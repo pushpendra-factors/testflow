@@ -25,6 +25,7 @@ func main() {
 	}
 
 	db := C.GetServices().Db
+	defer db.Close()
 	db.DropTableIfExists(&M.Event{})
 	log.Info("Dropped Event table")
 }

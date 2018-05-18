@@ -3,11 +3,12 @@ package config
 import (
 	json "encoding/json"
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"path/filepath"
 
 	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/sqlite"
+	_ "github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -16,10 +17,13 @@ var configFilePath = flag.String("config_filepath", "../config/config.json", "")
 const DEVELOPMENT = "development"
 
 type Configuration struct {
-	Env    string `json:"env"`
-	Port   int    `json:"port"`
-	DbHost string `json:"db_host"`
-	DbPort int    `json:"db_port"`
+	Env        string `json:"env"`
+	Port       int    `json:"port"`
+	DbHost     string `json:"db_host"`
+	DbPort     int    `json:"db_port"`
+	DbUser     string `json:"db_user"`
+	DbName     string `json:"db_name"`
+	DbPassword string `json:"db_password"`
 }
 type Services struct {
 	Db *gorm.DB
@@ -58,7 +62,16 @@ func initConfigFromFile() error {
 }
 
 func initServices() error {
-	db, err := gorm.Open("sqlite3", "../gorm.db")
+	db, err := gorm.Open("postgres", fmt.Sprintf("host=%s port=%d user=%s dbname=%s password=%s sslmode=disable",
+		configuration.DbHost,
+		configuration.DbPort,
+		configuration.DbUser,
+		configuration.DbName,
+		configuration.DbPassword))
+	// Connection Pooling.
+	db.DB().SetMaxIdleConns(10)
+	db.DB().SetMaxOpenConns(100)
+
 	if err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("Failed Db Initialization")
 		return err

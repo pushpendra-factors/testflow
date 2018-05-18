@@ -25,6 +25,7 @@ func main() {
 	}
 
 	db := C.GetServices().Db
+	defer db.Close()
 	db.CreateTable(&M.Event{})
 	log.Info("Created Event table")
 }

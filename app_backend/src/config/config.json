@@ -2,5 +2,8 @@
 	"env": "development",
 	"port": 8080,
 	"db_host": "localhost",
-	"db_port": 5432
+	"db_port": 5432,
+	"db_user": "autometa",
+	"db_name": "autometa",
+	"db_password": "@ut0me7a"
 }
