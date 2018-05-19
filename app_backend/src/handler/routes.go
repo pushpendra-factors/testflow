@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	M "model"
 	"net/http"
 
@@ -16,15 +17,30 @@ func InitRoutes(r *gin.Engine) {
 // curl -H "Content-Type: application/json" -i -X POST http://localhost:8080/events -d '{ "account_id": "1", "user_id": "1", "event_name": "login", "attributes": "{\"ip\": \"10.0.0.1\"}"}'
 func CreateEventHandler(c *gin.Context) {
 	var event M.Event
-	c.BindJSON(&event)
 
-	if err := c.BindJSON(&event); err != nil {
+	r := c.Request
+	if r.Body == nil {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+	err := json.NewDecoder(r.Body).Decode(&event)
+	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error":  "json decoding : " + err.Error(),
 			"status": http.StatusBadRequest,
 		})
 		return
 	}
+	/* Commented out code. Using Json Decoder directly above, since gin.Context.BindJSON is returning error "EOF"
+	   despite being able to decode the json. Need to check.
+	c.BindJSON(&event)
+	if err := c.BindJSON(&event); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":  "json decoding : " + err.Error(),
+			"status": http.StatusBadRequest,
+		})
+		return
+	}*/
 
 	var err_code int
 	_, err_code = M.CreateEvent(&event)
