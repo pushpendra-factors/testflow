@@ -27,5 +27,9 @@ func main() {
 	db := C.GetServices().Db
 	defer db.Close()
 	db.DropTableIfExists(&M.Event{})
-	log.Info("Dropped Event table")
+	if err := db.DropTableIfExists(&M.Event{}).Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("Events table creation failed.")
+	} else {
+		log.Info("Dropped Event table")
+	}
 }

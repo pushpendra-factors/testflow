@@ -2,6 +2,7 @@ package model
 
 import (
 	C "config"
+	"net/http"
 	"time"
 
 	_ "github.com/jinzhu/gorm"
@@ -10,10 +11,11 @@ import (
 )
 
 type Event struct {
-	ID        uint   `gorm:"primary_key" json:"-"`
+	// Random string (uuid_v4) as primary key and id.
+	ID        string `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
 	AccountId string `json:"account_id"`
 	UserId    string `json:"user_id"`
-	EventId   string `json:"event_id"`
+	EventName string `json:"event_name"`
 	// JsonB of postgres with gorm. https://github.com/jinzhu/gorm/issues/1183
 	Attributes postgres.Jsonb `json:"attributes"`
 	CreatedAt  time.Time      `json:"created_at"`
@@ -25,13 +27,13 @@ func CreateEvent(event *Event) (*Event, int) {
 
 	log.WithFields(log.Fields{"event": &event}).Info("Creating event")
 	// Input Validation.
-	if event.ID != 0 || event.AccountId == "" || event.EventId == "" {
-		return nil, 422
+	if event.ID != "" || event.AccountId == "" || event.UserId == "" || event.EventName == "" {
+		return nil, http.StatusBadRequest
 	}
 
 	if err := db.Create(event).Error; err != nil {
 		log.WithFields(log.Fields{"event": &event, "error": err}).Error("CreateEvent Failed")
-		return nil, 500
+		return nil, http.StatusInternalServerError
 	} else {
 		return event, -1
 	}

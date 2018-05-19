@@ -26,6 +26,9 @@ func main() {
 
 	db := C.GetServices().Db
 	defer db.Close()
-	db.CreateTable(&M.Event{})
-	log.Info("Created Event table")
+	if err := db.CreateTable(&M.Event{}).Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("Events table creation failed.")
+	} else {
+		log.Info("Created Events table")
+	}
 }
