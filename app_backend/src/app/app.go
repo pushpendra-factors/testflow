@@ -13,7 +13,7 @@ func main() {
 	// Initialize configs and connections.
 	err := C.Init()
 	if err != nil {
-		log.Error("Failed to initialize.")
+		log.Fatal("Failed to initialize.")
 		return
 	}
 

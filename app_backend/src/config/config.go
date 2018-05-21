@@ -13,6 +13,7 @@ import (
 )
 
 var configFilePath = flag.String("config_filepath", "../config/config.json", "")
+var initiated bool = false
 
 const DEVELOPMENT = "development"
 
@@ -83,6 +84,9 @@ func initServices() error {
 }
 
 func Init() error {
+	if initiated {
+		return fmt.Errorf("Config already initialized")
+	}
 	initFlags()
 	initLogging()
 	err := initConfigFromFile()
@@ -94,6 +98,8 @@ func Init() error {
 	if err != nil {
 		return err
 	}
+
+	initiated = true
 	return nil
 }
 

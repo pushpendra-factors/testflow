@@ -47,7 +47,7 @@ func CreateEventHandler(c *gin.Context) {
 	if err_code != -1 {
 		c.AbortWithStatus(err_code)
 	} else {
-		c.JSON(201, event)
+		c.JSON(http.StatusCreated, event)
 	}
 }
 
@@ -59,6 +59,6 @@ func GetEventHandler(c *gin.Context) {
 	if err_code != -1 {
 		c.AbortWithStatus(err_code)
 	} else {
-		c.JSON(200, event)
+		c.JSON(http.StatusOK, event)
 	}
 }
