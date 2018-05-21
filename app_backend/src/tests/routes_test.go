@@ -39,7 +39,6 @@ func TestCreateAndGetEvent(t *testing.T) {
 	assert.NotNil(t, jsonResponseMap["created_at"].(string))
 	assert.NotNil(t, jsonResponseMap["updated_at"].(string))
 	assert.Equal(t, jsonResponseMap["created_at"].(string), jsonResponseMap["updated_at"].(string))
-	log.Info(string(jsonResponse))
 	assert.Equal(t, 7, len(jsonResponseMap))
 
 	// Test GetEvent on the created id.
@@ -59,7 +58,6 @@ func TestCreateAndGetEvent(t *testing.T) {
 	assert.NotNil(t, jsonResponseMap["created_at"].(string))
 	assert.NotNil(t, jsonResponseMap["updated_at"].(string))
 	assert.Equal(t, jsonResponseMap["created_at"].(string), jsonResponseMap["updated_at"].(string))
-	log.Info(string(jsonResponse))
 
 	// Test GetEvent on random id.
 	id = "r4nd0m!234"
@@ -68,7 +66,36 @@ func TestCreateAndGetEvent(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	r.ServeHTTP(w, req)
 	assert.Equal(t, w.Code, http.StatusNotFound)
+}
 
+func TestCreateEventWithAttributes(t *testing.T) {
+	// Initialize routes.
+	r := gin.Default()
+	H.InitRoutes(r)
+
+	// Test CreateEvent.
+	w := httptest.NewRecorder()
+	var reqBodyStr = []byte(`{ "account_id": "1", "user_id": "1", "event_name": "login", "attributes": {"ip": "10.0.0.1", "mobile": true, "code": 1}}`)
+	req, _ := http.NewRequest("POST", "/events", bytes.NewBuffer(reqBodyStr))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusCreated, w.Code)
+	jsonResponse, _ := ioutil.ReadAll(w.Body)
+	var jsonResponseMap map[string]interface{}
+	json.Unmarshal(jsonResponse, &jsonResponseMap)
+	assert.NotEqual(t, 0, len(jsonResponseMap["id"].(string)))
+	assert.Equal(t, "1", jsonResponseMap["account_id"].(string))
+	assert.Equal(t, "1", jsonResponseMap["user_id"].(string))
+	assert.Equal(t, "login", jsonResponseMap["event_name"].(string))
+	assert.NotNil(t, jsonResponseMap["created_at"].(string))
+	assert.NotNil(t, jsonResponseMap["updated_at"].(string))
+	assert.Equal(t, jsonResponseMap["created_at"].(string), jsonResponseMap["updated_at"].(string))
+	assert.NotNil(t, jsonResponseMap["attributes"])
+	attributesMap := jsonResponseMap["attributes"].(map[string]interface{})
+	assert.Equal(t, "10.0.0.1", attributesMap["ip"].(string))
+	assert.Equal(t, true, attributesMap["mobile"].(bool))
+	assert.Equal(t, 1.0, attributesMap["code"].(float64))
+	assert.Equal(t, 7, len(jsonResponseMap))
 }
 
 func TestCreateEventBadRequest(t *testing.T) {
