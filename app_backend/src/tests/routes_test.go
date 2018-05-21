@@ -152,6 +152,10 @@ func TestMain(m *testing.M) {
 		log.Fatal("Failed to initialize config and services.")
 		os.Exit(1)
 	}
+	if C.GetConfig().Env != C.DEVELOPMENT {
+		log.Fatal("Envorionment is not Development.")
+		os.Exit(1)
+	}
 	retCode := m.Run()
 	os.Exit(retCode)
 }
