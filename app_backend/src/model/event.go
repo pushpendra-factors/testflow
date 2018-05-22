@@ -42,7 +42,7 @@ func CreateEvent(event *Event) (*Event, int) {
 		log.WithFields(log.Fields{"event": &event, "error": err}).Error("CreateEvent Failed")
 		return nil, http.StatusInternalServerError
 	} else {
-		return event, -1
+		return event, DB_SUCCESS
 	}
 }
 
@@ -53,6 +53,6 @@ func GetEvent(id string) (*Event, int) {
 	if err := db.Where("id = ?", id).First(&event).Error; err != nil {
 		return nil, 404
 	} else {
-		return &event, -1
+		return &event, DB_SUCCESS
 	}
 }

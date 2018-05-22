@@ -204,17 +204,17 @@ func TestMain(m *testing.M) {
 	// Create random project and a corresponding event_name and user.
 	random_project_name := U.RandomLowerAphaNumString(15)
 	project, err_code := M.CreateProject(&M.Project{Name: random_project_name})
-	if err_code != -1 {
+	if err_code != M.DB_SUCCESS {
 		log.Fatal("Project Creation failed.")
 		os.Exit(1)
 	}
 	user, err_code := M.CreateUser(&M.User{ProjectId: project.ID})
-	if err_code != -1 {
+	if err_code != M.DB_SUCCESS {
 		log.Fatal("User Creation failed.")
 		os.Exit(1)
 	}
 	en, err_code := M.CreateEventName(&M.EventName{ProjectId: project.ID, Name: "login"})
-	if err_code != -1 {
+	if err_code != M.DB_SUCCESS {
 		log.Fatal("EventName Creation failed.")
 		os.Exit(1)
 	}

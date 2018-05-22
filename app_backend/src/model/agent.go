@@ -34,7 +34,7 @@ func CreateUser(user *User) (*User, int) {
 		log.WithFields(log.Fields{"user": &user, "error": err}).Error("CreateUser Failed")
 		return nil, http.StatusInternalServerError
 	} else {
-		return user, -1
+		return user, DB_SUCCESS
 	}
 }
 */

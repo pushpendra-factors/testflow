@@ -44,7 +44,7 @@ func CreateEventHandler(c *gin.Context) {
 
 	var err_code int
 	_, err_code = M.CreateEvent(&event)
-	if err_code != -1 {
+	if err_code != M.DB_SUCCESS {
 		c.AbortWithStatus(err_code)
 	} else {
 		c.JSON(http.StatusCreated, event)
@@ -56,7 +56,7 @@ func CreateEventHandler(c *gin.Context) {
 func GetEventHandler(c *gin.Context) {
 	id := c.Params.ByName("id")
 	event, err_code := M.GetEvent(id)
-	if err_code != -1 {
+	if err_code != M.DB_SUCCESS {
 		c.AbortWithStatus(err_code)
 	} else {
 		c.JSON(http.StatusOK, event)

@@ -29,6 +29,6 @@ func CreateProject(project *Project) (*Project, int) {
 		log.WithFields(log.Fields{"project": &project, "error": err}).Error("CreateProject Failed")
 		return nil, http.StatusInternalServerError
 	} else {
-		return project, -1
+		return project, DB_SUCCESS
 	}
 }

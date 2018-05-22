@@ -27,6 +27,6 @@ func CreateEventName(event_name *EventName) (*EventName, int) {
 		log.WithFields(log.Fields{"event_name": &event_name, "error": err}).Error("CreateEventName Failed")
 		return nil, http.StatusInternalServerError
 	} else {
-		return event_name, -1
+		return event_name, DB_SUCCESS
 	}
 }
