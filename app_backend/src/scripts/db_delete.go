@@ -48,10 +48,10 @@ func main() {
 		log.Info("Dropped users table")
 	}
 
-	// Drop accounts Table.
-	if err := db.DropTableIfExists(&M.Account{}).Error; err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("accounts table deletion failed.")
+	// Drop projects Table.
+	if err := db.DropTableIfExists(&M.Project{}).Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("projects table deletion failed.")
 	} else {
-		log.Info("Dropped accounts table")
+		log.Info("Dropped projects table")
 	}
 }

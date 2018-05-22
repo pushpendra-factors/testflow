@@ -1,5 +1,6 @@
 package model
 
+/*
 import (
 	C "config"
 	"net/http"
@@ -9,12 +10,13 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type User struct {
+type Agent struct {
 	// Composite primary key with project_id and random uuid.
-	ID string `gorm:"primary_key:true;uuid;default:uuid_generate_v4()" json:"id"`
+	ID uint `gorm:"primary_key:true;" json:"id"`
 	// Below are the foreign key constraints added in creation script.
 	// project_id -> projects(id)
 	ProjectId uint64    `gorm:"primary_key:true;" json:"project_id"`
+	Email
 	CreatedAt time.Time `json:"created_at"`
 }
 
@@ -35,3 +37,4 @@ func CreateUser(user *User) (*User, int) {
 		return user, -1
 	}
 }
+*/

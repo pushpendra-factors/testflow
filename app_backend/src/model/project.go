@@ -9,26 +9,26 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type Account struct {
+type Project struct {
 	ID        uint64    `gorm:"primary_key:true;" json:"id"`
 	Name      string    `gorm:"not null;unique"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
-func CreateAccount(account *Account) (*Account, int) {
+func CreateProject(project *Project) (*Project, int) {
 	db := C.GetServices().Db
 
-	log.WithFields(log.Fields{"account": &account}).Info("Creating account")
+	log.WithFields(log.Fields{"project": &project}).Info("Creating project")
 
 	// Input Validation. (ID is to be auto generated)
-	if account.ID > 0 {
+	if project.ID > 0 {
 		return nil, http.StatusBadRequest
 	}
 
-	if err := db.Create(account).Error; err != nil {
-		log.WithFields(log.Fields{"account": &account, "error": err}).Error("CreateAccount Failed")
+	if err := db.Create(project).Error; err != nil {
+		log.WithFields(log.Fields{"project": &project, "error": err}).Error("CreateProject Failed")
 		return nil, http.StatusInternalServerError
 	} else {
-		return account, -1
+		return project, -1
 	}
 }

@@ -28,11 +28,11 @@ func main() {
 	db := C.GetServices().Db
 	defer db.Close()
 
-	// Create accounts table.
-	if err := db.CreateTable(&M.Account{}).Error; err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("accounts table creation failed.")
+	// Create projects table.
+	if err := db.CreateTable(&M.Project{}).Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("projects table creation failed.")
 	} else {
-		log.Info("Created accounts table")
+		log.Info("Created projects table")
 	}
 
 	// Create users table.
@@ -42,10 +42,10 @@ func main() {
 		log.Info("Created users table")
 	}
 	// Add foreign key constraints.
-	if err := db.Model(&M.User{}).AddForeignKey("account_id", "accounts(id)", "RESTRICT", "RESTRICT").Error; err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("users table association with accounts table failed.")
+	if err := db.Model(&M.User{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("users table association with projects table failed.")
 	} else {
-		log.Info("users table is associated with accounts table.")
+		log.Info("users table is associated with projects table.")
 	}
 
 	// Create event_names table.
@@ -55,10 +55,10 @@ func main() {
 		log.Info("Created event_names table")
 	}
 	// Add foreign key constraints.
-	if err := db.Model(&M.EventName{}).AddForeignKey("account_id", "accounts(id)", "RESTRICT", "RESTRICT").Error; err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("event_names table association with accounts table failed.")
+	if err := db.Model(&M.EventName{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("event_names table association with projects table failed.")
 	} else {
-		log.Info("event_names table is associated with accounts table.")
+		log.Info("event_names table is associated with projects table.")
 	}
 
 	// Create events table.
@@ -68,19 +68,19 @@ func main() {
 		log.Info("Created events table")
 	}
 	// Add foreign key constraints.
-	if err := db.Model(&M.Event{}).AddForeignKey("account_id", "accounts(id)", "RESTRICT", "RESTRICT").Error; err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("events table association with accounts table failed.")
+	if err := db.Model(&M.Event{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("events table association with projects table failed.")
 	} else {
-		log.Info("events table is associated with accounts table.")
+		log.Info("events table is associated with projects table.")
 	}
 	// Adding composite foreign key with users table.
-	if err := db.Model(&M.Event{}).AddForeignKey("account_id, user_id", "users(account_id, id)", "RESTRICT", "RESTRICT").Error; err != nil {
+	if err := db.Model(&M.Event{}).AddForeignKey("project_id, user_id", "users(project_id, id)", "RESTRICT", "RESTRICT").Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("events table association with users table failed.")
 	} else {
 		log.Info("events table is associated with users table.")
 	}
 	// Adding composite foreign key with event_names table.
-	if err := db.Model(&M.Event{}).AddForeignKey("account_id, event_name", "event_names(account_id, name)", "RESTRICT", "RESTRICT").Error; err != nil {
+	if err := db.Model(&M.Event{}).AddForeignKey("project_id, event_name", "event_names(project_id, name)", "RESTRICT", "RESTRICT").Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("events table association with event_names table failed.")
 	} else {
 		log.Info("events table is associated with event_names table.")

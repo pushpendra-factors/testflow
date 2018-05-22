@@ -11,14 +11,14 @@ import (
 )
 
 type Event struct {
-	// Composite primary key with account_id and uuid.
+	// Composite primary key with project_id and uuid.
 	ID string `gorm:"primary_key:true;type:uuid;default:uuid_generate_v4()" json:"id"`
 
 	// Below are the foreign key constraints added in creation script.
-	// account_id -> accounts(id)
-	// (account_id, user_id) -> users(account_id, id)
-	// (account_id, event_name) -> events(account_id, name)
-	AccountId uint64 `gorm:"primary_key:true;" json:"account_id"`
+	// project_id -> projects(id)
+	// (project_id, user_id) -> users(project_id, id)
+	// (project_id, event_name) -> events(project_id, name)
+	ProjectId uint64 `gorm:"primary_key:true;" json:"project_id"`
 	UserId    string `json:"user_id"`
 	EventName string `json:"event_name"`
 
