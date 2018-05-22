@@ -26,10 +26,32 @@ func main() {
 
 	db := C.GetServices().Db
 	defer db.Close()
-	db.DropTableIfExists(&M.Event{})
+
+	// Drop events table.
 	if err := db.DropTableIfExists(&M.Event{}).Error; err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("Events table creation failed.")
+		log.WithFields(log.Fields{"err": err}).Error("events table deletion failed.")
 	} else {
-		log.Info("Dropped Event table")
+		log.Info("Dropped events table")
+	}
+
+	// Drop event_names Table.
+	if err := db.DropTableIfExists(&M.EventName{}).Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("event_names table deletion failed.")
+	} else {
+		log.Info("Dropped event_names table")
+	}
+
+	// Drop users Table.
+	if err := db.DropTableIfExists(&M.User{}).Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("users table deletion failed.")
+	} else {
+		log.Info("Dropped users table")
+	}
+
+	// Drop accounts Table.
+	if err := db.DropTableIfExists(&M.Account{}).Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("accounts table deletion failed.")
+	} else {
+		log.Info("Dropped accounts table")
 	}
 }

@@ -11,11 +11,17 @@ import (
 )
 
 type Event struct {
-	// Random string (uuid_v4) as primary key and id.
-	ID        string `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
-	AccountId string `json:"account_id"`
+	// Composite primary key with account_id and uuid.
+	ID string `gorm:"primary_key:true;type:uuid;default:uuid_generate_v4()" json:"id"`
+
+	// Below are the foreign key constraints added in creation script.
+	// account_id -> accounts(id)
+	// (account_id, user_id) -> users(account_id, id)
+	// (account_id, event_name) -> events(account_id, name)
+	AccountId uint64 `gorm:"primary_key:true;" json:"account_id"`
 	UserId    string `json:"user_id"`
 	EventName string `json:"event_name"`
+
 	// JsonB of postgres with gorm. https://github.com/jinzhu/gorm/issues/1183
 	Attributes postgres.Jsonb `json:"attributes,omitempty"`
 	CreatedAt  time.Time      `json:"created_at"`
@@ -26,8 +32,9 @@ func CreateEvent(event *Event) (*Event, int) {
 	db := C.GetServices().Db
 
 	log.WithFields(log.Fields{"event": &event}).Info("Creating event")
-	// Input Validation.
-	if event.ID != "" || event.AccountId == "" || event.UserId == "" || event.EventName == "" {
+
+	// Input Validation. (ID is to be auto generated)
+	if event.ID != "" {
 		return nil, http.StatusBadRequest
 	}
 
