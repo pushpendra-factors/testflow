@@ -43,7 +43,7 @@ func TestCreateAndGetEvent(t *testing.T) {
 	assert.Equal(t, float64(project_id), jsonResponseMap["project_id"].(float64))
 	assert.Equal(t, user_id, jsonResponseMap["user_id"].(string))
 	assert.Equal(t, event_name, jsonResponseMap["event_name"].(string))
-	assert.Nil(t, jsonResponseMap["attributes"])
+	assert.Nil(t, jsonResponseMap["properties"])
 	assert.NotNil(t, jsonResponseMap["created_at"].(string))
 	assert.NotNil(t, jsonResponseMap["updated_at"].(string))
 	assert.Equal(t, jsonResponseMap["created_at"].(string), jsonResponseMap["updated_at"].(string))
@@ -62,7 +62,7 @@ func TestCreateAndGetEvent(t *testing.T) {
 	assert.Equal(t, float64(project_id), jsonResponseMap["project_id"].(float64))
 	assert.Equal(t, user_id, jsonResponseMap["user_id"].(string))
 	assert.Equal(t, event_name, jsonResponseMap["event_name"].(string))
-	assert.Nil(t, jsonResponseMap["attributes"])
+	assert.Nil(t, jsonResponseMap["properties"])
 	assert.NotNil(t, jsonResponseMap["created_at"].(string))
 	assert.NotNil(t, jsonResponseMap["updated_at"].(string))
 	assert.Equal(t, jsonResponseMap["created_at"].(string), jsonResponseMap["updated_at"].(string))
@@ -83,7 +83,7 @@ func TestCreateEventWithAttributes(t *testing.T) {
 
 	// Test CreateEvent.
 	w := httptest.NewRecorder()
-	var reqBodyStr = []byte(fmt.Sprintf(`{ "project_id": %d, "user_id": "%s", "event_name": "%s", "attributes": {"ip": "10.0.0.1", "mobile": true, "code": 1}}`,
+	var reqBodyStr = []byte(fmt.Sprintf(`{ "project_id": %d, "user_id": "%s", "event_name": "%s", "properties": {"ip": "10.0.0.1", "mobile": true, "code": 1}}`,
 		project_id, user_id, event_name))
 	req, _ := http.NewRequest("POST", "/events", bytes.NewBuffer(reqBodyStr))
 	req.Header.Set("Content-Type", "application/json")
@@ -99,11 +99,11 @@ func TestCreateEventWithAttributes(t *testing.T) {
 	assert.NotNil(t, jsonResponseMap["created_at"].(string))
 	assert.NotNil(t, jsonResponseMap["updated_at"].(string))
 	assert.Equal(t, jsonResponseMap["created_at"].(string), jsonResponseMap["updated_at"].(string))
-	assert.NotNil(t, jsonResponseMap["attributes"])
-	attributesMap := jsonResponseMap["attributes"].(map[string]interface{})
-	assert.Equal(t, "10.0.0.1", attributesMap["ip"].(string))
-	assert.Equal(t, true, attributesMap["mobile"].(bool))
-	assert.Equal(t, 1.0, attributesMap["code"].(float64))
+	assert.NotNil(t, jsonResponseMap["properties"])
+	propertiesMap := jsonResponseMap["properties"].(map[string]interface{})
+	assert.Equal(t, "10.0.0.1", propertiesMap["ip"].(string))
+	assert.Equal(t, true, propertiesMap["mobile"].(bool))
+	assert.Equal(t, 1.0, propertiesMap["code"].(float64))
 	assert.Equal(t, 7, len(jsonResponseMap))
 }
 

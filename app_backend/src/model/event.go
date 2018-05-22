@@ -23,7 +23,7 @@ type Event struct {
 	EventName string `json:"event_name"`
 
 	// JsonB of postgres with gorm. https://github.com/jinzhu/gorm/issues/1183
-	Attributes postgres.Jsonb `json:"attributes,omitempty"`
+	Properties postgres.Jsonb `json:"properties,omitempty"`
 	CreatedAt  time.Time      `json:"created_at"`
 	UpdatedAt  time.Time      `json:"updated_at"`
 }

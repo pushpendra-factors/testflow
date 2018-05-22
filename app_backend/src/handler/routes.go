@@ -14,7 +14,7 @@ func InitRoutes(r *gin.Engine) {
 }
 
 // Test command.
-// curl -H "Content-Type: application/json" -i -X POST http://localhost:8080/events -d '{ "project_id": "1", "user_id": "1", "event_name": "login", "attributes": {"ip": "10.0.0.1", "mobile": true}}'
+// curl -H "Content-Type: application/json" -i -X POST http://localhost:8080/events -d '{ "project_id": "1", "user_id": "1", "event_name": "login", "properties": {"ip": "10.0.0.1", "mobile": true}}'
 func CreateEventHandler(c *gin.Context) {
 	var event M.Event
 
