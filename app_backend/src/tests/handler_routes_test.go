@@ -17,7 +17,7 @@ import (
 )
 
 // TODO: Use testify.suites to avoid multiple initializations across these tests.
-func setupProjectUserEventName() (uint64, string, string, error) {
+func SetupProjectUserEventName() (uint64, string, string, error) {
 	var project_id uint64
 	var user_id string
 	var event_name string
@@ -46,7 +46,7 @@ func TestAPICreateAndGetEvent(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
 	H.InitRoutes(r)
-	project_id, user_id, event_name, err := setupProjectUserEventName()
+	project_id, user_id, event_name, err := SetupProjectUserEventName()
 	assert.Nil(t, err)
 
 	// Test CreateEvent.
@@ -101,7 +101,7 @@ func TestAPICreateEventWithAttributes(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
 	H.InitRoutes(r)
-	project_id, user_id, event_name, err := setupProjectUserEventName()
+	project_id, user_id, event_name, err := SetupProjectUserEventName()
 	assert.Nil(t, err)
 
 	// Test CreateEvent.
@@ -134,7 +134,7 @@ func TestAPICreateEventBadRequest(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
 	H.InitRoutes(r)
-	project_id, user_id, event_name, err := setupProjectUserEventName()
+	project_id, user_id, event_name, err := SetupProjectUserEventName()
 	assert.Nil(t, err)
 
 	// Test CreateEvent with id.

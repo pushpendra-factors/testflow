@@ -30,3 +30,19 @@ func CreateEventName(event_name *EventName) (*EventName, int) {
 		return event_name, DB_SUCCESS
 	}
 }
+
+func GetEventName(name string, project_id uint64) (*EventName, int) {
+	// Input Validation. (ID is to be auto generated)
+	if name == "" || project_id == 0 {
+		return nil, http.StatusBadRequest
+	}
+
+	db := C.GetServices().Db
+
+	var event_name EventName
+	if err := db.Where(&EventName{Name: name, ProjectId: project_id}).First(&event_name).Error; err != nil {
+		return nil, 404
+	} else {
+		return &event_name, DB_SUCCESS
+	}
+}
