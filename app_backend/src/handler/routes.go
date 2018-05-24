@@ -42,10 +42,10 @@ func CreateEventHandler(c *gin.Context) {
 		return
 	}*/
 
-	var err_code int
-	_, err_code = M.CreateEvent(&event)
-	if err_code != M.DB_SUCCESS {
-		c.AbortWithStatus(err_code)
+	var errCode int
+	_, errCode = M.CreateEvent(&event)
+	if errCode != M.DB_SUCCESS {
+		c.AbortWithStatus(errCode)
 	} else {
 		c.JSON(http.StatusCreated, event)
 	}
@@ -55,9 +55,9 @@ func CreateEventHandler(c *gin.Context) {
 // curl -i -X GET http://localhost:8080/events/bc7318e8-2b69-49b6-baf3-fdf47bcb1af9
 func GetEventHandler(c *gin.Context) {
 	id := c.Params.ByName("id")
-	event, err_code := M.GetEvent(id)
-	if err_code != M.DB_SUCCESS {
-		c.AbortWithStatus(err_code)
+	event, errCode := M.GetEvent(id)
+	if errCode != M.DB_SUCCESS {
+		c.AbortWithStatus(errCode)
 	} else {
 		c.JSON(http.StatusOK, event)
 	}

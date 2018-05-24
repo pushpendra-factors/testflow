@@ -15,43 +15,43 @@ import (
 
 func TestDBCreateAndGetUser(t *testing.T) {
 	// Initialize a project for the user.
-	random_project_name := U.RandomLowerAphaNumString(15)
-	project, err_code := M.CreateProject(&M.Project{Name: random_project_name})
-	assert.Equal(t, M.DB_SUCCESS, err_code)
+	randomProjectName := U.RandomLowerAphaNumString(15)
+	project, errCode := M.CreateProject(&M.Project{Name: randomProjectName})
+	assert.Equal(t, M.DB_SUCCESS, errCode)
 	assert.NotNil(t, project)
-	project_id := project.ID
+	projectId := project.ID
 
 	start := time.Now()
 
 	// Test successful create user.
-	user, err_code := M.CreateUser(&M.User{ProjectId: project_id})
-	assert.Equal(t, M.DB_SUCCESS, err_code)
+	user, errCode := M.CreateUser(&M.User{ProjectId: projectId})
+	assert.Equal(t, M.DB_SUCCESS, errCode)
 	assert.True(t, len(user.ID) > 30)
-	assert.Equal(t, project_id, user.ProjectId)
+	assert.Equal(t, projectId, user.ProjectId)
 	assert.True(t, user.CreatedAt.After(start))
 	assert.True(t, user.UpdatedAt.After(start))
 	assert.Equal(t, user.CreatedAt, user.UpdatedAt)
 	assert.Equal(t, postgres.Jsonb{RawMessage: json.RawMessage(nil)}, user.Properties)
 	// Test Get Project on the created one.
-	get_user, err_code := M.GetUser(user.ID)
-	assert.Equal(t, M.DB_SUCCESS, err_code)
+	getUser, errCode := M.GetUser(user.ID)
+	assert.Equal(t, M.DB_SUCCESS, errCode)
 	// time.Time is not exactly same. Checking within an error threshold.
-	assert.True(t, math.Abs(user.CreatedAt.Sub(get_user.CreatedAt).Seconds()) < 0.1)
-	assert.True(t, math.Abs(user.UpdatedAt.Sub(get_user.UpdatedAt).Seconds()) < 0.1)
+	assert.True(t, math.Abs(user.CreatedAt.Sub(getUser.CreatedAt).Seconds()) < 0.1)
+	assert.True(t, math.Abs(user.UpdatedAt.Sub(getUser.UpdatedAt).Seconds()) < 0.1)
 	user.CreatedAt = time.Time{}
 	user.UpdatedAt = time.Time{}
-	get_user.CreatedAt = time.Time{}
-	get_user.UpdatedAt = time.Time{}
-	assert.Equal(t, user, get_user)
+	getUser.CreatedAt = time.Time{}
+	getUser.UpdatedAt = time.Time{}
+	assert.Equal(t, user, getUser)
 
 	// Test Get User on random id.
-	random_id := U.RandomLowerAphaNumString(15)
-	get_user, err_code = M.GetUser(random_id)
-	assert.Equal(t, http.StatusNotFound, err_code)
-	assert.Nil(t, get_user)
+	randomId := U.RandomLowerAphaNumString(15)
+	getUser, errCode = M.GetUser(randomId)
+	assert.Equal(t, http.StatusNotFound, errCode)
+	assert.Nil(t, getUser)
 
 	// Test Bad input by providing id.
-	user, err_code = M.CreateUser(&M.User{ID: random_id, ProjectId: project_id})
-	assert.Equal(t, http.StatusBadRequest, err_code)
+	user, errCode = M.CreateUser(&M.User{ID: randomId, ProjectId: projectId})
+	assert.Equal(t, http.StatusBadRequest, errCode)
 	assert.Nil(t, user)
 }

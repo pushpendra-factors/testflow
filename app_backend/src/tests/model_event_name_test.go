@@ -13,40 +13,40 @@ import (
 
 func TestDBCreateAndGetEventName(t *testing.T) {
 	// Initialize a project for the event.
-	random_project_name := U.RandomLowerAphaNumString(15)
-	project, err_code := M.CreateProject(&M.Project{Name: random_project_name})
-	assert.Equal(t, M.DB_SUCCESS, err_code)
+	randomProjectName := U.RandomLowerAphaNumString(15)
+	project, errCode := M.CreateProject(&M.Project{Name: randomProjectName})
+	assert.Equal(t, M.DB_SUCCESS, errCode)
 	assert.NotNil(t, project)
-	project_id := project.ID
+	projectId := project.ID
 
 	start := time.Now()
 
-	// Test successful create event_name.
-	event_name, err_code := M.CreateEventName(&M.EventName{Name: "test_event", ProjectId: project_id})
-	assert.Equal(t, M.DB_SUCCESS, err_code)
-	assert.Equal(t, project_id, event_name.ProjectId)
-	assert.True(t, event_name.CreatedAt.After(start))
+	// Test successful create eventName.
+	eventName, errCode := M.CreateEventName(&M.EventName{Name: "test_event", ProjectId: projectId})
+	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Equal(t, projectId, eventName.ProjectId)
+	assert.True(t, eventName.CreatedAt.After(start))
 	// Test Get Project on the created one.
-	get_event_name, err_code := M.GetEventName(event_name.Name, project_id)
-	assert.Equal(t, M.DB_SUCCESS, err_code)
+	retEventName, errCode := M.GetEventName(eventName.Name, projectId)
+	assert.Equal(t, M.DB_SUCCESS, errCode)
 	// time.Time is not exactly same. Checking within an error threshold.
-	assert.True(t, math.Abs(event_name.CreatedAt.Sub(get_event_name.CreatedAt).Seconds()) < 0.1)
-	event_name.CreatedAt = time.Time{}
-	get_event_name.CreatedAt = time.Time{}
-	assert.Equal(t, event_name, get_event_name)
+	assert.True(t, math.Abs(eventName.CreatedAt.Sub(retEventName.CreatedAt).Seconds()) < 0.1)
+	eventName.CreatedAt = time.Time{}
+	retEventName.CreatedAt = time.Time{}
+	assert.Equal(t, eventName, retEventName)
 
 	// Test Get Event on non existent name.
-	get_event_name, err_code = M.GetEventName("non_existent_event", project_id)
-	assert.Equal(t, http.StatusNotFound, err_code)
-	assert.Nil(t, get_event_name)
+	retEventName, errCode = M.GetEventName("non_existent_event", projectId)
+	assert.Equal(t, http.StatusNotFound, errCode)
+	assert.Nil(t, retEventName)
 
 	// Test Get Event with only name.
-	get_event_name, err_code = M.GetEventName(event_name.Name, 0)
-	assert.Equal(t, http.StatusBadRequest, err_code)
-	assert.Nil(t, get_event_name)
+	retEventName, errCode = M.GetEventName(eventName.Name, 0)
+	assert.Equal(t, http.StatusBadRequest, errCode)
+	assert.Nil(t, retEventName)
 
-	// Test Get Event with only project_id.
-	get_event_name, err_code = M.GetEventName("", project_id)
-	assert.Equal(t, http.StatusBadRequest, err_code)
-	assert.Nil(t, get_event_name)
+	// Test Get Event with only projectId.
+	retEventName, errCode = M.GetEventName("", projectId)
+	assert.Equal(t, http.StatusBadRequest, errCode)
+	assert.Nil(t, retEventName)
 }

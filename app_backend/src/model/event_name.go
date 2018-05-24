@@ -10,7 +10,7 @@ import (
 )
 
 type EventName struct {
-	// Composite primary key with project_id and random uuid.
+	// Composite primary key with projectId and random uuid.
 	Name string `gorm:"primary_key:true;" json:"name"`
 	// Below are the foreign key constraints added in creation script.
 	// project_id -> projects(id)
@@ -18,31 +18,31 @@ type EventName struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-func CreateEventName(event_name *EventName) (*EventName, int) {
+func CreateEventName(eventName *EventName) (*EventName, int) {
 	db := C.GetServices().Db
 
-	log.WithFields(log.Fields{"event_name": &event_name}).Info("Creating event name")
+	log.WithFields(log.Fields{"eventName": &eventName}).Info("Creating event name")
 
-	if err := db.Create(event_name).Error; err != nil {
-		log.WithFields(log.Fields{"event_name": &event_name, "error": err}).Error("CreateEventName Failed")
+	if err := db.Create(eventName).Error; err != nil {
+		log.WithFields(log.Fields{"eventName": &eventName, "error": err}).Error("CreateEventName Failed")
 		return nil, http.StatusInternalServerError
 	} else {
-		return event_name, DB_SUCCESS
+		return eventName, DB_SUCCESS
 	}
 }
 
-func GetEventName(name string, project_id uint64) (*EventName, int) {
+func GetEventName(name string, projectId uint64) (*EventName, int) {
 	// Input Validation. (ID is to be auto generated)
-	if name == "" || project_id == 0 {
+	if name == "" || projectId == 0 {
 		return nil, http.StatusBadRequest
 	}
 
 	db := C.GetServices().Db
 
-	var event_name EventName
-	if err := db.Where(&EventName{Name: name, ProjectId: project_id}).First(&event_name).Error; err != nil {
+	var eventName EventName
+	if err := db.Where(&EventName{Name: name, ProjectId: projectId}).First(&eventName).Error; err != nil {
 		return nil, 404
 	} else {
-		return &event_name, DB_SUCCESS
+		return &eventName, DB_SUCCESS
 	}
 }
