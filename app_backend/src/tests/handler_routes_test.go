@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// TODO: Use testify.suites to avoid multiple initializations across these tests.
 func setupProjectUserEventName() (uint64, string, string, error) {
 	var project_id uint64
 	var user_id string
