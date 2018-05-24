@@ -2,7 +2,6 @@ package tests
 
 import (
 	"bytes"
-	C "config"
 	"encoding/json"
 	"fmt"
 	H "handler"
@@ -10,23 +9,44 @@ import (
 	M "model"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 	U "util"
 
 	"github.com/gin-gonic/gin"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
-var project_id uint64
-var user_id string
-var event_name string
+func setupProjectUserEventName() (uint64, string, string, error) {
+	var project_id uint64
+	var user_id string
+	var event_name string
 
-func TestCreateAndGetEvent(t *testing.T) {
-	// Initialize routes.
+	// Create random project and a corresponding event_name and user.
+	random_project_name := U.RandomLowerAphaNumString(15)
+	project, err_code := M.CreateProject(&M.Project{Name: random_project_name})
+	if err_code != M.DB_SUCCESS {
+		return project_id, user_id, event_name, fmt.Errorf("Project Creation failed.")
+	}
+	user, err_code := M.CreateUser(&M.User{ProjectId: project.ID})
+	if err_code != M.DB_SUCCESS {
+		return project_id, user_id, event_name, fmt.Errorf("User Creation failed.")
+	}
+	en, err_code := M.CreateEventName(&M.EventName{ProjectId: project.ID, Name: "login"})
+	if err_code != M.DB_SUCCESS {
+		return project_id, user_id, event_name, fmt.Errorf("EventName Creation failed.")
+	}
+	project_id = project.ID
+	user_id = user.ID
+	event_name = en.Name
+	return project_id, user_id, event_name, nil
+}
+
+func TestAPICreateAndGetEvent(t *testing.T) {
+	// Initialize routes and dependent data.
 	r := gin.Default()
 	H.InitRoutes(r)
+	project_id, user_id, event_name, err := setupProjectUserEventName()
+	assert.Nil(t, err)
 
 	// Test CreateEvent.
 	w := httptest.NewRecorder()
@@ -76,10 +96,12 @@ func TestCreateAndGetEvent(t *testing.T) {
 	assert.Equal(t, w.Code, http.StatusNotFound)
 }
 
-func TestCreateEventWithAttributes(t *testing.T) {
-	// Initialize routes.
+func TestAPICreateEventWithAttributes(t *testing.T) {
+	// Initialize routes and dependent data.
 	r := gin.Default()
 	H.InitRoutes(r)
+	project_id, user_id, event_name, err := setupProjectUserEventName()
+	assert.Nil(t, err)
 
 	// Test CreateEvent.
 	w := httptest.NewRecorder()
@@ -107,10 +129,12 @@ func TestCreateEventWithAttributes(t *testing.T) {
 	assert.Equal(t, 7, len(jsonResponseMap))
 }
 
-func TestCreateEventBadRequest(t *testing.T) {
-	// Initialize routes.
+func TestAPICreateEventBadRequest(t *testing.T) {
+	// Initialize routes and dependent data.
 	r := gin.Default()
 	H.InitRoutes(r)
+	project_id, user_id, event_name, err := setupProjectUserEventName()
+	assert.Nil(t, err)
 
 	// Test CreateEvent with id.
 	w := httptest.NewRecorder()
@@ -188,40 +212,4 @@ func TestCreateEventBadRequest(t *testing.T) {
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 	jsonResponse, _ = ioutil.ReadAll(w.Body)
 	assert.Equal(t, []byte{}, jsonResponse)
-}
-
-func TestMain(m *testing.M) {
-	// Setup.
-	// Initialize configs and connections.
-	if err := C.Init(); err != nil {
-		log.Fatal("Failed to initialize config and services.")
-		os.Exit(1)
-	}
-	if C.GetConfig().Env != C.DEVELOPMENT {
-		log.Fatal("Environment is not Development.")
-		os.Exit(1)
-	}
-	// Create random project and a corresponding event_name and user.
-	random_project_name := U.RandomLowerAphaNumString(15)
-	project, err_code := M.CreateProject(&M.Project{Name: random_project_name})
-	if err_code != M.DB_SUCCESS {
-		log.Fatal("Project Creation failed.")
-		os.Exit(1)
-	}
-	user, err_code := M.CreateUser(&M.User{ProjectId: project.ID})
-	if err_code != M.DB_SUCCESS {
-		log.Fatal("User Creation failed.")
-		os.Exit(1)
-	}
-	en, err_code := M.CreateEventName(&M.EventName{ProjectId: project.ID, Name: "login"})
-	if err_code != M.DB_SUCCESS {
-		log.Fatal("EventName Creation failed.")
-		os.Exit(1)
-	}
-	project_id = project.ID
-	user_id = user.ID
-	event_name = en.Name
-
-	retCode := m.Run()
-	os.Exit(retCode)
 }
