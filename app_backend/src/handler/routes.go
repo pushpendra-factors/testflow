@@ -9,4 +9,5 @@ func InitRoutes(r *gin.Engine) {
 	r.GET("/projects/:project_id/users/:user_id/events/:id", GetEventHandler)
 	r.POST("projects/:project_id/users", CreateUserHandler)
 	r.GET("/projects/:project_id/users/:user_id", GetUserHandler)
+	r.GET("/projects/:project_id/users", GetUsersHandler)
 }

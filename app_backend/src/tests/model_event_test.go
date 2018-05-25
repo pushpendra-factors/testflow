@@ -55,7 +55,8 @@ func TestDBCreateAndGetEvent(t *testing.T) {
 	assert.Nil(t, retEvent)
 
 	// Test Create Event with id.
-	event, errCode = M.CreateEvent(&M.Event{ID: "random_id", EventName: eventName, ProjectId: projectId, UserId: userId})
+	randomId := "random_id"
+	event, errCode = M.CreateEvent(&M.Event{ID: randomId, EventName: eventName, ProjectId: projectId, UserId: userId})
 	assert.Equal(t, http.StatusBadRequest, errCode)
 	assert.Nil(t, event)
 

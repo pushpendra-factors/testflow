@@ -47,8 +47,8 @@ func main() {
 	} else {
 		log.Info("users table is associated with projects table.")
 	}
-	// Add unique index on project_id+customer_user_id.
-	if err := db.Model(&M.User{}).AddUniqueIndex("project_id_customer_user_id_idx", "project_id", "customer_user_id").Error; err != nil {
+	// Add unique partial index on project_id+customer_user_id when customer_id is not null.
+	if err := db.Exec("CREATE UNIQUE INDEX project_id_customer_user_id_idx ON users (project_id, customer_user_id) WHERE customer_user_id != '';").Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("users table project_id:customer_user_id unique index failed.")
 	} else {
 		log.Info("users table project_id:customer_user_id unique index created.")

@@ -76,3 +76,60 @@ func TestDBCreateAndGetUser(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, errCode)
 	assert.Nil(t, user)
 }
+
+func TestDBGetUsers(t *testing.T) {
+	// Initialize a project for the user.
+	randomProjectName := U.RandomLowerAphaNumString(15)
+	project, errCode := M.CreateProject(&M.Project{Name: randomProjectName})
+	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.NotNil(t, project)
+	projectId := project.ID
+
+	// Create 100 users.
+	var users []M.User
+	numUsers := 100
+	for i := 0; i < numUsers; i++ {
+		user, errCode := M.CreateUser(&M.User{ProjectId: projectId})
+		assert.Equal(t, M.DB_SUCCESS, errCode)
+		assert.True(t, len(user.ID) > 30)
+		users = append(users, *user)
+	}
+
+	var offset uint64 = 0
+	var limit uint64 = 10
+	retUsers, errCode := M.GetUsers(projectId, offset, limit)
+	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Equal(t, limit, uint64(len(retUsers)))
+	assertUsersWithOffset(t, users[offset:offset+limit], retUsers)
+
+	offset = 25
+	limit = 20
+	retUsers, errCode = M.GetUsers(projectId, offset, limit)
+	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Equal(t, limit, uint64(len(retUsers)))
+	assertUsersWithOffset(t, users[offset:offset+limit], retUsers)
+
+	// Overflow
+	offset = 95
+	limit = 10
+	retUsers, errCode = M.GetUsers(projectId, offset, limit)
+	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Equal(t, numUsers-95, len(retUsers))
+	assertUsersWithOffset(t, users[offset:numUsers], retUsers)
+}
+
+func assertUsersWithOffset(t *testing.T, expectedUsers []M.User, actualUsers []M.User) {
+	assert.Equal(t, len(expectedUsers), len(actualUsers))
+	for i := 0; i < len(actualUsers); i++ {
+		expectedUser := expectedUsers[i]
+		actualUser := actualUsers[i]
+		// time.Time is not exactly same. Checking within an error threshold.
+		assert.True(t, math.Abs(expectedUser.CreatedAt.Sub(actualUser.CreatedAt).Seconds()) < 0.1)
+		assert.True(t, math.Abs(expectedUser.UpdatedAt.Sub(actualUser.UpdatedAt).Seconds()) < 0.1)
+		expectedUser.CreatedAt = time.Time{}
+		expectedUser.UpdatedAt = time.Time{}
+		actualUser.CreatedAt = time.Time{}
+		actualUser.UpdatedAt = time.Time{}
+		assert.Equal(t, expectedUser, actualUser)
+	}
+}

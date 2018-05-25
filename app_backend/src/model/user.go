@@ -54,3 +54,14 @@ func GetUser(projectId uint64, id string) (*User, int) {
 		return &user, DB_SUCCESS
 	}
 }
+
+func GetUsers(projectId uint64, offset uint64, limit uint64) ([]User, int) {
+	db := C.GetServices().Db
+
+	var users []User
+	if err := db.Offset(offset).Where("project_id = ?", projectId).Limit(limit).Find(&users).Error; err != nil {
+		return nil, 404
+	} else {
+		return users, DB_SUCCESS
+	}
+}

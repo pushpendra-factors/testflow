@@ -83,13 +83,6 @@ func TestAPICreateAndGetUser(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	r.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusNotFound, w.Code)
-
-	// Test GetUser with no id.
-	w = httptest.NewRecorder()
-	req, _ = http.NewRequest("GET", fmt.Sprintf("/projects/%d/users/", projectId), nil)
-	req.Header.Set("Content-Type", "application/json")
-	r.ServeHTTP(w, req)
-	assert.Equal(t, http.StatusNotFound, w.Code)
 }
 
 func TestAPICreateUserEmptyAndWithAttributes(t *testing.T) {
@@ -183,4 +176,86 @@ func TestAPICreateUserBadRequest(t *testing.T) {
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 	jsonResponse, _ = ioutil.ReadAll(w.Body)
 	assert.Equal(t, []byte{}, jsonResponse)
+}
+
+func TestAPIGetUsers(t *testing.T) {
+	// Initialize routes and dependent data.
+	r := gin.Default()
+	H.InitRoutes(r)
+	projectId, err := SetupProject()
+	assert.Nil(t, err)
+
+	// Create 100 Users.
+	var users []map[string]interface{}
+	numUsers := 100
+	for i := 0; i < numUsers; i++ {
+		w := httptest.NewRecorder()
+		var reqBodyStr = []byte(`{}`)
+		req, _ := http.NewRequest("POST", fmt.Sprintf("/projects/%d/users", projectId),
+			bytes.NewBuffer(reqBodyStr))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusCreated, w.Code)
+		jsonResponse, _ := ioutil.ReadAll(w.Body)
+		var userMap map[string]interface{}
+		json.Unmarshal(jsonResponse, &userMap)
+		users = append(users, userMap)
+	}
+
+	// Default values of offset and limit. Not sent in params.
+	offset := 0
+	limit := 10
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET",
+		fmt.Sprintf("/projects/%d/users", projectId), nil)
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ := ioutil.ReadAll(w.Body)
+	var retUsers []map[string]interface{}
+	json.Unmarshal(jsonResponse, &retUsers)
+	assert.Equal(t, limit, len(retUsers))
+	assertUserMapsWithOffset(t, users[offset:offset+limit], retUsers)
+
+	offset = 25
+	limit = 20
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest("GET",
+		fmt.Sprintf("/projects/%d/users?offset=%d&limit=%d", projectId, offset, limit), nil)
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	json.Unmarshal(jsonResponse, &retUsers)
+	assert.Equal(t, limit, len(retUsers))
+	assertUserMapsWithOffset(t, users[offset:offset+limit], retUsers)
+
+	// Overflow
+	offset = 95
+	limit = 10
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest("GET",
+		fmt.Sprintf("/projects/%d/users?offset=%d&limit=%d", projectId, offset, limit), nil)
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	json.Unmarshal(jsonResponse, &retUsers)
+	assert.Equal(t, numUsers-95, len(retUsers))
+	assertUserMapsWithOffset(t, users[offset:numUsers], retUsers)
+}
+
+func assertUserMapsWithOffset(t *testing.T, expectedUsers []map[string]interface{}, actualUsers []map[string]interface{}) {
+	assert.Equal(t, len(expectedUsers), len(actualUsers))
+	for i := 0; i < len(actualUsers); i++ {
+		expectedUser := expectedUsers[i]
+		actualUser := actualUsers[i]
+		assert.Equal(t, expectedUser["id"].(string), actualUser["id"].(string))
+		assert.Equal(t, expectedUser["project_id"].(float64), actualUser["project_id"].(float64))
+		assert.Equal(t, expectedUser["c_uid"].(string), actualUser["c_uid"].(string))
+		assert.Nil(t, actualUser["properties"])
+		assert.NotNil(t, actualUser["created_at"].(string))
+		assert.NotNil(t, actualUser["updated_at"].(string))
+		assert.Equal(t, actualUser["created_at"].(string), actualUser["updated_at"].(string))
+	}
 }
