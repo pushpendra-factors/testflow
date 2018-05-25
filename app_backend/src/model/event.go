@@ -46,11 +46,11 @@ func CreateEvent(event *Event) (*Event, int) {
 	}
 }
 
-func GetEvent(id string) (*Event, int) {
+func GetEvent(projectId uint64, userId string, id string) (*Event, int) {
 	db := C.GetServices().Db
 
 	var event Event
-	if err := db.Where("id = ?", id).First(&event).Error; err != nil {
+	if err := db.Where("id = ?", id).Where("project_id = ?", projectId).Where("user_id = ?", userId).First(&event).Error; err != nil {
 		return nil, 404
 	} else {
 		return &event, DB_SUCCESS

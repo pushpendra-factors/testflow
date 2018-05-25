@@ -18,7 +18,7 @@ type User struct {
 	ProjectId uint64 `gorm:"primary_key:true;" json:"project_id"`
 	// UserId provided by the customer.
 	// An unique index is creatd on ProjectId+UserId.
-	CustomerUserId string `gorm:"json:"user_id"`
+	CustomerUserId string `json:"c_uid"`
 
 	// JsonB of postgres with gorm. https://github.com/jinzhu/gorm/issues/1183
 	Properties postgres.Jsonb `json:"properties,omitempty"`
@@ -31,7 +31,7 @@ func CreateUser(user *User) (*User, int) {
 
 	log.WithFields(log.Fields{"user": &user}).Info("Creating user")
 
-	// Input Validation. (ID is to be auto generated)
+	// Input Validation. (ID is to be auto generated).
 	if user.ID != "" {
 		return nil, http.StatusBadRequest
 	}
@@ -44,11 +44,11 @@ func CreateUser(user *User) (*User, int) {
 	}
 }
 
-func GetUser(id string) (*User, int) {
+func GetUser(projectId uint64, id string) (*User, int) {
 	db := C.GetServices().Db
 
 	var user User
-	if err := db.Where("id = ?", id).First(&user).Error; err != nil {
+	if err := db.Where("project_id = ?", projectId).Where("id = ?", id).First(&user).Error; err != nil {
 		return nil, 404
 	} else {
 		return &user, DB_SUCCESS

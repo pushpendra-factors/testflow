@@ -29,8 +29,8 @@ func TestDBCreateAndGetEvent(t *testing.T) {
 	assert.True(t, event.UpdatedAt.After(start))
 	assert.Equal(t, event.CreatedAt, event.UpdatedAt)
 	assert.Equal(t, postgres.Jsonb{RawMessage: json.RawMessage(nil)}, event.Properties)
-	// Test Get Project on the created.
-	retEvent, errCode := M.GetEvent(event.ID)
+	// Test Get Event on the created.
+	retEvent, errCode := M.GetEvent(projectId, userId, event.ID)
 	assert.Equal(t, M.DB_SUCCESS, errCode)
 	// time.Time is not exactly same. Checking within an error threshold.
 	assert.True(t, math.Abs(event.CreatedAt.Sub(retEvent.CreatedAt).Seconds()) < 0.1)
@@ -40,9 +40,17 @@ func TestDBCreateAndGetEvent(t *testing.T) {
 	retEvent.CreatedAt = time.Time{}
 	retEvent.UpdatedAt = time.Time{}
 	assert.Equal(t, event, retEvent)
+	// Test Get Event with wrong project id.
+	retEvent, errCode = M.GetEvent(projectId+1, userId, event.ID)
+	assert.Equal(t, http.StatusNotFound, errCode)
+	assert.Nil(t, retEvent)
+	// Test Get Event with wrong user id.
+	retEvent, errCode = M.GetEvent(projectId, "randomId", event.ID)
+	assert.Equal(t, http.StatusNotFound, errCode)
+	assert.Nil(t, retEvent)
 
 	// Test Get Event on non existent id.
-	retEvent, errCode = M.GetEvent("random_id")
+	retEvent, errCode = M.GetEvent(projectId, userId, "random_id")
 	assert.Equal(t, http.StatusNotFound, errCode)
 	assert.Nil(t, retEvent)
 

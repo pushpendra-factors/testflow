@@ -51,9 +51,9 @@ func TestAPICreateAndGetEvent(t *testing.T) {
 
 	// Test CreateEvent.
 	w := httptest.NewRecorder()
-	var reqBodyStr = []byte(fmt.Sprintf(`{ "project_id": %d, "user_id": "%s", "event_name": "%s"}`,
-		projectId, userId, eventName))
-	req, _ := http.NewRequest("POST", "/events", bytes.NewBuffer(reqBodyStr))
+	var reqBodyStr = []byte(fmt.Sprintf(`{"event_name": "%s"}`, eventName))
+	req, _ := http.NewRequest("POST", fmt.Sprintf("/projects/%d/users/%s/events", projectId, userId),
+		bytes.NewBuffer(reqBodyStr))
 	req.Header.Set("Content-Type", "application/json")
 	r.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusCreated, w.Code)
@@ -73,7 +73,8 @@ func TestAPICreateAndGetEvent(t *testing.T) {
 	// Test GetEvent on the created id.
 	id := jsonResponseMap["id"].(string)
 	w = httptest.NewRecorder()
-	req, _ = http.NewRequest("GET", "/events/"+id, nil)
+	req, _ = http.NewRequest("GET",
+		fmt.Sprintf("/projects/%d/users/%s/events/%s", projectId, userId, id), nil)
 	req.Header.Set("Content-Type", "application/json")
 	r.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -91,10 +92,19 @@ func TestAPICreateAndGetEvent(t *testing.T) {
 	// Test GetEvent on random id.
 	id = "r4nd0m!234"
 	w = httptest.NewRecorder()
-	req, _ = http.NewRequest("GET", "/events/"+id, nil)
+	req, _ = http.NewRequest("GET",
+		fmt.Sprintf("/projects/%d/users/%s/events/%s", projectId, userId, id), nil)
 	req.Header.Set("Content-Type", "application/json")
 	r.ServeHTTP(w, req)
-	assert.Equal(t, w.Code, http.StatusNotFound)
+	assert.Equal(t, http.StatusNotFound, w.Code)
+
+	// Test GetEvent with no id.
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest("GET",
+		fmt.Sprintf("/projects/%d/users/%s/events/", projectId, userId), nil)
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusNotFound, w.Code)
 }
 
 func TestAPICreateEventWithAttributes(t *testing.T) {
@@ -106,9 +116,10 @@ func TestAPICreateEventWithAttributes(t *testing.T) {
 
 	// Test CreateEvent.
 	w := httptest.NewRecorder()
-	var reqBodyStr = []byte(fmt.Sprintf(`{ "project_id": %d, "user_id": "%s", "event_name": "%s", "properties": {"ip": "10.0.0.1", "mobile": true, "code": 1}}`,
-		projectId, userId, eventName))
-	req, _ := http.NewRequest("POST", "/events", bytes.NewBuffer(reqBodyStr))
+	var reqBodyStr = []byte(fmt.Sprintf(`{ "event_name": "%s", "properties": {"ip": "10.0.0.1", "mobile": true, "code": 1}}`,
+		eventName))
+	req, _ := http.NewRequest("POST", fmt.Sprintf("/projects/%d/users/%s/events", projectId, userId),
+		bytes.NewBuffer(reqBodyStr))
 	req.Header.Set("Content-Type", "application/json")
 	r.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusCreated, w.Code)
@@ -139,9 +150,9 @@ func TestAPICreateEventBadRequest(t *testing.T) {
 
 	// Test CreateEvent with id.
 	w := httptest.NewRecorder()
-	var reqBodyStr = []byte(fmt.Sprintf(`{ "id": "a745814b-a820-4f34-a01a-34e623b9c1a2", "project_id": %d, "user_id": "%s", "event_name": "%s"}`,
-		projectId, userId, eventName))
-	req, _ := http.NewRequest("POST", "/events", bytes.NewBuffer(reqBodyStr))
+	var reqBodyStr = []byte(fmt.Sprintf(`{ "id": "a745814b-a820-4f34-a01a-34e623b9c1a2", "event_name": "%s"}`, eventName))
+	req, _ := http.NewRequest("POST", fmt.Sprintf("/projects/%d/users/%s/events", projectId, userId),
+		bytes.NewBuffer(reqBodyStr))
 	req.Header.Set("Content-Type", "application/json")
 	r.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusBadRequest, w.Code)
@@ -150,31 +161,31 @@ func TestAPICreateEventBadRequest(t *testing.T) {
 
 	// Test CreateEvent without projectId.
 	w = httptest.NewRecorder()
-	reqBodyStr = []byte(fmt.Sprintf(`{ "user_id": "%s", "event_name": "%s"}`,
-		userId, eventName))
-	req, _ = http.NewRequest("POST", "/events", bytes.NewBuffer(reqBodyStr))
+	reqBodyStr = []byte(fmt.Sprintf(`{ "event_name": "%s"}`, eventName))
+	req, _ = http.NewRequest("POST", fmt.Sprintf("/projects//users/%s/events", userId),
+		bytes.NewBuffer(reqBodyStr))
 	req.Header.Set("Content-Type", "application/json")
 	r.ServeHTTP(w, req)
-	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
 	jsonResponse, _ = ioutil.ReadAll(w.Body)
 	assert.Equal(t, []byte{}, jsonResponse)
 
 	// Test CreateEvent without userId.
 	w = httptest.NewRecorder()
-	reqBodyStr = []byte(fmt.Sprintf(`{ "project_id": %d, "user_id": "", "event_name": "%s"}`,
-		projectId, eventName))
-	req, _ = http.NewRequest("POST", "/events", bytes.NewBuffer(reqBodyStr))
+	reqBodyStr = []byte(fmt.Sprintf(`{ "event_name": "%s"}`, eventName))
+	req, _ = http.NewRequest("POST", fmt.Sprintf("/projects/%d/users//events", projectId),
+		bytes.NewBuffer(reqBodyStr))
 	req.Header.Set("Content-Type", "application/json")
 	r.ServeHTTP(w, req)
-	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
 	jsonResponse, _ = ioutil.ReadAll(w.Body)
 	assert.Equal(t, []byte{}, jsonResponse)
 
 	// Test CreateEvent without eventName.
 	w = httptest.NewRecorder()
-	reqBodyStr = []byte(fmt.Sprintf(`{ "project_id": %d, "user_id": "%s"}`,
-		projectId, userId))
-	req, _ = http.NewRequest("POST", "/events", bytes.NewBuffer(reqBodyStr))
+	reqBodyStr = []byte(`{}`)
+	req, _ = http.NewRequest("POST", fmt.Sprintf("/projects/%d/users/%s/events", projectId, userId),
+		bytes.NewBuffer(reqBodyStr))
 	req.Header.Set("Content-Type", "application/json")
 	r.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
@@ -183,9 +194,9 @@ func TestAPICreateEventBadRequest(t *testing.T) {
 
 	// Test CreateEvent invalid projectId.
 	w = httptest.NewRecorder()
-	reqBodyStr = []byte(fmt.Sprintf(`{ "project_id": 0, "user_id": "%s", "event_name": "%s"}`,
-		userId, eventName))
-	req, _ = http.NewRequest("POST", "/events", bytes.NewBuffer(reqBodyStr))
+	reqBodyStr = []byte(fmt.Sprintf(`{"event_name": "%s"}`, eventName))
+	req, _ = http.NewRequest("POST", fmt.Sprintf("/projects/0/users/%s/events", userId),
+		bytes.NewBuffer(reqBodyStr))
 	req.Header.Set("Content-Type", "application/json")
 	r.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
@@ -194,9 +205,9 @@ func TestAPICreateEventBadRequest(t *testing.T) {
 
 	// Test CreateEvent invalid userId.
 	w = httptest.NewRecorder()
-	reqBodyStr = []byte(fmt.Sprintf(`{ "project_id": %d, "user_id": "random1234", "event_name": "%s"}`,
-		projectId, eventName))
-	req, _ = http.NewRequest("POST", "/events", bytes.NewBuffer(reqBodyStr))
+	reqBodyStr = []byte(fmt.Sprintf(`{ "event_name": "%s"}`, eventName))
+	req, _ = http.NewRequest("POST", fmt.Sprintf("/projects/%d/users/random123/events", projectId),
+		bytes.NewBuffer(reqBodyStr))
 	req.Header.Set("Content-Type", "application/json")
 	r.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
@@ -205,9 +216,9 @@ func TestAPICreateEventBadRequest(t *testing.T) {
 
 	// Test CreateEvent invalid eventName.
 	w = httptest.NewRecorder()
-	reqBodyStr = []byte(fmt.Sprintf(`{ "project_id": %d, "user_id": "%s", "event_name": "random1234"}`,
-		projectId, userId))
-	req, _ = http.NewRequest("POST", "/events", bytes.NewBuffer(reqBodyStr))
+	reqBodyStr = []byte(`{"event_name": "random1234"}`)
+	req, _ = http.NewRequest("POST", fmt.Sprintf("/projects/%d/users/%s/events", projectId, userId),
+		bytes.NewBuffer(reqBodyStr))
 	req.Header.Set("Content-Type", "application/json")
 	r.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
