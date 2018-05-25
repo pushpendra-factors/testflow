@@ -32,7 +32,7 @@ func TestDBCreateAndGetUser(t *testing.T) {
 	assert.True(t, user.UpdatedAt.After(start))
 	assert.Equal(t, user.CreatedAt, user.UpdatedAt)
 	assert.Equal(t, postgres.Jsonb{RawMessage: json.RawMessage(nil)}, user.Properties)
-	// Test Get Project on the created one.
+	// Test Get User on the created one.
 	getUser, errCode := M.GetUser(user.ID)
 	assert.Equal(t, M.DB_SUCCESS, errCode)
 	// time.Time is not exactly same. Checking within an error threshold.
@@ -43,6 +43,23 @@ func TestDBCreateAndGetUser(t *testing.T) {
 	getUser.CreatedAt = time.Time{}
 	getUser.UpdatedAt = time.Time{}
 	assert.Equal(t, user, getUser)
+
+	// Test successful create user with customer_user_id and properties.
+	customerUserId := "customer_id"
+	properties := postgres.Jsonb{RawMessage: json.RawMessage([]byte(`{"country": "india", "age": 30, "paid": true}`))}
+	user, errCode = M.CreateUser(&M.User{ProjectId: projectId, CustomerUserId: customerUserId, Properties: properties})
+	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Equal(t, customerUserId, user.CustomerUserId)
+	assert.True(t, len(user.ID) > 30)
+	assert.Equal(t, projectId, user.ProjectId)
+	assert.True(t, user.CreatedAt.After(start))
+	assert.True(t, user.UpdatedAt.After(start))
+	assert.Equal(t, user.CreatedAt, user.UpdatedAt)
+	assert.Equal(t, properties, user.Properties)
+	// Creating again with the same customer_user_id with no properties.
+	user, errCode = M.CreateUser(&M.User{ProjectId: projectId, CustomerUserId: customerUserId})
+	assert.Equal(t, http.StatusInternalServerError, errCode)
+	assert.Nil(t, user)
 
 	// Test Get User on random id.
 	randomId := U.RandomLowerAphaNumString(15)

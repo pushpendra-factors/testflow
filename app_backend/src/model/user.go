@@ -16,6 +16,9 @@ type User struct {
 	// Below are the foreign key constraints added in creation script.
 	// project_id -> projects(id)
 	ProjectId uint64 `gorm:"primary_key:true;" json:"project_id"`
+	// UserId provided by the customer.
+	// An unique index is creatd on ProjectId+UserId.
+	CustomerUserId string `gorm:"json:"user_id"`
 
 	// JsonB of postgres with gorm. https://github.com/jinzhu/gorm/issues/1183
 	Properties postgres.Jsonb `json:"properties,omitempty"`
