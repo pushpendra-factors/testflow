@@ -8,6 +8,7 @@ import (
 	"time"
 	U "util"
 
+	"github.com/jinzhu/copier"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -22,18 +23,30 @@ func TestDBCreateAndGetEventName(t *testing.T) {
 	start := time.Now()
 
 	// Test successful create eventName.
-	eventName, errCode := M.CreateEventName(&M.EventName{Name: "test_event", ProjectId: projectId})
+	eventName, errCode := M.CreateOrGetEventName(&M.EventName{Name: "test_event", ProjectId: projectId})
 	assert.Equal(t, M.DB_SUCCESS, errCode)
 	assert.Equal(t, projectId, eventName.ProjectId)
 	assert.True(t, eventName.CreatedAt.After(start))
-	// Test Get Project on the created one.
-	retEventName, errCode := M.GetEventName(eventName.Name, projectId)
+	// Trying to create again should return the old one.
+	expectedEventName := &M.EventName{}
+	copier.Copy(expectedEventName, eventName)
+	retryEventName, errCode := M.CreateOrGetEventName(&M.EventName{Name: "test_event", ProjectId: projectId})
+	assert.Equal(t, http.StatusConflict, errCode)
+	// time.Time is not exactly same. Checking within an error threshold.
+	assert.True(t, math.Abs(expectedEventName.CreatedAt.Sub(retryEventName.CreatedAt).Seconds()) < 0.1)
+	expectedEventName.CreatedAt = time.Time{}
+	retryEventName.CreatedAt = time.Time{}
+	assert.Equal(t, expectedEventName, retryEventName)
+	// Test Get EventName on the created one.
+	expectedEventName = &M.EventName{}
+	copier.Copy(expectedEventName, eventName)
+	retEventName, errCode := M.GetEventName(expectedEventName.Name, projectId)
 	assert.Equal(t, M.DB_SUCCESS, errCode)
 	// time.Time is not exactly same. Checking within an error threshold.
-	assert.True(t, math.Abs(eventName.CreatedAt.Sub(retEventName.CreatedAt).Seconds()) < 0.1)
-	eventName.CreatedAt = time.Time{}
+	assert.True(t, math.Abs(expectedEventName.CreatedAt.Sub(retEventName.CreatedAt).Seconds()) < 0.1)
+	expectedEventName.CreatedAt = time.Time{}
 	retEventName.CreatedAt = time.Time{}
-	assert.Equal(t, eventName, retEventName)
+	assert.Equal(t, expectedEventName, retEventName)
 
 	// Test Get Event on non existent name.
 	retEventName, errCode = M.GetEventName("non_existent_event", projectId)

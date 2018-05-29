@@ -35,6 +35,7 @@ func CreateEvent(event *Event) (*Event, int) {
 
 	// Input Validation. (ID is to be auto generated)
 	if event.ID != "" {
+		log.Error("CreateEvent Failed. Id provided.")
 		return nil, http.StatusBadRequest
 	}
 

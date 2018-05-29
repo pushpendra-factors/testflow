@@ -33,6 +33,7 @@ func CreateUser(user *User) (*User, int) {
 
 	// Input Validation. (ID is to be auto generated).
 	if user.ID != "" {
+		log.Error("CreateUser Failed. ID provided.")
 		return nil, http.StatusBadRequest
 	}
 

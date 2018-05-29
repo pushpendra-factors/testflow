@@ -18,12 +18,20 @@ type EventName struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-func CreateEventName(eventName *EventName) (*EventName, int) {
+func CreateOrGetEventName(eventName *EventName) (*EventName, int) {
 	db := C.GetServices().Db
 
-	log.WithFields(log.Fields{"eventName": &eventName}).Info("Creating event name")
+	log.WithFields(log.Fields{"eventName": &eventName}).Info("Create or get event_name")
 
-	if err := db.Create(eventName).Error; err != nil {
+	if err := db.FirstOrInit(&eventName).Error; err != nil {
+		log.WithFields(log.Fields{"eventName": &eventName, "error": err}).Error("CreateEventName Failed")
+		return nil, http.StatusInternalServerError
+	}
+
+	if !eventName.CreatedAt.IsZero() {
+		log.WithFields(log.Fields{"eventName": &eventName}).Info("Event Name already exists.")
+		return eventName, http.StatusConflict
+	} else if err := db.Create(eventName).Error; err != nil {
 		log.WithFields(log.Fields{"eventName": &eventName, "error": err}).Error("CreateEventName Failed")
 		return nil, http.StatusInternalServerError
 	} else {
@@ -34,6 +42,7 @@ func CreateEventName(eventName *EventName) (*EventName, int) {
 func GetEventName(name string, projectId uint64) (*EventName, int) {
 	// Input Validation. (ID is to be auto generated)
 	if name == "" || projectId == 0 {
+		log.Error("GetEventName Failed. Missing name or projectId")
 		return nil, http.StatusBadRequest
 	}
 

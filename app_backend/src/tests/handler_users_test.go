@@ -138,6 +138,37 @@ func TestAPICreateUserEmptyAndWithAttributes(t *testing.T) {
 	assert.Equal(t, 6, len(jsonResponseMap))
 }
 
+func TestAPICreateUserWithCreatedTime(t *testing.T) {
+	// Initialize routes and dependent data.
+	r := gin.Default()
+	H.InitRoutes(r)
+	projectId, err := SetupProject()
+	assert.Nil(t, err)
+	customerUserId := "murthy@autometa"
+
+	// Test CreateUser.
+	w := httptest.NewRecorder()
+	timeStr := "2016-06-11T15:40:38.477168Z"
+
+	var reqBodyStr = []byte(fmt.Sprintf(`{ "c_uid": "%s", "created_at": "%s", "updated_at": "%s"}`,
+		customerUserId, timeStr, timeStr))
+	req, _ := http.NewRequest("POST", fmt.Sprintf("/projects/%d/users", projectId),
+		bytes.NewBuffer(reqBodyStr))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusCreated, w.Code)
+	jsonResponse, _ := ioutil.ReadAll(w.Body)
+	var jsonResponseMap map[string]interface{}
+	json.Unmarshal(jsonResponse, &jsonResponseMap)
+	assert.NotEqual(t, 0, len(jsonResponseMap["id"].(string)))
+	assert.Equal(t, float64(projectId), jsonResponseMap["project_id"].(float64))
+	assert.Equal(t, customerUserId, jsonResponseMap["c_uid"].(string))
+	assert.Equal(t, timeStr, jsonResponseMap["created_at"].(string))
+	assert.Equal(t, timeStr, jsonResponseMap["updated_at"].(string))
+	assert.Nil(t, jsonResponseMap["properties"])
+	assert.Equal(t, 6, len(jsonResponseMap))
+}
+
 func TestAPICreateUserBadRequest(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()

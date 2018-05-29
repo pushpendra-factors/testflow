@@ -32,7 +32,7 @@ func SetupProjectUserEventName() (uint64, string, string, error) {
 	if err_code != M.DB_SUCCESS {
 		return projectId, userId, eventName, fmt.Errorf("User Creation failed.")
 	}
-	en, err_code := M.CreateEventName(&M.EventName{ProjectId: project.ID, Name: "login"})
+	en, err_code := M.CreateOrGetEventName(&M.EventName{ProjectId: project.ID, Name: "login"})
 	if err_code != M.DB_SUCCESS {
 		return projectId, userId, eventName, fmt.Errorf("EventName Creation failed.")
 	}
@@ -141,6 +141,37 @@ func TestAPICreateEventWithAttributes(t *testing.T) {
 	assert.Equal(t, 7, len(jsonResponseMap))
 }
 
+func TestAPICreateEventNonExistentEventName(t *testing.T) {
+	// Initialize routes and dependent data.
+	r := gin.Default()
+	H.InitRoutes(r)
+	projectId, userId, _, err := SetupProjectUserEventName()
+	assert.Nil(t, err)
+
+	// Test CreateEvent nonexistent eventName.
+	w := httptest.NewRecorder()
+	randomEventName := "random1234"
+	reqBodyStr := []byte(fmt.Sprintf(`{"event_name": "%s"}`, randomEventName))
+	req, _ := http.NewRequest("POST", fmt.Sprintf("/projects/%d/users/%s/events", projectId, userId),
+		bytes.NewBuffer(reqBodyStr))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+	// Creates a corresponding eventName on the fly and returns created.
+	assert.Equal(t, http.StatusCreated, w.Code)
+	jsonResponse, _ := ioutil.ReadAll(w.Body)
+	var jsonResponseMap map[string]interface{}
+	json.Unmarshal(jsonResponse, &jsonResponseMap)
+	assert.NotEqual(t, 0, len(jsonResponseMap["id"].(string)))
+	assert.Equal(t, float64(projectId), jsonResponseMap["project_id"].(float64))
+	assert.Equal(t, userId, jsonResponseMap["user_id"].(string))
+	assert.Equal(t, randomEventName, jsonResponseMap["event_name"].(string))
+	assert.Nil(t, jsonResponseMap["properties"])
+	assert.NotNil(t, jsonResponseMap["created_at"].(string))
+	assert.NotNil(t, jsonResponseMap["updated_at"].(string))
+	assert.Equal(t, jsonResponseMap["created_at"].(string), jsonResponseMap["updated_at"].(string))
+	assert.Equal(t, 7, len(jsonResponseMap))
+}
+
 func TestAPICreateEventBadRequest(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
@@ -207,17 +238,6 @@ func TestAPICreateEventBadRequest(t *testing.T) {
 	w = httptest.NewRecorder()
 	reqBodyStr = []byte(fmt.Sprintf(`{ "event_name": "%s"}`, eventName))
 	req, _ = http.NewRequest("POST", fmt.Sprintf("/projects/%d/users/random123/events", projectId),
-		bytes.NewBuffer(reqBodyStr))
-	req.Header.Set("Content-Type", "application/json")
-	r.ServeHTTP(w, req)
-	assert.Equal(t, http.StatusInternalServerError, w.Code)
-	jsonResponse, _ = ioutil.ReadAll(w.Body)
-	assert.Equal(t, []byte{}, jsonResponse)
-
-	// Test CreateEvent invalid eventName.
-	w = httptest.NewRecorder()
-	reqBodyStr = []byte(`{"event_name": "random1234"}`)
-	req, _ = http.NewRequest("POST", fmt.Sprintf("/projects/%d/users/%s/events", projectId, userId),
 		bytes.NewBuffer(reqBodyStr))
 	req.Header.Set("Content-Type", "application/json")
 	r.ServeHTTP(w, req)

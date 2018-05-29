@@ -31,6 +31,7 @@ func CreateProject(project *Project) (*Project, int) {
 
 	// Input Validation. (ID is to be auto generated)
 	if project.ID > 0 {
+		log.Error("CreateProject Failed. ProjectId provided.")
 		return nil, http.StatusBadRequest
 	}
 

@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	log "github.com/sirupsen/logrus"
 )
 
 // Test command.
@@ -16,6 +17,7 @@ func CreateUserHandler(c *gin.Context) {
 
 	projectId, err := strconv.ParseUint(c.Params.ByName("project_id"), 10, 64)
 	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("CreateUser Failed. ProjectId parse failed.")
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
@@ -24,6 +26,7 @@ func CreateUserHandler(c *gin.Context) {
 	err = json.NewDecoder(r.Body).Decode(&user)
 	user.ProjectId = projectId
 	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("CreateUser Failed. Json Decoding failed.")
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error":  "json decoding : " + err.Error(),
 			"status": http.StatusBadRequest,
@@ -45,12 +48,14 @@ func CreateUserHandler(c *gin.Context) {
 func GetUserHandler(c *gin.Context) {
 	projectId, err := strconv.ParseUint(c.Params.ByName("project_id"), 10, 64)
 	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("GetUser Failed. ProjectId parse failed.")
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
 
 	id := c.Params.ByName("user_id")
 	if id == "" {
+		log.WithFields(log.Fields{"error": err}).Error("GetUser Failed. Missing id.")
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
@@ -80,6 +85,7 @@ func GetUsersHandler(c *gin.Context) {
 	if offsets != nil {
 		offsetStr := offsets[0]
 		if offsetParse, err := strconv.ParseUint(offsetStr, 10, 64); err != nil {
+			log.WithFields(log.Fields{"error": err}).Error("GetUsers Failed. Offset parse failed.")
 			c.AbortWithStatus(http.StatusBadRequest)
 			return
 		} else {
@@ -92,6 +98,7 @@ func GetUsersHandler(c *gin.Context) {
 	if limits != nil {
 		limitStr := limits[0]
 		if limitParse, err := strconv.ParseUint(limitStr, 10, 64); err != nil {
+			log.WithFields(log.Fields{"error": err}).Error("GetUsers Failed. Limit parse failed.")
 			c.AbortWithStatus(http.StatusBadRequest)
 			return
 		} else {
