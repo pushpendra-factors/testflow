@@ -36,7 +36,15 @@ func getUserId(clientUserId string, eventMap map[string]interface{}) (string, er
 	userId, found := clientUserIdToUserIdMap[clientUserId]
 	if !found {
 		// Create a user.
-		userCreatedTime, _ := eventMap[clientUserCreationTimeKey].(string)
+		var userCreatedTime string
+		userCreatedTimeData, found := eventMap[clientUserCreationTimeKey]
+		if userCreatedTimeData != nil && found {
+			userCreatedTime = userCreatedTimeData.(string)
+		} else {
+			// If user created time is absent use eventCreatedTime.
+			userCreatedTime, _ = eventMap[eventCreationTimeKey].(string)
+		}
+		userCreatedTime = strings.Replace(userCreatedTime, " ", "T", -1)
 		userCreatedTime = strings.Replace(userCreatedTime, " ", "T", -1)
 		userCreatedTime = fmt.Sprintf("%sZ", userCreatedTime)
 
