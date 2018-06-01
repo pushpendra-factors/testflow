@@ -2,7 +2,7 @@ package main
 
 // Example usage on Terminal.
 // export GOPATH=/Users/aravindmurthy/code/autometa/app_backend/
-// go run db_delete.go
+// go run run_db_delete.go
 
 import (
 	C "config"

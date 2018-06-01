@@ -2,7 +2,7 @@ package main
 
 // Example usage on Terminal. Process 24 hours of events ending at end time.
 // export GOPATH=/Users/aravindmurthy/code/autometa/app_backend/
-// go run pull_and_segment_events.go --project_id=1 --end_time=""--output_dir=""
+// go run run_pull_and_segment_events.go --project_id=1 --end_time=""--output_dir=""
 
 import (
 	C "config"
