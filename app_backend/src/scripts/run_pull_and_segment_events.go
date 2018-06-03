@@ -79,10 +79,6 @@ func pullAndSegmentEvents(baseOutputDir string) {
 
 func setupOutputDirectory() (string, error) {
 	dirName := fmt.Sprintf("meta-%d-%d-%d", *projectIdFlag, startTime.Unix(), endTime.Unix())
-	/*absDirPath, err := filepath.Abs(*outputDirFlag)
-	if err != nil {
-		return "", err
-	}*/
 	outputDirectory := filepath.Join(*outputDirFlag, dirName)
 	err := os.Mkdir(outputDirectory, 0777)
 	return outputDirectory, err
@@ -116,7 +112,4 @@ func main() {
 	}
 
 	pullAndSegmentEvents(baseOutputDir)
-
-	db := C.GetServices().Db
-	defer db.Close()
 }
