@@ -55,3 +55,14 @@ func GetEventName(name string, projectId uint64) (*EventName, int) {
 		return &eventName, DB_SUCCESS
 	}
 }
+
+func GetEventNames(projectId uint64) ([]EventName, int) {
+	db := C.GetServices().Db
+
+	var eventNames []EventName
+	if err := db.Where("project_id = ?", projectId).Find(&eventNames).Error; err != nil {
+		return nil, 404
+	} else {
+		return eventNames, DB_SUCCESS
+	}
+}

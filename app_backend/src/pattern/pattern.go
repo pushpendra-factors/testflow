@@ -5,6 +5,7 @@ import (
 	"time"
 
 	Hist "github.com/VividCortex/gohistogram"
+	log "github.com/sirupsen/logrus"
 )
 
 type Pattern struct {
@@ -96,7 +97,9 @@ func (p *Pattern) CountForEvent(eventName string, eventCreatedTime time.Time, us
 	}
 
 	if userId != p.currentUserId || !p.currentUserCreatedTime.Equal(userCreatedTime) {
-		return fmt.Errorf("Mismatch in User data.")
+		return fmt.Errorf(
+			fmt.Sprintf("Mismatch in User data. userId: %s, userCreatedTime: %v, pattern userId: %s, pattern userCreatedTime: %v",
+				userId, userCreatedTime, p.currentUserId, p.currentUserCreatedTime))
 	}
 
 	p.EventCount += 1
@@ -126,12 +129,18 @@ func (p *Pattern) CountForEvent(eventName string, eventCreatedTime time.Time, us
 			for i := 0; i < pLen; i++ {
 				if i == 0 {
 					duration = p.currentEventTimes[0].Sub(userCreatedTime).Seconds()
+					if duration < 0 {
+						// Ignoring this error for now, since there are no DB checks to avoid
+						// these user input values.
+						log.Error(fmt.Sprintf("Event occurs before creation for user:%s", p.currentUserId))
+					}
 				} else {
 					duration = p.currentEventTimes[i].Sub(p.currentEventTimes[i-1]).Seconds()
+					if duration < 0 {
+						return fmt.Errorf("Event Timings not in order")
+					}
 				}
-				if duration < 0 {
-					return fmt.Errorf("Event Timings not in order")
-				}
+
 				p.Timings[i].Add(duration)
 			}
 
