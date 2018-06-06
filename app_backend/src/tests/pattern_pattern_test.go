@@ -12,7 +12,7 @@ func TestPatternCountEvents(t *testing.T) {
 	// Count A -> B -> C
 	// U1: F, G, A, L, B, A, B, C   (A(1) -> B(2) -> C(1):1)
 	// U2: F, A, A, K, B, Z, C, A, B, C  (A(2,1) -> B (1, 1) -> C(1, 1)
-	// Count:3, OncePerUserCount:2, EventCount: 18, UserCount:2
+	// Count:3, OncePerUserCount:2, UserCount:2
 	pEvents := []string{"A", "B", "C"}
 	p, err := P.NewPattern(pEvents)
 	assert.Nil(t, err)
@@ -22,7 +22,6 @@ func TestPatternCountEvents(t *testing.T) {
 	assert.Equal(t, pLen, len(p.Timings))
 	assert.Equal(t, pLen, len(p.Repeats))
 	assert.Equal(t, uint(0), p.Count)
-	assert.Equal(t, uint(0), p.EventCount)
 	assert.Equal(t, uint(0), p.UserCount)
 	assert.Equal(t, uint(0), p.OncePerUserCount)
 	// User 1 events.
@@ -33,7 +32,7 @@ func TestPatternCountEvents(t *testing.T) {
 	nextEventCreatedTime, _ := time.Parse(time.RFC3339, "2017-06-01T01:00:00Z")
 	events := []string{"F", "G", "A", "L", "B", "A", "B", "C"}
 	for _, event := range events {
-		err = p.CountForEvent(event, nextEventCreatedTime, userId, userCreatedTime)
+		_, err = p.CountForEvent(event, nextEventCreatedTime, userId, userCreatedTime)
 		assert.Nil(t, err)
 		nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
 	}
@@ -45,13 +44,12 @@ func TestPatternCountEvents(t *testing.T) {
 	nextEventCreatedTime, _ = time.Parse(time.RFC3339, "2017-06-01T01:01:00Z")
 	events = []string{"F", "A", "A", "K", "B", "Z", "C", "A", "B", "C"}
 	for _, event := range events {
-		err = p.CountForEvent(event, nextEventCreatedTime, userId, userCreatedTime)
+		_, err = p.CountForEvent(event, nextEventCreatedTime, userId, userCreatedTime)
 		assert.Nil(t, err)
 		nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
 	}
 
 	assert.Equal(t, uint(3), p.Count)
-	assert.Equal(t, uint(18), p.EventCount)
 	assert.Equal(t, uint(2), p.UserCount)
 	assert.Equal(t, uint(2), p.OncePerUserCount)
 	assert.Equal(t, pLen, len(p.EventNames))
@@ -101,7 +99,6 @@ func TestPatternEdgeConditions(t *testing.T) {
 	assert.Equal(t, pLen, len(p.Timings))
 	assert.Equal(t, pLen, len(p.Repeats))
 	assert.Equal(t, uint(0), p.Count)
-	assert.Equal(t, uint(0), p.EventCount)
 	assert.Equal(t, uint(0), p.UserCount)
 	assert.Equal(t, uint(0), p.OncePerUserCount)
 
@@ -120,7 +117,7 @@ func TestPatternEdgeConditions(t *testing.T) {
 	assert.Nil(t, err)
 	userCreatedTime, _ = time.Parse(time.RFC3339, "2017-06-01T00:00:00Z")
 	eventCreatedTime, _ := time.Parse(time.RFC3339, "2017-06-01T01:00:00Z")
-	err = p.CountForEvent("J", eventCreatedTime, "user1", userCreatedTime)
+	_, err = p.CountForEvent("J", eventCreatedTime, "user1", userCreatedTime)
 	assert.NotNil(t, err)
 
 	// Test Count Event, with wrong userId or wrong userCreatedTime.
@@ -130,13 +127,13 @@ func TestPatternEdgeConditions(t *testing.T) {
 	eventCreatedTime, _ = time.Parse(time.RFC3339, "2017-06-01T01:00:00Z")
 	err = p.ResetForNewUser("user1", userCreatedTime)
 	assert.Nil(t, err)
-	err = p.CountForEvent("J", eventCreatedTime, "user1", userCreatedTime)
+	_, err = p.CountForEvent("J", eventCreatedTime, "user1", userCreatedTime)
 	assert.Nil(t, err)
 	// Wrong userId.
-	err = p.CountForEvent("J", eventCreatedTime, "user2", userCreatedTime)
+	_, err = p.CountForEvent("J", eventCreatedTime, "user2", userCreatedTime)
 	assert.NotNil(t, err)
 	// Wrong userCreatedTime
-	err = p.CountForEvent("J", eventCreatedTime, "user1", eventCreatedTime)
+	_, err = p.CountForEvent("J", eventCreatedTime, "user1", eventCreatedTime)
 	assert.NotNil(t, err)
 
 	// Test Events out of order. Out of order events are noticed only when
@@ -152,9 +149,9 @@ func TestPatternEdgeConditions(t *testing.T) {
 	event2CreatedTime, _ := time.Parse(time.RFC3339, "2017-06-01T01:00:00Z")
 	err = p.ResetForNewUser(userId, userCreatedTime)
 	assert.Nil(t, err)
-	err = p.CountForEvent("A", event1CreatedTime, userId, userCreatedTime)
+	_, err = p.CountForEvent("A", event1CreatedTime, userId, userCreatedTime)
 	assert.Nil(t, err)
-	err = p.CountForEvent("B", event2CreatedTime, userId, userCreatedTime)
+	_, err = p.CountForEvent("B", event2CreatedTime, userId, userCreatedTime)
 	assert.NotNil(t, err)*/
 
 	// Event2 and Event1 are out of order.
@@ -164,8 +161,8 @@ func TestPatternEdgeConditions(t *testing.T) {
 	event2CreatedTime, _ := time.Parse(time.RFC3339, "2017-06-01T00:59:59Z")
 	err = p.ResetForNewUser(userId, userCreatedTime)
 	assert.Nil(t, err)
-	err = p.CountForEvent("A", event1CreatedTime, userId, userCreatedTime)
+	_, err = p.CountForEvent("A", event1CreatedTime, userId, userCreatedTime)
 	assert.Nil(t, err)
-	err = p.CountForEvent("B", event2CreatedTime, userId, userCreatedTime)
+	_, err = p.CountForEvent("B", event2CreatedTime, userId, userCreatedTime)
 	assert.NotNil(t, err)
 }

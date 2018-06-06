@@ -20,8 +20,6 @@ type Pattern struct {
 	OncePerUserCount uint
 	// Number of users the pattern was counted on.
 	UserCount uint
-	// Number of events the pattern was counted on.
-	EventCount uint
 
 	// Private variables.
 	waitIndex                  int
@@ -51,7 +49,6 @@ func NewPattern(events []string) (*Pattern, error) {
 		Repeats:                    make([]Hist.NumericHistogram, pLen),
 		Count:                      0,
 		OncePerUserCount:           0,
-		EventCount:                 0,
 		waitIndex:                  0,
 		currentUserId:              "",
 		currentUserCreatedTime:     time.Time{},
@@ -104,18 +101,16 @@ func (p *Pattern) ResetForNewUser(userId string, userCreatedTime time.Time) erro
 // [U3: E1(T12) -> E5(T13)].
 // Further the distribution of timestamps, event properties and number of occurrences
 // are stored with the patterns.
-func (p *Pattern) CountForEvent(eventName string, eventCreatedTime time.Time, userId string, userCreatedTime time.Time) error {
+func (p *Pattern) CountForEvent(eventName string, eventCreatedTime time.Time, userId string, userCreatedTime time.Time) (string, error) {
 	if eventName == "" || eventCreatedTime.Equal(time.Time{}) {
-		return fmt.Errorf("Missing eventId or eventCreatedTime.")
+		return "", fmt.Errorf("Missing eventId or eventCreatedTime.")
 	}
 
 	if userId != p.currentUserId || !p.currentUserCreatedTime.Equal(userCreatedTime) {
-		return fmt.Errorf(
+		return "", fmt.Errorf(
 			fmt.Sprintf("Mismatch in User data. userId: %s, userCreatedTime: %v, pattern userId: %s, pattern userCreatedTime: %v",
 				userId, userCreatedTime, p.currentUserId, p.currentUserCreatedTime))
 	}
-
-	p.EventCount += 1
 
 	if p.waitIndex > 0 && eventName == p.EventNames[p.waitIndex-1] {
 		// Repeats count the number of times the current event has occurred
@@ -150,7 +145,7 @@ func (p *Pattern) CountForEvent(eventName string, eventCreatedTime time.Time, us
 				} else {
 					duration = p.currentEventTimes[i].Sub(p.currentEventTimes[i-1]).Seconds()
 					if duration < 0 {
-						return fmt.Errorf("Event Timings not in order")
+						return "", fmt.Errorf("Event Timings not in order")
 					}
 				}
 				p.Timings[i].Add(duration)
@@ -167,7 +162,7 @@ func (p *Pattern) CountForEvent(eventName string, eventCreatedTime time.Time, us
 			p.waitIndex = 0
 		}
 	}
-	return nil
+	return p.EventNames[p.waitIndex], nil
 }
 
 func (p *Pattern) String() string {

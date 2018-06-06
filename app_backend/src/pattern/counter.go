@@ -98,6 +98,16 @@ func CountPatterns(scanner *bufio.Scanner, patterns []*Pattern) error {
 	var seenUsers map[string]bool = make(map[string]bool)
 
 	numEventsProcessed := 0
+	waitingOnPatternsMap := make(map[string][]*Pattern)
+	// Initialize.
+	for _, p := range patterns {
+		waitEvent := p.EventNames[0]
+		if _, ok := waitingOnPatternsMap[waitEvent]; !ok {
+			waitingOnPatternsMap[waitEvent] = []*Pattern{}
+		}
+		waitingOnPatternsMap[waitEvent] = append(waitingOnPatternsMap[waitEvent], p)
+	}
+
 	for scanner.Scan() {
 		line := scanner.Text()
 		splits := strings.Split(line, ",")
@@ -123,9 +133,16 @@ func CountPatterns(scanner *bufio.Scanner, patterns []*Pattern) error {
 					log.Fatal(err)
 				}
 			}
-			if err = p.CountForEvent(eventName, eventCreatedTime, userId, userCreatedTime); err != nil {
+		}
+
+		waitPatterns := waitingOnPatternsMap[eventName]
+		waitingOnPatternsMap[eventName] = []*Pattern{}
+		for _, p := range waitPatterns {
+			var waitingOnEvent string
+			if waitingOnEvent, err = p.CountForEvent(eventName, eventCreatedTime, userId, userCreatedTime); err != nil || waitingOnEvent == "" {
 				log.Error(err)
 			}
+			waitingOnPatternsMap[waitingOnEvent] = append(waitingOnPatternsMap[waitingOnEvent], p)
 		}
 		seenUsers[userId] = true
 	}
