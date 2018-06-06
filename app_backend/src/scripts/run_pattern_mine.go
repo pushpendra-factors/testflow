@@ -9,6 +9,7 @@ package main
 import (
 	"bufio"
 	C "config"
+	"encoding/json"
 	"flag"
 	"fmt"
 	M "model"
@@ -196,6 +197,12 @@ func printFilteredPatterns(filteredPatterns []*P.Pattern, iter int) {
 	for _, p := range filteredPatterns {
 		pnum++
 		fmt.Println(fmt.Sprintf("%d) %v      (%d)", pnum, p.EventNames, p.Count))
+		b, err := json.Marshal(p)
+		if err == nil {
+			fmt.Println(string(b))
+		} else {
+			panic(err)
+		}
 	}
 	fmt.Println("----------------------------------")
 }
