@@ -2,10 +2,10 @@ package pattern
 
 import (
 	"fmt"
+	Hist "gohistogram"
 	"strings"
 	"time"
 
-	Hist "github.com/VividCortex/gohistogram"
 	log "github.com/sirupsen/logrus"
 )
 
