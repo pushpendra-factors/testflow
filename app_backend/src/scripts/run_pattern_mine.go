@@ -28,7 +28,7 @@ var inputFileFlag = flag.String("input_file", "",
 // The amount of data and the time computed to generate this data is bounded
 // by these constants.
 const max_SEGMENTS = 100000
-const top_K = 20
+const top_K = 5
 
 func countPatterns(filepath string, patterns []*P.Pattern) {
 	file, err := os.Open(filepath)
