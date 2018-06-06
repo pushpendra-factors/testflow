@@ -99,6 +99,7 @@ func CountPatterns(scanner *bufio.Scanner, patterns []*Pattern) error {
 
 	numEventsProcessed := 0
 	waitingOnPatternsMap := make(map[string][]*Pattern)
+	prevSeenEventMap := make(map[*Pattern]string)
 	// Initialize.
 	for _, p := range patterns {
 		waitEvent := p.EventNames[0]
@@ -106,6 +107,7 @@ func CountPatterns(scanner *bufio.Scanner, patterns []*Pattern) error {
 			waitingOnPatternsMap[waitEvent] = []*Pattern{}
 		}
 		waitingOnPatternsMap[waitEvent] = append(waitingOnPatternsMap[waitEvent], p)
+		prevSeenEventMap[p] = ""
 	}
 
 	for scanner.Scan() {
@@ -127,15 +129,25 @@ func CountPatterns(scanner *bufio.Scanner, patterns []*Pattern) error {
 		}
 
 		_, isSeenUser := seenUsers[userId]
-		for _, p := range patterns {
-			if !isSeenUser {
+		if !isSeenUser {
+			for _, p := range patterns {
 				if err = p.ResetForNewUser(userId, userCreatedTime); err != nil {
 					log.Fatal(err)
 				}
 			}
 		}
 
-		waitPatterns := waitingOnPatternsMap[eventName]
+		// Count Repeats.
+		for _, p := range patterns {
+			prevEvent, _ := prevSeenEventMap[p]
+			if strings.Compare(prevEvent, eventName) == 0 {
+				if _, err = p.CountForEvent(eventName, eventCreatedTime, userId, userCreatedTime); err != nil {
+					log.Error(err)
+				}
+			}
+		}
+
+		waitPatterns, _ := waitingOnPatternsMap[eventName]
 		waitingOnPatternsMap[eventName] = []*Pattern{}
 		for _, p := range waitPatterns {
 			var waitingOnEvent string
@@ -143,6 +155,7 @@ func CountPatterns(scanner *bufio.Scanner, patterns []*Pattern) error {
 				log.Error(err)
 			}
 			waitingOnPatternsMap[waitingOnEvent] = append(waitingOnPatternsMap[waitingOnEvent], p)
+			prevSeenEventMap[p] = eventName
 		}
 		seenUsers[userId] = true
 	}
