@@ -57,4 +57,4 @@ func TestGenCandidatesPair(t *testing.T) {
 	assert.Equal(t, []string{"A", "C", "B", "D"}, c2.EventNames)
 }
 
-// TODO: Add tests for GenCandidates.
+// TODO: Add tests for GenCandidates and GenLenThreeCandidatePattern.

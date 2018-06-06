@@ -2,6 +2,7 @@ package pattern
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	Hist "github.com/VividCortex/gohistogram"
@@ -91,6 +92,18 @@ func (p *Pattern) ResetForNewUser(userId string, userCreatedTime time.Time) erro
 	return nil
 }
 
+// If data is visualized in below format, where U(.) are users, E(.) are events,
+// T(.) are timestamps.
+
+// U1: E1(T1), E4(T2), E1(T3), E5(T4), E1(T5), E5(T6)
+// U2: E3(T7), E4(T8), E5(T9), E1(T10)
+// U3: E2(T11), E1(T12), E5(T13)
+
+// The frequency of the event E1 -> E5 is 3 - twice non overlapping
+// in U1 and once in U3 - i.e. [U1: E1(T1) -> E5(T4)] [U1: E1(T5) -> E5(T6)] and
+// [U3: E1(T12) -> E5(T13)].
+// Further the distribution of timestamps, event properties and number of occurrences
+// are stored with the patterns.
 func (p *Pattern) CountForEvent(eventName string, eventCreatedTime time.Time, userId string, userCreatedTime time.Time) error {
 	if eventName == "" || eventCreatedTime.Equal(time.Time{}) {
 		return fmt.Errorf("Missing eventId or eventCreatedTime.")
@@ -140,7 +153,6 @@ func (p *Pattern) CountForEvent(eventName string, eventCreatedTime time.Time, us
 						return fmt.Errorf("Event Timings not in order")
 					}
 				}
-
 				p.Timings[i].Add(duration)
 			}
 
@@ -155,6 +167,9 @@ func (p *Pattern) CountForEvent(eventName string, eventCreatedTime time.Time, us
 			p.waitIndex = 0
 		}
 	}
-
 	return nil
+}
+
+func (p *Pattern) String() string {
+	return strings.Join(p.EventNames, ",")
 }
