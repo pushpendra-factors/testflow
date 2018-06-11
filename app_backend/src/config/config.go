@@ -1,11 +1,14 @@
 package config
 
 import (
+	"bufio"
 	json "encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path/filepath"
+	P "pattern"
 
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
@@ -18,16 +21,18 @@ var initiated bool = false
 const DEVELOPMENT = "development"
 
 type Configuration struct {
-	Env        string `json:"env"`
-	Port       int    `json:"port"`
-	DbHost     string `json:"db_host"`
-	DbPort     int    `json:"db_port"`
-	DbUser     string `json:"db_user"`
-	DbName     string `json:"db_name"`
-	DbPassword string `json:"db_password"`
+	Env          string `json:"env"`
+	Port         int    `json:"port"`
+	DbHost       string `json:"db_host"`
+	DbPort       int    `json:"db_port"`
+	DbUser       string `json:"db_user"`
+	DbName       string `json:"db_name"`
+	DbPassword   string `json:"db_password"`
+	PatternsFile string `json:"patterns_file"`
 }
 type Services struct {
-	Db *gorm.DB
+	Db             *gorm.DB
+	PatternService *P.PatternService
 }
 
 var configuration *Configuration = nil
@@ -80,7 +85,30 @@ func initServices() error {
 	}
 	log.Info("Db Service initialized")
 
-	services = &Services{Db: db}
+	patternsFileAbsPath, _ := filepath.Abs(configuration.PatternsFile)
+	file, err := os.Open(patternsFileAbsPath)
+	if err != nil {
+		log.WithFields(log.Fields{"file": patternsFileAbsPath}).Error("Failed to load patterns")
+		return err
+	}
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
+	patterns := []*P.Pattern{}
+	for scanner.Scan() {
+		line := scanner.Text()
+		var pattern P.Pattern
+		if err := json.Unmarshal([]byte(line), &pattern); err != nil {
+			log.WithFields(log.Fields{"file": patternsFileAbsPath, "line": line}).Error("Failed to unmarshal pattern.")
+			return err
+		}
+		patterns = append(patterns, &pattern)
+	}
+	patternService, err := P.NewPatternService(patterns)
+	if err != nil {
+		log.WithFields(log.Fields{"file": patternsFileAbsPath}).Error("Failed to load patterns")
+	}
+
+	services = &Services{Db: db, PatternService: patternService}
 	return nil
 }
 

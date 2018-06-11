@@ -11,4 +11,5 @@ func InitRoutes(r *gin.Engine) {
 	r.POST("/projects/:project_id/users", CreateUserHandler)
 	r.GET("/projects/:project_id/users/:user_id", GetUserHandler)
 	r.GET("/projects/:project_id/users", GetUsersHandler)
+	r.GET("/projects/:project_id/patterns", QueryPatternsHandler)
 }
