@@ -4,11 +4,12 @@ package main
 
 // Sample usage in terminal.
 // export GOPATH=/Users/aravindmurthy/code/autometa/app_backend/
-// go run run_pattern_mine.go --project_id=1 --input_file=""
+// go run run_pattern_mine.go --project_id=1 --input_file="" --output_file=""
 
 import (
 	"bufio"
 	C "config"
+	"encoding/json"
 	"flag"
 	"fmt"
 	M "model"
@@ -23,6 +24,7 @@ import (
 var projectIdFlag = flag.Int("project_id", 0, "Project Id.")
 var inputFileFlag = flag.String("input_file", "",
 	"Input file of format user_id,user_creation_time,event_id,event_creation_time sorted by user_id and event_creation_time")
+var outputFileFlag = flag.String("output_file", "", "All patterns written to file with each line a JSON")
 
 // The number of patterns generated is bounded to max_SEGMENTS * top_K per iteration.
 // The amount of data and the time computed to generate this data is bounded
@@ -213,14 +215,35 @@ func main() {
 		os.Exit(1)
 	}
 
-	if *projectIdFlag <= 0 || *inputFileFlag == "" {
+	if *projectIdFlag <= 0 || *inputFileFlag == "" || *outputFileFlag == "" {
 		log.Error("project_id and input_file are required.")
 		os.Exit(1)
 	}
 
-	_, err = minePatterns(*projectIdFlag, *inputFileFlag)
+	allCountedPatterns, err := minePatterns(*projectIdFlag, *inputFileFlag)
 	if err != nil {
 		log.Error("Failed to mine patterns.")
 		os.Exit(1)
+	}
+
+	// Write to ouptput file.
+	file, err := os.Create(*outputFileFlag)
+	if err != nil {
+		log.WithFields(log.Fields{"file": *outputFileFlag, "err": err}).Fatal("Unable to create file.")
+		os.Exit(1)
+	}
+	defer file.Close()
+	for _, patterns := range allCountedPatterns {
+		for _, pattern := range patterns {
+			b, err := json.Marshal(pattern)
+			if err != nil {
+				log.WithFields(log.Fields{"err": err}).Fatal("Unable to unmarshal pattern.")
+			}
+			pString := string(b)
+			if _, err := file.WriteString(fmt.Sprintf("%s\n", pString)); err != nil {
+				log.WithFields(log.Fields{"line": pString, "err": err}).Fatal("Unable to write to file.")
+				os.Exit(1)
+			}
+		}
 	}
 }
