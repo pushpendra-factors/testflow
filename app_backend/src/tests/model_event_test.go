@@ -25,6 +25,7 @@ func TestDBCreateAndGetEvent(t *testing.T) {
 	assert.True(t, len(event.ID) > 30)
 	assert.Equal(t, projectId, event.ProjectId)
 	assert.Equal(t, eventName, event.EventName)
+	assert.Equal(t, uint64(1), event.Count)
 	assert.True(t, event.CreatedAt.After(start))
 	assert.True(t, event.UpdatedAt.After(start))
 	assert.Equal(t, event.CreatedAt, event.UpdatedAt)
@@ -48,6 +49,17 @@ func TestDBCreateAndGetEvent(t *testing.T) {
 	retEvent, errCode = M.GetEvent(projectId, "randomId", event.ID)
 	assert.Equal(t, http.StatusNotFound, errCode)
 	assert.Nil(t, retEvent)
+	// Test successful CreateEvent with count increment
+	event, errCode = M.CreateEvent(&M.Event{EventName: eventName, ProjectId: projectId, UserId: userId})
+	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.True(t, len(event.ID) > 30)
+	assert.Equal(t, projectId, event.ProjectId)
+	assert.Equal(t, eventName, event.EventName)
+	assert.Equal(t, uint64(2), event.Count)
+	assert.True(t, event.CreatedAt.After(start))
+	assert.True(t, event.UpdatedAt.After(start))
+	assert.Equal(t, event.CreatedAt, event.UpdatedAt)
+	assert.Equal(t, postgres.Jsonb{RawMessage: json.RawMessage(nil)}, event.Properties)
 
 	// Test Get Event on non existent id.
 	retEvent, errCode = M.GetEvent(projectId, userId, "random_id")

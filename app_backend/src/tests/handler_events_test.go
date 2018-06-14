@@ -64,11 +64,12 @@ func TestAPICreateAndGetEvent(t *testing.T) {
 	assert.Equal(t, float64(projectId), jsonResponseMap["project_id"].(float64))
 	assert.Equal(t, userId, jsonResponseMap["user_id"].(string))
 	assert.Equal(t, eventName, jsonResponseMap["event_name"].(string))
+	assert.Equal(t, 1.0, jsonResponseMap["count"].(float64))
 	assert.Nil(t, jsonResponseMap["properties"])
 	assert.NotNil(t, jsonResponseMap["created_at"].(string))
 	assert.NotNil(t, jsonResponseMap["updated_at"].(string))
 	assert.Equal(t, jsonResponseMap["created_at"].(string), jsonResponseMap["updated_at"].(string))
-	assert.Equal(t, 7, len(jsonResponseMap))
+	assert.Equal(t, 8, len(jsonResponseMap))
 
 	// Test GetEvent on the created id.
 	id := jsonResponseMap["id"].(string)
@@ -84,10 +85,33 @@ func TestAPICreateAndGetEvent(t *testing.T) {
 	assert.Equal(t, float64(projectId), jsonResponseMap["project_id"].(float64))
 	assert.Equal(t, userId, jsonResponseMap["user_id"].(string))
 	assert.Equal(t, eventName, jsonResponseMap["event_name"].(string))
+	assert.Equal(t, 1.0, jsonResponseMap["count"].(float64))
 	assert.Nil(t, jsonResponseMap["properties"])
 	assert.NotNil(t, jsonResponseMap["created_at"].(string))
 	assert.NotNil(t, jsonResponseMap["updated_at"].(string))
 	assert.Equal(t, jsonResponseMap["created_at"].(string), jsonResponseMap["updated_at"].(string))
+	assert.Equal(t, 8, len(jsonResponseMap))
+
+	// Test CreateEvent with increment
+	w = httptest.NewRecorder()
+	reqBodyStr = []byte(fmt.Sprintf(`{"event_name": "%s"}`, eventName))
+	req, _ = http.NewRequest("POST", fmt.Sprintf("/projects/%d/users/%s/events", projectId, userId),
+		bytes.NewBuffer(reqBodyStr))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusCreated, w.Code)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	json.Unmarshal(jsonResponse, &jsonResponseMap)
+	assert.NotEqual(t, 0, len(jsonResponseMap["id"].(string)))
+	assert.Equal(t, float64(projectId), jsonResponseMap["project_id"].(float64))
+	assert.Equal(t, userId, jsonResponseMap["user_id"].(string))
+	assert.Equal(t, eventName, jsonResponseMap["event_name"].(string))
+	assert.Equal(t, 2.0, jsonResponseMap["count"].(float64))
+	assert.Nil(t, jsonResponseMap["properties"])
+	assert.NotNil(t, jsonResponseMap["created_at"].(string))
+	assert.NotNil(t, jsonResponseMap["updated_at"].(string))
+	assert.Equal(t, jsonResponseMap["created_at"].(string), jsonResponseMap["updated_at"].(string))
+	assert.Equal(t, 8, len(jsonResponseMap))
 
 	// Test GetEvent on random id.
 	id = "r4nd0m!234"
@@ -130,6 +154,7 @@ func TestAPICreateEventWithAttributes(t *testing.T) {
 	assert.Equal(t, float64(projectId), jsonResponseMap["project_id"].(float64))
 	assert.Equal(t, userId, jsonResponseMap["user_id"].(string))
 	assert.Equal(t, eventName, jsonResponseMap["event_name"].(string))
+	assert.Equal(t, 1.0, jsonResponseMap["count"].(float64))
 	assert.NotNil(t, jsonResponseMap["created_at"].(string))
 	assert.NotNil(t, jsonResponseMap["updated_at"].(string))
 	assert.Equal(t, jsonResponseMap["created_at"].(string), jsonResponseMap["updated_at"].(string))
@@ -138,7 +163,7 @@ func TestAPICreateEventWithAttributes(t *testing.T) {
 	assert.Equal(t, "10.0.0.1", propertiesMap["ip"].(string))
 	assert.Equal(t, true, propertiesMap["mobile"].(bool))
 	assert.Equal(t, 1.0, propertiesMap["code"].(float64))
-	assert.Equal(t, 7, len(jsonResponseMap))
+	assert.Equal(t, 8, len(jsonResponseMap))
 }
 
 func TestAPICreateEventNonExistentEventName(t *testing.T) {
@@ -165,11 +190,12 @@ func TestAPICreateEventNonExistentEventName(t *testing.T) {
 	assert.Equal(t, float64(projectId), jsonResponseMap["project_id"].(float64))
 	assert.Equal(t, userId, jsonResponseMap["user_id"].(string))
 	assert.Equal(t, randomEventName, jsonResponseMap["event_name"].(string))
+	assert.Equal(t, 1.0, jsonResponseMap["count"].(float64))
 	assert.Nil(t, jsonResponseMap["properties"])
 	assert.NotNil(t, jsonResponseMap["created_at"].(string))
 	assert.NotNil(t, jsonResponseMap["updated_at"].(string))
 	assert.Equal(t, jsonResponseMap["created_at"].(string), jsonResponseMap["updated_at"].(string))
-	assert.Equal(t, 7, len(jsonResponseMap))
+	assert.Equal(t, 8, len(jsonResponseMap))
 }
 
 func TestAPICreateEventBadRequest(t *testing.T) {

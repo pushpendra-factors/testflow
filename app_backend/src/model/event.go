@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	_ "github.com/jinzhu/gorm"
+	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
@@ -21,11 +21,22 @@ type Event struct {
 	ProjectId uint64 `gorm:"primary_key:true;" json:"project_id"`
 	UserId    string `json:"user_id"`
 	EventName string `json:"event_name"`
+	Count     uint64 `json:"count"`
 
 	// JsonB of postgres with gorm. https://github.com/jinzhu/gorm/issues/1183
 	Properties postgres.Jsonb `json:"properties,omitempty"`
 	CreatedAt  time.Time      `json:"created_at"`
 	UpdatedAt  time.Time      `json:"updated_at"`
+}
+
+func (event *Event) BeforeCreate(scope *gorm.Scope) error {
+	db := C.GetServices().Db
+	var count uint64
+	db.Model(&Event{}).Where(
+		"project_id = ? AND user_id = ? AND event_name = ?", event.ProjectId, event.UserId, event.EventName).Count(&count)
+
+	event.Count = count + 1
+	return nil
 }
 
 func CreateEvent(event *Event) (*Event, int) {
