@@ -6,6 +6,7 @@ import (
 	"math"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -121,6 +122,10 @@ func CountPatterns(scanner *bufio.Scanner, patterns []*Pattern) error {
 		if err != nil {
 			log.Fatal(err)
 		}
+		eventCardinality, err := strconv.ParseUint(splits[4], 10, 64)
+		if err != nil {
+			log.Fatal(err)
+		}
 
 		numEventsProcessed += 1
 		if math.Mod(float64(numEventsProcessed), 1000.0) == 0.0 {
@@ -140,7 +145,7 @@ func CountPatterns(scanner *bufio.Scanner, patterns []*Pattern) error {
 		prevWaitPattens, ok := prevWaitPatternsMap[eventName]
 		if ok {
 			for _, p := range prevWaitPattens {
-				if _, err = p.CountForEvent(eventName, eventCreatedTime, userId, userCreatedTime); err != nil {
+				if _, err = p.CountForEvent(eventName, eventCreatedTime, uint(eventCardinality), userId, userCreatedTime); err != nil {
 					log.Error(err)
 				}
 			}
@@ -151,7 +156,7 @@ func CountPatterns(scanner *bufio.Scanner, patterns []*Pattern) error {
 		prevWaitPatternsMap[eventName] = waitPatterns
 		for _, p := range waitPatterns {
 			var waitingOnEvent string
-			if waitingOnEvent, err = p.CountForEvent(eventName, eventCreatedTime, userId, userCreatedTime); err != nil || waitingOnEvent == "" {
+			if waitingOnEvent, err = p.CountForEvent(eventName, eventCreatedTime, uint(eventCardinality), userId, userCreatedTime); err != nil || waitingOnEvent == "" {
 				log.Error(err)
 			}
 			waitingOnPatternsMap[waitingOnEvent] = append(waitingOnPatternsMap[waitingOnEvent], p)

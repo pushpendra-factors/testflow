@@ -10,9 +10,10 @@ import (
 )
 
 type Pattern struct {
-	EventNames []string
-	Timings    []Hist.NumericHistogram
-	Repeats    []Hist.NumericHistogram
+	EventNames         []string
+	Timings            []Hist.NumericHistogram
+	EventCardinalities []Hist.NumericHistogram
+	Repeats            []Hist.NumericHistogram
 	// The total number of times this pattern occurs allowing multiple counts
 	// per user.
 	Count uint
@@ -27,10 +28,12 @@ type Pattern struct {
 	currentUserCreatedTime     time.Time
 	currentUserOccurrenceCount uint
 	currentEventTimes          []time.Time
+	currentEventCardinalities  []uint
 	currentRepeats             []uint
 }
 
-const num_T_BINS = 100
+const num_T_BINS = 20
+const num_C_BINS = 10
 const num_R_BINS = 10
 
 func NewPattern(events []string) (*Pattern, error) {
@@ -46,6 +49,7 @@ func NewPattern(events []string) (*Pattern, error) {
 	pattern := Pattern{
 		EventNames:                 events,
 		Timings:                    make([]Hist.NumericHistogram, pLen),
+		EventCardinalities:         make([]Hist.NumericHistogram, pLen),
 		Repeats:                    make([]Hist.NumericHistogram, pLen),
 		Count:                      0,
 		OncePerUserCount:           0,
@@ -54,10 +58,12 @@ func NewPattern(events []string) (*Pattern, error) {
 		currentUserCreatedTime:     time.Time{},
 		currentUserOccurrenceCount: 0,
 		currentEventTimes:          make([]time.Time, pLen),
+		currentEventCardinalities:  make([]uint, pLen),
 		currentRepeats:             make([]uint, pLen),
 	}
 	for i := 0; i < pLen; i++ {
 		pattern.Timings[i] = *Hist.NewHistogram(num_T_BINS)
+		pattern.EventCardinalities[i] = *Hist.NewHistogram(num_C_BINS)
 		pattern.Repeats[i] = *Hist.NewHistogram(num_R_BINS)
 	}
 	return &pattern, nil
@@ -101,7 +107,7 @@ func (p *Pattern) ResetForNewUser(userId string, userCreatedTime time.Time) erro
 // [U3: E1(T12) -> E5(T13)].
 // Further the distribution of timestamps, event properties and number of occurrences
 // are stored with the patterns.
-func (p *Pattern) CountForEvent(eventName string, eventCreatedTime time.Time, userId string, userCreatedTime time.Time) (string, error) {
+func (p *Pattern) CountForEvent(eventName string, eventCreatedTime time.Time, eventCardinality uint, userId string, userCreatedTime time.Time) (string, error) {
 	if eventName == "" || eventCreatedTime.Equal(time.Time{}) {
 		return "", fmt.Errorf("Missing eventId or eventCreatedTime.")
 	}
@@ -119,6 +125,7 @@ func (p *Pattern) CountForEvent(eventName string, eventCreatedTime time.Time, us
 	} else if eventName == p.EventNames[p.waitIndex] {
 		// Record the event occurrence and wait on the next one.
 		p.currentEventTimes[p.waitIndex] = eventCreatedTime
+		p.currentEventCardinalities[p.waitIndex] = eventCardinality
 		p.currentRepeats[p.waitIndex] = 1
 
 		p.waitIndex += 1
@@ -151,13 +158,15 @@ func (p *Pattern) CountForEvent(eventName string, eventCreatedTime time.Time, us
 				p.Timings[i].Add(duration)
 			}
 
-			// Update histograms of repeats.
+			// Update histograms of repeats and Cardinalities.
 			for i := 0; i < pLen; i++ {
+				p.EventCardinalities[i].Add(float64(p.currentEventCardinalities[i]))
 				p.Repeats[i].Add(float64(p.currentRepeats[i]))
 			}
 
 			// Reset.
 			p.currentEventTimes = make([]time.Time, pLen)
+			p.currentEventCardinalities = make([]uint, pLen)
 			p.currentRepeats = make([]uint, pLen)
 			p.waitIndex = 0
 		}
