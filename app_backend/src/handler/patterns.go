@@ -37,6 +37,31 @@ func QueryPatternsHandler(c *gin.Context) {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	} else {
-		c.JSON(http.StatusOK, patterns)
+		type result struct {
+			EventNames         []string
+			Timings            []float64
+			EventCardinalities []float64
+			Repeats            []float64
+			Count              uint
+			OncePerUserCount   uint
+			UserCount          uint
+		}
+		results := []result{}
+		for _, p := range patterns {
+			r := result{EventNames: p.EventNames,
+				Timings:            []float64{},
+				EventCardinalities: []float64{},
+				Repeats:            []float64{},
+				Count:              p.Count,
+				OncePerUserCount:   p.OncePerUserCount,
+				UserCount:          p.UserCount}
+			for i := 0; i < len(p.EventNames); i++ {
+				r.Timings = append(r.Timings, p.Timings[i].Mean())
+				r.Repeats = append(r.Repeats, p.Repeats[i].Mean())
+				r.EventCardinalities = append(r.EventCardinalities, p.EventCardinalities[i].Mean())
+			}
+			results = append(results, r)
+		}
+		c.JSON(http.StatusOK, results)
 	}
 }

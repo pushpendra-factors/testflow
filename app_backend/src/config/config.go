@@ -85,27 +85,30 @@ func initServices() error {
 	}
 	log.Info("Db Service initialized")
 
-	patternsFileAbsPath, _ := filepath.Abs(configuration.PatternsFile)
-	file, err := os.Open(patternsFileAbsPath)
-	if err != nil {
-		log.WithFields(log.Fields{"file": patternsFileAbsPath}).Error("Failed to load patterns")
-		return err
-	}
-	defer file.Close()
-	scanner := bufio.NewScanner(file)
 	patterns := []*P.Pattern{}
-	for scanner.Scan() {
-		line := scanner.Text()
-		var pattern P.Pattern
-		if err := json.Unmarshal([]byte(line), &pattern); err != nil {
-			log.WithFields(log.Fields{"file": patternsFileAbsPath, "line": line}).Error("Failed to unmarshal pattern.")
+	if configuration.PatternsFile != "" {
+		patternsFileAbsPath, _ := filepath.Abs(configuration.PatternsFile)
+		file, err := os.Open(patternsFileAbsPath)
+		if err != nil {
+			log.WithFields(log.Fields{"file": patternsFileAbsPath}).Error("Failed to load patterns")
 			return err
 		}
-		patterns = append(patterns, &pattern)
+		defer file.Close()
+		scanner := bufio.NewScanner(file)
+		for scanner.Scan() {
+			line := scanner.Text()
+			var pattern P.Pattern
+			if err := json.Unmarshal([]byte(line), &pattern); err != nil {
+				log.WithFields(log.Fields{"file": patternsFileAbsPath, "line": line}).Error("Failed to unmarshal pattern.")
+				return err
+			}
+			patterns = append(patterns, &pattern)
+		}
+
 	}
 	patternService, err := P.NewPatternService(patterns)
 	if err != nil {
-		log.WithFields(log.Fields{"file": patternsFileAbsPath}).Error("Failed to load patterns")
+		log.Error("Failed to initialize pattern service")
 	}
 
 	services = &Services{Db: db, PatternService: patternService}

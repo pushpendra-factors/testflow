@@ -34,7 +34,7 @@ func pullAndWriteEventsFile(projectId int, startTime time.Time, endTime time.Tim
 
 	defer db.Close()
 
-	rows, err := db.Raw("SELECT events.user_id, events.event_name, events.created_at, users.created_at FROM events "+
+	rows, err := db.Raw("SELECT events.user_id, events.event_name, events.created_at, events.count, users.created_at FROM events "+
 		"LEFT JOIN users ON events.user_id = users.id WHERE events.project_id = ? AND events.created_at BETWEEN  ? AND ? "+
 		"ORDER BY events.user_id, events.created_at LIMIT ?",
 		*projectIdFlag, startTime, endTime, max_EVENTS).Rows()
@@ -57,12 +57,13 @@ func pullAndWriteEventsFile(projectId int, startTime time.Time, endTime time.Tim
 		var eventName string
 		var eventCreatedAt time.Time
 		var userCreatedAt time.Time
-		if err = rows.Scan(&userId, &eventName, &eventCreatedAt, &userCreatedAt); err != nil {
+		var eventCardinality uint
+		if err = rows.Scan(&userId, &eventName, &eventCreatedAt, &eventCardinality, &userCreatedAt); err != nil {
 			log.WithFields(log.Fields{"err": err}).Error("SQL Parse failed.")
 			return err
 		}
-		var line string = fmt.Sprintf("%s,%s,%s,%s\n", userId, userCreatedAt.Format(time.RFC3339),
-			eventName, eventCreatedAt.Format(time.RFC3339))
+		var line string = fmt.Sprintf("%s,%s,%s,%s,%d\n", userId, userCreatedAt.Format(time.RFC3339),
+			eventName, eventCreatedAt.Format(time.RFC3339), eventCardinality)
 		if _, err := file.WriteString(line); err != nil {
 			log.WithFields(log.Fields{"line": line, "err": err}).Fatal("Unable to write to file.")
 			return err
