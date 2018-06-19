@@ -6,5 +6,7 @@
 	"db_user": "autometa",
 	"db_name": "autometa",
 	"db_password": "@ut0me7a",
-	"patterns_file": ""
+	"patterns_file": "",
+	"templates": "../../app_frontend/templates/",
+	"static_dir": "../../app_frontend/static/"
 }
