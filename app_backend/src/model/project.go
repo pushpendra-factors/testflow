@@ -53,3 +53,14 @@ func GetProject(id uint64) (*Project, int) {
 		return &project, DB_SUCCESS
 	}
 }
+
+func GetProjects() ([]Project, int) {
+	db := C.GetServices().Db
+
+	var projects []Project
+	if err := db.Find(&projects).Error; err != nil {
+		return nil, 404
+	} else {
+		return projects, DB_SUCCESS
+	}
+}

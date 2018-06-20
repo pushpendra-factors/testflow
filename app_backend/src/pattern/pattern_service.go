@@ -8,14 +8,34 @@ import (
 )
 
 type PatternService struct {
-	patterns []*Pattern
+	patterns         []*Pattern
+	perUserCountsMap map[string]uint
+	countsMap        map[string]uint
 }
 
 func NewPatternService(patterns []*Pattern) (*PatternService, error) {
 	patternService := PatternService{
 		patterns: patterns,
 	}
+	perUserCountsMap := make(map[string]uint)
+	countsMap := make(map[string]uint)
+	for _, p := range patterns {
+		perUserCountsMap[p.String()] = p.OncePerUserCount
+		countsMap[p.String()] = p.Count
+	}
+	patternService.perUserCountsMap = perUserCountsMap
+	patternService.countsMap = countsMap
 	return &patternService, nil
+}
+
+func (ps *PatternService) GetPerUserCount(eventNames []string) (uint, bool) {
+	c, ok := ps.perUserCountsMap[strings.Join(eventNames, ",")]
+	return c, ok
+}
+
+func (ps *PatternService) GetCount(eventNames []string) (uint, bool) {
+	c, ok := ps.countsMap[strings.Join(eventNames, ",")]
+	return c, ok
 }
 
 func (ps *PatternService) Query(startEvent string, endEvent string) ([]*Pattern, error) {
