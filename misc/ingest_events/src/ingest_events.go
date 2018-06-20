@@ -100,7 +100,7 @@ func getUserId(clientUserId string, eventMap map[string]interface{}) (string, er
 }
 
 func lineIngest(eventMap map[string]interface{}) {
-	log.Info("Processing event: %v", eventMap)
+	log.Info(fmt.Sprintf("Processing event: %v", eventMap))
 	clientUserId, found := eventMap[clientUserIdKey].(string)
 	if !found {
 		// If user_id is missing use session_id as user_id.
