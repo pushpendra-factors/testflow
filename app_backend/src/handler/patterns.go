@@ -14,7 +14,7 @@ import (
 // Test command.
 // curl -i -X GET http://localhost:8080/projects/1/patterns?start_event=login&end_event=payment
 func QueryPatternsHandler(c *gin.Context) {
-	_, err := strconv.ParseUint(c.Params.ByName("project_id"), 10, 64)
+	projectId, err := strconv.ParseUint(c.Params.ByName("project_id"), 10, 64)
 	if err != nil {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
@@ -34,7 +34,7 @@ func QueryPatternsHandler(c *gin.Context) {
 	}
 
 	ps := C.GetServices().PatternService
-	if patterns, err := ps.Query(startEvent, endEvent); err != nil {
+	if patterns, err := ps.Query(projectId, startEvent, endEvent); err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("Patterns query failed.")
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
@@ -62,7 +62,7 @@ func QueryPatternsHandler(c *gin.Context) {
 				r.Timings = append(r.Timings, p.Timings[i].Quantile(0.5))
 				r.Repeats = append(r.Repeats, p.Repeats[i].Quantile(0.5))
 				r.Cardinalities = append(r.Cardinalities, p.EventCardinalities[i].Quantile(0.5))
-				subsequenceCount, ok := ps.GetCount(p.EventNames[:i+1])
+				subsequenceCount, ok := ps.GetCount(projectId, p.EventNames[:i+1])
 				if !ok {
 					log.Errorf(fmt.Sprintf(
 						"Subsequence %s not as frequent as sequence %s",
@@ -72,7 +72,7 @@ func QueryPatternsHandler(c *gin.Context) {
 					r.Counts = append(r.Counts, subsequenceCount)
 				}
 
-				subsequencePerUserCount, ok := ps.GetPerUserCount(p.EventNames[:i+1])
+				subsequencePerUserCount, ok := ps.GetPerUserCount(projectId, p.EventNames[:i+1])
 				if !ok {
 					log.Errorf(fmt.Sprintf(
 						"Subsequence %s not as frequent as sequence %s",

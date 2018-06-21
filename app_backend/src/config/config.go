@@ -21,16 +21,16 @@ var initiated bool = false
 const DEVELOPMENT = "development"
 
 type Configuration struct {
-	Env          string `json:"env"`
-	Port         int    `json:"port"`
-	DbHost       string `json:"db_host"`
-	DbPort       int    `json:"db_port"`
-	DbUser       string `json:"db_user"`
-	DbName       string `json:"db_name"`
-	DbPassword   string `json:"db_password"`
-	PatternsFile string `json:"patterns_file"`
-	Templates    string `json:"templates"`
-	StaticDir    string `json:"static_dir"`
+	Env          string            `json:"env"`
+	Port         int               `json:"port"`
+	DbHost       string            `json:"db_host"`
+	DbPort       int               `json:"db_port"`
+	DbUser       string            `json:"db_user"`
+	DbName       string            `json:"db_name"`
+	DbPassword   string            `json:"db_password"`
+	PatternFiles map[uint64]string `json:"pattern_files"`
+	Templates    string            `json:"templates"`
+	StaticDir    string            `json:"static_dir"`
 }
 type Services struct {
 	Db             *gorm.DB
@@ -64,7 +64,9 @@ func initConfigFromFile() error {
 		return err
 	}
 
-	json.Unmarshal(raw, &configuration)
+	if err := json.Unmarshal(raw, &configuration); err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("Failed to unmarshal json")
+	}
 	log.WithFields(log.Fields{"file": configFileAbsPath, "config": &configuration}).Info("Config File Loaded")
 	return nil
 }
@@ -87,9 +89,10 @@ func initServices() error {
 	}
 	log.Info("Db Service initialized")
 
-	patterns := []*P.Pattern{}
-	if configuration.PatternsFile != "" {
-		patternsFileAbsPath, _ := filepath.Abs(configuration.PatternsFile)
+	patternsMap := make(map[uint64][]*P.Pattern)
+	for projectId, patternsFile := range configuration.PatternFiles {
+		patterns := []*P.Pattern{}
+		patternsFileAbsPath, _ := filepath.Abs(patternsFile)
 		file, err := os.Open(patternsFileAbsPath)
 		if err != nil {
 			log.WithFields(log.Fields{"file": patternsFileAbsPath}).Error("Failed to load patterns")
@@ -106,9 +109,10 @@ func initServices() error {
 			}
 			patterns = append(patterns, &pattern)
 		}
-
+		patternsMap[projectId] = patterns
 	}
-	patternService, err := P.NewPatternService(patterns)
+
+	patternService, err := P.NewPatternService(patternsMap)
 	if err != nil {
 		log.Error("Failed to initialize pattern service")
 	}
