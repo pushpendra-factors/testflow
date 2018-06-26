@@ -76,5 +76,8 @@ func (ps *PatternService) Query(projectId uint64, startEvent string, endEvent st
 		func(i, j int) bool {
 			return resPatterns[i].Count > resPatterns[j].Count
 		})
-	return resPatterns[:maxPatterns], nil
+	if len(resPatterns) > maxPatterns {
+		resPatterns = resPatterns[:maxPatterns]
+	}
+	return resPatterns, nil
 }
