@@ -20,14 +20,13 @@ type PatternService struct {
 }
 
 type result struct {
-	EventNames      []string  `json:"event_names"`
-	Timings         []float64 `json:"timings"`
-	Cardinalities   []float64 `json:"cardinalities"`
-	Repeats         []float64 `json:"repeats"`
-	Counts          []uint    `json:"counts"`
-	PerUserCounts   []uint    `json:"per_user_counts"`
-	TotalUserCount  uint      `json:"total_user_count"`
-	NormalizedCount uint      `json:"normalized_count"`
+	EventNames     []string  `json:"event_names"`
+	Timings        []float64 `json:"timings"`
+	Cardinalities  []float64 `json:"cardinalities"`
+	Repeats        []float64 `json:"repeats"`
+	Counts         []uint    `json:"counts"`
+	PerUserCounts  []uint    `json:"per_user_counts"`
+	TotalUserCount uint      `json:"total_user_count"`
 }
 
 type PatternServiceResults []*result
@@ -70,8 +69,7 @@ func (ps *PatternService) GetCount(projectId uint64, eventNames []string) (uint,
 	return c, ok
 }
 
-func (ps *PatternService) rankPatterns(projectId uint64, patterns []*Pattern, minStartInterval uint,
-	maxStartInterval uint, minInterEventInterval uint, maxInterEventInterval uint) PatternServiceResults {
+func (ps *PatternService) rankPatterns(projectId uint64, patterns []*Pattern) PatternServiceResults {
 	results := PatternServiceResults{}
 	for _, p := range patterns {
 		r := result{
@@ -83,7 +81,6 @@ func (ps *PatternService) rankPatterns(projectId uint64, patterns []*Pattern, mi
 			PerUserCounts:  []uint{},
 			TotalUserCount: p.UserCount,
 		}
-		var countMultiplier float64 = 1.0
 		for i := 0; i < len(p.EventNames); i++ {
 			r.Timings = append(r.Timings, p.Timings[i].Quantile(0.5))
 			r.Repeats = append(r.Repeats, p.Repeats[i].Quantile(0.5))
@@ -107,20 +104,14 @@ func (ps *PatternService) rankPatterns(projectId uint64, patterns []*Pattern, mi
 			} else {
 				r.PerUserCounts = append(r.Counts, subsequencePerUserCount)
 			}
-			if i == 0 {
-				countMultiplier *= (p.Timings[i].CDF(float64(maxStartInterval)) - p.Timings[i].CDF(float64(minStartInterval)))
-			} else {
-				countMultiplier *= (p.Timings[i].CDF(float64(maxInterEventInterval)) - p.Timings[i].CDF(float64(minInterEventInterval)))
-			}
 		}
-		r.NormalizedCount = uint(float64(p.Count) * countMultiplier)
 		results = append(results, &r)
 	}
 
-	// Sort in decreasing order of counts.
+	// Sort in decreasing order of per user counts.
 	sort.SliceStable(results,
 		func(i, j int) bool {
-			return (results[i].NormalizedCount > results[j].NormalizedCount)
+			return (results[i].PerUserCounts[0] > results[j].PerUserCounts[0])
 		})
 	maxPatterns := 50
 	if len(results) > maxPatterns {
@@ -130,8 +121,7 @@ func (ps *PatternService) rankPatterns(projectId uint64, patterns []*Pattern, mi
 }
 
 func (ps *PatternService) Query(projectId uint64, startEvent string,
-	endEvent string, minStartInterval uint, maxStartInterval uint,
-	minInterEventInterval uint, maxInterEventInterval uint) (PatternServiceResults, error) {
+	endEvent string) (PatternServiceResults, error) {
 
 	pw, ok := ps.patternsMap[projectId]
 	if !ok {
@@ -148,7 +138,33 @@ func (ps *PatternService) Query(projectId uint64, startEvent string,
 		}
 	}
 
-	results := ps.rankPatterns(projectId, matchPatterns, minStartInterval, maxStartInterval,
-		minInterEventInterval, maxInterEventInterval)
+	results := ps.rankPatterns(projectId, matchPatterns)
+	return results, nil
+}
+
+func (ps *PatternService) crunchPatterns(projectId uint64, patterns []*Pattern) PatternServiceResults {
+	results := PatternServiceResults{}
+	return results
+}
+
+func (ps *PatternService) Crunch(projectId uint64, startEvent string,
+	endEvent string) (PatternServiceResults, error) {
+
+	pw, ok := ps.patternsMap[projectId]
+	if !ok {
+		return nil, fmt.Errorf(fmt.Sprintf("No patterns for projectId:%d", projectId))
+	}
+	if startEvent == "" && endEvent == "" {
+		return nil, fmt.Errorf("Invalid Query")
+	}
+	matchPatterns := []*Pattern{}
+	for _, p := range pw.patterns {
+		if (startEvent == "" || strings.Compare(startEvent, p.EventNames[0]) == 0) &&
+			(endEvent == "" || strings.Compare(endEvent, p.EventNames[len(p.EventNames)-1]) == 0) {
+			matchPatterns = append(matchPatterns, p)
+		}
+	}
+
+	results := ps.crunchPatterns(projectId, matchPatterns)
 	return results, nil
 }

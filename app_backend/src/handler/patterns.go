@@ -32,7 +32,7 @@ func QueryPatternsHandler(c *gin.Context) {
 	}
 
 	ps := C.GetServices().PatternService
-	if results, err := ps.Query(projectId, startEvent, endEvent, 0, ^uint(0), 0, ^uint(0)); err != nil {
+	if results, err := ps.Query(projectId, startEvent, endEvent); err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("Patterns query failed.")
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
