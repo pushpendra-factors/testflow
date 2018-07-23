@@ -4,6 +4,7 @@ package pattern
 
 import (
 	"fmt"
+	"math"
 	"sort"
 	"strings"
 
@@ -55,8 +56,8 @@ type Itree struct {
 	EndEvent string
 }
 
-// Minimum drop in Gini Impurity in order to select a child node.
-const MIN_GINI_DROP = 0.000005
+// Minimum absolute gain in confidence in order to select a child node.
+const MIN_ABS_CONFIDENCE_GAIN = 0.01
 const MAX_CHILD_NODES = 3
 
 func (it *Itree) buildRootNode(pattern *Pattern) (*ItreeNode, error) {
@@ -65,7 +66,8 @@ func (it *Itree) buildRootNode(pattern *Pattern) (*ItreeNode, error) {
 	// RightGI is p(1-p)
 	// RightFraction is 1.0
 	// OverallGI = rightGI
-	// confidence, confidenceGain, leftGi, leftFraction, giniDrop are not defined.
+	// confidence is p.
+	// confidenceGain, leftGi, leftFraction, giniDrop are not defined.
 	// parentIndex is set to -1.
 	p := float64(pattern.OncePerUserCount) / float64(pattern.UserCount)
 	giniImpurity := p * (1 - p)
@@ -75,6 +77,7 @@ func (it *Itree) buildRootNode(pattern *Pattern) (*ItreeNode, error) {
 		RightGI:       giniImpurity,
 		RightFraction: 1.0,
 		OverallGI:     giniImpurity,
+		Confidence:    p,
 	}
 	return &node, nil
 }
@@ -130,7 +133,7 @@ func (it *Itree) buildChildNode(
 	giniDrop := parentNode.RightGI - overallGI
 
 	confidence := fcr / fcp
-	confidenceGain := confidence - parentNode.ConfidenceGain
+	confidenceGain := confidence - parentNode.Confidence
 
 	node := ItreeNode{
 		Pattern:        pattern,
@@ -155,6 +158,9 @@ func (it *Itree) addNode(node *ItreeNode) int {
 }
 
 func isChildSequence(parent []string, child []string) bool {
+	// ABY and ABCY is true.
+	// ABY and ACBY is false.
+	// ABY and BCY is false.
 	cLen := len(child)
 	pLen := len(parent)
 	if cLen-pLen != 1 {
@@ -176,8 +182,8 @@ func isChildSequence(parent []string, child []string) bool {
 			cIndex++
 		}
 	}
-	if differentChildIndex == -1 || differentChildIndex == cLen-1 {
-		// The last event should be the same.
+	if differentChildIndex != cLen-2 {
+		// Parent and child should differ only at the end.
 		return false
 	}
 	return true
@@ -192,7 +198,7 @@ func (it *Itree) buildAndAddChildNodes(
 			if cNode, err := it.buildChildNode(p, parentNode.Index, allPatternCountsMap); err != nil {
 				log.WithFields(log.Fields{"err": err}).Errorf("Couldn't build child node")
 				continue
-			} else if cNode.GiniDrop > MIN_GINI_DROP {
+			} else if math.Abs(cNode.ConfidenceGain) > MIN_ABS_CONFIDENCE_GAIN {
 				childNodes = append(childNodes, cNode)
 			}
 		}
@@ -203,6 +209,7 @@ func (it *Itree) buildAndAddChildNodes(
 			return (childNodes[i].GiniDrop > childNodes[j].GiniDrop)
 		})
 
+	// Only top MAX_CHILD_NODES in order of drop in GiniImpurity are selected.
 	if len(childNodes) > MAX_CHILD_NODES {
 		childNodes = childNodes[:MAX_CHILD_NODES]
 	}

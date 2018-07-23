@@ -129,10 +129,12 @@ func (ps *PatternService) Query(projectId uint64, startEvent string,
 	}
 
 	results := ps.buildResultsFromPatterns(projectId, matchPatterns)
-	// Sort in decreasing order of per user counts.
+	// Sort in decreasing order of per user counts of the sequence.
 	sort.SliceStable(results,
 		func(i, j int) bool {
-			return (results[i].PerUserCounts[0] > results[j].PerUserCounts[0])
+			lenI := len(results[i].PerUserCounts)
+			lenJ := len(results[j].PerUserCounts)
+			return (results[i].PerUserCounts[lenI-1] > results[j].PerUserCounts[lenJ-1])
 		})
 	maxPatterns := 50
 	if len(results) > maxPatterns {
@@ -161,6 +163,14 @@ func (ps *PatternService) Crunch(projectId uint64, endEvent string) (PatternServ
 		}
 	}
 	results := ps.buildResultsFromPatterns(projectId, iPatterns)
+
+	// Sort in decreasing order of per user counts of the sequence.
+	sort.SliceStable(results,
+		func(i, j int) bool {
+			lenI := len(results[i].PerUserCounts)
+			lenJ := len(results[j].PerUserCounts)
+			return (results[i].PerUserCounts[lenI-1] > results[j].PerUserCounts[lenJ-1])
+		})
 
 	maxPatterns := 50
 	if len(results) > maxPatterns {
