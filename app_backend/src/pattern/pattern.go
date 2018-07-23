@@ -175,5 +175,9 @@ func (p *Pattern) CountForEvent(eventName string, eventCreatedTime time.Time, ev
 }
 
 func (p *Pattern) String() string {
-	return strings.Join(p.EventNames, ",")
+	return eventArrayToString(p.EventNames)
+}
+
+func eventArrayToString(eventNames []string) string {
+	return strings.Join(eventNames, ",")
 }

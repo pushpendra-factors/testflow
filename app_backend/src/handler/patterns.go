@@ -10,7 +10,7 @@ import (
 )
 
 // Test command.
-// curl -i -X GET http://localhost:8080/projects/1/patterns?start_event=login&end_event=payment
+// curl -i -X GET http://localhost:8080/projects/1/patterns/query?start_event=login&end_event=payment
 func QueryPatternsHandler(c *gin.Context) {
 	projectId, err := strconv.ParseUint(c.Params.ByName("project_id"), 10, 64)
 	if err != nil {
@@ -20,11 +20,39 @@ func QueryPatternsHandler(c *gin.Context) {
 
 	qParams := c.Request.URL.Query()
 
+	var endEvent string = ""
+	endEvents := qParams["end_event"]
+	if endEvents != nil {
+		endEvent = endEvents[0]
+	}
+
 	var startEvent string = ""
 	startEvents := qParams["start_event"]
 	if startEvents != nil {
 		startEvent = startEvents[0]
 	}
+
+	ps := C.GetServices().PatternService
+	if results, err := ps.Query(projectId, startEvent, endEvent); err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("Patterns query failed.")
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	} else {
+		c.JSON(http.StatusOK, results)
+	}
+}
+
+// Test command.
+// curl -i -X GET http://localhost:8080/projects/1/patterns/crunch?end_event=payment
+func CrunchPatternsHandler(c *gin.Context) {
+	projectId, err := strconv.ParseUint(c.Params.ByName("project_id"), 10, 64)
+	if err != nil {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	qParams := c.Request.URL.Query()
+
 	var endEvent string = ""
 	endEvents := qParams["end_event"]
 	if endEvents != nil {
@@ -32,8 +60,8 @@ func QueryPatternsHandler(c *gin.Context) {
 	}
 
 	ps := C.GetServices().PatternService
-	if results, err := ps.Query(projectId, startEvent, endEvent); err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("Patterns query failed.")
+	if results, err := ps.Crunch(projectId, endEvent); err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("Patterns crunch failed.")
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	} else {

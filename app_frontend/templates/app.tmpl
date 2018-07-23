@@ -21,7 +21,8 @@
                 </div>
 
                 <div class="message-controls">
-                    <button type="button" class="btn btn-action btn-single" onclick='runQuery()'>Paths</button>
+                    <button type="button" class="btn btn-action btn-single" onclick='queryPatterns()'>Paths</button>
+                    <button type="button" class="btn btn-action btn-single" onclick='crunchPatterns()'>Crunch</button>
                 </div>
             </div>
         </div>
@@ -45,18 +46,34 @@
 
 {{define "script"}}
 <script>
-	
-	function runQuery() {
+
+	function queryPatterns() {
 		var startEvent = $('#rules-input').find('#start-options').val();
 		var endEvent = $('#rules-input').find('#end-options').val();
-		var url = "/projects/" + globalCurrentProjectId + "/patterns/?";
+		var url = "/projects/" + globalCurrentProjectId + "/patterns/query?";
 		if (!!startEvent && startEvent != "[None]") {
 			url += "start_event=" + stringify(startEvent) + "&";
 		}
 		if (!!endEvent && endEvent != "[None]") {
 			url += "end_event=" + stringify(endEvent);
 		}
-		
+
+		httpAjax({
+            method: "GET",
+            url: url,
+            success: function(response) {
+                populateResults(response);
+            },
+        });
+    }
+
+    function crunchPatterns() {
+		var endEvent = $('#rules-input').find('#end-options').val();
+		var url = "/projects/" + globalCurrentProjectId + "/patterns/crunch?";
+		if (!!endEvent && endEvent != "[None]") {
+			url += "end_event=" + stringify(endEvent);
+		}
+
 		httpAjax({
             method: "GET",
             url: url,

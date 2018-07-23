@@ -56,7 +56,7 @@ func (ps *PatternService) GetPerUserCount(projectId uint64, eventNames []string)
 	if !ok {
 		return 0, false
 	}
-	c, ok := pw.perUserCountsMap[strings.Join(eventNames, ",")]
+	c, ok := pw.perUserCountsMap[eventArrayToString(eventNames)]
 	return c, ok
 }
 
@@ -65,11 +65,11 @@ func (ps *PatternService) GetCount(projectId uint64, eventNames []string) (uint,
 	if !ok {
 		return 0, false
 	}
-	c, ok := pw.countsMap[strings.Join(eventNames, ",")]
+	c, ok := pw.countsMap[eventArrayToString(eventNames)]
 	return c, ok
 }
 
-func (ps *PatternService) rankPatterns(projectId uint64, patterns []*Pattern) PatternServiceResults {
+func (ps *PatternService) buildResultsFromPatterns(projectId uint64, patterns []*Pattern) PatternServiceResults {
 	results := PatternServiceResults{}
 	for _, p := range patterns {
 		r := result{
@@ -89,7 +89,7 @@ func (ps *PatternService) rankPatterns(projectId uint64, patterns []*Pattern) Pa
 			if !ok {
 				log.Errorf(fmt.Sprintf(
 					"Subsequence %s not as frequent as sequence %s",
-					strings.Join(p.EventNames[:i+1], ","), p.String()))
+					eventArrayToString(p.EventNames[:i+1]), ","), p.String())
 				r.Counts = append(r.Counts, p.Count)
 			} else {
 				r.Counts = append(r.Counts, subsequenceCount)
@@ -99,23 +99,13 @@ func (ps *PatternService) rankPatterns(projectId uint64, patterns []*Pattern) Pa
 			if !ok {
 				log.Errorf(fmt.Sprintf(
 					"Subsequence %s not as frequent as sequence %s",
-					strings.Join(p.EventNames[:i+1], ","), p.String()))
-				r.PerUserCounts = append(r.Counts, p.OncePerUserCount)
+					eventArrayToString(p.EventNames[:i+1]), ","), p.String())
+				r.PerUserCounts = append(r.PerUserCounts, p.OncePerUserCount)
 			} else {
-				r.PerUserCounts = append(r.Counts, subsequencePerUserCount)
+				r.PerUserCounts = append(r.PerUserCounts, subsequencePerUserCount)
 			}
 		}
 		results = append(results, &r)
-	}
-
-	// Sort in decreasing order of per user counts.
-	sort.SliceStable(results,
-		func(i, j int) bool {
-			return (results[i].PerUserCounts[0] > results[j].PerUserCounts[0])
-		})
-	maxPatterns := 50
-	if len(results) > maxPatterns {
-		results = results[:maxPatterns]
 	}
 	return results
 }
@@ -138,33 +128,44 @@ func (ps *PatternService) Query(projectId uint64, startEvent string,
 		}
 	}
 
-	results := ps.rankPatterns(projectId, matchPatterns)
+	results := ps.buildResultsFromPatterns(projectId, matchPatterns)
+	// Sort in decreasing order of per user counts.
+	sort.SliceStable(results,
+		func(i, j int) bool {
+			return (results[i].PerUserCounts[0] > results[j].PerUserCounts[0])
+		})
+	maxPatterns := 50
+	if len(results) > maxPatterns {
+		results = results[:maxPatterns]
+	}
+
 	return results, nil
 }
 
-func (ps *PatternService) crunchPatterns(projectId uint64, patterns []*Pattern) PatternServiceResults {
-	results := PatternServiceResults{}
-	return results
-}
-
-func (ps *PatternService) Crunch(projectId uint64, startEvent string,
-	endEvent string) (PatternServiceResults, error) {
-
+func (ps *PatternService) Crunch(projectId uint64, endEvent string) (PatternServiceResults, error) {
 	pw, ok := ps.patternsMap[projectId]
 	if !ok {
 		return nil, fmt.Errorf(fmt.Sprintf("No patterns for projectId:%d", projectId))
 	}
-	if startEvent == "" && endEvent == "" {
+	if endEvent == "" {
 		return nil, fmt.Errorf("Invalid Query")
 	}
-	matchPatterns := []*Pattern{}
-	for _, p := range pw.patterns {
-		if (startEvent == "" || strings.Compare(startEvent, p.EventNames[0]) == 0) &&
-			(endEvent == "" || strings.Compare(endEvent, p.EventNames[len(p.EventNames)-1]) == 0) {
-			matchPatterns = append(matchPatterns, p)
+
+	iPatterns := []*Pattern{}
+	if itree, err := BuildNewItree(endEvent, pw); err != nil {
+		log.Error(err)
+		return nil, err
+	} else {
+		for _, node := range itree.Nodes {
+			iPatterns = append(iPatterns, node.Pattern)
 		}
 	}
+	results := ps.buildResultsFromPatterns(projectId, iPatterns)
 
-	results := ps.crunchPatterns(projectId, matchPatterns)
+	maxPatterns := 50
+	if len(results) > maxPatterns {
+		results = results[:maxPatterns]
+	}
+
 	return results, nil
 }
