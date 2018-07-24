@@ -95,6 +95,19 @@ func GenCandidates(currentPatterns []*Pattern, maxCandidates int) ([]*Pattern, u
 	return candidatesMapToSlice(candidatesMap), currentMinCount, nil
 }
 
+func deletePatternFromSlice(patternArray []*Pattern, pattern *Pattern) []*Pattern {
+	// Delete all occurrences of the pattern.
+	j := 0
+	for _, p := range patternArray {
+		if p != pattern {
+			patternArray[j] = p
+			j++
+		}
+	}
+	patternArray = patternArray[:j]
+	return patternArray
+}
+
 func CountPatterns(scanner *bufio.Scanner, patterns []*Pattern) error {
 	var seenUsers map[string]bool = make(map[string]bool)
 
@@ -103,7 +116,7 @@ func CountPatterns(scanner *bufio.Scanner, patterns []*Pattern) error {
 	prevWaitPatternsMap := make(map[string][]*Pattern)
 	// Initialize.
 	for _, p := range patterns {
-		waitEvent := p.EventNames[0]
+		waitEvent := p.WaitingOn()
 		if _, ok := waitingOnPatternsMap[waitEvent]; !ok {
 			waitingOnPatternsMap[waitEvent] = []*Pattern{}
 		}
@@ -134,10 +147,18 @@ func CountPatterns(scanner *bufio.Scanner, patterns []*Pattern) error {
 
 		_, isSeenUser := seenUsers[userId]
 		if !isSeenUser {
+			// Reinitialize.
+			waitingOnPatternsMap = make(map[string][]*Pattern)
+			prevWaitPatternsMap = make(map[string][]*Pattern)
 			for _, p := range patterns {
 				if err = p.ResetForNewUser(userId, userCreatedTime); err != nil {
 					log.Fatal(err)
 				}
+				waitEvent := p.WaitingOn()
+				if _, ok := waitingOnPatternsMap[waitEvent]; !ok {
+					waitingOnPatternsMap[waitEvent] = []*Pattern{}
+				}
+				waitingOnPatternsMap[waitEvent] = append(waitingOnPatternsMap[waitEvent], p)
 			}
 		}
 
@@ -153,13 +174,44 @@ func CountPatterns(scanner *bufio.Scanner, patterns []*Pattern) error {
 
 		waitPatterns, _ := waitingOnPatternsMap[eventName]
 		waitingOnPatternsMap[eventName] = []*Pattern{}
-		prevWaitPatternsMap[eventName] = waitPatterns
 		for _, p := range waitPatterns {
-			var waitingOnEvent string
-			if waitingOnEvent, err = p.CountForEvent(eventName, eventCreatedTime, uint(eventCardinality), userId, userCreatedTime); err != nil || waitingOnEvent == "" {
+			waitingOn1 := p.WaitingOn()
+			prevWaitingOn1 := p.PrevWaitingOn()
+			if strings.Compare(waitingOn1, eventName) != 0 {
+				log.Fatal(fmt.Errorf(
+					"Pattern %s assumed to wait on %s but actually waiting on %s. Line %s",
+					p.String(), eventName, waitingOn1, line))
+			}
+			waitingOn2, err := p.CountForEvent(eventName, eventCreatedTime, uint(eventCardinality), userId, userCreatedTime)
+			if err != nil || waitingOn2 == "" {
 				log.Error(err)
 			}
-			waitingOnPatternsMap[waitingOnEvent] = append(waitingOnPatternsMap[waitingOnEvent], p)
+			prevWaitingOn2 := p.PrevWaitingOn()
+			if strings.Compare(prevWaitingOn1, prevWaitingOn2) != 0 {
+				if prevWaitingOn1 != "" {
+					if pwArray1, ok := prevWaitPatternsMap[prevWaitingOn1]; ok {
+						pwArray1 = deletePatternFromSlice(pwArray1, p)
+						prevWaitPatternsMap[prevWaitingOn1] = pwArray1
+					}
+				}
+				if prevWaitingOn2 != "" {
+					if pwArray2, ok := prevWaitPatternsMap[prevWaitingOn2]; ok {
+						pwArray2 = deletePatternFromSlice(pwArray2, p)
+						// Add the pattern.
+						pwArray2 = append(pwArray2, p)
+						prevWaitPatternsMap[prevWaitingOn2] = pwArray2
+					} else {
+						prevWaitPatternsMap[prevWaitingOn2] = []*Pattern{p}
+					}
+				}
+			}
+			if strings.Compare(waitingOn1, waitingOn2) == 0 && len(p.EventNames) != 1 {
+				log.Fatal(fmt.Errorf(
+					"Pattern %s waiting on %s did not get updated. Line %s",
+					p.String(), waitingOn1, line))
+			} else {
+				waitingOnPatternsMap[waitingOn2] = append(waitingOnPatternsMap[waitingOn2], p)
+			}
 		}
 		seenUsers[userId] = true
 	}

@@ -83,7 +83,6 @@ func TestPatternCountEvents(t *testing.T) {
 	assert.Equal(t, float64((180.0+120.0+60.0)/3), p.Timings[2].Mean())
 	assert.Equal(t, float64((1.0+1.0+2.0)/3), p.EventCardinalities[2].Mean())
 	assert.Equal(t, float64((1.0+1.0+1.0)/3), p.Repeats[2].Mean())
-
 }
 
 func TestPatternEdgeConditions(t *testing.T) {

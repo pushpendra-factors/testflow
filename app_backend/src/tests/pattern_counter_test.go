@@ -1,11 +1,111 @@
 package tests
 
 import (
+	"bufio"
 	P "pattern"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
+
+func TestCountPatterns(t *testing.T) {
+	// U1: F, G, A, L, B, A, B, C   (A(1) -> B(2) -> C(1):1)
+	// U2: F, A, A, K, B, Z, C, A, B, C  (A(2,1) -> B (1, 1) -> C(1, 1)
+	// Count A -> B -> C, Count:3, OncePerUserCount:2, UserCount:2
+
+	const eventsInput = ("U1,2017-06-01T00:00:00Z,F,2017-06-01T01:00:00Z,1\n" +
+		"U1,2017-06-01T00:00:00Z,G,2017-06-01T01:01:00Z,2\n" +
+		"U1,2017-06-01T00:00:00Z,A,2017-06-01T01:02:00Z,2\n" +
+		"U1,2017-06-01T00:00:00Z,L,2017-06-01T01:03:00Z,1\n" +
+		"U1,2017-06-01T00:00:00Z,B,2017-06-01T01:04:00Z,5\n" +
+		"U1,2017-06-01T00:00:00Z,A,2017-06-01T01:05:00Z,3\n" +
+		"U1,2017-06-01T00:00:00Z,B,2017-06-01T01:06:00Z,6\n" +
+		"U1,2017-06-01T00:00:00Z,C,2017-06-01T01:07:00Z,1\n" +
+		"U2,2017-06-01T00:01:00Z,F,2017-06-01T01:01:00Z,1\n" +
+		"U2,2017-06-01T00:01:00Z,A,2017-06-01T01:02:00Z,1\n" +
+		"U2,2017-06-01T00:01:00Z,A,2017-06-01T01:03:00Z,2\n" +
+		"U2,2017-06-01T00:01:00Z,K,2017-06-01T01:04:00Z,1\n" +
+		"U2,2017-06-01T00:01:00Z,B,2017-06-01T01:05:00Z,1\n" +
+		"U2,2017-06-01T00:01:00Z,Z,2017-06-01T01:06:00Z,1\n" +
+		"U2,2017-06-01T00:01:00Z,C,2017-06-01T01:07:00Z,1\n" +
+		"U2,2017-06-01T00:01:00Z,A,2017-06-01T01:08:00Z,3\n" +
+		"U2,2017-06-01T00:01:00Z,B,2017-06-01T01:09:00Z,2\n" +
+		"U2,2017-06-01T00:01:00Z,C,2017-06-01T01:10:00Z,2\n")
+	scanner := bufio.NewScanner(strings.NewReader(eventsInput))
+
+	pABCEvents := []string{"A", "B", "C"}
+	pLen := len(pABCEvents)
+	pABC, _ := P.NewPattern(pABCEvents)
+	pAB, _ := P.NewPattern([]string{"A", "B"})
+	pBC, _ := P.NewPattern([]string{"B", "C"})
+	pAC, _ := P.NewPattern([]string{"B", "C"})
+	pA, _ := P.NewPattern([]string{"A"})
+	pB, _ := P.NewPattern([]string{"B"})
+	pC, _ := P.NewPattern([]string{"C"})
+
+	patterns := []*P.Pattern{pABC, pAB, pBC, pAC, pA, pB, pC}
+	err := P.CountPatterns(scanner, patterns)
+	assert.Nil(t, err)
+
+	// Test pABC output.
+	assert.Equal(t, uint(3), pABC.Count)
+	assert.Equal(t, uint(2), pABC.UserCount)
+	assert.Equal(t, uint(2), pABC.OncePerUserCount)
+	assert.Equal(t, pLen, len(pABC.EventNames))
+	for i := 0; i < pLen; i++ {
+		assert.Equal(t, pABCEvents[i], pABC.EventNames[i])
+	}
+	assert.Equal(t, pLen, len(pABC.Timings))
+	assert.Equal(t, pLen, len(pABC.Repeats))
+	assert.Equal(t, pLen, len(pABC.EventCardinalities))
+	// A-B-C occurs 3 times, with first A occurring after 3720s in User1 and
+	// 3660 and 4020s in User 2.
+	// Repeats once before the next B occurs in User2.
+	assert.Equal(t, float64(3), pABC.Timings[0].Count())
+	assert.Equal(t, float64((3720.0+3660.0+4020.0)/3), pABC.Timings[0].Mean())
+	assert.Equal(t, float64((2.0+1.0+3.0)/3), pABC.EventCardinalities[0].Mean())
+	assert.Equal(t, float64((1.0+2.0+1.0)/3), pABC.Repeats[0].Mean())
+	// A-B-C occurs 3 times, with first B following first A after 120s in User1 and
+	// 180 and 60s in User 2.
+	// Repeats once before the next C occurs in User1.
+	assert.Equal(t, float64(3), pABC.Timings[1].Count())
+	assert.Equal(t, float64((120.0+180.0+60.0)/3), pABC.Timings[1].Mean())
+	assert.Equal(t, float64((5.0+1.0+2.0)/3), pABC.EventCardinalities[1].Mean())
+	assert.Equal(t, float64((2.0+1.0+1.0)/3), pABC.Repeats[1].Mean())
+	// A-B-C occurs 3 times, with first C following first B after 180s in User1 and
+	// 120 and 60s in User 2.
+	// Last event always is counted once.
+	assert.Equal(t, float64(3), pABC.Timings[2].Count())
+	assert.Equal(t, float64((180.0+120.0+60.0)/3), pABC.Timings[2].Mean())
+	assert.Equal(t, float64((1.0+1.0+2.0)/3), pABC.EventCardinalities[2].Mean())
+	assert.Equal(t, float64((1.0+1.0+1.0)/3), pABC.Repeats[2].Mean())
+
+	// Test output on other patterns.
+	assert.Equal(t, uint(4), pAB.Count)
+	assert.Equal(t, uint(2), pAB.OncePerUserCount)
+	assert.Equal(t, uint(2), pAB.UserCount)
+
+	assert.Equal(t, uint(3), pBC.Count)
+	assert.Equal(t, uint(2), pBC.OncePerUserCount)
+	assert.Equal(t, uint(2), pBC.UserCount)
+
+	assert.Equal(t, uint(3), pAC.Count)
+	assert.Equal(t, uint(2), pAC.OncePerUserCount)
+	assert.Equal(t, uint(2), pAC.UserCount)
+
+	assert.Equal(t, uint(5), pA.Count)
+	assert.Equal(t, uint(2), pA.OncePerUserCount)
+	assert.Equal(t, uint(2), pA.UserCount)
+
+	assert.Equal(t, uint(4), pB.Count)
+	assert.Equal(t, uint(2), pB.OncePerUserCount)
+	assert.Equal(t, uint(2), pB.UserCount)
+
+	assert.Equal(t, uint(3), pC.Count)
+	assert.Equal(t, uint(2), pC.OncePerUserCount)
+	assert.Equal(t, uint(2), pC.UserCount)
+}
 
 func TestGenCandidatesPair(t *testing.T) {
 	// Mismatched length patterns.

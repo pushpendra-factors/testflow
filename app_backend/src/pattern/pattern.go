@@ -174,6 +174,17 @@ func (p *Pattern) CountForEvent(eventName string, eventCreatedTime time.Time, ev
 	return p.EventNames[p.waitIndex], nil
 }
 
+func (p *Pattern) WaitingOn() string {
+	return p.EventNames[p.waitIndex]
+}
+
+func (p *Pattern) PrevWaitingOn() string {
+	if p.waitIndex > 0 {
+		return p.EventNames[p.waitIndex-1]
+	}
+	return ""
+}
+
 func (p *Pattern) String() string {
 	return eventArrayToString(p.EventNames)
 }
