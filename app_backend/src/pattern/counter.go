@@ -90,7 +90,7 @@ func GenCandidates(currentPatterns []*Pattern, maxCandidates int) ([]*Pattern, u
 		}
 	}
 	if len(candidatesMap) > maxCandidates {
-		panic(fmt.Errorf("More than max candidates generated."))
+		log.Fatal("More than max candidates generated.")
 	}
 	return candidatesMapToSlice(candidatesMap), currentMinCount, nil
 }
@@ -225,10 +225,10 @@ func CountPatterns(scanner *bufio.Scanner, patterns []*Pattern) error {
 
 // Special candidate generation method that generates upto maxCandidates with
 // events that start with and end with the two event patterns.
-func GenLenThreeCandidatePattern(pattern *Pattern, startPatterns []*Pattern,
-	endPatterns []*Pattern, maxCandidates int) []*Pattern {
+func GenLenThreeCandidatePatterns(pattern *Pattern, startPatterns []*Pattern,
+	endPatterns []*Pattern, maxCandidates int) ([]*Pattern, error) {
 	if len(pattern.EventNames) != 2 {
-		panic(fmt.Errorf("Unexpected length"))
+		return nil, fmt.Errorf(fmt.Sprintf("Pattern %s length is not two.", pattern.String()))
 	}
 	sLen := len(startPatterns)
 	eLen := len(endPatterns)
@@ -237,15 +237,36 @@ func GenLenThreeCandidatePattern(pattern *Pattern, startPatterns []*Pattern,
 	eventsWithStartMap := make(map[string]bool)
 	eventsWithEndMap := make(map[string]bool)
 	for i := 0; i < sLen; i++ {
+		if len(startPatterns[i].EventNames) != 2 {
+			return nil, fmt.Errorf("Start pattern %s of not length two.",
+				startPatterns[i].String())
+		}
+		if strings.Compare(
+			startPatterns[i].EventNames[0], pattern.EventNames[0]) != 0 {
+			return nil, fmt.Errorf("Pattern %s does not match start event of %s",
+				startPatterns[i].String(), pattern.String())
+		}
 		eventsWithStartMap[startPatterns[i].EventNames[1]] = true
 	}
 	for i := 0; i < eLen; i++ {
+		if len(endPatterns[i].EventNames) != 2 {
+			return nil, fmt.Errorf("End pattern %s of not length two.",
+				endPatterns[i].String())
+		}
+		if strings.Compare(
+			endPatterns[i].EventNames[len(endPatterns[i].EventNames)-1],
+			pattern.EventNames[1]) != 0 {
+			return nil, fmt.Errorf("Pattern %s does not match end event of %s",
+				endPatterns[i].String(), pattern.String())
+		}
 		eventsWithEndMap[endPatterns[i].EventNames[0]] = true
 	}
 
 	candidatesMap := make(map[string]*Pattern)
 	var err error
 	// Alternate between startsWith and endsWith till the end of one.
+	// The ordering of the patterns should be taken care by the caller.
+	// The ones at the beginning are given higher priority.
 	for i := 0; i < (sLen + eLen); i++ {
 		var candidate *Pattern
 		cString := make([]string, 2)
@@ -297,15 +318,15 @@ func GenLenThreeCandidatePattern(pattern *Pattern, startPatterns []*Pattern,
 			}
 		}
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 		candidatesMap[candidate.String()] = candidate
 		if len(candidatesMap) >= maxCandidates {
-			return candidatesMapToSlice(candidatesMap)
+			return candidatesMapToSlice(candidatesMap), nil
 		}
 	}
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return candidatesMapToSlice(candidatesMap)
+	return candidatesMapToSlice(candidatesMap), nil
 }

@@ -157,4 +157,78 @@ func TestGenCandidatesPair(t *testing.T) {
 	assert.Equal(t, []string{"A", "C", "B", "D"}, c2.EventNames)
 }
 
-// TODO: Add tests for GenCandidates and GenLenThreeCandidatePattern.
+func TestGenLenThreeCandidatePatterns(t *testing.T) {
+	// Not of length 2.
+	pattern, _ := P.NewPattern([]string{"A", "X", "Z"})
+	startPatterns := []*P.Pattern{}
+	endPatterns := []*P.Pattern{}
+	maxCandidates := 5
+	cPatterns, err := P.GenLenThreeCandidatePatterns(
+		pattern, startPatterns, endPatterns, maxCandidates)
+	assert.NotNil(t, err)
+	assert.Nil(t, cPatterns)
+
+	// Mismatch event.
+	pattern, _ = P.NewPattern([]string{"A", "Z"})
+	mismatchPattern, _ := P.NewPattern([]string{"B", "X"})
+	patterns1 := []*P.Pattern{mismatchPattern}
+	patterns2 := []*P.Pattern{}
+	maxCandidates = 5
+	// Mismatch start event.
+	cPatterns, err = P.GenLenThreeCandidatePatterns(
+		pattern, patterns1, patterns2, maxCandidates)
+	assert.NotNil(t, err)
+	assert.Nil(t, cPatterns)
+	// Mismatch end event.
+	cPatterns, err = P.GenLenThreeCandidatePatterns(
+		pattern, patterns2, patterns1, maxCandidates)
+	assert.NotNil(t, err)
+	assert.Nil(t, cPatterns)
+
+	// Mismatch length.
+	pattern, _ = P.NewPattern([]string{"A", "Z"})
+	mismatchPattern, _ = P.NewPattern([]string{"A", "B", "Z"})
+	patterns1 = []*P.Pattern{mismatchPattern}
+	patterns2 = []*P.Pattern{}
+	maxCandidates = 5
+	// Mismatch in startPatterns.
+	cPatterns, err = P.GenLenThreeCandidatePatterns(
+		pattern, patterns1, patterns2, maxCandidates)
+	assert.NotNil(t, err)
+	assert.Nil(t, cPatterns)
+	// Mismatch in endPatterns.
+	cPatterns, err = P.GenLenThreeCandidatePatterns(
+		pattern, patterns2, patterns1, maxCandidates)
+	assert.NotNil(t, err)
+	assert.Nil(t, cPatterns)
+
+	// Candidate generation.
+	pattern, _ = P.NewPattern([]string{"A", "Z"})
+	maxCandidates = 3
+	sp1, _ := P.NewPattern([]string{"A", "B"}) // Skipped. BZ not found.
+	sp2, _ := P.NewPattern([]string{"A", "Z"}) // Skipped. Same as pattern.
+	sp3, _ := P.NewPattern([]string{"A", "C"}) // Skipped. ACZ Repeat.
+	sp4, _ := P.NewPattern([]string{"A", "D"}) // Skipped. ADZ Repeat.
+	sp5, _ := P.NewPattern([]string{"A", "E"}) // Skipped. AEZ Repeat.
+	sp6, _ := P.NewPattern([]string{"A", "F"}) // Ignored. Greater than maxCandidates.
+	startPatterns = []*P.Pattern{sp1, sp2, sp3, sp4, sp5, sp6}
+	ep1, _ := P.NewPattern([]string{"C", "Z"}) // cPatterns[0] ACZ
+	ep2, _ := P.NewPattern([]string{"D", "Z"}) // cPatterns[1] ADZ
+	ep3, _ := P.NewPattern([]string{"E", "Z"}) // cPatterns[2] AEZ
+	ep4, _ := P.NewPattern([]string{"F", "Z"}) // Ignored. Greater than maxCandidates.
+	endPatterns = []*P.Pattern{ep1, ep2, ep3, ep4}
+	cPatterns, err = P.GenLenThreeCandidatePatterns(
+		pattern, startPatterns, endPatterns, maxCandidates)
+	assert.Nil(t, err)
+	assert.Equal(t, maxCandidates, len(cPatterns))
+	// Not expected in order.
+	cMap := make(map[string]bool)
+	for _, c := range cPatterns {
+		cMap[c.String()] = true
+	}
+	assert.Equal(t, true, cMap["A,C,Z"])
+	assert.Equal(t, true, cMap["A,D,Z"])
+	assert.Equal(t, true, cMap["A,E,Z"])
+}
+
+// TODO: Add tests for genLenThreeSegmentedCandidates and genSegmentedCandidates in run_pattern_mine.go

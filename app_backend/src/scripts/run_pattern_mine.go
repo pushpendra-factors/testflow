@@ -68,7 +68,7 @@ func genSegmentedCandidates(patterns []*P.Pattern) map[string][]*P.Pattern {
 	for k, patterns := range pSegments {
 		cPatterns, _, err := P.GenCandidates(patterns, top_K)
 		if err != nil {
-			panic(err)
+			log.Fatal(err)
 		}
 		candidateSegments[k] = cPatterns
 	}
@@ -82,7 +82,7 @@ func genLenThreeSegmentedCandidates(lenTwoPatterns []*P.Pattern) map[string][]*P
 	for _, p := range lenTwoPatterns {
 		pEvents := p.EventNames
 		if len(pEvents) != 2 {
-			panic(fmt.Errorf(fmt.Sprintf("Pattern %s is not of length two.", p.EventNames)))
+			log.Fatal(fmt.Sprintf("Pattern %s is not of length two.", p.EventNames))
 		}
 		startEvent := pEvents[0]
 		endEvent := pEvents[1]
@@ -119,8 +119,12 @@ func genLenThreeSegmentedCandidates(lenTwoPatterns []*P.Pattern) map[string][]*P
 		if startPatterns == nil || endPatterns == nil || !ok1 || !ok2 {
 			continue
 		}
-		segmentedCandidates[p.String()] = P.GenLenThreeCandidatePattern(
+		lenThreeCandidates, err := P.GenLenThreeCandidatePatterns(
 			p, startPatterns, endPatterns, top_K)
+		if err != nil {
+			log.Fatal(err)
+		}
+		segmentedCandidates[p.String()] = lenThreeCandidates
 	}
 	return segmentedCandidates
 }
@@ -150,7 +154,7 @@ func minePatterns(projectId int, filepath string) ([][]*P.Pattern, error) {
 	// Each event combination is a segment in itself.
 	lenTwoPatterns, _, err := P.GenCandidates(filteredLenOnePatterns, max_SEGMENTS)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 	countPatterns(filepath, lenTwoPatterns)
 	filteredLenTwoPatterns := filterPatterns(lenTwoPatterns)
