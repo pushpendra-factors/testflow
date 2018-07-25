@@ -4,7 +4,6 @@ package pattern
 
 import (
 	"fmt"
-	"math"
 	"sort"
 	"strings"
 
@@ -56,8 +55,6 @@ type Itree struct {
 	EndEvent string
 }
 
-// Minimum absolute gain in confidence in order to select a child node.
-const MIN_ABS_CONFIDENCE_GAIN = 0.01
 const MAX_CHILD_NODES = 3
 
 func (it *Itree) buildRootNode(pattern *Pattern) (*ItreeNode, error) {
@@ -198,7 +195,7 @@ func (it *Itree) buildAndAddChildNodes(
 			if cNode, err := it.buildChildNode(p, parentNode.Index, allPatternCountsMap); err != nil {
 				log.WithFields(log.Fields{"err": err}).Errorf("Couldn't build child node")
 				continue
-			} else if math.Abs(cNode.ConfidenceGain) > MIN_ABS_CONFIDENCE_GAIN {
+			} else {
 				childNodes = append(childNodes, cNode)
 			}
 		}
