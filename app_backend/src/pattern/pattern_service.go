@@ -31,22 +31,27 @@ type result struct {
 
 type PatternServiceResults []*result
 
+func NewPatternWrapper(patterns []*Pattern) *PatternWrapper {
+	patternWrapper := PatternWrapper{
+		patterns: patterns,
+	}
+	perUserCountsMap := make(map[string]uint)
+	countsMap := make(map[string]uint)
+	for _, p := range patterns {
+		perUserCountsMap[p.String()] = p.OncePerUserCount
+		countsMap[p.String()] = p.Count
+	}
+	patternWrapper.perUserCountsMap = perUserCountsMap
+	patternWrapper.countsMap = countsMap
+	return &patternWrapper
+}
+
 func NewPatternService(patternsMap map[uint64][]*Pattern) (*PatternService, error) {
 	patternService := PatternService{patternsMap: map[uint64]*PatternWrapper{}}
 
 	for projectId, patterns := range patternsMap {
-		patternWrapper := PatternWrapper{
-			patterns: patterns,
-		}
-		perUserCountsMap := make(map[string]uint)
-		countsMap := make(map[string]uint)
-		for _, p := range patterns {
-			perUserCountsMap[p.String()] = p.OncePerUserCount
-			countsMap[p.String()] = p.Count
-		}
-		patternWrapper.perUserCountsMap = perUserCountsMap
-		patternWrapper.countsMap = countsMap
-		patternService.patternsMap[projectId] = &patternWrapper
+		patternWrapper := NewPatternWrapper(patterns)
+		patternService.patternsMap[projectId] = patternWrapper
 	}
 	return &patternService, nil
 }

@@ -1,5 +1,5 @@
 // itree
-// Methods to build Insight trees.
+// Methods to build Insight/Information trees.
 package pattern
 
 import (
@@ -67,7 +67,7 @@ func (it *Itree) buildRootNode(pattern *Pattern) (*ItreeNode, error) {
 	// confidenceGain, leftGi, leftFraction, giniDrop are not defined.
 	// parentIndex is set to -1.
 	p := float64(pattern.OncePerUserCount) / float64(pattern.UserCount)
-	giniImpurity := p * (1 - p)
+	giniImpurity := p * (1.0 - p)
 	node := ItreeNode{
 		Pattern:       pattern,
 		ParentIndex:   -1,
@@ -76,6 +76,7 @@ func (it *Itree) buildRootNode(pattern *Pattern) (*ItreeNode, error) {
 		OverallGI:     giniImpurity,
 		Confidence:    p,
 	}
+	log.WithFields(log.Fields{"node": node}).Info("Built root node.")
 	return &node, nil
 }
 
@@ -121,10 +122,10 @@ func (it *Itree) buildChildNode(
 			"Current pattern(%s) and parent pattern(%s) not compatible", pattern.String(), parentRuleString))
 	}
 
-	rightGI := (fcr / fcp) * (1 - fcr/fcp)
+	rightGI := (fcr / fcp) * (1.0 - fcr/fcp)
 	rightFraction := fcp / fpp
-	leftGI := ((fpr - fcr) / (fpp - fcp)) * (1 - ((fpr - fcr) / (fpp - fcp)))
-	leftFraction := 1 - rightFraction
+	leftGI := ((fpr - fcr) / (fpp - fcp)) * (1.0 - ((fpr - fcr) / (fpp - fcp)))
+	var leftFraction float64 = 1.0 - rightFraction
 	overallGI := rightFraction*rightGI + leftFraction*leftGI
 
 	giniDrop := parentNode.RightGI - overallGI
@@ -144,7 +145,8 @@ func (it *Itree) buildChildNode(
 		Confidence:     confidence,
 		ConfidenceGain: confidenceGain,
 	}
-	log.WithFields(log.Fields{"node": node, "parent": parentPattern.String()}).Info("Built candidate child node.")
+	log.WithFields(log.Fields{"node": node, "parent": parentPattern.String(),
+		"fcr": fcr, "fcp": fcp, "fpr": fpr, "fpp": fpp}).Info("Built candidate child node.")
 	return &node, nil
 }
 
