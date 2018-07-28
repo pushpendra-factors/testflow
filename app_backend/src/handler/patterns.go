@@ -2,6 +2,7 @@ package handler
 
 import (
 	C "config"
+	"encoding/json"
 	"net/http"
 	"strconv"
 
@@ -10,7 +11,7 @@ import (
 )
 
 // Test command.
-// curl -i -X GET http://localhost:8080/projects/1/patterns/query?start_event=login&end_event=payment
+// curl -i -X POST http://localhost:8080/projects/1/patterns/query -d '{ "start_event": "login", "end_event": "payment" }
 func QueryPatternsHandler(c *gin.Context) {
 	projectId, err := strconv.ParseUint(c.Params.ByName("project_id"), 10, 64)
 	if err != nil {
@@ -18,18 +19,22 @@ func QueryPatternsHandler(c *gin.Context) {
 		return
 	}
 
-	qParams := c.Request.URL.Query()
-
-	var endEvent string = ""
-	endEvents := qParams["end_event"]
-	if endEvents != nil {
-		endEvent = endEvents[0]
+	var requestBodyMap map[string]interface{}
+	if err := json.NewDecoder(c.Request.Body).Decode(&requestBodyMap); err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("Query Patterns JSON Decoding failed.")
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":  "json decoding : " + err.Error(),
+			"status": http.StatusBadRequest,
+		})
+		return
 	}
 
-	var startEvent string = ""
-	startEvents := qParams["start_event"]
-	if startEvents != nil {
-		startEvent = startEvents[0]
+	var startEvent, endEvent string
+	if se, ok := requestBodyMap["start_event"]; ok {
+		startEvent = se.(string)
+	}
+	if ee, ok := requestBodyMap["end_event"]; ok {
+		endEvent = ee.(string)
 	}
 
 	ps := C.GetServices().PatternService
@@ -43,7 +48,8 @@ func QueryPatternsHandler(c *gin.Context) {
 }
 
 // Test command.
-// curl -i -X GET http://localhost:8080/projects/1/patterns/crunch?end_event=payment
+// curl -i -X POST http://localhost:8080/projects/1/patterns/crunch -d '{ "end_event": "payment" }
+
 func CrunchPatternsHandler(c *gin.Context) {
 	projectId, err := strconv.ParseUint(c.Params.ByName("project_id"), 10, 64)
 	if err != nil {
@@ -51,12 +57,19 @@ func CrunchPatternsHandler(c *gin.Context) {
 		return
 	}
 
-	qParams := c.Request.URL.Query()
+	var requestBodyMap map[string]interface{}
+	if err := json.NewDecoder(c.Request.Body).Decode(&requestBodyMap); err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("Query Patterns JSON Decoding failed.")
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":  "json decoding : " + err.Error(),
+			"status": http.StatusBadRequest,
+		})
+		return
+	}
 
-	var endEvent string = ""
-	endEvents := qParams["end_event"]
-	if endEvents != nil {
-		endEvent = endEvents[0]
+	var endEvent string
+	if ee, ok := requestBodyMap["end_event"]; ok {
+		endEvent = ee.(string)
 	}
 
 	ps := C.GetServices().PatternService

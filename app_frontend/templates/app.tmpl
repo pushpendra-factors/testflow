@@ -50,17 +50,18 @@
 	function queryPatterns() {
 		var startEvent = $('#rules-input').find('#start-options').val();
 		var endEvent = $('#rules-input').find('#end-options').val();
-		var url = "/projects/" + globalCurrentProjectId + "/patterns/query?";
-		if (!!startEvent && startEvent != "[None]") {
-			url += "start_event=" + stringify(startEvent) + "&";
+		var url = "/projects/" + globalCurrentProjectId + "/patterns/query";
+		if (startEvent == "[None]") {
+			startEvent = ""
 		}
-		if (!!endEvent && endEvent != "[None]") {
-			url += "end_event=" + stringify(endEvent);
+		if (endEvent == "[None]") {
+			endEvent = ""
 		}
 
 		httpAjax({
-            method: "GET",
+            method: "POST",
             url: url,
+			data: {"start_event": startEvent, "end_event": endEvent},
             success: function(response) {
                 populateResults(response);
             },
@@ -69,14 +70,15 @@
 
     function crunchPatterns() {
 		var endEvent = $('#rules-input').find('#end-options').val();
-		var url = "/projects/" + globalCurrentProjectId + "/patterns/crunch?";
-		if (!!endEvent && endEvent != "[None]") {
-			url += "end_event=" + stringify(endEvent);
+		if (endEvent == "[None]") {
+			endEvent = ""
 		}
+		var url = "/projects/" + globalCurrentProjectId + "/patterns/crunch";
 
 		httpAjax({
-            method: "GET",
+            method: "POST",
             url: url,
+			data: {"end_event": endEvent},
             success: function(response) {
                 populateResults(response);
             },
@@ -143,7 +145,7 @@
         }
 
         var row = `
-        <tr class='event-row'>
+        <tr class='event-row' style="display:none;">
             <td class="text-center">
                 <select data-placeholder="Choose an event..." id="start-options" tabindex="2">`
 		row +="<option value='[None]'>[None]</option>";

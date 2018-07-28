@@ -15,8 +15,8 @@ func InitRoutes(r *gin.Engine) {
 	r.POST("/projects/:project_id/users", CreateUserHandler)
 	r.GET("/projects/:project_id/users/:user_id", GetUserHandler)
 	r.GET("/projects/:project_id/users", GetUsersHandler)
-	r.GET("/projects/:project_id/patterns/query", QueryPatternsHandler)
-	r.GET("/projects/:project_id/patterns/crunch", CrunchPatternsHandler)
+	r.POST("/projects/:project_id/patterns/query", QueryPatternsHandler)
+	r.POST("/projects/:project_id/patterns/crunch", CrunchPatternsHandler)
 
 	// Static files.
 	r.Static("static", C.GetConfig().StaticDir)
