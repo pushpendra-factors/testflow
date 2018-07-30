@@ -3,12 +3,46 @@ package handler
 import (
 	C "config"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 )
+
+func parseEventQuery(requestBodyMap map[string]interface{}) (string, string, uint, uint, error) {
+	var startEvent string
+	if se, ok := requestBodyMap["start_event"]; ok {
+		if sen, ok := se.(map[string]interface{})["name"]; ok {
+			startEvent = sen.(string)
+		}
+	}
+
+	var endEvent string
+	var endEventCardinalityLowerBound, endEventCardinalityUpperBound uint
+	if ee, ok := requestBodyMap["end_event"]; ok {
+		eeMap := ee.(map[string]interface{})
+		if een, ok := eeMap["name"]; ok {
+			endEvent = een.(string)
+		}
+		if eeclb, ok := eeMap["card_lower_bound"]; ok {
+			endEventCardinalityLowerBound = uint(eeclb.(float64))
+		}
+		if eecub, ok := eeMap["card_upper_bound"]; ok {
+			endEventCardinalityUpperBound = uint(eecub.(float64))
+		}
+	}
+
+	var err error
+	if endEventCardinalityLowerBound > 0 &&
+		endEventCardinalityUpperBound > 0 &&
+		endEventCardinalityLowerBound > endEventCardinalityUpperBound {
+		err = fmt.Errorf(fmt.Sprintf("Unexpected Input %d is greater than %d",
+			endEventCardinalityLowerBound, endEventCardinalityUpperBound))
+	}
+	return startEvent, endEvent, endEventCardinalityLowerBound, endEventCardinalityUpperBound, err
+}
 
 // Test command.
 // curl -i -X POST http://localhost:8080/projects/1/patterns/query -d '{ "start_event": "login", "end_event": "payment" }
@@ -30,12 +64,21 @@ func QueryPatternsHandler(c *gin.Context) {
 	}
 
 	var startEvent, endEvent string
-	if se, ok := requestBodyMap["start_event"]; ok {
-		startEvent = se.(string)
+	var endEventCardinalityLowerBound, endEventCardinalityUpperBound uint
+	if startEvent, endEvent, endEventCardinalityLowerBound, endEventCardinalityUpperBound, err = parseEventQuery(requestBodyMap); err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("Invalid Query.")
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":  err.Error(),
+			"status": http.StatusBadRequest,
+		})
+		return
 	}
-	if ee, ok := requestBodyMap["end_event"]; ok {
-		endEvent = ee.(string)
-	}
+
+	log.WithFields(log.Fields{
+		"startEvent": startEvent,
+		"endEvent":   endEvent,
+		"eeclb":      endEventCardinalityLowerBound,
+		"eecub":      endEventCardinalityUpperBound}).Info("Pattern query.")
 
 	ps := C.GetServices().PatternService
 	if results, err := ps.Query(projectId, startEvent, endEvent); err != nil {
@@ -67,10 +110,21 @@ func CrunchPatternsHandler(c *gin.Context) {
 		return
 	}
 
-	var endEvent string
-	if ee, ok := requestBodyMap["end_event"]; ok {
-		endEvent = ee.(string)
+	var startEvent, endEvent string
+	var endEventCardinalityLowerBound, endEventCardinalityUpperBound uint
+	if startEvent, endEvent, endEventCardinalityLowerBound, endEventCardinalityUpperBound, err = parseEventQuery(requestBodyMap); err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("Invalid Query.")
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":  err.Error(),
+			"status": http.StatusBadRequest,
+		})
+		return
 	}
+	log.WithFields(log.Fields{
+		"startEvent": startEvent,
+		"endEvent":   endEvent,
+		"eeclb":      endEventCardinalityLowerBound,
+		"eecub":      endEventCardinalityUpperBound}).Info("Pattern crunch query")
 
 	ps := C.GetServices().PatternService
 	if results, err := ps.Crunch(projectId, endEvent); err != nil {

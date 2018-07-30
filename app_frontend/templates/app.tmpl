@@ -3,7 +3,7 @@
 {{end}}
 
 {{define "title"}}
-<h1>Insights <small>User paths</small></h1>
+<h1>Insights <small></small></h1>
 {{end}}
 
 {{define "content"}}
@@ -11,7 +11,7 @@
     <div class="col-md-12">
 
         <div class="panel panel-default">
-            <div class="panel-heading"><h6 class="panel-title">Select events</h6></div>
+            <div class="panel-heading"><h6 class="panel-title">Select goal event</h6></div>
             <div class="panel-body">
                 <div class="create-funnel">
                     <table>
@@ -21,7 +21,7 @@
                 </div>
 
                 <div class="message-controls">
-                    <button type="button" class="btn btn-action btn-single" onclick='queryPatterns()'>Paths</button>
+                    <button type="button" class="btn btn-action btn-single" style="display: none;" onclick='queryPatterns()'>Paths</button>
                     <button type="button" class="btn btn-action btn-single" onclick='crunchPatterns()'>Crunch</button>
                 </div>
             </div>
@@ -47,21 +47,46 @@
 {{define "script"}}
 <script>
 
-	function queryPatterns() {
+    function buildQueryData() {
+        var data = {};
 		var startEvent = $('#rules-input').find('#start-options').val();
+		if (startEvent != "[None]" && startEvent != "") {
+			data["start_event"] = {"name": startEvent};
+		}
 		var endEvent = $('#rules-input').find('#end-options').val();
-		var url = "/projects/" + globalCurrentProjectId + "/patterns/query";
-		if (startEvent == "[None]") {
-			startEvent = ""
+		if (endEvent != "[None]" && endEvent != "") {
+			data["end_event"] = {"name": endEvent };
+		    var cardLowerBound = $('#end-event-row').find('input[name=card-lower-bound]').val();
+            if (!!cardLowerBound) {
+                var clbInt = parseInt(cardLowerBound);
+                if (clbInt < 0) {
+                    return null;
+                }
+                data["end_event"]["card_lower_bound"] = clbInt;
+            }
+            var cardUpperBound = $('#end-event-row').find('input[name=card-upper-bound]').val();
+            if (!!cardUpperBound) {
+                var cubInt = parseInt(cardUpperBound);
+                if (cubInt < 0) {
+                    return null;
+                }
+                data["end_event"]["card_upper_bound"] = cubInt;
+            }
 		}
-		if (endEvent == "[None]") {
-			endEvent = ""
-		}
+        return data;
+    }
 
+	function queryPatterns() {
+		var url = "/projects/" + globalCurrentProjectId + "/patterns/query";
+        var data = buildQueryData();
+        if (data == null) {
+            alert("Bad Input");
+            return;
+        }
 		httpAjax({
             method: "POST",
             url: url,
-			data: {"start_event": startEvent, "end_event": endEvent},
+			data: data,
             success: function(response) {
                 populateResults(response);
             },
@@ -69,16 +94,17 @@
     }
 
     function crunchPatterns() {
-		var endEvent = $('#rules-input').find('#end-options').val();
-		if (endEvent == "[None]") {
-			endEvent = ""
-		}
 		var url = "/projects/" + globalCurrentProjectId + "/patterns/crunch";
+        var data = buildQueryData();
+        if (data == null) {
+            alert("Bad Input");
+            return;
+        }
 
 		httpAjax({
             method: "POST",
             url: url,
-			data: {"end_event": endEvent},
+			data: data,
             success: function(response) {
                 populateResults(response);
             },
@@ -145,7 +171,7 @@
         }
 
         var row = `
-        <tr class='event-row' style="display:none;">
+        <tr id="start-event-row" class='event-row' style="display:none;">
             <td class="text-center">
                 <select data-placeholder="Choose an event..." id="start-options" tabindex="2">`
 		row +="<option value='[None]'>[None]</option>";
@@ -161,7 +187,7 @@
         </tr>
         `
         row += `
-        <tr class='event-row'>
+        <tr id="end-event-row" class='event-row'>
             <td class="text-center">
                 <select data-placeholder="Choose an event..." id="end-options" tabindex="2">`
 		row +="<option value='[None]'>[None]</option>";
@@ -174,12 +200,19 @@
         row += `
                 </select>
             </td>
+            <td class="text-center">
+                for the &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                <input type="number" name="card-lower-bound" style="width: 50px;" value=1>
+            </td class="text-center">
+            <td>
+               &nbsp;&nbsp;&nbsp;&nbsp;to&nbsp;&nbsp;&nbsp;&nbsp;<input type="number" name="card-upper-bound" style="width: 50px;" placeholder="any"> th time.
+            </td>
         </tr>
         `
         return row
     }
 
-	function timeFormat(time) {   
+	function timeFormat(time) {
     	// Hours, minutes and seconds
 		time = Math.floor(time)
     	var hrs = ~~(time / 3600);
