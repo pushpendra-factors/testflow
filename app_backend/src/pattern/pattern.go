@@ -137,31 +137,31 @@ func (p *Pattern) CountForEvent(eventName string, eventCreatedTime time.Time, ev
 			p.currentUserOccurrenceCount += 1
 			if p.currentUserOccurrenceCount == 1 {
 				p.OncePerUserCount += 1
-			}
-
-			// Update histograms of timings.
-			var duration float64
-			for i := 0; i < pLen; i++ {
-				if i == 0 {
-					duration = p.currentEventTimes[0].Sub(userCreatedTime).Seconds()
-					if duration < 0 {
-						// Ignoring this error for now, since there are no DB checks to avoid
-						// these user input values.
-						log.Error(fmt.Sprintf("Event occurs before creation for user:%s", p.currentUserId))
+				// Update histograms only for the first count per user.
+				// Update histograms of timings.
+				var duration float64
+				for i := 0; i < pLen; i++ {
+					if i == 0 {
+						duration = p.currentEventTimes[0].Sub(userCreatedTime).Seconds()
+						if duration < 0 {
+							// Ignoring this error for now, since there are no DB checks to avoid
+							// these user input values.
+							log.Error(fmt.Sprintf("Event occurs before creation for user:%s", p.currentUserId))
+						}
+					} else {
+						duration = p.currentEventTimes[i].Sub(p.currentEventTimes[i-1]).Seconds()
+						if duration < 0 {
+							return "", fmt.Errorf("Event Timings not in order")
+						}
 					}
-				} else {
-					duration = p.currentEventTimes[i].Sub(p.currentEventTimes[i-1]).Seconds()
-					if duration < 0 {
-						return "", fmt.Errorf("Event Timings not in order")
-					}
+					p.Timings[i].Add(duration)
 				}
-				p.Timings[i].Add(duration)
-			}
 
-			// Update histograms of repeats and Cardinalities.
-			for i := 0; i < pLen; i++ {
-				p.EventCardinalities[i].Add(float64(p.currentEventCardinalities[i]))
-				p.Repeats[i].Add(float64(p.currentRepeats[i]))
+				// Update histograms of repeats and Cardinalities.
+				for i := 0; i < pLen; i++ {
+					p.EventCardinalities[i].Add(float64(p.currentEventCardinalities[i]))
+					p.Repeats[i].Add(float64(p.currentRepeats[i]))
+				}
 			}
 
 			// Reset.
@@ -172,6 +172,35 @@ func (p *Pattern) CountForEvent(eventName string, eventCreatedTime time.Time, ev
 		}
 	}
 	return p.EventNames[p.waitIndex], nil
+}
+
+func (p *Pattern) GetOncePerUserCount(eventCardinalityLowerBound int,
+	eventCardinalityUpperBound int) uint {
+
+	if eventCardinalityLowerBound > eventCardinalityUpperBound {
+		log.WithFields(log.Fields{
+			"eclb": eventCardinalityLowerBound,
+			"ecub": eventCardinalityUpperBound}).Error("Unexpected cardinality bounds.")
+		return p.OncePerUserCount
+	}
+	lowerCDF := 0.0
+	upperCDF := 1.0
+	pLen := len(p.EventNames)
+	if eventCardinalityLowerBound > 0 {
+		// The bounds are meant for the last event.
+		lowerCDF = p.EventCardinalities[pLen-1].CDF(float64(eventCardinalityLowerBound) - 0.5)
+	}
+	if eventCardinalityUpperBound > 0 {
+		upperCDF = p.EventCardinalities[pLen-1].CDF(float64(eventCardinalityUpperBound) + 0.5)
+	}
+	floatCount := (float64(p.OncePerUserCount) * (upperCDF - lowerCDF))
+	if floatCount < 0 {
+		log.WithFields(log.Fields{"upperCDF": upperCDF, "lowerCDF": lowerCDF,
+			"eelb": eventCardinalityLowerBound,
+			"ecub": eventCardinalityUpperBound, "pattern": p.String()}).Fatal(
+			"Final count is less than 0.")
+	}
+	return uint(floatCount)
 }
 
 func (p *Pattern) WaitingOn() string {

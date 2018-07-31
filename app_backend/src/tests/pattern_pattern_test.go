@@ -62,27 +62,74 @@ func TestPatternCountEvents(t *testing.T) {
 	assert.Equal(t, pLen, len(p.Timings))
 	assert.Equal(t, pLen, len(p.Repeats))
 	assert.Equal(t, pLen, len(p.EventCardinalities))
-	// A-B-C occurs 3 times, with first A occurring after 3720s in User1 and
-	// 3660 and 4020s in User 2.
+	// A-B-C occurs twice oncePerUser , with first A occurring after 3720s in User1 and
+	// 3660s in User 2.
 	// Repeats once before the  next B occurs in User2.
-	assert.Equal(t, float64(3), p.Timings[0].Count())
-	assert.Equal(t, float64((3720.0+3660.0+4020.0)/3), p.Timings[0].Mean())
-	assert.Equal(t, float64((2.0+1.0+3.0)/3), p.EventCardinalities[0].Mean())
-	assert.Equal(t, float64((1.0+2.0+1.0)/3), p.Repeats[0].Mean())
-	// A-B-C occurs 3 times, with first B following first A after 120s in User1 and
-	// 180 and 60s in User 2.
+	assert.Equal(t, float64(2), p.Timings[0].Count())
+	assert.Equal(t, float64((3720.0+3660.0)/2), p.Timings[0].Mean())
+	assert.Equal(t, float64((2.0+1.0)/2), p.EventCardinalities[0].Mean())
+	assert.Equal(t, float64((1.0+2.0)/2), p.Repeats[0].Mean())
+	// A-B-C occurs twice oncePerUser, with first B following first A after 120s in User1 and
+	// 180 in User 2.
 	// Repeats once before the  next C occurs in User1.
-	assert.Equal(t, float64(3), p.Timings[1].Count())
-	assert.Equal(t, float64((120.0+180.0+60.0)/3), p.Timings[1].Mean())
-	assert.Equal(t, float64((5.0+1.0+2.0)/3), p.EventCardinalities[1].Mean())
-	assert.Equal(t, float64((2.0+1.0+1.0)/3), p.Repeats[1].Mean())
-	// A-B-C occurs 3 times, with first C following first B after 180s in User1 and
-	// 120 and 60s in User 2.
+	assert.Equal(t, float64(2), p.Timings[1].Count())
+	assert.Equal(t, float64((120.0+180.0)/2), p.Timings[1].Mean())
+	assert.Equal(t, float64((5.0+1.0)/2), p.EventCardinalities[1].Mean())
+	assert.Equal(t, float64((2.0+1.0)/2), p.Repeats[1].Mean())
+	// A-B-C occurs twice oncePerUser, with first C following first B after 180s in User1 and
+	// 120s in User 2.
 	// Last event always is counted once.
-	assert.Equal(t, float64(3), p.Timings[2].Count())
-	assert.Equal(t, float64((180.0+120.0+60.0)/3), p.Timings[2].Mean())
-	assert.Equal(t, float64((1.0+1.0+2.0)/3), p.EventCardinalities[2].Mean())
-	assert.Equal(t, float64((1.0+1.0+1.0)/3), p.Repeats[2].Mean())
+	assert.Equal(t, float64(2), p.Timings[2].Count())
+	assert.Equal(t, float64((180.0+120.0)/2), p.Timings[2].Mean())
+	assert.Equal(t, float64((1.0+1.0)/2), p.EventCardinalities[2].Mean())
+	assert.Equal(t, float64((1.0+1.0)/2), p.Repeats[2].Mean())
+}
+
+func TestPatternGetOncePerUserCount(t *testing.T) {
+	// Count A -> B -> C
+	// U1: F, G, A, L, B, A, B, C   (A(1) -> B(2) -> C(1):1)
+	// U2: F, A, A, K, B, Z, C, A, B, C  (A(2,1) -> B (1, 1) -> C(1, 1)
+	// Count:3, OncePerUserCount:2, UserCount:2
+	pEvents := []string{"A", "B", "C"}
+	p, err := P.NewPattern(pEvents)
+	// User 1 events.
+	userId := "user1"
+	userCreatedTime, _ := time.Parse(time.RFC3339, "2017-06-01T00:00:00Z")
+	err = p.ResetForNewUser(userId, userCreatedTime)
+	assert.Nil(t, err)
+	nextEventCreatedTime, _ := time.Parse(time.RFC3339, "2017-06-01T01:00:00Z")
+	events := []string{"F", "G", "A", "L", "B", "A", "B", "C"}
+	cardinalities := []uint{1, 2, 2, 1, 5, 3, 6, 1}
+	for i, event := range events {
+		_, err = p.CountForEvent(event, nextEventCreatedTime, cardinalities[i], userId, userCreatedTime)
+		assert.Nil(t, err)
+		nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
+	}
+	// User 2 events.
+	userId = "user2"
+	userCreatedTime, _ = time.Parse(time.RFC3339, "2017-06-01T00:01:00Z")
+	err = p.ResetForNewUser(userId, userCreatedTime)
+	assert.Nil(t, err)
+	nextEventCreatedTime, _ = time.Parse(time.RFC3339, "2017-06-01T01:01:00Z")
+	events = []string{"F", "A", "A", "K", "B", "Z", "C", "A", "B", "C"}
+	cardinalities = []uint{1, 1, 2, 1, 1, 1, 2, 3, 2, 3}
+	for i, event := range events {
+		_, err = p.CountForEvent(event, nextEventCreatedTime, cardinalities[i], userId, userCreatedTime)
+		assert.Nil(t, err)
+		nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
+	}
+
+	// A-B-C occurs 2 times, with cardinality of C 1, 2.
+	assert.Equal(t, uint(3), p.Count)
+	assert.Equal(t, uint(2), p.UserCount)
+	assert.Equal(t, uint(2), p.OncePerUserCount)
+	assert.Equal(t, float64((1.0+2.0)/2), p.EventCardinalities[2].Mean())
+	assert.Equal(t, uint(2), p.GetOncePerUserCount(-1, -1))
+	assert.Equal(t, uint(2), p.GetOncePerUserCount(1, -1))
+	assert.Equal(t, uint(1), p.GetOncePerUserCount(-1, 1))
+	assert.Equal(t, uint(1), p.GetOncePerUserCount(1, 1))
+	assert.Equal(t, uint(1), p.GetOncePerUserCount(2, 2))
+	assert.Equal(t, uint(1), p.GetOncePerUserCount(2, 3))
 }
 
 func TestPatternEdgeConditions(t *testing.T) {

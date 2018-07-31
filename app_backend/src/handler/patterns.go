@@ -11,7 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func parseEventQuery(requestBodyMap map[string]interface{}) (string, string, uint, uint, error) {
+func parseEventQuery(requestBodyMap map[string]interface{}) (string, string, int, int, error) {
 	var startEvent string
 	if se, ok := requestBodyMap["start_event"]; ok {
 		if sen, ok := se.(map[string]interface{})["name"]; ok {
@@ -20,17 +20,24 @@ func parseEventQuery(requestBodyMap map[string]interface{}) (string, string, uin
 	}
 
 	var endEvent string
-	var endEventCardinalityLowerBound, endEventCardinalityUpperBound uint
+	var endEventCardinalityLowerBound int = -1
+	var endEventCardinalityUpperBound int = -1
 	if ee, ok := requestBodyMap["end_event"]; ok {
 		eeMap := ee.(map[string]interface{})
 		if een, ok := eeMap["name"]; ok {
 			endEvent = een.(string)
 		}
 		if eeclb, ok := eeMap["card_lower_bound"]; ok {
-			endEventCardinalityLowerBound = uint(eeclb.(float64))
+			tmp := int(eeclb.(float64))
+			if tmp > 0 {
+				endEventCardinalityLowerBound = tmp
+			}
 		}
 		if eecub, ok := eeMap["card_upper_bound"]; ok {
-			endEventCardinalityUpperBound = uint(eecub.(float64))
+			tmp := int(eecub.(float64))
+			if tmp > 0 {
+				endEventCardinalityUpperBound = tmp
+			}
 		}
 	}
 
@@ -64,7 +71,7 @@ func QueryPatternsHandler(c *gin.Context) {
 	}
 
 	var startEvent, endEvent string
-	var endEventCardinalityLowerBound, endEventCardinalityUpperBound uint
+	var endEventCardinalityLowerBound, endEventCardinalityUpperBound int
 	if startEvent, endEvent, endEventCardinalityLowerBound, endEventCardinalityUpperBound, err = parseEventQuery(requestBodyMap); err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("Invalid Query.")
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -92,7 +99,6 @@ func QueryPatternsHandler(c *gin.Context) {
 
 // Test command.
 // curl -i -X POST http://localhost:8080/projects/1/patterns/crunch -d '{ "end_event": "payment" }
-
 func CrunchPatternsHandler(c *gin.Context) {
 	projectId, err := strconv.ParseUint(c.Params.ByName("project_id"), 10, 64)
 	if err != nil {
@@ -111,7 +117,7 @@ func CrunchPatternsHandler(c *gin.Context) {
 	}
 
 	var startEvent, endEvent string
-	var endEventCardinalityLowerBound, endEventCardinalityUpperBound uint
+	var endEventCardinalityLowerBound, endEventCardinalityUpperBound int
 	if startEvent, endEvent, endEventCardinalityLowerBound, endEventCardinalityUpperBound, err = parseEventQuery(requestBodyMap); err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("Invalid Query.")
 		c.JSON(http.StatusBadRequest, gin.H{
