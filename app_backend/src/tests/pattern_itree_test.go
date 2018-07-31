@@ -73,7 +73,7 @@ func TestBuildNewItree(t *testing.T) {
 		patterns = append(patterns, p)
 	}
 	pw := P.NewPatternWrapper(patterns)
-	itree, err := P.BuildNewItree("Y", pw)
+	itree, err := P.BuildNewItree("Y", -1, -1, pw)
 	assert.Nil(t, err)
 	assert.NotNil(t, itree)
 

@@ -59,27 +59,27 @@ func TestCountPatterns(t *testing.T) {
 	assert.Equal(t, pLen, len(pABC.Timings))
 	assert.Equal(t, pLen, len(pABC.Repeats))
 	assert.Equal(t, pLen, len(pABC.EventCardinalities))
-	// A-B-C occurs 3 times, with first A occurring after 3720s in User1 and
-	// 3660 and 4020s in User 2.
-	// Repeats once before the next B occurs in User2.
-	assert.Equal(t, float64(3), pABC.Timings[0].Count())
-	assert.Equal(t, float64((3720.0+3660.0+4020.0)/3), pABC.Timings[0].Mean())
-	assert.Equal(t, float64((2.0+1.0+3.0)/3), pABC.EventCardinalities[0].Mean())
-	assert.Equal(t, float64((1.0+2.0+1.0)/3), pABC.Repeats[0].Mean())
-	// A-B-C occurs 3 times, with first B following first A after 120s in User1 and
-	// 180 and 60s in User 2.
-	// Repeats once before the next C occurs in User1.
-	assert.Equal(t, float64(3), pABC.Timings[1].Count())
-	assert.Equal(t, float64((120.0+180.0+60.0)/3), pABC.Timings[1].Mean())
-	assert.Equal(t, float64((5.0+1.0+2.0)/3), pABC.EventCardinalities[1].Mean())
-	assert.Equal(t, float64((2.0+1.0+1.0)/3), pABC.Repeats[1].Mean())
-	// A-B-C occurs 3 times, with first C following first B after 180s in User1 and
-	// 120 and 60s in User 2.
+	// A-B-C occurs twice oncePerUser , with first A occurring after 3720s in User1 and
+	// 3660s in User 2.
+	// Repeats once before the  next B occurs in User2.
+	assert.Equal(t, float64(2), pABC.Timings[0].Count())
+	assert.Equal(t, float64((3720.0+3660.0)/2), pABC.Timings[0].Mean())
+	assert.Equal(t, float64((2.0+1.0)/2), pABC.EventCardinalities[0].Mean())
+	assert.Equal(t, float64((1.0+2.0)/2), pABC.Repeats[0].Mean())
+	// A-B-C occurs twice oncePerUser, with first B following first A after 120s in User1 and
+	// 180 in User 2.
+	// Repeats once before the  next C occurs in User1.
+	assert.Equal(t, float64(2), pABC.Timings[1].Count())
+	assert.Equal(t, float64((120.0+180.0)/2), pABC.Timings[1].Mean())
+	assert.Equal(t, float64((5.0+1.0)/2), pABC.EventCardinalities[1].Mean())
+	assert.Equal(t, float64((2.0+1.0)/2), pABC.Repeats[1].Mean())
+	// A-B-C occurs twice oncePerUser, with first C following first B after 180s in User1 and
+	// 120s in User 2.
 	// Last event always is counted once.
-	assert.Equal(t, float64(3), pABC.Timings[2].Count())
-	assert.Equal(t, float64((180.0+120.0+60.0)/3), pABC.Timings[2].Mean())
-	assert.Equal(t, float64((1.0+1.0+2.0)/3), pABC.EventCardinalities[2].Mean())
-	assert.Equal(t, float64((1.0+1.0+1.0)/3), pABC.Repeats[2].Mean())
+	assert.Equal(t, float64(2), pABC.Timings[2].Count())
+	assert.Equal(t, float64((180.0+120.0)/2), pABC.Timings[2].Mean())
+	assert.Equal(t, float64((1.0+1.0)/2), pABC.EventCardinalities[2].Mean())
+	assert.Equal(t, float64((1.0+1.0)/2), pABC.Repeats[2].Mean())
 
 	// Test output on other patterns.
 	assert.Equal(t, uint(4), pAB.Count)

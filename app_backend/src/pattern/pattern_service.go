@@ -10,9 +10,8 @@ import (
 )
 
 type PatternWrapper struct {
-	patterns         []*Pattern
-	perUserCountsMap map[string]uint
-	countsMap        map[string]uint
+	patterns []*Pattern
+	pMap     map[string]*Pattern
 }
 
 type PatternService struct {
@@ -24,7 +23,6 @@ type result struct {
 	Timings        []float64 `json:"timings"`
 	Cardinalities  []float64 `json:"cardinalities"`
 	Repeats        []float64 `json:"repeats"`
-	Counts         []uint    `json:"counts"`
 	PerUserCounts  []uint    `json:"per_user_counts"`
 	TotalUserCount uint      `json:"total_user_count"`
 }
@@ -35,15 +33,60 @@ func NewPatternWrapper(patterns []*Pattern) *PatternWrapper {
 	patternWrapper := PatternWrapper{
 		patterns: patterns,
 	}
-	perUserCountsMap := make(map[string]uint)
-	countsMap := make(map[string]uint)
+	pMap := make(map[string]*Pattern)
 	for _, p := range patterns {
-		perUserCountsMap[p.String()] = p.OncePerUserCount
-		countsMap[p.String()] = p.Count
+		pMap[p.String()] = p
 	}
-	patternWrapper.perUserCountsMap = perUserCountsMap
-	patternWrapper.countsMap = countsMap
+	patternWrapper.pMap = pMap
 	return &patternWrapper
+}
+
+func (pw *PatternWrapper) GetPerUserCount(eventNames []string,
+	eCardLowerBound int, ecardUpperBound int) (uint, bool) {
+	if p, ok := pw.pMap[eventArrayToString(eventNames)]; ok {
+		return p.GetOncePerUserCount(eCardLowerBound, ecardUpperBound), true
+	}
+	return 0, false
+}
+
+func (pw *PatternWrapper) buildResultsFromPatterns(patterns []*Pattern,
+	eCardLowerBound int, ecardUpperBound int) PatternServiceResults {
+	results := PatternServiceResults{}
+
+	for _, p := range patterns {
+		r := result{
+			EventNames:     p.EventNames,
+			Timings:        []float64{},
+			Cardinalities:  []float64{},
+			Repeats:        []float64{},
+			PerUserCounts:  []uint{},
+			TotalUserCount: p.UserCount,
+		}
+		pLen := len(p.EventNames)
+		for i := 0; i < pLen; i++ {
+			r.Timings = append(r.Timings, p.Timings[i].Quantile(0.5))
+			r.Repeats = append(r.Repeats, p.Repeats[i].Quantile(0.5))
+			r.Cardinalities = append(r.Cardinalities, p.EventCardinalities[i].Quantile(0.5))
+
+			var subsequencePerUserCount uint
+			var found bool = true
+			if i == pLen-1 {
+				subsequencePerUserCount = p.GetOncePerUserCount(eCardLowerBound, ecardUpperBound)
+			} else {
+				subsequencePerUserCount, found = pw.GetPerUserCount(p.EventNames[:i+1], -1, -1)
+			}
+			if !found {
+				log.Errorf(fmt.Sprintf(
+					"Subsequence %s not as frequent as sequence %s",
+					eventArrayToString(p.EventNames[:i+1]), ","), p.String())
+				r.PerUserCounts = append(r.PerUserCounts, p.GetOncePerUserCount(eCardLowerBound, ecardUpperBound))
+			} else {
+				r.PerUserCounts = append(r.PerUserCounts, subsequencePerUserCount)
+			}
+		}
+		results = append(results, &r)
+	}
+	return results
 }
 
 func NewPatternService(patternsMap map[uint64][]*Pattern) (*PatternService, error) {
@@ -56,67 +99,8 @@ func NewPatternService(patternsMap map[uint64][]*Pattern) (*PatternService, erro
 	return &patternService, nil
 }
 
-func (ps *PatternService) GetPerUserCount(projectId uint64, eventNames []string) (uint, bool) {
-	pw, ok := ps.patternsMap[projectId]
-	if !ok {
-		return 0, false
-	}
-	c, ok := pw.perUserCountsMap[eventArrayToString(eventNames)]
-	return c, ok
-}
-
-func (ps *PatternService) GetCount(projectId uint64, eventNames []string) (uint, bool) {
-	pw, ok := ps.patternsMap[projectId]
-	if !ok {
-		return 0, false
-	}
-	c, ok := pw.countsMap[eventArrayToString(eventNames)]
-	return c, ok
-}
-
-func (ps *PatternService) buildResultsFromPatterns(projectId uint64, patterns []*Pattern) PatternServiceResults {
-	results := PatternServiceResults{}
-	for _, p := range patterns {
-		r := result{
-			EventNames:     p.EventNames,
-			Timings:        []float64{},
-			Cardinalities:  []float64{},
-			Repeats:        []float64{},
-			Counts:         []uint{},
-			PerUserCounts:  []uint{},
-			TotalUserCount: p.UserCount,
-		}
-		for i := 0; i < len(p.EventNames); i++ {
-			r.Timings = append(r.Timings, p.Timings[i].Quantile(0.5))
-			r.Repeats = append(r.Repeats, p.Repeats[i].Quantile(0.5))
-			r.Cardinalities = append(r.Cardinalities, p.EventCardinalities[i].Quantile(0.5))
-			subsequenceCount, ok := ps.GetCount(projectId, p.EventNames[:i+1])
-			if !ok {
-				log.Errorf(fmt.Sprintf(
-					"Subsequence %s not as frequent as sequence %s",
-					eventArrayToString(p.EventNames[:i+1]), ","), p.String())
-				r.Counts = append(r.Counts, p.Count)
-			} else {
-				r.Counts = append(r.Counts, subsequenceCount)
-			}
-
-			subsequencePerUserCount, ok := ps.GetPerUserCount(projectId, p.EventNames[:i+1])
-			if !ok {
-				log.Errorf(fmt.Sprintf(
-					"Subsequence %s not as frequent as sequence %s",
-					eventArrayToString(p.EventNames[:i+1]), ","), p.String())
-				r.PerUserCounts = append(r.PerUserCounts, p.OncePerUserCount)
-			} else {
-				r.PerUserCounts = append(r.PerUserCounts, subsequencePerUserCount)
-			}
-		}
-		results = append(results, &r)
-	}
-	return results
-}
-
 func (ps *PatternService) Query(projectId uint64, startEvent string,
-	endEvent string) (PatternServiceResults, error) {
+	endEvent string, eCardLowerBound int, ecardUpperBound int) (PatternServiceResults, error) {
 
 	pw, ok := ps.patternsMap[projectId]
 	if !ok {
@@ -133,7 +117,7 @@ func (ps *PatternService) Query(projectId uint64, startEvent string,
 		}
 	}
 
-	results := ps.buildResultsFromPatterns(projectId, matchPatterns)
+	results := pw.buildResultsFromPatterns(matchPatterns, eCardLowerBound, ecardUpperBound)
 	// Sort in decreasing order of per user counts of the sequence.
 	sort.SliceStable(results,
 		func(i, j int) bool {
@@ -149,7 +133,8 @@ func (ps *PatternService) Query(projectId uint64, startEvent string,
 	return results, nil
 }
 
-func (ps *PatternService) Crunch(projectId uint64, endEvent string) (PatternServiceResults, error) {
+func (ps *PatternService) Crunch(projectId uint64, endEvent string,
+	eCardLowerBound int, ecardUpperBound int) (PatternServiceResults, error) {
 	pw, ok := ps.patternsMap[projectId]
 	if !ok {
 		return nil, fmt.Errorf(fmt.Sprintf("No patterns for projectId:%d", projectId))
@@ -159,7 +144,7 @@ func (ps *PatternService) Crunch(projectId uint64, endEvent string) (PatternServ
 	}
 
 	iPatterns := []*Pattern{}
-	if itree, err := BuildNewItree(endEvent, pw); err != nil {
+	if itree, err := BuildNewItree(endEvent, eCardLowerBound, ecardUpperBound, pw); err != nil {
 		log.Error(err)
 		return nil, err
 	} else {
@@ -167,7 +152,7 @@ func (ps *PatternService) Crunch(projectId uint64, endEvent string) (PatternServ
 			iPatterns = append(iPatterns, node.Pattern)
 		}
 	}
-	results := ps.buildResultsFromPatterns(projectId, iPatterns)
+	results := pw.buildResultsFromPatterns(iPatterns, eCardLowerBound, ecardUpperBound)
 
 	maxPatterns := 50
 	if len(results) > maxPatterns {

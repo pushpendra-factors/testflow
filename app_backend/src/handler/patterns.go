@@ -88,7 +88,8 @@ func QueryPatternsHandler(c *gin.Context) {
 		"eecub":      endEventCardinalityUpperBound}).Info("Pattern query.")
 
 	ps := C.GetServices().PatternService
-	if results, err := ps.Query(projectId, startEvent, endEvent); err != nil {
+	if results, err := ps.Query(projectId, startEvent, endEvent,
+		endEventCardinalityLowerBound, endEventCardinalityUpperBound); err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("Patterns query failed.")
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
@@ -133,7 +134,8 @@ func CrunchPatternsHandler(c *gin.Context) {
 		"eecub":      endEventCardinalityUpperBound}).Info("Pattern crunch query")
 
 	ps := C.GetServices().PatternService
-	if results, err := ps.Crunch(projectId, endEvent); err != nil {
+	if results, err := ps.Crunch(projectId, endEvent,
+		endEventCardinalityLowerBound, endEventCardinalityUpperBound); err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("Patterns crunch failed.")
 		c.AbortWithStatus(http.StatusBadRequest)
 		return

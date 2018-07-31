@@ -177,7 +177,7 @@ func (p *Pattern) CountForEvent(eventName string, eventCreatedTime time.Time, ev
 func (p *Pattern) GetOncePerUserCount(eventCardinalityLowerBound int,
 	eventCardinalityUpperBound int) uint {
 
-	if eventCardinalityLowerBound > eventCardinalityUpperBound {
+	if eventCardinalityUpperBound > 0 && eventCardinalityLowerBound > eventCardinalityUpperBound {
 		log.WithFields(log.Fields{
 			"eclb": eventCardinalityLowerBound,
 			"ecub": eventCardinalityUpperBound}).Error("Unexpected cardinality bounds.")
