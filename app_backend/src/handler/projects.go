@@ -33,3 +33,14 @@ func CreateProjectHandler(c *gin.Context) {
 		c.JSON(http.StatusCreated, project)
 	}
 }
+
+// Test command.
+// curl -i -X GET http://localhost:8080/projects
+func GetProjectsHandler(c *gin.Context) {
+	projects, errCode := M.GetProjects()
+	if errCode != M.DB_SUCCESS {
+		c.AbortWithStatus(errCode)
+	} else {
+		c.JSON(http.StatusOK, projects)
+	}
+}
