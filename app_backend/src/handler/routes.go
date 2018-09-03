@@ -4,11 +4,24 @@ import (
 	C "config"
 	M "model"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/contrib/renders/multitemplate"
 	"github.com/gin-gonic/gin"
+	log "github.com/sirupsen/logrus"
 )
 
 func InitRoutes(r *gin.Engine) {
+	// CORS
+	if C.IsDevelopment() {
+		log.Info("Running in development.")
+		r.Use(cors.New(cors.Config{
+			AllowOrigins:  []string{"http://localhost:8080"},
+			AllowMethods:  []string{"PUT", "PATCH"},
+			AllowHeaders:  []string{"Origin"},
+			ExposeHeaders: []string{"Content-Length"},
+		}))
+	}
+
 	r.POST("/projects", CreateProjectHandler)
 	r.GET("/projects", GetProjectsHandler)
 	r.GET("/projects/:project_id/event_names", GetEventNamesHandler)

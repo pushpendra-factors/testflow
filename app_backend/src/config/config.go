@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	P "pattern"
+	"strings"
 
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
@@ -147,4 +148,8 @@ func GetConfig() *Configuration {
 
 func GetServices() *Services {
 	return services
+}
+
+func IsDevelopment() bool {
+	return (strings.Compare(configuration.Env, DEVELOPMENT) == 0)
 }
