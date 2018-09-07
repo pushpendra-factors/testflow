@@ -14,12 +14,10 @@ func InitRoutes(r *gin.Engine) {
 	// CORS
 	if C.IsDevelopment() {
 		log.Info("Running in development.")
-		r.Use(cors.New(cors.Config{
-			AllowOrigins:  []string{"http://localhost:3000"},
-			AllowMethods:  []string{"PUT", "PATCH"},
-			AllowHeaders:  []string{"Origin"},
-			ExposeHeaders: []string{"Content-Length"},
-		}))
+		config := cors.DefaultConfig()
+		config.AllowOrigins = []string{"http://localhost:8080",
+			"http://localhost:3000"}
+		r.Use(cors.New(config))
 	}
 
 	r.POST("/projects", CreateProjectHandler)
