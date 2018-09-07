@@ -1,0 +1,6 @@
+{
+  "name": "Factor",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./Factor.js"
+}

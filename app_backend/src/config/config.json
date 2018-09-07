@@ -1,6 +1,6 @@
 {
 	"env": "development",
-	"port": 80,
+	"port": 8080,
 	"db_host": "localhost",
 	"db_port": 5432,
 	"db_user": "autometa",
