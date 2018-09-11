@@ -143,3 +143,59 @@ func CrunchPatternsHandler(c *gin.Context) {
 		c.JSON(http.StatusOK, results)
 	}
 }
+
+func FactorHandler(c *gin.Context) {
+	projectId, err := strconv.ParseUint(c.Params.ByName("project_id"), 10, 64)
+	if err != nil {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+	log.WithFields(log.Fields{"projectId": projectId}).Info("Factor Query")
+
+	var requestBodyMap map[string]interface{}
+	if err := json.NewDecoder(c.Request.Body).Decode(&requestBodyMap); err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("Query Patterns JSON Decoding failed.")
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":  "json decoding : " + err.Error(),
+			"status": http.StatusBadRequest,
+		})
+		return
+	}
+
+	if query, ok := requestBodyMap["query"]; ok {
+		log.WithFields(log.Fields{"query": query}).Info("Received query")
+		response := map[string]interface{}{
+			"query": query,
+			"charts": []map[string]interface{}{
+				map[string]interface{}{
+					"type":   "line",
+					"header": "Line Chart",
+					"labels": []string{"January", "February", "March", "April", "May", "June", "July"},
+					"datasets": []map[string]interface{}{
+						map[string]interface{}{
+							"label": "Event Timeline",
+							"data":  []float64{65, 59, 80, 81, 56, 55, 40},
+						},
+					},
+				},
+				map[string]interface{}{
+					"type":   "bar",
+					"header": "Bar Chart",
+					"labels": []string{"January", "February", "March", "April", "May", "June", "July"},
+					"datasets": []map[string]interface{}{
+						map[string]interface{}{
+							"label": "Events Bar Timeline",
+							"data":  []float64{65, 59, 80, 81, 56, 55, 40},
+						},
+					},
+				},
+			},
+		}
+		c.JSON(http.StatusOK, response)
+	} else {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":  fmt.Errorf("No query in request"),
+			"status": http.StatusBadRequest,
+		})
+	}
+}

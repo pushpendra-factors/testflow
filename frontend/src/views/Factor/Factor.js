@@ -1,15 +1,19 @@
 import React, { Component } from 'react';
+import { Bar, Line } from 'react-chartjs-2';
 import { connect } from 'react-redux'
 import {
   Button,
   Card,
   CardBody,
+  CardColumns,
   CardHeader,
   Col,
   FormGroup,
   Row,
 } from 'reactstrap';
 import CreatableSelect from 'react-select/lib/Creatable';
+import { fetchFactors } from "../../actions/factorsActions"
+import { CustomTooltips } from '@coreui/coreui-plugin-chartjs-custom-tooltips';
 
 const customSelectStyles = {
   multiValue: () => ({
@@ -20,6 +24,14 @@ const customSelectStyles = {
     display: 'none',
   }),
 }
+
+const chartOptions = {
+  tooltips: {
+    enabled: false,
+    custom: CustomTooltips
+  },
+  maintainAspectRatio: false
+};
 
 const eventNameType = "eventName";
 const eventPropertyStartType = "eventPropertyStart";
@@ -37,6 +49,7 @@ const operatorLesserThan = "lesserThan";
   return {
     currentProject: store.projects.currentProject,
     currentProjectEventNames : store.projects.currentProjectEventNames,
+    factors: store.factors.factors,
   };
 })
 
@@ -299,6 +312,8 @@ class Factor extends Component {
           return;
         }
         console.log('Fire Query: ' + JSON.stringify(query));
+        this.props.dispatch(fetchFactors(this.props.currentProject.value,
+                            {query: query}));
       }
 
       disallowNewOption = (inputOption, valueType, optionsType) => {
@@ -322,8 +337,68 @@ class Factor extends Component {
       };
 
       render() {
+        var charts = [];
+        if (!!this.props.factors.charts) {
+          for (var i = 0; i < this.props.factors.charts.length; i++) {
+            // note: we add a key prop here to allow react to uniquely identify each
+            // element in this array. see: https://reactjs.org/docs/lists-and-keys.html
+            var chartData = this.props.factors.charts[i];
+            var chart;
+            if (chartData.type === 'line') {
+              var line = {
+                labels: chartData.labels,
+                datasets: chartData.datasets,
+              };
+              line.datasets[0].fill = false;
+              line.datasets[0].lineTension = 0.1;
+              line.datasets[0].backgroundColor = 'rgba(75,192,192,0.4)';
+              line.datasets[0].borderColor = 'rgba(75,192,192,1)';
+              line.datasets[0].borderCapStyle = 'butt';
+              line.datasets[0].borderDash = [];
+              line.datasets[0].borderDashOffset = 0.0;
+              line.datasets[0].borderJoinStyle = 'miter';
+              line.datasets[0].pointBorderColor = 'rgba(75,192,192,1)';
+              line.datasets[0].pointBackgroundColor = '#fff';
+              line.datasets[0].pointBorderWidth = 1;
+              line.datasets[0].pointHoverRadius = 5;
+              line.datasets[0].pointHoverBackgroundColor = 'rgba(75,192,192,1)';
+              line.datasets[0].pointHoverBorderColor = 'rgba(220,220,220,1)';
+              line.datasets[0].pointHoverBorderWidth = 2;
+              line.datasets[0].pointRadius = 1;
+              line.datasets[0].pointHitRadius = 10;
+              chart = <Line data={line} options={chartOptions} />
+            } else if (chartData.type === 'bar') {
+              var bar = {
+                labels: chartData.labels,
+                datasets: chartData.datasets,
+              };
+              bar.datasets[0].backgroundColor = 'rgba(255,99,132,0.2)';
+              bar.datasets[0].borderColor = 'rgba(255,99,132,1)';
+              bar.datasets[0].borderWidth = 1;
+              bar.datasets[0].hoverBackgroundColor = 'rgba(255,99,132,0.4)';
+              bar.datasets[0].hoverBorderColor = 'rgba(255,99,132,1)';
+              chart = <Bar data={bar} options={chartOptions} />
+            }
+            charts.push(
+              <Card key={i}>
+              <CardHeader>
+              {chartData.header}
+              </CardHeader>
+              <CardBody>
+              <div className="chart-wrapper">
+                {chart}
+              </div>
+              </CardBody>
+              </Card>
+            )
+          }
+        }
+
+
         return (
           <div className='animated fadeIn'>
+
+          <div>
           <Row>
           <Col xs='12' md='12'>
           <Card>
@@ -365,6 +440,14 @@ class Factor extends Component {
           </Card>
           </Col>
           </Row>
+          </div>
+
+          <div>
+          <CardColumns className="cols-2">
+          {charts}
+          </CardColumns>
+          </div>
+
           </div>
         );
       }
