@@ -176,6 +176,10 @@ func FactorHandler(c *gin.Context) {
 							"label": "Event Timeline",
 							"data":  []float64{65, 59, 80, 81, 56, 55, 40},
 						},
+						map[string]interface{}{
+							"label": "Events Timeline 2",
+							"data":  []float64{45, 70, 70, 101, 95, 5, 64},
+						},
 					},
 				},
 				map[string]interface{}{
@@ -186,6 +190,10 @@ func FactorHandler(c *gin.Context) {
 						map[string]interface{}{
 							"label": "Events Bar Timeline",
 							"data":  []float64{65, 59, 80, 81, 56, 55, 40},
+						},
+						map[string]interface{}{
+							"label": "Events Bar Timeline 2",
+							"data":  []float64{45, 70, 70, 101, 95, 5, 64},
 						},
 					},
 				},
