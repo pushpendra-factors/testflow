@@ -14,6 +14,10 @@ const chartOptions = {
   },
   maintainAspectRatio: false
 };
+const barBackgroundColors = ['rgba(75,192,192,0.4)', 'rgba(255,99,132,0.2)'];
+const barBorderColors = ['rgba(75,192,192,1)', 'rgba(255,99,132,1)'];
+const barHoverBackgroundColors = ['rgba(75,192,192,1)', 'rgba(255,99,132,0.4)'];
+const barHoverBorderColors = ['rgba(220,220,220,1)', 'rgba(255,99,132,0.4)'];
 
 class BarChartCard extends Component {
   render() {
@@ -22,11 +26,15 @@ class BarChartCard extends Component {
       labels: chartData.labels,
       datasets: chartData.datasets,
     };
-    bar.datasets[0].backgroundColor = 'rgba(255,99,132,0.2)';
-    bar.datasets[0].borderColor = 'rgba(255,99,132,1)';
-    bar.datasets[0].borderWidth = 1;
-    bar.datasets[0].hoverBackgroundColor = 'rgba(255,99,132,0.4)';
-    bar.datasets[0].hoverBorderColor = 'rgba(255,99,132,1)';
+    // Styling.
+    for (var i = 0; i < bar.datasets.length; i++) {
+      bar.datasets[i].backgroundColor = barBackgroundColors[i % barBackgroundColors.length];
+      bar.datasets[i].borderColor = barBorderColors[i % barBorderColors.length];
+      bar.datasets[i].borderWidth = 1;
+      bar.datasets[i].hoverBackgroundColor = barHoverBackgroundColors[i % barHoverBackgroundColors.length];
+      bar.datasets[i].hoverBorderColor = barHoverBorderColors[i % barHoverBorderColors.length];
+    }
+
     var chart = <Bar data={bar} options={chartOptions} />
 
     return (

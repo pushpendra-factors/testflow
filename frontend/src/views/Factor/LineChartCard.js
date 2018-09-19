@@ -14,6 +14,10 @@ const chartOptions = {
   },
   maintainAspectRatio: false
 };
+const lineBackgroundColors = ['rgba(75,192,192,0.4)', 'rgba(255,99,132,0.2)'];
+const lineBorderColors = ['rgba(75,192,192,1)', 'rgba(255,99,132,1)'];
+const lineHoverBackgroundColors = ['rgba(75,192,192,1)', 'rgba(255,99,132,0.4)'];
+const lineHoverBorderColors = ['rgba(220,220,220,1)', 'rgba(255,99,132,0.4)'];
 
 class LineChartCard extends Component {
   render() {
@@ -22,23 +26,27 @@ class LineChartCard extends Component {
       labels: chartData.labels,
       datasets: chartData.datasets,
     };
-    line.datasets[0].fill = false;
-    line.datasets[0].lineTension = 0.1;
-    line.datasets[0].backgroundColor = 'rgba(75,192,192,0.4)';
-    line.datasets[0].borderColor = 'rgba(75,192,192,1)';
-    line.datasets[0].borderCapStyle = 'butt';
-    line.datasets[0].borderDash = [];
-    line.datasets[0].borderDashOffset = 0.0;
-    line.datasets[0].borderJoinStyle = 'miter';
-    line.datasets[0].pointBorderColor = 'rgba(75,192,192,1)';
-    line.datasets[0].pointBackgroundColor = '#fff';
-    line.datasets[0].pointBorderWidth = 1;
-    line.datasets[0].pointHoverRadius = 5;
-    line.datasets[0].pointHoverBackgroundColor = 'rgba(75,192,192,1)';
-    line.datasets[0].pointHoverBorderColor = 'rgba(220,220,220,1)';
-    line.datasets[0].pointHoverBorderWidth = 2;
-    line.datasets[0].pointRadius = 1;
-    line.datasets[0].pointHitRadius = 10;
+    // Styling.
+    for (var i = 0; i < line.datasets.length; i++) {
+      line.datasets[i].fill = false;
+      line.datasets[i].lineTension = 0.1;
+      line.datasets[i].backgroundColor = lineBackgroundColors[i % lineBackgroundColors.length];
+      line.datasets[i].borderColor = lineBorderColors[i % lineBorderColors.length];
+      line.datasets[i].borderCapStyle = 'butt';
+      line.datasets[i].borderDash = [];
+      line.datasets[i].borderDashOffset = 0.0;
+      line.datasets[i].borderJoinStyle = 'miter';
+      line.datasets[i].pointBorderColor = lineBorderColors[i % lineBorderColors.length];
+      line.datasets[i].pointBackgroundColor = '#fff';
+      line.datasets[i].pointBorderWidth = 1;
+      line.datasets[i].pointHoverRadius = 5;
+      line.datasets[i].pointHoverBackgroundColor = lineHoverBackgroundColors[i % lineHoverBackgroundColors.length];
+      line.datasets[i].pointHoverBorderColor = lineHoverBorderColors[i % lineHoverBorderColors.length];
+      line.datasets[i].pointHoverBorderWidth = 2;
+      line.datasets[i].pointRadius = 1;
+      line.datasets[i].pointHitRadius = 10;
+    }
+
     var chart = <Line data={line} options={chartOptions} />
 
     return (

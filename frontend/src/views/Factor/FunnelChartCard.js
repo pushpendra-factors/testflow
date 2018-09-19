@@ -10,7 +10,7 @@ import {
 } from 'reactstrap';
 import FunnelArrow from './FunnelArrow.js';
 
-const funnelRowStyle = {
+const funnelLabelRowStyle = {
   marginBottom: '20px',
 };
 const eventTextStyle = {
@@ -20,10 +20,10 @@ const eventTextStyle = {
   margin: 'auto'
 };
 const arrowStyle = {
-  maxWidth: '100%',
-  maxHeight: '100%',
+  maxWidth: '80%',
+  maxHeight: '80%',
   position: 'relative',
-  top: '15%'
+  top: '8%'
 }
 const chartOptions = {
   layout: {
@@ -35,6 +35,7 @@ const chartOptions = {
     },
   },
 };
+const arrowColor = "#73818f"
 
 class FunnelChartCard extends Component {
   render() {
@@ -45,38 +46,52 @@ class FunnelChartCard extends Component {
       Funnel
       </CardHeader>
       <CardBody>
-      <Row style={funnelRowStyle} noGutters={true}>
-      <Col xs={{ size: '4' }}>
+      <Row noGutters={true}>
+      <Col xs={{ size: '2' }}>
       <Doughnut data={chartData} options={chartOptions}/>
-      <div style={eventTextStyle}>{'PublicMessageSent (20350)'}</div>
       </Col>
       <Col xs={{ size: '1' }}>
-      <div style={arrowStyle}><FunnelArrow color={"#4dbd74"} uid={1} /></div>
+      <div style={arrowStyle}><FunnelArrow color={arrowColor} uid={1} /></div>
       </Col>
-      <Col xs={{ size: '4' }}>
+      <Col xs={{ size: '2' }}>
       <Doughnut data={chartData} options={chartOptions} />
-      <div style={eventTextStyle}>{'PublicMessage'}</div>
+      </Col>
+      </Row>
+      <Row style={funnelLabelRowStyle} noGutters={true}>
+      <Col xs={{ size: '2' }}>
+      <div style={eventTextStyle}>{'PublicMessageSent (20350)'}</div>
+      </Col>
+      <Col xs={{ size: '2', offset: '1' }}>
+      <div style={eventTextStyle}>{'PublicMessageSent (20350)'}</div>
       </Col>
       </Row>
 
-      <Row style={funnelRowStyle} noGutters={true}>
-      <Col xs={{ size: '3' }}>
+      <Row noGutters={true}>
+      <Col xs={{ size: '2' }}>
       <Doughnut data={chartData} options={chartOptions} />
-      <div style={eventTextStyle}>{'PublicMessage'}</div>
       </Col>
       <Col xs={{ size: '1' }}>
-      <div style={arrowStyle}><FunnelArrow color={"#c8ced3"} uid={2} /></div>
+      <div style={arrowStyle}><FunnelArrow color={arrowColor} uid={2} /></div>
       </Col>
-      <Col xs={{ size: '3' }}>
+      <Col xs={{ size: '2' }}>
       <Doughnut data={chartData} options={chartOptions}/>
-      <div style={eventTextStyle}>{'PublicMessage'}</div>
       </Col>
       <Col xs={{ size: '1' }}>
-      <div style={arrowStyle}><FunnelArrow color={"#f86c6b"} uid={3} /></div>
+      <div style={arrowStyle}><FunnelArrow color={arrowColor} uid={3} /></div>
       </Col>
-      <Col xs={{ size: '3' }}>
+      <Col xs={{ size: '2' }}>
       <Doughnut data={chartData} options={chartOptions} />
-      <div style={eventTextStyle}>{'PublicMessage'}</div>
+      </Col>
+      </Row>
+      <Row style={funnelLabelRowStyle} noGutters={true}>
+      <Col xs={{ size: '2' }}>
+      <div style={eventTextStyle}>{'PublicMessageSent (20350)'}</div>
+      </Col>
+      <Col xs={{ size: '2', offset: '1' }}>
+      <div style={eventTextStyle}>{'PublicMessageSent (20350)'}</div>
+      </Col>
+      <Col xs={{ size: '2', offset: '1' }}>
+      <div style={eventTextStyle}>{'PublicMessageSent (20350)'}</div>
       </Col>
       </Row>
 

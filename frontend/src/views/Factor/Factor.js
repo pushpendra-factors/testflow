@@ -24,6 +24,11 @@ const operatorEquals = "equals";
 const operatorGreaterThan = "greaterThan";
 const operatorLesserThan = "lesserThan";
 
+const cardColumnSetting = {
+  size: '10',
+  offset: '1'
+};
+
 @connect((store) => {
   return {
     currentProject: store.projects.currentProject,
@@ -208,9 +213,9 @@ class Factor extends Component {
                 // element in this array. see: https://reactjs.org/docs/lists-and-keys.html
                 var chartData = this.props.factors.charts[i];
                 if (chartData.type === 'line') {
-                  charts.push(<LineChartCard chartData={chartData} key={i} />)
+                  charts.push(<Row  key={i}><Col sm={cardColumnSetting}><LineChartCard chartData={chartData}/></Col></Row>)
                 } else if (chartData.type === 'bar') {
-                  charts.push(<BarChartCard chartData={chartData} key={i} />)
+                  charts.push(<Row  key={i}><Col sm={cardColumnSetting}><BarChartCard chartData={chartData} key={i} /></Col></Row>)
                 }
               }
               var funnelData = {
@@ -227,7 +232,7 @@ class Factor extends Component {
                     ],
                   }],
                 };
-                charts.push(<FunnelChartCard chartData={funnelData} key='2' />);
+                charts.push(<Row  key='2'><Col sm={cardColumnSetting}><FunnelChartCard chartData={funnelData}/></Col></Row>);
               }
 
 
@@ -243,9 +248,7 @@ class Factor extends Component {
                 </div>
 
                 <div>
-                <CardColumns className="cols-2">
                 {charts}
-                </CardColumns>
                 </div>
 
                 </div>

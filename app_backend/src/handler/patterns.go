@@ -169,30 +169,30 @@ func FactorHandler(c *gin.Context) {
 			"charts": []map[string]interface{}{
 				map[string]interface{}{
 					"type":   "line",
-					"header": "Line Chart",
+					"header": "Average PublicMessageSent per month",
 					"labels": []string{"January", "February", "March", "April", "May", "June", "July"},
 					"datasets": []map[string]interface{}{
 						map[string]interface{}{
-							"label": "Event Timeline",
+							"label": "Users with country:US",
 							"data":  []float64{65, 59, 80, 81, 56, 55, 40},
 						},
 						map[string]interface{}{
-							"label": "Events Timeline 2",
+							"label": "All Users",
 							"data":  []float64{45, 70, 70, 101, 95, 5, 64},
 						},
 					},
 				},
 				map[string]interface{}{
 					"type":   "bar",
-					"header": "Bar Chart",
-					"labels": []string{"January", "February", "March", "April", "May", "June", "July"},
+					"header": "Users with country:US have 30% higer average PublicMessageSent than others.",
+					"labels": []string{"All Users", "US", "India", "UK", "Australia", "Egypt", "Iran"},
 					"datasets": []map[string]interface{}{
 						map[string]interface{}{
-							"label": "Events Bar Timeline",
+							"label": "Average PublicMessageSent",
 							"data":  []float64{65, 59, 80, 81, 56, 55, 40},
 						},
 						map[string]interface{}{
-							"label": "Events Bar Timeline 2",
+							"label": "Total PublicMessageSent",
 							"data":  []float64{45, 70, 70, 101, 95, 5, 64},
 						},
 					},
