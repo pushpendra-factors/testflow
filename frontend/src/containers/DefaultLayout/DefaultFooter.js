@@ -15,7 +15,7 @@ class DefaultFooter extends Component {
 
     return (
       <React.Fragment>
-        <span>Factors</span>
+        <span></span>
       </React.Fragment>
     );
   }

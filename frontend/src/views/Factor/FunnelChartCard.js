@@ -20,8 +20,8 @@ const eventTextStyle = {
   margin: 'auto'
 };
 const arrowStyle = {
-  maxWidth: '80%',
-  maxHeight: '80%',
+  maxWidth: '60%',
+  maxHeight: '60%',
   position: 'relative',
   top: '8%'
 }
@@ -38,63 +38,87 @@ const chartOptions = {
 const arrowColor = "#73818f"
 
 class FunnelChartCard extends Component {
+  buildFunnelUI(funnelData) {
+    var graphCols = [];
+    var eventCols = [];
+    for (var i = 0; i < funnelData.length; i++) {
+      var donutGraphData = {
+        labels: [
+        ],
+        datasets: [
+          {
+            data: funnelData[i].data,
+            backgroundColor: [
+              '#36A2EB',
+              '#C8CED3'
+            ],
+            hoverBackgroundColor: [
+            ],
+          }],
+        };
+
+        graphCols.push(
+          <Col xs={{ size: '2' }} key={i}>
+            <Doughnut data={donutGraphData} options={chartOptions}/>
+          </Col>);
+        if (i < funnelData.length - 1) {
+          graphCols.push(
+            <Col xs={{ size: '1' }} key={i}>
+              <div style={arrowStyle}><FunnelArrow color={arrowColor} uid={1} /></div>
+            </Col>);
+        }
+        if (i == 0) {
+          eventCols.push(
+            <Col xs={{ size: '2' }} key={i}>
+            <div style={eventTextStyle}>{funnelData[i].event}</div>
+            </Col>
+          );
+        } else {
+          eventCols.push(
+            <Col xs={{ size: '2', offset: '1'}} key={i}>
+            <div style={eventTextStyle}>{funnelData[i].event}</div>
+            </Col>
+          );
+        }
+    }
+    return [graphCols, eventCols];
+  }
   render() {
     var chartData = this.props.chartData;
+    var baseFunnelGraphCols, baseFunnelEventCols;
+    [baseFunnelGraphCols, baseFunnelEventCols] = this.buildFunnelUI(chartData.baseFunnelData);
+    var funnelGraphCols, funnelEventCols;
+    [funnelGraphCols, funnelEventCols] = this.buildFunnelUI(chartData.funnelData);
+
     return (
       <Card>
       <CardHeader>
-      Funnel
+      {chartData.header}
       </CardHeader>
       <CardBody>
       <Row noGutters={true}>
-      <Col xs={{ size: '2' }}>
-      <Doughnut data={chartData} options={chartOptions}/>
-      </Col>
-      <Col xs={{ size: '1' }}>
-      <div style={arrowStyle}><FunnelArrow color={arrowColor} uid={1} /></div>
-      </Col>
-      <Col xs={{ size: '2' }}>
-      <Doughnut data={chartData} options={chartOptions} />
-      </Col>
+      {
+        baseFunnelGraphCols
+      }
       </Row>
+
       <Row style={funnelLabelRowStyle} noGutters={true}>
-      <Col xs={{ size: '2' }}>
-      <div style={eventTextStyle}>{'PublicMessageSent (20350)'}</div>
-      </Col>
-      <Col xs={{ size: '2', offset: '1' }}>
-      <div style={eventTextStyle}>{'PublicMessageSent (20350)'}</div>
-      </Col>
+      {
+        baseFunnelEventCols
+      }
       </Row>
 
       <Row noGutters={true}>
-      <Col xs={{ size: '2' }}>
-      <Doughnut data={chartData} options={chartOptions} />
-      </Col>
-      <Col xs={{ size: '1' }}>
-      <div style={arrowStyle}><FunnelArrow color={arrowColor} uid={2} /></div>
-      </Col>
-      <Col xs={{ size: '2' }}>
-      <Doughnut data={chartData} options={chartOptions}/>
-      </Col>
-      <Col xs={{ size: '1' }}>
-      <div style={arrowStyle}><FunnelArrow color={arrowColor} uid={3} /></div>
-      </Col>
-      <Col xs={{ size: '2' }}>
-      <Doughnut data={chartData} options={chartOptions} />
-      </Col>
-      </Row>
-      <Row style={funnelLabelRowStyle} noGutters={true}>
-      <Col xs={{ size: '2' }}>
-      <div style={eventTextStyle}>{'PublicMessageSent (20350)'}</div>
-      </Col>
-      <Col xs={{ size: '2', offset: '1' }}>
-      <div style={eventTextStyle}>{'PublicMessageSent (20350)'}</div>
-      </Col>
-      <Col xs={{ size: '2', offset: '1' }}>
-      <div style={eventTextStyle}>{'PublicMessageSent (20350)'}</div>
-      </Col>
+      {
+        funnelGraphCols
+      }
       </Row>
 
+      <Row style={funnelLabelRowStyle} noGutters={true}>
+      {
+        funnelEventCols
+      }
+      </Row>
       </CardBody>
       </Card>
     );

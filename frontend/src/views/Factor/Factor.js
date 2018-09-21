@@ -1,7 +1,8 @@
 import React, { Component } from 'react';
 import { connect } from 'react-redux'
 import {
-  CardColumns,
+  Card,
+  CardHeader,
   Col,
   Row,
 } from 'reactstrap';
@@ -27,6 +28,13 @@ const operatorLesserThan = "lesserThan";
 const cardColumnSetting = {
   size: '10',
   offset: '1'
+};
+
+const chartCardRowStyle = {
+  marginTop: '50px',
+  marginBottom: '2px',
+  marginRight: '2px',
+  marginLeft: '2px',
 };
 
 @connect((store) => {
@@ -207,32 +215,21 @@ class Factor extends Component {
 
           render() {
             var charts = [];
+            let resultElements;
             if (!!this.props.factors.charts) {
               for (var i = 0; i < this.props.factors.charts.length; i++) {
                 // note: we add a key prop here to allow react to uniquely identify each
                 // element in this array. see: https://reactjs.org/docs/lists-and-keys.html
                 var chartData = this.props.factors.charts[i];
                 if (chartData.type === 'line') {
-                  charts.push(<Row  key={i}><Col sm={cardColumnSetting}><LineChartCard chartData={chartData}/></Col></Row>)
+                  charts.push(<Row style={chartCardRowStyle} key={i}><Col sm={cardColumnSetting}><LineChartCard chartData={chartData}/></Col></Row>)
                 } else if (chartData.type === 'bar') {
-                  charts.push(<Row  key={i}><Col sm={cardColumnSetting}><BarChartCard chartData={chartData} key={i} /></Col></Row>)
+                  charts.push(<Row style={chartCardRowStyle} key={i}><Col sm={cardColumnSetting}><BarChartCard chartData={chartData} key={i} /></Col></Row>)
+                } else if (chartData.type === 'funnel') {
+                  charts.push(<Row style={chartCardRowStyle} key={i}><Col sm={cardColumnSetting}><FunnelChartCard chartData={chartData}/></Col></Row>);
                 }
               }
-              var funnelData = {
-                labels: [
-                ],
-                datasets: [
-                  {
-                    data: [90, 10],
-                    backgroundColor: [
-                      '#36A2EB',
-                      '#FFFFFF'
-                    ],
-                    hoverBackgroundColor: [
-                    ],
-                  }],
-                };
-                charts.push(<Row  key='2'><Col sm={cardColumnSetting}><FunnelChartCard chartData={funnelData}/></Col></Row>);
+                resultElements = <Card>{charts}</Card>;
               }
 
 
@@ -247,9 +244,7 @@ class Factor extends Component {
                 </Row>
                 </div>
 
-                <div>
-                {charts}
-                </div>
+                {resultElements}
 
                 </div>
               );

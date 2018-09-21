@@ -197,6 +197,34 @@ func FactorHandler(c *gin.Context) {
 						},
 					},
 				},
+				map[string]interface{}{
+					"type":   "funnel",
+					"header": "Users who have LoggedIn(1st to 5th time) and then MessageFlagged have 25% higher chance to PublicMessageSend(> 10th time).",
+					"baseFunnelData": []map[string]interface{}{
+						map[string]interface{}{
+							"data":  []float64{20000, 0},
+							"event": "LoggedIn(1st to 5th time) (20000)",
+						},
+						map[string]interface{}{
+							"data":  []float64{1000, 19000},
+							"event": "PublicMessageSend(> 10th time) (1000)",
+						},
+					},
+					"funnelData": []map[string]interface{}{
+						map[string]interface{}{
+							"data":  []float64{19000, 1000},
+							"event": "LoggedIn(1st to 5th time) (20000)",
+						},
+						map[string]interface{}{
+							"data":  []float64{19000, 1000},
+							"event": "MessageFlagged (800)",
+						},
+						map[string]interface{}{
+							"data":  []float64{1000, 19000},
+							"event": "PublicMessageSend(> 10th time) (500)",
+						},
+					},
+				},
 			},
 		}
 		c.JSON(http.StatusOK, response)
