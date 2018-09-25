@@ -21,6 +21,7 @@ const queryBuilderStyles = {
     display: 'none',
   }),
 }
+const numericalValueType = "numericalValue";
 
 @connect((store) => {
   return {

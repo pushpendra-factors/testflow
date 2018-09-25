@@ -187,6 +187,19 @@ class Factor extends Component {
               nextExpectedTypes = [numericalValueType, stringValueType];
               break;
               case numericalValueType:
+              var numUserProperties = query.userProperties.length;
+              var currentUserProperty = query.userProperties[numUserProperties - 1];
+              if (!currentUserProperty || currentUserProperty.hasOwnProperty('value')) {
+                var numEvents = query.eventsWithProperties.length;
+                var currentEvent = query.eventsWithProperties[numEvents - 1];
+                var numEventProperties = currentEvent.properties.length;
+                var currentEventProperty = currentEvent.properties[numEventProperties - 1];
+                currentEventProperty['value'] = parseFloat(queryElement.label);
+              } else {
+                currentUserProperty['value'] = parseFloat(queryElement.label);
+              }
+              nextExpectedTypes = [];
+              break;
               case stringValueType:
               var numUserProperties = query.userProperties.length;
               var currentUserProperty = query.userProperties[numUserProperties - 1];

@@ -144,6 +144,66 @@ func CrunchPatternsHandler(c *gin.Context) {
 	}
 }
 
+func parseFactorQuery(query map[string]interface{}) (string, string, float64, float64, error) {
+	var startEvent string
+	var endEvent string
+	var endEventCardinalityLowerBound float64 = -1
+	var endEventCardinalityUpperBound float64 = -1
+	var err error
+
+	if ewp, ok := query["eventsWithProperties"]; ok {
+		eventsWithProperties := ewp.([]interface{})
+		numEvents := len(eventsWithProperties)
+		var endEventWithProperties map[string]interface{}
+		if numEvents == 1 {
+			endEventWithProperties = eventsWithProperties[0].(map[string]interface{})
+		} else if numEvents == 2 {
+			startEvent = eventsWithProperties[0].((map[string]interface{}))["name"].(string)
+			endEventWithProperties = eventsWithProperties[1].(map[string]interface{})
+		} else {
+			err = fmt.Errorf(fmt.Sprintf(
+				"Unexpected number of events in query: %d", numEvents))
+		}
+		endEvent = endEventWithProperties["name"].(string)
+		for _, ep := range endEventWithProperties["properties"].([]interface{}) {
+			p := ep.(map[string]interface{})
+			if p["property"].(string) != "occurrence" {
+				continue
+			}
+			switch op := p["operator"].(string); op {
+			case "equals":
+				tmp := p["value"].(float64)
+				if tmp > 0 {
+					endEventCardinalityLowerBound = tmp - 0.5
+					endEventCardinalityUpperBound = tmp + 0.5
+				}
+			case "greaterThan":
+				tmp := p["value"].(float64)
+				if tmp > 0 {
+					endEventCardinalityLowerBound = tmp
+				}
+			case "lesserThan":
+				tmp := p["value"].(float64)
+				if tmp > 0 {
+					endEventCardinalityUpperBound = tmp
+				}
+			default:
+				err = fmt.Errorf(fmt.Sprintf("Unknown Operator: %s", op))
+			}
+		}
+	} else {
+		err = fmt.Errorf("Missing eventsWithProperties")
+	}
+
+	if endEventCardinalityLowerBound > 0 &&
+		endEventCardinalityUpperBound > 0 &&
+		endEventCardinalityLowerBound > endEventCardinalityUpperBound {
+		err = fmt.Errorf(fmt.Sprintf("Unexpected Input %d is greater than %d",
+			endEventCardinalityLowerBound, endEventCardinalityUpperBound))
+	}
+	return startEvent, endEvent, endEventCardinalityLowerBound, endEventCardinalityUpperBound, err
+}
+
 func FactorHandler(c *gin.Context) {
 	projectId, err := strconv.ParseUint(c.Params.ByName("project_id"), 10, 64)
 	if err != nil {
@@ -162,72 +222,35 @@ func FactorHandler(c *gin.Context) {
 		return
 	}
 
-	if query, ok := requestBodyMap["query"]; ok {
+	if query, ok := requestBodyMap["query"].(map[string]interface{}); ok {
 		log.WithFields(log.Fields{"query": query}).Info("Received query")
-		response := map[string]interface{}{
-			"query": query,
-			"charts": []map[string]interface{}{
-				map[string]interface{}{
-					"type":   "line",
-					"header": "Average PublicMessageSent per month",
-					"labels": []string{"January", "February", "March", "April", "May", "June", "July"},
-					"datasets": []map[string]interface{}{
-						map[string]interface{}{
-							"label": "Users with country:US",
-							"data":  []float64{65, 59, 80, 81, 56, 55, 40},
-						},
-						map[string]interface{}{
-							"label": "All Users",
-							"data":  []float64{45, 70, 70, 101, 95, 5, 64},
-						},
-					},
-				},
-				map[string]interface{}{
-					"type":   "bar",
-					"header": "Users with country:US have 30% higer average PublicMessageSent than others.",
-					"labels": []string{"All Users", "US", "India", "UK", "Australia", "Egypt", "Iran"},
-					"datasets": []map[string]interface{}{
-						map[string]interface{}{
-							"label": "Average PublicMessageSent",
-							"data":  []float64{65, 59, 80, 81, 56, 55, 40},
-						},
-						map[string]interface{}{
-							"label": "Total PublicMessageSent",
-							"data":  []float64{45, 70, 70, 101, 95, 5, 64},
-						},
-					},
-				},
-				map[string]interface{}{
-					"type":   "funnel",
-					"header": "Users who have LoggedIn(1st to 5th time) and then MessageFlagged have 25% higher chance to PublicMessageSend(> 10th time).",
-					"baseFunnelData": []map[string]interface{}{
-						map[string]interface{}{
-							"data":  []float64{20000, 0},
-							"event": "LoggedIn(1st to 5th time) (20000)",
-						},
-						map[string]interface{}{
-							"data":  []float64{1000, 19000},
-							"event": "PublicMessageSend(> 10th time) (1000)",
-						},
-					},
-					"funnelData": []map[string]interface{}{
-						map[string]interface{}{
-							"data":  []float64{19000, 1000},
-							"event": "LoggedIn(1st to 5th time) (20000)",
-						},
-						map[string]interface{}{
-							"data":  []float64{19000, 1000},
-							"event": "MessageFlagged (800)",
-						},
-						map[string]interface{}{
-							"data":  []float64{1000, 19000},
-							"event": "PublicMessageSend(> 10th time) (500)",
-						},
-					},
-				},
-			},
+
+		var startEvent, endEvent string
+		var endEventCardinalityLowerBound, endEventCardinalityUpperBound float64
+		var err error
+		if startEvent, endEvent, endEventCardinalityLowerBound, endEventCardinalityUpperBound, err = parseFactorQuery(query); err != nil {
+			log.WithFields(log.Fields{"error": err}).Error("Invalid Query.")
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error":  err.Error(),
+				"status": http.StatusBadRequest,
+			})
+			return
 		}
-		c.JSON(http.StatusOK, response)
+		log.WithFields(log.Fields{
+			"startEvent": startEvent,
+			"endEvent":   endEvent,
+			"eeclb":      endEventCardinalityLowerBound,
+			"eecub":      endEventCardinalityUpperBound}).Info("Factor query parse")
+
+		ps := C.GetServices().PatternService
+		if results, err := ps.Factor(projectId, endEvent,
+			int(endEventCardinalityLowerBound), int(endEventCardinalityUpperBound)); err != nil {
+			log.WithFields(log.Fields{"error": err}).Error("Factors failed.")
+			c.AbortWithStatus(http.StatusBadRequest)
+			return
+		} else {
+			c.JSON(http.StatusOK, results)
+		}
 	} else {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error":  fmt.Errorf("No query in request"),
