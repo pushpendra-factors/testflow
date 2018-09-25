@@ -408,3 +408,37 @@ func (ps *PatternService) Factor(projectId uint64, endEvent string,
 
 	return results, nil
 }
+
+func (ps *PatternService) FrequentPaths(projectId uint64, startEvent string,
+	endEvent string, eCardLowerBound int, ecardUpperBound int) (PatternServiceGraphResults, error) {
+
+	pw, ok := ps.patternsMap[projectId]
+	if !ok {
+		return PatternServiceGraphResults{}, fmt.Errorf(fmt.Sprintf("No patterns for projectId:%d", projectId))
+	}
+	if startEvent == "" && endEvent == "" {
+		return PatternServiceGraphResults{}, fmt.Errorf("Invalid Query")
+	}
+	matchPatterns := []*Pattern{}
+	for _, p := range pw.patterns {
+		if (startEvent == "" || strings.Compare(startEvent, p.EventNames[0]) == 0) &&
+			(endEvent == "" || strings.Compare(endEvent, p.EventNames[len(p.EventNames)-1]) == 0) {
+			matchPatterns = append(matchPatterns, p)
+		}
+	}
+
+	// Sort in decreasing order of per user counts of the sequence.
+	sort.SliceStable(matchPatterns,
+		func(i, j int) bool {
+			return (matchPatterns[i].OncePerUserCount > matchPatterns[j].OncePerUserCount)
+		})
+	maxPatterns := 50
+	if len(matchPatterns) > maxPatterns {
+		matchPatterns = matchPatterns[:maxPatterns]
+	}
+
+	results := pw.buildFactorResultsFromPatterns(
+		matchPatterns, endEvent, eCardLowerBound, ecardUpperBound)
+
+	return results, nil
+}

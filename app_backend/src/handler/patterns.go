@@ -222,6 +222,17 @@ func FactorHandler(c *gin.Context) {
 		return
 	}
 
+	qParams := c.Request.URL.Query()
+	isPathsQuery := false
+	qtypes := qParams["qtype"]
+	if qtypes != nil {
+		qtype := qtypes[0]
+		if qtype == "paths" {
+			isPathsQuery = true
+			log.Info("FrequentPaths Query.")
+		}
+	}
+
 	if query, ok := requestBodyMap["query"].(map[string]interface{}); ok {
 		log.WithFields(log.Fields{"query": query}).Info("Received query")
 
@@ -243,13 +254,24 @@ func FactorHandler(c *gin.Context) {
 			"eecub":      endEventCardinalityUpperBound}).Info("Factor query parse")
 
 		ps := C.GetServices().PatternService
-		if results, err := ps.Factor(projectId, endEvent,
-			int(endEventCardinalityLowerBound), int(endEventCardinalityUpperBound)); err != nil {
-			log.WithFields(log.Fields{"error": err}).Error("Factors failed.")
-			c.AbortWithStatus(http.StatusBadRequest)
-			return
+		if !isPathsQuery {
+			if results, err := ps.Factor(projectId, endEvent,
+				int(endEventCardinalityLowerBound), int(endEventCardinalityUpperBound)); err != nil {
+				log.WithFields(log.Fields{"error": err}).Error("Factors failed.")
+				c.AbortWithStatus(http.StatusBadRequest)
+				return
+			} else {
+				c.JSON(http.StatusOK, results)
+			}
 		} else {
-			c.JSON(http.StatusOK, results)
+			if results, err := ps.FrequentPaths(projectId, startEvent, endEvent,
+				int(endEventCardinalityLowerBound), int(endEventCardinalityUpperBound)); err != nil {
+				log.WithFields(log.Fields{"error": err}).Error("Factors failed.")
+				c.AbortWithStatus(http.StatusBadRequest)
+				return
+			} else {
+				c.JSON(http.StatusOK, results)
+			}
 		}
 	} else {
 		c.JSON(http.StatusBadRequest, gin.H{

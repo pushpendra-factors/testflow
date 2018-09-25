@@ -223,7 +223,7 @@ class Factor extends Component {
           }
           console.log('Fire Query: ' + JSON.stringify(query));
           this.props.dispatch(fetchFactors(this.props.currentProject.value,
-            {query: query}));
+            {query: query}, this.props.location.search));
           }
 
           render() {
