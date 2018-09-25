@@ -30,8 +30,6 @@ type Configuration struct {
 	DbName       string            `json:"db_name"`
 	DbPassword   string            `json:"db_password"`
 	PatternFiles map[uint64]string `json:"pattern_files"`
-	Templates    string            `json:"templates"`
-	StaticDir    string            `json:"static_dir"`
 }
 type Services struct {
 	Db             *gorm.DB

@@ -7,7 +7,5 @@
 	"db_name": "autometa",
 	"db_password": "@ut0me7a",
 	"pattern_files": {"1": "/Users/aravindmurthy/output/patterns-1-1470009600/patterns_events.txt",
-					  "2": ""},
-	"templates": "/Users/aravindmurthy/code/autometa/app_frontend/templates/",
-	"static_dir": "/Users/aravindmurthy/code/autometa/app_frontend/static/"
+					  "2": ""}
 }
