@@ -42,10 +42,10 @@ func subtract(x, y []float64) []float64 {
 	return r
 }
 
-func multiply(y int, x []float64) []float64 {
+func multiply(y float64, x []float64) []float64 {
 	r := make([]float64, len(x))
 	for i := range x {
-		r[i] = float64(y) * x[i]
+		r[i] = y * x[i]
 	}
 	return r
 }
@@ -94,4 +94,13 @@ func linspace(start, stop float64, num int) []float64 {
 		r[i] = start + float64(i)*step
 	}
 	return r
+}
+
+func less(x, y []float64) bool {
+	for i := range x {
+		if x[i] > y[i] {
+			return false
+		}
+	}
+	return true
 }

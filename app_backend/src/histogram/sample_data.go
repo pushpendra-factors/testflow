@@ -1,5 +1,11 @@
 package histogram
 
+// Data contains 10000 random samples each from symmetrical Gaussian distributions
+// of dimension 1, 2, 3, 4 and 5. Each Gaussian distribution haz zero mean and a
+// variance 10000. The data is available in the variables dataDimension1,
+// dataDimension2,  dataDimension3,  dataDimension4 and  dataDimension5 
+// respectively.
+
 var dataDimension1 = [][]float64{
 	[]float64{-40.653400320000},
 	[]float64{-58.359607220000},
