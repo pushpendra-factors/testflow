@@ -15,7 +15,7 @@ func TestHistogramMeanAndVariance(t *testing.T) {
 				// Exact Mean and Variance calculations with combinations of
 				// number of bins, dimensions and number of samples.
 
-				h := NewHistogram(maxBins, dimensions)
+				h := NewNumericHistogram(maxBins, dimensions)
 				var sample = [][]float64{}
 
 				for j := 0; j < numSamples; j++ {

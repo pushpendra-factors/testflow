@@ -1,9 +1,5 @@
 package histogram
 
-import (
-	"fmt"
-)
-
 type vector struct {
 	Values []float64
 }
@@ -14,10 +10,6 @@ func NewVector(v []float64) vector {
 
 func (v *vector) Dimension() int {
 	return len(v.Values)
-}
-
-func (v *vector) String() string {
-	return fmt.Sprintf("%v", v.Values)
 }
 
 func (v *vector) Equals(o vector) bool {

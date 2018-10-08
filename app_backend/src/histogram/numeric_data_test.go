@@ -25,8 +25,8 @@ func computeCDFUsingData(data [][]float64, evalPoint []float64) float64 {
 	return sum / count
 }
 
-func buildHistogramFromData(maxBins int, dimensions int, data [][]float64) Histogram {
-	h := NewHistogram(maxBins, dimensions)
+func buildHistogramFromData(maxBins int, dimensions int, data [][]float64) NumericHistogram {
+	h := NewNumericHistogram(maxBins, dimensions)
 
 	for _, val := range data {
 		h.Add(val)
@@ -109,7 +109,7 @@ func TestSampleData(t *testing.T) {
 			fmt.Println("------------------------------------------------------------")
 
 			hist := buildHistogramFromData(numBins, dimensions, data)
-			assert.Equal(t, float64(numDataSamples), hist.Count(), "Mismatch in number of samples.")
+			assert.Equal(t, uint64(numDataSamples), hist.Count(), "Mismatch in number of samples.")
 
 			// Empirically determined upper bound for error.
 			// j+3 represents log2(numBins).

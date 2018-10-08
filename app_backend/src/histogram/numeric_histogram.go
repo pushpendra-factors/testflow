@@ -1,10 +1,6 @@
 package histogram
 
-import (
-	"fmt"
-)
-
-type Histogram interface {
+type NumericHistogram interface {
 	Add(vector []float64)
 
 	Mean() []float64
@@ -13,29 +9,27 @@ type Histogram interface {
 
 	CDF(x []float64) float64
 
-	String() (str string)
-
-	Count() float64
+	Count() uint64
 }
 
-type histogram struct {
-	Bins      []bin
+type numericHistogram struct {
+	Bins      []numericBin
 	Maxbins   int
 	Total     uint64
 	Dimension int
 }
 
 // New multidimensional Histogram with d dimensions and max n bins.
-func NewHistogram(n int, d int) Histogram {
-	return &histogram{
-		Bins:      make([]bin, 0),
+func NewNumericHistogram(n int, d int) NumericHistogram {
+	return &numericHistogram{
+		Bins:      make([]numericBin, 0),
 		Maxbins:   n,
 		Total:     0,
 		Dimension: d,
 	}
 }
 
-type bin struct {
+type numericBin struct {
 	Mean     vector
 	Variance vector
 	Count    float64
@@ -44,7 +38,7 @@ type bin struct {
 }
 
 // http://www.science.canterbury.ac.nz/nzns/issues/vol7-1979/duncan_b.pdf
-func (b *bin) Merge(o bin) bin {
+func (b *numericBin) merge(o numericBin) numericBin {
 	dimension := b.Mean.Dimension()
 
 	count := b.Count + o.Count
@@ -75,7 +69,7 @@ func (b *bin) Merge(o bin) bin {
 
 	}
 
-	return bin{
+	return numericBin{
 		Mean:     NewVector(mean),
 		Variance: NewVector(variance),
 		Count:    count,
@@ -84,7 +78,7 @@ func (b *bin) Merge(o bin) bin {
 	}
 }
 
-func (h *histogram) Add(values []float64) {
+func (h *numericHistogram) Add(values []float64) {
 	m := NewVector(values)
 	v := NewVector(make([]float64, len(values)))
 
@@ -98,11 +92,11 @@ func (h *histogram) Add(values []float64) {
 			return
 		}
 	}
-	h.Bins = append(h.Bins, bin{Count: 1, Mean: m, Variance: v, Min: m, Max: m})
+	h.Bins = append(h.Bins, numericBin{Count: 1, Mean: m, Variance: v, Min: m, Max: m})
 	h.trim()
 }
 
-func (h *histogram) Mean() []float64 {
+func (h *numericHistogram) Mean() []float64 {
 	if h.Total == 0 {
 		return []float64{}
 	}
@@ -123,7 +117,7 @@ func (h *histogram) Mean() []float64 {
 }
 
 // http://www.science.canterbury.ac.nz/nzns/issues/vol7-1979/duncan_b.pdf
-func (h *histogram) Variance() []float64 {
+func (h *numericHistogram) Variance() []float64 {
 	if h.Total == 0 {
 		return []float64{}
 	}
@@ -144,7 +138,7 @@ func (h *histogram) Variance() []float64 {
 	return sum
 }
 
-func (h *histogram) CDF(x []float64) float64 {
+func (h *numericHistogram) CDF(x []float64) float64 {
 	xVec := NewVector(x)
 	if xVec.Dimension() != h.Dimension {
 		return -1
@@ -174,24 +168,7 @@ func (h *histogram) CDF(x []float64) float64 {
 	return sum / float64(h.Total)
 }
 
-func (h *histogram) String() (str string) {
-	str += fmt.Sprintln("Total:", h.Total)
-
-	for i := range h.Bins {
-		var bar string
-		for j := 0; j < int(h.Bins[i].Count); j++ {
-			bar += "."
-		}
-		str += fmt.Sprintln(h.Bins[i].Mean.String(), h.Bins[i].Min.String(), h.Bins[i].Max.String(), "\t", h.Count())
-	}
-	return
-}
-
-func (h *histogram) Count() float64 {
-	return float64(h.Total)
-}
-
-func (h *histogram) trim() {
+func (h *numericHistogram) trim() {
 	for len(h.Bins) > h.Maxbins {
 		// Find closest bins in terms of value
 		minDelta := 1e99
@@ -221,17 +198,22 @@ func (h *histogram) trim() {
 				count_i := h.Bins[i].Count
 				count_j := h.Bins[j].Count
 
+				// The propability of each data point occuring within bin boundaries is 1 / volBin, assuming it to be uniformly distributed.
+				// The probability / likelihood of N such data points being in the bin is (1 / volBin)^N.
+				// The log likelihood is -N * log(volBin)
+				// The log likelihood of merged bin is -(N1 + N2) * log(mergedVol)
+				// Select the bin whose bin1LogLikelihood + bin2LogLikelihood - mergedLogLikelihood is minimum.
+				// i.e. the one which causes minimum drop in the overall likelihood as a result of merging.
 				if delta := (count_i+count_j)*log(vol) - count_i*log(vol_i) - count_j*log(vol_j); delta < minDelta {
 					minDelta = delta
 					min_i = i
 					min_j = j
 				}
-
 			}
 		}
 
 		// We need to merge bins min_i-1 and min_j
-		mergedbin := h.Bins[min_i].Merge(h.Bins[min_j])
+		mergedbin := h.Bins[min_i].merge(h.Bins[min_j])
 
 		// Remove min_i and min_j bins
 		min, max := sort(min_i, min_j)
@@ -245,4 +227,8 @@ func (h *histogram) trim() {
 
 		h.Bins = append(h.Bins, mergedbin)
 	}
+}
+
+func (h *numericHistogram) Count() uint64 {
+	return h.Total
 }
