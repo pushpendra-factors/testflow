@@ -2,7 +2,7 @@ package main
 
 // Pull events that needs to be processed and write to file.
 // Sample usage in terminal.
-// export GOPATH=/Users/aravindmurthy/code/autometa/app_backend/
+// export GOPATH=/Users/aravindmurthy/code/factors/app_backend/
 // go run run_pull_events.go --project_id=1 --output_dir="" --end_time=""
 
 import (

@@ -1,7 +1,7 @@
 package main
 
 // Example usage on Terminal.
-// export GOPATH=/Users/aravindmurthy/code/autometa/app_backend/
+// export GOPATH=/Users/aravindmurthy/code/factors/app_backend/
 // go run run_db_create.go
 
 import (

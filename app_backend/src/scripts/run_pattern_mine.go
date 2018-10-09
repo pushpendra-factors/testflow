@@ -3,7 +3,7 @@ package main
 // Mine TOP_K Frequent patterns for every event combination (segment) at every iteration.
 
 // Sample usage in terminal.
-// export GOPATH=/Users/aravindmurthy/code/autometa/app_backend/
+// export GOPATH=/Users/aravindmurthy/code/factors/app_backend/
 // go run run_pattern_mine.go --project_id=1 --input_file="" --output_file=""
 
 import (
