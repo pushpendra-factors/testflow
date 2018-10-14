@@ -51,7 +51,7 @@ func (h *categoricalHistogram) PDF(x []string) (float64, error) {
 	}
 	totalProb := 0.0
 	for i := range h.Bins {
-		binProb := 0.0
+		binProb := 1.0
 		fMaps := h.Bins[i].FrequencyMaps
 		for j := 0; j < h.Dimension; j++ {
 			var varFreq uint64 = 0
@@ -141,7 +141,7 @@ func (b *categoricalBin) merge(o categoricalBin) categoricalBin {
 		mergedFmaps[i] = frequencyMap{Fmap: make(map[string]uint64), Count: 0}
 	}
 	for i := 0; i < dimension; i++ {
-		mFmap := mergedFmaps[i]
+		mFmap := &mergedFmaps[i]
 		mFmap.Count = o.FrequencyMaps[i].Count + b.FrequencyMaps[i].Count
 		for k, bCount := range b.FrequencyMaps[i].Fmap {
 			if _, ok := mFmap.Fmap[k]; !ok {

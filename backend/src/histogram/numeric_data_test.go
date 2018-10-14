@@ -25,7 +25,7 @@ func computeCDFUsingData(data [][]float64, evalPoint []float64) float64 {
 	return sum / count
 }
 
-func buildHistogramFromData(maxBins int, dimensions int, data [][]float64) NumericHistogram {
+func buildNumericHistogramFromData(maxBins int, dimensions int, data [][]float64) NumericHistogram {
 	h := NewNumericHistogram(maxBins, dimensions)
 
 	for _, val := range data {
@@ -85,7 +85,7 @@ func getEvaluationPointsAndActualCDFs(mean []float64, variance []float64) ([][]f
 	return evaluationPoints, actualCDFs
 }
 
-func TestSampleData(t *testing.T) {
+func TestNumericalSampleData(t *testing.T) {
 	for _, data := range [][][]float64{dataDimension1, dataDimension2,
 		dataDimension3, dataDimension4, dataDimension5} {
 
@@ -108,7 +108,7 @@ func TestSampleData(t *testing.T) {
 				dimensions, numBins, numDataSamples))
 			fmt.Println("------------------------------------------------------------")
 
-			hist := buildHistogramFromData(numBins, dimensions, data)
+			hist := buildNumericHistogramFromData(numBins, dimensions, data)
 			assert.Equal(t, uint64(numDataSamples), hist.Count(), "Mismatch in number of samples.")
 
 			// Empirically determined upper bound for error.
@@ -127,7 +127,7 @@ func TestSampleData(t *testing.T) {
 				fmt.Println(fmt.Sprintf(
 					"EVALPOINT%d:%v, ACTUAL_CDF:%.2f, SAMPLE_CDF:%.2f, HIST_CDF:%.2f, ACTUAL_CDF_ERROR:%.2f, SAMPLE_CDF_ERROR:%.2f",
 					k+1, evalPoint, actualCDF, sampleCDF, histCDF, actualCDFError, sampleCDFError))
-				assert.InDelta(t, actualCDF, histCDF, maxError, "High Actual CDF error")
+				assert.InDelta(t, actualCDF, histCDF, maxError, "High Histogram CDF error")
 				assert.InDelta(t, sampleCDF, histCDF, maxError, "High Sample CDF error")
 			}
 
