@@ -1,2 +1,2 @@
-app_backend/pkg/**
-app_backend/bin/**
+backend/pkg/**
+backend/bin/**
