@@ -1,0 +1,38 @@
+https://archive.ics.uci.edu/ml/datasets/KASANDR#
+
+Data Set Information:
+
+We created this data by sampling and processing the www.kelkoo.com logs. The data records offers which were clicked (or shown) to the users of the www.kelkoo.com (and partners) in Germany as well as meta-information of these users and offers and the objective is to predict if a given user will click on a given offer. 
+
+
+Attribute Information:
+
+userid offerid countrycode category merchant utcdate implicit-feedback 
+
+
+1. train_de.csv (3,14 GB) 
+Instances: 15,844,718 
+Attributes: 2,299,713 
+userid: Categorical, 291,485 
+offerid: Categorical, 2,158,859 
+countrycode: Categorical, 1 (de - Germany) 
+category: Integer, 271 
+merchant: Integer, 703 
+utcdate: Timestamp, 2016-06-01 02:00:17.0 to 2016-06-14 23:52:51.0 
+implicit feedback (click): Binary, 0 or 1 
+
+2. test_de.csv (381,3 MB) 
+Instances: 1,919,562 
+Attributes: 2,299,713 
+userid: Categorical, 278,293 
+offerid: Categorical, 380,803 
+countrycode: Categorical, 1 
+category: Integer, 267 
+merchant: Integer, 738 
+utcdate: Timestamp, 2016-06-14 23:52:51.0 to 2016-07-01 01:59:36.0 
+implicit feedback (click): Binary, 0 or 1 
+
+
+Relevant Papers:
+
+Sumit Sidana, Charlotte Laclau, Massih-Reza Amini, Gilles Vandelle, and Andre Bois-Crettez. 'KASANDR: A Large-Scale Dataset with Implicit Feedback for Recommendation', SIGIR 2017. 

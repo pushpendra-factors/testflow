@@ -2,8 +2,8 @@ package main
 
 // Recursively reads all json files.
 // Example usage on Terminal.
-// export GOPATH=/Users/aravindmurthy/code/autometa/misc/ingest_events
-// go run ingest_kasandr_events.go --input_file=/Users/aravindmurthy/data/kasandr/train_de_1000000.csv --server=http://localhost:80
+// export GOPATH=/Users/aravindmurthy/code/factors/misc/ingest_events
+// go run ingest_kasandr_events.go --input_file=/Users/aravindmurthy/code/factors/sample_data/kasandr/sample_raw_data.csv --server=http://localhost:8080
 
 import (
 	"bufio"
@@ -139,7 +139,7 @@ func setupProject() (int, error) {
 	var projectId int
 
 	// Create random project and a corresponding eventName and user.
-	reqBody := []byte(`{"name": "ECommerce"}`)
+	reqBody := []byte(`{"name": "ECommerce-Sample"}`)
 	url := fmt.Sprintf("%s/projects", *serverFlag)
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(reqBody))
 	// always close the response-body, even if content is not required.
@@ -172,4 +172,5 @@ func main() {
 	}
 
 	fileIngest(*inputFileFlag)
+	log.Info(fmt.Sprintf("Ingested events to project Ecommerce-Sample with id: %d", *projectIdFlag))
 }
