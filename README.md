@@ -73,8 +73,12 @@ CREATE EXTENSION
 * Build -> Get to add missing dependencies.
 * Build -> CleanAll to remove existing binaries
 * Build -> Install to create binary.
-* cd <path_to_githubcode>/factors/backend/bin
-* ./app --config_filepath=../src/config/config.json
+```
+cd <path_to_githubcode>/factors/backend/bin
+mkdir -p /tmp/factors/config
+cp ../src/config/config.json /tmp/factors/config
+./app --config_filepath=/tmp/factors/config/config.json
+```
 * Backend available at localhost:8080
 
 ## Frontend.
@@ -88,6 +92,9 @@ npm serve dev
 * Use Atom IDE for editiong React Code.
 
 ## Bootstrapping data.
+```
+mkdir -p /tmp/factors/output
+```
 * TODO. Add script.
 
 ## Debugging using LiteIDE and Delve
