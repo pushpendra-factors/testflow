@@ -78,6 +78,7 @@ CREATE EXTENSION
 * Backend available at localhost:8080
 
 ## Frontend.
+* Download and install Nodejs. https://nodejs.org/en/download/
 ```
 cd <path_to_githubcode>/factors/frontend
 npm install
