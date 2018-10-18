@@ -60,6 +60,13 @@ autometa=# CREATE EXTENSION "uuid-ossp";
 CREATE EXTENSION
 ```
 
+### Create tables.
+```
+cd <path_to_githubcode>/factors/backend/src/scripts
+export GOPATH=<path_to_githubcode>/factors/backend
+go run run_db_create.go
+```
+
 ## Backend Setup. Compilation, Package management using LiteIDE
 * Download LiteIDE
 * Unpack into Home Folder
