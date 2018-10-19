@@ -113,7 +113,7 @@ cp ../src/config/config.json /tmp/factors/config
 ```
 cd <path_to_githubcode>/factors/frontend
 npm install
-npm serve dev
+npm run dev
 ```
 * Frontend available at localhost:3000  (API assumed to be served from localhost:8080)
 * Use Atom IDE for editiong React Code.
@@ -124,7 +124,7 @@ npm serve dev
 ```
 cd <path_to_githubcode>/factors/misc/ingest_events/src
 export GOPATH=<path_to_githubcode>/factors/misc/ingest_events
-go run ingest_kasandr_events.go --input_file=/factors/sample_data/kasandr/sample_raw_data.csv --server=http://localhost:8080
+go run ingest_kasandr_events.go --input_file=<path_to_githubcode>/factors/sample_data/kasandr/sample_raw_data.csv --server=http://localhost:8080
 ```
 
 * Note \<projectId\> from the last line of the stdout of the script.
