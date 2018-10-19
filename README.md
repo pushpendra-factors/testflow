@@ -52,10 +52,30 @@ postgres=> \l
 `psql -U autometa autometa`
 
 ### Setting up uuid extension.
+
+* Get super user
+
 ```
-aravindmurthy@Aravinds-MacBook-Air:~$ psql -U autometa autometa
+dp-mac:factors dinesh$  psql -U autometa autometa
+psql (10.5)
+Type "help" for help.
+autometa=> \du
+                                   List of roles
+ Role name   |                         Attributes                         | Member of
+-------------+------------------------------------------------------------+-----------
+ autometa    | Create role, Create DB                                     | {}
+ <superuser> | Superuser, Create role, Create DB, Replication, Bypass RLS | {}
+
+ autometa=> \q
+```
+
+* Create extension
+
+```
+dp-mac:factors dinesh$ psql -U <superuser> autometa
 psql (10.4)
 Type "help" for help.
+
 autometa=# CREATE EXTENSION "uuid-ossp";
 CREATE EXTENSION
 ```
