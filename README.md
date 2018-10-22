@@ -172,3 +172,41 @@ go run run_pattern_mine.go --input_file="/tmp/factors/output/patterns-<projectId
 * On LiteIDE:  "Debug" -> "debugger/delve"
 * Insert Breakpoints in IDE.
 * "Build" -> "Debug"
+
+## Javascript SDK
+
+### Setup, Build and Serve
+
+* Setup
+```
+cd <path_to_github_code>/factors/sdk/javascript
+npm install
+```
+
+* Build (development)
+```
+npm run build-dev
+```
+
+* Build (production)
+```
+npm run build-prod
+```
+
+* Serving development build
+```
+npm run serve-dev
+```
+
+* Build will be served on http://localhost:8090/bundle-dev
+
+* Open developer console and run.
+
+```javascript
+factors.isInstalled()
+
+// "Factors sdk v0.1 is installed!"
+```
+
+
+

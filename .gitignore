@@ -1,2 +1,5 @@
 backend/pkg/**
 backend/bin/**
+
+sdk/javascript/dist
+sdk/javascript/node_modules
