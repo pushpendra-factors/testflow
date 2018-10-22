@@ -19,9 +19,6 @@ func TestPatternCountEvents(t *testing.T) {
 	assert.NotNil(t, p)
 	pLen := len(pEvents)
 	assert.Equal(t, pLen, len(p.EventNames))
-	assert.Equal(t, pLen, len(p.Timings))
-	assert.Equal(t, pLen, len(p.EventCardinalities))
-	assert.Equal(t, pLen, len(p.Repeats))
 	assert.Equal(t, uint(0), p.Count)
 	assert.Equal(t, uint(0), p.UserCount)
 	assert.Equal(t, uint(0), p.OncePerUserCount)
@@ -59,30 +56,30 @@ func TestPatternCountEvents(t *testing.T) {
 	for i := 0; i < pLen; i++ {
 		assert.Equal(t, pEvents[i], p.EventNames[i])
 	}
-	assert.Equal(t, pLen, len(p.Timings))
-	assert.Equal(t, pLen, len(p.Repeats))
-	assert.Equal(t, pLen, len(p.EventCardinalities))
 	// A-B-C occurs twice oncePerUser , with first A occurring after 3720s in User1 and
 	// 3660s in User 2.
 	// Repeats once before the  next B occurs in User2.
-	assert.Equal(t, float64(2), p.Timings[0].Count())
-	assert.Equal(t, float64((3720.0+3660.0)/2), p.Timings[0].Mean())
-	assert.Equal(t, float64((2.0+1.0)/2), p.EventCardinalities[0].Mean())
-	assert.Equal(t, float64((1.0+2.0)/2), p.Repeats[0].Mean())
+	assert.Equal(t, uint64(2), p.CardinalityRepeatTimings.Count())
+	assert.Equal(t, float64((2.0+1.0)/2), p.CardinalityRepeatTimings.Mean()[0])
+	assert.Equal(t, float64((1.0+2.0)/2), p.CardinalityRepeatTimings.Mean()[1])
+	assert.Equal(t, float64((3720.0+3660.0)/2), p.CardinalityRepeatTimings.Mean()[2])
+
 	// A-B-C occurs twice oncePerUser, with first B following first A after 120s in User1 and
 	// 180 in User 2.
 	// Repeats once before the  next C occurs in User1.
+	/* Only start and end event are tracked currently.
 	assert.Equal(t, float64(2), p.Timings[1].Count())
 	assert.Equal(t, float64((120.0+180.0)/2), p.Timings[1].Mean())
 	assert.Equal(t, float64((5.0+1.0)/2), p.EventCardinalities[1].Mean())
 	assert.Equal(t, float64((2.0+1.0)/2), p.Repeats[1].Mean())
+	*/
+
 	// A-B-C occurs twice oncePerUser, with first C following first B after 180s in User1 and
 	// 120s in User 2.
 	// Last event always is counted once.
-	assert.Equal(t, float64(2), p.Timings[2].Count())
-	assert.Equal(t, float64((180.0+120.0)/2), p.Timings[2].Mean())
-	assert.Equal(t, float64((1.0+1.0)/2), p.EventCardinalities[2].Mean())
-	assert.Equal(t, float64((1.0+1.0)/2), p.Repeats[2].Mean())
+	assert.Equal(t, float64((1.0+1.0)/2), p.CardinalityRepeatTimings.Mean()[3])
+	assert.Equal(t, float64((1.0+1.0)/2), p.CardinalityRepeatTimings.Mean()[4])
+	assert.Equal(t, float64((180.0+120.0)/2), p.CardinalityRepeatTimings.Mean()[5])
 }
 
 func TestPatternGetOncePerUserCount(t *testing.T) {
@@ -123,7 +120,7 @@ func TestPatternGetOncePerUserCount(t *testing.T) {
 	assert.Equal(t, uint(3), p.Count)
 	assert.Equal(t, uint(2), p.UserCount)
 	assert.Equal(t, uint(2), p.OncePerUserCount)
-	assert.Equal(t, float64((1.0+2.0)/2), p.EventCardinalities[2].Mean())
+	assert.Equal(t, float64((1.0+2.0)/2), p.CardinalityRepeatTimings.Mean()[3])
 	assert.Equal(t, uint(2), p.GetOncePerUserCount(-1, -1))
 	assert.Equal(t, uint(2), p.GetOncePerUserCount(1, -1))
 	assert.Equal(t, uint(1), p.GetOncePerUserCount(-1, 1))
@@ -147,10 +144,6 @@ func TestPatternEdgeConditions(t *testing.T) {
 	p, err = P.NewPattern([]string{"A", "B", "C"})
 	assert.Nil(t, err)
 	assert.NotNil(t, p)
-	pLen := 3
-	assert.Equal(t, pLen, len(p.EventNames))
-	assert.Equal(t, pLen, len(p.Timings))
-	assert.Equal(t, pLen, len(p.Repeats))
 	assert.Equal(t, uint(0), p.Count)
 	assert.Equal(t, uint(0), p.UserCount)
 	assert.Equal(t, uint(0), p.OncePerUserCount)

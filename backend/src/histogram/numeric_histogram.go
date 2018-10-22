@@ -12,7 +12,7 @@ type NumericHistogram interface {
 	Count() uint64
 }
 
-type numericHistogram struct {
+type NumericHistogramStruct struct {
 	Bins      []numericBin
 	Maxbins   int
 	Total     uint64
@@ -20,8 +20,8 @@ type numericHistogram struct {
 }
 
 // New multidimensional Histogram with d dimensions and max n bins.
-func NewNumericHistogram(n int, d int) NumericHistogram {
-	return &numericHistogram{
+func NewNumericHistogram(n int, d int) *NumericHistogramStruct {
+	return &NumericHistogramStruct{
 		Bins:      make([]numericBin, 0),
 		Maxbins:   n,
 		Total:     0,
@@ -78,7 +78,7 @@ func (b *numericBin) merge(o numericBin) numericBin {
 	}
 }
 
-func (h *numericHistogram) Add(values []float64) {
+func (h *NumericHistogramStruct) Add(values []float64) {
 	m := NewVector(values)
 	v := NewVector(make([]float64, len(values)))
 
@@ -96,7 +96,7 @@ func (h *numericHistogram) Add(values []float64) {
 	h.trim()
 }
 
-func (h *numericHistogram) Mean() []float64 {
+func (h *NumericHistogramStruct) Mean() []float64 {
 	if h.Total == 0 {
 		return []float64{}
 	}
@@ -117,7 +117,7 @@ func (h *numericHistogram) Mean() []float64 {
 }
 
 // http://www.science.canterbury.ac.nz/nzns/issues/vol7-1979/duncan_b.pdf
-func (h *numericHistogram) Variance() []float64 {
+func (h *NumericHistogramStruct) Variance() []float64 {
 	if h.Total == 0 {
 		return []float64{}
 	}
@@ -138,7 +138,7 @@ func (h *numericHistogram) Variance() []float64 {
 	return sum
 }
 
-func (h *numericHistogram) CDF(x []float64) float64 {
+func (h *NumericHistogramStruct) CDF(x []float64) float64 {
 	xVec := NewVector(x)
 	if xVec.Dimension() != h.Dimension {
 		return -1
@@ -168,7 +168,7 @@ func (h *numericHistogram) CDF(x []float64) float64 {
 	return sum / float64(h.Total)
 }
 
-func (h *numericHistogram) trim() {
+func (h *NumericHistogramStruct) trim() {
 	for len(h.Bins) > h.Maxbins {
 		// Find closest bins in terms of value
 		minDelta := 1e99
@@ -229,6 +229,6 @@ func (h *numericHistogram) trim() {
 	}
 }
 
-func (h *numericHistogram) Count() uint64 {
+func (h *NumericHistogramStruct) Count() uint64 {
 	return h.Total
 }

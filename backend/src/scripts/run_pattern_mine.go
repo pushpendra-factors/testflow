@@ -203,8 +203,7 @@ func printFilteredPatterns(filteredPatterns []*P.Pattern, iter int) {
 		pnum++
 		fmt.Printf("User Created")
 		for i := 0; i < len(p.EventNames); i++ {
-			fmt.Printf("--(%d min)---> %s (%.2f times)",
-				int(p.Timings[i].Mean()/60.0), p.EventNames[i], p.Repeats[i].Mean())
+			fmt.Printf("-----> %s", p.EventNames[i])
 		}
 		fmt.Printf(fmt.Sprintf(" : (Count %d)\n\n\n", p.Count))
 	}

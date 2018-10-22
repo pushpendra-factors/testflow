@@ -2,7 +2,8 @@ package pattern
 
 import (
 	"fmt"
-	Hist "gohistogram"
+	Hist "histogram"
+	"math"
 	"strings"
 	"time"
 
@@ -10,10 +11,8 @@ import (
 )
 
 type Pattern struct {
-	EventNames         []string
-	Timings            []Hist.NumericHistogram
-	EventCardinalities []Hist.NumericHistogram
-	Repeats            []Hist.NumericHistogram
+	EventNames               []string
+	CardinalityRepeatTimings Hist.NumericHistogramStruct
 	// The total number of times this pattern occurs allowing multiple counts
 	// per user.
 	Count uint
@@ -35,6 +34,7 @@ type Pattern struct {
 const num_T_BINS = 20
 const num_C_BINS = 10
 const num_R_BINS = 10
+const num_MULTI_BINS = 32
 
 func NewPattern(events []string) (*Pattern, error) {
 	pLen := len(events)
@@ -47,10 +47,10 @@ func NewPattern(events []string) (*Pattern, error) {
 		return nil, err
 	}
 	pattern := Pattern{
-		EventNames:                 events,
-		Timings:                    make([]Hist.NumericHistogram, pLen),
-		EventCardinalities:         make([]Hist.NumericHistogram, pLen),
-		Repeats:                    make([]Hist.NumericHistogram, pLen),
+		EventNames: events,
+		// 6 dimensional histogram - Cardinalties, Repeats, Timings of start_event
+		// and last_event.
+		CardinalityRepeatTimings: *Hist.NewNumericHistogram(num_MULTI_BINS, 6),
 		Count:                      0,
 		OncePerUserCount:           0,
 		waitIndex:                  0,
@@ -60,11 +60,6 @@ func NewPattern(events []string) (*Pattern, error) {
 		currentEventTimes:          make([]time.Time, pLen),
 		currentEventCardinalities:  make([]uint, pLen),
 		currentRepeats:             make([]uint, pLen),
-	}
-	for i := 0; i < pLen; i++ {
-		pattern.Timings[i] = *Hist.NewHistogram(num_T_BINS)
-		pattern.EventCardinalities[i] = *Hist.NewHistogram(num_C_BINS)
-		pattern.Repeats[i] = *Hist.NewHistogram(num_R_BINS)
 	}
 	return &pattern, nil
 }
@@ -137,31 +132,36 @@ func (p *Pattern) CountForEvent(eventName string, eventCreatedTime time.Time, ev
 			p.currentUserOccurrenceCount += 1
 			if p.currentUserOccurrenceCount == 1 {
 				p.OncePerUserCount += 1
-				// Update histograms only for the first count per user.
-				// Update histograms of timings.
-				var duration float64
+
+				// Check whether events are in order.
 				for i := 0; i < pLen; i++ {
 					if i == 0 {
-						duration = p.currentEventTimes[0].Sub(userCreatedTime).Seconds()
+						duration := p.currentEventTimes[0].Sub(userCreatedTime).Seconds()
 						if duration < 0 {
 							// Ignoring this error for now, since there are no DB checks to avoid
 							// these user input values.
 							log.Error(fmt.Sprintf("Event occurs before creation for user:%s", p.currentUserId))
 						}
 					} else {
-						duration = p.currentEventTimes[i].Sub(p.currentEventTimes[i-1]).Seconds()
+						duration := p.currentEventTimes[i].Sub(p.currentEventTimes[i-1]).Seconds()
 						if duration < 0 {
 							return "", fmt.Errorf("Event Timings not in order")
 						}
 					}
-					p.Timings[i].Add(duration)
 				}
-
-				// Update histograms of repeats and Cardinalities.
-				for i := 0; i < pLen; i++ {
-					p.EventCardinalities[i].Add(float64(p.currentEventCardinalities[i]))
-					p.Repeats[i].Add(float64(p.currentRepeats[i]))
+				// Update multi histogram of cardinalities, repeats and timings.
+				var cardinalityRepeatTimingsVec []float64 = make([]float64, 6)
+				cardinalityRepeatTimingsVec[0] = float64(p.currentEventCardinalities[0])
+				cardinalityRepeatTimingsVec[1] = float64(p.currentRepeats[0])
+				cardinalityRepeatTimingsVec[2] = p.currentEventTimes[0].Sub(userCreatedTime).Seconds()
+				cardinalityRepeatTimingsVec[3] = float64(p.currentEventCardinalities[pLen-1])
+				cardinalityRepeatTimingsVec[4] = float64(p.currentRepeats[pLen-1])
+				if pLen > 1 {
+					cardinalityRepeatTimingsVec[5] = p.currentEventTimes[pLen-1].Sub(p.currentEventTimes[pLen-2]).Seconds()
+				} else {
+					cardinalityRepeatTimingsVec[5] = cardinalityRepeatTimingsVec[2]
 				}
+				p.CardinalityRepeatTimings.Add(cardinalityRepeatTimingsVec)
 			}
 
 			// Reset.
@@ -185,13 +185,18 @@ func (p *Pattern) GetOncePerUserCount(eventCardinalityLowerBound int,
 	}
 	lowerCDF := 0.0
 	upperCDF := 1.0
-	pLen := len(p.EventNames)
+	cdfVec := make([]float64, 6)
+	for i := 0; i < 6; i++ {
+		cdfVec[i] = math.MaxFloat64
+	}
 	if eventCardinalityLowerBound > 0 {
 		// The bounds are meant for the last event.
-		lowerCDF = p.EventCardinalities[pLen-1].CDF(float64(eventCardinalityLowerBound) - 0.5)
+		cdfVec[3] = float64(eventCardinalityLowerBound) - 0.5
+		lowerCDF = p.CardinalityRepeatTimings.CDF(cdfVec)
 	}
 	if eventCardinalityUpperBound > 0 {
-		upperCDF = p.EventCardinalities[pLen-1].CDF(float64(eventCardinalityUpperBound) + 0.5)
+		cdfVec[3] = float64(eventCardinalityUpperBound) + 0.5
+		upperCDF = p.CardinalityRepeatTimings.CDF(cdfVec)
 	}
 	floatCount := (float64(p.OncePerUserCount) * (upperCDF - lowerCDF))
 	if floatCount < 0 {

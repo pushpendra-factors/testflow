@@ -103,7 +103,7 @@ func initServices() error {
 			line := scanner.Text()
 			var pattern P.Pattern
 			if err := json.Unmarshal([]byte(line), &pattern); err != nil {
-				log.WithFields(log.Fields{"file": patternsFileAbsPath, "line": line}).Error("Failed to unmarshal pattern.")
+				log.WithFields(log.Fields{"file": patternsFileAbsPath, "line": line, "err": err}).Error("Failed to unmarshal pattern.")
 				return err
 			}
 			patterns = append(patterns, &pattern)

@@ -55,7 +55,7 @@ type Itree struct {
 	EndEvent string
 }
 
-const MAX_CHILD_NODES = 3
+const MAX_CHILD_NODES = 10
 
 func (it *Itree) buildRootNode(pattern *Pattern, eCardLowerBound int, ecardUpperBound int) (*ItreeNode, error) {
 	// The pattern for root node is just Y (end_event).
@@ -76,7 +76,8 @@ func (it *Itree) buildRootNode(pattern *Pattern, eCardLowerBound int, ecardUpper
 		OverallGI:     giniImpurity,
 		Confidence:    p,
 	}
-	log.WithFields(log.Fields{"node": node}).Info("Built root node.")
+	log.WithFields(log.Fields{"node": node.Pattern.String(),
+		"frequency": node.Pattern.OncePerUserCount}).Info("Built root node.")
 	return &node, nil
 }
 
@@ -144,8 +145,9 @@ func (it *Itree) buildChildNode(
 		Confidence:     confidence,
 		ConfidenceGain: confidenceGain,
 	}
-	log.WithFields(log.Fields{"node": node, "parent": parentPattern.String(),
-		"fcr": fcr, "fcp": fcp, "fpr": fpr, "fpp": fpp}).Info("Built candidate child node.")
+	log.WithFields(log.Fields{"node": node.Pattern.String(), "parent": parentPattern.String(),
+		"fcr": fcr, "fcp": fcp, "fpr": fpr, "fpp": fpp, "GI": overallGI, "giniDrop": giniDrop}).Info(
+		"Built candidate child node.")
 	return &node, nil
 }
 
@@ -218,6 +220,9 @@ func (it *Itree) buildAndAddChildNodes(
 
 	for _, cNode := range childNodes {
 		it.addNode(cNode)
+		log.WithFields(log.Fields{"node": cNode.Pattern.String(),
+			"GI": cNode.OverallGI, "giniDrop": cNode.GiniDrop}).Info(
+			"Added child node.")
 	}
 
 	return childNodes, nil
@@ -269,6 +274,6 @@ func BuildNewItree(endEvent string, eCardLowerBound int, ecardUpperBound int,
 		queue = queue[1:]
 	}
 
-	log.WithFields(log.Fields{"itree": itree}).Info("Returning Itree.")
+	//log.WithFields(log.Fields{"itree": itree}).Info("Returning Itree.")
 	return &itree, nil
 }
