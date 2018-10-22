@@ -80,33 +80,48 @@ autometa=# CREATE EXTENSION "uuid-ossp";
 CREATE EXTENSION
 ```
 
-### Create tables.
+## Setup, Build and Run
+
+* Setup
 ```
-cd <path_to_githubcode>/factors/backend/src/scripts
+git clone https://github.com/Slashbit-Technologies/factors.git
 export GOPATH=<path_to_githubcode>/factors/backend
+```
+
+* Create tables
+```
+cd $GOPATH/factors/backend/src/factors/scripts
 go run run_db_create.go
 ```
 
-## Backend Setup. Compilation, Package management using LiteIDE
-* Download LiteIDE
-* Unpack into Home Folder
-* Move Bin to Applications Folder
-* Open Project Folder in LiteIDE (<path_to_githubcode>/factors/backend)
-* Go to "Build -> Build Configuration"
-* Choose "Use Custom GOPATH". Remove "Inherit System GOPATH" and  "Inherit LITEIDE GOPATH"
-* Add this line <path_to_githubcode>/factors/backend
-* Dependencies managed using LiteIDe.
-* Open File <path_to_githubcode>/factors/backend/src/app/app.go
-* Build -> Get to add missing dependencies.
-* Build -> CleanAll to remove existing binaries
-* Build -> Install to create binary.
+* Install godep (mac) `brew install dep`.
+* Install all dependencies of the project (Optional, as we have checked in vendor libs already).
 ```
-cd <path_to_githubcode>/factors/backend/bin
+cd $GOPATH/src/factors
+dep ensure
+```
+* Build
+```
+go build -o $GOPATH/bin/app $GOPATH/src/factors/app/app.go
+```
+
+* Run 
+```
+cd $GOPATH/bin
 mkdir -p /tmp/factors/config
-cp ../src/config/config.json /tmp/factors/config
+cp $GOPATH/src/factors/config/config.json /tmp/factors/config
 ./app --config_filepath=/tmp/factors/config/config.json
 ```
+
 * Backend available at localhost:8080
+
+## Managing dependencies with godep
+
+* Adding new dependency
+```
+dep ensure -add github.com/<path_to_repo>
+```
+* Removing a dependency - Remove it from import and run `dep ensure`
 
 ## Frontend.
 * Download and install Nodejs. https://nodejs.org/en/download/
@@ -130,7 +145,7 @@ go run ingest_kasandr_events.go --input_file=<path_to_githubcode>/factors/sample
 * Note \<projectId\> from the last line of the stdout of the script.
   
 ```
-cd ../../../backend/src/scripts/
+cd ../../../backend/src/factors/scripts/
 export GOPATH=<path_to_githubcode>/factors/backend
 mkdir -p /tmp/factors/output
 go run run_pull_events.go --project_id=<projectId> --end_time="2016-06-20T00:00:00Z" --output_dir="/tmp/factors/output"
