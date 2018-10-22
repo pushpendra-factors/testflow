@@ -1,9 +1,9 @@
-var exports = module.exports = {};
-
-exports.info = function(message) {
+function info(message) {
     console.log(message);
 }
 
-exports.error = function(message) {
+function error(message) {
     console.error(message);
 }
+
+export { info, error };

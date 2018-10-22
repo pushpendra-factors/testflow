@@ -1,10 +1,7 @@
-var logger = require('./logger');
+import * as logger from './logger';
 
 var isInstalled = function() {
     return "Factors sdk v0.1 is installed!";
 }
 
-module.exports = {
-    logger: logger,
-    isInstalled: isInstalled
-};
+export { logger, isInstalled };
