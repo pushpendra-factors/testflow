@@ -287,14 +287,29 @@ func (ps *PatternService) Factor(projectId uint64, endEvent string,
 	}
 
 	iPatterns := []*Pattern{}
+	iPatternScores := []float64{}
 	if itree, err := BuildNewItree(endEvent, eCardLowerBound, ecardUpperBound, pw); err != nil {
 		log.Error(err)
 		return PatternServiceGraphResults{}, err
 	} else {
 		for _, node := range itree.Nodes {
 			iPatterns = append(iPatterns, node.Pattern)
+			// GiniDrop * parentPatternFrequency is the ranking score for the node.
+			score := node.GiniDrop * node.Fpp
+			iPatternScores = append(iPatternScores, score)
 		}
 	}
+
+	if len(iPatterns) != len(iPatternScores) {
+		return PatternServiceGraphResults{}, fmt.Errorf(fmt.Sprintf(
+			"Ranking error. Len of scores %d not matching len of nodes %d.",
+			len(iPatternScores), len(iPatterns)))
+	}
+	// Rerank iPatterns in descending order of ranked scores.
+	sort.SliceStable(iPatterns,
+		func(i, j int) bool {
+			return (iPatternScores[i] > iPatternScores[j])
+		})
 	results := pw.buildFactorResultsFromPatterns(
 		iPatterns, endEvent, eCardLowerBound, ecardUpperBound)
 

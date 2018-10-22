@@ -48,6 +48,7 @@ type ItreeNode struct {
 	Confidence float64
 	// confidenceGain = confidence - parentIndex.Confidence
 	ConfidenceGain float64
+	Fpp            float64
 }
 
 type Itree struct {
@@ -75,6 +76,7 @@ func (it *Itree) buildRootNode(pattern *Pattern, eCardLowerBound int, ecardUpper
 		RightFraction: 1.0,
 		OverallGI:     giniImpurity,
 		Confidence:    p,
+		Fpp:           0.0,
 	}
 	log.WithFields(log.Fields{"node": node.Pattern.String(),
 		"frequency": node.Pattern.OncePerUserCount}).Info("Built root node.")
@@ -144,6 +146,7 @@ func (it *Itree) buildChildNode(
 		GiniDrop:       giniDrop,
 		Confidence:     confidence,
 		ConfidenceGain: confidenceGain,
+		Fpp:            fpp,
 	}
 	log.WithFields(log.Fields{"node": node.Pattern.String(), "parent": parentPattern.String(),
 		"fcr": fcr, "fcp": fcp, "fpr": fpr, "fpp": fpp, "GI": overallGI, "giniDrop": giniDrop}).Info(
