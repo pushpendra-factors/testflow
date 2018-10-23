@@ -54,7 +54,7 @@ func square(x float64) float64 {
 	return x * x
 }
 
-func sort(x, y int) (int, int) {
+func sortTuple(x, y int) (int, int) {
 	if x < y {
 		return x, y
 	}

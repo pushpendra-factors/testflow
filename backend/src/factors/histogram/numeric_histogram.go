@@ -271,7 +271,7 @@ func (h *NumericHistogramStruct) trim() {
 		mergedbin := h.Bins[min_i].merge(h.Bins[min_j])
 
 		// Remove min_i and min_j bins
-		min, max := sort(min_i, min_j)
+		min, max := sortTuple(min_i, min_j)
 
 		head := h.Bins[0:min]
 		mid := h.Bins[min+1 : max]
