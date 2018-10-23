@@ -2,6 +2,7 @@ package histogram
 
 import (
 	"fmt"
+	"sort"
 )
 
 type CategoricalHistogram interface {
@@ -61,6 +62,9 @@ type frequencyMap struct {
 	Fmap  map[string]uint64
 	Count uint64
 }
+
+const fMAP_MAX_SIZE = 5000
+const fMAP_OTHER_KEY = "__OTHER__"
 
 func (h *categoricalHistogram) PDF(x []string) (float64, error) {
 	if h.Dimension != len(x) {
@@ -168,7 +172,7 @@ func (h *categoricalHistogram) trim() {
 		mergedbin := h.Bins[min_i].merge(h.Bins[min_j])
 
 		// Remove min_i and min_j bins
-		min, max := sort(min_i, min_j)
+		min, max := sortTuple(min_i, min_j)
 
 		head := h.Bins[0:min]
 		mid := h.Bins[min+1 : max]
@@ -212,11 +216,49 @@ func (b *categoricalBin) merge(o categoricalBin) categoricalBin {
 				mFmap.Fmap[k] = bCount + oCount
 			}
 		}
+		// Trim the frequency maps to fMAP_MAX_SIZE.
+		if len(mFmap.Fmap) > fMAP_MAX_SIZE {
+			mFmap.Fmap = trimFrequencyMap(mFmap.Fmap)
+		}
 	}
 	return categoricalBin{
 		FrequencyMaps: mergedFmaps,
 		Count:         b.Count + o.Count,
 	}
+}
+
+func trimFrequencyMap(fmap map[string]uint64) map[string]uint64 {
+	if len(fmap) < fMAP_MAX_SIZE {
+		return fmap
+	}
+
+	type kv struct {
+		key   string
+		value uint64
+	}
+	var ss []kv
+	for k, v := range fmap {
+		ss = append(ss, kv{k, v})
+	}
+
+	sort.Slice(ss, func(i, j int) bool {
+		return ss[i].value > ss[j].value
+	})
+
+	trimmedFmap := map[string]uint64{}
+	for i, kv := range ss {
+		if i < fMAP_MAX_SIZE-1 {
+			trimmedFmap[kv.key] = kv.value
+		} else {
+			if count, ok := trimmedFmap[fMAP_OTHER_KEY]; ok {
+				trimmedFmap[fMAP_OTHER_KEY] = count + kv.value
+			} else {
+				trimmedFmap[fMAP_OTHER_KEY] = kv.value
+			}
+		}
+	}
+
+	return trimmedFmap
 }
 
 func (b *categoricalBin) logLikelihood() float64 {
