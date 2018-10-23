@@ -9,7 +9,7 @@ import (
 )
 
 func buildCategoricalHistogramFromData(t *testing.T, maxBins int, dimensions int, data []string) CategoricalHistogram {
-	h := NewCategoricalHistogram(maxBins, dimensions)
+	h, _ := NewCategoricalHistogram(maxBins, dimensions, nil)
 
 	for _, valStr := range data {
 		val := strings.Split(valStr, ",")

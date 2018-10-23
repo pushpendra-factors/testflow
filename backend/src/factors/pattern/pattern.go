@@ -46,11 +46,15 @@ func NewPattern(events []string) (*Pattern, error) {
 		err := fmt.Errorf("Events are not unique")
 		return nil, err
 	}
+	hist, err := Hist.NewNumericHistogram(num_MULTI_BINS, 6, nil)
+	if err != nil {
+		return nil, err
+	}
 	pattern := Pattern{
 		EventNames: events,
 		// 6 dimensional histogram - Cardinalties, Repeats, Timings of start_event
 		// and last_event.
-		CardinalityRepeatTimings:   *Hist.NewNumericHistogram(num_MULTI_BINS, 6),
+		CardinalityRepeatTimings: *hist,
 		Count:                      0,
 		OncePerUserCount:           0,
 		waitIndex:                  0,

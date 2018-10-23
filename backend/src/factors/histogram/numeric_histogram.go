@@ -1,7 +1,15 @@
 package histogram
 
+import (
+	"fmt"
+)
+
 type NumericHistogram interface {
-	Add(vector []float64)
+	Add(v []float64) error
+
+	// When initialized with a template, can use dictionaries to add elements
+	// to histogram.
+	AddMap(m map[string]float64) error
 
 	Mean() []float64
 
@@ -17,16 +25,33 @@ type NumericHistogramStruct struct {
 	Maxbins   int
 	Total     uint64
 	Dimension int
+	Template  *NumericHistogramTemplate
 }
 
+type NumericHistogramTemplateUnit struct {
+	Name       string
+	IsRequired bool
+	Default    float64
+}
+
+type NumericHistogramTemplate []NumericHistogramTemplateUnit
+
 // New multidimensional Histogram with d dimensions and max n bins.
-func NewNumericHistogram(n int, d int) *NumericHistogramStruct {
+// TODO(aravind): Not returning the interface but the struct, since struct is
+// required to marshal and unmarshal histograms. Fix it by adding methods to
+// do it on the interface.
+func NewNumericHistogram(n int, d int, t *NumericHistogramTemplate) (*NumericHistogramStruct, error) {
+	if t != nil && len(*t) != d {
+		return nil, fmt.Errorf(fmt.Sprintf(
+			"Mismatch in dimension %d and template length %d", d, len(*t)))
+	}
 	return &NumericHistogramStruct{
 		Bins:      make([]numericBin, 0),
 		Maxbins:   n,
 		Total:     0,
 		Dimension: d,
-	}
+		Template:  t,
+	}, nil
 }
 
 type numericBin struct {
@@ -78,22 +103,52 @@ func (b *numericBin) merge(o numericBin) numericBin {
 	}
 }
 
-func (h *NumericHistogramStruct) Add(values []float64) {
+func (h *NumericHistogramStruct) Add(values []float64) error {
 	m := NewVector(values)
 	v := NewVector(make([]float64, len(values)))
 
 	if h.Dimension != m.Dimension() {
-		return
+		return fmt.Errorf(
+			fmt.Sprintf("Input dimension %d does not match histogram dimension %d",
+				m.Dimension(), h.Dimension))
 	}
 	h.Total++
 	for i := range h.Bins {
 		if h.Bins[i].Mean.Equals(v) {
 			h.Bins[i].Count++
-			return
+			return nil
 		}
 	}
 	h.Bins = append(h.Bins, numericBin{Count: 1, Mean: m, Variance: v, Min: m, Max: m})
 	h.trim()
+	return nil
+}
+
+func (h *NumericHistogramStruct) AddMap(keyValues map[string]float64) error {
+	if h.Template == nil {
+		return fmt.Errorf("Template not initialized")
+	}
+	seenKeys := map[string]bool{}
+	vec := make([]float64, h.Dimension)
+	template := *h.Template
+	for i := range template {
+		if value, ok := keyValues[template[i].Name]; ok {
+			vec[i] = value
+		} else if !template[i].IsRequired {
+			vec[i] = template[i].Default
+		} else {
+			return fmt.Errorf(fmt.Sprintf("Missing required key %s in %v",
+				template[i].Name, keyValues))
+		}
+		seenKeys[template[i].Name] = true
+	}
+	for k, _ := range keyValues {
+		if _, ok := seenKeys[k]; !ok {
+			return fmt.Errorf(fmt.Sprintf(
+				"Unexpected key %s in %v", k, keyValues))
+		}
+	}
+	return h.Add(vec)
 }
 
 func (h *NumericHistogramStruct) Mean() []float64 {
