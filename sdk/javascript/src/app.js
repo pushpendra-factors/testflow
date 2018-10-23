@@ -1,7 +1,18 @@
-import * as logger from './logger';
+import config from './config';
+import * as Request from "./request";
+import APIClient from "./api"
 
-var isInstalled = function() {
+function isInstalled() {
+    console.log(config);
     return "Factors sdk v0.1 is installed!";
 }
 
-export { logger, isInstalled };
+function init(token, config) {}
+
+function track(eventName, eventProperties) {}
+
+function identify(userId) {}
+
+function addUserProperties() {}
+
+export { isInstalled, init, track, identify, addUserProperties };

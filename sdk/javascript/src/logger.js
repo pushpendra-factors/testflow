@@ -6,4 +6,10 @@ function error(message) {
     console.error(message);
 }
 
-export { info, error };
+function debug(message) {
+    if (process.env.NODE_ENV !== "production") {
+        console.log(messag)
+    }
+}
+
+export { info, error, debug };
