@@ -7,6 +7,10 @@ import (
 type CategoricalHistogram interface {
 	Add([]string) error
 
+	// When initialized with a template, can use dictionaries to add elements
+	// to histogram.
+	AddMap(m map[string]string) error
+
 	PDF(x []string) (float64, error)
 
 	Count() uint64
@@ -21,16 +25,31 @@ type categoricalHistogram struct {
 	Maxbins   int
 	Total     uint64
 	Dimension int
+	Template  *CategoricalHistogramTemplate
 }
 
+type CategoricalHistogramTemplateUnit struct {
+	Name       string
+	IsRequired bool
+	Default    string
+}
+
+type CategoricalHistogramTemplate []CategoricalHistogramTemplateUnit
+
 // New Categorical Histogram with d categoriacal variables and max n bins.
-func NewCategoricalHistogram(n int, d int) CategoricalHistogram {
+func NewCategoricalHistogram(
+	n int, d int, t *CategoricalHistogramTemplate) (CategoricalHistogram, error) {
+	if t != nil && len(*t) != d {
+		return nil, fmt.Errorf(fmt.Sprintf(
+			"Mismatch in dimension %d and template length %d", d, len(*t)))
+	}
 	return &categoricalHistogram{
 		Bins:      make([]categoricalBin, 0),
 		Maxbins:   n,
 		Total:     0,
 		Dimension: d,
-	}
+		Template:  t,
+	}, nil
 }
 
 // Each bin has a separate frequency map for each of the d categorical variables.
@@ -87,6 +106,35 @@ func (h *categoricalHistogram) Add(values []string) error {
 	h.Bins = append(h.Bins, categoricalBin{FrequencyMaps: binFrequencyMaps, Count: 1})
 	h.trim()
 	return nil
+}
+
+func (h *categoricalHistogram) AddMap(keyValues map[string]string) error {
+	if h.Template == nil {
+		return fmt.Errorf("Template not initialized")
+	}
+	seenKeys := map[string]bool{}
+	vec := make([]string, h.Dimension)
+	template := *h.Template
+	for i := range template {
+		if value, ok := keyValues[template[i].Name]; ok {
+			vec[i] = value
+		} else if !template[i].IsRequired {
+			// If Default value is not set it is set to "", which is
+			// assumed to be missing.
+			vec[i] = template[i].Default
+		} else {
+			return fmt.Errorf(fmt.Sprintf("Missing required key %s in %v",
+				template[i].Name, keyValues))
+		}
+		seenKeys[template[i].Name] = true
+	}
+	for k, _ := range keyValues {
+		if _, ok := seenKeys[k]; !ok {
+			return fmt.Errorf(fmt.Sprintf(
+				"Unexpected key %s in %v", k, keyValues))
+		}
+	}
+	return h.Add(vec)
 }
 
 func (h *categoricalHistogram) trim() {
