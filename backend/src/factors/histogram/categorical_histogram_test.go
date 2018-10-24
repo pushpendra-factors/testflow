@@ -190,3 +190,48 @@ func TestCategoricalHistogramAddWithTemplate(t *testing.T) {
 				k, expectedCount, actualCount))
 	}
 }
+
+func TestTrimFrequencyMap(t *testing.T) {
+	maxSize := 3
+
+	fmap := map[string]uint64{
+		"key1": 10,
+		"key2": 5,
+		"key3": 7,
+		"key4": 9,
+	}
+	tFmap := trimFrequencyMap(fmap, maxSize)
+	fmt.Println(fmt.Sprintf("tFmap: %v", tFmap))
+	assert.Equal(t, maxSize, len(tFmap))
+	for _, key := range []string{"key1", "key4"} {
+		actualCount, ok := tFmap[key]
+		assert.True(t, ok, fmt.Sprintf("Missing key: %s", key))
+		expectedCount, _ := fmap[key]
+		assert.Equal(t, expectedCount, actualCount,
+			fmt.Sprintf("Mismatch in count value for key: %s", key))
+	}
+	actualOtherCount, ok := tFmap[fMAP_OTHER_KEY]
+	assert.True(t, ok)
+	assert.Equal(t, uint64(12), actualOtherCount)
+
+	fmap = map[string]uint64{
+		"key1":         10,
+		"key2":         5,
+		"key3":         7,
+		"key4":         9,
+		fMAP_OTHER_KEY: 12,
+	}
+	tFmap = trimFrequencyMap(fmap, maxSize)
+	fmt.Println(fmt.Sprintf("tFmap: %v", tFmap))
+	assert.Equal(t, maxSize, len(tFmap))
+	for _, key := range []string{"key1", "key4"} {
+		actualCount, ok := tFmap[key]
+		assert.True(t, ok, fmt.Sprintf("Missing key: %s", key))
+		expectedCount, _ := fmap[key]
+		assert.Equal(t, expectedCount, actualCount,
+			fmt.Sprintf("Mismatch in count value for key: %s", key))
+	}
+	actualOtherCount, ok = tFmap[fMAP_OTHER_KEY]
+	assert.True(t, ok)
+	assert.Equal(t, uint64(24), actualOtherCount)
+}

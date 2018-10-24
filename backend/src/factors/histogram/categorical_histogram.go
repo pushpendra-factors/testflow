@@ -218,7 +218,7 @@ func (b *categoricalBin) merge(o categoricalBin) categoricalBin {
 		}
 		// Trim the frequency maps to fMAP_MAX_SIZE.
 		if len(mFmap.Fmap) > fMAP_MAX_SIZE {
-			mFmap.Fmap = trimFrequencyMap(mFmap.Fmap)
+			mFmap.Fmap = trimFrequencyMap(mFmap.Fmap, fMAP_MAX_SIZE)
 		}
 	}
 	return categoricalBin{
@@ -227,8 +227,8 @@ func (b *categoricalBin) merge(o categoricalBin) categoricalBin {
 	}
 }
 
-func trimFrequencyMap(fmap map[string]uint64) map[string]uint64 {
-	if len(fmap) < fMAP_MAX_SIZE {
+func trimFrequencyMap(fmap map[string]uint64, maxSize int) map[string]uint64 {
+	if len(fmap) < maxSize {
 		return fmap
 	}
 
@@ -242,12 +242,19 @@ func trimFrequencyMap(fmap map[string]uint64) map[string]uint64 {
 	}
 
 	sort.Slice(ss, func(i, j int) bool {
+		// Move fmap_OTHER_KEY to the end.
+		if ss[i].key == fMAP_OTHER_KEY {
+			return false
+		} else if ss[j].key == fMAP_OTHER_KEY {
+			return true
+		}
+		// Remaining are sorted in descending order.
 		return ss[i].value > ss[j].value
 	})
 
 	trimmedFmap := map[string]uint64{}
 	for i, kv := range ss {
-		if i < fMAP_MAX_SIZE-1 {
+		if i < maxSize-1 {
 			trimmedFmap[kv.key] = kv.value
 		} else {
 			if count, ok := trimmedFmap[fMAP_OTHER_KEY]; ok {
