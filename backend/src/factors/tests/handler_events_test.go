@@ -45,7 +45,7 @@ func SetupProjectUserEventName() (uint64, string, string, error) {
 func TestAPICreateAndGetEvent(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
-	H.InitRoutes(r)
+	H.InitAppRoutes(r)
 	projectId, userId, eventName, err := SetupProjectUserEventName()
 	assert.Nil(t, err)
 
@@ -134,7 +134,7 @@ func TestAPICreateAndGetEvent(t *testing.T) {
 func TestAPICreateEventWithAttributes(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
-	H.InitRoutes(r)
+	H.InitAppRoutes(r)
 	projectId, userId, eventName, err := SetupProjectUserEventName()
 	assert.Nil(t, err)
 
@@ -169,7 +169,7 @@ func TestAPICreateEventWithAttributes(t *testing.T) {
 func TestAPICreateEventNonExistentEventName(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
-	H.InitRoutes(r)
+	H.InitAppRoutes(r)
 	projectId, userId, _, err := SetupProjectUserEventName()
 	assert.Nil(t, err)
 
@@ -201,7 +201,7 @@ func TestAPICreateEventNonExistentEventName(t *testing.T) {
 func TestAPICreateEventBadRequest(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
-	H.InitRoutes(r)
+	H.InitAppRoutes(r)
 	projectId, userId, eventName, err := SetupProjectUserEventName()
 	assert.Nil(t, err)
 

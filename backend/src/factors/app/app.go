@@ -19,6 +19,7 @@ func main() {
 
 	r := gin.Default()
 	// Initialize routes.
-	H.InitRoutes(r)
+	H.InitAppRoutes(r)
+	H.InitSDKRoutes(r)
 	r.Run(":" + strconv.Itoa(C.GetConfig().Port))
 }

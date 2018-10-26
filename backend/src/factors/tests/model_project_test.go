@@ -20,22 +20,22 @@ func TestDBCreateAndGetProject(t *testing.T) {
 	assert.Equal(t, M.DB_SUCCESS, errCode)
 	assert.True(t, project.ID > 0)
 	assert.Equal(t, projectName, project.Name)
-	assert.Equal(t, 32, len(project.APIKey))
+	assert.Equal(t, 32, len(project.Token))
 	assert.True(t, project.CreatedAt.After(start))
 	assert.True(t, project.UpdatedAt.After(start))
 	assert.Equal(t, project.CreatedAt, project.UpdatedAt)
 
-	// Test API key is overwritten and cannot be provided.
+	// Test token is overwritten and cannot be provided.
 	previousProjectId := project.ID
-	// Random API Key.
-	providedApiKey := U.RandomLowerAphaNumString(32)
+	// Random Token.
+	providedToken := U.RandomLowerAphaNumString(32)
 	// Reusing the same name. Name is not meant to be unique.
-	project, errCode = M.CreateProject(&M.Project{Name: projectName, APIKey: providedApiKey})
+	project, errCode = M.CreateProject(&M.Project{Name: projectName, Token: providedToken})
 	assert.Equal(t, M.DB_SUCCESS, errCode)
 	assert.True(t, project.ID > previousProjectId)
 	assert.Equal(t, projectName, project.Name)
-	assert.Equal(t, 32, len(project.APIKey))
-	assert.NotEqual(t, providedApiKey, project.APIKey)
+	assert.Equal(t, 32, len(project.Token))
+	assert.NotEqual(t, providedToken, project.Token)
 	assert.True(t, project.CreatedAt.After(start))
 	assert.True(t, project.UpdatedAt.After(start))
 	assert.Equal(t, project.CreatedAt, project.UpdatedAt)

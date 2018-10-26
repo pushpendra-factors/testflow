@@ -33,7 +33,7 @@ func SetupProject() (uint64, error) {
 func TestAPICreateAndGetUser(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
-	H.InitRoutes(r)
+	H.InitAppRoutes(r)
 	projectId, err := SetupProject()
 	assert.Nil(t, err)
 	customerUserId := "murthy@autometa"
@@ -88,7 +88,7 @@ func TestAPICreateAndGetUser(t *testing.T) {
 func TestAPICreateUserEmptyAndWithAttributes(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
-	H.InitRoutes(r)
+	H.InitAppRoutes(r)
 	projectId, err := SetupProject()
 	assert.Nil(t, err)
 	customerUserId := "murthy@autometa"
@@ -141,7 +141,7 @@ func TestAPICreateUserEmptyAndWithAttributes(t *testing.T) {
 func TestAPICreateUserWithCreatedTime(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
-	H.InitRoutes(r)
+	H.InitAppRoutes(r)
 	projectId, err := SetupProject()
 	assert.Nil(t, err)
 	customerUserId := "murthy@autometa"
@@ -172,7 +172,7 @@ func TestAPICreateUserWithCreatedTime(t *testing.T) {
 func TestAPICreateUserBadRequest(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
-	H.InitRoutes(r)
+	H.InitAppRoutes(r)
 	projectId, err := SetupProject()
 	assert.Nil(t, err)
 	customerUserId := "murthy@autometa"
@@ -212,7 +212,7 @@ func TestAPICreateUserBadRequest(t *testing.T) {
 func TestAPIGetUsers(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
-	H.InitRoutes(r)
+	H.InitAppRoutes(r)
 	projectId, err := SetupProject()
 	assert.Nil(t, err)
 

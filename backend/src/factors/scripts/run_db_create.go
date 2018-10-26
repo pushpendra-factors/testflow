@@ -35,6 +35,12 @@ func main() {
 		log.Info("Created projects table")
 	}
 
+	if err := db.Exec("CREATE UNIQUE INDEX token_unique_idx ON projects(token);").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("projects table token unique indexing failed.")
+	} else {
+		log.Info("projects table token unique index created.")
+	}
+
 	// Create users table.
 	if err := db.CreateTable(&M.User{}).Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("users table creation failed.")

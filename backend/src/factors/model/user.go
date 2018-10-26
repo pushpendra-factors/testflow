@@ -66,3 +66,26 @@ func GetUsers(projectId uint64, offset uint64, limit uint64) ([]User, int) {
 		return users, DB_SUCCESS
 	}
 }
+
+func GetCustomerUserIdById(scopeProjectId uint64, id string) (string, int) {
+	db := C.GetServices().Db
+
+	var user User
+	if err := db.Where("project_id = ?", scopeProjectId).Where("id = ?", id).First(&user).Error; err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("Failed fetching c_uid by user_id")
+		return "", http.StatusInternalServerError
+	} else {
+		return user.CustomerUserId, DB_SUCCESS
+	}
+}
+
+func UpdateCustomerUserIdById(scopeProjectId uint64, id string, customerUserId string) int {
+	db := C.GetServices().Db
+
+	if err := db.Model(&User{}).Where("project_id = ?", scopeProjectId).Where("id = ?", id).Update("c_uid", customerUserId).Error; err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("Failed fetching c_uid by user_id")
+		return http.StatusInternalServerError
+	} else {
+		return DB_SUCCESS
+	}
+}

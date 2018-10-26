@@ -1,5 +1,8 @@
 backend/pkg/**
 backend/bin/**
 
+misc/ingest_events/pkg/**
+misc/ingest_events/bin/**
+
 sdk/javascript/dist
 sdk/javascript/node_modules

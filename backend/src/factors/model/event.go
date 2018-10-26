@@ -20,6 +20,7 @@ type Event struct {
 	// (project_id, event_name) -> events(project_id, name)
 	ProjectId uint64 `gorm:"primary_key:true;" json:"project_id"`
 	UserId    string `json:"user_id"`
+	// Todo(Dinesh): Change EventName -> Name.
 	EventName string `json:"event_name"`
 	Count     uint64 `json:"count"`
 
