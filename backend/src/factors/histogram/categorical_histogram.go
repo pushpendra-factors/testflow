@@ -2,10 +2,15 @@ package histogram
 
 import (
 	"fmt"
+	"sort"
 )
 
 type CategoricalHistogram interface {
 	Add([]string) error
+
+	// When initialized with a template, can use dictionaries to add elements
+	// to histogram.
+	AddMap(m map[string]string) error
 
 	PDF(x []string) (float64, error)
 
@@ -21,16 +26,31 @@ type categoricalHistogram struct {
 	Maxbins   int
 	Total     uint64
 	Dimension int
+	Template  *CategoricalHistogramTemplate
 }
 
+type CategoricalHistogramTemplateUnit struct {
+	Name       string
+	IsRequired bool
+	Default    string
+}
+
+type CategoricalHistogramTemplate []CategoricalHistogramTemplateUnit
+
 // New Categorical Histogram with d categoriacal variables and max n bins.
-func NewCategoricalHistogram(n int, d int) CategoricalHistogram {
+func NewCategoricalHistogram(
+	n int, d int, t *CategoricalHistogramTemplate) (CategoricalHistogram, error) {
+	if t != nil && len(*t) != d {
+		return nil, fmt.Errorf(fmt.Sprintf(
+			"Mismatch in dimension %d and template length %d", d, len(*t)))
+	}
 	return &categoricalHistogram{
 		Bins:      make([]categoricalBin, 0),
 		Maxbins:   n,
 		Total:     0,
 		Dimension: d,
-	}
+		Template:  t,
+	}, nil
 }
 
 // Each bin has a separate frequency map for each of the d categorical variables.
@@ -42,6 +62,9 @@ type frequencyMap struct {
 	Fmap  map[string]uint64
 	Count uint64
 }
+
+const fMAP_MAX_SIZE = 5000
+const fMAP_OTHER_KEY = "__OTHER__"
 
 func (h *categoricalHistogram) PDF(x []string) (float64, error) {
 	if h.Dimension != len(x) {
@@ -89,6 +112,35 @@ func (h *categoricalHistogram) Add(values []string) error {
 	return nil
 }
 
+func (h *categoricalHistogram) AddMap(keyValues map[string]string) error {
+	if h.Template == nil {
+		return fmt.Errorf("Template not initialized")
+	}
+	seenKeys := map[string]bool{}
+	vec := make([]string, h.Dimension)
+	template := *h.Template
+	for i := range template {
+		if value, ok := keyValues[template[i].Name]; ok {
+			vec[i] = value
+		} else if !template[i].IsRequired {
+			// If Default value is not set it is set to "", which is
+			// assumed to be missing.
+			vec[i] = template[i].Default
+		} else {
+			return fmt.Errorf(fmt.Sprintf("Missing required key %s in %v",
+				template[i].Name, keyValues))
+		}
+		seenKeys[template[i].Name] = true
+	}
+	for k, _ := range keyValues {
+		if _, ok := seenKeys[k]; !ok {
+			return fmt.Errorf(fmt.Sprintf(
+				"Unexpected key %s in %v", k, keyValues))
+		}
+	}
+	return h.Add(vec)
+}
+
 func (h *categoricalHistogram) trim() {
 	for len(h.Bins) > h.Maxbins {
 		// Find closest bins in terms of value
@@ -120,7 +172,7 @@ func (h *categoricalHistogram) trim() {
 		mergedbin := h.Bins[min_i].merge(h.Bins[min_j])
 
 		// Remove min_i and min_j bins
-		min, max := sort(min_i, min_j)
+		min, max := sortTuple(min_i, min_j)
 
 		head := h.Bins[0:min]
 		mid := h.Bins[min+1 : max]
@@ -164,11 +216,56 @@ func (b *categoricalBin) merge(o categoricalBin) categoricalBin {
 				mFmap.Fmap[k] = bCount + oCount
 			}
 		}
+		// Trim the frequency maps to fMAP_MAX_SIZE.
+		if len(mFmap.Fmap) > fMAP_MAX_SIZE {
+			mFmap.Fmap = trimFrequencyMap(mFmap.Fmap, fMAP_MAX_SIZE)
+		}
 	}
 	return categoricalBin{
 		FrequencyMaps: mergedFmaps,
 		Count:         b.Count + o.Count,
 	}
+}
+
+func trimFrequencyMap(fmap map[string]uint64, maxSize int) map[string]uint64 {
+	if len(fmap) < maxSize {
+		return fmap
+	}
+
+	type kv struct {
+		key   string
+		value uint64
+	}
+	var ss []kv
+	for k, v := range fmap {
+		ss = append(ss, kv{k, v})
+	}
+
+	sort.Slice(ss, func(i, j int) bool {
+		// Move fmap_OTHER_KEY to the end.
+		if ss[i].key == fMAP_OTHER_KEY {
+			return false
+		} else if ss[j].key == fMAP_OTHER_KEY {
+			return true
+		}
+		// Remaining are sorted in descending order.
+		return ss[i].value > ss[j].value
+	})
+
+	trimmedFmap := map[string]uint64{}
+	for i, kv := range ss {
+		if i < maxSize-1 {
+			trimmedFmap[kv.key] = kv.value
+		} else {
+			if count, ok := trimmedFmap[fMAP_OTHER_KEY]; ok {
+				trimmedFmap[fMAP_OTHER_KEY] = count + kv.value
+			} else {
+				trimmedFmap[fMAP_OTHER_KEY] = kv.value
+			}
+		}
+	}
+
+	return trimmedFmap
 }
 
 func (b *categoricalBin) logLikelihood() float64 {
