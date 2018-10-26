@@ -80,7 +80,7 @@ func initServices() error {
 	// Connection Pooling and Logging.
 	db.DB().SetMaxIdleConns(10)
 	db.DB().SetMaxOpenConns(100)
-	db.LogMode(true)
+	// db.LogMode(true)
 
 	if err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("Failed Db Initialization")

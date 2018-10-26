@@ -60,10 +60,14 @@ func TestDBCreateAndGetUser(t *testing.T) {
 	assert.True(t, user.UpdatedAt.After(start))
 	assert.Equal(t, user.CreatedAt, user.UpdatedAt)
 	assert.Equal(t, properties, user.Properties)
+
 	// Creating again with the same customer_user_id with no properties.
-	user, errCode = M.CreateUser(&M.User{ProjectId: projectId, CustomerUserId: customerUserId})
-	assert.Equal(t, http.StatusInternalServerError, errCode)
-	assert.Nil(t, user)
+	// Should respond with last user of customer_user instead of creating.
+	newUser, newUserErrorCode := M.CreateUser(&M.User{ProjectId: projectId, CustomerUserId: customerUserId})
+	assert.Equal(t, M.DB_SUCCESS, newUserErrorCode)
+	lastUser, lastUserErrorCode := M.GetUserLatestByCustomerUserId(projectId, customerUserId)
+	assert.Equal(t, M.DB_SUCCESS, lastUserErrorCode)
+	assert.Equal(t, lastUser.ID, newUser.ID)
 
 	// Test Get User on random id.
 	randomId := U.RandomLowerAphaNumString(15)

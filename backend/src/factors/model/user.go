@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	_ "github.com/jinzhu/gorm"
+	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
@@ -67,22 +67,26 @@ func GetUsers(projectId uint64, offset uint64, limit uint64) ([]User, int) {
 	}
 }
 
-func GetCustomerUserIdById(scopeProjectId uint64, id string) (string, int) {
+func GetUserLatestByCustomerUserId(projectId uint64, customerUserId string) (*User, int) {
 	db := C.GetServices().Db
 
 	var user User
-	if err := db.Where("project_id = ?", scopeProjectId).Where("id = ?", id).First(&user).Error; err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("Failed fetching c_uid by user_id")
-		return "", http.StatusInternalServerError
-	} else {
-		return user.CustomerUserId, DB_SUCCESS
+	err := db.Where("project_id = ?", projectId).Where("customer_user_id = ?", customerUserId).Last(&user).Error
+
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+		return nil, http.StatusInternalServerError
 	}
+
+	return &user, DB_SUCCESS
 }
 
-func UpdateCustomerUserIdById(scopeProjectId uint64, id string, customerUserId string) int {
+func UpdateCustomerUserIdById(projectId uint64, id string, customerUserId string) int {
 	db := C.GetServices().Db
 
-	if err := db.Model(&User{}).Where("project_id = ?", scopeProjectId).Where("id = ?", id).Update("c_uid", customerUserId).Error; err != nil {
+	if err := db.Model(&User{}).Where("project_id = ?", projectId).Where("id = ?", id).Update("customer_user_id", customerUserId).Error; err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("Failed fetching c_uid by user_id")
 		return http.StatusInternalServerError
 	} else {
