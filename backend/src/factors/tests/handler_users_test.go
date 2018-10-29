@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	H "factors/handler"
-	M "factors/model"
-	U "factors/util"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -15,20 +13,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )
-
-// TODO: Use testify.suites to avoid multiple initializations across these tests.
-func SetupProject() (uint64, error) {
-	var projectId uint64
-
-	// Create random project.
-	random_project_name := U.RandomLowerAphaNumString(15)
-	project, err_code := M.CreateProject(&M.Project{Name: random_project_name})
-	if err_code != M.DB_SUCCESS {
-		return projectId, fmt.Errorf("Project Creation failed.")
-	}
-	projectId = project.ID
-	return projectId, nil
-}
 
 func TestAPICreateAndGetUser(t *testing.T) {
 	// Initialize routes and dependent data.

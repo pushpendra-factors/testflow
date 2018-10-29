@@ -17,7 +17,7 @@ type IdentifiedUser struct {
 }
 
 // Test command.
-// curl -i -H "Content-Type: application/json" -H "Authorization: YOUR_TOKEN" -X POST http://localhost:8080/sdk/event/track -d '{"event_name": "login", "properties": {"ip": "10.0.0.1", "mobile": true}}'
+// curl -i -H "Content-Type: application/json" -H "Authorization: YOUR_TOKEN" -X POST http://localhost:8080/sdk/event/track -d '{"user_id": "YOUR_USER_ID", "event_name": "login", "properties": {"ip": "10.0.0.1", "mobile": true}}'
 func SDKTrackHandler(c *gin.Context) {
 	r := c.Request
 
@@ -83,7 +83,7 @@ func SDKTrackHandler(c *gin.Context) {
 }
 
 //Test command.
-// curl -i -H "Content-Type: application/json" -H "Authorization: c6b4useqmywdrvo7m8kqtqn2htvglvgj" -X POST http://localhost:8080/sdk/user/identify -d '{"user_id":"5624438c-18c4-4969-961e-078b4e83e516", "c_uid": "cid-001"}'
+// curl -i -H "Content-Type: application/json" -H "Authorization: YOUR_TOKEN" -X POST http://localhost:8080/sdk/user/identify -d '{"user_id":"USER_ID", "c_uid": "CUSTOMER_USER_ID"}'
 func SDKIdentifyHandler(c *gin.Context) {
 	r := c.Request
 
@@ -101,10 +101,11 @@ func SDKIdentifyHandler(c *gin.Context) {
 		return
 	}
 
+	// Todo(Dinesh): Add a mandatory field validator and move this.
 	// Precondition: Fails to identify if customer_user_id not present.
 	if identifiedUser.CustomerUserId == "" {
 		log.Error("Identification failed. Missing user_id or c_uid.")
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Identification failed. Missing mandatory keys user_id or c_uid."})
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Identification failed. Missing mandatory keys c_uid."})
 		return
 	}
 
@@ -117,7 +118,7 @@ func SDKIdentifyHandler(c *gin.Context) {
 	scopeProjectId := scopeProjectIdIntf.(uint64)
 
 	// Precondition: customer_user_id present, user_id not.
-	// if customer_user has user already : using the same user.
+	// if customer_user has user already : respond with same user.
 	// else : creating a new_user with the given customer_user_id and respond with new_user_id.
 	if identifiedUser.UserId == "" {
 		response := gin.H{}
@@ -142,7 +143,7 @@ func SDKIdentifyHandler(c *gin.Context) {
 		}
 
 		response["message"] = "User has been identified successfully."
-		c.JSON(errCode, response)
+		c.JSON(http.StatusOK, response)
 		return
 	}
 
