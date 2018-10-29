@@ -21,7 +21,7 @@ type CategoricalHistogram interface {
 	frequency(symbol string) uint64
 }
 
-type categoricalHistogram struct {
+type CategoricalHistogramStruct struct {
 	Bins      []categoricalBin
 	Maxbins   int
 	Total     uint64
@@ -38,13 +38,16 @@ type CategoricalHistogramTemplateUnit struct {
 type CategoricalHistogramTemplate []CategoricalHistogramTemplateUnit
 
 // New Categorical Histogram with d categoriacal variables and max n bins.
+// TODO(aravind): Not returning the interface but the struct, since struct is
+// required to marshal and unmarshal histograms. Fix it by adding methods to
+// do it on the interface.
 func NewCategoricalHistogram(
-	n int, d int, t *CategoricalHistogramTemplate) (CategoricalHistogram, error) {
+	n int, d int, t *CategoricalHistogramTemplate) (*CategoricalHistogramStruct, error) {
 	if t != nil && len(*t) != d {
 		return nil, fmt.Errorf(fmt.Sprintf(
 			"Mismatch in dimension %d and template length %d", d, len(*t)))
 	}
-	return &categoricalHistogram{
+	return &CategoricalHistogramStruct{
 		Bins:      make([]categoricalBin, 0),
 		Maxbins:   n,
 		Total:     0,
@@ -66,7 +69,7 @@ type frequencyMap struct {
 const fMAP_MAX_SIZE = 5000
 const fMAP_OTHER_KEY = "__OTHER__"
 
-func (h *categoricalHistogram) PDF(x []string) (float64, error) {
+func (h *CategoricalHistogramStruct) PDF(x []string) (float64, error) {
 	if h.Dimension != len(x) {
 		return 0.0, fmt.Errorf(fmt.Sprintf(
 			"Input dimension %d not matching histogram dimension %d.",
@@ -89,7 +92,20 @@ func (h *categoricalHistogram) PDF(x []string) (float64, error) {
 	return totalProb, nil
 }
 
-func (h *categoricalHistogram) Add(values []string) error {
+func (h *CategoricalHistogramStruct) PDFMap(xMap map[string]string) (float64, error) {
+	x := make([]string, h.Dimension)
+	for i := 0; i < h.Dimension; i++ {
+		eventName := (*h.Template)[i].Name
+		if val, ok := xMap[eventName]; ok {
+			x[i] = val
+		} else {
+			x[i] = ""
+		}
+	}
+	return h.PDF(x)
+}
+
+func (h *CategoricalHistogramStruct) Add(values []string) error {
 	if h.Dimension != len(values) {
 		return fmt.Errorf(fmt.Sprintf(
 			"Input dimension %d not matching histogram dimension %d.",
@@ -112,7 +128,7 @@ func (h *categoricalHistogram) Add(values []string) error {
 	return nil
 }
 
-func (h *categoricalHistogram) AddMap(keyValues map[string]string) error {
+func (h *CategoricalHistogramStruct) AddMap(keyValues map[string]string) error {
 	if h.Template == nil {
 		return fmt.Errorf("Template not initialized")
 	}
@@ -141,7 +157,7 @@ func (h *categoricalHistogram) AddMap(keyValues map[string]string) error {
 	return h.Add(vec)
 }
 
-func (h *categoricalHistogram) trim() {
+func (h *CategoricalHistogramStruct) trim() {
 	for len(h.Bins) > h.Maxbins {
 		// Find closest bins in terms of value
 		minDelta := 1e99
@@ -287,11 +303,11 @@ func (b *categoricalBin) logLikelihood() float64 {
 	return totalLh
 }
 
-func (h *categoricalHistogram) Count() uint64 {
+func (h *CategoricalHistogramStruct) Count() uint64 {
 	return h.Total
 }
 
-func (h *categoricalHistogram) frequency(symbol string) uint64 {
+func (h *CategoricalHistogramStruct) frequency(symbol string) uint64 {
 	var symbolCount uint64 = 0
 	for l := range h.Bins {
 		for m := range h.Bins[l].FrequencyMaps {
@@ -304,7 +320,7 @@ func (h *categoricalHistogram) frequency(symbol string) uint64 {
 	return symbolCount
 }
 
-func (h *categoricalHistogram) totalBinCount() uint64 {
+func (h *CategoricalHistogramStruct) totalBinCount() uint64 {
 	var c uint64 = 0
 	for l := range h.Bins {
 		c += h.Bins[l].Count

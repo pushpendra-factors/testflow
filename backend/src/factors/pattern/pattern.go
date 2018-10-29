@@ -11,8 +11,11 @@ import (
 )
 
 type Pattern struct {
-	EventNames               []string
-	CardinalityRepeatTimings Hist.NumericHistogramStruct
+	EventNames []string
+	// Histograms.
+	CardinalityRepeatTimings *Hist.NumericHistogramStruct
+	NumericProperties        *Hist.NumericHistogramStruct
+	CategoricalProperties    *Hist.CategoricalHistogramStruct
 	// The total number of times this pattern occurs allowing multiple counts
 	// per user.
 	Count uint
@@ -29,14 +32,20 @@ type Pattern struct {
 	currentEventTimes          []time.Time
 	currentEventCardinalities  []uint
 	currentRepeats             []uint
+	currentNMap                map[string]float64
+	currentCMap                map[string]string
 }
 
 const num_T_BINS = 20
 const num_C_BINS = 10
 const num_R_BINS = 10
-const num_MULTI_BINS = 32
+const num_DEFAULT_MULTI_BINS = 32
+const num_NUMERIC_BINS_PER_DIMENSION = 3
+const num_MAX_NUMERIC_MULTI_BINS = 256
+const num_CATEGORICAL_BINS_PER_DIMENSION = 1
+const num_MAX_CATEGORICAL_MULTI_BINS = 6
 
-func NewPattern(events []string) (*Pattern, error) {
+func NewPattern(events []string, eventInfoMap *EventInfoMap) (*Pattern, error) {
 	pLen := len(events)
 	if pLen == 0 {
 		err := fmt.Errorf("No events in pattern")
@@ -46,7 +55,7 @@ func NewPattern(events []string) (*Pattern, error) {
 		err := fmt.Errorf("Events are not unique")
 		return nil, err
 	}
-	hist, err := Hist.NewNumericHistogram(num_MULTI_BINS, 6, nil)
+	defaultHist, err := Hist.NewNumericHistogram(num_DEFAULT_MULTI_BINS, 6, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +63,9 @@ func NewPattern(events []string) (*Pattern, error) {
 		EventNames: events,
 		// 6 dimensional histogram - Cardinalties, Repeats, Timings of start_event
 		// and last_event.
-		CardinalityRepeatTimings: *hist,
+		CardinalityRepeatTimings: defaultHist,
+		NumericProperties:        nil,
+		CategoricalProperties:    nil,
 		Count:                      0,
 		OncePerUserCount:           0,
 		waitIndex:                  0,
@@ -64,6 +75,45 @@ func NewPattern(events []string) (*Pattern, error) {
 		currentEventTimes:          make([]time.Time, pLen),
 		currentEventCardinalities:  make([]uint, pLen),
 		currentRepeats:             make([]uint, pLen),
+		currentNMap:                make(map[string]float64),
+		currentCMap:                make(map[string]string),
+	}
+	if eventInfoMap != nil {
+		nTemplate := Hist.NumericHistogramTemplate{}
+		for i := 0; i < pLen; i++ {
+			if eventInfo, ok := (*eventInfoMap)[events[i]]; ok {
+				nTemplate = append(nTemplate, *eventInfo.NumericPropertiesTemplate...)
+			} else {
+				return nil, fmt.Errorf(fmt.Sprintf(
+					"Missing info for event %s", events[i]))
+			}
+		}
+		nDimensions := len(nTemplate)
+		nBins := int(math.Min(float64(nDimensions*num_NUMERIC_BINS_PER_DIMENSION),
+			float64(num_MAX_NUMERIC_MULTI_BINS)))
+		nHist, err := Hist.NewNumericHistogram(nBins, nDimensions, &nTemplate)
+		if err != nil {
+			return nil, err
+		}
+		pattern.NumericProperties = nHist
+
+		cTemplate := Hist.CategoricalHistogramTemplate{}
+		for i := 0; i < pLen; i++ {
+			if eventInfo, ok := (*eventInfoMap)[events[i]]; ok {
+				cTemplate = append(cTemplate, *eventInfo.CategoricalPropertiesTemplate...)
+			} else {
+				return nil, fmt.Errorf(fmt.Sprintf(
+					"Missing info for event %s", events[i]))
+			}
+		}
+		cDimensions := len(cTemplate)
+		cBins := int(math.Min(float64(cDimensions*num_CATEGORICAL_BINS_PER_DIMENSION),
+			float64(num_MAX_CATEGORICAL_MULTI_BINS)))
+		cHist, err := Hist.NewCategoricalHistogram(cBins, cDimensions, &cTemplate)
+		if err != nil {
+			return nil, err
+		}
+		pattern.CategoricalProperties = cHist
 	}
 	return &pattern, nil
 }
@@ -94,6 +144,19 @@ func (p *Pattern) ResetForNewUser(userId string, userCreatedTime time.Time) erro
 	return nil
 }
 
+func addNumericAndCategoricalProperties(
+	eventName string, eventProperties map[string]interface{},
+	nMap map[string]float64, cMap map[string]string) {
+
+	for key, value := range eventProperties {
+		if numericValue, ok := value.(float64); ok {
+			nMap[EventPropertyKey(eventName, key)] = numericValue
+		} else if categoricalValue, ok := value.(string); ok {
+			cMap[EventPropertyKey(eventName, key)] = categoricalValue
+		}
+	}
+}
+
 // If data is visualized in below format, where U(.) are users, E(.) are events,
 // T(.) are timestamps.
 
@@ -106,7 +169,10 @@ func (p *Pattern) ResetForNewUser(userId string, userCreatedTime time.Time) erro
 // [U3: E1(T12) -> E5(T13)].
 // Further the distribution of timestamps, event properties and number of occurrences
 // are stored with the patterns.
-func (p *Pattern) CountForEvent(eventName string, eventCreatedTime time.Time, eventCardinality uint, userId string, userCreatedTime time.Time) (string, error) {
+func (p *Pattern) CountForEvent(
+	eventName string, eventCreatedTime time.Time, eventProperties map[string]interface{},
+	eventCardinality uint, userId string, userCreatedTime time.Time) (string, error) {
+
 	if eventName == "" || eventCreatedTime.Equal(time.Time{}) {
 		return "", fmt.Errorf("Missing eventId or eventCreatedTime.")
 	}
@@ -126,6 +192,8 @@ func (p *Pattern) CountForEvent(eventName string, eventCreatedTime time.Time, ev
 		p.currentEventTimes[p.waitIndex] = eventCreatedTime
 		p.currentEventCardinalities[p.waitIndex] = eventCardinality
 		p.currentRepeats[p.waitIndex] = 1
+		// Update seen properties.
+		addNumericAndCategoricalProperties(eventName, eventProperties, p.currentNMap, p.currentCMap)
 
 		p.waitIndex += 1
 
@@ -153,6 +221,18 @@ func (p *Pattern) CountForEvent(eventName string, eventCreatedTime time.Time, ev
 						}
 					}
 				}
+				// Update properties histograms.
+				if p.NumericProperties != nil {
+					if err := p.NumericProperties.AddMap(p.currentNMap); err != nil {
+						return "", err
+					}
+				}
+				// Update properties histograms.
+				if p.CategoricalProperties != nil {
+					if err := p.CategoricalProperties.AddMap(p.currentCMap); err != nil {
+						return "", err
+					}
+				}
 				// Update multi histogram of cardinalities, repeats and timings.
 				var cardinalityRepeatTimingsVec []float64 = make([]float64, 6)
 				cardinalityRepeatTimingsVec[0] = float64(p.currentEventCardinalities[0])
@@ -173,6 +253,8 @@ func (p *Pattern) CountForEvent(eventName string, eventCreatedTime time.Time, ev
 			p.currentEventCardinalities = make([]uint, pLen)
 			p.currentRepeats = make([]uint, pLen)
 			p.waitIndex = 0
+			p.currentNMap = make(map[string]float64)
+			p.currentCMap = make(map[string]string)
 		}
 	}
 	return p.EventNames[p.waitIndex], nil

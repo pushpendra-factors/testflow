@@ -11,8 +11,9 @@ import (
 )
 
 type PatternWrapper struct {
-	patterns []*Pattern
-	pMap     map[string]*Pattern
+	patterns     []*Pattern
+	pMap         map[string]*Pattern
+	eventInfoMap *EventInfoMap
 }
 
 type PatternService struct {
@@ -46,7 +47,7 @@ type PatternServiceGraphResults struct {
 	Charts []graphResult `json:"charts"`
 }
 
-func NewPatternWrapper(patterns []*Pattern) *PatternWrapper {
+func NewPatternWrapper(patterns []*Pattern, eventInfoMap *EventInfoMap) *PatternWrapper {
 	patternWrapper := PatternWrapper{
 		patterns: patterns,
 	}
@@ -55,6 +56,7 @@ func NewPatternWrapper(patterns []*Pattern) *PatternWrapper {
 		pMap[p.String()] = p
 	}
 	patternWrapper.pMap = pMap
+	patternWrapper.eventInfoMap = eventInfoMap
 	return &patternWrapper
 }
 
@@ -266,11 +268,15 @@ func (pw *PatternWrapper) buildFactorResultsFromPatterns(
 	return results
 }
 
-func NewPatternService(patternsMap map[uint64][]*Pattern) (*PatternService, error) {
+func NewPatternService(
+	patternsMap map[uint64][]*Pattern,
+	projectEventInfoMap map[uint64]*EventInfoMap) (*PatternService, error) {
+
 	patternService := PatternService{patternsMap: map[uint64]*PatternWrapper{}}
 
 	for projectId, patterns := range patternsMap {
-		patternWrapper := NewPatternWrapper(patterns)
+		eventInfoMap, _ := projectEventInfoMap[projectId]
+		patternWrapper := NewPatternWrapper(patterns, eventInfoMap)
 		patternService.patternsMap[projectId] = patternWrapper
 	}
 	return &patternService, nil

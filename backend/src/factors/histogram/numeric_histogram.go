@@ -171,6 +171,18 @@ func (h *NumericHistogramStruct) Mean() []float64 {
 	return sum
 }
 
+func (h *NumericHistogramStruct) MeanMap() map[string]float64 {
+	if h.Template == nil {
+		return nil
+	}
+	mean := h.Mean()
+	meanMap := make(map[string]float64)
+	for i := 0; i < len(*h.Template); i++ {
+		meanMap[(*h.Template)[i].Name] = mean[i]
+	}
+	return meanMap
+}
+
 // http://www.science.canterbury.ac.nz/nzns/issues/vol7-1979/duncan_b.pdf
 func (h *NumericHistogramStruct) Variance() []float64 {
 	if h.Total == 0 {

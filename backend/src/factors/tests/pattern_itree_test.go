@@ -66,13 +66,13 @@ func TestBuildNewItree(t *testing.T) {
 	}
 	patterns := []*P.Pattern{}
 	for _, tpi := range tpis {
-		p, _ := P.NewPattern(tpi.eventNames)
+		p, _ := P.NewPattern(tpi.eventNames, nil)
 		p.Count = tpi.count
 		p.OncePerUserCount = tpi.perUserCount
 		p.UserCount = userCount
 		patterns = append(patterns, p)
 	}
-	pw := P.NewPatternWrapper(patterns)
+	pw := P.NewPatternWrapper(patterns, nil)
 	itree, err := P.BuildNewItree("Y", -1, -1, pw)
 	assert.Nil(t, err)
 	assert.NotNil(t, itree)

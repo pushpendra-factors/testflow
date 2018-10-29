@@ -2,11 +2,12 @@ package pattern
 
 import (
 	"bufio"
+	"encoding/json"
+	Hist "factors/histogram"
 	"fmt"
 	"math"
 	"reflect"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
@@ -14,7 +15,24 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func GenCandidatesPair(p1 *Pattern, p2 *Pattern) (*Pattern, *Pattern, bool) {
+type CounterEventFormat struct {
+	UserId           string                 `json:"uid"`
+	UserCreatedTime  time.Time              `json:"uct"`
+	EventName        string                 `json:"en"`
+	EventCreatedTime time.Time              `json:"ect"`
+	EventCardinality uint                   `json:"ecd"`
+	EventProperties  map[string]interface{} `json:"epr"`
+}
+
+type EventInfo struct {
+	NumericPropertyKeys           map[string]bool
+	NumericPropertiesTemplate     *Hist.NumericHistogramTemplate
+	CategoricalPropertyKeyValues  map[string]map[string]bool
+	CategoricalPropertiesTemplate *Hist.CategoricalHistogramTemplate
+}
+type EventInfoMap map[string]*EventInfo
+
+func GenCandidatesPair(p1 *Pattern, p2 *Pattern, eventInfoMap *EventInfoMap) (*Pattern, *Pattern, bool) {
 	p1Len := len(p1.EventNames)
 	p2Len := len(p2.EventNames)
 	if p1Len != p2Len || p1Len == 0 {
@@ -46,8 +64,8 @@ func GenCandidatesPair(p1 *Pattern, p2 *Pattern) (*Pattern, *Pattern, bool) {
 	// Insert the different event in p2 before and after differentIndex in p1.
 	c1String = append(c1String[:differentIndex], append([]string{p2.EventNames[differentIndex]}, c1String[differentIndex:]...)...)
 	c2String = append(c2String[:differentIndex+1], append([]string{p2.EventNames[differentIndex]}, c2String[differentIndex+1:]...)...)
-	c1Pattern, _ := NewPattern(c1String)
-	c2Pattern, _ := NewPattern(c2String)
+	c1Pattern, _ := NewPattern(c1String, eventInfoMap)
+	c2Pattern, _ := NewPattern(c2String, eventInfoMap)
 	return c1Pattern, c2Pattern, true
 }
 
@@ -59,7 +77,7 @@ func candidatesMapToSlice(candidatesMap map[string]*Pattern) []*Pattern {
 	return candidates
 }
 
-func GenCandidates(currentPatterns []*Pattern, maxCandidates int) ([]*Pattern, uint, error) {
+func GenCandidates(currentPatterns []*Pattern, maxCandidates int, eventInfoMap *EventInfoMap) ([]*Pattern, uint, error) {
 	numPatterns := len(currentPatterns)
 	var currentMinCount uint
 
@@ -76,7 +94,7 @@ func GenCandidates(currentPatterns []*Pattern, maxCandidates int) ([]*Pattern, u
 	// Candidates are formed in decreasing order of frequent patterns till maxCandidates.
 	for i := 0; i < numPatterns; i++ {
 		for j := i + 1; j < numPatterns; j++ {
-			if c1, c2, ok := GenCandidatesPair(currentPatterns[i], currentPatterns[j]); ok {
+			if c1, c2, ok := GenCandidatesPair(currentPatterns[i], currentPatterns[j], eventInfoMap); ok {
 				currentMinCount = currentPatterns[j].Count
 				candidatesMap[c1.String()] = c1
 				if len(candidatesMap) >= maxCandidates {
@@ -108,6 +126,73 @@ func deletePatternFromSlice(patternArray []*Pattern, pattern *Pattern) []*Patter
 	return patternArray
 }
 
+func EventPropertyKey(eventName string, propertyName string) string {
+	// property names are scoped by event, since different events can have
+	// same properties.
+	return eventName + "." + propertyName
+}
+
+// Collects event info for the events initilaized in eventInfoMap.
+func CollectEventInfo(scanner *bufio.Scanner, eventInfoMap *EventInfoMap) error {
+	lineNum := 0
+	for scanner.Scan() {
+		line := scanner.Text()
+		lineNum++
+		var eventDetails CounterEventFormat
+		if err := json.Unmarshal([]byte(line), &eventDetails); err != nil {
+			log.WithFields(log.Fields{"line": line, "err": err}).Fatal("Read failed.")
+			return err
+		}
+		eventName := eventDetails.EventName
+		eInfo, ok := (*eventInfoMap)[eventName]
+		if !ok {
+			log.WithFields(log.Fields{"event": eventName, "line no": lineNum}).Info("Unexpected event. Ignoring")
+			continue
+		}
+		for key, value := range eventDetails.EventProperties {
+			if _, ok := value.(float64); ok {
+				eInfo.NumericPropertyKeys[key] = true
+			} else if categoricalValue, ok := value.(string); ok {
+				cmap, ok := eInfo.CategoricalPropertyKeyValues[key]
+				if !ok {
+					cmap = make(map[string]bool)
+					eInfo.CategoricalPropertyKeyValues[key] = cmap
+				}
+				cmap[categoricalValue] = true
+			} else {
+				log.WithFields(log.Fields{"event": eventName, "property": key, "value": value, "line no": lineNum}).Info(
+					"Ignoring non string, non numeric property.")
+			}
+		}
+	}
+
+	// Set template for each event.
+	for eventName, eventInfo := range *eventInfoMap {
+		npt := Hist.NumericHistogramTemplate{}
+		for propertyName, _ := range eventInfo.NumericPropertyKeys {
+			nptu := Hist.NumericHistogramTemplateUnit{
+				Name:       EventPropertyKey(eventName, propertyName),
+				IsRequired: false,
+				Default:    0.0,
+			}
+			npt = append(npt, nptu)
+		}
+		eventInfo.NumericPropertiesTemplate = &npt
+
+		cpt := Hist.CategoricalHistogramTemplate{}
+		for propertyName, _ := range eventInfo.CategoricalPropertyKeyValues {
+			cptu := Hist.CategoricalHistogramTemplateUnit{
+				Name:       EventPropertyKey(eventName, propertyName),
+				IsRequired: false,
+				Default:    "",
+			}
+			cpt = append(cpt, cptu)
+		}
+		eventInfo.CategoricalPropertiesTemplate = &cpt
+	}
+	return nil
+}
+
 func CountPatterns(scanner *bufio.Scanner, patterns []*Pattern) error {
 	var seenUsers map[string]bool = make(map[string]bool)
 
@@ -125,20 +210,17 @@ func CountPatterns(scanner *bufio.Scanner, patterns []*Pattern) error {
 
 	for scanner.Scan() {
 		line := scanner.Text()
-		splits := strings.Split(line, ",")
-		userId, eventName := splits[0], splits[2]
-		userCreatedTime, err := time.Parse(time.RFC3339, splits[1])
-		if err != nil {
-			log.Fatal(err)
+		var eventDetails CounterEventFormat
+		if err := json.Unmarshal([]byte(line), &eventDetails); err != nil {
+			log.WithFields(log.Fields{"line": line, "err": err}).Fatal("Read failed.")
+			return err
 		}
-		eventCreatedTime, err := time.Parse(time.RFC3339, splits[3])
-		if err != nil {
-			log.Fatal(err)
-		}
-		eventCardinality, err := strconv.ParseUint(splits[4], 10, 64)
-		if err != nil {
-			log.Fatal(err)
-		}
+		userId := eventDetails.UserId
+		eventName := eventDetails.EventName
+		eventProperties := eventDetails.EventProperties
+		userCreatedTime := eventDetails.UserCreatedTime
+		eventCreatedTime := eventDetails.EventCreatedTime
+		eventCardinality := eventDetails.EventCardinality
 
 		numEventsProcessed += 1
 		if math.Mod(float64(numEventsProcessed), 1000.0) == 0.0 {
@@ -151,7 +233,7 @@ func CountPatterns(scanner *bufio.Scanner, patterns []*Pattern) error {
 			waitingOnPatternsMap = make(map[string][]*Pattern)
 			prevWaitPatternsMap = make(map[string][]*Pattern)
 			for _, p := range patterns {
-				if err = p.ResetForNewUser(userId, userCreatedTime); err != nil {
+				if err := p.ResetForNewUser(userId, userCreatedTime); err != nil {
 					log.Fatal(err)
 				}
 				waitEvent := p.WaitingOn()
@@ -166,7 +248,8 @@ func CountPatterns(scanner *bufio.Scanner, patterns []*Pattern) error {
 		prevWaitPattens, ok := prevWaitPatternsMap[eventName]
 		if ok {
 			for _, p := range prevWaitPattens {
-				if _, err = p.CountForEvent(eventName, eventCreatedTime, uint(eventCardinality), userId, userCreatedTime); err != nil {
+				if _, err := p.CountForEvent(eventName, eventCreatedTime, eventProperties,
+					uint(eventCardinality), userId, userCreatedTime); err != nil {
 					log.Error(err)
 				}
 			}
@@ -182,7 +265,8 @@ func CountPatterns(scanner *bufio.Scanner, patterns []*Pattern) error {
 					"Pattern %s assumed to wait on %s but actually waiting on %s. Line %s",
 					p.String(), eventName, waitingOn1, line))
 			}
-			waitingOn2, err := p.CountForEvent(eventName, eventCreatedTime, uint(eventCardinality), userId, userCreatedTime)
+			waitingOn2, err := p.CountForEvent(eventName, eventCreatedTime, eventProperties,
+				uint(eventCardinality), userId, userCreatedTime)
 			if err != nil || waitingOn2 == "" {
 				log.Error(err)
 			}
@@ -226,7 +310,7 @@ func CountPatterns(scanner *bufio.Scanner, patterns []*Pattern) error {
 // Special candidate generation method that generates upto maxCandidates with
 // events that start with and end with the two event patterns.
 func GenLenThreeCandidatePatterns(pattern *Pattern, startPatterns []*Pattern,
-	endPatterns []*Pattern, maxCandidates int) ([]*Pattern, error) {
+	endPatterns []*Pattern, maxCandidates int, eventInfoMap *EventInfoMap) ([]*Pattern, error) {
 	if len(pattern.EventNames) != 2 {
 		return nil, fmt.Errorf(fmt.Sprintf("Pattern %s length is not two.", pattern.String()))
 	}
@@ -281,7 +365,7 @@ func GenLenThreeCandidatePatterns(pattern *Pattern, startPatterns []*Pattern,
 				}
 				copy(cString, startPatterns[j].EventNames)
 				cString = append(cString, pattern.EventNames[1])
-				candidate, err = NewPattern(cString)
+				candidate, err = NewPattern(cString, eventInfoMap)
 			} else {
 				if reflect.DeepEqual(pattern.EventNames, endPatterns[j].EventNames) {
 					continue
@@ -291,7 +375,7 @@ func GenLenThreeCandidatePatterns(pattern *Pattern, startPatterns []*Pattern,
 				}
 				cString = []string{pattern.EventNames[0]}
 				cString = append(cString, endPatterns[j].EventNames...)
-				candidate, err = NewPattern(cString)
+				candidate, err = NewPattern(cString, eventInfoMap)
 			}
 		} else {
 			j := i - minLen
@@ -304,7 +388,7 @@ func GenLenThreeCandidatePatterns(pattern *Pattern, startPatterns []*Pattern,
 				}
 				copy(cString, startPatterns[j].EventNames)
 				cString = append(cString, pattern.EventNames[1])
-				candidate, err = NewPattern(cString)
+				candidate, err = NewPattern(cString, eventInfoMap)
 			} else {
 				if reflect.DeepEqual(pattern.EventNames, endPatterns[j].EventNames) {
 					continue
@@ -314,7 +398,7 @@ func GenLenThreeCandidatePatterns(pattern *Pattern, startPatterns []*Pattern,
 				}
 				cString = []string{pattern.EventNames[0]}
 				cString = append(cString, endPatterns[j].EventNames...)
-				candidate, err = NewPattern(cString)
+				candidate, err = NewPattern(cString, eventInfoMap)
 			}
 		}
 		if err != nil {
