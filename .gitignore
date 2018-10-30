@@ -1,2 +1,4 @@
 backend/pkg/**
 backend/bin/**
+backend/src/github.com/**
+backend/src/golang.org/**
