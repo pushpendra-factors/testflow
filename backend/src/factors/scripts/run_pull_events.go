@@ -6,7 +6,9 @@ package main
 // go run run_pull_events.go --project_id=1 --output_dir="" --end_time=""
 
 import (
+	"encoding/json"
 	C "factors/config"
+	P "factors/pattern"
 	"flag"
 	"fmt"
 	"os"
@@ -14,6 +16,7 @@ import (
 	"time"
 
 	_ "github.com/jinzhu/gorm"
+	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -34,7 +37,7 @@ func pullAndWriteEventsFile(projectId int, startTime time.Time, endTime time.Tim
 
 	defer db.Close()
 
-	rows, err := db.Raw("SELECT events.user_id, events.event_name, events.created_at, events.count, users.created_at FROM events "+
+	rows, err := db.Raw("SELECT events.user_id, events.event_name, events.created_at, events.count, events.properties, users.created_at FROM events "+
 		"LEFT JOIN users ON events.user_id = users.id WHERE events.project_id = ? AND events.created_at BETWEEN  ? AND ? "+
 		"ORDER BY events.user_id, events.created_at LIMIT ?",
 		*projectIdFlag, startTime, endTime, max_EVENTS).Rows()
@@ -58,13 +61,36 @@ func pullAndWriteEventsFile(projectId int, startTime time.Time, endTime time.Tim
 		var eventCreatedAt time.Time
 		var userCreatedAt time.Time
 		var eventCardinality uint
-		if err = rows.Scan(&userId, &eventName, &eventCreatedAt, &eventCardinality, &userCreatedAt); err != nil {
+		var eventProperties postgres.Jsonb
+		if err = rows.Scan(&userId, &eventName, &eventCreatedAt, &eventCardinality, &eventProperties, &userCreatedAt); err != nil {
 			log.WithFields(log.Fields{"err": err}).Error("SQL Parse failed.")
 			return err
 		}
-		var line string = fmt.Sprintf("%s,%s,%s,%s,%d\n", userId, userCreatedAt.Format(time.RFC3339),
-			eventName, eventCreatedAt.Format(time.RFC3339), eventCardinality)
-		if _, err := file.WriteString(line); err != nil {
+		eventPropertiesBytes, err := eventProperties.Value()
+		if err != nil {
+			log.WithFields(log.Fields{"err": err}).Fatal("Unable to unmarshal property.")
+		}
+		var eventPropertiesMap map[string]interface{}
+		err = json.Unmarshal(eventPropertiesBytes.([]byte), &eventPropertiesMap)
+		if err != nil {
+			log.WithFields(log.Fields{"err": err}).Fatal("Unable to unmarshal property.")
+		}
+		event := P.CounterEventFormat{
+			UserId:           userId,
+			UserCreatedTime:  userCreatedAt,
+			EventName:        eventName,
+			EventCreatedTime: eventCreatedAt,
+			EventCardinality: eventCardinality,
+			EventProperties:  eventPropertiesMap,
+		}
+
+		lineBytes, err := json.Marshal(event)
+		if err != nil {
+			log.WithFields(log.Fields{"err": err}).Fatal("Unable to unmarshal event.")
+			return err
+		}
+		line := string(lineBytes)
+		if _, err := file.WriteString(fmt.Sprintf("%s\n", line)); err != nil {
 			log.WithFields(log.Fields{"line": line, "err": err}).Fatal("Unable to write to file.")
 			return err
 		}
