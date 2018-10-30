@@ -1,14 +1,14 @@
 function info(message) {
-    console.log(message);
+    console.log("[Factors:INFO] : "+message);
 }
 
 function error(message) {
-    console.error(message);
+    console.error("[Factors:ERROR] : "+message);
 }
 
 function debug(message) {
     if (process.env.NODE_ENV !== "production") {
-        console.log(messag)
+        console.log("[Factors:DEBUG] : "+message)
     }
 }
 

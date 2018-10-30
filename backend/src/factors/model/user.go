@@ -3,6 +3,7 @@ package model
 import (
 	C "factors/config"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/jinzhu/gorm"
@@ -83,13 +84,26 @@ func GetUserLatestByCustomerUserId(projectId uint64, customerUserId string) (*Us
 	return &user, DB_SUCCESS
 }
 
-func UpdateCustomerUserIdById(projectId uint64, id string, customerUserId string) int {
+func UpdateCustomerUserIdById(projectId uint64, id string, customerUserId string) (*User, int) {
 	db := C.GetServices().Db
 
-	if err := db.Model(&User{}).Where("project_id = ?", projectId).Where("id = ?", id).Update("customer_user_id", customerUserId).Error; err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("Failed fetching c_uid by user_id")
-		return http.StatusInternalServerError
+	// Todo(Dinesh): Move to validations.
+	// Ref: https://github.com/qor/validations
+	if projectId == 0 {
+		return nil, http.StatusBadRequest
+	}
+
+	// Todo(Dinesh): Move to validations.
+	cleanId := strings.TrimSpace(id)
+	if len(cleanId) == 0 {
+		return nil, http.StatusBadRequest
+	}
+
+	var user User
+	if err := db.Model(&user).Where("project_id = ?", projectId).Where("id = ?", cleanId).Update("customer_user_id", customerUserId).Error; err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("Failed updating customer_user_id by user_id")
+		return nil, http.StatusInternalServerError
 	} else {
-		return DB_SUCCESS
+		return &user, DB_SUCCESS
 	}
 }

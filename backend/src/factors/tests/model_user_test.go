@@ -63,11 +63,12 @@ func TestDBCreateAndGetUser(t *testing.T) {
 
 	// Creating again with the same customer_user_id with no properties.
 	// Should respond with last user of customer_user instead of creating.
-	newUser, newUserErrorCode := M.CreateUser(&M.User{ProjectId: projectId, CustomerUserId: customerUserId})
+	rCustomerUserId := U.RandomLowerAphaNumString(15)
+	newUser, newUserErrorCode := M.CreateUser(&M.User{ProjectId: projectId, CustomerUserId: rCustomerUserId})
 	assert.Equal(t, M.DB_SUCCESS, newUserErrorCode)
-	lastUser, lastUserErrorCode := M.GetUserLatestByCustomerUserId(projectId, customerUserId)
+	lastUser, lastUserErrorCode := M.GetUserLatestByCustomerUserId(projectId, rCustomerUserId)
 	assert.Equal(t, M.DB_SUCCESS, lastUserErrorCode)
-	assert.Equal(t, lastUser.ID, newUser.ID)
+	assert.Equal(t, newUser.ID, lastUser.ID)
 
 	// Test Get User on random id.
 	randomId := U.RandomLowerAphaNumString(15)
@@ -136,4 +137,51 @@ func assertUsersWithOffset(t *testing.T, expectedUsers []M.User, actualUsers []M
 		actualUser.UpdatedAt = time.Time{}
 		assert.Equal(t, expectedUser, actualUser)
 	}
+}
+
+func TestDBGetUserLatestByCustomerUserId(t *testing.T) {
+	// Intialize.
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+
+	// Test latest user return for the customer_user.
+	rCustomerUserId := U.RandomLowerAphaNumString(15)
+	latestUser, latestUserErrCode := M.CreateUser(&M.User{ProjectId: project.ID, CustomerUserId: rCustomerUserId})
+	assert.Equal(t, M.DB_SUCCESS, latestUserErrCode)
+	getUser, getUserErrCode := M.GetUserLatestByCustomerUserId(project.ID, rCustomerUserId)
+	assert.Equal(t, M.DB_SUCCESS, getUserErrCode)
+	assert.Equal(t, latestUser.ID, getUser.ID)
+
+	// Bad input. // Without project scope.
+	_, errCode := M.GetUserLatestByCustomerUserId(0, rCustomerUserId)
+	assert.NotEqual(t, M.DB_SUCCESS, errCode)
+
+	// Bad input. // Unacceptable customer_user_id
+	_, errCode = M.GetUserLatestByCustomerUserId(project.ID, " ")
+	assert.NotEqual(t, M.DB_SUCCESS, errCode)
+}
+
+func TestDBUpdateCustomerUserIdById(t *testing.T) {
+	// Intialize.
+	project, user, err := SetupProjectUserReturnDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+	assert.NotNil(t, user)
+
+	// Test update of customer_user.
+	rCustomerUserId := U.RandomLowerAphaNumString(15)
+	user, errCode := M.UpdateCustomerUserIdById(project.ID, user.ID, rCustomerUserId)
+	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Equal(t, rCustomerUserId, user.CustomerUserId)
+
+	// Bad input. ProjectId.
+	rCustomerUserId = U.RandomLowerAphaNumString(15)
+	user, errCode = M.UpdateCustomerUserIdById(0, user.ID, rCustomerUserId)
+	assert.NotEqual(t, M.DB_SUCCESS, errCode)
+
+	// Bad input. UserId.
+	rCustomerUserId = U.RandomLowerAphaNumString(15)
+	user, errCode = M.UpdateCustomerUserIdById(project.ID, "", rCustomerUserId)
+	assert.NotEqual(t, M.DB_SUCCESS, errCode)
 }

@@ -62,4 +62,14 @@ func TestDBCreateAndGetProject(t *testing.T) {
 	project, errCode = M.CreateProject(&M.Project{Name: projectName, ID: previousProjectId + 10})
 	assert.Equal(t, http.StatusBadRequest, errCode)
 	assert.Nil(t, project)
+
+	// Test Get Project by a token.
+	// Bad input.
+	project, errCode = M.GetProjectByToken("")
+	assert.Equal(t, http.StatusBadRequest, errCode)
+	// Check corresponding project returned with token.
+	project, errCode = M.CreateProject(&M.Project{Name: projectName})
+	rProject, rErrCode := M.GetProjectByToken(project.Token)
+	assert.Equal(t, M.DB_SUCCESS, rErrCode)
+	assert.Equal(t, project.ID, rProject.ID)
 }

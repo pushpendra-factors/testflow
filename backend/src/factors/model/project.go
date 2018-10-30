@@ -5,6 +5,7 @@ import (
 	U "factors/util"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	_ "github.com/jinzhu/gorm"
@@ -95,10 +96,15 @@ func GetProject(id uint64) (*Project, int) {
 
 func GetProjectByToken(token string) (*Project, int) {
 	db := C.GetServices().Db
+	cleanToken := strings.TrimSpace(token)
+
+	if len(cleanToken) == 0 {
+		return nil, http.StatusBadRequest
+	}
 
 	var project Project
-	if err := db.Where("token = ?", token).First(&project).Error; err != nil {
-		return nil, 404
+	if err := db.Where("token = ?", cleanToken).First(&project).Error; err != nil {
+		return nil, http.StatusNotFound
 	}
 
 	return &project, DB_SUCCESS
