@@ -2,7 +2,7 @@ package util
 
 import "github.com/gin-gonic/gin"
 
-// GetScopeByKey sets scope to the context.
+// SetScope sets scope to the context with a key/value.
 func SetScope(c *gin.Context, key string, value interface{}) {
 	scopeValue, exists := c.Get("scopes")
 	if !exists {

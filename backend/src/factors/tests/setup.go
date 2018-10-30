@@ -48,6 +48,7 @@ func SetupProjectUserReturnDAO() (*M.Project, *M.User, error) {
 	return project, user, nil
 }
 
+// Todo(Dinesh): To be replaced with SetupProjectUserEventNameReturnDAO.
 func SetupProjectUserEventName() (uint64, string, string, error) {
 	var projectId uint64
 	var userId string

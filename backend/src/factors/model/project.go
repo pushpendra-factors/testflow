@@ -96,8 +96,9 @@ func GetProject(id uint64) (*Project, int) {
 
 func GetProjectByToken(token string) (*Project, int) {
 	db := C.GetServices().Db
-	cleanToken := strings.TrimSpace(token)
 
+	// Todo(Dinesh): Move to validations.
+	cleanToken := strings.TrimSpace(token)
 	if len(cleanToken) == 0 {
 		return nil, http.StatusBadRequest
 	}
