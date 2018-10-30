@@ -3,7 +3,9 @@ package model
 import (
 	C "factors/config"
 	U "factors/util"
+	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	_ "github.com/jinzhu/gorm"
@@ -11,16 +13,54 @@ import (
 )
 
 type Project struct {
-	ID        uint64    `gorm:"primary_key:true;" json:"id"`
-	Name      string    `gorm:"not null;" json:"name"`
-	APIKey    string    `gorm:"unique" json:"api_key"`
+	ID   uint64 `gorm:"primary_key:true;" json:"id"`
+	Name string `gorm:"not null;" json:"name"`
+	// An index created on token.
+	Token     string    `gorm:"size:32" json:"token"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+const TOKEN_GEN_RETRY_LIMIT = 5
+
+// Checks for the existence of token already.
+func isTokenExist(token string) (exists int, err error) {
+	db := C.GetServices().Db
+
+	var count uint64
+	if err := db.Model(&Project{}).Where("token = ?", token).Count(&count).Error; err != nil {
+		return -1, err
+	}
+
+	if count > 0 {
+		return 1, nil
+	}
+
+	return 0, nil
+}
+
+func generateUniqueToken() (token string, err error) {
+	for tryCount := 0; tryCount < TOKEN_GEN_RETRY_LIMIT; tryCount++ {
+		token = U.RandomLowerAphaNumString(32)
+		tokenExists, err := isTokenExist(token)
+		if err != nil {
+			return "", err
+		}
+		// Break generation, if token doesn't exist already.
+		if tokenExists == 0 {
+			return token, nil
+		}
+	}
+	return "", fmt.Errorf("Token generation failed after %d attempts.", TOKEN_GEN_RETRY_LIMIT)
+}
+
 func (project *Project) BeforeCreate() (err error) {
-	// Create a new API Key.
-	project.APIKey = U.RandomLowerAphaNumString(32)
+	// Unique token assignment.
+	var token string
+	if token, err = generateUniqueToken(); err != nil {
+		return err
+	}
+	project.Token = token
 	return nil
 }
 
@@ -52,6 +92,23 @@ func GetProject(id uint64) (*Project, int) {
 	} else {
 		return &project, DB_SUCCESS
 	}
+}
+
+func GetProjectByToken(token string) (*Project, int) {
+	db := C.GetServices().Db
+
+	// Todo(Dinesh): Move to validations.
+	cleanToken := strings.TrimSpace(token)
+	if len(cleanToken) == 0 {
+		return nil, http.StatusBadRequest
+	}
+
+	var project Project
+	if err := db.Where("token = ?", cleanToken).First(&project).Error; err != nil {
+		return nil, http.StatusNotFound
+	}
+
+	return &project, DB_SUCCESS
 }
 
 func GetProjects() ([]Project, int) {

@@ -34,6 +34,12 @@ func main() {
 	} else {
 		log.Info("Created projects table")
 	}
+	// Add unique index on project tokens.
+	if err := db.Exec("CREATE UNIQUE INDEX token_unique_idx ON projects(token);").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("projects table token unique indexing failed.")
+	} else {
+		log.Info("projects table token unique index created.")
+	}
 
 	// Create users table.
 	if err := db.CreateTable(&M.User{}).Error; err != nil {
@@ -46,12 +52,6 @@ func main() {
 		log.WithFields(log.Fields{"err": err}).Error("users table association with projects table failed.")
 	} else {
 		log.Info("users table is associated with projects table.")
-	}
-	// Add unique partial index on project_id+customer_user_id when customer_id is not null.
-	if err := db.Exec("CREATE UNIQUE INDEX project_id_customer_user_id_idx ON users (project_id, customer_user_id) WHERE customer_user_id != '';").Error; err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("users table project_id:customer_user_id unique index failed.")
-	} else {
-		log.Info("users table project_id:customer_user_id unique index created.")
 	}
 
 	// Create event_names table.

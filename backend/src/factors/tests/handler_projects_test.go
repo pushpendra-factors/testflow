@@ -17,7 +17,7 @@ import (
 func TestAPICreateProject(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
-	H.InitRoutes(r)
+	H.InitAppRoutes(r)
 	projectName := "test_project_name"
 
 	// Test CreateProject.
@@ -32,7 +32,7 @@ func TestAPICreateProject(t *testing.T) {
 	json.Unmarshal(jsonResponse, &jsonResponseMap)
 	assert.NotEqual(t, 0, jsonResponseMap["id"])
 	assert.Equal(t, projectName, jsonResponseMap["name"].(string))
-	assert.NotEqual(t, 0, len(jsonResponseMap["api_key"].(string)))
+	assert.NotEqual(t, 0, len(jsonResponseMap["token"].(string)))
 	assert.NotNil(t, jsonResponseMap["created_at"].(string))
 	assert.NotNil(t, jsonResponseMap["updated_at"].(string))
 	assert.Equal(t, jsonResponseMap["created_at"].(string), jsonResponseMap["updated_at"].(string))

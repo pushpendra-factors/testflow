@@ -1,4 +1,19 @@
+
+# backend
 backend/pkg/**
 backend/bin/**
+
 backend/src/github.com/**
 backend/src/golang.org/**
+
+# sdk
+sdk/javascript/dist
+sdk/javascript/node_modules
+
+# misc
+misc/ingest_events/pkg/**
+misc/ingest_events/bin/**
+
+
+
+

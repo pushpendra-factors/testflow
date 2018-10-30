@@ -9,6 +9,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -142,6 +143,10 @@ func setupProject() (int, error) {
 	reqBody := []byte(`{"name": "ECommerce-Sample"}`)
 	url := fmt.Sprintf("%s/projects", *serverFlag)
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(reqBody))
+	if resp == nil {
+		log.Fatal("HTTP Request failed. Is your backend up?")
+		return 0, errors.New("HTTP Request failed")
+	}
 	// always close the response-body, even if content is not required.
 	defer resp.Body.Close()
 	if err != nil {

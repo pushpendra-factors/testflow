@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	H "factors/handler"
-	M "factors/model"
-	U "factors/util"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -16,24 +14,10 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TODO: Use testify.suites to avoid multiple initializations across these tests.
-func SetupProject() (uint64, error) {
-	var projectId uint64
-
-	// Create random project.
-	random_project_name := U.RandomLowerAphaNumString(15)
-	project, err_code := M.CreateProject(&M.Project{Name: random_project_name})
-	if err_code != M.DB_SUCCESS {
-		return projectId, fmt.Errorf("Project Creation failed.")
-	}
-	projectId = project.ID
-	return projectId, nil
-}
-
 func TestAPICreateAndGetUser(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
-	H.InitRoutes(r)
+	H.InitAppRoutes(r)
 	projectId, err := SetupProject()
 	assert.Nil(t, err)
 	customerUserId := "murthy@autometa"
@@ -88,7 +72,7 @@ func TestAPICreateAndGetUser(t *testing.T) {
 func TestAPICreateUserEmptyAndWithAttributes(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
-	H.InitRoutes(r)
+	H.InitAppRoutes(r)
 	projectId, err := SetupProject()
 	assert.Nil(t, err)
 	customerUserId := "murthy@autometa"
@@ -141,7 +125,7 @@ func TestAPICreateUserEmptyAndWithAttributes(t *testing.T) {
 func TestAPICreateUserWithCreatedTime(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
-	H.InitRoutes(r)
+	H.InitAppRoutes(r)
 	projectId, err := SetupProject()
 	assert.Nil(t, err)
 	customerUserId := "murthy@autometa"
@@ -172,7 +156,7 @@ func TestAPICreateUserWithCreatedTime(t *testing.T) {
 func TestAPICreateUserBadRequest(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
-	H.InitRoutes(r)
+	H.InitAppRoutes(r)
 	projectId, err := SetupProject()
 	assert.Nil(t, err)
 	customerUserId := "murthy@autometa"
@@ -212,7 +196,7 @@ func TestAPICreateUserBadRequest(t *testing.T) {
 func TestAPIGetUsers(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
-	H.InitRoutes(r)
+	H.InitAppRoutes(r)
 	projectId, err := SetupProject()
 	assert.Nil(t, err)
 

@@ -3,9 +3,10 @@ package model
 import (
 	C "factors/config"
 	"net/http"
+	"strings"
 	"time"
 
-	_ "github.com/jinzhu/gorm"
+	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
@@ -64,5 +65,45 @@ func GetUsers(projectId uint64, offset uint64, limit uint64) ([]User, int) {
 		return nil, 404
 	} else {
 		return users, DB_SUCCESS
+	}
+}
+
+func GetUserLatestByCustomerUserId(projectId uint64, customerUserId string) (*User, int) {
+	db := C.GetServices().Db
+
+	var user User
+	err := db.Where("project_id = ?", projectId).Where("customer_user_id = ?", customerUserId).Last(&user).Error
+
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+		return nil, http.StatusInternalServerError
+	}
+
+	return &user, DB_SUCCESS
+}
+
+func UpdateCustomerUserIdById(projectId uint64, id string, customerUserId string) (*User, int) {
+	db := C.GetServices().Db
+
+	// Todo(Dinesh): Move to validations.
+	// Ref: https://github.com/qor/validations
+	if projectId == 0 {
+		return nil, http.StatusBadRequest
+	}
+
+	// Todo(Dinesh): Move to validations.
+	cleanId := strings.TrimSpace(id)
+	if len(cleanId) == 0 {
+		return nil, http.StatusBadRequest
+	}
+
+	var user User
+	if err := db.Model(&user).Where("project_id = ?", projectId).Where("id = ?", cleanId).Update("customer_user_id", customerUserId).Error; err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("Failed updating customer_user_id by user_id")
+		return nil, http.StatusInternalServerError
+	} else {
+		return &user, DB_SUCCESS
 	}
 }

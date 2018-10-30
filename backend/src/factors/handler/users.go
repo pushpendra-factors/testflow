@@ -35,6 +35,22 @@ func CreateUserHandler(c *gin.Context) {
 	}
 
 	var errCode int
+
+	// If customer_user given and already exists, respond with last user of customer_user.
+	if user.CustomerUserId != "" {
+		userLatest, errCode := M.GetUserLatestByCustomerUserId(projectId, user.CustomerUserId)
+
+		if errCode == http.StatusInternalServerError {
+			c.AbortWithStatusJSON(errCode, gin.H{"error": "User creation failed. Finding customer user failed."})
+			return
+		}
+
+		if errCode == M.DB_SUCCESS {
+			c.JSON(http.StatusOK, userLatest)
+			return
+		}
+	}
+
 	_, errCode = M.CreateUser(&user)
 	if errCode != M.DB_SUCCESS {
 		c.AbortWithStatus(errCode)

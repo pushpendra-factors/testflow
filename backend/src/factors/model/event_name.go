@@ -10,7 +10,7 @@ import (
 )
 
 type EventName struct {
-	// Composite primary key with projectId and random uuid.
+	// Composite primary key with projectId.
 	Name string `gorm:"primary_key:true;" json:"name"`
 	// Below are the foreign key constraints added in creation script.
 	// project_id -> projects(id)
