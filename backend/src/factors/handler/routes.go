@@ -1,23 +1,14 @@
 package handler
 
 import (
-	C "factors/config"
 	Middleware "factors/middleware"
 
-	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	log "github.com/sirupsen/logrus"
 )
 
-func InitAppRoutes(r *gin.Engine) {
-	// CORS
-	if C.IsDevelopment() {
-		log.Info("Running in development.")
-		config := cors.DefaultConfig()
-		config.AllowOrigins = []string{"http://localhost:8080", "http://localhost:3000"}
-		r.Use(cors.New(config))
-	}
+const ROUTE_GROUP_PREFIX_SDK = "/sdk"
 
+func InitAppRoutes(r *gin.Engine) {
 	r.POST("/projects", CreateProjectHandler)
 	r.GET("/projects", GetProjectsHandler)
 	r.GET("/projects/:project_id/event_names", GetEventNamesHandler)
@@ -30,10 +21,9 @@ func InitAppRoutes(r *gin.Engine) {
 }
 
 func InitSDKRoutes(r *gin.Engine) {
-	apiRouteGroup := r.Group("/sdk")
-	apiRouteGroup.Use(cors.Default()) // Cors allows all origins.
-	apiRouteGroup.Use(Middleware.SetProjectScopeByTokenMiddleware())
+	sdkRG := r.Group(ROUTE_GROUP_PREFIX_SDK)
+	sdkRG.Use(Middleware.SetProjectScopeByTokenMiddleware())
 
-	apiRouteGroup.POST("/event/track", SDKTrackHandler)
-	apiRouteGroup.POST("/user/identify", SDKIdentifyHandler)
+	sdkRG.POST("/event/track", SDKTrackHandler)
+	sdkRG.POST("/user/identify", SDKIdentifyHandler)
 }
