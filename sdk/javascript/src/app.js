@@ -1,44 +1,45 @@
 "use strict";
 
-import * as Request from "./request";
 import APIClient from "./api";
-import config from "./config";
+import * as Cookie from "./utils/cookie"
 
 class App {
-    constructor() {
-        this.token = "";
-        this.config = {};
-    }
-
-    setProperties(token, config={}) {
-        this.token = token;
+    constructor(token, config={}) {
+        this.client = new APIClient(token);
         this.config = config;
     }
 
     setToken(token) {
-        this.token = token;
+        this.client = new APIClient(token);
     }
 
-    getToken() {
-        return token;
+    setConfig(config) {
+        this.config = config;
+    }
+
+    getClient() {
+        this.client;
     }
 }
 
 // Global references.
-var app = new App();
-var apiClient = new APIClient(config.api.host);
+var app = null;
 
 function isInstalled() {
     return "Factors sdk v0.1 is installed!";
 }
 
+function isInitialized() {
+    return app != null || app != undefined;
+}
+
 /**
- * Initializes sdk environment on user application.
+ * Initializes sdk environment on user application. Overwrites if initialized already.
  * @param {string} token Unique application token.
  * @param {Object} appConfig Custom application configuration. i.e., { autoTrackPageView: true }
  */
 function init(token, appConfig) {
-    app.setProperties(token, appConfig);
+    app = new App(token, appConfig);
 }
 
 /**
@@ -63,10 +64,7 @@ function track(eventName, eventProperties) {
 	Todo(Dinesh): Do we need a _fident cookie for flaging identified?
      */
 
-    apiClient.postEvent(
-        app.getToken(),
-        eventProperties
-    );
+     
 }
 
 /**
@@ -98,5 +96,5 @@ function identify(customerUserId) {
  */
 function addUserProperties(properties) {}
 
-export { isInstalled, init, track, identify, addUserProperties };
+export { isInstalled, app, init, track, identify, addUserProperties, Cookie };
 

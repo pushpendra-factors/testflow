@@ -3,12 +3,12 @@
 const CONFIG = {
     development: {
         api: {
-            host: "http://localhost:8090"
+            host: "http://localhost:8080"
         }
     },
     test: {
         api: {
-            host: "http://localhost:8090"
+            host: "http://localhost:8080"
         }
     },
     production: {
