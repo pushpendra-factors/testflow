@@ -1,5 +1,4 @@
-import * as logger from "./logger";
-
+var logger = require("./logger");
 
 function request(method, url, headers, data) {
     let options = { method: method };
@@ -36,4 +35,4 @@ function get(url, headers={}) { return request("get", url, headers); }
 
 function post(url, data, headers={}) { return request("post", url, headers, data); }
 
-export { get, post };
+module.exports = exports = { get, post };

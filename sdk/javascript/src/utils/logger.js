@@ -12,4 +12,4 @@ function debug(message) {
     }
 }
 
-export { info, error, debug };
+module.exports = exports = { info, error, debug };

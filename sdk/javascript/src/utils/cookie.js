@@ -23,4 +23,4 @@ function remove(name) {
     document.cookie = name+'=; Max-Age=-99999999;';  
 }
 
-export { set, get, remove };
+module.exports = exports =  { set, get, remove };

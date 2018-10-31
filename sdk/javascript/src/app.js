@@ -1,29 +1,27 @@
 "use strict";
+var APIClient = require("./api").Client;
+var Cookie = require("./utils/cookie");
 
-import APIClient from "./api";
-import * as Cookie from "./utils/cookie"
-
-class App {
-    constructor(token, config={}) {
-        this.client = new APIClient(token);
-        this.config = config;
-    }
-
-    setToken(token) {
-        this.client = new APIClient(token);
-    }
-
-    setConfig(config) {
-        this.config = config;
-    }
-
-    getClient() {
-        this.client;
-    }
+function App(token, config={}) {
+    this.client = new APIClient(token);
+    this.config = config;
 }
 
-// Global references.
-var app = null;
+App.prototype.setToken = function(token) {
+    this.client.setToken(token);
+}
+
+App.prototype.setConfig = function(config) {
+    this.config = config;
+}
+
+App.prototype.getClient = function() {
+    return this.client;
+}
+
+
+// Global reference.
+var app = new App(null, {});
 
 function isInstalled() {
     return "Factors sdk v0.1 is installed!";
@@ -39,7 +37,7 @@ function isInitialized() {
  * @param {Object} appConfig Custom application configuration. i.e., { autoTrackPageView: true }
  */
 function init(token, appConfig) {
-    app = new App(token, appConfig);
+    app.setToken(token);
 }
 
 /**
@@ -96,5 +94,5 @@ function identify(customerUserId) {
  */
 function addUserProperties(properties) {}
 
-export { isInstalled, app, init, track, identify, addUserProperties, Cookie };
+module.exports = exports = { isInstalled, app, init, track, identify, addUserProperties, Cookie };
 
