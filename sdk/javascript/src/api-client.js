@@ -1,5 +1,5 @@
-var Request = require('./utils/request');
-const config = require('./config').Config;
+var Request = require("./utils/request");
+const config = require("./config");
 
 const URI_TRACK = "/sdk/event/track";
 const URI_IDENTIFY = "/sdk/user/identify";
@@ -20,13 +20,10 @@ APIClient.prototype.isInitialized = function() {
     return this.token && (this.token.trim().length > 0);
 }
 
-APIClient.prototype.track = function(userId, eventName, eventProperties={}) {
-    eventName = eventName.trim()
-    if(!eventName || eventName == "")
-        return Promise.reject("Failed Tracking. Event name is missing");
-
-    let payload = { "event_name": eventName, "properties": eventProperties };
-    if(userId) payload["user_id"] = userId;
+APIClient.prototype.track = function(payload) {
+    // Mandatory fields check. Other fields are passed as given.
+    if (!payload || !payload.event_name) 
+        return Promise.reject("Track failed. API Client invalid payload. Missing event_name.");
 
     let customHeaders = { "Authorization": this.token };
     return Request.post(
@@ -36,14 +33,10 @@ APIClient.prototype.track = function(userId, eventName, eventProperties={}) {
     );
 }
 
-APIClient.prototype.identify = function(userId, customerUserId) {
-    let payload = {};
-
-    if(userId && userId != null && userId != undefined) 
-        payload["userId"] = userId;
-
-    if(customerUserId && customerUserId != null && customerUserId != undefined) 
-        payload["c_uid"] = customerUserId;
+APIClient.prototype.identify = function(payload) {
+    // Mandatory fields check. Other fields are passed as given.
+    if (!payload || !payload.c_uid)
+        return Promise.reject("Identify failed. API Client invalid payload. Missing customer_user_id.");
 
     let customHeaders = { "Authorization": this.token };
     return Request.post(

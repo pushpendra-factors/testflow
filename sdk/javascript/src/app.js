@@ -5,6 +5,9 @@ var logger = require("./utils/logger");
 
 var APIClient = require("./api-client");
 
+
+// App class.
+
 function App(token, config={}) {
     this.client = new APIClient(token);
     this.config = config;
@@ -12,7 +15,7 @@ function App(token, config={}) {
 
 App.prototype.isInitialized = function() {}
 
-App.prototype.init = function(token, config={}) {
+App.prototype.set = function(token, config={}) {
     if(token) this.client.setToken(token);
     this.config = config;
 }
@@ -21,30 +24,50 @@ App.prototype.getClient = function() {
     return this.client;
 }
 
+
+// Common methods.
+
+function _updateCookieIfUserIdInResponse(response){
+    if (response && response.body && response.body.user_id) {
+        let cleanUserId = response.body.user_id.trim();
+
+        if (cleanUserId) Cookie.set(COOKIE_FUID, cleanUserId);
+    }
+}
+
+function _validatedStringArg(name, value) {
+    if (typeof(value) != "string")
+        throw new TypeError("FactorsError: Invalid type for "+name);
+    
+    value = value.trim();
+    if (!value) throw new Error("FactorsError: "+name+" cannot be empty.");
+    
+    return value;
+}
+
+
+// Exposed methods.
+
 // Constants.
 const COOKIE_FUID = "_fuid";
 
 // Global reference.
 var app = new App(null, {});
 
-function updateCookieIfUserIdInResponse(response){
-    if (response && response.body && response.body.user_id) { 
-        Cookie.set(COOKIE_FUID, response.body.user_id);
-        return true;
-    } else return false;
-}
-
+/**
+ * Prints SDK information, if installed.
+ */
 function isInstalled() {
     return "Factors sdk v0.1 is installed!";
 }
 
 /**
  * Initializes sdk environment on user application. Overwrites if initialized already.
- * @param {string} token Unique application token.
+ * @param {string} appToken Unique application token.
  * @param {Object} appConfig Custom application configuration. i.e., { autoTrackPageView: true }
  */
-function init(token, appConfig) {
-    app.set(token, appConfig);
+function init(appToken, appConfig) {
+    app.set(appToken, appConfig);
 }
 
 /**
@@ -53,34 +76,23 @@ function init(token, appConfig) {
  * @param {Object} eventProperties 
  */
 function track(eventName, eventProperties) {
-    /**
-    (eventName, eventProperties)
-        check cookie._fuid:
-            if not exist:
-                cookie._fuid = (create user) response.id
-                
-		payload.event_name = eventName
-        payload.properties = eventProperties
-
-        request /track with payload
-            response == 200 && response.body.user_id && response.body.user_id != "":
-                cookie._fuid = response.body.user_id
-
-	Todo(Dinesh): Do we need a _fident cookie for flaging identified?
-     */
+    eventName = _validatedStringArg("event_name", eventName)
 
     let payload = {};
 
+    // Use user_id on cookie.
     if (Cookie.isExist(COOKIE_FUID)) 
         payload.user_id = Cookie.get(COOKIE_FUID);
+    
+    payload.event_name = eventName;
+    payload.event_properties = eventProperties;
 
     if (app && app.client.isInitialized()) {
-        app.client.track(null, eventName, eventProperties)
-            .then(updateCookieIfUserIdInResponse)
+        app.client.track(payload)
+            .then(_updateCookieIfUserIdInResponse)
             .catch(logger.error);
-
     } else {
-        throw new Error("Tracking failed. Factors not initialized with token.");
+        throw new Error("FactorsError: SDK is not initialised with token.");
     }
 }
 
@@ -90,21 +102,23 @@ function track(eventName, eventProperties) {
  * @param {string} customerUserId Actual id of the user from the application.
  */
 function identify(customerUserId) {
-    /**
-    (customerUserId)
-        payload = {}
-        check cookie._fuid:
-            if not exist:
-                cookie._fuid = (create user) response.id
-        
-        payload.user_id = cookie._fuid
-        payload.c_uid = customerUserId
+    customerUserId = _validatedStringArg("customer_user_id", customerUserId);
+    
+    let payload = {};
 
-        request /identify with payload:
-            // if user_id already claimed as different user.
-            if response == 200 && response.body.user_id && response.body.user_id != "":
-                cookie._fuid = response.body.user_id
-    */
+    // Use user_id on cookie.
+    if (Cookie.isExist(COOKIE_FUID)) 
+        payload.user_id = Cookie.get(COOKIE_FUID);
+
+    payload.c_uid = customerUserId;
+    
+    if (app && app.client.isInitialized()) {
+        app.client.identify(payload)
+            .then(_updateCookieIfUserIdInResponse)
+            .catch(logger.error);
+    } else {
+        throw new Error("FactorsError: SDK is not initialised with token.");
+    }
 }
 
 /**
@@ -113,5 +127,5 @@ function identify(customerUserId) {
  */
 function addUserProperties(properties) {}
 
-module.exports = exports = { isInstalled, app, init, track, identify, addUserProperties, Cookie };
+module.exports = exports = { isInstalled, init, track, identify, addUserProperties };
 

@@ -18,4 +18,4 @@ const CONFIG = {
     }
 }
 
-module.exports = exports = { config: CONFIG[process.env.NODE_ENV] };
+module.exports = exports = CONFIG[process.env.NODE_ENV];

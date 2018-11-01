@@ -1,4 +1,4 @@
-// set - Sets the cookie. Replaces if exists already.
+// Sets the cookie. Replaces if exists already.
 function set(name, value, days) {
     let expires = "";
     if (days) {
@@ -9,9 +9,10 @@ function set(name, value, days) {
     document.cookie = name + "=" + (value || "")  + expires + "; path=/";
 }
 
+// Gets cookie by its name.
 function get(name) {
     let nameEQ = name + "=";
-    let ca = document.cookie.split(';');
+    let ca = document.cookie.split(";");
     for(let i=0;i < ca.length;i++) {
         let c = ca[i];
         while (c.charAt(0)==' ') c = c.substring(1,c.length);
@@ -20,14 +21,15 @@ function get(name) {
     return null;
 }
 
+// Removes the cookie.
 function remove(name) {   
-    document.cookie = name+'=; Max-Age=-99999999;';  
+    document.cookie = name+"=; Max-Age=-99999999;";  
 }
 
+// Checks for existence of the cookie by name.
 function isExist(name) {
     return ((document.cookie.indexOf(name+"=") == 0) 
         || (document.cookie.indexOf("; "+name+"=") >= 0));
 }
-
 
 module.exports = exports =  { set, get, remove, isExist };
