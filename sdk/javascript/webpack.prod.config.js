@@ -3,7 +3,7 @@ module.exports = {
   output: {
     filename: "bundle-prod.js",
     library: "factors",
-    libraryTarget: "var"
+    libraryTarget: "umd"
   },
   module: {
     rules: [
