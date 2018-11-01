@@ -17,8 +17,7 @@ function request(method, url, headers, data) {
         .then((response) =>  {
             return response.json()
                 .then((responseJSON) => {
-                    let responseBody = { status: response.status, body: responseJSON };
-                    return response.ok ? Promise.resolve(responseBody) : Promise.reject(responseBody);
+                    return { status: response.status, body: responseJSON };
                 })
                 .catch((JSONError) => {
                     logger.error(JSONError);

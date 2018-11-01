@@ -4,25 +4,29 @@ const config = require('./config').Config;
 const URI_TRACK = "/sdk/event/track";
 const URI_IDENTIFY = "/sdk/user/identify";
 
-function Client(token) {
+function APIClient(token) {
    this.token = token;
 }
 
-Client.prototype.getURL = function(uri) {
+APIClient.prototype.getURL = function(uri) {
     return config.api.host+uri;
 }
 
-Client.prototype.setToken = function(token) {
+APIClient.prototype.setToken = function(token) {
     this.token = token;
 }
 
-Client.prototype.track = function(userId, eventName, eventProperties={}) {
+APIClient.prototype.isInitialized = function() {
+    return this.token && (this.token.trim().length > 0);
+}
+
+APIClient.prototype.track = function(userId, eventName, eventProperties={}) {
     eventName = eventName.trim()
     if(!eventName || eventName == "")
         return Promise.reject("Failed Tracking. Event name is missing");
 
     let payload = { "event_name": eventName, "properties": eventProperties };
-    if(userId && userId != null && userId != undefined) payload["user_id"] = userId;
+    if(userId) payload["user_id"] = userId;
 
     let customHeaders = { "Authorization": this.token };
     return Request.post(
@@ -32,7 +36,7 @@ Client.prototype.track = function(userId, eventName, eventProperties={}) {
     );
 }
 
-Client.prototype.identify = function(userId, customerUserId) {
+APIClient.prototype.identify = function(userId, customerUserId) {
     let payload = {};
 
     if(userId && userId != null && userId != undefined) 
@@ -49,4 +53,4 @@ Client.prototype.identify = function(userId, customerUserId) {
     );
 }
 
-module.exports = exports = { Client };
+module.exports = exports = APIClient;

@@ -1,17 +1,19 @@
 "use strict";
-var APIClient = require("./api").Client;
+
 var Cookie = require("./utils/cookie");
+var logger = require("./utils/logger");
+
+var APIClient = require("./api-client");
 
 function App(token, config={}) {
     this.client = new APIClient(token);
     this.config = config;
 }
 
-App.prototype.setToken = function(token) {
-    this.client.setToken(token);
-}
+App.prototype.isInitialized = function() {}
 
-App.prototype.setConfig = function(config) {
+App.prototype.init = function(token, config={}) {
+    if(token) this.client.setToken(token);
     this.config = config;
 }
 
@@ -19,16 +21,21 @@ App.prototype.getClient = function() {
     return this.client;
 }
 
+// Constants.
+const COOKIE_FUID = "_fuid";
 
 // Global reference.
 var app = new App(null, {});
 
-function isInstalled() {
-    return "Factors sdk v0.1 is installed!";
+function updateCookieIfUserIdInResponse(response){
+    if (response && response.body && response.body.user_id) { 
+        Cookie.set(COOKIE_FUID, response.body.user_id);
+        return true;
+    } else return false;
 }
 
-function isInitialized() {
-    return app != null || app != undefined;
+function isInstalled() {
+    return "Factors sdk v0.1 is installed!";
 }
 
 /**
@@ -37,7 +44,7 @@ function isInitialized() {
  * @param {Object} appConfig Custom application configuration. i.e., { autoTrackPageView: true }
  */
 function init(token, appConfig) {
-    app.setToken(token);
+    app.set(token, appConfig);
 }
 
 /**
@@ -49,9 +56,9 @@ function track(eventName, eventProperties) {
     /**
     (eventName, eventProperties)
         check cookie._fuid:
-            if exist:
-                payload.user_id = cookie._fuid
-        
+            if not exist:
+                cookie._fuid = (create user) response.id
+                
 		payload.event_name = eventName
         payload.properties = eventProperties
 
@@ -62,7 +69,19 @@ function track(eventName, eventProperties) {
 	Todo(Dinesh): Do we need a _fident cookie for flaging identified?
      */
 
-     
+    let payload = {};
+
+    if (Cookie.isExist(COOKIE_FUID)) 
+        payload.user_id = Cookie.get(COOKIE_FUID);
+
+    if (app && app.client.isInitialized()) {
+        app.client.track(null, eventName, eventProperties)
+            .then(updateCookieIfUserIdInResponse)
+            .catch(logger.error);
+
+    } else {
+        throw new Error("Tracking failed. Factors not initialized with token.");
+    }
 }
 
 /**
