@@ -162,7 +162,7 @@ Suite.testTrackWithoutEventProperites = function() {
 }
 
 // Track as new user. Track without user cookie.
-Suite.testTrackAsNewUser = function() {
+Suite.testTrackWithoutUserCookie = function() {
     return setupNewProjectAndInit()
         .then((r) => {
             // Setup clears the cookie internally.
@@ -179,7 +179,7 @@ Suite.testTrackAsNewUser = function() {
 }
 
 // Track as existing user. Track with user cookie.
-Suite.testTrackAsExistingUser = function() {
+Suite.testTrackWithUserCookie = function() {
     setupNewProjectWithUser()
         .then((r) => {
             factors.reset(); // Clears existing env.
@@ -192,20 +192,6 @@ Suite.testTrackAsExistingUser = function() {
         })
         .catch(assertOnCall);
 }
-
-/**
- * 
- * Test: Identify
- * 
- * Suite.testIdentifyBeforeInit
- * Suite.testIdentifyAfterInit
- * Suite.testIdentifyWithBadToken
- * Suite.testIdentifyWithoutCustomerUserId
- * Suite.testIdentifyAsNewUser
- * Suite.testIdentifyAsExistingUser
- * Suite.testIdentifyAsIdentifiedUser
- * 
- */
 
 Suite.testIdentifyBeforeInit = function() {
     factors.reset();

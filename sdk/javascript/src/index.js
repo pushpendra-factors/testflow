@@ -1,12 +1,10 @@
 "use strict";
 
 var Cookie = require("./utils/cookie");
-var logger = require("./utils/logger");
+const logger = require("./utils/logger");
+const constant = require("./constant")
 
 var App = require("./app");
-
-// Constants.
-const COOKIE_FUID = "_fuid";
 
 // Common methods.
 
@@ -14,7 +12,7 @@ function _updateCookieIfUserIdInResponse(response){
     if (response && response.body && response.body.user_id) {
         let cleanUserId = response.body.user_id.trim();
 
-        if (cleanUserId) Cookie.set(COOKIE_FUID, cleanUserId);
+        if (cleanUserId) Cookie.set(constant.cookie.USER_ID, cleanUserId);
     }
     return response; // To continue chaining.
 }
@@ -55,7 +53,7 @@ function init(appToken, appConfig) {
 
 function reset() {
     app.reset();
-    Cookie.remove(COOKIE_FUID);
+    Cookie.remove(constant.cookie.USER_ID);
 }
 
 /**
@@ -69,8 +67,8 @@ function track(eventName, eventProperties={}) {
     let payload = {};
 
     // Use user_id on cookie.
-    if (Cookie.isExist(COOKIE_FUID)) 
-        payload.user_id = Cookie.get(COOKIE_FUID);
+    if (Cookie.isExist(constant.cookie.USER_ID)) 
+        payload.user_id = Cookie.get(constant.cookie.USER_ID);
     
     payload.event_name = eventName;
     payload.event_properties = eventProperties;
@@ -95,8 +93,8 @@ function identify(customerUserId) {
     let payload = {};
 
     // Use user_id on cookie.
-    if (Cookie.isExist(COOKIE_FUID))
-        payload.user_id = Cookie.get(COOKIE_FUID);
+    if (Cookie.isExist(constant.cookie.USER_ID))
+        payload.user_id = Cookie.get(constant.cookie.USER_ID);
 
     payload.c_uid = customerUserId;
     
