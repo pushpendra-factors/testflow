@@ -42,7 +42,7 @@ function setupNewUser(projectId) {
 
     return Request.post(
         config.api.host+"/projects/"+projectId+"/users",
-        { c_uid: randomAlphaNumeric(20), properties: { mobile: true } }
+        { properties: { mobile: true } }
     );
 }
 
@@ -59,11 +59,11 @@ function setupNewProjectWithUser() {
 // Sets up new project and new sdk environment.
 // Do not reset once again, as it does already.
 function setupNewProjectAndInit() {
-    factors.reset();
-
     return setupNewProject()
-        .then((r) => { 
-            factors.init(r.body.token);
+        .then((r) => {
+            factors.reset(); // Clear existing environment.
+            factors.init(r.body.token, {});
+            assert.equal(factors.app.client.token, r.body.token, "App initialization failed.");
             return r;
         });
 }
@@ -100,22 +100,27 @@ function assertIfUserIdOnResponse(r) {
     return r;
 }
 
+// Test: Init
+
+Suite.testInitWithBadInput = function() {
+    factors.reset();
+
+    // Bad input. Invalidated on sdk.
+    assert.throws(() => factors.init(" "), Error, "FactorsError: Initialization failed. Invalid Token.");
+    assert.equal(factors.app.client.token, null, "Bad input token should not be allowed.");
+}
+
 // Test: Track
 
 Suite.testTrackBeforeInit = function() {
     factors.reset();
     // Should throw exception.
-    assert.throws(factors.track, Error);
+    assert.throws(factors.track, Error, "FactorsArgumentError: Invalid type for event_name");
 }
 
 Suite.testTrackAfterInit = function() {
-    factors.reset();
-
-    return setupNewProject()
+    return setupNewProjectAndInit()
         .then((r) => {
-            factors.init(r.body.token, { "platform": "Google Chrome v10.0" });
-            assert.equal(factors.app.client.token, r.body.token, "App initialization failed.");
-            
             // Validate track response.
             let eventName = randomAlphaNumeric(10);
             return factors.track(eventName, {})
@@ -129,13 +134,10 @@ Suite.testTrackAfterInit = function() {
 Suite.testTrackWithBadToken = function() {
     factors.reset();
 
-    // Bad input. Invalidated on sdk.
-    assert.throws(() => factors.init(" "), Error);
-    assert.equal(factors.app.client.token, null, "Bad input but is token set.")
-
     // Bad input. Invalidated on backend.
     let eventName = randomAlphaNumeric(10);
     factors.init("BAD_TOKEN", {});
+    assert.equal(factors.app.client.token, "BAD_TOKEN", "App initialization failed.");
     return factors.track(eventName)
         .then(assertIfHttpSuccess)
         .catch(suppressExpectedError);
@@ -145,7 +147,7 @@ Suite.testTrackWithoutEventName = function() {
     factors.reset();
 
     // Fail if no eventName.
-    assert.throws(factors.track, Error);
+    assert.throws(factors.track, Error, "FactorsArgumentError: Invalid type for event_name");
 }
 
 Suite.testTrackWithoutEventProperites = function() {
@@ -172,24 +174,21 @@ Suite.testTrackAsNewUser = function() {
             return factors.track(eventName, {})
                 .then(assertIfHttpFailure)
                 .then(assertOnUserIdMapFailure)
-                .catch(assertOnCall);
         })
         .catch(assertOnCall);
 }
 
 // Track as existing user. Track with user cookie.
 Suite.testTrackAsExistingUser = function() {
-    factors.reset();
-
     setupNewProjectWithUser()
         .then((r) => {
+            factors.reset(); // Clears existing env.
             factors.init(r.project.body.token, {});
             Cookie.set(constant.cookie.USER_ID, r.user.body.id);
 
             factors.track(randomAlphaNumeric(10), {})
                 .then(assertIfHttpFailure)
                 .then(assertIfUserIdOnResponse) // user_id shouldn't be there on response.
-                .catch(assertOnCall);
         })
         .catch(assertOnCall);
 }
@@ -198,15 +197,177 @@ Suite.testTrackAsExistingUser = function() {
  * 
  * Test: Identify
  * 
- * testIdentifyBeforeInit
- * testIdentifyAfterInit
- * testIdentifyWithBadToken
- * testIdentifyWithoutCustomerUserId
- * testIdentifyAsNewUser
- * testIdentifyAsExistingUser
- * testIdentifyAsIdentifiedUser
+ * Suite.testIdentifyBeforeInit
+ * Suite.testIdentifyAfterInit
+ * Suite.testIdentifyWithBadToken
+ * Suite.testIdentifyWithoutCustomerUserId
+ * Suite.testIdentifyAsNewUser
+ * Suite.testIdentifyAsExistingUser
+ * Suite.testIdentifyAsIdentifiedUser
  * 
  */
+
+Suite.testIdentifyBeforeInit = function() {
+    factors.reset();
+
+    // Throws error, if not initialized.
+    assert.throws(factors.identify, Error, "FactorsArgumentError: Invalid type for customer_user_id");
+}
+
+Suite.testIdentifyAfterInit = function() {
+    return setupNewProjectAndInit()
+        .then((r) => {
+            let customerUserId = randomAlphaNumeric(15);
+            return factors.identify(customerUserId)
+                .then(assertIfHttpFailure)
+                .then(assertOnUserIdMapFailure) // It has to set cookie.
+        })
+        .catch(assertOnCall);
+}
+
+Suite.testIdentifyWithBadToken = function() {
+    factors.reset();
+
+    // Bad input. Invalidated on backend.
+    let customerUserId = randomAlphaNumeric(10);
+    factors.init("BAD_TOKEN", {});
+    return factors.identify(customerUserId)
+        .then(assertIfHttpSuccess)
+        .catch(suppressExpectedError);
+}
+
+Suite.testIdentifyWithoutCustomerUserId = function() {
+    factors.reset();
+
+    return setupNewProjectAndInit()
+        .then((r) => {
+            assert.throws(factors.identify, Error, "FactorsArgumentError: Invalid type for customer_user_id");
+            assert.throws(() => factors.identify(" "), Error, "FactorsArgumentError: customer_user_id cannot be empty.");
+        })
+        .catch(assertOnCall);
+}
+
+// New user => Without user cookie.
+Suite.testIdentifyWithoutUserCookie = function() {
+    factors.reset();
+
+    return setupNewProjectAndInit()
+        .then((r) => {
+            let customerUserId = randomAlphaNumeric(15);
+            return factors.identify(customerUserId)
+                .then(assertIfHttpFailure)
+                .then(assertOnUserIdMapFailure);
+        })
+        .catch(assertOnCall);
+}
+
+// With user cookie => Identify existing unidentified user.
+Suite.testIdentifyWithUserCookie = function() {
+    return setupNewProjectWithUser()
+        .then((r) => {
+            factors.reset(); // Clear existing env.
+            factors.init(r.project.body.token, {});
+            assert.equal(factors.app.client.token, r.project.body.token, "App initialization failed.");
+
+            Cookie.set(constant.cookie.USER_ID, r.user.body.id); // Setting new user.
+
+            let customerUserId = randomAlphaNumeric(15);
+            return factors.identify(customerUserId)
+                .then(assertIfHttpFailure)
+                .then(assertIfUserIdOnResponse) // Should not respond new user.
+        })
+        .catch(assertOnCall);
+}
+
+Suite.testIdentifyWithIdentifiedCustomerUserWithSameUserCookie = function() {
+    return setupNewProjectAndInit()
+        .then((r) => {
+            let customerUserId = randomAlphaNumeric(15);
+            let _token = factors.app.client.token; // Fix: Project context copy assign.
+            // Identified as customer user and user cookie set here.
+            return factors.identify(customerUserId)
+                .then(assertIfHttpFailure)
+                .then(assertOnUserIdMapFailure) 
+                .then((r1) => {
+                    factors.init(_token); // Fix: Project context copy assign.
+                    // Same user cookie used to identify with same customer user id.
+                    // No user_id changes required. user_id should not exist on response.
+                    return factors.identify(customerUserId)
+                        .then(assertIfHttpFailure)
+                        .then(assertIfUserIdOnResponse); // Should not response new user as identified with same user already.
+                });
+        })
+        .catch(assertOnCall);
+}
+
+Suite.testIdentifyWithIdentifiedCustomerUserWithDifferentUserCookie = function() {
+    return setupNewProjectWithUser()
+        .then((r1) => {
+            factors.reset();
+            factors.init(r1.project.body.token, {});
+            assert.equal(factors.app.client.token, r1.project.body.token, "App initialization failed.");
+
+            Cookie.set(constant.cookie.USER_ID, r1.user.body.id);
+            let customerUserId = randomAlphaNumeric(15);
+            let _token = factors.app.client.token; // Fix: Project context copy assign.
+
+            return factors.identify(customerUserId)
+                .then(assertIfHttpFailure)
+                .then(assertIfUserIdOnResponse) 
+                .then((r2) => {
+                    let _customerUserId = customerUserId;
+
+                    return setupNewUser(r1.project.body.id)
+                        .then((rUser) => {
+                            // Setting new user cookie.
+                            Cookie.set(constant.cookie.USER_ID, rUser.body.id);
+                            factors.init(_token);
+                            
+                            // Re-identify with same customer_user and diff user.
+                            // The new user_id will be identified as customer_user.
+                            // No changes on user_id required.
+                            factors.identify(_customerUserId)
+                                .then(assertIfHttpFailure)
+                                .then(assertIfUserIdOnResponse) 
+                        })
+                })
+        })
+        .catch(assertOnCall);
+}
+
+// Identify as an identified user without user cookie should respond
+// with latest user of the customer_user. Reusing same user session.
+Suite.testIdentifyWithIdentifiedCustomerUserWithoutUserCookie = function() {
+    return setupNewProjectWithUser()
+        .then((r1) => {
+            factors.reset();
+            factors.init(r1.project.body.token, {});
+            assert.equal(factors.app.client.token, r1.project.body.token, "App initialization failed.");
+
+            Cookie.set(constant.cookie.USER_ID, r1.user.body.id);
+
+            let customerUserId = randomAlphaNumeric(15);
+            return factors.identify(customerUserId)
+                .then(assertIfHttpFailure)
+                .then(assertIfUserIdOnResponse) // User cookie already set.
+                .then(() => {
+                    Cookie.remove(constant.cookie.USER_ID); // Remove cookie.
+                    factors.init(r1.project.body.token); // Set same project context.
+
+                    return factors.identify(customerUserId) // Re-identify as same customer.
+                        .then(assertIfHttpFailure)
+                        .then(assertOnUserIdMapFailure)
+                        .then((r2) => {
+                            // Check latest user_id of customer returned or not.
+                            assert.equal(r2.body.user_id, r1.user.body.id);
+                            return r2;
+                        });
+                });
+        })
+        .catch(assertOnCall);
+}
+
+
 
 function run() {
     // Runs individual test in the test_suite.

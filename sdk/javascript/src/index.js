@@ -21,10 +21,10 @@ function _updateCookieIfUserIdInResponse(response){
 
 function _validatedStringArg(name, value) {
     if (typeof(value) != "string")
-        throw new Error("FactorsError: Invalid type for "+name);
+        throw new Error("FactorsArgumentError: Invalid type for "+name);
     
     value = value.trim();
-    if (!value) throw new Error("FactorsError: "+name+" cannot be empty.");
+    if (!value) throw new Error("FactorsArgumentError: "+name+" cannot be empty.");
     
     return value;
 }
@@ -95,13 +95,13 @@ function identify(customerUserId) {
     let payload = {};
 
     // Use user_id on cookie.
-    if (Cookie.isExist(COOKIE_FUID)) 
+    if (Cookie.isExist(COOKIE_FUID))
         payload.user_id = Cookie.get(COOKIE_FUID);
 
     payload.c_uid = customerUserId;
     
     if (app && app.client.isInitialized()) {
-        app.client.identify(payload)
+        return app.client.identify(payload)
             .then(_updateCookieIfUserIdInResponse)
             .catch(logger.error);
     } else {
