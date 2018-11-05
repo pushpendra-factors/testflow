@@ -2,7 +2,7 @@
 
 var Cookie = require("./utils/cookie");
 const logger = require("./utils/logger");
-const constant = require("./constant")
+const constant = require("./constant");
 
 var App = require("./app");
 

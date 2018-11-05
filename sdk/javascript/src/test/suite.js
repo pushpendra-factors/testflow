@@ -102,6 +102,30 @@ function assertIfUserIdOnResponse(r) {
 
 // Test: Init
 
+Suite.testInit = function() {
+    setupNewProject()
+        .then((r) => {
+            factors.reset();
+            assert.isTrue(r.body.hasOwnProperty("token"), "Token should be in the response.");
+            assert.isTrue(r.body.token.trim().length > 0, "Token should not be empty.")
+            
+            factors.reset();
+            factors.init(r.body.token, { mobile: true });
+            assert.isTrue(factors.app.client.token === r.body.token, "Token should be set as api client token for the app.");
+
+            // init without props.
+            factors.reset();
+            factors.init(r.body.token);
+            assert.isTrue(factors.app.client.token === r.body.token, "Should be able to init without properties");
+
+            // init with empty props.
+            factors.reset();
+            factors.init(r.body.token, {});
+            assert.isTrue(factors.app.client.token === r.body.token, "Should be able to init with empty properties");
+        })
+        .catch(assertOnCall);
+}
+
 Suite.testInitWithBadInput = function() {
     factors.reset();
 
