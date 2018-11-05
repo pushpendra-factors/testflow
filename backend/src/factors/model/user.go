@@ -114,6 +114,7 @@ func UpdateUser(projectId uint64, id string, user *User) (*User, int) {
 	}
 }
 
+// Todo(Dinesh): Remove this method. Use UpdateUser to update any field by id.
 func UpdateCustomerUserIdById(projectId uint64, id string, customerUserId string) (*User, int) {
 	db := C.GetServices().Db
 

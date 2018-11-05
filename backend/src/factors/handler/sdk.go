@@ -82,7 +82,7 @@ func SDKTrackHandler(c *gin.Context) {
 	}
 }
 
-//Test command.
+// Test command.
 // curl -i -H "Content-Type: application/json" -H "Authorization: YOUR_TOKEN" -X POST http://localhost:8080/sdk/user/identify -d '{"user_id":"USER_ID", "c_uid": "CUSTOMER_USER_ID"}'
 func SDKIdentifyHandler(c *gin.Context) {
 	r := c.Request
@@ -181,4 +181,57 @@ func SDKIdentifyHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "User has been identified successfully."})
+}
+
+// Test command.
+// curl -i -H "Content-Type: application/json" -H "Authorization: YOUR_TOKEN" -X POST http://localhost:8080/sdk/user/add_properties -d '{"id": "USER_ID", "properties": {"name": "USER_NAME"}}'
+func SDKAddUserPropertiesHandler(c *gin.Context) {
+	r := c.Request
+
+	if r.Body == nil {
+		log.Error("Invalid request. Request body unavailable.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Adding user properities failed. Missing request body."})
+		return
+	}
+
+	// Get ProjecId scope for the request.
+	scopeProjectIdIntf := U.GetScopeByKey(c, "projectId")
+	if scopeProjectIdIntf == nil {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Add user properties failed. Invalid project."})
+		return
+	}
+	scopeProjectId := scopeProjectIdIntf.(uint64)
+
+	addPropsUser := M.User{}
+	if err := json.NewDecoder(r.Body).Decode(&addPropsUser); err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("Add user properties failed. JSON Decoding failed.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Add user properties failed. Invalid payload."})
+		return
+	}
+
+	// Precondition: user_id not given.
+	if addPropsUser.ID == "" {
+		// Create user with properties and respond user_id.
+		newUser, errCode := M.CreateUser(&addPropsUser)
+		if errCode != M.DB_SUCCESS {
+			c.AbortWithStatusJSON(errCode, gin.H{"error": "Add user properties failed. User create failed"})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"user_id": newUser.ID, "message": "User properties added successfully."})
+		return
+	}
+
+	scopeUser, errCode := M.GetUser(scopeProjectId, addPropsUser.ID)
+	if errCode != M.DB_SUCCESS {
+		c.AbortWithStatusJSON(errCode, gin.H{"error": "Add user properties failed. Invalid user_id."})
+		return
+	}
+
+	if _, errCode = M.UpdateUser(scopeProjectId, scopeUser.ID,
+		&M.User{Properties: addPropsUser.Properties}); errCode != M.DB_SUCCESS {
+		c.AbortWithStatusJSON(errCode, gin.H{"error": "Add user properties failed."})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Added user properties successfully."})
 }
