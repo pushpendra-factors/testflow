@@ -144,3 +144,4 @@ func TestSDKIdentify(t *testing.T) {
 	assert.NotNil(t, responseMap["user_id"])
 	assert.NotEmpty(t, responseMap["user_id"].(string))
 	assert.NotEqual(t, responseMap["user_id"], user.ID)
+}
