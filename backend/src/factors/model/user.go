@@ -84,6 +84,36 @@ func GetUserLatestByCustomerUserId(projectId uint64, customerUserId string) (*Us
 	return &user, DB_SUCCESS
 }
 
+// UpdateUser updates user fields by Id.
+func UpdateUser(projectId uint64, id string, user *User) (*User, int) {
+	db := C.GetServices().Db
+
+	// Todo(Dinesh): Move to validations.
+	// Ref: https://github.com/qor/validations
+	if projectId == 0 {
+		return nil, http.StatusBadRequest
+	}
+
+	// Todo(Dinesh): Move to validations.
+	cleanId := strings.TrimSpace(id)
+	if len(cleanId) == 0 {
+		return nil, http.StatusBadRequest
+	}
+
+	if user.ProjectId != 0 || user.ID != "" {
+		log.WithFields(log.Fields{"user": user}).Error("Bad Request. Tried updating ID or ProjectId.")
+		return nil, http.StatusBadRequest
+	}
+
+	var updatedUser User
+	if err := db.Model(&updatedUser).Where("project_id = ?", projectId).Where("id = ?", cleanId).Updates(user).Error; err != nil {
+		log.WithFields(log.Fields{"user": user, "error": err}).Error("Failed updating fields by user_id")
+		return nil, http.StatusInternalServerError
+	} else {
+		return &updatedUser, DB_SUCCESS
+	}
+}
+
 func UpdateCustomerUserIdById(projectId uint64, id string, customerUserId string) (*User, int) {
 	db := C.GetServices().Db
 
