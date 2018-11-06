@@ -17,6 +17,13 @@ function _updateCookieIfUserIdInResponse(response){
     return response; // To continue chaining.
 }
 
+function _updatePayloadWithUserIdFromCookie(payload) {
+    if (Cookie.isExist(constant.cookie.USER_ID))
+        payload.user_id = Cookie.get(constant.cookie.USER_ID);
+    
+    return payload;
+}
+
 function _validatedStringArg(name, value) {
     if (typeof(value) != "string")
         throw new Error("FactorsArgumentError: Invalid type for "+name);
@@ -65,10 +72,7 @@ function track(eventName, eventProperties={}) {
     eventName = _validatedStringArg("event_name", eventName)
 
     let payload = {};
-
-    // Use user_id on cookie.
-    if (Cookie.isExist(constant.cookie.USER_ID)) 
-        payload.user_id = Cookie.get(constant.cookie.USER_ID);
+    _updatePayloadWithUserIdFromCookie(payload);
     
     payload.event_name = eventName;
     payload.event_properties = eventProperties;
@@ -91,10 +95,7 @@ function identify(customerUserId) {
     customerUserId = _validatedStringArg("customer_user_id", customerUserId);
     
     let payload = {};
-
-    // Use user_id on cookie.
-    if (Cookie.isExist(constant.cookie.USER_ID))
-        payload.user_id = Cookie.get(constant.cookie.USER_ID);
+    _updatePayloadWithUserIdFromCookie(payload);
 
     payload.c_uid = customerUserId;
     
@@ -111,7 +112,26 @@ function identify(customerUserId) {
  * Add additional user properties.
  * @param {Object} properties 
  */
-function addUserProperties(properties) {}
+function addUserProperties(properties={}) {
+    if (typeof(properties) != "object")
+        throw new Error("FactorsArgumentError: Properties should be an Object(key/values).");
+    
+    if (Object.keys(properties).length == 0)
+        return Promise.reject("No changes. Empty properties.");
+
+    let payload = {};
+    _updatePayloadWithUserIdFromCookie(payload);
+
+    payload.properties = properties;
+
+    if (app && app.client.isInitialized()) {
+        return app.client.addUserProperties(payload)
+            .then(_updateCookieIfUserIdInResponse)
+            .catch(logger.error);
+    } else {
+        throw new Error("FactorsError: SDK is not initialised with token.");
+    }
+}
 
 let exposed = { app, isInstalled, init, reset, track, identify, addUserProperties };
 if (process.env.NODE_ENV === "development") exposed["test"] = require("./test/suite.js");

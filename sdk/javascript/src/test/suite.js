@@ -217,6 +217,8 @@ Suite.testTrackWithUserCookie = function() {
         .catch(assertOnCall);
 }
 
+// Test: identify
+
 Suite.testIdentifyBeforeInit = function() {
     factors.reset();
 
@@ -377,7 +379,53 @@ Suite.testIdentifyWithIdentifiedCustomerUserWithoutUserCookie = function() {
         .catch(assertOnCall);
 }
 
+// Test: addUserProperties
 
+Suite.testAddUserPropertiesWithEmptyProperties = function() {
+    factors.reset();
+
+    return factors.addUserProperties({})
+        .then(assertOnCall) // Should not be resolved.
+        .catch((m) => {
+            // To be rejected with message.
+            assert.equal(m, "No changes. Empty properties.");
+        });
+}
+
+Suite.testAddUserPropertiesBadProperties = function() {
+    factors.reset();
+
+    // Properties argument type mismatch. Using string as properties.
+    assert.throws(() => factors.addUserProperties("STRING_INPUT"), "FactorsArgumentError: Properties should be an Object(key/values).")
+}
+
+Suite.testAddUserPropertiesWithoutUserCookie = function() {
+    return setupNewProjectAndInit()
+        .then((r) => {
+            let properties = { userHandle: randomAlphaNumeric(15) };
+            factors.addUserProperties(properties)
+                .then(assertIfHttpFailure)
+                .then(assertOnUserIdMapFailure) // UserId on response expected.
+        })
+        .catch(assertOnCall)
+}
+
+Suite.testAddUserPropertiesWithUserCookie = function() {
+    return setupNewProjectWithUser()
+        .then((r) => {
+            factors.reset();
+            factors.init(r.project.body.token, {});
+            assert.equal(factors.app.client.token, r.project.body.token, "App initialization failed.");
+            
+            Cookie.set(constant.cookie.USER_ID, r.user.body.id);
+
+            let properties = { userHandle: randomAlphaNumeric(15) };
+            factors.addUserProperties(properties)
+                .then(assertIfHttpFailure)
+                .then(assertOnUserIdMapFailure) // User should not be created.
+        })
+        .catch(assertOnCall)
+}
 
 function run() {
     // Runs individual test in the test_suite.

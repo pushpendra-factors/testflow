@@ -3,6 +3,7 @@ const config = require("./config");
 
 const URI_TRACK = "/sdk/event/track";
 const URI_IDENTIFY = "/sdk/user/identify";
+const URI_ADD_USER_PROPERTIES = "/sdk/user/add_properties";
 
 function APIClient(token) {
    this.token = token;
@@ -41,6 +42,19 @@ APIClient.prototype.identify = function(payload) {
     let customHeaders = { "Authorization": this.token };
     return Request.post(
         this.getURL(URI_IDENTIFY),
+        payload,
+        customHeaders
+    );
+}
+
+APIClient.prototype.addUserProperties = function(payload) {
+    // Mandaotry field check.
+    if (!payload || !payload.properties) 
+        return Promise.reject("Add properties failed. Missing properties on payload.");
+
+    let customHeaders = { "Authorization": this.token };
+    return Request.post(
+        this.getURL(URI_ADD_USER_PROPERTIES),
         payload,
         customHeaders
     );
