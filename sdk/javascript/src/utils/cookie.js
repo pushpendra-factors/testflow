@@ -32,4 +32,14 @@ function isExist(name) {
         || (document.cookie.indexOf("; "+name+"=") >= 0));
 }
 
-module.exports = exports =  { set, get, remove, isExist };
+function setEncoded(name, value, days) {
+    set(name, btoa(value), days);
+}
+
+function getDecoded(name) {
+    let value = get(name);
+    if (value) value = atob(value);
+    return value;
+}
+
+module.exports = exports =  { set, get, setEncoded, getDecoded, remove, isExist };

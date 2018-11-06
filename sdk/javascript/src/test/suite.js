@@ -72,7 +72,7 @@ function setupNewProjectAndInit() {
 
 function assertOnUserIdMapFailure(r) {
     assert.isTrue(r.body.hasOwnProperty("user_id"), "user_id missing on response.");
-    assert.equal(Cookie.get(constant.cookie.USER_ID), r.body.user_id, 
+    assert.equal(Cookie.getDecoded(constant.cookie.USER_ID), r.body.user_id, 
         constant.cookie.USER_ID+" cookie is not set with user_id on response");
     return r;
 }
@@ -208,7 +208,7 @@ Suite.testTrackWithUserCookie = function() {
         .then((r) => {
             factors.reset(); // Clears existing env.
             factors.init(r.project.body.token, {});
-            Cookie.set(constant.cookie.USER_ID, r.user.body.id);
+            Cookie.setEncoded(constant.cookie.USER_ID, r.user.body.id);
 
             factors.track(randomAlphaNumeric(10), {})
                 .then(assertIfHttpFailure)
@@ -281,7 +281,7 @@ Suite.testIdentifyWithUserCookie = function() {
             factors.init(r.project.body.token, {});
             assert.equal(factors.app.client.token, r.project.body.token, "App initialization failed.");
 
-            Cookie.set(constant.cookie.USER_ID, r.user.body.id); // Setting new user.
+            Cookie.setEncoded(constant.cookie.USER_ID, r.user.body.id); // Setting new user.
 
             let customerUserId = randomAlphaNumeric(15);
             return factors.identify(customerUserId)
@@ -319,7 +319,7 @@ Suite.testIdentifyWithIdentifiedCustomerUserWithDifferentUserCookie = function()
             factors.init(r1.project.body.token, {});
             assert.equal(factors.app.client.token, r1.project.body.token, "App initialization failed.");
 
-            Cookie.set(constant.cookie.USER_ID, r1.user.body.id);
+            Cookie.setEncoded(constant.cookie.USER_ID, r1.user.body.id);
             let customerUserId = randomAlphaNumeric(15);
             let _token = factors.app.client.token; // Fix: Project context copy assign.
 
@@ -332,7 +332,7 @@ Suite.testIdentifyWithIdentifiedCustomerUserWithDifferentUserCookie = function()
                     return setupNewUser(r1.project.body.id)
                         .then((rUser) => {
                             // Setting new user cookie.
-                            Cookie.set(constant.cookie.USER_ID, rUser.body.id);
+                            Cookie.setEncoded(constant.cookie.USER_ID, rUser.body.id);
                             factors.init(_token);
                             
                             // Re-identify with same customer_user and diff user.
@@ -356,7 +356,7 @@ Suite.testIdentifyWithIdentifiedCustomerUserWithoutUserCookie = function() {
             factors.init(r1.project.body.token, {});
             assert.equal(factors.app.client.token, r1.project.body.token, "App initialization failed.");
 
-            Cookie.set(constant.cookie.USER_ID, r1.user.body.id);
+            Cookie.setEncoded(constant.cookie.USER_ID, r1.user.body.id);
 
             let customerUserId = randomAlphaNumeric(15);
             return factors.identify(customerUserId)
@@ -417,7 +417,7 @@ Suite.testAddUserPropertiesWithUserCookie = function() {
             factors.init(r.project.body.token, {});
             assert.equal(factors.app.client.token, r.project.body.token, "App initialization failed.");
             
-            Cookie.set(constant.cookie.USER_ID, r.user.body.id);
+            Cookie.setEncoded(constant.cookie.USER_ID, r.user.body.id);
 
             let properties = { userHandle: randomAlphaNumeric(15) };
             factors.addUserProperties(properties)

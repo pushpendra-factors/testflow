@@ -12,14 +12,14 @@ function _updateCookieIfUserIdInResponse(response){
     if (response && response.body && response.body.user_id) {
         let cleanUserId = response.body.user_id.trim();
 
-        if (cleanUserId) Cookie.set(constant.cookie.USER_ID, cleanUserId);
+        if (cleanUserId) Cookie.setEncoded(constant.cookie.USER_ID, cleanUserId);
     }
     return response; // To continue chaining.
 }
 
 function _updatePayloadWithUserIdFromCookie(payload) {
     if (Cookie.isExist(constant.cookie.USER_ID))
-        payload.user_id = Cookie.get(constant.cookie.USER_ID);
+        payload.user_id = Cookie.getDecoded(constant.cookie.USER_ID);
     
     return payload;
 }
