@@ -32,10 +32,12 @@ function isExist(name) {
         || (document.cookie.indexOf("; "+name+"=") >= 0));
 }
 
+// Set cookie with encoded value. Base64.
 function setEncoded(name, value, days) {
     set(name, btoa(value), days);
 }
 
+// Get decoded cookie value. Base64.
 function getDecoded(name) {
     let value = get(name);
     if (value) value = atob(value);

@@ -58,6 +58,9 @@ function init(appToken, appConfig) {
     app.set(appToken, appConfig);
 }
 
+/**
+ * Clears existing SDK environment, both API token and cookies. 
+ */
 function reset() {
     app.reset();
     Cookie.remove(constant.cookie.USER_ID);
@@ -73,7 +76,6 @@ function track(eventName, eventProperties={}) {
 
     let payload = {};
     _updatePayloadWithUserIdFromCookie(payload);
-    
     payload.event_name = eventName;
     payload.event_properties = eventProperties;
 
@@ -96,7 +98,6 @@ function identify(customerUserId) {
     
     let payload = {};
     _updatePayloadWithUserIdFromCookie(payload);
-
     payload.c_uid = customerUserId;
     
     if (app && app.client.isInitialized()) {
@@ -121,7 +122,6 @@ function addUserProperties(properties={}) {
 
     let payload = {};
     _updatePayloadWithUserIdFromCookie(payload);
-
     payload.properties = properties;
 
     if (app && app.client.isInitialized()) {
