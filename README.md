@@ -175,7 +175,7 @@ go run run_pattern_mine.go --input_file="/tmp/factors/output/patterns-<projectId
 
 ## Javascript SDK
 
-### Setup, Build and Serve
+### Setup, Build, Serve and Test
 
 * Setup
 ```
@@ -189,22 +189,37 @@ npm run build-dev
 ```
 
 * Build (production)
-```
+```bash
+# This build will not have tests.
 npm run build-prod
 ```
 
-* Serving development build
+* Serve (development)
 ```
 npm run serve-dev
 ```
 
+* Serve (production)
+```bash
+# This build will not have tests.
+npm run serve-prod
+```
+
 * Build will be served on http://localhost:8090/bundle-dev
 
-* Open developer console and run.
+* Validate SDK installation
+```javascript
+// Run below command on browser dev console.
+factors.isInstalled();
+```
+
+* Tests.
 
 ```javascript
-factors.isInstalled()
+// Running all tests
+factors.test.run() 
 
-// "Factors sdk v0.1 is installed!"
+// Running a specific test
+factors.test.Suite.TEST_NAME
 ```
 
