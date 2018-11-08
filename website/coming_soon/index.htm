@@ -266,7 +266,7 @@
             -ms-justify-content: center;
             justify-content: center;
             min-height: 75vh;
-            position: relative;
+            /* position: relative; */
             z-index: 2;
             overflow: hidden;
         }
@@ -276,7 +276,7 @@
             display: -webkit-flex;
             display: -ms-flex;
             display: flex;
-            position: relative;
+            /* position: relative; */
             max-width: 100%;
             z-index: 1;
             -moz-align-items: center;
@@ -299,7 +299,7 @@
         }
 
         #main>.inner {
-            position: relative;
+            /* position: relative; */
             z-index: 1;
             border-radius: inherit;
             padding: 1rem 1rem;
@@ -341,7 +341,7 @@
         #main>.inner>.full.screen {
             width: 100vw;
             max-width: 100vw;
-            position: relative;
+            /* position: relative; */
             border-radius: 0 !important;
             left: 50%;
             right: auto;
@@ -501,14 +501,14 @@
                 margin-left: -50vw;
             }
             #text01 {
-                font-size: 3em;
+                font-size: 5em;
             }
         }
 
         @media (max-width: 480px) {
             #main>.inner>* {
-                margin-top: 0.65625rem;
-                margin-bottom: 0.65625rem;
+                margin-top: 2.65625rem;
+                margin-bottom: 0.55625rem;
             }
             #buttons01 {
                 margin-left: 0;
@@ -594,14 +594,20 @@
             color: gray;
         }
 
+        .notify {
+            width: 100%;
+            height: 15%;
+        }
+
         .notify input {
             border: 1px solid #ABB2B9;
             border-radius: 5px;
-            font-size: 20px;
+            font-size: 1.25em;
             font-family: sans-serif;
-            font-weight: 200;
+            font-weight: 100;
             padding: 15px 15px;
             width: 50%;
+            height: 6vh;
             color: #566573;
             margin-right: 10px;
             letter-spacing: 1px;
@@ -611,6 +617,7 @@
         .notify input::placeholder {
             color: #808B96;
             letter-spacing: 1.5px;
+            font-weight: 100;
         }
 
         *:focus {
@@ -624,7 +631,6 @@
         .notify button {
             font-size: 22px;
             background: none;
-            padding: 4px 20px;
             border-radius: 6px;
             background: #4daf7c;
             border-color: #4daf7c;
@@ -632,9 +638,9 @@
             font-family: sans-serif;
             letter-spacing: 0.125rem;
             font-size: 1.25em;
-            font-weight: 400;
-            width: 170px;
-            height: 56px;
+            font-weight: 100;
+            width: 8rem;
+            height: 6vh;
         }
 
         .notify button:hover {
@@ -650,7 +656,7 @@
             text-align: center;
             color: darkgray;
             font-size: 1.25em;
-            margin-bottom: 1.5rem !important;
+            margin-bottom: 2.0rem !important;
         }
 
         body {
