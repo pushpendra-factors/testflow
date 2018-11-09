@@ -185,3 +185,42 @@ func TestDBUpdateCustomerUserIdById(t *testing.T) {
 	user, errCode = M.UpdateCustomerUserIdById(project.ID, "", rCustomerUserId)
 	assert.NotEqual(t, M.DB_SUCCESS, errCode)
 }
+
+func TestDBUpdateUserById(t *testing.T) {
+	// Intialize.
+	project, user, err := SetupProjectUserReturnDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+	assert.NotNil(t, user)
+
+	// Test updating a field.
+	rCustomerUserId := U.RandomLowerAphaNumString(15)
+	updateUser := &M.User{CustomerUserId: rCustomerUserId}
+	cuUpdatedUser, errCode := M.UpdateUser(project.ID, user.ID, updateUser)
+	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Equal(t, rCustomerUserId, cuUpdatedUser.CustomerUserId)
+	// Using already tested GetUser method to validate update.
+	gUser, gErrCode := M.GetUser(project.ID, user.ID)
+	assert.Equal(t, M.DB_SUCCESS, gErrCode)
+	// Test CustomerUserId updated or not.
+	assert.Equal(t, rCustomerUserId, gUser.CustomerUserId)
+
+	// Test updating ProjectId with other fields
+	rCustomerUserId = U.RandomLowerAphaNumString(15)
+	uProject, uErr := SetupProjectReturnDAO()
+	assert.Nil(t, uErr)
+	assert.NotNil(t, uProject)
+	updateUser = &M.User{ProjectId: uProject.ID, CustomerUserId: rCustomerUserId}
+	_, errCode = M.UpdateUser(project.ID, user.ID, updateUser)
+	assert.Equal(t, http.StatusBadRequest, errCode)
+
+	// Bad input. ProjectId.
+	rCustomerUserId = U.RandomLowerAphaNumString(15)
+	_, errCode = M.UpdateUser(0, user.ID, &M.User{})
+	assert.NotEqual(t, M.DB_SUCCESS, errCode)
+
+	// Bad input. UserId.
+	rCustomerUserId = U.RandomLowerAphaNumString(15)
+	_, errCode = M.UpdateUser(project.ID, "", &M.User{})
+	assert.NotEqual(t, M.DB_SUCCESS, errCode)
+}
