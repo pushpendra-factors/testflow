@@ -57,7 +57,7 @@ func CustomCorsMiddleware() gin.HandlerFunc {
 		} else {
 			if C.IsDevelopment() {
 				log.Info("Running in development..")
-				corsConfig.AllowOrigins = []string{"http://localhost:8080", "http://localhost:3000"}
+				corsConfig.AllowOrigins = []string{"http://localhost:8080", "http://localhost:3000", "http://localhost:8090"}
 			}
 		}
 
