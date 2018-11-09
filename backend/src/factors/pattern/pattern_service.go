@@ -360,3 +360,64 @@ func (ps *PatternService) FrequentPaths(projectId uint64, startEvent string,
 
 	return results, nil
 }
+
+func (ps *PatternService) GetSeenEventProperties(projectId uint64, eventName string) (map[string][]string, error) {
+	// Initialize results.
+	results := make(map[string][]string)
+	numericalProperties := []string{}
+	categoricalProperties := []string{}
+	results["numerical"] = numericalProperties
+	results["categorical"] = categoricalProperties
+	pw, ok := ps.patternsMap[projectId]
+	if !ok {
+		return results, fmt.Errorf(fmt.Sprintf("No data for projectId:%d", projectId))
+	}
+	if eventName == "" {
+		return results, fmt.Errorf("Invalid Query")
+	}
+	if pw.eventInfoMap == nil {
+		return results, nil
+	}
+	eventInfo, _ := (*pw.eventInfoMap)[eventName]
+	for nprop, _ := range eventInfo.NumericPropertyKeys {
+		numericalProperties = append(numericalProperties, nprop)
+	}
+	for cprop, _ := range eventInfo.CategoricalPropertyKeyValues {
+		categoricalProperties = append(categoricalProperties, cprop)
+	}
+	results["numerical"] = numericalProperties
+	results["categorical"] = categoricalProperties
+	return results, nil
+}
+
+func (ps *PatternService) GetSeenEventPropertyValues(
+	projectId uint64, eventName string, propertyName string) ([]string, error) {
+	// Initialize results.
+	results := []string{}
+	if eventName == "" {
+		return results, fmt.Errorf("Invalid Query")
+	}
+	if propertyName == "" {
+		return results, fmt.Errorf("Invalid Query")
+	}
+
+	pw, ok := ps.patternsMap[projectId]
+	if !ok {
+		return results, fmt.Errorf(fmt.Sprintf("No data for projectId:%d", projectId))
+	}
+	if pw.eventInfoMap == nil {
+		return results, nil
+	}
+	eventInfo, _ := (*pw.eventInfoMap)[eventName]
+	propValuesMap, ok := eventInfo.CategoricalPropertyKeyValues[propertyName]
+	if !ok {
+		log.WithFields(log.Fields{
+			"eventName": eventName, "propertyName": propertyName,
+			"projectId": projectId}).Info("Property not found.")
+		return results, nil
+	}
+	for k, _ := range propValuesMap {
+		results = append(results, k)
+	}
+	return results, nil
+}
