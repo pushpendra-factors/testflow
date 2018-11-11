@@ -176,6 +176,26 @@ func TestSDKAddUserProperties(t *testing.T) {
 	// user_id should not exist on response.
 	assert.Nil(t, responseMap["user_id"])
 
+	// Test with new property. email.
+	uniqueEmail := fmt.Sprintf(`%s@example.com`, U.RandomLowerAphaNumString(10))
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"id": "%s", "properties": {"email": "%s"}}`,
+		user.ID, uniqueEmail)), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	responseMap = DecodeJSONResponseToMap(w.Body)
+	// user_id should not exist on response.
+	assert.Nil(t, responseMap["user_id"])
+
+	// Test with multiple properties. name and email.
+	uniqueName = U.RandomLowerAphaNumString(16)
+	uniqueEmail = fmt.Sprintf(`%s@example.com`, U.RandomLowerAphaNumString(10))
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(
+		`{"id": "%s", "properties": {"name": "%s", "email": "%s"}}`, user.ID, uniqueName, uniqueEmail)),
+		map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	responseMap = DecodeJSONResponseToMap(w.Body)
+	// user_id should not exist on response.
+	assert.Nil(t, responseMap["user_id"])
+
 	// Test without user_id in the payload.
 	uniqueName = U.RandomLowerAphaNumString(16)
 	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"properties": {"name": "%s"}}`, uniqueName)),
