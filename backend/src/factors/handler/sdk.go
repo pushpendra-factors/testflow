@@ -211,8 +211,8 @@ func SDKAddUserPropertiesHandler(c *gin.Context) {
 
 	// Precondition: user_id not given.
 	if addPropsUser.ID == "" {
-		// Create user with properties and respond user_id.
-		newUser, errCode := M.CreateUser(&addPropsUser)
+		// Create user with properties and respond user_id. Only properties allowed on create.
+		newUser, errCode := M.CreateUser(&M.User{Properties: addPropsUser.Properties})
 		if errCode != M.DB_SUCCESS {
 			c.AbortWithStatusJSON(errCode, gin.H{"error": "Add user properties failed. User create failed"})
 			return
