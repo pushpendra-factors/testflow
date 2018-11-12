@@ -205,4 +205,24 @@ func TestSDKAddUserProperties(t *testing.T) {
 	assert.NotEmpty(t, responseMap)
 	assert.NotNil(t, responseMap["user_id"])
 	assert.NotEmpty(t, responseMap["user_id"].(string))
+
+	// Test bad payload - updating project_id as existing user.
+	uniqueName = U.RandomLowerAphaNumString(16)
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"id": "%s", "project_id": "99999999", "properties": {"name": "%s"}}`, user.ID, uniqueName)),
+		map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	// Test bad payload - updating project_id as new user.
+	uniqueName = U.RandomLowerAphaNumString(16)
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"project_id": "99999999", "properties": {"name": "%s"}}`, uniqueName)),
+		map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	// Test bad input with non exiting user id.
+	uniqueName = U.RandomLowerAphaNumString(16)
+	fakeUserId := U.RandomLowerAphaNumString(16)
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"id": "%s" , "properties": {"name": "%s"}}`, fakeUserId, uniqueName)),
+		map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusNotFound, w.Code)
+
 }
