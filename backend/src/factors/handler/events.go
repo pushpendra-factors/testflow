@@ -5,6 +5,7 @@ import (
 	M "factors/model"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -17,6 +18,8 @@ type EventWithName struct {
 	Properties postgres.Jsonb `json:"properties"`
 	ProjectId  uint64         `json:"project_id"`
 	UserId     string         `json:"user_id"`
+	CreatedAt  time.Time      `json:"created_at"`
+	UpdatedAt  time.Time      `json:"updated_at"`
 }
 
 // Test command.
@@ -60,7 +63,8 @@ func CreateEventHandler(c *gin.Context) {
 		return
 	}
 
-	createdEvent, errCode := M.CreateEvent(&M.Event{ProjectId: projectId, UserId: userId, EventNameId: eventName.ID, Properties: event.Properties})
+	createdEvent, errCode := M.CreateEvent(&M.Event{ProjectId: projectId, UserId: userId, EventNameId: eventName.ID,
+		Properties: event.Properties, CreatedAt: event.CreatedAt, UpdatedAt: event.UpdatedAt})
 	if errCode != M.DB_SUCCESS {
 		c.AbortWithStatus(errCode)
 	} else {
