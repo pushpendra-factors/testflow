@@ -11,23 +11,33 @@ import (
 
 type EventName struct {
 	// Composite primary key with projectId.
-	Name string `gorm:"primary_key:true;" json:"name"`
+	ID   uint64 `gorm:"primary_key:true;" json:"id"`
+	Name string `json:"name"`
+	// auto_name Defaults to user_created, if not supplied.
+	AutoName string `gorm:"default:'UCEN'" json:"auto_name";`
 	// Below are the foreign key constraints added in creation script.
 	// project_id -> projects(id)
 	ProjectId uint64    `gorm:"primary_key:true;" json:"project_id"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
+const USER_CREATED_EVENT_NAME = "UCEN"
+
 func CreateOrGetEventName(eventName *EventName) (*EventName, int) {
 	db := C.GetServices().Db
 
 	log.WithFields(log.Fields{"eventName": &eventName}).Info("Create or get event_name")
 
-	if err := db.FirstOrInit(&eventName).Error; err != nil {
+	if eventName.Name == "" || eventName.ProjectId == 0 {
+		return nil, http.StatusBadRequest
+	}
+
+	if err := db.FirstOrInit(&eventName, &eventName).Error; err != nil {
 		log.WithFields(log.Fields{"eventName": &eventName, "error": err}).Error("CreateEventName Failed")
 		return nil, http.StatusInternalServerError
 	}
 
+	// Checks new record or not.
 	if !eventName.CreatedAt.IsZero() {
 		log.WithFields(log.Fields{"eventName": &eventName}).Info("Event Name already exists.")
 		return eventName, http.StatusConflict
@@ -37,6 +47,12 @@ func CreateOrGetEventName(eventName *EventName) (*EventName, int) {
 	} else {
 		return eventName, DB_SUCCESS
 	}
+}
+
+// Create or Get user created EventName.
+func CreateOrGetUserCreatedEventName(eventName *EventName) (*EventName, int) {
+	eventName.AutoName = USER_CREATED_EVENT_NAME
+	return CreateOrGetEventName(eventName)
 }
 
 func GetEventName(name string, projectId uint64) (*EventName, int) {

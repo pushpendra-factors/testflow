@@ -14,17 +14,17 @@ import (
 
 func TestDBCreateAndGetEvent(t *testing.T) {
 	// Initialize a project, user and  the event.
-	projectId, userId, eventName, err := SetupProjectUserEventName()
+	projectId, userId, eventNameId, err := SetupProjectUserEventName()
 	assert.Nil(t, err)
 
 	start := time.Now()
 
 	// Test successful CreateEvent.
-	event, errCode := M.CreateEvent(&M.Event{EventName: eventName, ProjectId: projectId, UserId: userId})
+	event, errCode := M.CreateEvent(&M.Event{EventNameId: eventNameId, ProjectId: projectId, UserId: userId})
 	assert.Equal(t, M.DB_SUCCESS, errCode)
 	assert.True(t, len(event.ID) > 30)
 	assert.Equal(t, projectId, event.ProjectId)
-	assert.Equal(t, eventName, event.EventName)
+	assert.Equal(t, eventNameId, event.EventNameId)
 	assert.Equal(t, uint64(1), event.Count)
 	assert.True(t, event.CreatedAt.After(start))
 	assert.True(t, event.UpdatedAt.After(start))
@@ -50,11 +50,11 @@ func TestDBCreateAndGetEvent(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, errCode)
 	assert.Nil(t, retEvent)
 	// Test successful CreateEvent with count increment
-	event, errCode = M.CreateEvent(&M.Event{EventName: eventName, ProjectId: projectId, UserId: userId})
+	event, errCode = M.CreateEvent(&M.Event{EventNameId: eventNameId, ProjectId: projectId, UserId: userId})
 	assert.Equal(t, M.DB_SUCCESS, errCode)
 	assert.True(t, len(event.ID) > 30)
 	assert.Equal(t, projectId, event.ProjectId)
-	assert.Equal(t, eventName, event.EventName)
+	assert.Equal(t, eventNameId, event.EventNameId)
 	assert.Equal(t, uint64(2), event.Count)
 	assert.True(t, event.CreatedAt.After(start))
 	assert.True(t, event.UpdatedAt.After(start))
@@ -68,22 +68,22 @@ func TestDBCreateAndGetEvent(t *testing.T) {
 
 	// Test Create Event with id.
 	randomId := "random_id"
-	event, errCode = M.CreateEvent(&M.Event{ID: randomId, EventName: eventName, ProjectId: projectId, UserId: userId})
+	event, errCode = M.CreateEvent(&M.Event{ID: randomId, EventNameId: eventNameId, ProjectId: projectId, UserId: userId})
 	assert.Equal(t, http.StatusBadRequest, errCode)
 	assert.Nil(t, event)
 
 	// Test Create Event without projectId.
-	event, errCode = M.CreateEvent(&M.Event{EventName: eventName, UserId: userId})
-	assert.Equal(t, http.StatusInternalServerError, errCode)
+	event, errCode = M.CreateEvent(&M.Event{EventNameId: eventNameId, UserId: userId})
+	assert.Equal(t, http.StatusBadRequest, errCode)
 	assert.Nil(t, event)
 
 	// Test Create Event without userId.
-	event, errCode = M.CreateEvent(&M.Event{EventName: eventName, ProjectId: projectId})
-	assert.Equal(t, http.StatusInternalServerError, errCode)
+	event, errCode = M.CreateEvent(&M.Event{EventNameId: eventNameId, ProjectId: projectId})
+	assert.Equal(t, http.StatusBadRequest, errCode)
 	assert.Nil(t, event)
 
-	// Test Create Event without eventName.
-	event, errCode = M.CreateEvent(&M.Event{EventName: "", ProjectId: projectId, UserId: userId})
+	// Test Create Event without eventNameId.
+	event, errCode = M.CreateEvent(&M.Event{EventNameId: 0, ProjectId: projectId, UserId: userId})
 	assert.Equal(t, http.StatusInternalServerError, errCode)
 	assert.Nil(t, event)
 }
