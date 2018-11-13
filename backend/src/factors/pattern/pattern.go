@@ -89,8 +89,9 @@ func NewPattern(events []string, eventInfoMap *EventInfoMap) (*Pattern, error) {
 			}
 		}
 		nDimensions := len(nTemplate)
-		nBins := int(math.Min(float64(nDimensions*num_NUMERIC_BINS_PER_DIMENSION),
-			float64(num_MAX_NUMERIC_MULTI_BINS)))
+		nBinsFloat := math.Min(float64(nDimensions*num_NUMERIC_BINS_PER_DIMENSION),
+			float64(num_MAX_NUMERIC_MULTI_BINS))
+		nBins := int(math.Max(1.0, nBinsFloat))
 		nHist, err := Hist.NewNumericHistogram(nBins, nDimensions, &nTemplate)
 		if err != nil {
 			return nil, err
@@ -107,8 +108,9 @@ func NewPattern(events []string, eventInfoMap *EventInfoMap) (*Pattern, error) {
 			}
 		}
 		cDimensions := len(cTemplate)
-		cBins := int(math.Min(float64(cDimensions*num_CATEGORICAL_BINS_PER_DIMENSION),
-			float64(num_MAX_CATEGORICAL_MULTI_BINS)))
+		cBinsFloat := math.Min(float64(cDimensions*num_CATEGORICAL_BINS_PER_DIMENSION),
+			float64(num_MAX_CATEGORICAL_MULTI_BINS))
+		cBins := int(math.Max(1.0, cBinsFloat))
 		cHist, err := Hist.NewCategoricalHistogram(cBins, cDimensions, &cTemplate)
 		if err != nil {
 			return nil, err
