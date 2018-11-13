@@ -41,6 +41,19 @@ func main() {
 		log.Info("projects table token unique index created.")
 	}
 
+	// Create project settings table.
+	if err := db.CreateTable(&M.ProjectSetting{}).Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("project_settings table creation failed.")
+	} else {
+		log.Info("Created project_settings table.")
+	}
+	// Add foreign key constraint by project.
+	if err := db.Model(&M.ProjectSetting{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("project_settings table association with projects table failed.")
+	} else {
+		log.Info("project_settings table is associated with projects table.")
+	}
+
 	// Create users table.
 	if err := db.CreateTable(&M.User{}).Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("users table creation failed.")
