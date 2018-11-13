@@ -5,10 +5,22 @@ import (
 	M "factors/model"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
+
+// Custom type to support Name with event.
+type EventWithName struct {
+	Name       string         `json:"event_name"`
+	Properties postgres.Jsonb `json:"properties"`
+	ProjectId  uint64         `json:"project_id"`
+	UserId     string         `json:"user_id"`
+	CreatedAt  time.Time      `json:"created_at"`
+	UpdatedAt  time.Time      `json:"updated_at"`
+}
 
 // Test command.
 // curl -H "Content-Type: application/json" -i -X POST http://localhost:8080/projects/1/users/1/events -d '{ "event_name": "login", "properties": {"ip": "10.0.0.1", "mobile": true}}'
@@ -21,6 +33,7 @@ func CreateEventHandler(c *gin.Context) {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
+
 	userId := c.Params.ByName("user_id")
 	if userId == "" || r.Body == nil {
 		log.Error("CreateEvent Failed. Missing UserId or Body.")
@@ -28,8 +41,11 @@ func CreateEventHandler(c *gin.Context) {
 		return
 	}
 
-	var event M.Event
-	err = json.NewDecoder(r.Body).Decode(&event)
+	var event EventWithName
+	decoder := json.NewDecoder(r.Body)
+	// Rejects requests with unknown properties on decoded struct. E.g id.
+	decoder.DisallowUnknownFields()
+	err = decoder.Decode(&event)
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("CreateEvent Failed. Json Decoding failed.")
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -38,31 +54,21 @@ func CreateEventHandler(c *gin.Context) {
 		})
 		return
 	}
-	event.ProjectId = projectId
-	event.UserId = userId
 
-	/* Commented out code. Using Json Decoder directly above, since gin.Context.BindJSON is returning error "EOF"
-	   despite being able to decode the json. Need to check.
-	c.BindJSON(&event)
-	if err := c.BindJSON(&event); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":  "json decoding : " + err.Error(),
-			"status": http.StatusBadRequest,
-		})
-		return
-	}*/
-
+	// Todo(Dinesh): Handle rollback of created event_name on event creation failure using callbacks on model.
 	// Create corresponding event_name if not exists.
-	_, errCode := M.CreateOrGetEventName(&M.EventName{Name: event.EventName, ProjectId: event.ProjectId})
+	eventName, errCode := M.CreateOrGetUserCreatedEventName(&M.EventName{Name: event.Name, ProjectId: projectId})
 	if errCode != http.StatusConflict && errCode != M.DB_SUCCESS {
 		c.AbortWithStatus(errCode)
 		return
 	}
-	_, errCode = M.CreateEvent(&event)
+
+	createdEvent, errCode := M.CreateEvent(&M.Event{ProjectId: projectId, UserId: userId, EventNameId: eventName.ID,
+		Properties: event.Properties, CreatedAt: event.CreatedAt, UpdatedAt: event.UpdatedAt})
 	if errCode != M.DB_SUCCESS {
 		c.AbortWithStatus(errCode)
 	} else {
-		c.JSON(http.StatusCreated, event)
+		c.JSON(http.StatusCreated, createdEvent)
 	}
 }
 

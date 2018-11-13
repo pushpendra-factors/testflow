@@ -4,6 +4,7 @@ import (
 	M "factors/model"
 	U "factors/util"
 	"fmt"
+	"net/http"
 )
 
 // TODO: Use testify.suites to avoid multiple initializations across these tests.
@@ -49,29 +50,29 @@ func SetupProjectUserReturnDAO() (*M.Project, *M.User, error) {
 }
 
 // Todo(Dinesh): To be replaced with SetupProjectUserEventNameReturnDAO.
-func SetupProjectUserEventName() (uint64, string, string, error) {
+func SetupProjectUserEventName() (uint64, string, uint64, error) {
 	var projectId uint64
 	var userId string
-	var eventName string
+	var eventNameId uint64
 
 	// Create random project and a corresponding eventName and user.
 	random_project_name := U.RandomLowerAphaNumString(15)
 	project, err_code := M.CreateProject(&M.Project{Name: random_project_name})
 	if err_code != M.DB_SUCCESS {
-		return projectId, userId, eventName, fmt.Errorf("Project Creation failed.")
+		return projectId, userId, eventNameId, fmt.Errorf("Project Creation failed.")
 	}
 	user, err_code := M.CreateUser(&M.User{ProjectId: project.ID})
 	if err_code != M.DB_SUCCESS {
-		return projectId, userId, eventName, fmt.Errorf("User Creation failed.")
+		return projectId, userId, eventNameId, fmt.Errorf("User Creation failed.")
 	}
 	en, err_code := M.CreateOrGetEventName(&M.EventName{ProjectId: project.ID, Name: "login"})
 	if err_code != M.DB_SUCCESS {
-		return projectId, userId, eventName, fmt.Errorf("EventName Creation failed.")
+		return projectId, userId, eventNameId, fmt.Errorf("EventName Creation failed.")
 	}
 	projectId = project.ID
 	userId = user.ID
-	eventName = en.Name
-	return projectId, userId, eventName, nil
+	eventNameId = en.ID
+	return projectId, userId, eventNameId, nil
 }
 
 func SetupProjectUserEventNameReturnDAO() (*M.Project, *M.User, *M.EventName, error) {
@@ -88,7 +89,7 @@ func SetupProjectUserEventNameReturnDAO() (*M.Project, *M.User, *M.EventName, er
 	}
 
 	en, err_code := M.CreateOrGetEventName(&M.EventName{ProjectId: project.ID, Name: "login"})
-	if err_code != M.DB_SUCCESS {
+	if err_code != http.StatusConflict && err_code != M.DB_SUCCESS {
 		return nil, nil, nil, fmt.Errorf("EventName Creation failed.")
 	}
 

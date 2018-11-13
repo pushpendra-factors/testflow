@@ -27,7 +27,7 @@ func SDKTrackHandler(c *gin.Context) {
 		return
 	}
 
-	var event M.Event
+	var event EventWithName
 	err := json.NewDecoder(r.Body).Decode(&event)
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("Tracking failed. Json Decoding failed.")
@@ -36,8 +36,8 @@ func SDKTrackHandler(c *gin.Context) {
 	}
 
 	// Precondition: Fails if event_name not provided.
-	event.EventName = strings.TrimSpace(event.EventName) // Discourage whitespace on the end.
-	if event.EventName == "" {
+	event.Name = strings.TrimSpace(event.Name) // Discourage whitespace on the end.
+	if event.Name == "" {
 		c.AbortWithStatusJSON(http.StatusBadRequest, "Tracking failed. Event name cannot be omitted or left empty.")
 		return
 	}
@@ -64,7 +64,7 @@ func SDKTrackHandler(c *gin.Context) {
 		response = gin.H{"user_id": newUser.ID}
 	}
 
-	_, errCode := M.CreateOrGetEventName(&M.EventName{Name: event.EventName, ProjectId: scopeProjectId})
+	eventName, errCode := M.CreateOrGetEventName(&M.EventName{Name: event.Name, ProjectId: scopeProjectId})
 	if errCode != http.StatusConflict && errCode != M.DB_SUCCESS {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Tracking failed. EventName creation failed."})
 		return
@@ -72,11 +72,12 @@ func SDKTrackHandler(c *gin.Context) {
 
 	// Create Event.
 	event.ProjectId = scopeProjectId
-	_, errCode = M.CreateEvent(&event)
+	createdEvent, errCode := M.CreateEvent(&M.Event{EventNameId: eventName.ID, Properties: event.Properties,
+		ProjectId: scopeProjectId, UserId: event.UserId})
 	if errCode != M.DB_SUCCESS {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Tracking failed. Event creation failed."})
 	} else {
-		response["event_id"] = event.ID
+		response["event_id"] = createdEvent.ID
 		response["message"] = "User event tracked successfully."
 		c.JSON(http.StatusOK, response)
 	}
@@ -226,6 +227,7 @@ func SDKAddUserPropertiesHandler(c *gin.Context) {
 		return
 	}
 
+	// Todo(Dinesh): Make UpdateUser to return 404 on 0 rows affected and remove this.
 	scopeUser, errCode := M.GetUser(scopeProjectId, addPropsUser.ID)
 	if errCode != M.DB_SUCCESS {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Add user properties failed. Invalid user_id."})

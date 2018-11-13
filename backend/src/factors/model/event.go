@@ -17,12 +17,11 @@ type Event struct {
 	// Below are the foreign key constraints added in creation script.
 	// project_id -> projects(id)
 	// (project_id, user_id) -> users(project_id, id)
-	// (project_id, event_name) -> events(project_id, name)
-	ProjectId uint64 `gorm:"primary_key:true;" json:"project_id"`
-	UserId    string `json:"user_id"`
-	// Todo(Dinesh): Change EventName -> Name.
-	EventName string `json:"event_name"`
-	Count     uint64 `json:"count"`
+	// (project_id, event_name_id) -> event_names(project_id, id)
+	ProjectId   uint64 `gorm:"primary_key:true;" json:"project_id"`
+	UserId      string `json:"user_id"`
+	EventNameId uint64 `json:"event_name_id"`
+	Count       uint64 `json:"count"`
 
 	// JsonB of postgres with gorm. https://github.com/jinzhu/gorm/issues/1183
 	Properties postgres.Jsonb `json:"properties,omitempty"`
@@ -32,11 +31,15 @@ type Event struct {
 
 func (event *Event) BeforeCreate(scope *gorm.Scope) error {
 	db := C.GetServices().Db
-	var count uint64
-	db.Model(&Event{}).Where(
-		"project_id = ? AND user_id = ? AND event_name = ?", event.ProjectId, event.UserId, event.EventName).Count(&count)
 
+	// Increamenting count based on EventNameId, not by EventName.
+	var count uint64
+	if err := db.Model(&Event{}).Where("project_id = ? AND user_id = ? AND event_name_id = ?",
+		event.ProjectId, event.UserId, event.EventNameId).Count(&count).Error; err != nil {
+		return err
+	}
 	event.Count = count + 1
+
 	return nil
 }
 
@@ -48,6 +51,11 @@ func CreateEvent(event *Event) (*Event, int) {
 	// Input Validation. (ID is to be auto generated)
 	if event.ID != "" {
 		log.Error("CreateEvent Failed. Id provided.")
+		return nil, http.StatusBadRequest
+	}
+
+	if event.ProjectId == 0 || event.UserId == "" {
+		log.Error("CreateEvent Failed. Invalid projectId or userId.")
 		return nil, http.StatusBadRequest
 	}
 

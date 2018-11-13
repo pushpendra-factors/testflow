@@ -62,4 +62,29 @@ func TestDBCreateAndGetEventName(t *testing.T) {
 	retEventName, errCode = M.GetEventName("", projectId)
 	assert.Equal(t, http.StatusBadRequest, errCode)
 	assert.Nil(t, retEventName)
+
+	// Test Validate auto_name on CreateOrGetUserCreatedEventName.
+	randomName := U.RandomLowerAphaNumString(10)
+	ucEventName := &M.EventName{Name: randomName, ProjectId: project.ID}
+	retEventName, errCode = M.CreateOrGetUserCreatedEventName(ucEventName)
+	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Equal(t, M.USER_CREATED_EVENT_NAME, retEventName.AutoName)
+
+	// Test Duplicate creation of user created event name. Should be unique by project.
+	duplicateEventName, errCode := M.CreateOrGetUserCreatedEventName(&M.EventName{Name: randomName, ProjectId: project.ID})
+	assert.Equal(t, http.StatusConflict, errCode) // Should return conflict with the conflicted object.
+	assert.Equal(t, M.USER_CREATED_EVENT_NAME, retEventName.AutoName)
+	assert.Equal(t, retEventName.ID, duplicateEventName.ID)
+
+	// Test CreateOrGetUserCreatedEventName without ProjectId.
+	ucEventName = &M.EventName{Name: U.RandomLowerAphaNumString(10)}
+	retEventName, errCode = M.CreateOrGetUserCreatedEventName(ucEventName)
+	assert.Equal(t, http.StatusBadRequest, errCode)
+	assert.Nil(t, retEventName)
+
+	// Test CreateOrGetUserCreatedEventName without name.
+	ucEventName = &M.EventName{Name: "", ProjectId: project.ID}
+	retEventName, errCode = M.CreateOrGetUserCreatedEventName(ucEventName)
+	assert.Equal(t, http.StatusBadRequest, errCode)
+	assert.Nil(t, retEventName)
 }

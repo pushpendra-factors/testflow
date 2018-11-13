@@ -37,10 +37,9 @@ func pullAndWriteEventsFile(projectId int, startTime time.Time, endTime time.Tim
 
 	defer db.Close()
 
-	rows, err := db.Raw("SELECT events.user_id, events.event_name, events.created_at, events.count, events.properties, users.created_at FROM events "+
-		"LEFT JOIN users ON events.user_id = users.id WHERE events.project_id = ? AND events.created_at BETWEEN  ? AND ? "+
-		"ORDER BY events.user_id, events.created_at LIMIT ?",
-		*projectIdFlag, startTime, endTime, max_EVENTS).Rows()
+	rows, err := db.Raw("SELECT events.user_id, event_names.name, events.created_at, events.count, events.properties, users.created_at FROM events "+
+		"LEFT JOIN event_names ON events.event_name_id = event_names.id LEFT JOIN users ON events.user_id = users.id WHERE events.project_id = ? AND events.created_at BETWEEN  ? AND ? "+
+		"ORDER BY events.user_id, events.created_at LIMIT ?", *projectIdFlag, startTime, endTime, max_EVENTS).Rows()
 	defer rows.Close()
 
 	if err != nil {
@@ -55,6 +54,7 @@ func pullAndWriteEventsFile(projectId int, startTime time.Time, endTime time.Tim
 	}
 	defer file.Close()
 
+	rowCount := 0
 	for rows.Next() {
 		var userId string
 		var eventName string
@@ -94,7 +94,10 @@ func pullAndWriteEventsFile(projectId int, startTime time.Time, endTime time.Tim
 			log.WithFields(log.Fields{"line": line, "err": err}).Fatal("Unable to write to file.")
 			return err
 		}
+		rowCount++
 	}
+	log.Infof("Events pulled : %d", rowCount)
+	log.Infof("Output filepath : %s", filename)
 	return nil
 }
 

@@ -86,7 +86,7 @@ func main() {
 		log.Info("events table is associated with users table.")
 	}
 	// Adding composite foreign key with event_names table.
-	if err := db.Model(&M.Event{}).AddForeignKey("project_id, event_name", "event_names(project_id, name)", "RESTRICT", "RESTRICT").Error; err != nil {
+	if err := db.Model(&M.Event{}).AddForeignKey("project_id, event_name_id", "event_names(project_id, id)", "RESTRICT", "RESTRICT").Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("events table association with event_names table failed.")
 	} else {
 		log.Info("events table is associated with event_names table.")
