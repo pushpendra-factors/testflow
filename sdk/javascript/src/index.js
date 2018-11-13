@@ -11,8 +11,9 @@ var App = require("./app");
 function _updateCookieIfUserIdInResponse(response){
     if (response && response.body && response.body.user_id) {
         let cleanUserId = response.body.user_id.trim();
-
-        if (cleanUserId) Cookie.setEncoded(constant.cookie.USER_ID, cleanUserId);
+        
+        if (cleanUserId) 
+            Cookie.setEncoded(constant.cookie.USER_ID, cleanUserId, constant.cookie.EXPIRY);
     }
     return response; // To continue chaining.
 }
@@ -52,9 +53,7 @@ function isInstalled() {
  * @param {Object} appConfig Custom application configuration. i.e., { autoTrackPageView: true }
  */
 function init(appToken, appConfig) {
-    appToken = appToken.trim();
-    if(!appToken) throw new Error("FactorsError: Initialization failed. Invalid Token.");
-
+    appToken = _validatedStringArg("token", appToken);
     app.set(appToken, appConfig);
 }
 

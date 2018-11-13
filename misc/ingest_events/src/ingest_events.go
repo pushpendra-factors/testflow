@@ -2,7 +2,7 @@ package main
 
 // Recursively reads all json files.
 // Example usage on Terminal.
-// export GOPATH=/Users/aravindmurthy/code/autometa/misc/ingest_events
+// export GOPATH=/Users/aravindmurthy/code/factors/misc/ingest_events
 // go run ingest_events.go --input_dir=/Users/aravindmurthy/events --server=http://localhost:8080
 
 import (

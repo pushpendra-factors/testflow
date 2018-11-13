@@ -130,7 +130,7 @@ Suite.testInitWithBadInput = function() {
     factors.reset();
 
     // Bad input. Invalidated on sdk.
-    assert.throws(() => factors.init(" "), Error, "FactorsError: Initialization failed. Invalid Token.");
+    assert.throws(() => factors.init(" "), Error, "FactorsArgumentError: token cannot be empty.");
     assert.equal(factors.app.client.token, null, "Bad input token should not be allowed.");
 }
 

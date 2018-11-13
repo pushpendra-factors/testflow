@@ -24,7 +24,7 @@ import routes from '../../routes';
 import DefaultAside from './DefaultAside';
 import DefaultFooter from './DefaultFooter';
 import DefaultHeader from './DefaultHeader';
-import { fetchProjects, updateCurrentProject } from "../../actions/projectsActions"
+import { fetchProjects, fetchCurrentProjectEvents } from "../../actions/projectsActions"
 
 
 const projectSelectStyles = {
@@ -66,7 +66,7 @@ class DefaultLayout extends Component {
   }
 
   handleChange = (selectedOption) => {
-    this.props.dispatch(updateCurrentProject(selectedOption))
+    this.props.dispatch(fetchCurrentProjectEvents(selectedOption))
   }
 
   render() {
@@ -74,7 +74,7 @@ class DefaultLayout extends Component {
        project => ({"label": project.name, "value": project.id}))
     if (!this.props.currentProject && mappedProjects.length > 0) {
       // Default select first project.
-      this.props.dispatch(updateCurrentProject(mappedProjects[0]))
+      this.props.dispatch(fetchCurrentProjectEvents(mappedProjects[0]))
     }
 
     return (

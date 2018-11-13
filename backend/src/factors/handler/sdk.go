@@ -194,6 +194,18 @@ func SDKAddUserPropertiesHandler(c *gin.Context) {
 		return
 	}
 
+	addPropsUser := M.User{}
+	if err := json.NewDecoder(r.Body).Decode(&addPropsUser); err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("Add user properties failed. JSON Decoding failed.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Add user properties failed. Invalid payload."})
+		return
+	}
+
+	if addPropsUser.ProjectId != 0 {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid payload. project_id is not required."})
+		return
+	}
+
 	// Get ProjecId scope for the request.
 	scopeProjectIdIntf := U.GetScopeByKey(c, "projectId")
 	if scopeProjectIdIntf == nil {
@@ -202,17 +214,10 @@ func SDKAddUserPropertiesHandler(c *gin.Context) {
 	}
 	scopeProjectId := scopeProjectIdIntf.(uint64)
 
-	addPropsUser := M.User{}
-	if err := json.NewDecoder(r.Body).Decode(&addPropsUser); err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("Add user properties failed. JSON Decoding failed.")
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Add user properties failed. Invalid payload."})
-		return
-	}
-
 	// Precondition: user_id not given.
 	if addPropsUser.ID == "" {
-		// Create user with properties and respond user_id.
-		newUser, errCode := M.CreateUser(&addPropsUser)
+		// Create user with properties and respond user_id. Only properties allowed on create.
+		newUser, errCode := M.CreateUser(&M.User{Properties: addPropsUser.Properties})
 		if errCode != M.DB_SUCCESS {
 			c.AbortWithStatusJSON(errCode, gin.H{"error": "Add user properties failed. User create failed"})
 			return

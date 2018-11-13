@@ -12,6 +12,8 @@ func InitAppRoutes(r *gin.Engine) {
 	r.POST("/projects", CreateProjectHandler)
 	r.GET("/projects", GetProjectsHandler)
 	r.GET("/projects/:project_id/event_names", GetEventNamesHandler)
+	r.GET("/projects/:project_id/event_names/:event_name/properties", GetEventPropertiesHandler)
+	r.GET("/projects/:project_id/event_names/:event_name/properties/:property_name/values", GetEventPropertyValuesHandler)
 	r.POST("/projects/:project_id/users/:user_id/events", CreateEventHandler)
 	r.GET("/projects/:project_id/users/:user_id/events/:id", GetEventHandler)
 	r.POST("/projects/:project_id/users", CreateUserHandler)
