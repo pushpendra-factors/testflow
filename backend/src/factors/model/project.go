@@ -83,15 +83,24 @@ func CreateProject(project *Project) (*Project, int) {
 	return project, DB_SUCCESS
 }
 
-// CreateProjectDependencies bootstraps a project.
-func CreateProjectDependencies(project *Project) int {
+func CreateProjectDependencies(project *Project) (*Project, int) {
 	// Associated project setting creation.
 	if _, errCode := CreateProjectSetting(&ProjectSetting{ProjectId: project.ID}); errCode != DB_SUCCESS {
 		log.WithFields(log.Fields{"project": project}).Error("Creating project_settings failed")
-		return errCode
+		return nil, errCode
 	}
 
-	return DB_SUCCESS
+	return project, DB_SUCCESS
+}
+
+// CreateProjectWithDependencies seperate create method with dependencies to avoid breaking tests.
+func CreateProjectWithDependencies(project *Project) (*Project, int) {
+	cProject, errCode := CreateProject(project)
+	if errCode != DB_SUCCESS {
+		return nil, errCode
+	}
+
+	return CreateProjectDependencies(cProject)
 }
 
 func GetProject(id uint64) (*Project, int) {
