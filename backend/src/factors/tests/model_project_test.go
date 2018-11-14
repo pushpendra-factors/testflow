@@ -25,6 +25,14 @@ func TestDBCreateAndGetProject(t *testing.T) {
 	assert.True(t, project.UpdatedAt.After(start))
 	assert.Equal(t, project.CreatedAt, project.UpdatedAt)
 
+	// Test Create project dependencies
+	errCode = M.CreateProjectDependencies(project)
+	assert.Equal(t, M.DB_SUCCESS, errCode)
+
+	// Test Create project dependencies with bad input
+	errCode = M.CreateProjectDependencies(&M.Project{ID: 0})
+	assert.Equal(t, http.StatusBadRequest, errCode)
+
 	// Test token is overwritten and cannot be provided.
 	previousProjectId := project.ID
 	// Random Token.

@@ -32,9 +32,9 @@ func TestAPICreateProject(t *testing.T) {
 	json.Unmarshal(jsonResponse, &jsonResponseMap)
 	assert.NotEqual(t, 0, jsonResponseMap["id"])
 	assert.Equal(t, projectName, jsonResponseMap["name"].(string))
-	assert.NotEqual(t, 0, len(jsonResponseMap["token"].(string)))
+	assert.Nil(t, jsonResponseMap["token"]) // Token should be excluded on response. Security.
 	assert.NotNil(t, jsonResponseMap["created_at"].(string))
 	assert.NotNil(t, jsonResponseMap["updated_at"].(string))
 	assert.Equal(t, jsonResponseMap["created_at"].(string), jsonResponseMap["updated_at"].(string))
-	assert.Equal(t, 5, len(jsonResponseMap))
+	assert.Equal(t, 4, len(jsonResponseMap))
 }

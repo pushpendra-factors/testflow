@@ -15,8 +15,8 @@ import (
 type Project struct {
 	ID   uint64 `gorm:"primary_key:true;" json:"id"`
 	Name string `gorm:"not null;" json:"name"`
-	// An index created on token.
-	Token     string    `gorm:"size:32" json:"token"`
+	// Token is indexed. Ignored on JSON response.
+	Token     string    `gorm:"size:32" json:"-"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
@@ -78,9 +78,20 @@ func CreateProject(project *Project) (*Project, int) {
 	if err := db.Create(project).Error; err != nil {
 		log.WithFields(log.Fields{"project": &project, "error": err}).Error("CreateProject Failed")
 		return nil, http.StatusInternalServerError
-	} else {
-		return project, DB_SUCCESS
 	}
+
+	return project, DB_SUCCESS
+}
+
+// CreateProjectDependencies bootstraps a project.
+func CreateProjectDependencies(project *Project) int {
+	// Associated project setting creation.
+	if _, errCode := CreateProjectSetting(&ProjectSetting{ProjectId: project.ID}); errCode != DB_SUCCESS {
+		log.WithFields(log.Fields{"project": project}).Error("Creating project_settings failed")
+		return errCode
+	}
+
+	return DB_SUCCESS
 }
 
 func GetProject(id uint64) (*Project, int) {
