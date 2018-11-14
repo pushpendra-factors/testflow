@@ -7,11 +7,12 @@ function App(token, config={}) {
     this.config = config;
 }
 
-App.prototype.isInitialized = function() {}
-
-App.prototype.set = function(token, config={}) {
+App.prototype.setToken = function(token, config={}) {
     if(token) this.client.setToken(token);
-    this.config = config;
+}
+
+App.prototype.setConfig = function(config) {
+    if(config) this.config = config;
 }
 
 App.prototype.reset = function(token=null, config={}) {

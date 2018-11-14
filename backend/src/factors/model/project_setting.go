@@ -11,7 +11,7 @@ import (
 type ProjectSetting struct {
 	// Foreign key constraing project_id -> projects(id)
 	// Used project_id as primary key also, becase of 1-1 relationship.
-	ProjectId uint64 `gorm:"primary_key:true" json:"project_id"`
+	ProjectId uint64 `gorm:"primary_key:true" json:"-"` // exclude on JSON response.
 	// Defaults to AUTO_TRACK_DISABLED.
 	AutoTrack uint8 `gorm:"default:0" json:"auto_track"`
 }

@@ -242,3 +242,23 @@ func SDKAddUserPropertiesHandler(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Added user properties successfully."})
 }
+
+// Test command.
+// curl -i -H "Content-Type: application/json" -H "Authorization: YOUR_TOKEN" -X GET http://localhost:8080/sdk/project/get_settings
+func SDKGetProjectSettings(c *gin.Context) {
+	// Get ProjecId scope for the request.
+	scopeProjectIdIntf := U.GetScopeByKey(c, "projectId")
+	if scopeProjectIdIntf == nil {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Get project settings failed. Invalid project."})
+		return
+	}
+	scopeProjectId := scopeProjectIdIntf.(uint64)
+
+	projectSetting, errCode := M.GetProjectSetting(scopeProjectId)
+	if errCode != M.DB_SUCCESS {
+		c.AbortWithStatusJSON(errCode, gin.H{"error": "Get project settings failed."})
+		return
+	}
+
+	c.JSON(http.StatusOK, projectSetting)
+}

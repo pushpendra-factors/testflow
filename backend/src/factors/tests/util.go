@@ -43,6 +43,19 @@ func ServePostRequestWithHeaders(r *gin.Engine, uri string, reqBodyString []byte
 	return w
 }
 
+func ServeGetRequestWithHeaders(r *gin.Engine, uri string, headers map[string]string) *httptest.ResponseRecorder {
+	if len(headers) == 0 {
+		log.Fatal("Please use ServePostRequest, if you don't have any custom headers to be set.")
+	}
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", uri, bytes.NewBuffer([]byte{}))
+	req.Header.Set("Content-Type", "application/json") // Default header.
+	setHeaders(req, headers)                           // Setting custom headers.
+	r.ServeHTTP(w, req)
+	return w
+}
+
 func DecodeJSONResponseToMap(body *bytes.Buffer) map[string]interface{} {
 	var responseMap map[string]interface{}
 	jsonResponse, err := ioutil.ReadAll(body)

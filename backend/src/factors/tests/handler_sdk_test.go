@@ -1,9 +1,11 @@
 package tests
 
 import (
+	"encoding/json"
 	H "factors/handler"
 	U "factors/util"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"testing"
 
@@ -225,4 +227,35 @@ func TestSDKAddUserProperties(t *testing.T) {
 		map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusNotFound, w.Code)
 
+}
+
+func TestSDKGetProjectSettings(t *testing.T) {
+	// Initialize routes and dependent data.
+	r := gin.Default()
+	H.InitSDKRoutes(r)
+	uri := "/sdk/project/get_settings"
+
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+
+	_, err = SetupProjectDependenciesReturnDAO(project)
+	assert.Nil(t, err)
+
+	// Test Get project settings.
+	w := ServeGetRequestWithHeaders(r, uri, map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ := ioutil.ReadAll(w.Body)
+	var jsonResponseMap map[string]interface{}
+	json.Unmarshal(jsonResponse, &jsonResponseMap)
+	assert.NotEqual(t, 0, jsonResponseMap["id"])
+	assert.NotNil(t, jsonResponseMap["auto_track"])
+
+	// Test Get project settings with invalid token.
+	randomToken := U.RandomLowerAphaNumString(32)
+	w = ServeGetRequestWithHeaders(r, uri, map[string]string{"Authorization": randomToken})
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	json.Unmarshal(jsonResponse, &jsonResponseMap)
+	assert.NotNil(t, jsonResponseMap["error"])
 }

@@ -29,4 +29,5 @@ func InitSDKRoutes(r *gin.Engine) {
 	sdkRG.POST("/event/track", SDKTrackHandler)
 	sdkRG.POST("/user/identify", SDKIdentifyHandler)
 	sdkRG.POST("/user/add_properties", SDKAddUserPropertiesHandler)
+	sdkRG.GET("/project/get_settings", SDKGetProjectSettings)
 }

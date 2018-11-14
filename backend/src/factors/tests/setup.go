@@ -95,3 +95,11 @@ func SetupProjectUserEventNameReturnDAO() (*M.Project, *M.User, *M.EventName, er
 
 	return project, user, en, nil
 }
+
+func SetupProjectDependenciesReturnDAO(project *M.Project) (*M.Project, error) {
+	_, errCode := M.CreateProjectDependencies(project)
+	if errCode != M.DB_SUCCESS {
+		return nil, fmt.Errorf("Project depencies setup failed for project : %d", project.ID)
+	}
+	return project, nil
+}

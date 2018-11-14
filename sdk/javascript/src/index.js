@@ -18,6 +18,13 @@ function _updateCookieIfUserIdInResponse(response){
     return response; // To continue chaining.
 }
 
+function _throwErrorOnFailureResponse(response, message="Request failed.") {
+    if (response.status < 200 || response.status > 308) 
+        throw new Error("FactorsRequestError: "+message);
+    
+    return response;
+}
+
 function _updatePayloadWithUserIdFromCookie(payload) {
     if (Cookie.isExist(constant.cookie.USER_ID))
         payload.user_id = Cookie.getDecoded(constant.cookie.USER_ID);
@@ -49,12 +56,24 @@ function isInstalled() {
 
 /**
  * Initializes sdk environment on user application. Overwrites if initialized already.
+ * 
  * @param {string} appToken Unique application token.
- * @param {Object} appConfig Custom application configuration. i.e., { autoTrackPageView: true }
  */
-function init(appToken, appConfig) {
+function init(appToken) {
     appToken = _validatedStringArg("token", appToken);
-    app.set(appToken, appConfig);
+    app.setToken(appToken);
+
+    if (app && app.client.isInitialized()) {
+        return app.client.getProjectSettings()
+            .then((response) => _throwErrorOnFailureResponse(response, "Failed fetching project settings."))
+            .then((response) => {
+                app.setConfig(response.body);
+                return response
+            })
+            .catch(logger.error);
+    } else {
+        throw new Error("FactorsError: SDK is not initialized with token.");
+    }
 }
 
 /**
