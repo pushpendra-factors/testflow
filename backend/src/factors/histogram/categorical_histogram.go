@@ -22,17 +22,19 @@ type CategoricalHistogram interface {
 }
 
 type CategoricalHistogramStruct struct {
-	Bins      []categoricalBin
-	Maxbins   int
-	Total     uint64
-	Dimension int
-	Template  *CategoricalHistogramTemplate
+	Bins                        []categoricalBin              `json:"b"`
+	Maxbins                     int                           `json:"mb"`
+	Total                       uint64                        `json:"to"`
+	Dimension                   int                           `json:"d"`
+	Template                    *CategoricalHistogramTemplate `json:"te"`
+	binLogLikelihoodCache       map[string]float64
+	mergedBinLogLikelihoodCache map[string]map[string]float64
 }
 
 type CategoricalHistogramTemplateUnit struct {
-	Name       string
-	IsRequired bool
-	Default    string
+	Name       string `json:"n"`
+	IsRequired bool   `json:"ir"`
+	Default    string `json:"d"`
 }
 
 type CategoricalHistogramTemplate []CategoricalHistogramTemplateUnit
@@ -48,22 +50,26 @@ func NewCategoricalHistogram(
 			"Mismatch in dimension %d and template length %d", d, len(*t)))
 	}
 	return &CategoricalHistogramStruct{
-		Bins:      make([]categoricalBin, 0),
-		Maxbins:   n,
-		Total:     0,
-		Dimension: d,
-		Template:  t,
+		Bins:                        make([]categoricalBin, 0),
+		Maxbins:                     n,
+		Total:                       0,
+		Dimension:                   d,
+		Template:                    t,
+		binLogLikelihoodCache:       make(map[string]float64),
+		mergedBinLogLikelihoodCache: make(map[string]map[string]float64),
 	}, nil
 }
 
 // Each bin has a separate frequency map for each of the d categorical variables.
 type categoricalBin struct {
-	FrequencyMaps []frequencyMap
-	Count         uint64
+	FrequencyMaps []frequencyMap `json:"fm"`
+	Count         uint64         `json:"c"`
+	// uuid required for internal caching.
+	uuid string
 }
 type frequencyMap struct {
-	Fmap  map[string]uint64
-	Count uint64
+	Fmap  map[string]uint64 `json:"fm"`
+	Count uint64            `json:"c"`
 }
 
 const fMAP_MAX_SIZE = 5000
@@ -157,6 +163,90 @@ func (h *CategoricalHistogramStruct) AddMap(keyValues map[string]string) error {
 	return h.Add(vec)
 }
 
+func (h *CategoricalHistogramStruct) getBinLogLikelihood(bin *categoricalBin) float64 {
+	if bin.uuid == "" {
+		bin.uuid = randomLowerAphaNumString(32)
+	}
+	if l, ok := h.binLogLikelihoodCache[bin.uuid]; ok {
+		return l
+	}
+	l := bin.logLikelihood()
+	h.binLogLikelihoodCache[bin.uuid] = l
+	return l
+}
+
+func (h *CategoricalHistogramStruct) getMergedBinLogLikelihood(
+	bin1 *categoricalBin, bin2 *categoricalBin) float64 {
+	if bin1.uuid == "" {
+		bin1.uuid = randomLowerAphaNumString(32)
+	}
+	if bin2.uuid == "" {
+		bin2.uuid = randomLowerAphaNumString(32)
+	}
+	if lMap, ok1 := h.mergedBinLogLikelihoodCache[bin1.uuid]; ok1 {
+		if l, ok2 := lMap[bin2.uuid]; ok2 {
+			return l
+		}
+	} else if lMap, ok1 := h.mergedBinLogLikelihoodCache[bin2.uuid]; ok1 {
+		if l, ok2 := lMap[bin1.uuid]; ok2 {
+			return l
+		}
+	}
+	mergedbin := (*bin1).merge(*bin2)
+	mergedLikelihood := mergedbin.logLikelihood()
+	// Add to cache;
+	lMap, ok := h.mergedBinLogLikelihoodCache[bin1.uuid]
+	if !ok {
+		lMap = make(map[string]float64)
+	}
+	lMap[bin2.uuid] = mergedLikelihood
+	h.mergedBinLogLikelihoodCache[bin1.uuid] = lMap
+	return mergedLikelihood
+}
+
+func (h *CategoricalHistogramStruct) cleanCache() {
+	// Clear cached entries of non existent bins.
+	currentIDS := make(map[string]bool)
+	for _, bin := range h.Bins {
+		if bin.uuid != "" {
+			currentIDS[bin.uuid] = true
+		}
+	}
+
+	// Delete from binLogLikelihoodCache.
+	idsToDelete := []string{}
+	for id, _ := range h.binLogLikelihoodCache {
+		if _, ok := currentIDS[id]; !ok {
+			idsToDelete = append(idsToDelete, id)
+		}
+	}
+	for _, id := range idsToDelete {
+		delete(h.binLogLikelihoodCache, id)
+	}
+
+	// Delete from mergedBinLogLikelihoodCache.
+	primaryIDSToDelete := []string{}
+	for pid, secMap := range h.mergedBinLogLikelihoodCache {
+		if _, ok1 := currentIDS[pid]; !ok1 {
+			primaryIDSToDelete = append(primaryIDSToDelete, pid)
+			continue
+		}
+		secondaryIDSToDelete := []string{}
+		for sid, _ := range secMap {
+			if _, ok2 := currentIDS[sid]; !ok2 {
+				secondaryIDSToDelete = append(secondaryIDSToDelete, sid)
+				continue
+			}
+		}
+		for _, id := range secondaryIDSToDelete {
+			delete(secMap, id)
+		}
+	}
+	for _, id := range primaryIDSToDelete {
+		delete(h.mergedBinLogLikelihoodCache, id)
+	}
+}
+
 func (h *CategoricalHistogramStruct) trim() {
 	for len(h.Bins) > h.Maxbins {
 		// Find closest bins in terms of value
@@ -164,15 +254,14 @@ func (h *CategoricalHistogramStruct) trim() {
 		min_i := 0
 		min_j := 0
 		for i := range h.Bins {
-			binILikelihood := h.Bins[i].logLikelihood()
+			binILikelihood := h.getBinLogLikelihood(&h.Bins[i])
 			for j := range h.Bins {
 				if j <= i {
 					continue
 				}
 
-				binJLikelihood := h.Bins[j].logLikelihood()
-				mergedbin := h.Bins[i].merge(h.Bins[j])
-				mergedLikelihood := mergedbin.logLikelihood()
+				binJLikelihood := h.getBinLogLikelihood(&h.Bins[j])
+				mergedLikelihood := h.getMergedBinLogLikelihood(&h.Bins[i], &h.Bins[j])
 
 				// Select the bin whose bin1LogLikelihood + bin2LogLikelihood - mergedLogLikelihood is minimum.
 				// i.e. the one which causes minimum drop in the overall likelihood as a result of merging.
@@ -199,6 +288,7 @@ func (h *CategoricalHistogramStruct) trim() {
 
 		h.Bins = append(h.Bins, mergedbin)
 	}
+	h.cleanCache()
 }
 
 func (b *categoricalBin) merge(o categoricalBin) categoricalBin {

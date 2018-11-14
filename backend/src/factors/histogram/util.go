@@ -2,6 +2,8 @@ package histogram
 
 import (
 	"math"
+	"math/rand"
+	"time"
 )
 
 func approx(x, y float64) bool {
@@ -103,4 +105,16 @@ func less(x, y []float64) bool {
 		}
 	}
 	return true
+}
+
+func randomLowerAphaNumString(n int) string {
+	rand.Seed(time.Now().UnixNano())
+
+	var letter = []rune("abcdefghijklmnopqrstuvwxyz0123456789")
+
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letter[rand.Intn(len(letter))]
+	}
+	return string(b)
 }

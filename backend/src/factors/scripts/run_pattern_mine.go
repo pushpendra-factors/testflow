@@ -14,8 +14,10 @@ import (
 	P "factors/pattern"
 	"flag"
 	"fmt"
+	"math"
 	"os"
 	"sort"
+	"sync"
 
 	_ "github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
@@ -25,22 +27,42 @@ var projectIdFlag = flag.Int("project_id", 0, "Project Id.")
 var inputFileFlag = flag.String("input_file", "",
 	"Input file of format user_id,user_creation_time,event_id,event_creation_time sorted by user_id and event_creation_time")
 var outputFileFlag = flag.String("output_file", "", "All patterns written to file with each line a JSON")
+var numRoutinesFlag = flag.Int("num_routines", 4, "Project Id.")
 
 // The number of patterns generated is bounded to max_SEGMENTS * top_K per iteration.
 // The amount of data and the time computed to generate this data is bounded
 // by these constants.
 const max_SEGMENTS = 100000
 const top_K = 5
+const max_PATTERN_LENGTH = 4
 
-func countPatterns(filepath string, patterns []*P.Pattern) {
+func countPatternsWorker(filepath string,
+	patterns []*P.Pattern, wg *sync.WaitGroup) {
 	file, err := os.Open(filepath)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
 	P.CountPatterns(scanner, patterns)
+	file.Close()
+	wg.Done()
+}
+
+func countPatterns(filepath string, patterns []*P.Pattern, numRoutines int) {
+	var wg sync.WaitGroup
+	numPatterns := len(patterns)
+	log.Info(fmt.Sprintf("Num patterns to count Range: %d - %d", 0, numPatterns-1))
+	batchSize := int(math.Ceil(float64(numPatterns) / float64(numRoutines)))
+	for i := 0; i < numRoutines; i++ {
+		// Each worker gets a slice of patterns to count.
+		low := int(math.Min(float64(batchSize*i), float64(numPatterns)))
+		high := int(math.Min(float64(batchSize*(i+1)), float64(numPatterns)))
+		log.Info(fmt.Sprintf("Batch %d patterns to count range: %d:%d", i+1, low, high))
+		wg.Add(1)
+		go countPatternsWorker(filepath, patterns[low:high], &wg)
+	}
+	wg.Wait()
 }
 
 // Removes all patterns with zero counts.
@@ -130,56 +152,116 @@ func genLenThreeSegmentedCandidates(lenTwoPatterns []*P.Pattern,
 	return segmentedCandidates
 }
 
-func minePatterns(projectId int, filepath string, eventInfoMap *P.EventInfoMap) ([][]*P.Pattern, error) {
-	allCountedPatterns := [][]*P.Pattern{}
-
-	// Length One Patterns.
-	eventNames, err_code := M.GetEventNames(uint64(projectId))
-	if err_code != M.DB_SUCCESS {
-		return nil, fmt.Errorf("DB read of event names failed")
+func writePatterns(patterns []*P.Pattern, outputFile *os.File) error {
+	for _, pattern := range patterns {
+		b, err := json.Marshal(pattern)
+		if err != nil {
+			log.WithFields(log.Fields{"err": err}).Fatal("Unable to unmarshal pattern.")
+			return err
+		}
+		pString := string(b)
+		if _, err := outputFile.WriteString(fmt.Sprintf("%s\n", pString)); err != nil {
+			log.WithFields(log.Fields{"line": pString, "err": err}).Fatal("Unable to write to file.")
+			return err
+		}
 	}
+	return nil
+}
+
+func mineAndWriteLenOnePatterns(
+	eventNames []M.EventName, filepath string,
+	eventInfoMap *P.EventInfoMap, numRoutines int,
+	outputFile *os.File) ([]*P.Pattern, error) {
 	var lenOnePatterns []*P.Pattern
 	for _, eventName := range eventNames {
 		p, err := P.NewPattern([]string{eventName.Name}, eventInfoMap)
 		if err != nil {
-			return nil, fmt.Errorf("Pattern initialization failed")
+			return []*P.Pattern{}, fmt.Errorf("Pattern initialization failed")
 		}
 		lenOnePatterns = append(lenOnePatterns, p)
 	}
-	countPatterns(filepath, lenOnePatterns)
+	countPatterns(filepath, lenOnePatterns, numRoutines)
 	filteredLenOnePatterns := filterPatterns(lenOnePatterns)
-	allCountedPatterns = append(allCountedPatterns, filteredLenOnePatterns)
-	iter := 1
-	printFilteredPatterns(filteredLenOnePatterns, iter)
+	if err := writePatterns(filteredLenOnePatterns, outputFile); err != nil {
+		return []*P.Pattern{}, err
+	}
+	return filteredLenOnePatterns, nil
+}
 
+func mineAndWriteLenTwoPatterns(
+	lenOnePatterns []*P.Pattern, filepath string,
+	eventInfoMap *P.EventInfoMap, numRoutines int,
+	outputFile *os.File) ([]*P.Pattern, error) {
 	// Each event combination is a segment in itself.
 	lenTwoPatterns, _, err := P.GenCandidates(
-		filteredLenOnePatterns, max_SEGMENTS, eventInfoMap)
+		lenOnePatterns, max_SEGMENTS, eventInfoMap)
 	if err != nil {
-		log.Fatal(err)
+		return []*P.Pattern{}, err
 	}
-	countPatterns(filepath, lenTwoPatterns)
+	countPatterns(filepath, lenTwoPatterns, numRoutines)
 	filteredLenTwoPatterns := filterPatterns(lenTwoPatterns)
-	allCountedPatterns = append(allCountedPatterns, filteredLenTwoPatterns)
-	iter++
-	printFilteredPatterns(filteredLenTwoPatterns, iter)
-
-	lenThreeSegmentedPatterns := genLenThreeSegmentedCandidates(
-		filteredLenTwoPatterns, eventInfoMap)
-	lenThreePatterns := []*P.Pattern{}
-	for _, patterns := range lenThreeSegmentedPatterns {
-		lenThreePatterns = append(lenThreePatterns, patterns...)
+	if err := writePatterns(filteredLenTwoPatterns, outputFile); err != nil {
+		return []*P.Pattern{}, err
 	}
-	countPatterns(filepath, lenThreePatterns)
-	filteredLenThreePatterns := filterPatterns(lenThreePatterns)
-	allCountedPatterns = append(allCountedPatterns, filteredLenThreePatterns)
+	return lenTwoPatterns, nil
+}
 
-	filteredPatterns := filteredLenThreePatterns
+func mineAndWritePatterns(projectId int, filepath string,
+	eventInfoMap *P.EventInfoMap, numRoutines int, outputFile *os.File) error {
+	// Length One Patterns.
+	eventNames, errCode := M.GetEventNames(uint64(projectId))
+	if errCode != M.DB_SUCCESS {
+		return fmt.Errorf("DB read of event names failed")
+	}
+	var filteredPatterns []*P.Pattern
+	patternLen := 1
+	filteredPatterns, err := mineAndWriteLenOnePatterns(
+		eventNames, filepath, eventInfoMap, numRoutines, outputFile)
+	if err != nil {
+		return err
+	}
+	printFilteredPatterns(filteredPatterns, patternLen)
+
+	patternLen++
+	if patternLen > max_PATTERN_LENGTH {
+		return nil
+	}
+	filteredPatterns, err = mineAndWriteLenTwoPatterns(
+		filteredPatterns, filepath, eventInfoMap,
+		numRoutines, outputFile)
+	if err != nil {
+		return err
+	}
+	printFilteredPatterns(filteredPatterns, patternLen)
+
+	// Len three patterns generation in a block to free up memory of
+	// lenThreeVariables after use.
+	{
+		patternLen++
+		if patternLen > max_PATTERN_LENGTH {
+			return nil
+		}
+		lenThreeSegmentedPatterns := genLenThreeSegmentedCandidates(
+			filteredPatterns, eventInfoMap)
+		lenThreePatterns := []*P.Pattern{}
+		for _, patterns := range lenThreeSegmentedPatterns {
+			lenThreePatterns = append(lenThreePatterns, patterns...)
+		}
+		countPatterns(filepath, lenThreePatterns, numRoutines)
+		filteredPatterns = filterPatterns(lenThreePatterns)
+		if err := writePatterns(filteredPatterns, outputFile); err != nil {
+			return err
+		}
+		printFilteredPatterns(filteredPatterns, patternLen)
+	}
+
 	var candidatePatternsMap map[string][]*P.Pattern
 	var candidatePatterns []*P.Pattern
 	for len(filteredPatterns) > 0 {
-		iter++
-		printFilteredPatterns(filteredPatterns, iter)
+		patternLen++
+		if patternLen > max_PATTERN_LENGTH {
+			return nil
+		}
 
 		candidatePatternsMap = genSegmentedCandidates(
 			filteredPatterns, eventInfoMap)
@@ -187,22 +269,25 @@ func minePatterns(projectId int, filepath string, eventInfoMap *P.EventInfoMap) 
 		for _, patterns := range candidatePatternsMap {
 			candidatePatterns = append(candidatePatterns, patterns...)
 		}
-		countPatterns(filepath, candidatePatterns)
+		countPatterns(filepath, candidatePatterns, numRoutines)
 		filteredPatterns = filterPatterns(candidatePatterns)
 		if len(filteredPatterns) > 0 {
-			allCountedPatterns = append(allCountedPatterns, filteredPatterns)
+			if err := writePatterns(filteredPatterns, outputFile); err != nil {
+				return err
+			}
 		}
+		printFilteredPatterns(filteredPatterns, patternLen)
 	}
 
-	return allCountedPatterns, nil
+	return nil
 }
 
 func buildEventInfoMapFromInput(projectId int, filepath string) (*P.EventInfoMap, error) {
 	eMap := &P.EventInfoMap{}
 
 	// Length One Patterns.
-	eventNames, err_code := M.GetEventNames(uint64(projectId))
-	if err_code != M.DB_SUCCESS {
+	eventNames, errCode := M.GetEventNames(uint64(projectId))
+	if errCode != M.DB_SUCCESS {
 		return nil, fmt.Errorf("DB read of event names failed")
 	}
 	for _, eventName := range eventNames {
@@ -256,19 +341,12 @@ func main() {
 		log.Error("project_id and input_file are required.")
 		os.Exit(1)
 	}
-
-	eventInfoMap, err := buildEventInfoMapFromInput(*projectIdFlag, *inputFileFlag)
-	if err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("Failed to build event Info.")
-		os.Exit(1)
-	}
-	allCountedPatterns, err := minePatterns(*projectIdFlag, *inputFileFlag, eventInfoMap)
-	if err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("Failed to mine patterns.")
+	if *numRoutinesFlag < 1 {
+		log.Error("num_routines is less than one.")
 		os.Exit(1)
 	}
 
-	// Write to ouptput file.
+	// Initialize ouptput file.
 	file, err := os.Create(*outputFileFlag)
 	if err != nil {
 		log.WithFields(log.Fields{"file": *outputFileFlag, "err": err}).Fatal("Unable to create file.")
@@ -276,7 +354,12 @@ func main() {
 	}
 	defer file.Close()
 
-	// First line is events information seen in the data.
+	eventInfoMap, err := buildEventInfoMapFromInput(*projectIdFlag, *inputFileFlag)
+	if err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("Failed to build event Info.")
+		os.Exit(1)
+	}
+	// First line in output file are events information seen in the data.
 	eventInfoBytes, err := json.Marshal(eventInfoMap)
 	eventInfoStr := string(eventInfoBytes)
 	if _, err := file.WriteString(fmt.Sprintf("%s\n", eventInfoStr)); err != nil {
@@ -284,17 +367,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	for _, patterns := range allCountedPatterns {
-		for _, pattern := range patterns {
-			b, err := json.Marshal(pattern)
-			if err != nil {
-				log.WithFields(log.Fields{"err": err}).Fatal("Unable to unmarshal pattern.")
-			}
-			pString := string(b)
-			if _, err := file.WriteString(fmt.Sprintf("%s\n", pString)); err != nil {
-				log.WithFields(log.Fields{"line": pString, "err": err}).Fatal("Unable to write to file.")
-				os.Exit(1)
-			}
-		}
+	err = mineAndWritePatterns(*projectIdFlag, *inputFileFlag,
+		eventInfoMap, *numRoutinesFlag, file)
+	if err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("Failed to mine patterns.")
+		os.Exit(1)
 	}
 }

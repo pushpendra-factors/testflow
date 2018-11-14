@@ -11,18 +11,18 @@ import (
 )
 
 type Pattern struct {
-	EventNames []string
+	EventNames []string   `json:"en"`
 	// Histograms.
-	CardinalityRepeatTimings *Hist.NumericHistogramStruct
-	NumericProperties        *Hist.NumericHistogramStruct
-	CategoricalProperties    *Hist.CategoricalHistogramStruct
+	CardinalityRepeatTimings *Hist.NumericHistogramStruct  `json:"crt"`
+	NumericProperties        *Hist.NumericHistogramStruct  `json:"np"`
+	CategoricalProperties    *Hist.CategoricalHistogramStruct  `json:"cp"`
 	// The total number of times this pattern occurs allowing multiple counts
 	// per user.
-	Count uint
+	Count uint     `json:"c"`
 	// Counted only once per user.
-	OncePerUserCount uint
+	OncePerUserCount uint  `json:"ouc"`
 	// Number of users the pattern was counted on.
-	UserCount uint
+	UserCount uint  `json:"uc"`
 
 	// Private variables.
 	waitIndex                  int
