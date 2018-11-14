@@ -133,6 +133,8 @@ func EventPropertyKey(eventName string, propertyName string) string {
 }
 
 // Collects event info for the events initilaized in eventInfoMap.
+const max_SEEN_PROPERTIES = 10000
+const max_SEEN_PROPERTY_VALUES = 1000
 func CollectEventInfo(scanner *bufio.Scanner, eventInfoMap *EventInfoMap) error {
 	lineNum := 0
 	for scanner.Scan() {
@@ -151,14 +153,22 @@ func CollectEventInfo(scanner *bufio.Scanner, eventInfoMap *EventInfoMap) error 
 		}
 		for key, value := range eventDetails.EventProperties {
 			if _, ok := value.(float64); ok {
+				if len(eInfo.NumericPropertyKeys) > max_SEEN_PROPERTIES {
+					continue
+				}
 				eInfo.NumericPropertyKeys[key] = true
 			} else if categoricalValue, ok := value.(string); ok {
+				if len(eInfo.CategoricalPropertyKeyValues) > max_SEEN_PROPERTIES {
+					continue
+				}
 				cmap, ok := eInfo.CategoricalPropertyKeyValues[key]
 				if !ok {
 					cmap = make(map[string]bool)
 					eInfo.CategoricalPropertyKeyValues[key] = cmap
 				}
-				cmap[categoricalValue] = true
+				if len(categoricalValue) < max_SEEN_PROPERTY_VALUES {
+					cmap[categoricalValue] = true
+				}
 			} else {
 				log.WithFields(log.Fields{"event": eventName, "property": key, "value": value, "line no": lineNum}).Info(
 					"Ignoring non string, non numeric property.")

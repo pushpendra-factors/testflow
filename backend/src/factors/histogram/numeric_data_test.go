@@ -25,7 +25,7 @@ func computeCDFUsingData(data [][]float64, evalPoint []float64) float64 {
 	return sum / count
 }
 
-func buildNumericHistogramFromData(maxBins int, dimensions int, data [][]float64) NumericHistogram {
+func buildNumericHistogramFromData(maxBins int, dimensions int, data [][]float64) *NumericHistogramStruct {
 	h, _ := NewNumericHistogram(maxBins, dimensions, nil)
 
 	for _, val := range data {

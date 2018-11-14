@@ -21,17 +21,17 @@ type NumericHistogram interface {
 }
 
 type NumericHistogramStruct struct {
-	Bins      []numericBin
-	Maxbins   int
-	Total     uint64
-	Dimension int
-	Template  *NumericHistogramTemplate
+	Bins      []numericBin  `json:"b"`
+	Maxbins   int	  `json:"mb"`
+	Total     uint64  `json:"to"`
+	Dimension int      `json:"d"`
+	Template  *NumericHistogramTemplate  `json:"te"`
 }
 
 type NumericHistogramTemplateUnit struct {
-	Name       string
-	IsRequired bool
-	Default    float64
+	Name       string   `json:"n"`
+	IsRequired bool     `json:"ir"`
+	Default    float64  `json:"d"`
 }
 
 type NumericHistogramTemplate []NumericHistogramTemplateUnit
@@ -55,31 +55,21 @@ func NewNumericHistogram(n int, d int, t *NumericHistogramTemplate) (*NumericHis
 }
 
 type numericBin struct {
-	Mean     vector
-	Variance vector
-	Count    float64
-	Min      vector
-	Max      vector
+	Count    float64  `json:"c"`
+	Min      vector   `json:"mn"`
+	Max      vector   `json:"mx"`
 }
 
 // http://www.science.canterbury.ac.nz/nzns/issues/vol7-1979/duncan_b.pdf
 func (b *numericBin) merge(o numericBin) numericBin {
-	dimension := b.Mean.Dimension()
+	dimension := b.Min.Dimension()
 
 	count := b.Count + o.Count
 
-	mean := make([]float64, dimension)
-	variance := make([]float64, dimension)
 	min := make([]float64, dimension)
 	max := make([]float64, dimension)
 
 	for i := 0; i < dimension; i++ {
-		mean[i] = (b.Count*b.Mean.Values[i] + o.Count*o.Mean.Values[i]) / float64(count)
-
-		variance[i] =
-			((b.Count*(b.Variance.Values[i]+b.Mean.Values[i]*b.Mean.Values[i]) +
-				o.Count*(o.Variance.Values[i]+o.Mean.Values[i]*o.Mean.Values[i])) / float64(count)) - mean[i]*mean[i]
-
 		if b.Min.Values[i] <= o.Min.Values[i] {
 			min[i] = b.Min.Values[i]
 		} else {
@@ -95,8 +85,6 @@ func (b *numericBin) merge(o numericBin) numericBin {
 	}
 
 	return numericBin{
-		Mean:     NewVector(mean),
-		Variance: NewVector(variance),
 		Count:    count,
 		Min:      NewVector(min),
 		Max:      NewVector(max),
@@ -104,22 +92,14 @@ func (b *numericBin) merge(o numericBin) numericBin {
 }
 
 func (h *NumericHistogramStruct) Add(values []float64) error {
-	m := NewVector(values)
-	v := NewVector(make([]float64, len(values)))
-
-	if h.Dimension != m.Dimension() {
+	v := NewVector(values)
+	if h.Dimension != v.Dimension() {
 		return fmt.Errorf(
 			fmt.Sprintf("Input dimension %d does not match histogram dimension %d",
-				m.Dimension(), h.Dimension))
+				v.Dimension(), h.Dimension))
 	}
 	h.Total++
-	for i := range h.Bins {
-		if h.Bins[i].Mean.Equals(v) {
-			h.Bins[i].Count++
-			return nil
-		}
-	}
-	h.Bins = append(h.Bins, numericBin{Count: 1, Mean: m, Variance: v, Min: m, Max: m})
+	h.Bins = append(h.Bins, numericBin{Count: 1, Min: v, Max: v})
 	h.trim()
 	return nil
 }
@@ -160,7 +140,10 @@ func (h *NumericHistogramStruct) Mean() []float64 {
 
 	for i := range h.Bins {
 		for j := range sum {
-			sum[j] += h.Bins[i].Mean.Values[j] * h.Bins[i].Count
+			minIJ :=  h.Bins[i].Min.Values[j]
+			maxIJ := h.Bins[i].Max.Values[j]
+			meanIJ := minIJ + (maxIJ - minIJ) / 2.0
+			sum[j] += meanIJ * h.Bins[i].Count
 		}
 	}
 
@@ -181,28 +164,6 @@ func (h *NumericHistogramStruct) MeanMap() map[string]float64 {
 		meanMap[(*h.Template)[i].Name] = mean[i]
 	}
 	return meanMap
-}
-
-// http://www.science.canterbury.ac.nz/nzns/issues/vol7-1979/duncan_b.pdf
-func (h *NumericHistogramStruct) Variance() []float64 {
-	if h.Total == 0 {
-		return []float64{}
-	}
-
-	sum := make([]float64, h.Dimension)
-	mean := h.Mean()
-
-	for i := range h.Bins {
-		for j := range sum {
-			sum[j] += (h.Bins[i].Count * (h.Bins[i].Variance.Values[j] + h.Bins[i].Mean.Values[j]*h.Bins[i].Mean.Values[j]))
-		}
-	}
-
-	for k, _ := range sum {
-		sum[k] = sum[k] / float64(h.Total)
-		sum[k] = sum[k] - mean[k]*mean[k]
-	}
-	return sum
 }
 
 func (h *NumericHistogramStruct) CDF(x []float64) float64 {
