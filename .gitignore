@@ -16,6 +16,7 @@ misc/ingest_events/bin/**
 
 */.DS_Store
 **/.DS_Store
+.vscode
 
 
 

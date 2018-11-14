@@ -163,6 +163,39 @@ go run run_pattern_mine.go --input_file="/tmp/factors/output/patterns-<projectId
 * "pattern_files": {"\<projectId\>": "/tmp/factors/output/patterns-\<projectId\>-1466380800/patterns.txt" }
 * Restart server to see factors in action on Frontend.
 
+## Setting up debugging in VSCode
+
+* Open VSCode, Click `Debug` on top meu bar and choose `Add Configuration`.
+* Choose `Go` on the environments list and it will open a file called `launch.json`.
+* Copy and replace the content with below one and save. (Note: Change the `Program` path).
+
+```json
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "remotePath": "",
+            "port": 2345,
+            "host": "127.0.0.1",
+            "program": "<path_to_gitub_code>/factors/backend/src/factors/app/app.go",
+            "env": {},
+            "args": [],
+            "showLog": true
+        }
+    ]
+}
+```
+* Choose a debug point on the app. 
+* Click `Debug` and choose `Start Debugging`.
+* Check the `DEBUG CONSOLE` on the bottom terminal pane.
+
 ## Debugging using LiteIDE and Delve
 * cd ~/go
 * GOPATH=~/go
