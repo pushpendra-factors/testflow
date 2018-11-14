@@ -121,3 +121,8 @@ func GetProjects() ([]Project, int) {
 		return projects, DB_SUCCESS
 	}
 }
+
+// isValidProjectScope return false if projectId is invalid.
+func isValidProjectScope(id uint64) bool {
+	return id != 0
+}

@@ -194,14 +194,6 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:1a44c28f6de12e934afea5ff48ccd61a779526dc587afb60f30ebbfae838c2fd"
-  name = "github.com/qor/validations"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "87c1296c75e72a8f3247beab65c48c50b7b66a7a"
-  version = "v1.0"
-
-[[projects]]
   digest = "1:3f53e9e4dfbb664cd62940c9c4b65a2171c66acd0b7621a1a6b8e78513525a52"
   name = "github.com/sirupsen/logrus"
   packages = ["."]
@@ -387,7 +379,6 @@
     "github.com/jinzhu/copier",
     "github.com/jinzhu/gorm",
     "github.com/jinzhu/gorm/dialects/postgres",
-    "github.com/qor/validations",
     "github.com/sirupsen/logrus",
     "github.com/stretchr/testify/assert",
   ]

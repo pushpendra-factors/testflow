@@ -22,14 +22,6 @@ const (
 	AUTO_TRACK_ENABLED  = 1
 )
 
-// Validate creates and updates.
-func (projectSetting ProjectSetting) Validate(db *gorm.DB) {
-	// Project scope validation.
-	if projectSetting.ProjectId == 0 {
-		db.AddError(ErrInvalidProjectScope)
-	}
-}
-
 func GetProjectSetting(projectId uint64) (*ProjectSetting, int) {
 	db := C.GetServices().Db
 
@@ -40,7 +32,6 @@ func GetProjectSetting(projectId uint64) (*ProjectSetting, int) {
 	var projectSetting ProjectSetting
 	if err := db.Where("project_id = ?", projectId).First(&projectSetting).Error; err != nil {
 		if gorm.IsRecordNotFoundError(err) {
-			// http.BadRequest because of non-existing project id given.
 			return nil, http.StatusNotFound
 		}
 		return nil, http.StatusInternalServerError
@@ -49,17 +40,17 @@ func GetProjectSetting(projectId uint64) (*ProjectSetting, int) {
 	return &projectSetting, DB_SUCCESS
 }
 
-func CreateProjectSetting(projectSetting *ProjectSetting) (*ProjectSetting, int) {
+func CreateProjectSetting(ps *ProjectSetting) (*ProjectSetting, int) {
 	db := C.GetServices().Db
 
-	if err := db.Create(projectSetting).Error; err != nil {
-		if isInvalidProjectScopeError(err) {
-			return nil, http.StatusBadRequest
-		}
+	if valid := isValidProjectScope(ps.ProjectId); !valid {
+		return nil, http.StatusBadRequest
+	}
 
-		log.WithFields(log.Fields{"ProjectSetting": projectSetting, "error": err}).Error("Failed creating ProjectSetting.")
+	if err := db.Create(ps).Error; err != nil {
+		log.WithFields(log.Fields{"ProjectSetting": ps, "error": err}).Error("Failed creating ProjectSetting.")
 		return nil, http.StatusInternalServerError
 	}
 
-	return projectSetting, DB_SUCCESS
+	return ps, DB_SUCCESS
 }
