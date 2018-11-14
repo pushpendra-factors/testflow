@@ -27,7 +27,7 @@ var projectIdFlag = flag.Int("project_id", 0, "Project Id.")
 var inputFileFlag = flag.String("input_file", "",
 	"Input file of format user_id,user_creation_time,event_id,event_creation_time sorted by user_id and event_creation_time")
 var outputFileFlag = flag.String("output_file", "", "All patterns written to file with each line a JSON")
-var numRoutinesFlag = flag.Int("num_routines", 4, "Project Id.")
+var numRoutinesFlag = flag.Int("num_routines", 3, "Project Id.")
 
 // The number of patterns generated is bounded to max_SEGMENTS * top_K per iteration.
 // The amount of data and the time computed to generate this data is bounded
@@ -44,6 +44,10 @@ func countPatternsWorker(filepath string,
 	}
 
 	scanner := bufio.NewScanner(file)
+	// 10 MB buffer.
+	const maxCapacity = 10 * 1024 * 1024
+	buf := make([]byte, maxCapacity)
+	scanner.Buffer(buf, maxCapacity)
 	P.CountPatterns(scanner, patterns)
 	file.Close()
 	wg.Done()
@@ -347,6 +351,10 @@ func main() {
 	}
 
 	// Initialize ouptput file.
+	if _, err := os.Stat(*outputFileFlag); !os.IsNotExist(err) {
+		log.WithFields(log.Fields{"file": *outputFileFlag, "err": err}).Fatal("File already exists.")
+		os.Exit(1)
+	}
 	file, err := os.Create(*outputFileFlag)
 	if err != nil {
 		log.WithFields(log.Fields{"file": *outputFileFlag, "err": err}).Fatal("Unable to create file.")

@@ -11,18 +11,18 @@ import (
 )
 
 type Pattern struct {
-	EventNames []string   `json:"en"`
+	EventNames []string `json:"en"`
 	// Histograms.
-	CardinalityRepeatTimings *Hist.NumericHistogramStruct  `json:"crt"`
-	NumericProperties        *Hist.NumericHistogramStruct  `json:"np"`
-	CategoricalProperties    *Hist.CategoricalHistogramStruct  `json:"cp"`
+	CardinalityRepeatTimings *Hist.NumericHistogramStruct     `json:"crt"`
+	NumericProperties        *Hist.NumericHistogramStruct     `json:"np"`
+	CategoricalProperties    *Hist.CategoricalHistogramStruct `json:"cp"`
 	// The total number of times this pattern occurs allowing multiple counts
 	// per user.
-	Count uint     `json:"c"`
+	Count uint `json:"c"`
 	// Counted only once per user.
-	OncePerUserCount uint  `json:"ouc"`
+	OncePerUserCount uint `json:"ouc"`
 	// Number of users the pattern was counted on.
-	UserCount uint  `json:"uc"`
+	UserCount uint `json:"uc"`
 
 	// Private variables.
 	waitIndex                  int
@@ -41,7 +41,7 @@ const num_C_BINS = 10
 const num_R_BINS = 10
 const num_DEFAULT_MULTI_BINS = 32
 const num_NUMERIC_BINS_PER_DIMENSION = 3
-const num_MAX_NUMERIC_MULTI_BINS = 256
+const num_MAX_NUMERIC_MULTI_BINS = 128
 const num_CATEGORICAL_BINS_PER_DIMENSION = 1
 const num_MAX_CATEGORICAL_MULTI_BINS = 6
 
