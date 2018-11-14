@@ -169,7 +169,7 @@ go run run_pattern_mine.go --input_file="/tmp/factors/output/patterns-<projectId
 * Choose `Go` on the environments list and it will open a file called `launch.json`.
 * Copy and replace the content with below one and save. (Note: Change the `Program` path).
 
-```json
+```
 {
     // Use IntelliSense to learn about possible attributes.
     // Hover to view descriptions of existing attributes.
