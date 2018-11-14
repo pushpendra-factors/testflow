@@ -43,4 +43,8 @@ func TestDBCreateAndGetProjectSetting(t *testing.T) {
 	// Test GetProjectSetting with invalid project id.
 	projectSetting, errCode = M.GetProjectSetting(0)
 	assert.Equal(t, http.StatusBadRequest, errCode)
+
+	// Test GetProjectSetting with invalid project id.
+	projectSetting, errCode = M.GetProjectSetting(99999999999)
+	assert.Equal(t, http.StatusNotFound, errCode)
 }

@@ -16,27 +16,32 @@ type ProjectSetting struct {
 	AutoTrack uint8 `gorm:"default:0" json:"auto_track"`
 }
 
-// AutoTrack states.
+// Enum AutoTrack.
 const (
 	AUTO_TRACK_DISABLED = 0
 	AUTO_TRACK_ENABLED  = 1
 )
 
+// Validate creates and updates.
 func (projectSetting ProjectSetting) Validate(db *gorm.DB) {
 	// Project scope validation.
 	if projectSetting.ProjectId == 0 {
-		db.AddError(InvalidProjectScopeError)
+		db.AddError(ErrInvalidProjectScope)
 	}
 }
 
 func GetProjectSetting(projectId uint64) (*ProjectSetting, int) {
 	db := C.GetServices().Db
 
+	if valid := isValidProjectScope(projectId); !valid {
+		return nil, http.StatusBadRequest
+	}
+
 	var projectSetting ProjectSetting
 	if err := db.Where("project_id = ?", projectId).First(&projectSetting).Error; err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			// http.BadRequest because of non-existing project id given.
-			return nil, http.StatusBadRequest
+			return nil, http.StatusNotFound
 		}
 		return nil, http.StatusInternalServerError
 	}
@@ -48,9 +53,10 @@ func CreateProjectSetting(projectSetting *ProjectSetting) (*ProjectSetting, int)
 	db := C.GetServices().Db
 
 	if err := db.Create(projectSetting).Error; err != nil {
-		if IsInvalidProjectError(err) {
+		if isInvalidProjectScopeError(err) {
 			return nil, http.StatusBadRequest
 		}
+
 		log.WithFields(log.Fields{"ProjectSetting": projectSetting, "error": err}).Error("Failed creating ProjectSetting.")
 		return nil, http.StatusInternalServerError
 	}
