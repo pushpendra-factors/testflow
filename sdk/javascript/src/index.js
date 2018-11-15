@@ -42,10 +42,11 @@ function _validatedStringArg(name, value) {
     return value;
 }
 
-// Exposed methods.
 
 // Global reference.
-var app = new App(null, {});
+var app = new App();
+
+// Exposed methods.
 
 /**
  * Prints SDK information, if installed.
@@ -61,28 +62,13 @@ function isInstalled() {
  */
 function init(appToken) {
     appToken = _validatedStringArg("token", appToken);
-    app.setToken(appToken);
-
-    if (app && app.client.isInitialized()) {
-        return app.client.getProjectSettings()
-            .then((response) => _throwErrorOnFailureResponse(response, "Failed fetching project settings."))
-            .then((response) => {
-                app.setConfig(response.body);
-                return response
-            })
-            .catch(logger.error);
-    } else {
-        throw new Error("FactorsError: SDK is not initialized with token.");
-    }
+    return app.init(appToken);
 }
 
 /**
  * Clears existing SDK environment, both API token and cookies. 
  */
-function reset() {
-    app.reset();
-    Cookie.remove(constant.cookie.USER_ID);
-}
+function reset() { app.reset(); }
 
 /**
  * Track events on user application.
@@ -90,6 +76,9 @@ function reset() {
  * @param {Object} eventProperties 
  */
 function track(eventName, eventProperties={}) {
+    if (!app || !app.isInitialized())
+        throw new Error("FactorsError: SDK is not initialised with token.");
+
     eventName = _validatedStringArg("event_name", eventName)
 
     let payload = {};
@@ -97,13 +86,9 @@ function track(eventName, eventProperties={}) {
     payload.event_name = eventName;
     payload.event_properties = eventProperties;
 
-    if (app && app.client.isInitialized()) {
-        return app.client.track(payload)
-            .then(_updateCookieIfUserIdInResponse)
-            .catch(logger.error);
-    } else {
-        throw new Error("FactorsError: SDK is not initialised with token.");
-    }
+    return app.client.track(payload)
+        .then(_updateCookieIfUserIdInResponse)
+        .catch(logger.error);
 }
 
 /**
@@ -112,19 +97,18 @@ function track(eventName, eventProperties={}) {
  * @param {string} customerUserId Actual id of the user from the application.
  */
 function identify(customerUserId) {
+    if (!app || !app.isInitialized())
+        throw new Error("FactorsError: SDK is not initialised with token.");
+    
     customerUserId = _validatedStringArg("customer_user_id", customerUserId);
     
     let payload = {};
     _updatePayloadWithUserIdFromCookie(payload);
     payload.c_uid = customerUserId;
     
-    if (app && app.client.isInitialized()) {
-        return app.client.identify(payload)
-            .then(_updateCookieIfUserIdInResponse)
-            .catch(logger.error);
-    } else {
-        throw new Error("FactorsError: SDK is not initialised with token.");
-    }
+    return app.client.identify(payload)
+        .then(_updateCookieIfUserIdInResponse)
+        .catch(logger.error);
 }
 
 /**
@@ -132,27 +116,27 @@ function identify(customerUserId) {
  * @param {Object} properties 
  */
 function addUserProperties(properties={}) {
+    if (!app || !app.isInitialized())
+        throw new Error("FactorsError: SDK is not initialised with token.");
+
     if (typeof(properties) != "object")
         throw new Error("FactorsArgumentError: Properties should be an Object(key/values).");
     
     if (Object.keys(properties).length == 0)
         return Promise.reject("No changes. Empty properties.");
-
+    
     let payload = {};
     _updatePayloadWithUserIdFromCookie(payload);
     payload.properties = properties;
 
-    if (app && app.client.isInitialized()) {
-        return app.client.addUserProperties(payload)
-            .then(_updateCookieIfUserIdInResponse)
-            .catch(logger.error);
-    } else {
-        throw new Error("FactorsError: SDK is not initialised with token.");
-    }
+    return app.client.addUserProperties(payload)
+        .then(_updateCookieIfUserIdInResponse)
+        .catch(logger.error);
 }
 
-let exposed = { app, isInstalled, init, reset, track, identify, addUserProperties };
-if (process.env.NODE_ENV === "development") exposed["test"] = require("./test/suite.js");
-
+let exposed = { isInstalled, init, reset, track, identify, addUserProperties };
+if (process.env.NODE_ENV === "development") {
+    exposed["test"] = require("./test/suite.js");
+}
 module.exports = exports = exposed;
 

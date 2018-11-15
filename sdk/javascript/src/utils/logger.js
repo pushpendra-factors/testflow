@@ -3,7 +3,7 @@ function info(message) {
 }
 
 function error(message) {
-    console.error("[Factors:ERROR] : "+message);
+    console.error(message);
 }
 
 function debug(message) {
