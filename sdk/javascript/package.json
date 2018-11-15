@@ -8,7 +8,7 @@
     "build-dev": "./node_modules/.bin/webpack --config webpack.dev.config.js",
     "build-prod": "./node_modules/.bin/webpack --config webpack.prod.config.js",
     "serve-dev": "./node_modules/.bin/webpack-dev-server --port 8090 --config webpack.dev.config.js",
-    "serve-prod": "./node_modules/.bin/webpack-dev-server --port 8090 --config webpack.prod.config.js"
+    "serve-prod": "./node_modules/.bin/webpack --config webpack.prod.config.js && ./node_modules/.bin/webpack-dev-server --port 8090 --config webpack.prod.config.js"
   },
   "author": "Dineshprabu S",
   "license": "ISC",

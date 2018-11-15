@@ -1,7 +1,7 @@
 module.exports = {
   entry: "./src/index.js",
   output: {
-    filename: "bundle-prod.js",
+    filename: "factors.prod.js",
     library: "factors",
     libraryTarget: "umd"
   },
