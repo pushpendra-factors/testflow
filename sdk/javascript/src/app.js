@@ -1,11 +1,10 @@
 "use strict";
 
-var APIClient = require("./api-client");
 var Cookie = require("./utils/cookie");
-
 const logger = require("./utils/logger");
-const constant = require("./constant");
 
+var APIClient = require("./api-client");
+const constant = require("./constant");
 
 function App() {
     // lazy initialization with .init
@@ -65,4 +64,36 @@ App.prototype.isSameToken = function(token) {
     return this.client && this.client.token && this.client.token === token;
 }
 
-module.exports = exports = App;
+// Common methods.
+
+function updateCookieIfUserIdInResponse(response){
+    if (response && response.body && response.body.user_id) {
+        let cleanUserId = response.body.user_id.trim();
+        
+        if (cleanUserId) 
+            Cookie.setEncoded(constant.cookie.USER_ID, cleanUserId, constant.cookie.EXPIRY);
+    }
+    return response; // To continue chaining.
+}
+
+function throwErrorOnFailureResponse(response, message="Request failed.") {
+    if (response.status < 200 || response.status > 308) 
+        throw new Error("FactorsRequestError: "+message);
+    
+    return response;
+}
+
+function updatePayloadWithUserIdFromCookie(payload) {
+    if (Cookie.isExist(constant.cookie.USER_ID))
+        payload.user_id = Cookie.getDecoded(constant.cookie.USER_ID);
+    
+    return payload;
+}
+
+module.exports = exports = {
+    App: App, 
+    updatePayloadWithUserIdFromCookie: updatePayloadWithUserIdFromCookie,
+    throwErrorOnFailureResponse: throwErrorOnFailureResponse,
+    updateCookieIfUserIdInResponse: updateCookieIfUserIdInResponse
+};
+

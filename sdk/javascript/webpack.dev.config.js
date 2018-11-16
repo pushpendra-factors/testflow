@@ -5,7 +5,7 @@ module.exports = {
   output: {
     filename: "factors.dev.js",
     library: "factors",
-    libraryTarget: "umd"
+    libraryTarget: "var"
   },
   module: {
     rules: [
