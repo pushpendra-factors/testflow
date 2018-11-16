@@ -8,12 +8,18 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
 
-type IdentifiedUser struct {
+type SDKIdentifyPayload struct {
 	UserId         string `json:"user_id"`
 	CustomerUserId string `json:"c_uid"`
+}
+
+type SDKAddPropertiesPayload struct {
+	UserId     string         `json:"user_id"`
+	Properties postgres.Jsonb `json:"properties,omitempty"`
 }
 
 // Test command.
@@ -94,7 +100,10 @@ func SDKIdentifyHandler(c *gin.Context) {
 		return
 	}
 
-	identifiedUser := IdentifiedUser{}
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+
+	identifiedUser := SDKIdentifyPayload{}
 	err := json.NewDecoder(r.Body).Decode(&identifiedUser)
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("Identification failed. JSON Decoding failed.")
@@ -195,15 +204,13 @@ func SDKAddUserPropertiesHandler(c *gin.Context) {
 		return
 	}
 
-	addPropsUser := M.User{}
-	if err := json.NewDecoder(r.Body).Decode(&addPropsUser); err != nil {
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+
+	addPropsUser := SDKAddPropertiesPayload{}
+	if err := decoder.Decode(&addPropsUser); err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("Add user properties failed. JSON Decoding failed.")
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Add user properties failed. Invalid payload."})
-		return
-	}
-
-	if addPropsUser.ProjectId != 0 {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid payload. project_id is not required."})
 		return
 	}
 
@@ -216,7 +223,7 @@ func SDKAddUserPropertiesHandler(c *gin.Context) {
 	scopeProjectId := scopeProjectIdIntf.(uint64)
 
 	// Precondition: user_id not given.
-	if addPropsUser.ID == "" {
+	if addPropsUser.UserId == "" {
 		// Create user with properties and respond user_id. Only properties allowed on create.
 		newUser, errCode := M.CreateUser(&M.User{Properties: addPropsUser.Properties})
 		if errCode != M.DB_SUCCESS {
@@ -228,7 +235,7 @@ func SDKAddUserPropertiesHandler(c *gin.Context) {
 	}
 
 	// Todo(Dinesh): Make UpdateUser to return 404 on 0 rows affected and remove this.
-	scopeUser, errCode := M.GetUser(scopeProjectId, addPropsUser.ID)
+	scopeUser, errCode := M.GetUser(scopeProjectId, addPropsUser.UserId)
 	if errCode != M.DB_SUCCESS {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Add user properties failed. Invalid user_id."})
 		return

@@ -169,7 +169,7 @@ func TestSDKAddUserProperties(t *testing.T) {
 
 	// Test with user_id in the payload.
 	uniqueName := U.RandomLowerAphaNumString(16)
-	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"id": "%s", "properties": {"name": "%s"}}`,
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"user_id": "%s", "properties": {"name": "%s"}}`,
 		user.ID, uniqueName)), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 	responseMap = DecodeJSONResponseToMap(w.Body)
@@ -178,7 +178,7 @@ func TestSDKAddUserProperties(t *testing.T) {
 
 	// Test with new property. email.
 	uniqueEmail := fmt.Sprintf(`%s@example.com`, U.RandomLowerAphaNumString(10))
-	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"id": "%s", "properties": {"email": "%s"}}`,
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"user_id": "%s", "properties": {"email": "%s"}}`,
 		user.ID, uniqueEmail)), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 	responseMap = DecodeJSONResponseToMap(w.Body)
@@ -189,7 +189,7 @@ func TestSDKAddUserProperties(t *testing.T) {
 	uniqueName = U.RandomLowerAphaNumString(16)
 	uniqueEmail = fmt.Sprintf(`%s@example.com`, U.RandomLowerAphaNumString(10))
 	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(
-		`{"id": "%s", "properties": {"name": "%s", "email": "%s"}}`, user.ID, uniqueName, uniqueEmail)),
+		`{"user_id": "%s", "properties": {"name": "%s", "email": "%s"}}`, user.ID, uniqueName, uniqueEmail)),
 		map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 	responseMap = DecodeJSONResponseToMap(w.Body)
@@ -208,7 +208,7 @@ func TestSDKAddUserProperties(t *testing.T) {
 
 	// Test bad payload - updating project_id as existing user.
 	uniqueName = U.RandomLowerAphaNumString(16)
-	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"id": "%s", "project_id": "99999999", "properties": {"name": "%s"}}`, user.ID, uniqueName)),
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"user_id": "%s", "project_id": "99999999", "properties": {"name": "%s"}}`, user.ID, uniqueName)),
 		map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 
@@ -221,7 +221,7 @@ func TestSDKAddUserProperties(t *testing.T) {
 	// Test bad input with non exiting user id.
 	uniqueName = U.RandomLowerAphaNumString(16)
 	fakeUserId := U.RandomLowerAphaNumString(16)
-	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"id": "%s" , "properties": {"name": "%s"}}`, fakeUserId, uniqueName)),
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"user_id": "%s" , "properties": {"name": "%s"}}`, fakeUserId, uniqueName)),
 		map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusNotFound, w.Code)
 
