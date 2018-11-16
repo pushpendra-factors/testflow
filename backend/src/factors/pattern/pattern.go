@@ -39,7 +39,7 @@ type Pattern struct {
 const num_T_BINS = 20
 const num_C_BINS = 10
 const num_R_BINS = 10
-const num_DEFAULT_MULTI_BINS = 32
+const num_DEFAULT_MULTI_BINS = 64
 const num_NUMERIC_BINS_PER_DIMENSION = 3
 const num_MAX_NUMERIC_MULTI_BINS = 128
 const num_CATEGORICAL_BINS_PER_DIMENSION = 1

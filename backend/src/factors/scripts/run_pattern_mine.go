@@ -16,8 +16,10 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"path/filepath"
 	"sort"
 	"sync"
+	"time"
 
 	_ "github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
@@ -350,17 +352,20 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Initialize ouptput file.
 	if _, err := os.Stat(*outputFileFlag); !os.IsNotExist(err) {
 		log.WithFields(log.Fields{"file": *outputFileFlag, "err": err}).Fatal("File already exists.")
 		os.Exit(1)
 	}
-	file, err := os.Create(*outputFileFlag)
+	// Write intermediate results to temporary file in the same directory.
+	dir, fileName := filepath.Split(*outputFileFlag)
+	tmpOutputFileName := fmt.Sprintf("_tmp_%d_%s", time.Now().Unix(), fileName)
+	tmpOutputFilePath := filepath.Join(dir, tmpOutputFileName)
+	tmpFile, err := os.Create(tmpOutputFilePath)
 	if err != nil {
-		log.WithFields(log.Fields{"file": *outputFileFlag, "err": err}).Fatal("Unable to create file.")
+		log.WithFields(log.Fields{"file": tmpOutputFilePath, "err": err}).Fatal("Unable to create file.")
 		os.Exit(1)
 	}
-	defer file.Close()
+	defer tmpFile.Close()
 
 	eventInfoMap, err := buildEventInfoMapFromInput(*projectIdFlag, *inputFileFlag)
 	if err != nil {
@@ -370,15 +375,21 @@ func main() {
 	// First line in output file are events information seen in the data.
 	eventInfoBytes, err := json.Marshal(eventInfoMap)
 	eventInfoStr := string(eventInfoBytes)
-	if _, err := file.WriteString(fmt.Sprintf("%s\n", eventInfoStr)); err != nil {
+	if _, err := tmpFile.WriteString(fmt.Sprintf("%s\n", eventInfoStr)); err != nil {
 		log.WithFields(log.Fields{"line": eventInfoStr, "err": err}).Fatal("Failed to write events Info.")
 		os.Exit(1)
 	}
 
 	err = mineAndWritePatterns(*projectIdFlag, *inputFileFlag,
-		eventInfoMap, *numRoutinesFlag, file)
+		eventInfoMap, *numRoutinesFlag, tmpFile)
 	if err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("Failed to mine patterns.")
+		os.Exit(1)
+	}
+
+	// Rename file
+	if err = os.Rename(tmpOutputFilePath, *outputFileFlag); err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("Failed to rename output.")
 		os.Exit(1)
 	}
 }
