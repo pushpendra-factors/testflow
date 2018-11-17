@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	_ "github.com/jinzhu/gorm"
+	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -70,6 +70,20 @@ func GetEventName(name string, projectId uint64) (*EventName, int) {
 	} else {
 		return &eventName, DB_SUCCESS
 	}
+}
+
+func GetEventNameByFilter(filter *EventName) (*EventName, int) {
+	db := C.GetServices().Db
+
+	var eventName EventName
+	if err := db.First(&eventName, &filter).Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+		return nil, http.StatusInternalServerError
+	}
+
+	return &eventName, DB_SUCCESS
 }
 
 func GetEventNames(projectId uint64) ([]EventName, int) {

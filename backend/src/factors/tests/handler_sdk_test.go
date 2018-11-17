@@ -3,6 +3,7 @@ package tests
 import (
 	"encoding/json"
 	H "factors/handler"
+	M "factors/model"
 	U "factors/util"
 	"fmt"
 	"io/ioutil"
@@ -19,7 +20,7 @@ func TestSDKTrack(t *testing.T) {
 	H.InitSDKRoutes(r)
 	uri := "/sdk/event/track"
 
-	project, user, eventName, err := SetupProjectUserEventNameReturnDAO()
+	project, user, err := SetupProjectUserReturnDAO()
 	assert.Nil(t, err)
 
 	// Test without project_id scope and with non-existing project.
@@ -32,7 +33,7 @@ func TestSDKTrack(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 
 	// Test without user_id in the payload.
-	w = ServePostRequestWithHeaders(r, uri, []byte(`{"event_name": "signup", "properties": {"mobile" : "true"}}`),
+	w = ServePostRequestWithHeaders(r, uri, []byte(`{"event_name": "signup", "event_properties": {"mobile" : "true"}}`),
 		map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 	responseMap := DecodeJSONResponseToMap(w.Body)
@@ -40,13 +41,13 @@ func TestSDKTrack(t *testing.T) {
 	assert.NotNil(t, responseMap["user_id"])
 
 	// Test without event_name in the payload.
-	w = ServePostRequestWithHeaders(r, uri, []byte(`{"properties": {"mobile" : "true"}}`),
+	w = ServePostRequestWithHeaders(r, uri, []byte(`{"event_properties": {"mobile" : "true"}}`),
 		map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 
 	// Test without properties and with empty properites in the payload.
 	w = ServePostRequestWithHeaders(r, uri,
-		[]byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "event_1", "properties": {}}`, user.ID)),
+		[]byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "event_1", "event_properties": {}}`, user.ID)),
 		map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 	w = ServePostRequestWithHeaders(r, uri,
@@ -54,14 +55,33 @@ func TestSDKTrack(t *testing.T) {
 		map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	// Test track event with all conditions satisfied.
+	// Test track user created event.
+	rEventName := U.RandomLowerAphaNumString(10)
 	w = ServePostRequestWithHeaders(r, uri,
-		[]byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "%s", "properties": {"mobile" : "true"}}`, user.ID, eventName.Name)),
+		[]byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "%s", "event_properties": {"mobile" : "true"}}`, user.ID, rEventName)),
 		map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 	responseMap = DecodeJSONResponseToMap(w.Body)
 	assert.NotEmpty(t, responseMap)
-	assert.Nil(t, responseMap["user_id"]) // user_id is present, should not create new one.
+	assert.Nil(t, responseMap["user_id"])
+	ren, errCode := M.GetEventNameByFilter(&M.EventName{ProjectId: project.ID, Name: rEventName})
+	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Equal(t, M.USER_CREATED_EVENT_NAME, ren.AutoName)
+	assert.NotEqual(t, ren.Name, ren.AutoName)
+
+	// Test auto tracked event.
+	rEventName = U.RandomLowerAphaNumString(10)
+	w = ServePostRequestWithHeaders(r, uri,
+		[]byte(fmt.Sprintf(`{"user_id": "%s", "auto": true, "event_name": "%s", "event_properties": {"mobile" : "true"}}`, user.ID, rEventName)),
+		map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	responseMap = DecodeJSONResponseToMap(w.Body)
+	assert.NotEmpty(t, responseMap)
+	assert.Nil(t, responseMap["user_id"])
+	ren, errCode = M.GetEventNameByFilter(&M.EventName{ProjectId: project.ID, Name: rEventName})
+	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.NotEqual(t, M.USER_CREATED_EVENT_NAME, ren.AutoName)
+	assert.Equal(t, ren.Name, ren.AutoName)
 }
 
 func TestSDKIdentify(t *testing.T) {

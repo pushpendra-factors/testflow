@@ -20,7 +20,7 @@ function init(appToken) {
             // Starts autotrack, if enabled. Need to change auto_track to boolean?
             return autoTrack(app.getConfig("auto_track") === 1);
         })
-        .catch(logger.error)       
+        .catch(logger.error);  
 }
 
 /**

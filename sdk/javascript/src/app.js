@@ -48,8 +48,8 @@ App.prototype.track = function(eventName, eventProperties, auto=false) {
     let payload = {};
     updatePayloadWithUserIdFromCookie(payload);
     payload.event_name = eventName;
-    payload.properties = eventProperties;
-    // payload.auto = auto;
+    payload.event_properties = eventProperties;
+    payload.auto = auto;
 
     return this.client.track(payload)
         .then(updateCookieIfUserIdInResponse)

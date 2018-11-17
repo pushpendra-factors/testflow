@@ -6,11 +6,22 @@ import (
 	U "factors/util"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
+
+type SDKTrackPayload struct {
+	Name       string         `json:"event_name"`
+	Properties postgres.Jsonb `json:"event_properties"`
+	ProjectId  uint64         `json:"project_id"`
+	UserId     string         `json:"user_id"`
+	Auto       bool           `json:"auto"`
+	CreatedAt  time.Time      `json:"created_at"`
+	UpdatedAt  time.Time      `json:"updated_at"`
+}
 
 type SDKIdentifyPayload struct {
 	UserId         string `json:"user_id"`
@@ -23,7 +34,7 @@ type SDKAddPropertiesPayload struct {
 }
 
 // Test command.
-// curl -i -H "Content-Type: application/json" -H "Authorization: YOUR_TOKEN" -X POST http://localhost:8080/sdk/event/track -d '{"user_id": "YOUR_USER_ID", "event_name": "login", "properties": {"ip": "10.0.0.1", "mobile": true}}'
+// curl -i -H "Content-Type: application/json" -H "Authorization: YOUR_TOKEN" -X POST http://localhost:8080/sdk/event/track -d '{"user_id": "YOUR_USER_ID", "event_name": "login", "event_properties": {"ip": "10.0.0.1", "mobile": true}}'
 func SDKTrackHandler(c *gin.Context) {
 	r := c.Request
 
@@ -33,7 +44,7 @@ func SDKTrackHandler(c *gin.Context) {
 		return
 	}
 
-	var event EventWithName
+	var event SDKTrackPayload
 
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
@@ -72,7 +83,15 @@ func SDKTrackHandler(c *gin.Context) {
 		response = gin.H{"user_id": newUser.ID}
 	}
 
-	eventName, errCode := M.CreateOrGetEventName(&M.EventName{Name: event.Name, ProjectId: scopeProjectId})
+	var eventName *M.EventName
+	var errCode int
+	// if auto_track enabled, auto_name = event_name else auto_name = "UCEN".
+	if event.Auto {
+		eventName, errCode = M.CreateOrGetEventName(&M.EventName{Name: event.Name,
+			AutoName: event.Name, ProjectId: scopeProjectId})
+	} else {
+		eventName, errCode = M.CreateOrGetUserCreatedEventName(&M.EventName{Name: event.Name, ProjectId: scopeProjectId})
+	}
 	if errCode != http.StatusConflict && errCode != M.DB_SUCCESS {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Tracking failed. EventName creation failed."})
 		return
