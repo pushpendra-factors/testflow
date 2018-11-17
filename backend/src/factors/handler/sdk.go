@@ -34,8 +34,10 @@ func SDKTrackHandler(c *gin.Context) {
 	}
 
 	var event EventWithName
-	err := json.NewDecoder(r.Body).Decode(&event)
-	if err != nil {
+
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&event); err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("Tracking failed. Json Decoding failed.")
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Tracking failed. Invalid payload."})
 		return
@@ -100,12 +102,11 @@ func SDKIdentifyHandler(c *gin.Context) {
 		return
 	}
 
+	var identifiedUser SDKIdentifyPayload
+
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
-
-	identifiedUser := SDKIdentifyPayload{}
-	err := json.NewDecoder(r.Body).Decode(&identifiedUser)
-	if err != nil {
+	if err := decoder.Decode(&identifiedUser); err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("Identification failed. JSON Decoding failed.")
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Identification failed. Invalid payload."})
 		return
@@ -204,10 +205,10 @@ func SDKAddUserPropertiesHandler(c *gin.Context) {
 		return
 	}
 
+	var addPropsUser SDKAddPropertiesPayload
+
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
-
-	addPropsUser := SDKAddPropertiesPayload{}
 	if err := decoder.Decode(&addPropsUser); err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("Add user properties failed. JSON Decoding failed.")
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Add user properties failed. Invalid payload."})
