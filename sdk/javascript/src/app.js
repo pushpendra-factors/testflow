@@ -39,7 +39,7 @@ App.prototype.init = function(token) {
         .catch(logger.error);
 }
 
-App.prototype.track = function(eventName, eventProperties, auto) {
+App.prototype.track = function(eventName, eventProperties, auto=false) {
     if (!this.isInitialized())
         throw new Error("FactorsError: SDK is not initialised with token.");
 
@@ -49,6 +49,7 @@ App.prototype.track = function(eventName, eventProperties, auto) {
     updatePayloadWithUserIdFromCookie(payload);
     payload.event_name = eventName;
     payload.properties = eventProperties;
+    // payload.auto = auto;
 
     return this.client.track(payload)
         .then(updateCookieIfUserIdInResponse)
@@ -107,11 +108,31 @@ function updatePayloadWithUserIdFromCookie(payload) {
     return payload;
 }
 
+/**
+ * Parse query string.
+ * @param {*} qString 
+ * ----- Cases -----
+ * window.search = "" -> {}
+ * window.search = "?" -> {}
+ * window.search = "?a" -> {a: null}
+ * window.search = "?a=" -> {a: null}
+ * window.search = "?a=10" -> {a: 10}
+ * window.search = "?a=10&" -> {a: 10}
+ * window.search = "?a=10&b" -> {a: 10, b: null}
+ * window.search = "?a=10&b=20" -> {a: 10, b: 20}
+ */
 function parseQueryString(qString) {
     var ep = {};
-    var t = qString.split("&");
+    var t = null;
+    // Remove & at the end.
+    var ambPos = qString.indexOf("&");
+    if (ambPos === qString.length-1) qString = qString.slice(0, qString.length-1);
+    if (ambPos >= 0) t = qString.split("&");
+    else t = [qString];
     for (var i=0; i<t.length; i++){
-        var kv = t[i].split("=");
+        var kv = null;
+        if (t[i].indexOf("=") >= 0) kv = t[i].split("=");
+        else kv = [t[i], null];
         // Remove ? on first query param.
         if (i == 0 && kv[0].indexOf("?") === 0) kv[0] = kv[0].slice(1);
         // No value, assign null.

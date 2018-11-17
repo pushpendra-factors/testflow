@@ -45,9 +45,8 @@ function autoTrack(enabled=false) {
     if (!enabled) return false; // not enabled.
     var en = window.location.host+window.location.pathname;
     var search =  window.location.search;
-    var searchKV = (search.indexOf("?") === 0 && search.indexOf("=") > 1);
-    // Add to event name if query is not kvs.
-    if (!searchKV) return app.track(en+search, {}, true); 
+    // no query params.
+    if (search.length === 0) return app.track(en, {}, true);
     return app.track(en, _fa.parseQueryString(search), true);
 }
 
