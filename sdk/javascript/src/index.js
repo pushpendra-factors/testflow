@@ -9,20 +9,18 @@ var _fa = require("./app");
 var app = new _fa.App();
 
 /**
- * Prints SDK information, if installed.
- */
-function isInstalled() {
-    return "Factors sdk v0.2 is installed!";
-}
-
-/**
  * Initializes sdk environment on user application. Overwrites if initialized already.
  * 
  * @param {string} appToken Unique application token.
  */
 function init(appToken) {
     appToken = util.validatedStringArg("token", appToken);
-    return app.init(appToken);
+    return app.init(appToken)
+        .then(function() {
+            // Starts autotrack, if enabled. Need to change auto_track to boolean?
+            return autoTrack(app.getConfig("auto_track") === 1);
+        })
+        .catch(logger.error)       
 }
 
 /**
@@ -36,24 +34,25 @@ function reset() { app.reset(); }
  * @param {Object} eventProperties 
  */
 function track(eventName, eventProperties={}) {
-    if (!app || !app.isInitialized())
-        throw new Error("FactorsError: SDK is not initialised with token.");
-
-    eventName = util.validatedStringArg("event_name", eventName)
-
-    let payload = {};
-    _fa.updatePayloadWithUserIdFromCookie(payload);
-    payload.event_name = eventName;
-    payload.event_properties = eventProperties;
-
-    return app.client.track(payload)
-        .then(_fa.updateCookieIfUserIdInResponse)
-        .catch(logger.error);
+    return app.track(eventName, eventProperties, false);
 }
 
 /**
- * Identify user with original 
- * userId from the application.
+ * Automatically tracks events, if enabled by admin. Not exposed.
+ * @param {boolean} enabled 
+ */
+function autoTrack(enabled=false) {
+    if (!enabled) return false; // not enabled.
+    var en = window.location.host+window.location.pathname;
+    var search =  window.location.search;
+    var searchKV = (search.indexOf("?") === 0 && search.indexOf("=") > 1);
+    // Add to event name if query is not kvs.
+    if (!searchKV) return app.track(en+search, {}, true); 
+    return app.track(en, _fa.parseQueryString(search), true);
+}
+
+/**
+ * Identify user with original userId from the application.
  * @param {string} customerUserId Actual id of the user from the application.
  */
 function identify(customerUserId) {
@@ -94,7 +93,7 @@ function addUserProperties(properties={}) {
         .catch(logger.error);
 }
 
-let exposed = { isInstalled, init, reset, track, identify, addUserProperties };
+let exposed = { init, reset, track, identify, addUserProperties };
 if (process.env.NODE_ENV === "development") {
     exposed["test"] = require("./test/suite.js");
 }

@@ -2,6 +2,7 @@
 
 var Cookie = require("./utils/cookie");
 const logger = require("./utils/logger");
+const util = require("./utils/util");
 
 var APIClient = require("./api-client");
 const constant = require("./constant");
@@ -35,6 +36,22 @@ App.prototype.init = function(token) {
             this.client = _client;
             return response;
         })
+        .catch(logger.error);
+}
+
+App.prototype.track = function(eventName, eventProperties, auto) {
+    if (!this.isInitialized())
+        throw new Error("FactorsError: SDK is not initialised with token.");
+
+    eventName = util.validatedStringArg("event_name", eventName)
+
+    let payload = {};
+    updatePayloadWithUserIdFromCookie(payload);
+    payload.event_name = eventName;
+    payload.properties = eventProperties;
+
+    return this.client.track(payload)
+        .then(updateCookieIfUserIdInResponse)
         .catch(logger.error);
 }
 
@@ -90,10 +107,25 @@ function updatePayloadWithUserIdFromCookie(payload) {
     return payload;
 }
 
+function parseQueryString(qString) {
+    var ep = {};
+    var t = qString.split("&");
+    for (var i=0; i<t.length; i++){
+        var kv = t[i].split("=");
+        // Remove ? on first query param.
+        if (i == 0 && kv[0].indexOf("?") === 0) kv[0] = kv[0].slice(1);
+        // No value, assign null.
+        if (kv[1] === "") kv[1] = null;
+        ep[kv[0]] = kv[1];
+    }
+    return ep;
+}
+
 module.exports = exports = {
-    App: App, 
+    App: App,
     updatePayloadWithUserIdFromCookie: updatePayloadWithUserIdFromCookie,
     throwErrorOnFailureResponse: throwErrorOnFailureResponse,
-    updateCookieIfUserIdInResponse: updateCookieIfUserIdInResponse
+    updateCookieIfUserIdInResponse: updateCookieIfUserIdInResponse,
+    parseQueryString: parseQueryString
 };
 
