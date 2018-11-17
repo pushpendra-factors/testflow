@@ -16,8 +16,10 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"path/filepath"
 	"sort"
 	"sync"
+	"time"
 
 	_ "github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
@@ -27,7 +29,7 @@ var projectIdFlag = flag.Int("project_id", 0, "Project Id.")
 var inputFileFlag = flag.String("input_file", "",
 	"Input file of format user_id,user_creation_time,event_id,event_creation_time sorted by user_id and event_creation_time")
 var outputFileFlag = flag.String("output_file", "", "All patterns written to file with each line a JSON")
-var numRoutinesFlag = flag.Int("num_routines", 4, "Project Id.")
+var numRoutinesFlag = flag.Int("num_routines", 3, "Project Id.")
 
 // The number of patterns generated is bounded to max_SEGMENTS * top_K per iteration.
 // The amount of data and the time computed to generate this data is bounded
@@ -44,6 +46,10 @@ func countPatternsWorker(filepath string,
 	}
 
 	scanner := bufio.NewScanner(file)
+	// 10 MB buffer.
+	const maxCapacity = 10 * 1024 * 1024
+	buf := make([]byte, maxCapacity)
+	scanner.Buffer(buf, maxCapacity)
 	P.CountPatterns(scanner, patterns)
 	file.Close()
 	wg.Done()
@@ -346,13 +352,20 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Initialize ouptput file.
-	file, err := os.Create(*outputFileFlag)
-	if err != nil {
-		log.WithFields(log.Fields{"file": *outputFileFlag, "err": err}).Fatal("Unable to create file.")
+	if _, err := os.Stat(*outputFileFlag); !os.IsNotExist(err) {
+		log.WithFields(log.Fields{"file": *outputFileFlag, "err": err}).Fatal("File already exists.")
 		os.Exit(1)
 	}
-	defer file.Close()
+	// Write intermediate results to temporary file in the same directory.
+	dir, fileName := filepath.Split(*outputFileFlag)
+	tmpOutputFileName := fmt.Sprintf("_tmp_%d_%s", time.Now().Unix(), fileName)
+	tmpOutputFilePath := filepath.Join(dir, tmpOutputFileName)
+	tmpFile, err := os.Create(tmpOutputFilePath)
+	if err != nil {
+		log.WithFields(log.Fields{"file": tmpOutputFilePath, "err": err}).Fatal("Unable to create file.")
+		os.Exit(1)
+	}
+	defer tmpFile.Close()
 
 	eventInfoMap, err := buildEventInfoMapFromInput(*projectIdFlag, *inputFileFlag)
 	if err != nil {
@@ -362,15 +375,21 @@ func main() {
 	// First line in output file are events information seen in the data.
 	eventInfoBytes, err := json.Marshal(eventInfoMap)
 	eventInfoStr := string(eventInfoBytes)
-	if _, err := file.WriteString(fmt.Sprintf("%s\n", eventInfoStr)); err != nil {
+	if _, err := tmpFile.WriteString(fmt.Sprintf("%s\n", eventInfoStr)); err != nil {
 		log.WithFields(log.Fields{"line": eventInfoStr, "err": err}).Fatal("Failed to write events Info.")
 		os.Exit(1)
 	}
 
 	err = mineAndWritePatterns(*projectIdFlag, *inputFileFlag,
-		eventInfoMap, *numRoutinesFlag, file)
+		eventInfoMap, *numRoutinesFlag, tmpFile)
 	if err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("Failed to mine patterns.")
+		os.Exit(1)
+	}
+
+	// Rename file
+	if err = os.Rename(tmpOutputFilePath, *outputFileFlag); err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("Failed to rename output.")
 		os.Exit(1)
 	}
 }
