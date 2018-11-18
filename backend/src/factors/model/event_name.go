@@ -14,14 +14,14 @@ type EventName struct {
 	ID   uint64 `gorm:"primary_key:true;" json:"id"`
 	Name string `json:"name"`
 	// auto_name Defaults to user_created, if not supplied.
-	AutoName string `gorm:"default:'UCEN'" json:"auto_name";`
+	AutoName string `gorm:"default:'$UCEN'" json:"auto_name";`
 	// Below are the foreign key constraints added in creation script.
 	// project_id -> projects(id)
 	ProjectId uint64    `gorm:"primary_key:true;" json:"project_id"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
-const USER_CREATED_EVENT_NAME = "UCEN"
+const USER_CREATED_EVENT_NAME = "$UCEN"
 
 func CreateOrGetEventName(eventName *EventName) (*EventName, int) {
 	db := C.GetServices().Db

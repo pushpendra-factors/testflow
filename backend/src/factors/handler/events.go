@@ -55,8 +55,6 @@ func CreateEventHandler(c *gin.Context) {
 		return
 	}
 
-	// Todo(Dinesh): Handle rollback of created event_name on event creation failure using callbacks on model.
-	// Create corresponding event_name if not exists.
 	eventName, errCode := M.CreateOrGetUserCreatedEventName(&M.EventName{Name: event.Name, ProjectId: projectId})
 	if errCode != http.StatusConflict && errCode != M.DB_SUCCESS {
 		c.AbortWithStatus(errCode)
