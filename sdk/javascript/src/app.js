@@ -43,7 +43,9 @@ App.prototype.track = function(eventName, eventProperties, auto=false) {
     if (!this.isInitialized())
         throw new Error("FactorsError: SDK is not initialised with token.");
 
-    eventName = util.validatedStringArg("event_name", eventName)
+    eventName = util.validatedStringArg("event_name", eventName) // Clean event name.
+    if (!isAllowedEventName(eventName)) 
+        throw new Error("FactorsError: Invalid event name.");
 
     let payload = {};
     updatePayloadWithUserIdFromCookie(payload);
@@ -80,6 +82,12 @@ App.prototype.isInitialized = function() {
 
 App.prototype.isSameToken = function(token) {
     return this.client && this.client.token && this.client.token === token;
+}
+
+function isAllowedEventName(eventName) {
+    // Don't allow event_name starts with '$'.
+    if (eventName.indexOf('$') == 0) return false; 
+    return true;
 }
 
 // Common methods.
