@@ -1,0 +1,7 @@
+{
+    "name": "AutoTrack",
+    "version": "0.0.0",
+    "private": true,
+    "main": "./AutoTrack.js"
+}
+  

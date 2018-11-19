@@ -73,6 +73,9 @@ function parseQueryString(qString) {
     return ep;
 }
 
+/**
+ * App prototype.
+ */
 function App() {
     // lazy initialization with .init
     this.client = null; 
