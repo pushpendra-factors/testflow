@@ -47,6 +47,7 @@ function addUserProperties(properties={}) {
 let exposed = { init, reset, track, identify, addUserProperties };
 if (process.env.NODE_ENV === "development") {
     exposed["test"] = require("./test/suite.js");
+    exposed["app"] = app;
 }
 module.exports = exports = exposed;
 
