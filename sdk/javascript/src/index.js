@@ -1,12 +1,9 @@
 "use strict";
 
-const logger = require("./utils/logger");
-const util = require("./utils/util");
-
-var _fa = require("./app");
+var App = require("./app");
 
 // Global reference.
-var app = new _fa.App();
+var app = new App();
 
 /**
  * Initializes sdk environment on user application. Overwrites if initialized already.
@@ -14,13 +11,7 @@ var app = new _fa.App();
  * @param {string} appToken Unique application token.
  */
 function init(appToken) {
-    appToken = util.validatedStringArg("token", appToken);
-    return app.init(appToken)
-        .then(function() {
-            // Starts autotrack, if enabled. Need to change auto_track to boolean?
-            return autoTrack(app.getConfig("auto_track") === 1);
-        })
-        .catch(logger.error);  
+    return app.init(appToken);
 }
 
 /**
@@ -38,35 +29,11 @@ function track(eventName, eventProperties={}) {
 }
 
 /**
- * Automatically tracks events, if enabled by admin. Not exposed.
- * @param {boolean} enabled 
- */
-function autoTrack(enabled=false) {
-    if (!enabled) return false; // not enabled.
-    var en = window.location.host+window.location.pathname;
-    var search =  window.location.search;
-    // no query params.
-    if (search.length === 0) return app.track(en, {}, true);
-    return app.track(en, _fa.parseQueryString(search), true);
-}
-
-/**
  * Identify user with original userId from the application.
  * @param {string} customerUserId Actual id of the user from the application.
  */
 function identify(customerUserId) {
-    if (!app || !app.isInitialized())
-        throw new Error("FactorsError: SDK is not initialised with token.");
-    
-    customerUserId = util.validatedStringArg("customer_user_id", customerUserId);
-    
-    let payload = {};
-    _fa.updatePayloadWithUserIdFromCookie(payload);
-    payload.c_uid = customerUserId;
-    
-    return app.client.identify(payload)
-        .then(_fa.updateCookieIfUserIdInResponse)
-        .catch(logger.error);
+    return app.identify(customerUserId);
 }
 
 /**
@@ -74,22 +41,7 @@ function identify(customerUserId) {
  * @param {Object} properties 
  */
 function addUserProperties(properties={}) {
-    if (!app || !app.isInitialized())
-        throw new Error("FactorsError: SDK is not initialised with token.");
-
-    if (typeof(properties) != "object")
-        throw new Error("FactorsArgumentError: Properties should be an Object(key/values).");
-    
-    if (Object.keys(properties).length == 0)
-        return Promise.reject("No changes. Empty properties.");
-    
-    let payload = {};
-    _fa.updatePayloadWithUserIdFromCookie(payload);
-    payload.properties = properties;
-
-    return app.client.addUserProperties(payload)
-        .then(_fa.updateCookieIfUserIdInResponse)
-        .catch(logger.error);
+    return app.addUserProperties(properties);
 }
 
 let exposed = { init, reset, track, identify, addUserProperties };
