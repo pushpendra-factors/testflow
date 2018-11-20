@@ -13,14 +13,8 @@ type ProjectSetting struct {
 	// Used project_id as primary key also, becase of 1-1 relationship.
 	ProjectId uint64 `gorm:"primary_key:true" json:"-"` // exclude on JSON response.
 	// Defaults to AUTO_TRACK_DISABLED.
-	AutoTrack uint8 `gorm:"not null;default:0" json:"auto_track"`
+	AutoTrack bool `gorm:"not null" json:"auto_track"`
 }
-
-// Enum AutoTrack.
-const (
-	AUTO_TRACK_DISABLED = 0
-	AUTO_TRACK_ENABLED  = 1
-)
 
 func GetProjectSetting(projectId uint64) (*ProjectSetting, int) {
 	db := C.GetServices().Db

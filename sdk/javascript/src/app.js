@@ -110,7 +110,7 @@ App.prototype.init = function(token) {
         })
         .then(function() {
             // Starts autotrack, if enabled. Need to change auto_track to boolean?
-            return _this.autoTrack(_this.getConfig("auto_track") === 1);
+            return _this.autoTrack(_this.getConfig("auto_track"));
         })
         .catch(logger.error);
 }

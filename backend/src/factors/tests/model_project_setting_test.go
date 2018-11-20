@@ -18,18 +18,18 @@ func TestDBCreateAndGetProjectSetting(t *testing.T) {
 	assert.Equal(t, M.DB_SUCCESS, errCode)
 	assert.NotNil(t, projectSetting)
 	// Check auto track default as disabled.
-	assert.EqualValues(t, M.AUTO_TRACK_DISABLED, projectSetting.AutoTrack)
+	assert.False(t, projectSetting.AutoTrack)
 
 	project1, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 	assert.NotNil(t, project)
 
 	// Test CreateProjectSetting with project id.
-	projectSetting, errCode = M.CreateProjectSetting(&M.ProjectSetting{ProjectId: project1.ID, AutoTrack: M.AUTO_TRACK_ENABLED})
+	projectSetting, errCode = M.CreateProjectSetting(&M.ProjectSetting{ProjectId: project1.ID, AutoTrack: true})
 	assert.Equal(t, M.DB_SUCCESS, errCode)
 	assert.NotNil(t, projectSetting)
 	// Check auto track default as disabled.
-	assert.EqualValues(t, M.AUTO_TRACK_ENABLED, projectSetting.AutoTrack)
+	assert.True(t, projectSetting.AutoTrack)
 
 	// Test CreateProjectSetting without project id.
 	projectSetting, errCode = M.CreateProjectSetting(&M.ProjectSetting{ProjectId: 0})
