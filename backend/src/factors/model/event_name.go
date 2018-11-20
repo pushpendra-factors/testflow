@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	_ "github.com/jinzhu/gorm"
+	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -44,9 +44,8 @@ func CreateOrGetEventName(eventName *EventName) (*EventName, int) {
 	} else if err := db.Create(eventName).Error; err != nil {
 		log.WithFields(log.Fields{"eventName": &eventName, "error": err}).Error("CreateEventName Failed")
 		return nil, http.StatusInternalServerError
-	} else {
-		return eventName, DB_SUCCESS
 	}
+	return eventName, DB_SUCCESS
 }
 
 // Create or Get user created EventName.
@@ -66,19 +65,28 @@ func GetEventName(name string, projectId uint64) (*EventName, int) {
 
 	var eventName EventName
 	if err := db.Where(&EventName{Name: name, ProjectId: projectId}).First(&eventName).Error; err != nil {
-		return nil, 404
-	} else {
-		return &eventName, DB_SUCCESS
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+		return nil, http.StatusInternalServerError
 	}
+	return &eventName, DB_SUCCESS
 }
 
 func GetEventNames(projectId uint64) ([]EventName, int) {
+	if projectId == 0 {
+		log.Error("GetEventNames Failed. Missing projectId")
+		return nil, http.StatusBadRequest
+	}
+
 	db := C.GetServices().Db
 
 	var eventNames []EventName
 	if err := db.Where("project_id = ?", projectId).Find(&eventNames).Error; err != nil {
-		return nil, 404
-	} else {
-		return eventNames, DB_SUCCESS
+		return nil, http.StatusInternalServerError
 	}
+	if len(eventNames) == 0 {
+		return nil, http.StatusNotFound
+	}
+	return eventNames, DB_SUCCESS
 }

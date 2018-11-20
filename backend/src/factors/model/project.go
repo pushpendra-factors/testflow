@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	_ "github.com/jinzhu/gorm"
+	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -78,9 +78,9 @@ func CreateProject(project *Project) (*Project, int) {
 	if err := db.Create(project).Error; err != nil {
 		log.WithFields(log.Fields{"project": &project, "error": err}).Error("CreateProject Failed")
 		return nil, http.StatusInternalServerError
-	} else {
-		return project, DB_SUCCESS
 	}
+
+	return project, DB_SUCCESS
 }
 
 func GetProject(id uint64) (*Project, int) {
@@ -88,10 +88,12 @@ func GetProject(id uint64) (*Project, int) {
 
 	var project Project
 	if err := db.Where("id = ?", id).First(&project).Error; err != nil {
-		return nil, 404
-	} else {
-		return &project, DB_SUCCESS
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+		return nil, http.StatusInternalServerError
 	}
+	return &project, DB_SUCCESS
 }
 
 func GetProjectByToken(token string) (*Project, int) {
@@ -105,7 +107,10 @@ func GetProjectByToken(token string) (*Project, int) {
 
 	var project Project
 	if err := db.Where("token = ?", cleanToken).First(&project).Error; err != nil {
-		return nil, http.StatusNotFound
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+		return nil, http.StatusInternalServerError
 	}
 
 	return &project, DB_SUCCESS
@@ -116,8 +121,10 @@ func GetProjects() ([]Project, int) {
 
 	var projects []Project
 	if err := db.Find(&projects).Error; err != nil {
-		return nil, 404
-	} else {
-		return projects, DB_SUCCESS
+		return nil, http.StatusInternalServerError
 	}
+	if len(projects) == 0 {
+		return projects, http.StatusNotFound
+	}
+	return projects, DB_SUCCESS
 }

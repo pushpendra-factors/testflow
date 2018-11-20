@@ -67,6 +67,11 @@ func TestDBCreateAndGetProject(t *testing.T) {
 	// Bad input.
 	project, errCode = M.GetProjectByToken("")
 	assert.Equal(t, http.StatusBadRequest, errCode)
+
+	// RandomInput
+	project, errCode = M.GetProjectByToken(U.RandomLowerAphaNumString(32))
+	assert.Equal(t, http.StatusNotFound, errCode)
+
 	// Check corresponding project returned with token.
 	project, errCode = M.CreateProject(&M.Project{Name: projectName})
 	rProject, rErrCode := M.GetProjectByToken(project.Token)

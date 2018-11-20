@@ -86,7 +86,7 @@ func TestAPICreateAndGetEvent(t *testing.T) {
 	assert.Equal(t, 8, len(jsonResponseMap))
 
 	// Test GetEvent on random id.
-	id = "r4nd0m!234"
+	id = "9ad21963-bcfb-4563-aa02-8ea589710d1a"
 	w = httptest.NewRecorder()
 	req, _ = http.NewRequest("GET",
 		fmt.Sprintf("/projects/%d/users/%s/events/%s", project.ID, user.ID, id), nil)

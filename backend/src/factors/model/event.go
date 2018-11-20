@@ -62,9 +62,8 @@ func CreateEvent(event *Event) (*Event, int) {
 	if err := db.Create(event).Error; err != nil {
 		log.WithFields(log.Fields{"event": &event, "error": err}).Error("CreateEvent Failed")
 		return nil, http.StatusInternalServerError
-	} else {
-		return event, DB_SUCCESS
 	}
+	return event, DB_SUCCESS
 }
 
 func GetEvent(projectId uint64, userId string, id string) (*Event, int) {
@@ -72,8 +71,10 @@ func GetEvent(projectId uint64, userId string, id string) (*Event, int) {
 
 	var event Event
 	if err := db.Where("id = ?", id).Where("project_id = ?", projectId).Where("user_id = ?", userId).First(&event).Error; err != nil {
-		return nil, 404
-	} else {
-		return &event, DB_SUCCESS
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+		return nil, http.StatusInternalServerError
 	}
+	return &event, DB_SUCCESS
 }

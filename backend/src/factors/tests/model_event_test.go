@@ -62,8 +62,13 @@ func TestDBCreateAndGetEvent(t *testing.T) {
 	assert.Equal(t, postgres.Jsonb{RawMessage: json.RawMessage(nil)}, event.Properties)
 
 	// Test Get Event on non existent id.
-	retEvent, errCode = M.GetEvent(projectId, userId, "random_id")
+	retEvent, errCode = M.GetEvent(projectId, userId, "9ad21963-bcfb-4563-aa02-8ea589710d1a")
 	assert.Equal(t, http.StatusNotFound, errCode)
+	assert.Nil(t, retEvent)
+
+	// Test Get Event on wrong format of id.
+	retEvent, errCode = M.GetEvent(projectId, userId, "r4nd0m!234")
+	assert.Equal(t, http.StatusInternalServerError, errCode)
 	assert.Nil(t, retEvent)
 
 	// Test Create Event with id.

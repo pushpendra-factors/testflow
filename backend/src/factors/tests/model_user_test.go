@@ -90,6 +90,12 @@ func TestDBGetUsers(t *testing.T) {
 	assert.NotNil(t, project)
 	projectId := project.ID
 
+	var offset uint64 = 0
+	var limit uint64 = 10
+	// no users have been created
+	retUsers, errCode := M.GetUsers(projectId, offset, limit)
+	assert.Equal(t, http.StatusNotFound, errCode)
+
 	// Create 100 users.
 	var users []M.User
 	numUsers := 100
@@ -100,9 +106,7 @@ func TestDBGetUsers(t *testing.T) {
 		users = append(users, *user)
 	}
 
-	var offset uint64 = 0
-	var limit uint64 = 10
-	retUsers, errCode := M.GetUsers(projectId, offset, limit)
+	retUsers, errCode = M.GetUsers(projectId, offset, limit)
 	assert.Equal(t, M.DB_SUCCESS, errCode)
 	assert.Equal(t, limit, uint64(len(retUsers)))
 	assertUsersWithOffset(t, users[offset:offset+limit], retUsers)
