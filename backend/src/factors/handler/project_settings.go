@@ -36,7 +36,7 @@ func UpdateProjectSettingsHandler(c *gin.Context) {
 	projectId, err := strconv.ParseUint(c.Params.ByName("project_id"), 10, 64)
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("GetEvent Failed. ProjectId parse failed.")
-		c.AbortWithStatus(http.StatusBadRequest)
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid project id."})
 		return
 	}
 

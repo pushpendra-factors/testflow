@@ -227,18 +227,25 @@ npm run build-dev
 npm run build-prod
 ```
 
+* Build (Loader)
+```
+npm run build-loader
+```
+
 * Serve (development)
 ```
 npm run serve-dev
 ```
 
+* Dev Build will be served on http://localhost:8090/factors.dev using webpack.
+
 * Serve (production)
 ```bash
-# This build will not have tests.
+# This build will not have tests. 
 npm run serve-prod
 ```
 
-* Build will be served on http://localhost:8090/bundle-dev
+* Prod build will be served on http://localhost:8090/factors.html using loader script.
 
 * Validate SDK installation
 ```javascript
@@ -255,4 +262,5 @@ factors.test.run()
 // Running a specific test
 factors.test.Suite.TEST_NAME
 ```
+
 

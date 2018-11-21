@@ -23,6 +23,24 @@ func ServePostRequest(r *gin.Engine, uri string,
 	return w
 }
 
+func ServePutRequest(r *gin.Engine, uri string,
+	reqBodyString []byte) *httptest.ResponseRecorder {
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("PUT", uri, bytes.NewBuffer(reqBodyString))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+	return w
+}
+
+func ServeGetRequest(r *gin.Engine, uri string) *httptest.ResponseRecorder {
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", uri, bytes.NewBuffer([]byte{}))
+	req.Header.Set("Content-Type", "application/json") // Default header.
+	r.ServeHTTP(w, req)
+	return w
+}
+
 func setHeaders(req *http.Request, headers map[string]string) {
 	for k, v := range headers {
 		req.Header.Set(k, v)

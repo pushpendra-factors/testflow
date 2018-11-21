@@ -15,7 +15,7 @@ import (
 type Project struct {
 	ID   uint64 `gorm:"primary_key:true;" json:"id"`
 	Name string `gorm:"not null;" json:"name"`
-	// Token is indexed. Ignored on JSON response.
+	// An index created on token.
 	Token     string    `gorm:"size:32" json:"token"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
