@@ -19,7 +19,34 @@ export default function reducer(state={
           ...state,
           fetchingProjects: false,
           fetchedProjects: true,
-          projects: action.payload,
+          projects: action.payload
+        }
+      }
+      case "FETCH_CURRENT_PROJECT_SETTINGS_FULFILLED": {
+        return {
+          ...state,
+          currentProjectSettings: action.payload.settings
+        }
+      }
+      case "FETCH_CURRENT_PROJECT_SETTINGS_REJECTED": {
+        return {
+          ...state,
+          projectSettingsError: action.payload.err
+        }
+      }
+      case "UPDATE_CURRENT_PROJECT_SETTINGS_FULFILLED": {
+        let _state = { ...state };
+        if (_state.currentProjectSettings)
+          _state.currentProjectSettings = { 
+            ..._state.currentProjectSettings,
+            ...action.payload.updatedSettings // Updates the state of settings only which are updated.
+          };
+        return _state;
+      }
+      case "UPDATE_CURRENT_PROJECT_SETTINGS_REJECTED": {
+        return {
+          ...state,
+          projectEventsError: action.payload.err
         }
       }
       case "FETCH_CURRENT_PROJECT_EVENTS_FULFILLED": {
@@ -52,9 +79,10 @@ export default function reducer(state={
         eventPropertyValuesMap[action.payload.eventName] = {}
         eventPropertyValuesMap[action.payload.eventName][
           action.payload.propertyName] = action.payload.eventPropertyValues;
-        return {...state,
-                eventPropertyValuesMap: eventPropertyValuesMap,
-              }
+        return {
+          ...state,
+          eventPropertyValuesMap: eventPropertyValuesMap,
+        }
       }
       case "FETCH_CURRENT_PROJECT_EVENT_PROPERTY_VALUES_REJECTED": {
         return {...state,

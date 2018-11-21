@@ -5,29 +5,77 @@ export function fetchProjects() {
   return function(dispatch) {
     dispatch({type: "FETCH_PROJECTS"});
 
-    axios.get(appConfig.API_PATH + "projects")
+    return axios.get(appConfig.API_PATH + "projects")
       .then((response) => {
-        dispatch({type: "FETCH_PROJECTS_FULFILLED", payload: response.data})
+        return dispatch({type: "FETCH_PROJECTS_FULFILLED", payload: response.data});
       })
       .catch((err) => {
-        dispatch({type: "FETCH_PROJECTS_REJECTED", payload: err})
+        return dispatch({type: "FETCH_PROJECTS_REJECTED", payload: err});
       })
   }
 }
 
 export function fetchCurrentProjectEvents(currentProject) {
   return function(dispatch) {
-    axios.get(appConfig.API_PATH + "projects/" + currentProject.value + "/event_names")
+    return axios.get(appConfig.API_PATH + "projects/" + currentProject.value + "/event_names")
       .then((response) => {
-        dispatch({type: "FETCH_CURRENT_PROJECT_EVENTS_FULFILLED",
+        return dispatch({type: "FETCH_CURRENT_PROJECT_EVENTS_FULFILLED",
                  payload: { currentProject: currentProject, currentProjectEventNames: response.data,
                    eventPropertiesMap: {} }})
       })
       .catch((err) => {
-        dispatch({type: "FETCH_CURRENT_PROJECT_EVENTS_REJECTED",
+        return dispatch({type: "FETCH_CURRENT_PROJECT_EVENTS_REJECTED",
                  payload: { currentProject: currentProject, currentProjectEventNames: [],
-                   eventPropertiesMap: {}, err: err }})
+                   eventPropertiesMap: {}, err: err }});
       })
+  }
+}
+
+export function fetchCurrentProjectSettings(currentProject) {
+  return function(dispatch) {
+    return axios.get(appConfig.API_PATH + "projects/" + currentProject.value + "/settings")
+     .then((response) => {
+        return dispatch({
+          type: "FETCH_CURRENT_PROJECT_SETTINGS_FULFILLED", 
+          payload: {
+            currentProject: currentProject, 
+            settings: response.data
+          }
+        });
+      })
+      .catch((err) => {
+        return dispatch({
+          type: "FETCH_CURRENT_PROJECT_SETTINGS_REJECTED", 
+          payload: {
+            currentProject: currentProject, 
+            settings: {}, 
+            err: err
+          }
+        });
+      });
+  }
+}
+
+export function udpateCurrentProjectSettings(currentProject, payload) {
+  return function(dispatch) {
+    return axios.put(appConfig.API_PATH + "projects/" + currentProject.value + "/settings", payload)
+     .then((response) => {
+        return dispatch({
+          type: "UPDATE_CURRENT_PROJECT_SETTINGS_FULFILLED", 
+          payload: {
+            updatedSettings: response.data
+          }
+        });
+      })
+      .catch((err) => {
+        return dispatch({
+          type: "UPDATE_CURRENT_PROJECT_SETTINGS_REJECTED", 
+          payload: {
+            updatedSettings: {}, 
+            err: err
+          }
+        });
+      });
   }
 }
 
