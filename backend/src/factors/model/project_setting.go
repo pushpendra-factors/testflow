@@ -69,6 +69,7 @@ func UpdateProjectSettings(projectId uint64, ps *ProjectSetting) (*ProjectSettin
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound
 		}
+		log.WithFields(log.Fields{"ProjectSetting": ps, "error": err, "update_fields": updateFields}).Error("Failed updating ProjectSettings.")
 		return nil, http.StatusInternalServerError
 	}
 
