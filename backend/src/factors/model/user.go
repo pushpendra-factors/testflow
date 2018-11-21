@@ -41,9 +41,8 @@ func CreateUser(user *User) (*User, int) {
 	if err := db.Create(user).Error; err != nil {
 		log.WithFields(log.Fields{"user": &user, "error": err}).Error("CreateUser Failed")
 		return nil, http.StatusInternalServerError
-	} else {
-		return user, DB_SUCCESS
 	}
+	return user, DB_SUCCESS
 }
 
 func GetUser(projectId uint64, id string) (*User, int) {
@@ -51,10 +50,12 @@ func GetUser(projectId uint64, id string) (*User, int) {
 
 	var user User
 	if err := db.Where("project_id = ?", projectId).Where("id = ?", id).First(&user).Error; err != nil {
-		return nil, 404
-	} else {
-		return &user, DB_SUCCESS
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+		return nil, http.StatusInternalServerError
 	}
+	return &user, DB_SUCCESS
 }
 
 func GetUsers(projectId uint64, offset uint64, limit uint64) ([]User, int) {
@@ -62,10 +63,12 @@ func GetUsers(projectId uint64, offset uint64, limit uint64) ([]User, int) {
 
 	var users []User
 	if err := db.Order("created_at").Offset(offset).Where("project_id = ?", projectId).Limit(limit).Find(&users).Error; err != nil {
-		return nil, 404
-	} else {
-		return users, DB_SUCCESS
+		return nil, http.StatusInternalServerError
 	}
+	if len(users) == 0 {
+		return nil, http.StatusNotFound
+	}
+	return users, DB_SUCCESS
 }
 
 func GetUserLatestByCustomerUserId(projectId uint64, customerUserId string) (*User, int) {
@@ -80,7 +83,6 @@ func GetUserLatestByCustomerUserId(projectId uint64, customerUserId string) (*Us
 		}
 		return nil, http.StatusInternalServerError
 	}
-
 	return &user, DB_SUCCESS
 }
 
@@ -109,9 +111,8 @@ func UpdateUser(projectId uint64, id string, user *User) (*User, int) {
 	if err := db.Model(&updatedUser).Where("project_id = ?", projectId).Where("id = ?", cleanId).Updates(user).Error; err != nil {
 		log.WithFields(log.Fields{"user": user, "error": err}).Error("Failed updating fields by user_id")
 		return nil, http.StatusInternalServerError
-	} else {
-		return &updatedUser, DB_SUCCESS
 	}
+	return &updatedUser, DB_SUCCESS
 }
 
 // Todo(Dinesh): Remove this method. Use UpdateUser to update any field by id.
@@ -134,7 +135,6 @@ func UpdateCustomerUserIdById(projectId uint64, id string, customerUserId string
 	if err := db.Model(&user).Where("project_id = ?", projectId).Where("id = ?", cleanId).Update("customer_user_id", customerUserId).Error; err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("Failed updating customer_user_id by user_id")
 		return nil, http.StatusInternalServerError
-	} else {
-		return &user, DB_SUCCESS
 	}
+	return &user, DB_SUCCESS
 }

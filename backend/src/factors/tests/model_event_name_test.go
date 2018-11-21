@@ -5,6 +5,7 @@ import (
 	U "factors/util"
 	"math"
 	"net/http"
+	"sort"
 	"testing"
 	"time"
 
@@ -87,4 +88,40 @@ func TestDBCreateAndGetEventName(t *testing.T) {
 	retEventName, errCode = M.CreateOrGetUserCreatedEventName(ucEventName)
 	assert.Equal(t, http.StatusBadRequest, errCode)
 	assert.Nil(t, retEventName)
+}
+
+func TestDBGetEventNames(t *testing.T) {
+	// Initialize a project for the event.
+	randomProjectName := U.RandomLowerAphaNumString(15)
+	project, errCode := M.CreateProject(&M.Project{Name: randomProjectName})
+	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.NotNil(t, project)
+	projectId := project.ID
+
+	// bad input
+	events, errCode := M.GetEventNames(0)
+	assert.Equal(t, http.StatusBadRequest, errCode)
+
+	// get events should return not found, no events have been created
+	events, errCode = M.GetEventNames(projectId)
+	assert.Equal(t, http.StatusNotFound, errCode)
+	assert.Nil(t, events)
+
+	// create events
+	eventName1, errCode := M.CreateOrGetEventName(&M.EventName{Name: "test_event", ProjectId: projectId})
+	assert.Equal(t, M.DB_SUCCESS, errCode)
+	eventName2, errCode := M.CreateOrGetEventName(&M.EventName{Name: "test_event_1", ProjectId: projectId})
+	assert.Equal(t, M.DB_SUCCESS, errCode)
+
+	createdEventsNames := []string{eventName1.Name, eventName2.Name}
+	sort.Strings(createdEventsNames)
+
+	// should return events
+	events, errCode = M.GetEventNames(projectId)
+	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Len(t, events, 2)
+
+	resultEventNames := []string{events[0].Name, events[1].Name}
+	sort.Strings(createdEventsNames)
+	assert.Equal(t, createdEventsNames, resultEventNames)
 }
