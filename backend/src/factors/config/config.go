@@ -21,14 +21,18 @@ var initiated bool = false
 
 const DEVELOPMENT = "development"
 
+type DBConf struct {
+	Host     string `json:"host"`
+	Port     int    `json:"port"`
+	User     string `json:"user"`
+	Name     string `json:"name"`
+	Password string `json:"password"`
+}
+
 type Configuration struct {
 	Env          string            `json:"env"`
 	Port         int               `json:"port"`
-	DbHost       string            `json:"db_host"`
-	DbPort       int               `json:"db_port"`
-	DbUser       string            `json:"db_user"`
-	DbName       string            `json:"db_name"`
-	DbPassword   string            `json:"db_password"`
+	DBInfo       DBConf            `json:"db"`
 	PatternFiles map[uint64]string `json:"pattern_files"`
 }
 type Services struct {
@@ -56,27 +60,32 @@ func initLogging() {
 }
 
 func initConfigFromFile() error {
+
 	configFileAbsPath, _ := filepath.Abs(*configFilePath)
+
+	logCtx := log.WithFields(log.Fields{
+		"file": configFileAbsPath,
+	})
+
 	raw, err := ioutil.ReadFile(configFileAbsPath)
 	if err != nil {
-		log.WithFields(log.Fields{"file": configFileAbsPath}).Error("Failed to load config")
-		return err
+		logCtx.WithError(err).Error("Failed to load config")
 	}
 
 	if err := json.Unmarshal(raw, &configuration); err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("Failed to unmarshal json")
+		logCtx.WithError(err).Error("Failed to unmarshal json")
 	}
-	log.WithFields(log.Fields{"file": configFileAbsPath, "config": &configuration}).Info("Config File Loaded")
+	logCtx.WithFields(log.Fields{"config": &configuration}).Info("Config File Loaded")
 	return nil
 }
 
 func initServices() error {
 	db, err := gorm.Open("postgres", fmt.Sprintf("host=%s port=%d user=%s dbname=%s password=%s sslmode=disable",
-		configuration.DbHost,
-		configuration.DbPort,
-		configuration.DbUser,
-		configuration.DbName,
-		configuration.DbPassword))
+		configuration.DBInfo.Host,
+		configuration.DBInfo.Port,
+		configuration.DBInfo.User,
+		configuration.DBInfo.Name,
+		configuration.DBInfo.Password))
 	// Connection Pooling and Logging.
 	db.DB().SetMaxIdleConns(10)
 	db.DB().SetMaxOpenConns(100)
