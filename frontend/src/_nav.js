@@ -5,20 +5,20 @@ export default {
       url: '/dashboard',
       icon: 'icon-speedometer'
     },
+    {
+      name: 'Factor',
+      url: '/factor',
+      icon: 'icon-graph',
+    },
 	  {
       name: 'Query',
       url: '/query',
       icon: 'icon-question',
     },
-	  {
-      name: 'Factor',
-      url: '/factor',
-      icon: 'icon-graph',
-    },
     {
-      name: "AutoTrack",
-      url: '/auto-track',
-      icon: 'icon-note'
+      name: "Settings",
+      url: '/settings',
+      icon: 'icon-settings'
     }
   ],
 };

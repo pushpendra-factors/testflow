@@ -22,8 +22,8 @@ const Factor = Loadable({
   loading: Loading,
 });
 
-const AutoTrack = Loadable({
-  loader: () => import('./views/AutoTrack'),
+const Settings = Loadable({
+  loader: () => import('./views/Settings'),
   loading: Loading,
 })
 
@@ -44,7 +44,7 @@ const routes = [
   { path: '/dashboard', name: 'Dashboard', component: Dashboard },
   { path: '/query', name: 'Query', component: Query },
   { path: '/factor', name: 'Factor', component: Factor },
-  { path: '/auto-track', name: 'AutoTrack', component: AutoTrack },
+  { path: '/settings', name: 'Settings', component: Settings },
   { path: '/users', exact: true,  name: 'Users', component: Users },
   { path: '/users/:id', exact: true, name: 'User Details', component: User },
 ];

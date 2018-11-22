@@ -78,10 +78,6 @@ class DefaultLayout extends Component {
     this.props.dispatch(fetchCurrentProjectEvents(project));
   }
 
-  handleChange = (selectedProject) => {
-    this.fetchProjectDependencies(selectedProject);
-  }
-
   render() {
     const mappedProjects = Array.from(this.props.projects,
        project => ({"label": project.name, "value": project.id}))
@@ -92,28 +88,17 @@ class DefaultLayout extends Component {
 
     return (
       <div className="app">
-        <AppHeader fixed>
-          <DefaultHeader />
+        <AppHeader className="fapp-header" fixed>
+          <DefaultHeader fetchProjectDependencies={this.fetchProjectDependencies} projects={mappedProjects} currentProject={this.props.currentProject} />
         </AppHeader>
         <div className="app-body">
           <AppSidebar fixed display="lg">
             <AppSidebarHeader />
-            <AppSidebarForm>
-              <Select
-                options={mappedProjects}
-                value={this.props.currentProject}
-                onChange={this.handleChange}
-                styles={projectSelectStyles}
-                placeholder={"Select Project ..."}
-                blurInputOnSelect={true}
-                />
-            </AppSidebarForm>
-            <AppSidebarNav navConfig={navigation} {...this.props} />
+            <AppSidebarNav className="fapp-sidebar-nav" navConfig={navigation} {...this.props} />
             <AppSidebarFooter />
             <AppSidebarMinimizer />
           </AppSidebar>
-          <main className="main">
-            <AppBreadcrumb appRoutes={routes}/>
+          <main className="main fapp-main">
             <Container fluid>
               <Switch>
                 {routes.map((route, idx) => {
