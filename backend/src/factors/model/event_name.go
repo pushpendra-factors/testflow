@@ -73,6 +73,20 @@ func GetEventName(name string, projectId uint64) (*EventName, int) {
 	return &eventName, DB_SUCCESS
 }
 
+func GetEventNameByFilter(filter *EventName) (*EventName, int) {
+	db := C.GetServices().Db
+
+	var eventName EventName
+	if err := db.First(&eventName, &filter).Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+		return nil, http.StatusInternalServerError
+	}
+
+	return &eventName, DB_SUCCESS
+}
+
 func GetEventNames(projectId uint64) ([]EventName, int) {
 	if projectId == 0 {
 		log.Error("GetEventNames Failed. Missing projectId")

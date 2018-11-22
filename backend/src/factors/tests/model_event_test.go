@@ -66,6 +66,18 @@ func TestDBCreateAndGetEvent(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, errCode)
 	assert.Nil(t, retEvent)
 
+	// Test Create Event with properties.
+	properties := json.RawMessage(`{"email": "random@example.com"}`)
+	event, errCode = M.CreateEvent(&M.Event{EventNameId: eventNameId, ProjectId: projectId, UserId: userId, Properties: postgres.Jsonb{properties}})
+	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.NotNil(t, event)
+	assert.NotEqual(t, postgres.Jsonb{RawMessage: json.RawMessage(nil)}, event.Properties)
+	// Retrieve and validate properties.
+	retEvent, errCode = M.GetEvent(projectId, userId, event.ID)
+	eventPropertiesBytes, err := retEvent.Properties.Value()
+	var eventPropertiesMap map[string]interface{}
+	json.Unmarshal(eventPropertiesBytes.([]byte), &eventPropertiesMap)
+	assert.Equal(t, "random@example.com", eventPropertiesMap["email"])
 	// Test Get Event on wrong format of id.
 	retEvent, errCode = M.GetEvent(projectId, userId, "r4nd0m!234")
 	assert.Equal(t, http.StatusInternalServerError, errCode)

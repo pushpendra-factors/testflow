@@ -77,4 +77,19 @@ func TestDBCreateAndGetProject(t *testing.T) {
 	rProject, rErrCode := M.GetProjectByToken(project.Token)
 	assert.Equal(t, M.DB_SUCCESS, rErrCode)
 	assert.Equal(t, project.ID, rProject.ID)
+
+	// Test CreateProjectWithDependencies
+	start = time.Now()
+	projectWithDeps, errCode := M.CreateProjectWithDependencies(&M.Project{Name: U.RandomLowerAphaNumString(15)})
+	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.True(t, projectWithDeps.ID > 0)
+	assert.Equal(t, 32, len(projectWithDeps.Token))
+	assert.True(t, projectWithDeps.CreatedAt.After(start))
+	assert.True(t, projectWithDeps.UpdatedAt.After(start))
+	assert.Equal(t, projectWithDeps.CreatedAt, projectWithDeps.UpdatedAt)
+
+	// Test depedencies creation - ProjectSettings.
+	ps, errCode := M.GetProjectSetting(projectWithDeps.ID)
+	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.NotNil(t, ps)
 }

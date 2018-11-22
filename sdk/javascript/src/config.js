@@ -13,7 +13,7 @@ const CONFIG = {
     },
     production: {
         api: {
-            host: "https://factors.ai"
+            host: "http://localhost:8080"
         }
     }
 }

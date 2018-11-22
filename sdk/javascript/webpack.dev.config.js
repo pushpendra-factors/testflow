@@ -1,9 +1,11 @@
+var path = require('path');
+
 module.exports = {
   entry: "./src/index.js",
   output: {
-    filename: "bundle-dev.js",
+    filename: "factors.dev.js",
     library: "factors",
-    libraryTarget: "umd"
+    libraryTarget: "var"
   },
   module: {
     rules: [

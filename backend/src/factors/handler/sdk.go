@@ -6,11 +6,22 @@ import (
 	U "factors/util"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
+
+type SDKTrackPayload struct {
+	Name       string         `json:"event_name"`
+	Properties postgres.Jsonb `json:"event_properties"`
+	ProjectId  uint64         `json:"project_id"`
+	UserId     string         `json:"user_id"`
+	Auto       bool           `json:"auto"`
+	CreatedAt  time.Time      `json:"created_at"`
+	UpdatedAt  time.Time      `json:"updated_at"`
+}
 
 type SDKIdentifyPayload struct {
 	UserId         string `json:"user_id"`
@@ -23,7 +34,7 @@ type SDKAddPropertiesPayload struct {
 }
 
 // Test command.
-// curl -i -H "Content-Type: application/json" -H "Authorization: YOUR_TOKEN" -X POST http://localhost:8080/sdk/event/track -d '{"user_id": "YOUR_USER_ID", "event_name": "login", "properties": {"ip": "10.0.0.1", "mobile": true}}'
+// curl -i -H "Content-Type: application/json" -H "Authorization: YOUR_TOKEN" -X POST http://localhost:8080/sdk/event/track -d '{"user_id": "YOUR_USER_ID", "event_name": "login", "event_properties": {"ip": "10.0.0.1", "mobile": true}}'
 func SDKTrackHandler(c *gin.Context) {
 	r := c.Request
 
@@ -33,9 +44,11 @@ func SDKTrackHandler(c *gin.Context) {
 		return
 	}
 
-	var event EventWithName
-	err := json.NewDecoder(r.Body).Decode(&event)
-	if err != nil {
+	var event SDKTrackPayload
+
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&event); err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("Tracking failed. Json Decoding failed.")
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Tracking failed. Invalid payload."})
 		return
@@ -70,7 +83,15 @@ func SDKTrackHandler(c *gin.Context) {
 		response = gin.H{"user_id": newUser.ID}
 	}
 
-	eventName, errCode := M.CreateOrGetEventName(&M.EventName{Name: event.Name, ProjectId: scopeProjectId})
+	var eventName *M.EventName
+	var errCode int
+	// if auto_track enabled, auto_name = event_name else auto_name = "UCEN".
+	if event.Auto {
+		eventName, errCode = M.CreateOrGetEventName(&M.EventName{Name: event.Name,
+			AutoName: event.Name, ProjectId: scopeProjectId})
+	} else {
+		eventName, errCode = M.CreateOrGetUserCreatedEventName(&M.EventName{Name: event.Name, ProjectId: scopeProjectId})
+	}
 	if errCode != http.StatusConflict && errCode != M.DB_SUCCESS {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Tracking failed. EventName creation failed."})
 		return
@@ -100,12 +121,11 @@ func SDKIdentifyHandler(c *gin.Context) {
 		return
 	}
 
+	var identifiedUser SDKIdentifyPayload
+
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
-
-	identifiedUser := SDKIdentifyPayload{}
-	err := json.NewDecoder(r.Body).Decode(&identifiedUser)
-	if err != nil {
+	if err := decoder.Decode(&identifiedUser); err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("Identification failed. JSON Decoding failed.")
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Identification failed. Invalid payload."})
 		return
@@ -204,10 +224,10 @@ func SDKAddUserPropertiesHandler(c *gin.Context) {
 		return
 	}
 
+	var addPropsUser SDKAddPropertiesPayload
+
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
-
-	addPropsUser := SDKAddPropertiesPayload{}
 	if err := decoder.Decode(&addPropsUser); err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("Add user properties failed. JSON Decoding failed.")
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Add user properties failed. Invalid payload."})
@@ -248,4 +268,24 @@ func SDKAddUserPropertiesHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Added user properties successfully."})
+}
+
+// Test command.
+// curl -i -H "Content-Type: application/json" -H "Authorization: YOUR_TOKEN" -X GET http://localhost:8080/sdk/project/get_settings
+func SDKGetProjectSettings(c *gin.Context) {
+	// Get ProjecId scope for the request.
+	scopeProjectIdIntf := U.GetScopeByKey(c, "projectId")
+	if scopeProjectIdIntf == nil {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Get project settings failed. Invalid project."})
+		return
+	}
+	scopeProjectId := scopeProjectIdIntf.(uint64)
+
+	projectSetting, errCode := M.GetProjectSetting(scopeProjectId)
+	if errCode != M.DB_SUCCESS {
+		c.AbortWithStatusJSON(errCode, gin.H{"error": "Get project settings failed."})
+		return
+	}
+
+	c.JSON(http.StatusOK, projectSetting)
 }

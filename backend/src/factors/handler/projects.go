@@ -26,9 +26,9 @@ func CreateProjectHandler(c *gin.Context) {
 	}
 
 	var errCode int
-	_, errCode = M.CreateProject(&project)
+	_, errCode = M.CreateProjectWithDependencies(&project)
 	if errCode != M.DB_SUCCESS {
-		c.AbortWithStatus(errCode)
+		c.AbortWithStatusJSON(errCode, gin.H{"error": "Creating project failed."})
 	} else {
 		c.JSON(http.StatusCreated, project)
 	}

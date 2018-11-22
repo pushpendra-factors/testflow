@@ -24,7 +24,11 @@ import routes from '../../routes';
 import DefaultAside from './DefaultAside';
 import DefaultFooter from './DefaultFooter';
 import DefaultHeader from './DefaultHeader';
-import { fetchProjects, fetchCurrentProjectEvents } from "../../actions/projectsActions"
+import { 
+  fetchProjects, 
+  fetchCurrentProjectEvents, 
+  fetchCurrentProjectSettings 
+} from "../../actions/projectsActions";
 
 
 const projectSelectStyles = {
@@ -65,16 +69,25 @@ class DefaultLayout extends Component {
     this.props.dispatch(fetchProjects())
   }
 
-  handleChange = (selectedOption) => {
-    this.props.dispatch(fetchCurrentProjectEvents(selectedOption))
+  /**
+   * Loads all dependencies; 
+   * */
+  fetchProjectDependencies  = (project) => {
+    // Independent methods. Not chained.
+    this.props.dispatch(fetchCurrentProjectSettings(project));
+    this.props.dispatch(fetchCurrentProjectEvents(project));
+  }
+
+  handleChange = (selectedProject) => {
+    this.fetchProjectDependencies(selectedProject);
   }
 
   render() {
     const mappedProjects = Array.from(this.props.projects,
        project => ({"label": project.name, "value": project.id}))
     if (!this.props.currentProject && mappedProjects.length > 0) {
-      // Default select first project.
-      this.props.dispatch(fetchCurrentProjectEvents(mappedProjects[0]))
+      // Default select first project.    
+      this.fetchProjectDependencies(mappedProjects[0]);
     }
 
     return (

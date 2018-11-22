@@ -1,1 +1,11 @@
+/*
+Custom application CSS
+*/
 
+.sidebar .nav{
+    font-weight: 500 !important;
+}
+
+.sidebar .nav-link .nav-icon {
+    font-size: 1rem !important;
+}

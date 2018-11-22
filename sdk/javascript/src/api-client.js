@@ -4,6 +4,7 @@ const config = require("./config");
 const URI_TRACK = "/sdk/event/track";
 const URI_IDENTIFY = "/sdk/user/identify";
 const URI_ADD_USER_PROPERTIES = "/sdk/user/add_properties";
+const URI_ADD_PROJECT_SETTINGS="/sdk/project/get_settings";
 
 function APIClient(token) {
    this.token = token;
@@ -59,5 +60,14 @@ APIClient.prototype.addUserProperties = function(payload) {
         customHeaders
     );
 }
+
+APIClient.prototype.getProjectSettings = function() {
+    let customHeaders = { "Authorization": this.token };
+    return Request.get(
+        this.getURL(URI_ADD_PROJECT_SETTINGS),
+        customHeaders
+    );
+}
+
 
 module.exports = exports = APIClient;

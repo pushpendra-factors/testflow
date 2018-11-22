@@ -11,6 +11,8 @@ const ROUTE_GROUP_PREFIX_SDK = "/sdk"
 func InitAppRoutes(r *gin.Engine) {
 	r.POST("/projects", CreateProjectHandler)
 	r.GET("/projects", GetProjectsHandler)
+	r.GET("/projects/:project_id/settings", GetProjectSettingHandler)
+	r.PUT("/projects/:project_id/settings", UpdateProjectSettingsHandler)
 	r.GET("/projects/:project_id/event_names", GetEventNamesHandler)
 	r.GET("/projects/:project_id/event_names/:event_name/properties", GetEventPropertiesHandler)
 	r.GET("/projects/:project_id/event_names/:event_name/properties/:property_name/values", GetEventPropertyValuesHandler)
@@ -29,4 +31,5 @@ func InitSDKRoutes(r *gin.Engine) {
 	sdkRG.POST("/event/track", SDKTrackHandler)
 	sdkRG.POST("/user/identify", SDKIdentifyHandler)
 	sdkRG.POST("/user/add_properties", SDKAddUserPropertiesHandler)
+	sdkRG.GET("/project/get_settings", SDKGetProjectSettings)
 }
