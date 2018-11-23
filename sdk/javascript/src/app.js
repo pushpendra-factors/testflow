@@ -43,25 +43,30 @@ function updatePayloadWithUserIdFromCookie(payload) {
  * Parse query string.
  * @param {*} qString 
  * ----- Cases -----
- * window.search = "" -> {}
- * window.search = "?" -> {}
- * window.search = "?a" -> {a: null}
- * window.search = "?a=" -> {a: null}
- * window.search = "?a=10" -> {a: 10}
- * window.search = "?a=10&" -> {a: 10}
- * window.search = "?a=10&b" -> {a: 10, b: null}
- * window.search = "?a=10&b=20" -> {a: 10, b: 20}
+ * window.location.search = "" -> {}
+ * window.location.search = "?" -> {}
+ * window.location.search = "?a" -> {a: null}
+ * window.location.search = "?a=" -> {a: null}
+ * window.location.search = "?a=10" -> {a: 10}
+ * window.location.search = "?a=10&" -> {a: 10}
+ * window.location.search = "?a=10&b" -> {a: 10, b: null}
+ * window.location.search = "?a=10&b=20" -> {a: 10, b: 20}
  */
 function parseQueryString(qString) {
-    var ep = {};
-    var t = null;
+    // "?" check is not necessary for window.search. Added to stay pure.
+    if (typeof(qString) !== "string" 
+        || qString.length === 0 
+        || (qString.length === 1 && qString.indexOf("?") === 0)) 
+        return {};
+    let ep = {};
+    let t = null;
     // Remove & at the end.
-    var ambPos = qString.indexOf("&");
+    let ambPos = qString.indexOf("&");
     if (ambPos === qString.length-1) qString = qString.slice(0, qString.length-1);
     if (ambPos >= 0) t = qString.split("&");
     else t = [qString];
     for (var i=0; i<t.length; i++){
-        var kv = null;
+        let kv = null;
         if (t[i].indexOf("=") >= 0) kv = t[i].split("=");
         else kv = [t[i], null];
         // Remove ? on first query param.
@@ -136,8 +141,6 @@ App.prototype.autoTrack = function(enabled=false) {
     if (!enabled) return false; // not enabled.
     var en = window.location.host+window.location.pathname;
     var search =  window.location.search;
-    // no query params.
-    if (search.length === 0) return this.track(en, {}, true);
     return this.track(en, parseQueryString(search), true);
 }
 
