@@ -8,7 +8,7 @@ export default {
     {
       name: 'Factor',
       url: '/factor',
-      icon: 'icon-graph',
+      icon: 'fa fa-code',
     },
 	  {
       name: 'Query',

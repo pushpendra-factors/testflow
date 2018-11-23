@@ -4,7 +4,8 @@ import PropTypes from 'prop-types';
 import { connect } from "react-redux"
 
 
-import { AppAsideToggler, AppHeaderDropdown, AppNavbarBrand, AppSidebarToggler } from '@coreui/react';
+
+import { AppHeaderDropdown, AppSidebarToggler } from '@coreui/react';
 import factorslogo from '../../assets/img/brand/factors-logo.svg'
 import factorsicon from '../../assets/img/brand/factors-icon.svg'
 
@@ -13,13 +14,6 @@ import {
 } from '@coreui/react';
 import Select from 'react-select';
 // sidebar nav config
-
-import { 
-  fetchProjects, 
-  fetchCurrentProjectEvents, 
-  fetchCurrentProjectSettings 
-} from "../../actions/projectsActions";
-
 
 const propTypes = {
   children: PropTypes.node,

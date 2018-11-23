@@ -4,7 +4,7 @@ import { Doughnut } from 'react-chartjs-2';
 import {
   Card,
   CardBody,
-  CardHeader,
+  CardFooter,
   Col,
   Container,
   Row,
@@ -107,10 +107,7 @@ class FunnelChartCard extends Component {
 
     return (
       <Card>
-      <CardHeader>
-      {chartData.header}
-      </CardHeader>
-      <CardBody>
+      <CardBody className="fapp-card-body">
       <Row noGutters={true}>
       {
         baseFunnelGraphCols
@@ -135,6 +132,9 @@ class FunnelChartCard extends Component {
       }
       </Row>
       </CardBody>
+      <CardFooter className="fapp-chart-card-footer">
+      {chartData.header}
+      </CardFooter>
       </Card>
     );
   }
