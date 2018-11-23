@@ -55,7 +55,7 @@ class Settings extends Component {
           <div>
             <Row>
               <Col xs='12' md='12'>
-                <Card> 
+                <Card className="fapp-card"> 
                   <CardHeader>
                     <div style={{ position: "absolute", paddingTop: "0.4rem" }}><strong>Configure</strong></div>
                     <Button onClick={this.handleAutoTrackToggle} color="success" style={{ position: "relative", float:"right", padding: "7px 35px" }}><strong>{this.getAutoTrackToggleText()}</strong></Button>
@@ -65,7 +65,7 @@ class Settings extends Component {
                       <Col md={{ size: '6' }} style={{ paddingLeft: "3rem" }}>                                            
                         <FormGroup>
                           <Label for="code-snippet">Javascript SDK </Label>
-                          <Input style={{ height: "17vh" }} type="textarea" name="text" id="code-snippet" value={this.getSDKScript()}/>
+                          <Input style={{ height: "12vh" }} type="textarea" name="text" id="code-snippet" value={this.getSDKScript()}/>
                         </FormGroup>
                       </Col>
                     </Row>

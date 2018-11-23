@@ -7,7 +7,7 @@ body {
 }
 
 .fapp-main {
-    padding: 50px 10px;
+    padding: 50px 0;
 }
 
 .fapp-header-right {
@@ -20,7 +20,8 @@ body {
 
 .fapp-header {
     height: 65px !important;
-    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.03), 0 6px 20px 0 rgba(0, 0, 0, 0.02);
+    border: none !important;
+    box-shadow: 0 4px 10px 0 rgba(0, 0, 0, 0.09), 0 6px 20px 0 rgba(0, 0, 0, 0);
 }
 
 .fapp-bell {
@@ -33,6 +34,20 @@ body {
 
 .sidebar .nav-link .nav-icon {
     font-size: 1rem !important;
+    color: #fff !important;
+}
+
+.sidebar .nav-link.active {
+    background: #31476e !important;
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.5), 0 6px 20px 0 rgba(0, 0, 0, 0.1);
+}
+
+.sidebar .nav-link.active .nav-icon {
+    color: #20a8d8 !important;
+}
+
+.fapp-sidebar {
+    background: #081e4c !important;
 }
 
 .fapp-sidebar-form {
@@ -79,6 +94,11 @@ body {
     color: #8f9ba6
 }
 
+/* Placehoder text on select */
+.fapp-search-card .css-1492t68 {
+    letter-spacing: 0.05rem;
+}
+
 .fapp-search-card .form-group {
     margin-bottom: 2rem;
 }
@@ -101,4 +121,24 @@ body {
     color: #8f9ba6;
     background-color: white;
     border-radius: 10px;
+}
+
+.fapp-chart-card-footer {
+    background: none !important;
+    border-top: none !important;
+    line-height: 1.5rem;
+    padding: 0.5rem 0 1.7rem 4rem !important;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    color: #23282c;
+}
+
+.fapp-card-body {
+    padding: 1.7rem 1.25rem !important;
+}
+
+/* Used with card with additional maring */
+.fapp-card {
+    margin-left: 2rem;
+    margin-right: 2rem;
 }

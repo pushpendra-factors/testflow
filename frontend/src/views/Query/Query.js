@@ -183,7 +183,7 @@ class Query extends Component {
         closeMenuOnSelect={false}
         styles={customStyles}
         options={this.state.data}
-        placeholder="Enter Query.."
+        placeholder="Enter query."
       />
       </div>
       </FormGroup>

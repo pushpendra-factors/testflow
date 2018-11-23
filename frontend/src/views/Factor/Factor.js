@@ -323,7 +323,7 @@ class Factor extends Component {
                 getEventPropertiesOptions={this.getEventPropertiesOptions}
                 getEventPropertyValueOptions={this.getEventPropertyValueOptions}
                 onKeyDown={this.factor}
-                holderText="Enter Goal.."
+                holderText="Enter goal."
               />
             </Col>
           </Row>

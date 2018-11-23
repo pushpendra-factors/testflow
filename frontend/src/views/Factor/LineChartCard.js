@@ -3,7 +3,8 @@ import { Line } from 'react-chartjs-2';
 import {
   Card,
   CardBody,
-  CardHeader,
+  CardFooter,
+  CardText
 } from 'reactstrap';
 import { CustomTooltips } from '@coreui/coreui-plugin-chartjs-custom-tooltips';
 
@@ -51,14 +52,14 @@ class LineChartCard extends Component {
 
     return (
       <Card>
-      <CardHeader>
-      {chartData.header}
-      </CardHeader>
-      <CardBody>
+      <CardBody className="fapp-card-body">
       <div className="chart-wrapper">
       {chart}
       </div>
       </CardBody>
+      <CardFooter className="fapp-chart-card-footer">
+      {chartData.header}
+      </CardFooter>
       </Card>
     );
   }

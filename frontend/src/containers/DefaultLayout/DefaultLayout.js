@@ -92,7 +92,7 @@ class DefaultLayout extends Component {
           <DefaultHeader fetchProjectDependencies={this.fetchProjectDependencies} projects={mappedProjects} currentProject={this.props.currentProject} />
         </AppHeader>
         <div className="app-body">
-          <AppSidebar fixed display="lg">
+          <AppSidebar className="fapp-sidebar" fixed display="lg">
             <AppSidebarHeader />
             <AppSidebarNav className="fapp-sidebar-nav" navConfig={navigation} {...this.props} />
             <AppSidebarFooter />
