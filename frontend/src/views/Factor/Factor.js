@@ -308,7 +308,7 @@ class Factor extends Component {
           charts.push(<Row style={chartCardRowStyle} key={i}><Col sm={cardColumnSetting}><FunnelChartCard chartData={chartData} /></Col></Row>);
         }
       }
-      resultElements = <Card>{charts}</Card>;
+      resultElements = <Card className="fapp-card-border-none">{charts}</Card>;
     }
 
 
@@ -322,7 +322,9 @@ class Factor extends Component {
                 getQueryStates={this.getQueryStates}
                 getEventPropertiesOptions={this.getEventPropertiesOptions}
                 getEventPropertyValueOptions={this.getEventPropertyValueOptions}
-                onKeyDown={this.factor} />
+                onKeyDown={this.factor}
+                holderText="Enter Goal.."
+              />
             </Col>
           </Row>
         </div>

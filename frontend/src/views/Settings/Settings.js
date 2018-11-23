@@ -19,7 +19,7 @@ import { udpateCurrentProjectSettings } from '../../actions/projectsActions';
       currentProjectSettings: store.projects.currentProjectSettings
     };
 })
-class AutoTrack extends Component {
+class Settings extends Component {
   constructor(props) {
     super(props);
     this.state = {
@@ -81,4 +81,4 @@ class AutoTrack extends Component {
 
 }
 
-export default AutoTrack;
+export default Settings;

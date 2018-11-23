@@ -165,10 +165,7 @@ class Query extends Component {
       <div className="animated fadeIn">
       <Row>
       <Col xs="12" md="12">
-      <Card>
-      <CardHeader>
-      <strong>Input</strong>
-      </CardHeader>
+      <Card className="fapp-search-card">
       <CardBody>
       <Row>
       <Col md={{ size: '8', offset: 2 }}>
@@ -186,6 +183,7 @@ class Query extends Component {
         closeMenuOnSelect={false}
         styles={customStyles}
         options={this.state.data}
+        placeholder="Enter Query.."
       />
       </div>
       </FormGroup>
@@ -193,10 +191,10 @@ class Query extends Component {
       </Row>
       <Row>
       <Col md={{ size: 'auto', offset: 5 }}>
-      <Button block outline color="primary">Query</Button>
+      <Button block color="primary">Query</Button>
       </Col>
       <Col md={{ size: 'auto'}} style={{display: 'none'}}>
-      <Button block outline color="primary">Paths!</Button>
+      <Button block color="primary">Paths!</Button>
       </Col>
       </Row>
       </CardBody>

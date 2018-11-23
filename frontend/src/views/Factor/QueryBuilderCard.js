@@ -264,10 +264,7 @@ class QueryBuilderCard extends Component {
 
   render() {
     return (
-      <Card>
-        <CardHeader>
-          <strong>Goal</strong>
-        </CardHeader>
+      <Card class="fapp-search-card">
         <CardBody>
           <Row>
             <Col md={{ size: '8', offset: 2 }}>
@@ -287,6 +284,7 @@ class QueryBuilderCard extends Component {
                     options={this.state.currentOptions}
                     value={this.state.values}
                     isLoading={this.state.isLoadingOptions}
+                    placeholder={this.props.holderText}
                   />
                 </div>
               </FormGroup>
@@ -294,10 +292,10 @@ class QueryBuilderCard extends Component {
           </Row>
           <Row>
             <Col md={{ size: 'auto', offset: 5 }}>
-              <Button block outline color='primary' onClick={() => { this.props.onKeyDown(this.state.values) }}>Factor</Button>
+              <Button block color='primary' onClick={() => { this.props.onKeyDown(this.state.values) }}>Factor</Button>
             </Col>
             <Col md={{ size: 'auto' }} style={{ display: 'none' }}>
-              <Button block outline color='primary'>Paths!</Button>
+              <Button block color='primary'>Paths!</Button>
             </Col>
           </Row>
         </CardBody>

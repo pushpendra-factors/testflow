@@ -2,10 +2,103 @@
 Custom application CSS
 */
 
+body {
+    background: #fff !important;    
+}
+
+.fapp-main {
+    padding: 50px 10px;
+}
+
+.fapp-header-right {
+    margin: 0 1.25rem;
+}
+
+.fapp-header-right li {
+    margin: 0 0.25rem !important;
+}
+
+.fapp-header {
+    height: 65px !important;
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.03), 0 6px 20px 0 rgba(0, 0, 0, 0.02);
+}
+
+.fapp-bell {
+    font-size: 1.5rem;
+}
+
 .sidebar .nav{
     font-weight: 500 !important;
 }
 
 .sidebar .nav-link .nav-icon {
     font-size: 1rem !important;
+}
+
+.fapp-sidebar-form {
+    width: 22vw;
+}
+
+.fapp-sidebar-nav {
+    padding: 20px 0;
+}
+
+.fapp-navbar-toggler {
+    margin: 0 12px;
+}
+
+.fapp-search-card {
+    border: none !important;
+    margin-bottom: 0.5rem !important;
+}
+
+.fapp-search-card .card-body {
+    padding: 2rem 1.25rem 1rem 1.25rem !important;
+}
+
+/* search card select class */
+.fapp-search-card .css-1aya2g8 {
+    background: none;
+    min-height: 55px;
+    font-weight: 300;
+    padding: 5px 8px;
+    border-color: #8f9ba6;
+}
+
+
+/* On hover class for select */
+.fapp-search-card .css-2o5izw {
+    min-height: 55px;
+    font-size: 14px;
+    font-weight: 300;
+    padding: 5px 8px;
+    border-color: #8f9ba6;
+}
+
+.fapp-search-card .css-1ep9fjw {
+    color: #8f9ba6
+}
+
+.fapp-search-card .form-group {
+    margin-bottom: 2rem;
+}
+
+.fapp-search-card .btn {
+    font-weight: 500;
+    padding: 6px 28px;
+    font-size: 1rem;
+}
+
+.fapp-card-border-none {
+    border: none !important;
+}
+
+.fapp-sidebar-form .css-1aya2g8 {
+    border-color: #8f9ba6;
+}
+
+.fapp-sidebar-form .css-1ep9fjw {
+    color: #8f9ba6;
+    background-color: white;
+    border-radius: 10px;
 }

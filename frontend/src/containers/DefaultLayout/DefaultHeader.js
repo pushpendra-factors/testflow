@@ -1,10 +1,25 @@
 import React, { Component } from 'react';
 import { Badge, DropdownItem, DropdownMenu, DropdownToggle, Nav, NavItem, NavLink } from 'reactstrap';
 import PropTypes from 'prop-types';
+import { connect } from "react-redux"
+
 
 import { AppAsideToggler, AppHeaderDropdown, AppNavbarBrand, AppSidebarToggler } from '@coreui/react';
 import factorslogo from '../../assets/img/brand/factors-logo.svg'
 import factorsicon from '../../assets/img/brand/factors-icon.svg'
+
+import {
+  AppSidebarForm,
+} from '@coreui/react';
+import Select from 'react-select';
+// sidebar nav config
+
+import { 
+  fetchProjects, 
+  fetchCurrentProjectEvents, 
+  fetchCurrentProjectSettings 
+} from "../../actions/projectsActions";
+
 
 const propTypes = {
   children: PropTypes.node,
@@ -12,41 +27,63 @@ const propTypes = {
 
 const defaultProps = {};
 
-class DefaultHeader extends Component {
-  render() {
+const projectSelectStyles = {
+  option: (base, state) => ({
+    ...base,
+    color: '#5c6873',
+    background: '#fff',
+  }),
+  singleValue: base => ({
+    ...base,
+    background: '#fff',
+    color: '#5c6873',
+  }),
+  valueContainer: base => ({
+    ...base,
+    background: '#fff',
+    color: '#5c6873',
+  }),
+  container: base => ({
+    ...base,
+    background: '#fff',
+    border: 'none',
+  }),
+  indicatorSeparator: () => ({
+    display: 'none',
+  }),
+}
 
+class DefaultHeader extends Component {
+  handleChange = (selectedProject) => {
+    this.props.fetchProjectDependencies(selectedProject);
+  }
+  
+  render() {
     // eslint-disable-next-line
     const { children, ...attributes } = this.props;
 
     return (
       <React.Fragment>
         <AppSidebarToggler className="d-lg-none" display="md" mobile />
-        <AppNavbarBrand
-          full={{ src: factorslogo, width: 89, height: 25, alt: 'CoreUI Logo' }}
-          minimized={{ src: factorsicon, width: 30, height: 30, alt: 'CoreUI Logo' }}
-        />
-        <AppSidebarToggler className="d-md-down-none" display="lg" />
+        <AppSidebarToggler className="d-md-down-none fapp-navbar-toggler" display="lg" />
+        <AppSidebarForm className="fapp-sidebar-form">
+          <Select
+            options={this.props.projects}
+            value={this.props.currentProject}
+            onChange={this.handleChange}
+            styles={projectSelectStyles}
+            placeholder={"Select Project ..."}
+            blurInputOnSelect={true}
+            />
+        </AppSidebarForm>
 
-        <Nav className="d-md-down-none" navbar>
-          <NavItem className="px-3">
-            <NavLink href="/">Dashboard</NavLink>
-          </NavItem>
-          <NavItem className="px-3">
-            <NavLink href="#/users">Users</NavLink>
-          </NavItem>
-          <NavItem className="px-3">
-            <NavLink href="#">Settings</NavLink>
-          </NavItem>
-        </Nav>
-        <Nav className="ml-auto" navbar>
+
+        <Nav className="ml-auto fapp-header-right" navbar>
           <NavItem className="d-md-down-none">
-            <NavLink href="#"><i className="icon-bell"></i><Badge pill color="danger">5</Badge></NavLink>
-          </NavItem>
-          <NavItem className="d-md-down-none">
-            <NavLink href="#"><i className="icon-list"></i></NavLink>
-          </NavItem>
-          <NavItem className="d-md-down-none">
-            <NavLink href="#"><i className="icon-location-pin"></i></NavLink>
+            <NavLink href="#">
+              <i className="icon-bell fapp-bell"></i>
+              <Badge pill color="danger">5</Badge>
+            </NavLink>
           </NavItem>
           <AppHeaderDropdown direction="down">
             <DropdownToggle nav>
@@ -69,8 +106,6 @@ class DefaultHeader extends Component {
             </DropdownMenu>
           </AppHeaderDropdown>
         </Nav>
-        <AppAsideToggler className="d-md-down-none" />
-        {/*<AppAsideToggler className="d-lg-none" mobile />*/}
       </React.Fragment>
     );
   }
