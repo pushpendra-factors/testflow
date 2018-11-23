@@ -3,7 +3,6 @@ package tests
 import (
 	"encoding/json"
 	H "factors/handler"
-	M "factors/model"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -70,21 +69,19 @@ func TestAPIUpdateProjectSettingsHandler(t *testing.T) {
 	var randomProjectId uint64
 	randomProjectId = 999999999
 	w = ServePutRequest(r, projectSettingsURL, []byte(fmt.Sprintf(`{"auto_track": true, "project_id":%d}`, randomProjectId)))
-	assert.Equal(t, http.StatusOK, w.Code)
-	// Tested by getting as M.ProjectSetting omits projectId on json ops.
-	projectSetting, errCode := M.GetProjectSetting(project.ID)
-	assert.NotNil(t, projectSetting)
-	assert.Equal(t, M.DB_SUCCESS, errCode)
-	projectSetting, errCode = M.GetProjectSetting(randomProjectId)
-	assert.Nil(t, projectSetting)
-	assert.NotEqual(t, M.DB_SUCCESS, errCode)
+	// project_id becomes unknown field as omitted on json.
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	var jsonRespMap1 map[string]interface{}
+	json.Unmarshal(jsonResponse, &jsonRespMap1)
+	assert.NotNil(t, jsonRespMap1["error"])
 
 	// Test update project settings with bad project id.
 	w = ServePutRequest(r, fmt.Sprintf("/projects/%d/settings", 0), []byte(`{"auto_track": true}`))
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 	jsonResponse, _ = ioutil.ReadAll(w.Body)
-	var jsonRespMap map[string]interface{}
-	json.Unmarshal(jsonResponse, &jsonRespMap)
-	assert.NotNil(t, jsonRespMap["error"])
-	assert.Equal(t, 1, len(jsonRespMap))
+	var jsonRespMap2 map[string]interface{}
+	json.Unmarshal(jsonResponse, &jsonRespMap2)
+	assert.NotNil(t, jsonRespMap2["error"])
+	assert.Equal(t, 1, len(jsonRespMap2))
 }

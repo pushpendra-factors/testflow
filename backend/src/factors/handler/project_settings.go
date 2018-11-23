@@ -40,16 +40,13 @@ func UpdateProjectSettingsHandler(c *gin.Context) {
 		return
 	}
 
-	var projectSetting M.ProjectSetting
 	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+
+	var projectSetting M.ProjectSetting
 	if err := decoder.Decode(&projectSetting); err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("Project setting update failed. Json Decoding failed.")
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Project setting update failed. Invalid payload."})
-		return
-	}
-
-	if projectSetting.ProjectId != 0 {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Project setting failed. Tried updating disallowed field."})
 		return
 	}
 
