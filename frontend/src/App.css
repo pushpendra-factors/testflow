@@ -39,7 +39,7 @@ body {
 
 .sidebar .nav-link.active {
     background: #31476e !important;
-    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.5), 0 6px 20px 0 rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.1), 0 6px 20px 0 rgba(0, 0, 0, 0.1);
 }
 
 .sidebar .nav-link.active .nav-icon {
@@ -47,7 +47,7 @@ body {
 }
 
 .fapp-sidebar {
-    background: #081e4c !important;
+    background: #192a56 !important;
 }
 
 .fapp-sidebar-form {
