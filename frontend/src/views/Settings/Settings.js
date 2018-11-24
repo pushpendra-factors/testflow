@@ -1,14 +1,12 @@
 import React, { Component } from 'react';
 import { connect } from 'react-redux'
+import Toggle from 'react-toggle'
 import {
     Row,
     Col,
     Card,
     CardBody,
     CardHeader,
-    FormGroup,
-    Label,
-    Input,
     Button
 } from 'reactstrap';
 import { udpateCurrentProjectSettings } from '../../actions/projectsActions';
@@ -22,11 +20,6 @@ import { udpateCurrentProjectSettings } from '../../actions/projectsActions';
 class Settings extends Component {
   constructor(props) {
     super(props);
-    this.state = {
-      settings: {
-        auto_track: false
-      }
-    };
   }
 
   isAutoTrackEnabled() {
@@ -36,11 +29,7 @@ class Settings extends Component {
 
   handleAutoTrackToggle = () =>  {
     this.props.dispatch(udpateCurrentProjectSettings(
-      this.props.currentProject, {'auto_track': !this.isAutoTrackEnabled()}));  
-  }
-  
-  getAutoTrackToggleText() {
-    return this.isAutoTrackEnabled() ? "Disable" : "Enable"
+      this.props.currentProject, {'auto_track': !this.isAutoTrackEnabled()}))
   }
 
   getSDKScript() {
@@ -56,19 +45,27 @@ class Settings extends Component {
             <Row>
               <Col xs='12' md='12'>
                 <Card className="fapp-card"> 
-                  <CardHeader>
-                    <div style={{ position: "absolute", paddingTop: "0.4rem" }}><strong>Configure</strong></div>
-                    <Button onClick={this.handleAutoTrackToggle} color="success" style={{ position: "relative", float:"right", padding: "7px 35px" }}><strong>{this.getAutoTrackToggleText()}</strong></Button>
+                  <CardHeader className="fapp-card-header">
+                    <strong>SDK Code</strong>
                   </CardHeader>
                   <CardBody>
                     <Row>
-                      <Col md={{ size: '6' }} style={{ paddingLeft: "3rem" }}>                                            
-                        <FormGroup>
-                          <Label for="code-snippet">Javascript SDK </Label>
-                          <Input style={{ height: "12vh" }} type="textarea" name="text" id="code-snippet" value={this.getSDKScript()}/>
-                        </FormGroup>
+                      <Col md={{ size: '10' }}>                                            
+                          <span id="code-snippet" className="sdk-code">{this.getSDKScript()}</span>
                       </Col>
                     </Row>
+                  </CardBody>
+                </Card>
+                <Card className="fapp-card">
+                  <CardHeader className="fapp-card-header">
+                    <strong>Configure SDK</strong>
+                  </CardHeader>
+                  <CardBody>
+                    <Toggle
+                      checked={this.isAutoTrackEnabled()}
+                      icons={false}
+                      onChange={this.handleAutoTrackToggle} />
+                    <span className="fapp-toggle-label">Auto-track</span>
                   </CardBody>
                 </Card>
               </Col>
