@@ -6,9 +6,9 @@ import {
     Col,
     Card,
     CardBody,
-    CardHeader,
-    Button
+    CardHeader
 } from 'reactstrap';
+
 import { udpateCurrentProjectSettings } from '../../actions/projectsActions';
 
 @connect((store) => {
@@ -35,7 +35,8 @@ class Settings extends Component {
   getSDKScript() {
     // Todo(Dinesh): https://github.com/orgs/Slashbit-Technologies/projects/1#card-15042473
     let token = 'YOUR_TOKEN';
-    return '(function(c){var s=document.createElement("script");s.type="text/javascript";if(s.readyState){s.onreadystatechange=function(){if(s.readyState=="loaded"||s.readyState=="complete"){s.onreadystatechange=null;c()}}}else{s.onload=function(){c()}}s.src="/dist/factors.prod.js";d=!!document.body?document.body:document.head;d.appendChild(s)})(function(){factors.init("'+token+'")})';
+    let assetURL = BUILD_CONFIG.sdk_asset_url; // resolved on build.
+    return '(function(c){var s=document.createElement("script");s.type="text/javascript";if(s.readyState){s.onreadystatechange=function(){if(s.readyState=="loaded"||s.readyState=="complete"){s.onreadystatechange=null;c()}}}else{s.onload=function(){c()}}s.src="'+assetURL+'";d=!!document.body?document.body:document.head;d.appendChild(s)})(function(){factors.init("'+token+'")})';
   }
 
   render() {
