@@ -19,40 +19,45 @@ export function fetchProjects() {
 
 export function fetchCurrentProjectEvents(projectId) {
   return function(dispatch) {
-    return axios.get(appConfig.API_PATH + "projects/" + projectId + "/event_names")
-      .then((response) => {
-        return dispatch({type: "FETCH_CURRENT_PROJECT_EVENTS_FULFILLED",
-                 payload: { currentProjectId: projectId, currentProjectEventNames: response.data,
-                   eventPropertiesMap: {} }})
-      })
-      .catch((err) => {
-        return dispatch({type: "FETCH_CURRENT_PROJECT_EVENTS_REJECTED",
-                 payload: { currentProjectId: projectId, currentProjectEventNames: [],
-                   eventPropertiesMap: {}, err: err }});
-      })
+    return new Promise((resolve, reject) => {
+      axios.get(appConfig.API_PATH + "projects/" + projectId + "/event_names")
+        .then((response) => {
+          resolve(dispatch({type: "FETCH_CURRENT_PROJECT_EVENTS_FULFILLED",
+                  payload: { currentProjectId: projectId, currentProjectEventNames: response.data,
+                    eventPropertiesMap: {} }}));
+        })
+        .catch((err) => {
+          reject(dispatch({type: "FETCH_CURRENT_PROJECT_EVENTS_REJECTED",
+                  payload: { currentProjectId: projectId, currentProjectEventNames: [],
+                    eventPropertiesMap: {}, err: err }}));
+        });
+    });
   }
 }
 
 export function fetchCurrentProjectSettings(projectId) {
   return function(dispatch) {
-    return axios.get(appConfig.API_PATH + "projects/" + projectId + "/settings")
-     .then((response) => {
-        return dispatch({
-          type: "FETCH_CURRENT_PROJECT_SETTINGS_FULFILLED", 
-          payload: {
-            currentProjectId: projectId,
-            settings: response.data
-          }
-        });
-      })
-      .catch((err) => {
-        return dispatch({
-          type: "FETCH_CURRENT_PROJECT_SETTINGS_REJECTED", 
-          payload: {
-            currentProjectId: projectId, 
-            settings: {}, 
-            err: err
-          }
+    return new Promise((resolve, reject) => {
+      axios.get(appConfig.API_PATH + "projects/" + projectId + "/settings")
+        .then((response) => {
+          resolve(dispatch({
+            type: "FETCH_CURRENT_PROJECT_SETTINGS_FULFILLED", 
+            payload: {
+              currentProjectId: projectId,
+              settings: response.data
+            }
+          }));
+        })
+        .catch((err) => {
+          reject(
+            dispatch({
+            type: "FETCH_CURRENT_PROJECT_SETTINGS_REJECTED", 
+            payload: {
+              currentProjectId: projectId, 
+              settings: {}, 
+              err: err
+            }
+          }));
         });
       });
   }

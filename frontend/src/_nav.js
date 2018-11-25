@@ -16,7 +16,7 @@ export default {
       icon: 'icon-question',
     },
     {
-      name: "Settings",
+      name: 'Settings',
       url: '/settings',
       icon: 'icon-settings'
     }

@@ -1,9 +1,7 @@
 import React, { Component } from 'react';
 import { connect } from "react-redux"
-
 import { Redirect, Route, Switch } from 'react-router-dom';
 import { Container } from 'reactstrap';
-
 import {
   AppAside,
   AppBreadcrumb,
@@ -16,7 +14,7 @@ import {
   AppSidebarMinimizer,
   AppSidebarNav,
 } from '@coreui/react';
-import Select from 'react-select';
+
 // sidebar nav config
 import navigation from '../../_nav';
 // routes config
@@ -80,9 +78,9 @@ class DefaultLayout extends Component {
     this.props.dispatch(fetchProjects())
       .then((response) => {
         this.setState({ 
-          projects: { 
+          projects: {
             loaded: true
-          } 
+          }
         });
       })
       .catch((response) => {
@@ -95,11 +93,9 @@ class DefaultLayout extends Component {
       });
   }
 
-  /**
-   * Loads all dependencies; 
-   * */
   fetchProjectDependencies  = (projectId) => {
-    // Independent methods. Not chained.
+    // Todo(Dinesh): Only corresponding dependency should be fetched on project change
+    // and state of correspond component should go to loaded: false.
     this.props.dispatch(fetchCurrentProjectSettings(projectId));
     this.props.dispatch(fetchCurrentProjectEvents(projectId));
   }
@@ -115,8 +111,6 @@ class DefaultLayout extends Component {
       Object.values(this.props.projects), 
       project => ({ "label": project.name, "value": project.id }) // selectable_projects object structure.
     )
-
-    this.fetchProjectDependencies(this.props.currentProjectId);
 
     return (
       <div className="app">

@@ -9,7 +9,7 @@ import {
     CardHeader
 } from 'reactstrap';
 
-import { udpateCurrentProjectSettings } from '../../actions/projectsActions';
+import { fetchCurrentProjectSettings, udpateCurrentProjectSettings } from '../../actions/projectsActions';
 
 @connect((store) => {
     return {
@@ -17,19 +17,37 @@ import { udpateCurrentProjectSettings } from '../../actions/projectsActions';
       currentProjectSettings: store.projects.currentProjectSettings
     };
 })
+
 class Settings extends Component {
   constructor(props) {
     super(props);
+
+    this.state = {
+      settings: {
+        loaded: false,
+        error: null
+      }
+    }
+  }
+
+  componentWillMount() {
+    this.props.dispatch(fetchCurrentProjectSettings(this.props.currentProjectId))
+      .then((response) => {
+        this.setState({ settings: { loaded: true } });
+      })
+      .catch((response) => {
+        this.setState({ settings: { loaded: true, error: response.payload } });
+      });
   }
 
   isAutoTrackEnabled() {
     return this.props.currentProjectSettings 
-      && this.props.currentProjectSettings.auto_track == 1;
+      && this.props.currentProjectSettings.auto_track;
   }
 
   handleAutoTrackToggle = () =>  {
     this.props.dispatch(udpateCurrentProjectSettings(
-      this.props.currentProjectId, {'auto_track': !this.isAutoTrackEnabled()}))
+      this.props.currentProjectId, { 'auto_track': !this.isAutoTrackEnabled() }))
   }
 
   getSDKScript() {
@@ -40,6 +58,8 @@ class Settings extends Component {
   }
 
   render() {
+    if (!this.state.settings.loaded) return <div> Loading... </div>;
+
     return (
         <div className='animated fadeIn'>
           <div>

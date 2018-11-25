@@ -5,7 +5,9 @@ import {
   Col,
   Row,
 } from 'reactstrap';
-import { fetchFactors } from "../../actions/factorsActions"
+
+import { fetchFactors } from "../../actions/factorsActions";
+import { fetchCurrentProjectEvents } from "../../actions/projectsActions";
 import BarChartCard from './BarChartCard.js';
 import LineChartCard from './LineChartCard.js';
 import FunnelChartCard from './FunnelChartCard.js';
@@ -51,6 +53,34 @@ const chartCardRowStyle = {
 })
 
 class Factor extends Component {
+  constructor(props) {
+    super(props);
+    this.toggle = this.toggle.bind(this);
+    this.toggleFade = this.toggleFade.bind(this);
+    this.factor = this.factor.bind(this);
+
+    this.state = {
+      collapse: true,
+      fadeIn: true,
+      timeout: 300,
+
+      eventNames: {
+        loaded: false,
+        error: null
+      }
+    }
+  }
+
+  componentWillMount() {
+    this.props.dispatch(fetchCurrentProjectEvents(this.props.currentProjectId))
+      .then((response) => {
+        this.setState({ eventNames: { loaded: true } });
+      })
+      .catch((response) => {
+        this.setState({ eventNames: { loaded: true, error: response.payload } });
+      });
+  }
+
   getEventPropertiesOptions(eventProperties) {
     var lp = [];
     var categoricalProperties = eventProperties["categorical"];
@@ -173,19 +203,6 @@ class Factor extends Component {
     return queryStates;
   }
 
-  constructor(props) {
-    super(props);
-    this.toggle = this.toggle.bind(this);
-    this.toggleFade = this.toggleFade.bind(this);
-    this.factor = this.factor.bind(this);
-
-    this.state = {
-      collapse: true,
-      fadeIn: true,
-      timeout: 300,
-    }
-  }
-
   toggle() {
     this.setState({ collapse: !this.state.collapse });
   }
@@ -293,6 +310,8 @@ class Factor extends Component {
   }
 
   render() {
+    if (!this.state.eventNames.loaded) return <div> Loading... </div>;
+
     var charts = [];
     let resultElements;
     if (!!this.props.factors.charts) {

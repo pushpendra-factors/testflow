@@ -1,9 +1,6 @@
 import React, { Component } from 'react';
 import { Badge, DropdownItem, DropdownMenu, DropdownToggle, Nav, NavItem, NavLink } from 'reactstrap';
 import PropTypes from 'prop-types';
-import { connect } from "react-redux"
-
-
 
 import { AppHeaderDropdown, AppSidebarToggler } from '@coreui/react';
 import factorslogo from '../../assets/img/brand/factors-logo.svg'
