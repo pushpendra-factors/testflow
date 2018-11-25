@@ -20,12 +20,19 @@ export default function reducer(state={
         let projects = {};
         for (let project of action.payload) {
           projects[project.id] = project;
-        }      
+        }
+
+        // Initial project set.
+        let currentProjectId = null;
+        if (action.payload.length > 0)
+          currentProjectId = action.payload[0].id;
+
         return {
           ...state,
           fetchingProjects: false,
           fetchedProjects: true,
-          projects: projects
+          projects: projects,
+          currentProjectId: currentProjectId
         }
       }
       case "FETCH_CURRENT_PROJECT_SETTINGS_FULFILLED": {

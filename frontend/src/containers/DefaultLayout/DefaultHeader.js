@@ -49,7 +49,7 @@ const projectSelectStyles = {
 
 class DefaultHeader extends Component {
   handleChange = (selectedProject) => {
-    this.props.fetchProjectDependencies(selectedProject);
+    this.props.fetchProjectDependencies(selectedProject.value);
   }
   
   render() {

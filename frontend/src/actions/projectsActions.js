@@ -5,13 +5,15 @@ export function fetchProjects() {
   return function(dispatch) {
     dispatch({type: "FETCH_PROJECTS"});
 
-    return axios.get(appConfig.API_PATH + "projects")
-      .then((response) => {
-        return dispatch({type: "FETCH_PROJECTS_FULFILLED", payload: response.data});
-      })
-      .catch((err) => {
-        return dispatch({type: "FETCH_PROJECTS_REJECTED", payload: err});
-      })
+    return new Promise((resolve, reject) => {
+      axios.get(appConfig.API_PATH + "projects")
+        .then((response) => {
+          resolve(dispatch({type: "FETCH_PROJECTS_FULFILLED", payload: response.data}));
+        })
+        .catch((err) => {
+          reject(dispatch({type: "FETCH_PROJECTS_REJECTED", payload: err}));
+        });
+    }); 
   }
 }
 

@@ -65,8 +65,34 @@ const projectSelectStyles = {
 })
 
 class DefaultLayout extends Component {
+
+  constructor(props) {
+    super(props);
+    this.state = {
+      projects: {
+        loaded: false,
+        error: null
+      }
+    }
+  }
+
   componentWillMount() {
     this.props.dispatch(fetchProjects())
+      .then((response) => {
+        this.setState({ 
+          projects: { 
+            loaded: true
+          } 
+        });
+      })
+      .catch((response) => {
+        this.setState({ 
+          projects: { 
+            loaded: true, 
+            error: response.payload 
+          } 
+        });
+      });
   }
 
   /**
@@ -79,22 +105,26 @@ class DefaultLayout extends Component {
   }
 
   render() {
+    // Todo(Dinesh): Define a generic loading..
+    if (!this.state.projects.loaded) return <div>Loading...</div>;
+
+    // Todo(Dinesh): Handle project fetch failure on frontend.
+    if (this.state.projects.loaded && this.state.projects.error) return <div>Failed loading your project.</div>;
+
     const selectableProjects = Array.from(
       Object.values(this.props.projects), 
       project => ({ "label": project.name, "value": project.id }) // selectable_projects object structure.
     )
-    if (!this.props.currentProjectId && selectableProjects.length > 0) {
-      // Initial current project selection and dependencies fetch for projects[0].
-      this.fetchProjectDependencies(selectableProjects[0].value);
-    }
+
+    this.fetchProjectDependencies(this.props.currentProjectId);
 
     return (
       <div className="app">
         <AppHeader className="fapp-header" fixed>
           <DefaultHeader 
             fetchProjectDependencies={this.fetchProjectDependencies} 
-            selectableProjects={selectableProjects} 
-            selectedProject={{ label: 'selected', value: this.props.currentProjectId }} 
+            selectableProjects={selectableProjects}
+            selectedProject={{ label: this.props.projects[this.props.currentProjectId].name, value: this.props.currentProjectId }} 
           />
         </AppHeader>
         <div className="app-body">
