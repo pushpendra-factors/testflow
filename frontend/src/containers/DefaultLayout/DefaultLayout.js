@@ -59,8 +59,8 @@ const projectSelectStyles = {
 
 @connect((store) => {
   return {
-    projects : store.projects.projects,
-    currentProject : store.projects.currentProject,
+    currentProjectId : store.projects.currentProjectId,
+    projects : store.projects.projects
   };
 })
 
@@ -72,24 +72,30 @@ class DefaultLayout extends Component {
   /**
    * Loads all dependencies; 
    * */
-  fetchProjectDependencies  = (project) => {
+  fetchProjectDependencies  = (projectId) => {
     // Independent methods. Not chained.
-    this.props.dispatch(fetchCurrentProjectSettings(project));
-    this.props.dispatch(fetchCurrentProjectEvents(project));
+    this.props.dispatch(fetchCurrentProjectSettings(projectId));
+    this.props.dispatch(fetchCurrentProjectEvents(projectId));
   }
 
   render() {
-    const mappedProjects = Array.from(this.props.projects,
-       project => ({"label": project.name, "value": project.id}))
-    if (!this.props.currentProject && mappedProjects.length > 0) {
-      // Default select first project.    
-      this.fetchProjectDependencies(mappedProjects[0]);
+    const selectableProjects = Array.from(
+      Object.values(this.props.projects), 
+      project => ({ "label": project.name, "value": project.id }) // selectable_projects object structure.
+    )
+    if (!this.props.currentProjectId && selectableProjects.length > 0) {
+      // Initial current project selection and dependencies fetch for projects[0].
+      this.fetchProjectDependencies(selectableProjects[0].value);
     }
 
     return (
       <div className="app">
         <AppHeader className="fapp-header" fixed>
-          <DefaultHeader fetchProjectDependencies={this.fetchProjectDependencies} projects={mappedProjects} currentProject={this.props.currentProject} />
+          <DefaultHeader 
+            fetchProjectDependencies={this.fetchProjectDependencies} 
+            selectableProjects={selectableProjects} 
+            selectedProject={{ label: 'selected', value: this.props.currentProjectId }} 
+          />
         </AppHeader>
         <div className="app-body">
           <AppSidebar className="fapp-sidebar" fixed display="lg">
@@ -102,10 +108,8 @@ class DefaultLayout extends Component {
             <Container fluid>
               <Switch>
                 {routes.map((route, idx) => {
-                    return route.component ? (<Route key={idx} path={route.path} exact={route.exact} name={route.name} render={props => (
-                        <route.component {...props} />
-                      )} />)
-                      : (null);
+                    return route.component ? (<Route key={idx} path={route.path} exact={route.exact} name={route.name} 
+                      render={props => (<route.component {...props} />)} />) : (null);
                   },
                 )}
                 <Redirect from="/" to="/dashboard" />

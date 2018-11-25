@@ -45,7 +45,7 @@ const chartCardRowStyle = {
 
 @connect((store) => {
   return {
-    currentProject: store.projects.currentProject,
+    currentProjectId: store.projects.currentProjectId,
     factors: store.factors.factors,
   };
 })
@@ -288,7 +288,7 @@ class Factor extends Component {
       return;
     }
     console.log('Fire Query: ' + JSON.stringify(query));
-    this.props.dispatch(fetchFactors(this.props.currentProject.value,
+    this.props.dispatch(fetchFactors(this.props.currentProjectId,
       { query: query }, this.props.location.search));
   }
 

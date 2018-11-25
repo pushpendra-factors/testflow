@@ -15,30 +15,30 @@ export function fetchProjects() {
   }
 }
 
-export function fetchCurrentProjectEvents(currentProject) {
+export function fetchCurrentProjectEvents(projectId) {
   return function(dispatch) {
-    return axios.get(appConfig.API_PATH + "projects/" + currentProject.value + "/event_names")
+    return axios.get(appConfig.API_PATH + "projects/" + projectId + "/event_names")
       .then((response) => {
         return dispatch({type: "FETCH_CURRENT_PROJECT_EVENTS_FULFILLED",
-                 payload: { currentProject: currentProject, currentProjectEventNames: response.data,
+                 payload: { currentProjectId: projectId, currentProjectEventNames: response.data,
                    eventPropertiesMap: {} }})
       })
       .catch((err) => {
         return dispatch({type: "FETCH_CURRENT_PROJECT_EVENTS_REJECTED",
-                 payload: { currentProject: currentProject, currentProjectEventNames: [],
+                 payload: { currentProjectId: projectId, currentProjectEventNames: [],
                    eventPropertiesMap: {}, err: err }});
       })
   }
 }
 
-export function fetchCurrentProjectSettings(currentProject) {
+export function fetchCurrentProjectSettings(projectId) {
   return function(dispatch) {
-    return axios.get(appConfig.API_PATH + "projects/" + currentProject.value + "/settings")
+    return axios.get(appConfig.API_PATH + "projects/" + projectId + "/settings")
      .then((response) => {
         return dispatch({
           type: "FETCH_CURRENT_PROJECT_SETTINGS_FULFILLED", 
           payload: {
-            currentProject: currentProject, 
+            currentProjectId: projectId,
             settings: response.data
           }
         });
@@ -47,7 +47,7 @@ export function fetchCurrentProjectSettings(currentProject) {
         return dispatch({
           type: "FETCH_CURRENT_PROJECT_SETTINGS_REJECTED", 
           payload: {
-            currentProject: currentProject, 
+            currentProjectId: projectId, 
             settings: {}, 
             err: err
           }
@@ -56,9 +56,9 @@ export function fetchCurrentProjectSettings(currentProject) {
   }
 }
 
-export function udpateCurrentProjectSettings(currentProject, payload) {
+export function udpateCurrentProjectSettings(projectId, payload) {
   return function(dispatch) {
-    return axios.put(appConfig.API_PATH + "projects/" + currentProject.value + "/settings", payload)
+    return axios.put(appConfig.API_PATH + "projects/" + projectId + "/settings", payload)
      .then((response) => {
         return dispatch({
           type: "UPDATE_CURRENT_PROJECT_SETTINGS_FULFILLED", 
@@ -79,9 +79,9 @@ export function udpateCurrentProjectSettings(currentProject, payload) {
   }
 }
 
-export function fetchProjectEventProperties(currentProjectId, eventName) {
+export function fetchProjectEventProperties(projectId, eventName) {
   return function(dispatch) {
-    axios.get(appConfig.API_PATH + "projects/" + currentProjectId +
+    axios.get(appConfig.API_PATH + "projects/" + projectId +
               "/event_names/" + eventName + "/properties")
       .then((response) => {
         dispatch({type: "FETCH_CURRENT_PROJECT_EVENT_PROPERTIES_FULFILLED",
@@ -94,9 +94,9 @@ export function fetchProjectEventProperties(currentProjectId, eventName) {
   }
 }
 
-export function fetchProjectEventPropertyValues(currentProjectId, eventName, propertyName) {
+export function fetchProjectEventPropertyValues(projectId, eventName, propertyName) {
   return function(dispatch) {
-    axios.get(appConfig.API_PATH + "projects/" + currentProjectId +
+    axios.get(appConfig.API_PATH + "projects/" + projectId +
               "/event_names/" + eventName + "/properties/" + propertyName +
               "/values")
       .then((response) => {

@@ -13,7 +13,7 @@ import { udpateCurrentProjectSettings } from '../../actions/projectsActions';
 
 @connect((store) => {
     return {
-      currentProject: store.projects.currentProject,
+      currentProjectId: store.projects.currentProjectId,
       currentProjectSettings: store.projects.currentProjectSettings
     };
 })
@@ -29,7 +29,7 @@ class Settings extends Component {
 
   handleAutoTrackToggle = () =>  {
     this.props.dispatch(udpateCurrentProjectSettings(
-      this.props.currentProject, {'auto_track': !this.isAutoTrackEnabled()}))
+      this.props.currentProjectId, {'auto_track': !this.isAutoTrackEnabled()}))
   }
 
   getSDKScript() {

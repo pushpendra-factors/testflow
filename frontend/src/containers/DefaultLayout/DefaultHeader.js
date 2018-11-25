@@ -62,13 +62,13 @@ class DefaultHeader extends Component {
         <AppSidebarToggler className="d-md-down-none fapp-navbar-toggler" display="lg" />
         <AppSidebarForm className="fapp-sidebar-form">
           <Select
-            options={this.props.projects}
-            value={this.props.currentProject}
+            options={this.props.selectableProjects}
+            value={this.props.selectedProject}
             onChange={this.handleChange}
             styles={projectSelectStyles}
             placeholder={"Select Project ..."}
             blurInputOnSelect={true}
-            />
+          />
         </AppSidebarForm>
 
 

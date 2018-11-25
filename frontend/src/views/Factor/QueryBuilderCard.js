@@ -38,7 +38,7 @@ export const STATE_USER_STRING_PROPERTY_VALUE = 7;
 
 @connect((store) => {
   return {
-    currentProject: store.projects.currentProject,
+    currentProjectId: store.projects.currentProjectId,
     currentProjectEventNames: store.projects.currentProjectEventNames,
     eventPropertiesMap: store.projects.eventPropertiesMap,
     eventPropertyValuesMap: store.projects.eventPropertyValuesMap,
@@ -99,7 +99,7 @@ class QueryBuilderCard extends Component {
   }
 
   shouldComponentUpdate(nextProps, nextState) {
-    if (this.props.currentProject.value != nextProps.currentProject.value) {
+    if (this.props.currentProjectId != nextProps.currentProjectId) {
       this.resetProject(nextProps.currentProjectEventNames);
     }
     if (this.state.queryStates[this.state.currentQueryState][DYNAMIC_FETCH_EVENT_PROPERTIES] &&
@@ -189,7 +189,7 @@ class QueryBuilderCard extends Component {
       this.latestSelectedEventProperty = newValues[numEnteredValues - 1]['property'];
     }
     if (this.state.queryStates[nextState][DYNAMIC_FETCH_EVENT_PROPERTIES]) {
-      this.props.dispatch(fetchProjectEventProperties(this.props.currentProject.value,
+      this.props.dispatch(fetchProjectEventProperties(this.props.currentProjectId,
         this.latestSelectedEventName));
         this.setState({
           currentOptions: [],
@@ -201,7 +201,7 @@ class QueryBuilderCard extends Component {
         });
     } else if (this.state.queryStates[nextState][DYNAMIC_FETCH_EVENT_PROPERTY_VALUES]) {
       console.log("Fetch property: " + this.latestSelectedEventProperty);
-      this.props.dispatch(fetchProjectEventPropertyValues(this.props.currentProject.value,
+      this.props.dispatch(fetchProjectEventPropertyValues(this.props.currentProjectId,
         this.latestSelectedEventName, this.latestSelectedEventProperty));
         this.setState({
           currentOptions: [],

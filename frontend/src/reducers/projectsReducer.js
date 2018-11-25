@@ -15,11 +15,17 @@ export default function reducer(state={
         return {...state, fetchingProjects: false, projectsError: action.payload}
       }
       case "FETCH_PROJECTS_FULFILLED": {
+        // Indexed project objects by projectId. Kept projectId on value also intentionally 
+        // for array of projects from Object.values().
+        let projects = {};
+        for (let project of action.payload) {
+          projects[project.id] = project;
+        }      
         return {
           ...state,
           fetchingProjects: false,
           fetchedProjects: true,
-          projects: action.payload
+          projects: projects
         }
       }
       case "FETCH_CURRENT_PROJECT_SETTINGS_FULFILLED": {
@@ -51,13 +57,13 @@ export default function reducer(state={
       }
       case "FETCH_CURRENT_PROJECT_EVENTS_FULFILLED": {
         return {...state,
-                currentProject: action.payload.currentProject,
+                currentProjectId: action.payload.currentProjectId,
                 currentProjectEventNames: action.payload.currentProjectEventNames
               }
       }
       case "FETCH_CURRENT_PROJECT_EVENTS_REJECTED": {
         return {...state,
-                currentProject: action.payload.currentProject,
+                currentProjectId: action.payload.currentProjectId,
                 currentProjectEventNames: action.payload.currentProjectEventNames,
                 projectEventsError: action.payload.err}
       }
