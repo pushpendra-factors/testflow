@@ -46,6 +46,17 @@ const chartCardRowStyle = {
   marginLeft: '2px',
 };
 
+const mapStateToProps = store => {
+  return {
+    currentProjectId: store.projects.currentProjectId,
+    factors: store.factors.factors,
+  }
+}
+
+const mapDispatchToProps = dispatch => {
+  return bindActionCreators({ fetchFactors, fetchCurrentProjectEvents }, dispatch);
+}
+
 class Factor extends Component {
   constructor(props) {
     super(props);
@@ -347,17 +358,6 @@ class Factor extends Component {
       </div>
     );
   }
-}
-
-const mapStateToProps = store => {
-  return {
-    currentProjectId: store.projects.currentProjectId,
-    factors: store.factors.factors,
-  }
-}
-
-const mapDispatchToProps = dispatch => {
-  return bindActionCreators({ fetchFactors, fetchCurrentProjectEvents }, dispatch)
 }
 
 export default connect(mapStateToProps, mapDispatchToProps)(Factor);

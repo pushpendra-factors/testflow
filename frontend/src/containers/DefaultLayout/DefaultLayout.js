@@ -56,8 +56,23 @@ const projectSelectStyles = {
   }),
 }
 
+const mapStateToProps = store => {
+  return {
+    currentProjectId: store.projects.currentProjectId,
+    projects: store.projects.projects
+  }
+}
+
+const mapDispatchToProps = dispatch => {
+  return bindActionCreators({ 
+    fetchProjects,
+    fetchCurrentProjectEvents, 
+    fetchCurrentProjectSettings 
+  }, dispatch);
+}
+
 class DefaultLayout extends Component {
-  
+
   constructor(props) {
     super(props);
     this.state = {
@@ -88,19 +103,18 @@ class DefaultLayout extends Component {
   }
 
   fetchProjectDependencies  = (projectId) => {
-    // Todo(Dinesh): Only corresponding dependency should be fetched on project change
-    // and state of correspond component should go to loaded: false.
+    // Todo(Dinesh): Remove dependency reload from here. dispatch changeProject action to
+    // re-render corresponding component which will call fetch on mount.
     this.props.fetchCurrentProjectSettings(projectId);
     this.props.fetchCurrentProjectEvents(projectId);
-    // this.props.dispatch(changeProject(projectId));
   }
 
   render() {
-    // Todo(Dinesh): Define a generic loading..
+    // Todo(Dinesh): Define a generic loading screen.
     if (!this.state.projects.loaded) return <div>Loading...</div>;
 
-    // Todo(Dinesh): Handle project fetch failure on frontend.
-    if (this.state.projects.loaded && this.state.projects.error) return <div>Failed loading your project.</div>;
+    if (this.state.projects.loaded && this.state.projects.error) 
+      return <div>Failed loading your project.</div>;
 
     const selectableProjects = Array.from(
       Object.values(this.props.projects), 
@@ -145,21 +159,6 @@ class DefaultLayout extends Component {
       </div>
     );
   }
-}
-
-const mapStateToProps = store => {
-  return {
-    currentProjectId : store.projects.currentProjectId,
-    projects : store.projects.projects
-  }
-}
-
-const mapDispatchToProps = dispatch => {
-  return bindActionCreators({ 
-    fetchProjects,
-    fetchCurrentProjectEvents, 
-    fetchCurrentProjectSettings 
-  }, dispatch)
 }
 
 export default connect(mapStateToProps, mapDispatchToProps)(DefaultLayout);

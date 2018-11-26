@@ -10,7 +10,10 @@ import {
   Row,
 } from 'reactstrap';
 import CreatableSelect from 'react-select/lib/Creatable';
-import { fetchProjectEventProperties, fetchProjectEventPropertyValues } from "../../actions/projectsActions"
+import { 
+  fetchProjectEventProperties, 
+  fetchProjectEventPropertyValues 
+} from "../../actions/projectsActions"
 
 const queryBuilderStyles = {
   multiValue: () => ({
@@ -36,6 +39,22 @@ export const STATE_EVENT_NUMERIC_PROPERTY_VALUE = 4;
 export const STATE_EVENT_STRING_PROPERTY_VALUE = 5;
 export const STATE_USER_NUMERIC_PROPERTY_VALUE = 6;
 export const STATE_USER_STRING_PROPERTY_VALUE = 7;
+
+const mapStateToProps = store => {
+  return {
+    currentProjectId: store.projects.currentProjectId,
+    currentProjectEventNames: store.projects.currentProjectEventNames,
+    eventPropertiesMap: store.projects.eventPropertiesMap,
+    eventPropertyValuesMap: store.projects.eventPropertyValuesMap,
+  }
+}
+
+const mapDispatchToProps = dispatch => {
+  return bindActionCreators({ 
+    fetchProjectEventProperties, 
+    fetchProjectEventPropertyValues
+  }, dispatch);
+}
 
 class QueryBuilderCard extends Component {
   // Instance variables.
@@ -291,22 +310,6 @@ class QueryBuilderCard extends Component {
       </Card>
     )
   }
-}
-
-const mapStateToProps = store => {
-  return {
-    currentProjectId: store.projects.currentProjectId,
-    currentProjectEventNames: store.projects.currentProjectEventNames,
-    eventPropertiesMap: store.projects.eventPropertiesMap,
-    eventPropertyValuesMap: store.projects.eventPropertyValuesMap,
-  }
-}
-
-const mapDispatchToProps = dispatch => {
-  return bindActionCreators({ 
-    fetchProjectEventProperties, 
-    fetchProjectEventPropertyValues
-  }, dispatch)
 }
 
 export default connect(mapStateToProps, mapDispatchToProps)(QueryBuilderCard);

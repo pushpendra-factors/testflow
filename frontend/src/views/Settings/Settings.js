@@ -15,6 +15,19 @@ import {
   udpateCurrentProjectSettings 
 } from '../../actions/projectsActions';
 
+
+const mapStateToProps = store => {
+  return {
+    projects: store.projects.projects,
+    currentProjectId: store.projects.currentProjectId,
+    currentProjectSettings: store.projects.currentProjectSettings
+  }
+}
+
+const mapDispatchToProps = dispatch => {
+  return bindActionCreators({ fetchCurrentProjectSettings, udpateCurrentProjectSettings }, dispatch)
+}
+
 class Settings extends Component {
   constructor(props) {
     super(props);
@@ -22,7 +35,7 @@ class Settings extends Component {
     this.state = {
       settings: {
         loaded: false,
-        error: null
+        error: null,
       }
     }
   }
@@ -43,12 +56,16 @@ class Settings extends Component {
 
   handleAutoTrackToggle = () =>  {
     this.props.udpateCurrentProjectSettings(
-      this.props.currentProjectId, { 'auto_track': !this.isAutoTrackEnabled() })
+      this.props.currentProjectId, { 'auto_track': !this.isAutoTrackEnabled() });
+  }
+
+  getToken() {
+    return this.props.projects[this.props.currentProjectId].token;
   }
 
   getSDKScript() {
     // Todo(Dinesh): https://github.com/orgs/Slashbit-Technologies/projects/1#card-15042473
-    let token = 'YOUR_TOKEN';
+    let token = this.getToken();
     let assetURL = BUILD_CONFIG.sdk_asset_url; // resolved on build.
     return '(function(c){var s=document.createElement("script");s.type="text/javascript";if(s.readyState){s.onreadystatechange=function(){if(s.readyState=="loaded"||s.readyState=="complete"){s.onreadystatechange=null;c()}}}else{s.onload=function(){c()}}s.src="'+assetURL+'";d=!!document.body?document.body:document.head;d.appendChild(s)})(function(){factors.init("'+token+'")})';
   }
@@ -91,17 +108,6 @@ class Settings extends Component {
         </div>
     );
   }
-}
-
-const mapStateToProps = store => {
-  return {
-    currentProjectId: store.projects.currentProjectId,
-    currentProjectSettings: store.projects.currentProjectSettings
-  }
-}
-
-const mapDispatchToProps = dispatch => {
-  return bindActionCreators({ fetchCurrentProjectSettings, udpateCurrentProjectSettings }, dispatch)
 }
 
 export default connect(mapStateToProps, mapDispatchToProps)(Settings);
