@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
-import { connect } from 'react-redux'
+import { connect } from 'react-redux';
+import { bindActionCreators } from 'redux';
 import Toggle from 'react-toggle'
 import {
     Row,
@@ -9,14 +10,10 @@ import {
     CardHeader
 } from 'reactstrap';
 
-import { fetchCurrentProjectSettings, udpateCurrentProjectSettings } from '../../actions/projectsActions';
-
-@connect((store) => {
-    return {
-      currentProjectId: store.projects.currentProjectId,
-      currentProjectSettings: store.projects.currentProjectSettings
-    };
-})
+import { 
+  fetchCurrentProjectSettings, 
+  udpateCurrentProjectSettings 
+} from '../../actions/projectsActions';
 
 class Settings extends Component {
   constructor(props) {
@@ -31,7 +28,7 @@ class Settings extends Component {
   }
 
   componentWillMount() {
-    this.props.dispatch(fetchCurrentProjectSettings(this.props.currentProjectId))
+    this.props.fetchCurrentProjectSettings(this.props.currentProjectId)
       .then((response) => {
         this.setState({ settings: { loaded: true } });
       })
@@ -41,13 +38,12 @@ class Settings extends Component {
   }
 
   isAutoTrackEnabled() {
-    return this.props.currentProjectSettings 
-      && this.props.currentProjectSettings.auto_track;
+    return this.props.currentProjectSettings && this.props.currentProjectSettings.auto_track;
   }
 
   handleAutoTrackToggle = () =>  {
-    this.props.dispatch(udpateCurrentProjectSettings(
-      this.props.currentProjectId, { 'auto_track': !this.isAutoTrackEnabled() }))
+    this.props.udpateCurrentProjectSettings(
+      this.props.currentProjectId, { 'auto_track': !this.isAutoTrackEnabled() })
   }
 
   getSDKScript() {
@@ -95,8 +91,17 @@ class Settings extends Component {
         </div>
     );
   }
-
-
 }
 
-export default Settings;
+const mapStateToProps = store => {
+  return {
+    currentProjectId: store.projects.currentProjectId,
+    currentProjectSettings: store.projects.currentProjectSettings
+  }
+}
+
+const mapDispatchToProps = dispatch => {
+  return bindActionCreators({ fetchCurrentProjectSettings, udpateCurrentProjectSettings }, dispatch)
+}
+
+export default connect(mapStateToProps, mapDispatchToProps)(Settings);

@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
-import { connect } from 'react-redux'
+import { connect } from 'react-redux';
+import { bindActionCreators } from 'redux';
 import {
   Button,
   Card,
@@ -36,18 +37,7 @@ export const STATE_EVENT_STRING_PROPERTY_VALUE = 5;
 export const STATE_USER_NUMERIC_PROPERTY_VALUE = 6;
 export const STATE_USER_STRING_PROPERTY_VALUE = 7;
 
-@connect((store) => {
-  return {
-    currentProjectId: store.projects.currentProjectId,
-    currentProjectEventNames: store.projects.currentProjectEventNames,
-    eventPropertiesMap: store.projects.eventPropertiesMap,
-    eventPropertyValuesMap: store.projects.eventPropertyValuesMap,
-  };
-})
-
 class QueryBuilderCard extends Component {
-
-
   // Instance variables.
   latestSelectedEventName = null;
   latestSelectedEventProperty = null;
@@ -189,8 +179,8 @@ class QueryBuilderCard extends Component {
       this.latestSelectedEventProperty = newValues[numEnteredValues - 1]['property'];
     }
     if (this.state.queryStates[nextState][DYNAMIC_FETCH_EVENT_PROPERTIES]) {
-      this.props.dispatch(fetchProjectEventProperties(this.props.currentProjectId,
-        this.latestSelectedEventName));
+      this.props.fetchProjectEventProperties(this.props.currentProjectId,
+        this.latestSelectedEventName);
         this.setState({
           currentOptions: [],
           currentQueryState: nextState,
@@ -201,8 +191,8 @@ class QueryBuilderCard extends Component {
         });
     } else if (this.state.queryStates[nextState][DYNAMIC_FETCH_EVENT_PROPERTY_VALUES]) {
       console.log("Fetch property: " + this.latestSelectedEventProperty);
-      this.props.dispatch(fetchProjectEventPropertyValues(this.props.currentProjectId,
-        this.latestSelectedEventName, this.latestSelectedEventProperty));
+      this.props.fetchProjectEventPropertyValues(this.props.currentProjectId,
+        this.latestSelectedEventName, this.latestSelectedEventProperty);
         this.setState({
           currentOptions: [],
           currentQueryState: nextState,
@@ -303,4 +293,20 @@ class QueryBuilderCard extends Component {
   }
 }
 
-export default QueryBuilderCard;
+const mapStateToProps = store => {
+  return {
+    currentProjectId: store.projects.currentProjectId,
+    currentProjectEventNames: store.projects.currentProjectEventNames,
+    eventPropertiesMap: store.projects.eventPropertiesMap,
+    eventPropertyValuesMap: store.projects.eventPropertyValuesMap,
+  }
+}
+
+const mapDispatchToProps = dispatch => {
+  return bindActionCreators({ 
+    fetchProjectEventProperties, 
+    fetchProjectEventPropertyValues
+  }, dispatch)
+}
+
+export default connect(mapStateToProps, mapDispatchToProps)(QueryBuilderCard);

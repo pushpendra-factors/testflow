@@ -1,10 +1,10 @@
 import React, { Component } from 'react';
-import { connect } from "react-redux"
+import { connect } from "react-redux";
+import { bindActionCreators } from 'redux';
 import { Redirect, Route, Switch } from 'react-router-dom';
 import { Container } from 'reactstrap';
 import {
   AppAside,
-  AppBreadcrumb,
   AppFooter,
   AppHeader,
   AppSidebar,
@@ -22,8 +22,9 @@ import routes from '../../routes';
 import DefaultAside from './DefaultAside';
 import DefaultFooter from './DefaultFooter';
 import DefaultHeader from './DefaultHeader';
-import { 
-  fetchProjects, 
+import {
+  changeProject,
+  fetchProjects,
   fetchCurrentProjectEvents, 
   fetchCurrentProjectSettings 
 } from "../../actions/projectsActions";
@@ -55,15 +56,8 @@ const projectSelectStyles = {
   }),
 }
 
-@connect((store) => {
-  return {
-    currentProjectId : store.projects.currentProjectId,
-    projects : store.projects.projects
-  };
-})
-
 class DefaultLayout extends Component {
-
+  
   constructor(props) {
     super(props);
     this.state = {
@@ -75,8 +69,8 @@ class DefaultLayout extends Component {
   }
 
   componentWillMount() {
-    this.props.dispatch(fetchProjects())
-      .then((response) => {
+    this.props.fetchProjects()
+      .then((action) => {
         this.setState({ 
           projects: {
             loaded: true
@@ -87,7 +81,7 @@ class DefaultLayout extends Component {
         this.setState({ 
           projects: { 
             loaded: true, 
-            error: response.payload 
+            error: response.payload
           } 
         });
       });
@@ -96,8 +90,9 @@ class DefaultLayout extends Component {
   fetchProjectDependencies  = (projectId) => {
     // Todo(Dinesh): Only corresponding dependency should be fetched on project change
     // and state of correspond component should go to loaded: false.
-    this.props.dispatch(fetchCurrentProjectSettings(projectId));
-    this.props.dispatch(fetchCurrentProjectEvents(projectId));
+    this.props.fetchCurrentProjectSettings(projectId);
+    this.props.fetchCurrentProjectEvents(projectId);
+    // this.props.dispatch(changeProject(projectId));
   }
 
   render() {
@@ -152,4 +147,19 @@ class DefaultLayout extends Component {
   }
 }
 
-export default DefaultLayout;
+const mapStateToProps = store => {
+  return {
+    currentProjectId : store.projects.currentProjectId,
+    projects : store.projects.projects
+  }
+}
+
+const mapDispatchToProps = dispatch => {
+  return bindActionCreators({ 
+    fetchProjects,
+    fetchCurrentProjectEvents, 
+    fetchCurrentProjectSettings 
+  }, dispatch)
+}
+
+export default connect(mapStateToProps, mapDispatchToProps)(DefaultLayout);

@@ -8,6 +8,9 @@ export default function reducer(state={
   }, action) {
 
     switch (action.type) {
+      case "CHANGE_PROJECT": {
+        return {...state, currentProjectId: action.payload }
+      }
       case "FETCH_PROJECTS": {
         return {...state, fetchingProjects: true}
       }

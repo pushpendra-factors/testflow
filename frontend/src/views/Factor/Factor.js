@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
-import { connect } from 'react-redux'
+import { connect } from 'react-redux';
+import { bindActionCreators } from 'redux';
 import {
   Card,
   Col,
@@ -45,13 +46,6 @@ const chartCardRowStyle = {
   marginLeft: '2px',
 };
 
-@connect((store) => {
-  return {
-    currentProjectId: store.projects.currentProjectId,
-    factors: store.factors.factors,
-  };
-})
-
 class Factor extends Component {
   constructor(props) {
     super(props);
@@ -72,7 +66,7 @@ class Factor extends Component {
   }
 
   componentWillMount() {
-    this.props.dispatch(fetchCurrentProjectEvents(this.props.currentProjectId))
+    this.props.fetchCurrentProjectEvents(this.props.currentProjectId)
       .then((response) => {
         this.setState({ eventNames: { loaded: true } });
       })
@@ -305,8 +299,8 @@ class Factor extends Component {
       return;
     }
     console.log('Fire Query: ' + JSON.stringify(query));
-    this.props.dispatch(fetchFactors(this.props.currentProjectId,
-      { query: query }, this.props.location.search));
+    this.props.fetchFactors(this.props.currentProjectId,
+      { query: query }, this.props.location.search);
   }
 
   render() {
@@ -355,4 +349,15 @@ class Factor extends Component {
   }
 }
 
-export default Factor;
+const mapStateToProps = store => {
+  return {
+    currentProjectId: store.projects.currentProjectId,
+    factors: store.factors.factors,
+  }
+}
+
+const mapDispatchToProps = dispatch => {
+  return bindActionCreators({ fetchFactors, fetchCurrentProjectEvents }, dispatch)
+}
+
+export default connect(mapStateToProps, mapDispatchToProps)(Factor);

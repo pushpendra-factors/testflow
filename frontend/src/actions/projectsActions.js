@@ -1,6 +1,12 @@
 import axios from "axios";
 import appConfig from "../config/appConfig"
 
+export function changeProject(projectId) {
+  return function(dispatch) {
+    dispatch({type: "CHANGE_PROJECT", payload: projectId});
+  }
+}
+
 export function fetchProjects() {
   return function(dispatch) {
     dispatch({type: "FETCH_PROJECTS"});
@@ -13,7 +19,7 @@ export function fetchProjects() {
         .catch((err) => {
           reject(dispatch({type: "FETCH_PROJECTS_REJECTED", payload: err}));
         });
-    }); 
+    });
   }
 }
 
