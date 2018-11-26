@@ -1,10 +1,15 @@
 var debug = process.env.NODE_ENV !== "production";
 var webpack = require('webpack');
 var path = require('path');
+var config = require('./buildConfig');
+
+var buildConfigPlugin = new webpack.DefinePlugin({
+  "BUILD_CONFIG": JSON.stringify(config[process.env.NODE_ENV])
+});
 
 module.exports = {
   context: path.join(__dirname, "src"),
-  devtool: debug ? "inline-sourcemap" : null,
+  devtool: debug ? "inline-sourcemap" : false,
   entry: "./index.js",
   module: {
     loaders: [
@@ -39,7 +44,8 @@ module.exports = {
     path: __dirname + "/src/",
     filename: "index.min.js"
   },
-  plugins: debug ? [] : [
+  plugins: debug ? [buildConfigPlugin] : [
+    buildConfigPlugin, 
     new webpack.optimize.DedupePlugin(),
     new webpack.optimize.OccurenceOrderPlugin(),
     new webpack.optimize.UglifyJsPlugin({ mangle: false, sourcemap: false }),

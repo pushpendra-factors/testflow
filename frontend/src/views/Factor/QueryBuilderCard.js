@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
-import { connect } from 'react-redux'
+import { connect } from 'react-redux';
+import { bindActionCreators } from 'redux';
 import {
   Button,
   Card,
@@ -9,7 +10,10 @@ import {
   Row,
 } from 'reactstrap';
 import CreatableSelect from 'react-select/lib/Creatable';
-import { fetchProjectEventProperties, fetchProjectEventPropertyValues } from "../../actions/projectsActions"
+import { 
+  fetchProjectEventProperties, 
+  fetchProjectEventPropertyValues 
+} from "../../actions/projectsActions"
 
 const queryBuilderStyles = {
   multiValue: () => ({
@@ -36,18 +40,23 @@ export const STATE_EVENT_STRING_PROPERTY_VALUE = 5;
 export const STATE_USER_NUMERIC_PROPERTY_VALUE = 6;
 export const STATE_USER_STRING_PROPERTY_VALUE = 7;
 
-@connect((store) => {
+const mapStateToProps = store => {
   return {
-    currentProject: store.projects.currentProject,
+    currentProjectId: store.projects.currentProjectId,
     currentProjectEventNames: store.projects.currentProjectEventNames,
     eventPropertiesMap: store.projects.eventPropertiesMap,
     eventPropertyValuesMap: store.projects.eventPropertyValuesMap,
-  };
-})
+  }
+}
+
+const mapDispatchToProps = dispatch => {
+  return bindActionCreators({ 
+    fetchProjectEventProperties, 
+    fetchProjectEventPropertyValues
+  }, dispatch);
+}
 
 class QueryBuilderCard extends Component {
-
-
   // Instance variables.
   latestSelectedEventName = null;
   latestSelectedEventProperty = null;
@@ -99,7 +108,7 @@ class QueryBuilderCard extends Component {
   }
 
   shouldComponentUpdate(nextProps, nextState) {
-    if (this.props.currentProject.value != nextProps.currentProject.value) {
+    if (this.props.currentProjectId != nextProps.currentProjectId) {
       this.resetProject(nextProps.currentProjectEventNames);
     }
     if (this.state.queryStates[this.state.currentQueryState][DYNAMIC_FETCH_EVENT_PROPERTIES] &&
@@ -189,8 +198,8 @@ class QueryBuilderCard extends Component {
       this.latestSelectedEventProperty = newValues[numEnteredValues - 1]['property'];
     }
     if (this.state.queryStates[nextState][DYNAMIC_FETCH_EVENT_PROPERTIES]) {
-      this.props.dispatch(fetchProjectEventProperties(this.props.currentProject.value,
-        this.latestSelectedEventName));
+      this.props.fetchProjectEventProperties(this.props.currentProjectId,
+        this.latestSelectedEventName);
         this.setState({
           currentOptions: [],
           currentQueryState: nextState,
@@ -201,8 +210,8 @@ class QueryBuilderCard extends Component {
         });
     } else if (this.state.queryStates[nextState][DYNAMIC_FETCH_EVENT_PROPERTY_VALUES]) {
       console.log("Fetch property: " + this.latestSelectedEventProperty);
-      this.props.dispatch(fetchProjectEventPropertyValues(this.props.currentProject.value,
-        this.latestSelectedEventName, this.latestSelectedEventProperty));
+      this.props.fetchProjectEventPropertyValues(this.props.currentProjectId,
+        this.latestSelectedEventName, this.latestSelectedEventProperty);
         this.setState({
           currentOptions: [],
           currentQueryState: nextState,
@@ -303,4 +312,4 @@ class QueryBuilderCard extends Component {
   }
 }
 
-export default QueryBuilderCard;
+export default connect(mapStateToProps, mapDispatchToProps)(QueryBuilderCard);

@@ -1,12 +1,10 @@
 import React, { Component } from 'react';
-import { connect } from "react-redux"
-
+import { connect } from "react-redux";
+import { bindActionCreators } from 'redux';
 import { Redirect, Route, Switch } from 'react-router-dom';
 import { Container } from 'reactstrap';
-
 import {
   AppAside,
-  AppBreadcrumb,
   AppFooter,
   AppHeader,
   AppSidebar,
@@ -16,7 +14,7 @@ import {
   AppSidebarMinimizer,
   AppSidebarNav,
 } from '@coreui/react';
-import Select from 'react-select';
+
 // sidebar nav config
 import navigation from '../../_nav';
 // routes config
@@ -24,8 +22,9 @@ import routes from '../../routes';
 import DefaultAside from './DefaultAside';
 import DefaultFooter from './DefaultFooter';
 import DefaultHeader from './DefaultHeader';
-import { 
-  fetchProjects, 
+import {
+  changeProject,
+  fetchProjects,
   fetchCurrentProjectEvents, 
   fetchCurrentProjectSettings 
 } from "../../actions/projectsActions";
@@ -57,39 +56,79 @@ const projectSelectStyles = {
   }),
 }
 
-@connect((store) => {
+const mapStateToProps = store => {
   return {
-    projects : store.projects.projects,
-    currentProject : store.projects.currentProject,
-  };
-})
+    currentProjectId: store.projects.currentProjectId,
+    projects: store.projects.projects
+  }
+}
+
+const mapDispatchToProps = dispatch => {
+  return bindActionCreators({ 
+    fetchProjects,
+    fetchCurrentProjectEvents, 
+    fetchCurrentProjectSettings 
+  }, dispatch);
+}
 
 class DefaultLayout extends Component {
-  componentWillMount() {
-    this.props.dispatch(fetchProjects())
+
+  constructor(props) {
+    super(props);
+    this.state = {
+      projects: {
+        loaded: false,
+        error: null
+      }
+    }
   }
 
-  /**
-   * Loads all dependencies; 
-   * */
-  fetchProjectDependencies  = (project) => {
-    // Independent methods. Not chained.
-    this.props.dispatch(fetchCurrentProjectSettings(project));
-    this.props.dispatch(fetchCurrentProjectEvents(project));
+  componentWillMount() {
+    this.props.fetchProjects()
+      .then((action) => {
+        this.setState({ 
+          projects: {
+            loaded: true
+          }
+        });
+      })
+      .catch((response) => {
+        this.setState({ 
+          projects: { 
+            loaded: true, 
+            error: response.payload
+          } 
+        });
+      });
+  }
+
+  fetchProjectDependencies  = (projectId) => {
+    // Todo(Dinesh): Remove dependency reload from here. dispatch changeProject action to
+    // re-render corresponding component which will call fetch on mount.
+    this.props.fetchCurrentProjectSettings(projectId);
+    this.props.fetchCurrentProjectEvents(projectId);
   }
 
   render() {
-    const mappedProjects = Array.from(this.props.projects,
-       project => ({"label": project.name, "value": project.id}))
-    if (!this.props.currentProject && mappedProjects.length > 0) {
-      // Default select first project.    
-      this.fetchProjectDependencies(mappedProjects[0]);
-    }
+    // Todo(Dinesh): Define a generic loading screen.
+    if (!this.state.projects.loaded) return <div>Loading...</div>;
+
+    if (this.state.projects.loaded && this.state.projects.error) 
+      return <div>Failed loading your project.</div>;
+
+    const selectableProjects = Array.from(
+      Object.values(this.props.projects), 
+      project => ({ "label": project.name, "value": project.id }) // selectable_projects object structure.
+    )
 
     return (
       <div className="app">
         <AppHeader className="fapp-header" fixed>
-          <DefaultHeader fetchProjectDependencies={this.fetchProjectDependencies} projects={mappedProjects} currentProject={this.props.currentProject} />
+          <DefaultHeader 
+            fetchProjectDependencies={this.fetchProjectDependencies} 
+            selectableProjects={selectableProjects}
+            selectedProject={{ label: this.props.projects[this.props.currentProjectId].name, value: this.props.currentProjectId }} 
+          />
         </AppHeader>
         <div className="app-body">
           <AppSidebar className="fapp-sidebar" fixed display="lg">
@@ -102,10 +141,8 @@ class DefaultLayout extends Component {
             <Container fluid>
               <Switch>
                 {routes.map((route, idx) => {
-                    return route.component ? (<Route key={idx} path={route.path} exact={route.exact} name={route.name} render={props => (
-                        <route.component {...props} />
-                      )} />)
-                      : (null);
+                    return route.component ? (<Route key={idx} path={route.path} exact={route.exact} name={route.name} 
+                      render={props => (<route.component {...props} />)} />) : (null);
                   },
                 )}
                 <Redirect from="/" to="/dashboard" />
@@ -124,4 +161,4 @@ class DefaultLayout extends Component {
   }
 }
 
-export default DefaultLayout;
+export default connect(mapStateToProps, mapDispatchToProps)(DefaultLayout);

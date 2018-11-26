@@ -1,11 +1,14 @@
 import React, { Component } from 'react';
-import { connect } from 'react-redux'
+import { connect } from 'react-redux';
+import { bindActionCreators } from 'redux';
 import {
   Card,
   Col,
   Row,
 } from 'reactstrap';
-import { fetchFactors } from "../../actions/factorsActions"
+
+import { fetchFactors } from "../../actions/factorsActions";
+import { fetchCurrentProjectEvents } from "../../actions/projectsActions";
 import BarChartCard from './BarChartCard.js';
 import LineChartCard from './LineChartCard.js';
 import FunnelChartCard from './FunnelChartCard.js';
@@ -43,14 +46,46 @@ const chartCardRowStyle = {
   marginLeft: '2px',
 };
 
-@connect((store) => {
+const mapStateToProps = store => {
   return {
-    currentProject: store.projects.currentProject,
+    currentProjectId: store.projects.currentProjectId,
     factors: store.factors.factors,
-  };
-})
+  }
+}
+
+const mapDispatchToProps = dispatch => {
+  return bindActionCreators({ fetchFactors, fetchCurrentProjectEvents }, dispatch);
+}
 
 class Factor extends Component {
+  constructor(props) {
+    super(props);
+    this.toggle = this.toggle.bind(this);
+    this.toggleFade = this.toggleFade.bind(this);
+    this.factor = this.factor.bind(this);
+
+    this.state = {
+      collapse: true,
+      fadeIn: true,
+      timeout: 300,
+
+      eventNames: {
+        loaded: false,
+        error: null
+      }
+    }
+  }
+
+  componentWillMount() {
+    this.props.fetchCurrentProjectEvents(this.props.currentProjectId)
+      .then((response) => {
+        this.setState({ eventNames: { loaded: true } });
+      })
+      .catch((response) => {
+        this.setState({ eventNames: { loaded: true, error: response.payload } });
+      });
+  }
+
   getEventPropertiesOptions(eventProperties) {
     var lp = [];
     var categoricalProperties = eventProperties["categorical"];
@@ -173,19 +208,6 @@ class Factor extends Component {
     return queryStates;
   }
 
-  constructor(props) {
-    super(props);
-    this.toggle = this.toggle.bind(this);
-    this.toggleFade = this.toggleFade.bind(this);
-    this.factor = this.factor.bind(this);
-
-    this.state = {
-      collapse: true,
-      fadeIn: true,
-      timeout: 300,
-    }
-  }
-
   toggle() {
     this.setState({ collapse: !this.state.collapse });
   }
@@ -288,11 +310,13 @@ class Factor extends Component {
       return;
     }
     console.log('Fire Query: ' + JSON.stringify(query));
-    this.props.dispatch(fetchFactors(this.props.currentProject.value,
-      { query: query }, this.props.location.search));
+    this.props.fetchFactors(this.props.currentProjectId,
+      { query: query }, this.props.location.search);
   }
 
   render() {
+    if (!this.state.eventNames.loaded) return <div> Loading... </div>;
+
     var charts = [];
     let resultElements;
     if (!!this.props.factors.charts) {
@@ -336,4 +360,4 @@ class Factor extends Component {
   }
 }
 
-export default Factor;
+export default connect(mapStateToProps, mapDispatchToProps)(Factor);

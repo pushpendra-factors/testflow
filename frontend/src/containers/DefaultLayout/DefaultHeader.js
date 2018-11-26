@@ -2,7 +2,6 @@ import React, { Component } from 'react';
 import { Badge, DropdownItem, DropdownMenu, DropdownToggle, Nav, NavItem, NavLink } from 'reactstrap';
 import PropTypes from 'prop-types';
 
-
 import { AppHeaderDropdown, AppSidebarToggler } from '@coreui/react';
 import factorslogo from '../../assets/img/brand/factors-logo.svg'
 import factorsicon from '../../assets/img/brand/factors-icon.svg'
@@ -47,7 +46,7 @@ const projectSelectStyles = {
 
 class DefaultHeader extends Component {
   handleChange = (selectedProject) => {
-    this.props.fetchProjectDependencies(selectedProject);
+    this.props.fetchProjectDependencies(selectedProject.value);
   }
   
   render() {
@@ -60,13 +59,13 @@ class DefaultHeader extends Component {
         <AppSidebarToggler className="d-md-down-none fapp-navbar-toggler" display="lg" />
         <AppSidebarForm className="fapp-sidebar-form">
           <Select
-            options={this.props.projects}
-            value={this.props.currentProject}
+            options={this.props.selectableProjects}
+            value={this.props.selectedProject}
             onChange={this.handleChange}
             styles={projectSelectStyles}
             placeholder={"Select Project ..."}
             blurInputOnSelect={true}
-            />
+          />
         </AppSidebarForm>
 
 

@@ -8,6 +8,9 @@ export default function reducer(state={
   }, action) {
 
     switch (action.type) {
+      case "CHANGE_PROJECT": {
+        return {...state, currentProjectId: action.payload }
+      }
       case "FETCH_PROJECTS": {
         return {...state, fetchingProjects: true}
       }
@@ -15,11 +18,24 @@ export default function reducer(state={
         return {...state, fetchingProjects: false, projectsError: action.payload}
       }
       case "FETCH_PROJECTS_FULFILLED": {
+        // Indexed project objects by projectId. Kept projectId on value also intentionally 
+        // for array of projects from Object.values().
+        let projects = {};
+        for (let project of action.payload) {
+          projects[project.id] = project;
+        }
+
+        // Initial project set.
+        let currentProjectId = null;
+        if (action.payload.length > 0)
+          currentProjectId = action.payload[0].id;
+
         return {
           ...state,
           fetchingProjects: false,
           fetchedProjects: true,
-          projects: action.payload
+          projects: projects,
+          currentProjectId: currentProjectId
         }
       }
       case "FETCH_CURRENT_PROJECT_SETTINGS_FULFILLED": {
@@ -51,13 +67,13 @@ export default function reducer(state={
       }
       case "FETCH_CURRENT_PROJECT_EVENTS_FULFILLED": {
         return {...state,
-                currentProject: action.payload.currentProject,
+                currentProjectId: action.payload.currentProjectId,
                 currentProjectEventNames: action.payload.currentProjectEventNames
               }
       }
       case "FETCH_CURRENT_PROJECT_EVENTS_REJECTED": {
         return {...state,
-                currentProject: action.payload.currentProject,
+                currentProjectId: action.payload.currentProjectId,
                 currentProjectEventNames: action.payload.currentProjectEventNames,
                 projectEventsError: action.payload.err}
       }
