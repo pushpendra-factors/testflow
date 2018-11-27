@@ -3,9 +3,9 @@
 var Cookie = require("./utils/cookie");
 const logger = require("./utils/logger");
 const util = require("./utils/util");
-
 var APIClient = require("./api-client");
 const constant = require("./constant");
+const Properties = require("./properties");
 
 const SDK_NOT_INIT_ERROR = new Error("FactorsError: SDK is not initialized with token.");
 
@@ -39,44 +39,7 @@ function updatePayloadWithUserIdFromCookie(payload) {
     return payload;
 }
 
-/**
- * Parse query string.
- * @param {*} qString 
- * ----- Cases -----
- * window.location.search = "" -> {}
- * window.location.search = "?" -> {}
- * window.location.search = "?a" -> {a: null}
- * window.location.search = "?a=" -> {a: null}
- * window.location.search = "?a=10" -> {a: 10}
- * window.location.search = "?a=10&" -> {a: 10}
- * window.location.search = "?a=10&b" -> {a: 10, b: null}
- * window.location.search = "?a=10&b=20" -> {a: 10, b: 20}
- */
-function parseQueryString(qString) {
-    // "?" check is not necessary for window.search. Added to stay pure.
-    if (typeof(qString) !== "string" 
-        || qString.length === 0 
-        || (qString.length === 1 && qString.indexOf("?") === 0)) 
-        return {};
-    let ep = {};
-    let t = null;
-    // Remove & at the end.
-    let ambPos = qString.indexOf("&");
-    if (ambPos === qString.length-1) qString = qString.slice(0, qString.length-1);
-    if (ambPos >= 0) t = qString.split("&");
-    else t = [qString];
-    for (var i=0; i<t.length; i++){
-        let kv = null;
-        if (t[i].indexOf("=") >= 0) kv = t[i].split("=");
-        else kv = [t[i], null];
-        // Remove ? on first query param.
-        if (i == 0 && kv[0].indexOf("?") === 0) kv[0] = kv[0].slice(1);
-        // No value, assign null.
-        if (kv[1] === "") kv[1] = null;
-        ep[kv[0]] = kv[1];
-    }
-    return ep;
-}
+
 
 /**
  * App prototype.
@@ -129,7 +92,7 @@ App.prototype.track = function(eventName, eventProperties, auto=false) {
     let payload = {};
     updatePayloadWithUserIdFromCookie(payload);
     payload.event_name = eventName;
-    payload.event_properties = eventProperties;
+    payload.event_properties = Object.assign(eventProperties, Properties.getDefault());
     payload.auto = auto;
 
     return this.client.track(payload)
@@ -140,8 +103,7 @@ App.prototype.track = function(eventName, eventProperties, auto=false) {
 App.prototype.autoTrack = function(enabled=false) {
     if (!enabled) return false; // not enabled.
     var en = window.location.host+window.location.pathname;
-    var search =  window.location.search;
-    return this.track(en, parseQueryString(search), true);
+    return this.track(en, Properties.parseFromQueryString(window.location.search), true);
 }
 
 App.prototype.identify = function(customerUserId) {
