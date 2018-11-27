@@ -17,16 +17,9 @@ function request(method, url, headers, data) {
         .then((response) =>  {
             return response.json()
                 .then((responseJSON) => {
+                    if (!response.ok) return Promise.reject("Failed on fetch.");
                     return { status: response.status, body: responseJSON };
                 })
-                .catch((JSONError) => {
-                    logger.debug(JSONError);
-                    return Promise.reject(JSONError);
-                });
-        })
-        .catch((error) => {
-            logger.debug(error);
-            return Promise.reject(error);
         });
 }
 
