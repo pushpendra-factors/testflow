@@ -79,7 +79,7 @@ App.prototype.init = function(token) {
         .then(function() {
             return _this.autoTrack(_this.getConfig("auto_track"));
         })
-        .catch(logger.error);
+        .catch(logger.debug);
 }
 
 App.prototype.track = function(eventName, eventProperties, auto=false) {
@@ -92,12 +92,13 @@ App.prototype.track = function(eventName, eventProperties, auto=false) {
     let payload = {};
     updatePayloadWithUserIdFromCookie(payload);
     payload.event_name = eventName;
-    payload.event_properties = Object.assign(eventProperties, Properties.getDefault());
+    payload.event_properties = Object.assign(eventProperties, 
+        Properties.getDefault());
     payload.auto = auto;
 
     return this.client.track(payload)
         .then(updateCookieIfUserIdInResponse)
-        .catch(logger.error);
+        .catch(logger.debug);
 }
 
 App.prototype.autoTrack = function(enabled=false) {
@@ -117,7 +118,7 @@ App.prototype.identify = function(customerUserId) {
     
     return this.client.identify(payload)
         .then(updateCookieIfUserIdInResponse)
-        .catch(logger.error);
+        .catch(logger.debug);
 }
 
 App.prototype.addUserProperties = function (properties={}) {
@@ -135,7 +136,7 @@ App.prototype.addUserProperties = function (properties={}) {
 
     return this.client.addUserProperties(payload)
         .then(updateCookieIfUserIdInResponse)
-        .catch(logger.error);
+        .catch(logger.debug);
 }
 
 // Clears the state of the app.

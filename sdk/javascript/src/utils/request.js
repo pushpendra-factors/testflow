@@ -20,12 +20,12 @@ function request(method, url, headers, data) {
                     return { status: response.status, body: responseJSON };
                 })
                 .catch((JSONError) => {
-                    logger.error(JSONError);
+                    logger.debug(JSONError);
                     return Promise.reject(JSONError);
                 });
         })
         .catch((error) => {
-            logger.error(JSON.stringify(error));
+            logger.debug(error);
             return Promise.reject(error);
         });
 }
