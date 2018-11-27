@@ -25,13 +25,6 @@ function updateCookieIfUserIdInResponse(response){
     return response; // To continue chaining.
 }
 
-function throwErrorOnFailureResponse(response, message="Request failed.") {
-    if (response.status < 200 || response.status > 308) 
-        throw new Error("FactorsRequestError: "+message);
-    
-    return response;
-}
-
 function updatePayloadWithUserIdFromCookie(payload) {
     if (Cookie.isExist(constant.cookie.USER_ID))
         payload.user_id = Cookie.getDecoded(constant.cookie.USER_ID);
@@ -103,8 +96,27 @@ App.prototype.track = function(eventName, eventProperties, auto=false) {
 
 App.prototype.autoTrack = function(enabled=false) {
     if (!enabled) return false; // not enabled.
-    var en = window.location.host+window.location.pathname;
-    return this.track(en, Properties.parseFromQueryString(window.location.search), true);
+    this.track(window.location.host+window.location.pathname, 
+        Properties.parseFromQueryString(window.location.search), true);
+
+    // AutoTrack SPA
+    // check support for history and onpopstate listener.
+    if (window.history && window.onpopstate !== undefined) { 
+        if (window.onpopstate != null) {
+            logger.debug("Failed. Already a function attached on window.onpopstate.");
+            return;
+        }
+        var _land_location = window.location.href;
+        var _this = this;
+        window.onpopstate = function() {
+            console.log("on history");
+            logger.debug("Triggered window.onpopstate: "+window.location.href);
+            // Track only if URL or QueryParam changed.
+            if (_land_location !== window.location.href)
+                _this.track(window.location.host+window.location.pathname, 
+                    Properties.parseFromQueryString(window.location.search), true);
+        }
+    }
 }
 
 App.prototype.identify = function(customerUserId) {
