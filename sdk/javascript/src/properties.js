@@ -312,12 +312,13 @@ function getDefault(pfix="$") {
  * ----- Cases -----
  * window.location.search = "" -> {}
  * window.location.search = "?" -> {}
- * window.location.search = "?a" -> {a: null}
- * window.location.search = "?a=" -> {a: null}
+ * window.location.search = "?a" -> {}
+ * window.location.search = "?a=" -> {}
  * window.location.search = "?a=10" -> {a: 10}
  * window.location.search = "?a=10&" -> {a: 10}
- * window.location.search = "?a=10&b" -> {a: 10, b: null}
+ * window.location.search = "?a=10&b" -> {a: 10}
  * window.location.search = "?a=10&b=20" -> {a: 10, b: 20}
+ * window.location.search = "?a=10&b=medium" -> {a: 10, b: "medium"}
  */
 function parseFromQueryString(qString, prefix="$qp_") {
     // "?" check is not necessary for window.search. Added to stay pure.

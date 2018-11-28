@@ -17,7 +17,10 @@ const Properties = require("../properties");
 // Assertion with chai.assert
 const assert = chai.assert;
 
-var SuitePublicMethod = {};
+
+/**
+ * Test Utils
+ */
 
 function randomAlphaNumeric(len) {
     var p = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -107,24 +110,91 @@ function assertIfUserIdOnResponse(r) {
     return r;
 }
 
+/**
+ * Private methods
+ */
+
+const SuitePrivateMethod = {};
+
+SuitePrivateMethod.testGetPropertiesFromQueryString = function() {
+    assert.isEmpty(Object.keys(Properties.parseFromQueryString("")));
+    assert.isEmpty(Object.keys(Properties.parseFromQueryString("?")));
+
+    let props = Properties.parseFromQueryString("?a")
+    assert.isEmpty(Object.keys(props));
+
+    props = Properties.parseFromQueryString("?a=")
+    assert.isEmpty(Object.keys(props));
+
+    // Type check for numerical properties.
+    props = Properties.parseFromQueryString("?a=10")
+    assert.isNotEmpty(Object.keys(props));
+    assert.isTrue(props && props.$qp_a === 10); // Do we need this as int?
+
+    props = Properties.parseFromQueryString("?a=10abc")
+    assert.isNotEmpty(Object.keys(props));
+    assert.isTrue(props && props.$qp_a === "10abc");
+
+    props = Properties.parseFromQueryString("?a=ab10")
+    assert.isNotEmpty(Object.keys(props));
+    assert.isTrue(props && props.$qp_a === "ab10");
+
+    props = Properties.parseFromQueryString("?a=10&")
+    assert.isNotEmpty(Object.keys(props));
+    assert.isTrue(props && props.$qp_a === 10); 
+
+    props = Properties.parseFromQueryString("?a=10&b")
+    assert.isNotEmpty(Object.keys(props));
+    assert.isTrue(props && props.$qp_a === 10); 
+    assert.isTrue(props && props.$qp_b == null);
+
+    props = Properties.parseFromQueryString("?a=10&utm=medium");
+    assert.isNotEmpty(Object.keys(props));
+    assert.isTrue(props && props.$qp_a === 10); 
+    assert.isTrue(props && props.$qp_utm === "medium");
+}
+
+SuitePrivateMethod.testGetDefaultProperties = function() {
+    assert.isNotEmpty(Properties.getDefault())
+    let props =  Properties.getDefault();
+    // No empty values.
+    for (let k in props) assert.isNotEmpty(props[k].toString(), "Empty: "+k);
+
+    // Check individual keys needed.
+    assert.containsAllKeys(props, 
+        ["$referrer", "$browser", "$browser_version", "$os", "$os_version", "$screen_width", "$screen_height"]);
+    
+    props = Properties.getDefault();
+    // If 8 properties, includes device.
+    if (props.$device) assert.isTrue(props.$device != "");
+}
+
+
+/**
+ * Public methods
+ */
+
+const App = require("../app");
+const SuitePublicMethod = {};
+
+var app = new App();
+
+// Todo: 
+
 // Test: Init
 
 SuitePublicMethod.testInit = function() {
     return setupNewProject()
         .then((r) => {
-            factors.reset();
+            app.reset();
             assert.isTrue(r.body.hasOwnProperty("token"), "Token should be in the response.");
             assert.isTrue(r.body.token.trim().length > 0, "Token should not be empty.")
-            
-            factors.reset();
-            return factors.init(r.body.token)
-                .then(() => {
-                    assert.isTrue(factors.app.client.token === r.body.token, "Token should be set as api client token for the app.");
-                });
+
+            app.reset();
+            return app.init(r.body.token)
+                .then( () => assert.isTrue(app.isInitialized()) );
         });
 }
-
-
 
 SuitePublicMethod.testInitWithBadInput = function() {
     factors.reset();
@@ -396,58 +466,13 @@ SuitePublicMethod.testAddUserPropertiesWithUserCookie = function() {
         });
 }
 
-
-const SuitePrivateMethod = {};
-
-SuitePrivateMethod.testGetPropertiesFromQueryString = function() {
-    assert.isEmpty(Object.keys(Properties.parseFromQueryString("")));
-    assert.isEmpty(Object.keys(Properties.parseFromQueryString("?")));
-
-    let props = Properties.parseFromQueryString("?a")
-    assert.isEmpty(Object.keys(props));
-
-    props = Properties.parseFromQueryString("?a=")
-    assert.isEmpty(Object.keys(props));
-
-    // Type check for numerical properties.
-    props = Properties.parseFromQueryString("?a=10")
-    assert.isNotEmpty(Object.keys(props));
-    assert.isTrue(props && props.$qp_a === 10); // Do we need this as int?
-
-    props = Properties.parseFromQueryString("?a=10abc")
-    assert.isNotEmpty(Object.keys(props));
-    assert.isTrue(props && props.$qp_a === "10abc");
-
-    props = Properties.parseFromQueryString("?a=ab10")
-    assert.isNotEmpty(Object.keys(props));
-    assert.isTrue(props && props.$qp_a === "ab10");
-
-    props = Properties.parseFromQueryString("?a=10&")
-    assert.isNotEmpty(Object.keys(props));
-    assert.isTrue(props && props.$qp_a === 10); 
-
-    props = Properties.parseFromQueryString("?a=10&b")
-    assert.isNotEmpty(Object.keys(props));
-    assert.isTrue(props && props.$qp_a === 10); 
-    assert.isTrue(props && props.$qp_b == null);
-
-    props = Properties.parseFromQueryString("?a=10&utm=medium");
-    assert.isNotEmpty(Object.keys(props));
-    assert.isTrue(props && props.$qp_a === 10); 
-    assert.isTrue(props && props.$qp_utm === "medium");
-}
-
-SuitePrivateMethod.testGetDefaultProperties = function() {
-    assert.isNotEmpty(Properties.getDefault())
-    let props =  Properties.getDefault();
-    // No empty values.
-    for (let k in props) assert.isNotEmpty(props[k].toString(), "Empty: "+k);
-    props = Properties.getDefault();
-    // If 8 properties, includes device.
-    if (props.$device) assert.isTrue(props.$device != "");
-}
+/**
+ * Test Runners
+ */
 
 function runPrivateMethodsSuite() {
+    window.FACOTRS_DEBUG=true;
+
     for (let test in SuitePrivateMethod) {
         console.log('%c Running Private Methods Suite '+test+'..', 'color: green');
         SuitePrivateMethod[test]();
@@ -458,6 +483,8 @@ function runPrivateMethodsSuite() {
 // Todo(Dinesh): Inconsistent: Make async methods to run synchronously as cookie 
 // is a shared object.
 function runPublicMethodsSuite() {
+    window.FACOTRS_DEBUG=true;
+
     // Runs individual test in the test_suite.
     for (let test in SuitePublicMethod) {
         console.log('%c Running Public Methods Suite '+test+'..', 'color: green');

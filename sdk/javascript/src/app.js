@@ -33,7 +33,6 @@ function updatePayloadWithUserIdFromCookie(payload) {
 }
 
 
-
 /**
  * App prototype.
  */
@@ -98,9 +97,11 @@ App.prototype.autoTrack = function(enabled=false) {
     if (!enabled) return false; // not enabled.
     this.track(window.location.host+window.location.pathname, 
         Properties.parseFromQueryString(window.location.search), true);
-
+    
+    // Todo(Dinesh): Find ways to automate tests SPA.
+    
     // AutoTrack SPA
-    // check support for history and onpopstate listener.
+    // checks support for history and onpopstate listener.
     if (window.history && window.onpopstate !== undefined) { 
         if (window.onpopstate != null) {
             logger.debug("Failed. Already a function attached on window.onpopstate.");
@@ -109,7 +110,6 @@ App.prototype.autoTrack = function(enabled=false) {
         var _land_location = window.location.href;
         var _this = this;
         window.onpopstate = function() {
-            console.log("on history");
             logger.debug("Triggered window.onpopstate: "+window.location.href);
             // Track only if URL or QueryParam changed.
             if (_land_location !== window.location.href)
