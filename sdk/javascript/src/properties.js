@@ -346,7 +346,20 @@ function parseFromQueryString(qString, prefix="$qp_") {
     return ep;
 }
 
+function getValidated(props={}) {
+    let vprops = {}
+    for (let k in props) {
+        // Prefixes with _, if starts with $. 
+        if (k.indexOf("$") == 0) 
+            vprops["_"+k] = props[k];
+        else
+            vprops[k] = props[k];
+    }
+    return vprops;
+}
+
 module.exports = {
     getDefault: getDefault,
-    parseFromQueryString: parseFromQueryString
+    parseFromQueryString: parseFromQueryString,
+    getValidated: getValidated
 }

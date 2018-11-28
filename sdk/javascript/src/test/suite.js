@@ -5,11 +5,10 @@ const chai = require("chai");
 
 const Cookie = require("../utils/cookie");
 const Request = require("../utils/request");
+const Properties = require("../properties");
 
 const config = require("../config");
 const constant = require("../constant");
-
-const Properties = require("../properties");
 
 // Enable full stacktrace for chai.
 // chai.config.includeStack = true;
@@ -168,6 +167,24 @@ SuitePrivateMethod.testGetDefaultProperties = function() {
     // If 8 properties, includes device.
     if (props.$device) assert.isTrue(props.$device != "");
 }
+
+SuitePrivateMethod.testGetValidateProperties = function() {
+    assert.isEmpty(Properties.getValidated()); // no arg.
+    assert.isEmpty(Properties.getValidated({})); // empty props.
+
+    let vprops = Properties.getValidated({prop_1: "value_1"})
+    assert.containsAllKeys(vprops, ["prop_1"]);
+    assert.equal(vprops["prop_1"], "value_1");
+
+    vprops = Properties.getValidated({"$prop_1": "value_1"});
+    assert.containsAllKeys(vprops, ["_$prop_1"], "Not prefixed with '_'.") // Should be prefixed with '_'.
+    assert.isFalse(!!vprops["$prop_1"], "Allowed duplicate with $ prefix");
+    
+    vprops = Properties.getValidated({"$prop_1": 10});
+    assert.containsAllKeys(vprops, ["_$prop_1"]);
+    assert.deepEqual(vprops["_$prop_1"], 10); // Check value's datatype preserved.
+}
+
 
 
 /**

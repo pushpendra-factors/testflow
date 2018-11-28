@@ -11,7 +11,7 @@ const SDK_NOT_INIT_ERROR = new Error("FactorsError: SDK is not initialized with 
 
 function isAllowedEventName(eventName) {
     // Don't allow event_name starts with '$'.
-    if (eventName.indexOf('$') == 0) return false; 
+    if (eventName.indexOf("$") == 0) return false; 
     return true;
 }
 
@@ -80,12 +80,21 @@ App.prototype.track = function(eventName, eventProperties, auto=false) {
     eventName = util.validatedStringArg("event_name", eventName) // Clean event name.
     if (!isAllowedEventName(eventName)) 
         throw new Error("FactorsError: Invalid event name.");
+    
+    eventProperties = Properties.getValidated(eventProperties);
+
+    // Adds default properties.
+    eventProperties = Object.assign(eventProperties, 
+        Properties.getDefault());
+
+    // Add query params properties, if auto.
+    if (auto) eventProperties = Object.assign(eventProperties, 
+        Properties.parseFromQueryString(window.location.search));
 
     let payload = {};
     updatePayloadWithUserIdFromCookie(payload);
     payload.event_name = eventName;
-    payload.event_properties = Object.assign(eventProperties, 
-        Properties.getDefault());
+    payload.event_properties = eventProperties;
     payload.auto = auto;
 
     return this.client.track(payload)
@@ -95,8 +104,7 @@ App.prototype.track = function(eventName, eventProperties, auto=false) {
 
 App.prototype.autoTrack = function(enabled=false) {
     if (!enabled) return false; // not enabled.
-    this.track(window.location.host+window.location.pathname, 
-        Properties.parseFromQueryString(window.location.search), true);
+    this.track(window.location.host+window.location.pathname, {}, true);
     
     // Todo(Dinesh): Find ways to automate tests SPA.
     
@@ -113,8 +121,7 @@ App.prototype.autoTrack = function(enabled=false) {
             logger.debug("Triggered window.onpopstate: "+window.location.href);
             // Track only if URL or QueryParam changed.
             if (_land_location !== window.location.href)
-                _this.track(window.location.host+window.location.pathname, 
-                    Properties.parseFromQueryString(window.location.search), true);
+                _this.track(window.location.host+window.location.pathname, {}, true);
         }
     }
 }
@@ -144,7 +151,7 @@ App.prototype.addUserProperties = function (properties={}) {
     
     let payload = {};
     updatePayloadWithUserIdFromCookie(payload);
-    payload.properties = properties;
+    payload.properties = Properties.getValidated(properties);
 
     return this.client.addUserProperties(payload)
         .then(updateCookieIfUserIdInResponse)
