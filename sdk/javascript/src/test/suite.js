@@ -185,8 +185,6 @@ SuitePrivateMethod.testGetValidateProperties = function() {
     assert.deepEqual(vprops["_$prop_1"], 10); // Check value's datatype preserved.
 }
 
-
-
 /**
  * Public methods
  */
@@ -497,8 +495,8 @@ function runPrivateMethodsSuite() {
     return true;
 }
 
-// Todo(Dinesh): Inconsistent: Make async methods to run synchronously as cookie 
-// is a shared object.
+// Todo(Dinesh): Inconsistent test: Fixes - Create a mock object for document.cookie,
+// Use app instance instead of factors like testInit.
 function runPublicMethodsSuite() {
     window.FACOTRS_DEBUG=true;
 
