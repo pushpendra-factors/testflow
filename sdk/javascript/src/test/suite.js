@@ -5,9 +5,10 @@ const chai = require("chai");
 
 const Cookie = require("../utils/cookie");
 const Request = require("../utils/request");
+const Properties = require("../properties");
 
 const config = require("../config");
-const constant = require("../constant")
+const constant = require("../constant");
 
 // Enable full stacktrace for chai.
 // chai.config.includeStack = true;
@@ -15,7 +16,10 @@ const constant = require("../constant")
 // Assertion with chai.assert
 const assert = chai.assert;
 
-var Suite = {};
+
+/**
+ * Test Utils
+ */
 
 function randomAlphaNumeric(len) {
     var p = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -23,6 +27,8 @@ function randomAlphaNumeric(len) {
 }
 
 function suppressExpectedError(e) {
+    if (e instanceof chai.AssertionError)
+        throw new Error("Sorry, Test failed!");
     console.log("Suppressed Expected Error: "+ e);
 }
 
@@ -103,26 +109,119 @@ function assertIfUserIdOnResponse(r) {
     return r;
 }
 
+/**
+ * Private methods
+ */
+
+const SuitePrivateMethod = {};
+
+SuitePrivateMethod.testGetPropertiesFromQueryString = function() {
+    assert.isEmpty(Object.keys(Properties.parseFromQueryString("")));
+    assert.isEmpty(Object.keys(Properties.parseFromQueryString("?")));
+
+    let props = Properties.parseFromQueryString("?a")
+    assert.isEmpty(Object.keys(props));
+
+    props = Properties.parseFromQueryString("?a=")
+    assert.isEmpty(Object.keys(props));
+
+    // Type check for numerical properties.
+    props = Properties.parseFromQueryString("?a=10")
+    assert.isNotEmpty(Object.keys(props));
+    assert.isTrue(props && props.$qp_a === 10); // Do we need this as int?
+
+    props = Properties.parseFromQueryString("?a=10abc")
+    assert.isNotEmpty(Object.keys(props));
+    assert.isTrue(props && props.$qp_a === "10abc");
+
+    props = Properties.parseFromQueryString("?a=ab10")
+    assert.isNotEmpty(Object.keys(props));
+    assert.isTrue(props && props.$qp_a === "ab10");
+
+    props = Properties.parseFromQueryString("?a=10&")
+    assert.isNotEmpty(Object.keys(props));
+    assert.isTrue(props && props.$qp_a === 10); 
+
+    props = Properties.parseFromQueryString("?a=10&b")
+    assert.isNotEmpty(Object.keys(props));
+    assert.isTrue(props && props.$qp_a === 10); 
+    assert.isTrue(props && props.$qp_b == null);
+
+    props = Properties.parseFromQueryString("?a=10&utm=medium");
+    assert.isNotEmpty(Object.keys(props));
+    assert.isTrue(props && props.$qp_a === 10); 
+    assert.isTrue(props && props.$qp_utm === "medium");
+}
+
+SuitePrivateMethod.testGetDefaultProperties = function() {
+    assert.isNotEmpty(Properties.getDefault())
+    let props =  Properties.getDefault();
+    // No empty values.
+    for (let k in props) assert.isNotEmpty(props[k].toString(), "Empty: "+k);
+
+    // Check individual keys needed.
+    assert.containsAllKeys(props, 
+        ["$referrer", "$browser", "$browser_version", "$os", "$os_version", "$screen_width", "$screen_height"]);
+    
+    props = Properties.getDefault();
+    if (props.$device) assert.isTrue(props.$device != "");
+}
+
+SuitePrivateMethod.testGetValidateProperties = function() {
+    assert.isEmpty(Properties.getValidated()); // no arg.
+    assert.isEmpty(Properties.getValidated({})); // empty props.
+
+    let vprops = Properties.getValidated({prop_1: "value_1"})
+    assert.containsAllKeys(vprops, ["prop_1"]);
+    assert.equal(vprops["prop_1"], "value_1");
+
+    vprops = Properties.getValidated({"$prop_1": "value_1"});
+    assert.containsAllKeys(vprops, ["_$prop_1"], "Not prefixed with '_'.") // Should be prefixed with '_'.
+    assert.isFalse(!!vprops["$prop_1"], "Allowed duplicate with $ prefix");
+    
+    vprops = Properties.getValidated({"$prop_1": 10});
+    assert.containsAllKeys(vprops, ["_$prop_1"]);
+    assert.deepEqual(vprops["_$prop_1"], 10); // Check value's datatype preserved.
+
+    // Allow $qp_ prefix.
+    vprops = Properties.getValidated({"$qp_prop_1": 10});
+    assert.containsAllKeys(vprops, ["$qp_prop_1"]);
+    assert.isFalse(!!vprops["_$qp_prop_1"], "Should not escape $qp with _.");
+
+    // Property value validation.
+    vprops = Properties.getValidated({"int_prop": 10, "float_prop": 10.2, "string_prop": "somevalue", "obj_prop": {"obj_num_prop": 10}});
+    assert.containsAllKeys(vprops, ["int_prop", "float_prop", "string_prop"], "Should allow number and string.");
+    assert.isFalse(!!vprops["obj_prop"], "Should not allow anything other than number or string.");
+    assert.isFalse(!!vprops["obj_num_prop"], "Should not allow object prop.");
+}
+
+/**
+ * Public methods
+ */
+
+const App = require("../app");
+const SuitePublicMethod = {};
+
+var app = new App();
+
+// Todo: 
+
 // Test: Init
 
-Suite.testInit = function() {
+SuitePublicMethod.testInit = function() {
     return setupNewProject()
         .then((r) => {
-            factors.reset();
+            app.reset();
             assert.isTrue(r.body.hasOwnProperty("token"), "Token should be in the response.");
             assert.isTrue(r.body.token.trim().length > 0, "Token should not be empty.")
-            
-            factors.reset();
-            return factors.init(r.body.token)
-                .then(() => {
-                    assert.isTrue(factors.app.client.token === r.body.token, "Token should be set as api client token for the app.");
-                });
+
+            app.reset();
+            return app.init(r.body.token)
+                .then( () => assert.isTrue(app.isInitialized()) );
         });
 }
 
-
-
-Suite.testInitWithBadInput = function() {
+SuitePublicMethod.testInitWithBadInput = function() {
     factors.reset();
 
     // Bad input. Invalidated on sdk.
@@ -132,13 +231,13 @@ Suite.testInitWithBadInput = function() {
 
 // Test: Track
 
-Suite.testTrackBeforeInit = function() {
+SuitePublicMethod.testTrackBeforeInit = function() {
     factors.reset();
     // Should throw exception.
     assert.throws(factors.track, Error, "FactorsError: SDK is not initialized with token.");
 }
 
-Suite.testTrackAfterInit = function() {
+SuitePublicMethod.testTrackAfterInit = function() {
     return setupNewProjectAndInit()
         .then((r) => {
             // Validate track response.
@@ -149,7 +248,7 @@ Suite.testTrackAfterInit = function() {
         })
 }
 
-Suite.testTrackWithBadToken = function() {
+SuitePublicMethod.testTrackWithBadToken = function() {
     factors.reset();
 
     // Bad input. Invalidated on backend.
@@ -159,7 +258,7 @@ Suite.testTrackWithBadToken = function() {
         .catch(suppressExpectedError);    
 }
 
-Suite.testTrackWithoutEventName = function() {
+SuitePublicMethod.testTrackWithoutEventName = function() {
     factors.reset();
 
     return setupNewProjectAndInit()
@@ -171,7 +270,7 @@ Suite.testTrackWithoutEventName = function() {
         });
 }
 
-Suite.testTrackWithoutEventProperites = function() {
+SuitePublicMethod.testTrackWithoutEventProperites = function() {
     return setupNewProjectAndInit()
         .then((r) => {
             let eventName = randomAlphaNumeric(10);
@@ -183,7 +282,7 @@ Suite.testTrackWithoutEventProperites = function() {
 }
 
 // Track as new user. Track without user cookie.
-Suite.testTrackWithoutUserCookie = function() {
+SuitePublicMethod.testTrackWithoutUserCookie = function() {
     return setupNewProjectAndInit()
         .then((r) => {
             // Setup clears the cookie internally.
@@ -200,7 +299,7 @@ Suite.testTrackWithoutUserCookie = function() {
 }
 
 // Track as existing user. Track with user cookie.
-Suite.testTrackWithUserCookie = function() {
+SuitePublicMethod.testTrackWithUserCookie = function() {
     return setupNewProjectWithUser()
         .then((r) => {
             factors.reset(); // Clears existing env.
@@ -217,14 +316,14 @@ Suite.testTrackWithUserCookie = function() {
 
 // Test: identify
 
-Suite.testIdentifyBeforeInit = function() {
+SuitePublicMethod.testIdentifyBeforeInit = function() {
     factors.reset();
 
     // Throws error, if not initialized.
     assert.throws(factors.identify, Error, "FactorsError: SDK is not initialized with token.");
 }
 
-Suite.testIdentifyAfterInit = function() {
+SuitePublicMethod.testIdentifyAfterInit = function() {
     return setupNewProjectAndInit()
         .then((r) => {
             let customerUserId = randomAlphaNumeric(15);
@@ -236,7 +335,7 @@ Suite.testIdentifyAfterInit = function() {
         .catch(assertOnCall);
 }
 
-Suite.testIdentifyWithoutCustomerUserId = function() {
+SuitePublicMethod.testIdentifyWithoutCustomerUserId = function() {
     factors.reset();
 
     return setupNewProjectAndInit()
@@ -248,7 +347,7 @@ Suite.testIdentifyWithoutCustomerUserId = function() {
 }
 
 // New user => Without user cookie.
-Suite.testIdentifyWithoutUserCookie = function() {
+SuitePublicMethod.testIdentifyWithoutUserCookie = function() {
     factors.reset();
 
     return setupNewProjectAndInit()
@@ -262,7 +361,7 @@ Suite.testIdentifyWithoutUserCookie = function() {
 }
 
 // With user cookie => Identify existing unidentified user.
-Suite.testIdentifyWithUserCookie = function() {
+SuitePublicMethod.testIdentifyWithUserCookie = function() {
     return setupNewProjectWithUser()
         .then((r) => {
             factors.reset(); // Clear existing env.
@@ -279,7 +378,7 @@ Suite.testIdentifyWithUserCookie = function() {
         .catch(assertOnCall);
 }
 
-Suite.testIdentifyWithIdentifiedCustomerUserWithSameUserCookie = function() {
+SuitePublicMethod.testIdentifyWithIdentifiedCustomerUserWithSameUserCookie = function() {
     return setupNewProjectAndInit()
         .then((r) => {
             var customerUserId = randomAlphaNumeric(15);
@@ -303,7 +402,7 @@ Suite.testIdentifyWithIdentifiedCustomerUserWithSameUserCookie = function() {
         });
 }
 
-Suite.testIdentifyWithIdentifiedCustomerUserWithDifferentUserCookie = function() {
+SuitePublicMethod.testIdentifyWithIdentifiedCustomerUserWithDifferentUserCookie = function() {
     return setupNewProjectWithUser()
         .then((r1) => {
             factors.reset();
@@ -342,11 +441,11 @@ Suite.testIdentifyWithIdentifiedCustomerUserWithDifferentUserCookie = function()
 
 // Identify as an identified user without user cookie should respond
 // with latest user of the customer_user. Reusing same user session.
-Suite.testIdentifyWithIdentifiedCustomerUserWithoutUserCookie = function() {}
+SuitePublicMethod.testIdentifyWithIdentifiedCustomerUserWithoutUserCookie = function() {}
 
 // Test: addUserProperties
 
-Suite.testAddUserPropertiesWithEmptyProperties = function() {
+SuitePublicMethod.testAddUserPropertiesWithEmptyProperties = function() {
     factors.reset();
 
     return setupNewProjectAndInit()
@@ -360,7 +459,7 @@ Suite.testAddUserPropertiesWithEmptyProperties = function() {
         });
 }
 
-Suite.testAddUserPropertiesBadProperties = function() {
+SuitePublicMethod.testAddUserPropertiesBadProperties = function() {
     factors.reset();
 
     return setupNewProjectAndInit()
@@ -372,9 +471,9 @@ Suite.testAddUserPropertiesBadProperties = function() {
         });
 }
 
-Suite.testAddUserPropertiesWithoutUserCookie = function() {}
+SuitePublicMethod.testAddUserPropertiesWithoutUserCookie = function() {}
 
-Suite.testAddUserPropertiesWithUserCookie = function() {
+SuitePublicMethod.testAddUserPropertiesWithUserCookie = function() {
     return setupNewProjectWithUser()
         .then((r) => {
             factors.reset();
@@ -392,14 +491,38 @@ Suite.testAddUserPropertiesWithUserCookie = function() {
         });
 }
 
-function run() {
-    // Runs individual test in the test_suite.
-    for (let test in Suite) {
-        console.log('%c Running '+test+'..', 'color: green');
-        Suite[test]();
+/**
+ * Test Runners
+ */
+
+function runPrivateMethodsSuite() {
+    window.FACOTRS_DEBUG=true;
+
+    for (let test in SuitePrivateMethod) {
+        console.log('%c Running Private Methods Suite '+test+'..', 'color: green');
+        SuitePrivateMethod[test]();
     }
     return true;
 }
 
-module.exports = exports = { Suite, run };
+// Todo(Dinesh): Inconsistent test: Fixes - Create a mock object for document.cookie,
+// Use app instance instead of factors like testInit.
+function runPublicMethodsSuite() {
+    window.FACOTRS_DEBUG=true;
+
+    // Runs individual test in the test_suite.
+    for (let test in SuitePublicMethod) {
+        console.log('%c Running Public Methods Suite '+test+'..', 'color: green');
+        SuitePublicMethod[test]();
+    }
+    return true;
+}
+
+// Runs everything.
+function run() {
+    runPrivateMethodsSuite();
+    runPublicMethodsSuite();
+}
+
+module.exports = exports = { SuitePublicMethod, SuitePrivateMethod, runPrivateMethodsSuite, runPrivateMethodsSuite, run };
 

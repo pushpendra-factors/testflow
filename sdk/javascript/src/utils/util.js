@@ -8,5 +8,15 @@ function validatedStringArg(name, value) {
     return value;
 }
 
-module.exports = exports =  { validatedStringArg: validatedStringArg };
+function convertIfNumber(nString) {
+    if (!nString.match(/^[+-]?\d+(\.\d+)?$/)) return nString;
+    n = Number(nString); // Supports float.
+    if (isNaN(n)) return nString;
+    return n;
+}
+
+module.exports = exports =  { 
+    validatedStringArg: validatedStringArg,
+    convertIfNumber: convertIfNumber
+};
 

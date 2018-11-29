@@ -3,15 +3,15 @@
 var Cookie = require("./utils/cookie");
 const logger = require("./utils/logger");
 const util = require("./utils/util");
-
 var APIClient = require("./api-client");
 const constant = require("./constant");
+const Properties = require("./properties");
 
 const SDK_NOT_INIT_ERROR = new Error("FactorsError: SDK is not initialized with token.");
 
 function isAllowedEventName(eventName) {
     // Don't allow event_name starts with '$'.
-    if (eventName.indexOf('$') == 0) return false; 
+    if (eventName.indexOf("$") == 0) return false; 
     return true;
 }
 
@@ -25,13 +25,6 @@ function updateCookieIfUserIdInResponse(response){
     return response; // To continue chaining.
 }
 
-function throwErrorOnFailureResponse(response, message="Request failed.") {
-    if (response.status < 200 || response.status > 308) 
-        throw new Error("FactorsRequestError: "+message);
-    
-    return response;
-}
-
 function updatePayloadWithUserIdFromCookie(payload) {
     if (Cookie.isExist(constant.cookie.USER_ID))
         payload.user_id = Cookie.getDecoded(constant.cookie.USER_ID);
@@ -39,44 +32,6 @@ function updatePayloadWithUserIdFromCookie(payload) {
     return payload;
 }
 
-/**
- * Parse query string.
- * @param {*} qString 
- * ----- Cases -----
- * window.location.search = "" -> {}
- * window.location.search = "?" -> {}
- * window.location.search = "?a" -> {a: null}
- * window.location.search = "?a=" -> {a: null}
- * window.location.search = "?a=10" -> {a: 10}
- * window.location.search = "?a=10&" -> {a: 10}
- * window.location.search = "?a=10&b" -> {a: 10, b: null}
- * window.location.search = "?a=10&b=20" -> {a: 10, b: 20}
- */
-function parseQueryString(qString) {
-    // "?" check is not necessary for window.search. Added to stay pure.
-    if (typeof(qString) !== "string" 
-        || qString.length === 0 
-        || (qString.length === 1 && qString.indexOf("?") === 0)) 
-        return {};
-    let ep = {};
-    let t = null;
-    // Remove & at the end.
-    let ambPos = qString.indexOf("&");
-    if (ambPos === qString.length-1) qString = qString.slice(0, qString.length-1);
-    if (ambPos >= 0) t = qString.split("&");
-    else t = [qString];
-    for (var i=0; i<t.length; i++){
-        let kv = null;
-        if (t[i].indexOf("=") >= 0) kv = t[i].split("=");
-        else kv = [t[i], null];
-        // Remove ? on first query param.
-        if (i == 0 && kv[0].indexOf("?") === 0) kv[0] = kv[0].slice(1);
-        // No value, assign null.
-        if (kv[1] === "") kv[1] = null;
-        ep[kv[0]] = kv[1];
-    }
-    return ep;
-}
 
 /**
  * App prototype.
@@ -116,7 +71,7 @@ App.prototype.init = function(token) {
         .then(function() {
             return _this.autoTrack(_this.getConfig("auto_track"));
         })
-        .catch(logger.error);
+        .catch(logger.debug);
 }
 
 App.prototype.track = function(eventName, eventProperties, auto=false) {
@@ -125,6 +80,12 @@ App.prototype.track = function(eventName, eventProperties, auto=false) {
     eventName = util.validatedStringArg("event_name", eventName) // Clean event name.
     if (!isAllowedEventName(eventName)) 
         throw new Error("FactorsError: Invalid event name.");
+    
+    eventProperties = Properties.getValidated(eventProperties);
+
+    // Adds default properties.
+    eventProperties = Object.assign(eventProperties, 
+        Properties.getDefault());
 
     let payload = {};
     updatePayloadWithUserIdFromCookie(payload);
@@ -134,14 +95,33 @@ App.prototype.track = function(eventName, eventProperties, auto=false) {
 
     return this.client.track(payload)
         .then(updateCookieIfUserIdInResponse)
-        .catch(logger.error);
+        .catch(logger.debug);
 }
 
 App.prototype.autoTrack = function(enabled=false) {
     if (!enabled) return false; // not enabled.
-    var en = window.location.host+window.location.pathname;
-    var search =  window.location.search;
-    return this.track(en, parseQueryString(search), true);
+    this.track(window.location.host+window.location.pathname, 
+        Properties.parseFromQueryString(window.location.search), true);
+    
+    // Todo(Dinesh): Find ways to automate tests for SPA support.
+    
+    // AutoTrack SPA
+    // checks support for history and onpopstate listener.
+    if (window.history && window.onpopstate !== undefined) {
+        if (window.onpopstate != null) {
+            logger.debug("Failed. Already a function attached on window.onpopstate.");
+            return;
+        }
+        var _land_location = window.location.href;
+        var _this = this;
+        window.onpopstate = function() {
+            logger.debug("Triggered window.onpopstate: "+window.location.href);
+            // Track only if URL or QueryParam changed.
+            if (_land_location !== window.location.href)
+                _this.track(window.location.host+window.location.pathname, 
+                    Properties.parseFromQueryString(window.location.search), true);
+        }
+    }
 }
 
 App.prototype.identify = function(customerUserId) {
@@ -155,7 +135,7 @@ App.prototype.identify = function(customerUserId) {
     
     return this.client.identify(payload)
         .then(updateCookieIfUserIdInResponse)
-        .catch(logger.error);
+        .catch(logger.debug);
 }
 
 App.prototype.addUserProperties = function (properties={}) {
@@ -169,11 +149,11 @@ App.prototype.addUserProperties = function (properties={}) {
     
     let payload = {};
     updatePayloadWithUserIdFromCookie(payload);
-    payload.properties = properties;
+    payload.properties = Properties.getValidated(properties);
 
     return this.client.addUserProperties(payload)
         .then(updateCookieIfUserIdInResponse)
-        .catch(logger.error);
+        .catch(logger.debug);
 }
 
 // Clears the state of the app.

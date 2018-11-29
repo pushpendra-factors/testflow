@@ -1,5 +1,5 @@
 function info(message) {
-    console.log("[Factors:INFO] : "+message);
+    console.log(message);
 }
 
 function error(message) {
@@ -7,8 +7,8 @@ function error(message) {
 }
 
 function debug(message) {
-    if (process.env.NODE_ENV !== "production") {
-        console.log("[Factors:DEBUG] : "+message)
+    if (window.FACTORS_DEBUG == true) {
+        console.trace("%c"+message, 'color: red');
     }
 }
 

@@ -7,17 +7,20 @@ var app = new App();
 
 /**
  * Initializes sdk environment on user application. Overwrites if initialized already.
- * 
  * @param {string} appToken Unique application token.
  */
 function init(appToken) {
-    return app.init(appToken);
+    app.init(appToken);
+    return;
 }
 
 /**
  * Clears existing SDK environment, both API token and cookies. 
  */
-function reset() { app.reset(); }
+function reset() { 
+    app.reset();
+    return;
+}
 
 /**
  * Track events on user application.
@@ -25,7 +28,8 @@ function reset() { app.reset(); }
  * @param {Object} eventProperties 
  */
 function track(eventName, eventProperties={}) {
-    return app.track(eventName, eventProperties, false);
+    app.track(eventName, eventProperties, false);
+    return;
 }
 
 /**
@@ -33,7 +37,8 @@ function track(eventName, eventProperties={}) {
  * @param {string} customerUserId Actual id of the user from the application.
  */
 function identify(customerUserId) {
-    return app.identify(customerUserId);
+    app.identify(customerUserId);
+    return;
 }
 
 /**
@@ -41,7 +46,8 @@ function identify(customerUserId) {
  * @param {Object} properties 
  */
 function addUserProperties(properties={}) {
-    return app.addUserProperties(properties);
+    app.addUserProperties(properties);
+    return;
 }
 
 let exposed = { init, reset, track, identify, addUserProperties };
