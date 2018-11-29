@@ -73,7 +73,7 @@ func TestBuildNewItree(t *testing.T) {
 		patterns = append(patterns, p)
 	}
 	pw := P.NewPatternWrapper(patterns, nil)
-	itree, err := P.BuildNewItree("Y", -1, -1, pw)
+	itree, err := P.BuildNewItree("", nil, "Y", nil, pw)
 	assert.Nil(t, err)
 	assert.NotNil(t, itree)
 
@@ -161,4 +161,52 @@ func TestBuildNewItree(t *testing.T) {
 		}
 	}
 
+	// Build withs start and end event. Expected tree would be the subtree of above tree with root node AY.
+	itree, err = P.BuildNewItree("A", nil, "Y", nil, pw)
+	assert.Nil(t, err)
+	assert.NotNil(t, itree)
+	node0 = expectedNode{
+		patternString: "A,Y",
+		index:         0, parentIndex: -1,
+		rightGi: 0.246914, overallGi: 0.246914,
+		confidence: 0.444444,
+	}
+	node1 = expectedNode{
+		patternString: "A,C,Y",
+		index:         1, parentIndex: 0,
+		rightGi: 0.16, overallGi: 0.088889, giniDrop: 0.158025,
+		confidence: 0.80, confidenceGain: 0.355556,
+	}
+	node2 = expectedNode{
+		patternString: "A,B,Y",
+		index:         2, parentIndex: 0,
+		rightGi: 0.244898, overallGi: 0.190476, giniDrop: 0.056438,
+		confidence: 0.571429, confidenceGain: 0.126985,
+	}
+	node3 = expectedNode{
+		patternString: "A,C,B,Y",
+		index:         3, parentIndex: 1,
+		rightGi: 0.0, overallGi: 0.15, giniDrop: 0.01,
+		confidence: 1.0, confidenceGain: 0.2,
+	}
+	node4 = expectedNode{
+		patternString: "A,B,C,Y",
+		index:         4, parentIndex: 2,
+		rightGi: 0.16, overallGi: 0.114286, giniDrop: 0.130612,
+		confidence: 0.8, confidenceGain: 0.228571,
+	}
+	expectedNodes = []*expectedNode{
+		&node0, &node1, &node2, &node3, &node4}
+	for i, eNode := range expectedNodes {
+		aNode := itree.Nodes[eNode.index]
+		assert.Equal(t, eNode.patternString, aNode.Pattern.String())
+		assert.Equal(t, eNode.parentIndex, aNode.ParentIndex, fmt.Sprintf("Node: %s", eNode.patternString))
+		assert.InDelta(t, eNode.rightGi, aNode.RightGI, 0.000001, fmt.Sprintf("Node: %s", eNode.patternString))
+		assert.InDelta(t, eNode.overallGi, aNode.OverallGI, 0.000001, fmt.Sprintf("Node: %s", eNode.patternString))
+		assert.InDelta(t, eNode.confidence, aNode.Confidence, 0.000001, fmt.Sprintf("Node: %s", eNode.patternString))
+		if i != 0 {
+			assert.InDelta(t, eNode.giniDrop, aNode.GiniDrop, 0.000001, fmt.Sprintf("Node: %s", eNode.patternString))
+			assert.InDelta(t, eNode.confidenceGain, aNode.ConfidenceGain, 0.000001, fmt.Sprintf("Node: %s", eNode.patternString))
+		}
+	}
 }

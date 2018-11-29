@@ -73,24 +73,24 @@ class FunnelChartCard extends Component {
         }
 
         graphCols.push(
-          <Col xs={{ size: '2' }} key={i}>
+          <Col xs={{ size: '2' }} key={i*4}>
           <Doughnut data={donutGraphData} options={chartOptions}/>
           </Col>);
           if (i < funnelData.length - 1) {
             graphCols.push(
-              <Col xs={{ size: '1' }} key={i}>
+              <Col xs={{ size: '1' }} key={i*4 + 1}>
               <div style={arrowStyle}><FunnelArrow color={arrowColor} conversionString={conversionString} uid={UUID.v4()} /></div>
               </Col>);
             }
             if (i == 0) {
               eventCols.push(
-                <Col xs={{ size: '2' }} key={i}>
+                <Col xs={{ size: '2' }} key={i*4 + 2}>
                 <div style={eventTextStyle}>{funnelData[i].event}</div>
                 </Col>
               );
             } else {
               eventCols.push(
-                <Col xs={{ size: '2', offset: '1'}} key={i}>
+                <Col xs={{ size: '2', offset: '1'}} key={i*4 + 3}>
                 <div style={eventTextStyle}>{funnelData[i].event}</div>
                 </Col>
               );

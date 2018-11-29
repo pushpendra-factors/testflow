@@ -453,13 +453,21 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 	actualMeanMap := pABC.NumericProperties.MeanMap()
 	assert.Equal(t, expectedMeanMap, actualMeanMap)
 
+	actualCdf := pABC.NumericProperties.CDFFromMap(
+		map[string]float64{
+			"A.ANum":   2.0,
+			"A.ComNum": 2.0,
+			"B.ComNum": 1.5,
+		})
+	assert.InDelta(t, actualCdf, 0.5, 0.01)
+
 	// A.ACat: "acat1" and "acat1"
 	// A.ComCat: "com3" and "com1"
 	// B.BCat: "bcat1" and "bcat1"
 	// B.ComCat: "com2" and "com1"
 	// C.CCat: "ccat1" and "ccat2"
 	// C.ComCat: "com2" and "com3"
-	actualPdf, err := pABC.CategoricalProperties.PDFMap(
+	actualPdf, err := pABC.CategoricalProperties.PDFFromMap(
 		map[string]string{
 			"A.ACat":   "acat1",
 			"A.ComCat": "com3",
@@ -471,7 +479,7 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 	assert.Nil(t, err, fmt.Sprintf("Error: %v", err))
 	assert.InDelta(t, actualPdf, 0.5, 0.01)
 
-	actualPdf, err = pABC.CategoricalProperties.PDFMap(
+	actualPdf, err = pABC.CategoricalProperties.PDFFromMap(
 		map[string]string{
 			"A.ACat":   "acat1",
 			"A.ComCat": "com1",

@@ -2,6 +2,7 @@ package histogram
 
 import (
 	"fmt"
+	"math"
 	"math/rand"
 	"testing"
 
@@ -16,41 +17,70 @@ func TestHistogramMean(t *testing.T) {
 				// number of bins, dimensions and number of samples.
 
 				h, _ := NewNumericHistogram(maxBins, dimensions, nil)
-				var sample = [][]float64{}
+				var allSamples = [][]float64{}
 
 				for j := 0; j < numSamples; j++ {
 					var values = []float64{}
 					for i := 0; i < dimensions; i++ {
 						values = append(values, float64(rand.Intn(100)))
 					}
-					sample = append(sample, values)
+					allSamples = append(allSamples, values)
 					h.Add(values)
 				}
 
 				count := h.Count()
-				assert.InDelta(t, float64(len(sample)), count, 0.0001,
-					fmt.Sprintf("Count mismatch %v != %v", count, len(sample)))
+				assert.InDelta(t, float64(len(allSamples)), count, 0.0001,
+					fmt.Sprintf("Count mismatch %v != %v", count, len(allSamples)))
+
+				for _, sample := range allSamples {
+					expectedCDF := 1.0
+					for i := 0; i < dimensions; i++ {
+						expectedCDF *= sample[i] / 100.0
+					}
+					actualCDF := h.CDF(sample)
+					maxDelta := 1.0 * float64(dimensions*dimensions*dimensions) / float64(numSamples)
+					// Minimum of 0.15 deviation is always allowed.
+					// Test is not expected to pass everytime though.
+					maxDelta = math.Max(maxDelta, 0.15)
+					assert.InDelta(t, expectedCDF, actualCDF, maxDelta,
+						fmt.Sprintf(
+							"Mismatch for vec %v, dimensions %d, "+
+								"numSamples %d, numBins: %d, actualCDF %.3f, expectedCDF %.3f",
+							sample, dimensions, numSamples,
+							maxBins, actualCDF, expectedCDF))
+				}
 
 				var sum = make([]float64, dimensions)
-				for _, values := range sample {
+				for _, sample := range allSamples {
 					for i := 0; i < dimensions; i++ {
-						sum[i] = sum[i] + values[i]
+						sum[i] = sum[i] + sample[i]
 					}
 				}
 
 				for k, _ := range sum {
-					sum[k] = sum[k] / float64(len(sample))
+					sum[k] = sum[k] / float64(len(allSamples))
 				}
 
 				mean := h.Mean()
-				// 6% error from exact value with one dimension
-				// and 30% for 5 dimensions. Not a stable test.
+				// Each dimension here is an independent uniform distribution here
+				// with b=100 and a=0.
+				// Mean is 50.0
+				// Standard deviation is (b-a)/sqrt(12) = 8.33.
+				// Actual mean can be expected to be within
+				// (numSamples * numDimensions * numDimensions * numDimensions / 80 * maxBins)
+				// of standard deviation away from the sample mean.
+				// i.e with 100 samples and 2 dimensions and 10 bins within 1 sd.
+				// with 1 sample, 10 dimensions and 2 bins within 6.2 sd.
+				// A minimum deviation of one 1 sd is always allowed.
 				// Can fail occassionally.
-				allowedMismatchFraction := 0.06 * float64(dimensions)
+				maxDeviation := (8.33 * float64(
+					numSamples*dimensions*dimensions*dimensions) / float64(80*maxBins))
+				maxDeviation = math.Max(maxDeviation, 8.33)
 				for k, _ := range sum {
-					assert.InDelta(t, sum[k], mean[k], 
-						sum[k] * allowedMismatchFraction,
-						fmt.Sprintf("Mean mismatch %v != %v", mean, sum))
+					assert.InDelta(t, sum[k], mean[k],
+						maxDeviation,
+						fmt.Sprintf("Mean mismatch %v != %v, numSamples:%d, dimensions:%d, numBins:%d",
+							mean, sum, numSamples, dimensions, maxBins))
 				}
 			}
 		}
@@ -83,7 +113,8 @@ func TestNumericHistogramAddWithTemplate(t *testing.T) {
 	}
 
 	h, _ := NewNumericHistogram(maxBins, dimensions, &template)
-	var samples = [][]float64{}
+	allSamples := [][]float64{}
+	allSampleMaps := []map[string]float64{}
 
 	for j := 0; j < numSamples; {
 
@@ -94,7 +125,7 @@ func TestNumericHistogramAddWithTemplate(t *testing.T) {
 			for i := 0; i < dimensions; i++ {
 				values = append(values, float64(rand.Intn(100)))
 			}
-			samples = append(samples, values)
+			allSamples = append(allSamples, values)
 			err := h.Add(values)
 			assert.Nil(t, err)
 			j++
@@ -109,7 +140,8 @@ func TestNumericHistogramAddWithTemplate(t *testing.T) {
 			assert.Nil(t, err)
 			values := []float64{keyValues["dim1"], keyValues["dim2"],
 				keyValues["dim3"], keyValues["dim4"]}
-			samples = append(samples, values)
+			allSamples = append(allSamples, values)
+			allSampleMaps = append(allSampleMaps, keyValues)
 			j++
 		case 2:
 			// AddMap with default dimension.
@@ -121,7 +153,8 @@ func TestNumericHistogramAddWithTemplate(t *testing.T) {
 			assert.Nil(t, err)
 			values := []float64{keyValues["dim1"], template[1].Default,
 				keyValues["dim3"], template[3].Default}
-			samples = append(samples, values)
+			allSamples = append(allSamples, values)
+			allSampleMaps = append(allSampleMaps, keyValues)
 			j++
 		case 3:
 			// AddMap error missing required dimension.
@@ -148,18 +181,32 @@ func TestNumericHistogramAddWithTemplate(t *testing.T) {
 	}
 
 	count := h.Count()
-	assert.InDelta(t, float64(len(samples)), count, 0.0001,
-		fmt.Sprintf("Count mismatch %v != %v", count, len(samples)))
+	assert.InDelta(t, float64(len(allSamples)), count, 0.0001,
+		fmt.Sprintf("Count mismatch %v != %v", count, len(allSamples)))
+
+	for _, sample := range allSampleMaps {
+		expectedCDF := 1.0
+		for _, v := range sample {
+			expectedCDF *= v / 100.0
+		}
+		actualCDF := h.CDFFromMap(sample)
+		assert.InDelta(t, expectedCDF, actualCDF, 0.2,
+			fmt.Sprintf(
+				"Mismatch for vec %v, dimensions %d, "+
+					"numSamples %d, numBins: %d, actualCDF %.3f, expectedCDF %.3f",
+				sample, dimensions, numSamples,
+				maxBins, actualCDF, expectedCDF))
+	}
 
 	var sum = make([]float64, dimensions)
-	for _, values := range samples {
+	for _, values := range allSamples {
 		for i := 0; i < dimensions; i++ {
 			sum[i] = sum[i] + values[i]
 		}
 	}
 
 	for k, _ := range sum {
-		sum[k] = sum[k] / float64(len(samples))
+		sum[k] = sum[k] / float64(len(allSamples))
 	}
 
 	mean := h.Mean()
@@ -168,8 +215,8 @@ func TestNumericHistogramAddWithTemplate(t *testing.T) {
 	// Can fail occassionally.
 	allowedMismatchFraction := 0.06 * float64(dimensions)
 	for k, _ := range sum {
-		assert.InDelta(t, sum[k], mean[k], 
-			sum[k] * allowedMismatchFraction,
+		assert.InDelta(t, sum[k], mean[k],
+			sum[k]*allowedMismatchFraction,
 			fmt.Sprintf("Mean mismatch %v != %v", mean, sum))
 	}
 }

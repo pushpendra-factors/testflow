@@ -2,6 +2,7 @@ package pattern
 
 import (
 	Hist "factors/histogram"
+	U "factors/util"
 	"fmt"
 	"math"
 	"strings"
@@ -44,6 +45,21 @@ const num_NUMERIC_BINS_PER_DIMENSION = 3
 const num_MAX_NUMERIC_MULTI_BINS = 128
 const num_CATEGORICAL_BINS_PER_DIMENSION = 1
 const num_MAX_CATEGORICAL_MULTI_BINS = 6
+
+type NumericConstraint struct {
+	PropertyName string
+	LowerBound   float64
+	UpperBound   float64
+	IsEquality   bool
+}
+type CategoricalConstraint struct {
+	PropertyName  string
+	PropertyValue string
+}
+type EventConstraints struct {
+	NumericConstraints     []NumericConstraint
+	CategoricalConstraints []CategoricalConstraint
+}
 
 func NewPattern(events []string, eventInfoMap *EventInfoMap) (*Pattern, error) {
 	pLen := len(events)
@@ -262,38 +278,99 @@ func (p *Pattern) CountForEvent(
 	return p.EventNames[p.waitIndex], nil
 }
 
-func (p *Pattern) GetOncePerUserCount(eventCardinalityLowerBound int,
-	eventCardinalityUpperBound int) uint {
-
-	if eventCardinalityUpperBound > 0 && eventCardinalityLowerBound > eventCardinalityUpperBound {
-		log.WithFields(log.Fields{
-			"eclb": eventCardinalityLowerBound,
-			"ecub": eventCardinalityUpperBound}).Error("Unexpected cardinality bounds.")
-		return p.OncePerUserCount
+func (p *Pattern) GetOncePerUserCount(
+	patternConstraints []EventConstraints) (uint, error) {
+	pLen := len(p.EventNames)
+	if patternConstraints != nil && (len(patternConstraints) != pLen) {
+		errorString := fmt.Sprintf(
+			"Constraint length %d does not match pattern length %d for pattern %v",
+			len(patternConstraints), pLen, p.EventNames)
+		log.Error(errorString)
+		return 0, fmt.Errorf(errorString)
 	}
-	lowerCDF := 0.0
-	upperCDF := 1.0
-	cdfVec := make([]float64, 6)
+	crtLowerBounds := make([]float64, 6)
+	crtUpperBounds := make([]float64, 6)
 	for i := 0; i < 6; i++ {
-		cdfVec[i] = math.MaxFloat64
+		crtLowerBounds[i] = math.MaxFloat64
+		crtUpperBounds[i] = math.MaxFloat64
 	}
-	if eventCardinalityLowerBound > 0 {
-		// The bounds are meant for the last event.
-		cdfVec[3] = float64(eventCardinalityLowerBound) - 0.5
-		lowerCDF = p.CardinalityRepeatTimings.CDF(cdfVec)
+	nMapUpperBounds := make(map[string]float64)
+	nMapLowerBounds := make(map[string]float64)
+	cMapEquality := make(map[string]string)
+	hasCrtConstraints := false
+	for i, ecs := range patternConstraints {
+		eventName := p.EventNames[i]
+		for _, ncs := range ecs.NumericConstraints {
+			if ncs.PropertyName == U.EP_OCCURRENCE_COUNT {
+				hasCrtConstraints = true
+				if i == 0 {
+					crtLowerBounds[0] = ncs.LowerBound
+					crtUpperBounds[0] = ncs.UpperBound
+				} else if i == pLen-1 {
+					crtLowerBounds[3] = ncs.LowerBound
+					crtUpperBounds[3] = ncs.UpperBound
+				} else {
+					errorString := fmt.Sprintf(
+						"Cardinality is not maintained for event %v in pattern %s", eventName, p.EventNames)
+					return 0, fmt.Errorf(errorString)
+				}
+			} else {
+				key := EventPropertyKey(eventName, ncs.PropertyName)
+				nMapLowerBounds[key] = ncs.LowerBound
+				nMapUpperBounds[key] = ncs.UpperBound
+			}
+		}
+		for _, ccs := range ecs.CategoricalConstraints {
+			key := EventPropertyKey(eventName, ccs.PropertyName)
+			cMapEquality[key] = ccs.PropertyValue
+		}
 	}
-	if eventCardinalityUpperBound > 0 {
-		cdfVec[3] = float64(eventCardinalityUpperBound) + 0.5
-		upperCDF = p.CardinalityRepeatTimings.CDF(cdfVec)
+
+	crtUpperCDF := 1.0
+	crtLowerCDF := 0.0
+	if hasCrtConstraints {
+		crtUpperCDF = p.CardinalityRepeatTimings.CDF(crtUpperBounds)
+		crtLowerCDF = p.CardinalityRepeatTimings.CDF(crtLowerBounds)
 	}
-	floatCount := (float64(p.OncePerUserCount) * (upperCDF - lowerCDF))
-	if floatCount < 0 {
-		log.WithFields(log.Fields{"upperCDF": upperCDF, "lowerCDF": lowerCDF,
-			"eelb": eventCardinalityLowerBound,
-			"ecub": eventCardinalityUpperBound, "pattern": p.String()}).Fatal(
-			"Final count is less than 0.")
+
+	numericUpperCDF := 1.0
+	numericLowerCDF := 0.0
+	if p.NumericProperties != nil && len(nMapLowerBounds) > 0 {
+		numericUpperCDF = p.NumericProperties.CDFFromMap(nMapUpperBounds)
+		numericLowerCDF = p.NumericProperties.CDFFromMap(nMapLowerBounds)
 	}
-	return uint(floatCount)
+	categoricalPDF := 1.0
+	if p.CategoricalProperties != nil && len(cMapEquality) > 0 {
+		var err error
+		categoricalPDF, err = p.CategoricalProperties.PDFFromMap(cMapEquality)
+		if err != nil {
+			return 0, err
+		}
+	}
+	count := (float64(p.OncePerUserCount) *
+		(crtUpperCDF - crtLowerCDF) *
+		(numericUpperCDF - numericLowerCDF) *
+		categoricalPDF)
+
+	if count < 0 {
+		log.WithFields(log.Fields{
+			"crtUpperCDF":        crtUpperCDF,
+			"crtUpperBounds":     crtUpperBounds,
+			"crtLowerCDF":        crtLowerCDF,
+			"crtLowerBounds":     crtLowerBounds,
+			"numericUpperCDF":    numericUpperCDF,
+			"numericLowerCDF":    numericLowerCDF,
+			"categoricalPDF":     categoricalPDF,
+			"pattern":            p.String(),
+			"patternConstraints": patternConstraints,
+			"patternCount":       p.OncePerUserCount,
+			"finalCount":         count,
+		}).Info("Computed CDF's and PDF's")
+		errorString := "Final count is less than 0."
+		log.Error(errorString)
+		return 0, fmt.Errorf(errorString)
+	}
+	return uint(count), nil
 }
 
 func (p *Pattern) WaitingOn() string {

@@ -58,16 +58,70 @@ type Itree struct {
 
 const MAX_CHILD_NODES = 10
 
-func (it *Itree) buildRootNode(pattern *Pattern, eCardLowerBound int, ecardUpperBound int) (*ItreeNode, error) {
-	// The pattern for root node is just Y (end_event).
+func constructPatternConstraints(
+	pLen int, startEventConstraints *EventConstraints,
+	endEventConstraints *EventConstraints) []EventConstraints {
+	if startEventConstraints == nil && endEventConstraints == nil {
+		return nil
+	}
+	if pLen == 0 {
+		return nil
+	}
+	patternConstraints := make([]EventConstraints, pLen)
+	for i := 0; i < pLen-1; i++ {
+		if i == 0 && startEventConstraints != nil {
+			patternConstraints[i] = *startEventConstraints
+		} else {
+			patternConstraints[i] = EventConstraints{}
+		}
+	}
+	if endEventConstraints != nil {
+		patternConstraints[pLen-1] = *endEventConstraints
+	} else if startEventConstraints != nil && pLen == 1 {
+		// When len = 1 startEventConstraints can be passed instead of
+		// endEvent as any of the contraints can apply. Higher priority
+		// to endEvent
+		patternConstraints[pLen-1] = *startEventConstraints
+	} else {
+		patternConstraints[pLen-1] = EventConstraints{}
+	}
+	return patternConstraints
+}
+
+func (it *Itree) buildRootNode(
+	pattern *Pattern, startEventConstraints *EventConstraints,
+	endEventConstraints *EventConstraints, patternWrapper *PatternWrapper) (*ItreeNode, error) {
+	// The pattern for root node is just Y (end_event) without a start_event.
 	// If p = n(Y) / totalUsers. n(Y) is number of users with occurrence of Y.
+	// Else for root node of type X -> Y
+	// p = n(X->Y) / n(X)
 	// RightGI is p(1-p)
 	// RightFraction is 1.0
 	// OverallGI = rightGI
 	// confidence is p.
 	// confidenceGain, leftGi, leftFraction, giniDrop are not defined.
 	// parentIndex is set to -1.
-	p := float64(pattern.GetOncePerUserCount(eCardLowerBound, ecardUpperBound)) / float64(pattern.UserCount)
+	patternCount, err := pattern.GetOncePerUserCount(
+		constructPatternConstraints(len(pattern.EventNames),
+			startEventConstraints, endEventConstraints))
+	if err != nil {
+		return nil, err
+	}
+	var p float64
+	if len(pattern.EventNames) == 1 {
+		p = float64(patternCount) / float64(pattern.UserCount)
+	} else if len(pattern.EventNames) == 2 {
+		c, ok := patternWrapper.GetPerUserCount(pattern.EventNames[:1],
+			constructPatternConstraints(1, startEventConstraints, nil))
+		if !ok {
+			return nil, fmt.Errorf(fmt.Sprintf("Frequency missing for startEvent", pattern.String()))
+		}
+		p = float64(patternCount) / float64(c)
+	} else {
+		return nil, fmt.Errorf(
+			fmt.Sprintf("Unexpected root node pattern %s", pattern.String()))
+	}
+
 	giniImpurity := p * (1.0 - p)
 	node := ItreeNode{
 		Pattern:       pattern,
@@ -84,34 +138,49 @@ func (it *Itree) buildRootNode(pattern *Pattern, eCardLowerBound int, ecardUpper
 }
 
 func (it *Itree) buildChildNode(
-	pattern *Pattern, parentIndex int, eCardLowerBound int, ecardUpperBound int,
+	pattern *Pattern, parentIndex int,
+	startEventConstraints *EventConstraints,
+	endEventConstraints *EventConstraints,
 	patternWrapper *PatternWrapper) (*ItreeNode, error) {
 
 	parentNode := it.Nodes[parentIndex]
 	parentPattern := parentNode.Pattern
 
 	var fcr, fcp, fpr, fpp float64
-	fcr = float64(pattern.GetOncePerUserCount(eCardLowerBound, ecardUpperBound))
-
 	eLen := len(pattern.EventNames)
-	if c, ok := patternWrapper.GetPerUserCount(pattern.EventNames[:eLen-1], -1, -1); !ok {
-		return nil, fmt.Errorf(fmt.Sprintf("Frequency missing for pattern sequence %s", pattern.String()))
-	} else {
-		fcp = float64(c)
+	onceCount, err := pattern.GetOncePerUserCount(
+		constructPatternConstraints(
+			eLen, startEventConstraints, endEventConstraints))
+	if err != nil {
+		return nil, err
 	}
+	fcr = float64(onceCount)
 
-	fpr = float64(parentPattern.GetOncePerUserCount(eCardLowerBound, ecardUpperBound))
+	c, ok := patternWrapper.GetPerUserCount(pattern.EventNames[:eLen-1],
+		constructPatternConstraints(eLen-1, startEventConstraints, nil))
+	if !ok {
+		return nil, fmt.Errorf(fmt.Sprintf("Frequency missing for pattern sequence %s", pattern.String()))
+	}
+	fcp = float64(c)
 
 	peLen := len(parentPattern.EventNames)
+	onceCount, err = parentPattern.GetOncePerUserCount(
+		constructPatternConstraints(peLen, startEventConstraints, endEventConstraints))
+	if err != nil {
+		return nil, err
+	}
+	fpr = float64(onceCount)
+
 	if peLen == 1 {
 		// Parent is root node. Count is all users.
 		fpp = float64(parentPattern.UserCount)
 	} else {
-		if c, ok := patternWrapper.GetPerUserCount(parentPattern.EventNames[:peLen-1], -1, -1); !ok {
+		c, ok := patternWrapper.GetPerUserCount(parentPattern.EventNames[:peLen-1],
+			constructPatternConstraints(peLen-1, startEventConstraints, nil))
+		if !ok {
 			return nil, fmt.Errorf(fmt.Sprintf("Frequency missing for pattern sequence", parentPattern.String()))
-		} else {
-			fpp = float64(c)
 		}
+		fpp = float64(c)
 	}
 
 	if peLen != eLen-1 {
@@ -193,16 +262,25 @@ func isChildSequence(parent []string, child []string) bool {
 }
 
 func (it *Itree) buildAndAddChildNodes(
-	parentNode *ItreeNode, candidatePattens []*Pattern, eCardLowerBound int, ecardUpperBound int,
-	patternWrapper *PatternWrapper) ([]*ItreeNode, error) {
+	parentNode *ItreeNode, candidatePattens []*Pattern,
+	startEventConstraints *EventConstraints,
+	endEventConstraints *EventConstraints, patternWrapper *PatternWrapper) ([]*ItreeNode, error) {
 	childNodes := []*ItreeNode{}
 	parentPattern := parentNode.Pattern
 	for _, p := range candidatePattens {
-		if p.GetOncePerUserCount(eCardLowerBound, ecardUpperBound) < 1 {
+		onceCount, err := p.GetOncePerUserCount(
+			constructPatternConstraints(
+				len(p.EventNames), startEventConstraints, endEventConstraints))
+		if err != nil {
+			return nil, err
+		}
+		if onceCount < 1 {
 			continue
 		}
 		if isChildSequence(parentPattern.EventNames, p.EventNames) {
-			if cNode, err := it.buildChildNode(p, parentNode.Index, eCardLowerBound, ecardUpperBound, patternWrapper); err != nil {
+			if cNode, err := it.buildChildNode(
+				p, parentNode.Index, startEventConstraints,
+				endEventConstraints, patternWrapper); err != nil {
 				log.WithFields(log.Fields{"err": err}).Errorf("Couldn't build child node")
 				continue
 			} else {
@@ -231,7 +309,9 @@ func (it *Itree) buildAndAddChildNodes(
 	return childNodes, nil
 }
 
-func BuildNewItree(endEvent string, eCardLowerBound int, ecardUpperBound int,
+func BuildNewItree(
+	startEvent string, startEventConstraints *EventConstraints,
+	endEvent string, endEventConstraints *EventConstraints,
 	patternWrapper *PatternWrapper) (*Itree, error) {
 	if endEvent == "" {
 		return nil, fmt.Errorf("Missing end event")
@@ -247,10 +327,16 @@ func BuildNewItree(endEvent string, eCardLowerBound int, ecardUpperBound int,
 	candidatePatterns := []*Pattern{}
 	for _, p := range patternWrapper.patterns {
 		pLen := len(p.EventNames)
-		if strings.Compare(endEvent, p.EventNames[pLen-1]) == 0 {
+		if (strings.Compare(endEvent, p.EventNames[pLen-1]) == 0) &&
+			(startEvent == "" || strings.Compare(startEvent, p.EventNames[0]) == 0) {
 			candidatePatterns = append(candidatePatterns, p)
-			if pLen == 1 && p.GetOncePerUserCount(eCardLowerBound, ecardUpperBound) > 0 {
-				rootNodePattern = p
+			if (startEvent == "" && pLen == 1) || (startEvent != "" && pLen == 2) {
+				if count, err := p.GetOncePerUserCount(constructPatternConstraints(
+					pLen, startEventConstraints, endEventConstraints)); count > 0 {
+					rootNodePattern = p
+				} else if err != nil {
+					return nil, err
+				}
 			}
 		}
 	}
@@ -259,7 +345,8 @@ func BuildNewItree(endEvent string, eCardLowerBound int, ecardUpperBound int,
 	}
 	queue := []*ItreeNode{}
 
-	if rootNode, err := itree.buildRootNode(rootNodePattern, eCardLowerBound, ecardUpperBound); err != nil {
+	if rootNode, err := itree.buildRootNode(
+		rootNodePattern, startEventConstraints, endEventConstraints, patternWrapper); err != nil {
 		return nil, err
 	} else {
 		itree.addNode(rootNode)
@@ -269,7 +356,8 @@ func BuildNewItree(endEvent string, eCardLowerBound int, ecardUpperBound int,
 	for len(queue) > 0 {
 		parentNode := queue[0]
 		if childNodes, err := itree.buildAndAddChildNodes(parentNode,
-			candidatePatterns, eCardLowerBound, ecardUpperBound, patternWrapper); err != nil {
+			candidatePatterns, startEventConstraints,
+			endEventConstraints, patternWrapper); err != nil {
 			return nil, err
 		} else {
 			queue = append(queue, childNodes...)

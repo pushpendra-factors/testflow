@@ -2,6 +2,7 @@ package histogram
 
 import (
 	"fmt"
+	"math"
 )
 
 type NumericHistogram interface {
@@ -21,17 +22,17 @@ type NumericHistogram interface {
 }
 
 type NumericHistogramStruct struct {
-	Bins      []numericBin  `json:"b"`
-	Maxbins   int	  `json:"mb"`
-	Total     uint64  `json:"to"`
-	Dimension int      `json:"d"`
-	Template  *NumericHistogramTemplate  `json:"te"`
+	Bins      []numericBin              `json:"b"`
+	Maxbins   int                       `json:"mb"`
+	Total     uint64                    `json:"to"`
+	Dimension int                       `json:"d"`
+	Template  *NumericHistogramTemplate `json:"te"`
 }
 
 type NumericHistogramTemplateUnit struct {
-	Name       string   `json:"n"`
-	IsRequired bool     `json:"ir"`
-	Default    float64  `json:"d"`
+	Name       string  `json:"n"`
+	IsRequired bool    `json:"ir"`
+	Default    float64 `json:"d"`
 }
 
 type NumericHistogramTemplate []NumericHistogramTemplateUnit
@@ -55,9 +56,9 @@ func NewNumericHistogram(n int, d int, t *NumericHistogramTemplate) (*NumericHis
 }
 
 type numericBin struct {
-	Count    float64  `json:"c"`
-	Min      vector   `json:"mn"`
-	Max      vector   `json:"mx"`
+	Count float64 `json:"c"`
+	Min   vector  `json:"mn"`
+	Max   vector  `json:"mx"`
 }
 
 // http://www.science.canterbury.ac.nz/nzns/issues/vol7-1979/duncan_b.pdf
@@ -85,9 +86,9 @@ func (b *numericBin) merge(o numericBin) numericBin {
 	}
 
 	return numericBin{
-		Count:    count,
-		Min:      NewVector(min),
-		Max:      NewVector(max),
+		Count: count,
+		Min:   NewVector(min),
+		Max:   NewVector(max),
 	}
 }
 
@@ -140,9 +141,9 @@ func (h *NumericHistogramStruct) Mean() []float64 {
 
 	for i := range h.Bins {
 		for j := range sum {
-			minIJ :=  h.Bins[i].Min.Values[j]
+			minIJ := h.Bins[i].Min.Values[j]
 			maxIJ := h.Bins[i].Max.Values[j]
-			meanIJ := minIJ + (maxIJ - minIJ) / 2.0
+			meanIJ := minIJ + (maxIJ-minIJ)/2.0
 			sum[j] += meanIJ * h.Bins[i].Count
 		}
 	}
@@ -194,6 +195,19 @@ func (h *NumericHistogramStruct) CDF(x []float64) float64 {
 	}
 
 	return sum / float64(h.Total)
+}
+
+func (h *NumericHistogramStruct) CDFFromMap(xMap map[string]float64) float64 {
+	x := make([]float64, h.Dimension)
+	for i := 0; i < h.Dimension; i++ {
+		eventName := (*h.Template)[i].Name
+		if val, ok := xMap[eventName]; ok {
+			x[i] = val
+		} else {
+			x[i] = math.MaxFloat64
+		}
+	}
+	return h.CDF(x)
 }
 
 func (h *NumericHistogramStruct) trim() {

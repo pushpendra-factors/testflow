@@ -2,6 +2,7 @@
 package pattern
 
 import (
+	U "factors/util"
 	"fmt"
 	"math"
 	"sort"
@@ -61,9 +62,12 @@ func NewPatternWrapper(patterns []*Pattern, eventInfoMap *EventInfoMap) *Pattern
 }
 
 func (pw *PatternWrapper) GetPerUserCount(eventNames []string,
-	eCardLowerBound int, ecardUpperBound int) (uint, bool) {
+	patternConstraints []EventConstraints) (uint, bool) {
 	if p, ok := pw.pMap[eventArrayToString(eventNames)]; ok {
-		return p.GetOncePerUserCount(eCardLowerBound, ecardUpperBound), true
+		count, err := p.GetOncePerUserCount(patternConstraints)
+		if err == nil {
+			return count, true
+		}
 	}
 	return 0, false
 }
@@ -73,24 +77,70 @@ func (pw *PatternWrapper) GetPattern(eventNames []string) (*Pattern, bool) {
 	return p, ok
 }
 
-func eventStringWithConditions(event string, eCardLowerBound int, eCardUpperBound int) string {
+func eventStringWithConditions(event string, endEventConstraints *EventConstraints) string {
 	var eventString string = event
-	if eCardLowerBound > 0 || eCardUpperBound > 0 {
-		eventString += "("
-		if eCardLowerBound > 0 && eCardUpperBound > 0 {
-			eventString += fmt.Sprintf("%d to %d time", eCardLowerBound, eCardUpperBound)
-		} else if eCardLowerBound > 0 {
-			eventString += fmt.Sprintf("> %d time", eCardLowerBound)
-		} else if eCardUpperBound > 0 {
-			eventString += fmt.Sprintf("< %d time", eCardUpperBound)
+	if endEventConstraints != nil {
+		for _, c := range endEventConstraints.NumericConstraints {
+			if c.PropertyName == "" {
+				continue
+			}
+			hasLowerBound := c.LowerBound > -math.MaxFloat64 && c.LowerBound < math.MaxFloat64
+			hasUpperBound := c.UpperBound > -math.MaxFloat64 && c.UpperBound < math.MaxFloat64
+			lowerBoundStr := ""
+			if hasLowerBound {
+				if c.LowerBound == float64(int64(c.LowerBound)) {
+					lowerBoundStr = fmt.Sprintf("%d", int(c.LowerBound))
+				} else {
+					lowerBoundStr = fmt.Sprintf("%.2f", c.LowerBound)
+				}
+			}
+			upperBoundStr := ""
+			if hasUpperBound {
+				if c.UpperBound == float64(int64(c.UpperBound)) {
+					upperBoundStr = fmt.Sprintf("%d", int(c.UpperBound))
+				} else {
+					upperBoundStr = fmt.Sprintf("%.2f", c.UpperBound)
+				}
+			}
+			midStr := ""
+			if hasUpperBound && hasLowerBound {
+				midNum := (c.LowerBound + c.UpperBound) / 2.0
+				if midNum == float64(int64(midNum)) {
+					midStr = fmt.Sprintf("%d", int(midNum))
+				} else {
+					midStr = fmt.Sprintf("%.2f", midNum)
+				}
+			}
+			if hasLowerBound || hasUpperBound {
+				eventString += " ("
+				if hasLowerBound && hasUpperBound {
+					if c.IsEquality {
+						eventString += fmt.Sprintf("%s = %s",
+							c.PropertyName, midStr)
+					} else {
+						eventString += fmt.Sprintf("%s < %s < %s",
+							lowerBoundStr, c.PropertyName, upperBoundStr)
+					}
+				} else if hasLowerBound {
+					eventString += fmt.Sprintf("%s > %s", c.PropertyName, lowerBoundStr)
+				} else if hasUpperBound {
+					eventString += fmt.Sprintf("%s < %s", c.PropertyName, upperBoundStr)
+				}
+				eventString += ")"
+			}
 		}
-		eventString += ")"
+		for _, c := range endEventConstraints.CategoricalConstraints {
+			if c.PropertyName == "" {
+				continue
+			}
+			eventString += fmt.Sprintf(" (%s is %s)", c.PropertyName, c.PropertyValue)
+		}
 	}
 	return eventString
 }
 
 func headerString(funnelEvents []string,
-	eCardLowerBound int, eCardUpperBound int, funnelConversionPercent float64,
+	endEventConstraints *EventConstraints, funnelConversionPercent float64,
 	baseFunnelConversionPercent float64) string {
 
 	var header string
@@ -100,7 +150,7 @@ func headerString(funnelEvents []string,
 		return header
 	}
 	impactEvent := funnelEvents[pLen-2]
-	endEventString := eventStringWithConditions(funnelEvents[pLen-1], eCardLowerBound, eCardUpperBound)
+	endEventString := eventStringWithConditions(funnelEvents[pLen-1], endEventConstraints)
 
 	otherEventString := ""
 	for i := 0; i < pLen-2; i++ {
@@ -125,25 +175,31 @@ func headerString(funnelEvents []string,
 }
 
 func (pw *PatternWrapper) buildFunnelData(
-	p *Pattern, endEvent string, eCardLowerBound int,
-	eCardUpperBound int, isBaseFunnel bool) funnelNodeResults {
+	p *Pattern, startEvent string, startEventConstraints *EventConstraints,
+	endEvent string, endEventConstraints *EventConstraints,
+	isBaseFunnel bool) funnelNodeResults {
 	pLen := len(p.EventNames)
 	funnelData := funnelNodeResults{}
 	var referenceFunnelCount uint
 
 	for i := 0; i < pLen; i++ {
 		var funnelSubsequencePerUserCount uint
-		var found bool = true
+		var found = true
 		if i == pLen-1 {
-			funnelSubsequencePerUserCount = p.GetOncePerUserCount(eCardLowerBound, eCardUpperBound)
+			funnelSubsequencePerUserCount, _ = p.GetOncePerUserCount(constructPatternConstraints(
+				pLen, startEventConstraints, endEventConstraints))
 		} else {
-			funnelSubsequencePerUserCount, found = pw.GetPerUserCount(p.EventNames[:i+1], -1, -1)
+			funnelSubsequencePerUserCount, found = pw.GetPerUserCount(
+				p.EventNames[:i+1],
+				constructPatternConstraints(
+					i+1, startEventConstraints, nil))
 		}
 		if !found {
 			log.Errorf(fmt.Sprintf(
 				"Subsequence %s not as frequent as sequence %s",
 				eventArrayToString(p.EventNames[:i+1]), ","), p.String())
-			funnelSubsequencePerUserCount = p.GetOncePerUserCount(eCardLowerBound, eCardUpperBound)
+			funnelSubsequencePerUserCount, _ = p.GetOncePerUserCount(constructPatternConstraints(
+				pLen, startEventConstraints, endEventConstraints))
 		}
 		if i == 0 {
 			if (pLen == 1 && isBaseFunnel) || (pLen == 2 && !isBaseFunnel) {
@@ -161,10 +217,11 @@ func (pw *PatternWrapper) buildFunnelData(
 		}
 		var eventString string
 		if i == (pLen - 1) {
-			// Conditions are implicitly only on end event currently.
-			eventString = eventStringWithConditions(p.EventNames[i], eCardLowerBound, eCardUpperBound)
+			eventString = eventStringWithConditions(p.EventNames[i], endEventConstraints)
+		} else if i == 0 {
+			eventString = eventStringWithConditions(p.EventNames[i], startEventConstraints)
 		} else {
-			eventString = eventStringWithConditions(p.EventNames[i], -1, -1)
+			eventString = eventStringWithConditions(p.EventNames[i], nil)
 		}
 		node := funnelNodeResult{
 			Data:  []float64{float64(funnelSubsequencePerUserCount), float64(referenceFunnelCount - funnelSubsequencePerUserCount)},
@@ -183,10 +240,11 @@ func (pw *PatternWrapper) buildFunnelData(
 }
 
 func (pw *PatternWrapper) buildFactorResultsFromPatterns(
-	patterns []*Pattern, endEvent string,
-	eCardLowerBound int, eCardUpperBound int) PatternServiceGraphResults {
+	patterns []*Pattern,
+	startEvent string, startEventConstraints *EventConstraints,
+	endEvent string, endEventConstraints *EventConstraints) PatternServiceGraphResults {
 	results := PatternServiceGraphResults{Charts: []graphResult{}}
-	endEventString := eventStringWithConditions(endEvent, eCardLowerBound, eCardUpperBound)
+	endEventString := eventStringWithConditions(endEvent, endEventConstraints)
 	// Dummy Line Chart.
 	chart := graphResult{
 		Type:   "line",
@@ -224,7 +282,8 @@ func (pw *PatternWrapper) buildFactorResultsFromPatterns(
 	// Actual funnel results.
 	for _, p := range patterns {
 		pLen := len(p.EventNames)
-		if pLen == 1 {
+		if pLen == 1 || (startEvent != "" && pLen == 2) {
+			// Root node.
 			continue
 		}
 
@@ -237,9 +296,9 @@ func (pw *PatternWrapper) buildFactorResultsFromPatterns(
 			continue
 		}
 		baseFunnelData := pw.buildFunnelData(
-			baseP, endEvent, eCardLowerBound, eCardUpperBound, true)
+			baseP, startEvent, startEventConstraints, endEvent, endEventConstraints, true)
 		funnelData := pw.buildFunnelData(
-			p, endEvent, eCardLowerBound, eCardUpperBound, false)
+			p, startEvent, startEventConstraints, endEvent, endEventConstraints, false)
 
 		baseFunnelLength := len(baseFunnelData)
 		baseFunnelConversionPercent := baseFunnelData[baseFunnelLength-2].ConversionPercent
@@ -253,9 +312,8 @@ func (pw *PatternWrapper) buildFactorResultsFromPatterns(
 
 		chart = graphResult{
 			Type: "funnel",
-			Header: headerString(p.EventNames, eCardLowerBound,
-				eCardUpperBound, funnelConversionPercent,
-				baseFunnelConversionPercent),
+			Header: headerString(p.EventNames, endEventConstraints,
+				funnelConversionPercent, baseFunnelConversionPercent),
 			Datasets: []map[string]interface{}{
 				map[string]interface{}{
 					"base_funnel_data": baseFunnelData,
@@ -282,8 +340,9 @@ func NewPatternService(
 	return &patternService, nil
 }
 
-func (ps *PatternService) Factor(projectId uint64, endEvent string,
-	eCardLowerBound int, ecardUpperBound int) (PatternServiceGraphResults, error) {
+func (ps *PatternService) Factor(projectId uint64, startEvent string,
+	startEventConstraints *EventConstraints, endEvent string,
+	endEventConstraints *EventConstraints) (PatternServiceGraphResults, error) {
 	pw, ok := ps.patternsMap[projectId]
 	if !ok {
 		return PatternServiceGraphResults{}, fmt.Errorf(fmt.Sprintf("No patterns for projectId:%d", projectId))
@@ -294,7 +353,8 @@ func (ps *PatternService) Factor(projectId uint64, endEvent string,
 
 	iPatterns := []*Pattern{}
 	iPatternScores := []float64{}
-	if itree, err := BuildNewItree(endEvent, eCardLowerBound, ecardUpperBound, pw); err != nil {
+	if itree, err := BuildNewItree(startEvent, startEventConstraints,
+		endEvent, endEventConstraints, pw); err != nil {
 		log.Error(err)
 		return PatternServiceGraphResults{}, err
 	} else {
@@ -317,7 +377,8 @@ func (ps *PatternService) Factor(projectId uint64, endEvent string,
 			return (iPatternScores[i] > iPatternScores[j])
 		})
 	results := pw.buildFactorResultsFromPatterns(
-		iPatterns, endEvent, eCardLowerBound, ecardUpperBound)
+		iPatterns, startEvent, startEventConstraints,
+		endEvent, endEventConstraints)
 
 	maxPatterns := 50
 	if len(results.Charts) > maxPatterns {
@@ -327,8 +388,9 @@ func (ps *PatternService) Factor(projectId uint64, endEvent string,
 	return results, nil
 }
 
-func (ps *PatternService) FrequentPaths(projectId uint64, startEvent string,
-	endEvent string, eCardLowerBound int, ecardUpperBound int) (PatternServiceGraphResults, error) {
+func (ps *PatternService) FrequentPaths(
+	projectId uint64, startEvent string, startEventConstraints *EventConstraints,
+	endEvent string, endEventConstraints *EventConstraints) (PatternServiceGraphResults, error) {
 
 	pw, ok := ps.patternsMap[projectId]
 	if !ok {
@@ -356,7 +418,8 @@ func (ps *PatternService) FrequentPaths(projectId uint64, startEvent string,
 	}
 
 	results := pw.buildFactorResultsFromPatterns(
-		matchPatterns, endEvent, eCardLowerBound, ecardUpperBound)
+		matchPatterns, startEvent, startEventConstraints,
+		endEvent, endEventConstraints)
 
 	return results, nil
 }
@@ -365,6 +428,9 @@ func (ps *PatternService) GetSeenEventProperties(projectId uint64, eventName str
 	// Initialize results.
 	results := make(map[string][]string)
 	numericalProperties := []string{}
+	for _, dnp := range U.DEFAULT_NUMERIC_EVENT_PROPERTIES {
+		numericalProperties = append(numericalProperties, dnp)
+	}
 	categoricalProperties := []string{}
 	results["numerical"] = numericalProperties
 	results["categorical"] = categoricalProperties

@@ -3,7 +3,9 @@ package handler
 import (
 	"encoding/json"
 	C "factors/config"
+	P "factors/pattern"
 	"fmt"
+	"math"
 	"net/http"
 	"strconv"
 
@@ -11,64 +13,114 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func parseFactorQuery(query map[string]interface{}) (string, string, float64, float64, error) {
-	var startEvent string
-	var endEvent string
-	var endEventCardinalityLowerBound float64 = -1
-	var endEventCardinalityUpperBound float64 = -1
-	var err error
-
+func ParseFactorQuery(query map[string]interface{}) (
+	string, *P.EventConstraints, string, *P.EventConstraints, error) {
+	var startEventWithProperties map[string]interface{}
+	var endEventWithProperties map[string]interface{}
 	if ewp, ok := query["eventsWithProperties"]; ok {
 		eventsWithProperties := ewp.([]interface{})
 		numEvents := len(eventsWithProperties)
-		var endEventWithProperties map[string]interface{}
 		if numEvents == 1 {
 			endEventWithProperties = eventsWithProperties[0].(map[string]interface{})
 		} else if numEvents == 2 {
-			startEvent = eventsWithProperties[0].((map[string]interface{}))["name"].(string)
+			startEventWithProperties = eventsWithProperties[0].((map[string]interface{}))
 			endEventWithProperties = eventsWithProperties[1].(map[string]interface{})
 		} else {
-			err = fmt.Errorf(fmt.Sprintf(
+			err := fmt.Errorf(fmt.Sprintf(
 				"Unexpected number of events in query: %d", numEvents))
+			return "", nil, "", nil, err
 		}
-		endEvent = endEventWithProperties["name"].(string)
-		for _, ep := range endEventWithProperties["properties"].([]interface{}) {
-			p := ep.(map[string]interface{})
-			if p["property"].(string) != "occurrence" {
-				continue
+	} else {
+		err := fmt.Errorf("Missing eventsWithProperties")
+		return "", nil, "", nil, err
+	}
+	endEvent, endEventConstraints, err := parseQueryEventWithProperties(endEventWithProperties)
+	if err != nil {
+		return "", nil, "", nil, err
+	}
+	if len(startEventWithProperties) == 0 {
+		return "", nil, endEvent, endEventConstraints, nil
+	}
+	startEvent, startEventConstraints, err := parseQueryEventWithProperties(startEventWithProperties)
+	if err != nil {
+		return "", nil, "", nil, err
+	}
+	return startEvent, startEventConstraints, endEvent, endEventConstraints, nil
+}
+
+func parseQueryEventWithProperties(eventWithProperties map[string]interface{}) (
+	string, *P.EventConstraints, error) {
+	numericConstraintsMap := make(map[string]*P.NumericConstraint)
+	categoricalConstraintsMap := make(map[string]*P.CategoricalConstraint)
+	var err error
+	eventName := eventWithProperties["name"].(string)
+	for _, ep := range eventWithProperties["properties"].([]interface{}) {
+		p := ep.(map[string]interface{})
+		propertyName := p["property"].(string)
+		if p["type"].(string) == "numerical" {
+			nC, ok := numericConstraintsMap[propertyName]
+			if !ok {
+				nC = &P.NumericConstraint{
+					PropertyName: propertyName,
+					LowerBound:   -math.MaxFloat64,
+					UpperBound:   math.MaxFloat64,
+					IsEquality:   false,
+				}
+				numericConstraintsMap[propertyName] = nC
 			}
+			numValue := p["value"].(float64)
 			switch op := p["operator"].(string); op {
 			case "equals":
-				tmp := p["value"].(float64)
-				if tmp > 0 {
-					endEventCardinalityLowerBound = tmp - 0.5
-					endEventCardinalityUpperBound = tmp + 0.5
+				if numValue == float64(int64(numValue)) && numValue > 0 {
+					// Most likely an positive integer.
+					nC.LowerBound = numValue - 0.5
+					nC.UpperBound = numValue + 0.5
+				} else {
+					// Automatically choose a small numeric range around numValue.
+					numRange := math.Min(0.1, 0.01*numValue)
+					nC.LowerBound = numValue - numRange
+					nC.UpperBound = numValue + numRange
 				}
+				nC.IsEquality = true
 			case "greaterThan":
-				tmp := p["value"].(float64)
-				if tmp > 0 {
-					endEventCardinalityLowerBound = tmp
-				}
+				nC.LowerBound = numValue
 			case "lesserThan":
-				tmp := p["value"].(float64)
-				if tmp > 0 {
-					endEventCardinalityUpperBound = tmp
-				}
+				nC.UpperBound = numValue
 			default:
 				err = fmt.Errorf(fmt.Sprintf("Unknown Operator: %s", op))
 			}
+		} else if p["type"].(string) == "categorical" {
+			cC, ok := categoricalConstraintsMap[propertyName]
+			if !ok {
+				cC = &P.CategoricalConstraint{PropertyName: propertyName}
+				categoricalConstraintsMap[propertyName] = cC
+			}
+			switch op := p["operator"].(string); op {
+			case "equals":
+				cC.PropertyValue = p["value"].(string)
+			default:
+				err = fmt.Errorf(fmt.Sprintf("Unknown Operator: %s", op))
+			}
+		} else {
+			err = fmt.Errorf(fmt.Sprintf("Unknown Property type: %s", p["type"].(string)))
 		}
-	} else {
-		err = fmt.Errorf("Missing eventsWithProperties")
 	}
-
-	if endEventCardinalityLowerBound > 0 &&
-		endEventCardinalityUpperBound > 0 &&
-		endEventCardinalityLowerBound > endEventCardinalityUpperBound {
-		err = fmt.Errorf(fmt.Sprintf("Unexpected Input %d is greater than %d",
-			endEventCardinalityLowerBound, endEventCardinalityUpperBound))
+	if err != nil {
+		return "", nil, err
 	}
-	return startEvent, endEvent, endEventCardinalityLowerBound, endEventCardinalityUpperBound, err
+	eventConstraints := &P.EventConstraints{
+		NumericConstraints:     []P.NumericConstraint{},
+		CategoricalConstraints: []P.CategoricalConstraint{},
+	}
+	for _, value := range numericConstraintsMap {
+		eventConstraints.NumericConstraints = append(
+			eventConstraints.NumericConstraints, *value)
+	}
+	for _, value := range categoricalConstraintsMap {
+		eventConstraints.CategoricalConstraints = append(
+			eventConstraints.CategoricalConstraints, *value)
+	}
+	return eventName, eventConstraints, err
 }
 
 func FactorHandler(c *gin.Context) {
@@ -102,11 +154,8 @@ func FactorHandler(c *gin.Context) {
 
 	if query, ok := requestBodyMap["query"].(map[string]interface{}); ok {
 		log.WithFields(log.Fields{"query": query}).Info("Received query")
-
-		var startEvent, endEvent string
-		var endEventCardinalityLowerBound, endEventCardinalityUpperBound float64
-		var err error
-		if startEvent, endEvent, endEventCardinalityLowerBound, endEventCardinalityUpperBound, err = parseFactorQuery(query); err != nil {
+		startEvent, startEventConstraints, endEvent, endEventConstraints, err := ParseFactorQuery(query)
+		if err != nil {
 			log.WithFields(log.Fields{"error": err}).Error("Invalid Query.")
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error":  err.Error(),
@@ -115,15 +164,16 @@ func FactorHandler(c *gin.Context) {
 			return
 		}
 		log.WithFields(log.Fields{
-			"startEvent": startEvent,
-			"endEvent":   endEvent,
-			"eeclb":      endEventCardinalityLowerBound,
-			"eecub":      endEventCardinalityUpperBound}).Info("Factor query parse")
+			"startEvent":            startEvent,
+			"endEvent":              endEvent,
+			"startEventConstraints": startEventConstraints,
+			"endEventConstraints":   endEventConstraints}).Info("Factor query parse")
 
 		ps := C.GetServices().PatternService
 		if !isPathsQuery {
-			if results, err := ps.Factor(projectId, endEvent,
-				int(endEventCardinalityLowerBound), int(endEventCardinalityUpperBound)); err != nil {
+			if results, err := ps.Factor(
+				projectId, startEvent, startEventConstraints,
+				endEvent, endEventConstraints); err != nil {
 				log.WithFields(log.Fields{"error": err}).Error("Factors failed.")
 				c.AbortWithStatus(http.StatusBadRequest)
 				return
@@ -131,8 +181,9 @@ func FactorHandler(c *gin.Context) {
 				c.JSON(http.StatusOK, results)
 			}
 		} else {
-			if results, err := ps.FrequentPaths(projectId, startEvent, endEvent,
-				int(endEventCardinalityLowerBound), int(endEventCardinalityUpperBound)); err != nil {
+			if results, err := ps.FrequentPaths(
+				projectId, startEvent, startEventConstraints,
+				endEvent, endEventConstraints); err != nil {
 				log.WithFields(log.Fields{"error": err}).Error("Factors failed.")
 				c.AbortWithStatus(http.StatusBadRequest)
 				return

@@ -2,6 +2,8 @@ package tests
 
 import (
 	P "factors/pattern"
+	U "factors/util"
+	"math"
 	"testing"
 	"time"
 
@@ -125,12 +127,104 @@ func TestPatternGetOncePerUserCount(t *testing.T) {
 	assert.Equal(t, uint(2), p.UserCount)
 	assert.Equal(t, uint(2), p.OncePerUserCount)
 	assert.Equal(t, float64((1.0+2.0)/2), p.CardinalityRepeatTimings.Mean()[3])
-	assert.Equal(t, uint(2), p.GetOncePerUserCount(-1, -1))
-	assert.Equal(t, uint(2), p.GetOncePerUserCount(1, -1))
-	assert.Equal(t, uint(1), p.GetOncePerUserCount(-1, 1))
-	assert.Equal(t, uint(1), p.GetOncePerUserCount(1, 1))
-	assert.Equal(t, uint(1), p.GetOncePerUserCount(2, 2))
-	assert.Equal(t, uint(1), p.GetOncePerUserCount(2, 3))
+	count, err := p.GetOncePerUserCount(nil)
+	assert.Nil(t, err)
+	assert.Equal(t, uint(2), count)
+	lastEventCardinalityConstraints := []P.EventConstraints{
+		P.EventConstraints{},
+		P.EventConstraints{},
+		P.EventConstraints{},
+	}
+	count, err = p.GetOncePerUserCount(lastEventCardinalityConstraints)
+	assert.Nil(t, err)
+	assert.Equal(t, uint(2), count)
+	lastEventCardinalityConstraints[2].NumericConstraints = []P.NumericConstraint{
+		P.NumericConstraint{
+			PropertyName: U.EP_OCCURRENCE_COUNT,
+			LowerBound:   0.5,
+			UpperBound:   math.MaxFloat64,
+		},
+	}
+	count, err = p.GetOncePerUserCount(lastEventCardinalityConstraints)
+	assert.Nil(t, err)
+	assert.Equal(t, uint(2), count)
+	lastEventCardinalityConstraints[2].NumericConstraints = []P.NumericConstraint{
+		P.NumericConstraint{
+			PropertyName: U.EP_OCCURRENCE_COUNT,
+			LowerBound:   -math.MaxFloat64,
+			UpperBound:   1.5,
+		},
+	}
+	count, err = p.GetOncePerUserCount(lastEventCardinalityConstraints)
+	assert.Nil(t, err)
+	assert.Equal(t, uint(1), count)
+	lastEventCardinalityConstraints[2].NumericConstraints = []P.NumericConstraint{
+		P.NumericConstraint{
+			PropertyName: U.EP_OCCURRENCE_COUNT,
+			LowerBound:   0.5,
+			UpperBound:   1.5,
+		},
+	}
+	count, err = p.GetOncePerUserCount(lastEventCardinalityConstraints)
+	assert.Nil(t, err)
+	assert.Equal(t, uint(1), count)
+	lastEventCardinalityConstraints[2].NumericConstraints = []P.NumericConstraint{
+		P.NumericConstraint{
+			PropertyName: U.EP_OCCURRENCE_COUNT,
+			LowerBound:   1.5,
+			UpperBound:   2.5,
+		},
+	}
+	count, err = p.GetOncePerUserCount(lastEventCardinalityConstraints)
+	assert.Nil(t, err)
+	assert.Equal(t, uint(1), count)
+	lastEventCardinalityConstraints[2].NumericConstraints = []P.NumericConstraint{
+		P.NumericConstraint{
+			PropertyName: U.EP_OCCURRENCE_COUNT,
+			LowerBound:   1.5,
+			UpperBound:   3.5,
+		},
+	}
+	count, err = p.GetOncePerUserCount(lastEventCardinalityConstraints)
+	assert.Nil(t, err)
+	assert.Equal(t, uint(1), count)
+
+	// A-B-C occurrs twice with cardinality of A 2, 1.
+	startEventCardinalityConstraints := []P.EventConstraints{
+		P.EventConstraints{},
+		P.EventConstraints{},
+		P.EventConstraints{},
+	}
+	startEventCardinalityConstraints[0].NumericConstraints = []P.NumericConstraint{
+		P.NumericConstraint{
+			PropertyName: U.EP_OCCURRENCE_COUNT,
+			LowerBound:   0.5,
+			UpperBound:   1.5,
+		},
+	}
+	count, err = p.GetOncePerUserCount(startEventCardinalityConstraints)
+	assert.Nil(t, err)
+	assert.Equal(t, uint(1), count)
+	startEventCardinalityConstraints[0].NumericConstraints = []P.NumericConstraint{
+		P.NumericConstraint{
+			PropertyName: U.EP_OCCURRENCE_COUNT,
+			LowerBound:   -math.MaxFloat64,
+			UpperBound:   0.5,
+		},
+	}
+	count, err = p.GetOncePerUserCount(startEventCardinalityConstraints)
+	assert.Nil(t, err)
+	assert.Equal(t, uint(0), count)
+	startEventCardinalityConstraints[0].NumericConstraints = []P.NumericConstraint{
+		P.NumericConstraint{
+			PropertyName: U.EP_OCCURRENCE_COUNT,
+			LowerBound:   1.5,
+			UpperBound:   math.MaxFloat64,
+		},
+	}
+	count, err = p.GetOncePerUserCount(startEventCardinalityConstraints)
+	assert.Nil(t, err)
+	assert.Equal(t, uint(1), count)
 }
 
 func TestPatternEdgeConditions(t *testing.T) {

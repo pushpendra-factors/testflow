@@ -81,11 +81,21 @@ func (h *CategoricalHistogramStruct) PDF(x []string) (float64, error) {
 			"Input dimension %d not matching histogram dimension %d.",
 			len(x), h.Dimension))
 	}
+	if h.Total < 1 {
+		return 0.0, nil
+	}
 	totalProb := 0.0
 	for i := range h.Bins {
 		binProb := 1.0
 		fMaps := h.Bins[i].FrequencyMaps
 		for j := 0; j < h.Dimension; j++ {
+			if x[j] == "" {
+				continue
+			}
+			if fMaps[j].Count < 1 {
+				binProb = 0.0
+				break
+			}
 			var varFreq uint64 = 0
 			if count, ok := fMaps[j].Fmap[x[j]]; ok {
 				varFreq = count
@@ -98,7 +108,7 @@ func (h *CategoricalHistogramStruct) PDF(x []string) (float64, error) {
 	return totalProb, nil
 }
 
-func (h *CategoricalHistogramStruct) PDFMap(xMap map[string]string) (float64, error) {
+func (h *CategoricalHistogramStruct) PDFFromMap(xMap map[string]string) (float64, error) {
 	x := make([]string, h.Dimension)
 	for i := 0; i < h.Dimension; i++ {
 		eventName := (*h.Template)[i].Name

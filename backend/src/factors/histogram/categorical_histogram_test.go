@@ -2,7 +2,9 @@ package histogram
 
 import (
 	"fmt"
+	"math"
 	"math/rand"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -10,17 +12,17 @@ import (
 
 func TestHistogramFrequencyMaps(t *testing.T) {
 	for _, dimensions := range []int{2, 3, 4, 5, 10} {
+		// Each dimension can take upto 1 to 5 values.
+		numAllowedValues := make([]int, dimensions)
+		for i := 0; i < dimensions; i++ {
+			numAllowedValues[i] = rand.Intn(5) + 1
+		}
 		for _, maxBins := range []int{2, 3, 4, 5, 10} {
-			for _, numSamples := range []int{1, 5, 10, 50, 100} {
-				// Each dimension can take upto 1 to 5 values.
-				numAllowedValues := make([]int, dimensions)
-				for i := 0; i < dimensions; i++ {
-					numAllowedValues[i] = rand.Intn(5) + 1
-				}
-
+			for _, numSamples := range []int{10, 50, 100} {
 				// Track and check exact frequencies.
 				h, _ := NewCategoricalHistogram(maxBins, dimensions, nil)
-				var frequencies = make(map[string]int)
+				var symbolFrequencies = make(map[string]int)
+				allSamples := [][]string{}
 				for j := 0; j < numSamples; j++ {
 					var sample = []string{}
 					for i := 0; i < dimensions; i++ {
@@ -32,16 +34,17 @@ func TestHistogramFrequencyMaps(t *testing.T) {
 						if rand.Intn(10) > 1 {
 							// 20% chance of a symbol being an empty string.
 							v = fmt.Sprintf("%d%d", i+1, rand.Intn(numAllowedValues[i])+1)
-							if count, ok := frequencies[v]; ok {
-								frequencies[v] = count + 1
+							if count, ok := symbolFrequencies[v]; ok {
+								symbolFrequencies[v] = count + 1
 							} else {
-								frequencies[v] = 1
+								symbolFrequencies[v] = 1
 							}
 						}
 						sample = append(sample, v)
 
 					}
 					h.Add(sample)
+					allSamples = append(allSamples, sample)
 				}
 
 				assert.Equal(t, numSamples, int(h.Count()),
@@ -49,11 +52,43 @@ func TestHistogramFrequencyMaps(t *testing.T) {
 				assert.Equal(t, numSamples, int(h.totalBinCount()),
 					fmt.Sprintf("Bin Total Count mismatch %v != %v", h.totalBinCount(), numSamples))
 
-				for k, expectedCount := range frequencies {
+				// Check individual symbol frequencies.
+				for k, expectedCount := range symbolFrequencies {
 					actualCount := h.frequency(k)
 					assert.Equal(t, expectedCount, int(actualCount),
 						fmt.Sprintf("Count mismatch for symbol %s %v != %v",
 							k, expectedCount, actualCount))
+				}
+
+				for _, vec := range allSamples {
+					numSymbolCombinations := 1
+					for vecI, symbol := range vec {
+						if symbol != "" {
+							// The number of combinations in the marginal
+							// probability distribution function with missing
+							// dimensions is lower.
+							numSymbolCombinations *= numAllowedValues[vecI]
+						}
+					}
+					actualPdf, err := h.PDF(vec)
+					assert.Nil(t, err, fmt.Sprintf("Failed for string vec %v, error: %v", vec, err))
+					expectedPdf := 1.0 / float64(numSymbolCombinations)
+					// The expected error can be calculated by modelling this as binomial distribution.
+					// If p = 1/numSymbolCombinations is the probability of the sample occurring.
+					// 1 - p is the probability of it not occurrint.
+					// N = numSamples, is the number of trials.
+					// expected mean number of times of sample occurring = np
+					// expected variance = np(1-p)
+					// The actual value should not be more than 4 standard deviation from the mean.
+					// give or take 5 whole numbers for edge conditions.
+					maxDelta := 4.0*math.Sqrt(float64(numSamples)*expectedPdf*(1.0-expectedPdf)) + 5.0
+					assert.InDelta(t, int(expectedPdf*float64(numSamples)),
+						int(actualPdf*float64(numSamples)), maxDelta,
+						fmt.Sprintf(
+							"Mismatch for vec %v, dimensions %d, numSymbolCombinations %d,"+
+								"numSamples %d, numBins: %d, actualPDF %.3f, expectedPDF %.3f",
+							vec, dimensions, numSymbolCombinations, numSamples,
+							maxBins, actualPdf, expectedPdf))
 				}
 			}
 		}
@@ -93,11 +128,13 @@ func TestCategoricalHistogramAddWithTemplate(t *testing.T) {
 	// Track and check exact frequencies.
 	h, _ := NewCategoricalHistogram(maxBins, dimensions, &template)
 	var frequencies = make(map[string]int)
+	var allSamples = []map[string]string{}
 	for j := 0; j < numSamples; {
 		switch choice := rand.Intn(5); choice {
 		case 0:
 			// Add (values)
 			var sample = []string{}
+			keyValues := map[string]string{}
 			for i := 0; i < dimensions; i++ {
 				// Samples look like
 				// 11, 12, ""    -> Dimension 1, numAllowedValues 2
@@ -114,9 +151,12 @@ func TestCategoricalHistogramAddWithTemplate(t *testing.T) {
 					}
 				}
 				sample = append(sample, v)
+				key := fmt.Sprintf("key%d", i+1)
+				keyValues[key] = v
 			}
 			err := h.Add(sample)
 			assert.Nil(t, err)
+			allSamples = append(allSamples, keyValues)
 			j++
 		case 1:
 			// AddMap all 4 dimensions.
@@ -133,6 +173,7 @@ func TestCategoricalHistogramAddWithTemplate(t *testing.T) {
 			}
 			err := h.AddMap(keyValues)
 			assert.Nil(t, err)
+			allSamples = append(allSamples, keyValues)
 			j++
 		case 2:
 			// AddMap with default dimension.
@@ -144,6 +185,7 @@ func TestCategoricalHistogramAddWithTemplate(t *testing.T) {
 			keyValues["key3"] = v3
 			err := h.AddMap(keyValues)
 			assert.Nil(t, err)
+			allSamples = append(allSamples, keyValues)
 			for _, v := range []string{template[0].Default, v1, template[2].Default, v3} {
 				if v == "" {
 					continue
@@ -165,6 +207,7 @@ func TestCategoricalHistogramAddWithTemplate(t *testing.T) {
 			keyValues["key4"] = fmt.Sprintf("%d%d", 4, rand.Intn(numAllowedValues[3])+1)
 			err := h.AddMap(keyValues)
 			assert.NotNil(t, err)
+			allSamples = append(allSamples, keyValues)
 		case 4:
 			// AddMap error with extra unknown keys.
 			// Frequencies are not recorded since it is not added to histogram.
@@ -176,6 +219,7 @@ func TestCategoricalHistogramAddWithTemplate(t *testing.T) {
 			keyValues["key5"] = "unexpectedKey"
 			err := h.AddMap(keyValues)
 			assert.NotNil(t, err)
+			allSamples = append(allSamples, keyValues)
 		}
 	}
 	assert.Equal(t, numSamples, int(h.Count()),
@@ -188,6 +232,41 @@ func TestCategoricalHistogramAddWithTemplate(t *testing.T) {
 		assert.Equal(t, expectedCount, int(actualCount),
 			fmt.Sprintf("Count mismatch for symbol %s %v != %v",
 				k, expectedCount, actualCount))
+	}
+
+	for _, mp := range allSamples {
+		numSymbolCombinations := 1
+		for key, symbol := range mp {
+			if symbol != "" {
+				// The number of combinations in the marginal
+				// probability distribution function with missing
+				// dimensions is lower.
+				i, _ := strconv.ParseInt(string(key[3]), 10, 32)
+				i -= 1
+				if int(i) < dimensions {
+					numSymbolCombinations *= numAllowedValues[i]
+				}
+			}
+		}
+		actualPdf, err := h.PDFFromMap(mp)
+		assert.Nil(t, err, fmt.Sprintf("Failed for string vec %v, error: %v", mp, err))
+		expectedPdf := 1.0 / float64(numSymbolCombinations)
+		// The expected error can be calculated by modelling this as binomial distribution.
+		// If p = 1/numSymbolCombinations is the probability of the sample occurring.
+		// 1 - p is the probability of it not occurrint.
+		// N = numSamples, is the number of trials.
+		// expected mean number of times of sample occurring = np
+		// expected variance = np(1-p)
+		// The actual value should not be more than 4 standard deviation from the mean.
+		// give or take 2 whole numbers for edge conditions.
+		maxDelta := 4.0*math.Sqrt(float64(numSamples)*expectedPdf*(1.0-expectedPdf)) + 2
+		assert.InDelta(t, int(expectedPdf*float64(numSamples)),
+			int(actualPdf*float64(numSamples)), maxDelta,
+			fmt.Sprintf(
+				"Mismatch for map %v, numSymbolCombinations %d, numSamples %d,"+
+					"numBins: %d, actualPDF %.3f, expectedPDF %.3f",
+				mp, numSymbolCombinations, numSamples,
+				maxBins, actualPdf, expectedPdf))
 	}
 }
 

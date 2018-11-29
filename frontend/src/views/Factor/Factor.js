@@ -220,7 +220,6 @@ class Factor extends Component {
     console.log('Factor ' + JSON.stringify(this.state.values));
 
     var query = {
-      userProperties: [],
       eventsWithProperties: [],
     }
 
@@ -239,6 +238,7 @@ class Factor extends Component {
           var newEvent = {}
           newEvent["name"] = queryElement.label;
           newEvent["properties"] = [];
+          newEvent["userProperties"] = [];
           query.eventsWithProperties.push(newEvent);
           nextExpectedTypes = [];
           break;
@@ -250,9 +250,10 @@ class Factor extends Component {
           nextExpectedTypes = [EVENT_PROPERTY_NAME_TYPE];
           break;
         case USER_PROPERTY_STARTY_TYPE:
-          // Create a new event property condition type.
+          // Create a new user property condition type.
           var newUserProperty = {}
-          query.userProperties.push(newUserProperty);
+          var numEvents = query.eventsWithProperties.length;
+          query.eventsWithProperties[numEvents - 1].userProperties.push(newUserProperty);
           nextExpectedTypes = [USER_PROPERTY_NAME_TYPE];
           break;
         case TO_TYPE:
@@ -268,37 +269,47 @@ class Factor extends Component {
           nextExpectedTypes = [NUMERICAL_VALUE_TYPE, STRING_VALUE_TYPE];
           break;
         case USER_PROPERTY_NAME_TYPE:
-          var numProperties = query.userProperties.length;
-          var currentProperty = query.userProperties[numProperties - 1];
-          currentProperty['property'] = queryElement.property;
-          currentProperty['operator'] = queryElement.operator;
+          var numEvents = query.eventsWithProperties.length;
+          var currentEvent = query.eventsWithProperties[numEvents - 1];
+          var numProperties = currentEvent.userProperties.length;
+          var currentUserProperty = currentEvent.userProperties[numProperties - 1];
+          currentUserProperty['property'] = queryElement.property;
+          currentUserProperty['operator'] = queryElement.operator;
           nextExpectedTypes = [NUMERICAL_VALUE_TYPE, STRING_VALUE_TYPE];
           break;
         case NUMERICAL_VALUE_TYPE:
-          var numUserProperties = query.userProperties.length;
-          var currentUserProperty = query.userProperties[numUserProperties - 1];
+          var numEvents = query.eventsWithProperties.length;
+          var currentEvent = query.eventsWithProperties[numEvents - 1];
+          var numProperties = currentEvent.userProperties.length;
+          var currentUserProperty = currentEvent.userProperties[numProperties - 1];
           if (!currentUserProperty || currentUserProperty.hasOwnProperty('value')) {
             var numEvents = query.eventsWithProperties.length;
             var currentEvent = query.eventsWithProperties[numEvents - 1];
             var numEventProperties = currentEvent.properties.length;
             var currentEventProperty = currentEvent.properties[numEventProperties - 1];
             currentEventProperty['value'] = parseFloat(queryElement.label);
+            currentEventProperty['type'] = "numerical"
           } else {
             currentUserProperty['value'] = parseFloat(queryElement.label);
+            currentUserProperty['type'] = "numerical"
           }
           nextExpectedTypes = [];
           break;
         case STRING_VALUE_TYPE:
-          var numUserProperties = query.userProperties.length;
-          var currentUserProperty = query.userProperties[numUserProperties - 1];
+          var numEvents = query.eventsWithProperties.length;
+          var currentEvent = query.eventsWithProperties[numEvents - 1];
+          var numProperties = currentEvent.userProperties.length;
+          var currentUserProperty = currentEvent.userProperties[numProperties - 1];
           if (!currentUserProperty || currentUserProperty.hasOwnProperty('value')) {
             var numEvents = query.eventsWithProperties.length;
             var currentEvent = query.eventsWithProperties[numEvents - 1];
             var numEventProperties = currentEvent.properties.length;
             var currentEventProperty = currentEvent.properties[numEventProperties - 1];
             currentEventProperty['value'] = queryElement.label;
+            currentEventProperty['type'] = "categorical"
           } else {
             currentUserProperty['value'] = queryElement.label;
+            currentUserProperty['type'] = "categorical"
           }
           nextExpectedTypes = [];
           break;
