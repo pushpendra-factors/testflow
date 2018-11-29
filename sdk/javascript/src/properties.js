@@ -286,17 +286,17 @@ function getDefault(pfix="$") {
 
     let browser = BrowserInfo.getBrowser();
     if (browser.name) dp[pfix+"browser"] = browser.name;
-    if (browser.versionString) dp[pfix+"browser_version"] = browser.versionString;
+    if (browser.versionString) dp[pfix+"browserVersion"] = browser.versionString;
 
     let os = BrowserInfo.getOS();
     if (os.name) dp[pfix+"os"] = os.name;
-    if (os.versionString) dp[pfix+"os_version"] = os.versionString;
+    if (os.versionString) dp[pfix+"osVersion"] = os.versionString;
 
     let device = BrowserInfo.getDevice();
     if (device.screen && device.screen.width > 0) 
-        dp[pfix+"screen_width"] = device.screen.width;
+        dp[pfix+"screenWidth"] = device.screen.width;
     if (device.screen && device.screen.height > 0) 
-        dp[pfix+"screen_height"] = device.screen.height;
+        dp[pfix+"screenHeight"] = device.screen.height;
 
     // Device name added, if mobile.
     if (device.device) dp[prefix+"device"] = device.device;
@@ -349,11 +349,15 @@ function parseFromQueryString(qString, prefix="$qp_") {
 function getValidated(props={}) {
     let vprops = {}
     for (let k in props) {
-        // Prefixes with _, if starts with $. 
-        if (k.indexOf("$") == 0) 
-            vprops["_"+k] = props[k];
-        else
-            vprops[k] = props[k];
+        // Value validation: Allows only number or string.
+        if (typeof(props[k]) !== "string" && typeof(props[k]) !== "number")
+            continue;
+
+        let allowedKey = k;
+        // Key validation: Replaces '$' with '_$', but allows '$qp_'.
+        if (k.indexOf("$") == 0 && !(k.indexOf("$qp_") == 0)) allowedKey = "_"+k;
+
+        vprops[allowedKey] = props[k];
     }
     return vprops;
 }

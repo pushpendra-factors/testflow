@@ -87,10 +87,6 @@ App.prototype.track = function(eventName, eventProperties, auto=false) {
     eventProperties = Object.assign(eventProperties, 
         Properties.getDefault());
 
-    // Add query params properties, if auto.
-    if (auto) eventProperties = Object.assign(eventProperties, 
-        Properties.parseFromQueryString(window.location.search));
-
     let payload = {};
     updatePayloadWithUserIdFromCookie(payload);
     payload.event_name = eventName;
@@ -104,13 +100,14 @@ App.prototype.track = function(eventName, eventProperties, auto=false) {
 
 App.prototype.autoTrack = function(enabled=false) {
     if (!enabled) return false; // not enabled.
-    this.track(window.location.host+window.location.pathname, {}, true);
+    this.track(window.location.host+window.location.pathname, 
+        Properties.parseFromQueryString(window.location.search), true);
     
-    // Todo(Dinesh): Find ways to automate tests SPA.
+    // Todo(Dinesh): Find ways to automate tests for SPA support.
     
     // AutoTrack SPA
     // checks support for history and onpopstate listener.
-    if (window.history && window.onpopstate !== undefined) { 
+    if (window.history && window.onpopstate !== undefined) {
         if (window.onpopstate != null) {
             logger.debug("Failed. Already a function attached on window.onpopstate.");
             return;
@@ -121,7 +118,8 @@ App.prototype.autoTrack = function(enabled=false) {
             logger.debug("Triggered window.onpopstate: "+window.location.href);
             // Track only if URL or QueryParam changed.
             if (_land_location !== window.location.href)
-                _this.track(window.location.host+window.location.pathname, {}, true);
+                _this.track(window.location.host+window.location.pathname, 
+                    Properties.parseFromQueryString(window.location.search), true);
         }
     }
 }
