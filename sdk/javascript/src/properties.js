@@ -346,18 +346,12 @@ function parseFromQueryString(qString, prefix="$qp_") {
     return ep;
 }
 
-function getValidated(props={}) {
+function getTypeValidated(props={}) {
     let vprops = {}
     for (let k in props) {
         // Value validation: Allows only number or string.
-        if (typeof(props[k]) !== "string" && typeof(props[k]) !== "number")
-            continue;
-
-        let allowedKey = k;
-        // Key validation: Replaces '$' with '_$', but allows '$qp_'.
-        if (k.indexOf("$") == 0 && !(k.indexOf("$qp_") == 0)) allowedKey = "_"+k;
-
-        vprops[allowedKey] = props[k];
+        if (typeof(props[k]) == "string" || typeof(props[k]) == "number")
+            vprops[k] = props[k];
     }
     return vprops;
 }
@@ -365,5 +359,5 @@ function getValidated(props={}) {
 module.exports = {
     getUserDefault: getUserDefault,
     parseFromQueryString: parseFromQueryString,
-    getValidated: getValidated
+    getTypeValidated: getTypeValidated
 }

@@ -81,7 +81,8 @@ App.prototype.track = function(eventName, eventProperties, auto=false) {
     if (!isAllowedEventName(eventName)) 
         throw new Error("FactorsError: Invalid event name.");
     
-    eventProperties = Properties.getValidated(eventProperties);
+    // Other property validations done on backend.
+    eventProperties = Properties.getTypeValidated(eventProperties);
 
     let payload = {};
     updatePayloadWithUserIdFromCookie(payload);
@@ -143,7 +144,9 @@ App.prototype.addUserProperties = function (properties={}) {
     if (Object.keys(properties).length == 0)
         return Promise.reject("No changes. Empty properties.");
 
-    properties = Properties.getValidated(properties);
+    // Other property validations done on backend.
+    properties = Properties.getTypeValidated(properties);
+
     // Adds default user properties.
     properties = Object.assign(properties, 
             Properties.getUserDefault());

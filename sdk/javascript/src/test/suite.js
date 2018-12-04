@@ -167,29 +167,16 @@ SuitePrivateMethod.testGetUserDefaultProperties = function() {
     if (props.$device) assert.isTrue(props.$device != "");
 }
 
-SuitePrivateMethod.testGetValidateProperties = function() {
-    assert.isEmpty(Properties.getValidated()); // no arg.
-    assert.isEmpty(Properties.getValidated({})); // empty props.
+SuitePrivateMethod.testGetTypeValidatedProperties = function() {
+    assert.isEmpty(Properties.getTypeValidated()); // no arg.
+    assert.isEmpty(Properties.getTypeValidated({})); // empty props.
 
-    let vprops = Properties.getValidated({prop_1: "value_1"})
+    let vprops = Properties.getTypeValidated({prop_1: "value_1"})
     assert.containsAllKeys(vprops, ["prop_1"]);
     assert.equal(vprops["prop_1"], "value_1");
 
-    vprops = Properties.getValidated({"$prop_1": "value_1"});
-    assert.containsAllKeys(vprops, ["_$prop_1"], "Not prefixed with '_'.") // Should be prefixed with '_'.
-    assert.isFalse(!!vprops["$prop_1"], "Allowed duplicate with $ prefix");
-    
-    vprops = Properties.getValidated({"$prop_1": 10});
-    assert.containsAllKeys(vprops, ["_$prop_1"]);
-    assert.deepEqual(vprops["_$prop_1"], 10); // Check value's datatype preserved.
-
-    // Allow $qp_ prefix.
-    vprops = Properties.getValidated({"$qp_prop_1": 10});
-    assert.containsAllKeys(vprops, ["$qp_prop_1"]);
-    assert.isFalse(!!vprops["_$qp_prop_1"], "Should not escape $qp with _.");
-
     // Property value validation.
-    vprops = Properties.getValidated({"int_prop": 10, "float_prop": 10.2, "string_prop": "somevalue", "obj_prop": {"obj_num_prop": 10}});
+    vprops = Properties.getTypeValidated({"int_prop": 10, "float_prop": 10.2, "string_prop": "somevalue", "obj_prop": {"obj_num_prop": 10}});
     assert.containsAllKeys(vprops, ["int_prop", "float_prop", "string_prop"], "Should allow number and string.");
     assert.isFalse(!!vprops["obj_prop"], "Should not allow anything other than number or string.");
     assert.isFalse(!!vprops["obj_num_prop"], "Should not allow object prop.");
