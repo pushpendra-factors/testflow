@@ -244,7 +244,7 @@ func SDKAddUserPropertiesHandler(c *gin.Context) {
 	scopeProjectId := scopeProjectIdIntf.(uint64)
 
 	// Filter valid properties.
-	validProperties := U.FilterValidProperties(&addPropsUser.Properties)
+	validProperties := U.GetValidatedUserProperties(&addPropsUser.Properties)
 
 	//  Add default properties. Ignore on addition failure.
 	_ = M.AddUserDefaultProperties(validProperties, c.ClientIP())

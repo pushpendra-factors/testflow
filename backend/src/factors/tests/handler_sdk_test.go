@@ -284,6 +284,29 @@ func TestSDKAddUserProperties(t *testing.T) {
 	// Types not allowed.
 	assert.Nil(t, userPropertiesMap2["boolean_prop"])
 	assert.Nil(t, userPropertiesMap2["map_prop"])
+
+	// Should not allow $ prefixes apart from default properties.
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"user_id": "%s", "properties": {"$dollar_key": "unknow_value", "$os": "mac osx", "$osVersion": "1_2_3", "$referrer": "http://google.com", "$screenWidth": 10, "$screenHeight": 11, "$browser": "mozilla", "$browserVersion": "10_2_3"}}`,
+		user.ID)), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	propsResponseMap1 := DecodeJSONResponseToMap(w.Body)
+	assert.Nil(t, propsResponseMap1["user_id"])
+	retUser, errCode = M.GetUser(project.ID, user.ID)
+	assert.Equal(t, M.DB_SUCCESS, errCode)
+	userPropertiesBytes, err = retUser.Properties.Value()
+	assert.Nil(t, err)
+	var userPropertiesMap3 map[string]interface{}
+	json.Unmarshal(userPropertiesBytes.([]byte), &userPropertiesMap3)
+	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Nil(t, userPropertiesMap3["$dollar_key"])                                              // dollar prefix not allowed.
+	assert.NotNil(t, userPropertiesMap3[fmt.Sprintf("%s$dollar_key", U.NAME_PREFIX_ESCAPE_CHAR)]) // Escaped key should exist.
+	// check for default props. Hardcoded property name as request payload.
+	assert.NotNil(t, userPropertiesMap3["$os"])
+	assert.NotNil(t, userPropertiesMap3["$osVersion"])
+	assert.NotNil(t, userPropertiesMap3["$browser"])
+	assert.NotNil(t, userPropertiesMap3["$referrer"])
+	assert.NotNil(t, userPropertiesMap3["$screenWidth"])
+	assert.NotNil(t, userPropertiesMap3["$screenHeight"])
 }
 
 func TestSDKGetProjectSettings(t *testing.T) {

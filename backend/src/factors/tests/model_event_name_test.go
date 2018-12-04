@@ -88,6 +88,19 @@ func TestDBCreateAndGetEventName(t *testing.T) {
 	retEventName, errCode = M.CreateOrGetUserCreatedEventName(ucEventName)
 	assert.Equal(t, http.StatusBadRequest, errCode)
 	assert.Nil(t, retEventName)
+
+	// Test CreateOrGetUserCreatedEventName with disallowed name.
+	ucEventName = &M.EventName{Name: "$name", ProjectId: project.ID}
+	retEventName, errCode = M.CreateOrGetUserCreatedEventName(ucEventName)
+	assert.Equal(t, http.StatusBadRequest, errCode)
+	assert.Nil(t, retEventName)
+
+	// Test CreateOrGetUserCreatedEventName with disallowed autoName.
+	randomName = U.RandomLowerAphaNumString(10)
+	ucEventName = &M.EventName{Name: randomName, AutoName: "$UCEN", ProjectId: project.ID}
+	retEventName, errCode = M.CreateOrGetUserCreatedEventName(ucEventName)
+	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.NotNil(t, retEventName)
 }
 
 func TestDBGetEventNames(t *testing.T) {

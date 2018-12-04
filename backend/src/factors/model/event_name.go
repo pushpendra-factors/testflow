@@ -1,8 +1,11 @@
 package model
 
 import (
+	"errors"
 	C "factors/config"
+	U "factors/util"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/jinzhu/gorm"
@@ -21,14 +24,18 @@ type EventName struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+// Special autoname.
 const USER_CREATED_EVENT_NAME = "$UCEN"
+
+var ALLOWED_AUTONAMES = [...]string{USER_CREATED_EVENT_NAME}
 
 func CreateOrGetEventName(eventName *EventName) (*EventName, int) {
 	db := C.GetServices().Db
 
 	log.WithFields(log.Fields{"eventName": &eventName}).Info("Create or get event_name")
 
-	if eventName.Name == "" || eventName.ProjectId == 0 {
+	// Validation.
+	if eventName.ProjectId == 0 || IsValidName(eventName.Name) != nil || isValidAutoName(eventName.AutoName) != nil {
 		return nil, http.StatusBadRequest
 	}
 
@@ -46,6 +53,18 @@ func CreateOrGetEventName(eventName *EventName) (*EventName, int) {
 		return nil, http.StatusInternalServerError
 	}
 	return eventName, DB_SUCCESS
+}
+
+func isValidAutoName(autoName string) error {
+	// Allows only allowed autonames.
+	if strings.HasPrefix(autoName, U.NAME_PREFIX) {
+		for _, allowedAutoName := range ALLOWED_AUTONAMES {
+			if autoName != allowedAutoName {
+				return errors.New("invalid autoname")
+			}
+		}
+	}
+	return nil
 }
 
 // Create or Get user created EventName.
