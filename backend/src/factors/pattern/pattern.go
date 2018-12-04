@@ -79,9 +79,9 @@ func NewPattern(events []string, eventInfoMap *EventInfoMap) (*Pattern, error) {
 		EventNames: events,
 		// 6 dimensional histogram - Cardinalties, Repeats, Timings of start_event
 		// and last_event.
-		CardinalityRepeatTimings: defaultHist,
-		NumericProperties:        nil,
-		CategoricalProperties:    nil,
+		CardinalityRepeatTimings:   defaultHist,
+		NumericProperties:          nil,
+		CategoricalProperties:      nil,
 		Count:                      0,
 		OncePerUserCount:           0,
 		waitIndex:                  0,

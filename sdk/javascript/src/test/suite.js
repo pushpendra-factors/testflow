@@ -153,17 +153,17 @@ SuitePrivateMethod.testGetPropertiesFromQueryString = function() {
     assert.isTrue(props && props.$qp_utm === "medium");
 }
 
-SuitePrivateMethod.testGetDefaultProperties = function() {
-    assert.isNotEmpty(Properties.getDefault())
-    let props =  Properties.getDefault();
+SuitePrivateMethod.testGetUserDefaultProperties = function() {
+    assert.isNotEmpty(Properties.getUserDefault())
+    let props =  Properties.getUserDefault();
     // No empty values.
     for (let k in props) assert.isNotEmpty(props[k].toString(), "Empty: "+k);
 
     // Check individual keys needed.
     assert.containsAllKeys(props, 
-        ["$referrer", "$browser", "$browser_version", "$os", "$os_version", "$screen_width", "$screen_height"]);
+        ["$referrer", "$browser", "$browserVersion", "$os", "$osVersion", "$screenWidth", "$screenHeight"]);
     
-    props = Properties.getDefault();
+    props = Properties.getUserDefault();
     if (props.$device) assert.isTrue(props.$device != "");
 }
 

@@ -216,3 +216,7 @@
 [[constraint]]
   name = "github.com/VividCortex/gohistogram"
   version = "1.0.0"
+
+[[constraint]]
+  name = "github.com/oschwald/geoip2-golang"
+  version = "1.2.1"

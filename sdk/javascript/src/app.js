@@ -83,10 +83,6 @@ App.prototype.track = function(eventName, eventProperties, auto=false) {
     
     eventProperties = Properties.getValidated(eventProperties);
 
-    // Adds default properties.
-    eventProperties = Object.assign(eventProperties, 
-        Properties.getDefault());
-
     let payload = {};
     updatePayloadWithUserIdFromCookie(payload);
     payload.event_name = eventName;
@@ -146,10 +142,15 @@ App.prototype.addUserProperties = function (properties={}) {
     
     if (Object.keys(properties).length == 0)
         return Promise.reject("No changes. Empty properties.");
+
+    properties = Properties.getValidated(properties);
+    // Adds default user properties.
+    properties = Object.assign(properties, 
+            Properties.getUserDefault());
     
     let payload = {};
     updatePayloadWithUserIdFromCookie(payload);
-    payload.properties = Properties.getValidated(properties);
+    payload.properties = properties
 
     return this.client.addUserProperties(payload)
         .then(updateCookieIfUserIdInResponse)

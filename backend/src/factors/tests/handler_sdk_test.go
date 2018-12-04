@@ -247,6 +247,43 @@ func TestSDKAddUserProperties(t *testing.T) {
 		map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusNotFound, w.Code)
 
+	// Test default user properties.
+	uniqueName = U.RandomLowerAphaNumString(16)
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"user_id": "%s", "properties": {"prop_1": "%s"}}`, user.ID, uniqueName)),
+		map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	responseMap = DecodeJSONResponseToMap(w.Body)
+	assert.NotEmpty(t, responseMap)
+	retUser, errCode := M.GetUser(project.ID, user.ID)
+	assert.Equal(t, M.DB_SUCCESS, errCode)
+	userPropertiesBytes, err := retUser.Properties.Value()
+	assert.Nil(t, err)
+	var userPropertiesMap map[string]interface{}
+	json.Unmarshal(userPropertiesBytes.([]byte), &userPropertiesMap)
+	// Expected to test this. ClientIP nil on tests. HttpRequest RemoteAddr assignment is not working.
+	// assert.NotEmpty(t, userPropertiesMap[U.UP_INTERNAL_IP])
+	// assert.NotNil(t, userPropertiesMap[U.UP_COUNTRY])
+
+	// Test properties type.
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"user_id": "%s", "properties": {"int_prop": 100, "long_prop": 10000000000, "float_prop": 10.23, "string_prop": "string_value", "boolean_prop": false, "map_prop": {"key": "value"}}}`,
+		user.ID)), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	propsResponseMap := DecodeJSONResponseToMap(w.Body)
+	assert.Nil(t, propsResponseMap["user_id"])
+	retUser, errCode = M.GetUser(project.ID, user.ID)
+	assert.Equal(t, M.DB_SUCCESS, errCode)
+	userPropertiesBytes, err = retUser.Properties.Value()
+	assert.Nil(t, err)
+	var userPropertiesMap2 map[string]interface{}
+	json.Unmarshal(userPropertiesBytes.([]byte), &userPropertiesMap2)
+	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.NotNil(t, userPropertiesMap2["int_prop"])
+	assert.NotNil(t, userPropertiesMap2["long_prop"])
+	assert.NotNil(t, userPropertiesMap2["string_prop"])
+	assert.NotNil(t, userPropertiesMap2["float_prop"])
+	// Types not allowed.
+	assert.Nil(t, userPropertiesMap2["boolean_prop"])
+	assert.Nil(t, userPropertiesMap2["map_prop"])
 }
 
 func TestSDKGetProjectSettings(t *testing.T) {

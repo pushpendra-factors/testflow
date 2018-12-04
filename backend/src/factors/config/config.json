@@ -8,5 +8,6 @@
 		"name": "autometa",
 		"password": "@ut0me7a"
 	},
-	"pattern_files": {}
+	"pattern_files": {},
+	"geolocation_file": "/tmp/factors/geolocation_data/GeoLite2-Country.mmdb"
 }

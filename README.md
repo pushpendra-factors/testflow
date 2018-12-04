@@ -95,11 +95,13 @@ go run run_db_create.go
 ```
 
 * Install godep (mac) `brew install dep`.
+
 * Install all dependencies of the project (Optional, as we have checked in vendor libs already).
 ```
 cd $GOPATH/src/factors
 dep ensure
 ```
+
 * Build
 ```
 go build -o $GOPATH/bin/app $GOPATH/src/factors/app/app.go
@@ -109,6 +111,8 @@ go build -o $GOPATH/bin/app $GOPATH/src/factors/app/app.go
 ```
 cd $GOPATH/bin
 mkdir -p /tmp/factors/config
+mkdir -p /tmp/factors/geolocation_data
+cp <path_to_github_code>/geolocation_data/GeoLite2-Country.mmdb /tmp/factors/geolocation_data
 cp $GOPATH/src/factors/config/config.json /tmp/factors/config
 ./app --config_filepath=/tmp/factors/config/config.json
 ```

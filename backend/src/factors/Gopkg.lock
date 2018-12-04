@@ -186,6 +186,22 @@
   version = "1.0.1"
 
 [[projects]]
+  digest = "1:2e8bdbc8a11d716dab1bf66d326285d7e5c92fa4c996c1574ba1153e57534b85"
+  name = "github.com/oschwald/geoip2-golang"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "7118115686e16b77967cdbf55d1b944fe14ad312"
+  version = "v1.2.1"
+
+[[projects]]
+  digest = "1:07e8589503b7ec22430dae6eed6f2c17e4249ab245574f4fd0ba8fc9c597d138"
+  name = "github.com/oschwald/maxminddb-golang"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "c5bec84d1963260297932a1b7a1753c8420717a7"
+  version = "v1.3.0"
+
+[[projects]]
   digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
   name = "github.com/pmezard/go-difflib"
   packages = ["difflib"]
@@ -379,6 +395,7 @@
     "github.com/jinzhu/copier",
     "github.com/jinzhu/gorm",
     "github.com/jinzhu/gorm/dialects/postgres",
+    "github.com/oschwald/geoip2-golang",
     "github.com/sirupsen/logrus",
     "github.com/stretchr/testify/assert",
   ]

@@ -2,6 +2,9 @@ package model
 
 import (
 	C "factors/config"
+	U "factors/util"
+	"fmt"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -137,4 +140,34 @@ func UpdateCustomerUserIdById(projectId uint64, id string, customerUserId string
 		return nil, http.StatusInternalServerError
 	}
 	return &user, DB_SUCCESS
+}
+
+func AddUserDefaultProperties(properties *U.PropertiesMap, clientIP string) (*U.PropertiesMap, error) {
+	geo := C.GetServices().GeoLocation
+
+	// ClientIP unavailable.
+	if clientIP == "" {
+		return properties, fmt.Errorf("invalid IP, failed adding geolocation properties")
+	}
+
+	// Cloned properties. Supports only one level as
+	// objects are not allowed as a property.
+	propertiesCopy := make(U.PropertiesMap)
+	for k, v := range *properties {
+		propertiesCopy[k] = v
+	}
+
+	// Added IP for internal usage.
+	propertiesCopy[U.UP_INTERNAL_IP] = clientIP
+
+	country, err := geo.Country(net.ParseIP(clientIP))
+	if err != nil {
+		log.WithFields(log.Fields{"clientIP": clientIP, "serviceError": err}).Error(
+			"Failed to get country information from geodb")
+		return &propertiesCopy, err
+	}
+
+	propertiesCopy[U.UP_COUNTRY] = country.Country.IsoCode
+
+	return &propertiesCopy, nil
 }

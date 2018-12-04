@@ -14,7 +14,8 @@ import (
 )
 
 type SDKTrackPayload struct {
-	Name       string         `json:"event_name"`
+	Name string `json:"event_name"`
+	// Change this to PropertiesMap while adding default event properties.
 	Properties postgres.Jsonb `json:"event_properties"`
 	ProjectId  uint64         `json:"project_id"`
 	UserId     string         `json:"user_id"`
@@ -29,8 +30,8 @@ type SDKIdentifyPayload struct {
 }
 
 type SDKAddPropertiesPayload struct {
-	UserId     string         `json:"user_id"`
-	Properties postgres.Jsonb `json:"properties,omitempty"`
+	UserId     string          `json:"user_id"`
+	Properties U.PropertiesMap `json:"properties,omitempty"`
 }
 
 // Test command.
@@ -242,10 +243,18 @@ func SDKAddUserPropertiesHandler(c *gin.Context) {
 	}
 	scopeProjectId := scopeProjectIdIntf.(uint64)
 
+	// Filter valid properties. Add default properties. Ignore on addition failure.
+	properties, _ := M.AddUserDefaultProperties(U.FilterValidProperties(&addPropsUser.Properties), c.ClientIP())
+	propertiesJSON, err := json.Marshal(properties)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Tracking failed. Invalid properties."})
+		return
+	}
+
 	// Precondition: user_id not given.
 	if addPropsUser.UserId == "" {
 		// Create user with properties and respond user_id. Only properties allowed on create.
-		newUser, errCode := M.CreateUser(&M.User{Properties: addPropsUser.Properties})
+		newUser, errCode := M.CreateUser(&M.User{Properties: postgres.Jsonb{propertiesJSON}})
 		if errCode != M.DB_SUCCESS {
 			c.AbortWithStatusJSON(errCode, gin.H{"error": "Add user properties failed. User create failed"})
 			return
@@ -262,7 +271,7 @@ func SDKAddUserPropertiesHandler(c *gin.Context) {
 	}
 
 	if _, errCode = M.UpdateUser(scopeProjectId, scopeUser.ID,
-		&M.User{Properties: addPropsUser.Properties}); errCode != M.DB_SUCCESS {
+		&M.User{Properties: postgres.Jsonb{propertiesJSON}}); errCode != M.DB_SUCCESS {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Add user properties failed."})
 		return
 	}

@@ -57,6 +57,7 @@ func ServePostRequestWithHeaders(r *gin.Engine, uri string, reqBodyString []byte
 	req, _ := http.NewRequest("POST", uri, bytes.NewBuffer(reqBodyString))
 	req.Header.Set("Content-Type", "application/json") // Default header.
 	setHeaders(req, headers)                           // Setting custom headers.
+	req.RemoteAddr = "127.0.0.1"
 	r.ServeHTTP(w, req)
 	return w
 }

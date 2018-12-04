@@ -280,7 +280,7 @@ const BrowserInfo = {
  * os - Mac OSX
  * os_version_string - 10_13_6
  * */
-function getDefault(pfix="$") {
+function getUserDefault(pfix="$") {
     let dp = {};
     if (document.referrer) dp[pfix+"referrer"] = document.referrer;
 
@@ -363,7 +363,7 @@ function getValidated(props={}) {
 }
 
 module.exports = {
-    getDefault: getDefault,
+    getUserDefault: getUserDefault,
     parseFromQueryString: parseFromQueryString,
     getValidated: getValidated
 }

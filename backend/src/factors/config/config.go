@@ -13,6 +13,7 @@ import (
 
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
+	"github.com/oschwald/geoip2-golang"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -30,13 +31,16 @@ type DBConf struct {
 }
 
 type Configuration struct {
-	Env          string            `json:"env"`
-	Port         int               `json:"port"`
-	DBInfo       DBConf            `json:"db"`
-	PatternFiles map[uint64]string `json:"pattern_files"`
+	Env             string            `json:"env"`
+	Port            int               `json:"port"`
+	DBInfo          DBConf            `json:"db"`
+	PatternFiles    map[uint64]string `json:"pattern_files"`
+	GeolocationFile string            `json:"geolocation_file"`
 }
+
 type Services struct {
 	Db             *gorm.DB
+	GeoLocation    *geoip2.Reader
 	PatternService *P.PatternService
 }
 
@@ -153,10 +157,16 @@ func initServices() error {
 
 	patternService, err := P.NewPatternService(patternsMap, projectEventInfoMap)
 	if err != nil {
-		log.Error("Failed to initialize pattern service")
+		log.Fatal("Failed to initialize pattern service")
 	}
 
-	services = &Services{Db: db, PatternService: patternService}
+	geolocation, err := geoip2.Open(configuration.GeolocationFile)
+	if err != nil {
+		log.Fatal("Failed to initialize geolocation service")
+	}
+	log.Info("Geolocation service intialized")
+
+	services = &Services{Db: db, PatternService: patternService, GeoLocation: geolocation}
 	return nil
 }
 
