@@ -51,14 +51,12 @@ func IsPropertyTypeValid(value interface{}) error {
 	return nil
 }
 
-// Note: Client also has a similar user properties validation.
 func GetValidatedUserProperties(properties *PropertiesMap) *PropertiesMap {
 	validatedProperties := make(PropertiesMap)
 	for k, v := range *properties {
 		if err := IsPropertyTypeValid(v); err == nil {
-			// Allows query_params_props with $ prefix.
 			if strings.HasPrefix(k, NAME_PREFIX) {
-				// Escapes '$' with '_' prefix if not default user property.
+				// Escapes '$' with '_' if not default user property.
 				for _, dfup := range DEFAULT_USER_PROPERTIES {
 					if k != dfup {
 						validatedProperties[fmt.Sprintf("%s%s", NAME_PREFIX_ESCAPE_CHAR, k)] = v
@@ -66,6 +64,21 @@ func GetValidatedUserProperties(properties *PropertiesMap) *PropertiesMap {
 						validatedProperties[k] = v
 					}
 				}
+			} else {
+				validatedProperties[k] = v
+			}
+		}
+	}
+	return &validatedProperties
+}
+
+func GetValidatedEventProperties(properties *PropertiesMap) *PropertiesMap {
+	validatedProperties := make(PropertiesMap)
+	for k, v := range *properties {
+		if err := IsPropertyTypeValid(v); err == nil {
+			// Escape properties with $ prefix but allow query_params_props with $qp_ prrefix.
+			if strings.HasPrefix(k, NAME_PREFIX) && !strings.HasPrefix(k, QUERY_PARAM_PROPERTY_PREFIX) {
+				validatedProperties[fmt.Sprintf("%s%s", NAME_PREFIX_ESCAPE_CHAR, k)] = v
 			} else {
 				validatedProperties[k] = v
 			}

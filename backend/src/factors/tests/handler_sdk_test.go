@@ -82,6 +82,29 @@ func TestSDKTrack(t *testing.T) {
 	assert.Equal(t, M.DB_SUCCESS, errCode)
 	assert.NotEqual(t, M.USER_CREATED_EVENT_NAME, ren.AutoName)
 	assert.Equal(t, ren.Name, ren.AutoName)
+
+	// Test auto tracked event.
+	rEventName = U.RandomLowerAphaNumString(10)
+	w = ServePostRequestWithHeaders(r, uri,
+		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true"}}`, user.ID, rEventName)),
+		map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	responseMap = DecodeJSONResponseToMap(w.Body)
+	assert.NotEmpty(t, responseMap)
+	assert.Nil(t, responseMap["user_id"])
+	rEvent, errCode := M.GetEvent(project.ID, user.ID, responseMap["event_id"].(string))
+	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.NotNil(t, rEvent)
+	eventPropertiesBytes, err := rEvent.Properties.Value()
+	assert.Nil(t, err)
+	var eventProperties map[string]interface{}
+	json.Unmarshal(eventPropertiesBytes.([]byte), &eventProperties)
+	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Nil(t, eventProperties["$dollar_property"])
+	assert.NotNil(t, eventProperties[fmt.Sprintf("%s$dollar_property", U.NAME_PREFIX_ESCAPE_CHAR)]) // escaped property should exist.
+	assert.NotNil(t, eventProperties["$qp_search"])                                                 // $qp should exist.
+	assert.Nil(t, eventProperties[fmt.Sprintf("%s$qp_search", U.NAME_PREFIX_ESCAPE_CHAR)])          // $qp should not be escaped.
+	assert.NotNil(t, eventProperties["mobile"])                                                     // no dollar properties should exist.
 }
 
 func TestSDKIdentify(t *testing.T) {

@@ -14,14 +14,13 @@ import (
 )
 
 type SDKTrackPayload struct {
-	Name string `json:"event_name"`
-	// Change this to PropertiesMap while adding default event properties.
-	Properties postgres.Jsonb `json:"event_properties"`
-	ProjectId  uint64         `json:"project_id"`
-	UserId     string         `json:"user_id"`
-	Auto       bool           `json:"auto"`
-	CreatedAt  time.Time      `json:"created_at"`
-	UpdatedAt  time.Time      `json:"updated_at"`
+	Name       string          `json:"event_name"`
+	Properties U.PropertiesMap `json:"event_properties"`
+	ProjectId  uint64          `json:"project_id"`
+	UserId     string          `json:"user_id"`
+	Auto       bool            `json:"auto"`
+	CreatedAt  time.Time       `json:"created_at"`
+	UpdatedAt  time.Time       `json:"updated_at"`
 }
 
 type SDKIdentifyPayload struct {
@@ -98,9 +97,17 @@ func SDKTrackHandler(c *gin.Context) {
 		return
 	}
 
+	// Validate properties.
+	validProperties := U.GetValidatedEventProperties(&event.Properties)
+	propertiesJSON, err := json.Marshal(validProperties)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Tracking failed. Invalid properties."})
+		return
+	}
+
 	// Create Event.
 	event.ProjectId = scopeProjectId
-	createdEvent, errCode := M.CreateEvent(&M.Event{EventNameId: eventName.ID, Properties: event.Properties,
+	createdEvent, errCode := M.CreateEvent(&M.Event{EventNameId: eventName.ID, Properties: postgres.Jsonb{propertiesJSON},
 		ProjectId: scopeProjectId, UserId: event.UserId})
 	if errCode != M.DB_SUCCESS {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Tracking failed. Event creation failed."})
@@ -243,14 +250,14 @@ func SDKAddUserPropertiesHandler(c *gin.Context) {
 	}
 	scopeProjectId := scopeProjectIdIntf.(uint64)
 
-	// Filter valid properties.
+	// Validate properties.
 	validProperties := U.GetValidatedUserProperties(&addPropsUser.Properties)
 
 	//  Add default properties. Ignore on addition failure.
 	_ = M.AddUserDefaultProperties(validProperties, c.ClientIP())
 	propertiesJSON, err := json.Marshal(validProperties)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Tracking failed. Invalid properties."})
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Add user properties failed. Invalid properties."})
 		return
 	}
 
