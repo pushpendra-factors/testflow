@@ -243,9 +243,12 @@ func SDKAddUserPropertiesHandler(c *gin.Context) {
 	}
 	scopeProjectId := scopeProjectIdIntf.(uint64)
 
-	// Filter valid properties. Add default properties. Ignore on addition failure.
-	properties, _ := M.AddUserDefaultProperties(U.FilterValidProperties(&addPropsUser.Properties), c.ClientIP())
-	propertiesJSON, err := json.Marshal(properties)
+	// Filter valid properties.
+	validProperties := U.FilterValidProperties(&addPropsUser.Properties)
+
+	//  Add default properties. Ignore on addition failure.
+	_ = M.AddUserDefaultProperties(validProperties, c.ClientIP())
+	propertiesJSON, err := json.Marshal(validProperties)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Tracking failed. Invalid properties."})
 		return

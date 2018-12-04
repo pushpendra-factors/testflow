@@ -231,22 +231,22 @@ func TestDBUpdateUserById(t *testing.T) {
 
 func TestAddUserDefaultProperties(t *testing.T) {
 	propertiesMap := U.PropertiesMap{"prop_1": "value_1"}
-	propertiesWithDefault, err := M.AddUserDefaultProperties(&propertiesMap, "180.151.36.234") // Our gateway IP.
+	err := M.AddUserDefaultProperties(&propertiesMap, "180.151.36.234") // Our gateway IP.
 	assert.Nil(t, err)
-	assert.NotNil(t, (*propertiesWithDefault)[U.UP_INTERNAL_IP])
-	assert.NotNil(t, (*propertiesWithDefault)[U.UP_COUNTRY])
-	assert.Equal(t, "IN", (*propertiesWithDefault)[U.UP_COUNTRY])
-	assert.NotNil(t, (*propertiesWithDefault)["prop_1"])
+	assert.NotNil(t, propertiesMap[U.UP_INTERNAL_IP])
+	assert.NotNil(t, propertiesMap[U.UP_COUNTRY])
+	assert.Equal(t, "IN", propertiesMap[U.UP_COUNTRY])
+	assert.NotNil(t, propertiesMap["prop_1"])
 
 	propertiesMap = U.PropertiesMap{"prop_1": "value_1"}
-	propertiesWithDefault, err = M.AddUserDefaultProperties(&propertiesMap, "127.0.0.1")
+	err = M.AddUserDefaultProperties(&propertiesMap, "127.0.0.1")
 	assert.Nil(t, err)
-	assert.NotEmpty(t, (*propertiesWithDefault)[U.UP_INTERNAL_IP])
-	assert.Empty(t, (*propertiesWithDefault)[U.UP_COUNTRY])
+	assert.NotEmpty(t, propertiesMap[U.UP_INTERNAL_IP])
+	assert.Empty(t, propertiesMap[U.UP_COUNTRY])
 
 	propertiesMap = U.PropertiesMap{"prop_1": "value_1"}
-	propertiesWithDefault, err = M.AddUserDefaultProperties(&propertiesMap, "::1")
+	err = M.AddUserDefaultProperties(&propertiesMap, "::1")
 	assert.Nil(t, err)
-	assert.NotEmpty(t, (*propertiesWithDefault)[U.UP_INTERNAL_IP])
-	assert.Empty(t, (*propertiesWithDefault)[U.UP_COUNTRY])
+	assert.NotEmpty(t, propertiesMap[U.UP_INTERNAL_IP])
+	assert.Empty(t, propertiesMap[U.UP_COUNTRY])
 }
