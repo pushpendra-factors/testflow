@@ -267,4 +267,27 @@ factors.test.run()
 factors.test.Suite.TEST_NAME
 ```
 
+## Setup and test token login
 
+* Add below 2 entries to end of the file `/etc/hosts`
+```
+127.0.0.1       sample4ecom.factors-dev.ai
+127.0.0.1       unauthorized.factors-dev.ai
+```
+
+* Copy subdomain_login_config.json to tmp.
+```
+cp  $GOPATH/src/factors/config/subdomain_login_config.json /tmp/factors/config
+```
+
+* Map the ecommerce sample project's id to `sample4ecom`.
+
+* Test valid subdomain login
+```
+curl -i -X GET http://sample4ecom.factors-dev.ai:8080/projects/<project_id_of_sample4ecom>/users
+```
+
+* Test invalid subdomain login
+```
+curl -i -X GET http://unauthorized.factors-dev.ai:8080/projects/1/users
+```

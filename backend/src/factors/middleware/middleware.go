@@ -5,6 +5,7 @@ import (
 	M "factors/model"
 	U "factors/util"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/gin-contrib/cors"
@@ -14,13 +15,13 @@ import (
 
 // scope constants.
 const SCOPE_PROJECT = "projectId"
+const SCOPE_AUTHORIZED_PROJECTS = "authorizedProjects"
 
 // cors prefix constants.
 const PREFIX_PATH_SDK = "/sdk/"
 
-// SetProjectScopeByTokenMiddleware sets projectId scope to the request context
-// based on token on the 'Authorization' header.
-func SetProjectScopeByTokenMiddleware() gin.HandlerFunc {
+// SetScopeProjectIdByToken - Request scope set by token on 'Authorization' header.
+func SetScopeProjectIdByToken() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := c.Request.Header.Get("Authorization")
 		token = strings.TrimSpace(token)
@@ -45,7 +46,7 @@ func SetProjectScopeByTokenMiddleware() gin.HandlerFunc {
 }
 
 // CustomCorsMiddleware for customised cors configuration based on conditions.
-func CustomCorsMiddleware() gin.HandlerFunc {
+func CustomCors() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		corsConfig := cors.DefaultConfig()
 
@@ -63,6 +64,88 @@ func CustomCorsMiddleware() gin.HandlerFunc {
 
 		// Applys custom cors and proceed.
 		cors.New(corsConfig)(c)
+		c.Next()
+	}
+}
+
+// SetScopeAuthorizedProjectsBySubdomain - Request scope set by subdomain.
+func SetScopeAuthorizedProjectsBySubdomain() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Token login not enabled.
+		if !C.IsTokenLoginEnabled() {
+			c.Next()
+			return
+		}
+
+		// Only requests from dev and localhost authorized to access all projects. For tests.
+		if C.IsDevelopment() && U.IsRequestFromLocalhost(c.Request.Host) {
+			allProjects, errCode := M.GetProjects()
+			if errCode != M.DB_SUCCESS {
+				c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Dev envinoment failure. Failed to get projects."})
+				return
+			}
+
+			var projectIds []uint64
+			for _, project := range allProjects {
+				projectIds = append(projectIds, project.ID)
+			}
+
+			U.SetScope(c, SCOPE_AUTHORIZED_PROJECTS, projectIds)
+		} else {
+			loginTokenCache := C.GetLoginTokenCache().Map
+			subdomain, err := U.GetRequestSubdomain(c.Request.Host)
+
+			if err != nil {
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized access. Invalid subdomain."})
+				return
+			}
+
+			projectIds, tokenExists := loginTokenCache[subdomain]
+			if tokenExists {
+				U.SetScope(c, SCOPE_AUTHORIZED_PROJECTS, projectIds)
+			}
+		}
+	}
+}
+
+// IsAuthorized - Authorizes request by validating authorized projects scope.
+func IsAuthorized() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		paramProjectId, err := strconv.ParseUint(c.Params.ByName("project_id"), 10, 64)
+		if err != nil || paramProjectId == 0 {
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid project id on param."})
+			return
+		}
+
+		authorizedProjects := U.GetScopeByKey(c, SCOPE_AUTHORIZED_PROJECTS)
+		if authorizedProjects == nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized access. No projects found."})
+			return
+		}
+
+		for _, pid := range authorizedProjects.([]uint64) {
+			if paramProjectId == pid {
+				// Set scope projectId. This has to be used by other
+				// handlers for projectId.
+				U.SetScope(c, SCOPE_PROJECT, pid)
+
+				c.Next()
+				return
+			}
+		}
+
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized access. No projects found."})
+		return
+	}
+}
+
+// DenyPublicAccess - Allows only localhost.
+func DenyPublicAccess() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if !U.IsRequestFromLocalhost(c.Request.Host) {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized access. Restricted public access."})
+			return
+		}
 		c.Next()
 	}
 }

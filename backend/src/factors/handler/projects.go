@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	M "factors/model"
+	U "factors/util"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -37,7 +38,9 @@ func CreateProjectHandler(c *gin.Context) {
 // Test command.
 // curl -i -X GET http://localhost:8080/projects
 func GetProjectsHandler(c *gin.Context) {
-	projects, errCode := M.GetProjects()
+	authorizedProjects := U.GetScopeByKey(c, "authorizedProjects")
+
+	projects, errCode := M.GetProjectsByIDs(authorizedProjects.([]uint64))
 	if errCode != M.DB_SUCCESS {
 		c.AbortWithStatus(errCode)
 	} else {

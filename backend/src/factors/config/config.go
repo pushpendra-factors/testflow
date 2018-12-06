@@ -30,12 +30,18 @@ type DBConf struct {
 	Password string `json:"password"`
 }
 
+type SubdomainLoginConfig struct {
+	Enabled        bool   `json:"enabled"`
+	ConfigFilepath string `json:"config_filepath"`
+}
+
 type Configuration struct {
-	Env             string            `json:"env"`
-	Port            int               `json:"port"`
-	DBInfo          DBConf            `json:"db"`
-	PatternFiles    map[uint64]string `json:"pattern_files"`
-	GeolocationFile string            `json:"geolocation_file"`
+	Env             string               `json:"env"`
+	Port            int                  `json:"port"`
+	DBInfo          DBConf               `json:"db"`
+	PatternFiles    map[uint64]string    `json:"pattern_files"`
+	GeolocationFile string               `json:"geolocation_file"`
+	SubdomainLogin  SubdomainLoginConfig `json:"subdomain_login"`
 }
 
 type Services struct {
@@ -44,8 +50,13 @@ type Services struct {
 	PatternService *P.PatternService
 }
 
+type SubdomainLoginCache struct {
+	Map map[string][]uint64 `json:"token_projects"`
+}
+
 var configuration *Configuration = nil
 var services *Services = nil
+var subdomainLoginCache *SubdomainLoginCache = nil
 
 func initFlags() {
 	flag.Parse()
@@ -81,6 +92,27 @@ func initConfigFromFile() error {
 	}
 	logCtx.WithFields(log.Fields{"config": &configuration}).Info("Config File Loaded")
 	return nil
+}
+
+func initSubdomainLoginCache() {
+	subdomainLoginConfig := GetConfig().SubdomainLogin
+	if !subdomainLoginConfig.Enabled {
+		return
+	}
+
+	raw, err := ioutil.ReadFile(subdomainLoginConfig.ConfigFilepath)
+	if err != nil {
+		log.WithFields(log.Fields{"config": subdomainLoginConfig,
+			"err": err}).Fatal("Failed reading subdomain login config file.")
+	}
+
+	// Loading cache.
+	if err := json.Unmarshal(raw, &subdomainLoginCache); err != nil {
+		log.WithFields(log.Fields{"config": subdomainLoginConfig,
+			"err": err}).Fatal("Failed to unmarshal subdomain login config file.")
+	}
+
+	log.WithFields(log.Fields{"cache": &subdomainLoginCache}).Info("Initialized subdomain login cache.")
 }
 
 func initServices() error {
@@ -181,6 +213,8 @@ func Init() error {
 		return err
 	}
 
+	initSubdomainLoginCache()
+
 	err = initServices()
 	if err != nil {
 		return err
@@ -194,10 +228,18 @@ func GetConfig() *Configuration {
 	return configuration
 }
 
+func GetLoginTokenCache() *SubdomainLoginCache {
+	return subdomainLoginCache
+}
+
 func GetServices() *Services {
 	return services
 }
 
 func IsDevelopment() bool {
 	return (strings.Compare(configuration.Env, DEVELOPMENT) == 0)
+}
+
+func IsTokenLoginEnabled() bool {
+	return GetConfig().SubdomainLogin.Enabled
 }

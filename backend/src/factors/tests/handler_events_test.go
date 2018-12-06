@@ -199,8 +199,10 @@ func TestAPICreateEventBadRequest(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	r.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusBadRequest, w.Code)
-	jsonResponse, _ = ioutil.ReadAll(w.Body)
-	assert.Equal(t, []byte{}, jsonResponse)
+	jsonResponse2, _ := ioutil.ReadAll(w.Body)
+	var jsonResponseMap2 map[string]interface{}
+	json.Unmarshal(jsonResponse2, &jsonResponseMap2)
+	assert.NotNil(t, len(jsonResponseMap2["error"].(string)))
 
 	// Test CreateEvent without user.ID.
 	w = httptest.NewRecorder()
@@ -232,8 +234,10 @@ func TestAPICreateEventBadRequest(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	r.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusBadRequest, w.Code)
-	jsonResponse, _ = ioutil.ReadAll(w.Body)
-	assert.Equal(t, []byte{}, jsonResponse)
+	jsonResponse3, _ := ioutil.ReadAll(w.Body)
+	var jsonResponseMap3 map[string]interface{}
+	json.Unmarshal(jsonResponse3, &jsonResponseMap3)
+	assert.NotNil(t, len(jsonResponseMap3["error"].(string)))
 
 	// Test CreateEvent invalid user.ID.
 	w = httptest.NewRecorder()

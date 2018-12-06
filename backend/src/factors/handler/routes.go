@@ -1,35 +1,48 @@
 package handler
 
 import (
-	Middleware "factors/middleware"
+	Mid "factors/middleware"
 
 	"github.com/gin-gonic/gin"
 )
 
-const ROUTE_GROUP_PREFIX_SDK = "/sdk"
+const ROUTE_SDK_ROOT = "/sdk"
+const ROUTE_PROJECTS_ROOT = "/projects"
 
 func InitAppRoutes(r *gin.Engine) {
-	r.POST("/projects", CreateProjectHandler)
-	r.GET("/projects", GetProjectsHandler)
-	r.GET("/projects/:project_id/settings", GetProjectSettingHandler)
-	r.PUT("/projects/:project_id/settings", UpdateProjectSettingsHandler)
-	r.GET("/projects/:project_id/event_names", GetEventNamesHandler)
-	r.GET("/projects/:project_id/event_names/:event_name/properties", GetEventPropertiesHandler)
-	r.GET("/projects/:project_id/event_names/:event_name/properties/:property_name/values", GetEventPropertyValuesHandler)
-	r.POST("/projects/:project_id/users/:user_id/events", CreateEventHandler)
-	r.GET("/projects/:project_id/users/:user_id/events/:id", GetEventHandler)
-	r.POST("/projects/:project_id/users", CreateUserHandler)
-	r.GET("/projects/:project_id/users/:user_id", GetUserHandler)
-	r.GET("/projects/:project_id/users", GetUsersHandler)
-	r.POST("/projects/:project_id/factor", FactorHandler)
+	// Route not allowed for public access.
+	r.POST(ROUTE_PROJECTS_ROOT,
+		Mid.DenyPublicAccess(),
+		CreateProjectHandler)
+
+	r.GET(ROUTE_PROJECTS_ROOT,
+		Mid.SetScopeAuthorizedProjectsBySubdomain(),
+		GetProjectsHandler)
+
+	// Auth route group with authentication an authorization middleware.
+	authRouteGroup := r.Group(ROUTE_PROJECTS_ROOT)
+	authRouteGroup.Use(Mid.SetScopeAuthorizedProjectsBySubdomain())
+	authRouteGroup.Use(Mid.IsAuthorized())
+
+	authRouteGroup.GET("/:project_id/settings", GetProjectSettingHandler)
+	authRouteGroup.PUT("/:project_id/settings", UpdateProjectSettingsHandler)
+	authRouteGroup.GET("/:project_id/event_names", GetEventNamesHandler)
+	authRouteGroup.GET("/:project_id/event_names/:event_name/properties", GetEventPropertiesHandler)
+	authRouteGroup.GET("/:project_id/event_names/:event_name/properties/:property_name/values", GetEventPropertyValuesHandler)
+	authRouteGroup.POST("/:project_id/users/:user_id/events", CreateEventHandler)
+	authRouteGroup.GET("/:project_id/users/:user_id/events/:id", GetEventHandler)
+	authRouteGroup.POST("/:project_id/users", CreateUserHandler)
+	authRouteGroup.GET("/:project_id/users/:user_id", GetUserHandler)
+	authRouteGroup.GET("/:project_id/users", GetUsersHandler)
+	authRouteGroup.POST("/:project_id/factor", FactorHandler)
 }
 
 func InitSDKRoutes(r *gin.Engine) {
-	sdkRG := r.Group(ROUTE_GROUP_PREFIX_SDK)
-	sdkRG.Use(Middleware.SetProjectScopeByTokenMiddleware())
+	sdkRouteGroup := r.Group(ROUTE_SDK_ROOT)
+	sdkRouteGroup.Use(Mid.SetScopeProjectIdByToken())
 
-	sdkRG.POST("/event/track", SDKTrackHandler)
-	sdkRG.POST("/user/identify", SDKIdentifyHandler)
-	sdkRG.POST("/user/add_properties", SDKAddUserPropertiesHandler)
-	sdkRG.GET("/project/get_settings", SDKGetProjectSettings)
+	sdkRouteGroup.POST("/event/track", SDKTrackHandler)
+	sdkRouteGroup.POST("/user/identify", SDKIdentifyHandler)
+	sdkRouteGroup.POST("/user/add_properties", SDKAddUserPropertiesHandler)
+	sdkRouteGroup.GET("/project/get_settings", SDKGetProjectSettings)
 }

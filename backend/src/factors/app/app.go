@@ -3,7 +3,7 @@ package main
 import (
 	C "factors/config"
 	H "factors/handler"
-	Middleware "factors/middleware"
+	Mid "factors/middleware"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -21,7 +21,7 @@ func main() {
 	r := gin.Default()
 	// Group based middlewares should be registered on corresponding init methods.
 	// Root middleware for cors.
-	r.Use(Middleware.CustomCorsMiddleware())
+	r.Use(Mid.CustomCors())
 
 	// Initialize routes.
 	H.InitAppRoutes(r)
