@@ -200,14 +200,33 @@ func (h *NumericHistogramStruct) CDF(x []float64) float64 {
 func (h *NumericHistogramStruct) CDFFromMap(xMap map[string]float64) float64 {
 	x := make([]float64, h.Dimension)
 	for i := 0; i < h.Dimension; i++ {
-		eventName := (*h.Template)[i].Name
-		if val, ok := xMap[eventName]; ok {
+		k := (*h.Template)[i].Name
+		if val, ok := xMap[k]; ok {
 			x[i] = val
 		} else {
 			x[i] = math.MaxFloat64
 		}
 	}
 	return h.CDF(x)
+}
+
+func (h *NumericHistogramStruct) GetBinRanges(key string) [][2]float64 {
+	ranges := make([][2]float64, h.Dimension)
+	dim := -1
+	for i := 0; i < h.Dimension; i++ {
+		if (*h.Template)[i].Name == key {
+			dim = i
+			break
+		}
+	}
+	if dim < 0 {
+		return ranges
+	}
+	for _, bin := range h.Bins {
+		ranges = append(
+			ranges, [2]float64{bin.Min.Values[dim], bin.Max.Values[dim]})
+	}
+	return ranges
 }
 
 func (h *NumericHistogramStruct) trim() {

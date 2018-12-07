@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math"
 	"sort"
-	"strings"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -77,10 +76,10 @@ func (pw *PatternWrapper) GetPattern(eventNames []string) (*Pattern, bool) {
 	return p, ok
 }
 
-func eventStringWithConditions(event string, endEventConstraints *EventConstraints) string {
-	var eventString string = event
-	if endEventConstraints != nil {
-		for _, c := range endEventConstraints.NumericConstraints {
+func eventStringWithConditions(eventName string, eventConstraints *EventConstraints) string {
+	var eventString string = eventName
+	if eventConstraints != nil {
+		for _, c := range eventConstraints.NumericConstraints {
 			if c.PropertyName == "" {
 				continue
 			}
@@ -129,7 +128,7 @@ func eventStringWithConditions(event string, endEventConstraints *EventConstrain
 				eventString += ")"
 			}
 		}
-		for _, c := range endEventConstraints.CategoricalConstraints {
+		for _, c := range eventConstraints.CategoricalConstraints {
 			if c.PropertyName == "" {
 				continue
 			}
@@ -140,24 +139,34 @@ func eventStringWithConditions(event string, endEventConstraints *EventConstrain
 }
 
 func headerString(funnelEvents []string,
-	endEventConstraints *EventConstraints, funnelConversionPercent float64,
-	baseFunnelConversionPercent float64) string {
-
+	patternConstraints []EventConstraints, nodeType int,
+	funnelConversionPercent float64, baseFunnelConversionPercent float64) string {
 	var header string
 	pLen := len(funnelEvents)
 	if pLen < 2 {
 		log.Error(fmt.Sprintf("Unexpected funnel. %s", funnelEvents))
 		return header
 	}
-	impactEvent := funnelEvents[pLen-2]
-	endEventString := eventStringWithConditions(funnelEvents[pLen-1], endEventConstraints)
+	if patternConstraints == nil {
+		patternConstraints = make([]EventConstraints, len(funnelEvents))
+	}
+	var impactString string
+	if nodeType == NODE_TYPE_SEQUENCE {
+		impactString = funnelEvents[pLen-2]
+	} else if nodeType == NODE_TYPE_PROPERTY {
+		impactString = fmt.Sprintf("%s with %s", funnelEvents[pLen-2],
+			eventStringWithConditions("", &patternConstraints[pLen-2]))
+	}
+
+	endEventString := eventStringWithConditions(funnelEvents[pLen-1], &patternConstraints[pLen-1])
 
 	otherEventString := ""
 	for i := 0; i < pLen-2; i++ {
 		if i == 0 {
 			otherEventString += "after"
 		}
-		otherEventString += fmt.Sprintf(" %s", funnelEvents[i])
+		otherEventString +=  fmt.Sprintf(" %s",
+            eventStringWithConditions(funnelEvents[i], &patternConstraints[i]))
 		if i < pLen-3 {
 			otherEventString += " and"
 		}
@@ -170,14 +179,13 @@ func headerString(funnelEvents []string,
 		conversionMultiple := baseFunnelConversionPercent / funnelConversionPercent
 		conversionChangeString += fmt.Sprintf(" %.2f times lower chance to", conversionMultiple)
 	}
-	header = fmt.Sprintf("Users who have %s %s %s %s", impactEvent, otherEventString, conversionChangeString, endEventString)
+	header = fmt.Sprintf("Users who have %s %s %s %s", impactString, otherEventString, conversionChangeString, endEventString)
 	return header
 }
 
 func (pw *PatternWrapper) buildFunnelData(
-	p *Pattern, startEvent string, startEventConstraints *EventConstraints,
-	endEvent string, endEventConstraints *EventConstraints,
-	isBaseFunnel bool) funnelNodeResults {
+	p *Pattern, patternConstraints []EventConstraints,
+	nodeType int, isBaseFunnel bool) funnelNodeResults {
 	pLen := len(p.EventNames)
 	funnelData := funnelNodeResults{}
 	var referenceFunnelCount uint
@@ -186,23 +194,23 @@ func (pw *PatternWrapper) buildFunnelData(
 		var funnelSubsequencePerUserCount uint
 		var found = true
 		if i == pLen-1 {
-			funnelSubsequencePerUserCount, _ = p.GetOncePerUserCount(constructPatternConstraints(
-				pLen, startEventConstraints, endEventConstraints))
+			funnelSubsequencePerUserCount, _ = p.GetOncePerUserCount(patternConstraints)
 		} else {
+			var funnelConstraints []EventConstraints
+			if patternConstraints != nil {
+				funnelConstraints = patternConstraints[:i+1]
+			}
 			funnelSubsequencePerUserCount, found = pw.GetPerUserCount(
-				p.EventNames[:i+1],
-				constructPatternConstraints(
-					i+1, startEventConstraints, nil))
+				p.EventNames[:i+1], funnelConstraints)
 		}
 		if !found {
 			log.Errorf(fmt.Sprintf(
 				"Subsequence %s not as frequent as sequence %s",
 				eventArrayToString(p.EventNames[:i+1]), ","), p.String())
-			funnelSubsequencePerUserCount, _ = p.GetOncePerUserCount(constructPatternConstraints(
-				pLen, startEventConstraints, endEventConstraints))
+			funnelSubsequencePerUserCount, _ = p.GetOncePerUserCount(patternConstraints)
 		}
 		if i == 0 {
-			if (pLen == 1 && isBaseFunnel) || (pLen == 2 && !isBaseFunnel) {
+			if (nodeType == NODE_TYPE_SEQUENCE) && ((pLen == 1 && isBaseFunnel) || (pLen == 2 && !isBaseFunnel)) {
 				// Reference is total users.
 				referenceFunnelCount = p.UserCount
 				// If basefunnel has length 1 we prefix an initial node with all users for better comparision.
@@ -216,13 +224,12 @@ func (pw *PatternWrapper) buildFunnelData(
 			}
 		}
 		var eventString string
-		if i == (pLen - 1) {
-			eventString = eventStringWithConditions(p.EventNames[i], endEventConstraints)
-		} else if i == 0 {
-			eventString = eventStringWithConditions(p.EventNames[i], startEventConstraints)
+		if patternConstraints != nil {
+			eventString = eventStringWithConditions(p.EventNames[i], &patternConstraints[i])
 		} else {
 			eventString = eventStringWithConditions(p.EventNames[i], nil)
 		}
+
 		node := funnelNodeResult{
 			Data:  []float64{float64(funnelSubsequencePerUserCount), float64(referenceFunnelCount - funnelSubsequencePerUserCount)},
 			Event: fmt.Sprintf("%s (%d)", eventString, funnelSubsequencePerUserCount),
@@ -239,12 +246,9 @@ func (pw *PatternWrapper) buildFunnelData(
 	return funnelData
 }
 
-func (pw *PatternWrapper) buildFactorResultsFromPatterns(
-	patterns []*Pattern,
-	startEvent string, startEventConstraints *EventConstraints,
-	endEvent string, endEventConstraints *EventConstraints) PatternServiceGraphResults {
+func (pw *PatternWrapper) buildFactorResultsFromPatterns(nodes []*ItreeNode) PatternServiceGraphResults {
 	results := PatternServiceGraphResults{Charts: []graphResult{}}
-	endEventString := eventStringWithConditions(endEvent, endEventConstraints)
+	endEventString := "dummyEvent"
 	// Dummy Line Chart.
 	chart := graphResult{
 		Type:   "line",
@@ -269,7 +273,7 @@ func (pw *PatternWrapper) buildFactorResultsFromPatterns(
 		Labels: []string{"All Users", "US", "India", "UK", "Australia", "Egypt", "Iran"},
 		Datasets: []map[string]interface{}{
 			map[string]interface{}{
-				"label": fmt.Sprintf("Average %s", endEvent),
+				"label": fmt.Sprintf("Average %s", endEventString),
 				"data":  []float64{65, 59, 80, 81, 56, 55, 40},
 			},
 			map[string]interface{}{
@@ -280,25 +284,38 @@ func (pw *PatternWrapper) buildFactorResultsFromPatterns(
 	}
 	results.Charts = append(results.Charts, chart)
 	// Actual funnel results.
-	for _, p := range patterns {
-		pLen := len(p.EventNames)
-		if pLen == 1 || (startEvent != "" && pLen == 2) {
-			// Root node.
-			continue
-		}
 
-		// Skip (n - 1)st element for baseFunnel.
-		baseFunnelEvents := append(append([]string(nil), p.EventNames[:pLen-2]...), p.EventNames[pLen-1:]...)
+	for _, node := range nodes {
+		p := node.Pattern
+		patternConstraints := node.PatternConstraints
+		pLen := len(p.EventNames)
+		baseFunnelEvents := []string{}
+		baseFunnelConstraints := []EventConstraints{}
+
+		if node.NodeType == NODE_TYPE_SEQUENCE {
+			// Skip (n - 1)st element for baseFunnel.
+			baseFunnelEvents = append(append([]string(nil), p.EventNames[:pLen-2]...), p.EventNames[pLen-1:]...)
+			if patternConstraints != nil {
+				baseFunnelConstraints = append(append([]EventConstraints(nil), patternConstraints[:pLen-2]...), patternConstraints[pLen-1:]...)
+			}
+		} else if node.NodeType == NODE_TYPE_PROPERTY {
+			// Skip (n - 1)st constraint for baseFunnel.
+			baseFunnelEvents = append(append([]string(nil), p.EventNames...))
+			if patternConstraints != nil {
+				baseFunnelConstraints = append(append([]EventConstraints(nil), patternConstraints...))
+			} else {
+				baseFunnelConstraints = make([]EventConstraints, pLen)
+			}
+			baseFunnelConstraints[pLen-2] = EventConstraints{}
+		}
 		var baseP *Pattern
 		var ok bool
 		if baseP, ok = pw.GetPattern(baseFunnelEvents); !ok {
 			log.Errorf(fmt.Sprintf("Missing Base Funnel Pattern for %s", p.String()))
 			continue
 		}
-		baseFunnelData := pw.buildFunnelData(
-			baseP, startEvent, startEventConstraints, endEvent, endEventConstraints, true)
-		funnelData := pw.buildFunnelData(
-			p, startEvent, startEventConstraints, endEvent, endEventConstraints, false)
+		baseFunnelData := pw.buildFunnelData(baseP, baseFunnelConstraints, node.NodeType, true)
+		funnelData := pw.buildFunnelData(p, patternConstraints, node.NodeType, false)
 
 		baseFunnelLength := len(baseFunnelData)
 		baseFunnelConversionPercent := baseFunnelData[baseFunnelLength-2].ConversionPercent
@@ -312,7 +329,7 @@ func (pw *PatternWrapper) buildFactorResultsFromPatterns(
 
 		chart = graphResult{
 			Type: "funnel",
-			Header: headerString(p.EventNames, endEventConstraints,
+			Header: headerString(p.EventNames, patternConstraints, node.NodeType,
 				funnelConversionPercent, baseFunnelConversionPercent),
 			Datasets: []map[string]interface{}{
 				map[string]interface{}{
@@ -351,75 +368,36 @@ func (ps *PatternService) Factor(projectId uint64, startEvent string,
 		return PatternServiceGraphResults{}, fmt.Errorf("Invalid Query")
 	}
 
-	iPatterns := []*Pattern{}
-	iPatternScores := []float64{}
+	iPatternNodes := []*ItreeNode{}
 	if itree, err := BuildNewItree(startEvent, startEventConstraints,
 		endEvent, endEventConstraints, pw); err != nil {
 		log.Error(err)
 		return PatternServiceGraphResults{}, err
 	} else {
 		for _, node := range itree.Nodes {
-			iPatterns = append(iPatterns, node.Pattern)
-			// GiniDrop * parentPatternFrequency is the ranking score for the node.
-			score := node.GiniDrop * node.Fpp
-			iPatternScores = append(iPatternScores, score)
+			if node.NodeType == NODE_TYPE_ROOT {
+				// Root node.
+				continue
+			}
+			iPatternNodes = append(iPatternNodes, node)
 		}
 	}
 
-	if len(iPatterns) != len(iPatternScores) {
-		return PatternServiceGraphResults{}, fmt.Errorf(fmt.Sprintf(
-			"Ranking error. Len of scores %d not matching len of nodes %d.",
-			len(iPatternScores), len(iPatterns)))
-	}
-	// Rerank iPatterns in descending order of ranked scores.
-	sort.SliceStable(iPatterns,
+	// Rerank iPatternNodes in descending order of ranked scores.
+	sort.SliceStable(iPatternNodes,
 		func(i, j int) bool {
-			return (iPatternScores[i] > iPatternScores[j])
+			// GiniDrop * parentPatternFrequency is the ranking score for the node.
+			scoreI := iPatternNodes[i].GiniDrop * iPatternNodes[i].Fpp
+			scoreJ := iPatternNodes[j].GiniDrop * iPatternNodes[j].Fpp
+			return (scoreI > scoreJ)
 		})
-	results := pw.buildFactorResultsFromPatterns(
-		iPatterns, startEvent, startEventConstraints,
-		endEvent, endEventConstraints)
+
+	results := pw.buildFactorResultsFromPatterns(iPatternNodes)
 
 	maxPatterns := 50
 	if len(results.Charts) > maxPatterns {
 		results.Charts = results.Charts[:maxPatterns]
 	}
-
-	return results, nil
-}
-
-func (ps *PatternService) FrequentPaths(
-	projectId uint64, startEvent string, startEventConstraints *EventConstraints,
-	endEvent string, endEventConstraints *EventConstraints) (PatternServiceGraphResults, error) {
-
-	pw, ok := ps.patternsMap[projectId]
-	if !ok {
-		return PatternServiceGraphResults{}, fmt.Errorf(fmt.Sprintf("No patterns for projectId:%d", projectId))
-	}
-	if startEvent == "" && endEvent == "" {
-		return PatternServiceGraphResults{}, fmt.Errorf("Invalid Query")
-	}
-	matchPatterns := []*Pattern{}
-	for _, p := range pw.patterns {
-		if (startEvent == "" || strings.Compare(startEvent, p.EventNames[0]) == 0) &&
-			(endEvent == "" || strings.Compare(endEvent, p.EventNames[len(p.EventNames)-1]) == 0) {
-			matchPatterns = append(matchPatterns, p)
-		}
-	}
-
-	// Sort in decreasing order of per user counts of the sequence.
-	sort.SliceStable(matchPatterns,
-		func(i, j int) bool {
-			return (matchPatterns[i].OncePerUserCount > matchPatterns[j].OncePerUserCount)
-		})
-	maxPatterns := 50
-	if len(matchPatterns) > maxPatterns {
-		matchPatterns = matchPatterns[:maxPatterns]
-	}
-
-	results := pw.buildFactorResultsFromPatterns(
-		matchPatterns, startEvent, startEventConstraints,
-		endEvent, endEventConstraints)
 
 	return results, nil
 }

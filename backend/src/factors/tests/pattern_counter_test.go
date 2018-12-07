@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	P "factors/pattern"
 	"fmt"
+	"math"
 	"strings"
 	"testing"
 	"time"
@@ -515,6 +516,87 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 	assert.Equal(t, uint(3), pC.Count)
 	assert.Equal(t, uint(2), pC.OncePerUserCount)
 	assert.Equal(t, uint(2), pC.UserCount)
+
+	// Test GetOncePerUserCount with constraints.
+	count, err := pABC.GetOncePerUserCount(nil)
+	assert.Nil(t, err)
+	assert.Equal(t, uint(2), count)
+
+	patternConstraints := make([]P.EventConstraints, 3)
+	count, err = pABC.GetOncePerUserCount(patternConstraints)
+	assert.Nil(t, err)
+	assert.Equal(t, uint(2), count)
+
+	patternConstraints = make([]P.EventConstraints, 3)
+	patternConstraints[0] = P.EventConstraints{
+		NumericConstraints: []P.NumericConstraint{
+			P.NumericConstraint{
+				PropertyName: "ANum",
+				LowerBound:   -math.MaxFloat64,
+				UpperBound:   2.0,
+			},
+			P.NumericConstraint{
+				PropertyName: "ComNum",
+				LowerBound:   -math.MaxFloat64,
+				UpperBound:   2.0,
+			},
+		},
+	}
+	patternConstraints[1] = P.EventConstraints{
+		NumericConstraints: []P.NumericConstraint{
+			P.NumericConstraint{
+				PropertyName: "ComNum",
+				LowerBound:   -math.MaxFloat64,
+				UpperBound:   2.0,
+			},
+		},
+	}
+	count, err = pABC.GetOncePerUserCount(patternConstraints)
+	assert.Nil(t, err)
+	assert.Equal(t, uint(1), count)
+
+	patternConstraints = make([]P.EventConstraints, 3)
+	patternConstraints[0] = P.EventConstraints{
+		NumericConstraints: []P.NumericConstraint{
+			P.NumericConstraint{
+				PropertyName: "ANum",
+				LowerBound:   -0.5,
+				UpperBound:   +0.5,
+			},
+			P.NumericConstraint{
+				PropertyName: "ComNum",
+				LowerBound:   -0.5,
+				UpperBound:   +0.5,
+			},
+		},
+	}
+	count, err = pABC.GetOncePerUserCount(patternConstraints)
+	assert.Nil(t, err)
+	// This combination of A.Anum=1 and A.ComNum=1 does not occur together,
+	// though they take individually these values.
+	assert.Equal(t, uint(0), count)
+
+	patternConstraints = make([]P.EventConstraints, 3)
+	// Below categorical combination occurs in the first occurrence.
+	patternConstraints[1] = P.EventConstraints{
+		CategoricalConstraints: []P.CategoricalConstraint{
+			P.CategoricalConstraint{
+				PropertyName:  "BCat",
+				PropertyValue: "bcat1",
+			},
+		},
+	}
+	patternConstraints[2] = P.EventConstraints{
+		CategoricalConstraints: []P.CategoricalConstraint{
+			P.CategoricalConstraint{
+				PropertyName:  "ComCat",
+				PropertyValue: "com2",
+			},
+		},
+	}
+	count, err = pABC.GetOncePerUserCount(patternConstraints)
+	assert.Nil(t, err)
+	assert.Equal(t, uint(1), count)
 }
 
 // TODO(aravind): Add tests for genLenThreeSegmentedCandidates and genSegmentedCandidates in run_pattern_mine.go

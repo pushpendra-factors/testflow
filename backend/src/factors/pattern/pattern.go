@@ -79,9 +79,9 @@ func NewPattern(events []string, eventInfoMap *EventInfoMap) (*Pattern, error) {
 		EventNames: events,
 		// 6 dimensional histogram - Cardinalties, Repeats, Timings of start_event
 		// and last_event.
-		CardinalityRepeatTimings:   defaultHist,
-		NumericProperties:          nil,
-		CategoricalProperties:      nil,
+		CardinalityRepeatTimings: defaultHist,
+		NumericProperties:        nil,
+		CategoricalProperties:    nil,
 		Count:                      0,
 		OncePerUserCount:           0,
 		waitIndex:                  0,
@@ -382,6 +382,13 @@ func (p *Pattern) PrevWaitingOn() string {
 		return p.EventNames[p.waitIndex-1]
 	}
 	return ""
+}
+
+func (p *Pattern) GetEventPropertyRanges(
+	eventIndex int, propertyName string) [][2]float64 {
+	// Return the ranges of the bin [min, max], in which the numeric values for the event property occurr.
+	eventName := p.EventNames[eventIndex]
+	return p.NumericProperties.GetBinRanges(EventPropertyKey(eventName, propertyName))
 }
 
 func (p *Pattern) String() string {
