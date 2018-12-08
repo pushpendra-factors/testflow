@@ -64,7 +64,7 @@ func (project *Project) BeforeCreate() (err error) {
 	return nil
 }
 
-func CreateProject(project *Project) (*Project, int) {
+func createProject(project *Project) (*Project, int) {
 	db := C.GetServices().Db
 
 	log.WithFields(log.Fields{"project": &project}).Info("Creating project")
@@ -83,9 +83,9 @@ func CreateProject(project *Project) (*Project, int) {
 	return project, DB_SUCCESS
 }
 
-func CreateProjectDependencies(project *Project) (*Project, int) {
+func createProjectDependencies(project *Project) (*Project, int) {
 	// Associated project setting creation.
-	if _, errCode := CreateProjectSetting(&ProjectSetting{ProjectId: project.ID}); errCode != DB_SUCCESS {
+	if _, errCode := createProjectSetting(&ProjectSetting{ProjectId: project.ID}); errCode != DB_SUCCESS {
 		log.WithFields(log.Fields{"project": project}).Error("Creating project_settings failed")
 		return nil, errCode
 	}
@@ -95,12 +95,12 @@ func CreateProjectDependencies(project *Project) (*Project, int) {
 
 // CreateProjectWithDependencies seperate create method with dependencies to avoid breaking tests.
 func CreateProjectWithDependencies(project *Project) (*Project, int) {
-	cProject, errCode := CreateProject(project)
+	cProject, errCode := createProject(project)
 	if errCode != DB_SUCCESS {
 		return nil, errCode
 	}
 
-	return CreateProjectDependencies(cProject)
+	return createProjectDependencies(cProject)
 }
 
 func GetProject(id uint64) (*Project, int) {

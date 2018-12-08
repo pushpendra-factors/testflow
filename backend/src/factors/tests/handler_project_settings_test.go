@@ -20,9 +20,6 @@ func TestAPIGetProjectSettingHandler(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, project)
 
-	_, err = SetupProjectDependenciesReturnDAO(project)
-	assert.Nil(t, err)
-
 	projectSettingsURL := fmt.Sprintf("/projects/%d/settings", project.ID)
 
 	// Test get project settings.
@@ -51,9 +48,6 @@ func TestAPIUpdateProjectSettingsHandler(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 	assert.NotNil(t, project)
-
-	_, err = SetupProjectDependenciesReturnDAO(project)
-	assert.Nil(t, err)
 
 	projectSettingsURL := fmt.Sprintf("/projects/%d/settings", project.ID)
 

@@ -15,7 +15,7 @@ func SetupProject() (uint64, error) {
 
 	// Create random project.
 	random_project_name := U.RandomLowerAphaNumString(15)
-	project, err_code := M.CreateProject(&M.Project{Name: random_project_name})
+	project, err_code := M.CreateProjectWithDependencies(&M.Project{Name: random_project_name})
 	if err_code != M.DB_SUCCESS {
 		return projectId, fmt.Errorf("Project Creation failed.")
 	}
@@ -26,7 +26,7 @@ func SetupProject() (uint64, error) {
 func SetupProjectReturnDAO() (*M.Project, error) {
 	// Create random project.
 	random_project_name := U.RandomLowerAphaNumString(15)
-	project, err_code := M.CreateProject(&M.Project{Name: random_project_name})
+	project, err_code := M.CreateProjectWithDependencies(&M.Project{Name: random_project_name})
 	if err_code != M.DB_SUCCESS {
 		return nil, fmt.Errorf("Project Creation failed.")
 	}
@@ -36,7 +36,7 @@ func SetupProjectReturnDAO() (*M.Project, error) {
 func SetupProjectUserReturnDAO() (*M.Project, *M.User, error) {
 	// Create random project and user.
 	random_project_name := U.RandomLowerAphaNumString(15)
-	project, err_code := M.CreateProject(&M.Project{Name: random_project_name})
+	project, err_code := M.CreateProjectWithDependencies(&M.Project{Name: random_project_name})
 	if err_code != M.DB_SUCCESS {
 		return nil, nil, fmt.Errorf("Project Creation failed.")
 	}
@@ -57,7 +57,7 @@ func SetupProjectUserEventName() (uint64, string, uint64, error) {
 
 	// Create random project and a corresponding eventName and user.
 	random_project_name := U.RandomLowerAphaNumString(15)
-	project, err_code := M.CreateProject(&M.Project{Name: random_project_name})
+	project, err_code := M.CreateProjectWithDependencies(&M.Project{Name: random_project_name})
 	if err_code != M.DB_SUCCESS {
 		return projectId, userId, eventNameId, fmt.Errorf("Project Creation failed.")
 	}
@@ -78,7 +78,7 @@ func SetupProjectUserEventName() (uint64, string, uint64, error) {
 func SetupProjectUserEventNameReturnDAO() (*M.Project, *M.User, *M.EventName, error) {
 	// Create random project and a corresponding eventName and user.
 	random_project_name := U.RandomLowerAphaNumString(15)
-	project, err_code := M.CreateProject(&M.Project{Name: random_project_name})
+	project, err_code := M.CreateProjectWithDependencies(&M.Project{Name: random_project_name})
 	if err_code != M.DB_SUCCESS {
 		return nil, nil, nil, fmt.Errorf("Project Creation failed.")
 	}
@@ -94,12 +94,4 @@ func SetupProjectUserEventNameReturnDAO() (*M.Project, *M.User, *M.EventName, er
 	}
 
 	return project, user, en, nil
-}
-
-func SetupProjectDependenciesReturnDAO(project *M.Project) (*M.Project, error) {
-	_, errCode := M.CreateProjectDependencies(project)
-	if errCode != M.DB_SUCCESS {
-		return nil, fmt.Errorf("Project depencies setup failed for project : %d", project.ID)
-	}
-	return project, nil
 }

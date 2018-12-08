@@ -35,7 +35,7 @@ func GetProjectSetting(projectId uint64) (*ProjectSetting, int) {
 	return &projectSetting, DB_SUCCESS
 }
 
-func CreateProjectSetting(ps *ProjectSetting) (*ProjectSetting, int) {
+func createProjectSetting(ps *ProjectSetting) (*ProjectSetting, int) {
 	db := C.GetServices().Db
 
 	if valid := isValidProjectScope(ps.ProjectId); !valid {

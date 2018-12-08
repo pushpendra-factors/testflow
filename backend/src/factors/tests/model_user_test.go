@@ -16,7 +16,7 @@ import (
 func TestDBCreateAndGetUser(t *testing.T) {
 	// Initialize a project for the user.
 	randomProjectName := U.RandomLowerAphaNumString(15)
-	project, errCode := M.CreateProject(&M.Project{Name: randomProjectName})
+	project, errCode := M.CreateProjectWithDependencies(&M.Project{Name: randomProjectName})
 	assert.Equal(t, M.DB_SUCCESS, errCode)
 	assert.NotNil(t, project)
 	projectId := project.ID
@@ -85,7 +85,7 @@ func TestDBCreateAndGetUser(t *testing.T) {
 func TestDBGetUsers(t *testing.T) {
 	// Initialize a project for the user.
 	randomProjectName := U.RandomLowerAphaNumString(15)
-	project, errCode := M.CreateProject(&M.Project{Name: randomProjectName})
+	project, errCode := M.CreateProjectWithDependencies(&M.Project{Name: randomProjectName})
 	assert.Equal(t, M.DB_SUCCESS, errCode)
 	assert.NotNil(t, project)
 	projectId := project.ID

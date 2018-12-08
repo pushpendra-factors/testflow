@@ -342,9 +342,6 @@ func TestSDKGetProjectSettings(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, project)
 
-	_, err = SetupProjectDependenciesReturnDAO(project)
-	assert.Nil(t, err)
-
 	// Test Get project settings.
 	w := ServeGetRequestWithHeaders(r, uri, map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)

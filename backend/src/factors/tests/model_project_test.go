@@ -16,7 +16,7 @@ func TestDBCreateAndGetProject(t *testing.T) {
 
 	// Test successful create project.
 	projectName := U.RandomLowerAphaNumString(15)
-	project, errCode := M.CreateProject(&M.Project{Name: projectName})
+	project, errCode := M.CreateProjectWithDependencies(&M.Project{Name: projectName})
 	assert.Equal(t, M.DB_SUCCESS, errCode)
 	assert.True(t, project.ID > 0)
 	assert.Equal(t, projectName, project.Name)
@@ -30,7 +30,7 @@ func TestDBCreateAndGetProject(t *testing.T) {
 	// Random Token.
 	providedToken := U.RandomLowerAphaNumString(32)
 	// Reusing the same name. Name is not meant to be unique.
-	project, errCode = M.CreateProject(&M.Project{Name: projectName, Token: providedToken})
+	project, errCode = M.CreateProjectWithDependencies(&M.Project{Name: projectName, Token: providedToken})
 	assert.Equal(t, M.DB_SUCCESS, errCode)
 	assert.True(t, project.ID > previousProjectId)
 	assert.Equal(t, projectName, project.Name)
@@ -59,7 +59,7 @@ func TestDBCreateAndGetProject(t *testing.T) {
 
 	// Test Bad input by providing id.
 	// Reusing the same name. Name is not meant to be unique.
-	project, errCode = M.CreateProject(&M.Project{Name: projectName, ID: previousProjectId + 10})
+	project, errCode = M.CreateProjectWithDependencies(&M.Project{Name: projectName, ID: previousProjectId + 10})
 	assert.Equal(t, http.StatusBadRequest, errCode)
 	assert.Nil(t, project)
 
@@ -73,7 +73,7 @@ func TestDBCreateAndGetProject(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, errCode)
 
 	// Check corresponding project returned with token.
-	project, errCode = M.CreateProject(&M.Project{Name: projectName})
+	project, errCode = M.CreateProjectWithDependencies(&M.Project{Name: projectName})
 	rProject, rErrCode := M.GetProjectByToken(project.Token)
 	assert.Equal(t, M.DB_SUCCESS, rErrCode)
 	assert.Equal(t, project.ID, rProject.ID)
