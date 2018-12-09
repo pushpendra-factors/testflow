@@ -166,30 +166,6 @@ func TestDBGetUserLatestByCustomerUserId(t *testing.T) {
 	assert.NotEqual(t, M.DB_SUCCESS, errCode)
 }
 
-func TestDBUpdateCustomerUserIdById(t *testing.T) {
-	// Intialize.
-	project, user, err := SetupProjectUserReturnDAO()
-	assert.Nil(t, err)
-	assert.NotNil(t, project)
-	assert.NotNil(t, user)
-
-	// Test update of customer_user.
-	rCustomerUserId := U.RandomLowerAphaNumString(15)
-	user, errCode := M.UpdateCustomerUserIdById(project.ID, user.ID, rCustomerUserId)
-	assert.Equal(t, M.DB_SUCCESS, errCode)
-	assert.Equal(t, rCustomerUserId, user.CustomerUserId)
-
-	// Bad input. ProjectId.
-	rCustomerUserId = U.RandomLowerAphaNumString(15)
-	user, errCode = M.UpdateCustomerUserIdById(0, user.ID, rCustomerUserId)
-	assert.NotEqual(t, M.DB_SUCCESS, errCode)
-
-	// Bad input. UserId.
-	rCustomerUserId = U.RandomLowerAphaNumString(15)
-	user, errCode = M.UpdateCustomerUserIdById(project.ID, "", rCustomerUserId)
-	assert.NotEqual(t, M.DB_SUCCESS, errCode)
-}
-
 func TestDBUpdateUserById(t *testing.T) {
 	// Intialize.
 	project, user, err := SetupProjectUserReturnDAO()

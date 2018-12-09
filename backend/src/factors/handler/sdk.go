@@ -212,7 +212,7 @@ func SDKIdentifyHandler(c *gin.Context) {
 	}
 
 	// Happy path. Maps customer_user to an user.
-	_, errCode = M.UpdateCustomerUserIdById(scopeProjectId, identifiedUser.UserId, identifiedUser.CustomerUserId)
+	_, errCode = M.UpdateUser(scopeProjectId, identifiedUser.UserId, &M.User{CustomerUserId: identifiedUser.CustomerUserId})
 	if errCode != M.DB_SUCCESS {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Identification failed. Failed mapping customer_user to user"})
 		return

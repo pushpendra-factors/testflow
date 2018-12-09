@@ -118,30 +118,6 @@ func UpdateUser(projectId uint64, id string, user *User) (*User, int) {
 	return &updatedUser, DB_SUCCESS
 }
 
-// Todo(Dinesh): Remove this method. Use UpdateUser to update any field by id.
-func UpdateCustomerUserIdById(projectId uint64, id string, customerUserId string) (*User, int) {
-	db := C.GetServices().Db
-
-	// Todo(Dinesh): Move to validations.
-	// Ref: https://github.com/qor/validations
-	if projectId == 0 {
-		return nil, http.StatusBadRequest
-	}
-
-	// Todo(Dinesh): Move to validations.
-	cleanId := strings.TrimSpace(id)
-	if len(cleanId) == 0 {
-		return nil, http.StatusBadRequest
-	}
-
-	var user User
-	if err := db.Model(&user).Where("project_id = ?", projectId).Where("id = ?", cleanId).Update("customer_user_id", customerUserId).Error; err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("Failed updating customer_user_id by user_id")
-		return nil, http.StatusInternalServerError
-	}
-	return &user, DB_SUCCESS
-}
-
 func AddUserDefaultProperties(properties *U.PropertiesMap, clientIP string) error {
 	geo := C.GetServices().GeoLocation
 
