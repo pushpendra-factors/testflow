@@ -330,6 +330,13 @@ func TestSDKAddUserProperties(t *testing.T) {
 	assert.NotNil(t, userPropertiesMap3["$referrer"])
 	assert.NotNil(t, userPropertiesMap3["$screenWidth"])
 	assert.NotNil(t, userPropertiesMap3["$screenHeight"])
+	// should not be escaped.
+	assert.Nil(t, userPropertiesMap3["_$os"])
+	assert.Nil(t, userPropertiesMap3["_$osVersion"])
+	assert.Nil(t, userPropertiesMap3["_$browser"])
+	assert.Nil(t, userPropertiesMap3["_$referrer"])
+	assert.Nil(t, userPropertiesMap3["_$screenWidth"])
+	assert.Nil(t, userPropertiesMap3["_$screenHeight"])
 }
 
 func TestSDKGetProjectSettings(t *testing.T) {

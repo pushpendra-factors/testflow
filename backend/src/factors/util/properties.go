@@ -24,7 +24,15 @@ var UP_OS_VERSION string = "$osVersion"
 var UP_SCREEN_WIDTH string = "$screenWidth"
 var UP_SCREEN_HEIGHT string = "$screenHeight"
 
-var DEFAULT_USER_PROPERTIES = [...]string{UP_REFERRER, UP_BROWSER, UP_BROWSER_VERSION, UP_OS, UP_OS_VERSION, UP_SCREEN_WIDTH, UP_SCREEN_HEIGHT}
+var DEFAULT_USER_PROPERTIES_SDK = [...]string{
+	UP_REFERRER,
+	UP_BROWSER,
+	UP_BROWSER_VERSION,
+	UP_OS,
+	UP_OS_VERSION,
+	UP_SCREEN_WIDTH,
+	UP_SCREEN_HEIGHT,
+}
 
 // Default User Properties - Added from Backend
 var UP_COUNTRY string = "$country"
@@ -38,8 +46,8 @@ const NAME_PREFIX = "$"
 const NAME_PREFIX_ESCAPE_CHAR = "_"
 const QUERY_PARAM_PROPERTY_PREFIX = "$qp_"
 
-// IsValidProperty - Validate property type.
-func IsPropertyTypeValid(value interface{}) error {
+// isValidProperty - Validate property type.
+func isPropertyTypeValid(value interface{}) error {
 	switch valueType := value.(type) {
 	case float64:
 	case string:
@@ -51,19 +59,21 @@ func IsPropertyTypeValid(value interface{}) error {
 	return nil
 }
 
+func hasSDKUserDefaultProperty(key *string) bool {
+	for _, k := range DEFAULT_USER_PROPERTIES_SDK {
+		if k == *key {
+			return true
+		}
+	}
+	return false
+}
+
 func GetValidatedUserProperties(properties *PropertiesMap) *PropertiesMap {
 	validatedProperties := make(PropertiesMap)
 	for k, v := range *properties {
-		if err := IsPropertyTypeValid(v); err == nil {
-			if strings.HasPrefix(k, NAME_PREFIX) {
-				// Escapes '$' with '_' if not default user property.
-				for _, dfup := range DEFAULT_USER_PROPERTIES {
-					if k != dfup {
-						validatedProperties[fmt.Sprintf("%s%s", NAME_PREFIX_ESCAPE_CHAR, k)] = v
-					} else {
-						validatedProperties[k] = v
-					}
-				}
+		if err := isPropertyTypeValid(v); err == nil {
+			if strings.HasPrefix(k, NAME_PREFIX) && !hasSDKUserDefaultProperty(&k) {
+				validatedProperties[fmt.Sprintf("%s%s", NAME_PREFIX_ESCAPE_CHAR, k)] = v
 			} else {
 				validatedProperties[k] = v
 			}
@@ -75,7 +85,7 @@ func GetValidatedUserProperties(properties *PropertiesMap) *PropertiesMap {
 func GetValidatedEventProperties(properties *PropertiesMap) *PropertiesMap {
 	validatedProperties := make(PropertiesMap)
 	for k, v := range *properties {
-		if err := IsPropertyTypeValid(v); err == nil {
+		if err := isPropertyTypeValid(v); err == nil {
 			// Escape properties with $ prefix but allow query_params_props with $qp_ prrefix.
 			if strings.HasPrefix(k, NAME_PREFIX) && !strings.HasPrefix(k, QUERY_PARAM_PROPERTY_PREFIX) {
 				validatedProperties[fmt.Sprintf("%s%s", NAME_PREFIX_ESCAPE_CHAR, k)] = v
