@@ -9,6 +9,33 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func assertEqualConstraints(
+	t *testing.T,
+	expectedConstraints P.EventConstraints,
+	actualConstraints P.EventConstraints) {
+
+	expectedNumericMap := make(map[string]P.NumericConstraint)
+	for _, nc := range expectedConstraints.NumericConstraints {
+		expectedNumericMap[nc.PropertyName] = nc
+	}
+	expectedCategoricalMap := make(map[string]P.CategoricalConstraint)
+	for _, cc := range expectedConstraints.CategoricalConstraints {
+		expectedCategoricalMap[cc.PropertyName] = cc
+	}
+
+	actualNumericMap := make(map[string]P.NumericConstraint)
+	for _, nc := range actualConstraints.NumericConstraints {
+		actualNumericMap[nc.PropertyName] = nc
+	}
+	actualCategoricalMap := make(map[string]P.CategoricalConstraint)
+	for _, cc := range actualConstraints.CategoricalConstraints {
+		actualCategoricalMap[cc.PropertyName] = cc
+	}
+
+	assert.Equal(t, expectedNumericMap, actualNumericMap)
+	assert.Equal(t, expectedCategoricalMap, actualCategoricalMap)
+}
+
 func TestParseFactorQuery(t *testing.T) {
 	// No events.
 	var query = make(map[string]interface{})
@@ -76,7 +103,7 @@ func TestParseFactorQuery(t *testing.T) {
 	startEvent, startEventConstraints, endEvent, endEventConstraints, err = H.ParseFactorQuery(query)
 	assert.Nil(t, err)
 	assert.Equal(t, startEvent, "startEvent")
-	assert.Equal(t, *startEventConstraints, P.EventConstraints{
+	assertEqualConstraints(t, P.EventConstraints{
 		NumericConstraints: []P.NumericConstraint{
 			P.NumericConstraint{
 				PropertyName: "property1",
@@ -90,31 +117,33 @@ func TestParseFactorQuery(t *testing.T) {
 				PropertyName:  "property2",
 				PropertyValue: "property2Value",
 			}},
-	})
+	}, *startEventConstraints)
 	assert.Equal(t, endEvent, "endEvent")
-	assert.Equal(t, *endEventConstraints, P.EventConstraints{
-		NumericConstraints: []P.NumericConstraint{
-			P.NumericConstraint{
-				PropertyName: "property3",
-				LowerBound:   5.001,
-				UpperBound:   math.MaxFloat64,
-				IsEquality:   false,
+	assertEqualConstraints(t,
+		P.EventConstraints{
+			NumericConstraints: []P.NumericConstraint{
+				P.NumericConstraint{
+					PropertyName: "property3",
+					LowerBound:   5.001,
+					UpperBound:   math.MaxFloat64,
+					IsEquality:   false,
+				},
+				P.NumericConstraint{
+					PropertyName: "property4",
+					LowerBound:   -math.MaxFloat64,
+					UpperBound:   -10.0,
+					IsEquality:   false,
+				},
+				P.NumericConstraint{
+					PropertyName: "property5",
+					LowerBound:   50.01 - 0.1,
+					UpperBound:   50.01 + 0.1,
+					IsEquality:   true,
+				},
 			},
-			P.NumericConstraint{
-				PropertyName: "property4",
-				LowerBound:   -math.MaxFloat64,
-				UpperBound:   -10.0,
-				IsEquality:   false,
-			},
-			P.NumericConstraint{
-				PropertyName: "property5",
-				LowerBound:   50.01 - 0.1,
-				UpperBound:   50.01 + 0.1,
-				IsEquality:   true,
-			},
+			CategoricalConstraints: []P.CategoricalConstraint{},
 		},
-		CategoricalConstraints: []P.CategoricalConstraint{},
-	})
+		*endEventConstraints)
 
 	// Three events.
 	event1 = make(map[string]interface{})
