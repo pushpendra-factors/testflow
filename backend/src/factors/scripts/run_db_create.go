@@ -67,6 +67,25 @@ func main() {
 		log.Info("users table is associated with projects table.")
 	}
 
+	// Create user_properties table.
+	if err := db.CreateTable(&M.UserProperties{}).Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("user_properties table creation failed.")
+	} else {
+		log.Info("Created user_propeties table")
+	}
+	// Add foreign key with projects.
+	if err := db.Model(&M.UserProperties{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("user_properties table association with projects table failed.")
+	} else {
+		log.Info("user_properties table is associated with projects table.")
+	}
+	// Adding composite foreign key with users table.
+	if err := db.Model(&M.UserProperties{}).AddForeignKey("project_id, user_id", "users(project_id, id)", "RESTRICT", "RESTRICT").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("user_properties table association with users table failed.")
+	} else {
+		log.Info("user_properties table is associated with users table.")
+	}
+
 	// Create event_names table.
 	if err := db.CreateTable(&M.EventName{}).Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("event_names table creation failed.")

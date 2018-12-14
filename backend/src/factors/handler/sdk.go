@@ -254,7 +254,7 @@ func SDKAddUserPropertiesHandler(c *gin.Context) {
 	validProperties := U.GetValidatedUserProperties(&addPropsUser.Properties)
 
 	//  Add default properties. Ignore on addition failure.
-	_ = M.AddUserDefaultProperties(validProperties, c.ClientIP())
+	_ = M.FillUserDefaultProperties(validProperties, c.ClientIP())
 	propertiesJSON, err := json.Marshal(validProperties)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Add user properties failed. Invalid properties."})
@@ -264,7 +264,8 @@ func SDKAddUserPropertiesHandler(c *gin.Context) {
 	// Precondition: user_id not given.
 	if addPropsUser.UserId == "" {
 		// Create user with properties and respond user_id. Only properties allowed on create.
-		newUser, errCode := M.CreateUser(&M.User{Properties: postgres.Jsonb{propertiesJSON}})
+		newUser, errCode := M.CreateUser(&M.User{ProjectId: scopeProjectId,
+			Properties: postgres.Jsonb{propertiesJSON}})
 		if errCode != M.DB_SUCCESS {
 			c.AbortWithStatusJSON(errCode, gin.H{"error": "Add user properties failed. User create failed"})
 			return

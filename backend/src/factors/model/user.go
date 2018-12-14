@@ -2,9 +2,6 @@ package model
 
 import (
 	C "factors/config"
-	U "factors/util"
-	"fmt"
-	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -19,15 +16,16 @@ type User struct {
 	ID string `gorm:"primary_key:true;uuid;default:uuid_generate_v4()" json:"id"`
 	// Below are the foreign key constraints added in creation script.
 	// project_id -> projects(id)
-	ProjectId uint64 `gorm:"primary_key:true;" json:"project_id"`
+	ProjectId    uint64 `gorm:"primary_key:true;" json:"project_id"`
+	PropertiesId string `json:"properties_id"`
+	// Not part of table, but part of json. Stored in UserProperties table.
+	Properties postgres.Jsonb `gorm:"-" json:"properties"`
+
 	// UserId provided by the customer.
 	// An unique index is creatd on ProjectId+UserId.
-	CustomerUserId string `json:"c_uid"`
-
-	// JsonB of postgres with gorm. https://github.com/jinzhu/gorm/issues/1183
-	Properties postgres.Jsonb `json:"properties,omitempty"`
-	CreatedAt  time.Time      `json:"created_at"`
-	UpdatedAt  time.Time      `json:"updated_at"`
+	CustomerUserId string    `json:"c_uid"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
 }
 
 func CreateUser(user *User) (*User, int) {
@@ -40,11 +38,25 @@ func CreateUser(user *User) (*User, int) {
 		log.Error("CreateUser Failed. ID provided.")
 		return nil, http.StatusBadRequest
 	}
+	if user.ProjectId == 0 {
+		log.Error("CreateUser Failed. ProjectId not provided.")
+		return nil, http.StatusBadRequest
+	}
 
 	if err := db.Create(user).Error; err != nil {
 		log.WithFields(log.Fields{"user": &user, "error": err}).Error("CreateUser Failed")
 		return nil, http.StatusInternalServerError
 	}
+	propertiesId, success := createUserProperties(user.ProjectId, user.ID, user.Properties)
+	if success != DB_SUCCESS {
+		return nil, http.StatusInternalServerError
+	}
+
+	if err := db.Model(&user).Update("properties_id", propertiesId).Error; err != nil {
+		log.WithFields(log.Fields{"user": user, "error": err}).Error("Failed updating propertyId")
+		return nil, http.StatusInternalServerError
+	}
+
 	return user, DB_SUCCESS
 }
 
@@ -58,6 +70,14 @@ func GetUser(projectId uint64, id string) (*User, int) {
 		}
 		return nil, http.StatusInternalServerError
 	}
+	if user.PropertiesId != "" {
+		properties, errCode := getUserProperties(projectId, id, user.PropertiesId)
+		if errCode != DB_SUCCESS {
+			return nil, errCode
+		}
+		user.Properties = *properties
+	}
+
 	return &user, DB_SUCCESS
 }
 
@@ -115,28 +135,14 @@ func UpdateUser(projectId uint64, id string, user *User) (*User, int) {
 		log.WithFields(log.Fields{"user": user, "error": err}).Error("Failed updating fields by user_id")
 		return nil, http.StatusInternalServerError
 	}
+	// Update properties
+	propertiesId, success := createUserProperties(projectId, id, user.Properties)
+	if success != DB_SUCCESS {
+		return nil, http.StatusInternalServerError
+	}
+	if err := db.Model(&updatedUser).Update("properties_id", propertiesId).Error; err != nil {
+		log.WithFields(log.Fields{"user": user, "error": err}).Error("Failed updating propertyId")
+		return nil, http.StatusInternalServerError
+	}
 	return &updatedUser, DB_SUCCESS
-}
-
-func AddUserDefaultProperties(properties *U.PropertiesMap, clientIP string) error {
-	geo := C.GetServices().GeoLocation
-
-	// ClientIP unavailable.
-	if clientIP == "" {
-		return fmt.Errorf("invalid IP, failed adding geolocation properties")
-	}
-
-	// Added IP for internal usage.
-	(*properties)[U.UP_INTERNAL_IP] = clientIP
-
-	country, err := geo.Country(net.ParseIP(clientIP))
-	if err != nil {
-		log.WithFields(log.Fields{"clientIP": clientIP, "serviceError": err}).Error(
-			"Failed to get country information from geodb")
-		return err
-	}
-
-	(*properties)[U.UP_COUNTRY] = country.Country.IsoCode
-
-	return nil
 }

@@ -30,7 +30,8 @@ func TestDBCreateAndGetUser(t *testing.T) {
 	assert.Equal(t, projectId, user.ProjectId)
 	assert.True(t, user.CreatedAt.After(start))
 	assert.True(t, user.UpdatedAt.After(start))
-	assert.Equal(t, user.CreatedAt, user.UpdatedAt)
+	// Not more than 10ms difference.
+	assert.InDelta(t, user.CreatedAt.UnixNano(), user.UpdatedAt.UnixNano(), 1.0e+7)
 	assert.Equal(t, postgres.Jsonb{RawMessage: json.RawMessage(nil)}, user.Properties)
 	// Test Get User on the created one.
 	retUser, errCode := M.GetUser(projectId, user.ID)
@@ -58,7 +59,8 @@ func TestDBCreateAndGetUser(t *testing.T) {
 	assert.Equal(t, projectId, user.ProjectId)
 	assert.True(t, user.CreatedAt.After(start))
 	assert.True(t, user.UpdatedAt.After(start))
-	assert.Equal(t, user.CreatedAt, user.UpdatedAt)
+	// Not more than 10ms difference.
+	assert.InDelta(t, user.CreatedAt.UnixNano(), user.UpdatedAt.UnixNano(), 1.0e+7)
 	assert.Equal(t, properties, user.Properties)
 
 	// Creating again with the same customer_user_id with no properties.
@@ -207,7 +209,7 @@ func TestDBUpdateUserById(t *testing.T) {
 
 func TestAddUserDefaultProperties(t *testing.T) {
 	propertiesMap := U.PropertiesMap{"prop_1": "value_1"}
-	err := M.AddUserDefaultProperties(&propertiesMap, "180.151.36.234") // Our gateway IP.
+	err := M.FillUserDefaultProperties(&propertiesMap, "180.151.36.234") // Our gateway IP.
 	assert.Nil(t, err)
 	assert.NotNil(t, propertiesMap[U.UP_INTERNAL_IP])
 	assert.NotNil(t, propertiesMap[U.UP_COUNTRY])
@@ -215,13 +217,13 @@ func TestAddUserDefaultProperties(t *testing.T) {
 	assert.NotNil(t, propertiesMap["prop_1"])
 
 	propertiesMap = U.PropertiesMap{"prop_1": "value_1"}
-	err = M.AddUserDefaultProperties(&propertiesMap, "127.0.0.1")
+	err = M.FillUserDefaultProperties(&propertiesMap, "127.0.0.1")
 	assert.Nil(t, err)
 	assert.NotEmpty(t, propertiesMap[U.UP_INTERNAL_IP])
 	assert.Empty(t, propertiesMap[U.UP_COUNTRY])
 
 	propertiesMap = U.PropertiesMap{"prop_1": "value_1"}
-	err = M.AddUserDefaultProperties(&propertiesMap, "::1")
+	err = M.FillUserDefaultProperties(&propertiesMap, "::1")
 	assert.Nil(t, err)
 	assert.NotEmpty(t, propertiesMap[U.UP_INTERNAL_IP])
 	assert.Empty(t, propertiesMap[U.UP_COUNTRY])

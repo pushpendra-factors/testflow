@@ -39,8 +39,7 @@ func TestAPICreateAndGetUser(t *testing.T) {
 	assert.Nil(t, jsonResponseMap["properties"])
 	assert.NotNil(t, jsonResponseMap["created_at"].(string))
 	assert.NotNil(t, jsonResponseMap["updated_at"].(string))
-	assert.Equal(t, jsonResponseMap["created_at"].(string), jsonResponseMap["updated_at"].(string))
-	assert.Equal(t, 6, len(jsonResponseMap))
+	assert.Equal(t, 7, len(jsonResponseMap))
 
 	// Test GetUser on the created id.
 	id := jsonResponseMap["id"].(string)
@@ -58,7 +57,6 @@ func TestAPICreateAndGetUser(t *testing.T) {
 	assert.Nil(t, jsonResponseMap["properties"])
 	assert.NotNil(t, jsonResponseMap["created_at"].(string))
 	assert.NotNil(t, jsonResponseMap["updated_at"].(string))
-	assert.Equal(t, jsonResponseMap["created_at"].(string), jsonResponseMap["updated_at"].(string))
 
 	// Test GetUser on random id.
 	id = "r4nd0m!234"
@@ -94,13 +92,12 @@ func TestAPICreateUserEmptyAndWithAttributes(t *testing.T) {
 	assert.Equal(t, customerUserId, jsonResponseMap["c_uid"].(string))
 	assert.NotNil(t, jsonResponseMap["created_at"].(string))
 	assert.NotNil(t, jsonResponseMap["updated_at"].(string))
-	assert.Equal(t, jsonResponseMap["created_at"].(string), jsonResponseMap["updated_at"].(string))
 	assert.NotNil(t, jsonResponseMap["properties"])
 	propertiesMap := jsonResponseMap["properties"].(map[string]interface{})
 	assert.Equal(t, "10.0.0.1", propertiesMap["ip"].(string))
 	assert.Equal(t, true, propertiesMap["mobile"].(bool))
 	assert.Equal(t, 1.0, propertiesMap["code"].(float64))
-	assert.Equal(t, 6, len(jsonResponseMap))
+	assert.Equal(t, 7, len(jsonResponseMap))
 
 	// Test CreateUser without customerUserId and data.
 	w = httptest.NewRecorder()
@@ -117,9 +114,8 @@ func TestAPICreateUserEmptyAndWithAttributes(t *testing.T) {
 	assert.Equal(t, "", jsonResponseMap["c_uid"].(string))
 	assert.NotNil(t, jsonResponseMap["created_at"].(string))
 	assert.NotNil(t, jsonResponseMap["updated_at"].(string))
-	assert.Equal(t, jsonResponseMap["created_at"].(string), jsonResponseMap["updated_at"].(string))
 	assert.Nil(t, jsonResponseMap["properties"])
-	assert.Equal(t, 6, len(jsonResponseMap))
+	assert.Equal(t, 7, len(jsonResponseMap))
 }
 
 func TestAPICreateUserWithCreatedTime(t *testing.T) {
@@ -148,9 +144,8 @@ func TestAPICreateUserWithCreatedTime(t *testing.T) {
 	assert.Equal(t, float64(projectId), jsonResponseMap["project_id"].(float64))
 	assert.Equal(t, customerUserId, jsonResponseMap["c_uid"].(string))
 	assert.Equal(t, timeStr, jsonResponseMap["created_at"].(string))
-	assert.Equal(t, timeStr, jsonResponseMap["updated_at"].(string))
 	assert.Nil(t, jsonResponseMap["properties"])
-	assert.Equal(t, 6, len(jsonResponseMap))
+	assert.Equal(t, 7, len(jsonResponseMap))
 }
 
 func TestAPICreateUserBadRequest(t *testing.T) {
@@ -275,6 +270,5 @@ func assertUserMapsWithOffset(t *testing.T, expectedUsers []map[string]interface
 		assert.Nil(t, actualUser["properties"])
 		assert.NotNil(t, actualUser["created_at"].(string))
 		assert.NotNil(t, actualUser["updated_at"].(string))
-		assert.Equal(t, actualUser["created_at"].(string), actualUser["updated_at"].(string))
 	}
 }
