@@ -15,6 +15,7 @@ import (
 	"flag"
 	"fmt"
 	"math"
+	"net/http"
 	"os"
 	"path/filepath"
 	"sort"
@@ -216,7 +217,7 @@ func mineAndWritePatterns(projectId int, filepath string,
 	eventInfoMap *P.EventInfoMap, numRoutines int, outputFile *os.File) error {
 	// Length One Patterns.
 	eventNames, errCode := M.GetEventNames(uint64(projectId))
-	if errCode != M.DB_SUCCESS {
+	if errCode != http.StatusFound {
 		return fmt.Errorf("DB read of event names failed")
 	}
 	var filteredPatterns []*P.Pattern
@@ -293,7 +294,7 @@ func buildEventInfoMapFromInput(projectId int, filepath string) (*P.EventInfoMap
 
 	// Length One Patterns.
 	eventNames, errCode := M.GetEventNames(uint64(projectId))
-	if errCode != M.DB_SUCCESS {
+	if errCode != http.StatusFound {
 		return nil, fmt.Errorf("DB read of event names failed")
 	}
 	for _, eventName := range eventNames {
