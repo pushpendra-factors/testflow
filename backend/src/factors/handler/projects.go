@@ -28,7 +28,7 @@ func CreateProjectHandler(c *gin.Context) {
 
 	var errCode int
 	_, errCode = M.CreateProjectWithDependencies(&project)
-	if errCode != M.DB_SUCCESS {
+	if errCode != http.StatusCreated {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Creating project failed."})
 	} else {
 		c.JSON(http.StatusCreated, project)
@@ -41,7 +41,7 @@ func GetProjectsHandler(c *gin.Context) {
 	authorizedProjects := U.GetScopeByKey(c, "authorizedProjects")
 
 	projects, errCode := M.GetProjectsByIDs(authorizedProjects.([]uint64))
-	if errCode != M.DB_SUCCESS {
+	if errCode != http.StatusFound {
 		c.AbortWithStatus(errCode)
 	} else {
 		c.JSON(http.StatusOK, projects)

@@ -52,7 +52,7 @@ func CreateOrGetEventName(eventName *EventName) (*EventName, int) {
 		log.WithFields(log.Fields{"eventName": &eventName, "error": err}).Error("CreateEventName Failed")
 		return nil, http.StatusInternalServerError
 	}
-	return eventName, DB_SUCCESS
+	return eventName, http.StatusCreated
 }
 
 func isValidAutoName(autoName string) error {
@@ -89,7 +89,7 @@ func GetEventName(name string, projectId uint64) (*EventName, int) {
 		}
 		return nil, http.StatusInternalServerError
 	}
-	return &eventName, DB_SUCCESS
+	return &eventName, http.StatusFound
 }
 
 func GetEventNameByFilter(filter *EventName) (*EventName, int) {
@@ -103,7 +103,7 @@ func GetEventNameByFilter(filter *EventName) (*EventName, int) {
 		return nil, http.StatusInternalServerError
 	}
 
-	return &eventName, DB_SUCCESS
+	return &eventName, http.StatusFound
 }
 
 func GetEventNames(projectId uint64) ([]EventName, int) {
@@ -121,5 +121,5 @@ func GetEventNames(projectId uint64) ([]EventName, int) {
 	if len(eventNames) == 0 {
 		return nil, http.StatusNotFound
 	}
-	return eventNames, DB_SUCCESS
+	return eventNames, http.StatusFound
 }

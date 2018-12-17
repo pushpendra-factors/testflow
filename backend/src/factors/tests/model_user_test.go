@@ -17,7 +17,7 @@ func TestDBCreateAndGetUser(t *testing.T) {
 	// Initialize a project for the user.
 	randomProjectName := U.RandomLowerAphaNumString(15)
 	project, errCode := M.CreateProjectWithDependencies(&M.Project{Name: randomProjectName})
-	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotNil(t, project)
 	projectId := project.ID
 
@@ -25,7 +25,7 @@ func TestDBCreateAndGetUser(t *testing.T) {
 
 	// Test successful create user.
 	user, errCode := M.CreateUser(&M.User{ProjectId: projectId})
-	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Equal(t, http.StatusCreated, errCode)
 	assert.True(t, len(user.ID) > 30)
 	assert.Equal(t, projectId, user.ProjectId)
 	assert.True(t, user.CreatedAt.After(start))
@@ -35,7 +35,7 @@ func TestDBCreateAndGetUser(t *testing.T) {
 	assert.Equal(t, postgres.Jsonb{RawMessage: json.RawMessage(nil)}, user.Properties)
 	// Test Get User on the created one.
 	retUser, errCode := M.GetUser(projectId, user.ID)
-	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Equal(t, http.StatusFound, errCode)
 	// time.Time is not exactly same. Checking within an error threshold.
 	assert.True(t, math.Abs(user.CreatedAt.Sub(retUser.CreatedAt).Seconds()) < 0.1)
 	assert.True(t, math.Abs(user.UpdatedAt.Sub(retUser.UpdatedAt).Seconds()) < 0.1)
@@ -53,7 +53,7 @@ func TestDBCreateAndGetUser(t *testing.T) {
 	customerUserId := "customer_id"
 	properties := postgres.Jsonb{RawMessage: json.RawMessage([]byte(`{"country": "india", "age": 30, "paid": true}`))}
 	user, errCode = M.CreateUser(&M.User{ProjectId: projectId, CustomerUserId: customerUserId, Properties: properties})
-	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Equal(t, http.StatusCreated, errCode)
 	assert.Equal(t, customerUserId, user.CustomerUserId)
 	assert.True(t, len(user.ID) > 30)
 	assert.Equal(t, projectId, user.ProjectId)
@@ -67,9 +67,9 @@ func TestDBCreateAndGetUser(t *testing.T) {
 	// Should respond with last user of customer_user instead of creating.
 	rCustomerUserId := U.RandomLowerAphaNumString(15)
 	newUser, newUserErrorCode := M.CreateUser(&M.User{ProjectId: projectId, CustomerUserId: rCustomerUserId})
-	assert.Equal(t, M.DB_SUCCESS, newUserErrorCode)
+	assert.Equal(t, http.StatusCreated, newUserErrorCode)
 	lastUser, lastUserErrorCode := M.GetUserLatestByCustomerUserId(projectId, rCustomerUserId)
-	assert.Equal(t, M.DB_SUCCESS, lastUserErrorCode)
+	assert.Equal(t, http.StatusFound, lastUserErrorCode)
 	assert.Equal(t, newUser.ID, lastUser.ID)
 
 	// Test Get User on random id.
@@ -88,7 +88,7 @@ func TestDBGetUsers(t *testing.T) {
 	// Initialize a project for the user.
 	randomProjectName := U.RandomLowerAphaNumString(15)
 	project, errCode := M.CreateProjectWithDependencies(&M.Project{Name: randomProjectName})
-	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotNil(t, project)
 	projectId := project.ID
 
@@ -103,20 +103,20 @@ func TestDBGetUsers(t *testing.T) {
 	numUsers := 100
 	for i := 0; i < numUsers; i++ {
 		user, errCode := M.CreateUser(&M.User{ProjectId: projectId})
-		assert.Equal(t, M.DB_SUCCESS, errCode)
+		assert.Equal(t, http.StatusCreated, errCode)
 		assert.True(t, len(user.ID) > 30)
 		users = append(users, *user)
 	}
 
 	retUsers, errCode = M.GetUsers(projectId, offset, limit)
-	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Equal(t, http.StatusFound, errCode)
 	assert.Equal(t, limit, uint64(len(retUsers)))
 	assertUsersWithOffset(t, users[offset:offset+limit], retUsers)
 
 	offset = 25
 	limit = 20
 	retUsers, errCode = M.GetUsers(projectId, offset, limit)
-	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Equal(t, http.StatusFound, errCode)
 	assert.Equal(t, limit, uint64(len(retUsers)))
 	assertUsersWithOffset(t, users[offset:offset+limit], retUsers)
 
@@ -124,7 +124,7 @@ func TestDBGetUsers(t *testing.T) {
 	offset = 95
 	limit = 10
 	retUsers, errCode = M.GetUsers(projectId, offset, limit)
-	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Equal(t, http.StatusFound, errCode)
 	assert.Equal(t, numUsers-95, len(retUsers))
 	assertUsersWithOffset(t, users[offset:numUsers], retUsers)
 }
@@ -154,18 +154,18 @@ func TestDBGetUserLatestByCustomerUserId(t *testing.T) {
 	// Test latest user return for the customer_user.
 	rCustomerUserId := U.RandomLowerAphaNumString(15)
 	latestUser, latestUserErrCode := M.CreateUser(&M.User{ProjectId: project.ID, CustomerUserId: rCustomerUserId})
-	assert.Equal(t, M.DB_SUCCESS, latestUserErrCode)
+	assert.Equal(t, http.StatusCreated, latestUserErrCode)
 	getUser, getUserErrCode := M.GetUserLatestByCustomerUserId(project.ID, rCustomerUserId)
-	assert.Equal(t, M.DB_SUCCESS, getUserErrCode)
+	assert.Equal(t, http.StatusFound, getUserErrCode)
 	assert.Equal(t, latestUser.ID, getUser.ID)
 
 	// Bad input. // Without project scope.
 	_, errCode := M.GetUserLatestByCustomerUserId(0, rCustomerUserId)
-	assert.NotEqual(t, M.DB_SUCCESS, errCode)
+	assert.NotEqual(t, http.StatusFound, errCode)
 
 	// Bad input. // Unacceptable customer_user_id
 	_, errCode = M.GetUserLatestByCustomerUserId(project.ID, " ")
-	assert.NotEqual(t, M.DB_SUCCESS, errCode)
+	assert.NotEqual(t, http.StatusFound, errCode)
 }
 
 func TestDBUpdateUserById(t *testing.T) {
@@ -179,11 +179,11 @@ func TestDBUpdateUserById(t *testing.T) {
 	rCustomerUserId := U.RandomLowerAphaNumString(15)
 	updateUser := &M.User{CustomerUserId: rCustomerUserId}
 	cuUpdatedUser, errCode := M.UpdateUser(project.ID, user.ID, updateUser)
-	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Equal(t, http.StatusAccepted, errCode)
 	assert.Equal(t, rCustomerUserId, cuUpdatedUser.CustomerUserId)
 	// Using already tested GetUser method to validate update.
 	gUser, gErrCode := M.GetUser(project.ID, user.ID)
-	assert.Equal(t, M.DB_SUCCESS, gErrCode)
+	assert.Equal(t, http.StatusFound, gErrCode)
 	// Test CustomerUserId updated or not.
 	assert.Equal(t, rCustomerUserId, gUser.CustomerUserId)
 
@@ -199,12 +199,12 @@ func TestDBUpdateUserById(t *testing.T) {
 	// Bad input. ProjectId.
 	rCustomerUserId = U.RandomLowerAphaNumString(15)
 	_, errCode = M.UpdateUser(0, user.ID, &M.User{})
-	assert.NotEqual(t, M.DB_SUCCESS, errCode)
+	assert.NotEqual(t, http.StatusAccepted, errCode)
 
 	// Bad input. UserId.
 	rCustomerUserId = U.RandomLowerAphaNumString(15)
 	_, errCode = M.UpdateUser(project.ID, "", &M.User{})
-	assert.NotEqual(t, M.DB_SUCCESS, errCode)
+	assert.NotEqual(t, http.StatusAccepted, errCode)
 }
 
 func TestAddUserDefaultProperties(t *testing.T) {

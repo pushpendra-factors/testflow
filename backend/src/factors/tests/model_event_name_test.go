@@ -17,7 +17,7 @@ func TestDBCreateAndGetEventName(t *testing.T) {
 	// Initialize a project for the event.
 	randomProjectName := U.RandomLowerAphaNumString(15)
 	project, errCode := M.CreateProjectWithDependencies(&M.Project{Name: randomProjectName})
-	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotNil(t, project)
 	projectId := project.ID
 
@@ -25,7 +25,7 @@ func TestDBCreateAndGetEventName(t *testing.T) {
 
 	// Test successful create eventName.
 	eventName, errCode := M.CreateOrGetEventName(&M.EventName{Name: "test_event", ProjectId: projectId})
-	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Equal(t, http.StatusCreated, errCode)
 	assert.Equal(t, projectId, eventName.ProjectId)
 	assert.True(t, eventName.CreatedAt.After(start))
 	// Trying to create again should return the old one.
@@ -42,7 +42,7 @@ func TestDBCreateAndGetEventName(t *testing.T) {
 	expectedEventName = &M.EventName{}
 	copier.Copy(expectedEventName, eventName)
 	retEventName, errCode := M.GetEventName(expectedEventName.Name, projectId)
-	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Equal(t, http.StatusFound, errCode)
 	// time.Time is not exactly same. Checking within an error threshold.
 	assert.True(t, math.Abs(expectedEventName.CreatedAt.Sub(retEventName.CreatedAt).Seconds()) < 0.1)
 	expectedEventName.CreatedAt = time.Time{}
@@ -68,7 +68,7 @@ func TestDBCreateAndGetEventName(t *testing.T) {
 	randomName := U.RandomLowerAphaNumString(10)
 	ucEventName := &M.EventName{Name: randomName, ProjectId: project.ID}
 	retEventName, errCode = M.CreateOrGetUserCreatedEventName(ucEventName)
-	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Equal(t, http.StatusCreated, errCode)
 	assert.Equal(t, M.USER_CREATED_EVENT_NAME, retEventName.AutoName)
 
 	// Test Duplicate creation of user created event name. Should be unique by project.
@@ -99,7 +99,7 @@ func TestDBCreateAndGetEventName(t *testing.T) {
 	randomName = U.RandomLowerAphaNumString(10)
 	ucEventName = &M.EventName{Name: randomName, AutoName: "$UCEN", ProjectId: project.ID}
 	retEventName, errCode = M.CreateOrGetUserCreatedEventName(ucEventName)
-	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotNil(t, retEventName)
 }
 
@@ -107,7 +107,7 @@ func TestDBGetEventNames(t *testing.T) {
 	// Initialize a project for the event.
 	randomProjectName := U.RandomLowerAphaNumString(15)
 	project, errCode := M.CreateProjectWithDependencies(&M.Project{Name: randomProjectName})
-	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotNil(t, project)
 	projectId := project.ID
 
@@ -122,16 +122,16 @@ func TestDBGetEventNames(t *testing.T) {
 
 	// create events
 	eventName1, errCode := M.CreateOrGetEventName(&M.EventName{Name: "test_event", ProjectId: projectId})
-	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Equal(t, http.StatusCreated, errCode)
 	eventName2, errCode := M.CreateOrGetEventName(&M.EventName{Name: "test_event_1", ProjectId: projectId})
-	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Equal(t, http.StatusCreated, errCode)
 
 	createdEventsNames := []string{eventName1.Name, eventName2.Name}
 	sort.Strings(createdEventsNames)
 
 	// should return events
 	events, errCode = M.GetEventNames(projectId)
-	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Equal(t, http.StatusFound, errCode)
 	assert.Len(t, events, 2)
 
 	resultEventNames := []string{events[0].Name, events[1].Name}

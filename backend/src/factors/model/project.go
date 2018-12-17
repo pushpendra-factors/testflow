@@ -80,23 +80,23 @@ func createProject(project *Project) (*Project, int) {
 		return nil, http.StatusInternalServerError
 	}
 
-	return project, DB_SUCCESS
+	return project, http.StatusCreated
 }
 
 func createProjectDependencies(project *Project) (*Project, int) {
 	// Associated project setting creation.
-	if _, errCode := createProjectSetting(&ProjectSetting{ProjectId: project.ID}); errCode != DB_SUCCESS {
+	if _, errCode := createProjectSetting(&ProjectSetting{ProjectId: project.ID}); errCode != http.StatusCreated {
 		log.WithFields(log.Fields{"project": project}).Error("Creating project_settings failed")
 		return nil, errCode
 	}
 
-	return project, DB_SUCCESS
+	return project, http.StatusCreated
 }
 
 // CreateProjectWithDependencies seperate create method with dependencies to avoid breaking tests.
 func CreateProjectWithDependencies(project *Project) (*Project, int) {
 	cProject, errCode := createProject(project)
-	if errCode != DB_SUCCESS {
+	if errCode != http.StatusCreated {
 		return nil, errCode
 	}
 
@@ -113,7 +113,7 @@ func GetProject(id uint64) (*Project, int) {
 		}
 		return nil, http.StatusInternalServerError
 	}
-	return &project, DB_SUCCESS
+	return &project, http.StatusFound
 }
 
 func GetProjectByToken(token string) (*Project, int) {
@@ -133,7 +133,7 @@ func GetProjectByToken(token string) (*Project, int) {
 		return nil, http.StatusInternalServerError
 	}
 
-	return &project, DB_SUCCESS
+	return &project, http.StatusFound
 }
 
 func GetProjects() ([]Project, int) {
@@ -146,7 +146,7 @@ func GetProjects() ([]Project, int) {
 	if len(projects) == 0 {
 		return projects, http.StatusNotFound
 	}
-	return projects, DB_SUCCESS
+	return projects, http.StatusFound
 }
 
 // isValidProjectScope return false if projectId is invalid.
@@ -164,5 +164,5 @@ func GetProjectsByIDs(ids []uint64) ([]Project, int) {
 	if len(projects) == 0 {
 		return projects, http.StatusNotFound
 	}
-	return projects, DB_SUCCESS
+	return projects, http.StatusFound
 }

@@ -48,7 +48,7 @@ func CreateUser(user *User) (*User, int) {
 		return nil, http.StatusInternalServerError
 	}
 	propertiesId, success := createUserProperties(user.ProjectId, user.ID, user.Properties)
-	if success != DB_SUCCESS {
+	if success != http.StatusCreated {
 		return nil, http.StatusInternalServerError
 	}
 
@@ -57,7 +57,7 @@ func CreateUser(user *User) (*User, int) {
 		return nil, http.StatusInternalServerError
 	}
 
-	return user, DB_SUCCESS
+	return user, http.StatusCreated
 }
 
 func GetUser(projectId uint64, id string) (*User, int) {
@@ -72,13 +72,13 @@ func GetUser(projectId uint64, id string) (*User, int) {
 	}
 	if user.PropertiesId != "" {
 		properties, errCode := getUserProperties(projectId, id, user.PropertiesId)
-		if errCode != DB_SUCCESS {
+		if errCode != http.StatusFound {
 			return nil, errCode
 		}
 		user.Properties = *properties
 	}
 
-	return &user, DB_SUCCESS
+	return &user, http.StatusFound
 }
 
 func GetUsers(projectId uint64, offset uint64, limit uint64) ([]User, int) {
@@ -91,7 +91,7 @@ func GetUsers(projectId uint64, offset uint64, limit uint64) ([]User, int) {
 	if len(users) == 0 {
 		return nil, http.StatusNotFound
 	}
-	return users, DB_SUCCESS
+	return users, http.StatusFound
 }
 
 func GetUserLatestByCustomerUserId(projectId uint64, customerUserId string) (*User, int) {
@@ -106,7 +106,7 @@ func GetUserLatestByCustomerUserId(projectId uint64, customerUserId string) (*Us
 		}
 		return nil, http.StatusInternalServerError
 	}
-	return &user, DB_SUCCESS
+	return &user, http.StatusFound
 }
 
 // UpdateUser updates user fields by Id.
@@ -137,12 +137,12 @@ func UpdateUser(projectId uint64, id string, user *User) (*User, int) {
 	}
 	// Update properties
 	propertiesId, success := createUserProperties(projectId, id, user.Properties)
-	if success != DB_SUCCESS {
+	if success != http.StatusCreated {
 		return nil, http.StatusInternalServerError
 	}
 	if err := db.Model(&updatedUser).Update("properties_id", propertiesId).Error; err != nil {
 		log.WithFields(log.Fields{"user": user, "error": err}).Error("Failed updating propertyId")
 		return nil, http.StatusInternalServerError
 	}
-	return &updatedUser, DB_SUCCESS
+	return &updatedUser, http.StatusAccepted
 }

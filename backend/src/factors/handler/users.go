@@ -45,14 +45,14 @@ func CreateUserHandler(c *gin.Context) {
 			return
 		}
 
-		if errCode == M.DB_SUCCESS {
+		if errCode == http.StatusFound {
 			c.JSON(http.StatusOK, userLatest)
 			return
 		}
 	}
 
 	_, errCode = M.CreateUser(&user)
-	if errCode != M.DB_SUCCESS {
+	if errCode != http.StatusCreated {
 		c.AbortWithStatus(errCode)
 	} else {
 		c.JSON(http.StatusCreated, user)
@@ -77,7 +77,7 @@ func GetUserHandler(c *gin.Context) {
 	}
 
 	user, errCode := M.GetUser(projectId, id)
-	if errCode != M.DB_SUCCESS {
+	if errCode != http.StatusFound {
 		c.AbortWithStatus(errCode)
 	} else {
 		c.JSON(http.StatusOK, user)
@@ -123,7 +123,7 @@ func GetUsersHandler(c *gin.Context) {
 	}
 
 	users, errCode := M.GetUsers(projectId, offset, limit)
-	if errCode != M.DB_SUCCESS {
+	if errCode != http.StatusFound {
 		c.AbortWithStatus(errCode)
 	} else {
 		c.JSON(http.StatusOK, users)

@@ -56,14 +56,14 @@ func CreateEventHandler(c *gin.Context) {
 	}
 
 	eventName, errCode := M.CreateOrGetUserCreatedEventName(&M.EventName{Name: event.Name, ProjectId: projectId})
-	if errCode != http.StatusConflict && errCode != M.DB_SUCCESS {
+	if errCode != http.StatusConflict && errCode != http.StatusCreated {
 		c.AbortWithStatus(errCode)
 		return
 	}
 
 	createdEvent, errCode := M.CreateEvent(&M.Event{ProjectId: projectId, UserId: userId, EventNameId: eventName.ID,
 		Properties: event.Properties, CreatedAt: event.CreatedAt, UpdatedAt: event.UpdatedAt})
-	if errCode != M.DB_SUCCESS {
+	if errCode != http.StatusCreated {
 		c.AbortWithStatus(errCode)
 	} else {
 		c.JSON(http.StatusCreated, createdEvent)
@@ -89,7 +89,7 @@ func GetEventHandler(c *gin.Context) {
 	}
 
 	event, errCode := M.GetEvent(projectId, userId, id)
-	if errCode != M.DB_SUCCESS {
+	if errCode != http.StatusFound {
 		c.AbortWithStatus(errCode)
 	} else {
 		c.JSON(http.StatusOK, event)

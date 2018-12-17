@@ -63,7 +63,7 @@ func CreateEvent(event *Event) (*Event, int) {
 		log.WithFields(log.Fields{"event": &event, "error": err}).Error("CreateEvent Failed")
 		return nil, http.StatusInternalServerError
 	}
-	return event, DB_SUCCESS
+	return event, http.StatusCreated
 }
 
 func GetEvent(projectId uint64, userId string, id string) (*Event, int) {
@@ -76,5 +76,5 @@ func GetEvent(projectId uint64, userId string, id string) (*Event, int) {
 		}
 		return nil, http.StatusInternalServerError
 	}
-	return &event, DB_SUCCESS
+	return &event, http.StatusFound
 }

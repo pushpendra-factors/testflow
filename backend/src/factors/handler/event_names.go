@@ -20,7 +20,7 @@ func GetEventNamesHandler(c *gin.Context) {
 	}
 
 	ens, errCode := M.GetEventNames(projectId)
-	if errCode != M.DB_SUCCESS {
+	if errCode != http.StatusFound {
 		c.AbortWithStatus(errCode)
 	} else {
 		eventNames := []string{}

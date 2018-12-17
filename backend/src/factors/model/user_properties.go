@@ -41,7 +41,7 @@ func createUserProperties(projectId uint64, userId string, properties postgres.J
 		log.WithFields(log.Fields{"userProperties": &userProperties, "error": err}).Error("createUserProperties Failed")
 		return "", http.StatusInternalServerError
 	}
-	return userProperties.ID, DB_SUCCESS
+	return userProperties.ID, http.StatusCreated
 }
 
 func getUserProperties(projectId uint64, userId string, id string) (*postgres.Jsonb, int) {
@@ -55,7 +55,7 @@ func getUserProperties(projectId uint64, userId string, id string) (*postgres.Js
 		}
 		return nil, http.StatusInternalServerError
 	}
-	return &userProperties.Properties, DB_SUCCESS
+	return &userProperties.Properties, http.StatusFound
 }
 
 func FillUserDefaultProperties(properties *U.PropertiesMap, clientIP string) error {

@@ -32,7 +32,7 @@ func GetProjectSetting(projectId uint64) (*ProjectSetting, int) {
 		return nil, http.StatusInternalServerError
 	}
 
-	return &projectSetting, DB_SUCCESS
+	return &projectSetting, http.StatusFound
 }
 
 func createProjectSetting(ps *ProjectSetting) (*ProjectSetting, int) {
@@ -47,7 +47,7 @@ func createProjectSetting(ps *ProjectSetting) (*ProjectSetting, int) {
 		return nil, http.StatusInternalServerError
 	}
 
-	return ps, DB_SUCCESS
+	return ps, http.StatusCreated
 }
 
 func UpdateProjectSettings(projectId uint64, ps *ProjectSetting) (*ProjectSetting, int) {
@@ -73,5 +73,5 @@ func UpdateProjectSettings(projectId uint64, ps *ProjectSetting) (*ProjectSettin
 		return nil, http.StatusInternalServerError
 	}
 
-	return &updatedProjectSetting, DB_SUCCESS
+	return &updatedProjectSetting, http.StatusAccepted
 }

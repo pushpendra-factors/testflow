@@ -33,7 +33,7 @@ func SetScopeProjectIdByToken() gin.HandlerFunc {
 		}
 
 		project, errCode := M.GetProjectByToken(token)
-		if errCode != M.DB_SUCCESS {
+		if errCode != http.StatusFound {
 			errorMessage := "Invalid token"
 			log.WithFields(log.Fields{"error": errorMessage}).Error("Request failed because of invalid token.")
 			c.AbortWithStatusJSON(http.StatusUnauthorized, map[string]string{"error": errorMessage})
@@ -80,7 +80,7 @@ func SetScopeAuthorizedProjectsBySubdomain() gin.HandlerFunc {
 		// Only requests from dev and localhost authorized to access all projects. For tests.
 		if C.IsDevelopment() && U.IsRequestFromLocalhost(c.Request.Host) {
 			allProjects, errCode := M.GetProjects()
-			if errCode != M.DB_SUCCESS {
+			if errCode != http.StatusFound {
 				c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Dev envinoment failure. Failed to get projects."})
 				return
 			}

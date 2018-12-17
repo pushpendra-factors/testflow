@@ -21,7 +21,7 @@ func TestDBCreateAndGetEvent(t *testing.T) {
 
 	// Test successful CreateEvent.
 	event, errCode := M.CreateEvent(&M.Event{EventNameId: eventNameId, ProjectId: projectId, UserId: userId})
-	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Equal(t, http.StatusCreated, errCode)
 	assert.True(t, len(event.ID) > 30)
 	assert.Equal(t, projectId, event.ProjectId)
 	assert.Equal(t, eventNameId, event.EventNameId)
@@ -32,7 +32,7 @@ func TestDBCreateAndGetEvent(t *testing.T) {
 	assert.Equal(t, postgres.Jsonb{RawMessage: json.RawMessage(nil)}, event.Properties)
 	// Test Get Event on the created.
 	retEvent, errCode := M.GetEvent(projectId, userId, event.ID)
-	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Equal(t, http.StatusFound, errCode)
 	// time.Time is not exactly same. Checking within an error threshold.
 	assert.True(t, math.Abs(event.CreatedAt.Sub(retEvent.CreatedAt).Seconds()) < 0.1)
 	assert.True(t, math.Abs(event.UpdatedAt.Sub(retEvent.UpdatedAt).Seconds()) < 0.1)
@@ -51,7 +51,7 @@ func TestDBCreateAndGetEvent(t *testing.T) {
 	assert.Nil(t, retEvent)
 	// Test successful CreateEvent with count increment
 	event, errCode = M.CreateEvent(&M.Event{EventNameId: eventNameId, ProjectId: projectId, UserId: userId})
-	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Equal(t, http.StatusCreated, errCode)
 	assert.True(t, len(event.ID) > 30)
 	assert.Equal(t, projectId, event.ProjectId)
 	assert.Equal(t, eventNameId, event.EventNameId)
@@ -69,7 +69,7 @@ func TestDBCreateAndGetEvent(t *testing.T) {
 	// Test Create Event with properties.
 	properties := json.RawMessage(`{"email": "random@example.com"}`)
 	event, errCode = M.CreateEvent(&M.Event{EventNameId: eventNameId, ProjectId: projectId, UserId: userId, Properties: postgres.Jsonb{properties}})
-	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotNil(t, event)
 	assert.NotEqual(t, postgres.Jsonb{RawMessage: json.RawMessage(nil)}, event.Properties)
 	// Retrieve and validate properties.

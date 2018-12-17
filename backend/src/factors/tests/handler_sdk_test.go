@@ -65,7 +65,7 @@ func TestSDKTrack(t *testing.T) {
 	assert.NotEmpty(t, responseMap)
 	assert.Nil(t, responseMap["user_id"])
 	ren, errCode := M.GetEventNameByFilter(&M.EventName{ProjectId: project.ID, Name: rEventName})
-	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Equal(t, http.StatusFound, errCode)
 	assert.Equal(t, M.USER_CREATED_EVENT_NAME, ren.AutoName)
 	assert.NotEqual(t, ren.Name, ren.AutoName)
 
@@ -79,7 +79,7 @@ func TestSDKTrack(t *testing.T) {
 	assert.NotEmpty(t, responseMap)
 	assert.Nil(t, responseMap["user_id"])
 	ren, errCode = M.GetEventNameByFilter(&M.EventName{ProjectId: project.ID, Name: rEventName})
-	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotEqual(t, M.USER_CREATED_EVENT_NAME, ren.AutoName)
 	assert.Equal(t, ren.Name, ren.AutoName)
 
@@ -93,13 +93,13 @@ func TestSDKTrack(t *testing.T) {
 	assert.NotEmpty(t, responseMap)
 	assert.Nil(t, responseMap["user_id"])
 	rEvent, errCode := M.GetEvent(project.ID, user.ID, responseMap["event_id"].(string))
-	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, rEvent)
 	eventPropertiesBytes, err := rEvent.Properties.Value()
 	assert.Nil(t, err)
 	var eventProperties map[string]interface{}
 	json.Unmarshal(eventPropertiesBytes.([]byte), &eventProperties)
-	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Equal(t, http.StatusFound, errCode)
 	assert.Nil(t, eventProperties["$dollar_property"])
 	assert.NotNil(t, eventProperties[fmt.Sprintf("%s$dollar_property", U.NAME_PREFIX_ESCAPE_CHAR)]) // escaped property should exist.
 	assert.NotNil(t, eventProperties["$qp_search"])                                                 // $qp should exist.
@@ -278,7 +278,7 @@ func TestSDKAddUserProperties(t *testing.T) {
 	responseMap = DecodeJSONResponseToMap(w.Body)
 	assert.NotEmpty(t, responseMap)
 	retUser, errCode := M.GetUser(project.ID, user.ID)
-	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Equal(t, http.StatusFound, errCode)
 	userPropertiesBytes, err := retUser.Properties.Value()
 	assert.Nil(t, err)
 	var userPropertiesMap map[string]interface{}
@@ -294,12 +294,12 @@ func TestSDKAddUserProperties(t *testing.T) {
 	propsResponseMap := DecodeJSONResponseToMap(w.Body)
 	assert.Nil(t, propsResponseMap["user_id"])
 	retUser, errCode = M.GetUser(project.ID, user.ID)
-	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Equal(t, http.StatusFound, errCode)
 	userPropertiesBytes, err = retUser.Properties.Value()
 	assert.Nil(t, err)
 	var userPropertiesMap2 map[string]interface{}
 	json.Unmarshal(userPropertiesBytes.([]byte), &userPropertiesMap2)
-	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, userPropertiesMap2["int_prop"])
 	assert.NotNil(t, userPropertiesMap2["long_prop"])
 	assert.NotNil(t, userPropertiesMap2["string_prop"])
@@ -315,12 +315,12 @@ func TestSDKAddUserProperties(t *testing.T) {
 	propsResponseMap1 := DecodeJSONResponseToMap(w.Body)
 	assert.Nil(t, propsResponseMap1["user_id"])
 	retUser, errCode = M.GetUser(project.ID, user.ID)
-	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Equal(t, http.StatusFound, errCode)
 	userPropertiesBytes, err = retUser.Properties.Value()
 	assert.Nil(t, err)
 	var userPropertiesMap3 map[string]interface{}
 	json.Unmarshal(userPropertiesBytes.([]byte), &userPropertiesMap3)
-	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Equal(t, http.StatusFound, errCode)
 	assert.Nil(t, userPropertiesMap3["$dollar_key"])                                              // dollar prefix not allowed.
 	assert.NotNil(t, userPropertiesMap3[fmt.Sprintf("%s$dollar_key", U.NAME_PREFIX_ESCAPE_CHAR)]) // Escaped key should exist.
 	// check for default props. Hardcoded property name as request payload.

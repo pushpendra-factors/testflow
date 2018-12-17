@@ -21,7 +21,7 @@ func GetProjectSettingHandler(c *gin.Context) {
 	}
 
 	settings, errCode := M.GetProjectSetting(projectId)
-	if errCode != M.DB_SUCCESS {
+	if errCode != http.StatusFound {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Failed to get project settings."})
 	} else {
 		c.JSON(http.StatusOK, settings)
@@ -51,7 +51,7 @@ func UpdateProjectSettingsHandler(c *gin.Context) {
 	}
 
 	updatedPSetting, errCode := M.UpdateProjectSettings(projectId, &projectSetting)
-	if errCode != M.DB_SUCCESS {
+	if errCode != http.StatusAccepted {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Failed to update project settings."})
 		return
 	}

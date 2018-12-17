@@ -17,7 +17,7 @@ func TestDBCreateAndGetProject(t *testing.T) {
 	// Test successful create project.
 	projectName := U.RandomLowerAphaNumString(15)
 	project, errCode := M.CreateProjectWithDependencies(&M.Project{Name: projectName})
-	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Equal(t, http.StatusCreated, errCode)
 	assert.True(t, project.ID > 0)
 	assert.Equal(t, projectName, project.Name)
 	assert.Equal(t, 32, len(project.Token))
@@ -31,7 +31,7 @@ func TestDBCreateAndGetProject(t *testing.T) {
 	providedToken := U.RandomLowerAphaNumString(32)
 	// Reusing the same name. Name is not meant to be unique.
 	project, errCode = M.CreateProjectWithDependencies(&M.Project{Name: projectName, Token: providedToken})
-	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Equal(t, http.StatusCreated, errCode)
 	assert.True(t, project.ID > previousProjectId)
 	assert.Equal(t, projectName, project.Name)
 	assert.Equal(t, 32, len(project.Token))
@@ -41,7 +41,7 @@ func TestDBCreateAndGetProject(t *testing.T) {
 	assert.Equal(t, project.CreatedAt, project.UpdatedAt)
 	// Test Get Project on the created one.
 	getProject, errCode := M.GetProject(project.ID)
-	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Equal(t, http.StatusFound, errCode)
 	// time.Time is not exactly same. Checking within an error threshold.
 	assert.True(t, math.Abs(project.CreatedAt.Sub(getProject.CreatedAt).Seconds()) < 0.1)
 	assert.True(t, math.Abs(project.UpdatedAt.Sub(getProject.UpdatedAt).Seconds()) < 0.1)
@@ -75,13 +75,13 @@ func TestDBCreateAndGetProject(t *testing.T) {
 	// Check corresponding project returned with token.
 	project, errCode = M.CreateProjectWithDependencies(&M.Project{Name: projectName})
 	rProject, rErrCode := M.GetProjectByToken(project.Token)
-	assert.Equal(t, M.DB_SUCCESS, rErrCode)
+	assert.Equal(t, http.StatusFound, rErrCode)
 	assert.Equal(t, project.ID, rProject.ID)
 
 	// Test CreateProjectWithDependencies
 	start = time.Now()
 	projectWithDeps, errCode := M.CreateProjectWithDependencies(&M.Project{Name: U.RandomLowerAphaNumString(15)})
-	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Equal(t, http.StatusCreated, errCode)
 	assert.True(t, projectWithDeps.ID > 0)
 	assert.Equal(t, 32, len(projectWithDeps.Token))
 	assert.True(t, projectWithDeps.CreatedAt.After(start))
@@ -90,6 +90,6 @@ func TestDBCreateAndGetProject(t *testing.T) {
 
 	// Test depedencies creation - ProjectSettings.
 	ps, errCode := M.GetProjectSetting(projectWithDeps.ID)
-	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, ps)
 }

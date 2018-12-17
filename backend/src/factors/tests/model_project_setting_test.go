@@ -16,17 +16,17 @@ func TestDBUpdateProjectSettings(t *testing.T) {
 	// Test UpdateProjectSetting.
 	fieldsToBeUpdated := &M.ProjectSetting{AutoTrack: true}
 	updatedPSettings, errCode := M.UpdateProjectSettings(project.ID, fieldsToBeUpdated)
-	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Equal(t, http.StatusAccepted, errCode)
 	assert.NotNil(t, updatedPSettings)
 	assert.Equal(t, fieldsToBeUpdated.AutoTrack, updatedPSettings.AutoTrack)
 
 	// Test UpdateProjectSetting with default value of a field. Covers a known bug on gorm with '.Updates'.
 	fieldsToBeUpdated = &M.ProjectSetting{AutoTrack: false}
 	updatedPSettings, errCode = M.UpdateProjectSettings(project.ID, fieldsToBeUpdated)
-	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Equal(t, http.StatusAccepted, errCode)
 	assert.NotNil(t, updatedPSettings)
 	projectSetting, errCode := M.GetProjectSetting(project.ID)
-	assert.Equal(t, M.DB_SUCCESS, errCode)
+	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, projectSetting)
 	assert.Equal(t, fieldsToBeUpdated.AutoTrack, projectSetting.AutoTrack)
 

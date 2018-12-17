@@ -16,7 +16,7 @@ func SetupProject() (uint64, error) {
 	// Create random project.
 	random_project_name := U.RandomLowerAphaNumString(15)
 	project, err_code := M.CreateProjectWithDependencies(&M.Project{Name: random_project_name})
-	if err_code != M.DB_SUCCESS {
+	if err_code != http.StatusCreated {
 		return projectId, fmt.Errorf("Project Creation failed.")
 	}
 	projectId = project.ID
@@ -27,7 +27,7 @@ func SetupProjectReturnDAO() (*M.Project, error) {
 	// Create random project.
 	random_project_name := U.RandomLowerAphaNumString(15)
 	project, err_code := M.CreateProjectWithDependencies(&M.Project{Name: random_project_name})
-	if err_code != M.DB_SUCCESS {
+	if err_code != http.StatusCreated {
 		return nil, fmt.Errorf("Project Creation failed.")
 	}
 	return project, nil
@@ -37,12 +37,12 @@ func SetupProjectUserReturnDAO() (*M.Project, *M.User, error) {
 	// Create random project and user.
 	random_project_name := U.RandomLowerAphaNumString(15)
 	project, err_code := M.CreateProjectWithDependencies(&M.Project{Name: random_project_name})
-	if err_code != M.DB_SUCCESS {
+	if err_code != http.StatusCreated {
 		return nil, nil, fmt.Errorf("Project Creation failed.")
 	}
 
 	user, err_code := M.CreateUser(&M.User{ProjectId: project.ID})
-	if err_code != M.DB_SUCCESS {
+	if err_code != http.StatusCreated {
 		return nil, nil, fmt.Errorf("User Creation failed.")
 	}
 
@@ -58,15 +58,15 @@ func SetupProjectUserEventName() (uint64, string, uint64, error) {
 	// Create random project and a corresponding eventName and user.
 	random_project_name := U.RandomLowerAphaNumString(15)
 	project, err_code := M.CreateProjectWithDependencies(&M.Project{Name: random_project_name})
-	if err_code != M.DB_SUCCESS {
+	if err_code != http.StatusCreated {
 		return projectId, userId, eventNameId, fmt.Errorf("Project Creation failed.")
 	}
 	user, err_code := M.CreateUser(&M.User{ProjectId: project.ID})
-	if err_code != M.DB_SUCCESS {
+	if err_code != http.StatusCreated {
 		return projectId, userId, eventNameId, fmt.Errorf("User Creation failed.")
 	}
 	en, err_code := M.CreateOrGetEventName(&M.EventName{ProjectId: project.ID, Name: "login"})
-	if err_code != M.DB_SUCCESS {
+	if err_code != http.StatusCreated {
 		return projectId, userId, eventNameId, fmt.Errorf("EventName Creation failed.")
 	}
 	projectId = project.ID
@@ -79,17 +79,17 @@ func SetupProjectUserEventNameReturnDAO() (*M.Project, *M.User, *M.EventName, er
 	// Create random project and a corresponding eventName and user.
 	random_project_name := U.RandomLowerAphaNumString(15)
 	project, err_code := M.CreateProjectWithDependencies(&M.Project{Name: random_project_name})
-	if err_code != M.DB_SUCCESS {
+	if err_code != http.StatusCreated {
 		return nil, nil, nil, fmt.Errorf("Project Creation failed.")
 	}
 
 	user, err_code := M.CreateUser(&M.User{ProjectId: project.ID})
-	if err_code != M.DB_SUCCESS {
+	if err_code != http.StatusCreated {
 		return nil, nil, nil, fmt.Errorf("User Creation failed.")
 	}
 
 	en, err_code := M.CreateOrGetEventName(&M.EventName{ProjectId: project.ID, Name: "login"})
-	if err_code != http.StatusConflict && err_code != M.DB_SUCCESS {
+	if err_code != http.StatusConflict && err_code != http.StatusCreated {
 		return nil, nil, nil, fmt.Errorf("EventName Creation failed.")
 	}
 

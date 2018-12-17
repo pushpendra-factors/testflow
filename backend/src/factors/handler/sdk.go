@@ -75,7 +75,7 @@ func SDKTrackHandler(c *gin.Context) {
 	if event.UserId == "" {
 		newUser := M.User{ProjectId: scopeProjectId}
 		_, errCode := M.CreateUser(&newUser)
-		if errCode != M.DB_SUCCESS {
+		if errCode != http.StatusCreated {
 			c.AbortWithStatusJSON(errCode, gin.H{"error": "Tracking failed. User creation failed."})
 			return
 		}
@@ -92,7 +92,7 @@ func SDKTrackHandler(c *gin.Context) {
 	} else {
 		eventName, errCode = M.CreateOrGetUserCreatedEventName(&M.EventName{Name: event.Name, ProjectId: scopeProjectId})
 	}
-	if errCode != http.StatusConflict && errCode != M.DB_SUCCESS {
+	if errCode != http.StatusConflict && errCode != http.StatusCreated {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Tracking failed. EventName creation failed."})
 		return
 	}
@@ -109,7 +109,7 @@ func SDKTrackHandler(c *gin.Context) {
 	event.ProjectId = scopeProjectId
 	createdEvent, errCode := M.CreateEvent(&M.Event{EventNameId: eventName.ID, Properties: postgres.Jsonb{propertiesJSON},
 		ProjectId: scopeProjectId, UserId: event.UserId})
-	if errCode != M.DB_SUCCESS {
+	if errCode != http.StatusCreated {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Tracking failed. Event creation failed."})
 	} else {
 		response["event_id"] = createdEvent.ID
@@ -170,13 +170,13 @@ func SDKIdentifyHandler(c *gin.Context) {
 		case http.StatusNotFound:
 			newUser := M.User{ProjectId: scopeProjectId, CustomerUserId: identifiedUser.CustomerUserId}
 			_, errCode := M.CreateUser(&newUser)
-			if errCode != M.DB_SUCCESS {
+			if errCode != http.StatusCreated {
 				c.AbortWithStatusJSON(errCode, gin.H{"error": "Identification failed. User creation failed."})
 				return
 			}
 			response["user_id"] = newUser.ID
 
-		case M.DB_SUCCESS:
+		case http.StatusFound:
 			response["user_id"] = userLatest.ID
 		}
 
@@ -186,7 +186,7 @@ func SDKIdentifyHandler(c *gin.Context) {
 	}
 
 	scopeUser, errCode := M.GetUser(scopeProjectId, identifiedUser.UserId)
-	if errCode != M.DB_SUCCESS {
+	if errCode != http.StatusFound {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Identification failed. Invalid user_id."})
 		return
 	}
@@ -202,7 +202,7 @@ func SDKIdentifyHandler(c *gin.Context) {
 	if scopeUser.CustomerUserId != "" {
 		newUser := M.User{ProjectId: scopeProjectId, CustomerUserId: scopeUser.CustomerUserId}
 		_, errCode := M.CreateUser(&newUser)
-		if errCode != M.DB_SUCCESS {
+		if errCode != http.StatusCreated {
 			c.AbortWithStatusJSON(errCode, gin.H{"error": "Identification failed. User creation failed."})
 			return
 		}
@@ -213,7 +213,7 @@ func SDKIdentifyHandler(c *gin.Context) {
 
 	// Happy path. Maps customer_user to an user.
 	_, errCode = M.UpdateUser(scopeProjectId, identifiedUser.UserId, &M.User{CustomerUserId: identifiedUser.CustomerUserId})
-	if errCode != M.DB_SUCCESS {
+	if errCode != http.StatusAccepted {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Identification failed. Failed mapping customer_user to user"})
 		return
 	}
@@ -266,7 +266,7 @@ func SDKAddUserPropertiesHandler(c *gin.Context) {
 		// Create user with properties and respond user_id. Only properties allowed on create.
 		newUser, errCode := M.CreateUser(&M.User{ProjectId: scopeProjectId,
 			Properties: postgres.Jsonb{propertiesJSON}})
-		if errCode != M.DB_SUCCESS {
+		if errCode != http.StatusCreated {
 			c.AbortWithStatusJSON(errCode, gin.H{"error": "Add user properties failed. User create failed"})
 			return
 		}
@@ -276,13 +276,13 @@ func SDKAddUserPropertiesHandler(c *gin.Context) {
 
 	// Todo(Dinesh): Make UpdateUser to return 404 on 0 rows affected and remove this.
 	scopeUser, errCode := M.GetUser(scopeProjectId, addPropsUser.UserId)
-	if errCode != M.DB_SUCCESS {
+	if errCode != http.StatusFound {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Add user properties failed. Invalid user_id."})
 		return
 	}
 
 	if _, errCode = M.UpdateUser(scopeProjectId, scopeUser.ID,
-		&M.User{Properties: postgres.Jsonb{propertiesJSON}}); errCode != M.DB_SUCCESS {
+		&M.User{Properties: postgres.Jsonb{propertiesJSON}}); errCode != http.StatusAccepted {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Add user properties failed."})
 		return
 	}
@@ -302,7 +302,7 @@ func SDKGetProjectSettings(c *gin.Context) {
 	scopeProjectId := scopeProjectIdIntf.(uint64)
 
 	projectSetting, errCode := M.GetProjectSetting(scopeProjectId)
-	if errCode != M.DB_SUCCESS {
+	if errCode != http.StatusFound {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Get project settings failed."})
 		return
 	}
