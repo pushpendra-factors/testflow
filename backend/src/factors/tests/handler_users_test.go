@@ -39,6 +39,7 @@ func TestAPICreateAndGetUser(t *testing.T) {
 	assert.Nil(t, jsonResponseMap["properties"])
 	assert.NotNil(t, jsonResponseMap["created_at"].(string))
 	assert.NotNil(t, jsonResponseMap["updated_at"].(string))
+	assert.True(t, len(jsonResponseMap["properties_id"].(string)) > 0)
 	assert.Equal(t, 7, len(jsonResponseMap))
 
 	// Test GetUser on the created id.
@@ -97,6 +98,7 @@ func TestAPICreateUserEmptyAndWithAttributes(t *testing.T) {
 	assert.Equal(t, "10.0.0.1", propertiesMap["ip"].(string))
 	assert.Equal(t, true, propertiesMap["mobile"].(bool))
 	assert.Equal(t, 1.0, propertiesMap["code"].(float64))
+	assert.True(t, len(jsonResponseMap["properties_id"].(string)) > 0)
 	assert.Equal(t, 7, len(jsonResponseMap))
 
 	// Test CreateUser without customerUserId and data.
@@ -115,6 +117,7 @@ func TestAPICreateUserEmptyAndWithAttributes(t *testing.T) {
 	assert.NotNil(t, jsonResponseMap["created_at"].(string))
 	assert.NotNil(t, jsonResponseMap["updated_at"].(string))
 	assert.Nil(t, jsonResponseMap["properties"])
+	assert.True(t, len(jsonResponseMap["properties_id"].(string)) > 0)
 	assert.Equal(t, 7, len(jsonResponseMap))
 }
 
@@ -145,6 +148,7 @@ func TestAPICreateUserWithCreatedTime(t *testing.T) {
 	assert.Equal(t, customerUserId, jsonResponseMap["c_uid"].(string))
 	assert.Equal(t, timeStr, jsonResponseMap["created_at"].(string))
 	assert.Nil(t, jsonResponseMap["properties"])
+	assert.True(t, len(jsonResponseMap["properties_id"].(string)) > 0)
 	assert.Equal(t, 7, len(jsonResponseMap))
 }
 

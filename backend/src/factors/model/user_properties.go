@@ -1,13 +1,16 @@
 package model
 
 import (
+	"encoding/json"
 	C "factors/config"
 	U "factors/util"
 	"fmt"
 	"net"
 	"net/http"
+	"reflect"
 	"time"
 
+	"github.com/imdario/mergo"
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
@@ -27,14 +30,38 @@ type UserProperties struct {
 	CreatedAt  time.Time      `json:"created_at"`
 }
 
-func createUserProperties(projectId uint64, userId string, properties postgres.Jsonb) (string, int) {
+func createUserPropertiesIfChanged(projectId uint64, userId string,
+	currentPropertiesId string, newProperties *postgres.Jsonb) (string, int) {
 	db := C.GetServices().Db
+
+	currentProperties := &postgres.Jsonb{}
+	var statusCode int
+
+	var currentPropertiesMap map[string]interface{}
+	var newPropertiesMap map[string]interface{}
+	json.Unmarshal((*newProperties).RawMessage, &newPropertiesMap)
+
+	if currentPropertiesId != "" {
+		currentProperties, statusCode = getUserProperties(
+			projectId, userId, currentPropertiesId)
+		json.Unmarshal((*currentProperties).RawMessage, &currentPropertiesMap)
+		if statusCode == http.StatusFound {
+			if reflect.DeepEqual(currentPropertiesMap, newPropertiesMap) {
+				return currentPropertiesId, http.StatusNotModified
+			}
+		}
+	}
+	// Overwrite only given values.
+	mergo.Merge(&currentPropertiesMap, newPropertiesMap, mergo.WithOverride)
+	updatedPropertiesBytes, err := json.Marshal(currentPropertiesMap)
+	if err != nil {
+		return "", http.StatusInternalServerError
+	}
 	userProperties := UserProperties{
 		UserId:     userId,
 		ProjectId:  projectId,
-		Properties: properties,
+		Properties: postgres.Jsonb{RawMessage: json.RawMessage(updatedPropertiesBytes)},
 	}
-
 	log.WithFields(log.Fields{"UserProperties": &userProperties}).Info("Creating user properties")
 
 	if err := db.Create(&userProperties).Error; err != nil {

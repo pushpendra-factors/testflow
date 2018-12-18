@@ -41,6 +41,14 @@ func TestDBCreateAndGetUser(t *testing.T) {
 	assert.True(t, math.Abs(user.UpdatedAt.Sub(retUser.UpdatedAt).Seconds()) < 0.1)
 	user.CreatedAt = time.Time{}
 	user.UpdatedAt = time.Time{}
+	var userProperties, retUserProperties map[string]interface{}
+	json.Unmarshal(user.Properties.RawMessage, &userProperties)
+	json.Unmarshal(retUser.Properties.RawMessage, &retUserProperties)
+	assert.Equal(t, len(userProperties), 0)
+	assert.Equal(t, len(retUserProperties), 0)
+	// nil gets changed to null.
+	// A row in user_properties is created even when properties is nil.
+	user.Properties = postgres.Jsonb{RawMessage: json.RawMessage([]byte(`null`))}
 	retUser.CreatedAt = time.Time{}
 	retUser.UpdatedAt = time.Time{}
 	assert.Equal(t, user, retUser)
@@ -205,6 +213,45 @@ func TestDBUpdateUserById(t *testing.T) {
 	rCustomerUserId = U.RandomLowerAphaNumString(15)
 	_, errCode = M.UpdateUser(project.ID, "", &M.User{})
 	assert.NotEqual(t, http.StatusAccepted, errCode)
+}
+
+func TestDBUpdateUserProperties(t *testing.T) {
+	// Intialize.
+	project, user, err := SetupProjectUserReturnDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+	assert.NotNil(t, user)
+	assert.True(t, len(user.PropertiesId) > 0)
+
+	// No change on empty json
+	newProperties := &postgres.Jsonb{}
+	status := M.UpdateUserProperties(project.ID, user.ID, newProperties)
+	assert.Equal(t, http.StatusNotModified, status)
+
+	newProperties = &postgres.Jsonb{RawMessage: json.RawMessage([]byte(
+		`{"country": "india", "age": 30.1, "paid": true}`))}
+	status = M.UpdateUserProperties(project.ID, user.ID, newProperties)
+	assert.Equal(t, http.StatusAccepted, status)
+
+	newProperties = &postgres.Jsonb{RawMessage: json.RawMessage([]byte(
+		`{"country": "india", "age": 30.1, "paid": true}`))}
+	status = M.UpdateUserProperties(project.ID, user.ID, newProperties)
+	assert.Equal(t, http.StatusNotModified, status)
+
+	newProperties = &postgres.Jsonb{RawMessage: json.RawMessage([]byte(
+		`{"age": 30.1, "paid": true, "country": "usa"}`))}
+	status = M.UpdateUserProperties(project.ID, user.ID, newProperties)
+	assert.Equal(t, http.StatusAccepted, status)
+
+	newProperties = &postgres.Jsonb{RawMessage: json.RawMessage([]byte(
+		`{"device": "android"}`))}
+	status = M.UpdateUserProperties(project.ID, user.ID, newProperties)
+	assert.Equal(t, http.StatusAccepted, status)
+
+	newProperties = &postgres.Jsonb{RawMessage: json.RawMessage([]byte(
+		`{"age": 30.1, "country": "usa", "device": "android", "paid": true}`))}
+	status = M.UpdateUserProperties(project.ID, user.ID, newProperties)
+	assert.Equal(t, http.StatusNotModified, status)
 }
 
 func TestAddUserDefaultProperties(t *testing.T) {
