@@ -112,7 +112,7 @@ go build -o $GOPATH/bin/app $GOPATH/src/factors/app/app.go
 cd $GOPATH/bin
 mkdir -p /tmp/factors/config
 mkdir -p /tmp/factors/geolocation_data
-cp <path_to_github_code>/geolocation_data/GeoLite2-Country.mmdb /tmp/factors/geolocation_data
+cp <path_to_github_code>/geolocation_data/GeoLite2-City.mmdb /tmp/factors/geolocation_data
 cp $GOPATH/src/factors/config/config.json /tmp/factors/config
 ./app --config_filepath=/tmp/factors/config/config.json
 ```
