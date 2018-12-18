@@ -2,6 +2,8 @@
 
 const util = require("./utils/util");
 
+const PLATFORM_WEB = "web";
+
 const BrowserInfo = {
     getBrowser: function () {
         // initial values for checks
@@ -282,7 +284,9 @@ const BrowserInfo = {
  * */
 function getUserDefault(pfix="$") {
     let dp = {};
-    if (document.referrer) dp[pfix+"referrer"] = document.referrer;
+    dp[pfix+"platform"] = PLATFORM_WEB;
+
+    dp[pfix+"referrer"] = document.referrer;
 
     let browser = BrowserInfo.getBrowser();
     if (browser.name) dp[pfix+"browser"] = browser.name;

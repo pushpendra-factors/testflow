@@ -13,28 +13,29 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type SDKTrackPayload struct {
-	Name       string          `json:"event_name"`
-	Properties U.PropertiesMap `json:"event_properties"`
-	ProjectId  uint64          `json:"project_id"`
-	UserId     string          `json:"user_id"`
-	Auto       bool            `json:"auto"`
-	CreatedAt  time.Time       `json:"created_at"`
-	UpdatedAt  time.Time       `json:"updated_at"`
+type sdkTrackPayload struct {
+	Name            string          `json:"event_name"`
+	EventProperties U.PropertiesMap `json:"event_properties"`
+	UserProperties  U.PropertiesMap `json:"user_properties"`
+	ProjectId       uint64          `json:"project_id"`
+	UserId          string          `json:"user_id"`
+	Auto            bool            `json:"auto"`
+	CreatedAt       time.Time       `json:"created_at"`
+	UpdatedAt       time.Time       `json:"updated_at"`
 }
 
-type SDKIdentifyPayload struct {
+type sdkIdentifyPayload struct {
 	UserId         string `json:"user_id"`
 	CustomerUserId string `json:"c_uid"`
 }
 
-type SDKAddPropertiesPayload struct {
+type sdkAddPropertiesPayload struct {
 	UserId     string          `json:"user_id"`
-	Properties U.PropertiesMap `json:"properties,omitempty"`
+	Properties U.PropertiesMap `json:"properties"`
 }
 
 // Test command.
-// curl -i -H "Content-Type: application/json" -H "Authorization: YOUR_TOKEN" -X POST http://localhost:8080/sdk/event/track -d '{"user_id": "YOUR_USER_ID", "event_name": "login", "event_properties": {"ip": "10.0.0.1", "mobile": true}}'
+// curl -i -H "Content-Type: application/json" -H "Authorization: YOUR_TOKEN" -X POST http://localhost:8080/sdk/event/track -d '{"user_id": "YOUR_USER_ID", "event_name": "login", "event_properties": {"ip": "10.0.0.1", "mobile": true}, "user_properties": {"$os": "Mac OS"}}'
 func SDKTrackHandler(c *gin.Context) {
 	r := c.Request
 
@@ -44,7 +45,7 @@ func SDKTrackHandler(c *gin.Context) {
 		return
 	}
 
-	var event SDKTrackPayload
+	var event sdkTrackPayload
 
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
@@ -98,8 +99,8 @@ func SDKTrackHandler(c *gin.Context) {
 	}
 
 	// Validate properties.
-	validProperties := U.GetValidatedEventProperties(&event.Properties)
-	propertiesJSON, err := json.Marshal(validProperties)
+	validEventProperties := U.GetValidatedEventProperties(&event.EventProperties)
+	eventPropsJSON, err := json.Marshal(validEventProperties)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Tracking failed. Invalid properties."})
 		return
@@ -107,15 +108,35 @@ func SDKTrackHandler(c *gin.Context) {
 
 	// Create Event.
 	event.ProjectId = scopeProjectId
-	createdEvent, errCode := M.CreateEvent(&M.Event{EventNameId: eventName.ID, Properties: postgres.Jsonb{propertiesJSON},
+	createdEvent, errCode := M.CreateEvent(&M.Event{EventNameId: eventName.ID, Properties: postgres.Jsonb{eventPropsJSON},
 		ProjectId: scopeProjectId, UserId: event.UserId})
 	if errCode != http.StatusCreated {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Tracking failed. Event creation failed."})
-	} else {
-		response["event_id"] = createdEvent.ID
-		response["message"] = "User event tracked successfully."
-		c.JSON(http.StatusOK, response)
+		return
 	}
+
+	// Update user properties on track.
+	validUserProperties := U.GetValidatedUserProperties(&event.UserProperties)
+	_ = M.FillUserDefaultProperties(validUserProperties, c.ClientIP())
+
+	userPropsJSON, err := json.Marshal(validUserProperties)
+	if err != nil {
+		log.WithFields(log.Fields{"userProperties": validUserProperties, "eventId": createdEvent.ID,
+			"error": err}).Error("Update user properites on track failed. Unmarshal json failed.")
+		response["error"] = "Failed updating user properties."
+	}
+
+	errCode = M.UpdateUserProperties(scopeProjectId, event.UserId, &postgres.Jsonb{userPropsJSON})
+	if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
+		log.WithFields(log.Fields{"userProperties": validUserProperties, "eventId": createdEvent.ID,
+			"error": errCode}).Error("Update user properties on track failed. DB update failed.")
+		response["error"] = "Failed updating user properties."
+	}
+
+	response["event_id"] = createdEvent.ID
+	response["message"] = "User event tracked successfully."
+
+	c.JSON(http.StatusOK, response)
 }
 
 // Test command.
@@ -129,7 +150,7 @@ func SDKIdentifyHandler(c *gin.Context) {
 		return
 	}
 
-	var identifiedUser SDKIdentifyPayload
+	var identifiedUser sdkIdentifyPayload
 
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
@@ -232,7 +253,7 @@ func SDKAddUserPropertiesHandler(c *gin.Context) {
 		return
 	}
 
-	var addPropsUser SDKAddPropertiesPayload
+	var addPropsUser sdkAddPropertiesPayload
 
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()

@@ -47,7 +47,17 @@ func TestSDKTrack(t *testing.T) {
 
 	// Test without properties and with empty properites in the payload.
 	w = ServePostRequestWithHeaders(r, uri,
-		[]byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "event_1", "event_properties": {}}`, user.ID)),
+		[]byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "event_1", "event_properties": {}, "user_properties": {"$os": "Mac OS"}}`, user.ID)),
+		map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	w = ServePostRequestWithHeaders(r, uri,
+		[]byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "event_2"}`, user.ID)),
+		map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	// Test with empty user properties in the payload.
+	w = ServePostRequestWithHeaders(r, uri,
+		[]byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "event_1", "event_properties": {"mobile" : "true"}, "user_properties": {}}`, user.ID)),
 		map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 	w = ServePostRequestWithHeaders(r, uri,
@@ -58,7 +68,7 @@ func TestSDKTrack(t *testing.T) {
 	// Test track user created event.
 	rEventName := U.RandomLowerAphaNumString(10)
 	w = ServePostRequestWithHeaders(r, uri,
-		[]byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "%s", "event_properties": {"mobile" : "true"}}`, user.ID, rEventName)),
+		[]byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "%s", "event_properties": {"mobile" : "true"}, "user_properties": {"$os": "Mac OS"}}`, user.ID, rEventName)),
 		map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 	responseMap = DecodeJSONResponseToMap(w.Body)
@@ -72,7 +82,7 @@ func TestSDKTrack(t *testing.T) {
 	// Test auto tracked event.
 	rEventName = U.RandomLowerAphaNumString(10)
 	w = ServePostRequestWithHeaders(r, uri,
-		[]byte(fmt.Sprintf(`{"user_id": "%s", "auto": true, "event_name": "%s", "event_properties": {"mobile" : "true"}}`, user.ID, rEventName)),
+		[]byte(fmt.Sprintf(`{"user_id": "%s", "auto": true, "event_name": "%s", "event_properties": {"mobile" : "true"}, "user_properties": {"$os": "Mac OS"}}`, user.ID, rEventName)),
 		map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 	responseMap = DecodeJSONResponseToMap(w.Body)
@@ -105,6 +115,39 @@ func TestSDKTrack(t *testing.T) {
 	assert.NotNil(t, eventProperties["$qp_search"])                                                 // $qp should exist.
 	assert.Nil(t, eventProperties[fmt.Sprintf("%s$qp_search", U.NAME_PREFIX_ESCAPE_CHAR)])          // $qp should not be escaped.
 	assert.NotNil(t, eventProperties["mobile"])                                                     // no dollar properties should exist.
+
+	// Should not allow $ prefixes apart from default properties.
+	rEventName = U.RandomLowerAphaNumString(10)
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "%s", "event_properties": {"mobile": "true"}, "user_properties": {"$dollar_key": "unknow_value", "$os": "mac osx", "$osVersion": "1_2_3", "$referrer": "http://google.com", "$screenWidth": 10, "$screenHeight": 11, "$browser": "mozilla", "$platform": "web", "$browserVersion": "10_2_3"}}`,
+		user.ID, rEventName)), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	propsResponseMap1 := DecodeJSONResponseToMap(w.Body)
+	assert.Nil(t, propsResponseMap1["user_id"])
+	retUser, errCode := M.GetUser(project.ID, user.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+	userPropertiesBytes, err := retUser.Properties.Value()
+	assert.Nil(t, err)
+	var userPropertiesMap3 map[string]interface{}
+	json.Unmarshal(userPropertiesBytes.([]byte), &userPropertiesMap3)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Nil(t, userPropertiesMap3["$dollar_key"])                                              // dollar prefix not allowed.
+	assert.NotNil(t, userPropertiesMap3[fmt.Sprintf("%s$dollar_key", U.NAME_PREFIX_ESCAPE_CHAR)]) // Escaped key should exist.
+	// check for default props. Hardcoded property name as request payload.
+	assert.NotNil(t, userPropertiesMap3["$os"])
+	assert.NotNil(t, userPropertiesMap3["$osVersion"])
+	assert.NotNil(t, userPropertiesMap3["$browser"])
+	assert.NotNil(t, userPropertiesMap3["$referrer"])
+	assert.NotNil(t, userPropertiesMap3["$platform"])
+	assert.NotNil(t, userPropertiesMap3["$screenWidth"])
+	assert.NotNil(t, userPropertiesMap3["$screenHeight"])
+	// should not be escaped.
+	assert.Nil(t, userPropertiesMap3["_$os"])
+	assert.Nil(t, userPropertiesMap3["_$osVersion"])
+	assert.Nil(t, userPropertiesMap3["_$browser"])
+	assert.Nil(t, userPropertiesMap3["_$referrer"])
+	assert.Nil(t, userPropertiesMap3["_$platform"])
+	assert.Nil(t, userPropertiesMap3["_$screenWidth"])
+	assert.Nil(t, userPropertiesMap3["_$screenHeight"])
 }
 
 func TestSDKIdentify(t *testing.T) {
@@ -309,7 +352,7 @@ func TestSDKAddUserProperties(t *testing.T) {
 	assert.Nil(t, userPropertiesMap2["map_prop"])
 
 	// Should not allow $ prefixes apart from default properties.
-	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"user_id": "%s", "properties": {"$dollar_key": "unknow_value", "$os": "mac osx", "$osVersion": "1_2_3", "$referrer": "http://google.com", "$screenWidth": 10, "$screenHeight": 11, "$browser": "mozilla", "$browserVersion": "10_2_3"}}`,
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"user_id": "%s", "properties": {"$dollar_key": "unknow_value", "$os": "mac osx", "$osVersion": "1_2_3", "$platform": "web", "$referrer": "http://google.com", "$screenWidth": 10, "$screenHeight": 11, "$browser": "mozilla", "$browserVersion": "10_2_3"}}`,
 		user.ID)), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 	propsResponseMap1 := DecodeJSONResponseToMap(w.Body)
@@ -327,6 +370,7 @@ func TestSDKAddUserProperties(t *testing.T) {
 	assert.NotNil(t, userPropertiesMap3["$os"])
 	assert.NotNil(t, userPropertiesMap3["$osVersion"])
 	assert.NotNil(t, userPropertiesMap3["$browser"])
+	assert.NotNil(t, userPropertiesMap3["$platform"])
 	assert.NotNil(t, userPropertiesMap3["$referrer"])
 	assert.NotNil(t, userPropertiesMap3["$screenWidth"])
 	assert.NotNil(t, userPropertiesMap3["$screenHeight"])
@@ -334,6 +378,7 @@ func TestSDKAddUserProperties(t *testing.T) {
 	assert.Nil(t, userPropertiesMap3["_$os"])
 	assert.Nil(t, userPropertiesMap3["_$osVersion"])
 	assert.Nil(t, userPropertiesMap3["_$browser"])
+	assert.Nil(t, userPropertiesMap3["_$platform"])
 	assert.Nil(t, userPropertiesMap3["_$referrer"])
 	assert.Nil(t, userPropertiesMap3["_$screenWidth"])
 	assert.Nil(t, userPropertiesMap3["_$screenHeight"])

@@ -70,8 +70,7 @@ App.prototype.init = function(token) {
         })
         .then(function() {
             return _this.autoTrack(_this.getConfig("auto_track"));
-        })
-        .catch(logger.debug);
+        });
 }
 
 App.prototype.track = function(eventName, eventProperties, auto=false) {
@@ -88,11 +87,11 @@ App.prototype.track = function(eventName, eventProperties, auto=false) {
     updatePayloadWithUserIdFromCookie(payload);
     payload.event_name = eventName;
     payload.event_properties = eventProperties;
+    payload.user_properties = Properties.getUserDefault();
     payload.auto = auto;
 
     return this.client.track(payload)
-        .then(updateCookieIfUserIdInResponse)
-        .catch(logger.debug);
+        .then(updateCookieIfUserIdInResponse);
 }
 
 App.prototype.autoTrack = function(enabled=false) {
@@ -131,8 +130,7 @@ App.prototype.identify = function(customerUserId) {
     payload.c_uid = customerUserId;
     
     return this.client.identify(payload)
-        .then(updateCookieIfUserIdInResponse)
-        .catch(logger.debug);
+        .then(updateCookieIfUserIdInResponse);
 }
 
 App.prototype.addUserProperties = function (properties={}) {
@@ -156,8 +154,7 @@ App.prototype.addUserProperties = function (properties={}) {
     payload.properties = properties
 
     return this.client.addUserProperties(payload)
-        .then(updateCookieIfUserIdInResponse)
-        .catch(logger.debug);
+        .then(updateCookieIfUserIdInResponse);
 }
 
 // Clears the state of the app.

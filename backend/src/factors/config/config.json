@@ -9,7 +9,7 @@
 		"password": "@ut0me7a"
 	},
 	"pattern_files": {},
-	"geolocation_file": "/tmp/factors/geolocation_data/GeoLite2-Country.mmdb",
+	"geolocation_file": "/tmp/factors/geolocation_data/GeoLite2-City.mmdb",
 	"subdomain_login" : {
 		"enabled": true,
 		"config_filepath": "/tmp/factors/config/subdomain_login_config.json"

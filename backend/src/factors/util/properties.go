@@ -16,6 +16,7 @@ type PropertiesMap map[string]interface{}
 var EP_OCCURRENCE_COUNT string = "$occurrenceCount"
 
 // Default User Properties - Added from JS SDK
+var UP_PLATFORM string = "$platform"
 var UP_REFERRER string = "$referrer"
 var UP_BROWSER string = "$browser"
 var UP_BROWSER_VERSION string = "$browserVersion"
@@ -25,6 +26,7 @@ var UP_SCREEN_WIDTH string = "$screenWidth"
 var UP_SCREEN_HEIGHT string = "$screenHeight"
 
 var DEFAULT_USER_PROPERTIES_SDK = [...]string{
+	UP_PLATFORM,
 	UP_REFERRER,
 	UP_BROWSER,
 	UP_BROWSER_VERSION,
@@ -36,6 +38,7 @@ var DEFAULT_USER_PROPERTIES_SDK = [...]string{
 
 // Default User Properties - Added from Backend
 var UP_COUNTRY string = "$country"
+var UP_CITY string = "$city"
 
 // Default User Property - Added from Backend
 var UP_INTERNAL_IP = "$ip"

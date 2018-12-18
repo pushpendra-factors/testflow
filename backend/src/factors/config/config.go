@@ -84,11 +84,11 @@ func initConfigFromFile() error {
 
 	raw, err := ioutil.ReadFile(configFileAbsPath)
 	if err != nil {
-		logCtx.WithError(err).Error("Failed to load config")
+		logCtx.WithError(err).Fatal("Failed to load config")
 	}
 
 	if err := json.Unmarshal(raw, &configuration); err != nil {
-		logCtx.WithError(err).Error("Failed to unmarshal json")
+		logCtx.WithError(err).Fatal("Failed to unmarshal json")
 	}
 	logCtx.WithFields(log.Fields{"config": &configuration}).Info("Config File Loaded")
 	return nil
@@ -192,9 +192,10 @@ func initServices() error {
 		log.Fatal("Failed to initialize pattern service")
 	}
 
+	// Ref: https://geolite.maxmind.com/download/geoip/database/GeoLite2-City.tar.gz
 	geolocation, err := geoip2.Open(configuration.GeolocationFile)
 	if err != nil {
-		log.Fatal("Failed to initialize geolocation service")
+		log.Fatal("Failed to initialize geolocation service. Falied opening geolocation db file")
 	}
 	log.Info("Geolocation service intialized")
 

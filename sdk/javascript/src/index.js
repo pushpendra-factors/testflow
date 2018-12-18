@@ -1,6 +1,9 @@
 "use strict";
 
 var App = require("./app");
+const logger = require("./utils/logger");
+
+
 
 // Global reference.
 var app = new App();
@@ -10,7 +13,8 @@ var app = new App();
  * @param {string} appToken Unique application token.
  */
 function init(appToken) {
-    app.init(appToken);
+    app.init(appToken)
+        .catch(logger.debug);
     return;
 }
 
@@ -28,7 +32,8 @@ function reset() {
  * @param {Object} eventProperties 
  */
 function track(eventName, eventProperties={}) {
-    app.track(eventName, eventProperties, false);
+    app.track(eventName, eventProperties, false)
+        .catch(logger.debug);
     return;
 }
 
@@ -37,7 +42,8 @@ function track(eventName, eventProperties={}) {
  * @param {string} customerUserId Actual id of the user from the application.
  */
 function identify(customerUserId) {
-    app.identify(customerUserId);
+    app.identify(customerUserId)
+        .catch(logger.debug);
     return;
 }
 
@@ -46,7 +52,8 @@ function identify(customerUserId) {
  * @param {Object} properties 
  */
 function addUserProperties(properties={}) {
-    app.addUserProperties(properties);
+    app.addUserProperties(properties)
+        .catch(logger.debug);
     return;
 }
 

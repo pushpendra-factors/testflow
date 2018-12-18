@@ -96,14 +96,21 @@ func FillUserDefaultProperties(properties *U.PropertiesMap, clientIP string) err
 	// Added IP for internal usage.
 	(*properties)[U.UP_INTERNAL_IP] = clientIP
 
-	country, err := geo.Country(net.ParseIP(clientIP))
+	city, err := geo.City(net.ParseIP(clientIP))
 	if err != nil {
-		log.WithFields(log.Fields{"clientIP": clientIP, "serviceError": err}).Error(
-			"Failed to get country information from geodb")
+		log.WithFields(log.Fields{"clientIP": clientIP, "error": err}).Error(
+			"Failed to get city information from geodb")
 		return err
 	}
 
-	(*properties)[U.UP_COUNTRY] = country.Country.IsoCode
+	// Using en -> english name.
+	if countryName, ok := city.Country.Names["en"]; ok && countryName != "" {
+		(*properties)[U.UP_COUNTRY] = countryName
+	}
+
+	if cityName, ok := city.City.Names["en"]; ok && cityName != "" {
+		(*properties)[U.UP_CITY] = cityName
+	}
 
 	return nil
 }
