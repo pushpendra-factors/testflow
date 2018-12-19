@@ -68,15 +68,9 @@ func CustomCors() gin.HandlerFunc {
 	}
 }
 
-// SetScopeAuthorizedProjectsBySubdomain - Request scope set by subdomain.
+// SetScopeAuthorizedProjectsBySubdomain - scope set by subdomain.
 func SetScopeAuthorizedProjectsBySubdomain() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Token login not enabled.
-		if !C.IsTokenLoginEnabled() {
-			c.Next()
-			return
-		}
-
 		// Only requests from dev and localhost authorized to access all projects. For tests.
 		if C.IsDevelopment() && U.IsRequestFromLocalhost(c.Request.Host) {
 			allProjects, errCode := M.GetProjects()
@@ -91,7 +85,12 @@ func SetScopeAuthorizedProjectsBySubdomain() gin.HandlerFunc {
 			}
 
 			U.SetScope(c, SCOPE_AUTHORIZED_PROJECTS, projectIds)
-		} else {
+
+			c.Next()
+			return
+		}
+
+		if C.IsTokenLoginEnabled() {
 			loginTokenCache := C.GetLoginTokenCache().Map
 			subdomain, err := U.GetRequestSubdomain(c.Request.Host)
 
@@ -105,6 +104,8 @@ func SetScopeAuthorizedProjectsBySubdomain() gin.HandlerFunc {
 				U.SetScope(c, SCOPE_AUTHORIZED_PROJECTS, projectIds)
 			}
 		}
+
+		c.Next()
 	}
 }
 
