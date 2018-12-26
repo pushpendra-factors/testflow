@@ -28,15 +28,19 @@ func TestDBCreateAndGetUser(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.True(t, len(user.ID) > 30)
 	assert.Equal(t, projectId, user.ProjectId)
+	assert.True(t, user.JoinTimestamp >= start.Unix())
+	assert.InDelta(t, user.JoinTimestamp, start.Unix(), 3)
 	assert.True(t, user.CreatedAt.After(start))
 	assert.True(t, user.UpdatedAt.After(start))
-	// Not more than 10ms difference.
-	assert.InDelta(t, user.CreatedAt.UnixNano(), user.UpdatedAt.UnixNano(), 1.0e+7)
+	// Not more than 20ms difference.
+	assert.InDelta(t, user.CreatedAt.UnixNano(), user.UpdatedAt.UnixNano(), 2.0e+7)
 	assert.Equal(t, postgres.Jsonb{RawMessage: json.RawMessage(nil)}, user.Properties)
 	// Test Get User on the created one.
 	retUser, errCode := M.GetUser(projectId, user.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	// time.Time is not exactly same. Checking within an error threshold.
+	assert.True(t, user.JoinTimestamp >= start.Unix())
+	assert.InDelta(t, user.JoinTimestamp, start.Unix(), 3)
 	assert.True(t, math.Abs(user.CreatedAt.Sub(retUser.CreatedAt).Seconds()) < 0.1)
 	assert.True(t, math.Abs(user.UpdatedAt.Sub(retUser.UpdatedAt).Seconds()) < 0.1)
 	user.CreatedAt = time.Time{}
@@ -65,10 +69,12 @@ func TestDBCreateAndGetUser(t *testing.T) {
 	assert.Equal(t, customerUserId, user.CustomerUserId)
 	assert.True(t, len(user.ID) > 30)
 	assert.Equal(t, projectId, user.ProjectId)
+	assert.True(t, user.JoinTimestamp >= start.Unix())
+	assert.InDelta(t, user.JoinTimestamp, start.Unix(), 3)
 	assert.True(t, user.CreatedAt.After(start))
 	assert.True(t, user.UpdatedAt.After(start))
-	// Not more than 10ms difference.
-	assert.InDelta(t, user.CreatedAt.UnixNano(), user.UpdatedAt.UnixNano(), 1.0e+7)
+	// Not more than 20ms difference.
+	assert.InDelta(t, user.CreatedAt.UnixNano(), user.UpdatedAt.UnixNano(), 2.0e+7)
 	assert.Equal(t, properties, user.Properties)
 
 	// Creating again with the same customer_user_id with no properties.
@@ -225,52 +231,64 @@ func TestDBUpdateUserProperties(t *testing.T) {
 
 	// No change on empty json
 	newProperties := &postgres.Jsonb{}
-	status := M.UpdateUserProperties(project.ID, user.ID, newProperties)
+	var oldPropertiesId, newPropertiesId string
+	newPropertiesId, status := M.UpdateUserProperties(project.ID, user.ID, newProperties)
 	assert.Equal(t, http.StatusNotModified, status)
 
+	oldPropertiesId = newPropertiesId
 	newProperties = &postgres.Jsonb{RawMessage: json.RawMessage([]byte(
 		`{"country": "india", "age": 30.1, "paid": true}`))}
-	status = M.UpdateUserProperties(project.ID, user.ID, newProperties)
+	newPropertiesId, status = M.UpdateUserProperties(project.ID, user.ID, newProperties)
 	assert.Equal(t, http.StatusAccepted, status)
+	assert.NotEqual(t, oldPropertiesId, newPropertiesId)
 
+	oldPropertiesId = newPropertiesId
 	newProperties = &postgres.Jsonb{RawMessage: json.RawMessage([]byte(
 		`{"country": "india", "age": 30.1, "paid": true}`))}
-	status = M.UpdateUserProperties(project.ID, user.ID, newProperties)
+	newPropertiesId, status = M.UpdateUserProperties(project.ID, user.ID, newProperties)
 	assert.Equal(t, http.StatusNotModified, status)
+	assert.Equal(t, oldPropertiesId, newPropertiesId)
 
+	oldPropertiesId = newPropertiesId
 	newProperties = &postgres.Jsonb{RawMessage: json.RawMessage([]byte(
 		`{"age": 30.1, "paid": true, "country": "usa"}`))}
-	status = M.UpdateUserProperties(project.ID, user.ID, newProperties)
+	newPropertiesId, status = M.UpdateUserProperties(project.ID, user.ID, newProperties)
 	assert.Equal(t, http.StatusAccepted, status)
+	assert.NotEqual(t, oldPropertiesId, newPropertiesId)
 
+	oldPropertiesId = newPropertiesId
 	newProperties = &postgres.Jsonb{RawMessage: json.RawMessage([]byte(
 		`{"device": "android"}`))}
-	status = M.UpdateUserProperties(project.ID, user.ID, newProperties)
+	newPropertiesId, status = M.UpdateUserProperties(project.ID, user.ID, newProperties)
 	assert.Equal(t, http.StatusAccepted, status)
+	assert.NotEqual(t, oldPropertiesId, newPropertiesId)
 
+	oldPropertiesId = newPropertiesId
 	newProperties = &postgres.Jsonb{RawMessage: json.RawMessage([]byte(
 		`{"age": 30.1, "country": "usa", "device": "android", "paid": true}`))}
-	status = M.UpdateUserProperties(project.ID, user.ID, newProperties)
+	newPropertiesId, status = M.UpdateUserProperties(project.ID, user.ID, newProperties)
 	assert.Equal(t, http.StatusNotModified, status)
+	assert.Equal(t, oldPropertiesId, newPropertiesId)
 }
 
 func TestDBFillUserDefaultProperties(t *testing.T) {
 	propertiesMap := U.PropertiesMap{"prop_1": "value_1"}
-	err := M.FillUserDefaultProperties(&propertiesMap, "180.151.36.234") // Our gateway IP.
+	err := M.FillLocationUserProperties(&propertiesMap, "180.151.36.234") // Our gateway IP.
 	assert.Nil(t, err)
-	assert.NotNil(t, propertiesMap[U.UP_INTERNAL_IP])
+	// IP is not stored in user properties.
+	assert.Empty(t, propertiesMap[U.EP_INTERNAL_IP])
 	assert.NotNil(t, propertiesMap[U.UP_COUNTRY])
 	assert.Equal(t, "India", propertiesMap[U.UP_COUNTRY])
 	assert.Equal(t, "Bengaluru", propertiesMap[U.UP_CITY])
 	assert.NotNil(t, propertiesMap["prop_1"]) // Should append to existing values.
 
 	propertiesMap = U.PropertiesMap{"prop_1": "value_1"}
-	err = M.FillUserDefaultProperties(&propertiesMap, "127.0.0.1")
+	err = M.FillLocationUserProperties(&propertiesMap, "127.0.0.1")
 	assert.Nil(t, err)
-	assert.NotEmpty(t, propertiesMap[U.UP_INTERNAL_IP])
+	assert.Empty(t, propertiesMap[U.EP_INTERNAL_IP])
 
 	propertiesMap = U.PropertiesMap{"prop_1": "value_1"}
-	err = M.FillUserDefaultProperties(&propertiesMap, "::1")
+	err = M.FillLocationUserProperties(&propertiesMap, "::1")
 	assert.Nil(t, err)
-	assert.NotEmpty(t, propertiesMap[U.UP_INTERNAL_IP])
+	assert.Empty(t, propertiesMap[U.EP_INTERNAL_IP])
 }

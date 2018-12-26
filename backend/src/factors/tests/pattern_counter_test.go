@@ -21,28 +21,32 @@ func TestCountPatterns(t *testing.T) {
 	u1ETime, _ := time.Parse(time.RFC3339, "2017-06-01T01:00:00Z")
 	u2CTime, _ := time.Parse(time.RFC3339, "2017-06-01T00:01:00Z")
 	u2ETime, _ := time.Parse(time.RFC3339, "2017-06-01T01:01:00Z")
+	u1CTimestamp := u1CTime.Unix()
+	u1ETimestamp := u1ETime.Unix()
+	u2CTimestamp := u2CTime.Unix()
+	u2ETimestamp := u2ETime.Unix()
 
 	eventsInput := []P.CounterEventFormat{
 		// User 1.
-		P.CounterEventFormat{UserId: "U1", UserCreatedTime: u1CTime, EventName: "F", EventCreatedTime: u1ETime, EventCardinality: uint(1)},
-		P.CounterEventFormat{UserId: "U1", UserCreatedTime: u1CTime, EventName: "G", EventCreatedTime: u1ETime.Add(1 * time.Minute), EventCardinality: uint(2)},
-		P.CounterEventFormat{UserId: "U1", UserCreatedTime: u1CTime, EventName: "A", EventCreatedTime: u1ETime.Add(2 * time.Minute), EventCardinality: uint(2)},
-		P.CounterEventFormat{UserId: "U1", UserCreatedTime: u1CTime, EventName: "L", EventCreatedTime: u1ETime.Add(3 * time.Minute), EventCardinality: uint(1)},
-		P.CounterEventFormat{UserId: "U1", UserCreatedTime: u1CTime, EventName: "B", EventCreatedTime: u1ETime.Add(4 * time.Minute), EventCardinality: uint(5)},
-		P.CounterEventFormat{UserId: "U1", UserCreatedTime: u1CTime, EventName: "A", EventCreatedTime: u1ETime.Add(5 * time.Minute), EventCardinality: uint(3)},
-		P.CounterEventFormat{UserId: "U1", UserCreatedTime: u1CTime, EventName: "B", EventCreatedTime: u1ETime.Add(6 * time.Minute), EventCardinality: uint(6)},
-		P.CounterEventFormat{UserId: "U1", UserCreatedTime: u1CTime, EventName: "C", EventCreatedTime: u1ETime.Add(7 * time.Minute), EventCardinality: uint(1)},
+		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "F", EventTimestamp: u1ETimestamp, EventCardinality: uint(1)},
+		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "G", EventTimestamp: u1ETimestamp + (1 * 60), EventCardinality: uint(2)},
+		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "A", EventTimestamp: u1ETimestamp + (2 * 60), EventCardinality: uint(2)},
+		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "L", EventTimestamp: u1ETimestamp + (3 * 60), EventCardinality: uint(1)},
+		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "B", EventTimestamp: u1ETimestamp + (4 * 60), EventCardinality: uint(5)},
+		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "A", EventTimestamp: u1ETimestamp + (5 * 60), EventCardinality: uint(3)},
+		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "B", EventTimestamp: u1ETimestamp + (6 * 60), EventCardinality: uint(6)},
+		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "C", EventTimestamp: u1ETimestamp + (7 * 60), EventCardinality: uint(1)},
 		// User 2.
-		P.CounterEventFormat{UserId: "U2", UserCreatedTime: u2CTime, EventName: "F", EventCreatedTime: u2ETime, EventCardinality: uint(1)},
-		P.CounterEventFormat{UserId: "U2", UserCreatedTime: u2CTime, EventName: "A", EventCreatedTime: u2ETime.Add(1 * time.Minute), EventCardinality: uint(1)},
-		P.CounterEventFormat{UserId: "U2", UserCreatedTime: u2CTime, EventName: "A", EventCreatedTime: u2ETime.Add(2 * time.Minute), EventCardinality: uint(1)},
-		P.CounterEventFormat{UserId: "U2", UserCreatedTime: u2CTime, EventName: "K", EventCreatedTime: u2ETime.Add(3 * time.Minute), EventCardinality: uint(2)},
-		P.CounterEventFormat{UserId: "U2", UserCreatedTime: u2CTime, EventName: "B", EventCreatedTime: u2ETime.Add(4 * time.Minute), EventCardinality: uint(1)},
-		P.CounterEventFormat{UserId: "U2", UserCreatedTime: u2CTime, EventName: "Z", EventCreatedTime: u2ETime.Add(5 * time.Minute), EventCardinality: uint(1)},
-		P.CounterEventFormat{UserId: "U2", UserCreatedTime: u2CTime, EventName: "C", EventCreatedTime: u2ETime.Add(6 * time.Minute), EventCardinality: uint(1)},
-		P.CounterEventFormat{UserId: "U2", UserCreatedTime: u2CTime, EventName: "A", EventCreatedTime: u2ETime.Add(7 * time.Minute), EventCardinality: uint(3)},
-		P.CounterEventFormat{UserId: "U2", UserCreatedTime: u2CTime, EventName: "B", EventCreatedTime: u2ETime.Add(8 * time.Minute), EventCardinality: uint(2)},
-		P.CounterEventFormat{UserId: "U2", UserCreatedTime: u2CTime, EventName: "C", EventCreatedTime: u2ETime.Add(9 * time.Minute), EventCardinality: uint(2)},
+		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "F", EventTimestamp: u2ETimestamp, EventCardinality: uint(1)},
+		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "A", EventTimestamp: u2ETimestamp + (1 * 60), EventCardinality: uint(1)},
+		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "A", EventTimestamp: u2ETimestamp + (2 * 60), EventCardinality: uint(1)},
+		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "K", EventTimestamp: u2ETimestamp + (3 * 60), EventCardinality: uint(2)},
+		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "B", EventTimestamp: u2ETimestamp + (4 * 60), EventCardinality: uint(1)},
+		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "Z", EventTimestamp: u2ETimestamp + (5 * 60), EventCardinality: uint(1)},
+		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "C", EventTimestamp: u2ETimestamp + (6 * 60), EventCardinality: uint(1)},
+		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "A", EventTimestamp: u2ETimestamp + (7 * 60), EventCardinality: uint(3)},
+		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "B", EventTimestamp: u2ETimestamp + (8 * 60), EventCardinality: uint(2)},
+		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "C", EventTimestamp: u2ETimestamp + (9 * 60), EventCardinality: uint(2)},
 	}
 	eventsInputString := ""
 	for _, event := range eventsInput {
@@ -257,47 +261,51 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 	u1ETime, _ := time.Parse(time.RFC3339, "2017-06-01T01:00:00Z")
 	u2CTime, _ := time.Parse(time.RFC3339, "2017-06-01T00:01:00Z")
 	u2ETime, _ := time.Parse(time.RFC3339, "2017-06-01T01:01:00Z")
+	u1CTimestamp := u1CTime.Unix()
+	u1ETimestamp := u1ETime.Unix()
+	u2CTimestamp := u2CTime.Unix()
+	u2ETimestamp := u2ETime.Unix()
 
 	eventsInput := []P.CounterEventFormat{
 		// User 1.
-		P.CounterEventFormat{UserId: "U1", UserCreatedTime: u1CTime, EventName: "F", EventProperties: map[string]interface{}{"ComNum": 1.0,
-			"ComCat": "com1", "IgnoredKey": []string{"check"}}, EventCreatedTime: u1ETime, EventCardinality: uint(1)},
-		P.CounterEventFormat{UserId: "U1", UserCreatedTime: u1CTime, EventName: "G", EventProperties: map[string]interface{}{"ComNum": 2.0,
-			"ComCat": "com2", "IgnoredKey": []string{"check"}}, EventCreatedTime: u1ETime.Add(1 * time.Minute), EventCardinality: uint(2)},
-		P.CounterEventFormat{UserId: "U1", UserCreatedTime: u1CTime, EventName: "A", EventProperties: map[string]interface{}{"ComNum": 3.0,
-			"ComCat": "com3", "IgnoredKey": []string{"check"}, "ANum": 1, "ACat": "acat1"}, EventCreatedTime: u1ETime.Add(2 * time.Minute),
+		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "F", EventProperties: map[string]interface{}{"ComNum": 1.0,
+			"ComCat": "com1", "IgnoredKey": []string{"check"}}, EventTimestamp: u1ETimestamp, EventCardinality: uint(1)},
+		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "G", EventProperties: map[string]interface{}{"ComNum": 2.0,
+			"ComCat": "com2", "IgnoredKey": []string{"check"}}, EventTimestamp: u1ETimestamp + (1 * 60), EventCardinality: uint(2)},
+		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "A", EventProperties: map[string]interface{}{"ComNum": 3.0,
+			"ComCat": "com3", "IgnoredKey": []string{"check"}, "ANum": 1, "ACat": "acat1"}, EventTimestamp: u1ETimestamp + (2 * 60),
 			EventCardinality: uint(2)},
-		P.CounterEventFormat{UserId: "U1", UserCreatedTime: u1CTime, EventName: "L", EventProperties: map[string]interface{}{"ComNum": 1.0,
-			"ComCat": "com1"}, EventCreatedTime: u1ETime.Add(3 * time.Minute), EventCardinality: uint(1)},
-		P.CounterEventFormat{UserId: "U1", UserCreatedTime: u1CTime, EventName: "B", EventProperties: map[string]interface{}{"ComNum": 2.0,
-			"ComCat": "com2", "BNum": 1, "BCat": "bcat1"}, EventCreatedTime: u1ETime.Add(4 * time.Minute), EventCardinality: uint(5)},
-		P.CounterEventFormat{UserId: "U1", UserCreatedTime: u1CTime, EventName: "A", EventProperties: map[string]interface{}{"ComNum": 3.0,
-			"ComCat": "com3", "ANum": 2, "ACat": "acat2"}, EventCreatedTime: u1ETime.Add(5 * time.Minute), EventCardinality: uint(3)},
-		P.CounterEventFormat{UserId: "U1", UserCreatedTime: u1CTime, EventName: "B", EventProperties: map[string]interface{}{"ComNum": 1.0,
-			"ComCat": "com1", "BNum": 2, "BCat": "bcat2"}, EventCreatedTime: u1ETime.Add(6 * time.Minute), EventCardinality: uint(6)},
-		P.CounterEventFormat{UserId: "U1", UserCreatedTime: u1CTime, EventName: "C", EventProperties: map[string]interface{}{"ComNum": 2.0,
-			"ComCat": "com2", "CNum": 1.0, "CCat": "ccat1"}, EventCreatedTime: u1ETime.Add(7 * time.Minute), EventCardinality: uint(1)},
+		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "L", EventProperties: map[string]interface{}{"ComNum": 1.0,
+			"ComCat": "com1"}, EventTimestamp: u1ETimestamp + (3 * 60), EventCardinality: uint(1)},
+		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "B", EventProperties: map[string]interface{}{"ComNum": 2.0,
+			"ComCat": "com2", "BNum": 1, "BCat": "bcat1"}, EventTimestamp: u1ETimestamp + (4 * 60), EventCardinality: uint(5)},
+		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "A", EventProperties: map[string]interface{}{"ComNum": 3.0,
+			"ComCat": "com3", "ANum": 2, "ACat": "acat2"}, EventTimestamp: u1ETimestamp + (5 * 60), EventCardinality: uint(3)},
+		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "B", EventProperties: map[string]interface{}{"ComNum": 1.0,
+			"ComCat": "com1", "BNum": 2, "BCat": "bcat2"}, EventTimestamp: u1ETimestamp + (6 * 60), EventCardinality: uint(6)},
+		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "C", EventProperties: map[string]interface{}{"ComNum": 2.0,
+			"ComCat": "com2", "CNum": 1.0, "CCat": "ccat1"}, EventTimestamp: u1ETimestamp + (7 * 60), EventCardinality: uint(1)},
 		// User 2.
-		P.CounterEventFormat{UserId: "U2", UserCreatedTime: u2CTime, EventName: "F", EventProperties: map[string]interface{}{"ComNum": 3.0,
-			"ComCat": "com3", "IgnoredKey": []string{"check"}}, EventCreatedTime: u2ETime, EventCardinality: uint(1)},
-		P.CounterEventFormat{UserId: "U2", UserCreatedTime: u2CTime, EventName: "A", EventProperties: map[string]interface{}{"ComNum": 1.0,
-			"ComCat": "com1", "ANum": 1, "ACat": "acat1"}, EventCreatedTime: u2ETime.Add(1 * time.Minute), EventCardinality: uint(1)},
-		P.CounterEventFormat{UserId: "U2", UserCreatedTime: u2CTime, EventName: "A", EventProperties: map[string]interface{}{"ComNum": 2.0,
-			"ComCat": "com2", "ANum": 2, "ACat": "acat2"}, EventCreatedTime: u2ETime.Add(2 * time.Minute), EventCardinality: uint(1)},
-		P.CounterEventFormat{UserId: "U2", UserCreatedTime: u2CTime, EventName: "K", EventProperties: map[string]interface{}{"ComNum": 3.0,
-			"ComCat": "com3"}, EventCreatedTime: u2ETime.Add(3 * time.Minute), EventCardinality: uint(2)},
-		P.CounterEventFormat{UserId: "U2", UserCreatedTime: u2CTime, EventName: "B", EventProperties: map[string]interface{}{"ComNum": 1.0,
-			"ComCat": "com1", "BNum": 1, "BCat": "bcat1"}, EventCreatedTime: u2ETime.Add(4 * time.Minute), EventCardinality: uint(1)},
-		P.CounterEventFormat{UserId: "U2", UserCreatedTime: u2CTime, EventName: "Z", EventProperties: map[string]interface{}{"ComNum": 2.0,
-			"ComCat": "com2"}, EventCreatedTime: u2ETime.Add(5 * time.Minute), EventCardinality: uint(1)},
-		P.CounterEventFormat{UserId: "U2", UserCreatedTime: u2CTime, EventName: "C", EventProperties: map[string]interface{}{"ComNum": 3.0,
-			"ComCat": "com3", "CNum": 2.0, "CCat": "ccat2"}, EventCreatedTime: u2ETime.Add(6 * time.Minute), EventCardinality: uint(1)},
-		P.CounterEventFormat{UserId: "U2", UserCreatedTime: u2CTime, EventName: "A", EventProperties: map[string]interface{}{"ComNum": 1.0,
-			"ComCat": "com1", "ANum": 1.0, "ACat": "acat1"}, EventCreatedTime: u2ETime.Add(7 * time.Minute), EventCardinality: uint(3)},
-		P.CounterEventFormat{UserId: "U2", UserCreatedTime: u2CTime, EventName: "B", EventProperties: map[string]interface{}{"ComNum": 2.0,
-			"ComCat": "com2", "BNum": 2, "BCat": "bcat2"}, EventCreatedTime: u2ETime.Add(8 * time.Minute), EventCardinality: uint(2)},
-		P.CounterEventFormat{UserId: "U2", UserCreatedTime: u2CTime, EventName: "C", EventProperties: map[string]interface{}{"ComNum": 3.0,
-			"ComCat": "com3", "CNum": 1.0, "CCat": "ccat1"}, EventCreatedTime: u2ETime.Add(9 * time.Minute), EventCardinality: uint(2)},
+		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "F", EventProperties: map[string]interface{}{"ComNum": 3.0,
+			"ComCat": "com3", "IgnoredKey": []string{"check"}}, EventTimestamp: u2ETimestamp, EventCardinality: uint(1)},
+		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "A", EventProperties: map[string]interface{}{"ComNum": 1.0,
+			"ComCat": "com1", "ANum": 1, "ACat": "acat1"}, EventTimestamp: u2ETimestamp + (1 * 60), EventCardinality: uint(1)},
+		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "A", EventProperties: map[string]interface{}{"ComNum": 2.0,
+			"ComCat": "com2", "ANum": 2, "ACat": "acat2"}, EventTimestamp: u2ETimestamp + (2 * 60), EventCardinality: uint(1)},
+		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "K", EventProperties: map[string]interface{}{"ComNum": 3.0,
+			"ComCat": "com3"}, EventTimestamp: u2ETimestamp + (3 * 60), EventCardinality: uint(2)},
+		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "B", EventProperties: map[string]interface{}{"ComNum": 1.0,
+			"ComCat": "com1", "BNum": 1, "BCat": "bcat1"}, EventTimestamp: u2ETimestamp + (4 * 60), EventCardinality: uint(1)},
+		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "Z", EventProperties: map[string]interface{}{"ComNum": 2.0,
+			"ComCat": "com2"}, EventTimestamp: u2ETimestamp + (5 * 60), EventCardinality: uint(1)},
+		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "C", EventProperties: map[string]interface{}{"ComNum": 3.0,
+			"ComCat": "com3", "CNum": 2.0, "CCat": "ccat2"}, EventTimestamp: u2ETimestamp + (6 * 60), EventCardinality: uint(1)},
+		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "A", EventProperties: map[string]interface{}{"ComNum": 1.0,
+			"ComCat": "com1", "ANum": 1.0, "ACat": "acat1"}, EventTimestamp: u2ETimestamp + (7 * 60), EventCardinality: uint(3)},
+		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "B", EventProperties: map[string]interface{}{"ComNum": 2.0,
+			"ComCat": "com2", "BNum": 2, "BCat": "bcat2"}, EventTimestamp: u2ETimestamp + (8 * 60), EventCardinality: uint(2)},
+		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "C", EventProperties: map[string]interface{}{"ComNum": 3.0,
+			"ComCat": "com3", "CNum": 1.0, "CCat": "ccat1"}, EventTimestamp: u2ETimestamp + (9 * 60), EventCardinality: uint(2)},
 	}
 	eventsInputString := ""
 	for _, event := range eventsInput {

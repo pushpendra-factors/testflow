@@ -6,7 +6,6 @@ import (
 	U "factors/util"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -20,13 +19,13 @@ type sdkTrackPayload struct {
 	ProjectId       uint64          `json:"project_id"`
 	UserId          string          `json:"user_id"`
 	Auto            bool            `json:"auto"`
-	CreatedAt       time.Time       `json:"created_at"`
-	UpdatedAt       time.Time       `json:"updated_at"`
+	Timestamp       int64           `json:"timestamp`
 }
 
 type sdkIdentifyPayload struct {
 	UserId         string `json:"user_id"`
 	CustomerUserId string `json:"c_uid"`
+	JoinTimestamp  int64  `json:"join_timestamp"`
 }
 
 type sdkAddPropertiesPayload struct {
@@ -105,32 +104,43 @@ func SDKTrackHandler(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Tracking failed. Invalid properties."})
 		return
 	}
-
-	// Create Event.
-	event.ProjectId = scopeProjectId
-	createdEvent, errCode := M.CreateEvent(&M.Event{EventNameId: eventName.ID, Properties: postgres.Jsonb{eventPropsJSON},
-		ProjectId: scopeProjectId, UserId: event.UserId})
-	if errCode != http.StatusCreated {
-		c.AbortWithStatusJSON(errCode, gin.H{"error": "Tracking failed. Event creation failed."})
-		return
-	}
-
 	// Update user properties on track.
+	var clientIP string
+	if ip, ok := (*validEventProperties)[U.EP_INTERNAL_IP]; ok && ip != "" {
+		clientIP = ip.(string)
+	} else {
+		clientIP = c.ClientIP()
+	}
+	// Added IP to event proerties for internal usage.
+	(*validEventProperties)[U.EP_INTERNAL_IP] = clientIP
+
 	validUserProperties := U.GetValidatedUserProperties(&event.UserProperties)
-	_ = M.FillUserDefaultProperties(validUserProperties, c.ClientIP())
+	_ = M.FillLocationUserProperties(validUserProperties, clientIP)
 
 	userPropsJSON, err := json.Marshal(validUserProperties)
 	if err != nil {
-		log.WithFields(log.Fields{"userProperties": validUserProperties, "eventId": createdEvent.ID,
+		log.WithFields(log.Fields{"userProperties": validUserProperties,
 			"error": err}).Error("Update user properites on track failed. Unmarshal json failed.")
 		response["error"] = "Failed updating user properties."
 	}
 
-	errCode = M.UpdateUserProperties(scopeProjectId, event.UserId, &postgres.Jsonb{userPropsJSON})
+	userPropertiesId, errCode := M.UpdateUserProperties(scopeProjectId, event.UserId, &postgres.Jsonb{userPropsJSON})
 	if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
-		log.WithFields(log.Fields{"userProperties": validUserProperties, "eventId": createdEvent.ID,
+		log.WithFields(log.Fields{"userProperties": validUserProperties,
 			"error": errCode}).Error("Update user properties on track failed. DB update failed.")
 		response["error"] = "Failed updating user properties."
+	}
+
+	// Create Event.
+	event.ProjectId = scopeProjectId
+	createdEvent, errCode := M.CreateEvent(&M.Event{
+		EventNameId: eventName.ID,
+		Timestamp:   event.Timestamp,
+		Properties:  postgres.Jsonb{eventPropsJSON},
+		ProjectId:   scopeProjectId, UserId: event.UserId, UserPropertiesId: userPropertiesId})
+	if errCode != http.StatusCreated {
+		c.AbortWithStatusJSON(errCode, gin.H{"error": "Tracking failed. Event creation failed."})
+		return
 	}
 
 	response["event_id"] = createdEvent.ID
@@ -189,7 +199,10 @@ func SDKIdentifyHandler(c *gin.Context) {
 			return
 
 		case http.StatusNotFound:
-			newUser := M.User{ProjectId: scopeProjectId, CustomerUserId: identifiedUser.CustomerUserId}
+			newUser := M.User{ProjectId: scopeProjectId,
+				CustomerUserId: identifiedUser.CustomerUserId,
+				JoinTimestamp:  identifiedUser.JoinTimestamp,
+			}
 			_, errCode := M.CreateUser(&newUser)
 			if errCode != http.StatusCreated {
 				c.AbortWithStatusJSON(errCode, gin.H{"error": "Identification failed. User creation failed."})
@@ -221,7 +234,11 @@ func SDKIdentifyHandler(c *gin.Context) {
 	// Precondition: user is already identified with different customer_user.
 	// Creating a new user with the given customer_user_id and respond with new_user_id.
 	if scopeUser.CustomerUserId != "" {
-		newUser := M.User{ProjectId: scopeProjectId, CustomerUserId: scopeUser.CustomerUserId}
+		newUser := M.User{
+			ProjectId:      scopeProjectId,
+			CustomerUserId: scopeUser.CustomerUserId,
+			JoinTimestamp:  identifiedUser.JoinTimestamp,
+		}
 		_, errCode := M.CreateUser(&newUser)
 		if errCode != http.StatusCreated {
 			c.AbortWithStatusJSON(errCode, gin.H{"error": "Identification failed. User creation failed."})
@@ -233,7 +250,9 @@ func SDKIdentifyHandler(c *gin.Context) {
 	}
 
 	// Happy path. Maps customer_user to an user.
-	_, errCode = M.UpdateUser(scopeProjectId, identifiedUser.UserId, &M.User{CustomerUserId: identifiedUser.CustomerUserId})
+	_, errCode = M.UpdateUser(scopeProjectId, identifiedUser.UserId,
+		&M.User{CustomerUserId: identifiedUser.CustomerUserId,
+			JoinTimestamp: identifiedUser.JoinTimestamp})
 	if errCode != http.StatusAccepted {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Identification failed. Failed mapping customer_user to user"})
 		return
@@ -273,9 +292,7 @@ func SDKAddUserPropertiesHandler(c *gin.Context) {
 
 	// Validate properties.
 	validProperties := U.GetValidatedUserProperties(&addPropsUser.Properties)
-
-	//  Add default properties. Ignore on addition failure.
-	_ = M.FillUserDefaultProperties(validProperties, c.ClientIP())
+	_ = M.FillLocationUserProperties(validProperties, c.ClientIP())
 	propertiesJSON, err := json.Marshal(validProperties)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Add user properties failed. Invalid properties."})

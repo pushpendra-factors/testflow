@@ -35,8 +35,11 @@ func TestDBCreateAndGetEventName(t *testing.T) {
 	assert.Equal(t, http.StatusConflict, errCode)
 	// time.Time is not exactly same. Checking within an error threshold.
 	assert.True(t, math.Abs(expectedEventName.CreatedAt.Sub(retryEventName.CreatedAt).Seconds()) < 0.1)
+	assert.True(t, math.Abs(expectedEventName.UpdatedAt.Sub(retryEventName.UpdatedAt).Seconds()) < 0.1)
 	expectedEventName.CreatedAt = time.Time{}
 	retryEventName.CreatedAt = time.Time{}
+	expectedEventName.UpdatedAt = time.Time{}
+	retryEventName.UpdatedAt = time.Time{}
 	assert.Equal(t, expectedEventName, retryEventName)
 	// Test Get EventName on the created one.
 	expectedEventName = &M.EventName{}
@@ -45,8 +48,11 @@ func TestDBCreateAndGetEventName(t *testing.T) {
 	assert.Equal(t, http.StatusFound, errCode)
 	// time.Time is not exactly same. Checking within an error threshold.
 	assert.True(t, math.Abs(expectedEventName.CreatedAt.Sub(retEventName.CreatedAt).Seconds()) < 0.1)
+	assert.True(t, math.Abs(expectedEventName.UpdatedAt.Sub(retEventName.UpdatedAt).Seconds()) < 0.1)
 	expectedEventName.CreatedAt = time.Time{}
 	retEventName.CreatedAt = time.Time{}
+	expectedEventName.UpdatedAt = time.Time{}
+	retEventName.UpdatedAt = time.Time{}
 	assert.Equal(t, expectedEventName, retEventName)
 
 	// Test Get Event on non existent name.

@@ -22,6 +22,7 @@ type EventName struct {
 	// project_id -> projects(id)
 	ProjectId uint64    `gorm:"primary_key:true;" json:"project_id"`
 	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // Special autoname.

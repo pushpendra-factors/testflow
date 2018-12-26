@@ -18,15 +18,17 @@ type Event struct {
 	// project_id -> projects(id)
 	// (project_id, user_id) -> users(project_id, id)
 	// (project_id, event_name_id) -> event_names(project_id, id)
-	ProjectId   uint64 `gorm:"primary_key:true;" json:"project_id"`
-	UserId      string `json:"user_id"`
-	EventNameId uint64 `json:"event_name_id"`
-	Count       uint64 `json:"count"`
-
+	ProjectId        uint64 `gorm:"primary_key:true;" json:"project_id"`
+	UserId           string `json:"user_id"`
+	UserPropertiesId string `json:"user_properties_id"`
+	EventNameId      uint64 `json:"event_name_id"`
+	Count            uint64 `json:"count"`
 	// JsonB of postgres with gorm. https://github.com/jinzhu/gorm/issues/1183
 	Properties postgres.Jsonb `json:"properties,omitempty"`
-	CreatedAt  time.Time      `json:"created_at"`
-	UpdatedAt  time.Time      `json:"updated_at"`
+	// unix epoch timestamp in seconds.
+	Timestamp int64     `json:"timestamp"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 func (event *Event) BeforeCreate(scope *gorm.Scope) error {
@@ -39,7 +41,9 @@ func (event *Event) BeforeCreate(scope *gorm.Scope) error {
 		return err
 	}
 	event.Count = count + 1
-
+	if event.Timestamp <= 0 {
+		event.Timestamp = time.Now().Unix()
+	}
 	return nil
 }
 

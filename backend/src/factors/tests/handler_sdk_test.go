@@ -96,7 +96,7 @@ func TestSDKTrack(t *testing.T) {
 	// Test auto tracked event.
 	rEventName = U.RandomLowerAphaNumString(10)
 	w = ServePostRequestWithHeaders(r, uri,
-		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true"}}`, user.ID, rEventName)),
+		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true"}, "user_properties": {"$os": "Mac OS"}}`, user.ID, rEventName)),
 		map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 	responseMap = DecodeJSONResponseToMap(w.Body)
@@ -109,12 +109,20 @@ func TestSDKTrack(t *testing.T) {
 	assert.Nil(t, err)
 	var eventProperties map[string]interface{}
 	json.Unmarshal(eventPropertiesBytes.([]byte), &eventProperties)
-	assert.Equal(t, http.StatusFound, errCode)
 	assert.Nil(t, eventProperties["$dollar_property"])
 	assert.NotNil(t, eventProperties[fmt.Sprintf("%s$dollar_property", U.NAME_PREFIX_ESCAPE_CHAR)]) // escaped property should exist.
 	assert.NotNil(t, eventProperties["$qp_search"])                                                 // $qp should exist.
 	assert.Nil(t, eventProperties[fmt.Sprintf("%s$qp_search", U.NAME_PREFIX_ESCAPE_CHAR)])          // $qp should not be escaped.
 	assert.NotNil(t, eventProperties["mobile"])                                                     // no dollar properties should exist.
+	assert.True(t, len(rEvent.UserPropertiesId) > 0)
+	rUser, errCode := M.GetUser(rEvent.ProjectId, rEvent.UserId)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotNil(t, rUser)
+	userPropertiesBytes, err := rUser.Properties.Value()
+	assert.Nil(t, err)
+	var userProperties map[string]interface{}
+	json.Unmarshal(userPropertiesBytes.([]byte), &userProperties)
+	assert.NotNil(t, userProperties["$os"])
 
 	// Should not allow $ prefixes apart from default properties.
 	rEventName = U.RandomLowerAphaNumString(10)
@@ -125,7 +133,7 @@ func TestSDKTrack(t *testing.T) {
 	assert.Nil(t, propsResponseMap1["user_id"])
 	retUser, errCode := M.GetUser(project.ID, user.ID)
 	assert.Equal(t, http.StatusFound, errCode)
-	userPropertiesBytes, err := retUser.Properties.Value()
+	userPropertiesBytes, err = retUser.Properties.Value()
 	assert.Nil(t, err)
 	var userPropertiesMap3 map[string]interface{}
 	json.Unmarshal(userPropertiesBytes.([]byte), &userPropertiesMap3)

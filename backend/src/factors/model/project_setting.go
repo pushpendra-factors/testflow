@@ -3,6 +3,7 @@ package model
 import (
 	C "factors/config"
 	"net/http"
+	"time"
 
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
@@ -14,7 +15,9 @@ type ProjectSetting struct {
 	ProjectId uint64 `gorm:"primary_key:true" json:"-"` // exclude on JSON response.
 
 	// Defaults to AUTO_TRACK_DISABLED.
-	AutoTrack bool `gorm:"not null;default:false" json:"auto_track"`
+	AutoTrack bool      `gorm:"not null;default:false" json:"auto_track"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 func GetProjectSetting(projectId uint64) (*ProjectSetting, int) {

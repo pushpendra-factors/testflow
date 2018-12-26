@@ -2,8 +2,8 @@ package main
 
 // Recursively reads all json files.
 // Example usage on Terminal.
-// export GOPATH=/Users/aravindmurthy/code/factors/misc/ingest_noctacam_events
-// go run ingest_noctacam_events.go --input_file=/Users/aravindmurthy/data/noctacam/sorted_select_all_09_11_2018_1541733812.json --server=http://localhost:8080
+// export GOPATH=/Users/aravindmurthy/code/factors/misc/ingest_events
+// go run ingest_firebase_ios_events.go --input_file=/Users/aravindmurthy/data/noctacam/sorted_select_all_09_11_2018_1541733812.json --server=http://localhost:8080
 
 import (
 	"bufio"
@@ -16,7 +16,6 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -24,6 +23,7 @@ import (
 var inputFileFlag = flag.String("input_file", "", "Input json file.")
 var serverFlag = flag.String("server", "http://localhost:8080", "Server Path.")
 var projectIdFlag = flag.Int("project_id", 0, "Project Id.")
+var projectTokenFlag = flag.String("project_token", "", "Needs to be passed if projectId is passed.")
 
 var clientUserIdKey string = "user_pseudo_id"
 var clientUserCreationTimeKey string = "user_first_touch_timestamp"
@@ -35,26 +35,26 @@ func getUserId(clientUserId string, eventMap map[string]interface{}) (string, er
 	userId, found := clientUserIdToUserIdMap[clientUserId]
 	if !found {
 		// Create a user.
-		var userCreatedTimeInt int64
+		var userCreatedTime int64
 		userCreatedTimeData, found := eventMap[clientUserCreationTimeKey]
 		if userCreatedTimeData != nil && found {
-			userCreatedTimeInt, _ = strconv.ParseInt(userCreatedTimeData.(string), 10, 64)
+			userCreatedTime, _ = strconv.ParseInt(userCreatedTimeData.(string), 10, 64)
 		} else {
 			// If user created time is absent use eventCreatedTime.
-			userCreatedTimeInt, _ = strconv.ParseInt(eventMap[eventCreationTimeKey].(string), 10, 64)
+			userCreatedTime, _ = strconv.ParseInt(eventMap[eventCreationTimeKey].(string), 10, 64)
 		}
-		userCreatedTimeInt = userCreatedTimeInt / 1000000
-		userCreatedTime := time.Unix(int64(userCreatedTimeInt), 0).Format(time.RFC3339)
+		userCreatedTime = userCreatedTime / 1000000
 
 		userRequestMap := make(map[string]interface{})
 		userRequestMap["c_uid"] = clientUserId
-		userRequestMap["created_at"] = userCreatedTime
-		userRequestMap["updated_at"] = userCreatedTime
-		userRequestMap["properties"] = extractUserProperties(eventMap)
+		userRequestMap["join_timestamp"] = userCreatedTime
 
 		reqBody, _ := json.Marshal(userRequestMap)
-		url := fmt.Sprintf("%s/projects/%d/users", *serverFlag, *projectIdFlag)
-		resp, err := http.Post(url, "application/json", bytes.NewBuffer(reqBody))
+		url := fmt.Sprintf("%s/sdk/user/identify", *serverFlag)
+		client := &http.Client{}
+		req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqBody))
+		req.Header.Add("Authorization", *projectTokenFlag)
+		resp, err := client.Do(req)
 		// always close the response-body, even if content is not required
 		defer resp.Body.Close()
 		if err != nil {
@@ -68,7 +68,7 @@ func getUserId(clientUserId string, eventMap map[string]interface{}) (string, er
 		}
 		var jsonResponseMap map[string]interface{}
 		json.Unmarshal(jsonResponse, &jsonResponseMap)
-		userId = jsonResponseMap["id"].(string)
+		userId = jsonResponseMap["user_id"].(string)
 		clientUserIdToUserIdMap[clientUserId] = userId
 	}
 	return userId, nil
@@ -176,60 +176,93 @@ func lineIngest(eventMap map[string]interface{}) {
 		return
 	}
 
-	var eventCreatedTime string
+	var eventCreatedTime int64
 	if eventCreatedTimeData, found := eventMap[eventCreationTimeKey]; eventCreatedTimeData != nil && found {
-		eventCreatedTimeInt, _ := strconv.ParseInt(eventCreatedTimeData.(string), 10, 64)
-		eventCreatedTimeInt = eventCreatedTimeInt / 1000000
-		eventCreatedTime = time.Unix(int64(eventCreatedTimeInt), 0).Format(time.RFC3339)
+		eventCreatedTime, _ = strconv.ParseInt(eventCreatedTimeData.(string), 10, 64)
+		eventCreatedTime = eventCreatedTime / 1000000
 	}
 
 	eventRequestMap := make(map[string]interface{})
 	eventRequestMap["event_name"] = eventName
-	eventRequestMap["created_at"] = eventCreatedTime
-	eventRequestMap["updated_at"] = eventCreatedTime
+	eventRequestMap["user_id"] = userId
+	eventRequestMap["timestamp"] = eventCreatedTime
 
 	// Event properties from params.
-	eventRequestPropertiesMap := extractEventProperties(eventMap)
+	eventPropertiesMap := extractEventProperties(eventMap)
+	eventRequestMap["event_properties"] = eventPropertiesMap
+
 	// User properties currently stored along with event.
-	userProperties := extractUserProperties(eventMap)
-	for k, value := range userProperties {
-		eventRequestPropertiesMap["user." + k] = value
-	}
+	userPropertiesMap := extractUserProperties(eventMap)
+
 	// Device properties.
 	if dp, ok := eventMap["device"]; ok {
 		deviceProperties := extractFloatandStringProperties(dp.(map[string]interface{}))
 		for k, value := range deviceProperties {
-			eventRequestPropertiesMap["device." + k] = value
+			switch k {
+			case "mobile_brand_name":
+				userPropertiesMap["$deviceBrand"] = value
+			case "mobile_model_name":
+				userPropertiesMap["$deviceModel"] = value
+			case "mobile_os_hardware_model":
+				userPropertiesMap["$deviceType"] = value
+			case "vendor_id":
+				userPropertiesMap["$deviceId"] = value
+			case "operating_system":
+				userPropertiesMap["$os"] = value
+			case "operating_system_version":
+				userPropertiesMap["$osVersion"] = value
+			case "language":
+				userPropertiesMap["$language"] = value
+			default:
+				userPropertiesMap["device."+k] = value
+			}
 		}
 	}
 	// Geo properties.
 	if gp, ok := eventMap["geo"]; ok {
 		geoProperties := extractFloatandStringProperties(gp.(map[string]interface{}))
 		for k, value := range geoProperties {
-			eventRequestPropertiesMap["geo." + k] = value
+			switch k {
+			case "country":
+				userPropertiesMap["$country"] = value
+			case "region":
+				userPropertiesMap["$region"] = value
+			case "city":
+				userPropertiesMap["$city"] = value
+			default:
+				userPropertiesMap["geo."+k] = value
+			}
 		}
 	}
 	// App properties.
 	if ap, ok := eventMap["app_info"]; ok {
 		appProperties := extractFloatandStringProperties(ap.(map[string]interface{}))
 		for k, value := range appProperties {
-			eventRequestPropertiesMap["app." + k] = value
+			switch k {
+			case "version":
+				userPropertiesMap["$appVersion"] = value
+			default:
+				userPropertiesMap["app."+k] = value
+			}
 		}
 	}
 	// User LTV properties.
 	if ulp, ok := eventMap["user_ltv"]; ok {
 		userLTVProperties := extractFloatandStringProperties(ulp.(map[string]interface{}))
 		for k, value := range userLTVProperties {
-			eventRequestPropertiesMap["user.ltv." + k] = value
+			userPropertiesMap["user.ltv."+k] = value
 		}
 	}
 	// Platform
-	eventRequestPropertiesMap["platform"], _ = eventMap["platform"]
-	
-	eventRequestMap["properties"] = eventRequestPropertiesMap
+	userPropertiesMap["$platform"], _ = eventMap["platform"]
+	eventRequestMap["user_properties"] = userPropertiesMap
+
 	reqBody, _ := json.Marshal(eventRequestMap)
-	url := fmt.Sprintf("%s/projects/%d/users/%s/events", *serverFlag, *projectIdFlag, userId)
-	resp, err := http.Post(url, "application/json", bytes.NewBuffer(reqBody))
+	url := fmt.Sprintf("%s/sdk/event/track", *serverFlag)
+	client := &http.Client{}
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqBody))
+	req.Header.Add("Authorization", *projectTokenFlag)
+	resp, err := client.Do(req)
 	// always close the response-body, even if content is not required
 	defer resp.Body.Close()
 	if err != nil {
@@ -261,8 +294,9 @@ func fileIngest(filepath string) {
 	}
 }
 
-func setupProject() (int, error) {
+func setupProject() (int, string, error) {
 	var projectId int
+	var projectToken string
 
 	// Create random project and a corresponding eventName and user.
 	reqBody := []byte(`{"name": "NoctaCam"}`)
@@ -270,35 +304,37 @@ func setupProject() (int, error) {
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(reqBody))
 	if resp == nil {
 		log.Fatal("HTTP Request failed. Is your backend up?")
-		return 0, errors.New("HTTP Request failed")
+		return 0, "", errors.New("HTTP Request failed")
 	}
 	// always close the response-body, even if content is not required.
 	defer resp.Body.Close()
 	if err != nil {
 		log.Fatal(fmt.Sprintf("Http Post user creation failed. Url: %s, reqBody: %s, response: %+v", url, reqBody, resp))
-		return 0, err
+		return 0, "", err
 	}
 	jsonResponse, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		log.Fatal("Unable to parse http user create response.")
-		return 0, err
+		return 0, "", err
 	}
 	var jsonResponseMap map[string]interface{}
 	json.Unmarshal(jsonResponse, &jsonResponseMap)
 	projectId = int(jsonResponseMap["id"].(float64))
-	return projectId, nil
+	projectToken = jsonResponseMap["token"].(string)
+	return projectId, projectToken, nil
 }
 
 func main() {
 	flag.Parse()
 
 	if *projectIdFlag <= 0 {
-		projectId, err := setupProject()
+		projectId, projectToken, err := setupProject()
 		if err != nil {
 			log.Fatal("Project setup failed.")
 			os.Exit(1)
 		}
 		projectIdFlag = &projectId
+		projectTokenFlag = &projectToken
 	}
 
 	fileIngest(*inputFileFlag)

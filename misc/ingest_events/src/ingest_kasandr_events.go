@@ -16,6 +16,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -23,10 +24,11 @@ import (
 var inputFileFlag = flag.String("input_file", "", "Input CSV file.")
 var serverFlag = flag.String("server", "http://localhost:8080", "Server Path.")
 var projectIdFlag = flag.Int("project_id", 0, "Project Id.")
+var projectTokenFlag = flag.String("project_token", "", "Needs to be passed if projectId is passed.")
 
 var clientUserIdToUserIdMap map[string]string = make(map[string]string)
 
-func getUserId(clientUserId string, eventCreatedTime string) (string, error) {
+func getUserId(clientUserId string, eventCreatedTime int64) (string, error) {
 	userId, found := clientUserIdToUserIdMap[clientUserId]
 	if !found {
 		// Create a user.
@@ -34,15 +36,14 @@ func getUserId(clientUserId string, eventCreatedTime string) (string, error) {
 
 		userRequestMap := make(map[string]interface{})
 		userRequestMap["c_uid"] = clientUserId
-		userRequestMap["created_at"] = userCreatedTime
-		userRequestMap["updated_at"] = userCreatedTime
-		// No Properties.
-		userRequestPropertiesMap := make(map[string]interface{})
-		userRequestMap["properties"] = userRequestPropertiesMap
+		userRequestMap["join_timestamp"] = userCreatedTime
 
 		reqBody, _ := json.Marshal(userRequestMap)
-		url := fmt.Sprintf("%s/projects/%d/users", *serverFlag, *projectIdFlag)
-		resp, err := http.Post(url, "application/json", bytes.NewBuffer(reqBody))
+		url := fmt.Sprintf("%s/sdk/user/identify", *serverFlag)
+		client := &http.Client{}
+		req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqBody))
+		req.Header.Add("Authorization", *projectTokenFlag)
+		resp, err := client.Do(req)
 		// always close the response-body, even if content is not required
 		defer resp.Body.Close()
 		if err != nil {
@@ -56,7 +57,7 @@ func getUserId(clientUserId string, eventCreatedTime string) (string, error) {
 		}
 		var jsonResponseMap map[string]interface{}
 		json.Unmarshal(jsonResponse, &jsonResponseMap)
-		userId = jsonResponseMap["id"].(string)
+		userId = jsonResponseMap["user_id"].(string)
 		clientUserIdToUserIdMap[clientUserId] = userId
 	}
 	return userId, nil
@@ -72,11 +73,11 @@ func lineIngest(line string) {
 	merchant := fields[4]
 	eventCreatedTime1 := fields[5]
 	eventCreatedTime2 := fields[6]
-	eventCreatedTime := fmt.Sprintf("%sT%sZ", eventCreatedTime1, eventCreatedTime2)
-
+	eventCreatedTimeString := fmt.Sprintf("%sT%sZ", eventCreatedTime1, eventCreatedTime2)
+	eventCreatedTime, _ := time.Parse(time.RFC3339, eventCreatedTimeString)
 	eventType := fields[7]
 
-	userId, err := getUserId(clientUserId, eventCreatedTime)
+	userId, err := getUserId(clientUserId, eventCreatedTime.Unix())
 	if err != nil {
 		log.Fatal("UserId not found.")
 		return
@@ -91,19 +92,24 @@ func lineIngest(line string) {
 
 	eventRequestMap := make(map[string]interface{})
 	eventRequestMap["event_name"] = eventName
-	eventRequestMap["created_at"] = eventCreatedTime
-	eventRequestMap["updated_at"] = eventCreatedTime
+	eventRequestMap["user_id"] = userId
+	eventRequestMap["timestamp"] = eventCreatedTime.Unix()
 
 	eventRequestPropertiesMap := make(map[string]interface{})
-	eventRequestPropertiesMap["country"] = country
 	eventRequestPropertiesMap["merchant"] = merchant
 	eventRequestPropertiesMap["offer_id"] = offerId
+	eventRequestMap["event_properties"] = eventRequestPropertiesMap
 
-	eventRequestMap["properties"] = eventRequestPropertiesMap
+	userRequestPropertiesMap := make(map[string]interface{})
+	userRequestPropertiesMap["$country"] = country
+	eventRequestMap["user_properties"] = userRequestPropertiesMap
 
 	reqBody, _ := json.Marshal(eventRequestMap)
-	url := fmt.Sprintf("%s/projects/%d/users/%s/events", *serverFlag, *projectIdFlag, userId)
-	resp, err := http.Post(url, "application/json", bytes.NewBuffer(reqBody))
+	url := fmt.Sprintf("%s/sdk/event/track", *serverFlag)
+	client := &http.Client{}
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqBody))
+	req.Header.Add("Authorization", *projectTokenFlag)
+	resp, err := client.Do(req)
 	// always close the response-body, even if content is not required
 	defer resp.Body.Close()
 	if err != nil {
@@ -136,8 +142,9 @@ func fileIngest(filepath string) {
 	}
 }
 
-func setupProject() (int, error) {
+func setupProject() (int, string, error) {
 	var projectId int
+	var projectToken string
 
 	// Create random project and a corresponding eventName and user.
 	reqBody := []byte(`{"name": "ECommerce-Sample"}`)
@@ -145,35 +152,37 @@ func setupProject() (int, error) {
 	resp, err := http.Post(url, "application/json", bytes.NewBuffer(reqBody))
 	if resp == nil {
 		log.Fatal("HTTP Request failed. Is your backend up?")
-		return 0, errors.New("HTTP Request failed")
+		return 0, "", errors.New("HTTP Request failed")
 	}
 	// always close the response-body, even if content is not required.
 	defer resp.Body.Close()
 	if err != nil {
 		log.Fatal(fmt.Sprintf("Http Post user creation failed. Url: %s, reqBody: %s, response: %+v", url, reqBody, resp))
-		return 0, err
+		return 0, "", err
 	}
 	jsonResponse, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		log.Fatal("Unable to parse http user create response.")
-		return 0, err
+		return 0, "", err
 	}
 	var jsonResponseMap map[string]interface{}
 	json.Unmarshal(jsonResponse, &jsonResponseMap)
 	projectId = int(jsonResponseMap["id"].(float64))
-	return projectId, nil
+	projectToken = jsonResponseMap["token"].(string)
+	return projectId, projectToken, nil
 }
 
 func main() {
 	flag.Parse()
 
 	if *projectIdFlag <= 0 {
-		projectId, err := setupProject()
+		projectId, projectToken, err := setupProject()
 		if err != nil {
 			log.Fatal("Project setup failed.")
 			os.Exit(1)
 		}
 		projectIdFlag = &projectId
+		projectTokenFlag = &projectToken
 	}
 
 	fileIngest(*inputFileFlag)

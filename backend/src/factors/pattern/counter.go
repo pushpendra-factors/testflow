@@ -9,19 +9,19 @@ import (
 	"reflect"
 	"sort"
 	"strings"
-	"time"
 
 	_ "github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 )
 
 type CounterEventFormat struct {
-	UserId           string                 `json:"uid"`
-	UserCreatedTime  time.Time              `json:"uct"`
-	EventName        string                 `json:"en"`
-	EventCreatedTime time.Time              `json:"ect"`
-	EventCardinality uint                   `json:"ecd"`
-	EventProperties  map[string]interface{} `json:"epr"`
+	UserId            string                 `json:"uid"`
+	UserJoinTimestamp int64                  `json:"ujt"`
+	EventName         string                 `json:"en"`
+	EventTimestamp    int64                  `json:"et"`
+	EventCardinality  uint                   `json:"ecd"`
+	EventProperties   map[string]interface{} `json:"epr"`
+	UserProperties    map[string]interface{} `json:"upr"`
 }
 
 type EventInfo struct {
@@ -135,6 +135,7 @@ func EventPropertyKey(eventName string, propertyName string) string {
 // Collects event info for the events initilaized in eventInfoMap.
 const max_SEEN_PROPERTIES = 10000
 const max_SEEN_PROPERTY_VALUES = 1000
+
 func CollectEventInfo(scanner *bufio.Scanner, eventInfoMap *EventInfoMap) error {
 	lineNum := 0
 	for scanner.Scan() {
@@ -228,8 +229,8 @@ func CountPatterns(scanner *bufio.Scanner, patterns []*Pattern) error {
 		userId := eventDetails.UserId
 		eventName := eventDetails.EventName
 		eventProperties := eventDetails.EventProperties
-		userCreatedTime := eventDetails.UserCreatedTime
-		eventCreatedTime := eventDetails.EventCreatedTime
+		userJoinTimestamp := eventDetails.UserJoinTimestamp
+		eventTimestamp := eventDetails.EventTimestamp
 		eventCardinality := eventDetails.EventCardinality
 
 		numEventsProcessed += 1
@@ -243,7 +244,7 @@ func CountPatterns(scanner *bufio.Scanner, patterns []*Pattern) error {
 			waitingOnPatternsMap = make(map[string][]*Pattern)
 			prevWaitPatternsMap = make(map[string][]*Pattern)
 			for _, p := range patterns {
-				if err := p.ResetForNewUser(userId, userCreatedTime); err != nil {
+				if err := p.ResetForNewUser(userId, userJoinTimestamp); err != nil {
 					log.Fatal(err)
 				}
 				waitEvent := p.WaitingOn()
@@ -258,8 +259,8 @@ func CountPatterns(scanner *bufio.Scanner, patterns []*Pattern) error {
 		prevWaitPattens, ok := prevWaitPatternsMap[eventName]
 		if ok {
 			for _, p := range prevWaitPattens {
-				if _, err := p.CountForEvent(eventName, eventCreatedTime, eventProperties,
-					uint(eventCardinality), userId, userCreatedTime); err != nil {
+				if _, err := p.CountForEvent(eventName, eventTimestamp, eventProperties,
+					uint(eventCardinality), userId, userJoinTimestamp); err != nil {
 					log.Error(err)
 				}
 			}
@@ -275,8 +276,8 @@ func CountPatterns(scanner *bufio.Scanner, patterns []*Pattern) error {
 					"Pattern %s assumed to wait on %s but actually waiting on %s. Line %s",
 					p.String(), eventName, waitingOn1, line))
 			}
-			waitingOn2, err := p.CountForEvent(eventName, eventCreatedTime, eventProperties,
-				uint(eventCardinality), userId, userCreatedTime)
+			waitingOn2, err := p.CountForEvent(eventName, eventTimestamp, eventProperties,
+				uint(eventCardinality), userId, userJoinTimestamp)
 			if err != nil || waitingOn2 == "" {
 				log.Error(err)
 			}

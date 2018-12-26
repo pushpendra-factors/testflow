@@ -152,19 +152,19 @@ go run ingest_kasandr_events.go --input_file=<path_to_githubcode>/factors/sample
 cd ../../../backend/src/factors/scripts/
 export GOPATH=<path_to_githubcode>/factors/backend
 mkdir -p /tmp/factors/output
-go run run_pull_events.go --project_id=<projectId> --end_time="2016-06-20T00:00:00Z" --output_dir="/tmp/factors/output"
+go run run_pull_events.go --project_id=<projectId> --end_time=1465948361 --output_dir="/tmp/factors/output"
 ```
 
-* Check output file at /tmp/factors/output/patterns-\<projectId\>-1466380800/events.txt
+* Check output file at /tmp/factors/output/patterns-\<projectId\>-1465948361/events.txt
 
 ```
-go run run_pattern_mine.go --input_file="/tmp/factors/output/patterns-<projectId>-1466380800/events.txt" --project_id=<projectId> --output_file="/tmp/factors/output/patterns-<projectId>-1466380800/patterns.txt"
+go run run_pattern_mine.go --input_file="/tmp/factors/output/patterns-<projectId>-1465948361/events.txt" --project_id=<projectId> --output_file="/tmp/factors/output/patterns-<projectId>-1465948361/patterns.txt"
 ```
 
 * Change in /tmp/factors/config/config.json 
 * "pattern_files": {} 
 *    to
-* "pattern_files": {"\<projectId\>": "/tmp/factors/output/patterns-\<projectId\>-1466380800/patterns.txt" }
+* "pattern_files": {"\<projectId\>": "/tmp/factors/output/patterns-\<projectId\>-1465948361/patterns.txt" }
 * Restart server to see factors in action on Frontend.
 
 ## Setting up debugging in VSCode

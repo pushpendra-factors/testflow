@@ -22,24 +22,24 @@ import (
 
 var projectIdFlag = flag.Int("project_id", 0, "Project Id.")
 var outputDirFlag = flag.String("output_dir", "", "Results are written to output directory.")
-var endTimeFlag = flag.String("end_time", time.Now().Format(time.RFC3339),
+var endTimeFlag = flag.Int64("end_time", time.Now().Unix(),
 	"Events that occurred from  num_HOURS or max_events before end time are processed. Format is '2018-06-30T00:00:00Z'")
 
-var startTime time.Time
-var endTime time.Time
+const max_EVENTS = 30000000        // 30 million. (million a day)
+const num_SECONDS = 30 * 24 * 3600 // TODO(Update this to 30 days)
 
-const max_EVENTS = 30000000 // 30 million. (million a day)
-const num_HOURS = 24 * 30   // TODO(Update this to 30 days)
-
-func pullAndWriteEventsFile(projectId int, startTime time.Time, endTime time.Time,
+func pullAndWriteEventsFile(projectId int, startTime int64, endTime int64,
 	baseOutputDir string) error {
 	db := C.GetServices().Db
 
 	defer db.Close()
 
-	rows, err := db.Raw("SELECT events.user_id, event_names.name, events.created_at, events.count, events.properties, users.created_at FROM events "+
-		"LEFT JOIN event_names ON events.event_name_id = event_names.id LEFT JOIN users ON events.user_id = users.id WHERE events.project_id = ? AND events.created_at BETWEEN  ? AND ? "+
-		"ORDER BY events.user_id, events.created_at LIMIT ?", *projectIdFlag, startTime, endTime, max_EVENTS).Rows()
+	rows, err := db.Raw("SELECT COALESCE(users.customer_user_id, users.id), event_names.name, events.timestamp, events.count,"+
+		" events.properties, users.join_timestamp, user_properties.properties FROM events "+
+		"LEFT JOIN event_names ON events.event_name_id = event_names.id LEFT JOIN users ON events.user_id = users.id "+
+		"LEFT JOIN user_properties ON events.user_properties_id = user_properties.id "+
+		"WHERE events.project_id = ? AND events.timestamp BETWEEN  ? AND ? "+
+		"ORDER BY events.user_id, events.timestamp LIMIT ?", *projectIdFlag, startTime, endTime, max_EVENTS).Rows()
 	defer rows.Close()
 
 	if err != nil {
@@ -58,30 +58,42 @@ func pullAndWriteEventsFile(projectId int, startTime time.Time, endTime time.Tim
 	for rows.Next() {
 		var userId string
 		var eventName string
-		var eventCreatedAt time.Time
-		var userCreatedAt time.Time
+		var eventTimestamp int64
+		var userJoinTimestamp int64
 		var eventCardinality uint
 		var eventProperties postgres.Jsonb
-		if err = rows.Scan(&userId, &eventName, &eventCreatedAt, &eventCardinality, &eventProperties, &userCreatedAt); err != nil {
+		var userProperties postgres.Jsonb
+		if err = rows.Scan(&userId, &eventName, &eventTimestamp,
+			&eventCardinality, &eventProperties, &userJoinTimestamp, &userProperties); err != nil {
 			log.WithFields(log.Fields{"err": err}).Error("SQL Parse failed.")
 			return err
 		}
 		eventPropertiesBytes, err := eventProperties.Value()
 		if err != nil {
-			log.WithFields(log.Fields{"err": err}).Fatal("Unable to unmarshal property.")
+			log.WithFields(log.Fields{"err": err}).Fatal("Unable to unmarshal event property.")
 		}
 		var eventPropertiesMap map[string]interface{}
 		err = json.Unmarshal(eventPropertiesBytes.([]byte), &eventPropertiesMap)
 		if err != nil {
-			log.WithFields(log.Fields{"err": err}).Fatal("Unable to unmarshal property.")
+			log.WithFields(log.Fields{"err": err}).Fatal("Unable to unmarshal event property.")
+		}
+		userPropertiesBytes, err := userProperties.Value()
+		if err != nil {
+			log.WithFields(log.Fields{"err": err}).Fatal("Unable to unmarshal user property.")
+		}
+		var userPropertiesMap map[string]interface{}
+		err = json.Unmarshal(userPropertiesBytes.([]byte), &userPropertiesMap)
+		if err != nil {
+			log.WithFields(log.Fields{"err": err}).Fatal("Unable to unmarshal user property.")
 		}
 		event := P.CounterEventFormat{
-			UserId:           userId,
-			UserCreatedTime:  userCreatedAt,
-			EventName:        eventName,
-			EventCreatedTime: eventCreatedAt,
-			EventCardinality: eventCardinality,
-			EventProperties:  eventPropertiesMap,
+			UserId:            userId,
+			UserJoinTimestamp: userJoinTimestamp,
+			EventName:         eventName,
+			EventTimestamp:    eventTimestamp,
+			EventCardinality:  eventCardinality,
+			EventProperties:   eventPropertiesMap,
+			UserProperties:    userPropertiesMap,
 		}
 
 		lineBytes, err := json.Marshal(event)
@@ -101,8 +113,8 @@ func pullAndWriteEventsFile(projectId int, startTime time.Time, endTime time.Tim
 	return nil
 }
 
-func setupOutputDirectory() (string, error) {
-	dirName := fmt.Sprintf("patterns-%d-%d", *projectIdFlag, endTime.Unix())
+func setupOutputDirectory(endTime int64) (string, error) {
+	dirName := fmt.Sprintf("patterns-%d-%d", *projectIdFlag, endTime)
 	outputDirectory := filepath.Join(*outputDirFlag, dirName)
 	err := os.Mkdir(outputDirectory, 0777)
 	return outputDirectory, err
@@ -121,15 +133,17 @@ func main() {
 		os.Exit(1)
 	}
 
+	var startTime int64
+	var endTime int64
 	// Initialize start time and end time.
-	endTime, err = time.Parse(time.RFC3339, *endTimeFlag)
-	if err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("Unable to parse time.")
+	if *endTimeFlag < 0 {
+		log.WithFields(log.Fields{"err": err}).Error("Incorrect end time.")
 		os.Exit(1)
 	}
-	startTime = endTime.Add(-num_HOURS * time.Hour)
+	endTime = *endTimeFlag
+	startTime = endTime - num_SECONDS
 
-	baseOutputDir, err := setupOutputDirectory()
+	baseOutputDir, err := setupOutputDirectory(endTime)
 	if err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("Failed to setup output directory.")
 		os.Exit(1)

@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"encoding/json"
 	M "factors/model"
 	"net/http"
 	"strconv"
@@ -9,55 +8,6 @@ import (
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 )
-
-// Test command.
-// curl -H "Content-Type: application/json" -i -X POST http://localhost:8080/projects/1/users -d '{ "user_id": "murthy@autometa", "properties": {"city": "bengaluru", "mobile": true}}'
-func CreateUserHandler(c *gin.Context) {
-	r := c.Request
-
-	projectId, err := strconv.ParseUint(c.Params.ByName("project_id"), 10, 64)
-	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("CreateUser Failed. ProjectId parse failed.")
-		c.AbortWithStatus(http.StatusBadRequest)
-		return
-	}
-
-	var user M.User
-	err = json.NewDecoder(r.Body).Decode(&user)
-	user.ProjectId = projectId
-	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("CreateUser Failed. Json Decoding failed.")
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":  "json decoding : " + err.Error(),
-			"status": http.StatusBadRequest,
-		})
-		return
-	}
-
-	var errCode int
-
-	// If customer_user given and already exists, respond with last user of customer_user.
-	if user.CustomerUserId != "" {
-		userLatest, errCode := M.GetUserLatestByCustomerUserId(projectId, user.CustomerUserId)
-
-		if errCode == http.StatusInternalServerError {
-			c.AbortWithStatusJSON(errCode, gin.H{"error": "User creation failed. Finding customer user failed."})
-			return
-		}
-
-		if errCode == http.StatusFound {
-			c.JSON(http.StatusOK, userLatest)
-			return
-		}
-	}
-
-	_, errCode = M.CreateUser(&user)
-	if errCode != http.StatusCreated {
-		c.AbortWithStatus(errCode)
-	} else {
-		c.JSON(http.StatusCreated, user)
-	}
-}
 
 // Test command.
 // curl -i -X GET http://localhost:8080/projects/1/users/bc7318e8-2b69-49b6-baf3-fdf47bcb1af9

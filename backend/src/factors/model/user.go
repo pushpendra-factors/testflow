@@ -23,9 +23,19 @@ type User struct {
 
 	// UserId provided by the customer.
 	// An unique index is creatd on ProjectId+UserId.
-	CustomerUserId string    `json:"c_uid"`
-	CreatedAt      time.Time `json:"created_at"`
-	UpdatedAt      time.Time `json:"updated_at"`
+	CustomerUserId string `json:"c_uid"`
+	// unix epoch timestamp in seconds.
+	JoinTimestamp int64     `json:"join_timestamp"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
+}
+
+func (user *User) BeforeCreate(scope *gorm.Scope) error {
+	// Increamenting count based on EventNameId, not by EventName.
+	if user.JoinTimestamp <= 0 {
+		user.JoinTimestamp = time.Now().Unix()
+	}
+	return nil
 }
 
 func CreateUser(user *User) (*User, int) {
@@ -101,27 +111,27 @@ func UpdateUser(projectId uint64, id string, user *User) (*User, int) {
 }
 
 // UpdateUserProperties only if there is a change in properties values.
-func UpdateUserProperties(projectId uint64, id string, properties *postgres.Jsonb) int {
+func UpdateUserProperties(projectId uint64, id string, properties *postgres.Jsonb) (string, int) {
 	userPropertiesId, status := getUserPropertiesId(projectId, id)
 	if status != http.StatusFound {
-		return status
+		return "", status
 	}
 	db := C.GetServices().Db
 	// Update properties.
 	newPropertiesId, statusCode := createUserPropertiesIfChanged(
 		projectId, id, userPropertiesId, properties)
 	if statusCode != http.StatusCreated && statusCode != http.StatusNotModified {
-		return http.StatusInternalServerError
+		return "", http.StatusInternalServerError
 	}
 	if newPropertiesId != userPropertiesId {
 		user := User{ID: id, ProjectId: projectId}
 		if err := db.Model(&user).Update("properties_id", newPropertiesId).Error; err != nil {
 			log.WithFields(log.Fields{"user": user, "error": err}).Error("Failed updating propertyId")
-			return http.StatusInternalServerError
+			return "", http.StatusInternalServerError
 		}
-		return http.StatusAccepted
+		return newPropertiesId, http.StatusAccepted
 	}
-	return http.StatusNotModified
+	return userPropertiesId, http.StatusNotModified
 }
 
 func getUserPropertiesId(projectId uint64, id string) (string, int) {

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math"
 	"strings"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -28,9 +27,9 @@ type Pattern struct {
 	// Private variables.
 	waitIndex                  int
 	currentUserId              string
-	currentUserCreatedTime     time.Time
+	currentUserJoinTimestamp   int64
 	currentUserOccurrenceCount uint
-	currentEventTimes          []time.Time
+	currentEventTimestamps     []int64
 	currentEventCardinalities  []uint
 	currentRepeats             []uint
 	currentNMap                map[string]float64
@@ -86,9 +85,9 @@ func NewPattern(events []string, eventInfoMap *EventInfoMap) (*Pattern, error) {
 		OncePerUserCount:           0,
 		waitIndex:                  0,
 		currentUserId:              "",
-		currentUserCreatedTime:     time.Time{},
+		currentUserJoinTimestamp:   0,
 		currentUserOccurrenceCount: 0,
-		currentEventTimes:          make([]time.Time, pLen),
+		currentEventTimestamps:     make([]int64, pLen),
 		currentEventCardinalities:  make([]uint, pLen),
 		currentRepeats:             make([]uint, pLen),
 		currentNMap:                make(map[string]float64),
@@ -145,8 +144,8 @@ func isEventsUnique(eventNames []string) bool {
 	return len(pMap) == pLen
 }
 
-func (p *Pattern) ResetForNewUser(userId string, userCreatedTime time.Time) error {
-	if userId == "" || userCreatedTime.Equal(time.Time{}) {
+func (p *Pattern) ResetForNewUser(userId string, userJoinTimestamp int64) error {
+	if userId == "" || userJoinTimestamp <= 0 {
 		return fmt.Errorf("Missing userId or userCreatedTime.")
 	}
 
@@ -154,10 +153,10 @@ func (p *Pattern) ResetForNewUser(userId string, userCreatedTime time.Time) erro
 	// Reinitialize all private variables maintained per user event stream.
 	p.waitIndex = 0
 	p.currentUserId = userId
-	p.currentUserCreatedTime = userCreatedTime
+	p.currentUserJoinTimestamp = userJoinTimestamp
 	p.currentUserOccurrenceCount = 0
 	pLen := len(p.EventNames)
-	p.currentEventTimes = make([]time.Time, pLen)
+	p.currentEventTimestamps = make([]int64, pLen)
 	p.currentRepeats = make([]uint, pLen)
 	return nil
 }
@@ -188,17 +187,17 @@ func addNumericAndCategoricalProperties(
 // Further the distribution of timestamps, event properties and number of occurrences
 // are stored with the patterns.
 func (p *Pattern) CountForEvent(
-	eventName string, eventCreatedTime time.Time, eventProperties map[string]interface{},
-	eventCardinality uint, userId string, userCreatedTime time.Time) (string, error) {
+	eventName string, eventTimestamp int64, eventProperties map[string]interface{},
+	eventCardinality uint, userId string, userJoinTimestamp int64) (string, error) {
 
-	if eventName == "" || eventCreatedTime.Equal(time.Time{}) {
-		return "", fmt.Errorf("Missing eventId or eventCreatedTime.")
+	if eventName == "" || eventTimestamp <= 0 {
+		return "", fmt.Errorf("Missing eventId or eventTimestamp.")
 	}
 
-	if userId != p.currentUserId || !p.currentUserCreatedTime.Equal(userCreatedTime) {
+	if userId != p.currentUserId || p.currentUserJoinTimestamp != userJoinTimestamp {
 		return "", fmt.Errorf(
-			fmt.Sprintf("Mismatch in User data. userId: %s, userCreatedTime: %v, pattern userId: %s, pattern userCreatedTime: %v",
-				userId, userCreatedTime, p.currentUserId, p.currentUserCreatedTime))
+			fmt.Sprintf("Mismatch in User data. userId: %s, userJoinTime: %v, pattern userId: %s, pattern userJoinTime: %d",
+				userId, userJoinTimestamp, p.currentUserId, p.currentUserJoinTimestamp))
 	}
 
 	if p.waitIndex > 0 && eventName == p.EventNames[p.waitIndex-1] {
@@ -207,7 +206,7 @@ func (p *Pattern) CountForEvent(
 		p.currentRepeats[p.waitIndex-1] += 1
 	} else if eventName == p.EventNames[p.waitIndex] {
 		// Record the event occurrence and wait on the next one.
-		p.currentEventTimes[p.waitIndex] = eventCreatedTime
+		p.currentEventTimestamps[p.waitIndex] = eventTimestamp
 		p.currentEventCardinalities[p.waitIndex] = eventCardinality
 		p.currentRepeats[p.waitIndex] = 1
 		// Update seen properties.
@@ -226,14 +225,14 @@ func (p *Pattern) CountForEvent(
 				// Check whether events are in order.
 				for i := 0; i < pLen; i++ {
 					if i == 0 {
-						duration := p.currentEventTimes[0].Sub(userCreatedTime).Seconds()
+						duration := p.currentEventTimestamps[0] - userJoinTimestamp
 						if duration < 0 {
 							// Ignoring this error for now, since there are no DB checks to avoid
 							// these user input values.
 							log.Error(fmt.Sprintf("Event occurs before creation for user:%s", p.currentUserId))
 						}
 					} else {
-						duration := p.currentEventTimes[i].Sub(p.currentEventTimes[i-1]).Seconds()
+						duration := p.currentEventTimestamps[i] - p.currentEventTimestamps[i-1]
 						if duration < 0 {
 							return "", fmt.Errorf("Event Timings not in order")
 						}
@@ -255,11 +254,11 @@ func (p *Pattern) CountForEvent(
 				var cardinalityRepeatTimingsVec []float64 = make([]float64, 6)
 				cardinalityRepeatTimingsVec[0] = float64(p.currentEventCardinalities[0])
 				cardinalityRepeatTimingsVec[1] = float64(p.currentRepeats[0])
-				cardinalityRepeatTimingsVec[2] = p.currentEventTimes[0].Sub(userCreatedTime).Seconds()
+				cardinalityRepeatTimingsVec[2] = float64(p.currentEventTimestamps[0] - userJoinTimestamp)
 				cardinalityRepeatTimingsVec[3] = float64(p.currentEventCardinalities[pLen-1])
 				cardinalityRepeatTimingsVec[4] = float64(p.currentRepeats[pLen-1])
 				if pLen > 1 {
-					cardinalityRepeatTimingsVec[5] = p.currentEventTimes[pLen-1].Sub(p.currentEventTimes[pLen-2]).Seconds()
+					cardinalityRepeatTimingsVec[5] = float64(p.currentEventTimestamps[pLen-1] - p.currentEventTimestamps[pLen-2])
 				} else {
 					cardinalityRepeatTimingsVec[5] = cardinalityRepeatTimingsVec[2]
 				}
@@ -267,7 +266,7 @@ func (p *Pattern) CountForEvent(
 			}
 
 			// Reset.
-			p.currentEventTimes = make([]time.Time, pLen)
+			p.currentEventTimestamps = make([]int64, pLen)
 			p.currentEventCardinalities = make([]uint, pLen)
 			p.currentRepeats = make([]uint, pLen)
 			p.waitIndex = 0

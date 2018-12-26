@@ -28,6 +28,7 @@ type UserProperties struct {
 	// JsonB of postgres with gorm. https://github.com/jinzhu/gorm/issues/1183
 	Properties postgres.Jsonb `json:"properties"`
 	CreatedAt  time.Time      `json:"created_at"`
+	UpdatedAt  time.Time      `json:"updated_at"`
 }
 
 func createUserPropertiesIfChanged(projectId uint64, userId string,
@@ -85,16 +86,13 @@ func getUserProperties(projectId uint64, userId string, id string) (*postgres.Js
 	return &userProperties.Properties, http.StatusFound
 }
 
-func FillUserDefaultProperties(properties *U.PropertiesMap, clientIP string) error {
+func FillLocationUserProperties(properties *U.PropertiesMap, clientIP string) error {
 	geo := C.GetServices().GeoLocation
 
 	// ClientIP unavailable.
 	if clientIP == "" {
 		return fmt.Errorf("invalid IP, failed adding geolocation properties")
 	}
-
-	// Added IP for internal usage.
-	(*properties)[U.UP_INTERNAL_IP] = clientIP
 
 	city, err := geo.City(net.ParseIP(clientIP))
 	if err != nil {
@@ -105,11 +103,15 @@ func FillUserDefaultProperties(properties *U.PropertiesMap, clientIP string) err
 
 	// Using en -> english name.
 	if countryName, ok := city.Country.Names["en"]; ok && countryName != "" {
-		(*properties)[U.UP_COUNTRY] = countryName
+		if c, ok := (*properties)[U.UP_COUNTRY]; !ok || c == "" {
+			(*properties)[U.UP_COUNTRY] = countryName
+		}
 	}
 
 	if cityName, ok := city.City.Names["en"]; ok && cityName != "" {
-		(*properties)[U.UP_CITY] = cityName
+		if c, ok := (*properties)[U.UP_CITY]; !ok || c == "" {
+			(*properties)[U.UP_CITY] = cityName
+		}
 	}
 
 	return nil

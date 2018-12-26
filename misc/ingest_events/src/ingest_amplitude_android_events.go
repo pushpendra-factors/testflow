@@ -16,6 +16,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -23,6 +24,7 @@ import (
 var inputDirFlag = flag.String("input_dir", "", "Input Directory with json files.")
 var serverFlag = flag.String("server", "http://localhost:8080", "Server Path.")
 var projectIdFlag = flag.Int("project_id", 0, "Project Id.")
+var projectTokenFlag = flag.String("project_token", "", "Needs to be passed if projectId is passed.")
 
 var clientUserIdKey string = "user_id"
 var sessionIdKey string = "session_id"
@@ -36,50 +38,29 @@ func getUserId(clientUserId string, eventMap map[string]interface{}) (string, er
 	userId, found := clientUserIdToUserIdMap[clientUserId]
 	if !found {
 		// Create a user.
-		var userCreatedTime string
+		var userCreatedTimeString string
 		userCreatedTimeData, found := eventMap[clientUserCreationTimeKey]
 		if userCreatedTimeData != nil && found {
-			userCreatedTime = userCreatedTimeData.(string)
+			userCreatedTimeString = userCreatedTimeData.(string)
 		} else {
 			// If user created time is absent use eventCreatedTime.
-			userCreatedTime, _ = eventMap[eventCreationTimeKey].(string)
+			userCreatedTimeString, _ = eventMap[eventCreationTimeKey].(string)
 		}
-		userCreatedTime = strings.Replace(userCreatedTime, " ", "T", -1)
-		userCreatedTime = strings.Replace(userCreatedTime, " ", "T", -1)
-		userCreatedTime = fmt.Sprintf("%sZ", userCreatedTime)
+		userCreatedTimeString = strings.Replace(userCreatedTimeString, " ", "T", -1)
+		userCreatedTimeString = strings.Replace(userCreatedTimeString, " ", "T", -1)
+		userCreatedTimeString = fmt.Sprintf("%sZ", userCreatedTimeString)
+		userCreatedTime, _ := time.Parse(time.RFC3339, userCreatedTimeString)
 
 		userRequestMap := make(map[string]interface{})
 		userRequestMap["c_uid"] = clientUserId
-		userRequestMap["created_at"] = userCreatedTime
-		userRequestMap["updated_at"] = userCreatedTime
-
-		userRequestPropertiesMap := make(map[string]interface{})
-		// TODO: These properties are not updated. Currently only based on the first event.
-		userRequestPropertiesMap["device_brand"], _ = eventMap["device_brand"]
-		userRequestPropertiesMap["location_lng"], _ = eventMap["location_lng"]
-		userRequestPropertiesMap["ip_address"], _ = eventMap["ip_address"]
-		userRequestPropertiesMap["device_model"], _ = eventMap["device_model"]
-		userRequestPropertiesMap["language"], _ = eventMap["language"]
-		userRequestPropertiesMap["country"], _ = eventMap["country"]
-		userRequestPropertiesMap["os_name"], _ = eventMap["os_name"]
-		userRequestPropertiesMap["device_id"], _ = eventMap["device_id"]
-		userRequestPropertiesMap["device_carrier"], _ = eventMap["device_carrier"]
-		userRequestPropertiesMap["os_version"], _ = eventMap["os_version"]
-		userRequestPropertiesMap["city"], _ = eventMap["city"]
-		userRequestPropertiesMap["device_type"], _ = eventMap["device_type"]
-		userRequestPropertiesMap["version_name"], _ = eventMap["version_name"]
-		userRequestPropertiesMap["region"], _ = eventMap["region"]
-		userRequestPropertiesMap["device_manufacturer"], _ = eventMap["device_manufacturer"]
-		userRequestPropertiesMap["location_lat"], _ = eventMap["location_lat"]
-		userRequestPropertiesMap["device_family"], _ = eventMap["device_family"]
-		userRequestPropertiesMap["platform"], _ = eventMap["platform"]
-		userRequestPropertiesMap["library"], _ = eventMap["library"]
-		userRequestPropertiesMap["user_properties"], _ = eventMap["user_properties"]
-		userRequestMap["properties"] = userRequestPropertiesMap
+		userRequestMap["join_timestamp"] = userCreatedTime.Unix()
 
 		reqBody, _ := json.Marshal(userRequestMap)
-		url := fmt.Sprintf("%s/projects/%d/users", *serverFlag, *projectIdFlag)
-		resp, err := http.Post(url, "application/json", bytes.NewBuffer(reqBody))
+		url := fmt.Sprintf("%s/sdk/user/identify", *serverFlag)
+		client := &http.Client{}
+		req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqBody))
+		req.Header.Add("Authorization", *projectTokenFlag)
+		resp, err := client.Do(req)
 		// always close the response-body, even if content is not required
 		defer resp.Body.Close()
 		if err != nil {
@@ -93,7 +74,7 @@ func getUserId(clientUserId string, eventMap map[string]interface{}) (string, er
 		}
 		var jsonResponseMap map[string]interface{}
 		json.Unmarshal(jsonResponse, &jsonResponseMap)
-		userId = jsonResponseMap["id"].(string)
+		userId = jsonResponseMap["user_id"].(string)
 		clientUserIdToUserIdMap[clientUserId] = userId
 	}
 	return userId, nil
@@ -122,49 +103,56 @@ func lineIngest(eventMap map[string]interface{}) {
 		return
 	}
 
-	eventCreatedTime, _ := eventMap[eventCreationTimeKey].(string)
-	eventCreatedTime = strings.Replace(eventCreatedTime, " ", "T", -1)
-	eventCreatedTime = fmt.Sprintf("%sZ", eventCreatedTime)
+	eventCreatedTimeString, _ := eventMap[eventCreationTimeKey].(string)
+	eventCreatedTimeString = strings.Replace(eventCreatedTimeString, " ", "T", -1)
+	eventCreatedTimeString = fmt.Sprintf("%sZ", eventCreatedTimeString)
+	eventCreatedTime, _ := time.Parse(time.RFC3339, eventCreatedTimeString)
 
 	eventRequestMap := make(map[string]interface{})
 	eventRequestMap["event_name"] = eventName
-	eventRequestMap["created_at"] = eventCreatedTime
-	eventRequestMap["updated_at"] = eventCreatedTime
+	eventRequestMap["user_id"] = userId
+	eventRequestMap["timestamp"] = eventCreatedTime.Unix()
 
-	eventRequestPropertiesMap := make(map[string]interface{})
+	// event properties.
+	eventPropertiesMap := make(map[string]interface{})
+	eventPropertiesMap["amplitude_event_type"], _ = eventMap["amplitude_event_type"]
+	eventPropertiesMap["client_event_time"], _ = eventMap["client_event_time"]
+	eventPropertiesMap["additional_event_properties"], _ = eventMap["event_properties"]
+	eventPropertiesMap["event_id"], _ = eventMap["event_id"]
+	eventPropertiesMap["processed_time"], _ = eventMap["processed_time"]
+	eventPropertiesMap["event_type"], _ = eventMap["event_type"]
+	eventPropertiesMap["version_name"], _ = eventMap["version_name"]
+	eventPropertiesMap["session_id"], _ = eventMap["session_id"]
+	eventPropertiesMap["$ip"], _ = eventMap["ip_address"]
+	eventPropertiesMap["$locationLng"], _ = eventMap["location_lng"]
+	eventPropertiesMap["$locationLat"], _ = eventMap["location_lat"]
+	eventRequestMap["event_properties"] = eventPropertiesMap
+
+	// User properties associatied with event.
+	userPropertiesMap := make(map[string]interface{})
 	// Keys that will go into eventProperties.
-	eventRequestPropertiesMap["device_brand"], _ = eventMap["device_brand"]
-	eventRequestPropertiesMap["location_lng"], _ = eventMap["location_lng"]
-	eventRequestPropertiesMap["amplitude_event_type"], _ = eventMap["amplitude_event_type"]
-	eventRequestPropertiesMap["ip_address"], _ = eventMap["ip_address"]
-	eventRequestPropertiesMap["client_event_time"], _ = eventMap["client_event_time"]
-	eventRequestPropertiesMap["device_model"], _ = eventMap["device_model"]
-	eventRequestPropertiesMap["event_properties"], _ = eventMap["event_properties"]
-	eventRequestPropertiesMap["language"], _ = eventMap["language"]
-	eventRequestPropertiesMap["country"], _ = eventMap["country"]
-	eventRequestPropertiesMap["event_id"], _ = eventMap["event_id"]
-	eventRequestPropertiesMap["os_name"], _ = eventMap["os_name"]
-	eventRequestPropertiesMap["device_id"], _ = eventMap["device_id"]
-	eventRequestPropertiesMap["processed_time"], _ = eventMap["processed_time"]
-	eventRequestPropertiesMap["event_type"], _ = eventMap["event_type"]
-	eventRequestPropertiesMap["device_carrier"], _ = eventMap["device_carrier"]
-	eventRequestPropertiesMap["os_version"], _ = eventMap["os_version"]
-	eventRequestPropertiesMap["city"], _ = eventMap["city"]
-	eventRequestPropertiesMap["device_type"], _ = eventMap["device_type"]
-	eventRequestPropertiesMap["version_name"], _ = eventMap["version_name"]
-	eventRequestPropertiesMap["region"], _ = eventMap["region"]
-	eventRequestPropertiesMap["device_manufacturer"], _ = eventMap["device_manufacturer"]
-	eventRequestPropertiesMap["location_lat"], _ = eventMap["location_lat"]
-	eventRequestPropertiesMap["device_family"], _ = eventMap["device_family"]
-	eventRequestPropertiesMap["platform"], _ = eventMap["platform"]
-	eventRequestPropertiesMap["library"], _ = eventMap["library"]
-	eventRequestPropertiesMap["session_id"], _ = eventMap["session_id"]
-	eventRequestPropertiesMap["event_properties"], _ = eventMap["event_properties"]
-	eventRequestMap["properties"] = eventRequestPropertiesMap
+	userPropertiesMap["$deviceBrand"], _ = eventMap["device_brand"]
+	userPropertiesMap["$deviceModel"], _ = eventMap["device_model"]
+	userPropertiesMap["$country"], _ = eventMap["country"]
+	userPropertiesMap["$os"], _ = eventMap["os_name"]
+	userPropertiesMap["$deviceId"], _ = eventMap["device_id"]
+	userPropertiesMap["$deviceType"], _ = eventMap["device_type"]
+	userPropertiesMap["$language"], _ = eventMap["language"]
+	userPropertiesMap["$deviceCarrier"], _ = eventMap["device_carrier"]
+	userPropertiesMap["$osVersion"], _ = eventMap["os_version"]
+	userPropertiesMap["$city"], _ = eventMap["city"]
+	userPropertiesMap["$region"], _ = eventMap["region"]
+	userPropertiesMap["$deviceManufacturer"], _ = eventMap["device_manufacturer"]
+	userPropertiesMap["$deviceFamily"], _ = eventMap["device_family"]
+	userPropertiesMap["$platform"], _ = eventMap["platform"]
+	eventRequestMap["user_properties"] = userPropertiesMap
 
 	reqBody, _ := json.Marshal(eventRequestMap)
-	url := fmt.Sprintf("%s/projects/%d/users/%s/events", *serverFlag, *projectIdFlag, userId)
-	resp, err := http.Post(url, "application/json", bytes.NewBuffer(reqBody))
+	url := fmt.Sprintf("%s/sdk/event/track", *serverFlag)
+	client := &http.Client{}
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqBody))
+	req.Header.Add("Authorization", *projectTokenFlag)
+	resp, err := client.Do(req)
 	// always close the response-body, even if content is not required
 	defer resp.Body.Close()
 	if err != nil {
@@ -196,8 +184,9 @@ func fileIngest(filepath string) {
 	}
 }
 
-func setupProject() (int, error) {
+func setupProject() (int, string, error) {
 	var projectId int
+	var projectToken string
 
 	// Create random project and a corresponding eventName and user.
 	reqBody := []byte(`{"name": "ingest_events_project"}`)
@@ -207,29 +196,31 @@ func setupProject() (int, error) {
 	defer resp.Body.Close()
 	if err != nil {
 		log.Fatal(fmt.Sprintf("Http Post user creation failed. Url: %s, reqBody: %s, response: %+v", url, reqBody, resp))
-		return 0, err
+		return 0, "", err
 	}
 	jsonResponse, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		log.Fatal("Unable to parse http user create response.")
-		return 0, err
+		return 0, "", err
 	}
 	var jsonResponseMap map[string]interface{}
 	json.Unmarshal(jsonResponse, &jsonResponseMap)
 	projectId = int(jsonResponseMap["id"].(float64))
-	return projectId, nil
+	projectToken = jsonResponseMap["token"].(string)
+	return projectId, projectToken, nil
 }
 
 func main() {
 	flag.Parse()
 
 	if *projectIdFlag <= 0 {
-		projectId, err := setupProject()
+		projectId, projectToken, err := setupProject()
 		if err != nil {
 			log.Fatal("Project setup failed.")
 			os.Exit(1)
 		}
 		projectIdFlag = &projectId
+		projectTokenFlag = &projectToken
 	}
 	fileList := []string{}
 	err := filepath.Walk(*inputDirFlag, func(path string, f os.FileInfo, err error) error {
