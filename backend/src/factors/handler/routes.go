@@ -10,6 +10,7 @@ const ROUTE_SDK_ROOT = "/sdk"
 const ROUTE_PROJECTS_ROOT = "/projects"
 
 func InitAppRoutes(r *gin.Engine) {
+
 	// Route not allowed for public access.
 	r.POST(ROUTE_PROJECTS_ROOT,
 		Mid.DenyPublicAccess(),
@@ -27,6 +28,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/settings", GetProjectSettingHandler)
 	authRouteGroup.PUT("/:project_id/settings", UpdateProjectSettingsHandler)
 	authRouteGroup.GET("/:project_id/event_names", GetEventNamesHandler)
+	authRouteGroup.GET("/:project_id/models", GetProjectModelIntervalsHandler)
 	authRouteGroup.GET("/:project_id/filters", GetFiltersHandler)
 	authRouteGroup.POST("/:project_id/filters", CreateFilterHandler)
 	authRouteGroup.PUT("/:project_id/filters/:filter_id", UpdateFilterHandler)

@@ -3,8 +3,10 @@ package handler
 import (
 	"encoding/json"
 	M "factors/model"
+	crpc "factors/patternserver"
 	U "factors/util"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -46,4 +48,20 @@ func GetProjectsHandler(c *gin.Context) {
 	} else {
 		c.JSON(http.StatusOK, projects)
 	}
+}
+
+func GetProjectModelIntervalsHandler(c *gin.Context) {
+	projectId, err := strconv.ParseUint(c.Params.ByName("project_id"), 10, 64)
+	if err != nil {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	modelIntervals, err := crpc.GetProjectModelIntervals(projectId)
+	if err != nil {
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+
+	c.JSON(http.StatusOK, modelIntervals)
 }

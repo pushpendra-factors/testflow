@@ -1,20 +1,25 @@
 package config
 
 import (
-	"bufio"
 	json "encoding/json"
 	P "factors/pattern"
+	PS "factors/patternserver/store"
+	serviceEtcd "factors/services/etcd"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
+
+	"github.com/coreos/etcd/mvcc/mvccpb"
 
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/oschwald/geoip2-golang"
 	log "github.com/sirupsen/logrus"
+	"go.etcd.io/etcd/clientv3"
 )
 
 var configFilePath = flag.String("config_filepath", "../config/config.json", "")
@@ -36,18 +41,50 @@ type SubdomainLoginConfig struct {
 }
 
 type Configuration struct {
-	Env             string               `json:"env"`
-	Port            int                  `json:"port"`
-	DBInfo          DBConf               `json:"db"`
-	PatternFiles    map[uint64]string    `json:"pattern_files"`
-	GeolocationFile string               `json:"geolocation_file"`
-	SubdomainLogin  SubdomainLoginConfig `json:"subdomain_login"`
+	Env                 string               `json:"env"`
+	Port                int                  `json:"port"`
+	DBInfo              DBConf               `json:"db"`
+	ProjectModelMapping map[uint64]string    `json:"project_model_mapping"`
+	EtcdEndpoints       []string             `json:"etcd_endpoints"`
+	GeolocationFile     string               `json:"geolocation_file"`
+	SubdomainLogin      SubdomainLoginConfig `json:"subdomain_login"`
 }
 
 type Services struct {
 	Db             *gorm.DB
 	GeoLocation    *geoip2.Reader
 	PatternService *P.PatternService
+	Etcd           *serviceEtcd.EtcdClient
+
+	patternServersLock sync.RWMutex
+	patternServers     map[string]string
+}
+
+func (service *Services) GetPatternServerAddresses() []string {
+	service.patternServersLock.RLock()
+	defer service.patternServersLock.RUnlock()
+
+	ps := make([]string, 0, 0)
+	for _, addr := range service.patternServers {
+		ps = append(ps, addr)
+	}
+	return ps
+}
+
+func (service *Services) addPatternServer(key, addr string) {
+	log.Infof("Add Pattern Server Key:%s, addr: %s", key, addr)
+	service.patternServersLock.Lock()
+	defer service.patternServersLock.Unlock()
+
+	service.patternServers[key] = addr
+}
+
+func (service *Services) removePatternServer(key string) {
+	log.Infof("Remove Pattern Server Key: %s", key)
+	service.patternServersLock.Lock()
+	defer service.patternServersLock.Unlock()
+
+	delete(services.patternServers, key)
 }
 
 type SubdomainLoginCache struct {
@@ -65,6 +102,10 @@ func initFlags() {
 func initLogging() {
 	// Log as JSON instead of the default ASCII formatter.
 	log.SetFormatter(&log.JSONFormatter{})
+
+	if IsDevelopment() {
+		log.SetLevel(log.DebugLevel)
+	}
 
 	// Output to stdout instead of the default stderr
 	// Can be any io.Writer, see below for File example
@@ -84,13 +125,15 @@ func initConfigFromFile() error {
 
 	raw, err := ioutil.ReadFile(configFileAbsPath)
 	if err != nil {
-		logCtx.WithError(err).Fatal("Failed to load config")
+		logCtx.WithError(err).Error("Failed to load config")
+		return err
 	}
 
 	if err := json.Unmarshal(raw, &configuration); err != nil {
-		logCtx.WithError(err).Fatal("Failed to unmarshal json")
+		logCtx.WithError(err).Error("Failed to unmarshal json")
+		return err
 	}
-	logCtx.WithFields(log.Fields{"config": &configuration}).Info("Config File Loaded")
+	logCtx.WithFields(log.Fields{"config": configuration}).Info("Config File Loaded")
 	return nil
 }
 
@@ -135,53 +178,35 @@ func initServices() error {
 
 	patternsMap := make(map[uint64][]*P.Pattern)
 	projectToUserAndEventsInfoMap := make(map[uint64]*P.UserAndEventsInfo)
-	for projectId, patternsFile := range configuration.PatternFiles {
-		patterns := []*P.Pattern{}
-		var userAndEventsInfo P.UserAndEventsInfo
+	for projectId, modelId := range configuration.ProjectModelMapping {
 
-		patternsFileAbsPath, _ := filepath.Abs(patternsFile)
-		file, err := os.Open(patternsFileAbsPath)
+		eventInfoFilePath := fmt.Sprintf("/tmp/factors-dev/projects/%v/models/%v/event_info_%v.txt", projectId, modelId, modelId)
+		eventInfofile, err := os.Open(eventInfoFilePath)
 		if err != nil {
-			log.WithFields(log.Fields{"file": patternsFileAbsPath}).Error("Failed to load patterns")
+			log.WithFields(log.Fields{"file": eventInfoFilePath}).Error("Failed to load eventInfoFile")
 			return err
 		}
-		defer file.Close()
-
-		scanner := bufio.NewScanner(file)
-		// Adjust scanner buffer capacity to 10MB per line.
-		const maxCapacity = 10 * 1024 * 1024
-		buf := make([]byte, maxCapacity)
-		scanner.Buffer(buf, maxCapacity)
-
-		lineNum := 0
-		for scanner.Scan() {
-			lineNum++
-			line := scanner.Text()
-			if lineNum == 1 {
-				// First line is all the event, event properties and user properties information
-				// seen in the data.
-				if err := json.Unmarshal([]byte(line), &userAndEventsInfo); err != nil {
-					log.WithFields(log.Fields{
-						"file": patternsFileAbsPath, "lineNum": lineNum, "err": err}).Error(
-						"Failed to unmarshal events info.")
-					return err
-				}
-			} else {
-				var pattern P.Pattern
-				if err := json.Unmarshal([]byte(line), &pattern); err != nil {
-					log.WithFields(log.Fields{
-						"file": patternsFileAbsPath, "lineNum": lineNum, "err": err}).Error(
-						"Failed to unmarshal pattern.")
-					return err
-				}
-				patterns = append(patterns, &pattern)
-			}
-		}
-		err = scanner.Err()
+		defer eventInfofile.Close()
+		userAndEventsInfo, err := PS.CreatePatternEventInfoFromScanner(PS.CreateScannerFromFile(eventInfofile))
 		if err != nil {
-			log.WithFields(log.Fields{"err": err, "file": patternsFileAbsPath}).Error("Scanner error")
+			log.WithError(err).WithField("file", eventInfoFilePath).Error("Failed to create eventInfo from File")
 			return err
 		}
+
+		patternsFilePath := fmt.Sprintf("/tmp/factors-dev/projects/%v/models/%v/patterns_%v.txt", projectId, modelId, modelId)
+		patternsfile, err := os.Open(patternsFilePath)
+		if err != nil {
+			log.WithError(err).WithField("file", patternsFilePath).Error("Failed to load patternsFile")
+			return err
+		}
+		defer patternsfile.Close()
+
+		patterns, err := PS.CreatePatternsFromScanner(PS.CreateScannerFromFile(patternsfile))
+		if err != nil {
+			log.WithError(err).WithField("file", patternsFilePath).Error("Failed to create patterns from File")
+			return err
+		}
+
 		patternsMap[projectId] = patterns
 		projectToUserAndEventsInfoMap[projectId] = &userAndEventsInfo
 		log.Info(fmt.Sprintf("Loaded %d patterns for project %d", len(patterns), projectId))
@@ -189,18 +214,62 @@ func initServices() error {
 
 	patternService, err := P.NewPatternService(patternsMap, projectToUserAndEventsInfoMap)
 	if err != nil {
-		log.Fatal("Failed to initialize pattern service")
+		log.WithError(err).Fatal("Failed to initialize pattern service")
 	}
 
 	// Ref: https://geolite.maxmind.com/download/geoip/database/GeoLite2-City.tar.gz
 	geolocation, err := geoip2.Open(configuration.GeolocationFile)
 	if err != nil {
-		log.Fatal("Failed to initialize geolocation service. Falied opening geolocation db file")
+		log.WithError(err).WithField("GeolocationFilePath", configuration.GeolocationFile).Fatal("Failed to initialize geolocation service")
 	}
 	log.Info("Geolocation service intialized")
 
-	services = &Services{Db: db, PatternService: patternService, GeoLocation: geolocation}
+	etcdClient, err := serviceEtcd.New(configuration.EtcdEndpoints)
+	if err != nil {
+		log.WithError(err).Errorln("Falied to initialize etcd client")
+		return err
+	}
+	log.Infof("ETCD Service Initialized with endpoints: %v", configuration.EtcdEndpoints)
+
+	services = &Services{Db: db, PatternService: patternService, Etcd: etcdClient, patternServers: make(map[string]string), GeoLocation: geolocation}
+
+	regPatternServers, err := etcdClient.DiscoverPatternServers()
+	if err != nil && err != serviceEtcd.NotFound {
+		log.WithError(err).Errorln("Falied to initialize discover pattern servers")
+		return err
+	}
+
+	for _, ps := range regPatternServers {
+		services.addPatternServer(ps.Key, ps.Value)
+	}
+
+	go func() {
+		psUpdateChannel := etcdClient.Watch(serviceEtcd.PatternServerPrefix, clientv3.WithPrefix())
+		watchPatternServers(psUpdateChannel)
+	}()
+
 	return nil
+}
+
+func watchPatternServers(psUpdateChannel clientv3.WatchChan) {
+	log.Infoln("Starting to watch on psUpdateChannel")
+	for {
+		msg := <-psUpdateChannel
+		for _, event := range msg.Events {
+			log.WithFields(log.Fields{
+				"Type":  event.Type,
+				"Key":   string(event.Kv.Key),
+				"Value": string(event.Kv.Value),
+			}).Infoln("Event Received on PatternServerUpdateChannel")
+
+			if event.Type == mvccpb.PUT {
+				GetServices().addPatternServer(string(event.Kv.Key), string(event.Kv.Value))
+			} else if event.Type == mvccpb.DELETE {
+				GetServices().removePatternServer(string(event.Kv.Key))
+			}
+		}
+		log.WithField("PatternServers", GetServices().GetPatternServerAddresses()).Info("Updated List of pattern servers")
+	}
 }
 
 func Init() error {
@@ -208,11 +277,11 @@ func Init() error {
 		return fmt.Errorf("Config already initialized")
 	}
 	initFlags()
-	initLogging()
 	err := initConfigFromFile()
 	if err != nil {
 		return err
 	}
+	initLogging()
 
 	initSubdomainLoginCache()
 

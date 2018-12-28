@@ -12,6 +12,18 @@ brew services stop postgresql
 brew services restart postgresql
 ```
 
+## etcd Setup (Homebrew):
+```
+brew install etcd
+brew services start etcd
+brew services stop etcd
+brew services restart etcd
+```
+or run it in a new terminal tab using (logs are easily accessible using this approach)
+```
+etcd 
+```
+
 ### Create user and database.
 ```
 createuser -d -e -P -r autometa
@@ -137,6 +149,26 @@ npm run dev
 * Frontend available at localhost:3000  (API assumed to be served from localhost:8080)
 * Use Atom IDE for editiong React Code.
 
+## Pattern Server
+* Setup
+```
+export GOPATH=<path_to_githubcode>/factors/backend
+export ETCDCTL_API=3
+etcdctl put /factors/metadata/project_version_key version1
+mkdir -p /tmp/factors-dev/metadata
+mkdir -p /tmp/factors/metadata
+cp $GOPATH/src/factors/patternserver/cmd/project_data.txt /tmp/factors/metadata/version1.txt
+cp /tmp/factors/metadata/version1.txt /tmp/factors-dev/metadata/version1.txt
+```
+* Build
+```
+go build -o $GOPATH/bin/pattern-app $GOPATH/src/factors/patternserver/cmd/pattern-app.go
+```
+* Run
+```
+cd $GOPATH/bin
+./pattern-app
+```
 ## Bootstrapping sample data, Building and serving model.
 * Start server on 8080.
 
@@ -151,20 +183,20 @@ go run ingest_kasandr_events.go --input_file=<path_to_githubcode>/factors/sample
 ```
 cd ../../../backend/src/factors/scripts/
 export GOPATH=<path_to_githubcode>/factors/backend
-mkdir -p /tmp/factors/output
-go run run_pull_events.go --project_id=<projectId> --end_time=1465948361 --output_dir="/tmp/factors/output"
+go run run_pull_events.go --project_id=<projectId> --end_time=1465948361 --disk_dir=/tmp/factors --bucket_name=/tmp/factors-dev
+* Note \<modelId\> from the last line of the stdout of the script.
 ```
 
-* Check output file at /tmp/factors/output/patterns-\<projectId\>-1465948361/events.txt
+* Check output file at /tmp/factors/projects/\<projectId\>models/\<modelId\>/events_<modelId>.txt
 
 ```
-go run run_pattern_mine.go --input_file="/tmp/factors/output/patterns-<projectId>-1465948361/events.txt" --project_id=<projectId> --output_file="/tmp/factors/output/patterns-<projectId>-1465948361/patterns.txt"
+go run run_pattern_mine.go --project_id=<projectId> --model_id=<modelId> --disk_dir=/tmp/factors --bucket_name=/tmp/factors-dev
 ```
 
 * Change in /tmp/factors/config/config.json 
-* "pattern_files": {} 
+* "project_model_mapping": {} 
 *    to
-* "pattern_files": {"\<projectId\>": "/tmp/factors/output/patterns-\<projectId\>-1465948361/patterns.txt" }
+* "project_model_mapping": {"\<projectId\>": "\<modelId\>"}
 * Restart server to see factors in action on Frontend.
 
 ## Setting up debugging in VSCode

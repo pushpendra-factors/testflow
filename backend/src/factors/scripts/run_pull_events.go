@@ -9,10 +9,10 @@ import (
 	"encoding/json"
 	C "factors/config"
 	P "factors/pattern"
+	serviceDisk "factors/services/disk"
 	"flag"
 	"fmt"
 	"os"
-	"path/filepath"
 	"time"
 
 	_ "github.com/jinzhu/gorm"
@@ -21,9 +21,10 @@ import (
 )
 
 var projectIdFlag = flag.Int("project_id", 0, "Project Id.")
-var outputDirFlag = flag.String("output_dir", "", "Results are written to output directory.")
+var diskDirFlag = flag.String("disk_dir", "/tmp/factors", "--disk_dir=/tmp/factors pass directory")
+var bucketNameFlag = flag.String("bucket_name", "/tmp/factors-dev", "--bucket_name=/tmp/factors-dev pass bucket name")
 var endTimeFlag = flag.Int64("end_time", time.Now().Unix(),
-	"Events that occurred from  num_HOURS or max_events before end time are processed. Format is '2018-06-30T00:00:00Z'")
+	"Events that occurred from  num_HOURS or max_events before end time are processed. Format is unix timestamp")
 
 const max_EVENTS = 30000000        // 30 million. (million a day)
 const num_SECONDS = 30 * 24 * 3600 // TODO(Update this to 30 days)
@@ -46,10 +47,10 @@ func pullAndWriteEventsFile(projectId int, startTime int64, endTime int64,
 		log.WithFields(log.Fields{"err": err}).Fatal("SQL Query failed.")
 		return err
 	}
-	filename := filepath.Join(baseOutputDir, "events.txt")
-	file, err := os.Create(filename)
+
+	file, err := os.Create(baseOutputDir)
 	if err != nil {
-		log.WithFields(log.Fields{"file": filename, "err": err}).Fatal("Unable to create file.")
+		log.WithFields(log.Fields{"file": baseOutputDir, "err": err}).Fatal("Unable to create file.")
 		return err
 	}
 	defer file.Close()
@@ -109,15 +110,8 @@ func pullAndWriteEventsFile(projectId int, startTime int64, endTime int64,
 		rowCount++
 	}
 	log.Infof("Events pulled : %d", rowCount)
-	log.Infof("Output filepath : %s", filename)
+	log.Infof("Output filepath : %s", baseOutputDir)
 	return nil
-}
-
-func setupOutputDirectory(endTime int64) (string, error) {
-	dirName := fmt.Sprintf("patterns-%d-%d", *projectIdFlag, endTime)
-	outputDirectory := filepath.Join(*outputDirFlag, dirName)
-	err := os.Mkdir(outputDirectory, 0777)
-	return outputDirectory, err
 }
 
 func main() {
@@ -128,9 +122,32 @@ func main() {
 		os.Exit(1)
 	}
 
-	if *projectIdFlag <= 0 || *outputDirFlag == "" {
-		log.Error("project_id and output_dir are required.")
+	if *projectIdFlag <= 0 {
+		log.Error("project_id flag is required.")
 		os.Exit(1)
+	}
+
+	projectId := uint64(*projectIdFlag)
+	modelId := uint64(time.Now().Unix())
+
+	diskDir := *diskDirFlag
+	bucketName := *bucketNameFlag
+
+	diskManager := serviceDisk.New(diskDir)
+	cloundManager := serviceDisk.New(bucketName)
+
+	err = os.MkdirAll(fmt.Sprintf("%s/projects/%v/models/%v/", diskDir, projectId, modelId), 0755)
+	if err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("Failed to Create projects model dir.")
+		os.Exit(1)
+	}
+
+	if C.IsDevelopment() {
+		err = os.MkdirAll(fmt.Sprintf("%s/projects/%v/models/%v/", bucketName, projectId, modelId), 0755)
+		if err != nil {
+			log.WithFields(log.Fields{"err": err}).Error("/tmp/factors-dev Failed to Create projects model dir.")
+			os.Exit(1)
+		}
 	}
 
 	var startTime int64
@@ -143,15 +160,30 @@ func main() {
 	endTime = *endTimeFlag
 	startTime = endTime - num_SECONDS
 
-	baseOutputDir, err := setupOutputDirectory(endTime)
-	if err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("Failed to setup output directory.")
-		os.Exit(1)
-	}
-
-	err = pullAndWriteEventsFile(*projectIdFlag, startTime, endTime, baseOutputDir)
+	path, fname := diskManager.GetModelEventsFilePathAndName(projectId, modelId)
+	outputDir := path + fname
+	err = pullAndWriteEventsFile(*projectIdFlag, startTime, endTime, outputDir)
 	if err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("Failed to mine patterns.")
 		os.Exit(1)
 	}
+
+	file, err := os.Open(outputDir)
+
+	if err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("Failed to open file.")
+		os.Exit(1)
+	}
+
+	cDir, cName := cloundManager.GetModelEventsFilePathAndName(projectId, modelId)
+	err = cloundManager.Create(cDir, cName, file)
+	if err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("Failed to upload file to cloud")
+		os.Exit(1)
+	}
+
+	log.WithFields(log.Fields{
+		"ProjectId": *projectIdFlag,
+		"ModelId":   modelId,
+	}).Info("Project Model Information")
 }

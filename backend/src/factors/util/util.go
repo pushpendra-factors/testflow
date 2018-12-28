@@ -28,3 +28,7 @@ func RandomLowerAphaNumString(n int) string {
 	}
 	return string(b)
 }
+
+func RandomUint64() uint64 {
+	return rand.Uint64()
+}

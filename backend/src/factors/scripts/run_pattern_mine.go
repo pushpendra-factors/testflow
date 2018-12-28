@@ -8,16 +8,20 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	C "factors/config"
+	"factors/filestore"
 	M "factors/model"
 	P "factors/pattern"
+	serviceDisk "factors/services/disk"
+	serviceEtcd "factors/services/etcd"
 	"flag"
 	"fmt"
+	"io"
 	"math"
 	"net/http"
 	"os"
-	"path/filepath"
 	"sort"
 	"sync"
 	"time"
@@ -27,10 +31,10 @@ import (
 )
 
 var projectIdFlag = flag.Int("project_id", 0, "Project Id.")
-var inputFileFlag = flag.String("input_file", "",
-	"Input file of format user_id,user_creation_time,event_id,event_creation_time sorted by user_id and event_creation_time")
-var outputFileFlag = flag.String("output_file", "", "All patterns written to file with each line a JSON")
-var numRoutinesFlag = flag.Int("num_routines", 3, "Project Id.")
+var modelIdFlag = flag.Int("model_id", 0, "Model Id")
+var diskDirFlag = flag.String("disk_dir", "/tmp/factors", "--disk_dir=/tmp/factors pass directory")
+var bucketNameFlag = flag.String("bucket_name", "/tmp/factors-dev", "--bucket_name=/tmp/factors-dev pass bucket name")
+var numRoutinesFlag = flag.Int("num_routines", 3, "No of routines")
 
 // The number of patterns generated is bounded to max_SEGMENTS * top_K per iteration.
 // The amount of data and the time computed to generate this data is bounded
@@ -353,53 +357,215 @@ func main() {
 		os.Exit(1)
 	}
 
-	if *projectIdFlag <= 0 || *inputFileFlag == "" || *outputFileFlag == "" {
-		log.Error("project_id and input_file are required.")
+	if *projectIdFlag <= 0 || *modelIdFlag <= 0 {
+		log.Error("project_id and model_id are required.")
 		os.Exit(1)
 	}
+
 	if *numRoutinesFlag < 1 {
 		log.Error("num_routines is less than one.")
 		os.Exit(1)
 	}
 
-	if _, err := os.Stat(*outputFileFlag); !os.IsNotExist(err) {
-		log.WithFields(log.Fields{"file": *outputFileFlag, "err": err}).Fatal("File already exists.")
+	modelId := uint64(*modelIdFlag)
+	projectId := uint64(*projectIdFlag)
+
+	diskDir := *diskDirFlag
+	bucketName := *bucketNameFlag
+
+	diskManager := serviceDisk.New(diskDir)
+	cloundManager := serviceDisk.New(bucketName)
+
+	etcdClient, err := serviceEtcd.New([]string{"http://localhost:2379"})
+	if err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("failed to init etcd client")
 		os.Exit(1)
 	}
+
+	if C.IsDevelopment() {
+		// only for local
+		err = os.MkdirAll(fmt.Sprintf("%s/projects/%v/models/%v/", bucketName, projectId, modelId), 0755)
+		if err != nil {
+			log.WithFields(log.Fields{"err": err}).Error("/tmp/factors-dev Failed to Create projects model dir.")
+			os.Exit(1)
+		}
+	}
+
+	err = os.MkdirAll(fmt.Sprintf("%s/projects/%v/models/%v/", diskDir, projectId, modelId), 0755)
+	if err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("Failed to Create projects model dir.")
+		os.Exit(1)
+	}
+	err = os.MkdirAll(fmt.Sprintf("%s/metadata", diskDir), 0755)
+	if err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("Failed to Create metadata dir.")
+		os.Exit(1)
+	}
+
+	input, Name := diskManager.GetModelEventsFilePathAndName(projectId, modelId)
+	inputFilePath := input + Name
+
+	userAndEventsInfo, err := buildPropertiesInfoFromInput(*projectIdFlag, inputFilePath)
+	if err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("Failed to build user and event Info.")
+		os.Exit(1)
+	}
+	userAndEventsInfoBytes, err := json.Marshal(userAndEventsInfo)
+	if err != nil {
+		log.WithFields(log.Fields{"err": err}).Fatal("Failed to unmarshal events Info.")
+		os.Exit(1)
+	}
+
+	err = writeEventInfoFile(projectId, modelId, bytes.NewReader(userAndEventsInfoBytes), cloundManager)
+	if err != nil {
+		log.WithFields(log.Fields{"err": err}).Fatal("Failed to write events Info.")
+		os.Exit(1)
+	}
+
 	// Write intermediate results to temporary file in the same directory.
-	dir, fileName := filepath.Split(*outputFileFlag)
-	tmpOutputFileName := fmt.Sprintf("_tmp_%d_%s", time.Now().Unix(), fileName)
-	tmpOutputFilePath := filepath.Join(dir, tmpOutputFileName)
+	tmpOutputFilePath := fmt.Sprintf("%s/projects/%v/models/%v/tmp.txt", diskDir, projectId, modelId)
 	tmpFile, err := os.Create(tmpOutputFilePath)
 	if err != nil {
 		log.WithFields(log.Fields{"file": tmpOutputFilePath, "err": err}).Fatal("Unable to create file.")
 		os.Exit(1)
 	}
-	defer tmpFile.Close()
 
-	userAndEventsInfo, err := buildPropertiesInfoFromInput(*projectIdFlag, *inputFileFlag)
-	if err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("Failed to build user and event Info.")
-		os.Exit(1)
-	}
-	// First line in output file are user and event properties seen in the data.
-	userAndEventsInfoBytes, err := json.Marshal(userAndEventsInfo)
-	userAndEventsInfoStr := string(userAndEventsInfoBytes)
-	if _, err := tmpFile.WriteString(fmt.Sprintf("%s\n", userAndEventsInfoStr)); err != nil {
-		log.WithFields(log.Fields{"line": userAndEventsInfoStr, "err": err}).Fatal("Failed to write user and Events Info.")
-		os.Exit(1)
-	}
-
-	err = mineAndWritePatterns(*projectIdFlag, *inputFileFlag,
+	err = mineAndWritePatterns(*projectIdFlag, inputFilePath,
 		userAndEventsInfo, *numRoutinesFlag, tmpFile)
 	if err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("Failed to mine patterns.")
 		os.Exit(1)
 	}
 
-	// Rename file
-	if err = os.Rename(tmpOutputFilePath, *outputFileFlag); err != nil {
+	log.Infoln("Renaming ModelPatterns File")
+	path, fName := diskManager.GetModelPatternsFilePathAndName(projectId, modelId)
+	if err = os.Rename(tmpOutputFilePath, path+"/"+fName); err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("Failed to rename output.")
 		os.Exit(1)
 	}
+	tmpFile.Close()
+	path, fName = diskManager.GetModelPatternsFilePathAndName(projectId, modelId)
+	tmpFile, err = os.Open(path + "/" + fName)
+	defer tmpFile.Close()
+	if err != nil {
+		log.WithError(err).Error("failed to open temp file")
+		os.Exit(1)
+	}
+
+	log.Infoln("Cloudmanager Creating ModelPatterns File")
+	path, fName = cloundManager.GetModelPatternsFilePathAndName(projectId, modelId)
+	err = cloundManager.Create(path, fName, tmpFile)
+	if err != nil {
+		log.WithError(err).Error("cloud manager Failed to create model patterns file")
+		os.Exit(1)
+	}
+
+	log.Infoln("Etcd fetch current project version")
+	curVersion, err := etcdClient.GetProjectVersion()
+	if err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("Failed to fetch current project version")
+		os.Exit(1)
+	}
+
+	log.Printf("Current Version: %s", curVersion)
+
+	path, name := cloundManager.GetProjectsDataFilePathAndName(curVersion)
+	versionFile, err := cloundManager.Get(path, name)
+	if err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("Failed to read cur version file")
+		os.Exit(1)
+	}
+
+	projectDatas := parseProjectsDataFile(versionFile)
+
+	projectDatas = append(projectDatas, projectData{
+		ID:      projectId,
+		ModelID: modelId,
+		Chunks:  []string{"TODO"},
+	})
+
+	newVersionName := fmt.Sprintf("%v", time.Now().Unix())
+	err = writeProjectDataFile(newVersionName, projectDatas, cloundManager)
+	if err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("Failed to write new version file to cloud")
+		os.Exit(1)
+	}
+
+	log.WithField("newVersion", newVersionName).Info("New version")
+
+	err = etcdClient.SetProjectVersion(newVersionName)
+	if err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("Failed to write new version file to etcd")
+		os.Exit(1)
+	}
+}
+
+func writeProjectDataFile(newVersionName string, projectDatas []projectData, cloudManager filestore.FileManager) error {
+
+	path, name := cloudManager.GetProjectsDataFilePathAndName(newVersionName)
+
+	log.Printf("Writing Projects Data %v", projectDatas)
+
+	buffer := bytes.NewBuffer(nil)
+
+	for _, pD := range projectDatas {
+		bytes, err := json.Marshal(pD)
+		if err != nil {
+			return err
+		}
+		_, err = buffer.WriteString(fmt.Sprintf("%s\n", string(bytes)))
+		if err != nil {
+			return err
+		}
+	}
+	err := cloudManager.Create(path, name, bytes.NewReader(buffer.Bytes()))
+	return err
+}
+
+func writeEventInfoFile(projectId, modelId uint64, events *bytes.Reader, cloudManager filestore.FileManager) error {
+	path, name := cloudManager.GetModelEventInfoFilePathAndName(projectId, modelId)
+	err := cloudManager.Create(path, name, events)
+	if err != nil {
+		log.WithError(err).Error("writeEventInfoFile Failed to write to cloud")
+		return err
+	}
+	return err
+}
+
+type projectData struct {
+	ID        uint64    `json:"pid"`
+	ModelID   uint64    `json:"mid"`
+	StartDate time.Time `json:"sd"`
+	EndDate   time.Time `json:"ed"`
+	Chunks    []string  `json:"cs"`
+}
+
+func parseProjectsDataFile(reader io.Reader) []projectData {
+
+	scanner := bufio.NewScanner(reader)
+	// Adjust scanner buffer capacity to 10MB per line.
+	const maxCapacity = 10 * 1024 * 1024
+	buf := make([]byte, maxCapacity)
+	scanner.Buffer(buf, maxCapacity)
+
+	projectDatas := make([]projectData, 0, 0)
+
+	lineNum := 0
+	for scanner.Scan() {
+		lineNum++
+		line := scanner.Text()
+
+		var p projectData
+		if err := json.Unmarshal([]byte(line), &p); err != nil {
+			log.WithFields(log.Fields{"lineNum": lineNum, "err": err}).Error("Failed to unmarshal project")
+			continue
+		}
+		projectDatas = append(projectDatas, p)
+	}
+	err := scanner.Err()
+	if err != nil {
+		log.WithError(err).Errorln("Scanner error")
+	}
+
+	return projectDatas
 }

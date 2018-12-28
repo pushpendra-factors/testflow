@@ -1,8 +1,8 @@
 package handler
 
 import (
-	C "factors/config"
 	M "factors/model"
+	crpc "factors/patternserver"
 	"net/http"
 	"strconv"
 
@@ -32,37 +32,44 @@ func GetEventNamesHandler(c *gin.Context) {
 }
 
 // Test command.
-// curl -i -X GET http://localhost:8080/projects/1/event_names/view_100020213/properties
+// curl -i -X GET http://localhost:8080/projects/1/event_names/view_100020213/properties?model_id=:model_id
 func GetEventPropertiesHandler(c *gin.Context) {
-	projectID, err := strconv.ParseUint(c.Params.ByName("project_id"), 10, 64)
+	projectId, err := strconv.ParseUint(c.Params.ByName("project_id"), 10, 64)
 	if err != nil {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
+
+	modelId, _ := strconv.ParseUint(c.Query("model_id"), 10, 64)
+
 	eventName := c.Params.ByName("event_name")
 	if eventName == "" {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-	ps := C.GetServices().PatternService
-	if properties, err := ps.GetSeenEventProperties(projectID, eventName); err != nil {
+
+	properties, err := crpc.GetSeenEventProperties(projectId, modelId, eventName)
+	if err != nil {
 		log.WithFields(log.Fields{
-			"error": err, "projectId": projectID, "eventName": eventName}).Error(
+			"error": err, "projectId": projectId, "eventName": eventName}).Error(
 			"Get Event Properties failed.")
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
-	} else {
-		c.JSON(http.StatusOK, properties)
 	}
+	c.JSON(http.StatusOK, properties)
+
 }
 
-// curl -i -X GET http://localhost:8080/projects/1/event_names/view_100020213/properties/offer_id
+// curl -i -X GET http://localhost:8080/projects/1/event_names/view_100020213/properties/offer_id?model_id=:model_id
 func GetEventPropertyValuesHandler(c *gin.Context) {
-	projectID, err := strconv.ParseUint(c.Params.ByName("project_id"), 10, 64)
+	projectId, err := strconv.ParseUint(c.Params.ByName("project_id"), 10, 64)
 	if err != nil {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
+
+	modelId, _ := strconv.ParseUint(c.Query("model_id"), 10, 64)
+
 	eventName := c.Params.ByName("event_name")
 	if eventName == "" {
 		c.AbortWithStatus(http.StatusBadRequest)
@@ -73,10 +80,13 @@ func GetEventPropertyValuesHandler(c *gin.Context) {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-	ps := C.GetServices().PatternService
-	if propertyValues, err := ps.GetSeenEventPropertyValues(projectID, eventName, propertyName); err != nil {
+
+	if propertyValues, err := crpc.GetSeenEventPropertyValues(projectId, modelId, eventName, propertyName); err != nil {
 		log.WithFields(log.Fields{
-			"error": err, "projectId": projectID, "eventName": eventName,
+			"error":        err,
+			"projectId":    projectId,
+			"modelId":      modelId,
+			"eventName":    eventName,
 			"propertyName": propertyName}).Error(
 			"Get Event Properties failed.")
 		c.AbortWithStatus(http.StatusBadRequest)

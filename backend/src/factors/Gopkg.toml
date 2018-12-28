@@ -218,5 +218,25 @@
   version = "1.0.0"
 
 [[constraint]]
+  name = "go.etcd.io/etcd"
+  version = "3.3.10"
+
+[[constraint]]
+  name = "github.com/gorilla/mux"
+  version = "1.6.2"
+
+[[constraint]]
+  name = "github.com/gorilla/rpc"
+  version = "1.1.0"
+
+[[constraint]]
+  name = "github.com/aws/aws-sdk-go"
+  version = "1.15.90"
+
+[[constraint]]
+  name = "github.com/hashicorp/golang-lru"
+  version = "0.5.0"
+
+[[constraint]]
   name = "github.com/oschwald/geoip2-golang"
   version = "1.2.1"

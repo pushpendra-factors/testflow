@@ -1,0 +1,1 @@
+{"UserPropertiesInfo":{"NumericPropertyKeys":{}, "CategoricalPropertyKeyValues":{"$country":{"de":true}}},"EventPropertiesInfoMap":{"click_100001":{"NumericPropertyKeys":{},"CategoricalPropertyKeyValues":{"merchant":{"539bb79186052ca6042ec417d244cdfbba86238e53455a1e57d1fafd42dcdf12":true, "98d6f1017a0284d82aee85ef51d5f3be150c3a4286c105699d04867424d9d77d":true}}}}}
