@@ -24,15 +24,20 @@ type CounterEventFormat struct {
 	UserProperties    map[string]interface{} `json:"upr"`
 }
 
-type EventInfo struct {
+type PropertiesInfo struct {
 	NumericPropertyKeys           map[string]bool
 	NumericPropertiesTemplate     *Hist.NumericHistogramTemplate
 	CategoricalPropertyKeyValues  map[string]map[string]bool
 	CategoricalPropertiesTemplate *Hist.CategoricalHistogramTemplate
 }
-type EventInfoMap map[string]*EventInfo
 
-func GenCandidatesPair(p1 *Pattern, p2 *Pattern, eventInfoMap *EventInfoMap) (*Pattern, *Pattern, bool) {
+// Event name to corresponding properties Info.
+type UserAndEventsInfo struct {
+	UserPropertiesInfo     *PropertiesInfo
+	EventPropertiesInfoMap *map[string]*PropertiesInfo
+}
+
+func GenCandidatesPair(p1 *Pattern, p2 *Pattern, userAndEventsInfo *UserAndEventsInfo) (*Pattern, *Pattern, bool) {
 	p1Len := len(p1.EventNames)
 	p2Len := len(p2.EventNames)
 	if p1Len != p2Len || p1Len == 0 {
@@ -64,8 +69,8 @@ func GenCandidatesPair(p1 *Pattern, p2 *Pattern, eventInfoMap *EventInfoMap) (*P
 	// Insert the different event in p2 before and after differentIndex in p1.
 	c1String = append(c1String[:differentIndex], append([]string{p2.EventNames[differentIndex]}, c1String[differentIndex:]...)...)
 	c2String = append(c2String[:differentIndex+1], append([]string{p2.EventNames[differentIndex]}, c2String[differentIndex+1:]...)...)
-	c1Pattern, _ := NewPattern(c1String, eventInfoMap)
-	c2Pattern, _ := NewPattern(c2String, eventInfoMap)
+	c1Pattern, _ := NewPattern(c1String, userAndEventsInfo)
+	c2Pattern, _ := NewPattern(c2String, userAndEventsInfo)
 	return c1Pattern, c2Pattern, true
 }
 
@@ -77,7 +82,8 @@ func candidatesMapToSlice(candidatesMap map[string]*Pattern) []*Pattern {
 	return candidates
 }
 
-func GenCandidates(currentPatterns []*Pattern, maxCandidates int, eventInfoMap *EventInfoMap) ([]*Pattern, uint, error) {
+func GenCandidates(currentPatterns []*Pattern, maxCandidates int, userAndEventsInfo *UserAndEventsInfo) (
+	[]*Pattern, uint, error) {
 	numPatterns := len(currentPatterns)
 	var currentMinCount uint
 
@@ -94,7 +100,8 @@ func GenCandidates(currentPatterns []*Pattern, maxCandidates int, eventInfoMap *
 	// Candidates are formed in decreasing order of frequent patterns till maxCandidates.
 	for i := 0; i < numPatterns; i++ {
 		for j := i + 1; j < numPatterns; j++ {
-			if c1, c2, ok := GenCandidatesPair(currentPatterns[i], currentPatterns[j], eventInfoMap); ok {
+			if c1, c2, ok := GenCandidatesPair(
+				currentPatterns[i], currentPatterns[j], userAndEventsInfo); ok {
 				currentMinCount = currentPatterns[j].Count
 				candidatesMap[c1.String()] = c1
 				if len(candidatesMap) >= maxCandidates {
@@ -132,12 +139,15 @@ func EventPropertyKey(eventName string, propertyName string) string {
 	return eventName + "." + propertyName
 }
 
-// Collects event info for the events initilaized in eventInfoMap.
+// Collects event info for the events initilaized in userAndEventsInfo.
 const max_SEEN_PROPERTIES = 10000
 const max_SEEN_PROPERTY_VALUES = 1000
 
-func CollectEventInfo(scanner *bufio.Scanner, eventInfoMap *EventInfoMap) error {
+func CollectPropertiesInfo(scanner *bufio.Scanner, userAndEventsInfo *UserAndEventsInfo) error {
 	lineNum := 0
+	userPropertiesInfo := userAndEventsInfo.UserPropertiesInfo
+	eventInfoMap := userAndEventsInfo.EventPropertiesInfoMap
+
 	for scanner.Scan() {
 		line := scanner.Text()
 		lineNum++
@@ -145,6 +155,29 @@ func CollectEventInfo(scanner *bufio.Scanner, eventInfoMap *EventInfoMap) error 
 		if err := json.Unmarshal([]byte(line), &eventDetails); err != nil {
 			log.WithFields(log.Fields{"line": line, "err": err}).Fatal("Read failed.")
 			return err
+		}
+		for key, value := range eventDetails.UserProperties {
+			if _, ok := value.(float64); ok {
+				if len(userPropertiesInfo.NumericPropertyKeys) > max_SEEN_PROPERTIES {
+					continue
+				}
+				userPropertiesInfo.NumericPropertyKeys[key] = true
+			} else if categoricalValue, ok := value.(string); ok {
+				if len(userPropertiesInfo.CategoricalPropertyKeyValues) > max_SEEN_PROPERTIES {
+					continue
+				}
+				cmap, ok := userPropertiesInfo.CategoricalPropertyKeyValues[key]
+				if !ok {
+					cmap = make(map[string]bool)
+					userPropertiesInfo.CategoricalPropertyKeyValues[key] = cmap
+				}
+				if len(categoricalValue) < max_SEEN_PROPERTY_VALUES {
+					cmap[categoricalValue] = true
+				}
+			} else {
+				log.WithFields(log.Fields{"property": key, "value": value, "line no": lineNum}).Info(
+					"Ignoring non string, non numeric user property.")
+			}
 		}
 		eventName := eventDetails.EventName
 		eInfo, ok := (*eventInfoMap)[eventName]
@@ -172,10 +205,39 @@ func CollectEventInfo(scanner *bufio.Scanner, eventInfoMap *EventInfoMap) error 
 				}
 			} else {
 				log.WithFields(log.Fields{"event": eventName, "property": key, "value": value, "line no": lineNum}).Info(
-					"Ignoring non string, non numeric property.")
+					"Ignoring non string, non numeric event property.")
 			}
 		}
 	}
+
+	// Set template for user properties.
+	userNTemplate := Hist.NumericHistogramTemplate{}
+	// Temporary fix to index multiple histogram keys with same property value.
+	i := 0
+	for propertyName, _ := range userAndEventsInfo.UserPropertiesInfo.NumericPropertyKeys {
+		nptu := Hist.NumericHistogramTemplateUnit{
+			Name:       EventPropertyKey(fmt.Sprintf("%d", i), propertyName),
+			IsRequired: false,
+			Default:    0.0,
+		}
+		userNTemplate = append(userNTemplate, nptu)
+		i++
+	}
+	userAndEventsInfo.UserPropertiesInfo.NumericPropertiesTemplate = &userNTemplate
+
+	userCTemplate := Hist.CategoricalHistogramTemplate{}
+	// Temporary fix to index multiple histogram keys with same property value.
+	i = 0
+	for propertyName, _ := range userAndEventsInfo.UserPropertiesInfo.CategoricalPropertyKeyValues {
+		cptu := Hist.CategoricalHistogramTemplateUnit{
+			Name:       EventPropertyKey(fmt.Sprintf("%d", i), propertyName),
+			IsRequired: false,
+			Default:    "",
+		}
+		userCTemplate = append(userCTemplate, cptu)
+		i++
+	}
+	userAndEventsInfo.UserPropertiesInfo.CategoricalPropertiesTemplate = &userCTemplate
 
 	// Set template for each event.
 	for eventName, eventInfo := range *eventInfoMap {
@@ -321,7 +383,7 @@ func CountPatterns(scanner *bufio.Scanner, patterns []*Pattern) error {
 // Special candidate generation method that generates upto maxCandidates with
 // events that start with and end with the two event patterns.
 func GenLenThreeCandidatePatterns(pattern *Pattern, startPatterns []*Pattern,
-	endPatterns []*Pattern, maxCandidates int, eventInfoMap *EventInfoMap) ([]*Pattern, error) {
+	endPatterns []*Pattern, maxCandidates int, userAndEventsInfo *UserAndEventsInfo) ([]*Pattern, error) {
 	if len(pattern.EventNames) != 2 {
 		return nil, fmt.Errorf(fmt.Sprintf("Pattern %s length is not two.", pattern.String()))
 	}
@@ -376,7 +438,7 @@ func GenLenThreeCandidatePatterns(pattern *Pattern, startPatterns []*Pattern,
 				}
 				copy(cString, startPatterns[j].EventNames)
 				cString = append(cString, pattern.EventNames[1])
-				candidate, err = NewPattern(cString, eventInfoMap)
+				candidate, err = NewPattern(cString, userAndEventsInfo)
 			} else {
 				if reflect.DeepEqual(pattern.EventNames, endPatterns[j].EventNames) {
 					continue
@@ -386,7 +448,7 @@ func GenLenThreeCandidatePatterns(pattern *Pattern, startPatterns []*Pattern,
 				}
 				cString = []string{pattern.EventNames[0]}
 				cString = append(cString, endPatterns[j].EventNames...)
-				candidate, err = NewPattern(cString, eventInfoMap)
+				candidate, err = NewPattern(cString, userAndEventsInfo)
 			}
 		} else {
 			j := i - minLen
@@ -399,7 +461,7 @@ func GenLenThreeCandidatePatterns(pattern *Pattern, startPatterns []*Pattern,
 				}
 				copy(cString, startPatterns[j].EventNames)
 				cString = append(cString, pattern.EventNames[1])
-				candidate, err = NewPattern(cString, eventInfoMap)
+				candidate, err = NewPattern(cString, userAndEventsInfo)
 			} else {
 				if reflect.DeepEqual(pattern.EventNames, endPatterns[j].EventNames) {
 					continue
@@ -409,7 +471,7 @@ func GenLenThreeCandidatePatterns(pattern *Pattern, startPatterns []*Pattern,
 				}
 				cString = []string{pattern.EventNames[0]}
 				cString = append(cString, endPatterns[j].EventNames...)
-				candidate, err = NewPattern(cString, eventInfoMap)
+				candidate, err = NewPattern(cString, userAndEventsInfo)
 			}
 		}
 		if err != nil {

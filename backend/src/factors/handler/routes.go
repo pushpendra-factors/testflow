@@ -29,8 +29,10 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/event_names", GetEventNamesHandler)
 	authRouteGroup.GET("/:project_id/event_names/:event_name/properties", GetEventPropertiesHandler)
 	authRouteGroup.GET("/:project_id/event_names/:event_name/properties/:property_name/values", GetEventPropertyValuesHandler)
-	authRouteGroup.GET("/:project_id/users/:user_id", GetUserHandler)
 	authRouteGroup.GET("/:project_id/users", GetUsersHandler)
+	authRouteGroup.GET("/:project_id/users/:user_id", GetUserHandler)
+	authRouteGroup.GET("/:project_id/user_properties", GetUserPropertiesHandler)
+	authRouteGroup.GET("/:project_id/user_properties/:property_name/values", GetUserPropertyValuesHandler)
 	authRouteGroup.POST("/:project_id/factor", FactorHandler)
 }
 

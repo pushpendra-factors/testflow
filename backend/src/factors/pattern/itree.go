@@ -435,12 +435,16 @@ func (it *Itree) buildAndAddPropertyChildNodes(
 		return nil, fmt.Errorf(fmt.Sprintf(
 			"Pattern size should be atleast 2. %s", parentPattern.String()))
 	}
-	if patternWrapper.eventInfoMap == nil {
+	if patternWrapper.userAndEventsInfo == nil {
+		// No event properties available.
+		return []*ItreeNode{}, nil
+	}
+	if patternWrapper.userAndEventsInfo.EventPropertiesInfoMap == nil {
 		// No event properties available.
 		return []*ItreeNode{}, nil
 	}
 	eventName := parentPattern.EventNames[pLen-2]
-	eventInfo, ok := (*patternWrapper.eventInfoMap)[eventName]
+	eventInfo, ok := (*patternWrapper.userAndEventsInfo.EventPropertiesInfoMap)[eventName]
 	if !ok {
 		// No properties.
 		return []*ItreeNode{}, nil

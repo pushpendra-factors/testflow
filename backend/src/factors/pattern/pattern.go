@@ -13,9 +13,11 @@ import (
 type Pattern struct {
 	EventNames []string `json:"en"`
 	// Histograms.
-	CardinalityRepeatTimings *Hist.NumericHistogramStruct     `json:"crt"`
-	NumericProperties        *Hist.NumericHistogramStruct     `json:"np"`
-	CategoricalProperties    *Hist.CategoricalHistogramStruct `json:"cp"`
+	CardinalityRepeatTimings   *Hist.NumericHistogramStruct     `json:"crt"`
+	EventNumericProperties     *Hist.NumericHistogramStruct     `json:"enp"`
+	EventCategoricalProperties *Hist.CategoricalHistogramStruct `json:"ecp"`
+	UserNumericProperties      *Hist.NumericHistogramStruct     `json:"unp"`
+	UserCategoricalProperties  *Hist.CategoricalHistogramStruct `json:"ucp"`
 	// The total number of times this pattern occurs allowing multiple counts
 	// per user.
 	Count uint `json:"c"`
@@ -60,7 +62,7 @@ type EventConstraints struct {
 	CategoricalConstraints []CategoricalConstraint
 }
 
-func NewPattern(events []string, eventInfoMap *EventInfoMap) (*Pattern, error) {
+func NewPattern(events []string, userAndEventsInfo *UserAndEventsInfo) (*Pattern, error) {
 	pLen := len(events)
 	if pLen == 0 {
 		err := fmt.Errorf("No events in pattern")
@@ -78,9 +80,11 @@ func NewPattern(events []string, eventInfoMap *EventInfoMap) (*Pattern, error) {
 		EventNames: events,
 		// 6 dimensional histogram - Cardinalties, Repeats, Timings of start_event
 		// and last_event.
-		CardinalityRepeatTimings: defaultHist,
-		NumericProperties:        nil,
-		CategoricalProperties:    nil,
+		CardinalityRepeatTimings:   defaultHist,
+		EventNumericProperties:     nil,
+		EventCategoricalProperties: nil,
+		UserNumericProperties:      nil,
+		UserCategoricalProperties:  nil,
 		Count:                      0,
 		OncePerUserCount:           0,
 		waitIndex:                  0,
@@ -93,6 +97,43 @@ func NewPattern(events []string, eventInfoMap *EventInfoMap) (*Pattern, error) {
 		currentNMap:                make(map[string]float64),
 		currentCMap:                make(map[string]string),
 	}
+	if userAndEventsInfo == nil {
+		return &pattern, nil
+	}
+	userPropertiesInfo := userAndEventsInfo.UserPropertiesInfo
+	if userPropertiesInfo != nil {
+		nTemplate := Hist.NumericHistogramTemplate{}
+		for i := 0; i < pLen; i++ {
+			// User properties is tracked at each event level.
+			nTemplate = append(nTemplate, *userPropertiesInfo.NumericPropertiesTemplate...)
+		}
+
+		nDimensions := len(nTemplate)
+		nBinsFloat := math.Min(float64(nDimensions*num_NUMERIC_BINS_PER_DIMENSION),
+			float64(num_MAX_NUMERIC_MULTI_BINS))
+		nBins := int(math.Max(1.0, nBinsFloat))
+		nHist, err := Hist.NewNumericHistogram(nBins, nDimensions, &nTemplate)
+		if err != nil {
+			return nil, err
+		}
+		pattern.UserNumericProperties = nHist
+
+		cTemplate := Hist.CategoricalHistogramTemplate{}
+		for i := 0; i < pLen; i++ {
+			// User properties is tracked at each event level.
+			cTemplate = append(cTemplate, *userPropertiesInfo.CategoricalPropertiesTemplate...)
+		}
+		cDimensions := len(cTemplate)
+		cBinsFloat := math.Min(float64(cDimensions*num_CATEGORICAL_BINS_PER_DIMENSION),
+			float64(num_MAX_CATEGORICAL_MULTI_BINS))
+		cBins := int(math.Max(1.0, cBinsFloat))
+		cHist, err := Hist.NewCategoricalHistogram(cBins, cDimensions, &cTemplate)
+		if err != nil {
+			return nil, err
+		}
+		pattern.UserCategoricalProperties = cHist
+	}
+	eventInfoMap := userAndEventsInfo.EventPropertiesInfoMap
 	if eventInfoMap != nil {
 		nTemplate := Hist.NumericHistogramTemplate{}
 		for i := 0; i < pLen; i++ {
@@ -111,7 +152,7 @@ func NewPattern(events []string, eventInfoMap *EventInfoMap) (*Pattern, error) {
 		if err != nil {
 			return nil, err
 		}
-		pattern.NumericProperties = nHist
+		pattern.EventNumericProperties = nHist
 
 		cTemplate := Hist.CategoricalHistogramTemplate{}
 		for i := 0; i < pLen; i++ {
@@ -130,7 +171,7 @@ func NewPattern(events []string, eventInfoMap *EventInfoMap) (*Pattern, error) {
 		if err != nil {
 			return nil, err
 		}
-		pattern.CategoricalProperties = cHist
+		pattern.EventCategoricalProperties = cHist
 	}
 	return &pattern, nil
 }
@@ -239,14 +280,14 @@ func (p *Pattern) CountForEvent(
 					}
 				}
 				// Update properties histograms.
-				if p.NumericProperties != nil {
-					if err := p.NumericProperties.AddMap(p.currentNMap); err != nil {
+				if p.EventNumericProperties != nil {
+					if err := p.EventNumericProperties.AddMap(p.currentNMap); err != nil {
 						return "", err
 					}
 				}
 				// Update properties histograms.
-				if p.CategoricalProperties != nil {
-					if err := p.CategoricalProperties.AddMap(p.currentCMap); err != nil {
+				if p.EventCategoricalProperties != nil {
+					if err := p.EventCategoricalProperties.AddMap(p.currentCMap); err != nil {
 						return "", err
 					}
 				}
@@ -334,14 +375,14 @@ func (p *Pattern) GetOncePerUserCount(
 
 	numericUpperCDF := 1.0
 	numericLowerCDF := 0.0
-	if p.NumericProperties != nil && len(nMapLowerBounds) > 0 {
-		numericUpperCDF = p.NumericProperties.CDFFromMap(nMapUpperBounds)
-		numericLowerCDF = p.NumericProperties.CDFFromMap(nMapLowerBounds)
+	if p.EventNumericProperties != nil && len(nMapLowerBounds) > 0 {
+		numericUpperCDF = p.EventNumericProperties.CDFFromMap(nMapUpperBounds)
+		numericLowerCDF = p.EventNumericProperties.CDFFromMap(nMapLowerBounds)
 	}
 	categoricalPDF := 1.0
-	if p.CategoricalProperties != nil && len(cMapEquality) > 0 {
+	if p.EventCategoricalProperties != nil && len(cMapEquality) > 0 {
 		var err error
-		categoricalPDF, err = p.CategoricalProperties.PDFFromMap(cMapEquality)
+		categoricalPDF, err = p.EventCategoricalProperties.PDFFromMap(cMapEquality)
 		if err != nil {
 			return 0, err
 		}
@@ -387,7 +428,7 @@ func (p *Pattern) GetEventPropertyRanges(
 	eventIndex int, propertyName string) [][2]float64 {
 	// Return the ranges of the bin [min, max], in which the numeric values for the event property occurr.
 	eventName := p.EventNames[eventIndex]
-	return p.NumericProperties.GetBinRanges(EventPropertyKey(eventName, propertyName))
+	return p.EventNumericProperties.GetBinRanges(EventPropertyKey(eventName, propertyName))
 }
 
 func (p *Pattern) String() string {

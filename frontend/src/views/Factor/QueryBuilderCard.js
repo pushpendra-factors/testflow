@@ -12,7 +12,9 @@ import {
 import CreatableSelect from 'react-select/lib/Creatable';
 import { 
   fetchProjectEventProperties, 
-  fetchProjectEventPropertyValues 
+  fetchProjectEventPropertyValues,
+  fetchProjectUserProperties, 
+  fetchProjectUserPropertyValues
 } from "../../actions/projectsActions"
 
 const queryBuilderStyles = {
@@ -28,6 +30,8 @@ export const ALLOW_NUMBER_CREATE = "allowNumberCreate";
 export const ALLOW_STRING_CREATE = "allowStringCreate";
 export const DYNAMIC_FETCH_EVENT_PROPERTIES = "dynamicFetchEventProperties";
 export const DYNAMIC_FETCH_EVENT_PROPERTY_VALUES = "dynamicFetchEventPropertyValues";
+export const DYNAMIC_FETCH_USER_PROPERTIES = "dynamicFetchUserProperties";
+export const DYNAMIC_FETCH_USER_PROPERTY_VALUES = "dynamicFetchUserPropertyValues";
 export const NUMERICAL_VALUE_TYPE = "numericalValue";
 export const STRING_VALUE_TYPE = "stringValue"
 
@@ -46,13 +50,17 @@ const mapStateToProps = store => {
     currentProjectEventNames: store.projects.currentProjectEventNames,
     eventPropertiesMap: store.projects.eventPropertiesMap,
     eventPropertyValuesMap: store.projects.eventPropertyValuesMap,
+    userProperties: store.projects.userProperties,
+    userPropertyValuesMap: store.projects.userPropertyValuesMap,
   }
 }
 
 const mapDispatchToProps = dispatch => {
   return bindActionCreators({ 
     fetchProjectEventProperties, 
-    fetchProjectEventPropertyValues
+    fetchProjectEventPropertyValues,
+    fetchProjectUserProperties, 
+    fetchProjectUserPropertyValues
   }, dispatch);
 }
 
@@ -60,6 +68,7 @@ class QueryBuilderCard extends Component {
   // Instance variables.
   latestSelectedEventName = null;
   latestSelectedEventProperty = null;
+  latestSelectedUserProperty = null;
 
   constructor(props) {
     super(props);
@@ -78,6 +87,7 @@ class QueryBuilderCard extends Component {
     };
     this.latestSelectedEventName = null;
     this.latestSelectedEventProperty = null;
+    this.latestSelectedUserProperty = null;
   }
 
   resetProject(projectEventNames) {
@@ -95,6 +105,7 @@ class QueryBuilderCard extends Component {
     });
     this.latestSelectedEventName = null;
     this.latestSelectedEventProperty = null;
+    this.latestSelectedUserProperty = null;
   }
 
   allowNewOptionMethod(queryState) {
@@ -116,9 +127,10 @@ class QueryBuilderCard extends Component {
         this.state.isLoadingOptions &&
         !!nextProps.eventPropertiesMap[this.latestSelectedEventName]) {
           var eventProperties = nextProps.eventPropertiesMap[this.latestSelectedEventName];
-          var ops = this.props.getEventPropertiesOptions(eventProperties)
+          var ops = this.props.getPropertiesOptions(eventProperties, true)
+          var nextOptions = this.buildNewOptions(ops, this.state.values, this.state.values.length)
           this.setState({
-            currentOptions: ops,
+            currentOptions: nextOptions,
             isLoadingOptions: false,
           })
     }
@@ -128,12 +140,37 @@ class QueryBuilderCard extends Component {
       !!nextProps.eventPropertyValuesMap[this.latestSelectedEventName] &&
       !!nextProps.eventPropertyValuesMap[this.latestSelectedEventName][this.latestSelectedEventProperty]) {
         var eventPropertyValues = nextProps.eventPropertyValuesMap[this.latestSelectedEventName][this.latestSelectedEventProperty];
-        var ops = this.props.getEventPropertyValueOptions(eventPropertyValues)
+        var ops = this.props.getPropertyValueOptions(eventPropertyValues, true)
+        var nextOptions = this.buildNewOptions(ops, this.state.values, this.state.values.length)
         this.setState({
-          currentOptions: ops,
+          currentOptions: nextOptions,
           isLoadingOptions: false,
         })
-  }
+    }
+    if (this.state.queryStates[this.state.currentQueryState][DYNAMIC_FETCH_USER_PROPERTIES] &&
+      this.state.currentOptions.length == 0 && 
+      this.state.isLoadingOptions &&
+      !!nextProps.userProperties) {
+        var userProperties = nextProps.userProperties;
+        var ops = this.props.getPropertiesOptions(userProperties, false)
+        var nextOptions = this.buildNewOptions(ops, this.state.values, this.state.values.length)
+        this.setState({
+          currentOptions: nextOptions,
+          isLoadingOptions: false,
+        })
+    }
+    if (this.state.queryStates[this.state.currentQueryState][DYNAMIC_FETCH_USER_PROPERTY_VALUES] &&
+      this.state.currentOptions.length == 0 && 
+      this.state.isLoadingOptions &&
+      !!nextProps.userPropertyValuesMap[this.latestSelectedUserProperty]) {
+        var userPropertyValues = nextProps.userPropertyValuesMap[this.latestSelectedUserProperty];
+        var ops = this.props.getPropertyValueOptions(userPropertyValues, false)
+        var nextOptions = this.buildNewOptions(ops, this.state.values, this.state.values.length)
+        this.setState({
+          currentOptions: nextOptions,
+          isLoadingOptions: false,
+        })
+    }
     return true
   }
 
@@ -197,29 +234,55 @@ class QueryBuilderCard extends Component {
       // Update  if selected.
       this.latestSelectedEventProperty = newValues[numEnteredValues - 1]['property'];
     }
+    if (this.state.currentQueryState == STATE_USER_PROPERTY_NAME) {
+      // Update  if selected.
+      this.latestSelectedUserProperty = newValues[numEnteredValues - 1]['property'];
+    }
     if (this.state.queryStates[nextState][DYNAMIC_FETCH_EVENT_PROPERTIES]) {
       this.props.fetchProjectEventProperties(this.props.currentProjectId,
         this.latestSelectedEventName);
-        this.setState({
-          currentOptions: [],
-          currentQueryState: nextState,
-          allowNewOption: this.allowNewOptionMethod(this.state.queryStates[nextState]),
-          noOptionsMessage: this.state.queryStates[nextState][ALLOW_NUMBER_CREATE] ? this.enterNumberMessage : this.noOptionsMessage,
-          values: newValues,
-          isLoadingOptions: true,
-        });
+      this.setState({
+        currentOptions: [],
+        currentQueryState: nextState,
+        allowNewOption: this.allowNewOptionMethod(this.state.queryStates[nextState]),
+        noOptionsMessage: this.state.queryStates[nextState][ALLOW_NUMBER_CREATE] ? this.enterNumberMessage : this.noOptionsMessage,
+        values: newValues,
+        isLoadingOptions: true,
+      });
     } else if (this.state.queryStates[nextState][DYNAMIC_FETCH_EVENT_PROPERTY_VALUES]) {
       console.log("Fetch property: " + this.latestSelectedEventProperty);
       this.props.fetchProjectEventPropertyValues(this.props.currentProjectId,
         this.latestSelectedEventName, this.latestSelectedEventProperty);
-        this.setState({
-          currentOptions: [],
-          currentQueryState: nextState,
-          allowNewOption: this.allowNewOptionMethod(this.state.queryStates[nextState]),
-          noOptionsMessage: this.state.queryStates[nextState][ALLOW_NUMBER_CREATE] ? this.enterNumberMessage : this.noOptionsMessage,
-          values: newValues,
-          isLoadingOptions: true,
-        });
+      this.setState({
+        currentOptions: [],
+        currentQueryState: nextState,
+        allowNewOption: this.allowNewOptionMethod(this.state.queryStates[nextState]),
+        noOptionsMessage: this.state.queryStates[nextState][ALLOW_NUMBER_CREATE] ? this.enterNumberMessage : this.noOptionsMessage,
+        values: newValues,
+        isLoadingOptions: true,
+      });
+    } else if (this.state.queryStates[nextState][DYNAMIC_FETCH_USER_PROPERTIES]) {
+      this.props.fetchProjectUserProperties(this.props.currentProjectId);
+      this.setState({
+        currentOptions: [],
+        currentQueryState: nextState,
+        allowNewOption: this.allowNewOptionMethod(this.state.queryStates[nextState]),
+        noOptionsMessage: this.state.queryStates[nextState][ALLOW_NUMBER_CREATE] ? this.enterNumberMessage : this.noOptionsMessage,
+        values: newValues,
+        isLoadingOptions: true,
+      });
+    } else if (this.state.queryStates[nextState][DYNAMIC_FETCH_USER_PROPERTY_VALUES]) {
+      console.log("Fetch property: " + this.latestSelectedEventProperty);
+      this.props.fetchProjectUserPropertyValues(this.props.currentProjectId,
+        this.latestSelectedUserProperty);
+      this.setState({
+        currentOptions: [],
+        currentQueryState: nextState,
+        allowNewOption: this.allowNewOptionMethod(this.state.queryStates[nextState]),
+        noOptionsMessage: this.state.queryStates[nextState][ALLOW_NUMBER_CREATE] ? this.enterNumberMessage : this.noOptionsMessage,
+        values: newValues,
+        isLoadingOptions: true,
+      });
     } else {
       var nextOptions = this.buildNewOptions(
         this.state.queryStates[nextState]['labels'], newValues, numEnteredValues)

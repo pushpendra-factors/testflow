@@ -124,3 +124,35 @@ export function fetchProjectEventPropertyValues(projectId, eventName, propertyNa
       })
   }
 }
+
+export function fetchProjectUserProperties(projectId) {
+  return function(dispatch) {
+    axios.get(appConfig.API_PATH + "projects/" + projectId +
+              "/user_properties")
+      .then((response) => {
+        dispatch({type: "FETCH_CURRENT_PROJECT_USER_PROPERTIES_FULFILLED",
+                 payload: { userProperties: response.data }})
+      })
+      .catch((err) => {
+        dispatch({type: "FETCH_CURRENT_PROJECT_USER_PROPERTIES_REJECTED",
+                 payload: { userProperties: {}, err: err }})
+      })
+  }
+}
+
+export function fetchProjectUserPropertyValues(projectId, propertyName) {
+  return function(dispatch) {
+    axios.get(appConfig.API_PATH + "projects/" + projectId +
+              "/user_properties/" + propertyName + "/values")
+      .then((response) => {
+        dispatch({type: "FETCH_CURRENT_PROJECT_USER_PROPERTY_VALUES_FULFILLED",
+                 payload: { propertyName: propertyName,
+                  userPropertyValues: response.data }})
+      })
+      .catch((err) => {
+        dispatch({type: "FETCH_CURRENT_PROJECT_USER_PROPERTY_VALUES_REJECTED",
+                 payload: { propertyName: propertyName,
+                  userPropertyValues: [], err: err }})
+      })
+  }
+}

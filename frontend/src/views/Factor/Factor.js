@@ -16,6 +16,7 @@ import QueryBuilderCard from './QueryBuilderCard';
 import {
   ALLOW_NUMBER_CREATE, ALLOW_STRING_CREATE,
   DYNAMIC_FETCH_EVENT_PROPERTIES, DYNAMIC_FETCH_EVENT_PROPERTY_VALUES,
+  DYNAMIC_FETCH_USER_PROPERTIES, DYNAMIC_FETCH_USER_PROPERTY_VALUES,
   NUMERICAL_VALUE_TYPE, STRING_VALUE_TYPE,
   STATE_EVENTS, STATE_PROPERTY_TYPE,
   STATE_EVENT_PROPERTY_NAME, STATE_USER_PROPERTY_NAME,
@@ -86,47 +87,65 @@ class Factor extends Component {
       });
   }
 
-  getEventPropertiesOptions(eventProperties) {
+  getPropertiesOptions(properties, isEventType) {
     var lp = [];
-    var categoricalProperties = eventProperties["categorical"];
+    var categoricalProperties = properties["categorical"];
     categoricalProperties.forEach(function (categoricalProperty) {
       lp.push(
         {
-          label: categoricalProperty + " equals", value: lp.length + 1, currentState: STATE_EVENT_PROPERTY_NAME,
-          nextState: STATE_EVENT_STRING_PROPERTY_VALUE,
-          type: EVENT_PROPERTY_NAME_TYPE, property: categoricalProperty, operator: OPERATOR_EQUALS
+          label: categoricalProperty + " equals", value: lp.length + 1,
+          currentState: isEventType ? STATE_EVENT_PROPERTY_NAME: STATE_USER_PROPERTY_NAME,
+          nextState: isEventType ? STATE_EVENT_STRING_PROPERTY_VALUE: STATE_USER_STRING_PROPERTY_VALUE,
+          type: isEventType ? EVENT_PROPERTY_NAME_TYPE: USER_PROPERTY_NAME_TYPE,
+          property: categoricalProperty,
+          operator: OPERATOR_EQUALS
         });
     });
-    var numericalProperties = eventProperties["numerical"];
+    var numericalProperties = properties["numerical"];
     numericalProperties.forEach(function (numericalProperty) {
       lp.push(
         {
-          label: numericalProperty + " equals", value: lp.length + 1, currentState: STATE_EVENT_PROPERTY_NAME,
-          nextState: STATE_EVENT_NUMERIC_PROPERTY_VALUE,
-          type: EVENT_PROPERTY_NAME_TYPE, property: numericalProperty, operator: OPERATOR_EQUALS
+          label: numericalProperty + " equals",
+          value: lp.length + 1,
+          currentState: isEventType ? STATE_EVENT_PROPERTY_NAME: STATE_USER_PROPERTY_NAME,
+          nextState: isEventType ? STATE_EVENT_NUMERIC_PROPERTY_VALUE: STATE_USER_NUMERIC_PROPERTY_VALUE,
+          type: isEventType ? EVENT_PROPERTY_NAME_TYPE: USER_PROPERTY_NAME_TYPE,
+          property: numericalProperty,
+          operator: OPERATOR_EQUALS
         });
       lp.push(
         {
-          label: numericalProperty + " greater than", value: lp.length + 1, currentState: STATE_EVENT_PROPERTY_NAME,
-          nextState: STATE_EVENT_NUMERIC_PROPERTY_VALUE,
-          type: EVENT_PROPERTY_NAME_TYPE, property: numericalProperty, operator: OPERATOR_GREATER_THAN
+          label: numericalProperty + " greater than",
+          value: lp.length + 1,
+          currentState: isEventType ? STATE_EVENT_PROPERTY_NAME: STATE_USER_PROPERTY_NAME,
+          nextState: isEventType ? STATE_EVENT_NUMERIC_PROPERTY_VALUE: STATE_USER_NUMERIC_PROPERTY_VALUE,
+          type: isEventType ? EVENT_PROPERTY_NAME_TYPE: USER_PROPERTY_NAME_TYPE,
+          property: numericalProperty,
+          operator: OPERATOR_GREATER_THAN
         });
       lp.push(
         {
-          label: numericalProperty + " lesser than", value: lp.length + 1, currentState: STATE_EVENT_PROPERTY_NAME,
-          nextState: STATE_EVENT_NUMERIC_PROPERTY_VALUE,
-          type: EVENT_PROPERTY_NAME_TYPE, property: numericalProperty, operator: OPERATOR_LESSER_THAN
+          label: numericalProperty + " lesser than",
+          value: lp.length + 1,
+          currentState: isEventType ? STATE_EVENT_PROPERTY_NAME: STATE_USER_PROPERTY_NAME,
+          nextState: isEventType ? STATE_EVENT_NUMERIC_PROPERTY_VALUE: STATE_USER_NUMERIC_PROPERTY_VALUE,
+          type: isEventType ? EVENT_PROPERTY_NAME_TYPE: USER_PROPERTY_NAME_TYPE,
+          property: numericalProperty,
+          operator: OPERATOR_LESSER_THAN
         });
     });
     return lp;
   }
 
-  getEventPropertyValueOptions(eventPropertyValues) {
+  getPropertyValueOptions(propertyValues, isEventType) {
     var lp = [];
-    eventPropertyValues.forEach(function (propertyValue) {
+    propertyValues.forEach(function (propertyValue) {
       lp.push(
-        { label: propertyValue, value: lp.length + 1, currentState: STATE_EVENT_STRING_PROPERTY_VALUE,
-          nextState: STATE_PROPERTY_TYPE, 'type': STRING_VALUE_TYPE },
+        { label: propertyValue,
+          value: lp.length + 1,
+          currentState: isEventType ? STATE_EVENT_STRING_PROPERTY_VALUE : STATE_USER_STRING_PROPERTY_VALUE,
+          nextState: STATE_PROPERTY_TYPE,
+          'type': STRING_VALUE_TYPE },
         );
     });
     return lp;
@@ -156,24 +175,8 @@ class Factor extends Component {
         [DYNAMIC_FETCH_EVENT_PROPERTIES]: true,
       },
       [STATE_USER_PROPERTY_NAME]: {
-        'labels': [
-          {
-            label: 'country equals', value: 1, currentState: STATE_USER_PROPERTY_NAME, nextState: STATE_USER_STRING_PROPERTY_VALUE,
-            type: USER_PROPERTY_NAME_TYPE, property: 'country', operator: OPERATOR_EQUALS
-          },
-          {
-            label: 'age equals', value: 2, currentState: STATE_USER_PROPERTY_NAME, nextState: STATE_USER_NUMERIC_PROPERTY_VALUE,
-            type: USER_PROPERTY_NAME_TYPE, property: 'age', operator: OPERATOR_EQUALS
-          },
-          {
-            label: 'age greater than', value: 3, currentState: STATE_USER_PROPERTY_NAME, nextState: STATE_USER_NUMERIC_PROPERTY_VALUE,
-            type: USER_PROPERTY_NAME_TYPE, property: 'age', operator: OPERATOR_GREATER_THAN
-          },
-          {
-            label: 'age lesser than', value: 4, currentState: STATE_USER_PROPERTY_NAME, nextState: STATE_USER_NUMERIC_PROPERTY_VALUE,
-            type: USER_PROPERTY_NAME_TYPE, property: 'age', operator: OPERATOR_LESSER_THAN
-          },
-        ],
+        'labels': [],
+        [DYNAMIC_FETCH_USER_PROPERTIES]: true,
       },
       [STATE_EVENT_NUMERIC_PROPERTY_VALUE]: {
         'labels': [
@@ -196,12 +199,9 @@ class Factor extends Component {
         'nextState': STATE_PROPERTY_TYPE,
       },
       [STATE_USER_STRING_PROPERTY_VALUE]: {
-        'labels': [
-          { label: 'India', value: 1, currentState: STATE_USER_STRING_PROPERTY_VALUE, nextState: STATE_PROPERTY_TYPE, 'type': STRING_VALUE_TYPE },
-          { label: 'United States', value: 2, currentState: STATE_USER_STRING_PROPERTY_VALUE, nextState: STATE_PROPERTY_TYPE, 'type': STRING_VALUE_TYPE },
-          { label: 'France', value: 3, currentState: STATE_USER_STRING_PROPERTY_VALUE, nextState: STATE_PROPERTY_TYPE, 'type': STRING_VALUE_TYPE }
-        ],
+        'labels': [],
         [ALLOW_STRING_CREATE]: true,
+        [DYNAMIC_FETCH_USER_PROPERTY_VALUES]: true,
         'nextState': STATE_PROPERTY_TYPE,
       },
     };
@@ -355,8 +355,8 @@ class Factor extends Component {
             <Col xs='12' md='12'>
               <QueryBuilderCard 
                 getQueryStates={this.getQueryStates}
-                getEventPropertiesOptions={this.getEventPropertiesOptions}
-                getEventPropertyValueOptions={this.getEventPropertyValueOptions}
+                getPropertiesOptions={this.getPropertiesOptions}
+                getPropertyValueOptions={this.getPropertyValueOptions}
                 onKeyDown={this.factor}
                 holderText="Enter goal."
               />

@@ -11,9 +11,9 @@ import (
 )
 
 type PatternWrapper struct {
-	patterns     []*Pattern
-	pMap         map[string]*Pattern
-	eventInfoMap *EventInfoMap
+	patterns          []*Pattern
+	pMap              map[string]*Pattern
+	userAndEventsInfo *UserAndEventsInfo
 }
 
 type PatternService struct {
@@ -47,7 +47,7 @@ type PatternServiceGraphResults struct {
 	Charts []graphResult `json:"charts"`
 }
 
-func NewPatternWrapper(patterns []*Pattern, eventInfoMap *EventInfoMap) *PatternWrapper {
+func NewPatternWrapper(patterns []*Pattern, userAndEventsInfo *UserAndEventsInfo) *PatternWrapper {
 	patternWrapper := PatternWrapper{
 		patterns: patterns,
 	}
@@ -56,7 +56,7 @@ func NewPatternWrapper(patterns []*Pattern, eventInfoMap *EventInfoMap) *Pattern
 		pMap[p.String()] = p
 	}
 	patternWrapper.pMap = pMap
-	patternWrapper.eventInfoMap = eventInfoMap
+	patternWrapper.userAndEventsInfo = userAndEventsInfo
 	return &patternWrapper
 }
 
@@ -165,8 +165,8 @@ func headerString(funnelEvents []string,
 		if i == 0 {
 			otherEventString += "after"
 		}
-		otherEventString +=  fmt.Sprintf(" %s",
-            eventStringWithConditions(funnelEvents[i], &patternConstraints[i]))
+		otherEventString += fmt.Sprintf(" %s",
+			eventStringWithConditions(funnelEvents[i], &patternConstraints[i]))
 		if i < pLen-3 {
 			otherEventString += " and"
 		}
@@ -345,12 +345,12 @@ func (pw *PatternWrapper) buildFactorResultsFromPatterns(nodes []*ItreeNode) Pat
 
 func NewPatternService(
 	patternsMap map[uint64][]*Pattern,
-	projectEventInfoMap map[uint64]*EventInfoMap) (*PatternService, error) {
+	projectToUserAndEventsInfoMap map[uint64]*UserAndEventsInfo) (*PatternService, error) {
 
 	patternService := PatternService{patternsMap: map[uint64]*PatternWrapper{}}
 
 	for projectId, patterns := range patternsMap {
-		eventInfoMap, _ := projectEventInfoMap[projectId]
+		eventInfoMap, _ := projectToUserAndEventsInfoMap[projectId]
 		patternWrapper := NewPatternWrapper(patterns, eventInfoMap)
 		patternService.patternsMap[projectId] = patternWrapper
 	}
@@ -406,7 +406,7 @@ func (ps *PatternService) GetSeenEventProperties(projectId uint64, eventName str
 	// Initialize results.
 	results := make(map[string][]string)
 	numericalProperties := []string{}
-	for _, dnp := range U.DEFAULT_NUMERIC_EVENT_PROPERTIES {
+	for _, dnp := range U.VISIBLE_DEFAULT_NUMERIC_EVENT_PROPERTIES {
 		numericalProperties = append(numericalProperties, dnp)
 	}
 	categoricalProperties := []string{}
@@ -419,10 +419,10 @@ func (ps *PatternService) GetSeenEventProperties(projectId uint64, eventName str
 	if eventName == "" {
 		return results, fmt.Errorf("Invalid Query")
 	}
-	if pw.eventInfoMap == nil {
+	if pw.userAndEventsInfo.EventPropertiesInfoMap == nil {
 		return results, nil
 	}
-	eventInfo, _ := (*pw.eventInfoMap)[eventName]
+	eventInfo, _ := (*pw.userAndEventsInfo.EventPropertiesInfoMap)[eventName]
 	for nprop, _ := range eventInfo.NumericPropertyKeys {
 		numericalProperties = append(numericalProperties, nprop)
 	}
@@ -449,15 +449,70 @@ func (ps *PatternService) GetSeenEventPropertyValues(
 	if !ok {
 		return results, fmt.Errorf(fmt.Sprintf("No data for projectId:%d", projectId))
 	}
-	if pw.eventInfoMap == nil {
+	if pw.userAndEventsInfo.EventPropertiesInfoMap == nil {
 		return results, nil
 	}
-	eventInfo, _ := (*pw.eventInfoMap)[eventName]
+	eventInfo, _ := (*pw.userAndEventsInfo.EventPropertiesInfoMap)[eventName]
 	propValuesMap, ok := eventInfo.CategoricalPropertyKeyValues[propertyName]
 	if !ok {
 		log.WithFields(log.Fields{
 			"eventName": eventName, "propertyName": propertyName,
 			"projectId": projectId}).Info("Property not found.")
+		return results, nil
+	}
+	for k, _ := range propValuesMap {
+		results = append(results, k)
+	}
+	return results, nil
+}
+
+func (ps *PatternService) GetSeenUserProperties(projectId uint64) (map[string][]string, error) {
+	// Initialize results.
+	results := make(map[string][]string)
+	numericalProperties := []string{}
+	categoricalProperties := []string{}
+	results["numerical"] = numericalProperties
+	results["categorical"] = categoricalProperties
+	pw, ok := ps.patternsMap[projectId]
+	if !ok {
+		return results, fmt.Errorf(fmt.Sprintf("No data for projectId:%d", projectId))
+	}
+	userPropertiesInfo := pw.userAndEventsInfo.UserPropertiesInfo
+	if userPropertiesInfo == nil {
+		return results, nil
+	}
+	for nprop, _ := range userPropertiesInfo.NumericPropertyKeys {
+		numericalProperties = append(numericalProperties, nprop)
+	}
+	for cprop, _ := range userPropertiesInfo.CategoricalPropertyKeyValues {
+		categoricalProperties = append(categoricalProperties, cprop)
+	}
+	results["numerical"] = numericalProperties
+	results["categorical"] = categoricalProperties
+	return results, nil
+}
+
+func (ps *PatternService) GetSeenUserPropertyValues(
+	projectId uint64, propertyName string) ([]string, error) {
+	// Initialize results.
+	results := []string{}
+	if propertyName == "" {
+		return results, fmt.Errorf("Invalid Query")
+	}
+
+	pw, ok := ps.patternsMap[projectId]
+	if !ok {
+		return results, fmt.Errorf(fmt.Sprintf("No data for projectId:%d", projectId))
+	}
+	userPropertiesInfo := pw.userAndEventsInfo.UserPropertiesInfo
+	if userPropertiesInfo == nil {
+		return results, nil
+	}
+	propValuesMap, ok := userPropertiesInfo.CategoricalPropertyKeyValues[propertyName]
+	if !ok {
+		log.WithFields(log.Fields{
+			"propertyName": propertyName,
+			"projectId":    projectId}).Info("Property not found.")
 		return results, nil
 	}
 	for k, _ := range propValuesMap {

@@ -315,16 +315,19 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 	}
 
 	scanner := bufio.NewScanner(strings.NewReader(eventsInputString))
-	actualEventInfoMap := P.EventInfoMap{}
+	actualEventInfoMap := make(map[string]*P.PropertiesInfo)
 	// Initialize.
 	for _, eventName := range []string{"A", "B", "C", "F", "G", "K", "L", "Z"} {
 		// Initialize info.
-		actualEventInfoMap[eventName] = &P.EventInfo{
+		actualEventInfoMap[eventName] = &P.PropertiesInfo{
 			NumericPropertyKeys:          make(map[string]bool),
 			CategoricalPropertyKeyValues: make(map[string]map[string]bool),
 		}
 	}
-	err := P.CollectEventInfo(scanner, &actualEventInfoMap)
+	userAndEventsInfo := P.UserAndEventsInfo{
+		EventPropertiesInfoMap: &actualEventInfoMap,
+	}
+	err := P.CollectPropertiesInfo(scanner, &userAndEventsInfo)
 	assert.Nil(t, err)
 
 	expectedNumericKeys := map[string][]string{
@@ -408,13 +411,13 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 
 	pABCEvents := []string{"A", "B", "C"}
 	pLen := len(pABCEvents)
-	pABC, _ := P.NewPattern(pABCEvents, &actualEventInfoMap)
-	pAB, _ := P.NewPattern([]string{"A", "B"}, &actualEventInfoMap)
-	pBC, _ := P.NewPattern([]string{"B", "C"}, &actualEventInfoMap)
-	pAC, _ := P.NewPattern([]string{"B", "C"}, &actualEventInfoMap)
-	pA, _ := P.NewPattern([]string{"A"}, &actualEventInfoMap)
-	pB, _ := P.NewPattern([]string{"B"}, &actualEventInfoMap)
-	pC, _ := P.NewPattern([]string{"C"}, &actualEventInfoMap)
+	pABC, _ := P.NewPattern(pABCEvents, &userAndEventsInfo)
+	pAB, _ := P.NewPattern([]string{"A", "B"}, &userAndEventsInfo)
+	pBC, _ := P.NewPattern([]string{"B", "C"}, &userAndEventsInfo)
+	pAC, _ := P.NewPattern([]string{"B", "C"}, &userAndEventsInfo)
+	pA, _ := P.NewPattern([]string{"A"}, &userAndEventsInfo)
+	pB, _ := P.NewPattern([]string{"B"}, &userAndEventsInfo)
+	pC, _ := P.NewPattern([]string{"C"}, &userAndEventsInfo)
 
 	patterns := []*P.Pattern{pABC, pAB, pBC, pAC, pA, pB, pC}
 	err = P.CountPatterns(scanner, patterns)
@@ -459,10 +462,10 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 		"C.CNum":   float64((1.0 + 2.0) / 2),
 		"C.ComNum": float64((2.0 + 3.0) / 2),
 	}
-	actualMeanMap := pABC.NumericProperties.MeanMap()
+	actualMeanMap := pABC.EventNumericProperties.MeanMap()
 	assert.Equal(t, expectedMeanMap, actualMeanMap)
 
-	actualCdf := pABC.NumericProperties.CDFFromMap(
+	actualCdf := pABC.EventNumericProperties.CDFFromMap(
 		map[string]float64{
 			"A.ANum":   2.0,
 			"A.ComNum": 2.0,
@@ -476,7 +479,7 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 	// B.ComCat: "com2" and "com1"
 	// C.CCat: "ccat1" and "ccat2"
 	// C.ComCat: "com2" and "com3"
-	actualPdf, err := pABC.CategoricalProperties.PDFFromMap(
+	actualPdf, err := pABC.EventCategoricalProperties.PDFFromMap(
 		map[string]string{
 			"A.ACat":   "acat1",
 			"A.ComCat": "com3",
@@ -488,7 +491,7 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 	assert.Nil(t, err, fmt.Sprintf("Error: %v", err))
 	assert.InDelta(t, actualPdf, 0.5, 0.01)
 
-	actualPdf, err = pABC.CategoricalProperties.PDFFromMap(
+	actualPdf, err = pABC.EventCategoricalProperties.PDFFromMap(
 		map[string]string{
 			"A.ACat":   "acat1",
 			"A.ComCat": "com1",

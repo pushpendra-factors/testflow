@@ -1,6 +1,7 @@
 package handler
 
 import (
+	C "factors/config"
 	M "factors/model"
 	"net/http"
 	"strconv"
@@ -77,5 +78,50 @@ func GetUsersHandler(c *gin.Context) {
 		c.AbortWithStatus(errCode)
 	} else {
 		c.JSON(http.StatusOK, users)
+	}
+}
+
+// Test command.
+// curl -i -X GET http://localhost:8080/projects/1/users/properties
+func GetUserPropertiesHandler(c *gin.Context) {
+	projectID, err := strconv.ParseUint(c.Params.ByName("project_id"), 10, 64)
+	if err != nil {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+	ps := C.GetServices().PatternService
+	if properties, err := ps.GetSeenUserProperties(projectID); err != nil {
+		log.WithFields(log.Fields{
+			"error": err, "projectId": projectID}).Error(
+			"Get User Properties failed.")
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	} else {
+		c.JSON(http.StatusOK, properties)
+	}
+}
+
+// curl -i -X GET http://localhost:8080/projects/1/user/properties/$country
+func GetUserPropertyValuesHandler(c *gin.Context) {
+	projectID, err := strconv.ParseUint(c.Params.ByName("project_id"), 10, 64)
+	if err != nil {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+	propertyName := c.Params.ByName("property_name")
+	if propertyName == "" {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+	ps := C.GetServices().PatternService
+	if propertyValues, err := ps.GetSeenUserPropertyValues(projectID, propertyName); err != nil {
+		log.WithFields(log.Fields{
+			"error": err, "projectId": projectID,
+			"propertyName": propertyName}).Error(
+			"Get User Properties failed.")
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	} else {
+		c.JSON(http.StatusOK, propertyValues)
 	}
 }

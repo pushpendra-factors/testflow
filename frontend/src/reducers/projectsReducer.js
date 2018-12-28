@@ -2,6 +2,8 @@ export default function reducer(state={
     projects: [],
     eventPropertiesMap: {},
     eventPropertyValuesMap: {},
+    userProperties: [],
+    userPropertyValuesMap: {},
     fetchingProjects: false,
     fetchedProjects: false,
     projectsError: null,
@@ -103,6 +105,29 @@ export default function reducer(state={
       case "FETCH_CURRENT_PROJECT_EVENT_PROPERTY_VALUES_REJECTED": {
         return {...state,
                 eventPropertyValuesError: action.payload.err}
+      }
+
+      case "FETCH_CURRENT_PROJECT_USER_PROPERTIES_FULFILLED": {
+        return {...state,
+                userProperties: action.payload.userProperties,
+              }
+      }
+      case "FETCH_CURRENT_PROJECT_USER_PROPERTIES_REJECTED": {
+        return {...state,
+                userPropertiesError: action.payload.err}
+      }
+      case "FETCH_CURRENT_PROJECT_USER_PROPERTY_VALUES_FULFILLED": {
+        // Only the latest fetch is maintained.
+        var userPropertyValuesMap = {};
+        userPropertyValuesMap[action.payload.propertyName] = action.payload.userPropertyValues;
+        return {
+          ...state,
+          userPropertyValuesMap: userPropertyValuesMap,
+        }
+      }
+      case "FETCH_CURRENT_PROJECT_USER_PROPERTY_VALUES_REJECTED": {
+        return {...state,
+                userPropertyValuesError: action.payload.err}
       }
     }
     return state

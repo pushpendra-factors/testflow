@@ -134,10 +134,10 @@ func initServices() error {
 	log.Info("Db Service initialized")
 
 	patternsMap := make(map[uint64][]*P.Pattern)
-	projectEventInfoMap := make(map[uint64]*P.EventInfoMap)
+	projectToUserAndEventsInfoMap := make(map[uint64]*P.UserAndEventsInfo)
 	for projectId, patternsFile := range configuration.PatternFiles {
 		patterns := []*P.Pattern{}
-		var eventInfoMap P.EventInfoMap
+		var userAndEventsInfo P.UserAndEventsInfo
 
 		patternsFileAbsPath, _ := filepath.Abs(patternsFile)
 		file, err := os.Open(patternsFileAbsPath)
@@ -158,9 +158,9 @@ func initServices() error {
 			lineNum++
 			line := scanner.Text()
 			if lineNum == 1 {
-				// First line is all the event and event properties information
+				// First line is all the event, event properties and user properties information
 				// seen in the data.
-				if err := json.Unmarshal([]byte(line), &eventInfoMap); err != nil {
+				if err := json.Unmarshal([]byte(line), &userAndEventsInfo); err != nil {
 					log.WithFields(log.Fields{
 						"file": patternsFileAbsPath, "lineNum": lineNum, "err": err}).Error(
 						"Failed to unmarshal events info.")
@@ -183,11 +183,11 @@ func initServices() error {
 			return err
 		}
 		patternsMap[projectId] = patterns
-		projectEventInfoMap[projectId] = &eventInfoMap
+		projectToUserAndEventsInfoMap[projectId] = &userAndEventsInfo
 		log.Info(fmt.Sprintf("Loaded %d patterns for project %d", len(patterns), projectId))
 	}
 
-	patternService, err := P.NewPatternService(patternsMap, projectEventInfoMap)
+	patternService, err := P.NewPatternService(patternsMap, projectToUserAndEventsInfoMap)
 	if err != nil {
 		log.Fatal("Failed to initialize pattern service")
 	}

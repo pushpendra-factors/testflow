@@ -83,7 +83,8 @@ func filterPatterns(patterns []*P.Pattern) []*P.Pattern {
 	return filteredPatterns
 }
 
-func genSegmentedCandidates(patterns []*P.Pattern, eventInfoMap *P.EventInfoMap) map[string][]*P.Pattern {
+func genSegmentedCandidates(
+	patterns []*P.Pattern, userAndEventsInfo *P.UserAndEventsInfo) map[string][]*P.Pattern {
 	pSegments := make(map[string][]*P.Pattern)
 	for _, p := range patterns {
 		segmentKey := fmt.Sprintf("%s,%s", p.EventNames[0], p.EventNames[len(p.EventNames)-1])
@@ -95,7 +96,7 @@ func genSegmentedCandidates(patterns []*P.Pattern, eventInfoMap *P.EventInfoMap)
 
 	candidateSegments := make(map[string][]*P.Pattern)
 	for k, patterns := range pSegments {
-		cPatterns, _, err := P.GenCandidates(patterns, top_K, eventInfoMap)
+		cPatterns, _, err := P.GenCandidates(patterns, top_K, userAndEventsInfo)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -105,7 +106,7 @@ func genSegmentedCandidates(patterns []*P.Pattern, eventInfoMap *P.EventInfoMap)
 }
 
 func genLenThreeSegmentedCandidates(lenTwoPatterns []*P.Pattern,
-	eventInfoMap *P.EventInfoMap) map[string][]*P.Pattern {
+	userAndEventsInfo *P.UserAndEventsInfo) map[string][]*P.Pattern {
 	startPatternsMap := make(map[string][]*P.Pattern)
 	endPatternsMap := make(map[string][]*P.Pattern)
 
@@ -150,7 +151,7 @@ func genLenThreeSegmentedCandidates(lenTwoPatterns []*P.Pattern,
 			continue
 		}
 		lenThreeCandidates, err := P.GenLenThreeCandidatePatterns(
-			p, startPatterns, endPatterns, top_K, eventInfoMap)
+			p, startPatterns, endPatterns, top_K, userAndEventsInfo)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -177,11 +178,11 @@ func writePatterns(patterns []*P.Pattern, outputFile *os.File) error {
 
 func mineAndWriteLenOnePatterns(
 	eventNames []M.EventName, filepath string,
-	eventInfoMap *P.EventInfoMap, numRoutines int,
+	userAndEventsInfo *P.UserAndEventsInfo, numRoutines int,
 	outputFile *os.File) ([]*P.Pattern, error) {
 	var lenOnePatterns []*P.Pattern
 	for _, eventName := range eventNames {
-		p, err := P.NewPattern([]string{eventName.Name}, eventInfoMap)
+		p, err := P.NewPattern([]string{eventName.Name}, userAndEventsInfo)
 		if err != nil {
 			return []*P.Pattern{}, fmt.Errorf("Pattern initialization failed")
 		}
@@ -197,11 +198,11 @@ func mineAndWriteLenOnePatterns(
 
 func mineAndWriteLenTwoPatterns(
 	lenOnePatterns []*P.Pattern, filepath string,
-	eventInfoMap *P.EventInfoMap, numRoutines int,
+	userAndEventsInfo *P.UserAndEventsInfo, numRoutines int,
 	outputFile *os.File) ([]*P.Pattern, error) {
 	// Each event combination is a segment in itself.
 	lenTwoPatterns, _, err := P.GenCandidates(
-		lenOnePatterns, max_SEGMENTS, eventInfoMap)
+		lenOnePatterns, max_SEGMENTS, userAndEventsInfo)
 	if err != nil {
 		return []*P.Pattern{}, err
 	}
@@ -214,16 +215,17 @@ func mineAndWriteLenTwoPatterns(
 }
 
 func mineAndWritePatterns(projectId int, filepath string,
-	eventInfoMap *P.EventInfoMap, numRoutines int, outputFile *os.File) error {
+	userAndEventsInfo *P.UserAndEventsInfo, numRoutines int, outputFile *os.File) error {
 	// Length One Patterns.
 	eventNames, errCode := M.GetEventNames(uint64(projectId))
 	if errCode != http.StatusFound {
 		return fmt.Errorf("DB read of event names failed")
 	}
 	var filteredPatterns []*P.Pattern
+
 	patternLen := 1
 	filteredPatterns, err := mineAndWriteLenOnePatterns(
-		eventNames, filepath, eventInfoMap, numRoutines, outputFile)
+		eventNames, filepath, userAndEventsInfo, numRoutines, outputFile)
 	if err != nil {
 		return err
 	}
@@ -234,7 +236,7 @@ func mineAndWritePatterns(projectId int, filepath string,
 		return nil
 	}
 	filteredPatterns, err = mineAndWriteLenTwoPatterns(
-		filteredPatterns, filepath, eventInfoMap,
+		filteredPatterns, filepath, userAndEventsInfo,
 		numRoutines, outputFile)
 	if err != nil {
 		return err
@@ -249,7 +251,7 @@ func mineAndWritePatterns(projectId int, filepath string,
 			return nil
 		}
 		lenThreeSegmentedPatterns := genLenThreeSegmentedCandidates(
-			filteredPatterns, eventInfoMap)
+			filteredPatterns, userAndEventsInfo)
 		lenThreePatterns := []*P.Pattern{}
 		for _, patterns := range lenThreeSegmentedPatterns {
 			lenThreePatterns = append(lenThreePatterns, patterns...)
@@ -271,7 +273,7 @@ func mineAndWritePatterns(projectId int, filepath string,
 		}
 
 		candidatePatternsMap = genSegmentedCandidates(
-			filteredPatterns, eventInfoMap)
+			filteredPatterns, userAndEventsInfo)
 		candidatePatterns = []*P.Pattern{}
 		for _, patterns := range candidatePatternsMap {
 			candidatePatterns = append(candidatePatterns, patterns...)
@@ -289,8 +291,8 @@ func mineAndWritePatterns(projectId int, filepath string,
 	return nil
 }
 
-func buildEventInfoMapFromInput(projectId int, filepath string) (*P.EventInfoMap, error) {
-	eMap := &P.EventInfoMap{}
+func buildPropertiesInfoFromInput(projectId int, filepath string) (*P.UserAndEventsInfo, error) {
+	eMap := make(map[string]*P.PropertiesInfo)
 
 	// Length One Patterns.
 	eventNames, errCode := M.GetEventNames(uint64(projectId))
@@ -299,7 +301,7 @@ func buildEventInfoMapFromInput(projectId int, filepath string) (*P.EventInfoMap
 	}
 	for _, eventName := range eventNames {
 		// Initialize info.
-		(*eMap)[eventName.Name] = &P.EventInfo{
+		eMap[eventName.Name] = &P.PropertiesInfo{
 			NumericPropertyKeys:          make(map[string]bool),
 			CategoricalPropertyKeyValues: make(map[string]map[string]bool),
 		}
@@ -311,12 +313,19 @@ func buildEventInfoMapFromInput(projectId int, filepath string) (*P.EventInfoMap
 	}
 	defer file.Close()
 
+	userAndEventsInfo := &P.UserAndEventsInfo{
+		UserPropertiesInfo: &P.PropertiesInfo{
+			NumericPropertyKeys:          make(map[string]bool),
+			CategoricalPropertyKeyValues: make(map[string]map[string]bool),
+		},
+		EventPropertiesInfoMap: &eMap,
+	}
 	scanner := bufio.NewScanner(file)
-	err = P.CollectEventInfo(scanner, eMap)
+	err = P.CollectPropertiesInfo(scanner, userAndEventsInfo)
 	if err != nil {
 		return nil, err
 	}
-	return eMap, nil
+	return userAndEventsInfo, nil
 }
 
 func printFilteredPatterns(filteredPatterns []*P.Pattern, iter int) {
@@ -368,21 +377,21 @@ func main() {
 	}
 	defer tmpFile.Close()
 
-	eventInfoMap, err := buildEventInfoMapFromInput(*projectIdFlag, *inputFileFlag)
+	userAndEventsInfo, err := buildPropertiesInfoFromInput(*projectIdFlag, *inputFileFlag)
 	if err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("Failed to build event Info.")
+		log.WithFields(log.Fields{"err": err}).Error("Failed to build user and event Info.")
 		os.Exit(1)
 	}
-	// First line in output file are events information seen in the data.
-	eventInfoBytes, err := json.Marshal(eventInfoMap)
-	eventInfoStr := string(eventInfoBytes)
-	if _, err := tmpFile.WriteString(fmt.Sprintf("%s\n", eventInfoStr)); err != nil {
-		log.WithFields(log.Fields{"line": eventInfoStr, "err": err}).Fatal("Failed to write events Info.")
+	// First line in output file are user and event properties seen in the data.
+	userAndEventsInfoBytes, err := json.Marshal(userAndEventsInfo)
+	userAndEventsInfoStr := string(userAndEventsInfoBytes)
+	if _, err := tmpFile.WriteString(fmt.Sprintf("%s\n", userAndEventsInfoStr)); err != nil {
+		log.WithFields(log.Fields{"line": userAndEventsInfoStr, "err": err}).Fatal("Failed to write user and Events Info.")
 		os.Exit(1)
 	}
 
 	err = mineAndWritePatterns(*projectIdFlag, *inputFileFlag,
-		eventInfoMap, *numRoutinesFlag, tmpFile)
+		userAndEventsInfo, *numRoutinesFlag, tmpFile)
 	if err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("Failed to mine patterns.")
 		os.Exit(1)
