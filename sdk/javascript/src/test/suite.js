@@ -5,6 +5,7 @@ const chai = require("chai");
 
 const Cookie = require("../utils/cookie");
 const Request = require("../utils/request");
+const APIClient = require("../api-client");
 const Properties = require("../properties");
 
 const config = require("../config");
@@ -15,7 +16,7 @@ const constant = require("../constant");
 
 // Assertion with chai.assert
 const assert = chai.assert;
-
+var COMMON_CUST_ID = randomAlphaNumeric(10);
 
 /**
  * Test Utils
@@ -44,19 +45,17 @@ function setupNewProject() {
     .then(assertIfHttpFailure);
 }
 
-function setupNewUser(projectId) {
-    if (!projectId) throw new Error("Setup new user failed. Invalid project.");
+function setupNewUser(token) {
+    if (!token) throw new Error("Setup new user failed. Invalid project.");
 
-    return Request.post(
-        config.api.host+"/projects/"+projectId+"/users",
-        { properties: { mobile: true } }
-    );
+    let client = new APIClient(token);
+    return client.identify({c_uid: COMMON_CUST_ID});
 }
 
 function setupNewProjectWithUser() {
     return setupNewProject()
         .then((r1) => {
-            return setupNewUser(r1.body.id)
+            return setupNewUser(r1.body.token)
                 .then((r2) => {
                     return { project: r1, user: r2 };
                 });
@@ -221,8 +220,12 @@ SuitePublicMethod.testInitWithBadInput = function() {
 
 SuitePublicMethod.testTrackBeforeInit = function() {
     app.reset();
-    // Should throw exception.
-    assert.throws(app.track, Error, "FactorsError: SDK is not initialized with token.");
+
+    try {
+        app.track();
+    } catch(e) {
+        assert.equal(e.message, "FactorsError: SDK is not initialized with token.")
+    }
 }
 
 SuitePublicMethod.testTrackAfterInit = function() {
@@ -292,7 +295,7 @@ SuitePublicMethod.testTrackWithUserCookie = function() {
             app.reset(); // Clears existing env.
             return app.init(r.project.body.token, {})
                 .then(() => {
-                    Cookie.setEncoded(constant.cookie.USER_ID, r.user.body.id);
+                    Cookie.setEncoded(constant.cookie.USER_ID, r.user.body.user_id);
                     app.track(randomAlphaNumeric(10), {})
                         .then(assertIfHttpFailure)
                         .then(assertIfUserIdOnResponse); // user_id shouldn't be there on response.
@@ -306,8 +309,11 @@ SuitePublicMethod.testTrackWithUserCookie = function() {
 SuitePublicMethod.testIdentifyBeforeInit = function() {
     app.reset();
 
-    // Throws error, if not initialized.
-    assert.throws(app.identify, Error, "FactorsError: SDK is not initialized with token.");
+    try {
+        app.identify();
+    } catch(e) {
+        assert.equal(e.message, "FactorsError: SDK is not initialized with token.")
+    }
 }
 
 SuitePublicMethod.testIdentifyAfterInit = function() {
@@ -327,10 +333,12 @@ SuitePublicMethod.testIdentifyWithoutCustomerUserId = function() {
 
     return setupNewProjectAndInit()
         .then((r) => {
-            assert.throws(app.identify, Error, "FactorsArgumentError: Invalid type for customer_user_id");
-            assert.throws(() => app.identify(" "), Error, "FactorsArgumentError: customer_user_id cannot be empty.");
-        })
-        .catch(assertOnCall);
+            try {
+                app.identify(" ");
+            } catch(e) {
+                assert.equal(e.message, "FactorsArgumentError: customer_user_id cannot be empty.")
+            }
+        });
 }
 
 // New user => Without user cookie.
@@ -347,7 +355,6 @@ SuitePublicMethod.testIdentifyWithoutUserCookie = function() {
         });
 }
 
-// With user cookie => Identify existing unidentified user.
 SuitePublicMethod.testIdentifyWithUserCookie = function() {
     return setupNewProjectWithUser()
         .then((r) => {
@@ -355,14 +362,14 @@ SuitePublicMethod.testIdentifyWithUserCookie = function() {
             return app.init(r.project.body.token, {})
             .then(() => {
                 assert.equal(app.client.token, r.project.body.token, "App initialization failed.");
-                Cookie.setEncoded(constant.cookie.USER_ID, r.user.body.id); // Setting new user.
-                let customerUserId = randomAlphaNumeric(15);
-                return app.identify(customerUserId)
+                Cookie.setEncoded(constant.cookie.USER_ID, r.user.body.user_id); // Setting new user.
+                // Workaround as we use identify for setup new user.
+                // which makes the user already identified.
+                return app.identify(COMMON_CUST_ID) 
                     .then(assertIfHttpFailure)
                     .then(assertIfUserIdOnResponse) // Should not respond new user.
             });
-        })
-        .catch(assertOnCall);
+        });
 }
 
 SuitePublicMethod.testIdentifyWithIdentifiedCustomerUserWithSameUserCookie = function() {
@@ -511,5 +518,5 @@ function run() {
     runPublicMethodsSuite();
 }
 
-module.exports = exports = { SuitePublicMethod, SuitePrivateMethod, runPrivateMethodsSuite, runPrivateMethodsSuite, run };
+module.exports = exports = { SuitePublicMethod, SuitePrivateMethod, runPrivateMethodsSuite, runPublicMethodsSuite, run };
 
