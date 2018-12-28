@@ -3,7 +3,6 @@ package pattern
 import (
 	"bufio"
 	"encoding/json"
-	Hist "factors/histogram"
 	"fmt"
 	"math"
 	"reflect"
@@ -25,10 +24,8 @@ type CounterEventFormat struct {
 }
 
 type PropertiesInfo struct {
-	NumericPropertyKeys           map[string]bool
-	NumericPropertiesTemplate     *Hist.NumericHistogramTemplate
-	CategoricalPropertyKeyValues  map[string]map[string]bool
-	CategoricalPropertiesTemplate *Hist.CategoricalHistogramTemplate
+	NumericPropertyKeys          map[string]bool
+	CategoricalPropertyKeyValues map[string]map[string]bool
 }
 
 // Event name to corresponding properties Info.
@@ -133,10 +130,10 @@ func deletePatternFromSlice(patternArray []*Pattern, pattern *Pattern) []*Patter
 	return patternArray
 }
 
-func EventPropertyKey(eventName string, propertyName string) string {
-	// property names are scoped by event, since different events can have
-	// same properties.
-	return eventName + "." + propertyName
+func PatternPropertyKey(patternIndex int, propertyName string) string {
+	// property names are scoped by index of the event in pattern,
+	// since different events can have same properties.
+	return fmt.Sprintf("%d.%s", patternIndex, propertyName)
 }
 
 // Collects event info for the events initilaized in userAndEventsInfo.
@@ -208,60 +205,6 @@ func CollectPropertiesInfo(scanner *bufio.Scanner, userAndEventsInfo *UserAndEve
 					"Ignoring non string, non numeric event property.")
 			}
 		}
-	}
-
-	// Set template for user properties.
-	userNTemplate := Hist.NumericHistogramTemplate{}
-	// Temporary fix to index multiple histogram keys with same property value.
-	i := 0
-	for propertyName, _ := range userAndEventsInfo.UserPropertiesInfo.NumericPropertyKeys {
-		nptu := Hist.NumericHistogramTemplateUnit{
-			Name:       EventPropertyKey(fmt.Sprintf("%d", i), propertyName),
-			IsRequired: false,
-			Default:    0.0,
-		}
-		userNTemplate = append(userNTemplate, nptu)
-		i++
-	}
-	userAndEventsInfo.UserPropertiesInfo.NumericPropertiesTemplate = &userNTemplate
-
-	userCTemplate := Hist.CategoricalHistogramTemplate{}
-	// Temporary fix to index multiple histogram keys with same property value.
-	i = 0
-	for propertyName, _ := range userAndEventsInfo.UserPropertiesInfo.CategoricalPropertyKeyValues {
-		cptu := Hist.CategoricalHistogramTemplateUnit{
-			Name:       EventPropertyKey(fmt.Sprintf("%d", i), propertyName),
-			IsRequired: false,
-			Default:    "",
-		}
-		userCTemplate = append(userCTemplate, cptu)
-		i++
-	}
-	userAndEventsInfo.UserPropertiesInfo.CategoricalPropertiesTemplate = &userCTemplate
-
-	// Set template for each event.
-	for eventName, eventInfo := range *eventInfoMap {
-		npt := Hist.NumericHistogramTemplate{}
-		for propertyName, _ := range eventInfo.NumericPropertyKeys {
-			nptu := Hist.NumericHistogramTemplateUnit{
-				Name:       EventPropertyKey(eventName, propertyName),
-				IsRequired: false,
-				Default:    0.0,
-			}
-			npt = append(npt, nptu)
-		}
-		eventInfo.NumericPropertiesTemplate = &npt
-
-		cpt := Hist.CategoricalHistogramTemplate{}
-		for propertyName, _ := range eventInfo.CategoricalPropertyKeyValues {
-			cptu := Hist.CategoricalHistogramTemplateUnit{
-				Name:       EventPropertyKey(eventName, propertyName),
-				IsRequired: false,
-				Default:    "",
-			}
-			cpt = append(cpt, cptu)
-		}
-		eventInfo.CategoricalPropertiesTemplate = &cpt
 	}
 	return nil
 }

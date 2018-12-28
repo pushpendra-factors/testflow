@@ -100,79 +100,51 @@ func NewPattern(events []string, userAndEventsInfo *UserAndEventsInfo) (*Pattern
 	if userAndEventsInfo == nil {
 		return &pattern, nil
 	}
-	userPropertiesInfo := userAndEventsInfo.UserPropertiesInfo
-	if userPropertiesInfo != nil {
-		nTemplate := Hist.NumericHistogramTemplate{}
-		for i := 0; i < pLen; i++ {
-			// User properties is tracked at each event level.
-			nTemplate = append(nTemplate, *userPropertiesInfo.NumericPropertiesTemplate...)
-		}
-
-		nDimensions := len(nTemplate)
-		nBinsFloat := math.Min(float64(nDimensions*num_NUMERIC_BINS_PER_DIMENSION),
-			float64(num_MAX_NUMERIC_MULTI_BINS))
-		nBins := int(math.Max(1.0, nBinsFloat))
-		nHist, err := Hist.NewNumericHistogram(nBins, nDimensions, &nTemplate)
-		if err != nil {
-			return nil, err
-		}
-		pattern.UserNumericProperties = nHist
-
-		cTemplate := Hist.CategoricalHistogramTemplate{}
-		for i := 0; i < pLen; i++ {
-			// User properties is tracked at each event level.
-			cTemplate = append(cTemplate, *userPropertiesInfo.CategoricalPropertiesTemplate...)
-		}
-		cDimensions := len(cTemplate)
-		cBinsFloat := math.Min(float64(cDimensions*num_CATEGORICAL_BINS_PER_DIMENSION),
-			float64(num_MAX_CATEGORICAL_MULTI_BINS))
-		cBins := int(math.Max(1.0, cBinsFloat))
-		cHist, err := Hist.NewCategoricalHistogram(cBins, cDimensions, &cTemplate)
-		if err != nil {
-			return nil, err
-		}
-		pattern.UserCategoricalProperties = cHist
+	userPropertiesNTemplate, userPropertiesCTemplate, eventPropertiesNTemplate, eventPropertiesCTemplate, err :=
+		buildPropertiesHistogramTemplates(events, userAndEventsInfo)
+	if err != nil {
+		return nil, err
 	}
-	eventInfoMap := userAndEventsInfo.EventPropertiesInfoMap
-	if eventInfoMap != nil {
-		nTemplate := Hist.NumericHistogramTemplate{}
-		for i := 0; i < pLen; i++ {
-			if eventInfo, ok := (*eventInfoMap)[events[i]]; ok {
-				nTemplate = append(nTemplate, *eventInfo.NumericPropertiesTemplate...)
-			} else {
-				return nil, fmt.Errorf(fmt.Sprintf(
-					"Missing info for event %s", events[i]))
-			}
-		}
-		nDimensions := len(nTemplate)
-		nBinsFloat := math.Min(float64(nDimensions*num_NUMERIC_BINS_PER_DIMENSION),
-			float64(num_MAX_NUMERIC_MULTI_BINS))
-		nBins := int(math.Max(1.0, nBinsFloat))
-		nHist, err := Hist.NewNumericHistogram(nBins, nDimensions, &nTemplate)
-		if err != nil {
-			return nil, err
-		}
-		pattern.EventNumericProperties = nHist
-
-		cTemplate := Hist.CategoricalHistogramTemplate{}
-		for i := 0; i < pLen; i++ {
-			if eventInfo, ok := (*eventInfoMap)[events[i]]; ok {
-				cTemplate = append(cTemplate, *eventInfo.CategoricalPropertiesTemplate...)
-			} else {
-				return nil, fmt.Errorf(fmt.Sprintf(
-					"Missing info for event %s", events[i]))
-			}
-		}
-		cDimensions := len(cTemplate)
-		cBinsFloat := math.Min(float64(cDimensions*num_CATEGORICAL_BINS_PER_DIMENSION),
-			float64(num_MAX_CATEGORICAL_MULTI_BINS))
-		cBins := int(math.Max(1.0, cBinsFloat))
-		cHist, err := Hist.NewCategoricalHistogram(cBins, cDimensions, &cTemplate)
-		if err != nil {
-			return nil, err
-		}
-		pattern.EventCategoricalProperties = cHist
+	// Setup Histograms.
+	nDimensions := len(*userPropertiesNTemplate)
+	nBinsFloat := math.Min(float64(nDimensions*num_NUMERIC_BINS_PER_DIMENSION),
+		float64(num_MAX_NUMERIC_MULTI_BINS))
+	nBins := int(math.Max(1.0, nBinsFloat))
+	nHist, err := Hist.NewNumericHistogram(nBins, nDimensions, userPropertiesNTemplate)
+	if err != nil {
+		return nil, err
 	}
+	pattern.UserNumericProperties = nHist
+
+	cDimensions := len(*userPropertiesCTemplate)
+	cBinsFloat := math.Min(float64(cDimensions*num_CATEGORICAL_BINS_PER_DIMENSION),
+		float64(num_MAX_CATEGORICAL_MULTI_BINS))
+	cBins := int(math.Max(1.0, cBinsFloat))
+	cHist, err := Hist.NewCategoricalHistogram(cBins, cDimensions, userPropertiesCTemplate)
+	if err != nil {
+		return nil, err
+	}
+	pattern.UserCategoricalProperties = cHist
+
+	nDimensions = len(*eventPropertiesNTemplate)
+	nBinsFloat = math.Min(float64(nDimensions*num_NUMERIC_BINS_PER_DIMENSION),
+		float64(num_MAX_NUMERIC_MULTI_BINS))
+	nBins = int(math.Max(1.0, nBinsFloat))
+	nHist, err = Hist.NewNumericHistogram(nBins, nDimensions, eventPropertiesNTemplate)
+	if err != nil {
+		return nil, err
+	}
+	pattern.EventNumericProperties = nHist
+
+	cDimensions = len(*eventPropertiesCTemplate)
+	cBinsFloat = math.Min(float64(cDimensions*num_CATEGORICAL_BINS_PER_DIMENSION),
+		float64(num_MAX_CATEGORICAL_MULTI_BINS))
+	cBins = int(math.Max(1.0, cBinsFloat))
+	cHist, err = Hist.NewCategoricalHistogram(cBins, cDimensions, eventPropertiesCTemplate)
+	if err != nil {
+		return nil, err
+	}
+	pattern.EventCategoricalProperties = cHist
 	return &pattern, nil
 }
 
@@ -183,6 +155,79 @@ func isEventsUnique(eventNames []string) bool {
 		pMap[eventNames[i]] = true
 	}
 	return len(pMap) == pLen
+}
+
+func buildPropertiesHistogramTemplates(
+	events []string, userAndEventsInfo *UserAndEventsInfo) (
+	*Hist.NumericHistogramTemplate, *Hist.CategoricalHistogramTemplate,
+	*Hist.NumericHistogramTemplate, *Hist.CategoricalHistogramTemplate,
+	error) {
+	userPropertiesNTemplate := Hist.NumericHistogramTemplate{}
+	userPropertiesCTemplate := Hist.CategoricalHistogramTemplate{}
+	eventPropertiesNTemplate := Hist.NumericHistogramTemplate{}
+	eventPropertiesCTemplate := Hist.CategoricalHistogramTemplate{}
+	if userAndEventsInfo == nil {
+		return &userPropertiesNTemplate, &userPropertiesCTemplate,
+			&eventPropertiesNTemplate, &eventPropertiesCTemplate, nil
+	}
+
+	pLen := len(events)
+	userPropertiesInfo := userAndEventsInfo.UserPropertiesInfo
+	if userPropertiesInfo != nil {
+		for i := 0; i < pLen; i++ {
+			for propertyName, _ := range userAndEventsInfo.UserPropertiesInfo.NumericPropertyKeys {
+				// User properties is tracked at each event level.
+				nptu := Hist.NumericHistogramTemplateUnit{
+					Name:       PatternPropertyKey(i, propertyName),
+					IsRequired: false,
+					Default:    0.0,
+				}
+				userPropertiesNTemplate = append(userPropertiesNTemplate, nptu)
+			}
+
+			for propertyName, _ := range userAndEventsInfo.UserPropertiesInfo.CategoricalPropertyKeyValues {
+				// User properties is tracked at each event level.
+				cptu := Hist.CategoricalHistogramTemplateUnit{
+					Name:       PatternPropertyKey(i, propertyName),
+					IsRequired: false,
+					Default:    "",
+				}
+				userPropertiesCTemplate = append(userPropertiesCTemplate, cptu)
+			}
+		}
+	}
+
+	eventInfoMap := userAndEventsInfo.EventPropertiesInfoMap
+	if eventInfoMap != nil {
+		for i := 0; i < pLen; i++ {
+			if eventInfo, ok := (*eventInfoMap)[events[i]]; ok {
+				for propertyName, _ := range eventInfo.NumericPropertyKeys {
+					// Event properties of corresponding event.
+					nptu := Hist.NumericHistogramTemplateUnit{
+						Name:       PatternPropertyKey(i, propertyName),
+						IsRequired: false,
+						Default:    0.0,
+					}
+					eventPropertiesNTemplate = append(eventPropertiesNTemplate, nptu)
+				}
+
+				for propertyName, _ := range eventInfo.CategoricalPropertyKeyValues {
+					// User properties is tracked at each event level.
+					cptu := Hist.CategoricalHistogramTemplateUnit{
+						Name:       PatternPropertyKey(i, propertyName),
+						IsRequired: false,
+						Default:    "",
+					}
+					eventPropertiesCTemplate = append(eventPropertiesCTemplate, cptu)
+				}
+			} else {
+				return nil, nil, nil, nil, fmt.Errorf(fmt.Sprintf(
+					"Missing info for event %s", events[i]))
+			}
+		}
+	}
+	return &userPropertiesNTemplate, &userPropertiesCTemplate,
+		&eventPropertiesNTemplate, &eventPropertiesCTemplate, nil
 }
 
 func (p *Pattern) ResetForNewUser(userId string, userJoinTimestamp int64) error {
@@ -203,14 +248,14 @@ func (p *Pattern) ResetForNewUser(userId string, userJoinTimestamp int64) error 
 }
 
 func addNumericAndCategoricalProperties(
-	eventName string, eventProperties map[string]interface{},
+	eventIndex int, eventProperties map[string]interface{},
 	nMap map[string]float64, cMap map[string]string) {
 
 	for key, value := range eventProperties {
 		if numericValue, ok := value.(float64); ok {
-			nMap[EventPropertyKey(eventName, key)] = numericValue
+			nMap[PatternPropertyKey(eventIndex, key)] = numericValue
 		} else if categoricalValue, ok := value.(string); ok {
-			cMap[EventPropertyKey(eventName, key)] = categoricalValue
+			cMap[PatternPropertyKey(eventIndex, key)] = categoricalValue
 		}
 	}
 }
@@ -251,7 +296,7 @@ func (p *Pattern) CountForEvent(
 		p.currentEventCardinalities[p.waitIndex] = eventCardinality
 		p.currentRepeats[p.waitIndex] = 1
 		// Update seen properties.
-		addNumericAndCategoricalProperties(eventName, eventProperties, p.currentNMap, p.currentCMap)
+		addNumericAndCategoricalProperties(p.waitIndex, eventProperties, p.currentNMap, p.currentCMap)
 
 		p.waitIndex += 1
 
@@ -355,13 +400,13 @@ func (p *Pattern) GetOncePerUserCount(
 					return 0, fmt.Errorf(errorString)
 				}
 			} else {
-				key := EventPropertyKey(eventName, ncs.PropertyName)
+				key := PatternPropertyKey(i, ncs.PropertyName)
 				nMapLowerBounds[key] = ncs.LowerBound
 				nMapUpperBounds[key] = ncs.UpperBound
 			}
 		}
 		for _, ccs := range ecs.CategoricalConstraints {
-			key := EventPropertyKey(eventName, ccs.PropertyName)
+			key := PatternPropertyKey(i, ccs.PropertyName)
 			cMapEquality[key] = ccs.PropertyValue
 		}
 	}
@@ -427,8 +472,7 @@ func (p *Pattern) PrevWaitingOn() string {
 func (p *Pattern) GetEventPropertyRanges(
 	eventIndex int, propertyName string) [][2]float64 {
 	// Return the ranges of the bin [min, max], in which the numeric values for the event property occurr.
-	eventName := p.EventNames[eventIndex]
-	return p.EventNumericProperties.GetBinRanges(EventPropertyKey(eventName, propertyName))
+	return p.EventNumericProperties.GetBinRanges(PatternPropertyKey(eventIndex, propertyName))
 }
 
 func (p *Pattern) String() string {

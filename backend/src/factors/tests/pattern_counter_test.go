@@ -448,57 +448,57 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 
 	// A-B-C occurs twice oncePerUser with the following six dimensional numerical
 	// distribution.
-	// A.ANum: 1.0 and 1.0
-	// A.ComNum: 3.0 and 1.0
-	// B.BNum: 1.0 and 1.0
-	// B.ComNum: 2.0 and 1.0
-	// C.CNum: 1.0 and 2.0
-	// C.ComNum 2.0 and 3.0
+	// 0.ANum: 1.0 and 1.0
+	// 0.ComNum: 3.0 and 1.0
+	// 1.BNum: 1.0 and 1.0
+	// 1.ComNum: 2.0 and 1.0
+	// 2.CNum: 1.0 and 2.0
+	// 2.ComNum 2.0 and 3.0
 	expectedMeanMap := map[string]float64{
-		"A.ANum":   float64((1.0 + 1.0) / 2),
-		"A.ComNum": float64((3.0 + 1.0) / 2),
-		"B.BNum":   float64((1.0 + 1.0) / 2),
-		"B.ComNum": float64((2.0 + 1.0) / 2),
-		"C.CNum":   float64((1.0 + 2.0) / 2),
-		"C.ComNum": float64((2.0 + 3.0) / 2),
+		"0.ANum":   float64((1.0 + 1.0) / 2),
+		"0.ComNum": float64((3.0 + 1.0) / 2),
+		"1.BNum":   float64((1.0 + 1.0) / 2),
+		"1.ComNum": float64((2.0 + 1.0) / 2),
+		"2.CNum":   float64((1.0 + 2.0) / 2),
+		"2.ComNum": float64((2.0 + 3.0) / 2),
 	}
 	actualMeanMap := pABC.EventNumericProperties.MeanMap()
 	assert.Equal(t, expectedMeanMap, actualMeanMap)
 
 	actualCdf := pABC.EventNumericProperties.CDFFromMap(
 		map[string]float64{
-			"A.ANum":   2.0,
-			"A.ComNum": 2.0,
-			"B.ComNum": 1.5,
+			"0.ANum":   2.0,
+			"0.ComNum": 2.0,
+			"1.ComNum": 1.5,
 		})
 	assert.InDelta(t, actualCdf, 0.5, 0.01)
 
-	// A.ACat: "acat1" and "acat1"
-	// A.ComCat: "com3" and "com1"
-	// B.BCat: "bcat1" and "bcat1"
-	// B.ComCat: "com2" and "com1"
-	// C.CCat: "ccat1" and "ccat2"
-	// C.ComCat: "com2" and "com3"
+	// 0.ACat: "acat1" and "acat1"
+	// 0.ComCat: "com3" and "com1"
+	// 1.BCat: "bcat1" and "bcat1"
+	// 1.ComCat: "com2" and "com1"
+	// 2.CCat: "ccat1" and "ccat2"
+	// 2.ComCat: "com2" and "com3"
 	actualPdf, err := pABC.EventCategoricalProperties.PDFFromMap(
 		map[string]string{
-			"A.ACat":   "acat1",
-			"A.ComCat": "com3",
-			"B.BCat":   "bcat1",
-			"B.ComCat": "com2",
-			"C.CCat":   "ccat1",
-			"C.ComCat": "com2",
+			"0.ACat":   "acat1",
+			"0.ComCat": "com3",
+			"1.BCat":   "bcat1",
+			"1.ComCat": "com2",
+			"2.CCat":   "ccat1",
+			"2.ComCat": "com2",
 		})
 	assert.Nil(t, err, fmt.Sprintf("Error: %v", err))
 	assert.InDelta(t, actualPdf, 0.5, 0.01)
 
 	actualPdf, err = pABC.EventCategoricalProperties.PDFFromMap(
 		map[string]string{
-			"A.ACat":   "acat1",
-			"A.ComCat": "com1",
-			"B.BCat":   "bcat1",
-			"B.ComCat": "com1",
-			"C.CCat":   "ccat2",
-			"C.ComCat": "com3",
+			"0.ACat":   "acat1",
+			"0.ComCat": "com1",
+			"1.BCat":   "bcat1",
+			"1.ComCat": "com1",
+			"2.CCat":   "ccat2",
+			"2.ComCat": "com3",
 		})
 	assert.Nil(t, err, fmt.Sprintf("Error: %v", err))
 	assert.InDelta(t, actualPdf, 0.5, 0.01)
@@ -583,7 +583,7 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 	}
 	count, err = pABC.GetOncePerUserCount(patternConstraints)
 	assert.Nil(t, err)
-	// This combination of A.Anum=1 and A.ComNum=1 does not occur together,
+	// This combination of 0.Anum=1 and 0.ComNum=1 does not occur together,
 	// though they take individually these values.
 	assert.Equal(t, uint(0), count)
 

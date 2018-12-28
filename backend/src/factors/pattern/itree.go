@@ -133,7 +133,7 @@ func (it *Itree) buildRootNode(
 		c, ok := patternWrapper.GetPerUserCount(pattern.EventNames[:1],
 			patternConstraints[:1])
 		if !ok {
-			return nil, fmt.Errorf(fmt.Sprintf("Frequency missing for startEvent", pattern.String()))
+			return nil, fmt.Errorf(fmt.Sprintf("Frequency missing for startEvent: %s", pattern.String()))
 		}
 		p = float64(patternCount) / float64(c)
 	} else {
