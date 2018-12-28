@@ -4,6 +4,7 @@ import (
 	"errors"
 	C "factors/config"
 	U "factors/util"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -16,27 +17,38 @@ type EventName struct {
 	// Composite primary key with projectId.
 	ID   uint64 `gorm:"primary_key:true;" json:"id"`
 	Name string `json:"name"`
-	// auto_name Defaults to user_created, if not supplied.
-	AutoName string `gorm:"default:'$UCEN'" json:"auto_name";`
+	// Todo: Rename auto_name to type.
+	AutoName string `json:"auto_name"`
 	// Below are the foreign key constraints added in creation script.
 	// project_id -> projects(id)
-	ProjectId uint64    `gorm:"primary_key:true;" json:"project_id"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ProjectId  uint64    `gorm:"primary_key:true;" json:"project_id"`
+	FilterExpr string    `json:"filter_expr"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
 }
 
-// Special autoname.
-const USER_CREATED_EVENT_NAME = "$UCEN"
+type FilterInfo struct {
+	tokenizedFilter []string // Filter split by URI_SLASH
+	eventName       *EventName
+}
 
-var ALLOWED_AUTONAMES = [...]string{USER_CREATED_EVENT_NAME}
+// AutoName types.
+const AN_USER_CREATED_EVENT_NAME = "$UCEN"
+const AN_AUTO_TRACKED_EVENT_NAME = "$ATEN"
+const AN_FILTER_EVENT_NAME = "$FEN"
+
+const URI_PROPERTY_PREFIX = ":"
+
+var ALLOWED_AUTONAMES = [...]string{AN_USER_CREATED_EVENT_NAME, AN_AUTO_TRACKED_EVENT_NAME, AN_FILTER_EVENT_NAME}
 
 func CreateOrGetEventName(eventName *EventName) (*EventName, int) {
 	db := C.GetServices().Db
 
-	log.WithFields(log.Fields{"eventName": &eventName}).Info("Create or get event_name")
-
 	// Validation.
-	if eventName.ProjectId == 0 || IsValidName(eventName.Name) != nil || isValidAutoName(eventName.AutoName) != nil {
+	if eventName.ProjectId == 0 ||
+		IsValidName(eventName.Name) != nil ||
+		isValidAutoName(eventName.AutoName) != nil {
+
 		return nil, http.StatusBadRequest
 	}
 
@@ -56,22 +68,19 @@ func CreateOrGetEventName(eventName *EventName) (*EventName, int) {
 	return eventName, http.StatusCreated
 }
 
+// Todo(dinesh): Change it allow only types defined, on renaming autoname to type.
 func isValidAutoName(autoName string) error {
-	// Allows only allowed autonames.
+	// if having $ prefix allows only defined autonames.
 	if strings.HasPrefix(autoName, U.NAME_PREFIX) {
 		for _, allowedAutoName := range ALLOWED_AUTONAMES {
-			if autoName != allowedAutoName {
-				return errors.New("invalid autoname")
+			if autoName == allowedAutoName {
+				return nil
 			}
 		}
+		return errors.New("invalid autoname")
 	}
-	return nil
-}
 
-// Create or Get user created EventName.
-func CreateOrGetUserCreatedEventName(eventName *EventName) (*EventName, int) {
-	eventName.AutoName = USER_CREATED_EVENT_NAME
-	return CreateOrGetEventName(eventName)
+	return nil
 }
 
 func GetEventName(name string, projectId uint64) (*EventName, int) {
@@ -93,20 +102,6 @@ func GetEventName(name string, projectId uint64) (*EventName, int) {
 	return &eventName, http.StatusFound
 }
 
-func GetEventNameByFilter(filter *EventName) (*EventName, int) {
-	db := C.GetServices().Db
-
-	var eventName EventName
-	if err := db.First(&eventName, &filter).Error; err != nil {
-		if gorm.IsRecordNotFoundError(err) {
-			return nil, http.StatusNotFound
-		}
-		return nil, http.StatusInternalServerError
-	}
-
-	return &eventName, http.StatusFound
-}
-
 func GetEventNames(projectId uint64) ([]EventName, int) {
 	if projectId == 0 {
 		log.Error("GetEventNames Failed. Missing projectId")
@@ -123,4 +118,328 @@ func GetEventNames(projectId uint64) ([]EventName, int) {
 		return nil, http.StatusNotFound
 	}
 	return eventNames, http.StatusFound
+}
+
+func CreateOrGetUserCreatedEventName(eventName *EventName) (*EventName, int) {
+	eventName.AutoName = AN_USER_CREATED_EVENT_NAME
+	return CreateOrGetEventName(eventName)
+}
+
+func CreateOrGetAutoTrackedEventName(eventName *EventName) (*EventName, int) {
+	eventName.AutoName = AN_AUTO_TRACKED_EVENT_NAME
+	return CreateOrGetEventName(eventName)
+}
+
+func CreateOrGetFilterEventName(eventName *EventName) (*EventName, int) {
+	filterExpr, valid := getValidatedFilterExpr(eventName.FilterExpr)
+	if !valid {
+		return nil, http.StatusBadRequest
+	}
+
+	eventName.AutoName = AN_FILTER_EVENT_NAME
+	eventName.FilterExpr = filterExpr
+
+	return CreateOrGetEventName(eventName)
+}
+
+func GetFilterEventNames(projectId uint64) ([]EventName, int) {
+	db := C.GetServices().Db
+
+	var eventNames []EventName
+	if err := db.Where("project_id = ? AND auto_name = ?",
+		projectId, AN_FILTER_EVENT_NAME).Find(&eventNames).Error; err != nil {
+		log.WithFields(log.Fields{"error": err, "project_id": projectId}).Error("Failed getting filter_event_names")
+
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(eventNames) == 0 {
+		return eventNames, http.StatusNotFound
+	}
+
+	return eventNames, http.StatusFound
+}
+
+func GetEventNamesByFilterExprPrefix(projectId uint64, prefix string) ([]EventName, int) {
+	db := C.GetServices().Db
+
+	var eventNames []EventName
+	if err := db.Where("project_id = ? AND filter_expr LIKE ?",
+		projectId, fmt.Sprintf("%s%%", prefix)).Find(&eventNames).Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+
+		return nil, http.StatusInternalServerError
+	}
+
+	// Todo(Dinesh): Why GORM couldn't detect RecordNotFound, returns err as nil?
+	if len(eventNames) == 0 {
+		return nil, http.StatusNotFound
+	}
+
+	return eventNames, http.StatusFound
+}
+
+func UpdateEventName(projectId uint64, id uint64, en *EventName) (*EventName, int) {
+	db := C.GetServices().Db
+
+	// Validation
+	if projectId == 0 ||
+		en.ProjectId != 0 ||
+		IsValidName(en.Name) != nil {
+		return nil, http.StatusBadRequest
+	}
+
+	var updatedEventName EventName
+	updateAllowedFields := map[string]interface{}{"name": en.Name}
+
+	exec := db.Model(&updatedEventName).Where("project_id = ? AND id = ?",
+		projectId, id).Updates(updateAllowedFields)
+
+	if err := exec.Error; err != nil {
+		log.WithFields(log.Fields{"event_name": en, "error": err,
+			"update_fields": updateAllowedFields}).Error("Failed updating filter.")
+
+		return nil, http.StatusInternalServerError
+	}
+
+	if exec.RowsAffected == 0 {
+		return nil, http.StatusBadRequest
+	}
+
+	return &updatedEventName, http.StatusAccepted
+}
+
+func UpdateFilterEventName(projectId uint64, id uint64, en *EventName) (*EventName, int) {
+	en.AutoName = AN_FILTER_EVENT_NAME
+	return UpdateEventName(projectId, id, en)
+}
+
+// Returns sanitized filter expression and valid or not bool.
+func getValidatedFilterExpr(filterExpr string) (string, bool) {
+	if filterExpr == "" {
+		return "", false
+	}
+
+	parsed, err := U.ParseURLStable(filterExpr)
+	if err != nil {
+		return "", false
+	}
+
+	if parsed.Host == "" {
+		return "", false
+	}
+
+	var uri string
+	if parsed.Path == "" || parsed.Path == U.URI_SLASH {
+		uri = U.URI_SLASH
+	} else {
+		uri = strings.TrimSuffix(parsed.Path, U.URI_SLASH)
+	}
+
+	return fmt.Sprintf("%s%s", parsed.Host, uri), true
+}
+
+// IsFilterMatch checks for exact match of filter and uri passed.
+// skips uri_token, if filter_token prefixed with semicolon (URI_PROPERTY_PREFIX).
+func IsFilterMatch(tokenizedFilter []string, tokenizedMatchURI []string) bool {
+	if len(tokenizedMatchURI) != len(tokenizedFilter) {
+		return false
+	}
+
+	lastIndexTF := len(tokenizedFilter) - 1
+	for i, ftoken := range tokenizedFilter {
+		if !strings.HasPrefix(ftoken, URI_PROPERTY_PREFIX) {
+			// filter_token is not property, should be == uri_token.
+			if ftoken != tokenizedMatchURI[i] {
+				return false
+			}
+		} else {
+			// last index of filter_token as property with uri_token as "". edge case.
+			if i == lastIndexTF && tokenizedMatchURI[0] == "" {
+				return false
+			}
+		}
+	}
+
+	return true
+}
+
+// calculateDefinitionScore -  calculates score based on number of property_token
+// and number of defined static_token.
+// algo: increament on static_token (u1), decreament on property_token (v1).
+// ["u1", "u2", "u3"] -> 2
+// ["u1", "u2", ":v1"] -> 1
+// ["u1", "u2", ":v1", ":v2"] -> 0
+func calculateDefinitionScore(tokenizedFilter []string) int16 {
+	if len(tokenizedFilter) == 0 {
+		return -9999
+	}
+
+	var score int16 = 0
+	for _, token := range tokenizedFilter {
+		if strings.HasPrefix(token, URI_PROPERTY_PREFIX) {
+			score = score - 1
+		} else {
+			score = score + 1
+		}
+	}
+
+	return score
+}
+
+// getHighDefinitionFilter - Returns filter with high definition score.
+func getHighDefinitionFilter(filters []*FilterInfo) *FilterInfo {
+	if filtersLen := len(filters); filtersLen == 0 {
+		return nil
+	} else if filtersLen == 1 {
+		return filters[0]
+	}
+
+	var highScoredFilter *FilterInfo
+	var score int16 = -9999
+
+	for _, f := range filters {
+		// calculating definity score for filter_expr everytime,
+		// can be avoided by memoizing it on db column during expr insert?
+		defScore := calculateDefinitionScore(f.tokenizedFilter)
+		if defScore > score {
+			score = defScore
+			highScoredFilter = f
+		}
+	}
+
+	return highScoredFilter
+}
+
+// matchEventNameWithFilters match uri by passing through filters.
+func matchEventURIWithFilters(filters *[]FilterInfo,
+	tokenizedEventURI []string) (*FilterInfo, bool) {
+	if len(tokenizedEventURI) == 0 {
+		return nil, false
+	}
+
+	matches := make([]*FilterInfo, 0, 0)
+	for i, finfo := range *filters {
+		if IsFilterMatch(finfo.tokenizedFilter, tokenizedEventURI) {
+			matches = append(matches, &(*filters)[i])
+		}
+	}
+
+	// Get one high definition filter from matches.
+	matchedFilter := getHighDefinitionFilter(matches)
+	if matchedFilter == nil {
+		return nil, false
+	}
+
+	return matchedFilter, true
+}
+
+// popAndMatchEventURIWithFilters - Pops event_uri by slash and
+// compare after_popped_uri with filter.
+func popAndMatchEventURIWithFilters(filters *[]FilterInfo,
+	eventURI string) (*FilterInfo, bool) {
+
+	for afterPopURI := eventURI; afterPopURI != ""; afterPopURI, _ = U.PopURIBySlash(afterPopURI) {
+		tokenizedEventURI := U.TokenizeURI(afterPopURI)
+
+		if finfo, matched := matchEventURIWithFilters(
+			filters, tokenizedEventURI); matched {
+			return finfo, true
+		}
+	}
+
+	return nil, false
+}
+
+func makeFilterInfos(eventNames []EventName) (*[]FilterInfo, error) {
+	// Selected list of filters to use after pruning.
+	filters := make([]FilterInfo, len(eventNames))
+	for i := 0; i < len(eventNames); i++ {
+		// Todo(Dinesh): Can be removed if we store domain seperately.
+		parsedFilterExpr, err := U.ParseURLWithoutProtocol(eventNames[i].FilterExpr)
+		if err != nil {
+			log.WithFields(log.Fields{"error": err,
+				"filter_expr": eventNames[i].FilterExpr}).Error(
+				"Failed parsing filter_expr. Insert validator might be failing.")
+
+			return nil, err
+		}
+
+		tokenizedFilter := U.TokenizeURI(U.CleanURI(parsedFilterExpr.Path))
+
+		filters[i] = FilterInfo{
+			tokenizedFilter: tokenizedFilter,
+			eventName:       &eventNames[i]}
+	}
+
+	return &filters, nil
+}
+
+// FilterEventNameByEventURL - Filter and return an event_name by event_url.
+func FilterEventNameByEventURL(projectId uint64, eventURL string) (*EventName, int) {
+	if projectId == 0 && eventURL == "" {
+		return nil, http.StatusBadRequest
+	}
+
+	// Need parse or parseStable here?
+	parsedEventURL, err := U.ParseURLStable(eventURL)
+	if err != nil {
+		log.WithFields(log.Fields{"error": err,
+			"event_url": eventURL}).Error("Failed parsing event_url.")
+		return nil, http.StatusBadRequest
+	}
+
+	// Get expressions with same domain prefix.
+	eventNames, errCode := GetEventNamesByFilterExprPrefix(projectId,
+		parsedEventURL.Host)
+	if errCode != http.StatusFound {
+		return nil, errCode
+	}
+
+	filters, err := makeFilterInfos(eventNames)
+	if err != nil {
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(*filters) == 0 {
+		return nil, http.StatusNotFound
+	}
+
+	filterInfo, matched := popAndMatchEventURIWithFilters(filters,
+		U.CleanURI(parsedEventURL.Path))
+	if !matched {
+		return nil, http.StatusNotFound
+	}
+
+	return filterInfo.eventName, http.StatusFound
+}
+
+// FillEventPropertiesByFilterExpr - Parses and fills event properties
+// from tokenized_event_uri using tokenized_filter_expr.
+func FillEventPropertiesByFilterExpr(eventProperties *U.PropertiesMap,
+	filterExpr string, eventURL string) error {
+
+	parsedEventURL, err := U.ParseURLStable(eventURL)
+	if err != nil {
+		return err
+	}
+	tokenizedEventURI := U.TokenizeURI(strings.TrimSuffix(parsedEventURL.Path, U.URI_SLASH))
+
+	parsedFilterExpr, err := U.ParseURLWithoutProtocol(filterExpr)
+	if err != nil {
+		return err
+	}
+	tokenizedFilterExpr := U.TokenizeURI(strings.TrimSuffix(parsedFilterExpr.Path, U.URI_SLASH))
+
+	for pos := 0; pos < len(tokenizedFilterExpr); pos++ {
+		if strings.HasPrefix(tokenizedFilterExpr[pos], URI_PROPERTY_PREFIX) {
+			// Adding semicolon removed filter_expr_token as key and event_uri_token as value.
+			(*eventProperties)[strings.TrimPrefix(tokenizedFilterExpr[pos],
+				URI_PROPERTY_PREFIX)] = tokenizedEventURI[pos]
+		}
+	}
+
+	return nil
 }

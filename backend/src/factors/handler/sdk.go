@@ -34,7 +34,7 @@ type sdkAddPropertiesPayload struct {
 }
 
 // Test command.
-// curl -i -H "Content-Type: application/json" -H "Authorization: YOUR_TOKEN" -X POST http://localhost:8080/sdk/event/track -d '{"user_id": "YOUR_USER_ID", "event_name": "login", "event_properties": {"ip": "10.0.0.1", "mobile": true}, "user_properties": {"$os": "Mac OS"}}'
+// curl -i -H "Content-Type: application/json" -H "Authorization: YOUR_TOKEN" -X POST http://localhost:8080/sdk/event/track -d '{"user_id": "YOUR_USER_ID", "event_name": "login", "auto": false, "event_properties": {"ip": "10.0.0.1", "mobile": true}, "user_properties": {"$os": "Mac OS"}}'
 func SDKTrackHandler(c *gin.Context) {
 	r := c.Request
 
@@ -84,16 +84,30 @@ func SDKTrackHandler(c *gin.Context) {
 	}
 
 	var eventName *M.EventName
-	var errCode int
+	var eventNameErrCode int
+
 	// if auto_track enabled, auto_name = event_name else auto_name = "UCEN".
+	// On 'auto' true event_name is the eventURL(e.g: factors.ai/u1/u2/u3) for JS_SDK.
 	if event.Auto {
-		eventName, errCode = M.CreateOrGetEventName(&M.EventName{Name: event.Name,
-			AutoName: event.Name, ProjectId: scopeProjectId})
+		// Pass eventURL through filter and get corresponding event_name mapped by user.
+		eventName, eventNameErrCode = M.FilterEventNameByEventURL(scopeProjectId, event.Name)
+		if eventNameErrCode != http.StatusFound {
+			// create a auto tracked event name if no filter_expr match.
+			eventName, eventNameErrCode = M.CreateOrGetAutoTrackedEventName(&M.EventName{Name: event.Name, ProjectId: scopeProjectId})
+		}
+
+		err := M.FillEventPropertiesByFilterExpr(&event.EventProperties, eventName.FilterExpr, event.Name)
+		if err != nil {
+			log.WithFields(log.Fields{"project_id": scopeProjectId, "filter_expr": eventName.FilterExpr,
+				"event_url": event.Name, "error": err}).Error("Failed to fill event url properties for auto tracked event.")
+		}
 	} else {
-		eventName, errCode = M.CreateOrGetUserCreatedEventName(&M.EventName{Name: event.Name, ProjectId: scopeProjectId})
+		eventName, eventNameErrCode = M.CreateOrGetUserCreatedEventName(&M.EventName{Name: event.Name, ProjectId: scopeProjectId})
 	}
-	if errCode != http.StatusConflict && errCode != http.StatusCreated {
-		c.AbortWithStatusJSON(errCode, gin.H{"error": "Tracking failed. EventName creation failed."})
+
+	if eventNameErrCode != http.StatusCreated && eventNameErrCode != http.StatusConflict &&
+		eventNameErrCode != http.StatusFound {
+		c.AbortWithStatusJSON(eventNameErrCode, gin.H{"error": "Tracking failed. Creating event_name failed."})
 		return
 	}
 

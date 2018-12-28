@@ -16,8 +16,8 @@ type PropertiesMap map[string]interface{}
 var EP_OCCURRENCE_COUNT string = "$occurrenceCount"
 
 // Properties that change too often are better part of event properties rather than user property.
-// TODO(dineshprabhu): Internal property not to be exposed on Frontend / any http responses.
-var EP_INTERNAL_IP = "$ip"
+// TODO(Dinesh): Internal properties should not to be exposed on any http responses.
+var EP_INTERNAL_IP string = "$ip"
 var EP_LOCATION_LATITUDE string = "$locationLat"
 var EP_LOCATION_LONGITUDE string = "$locationLng"
 
@@ -93,7 +93,7 @@ func isPropertyTypeValid(value interface{}) error {
 	return nil
 }
 
-func hasSDKUserDefaultProperty(key *string) bool {
+func isSDKUserDefaultProperty(key *string) bool {
 	for _, k := range ALLOWED_SDK_DEFAULT_USER_PROPERTIES {
 		if k == *key {
 			return true
@@ -102,7 +102,7 @@ func hasSDKUserDefaultProperty(key *string) bool {
 	return false
 }
 
-func hasSDKEventDefaultProperty(key *string) bool {
+func isSDKEventDefaultProperty(key *string) bool {
 	for _, k := range ALLOWED_SDK_DEFAULT_EVENT_PROPERTIES {
 		if k == *key {
 			return true
@@ -115,7 +115,7 @@ func GetValidatedUserProperties(properties *PropertiesMap) *PropertiesMap {
 	validatedProperties := make(PropertiesMap)
 	for k, v := range *properties {
 		if err := isPropertyTypeValid(v); err == nil {
-			if strings.HasPrefix(k, NAME_PREFIX) && !hasSDKUserDefaultProperty(&k) {
+			if strings.HasPrefix(k, NAME_PREFIX) && !isSDKUserDefaultProperty(&k) {
 				validatedProperties[fmt.Sprintf("%s%s", NAME_PREFIX_ESCAPE_CHAR, k)] = v
 			} else {
 				validatedProperties[k] = v
@@ -130,7 +130,7 @@ func GetValidatedEventProperties(properties *PropertiesMap) *PropertiesMap {
 	for k, v := range *properties {
 		if err := isPropertyTypeValid(v); err == nil {
 			// Escape properties with $ prefix but allow query_params_props with $qp_ prrefix.
-			if strings.HasPrefix(k, NAME_PREFIX) && !strings.HasPrefix(k, QUERY_PARAM_PROPERTY_PREFIX) && !hasSDKEventDefaultProperty(&k) {
+			if strings.HasPrefix(k, NAME_PREFIX) && !strings.HasPrefix(k, QUERY_PARAM_PROPERTY_PREFIX) && !isSDKEventDefaultProperty(&k) {
 				validatedProperties[fmt.Sprintf("%s%s", NAME_PREFIX_ESCAPE_CHAR, k)] = v
 			} else {
 				validatedProperties[k] = v

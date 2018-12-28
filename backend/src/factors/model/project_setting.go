@@ -66,7 +66,7 @@ func UpdateProjectSettings(projectId uint64, ps *ProjectSetting) (*ProjectSettin
 	// and use reuse it for all updates.
 	updateFields := map[string]interface{}{"auto_track": ps.AutoTrack}
 
-	// Note: '.Updates(Project{AutoTrack: false})' won't trigger an update query to the backend.
+	// Note: '.Updates(Project{AutoTrack: false})' false(default) won't trigger an update query to the backend.
 	// Issue with updating with default value. Ref: https://github.com/jinzhu/gorm/issues/314
 	if err := db.Model(&updatedProjectSetting).Where("project_id = ?", projectId).Updates(updateFields).Error; err != nil {
 		if gorm.IsRecordNotFoundError(err) {

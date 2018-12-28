@@ -65,36 +65,8 @@ func TestSDKTrack(t *testing.T) {
 		map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	// Test track user created event.
+	// Test auto tracked event.
 	rEventName := U.RandomLowerAphaNumString(10)
-	w = ServePostRequestWithHeaders(r, uri,
-		[]byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "%s", "event_properties": {"mobile" : "true"}, "user_properties": {"$os": "Mac OS"}}`, user.ID, rEventName)),
-		map[string]string{"Authorization": project.Token})
-	assert.Equal(t, http.StatusOK, w.Code)
-	responseMap = DecodeJSONResponseToMap(w.Body)
-	assert.NotEmpty(t, responseMap)
-	assert.Nil(t, responseMap["user_id"])
-	ren, errCode := M.GetEventNameByFilter(&M.EventName{ProjectId: project.ID, Name: rEventName})
-	assert.Equal(t, http.StatusFound, errCode)
-	assert.Equal(t, M.USER_CREATED_EVENT_NAME, ren.AutoName)
-	assert.NotEqual(t, ren.Name, ren.AutoName)
-
-	// Test auto tracked event.
-	rEventName = U.RandomLowerAphaNumString(10)
-	w = ServePostRequestWithHeaders(r, uri,
-		[]byte(fmt.Sprintf(`{"user_id": "%s", "auto": true, "event_name": "%s", "event_properties": {"mobile" : "true"}, "user_properties": {"$os": "Mac OS"}}`, user.ID, rEventName)),
-		map[string]string{"Authorization": project.Token})
-	assert.Equal(t, http.StatusOK, w.Code)
-	responseMap = DecodeJSONResponseToMap(w.Body)
-	assert.NotEmpty(t, responseMap)
-	assert.Nil(t, responseMap["user_id"])
-	ren, errCode = M.GetEventNameByFilter(&M.EventName{ProjectId: project.ID, Name: rEventName})
-	assert.Equal(t, http.StatusFound, errCode)
-	assert.NotEqual(t, M.USER_CREATED_EVENT_NAME, ren.AutoName)
-	assert.Equal(t, ren.Name, ren.AutoName)
-
-	// Test auto tracked event.
-	rEventName = U.RandomLowerAphaNumString(10)
 	w = ServePostRequestWithHeaders(r, uri,
 		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true"}, "user_properties": {"$os": "Mac OS"}}`, user.ID, rEventName)),
 		map[string]string{"Authorization": project.Token})
@@ -156,6 +128,72 @@ func TestSDKTrack(t *testing.T) {
 	assert.Nil(t, userPropertiesMap3["_$platform"])
 	assert.Nil(t, userPropertiesMap3["_$screenWidth"])
 	assert.Nil(t, userPropertiesMap3["_$screenHeight"])
+
+	// Test event is using existing filter or not.
+	// Created filter.
+	expr := "a.com/u1/u2/:prop1"
+	name := "login"
+	filterEventName, errCode := M.CreateOrGetFilterEventName(&M.EventName{
+		ProjectId:  project.ID,
+		FilterExpr: expr,
+		Name:       name,
+	})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotNil(t, filterEventName)
+	assert.NotZero(t, filterEventName.ID)
+	assert.Equal(t, name, filterEventName.Name)
+	assert.Equal(t, expr, filterEventName.FilterExpr)
+	assert.Equal(t, M.AN_FILTER_EVENT_NAME, filterEventName.AutoName)
+
+	// Test filter_event_name hit with exact match.
+	rEventName = "a.com/u1/u2/i1"
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "%s", "auto": true, "event_properties": {"mobile": "true"}, "user_properties": {"$os": "mac osx", "$osVersion": "1_2_3"}}`,
+		user.ID, rEventName)), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	responseMap = DecodeJSONResponseToMap(w.Body)
+	assert.NotEmpty(t, responseMap)
+	assert.Nil(t, responseMap["user_id"])
+	rEvent, errCode = M.GetEvent(project.ID, user.ID, responseMap["event_id"].(string))
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotNil(t, rEvent)
+	assert.Equal(t, filterEventName.ID, rEvent.EventNameId)
+	var rEventProperties map[string]interface{}
+	json.Unmarshal(rEvent.Properties.RawMessage, &rEventProperties)
+	assert.NotNil(t, rEventProperties["prop1"])
+	assert.Equal(t, "i1", rEventProperties["prop1"]) // Event property filled using expression.
+
+	// Test filter_event_name hit with raw event_url.
+	rEventName = "https://a.com/u1/u2/i2/u4/u5?q=search_string"
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "%s", "auto": true, "event_properties": {"mobile": "true"}, "user_properties": {"$os": "mac osx", "$osVersion": "1_2_3"}}`,
+		user.ID, rEventName)), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	responseMap = DecodeJSONResponseToMap(w.Body)
+	assert.NotEmpty(t, responseMap)
+	assert.Nil(t, responseMap["user_id"])
+	rEvent, errCode = M.GetEvent(project.ID, user.ID, responseMap["event_id"].(string))
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotNil(t, rEvent)
+	assert.Equal(t, filterEventName.ID, rEvent.EventNameId)
+	var rEventProperties2 map[string]interface{}
+	json.Unmarshal(rEvent.Properties.RawMessage, &rEventProperties2)
+	assert.NotNil(t, rEventProperties2["prop1"])
+	assert.Equal(t, "i2", rEventProperties2["prop1"])
+
+	// Test filter_event_name miss created auto_tracked event_name.
+	rEventName = fmt.Sprintf("%s/%s", "a.com/u1/u5/u7", U.RandomLowerAphaNumString(5))
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "%s", "auto": true, "event_properties": {"mobile": "true"}, "user_properties": {"$os": "mac osx", "$osVersion": "1_2_3"}}`,
+		user.ID, rEventName)), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	responseMap = DecodeJSONResponseToMap(w.Body)
+	assert.NotEmpty(t, responseMap)
+	assert.Nil(t, responseMap["user_id"])
+	rEvent, errCode = M.GetEvent(project.ID, user.ID, responseMap["event_id"].(string))
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotNil(t, rEvent)
+	eventName, errCode := M.GetEventName(rEventName, project.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotNil(t, eventName)
+	assert.Equal(t, M.AN_AUTO_TRACKED_EVENT_NAME, eventName.AutoName)
 }
 
 func TestSDKIdentify(t *testing.T) {
