@@ -269,7 +269,7 @@ func IsFilterMatch(tokenizedFilter []string, tokenizedMatchURI []string) bool {
 // calculateDefinitionScore -  calculates score based on number of property_token
 // and number of defined static_token.
 // algo: increament on static_token (u1), decreament on property_token (v1).
-// ["u1", "u2", "u3"] -> 2
+// ["u1", "u2", "u3"] -> 3
 // ["u1", "u2", ":v1"] -> 1
 // ["u1", "u2", ":v1", ":v2"] -> 0
 func calculateDefinitionScore(tokenizedFilter []string) int16 {
@@ -383,7 +383,6 @@ func FilterEventNameByEventURL(projectId uint64, eventURL string) (*EventName, i
 		return nil, http.StatusBadRequest
 	}
 
-	// Need parse or parseStable here?
 	parsedEventURL, err := U.ParseURLStable(eventURL)
 	if err != nil {
 		log.WithFields(log.Fields{"error": err,

@@ -188,7 +188,7 @@ func setupProjectAndFilters(t *testing.T, filters map[string]string) *M.Project 
 	return project
 }
 
-func TestDBFilterEventName(t *testing.T) {
+func TestDBFilterEventNameByEventURL(t *testing.T) {
 	filters := map[string]string{"a_u1_u2": "a.com/u1/u2", "u3_v1": "a.com/u3/:v1", "b_u1_u2": "b.com/u1/u2"}
 	project := setupProjectAndFilters(t, filters)
 
