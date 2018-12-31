@@ -25,7 +25,21 @@ const queryBuilderStyles = {
   multiValueRemove: () => ({
     display: 'none',
   }),
+  option: (base, state) => {
+    let _style = {
+      ...base
+    }
+
+    if(state.data.type == SUBMIT_QUERY_TYPE) {
+      _style.backgroundColor = "#FFF"
+      _style.fontSize = "0px"
+      _style.padding = "0"
+    }
+
+    return _style;
+  },
 }
+
 export const ALLOW_NUMBER_CREATE = "allowNumberCreate";
 export const ALLOW_STRING_CREATE = "allowStringCreate";
 export const DYNAMIC_FETCH_EVENT_PROPERTIES = "dynamicFetchEventProperties";
@@ -34,6 +48,7 @@ export const DYNAMIC_FETCH_USER_PROPERTIES = "dynamicFetchUserProperties";
 export const DYNAMIC_FETCH_USER_PROPERTY_VALUES = "dynamicFetchUserPropertyValues";
 export const NUMERICAL_VALUE_TYPE = "numericalValue";
 export const STRING_VALUE_TYPE = "stringValue"
+export const SUBMIT_QUERY_TYPE = "submitQuery"
 
 export const STATE_EVENTS = 0;
 export const STATE_PROPERTY_TYPE = 1;
@@ -85,6 +100,7 @@ class QueryBuilderCard extends Component {
       values: null,
       isLoadingOptions: false,
     };
+    this.creatableSelect = React.createRef();
     this.latestSelectedEventName = null;
     this.latestSelectedEventProperty = null;
     this.latestSelectedUserProperty = null;
@@ -204,6 +220,13 @@ class QueryBuilderCard extends Component {
     var numEnteredValues = newValues.length
     if (!!newValues && numEnteredValues > 0) {
       var currentEnteredOption = newValues[numEnteredValues - 1];
+      
+      if(currentEnteredOption['type'] === SUBMIT_QUERY_TYPE){
+        this.creatableSelect.current.select.select.blur(); // Hide options menu.
+        this.props.onKeyDown(this.state.values); // Submit factor.
+        return
+      }
+
       if (!!currentEnteredOption['__isNew__'] && actionMeta.action === 'create-option') {
         if (this.state.queryStates[this.state.currentQueryState][ALLOW_STRING_CREATE]) {
           currentEnteredOption['value'] = (1000 * (numEnteredValues - 1));
@@ -356,6 +379,7 @@ class QueryBuilderCard extends Component {
                     value={this.state.values}
                     isLoading={this.state.isLoadingOptions}
                     placeholder={this.props.holderText}
+                    ref={this.creatableSelect}
                   />
                 </div>
               </FormGroup>

@@ -17,7 +17,7 @@ import {
   ALLOW_NUMBER_CREATE, ALLOW_STRING_CREATE,
   DYNAMIC_FETCH_EVENT_PROPERTIES, DYNAMIC_FETCH_EVENT_PROPERTY_VALUES,
   DYNAMIC_FETCH_USER_PROPERTIES, DYNAMIC_FETCH_USER_PROPERTY_VALUES,
-  NUMERICAL_VALUE_TYPE, STRING_VALUE_TYPE,
+  NUMERICAL_VALUE_TYPE, STRING_VALUE_TYPE, SUBMIT_QUERY_TYPE,
   STATE_EVENTS, STATE_PROPERTY_TYPE,
   STATE_EVENT_PROPERTY_NAME, STATE_USER_PROPERTY_NAME,
   STATE_EVENT_NUMERIC_PROPERTY_VALUE, STATE_EVENT_STRING_PROPERTY_VALUE,
@@ -164,7 +164,7 @@ class Factor extends Component {
       },
       [STATE_PROPERTY_TYPE]: {
         'labels': [
-          { label: 'Escape and Enter to close and search', isDisabled: true },
+          { label: '', isDisabled: false, type: SUBMIT_QUERY_TYPE },
           { label: 'to', value: 1, currentState: STATE_PROPERTY_TYPE, nextState: STATE_EVENTS, onlyOnce: true, type: TO_TYPE },
           { label: 'with event property', value: 2, currentState: STATE_PROPERTY_TYPE, nextState: STATE_EVENT_PROPERTY_NAME, type: EVENT_PROPERTY_START_TYPE },
           { label: 'with user property', value: 3, currentState: STATE_PROPERTY_TYPE, nextState: STATE_USER_PROPERTY_NAME, type: USER_PROPERTY_STARTY_TYPE },
