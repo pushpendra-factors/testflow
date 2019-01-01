@@ -79,7 +79,7 @@ func (pw *PatternWrapper) GetPattern(eventNames []string) (*Pattern, bool) {
 func eventStringWithConditions(eventName string, eventConstraints *EventConstraints) string {
 	var eventString string = eventName
 	if eventConstraints != nil {
-		for _, c := range eventConstraints.NumericConstraints {
+		for _, c := range eventConstraints.EPNumericConstraints {
 			if c.PropertyName == "" {
 				continue
 			}
@@ -128,7 +128,7 @@ func eventStringWithConditions(eventName string, eventConstraints *EventConstrai
 				eventString += ")"
 			}
 		}
-		for _, c := range eventConstraints.CategoricalConstraints {
+		for _, c := range eventConstraints.EPCategoricalConstraints {
 			if c.PropertyName == "" {
 				continue
 			}

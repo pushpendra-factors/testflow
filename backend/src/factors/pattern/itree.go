@@ -472,8 +472,8 @@ func (it *Itree) buildAndAddPropertyChildNodes(
 	if parentConstraints != nil {
 		eventConstraints = parentConstraints[pLen-2]
 	}
-	if len(eventConstraints.CategoricalConstraints) > 0 ||
-		len(eventConstraints.NumericConstraints) > 0 {
+	if len(eventConstraints.EPCategoricalConstraints) > 0 ||
+		len(eventConstraints.EPNumericConstraints) > 0 {
 		log.Errorf(fmt.Sprintf(
 			"Pattern %s already has constraints %v on event %s",
 			parentPattern.String(), eventConstraints, eventName))
@@ -509,14 +509,16 @@ func (it *Itree) buildAndAddPropertyChildNodes(
 					childPatternConstraints[i] = parentConstraints[i]
 				} else {
 					childPatternConstraints[i] = EventConstraints{
-						NumericConstraints:     []NumericConstraint{},
-						CategoricalConstraints: []CategoricalConstraint{},
+						EPNumericConstraints:     []NumericConstraint{},
+						EPCategoricalConstraints: []CategoricalConstraint{},
+						UPNumericConstraints:     []NumericConstraint{},
+						UPCategoricalConstraints: []CategoricalConstraint{},
 					}
 				}
 			}
 			// Add constraint to N-1st event. Assumed to be empty.
 			// Empty check is done earlier.
-			childPatternConstraints[pLen-2].CategoricalConstraints = []CategoricalConstraint{
+			childPatternConstraints[pLen-2].EPCategoricalConstraints = []CategoricalConstraint{
 				CategoricalConstraint{
 					PropertyName:  propertyName,
 					PropertyValue: value,
@@ -562,36 +564,42 @@ func (it *Itree) buildAndAddPropertyChildNodes(
 					childPatternConstraints3[i] = parentConstraints[i]
 				} else {
 					childPatternConstraints1[i] = EventConstraints{
-						NumericConstraints:     []NumericConstraint{},
-						CategoricalConstraints: []CategoricalConstraint{},
+						EPNumericConstraints:     []NumericConstraint{},
+						EPCategoricalConstraints: []CategoricalConstraint{},
+						UPNumericConstraints:     []NumericConstraint{},
+						UPCategoricalConstraints: []CategoricalConstraint{},
 					}
 					childPatternConstraints2[i] = EventConstraints{
-						NumericConstraints:     []NumericConstraint{},
-						CategoricalConstraints: []CategoricalConstraint{},
+						EPNumericConstraints:     []NumericConstraint{},
+						EPCategoricalConstraints: []CategoricalConstraint{},
+						UPNumericConstraints:     []NumericConstraint{},
+						UPCategoricalConstraints: []CategoricalConstraint{},
 					}
 					childPatternConstraints3[i] = EventConstraints{
-						NumericConstraints:     []NumericConstraint{},
-						CategoricalConstraints: []CategoricalConstraint{},
+						EPNumericConstraints:     []NumericConstraint{},
+						EPCategoricalConstraints: []CategoricalConstraint{},
+						UPNumericConstraints:     []NumericConstraint{},
+						UPCategoricalConstraints: []CategoricalConstraint{},
 					}
 				}
 			}
 			// Add constraint to N-1st event. Assumed to be empty.
 			// Empty check is done earlier.
-			childPatternConstraints1[pLen-2].NumericConstraints = []NumericConstraint{
+			childPatternConstraints1[pLen-2].EPNumericConstraints = []NumericConstraint{
 				NumericConstraint{
 					PropertyName: propertyName,
 					LowerBound:   -math.MaxFloat64,
 					UpperBound:   minValue,
 				},
 			}
-			childPatternConstraints2[pLen-2].NumericConstraints = []NumericConstraint{
+			childPatternConstraints2[pLen-2].EPNumericConstraints = []NumericConstraint{
 				NumericConstraint{
 					PropertyName: propertyName,
 					LowerBound:   minValue,
 					UpperBound:   maxValue,
 				},
 			}
-			childPatternConstraints3[pLen-2].NumericConstraints = []NumericConstraint{
+			childPatternConstraints3[pLen-2].EPNumericConstraints = []NumericConstraint{
 				NumericConstraint{
 					PropertyName: propertyName,
 					LowerBound:   maxValue,

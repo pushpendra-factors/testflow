@@ -33,7 +33,7 @@ func TestPatternCountEvents(t *testing.T) {
 	events := []string{"F", "G", "A", "L", "B", "A", "B", "C"}
 	cardinalities := []uint{1, 2, 2, 1, 5, 3, 6, 1}
 	for i, event := range events {
-		_, err = p.CountForEvent(event, nextEventCreatedTime.Unix(),
+		_, err = p.CountForEvent(event, nextEventCreatedTime.Unix(), make(map[string]interface{}),
 			make(map[string]interface{}), cardinalities[i], userId, userCreatedTime.Unix())
 		assert.Nil(t, err)
 		nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
@@ -47,7 +47,7 @@ func TestPatternCountEvents(t *testing.T) {
 	events = []string{"F", "A", "A", "K", "B", "Z", "C", "A", "B", "C"}
 	cardinalities = []uint{1, 1, 2, 1, 1, 1, 1, 3, 2, 2}
 	for i, event := range events {
-		_, err = p.CountForEvent(event, nextEventCreatedTime.Unix(),
+		_, err = p.CountForEvent(event, nextEventCreatedTime.Unix(), make(map[string]interface{}),
 			make(map[string]interface{}), cardinalities[i], userId, userCreatedTime.Unix())
 		assert.Nil(t, err)
 		nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
@@ -102,7 +102,7 @@ func TestPatternGetOncePerUserCount(t *testing.T) {
 	events := []string{"F", "G", "A", "L", "B", "A", "B", "C"}
 	cardinalities := []uint{1, 2, 2, 1, 5, 3, 6, 1}
 	for i, event := range events {
-		_, err = p.CountForEvent(event, nextEventCreatedTime.Unix(),
+		_, err = p.CountForEvent(event, nextEventCreatedTime.Unix(), make(map[string]interface{}),
 			make(map[string]interface{}), cardinalities[i], userId, userCreatedTime.Unix())
 		assert.Nil(t, err)
 		nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
@@ -116,7 +116,7 @@ func TestPatternGetOncePerUserCount(t *testing.T) {
 	events = []string{"F", "A", "A", "K", "B", "Z", "C", "A", "B", "C"}
 	cardinalities = []uint{1, 1, 2, 1, 1, 1, 2, 3, 2, 3}
 	for i, event := range events {
-		_, err = p.CountForEvent(event, nextEventCreatedTime.Unix(),
+		_, err = p.CountForEvent(event, nextEventCreatedTime.Unix(), make(map[string]interface{}),
 			make(map[string]interface{}), cardinalities[i], userId, userCreatedTime.Unix())
 		assert.Nil(t, err)
 		nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
@@ -138,7 +138,7 @@ func TestPatternGetOncePerUserCount(t *testing.T) {
 	count, err = p.GetOncePerUserCount(lastEventCardinalityConstraints)
 	assert.Nil(t, err)
 	assert.Equal(t, uint(2), count)
-	lastEventCardinalityConstraints[2].NumericConstraints = []P.NumericConstraint{
+	lastEventCardinalityConstraints[2].EPNumericConstraints = []P.NumericConstraint{
 		P.NumericConstraint{
 			PropertyName: U.EP_OCCURRENCE_COUNT,
 			LowerBound:   0.5,
@@ -148,7 +148,7 @@ func TestPatternGetOncePerUserCount(t *testing.T) {
 	count, err = p.GetOncePerUserCount(lastEventCardinalityConstraints)
 	assert.Nil(t, err)
 	assert.Equal(t, uint(2), count)
-	lastEventCardinalityConstraints[2].NumericConstraints = []P.NumericConstraint{
+	lastEventCardinalityConstraints[2].EPNumericConstraints = []P.NumericConstraint{
 		P.NumericConstraint{
 			PropertyName: U.EP_OCCURRENCE_COUNT,
 			LowerBound:   -math.MaxFloat64,
@@ -158,7 +158,7 @@ func TestPatternGetOncePerUserCount(t *testing.T) {
 	count, err = p.GetOncePerUserCount(lastEventCardinalityConstraints)
 	assert.Nil(t, err)
 	assert.Equal(t, uint(1), count)
-	lastEventCardinalityConstraints[2].NumericConstraints = []P.NumericConstraint{
+	lastEventCardinalityConstraints[2].EPNumericConstraints = []P.NumericConstraint{
 		P.NumericConstraint{
 			PropertyName: U.EP_OCCURRENCE_COUNT,
 			LowerBound:   0.5,
@@ -168,7 +168,7 @@ func TestPatternGetOncePerUserCount(t *testing.T) {
 	count, err = p.GetOncePerUserCount(lastEventCardinalityConstraints)
 	assert.Nil(t, err)
 	assert.Equal(t, uint(1), count)
-	lastEventCardinalityConstraints[2].NumericConstraints = []P.NumericConstraint{
+	lastEventCardinalityConstraints[2].EPNumericConstraints = []P.NumericConstraint{
 		P.NumericConstraint{
 			PropertyName: U.EP_OCCURRENCE_COUNT,
 			LowerBound:   1.5,
@@ -178,7 +178,7 @@ func TestPatternGetOncePerUserCount(t *testing.T) {
 	count, err = p.GetOncePerUserCount(lastEventCardinalityConstraints)
 	assert.Nil(t, err)
 	assert.Equal(t, uint(1), count)
-	lastEventCardinalityConstraints[2].NumericConstraints = []P.NumericConstraint{
+	lastEventCardinalityConstraints[2].EPNumericConstraints = []P.NumericConstraint{
 		P.NumericConstraint{
 			PropertyName: U.EP_OCCURRENCE_COUNT,
 			LowerBound:   1.5,
@@ -195,7 +195,7 @@ func TestPatternGetOncePerUserCount(t *testing.T) {
 		P.EventConstraints{},
 		P.EventConstraints{},
 	}
-	startEventCardinalityConstraints[0].NumericConstraints = []P.NumericConstraint{
+	startEventCardinalityConstraints[0].EPNumericConstraints = []P.NumericConstraint{
 		P.NumericConstraint{
 			PropertyName: U.EP_OCCURRENCE_COUNT,
 			LowerBound:   0.5,
@@ -205,7 +205,7 @@ func TestPatternGetOncePerUserCount(t *testing.T) {
 	count, err = p.GetOncePerUserCount(startEventCardinalityConstraints)
 	assert.Nil(t, err)
 	assert.Equal(t, uint(1), count)
-	startEventCardinalityConstraints[0].NumericConstraints = []P.NumericConstraint{
+	startEventCardinalityConstraints[0].EPNumericConstraints = []P.NumericConstraint{
 		P.NumericConstraint{
 			PropertyName: U.EP_OCCURRENCE_COUNT,
 			LowerBound:   -math.MaxFloat64,
@@ -215,7 +215,7 @@ func TestPatternGetOncePerUserCount(t *testing.T) {
 	count, err = p.GetOncePerUserCount(startEventCardinalityConstraints)
 	assert.Nil(t, err)
 	assert.Equal(t, uint(0), count)
-	startEventCardinalityConstraints[0].NumericConstraints = []P.NumericConstraint{
+	startEventCardinalityConstraints[0].EPNumericConstraints = []P.NumericConstraint{
 		P.NumericConstraint{
 			PropertyName: U.EP_OCCURRENCE_COUNT,
 			LowerBound:   1.5,
@@ -261,7 +261,7 @@ func TestPatternEdgeConditions(t *testing.T) {
 	assert.Nil(t, err)
 	userCreatedTime, _ = time.Parse(time.RFC3339, "2017-06-01T00:00:00Z")
 	eventCreatedTime, _ := time.Parse(time.RFC3339, "2017-06-01T01:00:00Z")
-	_, err = p.CountForEvent("J", eventCreatedTime.Unix(),
+	_, err = p.CountForEvent("J", eventCreatedTime.Unix(), make(map[string]interface{}),
 		make(map[string]interface{}), 1, "user1", userCreatedTime.Unix())
 	assert.NotNil(t, err)
 
@@ -273,14 +273,14 @@ func TestPatternEdgeConditions(t *testing.T) {
 	err = p.ResetForNewUser("user1", userCreatedTime.Unix())
 	assert.Nil(t, err)
 	_, err = p.CountForEvent("J", eventCreatedTime.Unix(), make(map[string]interface{}),
-		1, "user1", userCreatedTime.Unix())
+		make(map[string]interface{}), 1, "user1", userCreatedTime.Unix())
 	assert.Nil(t, err)
 	// Wrong userId.
-	_, err = p.CountForEvent("J", eventCreatedTime.Unix(),
+	_, err = p.CountForEvent("J", eventCreatedTime.Unix(), make(map[string]interface{}),
 		make(map[string]interface{}), 1, "user2", userCreatedTime.Unix())
 	assert.NotNil(t, err)
 	// Wrong userCreatedTime
-	_, err = p.CountForEvent("J", eventCreatedTime.Unix(),
+	_, err = p.CountForEvent("J", eventCreatedTime.Unix(), make(map[string]interface{}),
 		make(map[string]interface{}), 1, "user1", eventCreatedTime.Unix())
 	assert.NotNil(t, err)
 
@@ -297,10 +297,10 @@ func TestPatternEdgeConditions(t *testing.T) {
 	event2CreatedTime, _ := time.Parse(time.RFC3339, "2017-06-01T01:00:00Z")
 	err = p.ResetForNewUser(userId, userCreatedTime.Unix())
 	assert.Nil(t, err)
-	_, err = p.CountForEvent("A", event1CreatedTime.Unix(),
+	_, err = p.CountForEvent("A", event1CreatedTime.Unix(), make(map[string]interface{}),
 	 make(map[string]interface{}), 1, userId, userCreatedTime.Unix())
 	assert.Nil(t, err)
-	_, err = p.CountForEvent("B", event2CreatedTime,
+	_, err = p.CountForEvent("B", event2CreatedTime, make(map[string]interface{}),
 	make(map[string]interface{}), 1, userId, userCreatedTime.Unix())
 	assert.NotNil(t, err)*/
 
@@ -311,10 +311,10 @@ func TestPatternEdgeConditions(t *testing.T) {
 	event2CreatedTime, _ := time.Parse(time.RFC3339, "2017-06-01T00:59:59Z")
 	err = p.ResetForNewUser(userId, userCreatedTime.Unix())
 	assert.Nil(t, err)
-	_, err = p.CountForEvent("A", event1CreatedTime.Unix(),
+	_, err = p.CountForEvent("A", event1CreatedTime.Unix(), make(map[string]interface{}),
 		make(map[string]interface{}), 1, userId, userCreatedTime.Unix())
 	assert.Nil(t, err)
-	_, err = p.CountForEvent("B", event2CreatedTime.Unix(),
+	_, err = p.CountForEvent("B", event2CreatedTime.Unix(), make(map[string]interface{}),
 		make(map[string]interface{}), 1, userId, userCreatedTime.Unix())
 	assert.NotNil(t, err)
 }

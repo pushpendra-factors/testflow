@@ -34,8 +34,10 @@ type Pattern struct {
 	currentEventTimestamps     []int64
 	currentEventCardinalities  []uint
 	currentRepeats             []uint
-	currentNMap                map[string]float64
-	currentCMap                map[string]string
+	currentEPropertiesNMap     map[string]float64
+	currentEPropertiesCMap     map[string]string
+	currentUPropertiesNMap     map[string]float64
+	currentUPropertiesCMap     map[string]string
 }
 
 const num_T_BINS = 20
@@ -58,8 +60,10 @@ type CategoricalConstraint struct {
 	PropertyValue string
 }
 type EventConstraints struct {
-	NumericConstraints     []NumericConstraint
-	CategoricalConstraints []CategoricalConstraint
+	EPNumericConstraints     []NumericConstraint
+	EPCategoricalConstraints []CategoricalConstraint
+	UPNumericConstraints     []NumericConstraint
+	UPCategoricalConstraints []CategoricalConstraint
 }
 
 func NewPattern(events []string, userAndEventsInfo *UserAndEventsInfo) (*Pattern, error) {
@@ -94,8 +98,10 @@ func NewPattern(events []string, userAndEventsInfo *UserAndEventsInfo) (*Pattern
 		currentEventTimestamps:     make([]int64, pLen),
 		currentEventCardinalities:  make([]uint, pLen),
 		currentRepeats:             make([]uint, pLen),
-		currentNMap:                make(map[string]float64),
-		currentCMap:                make(map[string]string),
+		currentEPropertiesNMap:     make(map[string]float64),
+		currentEPropertiesCMap:     make(map[string]string),
+		currentUPropertiesNMap:     make(map[string]float64),
+		currentUPropertiesCMap:     make(map[string]string),
 	}
 	if userAndEventsInfo == nil {
 		return &pattern, nil
@@ -248,10 +254,10 @@ func (p *Pattern) ResetForNewUser(userId string, userJoinTimestamp int64) error 
 }
 
 func addNumericAndCategoricalProperties(
-	eventIndex int, eventProperties map[string]interface{},
+	eventIndex int, properties map[string]interface{},
 	nMap map[string]float64, cMap map[string]string) {
 
-	for key, value := range eventProperties {
+	for key, value := range properties {
 		if numericValue, ok := value.(float64); ok {
 			nMap[PatternPropertyKey(eventIndex, key)] = numericValue
 		} else if categoricalValue, ok := value.(string); ok {
@@ -274,7 +280,8 @@ func addNumericAndCategoricalProperties(
 // are stored with the patterns.
 func (p *Pattern) CountForEvent(
 	eventName string, eventTimestamp int64, eventProperties map[string]interface{},
-	eventCardinality uint, userId string, userJoinTimestamp int64) (string, error) {
+	userProperties map[string]interface{}, eventCardinality uint, userId string,
+	userJoinTimestamp int64) (string, error) {
 
 	if eventName == "" || eventTimestamp <= 0 {
 		return "", fmt.Errorf("Missing eventId or eventTimestamp.")
@@ -296,7 +303,10 @@ func (p *Pattern) CountForEvent(
 		p.currentEventCardinalities[p.waitIndex] = eventCardinality
 		p.currentRepeats[p.waitIndex] = 1
 		// Update seen properties.
-		addNumericAndCategoricalProperties(p.waitIndex, eventProperties, p.currentNMap, p.currentCMap)
+		addNumericAndCategoricalProperties(
+			p.waitIndex, eventProperties, p.currentEPropertiesNMap, p.currentEPropertiesCMap)
+		addNumericAndCategoricalProperties(
+			p.waitIndex, userProperties, p.currentUPropertiesNMap, p.currentUPropertiesCMap)
 
 		p.waitIndex += 1
 
@@ -326,13 +336,22 @@ func (p *Pattern) CountForEvent(
 				}
 				// Update properties histograms.
 				if p.EventNumericProperties != nil {
-					if err := p.EventNumericProperties.AddMap(p.currentNMap); err != nil {
+					if err := p.EventNumericProperties.AddMap(p.currentEPropertiesNMap); err != nil {
 						return "", err
 					}
 				}
-				// Update properties histograms.
 				if p.EventCategoricalProperties != nil {
-					if err := p.EventCategoricalProperties.AddMap(p.currentCMap); err != nil {
+					if err := p.EventCategoricalProperties.AddMap(p.currentEPropertiesCMap); err != nil {
+						return "", err
+					}
+				}
+				if p.UserNumericProperties != nil {
+					if err := p.UserNumericProperties.AddMap(p.currentUPropertiesNMap); err != nil {
+						return "", err
+					}
+				}
+				if p.UserCategoricalProperties != nil {
+					if err := p.UserCategoricalProperties.AddMap(p.currentUPropertiesCMap); err != nil {
 						return "", err
 					}
 				}
@@ -356,8 +375,10 @@ func (p *Pattern) CountForEvent(
 			p.currentEventCardinalities = make([]uint, pLen)
 			p.currentRepeats = make([]uint, pLen)
 			p.waitIndex = 0
-			p.currentNMap = make(map[string]float64)
-			p.currentCMap = make(map[string]string)
+			p.currentEPropertiesNMap = make(map[string]float64)
+			p.currentEPropertiesCMap = make(map[string]string)
+			p.currentUPropertiesNMap = make(map[string]float64)
+			p.currentUPropertiesCMap = make(map[string]string)
 		}
 	}
 	return p.EventNames[p.waitIndex], nil
@@ -379,13 +400,16 @@ func (p *Pattern) GetOncePerUserCount(
 		crtLowerBounds[i] = math.MaxFloat64
 		crtUpperBounds[i] = math.MaxFloat64
 	}
-	nMapUpperBounds := make(map[string]float64)
-	nMapLowerBounds := make(map[string]float64)
-	cMapEquality := make(map[string]string)
+	EPNMapUpperBounds := make(map[string]float64)
+	EPNMapLowerBounds := make(map[string]float64)
+	EPCMapEquality := make(map[string]string)
+	UPNMapUpperBounds := make(map[string]float64)
+	UPNMapLowerBounds := make(map[string]float64)
+	UPCMapEquality := make(map[string]string)
 	hasCrtConstraints := false
 	for i, ecs := range patternConstraints {
 		eventName := p.EventNames[i]
-		for _, ncs := range ecs.NumericConstraints {
+		for _, ncs := range ecs.EPNumericConstraints {
 			if ncs.PropertyName == U.EP_OCCURRENCE_COUNT {
 				hasCrtConstraints = true
 				if i == 0 {
@@ -401,13 +425,23 @@ func (p *Pattern) GetOncePerUserCount(
 				}
 			} else {
 				key := PatternPropertyKey(i, ncs.PropertyName)
-				nMapLowerBounds[key] = ncs.LowerBound
-				nMapUpperBounds[key] = ncs.UpperBound
+				EPNMapLowerBounds[key] = ncs.LowerBound
+				EPNMapUpperBounds[key] = ncs.UpperBound
 			}
 		}
-		for _, ccs := range ecs.CategoricalConstraints {
+		for _, ccs := range ecs.EPCategoricalConstraints {
 			key := PatternPropertyKey(i, ccs.PropertyName)
-			cMapEquality[key] = ccs.PropertyValue
+			EPCMapEquality[key] = ccs.PropertyValue
+		}
+
+		for _, ncs := range ecs.UPNumericConstraints {
+			key := PatternPropertyKey(i, ncs.PropertyName)
+			UPNMapLowerBounds[key] = ncs.LowerBound
+			UPNMapUpperBounds[key] = ncs.UpperBound
+		}
+		for _, ccs := range ecs.UPCategoricalConstraints {
+			key := PatternPropertyKey(i, ccs.PropertyName)
+			UPCMapEquality[key] = ccs.PropertyValue
 		}
 	}
 
@@ -418,24 +452,42 @@ func (p *Pattern) GetOncePerUserCount(
 		crtLowerCDF = p.CardinalityRepeatTimings.CDF(crtLowerBounds)
 	}
 
-	numericUpperCDF := 1.0
-	numericLowerCDF := 0.0
-	if p.EventNumericProperties != nil && len(nMapLowerBounds) > 0 {
-		numericUpperCDF = p.EventNumericProperties.CDFFromMap(nMapUpperBounds)
-		numericLowerCDF = p.EventNumericProperties.CDFFromMap(nMapLowerBounds)
+	EPNumericUpperCDF := 1.0
+	EPNumericLowerCDF := 0.0
+	if p.EventNumericProperties != nil && len(EPNMapLowerBounds) > 0 {
+		EPNumericUpperCDF = p.EventNumericProperties.CDFFromMap(EPNMapUpperBounds)
+		EPNumericLowerCDF = p.EventNumericProperties.CDFFromMap(EPNMapLowerBounds)
 	}
-	categoricalPDF := 1.0
-	if p.EventCategoricalProperties != nil && len(cMapEquality) > 0 {
+	EPCategoricalPDF := 1.0
+	if p.EventCategoricalProperties != nil && len(EPCMapEquality) > 0 {
 		var err error
-		categoricalPDF, err = p.EventCategoricalProperties.PDFFromMap(cMapEquality)
+		EPCategoricalPDF, err = p.EventCategoricalProperties.PDFFromMap(EPCMapEquality)
 		if err != nil {
 			return 0, err
 		}
 	}
+
+	UPNumericUpperCDF := 1.0
+	UPNumericLowerCDF := 0.0
+	if p.UserNumericProperties != nil && len(UPNMapLowerBounds) > 0 {
+		UPNumericUpperCDF = p.UserNumericProperties.CDFFromMap(UPNMapUpperBounds)
+		UPNumericLowerCDF = p.UserNumericProperties.CDFFromMap(UPNMapLowerBounds)
+	}
+	UPCategoricalPDF := 1.0
+	if p.UserCategoricalProperties != nil && len(UPCMapEquality) > 0 {
+		var err error
+		UPCategoricalPDF, err = p.UserCategoricalProperties.PDFFromMap(UPCMapEquality)
+		if err != nil {
+			return 0, err
+		}
+	}
+
 	count := (float64(p.OncePerUserCount) *
 		(crtUpperCDF - crtLowerCDF) *
-		(numericUpperCDF - numericLowerCDF) *
-		categoricalPDF)
+		(EPNumericUpperCDF - EPNumericLowerCDF) *
+		EPCategoricalPDF *
+		(UPNumericUpperCDF - UPNumericLowerCDF) *
+		UPCategoricalPDF)
 
 	if count < 0 {
 		log.WithFields(log.Fields{
@@ -443,9 +495,12 @@ func (p *Pattern) GetOncePerUserCount(
 			"crtUpperBounds":     crtUpperBounds,
 			"crtLowerCDF":        crtLowerCDF,
 			"crtLowerBounds":     crtLowerBounds,
-			"numericUpperCDF":    numericUpperCDF,
-			"numericLowerCDF":    numericLowerCDF,
-			"categoricalPDF":     categoricalPDF,
+			"EPNumericUpperCDF":  EPNumericUpperCDF,
+			"EPNumericLowerCDF":  EPNumericLowerCDF,
+			"EPCategoricalPDF":   EPCategoricalPDF,
+			"UPNumericUpperCDF":  UPNumericUpperCDF,
+			"UPNumericLowerCDF":  UPNumericLowerCDF,
+			"UPCategoricalPDF":   UPCategoricalPDF,
 			"pattern":            p.String(),
 			"patternConstraints": patternConstraints,
 			"patternCount":       p.OncePerUserCount,

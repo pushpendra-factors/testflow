@@ -238,7 +238,7 @@ class Factor extends Component {
           var newEvent = {}
           newEvent["name"] = queryElement.label;
           newEvent["properties"] = [];
-          newEvent["userProperties"] = [];
+          newEvent["user_properties"] = [];
           query.eventsWithProperties.push(newEvent);
           nextExpectedTypes = [];
           break;
@@ -253,7 +253,7 @@ class Factor extends Component {
           // Create a new user property condition type.
           var newUserProperty = {}
           var numEvents = query.eventsWithProperties.length;
-          query.eventsWithProperties[numEvents - 1].userProperties.push(newUserProperty);
+          query.eventsWithProperties[numEvents - 1].user_properties.push(newUserProperty);
           nextExpectedTypes = [USER_PROPERTY_NAME_TYPE];
           break;
         case TO_TYPE:
@@ -271,8 +271,8 @@ class Factor extends Component {
         case USER_PROPERTY_NAME_TYPE:
           var numEvents = query.eventsWithProperties.length;
           var currentEvent = query.eventsWithProperties[numEvents - 1];
-          var numProperties = currentEvent.userProperties.length;
-          var currentUserProperty = currentEvent.userProperties[numProperties - 1];
+          var numProperties = currentEvent.user_properties.length;
+          var currentUserProperty = currentEvent.user_properties[numProperties - 1];
           currentUserProperty['property'] = queryElement.property;
           currentUserProperty['operator'] = queryElement.operator;
           nextExpectedTypes = [NUMERICAL_VALUE_TYPE, STRING_VALUE_TYPE];
@@ -280,8 +280,8 @@ class Factor extends Component {
         case NUMERICAL_VALUE_TYPE:
           var numEvents = query.eventsWithProperties.length;
           var currentEvent = query.eventsWithProperties[numEvents - 1];
-          var numProperties = currentEvent.userProperties.length;
-          var currentUserProperty = currentEvent.userProperties[numProperties - 1];
+          var numProperties = currentEvent.user_properties.length;
+          var currentUserProperty = currentEvent.user_properties[numProperties - 1];
           if (!currentUserProperty || currentUserProperty.hasOwnProperty('value')) {
             var numEvents = query.eventsWithProperties.length;
             var currentEvent = query.eventsWithProperties[numEvents - 1];
@@ -298,8 +298,8 @@ class Factor extends Component {
         case STRING_VALUE_TYPE:
           var numEvents = query.eventsWithProperties.length;
           var currentEvent = query.eventsWithProperties[numEvents - 1];
-          var numProperties = currentEvent.userProperties.length;
-          var currentUserProperty = currentEvent.userProperties[numProperties - 1];
+          var numProperties = currentEvent.user_properties.length;
+          var currentUserProperty = currentEvent.user_properties[numProperties - 1];
           if (!currentUserProperty || currentUserProperty.hasOwnProperty('value')) {
             var numEvents = query.eventsWithProperties.length;
             var currentEvent = query.eventsWithProperties[numEvents - 1];

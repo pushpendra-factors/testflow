@@ -14,24 +14,43 @@ func assertEqualConstraints(
 	expectedConstraints P.EventConstraints,
 	actualConstraints P.EventConstraints) {
 
+	// Check event properties
 	expectedNumericMap := make(map[string]P.NumericConstraint)
-	for _, nc := range expectedConstraints.NumericConstraints {
+	for _, nc := range expectedConstraints.EPNumericConstraints {
 		expectedNumericMap[nc.PropertyName] = nc
 	}
 	expectedCategoricalMap := make(map[string]P.CategoricalConstraint)
-	for _, cc := range expectedConstraints.CategoricalConstraints {
+	for _, cc := range expectedConstraints.EPCategoricalConstraints {
 		expectedCategoricalMap[cc.PropertyName] = cc
 	}
-
 	actualNumericMap := make(map[string]P.NumericConstraint)
-	for _, nc := range actualConstraints.NumericConstraints {
+	for _, nc := range actualConstraints.EPNumericConstraints {
 		actualNumericMap[nc.PropertyName] = nc
 	}
 	actualCategoricalMap := make(map[string]P.CategoricalConstraint)
-	for _, cc := range actualConstraints.CategoricalConstraints {
+	for _, cc := range actualConstraints.EPCategoricalConstraints {
 		actualCategoricalMap[cc.PropertyName] = cc
 	}
+	assert.Equal(t, expectedNumericMap, actualNumericMap)
+	assert.Equal(t, expectedCategoricalMap, actualCategoricalMap)
 
+	// Check user properties
+	expectedNumericMap = make(map[string]P.NumericConstraint)
+	for _, nc := range expectedConstraints.UPNumericConstraints {
+		expectedNumericMap[nc.PropertyName] = nc
+	}
+	expectedCategoricalMap = make(map[string]P.CategoricalConstraint)
+	for _, cc := range expectedConstraints.UPCategoricalConstraints {
+		expectedCategoricalMap[cc.PropertyName] = cc
+	}
+	actualNumericMap = make(map[string]P.NumericConstraint)
+	for _, nc := range actualConstraints.UPNumericConstraints {
+		actualNumericMap[nc.PropertyName] = nc
+	}
+	actualCategoricalMap = make(map[string]P.CategoricalConstraint)
+	for _, cc := range actualConstraints.UPCategoricalConstraints {
+		actualCategoricalMap[cc.PropertyName] = cc
+	}
 	assert.Equal(t, expectedNumericMap, actualNumericMap)
 	assert.Equal(t, expectedCategoricalMap, actualCategoricalMap)
 }
@@ -57,8 +76,10 @@ func TestParseFactorQuery(t *testing.T) {
 	assert.Nil(t, startEventConstraints)
 	assert.Equal(t, endEvent, "endEvent")
 	assert.Equal(t, *endEventConstraints, P.EventConstraints{
-		NumericConstraints:     []P.NumericConstraint{},
-		CategoricalConstraints: []P.CategoricalConstraint{},
+		EPNumericConstraints:     []P.NumericConstraint{},
+		EPCategoricalConstraints: []P.CategoricalConstraint{},
+		UPNumericConstraints:     []P.NumericConstraint{},
+		UPCategoricalConstraints: []P.CategoricalConstraint{},
 	})
 
 	// Start and end events with properties.
@@ -77,6 +98,13 @@ func TestParseFactorQuery(t *testing.T) {
 	property2["value"] = "property2Value"
 	property2["operator"] = "equals"
 	event1["properties"] = []interface{}{property1, property2}
+	// user properties string equality.
+	uProperty1 := make(map[string]interface{})
+	uProperty1["property"] = "uProperty1"
+	uProperty1["type"] = "categorical"
+	uProperty1["value"] = "uProperty1Value"
+	uProperty1["operator"] = "equals"
+	event1["user_properties"] = []interface{}{uProperty1}
 	// Event 2.
 	event2 := make(map[string]interface{})
 	event2["name"] = "endEvent"
@@ -99,12 +127,19 @@ func TestParseFactorQuery(t *testing.T) {
 	property5["value"] = 50.01
 	property5["operator"] = "equals"
 	event2["properties"] = []interface{}{property3, property4, property5}
+	// Floating point equality user property.
+	uProperty2 := make(map[string]interface{})
+	uProperty2["property"] = "uProperty2"
+	uProperty2["type"] = "numerical"
+	uProperty2["value"] = 50.01
+	uProperty2["operator"] = "equals"
+	event2["user_properties"] = []interface{}{uProperty2}
 	query["eventsWithProperties"] = []interface{}{event1, event2}
 	startEvent, startEventConstraints, endEvent, endEventConstraints, err = H.ParseFactorQuery(query)
 	assert.Nil(t, err)
 	assert.Equal(t, startEvent, "startEvent")
 	assertEqualConstraints(t, P.EventConstraints{
-		NumericConstraints: []P.NumericConstraint{
+		EPNumericConstraints: []P.NumericConstraint{
 			P.NumericConstraint{
 				PropertyName: "property1",
 				LowerBound:   4.5,
@@ -112,16 +147,24 @@ func TestParseFactorQuery(t *testing.T) {
 				IsEquality:   true,
 			},
 		},
-		CategoricalConstraints: []P.CategoricalConstraint{
+		EPCategoricalConstraints: []P.CategoricalConstraint{
 			P.CategoricalConstraint{
 				PropertyName:  "property2",
 				PropertyValue: "property2Value",
-			}},
+			},
+		},
+		UPNumericConstraints: []P.NumericConstraint{},
+		UPCategoricalConstraints: []P.CategoricalConstraint{
+			P.CategoricalConstraint{
+				PropertyName:  "uProperty1",
+				PropertyValue: "uProperty1Value",
+			},
+		},
 	}, *startEventConstraints)
 	assert.Equal(t, endEvent, "endEvent")
 	assertEqualConstraints(t,
 		P.EventConstraints{
-			NumericConstraints: []P.NumericConstraint{
+			EPNumericConstraints: []P.NumericConstraint{
 				P.NumericConstraint{
 					PropertyName: "property3",
 					LowerBound:   5.001,
@@ -141,7 +184,16 @@ func TestParseFactorQuery(t *testing.T) {
 					IsEquality:   true,
 				},
 			},
-			CategoricalConstraints: []P.CategoricalConstraint{},
+			EPCategoricalConstraints: []P.CategoricalConstraint{},
+			UPNumericConstraints: []P.NumericConstraint{
+				P.NumericConstraint{
+					PropertyName: "uProperty2",
+					LowerBound:   50.01 - 0.1,
+					UpperBound:   50.01 + 0.1,
+					IsEquality:   true,
+				},
+			},
+			UPCategoricalConstraints: []P.CategoricalConstraint{},
 		},
 		*endEventConstraints)
 

@@ -234,6 +234,7 @@ func CountPatterns(scanner *bufio.Scanner, patterns []*Pattern) error {
 		userId := eventDetails.UserId
 		eventName := eventDetails.EventName
 		eventProperties := eventDetails.EventProperties
+		userProperties := eventDetails.UserProperties
 		userJoinTimestamp := eventDetails.UserJoinTimestamp
 		eventTimestamp := eventDetails.EventTimestamp
 		eventCardinality := eventDetails.EventCardinality
@@ -265,7 +266,7 @@ func CountPatterns(scanner *bufio.Scanner, patterns []*Pattern) error {
 		if ok {
 			for _, p := range prevWaitPattens {
 				if _, err := p.CountForEvent(eventName, eventTimestamp, eventProperties,
-					uint(eventCardinality), userId, userJoinTimestamp); err != nil {
+					userProperties, uint(eventCardinality), userId, userJoinTimestamp); err != nil {
 					log.Error(err)
 				}
 			}
@@ -282,7 +283,7 @@ func CountPatterns(scanner *bufio.Scanner, patterns []*Pattern) error {
 					p.String(), eventName, waitingOn1, line))
 			}
 			waitingOn2, err := p.CountForEvent(eventName, eventTimestamp, eventProperties,
-				uint(eventCardinality), userId, userJoinTimestamp)
+				userProperties, uint(eventCardinality), userId, userJoinTimestamp)
 			if err != nil || waitingOn2 == "" {
 				log.Error(err)
 			}

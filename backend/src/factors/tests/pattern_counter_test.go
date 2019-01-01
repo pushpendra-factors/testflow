@@ -268,44 +268,96 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 
 	eventsInput := []P.CounterEventFormat{
 		// User 1.
-		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "F", EventProperties: map[string]interface{}{"ComNum": 1.0,
-			"ComCat": "com1", "IgnoredKey": []string{"check"}}, EventTimestamp: u1ETimestamp, EventCardinality: uint(1)},
-		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "G", EventProperties: map[string]interface{}{"ComNum": 2.0,
-			"ComCat": "com2", "IgnoredKey": []string{"check"}}, EventTimestamp: u1ETimestamp + (1 * 60), EventCardinality: uint(2)},
-		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "A", EventProperties: map[string]interface{}{"ComNum": 3.0,
-			"ComCat": "com3", "IgnoredKey": []string{"check"}, "ANum": 1, "ACat": "acat1"}, EventTimestamp: u1ETimestamp + (2 * 60),
-			EventCardinality: uint(2)},
-		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "L", EventProperties: map[string]interface{}{"ComNum": 1.0,
-			"ComCat": "com1"}, EventTimestamp: u1ETimestamp + (3 * 60), EventCardinality: uint(1)},
-		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "B", EventProperties: map[string]interface{}{"ComNum": 2.0,
-			"ComCat": "com2", "BNum": 1, "BCat": "bcat1"}, EventTimestamp: u1ETimestamp + (4 * 60), EventCardinality: uint(5)},
-		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "A", EventProperties: map[string]interface{}{"ComNum": 3.0,
-			"ComCat": "com3", "ANum": 2, "ACat": "acat2"}, EventTimestamp: u1ETimestamp + (5 * 60), EventCardinality: uint(3)},
-		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "B", EventProperties: map[string]interface{}{"ComNum": 1.0,
-			"ComCat": "com1", "BNum": 2, "BCat": "bcat2"}, EventTimestamp: u1ETimestamp + (6 * 60), EventCardinality: uint(6)},
-		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "C", EventProperties: map[string]interface{}{"ComNum": 2.0,
-			"ComCat": "com2", "CNum": 1.0, "CCat": "ccat1"}, EventTimestamp: u1ETimestamp + (7 * 60), EventCardinality: uint(1)},
+		P.CounterEventFormat{
+			UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "F", EventProperties: map[string]interface{}{"ComNum": 1.0,
+				"ComCat": "com1", "IgnoredKey": []string{"check"}}, EventTimestamp: u1ETimestamp, EventCardinality: uint(1),
+			UserProperties: map[string]interface{}{"$country": "India", "paymentStatus": "Free", "age": 20.0},
+		},
+		P.CounterEventFormat{
+			UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "G", EventProperties: map[string]interface{}{"ComNum": 2.0,
+				"ComCat": "com2", "IgnoredKey": []string{"check"}}, EventTimestamp: u1ETimestamp + (1 * 60), EventCardinality: uint(2),
+			UserProperties: map[string]interface{}{"$country": "India", "paymentStatus": "Free", "age": 20.0},
+		},
+		P.CounterEventFormat{
+			UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "A", EventProperties: map[string]interface{}{"ComNum": 3.0,
+				"ComCat": "com3", "IgnoredKey": []string{"check"}, "ANum": 1, "ACat": "acat1"}, EventTimestamp: u1ETimestamp + (2 * 60),
+			EventCardinality: uint(2), UserProperties: map[string]interface{}{"$country": "India", "paymentStatus": "Free", "age": 20.0},
+		},
+		P.CounterEventFormat{
+			UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "L", EventProperties: map[string]interface{}{"ComNum": 1.0,
+				"ComCat": "com1"}, EventTimestamp: u1ETimestamp + (3 * 60), EventCardinality: uint(1),
+			UserProperties: map[string]interface{}{"$country": "India", "paymentStatus": "Free", "age": 20.0},
+		},
+		P.CounterEventFormat{
+			UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "B", EventProperties: map[string]interface{}{"ComNum": 2.0,
+				"ComCat": "com2", "BNum": 1, "BCat": "bcat1"}, EventTimestamp: u1ETimestamp + (4 * 60), EventCardinality: uint(5),
+			UserProperties: map[string]interface{}{"$country": "India", "paymentStatus": "Free", "age": 20.0},
+		},
+		P.CounterEventFormat{
+			UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "A", EventProperties: map[string]interface{}{"ComNum": 3.0,
+				"ComCat": "com3", "ANum": 2, "ACat": "acat2"}, EventTimestamp: u1ETimestamp + (5 * 60), EventCardinality: uint(3),
+			UserProperties: map[string]interface{}{"$country": "India", "paymentStatus": "Free", "age": 20.0},
+		},
+		P.CounterEventFormat{
+			UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "B", EventProperties: map[string]interface{}{"ComNum": 1.0,
+				"ComCat": "com1", "BNum": 2, "BCat": "bcat2"}, EventTimestamp: u1ETimestamp + (6 * 60), EventCardinality: uint(6),
+			UserProperties: map[string]interface{}{"$country": "India", "paymentStatus": "Free", "age": 20.0},
+		},
+		P.CounterEventFormat{
+			UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "C", EventProperties: map[string]interface{}{"ComNum": 2.0,
+				"ComCat": "com2", "CNum": 1.0, "CCat": "ccat1"}, EventTimestamp: u1ETimestamp + (7 * 60), EventCardinality: uint(1),
+			UserProperties: map[string]interface{}{"$country": "India", "paymentStatus": "Paid", "age": 20.0},
+		},
 		// User 2.
-		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "F", EventProperties: map[string]interface{}{"ComNum": 3.0,
-			"ComCat": "com3", "IgnoredKey": []string{"check"}}, EventTimestamp: u2ETimestamp, EventCardinality: uint(1)},
-		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "A", EventProperties: map[string]interface{}{"ComNum": 1.0,
-			"ComCat": "com1", "ANum": 1, "ACat": "acat1"}, EventTimestamp: u2ETimestamp + (1 * 60), EventCardinality: uint(1)},
-		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "A", EventProperties: map[string]interface{}{"ComNum": 2.0,
-			"ComCat": "com2", "ANum": 2, "ACat": "acat2"}, EventTimestamp: u2ETimestamp + (2 * 60), EventCardinality: uint(1)},
-		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "K", EventProperties: map[string]interface{}{"ComNum": 3.0,
-			"ComCat": "com3"}, EventTimestamp: u2ETimestamp + (3 * 60), EventCardinality: uint(2)},
-		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "B", EventProperties: map[string]interface{}{"ComNum": 1.0,
-			"ComCat": "com1", "BNum": 1, "BCat": "bcat1"}, EventTimestamp: u2ETimestamp + (4 * 60), EventCardinality: uint(1)},
-		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "Z", EventProperties: map[string]interface{}{"ComNum": 2.0,
-			"ComCat": "com2"}, EventTimestamp: u2ETimestamp + (5 * 60), EventCardinality: uint(1)},
-		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "C", EventProperties: map[string]interface{}{"ComNum": 3.0,
-			"ComCat": "com3", "CNum": 2.0, "CCat": "ccat2"}, EventTimestamp: u2ETimestamp + (6 * 60), EventCardinality: uint(1)},
-		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "A", EventProperties: map[string]interface{}{"ComNum": 1.0,
-			"ComCat": "com1", "ANum": 1.0, "ACat": "acat1"}, EventTimestamp: u2ETimestamp + (7 * 60), EventCardinality: uint(3)},
-		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "B", EventProperties: map[string]interface{}{"ComNum": 2.0,
-			"ComCat": "com2", "BNum": 2, "BCat": "bcat2"}, EventTimestamp: u2ETimestamp + (8 * 60), EventCardinality: uint(2)},
-		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "C", EventProperties: map[string]interface{}{"ComNum": 3.0,
-			"ComCat": "com3", "CNum": 1.0, "CCat": "ccat1"}, EventTimestamp: u2ETimestamp + (9 * 60), EventCardinality: uint(2)},
+		P.CounterEventFormat{
+			UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "F", EventProperties: map[string]interface{}{"ComNum": 3.0,
+				"ComCat": "com3", "IgnoredKey": []string{"check"}}, EventTimestamp: u2ETimestamp, EventCardinality: uint(1),
+			UserProperties: map[string]interface{}{"$country": "USA", "paymentStatus": "Free", "age": 30.0},
+		},
+		P.CounterEventFormat{
+			UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "A", EventProperties: map[string]interface{}{"ComNum": 1.0,
+				"ComCat": "com1", "ANum": 1, "ACat": "acat1"}, EventTimestamp: u2ETimestamp + (1 * 60), EventCardinality: uint(1),
+			UserProperties: map[string]interface{}{"$country": "USA", "paymentStatus": "Free", "age": 30.0},
+		},
+		P.CounterEventFormat{
+			UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "A", EventProperties: map[string]interface{}{"ComNum": 2.0,
+				"ComCat": "com2", "ANum": 2, "ACat": "acat2"}, EventTimestamp: u2ETimestamp + (2 * 60), EventCardinality: uint(1),
+			UserProperties: map[string]interface{}{"$country": "USA", "paymentStatus": "Free", "age": 30.0},
+		},
+		P.CounterEventFormat{
+			UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "K", EventProperties: map[string]interface{}{"ComNum": 3.0,
+				"ComCat": "com3"}, EventTimestamp: u2ETimestamp + (3 * 60), EventCardinality: uint(2),
+			UserProperties: map[string]interface{}{"$country": "USA", "paymentStatus": "Free", "age": 30.0}},
+		P.CounterEventFormat{
+			UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "B", EventProperties: map[string]interface{}{"ComNum": 1.0,
+				"ComCat": "com1", "BNum": 1, "BCat": "bcat1"}, EventTimestamp: u2ETimestamp + (4 * 60), EventCardinality: uint(1),
+			UserProperties: map[string]interface{}{"$country": "USA", "paymentStatus": "Free", "age": 30.0},
+		},
+		P.CounterEventFormat{
+			UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "Z", EventProperties: map[string]interface{}{"ComNum": 2.0,
+				"ComCat": "com2"}, EventTimestamp: u2ETimestamp + (5 * 60), EventCardinality: uint(1),
+			UserProperties: map[string]interface{}{"$country": "USA", "paymentStatus": "Free", "age": 30.0},
+		},
+		P.CounterEventFormat{
+			UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "C", EventProperties: map[string]interface{}{"ComNum": 3.0,
+				"ComCat": "com3", "CNum": 2.0, "CCat": "ccat2"}, EventTimestamp: u2ETimestamp + (6 * 60), EventCardinality: uint(1),
+			UserProperties: map[string]interface{}{"$country": "USA", "paymentStatus": "Paid", "age": 30.0},
+		},
+		P.CounterEventFormat{
+			UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "A", EventProperties: map[string]interface{}{"ComNum": 1.0,
+				"ComCat": "com1", "ANum": 1.0, "ACat": "acat1"}, EventTimestamp: u2ETimestamp + (7 * 60), EventCardinality: uint(3),
+			UserProperties: map[string]interface{}{"$country": "USA", "paymentStatus": "Paid", "age": 30.0},
+		},
+		P.CounterEventFormat{
+			UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "B", EventProperties: map[string]interface{}{"ComNum": 2.0,
+				"ComCat": "com2", "BNum": 2, "BCat": "bcat2"}, EventTimestamp: u2ETimestamp + (8 * 60), EventCardinality: uint(2),
+			UserProperties: map[string]interface{}{"$country": "USA", "paymentStatus": "Paid", "age": 30.0},
+		},
+		P.CounterEventFormat{
+			UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "C", EventProperties: map[string]interface{}{"ComNum": 3.0,
+				"ComCat": "com3", "CNum": 1.0, "CCat": "ccat1"}, EventTimestamp: u2ETimestamp + (9 * 60), EventCardinality: uint(2),
+			UserProperties: map[string]interface{}{"$country": "USA", "paymentStatus": "Paid", "age": 30.0},
+		},
 	}
 	eventsInputString := ""
 	for _, event := range eventsInput {
@@ -325,6 +377,10 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 		}
 	}
 	userAndEventsInfo := P.UserAndEventsInfo{
+		UserPropertiesInfo: &P.PropertiesInfo{
+			NumericPropertyKeys:          make(map[string]bool),
+			CategoricalPropertyKeyValues: make(map[string]map[string]bool),
+		},
 		EventPropertiesInfoMap: &actualEventInfoMap,
 	}
 	err := P.CollectPropertiesInfo(scanner, &userAndEventsInfo)
@@ -446,7 +502,7 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 	assert.Equal(t, float64((1.0+1.0)/2), pABC.CardinalityRepeatTimings.Mean()[4])
 	assert.Equal(t, float64((180.0+120.0)/2), pABC.CardinalityRepeatTimings.Mean()[5])
 
-	// A-B-C occurs twice oncePerUser with the following six dimensional numerical
+	// A-B-C occurs twice oncePerUser with the following six dimensional event numerical
 	// distribution.
 	// 0.ANum: 1.0 and 1.0
 	// 0.ComNum: 3.0 and 1.0
@@ -491,14 +547,43 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 	assert.Nil(t, err, fmt.Sprintf("Error: %v", err))
 	assert.InDelta(t, actualPdf, 0.5, 0.01)
 
-	actualPdf, err = pABC.EventCategoricalProperties.PDFFromMap(
+	// A-B-C occurs twice oncePerUser with the following six dimensional user numerical
+	// distribution.
+	// 0.age: 20.0 and 30.0
+	// 1.age: 20.0 and 30.0
+	// 2.age: 20.0 and 30.0
+	expectedMeanMap = map[string]float64{
+		"0.age": float64((20.0 + 30.0) / 2),
+		"1.age": float64((20.0 + 30.0) / 2),
+		"2.age": float64((20.0 + 30.0) / 2),
+	}
+	actualMeanMap = pABC.UserNumericProperties.MeanMap()
+	assert.Equal(t, expectedMeanMap, actualMeanMap)
+
+	actualCdf = pABC.UserNumericProperties.CDFFromMap(
+		map[string]float64{
+			"0.age": 25.0,
+			"1.age": 25.0,
+			"2.age": 25.0,
+		})
+	assert.InDelta(t, actualCdf, 0.5, 0.01)
+
+	// ABC occurs twice with U1 country India and U2 country USA.
+	// Payment status changes from Free to Paid on first occurrence of C.
+	// 0.$country: "India" and "USA"
+	// 0.paymentStatus: "Free" and "Free"
+	// 1.$country: "India" and "USA"
+	// 1.paymentStatus: "Free" and "Free"
+	// 2.$country: "India" and "USA"
+	// 2.paymentStatus: "Paid" and "Paid"
+	actualPdf, err = pABC.UserCategoricalProperties.PDFFromMap(
 		map[string]string{
-			"0.ACat":   "acat1",
-			"0.ComCat": "com1",
-			"1.BCat":   "bcat1",
-			"1.ComCat": "com1",
-			"2.CCat":   "ccat2",
-			"2.ComCat": "com3",
+			"0.$country":      "USA",
+			"0.paymentStatus": "Free",
+			"1.$country":      "USA",
+			"1.paymentStatus": "Free",
+			"2.$country":      "USA",
+			"2.paymentStatus": "Paid",
 		})
 	assert.Nil(t, err, fmt.Sprintf("Error: %v", err))
 	assert.InDelta(t, actualPdf, 0.5, 0.01)
@@ -528,7 +613,7 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 	assert.Equal(t, uint(2), pC.OncePerUserCount)
 	assert.Equal(t, uint(2), pC.UserCount)
 
-	// Test GetOncePerUserCount with constraints.
+	// Test GetOncePerUserCount with properties constraints.
 	count, err := pABC.GetOncePerUserCount(nil)
 	assert.Nil(t, err)
 	assert.Equal(t, uint(2), count)
@@ -540,7 +625,7 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 
 	patternConstraints = make([]P.EventConstraints, 3)
 	patternConstraints[0] = P.EventConstraints{
-		NumericConstraints: []P.NumericConstraint{
+		EPNumericConstraints: []P.NumericConstraint{
 			P.NumericConstraint{
 				PropertyName: "ANum",
 				LowerBound:   -math.MaxFloat64,
@@ -554,7 +639,7 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 		},
 	}
 	patternConstraints[1] = P.EventConstraints{
-		NumericConstraints: []P.NumericConstraint{
+		EPNumericConstraints: []P.NumericConstraint{
 			P.NumericConstraint{
 				PropertyName: "ComNum",
 				LowerBound:   -math.MaxFloat64,
@@ -568,7 +653,7 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 
 	patternConstraints = make([]P.EventConstraints, 3)
 	patternConstraints[0] = P.EventConstraints{
-		NumericConstraints: []P.NumericConstraint{
+		EPNumericConstraints: []P.NumericConstraint{
 			P.NumericConstraint{
 				PropertyName: "ANum",
 				LowerBound:   -0.5,
@@ -590,7 +675,7 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 	patternConstraints = make([]P.EventConstraints, 3)
 	// Below categorical combination occurs in the first occurrence.
 	patternConstraints[1] = P.EventConstraints{
-		CategoricalConstraints: []P.CategoricalConstraint{
+		EPCategoricalConstraints: []P.CategoricalConstraint{
 			P.CategoricalConstraint{
 				PropertyName:  "BCat",
 				PropertyValue: "bcat1",
@@ -598,10 +683,56 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 		},
 	}
 	patternConstraints[2] = P.EventConstraints{
-		CategoricalConstraints: []P.CategoricalConstraint{
+		EPCategoricalConstraints: []P.CategoricalConstraint{
 			P.CategoricalConstraint{
 				PropertyName:  "ComCat",
 				PropertyValue: "com2",
+			},
+		},
+	}
+	count, err = pABC.GetOncePerUserCount(patternConstraints)
+	assert.Nil(t, err)
+	assert.Equal(t, uint(1), count)
+
+	// User properties constraints.
+	patternConstraints = make([]P.EventConstraints, 3)
+	patternConstraints[0] = P.EventConstraints{
+		UPNumericConstraints: []P.NumericConstraint{
+			P.NumericConstraint{
+				PropertyName: "age",
+				LowerBound:   10.0,
+				UpperBound:   25.0,
+			},
+		},
+	}
+	count, err = pABC.GetOncePerUserCount(patternConstraints)
+	assert.Nil(t, err)
+	// U1 is age 20.0.
+	assert.Equal(t, uint(1), count)
+
+	patternConstraints = make([]P.EventConstraints, 3)
+	// Below categorical combination occurs in the first occurrence.
+	patternConstraints[0] = P.EventConstraints{
+		UPCategoricalConstraints: []P.CategoricalConstraint{
+			P.CategoricalConstraint{
+				PropertyName:  "$country",
+				PropertyValue: "India",
+			},
+		},
+	}
+	patternConstraints[1] = P.EventConstraints{
+		UPCategoricalConstraints: []P.CategoricalConstraint{
+			P.CategoricalConstraint{
+				PropertyName:  "$paymentStatus",
+				PropertyValue: "Free",
+			},
+		},
+	}
+	patternConstraints[2] = P.EventConstraints{
+		UPCategoricalConstraints: []P.CategoricalConstraint{
+			P.CategoricalConstraint{
+				PropertyName:  "$paymentStatus",
+				PropertyValue: "Paid",
 			},
 		},
 	}

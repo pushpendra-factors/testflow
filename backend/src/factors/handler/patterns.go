@@ -50,15 +50,69 @@ func ParseFactorQuery(query map[string]interface{}) (
 
 func parseQueryEventWithProperties(eventWithProperties map[string]interface{}) (
 	string, *P.EventConstraints, error) {
-	numericConstraintsMap := make(map[string]*P.NumericConstraint)
-	categoricalConstraintsMap := make(map[string]*P.CategoricalConstraint)
+	epNumericConstraintsMap := make(map[string]*P.NumericConstraint)
+	epCategoricalConstraintsMap := make(map[string]*P.CategoricalConstraint)
+	upNumericConstraintsMap := make(map[string]*P.NumericConstraint)
+	upCategoricalConstraintsMap := make(map[string]*P.CategoricalConstraint)
 	var err error
 	eventName := eventWithProperties["name"].(string)
-	for _, ep := range eventWithProperties["properties"].([]interface{}) {
+
+	// Event properties constraints.
+	if properties, ok := eventWithProperties["properties"]; ok {
+		err = addPropertyConstraintsToMap(
+			properties.([]interface{}),
+			&epNumericConstraintsMap,
+			&epCategoricalConstraintsMap)
+		if err != nil {
+			return "", nil, err
+		}
+	}
+
+	if properties, ok := eventWithProperties["user_properties"]; ok {
+		err = addPropertyConstraintsToMap(
+			properties.([]interface{}),
+			&upNumericConstraintsMap,
+			&upCategoricalConstraintsMap)
+		if err != nil {
+			return "", nil, err
+		}
+	}
+
+	eventConstraints := &P.EventConstraints{
+		EPNumericConstraints:     []P.NumericConstraint{},
+		EPCategoricalConstraints: []P.CategoricalConstraint{},
+		UPNumericConstraints:     []P.NumericConstraint{},
+		UPCategoricalConstraints: []P.CategoricalConstraint{},
+	}
+	for _, value := range epNumericConstraintsMap {
+		eventConstraints.EPNumericConstraints = append(
+			eventConstraints.EPNumericConstraints, *value)
+	}
+	for _, value := range epCategoricalConstraintsMap {
+		eventConstraints.EPCategoricalConstraints = append(
+			eventConstraints.EPCategoricalConstraints, *value)
+	}
+	for _, value := range upNumericConstraintsMap {
+		eventConstraints.UPNumericConstraints = append(
+			eventConstraints.UPNumericConstraints, *value)
+	}
+	for _, value := range upCategoricalConstraintsMap {
+		eventConstraints.UPCategoricalConstraints = append(
+			eventConstraints.UPCategoricalConstraints, *value)
+	}
+	return eventName, eventConstraints, err
+}
+
+func addPropertyConstraintsToMap(
+	properties []interface{},
+	numericConstraintsMap *map[string]*P.NumericConstraint,
+	categoricalConstraintsMap *map[string]*P.CategoricalConstraint) error {
+	var err error
+	for _, ep := range properties {
 		p := ep.(map[string]interface{})
 		propertyName := p["property"].(string)
 		if p["type"].(string) == "numerical" {
-			nC, ok := numericConstraintsMap[propertyName]
+			nC, ok := (*numericConstraintsMap)[propertyName]
 			if !ok {
 				nC = &P.NumericConstraint{
 					PropertyName: propertyName,
@@ -66,7 +120,7 @@ func parseQueryEventWithProperties(eventWithProperties map[string]interface{}) (
 					UpperBound:   math.MaxFloat64,
 					IsEquality:   false,
 				}
-				numericConstraintsMap[propertyName] = nC
+				(*numericConstraintsMap)[propertyName] = nC
 			}
 			numValue := p["value"].(float64)
 			switch op := p["operator"].(string); op {
@@ -90,10 +144,10 @@ func parseQueryEventWithProperties(eventWithProperties map[string]interface{}) (
 				err = fmt.Errorf(fmt.Sprintf("Unknown Operator: %s", op))
 			}
 		} else if p["type"].(string) == "categorical" {
-			cC, ok := categoricalConstraintsMap[propertyName]
+			cC, ok := (*categoricalConstraintsMap)[propertyName]
 			if !ok {
 				cC = &P.CategoricalConstraint{PropertyName: propertyName}
-				categoricalConstraintsMap[propertyName] = cC
+				(*categoricalConstraintsMap)[propertyName] = cC
 			}
 			switch op := p["operator"].(string); op {
 			case "equals":
@@ -105,22 +159,7 @@ func parseQueryEventWithProperties(eventWithProperties map[string]interface{}) (
 			err = fmt.Errorf(fmt.Sprintf("Unknown Property type: %s", p["type"].(string)))
 		}
 	}
-	if err != nil {
-		return "", nil, err
-	}
-	eventConstraints := &P.EventConstraints{
-		NumericConstraints:     []P.NumericConstraint{},
-		CategoricalConstraints: []P.CategoricalConstraint{},
-	}
-	for _, value := range numericConstraintsMap {
-		eventConstraints.NumericConstraints = append(
-			eventConstraints.NumericConstraints, *value)
-	}
-	for _, value := range categoricalConstraintsMap {
-		eventConstraints.CategoricalConstraints = append(
-			eventConstraints.CategoricalConstraints, *value)
-	}
-	return eventName, eventConstraints, err
+	return err
 }
 
 func FactorHandler(c *gin.Context) {
