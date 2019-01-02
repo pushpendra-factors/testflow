@@ -9,9 +9,11 @@ import (
 	serviceDisk "factors/services/disk"
 	serviceEtcd "factors/services/etcd"
 	serviceS3 "factors/services/s3"
+	"flag"
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gorilla/rpc"
@@ -24,6 +26,7 @@ import (
 
 const (
 	DefaultTTLSeconds = 10
+	Development       = "development"
 )
 
 type projectData struct {
@@ -89,16 +92,45 @@ type config struct {
 	DiskBaseDir    string
 }
 
-func readConfig() (*config, error) {
-	return &config{
-		Environment:    "development",
-		IP:             "127.0.0.1",
-		Port:           "1239",
-		EtcdEndpoints:  []string{"http://localhost:2379"},
-		S3BucketName:   "/tmp/factors-dev",
-		S3BucketRegion: "us-east-1",
-		DiskBaseDir:    "/tmp/factors",
-	}, nil
+func NewConfig(env, ip, port, etcd, diskBaseDir, s3Bucket, s3BucketRegion string) (*config, error) {
+	if env != Development {
+		return nil, errors.New("Invalid Environment")
+	}
+	if ip == "" {
+		return nil, errors.New("Invalid IP")
+	}
+	if port == "" {
+		return nil, errors.New("Invalid Port")
+	}
+
+	if diskBaseDir == "" {
+		return nil, errors.New("Invalid baseDiskDir")
+	}
+
+	if s3Bucket == "" {
+		return nil, errors.New("Invalid S3BucketName")
+	}
+
+	if s3BucketRegion == "" {
+		return nil, errors.New("Invalid S3BucketRegion")
+	}
+
+	etcds := strings.Split(etcd, ",")
+	if len(etcds) == 0 {
+		return nil, errors.New("Invalid EtcdEndpoints")
+	}
+
+	c := config{
+		Environment:    env,
+		IP:             ip,
+		Port:           port,
+		EtcdEndpoints:  etcds,
+		DiskBaseDir:    diskBaseDir,
+		S3BucketName:   s3Bucket,
+		S3BucketRegion: s3BucketRegion,
+	}
+
+	return &c, nil
 }
 
 func (c *config) GetEnvironment() string {
@@ -132,14 +164,35 @@ func (c *config) GetS3BucketRegion() string {
 // Process crashes if started with IP and port already registered with etcd.
 // TTL on etcd is 10 seconds.
 // Monit / Kubernetes will keep trying to restart the process, it should succeed after 10 seconds / till key expires.
+
+// ./pattern-app --env=development --ip=127.0.0.1 --port=8100 --etcd=localhost:2379 --disk_dir=/tmp/factors --s3=/tmp/factors-dev --s3_region=us-east-1
 func main() {
 
-	config, err := readConfig()
+	env := flag.String("env", "development", "")
+	ip := flag.String("ip", "127.0.0.1", "")
+	port := flag.String("port", "8100", "")
+	etcd := flag.String("etcd", "localhost:2379", "Comma separated list of etcd endpoints localhost:2379,localhost:2378")
+	diskBaseDir := flag.String("disk_dir", "/tmp/factors", "")
+	s3Bucket := flag.String("s3", "/tmp/factors-dev", "")
+	s3BucketRegion := flag.String("s3_region", "us-east-1", "")
+	flag.Parse()
+
+	config, err := NewConfig(*env, *ip, *port, *etcd, *diskBaseDir, *s3Bucket, *s3BucketRegion)
 	if err != nil {
-		panic("failed to read config")
+		panic(err)
 	}
 
-	if config.GetEnvironment() == "development" {
+	log.WithFields(log.Fields{
+		"IP":            config.GetIP(),
+		"Port":          config.GetPort(),
+		"Env":           config.GetEnvironment(),
+		"EtcdEndpoints": config.GetEtcdEndpoints(),
+		"DiskBaseDir":   config.GetBaseDiskDir(),
+		"S3Bucket":      config.GetS3BucketName(),
+		"S3Region":      config.GetS3BucketRegion(),
+	}).Infoln("Initialising with config")
+
+	if config.GetEnvironment() == Development {
 		log.SetLevel(log.DebugLevel)
 	}
 

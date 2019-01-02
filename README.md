@@ -169,6 +169,9 @@ go build -o $GOPATH/bin/pattern-app $GOPATH/src/factors/patternserver/cmd/patter
 ```
 cd $GOPATH/bin
 ./pattern-app
+Config can be passed using flags
+
+./pattern-app --env=development --ip=127.0.0.1 --port=8100 --etcd=localhost:2379 --disk_dir=/tmp/factors --s3=/tmp/factors-dev --s3_region=us-east-1
 ```
 ## Bootstrapping sample data, Building and serving model.
 * Start server on 8080.

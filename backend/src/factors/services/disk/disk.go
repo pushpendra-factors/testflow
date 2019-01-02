@@ -48,7 +48,10 @@ func (dd *DiskDriver) Create(path, fileName string, reader io.ReadSeeker) error 
 // Get opens a file in read only mode.
 // Caller should take care of closing the returned io.ReadCloser.
 func (dd *DiskDriver) Get(path, fileName string) (io.ReadCloser, error) {
-	log.WithField("Path", path).Debugln("DiskDriver Opening file")
+	log.WithFields(log.Fields{
+		"Path":     path,
+		"FileName": fileName,
+	}).Debugln("DiskDriver Opening file")
 	file, err := os.OpenFile(path+"/"+fileName, os.O_RDONLY, 0444)
 	return file, err
 }
