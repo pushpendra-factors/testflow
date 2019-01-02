@@ -16,8 +16,8 @@ import (
 
 const (
 	testEventName = "click_100001"
-	baseDiskDir   = "/tmp/factors-store-test/"
-	baseCloudDir  = "/tmp/factors-store-test-bucket/"
+	baseDiskDir   = "/tmp/factors-store-test"
+	baseCloudDir  = "/tmp/factors-store-test-bucket"
 )
 
 func getTestScannerFromTestFile() (*bufio.Scanner, error) {
@@ -114,6 +114,7 @@ func TestGetPutModelEventInfo(t *testing.T) {
 }
 
 func TestMain(m *testing.M) {
+	log.SetLevel(log.DebugLevel)
 	statusCode := m.Run()
 	cleanup() // not using defer, defer is not called if os.Exit() is used.
 	os.Exit(statusCode)
