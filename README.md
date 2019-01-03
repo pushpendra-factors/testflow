@@ -194,7 +194,9 @@ go run run_pull_events.go --project_id=<projectId> --end_time=1465948361 --disk_
 * Check output file at /tmp/factors/projects/\<projectId\>models/\<modelId\>/events_<modelId>.txt
 
 ```
-go run run_pattern_mine.go --project_id=<projectId> --model_id=<modelId> --disk_dir=/tmp/factors --bucket_name=/tmp/factors-dev
+go run run_pattern_mine.go --env=development --etcd=localhost:2379 --disk_dir=/tmp/factors --s3_region=us-east-1 --s3=/tmp/factors-dev --num_routines=3 --project_id=<projectId> --model_id=<modelId>
+or
+go run run_pattern_mine.go --project_id=<projectId> --model_id=<modelId>
 ```
 
 * Change in /tmp/factors/config/config.json 

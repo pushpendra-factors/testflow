@@ -4,18 +4,19 @@ package main
 
 // Sample usage in terminal.
 // export GOPATH=/Users/aravindmurthy/code/factors/backend/
-// go run run_pattern_mine.go --project_id=1 --input_file="" --output_file=""
-
+// go run run_pattern_mine.go --env=development --etcd=localhost:2379 --disk_dir=/tmp/factors --s3_region=us-east-1 --s3=/tmp/factors-dev --num_routines=3 --project_id=<projectId> --model_id=<modelId>
+// or
+// go run run_pattern_mine.go --project_id=<projectId> --model_id=<modelId>
 import (
 	"bufio"
 	"bytes"
 	"encoding/json"
-	C "factors/config"
 	"factors/filestore"
 	M "factors/model"
 	P "factors/pattern"
 	serviceDisk "factors/services/disk"
 	serviceEtcd "factors/services/etcd"
+	serviceS3 "factors/services/s3"
 	"flag"
 	"fmt"
 	"io"
@@ -29,12 +30,6 @@ import (
 	_ "github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 )
-
-var projectIdFlag = flag.Int("project_id", 0, "Project Id.")
-var modelIdFlag = flag.Int("model_id", 0, "Model Id")
-var diskDirFlag = flag.String("disk_dir", "/tmp/factors", "--disk_dir=/tmp/factors pass directory")
-var bucketNameFlag = flag.String("bucket_name", "/tmp/factors-dev", "--bucket_name=/tmp/factors-dev pass bucket name")
-var numRoutinesFlag = flag.Int("num_routines", 3, "No of routines")
 
 // The number of patterns generated is bounded to max_SEGMENTS * top_K per iteration.
 // The amount of data and the time computed to generate this data is bounded
@@ -218,10 +213,10 @@ func mineAndWriteLenTwoPatterns(
 	return lenTwoPatterns, nil
 }
 
-func mineAndWritePatterns(projectId int, filepath string,
+func mineAndWritePatterns(projectId uint64, filepath string,
 	userAndEventsInfo *P.UserAndEventsInfo, numRoutines int, outputFile *os.File) error {
 	// Length One Patterns.
-	eventNames, errCode := M.GetEventNames(uint64(projectId))
+	eventNames, errCode := M.GetEventNames(projectId)
 	if errCode != http.StatusFound {
 		return fmt.Errorf("DB read of event names failed")
 	}
@@ -295,11 +290,11 @@ func mineAndWritePatterns(projectId int, filepath string,
 	return nil
 }
 
-func buildPropertiesInfoFromInput(projectId int, filepath string) (*P.UserAndEventsInfo, error) {
+func buildPropertiesInfoFromInput(projectId uint64, filepath string) (*P.UserAndEventsInfo, error) {
 	eMap := make(map[string]*P.PropertiesInfo)
 
 	// Length One Patterns.
-	eventNames, errCode := M.GetEventNames(uint64(projectId))
+	eventNames, errCode := M.GetEventNames(projectId)
 	if errCode != http.StatusFound {
 		return nil, fmt.Errorf("DB read of event names failed")
 	}
@@ -350,11 +345,31 @@ func printFilteredPatterns(filteredPatterns []*P.Pattern, iter int) {
 }
 
 func main() {
-	// Initialize configs and connections.
-	err := C.Init()
-	if err != nil {
-		log.Error("Failed to initialize.")
-		os.Exit(1)
+
+	envFlag := flag.String("env", "development", "")
+	projectIdFlag := flag.Uint64("project_id", 0, "Project Id.")
+	modelIdFlag := flag.Uint64("model_id", 0, "Model Id")
+	etcd := flag.String("etcd", "localhost:2379", "Comma separated list of etcd endpoints localhost:2379,localhost:2378")
+	diskDirFlag := flag.String("disk_dir", "/tmp/factors", "--disk_dir=/tmp/factors pass directory")
+	s3BucketFlag := flag.String("s3", "/tmp/factors-dev", "")
+	s3BucketRegionFlag := flag.String("s3_region", "us-east-1", "")
+	numRoutinesFlag := flag.Int("num_routines", 3, "No of routines")
+	flag.Parse()
+
+	log.WithFields(log.Fields{
+		"Env":           *envFlag,
+		"EtcdEndpoints": *etcd,
+		"DiskBaseDir":   *diskDirFlag,
+		"ProjectId":     *projectIdFlag,
+		"ModelId":       *modelIdFlag,
+		"S3Bucket":      *s3BucketFlag,
+		"S3Region":      *s3BucketRegionFlag,
+		"NumRoutines":   *numRoutinesFlag,
+	}).Infoln("Initialising")
+
+	if *envFlag != "development" {
+		err := fmt.Errorf("env [ %s ] not recognised", *envFlag)
+		panic(err)
 	}
 
 	if *projectIdFlag <= 0 || *modelIdFlag <= 0 {
@@ -367,45 +382,34 @@ func main() {
 		os.Exit(1)
 	}
 
-	modelId := uint64(*modelIdFlag)
-	projectId := uint64(*projectIdFlag)
+	env := *envFlag
+	modelId := *modelIdFlag
+	projectId := *projectIdFlag
 
 	diskDir := *diskDirFlag
-	bucketName := *bucketNameFlag
+	bucketName := *s3BucketFlag
+	region := *s3BucketRegionFlag
 
 	diskManager := serviceDisk.New(diskDir)
-	cloundManager := serviceDisk.New(bucketName)
 
-	etcdClient, err := serviceEtcd.New([]string{"http://localhost:2379"})
+	var cloudManager filestore.FileManager
+
+	if env == "development" {
+		cloudManager = serviceDisk.New(bucketName)
+	} else {
+		cloudManager = serviceS3.New(bucketName, region)
+	}
+
+	etcdClient, err := serviceEtcd.New([]string{*etcd})
 	if err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("failed to init etcd client")
-		os.Exit(1)
-	}
-
-	if C.IsDevelopment() {
-		// only for local
-		err = os.MkdirAll(fmt.Sprintf("%s/projects/%v/models/%v/", bucketName, projectId, modelId), 0755)
-		if err != nil {
-			log.WithFields(log.Fields{"err": err}).Error("/tmp/factors-dev Failed to Create projects model dir.")
-			os.Exit(1)
-		}
-	}
-
-	err = os.MkdirAll(fmt.Sprintf("%s/projects/%v/models/%v/", diskDir, projectId, modelId), 0755)
-	if err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("Failed to Create projects model dir.")
-		os.Exit(1)
-	}
-	err = os.MkdirAll(fmt.Sprintf("%s/metadata", diskDir), 0755)
-	if err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("Failed to Create metadata dir.")
 		os.Exit(1)
 	}
 
 	input, Name := diskManager.GetModelEventsFilePathAndName(projectId, modelId)
 	inputFilePath := input + Name
 
-	userAndEventsInfo, err := buildPropertiesInfoFromInput(*projectIdFlag, inputFilePath)
+	userAndEventsInfo, err := buildPropertiesInfoFromInput(projectId, inputFilePath)
 	if err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("Failed to build user and event Info.")
 		os.Exit(1)
@@ -416,7 +420,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = writeEventInfoFile(projectId, modelId, bytes.NewReader(userAndEventsInfoBytes), cloundManager)
+	err = writeEventInfoFile(projectId, modelId, bytes.NewReader(userAndEventsInfoBytes), cloudManager)
 	if err != nil {
 		log.WithFields(log.Fields{"err": err}).Fatal("Failed to write events Info.")
 		os.Exit(1)
@@ -430,7 +434,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = mineAndWritePatterns(*projectIdFlag, inputFilePath,
+	err = mineAndWritePatterns(projectId, inputFilePath,
 		userAndEventsInfo, *numRoutinesFlag, tmpFile)
 	if err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("Failed to mine patterns.")
@@ -453,8 +457,8 @@ func main() {
 	}
 
 	log.Infoln("Cloudmanager Creating ModelPatterns File")
-	path, fName = cloundManager.GetModelPatternsFilePathAndName(projectId, modelId)
-	err = cloundManager.Create(path, fName, tmpFile)
+	path, fName = cloudManager.GetModelPatternsFilePathAndName(projectId, modelId)
+	err = cloudManager.Create(path, fName, tmpFile)
 	if err != nil {
 		log.WithError(err).Error("cloud manager Failed to create model patterns file")
 		os.Exit(1)
@@ -469,8 +473,8 @@ func main() {
 
 	log.Printf("Current Version: %s", curVersion)
 
-	path, name := cloundManager.GetProjectsDataFilePathAndName(curVersion)
-	versionFile, err := cloundManager.Get(path, name)
+	path, name := cloudManager.GetProjectsDataFilePathAndName(curVersion)
+	versionFile, err := cloudManager.Get(path, name)
 	if err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("Failed to read cur version file")
 		os.Exit(1)
@@ -485,7 +489,7 @@ func main() {
 	})
 
 	newVersionName := fmt.Sprintf("%v", time.Now().Unix())
-	err = writeProjectDataFile(newVersionName, projectDatas, cloundManager)
+	err = writeProjectDataFile(newVersionName, projectDatas, cloudManager)
 	if err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("Failed to write new version file to cloud")
 		os.Exit(1)
