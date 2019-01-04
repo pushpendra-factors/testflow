@@ -1,0 +1,11 @@
+FROM golang:1.11-alpine AS builder
+
+WORKDIR /go/src/factors
+ADD /factors .
+RUN go build -o $GOPATH/bin/pattern-app $GOPATH/src/factors/patternserver/cmd/pattern-app.go
+
+# Create stripped down version without go and source code
+FROM alpine:3.7
+COPY --from=builder /go/bin/ /go/bin/
+ENTRYPOINT [ "/go/bin/pattern-app"]
+EXPOSE 8100
