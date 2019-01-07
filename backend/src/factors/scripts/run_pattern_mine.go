@@ -11,6 +11,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	C "factors/config"
 	"factors/filestore"
 	M "factors/model"
 	P "factors/pattern"
@@ -354,7 +355,14 @@ func main() {
 	s3BucketFlag := flag.String("s3", "/tmp/factors-dev", "")
 	s3BucketRegionFlag := flag.String("s3_region", "us-east-1", "")
 	numRoutinesFlag := flag.Int("num_routines", 3, "No of routines")
-	flag.Parse()
+
+	// C.Init() calls flag.Parse()
+	// Remove this after initializing C.Service.DB
+	err := C.Init()
+	if err != nil {
+		log.WithError(err).Error("Failed to initialize config")
+		os.Exit(1)
+	}
 
 	log.WithFields(log.Fields{
 		"Env":           *envFlag,
@@ -406,6 +414,8 @@ func main() {
 		os.Exit(1)
 	}
 
+	// TODO(Ankit):
+	// This file should be pulled from cloud first
 	input, Name := diskManager.GetModelEventsFilePathAndName(projectId, modelId)
 	inputFilePath := input + Name
 

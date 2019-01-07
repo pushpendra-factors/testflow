@@ -16,6 +16,8 @@ const (
 	OperationNameGetSeenEventPropertyValues = "GetSeenEventPropertyValues"
 	OperationNameGetCountOfPattern          = "GetCountOfPattern"
 	OperationNameGetProjectModelsIntervals  = "GetProjectModelsIntervals"
+	OperationNameGetSeenUserProperties      = "GetSeenUserProperties"
+	OperationNameGetSeenUserPropertyValues  = "GetSeenUserPropertyValues"
 	Separator                               = "."
 )
 
@@ -109,8 +111,8 @@ func (ps *PatternServer) GetSeenEventProperties(r *http.Request, args *GetSeenEv
 type GetSeenEventPropertyValuesRequest struct {
 	ProjectId    uint64 `json:"pid"`
 	ModelId      uint64 `json:"mid"` // Optional, if not passed latest modelId will be used
-	EventName    string `json:"event_name"`
-	PropertyName string `json:"property_name"`
+	EventName    string `json:"en"`
+	PropertyName string `json:"pn"`
 }
 
 type GetSeenEventPropertyValuesResponse struct {
@@ -206,5 +208,119 @@ type GetCountOfPatternResponse struct {
 }
 
 func (ps *PatternServer) GetCountOfPattern(r *http.Request, args *GetCountOfPatternRequest, result *GetCountOfPatternResponse) error {
+	return nil
+}
+
+type GetSeenUserPropertiesRequest struct {
+	ProjectId uint64 `json:"pid"`
+	ModelId   uint64 `json:"mid"`
+}
+
+type GetSeenUserPropertiesResponse struct {
+	GenericRPCResp
+	UserProperties map[string][]string `json:"ups"`
+}
+
+func (ps *PatternServer) GetSeenUserProperties(r *http.Request, args *GetSeenUserPropertiesRequest, result *GetSeenUserPropertiesResponse) error {
+
+	if args == nil || args.ProjectId == 0 {
+		err := errors.New("MissingParams")
+		result.Error = err
+		return err
+	}
+	modelId := args.ModelId
+
+	if modelId == 0 {
+		latestInterval, err := ps.GetProjectModelLatestInterval(args.ProjectId)
+		if err != nil {
+			result.Error = err
+			return err
+		}
+		modelId = latestInterval.ModelId
+	}
+
+	if !ps.IsProjectModelServable(args.ProjectId, modelId) {
+		result.Ignored = true
+		return nil
+	}
+
+	userAndEventsInfo, err := ps.GetModelEventInfo(args.ProjectId, modelId)
+	if err != nil {
+		result.Error = err
+		return err
+	}
+	numericalProperties := []string{}
+	categoricalProperties := []string{}
+
+	for nprop := range userAndEventsInfo.UserPropertiesInfo.NumericPropertyKeys {
+		numericalProperties = append(numericalProperties, nprop)
+	}
+	for cprop := range userAndEventsInfo.UserPropertiesInfo.CategoricalPropertyKeyValues {
+		categoricalProperties = append(categoricalProperties, cprop)
+	}
+
+	props := make(map[string][]string)
+	props["numerical"] = numericalProperties
+	props["categorical"] = categoricalProperties
+
+	result.ProjectId = args.ProjectId
+	result.ModelId = modelId
+	result.UserProperties = props
+	return nil
+}
+
+type GetSeenUserPropertyValuesRequest struct {
+	ProjectId    uint64 `json:"pid"`
+	ModelId      uint64 `json:"mid"`
+	PropertyName string `json:"pn"`
+}
+type GetSeenUserPropertyValuesResponse struct {
+	GenericRPCResp
+	PropertyValues []string `json:"pvs"`
+}
+
+func (ps *PatternServer) GetSeenUserPropertyValues(r *http.Request, args *GetSeenUserPropertyValuesRequest, result *GetSeenUserPropertyValuesResponse) error {
+	if args == nil || args.ProjectId == 0 || args.PropertyName == "" {
+		err := errors.New("MissingParams")
+		result.Error = err
+		return err
+	}
+
+	modelId := args.ModelId
+	if modelId == 0 {
+		latestInterval, err := ps.GetProjectModelLatestInterval(args.ProjectId)
+		if err != nil {
+			result.Error = err
+			return err
+		}
+		modelId = latestInterval.ModelId
+	}
+
+	if !ps.IsProjectModelServable(args.ProjectId, modelId) {
+		result.Ignored = true
+		return nil
+	}
+
+	userAndEventsInfoMap, err := ps.GetModelEventInfo(args.ProjectId, modelId)
+	if err != nil {
+		result.Error = err
+		return err
+	}
+
+	propValuesMap, ok := userAndEventsInfoMap.UserPropertiesInfo.CategoricalPropertyKeyValues[args.PropertyName]
+	if !ok {
+		err := errors.New("PropertyValues not found")
+		result.Error = err
+		return err
+	}
+
+	values := make([]string, 0, 0)
+	for k := range propValuesMap {
+		values = append(values, k)
+	}
+
+	result.ProjectId = args.ProjectId
+	result.ModelId = modelId
+	result.PropertyValues = values
 	return nil
 }
