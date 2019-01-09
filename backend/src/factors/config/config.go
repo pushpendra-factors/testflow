@@ -187,7 +187,7 @@ func initServices() error {
 			return err
 		}
 		defer eventInfofile.Close()
-		userAndEventsInfo, err := PS.CreatePatternEventInfoFromScanner(PS.CreateScannerFromFile(eventInfofile))
+		userAndEventsInfo, err := PS.CreatePatternEventInfoFromScanner(PS.CreateScannerFromReader(eventInfofile))
 		if err != nil {
 			log.WithError(err).WithField("file", eventInfoFilePath).Error("Failed to create eventInfo from File")
 			return err
@@ -201,7 +201,7 @@ func initServices() error {
 		}
 		defer patternsfile.Close()
 
-		patterns, err := PS.CreatePatternsFromScanner(PS.CreateScannerFromFile(patternsfile))
+		patterns, err := PS.CreatePatternsFromScanner(PS.CreateScannerFromReader(patternsfile))
 		if err != nil {
 			log.WithError(err).WithField("file", patternsFilePath).Error("Failed to create patterns from File")
 			return err

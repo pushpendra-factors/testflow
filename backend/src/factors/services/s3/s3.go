@@ -78,3 +78,9 @@ func (sd *S3Driver) GetModelEventsFilePathAndName(projectId, modelId uint64) (st
 func (sd *S3Driver) GetProjectsDataFilePathAndName(version string) (string, string) {
 	return "metadata/", fmt.Sprintf("%s.txt", version)
 }
+
+func (sd *S3Driver) GetPatternChunkFilePathAndName(projectId, modelId uint64, chunkId string) (string, string) {
+	modelDir := sd.GetProjectModelDir(projectId, modelId)
+	path := fmt.Sprintf("%schunks/", modelDir)
+	return path, fmt.Sprintf("chunk_%s.txt", chunkId)
+}

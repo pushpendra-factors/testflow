@@ -122,14 +122,16 @@ func GetSeenUserPropertyValues(projectId, modelId uint64, propertyName string) (
 	return propValues, nil
 }
 
-func GetPatterns(projectId, modelId uint64) ([]pattern.Pattern, error) {
-	params := ListPatternsRequest{
-		ProjectId: projectId,
-		ModelId:   modelId,
+func GetPatterns(projectId, modelId uint64, startEvent, endEvent string) ([]*pattern.Pattern, error) {
+	params := GetPatternsRequest{
+		ProjectId:  projectId,
+		ModelId:    modelId,
+		StartEvent: startEvent,
+		EndEvent:   endEvent,
 	}
 	paramBytes, err := json.EncodeClientRequest(RPCServiceName+Separator+OperationNameGetPatterns, params)
 	if err != nil {
-		return []pattern.Pattern{}, err
+		return []*pattern.Pattern{}, err
 	}
 	serverAddrs := C.GetServices().GetPatternServerAddresses()
 
@@ -146,14 +148,14 @@ func GetPatterns(projectId, modelId uint64) ([]pattern.Pattern, error) {
 
 	httpDo(http.MethodPost, urls, paramBytes, headers, gatherResp)
 
-	patterns := make([]pattern.Pattern, 0, 0)
+	patterns := make([]*pattern.Pattern, 0, 0)
 
 	for r := range gatherResp {
 		if r.err != nil {
 			log.WithError(r.err).Error("Error Ignoring GetPatternsResponse")
 			continue
 		}
-		var result ListPatternsResponse
+		var result GetPatternsResponse
 		err = json.DecodeClientResponse(r.resp.Body, &result)
 		if err != nil {
 			log.WithError(err).Error("Error Decoding response Ignoring GetPatternsResponse")

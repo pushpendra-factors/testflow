@@ -13,4 +13,5 @@ type FileManager interface {
 	GetModelPatternsFilePathAndName(projectId, modelId uint64) (string, string)
 	GetModelEventsFilePathAndName(projectId, modelId uint64) (string, string)
 	GetProjectsDataFilePathAndName(version string) (string, string)
+	GetPatternChunkFilePathAndName(projectId, modelId uint64, chunkId string) (string, string)
 }

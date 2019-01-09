@@ -345,6 +345,7 @@ func printFilteredPatterns(filteredPatterns []*P.Pattern, iter int) {
 	fmt.Println("----------------------------------")
 }
 
+// TODO(Ankit): Change write logic to write to multiple chunks
 func main() {
 
 	envFlag := flag.String("env", "development", "")

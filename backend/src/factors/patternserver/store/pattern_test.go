@@ -3,6 +3,7 @@ package store
 import (
 	"bufio"
 	serviceDisk "factors/services/disk"
+	U "factors/util"
 	"fmt"
 	"os"
 	"strconv"
@@ -15,23 +16,24 @@ import (
 )
 
 const (
-	testEventName = "click_100001"
-	baseDiskDir   = "/tmp/factors-store-test"
-	baseCloudDir  = "/tmp/factors-store-test-bucket"
+	testEventName     = "click_100001"
+	baseDiskDir       = "/tmp/factors-store-test"
+	baseCloudDir      = "/tmp/factors-store-test-bucket"
+	eventInfoTestFile = "testdata/event_info.txt"
+	patternTestFile   = "testdata/pattern.txt"
 )
 
-func getTestScannerFromTestFile() (*bufio.Scanner, error) {
-	fileName := "testdata/event_info.txt"
-	f, err := os.Open(fileName)
+func openFileAndGetScanner(filePath string) (*bufio.Scanner, error) {
+	f, err := os.Open(filePath)
 	if err != nil {
 		return nil, err
 	}
-	scanner := bufio.NewScanner(f)
-	return scanner, err
+	scanner := CreateScannerFromReader(f)
+	return scanner, nil
 }
 
 func TestCreatePatternEventInfoFromScanner(t *testing.T) {
-	scanner, err := getTestScannerFromTestFile()
+	scanner, err := openFileAndGetScanner(eventInfoTestFile)
 	assert.Nil(t, err)
 	UserAndEventsInfo, err := CreatePatternEventInfoFromScanner(scanner)
 	assert.Nil(t, err)
@@ -65,12 +67,21 @@ func TestGetModelEventInfoCacheKey(t *testing.T) {
 	assert.Equal(t, expectedK, actualK)
 }
 
+func TestGetModelChunkCacheKey(t *testing.T) {
+	projectId := uint64(time.Now().Unix())
+	modelId := uint64(time.Now().Unix())
+	chunkId := strconv.Itoa(int(time.Now().Unix()))
+	actualK := getModelChunkCacheKey(projectId, modelId, chunkId)
+	expectedK := fmt.Sprintf("%s%s%d%s%d%s%s", "chunk_", IdSeparator, projectId, IdSeparator, modelId, IdSeparator, chunkId)
+	assert.Equal(t, expectedK, actualK)
+}
+
 func TestGetPutModelEventInfo(t *testing.T) {
 
 	cloudManager := serviceDisk.New(baseCloudDir)
 	diskManager := serviceDisk.New(baseDiskDir)
 
-	scanner, err := getTestScannerFromTestFile()
+	scanner, err := openFileAndGetScanner(eventInfoTestFile)
 	assert.Nil(t, err)
 
 	actualEventInfoMap, err := CreatePatternEventInfoFromScanner(scanner)
@@ -111,6 +122,53 @@ func TestGetPutModelEventInfo(t *testing.T) {
 	cacheEventInfo, found := store.getModelEventInfoFromCache(projectId, modelId)
 	assert.True(t, found)
 	assert.Equal(t, actualEventInfoMap, cacheEventInfo)
+}
+
+func TestGetPutPatterns(t *testing.T) {
+	cloudManager := serviceDisk.New(baseCloudDir)
+	diskManager := serviceDisk.New(baseDiskDir)
+	projectId := uint64(time.Now().Unix())
+	modelId := uint64(time.Now().Unix())
+	chunkId := U.RandomString(8)
+
+	scanner, err := openFileAndGetScanner(patternTestFile)
+	assert.Nil(t, err)
+
+	actualPatterns, err := CreatePatternsFromScanner(scanner)
+	assert.Nil(t, err)
+
+	store, err := New(5, 5, diskManager, cloudManager)
+	assert.Nil(t, err)
+
+	// should not be present in cloud
+	_, err = store.getPatternsFromCloud(projectId, modelId, chunkId)
+	assert.NotNil(t, err)
+
+	// put in cloud
+	err = store.PutPatternsInCloud(projectId, modelId, chunkId, actualPatterns)
+	assert.Nil(t, err)
+
+	// should not be present in disk
+	_, err = store.getPatternsFromDisk(projectId, modelId, chunkId)
+	assert.True(t, os.IsNotExist(err))
+
+	// should not be present in disk
+	_, found := store.getPatternsFromCache(projectId, modelId, chunkId)
+	assert.False(t, found)
+
+	patterns, err := store.GetPatterns(projectId, modelId, chunkId)
+	assert.Nil(t, err)
+	assert.Equal(t, actualPatterns, patterns)
+
+	// read from disk now, should be present
+	diskPatterns, err := store.getPatternsFromDisk(projectId, modelId, chunkId)
+	assert.Nil(t, err)
+	assert.Equal(t, actualPatterns, diskPatterns)
+
+	// read from cache now, should be present
+	cachePatterns, found := store.getPatternsFromCache(projectId, modelId, chunkId)
+	assert.True(t, found)
+	assert.Equal(t, actualPatterns, cachePatterns)
 }
 
 func TestMain(m *testing.M) {

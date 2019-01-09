@@ -29,6 +29,7 @@ type ModelData struct {
 	EndDate   time.Time
 }
 
+// model_id -> ModelData
 type ModelChunkMapping map[uint64]ModelData
 
 type state struct {
@@ -221,6 +222,27 @@ func (ps *PatternServer) GetProjectModels(projectId uint64) (ModelChunkMapping, 
 	projectModels := ps.GetState().getProjectModelChunkData()
 	projectData, exists := projectModels[projectId]
 	return projectData, exists
+}
+
+func (ps *PatternServer) GetProjectModel(projectId, modelId uint64) (ModelData, bool) {
+	projectModels, found := ps.GetProjectModels(projectId)
+	if !found {
+		return ModelData{}, found
+	}
+	modelData, found := projectModels[modelId]
+	return modelData, found
+}
+
+func (ps *PatternServer) GetProjectModelChunks(projectId, modelId uint64) ([]string, bool) {
+	modelData, found := ps.GetProjectModel(projectId, modelId)
+	if !found {
+		return []string{}, found
+	}
+	chunkIds := make([]string, 0, 0)
+	for _, cId := range modelData.Chunks {
+		chunkIds = append(chunkIds, cId)
+	}
+	return chunkIds, true
 }
 
 type ModelInfo struct {

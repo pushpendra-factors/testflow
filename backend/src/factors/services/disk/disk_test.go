@@ -102,6 +102,19 @@ func TestGetProjectsDataFilePathAndName(t *testing.T) {
 	assert.Equal(t, expectedName, resultName)
 }
 
+func TestGetPatternChunkFilePathAndName(t *testing.T) {
+	projectId := U.RandomUint64()
+	modelId := U.RandomUint64()
+	chunkId := U.RandomString(8)
+	expectedPath := diskDriver.GetProjectModelDir(projectId, modelId) + "/chunks/"
+	expectedName := fmt.Sprintf("chunk_%s.txt", chunkId)
+
+	resultPath, resultName := diskDriver.GetPatternChunkFilePathAndName(projectId, modelId, chunkId)
+
+	assert.Equal(t, expectedPath, resultPath)
+	assert.Equal(t, expectedName, resultName)
+}
+
 func TestCreate(t *testing.T) {
 	t.Run("CreateNewFile", func(t *testing.T) {
 		strToWrite := "This is a random string\n"

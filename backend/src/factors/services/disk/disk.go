@@ -79,3 +79,9 @@ func (dd *DiskDriver) GetProjectsDataFilePathAndName(version string) (string, st
 	path := fmt.Sprintf("%s/metadata/", dd.baseDir)
 	return path, fmt.Sprintf("%s.txt", version)
 }
+
+func (dd *DiskDriver) GetPatternChunkFilePathAndName(projectId, modelId uint64, chunkId string) (string, string) {
+	modelDir := dd.GetProjectModelDir(projectId, modelId)
+	path := fmt.Sprintf("%schunks/", modelDir)
+	return path, fmt.Sprintf("chunk_%s.txt", chunkId)
+}

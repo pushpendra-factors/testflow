@@ -7,6 +7,7 @@ import (
 	"factors/filestore"
 	"factors/pattern"
 	"fmt"
+	"io"
 	"os"
 
 	cache "github.com/hashicorp/golang-lru"
@@ -56,6 +57,10 @@ func getModelEventInfoCacheKey(projectId, modelId uint64) string {
 	return fmt.Sprintf("%s%s%s", "model_event_info", IdSeparator, GetModelKey(projectId, modelId))
 }
 
+func getModelChunkCacheKey(projectId, modelId uint64, chunkId string) string {
+	return fmt.Sprintf("%s%s%s", "chunk_", IdSeparator, GetChunkKey(projectId, modelId, chunkId))
+}
+
 func (ps *PatternStore) putModelEventInfoInCache(projectId, modelId uint64, eventInfo pattern.UserAndEventsInfo) {
 
 	log.WithFields(log.Fields{
@@ -85,6 +90,17 @@ func (ps *PatternStore) getModelEventInfoFromCache(projectId, modelId uint64) (p
 	return modelEventInfo, ok
 }
 
+func putModelEventInfoToFileManager(fm filestore.FileManager, projectId, modelId uint64, eventInfo pattern.UserAndEventsInfo) error {
+	path, fName := fm.GetModelEventInfoFilePathAndName(projectId, modelId)
+
+	reader, err := CreateReaderFromEventInfo(eventInfo)
+	if err != nil {
+		return err
+	}
+	err = fm.Create(path, fName, reader)
+	return err
+}
+
 func (ps *PatternStore) PutModelEventInfoInDisk(projectId, modelId uint64, eventInfo pattern.UserAndEventsInfo) error {
 
 	log.WithFields(log.Fields{
@@ -92,15 +108,22 @@ func (ps *PatternStore) PutModelEventInfoInDisk(projectId, modelId uint64, event
 		"mid": modelId,
 	}).Debugln("[PatternStore] putModelEventInfoInDisk")
 
-	reader, err := CreateReaderFromEventInfo(eventInfo)
+	return putModelEventInfoToFileManager(ps.diskFileManger, projectId, modelId, eventInfo)
+}
+
+func getModelEventInfoFromFileManager(fm filestore.FileManager, projectId, modelId uint64) (pattern.UserAndEventsInfo, error) {
+	path, fName := fm.GetModelEventInfoFilePathAndName(projectId, modelId)
+	modelEventInfoFile, err := fm.Get(path, fName)
 	if err != nil {
-		return err
+		return pattern.UserAndEventsInfo{}, err
 	}
+	defer modelEventInfoFile.Close()
 
-	path, fName := ps.diskFileManger.GetModelEventInfoFilePathAndName(projectId, modelId)
-	err = ps.diskFileManger.Create(path, fName, reader)
+	scanner := bufio.NewScanner(modelEventInfoFile)
 
-	return err
+	patternEventInfo, err := CreatePatternEventInfoFromScanner(scanner)
+
+	return patternEventInfo, err
 }
 
 func (ps *PatternStore) getModelEventInfoFromDisk(projectId, modelId uint64) (pattern.UserAndEventsInfo, error) {
@@ -110,18 +133,7 @@ func (ps *PatternStore) getModelEventInfoFromDisk(projectId, modelId uint64) (pa
 		"mid": modelId,
 	}).Debugln("[PatternStore] getModelEventInfoFromDisk")
 
-	path, fName := ps.diskFileManger.GetModelEventInfoFilePathAndName(projectId, modelId)
-	modelEventInfoFile, err := ps.diskFileManger.Get(path, fName)
-	if err != nil {
-		return pattern.UserAndEventsInfo{}, err
-	}
-	defer modelEventInfoFile.Close()
-
-	scanner := bufio.NewScanner(modelEventInfoFile)
-
-	patternEventInfo, err := CreatePatternEventInfoFromScanner(scanner)
-
-	return patternEventInfo, err
+	return getModelEventInfoFromFileManager(ps.diskFileManger, projectId, modelId)
 }
 
 func (ps *PatternStore) getModelEventInfoFromCloud(projectId, modelId uint64) (pattern.UserAndEventsInfo, error) {
@@ -130,30 +142,11 @@ func (ps *PatternStore) getModelEventInfoFromCloud(projectId, modelId uint64) (p
 		"mid": modelId,
 	}).Debugln("[PatternStore] getModelEventInfoFromCloud")
 
-	path, fName := ps.cloudFileManger.GetModelEventInfoFilePathAndName(projectId, modelId)
-	modelEventInfoFile, err := ps.cloudFileManger.Get(path, fName)
-	if err != nil {
-		return pattern.UserAndEventsInfo{}, err
-	}
-	defer modelEventInfoFile.Close()
-
-	scanner := bufio.NewScanner(modelEventInfoFile)
-	patternEventInfo, err := CreatePatternEventInfoFromScanner(scanner)
-
-	return patternEventInfo, err
+	return getModelEventInfoFromFileManager(ps.cloudFileManger, projectId, modelId)
 }
 
 func (ps *PatternStore) PutModelEventInfoInCloud(projectId, modelId uint64, eventInfo pattern.UserAndEventsInfo) error {
-	path, fName := ps.cloudFileManger.GetModelEventInfoFilePathAndName(projectId, modelId)
-
-	reader, err := CreateReaderFromEventInfo(eventInfo)
-	if err != nil {
-		return err
-	}
-
-	err = ps.cloudFileManger.Create(path, fName, reader)
-
-	return err
+	return putModelEventInfoToFileManager(ps.cloudFileManger, projectId, modelId, eventInfo)
 }
 
 func (ps *PatternStore) GetModelEventInfo(projectId, modelId uint64) (pattern.UserAndEventsInfo, error) {
@@ -201,6 +194,145 @@ func (ps *PatternStore) GetModelEventInfo(projectId, modelId uint64) (pattern.Us
 	return patternEventInfo, err
 }
 
+func getPatternsFromFileManager(fm filestore.FileManager, projectId, modelId uint64, chunkId string) ([]*pattern.Pattern, error) {
+	path, fName := fm.GetPatternChunkFilePathAndName(projectId, modelId, chunkId)
+	patternsReader, err := fm.Get(path, fName)
+	if err != nil {
+		return []*pattern.Pattern{}, err
+	}
+	defer patternsReader.Close()
+	scanner := CreateScannerFromReader(patternsReader)
+	patterns, err := CreatePatternsFromScanner(scanner)
+	return patterns, err
+}
+
+func (ps *PatternStore) getPatternsFromCloud(projectId, modelId uint64, chunkId string) ([]*pattern.Pattern, error) {
+	log.WithFields(log.Fields{
+		"pid": projectId,
+		"mid": modelId,
+		"cid": chunkId,
+	}).Debugln("[PatternStore] getPatternsFromCloud")
+
+	return getPatternsFromFileManager(ps.cloudFileManger, projectId, modelId, chunkId)
+}
+
+func (ps *PatternStore) PutPatternsInCloud(projectId, modelId uint64, chunkId string, patterns []*pattern.Pattern) error {
+	log.WithFields(log.Fields{
+		"pid": projectId,
+		"mid": modelId,
+		"cid": chunkId,
+	}).Debugln("[PatternStore] putPatternsInCloud")
+
+	reader, err := CreateReaderFromPatterns(patterns)
+	if err != nil {
+		return err
+	}
+
+	path, fName := ps.cloudFileManger.GetPatternChunkFilePathAndName(projectId, modelId, chunkId)
+
+	err = ps.cloudFileManger.Create(path, fName, reader)
+
+	return err
+}
+
+func (ps *PatternStore) PutPatternsInDisk(projectId, modelId uint64, chunkId string, patterns []*pattern.Pattern) error {
+	log.WithFields(log.Fields{
+		"pid": projectId,
+		"mid": modelId,
+		"cid": chunkId,
+	}).Debugln("[PatternStore] putPatternsInDisk")
+
+	reader, err := CreateReaderFromPatterns(patterns)
+	if err != nil {
+		return err
+	}
+
+	path, fName := ps.diskFileManger.GetPatternChunkFilePathAndName(projectId, modelId, chunkId)
+
+	err = ps.diskFileManger.Create(path, fName, reader)
+
+	return err
+}
+
+func (ps *PatternStore) getPatternsFromDisk(projectId, modelId uint64, chunkId string) ([]*pattern.Pattern, error) {
+	log.WithFields(log.Fields{
+		"pid": projectId,
+		"mid": modelId,
+		"cid": chunkId,
+	}).Debugln("[PatternStore] getPatternsFromDisk")
+
+	return getPatternsFromFileManager(ps.diskFileManger, projectId, modelId, chunkId)
+}
+
+func (ps *PatternStore) putPatternsInCache(projectId, modelId uint64, chunkId string, patterns []*pattern.Pattern) {
+	log.WithFields(log.Fields{
+		"pid": projectId,
+		"mid": modelId,
+		"cid": chunkId,
+	}).Debugln("[PatternStore] putPatternsInCache")
+
+	chunkKey := getModelChunkCacheKey(projectId, modelId, chunkId)
+	ps.modelChunkCache.Add(chunkKey, patterns)
+}
+
+func (ps *PatternStore) getPatternsFromCache(projectId, modelId uint64, chunkId string) ([]*pattern.Pattern, bool) {
+	log.WithFields(log.Fields{
+		"pid": projectId,
+		"mid": modelId,
+		"cid": chunkId,
+	}).Debugln("[PatternStore] getPatternsFromCache")
+
+	chunkKey := getModelChunkCacheKey(projectId, modelId, chunkId)
+	patternsIface, ok := ps.modelChunkCache.Get(chunkKey)
+	if !ok {
+		return []*pattern.Pattern{}, ok
+	}
+	patterns, ok := patternsIface.([]*pattern.Pattern)
+	return patterns, ok
+}
+
+func (ps *PatternStore) GetPatterns(projectId, modelId uint64, chunkId string) ([]*pattern.Pattern, error) {
+	logCtx := log.WithFields(log.Fields{
+		"pid": projectId,
+		"mid": modelId,
+		"cid": chunkId,
+	})
+
+	logCtx.Debugln("[PatternStore] GetPatterns")
+
+	patterns, foundInCache := ps.getPatternsFromCache(projectId, modelId, chunkId)
+	if foundInCache {
+		return patterns, nil
+	}
+
+	writeToCache := !foundInCache
+	writeToDisk := false
+
+	patterns, err := ps.getPatternsFromDisk(projectId, modelId, chunkId)
+	if err != nil {
+		if os.IsNotExist(err) {
+			writeToDisk = true
+			patterns, err = ps.getPatternsFromCloud(projectId, modelId, chunkId)
+			if err != nil {
+				return []*pattern.Pattern{}, err
+			}
+		} else {
+			return []*pattern.Pattern{}, err
+		}
+	}
+
+	// This can be done in a separate go routine
+	if writeToCache {
+		ps.putPatternsInCache(projectId, modelId, chunkId, patterns)
+	}
+
+	if writeToDisk {
+		err = ps.PutPatternsInDisk(projectId, modelId, chunkId, patterns)
+	}
+
+	return patterns, nil
+}
+
 func CreateReaderFromEventInfo(eventInfo pattern.UserAndEventsInfo) (*bytes.Reader, error) {
 	eventInfoBytes, err := json.Marshal(eventInfo)
 	if err != nil {
@@ -229,6 +361,22 @@ func CreatePatternEventInfoFromScanner(scanner *bufio.Scanner) (pattern.UserAndE
 	return patternEventInfo, err
 }
 
+func CreateReaderFromPatterns(patterns []*pattern.Pattern) (*bytes.Reader, error) {
+	buf := new(bytes.Buffer)
+	for _, pattern := range patterns {
+		b, err := json.Marshal(pattern)
+		if err != nil {
+			return nil, err
+		}
+		str := string(b)
+		_, err = buf.WriteString(fmt.Sprintf("%s\n", str))
+		if err != nil {
+			return nil, err
+		}
+	}
+	return bytes.NewReader(buf.Bytes()), nil
+}
+
 func CreatePatternsFromScanner(scanner *bufio.Scanner) ([]*pattern.Pattern, error) {
 	patterns := make([]*pattern.Pattern, 0, 0)
 	for scanner.Scan() {
@@ -244,8 +392,8 @@ func CreatePatternsFromScanner(scanner *bufio.Scanner) ([]*pattern.Pattern, erro
 	return patterns, err
 }
 
-func CreateScannerFromFile(file *os.File) *bufio.Scanner {
-	scanner := bufio.NewScanner(file)
+func CreateScannerFromReader(r io.Reader) *bufio.Scanner {
+	scanner := bufio.NewScanner(r)
 	// Adjust scanner buffer capacity to 10MB per line.
 	const maxCapacity = 10 * 1024 * 1024
 	buf := make([]byte, maxCapacity)
