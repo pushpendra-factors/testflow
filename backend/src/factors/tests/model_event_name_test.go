@@ -141,7 +141,7 @@ func TestDBGetEventNames(t *testing.T) {
 	assert.Len(t, events, 2)
 
 	resultEventNames := []string{events[0].Name, events[1].Name}
-	sort.Strings(createdEventsNames)
+	sort.Strings(resultEventNames)
 	assert.Equal(t, createdEventsNames, resultEventNames)
 }
 
@@ -428,6 +428,12 @@ func TestDBGetFilterEventNames(t *testing.T) {
 	assert.NotNil(t, eventNames)
 	assert.Equal(t, 1, len(eventNames))
 	assert.Equal(t, createdEN.ID, eventNames[0].ID)
+
+	// Should not return deleted.
+	_, errCode = M.DeleteFilterEventName(project.ID, createdEN.ID)
+	assert.Equal(t, http.StatusAccepted, errCode)
+	eventNames, errCode = M.GetFilterEventNames(project.ID)
+	assert.Equal(t, http.StatusNotFound, errCode)
 }
 
 func TestDBUpdateFilterEventName(t *testing.T) {
@@ -469,4 +475,30 @@ func TestDBUpdateFilterEventName(t *testing.T) {
 	eventName, errCode = M.UpdateFilterEventName(999999, createdEN.ID, &M.EventName{Name: U.RandomLowerAphaNumString(5)})
 	assert.Equal(t, http.StatusBadRequest, errCode)
 	assert.Nil(t, eventName)
+}
+
+func TestDBDeleteFilterEventName(t *testing.T) {
+	randomProjectName := U.RandomLowerAphaNumString(15)
+	project, errCode := M.CreateProjectWithDependencies(&M.Project{Name: randomProjectName})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotNil(t, project)
+
+	// Invalid event_name id.
+	eventName, errCode := M.DeleteFilterEventName(project.ID, 9999)
+	assert.Equal(t, http.StatusBadRequest, errCode)
+	assert.Nil(t, eventName)
+
+	expr := "a.com/u1/u2/u3"
+	name := "login"
+	createdEN, errCode := M.CreateOrGetFilterEventName(&M.EventName{
+		ProjectId:  project.ID,
+		FilterExpr: expr,
+		Name:       name,
+	})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotNil(t, createdEN)
+
+	eventName, errCode = M.DeleteFilterEventName(project.ID, createdEN.ID)
+	assert.Equal(t, http.StatusAccepted, errCode)
+	assert.NotNil(t, eventName)
 }

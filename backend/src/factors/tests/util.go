@@ -41,6 +41,14 @@ func ServeGetRequest(r *gin.Engine, uri string) *httptest.ResponseRecorder {
 	return w
 }
 
+func ServeDeleteRequest(r *gin.Engine, uri string) *httptest.ResponseRecorder {
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("DELETE", uri, bytes.NewBuffer([]byte{}))
+	req.Header.Set("Content-Type", "application/json") // Default header.
+	r.ServeHTTP(w, req)
+	return w
+}
+
 func setHeaders(req *http.Request, headers map[string]string) {
 	for k, v := range headers {
 		req.Header.Set(k, v)

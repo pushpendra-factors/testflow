@@ -1,7 +1,6 @@
 package model
 
 import (
-	"errors"
 	C "factors/config"
 	U "factors/util"
 	"fmt"
@@ -21,8 +20,10 @@ type EventName struct {
 	AutoName string `json:"auto_name"`
 	// Below are the foreign key constraints added in creation script.
 	// project_id -> projects(id)
-	ProjectId  uint64    `gorm:"primary_key:true;" json:"project_id"`
-	FilterExpr string    `json:"filter_expr"`
+	ProjectId uint64 `gorm:"primary_key:true;" json:"project_id"`
+	// if default is not set as NULL empty string will be installed.
+	FilterExpr string    `gorm:"type:varchar(500);default:null" json:"filter_expr"`
+	Deleted    bool      `gorm:"not null;default:false" json:"deleted"`
 	CreatedAt  time.Time `json:"created_at"`
 	UpdatedAt  time.Time `json:"updated_at"`
 }
@@ -41,13 +42,20 @@ const URI_PROPERTY_PREFIX = ":"
 
 var ALLOWED_AUTONAMES = [...]string{AN_USER_CREATED_EVENT_NAME, AN_AUTO_TRACKED_EVENT_NAME, AN_FILTER_EVENT_NAME}
 
+// error constants
+const error_DUPLICATE_FILTER_EXPR = "pq: duplicate key value violates unique constraint \"project_filter_expr_unique_idx\""
+
+func isDuplicateFilterExprError(err error) bool {
+	return err.Error() == error_DUPLICATE_FILTER_EXPR
+}
+
 func CreateOrGetEventName(eventName *EventName) (*EventName, int) {
 	db := C.GetServices().Db
 
 	// Validation.
 	if eventName.ProjectId == 0 ||
-		IsValidName(eventName.Name) != nil ||
-		isValidAutoName(eventName.AutoName) != nil {
+		!isValidName(eventName.Name) ||
+		!isValidAutoName(eventName.AutoName) {
 
 		return nil, http.StatusBadRequest
 	}
@@ -63,24 +71,32 @@ func CreateOrGetEventName(eventName *EventName) (*EventName, int) {
 		return eventName, http.StatusConflict
 	} else if err := db.Create(eventName).Error; err != nil {
 		log.WithFields(log.Fields{"eventName": &eventName, "error": err}).Error("CreateEventName Failed")
+		// Todo(Dinesh): should return validation errors along with status.
+		if isDuplicateFilterExprError(err) {
+			return nil, http.StatusBadRequest
+		}
 		return nil, http.StatusInternalServerError
 	}
+
 	return eventName, http.StatusCreated
 }
 
 // Todo(dinesh): Change it allow only types defined, on renaming autoname to type.
-func isValidAutoName(autoName string) error {
+func isValidAutoName(autoName string) bool {
 	// if having $ prefix allows only defined autonames.
 	if strings.HasPrefix(autoName, U.NAME_PREFIX) {
 		for _, allowedAutoName := range ALLOWED_AUTONAMES {
 			if autoName == allowedAutoName {
-				return nil
+				return true
 			}
 		}
-		return errors.New("invalid autoname")
+		return false
 	}
+	return true
+}
 
-	return nil
+func isValidName(name string) bool {
+	return name != "" && !strings.HasPrefix(name, U.NAME_PREFIX)
 }
 
 func GetEventName(name string, projectId uint64) (*EventName, int) {
@@ -146,7 +162,7 @@ func GetFilterEventNames(projectId uint64) ([]EventName, int) {
 	db := C.GetServices().Db
 
 	var eventNames []EventName
-	if err := db.Where("project_id = ? AND auto_name = ?",
+	if err := db.Where("project_id = ? AND auto_name = ? AND deleted = 'false'",
 		projectId, AN_FILTER_EVENT_NAME).Find(&eventNames).Error; err != nil {
 		log.WithFields(log.Fields{"error": err, "project_id": projectId}).Error("Failed getting filter_event_names")
 
@@ -164,7 +180,7 @@ func GetEventNamesByFilterExprPrefix(projectId uint64, prefix string) ([]EventNa
 	db := C.GetServices().Db
 
 	var eventNames []EventName
-	if err := db.Where("project_id = ? AND filter_expr LIKE ?",
+	if err := db.Where("project_id = ? AND filter_expr LIKE ? AND deleted = 'false'",
 		projectId, fmt.Sprintf("%s%%", prefix)).Find(&eventNames).Error; err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound
@@ -181,39 +197,75 @@ func GetEventNamesByFilterExprPrefix(projectId uint64, prefix string) ([]EventNa
 	return eventNames, http.StatusFound
 }
 
-func UpdateEventName(projectId uint64, id uint64, en *EventName) (*EventName, int) {
+func UpdateEventName(projectId uint64, id uint64,
+	nameType string, eventName *EventName) (*EventName, int) {
 	db := C.GetServices().Db
 
 	// Validation
 	if projectId == 0 ||
-		en.ProjectId != 0 ||
-		IsValidName(en.Name) != nil {
+		eventName.ProjectId != 0 ||
+		nameType == "" ||
+		!isValidName(eventName.Name) {
 		return nil, http.StatusBadRequest
 	}
 
 	var updatedEventName EventName
-	updateAllowedFields := map[string]interface{}{"name": en.Name}
+	updateFields := map[string]interface{}{}
+	updateFields["name"] = eventName.Name
 
-	exec := db.Model(&updatedEventName).Where("project_id = ? AND id = ?",
-		projectId, id).Updates(updateAllowedFields)
+	query := db.Model(&updatedEventName).Where(
+		"project_id = ? AND id = ? AND auto_name = ?",
+		projectId, id, nameType).Updates(updateFields)
 
-	if err := exec.Error; err != nil {
-		log.WithFields(log.Fields{"event_name": en, "error": err,
-			"update_fields": updateAllowedFields}).Error("Failed updating filter.")
+	if err := query.Error; err != nil {
+		log.WithFields(log.Fields{"event_name": eventName,
+			"error": err, "update_fields": updateFields,
+		}).Error("Failed updating filter.")
 
 		return nil, http.StatusInternalServerError
 	}
 
-	if exec.RowsAffected == 0 {
+	if query.RowsAffected == 0 {
 		return nil, http.StatusBadRequest
 	}
 
 	return &updatedEventName, http.StatusAccepted
 }
 
-func UpdateFilterEventName(projectId uint64, id uint64, en *EventName) (*EventName, int) {
-	en.AutoName = AN_FILTER_EVENT_NAME
-	return UpdateEventName(projectId, id, en)
+func UpdateFilterEventName(projectId uint64, id uint64, eventName *EventName) (*EventName, int) {
+	return UpdateEventName(projectId, id, AN_FILTER_EVENT_NAME, eventName)
+}
+
+func DeleteEventName(projectId uint64, id uint64,
+	nameType string) (*EventName, int) {
+	db := C.GetServices().Db
+
+	// Validation
+	if projectId == 0 {
+		return nil, http.StatusBadRequest
+	}
+
+	var updatedEventName EventName
+	updateFields := map[string]interface{}{"deleted": true}
+
+	query := db.Model(&updatedEventName).Where("project_id = ? AND id = ? AND auto_name = ?",
+		projectId, id, nameType).Updates(updateFields)
+
+	if err := query.Error; err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("Failed deleting filter.")
+
+		return nil, http.StatusInternalServerError
+	}
+
+	if query.RowsAffected == 0 {
+		return nil, http.StatusBadRequest
+	}
+
+	return &updatedEventName, http.StatusAccepted
+}
+
+func DeleteFilterEventName(projectId uint64, id uint64) (*EventName, int) {
+	return DeleteEventName(projectId, id, AN_FILTER_EVENT_NAME)
 }
 
 // Returns sanitized filter expression and valid or not bool.

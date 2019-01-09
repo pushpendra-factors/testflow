@@ -194,6 +194,25 @@ func TestSDKTrack(t *testing.T) {
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, eventName)
 	assert.Equal(t, M.AN_AUTO_TRACKED_EVENT_NAME, eventName.AutoName)
+
+	// Test filter_event_name miss after filter deleted by user.
+	_, errCode = M.DeleteFilterEventName(project.ID, filterEventName.ID)
+	assert.Equal(t, http.StatusAccepted, errCode)
+	rEventName = "a.com/u1/u2/i1"
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "%s", "auto": true, "event_properties": {"mobile": "true"}, "user_properties": {"$os": "mac osx", "$osVersion": "1_2_3"}}`,
+		user.ID, rEventName)), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	responseMap = DecodeJSONResponseToMap(w.Body)
+	assert.NotEmpty(t, responseMap)
+	assert.Nil(t, responseMap["user_id"])
+	rEvent, errCode = M.GetEvent(project.ID, user.ID, responseMap["event_id"].(string))
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotNil(t, rEvent)
+	eventName, errCode = M.GetEventName(rEventName, project.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotNil(t, eventName)
+	assert.NotEqual(t, filterEventName.ID, eventName.ID)              // should not use deleted filter.
+	assert.Equal(t, M.AN_AUTO_TRACKED_EVENT_NAME, eventName.AutoName) // should create auto created event.
 }
 
 func TestSDKIdentify(t *testing.T) {

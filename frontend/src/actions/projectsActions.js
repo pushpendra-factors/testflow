@@ -156,3 +156,93 @@ export function fetchProjectUserPropertyValues(projectId, propertyName) {
       })
   }
 }
+
+export function fetchFilters(projectId) {
+  return function(dispatch) {
+    // New promise created to handle use catch on
+    // fetch call from component.
+    return new Promise((resolve, reject) => {
+      axios.get(appConfig.API_PATH + "projects/" + projectId +"/filters")
+        .then((response) => {
+          dispatch({
+            type: "FETCH_FILTERS_FULFILLED",
+            payload: response.data
+          });
+          resolve(response.data);
+        })
+        .catch((err) => {
+          dispatch({
+            type: "FETCH_FILTERS_REJECTED",
+            error: err
+          })
+          reject(err);
+        });
+    })
+  }
+}
+
+export function createFilter(projectId, payload) {
+  return function(dispatch) {
+    return new Promise((resolve, reject) => {
+      axios.post(appConfig.API_PATH + "projects/" + projectId +"/filters", payload)
+        .then((r) => {
+          dispatch({
+            type: "CREATE_FILTER_FULFILLED",
+            payload: r.data
+          });
+          resolve(r.data);
+        })
+        .catch((r) => {
+          dispatch({
+            type: "CREATE_FILTER_REJECTED",
+            error: r
+          })
+          reject({body: r.data, status: r.status});
+        });
+    })
+  }
+}
+
+export function updateFilter(projectId, filterId, payload, storeIndex) {
+  return function(dispatch) {
+    return new Promise((resolve, reject) => {
+      axios.put(appConfig.API_PATH + "projects/" + projectId +"/filters/"+filterId, payload)
+        .then((r) => {
+          dispatch({
+            type: "UPDATE_FILTER_FULFILLED",
+            payload: {data: r.data, storeIndex: storeIndex}
+          });
+          resolve(r.data);
+        })
+        .catch((r) => {
+          dispatch({
+            type: "UPDATE_FILTER_REJECTED",
+            error: r
+          })
+          reject({body: r.data, status: r.status});
+        });
+    })
+  }
+}
+
+export function deleteFilter(projectId, filterId, storeIndex) {
+  return function(dispatch) {
+    return new Promise((resolve, reject) => {
+      axios.delete(appConfig.API_PATH + "projects/" + projectId +"/filters/"+filterId)
+        .then((r) => {
+          dispatch({
+            type: "DELETE_FILTER_FULFILLED",
+            payload: storeIndex
+          });
+          resolve(r.data);
+        })
+        .catch((r) => {
+          dispatch({
+            type: "DELETE_FILTER_REJECTED",
+            error: r
+          });
+          reject({body: r.data, status: r.status});
+        });
+    })
+  }
+}

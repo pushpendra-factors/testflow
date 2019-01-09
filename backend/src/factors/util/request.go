@@ -28,6 +28,15 @@ func GetScopeByKey(c *gin.Context, key string) interface{} {
 	return nil
 }
 
+// GetScopeByKeyAsUint64 gets scope by key and value of type uint64.
+func GetScopeByKeyAsUint64(c *gin.Context, key string) uint64 {
+	intrfce := GetScopeByKey(c, key)
+	if intrfce == nil {
+		return 0
+	}
+	return intrfce.(uint64)
+}
+
 // GetRequestSubdomain returns sample on sample.factors.ai
 func GetRequestSubdomain(host string) (string, error) {
 	splitHost := strings.Split(host, ".")

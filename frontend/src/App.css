@@ -309,3 +309,27 @@ body {
     color: #2f353a;
     font-size: 15px;
 }
+
+.fapp-filter-button {
+    background: transparent !important;
+    border: none !important;
+    padding: 5px !important;
+}
+
+.fapp-filter-button i {
+    font-size: 20px
+}
+
+.fapp-error {
+    color: red; 
+    text-align: center; 
+}
+
+.fapp-card-subtitle {
+    color: grey;
+    font-weight: 500;
+}
+
+.fapp-input-disabled {
+    background: #F8F8F8
+}

@@ -54,6 +54,13 @@ func TestAPICreateFilterHandler(t *testing.T) {
 	assert.NotNil(t, jsonResponseMap1["expr"])
 	assert.Equal(t, expr, jsonResponseMap1["expr"])
 
+	// invalid name
+	name = "u1_v2"
+	expr = "a.com/u1/:v2"
+	reqPayload = fmt.Sprintf(`{"name": "", "expr": "%s"}`, expr)
+	w1 = ServePostRequest(r, filterURL, []byte(reqPayload))
+	assert.Equal(t, http.StatusBadRequest, w1.Code)
+
 	// Bad request.
 	name = ""
 	expr = ""
@@ -87,7 +94,7 @@ func TestAPICreateFilterHandler(t *testing.T) {
 
 	name = "u1_u2"
 	// user copied the url and pasted as expression.
-	expr = "https://a.com/u1/u2?q=search_string"
+	expr = "https://a.com/u1/u5?q=search_string"
 	reqPayload = fmt.Sprintf(`{"name": "%s", "expr": "%s"}`, name, expr)
 	w5 := ServePostRequest(r, filterURL, []byte(reqPayload))
 	assert.Equal(t, http.StatusCreated, w5.Code)
@@ -100,7 +107,7 @@ func TestAPICreateFilterHandler(t *testing.T) {
 	assert.Equal(t, "u1_u2", jsonResponseMap5["name"])
 	assert.NotNil(t, jsonResponseMap5["expr"])
 	// sanitized expr from user given url.
-	assert.Equal(t, "a.com/u1/u2", jsonResponseMap5["expr"])
+	assert.Equal(t, "a.com/u1/u5", jsonResponseMap5["expr"])
 }
 
 func TestAPIGetFiltersHandler(t *testing.T) {
@@ -163,6 +170,11 @@ func TestAPIUpdateFilterHandler(t *testing.T) {
 	assert.Equal(t, name, jsonResponseMap["name"])
 	assert.Nil(t, jsonResponseMap["expr"]) // omit empty.
 
+	// Empty name update.
+	reqPayload = fmt.Sprintf(`{"name": ""}`)
+	w = ServePutRequest(r, filterURL, []byte(reqPayload))
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
 	// Try updating expr.
 	expr := "a.com/u1/u3"
 	reqPayload = fmt.Sprintf(`{"expr": "%s"}`, expr)
@@ -173,7 +185,6 @@ func TestAPIUpdateFilterHandler(t *testing.T) {
 	json.Unmarshal(jsonResponse1, &jsonResponseMap1)
 	assert.NotNil(t, jsonResponseMap1["error"])
 
-	// Test get project settings.
 	name = "$new_name"
 	reqPayload = fmt.Sprintf(`{"name": "%s"}`, name)
 	w2 := ServePutRequest(r, filterURL, []byte(reqPayload))
@@ -182,4 +193,35 @@ func TestAPIUpdateFilterHandler(t *testing.T) {
 	var jsonResponseMap2 map[string]interface{}
 	json.Unmarshal(jsonResponse2, &jsonResponseMap2)
 	assert.NotNil(t, jsonResponseMap2["error"])
+}
+
+func TestAPIDeleteFilterHandler(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+
+	// Invalid filter.
+	invalidFilterURL := fmt.Sprintf("/projects/%d/filters/%d", project.ID, 99999)
+	w := ServeDeleteRequest(r, invalidFilterURL)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	jsonResponse, _ := ioutil.ReadAll(w.Body)
+	var jsonResponseMap map[string]interface{}
+	json.Unmarshal(jsonResponse, &jsonResponseMap)
+	assert.NotNil(t, jsonResponseMap["error"])
+
+	// Valid filter.
+	filter, _ := M.CreateOrGetFilterEventName(&M.EventName{ProjectId: project.ID, Name: "u1_u2", FilterExpr: "a.com/u1/:u2"})
+	assert.NotNil(t, filter)
+
+	filterURL := fmt.Sprintf("/projects/%d/filters/%d", project.ID, filter.ID)
+	w1 := ServeDeleteRequest(r, filterURL)
+	assert.Equal(t, http.StatusAccepted, w1.Code)
+	jsonResponse1, _ := ioutil.ReadAll(w1.Body)
+	var jsonResponseMap1 map[string]interface{}
+	json.Unmarshal(jsonResponse1, &jsonResponseMap1)
+	assert.NotNil(t, jsonResponseMap1["project_id"])
+	assert.NotNil(t, jsonResponseMap1["id"])
 }

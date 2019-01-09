@@ -49,6 +49,7 @@ func SetScopeProjectIdByToken() gin.HandlerFunc {
 func CustomCors() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		corsConfig := cors.DefaultConfig()
+		corsConfig.AllowMethods = []string{"GET", "POST", "PUT", "HEAD", "DELETE"}
 
 		if strings.HasPrefix(c.Request.URL.Path, PREFIX_PATH_SDK) {
 			log.Info(c.Request.URL.Path)

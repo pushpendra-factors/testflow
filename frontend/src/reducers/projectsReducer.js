@@ -7,6 +7,8 @@ export default function reducer(state={
     fetchingProjects: false,
     fetchedProjects: false,
     projectsError: null,
+    filters: [],
+    filtersError: null
   }, action) {
 
     switch (action.type) {
@@ -128,6 +130,56 @@ export default function reducer(state={
       case "FETCH_CURRENT_PROJECT_USER_PROPERTY_VALUES_REJECTED": {
         return {...state,
                 userPropertyValuesError: action.payload.err}
+      }
+      case "FETCH_FILTERS_FULFILLED": {
+        return {
+          ...state,
+          filters:  Array.from(action.payload)
+        }
+      }
+      case "FETCH_FILTERS_REJECTED": {
+        return { 
+          ...state,
+          filtersError: {
+            error: action.error
+          }
+        }
+      }
+      case "CREATE_FILTER_FULFILLED": {
+        let _state = { ...state }
+        // Note: state clone uses same ref of pref filters,
+        // which won't trigger render.
+        _state.filters = [...state.filters];
+        _state.filters.push(action.payload);
+        return _state
+      }
+      case "CREATE_FILTER_REJECTED": {
+        // no redux state change.
+        return state
+      }
+      case "UPDATE_FILTER_FULFILLED": {
+        let _state = { ...state }
+        _state.filters = [...state.filters];
+        _state.filters[action.payload.storeIndex] = { 
+          ..._state.filters[action.payload.storeIndex],
+          ...action.payload.data,
+        };
+        return _state
+      }
+      case "UPDATE_FILTER_REJECTED": {
+        // no redux state change.
+        return state
+      }
+      case "DELETE_FILTER_FULFILLED": {
+        let _state = { ...state };
+        _state.filters = [...state.filters];
+        // payload is the index ref to be deleted.
+        _state.filters.splice(action.payload, 1);
+        return _state
+      }
+      case "DELETE_FILTER_REJECTED": {
+        // no redux state change.
+        return state
       }
     }
     return state

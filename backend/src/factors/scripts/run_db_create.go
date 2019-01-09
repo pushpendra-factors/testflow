@@ -99,6 +99,12 @@ func main() {
 		log.Info("event_names table is associated with projects table.")
 	}
 
+	if err := db.Exec("CREATE UNIQUE INDEX project_filter_expr_unique_idx ON event_names (project_id, filter_expr);").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("event_names project filter_expr unique index creation failed.")
+	} else {
+		log.Info("Created project filter_expr unique index created.")
+	}
+
 	// Create events table.
 	if err := db.CreateTable(&M.Event{}).Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("events table creation failed.")
