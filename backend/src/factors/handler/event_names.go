@@ -39,8 +39,16 @@ func GetEventPropertiesHandler(c *gin.Context) {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
+	modelId := uint64(0)
 
-	modelId, _ := strconv.ParseUint(c.Query("model_id"), 10, 64)
+	modelIdParam := c.Query("model_id")
+	if modelIdParam != "" {
+		modelId, err = strconv.ParseUint(modelIdParam, 10, 64)
+		if err != nil {
+			c.AbortWithStatus(http.StatusBadRequest)
+			return
+		}
+	}
 
 	eventName := c.Params.ByName("event_name")
 	if eventName == "" {
@@ -68,7 +76,16 @@ func GetEventPropertyValuesHandler(c *gin.Context) {
 		return
 	}
 
-	modelId, _ := strconv.ParseUint(c.Query("model_id"), 10, 64)
+	modelId := uint64(0)
+
+	modelIdParam := c.Query("model_id")
+	if modelIdParam != "" {
+		modelId, err = strconv.ParseUint(modelIdParam, 10, 64)
+		if err != nil {
+			c.AbortWithStatus(http.StatusBadRequest)
+			return
+		}
+	}
 
 	eventName := c.Params.ByName("event_name")
 	if eventName == "" {

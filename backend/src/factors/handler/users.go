@@ -89,7 +89,16 @@ func GetUserPropertiesHandler(c *gin.Context) {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-	modelId, _ := strconv.ParseUint(c.Query("model_id"), 10, 64)
+	modelId := uint64(0)
+
+	modelIdParam := c.Query("model_id")
+	if modelIdParam != "" {
+		modelId, err = strconv.ParseUint(modelIdParam, 10, 64)
+		if err != nil {
+			c.AbortWithStatus(http.StatusBadRequest)
+			return
+		}
+	}
 
 	properties, err := crpc.GetSeenUserProperties(projectID, modelId)
 	if err != nil {
@@ -109,7 +118,16 @@ func GetUserPropertyValuesHandler(c *gin.Context) {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-	modelId, _ := strconv.ParseUint(c.Query("model_id"), 10, 64)
+	modelId := uint64(0)
+
+	modelIdParam := c.Query("model_id")
+	if modelIdParam != "" {
+		modelId, err = strconv.ParseUint(modelIdParam, 10, 64)
+		if err != nil {
+			c.AbortWithStatus(http.StatusBadRequest)
+			return
+		}
+	}
 
 	propertyName := c.Params.ByName("property_name")
 	if propertyName == "" {

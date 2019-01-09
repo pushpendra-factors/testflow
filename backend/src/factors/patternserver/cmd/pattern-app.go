@@ -396,11 +396,7 @@ func keepEtcdLeaseAlive(ps *patternserver.PatternServer) {
 		log.WithError(err).Errorln("Error ETCD Keep Alive")
 	}
 	for {
-		ls := <-keepAliveChannel
-		log.WithFields(log.Fields{
-			"TTL":     ls.TTL,
-			"LeaseId": ps.GetLeaseId(),
-		}).Debugln("Success ETCD Keep Alive")
+		<-keepAliveChannel
 	}
 }
 
