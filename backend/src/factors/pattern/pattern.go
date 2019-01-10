@@ -112,45 +112,53 @@ func NewPattern(events []string, userAndEventsInfo *UserAndEventsInfo) (*Pattern
 		return nil, err
 	}
 	// Setup Histograms.
-	nDimensions := len(*userPropertiesNTemplate)
-	nBinsFloat := math.Min(float64(nDimensions*num_NUMERIC_BINS_PER_DIMENSION),
-		float64(num_MAX_NUMERIC_MULTI_BINS))
-	nBins := int(math.Max(1.0, nBinsFloat))
-	nHist, err := Hist.NewNumericHistogram(nBins, nDimensions, userPropertiesNTemplate)
-	if err != nil {
-		return nil, err
+	if userPropertiesNTemplate != nil {
+		nDimensions := len(*userPropertiesNTemplate)
+		nBinsFloat := math.Min(float64(nDimensions*num_NUMERIC_BINS_PER_DIMENSION),
+			float64(num_MAX_NUMERIC_MULTI_BINS))
+		nBins := int(math.Max(1.0, nBinsFloat))
+		nHist, err := Hist.NewNumericHistogram(nBins, nDimensions, userPropertiesNTemplate)
+		if err != nil {
+			return nil, err
+		}
+		pattern.UserNumericProperties = nHist
 	}
-	pattern.UserNumericProperties = nHist
 
-	cDimensions := len(*userPropertiesCTemplate)
-	cBinsFloat := math.Min(float64(cDimensions*num_CATEGORICAL_BINS_PER_DIMENSION),
-		float64(num_MAX_CATEGORICAL_MULTI_BINS))
-	cBins := int(math.Max(1.0, cBinsFloat))
-	cHist, err := Hist.NewCategoricalHistogram(cBins, cDimensions, userPropertiesCTemplate)
-	if err != nil {
-		return nil, err
+	if userPropertiesCTemplate != nil {
+		cDimensions := len(*userPropertiesCTemplate)
+		cBinsFloat := math.Min(float64(cDimensions*num_CATEGORICAL_BINS_PER_DIMENSION),
+			float64(num_MAX_CATEGORICAL_MULTI_BINS))
+		cBins := int(math.Max(1.0, cBinsFloat))
+		cHist, err := Hist.NewCategoricalHistogram(cBins, cDimensions, userPropertiesCTemplate)
+		if err != nil {
+			return nil, err
+		}
+		pattern.UserCategoricalProperties = cHist
 	}
-	pattern.UserCategoricalProperties = cHist
 
-	nDimensions = len(*eventPropertiesNTemplate)
-	nBinsFloat = math.Min(float64(nDimensions*num_NUMERIC_BINS_PER_DIMENSION),
-		float64(num_MAX_NUMERIC_MULTI_BINS))
-	nBins = int(math.Max(1.0, nBinsFloat))
-	nHist, err = Hist.NewNumericHistogram(nBins, nDimensions, eventPropertiesNTemplate)
-	if err != nil {
-		return nil, err
+	if eventPropertiesNTemplate != nil {
+		nDimensions := len(*eventPropertiesNTemplate)
+		nBinsFloat := math.Min(float64(nDimensions*num_NUMERIC_BINS_PER_DIMENSION),
+			float64(num_MAX_NUMERIC_MULTI_BINS))
+		nBins := int(math.Max(1.0, nBinsFloat))
+		nHist, err := Hist.NewNumericHistogram(nBins, nDimensions, eventPropertiesNTemplate)
+		if err != nil {
+			return nil, err
+		}
+		pattern.EventNumericProperties = nHist
 	}
-	pattern.EventNumericProperties = nHist
 
-	cDimensions = len(*eventPropertiesCTemplate)
-	cBinsFloat = math.Min(float64(cDimensions*num_CATEGORICAL_BINS_PER_DIMENSION),
-		float64(num_MAX_CATEGORICAL_MULTI_BINS))
-	cBins = int(math.Max(1.0, cBinsFloat))
-	cHist, err = Hist.NewCategoricalHistogram(cBins, cDimensions, eventPropertiesCTemplate)
-	if err != nil {
-		return nil, err
+	if eventPropertiesCTemplate != nil {
+		cDimensions := len(*eventPropertiesCTemplate)
+		cBinsFloat := math.Min(float64(cDimensions*num_CATEGORICAL_BINS_PER_DIMENSION),
+			float64(num_MAX_CATEGORICAL_MULTI_BINS))
+		cBins := int(math.Max(1.0, cBinsFloat))
+		cHist, err := Hist.NewCategoricalHistogram(cBins, cDimensions, eventPropertiesCTemplate)
+		if err != nil {
+			return nil, err
+		}
+		pattern.EventCategoricalProperties = cHist
 	}
-	pattern.EventCategoricalProperties = cHist
 	return &pattern, nil
 }
 
@@ -227,8 +235,10 @@ func buildPropertiesHistogramTemplates(
 					eventPropertiesCTemplate = append(eventPropertiesCTemplate, cptu)
 				}
 			} else {
-				return nil, nil, nil, nil, fmt.Errorf(fmt.Sprintf(
-					"Missing info for event %s", events[i]))
+				log.Error(fmt.Sprintf(
+					"Missing info for event %s in pattern %s. Not building event histogram templates.",
+					events[i], events))
+				return &userPropertiesNTemplate, &userPropertiesCTemplate, nil, nil, nil
 			}
 		}
 	}
@@ -528,6 +538,12 @@ func (p *Pattern) GetEventPropertyRanges(
 	eventIndex int, propertyName string) [][2]float64 {
 	// Return the ranges of the bin [min, max], in which the numeric values for the event property occurr.
 	return p.EventNumericProperties.GetBinRanges(PatternPropertyKey(eventIndex, propertyName))
+}
+
+func (p *Pattern) GetUserPropertyRanges(
+	eventIndex int, propertyName string) [][2]float64 {
+	// Return the ranges of the bin [min, max], in which the numeric values for the event property occurr.
+	return p.UserNumericProperties.GetBinRanges(PatternPropertyKey(eventIndex, propertyName))
 }
 
 func (p *Pattern) String() string {

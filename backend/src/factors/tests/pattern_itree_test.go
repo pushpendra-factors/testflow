@@ -2,6 +2,7 @@ package tests
 
 import (
 	P "factors/pattern"
+	U "factors/util"
 	"fmt"
 	"testing"
 
@@ -29,6 +30,7 @@ func TestBuildNewItree(t *testing.T) {
 	// Patterns with zero counts are not listed.
 	// Pattern, PerUserCount, Count
 	tpis := []testPatternInfo{
+		testPatternInfo{eventNames: []string{U.SEN_ALL_ACTIVE_USERS}, perUserCount: 10, count: 10},
 		testPatternInfo{eventNames: []string{"A"}, perUserCount: 9, count: 14},
 		testPatternInfo{eventNames: []string{"B"}, perUserCount: 9, count: 10},
 		testPatternInfo{eventNames: []string{"C"}, perUserCount: 9, count: 12},

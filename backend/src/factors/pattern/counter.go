@@ -209,6 +209,46 @@ func CollectPropertiesInfo(scanner *bufio.Scanner, userAndEventsInfo *UserAndEve
 	return nil
 }
 
+func ComputeAllUserPropertiesHistogram(scanner *bufio.Scanner, pattern *Pattern) error {
+	var seenUsers map[string]bool = make(map[string]bool)
+	numEventsProcessed := 0
+	for scanner.Scan() {
+		line := scanner.Text()
+		var eventDetails CounterEventFormat
+		if err := json.Unmarshal([]byte(line), &eventDetails); err != nil {
+			log.WithFields(log.Fields{"line": line, "err": err}).Fatal("Read failed.")
+			return err
+		}
+		userId := eventDetails.UserId
+		userProperties := eventDetails.UserProperties
+
+		numEventsProcessed += 1
+		if math.Mod(float64(numEventsProcessed), 1000.0) == 0.0 {
+			log.Info(fmt.Sprintf("ComputeAllUserPropertiesHistogram. Processed %d events", numEventsProcessed))
+		}
+
+		_, isSeenUser := seenUsers[userId]
+		if !isSeenUser {
+			nMap := make(map[string]float64)
+			cMap := make(map[string]string)
+			// Histogram of all user properties as seen in their first event is tracked.
+			addNumericAndCategoricalProperties(0, userProperties, nMap, cMap)
+			if err := pattern.UserNumericProperties.AddMap(nMap); err != nil {
+				return err
+			}
+			if err := pattern.UserCategoricalProperties.AddMap(cMap); err != nil {
+				return err
+			}
+		}
+		seenUsers[userId] = true
+	}
+	count := uint(pattern.UserCategoricalProperties.Count())
+	pattern.UserCount = count
+	pattern.OncePerUserCount = count
+	pattern.Count = count
+	return nil
+}
+
 func CountPatterns(scanner *bufio.Scanner, patterns []*Pattern) error {
 	var seenUsers map[string]bool = make(map[string]bool)
 

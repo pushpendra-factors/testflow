@@ -2,8 +2,10 @@
 package pattern
 
 import (
+	U "factors/util"
 	"fmt"
 	"math"
+	"reflect"
 	"sort"
 
 	log "github.com/sirupsen/logrus"
@@ -30,10 +32,12 @@ type result struct {
 type PatternServiceResults []*result
 
 type funnelNodeResult struct {
-	Data              []float64 `json:"data"`
-	Event             string    `json:"event"`
-	NodeType          string    `json:"node_type"`
-	ConversionPercent float64   `json:"conversion_percent"`
+	Data              []float64         `json:"data"`
+	Event             string            `json:"event"`
+	EventName         string            `json:"-"`
+	Constraints       *EventConstraints `json:"-"`
+	NodeType          string            `json:"node_type"`
+	ConversionPercent float64           `json:"conversion_percent"`
 }
 type funnelNodeResults []funnelNodeResult
 type graphResult struct {
@@ -75,59 +79,77 @@ func (pw *PatternWrapper) GetPattern(eventNames []string) (*Pattern, bool) {
 	return p, ok
 }
 
+func numericConstraintString(nC NumericConstraint) string {
+	constraintStr := ""
+	hasLowerBound := nC.LowerBound > -math.MaxFloat64 && nC.LowerBound < math.MaxFloat64
+	hasUpperBound := nC.UpperBound > -math.MaxFloat64 && nC.UpperBound < math.MaxFloat64
+	lowerBoundStr := ""
+	if hasLowerBound {
+		if nC.LowerBound == float64(int64(nC.LowerBound)) {
+			lowerBoundStr = fmt.Sprintf("%d", int(nC.LowerBound))
+		} else {
+			lowerBoundStr = fmt.Sprintf("%.2f", nC.LowerBound)
+		}
+	}
+	upperBoundStr := ""
+	if hasUpperBound {
+		if nC.UpperBound == float64(int64(nC.UpperBound)) {
+			upperBoundStr = fmt.Sprintf("%d", int(nC.UpperBound))
+		} else {
+			upperBoundStr = fmt.Sprintf("%.2f", nC.UpperBound)
+		}
+	}
+	midStr := ""
+	if hasUpperBound && hasLowerBound {
+		midNum := (nC.LowerBound + nC.UpperBound) / 2.0
+		if midNum == float64(int64(midNum)) {
+			midStr = fmt.Sprintf("%d", int(midNum))
+		} else {
+			midStr = fmt.Sprintf("%.2f", midNum)
+		}
+	}
+	if hasLowerBound || hasUpperBound {
+		constraintStr += " ("
+		if hasLowerBound && hasUpperBound {
+			if nC.IsEquality {
+				constraintStr += fmt.Sprintf("%s = %s",
+					nC.PropertyName, midStr)
+			} else {
+				constraintStr += fmt.Sprintf("%s < %s < %s",
+					lowerBoundStr, nC.PropertyName, upperBoundStr)
+			}
+		} else if hasLowerBound {
+			constraintStr += fmt.Sprintf("%s > %s", nC.PropertyName, lowerBoundStr)
+		} else if hasUpperBound {
+			constraintStr += fmt.Sprintf("%s < %s", nC.PropertyName, upperBoundStr)
+		}
+		constraintStr += ")"
+	}
+	return constraintStr
+}
+
 func eventStringWithConditions(eventName string, eventConstraints *EventConstraints) string {
 	var eventString string = eventName
 	if eventConstraints != nil {
-		for _, c := range eventConstraints.EPNumericConstraints {
+		for _, nC := range eventConstraints.EPNumericConstraints {
+			if nC.PropertyName == "" {
+				continue
+			}
+			eventString += numericConstraintString(nC)
+		}
+		for _, c := range eventConstraints.EPCategoricalConstraints {
 			if c.PropertyName == "" {
 				continue
 			}
-			hasLowerBound := c.LowerBound > -math.MaxFloat64 && c.LowerBound < math.MaxFloat64
-			hasUpperBound := c.UpperBound > -math.MaxFloat64 && c.UpperBound < math.MaxFloat64
-			lowerBoundStr := ""
-			if hasLowerBound {
-				if c.LowerBound == float64(int64(c.LowerBound)) {
-					lowerBoundStr = fmt.Sprintf("%d", int(c.LowerBound))
-				} else {
-					lowerBoundStr = fmt.Sprintf("%.2f", c.LowerBound)
-				}
-			}
-			upperBoundStr := ""
-			if hasUpperBound {
-				if c.UpperBound == float64(int64(c.UpperBound)) {
-					upperBoundStr = fmt.Sprintf("%d", int(c.UpperBound))
-				} else {
-					upperBoundStr = fmt.Sprintf("%.2f", c.UpperBound)
-				}
-			}
-			midStr := ""
-			if hasUpperBound && hasLowerBound {
-				midNum := (c.LowerBound + c.UpperBound) / 2.0
-				if midNum == float64(int64(midNum)) {
-					midStr = fmt.Sprintf("%d", int(midNum))
-				} else {
-					midStr = fmt.Sprintf("%.2f", midNum)
-				}
-			}
-			if hasLowerBound || hasUpperBound {
-				eventString += " ("
-				if hasLowerBound && hasUpperBound {
-					if c.IsEquality {
-						eventString += fmt.Sprintf("%s = %s",
-							c.PropertyName, midStr)
-					} else {
-						eventString += fmt.Sprintf("%s < %s < %s",
-							lowerBoundStr, c.PropertyName, upperBoundStr)
-					}
-				} else if hasLowerBound {
-					eventString += fmt.Sprintf("%s > %s", c.PropertyName, lowerBoundStr)
-				} else if hasUpperBound {
-					eventString += fmt.Sprintf("%s < %s", c.PropertyName, upperBoundStr)
-				}
-				eventString += ")"
-			}
+			eventString += fmt.Sprintf(" (%s is %s)", c.PropertyName, c.PropertyValue)
 		}
-		for _, c := range eventConstraints.EPCategoricalConstraints {
+		for _, nC := range eventConstraints.UPNumericConstraints {
+			if nC.PropertyName == "" {
+				continue
+			}
+			eventString += numericConstraintString(nC)
+		}
+		for _, c := range eventConstraints.UPCategoricalConstraints {
 			if c.PropertyName == "" {
 				continue
 			}
@@ -137,27 +159,25 @@ func eventStringWithConditions(eventName string, eventConstraints *EventConstrai
 	return eventString
 }
 
-func headerString(funnelEvents []string,
-	patternConstraints []EventConstraints, nodeType int,
+func headerString(funnelData funnelNodeResults, nodeType int,
 	funnelConversionPercent float64, baseFunnelConversionPercent float64) string {
 	var header string
-	pLen := len(funnelEvents)
+	pLen := len(funnelData)
 	if pLen < 2 {
-		log.Error(fmt.Sprintf("Unexpected funnel. %s", funnelEvents))
+		log.Error(fmt.Sprintf("Unexpected! Funnel: %s ", funnelData))
 		return header
 	}
-	if patternConstraints == nil {
-		patternConstraints = make([]EventConstraints, len(funnelEvents))
-	}
 	var impactString string
+	// Impact event.
 	if nodeType == NODE_TYPE_SEQUENCE {
-		impactString = funnelEvents[pLen-2]
-	} else if nodeType == NODE_TYPE_PROPERTY {
-		impactString = fmt.Sprintf("%s with %s", funnelEvents[pLen-2],
-			eventStringWithConditions("", &patternConstraints[pLen-2]))
+		impactString = funnelData[pLen-2].EventName
+	} else if nodeType == NODE_TYPE_EVENT_PROPERTY || nodeType == NODE_TYPE_USER_PROPERTY {
+		impactString = fmt.Sprintf("%s with %s", funnelData[pLen-2].EventName,
+			eventStringWithConditions("", funnelData[pLen-2].Constraints))
 	}
 
-	endEventString := eventStringWithConditions(funnelEvents[pLen-1], &patternConstraints[pLen-1])
+	endEventString := eventStringWithConditions(
+		funnelData[pLen-1].EventName, funnelData[pLen-1].Constraints)
 
 	otherEventString := ""
 	for i := 0; i < pLen-2; i++ {
@@ -165,7 +185,7 @@ func headerString(funnelEvents []string,
 			otherEventString += "after"
 		}
 		otherEventString += fmt.Sprintf(" %s",
-			eventStringWithConditions(funnelEvents[i], &patternConstraints[i]))
+			eventStringWithConditions(funnelData[i].EventName, funnelData[i].Constraints))
 		if i < pLen-3 {
 			otherEventString += " and"
 		}
@@ -184,7 +204,8 @@ func headerString(funnelEvents []string,
 
 func (pw *PatternWrapper) buildFunnelData(
 	p *Pattern, patternConstraints []EventConstraints,
-	nodeType int, isBaseFunnel bool) funnelNodeResults {
+	nodeType int, addedConstraint EventConstraints,
+	isBaseFunnel bool) funnelNodeResults {
 	pLen := len(p.EventNames)
 	funnelData := funnelNodeResults{}
 	var referenceFunnelCount uint
@@ -214,8 +235,48 @@ func (pw *PatternWrapper) buildFunnelData(
 				referenceFunnelCount = p.UserCount
 				// If basefunnel has length 1 we prefix an initial node with all users for better comparision.
 				node := funnelNodeResult{
-					Data:  []float64{float64(referenceFunnelCount), 0.0},
-					Event: fmt.Sprintf("AllActiveUsers (%d)", referenceFunnelCount),
+					Data:        []float64{float64(referenceFunnelCount), 0.0},
+					Event:       fmt.Sprintf("%s (%d)", U.SEN_ALL_ACTIVE_USERS, referenceFunnelCount),
+					EventName:   U.SEN_ALL_ACTIVE_USERS,
+					Constraints: nil,
+				}
+				funnelData = append(funnelData, node)
+			} else if nodeType == NODE_TYPE_USER_PROPERTY && pLen == 1 {
+				// If length 1 the addedConstraint is part of patternConstraints.
+				// Remove it from patternConstraint. addedConstraint is used as a constraint for
+				// AllActiveUsers
+				for j, pNConstraint := range patternConstraints[i].UPNumericConstraints {
+					for _, aNConstraint := range addedConstraint.UPNumericConstraints {
+						if reflect.DeepEqual(pNConstraint, aNConstraint) {
+							patternConstraints[i].UPNumericConstraints[j] = NumericConstraint{}
+						}
+					}
+				}
+				for j, pCConstraint := range patternConstraints[i].UPCategoricalConstraints {
+					for _, aCConstraint := range addedConstraint.UPCategoricalConstraints {
+						if reflect.DeepEqual(pCConstraint, aCConstraint) {
+							patternConstraints[i].UPCategoricalConstraints[j] = CategoricalConstraint{}
+						}
+					}
+				}
+				node := funnelNodeResult{}
+				if isBaseFunnel {
+					referenceFunnelCount, _ = pw.GetPerUserCount(
+						[]string{U.SEN_ALL_ACTIVE_USERS}, nil)
+					node.Data = []float64{float64(referenceFunnelCount), 0.0}
+					node.Event = fmt.Sprintf("%s (%d)", eventStringWithConditions(U.SEN_ALL_ACTIVE_USERS,
+						nil), referenceFunnelCount)
+					node.EventName = U.SEN_ALL_ACTIVE_USERS
+					node.Constraints = nil
+				} else {
+					tmpConstraints := []EventConstraints{addedConstraint}
+					referenceFunnelCount, _ = pw.GetPerUserCount(
+						[]string{U.SEN_ALL_ACTIVE_USERS}, tmpConstraints)
+					node.Data = []float64{float64(referenceFunnelCount), 0.0}
+					node.Event = fmt.Sprintf("%s (%d)", eventStringWithConditions(U.SEN_ALL_ACTIVE_USERS,
+						&addedConstraint), referenceFunnelCount)
+					node.EventName = U.SEN_ALL_ACTIVE_USERS
+					node.Constraints = &addedConstraint
 				}
 				funnelData = append(funnelData, node)
 			} else {
@@ -223,20 +284,28 @@ func (pw *PatternWrapper) buildFunnelData(
 			}
 		}
 		var eventString string
+		var eventConstraints *EventConstraints
 		if patternConstraints != nil {
 			eventString = eventStringWithConditions(p.EventNames[i], &patternConstraints[i])
+			eventConstraints = &patternConstraints[i]
 		} else {
 			eventString = eventStringWithConditions(p.EventNames[i], nil)
+			eventConstraints = nil
 		}
 
 		node := funnelNodeResult{
-			Data:  []float64{float64(funnelSubsequencePerUserCount), float64(referenceFunnelCount - funnelSubsequencePerUserCount)},
-			Event: fmt.Sprintf("%s (%d)", eventString, funnelSubsequencePerUserCount),
+			Data:        []float64{float64(funnelSubsequencePerUserCount), float64(referenceFunnelCount - funnelSubsequencePerUserCount)},
+			Event:       fmt.Sprintf("%s (%d)", eventString, funnelSubsequencePerUserCount),
+			EventName:   p.EventNames[i],
+			Constraints: eventConstraints,
 		}
 		funnelData = append(funnelData, node)
 	}
 	funnelLength := len(funnelData)
-	funnelConversionPercent := float64(funnelData[funnelLength-1].Data[0]*100.0) / funnelData[funnelLength-2].Data[0]
+	funnelConversionPercent := 0.0
+	if funnelData[funnelLength-2].Data[0] > 0.0 {
+		funnelConversionPercent = float64(funnelData[funnelLength-1].Data[0]*100.0) / funnelData[funnelLength-2].Data[0]
+	}
 	if funnelConversionPercent > 0.1 {
 		// Round it to nearest one digit.
 		funnelConversionPercent = math.Round(funnelConversionPercent*10) / 10.0
@@ -247,41 +316,43 @@ func (pw *PatternWrapper) buildFunnelData(
 
 func (pw *PatternWrapper) buildFactorResultsFromPatterns(nodes []*ItreeNode) PatternServiceGraphResults {
 	results := PatternServiceGraphResults{Charts: []graphResult{}}
-	endEventString := "dummyEvent"
-	// Dummy Line Chart.
-	chart := graphResult{
-		Type:   "line",
-		Header: fmt.Sprintf("Average %s per month", endEventString),
-		Labels: []string{"January", "February", "March", "April", "May", "June", "July"},
-		Datasets: []map[string]interface{}{
-			map[string]interface{}{
-				"label": "Users with country:US",
-				"data":  []float64{65, 59, 80, 81, 56, 55, 40},
+	/*
+		endEventString := "dummyEvent"
+		// Dummy Line Chart.
+		chart := graphResult{
+			Type:   "line",
+			Header: fmt.Sprintf("Average %s per month", endEventString),
+			Labels: []string{"January", "February", "March", "April", "May", "June", "July"},
+			Datasets: []map[string]interface{}{
+				map[string]interface{}{
+					"label": "Users with country:US",
+					"data":  []float64{65, 59, 80, 81, 56, 55, 40},
+				},
+				map[string]interface{}{
+					"label": "All Users",
+					"data":  []float64{45, 50, 70, 101, 95, 80, 64},
+				},
 			},
-			map[string]interface{}{
-				"label": "All Users",
-				"data":  []float64{45, 50, 70, 101, 95, 80, 64},
+		}
+		results.Charts = append(results.Charts, chart)
+		// Dummy Bar Chart.
+		chart = graphResult{
+			Type:   "bar",
+			Header: fmt.Sprintf("Users with country US have 30%% higher average %s than others.", endEventString),
+			Labels: []string{"All Users", "US", "India", "UK", "Australia", "Egypt", "Iran"},
+			Datasets: []map[string]interface{}{
+				map[string]interface{}{
+					"label": fmt.Sprintf("Average %s", endEventString),
+					"data":  []float64{65, 59, 80, 81, 56, 55, 40},
+				},
+				map[string]interface{}{
+					"label": "All Users",
+					"data":  []float64{45, 50, 70, 101, 95, 80, 64},
+				},
 			},
-		},
-	}
-	results.Charts = append(results.Charts, chart)
-	// Dummy Bar Chart.
-	chart = graphResult{
-		Type:   "bar",
-		Header: fmt.Sprintf("Users with country US have 30%% higher average %s than others.", endEventString),
-		Labels: []string{"All Users", "US", "India", "UK", "Australia", "Egypt", "Iran"},
-		Datasets: []map[string]interface{}{
-			map[string]interface{}{
-				"label": fmt.Sprintf("Average %s", endEventString),
-				"data":  []float64{65, 59, 80, 81, 56, 55, 40},
-			},
-			map[string]interface{}{
-				"label": "All Users",
-				"data":  []float64{45, 50, 70, 101, 95, 80, 64},
-			},
-		},
-	}
-	results.Charts = append(results.Charts, chart)
+		}
+		results.Charts = append(results.Charts, chart)
+	*/
 	// Actual funnel results.
 
 	for _, node := range nodes {
@@ -297,7 +368,7 @@ func (pw *PatternWrapper) buildFactorResultsFromPatterns(nodes []*ItreeNode) Pat
 			if patternConstraints != nil {
 				baseFunnelConstraints = append(append([]EventConstraints(nil), patternConstraints[:pLen-2]...), patternConstraints[pLen-1:]...)
 			}
-		} else if node.NodeType == NODE_TYPE_PROPERTY {
+		} else if node.NodeType == NODE_TYPE_EVENT_PROPERTY || node.NodeType == NODE_TYPE_USER_PROPERTY {
 			// Skip (n - 1)st constraint for baseFunnel.
 			baseFunnelEvents = append(append([]string(nil), p.EventNames...))
 			if patternConstraints != nil {
@@ -305,7 +376,12 @@ func (pw *PatternWrapper) buildFactorResultsFromPatterns(nodes []*ItreeNode) Pat
 			} else {
 				baseFunnelConstraints = make([]EventConstraints, pLen)
 			}
-			baseFunnelConstraints[pLen-2] = EventConstraints{}
+			if pLen > 1 {
+				baseFunnelConstraints[pLen-2] = EventConstraints{}
+			} else {
+				// Skip constraints for last node if Len1.
+				baseFunnelConstraints[pLen-1] = EventConstraints{}
+			}
 		}
 		var baseP *Pattern
 		var ok bool
@@ -313,8 +389,8 @@ func (pw *PatternWrapper) buildFactorResultsFromPatterns(nodes []*ItreeNode) Pat
 			log.Errorf(fmt.Sprintf("Missing Base Funnel Pattern for %s", p.String()))
 			continue
 		}
-		baseFunnelData := pw.buildFunnelData(baseP, baseFunnelConstraints, node.NodeType, true)
-		funnelData := pw.buildFunnelData(p, patternConstraints, node.NodeType, false)
+		baseFunnelData := pw.buildFunnelData(baseP, baseFunnelConstraints, node.NodeType, node.AddedConstraint, true)
+		funnelData := pw.buildFunnelData(p, patternConstraints, node.NodeType, node.AddedConstraint, false)
 
 		baseFunnelLength := len(baseFunnelData)
 		baseFunnelConversionPercent := baseFunnelData[baseFunnelLength-2].ConversionPercent
@@ -326,9 +402,9 @@ func (pw *PatternWrapper) buildFactorResultsFromPatterns(nodes []*ItreeNode) Pat
 			funnelData[funnelLength-2].NodeType = "negative"
 		}
 
-		chart = graphResult{
+		chart := graphResult{
 			Type: "funnel",
-			Header: headerString(p.EventNames, patternConstraints, node.NodeType,
+			Header: headerString(funnelData, node.NodeType,
 				funnelConversionPercent, baseFunnelConversionPercent),
 			Datasets: []map[string]interface{}{
 				map[string]interface{}{

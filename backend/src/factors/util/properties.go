@@ -10,6 +10,9 @@ import (
 // Common properties type.
 type PropertiesMap map[string]interface{}
 
+// Special Event Names used when building patterns and for querying.
+const SEN_ALL_ACTIVE_USERS = "$AllActiveUsers"
+
 /* Properties Constants */
 
 // Event Properties.
@@ -46,6 +49,13 @@ var UP_CITY string = "$city"
 var UP_REGION string = "$region"
 
 var ALLOWED_SDK_DEFAULT_EVENT_PROPERTIES = [...]string{
+	EP_INTERNAL_IP,
+	EP_LOCATION_LATITUDE,
+	EP_LOCATION_LONGITUDE,
+}
+
+// Event properties that are not visible to user for analysis.
+var INTERNAL_EVENT_PROPERTIES = [...]string{
 	EP_INTERNAL_IP,
 	EP_LOCATION_LATITUDE,
 	EP_LOCATION_LONGITUDE,
@@ -104,6 +114,15 @@ func isSDKUserDefaultProperty(key *string) bool {
 
 func isSDKEventDefaultProperty(key *string) bool {
 	for _, k := range ALLOWED_SDK_DEFAULT_EVENT_PROPERTIES {
+		if k == *key {
+			return true
+		}
+	}
+	return false
+}
+
+func IsInternalEventProperty(key *string) bool {
+	for _, k := range INTERNAL_EVENT_PROPERTIES {
 		if k == *key {
 			return true
 		}

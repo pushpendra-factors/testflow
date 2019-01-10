@@ -72,6 +72,20 @@ func countPatterns(filepath string, patterns []*P.Pattern, numRoutines int) {
 	wg.Wait()
 }
 
+func computeAllUserPropertiesHistogram(filepath string, pattern *P.Pattern) error {
+	file, err := os.Open(filepath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
+	// 10 MB buffer.
+	const maxCapacity = 10 * 1024 * 1024
+	buf := make([]byte, maxCapacity)
+	scanner.Buffer(buf, maxCapacity)
+	return P.ComputeAllUserPropertiesHistogram(scanner, pattern)
+}
+
 // Removes all patterns with zero counts.
 func filterPatterns(patterns []*P.Pattern) []*P.Pattern {
 	filteredPatterns := []*P.Pattern{}
@@ -442,6 +456,21 @@ func main() {
 	tmpFile, err := os.Create(tmpOutputFilePath)
 	if err != nil {
 		log.WithFields(log.Fields{"file": tmpOutputFilePath, "err": err}).Fatal("Unable to create file.")
+		os.Exit(1)
+	}
+
+	// First build histogram of all user properties.
+	allActiveUsersPattern, err := P.NewPattern([]string{U.SEN_ALL_ACTIVE_USERS}, userAndEventsInfo)
+	if err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("Failed to build pattern with histogram of all active user properties.")
+		os.Exit(1)
+	}
+	if err := computeAllUserPropertiesHistogram(inputFilePath, allActiveUsersPattern); err != nil {
+		log.WithFields(log.Fields{"err": err}).Fatal("Failed to compute user properties.")
+		os.Exit(1)
+	}
+	if err := writePatterns([]*P.Pattern{allActiveUsersPattern}, tmpFile); err != nil {
+		log.WithFields(log.Fields{"err": err}).Fatal("Failed to write user properties.")
 		os.Exit(1)
 	}
 
