@@ -2,9 +2,10 @@ package handler
 
 import (
 	"encoding/json"
+	mid "factors/middleware"
 	M "factors/model"
+	U "factors/util"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -13,9 +14,9 @@ import (
 // Test Command
 // curl -i -X GET http://localhost:8080/projects/1/settings
 func GetProjectSettingHandler(c *gin.Context) {
-	projectId, err := strconv.ParseUint(c.Params.ByName("project_id"), 10, 64)
-	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("GetEvent Failed. ProjectId parse failed.")
+	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
+		log.Error("Get project_settings failed. Failed to get project_id.")
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
@@ -33,9 +34,9 @@ func GetProjectSettingHandler(c *gin.Context) {
 func UpdateProjectSettingsHandler(c *gin.Context) {
 	r := c.Request
 
-	projectId, err := strconv.ParseUint(c.Params.ByName("project_id"), 10, 64)
-	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("GetEvent Failed. ProjectId parse failed.")
+	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
+		log.Error("Update project_settings failed. Failed to get project_id.")
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid project id."})
 		return
 	}

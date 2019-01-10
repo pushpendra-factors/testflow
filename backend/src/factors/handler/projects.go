@@ -2,11 +2,11 @@ package handler
 
 import (
 	"encoding/json"
+	mid "factors/middleware"
 	M "factors/model"
 	crpc "factors/patternserver"
 	U "factors/util"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -51,8 +51,8 @@ func GetProjectsHandler(c *gin.Context) {
 }
 
 func GetProjectModelIntervalsHandler(c *gin.Context) {
-	projectId, err := strconv.ParseUint(c.Params.ByName("project_id"), 10, 64)
-	if err != nil {
+	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}

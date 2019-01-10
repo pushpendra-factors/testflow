@@ -65,7 +65,7 @@ func SetupProjectUserEventName() (uint64, string, uint64, error) {
 	if err_code != http.StatusCreated {
 		return projectId, userId, eventNameId, fmt.Errorf("User Creation failed.")
 	}
-	en, err_code := M.CreateOrGetEventName(&M.EventName{ProjectId: project.ID, Name: "login"})
+	en, err_code := M.CreateOrGetUserCreatedEventName(&M.EventName{ProjectId: project.ID, Name: "login"})
 	if err_code != http.StatusCreated {
 		return projectId, userId, eventNameId, fmt.Errorf("EventName Creation failed.")
 	}
@@ -88,7 +88,7 @@ func SetupProjectUserEventNameReturnDAO() (*M.Project, *M.User, *M.EventName, er
 		return nil, nil, nil, fmt.Errorf("User Creation failed.")
 	}
 
-	en, err_code := M.CreateOrGetEventName(&M.EventName{ProjectId: project.ID, Name: "login"})
+	en, err_code := M.CreateOrGetUserCreatedEventName(&M.EventName{ProjectId: project.ID, Name: "login"})
 	if err_code != http.StatusConflict && err_code != http.StatusCreated {
 		return nil, nil, nil, fmt.Errorf("EventName Creation failed.")
 	}

@@ -1,7 +1,7 @@
 package handler
 
 import (
-	Mid "factors/middleware"
+	mid "factors/middleware"
 
 	"github.com/gin-gonic/gin"
 )
@@ -13,17 +13,17 @@ func InitAppRoutes(r *gin.Engine) {
 
 	// Route not allowed for public access.
 	r.POST(ROUTE_PROJECTS_ROOT,
-		Mid.DenyPublicAccess(),
+		mid.DenyPublicAccess(),
 		CreateProjectHandler)
 
 	r.GET(ROUTE_PROJECTS_ROOT,
-		Mid.SetScopeAuthorizedProjectsBySubdomain(),
+		mid.SetScopeAuthorizedProjectsBySubdomain(),
 		GetProjectsHandler)
 
 	// Auth route group with authentication an authorization middleware.
 	authRouteGroup := r.Group(ROUTE_PROJECTS_ROOT)
-	authRouteGroup.Use(Mid.SetScopeAuthorizedProjectsBySubdomain())
-	authRouteGroup.Use(Mid.IsAuthorized())
+	authRouteGroup.Use(mid.SetScopeAuthorizedProjectsBySubdomain())
+	authRouteGroup.Use(mid.IsAuthorized())
 
 	authRouteGroup.GET("/:project_id/settings", GetProjectSettingHandler)
 	authRouteGroup.PUT("/:project_id/settings", UpdateProjectSettingsHandler)
@@ -44,7 +44,7 @@ func InitAppRoutes(r *gin.Engine) {
 
 func InitSDKRoutes(r *gin.Engine) {
 	sdkRouteGroup := r.Group(ROUTE_SDK_ROOT)
-	sdkRouteGroup.Use(Mid.SetScopeProjectIdByToken())
+	sdkRouteGroup.Use(mid.SetScopeProjectIdByToken())
 
 	sdkRouteGroup.POST("/event/track", SDKTrackHandler)
 	sdkRouteGroup.POST("/user/identify", SDKIdentifyHandler)

@@ -1,8 +1,10 @@
 package handler
 
 import (
+	mid "factors/middleware"
 	M "factors/model"
 	crpc "factors/patternserver"
+	U "factors/util"
 	"net/http"
 	"strconv"
 
@@ -13,8 +15,8 @@ import (
 // Test command.
 // curl -i -X GET http://localhost:8080/projects/1/event_names
 func GetEventNamesHandler(c *gin.Context) {
-	projectId, err := strconv.ParseUint(c.Params.ByName("project_id"), 10, 64)
-	if err != nil {
+	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
@@ -34,11 +36,13 @@ func GetEventNamesHandler(c *gin.Context) {
 // Test command.
 // curl -i -X GET http://localhost:8080/projects/1/event_names/view_100020213/properties?model_id=:model_id
 func GetEventPropertiesHandler(c *gin.Context) {
-	projectId, err := strconv.ParseUint(c.Params.ByName("project_id"), 10, 64)
-	if err != nil {
+	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
+
+	var err error
 	modelId := uint64(0)
 
 	modelIdParam := c.Query("model_id")
@@ -70,12 +74,13 @@ func GetEventPropertiesHandler(c *gin.Context) {
 
 // curl -i -X GET http://localhost:8080/projects/1/event_names/view_100020213/properties/offer_id?model_id=:model_id
 func GetEventPropertyValuesHandler(c *gin.Context) {
-	projectId, err := strconv.ParseUint(c.Params.ByName("project_id"), 10, 64)
-	if err != nil {
+	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
 
+	var err error
 	modelId := uint64(0)
 
 	modelIdParam := c.Query("model_id")

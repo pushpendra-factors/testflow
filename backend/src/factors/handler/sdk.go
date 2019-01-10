@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	mid "factors/middleware"
 	M "factors/model"
 	U "factors/util"
 	"net/http"
@@ -62,18 +63,17 @@ func SDKTrackHandler(c *gin.Context) {
 	}
 
 	// Get ProjecId scope for the request.
-	scopeProjectIdIntf := U.GetScopeByKey(c, "projectId")
-	if scopeProjectIdIntf == nil {
+	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Tracking failed. Invalid project."})
 		return
 	}
-	scopeProjectId := scopeProjectIdIntf.(uint64)
 
 	response := gin.H{}
 
 	// Precondition: if user_id not given, create new user and respond.
 	if event.UserId == "" {
-		newUser := M.User{ProjectId: scopeProjectId}
+		newUser := M.User{ProjectId: projectId}
 		_, errCode := M.CreateUser(&newUser)
 		if errCode != http.StatusCreated {
 			c.AbortWithStatusJSON(errCode, gin.H{"error": "Tracking failed. User creation failed."})
@@ -86,25 +86,23 @@ func SDKTrackHandler(c *gin.Context) {
 	var eventName *M.EventName
 	var eventNameErrCode int
 
-	// if auto_track enabled, auto_name = event_name else auto_name = "UCEN".
 	// On 'auto' true event_name is the eventURL(e.g: factors.ai/u1/u2/u3) for JS_SDK.
 	if event.Auto {
 		// Pass eventURL through filter and get corresponding event_name mapped by user.
-		eventName, eventNameErrCode = M.FilterEventNameByEventURL(scopeProjectId, event.Name)
+		eventName, eventNameErrCode = M.FilterEventNameByEventURL(projectId, event.Name)
 		if eventNameErrCode != http.StatusFound {
 			// create a auto tracked event name if no filter_expr match.
-			eventName, eventNameErrCode = M.CreateOrGetAutoTrackedEventName(&M.EventName{Name: event.Name, ProjectId: scopeProjectId})
+			eventName, eventNameErrCode = M.CreateOrGetAutoTrackedEventName(&M.EventName{Name: event.Name, ProjectId: projectId})
 		}
 
 		err := M.FillEventPropertiesByFilterExpr(&event.EventProperties, eventName.FilterExpr, event.Name)
 		if err != nil {
-			log.WithFields(log.Fields{"project_id": scopeProjectId, "filter_expr": eventName.FilterExpr,
+			log.WithFields(log.Fields{"project_id": projectId, "filter_expr": eventName.FilterExpr,
 				"event_url": event.Name, "error": err}).Error("Failed to fill event url properties for auto tracked event.")
 		}
 	} else {
-		eventName, eventNameErrCode = M.CreateOrGetUserCreatedEventName(&M.EventName{Name: event.Name, ProjectId: scopeProjectId})
+		eventName, eventNameErrCode = M.CreateOrGetUserCreatedEventName(&M.EventName{Name: event.Name, ProjectId: projectId})
 	}
-
 	if eventNameErrCode != http.StatusCreated && eventNameErrCode != http.StatusConflict &&
 		eventNameErrCode != http.StatusFound {
 		c.AbortWithStatusJSON(eventNameErrCode, gin.H{"error": "Tracking failed. Creating event_name failed."})
@@ -138,7 +136,7 @@ func SDKTrackHandler(c *gin.Context) {
 		response["error"] = "Failed updating user properties."
 	}
 
-	userPropertiesId, errCode := M.UpdateUserProperties(scopeProjectId, event.UserId, &postgres.Jsonb{userPropsJSON})
+	userPropertiesId, errCode := M.UpdateUserProperties(projectId, event.UserId, &postgres.Jsonb{userPropsJSON})
 	if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
 		log.WithFields(log.Fields{"userProperties": validUserProperties,
 			"error": errCode}).Error("Update user properties on track failed. DB update failed.")
@@ -146,12 +144,12 @@ func SDKTrackHandler(c *gin.Context) {
 	}
 
 	// Create Event.
-	event.ProjectId = scopeProjectId
+	event.ProjectId = projectId
 	createdEvent, errCode := M.CreateEvent(&M.Event{
 		EventNameId: eventName.ID,
 		Timestamp:   event.Timestamp,
 		Properties:  postgres.Jsonb{eventPropsJSON},
-		ProjectId:   scopeProjectId, UserId: event.UserId, UserPropertiesId: userPropertiesId})
+		ProjectId:   projectId, UserId: event.UserId, UserPropertiesId: userPropertiesId})
 	if errCode != http.StatusCreated {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Tracking failed. Event creation failed."})
 		return
@@ -193,12 +191,11 @@ func SDKIdentifyHandler(c *gin.Context) {
 	}
 
 	// Get ProjecId scope for the request.
-	scopeProjectIdIntf := U.GetScopeByKey(c, "projectId")
-	if scopeProjectIdIntf == nil {
+	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Identification failed. Invalid project."})
 		return
 	}
-	scopeProjectId := scopeProjectIdIntf.(uint64)
 
 	// Precondition: customer_user_id present, user_id not.
 	// if customer_user has user already : respond with same user.
@@ -206,14 +203,14 @@ func SDKIdentifyHandler(c *gin.Context) {
 	if identifiedUser.UserId == "" {
 		response := gin.H{}
 
-		userLatest, errCode := M.GetUserLatestByCustomerUserId(scopeProjectId, identifiedUser.CustomerUserId)
+		userLatest, errCode := M.GetUserLatestByCustomerUserId(projectId, identifiedUser.CustomerUserId)
 		switch errCode {
 		case http.StatusInternalServerError:
 			c.AbortWithStatusJSON(errCode, gin.H{"error": "Identification failed. Processing without user_id failed."})
 			return
 
 		case http.StatusNotFound:
-			newUser := M.User{ProjectId: scopeProjectId,
+			newUser := M.User{ProjectId: projectId,
 				CustomerUserId: identifiedUser.CustomerUserId,
 				JoinTimestamp:  identifiedUser.JoinTimestamp,
 			}
@@ -233,7 +230,7 @@ func SDKIdentifyHandler(c *gin.Context) {
 		return
 	}
 
-	scopeUser, errCode := M.GetUser(scopeProjectId, identifiedUser.UserId)
+	scopeUser, errCode := M.GetUser(projectId, identifiedUser.UserId)
 	if errCode != http.StatusFound {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Identification failed. Invalid user_id."})
 		return
@@ -249,7 +246,7 @@ func SDKIdentifyHandler(c *gin.Context) {
 	// Creating a new user with the given customer_user_id and respond with new_user_id.
 	if scopeUser.CustomerUserId != "" {
 		newUser := M.User{
-			ProjectId:      scopeProjectId,
+			ProjectId:      projectId,
 			CustomerUserId: scopeUser.CustomerUserId,
 			JoinTimestamp:  identifiedUser.JoinTimestamp,
 		}
@@ -264,7 +261,7 @@ func SDKIdentifyHandler(c *gin.Context) {
 	}
 
 	// Happy path. Maps customer_user to an user.
-	_, errCode = M.UpdateUser(scopeProjectId, identifiedUser.UserId,
+	_, errCode = M.UpdateUser(projectId, identifiedUser.UserId,
 		&M.User{CustomerUserId: identifiedUser.CustomerUserId,
 			JoinTimestamp: identifiedUser.JoinTimestamp})
 	if errCode != http.StatusAccepted {
@@ -297,12 +294,11 @@ func SDKAddUserPropertiesHandler(c *gin.Context) {
 	}
 
 	// Get ProjecId scope for the request.
-	scopeProjectIdIntf := U.GetScopeByKey(c, "projectId")
-	if scopeProjectIdIntf == nil {
+	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Add user properties failed. Invalid project."})
 		return
 	}
-	scopeProjectId := scopeProjectIdIntf.(uint64)
 
 	// Validate properties.
 	validProperties := U.GetValidatedUserProperties(&addPropsUser.Properties)
@@ -316,7 +312,7 @@ func SDKAddUserPropertiesHandler(c *gin.Context) {
 	// Precondition: user_id not given.
 	if addPropsUser.UserId == "" {
 		// Create user with properties and respond user_id. Only properties allowed on create.
-		newUser, errCode := M.CreateUser(&M.User{ProjectId: scopeProjectId,
+		newUser, errCode := M.CreateUser(&M.User{ProjectId: projectId,
 			Properties: postgres.Jsonb{propertiesJSON}})
 		if errCode != http.StatusCreated {
 			c.AbortWithStatusJSON(errCode, gin.H{"error": "Add user properties failed. User create failed"})
@@ -327,13 +323,13 @@ func SDKAddUserPropertiesHandler(c *gin.Context) {
 	}
 
 	// Todo(Dinesh): Make UpdateUser to return 404 on 0 rows affected and remove this.
-	scopeUser, errCode := M.GetUser(scopeProjectId, addPropsUser.UserId)
+	scopeUser, errCode := M.GetUser(projectId, addPropsUser.UserId)
 	if errCode != http.StatusFound {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Add user properties failed. Invalid user_id."})
 		return
 	}
 
-	if _, errCode = M.UpdateUser(scopeProjectId, scopeUser.ID,
+	if _, errCode = M.UpdateUser(projectId, scopeUser.ID,
 		&M.User{Properties: postgres.Jsonb{propertiesJSON}}); errCode != http.StatusAccepted {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Add user properties failed."})
 		return
@@ -346,14 +342,13 @@ func SDKAddUserPropertiesHandler(c *gin.Context) {
 // curl -i -H "Content-Type: application/json" -H "Authorization: YOUR_TOKEN" -X GET http://localhost:8080/sdk/project/get_settings
 func SDKGetProjectSettings(c *gin.Context) {
 	// Get ProjecId scope for the request.
-	scopeProjectIdIntf := U.GetScopeByKey(c, "projectId")
-	if scopeProjectIdIntf == nil {
+	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Get project settings failed. Invalid project."})
 		return
 	}
-	scopeProjectId := scopeProjectIdIntf.(uint64)
 
-	projectSetting, errCode := M.GetProjectSetting(scopeProjectId)
+	projectSetting, errCode := M.GetProjectSetting(projectId)
 	if errCode != http.StatusFound {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Get project settings failed."})
 		return

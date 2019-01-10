@@ -1,8 +1,10 @@
 package handler
 
 import (
+	mid "factors/middleware"
 	M "factors/model"
 	crpc "factors/patternserver"
+	U "factors/util"
 	"net/http"
 	"strconv"
 
@@ -13,16 +15,16 @@ import (
 // Test command.
 // curl -i -X GET http://localhost:8080/projects/1/users/bc7318e8-2b69-49b6-baf3-fdf47bcb1af9
 func GetUserHandler(c *gin.Context) {
-	projectId, err := strconv.ParseUint(c.Params.ByName("project_id"), 10, 64)
-	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("GetUser Failed. ProjectId parse failed.")
+	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
+		log.Error("GetUser Failed. ProjectId parse failed.")
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
 
 	id := c.Params.ByName("user_id")
 	if id == "" {
-		log.WithFields(log.Fields{"error": err}).Error("GetUser Failed. Missing id.")
+		log.WithFields(log.Fields{"project_id": projectId}).Error("GetUser Failed. Missing id.")
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
@@ -39,8 +41,8 @@ func GetUserHandler(c *gin.Context) {
 // curl -i -X GET http://localhost:8080/projects/1/users
 // curl -i -X GET http://localhost:8080/projects/1/users?offset=50&limit=10
 func GetUsersHandler(c *gin.Context) {
-	projectId, err := strconv.ParseUint(c.Params.ByName("project_id"), 10, 64)
-	if err != nil {
+	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
@@ -84,13 +86,14 @@ func GetUsersHandler(c *gin.Context) {
 // Test command.
 // curl -i -X GET http://localhost:8080/projects/1/user_properties
 func GetUserPropertiesHandler(c *gin.Context) {
-	projectID, err := strconv.ParseUint(c.Params.ByName("project_id"), 10, 64)
-	if err != nil {
+	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-	modelId := uint64(0)
 
+	var err error
+	modelId := uint64(0)
 	modelIdParam := c.Query("model_id")
 	if modelIdParam != "" {
 		modelId, err = strconv.ParseUint(modelIdParam, 10, 64)
@@ -100,10 +103,10 @@ func GetUserPropertiesHandler(c *gin.Context) {
 		}
 	}
 
-	properties, err := crpc.GetSeenUserProperties(projectID, modelId)
+	properties, err := crpc.GetSeenUserProperties(projectId, modelId)
 	if err != nil {
 		log.WithFields(log.Fields{
-			"error": err, "projectId": projectID}).Error(
+			"error": err, "projectId": projectId}).Error(
 			"Get User Properties failed.")
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
@@ -113,13 +116,14 @@ func GetUserPropertiesHandler(c *gin.Context) {
 
 // curl -i -X GET http://localhost:8080/projects/1/user_properties/$country
 func GetUserPropertyValuesHandler(c *gin.Context) {
-	projectID, err := strconv.ParseUint(c.Params.ByName("project_id"), 10, 64)
-	if err != nil {
+	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-	modelId := uint64(0)
 
+	var err error
+	modelId := uint64(0)
 	modelIdParam := c.Query("model_id")
 	if modelIdParam != "" {
 		modelId, err = strconv.ParseUint(modelIdParam, 10, 64)
@@ -135,10 +139,10 @@ func GetUserPropertyValuesHandler(c *gin.Context) {
 		return
 	}
 
-	propertyValues, err := crpc.GetSeenUserPropertyValues(projectID, modelId, propertyName)
+	propertyValues, err := crpc.GetSeenUserPropertyValues(projectId, modelId, propertyName)
 	if err != nil {
 		log.WithError(err).WithFields(log.Fields{
-			"projectId":    projectID,
+			"projectId":    projectId,
 			"propertyName": propertyName}).Error(
 			"Get User Properties failed.")
 		c.AbortWithStatus(http.StatusBadRequest)

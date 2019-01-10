@@ -14,7 +14,7 @@ import (
 )
 
 // scope constants.
-const SCOPE_PROJECT = "projectId"
+const SCOPE_PROJECT_ID = "projectId"
 const SCOPE_AUTHORIZED_PROJECTS = "authorizedProjects"
 
 // cors prefix constants.
@@ -39,7 +39,7 @@ func SetScopeProjectIdByToken() gin.HandlerFunc {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, map[string]string{"error": errorMessage})
 			return
 		}
-		U.SetScope(c, SCOPE_PROJECT, project.ID)
+		U.SetScope(c, SCOPE_PROJECT_ID, project.ID)
 
 		c.Next()
 	}
@@ -129,7 +129,7 @@ func IsAuthorized() gin.HandlerFunc {
 			if paramProjectId == pid {
 				// Set scope projectId. This has to be used by other
 				// handlers for projectId.
-				U.SetScope(c, SCOPE_PROJECT, pid)
+				U.SetScope(c, SCOPE_PROJECT_ID, pid)
 
 				c.Next()
 				return

@@ -143,7 +143,7 @@ func TestSDKTrack(t *testing.T) {
 	assert.NotZero(t, filterEventName.ID)
 	assert.Equal(t, name, filterEventName.Name)
 	assert.Equal(t, expr, filterEventName.FilterExpr)
-	assert.Equal(t, M.AN_FILTER_EVENT_NAME, filterEventName.AutoName)
+	assert.Equal(t, M.TYPE_FILTER_EVENT_NAME, filterEventName.Type)
 
 	// Test filter_event_name hit with exact match.
 	rEventName = "a.com/u1/u2/i1"
@@ -193,7 +193,7 @@ func TestSDKTrack(t *testing.T) {
 	eventName, errCode := M.GetEventName(rEventName, project.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, eventName)
-	assert.Equal(t, M.AN_AUTO_TRACKED_EVENT_NAME, eventName.AutoName)
+	assert.Equal(t, M.TYPE_AUTO_TRACKED_EVENT_NAME, eventName.Type)
 
 	// Test filter_event_name miss after filter deleted by user.
 	_, errCode = M.DeleteFilterEventName(project.ID, filterEventName.ID)
@@ -211,8 +211,8 @@ func TestSDKTrack(t *testing.T) {
 	eventName, errCode = M.GetEventName(rEventName, project.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, eventName)
-	assert.NotEqual(t, filterEventName.ID, eventName.ID)              // should not use deleted filter.
-	assert.Equal(t, M.AN_AUTO_TRACKED_EVENT_NAME, eventName.AutoName) // should create auto created event.
+	assert.NotEqual(t, filterEventName.ID, eventName.ID)            // should not use deleted filter.
+	assert.Equal(t, M.TYPE_AUTO_TRACKED_EVENT_NAME, eventName.Type) // should create auto created event.
 }
 
 func TestSDKIdentify(t *testing.T) {

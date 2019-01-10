@@ -24,14 +24,14 @@ func TestDBCreateAndGetEventName(t *testing.T) {
 	start := time.Now()
 
 	// Test successful create eventName.
-	eventName, errCode := M.CreateOrGetEventName(&M.EventName{Name: "test_event", ProjectId: projectId})
+	eventName, errCode := M.CreateOrGetUserCreatedEventName(&M.EventName{Name: "test_event", ProjectId: projectId})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.Equal(t, projectId, eventName.ProjectId)
 	assert.True(t, eventName.CreatedAt.After(start))
 	// Trying to create again should return the old one.
 	expectedEventName := &M.EventName{}
 	copier.Copy(expectedEventName, eventName)
-	retryEventName, errCode := M.CreateOrGetEventName(&M.EventName{Name: "test_event", ProjectId: projectId})
+	retryEventName, errCode := M.CreateOrGetUserCreatedEventName(&M.EventName{Name: "test_event", ProjectId: projectId})
 	assert.Equal(t, http.StatusConflict, errCode)
 	// time.Time is not exactly same. Checking within an error threshold.
 	assert.True(t, math.Abs(expectedEventName.CreatedAt.Sub(retryEventName.CreatedAt).Seconds()) < 0.1)
@@ -70,17 +70,17 @@ func TestDBCreateAndGetEventName(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, errCode)
 	assert.Nil(t, retEventName)
 
-	// Test Validate auto_name on CreateOrGetUserCreatedEventName.
+	// Test Validate type on CreateOrGetUserCreatedEventName.
 	randomName := U.RandomLowerAphaNumString(10)
 	ucEventName := &M.EventName{Name: randomName, ProjectId: project.ID}
 	retEventName, errCode = M.CreateOrGetUserCreatedEventName(ucEventName)
 	assert.Equal(t, http.StatusCreated, errCode)
-	assert.Equal(t, M.AN_USER_CREATED_EVENT_NAME, retEventName.AutoName)
+	assert.Equal(t, M.TYPE_USER_CREATED_EVENT_NAME, retEventName.Type)
 
 	// Test Duplicate creation of user created event name. Should be unique by project.
 	duplicateEventName, errCode := M.CreateOrGetUserCreatedEventName(&M.EventName{Name: randomName, ProjectId: project.ID})
 	assert.Equal(t, http.StatusConflict, errCode) // Should return conflict with the conflicted object.
-	assert.Equal(t, M.AN_USER_CREATED_EVENT_NAME, retEventName.AutoName)
+	assert.Equal(t, M.TYPE_USER_CREATED_EVENT_NAME, retEventName.Type)
 	assert.Equal(t, retEventName.ID, duplicateEventName.ID)
 
 	// Test CreateOrGetUserCreatedEventName without ProjectId.
@@ -100,13 +100,6 @@ func TestDBCreateAndGetEventName(t *testing.T) {
 	retEventName, errCode = M.CreateOrGetUserCreatedEventName(ucEventName)
 	assert.Equal(t, http.StatusBadRequest, errCode)
 	assert.Nil(t, retEventName)
-
-	// Test CreateOrGetUserCreatedEventName with disallowed autoName.
-	randomName = U.RandomLowerAphaNumString(10)
-	ucEventName = &M.EventName{Name: randomName, AutoName: "$UCEN", ProjectId: project.ID}
-	retEventName, errCode = M.CreateOrGetUserCreatedEventName(ucEventName)
-	assert.Equal(t, http.StatusCreated, errCode)
-	assert.NotNil(t, retEventName)
 }
 
 func TestDBGetEventNames(t *testing.T) {
@@ -127,9 +120,9 @@ func TestDBGetEventNames(t *testing.T) {
 	assert.Nil(t, events)
 
 	// create events
-	eventName1, errCode := M.CreateOrGetEventName(&M.EventName{Name: "test_event", ProjectId: projectId})
+	eventName1, errCode := M.CreateOrGetUserCreatedEventName(&M.EventName{Name: "test_event", ProjectId: projectId})
 	assert.Equal(t, http.StatusCreated, errCode)
-	eventName2, errCode := M.CreateOrGetEventName(&M.EventName{Name: "test_event_1", ProjectId: projectId})
+	eventName2, errCode := M.CreateOrGetUserCreatedEventName(&M.EventName{Name: "test_event_1", ProjectId: projectId})
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	createdEventsNames := []string{eventName1.Name, eventName2.Name}
@@ -336,7 +329,7 @@ func TestDBCreateOrGetFilterEventName(t *testing.T) {
 	assert.NotZero(t, eventName.ID)
 	assert.Equal(t, name, eventName.Name)
 	assert.Equal(t, expr, eventName.FilterExpr)
-	assert.Equal(t, M.AN_FILTER_EVENT_NAME, eventName.AutoName)
+	assert.Equal(t, M.TYPE_FILTER_EVENT_NAME, eventName.Type)
 
 	// only domain as expr.
 	expr = "b.com"
@@ -351,7 +344,7 @@ func TestDBCreateOrGetFilterEventName(t *testing.T) {
 	assert.NotZero(t, eventName.ID)
 	assert.Equal(t, name, eventName.Name)
 	assert.Equal(t, "b.com/", eventName.FilterExpr) // only domain. root as expr.
-	assert.Equal(t, M.AN_FILTER_EVENT_NAME, eventName.AutoName)
+	assert.Equal(t, M.TYPE_FILTER_EVENT_NAME, eventName.Type)
 
 	// Test property and sanitization of expr.
 	expr = "https://a.com/u1/:v1?q=10"
@@ -366,7 +359,7 @@ func TestDBCreateOrGetFilterEventName(t *testing.T) {
 	assert.NotZero(t, eventName.ID)
 	assert.Equal(t, name, eventName.Name)
 	assert.Equal(t, "a.com/u1/:v1", eventName.FilterExpr) // sanitized expr.
-	assert.Equal(t, M.AN_FILTER_EVENT_NAME, eventName.AutoName)
+	assert.Equal(t, M.TYPE_FILTER_EVENT_NAME, eventName.Type)
 
 	expr = ""
 	name = "login2"

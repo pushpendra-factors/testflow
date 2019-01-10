@@ -3,11 +3,12 @@ package handler
 import (
 	"encoding/json"
 	C "factors/config"
+	mid "factors/middleware"
 	P "factors/pattern"
+	U "factors/util"
 	"fmt"
 	"math"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -163,8 +164,8 @@ func addPropertyConstraintsToMap(
 }
 
 func FactorHandler(c *gin.Context) {
-	projectId, err := strconv.ParseUint(c.Params.ByName("project_id"), 10, 64)
-	if err != nil {
+	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}

@@ -16,8 +16,7 @@ type EventName struct {
 	// Composite primary key with projectId.
 	ID   uint64 `gorm:"primary_key:true;" json:"id"`
 	Name string `json:"name"`
-	// Todo: Rename auto_name to type.
-	AutoName string `json:"auto_name"`
+	Type string `gorm:"not null;type:varchar(2)" json:"type"`
 	// Below are the foreign key constraints added in creation script.
 	// project_id -> projects(id)
 	ProjectId uint64 `gorm:"primary_key:true;" json:"project_id"`
@@ -29,18 +28,18 @@ type EventName struct {
 }
 
 type FilterInfo struct {
-	tokenizedFilter []string // Filter split by URI_SLASH
+	// filter_expr split by URI_SLASH
+	tokenizedFilter []string
 	eventName       *EventName
 }
 
-// AutoName types.
-const AN_USER_CREATED_EVENT_NAME = "$UCEN"
-const AN_AUTO_TRACKED_EVENT_NAME = "$ATEN"
-const AN_FILTER_EVENT_NAME = "$FEN"
+const TYPE_USER_CREATED_EVENT_NAME = "UC"
+const TYPE_AUTO_TRACKED_EVENT_NAME = "AT"
+const TYPE_FILTER_EVENT_NAME = "FE"
+
+var ALLOWED_TYPES = [...]string{TYPE_USER_CREATED_EVENT_NAME, TYPE_AUTO_TRACKED_EVENT_NAME, TYPE_FILTER_EVENT_NAME}
 
 const URI_PROPERTY_PREFIX = ":"
-
-var ALLOWED_AUTONAMES = [...]string{AN_USER_CREATED_EVENT_NAME, AN_AUTO_TRACKED_EVENT_NAME, AN_FILTER_EVENT_NAME}
 
 // error constants
 const error_DUPLICATE_FILTER_EXPR = "pq: duplicate key value violates unique constraint \"project_filter_expr_unique_idx\""
@@ -49,13 +48,13 @@ func isDuplicateFilterExprError(err error) bool {
 	return err.Error() == error_DUPLICATE_FILTER_EXPR
 }
 
-func CreateOrGetEventName(eventName *EventName) (*EventName, int) {
+func createOrGetEventName(eventName *EventName) (*EventName, int) {
 	db := C.GetServices().Db
 
 	// Validation.
 	if eventName.ProjectId == 0 ||
 		!isValidName(eventName.Name) ||
-		!isValidAutoName(eventName.AutoName) {
+		!isValidType(eventName.Type) {
 
 		return nil, http.StatusBadRequest
 	}
@@ -81,18 +80,39 @@ func CreateOrGetEventName(eventName *EventName) (*EventName, int) {
 	return eventName, http.StatusCreated
 }
 
-// Todo(dinesh): Change it allow only types defined, on renaming autoname to type.
-func isValidAutoName(autoName string) bool {
-	// if having $ prefix allows only defined autonames.
-	if strings.HasPrefix(autoName, U.NAME_PREFIX) {
-		for _, allowedAutoName := range ALLOWED_AUTONAMES {
-			if autoName == allowedAutoName {
-				return true
-			}
-		}
+func CreateOrGetUserCreatedEventName(eventName *EventName) (*EventName, int) {
+	eventName.Type = TYPE_USER_CREATED_EVENT_NAME
+	return createOrGetEventName(eventName)
+}
+
+func CreateOrGetAutoTrackedEventName(eventName *EventName) (*EventName, int) {
+	eventName.Type = TYPE_AUTO_TRACKED_EVENT_NAME
+	return createOrGetEventName(eventName)
+}
+
+func CreateOrGetFilterEventName(eventName *EventName) (*EventName, int) {
+	filterExpr, valid := getValidatedFilterExpr(eventName.FilterExpr)
+	if !valid {
+		return nil, http.StatusBadRequest
+	}
+
+	eventName.Type = TYPE_FILTER_EVENT_NAME
+	eventName.FilterExpr = filterExpr
+
+	return createOrGetEventName(eventName)
+}
+
+func isValidType(nameType string) bool {
+	if nameType == "" {
 		return false
 	}
-	return true
+
+	for _, allowedType := range ALLOWED_TYPES {
+		if nameType == allowedType {
+			return true
+		}
+	}
+	return false
 }
 
 func isValidName(name string) bool {
@@ -136,34 +156,12 @@ func GetEventNames(projectId uint64) ([]EventName, int) {
 	return eventNames, http.StatusFound
 }
 
-func CreateOrGetUserCreatedEventName(eventName *EventName) (*EventName, int) {
-	eventName.AutoName = AN_USER_CREATED_EVENT_NAME
-	return CreateOrGetEventName(eventName)
-}
-
-func CreateOrGetAutoTrackedEventName(eventName *EventName) (*EventName, int) {
-	eventName.AutoName = AN_AUTO_TRACKED_EVENT_NAME
-	return CreateOrGetEventName(eventName)
-}
-
-func CreateOrGetFilterEventName(eventName *EventName) (*EventName, int) {
-	filterExpr, valid := getValidatedFilterExpr(eventName.FilterExpr)
-	if !valid {
-		return nil, http.StatusBadRequest
-	}
-
-	eventName.AutoName = AN_FILTER_EVENT_NAME
-	eventName.FilterExpr = filterExpr
-
-	return CreateOrGetEventName(eventName)
-}
-
 func GetFilterEventNames(projectId uint64) ([]EventName, int) {
 	db := C.GetServices().Db
 
 	var eventNames []EventName
-	if err := db.Where("project_id = ? AND auto_name = ? AND deleted = 'false'",
-		projectId, AN_FILTER_EVENT_NAME).Find(&eventNames).Error; err != nil {
+	if err := db.Where("project_id = ? AND type = ? AND deleted = 'false'",
+		projectId, TYPE_FILTER_EVENT_NAME).Find(&eventNames).Error; err != nil {
 		log.WithFields(log.Fields{"error": err, "project_id": projectId}).Error("Failed getting filter_event_names")
 
 		return nil, http.StatusInternalServerError
@@ -176,12 +174,12 @@ func GetFilterEventNames(projectId uint64) ([]EventName, int) {
 	return eventNames, http.StatusFound
 }
 
-func GetEventNamesByFilterExprPrefix(projectId uint64, prefix string) ([]EventName, int) {
+func GetFilterEventNamesByExprPrefix(projectId uint64, prefix string) ([]EventName, int) {
 	db := C.GetServices().Db
 
 	var eventNames []EventName
-	if err := db.Where("project_id = ? AND filter_expr LIKE ? AND deleted = 'false'",
-		projectId, fmt.Sprintf("%s%%", prefix)).Find(&eventNames).Error; err != nil {
+	if err := db.Where("project_id = ? AND type = ? AND filter_expr LIKE ? AND deleted = 'false'",
+		projectId, TYPE_FILTER_EVENT_NAME, fmt.Sprintf("%s%%", prefix)).Find(&eventNames).Error; err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound
 		}
@@ -189,7 +187,6 @@ func GetEventNamesByFilterExprPrefix(projectId uint64, prefix string) ([]EventNa
 		return nil, http.StatusInternalServerError
 	}
 
-	// Todo(Dinesh): Why GORM couldn't detect RecordNotFound, returns err as nil?
 	if len(eventNames) == 0 {
 		return nil, http.StatusNotFound
 	}
@@ -204,7 +201,7 @@ func UpdateEventName(projectId uint64, id uint64,
 	// Validation
 	if projectId == 0 ||
 		eventName.ProjectId != 0 ||
-		nameType == "" ||
+		!isValidType(nameType) ||
 		!isValidName(eventName.Name) {
 		return nil, http.StatusBadRequest
 	}
@@ -214,7 +211,7 @@ func UpdateEventName(projectId uint64, id uint64,
 	updateFields["name"] = eventName.Name
 
 	query := db.Model(&updatedEventName).Where(
-		"project_id = ? AND id = ? AND auto_name = ?",
+		"project_id = ? AND id = ? AND type = ?",
 		projectId, id, nameType).Updates(updateFields)
 
 	if err := query.Error; err != nil {
@@ -233,7 +230,7 @@ func UpdateEventName(projectId uint64, id uint64,
 }
 
 func UpdateFilterEventName(projectId uint64, id uint64, eventName *EventName) (*EventName, int) {
-	return UpdateEventName(projectId, id, AN_FILTER_EVENT_NAME, eventName)
+	return UpdateEventName(projectId, id, TYPE_FILTER_EVENT_NAME, eventName)
 }
 
 func DeleteEventName(projectId uint64, id uint64,
@@ -248,7 +245,7 @@ func DeleteEventName(projectId uint64, id uint64,
 	var updatedEventName EventName
 	updateFields := map[string]interface{}{"deleted": true}
 
-	query := db.Model(&updatedEventName).Where("project_id = ? AND id = ? AND auto_name = ?",
+	query := db.Model(&updatedEventName).Where("project_id = ? AND id = ? AND type = ?",
 		projectId, id, nameType).Updates(updateFields)
 
 	if err := query.Error; err != nil {
@@ -265,7 +262,7 @@ func DeleteEventName(projectId uint64, id uint64,
 }
 
 func DeleteFilterEventName(projectId uint64, id uint64) (*EventName, int) {
-	return DeleteEventName(projectId, id, AN_FILTER_EVENT_NAME)
+	return DeleteEventName(projectId, id, TYPE_FILTER_EVENT_NAME)
 }
 
 // Returns sanitized filter expression and valid or not bool.
@@ -443,7 +440,7 @@ func FilterEventNameByEventURL(projectId uint64, eventURL string) (*EventName, i
 	}
 
 	// Get expressions with same domain prefix.
-	eventNames, errCode := GetEventNamesByFilterExprPrefix(projectId,
+	eventNames, errCode := GetFilterEventNamesByExprPrefix(projectId,
 		parsedEventURL.Host)
 	if errCode != http.StatusFound {
 		return nil, errCode

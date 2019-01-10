@@ -2,7 +2,7 @@ package handler
 
 import (
 	"encoding/json"
-	Mid "factors/middleware"
+	mid "factors/middleware"
 	M "factors/model"
 	U "factors/util"
 	"net/http"
@@ -39,7 +39,7 @@ func CreateFilterHandler(c *gin.Context) {
 		return
 	}
 
-	projectId := U.GetScopeByKeyAsUint64(c, Mid.SCOPE_PROJECT)
+	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Creating event_name failed. Invalid project."})
 		return
@@ -63,7 +63,7 @@ func CreateFilterHandler(c *gin.Context) {
 }
 
 func GetFiltersHandler(c *gin.Context) {
-	projectId := U.GetScopeByKeyAsUint64(c, Mid.SCOPE_PROJECT)
+	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Get filters failed. Invalid project."})
 		return
@@ -114,7 +114,7 @@ func UpdateFilterHandler(c *gin.Context) {
 		return
 	}
 
-	projectId := U.GetScopeByKeyAsUint64(c, Mid.SCOPE_PROJECT)
+	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Updating filter failed. Invalid project."})
 		return
@@ -140,7 +140,7 @@ func DeleteFilterHandler(c *gin.Context) {
 		return
 	}
 
-	projectId := U.GetScopeByKeyAsUint64(c, Mid.SCOPE_PROJECT)
+	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Get filters failed. Invalid project."})
 		return
