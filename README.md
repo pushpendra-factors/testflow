@@ -158,12 +158,12 @@ export ETCDCTL_API=3
 etcdctl put /factors/metadata/project_version_key version1
 mkdir -p /tmp/factors-dev/metadata
 mkdir -p /tmp/factors/metadata
-cp $GOPATH/src/factors/patternserver/cmd/project_data.txt /tmp/factors/metadata/version1.txt
+cp $GOPATH/src/factors/pattern_server/cmd/project_data.txt /tmp/factors/metadata/version1.txt
 cp /tmp/factors/metadata/version1.txt /tmp/factors-dev/metadata/version1.txt
 ```
 * Build
 ```
-go build -o $GOPATH/bin/pattern-app $GOPATH/src/factors/patternserver/cmd/pattern-app.go
+go build -o $GOPATH/bin/pattern-app $GOPATH/src/factors/pattern_server/cmd/pattern-app.go
 ```
 * Run
 ```
@@ -199,11 +199,7 @@ or
 go run run_pattern_mine.go --project_id=<projectId> --model_id=<modelId>
 ```
 
-* Change in /tmp/factors/config/config.json 
-* "project_model_mapping": {} 
-*    to
-* "project_model_mapping": {"\<projectId\>": "\<modelId\>"}
-* Restart server to see factors in action on Frontend.
+* Verify factors in action on Frontend.
 
 ## Setting up debugging in VSCode
 

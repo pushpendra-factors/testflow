@@ -2,13 +2,10 @@ package config
 
 import (
 	json "encoding/json"
-	P "factors/pattern"
-	PS "factors/patternserver/store"
 	serviceEtcd "factors/services/etcd"
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -41,21 +38,18 @@ type SubdomainLoginConfig struct {
 }
 
 type Configuration struct {
-	Env                 string               `json:"env"`
-	Port                int                  `json:"port"`
-	DBInfo              DBConf               `json:"db"`
-	ProjectModelMapping map[uint64]string    `json:"project_model_mapping"`
-	EtcdEndpoints       []string             `json:"etcd_endpoints"`
-	GeolocationFile     string               `json:"geolocation_file"`
-	SubdomainLogin      SubdomainLoginConfig `json:"subdomain_login"`
+	Env             string               `json:"env"`
+	Port            int                  `json:"port"`
+	DBInfo          DBConf               `json:"db"`
+	EtcdEndpoints   []string             `json:"etcd_endpoints"`
+	GeolocationFile string               `json:"geolocation_file"`
+	SubdomainLogin  SubdomainLoginConfig `json:"subdomain_login"`
 }
 
 type Services struct {
-	Db             *gorm.DB
-	GeoLocation    *geoip2.Reader
-	PatternService *P.PatternService
-	Etcd           *serviceEtcd.EtcdClient
-
+	Db                 *gorm.DB
+	GeoLocation        *geoip2.Reader
+	Etcd               *serviceEtcd.EtcdClient
 	patternServersLock sync.RWMutex
 	patternServers     map[string]string
 }
@@ -176,47 +170,6 @@ func initServices() error {
 	}
 	log.Info("Db Service initialized")
 
-	patternsMap := make(map[uint64][]*P.Pattern)
-	projectToUserAndEventsInfoMap := make(map[uint64]*P.UserAndEventsInfo)
-	for projectId, modelId := range configuration.ProjectModelMapping {
-
-		eventInfoFilePath := fmt.Sprintf("/tmp/factors-dev/projects/%v/models/%v/event_info_%v.txt", projectId, modelId, modelId)
-		eventInfofile, err := os.Open(eventInfoFilePath)
-		if err != nil {
-			log.WithFields(log.Fields{"file": eventInfoFilePath}).Error("Failed to load eventInfoFile")
-			return err
-		}
-		defer eventInfofile.Close()
-		userAndEventsInfo, err := PS.CreatePatternEventInfoFromScanner(PS.CreateScannerFromReader(eventInfofile))
-		if err != nil {
-			log.WithError(err).WithField("file", eventInfoFilePath).Error("Failed to create eventInfo from File")
-			return err
-		}
-
-		patternsFilePath := fmt.Sprintf("/tmp/factors-dev/projects/%v/models/%v/patterns_%v.txt", projectId, modelId, modelId)
-		patternsfile, err := os.Open(patternsFilePath)
-		if err != nil {
-			log.WithError(err).WithField("file", patternsFilePath).Error("Failed to load patternsFile")
-			return err
-		}
-		defer patternsfile.Close()
-
-		patterns, err := PS.CreatePatternsFromScanner(PS.CreateScannerFromReader(patternsfile))
-		if err != nil {
-			log.WithError(err).WithField("file", patternsFilePath).Error("Failed to create patterns from File")
-			return err
-		}
-
-		patternsMap[projectId] = patterns
-		projectToUserAndEventsInfoMap[projectId] = &userAndEventsInfo
-		log.Info(fmt.Sprintf("Loaded %d patterns for project %d", len(patterns), projectId))
-	}
-
-	patternService, err := P.NewPatternService(patternsMap, projectToUserAndEventsInfoMap)
-	if err != nil {
-		log.WithError(err).Fatal("Failed to initialize pattern service")
-	}
-
 	// Ref: https://geolite.maxmind.com/download/geoip/database/GeoLite2-City.tar.gz
 	geolocation, err := geoip2.Open(configuration.GeolocationFile)
 	if err != nil {
@@ -231,7 +184,7 @@ func initServices() error {
 	}
 	log.Infof("ETCD Service Initialized with endpoints: %v", configuration.EtcdEndpoints)
 
-	services = &Services{Db: db, PatternService: patternService, Etcd: etcdClient, patternServers: make(map[string]string), GeoLocation: geolocation}
+	services = &Services{Db: db, Etcd: etcdClient, patternServers: make(map[string]string), GeoLocation: geolocation}
 
 	regPatternServers, err := etcdClient.DiscoverPatternServers()
 	if err != nil && err != serviceEtcd.NotFound {

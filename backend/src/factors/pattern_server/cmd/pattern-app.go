@@ -5,7 +5,8 @@ import (
 	encjson "encoding/json"
 	"errors"
 	"factors/filestore"
-	patternserver "factors/patternserver"
+	PC "factors/pattern_client"
+	"factors/pattern_server"
 	serviceDisk "factors/services/disk"
 	serviceEtcd "factors/services/etcd"
 	serviceS3 "factors/services/s3"
@@ -404,8 +405,8 @@ func initRpcServer(ps *patternserver.PatternServer) *mux.Router {
 	s := rpc.NewServer()
 	s.RegisterCodec(rpcjson.NewCodec(), "application/json")
 	s.RegisterCodec(rpcjson.NewCodec(), "application/json;charset=UTF-8")
-	s.RegisterService(ps, patternserver.RPCServiceName)
+	s.RegisterService(ps, PC.RPCServiceName)
 	r := mux.NewRouter()
-	r.Handle(patternserver.RPCEndpoint, s)
+	r.Handle(PC.RPCEndpoint, s)
 	return r
 }

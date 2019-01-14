@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	mid "factors/middleware"
 	M "factors/model"
-	crpc "factors/patternserver"
+	PC "factors/pattern_client"
 	U "factors/util"
 	"net/http"
 
@@ -57,7 +57,7 @@ func GetProjectModelIntervalsHandler(c *gin.Context) {
 		return
 	}
 
-	modelIntervals, err := crpc.GetProjectModelIntervals(projectId)
+	modelIntervals, err := PC.GetProjectModelIntervals(projectId)
 	if err != nil {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return

@@ -1,7 +1,7 @@
 package tests
 
 import (
-	patternserver "factors/patternserver"
+	patternserver "factors/pattern_server"
 	serviceEtcd "factors/services/etcd"
 	U "factors/util"
 	"fmt"

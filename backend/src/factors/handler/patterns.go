@@ -2,13 +2,14 @@ package handler
 
 import (
 	"encoding/json"
-	C "factors/config"
 	mid "factors/middleware"
 	P "factors/pattern"
+	PW "factors/pattern_service_wrapper"
 	U "factors/util"
 	"fmt"
 	"math"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -171,6 +172,17 @@ func FactorHandler(c *gin.Context) {
 	}
 	log.WithFields(log.Fields{"projectId": projectId}).Info("Factor Query")
 
+	modelId := uint64(0)
+	modelIdParam := c.Query("model_id")
+	var err error
+	if modelIdParam != "" {
+		modelId, err = strconv.ParseUint(modelIdParam, 10, 64)
+		if err != nil {
+			c.AbortWithStatus(http.StatusBadRequest)
+			return
+		}
+	}
+
 	var requestBodyMap map[string]interface{}
 	if err := json.NewDecoder(c.Request.Body).Decode(&requestBodyMap); err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("Query Patterns JSON Decoding failed.")
@@ -198,10 +210,18 @@ func FactorHandler(c *gin.Context) {
 			"startEventConstraints": startEventConstraints,
 			"endEventConstraints":   endEventConstraints}).Info("Factor query parse")
 
-		ps := C.GetServices().PatternService
-		if results, err := ps.Factor(
+		ps, err := PW.NewPatternServiceWrapper(projectId, modelId)
+		if err != nil {
+			log.WithFields(log.Fields{"error": err}).Error("Pattern Service initialization failed.")
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error":  err.Error(),
+				"status": http.StatusBadRequest,
+			})
+			return
+		}
+		if results, err := PW.Factor(
 			projectId, startEvent, startEventConstraints,
-			endEvent, endEventConstraints); err != nil {
+			endEvent, endEventConstraints, ps); err != nil {
 			log.WithFields(log.Fields{"error": err}).Error("Factors failed.")
 			c.AbortWithStatus(http.StatusBadRequest)
 			return

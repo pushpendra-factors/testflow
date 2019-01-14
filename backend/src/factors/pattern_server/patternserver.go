@@ -4,7 +4,8 @@ import (
 	"errors"
 	"factors/filestore"
 	"factors/pattern"
-	store "factors/patternserver/store"
+	client "factors/pattern_client"
+	store "factors/pattern_server/store"
 	serviceEtcd "factors/services/etcd"
 	"fmt"
 	"hash/fnv"
@@ -99,7 +100,7 @@ func New(ip, port string, etcdClient *serviceEtcd.EtcdClient, diskFileManager, c
 	}
 
 	state := &state{
-		myNum:                  -1,
+		myNum: -1,
 		projectsModelChunkData: make(map[uint64]ModelChunkMapping),
 	}
 
@@ -136,7 +137,7 @@ func (ps *PatternServer) SetState(myNum int, psNodes []serviceEtcd.KV, projectDa
 	newState.projectsToServe = projectsToServe
 
 	log.WithFields(log.Fields{
-		"MyNum":                            newState.myNum,
+		"MyNum": newState.myNum,
 		"PatternServersRegisteredWithEtcd": newState.patternServerNodes,
 		"ProjectDataVersion":               newState.projectDataVersion,
 		"ProjectModelChunkData":            newState.projectsModelChunkData,
@@ -245,15 +246,9 @@ func (ps *PatternServer) GetProjectModelChunks(projectId, modelId uint64) ([]str
 	return chunkIds, true
 }
 
-type ModelInfo struct {
-	ModelId   uint64    `json:"mid"`
-	StartDate time.Time `json:"sd"`
-	EndDate   time.Time `json:"ed"`
-}
+func (ps *PatternServer) GetProjectModelIntervals(projectId uint64) ([]client.ModelInfo, error) {
 
-func (ps *PatternServer) GetProjectModelIntervals(projectId uint64) ([]ModelInfo, error) {
-
-	modelInfos := make([]ModelInfo, 0, 0)
+	modelInfos := make([]client.ModelInfo, 0, 0)
 
 	modelChunkData, exists := ps.GetProjectModels(projectId)
 	if !exists {
@@ -262,7 +257,7 @@ func (ps *PatternServer) GetProjectModelIntervals(projectId uint64) ([]ModelInfo
 	}
 
 	for mid, modelData := range modelChunkData {
-		mi := ModelInfo{
+		mi := client.ModelInfo{
 			ModelId:   mid,
 			StartDate: modelData.StartDate,
 			EndDate:   modelData.EndDate,
@@ -277,10 +272,10 @@ func (ps *PatternServer) GetProjectModelIntervals(projectId uint64) ([]ModelInfo
 	return modelInfos, nil
 }
 
-func (ps *PatternServer) GetProjectModelLatestInterval(projectId uint64) (ModelInfo, error) {
+func (ps *PatternServer) GetProjectModelLatestInterval(projectId uint64) (client.ModelInfo, error) {
 	modelInfos, err := ps.GetProjectModelIntervals(projectId)
 	if err != nil {
-		return ModelInfo{}, err
+		return client.ModelInfo{}, err
 	}
 
 	return modelInfos[0], nil

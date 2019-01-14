@@ -3,7 +3,7 @@ package handler
 import (
 	mid "factors/middleware"
 	M "factors/model"
-	crpc "factors/patternserver"
+	PC "factors/pattern_client"
 	U "factors/util"
 	"net/http"
 	"strconv"
@@ -60,7 +60,7 @@ func GetEventPropertiesHandler(c *gin.Context) {
 		return
 	}
 
-	properties, err := crpc.GetSeenEventProperties(projectId, modelId, eventName)
+	properties, err := PC.GetSeenEventProperties(projectId, modelId, eventName)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err, "projectId": projectId, "eventName": eventName}).Error(
@@ -103,7 +103,7 @@ func GetEventPropertyValuesHandler(c *gin.Context) {
 		return
 	}
 
-	if propertyValues, err := crpc.GetSeenEventPropertyValues(projectId, modelId, eventName, propertyName); err != nil {
+	if propertyValues, err := PC.GetSeenEventPropertyValues(projectId, modelId, eventName, propertyName); err != nil {
 		log.WithFields(log.Fields{
 			"error":        err,
 			"projectId":    projectId,

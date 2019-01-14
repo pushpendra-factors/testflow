@@ -3,7 +3,7 @@ package handler
 import (
 	mid "factors/middleware"
 	M "factors/model"
-	crpc "factors/patternserver"
+	PC "factors/pattern_client"
 	U "factors/util"
 	"net/http"
 	"strconv"
@@ -103,7 +103,7 @@ func GetUserPropertiesHandler(c *gin.Context) {
 		}
 	}
 
-	properties, err := crpc.GetSeenUserProperties(projectId, modelId)
+	properties, err := PC.GetSeenUserProperties(projectId, modelId)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err, "projectId": projectId}).Error(
@@ -139,7 +139,7 @@ func GetUserPropertyValuesHandler(c *gin.Context) {
 		return
 	}
 
-	propertyValues, err := crpc.GetSeenUserPropertyValues(projectId, modelId, propertyName)
+	propertyValues, err := PC.GetSeenUserPropertyValues(projectId, modelId, propertyName)
 	if err != nil {
 		log.WithError(err).WithFields(log.Fields{
 			"projectId":    projectId,

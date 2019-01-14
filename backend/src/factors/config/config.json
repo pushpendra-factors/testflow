@@ -8,7 +8,6 @@
 		"name": "autometa",
 		"password": "@ut0me7a"
 	},
-	"project_model_mapping": {},
 	"etcd_endpoints": [ "http://localhost:2379" ],
 	"geolocation_file": "/tmp/factors/geolocation_data/GeoLite2-City.mmdb",
 	"subdomain_login" : {

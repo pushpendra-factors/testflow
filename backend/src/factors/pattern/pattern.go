@@ -547,9 +547,9 @@ func (p *Pattern) GetUserPropertyRanges(
 }
 
 func (p *Pattern) String() string {
-	return eventArrayToString(p.EventNames)
+	return EventArrayToString(p.EventNames)
 }
 
-func eventArrayToString(eventNames []string) string {
+func EventArrayToString(eventNames []string) string {
 	return strings.Join(eventNames, ",")
 }

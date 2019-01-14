@@ -1,9 +1,10 @@
-package patternserver
+package patternclient
 
 import (
 	"bytes"
 	"factors/pattern"
 	"fmt"
+	"time"
 
 	"net/http"
 	"sync"
@@ -13,6 +14,119 @@ import (
 	"github.com/gorilla/rpc/json"
 	log "github.com/sirupsen/logrus"
 )
+
+const (
+	RPCServiceName                          = "ps"
+	RPCEndpoint                             = "/rpc"
+	OperationNameGetAllPatterns             = "GetAllPatterns"
+	OperationNameGetPatterns                = "GetPatterns"
+	OperationNameGetSeenEventProperties     = "GetSeenEventProperties"
+	OperationNameGetSeenEventPropertyValues = "GetSeenEventPropertyValues"
+	OperationNameGetCountOfPattern          = "GetCountOfPattern"
+	OperationNameGetProjectModelsIntervals  = "GetProjectModelsIntervals"
+	OperationNameGetSeenUserProperties      = "GetSeenUserProperties"
+	OperationNameGetSeenUserPropertyValues  = "GetSeenUserPropertyValues"
+	OperationNameGetUserAndEventsInfo       = "GetUserAndEventsInfo"
+	Separator                               = "."
+)
+
+type GenericRPCResp struct {
+	ProjectId uint64 `json:"pid"`
+	ModelId   uint64 `json:"mid"`
+	Ignored   bool   `json:"ignored"`
+	Error     error  `json:"error"`
+}
+
+type GetAllPatternsRequest struct {
+	ProjectId  uint64 `json:"pid"`
+	ModelId    uint64 `json:"mid"`
+	StartEvent string `json:"se"` // optional filter.
+	EndEvent   string `json:"ee"` // optional filter.
+}
+
+type GetAllPatternsResponse struct {
+	GenericRPCResp
+	Patterns []*pattern.Pattern `json:"ps"`
+}
+
+type GetPatternsRequest struct {
+	ProjectId     uint64     `json:"pid"`
+	ModelId       uint64     `json:"mid"`
+	PatternEvents [][]string `json:"pe"`
+}
+
+type GetPatternsResponse struct {
+	GenericRPCResp
+	Patterns []*pattern.Pattern `json:"ps"`
+}
+
+type GetSeenEventPropertiesRequest struct {
+	ProjectId uint64 `json:"pid"`
+	ModelId   uint64 `json:"mid"` // Optional, if not passed latest modelId will be used
+	EventName string `json:"en"`
+}
+
+type GetSeenEvenPropertiesResponse struct {
+	GenericRPCResp
+	EventProperties map[string][]string `json:"eps"`
+}
+
+type GetSeenEventPropertyValuesRequest struct {
+	ProjectId    uint64 `json:"pid"`
+	ModelId      uint64 `json:"mid"` // Optional, if not passed latest modelId will be used
+	EventName    string `json:"en"`
+	PropertyName string `json:"pn"`
+}
+
+type GetSeenEventPropertyValuesResponse struct {
+	GenericRPCResp
+	PropertyValues []string `json:"pvs"`
+}
+
+type GetProjectModelIntervalsRequest struct {
+	ProjectId uint64 `json:"pid"`
+}
+
+type GetProjectModelIntervalsResponse struct {
+	GenericRPCResp
+	ModelInfo []ModelInfo `json:"intervals"`
+}
+
+type GetSeenUserPropertiesRequest struct {
+	ProjectId uint64 `json:"pid"`
+	ModelId   uint64 `json:"mid"`
+}
+
+type GetSeenUserPropertiesResponse struct {
+	GenericRPCResp
+	UserProperties map[string][]string `json:"ups"`
+}
+
+type GetSeenUserPropertyValuesRequest struct {
+	ProjectId    uint64 `json:"pid"`
+	ModelId      uint64 `json:"mid"`
+	PropertyName string `json:"pn"`
+}
+type GetSeenUserPropertyValuesResponse struct {
+	GenericRPCResp
+	PropertyValues []string `json:"pvs"`
+}
+
+type GetUserAndEventsInfoRequest struct {
+	ProjectId uint64 `json:"pid"`
+	ModelId   uint64 `json:"mid"` // Optional, if not passed latest modelId will be used
+}
+
+type GetUserAndEventsInfoResponse struct {
+	GenericRPCResp
+	UserAndEventsInfo pattern.UserAndEventsInfo `json:"uei"`
+}
+
+type ModelInfo struct {
+	ModelId   uint64    `json:"mid"`
+	StartDate time.Time `json:"sd"`
+	EndDate   time.Time `json:"ed"`
+}
 
 func GetSeenUserProperties(projectId, modelId uint64) (map[string][]string, error) {
 	params := GetSeenUserPropertiesRequest{
@@ -99,21 +213,21 @@ func GetSeenUserPropertyValues(projectId, modelId uint64, propertyName string) (
 
 	for r := range gatherResp {
 		if r.err != nil {
-			log.WithError(r.err).Error("Error Ignoring GetPatternsResponse")
+			log.WithError(r.err).Error("Error Ignoring GetSeenUserPropertyValuesResponse")
 			continue
 		}
 		var result GetSeenUserPropertyValuesResponse
 		err = json.DecodeClientResponse(r.resp.Body, &result)
 		if err != nil {
-			log.WithError(err).Error("Error Decoding response Ignoring GetPatternsResponse")
+			log.WithError(err).Error("Error Decoding response Ignoring GetSeenUserPropertyValuesResponse")
 			continue
 		}
 		if result.Ignored {
-			log.Debugln("Ignoring GetPatternsResponse")
+			log.Debugln("Ignoring GetSeenUserPropertyValuesResponse")
 			continue
 		}
 		if result.Error != nil {
-			log.WithError(result.Error).Error("Error GetPatternsResponse")
+			log.WithError(result.Error).Error("Error GetSeenUserPropertyValuesResponse")
 			continue
 		}
 		propValues = append(propValues, result.PropertyValues...)
@@ -122,12 +236,64 @@ func GetSeenUserPropertyValues(projectId, modelId uint64, propertyName string) (
 	return propValues, nil
 }
 
-func GetPatterns(projectId, modelId uint64, startEvent, endEvent string) ([]*pattern.Pattern, error) {
-	params := GetPatternsRequest{
+func GetAllPatterns(projectId, modelId uint64, startEvent, endEvent string) ([]*pattern.Pattern, error) {
+	params := GetAllPatternsRequest{
 		ProjectId:  projectId,
 		ModelId:    modelId,
 		StartEvent: startEvent,
 		EndEvent:   endEvent,
+	}
+	paramBytes, err := json.EncodeClientRequest(RPCServiceName+Separator+OperationNameGetAllPatterns, params)
+	if err != nil {
+		return []*pattern.Pattern{}, err
+	}
+	serverAddrs := C.GetServices().GetPatternServerAddresses()
+
+	gatherResp := make(chan httpResp, len(serverAddrs))
+	headers := map[string]string{
+		"content-type": "application/json",
+	}
+
+	urls := make([]string, 0, 0)
+	for _, serverAddr := range serverAddrs {
+		url := fmt.Sprintf("http://%s%s", serverAddr, RPCEndpoint)
+		urls = append(urls, url)
+	}
+
+	httpDo(http.MethodPost, urls, paramBytes, headers, gatherResp)
+
+	patterns := make([]*pattern.Pattern, 0, 0)
+
+	for r := range gatherResp {
+		if r.err != nil {
+			log.WithError(r.err).Error("Error Ignoring GetAllPatternsResponse")
+			continue
+		}
+		var result GetAllPatternsResponse
+		err = json.DecodeClientResponse(r.resp.Body, &result)
+		if err != nil {
+			log.WithError(err).Error("Error Decoding response Ignoring GetAllPatternsResponse")
+			continue
+		}
+		if result.Ignored {
+			log.Debugln("Ignoring GetAllPatternsResponse")
+			continue
+		}
+		if result.Error != nil {
+			log.WithError(result.Error).Error("Error GetAllPatternsResponse")
+			continue
+		}
+		patterns = append(patterns, result.Patterns...)
+	}
+
+	return patterns, nil
+}
+
+func GetPatterns(projectId, modelId uint64, patternEvents [][]string) ([]*pattern.Pattern, error) {
+	params := GetPatternsRequest{
+		ProjectId:     projectId,
+		ModelId:       modelId,
+		PatternEvents: patternEvents,
 	}
 	paramBytes, err := json.EncodeClientRequest(RPCServiceName+Separator+OperationNameGetPatterns, params)
 	if err != nil {
@@ -336,6 +502,61 @@ func GetSeenEventProperties(projectId, modelId uint64, eventName string) (map[st
 	}
 
 	return resp, nil
+}
+
+func GetUserAndEventsInfo(projectId, modelId uint64) (*pattern.UserAndEventsInfo, uint64, error) {
+
+	params := GetUserAndEventsInfoRequest{
+		ProjectId: projectId,
+		ModelId:   modelId,
+	}
+	paramBytes, err := json.EncodeClientRequest(RPCServiceName+Separator+OperationNameGetUserAndEventsInfo, params)
+	if err != nil {
+		return nil, modelId, err
+	}
+
+	serverAddrs := C.GetServices().GetPatternServerAddresses()
+
+	gatherResp := make(chan httpResp, len(serverAddrs))
+	headers := map[string]string{
+		"content-type": "application/json",
+	}
+
+	urls := make([]string, 0, 0)
+	for _, serverAddr := range serverAddrs {
+		url := fmt.Sprintf("http://%s%s", serverAddr, RPCEndpoint)
+		urls = append(urls, url)
+	}
+
+	httpDo(http.MethodPost, urls, paramBytes, headers, gatherResp)
+
+	var respUserAndEventsInfo pattern.UserAndEventsInfo
+	// If modelId is not provided respond with the userAndEventsInfo of the latest modelId.
+	var respModelId uint64
+	for r := range gatherResp {
+		if r.err != nil {
+			log.WithError(r.err).Error("Error Ignoring GetUserAndEventsInfoResponse")
+			continue
+		}
+
+		var result GetUserAndEventsInfoResponse
+		err = json.DecodeClientResponse(r.resp.Body, &result)
+		if err != nil {
+			result.Error = err
+		}
+		if result.Ignored {
+			log.Debugln("Ignoring GetUserAndEventsInfoResponse")
+			continue
+		}
+
+		if result.Error != nil {
+			log.WithError(result.Error).Error("Error GetUserAndEventsInfoResponse")
+			continue
+		}
+		respUserAndEventsInfo = result.UserAndEventsInfo
+	}
+
+	return &respUserAndEventsInfo, respModelId, nil
 }
 
 type httpResp struct {

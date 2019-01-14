@@ -2,6 +2,7 @@ package tests
 
 import (
 	P "factors/pattern"
+	PW "factors/pattern_service_wrapper"
 	U "factors/util"
 	"fmt"
 	"testing"
@@ -74,8 +75,8 @@ func TestBuildNewItree(t *testing.T) {
 		p.UserCount = userCount
 		patterns = append(patterns, p)
 	}
-	pw := P.NewPatternWrapper(patterns, nil)
-	itree, err := P.BuildNewItree("", nil, "Y", nil, pw)
+	pw := NewMockPatternServiceWrapper(patterns, nil)
+	itree, err := PW.BuildNewItree("", nil, "Y", nil, pw)
 	assert.Nil(t, err)
 	assert.NotNil(t, itree)
 
@@ -164,7 +165,7 @@ func TestBuildNewItree(t *testing.T) {
 	}
 
 	// Build withs start and end event. Expected tree would be the subtree of above tree with root node AY.
-	itree, err = P.BuildNewItree("A", nil, "Y", nil, pw)
+	itree, err = PW.BuildNewItree("A", nil, "Y", nil, pw)
 	assert.Nil(t, err)
 	assert.NotNil(t, itree)
 	node0 = expectedNode{

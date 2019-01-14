@@ -1,20 +1,20 @@
 // itree
 // Methods to build Insight/Information trees.
-package pattern
+package pattern_service_wrapper
 
 import (
+	P "factors/pattern"
 	U "factors/util"
 	"fmt"
 	"math"
 	"sort"
-	"strings"
 
 	log "github.com/sirupsen/logrus"
 )
 
 type ItreeNode struct {
-	Pattern            *Pattern
-	PatternConstraints []EventConstraints
+	Pattern            *P.Pattern
+	PatternConstraints []P.EventConstraints
 	NodeType           int
 	Index              int
 	ParentIndex        int
@@ -56,7 +56,7 @@ type ItreeNode struct {
 	Fpr             float64
 	Fcp             float64
 	Fcr             float64
-	AddedConstraint EventConstraints
+	AddedConstraint P.EventConstraints
 }
 
 type Itree struct {
@@ -72,20 +72,20 @@ const NODE_TYPE_EVENT_PROPERTY = 2 // A child node that differs from its parent 
 const NODE_TYPE_USER_PROPERTY = 3  // A child node that differs from its parent by an user property constraint.
 
 func constructPatternConstraints(
-	pLen int, startEventConstraints *EventConstraints,
-	endEventConstraints *EventConstraints) []EventConstraints {
+	pLen int, startEventConstraints *P.EventConstraints,
+	endEventConstraints *P.EventConstraints) []P.EventConstraints {
 	if startEventConstraints == nil && endEventConstraints == nil {
 		return nil
 	}
 	if pLen == 0 {
 		return nil
 	}
-	patternConstraints := make([]EventConstraints, pLen)
+	patternConstraints := make([]P.EventConstraints, pLen)
 	for i := 0; i < pLen-1; i++ {
 		if i == 0 && startEventConstraints != nil {
 			patternConstraints[i] = *startEventConstraints
 		} else {
-			patternConstraints[i] = EventConstraints{}
+			patternConstraints[i] = P.EventConstraints{}
 		}
 	}
 	if endEventConstraints != nil {
@@ -96,18 +96,19 @@ func constructPatternConstraints(
 		// to endEvent
 		patternConstraints[pLen-1] = *startEventConstraints
 	} else {
-		patternConstraints[pLen-1] = EventConstraints{}
+		patternConstraints[pLen-1] = P.EventConstraints{}
 	}
 	return patternConstraints
 }
 
 func (it *Itree) buildRootNode(
-	pattern *Pattern, startEventConstraints *EventConstraints,
-	endEventConstraints *EventConstraints, patternWrapper *PatternWrapper) (*ItreeNode, error) {
+	pattern *P.Pattern, startEventConstraints *P.EventConstraints,
+	endEventConstraints *P.EventConstraints,
+	patternWrapper PatternServiceWrapperInterface) (*ItreeNode, error) {
 	pLen := len(pattern.EventNames)
-	patternConstraints := make([]EventConstraints, pLen)
+	patternConstraints := make([]P.EventConstraints, pLen)
 	for i := 0; i < pLen-1; i++ {
-		patternConstraints[i] = EventConstraints{}
+		patternConstraints[i] = P.EventConstraints{}
 	}
 	if startEventConstraints != nil {
 		patternConstraints[0] = *startEventConstraints
@@ -163,9 +164,10 @@ func (it *Itree) buildRootNode(
 }
 
 func (it *Itree) buildChildNode(
-	childPattern *Pattern, constraintToAdd *EventConstraints,
-	nodeType int, parentIndex int, patternWrapper *PatternWrapper,
-	allActiveUsersPattern *Pattern,
+	childPattern *P.Pattern, constraintToAdd *P.EventConstraints,
+	nodeType int, parentIndex int,
+	patternWrapper PatternServiceWrapperInterface,
+	allActiveUsersPattern *P.Pattern,
 	fpr float64, fpp float64) (*ItreeNode, error) {
 
 	parentNode := it.Nodes[parentIndex]
@@ -191,7 +193,7 @@ func (it *Itree) buildChildNode(
 	}
 
 	// Build Child constraints.
-	childPatternConstraints := make([]EventConstraints, childLen)
+	childPatternConstraints := make([]P.EventConstraints, childLen)
 	if nodeType == NODE_TYPE_SEQUENCE {
 		if parentConstraints != nil {
 			for i := 0; i < childLen-2; i++ {
@@ -204,7 +206,7 @@ func (it *Itree) buildChildNode(
 				// end event by default.
 				childPatternConstraints[1] = parentNode.PatternConstraints[0]
 			} else {
-				childPatternConstraints[childLen-2] = EventConstraints{}
+				childPatternConstraints[childLen-2] = P.EventConstraints{}
 			}
 			childPatternConstraints[childLen-1] = parentNode.PatternConstraints[childLen-2]
 		} else {
@@ -215,11 +217,11 @@ func (it *Itree) buildChildNode(
 			if parentConstraints != nil {
 				childPatternConstraints[i] = parentConstraints[i]
 			} else {
-				childPatternConstraints[i] = EventConstraints{
-					EPNumericConstraints:     []NumericConstraint{},
-					EPCategoricalConstraints: []CategoricalConstraint{},
-					UPNumericConstraints:     []NumericConstraint{},
-					UPCategoricalConstraints: []CategoricalConstraint{},
+				childPatternConstraints[i] = P.EventConstraints{
+					EPNumericConstraints:     []P.NumericConstraint{},
+					EPCategoricalConstraints: []P.CategoricalConstraint{},
+					UPNumericConstraints:     []P.NumericConstraint{},
+					UPCategoricalConstraints: []P.CategoricalConstraint{},
 				}
 			}
 		}
@@ -235,11 +237,11 @@ func (it *Itree) buildChildNode(
 			if parentConstraints != nil {
 				childPatternConstraints[i] = parentConstraints[i]
 			} else {
-				childPatternConstraints[i] = EventConstraints{
-					EPNumericConstraints:     []NumericConstraint{},
-					EPCategoricalConstraints: []CategoricalConstraint{},
-					UPNumericConstraints:     []NumericConstraint{},
-					UPCategoricalConstraints: []CategoricalConstraint{},
+				childPatternConstraints[i] = P.EventConstraints{
+					EPNumericConstraints:     []P.NumericConstraint{},
+					EPCategoricalConstraints: []P.CategoricalConstraint{},
+					UPNumericConstraints:     []P.NumericConstraint{},
+					UPCategoricalConstraints: []P.CategoricalConstraint{},
 				}
 			}
 		}
@@ -268,7 +270,7 @@ func (it *Itree) buildChildNode(
 	if nodeType == NODE_TYPE_SEQUENCE {
 		onceCount, _ := childPattern.GetOncePerUserCount(childPatternConstraints)
 		fcr = float64(onceCount)
-		var subConstraints []EventConstraints
+		var subConstraints []P.EventConstraints
 		if childPatternConstraints == nil {
 			subConstraints = nil
 		} else {
@@ -280,7 +282,7 @@ func (it *Itree) buildChildNode(
 		onceCount, _ := childPattern.GetOncePerUserCount(childPatternConstraints)
 		fcr = float64(onceCount)
 		if childLen > 1 {
-			var subConstraints []EventConstraints
+			var subConstraints []P.EventConstraints
 			if childPatternConstraints == nil {
 				subConstraints = nil
 			} else {
@@ -295,7 +297,7 @@ func (it *Itree) buildChildNode(
 					childPattern.String(), nodeType, constraintToAdd))
 			}
 			// frequency of child pattern is computed over allUserEvents after applying constraint.
-			allUConstraints := []EventConstraints{
+			allUConstraints := []P.EventConstraints{
 				*constraintToAdd,
 			}
 			c, _ := allActiveUsersPattern.GetOncePerUserCount(allUConstraints)
@@ -335,7 +337,7 @@ func (it *Itree) buildChildNode(
 	confidence := fcr / fcp
 	confidenceGain := confidence - parentNode.Confidence
 
-	addedConstraint := EventConstraints{}
+	addedConstraint := P.EventConstraints{}
 	if constraintToAdd != nil {
 		addedConstraint = *constraintToAdd
 	}
@@ -418,8 +420,9 @@ func isChildSequence(parent []string, child []string) bool {
 }
 
 func (it *Itree) buildAndAddSequenceChildNodes(
-	parentNode *ItreeNode, candidatePattens []*Pattern,
-	patternWrapper *PatternWrapper, allActiveUsersPattern *Pattern) ([]*ItreeNode, error) {
+	parentNode *ItreeNode, candidatePattens []*P.Pattern,
+	patternWrapper PatternServiceWrapperInterface,
+	allActiveUsersPattern *P.Pattern) ([]*ItreeNode, error) {
 
 	parentPattern := parentNode.Pattern
 	peLen := len(parentPattern.EventNames)
@@ -434,7 +437,7 @@ func (it *Itree) buildAndAddSequenceChildNodes(
 		// Parent is root node. Count is all users.
 		fpp = float64(parentPattern.UserCount)
 	} else {
-		var subParentConstraints []EventConstraints
+		var subParentConstraints []P.EventConstraints
 		if parentNode.PatternConstraints == nil {
 			subParentConstraints = nil
 		} else {
@@ -496,8 +499,8 @@ func (it *Itree) buildAndAddSequenceChildNodes(
 func (it *Itree) buildCategoricalPropertyChildNodes(
 	categoricalPropertyKeyValues map[string]map[string]bool,
 	nodeType int, maxNumProperties int, maxNumValues int,
-	parentNode *ItreeNode, patternWrapper *PatternWrapper,
-	allActiveUsersPattern *Pattern, pLen int, fpr float64, fpp float64) []*ItreeNode {
+	parentNode *ItreeNode, patternWrapper PatternServiceWrapperInterface,
+	allActiveUsersPattern *P.Pattern, pLen int, fpr float64, fpp float64) []*ItreeNode {
 	propertyChildNodes := []*ItreeNode{}
 	numP := 0
 	for propertyName, seenValues := range categoricalPropertyKeyValues {
@@ -511,14 +514,14 @@ func (it *Itree) buildCategoricalPropertyChildNodes(
 				break
 			}
 			numVal++
-			constraintToAdd := EventConstraints{
-				EPNumericConstraints:     []NumericConstraint{},
-				EPCategoricalConstraints: []CategoricalConstraint{},
-				UPNumericConstraints:     []NumericConstraint{},
-				UPCategoricalConstraints: []CategoricalConstraint{},
+			constraintToAdd := P.EventConstraints{
+				EPNumericConstraints:     []P.NumericConstraint{},
+				EPCategoricalConstraints: []P.CategoricalConstraint{},
+				UPNumericConstraints:     []P.NumericConstraint{},
+				UPCategoricalConstraints: []P.CategoricalConstraint{},
 			}
-			categoricalConstraint := []CategoricalConstraint{
-				CategoricalConstraint{
+			categoricalConstraint := []P.CategoricalConstraint{
+				P.CategoricalConstraint{
 					PropertyName:  propertyName,
 					PropertyValue: value,
 				},
@@ -547,8 +550,8 @@ func (it *Itree) buildCategoricalPropertyChildNodes(
 
 func (it *Itree) buildNumericalPropertyChildNodes(
 	numericPropertyKeys map[string]bool, nodeType int, maxNumProperties int,
-	parentNode *ItreeNode, patternWrapper *PatternWrapper,
-	allActiveUsersPattern *Pattern, pLen int, fpr float64, fpp float64) []*ItreeNode {
+	parentNode *ItreeNode, patternWrapper PatternServiceWrapperInterface,
+	allActiveUsersPattern *P.Pattern, pLen int, fpr float64, fpp float64) []*ItreeNode {
 	parentPattern := parentNode.Pattern
 	propertyChildNodes := []*ItreeNode{}
 	numP := 0
@@ -571,14 +574,14 @@ func (it *Itree) buildNumericalPropertyChildNodes(
 			minValue := pRange[0]
 			maxValue := pRange[1]
 			// Try three combinations of constraints. v < min, min < v < max, v > max
-			constraint1ToAdd := EventConstraints{
-				EPNumericConstraints:     []NumericConstraint{},
-				EPCategoricalConstraints: []CategoricalConstraint{},
-				UPNumericConstraints:     []NumericConstraint{},
-				UPCategoricalConstraints: []CategoricalConstraint{},
+			constraint1ToAdd := P.EventConstraints{
+				EPNumericConstraints:     []P.NumericConstraint{},
+				EPCategoricalConstraints: []P.CategoricalConstraint{},
+				UPNumericConstraints:     []P.NumericConstraint{},
+				UPCategoricalConstraints: []P.CategoricalConstraint{},
 			}
-			lesserThanConstraint := []NumericConstraint{
-				NumericConstraint{
+			lesserThanConstraint := []P.NumericConstraint{
+				P.NumericConstraint{
 					PropertyName: propertyName,
 					LowerBound:   -math.MaxFloat64,
 					UpperBound:   minValue,
@@ -590,14 +593,14 @@ func (it *Itree) buildNumericalPropertyChildNodes(
 				constraint1ToAdd.UPNumericConstraints = lesserThanConstraint
 			}
 
-			constraint2ToAdd := EventConstraints{
-				EPNumericConstraints:     []NumericConstraint{},
-				EPCategoricalConstraints: []CategoricalConstraint{},
-				UPNumericConstraints:     []NumericConstraint{},
-				UPCategoricalConstraints: []CategoricalConstraint{},
+			constraint2ToAdd := P.EventConstraints{
+				EPNumericConstraints:     []P.NumericConstraint{},
+				EPCategoricalConstraints: []P.CategoricalConstraint{},
+				UPNumericConstraints:     []P.NumericConstraint{},
+				UPCategoricalConstraints: []P.CategoricalConstraint{},
 			}
-			greaterThanConstraint := []NumericConstraint{
-				NumericConstraint{
+			greaterThanConstraint := []P.NumericConstraint{
+				P.NumericConstraint{
 					PropertyName: propertyName,
 					LowerBound:   minValue,
 					UpperBound:   maxValue,
@@ -609,14 +612,14 @@ func (it *Itree) buildNumericalPropertyChildNodes(
 				constraint2ToAdd.UPNumericConstraints = greaterThanConstraint
 			}
 
-			constraint3ToAdd := EventConstraints{
-				EPNumericConstraints:     []NumericConstraint{},
-				EPCategoricalConstraints: []CategoricalConstraint{},
-				UPNumericConstraints:     []NumericConstraint{},
-				UPCategoricalConstraints: []CategoricalConstraint{},
+			constraint3ToAdd := P.EventConstraints{
+				EPNumericConstraints:     []P.NumericConstraint{},
+				EPCategoricalConstraints: []P.CategoricalConstraint{},
+				UPNumericConstraints:     []P.NumericConstraint{},
+				UPCategoricalConstraints: []P.CategoricalConstraint{},
 			}
-			intervalConstraint := []NumericConstraint{
-				NumericConstraint{
+			intervalConstraint := []P.NumericConstraint{
+				P.NumericConstraint{
 					PropertyName: propertyName,
 					LowerBound:   maxValue,
 					UpperBound:   math.MaxFloat64,
@@ -628,7 +631,7 @@ func (it *Itree) buildNumericalPropertyChildNodes(
 				constraint3ToAdd.UPNumericConstraints = intervalConstraint
 			}
 
-			for _, constraintToAdd := range []EventConstraints{
+			for _, constraintToAdd := range []P.EventConstraints{
 				constraint1ToAdd, constraint2ToAdd, constraint3ToAdd} {
 				if cNode, err := it.buildChildNode(
 					parentPattern, &constraintToAdd, nodeType,
@@ -649,8 +652,8 @@ func (it *Itree) buildNumericalPropertyChildNodes(
 }
 
 func (it *Itree) buildAndAddPropertyChildNodes(
-	parentNode *ItreeNode, allActiveUsersPattern *Pattern,
-	patternWrapper *PatternWrapper) ([]*ItreeNode, error) {
+	parentNode *ItreeNode, allActiveUsersPattern *P.Pattern,
+	patternWrapper PatternServiceWrapperInterface) ([]*ItreeNode, error) {
 	// The top child nodes are obtained by adding constraints on the (N-1) event
 	// of parent pattern.
 	// i.e If parrent pattern is A -> B -> C -> Y with
@@ -663,29 +666,30 @@ func (it *Itree) buildAndAddPropertyChildNodes(
 	parentConstraints := parentNode.PatternConstraints
 	var fpr, fpp float64
 	pLen := len(parentPattern.EventNames)
-	if patternWrapper.userAndEventsInfo == nil {
+	userAndEventsInfo := patternWrapper.GetUserAndEventsInfo()
+	if userAndEventsInfo == nil {
 		// No event properties available.
 		return []*ItreeNode{}, nil
 	}
-	if patternWrapper.userAndEventsInfo.EventPropertiesInfoMap == nil {
+	if userAndEventsInfo.EventPropertiesInfoMap == nil {
 		// No event properties available.
 		return []*ItreeNode{}, nil
 	}
-	userInfo := patternWrapper.userAndEventsInfo.UserPropertiesInfo
+	userInfo := userAndEventsInfo.UserPropertiesInfo
 	if userInfo == nil {
 		// No properties.
 		return []*ItreeNode{}, nil
 	}
 
-	var eventInfo *PropertiesInfo
+	var eventInfo *P.PropertiesInfo
 	var eventName string
 	if pLen == 1 {
 		// Parent is root node. Count is all users.
 		fpp = float64(parentPattern.UserCount)
 	} else {
 		eventName = parentPattern.EventNames[pLen-2]
-		eventInfo, _ = (*patternWrapper.userAndEventsInfo.EventPropertiesInfoMap)[eventName]
-		var subConstraints []EventConstraints
+		eventInfo, _ = (*userAndEventsInfo.EventPropertiesInfoMap)[eventName]
+		var subConstraints []P.EventConstraints
 		if parentConstraints == nil {
 			subConstraints = nil
 		} else {
@@ -704,7 +708,7 @@ func (it *Itree) buildAndAddPropertyChildNodes(
 	fpr = float64(onceCount)
 
 	// Map out the current constraints applied on N-1st event in the pattern.
-	eventConstraints := EventConstraints{}
+	eventConstraints := P.EventConstraints{}
 	if parentConstraints != nil && pLen > 1 {
 		eventConstraints = parentConstraints[pLen-2]
 	}
@@ -779,9 +783,9 @@ func (it *Itree) buildAndAddPropertyChildNodes(
 }
 
 func BuildNewItree(
-	startEvent string, startEventConstraints *EventConstraints,
-	endEvent string, endEventConstraints *EventConstraints,
-	patternWrapper *PatternWrapper) (*Itree, error) {
+	startEvent string, startEventConstraints *P.EventConstraints,
+	endEvent string, endEventConstraints *P.EventConstraints,
+	patternWrapper PatternServiceWrapperInterface) (*Itree, error) {
 	if endEvent == "" {
 		return nil, fmt.Errorf("Missing end event")
 	}
@@ -792,32 +796,29 @@ func BuildNewItree(
 		EndEvent: endEvent,
 	}
 
-	var rootNodePattern *Pattern = nil
-	var allActiveUsersPattern *Pattern = nil
-	candidatePatterns := []*Pattern{}
-	for _, p := range patternWrapper.patterns {
+	var rootNodePattern *P.Pattern = nil
+	var allActiveUsersPattern *P.Pattern = nil
+	candidatePatterns, err := patternWrapper.GetAllPatterns(startEvent, endEvent)
+	if err != nil {
+		return nil, err
+	}
+	allActiveUsersPattern = patternWrapper.GetPattern([]string{U.SEN_ALL_ACTIVE_USERS})
+	if allActiveUsersPattern == nil {
+		return nil, fmt.Errorf("All active users pattern not found")
+	}
+	for _, p := range candidatePatterns {
 		pLen := len(p.EventNames)
-		if pLen == 1 && p.EventNames[0] == U.SEN_ALL_ACTIVE_USERS {
-			allActiveUsersPattern = p
-		}
-		if (strings.Compare(endEvent, p.EventNames[pLen-1]) == 0) &&
-			(startEvent == "" || strings.Compare(startEvent, p.EventNames[0]) == 0) {
-			candidatePatterns = append(candidatePatterns, p)
-			if (startEvent == "" && pLen == 1) || (startEvent != "" && pLen == 2) {
-				if count, err := p.GetOncePerUserCount(constructPatternConstraints(
-					pLen, startEventConstraints, endEventConstraints)); count > 0 {
-					rootNodePattern = p
-				} else if err != nil {
-					return nil, err
-				}
+		if (startEvent == "" && pLen == 1) || (startEvent != "" && pLen == 2) {
+			if count, err := p.GetOncePerUserCount(constructPatternConstraints(
+				pLen, startEventConstraints, endEventConstraints)); count > 0 {
+				rootNodePattern = p
+			} else if err != nil {
+				return nil, err
 			}
 		}
 	}
 	if rootNodePattern == nil {
 		return nil, fmt.Errorf("Root node not found or frequency 0")
-	}
-	if allActiveUsersPattern == nil {
-		return nil, fmt.Errorf("All active users pattern not found")
 	}
 	queue := []*ItreeNode{}
 

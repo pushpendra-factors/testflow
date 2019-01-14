@@ -18,6 +18,7 @@ import (
 	serviceDisk "factors/services/disk"
 	serviceEtcd "factors/services/etcd"
 	serviceS3 "factors/services/s3"
+	U "factors/util"
 	"flag"
 	"fmt"
 	"io"
@@ -482,14 +483,21 @@ func main() {
 	}
 
 	log.Infoln("Renaming ModelPatterns File")
-	path, fName := diskManager.GetModelPatternsFilePathAndName(projectId, modelId)
-	if err = os.Rename(tmpOutputFilePath, path+"/"+fName); err != nil {
+	chunkId := "01"
+	path, fName := diskManager.GetPatternChunkFilePathAndName(projectId, modelId, chunkId)
+	// Ensure directory is created.
+	err = os.MkdirAll(path, 0755)
+	if err != nil {
+		log.WithFields(log.Fields{"file": path, "err": err}).Fatal("Unable to create path.")
+		os.Exit(1)
+	}
+	if err = os.Rename(tmpOutputFilePath, path+fName); err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("Failed to rename output.")
 		os.Exit(1)
 	}
 	tmpFile.Close()
-	path, fName = diskManager.GetModelPatternsFilePathAndName(projectId, modelId)
-	tmpFile, err = os.Open(path + "/" + fName)
+	path, fName = diskManager.GetPatternChunkFilePathAndName(projectId, modelId, chunkId)
+	tmpFile, err = os.Open(path + fName)
 	defer tmpFile.Close()
 	if err != nil {
 		log.WithError(err).Error("failed to open temp file")
@@ -497,7 +505,7 @@ func main() {
 	}
 
 	log.Infoln("Cloudmanager Creating ModelPatterns File")
-	path, fName = cloudManager.GetModelPatternsFilePathAndName(projectId, modelId)
+	path, fName = cloudManager.GetPatternChunkFilePathAndName(projectId, modelId, chunkId)
 	err = cloudManager.Create(path, fName, tmpFile)
 	if err != nil {
 		log.WithError(err).Error("cloud manager Failed to create model patterns file")
@@ -525,7 +533,7 @@ func main() {
 	projectDatas = append(projectDatas, projectData{
 		ID:      projectId,
 		ModelID: modelId,
-		Chunks:  []string{"TODO"},
+		Chunks:  []string{chunkId},
 	})
 
 	newVersionName := fmt.Sprintf("%v", time.Now().Unix())
