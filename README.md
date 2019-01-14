@@ -156,10 +156,9 @@ npm run dev
 export GOPATH=<path_to_githubcode>/factors/backend
 export ETCDCTL_API=3
 etcdctl put /factors/metadata/project_version_key version1
-mkdir -p /tmp/factors-dev/metadata
-mkdir -p /tmp/factors/metadata
-cp $GOPATH/src/factors/pattern_server/cmd/project_data.txt /tmp/factors/metadata/version1.txt
-cp /tmp/factors/metadata/version1.txt /tmp/factors-dev/metadata/version1.txt
+mkdir -p /tmp/factors/local_disk
+mkdir -p /tmp/factors/cloud_storage/metadata
+cp $GOPATH/src/factors/pattern_server/cmd/project_data.txt /tmp/factors/cloud_storage/metadata/version1.txt
 ```
 * Build
 ```
@@ -171,7 +170,7 @@ cd $GOPATH/bin
 ./pattern-app
 Config can be passed using flags
 
-./pattern-app --env=development --ip=127.0.0.1 --port=8100 --etcd=localhost:2379 --disk_dir=/tmp/factors --s3=/tmp/factors-dev --s3_region=us-east-1
+./pattern-app --env=development --ip=127.0.0.1 --port=8100 --etcd=localhost:2379 --disk_dir=/tmp/factors/local_disk --s3=/tmp/factors/cloud_storage --s3_region=us-east-1
 ```
 ## Bootstrapping sample data, Building and serving model.
 * Start server on 8080.
@@ -187,14 +186,14 @@ go run ingest_kasandr_events.go --input_file=<path_to_githubcode>/factors/sample
 ```
 cd ../../../backend/src/factors/scripts/
 export GOPATH=<path_to_githubcode>/factors/backend
-go run run_pull_events.go --project_id=<projectId> --end_time=1465948361 --disk_dir=/tmp/factors --bucket_name=/tmp/factors-dev
+go run run_pull_events.go --project_id=<projectId> --end_time=1465948361 --local_disk_tmp_dir=/tmp/factors/local_disk/tmp --bucket_name=/tmp/factors/cloud_storage
 * Note \<modelId\> from the last line of the stdout of the script.
 ```
 
-* Check output file at /tmp/factors/projects/\<projectId\>models/\<modelId\>/events_<modelId>.txt
+* Check output file at /tmp/factors/cloud_storage/projects/\<projectId\>models/\<modelId\>/events_<modelId>.txt
 
 ```
-go run run_pattern_mine.go --env=development --etcd=localhost:2379 --disk_dir=/tmp/factors --s3_region=us-east-1 --s3=/tmp/factors-dev --num_routines=3 --project_id=<projectId> --model_id=<modelId>
+go run run_pattern_mine.go --env=development --etcd=localhost:2379 --local_disk_tmp_dir=/tmp/factors/local_disk/tmp --s3_region=us-east-1 --s3=/tmp/factors/cloud_storage --num_routines=3 --project_id=<projectId> --model_id=<modelId>
 or
 go run run_pattern_mine.go --project_id=<projectId> --model_id=<modelId>
 ```

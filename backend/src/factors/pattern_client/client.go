@@ -554,6 +554,7 @@ func GetUserAndEventsInfo(projectId, modelId uint64) (*pattern.UserAndEventsInfo
 			continue
 		}
 		respUserAndEventsInfo = result.UserAndEventsInfo
+		respModelId = result.ModelId
 	}
 
 	return &respUserAndEventsInfo, respModelId, nil

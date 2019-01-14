@@ -4,7 +4,7 @@ package main
 
 // Sample usage in terminal.
 // export GOPATH=/Users/aravindmurthy/code/factors/backend/
-// go run run_pattern_mine.go --env=development --etcd=localhost:2379 --disk_dir=/tmp/factors --s3_region=us-east-1 --s3=/tmp/factors-dev --num_routines=3 --project_id=<projectId> --model_id=<modelId>
+// go run run_pattern_mine.go --env=development --etcd=localhost:2379 --disk_dir=/tmp/factors/local_disk --s3_region=us-east-1 --s3=/tmp/factors/cloud_storage --num_routines=3 --project_id=<projectId> --model_id=<modelId>
 // or
 // go run run_pattern_mine.go --project_id=<projectId> --model_id=<modelId>
 import (
@@ -366,9 +366,11 @@ func main() {
 	envFlag := flag.String("env", "development", "")
 	projectIdFlag := flag.Uint64("project_id", 0, "Project Id.")
 	modelIdFlag := flag.Uint64("model_id", 0, "Model Id")
-	etcd := flag.String("etcd", "localhost:2379", "Comma separated list of etcd endpoints localhost:2379,localhost:2378")
-	diskDirFlag := flag.String("disk_dir", "/tmp/factors", "--disk_dir=/tmp/factors pass directory")
-	s3BucketFlag := flag.String("s3", "/tmp/factors-dev", "")
+	etcd := flag.String("etcd", "localhost:2379",
+		"Comma separated list of etcd endpoints localhost:2379,localhost:2378")
+	localDiskTmpDirFlag := flag.String("local_disk_tmp_dir",
+		"/tmp/factors/local_disk/tmp", "--local_disk_tmp_dir=/tmp/factors/local_disk/tmp pass directory")
+	s3BucketFlag := flag.String("s3", "/tmp/factors/cloud_storage", "")
 	s3BucketRegionFlag := flag.String("s3_region", "us-east-1", "")
 	numRoutinesFlag := flag.Int("num_routines", 3, "No of routines")
 
@@ -381,14 +383,14 @@ func main() {
 	}
 
 	log.WithFields(log.Fields{
-		"Env":           *envFlag,
-		"EtcdEndpoints": *etcd,
-		"DiskBaseDir":   *diskDirFlag,
-		"ProjectId":     *projectIdFlag,
-		"ModelId":       *modelIdFlag,
-		"S3Bucket":      *s3BucketFlag,
-		"S3Region":      *s3BucketRegionFlag,
-		"NumRoutines":   *numRoutinesFlag,
+		"Env":             *envFlag,
+		"EtcdEndpoints":   *etcd,
+		"localDiskTmpDir": *localDiskTmpDirFlag,
+		"ProjectId":       *projectIdFlag,
+		"ModelId":         *modelIdFlag,
+		"S3Bucket":        *s3BucketFlag,
+		"S3Region":        *s3BucketRegionFlag,
+		"NumRoutines":     *numRoutinesFlag,
 	}).Infoln("Initialising")
 
 	if *envFlag != "development" {
@@ -410,12 +412,11 @@ func main() {
 	modelId := *modelIdFlag
 	projectId := *projectIdFlag
 
-	diskDir := *diskDirFlag
+	localDiskTmpDir := *localDiskTmpDirFlag
 	bucketName := *s3BucketFlag
 	region := *s3BucketRegionFlag
 
-	diskManager := serviceDisk.New(diskDir)
-
+	diskManager := serviceDisk.New(localDiskTmpDir)
 	var cloudManager filestore.FileManager
 
 	if env == "development" {
@@ -430,9 +431,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// TODO(Ankit):
-	// This file should be pulled from cloud first
-	input, Name := diskManager.GetModelEventsFilePathAndName(projectId, modelId)
+	input, Name := cloudManager.GetModelEventsFilePathAndName(projectId, modelId)
 	inputFilePath := input + Name
 
 	userAndEventsInfo, err := buildPropertiesInfoFromInput(projectId, inputFilePath)
@@ -452,13 +451,17 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Write intermediate results to temporary file in the same directory.
-	tmpOutputFilePath := fmt.Sprintf("%s/projects/%v/models/%v/tmp.txt", diskDir, projectId, modelId)
+	// Write incremental results to temporary file in local disk tmp directory and then copy final files to
+	// cloud.
+	chunkId := "01"
+	_, fName := diskManager.GetPatternChunkFilePathAndName(projectId, modelId, chunkId)
+	tmpOutputFilePath := fmt.Sprintf("%s/%s", localDiskTmpDir, fName)
 	tmpFile, err := os.Create(tmpOutputFilePath)
 	if err != nil {
 		log.WithFields(log.Fields{"file": tmpOutputFilePath, "err": err}).Fatal("Unable to create file.")
 		os.Exit(1)
 	}
+	defer tmpFile.Close()
 
 	// First build histogram of all user properties.
 	allActiveUsersPattern, err := P.NewPattern([]string{U.SEN_ALL_ACTIVE_USERS}, userAndEventsInfo)
@@ -482,30 +485,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	log.Infoln("Renaming ModelPatterns File")
-	chunkId := "01"
-	path, fName := diskManager.GetPatternChunkFilePathAndName(projectId, modelId, chunkId)
-	// Ensure directory is created.
-	err = os.MkdirAll(path, 0755)
-	if err != nil {
-		log.WithFields(log.Fields{"file": path, "err": err}).Fatal("Unable to create path.")
-		os.Exit(1)
-	}
-	if err = os.Rename(tmpOutputFilePath, path+fName); err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("Failed to rename output.")
-		os.Exit(1)
-	}
-	tmpFile.Close()
-	path, fName = diskManager.GetPatternChunkFilePathAndName(projectId, modelId, chunkId)
-	tmpFile, err = os.Open(path + fName)
-	defer tmpFile.Close()
-	if err != nil {
-		log.WithError(err).Error("failed to open temp file")
-		os.Exit(1)
-	}
-
 	log.Infoln("Cloudmanager Creating ModelPatterns File")
-	path, fName = cloudManager.GetPatternChunkFilePathAndName(projectId, modelId, chunkId)
+	tmpFile.Seek(0, 0) // Reset to the begining, before writing to cloud.
+	path, fName := cloudManager.GetPatternChunkFilePathAndName(projectId, modelId, chunkId)
 	err = cloudManager.Create(path, fName, tmpFile)
 	if err != nil {
 		log.WithError(err).Error("cloud manager Failed to create model patterns file")

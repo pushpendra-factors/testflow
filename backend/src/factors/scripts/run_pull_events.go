@@ -21,8 +21,9 @@ import (
 )
 
 var projectIdFlag = flag.Int("project_id", 0, "Project Id.")
-var diskDirFlag = flag.String("disk_dir", "/tmp/factors", "--disk_dir=/tmp/factors pass directory")
-var bucketNameFlag = flag.String("bucket_name", "/tmp/factors-dev", "--bucket_name=/tmp/factors-dev pass bucket name")
+var localDiskTmpDirFlag = flag.String("local_disk_tmp_dir",
+	"/tmp/factors/local_disk/tmp", "--local_disk_tmp_dir=/tmp/factors/local_disk/tmp pass directory")
+var bucketNameFlag = flag.String("bucket_name", "/tmp/factors/cloud_storage", "--bucket_name=/tmp/factors/cloud_storage pass bucket name")
 var endTimeFlag = flag.Int64("end_time", time.Now().Unix(),
 	"Events that occurred from  num_HOURS or max_events before end time are processed. Format is unix timestamp")
 
@@ -130,22 +131,22 @@ func main() {
 	projectId := uint64(*projectIdFlag)
 	modelId := uint64(time.Now().Unix())
 
-	diskDir := *diskDirFlag
+	localDiskTmpDir := *localDiskTmpDirFlag
 	bucketName := *bucketNameFlag
 
-	diskManager := serviceDisk.New(diskDir)
+	diskManager := serviceDisk.New(localDiskTmpDir)
 	cloundManager := serviceDisk.New(bucketName)
 
-	err = os.MkdirAll(fmt.Sprintf("%s/projects/%v/models/%v/", diskDir, projectId, modelId), 0755)
+	err = os.MkdirAll(localDiskTmpDir, 0755)
 	if err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("Failed to Create projects model dir.")
+		log.WithFields(log.Fields{"err": err}).Error("Failed to create local disk tmp directory.")
 		os.Exit(1)
 	}
 
 	if C.IsDevelopment() {
 		err = os.MkdirAll(fmt.Sprintf("%s/projects/%v/models/%v/", bucketName, projectId, modelId), 0755)
 		if err != nil {
-			log.WithFields(log.Fields{"err": err}).Error("/tmp/factors-dev Failed to Create projects model dir.")
+			log.WithFields(log.Fields{"err": err}).Error("Failed to Create projects model dir.")
 			os.Exit(1)
 		}
 	}
@@ -160,23 +161,22 @@ func main() {
 	endTime = *endTimeFlag
 	startTime = endTime - num_SECONDS
 
-	path, fname := diskManager.GetModelEventsFilePathAndName(projectId, modelId)
-	outputDir := path + fname
-	err = pullAndWriteEventsFile(*projectIdFlag, startTime, endTime, outputDir)
+	// First write file to local disk tmp directory.
+	_, fName := diskManager.GetModelEventsFilePathAndName(projectId, modelId)
+	tmpOutputFilePath := fmt.Sprintf("%s/%s", localDiskTmpDir, fName)
+	err = pullAndWriteEventsFile(*projectIdFlag, startTime, endTime, tmpOutputFilePath)
 	if err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("Failed to mine patterns.")
 		os.Exit(1)
 	}
-
-	file, err := os.Open(outputDir)
-
+	tmpOutputFile, err := os.Open(tmpOutputFilePath)
 	if err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("Failed to open file.")
 		os.Exit(1)
 	}
 
 	cDir, cName := cloundManager.GetModelEventsFilePathAndName(projectId, modelId)
-	err = cloundManager.Create(cDir, cName, file)
+	err = cloundManager.Create(cDir, cName, tmpOutputFile)
 	if err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("Failed to upload file to cloud")
 		os.Exit(1)

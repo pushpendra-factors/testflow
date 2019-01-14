@@ -173,8 +173,8 @@ func main() {
 	ip := flag.String("ip", "127.0.0.1", "")
 	port := flag.String("port", "8100", "")
 	etcd := flag.String("etcd", "localhost:2379", "Comma separated list of etcd endpoints localhost:2379,localhost:2378")
-	diskBaseDir := flag.String("disk_dir", "/tmp/factors", "")
-	s3Bucket := flag.String("s3", "/tmp/factors-dev", "")
+	diskBaseDir := flag.String("disk_dir", "/tmp/factors/local_disk", "")
+	s3Bucket := flag.String("s3", "/tmp/factors/cloud_storage", "")
 	s3BucketRegion := flag.String("s3_region", "us-east-1", "")
 	flag.Parse()
 
