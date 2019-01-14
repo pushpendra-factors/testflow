@@ -19,8 +19,8 @@ type User struct {
 	ProjectId    uint64 `gorm:"primary_key:true;" json:"project_id"`
 	PropertiesId string `json:"properties_id"`
 	// Not part of table, but part of json. Stored in UserProperties table.
-	Properties postgres.Jsonb `gorm:"-" json:"properties"`
-
+	Properties         postgres.Jsonb `gorm:"-" json:"properties"`
+	SegmentAnonymousId string         `gorm:"type:varchar(50);default:null" json:"seg_aid"`
 	// UserId provided by the customer.
 	// An unique index is creatd on ProjectId+UserId.
 	CustomerUserId string `json:"c_uid"`
@@ -186,13 +186,36 @@ func GetUserLatestByCustomerUserId(projectId uint64, customerUserId string) (*Us
 	db := C.GetServices().Db
 
 	var user User
-	err := db.Where("project_id = ?", projectId).Where("customer_user_id = ?", customerUserId).Last(&user).Error
-
-	if err != nil {
+	if err := db.Order("created_at DESC").Where("project_id = ?", projectId).Where(
+		"customer_user_id = ?", customerUserId).First(&user).Error; err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound
 		}
 		return nil, http.StatusInternalServerError
 	}
 	return &user, http.StatusFound
+}
+
+func GetSegmentUser(projectId uint64, customerUserId string, segmentAnonymousId string) (*User, int) {
+	db := C.GetServices().Db
+
+	// Precedence goes to customerUserId, if exist.
+	if customerUserId != "" {
+		return GetUserLatestByCustomerUserId(projectId, customerUserId)
+	}
+
+	// Todo(Dinesh): Two queries can be made as one single query.
+	if segmentAnonymousId != "" {
+		var user User
+		if err := db.Where("project_id = ?  AND segment_anonymous_id = ?", projectId, segmentAnonymousId).First(&user).Error; err != nil {
+			if gorm.IsRecordNotFoundError(err) {
+				return nil, http.StatusNotFound
+			}
+			log.WithFields(log.Fields{"segment_anonymous_id": segmentAnonymousId}).Error("Failed to get segment user.")
+			return nil, http.StatusInternalServerError
+		}
+		return &user, http.StatusFound
+	}
+
+	return nil, http.StatusBadRequest
 }

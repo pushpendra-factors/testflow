@@ -41,6 +41,13 @@ func main() {
 		log.Info("projects table token unique index created.")
 	}
 
+	// Add unique index on project private_tokens.
+	if err := db.Exec("CREATE UNIQUE INDEX private_token_unique_idx ON projects(private_token);").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("projects table private_token unique indexing failed.")
+	} else {
+		log.Info("projects table private_token unique index created.")
+	}
+
 	// Create project settings table.
 	if err := db.CreateTable(&M.ProjectSetting{}).Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("project_settings table creation failed.")

@@ -18,40 +18,64 @@ const SEN_ALL_ACTIVE_USERS = "$AllActiveUsers"
 // Event Properties.
 var EP_OCCURRENCE_COUNT string = "$occurrenceCount"
 
-// Properties that change too often are better part of event properties rather than user property.
-// TODO(Dinesh): Internal properties should not to be exposed on any http responses.
+// Default Event Properites
 var EP_INTERNAL_IP string = "$ip"
 var EP_LOCATION_LATITUDE string = "$locationLat"
 var EP_LOCATION_LONGITUDE string = "$locationLng"
+var EP_REFERRER string = "$referrer"
+var EP_PAGE_TITLE string = "$pageTitle"
+var EP_RAW_URL string = "$rawURL"
+var EP_DEVICE_ID string = "$deviceId"
+var EP_DEVICE_NAME string = "$deviceName"
+var EP_DEVICE_ADVERTISING_ID string = "$deviceAdvertisingId"
 
-// Default User Properties - Added from JS SDK
+// Default User Properties
 var UP_PLATFORM string = "$platform"
-var UP_REFERRER string = "$referrer"
 var UP_BROWSER string = "$browser"
 var UP_BROWSER_VERSION string = "$browserVersion"
+var UP_USER_AGENT string = "$userAgent"
 var UP_OS string = "$os"
 var UP_OS_VERSION string = "$osVersion"
 var UP_SCREEN_WIDTH string = "$screenWidth"
 var UP_SCREEN_HEIGHT string = "$screenHeight"
+var UP_SCREEN_DENSITY string = "$screenDensity"
 var UP_LANGUAGE string = "$language"
+var UP_LOCALE string = "$locale"
 var UP_DEVICE_BRAND string = "$deviceBrand"
 var UP_DEVICE_MODEL string = "$deviceModel"
 var UP_DEVICE_TYPE string = "$deviceType"
 var UP_DEVICE_FAMILY string = "$deviceFamily"
 var UP_DEVICE_MANUFACTURER string = "$deviceManufacturer"
-var UP_DEVICE_ID string = "$deviceId"
 var UP_DEVICE_CARRIER string = "$deviceCarrier"
+var UP_DEVICE_ADTRACKING_ENABLED string = "$deviceAdTrackingEnabled"
+var UP_NETWORK_BLUETOOTH string = "$networkBluetooth"
+var UP_NETWORK_CARRIER string = "$networkCarrier"
+var UP_NETWORK_CELLULAR string = "$networkCellular"
+var UP_NETWORK_WIFI string = "$networkWifi"
+var UP_APP_NAME string = "$appName"
+var UP_APP_NAMESPACE string = "$appNamespace"
 var UP_APP_VERSION string = "$appVersion"
-
-// Default User Properties - Added from Backend
+var UP_APP_BUILD string = "$appBuild"
 var UP_COUNTRY string = "$country"
 var UP_CITY string = "$city"
 var UP_REGION string = "$region"
+var UP_CAMPAIGN_NAME string = "$campaignName"
+var UP_CAMPAIGN_SOURCE string = "$campaignSource"
+var UP_CAMPAIGN_MEDIUM string = "$campaignMedium"
+var UP_CAMPAIGN_TERM string = "$campaignTerm"
+var UP_CAMPAIGN_CONTENT string = "$campaignContent"
+var UP_TIMEZONE string = "$timezone"
 
 var ALLOWED_SDK_DEFAULT_EVENT_PROPERTIES = [...]string{
 	EP_INTERNAL_IP,
 	EP_LOCATION_LATITUDE,
 	EP_LOCATION_LONGITUDE,
+	EP_REFERRER,
+	EP_PAGE_TITLE,
+	EP_RAW_URL,
+	EP_DEVICE_ID,
+	EP_DEVICE_NAME,
+	EP_DEVICE_ADVERTISING_ID,
 }
 
 // Event properties that are not visible to user for analysis.
@@ -63,25 +87,40 @@ var INTERNAL_EVENT_PROPERTIES = [...]string{
 
 var ALLOWED_SDK_DEFAULT_USER_PROPERTIES = [...]string{
 	UP_PLATFORM,
-	UP_REFERRER,
 	UP_BROWSER,
 	UP_BROWSER_VERSION,
+	UP_USER_AGENT,
 	UP_OS,
 	UP_OS_VERSION,
 	UP_SCREEN_WIDTH,
 	UP_SCREEN_HEIGHT,
-	UP_COUNTRY,
-	UP_CITY,
-	UP_REGION,
+	UP_SCREEN_DENSITY,
 	UP_LANGUAGE,
+	UP_LOCALE,
 	UP_DEVICE_BRAND,
 	UP_DEVICE_MODEL,
 	UP_DEVICE_TYPE,
 	UP_DEVICE_FAMILY,
 	UP_DEVICE_MANUFACTURER,
-	UP_DEVICE_ID,
 	UP_DEVICE_CARRIER,
+	UP_DEVICE_ADTRACKING_ENABLED,
+	UP_NETWORK_BLUETOOTH,
+	UP_NETWORK_CARRIER,
+	UP_NETWORK_CELLULAR,
+	UP_NETWORK_WIFI,
+	UP_APP_NAME,
+	UP_APP_NAMESPACE,
 	UP_APP_VERSION,
+	UP_APP_BUILD,
+	UP_COUNTRY,
+	UP_CITY,
+	UP_REGION,
+	UP_CAMPAIGN_NAME,
+	UP_CAMPAIGN_SOURCE,
+	UP_CAMPAIGN_MEDIUM,
+	UP_CAMPAIGN_TERM,
+	UP_CAMPAIGN_CONTENT,
+	UP_TIMEZONE,
 }
 
 var VISIBLE_DEFAULT_NUMERIC_EVENT_PROPERTIES = [...]string{EP_OCCURRENCE_COUNT}
@@ -90,11 +129,15 @@ const NAME_PREFIX = "$"
 const NAME_PREFIX_ESCAPE_CHAR = "_"
 const QUERY_PARAM_PROPERTY_PREFIX = "$qp_"
 
+// Platforms
+const PLATFORM_WEB = "web"
+
 // isValidProperty - Validate property type.
 func isPropertyTypeValid(value interface{}) error {
 	switch valueType := value.(type) {
 	case float64:
 	case string:
+	case bool:
 	default:
 		log.WithFields(log.Fields{"value": value,
 			"valueType": valueType}).Debug("Invalid type used on property")
@@ -148,8 +191,10 @@ func GetValidatedEventProperties(properties *PropertiesMap) *PropertiesMap {
 	validatedProperties := make(PropertiesMap)
 	for k, v := range *properties {
 		if err := isPropertyTypeValid(v); err == nil {
-			// Escape properties with $ prefix but allow query_params_props with $qp_ prrefix.
-			if strings.HasPrefix(k, NAME_PREFIX) && !strings.HasPrefix(k, QUERY_PARAM_PROPERTY_PREFIX) && !isSDKEventDefaultProperty(&k) {
+			// Escape properties with $ prefix but allow query_params_props with $qp_ prrefix and default properties.
+			if strings.HasPrefix(k, NAME_PREFIX) &&
+				!strings.HasPrefix(k, QUERY_PARAM_PROPERTY_PREFIX) &&
+				!isSDKEventDefaultProperty(&k) {
 				validatedProperties[fmt.Sprintf("%s%s", NAME_PREFIX_ESCAPE_CHAR, k)] = v
 			} else {
 				validatedProperties[k] = v

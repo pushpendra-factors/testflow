@@ -162,10 +162,22 @@ SuitePrivateMethod.testGetUserDefaultProperties = function() {
 
     // Check individual keys needed.
     assert.containsAllKeys(props, 
-        ["$platform", "$referrer", "$browser", "$browserVersion", "$os", "$osVersion", "$screenWidth", "$screenHeight"]);
+        ["$platform", "$browser", "$browserVersion", "$os", "$osVersion", "$screenWidth", "$screenHeight"]);
     
     props = Properties.getUserDefault();
     if (props.$device) assert.isTrue(props.$device != "");
+}
+
+SuitePrivateMethod.testGetEventDefaultProperties = function() {
+    assert.isNotEmpty(Properties.getEventDefault())
+    let props =  Properties.getEventDefault();
+    // No empty values.
+    for (let k in props) 
+        if(k != "$pageTitle") // pageTitle can be empty.
+            assert.isNotEmpty(props[k].toString(), "Empty: "+k);
+    
+    // Check individual keys needed.
+    assert.containsAllKeys(props, ["$referrer", "$pageTitle", "$rawURL"]);
 }
 
 SuitePrivateMethod.testGetTypeValidatedProperties = function() {

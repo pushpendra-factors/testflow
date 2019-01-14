@@ -82,6 +82,8 @@ App.prototype.track = function(eventName, eventProperties, auto=false) {
     
     // Other property validations done on backend.
     eventProperties = Properties.getTypeValidated(eventProperties);
+    // Merge default properties.
+    eventProperties = Object.assign(eventProperties, Properties.getEventDefault())
 
     let payload = {};
     updatePayloadWithUserIdFromCookie(payload);

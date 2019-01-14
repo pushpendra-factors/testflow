@@ -8,9 +8,9 @@ import (
 
 const ROUTE_SDK_ROOT = "/sdk"
 const ROUTE_PROJECTS_ROOT = "/projects"
+const ROUTE_INTEGRATIONS_ROOT = "/integrations"
 
 func InitAppRoutes(r *gin.Engine) {
-
 	// Route not allowed for public access.
 	r.POST(ROUTE_PROJECTS_ROOT,
 		mid.DenyPublicAccess(),
@@ -49,5 +49,13 @@ func InitSDKRoutes(r *gin.Engine) {
 	sdkRouteGroup.POST("/event/track", SDKTrackHandler)
 	sdkRouteGroup.POST("/user/identify", SDKIdentifyHandler)
 	sdkRouteGroup.POST("/user/add_properties", SDKAddUserPropertiesHandler)
-	sdkRouteGroup.GET("/project/get_settings", SDKGetProjectSettings)
+	sdkRouteGroup.GET("/project/get_settings", SDKGetProjectSettingsHandler)
+}
+
+func InitIntRoutes(r *gin.Engine) {
+	intRouteGroup := r.Group(ROUTE_INTEGRATIONS_ROOT)
+
+	intRouteGroup.POST("/segment",
+		mid.SetScopeProjectIdByPrivateToken(),
+		IntSegmentHandler)
 }

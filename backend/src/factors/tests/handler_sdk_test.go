@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestSDKTrack(t *testing.T) {
+func TestSDKTrackHandler(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
 	H.InitSDKRoutes(r)
@@ -98,11 +98,28 @@ func TestSDKTrack(t *testing.T) {
 
 	// Should not allow $ prefixes apart from default properties.
 	rEventName = U.RandomLowerAphaNumString(10)
-	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "%s", "event_properties": {"mobile": "true"}, "user_properties": {"$dollar_key": "unknow_value", "$os": "mac osx", "$osVersion": "1_2_3", "$referrer": "http://google.com", "$screenWidth": 10, "$screenHeight": 11, "$browser": "mozilla", "$platform": "web", "$browserVersion": "10_2_3"}}`,
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "%s", "event_properties": {"mobile": "true", "$referrer": "http://google.com", "$rawURL": "https://factors.ai/login", "$pageTitle": "Login"}, "user_properties": {"$dollar_key": "unknow_value", "$os": "mac osx", "$osVersion": "1_2_3", "$screenWidth": 10, "$screenHeight": 11, "$browser": "mozilla", "$platform": "web", "$browserVersion": "10_2_3"}}`,
 		user.ID, rEventName)), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 	propsResponseMap1 := DecodeJSONResponseToMap(w.Body)
 	assert.Nil(t, propsResponseMap1["user_id"])
+	assert.NotNil(t, propsResponseMap1["event_id"])
+	retEvent, errCode := M.GetEvent(project.ID, user.ID, propsResponseMap1["event_id"].(string))
+	assert.Equal(t, http.StatusFound, errCode)
+	// check event default properties and tracked properties.
+	eventPropertiesBytes, err = retEvent.Properties.Value()
+	assert.Nil(t, err)
+	var eventProperties1 map[string]interface{}
+	json.Unmarshal(eventPropertiesBytes.([]byte), &eventProperties1)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotNil(t, eventProperties1["$referrer"])
+	assert.NotNil(t, eventProperties1["$rawURL"])
+	assert.NotNil(t, eventProperties1["$pageTitle"])
+	assert.NotNil(t, eventProperties1["mobile"])
+	assert.Nil(t, eventProperties1["_$referrer"])
+	assert.Nil(t, eventProperties1["_$rawURL"])
+	assert.Nil(t, eventProperties1["_$pageTitle"])
+	// check user default properties.
 	retUser, errCode := M.GetUser(project.ID, user.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	userPropertiesBytes, err = retUser.Properties.Value()
@@ -112,11 +129,9 @@ func TestSDKTrack(t *testing.T) {
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Nil(t, userPropertiesMap3["$dollar_key"])                                              // dollar prefix not allowed.
 	assert.NotNil(t, userPropertiesMap3[fmt.Sprintf("%s$dollar_key", U.NAME_PREFIX_ESCAPE_CHAR)]) // Escaped key should exist.
-	// check for default props. Hardcoded property name as request payload.
 	assert.NotNil(t, userPropertiesMap3["$os"])
 	assert.NotNil(t, userPropertiesMap3["$osVersion"])
 	assert.NotNil(t, userPropertiesMap3["$browser"])
-	assert.NotNil(t, userPropertiesMap3["$referrer"])
 	assert.NotNil(t, userPropertiesMap3["$platform"])
 	assert.NotNil(t, userPropertiesMap3["$screenWidth"])
 	assert.NotNil(t, userPropertiesMap3["$screenHeight"])
@@ -124,7 +139,6 @@ func TestSDKTrack(t *testing.T) {
 	assert.Nil(t, userPropertiesMap3["_$os"])
 	assert.Nil(t, userPropertiesMap3["_$osVersion"])
 	assert.Nil(t, userPropertiesMap3["_$browser"])
-	assert.Nil(t, userPropertiesMap3["_$referrer"])
 	assert.Nil(t, userPropertiesMap3["_$platform"])
 	assert.Nil(t, userPropertiesMap3["_$screenWidth"])
 	assert.Nil(t, userPropertiesMap3["_$screenHeight"])
@@ -215,7 +229,7 @@ func TestSDKTrack(t *testing.T) {
 	assert.Equal(t, M.TYPE_AUTO_TRACKED_EVENT_NAME, eventName.Type) // should create auto created event.
 }
 
-func TestSDKIdentify(t *testing.T) {
+func TestSDKIdentifyHandler(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
 	H.InitSDKRoutes(r)
@@ -299,7 +313,7 @@ func TestSDKIdentify(t *testing.T) {
 	assert.NotEqual(t, responseMap["user_id"], user.ID)
 }
 
-func TestSDKAddUserProperties(t *testing.T) {
+func TestSDKAddUserPropertiesHandler(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
 	H.InitSDKRoutes(r)
@@ -412,12 +426,12 @@ func TestSDKAddUserProperties(t *testing.T) {
 	assert.NotNil(t, userPropertiesMap2["long_prop"])
 	assert.NotNil(t, userPropertiesMap2["string_prop"])
 	assert.NotNil(t, userPropertiesMap2["float_prop"])
+	assert.NotNil(t, userPropertiesMap2["boolean_prop"])
 	// Types not allowed.
-	assert.Nil(t, userPropertiesMap2["boolean_prop"])
 	assert.Nil(t, userPropertiesMap2["map_prop"])
 
 	// Should not allow $ prefixes apart from default properties.
-	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"user_id": "%s", "properties": {"$dollar_key": "unknow_value", "$os": "mac osx", "$osVersion": "1_2_3", "$platform": "web", "$referrer": "http://google.com", "$screenWidth": 10, "$screenHeight": 11, "$browser": "mozilla", "$browserVersion": "10_2_3"}}`,
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"user_id": "%s", "properties": {"$dollar_key": "unknow_value", "$os": "mac osx", "$osVersion": "1_2_3", "$platform": "web", "$screenWidth": 10, "$screenHeight": 11, "$browser": "mozilla", "$browserVersion": "10_2_3"}}`,
 		user.ID)), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 	propsResponseMap1 := DecodeJSONResponseToMap(w.Body)
@@ -436,7 +450,6 @@ func TestSDKAddUserProperties(t *testing.T) {
 	assert.NotNil(t, userPropertiesMap3["$osVersion"])
 	assert.NotNil(t, userPropertiesMap3["$browser"])
 	assert.NotNil(t, userPropertiesMap3["$platform"])
-	assert.NotNil(t, userPropertiesMap3["$referrer"])
 	assert.NotNil(t, userPropertiesMap3["$screenWidth"])
 	assert.NotNil(t, userPropertiesMap3["$screenHeight"])
 	// should not be escaped.
@@ -444,12 +457,11 @@ func TestSDKAddUserProperties(t *testing.T) {
 	assert.Nil(t, userPropertiesMap3["_$osVersion"])
 	assert.Nil(t, userPropertiesMap3["_$browser"])
 	assert.Nil(t, userPropertiesMap3["_$platform"])
-	assert.Nil(t, userPropertiesMap3["_$referrer"])
 	assert.Nil(t, userPropertiesMap3["_$screenWidth"])
 	assert.Nil(t, userPropertiesMap3["_$screenHeight"])
 }
 
-func TestSDKGetProjectSettings(t *testing.T) {
+func TestSDKGetProjectSettingsHandler(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
 	H.InitSDKRoutes(r)

@@ -16,9 +16,11 @@ type Project struct {
 	ID   uint64 `gorm:"primary_key:true;" json:"id"`
 	Name string `gorm:"not null;" json:"name"`
 	// An index created on token.
-	Token     string    `gorm:"size:32" json:"token"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	Token string `gorm:"size:32" json:"token"`
+	// An index created on private_token.
+	PrivateToken string    `gorm:"size:32" json:"private_token"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
 }
 
 const TOKEN_GEN_RETRY_LIMIT = 5
@@ -55,12 +57,20 @@ func generateUniqueToken() (token string, err error) {
 }
 
 func (project *Project) BeforeCreate() (err error) {
-	// Unique token assignment.
-	var token string
-	if token, err = generateUniqueToken(); err != nil {
+	// Token creation.
+	if token, err := generateUniqueToken(); err != nil {
 		return err
+	} else {
+		project.Token = token
 	}
-	project.Token = token
+
+	// PrivateToken creation.
+	if privateToken, err := generateUniqueToken(); err != nil {
+		return err
+	} else {
+		project.PrivateToken = privateToken
+	}
+
 	return nil
 }
 
@@ -127,6 +137,25 @@ func GetProjectByToken(token string) (*Project, int) {
 
 	var project Project
 	if err := db.Where("token = ?", cleanToken).First(&project).Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+		return nil, http.StatusInternalServerError
+	}
+
+	return &project, http.StatusFound
+}
+
+func GetProjectByPrivateToken(privateToken string) (*Project, int) {
+	db := C.GetServices().Db
+
+	cleanToken := strings.TrimSpace(privateToken)
+	if len(cleanToken) == 0 {
+		return nil, http.StatusBadRequest
+	}
+
+	var project Project
+	if err := db.Where("private_token = ?", cleanToken).First(&project).Error; err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound
 		}

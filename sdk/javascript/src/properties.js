@@ -271,6 +271,18 @@ const BrowserInfo = {
         }
     }
 }
+/**
+ * @param {string} pfix Prefix to be added to default properties.
+ * Property - Example
+ * referrer - https://google.com/search
+ * */
+function getEventDefault(pfix="$") {
+    let dp = {};
+    dp[pfix+"referrer"] = document.referrer;
+    dp[pfix+"rawURL"] = window.location.href;
+    dp[pfix+"pageTitle"] = document.title;
+    return dp;
+}
 
 /**
  * @param {string} pfix Prefix to be added to default properties.
@@ -285,8 +297,6 @@ const BrowserInfo = {
 function getUserDefault(pfix="$") {
     let dp = {};
     dp[pfix+"platform"] = PLATFORM_WEB;
-
-    dp[pfix+"referrer"] = document.referrer;
 
     let browser = BrowserInfo.getBrowser();
     if (browser.name) dp[pfix+"browser"] = browser.name;
@@ -362,6 +372,7 @@ function getTypeValidated(props={}) {
 
 module.exports = {
     getUserDefault: getUserDefault,
+    getEventDefault: getEventDefault,
     parseFromQueryString: parseFromQueryString,
     getTypeValidated: getTypeValidated
 }

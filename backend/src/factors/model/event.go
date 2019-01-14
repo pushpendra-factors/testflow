@@ -82,3 +82,16 @@ func GetEvent(projectId uint64, userId string, id string) (*Event, int) {
 	}
 	return &event, http.StatusFound
 }
+
+func GetEventById(projectId uint64, id string) (*Event, int) {
+	db := C.GetServices().Db
+
+	var event Event
+	if err := db.Where("project_id = ?", projectId).Where("id = ?", id).First(&event).Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+		return nil, http.StatusInternalServerError
+	}
+	return &event, http.StatusFound
+}

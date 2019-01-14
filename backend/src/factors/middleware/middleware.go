@@ -45,6 +45,30 @@ func SetScopeProjectIdByToken() gin.HandlerFunc {
 	}
 }
 
+func SetScopeProjectIdByPrivateToken() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		token := c.Request.Header.Get("Authorization")
+		token = strings.TrimSpace(token)
+		if token == "" {
+			errorMessage := "Missing authorization header"
+			log.WithFields(log.Fields{"error": errorMessage}).Error("Request failed with auth failure.")
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": errorMessage})
+			return
+		}
+
+		project, errCode := M.GetProjectByPrivateToken(token)
+		if errCode != http.StatusFound {
+			errorMessage := "Invalid token"
+			log.WithFields(log.Fields{"error": errorMessage}).Error("Request failed because of invalid private token.")
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": errorMessage})
+			return
+		}
+		U.SetScope(c, SCOPE_PROJECT_ID, project.ID)
+
+		c.Next()
+	}
+}
+
 // CustomCorsMiddleware for customised cors configuration based on conditions.
 func CustomCors() gin.HandlerFunc {
 	return func(c *gin.Context) {
