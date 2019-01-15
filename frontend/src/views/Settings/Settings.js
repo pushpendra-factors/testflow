@@ -456,10 +456,10 @@ class Settings extends Component {
                         <Input type="text" placeholder="Event Name" onChange={this.handleFilterFormNameChange} value={this.state.filterSettings.formName} />
                       </Col>
                       <Col>
-                        <Button className="fapp-filter-button" style={{marginTop: "20px", color: this.getFormCreateButtonColor()}} onClick={this.createFilter}>
+                        <Button className="fapp-inline-button" style={{marginTop: "20px", color: this.getFormCreateButtonColor()}} onClick={this.createFilter}>
                           <i className="icon-check"></i>
                         </Button>
-                        <Button className="fapp-filter-button" style={{marginTop: "20px"}} onClick={this.resetFilterForm}>
+                        <Button className="fapp-inline-button" style={{marginTop: "20px"}} onClick={this.resetFilterForm}>
                           <i className="icon-close"></i>
                         </Button>
                       </Col>

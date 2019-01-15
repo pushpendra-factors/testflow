@@ -310,13 +310,13 @@ body {
     font-size: 15px;
 }
 
-.fapp-filter-button {
+.fapp-inline-button {
     background: transparent !important;
     border: none !important;
     padding: 5px !important;
 }
 
-.fapp-filter-button i {
+.fapp-inline-button i {
     font-size: 20px
 }
 

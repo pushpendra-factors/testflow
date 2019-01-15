@@ -25,8 +25,8 @@ class FilterRecord extends Component {
         < Input type="text" value={this.props.name} onChange={this.props.handleEventNameChange}/>
         </Col>
         <Col>
-          <Button className="fapp-filter-button" ><i className="icon-check" onClick={this.props.handleUpdate} style={{color: this.props.getUpdateButtonColor()}}></i></Button>
-          <Button className="fapp-filter-button"><i className="icon-trash" onClick={this.props.handleDelete}></i></Button>
+          <Button className="fapp-inline-button" ><i className="icon-check" onClick={this.props.handleUpdate} style={{color: this.props.getUpdateButtonColor()}}></i></Button>
+          <Button className="fapp-inline-button"><i className="icon-trash" onClick={this.props.handleDelete}></i></Button>
         </Col>
       </Row>
     )
