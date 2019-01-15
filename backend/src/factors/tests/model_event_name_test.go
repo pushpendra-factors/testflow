@@ -423,7 +423,7 @@ func TestDBGetFilterEventNames(t *testing.T) {
 	assert.Equal(t, createdEN.ID, eventNames[0].ID)
 
 	// Should not return deleted.
-	_, errCode = M.DeleteFilterEventName(project.ID, createdEN.ID)
+	errCode = M.DeleteFilterEventName(project.ID, createdEN.ID)
 	assert.Equal(t, http.StatusAccepted, errCode)
 	eventNames, errCode = M.GetFilterEventNames(project.ID)
 	assert.Equal(t, http.StatusNotFound, errCode)
@@ -477,9 +477,8 @@ func TestDBDeleteFilterEventName(t *testing.T) {
 	assert.NotNil(t, project)
 
 	// Invalid event_name id.
-	eventName, errCode := M.DeleteFilterEventName(project.ID, 9999)
+	errCode = M.DeleteFilterEventName(project.ID, 9999)
 	assert.Equal(t, http.StatusBadRequest, errCode)
-	assert.Nil(t, eventName)
 
 	expr := "a.com/u1/u2/u3"
 	name := "login"
@@ -491,7 +490,6 @@ func TestDBDeleteFilterEventName(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotNil(t, createdEN)
 
-	eventName, errCode = M.DeleteFilterEventName(project.ID, createdEN.ID)
+	errCode = M.DeleteFilterEventName(project.ID, createdEN.ID)
 	assert.Equal(t, http.StatusAccepted, errCode)
-	assert.NotNil(t, eventName)
 }

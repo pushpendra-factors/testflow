@@ -146,7 +146,7 @@ func DeleteFilterHandler(c *gin.Context) {
 		return
 	}
 
-	eventName, errCode := M.DeleteFilterEventName(projectId, filterId)
+	errCode := M.DeleteFilterEventName(projectId, filterId)
 	if errCode != http.StatusAccepted {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Updating filter failed."})
 		return
@@ -155,6 +155,5 @@ func DeleteFilterHandler(c *gin.Context) {
 	c.JSON(http.StatusAccepted, &API_FilterResponePayload{
 		ProjectID:   projectId,
 		EventNameID: filterId,
-		Deleted:     eventName.Deleted,
 	})
 }

@@ -210,7 +210,7 @@ func TestSDKTrackHandler(t *testing.T) {
 	assert.Equal(t, M.TYPE_AUTO_TRACKED_EVENT_NAME, eventName.Type)
 
 	// Test filter_event_name miss after filter deleted by user.
-	_, errCode = M.DeleteFilterEventName(project.ID, filterEventName.ID)
+	errCode = M.DeleteFilterEventName(project.ID, filterEventName.ID)
 	assert.Equal(t, http.StatusAccepted, errCode)
 	rEventName = "a.com/u1/u2/i1"
 	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "%s", "auto": true, "event_properties": {"mobile": "true"}, "user_properties": {"$os": "mac osx", "$osVersion": "1_2_3"}}`,

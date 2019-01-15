@@ -234,12 +234,12 @@ func UpdateFilterEventName(projectId uint64, id uint64, eventName *EventName) (*
 }
 
 func DeleteEventName(projectId uint64, id uint64,
-	nameType string) (*EventName, int) {
+	nameType string) int {
 	db := C.GetServices().Db
 
 	// Validation
 	if projectId == 0 {
-		return nil, http.StatusBadRequest
+		return http.StatusBadRequest
 	}
 
 	var updatedEventName EventName
@@ -251,17 +251,17 @@ func DeleteEventName(projectId uint64, id uint64,
 	if err := query.Error; err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("Failed deleting filter.")
 
-		return nil, http.StatusInternalServerError
+		return http.StatusInternalServerError
 	}
 
 	if query.RowsAffected == 0 {
-		return nil, http.StatusBadRequest
+		return http.StatusBadRequest
 	}
 
-	return &updatedEventName, http.StatusAccepted
+	return http.StatusAccepted
 }
 
-func DeleteFilterEventName(projectId uint64, id uint64) (*EventName, int) {
+func DeleteFilterEventName(projectId uint64, id uint64) int {
 	return DeleteEventName(projectId, id, TYPE_FILTER_EVENT_NAME)
 }
 
