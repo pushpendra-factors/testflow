@@ -20,7 +20,7 @@ type User struct {
 	PropertiesId string `json:"properties_id"`
 	// Not part of table, but part of json. Stored in UserProperties table.
 	Properties         postgres.Jsonb `gorm:"-" json:"properties"`
-	SegmentAnonymousId string         `gorm:"type:varchar(50);default:null" json:"seg_aid"`
+	SegmentAnonymousId string         `gorm:"type:varchar(200);default:null" json:"seg_aid"`
 	// UserId provided by the customer.
 	// An unique index is creatd on ProjectId+UserId.
 	CustomerUserId string `json:"c_uid"`
