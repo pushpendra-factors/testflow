@@ -83,7 +83,11 @@ func CustomCors() gin.HandlerFunc {
 		} else {
 			if C.IsDevelopment() {
 				log.Info("Running in development..")
-				corsConfig.AllowOrigins = []string{"http://localhost:8080", "http://localhost:3000", "http://localhost:8090"}
+				corsConfig.AllowOrigins = []string{
+					"http://localhost:8080",
+					"http://localhost:3000",
+					"http://localhost:8090",
+				}
 			}
 		}
 
@@ -100,7 +104,8 @@ func SetScopeAuthorizedProjectsBySubdomain() gin.HandlerFunc {
 		if C.IsDevelopment() && U.IsRequestFromLocalhost(c.Request.Host) {
 			allProjects, errCode := M.GetProjects()
 			if errCode != http.StatusFound {
-				c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Dev envinoment failure. Failed to get projects."})
+				c.AbortWithStatusJSON(http.StatusInternalServerError,
+					gin.H{"error": "Dev envinoment failure. Failed to get projects."})
 				return
 			}
 
@@ -120,7 +125,8 @@ func SetScopeAuthorizedProjectsBySubdomain() gin.HandlerFunc {
 			subdomain, err := U.GetRequestSubdomain(c.Request.Host)
 
 			if err != nil {
-				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized access. Invalid subdomain."})
+				c.AbortWithStatusJSON(http.StatusUnauthorized,
+					gin.H{"error": "Unauthorized access. Invalid subdomain."})
 				return
 			}
 
@@ -145,7 +151,8 @@ func IsAuthorized() gin.HandlerFunc {
 
 		authorizedProjects := U.GetScopeByKey(c, SCOPE_AUTHORIZED_PROJECTS)
 		if authorizedProjects == nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized access. No projects found."})
+			c.AbortWithStatusJSON(http.StatusUnauthorized,
+				gin.H{"error": "Unauthorized access. No projects found."})
 			return
 		}
 
@@ -160,7 +167,8 @@ func IsAuthorized() gin.HandlerFunc {
 			}
 		}
 
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized access. No projects found."})
+		c.AbortWithStatusJSON(http.StatusUnauthorized,
+			gin.H{"error": "Unauthorized access. No projects found."})
 		return
 	}
 }
@@ -169,7 +177,8 @@ func IsAuthorized() gin.HandlerFunc {
 func DenyPublicAccess() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if !U.IsRequestFromLocalhost(c.Request.Host) {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized access. Restricted public access."})
+			c.AbortWithStatusJSON(http.StatusUnauthorized,
+				gin.H{"error": "Unauthorized access. Restricted public access."})
 			return
 		}
 		c.Next()

@@ -739,7 +739,7 @@ func TestIntSegmentHandlerWithIdentifyEvent(t *testing.T) {
 			}
 		},
 		"type": "identify",
-		"userId": "",
+		"userId": "user_1",
 		"version": "1.1"
 	}
 	`
