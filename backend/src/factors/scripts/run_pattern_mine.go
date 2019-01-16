@@ -17,7 +17,7 @@ import (
 	P "factors/pattern"
 	serviceDisk "factors/services/disk"
 	serviceEtcd "factors/services/etcd"
-	serviceS3 "factors/services/s3"
+	serviceGCS "factors/services/gcstorage"
 	U "factors/util"
 	"flag"
 	"fmt"
@@ -371,9 +371,9 @@ func main() {
 	etcd := flag.String("etcd", "localhost:2379",
 		"Comma separated list of etcd endpoints localhost:2379,localhost:2378")
 	localDiskTmpDirFlag := flag.String("local_disk_tmp_dir", "/usr/local/var/factors/local_disk/tmp", "--local_disk_tmp_dir=/usr/local/var/factors/local_disk/tmp pass directory")
-	s3BucketFlag := flag.String("s3", "/usr/local/var/factors/cloud_storage", "")
-	s3BucketRegionFlag := flag.String("s3_region", "us-east-1", "")
+	bucketName := flag.String("bucket_name", "/usr/local/var/factors/cloud_storage", "")
 	numRoutinesFlag := flag.Int("num_routines", 3, "No of routines")
+
 	dbHost := flag.String("db_host", "localhost", "")
 	dbPort := flag.Int("db_port", 5432, "")
 	dbUser := flag.String("db_user", "autometa", "")
@@ -415,8 +415,7 @@ func main() {
 		"localDiskTmpDir": *localDiskTmpDirFlag,
 		"ProjectId":       *projectIdFlag,
 		"ModelId":         *modelIdFlag,
-		"S3Bucket":        *s3BucketFlag,
-		"S3Region":        *s3BucketRegionFlag,
+		"Bucket":          *bucketName,
 		"NumRoutines":     *numRoutinesFlag,
 	}).Infoln("Initialising")
 
@@ -440,16 +439,18 @@ func main() {
 	projectId := *projectIdFlag
 
 	localDiskTmpDir := *localDiskTmpDirFlag
-	bucketName := *s3BucketFlag
-	region := *s3BucketRegionFlag
 
 	diskManager := serviceDisk.New(localDiskTmpDir)
 	var cloudManager filestore.FileManager
 
 	if env == "development" {
-		cloudManager = serviceDisk.New(bucketName)
+		cloudManager = serviceDisk.New(*bucketName)
 	} else {
-		cloudManager = serviceS3.New(bucketName, region)
+		cloudManager, err = serviceGCS.New(*bucketName)
+		if err != nil {
+			log.WithError(err).Errorln("Failed to init New GCS Client")
+			panic(err)
+		}
 	}
 
 	etcdClient, err := serviceEtcd.New([]string{*etcd})

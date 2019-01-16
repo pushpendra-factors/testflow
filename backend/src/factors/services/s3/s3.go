@@ -1,6 +1,7 @@
 package s3
 
 import (
+	"factors/filestore"
 	"fmt"
 	"io"
 
@@ -13,6 +14,8 @@ import (
 const (
 	separator = "/"
 )
+
+var _ = (*filestore.FileManager)(nil)
 
 type S3Driver struct {
 	s3         *s3.S3

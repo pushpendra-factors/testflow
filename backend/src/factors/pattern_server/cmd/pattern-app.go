@@ -6,10 +6,10 @@ import (
 	"errors"
 	"factors/filestore"
 	PC "factors/pattern_client"
-	"factors/pattern_server"
+	patternserver "factors/pattern_server"
 	serviceDisk "factors/services/disk"
 	serviceEtcd "factors/services/etcd"
-	serviceS3 "factors/services/s3"
+	serviceGCS "factors/services/gcstorage"
 	"flag"
 	"fmt"
 	"io"
@@ -84,16 +84,16 @@ func makeProjectModelChunkLookup(projectDatas []projectData) map[uint64]patterns
 }
 
 type config struct {
-	Environment    string
-	IP             string
-	Port           string
-	EtcdEndpoints  []string
-	S3BucketName   string
-	S3BucketRegion string
-	DiskBaseDir    string
+	Environment   string
+	IP            string
+	Port          string
+	EtcdEndpoints []string
+	BucketName    string
+	BucketRegion  string
+	DiskBaseDir   string
 }
 
-func NewConfig(env, ip, port, etcd, diskBaseDir, s3Bucket, s3BucketRegion string) (*config, error) {
+func NewConfig(env, ip, port, etcd, diskBaseDir, bucketName, bucketRegion string) (*config, error) {
 	if env != Development {
 		return nil, errors.New("Invalid Environment")
 	}
@@ -108,12 +108,12 @@ func NewConfig(env, ip, port, etcd, diskBaseDir, s3Bucket, s3BucketRegion string
 		return nil, errors.New("Invalid baseDiskDir")
 	}
 
-	if s3Bucket == "" {
-		return nil, errors.New("Invalid S3BucketName")
+	if bucketName == "" {
+		return nil, errors.New("Invalid BucketName")
 	}
 
-	if s3BucketRegion == "" {
-		return nil, errors.New("Invalid S3BucketRegion")
+	if bucketRegion == "" {
+		return nil, errors.New("Invalid BucketRegion")
 	}
 
 	etcds := strings.Split(etcd, ",")
@@ -122,13 +122,13 @@ func NewConfig(env, ip, port, etcd, diskBaseDir, s3Bucket, s3BucketRegion string
 	}
 
 	c := config{
-		Environment:    env,
-		IP:             ip,
-		Port:           port,
-		EtcdEndpoints:  etcds,
-		DiskBaseDir:    diskBaseDir,
-		S3BucketName:   s3Bucket,
-		S3BucketRegion: s3BucketRegion,
+		Environment:   env,
+		IP:            ip,
+		Port:          port,
+		EtcdEndpoints: etcds,
+		DiskBaseDir:   diskBaseDir,
+		BucketName:    bucketName,
+		BucketRegion:  bucketRegion,
 	}
 
 	return &c, nil
@@ -154,31 +154,32 @@ func (c *config) GetEtcdEndpoints() []string {
 	return c.EtcdEndpoints
 }
 
-func (c *config) GetS3BucketName() string {
-	return c.S3BucketName
+func (c *config) GetBucketName() string {
+	return c.BucketName
 }
 
-func (c *config) GetS3BucketRegion() string {
-	return c.S3BucketRegion
+func (c *config) GetBucketRegion() string {
+	return c.BucketRegion
 }
 
 // Process crashes if started with IP and port already registered with etcd.
 // TTL on etcd is 10 seconds.
 // Monit / Kubernetes will keep trying to restart the process, it should succeed after 10 seconds / till key expires.
 
-// ./pattern-app --env=development --ip=127.0.0.1 --port=8100 --etcd=localhost:2379 --disk_dir=/usr/local/var/factors/local_disk --s3=/usr/local/var/factors/cloud_storage --s3_region=us-east-1
+// ./pattern-app --env=development --ip=127.0.0.1 --port=8100 --etcd=localhost:2379 --disk_dir=/usr/local/var/factors/local_disk --bucket_name=/usr/local/var/factors/cloud_storage --bucket_region=us-east-1
 func main() {
 
 	env := flag.String("env", "development", "")
 	ip := flag.String("ip", "127.0.0.1", "")
 	port := flag.String("port", "8100", "")
 	etcd := flag.String("etcd", "localhost:2379", "Comma separated list of etcd endpoints localhost:2379,localhost:2378")
+
 	diskBaseDir := flag.String("disk_dir", "/usr/local/var/factors/local_disk", "")
-	s3Bucket := flag.String("s3", "/usr/local/var/factors/cloud_storage", "")
-	s3BucketRegion := flag.String("s3_region", "us-east-1", "")
+	bucketName := flag.String("bucket_name", "/usr/local/var/factors/cloud_storage", "")
+	bucketRegion := flag.String("bucket_region", "us-east-1", "")
 	flag.Parse()
 
-	config, err := NewConfig(*env, *ip, *port, *etcd, *diskBaseDir, *s3Bucket, *s3BucketRegion)
+	config, err := NewConfig(*env, *ip, *port, *etcd, *diskBaseDir, *bucketName, *bucketRegion)
 	if err != nil {
 		panic(err)
 	}
@@ -189,8 +190,8 @@ func main() {
 		"Env":           config.GetEnvironment(),
 		"EtcdEndpoints": config.GetEtcdEndpoints(),
 		"DiskBaseDir":   config.GetBaseDiskDir(),
-		"S3Bucket":      config.GetS3BucketName(),
-		"S3Region":      config.GetS3BucketRegion(),
+		"BucketName":    config.GetBucketName(),
+		"BucketRegion":  config.GetBucketRegion(),
 	}).Infoln("Initialising with config")
 
 	if config.GetEnvironment() == Development {
@@ -222,9 +223,13 @@ func main() {
 	}
 	var cloudManger filestore.FileManager
 	if config.GetEnvironment() == "development" {
-		cloudManger = serviceDisk.New(config.GetS3BucketName())
+		cloudManger = serviceDisk.New(config.GetBucketName())
 	} else {
-		cloudManger = serviceS3.New(config.GetS3BucketName(), config.GetS3BucketRegion())
+		cloudManger, err = serviceGCS.New(config.GetBucketName())
+		if err != nil {
+			logCtx.WithError(err).Errorln("Failed to init New GCS Client")
+			panic(err)
+		}
 	}
 
 	diskManager := serviceDisk.New(config.GetBaseDiskDir())

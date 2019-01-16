@@ -240,3 +240,7 @@
 [[constraint]]
   name = "github.com/oschwald/geoip2-golang"
   version = "1.2.1"
+
+[[constraint]]
+  name = "cloud.google.com/go"
+  version = "0.34.0"

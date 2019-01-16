@@ -1,6 +1,7 @@
 package disk
 
 import (
+	"factors/filestore"
 	"fmt"
 	"io"
 	"os"
@@ -12,6 +13,8 @@ const (
 	// TODO Remove this once get and create have been moved to use filepath.Join
 	separator = "/"
 )
+
+var _ = (*filestore.FileManager)(nil)
 
 type DiskDriver struct {
 	// This can be used as namespace

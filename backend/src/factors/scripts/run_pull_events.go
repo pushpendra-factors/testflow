@@ -8,8 +8,10 @@ package main
 import (
 	"encoding/json"
 	C "factors/config"
+	"factors/filestore"
 	P "factors/pattern"
 	serviceDisk "factors/services/disk"
+	serviceGCS "factors/services/gcstorage"
 	"flag"
 	"fmt"
 	"os"
@@ -19,14 +21,6 @@ import (
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
-
-var projectIdFlag = flag.Int("project_id", 0, "Project Id.")
-var localDiskTmpDirFlag = flag.String("local_disk_tmp_dir",
-	"/usr/local/var/factors/local_disk/tmp", "--local_disk_tmp_dir=/usr/local/var/factors/local_disk/tmp pass directory")
-var bucketNameFlag = flag.String("bucket_name", "/usr/local/var/factors/cloud_storage",
-    "--bucket_name=/usr/local/var/factors/cloud_storage pass bucket name")
-var endTimeFlag = flag.Int64("end_time", time.Now().Unix(),
-	"Events that occurred from  num_HOURS or max_events before end time are processed. Format is unix timestamp")
 
 const max_EVENTS = 30000000        // 30 million. (million a day)
 const num_SECONDS = 31 * 24 * 3600 // TODO(Update this to 31 days)
@@ -42,7 +36,7 @@ func pullAndWriteEventsFile(projectId int, startTime int64, endTime int64,
 		"LEFT JOIN event_names ON events.event_name_id = event_names.id LEFT JOIN users ON events.user_id = users.id "+
 		"LEFT JOIN user_properties ON events.user_properties_id = user_properties.id "+
 		"WHERE events.project_id = ? AND events.timestamp BETWEEN  ? AND ? "+
-		"ORDER BY events.user_id, events.timestamp LIMIT ?", *projectIdFlag, startTime, endTime, max_EVENTS).Rows()
+		"ORDER BY events.user_id, events.timestamp LIMIT ?", projectId, startTime, endTime, max_EVENTS).Rows()
 	defer rows.Close()
 
 	if err != nil {
@@ -119,11 +113,17 @@ func pullAndWriteEventsFile(projectId int, startTime int64, endTime int64,
 func main() {
 
 	env := flag.String("env", "development", "")
+	bucketNameFlag := flag.String("bucket_name", "/usr/local/var/factors/cloud_storage", "--bucket_name=/usr/local/var/factors/cloud_storage pass bucket name")
+	localDiskTmpDirFlag := flag.String("local_disk_tmp_dir", "/usr/local/var/factors/local_disk/tmp", "--local_disk_tmp_dir=/usr/local/var/factors/local_disk/tmp pass directory")
+	endTimeFlag := flag.Int64("end_time", time.Now().Unix(), "Events that occurred from  num_HOURS or max_events before end time are processed. Format is unix timestamp")
+
 	dbHost := flag.String("db_host", "localhost", "")
 	dbPort := flag.Int("db_port", 5432, "")
 	dbUser := flag.String("db_user", "autometa", "")
 	dbName := flag.String("db_name", "autometa", "")
 	dbPass := flag.String("db_pass", "@ut0me7a", "")
+
+	projectIdFlag := flag.Int("project_id", 0, "Project Id.")
 
 	flag.Parse()
 
@@ -157,19 +157,15 @@ func main() {
 	bucketName := *bucketNameFlag
 
 	diskManager := serviceDisk.New(localDiskTmpDir)
-	cloundManager := serviceDisk.New(bucketName)
+	var cloudManager filestore.FileManager
 
-	err = os.MkdirAll(localDiskTmpDir, 0755)
-	if err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("Failed to create local disk tmp directory.")
-		os.Exit(1)
-	}
-
-	if C.IsDevelopment() {
-		err = os.MkdirAll(fmt.Sprintf("%s/projects/%v/models/%v/", bucketName, projectId, modelId), 0755)
+	if *env == "development" {
+		cloudManager = serviceDisk.New(bucketName)
+	} else {
+		cloudManager, err = serviceGCS.New(bucketName)
 		if err != nil {
-			log.WithFields(log.Fields{"err": err}).Error("Failed to Create projects model dir.")
-			os.Exit(1)
+			log.WithError(err).Errorln("Failed to init New GCS Client")
+			panic(err)
 		}
 	}
 
@@ -197,8 +193,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	cDir, cName := cloundManager.GetModelEventsFilePathAndName(projectId, modelId)
-	err = cloundManager.Create(cDir, cName, tmpOutputFile)
+	cDir, cName := cloudManager.GetModelEventsFilePathAndName(projectId, modelId)
+	err = cloudManager.Create(cDir, cName, tmpOutputFile)
 	if err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("Failed to upload file to cloud")
 		os.Exit(1)
