@@ -7,17 +7,40 @@ package main
 import (
 	C "factors/config"
 	M "factors/model"
+	"flag"
+	"os"
 
 	_ "github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 )
 
 func main() {
+
+	env := flag.String("env", "development", "")
+	dbHost := flag.String("db_host", "localhost", "")
+	dbPort := flag.Int("db_port", 5432, "")
+	dbUser := flag.String("db_user", "autometa", "")
+	dbName := flag.String("db_name", "autometa", "")
+	dbPass := flag.String("db_pass", "@ut0me7a", "")
+
+	flag.Parse()
+
+	config := &C.Configuration{
+		Env: *env,
+		DBInfo: C.DBConf{
+			Host:     *dbHost,
+			Port:     *dbPort,
+			User:     *dbUser,
+			Name:     *dbName,
+			Password: *dbPass,
+		},
+	}
+	C.InitConf(config.Env)
 	// Initialize configs and connections.
-	err := C.Init()
+	err := C.InitDB(config.DBInfo)
 	if err != nil {
 		log.Error("Failed to initialize.")
-		return
+		os.Exit(1)
 	}
 
 	if C.GetConfig().Env != C.DEVELOPMENT {

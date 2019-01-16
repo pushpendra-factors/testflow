@@ -6,7 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"path/filepath"
 	"strings"
 	"sync"
 
@@ -14,7 +13,7 @@ import (
 
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
-	"github.com/oschwald/geoip2-golang"
+	geoip2 "github.com/oschwald/geoip2-golang"
 	log "github.com/sirupsen/logrus"
 	"go.etcd.io/etcd/clientv3"
 )
@@ -85,13 +84,9 @@ type SubdomainLoginCache struct {
 	Map map[string][]uint64 `json:"token_projects"`
 }
 
-var configuration *Configuration = nil
+var configuration *Configuration
 var services *Services = nil
 var subdomainLoginCache *SubdomainLoginCache = nil
-
-func initFlags() {
-	flag.Parse()
-}
 
 func initLogging() {
 	// Log as JSON instead of the default ASCII formatter.
@@ -109,30 +104,8 @@ func initLogging() {
 	// log.SetLevel(log.WarnLevel)
 }
 
-func initConfigFromFile() error {
-
-	configFileAbsPath, _ := filepath.Abs(*configFilePath)
-
-	logCtx := log.WithFields(log.Fields{
-		"file": configFileAbsPath,
-	})
-
-	raw, err := ioutil.ReadFile(configFileAbsPath)
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to load config")
-		return err
-	}
-
-	if err := json.Unmarshal(raw, &configuration); err != nil {
-		logCtx.WithError(err).Error("Failed to unmarshal json")
-		return err
-	}
-	logCtx.WithFields(log.Fields{"config": configuration}).Info("Config File Loaded")
-	return nil
-}
-
-func initSubdomainLoginCache() {
-	subdomainLoginConfig := GetConfig().SubdomainLogin
+func initSubdomainLoginCache(config *Configuration) {
+	subdomainLoginConfig := config.SubdomainLogin
 	if !subdomainLoginConfig.Enabled {
 		return
 	}
@@ -152,41 +125,28 @@ func initSubdomainLoginCache() {
 	log.WithFields(log.Fields{"cache": &subdomainLoginCache}).Info("Initialized subdomain login cache.")
 }
 
-func initServices() error {
-	db, err := gorm.Open("postgres", fmt.Sprintf("host=%s port=%d user=%s dbname=%s password=%s sslmode=disable",
-		configuration.DBInfo.Host,
-		configuration.DBInfo.Port,
-		configuration.DBInfo.User,
-		configuration.DBInfo.Name,
-		configuration.DBInfo.Password))
-	// Connection Pooling and Logging.
-	db.DB().SetMaxIdleConns(10)
-	db.DB().SetMaxOpenConns(100)
-	db.LogMode(true)
+func initServices(config *Configuration) error {
+	services = &Services{patternServers: make(map[string]string)}
 
+	err := InitDB(config.DBInfo)
 	if err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("Failed Db Initialization")
 		return err
 	}
-	log.Info("Db Service initialized")
+
+	err = InitEtcd(config.EtcdEndpoints)
+	if err != nil {
+		return err
+	}
 
 	// Ref: https://geolite.maxmind.com/download/geoip/database/GeoLite2-City.tar.gz
-	geolocation, err := geoip2.Open(configuration.GeolocationFile)
+	geolocation, err := geoip2.Open(config.GeolocationFile)
 	if err != nil {
-		log.WithError(err).WithField("GeolocationFilePath", configuration.GeolocationFile).Fatal("Failed to initialize geolocation service")
+		log.WithError(err).WithField("GeolocationFilePath", config.GeolocationFile).Fatal("Failed to initialize geolocation service")
 	}
 	log.Info("Geolocation service intialized")
+	services.GeoLocation = geolocation
 
-	etcdClient, err := serviceEtcd.New(configuration.EtcdEndpoints)
-	if err != nil {
-		log.WithError(err).Errorln("Falied to initialize etcd client")
-		return err
-	}
-	log.Infof("ETCD Service Initialized with endpoints: %v", configuration.EtcdEndpoints)
-
-	services = &Services{Db: db, Etcd: etcdClient, patternServers: make(map[string]string), GeoLocation: geolocation}
-
-	regPatternServers, err := etcdClient.DiscoverPatternServers()
+	regPatternServers, err := GetServices().Etcd.DiscoverPatternServers()
 	if err != nil && err != serviceEtcd.NotFound {
 		log.WithError(err).Errorln("Falied to initialize discover pattern servers")
 		return err
@@ -197,10 +157,54 @@ func initServices() error {
 	}
 
 	go func() {
-		psUpdateChannel := etcdClient.Watch(serviceEtcd.PatternServerPrefix, clientv3.WithPrefix())
+		psUpdateChannel := GetServices().Etcd.Watch(serviceEtcd.PatternServerPrefix, clientv3.WithPrefix())
 		watchPatternServers(psUpdateChannel)
 	}()
 
+	return nil
+}
+
+func InitConf(env string) {
+	configuration = &Configuration{
+		Env: env,
+	}
+}
+
+func InitEtcd(EtcdEndpoints []string) error {
+	etcdClient, err := serviceEtcd.New(EtcdEndpoints)
+	if err != nil {
+		log.WithError(err).Errorln("Falied to initialize etcd client")
+		return err
+	}
+	log.Infof("ETCD Service Initialized with endpoints: %v", EtcdEndpoints)
+	services.Etcd = etcdClient
+	configuration.EtcdEndpoints = EtcdEndpoints
+	return nil
+}
+
+func InitDB(DBInfo DBConf) error {
+	if services == nil {
+		services = &Services{}
+	}
+
+	db, err := gorm.Open("postgres", fmt.Sprintf("host=%s port=%d user=%s dbname=%s password=%s sslmode=disable",
+		DBInfo.Host,
+		DBInfo.Port,
+		DBInfo.User,
+		DBInfo.Name,
+		DBInfo.Password))
+	// Connection Pooling and Logging.
+	db.DB().SetMaxIdleConns(10)
+	db.DB().SetMaxOpenConns(100)
+	db.LogMode(true)
+
+	if err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("Failed Db Initialization")
+		return err
+	}
+	log.Info("Db Service initialized")
+	services.Db = db
+	configuration.DBInfo = DBInfo
 	return nil
 }
 
@@ -225,20 +229,18 @@ func watchPatternServers(psUpdateChannel clientv3.WatchChan) {
 	}
 }
 
-func Init() error {
+func Init(config *Configuration) error {
 	if initiated {
 		return fmt.Errorf("Config already initialized")
 	}
-	initFlags()
-	err := initConfigFromFile()
-	if err != nil {
-		return err
-	}
+
+	configuration = config
+
 	initLogging()
 
-	initSubdomainLoginCache()
+	initSubdomainLoginCache(config)
 
-	err = initServices()
+	err := initServices(config)
 	if err != nil {
 		return err
 	}

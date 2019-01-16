@@ -26,6 +26,7 @@ import (
 	"net/http"
 	"os"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -363,22 +364,48 @@ func printFilteredPatterns(filteredPatterns []*P.Pattern, iter int) {
 // TODO(Ankit): Change write logic to write to multiple chunks
 func main() {
 
-	envFlag := flag.String("env", "development", "")
 	projectIdFlag := flag.Uint64("project_id", 0, "Project Id.")
 	modelIdFlag := flag.Uint64("model_id", 0, "Model Id")
+
+	envFlag := flag.String("env", "development", "")
 	etcd := flag.String("etcd", "localhost:2379",
 		"Comma separated list of etcd endpoints localhost:2379,localhost:2378")
-	localDiskTmpDirFlag := flag.String("local_disk_tmp_dir",
-		"/usr/local/var/factors/local_disk/tmp", "--local_disk_tmp_dir=/usr/local/var/factors/local_disk/tmp pass directory")
+	localDiskTmpDirFlag := flag.String("local_disk_tmp_dir", "/usr/local/var/factors/local_disk/tmp", "--local_disk_tmp_dir=/usr/local/var/factors/local_disk/tmp pass directory")
 	s3BucketFlag := flag.String("s3", "/usr/local/var/factors/cloud_storage", "")
 	s3BucketRegionFlag := flag.String("s3_region", "us-east-1", "")
 	numRoutinesFlag := flag.Int("num_routines", 3, "No of routines")
+	dbHost := flag.String("db_host", "localhost", "")
+	dbPort := flag.Int("db_port", 5432, "")
+	dbUser := flag.String("db_user", "autometa", "")
+	dbName := flag.String("db_name", "autometa", "")
+	dbPass := flag.String("db_pass", "@ut0me7a", "")
 
-	// C.Init() calls flag.Parse()
-	// Remove this after initializing C.Service.DB
-	err := C.Init()
+	flag.Parse()
+
+	// init DB, etcd
+	config := &C.Configuration{
+		Env:           *envFlag,
+		EtcdEndpoints: strings.Split(*etcd, ","),
+		DBInfo: C.DBConf{
+			Host:     *dbHost,
+			Port:     *dbPort,
+			User:     *dbUser,
+			Name:     *dbName,
+			Password: *dbPass,
+		},
+	}
+
+	C.InitConf(config.Env)
+
+	err := C.InitDB(config.DBInfo)
 	if err != nil {
-		log.WithError(err).Error("Failed to initialize config")
+		log.WithError(err).Error("Failed to initialize DB")
+		os.Exit(1)
+	}
+
+	err = C.InitEtcd(config.EtcdEndpoints)
+	if err != nil {
+		log.WithError(err).Error("Failed to initialize etcd")
 		os.Exit(1)
 	}
 
