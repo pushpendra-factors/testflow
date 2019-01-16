@@ -411,7 +411,9 @@ class Settings extends Component {
     if (!this.state.sdkSettings.loaded) return <div> Loading... </div>;
 
     let segmentWebhookURL = this.getSegmentWebhookURL();
-    let segmentInputLength = segmentWebhookURL.length.toString();
+    let segmentURLInputLength = segmentWebhookURL.length.toString();
+    let segmentPrivateToken = this.getPrivateToken();
+    let segmentTokenInputLength = (segmentPrivateToken.length+3).toString();
 
     return (
         <div className='animated fadeIn'>
@@ -463,7 +465,7 @@ class Settings extends Component {
                             <InputGroupAddon addonType="prepend">
                               <InputGroupText style={{fontWeight: 600}}>Webhook URL</InputGroupText>
                             </InputGroupAddon>
-                            <Input defaultValue={segmentWebhookURL} size={segmentInputLength} />
+                            <Input defaultValue={segmentWebhookURL} size={segmentURLInputLength} />
                           </InputGroup>
                         </div>
                         <div style={{padding: "5px 0", display: this.isIntSegmentEnabled()? "inline-block": "none"}}>
@@ -471,7 +473,7 @@ class Settings extends Component {
                             <InputGroupAddon addonType="prepend">
                               <InputGroupText style={{fontWeight: 600}}>Authorization Header</InputGroupText>
                             </InputGroupAddon>
-                            <Input defaultValue={this.getPrivateToken()} size={segmentInputLength} />
+                            <Input defaultValue={segmentPrivateToken} size={segmentTokenInputLength} />
                           </InputGroup>
                         </div>
                       </Col>
