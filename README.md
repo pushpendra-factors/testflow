@@ -148,7 +148,8 @@ npm install
 npm run dev
 ```
 * Frontend available at localhost:3000  (API assumed to be served from localhost:8080)
-* Use Atom IDE for editiong React Code.
+* Create production build by running `npm run build-prod` (Build will be on `dist` dir)
+* Serve production build by running `npm run serve-prod` (Creates and serves a new production build).
 
 ## Pattern Server
 * Setup

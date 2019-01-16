@@ -4,9 +4,10 @@ import thunk from "redux-thunk"
 import promise from "redux-promise-middleware"
 import reducer from "./reducers"
 
-const middleware = applyMiddleware(
+var middlewares = [
     promise(),
-    thunk,
-    logger())
+    thunk
+];
 
-export default createStore(reducer, middleware)
+if(process.env.NODE_ENV !== "production") middlewares.push(logger());
+export default createStore(reducer, applyMiddleware(...middlewares))

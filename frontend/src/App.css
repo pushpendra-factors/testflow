@@ -156,7 +156,7 @@ body {
 }
 
 .fapp-header-right {
-    margin: 0 1.25rem;
+    margin: 0 2.25rem;
 }
 
 .fapp-header-right li {
@@ -170,7 +170,9 @@ body {
 }
 
 .fapp-bell {
-    font-size: 1.5rem;
+    font-size: 1.6rem;
+    display: block;
+    margin-top: 5px;
 }
 
 .sidebar .nav{

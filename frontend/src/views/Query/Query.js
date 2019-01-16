@@ -161,6 +161,7 @@ class Query extends Component {
   };
 
   render() {
+    /* 
     return (
       <div className="animated fadeIn">
       <Row>
@@ -203,6 +204,9 @@ class Query extends Component {
       </Row>
       </div>
     );
+    */
+
+    return <div style={{marginTop: "10%"}}><p style={{color: "grey", fontSize: "35px", textAlign: "center", color: "#c0c0c0", fontWeight: "500", letterSpacing: "2px"}}>Coming Soon! We are on it.</p></div>
   }
 }
 

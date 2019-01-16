@@ -1,15 +1,19 @@
-var debug = process.env.NODE_ENV !== "production";
 var webpack = require('webpack');
 var path = require('path');
+
 var config = require('./buildConfig');
 
+// plugins
+var HtmlWebpackPlugin = require('html-webpack-plugin');
+
+var prodEnv = process.env.NODE_ENV === "production";
 var buildConfigPlugin = new webpack.DefinePlugin({
   "BUILD_CONFIG": JSON.stringify(config[process.env.NODE_ENV])
 });
 
 module.exports = {
   context: path.join(__dirname, "src"),
-  devtool: debug ? "inline-sourcemap" : false,
+  devtool: !prodEnv ? "inline-sourcemap" : false,
   entry: "./index.js",
   module: {
     loaders: [
@@ -27,7 +31,7 @@ module.exports = {
           loader: 'style-loader!css-loader'
       },
       {
-          test: /\.(eot|woff|woff2|ttf|svg|png|jpe?g|gif)(\?\S*)?$/,
+          test: /\.(eot|woff|woff2|ttf|svg|png|jpg|jpeg|gif)(\?\S*)?$/,
           use: [
             {
               loader: 'url-loader',
@@ -41,13 +45,35 @@ module.exports = {
     ]
   },
   output: {
-    path: __dirname + "/src/",
+    path: __dirname + "/dist/",
     filename: "index.min.js"
   },
-  plugins: debug ? [buildConfigPlugin] : [
+  plugins: !prodEnv ? [buildConfigPlugin] : [
+    new webpack.DefinePlugin({
+      'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development')
+    }),
     buildConfigPlugin, 
     new webpack.optimize.DedupePlugin(),
-    new webpack.optimize.OccurenceOrderPlugin(),
-    new webpack.optimize.UglifyJsPlugin({ mangle: false, sourcemap: false }),
+    new webpack.optimize.OccurrenceOrderPlugin(),
+    new webpack.optimize.UglifyJsPlugin({
+      compress: {
+        warnings: false,
+        conditionals: true,
+        unused: true,
+        comparisons: true,
+        sequences: true,
+        dead_code: true,
+        evaluate: true,
+        if_return: true,
+        join_vars: true
+      },
+      output: {
+        comments: false
+      }
+    }),
+    new webpack.optimize.AggressiveMergingPlugin(),
+    new HtmlWebpackPlugin({
+      template: './index.template.html'
+    })
   ],
 };

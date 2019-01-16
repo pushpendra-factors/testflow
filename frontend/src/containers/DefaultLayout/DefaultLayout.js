@@ -4,12 +4,10 @@ import { bindActionCreators } from 'redux';
 import { Redirect, Route, Switch } from 'react-router-dom';
 import { Container } from 'reactstrap';
 import {
-  AppAside,
   AppFooter,
   AppHeader,
   AppSidebar,
   AppSidebarFooter,
-  AppSidebarForm,
   AppSidebarHeader,
   AppSidebarMinimizer,
   AppSidebarNav,
@@ -19,7 +17,6 @@ import {
 import navigation from '../../_nav';
 // routes config
 import routes from '../../routes';
-import DefaultAside from './DefaultAside';
 import DefaultFooter from './DefaultFooter';
 import DefaultHeader from './DefaultHeader';
 import {
@@ -145,15 +142,12 @@ class DefaultLayout extends Component {
                       render={props => (<route.component {...props} />)} />) : (null);
                   },
                 )}
-                <Redirect from="/" to="/dashboard" />
+                <Redirect from="/" to="/factor" />
               </Switch>
             </Container>
           </main>
-          <AppAside fixed hidden>
-            <DefaultAside />
-          </AppAside>
         </div>
-        <AppFooter>
+        <AppFooter hidden>
           <DefaultFooter />
         </AppFooter>
       </div>

@@ -1,11 +1,6 @@
 export default {
   items: [
     {
-      name: 'Dashboard',
-      url: '/dashboard',
-      icon: 'icon-speedometer'
-    },
-    {
       name: 'Factor',
       url: '/factor',
       icon: 'fa fa-code',
