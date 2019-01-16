@@ -2,6 +2,7 @@ package handler
 
 import (
 	mid "factors/middleware"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
@@ -11,6 +12,14 @@ const ROUTE_PROJECTS_ROOT = "/projects"
 const ROUTE_INTEGRATIONS_ROOT = "/integrations"
 
 func InitAppRoutes(r *gin.Engine) {
+	r.GET("/status", func(c *gin.Context) {
+		resp := map[string]string{
+			"status": "ok",
+		}
+		c.JSON(http.StatusOK, resp)
+		return
+	})
+
 	// Route not allowed for public access.
 	r.POST(ROUTE_PROJECTS_ROOT,
 		mid.DenyPublicAccess(),
