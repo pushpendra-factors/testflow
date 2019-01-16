@@ -127,7 +127,9 @@ mkdir -p /usr/local/var/factors/geolocation_data
 cp <path_to_github_code>/geolocation_data/GeoLite2-City.mmdb /usr/local/var/factors/geolocation_data
 cp $GOPATH/src/factors/config/config.json /usr/local/var/factors/config
 cp $GOPATH/src/factors/config/subdomain_login_config.json /usr/local/var/factors/config
-./app --config_filepath=/usr/local/var/factors/config/config.json
+./app
+or
+./app --env=development --api_http_port=8080 --etcd=localhost:2379 --db_host=localhost --db_port=5432 --db_user=autometa --db_name=autometa --db_pass=@ut0me7a --geo_loc_path=/usr/local/var/factors/geolocation_data/GeoLite2-City.mmdb --subdomain_enabled=true --subdomain_conf_path=/usr/local/var/factors/config/subdomain_login_config.json
 ```
 
 * Backend available at localhost:8080
@@ -171,7 +173,7 @@ cd $GOPATH/bin
 ./pattern-app
 Config can be passed using flags
 
-./pattern-app --env=development --ip=127.0.0.1 --port=8100 --etcd=localhost:2379 --disk_dir=/usr/local/var/factors/local_disk --s3=/usr/local/var/factors/cloud_storage --s3_region=us-east-1
+./pattern-app --env=development --ip=127.0.0.1 --ps_rpc_port=8100 --etcd=localhost:2379 --disk_dir=/usr/local/var/factors/local_disk --s3=/usr/local/var/factors/cloud_storage --s3_region=us-east-1
 ```
 ## Bootstrapping sample data, Building and serving model.
 * Start server on 8080.

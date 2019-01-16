@@ -12,11 +12,11 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// ./app --env=development --port=8080 --etcd=localhost:2379 --db_host=localhost --db_port=5432 --db_user=autometa --db_name=autometa --db_pass=@ut0me7a --geo_loc_path=/usr/local/var/factors/geolocation_data/GeoLite2-City.mmdb --subdomain_enabled=true --subdomain_conf_path=/usr/local/var/factors/config/subdomain_login_config.json
+// ./app --env=development --api_http_port=8080 --etcd=localhost:2379 --db_host=localhost --db_port=5432 --db_user=autometa --db_name=autometa --db_pass=@ut0me7a --geo_loc_path=/usr/local/var/factors/geolocation_data/GeoLite2-City.mmdb --subdomain_enabled=true --subdomain_conf_path=/usr/local/var/factors/config/subdomain_login_config.json
 func main() {
 
 	env := flag.String("env", "development", "")
-	port := flag.Int("port", 8080, "")
+	port := flag.Int("api_http_port", 8080, "")
 	etcd := flag.String("etcd", "localhost:2379", "Comma separated list of etcd endpoints localhost:2379,localhost:2378")
 
 	dbHost := flag.String("db_host", "localhost", "")
