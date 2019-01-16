@@ -23,7 +23,7 @@ type User struct {
 	SegmentAnonymousId string         `gorm:"type:varchar(200);default:null" json:"seg_aid"`
 	// UserId provided by the customer.
 	// An unique index is creatd on ProjectId+UserId.
-	CustomerUserId string `json:"c_uid"`
+	CustomerUserId string `gorm:"type:varchar(255);default:null" json:"c_uid"`
 	// unix epoch timestamp in seconds.
 	JoinTimestamp int64     `json:"join_timestamp"`
 	CreatedAt     time.Time `json:"created_at"`
@@ -196,26 +196,73 @@ func GetUserLatestByCustomerUserId(projectId uint64, customerUserId string) (*Us
 	return &user, http.StatusFound
 }
 
-func GetSegmentUser(projectId uint64, customerUserId string, segmentAnonymousId string) (*User, int) {
+func GetUserBySegmentAnonymousId(projectId uint64, segAnonId string) (*User, int) {
 	db := C.GetServices().Db
 
-	// Precedence goes to customerUserId, if exist.
-	if customerUserId != "" {
-		return GetUserLatestByCustomerUserId(projectId, customerUserId)
-	}
-
-	// Todo(Dinesh): Two queries can be made as one single query.
-	if segmentAnonymousId != "" {
-		var user User
-		if err := db.Where("project_id = ?  AND segment_anonymous_id = ?", projectId, segmentAnonymousId).First(&user).Error; err != nil {
-			if gorm.IsRecordNotFoundError(err) {
-				return nil, http.StatusNotFound
-			}
-			log.WithFields(log.Fields{"segment_anonymous_id": segmentAnonymousId}).Error("Failed to get segment user.")
-			return nil, http.StatusInternalServerError
+	var user User
+	if err := db.Where("project_id = ?", projectId).Where(
+		"segment_anonymous_id = ?", segAnonId).First(&user).Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
 		}
-		return &user, http.StatusFound
+		return nil, http.StatusInternalServerError
 	}
 
-	return nil, http.StatusBadRequest
+	return &user, http.StatusFound
+}
+
+// GetSegmentUser create or updates(c_uid) and returns user by segement_anonymous_id
+// and customer_user_id.
+func GetSegmentUser(projectId uint64, segAnonId, custUserId string) (*User, int) {
+	// seg_aid not provided.
+	if segAnonId == "" {
+		log.WithFields(log.Fields{"project_id": projectId,
+			"c_uid": custUserId}).Error("No segment user id given")
+		return nil, http.StatusBadRequest
+	}
+
+	logCtx := log.WithFields(log.Fields{"project_id": projectId, "seg_aid": segAnonId})
+
+	// fetch by seg_aid, create and return user if not exist.
+	user, errCode := GetUserBySegmentAnonymousId(projectId, segAnonId)
+	if errCode == http.StatusInternalServerError ||
+		errCode == http.StatusBadRequest {
+		return nil, errCode
+	}
+
+	if errCode == http.StatusNotFound {
+		cUser := &User{ProjectId: projectId, SegmentAnonymousId: segAnonId}
+		// add c_uid on create, if provided.
+		if custUserId != "" {
+			cUser.CustomerUserId = custUserId
+			logCtx = logCtx.WithField("provided_c_uid", custUserId)
+		}
+
+		user, errCode = CreateUser(cUser)
+		if errCode != http.StatusCreated {
+			logCtx.WithField("err_code", errCode).Error("Failed creating user with c_uid. get_segment_user failed.")
+			return nil, errCode
+		}
+		return user, http.StatusOK
+	}
+
+	logCtx = logCtx.WithField("provided_c_uid", custUserId).WithField("fetched_c_uid", user.CustomerUserId)
+
+	// fetched c_uid empty, identify and return.
+	if user.CustomerUserId == "" {
+		uUser, uErrCode := UpdateUser(projectId, user.ID, &User{CustomerUserId: custUserId})
+		if uErrCode != http.StatusAccepted {
+			logCtx.WithField("err_code", uErrCode).Error(
+				"Identify failed. Failed updating c_uid failed. get_segment_user failed.")
+			return nil, uErrCode
+		}
+		user.CustomerUserId = uUser.CustomerUserId
+	}
+	// same seg_aid with different c_uid. log error. return user.
+	if user.CustomerUserId != custUserId {
+		logCtx.Error("Tried re-identifying with same seg_aid and different c_uid.")
+	}
+
+	// provided and fetched c_uid are same.
+	return user, http.StatusOK
 }

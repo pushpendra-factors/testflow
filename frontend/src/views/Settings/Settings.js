@@ -10,7 +10,10 @@ import {
     CardBody,
     CardHeader,
     Input,
-    Button
+    Button,
+    InputGroup,
+    InputGroupAddon,
+    InputGroupText,
 } from 'reactstrap';
 
 import { 
@@ -43,6 +46,8 @@ const mapDispatchToProps = dispatch => {
     deleteFilter,
   }, dispatch)
 }
+
+const INT_SEGMENT_URI="/integrations/segment";
 
 const FILTER_BUTTON_STATES = {
   success: "green",
@@ -120,13 +125,27 @@ class Settings extends Component {
       this.props.currentProjectSettings.auto_track;
   }
 
+  isIntSegmentEnabled() {
+    return this.props.currentProjectSettings && 
+      this.props.currentProjectSettings.int_segment;
+  }
+
   toggleAutoTrack = () =>  {
     this.props.udpateCurrentProjectSettings(this.props.currentProjectId, 
       { 'auto_track': !this.isAutoTrackEnabled() });
   }
 
+  toggleIntSegment = () =>  {
+    this.props.udpateCurrentProjectSettings(this.props.currentProjectId, 
+      { 'int_segment': !this.isIntSegmentEnabled() });
+  }
+
   getToken() {
     return this.props.projects[this.props.currentProjectId].token;
+  }
+
+  getPrivateToken() {
+    return this.props.projects[this.props.currentProjectId].private_token;
   }
 
   getSDKScript() {
@@ -134,6 +153,10 @@ class Settings extends Component {
     let token = this.getToken();
     let assetURL = BUILD_CONFIG.sdk_asset_url; // resolved on build.
     return '(function(c){var s=document.createElement("script");s.type="text/javascript";if(s.readyState){s.onreadystatechange=function(){if(s.readyState=="loaded"||s.readyState=="complete"){s.onreadystatechange=null;c()}}}else{s.onload=function(){c()}}s.src="'+assetURL+'";d=!!document.body?document.body:document.head;d.appendChild(s)})(function(){factors.init("'+token+'")})';
+  }
+
+  getSegmentWebhookURL() {
+    return BUILD_CONFIG.backend_host+INT_SEGMENT_URI;
   }
 
   isDomainValid(d) {
@@ -387,6 +410,9 @@ class Settings extends Component {
   render() {
     if (!this.state.sdkSettings.loaded) return <div> Loading... </div>;
 
+    let segmentWebhookURL = this.getSegmentWebhookURL();
+    let segmentInputLength = segmentWebhookURL.length.toString();
+
     return (
         <div className='animated fadeIn'>
           <div>
@@ -394,7 +420,7 @@ class Settings extends Component {
               <Col xs='12' md='12'>
                 <Card className="fapp-card"> 
                   <CardHeader className="fapp-card-header">
-                    <strong>SDK Code</strong>
+                    <strong>Web SDK Code</strong>
                   </CardHeader>
                   <CardBody>
                     <Row>
@@ -406,19 +432,55 @@ class Settings extends Component {
                 </Card>
                 <Card className="fapp-card">
                   <CardHeader className="fapp-card-header">
-                    <strong>Configure SDK</strong>
+                    <strong>Web SDK Settings</strong>
                   </CardHeader>
                   <CardBody>
                     <Toggle
                       checked={this.isAutoTrackEnabled()}
                       icons={false}
                       onChange={this.toggleAutoTrack} />
-                    <span className="fapp-toggle-label">Auto-track</span>
+                    <div style={{display: "inline-block", position: "absolute"}}>
+                      <span className="fapp-toggle-label">Auto-track</span>
+                    </div>
                   </CardBody>
                 </Card>
                 <Card className="fapp-card">
                   <CardHeader className="fapp-card-header">
-                    <strong>Event Filters</strong>
+                    <strong>Integrations</strong>
+                  </CardHeader>
+                  <CardBody>
+                    <Row>
+                      <Col md="2" style={{paddingTop: "10px"}}>
+                        <Toggle
+                        checked={this.isIntSegmentEnabled()}
+                        icons={false}
+                        onChange={this.toggleIntSegment} />
+                        <div style={{display: "inline-block", position: "absolute"}}><span className="fapp-toggle-label">Segment</span></div>
+                      </Col>
+                      <Col>
+                        <div style={{padding: "5px 20px 5px 0", display: this.isIntSegmentEnabled()? "inline-block": "none"}}>
+                          <InputGroup>
+                            <InputGroupAddon addonType="prepend">
+                              <InputGroupText style={{fontWeight: 600}}>Webhook URL</InputGroupText>
+                            </InputGroupAddon>
+                            <Input defaultValue={segmentWebhookURL} size={segmentInputLength} />
+                          </InputGroup>
+                        </div>
+                        <div style={{padding: "5px 0", display: this.isIntSegmentEnabled()? "inline-block": "none"}}>
+                          <InputGroup>
+                            <InputGroupAddon addonType="prepend">
+                              <InputGroupText style={{fontWeight: 600}}>Authorization Header</InputGroupText>
+                            </InputGroupAddon>
+                            <Input defaultValue={this.getPrivateToken()} size={segmentInputLength} />
+                          </InputGroup>
+                        </div>
+                      </Col>
+                    </Row>
+                  </CardBody>
+                </Card>
+                <Card className="fapp-card">
+                  <CardHeader className="fapp-card-header">
+                    <strong>Web event name rules</strong>
                   </CardHeader>
                   <CardBody>
                     <span className="fapp-card-subtitle">Add filter</span>

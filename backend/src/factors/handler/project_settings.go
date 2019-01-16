@@ -46,8 +46,10 @@ func UpdateProjectSettingsHandler(c *gin.Context) {
 
 	var projectSetting M.ProjectSetting
 	if err := decoder.Decode(&projectSetting); err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("Project setting update failed. Json Decoding failed.")
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Project setting update failed. Invalid payload."})
+		log.WithFields(log.Fields{"error": err}).Error(
+			"Project setting update failed. Json Decoding failed.")
+		c.AbortWithStatusJSON(http.StatusBadRequest,
+			gin.H{"error": "Project setting update failed. Invalid payload."})
 		return
 	}
 

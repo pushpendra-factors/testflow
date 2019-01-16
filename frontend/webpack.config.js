@@ -1,7 +1,6 @@
 var webpack = require('webpack');
 var path = require('path');
-
-var config = require('./buildConfig');
+var config = require('./build-config');
 
 // plugins
 var HtmlWebpackPlugin = require('html-webpack-plugin');

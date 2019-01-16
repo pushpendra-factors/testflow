@@ -211,6 +211,14 @@ func TestDBUpdateUserById(t *testing.T) {
 	// Test CustomerUserId updated or not.
 	assert.Equal(t, rCustomerUserId, gUser.CustomerUserId)
 
+	segAid := "seg_aid_1"
+	_, errCode = M.UpdateUser(project.ID, user.ID, &M.User{SegmentAnonymousId: segAid})
+	assert.Equal(t, http.StatusAccepted, errCode)
+	gUser, gErrCode = M.GetUser(project.ID, user.ID)
+	assert.Equal(t, http.StatusFound, gErrCode)
+	assert.Equal(t, segAid, gUser.SegmentAnonymousId)
+	assert.Equal(t, rCustomerUserId, gUser.CustomerUserId) // Should not update cuid.
+
 	// Test updating ProjectId with other fields
 	rCustomerUserId = U.RandomLowerAphaNumString(15)
 	uProject, uErr := SetupProjectReturnDAO()
@@ -304,38 +312,60 @@ func TestDBFillUserDefaultProperties(t *testing.T) {
 }
 
 func TestDBGetSegmentUser(t *testing.T) {
-	// Intialize.
-	project, user, err := SetupProjectUserReturnDAO()
+	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 	assert.NotNil(t, project)
-	assert.NotNil(t, user)
 
-	// Invalid values for both ids.
-	user, errCode := M.GetSegmentUser(project.ID, "", "")
-	assert.Nil(t, user)
+	user, errCode := M.GetSegmentUser(project.ID, "", "customer_1")
 	assert.Equal(t, http.StatusBadRequest, errCode)
+	assert.Nil(t, user)
 
-	// Get user with segment_anonymous_id if customer_user_id doesn't exist.
-	rSegId1 := U.RandomLowerAphaNumString(15)
-	unidentifiedUser, errCode := M.CreateUser(&M.User{ProjectId: project.ID, SegmentAnonymousId: rSegId1})
-	assert.Equal(t, http.StatusCreated, errCode)
-	assert.NotNil(t, unidentifiedUser)
-	user1, errCode := M.GetSegmentUser(project.ID, unidentifiedUser.CustomerUserId, unidentifiedUser.SegmentAnonymousId)
+	// no customer uid. create new user with seg_aid.
+	segAid := U.RandomLowerAphaNumString(15)
+	user1, errCode := M.GetSegmentUser(project.ID, segAid, "")
+	assert.Equal(t, http.StatusOK, errCode)
 	assert.NotNil(t, user1)
-	assert.Equal(t, unidentifiedUser.ID, user1.ID)
+	assert.Equal(t, segAid, user1.SegmentAnonymousId)
+	assert.Empty(t, user1.CustomerUserId)
 
-	// Precedence to customer_user_id when both exist.
-	// Get latest user by customer_user_id when multiple users exist with same customer_id,
-	// even if anonymous_id exist.
-	rSegId2 := U.RandomLowerAphaNumString(15)
-	identifiedUser1, errCode := M.CreateUser(&M.User{ProjectId: project.ID, SegmentAnonymousId: rSegId2, CustomerUserId: "customer_1"})
-	assert.Equal(t, http.StatusCreated, errCode)
-	assert.NotNil(t, identifiedUser1)
-	rSegId3 := U.RandomLowerAphaNumString(15)
-	identifiedUser2, errCode := M.CreateUser(&M.User{ProjectId: project.ID, SegmentAnonymousId: rSegId3, CustomerUserId: "customer_1"})
-	assert.Equal(t, http.StatusCreated, errCode)
-	assert.NotNil(t, identifiedUser2)
-	user2, errCode := M.GetSegmentUser(project.ID, "customer_1", rSegId2)
+	// exist return same user. using same segAid.
+	user2, errCode := M.GetSegmentUser(project.ID, segAid, "")
+	assert.Equal(t, http.StatusOK, errCode)
 	assert.NotNil(t, user2)
-	assert.Equal(t, user2.ID, identifiedUser2.ID)
+	assert.Equal(t, user1.ID, user2.ID)
+	assert.Equal(t, user1.SegmentAnonymousId, user2.SegmentAnonymousId)
+	assert.Empty(t, user2.CustomerUserId)
+
+	// both provided. c_uid is empty. identify
+	custId := U.RandomLowerAphaNumString(15)
+	user3, errCode := M.GetSegmentUser(project.ID, segAid, custId)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.NotNil(t, user3)
+	assert.Equal(t, user1.ID, user3.ID)
+	assert.NotEmpty(t, user3.CustomerUserId)
+	assert.Equal(t, custId, user3.CustomerUserId) // Update c_uid on existing user.
+
+	// both seg_aid and c_uid matches.
+	user4, errCode := M.GetSegmentUser(project.ID, segAid, user3.CustomerUserId)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.NotNil(t, user4)
+	assert.Equal(t, user3.ID, user4.ID)
+
+	// c_uid mismatch with existing seg_aid. should not update c_uid.
+	custId1 := U.RandomLowerAphaNumString(15)
+	user5, errCode := M.GetSegmentUser(project.ID, segAid, custId1)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.NotNil(t, user5)
+	assert.Equal(t, user4.ID, user5.ID)                         // Should return existing user.
+	assert.Equal(t, user4.CustomerUserId, user5.CustomerUserId) // Should not be updated.
+
+	// user by seg_aid doesn't exist. but c_uid exist. create new user with seg_id and c_uid.
+	segAid1 := U.RandomLowerAphaNumString(15)
+	user6, errCode := M.GetSegmentUser(project.ID, segAid1, user4.CustomerUserId) // new seg_aid.
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.NotNil(t, user6)
+	assert.NotEqual(t, user4.ID, user6.ID) // Should not use existing user with same c_uid.
+	// new user with new seg_aid and existing c_uid (new session).
+	assert.Equal(t, segAid1, user6.SegmentAnonymousId)
+	assert.Equal(t, user4.CustomerUserId, user6.CustomerUserId)
 }

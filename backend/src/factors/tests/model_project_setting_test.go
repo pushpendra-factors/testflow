@@ -14,35 +14,31 @@ func TestDBUpdateProjectSettings(t *testing.T) {
 	assert.NotNil(t, project)
 
 	// Test UpdateProjectSetting.
-	fieldsToBeUpdated := &M.ProjectSetting{AutoTrack: true}
-	updatedPSettings, errCode := M.UpdateProjectSettings(project.ID, fieldsToBeUpdated)
+	autoTrack := true
+	updatedPSettings, errCode := M.UpdateProjectSettings(project.ID,
+		&M.ProjectSetting{AutoTrack: &autoTrack})
 	assert.Equal(t, http.StatusAccepted, errCode)
 	assert.NotNil(t, updatedPSettings)
-	assert.Equal(t, fieldsToBeUpdated.AutoTrack, updatedPSettings.AutoTrack)
+	assert.Equal(t, autoTrack, *updatedPSettings.AutoTrack)
 
-	// Test UpdateProjectSetting with default value of a field. Covers a known bug on gorm with '.Updates'.
-	fieldsToBeUpdated = &M.ProjectSetting{AutoTrack: false}
-	updatedPSettings, errCode = M.UpdateProjectSettings(project.ID, fieldsToBeUpdated)
+	// Test updating one column and another column should not be
+	// updated with default value.
+	intSegment := true
+	updatedPSettings, errCode = M.UpdateProjectSettings(project.ID,
+		&M.ProjectSetting{IntSegment: &intSegment})
 	assert.Equal(t, http.StatusAccepted, errCode)
 	assert.NotNil(t, updatedPSettings)
 	projectSetting, errCode := M.GetProjectSetting(project.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, projectSetting)
-	assert.Equal(t, fieldsToBeUpdated.AutoTrack, projectSetting.AutoTrack)
+	// auto_track should stay true.
+	assert.Equal(t, autoTrack, *projectSetting.AutoTrack)
+	assert.Equal(t, intSegment, *projectSetting.IntSegment)
 
 	// Test UpdateProjectSetting without projectId.
-	fieldsToBeUpdated = &M.ProjectSetting{AutoTrack: true}
-	updatedPSettings, errCode = M.UpdateProjectSettings(0, fieldsToBeUpdated)
+	autoTrack = true
+	updatedPSettings, errCode = M.UpdateProjectSettings(0,
+		&M.ProjectSetting{AutoTrack: &autoTrack})
 	assert.Equal(t, http.StatusBadRequest, errCode)
 	assert.Nil(t, updatedPSettings)
-
-	// Todo(Dinesh): This would fail as update won't return error.
-	// Not able to use RowsNotAffected which is always 0.
-
-	// Test UpdateProjectSetting with invalid projectId.
-	// fieldsToBeUpdated = &M.ProjectSetting{AutoTrack: true}
-	// updatedPSettings, errCode = M.UpdateProjectSettings(999999999999, fieldsToBeUpdated)
-	// assert.Equal(t, http.StatusNotFound, errCode)
-	// assert.Nil(t, updatedPSettings)
-
 }

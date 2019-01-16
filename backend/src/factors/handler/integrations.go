@@ -23,9 +23,15 @@ func IntSegmentHandler(c *gin.Context) {
 		return
 	}
 
+	if !M.IsPSettingsIntSegmentEnabled(projectId) {
+		log.WithField("project_id", projectId).Error("Segment webhook failure. Integration not enabled.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Creating event_name failed. Invalid project."})
+		return
+	}
+
 	var event I.SegmentEvent
 	if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
-		log.WithFields(log.Fields{"project_id": projectId}).Error("Segment type JSON decode failed")
+		log.WithFields(log.Fields{"project_id": projectId, "error": err}).Error("Segment JSON decode failed")
 	}
 	log.WithFields(log.Fields{"event": event}).Debug("Segment webhook request")
 
@@ -36,20 +42,10 @@ func IntSegmentHandler(c *gin.Context) {
 		"user_id":      event.UserId,
 	})
 
-	user, errCode := M.GetSegmentUser(projectId, event.UserId, event.AnonymousID)
-	if errCode == http.StatusInternalServerError {
-		logCtx.Error("Get segment user failed. Segment event failure.")
+	user, errCode := M.GetSegmentUser(projectId, event.AnonymousID, event.UserId)
+	if errCode != http.StatusOK {
 		c.AbortWithStatus(errCode)
 		return
-	}
-	// Create segment user if not found.
-	if errCode == http.StatusNotFound {
-		user, errCode = M.CreateUser(&M.User{ProjectId: projectId, CustomerUserId: event.UserId, SegmentAnonymousId: event.AnonymousID})
-		if errCode != http.StatusCreated {
-			logCtx.Error("Create segment user failed. Segment event failure.")
-			c.AbortWithStatus(errCode)
-			return
-		}
 	}
 
 	var unixTimestamp int64

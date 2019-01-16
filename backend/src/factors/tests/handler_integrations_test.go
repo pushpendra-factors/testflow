@@ -52,19 +52,27 @@ func TestIntSegmentHandler(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, project)
 
-	// Empty body.
-	w := ServePostRequestWithHeaders(r, uri, []byte(`{}`),
+	// Not enabled.
+	w := ServePostRequestWithHeaders(r, uri, []byte(`{"anonymousId": "ranon_2", "type": "random_type"}`),
 		map[string]string{"Authorization": project.PrivateToken})
-	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	enable := true
+	_, errCode := M.UpdateProjectSettings(project.ID, &M.ProjectSetting{IntSegment: &enable})
+	assert.Equal(t, http.StatusAccepted, errCode)
+
+	// Empty body.
+	w = ServePostRequestWithHeaders(r, uri, []byte(`{}`),
+		map[string]string{"Authorization": project.PrivateToken})
+	assert.Equal(t, http.StatusBadRequest, w.Code)
 	jsonResponse, _ := ioutil.ReadAll(w.Body)
 	var jsonResponseMap map[string]interface{}
 	json.Unmarshal(jsonResponse, &jsonResponseMap)
-	assert.NotNil(t, jsonResponseMap["error"])
 	assert.Nil(t, jsonResponseMap["event_id"])
 	assert.Nil(t, jsonResponseMap["user_id"])
 
 	// Invalid type.
-	w = ServePostRequestWithHeaders(r, uri, []byte(`{"type": "random_type"}`),
+	w = ServePostRequestWithHeaders(r, uri, []byte(`{"anonymousId": "ranon_1", "type": "random_type"}`),
 		map[string]string{"Authorization": project.PrivateToken})
 	assert.Equal(t, http.StatusOK, w.Code)
 	jsonResponse1, _ := ioutil.ReadAll(w.Body)
@@ -79,7 +87,7 @@ func TestIntSegmentHandler(t *testing.T) {
 	// Without both anonymousId and userId
 	w = ServePostRequestWithHeaders(r, uri, []byte(`{"type": "track"}`),
 		map[string]string{"Authorization": project.PrivateToken})
-	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
 
 	// With only anonymousId
 	identifyPayloadWithoutUserId := `
@@ -122,52 +130,6 @@ func TestIntSegmentHandler(t *testing.T) {
 	retUser, _ := M.GetUser(project.ID, jsonResponseMap2["user_id"].(string))
 	assert.NotNil(t, retUser)
 	assert.Empty(t, retUser.CustomerUserId) // No customer user id.
-
-	// Precedence goes to customer_user_id if exists.
-	// Reuse the same user if customer_user_id matches,
-	// but segment_anonymous_id doesn't.
-	user, _ := M.CreateUser(&M.User{ProjectId: project.ID, SegmentAnonymousId: "random_uid", CustomerUserId: "existing_cuid"})
-	assert.NotNil(t, user)
-	identifyPayloadWithUserId := `
-	{
-		"anonymousId": "507f191e810c19729de860ea",
-		"channel": "browser",
-		"context": {
-			"ip": "8.8.8.8",
-			"userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.115 Safari/537.36"
-		},
-		"integrations": {
-			"All": false,
-			"Mixpanel": true,
-			"Salesforce": true
-		},
-		"messageId": "022bb90c-bbac-11e4-8dfc-aa07a5b093db",
-		"receivedAt": "2015-02-23T22:28:55.387Z",
-		"sentAt": "2015-02-23T22:28:55.111Z",
-		"timestamp": "2015-02-23T22:28:55.111Z",
-		"traits": {
-			"email": "peter@initech.com",
-			"plan": "premium",
-			"address": {
-				"street": "6th St",
-				"city": "San Francisco"
-			}
-		},
-		"type": "identify",
-		"userId": "existing_cuid",
-		"version": "1.1"
-	}
-	`
-	w = ServePostRequestWithHeaders(r, uri, []byte(identifyPayloadWithUserId),
-		map[string]string{"Authorization": project.PrivateToken})
-	assert.Equal(t, http.StatusOK, w.Code)
-	jsonResponse3, _ := ioutil.ReadAll(w.Body)
-	var jsonResponseMap3 map[string]interface{}
-	json.Unmarshal(jsonResponse3, &jsonResponseMap3)
-	assert.NotNil(t, jsonResponseMap3["user_id"])
-	retUser1, _ := M.GetUser(project.ID, jsonResponseMap3["user_id"].(string))
-	assert.NotNil(t, retUser1)
-	assert.Equal(t, "existing_cuid", retUser1.CustomerUserId)
 
 	// Test invalid event timestamp
 	samplePayloadWithInvalidTimestamp := `
@@ -295,6 +257,9 @@ func TestIntSegmentHandlerWithPageEvent(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 	assert.NotNil(t, project)
+	enable := true
+	_, errCode := M.UpdateProjectSettings(project.ID, &M.ProjectSetting{IntSegment: &enable})
+	assert.Equal(t, http.StatusAccepted, errCode)
 
 	// invalid private token.
 	w := ServePostRequestWithHeaders(r, uri, []byte(`{}`),
@@ -436,6 +401,9 @@ func TestIntSegmentHandlerWithTrackEvent(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 	assert.NotNil(t, project)
+	enable := true
+	_, errCode := M.UpdateProjectSettings(project.ID, &M.ProjectSetting{IntSegment: &enable})
+	assert.Equal(t, http.StatusAccepted, errCode)
 
 	sampleTrackPayload := `
 	{
@@ -575,6 +543,9 @@ func TestIntSegmentHandlerWithScreenEvent(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 	assert.NotNil(t, project)
+	enable := true
+	_, errCode := M.UpdateProjectSettings(project.ID, &M.ProjectSetting{IntSegment: &enable})
+	assert.Equal(t, http.StatusAccepted, errCode)
 
 	sampleScreenPayload := `
 	{
@@ -712,10 +683,13 @@ func TestIntSegmentHandlerWithIdentifyEvent(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 	assert.NotNil(t, project)
+	enable := true
+	_, errCode := M.UpdateProjectSettings(project.ID, &M.ProjectSetting{IntSegment: &enable})
+	assert.Equal(t, http.StatusAccepted, errCode)
 
 	sampleIdentifyPayload := `
 	{
-		"anonymousId": "507f191e810c19729de860ea",
+		"anonymousId": "anon_99",
 		"channel": "browser",
 		"context": {
 			"ip": "8.8.8.8",
@@ -735,11 +709,14 @@ func TestIntSegmentHandlerWithIdentifyEvent(t *testing.T) {
 			"plan": "premium",
 			"address": {
 				"street": "6th St",
-				"city": "San Francisco"
+				"city": "San Francisco",
+				"state": "CA",
+				"postalCode": "94103",
+				"country": "USA"
 			}
 		},
 		"type": "identify",
-		"userId": "user_1",
+		"userId": "user_99",
 		"version": "1.1"
 	}
 	`

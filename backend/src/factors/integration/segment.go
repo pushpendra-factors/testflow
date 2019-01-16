@@ -25,8 +25,8 @@ type SegmentPage struct {
 	Referrer string `json:"referrer"`
 	RawURL   string `json:"url"`
 	Title    string `json:"title"`
-	// Path     string `json:"path"`
-	// Search   string `json:"search"`
+	// Path     string `json:"path"`   // redundant. part of rawURL already.
+	// Search   string `json:"search"` // redundant. part of rawURL already.
 }
 
 type SegmentApp struct {
@@ -94,9 +94,9 @@ type SegmentEvent struct {
 	Context     SegmentContext  `json:"context"`
 	Timestamp   string          `json:"timestamp"`
 	Type        string          `json:"type"`
-	Version     float64         `json:"version"`
 	Properties  U.PropertiesMap `json:"properties"`
 	Traits      postgres.Jsonb  `json:"traits"`
+	// Version     float64         `json:"version"` // inconsistent type.
 }
 
 func FillSegmentGenericEventProperties(properties *U.PropertiesMap, event *SegmentEvent) {

@@ -1,6 +1,7 @@
 # frontend
 frontend/dist
 frontend/node_modules
+frontend/package-lock.json
 
 # backend
 backend/pkg/**
