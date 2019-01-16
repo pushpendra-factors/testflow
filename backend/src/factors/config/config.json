@@ -9,9 +9,9 @@
 		"password": "@ut0me7a"
 	},
 	"etcd_endpoints": [ "http://localhost:2379" ],
-	"geolocation_file": "/tmp/factors/geolocation_data/GeoLite2-City.mmdb",
+	"geolocation_file": "/usr/local/var/factors/geolocation_data/GeoLite2-City.mmdb",
 	"subdomain_login" : {
 		"enabled": true,
-		"config_filepath": "/tmp/factors/config/subdomain_login_config.json"
+		"config_filepath": "/usr/local/var/factors/config/subdomain_login_config.json"
 	}
 }

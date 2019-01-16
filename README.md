@@ -122,12 +122,12 @@ go build -o $GOPATH/bin/app $GOPATH/src/factors/app/app.go
 * Run 
 ```
 cd $GOPATH/bin
-mkdir -p /tmp/factors/config
-mkdir -p /tmp/factors/geolocation_data
-cp <path_to_github_code>/geolocation_data/GeoLite2-City.mmdb /tmp/factors/geolocation_data
-cp $GOPATH/src/factors/config/config.json /tmp/factors/config
-cp $GOPATH/src/factors/config/subdomain_login_config.json /tmp/factors/config
-./app --config_filepath=/tmp/factors/config/config.json
+mkdir -p /usr/local/var/factors/config
+mkdir -p /usr/local/var/factors/geolocation_data
+cp <path_to_github_code>/geolocation_data/GeoLite2-City.mmdb /usr/local/var/factors/geolocation_data
+cp $GOPATH/src/factors/config/config.json /usr/local/var/factors/config
+cp $GOPATH/src/factors/config/subdomain_login_config.json /usr/local/var/factors/config
+./app --config_filepath=/usr/local/var/factors/config/config.json
 ```
 
 * Backend available at localhost:8080
@@ -156,9 +156,9 @@ npm run dev
 export GOPATH=<path_to_githubcode>/factors/backend
 export ETCDCTL_API=3
 etcdctl put /factors/metadata/project_version_key version1
-mkdir -p /tmp/factors/local_disk
-mkdir -p /tmp/factors/cloud_storage/metadata
-cp $GOPATH/src/factors/pattern_server/cmd/project_data.txt /tmp/factors/cloud_storage/metadata/version1.txt
+mkdir -p /usr/local/var/factors/local_disk
+mkdir -p /usr/local/var/factors/cloud_storage/metadata
+cp $GOPATH/src/factors/pattern_server/cmd/project_data.txt /usr/local/var/factors/cloud_storage/metadata/version1.txt
 ```
 * Build
 ```
@@ -170,15 +170,19 @@ cd $GOPATH/bin
 ./pattern-app
 Config can be passed using flags
 
-./pattern-app --env=development --ip=127.0.0.1 --port=8100 --etcd=localhost:2379 --disk_dir=/tmp/factors/local_disk --s3=/tmp/factors/cloud_storage --s3_region=us-east-1
+./pattern-app --env=development --ip=127.0.0.1 --port=8100 --etcd=localhost:2379 --disk_dir=/usr/local/var/factors/local_disk --s3=/usr/local/var/factors/cloud_storage --s3_region=us-east-1
 ```
 ## Bootstrapping sample data, Building and serving model.
 * Start server on 8080.
+* Using Localytics challenge data. (https://github.com/localytics/data-viz-challenge)  (https://medium.com/@aabraahaam/localytics-data-visualization-challengue-81ed409471e)
 
 ```
 cd <path_to_githubcode>/factors/misc/ingest_events/src
 export GOPATH=<path_to_githubcode>/factors/misc/ingest_events
-go run ingest_kasandr_events.go --input_file=<path_to_githubcode>/factors/sample_data/kasandr/sample_raw_data.csv --server=http://localhost:8080
+mkdir /usr/local/var/factors/localytics_data
+git clone https://github.com/localytics/data-viz-challenge.git  /usr/local/var/factors/localytics_data
+
+go run ingest_localytics_events.go --input_file=/usr/local/var/factors/localytics_data/data.json --server=http://localhost:8080
 ```
 
 * Note \<projectId\> from the last line of the stdout of the script.
@@ -186,14 +190,14 @@ go run ingest_kasandr_events.go --input_file=<path_to_githubcode>/factors/sample
 ```
 cd ../../../backend/src/factors/scripts/
 export GOPATH=<path_to_githubcode>/factors/backend
-go run run_pull_events.go --project_id=<projectId> --end_time=1465948361 --local_disk_tmp_dir=/tmp/factors/local_disk/tmp --bucket_name=/tmp/factors/cloud_storage
+go run run_pull_events.go --project_id=<projectId> --end_time=1396310326 --local_disk_tmp_dir=/usr/local/var/factors/local_disk/tmp --bucket_name=/usr/local/var/factors/cloud_storage
 * Note \<modelId\> from the last line of the stdout of the script.
 ```
 
-* Check output file at /tmp/factors/cloud_storage/projects/\<projectId\>models/\<modelId\>/events_<modelId>.txt
+* Check output file at /usr/local/var/factors/cloud_storage/projects/\<projectId\>models/\<modelId\>/events_<modelId>.txt
 
 ```
-go run run_pattern_mine.go --env=development --etcd=localhost:2379 --local_disk_tmp_dir=/tmp/factors/local_disk/tmp --s3_region=us-east-1 --s3=/tmp/factors/cloud_storage --num_routines=3 --project_id=<projectId> --model_id=<modelId>
+go run run_pattern_mine.go --env=development --etcd=localhost:2379 --local_disk_tmp_dir=/usr/local/var/factors/local_disk/tmp --s3_region=us-east-1 --s3=/usr/local/var/factors/cloud_storage --num_routines=3 --project_id=<projectId> --model_id=<modelId>
 or
 go run run_pattern_mine.go --project_id=<projectId> --model_id=<modelId>
 ```
@@ -308,9 +312,9 @@ factors.test.Suite.TEST_NAME
 127.0.0.1       unauthorized.factors-dev.ai
 ```
 
-* Copy subdomain_login_config.json to tmp.
+* Copy subdomain_login_config.json to factors config.
 ```
-cp  $GOPATH/src/factors/config/subdomain_login_config.json /tmp/factors/config
+cp  $GOPATH/src/factors/config/subdomain_login_config.json /usr/local/var/factors/config
 ```
 
 * Map the ecommerce sample project's id to `sample4ecom`.

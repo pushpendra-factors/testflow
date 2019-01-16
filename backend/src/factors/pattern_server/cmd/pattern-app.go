@@ -166,15 +166,15 @@ func (c *config) GetS3BucketRegion() string {
 // TTL on etcd is 10 seconds.
 // Monit / Kubernetes will keep trying to restart the process, it should succeed after 10 seconds / till key expires.
 
-// ./pattern-app --env=development --ip=127.0.0.1 --port=8100 --etcd=localhost:2379 --disk_dir=/tmp/factors --s3=/tmp/factors-dev --s3_region=us-east-1
+// ./pattern-app --env=development --ip=127.0.0.1 --port=8100 --etcd=localhost:2379 --disk_dir=/usr/local/var/factors/local_disk --s3=/usr/local/var/factors/cloud_storage --s3_region=us-east-1
 func main() {
 
 	env := flag.String("env", "development", "")
 	ip := flag.String("ip", "127.0.0.1", "")
 	port := flag.String("port", "8100", "")
 	etcd := flag.String("etcd", "localhost:2379", "Comma separated list of etcd endpoints localhost:2379,localhost:2378")
-	diskBaseDir := flag.String("disk_dir", "/tmp/factors/local_disk", "")
-	s3Bucket := flag.String("s3", "/tmp/factors/cloud_storage", "")
+	diskBaseDir := flag.String("disk_dir", "/usr/local/var/factors/local_disk", "")
+	s3Bucket := flag.String("s3", "/usr/local/var/factors/cloud_storage", "")
 	s3BucketRegion := flag.String("s3_region", "us-east-1", "")
 	flag.Parse()
 

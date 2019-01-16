@@ -22,13 +22,14 @@ import (
 
 var projectIdFlag = flag.Int("project_id", 0, "Project Id.")
 var localDiskTmpDirFlag = flag.String("local_disk_tmp_dir",
-	"/tmp/factors/local_disk/tmp", "--local_disk_tmp_dir=/tmp/factors/local_disk/tmp pass directory")
-var bucketNameFlag = flag.String("bucket_name", "/tmp/factors/cloud_storage", "--bucket_name=/tmp/factors/cloud_storage pass bucket name")
+	"/usr/local/var/factors/local_disk/tmp", "--local_disk_tmp_dir=/usr/local/var/factors/local_disk/tmp pass directory")
+var bucketNameFlag = flag.String("bucket_name", "/usr/local/var/factors/cloud_storage",
+    "--bucket_name=/usr/local/var/factors/cloud_storage pass bucket name")
 var endTimeFlag = flag.Int64("end_time", time.Now().Unix(),
 	"Events that occurred from  num_HOURS or max_events before end time are processed. Format is unix timestamp")
 
 const max_EVENTS = 30000000        // 30 million. (million a day)
-const num_SECONDS = 30 * 24 * 3600 // TODO(Update this to 30 days)
+const num_SECONDS = 31 * 24 * 3600 // TODO(Update this to 31 days)
 
 func pullAndWriteEventsFile(projectId int, startTime int64, endTime int64,
 	baseOutputDir string) error {

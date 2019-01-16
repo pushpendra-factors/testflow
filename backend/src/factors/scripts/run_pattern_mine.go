@@ -4,7 +4,7 @@ package main
 
 // Sample usage in terminal.
 // export GOPATH=/Users/aravindmurthy/code/factors/backend/
-// go run run_pattern_mine.go --env=development --etcd=localhost:2379 --disk_dir=/tmp/factors/local_disk --s3_region=us-east-1 --s3=/tmp/factors/cloud_storage --num_routines=3 --project_id=<projectId> --model_id=<modelId>
+// go run run_pattern_mine.go --env=development --etcd=localhost:2379 --disk_dir=/usr/local/var/factors/local_disk --s3_region=us-east-1 --s3=/usr/local/var/factors/cloud_storage --num_routines=3 --project_id=<projectId> --model_id=<modelId>
 // or
 // go run run_pattern_mine.go --project_id=<projectId> --model_id=<modelId>
 import (
@@ -369,8 +369,8 @@ func main() {
 	etcd := flag.String("etcd", "localhost:2379",
 		"Comma separated list of etcd endpoints localhost:2379,localhost:2378")
 	localDiskTmpDirFlag := flag.String("local_disk_tmp_dir",
-		"/tmp/factors/local_disk/tmp", "--local_disk_tmp_dir=/tmp/factors/local_disk/tmp pass directory")
-	s3BucketFlag := flag.String("s3", "/tmp/factors/cloud_storage", "")
+		"/usr/local/var/factors/local_disk/tmp", "--local_disk_tmp_dir=/usr/local/var/factors/local_disk/tmp pass directory")
+	s3BucketFlag := flag.String("s3", "/usr/local/var/factors/cloud_storage", "")
 	s3BucketRegionFlag := flag.String("s3_region", "us-east-1", "")
 	numRoutinesFlag := flag.Int("num_routines", 3, "No of routines")
 
