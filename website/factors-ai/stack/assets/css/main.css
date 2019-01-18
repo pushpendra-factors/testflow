@@ -682,7 +682,12 @@ hr {
 }
 
 #hero-area .contents .hero-form {
-  padding: 0 20vw;
+  padding: 0 28vw;
+}
+
+#hero-area .landing-image {
+  max-width: 55%; 
+  height: auto;
 }
 
 /* Team Item */

@@ -113,7 +113,7 @@
     font-size: 30px;
   }
   .bg-inverse {
-    padding: 0 15px;
+    padding: 10px 15px;
     background: #fff !important;
     box-shadow: 0px 3px 6px 3px rgba(0, 0, 0, 0.06);
   }
@@ -121,7 +121,7 @@
     padding: 0px 15px;
   }
   #hero-area .contents {
-    padding: 100px 0px 60px 0px;
+    padding: 70px 0px 10px 0px;
   }
   #hero-area .contents .head-title {
     font-size: 20px;
@@ -136,6 +136,10 @@
   }
   #hero-area .contents .hero-form {
     padding: 0 10vw;
+  }
+  #hero-area .landing-image {
+    max-width: 90%; 
+    height: auto;
   }
   .text-wrapper {
     padding: 60px 15px;
@@ -202,5 +206,17 @@
   }
   .copyright .float-right {
     float: left !important;
+  }
+  .product-image {
+    text-align: center;
+  }
+  .product-text {
+    padding: 0 35px;
+  }
+  #contact {
+    text-align: center;
+  }
+  .navbar img {
+    width: 65%;
   }
 }
