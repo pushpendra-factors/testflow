@@ -672,7 +672,17 @@ hr {
   font-size: 30px;
   line-height: 48px;
   font-weight: 700;
+}
+
+#hero-area .contents .head-title-bottom {
   margin-bottom: 30px;
+  color: #585b60;
+  font-size: 16px;
+  letter-spacing: 0.02rem;
+}
+
+#hero-area .contents .hero-form {
+  padding: 0 20vw;
 }
 
 /* Team Item */

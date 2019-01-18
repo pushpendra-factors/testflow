@@ -134,6 +134,9 @@
   #hero-area .contents .btn {
     margin: 5px 10px 10px 0px;
   }
+  #hero-area .contents .hero-form {
+    padding: 0 10vw;
+  }
   .text-wrapper {
     padding: 60px 15px;
   }
