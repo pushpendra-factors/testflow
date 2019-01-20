@@ -1,8 +1,6 @@
 import axios from "axios";
 import appConfig from "../config/appConfig"
 
-const ORIGIN = window.location.origin;
-
 export function changeProject(projectId) {
   return function(dispatch) {
     dispatch({type: "CHANGE_PROJECT", payload: projectId});
@@ -14,7 +12,7 @@ export function fetchProjects() {
     dispatch({type: "FETCH_PROJECTS"});
 
     return new Promise((resolve, reject) => {
-      axios.get(ORIGIN + "projects")
+      axios.get(appConfig.API_PATH + "projects")
         .then((response) => {
           resolve(dispatch({type: "FETCH_PROJECTS_FULFILLED", payload: response.data}));
         })
@@ -28,7 +26,7 @@ export function fetchProjects() {
 export function fetchCurrentProjectEvents(projectId) {
   return function(dispatch) {
     return new Promise((resolve, reject) => {
-      axios.get(ORIGIN + "projects/" + projectId + "/event_names")
+      axios.get(appConfig.API_PATH + "projects/" + projectId + "/event_names")
         .then((response) => {
           resolve(dispatch({type: "FETCH_CURRENT_PROJECT_EVENTS_FULFILLED",
                   payload: { currentProjectId: projectId, currentProjectEventNames: response.data,
@@ -46,7 +44,7 @@ export function fetchCurrentProjectEvents(projectId) {
 export function fetchCurrentProjectSettings(projectId) {
   return function(dispatch) {
     return new Promise((resolve, reject) => {
-      axios.get(ORIGIN + "projects/" + projectId + "/settings")
+      axios.get(appConfig.API_PATH + "projects/" + projectId + "/settings")
         .then((response) => {
           resolve(dispatch({
             type: "FETCH_CURRENT_PROJECT_SETTINGS_FULFILLED", 
@@ -73,7 +71,7 @@ export function fetchCurrentProjectSettings(projectId) {
 
 export function udpateCurrentProjectSettings(projectId, payload) {
   return function(dispatch) {
-    return axios.put(ORIGIN + "projects/" + projectId + "/settings", payload)
+    return axios.put(appConfig.API_PATH + "projects/" + projectId + "/settings", payload)
      .then((response) => {
         return dispatch({
           type: "UPDATE_CURRENT_PROJECT_SETTINGS_FULFILLED", 
@@ -96,7 +94,7 @@ export function udpateCurrentProjectSettings(projectId, payload) {
 
 export function fetchProjectEventProperties(projectId, eventName) {
   return function(dispatch) {
-    axios.get(ORIGIN + "projects/" + projectId +
+    axios.get(appConfig.API_PATH + "projects/" + projectId +
               "/event_names/" + eventName + "/properties")
       .then((response) => {
         dispatch({type: "FETCH_CURRENT_PROJECT_EVENT_PROPERTIES_FULFILLED",
@@ -111,7 +109,7 @@ export function fetchProjectEventProperties(projectId, eventName) {
 
 export function fetchProjectEventPropertyValues(projectId, eventName, propertyName) {
   return function(dispatch) {
-    axios.get(ORIGIN + "projects/" + projectId +
+    axios.get(appConfig.API_PATH + "projects/" + projectId +
               "/event_names/" + eventName + "/properties/" + propertyName +
               "/values")
       .then((response) => {
@@ -129,7 +127,7 @@ export function fetchProjectEventPropertyValues(projectId, eventName, propertyNa
 
 export function fetchProjectUserProperties(projectId) {
   return function(dispatch) {
-    axios.get(ORIGIN + "projects/" + projectId +
+    axios.get(appConfig.API_PATH + "projects/" + projectId +
               "/user_properties")
       .then((response) => {
         dispatch({type: "FETCH_CURRENT_PROJECT_USER_PROPERTIES_FULFILLED",
@@ -144,7 +142,7 @@ export function fetchProjectUserProperties(projectId) {
 
 export function fetchProjectUserPropertyValues(projectId, propertyName) {
   return function(dispatch) {
-    axios.get(ORIGIN + "projects/" + projectId +
+    axios.get(appConfig.API_PATH + "projects/" + projectId +
               "/user_properties/" + propertyName + "/values")
       .then((response) => {
         dispatch({type: "FETCH_CURRENT_PROJECT_USER_PROPERTY_VALUES_FULFILLED",
@@ -164,7 +162,7 @@ export function fetchFilters(projectId) {
     // New promise created to handle use catch on
     // fetch call from component.
     return new Promise((resolve, reject) => {
-      axios.get(ORIGIN + "projects/" + projectId +"/filters")
+      axios.get(appConfig.API_PATH + "projects/" + projectId +"/filters")
         .then((response) => {
           dispatch({
             type: "FETCH_FILTERS_FULFILLED",
@@ -186,7 +184,7 @@ export function fetchFilters(projectId) {
 export function createFilter(projectId, payload) {
   return function(dispatch) {
     return new Promise((resolve, reject) => {
-      axios.post(ORIGIN + "projects/" + projectId +"/filters", payload)
+      axios.post(appConfig.API_PATH + "projects/" + projectId +"/filters", payload)
         .then((r) => {
           dispatch({
             type: "CREATE_FILTER_FULFILLED",
@@ -208,7 +206,7 @@ export function createFilter(projectId, payload) {
 export function updateFilter(projectId, filterId, payload, storeIndex) {
   return function(dispatch) {
     return new Promise((resolve, reject) => {
-      axios.put(ORIGIN + "projects/" + projectId +"/filters/"+filterId, payload)
+      axios.put(appConfig.API_PATH + "projects/" + projectId +"/filters/"+filterId, payload)
         .then((r) => {
           dispatch({
             type: "UPDATE_FILTER_FULFILLED",
@@ -230,7 +228,7 @@ export function updateFilter(projectId, filterId, payload, storeIndex) {
 export function deleteFilter(projectId, filterId, storeIndex) {
   return function(dispatch) {
     return new Promise((resolve, reject) => {
-      axios.delete(ORIGIN + "projects/" + projectId +"/filters/"+filterId)
+      axios.delete(appConfig.API_PATH + "projects/" + projectId +"/filters/"+filterId)
         .then((r) => {
           dispatch({
             type: "DELETE_FILTER_FULFILLED",
