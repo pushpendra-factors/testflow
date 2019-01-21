@@ -125,7 +125,6 @@ cd $GOPATH/bin
 mkdir -p /usr/local/var/factors/config
 mkdir -p /usr/local/var/factors/geolocation_data
 cp <path_to_github_code>/geolocation_data/GeoLite2-City.mmdb /usr/local/var/factors/geolocation_data
-cp $GOPATH/src/factors/config/config.json /usr/local/var/factors/config
 cp $GOPATH/src/factors/config/subdomain_login_config.json /usr/local/var/factors/config
 ./app
 or
