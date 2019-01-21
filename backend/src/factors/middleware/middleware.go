@@ -79,7 +79,6 @@ func CustomCors() gin.HandlerFunc {
 			log.Info(c.Request.URL.Path)
 			corsConfig.AllowAllOrigins = true
 			corsConfig.AddAllowHeaders("Authorization")
-			cors.New(corsConfig)(c)
 		} else {
 			if C.IsDevelopment() {
 				log.Info("Running in development..")
@@ -88,10 +87,14 @@ func CustomCors() gin.HandlerFunc {
 					"http://localhost:3000",
 					"http://localhost:8090",
 				}
+			} else {
+				// Temp allow all origin.
+				log.Warn("Running with all origins allowed..")
+				corsConfig.AllowAllOrigins = true
 			}
 		}
 
-		// Applys custom cors and proceed.
+		// Applys custom cors and proceed
 		cors.New(corsConfig)(c)
 		c.Next()
 	}

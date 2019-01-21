@@ -28,6 +28,7 @@ import (
 const (
 	DefaultTTLSeconds = 10
 	Development       = "development"
+	Staging           = "staging"
 )
 
 type projectData struct {
@@ -89,12 +90,15 @@ type config struct {
 	Port          string
 	EtcdEndpoints []string
 	BucketName    string
-	BucketRegion  string
 	DiskBaseDir   string
 }
 
-func NewConfig(env, ip, port, etcd, diskBaseDir, bucketName, bucketRegion string) (*config, error) {
-	if env != Development {
+func isValidEnv(env string) bool {
+	return env == Development || env == Staging
+}
+
+func NewConfig(env, ip, port, etcd, diskBaseDir, bucketName string) (*config, error) {
+	if !isValidEnv(env) {
 		return nil, errors.New("Invalid Environment")
 	}
 	if ip == "" {
@@ -112,10 +116,6 @@ func NewConfig(env, ip, port, etcd, diskBaseDir, bucketName, bucketRegion string
 		return nil, errors.New("Invalid BucketName")
 	}
 
-	if bucketRegion == "" {
-		return nil, errors.New("Invalid BucketRegion")
-	}
-
 	etcds := strings.Split(etcd, ",")
 	if len(etcds) == 0 {
 		return nil, errors.New("Invalid EtcdEndpoints")
@@ -128,7 +128,6 @@ func NewConfig(env, ip, port, etcd, diskBaseDir, bucketName, bucketRegion string
 		EtcdEndpoints: etcds,
 		DiskBaseDir:   diskBaseDir,
 		BucketName:    bucketName,
-		BucketRegion:  bucketRegion,
 	}
 
 	return &c, nil
@@ -158,15 +157,11 @@ func (c *config) GetBucketName() string {
 	return c.BucketName
 }
 
-func (c *config) GetBucketRegion() string {
-	return c.BucketRegion
-}
-
 // Process crashes if started with IP and port already registered with etcd.
 // TTL on etcd is 10 seconds.
 // Monit / Kubernetes will keep trying to restart the process, it should succeed after 10 seconds / till key expires.
 
-// ./pattern-app --env=development --ip=127.0.0.1 --ps_rpc_port=8100 --etcd=localhost:2379 --disk_dir=/usr/local/var/factors/local_disk --bucket_name=/usr/local/var/factors/cloud_storage --bucket_region=us-east-1
+// ./pattern-app --env=development --ip=127.0.0.1 --ps_rpc_port=8100 --etcd=localhost:2379 --disk_dir=/usr/local/var/factors/local_disk --bucket_name=/usr/local/var/factors/cloud_storage
 func main() {
 
 	env := flag.String("env", "development", "")
@@ -176,10 +171,9 @@ func main() {
 
 	diskBaseDir := flag.String("disk_dir", "/usr/local/var/factors/local_disk", "")
 	bucketName := flag.String("bucket_name", "/usr/local/var/factors/cloud_storage", "")
-	bucketRegion := flag.String("bucket_region", "us-east-1", "")
 	flag.Parse()
 
-	config, err := NewConfig(*env, *ip, *port, *etcd, *diskBaseDir, *bucketName, *bucketRegion)
+	config, err := NewConfig(*env, *ip, *port, *etcd, *diskBaseDir, *bucketName)
 	if err != nil {
 		panic(err)
 	}
@@ -191,7 +185,6 @@ func main() {
 		"EtcdEndpoints": config.GetEtcdEndpoints(),
 		"DiskBaseDir":   config.GetBaseDiskDir(),
 		"BucketName":    config.GetBucketName(),
-		"BucketRegion":  config.GetBucketRegion(),
 	}).Infoln("Initialising with config")
 
 	if config.GetEnvironment() == Development {

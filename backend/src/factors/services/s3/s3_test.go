@@ -77,7 +77,7 @@ func TestGetPatternChunkFilePathAndName(t *testing.T) {
 	projectId := U.RandomUint64()
 	modelId := U.RandomUint64()
 	chunkId := U.RandomString(8)
-	expectedPath := s3Driver.GetProjectModelDir(projectId, modelId) + "/chunks/"
+	expectedPath := s3Driver.GetProjectModelDir(projectId, modelId) + "chunks/"
 	expectedName := fmt.Sprintf("chunk_%s.txt", chunkId)
 
 	resultPath, resultName := s3Driver.GetPatternChunkFilePathAndName(projectId, modelId, chunkId)

@@ -173,7 +173,7 @@ cd $GOPATH/bin
 ./pattern-app
 Config can be passed using flags
 
-./pattern-app --env=development --ip=127.0.0.1 --ps_rpc_port=8100 --etcd=localhost:2379 --disk_dir=/usr/local/var/factors/local_disk --s3=/usr/local/var/factors/cloud_storage --s3_region=us-east-1
+./pattern-app --env=development --ip=127.0.0.1 --ps_rpc_port=8100 --etcd=localhost:2379 --disk_dir=/usr/local/var/factors/local_disk --bucket_name=/usr/local/var/factors/cloud_storage
 ```
 ## Bootstrapping sample data, Building and serving model.
 * Start server on 8080.

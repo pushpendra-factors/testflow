@@ -3,7 +3,6 @@ package config
 import (
 	json "encoding/json"
 	serviceEtcd "factors/services/etcd"
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"strings"
@@ -18,7 +17,6 @@ import (
 	"go.etcd.io/etcd/clientv3"
 )
 
-var configFilePath = flag.String("config_filepath", "../config/config.json", "")
 var initiated bool = false
 
 const DEVELOPMENT = "development"
