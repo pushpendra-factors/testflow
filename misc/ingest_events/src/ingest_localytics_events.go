@@ -204,6 +204,10 @@ func main() {
 		projectTokenFlag = &projectToken
 	}
 
+	if *projectTokenFlag == "" {
+		log.Fatal("Project token is missing.")
+	}
+
 	fileIngest(*inputFileFlag)
 	log.Info(fmt.Sprintf("Ingested events to project Localytics-Challenge with id: %d", *projectIdFlag))
 }

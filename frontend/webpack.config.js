@@ -4,15 +4,18 @@ var config = require('./build-config');
 
 // plugins
 var HtmlWebpackPlugin = require('html-webpack-plugin');
-
-var prodEnv = process.env.NODE_ENV === "production";
 var buildConfigPlugin = new webpack.DefinePlugin({
-  "BUILD_CONFIG": JSON.stringify(config[process.env.NODE_ENV])
+  "ENV": JSON.stringify(process.env.NODE_ENV),
+  "BUILD_CONFIG": JSON.stringify(config[process.env.NODE_ENV]),
+  // Fix: To use production build, if not dev.
+  'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV === 'development' ? 'development' : 'production')
 });
+
+var devEnv = process.env.NODE_ENV === "development";
 
 module.exports = {
   context: path.join(__dirname, "src"),
-  devtool: !prodEnv ? "inline-sourcemap" : false,
+  devtool: devEnv ? "inline-sourcemap" : false,
   entry: "./index.js",
   module: {
     loaders: [
@@ -47,10 +50,7 @@ module.exports = {
     path: __dirname + "/dist/",
     filename: "index.min.js"
   },
-  plugins: !prodEnv ? [buildConfigPlugin] : [
-    new webpack.DefinePlugin({
-      'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development')
-    }),
+  plugins: devEnv ? [buildConfigPlugin] : [
     buildConfigPlugin, 
     new webpack.optimize.DedupePlugin(),
     new webpack.optimize.OccurrenceOrderPlugin(),

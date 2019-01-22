@@ -11,5 +11,5 @@ app.get("*", function (req, res) {
   res.sendFile(path.join(DIST_DIR, "index.html"));
 });
 
-console.log("\nServing production build on http://localhost:3000 ...");
+console.log("\nServing on serving on port "+PORT+"..");
 app.listen(PORT);

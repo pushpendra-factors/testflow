@@ -16,6 +16,7 @@ import {
     InputGroupText,
 } from 'reactstrap';
 
+import { getSDKAssetURL } from "../../util";
 import { 
   fetchCurrentProjectSettings, 
   udpateCurrentProjectSettings,
@@ -25,7 +26,6 @@ import {
   deleteFilter,
 } from '../../actions/projectsActions';
 import FilterRecord from './FilterRecord';
-
 
 const mapStateToProps = store => {
   return {
@@ -151,7 +151,7 @@ class Settings extends Component {
   getSDKScript() {
     // Todo(Dinesh): https://github.com/orgs/Slashbit-Technologies/projects/1#card-15042473
     let token = this.getToken();
-    let assetURL = BUILD_CONFIG.sdk_asset_url; // resolved on build.
+    let assetURL = getSDKAssetURL();
     return '(function(c){var s=document.createElement("script");s.type="text/javascript";if(s.readyState){s.onreadystatechange=function(){if(s.readyState=="loaded"||s.readyState=="complete"){s.onreadystatechange=null;c()}}}else{s.onload=function(){c()}}s.src="'+assetURL+'";d=!!document.body?document.body:document.head;d.appendChild(s)})(function(){factors.init("'+token+'")})';
   }
 
