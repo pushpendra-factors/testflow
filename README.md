@@ -97,7 +97,8 @@ CREATE EXTENSION
 * Setup
 ```
 git clone https://github.com/Slashbit-Technologies/factors.git
-export GOPATH=<path_to_githubcode>/factors/backend
+export PATH_TO_FACTORS=~/repos
+export GOPATH=$PATH_TO_FACTORS/factors/backend
 ```
 
 * Create tables
@@ -124,7 +125,8 @@ go build -o $GOPATH/bin/app $GOPATH/src/factors/app/app.go
 cd $GOPATH/bin
 mkdir -p /usr/local/var/factors/config
 mkdir -p /usr/local/var/factors/geolocation_data
-cp <path_to_github_code>/geolocation_data/GeoLite2-City.mmdb /usr/local/var/factors/geolocation_data
+export PATH_TO_FACTORS=~/repos
+cp $PATH_TO_FACTORS/geolocation_data/GeoLite2-City.mmdb /usr/local/var/factors/geolocation_data
 cp $GOPATH/src/factors/config/subdomain_login_config.json /usr/local/var/factors/config
 ./app
 or
@@ -144,7 +146,8 @@ dep ensure -add github.com/<path_to_repo>
 ## Frontend.
 * Download and install Nodejs. https://nodejs.org/en/download/
 ```
-cd <path_to_githubcode>/factors/frontend
+export PATH_TO_FACTORS=~/repos
+cd $PATH_TO_FACTORS/factors/frontend
 npm install
 npm run dev
 ```
@@ -155,7 +158,8 @@ npm run dev
 ## Pattern Server
 * Setup
 ```
-export GOPATH=<path_to_githubcode>/factors/backend
+export PATH_TO_FACTORS=~/repos
+export GOPATH=$PATH_TO_FACTORS/factors/backend
 export ETCDCTL_API=3
 etcdctl put /factors/metadata/project_version_key version1
 mkdir -p /usr/local/var/factors/local_disk
@@ -179,8 +183,9 @@ Config can be passed using flags
 * Using Localytics challenge data. (https://github.com/localytics/data-viz-challenge)  (https://medium.com/@aabraahaam/localytics-data-visualization-challengue-81ed409471e)
 
 ```
-cd <path_to_githubcode>/factors/misc/ingest_events/src
-export GOPATH=<path_to_githubcode>/factors/misc/ingest_events
+export PATH_TO_FACTORS=~/repos
+cd $PATH_TO_FACTORS/factors/misc/ingest_events/src
+export GOPATH=$PATH_TO_FACTORS/factors/misc/ingest_events
 mkdir /usr/local/var/factors/localytics_data
 git clone https://github.com/localytics/data-viz-challenge.git  /usr/local/var/factors/localytics_data
 
@@ -190,8 +195,9 @@ go run ingest_localytics_events.go --input_file=/usr/local/var/factors/localytic
 * Note \<projectId\> from the last line of the stdout of the script.
   
 ```
+export PATH_TO_FACTORS=~/repos (path to github code)
 cd ../../../backend/src/factors/scripts/
-export GOPATH=<path_to_githubcode>/factors/backend
+export GOPATH=$PATH_TO_FACTORS/factors/backend
 go run run_pull_events.go --project_id=<projectId> --end_time=1396310326 --local_disk_tmp_dir=/usr/local/var/factors/local_disk/tmp --bucket_name=/usr/local/var/factors/cloud_storage
 * Note \<modelId\> from the last line of the stdout of the script.
 ```
@@ -255,7 +261,8 @@ go run run_pattern_mine.go --project_id=<projectId> --model_id=<modelId>
 
 * Setup
 ```
-cd <path_to_github_code>/factors/sdk/javascript
+export PATH_TO_FACTORS=~/repos (path to github code)
+cd $PATH_TO_FACTORS/factors/sdk/javascript
 npm install
 ```
 
