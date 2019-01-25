@@ -23,7 +23,8 @@ import {
   changeProject,
   fetchProjects,
   fetchCurrentProjectEvents, 
-  fetchCurrentProjectSettings 
+  fetchCurrentProjectSettings,
+  fetchProjectModels
 } from "../../actions/projectsActions";
 
 
@@ -64,7 +65,8 @@ const mapDispatchToProps = dispatch => {
   return bindActionCreators({ 
     fetchProjects,
     fetchCurrentProjectEvents, 
-    fetchCurrentProjectSettings 
+    fetchCurrentProjectSettings,
+    fetchProjectModels
   }, dispatch);
 }
 
@@ -104,6 +106,7 @@ class DefaultLayout extends Component {
     // re-render corresponding component which will call fetch on mount.
     this.props.fetchCurrentProjectSettings(projectId);
     this.props.fetchCurrentProjectEvents(projectId);
+    this.props.fetchProjectModels(projectId);
   }
 
   render() {

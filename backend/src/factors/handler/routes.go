@@ -37,7 +37,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/settings", GetProjectSettingHandler)
 	authRouteGroup.PUT("/:project_id/settings", UpdateProjectSettingsHandler)
 	authRouteGroup.GET("/:project_id/event_names", GetEventNamesHandler)
-	authRouteGroup.GET("/:project_id/models", GetProjectModelIntervalsHandler)
+	authRouteGroup.GET("/:project_id/models", GetProjectModelsHandler)
 	authRouteGroup.GET("/:project_id/filters", GetFiltersHandler)
 	authRouteGroup.POST("/:project_id/filters", CreateFilterHandler)
 	authRouteGroup.PUT("/:project_id/filters/:filter_id", UpdateFilterHandler)

@@ -50,7 +50,8 @@ func GetProjectsHandler(c *gin.Context) {
 	}
 }
 
-func GetProjectModelIntervalsHandler(c *gin.Context) {
+// curl -i -X GET http://localhost:8080/projects/1/models
+func GetProjectModelsHandler(c *gin.Context) {
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
@@ -62,6 +63,8 @@ func GetProjectModelIntervalsHandler(c *gin.Context) {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
-
-	c.JSON(http.StatusOK, modelIntervals)
+	response := make(map[string]interface{})
+	response["intervals"] = modelIntervals
+	response["default_interval"] = modelIntervals[0]
+	c.JSON(http.StatusOK, response)
 }

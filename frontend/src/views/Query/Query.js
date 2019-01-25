@@ -166,7 +166,7 @@ class Query extends Component {
       <div className="animated fadeIn">
       <Row>
       <Col xs="12" md="12">
-      <Card className="fapp-search-card">
+      <Card className="fapp-search-card fapp-select">
       <CardBody>
       <Row>
       <Col md={{ size: '8', offset: 2 }}>

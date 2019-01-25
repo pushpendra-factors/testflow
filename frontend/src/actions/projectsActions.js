@@ -247,3 +247,15 @@ export function deleteFilter(projectId, filterId, storeIndex) {
     })
   }
 }
+
+export function fetchProjectModels(projectId){
+  return function(dispatch){
+    axios.get(host + "projects/" + projectId + "/models")
+    .then((response) => {
+      dispatch({type: "FETCH_PROJECT_MODELS_FULFILLED", payload: response.data});
+    })
+    .catch((err) => {
+      dispatch({type: "FETCH_PROJECT_MODELS_REJECTED", payload: err})
+    });
+  }
+}

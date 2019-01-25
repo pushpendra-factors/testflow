@@ -8,7 +8,9 @@ export default function reducer(state={
     fetchedProjects: false,
     projectsError: null,
     filters: [],
-    filtersError: null
+    filtersError: null,
+    intervals: [],
+    defaultModelInterval: null
   }, action) {
 
     switch (action.type) {
@@ -180,6 +182,13 @@ export default function reducer(state={
       case "DELETE_FILTER_REJECTED": {
         // no redux state change.
         return state
+      }
+      case "FETCH_PROJECT_MODELS_FULFILLED": {
+        return {
+          ...state,
+          intervals: action.payload.intervals,
+          defaultModelInterval: action.payload.default_interval,
+        }
       }
     }
     return state

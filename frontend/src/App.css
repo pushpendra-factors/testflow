@@ -220,11 +220,14 @@ body {
 
 /* search card select class */
 .fapp-search-card .css-1aya2g8 {
-    background: none;
     min-height: 55px;
-    font-weight: 300;
     padding: 5px 8px;
+}
+
+.fapp-select .css-1aya2g8 {
+    background: none;
     border-color: #8f9ba6;
+    font-weight: 300;
 }
 
 

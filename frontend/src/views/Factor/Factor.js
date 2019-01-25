@@ -2,13 +2,12 @@ import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import {
-  Card,
-  Col,
-  Row,
+  Card, Col, Row,
+  Dropdown, DropdownToggle, DropdownMenu, DropdownItem 
 } from 'reactstrap';
 
 import { fetchFactors } from "../../actions/factorsActions";
-import { fetchCurrentProjectEvents } from "../../actions/projectsActions";
+import { fetchCurrentProjectEvents, fetchProjectModels } from "../../actions/projectsActions";
 import BarChartCard from './BarChartCard.js';
 import LineChartCard from './LineChartCard.js';
 import FunnelChartCard from './FunnelChartCard.js';
@@ -23,6 +22,8 @@ import {
   STATE_EVENT_NUMERIC_PROPERTY_VALUE, STATE_EVENT_STRING_PROPERTY_VALUE,
   STATE_USER_NUMERIC_PROPERTY_VALUE, STATE_USER_STRING_PROPERTY_VALUE
 } from './QueryBuilderCard';
+
+import Select from 'react-select';
 
 const EVENT_NAME_TYPE = "eventName";
 const EVENT_PROPERTY_START_TYPE = "eventPropertyStart";
@@ -51,19 +52,18 @@ const mapStateToProps = store => {
   return {
     currentProjectId: store.projects.currentProjectId,
     factors: store.factors.factors,
+    intervals: store.projects.intervals,
+    defaultModelInterval: store.projects.defaultModelInterval,
   }
 }
 
 const mapDispatchToProps = dispatch => {
-  return bindActionCreators({ fetchFactors, fetchCurrentProjectEvents }, dispatch);
+  return bindActionCreators({ fetchFactors, fetchCurrentProjectEvents, fetchProjectModels }, dispatch);
 }
 
 class Factor extends Component {
   constructor(props) {
     super(props);
-    this.toggle = this.toggle.bind(this);
-    this.toggleFade = this.toggleFade.bind(this);
-    this.factor = this.factor.bind(this);
 
     this.state = {
       collapse: true,
@@ -73,11 +73,15 @@ class Factor extends Component {
       eventNames: {
         loaded: false,
         error: null
-      }
+      },
+
+      isModelSelectorDropdownOpen: false,
+      selectedModelInterval: null
     }
   }
 
   componentWillMount() {
+    // TODO: Check if this needs to be removed
     this.props.fetchCurrentProjectEvents(this.props.currentProjectId)
       .then((response) => {
         this.setState({ eventNames: { loaded: true } });
@@ -85,6 +89,14 @@ class Factor extends Component {
       .catch((response) => {
         this.setState({ eventNames: { loaded: true, error: response.payload } });
       });
+      
+      this.props.fetchProjectModels(this.props.currentProjectId);
+  }
+
+  componentDidUpdate() {
+    if (this.props.defaultModelInterval != null && this.state.selectedModelInterval == null){ 
+      this.setState({selectedModelInterval: this.props.defaultModelInterval});
+    }
   }
 
   getPropertiesOptions(properties, isEventType) {
@@ -208,16 +220,37 @@ class Factor extends Component {
     return queryStates;
   }
 
-  toggle() {
+  toggle = () => {
     this.setState({ collapse: !this.state.collapse });
   }
 
-  toggleFade() {
+  toggleModelSelector = () => {
+    this.setState(prevState => ({
+      isModelSelectorDropdownOpen: !prevState.isModelSelectorDropdownOpen
+    }));
+  }
+
+  changeSelectedModel = (selectedOption) => {
+    
+    var clickedModelId = selectedOption.value;
+    var selectedInterval;
+    for (var i = 0; i < this.props.intervals.length; i++) {
+      var interval = this.props.intervals[i];
+      if (interval.mid ==  clickedModelId){
+        selectedInterval = interval;
+        break;
+      }
+    }
+    if(!!selectedInterval.mid){
+      this.setState({selectedModelInterval: selectedInterval});
+    }
+  }
+
+  toggleFade = () => {
     this.setState((prevState) => { return { fadeIn: !prevState } });
   }
 
   factor = (queryElements) => {
-    console.log('Factor ' + JSON.stringify(this.state.values));
 
     var query = {
       eventsWithProperties: [],
@@ -321,13 +354,19 @@ class Factor extends Component {
       return;
     }
     console.log('Fire Query: ' + JSON.stringify(query));
-    this.props.fetchFactors(this.props.currentProjectId,
+    this.props.fetchFactors(this.props.currentProjectId,this.state.selectedModelInterval.mid,
       { query: query }, this.props.location.search);
+  }
+
+  makeDropdownIntervals(intervals){
+    var dropdownIntervals = intervals.map(function(interval){
+      return { label: interval.sd + "-" + interval.ed, value: interval.mid};
+    });
+    return dropdownIntervals
   }
 
   render() {
     if (!this.state.eventNames.loaded) return <div> Loading... </div>;
-
     var charts = [];
     let resultElements;
     if (!!this.props.factors.charts) {
@@ -346,26 +385,42 @@ class Factor extends Component {
       resultElements = <Card className="fapp-card-border-none">{charts}</Card>;
     }
 
+    let mid = "";
+    let label = "";
+    if(this.state.selectedModelInterval != null){
+        mid = this.state.selectedModelInterval.mid;
+        label = this.state.selectedModelInterval.sd + " - " + this.state.selectedModelInterval.sd;
+    } 
 
     return (
-      <div className='animated fadeIn'>
-
+      <div>
         <div>
-          <Row>
-            <Col xs='12' md='12'>
-              <QueryBuilderCard 
-                getQueryStates={this.getQueryStates}
-                getPropertiesOptions={this.getPropertiesOptions}
-                getPropertyValueOptions={this.getPropertyValueOptions}
-                onKeyDown={this.factor}
-                holderText="Enter goal."
+          <Row class="fapp-select">
+            <Col xs='4' md='4'>
+              <Select
+                value={{value: mid , label: label}}
+                onChange={this.changeSelectedModel}
+                options={this.makeDropdownIntervals(this.props.intervals)}
               />
             </Col>
-          </Row>
+          </Row>  
         </div>
-
-        {resultElements}
-
+        <div className='animated fadeIn'>
+            <div>
+              <Row>
+                <Col xs='12' md='12'>
+                  <QueryBuilderCard 
+                    getQueryStates={this.getQueryStates}
+                    getPropertiesOptions={this.getPropertiesOptions}
+                    getPropertyValueOptions={this.getPropertyValueOptions}
+                    onKeyDown={this.factor}
+                    holderText="Enter goal."
+                  />
+                </Col>
+              </Row>
+            </div>
+            {resultElements}
+        </div>
       </div>
     );
   }
