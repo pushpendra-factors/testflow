@@ -57,7 +57,7 @@ class DefaultHeader extends Component {
       <React.Fragment>
         <AppSidebarToggler className="d-lg-none" display="md" mobile />
         <AppSidebarToggler className="d-md-down-none fapp-navbar-toggler" display="lg" />
-        <AppSidebarForm className="fapp-sidebar-form">
+        <AppSidebarForm className="fapp-header-dropdown">
           <Select
             options={this.props.selectableProjects}
             value={this.props.selectedProject}

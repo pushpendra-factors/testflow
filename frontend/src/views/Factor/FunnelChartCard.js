@@ -4,9 +4,8 @@ import { Doughnut } from 'react-chartjs-2';
 import {
   Card,
   CardBody,
-  CardFooter,
+  CardHeader,
   Col,
-  Container,
   Row,
 } from 'reactstrap';
 import FunnelArrow from './FunnelArrow.js';
@@ -107,34 +106,34 @@ class FunnelChartCard extends Component {
 
     return (
       <Card>
-      <CardBody className="fapp-card-body">
-      <Row noGutters={true}>
-      {
-        baseFunnelGraphCols
-      }
-      </Row>
+        <CardHeader className="fapp-chart-card-header">
+          {chartData.header}
+        </CardHeader>
+        <CardBody className="fapp-chart-card-body">
+        <Row noGutters={true}>
+        {
+          baseFunnelGraphCols
+        }
+        </Row>
 
-      <Row style={funnelLabelRowStyle} noGutters={true}>
-      {
-        baseFunnelEventCols
-      }
-      </Row>
+        <Row style={funnelLabelRowStyle} noGutters={true}>
+        {
+          baseFunnelEventCols
+        }
+        </Row>
 
-      <Row noGutters={true}>
-      {
-        funnelGraphCols
-      }
-      </Row>
+        <Row noGutters={true}>
+        {
+          funnelGraphCols
+        }
+        </Row>
 
-      <Row style={funnelLabelRowStyle} noGutters={true}>
-      {
-        funnelEventCols
-      }
-      </Row>
-      </CardBody>
-      <CardFooter className="fapp-chart-card-footer">
-      {chartData.header}
-      </CardFooter>
+        <Row style={funnelLabelRowStyle} noGutters={true}>
+        {
+          funnelEventCols
+        }
+        </Row>
+        </CardBody>
       </Card>
     );
   }

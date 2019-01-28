@@ -1,12 +1,5 @@
 package main
 
-// Mine TOP_K Frequent patterns for every event combination (segment) at every iteration.
-
-// Sample usage in terminal.
-// export GOPATH=/Users/aravindmurthy/code/factors/backend/
-// go run run_pattern_mine.go --env=development --etcd=localhost:2379 --disk_dir=/usr/local/var/factors/local_disk --s3_region=us-east-1 --s3=/usr/local/var/factors/cloud_storage --num_routines=3 --project_id=<projectId> --model_id=<modelId>
-// or
-// go run run_pattern_mine.go --project_id=<projectId> --model_id=<modelId>
 import (
 	C "factors/config"
 	"factors/filestore"
@@ -23,15 +16,13 @@ import (
 )
 
 func main() {
-	projectIdFlag := flag.Uint64("project_id", 0, "Project Id.")
-	modelIdFlag := flag.Uint64("model_id", 0, "Model Id")
-
 	envFlag := flag.String("env", "development", "")
 	etcd := flag.String("etcd", "localhost:2379",
 		"Comma separated list of etcd endpoints localhost:2379,localhost:2378")
 	localDiskTmpDirFlag := flag.String("local_disk_tmp_dir", "/usr/local/var/factors/local_disk/tmp", "--local_disk_tmp_dir=/usr/local/var/factors/local_disk/tmp pass directory")
 	bucketName := flag.String("bucket_name", "/usr/local/var/factors/cloud_storage", "")
 	numRoutinesFlag := flag.Int("num_routines", 3, "No of routines")
+	projectIdFlag := flag.Uint64("project_id", 0, "Optional: Project Id.")
 
 	dbHost := flag.String("db_host", "localhost", "")
 	dbPort := flag.Int("db_port", 5432, "")
@@ -77,8 +68,6 @@ func main() {
 		"Env":             *envFlag,
 		"EtcdEndpoints":   *etcd,
 		"localDiskTmpDir": *localDiskTmpDirFlag,
-		"ProjectId":       *projectIdFlag,
-		"ModelId":         *modelIdFlag,
 		"Bucket":          *bucketName,
 		"NumRoutines":     *numRoutinesFlag,
 	}).Infoln("Initialising")
@@ -86,10 +75,6 @@ func main() {
 	if *envFlag != "development" {
 		err := fmt.Errorf("env [ %s ] not recognised", *envFlag)
 		panic(err)
-	}
-
-	if *projectIdFlag <= 0 || *modelIdFlag <= 0 {
-		log.Fatal("project_id and model_id are required.")
 	}
 
 	if *numRoutinesFlag < 1 {
@@ -109,12 +94,6 @@ func main() {
 
 	diskManager := serviceDisk.New(*localDiskTmpDirFlag)
 
-	// modelType, startTime, endTime is part of update meta.
-	// kept null on run script.
-	_, err = T.PatternMine(db, etcdClient, &cloudManager, diskManager,
-		*localDiskTmpDirFlag, *bucketName, *numRoutinesFlag,
-		*projectIdFlag, *modelIdFlag, "", 0, 0)
-	if err != nil {
-		log.WithError(err).Fatal("Pattern mining failed")
-	}
+	T.BuildSequential(db, &cloudManager, etcdClient, diskManager,
+		*localDiskTmpDirFlag, *bucketName, *numRoutinesFlag, *projectIdFlag)
 }

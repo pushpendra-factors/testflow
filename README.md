@@ -198,9 +198,13 @@ go run ingest_localytics_events.go --input_file=/usr/local/var/factors/localytic
 export PATH_TO_FACTORS=~/repos (path to github code)
 cd ../../../backend/src/factors/scripts/
 export GOPATH=$PATH_TO_FACTORS/factors/backend
-go run run_pull_events.go --project_id=<projectId> --end_time=1396310326 --local_disk_tmp_dir=/usr/local/var/factors/local_disk/tmp --bucket_name=/usr/local/var/factors/cloud_storage
-* Note \<modelId\> from the last line of the stdout of the script.
+go run run_pull_events.go --project_id=<projectId> --model_type=monthly --end_time=1396310326 --local_disk_tmp_dir=/usr/local/var/factors/local_disk/tmp 
+--bucket_name=/usr/local/var/factors/cloud_storage
+or
+go run run_pull_events.go --project_id=<projectId> --start_time=1393632004 --end_time=1396310326 --local_disk_tmp_dir=/usr/local/var/factors/local_disk/tmp --bucket_name=/usr/local/var/factors/cloud_storage
 ```
+* Note \<modelId\> from the last line of the stdout of the script.
+
 
 * Check output file at /usr/local/var/factors/cloud_storage/projects/\<projectId\>models/\<modelId\>/events_<modelId>.txt
 
@@ -309,8 +313,13 @@ factors.isInstalled();
 // Running all tests
 factors.test.run() 
 
-// Running a specific test
-factors.test.Suite.TEST_NAME
+// Running specific suite
+factors.test.runPrivateMethodsSuite()
+factors.test.runPublicMethodsSuite()
+
+// Running specific test method
+factors.test.SuitePublicMethod.testIdentifyWithoutUserCookie()
+
 ```
 
 ## Setup and test token login
@@ -337,3 +346,4 @@ curl -i -X GET http://sample4ecom.factors-dev.ai:8080/projects/<project_id_of_sa
 ```
 curl -i -X GET http://unauthorized.factors-dev.ai:8080/projects/1/users
 ```
+

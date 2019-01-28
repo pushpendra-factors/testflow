@@ -11,7 +11,6 @@ import (
 	"hash/fnv"
 	"sort"
 	"sync"
-	"time"
 
 	log "github.com/sirupsen/logrus"
 	"go.etcd.io/etcd/clientv3"
@@ -25,9 +24,9 @@ const (
 )
 
 type ModelData struct {
-	Chunks    []string
-	StartDate time.Time
-	EndDate   time.Time
+	Chunks         []string
+	StartTimestamp int64
+	EndTimestamp   int64
 }
 
 // model_id -> ModelData
@@ -100,7 +99,7 @@ func New(ip, port string, etcdClient *serviceEtcd.EtcdClient, diskFileManager, c
 	}
 
 	state := &state{
-		myNum: -1,
+		myNum:                  -1,
 		projectsModelChunkData: make(map[uint64]ModelChunkMapping),
 	}
 
@@ -137,7 +136,7 @@ func (ps *PatternServer) SetState(myNum int, psNodes []serviceEtcd.KV, projectDa
 	newState.projectsToServe = projectsToServe
 
 	log.WithFields(log.Fields{
-		"MyNum": newState.myNum,
+		"MyNum":                            newState.myNum,
 		"PatternServersRegisteredWithEtcd": newState.patternServerNodes,
 		"ProjectDataVersion":               newState.projectDataVersion,
 		"ProjectModelChunkData":            newState.projectsModelChunkData,
@@ -258,17 +257,18 @@ func (ps *PatternServer) GetProjectModelIntervals(projectId uint64) ([]client.Mo
 
 	for mid, modelData := range modelChunkData {
 		mi := client.ModelInfo{
-			ModelId:   mid,
-			StartDate: modelData.StartDate,
-			EndDate:   modelData.EndDate,
+			ModelId:        mid,
+			StartTimestamp: modelData.StartTimestamp,
+			EndTimestamp:   modelData.EndTimestamp,
 		}
 		modelInfos = append(modelInfos, mi)
 	}
 
 	// latest interval is first
 	sort.Slice(modelInfos, func(i, j int) bool {
-		return modelInfos[i].StartDate.After(modelInfos[j].StartDate)
+		return modelInfos[i].StartTimestamp > modelInfos[j].StartTimestamp
 	})
+
 	return modelInfos, nil
 }
 

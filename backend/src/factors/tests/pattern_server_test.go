@@ -25,14 +25,14 @@ func TestGetProjectModels(t *testing.T) {
 
 	project1ModelChunkMapping := patternserver.ModelChunkMapping{
 		modelId1: patternserver.ModelData{
-			StartDate: time.Now().UTC(),
-			EndDate:   time.Now().UTC(),
-			Chunks:    []string{chunkId1},
+			StartTimestamp: time.Now().Unix(),
+			EndTimestamp:   time.Now().Unix(),
+			Chunks:         []string{chunkId1},
 		},
 		modelId2: patternserver.ModelData{
-			StartDate: time.Now().UTC(),
-			EndDate:   time.Now().UTC(),
-			Chunks:    []string{chunkId2, chunkId3},
+			StartTimestamp: time.Now().Unix(),
+			EndTimestamp:   time.Now().Unix(),
+			Chunks:         []string{chunkId2, chunkId3},
 		},
 	}
 

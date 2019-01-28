@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"factors/pattern"
 	"fmt"
-	"time"
 
 	"net/http"
 	"sync"
@@ -123,9 +122,9 @@ type GetUserAndEventsInfoResponse struct {
 }
 
 type ModelInfo struct {
-	ModelId   uint64    `json:"mid"`
-	StartDate time.Time `json:"sd"`
-	EndDate   time.Time `json:"ed"`
+	ModelId        uint64 `json:"mid"`
+	StartTimestamp int64  `json:"st"`
+	EndTimestamp   int64  `json:"et"`
 }
 
 func GetSeenUserProperties(projectId, modelId uint64) (map[string][]string, error) {

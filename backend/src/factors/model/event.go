@@ -31,6 +31,11 @@ type Event struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+type EventTimestamp struct {
+	First int64
+	Last  int64
+}
+
 func (event *Event) BeforeCreate(scope *gorm.Scope) error {
 	db := C.GetServices().Db
 
@@ -94,4 +99,37 @@ func GetEventById(projectId uint64, id string) (*Event, int) {
 		return nil, http.StatusInternalServerError
 	}
 	return &event, http.StatusFound
+}
+
+func GetProjectEventTimeInfo() (*(map[uint64]*EventTimestamp), int) {
+	db := C.GetServices().Db
+
+	rows, err := db.Raw("SELECT project_id, min(timestamp) as first_timestamp, max(timestamp) as last_timestamp FROM events GROUP BY project_id").Rows()
+	if err != nil {
+		log.Error("Failed to get events timestamp info.")
+		return nil, http.StatusInternalServerError
+	}
+	defer rows.Close()
+
+	projectEventsTime := make(map[uint64]*EventTimestamp, 0)
+
+	count := 0
+	for rows.Next() {
+		var projectId uint64
+		var firstTimestamp, lastTimestamp int64
+		if err = rows.Scan(&projectId, &firstTimestamp, &lastTimestamp); err != nil {
+			return nil, http.StatusInternalServerError
+		}
+
+		if firstTimestamp > 0 {
+			projectEventsTime[projectId] = &EventTimestamp{First: firstTimestamp, Last: lastTimestamp}
+		}
+
+		count++
+	}
+	if count == 0 {
+		return nil, http.StatusNotFound
+	}
+
+	return &projectEventsTime, http.StatusFound
 }

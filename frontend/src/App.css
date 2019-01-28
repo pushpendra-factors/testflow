@@ -1,4 +1,11 @@
-/* React Toggle */
+
+
+@media (min-width: 320px) and (max-width: 480px) {
+    .fapp-header-dropdown {
+        width: 60% !important;
+        text-align: left;
+    }
+}
 
 .react-toggle {
     touch-action: pan-x;
@@ -197,8 +204,8 @@ body {
     background: #192a56 !important;
 }
 
-.fapp-sidebar-form {
-    width: 22vw;
+.fapp-header-dropdown {
+    width: 22%;
 }
 
 .fapp-sidebar-nav {
@@ -215,7 +222,7 @@ body {
 }
 
 .fapp-search-card .card-body {
-    padding: 2rem 1.25rem 1rem 1.25rem !important;
+    padding: 4rem 1.25rem 1rem 1.25rem !important;
 }
 
 /* search card select class */
@@ -273,18 +280,18 @@ body {
     border-radius: 10px;
 }
 
-.fapp-chart-card-footer {
+.fapp-chart-card-header {
     background: none !important;
-    border-top: none !important;
+    border-bottom: none !important;
     line-height: 1.5rem;
-    padding: 0 4rem 1.7rem 4rem !important;
+    padding: 1rem 2.5rem 0.3rem 2.5rem !important;   
     font-weight: 500;
     letter-spacing: 0.02em;
     color: #23282c;
 }
 
-.fapp-card-body {
-    padding: 1.7rem 1.25rem !important;
+.fapp-chart-card-body {
+    padding: 1rem 1.25rem 0.5rem 1.25rem !important;
 }
 
 /* Used with card with additional maring */

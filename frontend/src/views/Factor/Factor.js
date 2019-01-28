@@ -5,6 +5,7 @@ import {
   Card, Col, Row,
   Dropdown, DropdownToggle, DropdownMenu, DropdownItem 
 } from 'reactstrap';
+import moment from 'moment';
 
 import { fetchFactors } from "../../actions/factorsActions";
 import { fetchCurrentProjectEvents, fetchProjectModels } from "../../actions/projectsActions";
@@ -42,7 +43,7 @@ const cardColumnSetting = {
 };
 
 const chartCardRowStyle = {
-  marginTop: '50px',
+  marginTop: '25px',
   marginBottom: '2px',
   marginRight: '2px',
   marginLeft: '2px',
@@ -231,7 +232,6 @@ class Factor extends Component {
   }
 
   changeSelectedModel = (selectedOption) => {
-    
     var clickedModelId = selectedOption.value;
     var selectedInterval;
     for (var i = 0; i < this.props.intervals.length; i++) {
@@ -358,9 +358,13 @@ class Factor extends Component {
       { query: query }, this.props.location.search);
   }
 
+  readableTimstamp(unixTime) {
+    return moment.unix(unixTime).utc().format('MMM DD, YYYY');
+  }
+
   makeDropdownIntervals(intervals){
-    var dropdownIntervals = intervals.map(function(interval){
-      return { label: interval.sd + "-" + interval.ed, value: interval.mid};
+    var dropdownIntervals = intervals.map((interval) => {
+      return { label: this.readableTimstamp(interval.st)+" - "+this.readableTimstamp(interval.et), value: interval.mid};
     });
     return dropdownIntervals
   }
@@ -389,14 +393,14 @@ class Factor extends Component {
     let label = "";
     if(this.state.selectedModelInterval != null){
         mid = this.state.selectedModelInterval.mid;
-        label = this.state.selectedModelInterval.sd + " - " + this.state.selectedModelInterval.sd;
+        label = this.readableTimstamp(this.state.selectedModelInterval.st)+" - "+this.readableTimstamp(this.state.selectedModelInterval.et);
     } 
 
     return (
       <div>
         <div>
           <Row class="fapp-select">
-            <Col xs='4' md='4'>
+            <Col xs={{size: 10, offset: 1}} md={{ size: 3, offset: 8 }}>
               <Select
                 value={{value: mid , label: label}}
                 onChange={this.changeSelectedModel}

@@ -1,21 +1,18 @@
 package main
 
 import (
-	"bufio"
-	encjson "encoding/json"
 	"errors"
 	"factors/filestore"
 	PC "factors/pattern_client"
+	PMM "factors/pattern_model_meta"
 	patternserver "factors/pattern_server"
 	serviceDisk "factors/services/disk"
 	serviceEtcd "factors/services/etcd"
 	serviceGCS "factors/services/gcstorage"
 	"flag"
 	"fmt"
-	"io"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/gorilla/rpc"
 
@@ -31,53 +28,15 @@ const (
 	Staging           = "staging"
 )
 
-type projectData struct {
-	ID        uint64    `json:"pid"`
-	ModelID   uint64    `json:"mid"`
-	StartDate time.Time `json:"sd"`
-	EndDate   time.Time `json:"ed"`
-	Chunks    []string  `json:"cs"`
-}
-
-func parseProjectsDataFile(reader io.Reader) []projectData {
-
-	scanner := bufio.NewScanner(reader)
-	// Adjust scanner buffer capacity to 10MB per line.
-	const maxCapacity = 10 * 1024 * 1024
-	buf := make([]byte, maxCapacity)
-	scanner.Buffer(buf, maxCapacity)
-
-	projectDatas := make([]projectData, 0, 0)
-
-	lineNum := 0
-	for scanner.Scan() {
-		lineNum++
-		line := scanner.Text()
-
-		var p projectData
-		if err := encjson.Unmarshal([]byte(line), &p); err != nil {
-			log.WithFields(log.Fields{"lineNum": lineNum, "err": err}).Error("Failed to unmarshal project")
-			continue
-		}
-		projectDatas = append(projectDatas, p)
-	}
-	err := scanner.Err()
-	if err != nil {
-		log.WithError(err).Errorln("Scanner error")
-	}
-
-	return projectDatas
-}
-
 // Add Test
-func makeProjectModelChunkLookup(projectDatas []projectData) map[uint64]patternserver.ModelChunkMapping {
+func makeProjectModelChunkLookup(projectDatas []PMM.ProjectData) map[uint64]patternserver.ModelChunkMapping {
 	pD := make(map[uint64]patternserver.ModelChunkMapping)
 	for _, p := range projectDatas {
 		mCM, exists := pD[p.ID]
 		if !exists {
 			mCM = patternserver.ModelChunkMapping{}
 		}
-		mD := patternserver.ModelData{Chunks: p.Chunks, StartDate: p.StartDate, EndDate: p.EndDate}
+		mD := patternserver.ModelData{Chunks: p.Chunks, StartTimestamp: p.StartTimestamp, EndTimestamp: p.EndTimestamp}
 		mCM[p.ModelID] = mD
 		pD[p.ID] = mCM
 	}
@@ -367,7 +326,6 @@ func watchAndHandleEtcdEvents(ps *patternserver.PatternServer, cloudManger files
 }
 
 func getProjectsDataFromVersion(version string, cloudManger filestore.FileManager) (map[uint64]patternserver.ModelChunkMapping, error) {
-
 	// always read from cloud
 	// do not copy on disk ?
 	projectDataFilePath, fName := cloudManger.GetProjectsDataFilePathAndName(version)
@@ -380,12 +338,16 @@ func getProjectsDataFromVersion(version string, cloudManger filestore.FileManage
 	projectDataFile, err := cloudManger.Get(projectDataFilePath, fName)
 	if err != nil {
 		log.WithError(err).Errorln("Failed to open projects data file")
-		return make(map[uint64]patternserver.ModelChunkMapping), err
+		return nil, err
 	}
 	defer projectDataFile.Close()
 
-	projectDataMap := makeProjectModelChunkLookup(parseProjectsDataFile(projectDataFile))
-	return projectDataMap, nil
+	projectMetadata, err := PMM.ParseProjectsDataFile(projectDataFile)
+	if err != nil {
+		return nil, err
+	}
+
+	return makeProjectModelChunkLookup(projectMetadata), nil
 }
 
 func keepEtcdLeaseAlive(ps *patternserver.PatternServer) {

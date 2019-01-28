@@ -3,6 +3,7 @@ package tests
 import (
 	"encoding/json"
 	M "factors/model"
+	"fmt"
 	"math"
 	"net/http"
 	"testing"
@@ -107,4 +108,42 @@ func TestDBCreateAndGetEvent(t *testing.T) {
 	event, errCode = M.CreateEvent(&M.Event{EventNameId: 0, ProjectId: projectId, UserId: userId})
 	assert.Equal(t, http.StatusInternalServerError, errCode)
 	assert.Nil(t, event)
+}
+
+func createEventWithTimestamp(t *testing.T, project *M.Project, user *M.User, timestamp int64) (*M.EventName, *M.Event) {
+	eventName, errCode := M.CreateOrGetUserCreatedEventName(&M.EventName{ProjectId: project.ID, Name: fmt.Sprintf("event_%d", timestamp)})
+	assert.NotNil(t, eventName)
+	event, errCode := M.CreateEvent(&M.Event{ProjectId: project.ID, EventNameId: eventName.ID, UserId: user.ID, Timestamp: timestamp})
+	assert.Equal(t, http.StatusCreated, errCode)
+	return eventName, event
+}
+
+func TestGetFirstLastEventTimestamp(t *testing.T) {
+	project, user, _ := SetupProjectUserReturnDAO()
+	assert.NotNil(t, project)
+
+	var firstTimestamp int64 = 1393632004
+	var secondTimestamp int64 = 1393633007
+	var thirdTimestamp int64 = 1393634005
+
+	createEventWithTimestamp(t, project, user, firstTimestamp)
+	createEventWithTimestamp(t, project, user, secondTimestamp)
+	createEventWithTimestamp(t, project, user, thirdTimestamp)
+
+	// Test with exact limit timestamp
+	ts1, errCode := M.GetProjectEventTimeInfo()
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotNil(t, ts1)
+	assert.NotNil(t, (*ts1)[project.ID])
+	assert.Equal(t, firstTimestamp, (*ts1)[project.ID].First)
+	assert.Equal(t, thirdTimestamp, (*ts1)[project.ID].Last)
+
+	// Test with increased limit timestamp
+	ts1, errCode = M.GetProjectEventTimeInfo() // adds 3 secs.
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotNil(t, ts1)
+	assert.NotNil(t, (*ts1)[project.ID])
+	assert.Equal(t, firstTimestamp, (*ts1)[project.ID].First)
+	assert.Equal(t, thirdTimestamp, (*ts1)[project.ID].Last)
+	assert.Nil(t, (*ts1)[999999])
 }
