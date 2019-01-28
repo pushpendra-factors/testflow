@@ -164,7 +164,7 @@ export ETCDCTL_API=3
 etcdctl put /factors/metadata/project_version_key version1
 mkdir -p /usr/local/var/factors/local_disk
 mkdir -p /usr/local/var/factors/cloud_storage/metadata
-cp $GOPATH/src/factors/pattern_server/cmd/project_data.txt /usr/local/var/factors/cloud_storage/metadata/version1.txt
+cp $GOPATH/src/factors/pattern_model_meta/project_data.txt /usr/local/var/factors/cloud_storage/metadata/version1.txt
 ```
 * Build
 ```
@@ -209,10 +209,23 @@ go run run_pull_events.go --project_id=<projectId> --start_time=1393632004 --end
 * Check output file at /usr/local/var/factors/cloud_storage/projects/\<projectId\>models/\<modelId\>/events_<modelId>.txt
 
 ```
-go run run_pattern_mine.go --env=development --etcd=localhost:2379 --local_disk_tmp_dir=/usr/local/var/factors/local_disk/tmp --s3_region=us-east-1 --s3=/usr/local/var/factors/cloud_storage --num_routines=3 --project_id=<projectId> --model_id=<modelId>
+go run run_pattern_mine.go --env=development --etcd=localhost:2379 --local_disk_tmp_dir=/usr/local/var/factors/local_disk/tmp --s3_region=us-east-1 --s3=/usr/local/var/factors/cloud_storage --num_routines=3 --project_id=<projectId> --mode
 or
 go run run_pattern_mine.go --project_id=<projectId> --model_id=<modelId>
 ```
+
+* Run sequential model build for all intervals.
+
+```bash
+# build for all projects
+go run run_build_seq.go --etcd=localhost:2379 --local_disk_tmp_dir=/usr/local/var/factors/local_disk/tmp --bucket_name=/usr/local/var/factors/cloud_storage
+```
+
+```bash
+# build for a specific project
+go run run_build_seq.go --etcd=localhost:2379 --local_disk_tmp_dir=/usr/local/var/factors/local_disk/tmp --bucket_name=/usr/local/var/factors/cloud_storage --project_id=1
+```
+
 
 * Verify factors in action on Frontend.
 
