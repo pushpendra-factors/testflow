@@ -40,8 +40,6 @@ func BuildSequential(db *gorm.DB, cloudManager *filestore.FileManager,
 
 		// Pull events
 		logCtx.Info("Pulling events for build interval.")
-		// Todo(Dinesh): Move modelID generation to getNextBuildInfo, to
-		// use projectId+ModelId as job id.
 		modelId, eventsCount, err := PullEvents(db, cloudManager, diskManger, localDiskTmpDir,
 			build.ProjectId, build.StartTimestamp, build.EndTimestamp)
 		if err != nil {

@@ -1,4 +1,4 @@
-package pattern_meta
+package pattern_model_meta
 
 import (
 	"bufio"
