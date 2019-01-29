@@ -161,10 +161,12 @@ npm run dev
 export PATH_TO_FACTORS=~/repos
 export GOPATH=$PATH_TO_FACTORS/factors/backend
 export ETCDCTL_API=3
-etcdctl put /factors/metadata/project_version_key version1
+
 mkdir -p /usr/local/var/factors/local_disk
 mkdir -p /usr/local/var/factors/cloud_storage/metadata
-cp $GOPATH/src/factors/pattern_model_meta/project_data.txt /usr/local/var/factors/cloud_storage/metadata/version1.txt
+touch /usr/local/var/factors/cloud_storage/metadata/version1.txt
+
+etcdctl put /factors/metadata/project_version_key version1
 ```
 * Build
 ```
