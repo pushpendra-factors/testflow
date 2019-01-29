@@ -5,6 +5,7 @@ import (
 	"factors/pattern"
 	client "factors/pattern_client"
 	U "factors/util"
+	"fmt"
 	"net/http"
 	"reflect"
 	"strings"
@@ -232,12 +233,13 @@ func (ps *PatternServer) GetSeenEventProperties(
 		numericalProperties = append(numericalProperties, dnp)
 	}
 
-	eventInfo, _ := (*userAndEventsInfo.EventPropertiesInfoMap)[args.EventName]
-	for nprop := range eventInfo.NumericPropertyKeys {
-		numericalProperties = append(numericalProperties, nprop)
-	}
-	for cprop, _ := range eventInfo.CategoricalPropertyKeyValues {
-		categoricalProperties = append(categoricalProperties, cprop)
+	if eventInfo, exists := (*userAndEventsInfo.EventPropertiesInfoMap)[args.EventName]; exists {
+		for nprop := range eventInfo.NumericPropertyKeys {
+			numericalProperties = append(numericalProperties, nprop)
+		}
+		for cprop := range eventInfo.CategoricalPropertyKeyValues {
+			categoricalProperties = append(categoricalProperties, cprop)
+		}
 	}
 
 	resp := make(map[string][]string)
@@ -280,10 +282,16 @@ func (ps *PatternServer) GetSeenEventPropertyValues(
 		return err
 	}
 
-	eventInfo, _ := (*userAndEventsInfoMap.EventPropertiesInfoMap)[args.EventName]
-	propValuesMap, ok := eventInfo.CategoricalPropertyKeyValues[args.PropertyName]
-	if !ok {
-		err := errors.New("PropertyValues not found")
+	eventInfo, exists := (*userAndEventsInfoMap.EventPropertiesInfoMap)[args.EventName]
+	if !exists {
+		err := fmt.Errorf("EventInfo not found for EventName: %s", args.EventName)
+		result.Error = err
+		return err
+	}
+
+	propValuesMap, exists := eventInfo.CategoricalPropertyKeyValues[args.PropertyName]
+	if !exists {
+		err := fmt.Errorf("PropertyValues not found for EventName: %s, PropertyName: %s", args.EventName, args.PropertyName)
 		result.Error = err
 		return err
 	}
@@ -368,11 +376,13 @@ func (ps *PatternServer) GetSeenUserProperties(
 	numericalProperties := []string{}
 	categoricalProperties := []string{}
 
-	for nprop := range userAndEventsInfo.UserPropertiesInfo.NumericPropertyKeys {
-		numericalProperties = append(numericalProperties, nprop)
-	}
-	for cprop := range userAndEventsInfo.UserPropertiesInfo.CategoricalPropertyKeyValues {
-		categoricalProperties = append(categoricalProperties, cprop)
+	if userAndEventsInfo.UserPropertiesInfo != nil {
+		for nprop := range userAndEventsInfo.UserPropertiesInfo.NumericPropertyKeys {
+			numericalProperties = append(numericalProperties, nprop)
+		}
+		for cprop := range userAndEventsInfo.UserPropertiesInfo.CategoricalPropertyKeyValues {
+			categoricalProperties = append(categoricalProperties, cprop)
+		}
 	}
 
 	props := make(map[string][]string)
@@ -415,9 +425,15 @@ func (ps *PatternServer) GetSeenUserPropertyValues(
 		return err
 	}
 
+	if userAndEventsInfoMap.UserPropertiesInfo == nil {
+		err := errors.New("UserPropertyValues not found")
+		result.Error = err
+		return err
+	}
+
 	propValuesMap, ok := userAndEventsInfoMap.UserPropertiesInfo.CategoricalPropertyKeyValues[args.PropertyName]
 	if !ok {
-		err := errors.New("PropertyValues not found")
+		err := errors.New("UserPropertyValues not found")
 		result.Error = err
 		return err
 	}
