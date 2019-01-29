@@ -121,7 +121,7 @@ func addNextIntervalsForProjectByType(builds *[]Build, projectId uint64, modelTy
 	prevBuildEndTime int64, startEventTime int64, endEventTime int64) {
 
 	log.WithFields(log.Fields{"ProjectId": projectId, "ModelType": modelType,
-		"PrevBuildEndTime": prevBuildEndTime}).Info("Adding next intervals to build.")
+		"PrevBuildEndTime": prevBuildEndTime}).Debug("Adding next intervals to build.")
 
 	if prevBuildEndTime > 0 {
 		addPendingIntervalsForProjectByType(builds, projectId, modelType,
