@@ -91,8 +91,8 @@ func addPendingIntervalsForProjectByType(builds *[]Build, projectId uint64,
 	logCtx := log.WithFields(log.Fields{"ProjectId": projectId, "ModelType": modelType,
 		"InitTimestamp": initTimestamp, "LimitTimestamp": limitTimestamp})
 
-	if isFutureTimestamp(initTimestamp) || isFutureTimestamp(limitTimestamp) {
-		logCtx.Error("Future time is not allowed as init/limit timestamp")
+	if isFutureTimestamp(initTimestamp) {
+		logCtx.Error("Future time is not allowed as interval init timestamp")
 		return
 	}
 
@@ -100,14 +100,17 @@ func addPendingIntervalsForProjectByType(builds *[]Build, projectId uint64,
 	actLimitTimestamp := ceilTimestampByType(modelType, limitTimestamp)
 	logCtx = logCtx.WithFields(log.Fields{"ActInitTimestamp": actInitTimestamp,
 		"ActLimitTimestamp": actLimitTimestamp})
-	if isFutureTimestamp(actInitTimestamp) || isFutureTimestamp(actLimitTimestamp) {
-		logCtx.Info("Skipping build for future rounded timestamp")
-		return
-	}
 
 	startTimestamp := actInitTimestamp
 	for startTimestamp <= actLimitTimestamp {
 		endTimestamp := ceilTimestampByType(modelType, startTimestamp)
+
+		if isFutureTimestamp(endTimestamp) {
+			logCtx.WithFields(log.Fields{"startTimestamp": startTimestamp,
+				"endTimestamp": endTimestamp}).Info("Skipping interval with future endTimestamp.")
+			return
+		}
+
 		*builds = append(*builds, Build{ProjectId: projectId, StartTimestamp: startTimestamp,
 			EndTimestamp: endTimestamp, ModelType: modelType})
 		startTimestamp = endTimestamp + OneSec

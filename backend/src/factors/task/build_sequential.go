@@ -4,6 +4,7 @@ import (
 	"factors/filestore"
 	serviceDisk "factors/services/disk"
 	serviceEtcd "factors/services/etcd"
+	"time"
 
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
@@ -39,7 +40,8 @@ func BuildSequential(db *gorm.DB, cloudManager *filestore.FileManager,
 		})
 
 		// Pull events
-		logCtx.Info("Pulling events for build interval.")
+		startAt := time.Now().Unix()
+		logCtx.Info("**** Starting to pull events *****")
 		modelId, eventsCount, err := PullEvents(db, cloudManager, diskManger, localDiskTmpDir,
 			build.ProjectId, build.StartTimestamp, build.EndTimestamp)
 		if err != nil {
@@ -51,9 +53,13 @@ func BuildSequential(db *gorm.DB, cloudManager *filestore.FileManager,
 			continue
 		}
 		logCtx = logCtx.WithFields(log.Fields{"ModelId": modelId, "EventsCount": eventsCount})
+		timeTakenToPullEvents := (time.Now().Unix() - startAt)
+		logCtx = logCtx.WithField("TimeTakenToPullEventsInSecs", timeTakenToPullEvents)
+		logCtx.Info("**** Pulled events successfully ****")
 
 		// Patten mine
-		logCtx.Info("Pulled events. Proceeding with pattern mining for the interval.")
+		startAt = time.Now().Unix()
+		logCtx.Info("***** Starting to mine patterns *****")
 		newProjectMetaVersion, err := PatternMine(db, etcdClient, cloudManager, diskManger,
 			localDiskTmpDir, bucketName, noOfPatternWorkers, build.ProjectId, modelId,
 			build.ModelType, build.StartTimestamp, build.EndTimestamp)
@@ -62,7 +68,9 @@ func BuildSequential(db *gorm.DB, cloudManager *filestore.FileManager,
 			continue
 		}
 		logCtx = logCtx.WithFields(log.Fields{"NewProjectMetaVersion": newProjectMetaVersion})
-		logCtx.Info("Patterns mined and updated meta.")
+		timeTakenToMinePatterns := (time.Now().Unix() - startAt)
+		logCtx = logCtx.WithField("TimeTakenToMinePatternsInSecs", timeTakenToMinePatterns)
+		logCtx.Info("**** Mined patterns successfully and update version metadata ****")
 	}
 
 	return nil
