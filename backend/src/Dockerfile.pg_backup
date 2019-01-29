@@ -1,0 +1,7 @@
+FROM google/cloud-sdk:229.0.0-alpine
+
+WORKDIR /root
+RUN apk update && apk add bash && echo "http://nl.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories && echo "http://nl.alpinelinux.org/alpine/edge/main" >> /etc/apk/repositories && apk add postgresql=11.1-r0 && apk add ca-certificates && rm -rf /var/cache/apk/*
+ADD ./pg_backup.sh /root/pg_backup.sh
+RUN chmod +x /root/pg_backup.sh
+ENTRYPOINT [ "/root/pg_backup.sh"]

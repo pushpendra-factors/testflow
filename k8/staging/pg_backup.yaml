@@ -1,0 +1,23 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: pg-backup
+spec:
+  schedule: "10 */2 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: pg-backup-job
+            image: us.gcr.io/factors-staging/pg-backup:098bc35
+            env:
+            envFrom:
+            - secretRef:
+                name: secret-postgres
+            - configMapRef:
+                name: config-postgres
+          restartPolicy: Never

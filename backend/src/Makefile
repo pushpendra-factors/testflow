@@ -1,4 +1,4 @@
-.PHONY: build-api build-ps clean pack-api upload-api pack-ps upload-ps
+.PHONY: build-api build-ps clean pack-api upload-api pack-ps upload-ps pack-debug upload-debug pack-pg-backup upload-pg-backup
 
 TAG?=$(shell git rev-list HEAD --max-count=1 --abbrev-commit)
 export TAG
@@ -24,3 +24,15 @@ pack-ps:
 
 upload-ps:
 	docker push us.gcr.io/factors-staging/pattern-server:$(TAG)
+
+pack-debug:
+	docker build --no-cache -t us.gcr.io/factors-staging/debug:$(TAG) -f Dockerfile.debug .
+
+upload-debug:
+	docker push us.gcr.io/factors-staging/debug:$(TAG)
+
+pack-pg-backup:
+	docker build --no-cache -t us.gcr.io/factors-staging/pg-backup:$(TAG) -f Dockerfile.pg_backup .
+
+upload-pg-backup:
+	docker push us.gcr.io/factors-staging/pg-backup:$(TAG)
