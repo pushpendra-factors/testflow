@@ -157,7 +157,7 @@ func GetNextBuilds(db *gorm.DB, cloudManager *filestore.FileManager,
 	// Intervals for existing projects on meta.
 	lastBuildOfProjects := makeLastBuildTimestampMap(projectsMeta)
 	for pid, buildTimeByType := range *lastBuildOfProjects {
-		log.Infof("Last build pid:%d info:%+v", pid, buildTimeByType)
+		log.Infof("Last build info - ProjectId: %d LastBuildEndTimeByType: %+v", pid, buildTimeByType)
 		if (*pEventTimeInfo)[pid] != nil {
 			addNextIntervalsForProjectByType(&builds, pid, ModelTypeWeek,
 				buildTimeByType[ModelTypeWeek], (*pEventTimeInfo)[pid].First,
