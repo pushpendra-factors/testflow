@@ -32,6 +32,11 @@ func main() {
 
 	flag.Parse()
 
+	if *envFlag != "development" {
+		err := fmt.Errorf("env [ %s ] not recognised", *envFlag)
+		panic(err)
+	}
+
 	// init DB, etcd
 	config := &C.Configuration{
 		Env:           *envFlag,
@@ -71,11 +76,6 @@ func main() {
 		"Bucket":          *bucketName,
 		"NumRoutines":     *numRoutinesFlag,
 	}).Infoln("Initialising")
-
-	if *envFlag != "development" {
-		err := fmt.Errorf("env [ %s ] not recognised", *envFlag)
-		panic(err)
-	}
 
 	if *numRoutinesFlag < 1 {
 		log.Fatal("num_routines is less than one.")

@@ -41,6 +41,11 @@ func main() {
 
 	flag.Parse()
 
+	if *envFlag != "development" {
+		err := fmt.Errorf("env [ %s ] not recognised", *envFlag)
+		panic(err)
+	}
+
 	// init DB, etcd
 	config := &C.Configuration{
 		Env:           *envFlag,
@@ -82,11 +87,6 @@ func main() {
 		"Bucket":          *bucketName,
 		"NumRoutines":     *numRoutinesFlag,
 	}).Infoln("Initialising")
-
-	if *envFlag != "development" {
-		err := fmt.Errorf("env [ %s ] not recognised", *envFlag)
-		panic(err)
-	}
 
 	if *projectIdFlag <= 0 || *modelIdFlag <= 0 {
 		log.Fatal("project_id and model_id are required.")

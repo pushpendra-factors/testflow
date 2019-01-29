@@ -12,6 +12,7 @@ import (
 	serviceGCS "factors/services/gcstorage"
 	T "factors/task"
 	"flag"
+	"fmt"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -40,6 +41,11 @@ func main() {
 	projectIdFlag := flag.Uint64("project_id", 0, "Project Id.")
 
 	flag.Parse()
+
+	if *env != "development" {
+		err := fmt.Errorf("env [ %s ] not recognised", *env)
+		panic(err)
+	}
 
 	config := &C.Configuration{
 		Env: *env,
