@@ -41,7 +41,9 @@ func main() {
 
 	flag.Parse()
 
-	if *envFlag != "development" {
+	if *envFlag != "development" &&
+		*envFlag != "staging" &&
+		*envFlag != "production" {
 		err := fmt.Errorf("env [ %s ] not recognised", *envFlag)
 		panic(err)
 	}
