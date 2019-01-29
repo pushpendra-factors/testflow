@@ -159,6 +159,7 @@ func GetSeenUserProperties(projectId, modelId uint64) (map[string][]string, erro
 			continue
 		}
 		var result GetSeenUserPropertiesResponse
+		defer r.resp.Body.Close()
 		err = json.DecodeClientResponse(r.resp.Body, &result)
 		if err != nil {
 			log.WithError(err).Error("Error Decoding response Ignoring GetSeenUserProperties")
@@ -216,6 +217,7 @@ func GetSeenUserPropertyValues(projectId, modelId uint64, propertyName string) (
 			continue
 		}
 		var result GetSeenUserPropertyValuesResponse
+		defer r.resp.Body.Close()
 		err = json.DecodeClientResponse(r.resp.Body, &result)
 		if err != nil {
 			log.WithError(err).Error("Error Decoding response Ignoring GetSeenUserPropertyValuesResponse")
@@ -269,6 +271,7 @@ func GetAllPatterns(projectId, modelId uint64, startEvent, endEvent string) ([]*
 			continue
 		}
 		var result GetAllPatternsResponse
+		defer r.resp.Body.Close()
 		err = json.DecodeClientResponse(r.resp.Body, &result)
 		if err != nil {
 			log.WithError(err).Error("Error Decoding response Ignoring GetAllPatternsResponse")
@@ -320,6 +323,7 @@ func GetPatterns(projectId, modelId uint64, patternEvents [][]string) ([]*patter
 			log.WithError(r.err).Error("Error Ignoring GetPatternsResponse")
 			continue
 		}
+		defer r.resp.Body.Close()
 		var result GetPatternsResponse
 		err = json.DecodeClientResponse(r.resp.Body, &result)
 		if err != nil {
@@ -372,6 +376,7 @@ func GetProjectModelIntervals(projectId uint64) ([]ModelInfo, error) {
 		}
 
 		var result GetProjectModelIntervalsResponse
+		defer r.resp.Body.Close()
 		err = json.DecodeClientResponse(r.resp.Body, &result)
 		if err != nil {
 			log.WithError(err).Error("Error Ignoring GetProjectModelIntervalsResponse")
@@ -427,6 +432,7 @@ func GetSeenEventPropertyValues(projectId, modelId uint64, eventName, propertyNa
 		}
 
 		var result GetSeenEventPropertyValuesResponse
+		defer r.resp.Body.Close()
 		err = json.DecodeClientResponse(r.resp.Body, &result)
 		if err != nil {
 			result.Error = err
@@ -481,6 +487,7 @@ func GetSeenEventProperties(projectId, modelId uint64, eventName string) (map[st
 		}
 
 		var result GetSeenEvenPropertiesResponse
+		defer r.resp.Body.Close()
 		err = json.DecodeClientResponse(r.resp.Body, &result)
 		if err != nil {
 			result.Error = err
@@ -539,6 +546,7 @@ func GetUserAndEventsInfo(projectId, modelId uint64) (*pattern.UserAndEventsInfo
 		}
 
 		var result GetUserAndEventsInfoResponse
+		defer r.resp.Body.Close()
 		err = json.DecodeClientResponse(r.resp.Body, &result)
 		if err != nil {
 			result.Error = err
@@ -564,8 +572,10 @@ type httpResp struct {
 	err  error
 }
 
-// TODO(Ankit): resp.Body.Close() ?
+// TODO(Ankit):
 // Do not create new httpClient for each request
+
+// Caller must take care of closing resp.Body
 func httpDo(method string, urls []string, paramBytes []byte, headers map[string]string, gatherResp chan httpResp) {
 	var wg sync.WaitGroup
 	wg.Add(len(urls))
