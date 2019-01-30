@@ -31,7 +31,7 @@ spec:
         app: frontend
     spec:
       containers:
-      - image: us.gcr.io/factors-staging/frontend:v2
+      - image: us.gcr.io/factors-staging/frontend:v1-beta_e7011fc
         imagePullPolicy: IfNotPresent
         name: frontend
         resources: {}
