@@ -3,17 +3,11 @@ import { Bar } from 'react-chartjs-2';
 import {
   Card,
   CardBody,
-  CardHeader
+  CardHeader,
+  CardTitle,
 } from 'reactstrap';
 import { CustomTooltips } from '@coreui/coreui-plugin-chartjs-custom-tooltips';
 
-const chartOptions = {
-  tooltips: {
-    enabled: false,
-    custom: CustomTooltips
-  },
-  maintainAspectRatio: false
-};
 const barBackgroundColors = ['rgba(75,192,192,0.4)', 'rgba(255,99,132,0.2)'];
 const barBorderColors = ['rgba(75,192,192,1)', 'rgba(255,99,132,1)'];
 const barHoverBackgroundColors = ['rgba(75,192,192,1)', 'rgba(255,99,132,0.4)'];
@@ -22,6 +16,25 @@ const barHoverBorderColors = ['rgba(220,220,220,1)', 'rgba(255,99,132,0.4)'];
 class BarChartCard extends Component {
   render() {
     var chartData = this.props.chartData;
+    var chartOptions = {
+      tooltips: {
+        enabled: false,
+        custom: CustomTooltips
+      },
+      maintainAspectRatio: false,
+      scales: {
+        xAxes: [{
+          scaleLabel: {
+            display: false,
+          }
+        }],
+        yAxes: [{
+          scaleLabel: {
+            display: false,
+          }
+        }],
+      },
+    };
     var bar = {
       labels: chartData.labels,
       datasets: chartData.datasets,
@@ -35,13 +48,26 @@ class BarChartCard extends Component {
       bar.datasets[i].hoverBorderColor = barHoverBorderColors[i % barHoverBorderColors.length];
     }
 
+    if (chartData.x_label != "") {
+      chartOptions.scales.xAxes[0].scaleLabel.display = true;
+      chartOptions.scales.xAxes[0].scaleLabel.labelString = chartData.x_label;
+    }
+    if (chartData.y_label != "") {
+      chartOptions.scales.yAxes[0].scaleLabel.display = true
+      chartOptions.scales.yAxes[0].scaleLabel.labelString = chartData.y_label
+    }
     var chart = <Bar data={bar} options={chartOptions} />
+
+    const explanations = chartData.explanations.map((explainText) =>
+      <CardTitle className="fapp-chart-card-title">{explainText}</CardTitle>
+    );
 
     return (
       <Card>
       <CardHeader className="fapp-chart-card-header">
         {chartData.header}
       </CardHeader>
+      {explanations}
       <CardBody className="fapp-chart-card-body">
       <div className="chart-wrapper">
       {chart}

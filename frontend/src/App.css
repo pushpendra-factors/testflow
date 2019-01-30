@@ -294,6 +294,14 @@ body {
     padding: 1rem 1.25rem 0.5rem 1.25rem !important;
 }
 
+.fapp-chart-card-title {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    padding: 0rem 0.0rem 0.25rem 2.5rem !important;
+    font-size: 14px !important;
+    font-weight: lighter !important;
+}
+
 /* Used with card with additional maring */
 .fapp-card {
     margin-left: 2rem;

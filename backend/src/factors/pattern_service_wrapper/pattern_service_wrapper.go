@@ -2,6 +2,7 @@
 package pattern_service_wrapper
 
 import (
+	"encoding/json"
 	P "factors/pattern"
 	PC "factors/pattern_client"
 	U "factors/util"
@@ -9,9 +10,16 @@ import (
 	"math"
 	"reflect"
 	"sort"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 )
+
+// DeepCopy deepcopies a to b using json marshaling
+func deepCopy(a, b interface{}) {
+	byt, _ := json.Marshal(a)
+	json.Unmarshal(byt, b)
+}
 
 // Fetches information from pattern server and operations on patterns in local cache.
 type PatternServiceWrapperInterface interface {
@@ -40,10 +48,13 @@ type funnelNodeResult struct {
 }
 type funnelNodeResults []funnelNodeResult
 type graphResult struct {
-	Type     string                   `json:"type"`
-	Header   string                   `json:"header"`
-	Labels   []string                 `json:"labels"`
-	Datasets []map[string]interface{} `json:"datasets"`
+	Type         string                   `json:"type"`
+	Header       string                   `json:"header"`
+	Explanations []string                 `json:"explanations"`
+	Labels       []string                 `json:"labels"`
+	Datasets     []map[string]interface{} `json:"datasets"`
+	XLabel       string                   `json:"x_label"`
+	YLabel       string                   `json:"y_label"`
 }
 type FactorGraphResults struct {
 	Charts []graphResult `json:"charts"`
@@ -128,7 +139,7 @@ func numericConstraintString(nC P.NumericConstraint) string {
 		}
 	}
 	if hasLowerBound || hasUpperBound {
-		constraintStr += " ("
+		constraintStr += " with "
 		if hasLowerBound && hasUpperBound {
 			if nC.IsEquality {
 				constraintStr += fmt.Sprintf("%s = %s",
@@ -142,57 +153,80 @@ func numericConstraintString(nC P.NumericConstraint) string {
 		} else if hasUpperBound {
 			constraintStr += fmt.Sprintf("%s < %s", nC.PropertyName, upperBoundStr)
 		}
-		constraintStr += ")"
 	}
 	return constraintStr
 }
 
 func eventStringWithConditions(eventName string, eventConstraints *P.EventConstraints) string {
 	var eventString string = eventName
+	if eventString == U.SEN_ALL_ACTIVE_USERS {
+		eventString = U.SEN_ALL_ACTIVE_USERS_DISPLAY_STRING
+	}
+	var seenProperty bool = false
 	if eventConstraints != nil {
 		for _, nC := range eventConstraints.EPNumericConstraints {
 			if nC.PropertyName == "" {
 				continue
 			}
+			if seenProperty {
+				eventString += " and"
+			}
 			eventString += numericConstraintString(nC)
+			seenProperty = true
 		}
 		for _, c := range eventConstraints.EPCategoricalConstraints {
 			if c.PropertyName == "" {
 				continue
 			}
-			eventString += fmt.Sprintf(" (%s is %s)", c.PropertyName, c.PropertyValue)
+			if seenProperty {
+				eventString += " and"
+			}
+			eventString += fmt.Sprintf(" with %s equals %s", c.PropertyName, c.PropertyValue)
+			seenProperty = true
 		}
 		for _, nC := range eventConstraints.UPNumericConstraints {
 			if nC.PropertyName == "" {
 				continue
 			}
+			if seenProperty {
+				eventString += " and"
+			}
 			eventString += numericConstraintString(nC)
+			seenProperty = true
 		}
 		for _, c := range eventConstraints.UPCategoricalConstraints {
 			if c.PropertyName == "" {
 				continue
 			}
-			eventString += fmt.Sprintf(" (%s is %s)", c.PropertyName, c.PropertyValue)
+			if seenProperty {
+				eventString += " and"
+			}
+			eventString += fmt.Sprintf(" with %s equals %s", c.PropertyName, c.PropertyValue)
+			seenProperty = true
 		}
 	}
 	return eventString
 }
 
 func headerString(funnelData funnelNodeResults, nodeType int,
-	funnelConversionPercent float64, baseFunnelConversionPercent float64) string {
+	funnelConversionPercent float64, baseFunnelConversionPercent float64) (string, []string) {
 	var header string
 	pLen := len(funnelData)
 	if pLen < 2 {
 		log.Error(fmt.Sprintf("Unexpected! Funnel: %s ", funnelData))
-		return header
+		return header, []string{}
 	}
 	var impactString string
 	// Impact event.
 	if nodeType == NODE_TYPE_SEQUENCE {
-		impactString = funnelData[pLen-2].EventName
+		impactString = fmt.Sprintf("who have %s", funnelData[pLen-2].EventName)
 	} else if nodeType == NODE_TYPE_EVENT_PROPERTY || nodeType == NODE_TYPE_USER_PROPERTY {
-		impactString = fmt.Sprintf("%s with %s", funnelData[pLen-2].EventName,
-			eventStringWithConditions("", funnelData[pLen-2].Constraints))
+		if funnelData[pLen-2].EventName == U.SEN_ALL_ACTIVE_USERS {
+			impactString = fmt.Sprintf("with %s", eventStringWithConditions("", funnelData[pLen-2].Constraints))
+		} else {
+			impactString = fmt.Sprintf("who have %s with %s", funnelData[pLen-2].EventName,
+				eventStringWithConditions("", funnelData[pLen-2].Constraints))
+		}
 	}
 
 	endEventString := eventStringWithConditions(
@@ -200,8 +234,11 @@ func headerString(funnelData funnelNodeResults, nodeType int,
 
 	otherEventString := ""
 	for i := 0; i < pLen-2; i++ {
-		if i == 0 {
-			otherEventString += "after"
+		if i == 0 && funnelData[i].EventName == U.SEN_ALL_ACTIVE_USERS {
+			continue
+		}
+		if otherEventString == "" {
+			otherEventString += " after"
 		}
 		otherEventString += fmt.Sprintf(" %s",
 			eventStringWithConditions(funnelData[i].EventName, funnelData[i].Constraints))
@@ -209,7 +246,7 @@ func headerString(funnelData funnelNodeResults, nodeType int,
 			otherEventString += " and"
 		}
 	}
-	conversionChangeString := " have"
+	conversionChangeString := ", have"
 	if funnelConversionPercent > baseFunnelConversionPercent {
 		conversionMultiple := funnelConversionPercent / baseFunnelConversionPercent
 		conversionChangeString += fmt.Sprintf(" %.1f times higher chance to", conversionMultiple)
@@ -217,106 +254,134 @@ func headerString(funnelData funnelNodeResults, nodeType int,
 		conversionMultiple := baseFunnelConversionPercent / funnelConversionPercent
 		conversionChangeString += fmt.Sprintf(" %.2f times lower chance to", conversionMultiple)
 	}
-	header = fmt.Sprintf("Users who have %s %s %s %s", impactString, otherEventString, conversionChangeString, endEventString)
-	return header
+	header = fmt.Sprintf("Users %s%s%s %s.", impactString, otherEventString, conversionChangeString, endEventString)
+	return header, []string{}
+}
+
+func barGraphHeaderString(
+	patternEvents []string, patternConstraints []P.EventConstraints,
+	propertyName string, propertyValues []string,
+	patternUsersLabel string,
+	patternPercentages map[string]float64,
+	ruleUsersLabel string,
+	rulePercentages map[string]float64,
+	isIncrement bool) (string, []string) {
+	pLen := len(patternEvents)
+	if pLen < 1 {
+		log.Error(fmt.Sprintf("Unexpected! Pattern: %s ", patternEvents))
+		return "", []string{}
+	}
+	var impactString string
+	if pLen == 1 {
+		impactString = fmt.Sprintf("with %s in %s", propertyName, strings.Join(propertyValues, ", "))
+	} else {
+		impactString = fmt.Sprintf("who have %s with %s in %s", patternEvents[pLen-2],
+			propertyName, strings.Join(propertyValues, ", "))
+	}
+
+	endEventString := eventStringWithConditions(
+		patternEvents[pLen-1], &patternConstraints[pLen-1])
+
+	otherEventString := ""
+	for i := 0; i < pLen-2; i++ {
+		if i == 0 {
+			otherEventString += " after"
+		}
+		otherEventString += fmt.Sprintf(" %s",
+			eventStringWithConditions(patternEvents[i], &patternConstraints[i]))
+		if i < pLen-3 {
+			otherEventString += " and"
+		}
+	}
+	conversionChangeString := ", have"
+	if isIncrement {
+		conversionChangeString += " a higher chance to"
+	} else {
+		conversionChangeString += " a lower chance to"
+	}
+	header := fmt.Sprintf("Users %s%s%s %s.", impactString, otherEventString, conversionChangeString, endEventString)
+
+	totalPatternPercentage := 0.0
+	totalRulePercentage := 0.0
+	for _, v := range propertyValues {
+		if pp, ok := patternPercentages[v]; ok {
+			totalPatternPercentage += pp
+		}
+		if rp, ok := rulePercentages[v]; ok {
+			totalRulePercentage += rp
+		}
+	}
+	headerExplanation := []string{}
+	headerExplanation = append(
+		headerExplanation,
+		fmt.Sprintf(
+			"%0.1f%% of %s, have %s in %s.",
+			totalRulePercentage,
+			ruleUsersLabel,
+			propertyName,
+			strings.Join(propertyValues, ", "),
+		))
+
+	headerExplanation = append(
+		headerExplanation,
+		fmt.Sprintf(
+			"%0.1f%% of %s, have %s in %s.",
+			totalPatternPercentage,
+			patternUsersLabel,
+			propertyName,
+			strings.Join(propertyValues, ", "),
+		))
+
+	//log.WithFields(log.Fields{"events": patternEvents,
+	//	"patternConstraints": patternConstraints,
+	//	"endEventString":     endEventString, "pLen": pLen}).Debug("Graph results.")
+	return header, headerExplanation
 }
 
 func buildFunnelData(
-	p *P.Pattern, patternConstraints []P.EventConstraints,
-	nodeType int, addedConstraint P.EventConstraints,
-	isBaseFunnel bool, pw PatternServiceWrapperInterface) funnelNodeResults {
-	pLen := len(p.EventNames)
+	funnelEvents []string, funnelConstraints []P.EventConstraints,
+	node *ItreeNode, isBaseFunnel bool,
+	pw PatternServiceWrapperInterface) funnelNodeResults {
+	pLen := len(funnelEvents)
 	funnelData := funnelNodeResults{}
 	var referenceFunnelCount uint
 
 	for i := 0; i < pLen; i++ {
 		var funnelSubsequencePerUserCount uint
 		var found = true
-		if i == pLen-1 {
-			funnelSubsequencePerUserCount, _ = p.GetOncePerUserCount(patternConstraints)
-		} else {
-			var funnelConstraints []P.EventConstraints
-			if patternConstraints != nil {
-				funnelConstraints = patternConstraints[:i+1]
+		if i == pLen-2 {
+			// Pick the counts from node.
+			if isBaseFunnel {
+				funnelSubsequencePerUserCount = uint(node.Fpp)
+			} else {
+				funnelSubsequencePerUserCount = uint(node.Fcp)
 			}
+		} else if i == pLen-1 {
+			// Pick the counts from node.
+			if isBaseFunnel {
+				funnelSubsequencePerUserCount = uint(node.Fpr)
+			} else {
+				funnelSubsequencePerUserCount = uint(node.Fcr)
+			}
+		} else {
 			funnelSubsequencePerUserCount, found = pw.GetPerUserCount(
-				p.EventNames[:i+1], funnelConstraints)
+				funnelEvents[:i+1], funnelConstraints[:i+1])
 		}
 		if !found {
 			log.Errorf(fmt.Sprintf(
 				"Subsequence %s not as frequent as sequence %s",
-				P.EventArrayToString(p.EventNames[:i+1]), ","), p.String())
-			funnelSubsequencePerUserCount, _ = p.GetOncePerUserCount(patternConstraints)
+				P.EventArrayToString(funnelEvents[:i+1]), ","), funnelEvents)
+			funnelSubsequencePerUserCount, _ = pw.GetPerUserCount(funnelEvents, funnelConstraints)
 		}
+		eventString := eventStringWithConditions(funnelEvents[i], &funnelConstraints[i])
 		if i == 0 {
-			if (nodeType == NODE_TYPE_SEQUENCE) && ((pLen == 1 && isBaseFunnel) || (pLen == 2 && !isBaseFunnel)) {
-				// Reference is total users.
-				referenceFunnelCount = p.UserCount
-				// If basefunnel has length 1 we prefix an initial node with all users for better comparision.
-				node := funnelNodeResult{
-					Data:        []float64{float64(referenceFunnelCount), 0.0},
-					Event:       fmt.Sprintf("%s (%d)", U.SEN_ALL_ACTIVE_USERS, referenceFunnelCount),
-					EventName:   U.SEN_ALL_ACTIVE_USERS,
-					Constraints: nil,
-				}
-				funnelData = append(funnelData, node)
-			} else if nodeType == NODE_TYPE_USER_PROPERTY && pLen == 1 {
-				// If length 1 the addedConstraint is part of patternConstraints.
-				// Remove it from patternConstraint. addedConstraint is used as a constraint for
-				// AllActiveUsers
-				for j, pNConstraint := range patternConstraints[i].UPNumericConstraints {
-					for _, aNConstraint := range addedConstraint.UPNumericConstraints {
-						if reflect.DeepEqual(pNConstraint, aNConstraint) {
-							patternConstraints[i].UPNumericConstraints[j] = P.NumericConstraint{}
-						}
-					}
-				}
-				for j, pCConstraint := range patternConstraints[i].UPCategoricalConstraints {
-					for _, aCConstraint := range addedConstraint.UPCategoricalConstraints {
-						if reflect.DeepEqual(pCConstraint, aCConstraint) {
-							patternConstraints[i].UPCategoricalConstraints[j] = P.CategoricalConstraint{}
-						}
-					}
-				}
-				node := funnelNodeResult{}
-				if isBaseFunnel {
-					referenceFunnelCount, _ = pw.GetPerUserCount(
-						[]string{U.SEN_ALL_ACTIVE_USERS}, nil)
-					node.Data = []float64{float64(referenceFunnelCount), 0.0}
-					node.Event = fmt.Sprintf("%s (%d)", eventStringWithConditions(U.SEN_ALL_ACTIVE_USERS,
-						nil), referenceFunnelCount)
-					node.EventName = U.SEN_ALL_ACTIVE_USERS
-					node.Constraints = nil
-				} else {
-					tmpConstraints := []P.EventConstraints{addedConstraint}
-					referenceFunnelCount, _ = pw.GetPerUserCount(
-						[]string{U.SEN_ALL_ACTIVE_USERS}, tmpConstraints)
-					node.Data = []float64{float64(referenceFunnelCount), 0.0}
-					node.Event = fmt.Sprintf("%s (%d)", eventStringWithConditions(U.SEN_ALL_ACTIVE_USERS,
-						&addedConstraint), referenceFunnelCount)
-					node.EventName = U.SEN_ALL_ACTIVE_USERS
-					node.Constraints = &addedConstraint
-				}
-				funnelData = append(funnelData, node)
-			} else {
-				referenceFunnelCount = funnelSubsequencePerUserCount
-			}
+			referenceFunnelCount = funnelSubsequencePerUserCount
 		}
-		var eventString string
-		var eventConstraints *P.EventConstraints
-		if patternConstraints != nil {
-			eventString = eventStringWithConditions(p.EventNames[i], &patternConstraints[i])
-			eventConstraints = &patternConstraints[i]
-		} else {
-			eventString = eventStringWithConditions(p.EventNames[i], nil)
-			eventConstraints = nil
-		}
-
 		node := funnelNodeResult{
 			Data:        []float64{float64(funnelSubsequencePerUserCount), float64(referenceFunnelCount - funnelSubsequencePerUserCount)},
 			Event:       fmt.Sprintf("%s (%d)", eventString, funnelSubsequencePerUserCount),
-			EventName:   p.EventNames[i],
-			Constraints: eventConstraints,
+			EventName:   funnelEvents[i],
+			Constraints: &funnelConstraints[i],
 		}
 		funnelData = append(funnelData, node)
 	}
@@ -331,6 +396,235 @@ func buildFunnelData(
 	}
 	funnelData[funnelLength-2].ConversionPercent = funnelConversionPercent
 	return funnelData
+}
+
+func buildFunnelFormats(node *ItreeNode) (
+	[]string, []P.EventConstraints, []string, []P.EventConstraints) {
+	var funnelConstraints []P.EventConstraints
+	// https://stackoverflow.com/questions/46790190/quicker-way-to-deepcopy-objects-in-golang
+	funnelEvents := append(make([]string, 0, len(node.Pattern.EventNames)), node.Pattern.EventNames...)
+	if node.PatternConstraints != nil {
+		funnelConstraints = make([]P.EventConstraints, len(node.PatternConstraints))
+		deepCopy(&node.PatternConstraints, &funnelConstraints)
+	} else {
+		funnelConstraints = make([]P.EventConstraints, len(funnelEvents))
+	}
+	funnelConstraints = append([]P.EventConstraints(nil), funnelConstraints...)
+	var baseFunnelEvents []string
+	var baseFunnelConstraints []P.EventConstraints
+	if node.NodeType == NODE_TYPE_SEQUENCE {
+		pLen := len(funnelEvents)
+		if pLen == 2 {
+			// Prepend AllActiveUsers Event at the begining for readability.
+			funnelEvents = append([]string{U.SEN_ALL_ACTIVE_USERS}, funnelEvents...)
+			funnelConstraints = append([]P.EventConstraints{P.EventConstraints{}}, funnelConstraints...)
+			pLen++
+		}
+		// Skip (n - 1)st element and constraint for baseFunnel.
+		baseFunnelEvents = append(append([]string(nil), funnelEvents[:pLen-2]...), funnelEvents[pLen-1:]...)
+		baseFunnelConstraints = append(append([]P.EventConstraints(nil), funnelConstraints[:pLen-2]...), funnelConstraints[pLen-1:]...)
+	} else if node.NodeType == NODE_TYPE_EVENT_PROPERTY {
+		pLen := len(funnelEvents)
+		// Base funnel events are the same.
+		baseFunnelEvents = append(make([]string, 0, len(funnelEvents)), funnelEvents...)
+		baseFunnelConstraints = make([]P.EventConstraints, len(funnelConstraints))
+		deepCopy(&funnelConstraints, &baseFunnelConstraints)
+		// Remove pLen-2 constraints.
+		baseFunnelConstraints[pLen-2] = P.EventConstraints{}
+	} else if node.NodeType == NODE_TYPE_USER_PROPERTY {
+		pLen := len(funnelEvents)
+		if pLen == 1 {
+			// Prepend AllActiveUsers to the begining.
+			// When length 1, the added constraint is collapsed on endEvent and needs to
+			// be removed from endEvent and moved to AllActiveUsers.
+			funnelEvents = append([]string{U.SEN_ALL_ACTIVE_USERS}, funnelEvents...)
+			funnelConstraints = append([]P.EventConstraints{node.AddedConstraint}, funnelConstraints...)
+			pLen++
+			// Remove addedConstraint from endEvent.
+			for j, pNConstraint := range funnelConstraints[pLen-1].UPNumericConstraints {
+				for _, aNConstraint := range node.AddedConstraint.UPNumericConstraints {
+					if reflect.DeepEqual(pNConstraint, aNConstraint) {
+						funnelConstraints[pLen-1].UPNumericConstraints[j] = P.NumericConstraint{}
+					}
+				}
+			}
+			for j, pCConstraint := range funnelConstraints[pLen-1].UPCategoricalConstraints {
+				for _, aCConstraint := range node.AddedConstraint.UPCategoricalConstraints {
+					if reflect.DeepEqual(pCConstraint, aCConstraint) {
+						funnelConstraints[pLen-1].UPCategoricalConstraints[j] = P.CategoricalConstraint{}
+					}
+				}
+			}
+		}
+		// Base funnel events are the same.
+		baseFunnelEvents = append(make([]string, 0, len(funnelEvents)), funnelEvents...)
+		baseFunnelConstraints = make([]P.EventConstraints, len(funnelConstraints))
+		deepCopy(&funnelConstraints, &baseFunnelConstraints)
+		// Remove addedConstraint from baseFunnelConstraint .
+		for j, pNConstraint := range baseFunnelConstraints[pLen-2].UPNumericConstraints {
+			for _, aNConstraint := range node.AddedConstraint.UPNumericConstraints {
+				if reflect.DeepEqual(pNConstraint, aNConstraint) {
+					baseFunnelConstraints[pLen-2].UPNumericConstraints[j] = P.NumericConstraint{}
+				}
+			}
+		}
+		for j, pCConstraint := range baseFunnelConstraints[pLen-2].UPCategoricalConstraints {
+			for _, aCConstraint := range node.AddedConstraint.UPCategoricalConstraints {
+				if reflect.DeepEqual(pCConstraint, aCConstraint) {
+					baseFunnelConstraints[pLen-2].UPCategoricalConstraints[j] = P.CategoricalConstraint{}
+				}
+			}
+		}
+	}
+	return funnelEvents, funnelConstraints, baseFunnelEvents, baseFunnelConstraints
+}
+
+func buildFunnelGraphResult(
+	node *ItreeNode, funnelEvents []string, funnelConstraints []P.EventConstraints,
+	baseFunnelEvents []string, baseFunnelConstraints []P.EventConstraints,
+	pw PatternServiceWrapperInterface) (
+	*graphResult, error) {
+	baseFunnelData := buildFunnelData(baseFunnelEvents, baseFunnelConstraints, node, true, pw)
+	funnelData := buildFunnelData(funnelEvents, funnelConstraints, node, false, pw)
+
+	baseFunnelLength := len(baseFunnelData)
+	baseFunnelConversionPercent := baseFunnelData[baseFunnelLength-2].ConversionPercent
+	funnelLength := len(funnelData)
+	funnelConversionPercent := funnelData[funnelLength-2].ConversionPercent
+	if funnelConversionPercent > baseFunnelConversionPercent {
+		funnelData[funnelLength-2].NodeType = "positive"
+	} else if funnelConversionPercent < baseFunnelConversionPercent {
+		funnelData[funnelLength-2].NodeType = "negative"
+	}
+
+	header, explanations := headerString(funnelData, node.NodeType,
+		funnelConversionPercent, baseFunnelConversionPercent)
+	chart := graphResult{
+		Type:         "funnel",
+		Header:       header,
+		Explanations: explanations,
+		Datasets: []map[string]interface{}{
+			map[string]interface{}{
+				"base_funnel_data": baseFunnelData,
+				"funnel_data":      funnelData,
+			},
+		},
+	}
+	return &chart, nil
+}
+
+func buildBarGraphResult(node *ItreeNode) (*graphResult, error) {
+	pLen := len(node.Pattern.EventNames)
+	patternConstraints := node.PatternConstraints
+	if patternConstraints == nil {
+		patternConstraints = make([]P.EventConstraints, pLen)
+	}
+	propertyValues := []string{}
+	increasedValues := []string{}
+	decreasedValues := []string{}
+	patternCounts := []float64{}
+	patternPercentages := map[string]float64{}
+	ruleCounts := []float64{}
+	rulePercentages := map[string]float64{}
+	percentageGain := 0.0
+	percentageLoss := 0.0
+	for i := 0; i < len(node.KLDistances); i++ {
+		if node.KLDistances[i].Fcp <= 0 && node.KLDistances[i].Fcr <= 0 {
+			log.WithFields(log.Fields{
+				"KLNode": node.KLDistances[i], "Node on Property:": node.PropertyName}).Debug(
+				"Skipping KLNode")
+			continue
+		}
+
+		patternPercentage := node.KLDistances[i].Fcp / node.KLDistances[i].Fpp
+		// In percentage rounded to two decimals.
+		patternPercentage = math.Round(patternPercentage*1000) / 10
+
+		rulePercentage := node.KLDistances[i].Fcr / node.KLDistances[i].Fpr
+		// In percentage rounded to two decimals.
+		rulePercentage = math.Round(rulePercentage*1000) / 10
+
+		patternCounts = append(patternCounts, node.KLDistances[i].Fcp)
+		patternPercentages[node.KLDistances[i].PropertyValue] = patternPercentage
+
+		ruleCounts = append(ruleCounts, node.KLDistances[i].Fcr)
+		rulePercentages[node.KLDistances[i].PropertyValue] = rulePercentage
+
+		propertyValues = append(propertyValues, node.KLDistances[i].PropertyValue)
+		if node.KLDistances[i].PropertyValue != OTHER_PROPERTY_VALUES_LABEL {
+			if rulePercentage > patternPercentage {
+				percentageGain += (rulePercentage - patternPercentage)
+				increasedValues = append(increasedValues, node.KLDistances[i].PropertyValue)
+			} else if rulePercentage < patternPercentage {
+				percentageLoss += (patternPercentage - rulePercentage)
+				decreasedValues = append(decreasedValues, node.KLDistances[i].PropertyValue)
+			}
+		}
+	}
+	patternUsersLabel := ""
+	if pLen == 1 {
+		patternUsersLabel += U.SEN_ALL_ACTIVE_USERS_DISPLAY_STRING
+	} else {
+		patternUsersLabel += "Users who "
+		for i := 0; i < pLen-3; i++ {
+			patternUsersLabel += eventStringWithConditions(
+				node.Pattern.EventNames[i], &node.PatternConstraints[i])
+			patternUsersLabel += " and "
+		}
+		patternUsersLabel += eventStringWithConditions(
+			node.Pattern.EventNames[pLen-2], &node.PatternConstraints[pLen-2])
+	}
+	ruleUsersLabel := ""
+	if pLen == 1 {
+		ruleUsersLabel += "Users who " + eventStringWithConditions(
+			node.Pattern.EventNames[0], &node.PatternConstraints[0])
+	} else {
+		ruleUsersLabel += patternUsersLabel + " and " + eventStringWithConditions(
+			node.Pattern.EventNames[pLen-1], &node.PatternConstraints[pLen-1])
+	}
+	var headerString string
+	var explanations []string
+	if len(increasedValues) > 0 && len(decreasedValues) > 0 {
+		// Look at average gain.
+		if (percentageGain / float64(len(increasedValues))) > (percentageLoss / float64(len(decreasedValues))) {
+			headerString, explanations = barGraphHeaderString(node.Pattern.EventNames, patternConstraints,
+				node.PropertyName, increasedValues, patternUsersLabel, patternPercentages,
+				ruleUsersLabel, rulePercentages, true)
+		} else {
+			headerString, explanations = barGraphHeaderString(node.Pattern.EventNames, patternConstraints,
+				node.PropertyName, decreasedValues, patternUsersLabel, patternPercentages,
+				ruleUsersLabel, rulePercentages, false)
+		}
+	} else if percentageGain >= 0.0 {
+		headerString, explanations = barGraphHeaderString(node.Pattern.EventNames, patternConstraints,
+			node.PropertyName, increasedValues, patternUsersLabel, patternPercentages,
+			ruleUsersLabel, rulePercentages, true)
+	} else {
+		headerString, explanations = barGraphHeaderString(node.Pattern.EventNames, patternConstraints,
+			node.PropertyName, decreasedValues, patternUsersLabel, patternPercentages,
+			ruleUsersLabel, rulePercentages, false)
+	}
+
+	// Bar Chart.
+	chart := &graphResult{
+		Type:         "bar",
+		Header:       headerString,
+		Explanations: explanations,
+		Labels:       propertyValues,
+		Datasets: []map[string]interface{}{
+			map[string]interface{}{
+				"label": patternUsersLabel,
+				"data":  patternCounts,
+			},
+			map[string]interface{}{
+				"label": ruleUsersLabel,
+				"data":  ruleCounts,
+			},
+		},
+		XLabel: node.PropertyName,
+		YLabel: "Number of users",
+	}
+	return chart, nil
 }
 
 func buildFactorResultsFromPatterns(nodes []*ItreeNode, pw PatternServiceWrapperInterface) FactorGraphResults {
@@ -375,63 +669,27 @@ func buildFactorResultsFromPatterns(nodes []*ItreeNode, pw PatternServiceWrapper
 	// Actual funnel results.
 
 	for _, node := range nodes {
-		p := node.Pattern
-		patternConstraints := node.PatternConstraints
-		pLen := len(p.EventNames)
-		baseFunnelEvents := []string{}
-		baseFunnelConstraints := []P.EventConstraints{}
-
-		if node.NodeType == NODE_TYPE_SEQUENCE {
-			// Skip (n - 1)st element for baseFunnel.
-			baseFunnelEvents = append(append([]string(nil), p.EventNames[:pLen-2]...), p.EventNames[pLen-1:]...)
-			if patternConstraints != nil {
-				baseFunnelConstraints = append(append([]P.EventConstraints(nil), patternConstraints[:pLen-2]...), patternConstraints[pLen-1:]...)
-			}
-		} else if node.NodeType == NODE_TYPE_EVENT_PROPERTY || node.NodeType == NODE_TYPE_USER_PROPERTY {
-			// Skip (n - 1)st constraint for baseFunnel.
-			baseFunnelEvents = append(append([]string(nil), p.EventNames...))
-			if patternConstraints != nil {
-				baseFunnelConstraints = append(append([]P.EventConstraints(nil), patternConstraints...))
+		var chart *graphResult = nil
+		if node.NodeType == NODE_TYPE_SEQUENCE || node.NodeType == NODE_TYPE_EVENT_PROPERTY ||
+			node.NodeType == NODE_TYPE_USER_PROPERTY {
+			funnelEvents, funnelConstraints, baseFunnelEvents, baseFunnelConstraints := buildFunnelFormats(node)
+			if c, err := buildFunnelGraphResult(node, funnelEvents, funnelConstraints, baseFunnelEvents, baseFunnelConstraints, pw); err != nil {
+				log.Error(err)
+				continue
 			} else {
-				baseFunnelConstraints = make([]P.EventConstraints, pLen)
+				chart = c
 			}
-			if pLen > 1 {
-				baseFunnelConstraints[pLen-2] = P.EventConstraints{}
+		} else if node.NodeType == NODE_TYPE_GRAPH_EVENT_PROPERTIES || node.NodeType == NODE_TYPE_GRAPH_USER_PROPERTIES {
+			if c, err := buildBarGraphResult(node); err != nil {
+				log.Error(err)
+				continue
 			} else {
-				// Skip constraints for last node if Len1.
-				baseFunnelConstraints[pLen-1] = P.EventConstraints{}
+				chart = c
 			}
 		}
-		var baseP *P.Pattern
-		if baseP = pw.GetPattern(baseFunnelEvents); baseP == nil {
-			log.Errorf(fmt.Sprintf("Missing Base Funnel Pattern for %s", p.String()))
-			continue
+		if chart != nil {
+			results.Charts = append(results.Charts, *chart)
 		}
-		baseFunnelData := buildFunnelData(baseP, baseFunnelConstraints, node.NodeType, node.AddedConstraint, true, pw)
-		funnelData := buildFunnelData(p, patternConstraints, node.NodeType, node.AddedConstraint, false, pw)
-
-		baseFunnelLength := len(baseFunnelData)
-		baseFunnelConversionPercent := baseFunnelData[baseFunnelLength-2].ConversionPercent
-		funnelLength := len(funnelData)
-		funnelConversionPercent := funnelData[funnelLength-2].ConversionPercent
-		if funnelConversionPercent > baseFunnelConversionPercent {
-			funnelData[funnelLength-2].NodeType = "positive"
-		} else if funnelConversionPercent < baseFunnelConversionPercent {
-			funnelData[funnelLength-2].NodeType = "negative"
-		}
-
-		chart := graphResult{
-			Type: "funnel",
-			Header: headerString(funnelData, node.NodeType,
-				funnelConversionPercent, baseFunnelConversionPercent),
-			Datasets: []map[string]interface{}{
-				map[string]interface{}{
-					"base_funnel_data": baseFunnelData,
-					"funnel_data":      funnelData,
-				},
-			},
-		}
-		results.Charts = append(results.Charts, chart)
 	}
 	return results
 }
@@ -478,9 +736,9 @@ func Factor(projectId uint64, startEvent string,
 	// Rerank iPatternNodes in descending order of ranked scores.
 	sort.SliceStable(iPatternNodes,
 		func(i, j int) bool {
-			// GiniDrop * parentPatternFrequency is the ranking score for the node.
-			scoreI := iPatternNodes[i].GiniDrop * iPatternNodes[i].Fpp
-			scoreJ := iPatternNodes[j].GiniDrop * iPatternNodes[j].Fpp
+			// InformationDrop * parentPatternFrequency is the ranking score for the node.
+			scoreI := iPatternNodes[i].InformationDrop * iPatternNodes[i].Fpp
+			scoreJ := iPatternNodes[j].InformationDrop * iPatternNodes[j].Fpp
 			return (scoreI > scoreJ)
 		})
 

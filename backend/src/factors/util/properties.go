@@ -12,6 +12,7 @@ type PropertiesMap map[string]interface{}
 
 // Special Event Names used when building patterns and for querying.
 const SEN_ALL_ACTIVE_USERS = "$AllActiveUsers"
+const SEN_ALL_ACTIVE_USERS_DISPLAY_STRING = "All Active Users"
 
 /* Properties Constants */
 

@@ -18,7 +18,7 @@ type ItreeNode struct {
 	NodeType           int
 	Index              int
 	ParentIndex        int
-	// Gini Impurity at a node with pattern "ABCY" with parent node "ABY" is
+	// Information at a node with pattern "ABCY" with parent node "ABY" is
 	// the measure of amount of impurity of the two partitions of itemsets
 	// obtained after splitting only the itemsets containing "AB" with "C"=1
 	// and C=0. The class labels are assumed to be Y=1 and Y=0.
@@ -27,26 +27,32 @@ type ItreeNode struct {
 	// Let n(ABCY) be fcr i.e frequency of current rule.
 	// Let n(ABC) be fcp i.e frequency of current pattern.
 
-	// With C=1 we get itemsets with ABCY and ABCY'.  (A' is A=0)
-	// With C=1 the GI we get RightGI = (n(ABCY) / n(ABC)) * ( 1 - n(ABCY) / n(ABC))
-	// RightGI = (fcr / fcp) * (1 - fcr / fcp)
+	// With C=1 we get all datapoints with pattern ABC as right child.
+	// Right child is partitoned by the two subsets ABCY and ABCY'.  (A' is A=0)
+	// With C=1 we get the probabilities for RightInformation as p, (1-p) with p = (n(ABCY) / n(ABC)) = fcr / fcp.
 	// RightFraction = (n(ABC) / n(AB)) = (fcp / fpp)
 
-	// With C=0 we get itemsets ABC'Y and ABC'Y'.
-	// With C=0 we get LeftGI = (n(ABC'Y) / n(ABC')) *  ( 1 - n(ABC'Y) / n(ABC'))
-	// LeftGI = ((fpr - fcr)/(fpp - fcp)) * [1 - ((fpr - fcr)/(fpp - fcp))]
+	// With C=0 we get all data points with ABC' into left node.
+	// The subsets partitioning ABC' are  ABC'YC' and ABC'Y'C'.
+	// (It is not ABC'Y because ABYC would be counted in ABC'Y, but not part the superset ABC'.
+	// Hence the extra C' at the end to ensure that the subset belongs to ABC')
+	// n(ABC'YC') = n(ABY) - n(ABCY) - n(ABYC) + n(ABCYC)
+	// n(ABC') = n(AB) - n(ABC)
+	// * We are approximating Left information with
+	// p = n(ABC'Y) / n(ABC') = (n(ABY) - n(ABCY)) / (n(AB) - n(ABC))
+	// p = (fpr - fcr)/(fpp - fcp)
+	// Although this number is not guaranteed to be less than 1*
+	// With C=0 we get the probabilities for LeftInformation as p, (1-p) with p = (n(ABC'YC') / n(ABC'))
 	// LeftFraction = 1 - (fcp/fpp)
 
-	// OverallGI = RightFraction * RightGI + LeftFraction * LeftGI
-	// GiniDrop is the amount of impurity gain obtained wrt to impurity in
+	// OverallInformation = RightFraction * RightInformation + LeftFraction * LeftInformation
+	// InformationDrop is the amount of impurity gain obtained wrt to impurity in
 	// parent among itemsets AB.
-	// GiniDrop = parentIndex.RightGI - OverallGI
-	RightGI       float64
-	RightFraction float64
-	LeftGI        float64
-	LeftFraction  float64
-	OverallGI     float64
-	GiniDrop      float64
+	// InformationDrop = parentIndex.RightInformation - OverallInformation
+	RightInformation   float64
+	RightFraction      float64
+	OverallInformation float64
+	InformationDrop    float64
 
 	// confidence = fcr / fcp
 	Confidence float64
@@ -57,6 +63,10 @@ type ItreeNode struct {
 	Fcp             float64
 	Fcr             float64
 	AddedConstraint P.EventConstraints
+
+	// Used to store graphs.
+	PropertyName string
+	KLDistances  []KLDistanceUnitInfo
 }
 
 type Itree struct {
@@ -64,12 +74,52 @@ type Itree struct {
 	EndEvent string
 }
 
+type KLDistanceUnitInfo struct {
+	Distance      float64
+	PropertyValue string
+	Fpp           float64
+	Fpr           float64
+	Fcp           float64
+	Fcr           float64
+}
+
 const MAX_SEQUENCE_CHILD_NODES = 10
 const MAX_PROPERTY_CHILD_NODES = 10
 const NODE_TYPE_ROOT = 0
-const NODE_TYPE_SEQUENCE = 1       // A child node that differs from its parent by an event.
-const NODE_TYPE_EVENT_PROPERTY = 2 // A child node that differs from its parent by an event property constraint.
-const NODE_TYPE_USER_PROPERTY = 3  // A child node that differs from its parent by an user property constraint.
+const NODE_TYPE_SEQUENCE = 1               // A child node that differs from its parent by an event.
+const NODE_TYPE_EVENT_PROPERTY = 2         // A child node that differs from its parent by an event property constraint.
+const NODE_TYPE_USER_PROPERTY = 3          // A child node that differs from its parent by an user property constraint.
+const NODE_TYPE_GRAPH_EVENT_PROPERTIES = 4 // A child graph node that has a different distribution on an event property, compared to parent
+const NODE_TYPE_GRAPH_USER_PROPERTIES = 5  // A child graph node that has a different distribution on an user property, compared to parent
+
+const MAX_PROPERTIES_IN_GRAPH_NODE = 10
+const OTHER_PROPERTY_VALUES_LABEL = "Other"
+
+var log2Value float64 = math.Log(2)
+
+func log2(x float64) float64 {
+	if x == 0 {
+		return 1
+	}
+	return math.Log(x) / log2Value
+}
+
+func information(probabilities []float64) float64 {
+	// The information in a distribution increases with
+	// the amount of uncertainity in the distribution.
+	// Ex. The sun rises in the east has zero information
+	// because it has probability 1.
+	// Currently returning entropy as information expressed in bits.
+	info := 0.0
+	for _, p := range probabilities {
+		info += -(p * log2(p))
+	}
+	return info
+}
+
+func computeKLDistanceBits(patternProb float64, ruleProb float64) float64 {
+	return -(ruleProb * (log2(patternProb) - log2(ruleProb)))
+}
 
 func constructPatternConstraints(
 	pLen int, startEventConstraints *P.EventConstraints,
@@ -123,11 +173,11 @@ func (it *Itree) buildRootNode(
 	// If p = n(Y) / totalUsers. n(Y) is number of users with occurrence of Y.
 	// Else for root node of type X -> Y
 	// p = n(X->Y) / n(X)
-	// RightGI is p(1-p)
+	// RightInformation is with distribution p, 1-p
 	// RightFraction is 1.0
-	// OverallGI = rightGI
+	// OverallInformation = rightInfo
 	// confidence is p.
-	// confidenceGain, leftGi, leftFraction, giniDrop are not defined.
+	// confidenceGain, infoDrop are not defined.
 	// parentIndex is set to -1.
 	patternCount, err := pattern.GetOncePerUserCount(patternConstraints)
 	if err != nil {
@@ -148,18 +198,102 @@ func (it *Itree) buildRootNode(
 			fmt.Sprintf("Unexpected root node pattern %s", pattern.String()))
 	}
 
-	giniImpurity := p * (1.0 - p)
+	info := information([]float64{p, 1.0 - p})
+
 	node := ItreeNode{
 		Pattern:            pattern,
 		NodeType:           NODE_TYPE_ROOT,
 		PatternConstraints: patternConstraints,
 		ParentIndex:        -1,
-		RightGI:            giniImpurity,
+		RightInformation:   info,
 		RightFraction:      1.0,
-		OverallGI:          giniImpurity,
+		OverallInformation: info,
 		Confidence:         p,
 		Fpp:                0.0,
 	}
+	return &node, nil
+}
+
+func (it *Itree) buildCategoricalGraphChildNode(
+	childPattern *P.Pattern, categoricalPropertyName string,
+	kLDistances []KLDistanceUnitInfo,
+	nodeType int, parentIndex int,
+	patternWrapper PatternServiceWrapperInterface,
+	fpr float64, fpp float64) (*ItreeNode, error) {
+
+	parentNode := it.Nodes[parentIndex]
+	parentPattern := parentNode.Pattern
+	parentConstraints := parentNode.PatternConstraints
+	childLen := len(childPattern.EventNames)
+	parentLen := len(parentPattern.EventNames)
+
+	if parentNode.NodeType != NODE_TYPE_SEQUENCE && parentNode.NodeType != NODE_TYPE_ROOT {
+		return nil, fmt.Errorf(fmt.Sprintf("Parent node of unexpected type: %v", parentNode))
+	}
+
+	if nodeType != NODE_TYPE_GRAPH_EVENT_PROPERTIES && nodeType != NODE_TYPE_GRAPH_USER_PROPERTIES {
+		return nil, fmt.Errorf(fmt.Sprintf("Node of unexpected type: %s, %d", childPattern.String(), nodeType))
+	}
+
+	if childLen != parentLen {
+		return nil, fmt.Errorf(fmt.Sprintf(
+			"Current Graph node with type property and pattern(%s) with propertyName(%s) and parent index(%d), pattern(%s) with constraints(%v) not compatible",
+			childPattern.String(), categoricalPropertyName, parentIndex, parentPattern.String(), parentConstraints))
+	}
+
+	// Sort by decreasing order of absolute KLDistance contribution
+	sort.SliceStable(kLDistances,
+		func(i, j int) bool {
+			distI := math.Abs(kLDistances[i].Distance)
+			distJ := math.Abs(kLDistances[j].Distance)
+			return (distI > distJ)
+		})
+
+	// Trim it to MAX_PROPERTIES_IN_GRAPH_NODE nodes.
+	if len(kLDistances) > MAX_PROPERTIES_IN_GRAPH_NODE {
+		kLDistances = kLDistances[:MAX_PROPERTIES_IN_GRAPH_NODE-1]
+		// Add an other label at the end.
+		totalFcp := 0.0
+		totalFcr := 0.0
+		for _, klu := range kLDistances {
+			totalFcp += klu.Fcp
+			totalFcr += klu.Fcr
+		}
+		otherFcp := fpp - totalFcp
+		otherFcr := fpr - totalFcr
+		otherPatternProb := otherFcp / fpp
+		otherRuleProb := otherFcr / fpr
+
+		otherKLDistanceUnit := KLDistanceUnitInfo{
+			PropertyValue: OTHER_PROPERTY_VALUES_LABEL,
+			Fpp:           fpp,
+			Fpr:           fpr,
+			Fcp:           otherFcp,
+			Fcr:           otherFcr,
+			Distance:      computeKLDistanceBits(otherPatternProb, otherRuleProb),
+		}
+		kLDistances = append(kLDistances, otherKLDistanceUnit)
+	}
+	totalKLDistance := 0.0
+	for _, klu := range kLDistances {
+		totalKLDistance += klu.Distance
+	}
+	node := ItreeNode{
+		Pattern:            childPattern,
+		PatternConstraints: parentConstraints,
+		NodeType:           nodeType,
+		ParentIndex:        parentIndex,
+		InformationDrop:    totalKLDistance,
+		Fpp:                fpp,
+		Fpr:                fpr,
+		PropertyName:       categoricalPropertyName,
+		KLDistances:        kLDistances,
+	}
+	log.WithFields(log.Fields{"node": node.Pattern.String(), "nodeType": nodeType,
+		"parent": parentPattern.String(),
+		"fpr":    fpr, "fpp": fpp, "kLDistances": kLDistances,
+		"PropertyName": categoricalPropertyName, "infoDrop": totalKLDistance}).Debug(
+		"Built candidate graph child node.")
 	return &node, nil
 }
 
@@ -321,18 +455,23 @@ func (it *Itree) buildChildNode(
 			"fpp": fpp, "fpr": fpr, "fcp": fcp, "fcr": fcr}).Debug("Inconsistent frequencies. Ignoring")
 		return nil, nil
 	}
-	rightGI := (fcr / fcp) * (1.0 - fcr/fcp)
+	p := fcr / fcp
+	rightInfo := information([]float64{p, 1.0 - p})
 	rightFraction := fcp / fpp
-	var leftGI float64
+	// Left information.
+	var leftInfo float64
 	if (fpp - fcp) > 0.0 {
-		leftGI = ((fpr - fcr) / (fpp - fcp)) * (1.0 - ((fpr - fcr) / (fpp - fcp)))
+		leftP := (fpr - fcr) / (fpp - fcp)
+		if leftP > 1.0 {
+			leftP = 1.0
+		}
+		leftInfo = information([]float64{leftP, 1.0 - leftP})
 	} else {
-		leftGI = 0.0
+		leftInfo = 0.0
 	}
-	var leftFraction float64 = 1.0 - rightFraction
-	overallGI := rightFraction*rightGI + leftFraction*leftGI
+	overallInfo := rightFraction*rightInfo + (1-rightFraction)*leftInfo
 
-	giniDrop := parentNode.RightGI - overallGI
+	infoDrop := parentNode.RightInformation - overallInfo
 
 	confidence := fcr / fcp
 	confidenceGain := confidence - parentNode.Confidence
@@ -346,12 +485,10 @@ func (it *Itree) buildChildNode(
 		NodeType:           nodeType,
 		PatternConstraints: childPatternConstraints,
 		ParentIndex:        parentIndex,
-		RightGI:            rightGI,
+		RightInformation:   rightInfo,
 		RightFraction:      rightFraction,
-		LeftGI:             leftGI,
-		LeftFraction:       leftFraction,
-		OverallGI:          overallGI,
-		GiniDrop:           giniDrop,
+		OverallInformation: overallInfo,
+		InformationDrop:    infoDrop,
 		Confidence:         confidence,
 		ConfidenceGain:     confidenceGain,
 		Fpp:                fpp,
@@ -362,7 +499,7 @@ func (it *Itree) buildChildNode(
 	}
 	//log.WithFields(log.Fields{"node": node.Pattern.String(), "constraints": constraints,
 	//	"parent": parentPattern.String(), "parentConstraints": parentNode.PatternConstraints,
-	//	"fcr": fcr, "fcp": fcp, "fpr": fpr, "fpp": fpp, "GI": overallGI, "giniDrop": giniDrop}).Debug(
+	//	"fcr": fcr, "fcp": fcp, "fpr": fpr, "fpp": fpp, "OverallInfo": overallInfo, "infoDrop": infoDrop}).Debug(
 	//	"Built candidate child node.")
 	return &node, nil
 }
@@ -381,8 +518,8 @@ func (it *Itree) addNode(node *ItreeNode) int {
 		"Fpr":             node.Fpr,
 		"Fcp":             node.Fcp,
 		"Fcr":             node.Fcr,
-		"GI":              node.OverallGI,
-		"giniDrop":        node.GiniDrop}).Info(
+		"OverallInfo":     node.OverallInformation,
+		"infoDrop":        node.InformationDrop}).Info(
 		"Added node to Itree.")
 	return node.Index
 }
@@ -445,7 +582,8 @@ func (it *Itree) buildAndAddSequenceChildNodes(
 		}
 		c, ok := patternWrapper.GetPerUserCount(parentPattern.EventNames[:peLen-1], subParentConstraints)
 		if !ok {
-			return nil, fmt.Errorf(fmt.Sprintf("Frequency missing for pattern sequence", parentPattern.String()))
+			return nil, fmt.Errorf(fmt.Sprintf(
+				"Frequency missing for pattern sequence", parentPattern.String()))
 		}
 		fpp = float64(c)
 	}
@@ -473,10 +611,10 @@ func (it *Itree) buildAndAddSequenceChildNodes(
 			childNodes = append(childNodes, cNode)
 		}
 	}
-	// Sort in decreasing order of giniDrop.
+	// Sort in decreasing order of infoDrop.
 	sort.SliceStable(childNodes,
 		func(i, j int) bool {
-			return (childNodes[i].GiniDrop > childNodes[j].GiniDrop)
+			return (childNodes[i].InformationDrop > childNodes[j].InformationDrop)
 		})
 
 	// Only top MAX_SEQUENCE_CHILD_NODES in order of drop in GiniImpurity are selected.
@@ -486,7 +624,7 @@ func (it *Itree) buildAndAddSequenceChildNodes(
 
 	addedChildNodes := []*ItreeNode{}
 	for _, cNode := range childNodes {
-		if cNode.GiniDrop <= 0.0 {
+		if cNode.InformationDrop <= 0.0 {
 			continue
 		}
 		it.addNode(cNode)
@@ -509,6 +647,8 @@ func (it *Itree) buildCategoricalPropertyChildNodes(
 		}
 		numP++
 		numVal := 0
+		// Compute KL Distance of child vs parent.
+		klDistanceUnits := []KLDistanceUnitInfo{}
 		for value, _ := range seenValues {
 			if numVal > maxNumValues {
 				break
@@ -542,6 +682,33 @@ func (it *Itree) buildCategoricalPropertyChildNodes(
 					continue
 				}
 				propertyChildNodes = append(propertyChildNodes, cNode)
+				// Distance computation for graph node.
+				// Distance is the measure of change in distribution between the pattern and the rule.
+				patternProb := cNode.Fcp / fpp
+				ruleProb := cNode.Fcr / fpr
+				klDistanceUnits = append(klDistanceUnits, KLDistanceUnitInfo{
+					PropertyValue: value,
+					// The distance / divergence of rule Distribution from pattern Distribution wrt propertyName in bits.
+					Distance: computeKLDistanceBits(patternProb, ruleProb),
+					Fpp:      cNode.Fpp,
+					Fpr:      cNode.Fpr,
+					Fcp:      cNode.Fcp,
+					Fcr:      cNode.Fcr,
+				})
+			}
+		}
+		if parentNode.NodeType == NODE_TYPE_ROOT {
+			// Build graph nodes only at first level below root.
+			nodeGraphType := NODE_TYPE_GRAPH_USER_PROPERTIES
+			if nodeType == NODE_TYPE_EVENT_PROPERTY {
+				nodeGraphType = NODE_TYPE_GRAPH_EVENT_PROPERTIES
+			}
+			if cGraphNode, err := it.buildCategoricalGraphChildNode(
+				parentNode.Pattern, propertyName, klDistanceUnits, nodeGraphType,
+				parentNode.Index, patternWrapper, fpr, fpp); err != nil {
+				log.WithFields(log.Fields{"err": err}).Errorf("Couldn't build graph child node")
+			} else {
+				propertyChildNodes = append(propertyChildNodes, cGraphNode)
 			}
 		}
 	}
@@ -760,10 +927,10 @@ func (it *Itree) buildAndAddPropertyChildNodes(
 			parentNode, patternWrapper, allActiveUsersPattern, pLen, fpr, fpp)...)
 	}
 
-	// Sort in decreasing order of giniDrop.
+	// Sort in decreasing order of infoDrop.
 	sort.SliceStable(childNodes,
 		func(i, j int) bool {
-			return (childNodes[i].GiniDrop > childNodes[j].GiniDrop)
+			return (childNodes[i].InformationDrop > childNodes[j].InformationDrop)
 		})
 
 	// Only top MAX_PROPERTY_CHILD_NODES in order of drop in GiniImpurity are selected.
@@ -773,7 +940,7 @@ func (it *Itree) buildAndAddPropertyChildNodes(
 
 	addedChildNodes := []*ItreeNode{}
 	for _, cNode := range childNodes {
-		if cNode.GiniDrop <= 0.0 {
+		if cNode.InformationDrop <= 0.0 {
 			continue
 		}
 		it.addNode(cNode)

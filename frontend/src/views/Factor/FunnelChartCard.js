@@ -5,6 +5,7 @@ import {
   Card,
   CardBody,
   CardHeader,
+  CardTitle,
   Col,
   Row,
 } from 'reactstrap';
@@ -103,13 +104,18 @@ class FunnelChartCard extends Component {
     [baseFunnelGraphCols, baseFunnelEventCols] = this.buildFunnelUI(chartData.datasets[0].base_funnel_data);
     var funnelGraphCols, funnelEventCols;
     [funnelGraphCols, funnelEventCols] = this.buildFunnelUI(chartData.datasets[0].funnel_data);
+    const explanations = chartData.explanations.map((explainText) =>
+      <CardTitle className="fapp-chart-card-title">{explainText}</CardTitle>
+    );
 
     return (
       <Card>
         <CardHeader className="fapp-chart-card-header">
           {chartData.header}
         </CardHeader>
+        {explanations}
         <CardBody className="fapp-chart-card-body">
+
         <Row noGutters={true}>
         {
           baseFunnelGraphCols

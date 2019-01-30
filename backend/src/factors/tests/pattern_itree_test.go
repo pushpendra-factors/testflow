@@ -95,58 +95,75 @@ func TestBuildNewItree(t *testing.T) {
 	//        |         |
 	//      ACBY(9)    ABCY(10)
 	type expectedNode struct {
-		patternString                                            string
-		index, parentIndex                                       int
-		rightGi, overallGi, giniDrop, confidence, confidenceGain float64
+		patternString                              string
+		index, parentIndex                         int
+		rightInfo, leftInfo, overallInfo, infoDrop float64
+		confidence, confidenceGain                 float64
+		fpp, fpr, fcp, fcr                         float64
 	}
 	node0 := expectedNode{
 		patternString: "Y",
 		index:         0, parentIndex: -1,
-		rightGi: 0.24, overallGi: 0.24,
-		confidence: 0.6,
+		rightInfo: 0.97095, leftInfo: 0.0,
+		overallInfo: 0.97095, confidence: 0.6,
+		fpp: 0.0, fpr: 0.0, fcp: 10.0, fcr: 6.0,
 	}
 	node1 := expectedNode{
 		patternString: "A,Y",
 		index:         1, parentIndex: 0,
-		rightGi: 0.246914, overallGi: 0.022222, giniDrop: 0.217778,
+		rightInfo: 0.99108, leftInfo: 0.0,
+		overallInfo: 0.89197, infoDrop: 0.07898,
 		confidence: 0.444444, confidenceGain: -0.155556,
+		fpp: 10.0, fpr: 6.0, fcp: 9.0, fcr: 4.0,
 	}
 	node2 := expectedNode{
 		patternString: "B,Y",
 		index:         2, parentIndex: 0,
-		rightGi: 0.246914, overallGi: 0.222222, giniDrop: 0.017778,
+		rightInfo: 0.99108, leftInfo: 0.0,
+		overallInfo: 0.89197, infoDrop: 0.07898,
 		confidence: 0.555556, confidenceGain: -0.044444,
+		fpp: 10.0, fpr: 6.0, fcp: 9.0, fcr: 5.0,
 	}
 	node3 := expectedNode{
 		patternString: "C,Y",
 		index:         3, parentIndex: 0,
-		rightGi: 0.246914, overallGi: 0.222222, giniDrop: 0.017778,
+		rightInfo: 0.99108, leftInfo: 0.0,
+		overallInfo: 0.89197, infoDrop: 0.07898,
 		confidence: 0.555556, confidenceGain: -0.044444,
+		fpp: 10.0, fpr: 6.0, fcp: 9.0, fcr: 5.0,
 	}
 
 	node4 := expectedNode{
 		patternString: "A,C,Y",
 		index:         4, parentIndex: 1,
-		rightGi: 0.16, overallGi: 0.088889, giniDrop: 0.158025,
+		rightInfo: 0.72193, leftInfo: 0.0,
+		overallInfo: 0.40107, infoDrop: 0.59001,
 		confidence: 0.80, confidenceGain: 0.355556,
+		fpp: 9.0, fpr: 4.0, fcp: 5.0, fcr: 4.0,
 	}
 	node5 := expectedNode{
 		patternString: "A,B,Y",
 		index:         5, parentIndex: 1,
-		rightGi: 0.244898, overallGi: 0.190476, giniDrop: 0.056438,
+		rightInfo: 0.98523, leftInfo: 0.0,
+		overallInfo: 0.76629, infoDrop: 0.22479,
 		confidence: 0.571429, confidenceGain: 0.126985,
+		fpp: 9.0, fpr: 4.0, fcp: 7.0, fcr: 4.0,
 	}
 	node9 := expectedNode{
 		patternString: "A,C,B,Y",
 		index:         9, parentIndex: 4,
-		rightGi: 0.0, overallGi: 0.15, giniDrop: 0.01,
+		rightInfo: 0.0, leftInfo: 0.81128,
+		overallInfo: 0.64902, infoDrop: 0.07291,
 		confidence: 1.0, confidenceGain: 0.2,
+		fpp: 5.0, fpr: 4.0, fcp: 1.0, fcr: 1.0,
 	}
 	node10 := expectedNode{
 		patternString: "A,B,C,Y",
 		index:         10, parentIndex: 5,
-		rightGi: 0.16, overallGi: 0.114286, giniDrop: 0.130612,
+		rightInfo: 0.72193, leftInfo: 0.0,
+		overallInfo: 0.51566, infoDrop: 0.46957,
 		confidence: 0.8, confidenceGain: 0.228571,
+		fpp: 7.0, fpr: 4.0, fcp: 5.0, fcr: 4.0,
 	}
 	expectedNodes := []*expectedNode{
 		&node0, &node1, &node2, &node3, &node4, &node5, &node9, &node10}
@@ -155,12 +172,12 @@ func TestBuildNewItree(t *testing.T) {
 		aNode := itree.Nodes[eNode.index]
 		assert.Equal(t, eNode.patternString, aNode.Pattern.String())
 		assert.Equal(t, eNode.parentIndex, aNode.ParentIndex, fmt.Sprintf("Node: %s", eNode.patternString))
-		assert.InDelta(t, eNode.rightGi, aNode.RightGI, 0.000001, fmt.Sprintf("Node: %s", eNode.patternString))
-		assert.InDelta(t, eNode.overallGi, aNode.OverallGI, 0.000001, fmt.Sprintf("Node: %s", eNode.patternString))
-		assert.InDelta(t, eNode.confidence, aNode.Confidence, 0.000001, fmt.Sprintf("Node: %s", eNode.patternString))
+		assert.InDelta(t, eNode.rightInfo, aNode.RightInformation, 0.0001, fmt.Sprintf("Node: %s", eNode.patternString))
+		assert.InDelta(t, eNode.overallInfo, aNode.OverallInformation, 0.0001, fmt.Sprintf("Node: %s", eNode.patternString))
+		assert.InDelta(t, eNode.confidence, aNode.Confidence, 0.0001, fmt.Sprintf("Node: %s", eNode.patternString))
 		if i != 0 {
-			assert.InDelta(t, eNode.giniDrop, aNode.GiniDrop, 0.000001, fmt.Sprintf("Node: %s", eNode.patternString))
-			assert.InDelta(t, eNode.confidenceGain, aNode.ConfidenceGain, 0.000001, fmt.Sprintf("Node: %s", eNode.patternString))
+			assert.InDelta(t, eNode.infoDrop, aNode.InformationDrop, 0.0001, fmt.Sprintf("Node: %s", eNode.patternString))
+			assert.InDelta(t, eNode.confidenceGain, aNode.ConfidenceGain, 0.0001, fmt.Sprintf("Node: %s", eNode.patternString))
 		}
 	}
 
@@ -171,32 +188,40 @@ func TestBuildNewItree(t *testing.T) {
 	node0 = expectedNode{
 		patternString: "A,Y",
 		index:         0, parentIndex: -1,
-		rightGi: 0.246914, overallGi: 0.246914,
-		confidence: 0.444444,
+		rightInfo: 0.99107, overallInfo: 0.99107,
+		confidence: 0.444444, fcp: 9.0, fcr: 4.0,
 	}
 	node1 = expectedNode{
 		patternString: "A,C,Y",
 		index:         1, parentIndex: 0,
-		rightGi: 0.16, overallGi: 0.088889, giniDrop: 0.158025,
+		rightInfo: 0.72193, leftInfo: 0.0,
+		overallInfo: 0.40107, infoDrop: 0.59,
 		confidence: 0.80, confidenceGain: 0.355556,
+		fpp: 9.0, fpr: 4.0, fcp: 5.0, fcr: 4.0,
 	}
 	node2 = expectedNode{
 		patternString: "A,B,Y",
 		index:         2, parentIndex: 0,
-		rightGi: 0.244898, overallGi: 0.190476, giniDrop: 0.056438,
+		rightInfo: 0.98523, leftInfo: 0.0,
+		overallInfo: 0.76629, infoDrop: 0.22478,
 		confidence: 0.571429, confidenceGain: 0.126985,
+		fpp: 9.0, fpr: 4.0, fcp: 7.0, fcr: 4.0,
 	}
 	node3 = expectedNode{
 		patternString: "A,C,B,Y",
 		index:         3, parentIndex: 1,
-		rightGi: 0.0, overallGi: 0.15, giniDrop: 0.01,
+		rightInfo: 0.0, leftInfo: 0.81128,
+		overallInfo: 0.64902, infoDrop: 0.07291,
 		confidence: 1.0, confidenceGain: 0.2,
+		fpp: 5.0, fpr: 4.0, fcp: 1.0, fcr: 1.0,
 	}
 	node4 = expectedNode{
 		patternString: "A,B,C,Y",
 		index:         4, parentIndex: 2,
-		rightGi: 0.16, overallGi: 0.114286, giniDrop: 0.130612,
+		rightInfo: 0.72193, leftInfo: 0.0,
+		overallInfo: 0.51566, infoDrop: 0.46957,
 		confidence: 0.8, confidenceGain: 0.228571,
+		fpp: 7.0, fpr: 4.0, fcp: 5.0, fcr: 4.0,
 	}
 	expectedNodes = []*expectedNode{
 		&node0, &node1, &node2, &node3, &node4}
@@ -204,12 +229,12 @@ func TestBuildNewItree(t *testing.T) {
 		aNode := itree.Nodes[eNode.index]
 		assert.Equal(t, eNode.patternString, aNode.Pattern.String())
 		assert.Equal(t, eNode.parentIndex, aNode.ParentIndex, fmt.Sprintf("Node: %s", eNode.patternString))
-		assert.InDelta(t, eNode.rightGi, aNode.RightGI, 0.000001, fmt.Sprintf("Node: %s", eNode.patternString))
-		assert.InDelta(t, eNode.overallGi, aNode.OverallGI, 0.000001, fmt.Sprintf("Node: %s", eNode.patternString))
-		assert.InDelta(t, eNode.confidence, aNode.Confidence, 0.000001, fmt.Sprintf("Node: %s", eNode.patternString))
+		assert.InDelta(t, eNode.rightInfo, aNode.RightInformation, 0.0001, fmt.Sprintf("Node: %s", eNode.patternString))
+		assert.InDelta(t, eNode.overallInfo, aNode.OverallInformation, 0.0001, fmt.Sprintf("Node: %s", eNode.patternString))
+		assert.InDelta(t, eNode.confidence, aNode.Confidence, 0.0001, fmt.Sprintf("Node: %s", eNode.patternString))
 		if i != 0 {
-			assert.InDelta(t, eNode.giniDrop, aNode.GiniDrop, 0.000001, fmt.Sprintf("Node: %s", eNode.patternString))
-			assert.InDelta(t, eNode.confidenceGain, aNode.ConfidenceGain, 0.000001, fmt.Sprintf("Node: %s", eNode.patternString))
+			assert.InDelta(t, eNode.infoDrop, aNode.InformationDrop, 0.0001, fmt.Sprintf("Node: %s", eNode.patternString))
+			assert.InDelta(t, eNode.confidenceGain, aNode.ConfidenceGain, 0.0001, fmt.Sprintf("Node: %s", eNode.patternString))
 		}
 	}
 }
