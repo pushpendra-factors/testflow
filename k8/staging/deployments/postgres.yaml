@@ -47,5 +47,5 @@ spec:
         - name: postgres-volume
           # This GCE PD must already exist
           gcePersistentDisk:
-            pdName: ps-disk-1
+            pdName: postgres-staging
             fsType: ext4
