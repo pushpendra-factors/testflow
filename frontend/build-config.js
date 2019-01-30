@@ -5,7 +5,7 @@ const CONFIG = {
   },
   staging: {
     backend_host: '', // Uses window.origin.
-    sdk_asset_url: 'https://slashbit.co/assets/factors.js'
+    sdk_asset_url: '' // Use window.origin/assets/factors.js
   },
   test: {
     backend_host: 'http://localhost:8080',

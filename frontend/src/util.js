@@ -6,5 +6,5 @@ export function getHostURL() {
 }
 
 export function getSDKAssetURL() {
-    return( ENV === "staging") ? (getHostURL() + "/assets/factors.prod.js") : BUILD_CONFIG.sdk_asset_url;
+    return( ENV === "staging") ? (getHostURL() + "assets/factors.js") : BUILD_CONFIG.sdk_asset_url;
 }
