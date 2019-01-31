@@ -176,6 +176,14 @@ body {
     box-shadow: 0 4px 10px 0 rgba(0, 0, 0, 0.09), 0 6px 20px 0 rgba(0, 0, 0, 0);
 }
 
+.fapp-header .navbar-brand {
+    margin-left: 8px;
+}
+
+.brand-minimized .app-header .navbar-brand {
+    width: 36px !important;
+}
+
 .fapp-bell {
     font-size: 1.6rem;
     display: block;
@@ -213,7 +221,7 @@ body {
 }
 
 .fapp-navbar-toggler {
-    margin: 0 12px;
+    margin-right: 12px;
 }
 
 .fapp-search-card {

@@ -2,9 +2,9 @@ import React, { Component } from 'react';
 import { Badge, DropdownItem, DropdownMenu, DropdownToggle, Nav, NavItem, NavLink, TextMuted } from 'reactstrap';
 import PropTypes from 'prop-types';
 
-import { AppHeaderDropdown, AppSidebarToggler } from '@coreui/react';
-import factorslogo from '../../assets/img/brand/factors-logo.svg'
-import factorsicon from '../../assets/img/brand/factors-icon.svg'
+import { AppHeaderDropdown, AppSidebarToggler, AppNavbarBrand } from '@coreui/react';
+import factorslogo from '../../assets/img/brand/factors-logo.png'
+import factorsicon from '../../assets/img/brand/factors-icon.png'
 
 import {
   AppSidebarForm,
@@ -56,6 +56,10 @@ class DefaultHeader extends Component {
     return (
       <React.Fragment>
         <AppSidebarToggler className="d-lg-none" display="md" mobile />
+        <AppNavbarBrand
+          full={{ src: factorslogo, alt: 'factors.ai' }}
+          minimized={{ src: factorsicon, alt: 'factors.ai' }}
+        />
         <AppSidebarToggler className="d-md-down-none fapp-navbar-toggler" display="lg" />
         <AppSidebarForm className="fapp-header-dropdown">
           <Select
