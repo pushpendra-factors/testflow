@@ -83,7 +83,7 @@ func TestGetPatternChunkFilePathAndName(t *testing.T) {
 	projectId := U.RandomUint64()
 	modelId := U.RandomUint64()
 	chunkId := U.RandomString(8)
-	expectedPath := gcsDriver.GetProjectModelDir(projectId, modelId) + "/chunks/"
+	expectedPath := gcsDriver.GetProjectModelDir(projectId, modelId) + "chunks/"
 	expectedName := fmt.Sprintf("chunk_%s.txt", chunkId)
 
 	resultPath, resultName := gcsDriver.GetPatternChunkFilePathAndName(projectId, modelId, chunkId)
