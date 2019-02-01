@@ -13,7 +13,7 @@ const (
 	separator = "/"
 )
 
-var _ = (*filestore.FileManager)(nil)
+var _ filestore.FileManager = (*GCSDriver)(nil)
 
 type GCSDriver struct {
 	client     *storage.Client

@@ -14,7 +14,7 @@ const (
 	separator = "/"
 )
 
-var _ = (*filestore.FileManager)(nil)
+var _ filestore.FileManager = (*DiskDriver)(nil)
 
 type DiskDriver struct {
 	// This can be used as namespace

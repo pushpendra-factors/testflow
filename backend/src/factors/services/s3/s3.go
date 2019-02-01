@@ -15,7 +15,7 @@ const (
 	separator = "/"
 )
 
-var _ = (*filestore.FileManager)(nil)
+var _ filestore.FileManager = (*S3Driver)(nil)
 
 type S3Driver struct {
 	s3         *s3.S3
