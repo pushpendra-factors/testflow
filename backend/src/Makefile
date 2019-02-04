@@ -1,4 +1,4 @@
-.PHONY: build-api build-ps clean pack-api upload-api pack-ps upload-ps pack-debug upload-debug pack-pg-backup upload-pg-backup
+.PHONY: build-api build-ps clean pack-api upload-api pack-ps upload-ps pack-debug upload-debug pack-pg-backup upload-pg-backup test
 
 TAG?=$(shell git rev-list HEAD --max-count=1 --abbrev-commit)
 export TAG
@@ -36,3 +36,6 @@ pack-pg-backup:
 
 upload-pg-backup:
 	docker push us.gcr.io/factors-staging/pg-backup:$(TAG)
+
+test: 
+	go test -v $(GOPATH)/src/factors/tests && go test -v $(GOPATH)/src/factors/pattern_server/store
