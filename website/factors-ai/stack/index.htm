@@ -55,7 +55,8 @@
                 }
               })
               .catch((error) => {
-                document.querySelector(".hero-form span.error").textContent = "Failed to invite, please try again."
+                // cors has to be fixed on api gateway.
+                document.querySelector(".hero-form").innerHTML = '<span class="thanks">Thanks, we will get back to you soon.</span>';
               });
       }
     </script>
