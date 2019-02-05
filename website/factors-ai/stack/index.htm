@@ -46,6 +46,9 @@
             return;
           }
           let data = {context: { source: "website", form: "get_invite" }, data: { email: email }};
+          
+          factors.track("get_invite", {email: email});
+
           return notify(data)
               .then((r) => {
                 if (r.ok) {
@@ -184,7 +187,7 @@
                   </div>
                   <div class="col-md-6">
                     <div class="form-group">
-                      <input type="text" placeholder="Email" id="email" class="form-control contact-email" name="email" required data-error="Please enter your email">
+                      <input type="text" placeholder="Work Email" id="email" class="form-control contact-email" name="email" required data-error="Please enter your email">
                       <div class="help-block with-errors"></div>
                     </div> 
                   </div>
@@ -279,6 +282,10 @@
     <script src="assets/js/main.js"></script>
     <script src="assets/js/form-validator.min.js"></script>
     <script src="assets/js/contact-form-script.min.js"></script>
+
+    <script>
+      (function(c){var s=document.createElement("script");s.type="text/javascript";if(s.readyState){s.onreadystatechange=function(){if(s.readyState=="loaded"||s.readyState=="complete"){s.onreadystatechange=null;c()}}}else{s.onload=function(){c()}}s.src="http://factors1bbde4.factors.ai/assets/factors.js";d=!!document.body?document.body:document.head;d.appendChild(s)})(function(){factors.init("we0jyjxcs0ix4ggnkptymjh48ur8y7q7")})
+    </script>
       
   </body>
 </html>
