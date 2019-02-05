@@ -6,12 +6,14 @@ const URI_IDENTIFY = "/sdk/user/identify";
 const URI_ADD_USER_PROPERTIES = "/sdk/user/add_properties";
 const URI_ADD_PROJECT_SETTINGS="/sdk/project/get_settings";
 
-function APIClient(token) {
+function APIClient(token, host="") {
    this.token = token;
+   this.host = host;
 }
 
 APIClient.prototype.getURL = function(uri) {
-    return config.api.host+uri;
+    // use given host if available.
+    return this.host != "" ? this.host : (config.api.host+uri);
 }
 
 APIClient.prototype.setToken = function(token) {

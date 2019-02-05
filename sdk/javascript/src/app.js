@@ -42,7 +42,7 @@ function App() {
     this.config = {};
 }
 
-App.prototype.init = function(token) {
+App.prototype.init = function(token, opts={}) {
     token = util.validatedStringArg("token", token);
 
     // Doesn't allow initialize with different token as it needs _fuid reset.
@@ -52,7 +52,13 @@ App.prototype.init = function(token) {
     if (!token) throw new Error("FactorsArgumentError: Invalid token.");
 
     let _this = this; // Remove arrows;
-    let _client = new APIClient(token);
+    
+    let _client = null;
+    if (opts.host && opts.host !== "")
+        _client = new APIClient(token, opts.host);
+    else 
+        _client = new APIClient(token);
+    
     // Gets settings using temp client with given token, if succeeds, 
     // set temp client as app client and set response as app config 
     // or else app is stays unintialized.

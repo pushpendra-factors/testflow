@@ -16,7 +16,7 @@ import {
     InputGroupText,
 } from 'reactstrap';
 
-import { getSDKAssetURL } from "../../util";
+import { getSDKAssetURL, getHostURL, isStaging } from "../../util";
 import { 
   fetchCurrentProjectSettings, 
   udpateCurrentProjectSettings,
@@ -149,10 +149,10 @@ class Settings extends Component {
   }
 
   getSDKScript() {
-    // Todo(Dinesh): https://github.com/orgs/Slashbit-Technologies/projects/1#card-15042473
     let token = this.getToken();
     let assetURL = getSDKAssetURL();
-    return '(function(c){var s=document.createElement("script");s.type="text/javascript";if(s.readyState){s.onreadystatechange=function(){if(s.readyState=="loaded"||s.readyState=="complete"){s.onreadystatechange=null;c()}}}else{s.onload=function(){c()}}s.src="'+assetURL+'";d=!!document.body?document.body:document.head;d.appendChild(s)})(function(){factors.init("'+token+'")})';
+    let init = isStaging() ? 'factors.init("'+token+'")' : 'factors.init("'+token+'", {host:"'+getHostURL()+'"})';
+    return '(function(c){var s=document.createElement("script");s.type="text/javascript";if(s.readyState){s.onreadystatechange=function(){if(s.readyState=="loaded"||s.readyState=="complete"){s.onreadystatechange=null;c()}}}else{s.onload=function(){c()}}s.src="'+assetURL+'";d=!!document.body?document.body:document.head;d.appendChild(s)})(function(){'+init+'})';
   }
 
   getSegmentWebhookURL() {
