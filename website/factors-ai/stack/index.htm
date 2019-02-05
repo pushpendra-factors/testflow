@@ -45,7 +45,7 @@
             document.querySelector(".hero-form span.error").textContent = "Invalid email"
             return;
           }
-          let data = { source: "website", form: "get_invite", email: email };
+          let data = {context: { source: "website", form: "get_invite" }, data: { email: email }};
           return notify(data)
               .then((r) => {
                 if (r.ok) {
