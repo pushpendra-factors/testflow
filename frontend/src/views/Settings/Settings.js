@@ -16,7 +16,7 @@ import {
     InputGroupText,
 } from 'reactstrap';
 
-import { getSDKAssetURL, getHostURL, isStaging } from "../../util";
+import { getSDKAssetURL, isStaging } from "../../util";
 import { 
   fetchCurrentProjectSettings, 
   udpateCurrentProjectSettings,
@@ -151,7 +151,7 @@ class Settings extends Component {
   getSDKScript() {
     let token = this.getToken();
     let assetURL = getSDKAssetURL();
-    let init = isStaging() ? 'factors.init("'+token+'")' : 'factors.init("'+token+'", {host:"'+getHostURL()+'"})';
+    let init = isStaging() ? 'factors.init("'+token+'", {host:"'+window.origin+'"})' : 'factors.init("'+token+'")';
     return '(function(c){var s=document.createElement("script");s.type="text/javascript";if(s.readyState){s.onreadystatechange=function(){if(s.readyState=="loaded"||s.readyState=="complete"){s.onreadystatechange=null;c()}}}else{s.onload=function(){c()}}s.src="'+assetURL+'";d=!!document.body?document.body:document.head;d.appendChild(s)})(function(){'+init+'})';
   }
 
