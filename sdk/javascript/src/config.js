@@ -1,5 +1,7 @@
 'use strict';
 
+// It is possible override api.host on init using opts. e.g factors.init("token", {host: "https://example.com"})
+
 const CONFIG = {
     development: {
         api: {
@@ -11,14 +13,9 @@ const CONFIG = {
             host: "http://localhost:8080"
         }
     },
-    staging: {
-        api: {
-            host: "" // uses host from init factors.init("token", {host: "api_host"})
-        }
-    },
     production: {
         api: {
-            host: "http://app.factors.ai"
+            host: "http://api.factors.ai"
         }
     }
 }
