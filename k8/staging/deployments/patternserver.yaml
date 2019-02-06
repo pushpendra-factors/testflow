@@ -71,6 +71,8 @@ spec:
             name: config-etcd
         - configMapRef:
             name: config-env
+        - configMapRef:
+            name: config-bucket
       volumes:
       - name: workdir
         emptyDir: {}

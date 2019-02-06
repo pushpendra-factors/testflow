@@ -114,8 +114,7 @@ func main() {
 	// modelType, startTime, endTime is part of update meta.
 	// kept null on run script.
 	_, err = T.PatternMine(db, etcdClient, &cloudManager, diskManager,
-		*localDiskTmpDirFlag, *bucketName, *numRoutinesFlag,
-		*projectIdFlag, *modelIdFlag, "", 0, 0)
+		*bucketName, *numRoutinesFlag, *projectIdFlag, *modelIdFlag, "", 0, 0)
 	if err != nil {
 		log.WithError(err).Fatal("Pattern mining failed")
 	}

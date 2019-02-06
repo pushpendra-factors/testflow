@@ -26,10 +26,9 @@ type ProjectData struct {
 func GetProjectsMetadata(cloudManager *filestore.FileManager,
 	etcdClient *serviceEtcd.EtcdClient) ([]ProjectData, error) {
 
-	log.Info("Fetching current project version")
 	curVersion, err := etcdClient.GetProjectVersion()
 	if err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("Failed to fetch current project version")
+		log.WithFields(log.Fields{"err": err}).Error("Failed to fetch current project version.")
 		return nil, err
 	}
 
@@ -40,7 +39,7 @@ func GetProjectsMetadata(cloudManager *filestore.FileManager,
 	versionFile, err := (*cloudManager).Get(path, name)
 	if err != nil {
 		log.WithFields(log.Fields{"path": path, "name": name,
-			"err": err}).Error("Failed to read current version file")
+			"err": err}).Error("Failed to read current version file.")
 		return nil, err
 	}
 
@@ -91,8 +90,6 @@ func WriteProjectDataFile(newVersionName string, projectDatas []ProjectData,
 
 	buffer := bytes.NewBuffer(nil)
 	for _, pD := range projectDatas {
-		log.WithFields(log.Fields{"Version": newVersionName,
-			"ProjectData": pD}).Info("Writing to new version of metadata.")
 		bytes, err := json.Marshal(pD)
 		if err != nil {
 			return err

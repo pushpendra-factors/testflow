@@ -4,5 +4,4 @@ metadata:
   name: config-patternserver
 data:
   PS_RPC_PORT: "8100"
-  BUCKET_NAME: "factors-staging"
   DISK_DIR: "/usr/local/var/factors"

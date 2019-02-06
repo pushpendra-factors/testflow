@@ -96,6 +96,5 @@ func main() {
 
 	diskManager := serviceDisk.New(*localDiskTmpDirFlag)
 
-	T.BuildSequential(db, &cloudManager, etcdClient, diskManager,
-		*localDiskTmpDirFlag, *bucketName, *numRoutinesFlag, *projectIdFlag)
+	T.BuildSequential(db, &cloudManager, etcdClient, diskManager, *bucketName, *numRoutinesFlag, *projectIdFlag)
 }

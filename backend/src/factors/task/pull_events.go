@@ -16,9 +16,10 @@ import (
 )
 
 const max_EVENTS = 30000000 // 30 million. (million a day)
+var peLog = taskLog.WithField("prefix", "Task#PullEvents")
 
 func pullAndWriteEventsToFile(db *gorm.DB, projectId uint64, startTime int64,
-	endTime int64, baseOutputDir string) (int, string, error) {
+	endTime int64, eventsFilePath string) (int, string, error) {
 
 	rows, err := db.Raw("SELECT COALESCE(users.customer_user_id, users.id), event_names.name, events.timestamp, events.count,"+
 		" events.properties, users.join_timestamp, user_properties.properties FROM events "+
@@ -28,13 +29,13 @@ func pullAndWriteEventsToFile(db *gorm.DB, projectId uint64, startTime int64,
 		"ORDER BY events.user_id, events.timestamp LIMIT ?", projectId, startTime, endTime, max_EVENTS+1).Rows()
 	defer rows.Close()
 	if err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("SQL Query failed.")
+		peLog.WithFields(log.Fields{"err": err}).Error("SQL Query failed.")
 		return 0, "", err
 	}
 
-	file, err := os.Create(baseOutputDir)
+	file, err := os.Create(eventsFilePath)
 	if err != nil {
-		log.WithFields(log.Fields{"file": baseOutputDir, "err": err}).Error("Unable to create file.")
+		peLog.WithFields(log.Fields{"file": eventsFilePath, "err": err}).Error("Unable to create file.")
 		return 0, "", err
 	}
 	defer file.Close()
@@ -52,29 +53,29 @@ func pullAndWriteEventsToFile(db *gorm.DB, projectId uint64, startTime int64,
 		var userProperties postgres.Jsonb
 		if err = rows.Scan(&userId, &eventName, &eventTimestamp,
 			&eventCardinality, &eventProperties, &userJoinTimestamp, &userProperties); err != nil {
-			log.WithFields(log.Fields{"err": err}).Error("SQL Parse failed.")
+			peLog.WithFields(log.Fields{"err": err}).Error("SQL Parse failed.")
 			return 0, "", err
 		}
 		eventPropertiesBytes, err := eventProperties.Value()
 		if err != nil {
-			log.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal event property.")
+			peLog.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal event property.")
 			return 0, "", err
 		}
 		var eventPropertiesMap map[string]interface{}
 		err = json.Unmarshal(eventPropertiesBytes.([]byte), &eventPropertiesMap)
 		if err != nil {
-			log.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal event property.")
+			peLog.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal event property.")
 			return 0, "", err
 		}
 		userPropertiesBytes, err := userProperties.Value()
 		if err != nil {
-			log.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal user property.")
+			peLog.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal user property.")
 			return 0, "", err
 		}
 		var userPropertiesMap map[string]interface{}
 		err = json.Unmarshal(userPropertiesBytes.([]byte), &userPropertiesMap)
 		if err != nil {
-			log.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal user property.")
+			peLog.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal user property.")
 			return 0, "", err
 		}
 		event := P.CounterEventFormat{
@@ -93,12 +94,12 @@ func pullAndWriteEventsToFile(db *gorm.DB, projectId uint64, startTime int64,
 
 		lineBytes, err := json.Marshal(event)
 		if err != nil {
-			log.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal event.")
+			peLog.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal event.")
 			return 0, "", err
 		}
 		line := string(lineBytes)
 		if _, err := file.WriteString(fmt.Sprintf("%s\n", line)); err != nil {
-			log.WithFields(log.Fields{"line": line, "err": err}).Error("Unable to write to file.")
+			peLog.WithFields(log.Fields{"line": line, "err": err}).Error("Unable to write to file.")
 			return 0, "", err
 		}
 
@@ -108,20 +109,20 @@ func pullAndWriteEventsToFile(db *gorm.DB, projectId uint64, startTime int64,
 
 	if rowCount > max_EVENTS {
 		// Todo(Dinesh): notify
-		return rowCount, baseOutputDir, fmt.Errorf("events count has exceeded the %d limit", max_EVENTS)
+		return rowCount, eventsFilePath, fmt.Errorf("events count has exceeded the %d limit", max_EVENTS)
 	}
 
 	if rowCount > 0 {
-		log.WithFields(log.Fields{
+		peLog.WithFields(log.Fields{
 			"FirstEventTimestamp": firstEvent.EventTimestamp,
 			"LastEventTimesamp":   lastEvent.EventTimestamp,
 		}).Info("Events time information.")
 	}
-	return rowCount, baseOutputDir, nil
+	return rowCount, eventsFilePath, nil
 }
 
 func PullEvents(db *gorm.DB, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver,
-	localDiskTmpDir string, projectId uint64, startTimestamp int64, endTimestamp int64) (uint64, int, error) {
+	projectId uint64, startTimestamp int64, endTimestamp int64) (uint64, int, error) {
 
 	var err error
 
@@ -135,18 +136,20 @@ func PullEvents(db *gorm.DB, cloudManager *filestore.FileManager, diskManager *s
 		return 0, 0, errors.New("invalid end timestamp")
 	}
 
-	logCtx := log.WithFields(log.Fields{"ProjectId": projectId,
+	logCtx := peLog.WithFields(log.Fields{"ProjectId": projectId,
 		"StartTime": startTimestamp, "EndTime": endTimestamp})
 
 	// Todo(Dinesh): Move modelId assignment to build task.
 	// Prefix timestamp with randomAlphanumeric(5).
 	modelId := uint64(time.Now().Unix())
 
-	// First write file to local disk tmp directory.
-	_, fName := diskManager.GetModelEventsFilePathAndName(projectId, modelId)
-	tmpOutputFilePath := fmt.Sprintf("%s/%s", localDiskTmpDir, fName)
-	eventsCount, baseOutputDir, err := pullAndWriteEventsToFile(db, projectId,
-		startTimestamp, endTimestamp, tmpOutputFilePath)
+	logCtx.Info("Pulling events.")
+	// Writing events to tmp file before upload.
+	fPath, fName := diskManager.GetModelEventsFilePathAndName(projectId, modelId)
+	serviceDisk.MkdirAll(fPath) // create dir if not exist.
+	tmpEventsFile := fPath + fName
+	eventsCount, eventsFilePath, err := pullAndWriteEventsToFile(db, projectId,
+		startTimestamp, endTimestamp, tmpEventsFile)
 	if err != nil {
 		logCtx.WithField("error", err).Error("Pull events failed. Pull and write events failed.")
 		return 0, 0, err
@@ -158,7 +161,7 @@ func PullEvents(db *gorm.DB, cloudManager *filestore.FileManager, diskManager *s
 		return 0, 0, nil
 	}
 
-	tmpOutputFile, err := os.Open(tmpOutputFilePath)
+	tmpOutputFile, err := os.Open(tmpEventsFile)
 	if err != nil {
 		logCtx.WithField("error", err).Error("Failed to pull events. Write to tmp failed.")
 		return 0, 0, err
@@ -172,9 +175,9 @@ func PullEvents(db *gorm.DB, cloudManager *filestore.FileManager, diskManager *s
 	}
 
 	logCtx.WithFields(log.Fields{
-		"ModelId":       modelId,
-		"EventsCount":   eventsCount,
-		"BaseOutputDir": baseOutputDir,
-	}).Info("Pulled events successfully.")
+		"ModelId":        modelId,
+		"EventsCount":    eventsCount,
+		"EventsFilePath": eventsFilePath,
+	}).Info("Successfully pulled events and written to file.")
 	return modelId, eventsCount, nil
 }

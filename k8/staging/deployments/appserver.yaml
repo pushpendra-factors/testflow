@@ -90,7 +90,7 @@ spec:
         - secretRef:
             name: secret-postgres
       initContainers:
-      - name: fetch-subdomain-logic-config
+      - name: fetch-subdomain-login-config
         image: google/cloud-sdk:229.0.0-alpine
         command:
         - gsutil

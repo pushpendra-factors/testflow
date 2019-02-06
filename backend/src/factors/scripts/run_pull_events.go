@@ -101,7 +101,7 @@ func main() {
 
 	diskManager := serviceDisk.New(*localDiskTmpDirFlag)
 
-	_, _, err = T.PullEvents(db, &cloudManager, diskManager, *localDiskTmpDirFlag, *projectIdFlag, startTime, *endTimeFlag)
+	_, _, err = T.PullEvents(db, &cloudManager, diskManager, *projectIdFlag, startTime, *endTimeFlag)
 	if err != nil {
 		log.WithError(err).Fatal("Failed to pull events.")
 	}

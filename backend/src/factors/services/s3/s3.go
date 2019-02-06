@@ -8,7 +8,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
-	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -29,25 +28,25 @@ func New(bucketName, region string) *S3Driver {
 	return &S3Driver{s3: s3, BucketName: bucketName, Region: region}
 }
 
-func (sd *S3Driver) Create(dir, fileName string, reader io.ReadSeeker) error {
+func (sd *S3Driver) Create(dir, fileName string, reader io.Reader) error {
+	// log.WithFields(log.Fields{
+	// 	"Dir":        dir,
+	// 	"BucketName": sd.BucketName,
+	// 	"Region":     sd.Region,
+	// }).Debug("S3Driver Creating file")
 
-	log.WithFields(log.Fields{
-		"Dir":        dir,
-		"BucketName": sd.BucketName,
-		"Region":     sd.Region,
-	}).Debug("S3Driver Creating file")
-
-	// add
-	// SSE
-	// content type
-	// any key value metadata if needed
-	input := &s3.PutObjectInput{
-		Bucket: aws.String(sd.BucketName),
-		Body:   reader,
-		Key:    aws.String(dir + separator + fileName),
-	}
-	_, err := sd.s3.PutObject(input)
-	return err
+	// // add
+	// // SSE
+	// // content type
+	// // any key value metadata if needed
+	// input := &s3.PutObjectInput{
+	// 	Bucket: aws.String(sd.BucketName),
+	// 	Body:   reader,
+	// 	Key:    aws.String(dir + separator + fileName),
+	// }
+	// _, err := sd.s3.PutObject(input)
+	// return err
+	return nil
 }
 
 func (sd *S3Driver) Get(dir, fileName string) (io.ReadCloser, error) {
@@ -82,8 +81,11 @@ func (sd *S3Driver) GetProjectsDataFilePathAndName(version string) (string, stri
 	return "metadata/", fmt.Sprintf("%s.txt", version)
 }
 
-func (sd *S3Driver) GetPatternChunkFilePathAndName(projectId, modelId uint64, chunkId string) (string, string) {
+func (sd *S3Driver) GetPatternChunksDir(projectId, modelId uint64) string {
 	modelDir := sd.GetProjectModelDir(projectId, modelId)
-	path := fmt.Sprintf("%schunks/", modelDir)
-	return path, fmt.Sprintf("chunk_%s.txt", chunkId)
+	return fmt.Sprintf("%schunks/", modelDir)
+}
+
+func (sd *S3Driver) GetPatternChunkFilePathAndName(projectId, modelId uint64, chunkId string) (string, string) {
+	return sd.GetPatternChunksDir(projectId, modelId), fmt.Sprintf("chunk_%s.txt", chunkId)
 }
