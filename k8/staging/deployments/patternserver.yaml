@@ -35,6 +35,16 @@ spec:
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         securityContext: {}
+        readinessProbe:
+          tcpSocket:
+            port: 8100
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        livenessProbe:
+          tcpSocket:
+            port: 8100
+          initialDelaySeconds: 10
+          periodSeconds: 10
         args:
           - --env
           - $(ENV)

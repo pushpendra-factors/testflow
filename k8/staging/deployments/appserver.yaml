@@ -35,6 +35,20 @@ spec:
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         securityContext: {}
+        readinessProbe:
+          httpGet:
+            path: /status?s=k8_rp
+            scheme: HTTP
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /status?s=k8_lp
+            scheme: HTTP
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 10
         args:          
           - --env
           - $(ENV)
