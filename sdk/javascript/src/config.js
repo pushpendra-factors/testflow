@@ -15,7 +15,7 @@ const CONFIG = {
     },
     production: {
         api: {
-            host: "http://api.factors.ai"
+            host: "https://api.factors.ai"
         }
     }
 }
