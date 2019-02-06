@@ -5,8 +5,24 @@ metadata:
   annotations:
     kubernetes.io/ingress.global-static-ip-name: "factors-staging-external-ip"
 spec:
+  tls:
+  - hosts:
+    - "*.factors.ai"
+    secretName: secret-ssl
   rules:
-  - http:
+  - host: "api.factors.ai"
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: appserver-service
+          servicePort: 80
+      - path: /*
+        backend:
+          serviceName: appserver-service
+          servicePort: 80
+  - host: "*.factors.ai"
+    http:
       paths:
       - path: /*
         backend:
