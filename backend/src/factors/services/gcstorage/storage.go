@@ -33,7 +33,7 @@ func New(bucketName string) (*GCSDriver, error) {
 	return d, nil
 }
 
-func (gcsd *GCSDriver) Create(dir, fileName string, reader io.ReadSeeker) error {
+func (gcsd *GCSDriver) Create(dir, fileName string, reader io.Reader) error {
 	ctx := context.Background()
 	obj := gcsd.client.Bucket(gcsd.BucketName).Object(dir + fileName)
 	w := obj.NewWriter(ctx)
@@ -74,8 +74,11 @@ func (gcsd *GCSDriver) GetProjectsDataFilePathAndName(version string) (string, s
 	return "metadata/", fmt.Sprintf("%s.txt", version)
 }
 
-func (gcsd *GCSDriver) GetPatternChunkFilePathAndName(projectId, modelId uint64, chunkId string) (string, string) {
+func (gcsd *GCSDriver) GetPatternChunksDir(projectId, modelId uint64) string {
 	modelDir := gcsd.GetProjectModelDir(projectId, modelId)
-	path := fmt.Sprintf("%schunks/", modelDir)
-	return path, fmt.Sprintf("chunk_%s.txt", chunkId)
+	return fmt.Sprintf("%schunks/", modelDir)
+}
+
+func (gcsd *GCSDriver) GetPatternChunkFilePathAndName(projectId, modelId uint64, chunkId string) (string, string) {
+	return gcsd.GetPatternChunksDir(projectId, modelId), fmt.Sprintf("chunk_%s.txt", chunkId)
 }

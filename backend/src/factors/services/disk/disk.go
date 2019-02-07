@@ -31,8 +31,7 @@ func MkdirAll(path string) error {
 	return os.MkdirAll(path, 0755)
 }
 
-func (dd *DiskDriver) Create(path, fileName string, reader io.ReadSeeker) error {
-
+func (dd *DiskDriver) Create(path, fileName string, reader io.Reader) error {
 	err := MkdirAll(path)
 	if err != nil {
 		log.WithError(err).Errorln("Failed to create dir")
@@ -83,8 +82,11 @@ func (dd *DiskDriver) GetProjectsDataFilePathAndName(version string) (string, st
 	return path, fmt.Sprintf("%s.txt", version)
 }
 
-func (dd *DiskDriver) GetPatternChunkFilePathAndName(projectId, modelId uint64, chunkId string) (string, string) {
+func (dd *DiskDriver) GetPatternChunksDir(projectId, modelId uint64) string {
 	modelDir := dd.GetProjectModelDir(projectId, modelId)
-	path := fmt.Sprintf("%schunks/", modelDir)
-	return path, fmt.Sprintf("chunk_%s.txt", chunkId)
+	return fmt.Sprintf("%schunks/", modelDir)
+}
+
+func (dd *DiskDriver) GetPatternChunkFilePathAndName(projectId, modelId uint64, chunkId string) (string, string) {
+	return dd.GetPatternChunksDir(projectId, modelId), fmt.Sprintf("chunk_%s.txt", chunkId)
 }

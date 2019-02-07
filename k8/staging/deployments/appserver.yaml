@@ -35,6 +35,20 @@ spec:
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         securityContext: {}
+        readinessProbe:
+          httpGet:
+            path: /status?s=k8_rp
+            scheme: HTTP
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /status?s=k8_lp
+            scheme: HTTP
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 10
         args:          
           - --env
           - $(ENV)
@@ -76,7 +90,7 @@ spec:
         - secretRef:
             name: secret-postgres
       initContainers:
-      - name: fetch-subdomain-logic-config
+      - name: fetch-subdomain-login-config
         image: google/cloud-sdk:229.0.0-alpine
         command:
         - gsutil

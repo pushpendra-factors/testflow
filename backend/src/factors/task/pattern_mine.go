@@ -12,10 +12,14 @@ import (
 	serviceEtcd "factors/services/etcd"
 	U "factors/util"
 	"fmt"
+	"io/ioutil"
 	"math"
 	"net/http"
 	"os"
+	"regexp"
 	"sort"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -29,12 +33,16 @@ import (
 const max_SEGMENTS = 100000
 const top_K = 5
 const max_PATTERN_LENGTH = 4
+const max_CHUNK_SIZE_IN_BYTES int64 = 250 * 1000 * 1000
+
+var regex_NUM = regexp.MustCompile("[0-9]+")
+var mineLog = taskLog.WithField("prefix", "Task#PatternMine")
 
 func countPatternsWorker(filepath string,
 	patterns []*P.Pattern, wg *sync.WaitGroup) {
 	file, err := os.Open(filepath)
 	if err != nil {
-		log.Fatal(err)
+		mineLog.WithField("filePath", filepath).Error("Failure on count pattern workers.")
 	}
 
 	scanner := bufio.NewScanner(file)
@@ -50,13 +58,13 @@ func countPatternsWorker(filepath string,
 func countPatterns(filepath string, patterns []*P.Pattern, numRoutines int) {
 	var wg sync.WaitGroup
 	numPatterns := len(patterns)
-	log.Info(fmt.Sprintf("Num patterns to count Range: %d - %d", 0, numPatterns-1))
+	mineLog.Info(fmt.Sprintf("Num patterns to count Range: %d - %d", 0, numPatterns-1))
 	batchSize := int(math.Ceil(float64(numPatterns) / float64(numRoutines)))
 	for i := 0; i < numRoutines; i++ {
 		// Each worker gets a slice of patterns to count.
 		low := int(math.Min(float64(batchSize*i), float64(numPatterns)))
 		high := int(math.Min(float64(batchSize*(i+1)), float64(numPatterns)))
-		log.Info(fmt.Sprintf("Batch %d patterns to count range: %d:%d", i+1, low, high))
+		mineLog.Info(fmt.Sprintf("Batch %d patterns to count range: %d:%d", i+1, low, high))
 		wg.Add(1)
 		go countPatternsWorker(filepath, patterns[low:high], &wg)
 	}
@@ -89,7 +97,7 @@ func filterPatterns(patterns []*P.Pattern) []*P.Pattern {
 }
 
 func genSegmentedCandidates(
-	patterns []*P.Pattern, userAndEventsInfo *P.UserAndEventsInfo) map[string][]*P.Pattern {
+	patterns []*P.Pattern, userAndEventsInfo *P.UserAndEventsInfo) (map[string][]*P.Pattern, error) {
 	pSegments := make(map[string][]*P.Pattern)
 	for _, p := range patterns {
 		segmentKey := fmt.Sprintf("%s,%s", p.EventNames[0], p.EventNames[len(p.EventNames)-1])
@@ -103,22 +111,26 @@ func genSegmentedCandidates(
 	for k, patterns := range pSegments {
 		cPatterns, _, err := P.GenCandidates(patterns, top_K, userAndEventsInfo)
 		if err != nil {
-			log.Fatal(err)
+			mineLog.Error("Failure on generate segemented candidates.")
+			return pSegments, err
 		}
 		candidateSegments[k] = cPatterns
 	}
-	return candidateSegments
+	return candidateSegments, nil
 }
 
 func genLenThreeSegmentedCandidates(lenTwoPatterns []*P.Pattern,
-	userAndEventsInfo *P.UserAndEventsInfo) map[string][]*P.Pattern {
+	userAndEventsInfo *P.UserAndEventsInfo) (map[string][]*P.Pattern, error) {
 	startPatternsMap := make(map[string][]*P.Pattern)
 	endPatternsMap := make(map[string][]*P.Pattern)
+
+	segmentedCandidates := make(map[string][]*P.Pattern)
 
 	for _, p := range lenTwoPatterns {
 		pEvents := p.EventNames
 		if len(pEvents) != 2 {
-			log.Fatal(fmt.Sprintf("Pattern %s is not of length two.", p.EventNames))
+			mineLog.Error(fmt.Sprintf("Pattern %s is not of length two.", p.EventNames))
+			return segmentedCandidates, fmt.Errorf("pattern %s is not of length two", p.EventNames)
 		}
 		startEvent := pEvents[0]
 		endEvent := pEvents[1]
@@ -148,7 +160,6 @@ func genLenThreeSegmentedCandidates(lenTwoPatterns []*P.Pattern,
 			})
 	}
 
-	segmentedCandidates := make(map[string][]*P.Pattern)
 	for _, p := range lenTwoPatterns {
 		startPatterns, ok1 := startPatternsMap[p.EventNames[0]]
 		endPatterns, ok2 := endPatternsMap[p.EventNames[1]]
@@ -158,33 +169,18 @@ func genLenThreeSegmentedCandidates(lenTwoPatterns []*P.Pattern,
 		lenThreeCandidates, err := P.GenLenThreeCandidatePatterns(
 			p, startPatterns, endPatterns, top_K, userAndEventsInfo)
 		if err != nil {
-			log.Fatal(err)
+			mineLog.WithError(err).Error("Failed on genLenThreeSegmentedCandidates.")
+			return segmentedCandidates, err
 		}
 		segmentedCandidates[p.String()] = lenThreeCandidates
 	}
-	return segmentedCandidates
-}
-
-func writePatterns(patterns []*P.Pattern, outputFile *os.File) error {
-	for _, pattern := range patterns {
-		b, err := json.Marshal(pattern)
-		if err != nil {
-			log.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal pattern.")
-			return err
-		}
-		pString := string(b)
-		if _, err := outputFile.WriteString(fmt.Sprintf("%s\n", pString)); err != nil {
-			log.WithFields(log.Fields{"line": pString, "err": err}).Error("Unable to write to file.")
-			return err
-		}
-	}
-	return nil
+	return segmentedCandidates, nil
 }
 
 func mineAndWriteLenOnePatterns(
 	eventNames []M.EventName, filepath string,
 	userAndEventsInfo *P.UserAndEventsInfo, numRoutines int,
-	outputFile *os.File) ([]*P.Pattern, error) {
+	chunkDir string) ([]*P.Pattern, error) {
 	var lenOnePatterns []*P.Pattern
 	for _, eventName := range eventNames {
 		p, err := P.NewPattern([]string{eventName.Name}, userAndEventsInfo)
@@ -195,7 +191,7 @@ func mineAndWriteLenOnePatterns(
 	}
 	countPatterns(filepath, lenOnePatterns, numRoutines)
 	filteredLenOnePatterns := filterPatterns(lenOnePatterns)
-	if err := writePatterns(filteredLenOnePatterns, outputFile); err != nil {
+	if err := writePatternsAsChunks(filteredLenOnePatterns, chunkDir); err != nil {
 		return []*P.Pattern{}, err
 	}
 	return filteredLenOnePatterns, nil
@@ -204,7 +200,7 @@ func mineAndWriteLenOnePatterns(
 func mineAndWriteLenTwoPatterns(
 	lenOnePatterns []*P.Pattern, filepath string,
 	userAndEventsInfo *P.UserAndEventsInfo, numRoutines int,
-	outputFile *os.File) ([]*P.Pattern, error) {
+	chunkDir string) ([]*P.Pattern, error) {
 	// Each event combination is a segment in itself.
 	lenTwoPatterns, _, err := P.GenCandidates(
 		lenOnePatterns, max_SEGMENTS, userAndEventsInfo)
@@ -213,14 +209,14 @@ func mineAndWriteLenTwoPatterns(
 	}
 	countPatterns(filepath, lenTwoPatterns, numRoutines)
 	filteredLenTwoPatterns := filterPatterns(lenTwoPatterns)
-	if err := writePatterns(filteredLenTwoPatterns, outputFile); err != nil {
+	if err := writePatternsAsChunks(filteredLenTwoPatterns, chunkDir); err != nil {
 		return []*P.Pattern{}, err
 	}
 	return lenTwoPatterns, nil
 }
 
 func mineAndWritePatterns(projectId uint64, filepath string,
-	userAndEventsInfo *P.UserAndEventsInfo, numRoutines int, outputFile *os.File) error {
+	userAndEventsInfo *P.UserAndEventsInfo, numRoutines int, chunkDir string) error {
 	// Length One Patterns.
 	eventNames, errCode := M.GetEventNames(projectId)
 	if errCode != http.StatusFound {
@@ -230,7 +226,7 @@ func mineAndWritePatterns(projectId uint64, filepath string,
 
 	patternLen := 1
 	filteredPatterns, err := mineAndWriteLenOnePatterns(
-		eventNames, filepath, userAndEventsInfo, numRoutines, outputFile)
+		eventNames, filepath, userAndEventsInfo, numRoutines, chunkDir)
 	if err != nil {
 		return err
 	}
@@ -242,7 +238,7 @@ func mineAndWritePatterns(projectId uint64, filepath string,
 	}
 	filteredPatterns, err = mineAndWriteLenTwoPatterns(
 		filteredPatterns, filepath, userAndEventsInfo,
-		numRoutines, outputFile)
+		numRoutines, chunkDir)
 	if err != nil {
 		return err
 	}
@@ -255,15 +251,18 @@ func mineAndWritePatterns(projectId uint64, filepath string,
 		if patternLen > max_PATTERN_LENGTH {
 			return nil
 		}
-		lenThreeSegmentedPatterns := genLenThreeSegmentedCandidates(
+		lenThreeSegmentedPatterns, err := genLenThreeSegmentedCandidates(
 			filteredPatterns, userAndEventsInfo)
+		if err != nil {
+			return err
+		}
 		lenThreePatterns := []*P.Pattern{}
 		for _, patterns := range lenThreeSegmentedPatterns {
 			lenThreePatterns = append(lenThreePatterns, patterns...)
 		}
 		countPatterns(filepath, lenThreePatterns, numRoutines)
 		filteredPatterns = filterPatterns(lenThreePatterns)
-		if err := writePatterns(filteredPatterns, outputFile); err != nil {
+		if err := writePatternsAsChunks(filteredPatterns, chunkDir); err != nil {
 			return err
 		}
 		printFilteredPatterns(filteredPatterns, patternLen)
@@ -277,8 +276,11 @@ func mineAndWritePatterns(projectId uint64, filepath string,
 			return nil
 		}
 
-		candidatePatternsMap = genSegmentedCandidates(
+		candidatePatternsMap, err = genSegmentedCandidates(
 			filteredPatterns, userAndEventsInfo)
+		if err != nil {
+			return err
+		}
 		candidatePatterns = []*P.Pattern{}
 		for _, patterns := range candidatePatternsMap {
 			candidatePatterns = append(candidatePatterns, patterns...)
@@ -286,7 +288,7 @@ func mineAndWritePatterns(projectId uint64, filepath string,
 		countPatterns(filepath, candidatePatterns, numRoutines)
 		filteredPatterns = filterPatterns(candidatePatterns)
 		if len(filteredPatterns) > 0 {
-			if err := writePatterns(filteredPatterns, outputFile); err != nil {
+			if err := writePatternsAsChunks(filteredPatterns, chunkDir); err != nil {
 				return err
 			}
 		}
@@ -356,86 +358,251 @@ func writeEventInfoFile(projectId, modelId uint64, events *bytes.Reader,
 	path, name := cloudManager.GetModelEventInfoFilePathAndName(projectId, modelId)
 	err := cloudManager.Create(path, name, events)
 	if err != nil {
-		log.WithError(err).Error("writeEventInfoFile Failed to write to cloud")
+		mineLog.WithError(err).Error("writeEventInfoFile Failed to write to cloud")
 		return err
 	}
 	return err
 }
 
+func getChunkIdFromName(chunkFileName string) string {
+	if !strings.HasPrefix(chunkFileName, "chunk_") {
+		return ""
+	}
+
+	return regex_NUM.FindString(chunkFileName)
+}
+
+func getLastChunkInfo(chunksDir string) (int, os.FileInfo, error) {
+	cfiles, err := ioutil.ReadDir(chunksDir)
+	if err != nil {
+		return 0, nil, err
+	}
+	lastChunkIndex := 0
+	var lastChunkFileInfo os.FileInfo
+	for _, cf := range cfiles {
+		cfName := cf.Name()
+		if chunkIdStr := getChunkIdFromName(cfName); chunkIdStr != "" {
+			ci, err := strconv.Atoi(chunkIdStr)
+			if err != nil {
+				mineLog.WithFields(log.Fields{"chunkDir": chunksDir,
+					"fileName": cfName}).Error("Failed to parse chunk index")
+				continue
+			}
+			if ci > lastChunkIndex {
+				lastChunkIndex = ci
+				lastChunkFileInfo = cf
+			}
+		}
+	}
+
+	return lastChunkIndex, lastChunkFileInfo, nil
+}
+
+func writePatternsAsChunks(patterns []*P.Pattern, chunksDir string) error {
+	lastChunkIndex, lastChunkFileInfo, err := getLastChunkInfo(chunksDir)
+	if err != nil {
+		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to read chunks dir.")
+		return err
+	}
+
+	var (
+		currentFilePath string
+		currentFileSize int64
+		currentFile     *os.File
+	)
+
+	currentFileIndex := lastChunkIndex
+	// initialize with existing chunk file.
+	if lastChunkIndex > 0 && lastChunkFileInfo != nil {
+		currentFilePath = fmt.Sprintf("%s/%s", chunksDir, lastChunkFileInfo.Name())
+		currentFileSize = lastChunkFileInfo.Size()
+		currentFile, err = os.OpenFile(currentFilePath, os.O_APPEND|os.O_WRONLY, 0666)
+		if err != nil {
+			mineLog.WithError(err).Error("Failed to open chunk file.")
+			return err
+		}
+	}
+
+	for _, pattern := range patterns {
+		b, err := json.Marshal(pattern)
+		if err != nil {
+			mineLog.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal pattern.")
+			return err
+		}
+		pString := string(b)
+		pString = pString + "\n"
+		pBytes := []byte(pString)
+		pBytesLen := int64(len(pBytes))
+
+		fileHasSpace := false
+		if currentFileIndex > 0 {
+			balanceSpace := max_CHUNK_SIZE_IN_BYTES - currentFileSize
+			if balanceSpace > 0 && balanceSpace >= pBytesLen {
+				fileHasSpace = true
+			}
+		}
+
+		if !fileHasSpace {
+			if currentFileIndex > 0 {
+				err := currentFile.Close()
+				if err != nil {
+					mineLog.WithError(err).Error("Failed to close chunk file.")
+				}
+			}
+			nextFileIndex := currentFileIndex + 1
+			nextFileName := fmt.Sprintf("%s_%d", "chunk", nextFileIndex)
+
+			currentFileIndex = nextFileIndex
+			currentFilePath = fmt.Sprintf("%s/%s.txt", chunksDir, nextFileName)
+			currentFileSize = 0
+			currentFile, err = os.Create(currentFilePath)
+			defer currentFile.Close()
+		}
+
+		_, err = currentFile.Write(pBytes)
+		if err != nil {
+			mineLog.WithFields(log.Fields{"line": pString, "err": err, "filePath": currentFilePath,
+				"fileSize": currentFileSize}).Error("Failed write to chunk file.")
+			return err
+		}
+
+		currentFileSize = currentFileSize + pBytesLen
+	}
+
+	return nil
+}
+
+func uploadChunksToCloud(tmpChunksDir, cloudChunksDir string, cloudManager *filestore.FileManager) ([]string, error) {
+	cfiles, err := ioutil.ReadDir(tmpChunksDir)
+	if err != nil {
+		return nil, err
+	}
+
+	uploadedChunkIds := make([]string, 0, 0)
+	for _, cf := range cfiles {
+		cfName := cf.Name()
+		if chunkIdStr := getChunkIdFromName(cfName); chunkIdStr != "" {
+			cfPath := fmt.Sprintf("%s/%s", tmpChunksDir, cfName)
+			cfFile, err := os.OpenFile(cfPath, os.O_RDWR, 0666)
+			if err != nil {
+				mineLog.WithError(err).Error("Failed to open tmp chunk to upload.")
+				return uploadedChunkIds, err
+			}
+			err = (*cloudManager).Create(cloudChunksDir, cfName, cfFile)
+			if err != nil {
+				mineLog.WithError(err).Error("Failed to chunk upload file to cloud.")
+				return uploadedChunkIds, err
+			}
+			uploadedChunkIds = append(uploadedChunkIds, chunkIdStr)
+		}
+	}
+
+	return uploadedChunkIds, nil
+}
+
 // PatternMine Mine TOP_K Frequent patterns for every event combination (segment) at every iteration.
-// TODO(Ankit): Change write logic to write to multiple chunks
 func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *filestore.FileManager,
-	diskManager *serviceDisk.DiskDriver, localDiskTmpDir string, bucketName string, numRoutines int,
-	projectId uint64, modelId uint64, modelType string, startTime int64, endTime int64) (string, error) {
+	diskManager *serviceDisk.DiskDriver, bucketName string, numRoutines int, projectId uint64,
+	modelId uint64, modelType string, startTime int64, endTime int64) (string, error) {
 
 	var err error
 
-	input, Name := (*cloudManager).GetModelEventsFilePathAndName(projectId, modelId)
-	inputFilePath := input + Name
-
-	userAndEventsInfo, err := buildPropertiesInfoFromInput(projectId, inputFilePath)
+	// download events file from cloud to local
+	efCloudPath, efCloudName := (*cloudManager).GetModelEventsFilePathAndName(projectId, modelId)
+	efTmpPath, efTmpName := diskManager.GetModelEventsFilePathAndName(projectId, modelId)
+	mineLog.WithFields(log.Fields{"eventFileCloudPath": efCloudPath,
+		"eventFileCloudName": efCloudName}).Info("Downloading events file from cloud.")
+	eReader, err := (*cloudManager).Get(efCloudPath, efCloudName)
 	if err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("Failed to build user and event Info.")
+		mineLog.WithFields(log.Fields{"err": err, "eventFilePath": efCloudPath,
+			"eventFileName": efCloudName}).Error("Failed downloading events file from cloud.")
+		return "", err
+	}
+	err = diskManager.Create(efTmpPath, efTmpName, eReader)
+	if err != nil {
+		mineLog.WithFields(log.Fields{"err": err, "eventFilePath": efTmpPath,
+			"eventFileName": efTmpName}).Error("Failed to create event file on disk.")
+		return "", err
+	}
+	tmpEventsFilepath := efTmpPath + efTmpName
+	mineLog.Info("Successfuly downloaded events file from cloud.")
+
+	// builld user and event properites info
+	mineLog.WithField("tmpEventsFilePath",
+		tmpEventsFilepath).Info("Building user and event properties info and writing it to file.")
+	userAndEventsInfo, err := buildPropertiesInfoFromInput(projectId, tmpEventsFilepath)
+	if err != nil {
+		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to build user and event Info.")
 		return "", err
 	}
 	userAndEventsInfoBytes, err := json.Marshal(userAndEventsInfo)
 	if err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("Failed to unmarshal events Info.")
+		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to unmarshal events Info.")
 		return "", err
 	}
-
 	err = writeEventInfoFile(projectId, modelId, bytes.NewReader(userAndEventsInfoBytes), (*cloudManager))
 	if err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("Failed to write events Info.")
+		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to write events Info.")
 		return "", err
 	}
+	mineLog.Info("Successfully Built user and event properties info and written it to file.")
 
-	// Write incremental results to temporary file in local disk tmp directory and then copy final files to
-	// cloud.
-	chunkId := "01"
-	_, fName := diskManager.GetPatternChunkFilePathAndName(projectId, modelId, chunkId)
-	tmpOutputFilePath := fmt.Sprintf("%s/%s", localDiskTmpDir, fName)
-	tmpFile, err := os.Create(tmpOutputFilePath)
-	if err != nil {
-		log.WithFields(log.Fields{"file": tmpOutputFilePath, "err": err}).Error("Unable to create file.")
-		return "", err
-	}
-	defer tmpFile.Close()
-
-	// First build histogram of all user properties.
+	// build histogram of all user properties.
+	mineLog.WithField("tmpEventsFilePath", tmpEventsFilepath).Info("Building all user properties histogram.")
 	allActiveUsersPattern, err := P.NewPattern([]string{U.SEN_ALL_ACTIVE_USERS}, userAndEventsInfo)
 	if err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("Failed to build pattern with histogram of all active user properties.")
+		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to build pattern with histogram of all active user properties.")
 		return "", err
 	}
-	if err := computeAllUserPropertiesHistogram(inputFilePath, allActiveUsersPattern); err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("Failed to compute user properties.")
+	if err := computeAllUserPropertiesHistogram(tmpEventsFilepath, allActiveUsersPattern); err != nil {
+		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to compute user properties.")
 		return "", err
 	}
-	if err := writePatterns([]*P.Pattern{allActiveUsersPattern}, tmpFile); err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("Failed to write user properties.")
+	tmpChunksDir := diskManager.GetPatternChunksDir(projectId, modelId)
+	if err := serviceDisk.MkdirAll(tmpChunksDir); err != nil {
+		mineLog.WithFields(log.Fields{"chunkDir": tmpChunksDir, "error": err}).Error("Unable to create chunks directory.")
 		return "", err
 	}
+	if err := writePatternsAsChunks([]*P.Pattern{allActiveUsersPattern}, tmpChunksDir); err != nil {
+		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to write user properties.")
+		return "", err
+	}
+	mineLog.Info("Successfully built all user properties histogram.")
 
-	err = mineAndWritePatterns(projectId, inputFilePath,
-		userAndEventsInfo, numRoutines, tmpFile)
+	// mine and write patterns as chunks
+	mineLog.WithFields(log.Fields{"projectId": projectId, "tmpEventsFilepath": tmpEventsFilepath,
+		"tmpChunksDir": tmpChunksDir, "routines": numRoutines}).Info("Mining patterns and writing it as chunks.")
+	err = mineAndWritePatterns(projectId, tmpEventsFilepath,
+		userAndEventsInfo, numRoutines, tmpChunksDir)
 	if err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("Failed to mine patterns.")
+		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to mine patterns.")
 		return "", err
 	}
+	mineLog.Info("Successfully mined patterns and written it as chunks.")
 
-	log.Infoln("Cloudmanager Creating ModelPatterns File")
-	tmpFile.Seek(0, 0) // Reset to the begining, before writing to cloud.
-	path, fName := (*cloudManager).GetPatternChunkFilePathAndName(projectId, modelId, chunkId)
-	err = (*cloudManager).Create(path, fName, tmpFile)
+	// upload chunks to cloud
+	cloudChunksDir := (*cloudManager).GetPatternChunksDir(projectId, modelId)
+	mineLog.WithFields(log.Fields{"tmpChunksDir": tmpChunksDir,
+		"cloudChunksDir": cloudChunksDir}).Info("Uploading chunks to cloud.")
+	chunkIds, err := uploadChunksToCloud(tmpChunksDir, cloudChunksDir, cloudManager)
 	if err != nil {
-		log.WithError(err).Error("cloud manager Failed to create model patterns file")
-		return "", err
+		mineLog.WithFields(log.Fields{"localChunksDir": tmpChunksDir,
+			"cloudChunksDir": cloudChunksDir}).Error("Failed to upload chunks to cloud.")
 	}
+	mineLog.Info("Successfully uploaded chunks to cloud.")
 
-	// Update meta. Need to move this out as seperate task?
+	// update metadata and notify new version through etcd.
+	mineLog.WithFields(log.Fields{
+		"ProjectId":      projectId,
+		"ModelID":        modelId,
+		"ModelType":      modelType,
+		"StartTimestamp": startTime,
+		"EndTimestamp":   endTime,
+		"Chunks":         chunkIds,
+	}).Info("Updating mined patterns info to new version of metadata.")
 	projectDatas, err := PMM.GetProjectsMetadata(cloudManager, etcdClient)
 	if err != nil {
+		// failures logged already.
 		return "", err
 	}
 	projectDatas = append(projectDatas, PMM.ProjectData{
@@ -444,22 +611,20 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 		ModelType:      modelType,
 		StartTimestamp: startTime,
 		EndTimestamp:   endTime,
-		Chunks:         []string{chunkId},
+		Chunks:         chunkIds,
 	})
-
-	newVersionName := fmt.Sprintf("%v", time.Now().Unix())
-	err = PMM.WriteProjectDataFile(newVersionName, projectDatas, cloudManager)
+	newVersionId := fmt.Sprintf("%v", time.Now().Unix())
+	err = PMM.WriteProjectDataFile(newVersionId, projectDatas, cloudManager)
 	if err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("Failed to write new version file to cloud")
+		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to write new version file to cloud.")
 		return "", err
 	}
-
-	err = etcdClient.SetProjectVersion(newVersionName)
+	err = etcdClient.SetProjectVersion(newVersionId)
 	if err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("Failed to write new version file to etcd")
+		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to write new version id to etcd.")
 		return "", err
 	}
+	mineLog.WithField("newVersionId", newVersionId).Info("Successfully mined patterns, updated metadata and notified new version id.")
 
-	log.WithField("newVersion", newVersionName).Info("Patterns mined successfully")
-	return newVersionName, nil
+	return newVersionId, nil
 }

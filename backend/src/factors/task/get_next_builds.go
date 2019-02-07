@@ -30,6 +30,8 @@ type Build struct {
 	EndTimestamp   int64  `json:"et"`
 }
 
+var gnbLog = taskLog.WithField("prefix", "Task#GetNextBuilds")
+
 // Returns last build timestamp lookup map for each project by type.
 func makeLastBuildTimestampMap(projectData []PMM.ProjectData) *map[uint64]map[string]int64 {
 	projectLatestModel := make(map[uint64]map[string]int64, 0)
@@ -64,7 +66,7 @@ func floorTimestampByType(modelType string, timestamp int64) int64 {
 		return now.New(time.Unix(timestamp, 0).UTC()).BeginningOfMonth().Unix()
 	}
 
-	log.Error("Unknown floor timestamp type.")
+	gnbLog.Error("Unknown floor timestamp type.")
 	return 0
 }
 
@@ -77,7 +79,7 @@ func ceilTimestampByType(modelType string, timestamp int64) int64 {
 		return now.New(time.Unix(timestamp, 0).UTC()).EndOfMonth().Unix()
 	}
 
-	log.Error("Unknown ceil timestamp type.")
+	gnbLog.Error("Unknown ceil timestamp type.")
 	return 0
 }
 
@@ -88,7 +90,7 @@ func unixToHumanTime(timestamp int64) string {
 func addPendingIntervalsForProjectByType(builds *[]Build, projectId uint64,
 	modelType string, initTimestamp int64, limitTimestamp int64) {
 
-	logCtx := log.WithFields(log.Fields{"ProjectId": projectId, "ModelType": modelType,
+	logCtx := gnbLog.WithFields(log.Fields{"ProjectId": projectId, "ModelType": modelType,
 		"InitTimestamp": initTimestamp, "LimitTimestamp": limitTimestamp})
 
 	if isFutureTimestamp(initTimestamp) {
@@ -120,7 +122,7 @@ func addPendingIntervalsForProjectByType(builds *[]Build, projectId uint64,
 func addNextIntervalsForProjectByType(builds *[]Build, projectId uint64, modelType string,
 	prevBuildEndTime int64, startEventTime int64, endEventTime int64) {
 
-	log.WithFields(log.Fields{"ProjectId": projectId, "ModelType": modelType,
+	gnbLog.WithFields(log.Fields{"ProjectId": projectId, "ModelType": modelType,
 		"PrevBuildEndTime": prevBuildEndTime}).Debug("Adding next intervals to build.")
 
 	if prevBuildEndTime > 0 {
@@ -144,7 +146,7 @@ func GetNextBuilds(db *gorm.DB, cloudManager *filestore.FileManager,
 
 	projectsMeta, err := PMM.GetProjectsMetadata(cloudManager, etcdClient)
 	if err != nil {
-		log.Error("Failed to get current project metadata")
+		gnbLog.Error("Failed to get current project metadata")
 		return nil, err
 	}
 
@@ -157,7 +159,7 @@ func GetNextBuilds(db *gorm.DB, cloudManager *filestore.FileManager,
 	// Intervals for existing projects on meta.
 	lastBuildOfProjects := makeLastBuildTimestampMap(projectsMeta)
 	for pid, buildTimeByType := range *lastBuildOfProjects {
-		log.Infof("Last build info - ProjectId: %d LastBuildEndTimeByType: %+v", pid, buildTimeByType)
+		gnbLog.Infof("Last build info - ProjectId: %d LastBuildEndTimeByType: %+v", pid, buildTimeByType)
 		if (*pEventTimeInfo)[pid] != nil {
 			addNextIntervalsForProjectByType(&builds, pid, ModelTypeWeek,
 				buildTimeByType[ModelTypeWeek], (*pEventTimeInfo)[pid].First,
@@ -166,7 +168,7 @@ func GetNextBuilds(db *gorm.DB, cloudManager *filestore.FileManager,
 				buildTimeByType[ModelTypeMonth], (*pEventTimeInfo)[pid].First,
 				(*pEventTimeInfo)[pid].Last)
 		} else {
-			log.WithField("ProjectId", pid).Error("No events for a project found on meta.")
+			gnbLog.WithField("ProjectId", pid).Error("No events for a project found on meta.")
 		}
 	}
 

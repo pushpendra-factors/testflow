@@ -405,6 +405,7 @@ class Factor extends Component {
                 value={{value: mid , label: label}}
                 onChange={this.changeSelectedModel}
                 options={this.makeDropdownIntervals(this.props.intervals)}
+                placeholder="Select a date range."
               />
             </Col>
           </Row>  
