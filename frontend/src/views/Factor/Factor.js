@@ -8,7 +8,7 @@ import {
 import moment from 'moment';
 
 import { fetchFactors } from "../../actions/factorsActions";
-import { fetchCurrentProjectEvents, fetchProjectModels } from "../../actions/projectsActions";
+import { fetchProjectEvents, fetchProjectModels } from "../../actions/projectsActions";
 import BarChartCard from './BarChartCard.js';
 import LineChartCard from './LineChartCard.js';
 import FunnelChartCard from './FunnelChartCard.js';
@@ -59,7 +59,7 @@ const mapStateToProps = store => {
 }
 
 const mapDispatchToProps = dispatch => {
-  return bindActionCreators({ fetchFactors, fetchCurrentProjectEvents, fetchProjectModels }, dispatch);
+  return bindActionCreators({ fetchFactors, fetchProjectEvents, fetchProjectModels }, dispatch);
 }
 
 class Factor extends Component {
@@ -83,7 +83,7 @@ class Factor extends Component {
 
   componentWillMount() {
     // TODO: Check if this needs to be removed
-    this.props.fetchCurrentProjectEvents(this.props.currentProjectId)
+    this.props.fetchProjectEvents(this.props.currentProjectId)
       .then((response) => {
         this.setState({ eventNames: { loaded: true } });
       })

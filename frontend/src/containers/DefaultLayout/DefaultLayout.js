@@ -20,10 +20,9 @@ import routes from '../../routes';
 import DefaultFooter from './DefaultFooter';
 import DefaultHeader from './DefaultHeader';
 import {
-  changeProject,
   fetchProjects,
-  fetchCurrentProjectEvents, 
-  fetchCurrentProjectSettings,
+  fetchProjectEvents, 
+  fetchProjectSettings,
   fetchProjectModels
 } from "../../actions/projectsActions";
 
@@ -64,8 +63,8 @@ const mapStateToProps = store => {
 const mapDispatchToProps = dispatch => {
   return bindActionCreators({ 
     fetchProjects,
-    fetchCurrentProjectEvents, 
-    fetchCurrentProjectSettings,
+    fetchProjectEvents, 
+    fetchProjectSettings,
     fetchProjectModels
   }, dispatch);
 }
@@ -104,8 +103,8 @@ class DefaultLayout extends Component {
   fetchProjectDependencies  = (projectId) => {
     // Todo(Dinesh): Remove dependency reload from here. dispatch changeProject action to
     // re-render corresponding component which will call fetch on mount.
-    this.props.fetchCurrentProjectSettings(projectId);
-    this.props.fetchCurrentProjectEvents(projectId);
+    this.props.fetchProjectSettings(projectId);
+    this.props.fetchProjectEvents(projectId);
     this.props.fetchProjectModels(projectId);
   }
 

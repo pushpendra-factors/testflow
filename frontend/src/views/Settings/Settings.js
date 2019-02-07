@@ -18,8 +18,8 @@ import {
 
 import { getSDKAssetURL, isStaging } from "../../util";
 import { 
-  fetchCurrentProjectSettings, 
-  udpateCurrentProjectSettings,
+  fetchProjectSettings, 
+  udpateProjectSettings,
   fetchFilters,
   createFilter,
   updateFilter,
@@ -38,8 +38,8 @@ const mapStateToProps = store => {
 
 const mapDispatchToProps = dispatch => {
   return bindActionCreators({ 
-    fetchCurrentProjectSettings, 
-    udpateCurrentProjectSettings,
+    fetchProjectSettings, 
+    udpateProjectSettings,
     fetchFilters,
     createFilter,
     updateFilter,
@@ -98,7 +98,7 @@ class Settings extends Component {
   }
 
   componentWillMount() {
-    this.props.fetchCurrentProjectSettings(this.props.currentProjectId)
+    this.props.fetchProjectSettings(this.props.currentProjectId)
       .then((response) => {
         this.setState(prevState => this.setSettingsState(prevState, { loaded: true }))
       })
@@ -131,12 +131,12 @@ class Settings extends Component {
   }
 
   toggleAutoTrack = () =>  {
-    this.props.udpateCurrentProjectSettings(this.props.currentProjectId, 
+    this.props.udpateProjectSettings(this.props.currentProjectId, 
       { 'auto_track': !this.isAutoTrackEnabled() });
   }
 
   toggleIntSegment = () =>  {
-    this.props.udpateCurrentProjectSettings(this.props.currentProjectId, 
+    this.props.udpateProjectSettings(this.props.currentProjectId, 
       { 'int_segment': !this.isIntSegmentEnabled() });
   }
 
@@ -400,7 +400,7 @@ class Settings extends Component {
     return FILTER_BUTTON_STATES.nochange;
   }
 
-  getCurrentFilterEventName = (index) => {
+  getFilterEventName = (index) => {
     let updates = this.state.filterSettings.updatesByIndex[index]
     if(updates != undefined && updates.name != undefined) return updates.name;
     return this.props.filters[index].name;
@@ -532,7 +532,7 @@ class Settings extends Component {
                       // existing filters list.
                       this.props.filters.map((v, i) => {
                         let exprURL = this.parseFilterExprURL(v.expr);
-                        return <FilterRecord name={this.getCurrentFilterEventName(i)} domain={exprURL.host} expr={exprURL.path} key={"filter_"+v.id} handleEventNameChange={(e) => this.setStateFilterEventName(i, e)} handleUpdate={() => this.updateFilterEventName(i)} handleDelete={() => this.deleteFilter(i)} getUpdateButtonColor={() => this.getFilterUpdateButtonColor(i)}/> 
+                        return <FilterRecord name={this.getFilterEventName(i)} domain={exprURL.host} expr={exprURL.path} key={"filter_"+v.id} handleEventNameChange={(e) => this.setStateFilterEventName(i, e)} handleUpdate={() => this.updateFilterEventName(i)} handleDelete={() => this.deleteFilter(i)} getUpdateButtonColor={() => this.getFilterUpdateButtonColor(i)}/> 
                       })
                     }
                   </CardBody>

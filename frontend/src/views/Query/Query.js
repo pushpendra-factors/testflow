@@ -96,7 +96,7 @@ class Query extends Component {
     this.setState((prevState) => { return { fadeIn: !prevState }});
   }
 
-  handleChange = (newValue: any, actionMeta: any) => {
+  handleChange = (newValue, actionMeta) => {
     var nextState = 0;
     var numEnteredValues = newValue.length
     if (!!newValue && numEnteredValues > 0) {
@@ -128,7 +128,7 @@ class Query extends Component {
     });
   };
 
-  handleKeyDown = (event: SyntheticKeyboardEvent<HTMLElement>) => {
+  handleKeyDown = (event) => {
     console.log(event)
     switch (event.key) {
       case 'Enter':

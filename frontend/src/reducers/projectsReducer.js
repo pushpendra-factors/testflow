@@ -44,19 +44,19 @@ export default function reducer(state={
           currentProjectId: currentProjectId
         }
       }
-      case "FETCH_CURRENT_PROJECT_SETTINGS_FULFILLED": {
+      case "FETCH_PROJECT_SETTINGS_FULFILLED": {
         return {
           ...state,
           currentProjectSettings: action.payload.settings
         }
       }
-      case "FETCH_CURRENT_PROJECT_SETTINGS_REJECTED": {
+      case "FETCH_PROJECT_SETTINGS_REJECTED": {
         return {
           ...state,
           projectSettingsError: action.payload.err
         }
       }
-      case "UPDATE_CURRENT_PROJECT_SETTINGS_FULFILLED": {
+      case "UPDATE_PROJECT_SETTINGS_FULFILLED": {
         let _state = { ...state };
         if (_state.currentProjectSettings)
           _state.currentProjectSettings = { 
@@ -65,25 +65,25 @@ export default function reducer(state={
           };
         return _state;
       }
-      case "UPDATE_CURRENT_PROJECT_SETTINGS_REJECTED": {
+      case "UPDATE_PROJECT_SETTINGS_REJECTED": {
         return {
           ...state,
           projectEventsError: action.payload.err
         }
       }
-      case "FETCH_CURRENT_PROJECT_EVENTS_FULFILLED": {
+      case "FETCH_PROJECT_EVENTS_FULFILLED": {
         return {...state,
                 currentProjectId: action.payload.currentProjectId,
                 currentProjectEventNames: action.payload.currentProjectEventNames
               }
       }
-      case "FETCH_CURRENT_PROJECT_EVENTS_REJECTED": {
+      case "FETCH_PROJECT_EVENTS_REJECTED": {
         return {...state,
                 currentProjectId: action.payload.currentProjectId,
                 currentProjectEventNames: action.payload.currentProjectEventNames,
                 projectEventsError: action.payload.err}
       }
-      case "FETCH_CURRENT_PROJECT_EVENT_PROPERTIES_FULFILLED": {
+      case "FETCH_PROJECT_EVENT_PROPERTIES_FULFILLED": {
         // Only the latest fetch is maintained.
         var eventPropertiesMap = {};
         eventPropertiesMap[action.payload.eventName] = action.payload.eventProperties;
@@ -91,11 +91,11 @@ export default function reducer(state={
                 eventPropertiesMap: eventPropertiesMap,
               }
       }
-      case "FETCH_CURRENT_PROJECT_EVENT_PROPERTIES_REJECTED": {
+      case "FETCH_PROJECT_EVENT_PROPERTIES_REJECTED": {
         return {...state,
                 eventPropertiesError: action.payload.err}
       }
-      case "FETCH_CURRENT_PROJECT_EVENT_PROPERTY_VALUES_FULFILLED": {
+      case "FETCH_PROJECT_EVENT_PROPERTY_VALUES_FULFILLED": {
         // Only the latest fetch is maintained.
         var eventPropertyValuesMap = {};
         eventPropertyValuesMap[action.payload.eventName] = {}
@@ -106,21 +106,21 @@ export default function reducer(state={
           eventPropertyValuesMap: eventPropertyValuesMap,
         }
       }
-      case "FETCH_CURRENT_PROJECT_EVENT_PROPERTY_VALUES_REJECTED": {
+      case "FETCH_PROJECT_EVENT_PROPERTY_VALUES_REJECTED": {
         return {...state,
                 eventPropertyValuesError: action.payload.err}
       }
 
-      case "FETCH_CURRENT_PROJECT_USER_PROPERTIES_FULFILLED": {
+      case "FETCH_PROJECT_USER_PROPERTIES_FULFILLED": {
         return {...state,
                 userProperties: action.payload.userProperties,
               }
       }
-      case "FETCH_CURRENT_PROJECT_USER_PROPERTIES_REJECTED": {
+      case "FETCH_PROJECT_USER_PROPERTIES_REJECTED": {
         return {...state,
                 userPropertiesError: action.payload.err}
       }
-      case "FETCH_CURRENT_PROJECT_USER_PROPERTY_VALUES_FULFILLED": {
+      case "FETCH_PROJECT_USER_PROPERTY_VALUES_FULFILLED": {
         // Only the latest fetch is maintained.
         var userPropertyValuesMap = {};
         userPropertyValuesMap[action.payload.propertyName] = action.payload.userPropertyValues;
@@ -129,7 +129,7 @@ export default function reducer(state={
           userPropertyValuesMap: userPropertyValuesMap,
         }
       }
-      case "FETCH_CURRENT_PROJECT_USER_PROPERTY_VALUES_REJECTED": {
+      case "FETCH_PROJECT_USER_PROPERTY_VALUES_REJECTED": {
         return {...state,
                 userPropertyValuesError: action.payload.err}
       }
