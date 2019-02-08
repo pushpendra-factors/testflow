@@ -215,7 +215,7 @@ class QueryBuilderCard extends Component {
     return nextOptions
   }
 
-  handleChange = (newValues: any, actionMeta: any) => {
+  handleChange = (newValues, actionMeta) => {
     var nextState = 0;
     var numEnteredValues = newValues.length
     if (!!newValues && numEnteredValues > 0) {
@@ -319,7 +319,7 @@ class QueryBuilderCard extends Component {
     }
   };
 
-  handleKeyDown = (event: SyntheticKeyboardEvent<HTMLElement>) => {
+  handleKeyDown = (event) => {
     console.log(event)
     switch (event.key) {
       case 'Enter':
