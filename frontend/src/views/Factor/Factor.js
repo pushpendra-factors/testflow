@@ -102,6 +102,12 @@ class Factor extends Component {
 
   getPropertiesOptions(properties, isEventType) {
     var lp = [];
+
+    if (properties.categorical == undefined && properties.numerical == undefined) {
+      console.warn("Warning: No properties returned.")
+      return lp;
+    }
+
     var categoricalProperties = properties["categorical"];
     categoricalProperties.forEach(function (categoricalProperty) {
       lp.push(
