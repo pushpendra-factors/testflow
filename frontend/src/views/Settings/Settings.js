@@ -27,6 +27,14 @@ import {
 } from '../../actions/projectsActions';
 import FilterRecord from './FilterRecord';
 
+const INT_SEGMENT_URI="/integrations/segment";
+
+const FILTER_BUTTON_STATES = {
+  success: "green",
+  failure: "red",
+  nochange: "#23282c"
+}
+
 const mapStateToProps = store => {
   return {
     projects: store.projects.projects,
@@ -45,14 +53,6 @@ const mapDispatchToProps = dispatch => {
     updateFilter,
     deleteFilter,
   }, dispatch)
-}
-
-const INT_SEGMENT_URI="/integrations/segment";
-
-const FILTER_BUTTON_STATES = {
-  success: "green",
-  failure: "red",
-  nochange: "#23282c"
 }
 
 class Settings extends Component {
@@ -406,8 +406,13 @@ class Settings extends Component {
     return this.props.filters[index].name;
   }
 
+  isLoaded() {
+    return this.state.sdkSettings.loaded &&
+      this.state.filterSettings.loaded;
+  }
+
   render() {
-    if (!this.state.sdkSettings.loaded) return <div> Loading... </div>;
+    if (!this.isLoaded()) return <div> Loading... </div>;
 
     let segmentWebhookURL = this.getSegmentWebhookURL();
     let segmentURLInputLength = segmentWebhookURL.length.toString();
