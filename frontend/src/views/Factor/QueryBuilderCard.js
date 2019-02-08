@@ -136,6 +136,7 @@ class QueryBuilderCard extends Component {
   }
 
   shouldComponentUpdate(nextProps, nextState) {
+    // Deep equal is not required, if we don't copy eventNames to components state.
     if (!deepEqual(this.props.currentProjectEventNames, nextProps.currentProjectEventNames)) {
       this.handleEventNamesChange(nextProps.currentProjectEventNames);
     }
