@@ -368,11 +368,21 @@ class Factor extends Component {
     return moment.unix(unixTime).utc().format('MMM DD, YYYY');
   }
 
-  makeDropdownIntervals(intervals){
+  makeIntervalOptions(intervals){
     var dropdownIntervals = intervals.map((interval) => {
       return { label: this.readableTimstamp(interval.st)+" - "+this.readableTimstamp(interval.et), value: interval.mid};
     });
     return dropdownIntervals
+  }
+
+  getDefaultIntervalOption() {
+    if(this.state.selectedModelInterval != null){
+        return {
+          mid: this.state.selectedModelInterval.mid,
+          label: this.readableTimstamp(this.state.selectedModelInterval.st)+" - "+this.readableTimstamp(this.state.selectedModelInterval.et)
+        }
+    }
+    return null 
   }
 
   render() {
@@ -395,12 +405,7 @@ class Factor extends Component {
       resultElements = <Card className="fapp-card-border-none">{charts}</Card>;
     }
 
-    let mid = "";
-    let label = "";
-    if(this.state.selectedModelInterval != null){
-        mid = this.state.selectedModelInterval.mid;
-        label = this.readableTimstamp(this.state.selectedModelInterval.st)+" - "+this.readableTimstamp(this.state.selectedModelInterval.et);
-    } 
+    
 
     return (
       <div>
@@ -408,10 +413,10 @@ class Factor extends Component {
           <Row class="fapp-select">
             <Col xs={{size: 10, offset: 1}} md={{ size: 3, offset: 8 }}>
               <Select
-                value={{value: mid , label: label}}
+                value={this.getDefaultIntervalOption()}
                 onChange={this.changeSelectedModel}
-                options={this.makeDropdownIntervals(this.props.intervals)}
-                placeholder="Select a date range."
+                options={this.makeIntervalOptions(this.props.intervals)}
+                placeholder="No intervals"
               />
             </Col>
           </Row>  
