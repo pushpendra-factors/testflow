@@ -6,6 +6,7 @@ import (
 	M "factors/model"
 	U "factors/util"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -20,6 +21,8 @@ func GetProjectSettingHandler(c *gin.Context) {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
+
+	time.Sleep(10 * time.Second)
 
 	settings, errCode := M.GetProjectSetting(projectId)
 	if errCode != http.StatusFound {
