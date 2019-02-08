@@ -15,7 +15,8 @@ import {
   fetchProjectEventPropertyValues,
   fetchProjectUserProperties, 
   fetchProjectUserPropertyValues
-} from "../../actions/projectsActions"
+} from '../../actions/projectsActions';
+import { deepEqual } from '../../util';
 
 const queryBuilderStyles = {
   multiValue: () => ({
@@ -106,7 +107,7 @@ class QueryBuilderCard extends Component {
     this.latestSelectedUserProperty = null;
   }
 
-  resetProject(projectEventNames) {
+  handleEventNamesChange(projectEventNames) {
     var queryStates;
     queryStates = this.props.getQueryStates(projectEventNames)
     this.setState({
@@ -135,8 +136,8 @@ class QueryBuilderCard extends Component {
   }
 
   shouldComponentUpdate(nextProps, nextState) {
-    if (this.props.currentProjectId != nextProps.currentProjectId) {
-      this.resetProject(nextProps.currentProjectEventNames);
+    if (!deepEqual(this.props.currentProjectEventNames, nextProps.currentProjectEventNames)) {
+      this.handleEventNamesChange(nextProps.currentProjectEventNames);
     }
     if (this.state.queryStates[this.state.currentQueryState][DYNAMIC_FETCH_EVENT_PROPERTIES] &&
         this.state.currentOptions.length == 0 && 

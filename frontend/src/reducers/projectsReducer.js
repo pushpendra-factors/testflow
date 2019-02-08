@@ -73,13 +73,11 @@ export default function reducer(state={
       }
       case "FETCH_PROJECT_EVENTS_FULFILLED": {
         return {...state,
-                currentProjectId: action.payload.currentProjectId,
                 currentProjectEventNames: action.payload.eventNames
               }
       }
       case "FETCH_PROJECT_EVENTS_REJECTED": {
         return {...state,
-                currentProjectId: action.payload.currentProjectId,
                 currentProjectEventNames: action.payload.eventNames,
                 projectEventsError: action.payload.err}
       }
