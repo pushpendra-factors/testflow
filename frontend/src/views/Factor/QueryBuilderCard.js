@@ -221,10 +221,6 @@ class QueryBuilderCard extends Component {
     var nextState = 0;
     var numEnteredValues = newValues.length
 
-    // fixes console error "Cannot read property 'label' of undefined"
-    // when there is no value on user onKeyDown.
-    if (numEnteredValues == 0) return;
-
     if (!!newValues && numEnteredValues > 0) {
       var currentEnteredOption = newValues[numEnteredValues - 1];
       
@@ -259,7 +255,9 @@ class QueryBuilderCard extends Component {
 
     if (this.state.currentQueryState == STATE_EVENTS) {
       // Update this.latestSelectedEventName if selected.
-      this.latestSelectedEventName = newValues[numEnteredValues - 1]['label'];
+      if (numEnteredValues > 0) {
+        this.latestSelectedEventName = newValues[numEnteredValues - 1]['label'];
+      }
     }
     if (this.state.currentQueryState == STATE_EVENT_PROPERTY_NAME) {
       // Update  if selected.

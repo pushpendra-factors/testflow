@@ -16,7 +16,7 @@ import {
     InputGroupText,
 } from 'reactstrap';
 
-import { getSDKAssetURL, isStaging } from "../../util";
+import { getSDKAssetURL } from "../../util";
 import { 
   fetchProjectSettings, 
   udpateProjectSettings,
