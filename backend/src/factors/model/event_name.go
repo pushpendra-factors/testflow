@@ -151,7 +151,7 @@ func GetEventNames(projectId uint64) ([]EventName, int) {
 		return nil, http.StatusInternalServerError
 	}
 	if len(eventNames) == 0 {
-		return nil, http.StatusNotFound
+		return eventNames, http.StatusNotFound
 	}
 	return eventNames, http.StatusFound
 }

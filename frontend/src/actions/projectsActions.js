@@ -30,12 +30,12 @@ export function fetchProjectEvents(projectId) {
       axios.get(host + "projects/" + projectId + "/event_names")
         .then((response) => {
           resolve(dispatch({type: "FETCH_PROJECT_EVENTS_FULFILLED",
-                  payload: { currentProjectId: projectId, currentProjectEventNames: response.data,
+                  payload: { currentProjectId: projectId, eventNames: response.data,
                     eventPropertiesMap: {} }}));
         })
         .catch((err) => {
           reject(dispatch({type: "FETCH_PROJECT_EVENTS_REJECTED",
-                  payload: { currentProjectId: projectId, currentProjectEventNames: [],
+                  payload: { currentProjectId: projectId, eventNames: [],
                     eventPropertiesMap: {}, err: err }}));
         });
     });
@@ -251,11 +251,18 @@ export function deleteFilter(projectId, filterId, storeIndex) {
 export function fetchProjectModels(projectId){
   return function(dispatch){
     axios.get(host + "projects/" + projectId + "/models")
-    .then((response) => {
-      dispatch({type: "FETCH_PROJECT_MODELS_FULFILLED", payload: response.data});
-    })
-    .catch((err) => {
-      dispatch({type: "FETCH_PROJECT_MODELS_REJECTED", payload: err})
-    });
+      .then((r) => {
+        dispatch({type: "FETCH_PROJECT_MODELS_FULFILLED", payload: r.data });
+      })
+      .catch((r) => {
+        if (r.status) {
+          // use this pattern for error handling. 
+          // decided to use redux store.
+          dispatch({type: "FETCH_PROJECT_MODELS_REJECTED", payload: r.data, code: r.status });        
+        } else {
+          // network error. Idea: Use a global error component for this.
+          console.log("network error");
+        }
+      });
   }
 }

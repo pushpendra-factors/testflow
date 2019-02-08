@@ -117,7 +117,7 @@ func TestDBGetEventNames(t *testing.T) {
 	// get events should return not found, no events have been created
 	events, errCode = M.GetEventNames(projectId)
 	assert.Equal(t, http.StatusNotFound, errCode)
-	assert.Nil(t, events)
+	assert.Empty(t, events)
 
 	// create events
 	eventName1, errCode := M.CreateOrGetUserCreatedEventName(&M.EventName{Name: "test_event", ProjectId: projectId})

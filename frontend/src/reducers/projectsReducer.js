@@ -74,22 +74,23 @@ export default function reducer(state={
       case "FETCH_PROJECT_EVENTS_FULFILLED": {
         return {...state,
                 currentProjectId: action.payload.currentProjectId,
-                currentProjectEventNames: action.payload.currentProjectEventNames
+                currentProjectEventNames: action.payload.eventNames
               }
       }
       case "FETCH_PROJECT_EVENTS_REJECTED": {
         return {...state,
                 currentProjectId: action.payload.currentProjectId,
-                currentProjectEventNames: action.payload.currentProjectEventNames,
+                currentProjectEventNames: action.payload.eventNames,
                 projectEventsError: action.payload.err}
       }
       case "FETCH_PROJECT_EVENT_PROPERTIES_FULFILLED": {
         // Only the latest fetch is maintained.
-        var eventPropertiesMap = {};
+        let eventPropertiesMap = {};
         eventPropertiesMap[action.payload.eventName] = action.payload.eventProperties;
-        return {...state,
-                eventPropertiesMap: eventPropertiesMap,
-              }
+        return {
+          ...state,
+          eventPropertiesMap: eventPropertiesMap,
+        }
       }
       case "FETCH_PROJECT_EVENT_PROPERTIES_REJECTED": {
         return {...state,
@@ -184,10 +185,22 @@ export default function reducer(state={
         return state
       }
       case "FETCH_PROJECT_MODELS_FULFILLED": {
+        let nextState = {
+          ...state,
+          intervals: action.payload
+        }
+        if (nextState.intervals.length > 0) {
+          // default interval is set here.
+          nextState.defaultModelInterval = nextState.intervals[0];
+        } else {
+          nextState.defaultModelInterval = null;
+        }
+        return nextState
+      }
+      case "FETCH_PROJECT_MODELS_REJECTED": {
         return {
           ...state,
-          intervals: action.payload.intervals,
-          defaultModelInterval: action.payload.default_interval,
+          intervals: []
         }
       }
     }
