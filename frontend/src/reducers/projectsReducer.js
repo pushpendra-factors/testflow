@@ -1,21 +1,27 @@
-export default function reducer(state={
-    projects: [],
-    eventPropertiesMap: {},
-    eventPropertyValuesMap: {},
-    userProperties: [],
-    userPropertyValuesMap: {},
-    fetchingProjects: false,
-    fetchedProjects: false,
-    projectsError: null,
-    filters: [],
-    filtersError: null,
-    intervals: [],
-    defaultModelInterval: null
-  }, action) {
+const DEFAULT_STATE = {
+  projects: [],
+  projectsError: null,
+  currentProjectEventNames: [],
+  eventPropertiesMap: {},
+  eventPropertyValuesMap: {},
+  userProperties: [],
+  userPropertyValuesMap: {},
+  fetchingProjects: false,
+  fetchedProjects: false,
+  filters: [],
+  filtersError: null,
+  intervals: [],
+  defaultModelInterval: null
+}
 
+export default function reducer(state=DEFAULT_STATE, action) {
     switch (action.type) {
       case "CHANGE_PROJECT": {
-        return {...state, currentProjectId: action.payload }
+        return {
+          ...DEFAULT_STATE, // reset store to default.
+          currentProjectId: action.payload,
+          projects: state.projects
+        }
       }
       case "FETCH_PROJECTS": {
         return {...state, fetchingProjects: true}
