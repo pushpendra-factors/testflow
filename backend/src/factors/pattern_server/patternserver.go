@@ -24,6 +24,7 @@ const (
 )
 
 type ModelData struct {
+	Type           string
 	Chunks         []string
 	StartTimestamp int64
 	EndTimestamp   int64
@@ -258,6 +259,7 @@ func (ps *PatternServer) GetProjectModelIntervals(projectId uint64) ([]client.Mo
 	for mid, modelData := range modelChunkData {
 		mi := client.ModelInfo{
 			ModelId:        mid,
+			ModelType:      modelData.Type,
 			StartTimestamp: modelData.StartTimestamp,
 			EndTimestamp:   modelData.EndTimestamp,
 		}

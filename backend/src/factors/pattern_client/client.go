@@ -123,6 +123,7 @@ type GetUserAndEventsInfoResponse struct {
 
 type ModelInfo struct {
 	ModelId        uint64 `json:"mid"`
+	ModelType      string `json:"mt"`
 	StartTimestamp int64  `json:"st"`
 	EndTimestamp   int64  `json:"et"`
 }
