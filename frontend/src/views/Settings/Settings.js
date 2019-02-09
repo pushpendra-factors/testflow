@@ -532,7 +532,7 @@ class Settings extends Component {
                         </Button>
                       </Col>
                     </Row>
-                    <span className="fapp-card-subtitle" style={{display: "inline-block", marginTop: "15px", marginBottom: "20px"}}>Existing filters</span>
+                    <span className="fapp-card-subtitle" style={{display: this.props.filters.length > 0 ? "inline-block" : "none", marginTop: "15px", marginBottom: "20px"}}>Existing filters</span>
                     { 
                       // existing filters list.
                       this.props.filters.map((v, i) => {
