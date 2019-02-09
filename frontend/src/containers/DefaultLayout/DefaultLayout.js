@@ -100,12 +100,8 @@ class DefaultLayout extends Component {
       });
   }
 
-  fetchProjectDependencies  = (projectId) => {
-    // Todo(Dinesh): Remove dependency reload from here. dispatch changeProject action to
-    // re-render corresponding component which will call fetch on mount.
-    this.props.fetchProjectSettings(projectId);
-    this.props.fetchProjectEvents(projectId);
-    this.props.fetchProjectModels(projectId);
+  refresh = () => {
+    this.props.history.push('/refresh');
   }
 
   render() {
@@ -123,8 +119,8 @@ class DefaultLayout extends Component {
     return (
       <div className="app">
         <AppHeader className="fapp-header" fixed>
-          <DefaultHeader 
-            fetchProjectDependencies={this.fetchProjectDependencies} 
+          <DefaultHeader
+            refresh={this.refresh}
             selectableProjects={selectableProjects}
             selectedProject={{ label: this.props.projects[this.props.currentProjectId].name, value: this.props.currentProjectId }} 
           />

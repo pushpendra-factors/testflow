@@ -52,7 +52,7 @@ class DefaultHeader extends Component {
   handleChange = (selectedProject) => {
     let projectId = selectedProject.value;
     this.props.changeProject(projectId);
-    this.props.fetchProjectDependencies(projectId);
+    this.props.refresh();
   }
   
   render() {
