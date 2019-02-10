@@ -368,19 +368,33 @@ class Factor extends Component {
     return moment.unix(unixTime).utc().format('MMM DD, YYYY');
   }
 
-  makeIntervalOptions(intervals){
-    var dropdownIntervals = intervals.map((interval) => {
-      return { label: this.readableTimstamp(interval.st)+" - "+this.readableTimstamp(interval.et), value: interval.mid};
-    });
-    return dropdownIntervals
+  monthFromTimestamp(unixTime) {
+    return moment.unix(unixTime).utc().format('MMMM YYYY');
   }
 
-  getDefaultIntervalOption() {
+  getReadableInterval = (interval) => {
+    if (interval.mt == 'w') {
+      return { 
+        label: 'Week: ' + this.readableTimstamp(interval.st)+' - '+this.readableTimstamp(interval.et), 
+        value: interval.mid
+      };
+    } else if (interval.mt == 'm') {
+      return { 
+        label: 'Month: ' + this.monthFromTimestamp(interval.st), 
+        value: interval.mid 
+      };
+    } else {
+      throw new Error('invalid interval type '+interval.mt);
+    }
+  }
+
+  getIntervalOptions(intervals){
+    return intervals.map(this.getReadableInterval);
+  }
+
+  getIntervalDisplayValue() {
     if(this.state.selectedModelInterval != null){
-        return {
-          mid: this.state.selectedModelInterval.mid,
-          label: this.readableTimstamp(this.state.selectedModelInterval.st)+" - "+this.readableTimstamp(this.state.selectedModelInterval.et)
-        }
+      return this.getReadableInterval(this.state.selectedModelInterval);
     }
     return null 
   }
@@ -411,11 +425,11 @@ class Factor extends Component {
       <div>
         <div>
           <Row class="fapp-select">
-            <Col xs={{size: 10, offset: 1}} md={{ size: 3, offset: 8 }}>
+            <Col xs={{size: 10, offset: 1}} md={{ size: 4, offset: 7 }}>
               <Select
-                value={this.getDefaultIntervalOption()}
+                value={this.getIntervalDisplayValue()}
                 onChange={this.changeSelectedModel}
-                options={this.makeIntervalOptions(this.props.intervals)}
+                options={this.getIntervalOptions(this.props.intervals)}
                 placeholder="No intervals"
               />
             </Col>
