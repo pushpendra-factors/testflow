@@ -5,8 +5,6 @@ import (
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 )
 
-const notify_SOURCE = "task"
-
 var taskLog = log.New()
 
 func init() {

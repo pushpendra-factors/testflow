@@ -26,8 +26,8 @@ func NotifyThroughSNS(source, env, message interface{}) error {
 		return err
 	}
 	if env == "development" {
-		fmt.Println("Notification Template")
-		fmt.Println(jsonBody)
+		fmt.Println("-- Notification Template -- \n")
+		fmt.Println(string(jsonBody))
 		return nil
 	}
 

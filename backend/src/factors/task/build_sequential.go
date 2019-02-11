@@ -11,7 +11,9 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var bsLog = taskLog.WithField("prefix", "Task#BuildSequential")
+const taskID = "Task#BuildSequential"
+
+var bsLog = taskLog.WithField("prefix", taskID)
 
 type BuildFailure struct {
 	Build   Build  `json:"build"`
@@ -21,8 +23,8 @@ type BuildFailure struct {
 
 type BuildSuccess struct {
 	Build               Build `json:"build"`
-	PullEventsTimeInMS  int64 `json:"pull_events_time_ms"`
-	PatternMineTimeInMS int64 `json:"pattern_mine_time_ms"`
+	PullEventsTimeInMS  int64 `json:"pulled_events_in_ms"`
+	PatternMineTimeInMS int64 `json:"mined_patterns_in_ms"`
 }
 
 // BuildSequential - runs model building sequenitally for all project intervals.
@@ -95,8 +97,10 @@ func BuildSequential(env string, db *gorm.DB, cloudManager *filestore.FileManage
 		"success":  success,
 		"failures": failures,
 	}
-	if err := util.NotifyThroughSNS(env, notify_SOURCE, buildStatus); err != nil {
+	if err := util.NotifyThroughSNS(taskID, env, buildStatus); err != nil {
 		log.WithError(err).Error("Failed to notify build status.")
+	} else {
+		log.Info("Notified build status.")
 	}
 
 	return nil
