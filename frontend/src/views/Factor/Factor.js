@@ -1,13 +1,10 @@
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
-import {
-  Card, Col, Row,
-  Dropdown, DropdownToggle, DropdownMenu, DropdownItem 
-} from 'reactstrap';
+import { Card, Col, Row } from 'reactstrap';
 import moment from 'moment';
 
-import { fetchFactors } from "../../actions/factorsActions";
+import { fetchFactors, resetFactors } from "../../actions/factorsActions";
 import { fetchProjectEvents, fetchProjectModels } from "../../actions/projectsActions";
 import BarChartCard from './BarChartCard.js';
 import LineChartCard from './LineChartCard.js';
@@ -59,7 +56,7 @@ const mapStateToProps = store => {
 }
 
 const mapDispatchToProps = dispatch => {
-  return bindActionCreators({ fetchFactors, fetchProjectEvents, fetchProjectModels }, dispatch);
+  return bindActionCreators({ fetchFactors, resetFactors, fetchProjectEvents, fetchProjectModels }, dispatch);
 }
 
 class Factor extends Component {
@@ -237,7 +234,7 @@ class Factor extends Component {
     }));
   }
 
-  changeSelectedModel = (selectedOption) => {
+  handleModelSelectorChange = (selectedOption) => {
     var clickedModelId = selectedOption.value;
     var selectedInterval;
     for (var i = 0; i < this.props.intervals.length; i++) {
@@ -250,6 +247,8 @@ class Factor extends Component {
     if(!!selectedInterval.mid){
       this.setState({selectedModelInterval: selectedInterval});
     }
+    
+    this.props.resetFactors();
   }
 
   toggleFade = () => {
@@ -411,8 +410,6 @@ class Factor extends Component {
       resultElements = <Card className="fapp-card-border-none">{charts}</Card>;
     }
 
-    
-
     return (
       <div>
         <div>
@@ -420,7 +417,7 @@ class Factor extends Component {
             <Col xs={{size: 10, offset: 1}} md={{ size: 3, offset: 8 }}>
               <Select
                 value={this.getIntervalDisplayValue()}
-                onChange={this.changeSelectedModel}
+                onChange={this.handleModelSelectorChange}
                 options={this.getIntervalOptions(this.props.intervals)}
                 placeholder="No intervals"
               />
@@ -437,6 +434,7 @@ class Factor extends Component {
                     getPropertyValueOptions={this.getPropertyValueOptions}
                     onKeyDown={this.factor}
                     holderText="Enter goal."
+                    resetCharts={this.props.resetFactors}
                   />
                 </Col>
               </Row>

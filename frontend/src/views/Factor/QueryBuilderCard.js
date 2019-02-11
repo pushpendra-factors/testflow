@@ -221,6 +221,9 @@ class QueryBuilderCard extends Component {
     var nextState = 0;
     var numEnteredValues = newValues.length
 
+    // reset charts on query change.
+    this.props.resetCharts();
+
     if (!!newValues && numEnteredValues > 0) {
       var currentEnteredOption = newValues[numEnteredValues - 1];
       

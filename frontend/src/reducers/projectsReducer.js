@@ -1,4 +1,4 @@
-const DEFAULT_STATE = {
+const DEFAULT_PROJECT_STATE = {
   projects: [],
   projectsError: null,
   currentProjectEventNames: [],
@@ -14,11 +14,11 @@ const DEFAULT_STATE = {
   defaultModelInterval: null
 }
 
-export default function reducer(state=DEFAULT_STATE, action) {
+export default function reducer(state=DEFAULT_PROJECT_STATE, action) {
     switch (action.type) {
       case "CHANGE_PROJECT": {
         return {
-          ...DEFAULT_STATE, // reset store to default.
+          ...DEFAULT_PROJECT_STATE, // reset store to default.
           currentProjectId: action.payload,
           projects: state.projects
         }

@@ -19,6 +19,12 @@ export function fetchFactors(currentProjectId, modelId, query, queryParams) {
       })
       .catch((err) => {
         dispatch({type: "FETCH_FACTORS_REJECTED", payload: err})
-      })
+      });
+  }
+}
+
+export function resetFactors() {
+  return function(dispatch) {
+    dispatch({type: "RESET_FACTORS"});
   }
 }

@@ -1,10 +1,11 @@
-export default function reducer(state={
-    factors: {},
-    fetchingFactors: false,
-    fetchedFactors: false,
-    factorsError: null,
-  }, action) {
+const DEFAULT_FACTORS_STATE = {
+  factors: {},
+  fetchingFactors: false,
+  fetchedFactors: false,
+  factorsError: null,
+}
 
+export default function reducer(state=DEFAULT_FACTORS_STATE, action) {
     switch (action.type) {
       case "FETCH_FACTORS": {
         return {...state, fetchingFactors: true}
@@ -19,6 +20,11 @@ export default function reducer(state={
           fetchedFactors: true,
           factors: action.payload,
         }
+      }
+      case "RESET_FACTORS": {
+        return {
+          ...DEFAULT_FACTORS_STATE
+        };
       }
     }
     return state
