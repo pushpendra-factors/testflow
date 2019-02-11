@@ -368,24 +368,16 @@ class Factor extends Component {
     return moment.unix(unixTime).utc().format('MMM DD, YYYY');
   }
 
-  monthFromTimestamp(unixTime) {
-    return moment.unix(unixTime).utc().format('MMMM YYYY');
-  }
-
   getReadableInterval = (interval) => {
-    if (interval.mt == 'w') {
-      return { 
-        label: 'Week: ' + this.readableTimstamp(interval.st)+' - '+this.readableTimstamp(interval.et), 
-        value: interval.mid
-      };
-    } else if (interval.mt == 'm') {
-      return { 
-        label: 'Month: ' + this.monthFromTimestamp(interval.st), 
-        value: interval.mid 
-      };
-    } else {
-      throw new Error('invalid interval type '+interval.mt);
-    }
+    let prefix = ''
+    if (interval.mt === 'w') { prefix = '[w]'; }
+    else if (interval.mt === 'm') { prefix = '[m]'; }
+    else { throw new Error('invalid model type'); }
+
+    return { 
+      label: prefix + ' ' + this.readableTimstamp(interval.st)+' - '+this.readableTimstamp(interval.et), 
+      value: interval.mid
+    };
   }
 
   getIntervalOptions(intervals){
@@ -425,7 +417,7 @@ class Factor extends Component {
       <div>
         <div>
           <Row class="fapp-select">
-            <Col xs={{size: 10, offset: 1}} md={{ size: 4, offset: 7 }}>
+            <Col xs={{size: 10, offset: 1}} md={{ size: 3, offset: 8 }}>
               <Select
                 value={this.getIntervalDisplayValue()}
                 onChange={this.changeSelectedModel}
