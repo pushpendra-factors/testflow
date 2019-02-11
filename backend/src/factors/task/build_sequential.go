@@ -4,6 +4,7 @@ import (
 	"factors/filestore"
 	serviceDisk "factors/services/disk"
 	serviceEtcd "factors/services/etcd"
+	"factors/util"
 	"time"
 
 	"github.com/jinzhu/gorm"
@@ -12,9 +13,20 @@ import (
 
 var bsLog = taskLog.WithField("prefix", "Task#BuildSequential")
 
-// BuildSequential - runs model building sequenitally for all project
-// intervals.
-func BuildSequential(db *gorm.DB, cloudManager *filestore.FileManager,
+type BuildFailure struct {
+	Build   Build  `json:"build"`
+	Error   error  `json:"error"`
+	Message string `json:"message"`
+}
+
+type BuildSuccess struct {
+	Build               Build `json:"build"`
+	PullEventsTimeInMS  int64 `json:"pull_events_time_ms"`
+	PatternMineTimeInMS int64 `json:"pattern_mine_time_ms"`
+}
+
+// BuildSequential - runs model building sequenitally for all project intervals.
+func BuildSequential(env string, db *gorm.DB, cloudManager *filestore.FileManager,
 	etcdClient *serviceEtcd.EtcdClient, diskManger *serviceDisk.DiskDriver,
 	bucketName string, noOfPatternWorkers int, projectId uint64) error {
 
@@ -26,6 +38,9 @@ func BuildSequential(db *gorm.DB, cloudManager *filestore.FileManager,
 	}
 
 	bsLog.Infof("Queueing %d builds required.", len(builds))
+
+	success := make([]BuildSuccess, 0, 0)
+	failures := make([]BuildFailure, 0, 0)
 
 	for _, build := range builds {
 		// Build model, for projectId if given, else for all.
@@ -44,11 +59,12 @@ func BuildSequential(db *gorm.DB, cloudManager *filestore.FileManager,
 		})
 
 		// Pull events
-		startAt := time.Now().Unix()
+		startAt := time.Now().UnixNano()
 		modelId, eventsCount, err := PullEvents(db, cloudManager, diskManger,
 			build.ProjectId, build.StartTimestamp, build.EndTimestamp)
 		if err != nil {
 			logCtx.WithField("error", err).Error("Failed to pull events.")
+			failures = append(failures, BuildFailure{Build: build, Error: err, Message: "Pattern mining failure"})
 			continue
 		}
 		if eventsCount == 0 {
@@ -56,21 +72,31 @@ func BuildSequential(db *gorm.DB, cloudManager *filestore.FileManager,
 			continue
 		}
 		logCtx = logCtx.WithFields(log.Fields{"ModelId": modelId, "EventsCount": eventsCount})
-		timeTakenToPullEvents := (time.Now().Unix() - startAt)
-		logCtx = logCtx.WithField("TimeTakenToPullEventsInSecs", timeTakenToPullEvents)
+		timeTakenToPullEvents := (time.Now().UnixNano() - startAt) / 1000000
+		logCtx = logCtx.WithField("TimeTakenToPullEventsInMS", timeTakenToPullEvents)
 
 		// Patten mine
-		startAt = time.Now().Unix()
+		startAt = time.Now().UnixNano()
 		newProjectMetaVersion, err := PatternMine(db, etcdClient, cloudManager, diskManger,
 			bucketName, noOfPatternWorkers, build.ProjectId, modelId, build.ModelType,
 			build.StartTimestamp, build.EndTimestamp)
 		if err != nil {
 			logCtx.Error("Failed to mine patterns.")
+			failures = append(failures, BuildFailure{Build: build, Error: err, Message: "Pattern mining failure"})
 			continue
 		}
 		logCtx = logCtx.WithFields(log.Fields{"NewProjectMetaVersion": newProjectMetaVersion})
-		timeTakenToMinePatterns := (time.Now().Unix() - startAt)
-		logCtx = logCtx.WithField("TimeTakenToMinePatternsInSecs", timeTakenToMinePatterns)
+		timeTakenToMinePatterns := (time.Now().UnixNano() - startAt) / 1000000
+		logCtx = logCtx.WithField("TimeTakenToMinePatternsInMS", timeTakenToMinePatterns)
+		success = append(success, BuildSuccess{Build: build, PullEventsTimeInMS: timeTakenToPullEvents, PatternMineTimeInMS: timeTakenToMinePatterns})
+	}
+
+	buildStatus := map[string]interface{}{
+		"success":  success,
+		"failures": failures,
+	}
+	if err := util.NotifyThroughSNS(env, notify_SOURCE, buildStatus); err != nil {
+		log.WithError(err).Error("Failed to notify build status.")
 	}
 
 	return nil
