@@ -13,12 +13,12 @@ export function fetchFactors(currentProjectId, modelId, query, queryParams) {
       separator = "&"
     }
 
-    axios.post(host + "projects/" + currentProjectId + "/factor"+ queryParams + separator + mid, query)
+    return axios.post(host + "projects/" + currentProjectId + "/factor"+ queryParams + separator + mid, query)
       .then((response) => {
         dispatch({type: "FETCH_FACTORS_FULFILLED", payload: response.data})
       })
       .catch((err) => {
-        dispatch({type: "FETCH_FACTORS_REJECTED", payload: err})
+        dispatch({type: "FETCH_FACTORS_REJECTED", payload: err});
       });
   }
 }

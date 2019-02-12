@@ -59,6 +59,8 @@ const mapDispatchToProps = dispatch => {
   return bindActionCreators({ fetchFactors, resetFactors, fetchProjectEvents, fetchProjectModels }, dispatch);
 }
 
+const LOADING_DEFAULT = -1, LOADING_INIT = 0, LOADING_DONE = 1;
+
 class Factor extends Component {
   constructor(props) {
     super(props);
@@ -71,6 +73,10 @@ class Factor extends Component {
       eventNames: {
         loaded: false,
         error: null
+      },
+
+      factors: {
+        loading: LOADING_DEFAULT
       },
 
       isModelSelectorDropdownOpen: false,
@@ -359,8 +365,15 @@ class Factor extends Component {
       return;
     }
     console.log('Fire Query: ' + JSON.stringify(query));
-    this.props.fetchFactors(this.props.currentProjectId,this.state.selectedModelInterval.mid,
-      { query: query }, this.props.location.search);
+
+    this.setState({ factors: { loading: LOADING_INIT } });
+    this.props.fetchFactors(this.props.currentProjectId,
+      this.state.selectedModelInterval.mid,{ query: query }, this.props.location.search)
+      .then(() => {
+        console.log('Factors completed');
+        this.setState({ factors: { loading: LOADING_DONE } });
+      });
+    // Todo(Dinesh): handle error here on factors failure.
   }
 
   readableTimstamp(unixTime) {
@@ -393,7 +406,6 @@ class Factor extends Component {
   render() {
     if (!this.state.eventNames.loaded) return <div> Loading... </div>;
     var charts = [];
-    let resultElements;
     if (!!this.props.factors.charts) {
       for (var i = 0; i < this.props.factors.charts.length; i++) {
         // note: we add a key prop here to allow react to uniquely identify each
@@ -407,7 +419,6 @@ class Factor extends Component {
           charts.push(<Row style={chartCardRowStyle} key={i}><Col sm={cardColumnSetting}><FunnelChartCard chartData={chartData} /></Col></Row>);
         }
       }
-      resultElements = <Card className="fapp-card-border-none">{charts}</Card>;
     }
 
     return (
@@ -439,7 +450,9 @@ class Factor extends Component {
                 </Col>
               </Row>
             </div>
-            {resultElements}
+            <Card className="fapp-card-border-none">
+            { this.state.factors.loading == LOADING_DEFAULT ? null : this.state.factors.loading == LOADING_DONE ? charts : <div>Loading...</div> }
+            </Card>
         </div>
       </div>
     );
