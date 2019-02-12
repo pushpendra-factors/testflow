@@ -67,7 +67,7 @@ class DefaultHeader extends Component {
           minimized={{ src: factorsicon, alt: 'factors.ai' }}
         />
         <AppSidebarToggler className="d-md-down-none fapp-navbar-toggler" display="lg" />
-        <AppSidebarForm className="fapp-header-dropdown">
+        <AppSidebarForm className="fapp-select fapp-header-dropdown">
           <Select
             options={this.props.selectableProjects}
             value={this.props.selectedProject}
