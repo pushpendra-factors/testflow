@@ -26,6 +26,8 @@ import {
   deleteFilter,
 } from '../../actions/projectsActions';
 import FilterRecord from './FilterRecord';
+import Loading from '../../loading';
+
 
 const INT_SEGMENT_URI="/integrations/segment";
 
@@ -412,7 +414,7 @@ class Settings extends Component {
   }
 
   render() {
-    if (!this.isLoaded()) return <div> Loading... </div>;
+    if (!this.isLoaded()) return <Loading />;
 
     let segmentWebhookURL = this.getSegmentWebhookURL();
     let segmentURLInputLength = segmentWebhookURL.length.toString();

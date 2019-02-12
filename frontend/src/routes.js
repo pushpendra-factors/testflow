@@ -3,10 +3,7 @@ import Loadable from 'react-loadable';
 import { Redirect } from 'react-router-dom';
 
 import DefaultLayout from './containers/DefaultLayout';
-
-function Loading() {
-  return <div>Loading...</div>;
-}
+import Loading from './loading';
 
 const Query = Loadable({
   loader: () => import('./views/Query'),

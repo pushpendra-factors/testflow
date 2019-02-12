@@ -250,7 +250,7 @@ export function deleteFilter(projectId, filterId, storeIndex) {
 
 export function fetchProjectModels(projectId){
   return function(dispatch){
-    axios.get(host + "projects/" + projectId + "/models")
+    return axios.get(host + "projects/" + projectId + "/models")
       .then((r) => {
         dispatch({type: "FETCH_PROJECT_MODELS_FULFILLED", payload: r.data });
       })

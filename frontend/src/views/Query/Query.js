@@ -9,6 +9,7 @@ import {
   Row,
 } from 'reactstrap';
 import CreatableSelect from 'react-select/lib/Creatable';
+import Loading from '../../loading';
 
 const customStyles = {
   multiValue: () => ({
@@ -160,7 +161,13 @@ class Query extends Component {
     return inputValue;
   };
 
+  isLoaded() {
+    return true;
+  }
+
   render() {
+    if(!this.isLoaded()) return <Loading />;
+
     /* 
     return (
       <div className="animated fadeIn">

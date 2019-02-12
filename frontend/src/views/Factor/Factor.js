@@ -20,7 +20,7 @@ import {
   STATE_EVENT_NUMERIC_PROPERTY_VALUE, STATE_EVENT_STRING_PROPERTY_VALUE,
   STATE_USER_NUMERIC_PROPERTY_VALUE, STATE_USER_STRING_PROPERTY_VALUE
 } from './QueryBuilderCard';
-
+import Loading from '../../loading';
 import loadingImage from '../../assets/img/loading.gif';
 
 
@@ -78,6 +78,11 @@ class Factor extends Component {
         error: null
       },
 
+      models: {
+        loaded: false,
+        error: null
+      },
+
       factors: {
         loading: LOADING_DEFAULT
       },
@@ -88,16 +93,16 @@ class Factor extends Component {
   }
 
   componentWillMount() {
-    // TODO: Check if this needs to be removed
     this.props.fetchProjectEvents(this.props.currentProjectId)
-      .then((response) => {
+      .then(() => {
         this.setState({ eventNames: { loaded: true } });
       })
-      .catch((response) => {
-        this.setState({ eventNames: { loaded: true, error: response.payload } });
+      .catch((r) => {
+        this.setState({ eventNames: { loaded: true, error: r.payload } });
       });
       
-      this.props.fetchProjectModels(this.props.currentProjectId);
+      this.props.fetchProjectModels(this.props.currentProjectId)
+        .then(() => this.setState({ models: { loaded: true } }));
   }
 
   componentDidUpdate() {
@@ -421,8 +426,14 @@ class Factor extends Component {
     return charts;
   }
 
+  isLoaded() {
+    return this.state.eventNames.loaded && 
+      this.state.models.loaded;
+  }
+
   render() {
-    if (!this.state.eventNames.loaded) return <div> Loading... </div>;
+    if (!this.isLoaded()) return <Loading />;
+    
     var charts = [];
     if (!!this.props.factors.charts) {
       for (var i = 0; i < this.props.factors.charts.length; i++) {

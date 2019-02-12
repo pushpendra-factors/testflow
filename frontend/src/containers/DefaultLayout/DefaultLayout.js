@@ -25,6 +25,7 @@ import {
   fetchProjectSettings,
   fetchProjectModels
 } from "../../actions/projectsActions";
+import Loading from '../../loading';
 
 
 const projectSelectStyles = {
@@ -104,9 +105,12 @@ class DefaultLayout extends Component {
     this.props.history.push('/refresh');
   }
 
+  isLoaded() {
+    return this.state.projects.loaded;
+  }
+
   render() {
-    // Todo(Dinesh): Define a generic loading screen.
-    if (!this.state.projects.loaded) return <div>Loading...</div>;
+    if (!this.isLoaded()) return <Loading />;
 
     if (this.state.projects.loaded && this.state.projects.error) 
       return <div>Failed loading your project.</div>;
