@@ -430,11 +430,11 @@ class Factor extends Component {
         // element in this array. see: https://reactjs.org/docs/lists-and-keys.html
         var chartData = this.props.factors.charts[i];
         if (chartData.type === 'line') {
-          charts.push(<Row style={chartCardRowStyle} key={i}><Col sm={cardColumnSetting}><LineChartCard chartData={chartData} /></Col></Row>)
+          charts.push(<Row className="animated fadeIn" style={chartCardRowStyle} key={i}><Col sm={cardColumnSetting}><LineChartCard chartData={chartData} /></Col></Row>)
         } else if (chartData.type === 'bar') {
-          charts.push(<Row style={chartCardRowStyle} key={i}><Col sm={cardColumnSetting}><BarChartCard chartData={chartData} key={i} /></Col></Row>)
+          charts.push(<Row className="animated fadeIn" style={chartCardRowStyle} key={i}><Col sm={cardColumnSetting}><BarChartCard chartData={chartData} key={i} /></Col></Row>)
         } else if (chartData.type === 'funnel') {
-          charts.push(<Row style={chartCardRowStyle} key={i}><Col sm={cardColumnSetting}><FunnelChartCard chartData={chartData} /></Col></Row>);
+          charts.push(<Row className="animated fadeIn" style={chartCardRowStyle} key={i}><Col sm={cardColumnSetting}><FunnelChartCard chartData={chartData} /></Col></Row>);
         }
       }
     }
