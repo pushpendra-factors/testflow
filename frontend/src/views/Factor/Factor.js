@@ -21,6 +21,9 @@ import {
   STATE_USER_NUMERIC_PROPERTY_VALUE, STATE_USER_STRING_PROPERTY_VALUE
 } from './QueryBuilderCard';
 
+import loadingImage from '../../assets/img/loading.gif';
+
+
 import Select from 'react-select';
 
 const EVENT_NAME_TYPE = "eventName";
@@ -403,6 +406,21 @@ class Factor extends Component {
     return null 
   }
 
+  getChartContainerContent(charts=[]) {
+    if (this.state.factors.loading == LOADING_DEFAULT || 
+      this.state.factors.loading == LOADING_INIT) return null;
+    
+    if (charts.length == 0) {
+      return (
+        <Col md={{ size: 'auto', offset: 5 }} style={{paddingTop:'8%', color: '#c0c0c0'}}>
+          <h2> No results </h2>
+        </Col>
+      )
+    }
+
+    return charts;
+  }
+
   render() {
     if (!this.state.eventNames.loaded) return <div> Loading... </div>;
     var charts = [];
@@ -450,8 +468,11 @@ class Factor extends Component {
                 </Col>
               </Row>
             </div>
+            <Col md={{ size: 'auto', offset: 5 }} style={{padding:'8% 43px', display: this.state.factors.loading === LOADING_INIT ? 'block' : 'none'}}>
+              <img src={loadingImage} alt="Loading.." /> 
+            </Col>
             <Card className="fapp-card-border-none">
-            { this.state.factors.loading == LOADING_DEFAULT ? null : this.state.factors.loading == LOADING_DONE ? charts : <div>Loading...</div> }
+              { this.getChartContainerContent(charts) }
             </Card>
         </div>
       </div>
