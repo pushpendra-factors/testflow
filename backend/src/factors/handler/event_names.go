@@ -22,15 +22,16 @@ func GetEventNamesHandler(c *gin.Context) {
 	}
 
 	ens, errCode := M.GetEventNames(projectId)
-	if errCode != http.StatusFound {
+	if errCode == http.StatusInternalServerError {
 		c.AbortWithStatus(errCode)
-	} else {
-		eventNames := []string{}
-		for _, en := range ens {
-			eventNames = append(eventNames, en.Name)
-		}
-		c.JSON(http.StatusOK, eventNames)
+		return
 	}
+
+	eventNames := []string{}
+	for _, en := range ens {
+		eventNames = append(eventNames, en.Name)
+	}
+	c.JSON(http.StatusOK, eventNames)
 }
 
 // Test command.

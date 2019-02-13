@@ -15,7 +15,8 @@ import {
   fetchProjectEventPropertyValues,
   fetchProjectUserProperties, 
   fetchProjectUserPropertyValues
-} from "../../actions/projectsActions"
+} from '../../actions/projectsActions';
+import { deepEqual } from '../../util';
 
 const queryBuilderStyles = {
   multiValue: () => ({
@@ -106,7 +107,7 @@ class QueryBuilderCard extends Component {
     this.latestSelectedUserProperty = null;
   }
 
-  resetProject(projectEventNames) {
+  handleEventNamesChange(projectEventNames) {
     var queryStates;
     queryStates = this.props.getQueryStates(projectEventNames)
     this.setState({
@@ -135,8 +136,9 @@ class QueryBuilderCard extends Component {
   }
 
   shouldComponentUpdate(nextProps, nextState) {
-    if (this.props.currentProjectId != nextProps.currentProjectId) {
-      this.resetProject(nextProps.currentProjectEventNames);
+    // Deep equal is not required, if we don't copy eventNames to components state.
+    if (!deepEqual(this.props.currentProjectEventNames, nextProps.currentProjectEventNames)) {
+      this.handleEventNamesChange(nextProps.currentProjectEventNames);
     }
     if (this.state.queryStates[this.state.currentQueryState][DYNAMIC_FETCH_EVENT_PROPERTIES] &&
         this.state.currentOptions.length == 0 && 
@@ -215,9 +217,13 @@ class QueryBuilderCard extends Component {
     return nextOptions
   }
 
-  handleChange = (newValues: any, actionMeta: any) => {
+  handleChange = (newValues, actionMeta) => {
     var nextState = 0;
     var numEnteredValues = newValues.length
+
+    // reset charts on query change.
+    this.props.resetCharts();
+
     if (!!newValues && numEnteredValues > 0) {
       var currentEnteredOption = newValues[numEnteredValues - 1];
       
@@ -249,9 +255,12 @@ class QueryBuilderCard extends Component {
     console.log(newValues);
     console.log(`action: ${actionMeta.action}`);
     console.groupEnd();
+
     if (this.state.currentQueryState == STATE_EVENTS) {
       // Update this.latestSelectedEventName if selected.
-      this.latestSelectedEventName = newValues[numEnteredValues - 1]['label'];
+      if (numEnteredValues > 0) {
+        this.latestSelectedEventName = newValues[numEnteredValues - 1]['label'];
+      }
     }
     if (this.state.currentQueryState == STATE_EVENT_PROPERTY_NAME) {
       // Update  if selected.
@@ -319,7 +328,7 @@ class QueryBuilderCard extends Component {
     }
   };
 
-  handleKeyDown = (event: SyntheticKeyboardEvent<HTMLElement>) => {
+  handleKeyDown = (event) => {
     console.log(event)
     switch (event.key) {
       case 'Enter':

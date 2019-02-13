@@ -1,21 +1,27 @@
-export default function reducer(state={
-    projects: [],
-    eventPropertiesMap: {},
-    eventPropertyValuesMap: {},
-    userProperties: [],
-    userPropertyValuesMap: {},
-    fetchingProjects: false,
-    fetchedProjects: false,
-    projectsError: null,
-    filters: [],
-    filtersError: null,
-    intervals: [],
-    defaultModelInterval: null
-  }, action) {
+const DEFAULT_PROJECT_STATE = {
+  projects: [],
+  projectsError: null,
+  currentProjectEventNames: [],
+  eventPropertiesMap: {},
+  eventPropertyValuesMap: {},
+  userProperties: [],
+  userPropertyValuesMap: {},
+  fetchingProjects: false,
+  fetchedProjects: false,
+  filters: [],
+  filtersError: null,
+  intervals: [],
+  defaultModelInterval: null
+}
 
+export default function reducer(state=DEFAULT_PROJECT_STATE, action) {
     switch (action.type) {
       case "CHANGE_PROJECT": {
-        return {...state, currentProjectId: action.payload }
+        return {
+          ...DEFAULT_PROJECT_STATE, // reset store to default.
+          currentProjectId: action.payload,
+          projects: state.projects
+        }
       }
       case "FETCH_PROJECTS": {
         return {...state, fetchingProjects: true}
@@ -44,19 +50,19 @@ export default function reducer(state={
           currentProjectId: currentProjectId
         }
       }
-      case "FETCH_CURRENT_PROJECT_SETTINGS_FULFILLED": {
+      case "FETCH_PROJECT_SETTINGS_FULFILLED": {
         return {
           ...state,
           currentProjectSettings: action.payload.settings
         }
       }
-      case "FETCH_CURRENT_PROJECT_SETTINGS_REJECTED": {
+      case "FETCH_PROJECT_SETTINGS_REJECTED": {
         return {
           ...state,
           projectSettingsError: action.payload.err
         }
       }
-      case "UPDATE_CURRENT_PROJECT_SETTINGS_FULFILLED": {
+      case "UPDATE_PROJECT_SETTINGS_FULFILLED": {
         let _state = { ...state };
         if (_state.currentProjectSettings)
           _state.currentProjectSettings = { 
@@ -65,37 +71,36 @@ export default function reducer(state={
           };
         return _state;
       }
-      case "UPDATE_CURRENT_PROJECT_SETTINGS_REJECTED": {
+      case "UPDATE_PROJECT_SETTINGS_REJECTED": {
         return {
           ...state,
           projectEventsError: action.payload.err
         }
       }
-      case "FETCH_CURRENT_PROJECT_EVENTS_FULFILLED": {
+      case "FETCH_PROJECT_EVENTS_FULFILLED": {
         return {...state,
-                currentProjectId: action.payload.currentProjectId,
-                currentProjectEventNames: action.payload.currentProjectEventNames
+                currentProjectEventNames: action.payload.eventNames
               }
       }
-      case "FETCH_CURRENT_PROJECT_EVENTS_REJECTED": {
+      case "FETCH_PROJECT_EVENTS_REJECTED": {
         return {...state,
-                currentProjectId: action.payload.currentProjectId,
-                currentProjectEventNames: action.payload.currentProjectEventNames,
+                currentProjectEventNames: action.payload.eventNames,
                 projectEventsError: action.payload.err}
       }
-      case "FETCH_CURRENT_PROJECT_EVENT_PROPERTIES_FULFILLED": {
+      case "FETCH_PROJECT_EVENT_PROPERTIES_FULFILLED": {
         // Only the latest fetch is maintained.
-        var eventPropertiesMap = {};
+        let eventPropertiesMap = {};
         eventPropertiesMap[action.payload.eventName] = action.payload.eventProperties;
-        return {...state,
-                eventPropertiesMap: eventPropertiesMap,
-              }
+        return {
+          ...state,
+          eventPropertiesMap: eventPropertiesMap,
+        }
       }
-      case "FETCH_CURRENT_PROJECT_EVENT_PROPERTIES_REJECTED": {
+      case "FETCH_PROJECT_EVENT_PROPERTIES_REJECTED": {
         return {...state,
                 eventPropertiesError: action.payload.err}
       }
-      case "FETCH_CURRENT_PROJECT_EVENT_PROPERTY_VALUES_FULFILLED": {
+      case "FETCH_PROJECT_EVENT_PROPERTY_VALUES_FULFILLED": {
         // Only the latest fetch is maintained.
         var eventPropertyValuesMap = {};
         eventPropertyValuesMap[action.payload.eventName] = {}
@@ -106,21 +111,21 @@ export default function reducer(state={
           eventPropertyValuesMap: eventPropertyValuesMap,
         }
       }
-      case "FETCH_CURRENT_PROJECT_EVENT_PROPERTY_VALUES_REJECTED": {
+      case "FETCH_PROJECT_EVENT_PROPERTY_VALUES_REJECTED": {
         return {...state,
                 eventPropertyValuesError: action.payload.err}
       }
 
-      case "FETCH_CURRENT_PROJECT_USER_PROPERTIES_FULFILLED": {
+      case "FETCH_PROJECT_USER_PROPERTIES_FULFILLED": {
         return {...state,
                 userProperties: action.payload.userProperties,
               }
       }
-      case "FETCH_CURRENT_PROJECT_USER_PROPERTIES_REJECTED": {
+      case "FETCH_PROJECT_USER_PROPERTIES_REJECTED": {
         return {...state,
                 userPropertiesError: action.payload.err}
       }
-      case "FETCH_CURRENT_PROJECT_USER_PROPERTY_VALUES_FULFILLED": {
+      case "FETCH_PROJECT_USER_PROPERTY_VALUES_FULFILLED": {
         // Only the latest fetch is maintained.
         var userPropertyValuesMap = {};
         userPropertyValuesMap[action.payload.propertyName] = action.payload.userPropertyValues;
@@ -129,7 +134,7 @@ export default function reducer(state={
           userPropertyValuesMap: userPropertyValuesMap,
         }
       }
-      case "FETCH_CURRENT_PROJECT_USER_PROPERTY_VALUES_REJECTED": {
+      case "FETCH_PROJECT_USER_PROPERTY_VALUES_REJECTED": {
         return {...state,
                 userPropertyValuesError: action.payload.err}
       }
@@ -184,10 +189,22 @@ export default function reducer(state={
         return state
       }
       case "FETCH_PROJECT_MODELS_FULFILLED": {
+        let nextState = {
+          ...state,
+          intervals: action.payload
+        }
+        if (nextState.intervals.length > 0) {
+          // default interval is set here.
+          nextState.defaultModelInterval = nextState.intervals[0];
+        } else {
+          nextState.defaultModelInterval = null;
+        }
+        return nextState
+      }
+      case "FETCH_PROJECT_MODELS_REJECTED": {
         return {
           ...state,
-          intervals: action.payload.intervals,
-          defaultModelInterval: action.payload.default_interval,
+          intervals: []
         }
       }
     }

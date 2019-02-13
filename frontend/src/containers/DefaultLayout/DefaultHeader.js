@@ -1,16 +1,15 @@
 import React, { Component } from 'react';
 import { Badge, DropdownItem, DropdownMenu, DropdownToggle, Nav, NavItem, NavLink, TextMuted } from 'reactstrap';
 import PropTypes from 'prop-types';
-
 import { AppHeaderDropdown, AppSidebarToggler, AppNavbarBrand } from '@coreui/react';
-import factorslogo from '../../assets/img/brand/factors-logo.png'
-import factorsicon from '../../assets/img/brand/factors-icon.png'
-
-import {
-  AppSidebarForm,
-} from '@coreui/react';
+import { AppSidebarForm } from '@coreui/react';
 import Select from 'react-select';
-// sidebar nav config
+import { bindActionCreators } from 'redux';
+import { connect } from 'react-redux';
+
+import factorslogo from '../../assets/img/brand/factors-logo.png';
+import factorsicon from '../../assets/img/brand/factors-icon.png';
+import { changeProject } from '../../actions/projectsActions';
 
 const propTypes = {
   children: PropTypes.node,
@@ -44,9 +43,16 @@ const projectSelectStyles = {
   }),
 }
 
+
+const mapDispatchToProps = dispatch => {
+  return bindActionCreators({ changeProject }, dispatch);
+}
+
 class DefaultHeader extends Component {
   handleChange = (selectedProject) => {
-    this.props.fetchProjectDependencies(selectedProject.value);
+    let projectId = selectedProject.value;
+    this.props.changeProject(projectId);
+    this.props.refresh();
   }
   
   render() {
@@ -61,7 +67,7 @@ class DefaultHeader extends Component {
           minimized={{ src: factorsicon, alt: 'factors.ai' }}
         />
         <AppSidebarToggler className="d-md-down-none fapp-navbar-toggler" display="lg" />
-        <AppSidebarForm className="fapp-header-dropdown">
+        <AppSidebarForm className="fapp-select fapp-header-dropdown">
           <Select
             options={this.props.selectableProjects}
             value={this.props.selectedProject}
@@ -100,4 +106,4 @@ class DefaultHeader extends Component {
 DefaultHeader.propTypes = propTypes;
 DefaultHeader.defaultProps = defaultProps;
 
-export default DefaultHeader;
+export default connect(null, mapDispatchToProps)(DefaultHeader);

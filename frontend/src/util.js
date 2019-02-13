@@ -13,3 +13,6 @@ export function getSDKAssetURL() {
     return isStaging() ? (getHostURL() + "assets/factors.js") : BUILD_CONFIG.sdk_asset_url;
 }
 
+export function deepEqual(x, y) {
+    return JSON.stringify(x) === JSON.stringify(y);
+}

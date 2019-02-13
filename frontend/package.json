@@ -75,9 +75,10 @@
   },
   "scripts": {
     "dev": "export NODE_ENV=development && ./node_modules/.bin/webpack-dev-server --host 127.0.0.1 --port 3000 --content-base src --inline --hot",
-    "build-staging": "export NODE_ENV=staging; rm -rf ./dist; ./node_modules/.bin/webpack --config webpack.config.js; cp -R ./src/assets dist/assets",
+    "build-copy-sdk": "cd $FACTORS_REPO/sdk/javascript; npm run build-prod; cp $FACTORS_REPO/sdk/javascript/dist/factors.prod.js $FACTORS_REPO/frontend/dist/assets/factors.js",
+    "build-staging": "export NODE_ENV=staging; rm -rf ./dist; ./node_modules/.bin/webpack --config webpack.config.js; cp -R ./src/assets dist/assets; npm run build-copy-sdk",
     "serve-staging": "npm run build-staging; node serve-dist.js",
-    "build-prod": "export NODE_ENV=production; rm -rf ./dist; ./node_modules/.bin/webpack --config webpack.config.js; cp -R ./src/assets dist/assets",
+    "build-prod": "export NODE_ENV=production; rm -rf ./dist; ./node_modules/.bin/webpack --config webpack.config.js; cp -R ./src/assets dist/assets; npm run build-copy-sdk",
     "serve-prod": "npm run build-prod; node serve-dist.js"
   }
 }

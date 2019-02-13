@@ -36,7 +36,7 @@ func makeProjectModelChunkLookup(projectDatas []PMM.ProjectData) map[uint64]patt
 		if !exists {
 			mCM = patternserver.ModelChunkMapping{}
 		}
-		mD := patternserver.ModelData{Chunks: p.Chunks, StartTimestamp: p.StartTimestamp, EndTimestamp: p.EndTimestamp}
+		mD := patternserver.ModelData{Type: p.ModelType, Chunks: p.Chunks, StartTimestamp: p.StartTimestamp, EndTimestamp: p.EndTimestamp}
 		mCM[p.ModelID] = mD
 		pD[p.ID] = mCM
 	}

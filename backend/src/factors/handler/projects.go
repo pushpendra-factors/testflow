@@ -63,8 +63,6 @@ func GetProjectModelsHandler(c *gin.Context) {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
-	response := make(map[string]interface{})
-	response["intervals"] = modelIntervals
-	response["default_interval"] = modelIntervals[0]
-	c.JSON(http.StatusOK, response)
+
+	c.JSON(http.StatusOK, modelIntervals)
 }

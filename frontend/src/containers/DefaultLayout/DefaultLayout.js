@@ -20,12 +20,12 @@ import routes from '../../routes';
 import DefaultFooter from './DefaultFooter';
 import DefaultHeader from './DefaultHeader';
 import {
-  changeProject,
   fetchProjects,
-  fetchCurrentProjectEvents, 
-  fetchCurrentProjectSettings,
+  fetchProjectEvents, 
+  fetchProjectSettings,
   fetchProjectModels
 } from "../../actions/projectsActions";
+import Loading from '../../loading';
 
 
 const projectSelectStyles = {
@@ -64,8 +64,8 @@ const mapStateToProps = store => {
 const mapDispatchToProps = dispatch => {
   return bindActionCreators({ 
     fetchProjects,
-    fetchCurrentProjectEvents, 
-    fetchCurrentProjectSettings,
+    fetchProjectEvents, 
+    fetchProjectSettings,
     fetchProjectModels
   }, dispatch);
 }
@@ -101,17 +101,16 @@ class DefaultLayout extends Component {
       });
   }
 
-  fetchProjectDependencies  = (projectId) => {
-    // Todo(Dinesh): Remove dependency reload from here. dispatch changeProject action to
-    // re-render corresponding component which will call fetch on mount.
-    this.props.fetchCurrentProjectSettings(projectId);
-    this.props.fetchCurrentProjectEvents(projectId);
-    this.props.fetchProjectModels(projectId);
+  refresh = () => {
+    this.props.history.push('/refresh');
+  }
+
+  isLoaded() {
+    return this.state.projects.loaded;
   }
 
   render() {
-    // Todo(Dinesh): Define a generic loading screen.
-    if (!this.state.projects.loaded) return <div>Loading...</div>;
+    if (!this.isLoaded()) return <Loading />;
 
     if (this.state.projects.loaded && this.state.projects.error) 
       return <div>Failed loading your project.</div>;
@@ -124,8 +123,8 @@ class DefaultLayout extends Component {
     return (
       <div className="app">
         <AppHeader className="fapp-header" fixed>
-          <DefaultHeader 
-            fetchProjectDependencies={this.fetchProjectDependencies} 
+          <DefaultHeader
+            refresh={this.refresh}
             selectableProjects={selectableProjects}
             selectedProject={{ label: this.props.projects[this.props.currentProjectId].name, value: this.props.currentProjectId }} 
           />

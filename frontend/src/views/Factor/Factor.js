@@ -1,14 +1,11 @@
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
-import {
-  Card, Col, Row,
-  Dropdown, DropdownToggle, DropdownMenu, DropdownItem 
-} from 'reactstrap';
+import { Card, Col, Row } from 'reactstrap';
 import moment from 'moment';
 
-import { fetchFactors } from "../../actions/factorsActions";
-import { fetchCurrentProjectEvents, fetchProjectModels } from "../../actions/projectsActions";
+import { fetchFactors, resetFactors } from "../../actions/factorsActions";
+import { fetchProjectEvents, fetchProjectModels } from "../../actions/projectsActions";
 import BarChartCard from './BarChartCard.js';
 import LineChartCard from './LineChartCard.js';
 import FunnelChartCard from './FunnelChartCard.js';
@@ -23,6 +20,9 @@ import {
   STATE_EVENT_NUMERIC_PROPERTY_VALUE, STATE_EVENT_STRING_PROPERTY_VALUE,
   STATE_USER_NUMERIC_PROPERTY_VALUE, STATE_USER_STRING_PROPERTY_VALUE
 } from './QueryBuilderCard';
+import Loading from '../../loading';
+import loadingImage from '../../assets/img/loading.gif';
+
 
 import Select from 'react-select';
 
@@ -59,8 +59,10 @@ const mapStateToProps = store => {
 }
 
 const mapDispatchToProps = dispatch => {
-  return bindActionCreators({ fetchFactors, fetchCurrentProjectEvents, fetchProjectModels }, dispatch);
+  return bindActionCreators({ fetchFactors, resetFactors, fetchProjectEvents, fetchProjectModels }, dispatch);
 }
+
+const LOADING_DEFAULT = -1, LOADING_INIT = 0, LOADING_DONE = 1;
 
 class Factor extends Component {
   constructor(props) {
@@ -76,22 +78,31 @@ class Factor extends Component {
         error: null
       },
 
+      models: {
+        loaded: false,
+        error: null
+      },
+
+      factors: {
+        loading: LOADING_DEFAULT
+      },
+
       isModelSelectorDropdownOpen: false,
       selectedModelInterval: null
     }
   }
 
   componentWillMount() {
-    // TODO: Check if this needs to be removed
-    this.props.fetchCurrentProjectEvents(this.props.currentProjectId)
-      .then((response) => {
+    this.props.fetchProjectEvents(this.props.currentProjectId)
+      .then(() => {
         this.setState({ eventNames: { loaded: true } });
       })
-      .catch((response) => {
-        this.setState({ eventNames: { loaded: true, error: response.payload } });
+      .catch((r) => {
+        this.setState({ eventNames: { loaded: true, error: r.payload } });
       });
       
-      this.props.fetchProjectModels(this.props.currentProjectId);
+      this.props.fetchProjectModels(this.props.currentProjectId)
+        .then(() => this.setState({ models: { loaded: true } }));
   }
 
   componentDidUpdate() {
@@ -102,6 +113,12 @@ class Factor extends Component {
 
   getPropertiesOptions(properties, isEventType) {
     var lp = [];
+
+    if (properties.categorical == undefined && properties.numerical == undefined) {
+      console.warn("Warning: No properties returned.")
+      return lp;
+    }
+
     var categoricalProperties = properties["categorical"];
     categoricalProperties.forEach(function (categoricalProperty) {
       lp.push(
@@ -231,7 +248,7 @@ class Factor extends Component {
     }));
   }
 
-  changeSelectedModel = (selectedOption) => {
+  handleModelSelectorChange = (selectedOption) => {
     var clickedModelId = selectedOption.value;
     var selectedInterval;
     for (var i = 0; i < this.props.intervals.length; i++) {
@@ -244,6 +261,8 @@ class Factor extends Component {
     if(!!selectedInterval.mid){
       this.setState({selectedModelInterval: selectedInterval});
     }
+    
+    this.props.resetFactors();
   }
 
   toggleFade = () => {
@@ -354,47 +373,82 @@ class Factor extends Component {
       return;
     }
     console.log('Fire Query: ' + JSON.stringify(query));
-    this.props.fetchFactors(this.props.currentProjectId,this.state.selectedModelInterval.mid,
-      { query: query }, this.props.location.search);
+
+    this.setState({ factors: { loading: LOADING_INIT } });
+    this.props.fetchFactors(this.props.currentProjectId,
+      this.state.selectedModelInterval.mid,{ query: query }, this.props.location.search)
+      .then(() => {
+        console.log('Factors completed');
+        this.setState({ factors: { loading: LOADING_DONE } });
+      });
+    // Todo(Dinesh): handle error here on factors failure.
   }
 
   readableTimstamp(unixTime) {
     return moment.unix(unixTime).utc().format('MMM DD, YYYY');
   }
 
-  makeDropdownIntervals(intervals){
-    var dropdownIntervals = intervals.map((interval) => {
-      return { label: this.readableTimstamp(interval.st)+" - "+this.readableTimstamp(interval.et), value: interval.mid};
-    });
-    return dropdownIntervals
+  getReadableInterval = (interval) => {
+    let prefix = ''
+    if (interval.mt === 'w') { prefix = '[w]'; }
+    else if (interval.mt === 'm') { prefix = '[m]'; }
+    else { throw new Error('invalid model type'); }
+
+    return { 
+      label: prefix + ' ' + this.readableTimstamp(interval.st)+' - '+this.readableTimstamp(interval.et), 
+      value: interval.mid
+    };
+  }
+
+  getIntervalOptions(intervals){
+    return intervals.map(this.getReadableInterval);
+  }
+
+  getIntervalDisplayValue() {
+    if(this.state.selectedModelInterval != null){
+      return this.getReadableInterval(this.state.selectedModelInterval);
+    }
+    return null 
+  }
+
+  getChartContainerContent(charts=[]) {
+    if (this.state.factors.loading == LOADING_DEFAULT || 
+      this.state.factors.loading == LOADING_INIT) return null;
+    
+    if (charts.length == 0) {
+      return (
+        <Col md={{ size: 'auto', offset: 5 }} style={{paddingTop:'8%', color: '#c0c0c0'}}>
+          <h2> No results </h2>
+        </Col>
+      )
+    }
+
+    return charts;
+  }
+
+  isLoaded() {
+    return this.state.eventNames.loaded && 
+      this.state.models.loaded;
   }
 
   render() {
-    if (!this.state.eventNames.loaded) return <div> Loading... </div>;
+    if (!this.isLoaded()) return <Loading />;
+    
     var charts = [];
-    let resultElements;
     if (!!this.props.factors.charts) {
       for (var i = 0; i < this.props.factors.charts.length; i++) {
         // note: we add a key prop here to allow react to uniquely identify each
         // element in this array. see: https://reactjs.org/docs/lists-and-keys.html
         var chartData = this.props.factors.charts[i];
         if (chartData.type === 'line') {
-          charts.push(<Row style={chartCardRowStyle} key={i}><Col sm={cardColumnSetting}><LineChartCard chartData={chartData} /></Col></Row>)
+          charts.push(<Row className="animated fadeIn" style={chartCardRowStyle} key={i}><Col sm={cardColumnSetting}><LineChartCard chartData={chartData} /></Col></Row>)
         } else if (chartData.type === 'bar') {
-          charts.push(<Row style={chartCardRowStyle} key={i}><Col sm={cardColumnSetting}><BarChartCard chartData={chartData} key={i} /></Col></Row>)
+          charts.push(<Row className="animated fadeIn" style={chartCardRowStyle} key={i}><Col sm={cardColumnSetting}><BarChartCard chartData={chartData} key={i} /></Col></Row>)
         } else if (chartData.type === 'funnel') {
-          charts.push(<Row style={chartCardRowStyle} key={i}><Col sm={cardColumnSetting}><FunnelChartCard chartData={chartData} /></Col></Row>);
+          charts.push(<Row className="animated fadeIn" style={chartCardRowStyle} key={i}><Col sm={cardColumnSetting}><FunnelChartCard chartData={chartData} /></Col></Row>);
         }
       }
-      resultElements = <Card className="fapp-card-border-none">{charts}</Card>;
     }
-
-    let mid = "";
-    let label = "";
-    if(this.state.selectedModelInterval != null){
-        mid = this.state.selectedModelInterval.mid;
-        label = this.readableTimstamp(this.state.selectedModelInterval.st)+" - "+this.readableTimstamp(this.state.selectedModelInterval.et);
-    } 
 
     return (
       <div>
@@ -402,10 +456,10 @@ class Factor extends Component {
           <Row class="fapp-select">
             <Col xs={{size: 10, offset: 1}} md={{ size: 3, offset: 8 }}>
               <Select
-                value={{value: mid , label: label}}
-                onChange={this.changeSelectedModel}
-                options={this.makeDropdownIntervals(this.props.intervals)}
-                placeholder="Select a date range."
+                value={this.getIntervalDisplayValue()}
+                onChange={this.handleModelSelectorChange}
+                options={this.getIntervalOptions(this.props.intervals)}
+                placeholder="No intervals"
               />
             </Col>
           </Row>  
@@ -420,11 +474,17 @@ class Factor extends Component {
                     getPropertyValueOptions={this.getPropertyValueOptions}
                     onKeyDown={this.factor}
                     holderText="Enter goal."
+                    resetCharts={this.props.resetFactors}
                   />
                 </Col>
               </Row>
             </div>
-            {resultElements}
+            <Col md={{ size: 'auto', offset: 5 }} style={{padding:'8% 43px', display: this.state.factors.loading === LOADING_INIT ? 'block' : 'none'}}>
+              <img src={loadingImage} alt="Loading.." /> 
+            </Col>
+            <Card className="fapp-card-border-none">
+              { this.getChartContainerContent(charts) }
+            </Card>
         </div>
       </div>
     );

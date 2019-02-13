@@ -24,31 +24,31 @@ export function fetchProjects() {
   }
 }
 
-export function fetchCurrentProjectEvents(projectId) {
+export function fetchProjectEvents(projectId) {
   return function(dispatch) {
     return new Promise((resolve, reject) => {
       axios.get(host + "projects/" + projectId + "/event_names")
         .then((response) => {
-          resolve(dispatch({type: "FETCH_CURRENT_PROJECT_EVENTS_FULFILLED",
-                  payload: { currentProjectId: projectId, currentProjectEventNames: response.data,
+          resolve(dispatch({type: "FETCH_PROJECT_EVENTS_FULFILLED",
+                  payload: { currentProjectId: projectId, eventNames: response.data,
                     eventPropertiesMap: {} }}));
         })
         .catch((err) => {
-          reject(dispatch({type: "FETCH_CURRENT_PROJECT_EVENTS_REJECTED",
-                  payload: { currentProjectId: projectId, currentProjectEventNames: [],
+          reject(dispatch({type: "FETCH_PROJECT_EVENTS_REJECTED",
+                  payload: { currentProjectId: projectId, eventNames: [],
                     eventPropertiesMap: {}, err: err }}));
         });
     });
   }
 }
 
-export function fetchCurrentProjectSettings(projectId) {
+export function fetchProjectSettings(projectId) {
   return function(dispatch) {
     return new Promise((resolve, reject) => {
       axios.get(host + "projects/" + projectId + "/settings")
         .then((response) => {
           resolve(dispatch({
-            type: "FETCH_CURRENT_PROJECT_SETTINGS_FULFILLED", 
+            type: "FETCH_PROJECT_SETTINGS_FULFILLED", 
             payload: {
               currentProjectId: projectId,
               settings: response.data
@@ -58,7 +58,7 @@ export function fetchCurrentProjectSettings(projectId) {
         .catch((err) => {
           reject(
             dispatch({
-            type: "FETCH_CURRENT_PROJECT_SETTINGS_REJECTED", 
+            type: "FETCH_PROJECT_SETTINGS_REJECTED", 
             payload: {
               currentProjectId: projectId, 
               settings: {}, 
@@ -70,12 +70,12 @@ export function fetchCurrentProjectSettings(projectId) {
   }
 }
 
-export function udpateCurrentProjectSettings(projectId, payload) {
+export function udpateProjectSettings(projectId, payload) {
   return function(dispatch) {
     return axios.put(host + "projects/" + projectId + "/settings", payload)
      .then((response) => {
         return dispatch({
-          type: "UPDATE_CURRENT_PROJECT_SETTINGS_FULFILLED", 
+          type: "UPDATE_PROJECT_SETTINGS_FULFILLED", 
           payload: {
             updatedSettings: response.data
           }
@@ -83,7 +83,7 @@ export function udpateCurrentProjectSettings(projectId, payload) {
       })
       .catch((err) => {
         return dispatch({
-          type: "UPDATE_CURRENT_PROJECT_SETTINGS_REJECTED", 
+          type: "UPDATE_PROJECT_SETTINGS_REJECTED", 
           payload: {
             updatedSettings: {}, 
             err: err
@@ -98,11 +98,11 @@ export function fetchProjectEventProperties(projectId, eventName) {
     axios.get(host + "projects/" + projectId +
               "/event_names/" + eventName + "/properties")
       .then((response) => {
-        dispatch({type: "FETCH_CURRENT_PROJECT_EVENT_PROPERTIES_FULFILLED",
+        dispatch({type: "FETCH_PROJECT_EVENT_PROPERTIES_FULFILLED",
                  payload: { eventName: eventName, eventProperties: response.data }})
       })
       .catch((err) => {
-        dispatch({type: "FETCH_CURRENT_PROJECT_EVENT_PROPERTIES_REJECTED",
+        dispatch({type: "FETCH_PROJECT_EVENT_PROPERTIES_REJECTED",
                  payload: { eventName: eventName, eventProperties: {}, err: err }})
       })
   }
@@ -114,12 +114,12 @@ export function fetchProjectEventPropertyValues(projectId, eventName, propertyNa
               "/event_names/" + eventName + "/properties/" + propertyName +
               "/values")
       .then((response) => {
-        dispatch({type: "FETCH_CURRENT_PROJECT_EVENT_PROPERTY_VALUES_FULFILLED",
+        dispatch({type: "FETCH_PROJECT_EVENT_PROPERTY_VALUES_FULFILLED",
                  payload: { eventName: eventName, propertyName: propertyName,
                   eventPropertyValues: response.data }})
       })
       .catch((err) => {
-        dispatch({type: "FETCH_CURRENT_PROJECT_EVENT_PROPERTY_VALUES_REJECTED",
+        dispatch({type: "FETCH_PROJECT_EVENT_PROPERTY_VALUES_REJECTED",
                  payload: { eventName: eventName, propertyName: propertyName,
                   eventPropertyValues: [], err: err }})
       })
@@ -131,11 +131,11 @@ export function fetchProjectUserProperties(projectId) {
     axios.get(host + "projects/" + projectId +
               "/user_properties")
       .then((response) => {
-        dispatch({type: "FETCH_CURRENT_PROJECT_USER_PROPERTIES_FULFILLED",
+        dispatch({type: "FETCH_PROJECT_USER_PROPERTIES_FULFILLED",
                  payload: { userProperties: response.data }})
       })
       .catch((err) => {
-        dispatch({type: "FETCH_CURRENT_PROJECT_USER_PROPERTIES_REJECTED",
+        dispatch({type: "FETCH_PROJECT_USER_PROPERTIES_REJECTED",
                  payload: { userProperties: {}, err: err }})
       })
   }
@@ -146,12 +146,12 @@ export function fetchProjectUserPropertyValues(projectId, propertyName) {
     axios.get(host + "projects/" + projectId +
               "/user_properties/" + propertyName + "/values")
       .then((response) => {
-        dispatch({type: "FETCH_CURRENT_PROJECT_USER_PROPERTY_VALUES_FULFILLED",
+        dispatch({type: "FETCH_PROJECT_USER_PROPERTY_VALUES_FULFILLED",
                  payload: { propertyName: propertyName,
                   userPropertyValues: response.data }})
       })
       .catch((err) => {
-        dispatch({type: "FETCH_CURRENT_PROJECT_USER_PROPERTY_VALUES_REJECTED",
+        dispatch({type: "FETCH_PROJECT_USER_PROPERTY_VALUES_REJECTED",
                  payload: { propertyName: propertyName,
                   userPropertyValues: [], err: err }})
       })
@@ -250,12 +250,19 @@ export function deleteFilter(projectId, filterId, storeIndex) {
 
 export function fetchProjectModels(projectId){
   return function(dispatch){
-    axios.get(host + "projects/" + projectId + "/models")
-    .then((response) => {
-      dispatch({type: "FETCH_PROJECT_MODELS_FULFILLED", payload: response.data});
-    })
-    .catch((err) => {
-      dispatch({type: "FETCH_PROJECT_MODELS_REJECTED", payload: err})
-    });
+    return axios.get(host + "projects/" + projectId + "/models")
+      .then((r) => {
+        dispatch({type: "FETCH_PROJECT_MODELS_FULFILLED", payload: r.data });
+      })
+      .catch((r) => {
+        if (r.status) {
+          // use this pattern for error handling. 
+          // decided to use redux store.
+          dispatch({type: "FETCH_PROJECT_MODELS_REJECTED", payload: r.data, code: r.status });        
+        } else {
+          // network error. Idea: Use a global error component for this.
+          console.log("network error");
+        }
+      });
   }
 }

@@ -1,11 +1,9 @@
 import React from 'react';
-import Loadable from 'react-loadable'
+import Loadable from 'react-loadable';
+import { Redirect } from 'react-router-dom';
 
 import DefaultLayout from './containers/DefaultLayout';
-
-function Loading() {
-  return <div>Loading...</div>;
-}
+import Loading from './loading';
 
 const Query = Loadable({
   loader: () => import('./views/Query'),
@@ -32,6 +30,11 @@ const User = Loadable({
   loading: Loading,
 });
 
+const ReloadComponent = (props) => {
+  // Todo(Dinesh): Fix browser forward after go(-1).
+  props.history.go(-1);
+  return "";
+}
 
 // https://github.com/ReactTraining/react-router/tree/master/packages/react-router-config
 const routes = [
@@ -41,6 +44,7 @@ const routes = [
   { path: '/settings', name: 'Settings', component: Settings },
   { path: '/users', exact: true,  name: 'Users', component: Users },
   { path: '/users/:id', exact: true, name: 'User Details', component: User },
+  { path: '/refresh', exact: true, name: 'Refresh', component: ReloadComponent },
 ];
 
 export default routes;
