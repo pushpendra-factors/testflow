@@ -24,7 +24,7 @@ spec:
     spec:
       containers:
       - name: appserver
-        image: us.gcr.io/factors-staging/app-server:v1-beta_e7011fc
+        image: us.gcr.io/factors-staging/app-server:v0.01-beta_f6d8ca6
         ports:
         - containerPort: 8080
         volumeMounts:

@@ -24,7 +24,7 @@ spec:
     spec:
       containers:
       - name: patternserver
-        image: us.gcr.io/factors-staging/pattern-server:v1-beta_e7011fc
+        image: us.gcr.io/factors-staging/pattern-server:v0.01-beta_f6d8ca6
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8100
