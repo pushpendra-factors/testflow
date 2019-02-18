@@ -6,7 +6,6 @@ spec:
   schedule: "0 15 * * *" # In UTC
   successfulJobsHistoryLimit: 5
   failedJobsHistoryLimit: 5
-  concurrencyPolicy: Forbid
   jobTemplate:
     spec:
       template:
