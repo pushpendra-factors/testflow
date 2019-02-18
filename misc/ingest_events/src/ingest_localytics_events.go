@@ -39,13 +39,13 @@ func getUserId(clientUserId string, eventTimestamp int64) (string, error) {
 		req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqBody))
 		req.Header.Add("Authorization", *projectTokenFlag)
 		resp, err := client.Do(req)
-		// always close the response-body, even if content is not required
-		defer resp.Body.Close()
 		if err != nil {
 			log.Fatal(fmt.Sprintf(
-				"Http Post user creation failed. Url: %s, reqBody: %s, response: %+v", url, reqBody, resp))
+				"Http Post user creation failed. Url: %s, reqBody: %s, response: %+v, error: %+v", url, reqBody, resp, err))
 			return "", err
 		}
+		// always close the response-body, even if content is not required
+		defer resp.Body.Close()
 		jsonResponse, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			log.Fatal("Unable to parse http user create response.")

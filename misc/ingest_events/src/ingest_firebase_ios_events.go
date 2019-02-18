@@ -8,14 +8,17 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"strconv"
+	"sync"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -30,8 +33,18 @@ var clientUserCreationTimeKey string = "user_first_touch_timestamp"
 var eventNameKey string = "event_name"
 var eventCreationTimeKey string = "event_timestamp"
 var clientUserIdToUserIdMap map[string]string = make(map[string]string)
+var mutex = &sync.Mutex{}
 
-func getUserId(clientUserId string, eventMap map[string]interface{}) (string, error) {
+func closeResp(resp *http.Response) {
+	_, err := io.Copy(ioutil.Discard, resp.Body)
+	resp.Body.Close()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "fetch: reading: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func getUserId(clientUserId string, eventMap map[string]interface{}, httpClient *http.Client) (string, error) {
 	userId, found := clientUserIdToUserIdMap[clientUserId]
 	if !found {
 		// Create a user.
@@ -51,14 +64,11 @@ func getUserId(clientUserId string, eventMap map[string]interface{}) (string, er
 
 		reqBody, _ := json.Marshal(userRequestMap)
 		url := fmt.Sprintf("%s/sdk/user/identify", *serverFlag)
-		client := &http.Client{}
 		req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqBody))
 		req.Header.Add("Authorization", *projectTokenFlag)
-		resp, err := client.Do(req)
-		// always close the response-body, even if content is not required
-		defer resp.Body.Close()
+		resp, err := httpClient.Do(req)
 		if err != nil {
-			log.Fatal(fmt.Sprintf("Http Post user creation failed. Url: %s, reqBody: %s, response: %+v", url, reqBody, resp))
+			log.Fatal(fmt.Sprintf("Http Post user creation failed. Url: %s, reqBody: %s, response: %+v, err:%+v", url, reqBody, resp, err))
 			return "", err
 		}
 		jsonResponse, err := ioutil.ReadAll(resp.Body)
@@ -66,10 +76,14 @@ func getUserId(clientUserId string, eventMap map[string]interface{}) (string, er
 			log.Fatal("Unable to parse http user create response.")
 			return "", err
 		}
+		// always close the response-body, even if content is not required
+		closeResp(resp)
 		var jsonResponseMap map[string]interface{}
 		json.Unmarshal(jsonResponse, &jsonResponseMap)
 		userId = jsonResponseMap["user_id"].(string)
+		mutex.Lock()
 		clientUserIdToUserIdMap[clientUserId] = userId
+		mutex.Unlock()
 	}
 	return userId, nil
 }
@@ -156,7 +170,7 @@ func extractFloatandStringProperties(
 	return propertiesMap
 }
 
-func lineIngest(eventMap map[string]interface{}) {
+func lineIngest(eventMap map[string]interface{}, httpClient *http.Client, wg *sync.WaitGroup) {
 	log.Info(fmt.Sprintf("Processing event: %v", eventMap))
 	clientUserId, found := eventMap[clientUserIdKey].(string)
 	if !found {
@@ -164,7 +178,7 @@ func lineIngest(eventMap map[string]interface{}) {
 		return
 	}
 
-	userId, err := getUserId(clientUserId, eventMap)
+	userId, err := getUserId(clientUserId, eventMap, httpClient)
 	if err != nil {
 		log.Fatal("UserId not found.")
 		return
@@ -259,16 +273,16 @@ func lineIngest(eventMap map[string]interface{}) {
 
 	reqBody, _ := json.Marshal(eventRequestMap)
 	url := fmt.Sprintf("%s/sdk/event/track", *serverFlag)
-	client := &http.Client{}
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqBody))
 	req.Header.Add("Authorization", *projectTokenFlag)
-	resp, err := client.Do(req)
-	// always close the response-body, even if content is not required
-	defer resp.Body.Close()
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		log.Fatal(fmt.Sprintf("Http Post event creation failed. Url: %s, reqBody: %s", url, reqBody))
 		return
 	}
+	// always close the response-body, even if content is not required
+	closeResp(resp)
+	wg.Done()
 }
 
 func fileIngest(filepath string) {
@@ -278,7 +292,19 @@ func fileIngest(filepath string) {
 	}
 	defer file.Close()
 
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	// Pool of 100 connections.
+	httpClients := []*http.Client{}
+	numConnections := 100
+	for i := 0; i < numConnections; i++ {
+		httpClients = append(httpClients, &http.Client{Transport: tr})
+	}
+	var wg sync.WaitGroup
+
 	scanner := bufio.NewScanner(file)
+	i := 0
 	for scanner.Scan() {
 		line := scanner.Text()
 		var eventMap map[string]interface{}
@@ -286,7 +312,13 @@ func fileIngest(filepath string) {
 			log.Fatal(fmt.Sprintf("Unable to unmarshal line to json in file %s : %s", filepath, err))
 			continue
 		}
-		lineIngest(eventMap)
+		mod := i % numConnections
+		wg.Add(1)
+		go lineIngest(eventMap, httpClients[mod], &wg)
+		if mod == numConnections-1 {
+			wg.Wait()
+		}
+		i++
 	}
 
 	if err := scanner.Err(); err != nil {
