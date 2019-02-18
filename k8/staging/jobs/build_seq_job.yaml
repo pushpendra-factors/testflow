@@ -6,6 +6,7 @@ spec:
   schedule: "0 15 * * *" # In UTC
   successfulJobsHistoryLimit: 5
   failedJobsHistoryLimit: 5
+  concurrencyPolicy: Forbid
   jobTemplate:
     spec:
       template:
@@ -15,7 +16,7 @@ spec:
         spec:
           containers:
           - name: build-seq-job
-            image: us.gcr.io/factors-staging/build-seq-job:v0.02-beta_ee346a9
+            image: us.gcr.io/factors-staging/build-seq-job:v0.03-beta_4174b9d
             imagePullPolicy: IfNotPresent
             args:
             - --env
