@@ -27,10 +27,21 @@ type BuildSuccess struct {
 	PatternMineTimeInMS int64 `json:"mined_patterns_in_ms"`
 }
 
+func notifyOnPanic(env string) {
+	if pe := recover(); pe != nil {
+		if ne := util.NotifyThroughSNS(taskID, env, map[string]interface{}{"panic_error": pe}); ne != nil {
+			log.Fatal(ne, pe)
+		}
+		log.Fatal(pe)
+	}
+}
+
 // BuildSequential - runs model building sequenitally for all project intervals.
 func BuildSequential(env string, db *gorm.DB, cloudManager *filestore.FileManager,
 	etcdClient *serviceEtcd.EtcdClient, diskManger *serviceDisk.DiskDriver,
 	bucketName string, noOfPatternWorkers int, projectId uint64) error {
+
+	defer notifyOnPanic(env)
 
 	// Todo(Dinesh): Add success and failure notification.
 	// Idea: []Builds from this can be queued and workers can process.
