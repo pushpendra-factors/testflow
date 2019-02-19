@@ -8,8 +8,14 @@ var app = express();
 app.use(express.static(DIST_DIR));
 
 app.get("*", function (req, res) {
-  console.log(req.headers.host+" -> "+req.originalUrl);
+  console.log(req.headers.host + "-" + req.method + " -> "+req.originalUrl);
   res.sendFile(path.join(DIST_DIR, "index.html"));
+});
+
+app.all("*", function (req, res) {
+  console.log(req.headers.host + "-" + req.method + " -> "+req.originalUrl);
+  res.status(404);
+  res.json({});
 });
 
 console.log("\nServing on serving on port "+PORT+"..");
