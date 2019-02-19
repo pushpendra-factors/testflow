@@ -26,7 +26,7 @@ func pullAndWriteEventsToFile(db *gorm.DB, projectId uint64, startTime int64,
 		"LEFT JOIN event_names ON events.event_name_id = event_names.id LEFT JOIN users ON events.user_id = users.id "+
 		"LEFT JOIN user_properties ON events.user_properties_id = user_properties.id "+
 		"WHERE events.project_id = ? AND events.timestamp BETWEEN  ? AND ? "+
-		"ORDER BY events.user_id, events.timestamp LIMIT ?", projectId, startTime, endTime, max_EVENTS+1).Rows()
+		"ORDER BY COALESCE(users.customer_user_id, users.id), events.timestamp LIMIT ?", projectId, startTime, endTime, max_EVENTS+1).Rows()
 	defer rows.Close()
 	if err != nil {
 		peLog.WithFields(log.Fields{"err": err}).Error("SQL Query failed.")
