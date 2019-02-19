@@ -8,6 +8,7 @@ var app = express();
 app.use(express.static(DIST_DIR));
 
 app.get("*", function (req, res) {
+  console.log(req.headers.host+" -> "+req.originalUrl);
   res.sendFile(path.join(DIST_DIR, "index.html"));
 });
 
