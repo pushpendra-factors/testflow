@@ -8,7 +8,7 @@ spec:
   tls:
   - hosts:
     - "*.factors.ai"
-    secretName: secret-ssl
+    secretName: secret-tls
   rules:
   - host: "api.factors.ai"
     http:
