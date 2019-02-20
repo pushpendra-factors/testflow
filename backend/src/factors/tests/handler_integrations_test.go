@@ -532,6 +532,127 @@ func TestIntSegmentHandlerWithTrackEvent(t *testing.T) {
 	assertKeysExistAndNotEmpty(t, userPropertiesMap, genericUserProps)
 	assertKeysExistAndNotEmpty(t, userPropertiesMap, webUserProps)
 	assertKeysExistAndNotEmpty(t, userPropertiesMap, mobileUserProps)
+
+	sampleTrackPayloadWithoutProperties := `
+	{
+		"_metadata": {
+		  "bundled": [
+			"Segment.io"
+		  ],
+		  "unbundled": [
+
+		  ]
+		},
+		"anonymousId": "80444c7e-1580-4d3c-a77a-2f3427ed7d97",
+		"channel": "client",
+		"context": {
+			"active": true,
+			"app": {
+			  "name": "InitechGlobal",
+			  "version": "545",
+			  "build": "3.0.1.545",
+			  "namespace": "com.production.segment"
+			},
+			"campaign": {
+			  "name": "TPS Innovation Newsletter",
+			  "source": "Newsletter",
+			  "medium": "email",
+			  "term": "tps reports",
+			  "content": "image link"
+			},
+			"device": {
+			  "id": "B5372DB0-C21E-11E4-8DFC-AA07A5B093DB",
+			  "advertisingId": "7A3CBEA0-BDF5-11E4-8DFC-AA07A5B093DB",
+			  "adTrackingEnabled": true,
+			  "manufacturer": "Apple",
+			  "model": "iPhone7,2",
+			  "name": "maguro",
+			  "type": "ios",
+			  "token": "ff15bc0c20c4aa6cd50854ff165fd265c838e5405bfeb9571066395b8c9da449"
+			},
+			"ip": "8.8.8.8",
+			"library": {
+			  "name": "analytics.js",
+			  "version": "2.11.1"
+			},
+			"locale": "nl-NL",
+			"location": {
+			  "city": "San Francisco",
+			  "country": "United States",
+			  "latitude": 40.2964197,
+			  "longitude": -76.9411617,
+			  "speed": 0
+			},
+			"network": {
+			  "bluetooth": false,
+			  "carrier": "T-Mobile NL",
+			  "cellular": true,
+			  "wifi": false
+			},
+			"os": {
+			  "name": "iPhone OS",
+			  "version": "8.1.3"
+			},
+			"page": {
+			  "path": "/academy/",
+			  "referrer": "https://google.com",
+			  "search": "",
+			  "title": "Analytics Academy",
+			  "url": "https://segment.com/academy/"
+			},
+			"referrer": {
+			  "id": "ABCD582CDEFFFF01919",
+			  "type": "dataxu"
+			},
+			"screen": {
+			  "width": 320,
+			  "height": 568,
+			  "density": 2
+			},
+			"groupId": "12345",
+			"timezone": "Europe/Amsterdam",
+			"userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 9_1 like Mac OS X) AppleWebKit/601.1.46 (KHTML, like Gecko) Version/9.0 Mobile/13B143 Safari/601.1"
+		},
+		"integrations": {},
+		"messageId": "ajs-19c084e2f80e70cf62bb62509e79b37e",
+		"originalTimestamp": "2019-01-08T16:22:06.053Z",
+		"projectId": "Zzft38QJhB",
+		"receivedAt": "2019-01-08T16:21:54.106Z",
+		"sentAt": "2019-01-08T16:22:06.058Z",
+		"timestamp": "2019-01-08T16:21:54.101Z",
+		"event": "click_1",
+		"type": "track",
+		"userId": "",
+		"version": 2
+	  }
+	`
+
+	w = ServePostRequestWithHeaders(r, uri, []byte(sampleTrackPayloadWithoutProperties),
+		map[string]string{"Authorization": project.PrivateToken})
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse3, _ := ioutil.ReadAll(w.Body)
+	var jsonResponseMap3 map[string]interface{}
+	json.Unmarshal(jsonResponse3, &jsonResponseMap3)
+	assert.Nil(t, jsonResponseMap3["error"])
+	assert.NotNil(t, jsonResponseMap3["event_id"])
+	// Check event properties added.
+	retEvent1, errCode := M.GetEventById(project.ID, jsonResponseMap3["event_id"].(string))
+	assert.Equal(t, http.StatusFound, errCode)
+	eventPropertiesBytes1, err := retEvent1.Properties.Value()
+	var eventPropertiesMap1 map[string]interface{}
+	json.Unmarshal(eventPropertiesBytes1.([]byte), &eventPropertiesMap1)
+	assertKeysExistAndNotEmpty(t, eventPropertiesMap1, genericEventProps)
+	assertKeysExistAndNotEmpty(t, eventPropertiesMap1, webEventProps)
+	assertKeysExistAndNotEmpty(t, eventPropertiesMap1, mobileEventProps)
+	// Check event properties added.
+	retUser, errCode = M.GetUser(project.ID, retEvent1.UserId)
+	assert.NotNil(t, retUser)
+	userPropertiesBytes1, err := retUser.Properties.Value()
+	var userPropertiesMap1 map[string]interface{}
+	json.Unmarshal(userPropertiesBytes1.([]byte), &userPropertiesMap1)
+	assertKeysExistAndNotEmpty(t, userPropertiesMap1, genericUserProps)
+	assertKeysExistAndNotEmpty(t, userPropertiesMap1, webUserProps)
+	assertKeysExistAndNotEmpty(t, userPropertiesMap1, mobileUserProps)
 }
 
 func TestIntSegmentHandlerWithScreenEvent(t *testing.T) {
