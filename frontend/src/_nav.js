@@ -6,9 +6,9 @@ export default {
       icon: 'fa fa-code',
     },
 	  {
-      name: 'Query',
-      url: '/query',
-      icon: 'icon-question',
+      name: 'Core Analytics',
+      url: '/core',
+      icon: 'cui-graph',
     },
     {
       name: 'Settings',

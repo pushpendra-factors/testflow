@@ -39,7 +39,7 @@ const ReloadComponent = (props) => {
 // https://github.com/ReactTraining/react-router/tree/master/packages/react-router-config
 const routes = [
   { path: '/', exact: true, name: 'Home', component: DefaultLayout },
-  { path: '/query', name: 'Query', component: Query },
+  { path: '/core', name: 'Query', component: Query },
   { path: '/factor', name: 'Factor', component: Factor },
   { path: '/settings', name: 'Settings', component: Settings },
   { path: '/users', exact: true,  name: 'Users', component: Users },
