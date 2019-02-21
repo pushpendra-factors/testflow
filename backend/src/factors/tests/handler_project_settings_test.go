@@ -3,79 +3,145 @@ package tests
 import (
 	"encoding/json"
 	H "factors/handler"
+	"factors/handler/helpers"
+	M "factors/model"
+	U "factors/util"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
+
+func sendGetProjectSettingsReq(r *gin.Engine, projectId uint64, agent *M.Agent) *httptest.ResponseRecorder {
+
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	if err != nil {
+		log.WithError(err).Error("Error Creating cookieData")
+	}
+	rb := U.NewRequestBuilder(http.MethodGet, fmt.Sprintf("/projects/%d/settings", projectId)).
+		WithCookie(&http.Cookie{
+			Name:   helpers.FactorsSessionCookieName,
+			Value:  cookieData,
+			MaxAge: 1000,
+		})
+
+	w := httptest.NewRecorder()
+	req, err := rb.Build()
+	if err != nil {
+		log.WithError(err).Error("Error Creating getProjectSetting Req")
+	}
+	r.ServeHTTP(w, req)
+	return w
+}
 
 func TestAPIGetProjectSettingHandler(t *testing.T) {
 	r := gin.Default()
 	H.InitAppRoutes(r)
 
-	project, err := SetupProjectReturnDAO()
+	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
 	assert.NotNil(t, project)
 
-	projectSettingsURL := fmt.Sprintf("/projects/%d/settings", project.ID)
-
 	// Test get project settings.
-	w := ServeGetRequest(r, projectSettingsURL)
-	assert.Equal(t, http.StatusOK, w.Code)
-	jsonResponse, _ := ioutil.ReadAll(w.Body)
-	var jsonResponseMap map[string]interface{}
-	json.Unmarshal(jsonResponse, &jsonResponseMap)
-	assert.NotEqual(t, 0, jsonResponseMap["id"])
-	assert.NotNil(t, jsonResponseMap["auto_track"])
+	t.Run("Success", func(t *testing.T) {
+		w := sendGetProjectSettingsReq(r, project.ID, agent)
+		assert.Equal(t, http.StatusOK, w.Code)
+		jsonResponse, _ := ioutil.ReadAll(w.Body)
+		var jsonResponseMap map[string]interface{}
+		json.Unmarshal(jsonResponse, &jsonResponseMap)
+		assert.NotEqual(t, 0, jsonResponseMap["id"])
+		assert.NotNil(t, jsonResponseMap["auto_track"])
+	})
 
 	// Test get project settings with bad id.
-	w = ServeGetRequest(r, fmt.Sprintf("/projects/%d/settings", 0))
-	assert.Equal(t, http.StatusBadRequest, w.Code)
-	jsonResponse, _ = ioutil.ReadAll(w.Body)
-	var jsonRespMap map[string]interface{}
-	json.Unmarshal(jsonResponse, &jsonRespMap)
-	assert.NotNil(t, jsonRespMap["error"])
-	assert.Equal(t, 1, len(jsonRespMap))
+	t.Run("BadID", func(t *testing.T) {
+		badProjectID := uint64(0)
+		w := sendGetProjectSettingsReq(r, badProjectID, agent)
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		jsonResponse, _ := ioutil.ReadAll(w.Body)
+		var jsonRespMap map[string]interface{}
+		json.Unmarshal(jsonResponse, &jsonRespMap)
+		assert.NotNil(t, jsonRespMap["error"])
+		assert.Equal(t, 1, len(jsonRespMap))
+	})
+
+}
+
+func sendUpdateProjectSettingReq(r *gin.Engine, projectId uint64, agent *M.Agent, params map[string]interface{}) *httptest.ResponseRecorder {
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	if err != nil {
+		log.WithError(err).Error("Error Creating cookieData")
+	}
+	rb := U.NewRequestBuilder(http.MethodPut, fmt.Sprintf("/projects/%d/settings", projectId)).
+		WithPostParams(params).
+		WithCookie(&http.Cookie{
+			Name:   helpers.FactorsSessionCookieName,
+			Value:  cookieData,
+			MaxAge: 1000,
+		})
+
+	w := httptest.NewRecorder()
+	req, err := rb.Build()
+	if err != nil {
+		log.WithError(err).Error("Error Creating UpdateProjectSetting Req")
+	}
+	r.ServeHTTP(w, req)
+	return w
 }
 
 func TestAPIUpdateProjectSettingsHandler(t *testing.T) {
 	r := gin.Default()
 	H.InitAppRoutes(r)
 
-	project, err := SetupProjectReturnDAO()
+	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
 	assert.NotNil(t, project)
 
-	projectSettingsURL := fmt.Sprintf("/projects/%d/settings", project.ID)
-
-	// Test update project settings.
-	w := ServePutRequest(r, projectSettingsURL, []byte(`{"auto_track": true}`))
-	assert.Equal(t, http.StatusOK, w.Code)
-	jsonResponse, _ := ioutil.ReadAll(w.Body)
-	var jsonResponseMap map[string]interface{}
-	json.Unmarshal(jsonResponse, &jsonResponseMap)
-	assert.NotNil(t, jsonResponseMap["auto_track"])
+	t.Run("Success", func(t *testing.T) {
+		w := sendUpdateProjectSettingReq(r, project.ID, agent, map[string]interface{}{
+			"auto_track": true,
+		})
+		assert.Equal(t, http.StatusOK, w.Code)
+		jsonResponse, _ := ioutil.ReadAll(w.Body)
+		var jsonResponseMap map[string]interface{}
+		json.Unmarshal(jsonResponse, &jsonResponseMap)
+		assert.NotNil(t, jsonResponseMap["auto_track"])
+	})
 
 	// Test updating project id.
-	var randomProjectId uint64
-	randomProjectId = 999999999
-	w = ServePutRequest(r, projectSettingsURL, []byte(fmt.Sprintf(`{"auto_track": true, "project_id":%d}`, randomProjectId)))
-	// project_id becomes unknown field as omitted on json.
-	assert.Equal(t, http.StatusBadRequest, w.Code)
-	jsonResponse, _ = ioutil.ReadAll(w.Body)
-	var jsonRespMap1 map[string]interface{}
-	json.Unmarshal(jsonResponse, &jsonRespMap1)
-	assert.NotNil(t, jsonRespMap1["error"])
+	t.Run("BadParamsTryUpdatingProjectId", func(t *testing.T) {
+		randomProjectId := uint64(999999999)
+		params := map[string]interface{}{
+			"auto_track": true,
+			"project_id": randomProjectId,
+		}
+		w := sendUpdateProjectSettingReq(r, project.ID, agent, params)
+		// project_id becomes unknown field as omitted on json.
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		jsonResponse, _ := ioutil.ReadAll(w.Body)
+		var jsonRespMap map[string]interface{}
+		json.Unmarshal(jsonResponse, &jsonRespMap)
+		assert.NotNil(t, jsonRespMap["error"])
+	})
 
 	// Test update project settings with bad project id.
-	w = ServePutRequest(r, fmt.Sprintf("/projects/%d/settings", 0), []byte(`{"auto_track": true}`))
-	assert.Equal(t, http.StatusBadRequest, w.Code)
-	jsonResponse, _ = ioutil.ReadAll(w.Body)
-	var jsonRespMap2 map[string]interface{}
-	json.Unmarshal(jsonResponse, &jsonRespMap2)
-	assert.NotNil(t, jsonRespMap2["error"])
-	assert.Equal(t, 1, len(jsonRespMap2))
+	t.Run("BadParamsInvalidProjectId", func(t *testing.T) {
+
+		w := sendUpdateProjectSettingReq(r, 0, agent, map[string]interface{}{
+			"auto_track": true,
+		})
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+
+		jsonResponse, _ := ioutil.ReadAll(w.Body)
+		var jsonRespMap map[string]interface{}
+		json.Unmarshal(jsonResponse, &jsonRespMap)
+		assert.NotNil(t, jsonRespMap["error"])
+		assert.Equal(t, 1, len(jsonRespMap))
+	})
 }

@@ -52,7 +52,7 @@ func TestDBCreateAndGetProject(t *testing.T) {
 	assert.Equal(t, project, getProject)
 
 	// Test Get Project on random id.
-	var randomId uint64 = 12345 // Assuming this to be random. Don't be surprised if this test fails some day.
+	var randomId uint64 = U.RandomUint64()%100007 + 5
 	getProject, errCode = M.GetProject(randomId)
 	assert.Equal(t, http.StatusNotFound, errCode)
 	assert.Nil(t, getProject)
@@ -92,4 +92,35 @@ func TestDBCreateAndGetProject(t *testing.T) {
 	ps, errCode := M.GetProjectSetting(projectWithDeps.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, ps)
+}
+
+func TestDBGetProjectByIDs(t *testing.T) {
+	t.Run("NoProjects", func(t *testing.T) {
+		randIds := []uint64{
+			U.RandomUint64()%100007 + 5,
+			U.RandomUint64()%100007 + 5,
+		}
+		proj, errCode := M.GetProjectsByIDs(randIds)
+		assert.Equal(t, 0, len(proj))
+		assert.Equal(t, http.StatusNoContent, errCode)
+	})
+
+	t.Run("MissingParams", func(t *testing.T) {
+		randIds := []uint64{}
+		_, errCode := M.GetProjectsByIDs(randIds)
+		assert.Equal(t, http.StatusBadRequest, errCode)
+	})
+
+	t.Run("FetchProjects", func(t *testing.T) {
+		noOfProjects := int(U.RandomUint64()%5 + 2)
+		idsToFetch := make([]uint64, 0, 0)
+		for i := 0; i < noOfProjects; i++ {
+			project, errCode := M.CreateProjectWithDependencies(&M.Project{Name: U.RandomLowerAphaNumString(15)})
+			assert.Equal(t, http.StatusCreated, errCode)
+			idsToFetch = append(idsToFetch, project.ID)
+		}
+		retProjects, errCode := M.GetProjectsByIDs(idsToFetch)
+		assert.Equal(t, http.StatusFound, errCode)
+		assert.Equal(t, noOfProjects, len(retProjects))
+	})
 }

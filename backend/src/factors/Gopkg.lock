@@ -18,7 +18,7 @@
   version = "v0.34.0"
 
 [[projects]]
-  digest = "1:e3024131446e97e441b82bcb280647a20e7bdbc1807397c0aed88d681c95c6c4"
+  digest = "1:1ea8374fcda1b7ec6727bbff3527c025152c73752decd42487330d4276acefb7"
   name = "github.com/aws/aws-sdk-go"
   packages = [
     "aws",
@@ -54,6 +54,7 @@
     "private/protocol/restxml",
     "private/protocol/xml/xmlutil",
     "service/s3",
+    "service/ses",
     "service/sts",
   ]
   pruneopts = "UT"
@@ -213,6 +214,14 @@
   pruneopts = "UT"
   revision = "22c016f3df3febe0c1f6727598b6389507e03a18"
   version = "v1.1.0"
+
+[[projects]]
+  digest = "1:e72d1ebb8d395cf9f346fd9cbc652e5ae222dd85e0ac842dc57f175abed6d195"
+  name = "github.com/gorilla/securecookie"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "e59506cc896acb7f7bf732d4fdf5e25f7ccd8983"
+  version = "v1.1.1"
 
 [[projects]]
   digest = "1:8ec8d88c248041a6df5f6574b87bc00e7e0b493881dad2e7ef47b11dc69093b5"
@@ -456,11 +465,13 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:cea8a31af44e77908c71e68561ce2e5992cf08d3ec29a3f9007f90c9b29bd001"
+  digest = "1:a37daa0a0a8c43b2a2c22b1afde7541e42a83bfcd3584130558d7857aa5bebfb"
   name = "golang.org/x/crypto"
   packages = [
     "acme",
     "acme/autocert",
+    "bcrypt",
+    "blowfish",
     "ssh/terminal",
   ]
   pruneopts = "UT"
@@ -671,6 +682,7 @@
     "github.com/aws/aws-sdk-go/aws",
     "github.com/aws/aws-sdk-go/aws/session",
     "github.com/aws/aws-sdk-go/service/s3",
+    "github.com/aws/aws-sdk-go/service/ses",
     "github.com/coreos/etcd/etcdserver/api/v3rpc/rpctypes",
     "github.com/coreos/etcd/mvcc/mvccpb",
     "github.com/gin-contrib/cors",
@@ -678,6 +690,7 @@
     "github.com/gorilla/mux",
     "github.com/gorilla/rpc",
     "github.com/gorilla/rpc/json",
+    "github.com/gorilla/securecookie",
     "github.com/hashicorp/golang-lru",
     "github.com/imdario/mergo",
     "github.com/jinzhu/copier",
@@ -689,6 +702,7 @@
     "github.com/stretchr/testify/assert",
     "github.com/x-cray/logrus-prefixed-formatter",
     "go.etcd.io/etcd/clientv3",
+    "golang.org/x/crypto/bcrypt",
     "google.golang.org/grpc/codes",
   ]
   solver-name = "gps-cdcl"

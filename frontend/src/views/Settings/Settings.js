@@ -23,7 +23,7 @@ import {
   fetchFilters,
   createFilter,
   updateFilter,
-  deleteFilter,
+  deleteFilter
 } from '../../actions/projectsActions';
 import FilterRecord from './FilterRecord';
 import Loading from '../../loading';
@@ -53,7 +53,7 @@ const mapDispatchToProps = dispatch => {
     fetchFilters,
     createFilter,
     updateFilter,
-    deleteFilter,
+    deleteFilter
   }, dispatch)
 }
 
@@ -62,6 +62,9 @@ class Settings extends Component {
     super(props);
 
     this.state = {
+      createProject:{
+        projectName : ""
+      },
       sdkSettings: {
         loaded: false,
         error: null,
@@ -100,6 +103,10 @@ class Settings extends Component {
   }
 
   componentWillMount() {
+    if(!this.props.currentProjectId){
+      return
+    }
+
     this.props.fetchProjectSettings(this.props.currentProjectId)
       .then((response) => {
         this.setState(prevState => this.setSettingsState(prevState, { loaded: true }))
@@ -206,6 +213,8 @@ class Settings extends Component {
     this.setState(prevState => this.setFilterSettingsState(prevState, {formName: name}));
   }
 
+  
+  
   setStateFilterEventName = (i, e) => {
     let name = e.target.value.trim();
     if(name == "") console.error("Event name cannot be empty");
@@ -409,12 +418,22 @@ class Settings extends Component {
   }
 
   isLoaded() {
+    if(!this.props.currentProjectId){
+      return true;
+    }
     return this.state.sdkSettings.loaded &&
       this.state.filterSettings.loaded;
   }
 
   render() {
     if (!this.isLoaded()) return <Loading />;
+    
+    // Render empty view
+    if(!this.props.currentProjectId){
+      return (
+        <div></div>
+      )
+    }
 
     let segmentWebhookURL = this.getSegmentWebhookURL();
     let segmentURLInputLength = segmentWebhookURL.length.toString();
@@ -425,7 +444,7 @@ class Settings extends Component {
         <div className='animated fadeIn'>
           <div>
             <Row>
-              <Col xs='12' md='12'>
+              <Col xs='12' md='12'>              
                 <Card className="fapp-card"> 
                   <CardHeader className="fapp-card-header">
                     <strong>Web SDK Code</strong>

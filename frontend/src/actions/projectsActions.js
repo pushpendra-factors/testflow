@@ -1,4 +1,4 @@
-import axios from "axios";
+import {get, post, del, put} from "./request.js";
 import { getHostURL } from "../util";
 
 var host = getHostURL();
@@ -9,17 +9,28 @@ export function changeProject(projectId) {
   }
 }
 
+export function createProject(projectName){
+  return function(dispatch){
+    return new Promise((resolve, reject)=>{
+      post(dispatch, host + "projects", {name:projectName})
+      .then((response)=>{
+        resolve(dispatch({type: "CREATE_PROJECT_FULFILLED", payload: response.data}))
+      }).catch((err)=>{
+        reject(dispatch({type:"CREATE_PROJECT_REJECTED", payload: err}))
+      })
+    })
+  }
+}
+
 export function fetchProjects() {
   return function(dispatch) {
-    dispatch({type: "FETCH_PROJECTS"});
-    return new Promise((resolve, reject) => {
-      axios.get(host + "projects")
-        .then((response) => {
-          resolve(dispatch({type: "FETCH_PROJECTS_FULFILLED", payload: response.data}));
-        })
-        .catch((err) => {
-          reject(dispatch({type: "FETCH_PROJECTS_REJECTED", payload: err}));
-        });
+    return new Promise((resolve,reject) => {
+      get(dispatch,host + "projects")
+      .then((response)=>{        
+        resolve(dispatch({type:"FETCH_PROJECTS_FULFILLED", payload: response.data}))
+      }).catch((err)=>{        
+        reject(dispatch({type:"FETCH_PROJECTS_REJECTED", payload: err}))
+      });
     });
   }
 }
@@ -27,7 +38,7 @@ export function fetchProjects() {
 export function fetchProjectEvents(projectId) {
   return function(dispatch) {
     return new Promise((resolve, reject) => {
-      axios.get(host + "projects/" + projectId + "/event_names")
+      get(dispatch, host + "projects/" + projectId + "/event_names")
         .then((response) => {
           resolve(dispatch({type: "FETCH_PROJECT_EVENTS_FULFILLED",
                   payload: { currentProjectId: projectId, eventNames: response.data,
@@ -37,6 +48,7 @@ export function fetchProjectEvents(projectId) {
           reject(dispatch({type: "FETCH_PROJECT_EVENTS_REJECTED",
                   payload: { currentProjectId: projectId, eventNames: [],
                     eventPropertiesMap: {}, err: err }}));
+                    
         });
     });
   }
@@ -45,7 +57,7 @@ export function fetchProjectEvents(projectId) {
 export function fetchProjectSettings(projectId) {
   return function(dispatch) {
     return new Promise((resolve, reject) => {
-      axios.get(host + "projects/" + projectId + "/settings")
+      get(dispatch, host + "projects/" + projectId + "/settings")
         .then((response) => {
           resolve(dispatch({
             type: "FETCH_PROJECT_SETTINGS_FULFILLED", 
@@ -72,7 +84,7 @@ export function fetchProjectSettings(projectId) {
 
 export function udpateProjectSettings(projectId, payload) {
   return function(dispatch) {
-    return axios.put(host + "projects/" + projectId + "/settings", payload)
+    return put(dispatch, host + "projects/" + projectId + "/settings", payload)
      .then((response) => {
         return dispatch({
           type: "UPDATE_PROJECT_SETTINGS_FULFILLED", 
@@ -95,7 +107,7 @@ export function udpateProjectSettings(projectId, payload) {
 
 export function fetchProjectEventProperties(projectId, eventName) {
   return function(dispatch) {
-    axios.get(host + "projects/" + projectId +
+    get(dispatch, host + "projects/" + projectId +
               "/event_names/" + eventName + "/properties")
       .then((response) => {
         dispatch({type: "FETCH_PROJECT_EVENT_PROPERTIES_FULFILLED",
@@ -110,7 +122,7 @@ export function fetchProjectEventProperties(projectId, eventName) {
 
 export function fetchProjectEventPropertyValues(projectId, eventName, propertyName) {
   return function(dispatch) {
-    axios.get(host + "projects/" + projectId +
+    get(dispatch, host + "projects/" + projectId +
               "/event_names/" + eventName + "/properties/" + propertyName +
               "/values")
       .then((response) => {
@@ -128,7 +140,7 @@ export function fetchProjectEventPropertyValues(projectId, eventName, propertyNa
 
 export function fetchProjectUserProperties(projectId) {
   return function(dispatch) {
-    axios.get(host + "projects/" + projectId +
+    get(dispatch, host + "projects/" + projectId +
               "/user_properties")
       .then((response) => {
         dispatch({type: "FETCH_PROJECT_USER_PROPERTIES_FULFILLED",
@@ -143,7 +155,7 @@ export function fetchProjectUserProperties(projectId) {
 
 export function fetchProjectUserPropertyValues(projectId, propertyName) {
   return function(dispatch) {
-    axios.get(host + "projects/" + projectId +
+    get(dispatch, host + "projects/" + projectId +
               "/user_properties/" + propertyName + "/values")
       .then((response) => {
         dispatch({type: "FETCH_PROJECT_USER_PROPERTY_VALUES_FULFILLED",
@@ -163,7 +175,7 @@ export function fetchFilters(projectId) {
     // New promise created to handle use catch on
     // fetch call from component.
     return new Promise((resolve, reject) => {
-      axios.get(host + "projects/" + projectId +"/filters")
+      get(dispatch, host + "projects/" + projectId +"/filters")
         .then((response) => {
           dispatch({
             type: "FETCH_FILTERS_FULFILLED",
@@ -185,7 +197,7 @@ export function fetchFilters(projectId) {
 export function createFilter(projectId, payload) {
   return function(dispatch) {
     return new Promise((resolve, reject) => {
-      axios.post(host + "projects/" + projectId +"/filters", payload)
+      post(dispatch, host + "projects/" + projectId +"/filters", payload)
         .then((r) => {
           dispatch({
             type: "CREATE_FILTER_FULFILLED",
@@ -207,7 +219,7 @@ export function createFilter(projectId, payload) {
 export function updateFilter(projectId, filterId, payload, storeIndex) {
   return function(dispatch) {
     return new Promise((resolve, reject) => {
-      axios.put(host + "projects/" + projectId +"/filters/"+filterId, payload)
+      put(dispatch, host + "projects/" + projectId +"/filters/"+filterId, payload)
         .then((r) => {
           dispatch({
             type: "UPDATE_FILTER_FULFILLED",
@@ -229,7 +241,7 @@ export function updateFilter(projectId, filterId, payload, storeIndex) {
 export function deleteFilter(projectId, filterId, storeIndex) {
   return function(dispatch) {
     return new Promise((resolve, reject) => {
-      axios.delete(host + "projects/" + projectId +"/filters/"+filterId)
+      del(dispatch, host + "projects/" + projectId +"/filters/"+filterId)
         .then((r) => {
           dispatch({
             type: "DELETE_FILTER_FULFILLED",
@@ -250,7 +262,7 @@ export function deleteFilter(projectId, filterId, storeIndex) {
 
 export function fetchProjectModels(projectId){
   return function(dispatch){
-    return axios.get(host + "projects/" + projectId + "/models")
+    return get(dispatch, host + "projects/" + projectId + "/models")
       .then((r) => {
         dispatch({type: "FETCH_PROJECT_MODELS_FULFILLED", payload: r.data });
       })

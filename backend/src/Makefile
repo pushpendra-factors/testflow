@@ -1,4 +1,4 @@
-.PHONY: build-api build-ps clean pack-api upload-api pack-ps upload-ps pack-debug upload-debug pack-pg-backup upload-pg-backup test
+.PHONY: build-api serve-api build-ps serve-ps clean pack-api upload-api pack-ps upload-ps pack-debug upload-debug pack-pg-backup upload-pg-backup test
 
 TAG?=$(shell git rev-list HEAD --max-count=1 --abbrev-commit)
 export TAG
@@ -7,8 +7,14 @@ export TAG
 build-api:
 	go build -o $(GOPATH)/bin/app $(GOPATH)/src/factors/app/app.go
 
+serve-api:
+	$(GOPATH)/bin/app
+
 build-ps:
 	go build -o $(GOPATH)/bin/pattern-app $(GOPATH)/src/factors/pattern_server/cmd/pattern-app.go
+
+serve-ps:
+	$(GOPATH)/bin/pattern-app
 
 clean:
 	rm $(GOPATH)/bin/pattern-app $(GOPATH)/bin/app

@@ -95,3 +95,38 @@ func SetupProjectUserEventNameReturnDAO() (*M.Project, *M.User, *M.EventName, er
 
 	return project, user, en, nil
 }
+
+func getRandomEmail() string {
+	email := U.RandomLowerAphaNumString(6) + "@asdfds.local"
+	return email
+}
+
+func getRandomAgentUUID() string {
+	return "6ba7b814-9dad-11d1-80b4-00c04fd430c8"
+}
+
+func SetupAgentReturnDAO() (*M.Agent, error) {
+	agent, errCode := M.CreateAgent(&M.Agent{
+		Email: getRandomEmail(),
+	})
+	if errCode != http.StatusCreated {
+		return nil, fmt.Errorf("Agent Creation failed.")
+	}
+	return agent, nil
+}
+
+func SetupProjectWithAgentDAO() (*M.Project, *M.Agent, error) {
+	project, err := SetupProjectReturnDAO()
+	if err != nil {
+		return nil, nil, err
+	}
+	agent, err := SetupAgentReturnDAO()
+	if err != nil {
+		return nil, nil, err
+	}
+	_, errCode := M.CreateProjectAgentMapping(&M.ProjectAgentMapping{ProjectID: project.ID, AgentUUID: agent.UUID})
+	if errCode != http.StatusCreated {
+		return nil, nil, fmt.Errorf("ProjectAgentMapping Creation failed.")
+	}
+	return project, agent, nil
+}

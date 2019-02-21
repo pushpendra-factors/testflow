@@ -165,4 +165,54 @@ func main() {
 	} else {
 		log.Info("events table project_id:user_id:timestamp sort index created.")
 	}
+
+	// Create agents table.
+	if err := db.CreateTable(&M.Agent{}).Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("agents table creation failed.")
+	} else {
+		log.Info("Created agents table")
+	}
+
+	// Adding unique index on email.
+	if err := db.Exec("CREATE UNIQUE INDEX agent_email_unique_idx ON agents (email);").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("agents email unique index creation failed.")
+	} else {
+		log.Info("Created email unique index on agents table.")
+	}
+
+	// Create project_agent_mappings table
+	if err := db.CreateTable(&M.ProjectAgentMapping{}).Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("project_agent_mappings table creation failed.")
+	} else {
+		log.Info("Created project_agent_mappings table")
+	}
+
+	// Add sort index on agent_uuid, project_id
+	if err := db.Exec("CREATE INDEX project_id_agent_uuid_idx ON project_agent_mappings (project_id, agent_uuid NULLS FIRST) ;").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("project_agent_mappings table agent_uuid_project_id_idx sort index failed.")
+	} else {
+		log.Info("events table agent_uuid_project_id_idx sort index created.")
+	}
+
+	// Add foreign key constraints.
+	if err := db.Model(&M.ProjectAgentMapping{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("project_agent_mappings table association with projects table failed.")
+	} else {
+		log.Info("project_agent_mappings table is associated with projects table.")
+	}
+
+	// Add foreign key constraints.
+	if err := db.Model(&M.ProjectAgentMapping{}).AddForeignKey("agent_uuid", "agents(uuid)", "RESTRICT", "RESTRICT").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("project_agent_mappings table association with agents table failed.")
+	} else {
+		log.Info("project_agent_mappings table is associated with agents table.")
+	}
+
+	// Add foreign key constraints.
+	if err := db.Model(&M.ProjectAgentMapping{}).AddForeignKey("invited_by", "agents(uuid)", "RESTRICT", "RESTRICT").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("project_agent_mappings table association with agents table failed.")
+	} else {
+		log.Info("project_agent_mappings table is associated with agents table.")
+	}
+
 }

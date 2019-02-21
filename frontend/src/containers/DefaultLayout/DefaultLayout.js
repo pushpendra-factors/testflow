@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import { connect } from "react-redux";
 import { bindActionCreators } from 'redux';
 import { Redirect, Route, Switch } from 'react-router-dom';
-import { Container } from 'reactstrap';
+import { Container, Button } from 'reactstrap';
 import {
   AppFooter,
   AppHeader,
@@ -57,7 +57,8 @@ const projectSelectStyles = {
 const mapStateToProps = store => {
   return {
     currentProjectId: store.projects.currentProjectId,
-    projects: store.projects.projects
+    projects: store.projects.projects,
+    isAgentLoggedIn: store.agents.isLoggedIn
   }
 }
 
@@ -109,25 +110,38 @@ class DefaultLayout extends Component {
     return this.state.projects.loaded;
   }
 
+  isAgentLoggedIn(){
+    return this.props.isAgentLoggedIn
+  }
+
+  renderProjectsDropdown(){    
+    const selectableProjects = Array.from(
+      Object.values(this.props.projects), 
+      project => ({ "label": project.name, "value": project.id }) // selectable_projects object structure.
+    )
+    if (selectableProjects.length == 0 ){
+      return <DefaultHeader refresh={this.refresh} /> 
+    }
+    return <DefaultHeader refresh={this.refresh} selectableProjects={selectableProjects}
+      selectedProject={{ label: this.props.projects[this.props.currentProjectId].name,
+      value: this.props.currentProjectId }} />
+  }
+
   render() {
+
+    if (!this.isAgentLoggedIn()){
+      return <Redirect to='/login' />
+    }
+
     if (!this.isLoaded()) return <Loading />;
 
     if (this.state.projects.loaded && this.state.projects.error) 
       return <div>Failed loading your project.</div>;
 
-    const selectableProjects = Array.from(
-      Object.values(this.props.projects), 
-      project => ({ "label": project.name, "value": project.id }) // selectable_projects object structure.
-    )
-
     return (
       <div className="app">
         <AppHeader className="fapp-header" fixed>
-          <DefaultHeader
-            refresh={this.refresh}
-            selectableProjects={selectableProjects}
-            selectedProject={{ label: this.props.projects[this.props.currentProjectId].name, value: this.props.currentProjectId }} 
-          />
+          {this.renderProjectsDropdown()} 
         </AppHeader>
         <div className="app-body">
           <AppSidebar className="fapp-sidebar" fixed display="lg">

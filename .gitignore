@@ -17,6 +17,8 @@ sdk/javascript/node_modules
 # misc
 misc/ingest_events/pkg/**
 misc/ingest_events/bin/**
+misc/ingest_events/src/golang.org/**
+misc/ingest_events/src/github.com/**
 
 */.DS_Store
 **/.DS_Store

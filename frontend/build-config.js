@@ -1,6 +1,6 @@
 const CONFIG = {
   development: {
-    backend_host: 'http://localhost:8080',
+    backend_host: 'http://factors-dev.com:8080',
     sdk_asset_url: 'http://localhost:8090/dist/factors.prod.js'
   },
   staging: {

@@ -20,19 +20,23 @@ func InitAppRoutes(r *gin.Engine) {
 		return
 	})
 
-	// Route not allowed for public access.
-	r.POST(ROUTE_PROJECTS_ROOT,
-		mid.DenyPublicAccess(),
-		CreateProjectHandler)
+	r.POST("/accounts/signup", SignUp)
+	r.POST("/agents/signin", Signin)
+	r.GET("/agents/signout", Signout)
+	r.POST("/agents/verify", mid.ValidateAgentVerificationRequest(), AgentVerify)
+
+	r.POST(ROUTE_PROJECTS_ROOT, mid.SetLoggedInAgent(), CreateProjectHandler)
 
 	r.GET(ROUTE_PROJECTS_ROOT,
-		mid.SetScopeAuthorizedProjectsBySubdomain(),
+		mid.SetLoggedInAgent(),
+		mid.SetAuthorizedProjectsByLoggedInAgent(),
 		GetProjectsHandler)
 
 	// Auth route group with authentication an authorization middleware.
 	authRouteGroup := r.Group(ROUTE_PROJECTS_ROOT)
-	authRouteGroup.Use(mid.SetScopeAuthorizedProjectsBySubdomain())
-	authRouteGroup.Use(mid.IsAuthorized())
+	authRouteGroup.Use(mid.SetLoggedInAgent())
+	authRouteGroup.Use(mid.SetAuthorizedProjectsByLoggedInAgent())
+	authRouteGroup.Use(mid.ValidateLoggedInAgentHasAccessToRequestProject())
 
 	authRouteGroup.GET("/:project_id/settings", GetProjectSettingHandler)
 	authRouteGroup.PUT("/:project_id/settings", UpdateProjectSettingsHandler)
@@ -49,6 +53,8 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/user_properties", GetUserPropertiesHandler)
 	authRouteGroup.GET("/:project_id/user_properties/:property_name/values", GetUserPropertyValuesHandler)
 	authRouteGroup.POST("/:project_id/factor", FactorHandler)
+	authRouteGroup.POST("/:project_id/agents/invite", AgentInvite)
+
 }
 
 func InitSDKRoutes(r *gin.Engine) {

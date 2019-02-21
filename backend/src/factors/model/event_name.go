@@ -41,6 +41,7 @@ var ALLOWED_TYPES = [...]string{TYPE_USER_CREATED_EVENT_NAME, TYPE_AUTO_TRACKED_
 
 const URI_PROPERTY_PREFIX = ":"
 
+// TODO: Make index name a constant and read it
 // error constants
 const error_DUPLICATE_FILTER_EXPR = "pq: duplicate key value violates unique constraint \"project_filter_expr_unique_idx\""
 

@@ -1,10 +1,11 @@
 package config
 
 import (
-	json "encoding/json"
+	"factors/interfaces/maileriface"
 	serviceEtcd "factors/services/etcd"
+	"factors/services/mailer"
+	serviceSes "factors/services/ses"
 	"fmt"
-	"io/ioutil"
 	"strings"
 	"sync"
 
@@ -29,18 +30,17 @@ type DBConf struct {
 	Password string `json:"password"`
 }
 
-type SubdomainLoginConfig struct {
-	Enabled        bool   `json:"enabled"`
-	ConfigFilepath string `json:"config_filepath"`
-}
-
 type Configuration struct {
-	Env             string               `json:"env"`
-	Port            int                  `json:"port"`
-	DBInfo          DBConf               `json:"db"`
-	EtcdEndpoints   []string             `json:"etcd_endpoints"`
-	GeolocationFile string               `json:"geolocation_file"`
-	SubdomainLogin  SubdomainLoginConfig `json:"subdomain_login"`
+	Env             string   `json:"env"`
+	Port            int      `json:"port"`
+	DBInfo          DBConf   `json:"db"`
+	EtcdEndpoints   []string `json:"etcd_endpoints"`
+	GeolocationFile string   `json:"geolocation_file"`
+	APIDomain       string
+	APPDomain       string
+	AWSRegion       string
+	AWSKey          string
+	AWSSecret       string
 }
 
 type Services struct {
@@ -49,6 +49,7 @@ type Services struct {
 	Etcd               *serviceEtcd.EtcdClient
 	patternServersLock sync.RWMutex
 	patternServers     map[string]string
+	Mailer             maileriface.Mailer
 }
 
 func (service *Services) GetPatternServerAddresses() []string {
@@ -78,13 +79,8 @@ func (service *Services) removePatternServer(key string) {
 	delete(services.patternServers, key)
 }
 
-type SubdomainLoginCache struct {
-	Map map[string][]uint64 `json:"token_projects"`
-}
-
 var configuration *Configuration
 var services *Services = nil
-var subdomainLoginCache *SubdomainLoginCache = nil
 
 func initLogging() {
 	// Log as JSON instead of the default ASCII formatter.
@@ -102,27 +98,6 @@ func initLogging() {
 	// log.SetLevel(log.WarnLevel)
 }
 
-func initSubdomainLoginCache(config *Configuration) {
-	subdomainLoginConfig := config.SubdomainLogin
-	if !subdomainLoginConfig.Enabled {
-		return
-	}
-
-	raw, err := ioutil.ReadFile(subdomainLoginConfig.ConfigFilepath)
-	if err != nil {
-		log.WithFields(log.Fields{"config": subdomainLoginConfig,
-			"err": err}).Fatal("Failed reading subdomain login config file.")
-	}
-
-	// Loading cache.
-	if err := json.Unmarshal(raw, &subdomainLoginCache); err != nil {
-		log.WithFields(log.Fields{"config": subdomainLoginConfig,
-			"err": err}).Fatal("Failed to unmarshal subdomain login config file.")
-	}
-
-	log.WithFields(log.Fields{"cache": &subdomainLoginCache}).Info("Initialized subdomain login cache.")
-}
-
 func initServices(config *Configuration) error {
 	services = &Services{patternServers: make(map[string]string)}
 
@@ -135,6 +110,8 @@ func initServices(config *Configuration) error {
 	if err != nil {
 		return err
 	}
+
+	InitMailClient(config.AWSKey, config.AWSSecret, config.AWSRegion)
 
 	// Ref: https://geolite.maxmind.com/download/geoip/database/GeoLite2-City.tar.gz
 	geolocation, err := geoip2.Open(config.GeolocationFile)
@@ -206,6 +183,19 @@ func InitDB(DBInfo DBConf) error {
 	return nil
 }
 
+func InitMailClient(key, secret, region string) {
+	if services == nil {
+		services = &Services{}
+	}
+	if IsDevelopment() {
+		services.Mailer = mailer.New()
+		return
+	}
+
+	services.Mailer = serviceSes.New(key, secret, region)
+
+}
+
 func watchPatternServers(psUpdateChannel clientv3.WatchChan) {
 	log.Infoln("Starting to watch on psUpdateChannel")
 	for {
@@ -236,8 +226,6 @@ func Init(config *Configuration) error {
 
 	initLogging()
 
-	initSubdomainLoginCache(config)
-
 	err := initServices(config)
 	if err != nil {
 		return err
@@ -251,10 +239,6 @@ func GetConfig() *Configuration {
 	return configuration
 }
 
-func GetLoginTokenCache() *SubdomainLoginCache {
-	return subdomainLoginCache
-}
-
 func GetServices() *Services {
 	return services
 }
@@ -263,6 +247,21 @@ func IsDevelopment() bool {
 	return (strings.Compare(configuration.Env, DEVELOPMENT) == 0)
 }
 
-func IsTokenLoginEnabled() bool {
-	return GetConfig().SubdomainLogin.Enabled
+func GetAPPDomain() string {
+	return configuration.APPDomain
+}
+
+func GetAPIDomain() string {
+	return configuration.APIDomain
+}
+
+func UseSecureCookie() bool {
+	return !IsDevelopment()
+}
+
+func GetProtocol() string {
+	if IsDevelopment() {
+		return "http://"
+	}
+	return "https://"
 }

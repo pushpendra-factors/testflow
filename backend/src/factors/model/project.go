@@ -184,14 +184,21 @@ func isValidProjectScope(id uint64) bool {
 }
 
 func GetProjectsByIDs(ids []uint64) ([]Project, int) {
+
+	if len(ids) == 0 {
+		return nil, http.StatusBadRequest
+	}
+
 	db := C.GetServices().Db
 
 	var projects []Project
-	if err := db.Where(ids).Find(&projects).Error; err != nil {
+	if err := db.Limit(len(ids)).Where(ids).Find(&projects).Error; err != nil {
 		return nil, http.StatusInternalServerError
 	}
+
 	if len(projects) == 0 {
-		return projects, http.StatusNotFound
+		return projects, http.StatusNoContent
 	}
+
 	return projects, http.StatusFound
 }

@@ -22,8 +22,6 @@ func TestMain(m *testing.M) {
 	dbPass := flag.String("db_pass", "@ut0me7a", "")
 
 	geoLocFilePath := flag.String("geo_loc_path", "/usr/local/var/factors/geolocation_data/GeoLite2-City.mmdb", "")
-	subDomainLogicEnabled := flag.Bool("subdomain_enabled", true, "")
-	subDomainLogicFilePath := flag.String("subdomain_conf_path", "/usr/local/var/factors/config/subdomain_login_config.json", "")
 
 	flag.Parse()
 
@@ -39,10 +37,6 @@ func TestMain(m *testing.M) {
 			Password: *dbPass,
 		},
 		GeolocationFile: *geoLocFilePath,
-		SubdomainLogin: C.SubdomainLoginConfig{
-			Enabled:        *subDomainLogicEnabled,
-			ConfigFilepath: *subDomainLogicFilePath,
-		},
 	}
 
 	// Setup.

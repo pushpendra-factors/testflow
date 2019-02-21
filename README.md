@@ -96,6 +96,9 @@ CREATE EXTENSION
 
 * Setup
 ```
+echo '127.0.0.1     factors-dev.com' | sudo tee -a /etc/hosts
+mkdir ~/repos
+cd ~/repos
 git clone https://github.com/Slashbit-Technologies/factors.git
 export PATH_TO_FACTORS=~/repos
 export GOPATH=$PATH_TO_FACTORS/factors/backend
@@ -103,7 +106,7 @@ export GOPATH=$PATH_TO_FACTORS/factors/backend
 
 * Create tables
 ```
-cd $GOPATH/factors/backend/src/factors/scripts
+cd $PATH_TO_FACTORS/factors/backend/src/factors/scripts
 go run run_db_create.go
 ```
 
@@ -117,23 +120,29 @@ dep ensure
 
 * Build
 ```
-go build -o $GOPATH/bin/app $GOPATH/src/factors/app/app.go
+export PATH_TO_FACTORS=~/repos
+cd $PATH_TO_FACTORS/factors/backend/src
+make build-api
 ```
 
 * Run 
 ```
-cd $GOPATH/bin
+export PATH_TO_FACTORS=~/repos
 mkdir -p /usr/local/var/factors/config
 mkdir -p /usr/local/var/factors/geolocation_data
-export PATH_TO_FACTORS=~/repos
+
 cp $PATH_TO_FACTORS/geolocation_data/GeoLite2-City.mmdb /usr/local/var/factors/geolocation_data
-cp $GOPATH/src/factors/config/subdomain_login_config.json /usr/local/var/factors/config
-./app
+
+cd $PATH_TO_FACTORS/factors/backend/src
+make serve-api
+
 or
-./app --env=development --api_http_port=8080 --etcd=localhost:2379 --db_host=localhost --db_port=5432 --db_user=autometa --db_name=autometa --db_pass=@ut0me7a --geo_loc_path=/usr/local/var/factors/geolocation_data/GeoLite2-City.mmdb --subdomain_enabled=true --subdomain_conf_path=/usr/local/var/factors/config/subdomain_login_config.json
+
+cd $GOPATH/bin
+./app --env=development --api_http_port=8080 --etcd=localhost:2379 --db_host=localhost --db_port=5432 --db_user=autometa --db_name=autometa --db_pass=@ut0me7a --geo_loc_path=/usr/local/var/factors/geolocation_data/GeoLite2-City.mmdb
 ```
 
-* Backend available at localhost:8080
+* Backend available at factors-dev.com:8080
 
 ## Managing dependencies with godep
 
@@ -151,7 +160,7 @@ cd $PATH_TO_FACTORS/factors/frontend
 npm install
 npm run dev
 ```
-* Frontend available at localhost:3000  (API assumed to be served from localhost:8080)
+* Frontend available at factors-dev.com:3000  (API assumed to be served from factors-dev.com:8080)
 * Create production build by running `npm run build-prod` (Build will be on `dist` dir)
 * Serve production build by running `npm run serve-prod` (Creates and serves a new production build).
 
@@ -160,24 +169,27 @@ npm run dev
 ```
 export PATH_TO_FACTORS=~/repos
 export GOPATH=$PATH_TO_FACTORS/factors/backend
-export ETCDCTL_API=3
 
 mkdir -p /usr/local/var/factors/local_disk
 mkdir -p /usr/local/var/factors/cloud_storage/metadata
 touch /usr/local/var/factors/cloud_storage/metadata/version1.txt
 
+export ETCDCTL_API=3
 etcdctl put /factors/metadata/project_version_key version1
 ```
 * Build
 ```
-go build -o $GOPATH/bin/pattern-app $GOPATH/src/factors/pattern_server/cmd/pattern-app.go
+cd $PATH_TO_FACTORS/factors/backend/src
+make build-ps
 ```
 * Run
 ```
-cd $GOPATH/bin
-./pattern-app
-Config can be passed using flags
+make serve-ps
 
+or
+
+Config can be passed using flags
+cd $GOPATH/bin
 ./pattern-app --env=development --ip=127.0.0.1 --ps_rpc_port=8100 --etcd=localhost:2379 --disk_dir=/usr/local/var/factors/local_disk --bucket_name=/usr/local/var/factors/cloud_storage
 ```
 ## Bootstrapping sample data, Building and serving model.
@@ -191,7 +203,7 @@ export GOPATH=$PATH_TO_FACTORS/factors/misc/ingest_events
 mkdir /usr/local/var/factors/localytics_data
 git clone https://github.com/localytics/data-viz-challenge.git  /usr/local/var/factors/localytics_data
 
-go run ingest_localytics_events.go --input_file=/usr/local/var/factors/localytics_data/data.json --server=http://localhost:8080
+go run ingest_localytics_events.go --input_file=/usr/local/var/factors/localytics_data/data.json --server=http://factors-dev.com:8080
 ```
 
 * Note \<projectId\> from the last line of the stdout of the script.
@@ -336,29 +348,3 @@ factors.test.runPublicMethodsSuite()
 factors.test.SuitePublicMethod.testIdentifyWithoutUserCookie()
 
 ```
-
-## Setup and test token login
-
-* Add below 2 entries to end of the file `/etc/hosts`
-```
-127.0.0.1       sample4ecom.factors-dev.ai
-127.0.0.1       unauthorized.factors-dev.ai
-```
-
-* Copy subdomain_login_config.json to factors config.
-```
-cp  $GOPATH/src/factors/config/subdomain_login_config.json /usr/local/var/factors/config
-```
-
-* Map the ecommerce sample project's id to `sample4ecom`.
-
-* Test valid subdomain login
-```
-curl -i -X GET http://sample4ecom.factors-dev.ai:8080/projects/<project_id_of_sample4ecom>/users
-```
-
-* Test invalid subdomain login
-```
-curl -i -X GET http://unauthorized.factors-dev.ai:8080/projects/1/users
-```
-

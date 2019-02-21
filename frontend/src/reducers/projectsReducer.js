@@ -33,14 +33,14 @@ export default function reducer(state=DEFAULT_PROJECT_STATE, action) {
         // Indexed project objects by projectId. Kept projectId on value also intentionally 
         // for array of projects from Object.values().
         let projects = {};
-        for (let project of action.payload) {
+        for (let project of action.payload.projects) {
           projects[project.id] = project;
         }
 
         // Initial project set.
         let currentProjectId = null;
-        if (action.payload.length > 0)
-          currentProjectId = action.payload[0].id;
+        if (action.payload.projects.length > 0)
+          currentProjectId = action.payload.projects[0].id;
 
         return {
           ...state,

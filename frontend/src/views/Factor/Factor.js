@@ -93,6 +93,10 @@ class Factor extends Component {
   }
 
   componentWillMount() {
+    if(!this.props.currentProjectId){
+      return;
+    }
+
     this.props.fetchProjectEvents(this.props.currentProjectId)
       .then(() => {
         this.setState({ eventNames: { loaded: true } });
@@ -401,6 +405,12 @@ class Factor extends Component {
   }
 
   getIntervalOptions(intervals){
+    if(intervals.length==0){
+      return [{ 
+        label:"", 
+        value: ""
+      }]
+    }
     return intervals.map(this.getReadableInterval);
   }
 
@@ -427,13 +437,22 @@ class Factor extends Component {
   }
 
   isLoaded() {
+    if(!this.props.currentProjectId){
+      return true;
+    }
     return this.state.eventNames.loaded && 
       this.state.models.loaded;
   }
 
   render() {
     if (!this.isLoaded()) return <Loading />;
-    
+    // Render empty view
+    if(!this.props.currentProjectId){
+      return (
+        <div></div>
+      )
+    }
+
     var charts = [];
     if (!!this.props.factors.charts) {
       for (var i = 0; i < this.props.factors.charts.length; i++) {

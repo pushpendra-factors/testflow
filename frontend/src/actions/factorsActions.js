@@ -1,4 +1,4 @@
-import axios from "axios";
+import {post} from "./request.js";
 import { getHostURL } from "../util";
 
 var host = getHostURL();
@@ -13,7 +13,7 @@ export function fetchFactors(currentProjectId, modelId, query, queryParams) {
       separator = "&"
     }
 
-    return axios.post(host + "projects/" + currentProjectId + "/factor"+ queryParams + separator + mid, query)
+    return post(dispatch, host + "projects/" + currentProjectId + "/factor"+ queryParams + separator + mid, query)
       .then((response) => {
         dispatch({type: "FETCH_FACTORS_FULFILLED", payload: response.data})
       })

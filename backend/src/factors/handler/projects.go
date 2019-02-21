@@ -28,13 +28,31 @@ func CreateProjectHandler(c *gin.Context) {
 		return
 	}
 
+	if project.Name == "" {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
 	var errCode int
 	_, errCode = M.CreateProjectWithDependencies(&project)
 	if errCode != http.StatusCreated {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Creating project failed."})
-	} else {
-		c.JSON(http.StatusCreated, project)
+		return
 	}
+	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+
+	// create project agent mapping
+	_, errCode = M.CreateProjectAgentMapping(&M.ProjectAgentMapping{
+		ProjectID: project.ID,
+		AgentUUID: loggedInAgentUUID,
+		Role:      M.ADMIN,
+	})
+	if errCode != http.StatusCreated {
+		c.AbortWithStatusJSON(errCode, gin.H{"error": "Creating project failed."})
+		return
+	}
+	c.JSON(http.StatusCreated, project)
+	return
 }
 
 // Test command.
@@ -43,11 +61,19 @@ func GetProjectsHandler(c *gin.Context) {
 	authorizedProjects := U.GetScopeByKey(c, "authorizedProjects")
 
 	projects, errCode := M.GetProjectsByIDs(authorizedProjects.([]uint64))
-	if errCode != http.StatusFound {
+	if errCode == http.StatusInternalServerError {
 		c.AbortWithStatus(errCode)
-	} else {
-		c.JSON(http.StatusOK, projects)
+		return
+	} else if errCode == http.StatusNoContent || errCode == http.StatusBadRequest {
+		resp := make(map[string]interface{})
+		resp["projects"] = []M.Project{}
+		c.JSON(http.StatusNotFound, resp)
+		return
 	}
+	resp := make(map[string]interface{})
+	resp["projects"] = projects
+	c.JSON(http.StatusOK, resp)
+	return
 }
 
 // curl -i -X GET http://localhost:8080/projects/1/models

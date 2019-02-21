@@ -2,6 +2,7 @@ package middleware
 
 import (
 	C "factors/config"
+	"factors/handler/helpers"
 	M "factors/model"
 	U "factors/util"
 	"net/http"
@@ -16,6 +17,7 @@ import (
 // scope constants.
 const SCOPE_PROJECT_ID = "projectId"
 const SCOPE_AUTHORIZED_PROJECTS = "authorizedProjects"
+const SCOPE_LOGGEDIN_AGENT_UUID = "loggedInAgentUUID"
 
 // cors prefix constants.
 const PREFIX_PATH_SDK = "/sdk/"
@@ -69,7 +71,6 @@ func SetScopeProjectIdByPrivateToken() gin.HandlerFunc {
 	}
 }
 
-// CustomCorsMiddleware for customised cors configuration based on conditions.
 func CustomCors() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		corsConfig := cors.DefaultConfig()
@@ -86,81 +87,42 @@ func CustomCors() gin.HandlerFunc {
 					"http://localhost:8080",
 					"http://localhost:3000",
 					"http://localhost:8090",
+					"http://127.0.0.1:3000",
+					"http://factors-dev.com:3000",
 				}
+				corsConfig.AllowCredentials = true
+				corsConfig.AddAllowHeaders("Access-Control-Allow-Headers")
+				corsConfig.AddAllowHeaders("Access-Control-Allow-Origin")
+				corsConfig.AddAllowHeaders("content-type")
 			} else {
 				// Temp allow all origin.
 				log.Warn("Running with all origins allowed..")
 				corsConfig.AllowAllOrigins = true
 			}
 		}
-
 		// Applys custom cors and proceed
 		cors.New(corsConfig)(c)
 		c.Next()
 	}
 }
 
-// SetScopeAuthorizedProjectsBySubdomain - scope set by subdomain.
-func SetScopeAuthorizedProjectsBySubdomain() gin.HandlerFunc {
+func ValidateLoggedInAgentHasAccessToRequestProject() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Only requests from dev and localhost authorized to access all projects. For tests.
-		if C.IsDevelopment() && U.IsRequestFromLocalhost(c.Request.Host) {
-			allProjects, errCode := M.GetProjects()
-			if errCode != http.StatusFound {
-				c.AbortWithStatusJSON(http.StatusInternalServerError,
-					gin.H{"error": "Dev envinoment failure. Failed to get projects."})
-				return
-			}
-
-			var projectIds []uint64
-			for _, project := range allProjects {
-				projectIds = append(projectIds, project.ID)
-			}
-
-			U.SetScope(c, SCOPE_AUTHORIZED_PROJECTS, projectIds)
-
-			c.Next()
-			return
-		}
-
-		if C.IsTokenLoginEnabled() {
-			loginTokenCache := C.GetLoginTokenCache().Map
-			subdomain, err := U.GetRequestSubdomain(c.Request.Host)
-
-			if err != nil {
-				c.AbortWithStatusJSON(http.StatusUnauthorized,
-					gin.H{"error": "Unauthorized access. Invalid subdomain."})
-				return
-			}
-
-			projectIds, tokenExists := loginTokenCache[subdomain]
-			if tokenExists {
-				U.SetScope(c, SCOPE_AUTHORIZED_PROJECTS, projectIds)
-			}
-		}
-
-		c.Next()
-	}
-}
-
-// IsAuthorized - Authorizes request by validating authorized projects scope.
-func IsAuthorized() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		paramProjectId, err := strconv.ParseUint(c.Params.ByName("project_id"), 10, 64)
-		if err != nil || paramProjectId == 0 {
+		urlParamProjectId, err := strconv.ParseUint(c.Params.ByName("project_id"), 10, 64)
+		if err != nil || urlParamProjectId == 0 {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid project id on param."})
 			return
 		}
 
 		authorizedProjects := U.GetScopeByKey(c, SCOPE_AUTHORIZED_PROJECTS)
 		if authorizedProjects == nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized,
-				gin.H{"error": "Unauthorized access. No projects found."})
+			c.AbortWithStatusJSON(http.StatusForbidden,
+				gin.H{"error": "Access Forbidden. No projects found."})
 			return
 		}
 
 		for _, pid := range authorizedProjects.([]uint64) {
-			if paramProjectId == pid {
+			if urlParamProjectId == pid {
 				// Set scope projectId. This has to be used by other
 				// handlers for projectId.
 				U.SetScope(c, SCOPE_PROJECT_ID, pid)
@@ -170,20 +132,116 @@ func IsAuthorized() gin.HandlerFunc {
 			}
 		}
 
-		c.AbortWithStatusJSON(http.StatusUnauthorized,
+		c.AbortWithStatusJSON(http.StatusForbidden,
 			gin.H{"error": "Unauthorized access. No projects found."})
 		return
 	}
 }
 
-// DenyPublicAccess - Allows only localhost.
-func DenyPublicAccess() gin.HandlerFunc {
+// returns *M.Agent, errString, errCode
+func validateAuthData(authDataStr string) (*M.Agent, string, int) {
+	if authDataStr == "" {
+		return nil, "error parsing auth data empty", http.StatusBadRequest
+	}
+	authData, err := helpers.ParseAuthData(authDataStr)
+	if err != nil {
+		return nil, "error parsing auth data", http.StatusUnauthorized
+	}
+
+	agent, errCode := M.GetAgentyUUID(authData.AgentUUID)
+	if errCode == http.StatusNotFound {
+		return nil, "agent not found", http.StatusUnauthorized
+	} else if errCode == http.StatusInternalServerError {
+		return nil, "error fetching agent", http.StatusInternalServerError
+	}
+
+	email, err := helpers.ParseAndDecryptProtectedFields(agent.Salt, authData.ProtectedFields)
+	if err != nil {
+		return nil, "error parsing protected fields", http.StatusUnauthorized
+	}
+
+	if email != agent.Email {
+		return nil, "token email and agent email do not match", http.StatusUnauthorized
+	}
+	return agent, "", http.StatusOK
+}
+
+func SetLoggedInAgent() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if !U.IsRequestFromLocalhost(c.Request.Host) {
-			c.AbortWithStatusJSON(http.StatusUnauthorized,
-				gin.H{"error": "Unauthorized access. Restricted public access."})
+		cookieStr, err := c.Cookie(helpers.FactorsSessionCookieName)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"error": "session cookie not found",
+			})
 			return
 		}
+		if cookieStr == "" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"error": "missing session cookie data",
+			})
+			return
+		}
+
+		agent, errMsg, errCode := validateAuthData(cookieStr)
+		if errCode != http.StatusOK {
+			c.AbortWithStatusJSON(errCode, gin.H{
+				"error": errMsg,
+			})
+			return
+		}
+
+		// TODO
+		// check if agent email is not verified
+		// send to verification page
+
+		U.SetScope(c, SCOPE_LOGGEDIN_AGENT_UUID, agent.UUID)
+		c.Next()
+	}
+}
+
+func SetAuthorizedProjectsByLoggedInAgent() gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		loggedInAgentUUID := U.GetScopeByKeyAsString(c, SCOPE_LOGGEDIN_AGENT_UUID)
+
+		projectAgentMappings, errCode := M.GetProjectAgentMappingsByAgentUUID(loggedInAgentUUID)
+		if errCode == http.StatusInternalServerError {
+			c.AbortWithStatusJSON(http.StatusInternalServerError,
+				gin.H{"error": "Failed to get projects."})
+			return
+		}
+
+		var projectIds []uint64
+		for _, pam := range projectAgentMappings {
+			projectIds = append(projectIds, pam.ProjectID)
+		}
+
+		U.SetScope(c, SCOPE_AUTHORIZED_PROJECTS, projectIds)
+		c.Next()
+	}
+}
+
+func ValidateAgentVerificationRequest() gin.HandlerFunc {
+
+	return func(c *gin.Context) {
+		token := c.Query("token")
+
+		agent, errMsg, errCode := validateAuthData(token)
+		if errCode != http.StatusOK {
+			c.AbortWithStatusJSON(errCode, gin.H{
+				"error": errMsg,
+			})
+			return
+		}
+
+		if agent.IsEmailVerified {
+			c.AbortWithStatusJSON(http.StatusIMUsed, gin.H{
+				"error": "agent is already verified",
+			})
+			return
+		}
+
+		U.SetScope(c, SCOPE_LOGGEDIN_AGENT_UUID, agent.UUID)
 		c.Next()
 	}
 }

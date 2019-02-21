@@ -3,24 +3,62 @@ package tests
 import (
 	"encoding/json"
 	H "factors/handler"
+	"factors/handler/helpers"
 	M "factors/model"
+	U "factors/util"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm/dialects/postgres"
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
+func sendGetUserReq(r *gin.Engine, projectId uint64, agent *M.Agent, offset, limit *int) *httptest.ResponseRecorder {
+
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	if err != nil {
+		log.WithError(err).Error("Error Creating cookieData")
+	}
+
+	qP := make(map[string]string)
+	if offset != nil {
+		qP["offset"] = fmt.Sprintf("%d", *offset)
+	}
+	if limit != nil {
+		qP["limit"] = fmt.Sprintf("%d", *limit)
+	}
+
+	rb := U.NewRequestBuilder(http.MethodGet, fmt.Sprintf("/projects/%d/users", projectId)).
+		WithHeader("Content-Type", "application/json").
+		WithQueryParams(qP).
+		WithCookie(&http.Cookie{
+			Name:   helpers.FactorsSessionCookieName,
+			Value:  cookieData,
+			MaxAge: 1000,
+		})
+	req, err := rb.Build()
+	if err != nil {
+		log.WithError(err).Error("Error Creating get users Req")
+	}
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	return w
+}
 func TestAPIGetUsers(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
 	H.InitAppRoutes(r)
-	projectId, err := SetupProject()
+	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
+
+	projectId := project.ID
 
 	// Create 100 Users.
 	users := make([]M.User, 0, 0)
@@ -33,11 +71,7 @@ func TestAPIGetUsers(t *testing.T) {
 	// Default values of offset and limit. Not sent in params.
 	offset := 0
 	limit := 10
-	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET",
-		fmt.Sprintf("/projects/%d/users", projectId), nil)
-	req.Header.Set("Content-Type", "application/json")
-	r.ServeHTTP(w, req)
+	w := sendGetUserReq(r, projectId, agent, nil, nil)
 	assert.Equal(t, http.StatusOK, w.Code)
 	jsonResponse, _ := ioutil.ReadAll(w.Body)
 	retUsers := make([]M.User, 0, 0)
@@ -47,11 +81,7 @@ func TestAPIGetUsers(t *testing.T) {
 
 	offset = 25
 	limit = 20
-	w = httptest.NewRecorder()
-	req, _ = http.NewRequest("GET",
-		fmt.Sprintf("/projects/%d/users?offset=%d&limit=%d", projectId, offset, limit), nil)
-	req.Header.Set("Content-Type", "application/json")
-	r.ServeHTTP(w, req)
+	w = sendGetUserReq(r, projectId, agent, &offset, &limit)
 	assert.Equal(t, http.StatusOK, w.Code)
 	jsonResponse, _ = ioutil.ReadAll(w.Body)
 	json.Unmarshal(jsonResponse, &retUsers)
@@ -61,11 +91,7 @@ func TestAPIGetUsers(t *testing.T) {
 	// Overflow
 	offset = 95
 	limit = 10
-	w = httptest.NewRecorder()
-	req, _ = http.NewRequest("GET",
-		fmt.Sprintf("/projects/%d/users?offset=%d&limit=%d", projectId, offset, limit), nil)
-	req.Header.Set("Content-Type", "application/json")
-	r.ServeHTTP(w, req)
+	w = sendGetUserReq(r, projectId, agent, &offset, &limit)
 	assert.Equal(t, http.StatusOK, w.Code)
 	jsonResponse, _ = ioutil.ReadAll(w.Body)
 	json.Unmarshal(jsonResponse, &retUsers)

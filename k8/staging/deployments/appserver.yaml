@@ -68,10 +68,16 @@ spec:
           - $(POSTGRES_PASSWORD)
           - --geo_loc_path
           - $(GEO_LOC_FILE_PATH)
-          - --subdomain_enabled
-          - $(SUBDOMAIN_ENABLED)
-          - --subdomain_conf_path
-          - $(SUBDOMAIN_CONF_FILE_PATH)
+          - --api_domain
+          - $(API_DOMAIN)
+          - --app_domain
+          - $(APP_DOMAIN)
+          - --aws_region
+          - $(AWS_REGION)
+          - --aws_key
+          - $(AWS_KEY)
+          - --aws_secret
+          - $(AWS_SECRET)  
         env:
           - name: MY_POD_IP
             valueFrom:
@@ -89,17 +95,9 @@ spec:
             name: config-postgres
         - secretRef:
             name: secret-postgres
+        - secretRef:
+            name: secret-aws    
       initContainers:
-      - name: fetch-subdomain-login-config
-        image: google/cloud-sdk:229.0.0-alpine
-        command:
-        - gsutil
-        - cp
-        - gs://factors-staging/subdomain_login_config.json
-        - /workdir/subdomain_login_config.json
-        volumeMounts:
-        - name: workdir
-          mountPath: "/workdir"
       - name: fetch-geolocation-file
         image: google/cloud-sdk:229.0.0-alpine
         command:

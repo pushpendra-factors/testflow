@@ -45,7 +45,7 @@ func CreateUser(user *User) (*User, int) {
 
 	// Input Validation. (ID is to be auto generated).
 	if user.ID != "" {
-		log.Error("CreateUser Failed. ID provided.")
+		log.Error("CreateUser Failed. ID not provided.")
 		return nil, http.StatusBadRequest
 	}
 	if user.ProjectId == 0 {

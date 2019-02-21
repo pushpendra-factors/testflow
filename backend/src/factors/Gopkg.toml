@@ -248,3 +248,7 @@
 [[constraint]]
   name = "github.com/x-cray/logrus-prefixed-formatter"
   version = "0.5.2"
+
+[[constraint]]
+  name = "github.com/gorilla/securecookie"
+  version = "1.1.1"

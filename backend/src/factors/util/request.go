@@ -37,6 +37,14 @@ func GetScopeByKeyAsUint64(c *gin.Context, key string) uint64 {
 	return intrfce.(uint64)
 }
 
+func GetScopeByKeyAsString(c *gin.Context, key string) string {
+	iface := GetScopeByKey(c, key)
+	if iface == nil {
+		return ""
+	}
+	return iface.(string)
+}
+
 // GetRequestSubdomain returns sample on sample.factors.ai
 func GetRequestSubdomain(host string) (string, error) {
 	splitHost := strings.Split(host, ".")
