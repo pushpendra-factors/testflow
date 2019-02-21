@@ -32,6 +32,8 @@ spec:
         - mountPath: /var/lib/postgresql/data
           name: postgres-volume
           subPath: postgres
+        - mountPath: /dev/shm
+          name: dshm
         imagePullPolicy: IfNotPresent
         resources:
           limits:
@@ -63,3 +65,6 @@ spec:
           gcePersistentDisk:
             pdName: postgres-staging
             fsType: ext4
+        - name: dshm
+          emptyDir:
+            medium: Memory
