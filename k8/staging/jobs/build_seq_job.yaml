@@ -47,6 +47,4 @@ spec:
                 name: config-postgres
             - secretRef:
                 name: secret-postgres
-          nodeSelector:
-            cloud.google.com/gke-nodepool: job-pool
           restartPolicy: OnFailure
