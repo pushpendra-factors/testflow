@@ -15,7 +15,7 @@ spec:
         spec:
           containers:
           - name: build-seq-job
-            image: us.gcr.io/factors-staging/build-seq-job:v0.03-beta_4174b9d
+            image: us.gcr.io/factors-staging/build-seq-job:v0.04-beta_df7c1d6
             imagePullPolicy: IfNotPresent
             args:
             - --env
