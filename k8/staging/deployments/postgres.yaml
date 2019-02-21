@@ -59,3 +59,8 @@ spec:
           gcePersistentDisk:
             pdName: postgres-staging
             fsType: ext4
+      resources:
+        limits:
+          memory: 2Gi
+        requests:
+          memory: 1Gi
