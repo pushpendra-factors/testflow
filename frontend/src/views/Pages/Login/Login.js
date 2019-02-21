@@ -49,7 +49,7 @@ class Login extends Component {
                             @
                           </InputGroupText>
                         </InputGroupAddon>
-                        <Input type="text" name="email" placeholder="email" autoComplete="email" />
+                        <Input type="text" name="email" placeholder="email" autoComplete="email" required/>
                       </InputGroup>
                       <InputGroup className="mb-4">
                         <InputGroupAddon addonType="prepend">
@@ -57,7 +57,7 @@ class Login extends Component {
                             <i className="icon-lock"></i>
                           </InputGroupText>
                         </InputGroupAddon>
-                        <Input type="password" name="password" placeholder="Password" autoComplete="current-password" />
+                        <Input type="password" name="password" placeholder="Password" autoComplete="current-password" required/>
                       </InputGroup>
                       <Row>
                         <Col xs="6">

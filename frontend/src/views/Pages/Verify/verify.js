@@ -50,13 +50,13 @@ class Verify extends Component {
                       <InputGroupAddon addonType="prepend">
                         <InputGroupText>FirstName</InputGroupText>
                       </InputGroupAddon>
-                      <Input type="text" name="firstName" placeholder="FirstName" autoComplete="firstName" />
+                      <Input type="text" name="firstName" placeholder="FirstName" autoComplete="firstName" required/>
                     </InputGroup>                  
                     <InputGroup className="mb-3">
                       <InputGroupAddon addonType="prepend">
                         <InputGroupText>LastName</InputGroupText>
                       </InputGroupAddon>
-                      <Input type="text" name="lastName" placeholder="LastName" autoComplete="lastName" />
+                      <Input type="text" name="lastName" placeholder="LastName" autoComplete="lastName" required/>
                     </InputGroup>      
                     <InputGroup className="mb-4">
                         <InputGroupAddon addonType="prepend">
@@ -64,7 +64,7 @@ class Verify extends Component {
                             <i className="icon-lock"></i>
                           </InputGroupText>
                         </InputGroupAddon>
-                        <Input type="password" name="password" placeholder="Password" autoComplete="current-password" />
+                        <Input type="password" name="password" placeholder="Password" autoComplete="current-password" required/>
                       </InputGroup>
                       <InputGroup className="mb-4">
                         <InputGroupAddon addonType="prepend">
@@ -72,7 +72,7 @@ class Verify extends Component {
                             <i className="icon-lock"></i>
                           </InputGroupText>
                         </InputGroupAddon>
-                        <Input type="password" name="confirm_password" placeholder="Confirm Password" autoComplete="current-password" />
+                        <Input type="password" name="confirm_password" placeholder="Confirm Password" autoComplete="current-password" required/>
                       </InputGroup>            
                     <Button color="success" block>Verify</Button>
                   </Form>

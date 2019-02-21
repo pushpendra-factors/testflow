@@ -41,7 +41,7 @@ class Register extends Component {
                       <InputGroupAddon addonType="prepend">
                         <InputGroupText>@</InputGroupText>
                       </InputGroupAddon>
-                      <Input type="text" name="email" placeholder="Email" autoComplete="email" />
+                      <Input type="text" name="email" placeholder="Email" autoComplete="email" required/>
                     </InputGroup>                  
                     <Button color="success" block>Create Account</Button>
                   </Form>
