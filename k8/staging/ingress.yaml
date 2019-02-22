@@ -21,7 +21,7 @@ spec:
         backend:
           serviceName: appserver-service
           servicePort: 80
-  - host: "*.factors.ai"
+  - host: "app.factors.ai"
     http:
       paths:
       - path: /
@@ -31,24 +31,4 @@ spec:
       - path: /*
         backend:
           serviceName: frontend-service
-          servicePort: 80
-      - path: /status
-        backend:
-          serviceName: appserver-service
-          servicePort: 80
-      - path: /projects
-        backend:
-          serviceName: appserver-service
-          servicePort: 80
-      - path: /projects/*
-        backend:
-          serviceName: appserver-service
-          servicePort: 80
-      - path: /integrations/*
-        backend:
-          serviceName: appserver-service
-          servicePort: 80
-      - path: /sdk/*
-        backend:
-          serviceName: appserver-service
           servicePort: 80
