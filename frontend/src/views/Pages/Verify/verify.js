@@ -29,7 +29,7 @@ class Verify extends Component {
     }
 
     const hash = window.location.hash;
-    paramToken = "token=";
+    var paramToken = "token=";
     const token = hash.substring(hash.indexOf(paramToken)+paramToken.length);
   
     this.props.verify(firstName, lastName, password,token);

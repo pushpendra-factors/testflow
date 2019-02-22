@@ -5,7 +5,7 @@
 CREATE TABLE public.project_agent_mappings
 (
     agent_uuid character varying(255) COLLATE pg_catalog."default" NOT NULL,
-    project_id bigint NOT NULL DEFAULT nextval('project_agent_mappings_project_id_seq'::regclass),
+    project_id bigint NOT NULL,
     role bigint,
     invited_by character varying(255) COLLATE pg_catalog."default",
     created_at timestamp with time zone,
