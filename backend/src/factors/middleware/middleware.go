@@ -98,6 +98,10 @@ func CustomCors() gin.HandlerFunc {
 				// Temp allow all origin.
 				log.Warn("Running with all origins allowed..")
 				corsConfig.AllowAllOrigins = true
+				corsConfig.AllowCredentials = true
+				corsConfig.AddAllowHeaders("Access-Control-Allow-Headers")
+				corsConfig.AddAllowHeaders("Access-Control-Allow-Origin")
+				corsConfig.AddAllowHeaders("content-type")
 			}
 		}
 		// Applys custom cors and proceed
