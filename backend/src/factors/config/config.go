@@ -41,6 +41,7 @@ type Configuration struct {
 	AWSRegion       string
 	AWSKey          string
 	AWSSecret       string
+	EmailSender     string
 }
 
 type Services struct {
@@ -264,4 +265,8 @@ func GetProtocol() string {
 		return "http://"
 	}
 	return "https://"
+}
+
+func GetFactorsSenderEmail() string {
+	return configuration.EmailSender
 }

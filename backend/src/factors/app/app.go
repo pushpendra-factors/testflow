@@ -12,7 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// ./app --env=development --api_domain=localhost:8080 --app_domain=localhost:3000  --api_http_port=8080 --etcd=localhost:2379 --db_host=localhost --db_port=5432 --db_user=autometa --db_name=autometa --db_pass=@ut0me7a --geo_loc_path=/usr/local/var/factors/geolocation_data/GeoLite2-City.mmdb --aws_region=us-east-1 --aws_key=dummy --aws_secret=dummy
+// ./app --env=development --api_domain=localhost:8080 --app_domain=localhost:3000  --api_http_port=8080 --etcd=localhost:2379 --db_host=localhost --db_port=5432 --db_user=autometa --db_name=autometa --db_pass=@ut0me7a --geo_loc_path=/usr/local/var/factors/geolocation_data/GeoLite2-City.mmdb --aws_region=us-east-1 --aws_key=dummy --aws_secret=dummy --email_sender=support@factors.ai
 func main() {
 
 	env := flag.String("env", "development", "")
@@ -33,6 +33,8 @@ func main() {
 	awsAccessKeyId := flag.String("aws_key", "dummy", "")
 	awsSecretAccessKey := flag.String("aws_secret", "dummy", "")
 
+	factorsEmailSender := flag.String("email_sender", "support@factors.ai", "")
+
 	flag.Parse()
 
 	config := &C.Configuration{
@@ -52,6 +54,7 @@ func main() {
 		AWSKey:          *awsAccessKeyId,
 		AWSSecret:       *awsSecretAccessKey,
 		AWSRegion:       *awsRegion,
+		EmailSender:     *factorsEmailSender,
 	}
 
 	// Initialize configs and connections.

@@ -63,7 +63,7 @@ func SignUp(c *gin.Context) {
 	// Create link & Send Agent Activation Email
 	log.WithField("email", email).Info("Sending Agent Activation Email")
 
-	err = C.GetServices().Mailer.SendMail(email, "Factors", "Activate Factors account", link, link)
+	err = C.GetServices().Mailer.SendMail(email, C.GetFactorsSenderEmail(), "Activate Factors account", link, link)
 	if err != nil {
 		log.WithError(err).Error("Failed to send activation email")
 	}
