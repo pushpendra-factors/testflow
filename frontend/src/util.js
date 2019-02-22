@@ -3,9 +3,7 @@ export function isStaging() {
 }
 
 export function getHostURL() {
-    // Use window.origin as host for staging to support subdomain login.
-    let host = isStaging() ? window.origin : BUILD_CONFIG.backend_host;
-    // Usable URL.
+    let host = BUILD_CONFIG.backend_host;
     return (host[host.length-1] === "/") ? host : host+"/";
 }
 

@@ -5,8 +5,7 @@ const CONFIG = {
   },
   staging: {
     backend_host: 'https://api.factors.ai',
-    // Uses window.origin/assets/factors.js. Todo: Replace with https://app.factors.ai/assets/factors.js
-    sdk_asset_url: ''
+    sdk_asset_url: 'https://app.factors.ai/assets/factors.js'
   },
   test: {
     backend_host: 'http://localhost:8080',
