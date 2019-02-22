@@ -95,9 +95,10 @@ func CustomCors() gin.HandlerFunc {
 				corsConfig.AddAllowHeaders("Access-Control-Allow-Origin")
 				corsConfig.AddAllowHeaders("content-type")
 			} else {
-				// Temp allow all origin.
-				log.Warn("Running with all origins allowed..")
-				corsConfig.AllowAllOrigins = true
+				corsConfig.AllowOrigins = []string{
+					"http://app.factors.ai",
+					"https://app.factors.ai",
+				}
 				corsConfig.AllowCredentials = true
 				corsConfig.AddAllowHeaders("Access-Control-Allow-Headers")
 				corsConfig.AddAllowHeaders("Access-Control-Allow-Origin")
