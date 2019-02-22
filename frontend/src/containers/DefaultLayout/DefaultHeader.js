@@ -112,7 +112,7 @@ class DefaultHeader extends Component {
           minimized={{ src: factorsicon, alt: 'factors.ai' }}
         />
         <AppSidebarToggler className="d-md-down-none fapp-navbar-toggler" display="lg" />
-        <AppSidebarForm className="fapp-select fapp-header-dropdown" style={{width: '80%'}}>
+        <AppSidebarForm className="fapp-select fapp-header-dropdown" style={{width: '50%'}}>
           <div style={{display: 'inline-block', width: '15%', marginRight: '25px'}}> {dropDown} </div>         
           <Form onSubmit={this.handleCreateProject} style={{width: '80%', display: 'inline-block'}}>
             <Input type="text" placeholder="Project Name" onChange={this.handleProjectNameFormChange} style={{display: 'inline-block', width: '230px', marginRight: '25px'}}  required />
