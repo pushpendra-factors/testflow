@@ -14,7 +14,7 @@ spec:
           containers:
           - name: pg-backup-job
             image: us.gcr.io/factors-staging/pg-backup:v1-beta_e7011fc
-            env:
+            imagePullPolicy: IfNotPresent
             envFrom:
             - secretRef:
                 name: secret-postgres
