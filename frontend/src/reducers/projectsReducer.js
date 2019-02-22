@@ -1,5 +1,5 @@
 const DEFAULT_PROJECT_STATE = {
-  projects: [],
+  projects: {},
   projectsError: null,
   currentProjectEventNames: [],
   eventPropertiesMap: {},
@@ -15,13 +15,19 @@ const DEFAULT_PROJECT_STATE = {
 }
 
 export default function reducer(state=DEFAULT_PROJECT_STATE, action) {
-    switch (action.type) {
+    switch (action.type) {      
       case "CHANGE_PROJECT": {
         return {
           ...DEFAULT_PROJECT_STATE, // reset store to default.
           currentProjectId: action.payload,
           projects: state.projects
         }
+      }
+      case "CREATE_PROJECT_FULFILLED" : {
+        let _state = { ...state  };
+        _state.projects = { ..._state.projects };
+        _state.projects[action.payload.id] = action.payload
+        return _state;
       }
       case "FETCH_PROJECTS": {
         return {...state, fetchingProjects: true}
