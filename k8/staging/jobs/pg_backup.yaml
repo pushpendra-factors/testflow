@@ -13,7 +13,7 @@ spec:
         spec:
           containers:
           - name: pg-backup-job
-            image: us.gcr.io/factors-staging/pg-backup:v1-beta_e7011fc
+            image: us.gcr.io/factors-staging/pg-backup:v2-beta_0238328
             imagePullPolicy: IfNotPresent
             envFrom:
             - secretRef:
