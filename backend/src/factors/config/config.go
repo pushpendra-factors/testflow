@@ -23,19 +23,19 @@ var initiated bool = false
 const DEVELOPMENT = "development"
 
 type DBConf struct {
-	Host     string `json:"host"`
-	Port     int    `json:"port"`
-	User     string `json:"user"`
-	Name     string `json:"name"`
-	Password string `json:"password"`
+	Host     string
+	Port     int
+	User     string
+	Name     string
+	Password string
 }
 
 type Configuration struct {
-	Env             string   `json:"env"`
-	Port            int      `json:"port"`
-	DBInfo          DBConf   `json:"db"`
-	EtcdEndpoints   []string `json:"etcd_endpoints"`
-	GeolocationFile string   `json:"geolocation_file"`
+	Env             string
+	Port            int
+	DBInfo          DBConf
+	EtcdEndpoints   []string
+	GeolocationFile string
 	APIDomain       string
 	APPDomain       string
 	AWSRegion       string
