@@ -6,6 +6,7 @@ import (
 	"factors/services/mailer"
 	serviceSes "factors/services/ses"
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -269,4 +270,13 @@ func GetProtocol() string {
 
 func GetFactorsSenderEmail() string {
 	return configuration.EmailSender
+}
+
+func GetCookieDomian() string {
+	domain := GetAPIDomain()
+	port := ":" + strconv.Itoa(configuration.Port)
+	if strings.Contains(domain, port) {
+		return strings.Split(domain, port)[0]
+	}
+	return domain
 }

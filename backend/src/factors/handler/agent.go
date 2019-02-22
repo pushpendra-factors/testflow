@@ -62,7 +62,7 @@ func Signin(c *gin.Context) {
 
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, helpers.SecondsInOneMonth*time.Second)
 
-	domain := C.GetAPIDomain()
+	domain := C.GetCookieDomian()
 	c.SetCookie(helpers.FactorsSessionCookieName, cookieData, helpers.SecondsInOneMonth, "/", domain, C.UseSecureCookie(), false)
 	resp := map[string]string{
 		"status": "success",
@@ -73,7 +73,7 @@ func Signin(c *gin.Context) {
 // curl -X GET  http://localhost:8080/agents/signout
 func Signout(c *gin.Context) {
 
-	domain := C.GetAPIDomain()
+	domain := C.GetCookieDomian()
 	c.SetCookie(helpers.FactorsSessionCookieName, "", helpers.ExpireCookie, "/", domain, C.UseSecureCookie(), false)
 	// redirect to login
 	resp := map[string]string{
