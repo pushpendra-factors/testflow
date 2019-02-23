@@ -97,8 +97,15 @@ func IntSegmentHandler(c *gin.Context) {
 		I.FillSegmentGenericEventProperties(&eventProperties, &event)
 		I.FillSegmentWebEventProperties(&eventProperties, &event)
 
+		name, err := U.GetURLHostAndPath(event.Context.Page.RawURL)
+		if err != nil {
+			log.WithFields(log.Fields{"err": err, "name": name}).Error("Falied parsing URL from segment.")
+			c.AbortWithStatus(http.StatusBadRequest)
+			return
+		}
+
 		request := &sdkTrackPayload{
-			Name:            event.Context.Page.RawURL,
+			Name:            name,
 			UserId:          user.ID,
 			Auto:            true,
 			EventProperties: eventProperties,

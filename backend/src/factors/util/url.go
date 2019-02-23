@@ -1,6 +1,7 @@
 package util
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 	"regexp"
@@ -42,7 +43,6 @@ func ParseURLStable(parseURL string) (*url.URL, error) {
 	if !hasProtocol(parseURL) {
 		return ParseURLWithoutProtocol(parseURL)
 	}
-
 	return url.Parse(parseURL)
 }
 
@@ -52,4 +52,25 @@ func TokenizeURI(uri string) []string {
 
 func CleanURI(uri string) string {
 	return strings.TrimSuffix(uri, URI_SLASH)
+}
+
+func GetURLHostAndPath(parseURL string) (string, error) {
+	cURL := strings.TrimSpace(parseURL)
+
+	if cURL == "" {
+		return "", errors.New("parsing failed empty url")
+	}
+
+	pURL, err := ParseURLStable(cURL)
+	if err != nil {
+		return "", err
+	}
+
+	// adds / as suffix for root.
+	path := pURL.Path
+	if path == "" {
+		path = "/"
+	}
+
+	return fmt.Sprintf("%s%s", pURL.Host, path), nil
 }

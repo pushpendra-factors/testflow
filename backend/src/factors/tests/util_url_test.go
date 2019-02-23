@@ -47,3 +47,17 @@ func TestUtilURLParseWithoutProtocol(t *testing.T) {
 	// For users testing from non-prod env.
 	assert.Equal(t, p4.Host, "localhost:3030")
 }
+
+func TestUtilGetURLHostAndPath(t *testing.T) {
+	p1, err := U.GetURLHostAndPath("https://www.factors.ai/?fclid=token")
+	assert.Nil(t, err)
+	assert.Equal(t, "www.factors.ai/", p1)
+
+	p2, err := U.GetURLHostAndPath("https://www.factors.ai")
+	assert.Nil(t, err)
+	assert.Equal(t, "www.factors.ai/", p2)
+
+	p3, err := U.GetURLHostAndPath(" ")
+	assert.NotNil(t, err)
+	assert.Empty(t, p3)
+}
