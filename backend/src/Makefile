@@ -1,6 +1,9 @@
 .PHONY: build-api serve-api build-ps serve-ps clean pack-api upload-api pack-ps upload-ps pack-debug upload-debug pack-pg-backup upload-pg-backup test
 
-TAG?=$(shell git rev-list HEAD --max-count=1 --abbrev-commit)
+# Update tag with the latest release version
+# Ex format: v0.05-beta_d0e9ed9 
+# git rev-list HEAD --max-count=1 --abbrev-commit
+TAG?=
 export TAG
 
 
