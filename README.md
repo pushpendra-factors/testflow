@@ -291,31 +291,39 @@ go run run_build_seq.go --etcd=localhost:2379 --local_disk_tmp_dir=/usr/local/va
 
 ### Setup, Build, Serve and Test
 
+* Add repo path to bash profile
+```
+export FACTORS_REPO=<path_to_factors>/factors
+```
+
 * Setup
 ```
-export PATH_TO_FACTORS=~/repos (path to github code)
-cd $PATH_TO_FACTORS/factors/sdk/javascript
+cd $FACTORS_REPO/sdk/javascript
 npm install
 ```
 
 * Build (development)
 ```
+cd $FACTORS_REPO/sdk/javascript
 npm run build-dev
 ```
 
 * Build (production)
 ```bash
 # This build will not have tests.
+cd $FACTORS_REPO/sdk/javascript
 npm run build-prod
 ```
 
 * Build (Loader)
 ```
+cd $FACTORS_REPO/sdk/javascript
 npm run build-loader
 ```
 
-* Serve (development)
+* Serve (development).
 ```
+cd $FACTORS_REPO/sdk/javascript
 npm run serve-dev
 ```
 
@@ -324,15 +332,15 @@ npm run serve-dev
 * Serve (production)
 ```bash
 # This build will not have tests. 
+cd $FACTORS_REPO/sdk/javascript
 npm run serve-prod
 ```
 
 * Prod build will be served on http://localhost:8090/factors.html using loader script.
 
-* Validate SDK installation
+* Validate SDK installation. Open browser console and run below command.
 ```javascript
-// Run below command on browser dev console.
-factors.isInstalled();
+factors
 ```
 
 * Tests.
@@ -347,5 +355,4 @@ factors.test.runPublicMethodsSuite()
 
 // Running specific test method
 factors.test.SuitePublicMethod.testIdentifyWithoutUserCookie()
-
 ```
