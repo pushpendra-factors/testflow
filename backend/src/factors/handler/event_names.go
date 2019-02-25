@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/base64"
 	mid "factors/middleware"
 	M "factors/model"
 	PC "factors/pattern_client"
@@ -55,11 +56,21 @@ func GetEventPropertiesHandler(c *gin.Context) {
 		}
 	}
 
-	eventName := c.Params.ByName("event_name")
-	if eventName == "" {
+	encodedEName := c.Params.ByName("event_name")
+	if encodedEName == "" {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
+
+	decENameInBytes, err := base64.StdEncoding.DecodeString(encodedEName)
+	if err != nil {
+		log.WithField("encodedName", encodedEName).Error("Failed decoding event_name.")
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+	eventName := string(decENameInBytes)
+
+	log.WithField("decodedEventName", eventName).Debug("Decoded event name on properties request.")
 
 	properties, err := PC.GetSeenEventProperties(projectId, modelId, eventName)
 	if err != nil {
@@ -70,7 +81,6 @@ func GetEventPropertiesHandler(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, properties)
-
 }
 
 // curl -i -X GET http://localhost:8080/projects/1/event_names/view_100020213/properties/offer_id?model_id=:model_id
@@ -93,11 +103,22 @@ func GetEventPropertyValuesHandler(c *gin.Context) {
 		}
 	}
 
-	eventName := c.Params.ByName("event_name")
-	if eventName == "" {
+	encodedEName := c.Params.ByName("event_name")
+	if encodedEName == "" {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
+
+	decNameInBytes, err := base64.StdEncoding.DecodeString(encodedEName)
+	if err != nil {
+		log.WithField("encodedName", encodedEName).Error("Failed decoding event_name.")
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+	eventName := string(decNameInBytes)
+
+	log.WithField("decodedEventName", eventName).Debug("Decoded event name on properties value request.")
+
 	propertyName := c.Params.ByName("property_name")
 	if propertyName == "" {
 		c.AbortWithStatus(http.StatusBadRequest)

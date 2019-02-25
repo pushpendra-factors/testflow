@@ -107,8 +107,9 @@ export function udpateProjectSettings(projectId, payload) {
 
 export function fetchProjectEventProperties(projectId, eventName) {
   return function(dispatch) {
+    // Using base64 encoded event name.
     get(dispatch, host + "projects/" + projectId +
-              "/event_names/" + eventName + "/properties")
+              "/event_names/" + btoa(eventName) + "/properties")
       .then((response) => {
         dispatch({type: "FETCH_PROJECT_EVENT_PROPERTIES_FULFILLED",
                  payload: { eventName: eventName, eventProperties: response.data }})
@@ -122,8 +123,9 @@ export function fetchProjectEventProperties(projectId, eventName) {
 
 export function fetchProjectEventPropertyValues(projectId, eventName, propertyName) {
   return function(dispatch) {
+    // Using base64 encoded event name.
     get(dispatch, host + "projects/" + projectId +
-              "/event_names/" + eventName + "/properties/" + propertyName +
+              "/event_names/" + btoa(eventName) + "/properties/" + propertyName +
               "/values")
       .then((response) => {
         dispatch({type: "FETCH_PROJECT_EVENT_PROPERTY_VALUES_FULFILLED",
