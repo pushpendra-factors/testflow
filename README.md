@@ -200,13 +200,14 @@ cd $GOPATH/bin
 export PATH_TO_FACTORS=~/repos
 cd $PATH_TO_FACTORS/factors/misc/ingest_events/src
 export GOPATH=$PATH_TO_FACTORS/factors/misc/ingest_events
-mkdir /usr/local/var/factors/localytics_data
+mkdir -p /usr/local/var/factors/localytics_data
 git clone https://github.com/localytics/data-viz-challenge.git  /usr/local/var/factors/localytics_data
 
-go run ingest_localytics_events.go --input_file=/usr/local/var/factors/localytics_data/data.json --server=http://factors-dev.com:8080
+# Create project from UI. Use projectId and project Token value for that project
+go run ingest_localytics_events.go --input_file=/usr/local/var/factors/localytics_data/data.json --server=http://factors-dev.com:8080 --project_id= --project_token=
+
 ```
 
-* Note \<projectId\> from the last line of the stdout of the script.
   
 ```
 export PATH_TO_FACTORS=~/repos (path to github code)

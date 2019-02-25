@@ -9,7 +9,6 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
-	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -22,7 +21,7 @@ import (
 )
 
 var inputFileFlag = flag.String("input_file", "", "Input CSV file.")
-var serverFlag = flag.String("server", "http://localhost:8080", "Server Path.")
+var serverFlag = flag.String("server", "http://factors-dev.com:8080", "Server Path.")
 var projectIdFlag = flag.Int("project_id", 0, "Project Id.")
 var projectTokenFlag = flag.String("project_token", "", "Needs to be passed if projectId is passed.")
 
@@ -142,47 +141,12 @@ func fileIngest(filepath string) {
 	}
 }
 
-func setupProject() (int, string, error) {
-	var projectId int
-	var projectToken string
-
-	// Create random project and a corresponding eventName and user.
-	reqBody := []byte(`{"name": "ECommerce-Sample"}`)
-	url := fmt.Sprintf("%s/projects", *serverFlag)
-	resp, err := http.Post(url, "application/json", bytes.NewBuffer(reqBody))
-	if resp == nil {
-		log.Fatal("HTTP Request failed. Is your backend up?")
-		return 0, "", errors.New("HTTP Request failed")
-	}
-	// always close the response-body, even if content is not required.
-	defer resp.Body.Close()
-	if err != nil {
-		log.Fatal(fmt.Sprintf("Http Post user creation failed. Url: %s, reqBody: %s, response: %+v", url, reqBody, resp))
-		return 0, "", err
-	}
-	jsonResponse, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatal("Unable to parse http user create response.")
-		return 0, "", err
-	}
-	var jsonResponseMap map[string]interface{}
-	json.Unmarshal(jsonResponse, &jsonResponseMap)
-	projectId = int(jsonResponseMap["id"].(float64))
-	projectToken = jsonResponseMap["token"].(string)
-	return projectId, projectToken, nil
-}
-
 func main() {
 	flag.Parse()
 
-	if *projectIdFlag <= 0 {
-		projectId, projectToken, err := setupProject()
-		if err != nil {
-			log.Fatal("Project setup failed.")
-			os.Exit(1)
-		}
-		projectIdFlag = &projectId
-		projectTokenFlag = &projectToken
+	if *projectIdFlag <= 0 || *projectTokenFlag == "" {
+		log.Printf("Missing args ProjectId: %d, projectToken: %s", *projectIdFlag, *projectTokenFlag)
+		os.Exit(1)
 	}
 
 	fileIngest(*inputFileFlag)
