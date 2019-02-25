@@ -81,24 +81,21 @@ func sdkTrack(projectId uint64, request *sdkTrackPayload, clientIP string) (int,
 		return eventNameErrCode, gin.H{"error": "Tracking failed. Creating event_name failed."}
 	}
 
-	// Validate properties.
+	// Event Properties
 	validEventProperties := U.GetValidatedEventProperties(&request.EventProperties)
+	if ip, ok := (*validEventProperties)[U.EP_INTERNAL_IP]; ok && ip != "" {
+		clientIP = ip.(string)
+	}
+	// Added IP to event proerties for internal usage.
+	(*validEventProperties)[U.EP_INTERNAL_IP] = clientIP
 	eventPropsJSON, err := json.Marshal(validEventProperties)
 	if err != nil {
 		return http.StatusBadRequest, gin.H{"error": "Tracking failed. Invalid properties."}
 	}
 
-	// Update user properties on track.
-	if ip, ok := (*validEventProperties)[U.EP_INTERNAL_IP]; ok && ip != "" {
-		clientIP = ip.(string)
-	}
-
-	// Added IP to event proerties for internal usage.
-	(*validEventProperties)[U.EP_INTERNAL_IP] = clientIP
-
+	// User Properties
 	validUserProperties := U.GetValidatedUserProperties(&request.UserProperties)
 	_ = M.FillLocationUserProperties(validUserProperties, clientIP)
-
 	userPropsJSON, err := json.Marshal(validUserProperties)
 	if err != nil {
 		log.WithFields(log.Fields{"userProperties": validUserProperties,
