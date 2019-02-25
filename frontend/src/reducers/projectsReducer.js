@@ -27,6 +27,11 @@ export default function reducer(state=DEFAULT_PROJECT_STATE, action) {
         let _state = { ...state  };
         _state.projects = { ..._state.projects };
         _state.projects[action.payload.id] = action.payload
+        // If the created project is the only project,
+        // set currentProjectId to this newly created project
+        if(Object.keys(_state.projects).length == 1 ){
+          _state.currentProjectId = action.payload.id;
+        }
         return _state;
       }
       case "FETCH_PROJECTS": {
