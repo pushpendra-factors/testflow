@@ -159,7 +159,7 @@ class Settings extends Component {
 
   getSDKScript() {
     let token = this.getToken();
-    let assetURL = getSDKAssetURL();
+    let assetURL = BUILD_CONFIG.sdk_asset_url;
     return '(function(c){var s=document.createElement("script");s.type="text/javascript";if(s.readyState){s.onreadystatechange=function(){if(s.readyState=="loaded"||s.readyState=="complete"){s.onreadystatechange=null;c()}}}else{s.onload=function(){c()}}s.src="'+assetURL+'";d=!!document.body?document.body:document.head;d.appendChild(s)})(function(){factors.init("'+token+'")})';
   }
 
