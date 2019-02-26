@@ -23,6 +23,11 @@ func TestMain(m *testing.M) {
 
 	geoLocFilePath := flag.String("geo_loc_path", "/usr/local/var/factors/geolocation_data/GeoLite2-City.mmdb", "")
 
+	apiDomain := flag.String("api_domain", "factors-dev.com:8080", "")
+	appDomain := flag.String("app_domain", "factors-dev.com:3000", "")
+
+	factorsEmailSender := flag.String("email_sender", "support-dev@factors.ai", "")
+
 	flag.Parse()
 
 	config := &C.Configuration{
@@ -37,6 +42,9 @@ func TestMain(m *testing.M) {
 			Password: *dbPass,
 		},
 		GeolocationFile: *geoLocFilePath,
+		APIDomain:       *apiDomain,
+		APPDomain:       *appDomain,
+		EmailSender:     *factorsEmailSender,
 	}
 
 	// Setup.

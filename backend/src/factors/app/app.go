@@ -33,7 +33,7 @@ func main() {
 	awsAccessKeyId := flag.String("aws_key", "dummy", "")
 	awsSecretAccessKey := flag.String("aws_secret", "dummy", "")
 
-	factorsEmailSender := flag.String("email_sender", "support@factors.ai", "")
+	factorsEmailSender := flag.String("email_sender", "support-dev@factors.ai", "")
 
 	flag.Parse()
 
