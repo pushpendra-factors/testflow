@@ -68,6 +68,7 @@ func main() {
 	// Group based middlewares should be registered on corresponding init methods.
 	// Root middleware for cors.
 	r.Use(mid.CustomCors())
+	r.Use(mid.Recovery())
 
 	// Initialize routes.
 	H.InitAppRoutes(r)

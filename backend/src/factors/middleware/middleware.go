@@ -5,7 +5,10 @@ import (
 	"factors/handler/helpers"
 	M "factors/model"
 	U "factors/util"
+	"fmt"
 	"net/http"
+	"net/http/httputil"
+	"runtime"
 	"strconv"
 	"strings"
 
@@ -247,6 +250,31 @@ func ValidateAgentVerificationRequest() gin.HandlerFunc {
 		}
 
 		U.SetScope(c, SCOPE_LOGGEDIN_AGENT_UUID, agent.UUID)
+		c.Next()
+	}
+}
+
+func Recovery() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		defer func() {
+			if r := recover(); r != nil {
+				httprequest, _ := httputil.DumpRequest(c.Request, false)
+
+				buf := make([]byte, 1024)
+				runtime.Stack(buf, false)
+
+				msg := fmt.Sprintf("Panic CausedBy: %v\nStackTrace: %v\nHttpReq: %v\n", r, string(buf), string(httprequest))
+
+				log.Errorf("Recovering from panic: %v", msg)
+
+				err := U.NotifyThroughSNS("APIPanicRecoveryMid", C.GetConfig().Env, msg)
+				if err != nil {
+					log.WithError(err).Error("failed to send message to sns")
+				}
+
+				c.AbortWithStatus(http.StatusInternalServerError)
+			}
+		}()
 		c.Next()
 	}
 }
