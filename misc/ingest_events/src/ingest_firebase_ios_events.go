@@ -75,11 +75,12 @@ func getUserId(clientUserId string, eventMap map[string]interface{}, httpClient 
 			log.Fatal("Unable to parse http user create response.")
 			return "", err
 		}
-		// always close the response-body, even if content is not required
-		closeResp(resp)
 		var jsonResponseMap map[string]interface{}
 		json.Unmarshal(jsonResponse, &jsonResponseMap)
+		log.WithFields(log.Fields{"user response": jsonResponseMap}).Info("Response")
 		userId = jsonResponseMap["user_id"].(string)
+		// always close the response-body, even if content is not required
+		closeResp(resp)
 		mutex.Lock()
 		clientUserIdToUserIdMap[clientUserId] = userId
 		mutex.Unlock()
