@@ -57,7 +57,10 @@ func SignUp(c *gin.Context) {
 	}
 	// Set Cookie with exp 1 day. After that the agent will be forced to set password
 	// And probably redirect to default project view
-	c.Status(http.StatusCreated)
+	resp := map[string]string{
+		"status": "success",
+	}
+	c.JSON(http.StatusCreated, resp)
 }
 
 func sendSignUpEmail(agent *M.Agent) error {
@@ -67,8 +70,8 @@ func sendSignUpEmail(agent *M.Agent) error {
 		return err
 	}
 	fe_host := C.GetProtocol() + C.GetAPPDomain()
-	link := fmt.Sprintf("%s/#/verify?token=%s", fe_host, authToken)
-	log.WithField("link", link).Debugf("Verification LInk")
+	link := fmt.Sprintf("%s/#/activate?token=%s", fe_host, authToken)
+	log.WithField("link", link).Debugf("Activation LInk")
 
 	// Create link & Send Agent Activation Email
 	log.WithField("email", agent.Email).Info("Sending Agent Activation Email")

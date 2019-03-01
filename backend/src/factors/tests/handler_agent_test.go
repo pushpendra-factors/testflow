@@ -51,11 +51,11 @@ func TestAPIAgentSignin(t *testing.T) {
 
 	t.Run("SigninSuccess", func(t *testing.T) {
 		email := getRandomEmail()
-		_, errCode := M.CreateAgent(&M.Agent{Email: email})
+		agent, errCode := M.CreateAgent(&M.Agent{Email: email})
 		assert.Equal(t, http.StatusCreated, errCode)
 
 		plainTextPassword := U.RandomLowerAphaNumString(6)
-		errCode = M.UpdateAgentPassword(email, plainTextPassword, time.Now().UTC())
+		errCode = M.UpdateAgentPassword(agent.UUID, plainTextPassword, time.Now().UTC())
 		assert.Equal(t, http.StatusAccepted, errCode)
 
 		w := sendSignInRequest(email, plainTextPassword, r)
@@ -180,7 +180,7 @@ func TestAPIAgentInvite(t *testing.T) {
 
 func sendAgentVerifyRequest(r *gin.Engine, authData, password, firstName, lastName string) *httptest.ResponseRecorder {
 
-	rb := U.NewRequestBuilder(http.MethodPost, "/agents/verify").
+	rb := U.NewRequestBuilder(http.MethodPost, "/agents/activate").
 		WithHeader("Content-Type", "application/json").
 		WithPostParams(map[string]interface{}{
 			"first_name": firstName,
@@ -240,5 +240,103 @@ func TestAPIAgentVerify(t *testing.T) {
 		// on retrying
 		w = sendAgentVerifyRequest(r, authData, password, firstName, lastName)
 		assert.Equal(t, http.StatusIMUsed, w.Code)
+	})
+}
+
+func sendAgentResetPasswordEmailReq(r *gin.Engine, email string) *httptest.ResponseRecorder {
+
+	rb := U.NewRequestBuilder(http.MethodPost, "/agents/forgotpassword").
+		WithHeader("Content-Type", "application/json").
+		WithPostParams(map[string]interface{}{
+			"email": email,
+		})
+
+	req, err := rb.Build()
+	if err != nil {
+		log.WithError(err).Error("Error Building agent verfication Request")
+	}
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	return w
+}
+
+func TestAPIAgentGenerateResetPasswordEmail(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+	t.Run("MissingParams", func(t *testing.T) {
+		w := sendAgentResetPasswordEmailReq(r, "")
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("AgentMissing", func(t *testing.T) {
+		email := getRandomEmail()
+		w := sendAgentResetPasswordEmailReq(r, email)
+		assert.Equal(t, http.StatusNotFound, w.Code)
+	})
+
+	t.Run("AgentExists", func(t *testing.T) {
+		agent, err := SetupAgentReturnDAO()
+		assert.Nil(t, err)
+
+		w := sendAgentResetPasswordEmailReq(r, agent.Email)
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+}
+
+func sendAgentSetPasswordRequest(r *gin.Engine, authData, password string) *httptest.ResponseRecorder {
+
+	rb := U.NewRequestBuilder(http.MethodPost, "/agents/setpassword").
+		WithHeader("Content-Type", "application/json").
+		WithPostParams(map[string]interface{}{
+			"password": password,
+		}).WithQueryParams(map[string]string{
+		"token": authData,
+	})
+
+	req, err := rb.Build()
+	if err != nil {
+		log.WithError(err).Error("Error Building agent set password Request")
+	}
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	return w
+}
+func TestAPIAgentSetPassword(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+	t.Run("MissingToken", func(t *testing.T) {
+		emptyAuthData := ""
+		password := U.RandomLowerAphaNumString(8)
+		w := sendAgentSetPasswordRequest(r, emptyAuthData, password)
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("MalformedToken", func(t *testing.T) {
+		emptyAuthData := U.RandomLowerAphaNumString(20)
+		password := U.RandomLowerAphaNumString(8)
+		w := sendAgentSetPasswordRequest(r, emptyAuthData, password)
+		assert.Equal(t, http.StatusUnauthorized, w.Code)
+	})
+
+	t.Run("Success", func(t *testing.T) {
+		email := getRandomEmail()
+		agent, errCode := M.CreateAgent(&M.Agent{Email: email})
+		assert.Equal(t, http.StatusCreated, errCode)
+
+		password := U.RandomLowerAphaNumString(8)
+
+		authData, err := helpers.GetAuthData(email, agent.UUID, agent.Salt, helpers.SecondsInFifteenDays*time.Second)
+		assert.Nil(t, err)
+
+		w := sendAgentSetPasswordRequest(r, authData, password)
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		// on retrying should return unauthorised
+		w = sendAgentSetPasswordRequest(r, authData, password)
+		assert.Equal(t, http.StatusUnauthorized, w.Code)
 	})
 }

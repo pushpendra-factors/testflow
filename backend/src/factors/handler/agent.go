@@ -158,7 +158,7 @@ func AgentInvite(c *gin.Context) {
 			return
 		}
 		fe_host := C.GetProtocol() + C.GetAPPDomain()
-		link := fmt.Sprintf("%s/#/verify?token=%s", fe_host, authToken)
+		link := fmt.Sprintf("%s/#/activate?token=%s", fe_host, authToken)
 		log.WithField("link", link).Debugf("Verification LInk")
 	}
 
@@ -168,7 +168,7 @@ func AgentInvite(c *gin.Context) {
 
 type agentVerifyParams struct {
 	FirstName string `json:"first_name" binding:"required"`
-	LastName  string `json:"last_name" binding:"required"`
+	LastName  string `json:"last_name"`
 	Password  string `json:"password" binding:"required"`
 }
 
@@ -181,8 +181,8 @@ func getAgentVerifyParams(c *gin.Context) (*agentVerifyParams, error) {
 	return &params, nil
 }
 
-// curl -X POST -d '{"first_name":"value1", "last_name":"value1", "password":"value"}' http://localhost:8080/agents/verify?token=value -v
-func AgentVerify(c *gin.Context) {
+// curl -X POST -d '{"first_name":"value1", "last_name":"value1", "password":"value"}' http://localhost:8080/agents/activate?token=value -v
+func AgentActivate(c *gin.Context) {
 	params, err := getAgentVerifyParams(c)
 	if err != nil {
 		log.WithError(err).Error("Failed to parse AgentVerifyParams")
@@ -198,10 +198,117 @@ func AgentVerify(c *gin.Context) {
 	} else if errCode == http.StatusNoContent {
 		c.AbortWithStatus(http.StatusNoContent)
 		return
+	} else if errCode == http.StatusBadRequest {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
 	}
 	resp := map[string]string{
 		"status": "success",
 	}
 	c.JSON(http.StatusOK, resp)
 	return
+}
+
+type resetPasswordEmailParams struct {
+	Email string `json:"email" binding:"required"`
+}
+
+func getResetPasswordEmailParams(c *gin.Context) (*resetPasswordEmailParams, error) {
+	params := resetPasswordEmailParams{}
+	err := c.BindJSON(&params)
+	if err != nil {
+		return nil, err
+	}
+	return &params, nil
+}
+
+// curl -X POST -d '{"email":"value1"}' http://localhost:8080/:project_id/agents/forgotpassword -v
+func AgentGenerateResetPasswordLinkEmail(c *gin.Context) {
+
+	params, err := getResetPasswordEmailParams(c)
+	if err != nil {
+		log.WithError(err).Error("Failed to parse AgentVerifyParams")
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	email := params.Email
+
+	agent, errCode := M.GetAgentByEmail(email)
+	if errCode == http.StatusInternalServerError {
+		log.Error("Failed to GetAgentByEmail")
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	} else if errCode == http.StatusNotFound {
+		c.AbortWithStatus(http.StatusNotFound)
+		return
+	}
+
+	err = sendAgentResetPasswordEmail(agent)
+	if err != nil {
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+
+	resp := map[string]string{
+		"status": "success",
+	}
+	c.JSON(http.StatusOK, resp)
+	return
+}
+
+func sendAgentResetPasswordEmail(agent *M.Agent) error {
+	authToken, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, time.Second*helpers.SecondsInOneDay)
+	if err != nil {
+		log.WithField("email", agent.Email).Error("Failed To Create Agent Auth Token")
+		return err
+	}
+	fe_host := C.GetProtocol() + C.GetAPPDomain()
+	link := fmt.Sprintf("%s/#/setpassword?token=%s", fe_host, authToken)
+	log.WithField("link", link).Debugf("Reset Password LInk")
+
+	log.WithField("email", agent.Email).Info("Sending Agent Password Reset Email")
+
+	err = C.GetServices().Mailer.SendMail(agent.Email, C.GetFactorsSenderEmail(), "ResetPassord Factors account", link, link)
+	if err != nil {
+		log.WithError(err).Error("Sending Agent Password Reset Email")
+	}
+	return err
+}
+
+type setPasswordParams struct {
+	Password string `json:"password"`
+}
+
+func getSetPasswordParams(c *gin.Context) (*setPasswordParams, error) {
+	params := setPasswordParams{}
+	err := c.BindJSON(&params)
+	if err != nil {
+		return nil, err
+	}
+	return &params, nil
+}
+
+func AgentSetPassword(c *gin.Context) {
+	params, err := getSetPasswordParams(c)
+	if err != nil {
+		log.WithError(err).Error("Failed to parse getSetPasswordParams")
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+	ts := time.Now().UTC()
+
+	errCode := M.UpdateAgentPassword(agentUUID, params.Password, ts)
+	if errCode == http.StatusInternalServerError {
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	} else if errCode == http.StatusNoContent {
+		c.AbortWithStatus(http.StatusNotFound)
+		return
+	}
+	resp := map[string]string{
+		"status": "success",
+	}
+	c.JSON(http.StatusOK, resp)
 }

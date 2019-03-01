@@ -1,6 +1,0 @@
-{
-    "name": "Verify",
-    "version": "0.0.0",
-    "private": true,
-    "main": "./verify.js"
-}

@@ -85,11 +85,11 @@ func TestAgentHashPasswordAndComparePassword(t *testing.T) {
 
 func TestAgentDBUpdatePassword(t *testing.T) {
 	t.Run("UpdatePasswordAgentNotPresent", func(t *testing.T) {
-		email := getRandomEmail()
+		uuid := getRandomAgentUUID()
 		randPlainTextPassword := U.RandomLowerAphaNumString(8)
 		ts := time.Now().UTC()
 
-		errCode := M.UpdateAgentPassword(email, randPlainTextPassword, ts)
+		errCode := M.UpdateAgentPassword(uuid, randPlainTextPassword, ts)
 		assert.Equal(t, http.StatusNoContent, errCode)
 	})
 	t.Run("UpdatePasswordSuccess", func(t *testing.T) {
@@ -102,11 +102,13 @@ func TestAgentDBUpdatePassword(t *testing.T) {
 		randPlainTextPassword := U.RandomLowerAphaNumString(8)
 		ts := time.Now().UTC()
 
-		errCode = M.UpdateAgentPassword(email, randPlainTextPassword, ts)
+		errCode = M.UpdateAgentPassword(agent.UUID, randPlainTextPassword, ts)
 		assert.Equal(t, http.StatusAccepted, errCode)
 
 		retAgent, errCode := M.GetAgentByEmail(email)
 		assert.Equal(t, http.StatusFound, errCode)
+
+		assert.NotEqual(t, retAgent.Salt, agent.Salt)
 
 		passEqual := M.IsPasswordAndHashEqual(randPlainTextPassword, retAgent.Password)
 		assert.True(t, passEqual)

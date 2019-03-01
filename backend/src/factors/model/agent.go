@@ -117,9 +117,9 @@ func IsPasswordAndHashEqual(password, hash string) bool {
 	return err == nil
 }
 
-func UpdateAgentPassword(email, plainTextPassword string, passUpdatedAt time.Time) int {
+func UpdateAgentPassword(uuid, plainTextPassword string, passUpdatedAt time.Time) int {
 
-	if email == "" || plainTextPassword == "" {
+	if uuid == "" || plainTextPassword == "" {
 		log.Error("UpdateAgentPassword Failed. Missing params")
 		return http.StatusBadRequest
 	}
@@ -131,10 +131,11 @@ func UpdateAgentPassword(email, plainTextPassword string, passUpdatedAt time.Tim
 
 	db := C.GetServices().Db
 
-	db = db.Model(&Agent{}).Where("email = ?", email).
+	db = db.Model(&Agent{}).Where("uuid = ?", uuid).
 		Updates(map[string]interface{}{
 			"password":            hashedPassword,
 			"password_created_at": passUpdatedAt,
+			"salt":                U.RandomString(SALT_LEN),
 		})
 
 	if db.Error != nil {
@@ -174,7 +175,7 @@ func UpdateAgentLastLoginInfo(email string, ts time.Time) int {
 
 func UpdateAgentVerificationDetails(agentUUID, password, firstName, lastName string, verified bool, passUpdatedAt time.Time) int {
 
-	if agentUUID == "" || firstName == "" || lastName == "" || password == "" {
+	if agentUUID == "" || firstName == "" || password == "" {
 		log.Error("UpdateAgentVerificationDetails Failed. Missing params")
 		return http.StatusBadRequest
 	}

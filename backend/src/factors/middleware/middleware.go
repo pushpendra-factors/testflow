@@ -229,7 +229,7 @@ func SetAuthorizedProjectsByLoggedInAgent() gin.HandlerFunc {
 	}
 }
 
-func ValidateAgentVerificationRequest() gin.HandlerFunc {
+func ValidateAgentActivationRequest() gin.HandlerFunc {
 
 	return func(c *gin.Context) {
 		token := c.Query("token")
@@ -249,6 +249,23 @@ func ValidateAgentVerificationRequest() gin.HandlerFunc {
 			return
 		}
 
+		U.SetScope(c, SCOPE_LOGGEDIN_AGENT_UUID, agent.UUID)
+		c.Next()
+	}
+}
+
+func ValidateAgentSetPasswordRequest() gin.HandlerFunc {
+
+	return func(c *gin.Context) {
+		token := c.Query("token")
+
+		agent, errMsg, errCode := validateAuthData(token)
+		if errCode != http.StatusOK {
+			c.AbortWithStatusJSON(errCode, gin.H{
+				"error": errMsg,
+			})
+			return
+		}
 		U.SetScope(c, SCOPE_LOGGEDIN_AGENT_UUID, agent.UUID)
 		c.Next()
 	}

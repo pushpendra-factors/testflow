@@ -23,7 +23,9 @@ func InitAppRoutes(r *gin.Engine) {
 	r.POST("/accounts/signup", SignUp)
 	r.POST("/agents/signin", Signin)
 	r.GET("/agents/signout", Signout)
-	r.POST("/agents/verify", mid.ValidateAgentVerificationRequest(), AgentVerify)
+	r.POST("/agents/forgotpassword", AgentGenerateResetPasswordLinkEmail)
+	r.POST("/agents/setpassword", mid.ValidateAgentSetPasswordRequest(), AgentSetPassword)
+	r.POST("/agents/activate", mid.ValidateAgentActivationRequest(), AgentActivate)
 
 	r.POST(ROUTE_PROJECTS_ROOT, mid.SetLoggedInAgent(), CreateProjectHandler)
 
