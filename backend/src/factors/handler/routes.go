@@ -14,7 +14,7 @@ const ROUTE_INTEGRATIONS_ROOT = "/integrations"
 func InitAppRoutes(r *gin.Engine) {
 	r.GET("/status", func(c *gin.Context) {
 		resp := map[string]string{
-			"status": "ok",
+			"status": "success",
 		}
 		c.JSON(http.StatusOK, resp)
 		return

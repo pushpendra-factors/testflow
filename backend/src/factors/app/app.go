@@ -64,6 +64,10 @@ func main() {
 		return
 	}
 
+	if !C.IsDevelopment() {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
 	r := gin.Default()
 	// Group based middlewares should be registered on corresponding init methods.
 	// Root middleware for cors.
