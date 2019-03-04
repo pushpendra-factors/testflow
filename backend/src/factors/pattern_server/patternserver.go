@@ -9,9 +9,11 @@ import (
 	serviceEtcd "factors/services/etcd"
 	"fmt"
 	"hash/fnv"
+	"net/http"
 	"sort"
 	"sync"
 
+	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 	"go.etcd.io/etcd/clientv3"
 )
@@ -82,7 +84,8 @@ func (s *state) getProjectModelChunksToServe() map[string]bool {
 
 type PatternServer struct {
 	ip          string
-	port        string
+	rpcPort     string
+	httpPort    string
 	etcdLeaseID clientv3.LeaseID
 	etcdClient  *serviceEtcd.EtcdClient
 
@@ -92,7 +95,7 @@ type PatternServer struct {
 	store *store.PatternStore
 }
 
-func New(ip, port string, etcdClient *serviceEtcd.EtcdClient, diskFileManager, cloudFileManger filestore.FileManager) (*PatternServer, error) {
+func New(ip, rpcPort, httpPort string, etcdClient *serviceEtcd.EtcdClient, diskFileManager, cloudFileManger filestore.FileManager) (*PatternServer, error) {
 
 	store, err := store.New(ChunkCacheSize, EventInfoCacheSize, diskFileManager, cloudFileManger)
 	if err != nil {
@@ -106,7 +109,8 @@ func New(ip, port string, etcdClient *serviceEtcd.EtcdClient, diskFileManager, c
 
 	ps := &PatternServer{
 		ip:         ip,
-		port:       port,
+		rpcPort:    rpcPort,
+		httpPort:   httpPort,
 		state:      state,
 		etcdClient: etcdClient,
 		store:      store,
@@ -327,8 +331,12 @@ func (ps *PatternServer) GetIp() string {
 	return ps.ip
 }
 
-func (ps *PatternServer) GetPort() string {
-	return ps.port
+func (ps *PatternServer) GetRPCPort() string {
+	return ps.rpcPort
+}
+
+func (ps *PatternServer) GetHTTPPort() string {
+	return ps.httpPort
 }
 
 func (ps *PatternServer) GetProjectModelsToServe() map[string]bool {
@@ -378,4 +386,21 @@ func CalculateMyNum(ip, port string, patternServers []serviceEtcd.KV) int {
 		}
 	}
 	return PatternServerNotFound
+}
+
+func (ps *PatternServer) DebugState(c *gin.Context) {
+	c.JSON(http.StatusOK, map[string]interface{}{
+		"status": "success",
+		"data": map[string]interface{}{
+			"num":                           ps.GetMyNum(),
+			"ip":                            ps.GetIp(),
+			"etcd_lease_id":                 ps.GetLeaseId(),
+			"project_data_version":          ps.GetProjectDataVersion(),
+			"projects_to_serve":             ps.GetState().getProjectsToServe(),
+			"project_models_to_serve":       ps.GetState().getProjectModelsToServe(),
+			"project_model_chunks_to_serve": ps.GetState().getProjectModelChunksToServe(),
+			"peer_pattern_servers":          ps.GetPatternServerNodes(),
+			"projects_model_chunk_data":     ps.GetState().getProjectModelChunkData(),
+		},
+	})
 }

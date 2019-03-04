@@ -14,6 +14,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/gin-gonic/gin"
+
 	"github.com/gorilla/rpc"
 
 	rpcjson "github.com/gorilla/rpc/json"
@@ -46,7 +48,8 @@ func makeProjectModelChunkLookup(projectDatas []PMM.ProjectData) map[uint64]patt
 type config struct {
 	Environment   string
 	IP            string
-	Port          string
+	RPCPort       string
+	HTTPPort      string
 	EtcdEndpoints []string
 	BucketName    string
 	DiskBaseDir   string
@@ -56,15 +59,19 @@ func isValidEnv(env string) bool {
 	return env == Development || env == Staging
 }
 
-func NewConfig(env, ip, port, etcd, diskBaseDir, bucketName string) (*config, error) {
+func NewConfig(env, ip, rpcPort, httpPort, etcd, diskBaseDir, bucketName string) (*config, error) {
 	if !isValidEnv(env) {
 		return nil, errors.New("Invalid Environment")
 	}
 	if ip == "" {
 		return nil, errors.New("Invalid IP")
 	}
-	if port == "" {
-		return nil, errors.New("Invalid Port")
+	if rpcPort == "" {
+		return nil, errors.New("Invalid RPCPort")
+	}
+
+	if httpPort == "" {
+		return nil, errors.New("Invalid HTTPPort")
 	}
 
 	if diskBaseDir == "" {
@@ -83,7 +90,8 @@ func NewConfig(env, ip, port, etcd, diskBaseDir, bucketName string) (*config, er
 	c := config{
 		Environment:   env,
 		IP:            ip,
-		Port:          port,
+		RPCPort:       rpcPort,
+		HTTPPort:      httpPort,
 		EtcdEndpoints: etcds,
 		DiskBaseDir:   diskBaseDir,
 		BucketName:    bucketName,
@@ -96,12 +104,20 @@ func (c *config) GetEnvironment() string {
 	return c.Environment
 }
 
+func (c *config) IsDevelopment() bool {
+	return c.Environment == Development
+}
+
 func (c *config) GetIP() string {
 	return c.IP
 }
 
-func (c *config) GetPort() string {
-	return c.Port
+func (c *config) GetRPCPort() string {
+	return c.RPCPort
+}
+
+func (c *config) GetHTTPPort() string {
+	return c.HTTPPort
 }
 
 func (c *config) GetBaseDiskDir() string {
@@ -120,39 +136,40 @@ func (c *config) GetBucketName() string {
 // TTL on etcd is 10 seconds.
 // Monit / Kubernetes will keep trying to restart the process, it should succeed after 10 seconds / till key expires.
 
-// ./pattern-app --env=development --ip=127.0.0.1 --ps_rpc_port=8100 --etcd=localhost:2379 --disk_dir=/usr/local/var/factors/local_disk --bucket_name=/usr/local/var/factors/cloud_storage
+// ./pattern-app --env=development --ip=127.0.0.1 --ps_rpc_port=8100 --ps_http_port=8101 --etcd=localhost:2379 --disk_dir=/usr/local/var/factors/local_disk --bucket_name=/usr/local/var/factors/cloud_storage
 func main() {
 
-	env := flag.String("env", "development", "")
+	env := flag.String("env", Development, "")
 	ip := flag.String("ip", "127.0.0.1", "")
-	port := flag.String("ps_rpc_port", "8100", "")
+	rpc_port := flag.String("ps_rpc_port", "8100", "")
+	http_port := flag.String("ps_http_port", "8101", "")
 	etcd := flag.String("etcd", "localhost:2379", "Comma separated list of etcd endpoints localhost:2379,localhost:2378")
 
 	diskBaseDir := flag.String("disk_dir", "/usr/local/var/factors/local_disk", "")
 	bucketName := flag.String("bucket_name", "/usr/local/var/factors/cloud_storage", "")
 	flag.Parse()
 
-	config, err := NewConfig(*env, *ip, *port, *etcd, *diskBaseDir, *bucketName)
+	config, err := NewConfig(*env, *ip, *rpc_port, *http_port, *etcd, *diskBaseDir, *bucketName)
 	if err != nil {
 		panic(err)
 	}
 
 	log.WithFields(log.Fields{
 		"IP":            config.GetIP(),
-		"Port":          config.GetPort(),
+		"Port":          config.GetRPCPort(),
 		"Env":           config.GetEnvironment(),
 		"EtcdEndpoints": config.GetEtcdEndpoints(),
 		"DiskBaseDir":   config.GetBaseDiskDir(),
 		"BucketName":    config.GetBucketName(),
 	}).Infoln("Initialising with config")
 
-	if config.GetEnvironment() == Development {
+	if config.IsDevelopment() {
 		log.SetLevel(log.DebugLevel)
 	}
 
 	logCtx := log.WithFields(log.Fields{
 		"IP":   config.GetIP(),
-		"Port": config.GetPort(),
+		"Port": config.GetRPCPort(),
 	})
 
 	logCtx.WithFields(log.Fields{
@@ -165,16 +182,17 @@ func main() {
 		panic(err)
 	}
 
-	if isRegistered, err := etcdClient.IsRegistered(config.GetIP(), config.GetPort()); err != nil {
+	if isRegistered, err := etcdClient.IsRegistered(config.GetIP(), config.GetRPCPort()); err != nil {
 		logCtx.WithError(err).Errorln("Falied to check registered status with etcd")
 		panic(err)
 	} else if isRegistered {
-		str := fmt.Sprintf("Pattern Server Already registered with IP:Port [ %s:%s ]", config.GetIP(), config.GetPort())
+		str := fmt.Sprintf("Pattern Server Already registered with IP:Port [ %s:%s ]", config.GetIP(), config.GetRPCPort())
 		logCtx.Errorln(str)
 		panic(str)
 	}
+
 	var cloudManger filestore.FileManager
-	if config.GetEnvironment() == "development" {
+	if config.IsDevelopment() {
 		cloudManger = serviceDisk.New(config.GetBucketName())
 	} else {
 		cloudManger, err = serviceGCS.New(config.GetBucketName())
@@ -186,7 +204,7 @@ func main() {
 
 	diskManager := serviceDisk.New(config.GetBaseDiskDir())
 
-	ps, err := patternserver.New(config.GetIP(), config.GetPort(), etcdClient, diskManager, cloudManger)
+	ps, err := patternserver.New(config.GetIP(), config.GetRPCPort(), config.GetHTTPPort(), etcdClient, diskManager, cloudManger)
 	if err != nil {
 		logCtx.WithError(err).Errorln("Failed to init New PatternServer")
 		panic(err)
@@ -205,7 +223,7 @@ func main() {
 
 	ps.SetLeaseId(lease.ID)
 
-	err = ps.GetEtcdClient().RegisterPatternServer(config.GetIP(), config.GetPort(), lease.ID)
+	err = ps.GetEtcdClient().RegisterPatternServer(config.GetIP(), config.GetRPCPort(), lease.ID)
 	if err != nil {
 		logCtx.WithError(err).Errorln("Failed to register with etcd")
 		panic(err)
@@ -222,7 +240,7 @@ func main() {
 		"Pattern-servers": patternServersRegisteredWithEtcd,
 	}).Infoln("List of pattern servers running")
 
-	myNum := patternserver.CalculateMyNum(config.GetIP(), config.GetPort(), patternServersRegisteredWithEtcd)
+	myNum := patternserver.CalculateMyNum(config.GetIP(), config.GetRPCPort(), patternServersRegisteredWithEtcd)
 	if myNum == patternserver.PatternServerNotFound {
 		panic("calculate my num failed: pattern server not registered")
 	}
@@ -241,7 +259,9 @@ func main() {
 
 	go keepEtcdLeaseAlive(ps)
 
-	addr := ps.GetIp() + ":" + ps.GetPort()
+	go runHttpStatus(ps.GetIp(), ps.GetHTTPPort(), ps, config.IsDevelopment())
+
+	addr := ps.GetIp() + ":" + ps.GetRPCPort()
 	logCtx.Printf("Starting rpc pattern server at %s", addr)
 	r := initRpcServer(ps)
 	err = http.ListenAndServe(addr, r)
@@ -257,7 +277,7 @@ func handlePatternServerNodeUpdates(ps *patternserver.PatternServer) error {
 		return err
 	}
 
-	n := patternserver.CalculateMyNum(ps.GetIp(), ps.GetPort(), psNodes)
+	n := patternserver.CalculateMyNum(ps.GetIp(), ps.GetRPCPort(), psNodes)
 	if n == patternserver.PatternServerNotFound {
 		log.WithError(err).Errorln("pattern server not registered")
 		return errors.New("pattern server not registered")
@@ -284,8 +304,8 @@ func handlerVersionFileUpdates(ps *patternserver.PatternServer, newVersion strin
 
 func watchAndHandleEtcdEvents(ps *patternserver.PatternServer, cloudManger filestore.FileManager) {
 	logCtx := log.WithFields(log.Fields{
-		"IP":   ps.GetIp(),
-		"Port": ps.GetPort(),
+		"IP":      ps.GetIp(),
+		"RPCPort": ps.GetRPCPort(),
 	})
 	psUpdateChan := ps.WatchPatternServers()
 	versionFileUpdateChan := ps.WatchProjectsFile()
@@ -361,6 +381,12 @@ func keepEtcdLeaseAlive(ps *patternserver.PatternServer) {
 	}
 }
 
+func runHttpStatus(ip, port string, ps *patternserver.PatternServer, isDev bool) {
+	r := initHttpStatusServer(isDev, ps)
+	addr := ip + ":" + port
+	r.Run(addr)
+}
+
 func initRpcServer(ps *patternserver.PatternServer) *mux.Router {
 	s := rpc.NewServer()
 	s.RegisterCodec(rpcjson.NewCodec(), "application/json")
@@ -368,5 +394,23 @@ func initRpcServer(ps *patternserver.PatternServer) *mux.Router {
 	s.RegisterService(ps, PC.RPCServiceName)
 	r := mux.NewRouter()
 	r.Handle(PC.RPCEndpoint, s)
+	return r
+}
+
+func initHttpStatusServer(isDev bool, ps *patternserver.PatternServer) *gin.Engine {
+
+	if !isDev {
+		gin.SetMode(gin.ReleaseMode)
+	}
+
+	r := gin.Default()
+	r.GET("/state", ps.DebugState)
+	r.GET("/status", func(c *gin.Context) {
+		resp := map[string]string{
+			"status": "success",
+		}
+		c.JSON(http.StatusOK, resp)
+		return
+	})
 	return r
 }
