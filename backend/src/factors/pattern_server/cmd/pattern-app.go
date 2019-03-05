@@ -153,6 +153,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	log.SetReportCaller(true)
 
 	log.WithFields(log.Fields{
 		"IP":            config.GetIP(),

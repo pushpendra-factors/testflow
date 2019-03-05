@@ -345,8 +345,8 @@ func CreateReaderFromEventInfo(eventInfo pattern.UserAndEventsInfo) (*bytes.Read
 
 func CreatePatternEventInfoFromScanner(scanner *bufio.Scanner) (pattern.UserAndEventsInfo, error) {
 	patternEventInfo := pattern.UserAndEventsInfo{}
-	// Adjust scanner buffer capacity to 10MB per line.
-	const maxCapacity = 10 * 1024 * 1024
+	// Adjust scanner buffer capacity to 250MB per line.
+	const maxCapacity = 250 * 1024 * 1024
 	buf := make([]byte, maxCapacity)
 	scanner.Buffer(buf, maxCapacity)
 

@@ -67,6 +67,7 @@ func main() {
 	if !C.IsDevelopment() {
 		gin.SetMode(gin.ReleaseMode)
 	}
+	log.SetReportCaller(true)
 
 	r := gin.Default()
 	// Group based middlewares should be registered on corresponding init methods.
