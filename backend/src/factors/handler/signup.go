@@ -8,6 +8,7 @@ import (
 	"time"
 
 	C "factors/config"
+	U "factors/util"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -69,14 +70,15 @@ func sendSignUpEmail(agent *M.Agent) error {
 		log.WithField("email", agent.Email).Error("Failed To Create Agent Auth Token")
 		return err
 	}
+
 	fe_host := C.GetProtocol() + C.GetAPPDomain()
 	link := fmt.Sprintf("%s/#/activate?token=%s", fe_host, authToken)
+
 	log.WithField("link", link).Debugf("Activation LInk")
 
-	// Create link & Send Agent Activation Email
-	log.WithField("email", agent.Email).Info("Sending Agent Activation Email")
+	sub, text, html := U.CreateActivationTemplate(link)
 
-	err = C.GetServices().Mailer.SendMail(agent.Email, C.GetFactorsSenderEmail(), "Activate Factors account", link, link)
+	err = C.GetServices().Mailer.SendMail(agent.Email, C.GetFactorsSenderEmail(), sub, html, text)
 	if err != nil {
 		log.WithError(err).Error("Failed to send activation email")
 	}

@@ -43,7 +43,7 @@ class ForgotPassword extends Component {
                 {({isSubmitting, touched})=> (
                     <Form noValidate>
                         <h1>Forgot Password</h1>
-                        <p>We'll send you a link to create a new password.</p>
+                        <p>We'll mail you a link to create a new password.</p>
                         <InputGroup className="mb-3">
                             <InputGroupAddon addonType="prepend">
                                 <InputGroupText>
@@ -76,11 +76,11 @@ class ForgotPassword extends Component {
         }
         return (
             <Alert color="success">
-            <h4 className="alert-heading">Check your inbox</h4>              
+            <h4 className="alert-heading">Success! Check your inbox</h4>              
               <hr />
               <p>
                 An email has been sent to {this.state.agentEmail}.
-                Please follow the instructions to reset your password.
+                Please follow the link in the email to reset your password.
               </p>        
             </Alert>
           )

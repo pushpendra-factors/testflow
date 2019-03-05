@@ -47,15 +47,14 @@ class Signup extends Component {
       >
         {({isSubmitting, touched})=> (
           <Form noValidate>
-              <h1>Signup</h1>
-              <p className="text-muted">We'll send you a link to create a new Factors Account.</p>
+              <h1>Signup Now.</h1>              
               <InputGroup className="mb-4">
                 <InputGroupAddon addonType="prepend">
                     <InputGroupText>
                       @
                     </InputGroupText>
                 </InputGroupAddon>                  
-                  <Input tag={Field} type="email" name="email" placeholder="Email"/>
+                  <Input tag={Field} type="email" name="email" placeholder="Enter work email"/>
                   {touched.email &&
                     <ErrorMessage name="email">
                         {msg => <div style={{color:'red'}}>{msg}</div>}    
@@ -86,8 +85,8 @@ class Signup extends Component {
         <h4 className="alert-heading">Thanks for signing up!</h4>
         <hr />
         <p>
-          A verification email has been sent to {this.state.agentEmail}.
-          Please follow the instructions to activate your account.
+          An activation email has been sent to {this.state.agentEmail}.
+          Please follow the link in the email to activate your account.
         </p>        
       </Alert>
     )

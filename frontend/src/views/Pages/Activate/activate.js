@@ -43,7 +43,7 @@ class Activate extends Component {
 
           <Form noValidate>
               <h1>Activate</h1>    
-              <p className="text-muted">Please enter following details and activate your Factors account.</p>
+              <p className="text-muted">Please enter following details to activate your account.</p>
               <InputGroup className="mb-4">
                 <InputGroupAddon addonType="prepend">
                     <InputGroupText>
@@ -99,7 +99,7 @@ class Activate extends Component {
               <Row>
                   <Col xs="6">
                       <Button color="success" className="px-4" type="submit" disabled={isSubmitting}>
-                          Activate Account
+                          Activate
                       </Button>
                   </Col>
               </Row>

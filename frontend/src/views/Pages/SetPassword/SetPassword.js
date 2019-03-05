@@ -45,7 +45,7 @@ class SetPassword extends Component {
                 >
                     {({isSubmitting, touched})=> (
                         <Form noValidate>
-                            <h1>Set Password</h1>
+                            <h1>Reset Password</h1>
                             <p>After updating, you can login to Factors using this password.</p>
                             <InputGroup className="mb-3">
                                 <InputGroupAddon addonType="prepend">
@@ -76,7 +76,7 @@ class SetPassword extends Component {
                             <Row>
                                 <Col xs="6">
                                     <Button color="primary" className="px-4" type="submit" disabled={isSubmitting}>
-                                        Update Password
+                                        Update
                                     </Button>
                                 </Col>
                             </Row>

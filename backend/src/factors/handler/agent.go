@@ -269,7 +269,9 @@ func sendAgentResetPasswordEmail(agent *M.Agent) error {
 
 	log.WithField("email", agent.Email).Info("Sending Agent Password Reset Email")
 
-	err = C.GetServices().Mailer.SendMail(agent.Email, C.GetFactorsSenderEmail(), "ResetPassord Factors account", link, link)
+	sub, text, html := U.CreateForgotPasswordTemplate(agent.Email, link)
+
+	err = C.GetServices().Mailer.SendMail(agent.Email, C.GetFactorsSenderEmail(), sub, html, text)
 	if err != nil {
 		log.WithError(err).Error("Sending Agent Password Reset Email")
 	}
