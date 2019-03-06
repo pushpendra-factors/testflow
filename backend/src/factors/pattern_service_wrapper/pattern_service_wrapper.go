@@ -553,7 +553,8 @@ func buildBarGraphResult(node *ItreeNode) (*graphResult, error) {
 		rulePercentages[node.KLDistances[i].PropertyValue] = rulePercentage
 
 		propertyValues = append(propertyValues, node.KLDistances[i].PropertyValue)
-		if node.KLDistances[i].PropertyValue != OTHER_PROPERTY_VALUES_LABEL {
+		if node.KLDistances[i].PropertyValue != OTHER_PROPERTY_VALUES_LABEL &&
+			node.KLDistances[i].PropertyValue != NONE_PROPERTY_VALUES_LABEL {
 			if rulePercentage > patternPercentage {
 				percentageGain += (rulePercentage - patternPercentage)
 				increasedValues = append(increasedValues, node.KLDistances[i].PropertyValue)
@@ -561,8 +562,10 @@ func buildBarGraphResult(node *ItreeNode) (*graphResult, error) {
 				percentageLoss += (patternPercentage - rulePercentage)
 				decreasedValues = append(decreasedValues, node.KLDistances[i].PropertyValue)
 			}
-
 		}
+	}
+	if len(increasedValues) == 0 && len(decreasedValues) == 0 {
+		return nil, fmt.Errorf("No increase or decrease in graphs.")
 	}
 	patternUsersLabel := ""
 	if pLen == 1 {
