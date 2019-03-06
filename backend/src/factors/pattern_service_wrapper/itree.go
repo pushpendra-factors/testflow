@@ -57,11 +57,14 @@ type ItreeNode struct {
 	// confidence = fcr / fcp
 	Confidence float64
 	// confidenceGain = confidence - parentIndex.Confidence
-	ConfidenceGain  float64
-	Fpp             float64
-	Fpr             float64
-	Fcp             float64
-	Fcr             float64
+	ConfidenceGain float64
+	Fpp            float64
+	Fpr            float64
+	Fcp            float64
+	Fcr            float64
+	// Count of number of data points that have other label in graph node.
+	// Default 0.0 for other tables.
+	OtherFcp        float64
 	AddedConstraint P.EventConstraints
 
 	// Used to store graphs.
@@ -94,6 +97,7 @@ const NODE_TYPE_GRAPH_USER_PROPERTIES = 5  // A child graph node that has a diff
 
 const MAX_PROPERTIES_IN_GRAPH_NODE = 10
 const OTHER_PROPERTY_VALUES_LABEL = "Other"
+const NONE_PROPERTY_VALUES_LABEL = "None"
 
 var log2Value float64 = math.Log(2)
 
@@ -250,6 +254,7 @@ func (it *Itree) buildCategoricalGraphChildNode(
 		})
 
 	// Trim it to MAX_PROPERTIES_IN_GRAPH_NODE nodes.
+	otherFcp := 0.0
 	if len(kLDistances) > MAX_PROPERTIES_IN_GRAPH_NODE {
 		kLDistances = kLDistances[:MAX_PROPERTIES_IN_GRAPH_NODE-1]
 		// Add an other label at the end.
@@ -259,7 +264,7 @@ func (it *Itree) buildCategoricalGraphChildNode(
 			totalFcp += klu.Fcp
 			totalFcr += klu.Fcr
 		}
-		otherFcp := fpp - totalFcp
+		otherFcp = fpp - totalFcp
 		otherFcr := fpr - totalFcr
 		otherPatternProb := otherFcp / fpp
 		otherRuleProb := otherFcr / fpr
@@ -276,6 +281,10 @@ func (it *Itree) buildCategoricalGraphChildNode(
 	}
 	totalKLDistance := 0.0
 	for _, klu := range kLDistances {
+		if klu.PropertyValue == OTHER_PROPERTY_VALUES_LABEL {
+			// Do not include Other label in total KL Distance, since it does not add much value.
+			continue
+		}
 		totalKLDistance += klu.Distance
 	}
 	node := ItreeNode{
@@ -286,6 +295,7 @@ func (it *Itree) buildCategoricalGraphChildNode(
 		InformationDrop:    totalKLDistance,
 		Fpp:                fpp,
 		Fpr:                fpr,
+		OtherFcp:           otherFcp,
 		PropertyName:       categoricalPropertyName,
 		KLDistances:        kLDistances,
 	}
@@ -645,6 +655,12 @@ func (it *Itree) buildCategoricalPropertyChildNodes(
 		if numP > maxNumProperties {
 			break
 		}
+		if nodeType == NODE_TYPE_EVENT_PROPERTY && U.IsInternalEventProperty(&propertyName) {
+			continue
+		}
+		if nodeType == NODE_TYPE_USER_PROPERTY && U.IsInternalUserProperty(&propertyName) {
+			continue
+		}
 		numP++
 		numVal := 0
 		// Compute KL Distance of child vs parent.
@@ -697,6 +713,29 @@ func (it *Itree) buildCategoricalPropertyChildNodes(
 				})
 			}
 		}
+
+		// Append None label if there is discrepancy in count.
+		totalFcp := 0.0
+		totalFcr := 0.0
+		for _, klu := range klDistanceUnits {
+			totalFcp += klu.Fcp
+			totalFcr += klu.Fcr
+		}
+		noneFcp := fpp - totalFcp
+		noneFcr := fpr - totalFcr
+		nonePatternProb := noneFcp / fpp
+		noneRuleProb := noneFcr / fpr
+
+		noneKLDistanceUnit := KLDistanceUnitInfo{
+			PropertyValue: NONE_PROPERTY_VALUES_LABEL,
+			Fpp:           fpp,
+			Fpr:           fpr,
+			Fcp:           noneFcp,
+			Fcr:           noneFcr,
+			Distance:      computeKLDistanceBits(nonePatternProb, noneRuleProb),
+		}
+		klDistanceUnits = append(klDistanceUnits, noneKLDistanceUnit)
+
 		if parentNode.NodeType == NODE_TYPE_ROOT {
 			// Build graph nodes only at first level below root.
 			nodeGraphType := NODE_TYPE_GRAPH_USER_PROPERTIES
@@ -726,7 +765,10 @@ func (it *Itree) buildNumericalPropertyChildNodes(
 		if numP > maxNumProperties {
 			break
 		}
-		if U.IsInternalEventProperty(&propertyName) {
+		if nodeType == NODE_TYPE_EVENT_PROPERTY && U.IsInternalEventProperty(&propertyName) {
+			continue
+		}
+		if nodeType == NODE_TYPE_USER_PROPERTY && U.IsInternalUserProperty(&propertyName) {
 			continue
 		}
 		numP++
@@ -933,18 +975,47 @@ func (it *Itree) buildAndAddPropertyChildNodes(
 			return (childNodes[i].InformationDrop > childNodes[j].InformationDrop)
 		})
 
-	// Only top MAX_PROPERTY_CHILD_NODES in order of drop in GiniImpurity are selected.
-	if len(childNodes) > MAX_PROPERTY_CHILD_NODES {
-		childNodes = childNodes[:MAX_PROPERTY_CHILD_NODES]
-	}
-
 	addedChildNodes := []*ItreeNode{}
+	numAddedChildNodes := 0
+	seenPropertyConstraints := make(map[string]bool)
 	for _, cNode := range childNodes {
 		if cNode.InformationDrop <= 0.0 {
 			continue
 		}
+		// Dedup repeated constraints on different values.
+		propertyConstraints := []string{}
+		for _, c := range cNode.AddedConstraint.EPCategoricalConstraints {
+			propertyConstraints = append(propertyConstraints, c.PropertyName)
+		}
+		for _, c := range cNode.AddedConstraint.EPNumericConstraints {
+			propertyConstraints = append(propertyConstraints, c.PropertyName)
+		}
+		for _, c := range cNode.AddedConstraint.UPCategoricalConstraints {
+			propertyConstraints = append(propertyConstraints, c.PropertyName)
+		}
+		for _, c := range cNode.AddedConstraint.UPNumericConstraints {
+			propertyConstraints = append(propertyConstraints, c.PropertyName)
+		}
+		isDup := false
+		for _, pc := range propertyConstraints {
+			if _, found := seenPropertyConstraints[pc]; found {
+				isDup = true
+				break
+			}
+		}
+		if isDup {
+			continue
+		}
 		it.addNode(cNode)
 		addedChildNodes = append(addedChildNodes, cNode)
+		for _, pc := range propertyConstraints {
+			seenPropertyConstraints[pc] = true
+		}
+		numAddedChildNodes++
+		// Only top MAX_PROPERTY_CHILD_NODES in order of drop in GiniImpurity are selected.
+		if numAddedChildNodes >= MAX_PROPERTY_CHILD_NODES {
+			break
+		}
 	}
 	return addedChildNodes, nil
 }

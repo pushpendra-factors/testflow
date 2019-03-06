@@ -46,6 +46,7 @@ var UP_DEVICE_BRAND string = "$deviceBrand"
 var UP_DEVICE_MODEL string = "$deviceModel"
 var UP_DEVICE_TYPE string = "$deviceType"
 var UP_DEVICE_FAMILY string = "$deviceFamily"
+var UP_DEVICE_ID string = "$deviceId"
 var UP_DEVICE_MANUFACTURER string = "$deviceManufacturer"
 var UP_DEVICE_CARRIER string = "$deviceCarrier"
 var UP_DEVICE_ADTRACKING_ENABLED string = "$deviceAdTrackingEnabled"
@@ -84,6 +85,7 @@ var INTERNAL_EVENT_PROPERTIES = [...]string{
 	EP_INTERNAL_IP,
 	EP_LOCATION_LATITUDE,
 	EP_LOCATION_LONGITUDE,
+	EP_DEVICE_ID,
 }
 
 var ALLOWED_SDK_DEFAULT_USER_PROPERTIES = [...]string{
@@ -102,6 +104,7 @@ var ALLOWED_SDK_DEFAULT_USER_PROPERTIES = [...]string{
 	UP_DEVICE_MODEL,
 	UP_DEVICE_TYPE,
 	UP_DEVICE_FAMILY,
+	UP_DEVICE_ID,
 	UP_DEVICE_MANUFACTURER,
 	UP_DEVICE_CARRIER,
 	UP_DEVICE_ADTRACKING_ENABLED,
@@ -122,6 +125,12 @@ var ALLOWED_SDK_DEFAULT_USER_PROPERTIES = [...]string{
 	UP_CAMPAIGN_TERM,
 	UP_CAMPAIGN_CONTENT,
 	UP_TIMEZONE,
+}
+
+// Event properties that are not visible to user for analysis.
+var INTERNAL_USER_PROPERTIES = [...]string{
+	UP_DEVICE_ID,
+	"_$deviceId", // Here for legacy reason.
 }
 
 var VISIBLE_DEFAULT_NUMERIC_EVENT_PROPERTIES = [...]string{EP_OCCURRENCE_COUNT}
@@ -167,6 +176,15 @@ func isSDKEventDefaultProperty(key *string) bool {
 
 func IsInternalEventProperty(key *string) bool {
 	for _, k := range INTERNAL_EVENT_PROPERTIES {
+		if k == *key {
+			return true
+		}
+	}
+	return false
+}
+
+func IsInternalUserProperty(key *string) bool {
+	for _, k := range INTERNAL_USER_PROPERTIES {
 		if k == *key {
 			return true
 		}

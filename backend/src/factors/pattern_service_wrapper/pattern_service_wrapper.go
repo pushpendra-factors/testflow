@@ -272,11 +272,15 @@ func barGraphHeaderString(
 		return "", []string{}
 	}
 	var impactString string
+	propertyValuesString := strings.Join(propertyValues, ", ")
+	if len(propertyValuesString) > 100 {
+		propertyValuesString = propertyValuesString[:100] + "..."
+	}
 	if pLen == 1 {
-		impactString = fmt.Sprintf("with %s in %s", propertyName, strings.Join(propertyValues, ", "))
+		impactString = fmt.Sprintf("with %s in %s", propertyName, propertyValuesString)
 	} else {
 		impactString = fmt.Sprintf("who have %s with %s in %s", patternEvents[pLen-2],
-			propertyName, strings.Join(propertyValues, ", "))
+			propertyName, propertyValuesString)
 	}
 
 	endEventString := eventStringWithConditions(
@@ -315,21 +319,19 @@ func barGraphHeaderString(
 	headerExplanation = append(
 		headerExplanation,
 		fmt.Sprintf(
-			"%0.1f%% of %s, have %s in %s.",
+			"%0.1f%% of %s, have these %s.",
 			totalRulePercentage,
 			ruleUsersLabel,
 			propertyName,
-			strings.Join(propertyValues, ", "),
 		))
 
 	headerExplanation = append(
 		headerExplanation,
 		fmt.Sprintf(
-			"%0.1f%% of %s, have %s in %s.",
+			"%0.1f%% of %s, have these %s.",
 			totalPatternPercentage,
 			patternUsersLabel,
 			propertyName,
-			strings.Join(propertyValues, ", "),
 		))
 
 	//log.WithFields(log.Fields{"events": patternEvents,
@@ -559,6 +561,7 @@ func buildBarGraphResult(node *ItreeNode) (*graphResult, error) {
 				percentageLoss += (patternPercentage - rulePercentage)
 				decreasedValues = append(decreasedValues, node.KLDistances[i].PropertyValue)
 			}
+
 		}
 	}
 	patternUsersLabel := ""
@@ -737,8 +740,8 @@ func Factor(projectId uint64, startEvent string,
 	sort.SliceStable(iPatternNodes,
 		func(i, j int) bool {
 			// InformationDrop * parentPatternFrequency is the ranking score for the node.
-			scoreI := iPatternNodes[i].InformationDrop * iPatternNodes[i].Fpp
-			scoreJ := iPatternNodes[j].InformationDrop * iPatternNodes[j].Fpp
+			scoreI := iPatternNodes[i].InformationDrop * (iPatternNodes[i].Fpp - iPatternNodes[i].OtherFcp)
+			scoreJ := iPatternNodes[j].InformationDrop * (iPatternNodes[j].Fpp - iPatternNodes[j].OtherFcp)
 			return (scoreI > scoreJ)
 		})
 
