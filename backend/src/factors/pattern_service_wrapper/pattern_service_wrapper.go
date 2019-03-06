@@ -601,14 +601,18 @@ func buildBarGraphResult(node *ItreeNode) (*graphResult, error) {
 				node.PropertyName, decreasedValues, patternUsersLabel, patternPercentages,
 				ruleUsersLabel, rulePercentages, false)
 		}
-	} else if percentageGain >= 0.0 {
+	} else if percentageGain >= 0.0 && len(increasedValues) > 0 {
 		headerString, explanations = barGraphHeaderString(node.Pattern.EventNames, patternConstraints,
 			node.PropertyName, increasedValues, patternUsersLabel, patternPercentages,
 			ruleUsersLabel, rulePercentages, true)
-	} else {
+	} else if percentageLoss >= 0.0 && len(decreasedValues) > 0 {
 		headerString, explanations = barGraphHeaderString(node.Pattern.EventNames, patternConstraints,
 			node.PropertyName, decreasedValues, patternUsersLabel, patternPercentages,
 			ruleUsersLabel, rulePercentages, false)
+	} else {
+		return nil, fmt.Errorf(fmt.Sprintf(
+			"Unclear graph. increasedValues:%v, decreasedValues:%v, percentageGain: %f, percentageLoss:%f",
+			increasedValues, decreasedValues, percentageGain, percentageLoss))
 	}
 
 	// Bar Chart.

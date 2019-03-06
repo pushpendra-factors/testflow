@@ -669,6 +669,9 @@ func (it *Itree) buildCategoricalPropertyChildNodes(
 			if numVal > maxNumValues {
 				break
 			}
+			if value == "" {
+				continue
+			}
 			numVal++
 			constraintToAdd := P.EventConstraints{
 				EPNumericConstraints:     []P.NumericConstraint{},
@@ -723,18 +726,20 @@ func (it *Itree) buildCategoricalPropertyChildNodes(
 		}
 		noneFcp := fpp - totalFcp
 		noneFcr := fpr - totalFcr
-		nonePatternProb := noneFcp / fpp
-		noneRuleProb := noneFcr / fpr
+		if noneFcp > 0.0 || noneFcr > 0.0 {
+			nonePatternProb := noneFcp / fpp
+			noneRuleProb := noneFcr / fpr
 
-		noneKLDistanceUnit := KLDistanceUnitInfo{
-			PropertyValue: NONE_PROPERTY_VALUES_LABEL,
-			Fpp:           fpp,
-			Fpr:           fpr,
-			Fcp:           noneFcp,
-			Fcr:           noneFcr,
-			Distance:      computeKLDistanceBits(nonePatternProb, noneRuleProb),
+			noneKLDistanceUnit := KLDistanceUnitInfo{
+				PropertyValue: NONE_PROPERTY_VALUES_LABEL,
+				Fpp:           fpp,
+				Fpr:           fpr,
+				Fcp:           noneFcp,
+				Fcr:           noneFcr,
+				Distance:      computeKLDistanceBits(nonePatternProb, noneRuleProb),
+			}
+			klDistanceUnits = append(klDistanceUnits, noneKLDistanceUnit)
 		}
-		klDistanceUnits = append(klDistanceUnits, noneKLDistanceUnit)
 
 		if parentNode.NodeType == NODE_TYPE_ROOT {
 			// Build graph nodes only at first level below root.
