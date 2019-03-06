@@ -121,6 +121,15 @@ class DefaultHeader extends Component {
         </AppSidebarForm>
         <Nav className="ml-auto fapp-header-right" navbar>          
           <AppHeaderDropdown direction="down">
+            <DropdownToggle nav>	
+                <i className="icon-bell fapp-bell"></i>	
+                  {/* <Badge pill color="danger">5</Badge> */}	
+            </DropdownToggle>	
+            <DropdownMenu right style={{ right: 'auto' }}>	
+              <DropdownItem disabled><span class="text-muted">No messages here.</span></DropdownItem>	
+            </DropdownMenu>
+          </AppHeaderDropdown>
+          <AppHeaderDropdown direction="down">  
             <DropdownToggle nav>
               <img src={'assets/img/avatars/default.png'} className="img-avatar" alt="" />
             </DropdownToggle>
