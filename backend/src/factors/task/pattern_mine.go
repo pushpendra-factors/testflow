@@ -212,7 +212,7 @@ func mineAndWriteLenTwoPatterns(
 	if err := writePatternsAsChunks(filteredLenTwoPatterns, chunkDir); err != nil {
 		return []*P.Pattern{}, err
 	}
-	return lenTwoPatterns, nil
+	return filteredLenTwoPatterns, nil
 }
 
 func mineAndWritePatterns(projectId uint64, filepath string,
