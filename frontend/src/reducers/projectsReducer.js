@@ -6,6 +6,8 @@ const DEFAULT_PROJECT_STATE = {
   eventPropertyValuesMap: {},
   userProperties: [],
   userPropertyValuesMap: {},
+  queryEventPropertiesMap: {},
+  queryEventPropertyValuesMap:{},
   fetchingProjects: false,
   fetchedProjects: false,
   filters: [],

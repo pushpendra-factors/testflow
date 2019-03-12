@@ -360,3 +360,22 @@ body {
 .fapp-input-disabled {
     background: #F8F8F8
 }
+
+.fapp-table th, 
+.fapp-table td {
+    border: none !important;
+}
+
+.fapp-table th {
+    background: #f5f5f5;
+}
+
+.fapp-table tbody tr {
+    border-bottom: 1px solid #cccccc;
+}
+
+.fapp-table {
+    color: #5c6873;
+    font-weight: 500;
+    font-size: 0.875rem;
+}

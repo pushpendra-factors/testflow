@@ -20,7 +20,8 @@ function request(dispatch, method, url, headers, data){
     return fetch(url, options)
     .then((response)=>{ 
         if (response.status === 401){
-            dispatch({type: "AGENT_LOGIN_FORCE"})
+            if (dispatch && dispatch != undefined) 
+                dispatch({type: "AGENT_LOGIN_FORCE"});
             return Promise.reject(response);
         }
         return response.json()

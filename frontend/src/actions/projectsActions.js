@@ -12,7 +12,7 @@ export function changeProject(projectId) {
 export function createProject(projectName){
   return function(dispatch){
     return new Promise((resolve, reject)=>{
-      post(dispatch, host + "projects", {name:projectName})
+      post(dispatch, host + "projects", {name: projectName})
       .then((response)=>{
         resolve(dispatch({type: "CREATE_PROJECT_FULFILLED", payload: response.data}))
       }).catch((err)=>{
@@ -25,7 +25,7 @@ export function createProject(projectName){
 export function fetchProjects() {
   return function(dispatch) {
     return new Promise((resolve,reject) => {
-      get(dispatch,host + "projects")
+      get(dispatch, host + "projects")
       .then((response)=>{        
         resolve(dispatch({type:"FETCH_PROJECTS_FULFILLED", payload: response.data}))
       }).catch((err)=>{        
@@ -105,71 +105,90 @@ export function udpateProjectSettings(projectId, payload) {
   }
 }
 
-export function fetchProjectEventProperties(projectId, eventName) {
-  return function(dispatch) {
-    // Using base64 encoded event name.
-    get(dispatch, host + "projects/" + projectId +
-              "/event_names/" + btoa(eventName) + "/properties")
-      .then((response) => {
-        dispatch({type: "FETCH_PROJECT_EVENT_PROPERTIES_FULFILLED",
-                 payload: { eventName: eventName, eventProperties: response.data }})
-      })
-      .catch((err) => {
-        dispatch({type: "FETCH_PROJECT_EVENT_PROPERTIES_REJECTED",
-                 payload: { eventName: eventName, eventProperties: {}, err: err }})
-      })
-  }
+export function fetchProjectEventProperties(projectId, eventName, useStore=true) {
+  let url = host + "projects/" + projectId + "/event_names/" + btoa(eventName) + "/properties";
+
+  if (useStore){
+    return function(dispatch) {
+      // Using base64 encoded event name.
+      return get(dispatch, url)
+        .then((response) => {
+            dispatch({type: "FETCH_PROJECT_EVENT_PROPERTIES_FULFILLED",
+              payload: { eventName: eventName, eventProperties: response.data }})
+        })
+        .catch((err) => {
+            dispatch({type: "FETCH_PROJECT_EVENT_PROPERTIES_REJECTED",
+              payload: { eventName: eventName, eventProperties: {}, err: err }})
+        })
+    }
+  } 
+  
+  return get(null, url);
 }
 
-export function fetchProjectEventPropertyValues(projectId, eventName, propertyName) {
-  return function(dispatch) {
-    // Using base64 encoded event name.
-    get(dispatch, host + "projects/" + projectId +
-              "/event_names/" + btoa(eventName) + "/properties/" + propertyName +
-              "/values")
-      .then((response) => {
-        dispatch({type: "FETCH_PROJECT_EVENT_PROPERTY_VALUES_FULFILLED",
-                 payload: { eventName: eventName, propertyName: propertyName,
-                  eventPropertyValues: response.data }})
-      })
-      .catch((err) => {
-        dispatch({type: "FETCH_PROJECT_EVENT_PROPERTY_VALUES_REJECTED",
-                 payload: { eventName: eventName, propertyName: propertyName,
-                  eventPropertyValues: [], err: err }})
-      })
+export function fetchProjectEventPropertyValues(projectId, eventName, propertyName, useStore=true) {
+  let url = host + "projects/" + projectId + "/event_names/" + btoa(eventName) + "/properties/" + propertyName + "/values";
+
+  if (useStore) {
+    return function(dispatch) {
+      // Using base64 encoded event name.
+      get(dispatch, url)
+        .then((response) => {
+          dispatch({type: "FETCH_PROJECT_EVENT_PROPERTY_VALUES_FULFILLED",
+                   payload: { eventName: eventName, propertyName: propertyName,
+                    eventPropertyValues: response.data }})
+        })
+        .catch((err) => {
+          dispatch({type: "FETCH_PROJECT_EVENT_PROPERTY_VALUES_REJECTED",
+                   payload: { eventName: eventName, propertyName: propertyName,
+                    eventPropertyValues: [], err: err }})
+        })
+    }
   }
+
+  return get(null, url);
 }
 
-export function fetchProjectUserProperties(projectId) {
-  return function(dispatch) {
-    get(dispatch, host + "projects/" + projectId +
-              "/user_properties")
-      .then((response) => {
-        dispatch({type: "FETCH_PROJECT_USER_PROPERTIES_FULFILLED",
-                 payload: { userProperties: response.data }})
-      })
-      .catch((err) => {
-        dispatch({type: "FETCH_PROJECT_USER_PROPERTIES_REJECTED",
-                 payload: { userProperties: {}, err: err }})
-      })
+export function fetchProjectUserProperties(projectId, useStore=true) {
+  let url = host + "projects/" + projectId + "/user_properties";
+  
+  if (useStore) {
+    return function(dispatch) {
+      get(dispatch, url)
+        .then((response) => {
+          dispatch({type: "FETCH_PROJECT_USER_PROPERTIES_FULFILLED",
+                   payload: { userProperties: response.data }})
+        })
+        .catch((err) => {
+          dispatch({type: "FETCH_PROJECT_USER_PROPERTIES_REJECTED",
+                   payload: { userProperties: {}, err: err }})
+        })
+    }
   }
+  
+  return get(null, url);
 }
 
-export function fetchProjectUserPropertyValues(projectId, propertyName) {
-  return function(dispatch) {
-    get(dispatch, host + "projects/" + projectId +
-              "/user_properties/" + propertyName + "/values")
-      .then((response) => {
-        dispatch({type: "FETCH_PROJECT_USER_PROPERTY_VALUES_FULFILLED",
-                 payload: { propertyName: propertyName,
-                  userPropertyValues: response.data }})
-      })
-      .catch((err) => {
-        dispatch({type: "FETCH_PROJECT_USER_PROPERTY_VALUES_REJECTED",
-                 payload: { propertyName: propertyName,
-                  userPropertyValues: [], err: err }})
-      })
+export function fetchProjectUserPropertyValues(projectId, propertyName, useStore=true) {
+  let url = host + "projects/" + projectId + "/user_properties/" + propertyName + "/values";
+
+  if (useStore) {
+    return function(dispatch) {
+      get(dispatch, url)
+        .then((response) => {
+          dispatch({type: "FETCH_PROJECT_USER_PROPERTY_VALUES_FULFILLED",
+                  payload: { propertyName: propertyName,
+                    userPropertyValues: response.data }})
+        })
+        .catch((err) => {
+          dispatch({type: "FETCH_PROJECT_USER_PROPERTY_VALUES_REJECTED",
+                  payload: { propertyName: propertyName,
+                    userPropertyValues: [], err: err }})
+        })
+    }
   }
+
+  return get(null, url);
 }
 
 export function fetchFilters(projectId) {
@@ -279,4 +298,9 @@ export function fetchProjectModels(projectId){
         }
       });
   }
+}
+
+export function runQuery(projectId, query) {
+  let url = host + "projects/" + projectId + "/query";
+  return post(null, url , {query: query});
 }

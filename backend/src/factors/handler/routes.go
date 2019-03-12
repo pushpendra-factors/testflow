@@ -55,8 +55,8 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/user_properties", GetUserPropertiesHandler)
 	authRouteGroup.GET("/:project_id/user_properties/:property_name/values", GetUserPropertyValuesHandler)
 	authRouteGroup.POST("/:project_id/factor", FactorHandler)
+	authRouteGroup.POST("/:project_id/query", QueryHandler)
 	authRouteGroup.POST("/:project_id/agents/invite", AgentInvite)
-
 }
 
 func InitSDKRoutes(r *gin.Engine) {
