@@ -2,5 +2,8 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: config-etcd
+  labels:
+    env: staging
+    project: factors-staging
 data:
-  ETCD: "10.40.0.10:2379"
+  ETCD: "etcd-0.etcd.default.svc.cluster.local:2379"

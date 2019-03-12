@@ -2,6 +2,9 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: config-appserver
+  labels:
+    env: staging
+    project: factors-staging
 data:
   API_HTTP_PORT: "8080"
   GEO_LOC_FILE_PATH: "/usr/local/var/factors/config/GeoLite2-City.mmdb"

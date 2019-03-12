@@ -3,6 +3,8 @@ kind: Deployment
 metadata:
   labels:
     layer: appserver
+    env: staging
+    project: factors-staging
   name: appserver
   namespace: default
 spec:
@@ -24,16 +26,22 @@ spec:
     spec:
       containers:
       - name: appserver
-        image: us.gcr.io/factors-staging/app-server:v0.01-beta_f6d8ca6
+        image: us.gcr.io/factors-staging/app-server:v0.12-beta_452f98
         ports:
         - containerPort: 8080
         volumeMounts:
         - name: workdir
           mountPath: /usr/local/var/factors/config
         imagePullPolicy: IfNotPresent
-        resources: {}
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
+        resources:
+          limits:
+            memory: "1500M"
+            cpu: "1"
+          requests:
+            memory: "1000M"
+            cpu: ".5"
         securityContext: {}
         readinessProbe:
           httpGet:

@@ -3,6 +3,8 @@ kind: Deployment
 metadata:
   labels:
     app: frontend
+    env: staging
+    project: factors-staging
   name: frontend
   namespace: default
 spec:
@@ -24,7 +26,7 @@ spec:
         app: frontend
     spec:
       containers:
-      - image: us.gcr.io/factors-staging/frontend:v0.01-beta_19bbfdc
+      - image: us.gcr.io/factors-staging/frontend:v0.10-beta_ed8453b
         imagePullPolicy: IfNotPresent
         name: frontend
         resources: {}

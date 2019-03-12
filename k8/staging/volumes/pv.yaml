@@ -6,9 +6,9 @@ metadata:
   name: etcd-pv
 spec:
   capacity:
-    storage: 20Gi
+    storage: 25Gi
   accessModes:
     - ReadWriteOnce
   gcePersistentDisk:
-    pdName: factors-staging-etcd-disk
+    pdName: factors-staging-1-etcd
     fsType: ext4
