@@ -17,5 +17,3 @@ spec:
     app: frontend
   sessionAffinity: None
   type: NodePort
-status:
-  loadBalancer: {}
