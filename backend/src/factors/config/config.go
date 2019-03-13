@@ -154,8 +154,9 @@ func initCookieInfo(env string) {
 	if env == STAGING {
 		cookieName = fmt.Sprintf("%s%s", FactorsSessionCookieName, "s")
 	} else if env == PRODUCTION {
-		fmt.Sprintf("%s%s", FactorsSessionCookieName, "p")
+		cookieName = FactorsSessionCookieName
 	}
+
 	configuration.Cookiename = cookieName
 }
 
