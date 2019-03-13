@@ -28,6 +28,7 @@ const (
 	DefaultTTLSeconds = 10
 	Development       = "development"
 	Staging           = "staging"
+	Production        = "production"
 )
 
 // Add Test
@@ -56,7 +57,7 @@ type config struct {
 }
 
 func isValidEnv(env string) bool {
-	return env == Development || env == Staging
+	return env == Development || env == Staging || env == Production
 }
 
 func NewConfig(env, ip, rpcPort, httpPort, etcd, diskBaseDir, bucketName string) (*config, error) {

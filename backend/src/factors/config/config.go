@@ -22,6 +22,8 @@ import (
 var initiated bool = false
 
 const DEVELOPMENT = "development"
+const STAGING = "staging"
+const PRODUCTION = "production"
 
 type DBConf struct {
 	Host     string
