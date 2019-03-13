@@ -1,10 +1,12 @@
-.PHONY: build-api serve-api build-ps serve-ps clean pack-api upload-api pack-ps upload-ps pack-debug upload-debug test
+.PHONY: build-api serve-api build-ps serve-ps clean pack-api upload-api pack-ps upload-ps pack-debug upload-debug pack-build-seq upload-build-seq test
 
 # Update tag with the latest release version
 # Ex format: v0.05-beta_d0e9ed9 
 # git rev-list HEAD --max-count=1 --abbrev-commit
 TAG?=
 export TAG
+
+# staging | production
 ENV?=staging
 export ENV
 
@@ -41,5 +43,10 @@ pack-debug:
 upload-debug:
 	docker push us.gcr.io/factors-$(ENV)/debug:$(TAG)
 
+pack-build-seq:
+	docker build -t us.gcr.io/factors-$(ENV)/build-seq-job:$(TAG) -f Dockerfile.build_seq_job .
+
+upload-build-seq:
+	docker push us.gcr.io/factors-$(ENV)/build-seq-job:$(TAG)
 test: 
 	go test -v $(GOPATH)/src/factors/tests && go test -v $(GOPATH)/src/factors/pattern_server/store
