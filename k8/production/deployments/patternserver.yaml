@@ -1,0 +1,82 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    layer: patternserver
+    env: production
+    project: factors-production
+  name: patternserver
+  namespace: default
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 4
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      layer: patternserver
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:      
+      labels:
+        layer: patternserver
+    spec:
+      containers:
+      - name: patternserver
+        image: us.gcr.io/factors-production/pattern-server:v0.10-beta_ed8453b
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8100
+        volumeMounts:
+        - name: workdir
+          mountPath: /usr/local/var/factors
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        securityContext: {}
+        readinessProbe:
+          tcpSocket:
+            port: 8100
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        livenessProbe:
+          tcpSocket:
+            port: 8100
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        args:
+          - --env
+          - $(ENV)
+          - --ip
+          - $(MY_POD_IP)
+          - --ps_rpc_port
+          - $(PS_RPC_PORT)
+          - --ps_http_port
+          - $(PS_HTTP_PORT)
+          - --etcd
+          - $(ETCD)
+          - --bucket_name
+          - $(BUCKET_NAME)
+          - --disk_dir
+          - $(DISK_DIR)
+        env:
+          - name: MY_POD_IP
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: status.podIP
+        envFrom:
+        - configMapRef:
+            name: config-patternserver
+        - configMapRef:
+            name: config-etcd
+        - configMapRef:
+            name: config-env
+        - configMapRef:
+            name: config-bucket
+      volumes:
+      - name: workdir
+        emptyDir: {}

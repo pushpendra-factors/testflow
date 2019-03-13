@@ -1,0 +1,123 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    layer: appserver
+    env: production
+    project: factors-production
+  name: appserver
+  namespace: default
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 3
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      layer: appserver
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:      
+      labels:
+        layer: appserver
+    spec:
+      containers:
+      - name: appserver
+        image: us.gcr.io/factors-production/app-server:v0.12-beta_452f98
+        ports:
+        - containerPort: 8080
+        volumeMounts:
+        - name: workdir
+          mountPath: /usr/local/var/factors/config
+        imagePullPolicy: IfNotPresent
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        resources:
+          limits:
+            memory: "1500M"
+            cpu: "1"
+          requests:
+            memory: "1000M"
+            cpu: ".5"
+        securityContext: {}
+        readinessProbe:
+          httpGet:
+            path: /status?s=k8_rp
+            scheme: HTTP
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /status?s=k8_lp
+            scheme: HTTP
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        args:          
+          - --env
+          - $(ENV)
+          - --api_http_port
+          - $(API_HTTP_PORT)
+          - --etcd
+          - $(ETCD)
+          - --db_host
+          - $(DB_HOST)
+          - --db_port
+          - $(DB_PORT)
+          - --db_name
+          - $(POSTGRES_DB)
+          - --db_user
+          - $(POSTGRES_USER)
+          - --db_pass
+          - $(POSTGRES_PASSWORD)
+          - --geo_loc_path
+          - $(GEO_LOC_FILE_PATH)
+          - --api_domain
+          - $(API_DOMAIN)
+          - --app_domain
+          - $(APP_DOMAIN)
+          - --aws_region
+          - $(AWS_REGION)
+          - --aws_key
+          - $(AWS_KEY)
+          - --aws_secret
+          - $(AWS_SECRET)
+          - --email_sender
+          - $(EMAIL_SENDER)  
+        env:
+          - name: MY_POD_IP
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: status.podIP              
+        envFrom:
+        - configMapRef:
+            name: config-appserver
+        - configMapRef:
+            name: config-etcd
+        - configMapRef:
+            name: config-env
+        - configMapRef:
+            name: config-postgres
+        - secretRef:
+            name: secret-postgres
+        - secretRef:
+            name: secret-aws    
+      initContainers:
+      - name: fetch-geolocation-file
+        image: google/cloud-sdk:229.0.0-alpine
+        command:
+        - gsutil
+        - cp
+        - gs://factors-production/GeoLite2-City.mmdb
+        - /workdir/GeoLite2-City.mmdb
+        volumeMounts:
+        - name: workdir
+          mountPath: "/workdir"    
+      volumes:
+      - name: workdir
+        emptyDir: {}

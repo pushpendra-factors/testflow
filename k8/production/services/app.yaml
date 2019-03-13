@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    layer: appserver
+    env: production
+    project: factors-production
+  name: appserver-service
+  namespace: default
+spec:    
+  ports:
+  - nodePort: 31074
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    layer: appserver
+  sessionAffinity: None
+  type: NodePort

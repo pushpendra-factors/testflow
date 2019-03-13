@@ -1,0 +1,17 @@
+# Create a gce persistent disk
+# 
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: etcd-pv
+  labels:
+    env: production
+    project: factors-production
+spec:
+  capacity:
+    storage: 25Gi
+  accessModes:
+    - ReadWriteOnce
+  gcePersistentDisk:
+    pdName: factors-production-etcd-disk-1
+    fsType: ext4

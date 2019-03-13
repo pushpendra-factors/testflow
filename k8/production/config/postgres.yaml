@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config-postgres
+  labels:
+    env: production
+    project: factors-production
+data:
+  DB_HOST: "localhost"
+  DB_PORT: "5432"
+  POSTGRES_DB: "autometa"
