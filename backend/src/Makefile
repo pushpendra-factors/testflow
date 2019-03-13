@@ -1,11 +1,12 @@
-.PHONY: build-api serve-api build-ps serve-ps clean pack-api upload-api pack-ps upload-ps pack-debug upload-debug pack-pg-backup upload-pg-backup test
+.PHONY: build-api serve-api build-ps serve-ps clean pack-api upload-api pack-ps upload-ps pack-debug upload-debug test
 
 # Update tag with the latest release version
 # Ex format: v0.05-beta_d0e9ed9 
 # git rev-list HEAD --max-count=1 --abbrev-commit
 TAG?=
 export TAG
-
+ENV?=staging
+export ENV
 
 build-api:
 	go build -o $(GOPATH)/bin/app $(GOPATH)/src/factors/app/app.go
@@ -23,28 +24,22 @@ clean:
 	rm $(GOPATH)/bin/pattern-app $(GOPATH)/bin/app
 
 pack-api:
-	docker build -t us.gcr.io/factors-staging/app-server:$(TAG) -f Dockerfile.appserver .
+	docker build -t us.gcr.io/factors-$(ENV)/app-server:$(TAG) -f Dockerfile.appserver .
 
 upload-api:
-	docker push us.gcr.io/factors-staging/app-server:$(TAG)
+	docker push us.gcr.io/factors-$(ENV)/app-server:$(TAG)
 
 pack-ps:
-	docker build -t us.gcr.io/factors-staging/pattern-server:$(TAG) -f Dockerfile.patternserver .
+	docker build -t us.gcr.io/factors-$(ENV)/pattern-server:$(TAG) -f Dockerfile.patternserver .
 
 upload-ps:
-	docker push us.gcr.io/factors-staging/pattern-server:$(TAG)
+	docker push us.gcr.io/factors-$(ENV)/pattern-server:$(TAG)
 
 pack-debug:
-	docker build --no-cache -t us.gcr.io/factors-staging/debug:$(TAG) -f Dockerfile.debug .
+	docker build --no-cache -t us.gcr.io/factors-$(ENV)/debug:$(TAG) -f Dockerfile.debug .
 
 upload-debug:
-	docker push us.gcr.io/factors-staging/debug:$(TAG)
-
-pack-pg-backup:
-	docker build --no-cache -t us.gcr.io/factors-staging/pg-backup:$(TAG) -f Dockerfile.pg_backup .
-
-upload-pg-backup:
-	docker push us.gcr.io/factors-staging/pg-backup:$(TAG)
+	docker push us.gcr.io/factors-$(ENV)/debug:$(TAG)
 
 test: 
 	go test -v $(GOPATH)/src/factors/tests && go test -v $(GOPATH)/src/factors/pattern_server/store
