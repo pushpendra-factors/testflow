@@ -4,8 +4,8 @@ const CONFIG = {
     sdk_asset_url: 'http://localhost:8090/dist/factors.prod.js'
   },
   staging: {
-    backend_host: 'https://api.factors.ai',
-    sdk_asset_url: 'https://app.factors.ai/assets/factors.js'
+    backend_host: 'https://staging-api.factors.ai',
+    sdk_asset_url: 'https://staging-app.factors.ai/assets/factors.js'
   },
   test: {
     backend_host: 'http://localhost:8080',

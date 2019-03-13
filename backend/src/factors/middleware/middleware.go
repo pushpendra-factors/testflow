@@ -101,6 +101,8 @@ func CustomCors() gin.HandlerFunc {
 				corsConfig.AllowOrigins = []string{
 					"http://app.factors.ai",
 					"https://app.factors.ai",
+					"http://staging-app.factors.ai",
+					"https://staging-app.factors.ai",
 				}
 				corsConfig.AllowCredentials = true
 				corsConfig.AddAllowHeaders("Access-Control-Allow-Headers")

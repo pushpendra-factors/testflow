@@ -10,7 +10,7 @@ spec:
     - "*.factors.ai"
     secretName: secret-tls
   rules:
-  - host: "api.factors.ai"
+  - host: "staging-api.factors.ai"
     http:
       paths:
       - path: /
@@ -21,7 +21,7 @@ spec:
         backend:
           serviceName: appserver-service
           servicePort: 80
-  - host: "app.factors.ai"
+  - host: "staging-app.factors.ai"
     http:
       paths:
       - path: /
