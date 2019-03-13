@@ -2,6 +2,7 @@ package tests
 
 import (
 	"encoding/json"
+	C "factors/config"
 	H "factors/handler"
 	"factors/handler/helpers"
 	M "factors/model"
@@ -26,7 +27,7 @@ func sendCreateProjectRequest(r *gin.Engine, projectName string, agent *M.Agent)
 		WithHeader("Content-Type", "application/json").
 		WithPostParams(map[string]string{"name": projectName}).
 		WithCookie(&http.Cookie{
-			Name:   helpers.FactorsSessionCookieName,
+			Name:   C.GetFactorsCookieName(),
 			Value:  cookieData,
 			MaxAge: 1000,
 		})

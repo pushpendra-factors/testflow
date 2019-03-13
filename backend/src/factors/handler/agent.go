@@ -63,7 +63,7 @@ func Signin(c *gin.Context) {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, helpers.SecondsInOneMonth*time.Second)
 
 	domain := C.GetCookieDomian()
-	c.SetCookie(helpers.FactorsSessionCookieName, cookieData, helpers.SecondsInOneMonth, "/", domain, C.UseSecureCookie(), false)
+	c.SetCookie(C.GetFactorsCookieName(), cookieData, helpers.SecondsInOneMonth, "/", domain, C.UseSecureCookie(), false)
 	resp := map[string]string{
 		"status": "success",
 	}
@@ -74,7 +74,7 @@ func Signin(c *gin.Context) {
 func Signout(c *gin.Context) {
 
 	domain := C.GetCookieDomian()
-	c.SetCookie(helpers.FactorsSessionCookieName, "", helpers.ExpireCookie, "/", domain, C.UseSecureCookie(), false)
+	c.SetCookie(C.GetFactorsCookieName(), "", helpers.ExpireCookie, "/", domain, C.UseSecureCookie(), false)
 	// redirect to login
 	resp := map[string]string{
 		"status": "success",

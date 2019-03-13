@@ -2,6 +2,7 @@ package tests
 
 import (
 	"encoding/json"
+	C "factors/config"
 	H "factors/handler"
 	"factors/handler/helpers"
 	M "factors/model"
@@ -29,7 +30,7 @@ func sendCreateFilterReq(r *gin.Engine, projectId uint64, agent *M.Agent, name, 
 			"expr": expr,
 		}).
 		WithCookie(&http.Cookie{
-			Name:   helpers.FactorsSessionCookieName,
+			Name:   C.GetFactorsCookieName(),
 			Value:  cookieData,
 			MaxAge: 1000,
 		})
@@ -157,7 +158,7 @@ func sendGetFilterRequest(projectId uint64, agent *M.Agent, r *gin.Engine) *http
 
 	rb := U.NewRequestBuilder(http.MethodGet, fmt.Sprintf("/projects/%d/filters", projectId)).
 		WithCookie(&http.Cookie{
-			Name:   helpers.FactorsSessionCookieName,
+			Name:   C.GetFactorsCookieName(),
 			Value:  cookieData,
 			MaxAge: 1000,
 		})
@@ -225,7 +226,7 @@ func sendUpdateFilterReq(r *gin.Engine, projectId, filterId uint64, agent *M.Age
 	rb := U.NewRequestBuilder(http.MethodPut, fmt.Sprintf("/projects/%d/filters/%d", projectId, filterId)).
 		WithPostParams(params).
 		WithCookie(&http.Cookie{
-			Name:   helpers.FactorsSessionCookieName,
+			Name:   C.GetFactorsCookieName(),
 			Value:  cookieData,
 			MaxAge: 1000,
 		})
@@ -296,7 +297,7 @@ func sendDeleteFilterReq(r *gin.Engine, projectId, fileterId uint64, agent *M.Ag
 
 	rb := U.NewRequestBuilder(http.MethodDelete, fmt.Sprintf("/projects/%d/filters/%d", projectId, fileterId)).
 		WithCookie(&http.Cookie{
-			Name:   helpers.FactorsSessionCookieName,
+			Name:   C.GetFactorsCookieName(),
 			Value:  cookieData,
 			MaxAge: 1000,
 		})

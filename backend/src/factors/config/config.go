@@ -25,6 +25,8 @@ const DEVELOPMENT = "development"
 const STAGING = "staging"
 const PRODUCTION = "production"
 
+const FactorsSessionCookieName = "factors-sid"
+
 type DBConf struct {
 	Host     string
 	Port     int
@@ -44,6 +46,7 @@ type Configuration struct {
 	AWSRegion       string
 	AWSKey          string
 	AWSSecret       string
+	Cookiename      string
 	EmailSender     string
 }
 
@@ -140,10 +143,24 @@ func initServices(config *Configuration) error {
 		watchPatternServers(psUpdateChannel)
 	}()
 
+	initCookieInfo(configuration.Env)
+
 	return nil
 }
 
+func initCookieInfo(env string) {
+	cookieName := fmt.Sprintf("%s%s", FactorsSessionCookieName, "d")
+
+	if env == STAGING {
+		cookieName = fmt.Sprintf("%s%s", FactorsSessionCookieName, "s")
+	} else if env == PRODUCTION {
+		fmt.Sprintf("%s%s", FactorsSessionCookieName, "p")
+	}
+	configuration.Cookiename = cookieName
+}
+
 func InitConf(env string) {
+
 	configuration = &Configuration{
 		Env: env,
 	}
@@ -251,6 +268,14 @@ func IsDevelopment() bool {
 	return (strings.Compare(configuration.Env, DEVELOPMENT) == 0)
 }
 
+func IsStaging() bool {
+	return (strings.Compare(configuration.Env, STAGING) == 0)
+}
+
+func IsProduction() bool {
+	return (strings.Compare(configuration.Env, PRODUCTION) == 0)
+}
+
 func GetAPPDomain() string {
 	return configuration.APPDomain
 }
@@ -281,4 +306,8 @@ func GetCookieDomian() string {
 		return strings.Split(domain, port)[0]
 	}
 	return domain
+}
+
+func GetFactorsCookieName() string {
+	return configuration.Cookiename
 }

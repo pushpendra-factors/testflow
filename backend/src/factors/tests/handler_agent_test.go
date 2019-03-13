@@ -1,6 +1,7 @@
 package tests
 
 import (
+	C "factors/config"
 	H "factors/handler"
 	"factors/handler/helpers"
 	M "factors/model"
@@ -84,7 +85,7 @@ func TestAPIAgentSignout(t *testing.T) {
 	cookies := w.Result().Cookies()
 	assert.Equal(t, 1, len(cookies))
 	cookie := cookies[0]
-	assert.Equal(t, helpers.FactorsSessionCookieName, cookie.Name)
+	assert.Equal(t, C.GetFactorsCookieName(), cookie.Name)
 	assert.Equal(t, helpers.ExpireCookie, cookie.MaxAge)
 }
 
@@ -96,7 +97,7 @@ func sendAgentInviteRequest(email string, projectId uint64, authData string, exp
 			"email": email,
 		}).
 		WithCookie(&http.Cookie{
-			Name:   helpers.FactorsSessionCookieName,
+			Name:   C.GetFactorsCookieName(),
 			Value:  authData,
 			MaxAge: exp,
 		})

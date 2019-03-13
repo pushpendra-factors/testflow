@@ -2,6 +2,7 @@ package tests
 
 import (
 	"encoding/json"
+	C "factors/config"
 	H "factors/handler"
 	"factors/handler/helpers"
 	M "factors/model"
@@ -38,7 +39,7 @@ func sendGetUserReq(r *gin.Engine, projectId uint64, agent *M.Agent, offset, lim
 		WithHeader("Content-Type", "application/json").
 		WithQueryParams(qP).
 		WithCookie(&http.Cookie{
-			Name:   helpers.FactorsSessionCookieName,
+			Name:   C.GetFactorsCookieName(),
 			Value:  cookieData,
 			MaxAge: 1000,
 		})

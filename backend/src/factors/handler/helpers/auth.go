@@ -6,15 +6,16 @@ import (
 	"errors"
 	"time"
 
+	C "factors/config"
+
 	"github.com/gorilla/securecookie"
 )
 
 const (
-	SecondsInOneDay          = 86400
-	SecondsInFifteenDays     = SecondsInOneDay * 15
-	SecondsInOneMonth        = SecondsInOneDay * 30
-	ExpireCookie             = -1
-	FactorsSessionCookieName = "factors-sid"
+	SecondsInOneDay      = 86400
+	SecondsInFifteenDays = SecondsInOneDay * 15
+	SecondsInOneMonth    = SecondsInOneDay * 30
+	ExpireCookie         = -1
 )
 
 var (
@@ -94,7 +95,7 @@ func ParseAndDecryptProtectedFields(key, protectedFields string) (string, error)
 func createSecureData(key []byte, pf ProtectedFields) (string, error) {
 	s := securecookie.New(key, key)
 	s = s.SetSerializer(securecookie.JSONEncoder{})
-	str, er := s.Encode(FactorsSessionCookieName, pf)
+	str, er := s.Encode(C.GetFactorsCookieName(), pf)
 	return str, er
 }
 
@@ -102,6 +103,6 @@ func decodeSecureData(key []byte, value string) (ProtectedFields, error) {
 	s := securecookie.New(key, key)
 	s = s.SetSerializer(securecookie.JSONEncoder{})
 	pf := ProtectedFields{}
-	err := s.Decode(FactorsSessionCookieName, value, &pf)
+	err := s.Decode(C.GetFactorsCookieName(), value, &pf)
 	return pf, err
 }

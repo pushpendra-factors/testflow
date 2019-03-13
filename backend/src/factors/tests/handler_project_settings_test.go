@@ -2,6 +2,7 @@ package tests
 
 import (
 	"encoding/json"
+	C "factors/config"
 	H "factors/handler"
 	"factors/handler/helpers"
 	M "factors/model"
@@ -26,7 +27,7 @@ func sendGetProjectSettingsReq(r *gin.Engine, projectId uint64, agent *M.Agent) 
 	}
 	rb := U.NewRequestBuilder(http.MethodGet, fmt.Sprintf("/projects/%d/settings", projectId)).
 		WithCookie(&http.Cookie{
-			Name:   helpers.FactorsSessionCookieName,
+			Name:   C.GetFactorsCookieName(),
 			Value:  cookieData,
 			MaxAge: 1000,
 		})
@@ -81,7 +82,7 @@ func sendUpdateProjectSettingReq(r *gin.Engine, projectId uint64, agent *M.Agent
 	rb := U.NewRequestBuilder(http.MethodPut, fmt.Sprintf("/projects/%d/settings", projectId)).
 		WithPostParams(params).
 		WithCookie(&http.Cookie{
-			Name:   helpers.FactorsSessionCookieName,
+			Name:   C.GetFactorsCookieName(),
 			Value:  cookieData,
 			MaxAge: 1000,
 		})

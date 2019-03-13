@@ -178,7 +178,7 @@ func validateAuthData(authDataStr string) (*M.Agent, string, int) {
 
 func SetLoggedInAgent() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		cookieStr, err := c.Cookie(helpers.FactorsSessionCookieName)
+		cookieStr, err := c.Cookie(C.GetFactorsCookieName())
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 				"error": "session cookie not found",
