@@ -11,13 +11,13 @@ export function changeProject(projectId) {
 
 export function createProject(projectName){
   return function(dispatch){
-    return new Promise((resolve, reject)=>{
-      post(dispatch, host + "projects", {name: projectName})
-      .then((response)=>{
-        resolve(dispatch({type: "CREATE_PROJECT_FULFILLED", payload: response.data}))
-      }).catch((err)=>{
-        reject(dispatch({type:"CREATE_PROJECT_REJECTED", payload: err}))
-      })
+    return new Promise((resolve, reject) => {
+      post(dispatch, host + "projects", {name:projectName})
+        .then((response)=>{
+          resolve(dispatch({type: "CREATE_PROJECT_FULFILLED", payload: response.data}))
+        }).catch((err)=>{
+          reject(dispatch({type:"CREATE_PROJECT_REJECTED", payload: err}))
+        })
     })
   }
 }
@@ -26,11 +26,11 @@ export function fetchProjects() {
   return function(dispatch) {
     return new Promise((resolve,reject) => {
       get(dispatch, host + "projects")
-      .then((response)=>{        
-        resolve(dispatch({type:"FETCH_PROJECTS_FULFILLED", payload: response.data}))
-      }).catch((err)=>{        
-        reject(dispatch({type:"FETCH_PROJECTS_REJECTED", payload: err}))
-      });
+        .then((response)=>{        
+          resolve(dispatch({type:"FETCH_PROJECTS_FULFILLED", payload: response.data}))
+        }).catch((err)=>{        
+          reject(dispatch({type:"FETCH_PROJECTS_REJECTED", payload: err}))
+        });
     });
   }
 }

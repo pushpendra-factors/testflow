@@ -396,7 +396,7 @@ class Query extends Component {
     console.debug('Query State : ', this.state);
 
     return (
-      <div>
+      <div style={{marginLeft: '2rem', marginRight: '2rem'}}>
         {/* Query */}
         <div>
           <Row style={{marginBottom: '15px'}}>

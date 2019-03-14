@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
-import { DropdownItem, DropdownMenu, DropdownToggle, Input, Button, Form, Nav} from 'reactstrap';
+import { DropdownItem, DropdownMenu, DropdownToggle, Input, Button, Form, Nav,
+  Modal, ModalHeader, ModalBody, ModalFooter } from 'reactstrap';
 import PropTypes from 'prop-types';
 import { AppHeaderDropdown, AppSidebarToggler, AppNavbarBrand } from '@coreui/react';
 import { AppSidebarForm } from '@coreui/react';
@@ -7,8 +8,6 @@ import Select from 'react-select';
 import { bindActionCreators } from 'redux';
 import { connect } from 'react-redux';
 
-import factorslogo from '../../assets/img/brand/factors-logo.png';
-import factorsicon from '../../assets/img/brand/factors-icon.png';
 import { changeProject, createProject } from '../../actions/projectsActions';
 import { signout } from '../../actions/agentActions';
 
@@ -56,7 +55,10 @@ class DefaultHeader extends Component {
       createProject:{
         showForm: false,
         projectName : ""
-      }
+      },
+
+      showAddProjectModal: false,
+      addProjectMessage: null,
     }
   }
 
@@ -67,6 +69,8 @@ class DefaultHeader extends Component {
   }
 
   handleProjectNameFormChange = (e) => {
+    this.setState({ addProjectMessage: null });
+
     let name = e.target.value.trim();
     if(name == "") console.error("project name cannot be empty");
     this.setState({ createProject: { projectName: name } });
@@ -85,45 +89,69 @@ class DefaultHeader extends Component {
 
     let projectName = this.state.createProject.projectName;
     if(projectName == "") {
-      console.error("project name cannot be empty");
-      return
+      this.showAddProjectMessage({success: false, message: 'Your project name cannot be empty'});
+      return;
     }
 
-    this.props.createProject(projectName);
+    this.props.createProject(projectName)
+      .then((r) => this.showAddProjectMessage({success: true, message: 'Your project has been created successfully'}))
+      .catch((r) => this.showAddProjectMessage({success: false, message: 'Failed to create project, try again'}))
   }
 
   handleLogout = () => {
     this.props.signout();
   }
 
+  toggleAddProjectModal = () => {
+    this.setState((pState) => {
+      let state = { showAddProjectModal: !pState.showAddProjectModal }
+      if (!state.showAddProjectModal) {
+        // reset message on close.
+        state.addProjectMessage = null;
+      }
+      return state
+    });
+  }
+
+  getAddProjectMessageStyle() {
+    if (this.state.addProjectMessage != null) {
+      let style = { display: 'inline-block' };
+      style.color = this.state.addProjectMessage.success ? 'green': 'red';
+      return style;
+    }
+    return { display: 'none' };
+  }
+
+  showAddProjectMessage(msg) {
+    this.setState({addProjectMessage: msg});
+  }
+
+  getAddProjectMessage() {
+    if (this.state.addProjectMessage == null) return '';
+    return this.state.addProjectMessage.message;
+  }
+
   render() {
     // eslint-disable-next-line
     const { children, ...attributes } = this.props;
 
-    let dropDown = "";
+    let selectProjectDropDown = "";
     if(!!this.props.selectableProjects ){
-      dropDown = <Select options={this.props.selectableProjects} value={this.props.selectedProject} onChange={this.handleChange} styles={projectSelectStyles} placeholder={"Select Project ..."} blurInputOnSelect={true}/>;
+      selectProjectDropDown = <Select options={this.props.selectableProjects} value={this.props.selectedProject} onChange={this.handleChange} styles={projectSelectStyles} placeholder={"Select Project ..."} blurInputOnSelect={true}/>;
     }
     return (
       <React.Fragment>
         <AppSidebarToggler className="d-lg-none" display="md" mobile />
-        <AppNavbarBrand
-          full={{ src: factorslogo, alt: 'factors.ai' }}
-          minimized={{ src: factorsicon, alt: 'factors.ai' }}
-        />
-        <AppSidebarToggler className="d-md-down-none fapp-navbar-toggler" display="lg" />
-        <AppSidebarForm className="fapp-select fapp-header-dropdown" style={{width: '50%'}}>
-          <div style={{display: 'inline-block', width: '40%', marginRight: '25px'}}> {dropDown} </div>         
-          <Form onSubmit={this.handleCreateProject} style={{display: 'inline-block'}}>
-            <Input type="text" placeholder="Project Name" onChange={this.handleProjectNameFormChange} style={{display: 'inline-block', width: '230px', marginRight: '25px'}}  required />
-            <Button color="success">Create</Button>
-          </Form>
+        {/* <AppSidebarToggler className="d-md-down-none fapp-navbar-toggler" display="lg" /> */}
+        <AppSidebarForm className="fapp-select fapp-header-dropdown" style={{width: '40%'}}>
+          <div style={{display: 'inline-block', width: '60%', marginRight: '5px'}}> { selectProjectDropDown } </div>
+          <Button outline color="primary" onClick={this.toggleAddProjectModal} style={{fontSize: '20px', padding: '0 10px', height: '38px'}}>+</Button>
         </AppSidebarForm>
         <Nav className="ml-auto fapp-header-right" navbar>          
           <AppHeaderDropdown direction="down">
             <DropdownToggle nav>	
                 <i className="icon-bell fapp-bell"></i>	
-                  {/* <Badge pill color="danger">5</Badge> */}	
+                {/* <Badge pill color="danger">5</Badge> */}	
             </DropdownToggle>	
             <DropdownMenu right style={{ right: 'auto' }}>	
               <DropdownItem disabled><span class="text-muted">No messages here.</span></DropdownItem>	
@@ -140,6 +168,20 @@ class DefaultHeader extends Component {
             </DropdownMenu>
           </AppHeaderDropdown>
         </Nav>
+        <Modal isOpen={this.state.showAddProjectModal} toggle={this.toggleAddProjectModal} style={{marginTop: '10rem'}}>
+          <ModalHeader toggle={this.toggleAddProjectModal}>New Project</ModalHeader>
+          <ModalBody style={{padding: '25px 35px'}}>
+            <div style={{textAlign: 'center', marginBottom: '15px'}}><span style={this.getAddProjectMessageStyle()}>{ this.getAddProjectMessage() }</span></div>
+            <Form onSubmit={this.handleCreateProject} >
+              <label>Name</label>
+              <Input style={{padding: '1.4rem 1rem', border: '1px solid #909ba5'}} type="text" placeholder="Your Project Name" onChange={this.handleProjectNameFormChange} />
+            </Form>
+          </ModalBody>
+          <ModalFooter style={{borderTop: 'none', paddingBottom: '30px', paddingRight: '35px'}}>
+            <Button outline color="success" onClick={this.handleCreateProject}>Create</Button>
+            <Button outline color='danger' onClick={this.toggleAddProjectModal}>Cancel</Button>
+          </ModalFooter>
+        </Modal>
       </React.Fragment>
     );
   }

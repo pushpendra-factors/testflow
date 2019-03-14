@@ -20,13 +20,18 @@ const Settings = Loadable({
   loading: Loading,
 })
 
-const Users = Loadable({
-  loader: () => import('./views/Users/Users'),
+const SettingsSegment =  Loadable({
+  loader: () => import('./views/Settings/Segment'),
   loading: Loading,
 });
 
-const User = Loadable({
-  loader: () => import('./views/Users/User'),
+const SettingsJsSdk = Loadable({
+  loader: () => import('./views/Settings/JsSdk'),
+  loading: Loading,
+});
+
+const SettingsAutoTrack = Loadable({
+  loader: () => import('./views/Settings/AutoTrack'),
   loading: Loading,
 });
 
@@ -41,9 +46,10 @@ const routes = [
   { path: '/', exact: true, name: 'Home', component: DefaultLayout },
   { path: '/core', name: 'Query', component: Query },
   { path: '/factor', name: 'Factor', component: Factor },
+  { path: '/settings/segment', exact: true, name: 'Segment', component: SettingsSegment },
+  { path: '/settings/autotrack', exact: true, name: 'AutoTrack', component: SettingsAutoTrack },
+  { path: '/settings/jssdk', exact: true, name: 'JsSdk', component: SettingsJsSdk },
   { path: '/settings', name: 'Settings', component: Settings },
-  { path: '/users', exact: true,  name: 'Users', component: Users },
-  { path: '/users/:id', exact: true, name: 'User Details', component: User },
   { path: '/refresh', exact: true, name: 'Refresh', component: ReloadComponent },
 ];
 

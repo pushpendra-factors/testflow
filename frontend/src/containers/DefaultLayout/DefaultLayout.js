@@ -4,11 +4,9 @@ import { bindActionCreators } from 'redux';
 import { Redirect, Route, Switch } from 'react-router-dom';
 import { Container, Button } from 'reactstrap';
 import {
-  AppFooter,
   AppHeader,
   AppSidebar,
   AppSidebarFooter,
-  AppSidebarHeader,
   AppSidebarMinimizer,
   AppSidebarNav,
 } from '@coreui/react';
@@ -26,6 +24,7 @@ import {
   fetchProjectModels
 } from "../../actions/projectsActions";
 import Loading from '../../loading';
+import factorsicon from '../../assets/img/brand/factors-icon.svg';
 
 
 const projectSelectStyles = {
@@ -140,18 +139,18 @@ class DefaultLayout extends Component {
 
     return (
       <div className="app">
-        <AppHeader className="fapp-header" fixed>
-          {this.renderProjectsDropdown()} 
-        </AppHeader>
-        <div className="app-body">
-          <AppSidebar className="fapp-sidebar" fixed display="lg">
-            <AppSidebarHeader />
-            <AppSidebarNav className="fapp-sidebar-nav" navConfig={navigation} {...this.props} />
+        <div className="app-body fapp-body">
+          <AppSidebar minimized className="fapp-sidebar" fixed display="lg">
+            <img style={{marginTop: '12px', marginBottom: '20px'}} src={factorsicon} />
+            <AppSidebarNav navConfig={navigation} {...this.props} />
             <AppSidebarFooter />
             <AppSidebarMinimizer />
           </AppSidebar>
           <main className="main fapp-main">
-            <Container fluid>
+          <AppHeader className="fapp-header" fixed>
+            {this.renderProjectsDropdown()} 
+          </AppHeader>
+            <Container className='fapp-content' fluid>
               <Switch>
                 {routes.map((route, idx) => {
                     return route.component ? (<Route key={idx} path={route.path} exact={route.exact} name={route.name} 
@@ -163,9 +162,6 @@ class DefaultLayout extends Component {
             </Container>
           </main>
         </div>
-        <AppFooter hidden>
-          <DefaultFooter />
-        </AppFooter>
       </div>
     );
   }

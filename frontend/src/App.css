@@ -1,5 +1,3 @@
-
-
 @media (min-width: 320px) and (max-width: 480px) {
     .fapp-header-dropdown {
         width: 60% !important;
@@ -158,37 +156,23 @@ body {
     background: #fff !important;    
 }
 
-.fapp-main {
-    padding: 50px 0;
+.btn {
+    font-weight: 500 !important;
 }
 
-.fapp-header-right {
-    margin: 0 2.25rem;
+/* React Select */
+
+.css-2o5izw {
+    box-shadow: none !important;
 }
 
-.fapp-header-right li {
-    margin: 0 0.25rem !important;
+.css-1aya2g8 {
+    border-color: #8f9ba6;
 }
 
-.fapp-header {
-    height: 65px !important;
-    border: none !important;
-    box-shadow: 0 4px 10px 0 rgba(0, 0, 0, 0.09), 0 6px 20px 0 rgba(0, 0, 0, 0);
-}
+/* End of React Select */
 
-.fapp-header .navbar-brand {
-    margin-left: 8px;
-}
-
-.brand-minimized .app-header .navbar-brand {
-    width: 36px !important;
-}
-
-.fapp-bell {
-    font-size: 1.6rem;
-    display: block;
-    margin-top: 5px;
-}
+/* core-ui class overrides */
 
 .sidebar .nav{
     font-weight: 500 !important;
@@ -208,20 +192,83 @@ body {
     color: #20a8d8 !important;
 }
 
+.sidebar-minimized .sidebar .sidebar-nav {
+    overflow: visible !important;
+}
+
+.sidebar-minimized .sidebar .nav-link .nav-icon {
+    font-size: 20px !important;
+}
+
+.sidebar-minimized .sidebar .nav-link {
+    padding-top: 18px;
+    padding-bottom: 18px;
+}
+
+.sidebar-minimized .sidebar .sidebar-nav {
+    width: 60px !important;
+}
+
+.sidebar-minimized .sidebar .nav-item {
+    width: 60px !important;
+}
+
+.sidebar-minimized .sidebar .nav-link .nav-icon {
+    width: 60px !important;
+}
+
+.sidebar-minimized.sidebar-fixed .sidebar {
+    width: 60px !important;
+}
+
+.dropdown-menu {
+    margin-top: 0.5rem !important;
+}
+
+.card-header {
+    color: #484848;
+    border-color: #ddd;
+}
+
+.card-body {
+    border-color: #ddd;
+}
+
+/* End of core-ui class overrides */
+
+
+.fapp-body {
+    margin-top: 0 !important;
+}
+
+.fapp-main {
+    margin-left: 60px !important;
+}
+
+.fapp-header {
+    padding-left: 50px !important;
+    padding-right: 80px !important;
+    height: 65px !important;
+    border: none !important;
+    box-shadow: 0 1px 5px 0 rgba(0, 0, 0, 0.08), 0 5px 10px 0 rgba(0, 0, 0, 0);
+}
+
+.fapp-content {
+    margin-top: 120px;
+}
+
+.fapp-bell {
+    font-size: 1.6rem;
+    display: block;
+    margin-top: 5px;
+}
+
 .fapp-sidebar {
     background: #192a56 !important;
 }
 
 .fapp-header-dropdown {
     width: 22%;
-}
-
-.fapp-sidebar-nav {
-    padding: 20px 0;
-}
-
-.fapp-navbar-toggler {
-    margin-right: 12px;
 }
 
 .fapp-search-card {
@@ -242,15 +289,20 @@ body {
 .fapp-select .css-1aya2g8 {
     background: none;
     border-color: #8f9ba6;
-    font-weight: 300;
 }
 
+.fapp-select .css-10odw4q {
+    color: #444444;
+}
+
+.fapp-select .css-va7pk8 {
+    color: #444444;
+}
 
 /* On hover class for select */
 .fapp-search-card .css-2o5izw {
     min-height: 55px;
     font-size: 14px;
-    font-weight: 300;
     padding: 5px 8px;
     border-color: #8f9ba6;
 }
@@ -269,17 +321,12 @@ body {
 }
 
 .fapp-search-card .btn {
-    font-weight: 500;
     padding: 6px 28px;
     font-size: 1rem;
 }
 
 .fapp-card-border-none {
     border: none !important;
-}
-
-.fapp-sidebar-form .css-1aya2g8 {
-    border-color: #8f9ba6;
 }
 
 .fapp-sidebar-form .css-1ep9fjw {
@@ -310,30 +357,22 @@ body {
     font-weight: lighter !important;
 }
 
-/* Used with card with additional maring */
-.fapp-card {
-    margin-left: 2rem;
-    margin-right: 2rem;
-    margin-bottom: 3rem !important;
-}
-
 .no-border { 
     border: none !important;
 }
 
-.sdk-code {
-    text-align: left;
-    color: darkslategray;
-    letter-spacing: 0.04rem;
-}
-
-.fapp-card-header {
-    color: #5c6873;
+.fapp-code {
+    background: #f5f5f5;
+    padding: 20px 30px;
+    border-radius: 12px;
+    font-family: monospace;
+    font-size: 13px;
+    color: #404040;
 }
 
 .fapp-toggle-label {
     font-weight: 500;
-    color: #2f353a;
+    color: #484848;
     font-size: 15px;
 }
 
@@ -352,30 +391,74 @@ body {
     text-align: center; 
 }
 
-.fapp-card-subtitle {
-    color: grey;
-    font-weight: 500;
-}
-
 .fapp-input-disabled {
     background: #F8F8F8
 }
 
-.fapp-table th, 
-.fapp-table td {
+.fapp-card {
+    margin-left: 4rem;
+    margin-right: 4rem;
     border: none !important;
+    margin-bottom: 2rem !important;
 }
 
-.fapp-table th {
-    background: #f5f5f5;
-}
-
-.fapp-table tbody tr {
-    border-bottom: 1px solid #cccccc;
-}
-
-.fapp-table {
-    color: #5c6873;
+.fapp-card .card-header {
+    border: none;
+    border-bottom: 1px solid #ccc;
     font-weight: 500;
-    font-size: 0.875rem;
+    background: none;
+    padding: 5px;
+    margin-bottom: 15px;
+}
+
+.fapp-card .card-body {
+    padding-top: 10px;
+    padding-left: 5px;
+    padding-right: 5px;
+}
+
+div.setting-card:hover{
+    box-shadow: 0 1px 5px 0 rgba(0, 0, 0, 0.1), 0 5px 10px 0 rgba(0, 0, 0, 0);
+    cursor: pointer;
+}
+
+.fapp-label {
+    color: #484848;
+    font-weight: 600;
+}
+
+.fapp-bordered-card {
+    margin-left: 4rem;
+    margin-right: 4rem;
+}
+
+.fapp-bordered-card .card-header {
+    background: #F3F4FB;
+}
+
+.fapp-bordered-card .card-body {
+    padding: 3rem 3rem;
+}
+
+.fapp-input {
+    border: 1px solid #8f9ba6 !important;
+    padding: 1.5rem 1rem !important;
+    color: #484848 !important;
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+.fapp-only-header {
+    border: 1px solid #ddd !important; 
+    background: #F3F4FB !important;
+    border-radius: 10px !important;
+    padding: 15px 20px 12px !important;
+}
+
+.fapp-button-header {
+    padding: 15px 20px 20px !important;
+}
+
+.fapp-block-shadow {
+    box-shadow: 0 2px 4px 0 rgba(0,0,0,0.16),0 2px 10px 0 rgba(0,0,0,0.12);
 }
