@@ -113,3 +113,52 @@
     font-size: 18;
     font-weight: 100
   }
+
+  .blog-comment {
+    background: #fff;
+    box-shadow: 0px 0px 40px 0px rgba(0, 0, 0, 0.1);
+    padding: 50px 30px;
+    margin-top: 30px;
+    overflow: hidden;
+  }
+  
+  .blog-comment h4 {
+    font-size: 24px;
+    margin-bottom: 30px;
+  }
+  
+  .blog-comment .comment-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    margin-bottom: 50px;
+  }
+  
+  .blog-comment .comment-list .the-comment {
+    border-bottom: 1px solid #e7e6e6;
+    padding-bottom: 25px;
+    margin-bottom: 25px;
+  }
+  
+  .blog-comment .comment-list .children {
+    padding-left: 40px;
+  }
+  
+  .blog-comment .avatar {
+    float: left;
+    margin-right: 15px;
+    padding: 5px;
+    border-radius: 4px;
+    background: #ffffff;
+    border: 1px solid #f1f1f1;
+  }
+  
+  .blog-comment .comment-author {
+    margin-bottom: 10px;
+  }
+  
+  .blog-comment .meta {
+    margin-bottom: 10px;
+    color: #999;
+  }
+  

@@ -448,15 +448,19 @@
         var app = $.sammy(function() {
           this.get('/', function() {
             $('#main-content').load('home.htm');
+            factors.track('pageview', {"url": "/"});
           });
           this.get('#/blog', function() {
             $('#main-content').load('blog.htm');
+            factors.track('pageview', {"url": "#/blog"});
           });
           this.get('#/blog/big-data-analytics-next-1', function() {
             $('#main-content').load('big-data-analytics-next-1.htm');
+            factors.track('pageview', {"url": "#/blog/big-data-analytics-next-1"});
           });
           this.get('#/blog/big-data-analytics-next-2', function() {
             $('#main-content').load('big-data-analytics-next-2.htm');
+            factors.track('pageview', {"url": "#/blog/big-data-analytics-next-2"});
           });
         });
         $(function() {
