@@ -465,43 +465,6 @@
       })(jQuery);
     </script>
 
-    <script type="text/javascript">
-      // feature tabs
-      $("#feat_track").on('click', function(){ 
-        $("#tab_track").fadeIn('slow'); $("#tab_measure").hide(); $("#tab_discover").hide();
-        $(".tabs .header h4").removeClass('active-tab');
-        $(".tabs .header h4#feat_track").addClass('active-tab');
-      });
-      $("#feat_measure").on('click', function(){ 
-        $("#tab_track").hide(); $("#tab_measure").fadeIn('slow'); $("#tab_discover").hide(); 
-        $(".tabs .header h4").removeClass('active-tab');
-        $(".tabs .header h4#feat_measure").addClass('active-tab');
-      });
-      $("#feat_discover").on('click', function(){ 
-        $("#tab_track").hide(); $("#tab_measure").hide(); $("#tab_discover").fadeIn('slow');
-        $(".tabs .header h4").removeClass('active-tab');
-        $(".tabs .header h4#feat_discover").addClass('active-tab');
-      });
-
-      // in-page scrolls
-      $("#bottom-signup").click(function(){
-        $("html, body").animate({ scrollTop: 0 }, 600);
-        return false;
-      });
-      $("#gda_link").click(function(){
-        $("html, body").animate({ scrollTop: $("#gda").offset().top }, 600);
-        return false;
-      })
-
-      // on enter work email.
-      $("#work-email").on('keypress', function(e) {
-        if(e.which == 13) {
-          getInvite(this.value);
-        }
-      });
-      
-    </script>
-
     <script>
       if(window.location.origin.indexOf('file://') == -1 && window.location.origin.indexOf('http://') == -1) {
         // factors sdk.
@@ -514,6 +477,45 @@
       } else {
         console.warn("SDKs are not initialized for local");
       }
+    </script>
+
+    <script type="text/javascript">
+      $(document).ready(function() {
+        // feature tabs
+        $("#main-content").delegate("#feat_track", 'click', function(){
+          $("#tab_track").fadeIn('slow'); $("#tab_measure").hide(); $("#tab_discover").hide();
+          $(".tabs .header h4").removeClass('active-tab');
+          $(".tabs .header h4#feat_track").addClass('active-tab');
+        });
+        $("#main-content").delegate("#feat_measure", 'click', function(){ 
+          $("#tab_track").hide(); $("#tab_measure").fadeIn('slow'); $("#tab_discover").hide(); 
+          $(".tabs .header h4").removeClass('active-tab');
+          $(".tabs .header h4#feat_measure").addClass('active-tab');
+        });
+        $("#main-content").delegate("#feat_discover", 'click', function(){ 
+          $("#tab_track").hide(); $("#tab_measure").hide(); $("#tab_discover").fadeIn('slow');
+          $(".tabs .header h4").removeClass('active-tab');
+          $(".tabs .header h4#feat_discover").addClass('active-tab');
+        });
+
+        // in-page scrolls
+        $("#main-content").delegate("#bottom-signup", 'click', function(){
+          $("html, body").animate({ scrollTop: 0 }, 600);
+          return false;
+        });
+
+        $("#main-content").delegate("#gda_link", "click", function(){
+          $("html, body").animate({ scrollTop: $("#gda").offset().top }, 600);
+          return false;
+        })
+
+        // on enter work email.
+        $("#main-content").delegate("#work-email", 'keypress', function(e) {
+          if(e.which == 13) {
+            getInvite(this.value);
+          }
+        });
+      });
     </script>
   </body>
 </html>
