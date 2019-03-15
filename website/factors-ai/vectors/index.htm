@@ -339,6 +339,21 @@
           color: #26a65b;
         }
       </style>
+    
+    <script>
+        if(window.location.origin.indexOf('file://') == -1 && window.location.origin.indexOf('http://') == -1) {
+          // factors sdk.
+          (function(c){var s=document.createElement("script");s.type="text/javascript";if(s.readyState){s.onreadystatechange=function(){if(s.readyState=="loaded"||s.readyState=="complete"){s.onreadystatechange=null;c()}}}else{s.onload=function(){c()}}s.src="https://app.factors.ai/assets/factors.js";d=!!document.body?document.body:document.head;d.appendChild(s)})(function(){factors.init("we0jyjxcs0ix4ggnkptymjh48ur8y7q7")})
+          
+          // segment sdk.
+          !function(){var analytics=window.analytics=window.analytics||[];if(!analytics.initialize)if(analytics.invoked)window.console&&console.error&&console.error("Segment snippet included twice.");else{analytics.invoked=!0;analytics.methods=["trackSubmit","trackClick","trackLink","trackForm","pageview","identify","reset","group","track","ready","alias","debug","page","once","off","on"];analytics.factory=function(t){return function(){var e=Array.prototype.slice.call(arguments);e.unshift(t);analytics.push(e);return analytics}};for(var t=0;t<analytics.methods.length;t++){var e=analytics.methods[t];analytics[e]=analytics.factory(e)}analytics.load=function(t,e){var n=document.createElement("script");n.type="text/javascript";n.async=!0;n.src="https://cdn.segment.com/analytics.js/v1/"+t+"/analytics.min.js";var a=document.getElementsByTagName("script")[0];a.parentNode.insertBefore(n,a);analytics._loadOptions=e};analytics.SNIPPET_VERSION="4.1.0";
+          analytics.load("HVq1TJ98r4dnKHxiruQfrjlff07TALQv");
+          }}();
+        } else {
+          console.warn("SDKs are not initialized for local");
+        }
+      </script>
+      
     <script>
         function notify(data) {
           let url = "https://fjnvg9a8wi.execute-api.us-east-1.amazonaws.com/v1/notify";
@@ -467,20 +482,6 @@
           app.run()
         });
       })(jQuery);
-    </script>
-
-    <script>
-      if(window.location.origin.indexOf('file://') == -1 && window.location.origin.indexOf('http://') == -1) {
-        // factors sdk.
-        (function(c){var s=document.createElement("script");s.type="text/javascript";if(s.readyState){s.onreadystatechange=function(){if(s.readyState=="loaded"||s.readyState=="complete"){s.onreadystatechange=null;c()}}}else{s.onload=function(){c()}}s.src="https://app.factors.ai/assets/factors.js";d=!!document.body?document.body:document.head;d.appendChild(s)})(function(){factors.init("we0jyjxcs0ix4ggnkptymjh48ur8y7q7")})
-        
-        // segment sdk.
-        !function(){var analytics=window.analytics=window.analytics||[];if(!analytics.initialize)if(analytics.invoked)window.console&&console.error&&console.error("Segment snippet included twice.");else{analytics.invoked=!0;analytics.methods=["trackSubmit","trackClick","trackLink","trackForm","pageview","identify","reset","group","track","ready","alias","debug","page","once","off","on"];analytics.factory=function(t){return function(){var e=Array.prototype.slice.call(arguments);e.unshift(t);analytics.push(e);return analytics}};for(var t=0;t<analytics.methods.length;t++){var e=analytics.methods[t];analytics[e]=analytics.factory(e)}analytics.load=function(t,e){var n=document.createElement("script");n.type="text/javascript";n.async=!0;n.src="https://cdn.segment.com/analytics.js/v1/"+t+"/analytics.min.js";var a=document.getElementsByTagName("script")[0];a.parentNode.insertBefore(n,a);analytics._loadOptions=e};analytics.SNIPPET_VERSION="4.1.0";
-        analytics.load("HVq1TJ98r4dnKHxiruQfrjlff07TALQv");
-        }}();
-      } else {
-        console.warn("SDKs are not initialized for local");
-      }
     </script>
 
     <script type="text/javascript">
