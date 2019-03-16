@@ -417,6 +417,7 @@ class AutoTrack extends Component {
             <strong>Virtual Events</strong>
           </CardHeader>
           <CardBody style={{paddingTop: '1.5rem'}}>
+            <span className="fapp-label" style={{marginTop: "15px", marginBottom: "20px"}}>Add new virtual event</span>
             <Row style={{padding: "10px 0"}}>
               <Col md={{size: 4}}>
                 <div style={{height: "20px"}}>
@@ -459,7 +460,7 @@ class AutoTrack extends Component {
                 </Button>
               </Col>
             </Row>
-            <span className="fapp-label" style={{display: this.props.filters.length > 0 ? "inline-block" : "none", marginTop: "15px", marginBottom: "20px"}}>Available Virtual Events</span>
+            <span className="fapp-label" style={{display: this.props.filters.length > 0 ? "inline-block" : "none", marginTop: "15px", marginBottom: "20px"}}>Available virtual events</span>
             { 
               // existing filters list.
               this.props.filters.map((v, i) => {

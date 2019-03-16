@@ -5,7 +5,10 @@ import { connect } from 'react-redux';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import { bindActionCreators } from 'redux';
 import * as yup from 'yup';
+
 import  { MissingFirstname, PasswordsDoNotMatch, MissingPassword, PasswordMinEightChars} from '../ValidationMessages';
+import HalfScreen from '../HalfScreen';
+
 const mapDispatchToProps = dispatch => {
   return bindActionCreators({ activate }, dispatch);
 }
@@ -17,12 +20,12 @@ class Activate extends Component {
       <Formik
         initialValues={{firstName:'', lastName:'', password:'', confirmPassword:''}}
         validationSchema = {
-            yup.object().shape({
-                firstName: yup.string().required(MissingFirstname),
-                lastName: yup.string(),
-                password: yup.string().required(MissingPassword).min(8, PasswordMinEightChars),
-                confirmPassword: yup.string().required().oneOf([yup.ref('password'),null], PasswordsDoNotMatch)
-            })
+          yup.object().shape({
+            firstName: yup.string().required(MissingFirstname),
+            lastName: yup.string(),
+            password: yup.string().required(MissingPassword).min(8, PasswordMinEightChars),
+            confirmPassword: yup.string().required().oneOf([yup.ref('password'),null], PasswordsDoNotMatch)
+          })
         }
         onSubmit={(values, {setSubmitting})=>{
           const hash = window.location.hash;
@@ -42,89 +45,61 @@ class Activate extends Component {
         {({isSubmitting, touched})=> (
 
           <Form noValidate>
-              <h1>Activate</h1>    
-              <p className="text-muted">Please enter following details to activate your account.</p>
-              <InputGroup className="mb-4">
-                <InputGroupAddon addonType="prepend">
-                    <InputGroupText>
-                      Firstname  
-                    </InputGroupText>
-                </InputGroupAddon>                  
-                  <Input tag={Field} type="text" name="firstName" placeholder="Firstname"/>
-                  {touched.firstName &&
-                    <ErrorMessage name="firstName">
-                        {msg => <div style={{color:'red'}}>{msg}</div>}    
-                    </ErrorMessage>
-                  }                  
-              </InputGroup>
-              <InputGroup className="mb-3">
-                <InputGroupAddon addonType="prepend">
-                    <InputGroupText>
-                      Lastname  
-                    </InputGroupText>
-                </InputGroupAddon>                  
-                  <Input tag={Field} type="text" name="lastName" placeholder="Lastname"/>
-                  {touched.lastName &&
-                    <ErrorMessage name="lastName">
-                        {msg => <div style={{color:'red'}}>{msg}</div>}    
-                    </ErrorMessage>
-                  }                  
-              </InputGroup>
-              <InputGroup className="mb-3">
-                <InputGroupAddon addonType="prepend">
-                    <InputGroupText>
-                    <i className="icon-lock"></i>
-                    </InputGroupText>
-                </InputGroupAddon>
-                <Input tag={Field} type="password" name="password" placeholder="Password"/>
-                {touched.password &&
-                    <ErrorMessage name="password">
-                        {msg => <div style={{color:'red'}}>{msg}</div>}    
-                    </ErrorMessage>
-                }
-              </InputGroup>
-              <InputGroup className="mb-3">
-                <InputGroupAddon addonType="prepend">
-                    <InputGroupText>
-                    <i className="icon-lock"></i>
-                    </InputGroupText>
-                </InputGroupAddon>                                
-                <Input tag={Field} type="password" name="confirmPassword" placeholder="Renter Password"/>
-                    {   touched.confirmPassword &&
-                        <ErrorMessage name="confirmPassword">
-                        {msg => <div style={{color:'red'}}>{msg}</div>}    
-                        </ErrorMessage>
-                    }
-              </InputGroup>
-              <Row>
-                  <Col xs="6">
-                      <Button color="success" className="px-4" type="submit" disabled={isSubmitting}>
-                          Activate
-                      </Button>
-                  </Col>
-              </Row>
-              
+            <h3 style={{textAlign: 'center', marginBottom: '30px', color: '#484848'}}>Activate your account</h3>
+            <span class='fapp-label'> Firstname* </span>                 
+            <Input className='fapp-input fapp-big-font' style={{marginBottom: '20px'}} tag={Field} type="text" name="firstName" placeholder="Your Firstname"/>
+            {
+              touched.firstName &&
+              <ErrorMessage name="firstName">
+                  {msg => <span className='fapp-error-span' style={{marginTop: '-15px'}}>{msg}</span>}    
+              </ErrorMessage>
+            }                  
+            <span class='fapp-label'> Lastname </span>            
+            <Input className='fapp-input fapp-big-font' style={{marginBottom: '20px'}} tag={Field} type="text" name="lastName" placeholder="Your Lastname"/>
+            {
+              touched.lastName &&
+              <ErrorMessage name="lastName">
+                {msg => <span className='fapp-error-span' style={{marginTop: '-15px'}}>{msg}</span>}    
+              </ErrorMessage>
+            }
+            <span class='fapp-label'>Password*</span>                                      
+            <Input className='fapp-input fapp-big-font' style={{marginBottom: '20px'}} tag={Field} type="password" name="password" placeholder="Password"/>
+            {
+              touched.password &&
+                <ErrorMessage name="password">
+                  {msg => <span className='fapp-error-span' style={{marginTop: '-15px'}}>{msg}</span>}    
+                </ErrorMessage>
+            }
+            <span class='fapp-label'>Confirm Password*</span>                           
+            <Input className='fapp-input fapp-big-font' style={{marginBottom: '20px'}} tag={Field} type="password" name="confirmPassword" placeholder="Renter Password"/>
+            {   
+              touched.confirmPassword &&
+                <ErrorMessage name="confirmPassword">
+                  {msg => <span className='fapp-error-span' style={{marginTop: '-15px'}}>{msg}</span>}    
+                </ErrorMessage>
+            }
+            <div style={{textAlign: 'center'}}>
+              <Button color='success' type='submit' disabled={isSubmitting} className='fapp-cta-button' style={{marginTop: '15px'}}>Activate</Button>
+            </div>
           </Form>
-        )}  
+        )}
       </Formik>
     )
   }
 
   render() {
     return (
-      <div className="app flex-row align-items-center">
-        <Container>
-          <Row className="justify-content-center">
-            <Col md="6">
-              <Card className="mx-4">
-                <CardBody className="p-4">
-                  {this.renderActivateForm()}                  
-                </CardBody>
-              </Card>
-            </Col>
-          </Row>
-        </Container>
-      </div>
+      <Container fluid>
+        <Row style={{backgroundColor: '#F7F8FD', height: '100vh'}}>
+          <Col md={{size: 6, offset: 3}}>
+            <Card style={{marginTop: '12%', width: '65%', marginLeft: '15%'}} className="p-4 fapp-block-shadow">
+              <CardBody>
+                { this.renderActivateForm() }
+              </CardBody>
+            </Card>
+          </Col>
+        </Row>
+      </Container>
     );
   }
 }

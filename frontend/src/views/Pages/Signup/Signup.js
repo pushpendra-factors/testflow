@@ -1,11 +1,14 @@
 import React, { Component } from 'react';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import { Button, Card, CardBody, Col, Container, Alert, Input, InputGroup, InputGroupAddon, InputGroupText, Row } from 'reactstrap';
-import { signup } from "../../../actions/agentActions";
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import * as yup from 'yup';
+
+import { signup } from "../../../actions/agentActions";
 import  { InvalidEmail, MissingEmail } from '../ValidationMessages';
+import HalfScreen from '../HalfScreen';
+
 
 const mapDispatchToProps = dispatch => {
   return bindActionCreators({ signup }, dispatch);
@@ -20,10 +23,23 @@ class Signup extends Component {
       agentEmail:''
     }
   }
+
+  redirectToLogin = (event) => {
+    event.preventDefault();    
+    this.props.history.push("/login");
+  }
   
   renderSignupForm = () => {
     if (this.state.signupPerformed){
-      return
+      return (
+        <div>
+          <h3 style={{textAlign: 'center', color: '#484848'}}>Sign up to factors.ai</h3>
+          <div style={{marginTop: '50px', marginBottom: '50px', textAlign: 'center', color: '#049372', fontWeight: '500', fontSize: '18px'}}>
+              <span style={{display: 'block', color: '#1f3a93', fontWeight: '500', marginBottom: '12px'}}>Thanks for signing up!</span>
+              <span style={{display: 'block'}}>An activation email has been sent to {this.state.agentEmail}. Please follow the link in the email to activate your account.</span>
+          </div>
+        </div>
+      );
     }
 
     return (
@@ -47,28 +63,19 @@ class Signup extends Component {
       >
         {({isSubmitting, touched})=> (
           <Form noValidate>
-              <h1>Signup Now.</h1>              
-              <InputGroup className="mb-4">
-                <InputGroupAddon addonType="prepend">
-                    <InputGroupText>
-                      @
-                    </InputGroupText>
-                </InputGroupAddon>                  
-                  <Input tag={Field} type="email" name="email" placeholder="Enter work email"/>
-                  {touched.email &&
-                    <ErrorMessage name="email">
-                        {msg => <div style={{color:'red'}}>{msg}</div>}    
-                    </ErrorMessage>
-                  }                  
-              </InputGroup>                            
-              <Row>
-                  <Col xs="6">
-                      <Button color="success" className="px-4" type="submit" disabled={isSubmitting}>
-                          Create Account
-                      </Button>
-                  </Col>
-              </Row>
-              
+              <h3 style={{textAlign: 'center', marginBottom: '30px', color: '#484848'}}>Sign up to factors.ai</h3>
+              <span class='fapp-label'>Email</span>
+              <Input className='fapp-input fapp-big-font' style={{marginBottom: '20px'}} tag={Field} type="email" name="email" placeholder="Your Work Email"/>
+              {
+                touched.email &&
+                <ErrorMessage name="email">
+                    {msg => <span style={{color:'#d64541', fontWeight: '700',textAlign: 'center', display: 'block', marginTop: '-15px'}}>{msg}</span>}  
+                </ErrorMessage>
+              }
+              <div style={{textAlign: 'center'}}>
+                <Button color='success' type='submit' disabled={isSubmitting} className='fapp-cta-button' style={{marginTop: '15px'}}>Create Account</Button>
+              </div>
+              <Button color='link' onClick={this.redirectToLogin} style={{float: 'right', fontWeight: '300'}} className="px-0"> I have an account already. Sign in now. </Button>
           </Form>
         )}  
       </Formik>
@@ -76,38 +83,9 @@ class Signup extends Component {
     )
   }
 
-  renderMessage = () => {
-    if (!this.state.signupPerformed){
-      return
-    }
-    return (
-      <Alert color="success">
-        <h4 className="alert-heading">Thanks for signing up!</h4>
-        <hr />
-        <p>
-          An activation email has been sent to {this.state.agentEmail}.
-          Please follow the link in the email to activate your account.
-        </p>        
-      </Alert>
-    )
-  }
-
   render() {
     return (
-      <div className="app flex-row align-items-center">
-        <Container>
-          <Row className="justify-content-center">
-            <Col md="6">
-              <Card className="mx-4">
-                <CardBody className="p-4">
-                  { this.renderSignupForm()}
-                  {this.renderMessage()}
-                </CardBody>
-              </Card>
-            </Col>
-          </Row>
-        </Container>
-      </div>
+      <HalfScreen renderForm={this.renderSignupForm} />
     );
   }
 }

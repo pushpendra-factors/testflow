@@ -6,6 +6,7 @@ import { connect } from 'react-redux';
 import {forgotPassword} from "../../../actions/agentActions";
 import * as yup from 'yup';
 import  { InvalidEmail, MissingEmail} from '../ValidationMessages';
+import HalfScreen from '../HalfScreen';
 
 const mapDispatchToProps = dispatch => {
     return bindActionCreators({forgotPassword}, dispatch)
@@ -16,96 +17,62 @@ class ForgotPassword extends Component {
         super(props);
         this.state = {
             forgotPasswordPerformed: false,
-            agentEmail:''
+            agentEmail: ""
         }
     }
     renderForgotPasswordForm = () => {
-        if(this.state.forgotPasswordPerformed){
-            return
-        }
-        return (
-            <Formik
-                initialValues={{email:''}}
-                validationSchema = {yup.object().shape({
-                    email: yup.string().email(InvalidEmail).required(MissingEmail)
-                })}
-                onSubmit={(values, {setSubmitting})=>{                    
-                    this.props.forgotPassword(values.email)
-                    .then(()=>{
-                        setSubmitting(false);
-                        this.setState({forgotPasswordPerformed: true, agentEmail: values.email });
-                    })
-                    .catch(()=>{
-                        setSubmitting(false);
-                    });                             
-                }}
-            >
-                {({isSubmitting, touched})=> (
-                    <Form noValidate>
-                        <h1>Forgot Password</h1>
-                        <p>We'll mail you a link to create a new password.</p>
-                        <InputGroup className="mb-3">
-                            <InputGroupAddon addonType="prepend">
-                                <InputGroupText>
-                                <i className="icon-lock"></i>
-                                </InputGroupText>
-                            </InputGroupAddon>
-                            <Input tag={Field} type="email" name="email" placeholder="Email"/>
+        if(!this.state.forgotPasswordPerformed){
+            return (
+                <Formik
+                    initialValues={{ email: '' }}
+                    validationSchema = {yup.object().shape({
+                        email: yup.string().email(InvalidEmail).required(MissingEmail)
+                    })}
+                    onSubmit={(values, {setSubmitting})=>{                    
+                        this.props.forgotPassword(values.email)
+                        .then(()=>{
+                            setSubmitting(false);
+                            this.setState({forgotPasswordPerformed: true, agentEmail: values.email });
+                        })
+                        .catch(()=>{
+                            setSubmitting(false);
+                        });                             
+                    }}
+                >
+                    {({isSubmitting, touched})=> (
+                        <Form noValidate>
+                            <h3 style={{textAlign: 'center', color: '#484848'}}>Forgot Password</h3>
+                            <div style={{marginBottom: '15px', textAlign: 'center', color: '#1f3a93', fontWeight: '500'}}>
+                                <span>We'll mail you a link to create a new password</span>
+                            </div>
+                            <span class='fapp-label'>Email</span>
+                            <Input className='fapp-input fapp-big-font' tag={Field} type="email" name="email" placeholder="Your Email"/>
                             {touched.email &&
                                 <ErrorMessage name="email">
-                                    {msg => <div style={{color:'red'}}>{msg}</div>}    
+                                    {msg => <span style={{color:'#d64541', fontWeight: '700', textAlign: 'center', display: 'block', marginTop: '-8px'}}>{msg}</span>}    
                                 </ErrorMessage>
                             }
-                        </InputGroup>                            
-                        <Row>
-                            <Col xs="6">
-                                <Button color="primary" className="px-4" type="submit" disabled={isSubmitting}>
-                                    Send Reset Link
-                                </Button>
-                            </Col>
-                        </Row>
-                    </Form>
-                )}
-            </Formik>
-        )
-    }
-    
-    renderMessage = () => {
-        if(!this.state.forgotPasswordPerformed){
-            return
+                            <div style={{textAlign: 'center'}}>
+                                <Button color='success' type='submit' disabled={isSubmitting} className='fapp-cta-button' style={{marginTop: '15px'}}>Send Reset Link</Button>
+                            </div>
+                        </Form>
+                    )}
+                </Formik>
+            );
+        } else {
+            return (
+                <div>
+                     <h3 style={{textAlign: 'center', color: '#484848'}}>Forgot Password</h3>
+                     <div style={{marginTop: '50px', marginBottom: '50px', textAlign: 'center', color: '#049372', fontWeight: '500', fontSize: '18px'}}>
+                         <span>An email has been sent to {this.state.agentEmail}. Please follow the link in the email to reset your password.</span>
+                     </div>
+                </div>
+            );
         }
-        return (
-            <Alert color="success">
-            <h4 className="alert-heading">Success! Check your inbox</h4>              
-              <hr />
-              <p>
-                An email has been sent to {this.state.agentEmail}.
-                Please follow the link in the email to reset your password.
-              </p>        
-            </Alert>
-          )
     }
 
     render(){
-        return (
-            <div className="app flex-row align-items-center">
-                <Container>            
-                    <Row className="justify-content-center">
-                        <Col md="6">
-                            <CardGroup>
-                                <Card md="6">
-                                    <CardBody>
-                                        { this.renderForgotPasswordForm() }
-                                        { this.renderMessage() }
-                                    </CardBody>
-                                </Card>
-                            </CardGroup>
-                        </Col>
-                    </Row>
-                </Container>
-            </div>
-
-        )    
+        return <HalfScreen renderForm={this.renderForgotPasswordForm} />;
     }
 }
 

@@ -462,3 +462,30 @@ div.setting-card:hover{
 .fapp-block-shadow {
     box-shadow: 0 2px 4px 0 rgba(0,0,0,0.16),0 2px 10px 0 rgba(0,0,0,0.12);
 }
+
+.fapp-big-font {
+    font-size: 17px !important;
+    color: #000 !important;
+    letter-spacing: 0.02rem;
+    font-weight: 300;
+}
+
+.fapp-cta-button {
+    padding: 10px !important; 
+    font-weight: 700 !important;
+    font-size: 16px !important;
+    background-color: #019875 !important;
+    border-color: #019875 !important;
+    width: 100%;
+}
+
+.fapp-cta-button:hover {
+    background-color: #4daf7c !important;
+}
+
+.fapp-error-span {
+    color: #d64541;
+    font-weight: 700;
+    display: block;
+    text-align: center;
+}

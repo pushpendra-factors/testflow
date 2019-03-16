@@ -1,13 +1,17 @@
 import React, { Component } from 'react';
-import { Button, Card, CardBody, CardGroup, Col, Container, Input, InputGroup, InputGroupAddon, InputGroupText, Row } from 'reactstrap';
-import { login } from "../../../actions/agentActions";
+import { 
+  Button,
+  Input, 
+} from 'reactstrap';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { Redirect } from 'react-router-dom';
 import * as yup from 'yup';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
-import  { InvalidEmail, MissingEmail, MissingPassword } from '../ValidationMessages';
 
+import { login } from "../../../actions/agentActions";
+import  { InvalidEmail, MissingEmail, MissingPassword } from '../ValidationMessages';
+import HalfScreen from '../HalfScreen';
 
 const mapDispatchToProps = dispatch => {
   return bindActionCreators({ login }, dispatch);
@@ -27,6 +31,11 @@ class Login extends Component {
     this.props.history.push("/forgotpassword");
   }
 
+  redirectToSignup = (event) => {
+    event.preventDefault();    
+    this.props.history.push("/signup");
+  }
+
   renderLoginForm = () => {
     return (
       <Formik
@@ -39,56 +48,38 @@ class Login extends Component {
         }
         onSubmit={(values, {setSubmitting})=>{
           this.props.login(values.email, values.password)
-          .then(()=>{
+          .then(() => {
             setSubmitting(false);            
           })
-          .catch(()=>{
+          .catch(() => {
             setSubmitting(false);
           });                             
         }}
       >
         {({isSubmitting, touched})=> (
-
           <Form noValidate>
-              <h1>Login</h1>
-              <p className="text-muted">Sign In to your account</p>
-              <InputGroup className="mb-3">
-                <InputGroupAddon addonType="prepend">
-                    <InputGroupText>
-                      @
-                    </InputGroupText>
-                </InputGroupAddon>                                    
-                  <Input tag={Field} type="email" name="email" placeholder="email"/>
-                  {touched.email &&
-                    <ErrorMessage name="email">
-                        {msg => <div style={{color:'red'}}>{msg}</div>}    
-                    </ErrorMessage>
-                  }                  
-              </InputGroup>              
-              <InputGroup className="mb-4">
-                <InputGroupAddon addonType="prepend">
-                    <InputGroupText>
-                    <i className="icon-lock"></i>
-                    </InputGroupText>
-                </InputGroupAddon>
-                <Input tag={Field} type="password" name="password" placeholder="Password"/>
-                {touched.password &&
-                    <ErrorMessage name="password">
-                        {msg => <div style={{color:'red'}}>{msg}</div>}    
-                    </ErrorMessage>
-                }
-              </InputGroup>              
-              <Row>
-                  <Col xs="6">
-                      <Button color="success" className="px-4" type="submit" disabled={isSubmitting}>
-                          Login
-                      </Button>
-                  </Col>
-                  <Col xs="6" className="text-right">
-                    <Button color="link" onClick={this.redirectToForgotPassword} className="px-0">Forgot password?</Button>
-                  </Col> 
-              </Row>
-              
+              <h3 style={{textAlign: 'center', marginBottom: '30px', color: '#484848'}}>Log in to factors.ai</h3>
+              <span class='fapp-label'>Email</span>
+              <Input className='fapp-input fapp-big-font' style={{marginBottom: '20px'}} tag={Field} type="email" name="email" placeholder="Your Email"/>
+              {
+                touched.email &&
+                <ErrorMessage name="email">
+                    {msg => <span style={{color:'#d64541', fontWeight: '700',textAlign: 'center', display: 'block', marginTop: '-15px'}}>{msg}</span>}    
+                </ErrorMessage>
+              } 
+              <span class='fapp-label'>Password</span>
+              <Input className='fapp-input fapp-big-font' style={{marginBottom: '20px'}} tag={Field} type="password" name="password" placeholder="Your Password"/>
+              {
+                touched.password &&
+                  <ErrorMessage name="password">
+                      {msg => <span style={{color:'#d64541', fontWeight: '700', display: 'block', textAlign: 'center', display: 'block', marginTop: '-15px'}}>{msg}</span>}    
+                  </ErrorMessage>
+              }
+              <div style={{textAlign: 'center'}}>
+                <Button color='success' type='submit' disabled={isSubmitting} className='fapp-cta-button' style={{marginTop: '15px'}}>Log in</Button>
+              </div>
+              <Button color='link'  onClick={this.redirectToSignup} style={{fontWeight: '300'}} className="px-0"> I don't have an account </Button>
+              <Button color='link' onClick={this.redirectToForgotPassword} style={{float: 'right', fontWeight: '300'}} className="px-0"> Forgot password? </Button>
           </Form>
         )}  
       </Formik>
@@ -99,24 +90,8 @@ class Login extends Component {
     if(this.props.isLoggedIn){
       return <Redirect to='/' />
     }
-
-    return (
-      <div className="app flex-row align-items-center">
-        <Container>
-          <Row className="justify-content-center">
-            <Col md="6">
-              <CardGroup>
-                <Card className="p-4">
-                  <CardBody>
-                    {this.renderLoginForm()}
-                  </CardBody>
-                </Card>
-              </CardGroup>
-            </Col>
-          </Row>
-        </Container>
-      </div>
-    );
+    
+    return <HalfScreen renderForm={this.renderLoginForm} />;
   }
 }
 
