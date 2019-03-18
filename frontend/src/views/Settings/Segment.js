@@ -2,12 +2,9 @@ import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import {
-  Row,
   Col,
   Input,
   InputGroup,
-  InputGroupAddon,
-  InputGroupText,
   Card,
   CardBody,
   CardHeader
@@ -85,7 +82,7 @@ class Segment extends Component {
     let segmentPrivateToken = this.getPrivateToken();
 
     return (
-      <Col md={{ size:6, offset:3 }} style={{paddingTop: '4rem'}}>
+      <Col md={{ size:6, offset:3 }} style={{paddingTop: '2rem'}}>
         <Card className='fapp-bordered-card'>
             <div class='fapp-block-shadow'>
               <CardHeader className='fapp-button-header' style={{marginBottom: '0'}}>

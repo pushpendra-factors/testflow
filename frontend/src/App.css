@@ -247,7 +247,7 @@ body {
 
 .fapp-header {
     padding-left: 50px !important;
-    padding-right: 80px !important;
+    padding-right: 90px !important;
     height: 65px !important;
     border: none !important;
     box-shadow: 0 1px 5px 0 rgba(0, 0, 0, 0.08), 0 5px 10px 0 rgba(0, 0, 0, 0);
@@ -261,6 +261,7 @@ body {
     font-size: 1.6rem;
     display: block;
     margin-top: 5px;
+    color: #404040
 }
 
 .fapp-sidebar {

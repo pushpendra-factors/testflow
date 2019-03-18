@@ -314,3 +314,15 @@ func AgentSetPassword(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, resp)
 }
+
+func AgentInfo(c *gin.Context) {
+	currentAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+
+	agentInfo, errCode := M.GetAgentInfo(currentAgentUUID)
+	if errCode != http.StatusFound {
+		c.AbortWithStatus(errCode)
+		return
+	}
+
+	c.JSON(http.StatusOK, agentInfo)
+}

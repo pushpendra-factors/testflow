@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import { connect } from "react-redux";
 import { bindActionCreators } from 'redux';
 import { Redirect, Route, Switch } from 'react-router-dom';
-import { Container, Button } from 'reactstrap';
+import { Container } from 'reactstrap';
 import {
   AppHeader,
   AppSidebar,
@@ -15,7 +15,6 @@ import {
 import navigation from '../../_nav';
 // routes config
 import routes from '../../routes';
-import DefaultFooter from './DefaultFooter';
 import DefaultHeader from './DefaultHeader';
 import {
   fetchProjects,
@@ -25,7 +24,7 @@ import {
 } from "../../actions/projectsActions";
 import Loading from '../../loading';
 import factorsicon from '../../assets/img/brand/factors-icon.svg';
-
+import { fetchAgentInfo } from '../../actions/agentActions';
 
 const projectSelectStyles = {
   option: (base, state) => ({
@@ -57,7 +56,8 @@ const mapStateToProps = store => {
   return {
     currentProjectId: store.projects.currentProjectId,
     projects: store.projects.projects,
-    isAgentLoggedIn: store.agents.isLoggedIn
+    isAgentLoggedIn: store.agents.isLoggedIn,
+    agent: store.agents.agent,
   }
 }
 
@@ -66,7 +66,8 @@ const mapDispatchToProps = dispatch => {
     fetchProjects,
     fetchProjectEvents, 
     fetchProjectSettings,
-    fetchProjectModels
+    fetchProjectModels,
+    fetchAgentInfo,
   }, dispatch);
 }
 
@@ -76,6 +77,10 @@ class DefaultLayout extends Component {
     super(props);
     this.state = {
       projects: {
+        loaded: false,
+        error: null
+      },
+      agent: {
         loaded: false,
         error: null
       }
@@ -99,6 +104,23 @@ class DefaultLayout extends Component {
           } 
         });
       });
+
+    this.props.fetchAgentInfo()
+      .then((r) => {
+        this.setState({
+          agent: {
+            loaded: true
+          }
+        })
+      })
+      .catch((r) => {
+        this.setState({ 
+          agent: { 
+            loaded: true,
+            error: 'Failed to get agent information'
+          } 
+        });
+      });
   }
 
   refresh = () => {
@@ -106,24 +128,38 @@ class DefaultLayout extends Component {
   }
 
   isLoaded() {
-    return this.state.projects.loaded;
+    return this.state.projects.loaded && this.state.agent.loaded;
   }
 
   isAgentLoggedIn(){
     return this.props.isAgentLoggedIn
   }
 
+  getAgentName = () => {
+    return (this.props.agent 
+      && this.props.agent.first_name) ? this.props.agent.first_name : '';
+  }
+
   renderProjectsDropdown(){    
     const selectableProjects = Array.from(
       Object.values(this.props.projects), 
-      project => ({ "label": project.name, "value": project.id }) // selectable_projects object structure.
+      // selectable_projects object structure.
+      project => ({ "label": project.name, "value": project.id }) 
     )
+
     if (selectableProjects.length == 0 ){
-      return <DefaultHeader refresh={this.refresh} /> 
+      return <DefaultHeader refresh={this.refresh} getProfileName={this.getAgentName} /> 
     }
-    return <DefaultHeader refresh={this.refresh} selectableProjects={selectableProjects}
-      selectedProject={{ label: this.props.projects[this.props.currentProjectId].name,
-      value: this.props.currentProjectId }} />
+
+    return <DefaultHeader 
+      refresh={this.refresh} 
+      selectableProjects={selectableProjects}
+      selectedProject={{
+        label: this.props.projects[this.props.currentProjectId].name,
+        value: this.props.currentProjectId 
+      }}
+      getProfileName={this.getAgentName}
+    />
   }
 
   render() {

@@ -8,6 +8,7 @@ import * as yup from 'yup';
 import { signup } from "../../../actions/agentActions";
 import  { InvalidEmail, MissingEmail } from '../ValidationMessages';
 import HalfScreen from '../HalfScreen';
+import SubmissionError from '../SubmissionError';
 
 
 const mapDispatchToProps = dispatch => {
@@ -20,7 +21,8 @@ class Signup extends Component {
     super(props);
     this.state = {
       signupPerformed: false,
-      agentEmail:''
+      agentEmail:'',
+      error: null,
     }
   }
 
@@ -50,20 +52,22 @@ class Signup extends Component {
                 email: yup.string().email(InvalidEmail).required(MissingEmail)
             })
         }
-        onSubmit={(values, {setSubmitting})=>{            
+        onSubmit={(values, {setSubmitting}) => {            
             this.props.signup(values.email)
-            .then(()=>{
+            .then(() => {
                 setSubmitting(false);
                 this.setState({signupPerformed: true, agentEmail: values.email });
             })
-            .catch(()=>{
+            .catch((msg) => {
                 setSubmitting(false);
+                this.setState({ error: msg });
             });                             
         }}
       >
-        {({isSubmitting, touched})=> (
+        {({isSubmitting, touched}) => (
           <Form noValidate>
               <h3 style={{textAlign: 'center', marginBottom: '30px', color: '#484848'}}>Sign up to factors.ai</h3>
+              <SubmissionError message={this.state.error} />
               <span class='fapp-label'>Email</span>
               <Input className='fapp-input fapp-big-font' style={{marginBottom: '20px'}} tag={Field} type="email" name="email" placeholder="Your Work Email"/>
               {
@@ -85,7 +89,7 @@ class Signup extends Component {
 
   render() {
     return (
-      <HalfScreen renderForm={this.renderSignupForm} />
+      <HalfScreen renderForm={this.renderSignupForm} marginTop='10rem' />
     );
   }
 }

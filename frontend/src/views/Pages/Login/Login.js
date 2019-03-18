@@ -12,6 +12,7 @@ import { Formik, Form, Field, ErrorMessage } from 'formik';
 import { login } from "../../../actions/agentActions";
 import  { InvalidEmail, MissingEmail, MissingPassword } from '../ValidationMessages';
 import HalfScreen from '../HalfScreen';
+import SubmissionError from '../SubmissionError';
 
 const mapDispatchToProps = dispatch => {
   return bindActionCreators({ login }, dispatch);
@@ -24,6 +25,10 @@ const mapStateToProps = store => {
 class Login extends Component {
   constructor(props){
     super(props);
+
+    this.state = {
+      error: null
+    }
   }
   
   redirectToForgotPassword = (event) => {
@@ -46,25 +51,27 @@ class Login extends Component {
                 password: yup.string().required(MissingPassword),
             })
         }
-        onSubmit={(values, {setSubmitting})=>{
+        onSubmit={(values, {setSubmitting}) => {
           this.props.login(values.email, values.password)
           .then(() => {
             setSubmitting(false);            
           })
-          .catch(() => {
+          .catch((msg) => {
             setSubmitting(false);
-          });                             
+            this.setState({ error: msg });
+          });                      
         }}
       >
         {({isSubmitting, touched})=> (
           <Form noValidate>
               <h3 style={{textAlign: 'center', marginBottom: '30px', color: '#484848'}}>Log in to factors.ai</h3>
+              <SubmissionError message={this.state.error} />
               <span class='fapp-label'>Email</span>
               <Input className='fapp-input fapp-big-font' style={{marginBottom: '20px'}} tag={Field} type="email" name="email" placeholder="Your Email"/>
               {
                 touched.email &&
                 <ErrorMessage name="email">
-                    {msg => <span style={{color:'#d64541', fontWeight: '700',textAlign: 'center', display: 'block', marginTop: '-15px'}}>{msg}</span>}    
+                    {msg => <span style={{color:'#d64541', fontWeight: '700', textAlign: 'center', display: 'block', marginTop: '-15px'}}>{msg}</span>}    
                 </ErrorMessage>
               } 
               <span class='fapp-label'>Password</span>
@@ -91,7 +98,7 @@ class Login extends Component {
       return <Redirect to='/' />
     }
     
-    return <HalfScreen renderForm={this.renderLoginForm} />;
+    return <HalfScreen renderForm={this.renderLoginForm} marginTop='8rem' />;
   }
 }
 

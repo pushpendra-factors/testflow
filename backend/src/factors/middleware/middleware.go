@@ -158,7 +158,7 @@ func validateAuthData(authDataStr string) (*M.Agent, string, int) {
 		return nil, "error parsing auth data", http.StatusUnauthorized
 	}
 
-	agent, errCode := M.GetAgentyUUID(authData.AgentUUID)
+	agent, errCode := M.GetAgentByUUID(authData.AgentUUID)
 	if errCode == http.StatusNotFound {
 		return nil, "agent not found", http.StatusUnauthorized
 	} else if errCode == http.StatusInternalServerError {

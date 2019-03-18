@@ -2,6 +2,23 @@ import { getHostURL } from "../util";
 import {get, post} from "./request.js";
 var host = getHostURL();
 
+export function fetchAgentInfo(){
+  return function(dispatch) {
+    return new Promise((resolve,reject) => {
+      get(dispatch, host + "agents/info")
+        .then((response) => {        
+          resolve(dispatch({type:"FETCH_AGENT_INFO_FULFILLED", payload: response.data}));
+        })
+        .catch(() => {       
+          reject(dispatch({
+            type:"FETCH_AGENT_INFO_REJECTED", 
+            payload: 'Failed to fetch agent info',
+          }));
+        });
+    });
+  }
+}
+
 export function login(email, password) {
     return function(dispatch) {
       return new Promise((resolve, reject) => {
@@ -14,14 +31,17 @@ export function login(email, password) {
               type: "AGENT_LOGIN_FULFILLED",
               payload: r.data
             });
+
             resolve(r.data);
           })
           .catch((r) => {
             dispatch({
               type: "AGENT_LOGIN_REJECTED",
-              error: r
-            })
-            reject({body: r.data, status: r.status});
+              payload: null
+            });
+
+            if(r.status && r.status == 401) reject("Invalid email or password");
+            else reject("Login failed. Please try again.");
           });
       })
     }
@@ -29,12 +49,16 @@ export function login(email, password) {
 
   export function signout(){
     return function(dispatch){
-      return new Promise((resolve, reject)=>{
-        get(dispatch, host + "agents/signout").then((response)=> {
-          resolve(dispatch({
-            type: "AGENT_LOGOUT_FULFILLED",
-          }));
-        });
+      return new Promise((resolve, reject) => {
+        get(dispatch, host + "agents/signout")
+          .then(() => {
+            resolve(dispatch({
+              type: "AGENT_LOGOUT_FULFILLED",
+            }));
+          })
+          .catch(() => {
+            reject("Sign out failed");
+          });
       })
     }
   }
@@ -43,16 +67,19 @@ export function login(email, password) {
     return function(dispatch){
       return new Promise((resolve, reject) => {
         dispatch({type: "AGENT_SIGNUP"});
-        post(dispatch, host+"accounts/signup",{email: email})
-        .then((response) => {
-          resolve(dispatch({
-            type: "AGENT_SIGNUP_FULFILLED",
-            payload: {}
-          }));
-        })
-        .catch((err)=>{
-          reject(dispatch({type: "AGENT_SIGNUP_REJECTED", payload: err}));
-        })
+
+        post(dispatch, host+"accounts/signup", { email: email })
+          .then(() => {
+            resolve(dispatch({
+              type: "AGENT_SIGNUP_FULFILLED",
+              payload: {}
+            }));
+          })
+          .catch(() => {
+            dispatch({type: "AGENT_SIGNUP_REJECTED", payload: null});
+            
+            reject("Sign up failed. Please try again.");
+          });
       });
     }
   }
@@ -61,19 +88,22 @@ export function login(email, password) {
     return function(dispatch){
       return new Promise((resolve, reject) => {
         dispatch({type: "AGENT_VERIFY"});
-        post(dispatch, host+"agents/activate?token="+token,{
+
+        post(dispatch, host+"agents/activate?token="+token, {
           first_name: firstName,
           last_name:lastName,
-          password: password}
-        )
-        .then((response) => {
+          password: password
+        })
+        .then(() => {
           resolve(dispatch({
             type: "AGENT_VERIFY_FULFILLED",
             payload: {}
           }));
         })
-        .catch((err)=>{
-          reject(dispatch({type: "AGENT_VERIFY_REJECTED", payload: err}));
+        .catch(() => {
+          dispatch({type: "AGENT_VERIFY_REJECTED", payload: null});
+          
+          reject("Activation failed. Please try again.");
         })
       });
     }
@@ -83,16 +113,19 @@ export function login(email, password) {
     return function(dispatch){
       return new Promise((resolve, reject) => {
         dispatch({type: "AGENT_FORGOT_PASSWORD"});
-        post(dispatch, host+"agents/forgotpassword",{email: email})
-        .then((response) => {
-          resolve(dispatch({
-            type: "AGENT_FORGOT_PASSWORD_FULFILLED",
-            payload: {}
-          }));
-        })
-        .catch((err)=>{
-          reject(dispatch({type: "AGENT_FORGOT_PASSWORD_REJECTED", payload: err}));
-        })
+
+        post(dispatch, host+"agents/forgotpassword", { email: email })
+          .then(() => {
+            resolve(dispatch({
+              type: "AGENT_FORGOT_PASSWORD_FULFILLED",
+              payload: {}
+            }));
+          })
+          .catch(() => {
+            dispatch({type: "AGENT_FORGOT_PASSWORD_REJECTED", payload: null});
+
+            reject("Failed sending the email. Please try again.")
+          });
       });
     }
   }
@@ -101,18 +134,23 @@ export function login(email, password) {
     return function(dispatch){
       return new Promise((resolve, reject) => {
         dispatch({type: "AGENT_SET_PASSWORD"});
-        post(dispatch, host+"agents/setpassword?token="+token,{
-          password: password}
-        )
-        .then((response) => {
-          resolve(dispatch({
-            type: "AGENT_SET_PASSWORD_FULFILLED",
-            payload: {}
-          }));
+
+        post(dispatch, host+"agents/setpassword?token="+token, {
+          password: password
         })
-        .catch((err)=>{
-          reject(dispatch({type: "AGENT_SET_PASSWORD_REJECTED", payload: err}));
-        })
+          .then(() => {
+            resolve(dispatch({
+              type: "AGENT_SET_PASSWORD_FULFILLED",
+              payload: {}
+            }));
+          })
+          .catch(() => {
+            dispatch({type: "AGENT_SET_PASSWORD_REJECTED", payload: null});
+
+            reject("Reset password failed. Please try again.");
+          });
       });
     }
   }
+
+  

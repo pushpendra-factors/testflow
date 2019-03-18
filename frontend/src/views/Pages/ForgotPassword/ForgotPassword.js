@@ -3,10 +3,13 @@ import { Formik, Form, Field, ErrorMessage } from 'formik';
 import { Alert, Container, Input, InputGroup, InputGroupAddon, InputGroupText, Button, Row, Col, CardGroup, CardBody, Card} from 'reactstrap';
 import { bindActionCreators } from 'redux';
 import { connect } from 'react-redux';
-import {forgotPassword} from "../../../actions/agentActions";
 import * as yup from 'yup';
-import  { InvalidEmail, MissingEmail} from '../ValidationMessages';
+
+import { forgotPassword } from "../../../actions/agentActions";
+import  { InvalidEmail, MissingEmail } from '../ValidationMessages';
 import HalfScreen from '../HalfScreen';
+import SubmissionError from '../SubmissionError';
+
 
 const mapDispatchToProps = dispatch => {
     return bindActionCreators({forgotPassword}, dispatch)
@@ -17,9 +20,11 @@ class ForgotPassword extends Component {
         super(props);
         this.state = {
             forgotPasswordPerformed: false,
-            agentEmail: ""
+            agentEmail: "",
+            error: null,
         }
     }
+
     renderForgotPasswordForm = () => {
         if(!this.state.forgotPasswordPerformed){
             return (
@@ -28,14 +33,15 @@ class ForgotPassword extends Component {
                     validationSchema = {yup.object().shape({
                         email: yup.string().email(InvalidEmail).required(MissingEmail)
                     })}
-                    onSubmit={(values, {setSubmitting})=>{                    
+                    onSubmit={(values, {setSubmitting}) => {                    
                         this.props.forgotPassword(values.email)
-                        .then(()=>{
+                        .then(() => {
                             setSubmitting(false);
                             this.setState({forgotPasswordPerformed: true, agentEmail: values.email });
                         })
-                        .catch(()=>{
+                        .catch((msg) => {
                             setSubmitting(false);
+                            this.setState({ error: msg });
                         });                             
                     }}
                 >
@@ -45,6 +51,7 @@ class ForgotPassword extends Component {
                             <div style={{marginBottom: '15px', textAlign: 'center', color: '#1f3a93', fontWeight: '500'}}>
                                 <span>We'll mail you a link to create a new password</span>
                             </div>
+                            <SubmissionError message={this.state.error} marginTop='-15px' />
                             <span class='fapp-label'>Email</span>
                             <Input className='fapp-input fapp-big-font' tag={Field} type="email" name="email" placeholder="Your Email"/>
                             {touched.email &&
@@ -72,7 +79,7 @@ class ForgotPassword extends Component {
     }
 
     render(){
-        return <HalfScreen renderForm={this.renderForgotPasswordForm} />;
+        return <HalfScreen renderForm={this.renderForgotPasswordForm} marginTop='10rem' />;
     }
 }
 

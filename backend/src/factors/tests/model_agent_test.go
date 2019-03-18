@@ -63,7 +63,7 @@ func TestAgentDBGetAgentByUUID(t *testing.T) {
 
 		uuid := agent.UUID
 
-		retAgent, errCode := M.GetAgentyUUID(uuid)
+		retAgent, errCode := M.GetAgentByUUID(uuid)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.Equal(t, agent.UUID, retAgent.UUID)
 		assert.Equal(t, agent.Email, retAgent.Email)

@@ -7,6 +7,7 @@ import { AppSidebarForm } from '@coreui/react';
 import Select from 'react-select';
 import { bindActionCreators } from 'redux';
 import { connect } from 'react-redux';
+import Avatar from 'react-avatar';
 
 import { changeProject, createProject } from '../../actions/projectsActions';
 import { signout } from '../../actions/agentActions';
@@ -45,14 +46,18 @@ const projectSelectStyles = {
 
 
 const mapDispatchToProps = dispatch => {
-  return bindActionCreators({ changeProject, createProject, signout }, dispatch);
+  return bindActionCreators({ 
+    changeProject, 
+    createProject, 
+    signout,
+  }, dispatch);
 }
 
 class DefaultHeader extends Component {
   constructor(props){
     super(props);
     this.state = {
-      createProject:{
+      createProject: {
         showForm: false,
         projectName : ""
       },
@@ -153,17 +158,17 @@ class DefaultHeader extends Component {
                 <i className="icon-bell fapp-bell"></i>	
                 {/* <Badge pill color="danger">5</Badge> */}	
             </DropdownToggle>	
-            <DropdownMenu right style={{ right: 'auto' }}>	
+            <DropdownMenu right style={{ right: 'auto' }}>
               <DropdownItem disabled><span class="text-muted">No messages here.</span></DropdownItem>	
             </DropdownMenu>
           </AppHeaderDropdown>
           <AppHeaderDropdown direction="down">  
             <DropdownToggle nav>
-              <img src={'assets/img/avatars/default.png'} className="img-avatar" alt="" />
+              <Avatar name={this.props.getProfileName()}  maxInitials={1} round={true} color='#3a539b' textSizeRatio={2} size='35' style={{fontWeight: '700', marginTop: '5px'}} />
             </DropdownToggle>
             <DropdownMenu right style={{ right: 'auto' }}>
-              <DropdownItem><i className="fa fa-user"></i> Profile</DropdownItem>
-              <DropdownItem><i className="fa fa-wrench"></i> Settings</DropdownItem>
+              {/* <DropdownItem><i className="fa fa-user"></i> Profile</DropdownItem> */}
+              {/* <DropdownItem><i className="fa fa-wrench"></i> Settings</DropdownItem> */}
               <DropdownItem onClick={this.handleLogout}><i className="fa fa-lock"></i> Logout</DropdownItem>
             </DropdownMenu>
           </AppHeaderDropdown>
@@ -173,8 +178,8 @@ class DefaultHeader extends Component {
           <ModalBody style={{padding: '25px 35px'}}>
             <div style={{textAlign: 'center', marginBottom: '15px'}}><span style={this.getAddProjectMessageStyle()}>{ this.getAddProjectMessage() }</span></div>
             <Form onSubmit={this.handleCreateProject} >
-              <label>Name</label>
-              <Input style={{padding: '1.4rem 1rem', border: '1px solid #909ba5'}} type="text" placeholder="Your Project Name" onChange={this.handleProjectNameFormChange} />
+              <span class='fapp-label'>Project Name </span>                 
+              <Input className='fapp-input' type="text" placeholder="Your Project Name" onChange={this.handleProjectNameFormChange} />
             </Form>
           </ModalBody>
           <ModalFooter style={{borderTop: 'none', paddingBottom: '30px', paddingRight: '35px'}}>

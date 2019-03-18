@@ -1,19 +1,27 @@
 import React, { Component } from 'react';
 import { Button, Card, CardBody, Col, Container, InputGroup, Input, InputGroupAddon, InputGroupText, Row } from 'reactstrap';
-import { activate } from "../../../actions/agentActions";
 import { connect } from 'react-redux';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import { bindActionCreators } from 'redux';
 import * as yup from 'yup';
 
 import  { MissingFirstname, PasswordsDoNotMatch, MissingPassword, PasswordMinEightChars} from '../ValidationMessages';
-import HalfScreen from '../HalfScreen';
+import { activate } from "../../../actions/agentActions";
+import SubmissionError from '../SubmissionError';
+
 
 const mapDispatchToProps = dispatch => {
   return bindActionCreators({ activate }, dispatch);
 }
 
 class Activate extends Component {
+  constructor(props) {
+    super(props);
+    
+    this.state = {
+      error: null
+    }
+  }
   
   renderActivateForm = () => {
     return (
@@ -27,25 +35,26 @@ class Activate extends Component {
             confirmPassword: yup.string().required().oneOf([yup.ref('password'),null], PasswordsDoNotMatch)
           })
         }
-        onSubmit={(values, {setSubmitting})=>{
+        onSubmit={(values, {setSubmitting}) => {
           const hash = window.location.hash;
           var paramToken = "token=";
           const token = hash.substring(hash.indexOf(paramToken)+paramToken.length);
         
           this.props.activate(values.firstName, values.lastName, values.password, token)
-          .then(()=>{
+          .then(() => {
             setSubmitting(false);
             this.props.history.push("/login");
           })
-          .catch(()=>{
+          .catch((msg) => {
             setSubmitting(false);
+            this.setState({ error: msg });
           });                             
         }}
       >
-        {({isSubmitting, touched})=> (
-
+        {({isSubmitting, touched}) => (
           <Form noValidate>
             <h3 style={{textAlign: 'center', marginBottom: '30px', color: '#484848'}}>Activate your account</h3>
+            <SubmissionError message={this.state.error} />
             <span class='fapp-label'> Firstname* </span>                 
             <Input className='fapp-input fapp-big-font' style={{marginBottom: '20px'}} tag={Field} type="text" name="firstName" placeholder="Your Firstname"/>
             {
@@ -71,7 +80,7 @@ class Activate extends Component {
                 </ErrorMessage>
             }
             <span class='fapp-label'>Confirm Password*</span>                           
-            <Input className='fapp-input fapp-big-font' style={{marginBottom: '20px'}} tag={Field} type="password" name="confirmPassword" placeholder="Renter Password"/>
+            <Input className='fapp-input fapp-big-font' style={{marginBottom: '20px'}} tag={Field} type="password" name="confirmPassword" placeholder="Re-enter Password"/>
             {   
               touched.confirmPassword &&
                 <ErrorMessage name="confirmPassword">
@@ -92,7 +101,7 @@ class Activate extends Component {
       <Container fluid>
         <Row style={{backgroundColor: '#F7F8FD', height: '100vh'}}>
           <Col md={{size: 6, offset: 3}}>
-            <Card style={{marginTop: '12%', width: '65%', marginLeft: '15%'}} className="p-4 fapp-block-shadow">
+            <Card style={{marginTop: '4rem', width: '65%', marginLeft: '15%'}} className="p-4 fapp-block-shadow">
               <CardBody>
                 { this.renderActivateForm() }
               </CardBody>

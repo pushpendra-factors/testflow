@@ -26,6 +26,7 @@ func InitAppRoutes(r *gin.Engine) {
 	r.POST("/agents/forgotpassword", AgentGenerateResetPasswordLinkEmail)
 	r.POST("/agents/setpassword", mid.ValidateAgentSetPasswordRequest(), AgentSetPassword)
 	r.POST("/agents/activate", mid.ValidateAgentActivationRequest(), AgentActivate)
+	r.GET("/agents/info", mid.SetLoggedInAgent(), AgentInfo)
 
 	r.POST(ROUTE_PROJECTS_ROOT, mid.SetLoggedInAgent(), CreateProjectHandler)
 

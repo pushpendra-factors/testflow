@@ -1,100 +1,92 @@
 import React, {Component} from 'react';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
-import { Container, Input, InputGroup, InputGroupAddon, InputGroupText, Button, Row, Col, CardGroup, CardBody, Card} from 'reactstrap';
+import { Container, Input, Button, Row, Col, CardGroup, CardBody, Card} from 'reactstrap';
 import { bindActionCreators } from 'redux';
 import { connect } from 'react-redux';
-import {setPassword} from "../../../actions/agentActions";
 import * as yup from 'yup';
+
+import { setPassword } from "../../../actions/agentActions";
 import  {  MissingPassword, PasswordsDoNotMatch, PasswordMinEightChars } from '../ValidationMessages';
+import SubmissionError from '../SubmissionError';
 
 const mapDispatchToProps = dispatch => {
     return bindActionCreators({setPassword}, dispatch)
 }
 
 class SetPassword extends Component {
-    render(){
-        return (
-            <div className="app flex-row align-items-center">
-                <Container>            
-                <Row className="justify-content-center">
-                <Col md="6">
-                <CardGroup>
-                <Card md="6">
-                <CardBody>
-                <Formik
-                    initialValues={{password:'', confirmPassword:''}}
+    constructor(props) {
+        super(props);
+        this.state = {
+            error: null
+        }
+    }
+
+    renderForm() {
+        return(
+            <Formik
+                    initialValues={{password:'', ReenterPassword:''}}
                     validationSchema = {
                         yup.object().shape({
                             password: yup.string().required(MissingPassword).min(8, PasswordMinEightChars),
-                            confirmPassword: yup.string().required().oneOf([yup.ref('password'),null], PasswordsDoNotMatch)
+                            ReenterPassword: yup.string().required().oneOf([yup.ref('password'),null], PasswordsDoNotMatch)
                         })
                     }
-                    onSubmit={(values, {setSubmitting})=>{                            
+                    onSubmit={(values, {setSubmitting}) => {                            
                         const hash = window.location.hash;
                         let paramToken = "token=";
                         let token = hash.substring(hash.indexOf(paramToken)+paramToken.length);
                         this.props.setPassword(values.password, token)
-                        .then(()=>{
+                        .then(() => {
                             setSubmitting(false);
                             this.props.history.push("/login");
                         })
-                        .catch(()=>{
+                        .catch((msg) => {
                             setSubmitting(false);
+                            this.setState({ error: msg });
                         });                             
                     }}
                 >
                     {({isSubmitting, touched})=> (
                         <Form noValidate>
-                            <h1>Reset Password</h1>
-                            <p>After updating, you can login to Factors using this password.</p>
-                            <InputGroup className="mb-3">
-                                <InputGroupAddon addonType="prepend">
-                                    <InputGroupText>
-                                    <i className="icon-lock"></i>
-                                    </InputGroupText>
-                                </InputGroupAddon>
-                                <Input tag={Field} type="password" name="password" placeholder="Password"/>
-                                {touched.password &&
-                                    <ErrorMessage name="password">
-                                        {msg => <div style={{color:'red'}}>{msg}</div>}    
-                                    </ErrorMessage>
-                                }
-                            </InputGroup>
-                            <InputGroup className="mb-4">
-                                <InputGroupAddon addonType="prepend">
-                                    <InputGroupText>
-                                    <i className="icon-lock"></i>
-                                    </InputGroupText>
-                                </InputGroupAddon>                                
-                                <Input tag={Field} type="password" name="confirmPassword" placeholder="Renter Password"/>
-                                    {   touched.confirmPassword &&
-                                        <ErrorMessage name="confirmPassword">
-                                        {msg => <div style={{color:'red'}}>{msg}</div>}    
-                                        </ErrorMessage>
-                                    }
-                            </InputGroup>
-                            <Row>
-                                <Col xs="6">
-                                    <Button color="primary" className="px-4" type="submit" disabled={isSubmitting}>
-                                        Update
-                                    </Button>
-                                </Col>
-                            </Row>
-                            
+                            <h3 style={{textAlign: 'center', marginBottom: '30px', color: '#484848'}}>Reset Password</h3>
+                            <SubmissionError message={this.state.error} />
+                            <Input className='fapp-input fapp-big-font' style={{marginBottom: '20px'}} tag={Field} type="password" name="password" placeholder="Password"/>
+                            {
+                                touched.password &&
+                                <ErrorMessage name="password">
+                                    {msg => <span className='fapp-error-span' style={{marginTop: '-15px'}}>{msg}</span>}    
+                                </ErrorMessage>
+                            }
+                            <Input className='fapp-input fapp-big-font' style={{marginBottom: '20px'}} tag={Field} type="password" name="ReenterPassword" placeholder="Re-enter Password"/>
+                            {   
+                                touched.ReenterPassword &&
+                                <ErrorMessage name="ReenterPassword">
+                                    {msg => <span className='fapp-error-span' style={{marginTop: '-15px'}}>{msg}</span>}    
+                                </ErrorMessage>
+                            }
+                            <div style={{textAlign: 'center'}}>
+                                <Button color='success' type='submit' disabled={isSubmitting} className='fapp-cta-button' style={{marginTop: '15px'}}>Reset Password</Button>
+                            </div>
                         </Form>
                     )}
-                    
                 </Formik>
-                </CardBody>
-                </Card>
-                </CardGroup>
-                </Col>
-                </Row>
-            </Container>
-            </div>
-
-        )    
+        );
     }
+    render(){
+        return (
+                <Container fluid>
+                    <Row style={{backgroundColor: '#F7F8FD', height: '100vh'}}>
+                        <Col md={{size: 6, offset: 3}}>
+                        <Card style={{marginTop: '8rem', width: '65%', marginLeft: '15%'}} className="p-4 fapp-block-shadow">
+                            <CardBody>
+                            { this.renderForm() }
+                            </CardBody>
+                        </Card>
+                        </Col>
+                    </Row>
+                </Container>
+            );
+        }
 }
 
 export default connect(null, mapDispatchToProps)(SetPassword);

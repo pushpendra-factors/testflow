@@ -39,6 +39,11 @@ type Agent struct {
 	LoginCount     uint64     `json:"login_count"`
 }
 
+// AgentInfo - Exposable Info.
+type AgentInfo struct {
+	FirstName string `json:"first_name"`
+}
+
 func (a *Agent) BeforeCreate(scope *gorm.Scope) error {
 	a.Salt = U.RandomString(SALT_LEN)
 	return nil
@@ -87,7 +92,7 @@ func GetAgentByEmail(email string) (*Agent, int) {
 	return &agent, http.StatusFound
 }
 
-func GetAgentyUUID(uuid string) (*Agent, int) {
+func GetAgentByUUID(uuid string) (*Agent, int) {
 	if uuid == "" {
 		log.Error("GetAgentyUUID Failed. UUID not provided.")
 		return nil, http.StatusBadRequest
@@ -106,6 +111,16 @@ func GetAgentyUUID(uuid string) (*Agent, int) {
 	}
 
 	return &agent, http.StatusFound
+}
+
+func GetAgentInfo(uuid string) (*AgentInfo, int) {
+	agent, errCode := GetAgentByUUID(uuid)
+	if errCode != http.StatusFound {
+		return nil, errCode
+	}
+
+	agentInfo := &AgentInfo{FirstName: agent.FirstName}
+	return agentInfo, errCode
 }
 
 func HashPassword(password string) (string, error) {

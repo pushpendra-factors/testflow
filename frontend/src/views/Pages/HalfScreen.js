@@ -16,7 +16,7 @@ const HalfScreen = (props) => {
           <img src={LeftSvg} height='100%'/>
         </Col>
         <Col md='6'>
-          <Card style={{marginTop: '23%', width: '65%', marginLeft: '15%'}} className="p-4 fapp-block-shadow">
+          <Card style={{marginTop: props.marginTop, width: '65%', marginLeft: '15%'}} className="p-4 fapp-block-shadow">
             <CardBody>
               { props.renderForm() }
             </CardBody>
