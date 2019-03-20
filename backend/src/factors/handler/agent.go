@@ -279,7 +279,7 @@ func sendAgentResetPasswordEmail(agent *M.Agent) error {
 }
 
 type setPasswordParams struct {
-	Password string `json:"password"`
+	Password string `json:"password binding:"required"`
 }
 
 func getSetPasswordParams(c *gin.Context) (*setPasswordParams, error) {
@@ -307,6 +307,9 @@ func AgentSetPassword(c *gin.Context) {
 		return
 	} else if errCode == http.StatusNoContent {
 		c.AbortWithStatus(http.StatusNotFound)
+		return
+	} else if errCode == http.StatusBadRequest {
+		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
 	resp := map[string]string{

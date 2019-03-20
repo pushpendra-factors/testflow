@@ -323,6 +323,18 @@ func TestAPIAgentSetPassword(t *testing.T) {
 		assert.Equal(t, http.StatusUnauthorized, w.Code)
 	})
 
+	t.Run("MissingPassword", func(t *testing.T) {
+		email := getRandomEmail()
+		agent, errCode := M.CreateAgent(&M.Agent{Email: email})
+		assert.Equal(t, http.StatusCreated, errCode)
+
+		authData, err := helpers.GetAuthData(email, agent.UUID, agent.Salt, helpers.SecondsInFifteenDays*time.Second)
+		assert.Nil(t, err)
+
+		w := sendAgentSetPasswordRequest(r, authData, "")
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
 	t.Run("Success", func(t *testing.T) {
 		email := getRandomEmail()
 		agent, errCode := M.CreateAgent(&M.Agent{Email: email})
