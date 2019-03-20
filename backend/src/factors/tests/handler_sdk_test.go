@@ -509,7 +509,7 @@ func TestSDKBulk(t *testing.T) {
 
 	project, _, err := SetupProjectUserReturnDAO()
 	assert.Nil(t, err)
-	uri := "/sdk/event/bulk"
+	uri := "/sdk/event/track/bulk"
 
 	t.Run("Success", func(t *testing.T) {
 		payload := fmt.Sprintf("[%s,%s]", `{"event_name": "signup", "event_properties": {"mobile" : "true"}}`, `{"event_name":"test", "event_properties": {"mobile" : "true"}}`)
