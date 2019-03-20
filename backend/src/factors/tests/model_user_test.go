@@ -359,13 +359,19 @@ func TestDBGetSegmentUser(t *testing.T) {
 	assert.Equal(t, user4.ID, user5.ID)                         // Should return existing user.
 	assert.Equal(t, user4.CustomerUserId, user5.CustomerUserId) // Should not be updated.
 
-	// user by seg_aid doesn't exist. but c_uid exist. create new user with seg_id and c_uid.
+	// user by seg_aid doesn't exist, but user exist with given c_uid.
 	segAid1 := U.RandomLowerAphaNumString(15)
 	user6, errCode := M.GetSegmentUser(project.ID, segAid1, user4.CustomerUserId) // new seg_aid.
 	assert.Equal(t, http.StatusOK, errCode)
 	assert.NotNil(t, user6)
-	assert.NotEqual(t, user4.ID, user6.ID) // Should not use existing user with same c_uid.
-	// new user with new seg_aid and existing c_uid (new session).
-	assert.Equal(t, segAid1, user6.SegmentAnonymousId)
-	assert.Equal(t, user4.CustomerUserId, user6.CustomerUserId)
+	assert.Equal(t, user4.ID, user6.ID) // Should not use existing user with same c_uid.
+
+	// user by seg_aid and c_uid doesn't exist.
+	custId2 := U.RandomLowerAphaNumString(15)
+	segAid2 := U.RandomLowerAphaNumString(15)
+	user7, errCode := M.GetSegmentUser(project.ID, segAid2, custId2)
+	assert.Equal(t, http.StatusOK, errCode)
+	// new user with new seg_aid and c_uid.
+	assert.Equal(t, segAid2, user7.SegmentAnonymousId)
+	assert.Equal(t, custId2, user7.CustomerUserId)
 }

@@ -229,9 +229,9 @@ func GetSegmentUser(projectId uint64, segAnonId, custUserId string) (*User, int)
 		return nil, errCode
 	}
 
+	// fetch by c_uid, if user not found by seg_aid provided.
 	if errCode == http.StatusNotFound {
-		// fetch by cuid, if user not found by seg_aid and c_uid provided.
-		// if found return user, else create new user.
+		// if found by c_uid return user, else create new user.
 		if custUserId != "" {
 			user, errCode = GetUserLatestByCustomerUserId(projectId, custUserId)
 			if errCode == http.StatusFound {
