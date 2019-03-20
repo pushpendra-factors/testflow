@@ -2,6 +2,7 @@ package tests
 
 import (
 	"encoding/json"
+	"factors/handler"
 	H "factors/handler"
 	M "factors/model"
 	U "factors/util"
@@ -64,6 +65,18 @@ func TestSDKTrackHandler(t *testing.T) {
 		[]byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "event_2"}`, user.ID)),
 		map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
+
+	// Create with customer_event_id
+	CustEventId := U.RandomString(8)
+	w = ServePostRequestWithHeaders(r, uri,
+		[]byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "event_2", "c_event_id":"%s"}`, user.ID, CustEventId)),
+		map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	// Duplicate customer_event_id
+	w = ServePostRequestWithHeaders(r, uri,
+		[]byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "event_2", "c_event_id":"%s"}`, user.ID, CustEventId)),
+		map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusFound, w.Code)
 
 	// Test auto tracked event.
 	rEventName := U.RandomLowerAphaNumString(10)
@@ -227,6 +240,7 @@ func TestSDKTrackHandler(t *testing.T) {
 	assert.NotNil(t, eventName)
 	assert.NotEqual(t, filterEventName.ID, eventName.ID)            // should not use deleted filter.
 	assert.Equal(t, M.TYPE_AUTO_TRACKED_EVENT_NAME, eventName.Type) // should create auto created event.
+
 }
 
 func TestSDKIdentifyHandler(t *testing.T) {
@@ -487,4 +501,40 @@ func TestSDKGetProjectSettingsHandler(t *testing.T) {
 	jsonResponse, _ = ioutil.ReadAll(w.Body)
 	json.Unmarshal(jsonResponse, &jsonResponseMap)
 	assert.NotNil(t, jsonResponseMap["error"])
+}
+
+func TestSDKBulk(t *testing.T) {
+	r := gin.Default()
+	H.InitSDKRoutes(r)
+
+	project, _, err := SetupProjectUserReturnDAO()
+	assert.Nil(t, err)
+	uri := "/sdk/event/bulk"
+
+	t.Run("Success", func(t *testing.T) {
+		payload := fmt.Sprintf("[%s,%s]", `{"event_name": "signup", "event_properties": {"mobile" : "true"}}`, `{"event_name":"test", "event_properties": {"mobile" : "true"}}`)
+		w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusOK, w.Code)
+		resp := make([]handler.SDKTrackResponse, 0, 0)
+		jsonResponse, _ := ioutil.ReadAll(w.Body)
+		json.Unmarshal(jsonResponse, &resp)
+		assert.Equal(t, 2, len(resp))
+	})
+
+	t.Run("DuplicateCustomerEventId", func(t *testing.T) {
+		payload := fmt.Sprintf("[%s,%s,%s]", `{"event_name": "signup", "event_properties": {"mobile" : "true"}}`, `{"event_name":"test","c_event_id":"1", "event_properties": {"mobile" : "true"}}`, `{"event_name":"test2","c_event_id":"1", "event_properties": {"mobile" : "true"}}`)
+		w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
+		resp := make([]handler.SDKTrackResponse, 0, 0)
+		jsonResponse, _ := ioutil.ReadAll(w.Body)
+		json.Unmarshal(jsonResponse, &resp)
+
+		assert.Equal(t, 3, len(resp))
+
+		assert.NotEmpty(t, resp[1].UserId)
+
+		assert.Equal(t, "1", *resp[2].CustomerEventId)
+		assert.Equal(t, "Tracking failed. Event creation failed. Duplicate CustomerEventID", resp[2].Error)
+	})
+
 }

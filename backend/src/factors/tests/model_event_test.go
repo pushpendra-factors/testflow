@@ -3,6 +3,7 @@ package tests
 import (
 	"encoding/json"
 	M "factors/model"
+	U "factors/util"
 	"fmt"
 	"math"
 	"net/http"
@@ -65,6 +66,17 @@ func TestDBCreateAndGetEvent(t *testing.T) {
 	assert.True(t, event.UpdatedAt.After(start))
 	assert.Equal(t, event.CreatedAt, event.UpdatedAt)
 	assert.Equal(t, postgres.Jsonb{RawMessage: json.RawMessage(nil)}, event.Properties)
+
+	t.Run("DuplicateCustomerEventId", func(t *testing.T) {
+		custEventId := U.RandomString(8)
+		//projectId, userId, eventNameId, err := SetupProjectUserEventName()
+		assert.Nil(t, err)
+
+		event, errCode = M.CreateEvent(&M.Event{EventNameId: eventNameId, ProjectId: projectId, UserId: userId, CustomerEventId: &custEventId})
+		assert.Equal(t, http.StatusCreated, errCode)
+		_, errCode = M.CreateEvent(&M.Event{EventNameId: eventNameId, ProjectId: projectId, UserId: userId, CustomerEventId: &custEventId})
+		assert.Equal(t, http.StatusFound, errCode)
+	})
 
 	// Test Get Event on non existent id.
 	retEvent, errCode = M.GetEvent(projectId, userId, "9ad21963-bcfb-4563-aa02-8ea589710d1a")

@@ -2,8 +2,10 @@ package main
 
 // Recursively reads all json files.
 // Example usage on Terminal.
-// export GOPATH=/Users/aravindmurthy/code/factors/misc/ingest_events
-// go run ingest_kasandr_events.go --input_file=/Users/aravindmurthy/code/factors/sample_data/kasandr/sample_raw_data.csv --server=http://localhost:8080
+// export PATH_TO_FACTORS=~/repos
+// cd $PATH_TO_FACTORS/factors/misc/ingest_events/src
+// export GOPATH=$PATH_TO_FACTORS/factors/misc/ingest_events
+// go run ingest_localytics_events.go --input_file=/usr/local/var/factors/localytics_data/data.json --server=http://factors-dev.com:8080  --server=http://localhost:8080 --project_id=282 --project_token=c3wycax2nd7fiqz32jqfiw21zpdhychz
 
 import (
 	"bytes"
@@ -58,7 +60,7 @@ func getUserId(clientUserId string, eventTimestamp int64) (string, error) {
 	return userId, nil
 }
 
-func eventIngest(eventMap map[string]interface{}) {
+func translateEvent(eventMap map[string]interface{}) map[string]interface{} {
 	/*
 		// Each eventMap is of below format.
 		{
@@ -78,32 +80,31 @@ func eventIngest(eventMap map[string]interface{}) {
 	clientUserId, found := eventMap["session_id"].(string)
 	if !found {
 		log.Fatal("Missing session_id in event.")
-		return
 	}
 
 	eventTimestampFloat, found := eventMap["client_time"].(float64)
 	if !found {
 		log.Fatal("Missing timestamp in event.")
-		return
 	}
 	eventTimestamp := int64(eventTimestampFloat)
 
 	userId, err := getUserId(clientUserId, eventTimestamp)
 	if err != nil {
 		log.Fatal("UserId not found.")
-		return
 	}
 
 	eventName, found := eventMap["event_name"].(string)
 	if !found {
 		log.Fatal("Missing EventName in event.")
-		return
 	}
 
 	eventRequestMap := make(map[string]interface{})
 	eventRequestMap["event_name"] = eventName
 	eventRequestMap["user_id"] = userId
 	eventRequestMap["timestamp"] = eventTimestamp
+
+	// Add customer event id if present
+	// eventRequestMap["c_event_id"]= customerEventId
 
 	// Event properties from params.
 	eventPropertiesMap := make(map[string]interface{})
@@ -126,18 +127,31 @@ func eventIngest(eventMap map[string]interface{}) {
 	eventRequestMap["event_properties"] = eventPropertiesMap
 	eventRequestMap["user_properties"] = userPropertiesMap
 
-	reqBody, _ := json.Marshal(eventRequestMap)
-	url := fmt.Sprintf("%s/sdk/event/track", *serverFlag)
-	client := &http.Client{}
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqBody))
+	return eventRequestMap
+}
+
+func ingestEvents(events []map[string]interface{}) error {
+	reqBody, err := json.Marshal(events)
+	if err != nil {
+		return err
+	}
+
+	url := fmt.Sprintf("%s/sdk/event/bulk", *serverFlag)
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(reqBody))
+	if err != nil {
+		return err
+	}
 	req.Header.Add("Authorization", *projectTokenFlag)
+	client := &http.Client{}
+
 	resp, err := client.Do(req)
-	// always close the response-body, even if content is not required
-	defer resp.Body.Close()
 	if err != nil {
 		log.Fatal(fmt.Sprintf("Http Post event creation failed. Url: %s, reqBody: %s", url, reqBody))
-		return
+		return err
 	}
+	defer resp.Body.Close()
+
+	return nil
 }
 
 func fileIngest(filepath string) {
@@ -155,9 +169,50 @@ func fileIngest(filepath string) {
 		log.Fatal(fmt.Sprintf("No data in json file %s : %s", filepath, eventsJson))
 	}
 
-	for _, eventMap := range eventsData {
-		eventIngest(eventMap)
+	maxBatchSize := 1000
+	size := len(eventsData)
+
+	noOfBatches := size / maxBatchSize
+
+	if size%maxBatchSize != 0 {
+		noOfBatches++
 	}
+
+	log.Infof("*** Total No of events to Ingest: %d", size)
+
+	log.WithFields(log.Fields{
+		"Batches":      noOfBatches,
+		"MaxBatchSize": maxBatchSize,
+	}).Info("No Of Batches")
+
+	for batch := 0; batch < noOfBatches; batch++ {
+		start := batch * maxBatchSize
+		end := start + min(size-start, maxBatchSize)
+		events := eventsData[start:end]
+		log.WithFields(log.Fields{
+			"start": start,
+			"end":   end,
+			"batch": batch,
+		}).Info("Ingesting Batch")
+
+		translatedEvents := make([]map[string]interface{}, 0, 0)
+		for _, event := range events {
+			translatedEvents = append(translatedEvents, translateEvent(event))
+		}
+
+		err := ingestEvents(translatedEvents)
+		if err != nil {
+			log.WithError(err).Fatal("Error ingesting events")
+		}
+
+	}
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 func main() {

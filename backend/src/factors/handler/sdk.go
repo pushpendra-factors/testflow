@@ -15,12 +15,22 @@ import (
 
 type sdkTrackPayload struct {
 	Name            string          `json:"event_name"`
+	CustomerEventId *string         `json:"c_event_id"`
 	EventProperties U.PropertiesMap `json:"event_properties"`
 	UserProperties  U.PropertiesMap `json:"user_properties"`
 	ProjectId       uint64          `json:"project_id"`
 	UserId          string          `json:"user_id"`
 	Auto            bool            `json:"auto"`
 	Timestamp       int64           `json:"timestamp`
+}
+
+type SDKTrackResponse struct {
+	EventId         string  `json:"event_id,omitempty"`
+	Type            string  `json:"type,omitempty"`
+	CustomerEventId *string `json:"c_event_id,omitempty"`
+	UserId          string  `json:"user_id,omitempty"`
+	Message         string  `json:"message,omitempty"`
+	Error           string  `json:"error,omitempty"`
 }
 
 type sdkIdentifyPayload struct {
@@ -34,24 +44,24 @@ type sdkAddUserPropertiesPayload struct {
 	Properties U.PropertiesMap `json:"properties"`
 }
 
-func sdkTrack(projectId uint64, request *sdkTrackPayload, clientIP string) (int, gin.H) {
+func sdkTrack(projectId uint64, request *sdkTrackPayload, clientIP string) (int, *SDKTrackResponse) {
 	// Precondition: Fails if event_name not provided.
 	request.Name = strings.TrimSpace(request.Name) // Discourage whitespace on the end.
 	if request.Name == "" {
-		return http.StatusBadRequest, gin.H{"error": "Tracking failed. Event name cannot be omitted or left empty."}
+		return http.StatusBadRequest, &SDKTrackResponse{Error: "Tracking failed. Event name cannot be omitted or left empty."}
 	}
 
-	response := gin.H{}
+	response := &SDKTrackResponse{}
 
 	// Precondition: if user_id not given, create new user and respond.
 	if request.UserId == "" {
 		newUser := M.User{ProjectId: projectId}
 		_, errCode := M.CreateUser(&newUser)
 		if errCode != http.StatusCreated {
-			return errCode, gin.H{"error": "Tracking failed. User creation failed."}
+			return errCode, &SDKTrackResponse{Error: "Tracking failed. User creation failed."}
 		}
 		request.UserId = newUser.ID
-		response = gin.H{"user_id": newUser.ID}
+		response.UserId = newUser.ID
 	}
 
 	var eventName *M.EventName
@@ -78,7 +88,7 @@ func sdkTrack(projectId uint64, request *sdkTrackPayload, clientIP string) (int,
 
 	if eventNameErrCode != http.StatusCreated && eventNameErrCode != http.StatusConflict &&
 		eventNameErrCode != http.StatusFound {
-		return eventNameErrCode, gin.H{"error": "Tracking failed. Creating event_name failed."}
+		return eventNameErrCode, &SDKTrackResponse{Error: "Tracking failed. Creating event_name failed."}
 	}
 
 	// Event Properties
@@ -90,7 +100,7 @@ func sdkTrack(projectId uint64, request *sdkTrackPayload, clientIP string) (int,
 	(*validEventProperties)[U.EP_INTERNAL_IP] = clientIP
 	eventPropsJSON, err := json.Marshal(validEventProperties)
 	if err != nil {
-		return http.StatusBadRequest, gin.H{"error": "Tracking failed. Invalid properties."}
+		return http.StatusBadRequest, &SDKTrackResponse{Error: "Tracking failed. Invalid properties."}
 	}
 
 	// User Properties
@@ -100,29 +110,33 @@ func sdkTrack(projectId uint64, request *sdkTrackPayload, clientIP string) (int,
 	if err != nil {
 		log.WithFields(log.Fields{"userProperties": validUserProperties,
 			"error": err}).Error("Update user properites on track failed. Unmarshal json failed.")
-		response["error"] = "Failed updating user properties."
+		response.Error = "Failed updating user properties."
 	}
 
 	userPropertiesId, errCode := M.UpdateUserProperties(projectId, request.UserId, &postgres.Jsonb{userPropsJSON})
 	if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
 		log.WithFields(log.Fields{"userProperties": validUserProperties,
 			"error": errCode}).Error("Update user properties on track failed. DB update failed.")
-		response["error"] = "Failed updating user properties."
+		response.Error = "Failed updating user properties."
 	}
 
-	// Create Event.
 	createdEvent, errCode := M.CreateEvent(&M.Event{
-		EventNameId: eventName.ID,
-		Timestamp:   request.Timestamp,
-		Properties:  postgres.Jsonb{eventPropsJSON},
-		ProjectId:   projectId, UserId: request.UserId, UserPropertiesId: userPropertiesId})
-	if errCode != http.StatusCreated {
-		return errCode, gin.H{"error": "Tracking failed. Event creation failed."}
+		EventNameId:     eventName.ID,
+		CustomerEventId: request.CustomerEventId,
+		Timestamp:       request.Timestamp,
+		Properties:      postgres.Jsonb{eventPropsJSON},
+		ProjectId:       projectId, UserId: request.UserId, UserPropertiesId: userPropertiesId,
+	})
+	if errCode == http.StatusFound {
+		return errCode, &SDKTrackResponse{Error: "Tracking failed. Event creation failed. Duplicate CustomerEventID", CustomerEventId: request.CustomerEventId}
+	} else if errCode != http.StatusCreated {
+		return errCode, &SDKTrackResponse{Error: "Tracking failed. Event creation failed."}
 	}
 
 	// Success response.
-	response["event_id"] = createdEvent.ID
-	response["message"] = "User event tracked successfully."
+	response.EventId = createdEvent.ID
+	response.Message = "User event tracked successfully."
+	response.CustomerEventId = request.CustomerEventId
 	return http.StatusOK, response
 }
 
@@ -264,6 +278,60 @@ func SDKTrackHandler(c *gin.Context) {
 	}
 
 	c.JSON(sdkTrack(projectId, &trackPayload, c.ClientIP()))
+}
+
+// Test command.
+// curl -i -H "Content-Type: application/json" -H "Authorization: PROJECT_TOKEN" -X POST http://localhost:8080/sdk/event/bulk -d '[{"user_id": "YOUR_USER_ID", "event_name": "login", "auto": false, "event_properties": {"ip": "10.0.0.1", "mobile": true}, "user_properties": {"$os": "Mac OS"}}]'
+func SDKBulkEventHandler(c *gin.Context) {
+	r := c.Request
+	if r.Body == nil {
+		log.Error("Invalid request. Request body unavailable.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Tracking failed. Missing request body."})
+		return
+	}
+
+	var sdkTrackPayloads []sdkTrackPayload
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&sdkTrackPayloads); err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("Tracking failed. Json Decoding failed.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Tracking failed. Invalid payload."})
+		return
+	}
+
+	if len(sdkTrackPayloads) > 1000 {
+		c.AbortWithStatusJSON(http.StatusRequestEntityTooLarge, gin.H{"error": "Tracking failed. Invalid payload. Request Exceeds more than 1000 events."})
+		return
+	}
+
+	// Get ProjecId scope for the request.
+	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Tracking failed. Invalid project."})
+		return
+	}
+
+	clientIP := c.ClientIP()
+
+	response := make([]*SDKTrackResponse, len(sdkTrackPayloads), len(sdkTrackPayloads))
+
+	hasError := false
+
+	for i, sdkTrackPayload := range sdkTrackPayloads {
+
+		errCode, resp := sdkTrack(projectId, &sdkTrackPayload, clientIP)
+		if errCode != http.StatusOK {
+			hasError = true
+		}
+		response[i] = resp
+	}
+
+	respCode := http.StatusOK
+	if hasError {
+		respCode = http.StatusInternalServerError
+	}
+
+	c.JSON(respCode, response)
 }
 
 // Test command.

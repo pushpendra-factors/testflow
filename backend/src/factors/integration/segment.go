@@ -90,6 +90,7 @@ type SegmentEvent struct {
 	ScreenName  string          `json:"name"`
 	UserId      string          `json:"userId"`
 	AnonymousID string          `json:"anonymousId"`
+	MessageID   *string         `json:"messageId"`
 	Channel     string          `json:"channel"`
 	Context     SegmentContext  `json:"context"`
 	Timestamp   string          `json:"timestamp"`

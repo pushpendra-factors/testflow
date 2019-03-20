@@ -6,6 +6,7 @@ import (
 	mid "factors/middleware"
 	M "factors/model"
 	U "factors/util"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -55,7 +56,7 @@ func IntSegmentHandler(c *gin.Context) {
 		unixTimestamp = parsedTimestamp.Unix()
 	}
 
-	var response gin.H
+	response := &SDKTrackResponse{}
 	var status int
 
 	switch event.Type {
@@ -78,6 +79,7 @@ func IntSegmentHandler(c *gin.Context) {
 
 		request := &sdkTrackPayload{
 			Name:            event.TrackName,
+			CustomerEventId: event.MessageID,
 			UserId:          user.ID,
 			Auto:            false,
 			EventProperties: eventProperties,
@@ -108,6 +110,7 @@ func IntSegmentHandler(c *gin.Context) {
 			Name:            name,
 			UserId:          user.ID,
 			Auto:            true,
+			CustomerEventId: event.MessageID,
 			EventProperties: eventProperties,
 			UserProperties:  userProperties,
 			Timestamp:       unixTimestamp,
@@ -130,6 +133,7 @@ func IntSegmentHandler(c *gin.Context) {
 			Name:            event.ScreenName,
 			UserId:          user.ID,
 			Auto:            false,
+			CustomerEventId: event.MessageID,
 			EventProperties: eventProperties,
 			UserProperties:  userProperties,
 			Timestamp:       unixTimestamp,
@@ -141,16 +145,17 @@ func IntSegmentHandler(c *gin.Context) {
 	case "identify":
 		// Identification happens on every call before type switch.
 		// Updates the user properties with the traits, here.
-		response = gin.H{"user_id": user.ID}
+		response.UserId = user.ID
 
 		_, status := M.UpdateUserProperties(projectId, user.ID, &event.Traits)
 		if status != http.StatusAccepted && status != http.StatusNotModified {
 			logCtx.WithFields(log.Fields{"user_properties": event.Traits, "error_code": status}).Error("Segment event failure. Updating user_properties failed.")
-			response["error"] = "Segment identification failed."
+			response.Error = "Segment identification failed."
 		}
 
 	default:
-		response = gin.H{"error": "Segment event failure. Unknown event type.", "type": event.Type}
+		response.Error = fmt.Sprintf("Segment event failure. Unknown event type: %s.", event.Type)
+		response.Type = event.Type
 		logCtx.Error("Unknown segment event type.")
 	}
 

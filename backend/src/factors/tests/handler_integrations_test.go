@@ -533,6 +533,16 @@ func TestIntSegmentHandlerWithTrackEvent(t *testing.T) {
 	assertKeysExistAndNotEmpty(t, userPropertiesMap, webUserProps)
 	assertKeysExistAndNotEmpty(t, userPropertiesMap, mobileUserProps)
 
+	// create track event with same messageId
+	w = ServePostRequestWithHeaders(r, uri, []byte(sampleTrackPayload),
+		map[string]string{"Authorization": project.PrivateToken})
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse4, _ := ioutil.ReadAll(w.Body)
+	var jsonResponseMap4 map[string]interface{}
+	json.Unmarshal(jsonResponse4, &jsonResponseMap4)
+
+	assert.Equal(t, "Tracking failed. Event creation failed. Duplicate CustomerEventID", jsonResponseMap4["error"])
+
 	sampleTrackPayloadWithoutProperties := `
 	{
 		"_metadata": {
@@ -614,7 +624,7 @@ func TestIntSegmentHandlerWithTrackEvent(t *testing.T) {
 			"userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 9_1 like Mac OS X) AppleWebKit/601.1.46 (KHTML, like Gecko) Version/9.0 Mobile/13B143 Safari/601.1"
 		},
 		"integrations": {},
-		"messageId": "ajs-19c084e2f80e70cf62bb62509e79b37e",
+		"messageId": "ajs-19c084e2f80e70cf62bb62509e79b37a",
 		"originalTimestamp": "2019-01-08T16:22:06.053Z",
 		"projectId": "Zzft38QJhB",
 		"receivedAt": "2019-01-08T16:21:54.106Z",

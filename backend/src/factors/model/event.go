@@ -12,7 +12,8 @@ import (
 
 type Event struct {
 	// Composite primary key with project_id and uuid.
-	ID string `gorm:"primary_key:true;type:uuid;default:uuid_generate_v4()" json:"id"`
+	ID              string  `gorm:"primary_key:true;type:uuid;default:uuid_generate_v4()" json:"id"`
+	CustomerEventId *string `json:"customer_event_id"`
 
 	// Below are the foreign key constraints added in creation script.
 	// project_id -> projects(id)
@@ -29,6 +30,12 @@ type Event struct {
 	Timestamp int64     `json:"timestamp"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
+}
+
+const error_Duplicate_event_customerEventID = "pq: duplicate key value violates unique constraint \"project_id_customer_event_id_unique_idx\""
+
+func isDuplicateCustomerEventIdError(err error) bool {
+	return err.Error() == error_Duplicate_event_customerEventID
 }
 
 type EventTimestamp struct {
@@ -70,6 +77,10 @@ func CreateEvent(event *Event) (*Event, int) {
 
 	if err := db.Create(event).Error; err != nil {
 		log.WithFields(log.Fields{"event": &event, "error": err}).Error("CreateEvent Failed")
+		if isDuplicateCustomerEventIdError(err) {
+			log.WithError(err).Error("CreateEvent Failed, duplicate customerEventId")
+			return nil, http.StatusFound
+		}
 		return nil, http.StatusInternalServerError
 	}
 	return event, http.StatusCreated

@@ -141,6 +141,14 @@ func main() {
 	} else {
 		log.Info("Created events table")
 	}
+
+	// Adding unique index on project_id, customer_event_id
+	if err := db.Exec("CREATE UNIQUE INDEX project_id_customer_event_id_unique_idx ON events (project_id, customer_event_id);").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("events project_id customer_event_id unique index creation failed.")
+	} else {
+		log.Info("Created project_id customer_event_id unique index created.")
+	}
+
 	// Add foreign key constraints.
 	if err := db.Model(&M.Event{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("events table association with projects table failed.")

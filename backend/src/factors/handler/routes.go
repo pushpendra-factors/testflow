@@ -65,6 +65,8 @@ func InitSDKRoutes(r *gin.Engine) {
 	sdkRouteGroup.Use(mid.SetScopeProjectIdByToken())
 
 	sdkRouteGroup.POST("/event/track", SDKTrackHandler)
+	sdkRouteGroup.POST("/event/bulk", SDKBulkEventHandler)
+
 	sdkRouteGroup.POST("/user/identify", SDKIdentifyHandler)
 	sdkRouteGroup.POST("/user/add_properties", SDKAddUserPropertiesHandler)
 	sdkRouteGroup.GET("/project/get_settings", SDKGetProjectSettingsHandler)
