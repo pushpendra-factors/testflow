@@ -136,7 +136,7 @@ func ingestEvents(events []map[string]interface{}) error {
 		return err
 	}
 
-	url := fmt.Sprintf("%s/sdk/event/bulk", *serverFlag)
+	url := fmt.Sprintf("%s/sdk/event/track/bulk", *serverFlag)
 	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(reqBody))
 	if err != nil {
 		return err
