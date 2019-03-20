@@ -279,7 +279,7 @@ func sendAgentResetPasswordEmail(agent *M.Agent) error {
 }
 
 type setPasswordParams struct {
-	Password string `json:"password binding:"required"`
+	Password string `json:"password" binding:"required"`
 }
 
 func getSetPasswordParams(c *gin.Context) (*setPasswordParams, error) {
