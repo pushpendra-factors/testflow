@@ -299,7 +299,7 @@ func SDKBulkEventHandler(c *gin.Context) {
 		return
 	}
 
-	if len(sdkTrackPayloads) > 1000 {
+	if len(sdkTrackPayloads) > 50000 {
 		c.AbortWithStatusJSON(http.StatusRequestEntityTooLarge, gin.H{"error": "Tracking failed. Invalid payload. Request Exceeds more than 1000 events."})
 		return
 	}
