@@ -139,18 +139,6 @@ func FillSegmentGenericUserProperties(properties *U.PropertiesMap, event *Segmen
 	}
 }
 
-func FillSegmentMobileEventProperties(properties *U.PropertiesMap, event *SegmentEvent) {
-	if event.Context.Device.ID != "" {
-		(*properties)[U.EP_DEVICE_ID] = event.Context.Device.ID
-	}
-	if event.Context.Device.Name != "" {
-		(*properties)[U.EP_DEVICE_NAME] = event.Context.Device.Name
-	}
-	if event.Context.Device.AdvertisingID != "" {
-		(*properties)[U.EP_DEVICE_ADVERTISING_ID] = event.Context.Device.AdvertisingID
-	}
-}
-
 func FillSegmentMobileUserProperties(properties *U.PropertiesMap, event *SegmentEvent) {
 	if event.Context.App.Name != "" {
 		(*properties)[U.UP_APP_NAME] = event.Context.App.Name
@@ -163,6 +151,15 @@ func FillSegmentMobileUserProperties(properties *U.PropertiesMap, event *Segment
 	}
 	if event.Context.App.Version != "" {
 		(*properties)[U.UP_APP_VERSION] = event.Context.App.Version
+	}
+	if event.Context.Device.ID != "" {
+		(*properties)[U.UP_DEVICE_ID] = event.Context.Device.ID
+	}
+	if event.Context.Device.Name != "" {
+		(*properties)[U.UP_DEVICE_NAME] = event.Context.Device.Name
+	}
+	if event.Context.Device.AdvertisingID != "" {
+		(*properties)[U.UP_DEVICE_ADVERTISING_ID] = event.Context.Device.AdvertisingID
 	}
 	if event.Context.Device.Model != "" {
 		(*properties)[U.UP_DEVICE_MODEL] = event.Context.Device.Model

@@ -30,7 +30,6 @@ func assertKeysExistAndNotEmpty(t *testing.T, obj map[string]interface{}, keys [
 // expected event properties from segment.
 var genericEventProps = []string{U.EP_LOCATION_LATITUDE, U.EP_LOCATION_LONGITUDE}
 var webEventProps = []string{U.EP_RAW_URL, U.EP_PAGE_TITLE, U.EP_REFERRER}
-var mobileEventProps = []string{U.EP_DEVICE_ID, U.EP_DEVICE_NAME, U.EP_DEVICE_ADVERTISING_ID}
 
 // expected user properties from segment.
 var genericUserProps = []string{U.UP_PLATFORM, U.UP_USER_AGENT, U.UP_COUNTRY, U.UP_CITY, U.UP_OS, U.UP_OS_VERSION,
@@ -38,7 +37,7 @@ var genericUserProps = []string{U.UP_PLATFORM, U.UP_USER_AGENT, U.UP_COUNTRY, U.
 var webUserProps = []string{U.UP_CAMPAIGN_CONTENT, U.UP_CAMPAIGN_MEDIUM, U.UP_CAMPAIGN_NAME,
 	U.UP_CAMPAIGN_SOURCE, U.UP_CAMPAIGN_TERM}
 var mobileUserProps = []string{U.UP_APP_NAME, U.UP_APP_BUILD, U.UP_APP_NAMESPACE, U.UP_APP_VERSION,
-	U.UP_DEVICE_MODEL, U.UP_DEVICE_TYPE, U.UP_DEVICE_MANUFACTURER, U.UP_DEVICE_ADTRACKING_ENABLED,
+	U.UP_DEVICE_ID, U.UP_DEVICE_NAME, U.UP_DEVICE_ADVERTISING_ID, U.UP_DEVICE_MODEL, U.UP_DEVICE_TYPE, U.UP_DEVICE_MANUFACTURER, U.UP_DEVICE_ADTRACKING_ENABLED,
 	U.UP_NETWORK_CARRIER, U.UP_NETWORK_BLUETOOTH, U.UP_NETWORK_CELLULAR, U.UP_NETWORK_WIFI, U.UP_SCREEN_DENSITY,
 	U.UP_TIMEZONE, U.UP_LOCALE}
 
@@ -522,7 +521,6 @@ func TestIntSegmentHandlerWithTrackEvent(t *testing.T) {
 	json.Unmarshal(eventPropertiesBytes.([]byte), &eventPropertiesMap)
 	assertKeysExistAndNotEmpty(t, eventPropertiesMap, genericEventProps)
 	assertKeysExistAndNotEmpty(t, eventPropertiesMap, webEventProps)
-	assertKeysExistAndNotEmpty(t, eventPropertiesMap, mobileEventProps)
 	// Check event properties added.
 	retUser, errCode := M.GetUser(project.ID, retEvent.UserId)
 	assert.NotNil(t, retUser)
@@ -653,7 +651,6 @@ func TestIntSegmentHandlerWithTrackEvent(t *testing.T) {
 	json.Unmarshal(eventPropertiesBytes1.([]byte), &eventPropertiesMap1)
 	assertKeysExistAndNotEmpty(t, eventPropertiesMap1, genericEventProps)
 	assertKeysExistAndNotEmpty(t, eventPropertiesMap1, webEventProps)
-	assertKeysExistAndNotEmpty(t, eventPropertiesMap1, mobileEventProps)
 	// Check event properties added.
 	retUser, errCode = M.GetUser(project.ID, retEvent1.UserId)
 	assert.NotNil(t, retUser)
@@ -794,7 +791,6 @@ func TestIntSegmentHandlerWithScreenEvent(t *testing.T) {
 	var eventPropertiesMap map[string]interface{}
 	json.Unmarshal(eventPropertiesBytes.([]byte), &eventPropertiesMap)
 	assertKeysExistAndNotEmpty(t, eventPropertiesMap, genericEventProps)
-	assertKeysExistAndNotEmpty(t, eventPropertiesMap, mobileEventProps)
 	// Check event properties added.
 	retUser, errCode := M.GetUser(project.ID, retEvent.UserId)
 	assert.NotNil(t, retUser)

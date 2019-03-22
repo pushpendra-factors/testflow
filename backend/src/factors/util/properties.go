@@ -26,9 +26,6 @@ var EP_LOCATION_LONGITUDE string = "$locationLng"
 var EP_REFERRER string = "$referrer"
 var EP_PAGE_TITLE string = "$pageTitle"
 var EP_RAW_URL string = "$rawURL"
-var EP_DEVICE_ID string = "$deviceId"
-var EP_DEVICE_NAME string = "$deviceName"
-var EP_DEVICE_ADVERTISING_ID string = "$deviceAdvertisingId"
 
 // Default User Properties
 var UP_PLATFORM string = "$platform"
@@ -42,11 +39,13 @@ var UP_SCREEN_HEIGHT string = "$screenHeight"
 var UP_SCREEN_DENSITY string = "$screenDensity"
 var UP_LANGUAGE string = "$language"
 var UP_LOCALE string = "$locale"
+var UP_DEVICE_ID string = "$deviceId"
+var UP_DEVICE_NAME string = "$deviceName"
+var UP_DEVICE_ADVERTISING_ID string = "$deviceAdvertisingId"
 var UP_DEVICE_BRAND string = "$deviceBrand"
 var UP_DEVICE_MODEL string = "$deviceModel"
 var UP_DEVICE_TYPE string = "$deviceType"
 var UP_DEVICE_FAMILY string = "$deviceFamily"
-var UP_DEVICE_ID string = "$deviceId"
 var UP_DEVICE_MANUFACTURER string = "$deviceManufacturer"
 var UP_DEVICE_CARRIER string = "$deviceCarrier"
 var UP_DEVICE_ADTRACKING_ENABLED string = "$deviceAdTrackingEnabled"
@@ -75,9 +74,6 @@ var ALLOWED_SDK_DEFAULT_EVENT_PROPERTIES = [...]string{
 	EP_REFERRER,
 	EP_PAGE_TITLE,
 	EP_RAW_URL,
-	EP_DEVICE_ID,
-	EP_DEVICE_NAME,
-	EP_DEVICE_ADVERTISING_ID,
 }
 
 // Event properties that are not visible to user for analysis.
@@ -85,7 +81,6 @@ var INTERNAL_EVENT_PROPERTIES = [...]string{
 	EP_INTERNAL_IP,
 	EP_LOCATION_LATITUDE,
 	EP_LOCATION_LONGITUDE,
-	EP_DEVICE_ID,
 }
 
 var ALLOWED_SDK_DEFAULT_USER_PROPERTIES = [...]string{
@@ -100,11 +95,13 @@ var ALLOWED_SDK_DEFAULT_USER_PROPERTIES = [...]string{
 	UP_SCREEN_DENSITY,
 	UP_LANGUAGE,
 	UP_LOCALE,
+	UP_DEVICE_ID,
+	UP_DEVICE_NAME,
+	UP_DEVICE_ADVERTISING_ID,
 	UP_DEVICE_BRAND,
 	UP_DEVICE_MODEL,
 	UP_DEVICE_TYPE,
 	UP_DEVICE_FAMILY,
-	UP_DEVICE_ID,
 	UP_DEVICE_MANUFACTURER,
 	UP_DEVICE_CARRIER,
 	UP_DEVICE_ADTRACKING_ENABLED,

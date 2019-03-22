@@ -1,26 +1,26 @@
 package main
 
-// Recursively reads all json files.
+// Recursively reads all json files sorted in date order.
 // Example usage on Terminal.
 // export GOPATH=/Users/aravindmurthy/code/factors/misc/ingest_events
-// go run ingest_events.go --input_dir=/Users/aravindmurthy/events --server=http://localhost:8080
+// go run ingest_amplitude_web_events.go --input_dir=/Users/aravindmurthy/events --server=http://localhost:8080 --project_id=1 --project_token=
 
 import (
 	"bufio"
 	"bytes"
-	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -38,7 +38,6 @@ var eventNameKey string = "event_type"
 var eventCreationTimeKey string = "event_time"
 
 var clientUserIdToUserIdMap map[string]string = make(map[string]string)
-var mutex = &sync.Mutex{}
 
 func closeResp(resp *http.Response) {
 	_, err := io.Copy(ioutil.Discard, resp.Body)
@@ -49,7 +48,7 @@ func closeResp(resp *http.Response) {
 	}
 }
 
-func getUserId(clientUserId string, eventMap map[string]interface{}, httpClient *http.Client) (string, error) {
+func getUserId(clientUserId string, eventMap map[string]interface{}) (string, error) {
 	userId, found := clientUserIdToUserIdMap[clientUserId]
 	if !found {
 		// Create a user.
@@ -74,6 +73,7 @@ func getUserId(clientUserId string, eventMap map[string]interface{}, httpClient 
 		url := fmt.Sprintf("%s/sdk/user/identify", *serverFlag)
 		req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqBody))
 		req.Header.Add("Authorization", *projectTokenFlag)
+		httpClient := &http.Client{}
 		resp, err := httpClient.Do(req)
 		if err != nil {
 			log.Fatal(fmt.Sprintf("Http Post user creation failed. Url: %s, reqBody: %s, response: %+v", url, reqBody, resp))
@@ -89,14 +89,49 @@ func getUserId(clientUserId string, eventMap map[string]interface{}, httpClient 
 		userId = jsonResponseMap["user_id"].(string)
 		// always close the response-body, even if content is not required
 		closeResp(resp)
-		mutex.Lock()
 		clientUserIdToUserIdMap[clientUserId] = userId
-		mutex.Unlock()
 	}
 	return userId, nil
 }
 
-func lineIngest(eventMap map[string]interface{}, httpClient *http.Client, wg *sync.WaitGroup) {
+// Copied from url.go of server code.
+func hasProtocol(purl string) bool {
+	return len(strings.Split(purl, "://")) > 1
+}
+
+func parseURLWithoutProtocol(parseURL string) (*url.URL, error) {
+	return url.Parse(fmt.Sprintf("dummy://%s", parseURL))
+}
+
+func parseURLStable(parseURL string) (*url.URL, error) {
+	if !hasProtocol(parseURL) {
+		return parseURLWithoutProtocol(parseURL)
+	}
+	return url.Parse(parseURL)
+}
+
+func getURLHostAndPath(parseURL string) (string, error) {
+	cURL := strings.TrimSpace(parseURL)
+
+	if cURL == "" {
+		return "", errors.New("parsing failed empty url")
+	}
+
+	pURL, err := parseURLStable(cURL)
+	if err != nil {
+		return "", err
+	}
+
+	// adds / as suffix for root.
+	path := pURL.Path
+	if path == "" {
+		path = "/"
+	}
+
+	return fmt.Sprintf("%s%s", pURL.Host, path), nil
+}
+
+func translateEvent(eventMap map[string]interface{}) map[string]interface{} {
 	log.Info(fmt.Sprintf("Processing event: %v", eventMap))
 	clientUserId, found := eventMap[clientUserIdKey].(string)
 	if !found {
@@ -104,19 +139,16 @@ func lineIngest(eventMap map[string]interface{}, httpClient *http.Client, wg *sy
 		clientUserIdFloat, found := eventMap[sessionIdKey].(float64)
 		if !found {
 			log.Fatal("Missing User Id and session Id in event.")
-			return
 		}
 		clientUserId = fmt.Sprintf("%f", clientUserIdFloat)
 	}
-	userId, err := getUserId(clientUserId, eventMap, httpClient)
+	userId, err := getUserId(clientUserId, eventMap)
 	if err != nil {
 		log.Fatal("UserId not found.")
-		return
 	}
 	eventName, found := eventMap[eventNameKey].(string)
 	if !found {
 		log.Fatal("Missing EventName in event.")
-		return
 	}
 
 	eventCreatedTimeString, _ := eventMap[eventCreationTimeKey].(string)
@@ -125,19 +157,36 @@ func lineIngest(eventMap map[string]interface{}, httpClient *http.Client, wg *sy
 	eventCreatedTime, _ := time.Parse(time.RFC3339, eventCreatedTimeString)
 
 	eventRequestMap := make(map[string]interface{})
-	eventRequestMap["event_name"] = eventName
+	eventPropertiesMap := make(map[string]interface{})
+
+	if eventName != "Loaded a Page" {
+		eventRequestMap["event_name"] = eventName
+		// Initialize event properties with, customer sent event properties.
+		eventPropertiesMap = eventMap["event_properties"].(map[string]interface{})
+	} else {
+		// It is an automatic page track. event name is the url.
+		pageEP := eventMap["event_properties"].(map[string]interface{})
+		urlName, err := getURLHostAndPath(pageEP["url"].(string))
+		if err != nil {
+			log.Fatal(fmt.Sprintf("event: %s, err: %s", eventMap, err))
+		}
+		eventRequestMap["event_name"] = urlName
+		eventPropertiesMap["$rawURL"] = pageEP["url"]
+		eventPropertiesMap["$pageTitle"] = pageEP["title"]
+		eventPropertiesMap["$referrer"] = pageEP["referrer"]
+	}
+
 	eventRequestMap["user_id"] = userId
+	eventRequestMap["c_event_id"] = eventMap["$insert_id"]
 	eventRequestMap["timestamp"] = eventCreatedTime.Unix()
 
-	// event properties.
-	eventPropertiesMap := make(map[string]interface{})
-	eventPropertiesMap["amplitude_event_type"], _ = eventMap["amplitude_event_type"]
-	eventPropertiesMap["client_event_time"], _ = eventMap["client_event_time"]
-	eventPropertiesMap["additional_event_properties"], _ = eventMap["event_properties"]
+	//eventPropertiesMap["amplitude_event_type"], _ = eventMap["amplitude_event_type"]
+	//eventPropertiesMap["client_event_time"], _ = eventMap["client_event_time"]
+	//eventPropertiesMap["additional_event_properties"], _ = eventMap["event_properties"]
 	//eventPropertiesMap["event_id"], _ = eventMap["event_id"]
-	eventPropertiesMap["processed_time"], _ = eventMap["processed_time"]
+	//eventPropertiesMap["processed_time"], _ = eventMap["processed_time"]
 	//eventPropertiesMap["event_type"], _ = eventMap["event_type"]
-	eventPropertiesMap["version_name"], _ = eventMap["version_name"]
+	//eventPropertiesMap["version_name"], _ = eventMap["version_name"]
 	//eventPropertiesMap["session_id"], _ = eventMap["session_id"]
 	eventPropertiesMap["$ip"], _ = eventMap["ip_address"]
 	eventPropertiesMap["$locationLng"], _ = eventMap["location_lng"]
@@ -145,7 +194,8 @@ func lineIngest(eventMap map[string]interface{}, httpClient *http.Client, wg *sy
 	eventRequestMap["event_properties"] = eventPropertiesMap
 
 	// User properties associatied with event.
-	userPropertiesMap := make(map[string]interface{})
+	// Initialize it with, customer sent user properties.
+	userPropertiesMap := eventMap["user_properties"].(map[string]interface{})
 	// Keys that will go into eventProperties.
 	userPropertiesMap["$deviceBrand"], _ = eventMap["device_brand"]
 	userPropertiesMap["$deviceModel"], _ = eventMap["device_model"]
@@ -154,7 +204,7 @@ func lineIngest(eventMap map[string]interface{}, httpClient *http.Client, wg *sy
 	userPropertiesMap["$deviceId"], _ = eventMap["device_id"]
 	userPropertiesMap["$deviceType"], _ = eventMap["device_type"]
 	userPropertiesMap["$language"], _ = eventMap["language"]
-	userPropertiesMap["$deviceCarrier"], _ = eventMap["device_carrier"]
+	userPropertiesMap["$networkCarrier"], _ = eventMap["device_carrier"]
 	userPropertiesMap["$osVersion"], _ = eventMap["os_version"]
 	userPropertiesMap["$city"], _ = eventMap["city"]
 	userPropertiesMap["$region"], _ = eventMap["region"]
@@ -163,40 +213,18 @@ func lineIngest(eventMap map[string]interface{}, httpClient *http.Client, wg *sy
 	userPropertiesMap["$platform"], _ = eventMap["platform"]
 	eventRequestMap["user_properties"] = userPropertiesMap
 
-	reqBody, _ := json.Marshal(eventRequestMap)
-	url := fmt.Sprintf("%s/sdk/event/track", *serverFlag)
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(reqBody))
-	req.Header.Add("Authorization", *projectTokenFlag)
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		log.Fatal(fmt.Sprintf("Http Post event creation failed. Url: %s, reqBody: %s", url, reqBody))
-		return
-	}
-	// always close the response-body, even if content is not required
-	closeResp(resp)
-	wg.Done()
+	return eventRequestMap
 }
 
-func fileIngest(filepath string) {
+func getFileEvents(filepath string) []map[string]interface{} {
 	file, err := os.Open(filepath)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer file.Close()
 
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-	// Pool of connections.
-	httpClients := []*http.Client{}
-	numConnections := 40
-	for i := 0; i < numConnections; i++ {
-		httpClients = append(httpClients, &http.Client{Transport: tr})
-	}
-	var wg sync.WaitGroup
-
+	fileEvents := []map[string]interface{}{}
 	scanner := bufio.NewScanner(file)
-	i := 0
 	for scanner.Scan() {
 		line := scanner.Text()
 		var eventMap map[string]interface{}
@@ -204,18 +232,82 @@ func fileIngest(filepath string) {
 			log.Fatal(fmt.Sprintf("Unable to unmarshal line to json in file %s : %s", filepath, err))
 			continue
 		}
-		mod := i % numConnections
-		wg.Add(1)
-		go lineIngest(eventMap, httpClients[mod], &wg)
-		if mod == numConnections-1 {
-			wg.Wait()
-		}
-		i++
+		fileEvents = append(fileEvents, eventMap)
 	}
 
 	if err := scanner.Err(); err != nil {
 		log.Fatal(err)
 	}
+	return fileEvents
+}
+
+func ingestEvents(events []map[string]interface{}) error {
+	reqBody, err := json.Marshal(events)
+	if err != nil {
+		return err
+	}
+
+	url := fmt.Sprintf("%s/sdk/event/track/bulk", *serverFlag)
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(reqBody))
+	if err != nil {
+		return err
+	}
+	req.Header.Add("Authorization", *projectTokenFlag)
+	client := &http.Client{}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Fatal(fmt.Sprintf("Http Post event creation failed. Url: %s, reqBody: %s", url, reqBody))
+		return err
+	}
+	closeResp(resp)
+	return nil
+}
+
+func batchAndIngestEvents(eventsData []map[string]interface{}) {
+	maxBatchSize := 1000
+	size := len(eventsData)
+
+	noOfBatches := size / maxBatchSize
+
+	if size%maxBatchSize != 0 {
+		noOfBatches++
+	}
+
+	log.Infof("*** Total No of events to Ingest: %d", size)
+
+	log.WithFields(log.Fields{
+		"Batches":      noOfBatches,
+		"MaxBatchSize": maxBatchSize,
+	}).Info("No Of Batches")
+
+	for batch := 0; batch < noOfBatches; batch++ {
+		start := batch * maxBatchSize
+		end := start + min(size-start, maxBatchSize)
+		events := eventsData[start:end]
+		log.WithFields(log.Fields{
+			"start": start,
+			"end":   end,
+			"batch": batch,
+		}).Info("Ingesting Batch")
+
+		translatedEvents := make([]map[string]interface{}, 0, 0)
+		for _, event := range events {
+			translatedEvents = append(translatedEvents, translateEvent(event))
+		}
+
+		err := ingestEvents(translatedEvents)
+		if err != nil {
+			log.WithError(err).Fatal("Error ingesting events")
+		}
+	}
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 func main() {
@@ -260,8 +352,10 @@ func main() {
 			}
 		})
 
+	eventsData := []map[string]interface{}{}
 	for _, file := range fileList {
-		log.Printf(fmt.Sprintf("Ingesting file: %s", file))
-		fileIngest(file)
+		log.Printf(fmt.Sprintf("Reading file: %s", file))
+		eventsData = append(eventsData, getFileEvents(file)...)
 	}
+	batchAndIngestEvents(eventsData)
 }

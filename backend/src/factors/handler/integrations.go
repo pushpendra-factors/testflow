@@ -75,7 +75,6 @@ func IntSegmentHandler(c *gin.Context) {
 		}
 		I.FillSegmentGenericEventProperties(&eventProperties, &event)
 		I.FillSegmentWebEventProperties(&eventProperties, &event)
-		I.FillSegmentMobileEventProperties(&eventProperties, &event)
 
 		request := &sdkTrackPayload{
 			Name:            event.TrackName,
@@ -127,7 +126,6 @@ func IntSegmentHandler(c *gin.Context) {
 		// Initialized with already existing event props.
 		eventProperties := event.Properties
 		I.FillSegmentGenericEventProperties(&eventProperties, &event)
-		I.FillSegmentMobileEventProperties(&eventProperties, &event)
 
 		request := &sdkTrackPayload{
 			Name:            event.ScreenName,
