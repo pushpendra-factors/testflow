@@ -1,4 +1,4 @@
 FROM google/cloud-sdk:229.0.0-alpine
 
-RUN apk update && apk add curl && apk add bash && echo "http://nl.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories && echo "http://nl.alpinelinux.org/alpine/edge/main" >> /etc/apk/repositories && apk add etcd-ctl && apk add postgresql=11.1-r0 && apk add ca-certificates && rm -rf /var/cache/apk/*
-ENTRYPOINT [ "/bin/sh"]
+RUN apk update && apk add --no-cache go curl bash vim ca-certificates && echo "http://nl.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories && echo "http://nl.alpinelinux.org/alpine/edge/main" >> /etc/apk/repositories && apk add etcd-ctl && apk add postgresql=11.1-r0 && rm -rf /var/cache/apk/*
+ENTRYPOINT [ "/bin/bash"]
