@@ -10,5 +10,5 @@ spec:
   accessModes:
     - ReadWriteOnce
   gcePersistentDisk:
-    pdName: factors-staging-1-etcd
+    pdName: factors-staging-etcd-disk
     fsType: ext4
