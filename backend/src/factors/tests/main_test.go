@@ -27,6 +27,7 @@ func TestMain(m *testing.M) {
 	appDomain := flag.String("app_domain", "factors-dev.com:3000", "")
 
 	factorsEmailSender := flag.String("email_sender", "support-dev@factors.ai", "")
+	errorReportingInterval := flag.Int("error_reporting_interval", 300, "")
 
 	flag.Parse()
 
@@ -41,10 +42,11 @@ func TestMain(m *testing.M) {
 			Name:     *dbName,
 			Password: *dbPass,
 		},
-		GeolocationFile: *geoLocFilePath,
-		APIDomain:       *apiDomain,
-		APPDomain:       *appDomain,
-		EmailSender:     *factorsEmailSender,
+		GeolocationFile:        *geoLocFilePath,
+		APIDomain:              *apiDomain,
+		APPDomain:              *appDomain,
+		EmailSender:            *factorsEmailSender,
+		ErrorReportingInterval: *errorReportingInterval,
 	}
 
 	// Setup.

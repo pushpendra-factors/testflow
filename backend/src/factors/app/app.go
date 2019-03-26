@@ -12,7 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// ./app --env=development --api_domain=localhost:8080 --app_domain=localhost:3000  --api_http_port=8080 --etcd=localhost:2379 --db_host=localhost --db_port=5432 --db_user=autometa --db_name=autometa --db_pass=@ut0me7a --geo_loc_path=/usr/local/var/factors/geolocation_data/GeoLite2-City.mmdb --aws_region=us-east-1 --aws_key=dummy --aws_secret=dummy --email_sender=support@factors.ai
+// ./app --env=development --api_domain=localhost:8080 --app_domain=localhost:3000  --api_http_port=8080 --etcd=localhost:2379 --db_host=localhost --db_port=5432 --db_user=autometa --db_name=autometa --db_pass=@ut0me7a --geo_loc_path=/usr/local/var/factors/geolocation_data/GeoLite2-City.mmdb --aws_region=us-east-1 --aws_key=dummy --aws_secret=dummy --email_sender=support@factors.ai --error_reporting_interval=300
 func main() {
 
 	env := flag.String("env", "development", "")
@@ -24,6 +24,7 @@ func main() {
 	dbUser := flag.String("db_user", "autometa", "")
 	dbName := flag.String("db_name", "autometa", "")
 	dbPass := flag.String("db_pass", "@ut0me7a", "")
+
 	geoLocFilePath := flag.String("geo_loc_path", "/usr/local/var/factors/geolocation_data/GeoLite2-City.mmdb", "")
 
 	apiDomain := flag.String("api_domain", "factors-dev.com:8080", "")
@@ -34,6 +35,7 @@ func main() {
 	awsSecretAccessKey := flag.String("aws_secret", "dummy", "")
 
 	factorsEmailSender := flag.String("email_sender", "support-dev@factors.ai", "")
+	errorReportingInterval := flag.Int("error_reporting_interval", 300, "")
 
 	flag.Parse()
 
@@ -48,13 +50,14 @@ func main() {
 			Name:     *dbName,
 			Password: *dbPass,
 		},
-		GeolocationFile: *geoLocFilePath,
-		APIDomain:       *apiDomain,
-		APPDomain:       *appDomain,
-		AWSKey:          *awsAccessKeyId,
-		AWSSecret:       *awsSecretAccessKey,
-		AWSRegion:       *awsRegion,
-		EmailSender:     *factorsEmailSender,
+		GeolocationFile:        *geoLocFilePath,
+		APIDomain:              *apiDomain,
+		APPDomain:              *appDomain,
+		AWSKey:                 *awsAccessKeyId,
+		AWSSecret:              *awsSecretAccessKey,
+		AWSRegion:              *awsRegion,
+		EmailSender:            *factorsEmailSender,
+		ErrorReportingInterval: *errorReportingInterval,
 	}
 
 	// Initialize configs and connections.
@@ -67,12 +70,13 @@ func main() {
 	if !C.IsDevelopment() {
 		gin.SetMode(gin.ReleaseMode)
 	}
-	log.SetReportCaller(true)
 
-	r := gin.Default()
+	r := gin.New()
 	// Group based middlewares should be registered on corresponding init methods.
 	// Root middleware for cors.
 	r.Use(mid.CustomCors())
+	r.Use(mid.RequestIdGenerator())
+	r.Use(mid.Logger())
 	r.Use(mid.Recovery())
 
 	// Initialize routes.
@@ -80,4 +84,8 @@ func main() {
 	H.InitSDKRoutes(r)
 	H.InitIntRoutes(r)
 	r.Run(":" + strconv.Itoa(C.GetConfig().Port))
+
+	// TODO(Ankit):
+	// Add graceful shutdown.
+	// flush error collector before quitting the process
 }

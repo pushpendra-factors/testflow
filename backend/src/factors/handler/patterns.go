@@ -164,13 +164,17 @@ func addPropertyConstraintsToMap(
 	return err
 }
 
+// TODO(Ankit): Pass req id to subsequent calls to pattern server
 func FactorHandler(c *gin.Context) {
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-	log.WithFields(log.Fields{"projectId": projectId}).Info("Factor Query")
+
+	reqId := U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID)
+
+	log.WithFields(log.Fields{"projectId": projectId}).Debug("Factor Query")
 
 	modelId := uint64(0)
 	modelIdParam := c.Query("model_id")
@@ -194,7 +198,7 @@ func FactorHandler(c *gin.Context) {
 	}
 
 	if query, ok := requestBodyMap["query"].(map[string]interface{}); ok {
-		log.WithFields(log.Fields{"query": query}).Info("Received query")
+		log.WithFields(log.Fields{"query": query}).Debug("Received query")
 		startEvent, startEventConstraints, endEvent, endEventConstraints, err := ParseFactorQuery(query)
 		if err != nil {
 			log.WithFields(log.Fields{"error": err}).Error("Invalid Query.")
@@ -208,9 +212,9 @@ func FactorHandler(c *gin.Context) {
 			"startEvent":            startEvent,
 			"endEvent":              endEvent,
 			"startEventConstraints": startEventConstraints,
-			"endEventConstraints":   endEventConstraints}).Info("Factor query parse")
+			"endEventConstraints":   endEventConstraints}).Debug("Factor query parse")
 
-		ps, err := PW.NewPatternServiceWrapper(projectId, modelId)
+		ps, err := PW.NewPatternServiceWrapper(reqId, projectId, modelId)
 		if err != nil {
 			log.WithFields(log.Fields{"error": err}).Error("Pattern Service initialization failed.")
 			c.JSON(http.StatusBadRequest, gin.H{
@@ -219,7 +223,7 @@ func FactorHandler(c *gin.Context) {
 			})
 			return
 		}
-		if results, err := PW.Factor(
+		if results, err := PW.Factor(reqId,
 			projectId, startEvent, startEventConstraints,
 			endEvent, endEventConstraints, ps); err != nil {
 			log.WithFields(log.Fields{"error": err}).Error("Factors failed.")

@@ -155,7 +155,7 @@ func constructPatternConstraints(
 	return patternConstraints
 }
 
-func (it *Itree) buildRootNode(
+func (it *Itree) buildRootNode(reqId string,
 	pattern *P.Pattern, startEventConstraints *P.EventConstraints,
 	endEventConstraints *P.EventConstraints,
 	patternWrapper PatternServiceWrapperInterface) (*ItreeNode, error) {
@@ -191,7 +191,7 @@ func (it *Itree) buildRootNode(
 	if len(pattern.EventNames) == 1 {
 		p = float64(patternCount) / float64(pattern.UserCount)
 	} else if len(pattern.EventNames) == 2 {
-		c, ok := patternWrapper.GetPerUserCount(pattern.EventNames[:1],
+		c, ok := patternWrapper.GetPerUserCount(reqId, pattern.EventNames[:1],
 			patternConstraints[:1])
 		if !ok {
 			return nil, fmt.Errorf(fmt.Sprintf("Frequency missing for startEvent: %s", pattern.String()))
@@ -307,7 +307,7 @@ func (it *Itree) buildCategoricalGraphChildNode(
 	return &node, nil
 }
 
-func (it *Itree) buildChildNode(
+func (it *Itree) buildChildNode(reqId string,
 	childPattern *P.Pattern, constraintToAdd *P.EventConstraints,
 	nodeType int, parentIndex int,
 	patternWrapper PatternServiceWrapperInterface,
@@ -420,7 +420,7 @@ func (it *Itree) buildChildNode(
 		} else {
 			subConstraints = childPatternConstraints[:childLen-1]
 		}
-		c, _ := patternWrapper.GetPerUserCount(childPattern.EventNames[:childLen-1], subConstraints)
+		c, _ := patternWrapper.GetPerUserCount(reqId, childPattern.EventNames[:childLen-1], subConstraints)
 		fcp = float64(c)
 	} else {
 		onceCount, _ := childPattern.GetOncePerUserCount(childPatternConstraints)
@@ -432,7 +432,7 @@ func (it *Itree) buildChildNode(
 			} else {
 				subConstraints = childPatternConstraints[:childLen-1]
 			}
-			c, _ := patternWrapper.GetPerUserCount(childPattern.EventNames[:childLen-1], subConstraints)
+			c, _ := patternWrapper.GetPerUserCount(reqId, childPattern.EventNames[:childLen-1], subConstraints)
 			fcp = float64(c)
 		} else {
 			if nodeType != NODE_TYPE_USER_PROPERTY {
@@ -566,7 +566,7 @@ func isChildSequence(parent []string, child []string) bool {
 	return true
 }
 
-func (it *Itree) buildAndAddSequenceChildNodes(
+func (it *Itree) buildAndAddSequenceChildNodes(reqId string,
 	parentNode *ItreeNode, candidatePattens []*P.Pattern,
 	patternWrapper PatternServiceWrapperInterface,
 	allActiveUsersPattern *P.Pattern) ([]*ItreeNode, error) {
@@ -590,7 +590,7 @@ func (it *Itree) buildAndAddSequenceChildNodes(
 		} else {
 			subParentConstraints = parentNode.PatternConstraints[:peLen-1]
 		}
-		c, ok := patternWrapper.GetPerUserCount(parentPattern.EventNames[:peLen-1], subParentConstraints)
+		c, ok := patternWrapper.GetPerUserCount(reqId, parentPattern.EventNames[:peLen-1], subParentConstraints)
 		if !ok {
 			return nil, fmt.Errorf(fmt.Sprintf(
 				"Frequency missing for pattern sequence", parentPattern.String()))
@@ -609,7 +609,7 @@ func (it *Itree) buildAndAddSequenceChildNodes(
 			continue
 		}
 
-		if cNode, err := it.buildChildNode(
+		if cNode, err := it.buildChildNode(reqId,
 			p, nil, NODE_TYPE_SEQUENCE,
 			parentNode.Index, patternWrapper, allActiveUsersPattern, fpr, fpp); err != nil {
 			log.WithFields(log.Fields{"err": err}).Errorf("Couldn't build child node")
@@ -644,7 +644,7 @@ func (it *Itree) buildAndAddSequenceChildNodes(
 	return addedChildNodes, nil
 }
 
-func (it *Itree) buildCategoricalPropertyChildNodes(
+func (it *Itree) buildCategoricalPropertyChildNodes(reqId string,
 	categoricalPropertyKeyValues map[string]map[string]bool,
 	nodeType int, maxNumProperties int, maxNumValues int,
 	parentNode *ItreeNode, patternWrapper PatternServiceWrapperInterface,
@@ -691,7 +691,7 @@ func (it *Itree) buildCategoricalPropertyChildNodes(
 				constraintToAdd.UPCategoricalConstraints = categoricalConstraint
 			}
 
-			if cNode, err := it.buildChildNode(
+			if cNode, err := it.buildChildNode(reqId,
 				parentNode.Pattern, &constraintToAdd, nodeType,
 				parentNode.Index, patternWrapper, allActiveUsersPattern, fpr, fpp); err != nil {
 				log.WithFields(log.Fields{"err": err}).Errorf("Couldn't build child node")
@@ -759,7 +759,7 @@ func (it *Itree) buildCategoricalPropertyChildNodes(
 	return propertyChildNodes
 }
 
-func (it *Itree) buildNumericalPropertyChildNodes(
+func (it *Itree) buildNumericalPropertyChildNodes(reqId string,
 	numericPropertyKeys map[string]bool, nodeType int, maxNumProperties int,
 	parentNode *ItreeNode, patternWrapper PatternServiceWrapperInterface,
 	allActiveUsersPattern *P.Pattern, pLen int, fpr float64, fpp float64) []*ItreeNode {
@@ -847,7 +847,7 @@ func (it *Itree) buildNumericalPropertyChildNodes(
 
 			for _, constraintToAdd := range []P.EventConstraints{
 				constraint1ToAdd, constraint2ToAdd, constraint3ToAdd} {
-				if cNode, err := it.buildChildNode(
+				if cNode, err := it.buildChildNode(reqId,
 					parentPattern, &constraintToAdd, nodeType,
 					parentNode.Index, patternWrapper, allActiveUsersPattern,
 					fpr, fpp); err != nil {
@@ -865,7 +865,7 @@ func (it *Itree) buildNumericalPropertyChildNodes(
 	return propertyChildNodes
 }
 
-func (it *Itree) buildAndAddPropertyChildNodes(
+func (it *Itree) buildAndAddPropertyChildNodes(reqId string,
 	parentNode *ItreeNode, allActiveUsersPattern *P.Pattern,
 	patternWrapper PatternServiceWrapperInterface) ([]*ItreeNode, error) {
 	// The top child nodes are obtained by adding constraints on the (N-1) event
@@ -909,7 +909,7 @@ func (it *Itree) buildAndAddPropertyChildNodes(
 		} else {
 			subConstraints = parentConstraints[:pLen-1]
 		}
-		c, ok := patternWrapper.GetPerUserCount(parentPattern.EventNames[:pLen-1], subConstraints)
+		c, ok := patternWrapper.GetPerUserCount(reqId, parentPattern.EventNames[:pLen-1], subConstraints)
 		if !ok {
 			return nil, fmt.Errorf(fmt.Sprintf("Frequency missing for pattern sequence %s", parentPattern.String()))
 		}
@@ -949,13 +949,13 @@ func (it *Itree) buildAndAddPropertyChildNodes(
 	MAX_CAT_VALUES_EVALUATED := 1000
 
 	if eventInfo != nil && pLen > 1 {
-		childNodes = append(childNodes, it.buildCategoricalPropertyChildNodes(
+		childNodes = append(childNodes, it.buildCategoricalPropertyChildNodes(reqId,
 			eventInfo.CategoricalPropertyKeyValues, NODE_TYPE_EVENT_PROPERTY, MAX_CAT_PROPERTIES_EVALUATED,
 			MAX_CAT_VALUES_EVALUATED, parentNode, patternWrapper, allActiveUsersPattern, pLen, fpr, fpp)...)
 	}
 
 	if userInfo != nil {
-		childNodes = append(childNodes, it.buildCategoricalPropertyChildNodes(
+		childNodes = append(childNodes, it.buildCategoricalPropertyChildNodes(reqId,
 			userInfo.CategoricalPropertyKeyValues, NODE_TYPE_USER_PROPERTY, MAX_CAT_PROPERTIES_EVALUATED,
 			MAX_CAT_VALUES_EVALUATED, parentNode, patternWrapper, allActiveUsersPattern, pLen, fpr, fpp)...)
 	}
@@ -964,12 +964,12 @@ func (it *Itree) buildAndAddPropertyChildNodes(
 	pLen = len(parentPattern.EventNames)
 	MAX_NUM_PROPERTIES_EVALUATED := 500
 	if eventInfo != nil && pLen > 1 {
-		childNodes = append(childNodes, it.buildNumericalPropertyChildNodes(
+		childNodes = append(childNodes, it.buildNumericalPropertyChildNodes(reqId,
 			eventInfo.NumericPropertyKeys, NODE_TYPE_EVENT_PROPERTY, MAX_NUM_PROPERTIES_EVALUATED,
 			parentNode, patternWrapper, allActiveUsersPattern, pLen, fpr, fpp)...)
 	}
 	if userInfo != nil {
-		childNodes = append(childNodes, it.buildNumericalPropertyChildNodes(
+		childNodes = append(childNodes, it.buildNumericalPropertyChildNodes(reqId,
 			userInfo.NumericPropertyKeys, NODE_TYPE_USER_PROPERTY, MAX_NUM_PROPERTIES_EVALUATED,
 			parentNode, patternWrapper, allActiveUsersPattern, pLen, fpr, fpp)...)
 	}
@@ -1025,7 +1025,7 @@ func (it *Itree) buildAndAddPropertyChildNodes(
 	return addedChildNodes, nil
 }
 
-func BuildNewItree(
+func BuildNewItree(reqId,
 	startEvent string, startEventConstraints *P.EventConstraints,
 	endEvent string, endEventConstraints *P.EventConstraints,
 	patternWrapper PatternServiceWrapperInterface) (*Itree, error) {
@@ -1041,11 +1041,11 @@ func BuildNewItree(
 
 	var rootNodePattern *P.Pattern = nil
 	var allActiveUsersPattern *P.Pattern = nil
-	candidatePatterns, err := patternWrapper.GetAllPatterns(startEvent, endEvent)
+	candidatePatterns, err := patternWrapper.GetAllPatterns(reqId, startEvent, endEvent)
 	if err != nil {
 		return nil, err
 	}
-	allActiveUsersPattern = patternWrapper.GetPattern([]string{U.SEN_ALL_ACTIVE_USERS})
+	allActiveUsersPattern = patternWrapper.GetPattern(reqId, []string{U.SEN_ALL_ACTIVE_USERS})
 	if allActiveUsersPattern == nil {
 		return nil, fmt.Errorf("All active users pattern not found")
 	}
@@ -1065,7 +1065,7 @@ func BuildNewItree(
 	}
 	queue := []*ItreeNode{}
 
-	rootNode, err := itree.buildRootNode(
+	rootNode, err := itree.buildRootNode(reqId,
 		rootNodePattern, startEventConstraints, endEventConstraints, patternWrapper)
 	if err != nil {
 		return nil, err
@@ -1076,13 +1076,13 @@ func BuildNewItree(
 
 	for len(queue) > 0 {
 		parentNode := queue[0]
-		if _, err := itree.buildAndAddPropertyChildNodes(
+		if _, err := itree.buildAndAddPropertyChildNodes(reqId,
 			parentNode, allActiveUsersPattern, patternWrapper); err != nil {
 			log.Errorf(fmt.Sprintf("%s", err))
 			return nil, err
 		}
 
-		if sequenceChildNodes, err := itree.buildAndAddSequenceChildNodes(parentNode,
+		if sequenceChildNodes, err := itree.buildAndAddSequenceChildNodes(reqId, parentNode,
 			candidatePatterns, patternWrapper, allActiveUsersPattern); err != nil {
 			return nil, err
 		} else {

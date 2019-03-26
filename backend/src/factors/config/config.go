@@ -2,13 +2,16 @@ package config
 
 import (
 	"factors/interfaces/maileriface"
+	"factors/services/error_collector"
 	serviceEtcd "factors/services/etcd"
 	"factors/services/mailer"
 	serviceSes "factors/services/ses"
+	U "factors/util"
 	"fmt"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/coreos/etcd/mvcc/mvccpb"
 
@@ -36,18 +39,19 @@ type DBConf struct {
 }
 
 type Configuration struct {
-	Env             string
-	Port            int
-	DBInfo          DBConf
-	EtcdEndpoints   []string
-	GeolocationFile string
-	APIDomain       string
-	APPDomain       string
-	AWSRegion       string
-	AWSKey          string
-	AWSSecret       string
-	Cookiename      string
-	EmailSender     string
+	Env                    string
+	Port                   int
+	DBInfo                 DBConf
+	EtcdEndpoints          []string
+	GeolocationFile        string
+	APIDomain              string
+	APPDomain              string
+	AWSRegion              string
+	AWSKey                 string
+	AWSSecret              string
+	Cookiename             string
+	EmailSender            string
+	ErrorReportingInterval int
 }
 
 type Services struct {
@@ -57,6 +61,7 @@ type Services struct {
 	patternServersLock sync.RWMutex
 	patternServers     map[string]string
 	Mailer             maileriface.Mailer
+	ErrorCollector     *error_collector.Collector
 }
 
 func (service *Services) GetPatternServerAddresses() []string {
@@ -89,7 +94,7 @@ func (service *Services) removePatternServer(key string) {
 var configuration *Configuration
 var services *Services = nil
 
-func initLogging() {
+func initLogging(collector *error_collector.Collector) {
 	// Log as JSON instead of the default ASCII formatter.
 	log.SetFormatter(&log.JSONFormatter{})
 
@@ -97,12 +102,12 @@ func initLogging() {
 		log.SetLevel(log.DebugLevel)
 	}
 
-	// Output to stdout instead of the default stderr
-	// Can be any io.Writer, see below for File example
-	// log.SetOutput(os.Stdout)
+	log.SetReportCaller(true)
 
-	// Only log the warning severity or above.
-	// log.SetLevel(log.WarnLevel)
+	if collector != nil {
+		hook := &U.Hook{C: services.ErrorCollector}
+		log.AddHook(hook)
+	}
 }
 
 func initServices(config *Configuration) error {
@@ -119,6 +124,8 @@ func initServices(config *Configuration) error {
 	}
 
 	InitMailClient(config.AWSKey, config.AWSSecret, config.AWSRegion)
+
+	initCollectorClient(config.Env, "team@factors.ai", config.EmailSender)
 
 	// Ref: https://geolite.maxmind.com/download/geoip/database/GeoLite2-City.tar.gz
 	geolocation, err := geoip2.Open(config.GeolocationFile)
@@ -213,9 +220,15 @@ func InitMailClient(key, secret, region string) {
 		services.Mailer = mailer.New()
 		return
 	}
-
 	services.Mailer = serviceSes.New(key, secret, region)
+}
 
+func initCollectorClient(env, toMail, fromMail string) {
+	if services == nil {
+		services = &Services{}
+	}
+	dur := time.Second * time.Duration(configuration.ErrorReportingInterval)
+	services.ErrorCollector = error_collector.New(services.Mailer, dur, env, toMail, fromMail)
 }
 
 func watchPatternServers(psUpdateChannel clientv3.WatchChan) {
@@ -246,12 +259,12 @@ func Init(config *Configuration) error {
 
 	configuration = config
 
-	initLogging()
-
 	err := initServices(config)
 	if err != nil {
 		return err
 	}
+
+	initLogging(services.ErrorCollector)
 
 	initiated = true
 	return nil

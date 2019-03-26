@@ -87,7 +87,9 @@ spec:
           - --aws_secret
           - $(AWS_SECRET)
           - --email_sender
-          - $(EMAIL_SENDER)  
+          - $(EMAIL_SENDER)
+          - --error_reporting_interval
+          - $(ERROR_REPORTING_INTERVAL)
         env:
           - name: MY_POD_IP
             valueFrom:

@@ -24,11 +24,10 @@ func deepCopy(a, b interface{}) {
 // Fetches information from pattern server and operations on patterns in local cache.
 type PatternServiceWrapperInterface interface {
 	GetUserAndEventsInfo() *P.UserAndEventsInfo
-	GetPerUserCount(eventNames []string,
+	GetPerUserCount(reqId string, eventNames []string,
 		patternConstraints []P.EventConstraints) (uint, bool)
-	GetPattern(eventNames []string) *P.Pattern
-	GetAllPatterns(
-		startEvent string, endEvent string) ([]*P.Pattern, error)
+	GetPattern(reqId string, eventNames []string) *P.Pattern
+	GetAllPatterns(reqId, startEvent, endEvent string) ([]*P.Pattern, error)
 }
 
 type PatternServiceWrapper struct {
@@ -64,9 +63,9 @@ func (pw *PatternServiceWrapper) GetUserAndEventsInfo() *P.UserAndEventsInfo {
 	return pw.userAndEventsInfo
 }
 
-func (pw *PatternServiceWrapper) GetPerUserCount(eventNames []string,
+func (pw *PatternServiceWrapper) GetPerUserCount(reqId string, eventNames []string,
 	patternConstraints []P.EventConstraints) (uint, bool) {
-	pattern := pw.GetPattern(eventNames)
+	pattern := pw.GetPattern(reqId, eventNames)
 	if pattern != nil {
 		count, err := pattern.GetOncePerUserCount(patternConstraints)
 		if err == nil {
@@ -76,13 +75,13 @@ func (pw *PatternServiceWrapper) GetPerUserCount(eventNames []string,
 	return 0, false
 }
 
-func (pw *PatternServiceWrapper) GetPattern(eventNames []string) *P.Pattern {
+func (pw *PatternServiceWrapper) GetPattern(reqId string, eventNames []string) *P.Pattern {
 	var pattern *P.Pattern = nil
 	var found bool
 	eventsHash := P.EventArrayToString(eventNames)
 	if pattern, found = pw.pMap[eventsHash]; !found {
 		// Fetch from server.
-		patterns, err := PC.GetPatterns(pw.projectId, pw.modelId, [][]string{eventNames})
+		patterns, err := PC.GetPatterns(reqId, pw.projectId, pw.modelId, [][]string{eventNames})
 		if err == nil && len(patterns) == 1 && P.EventArrayToString(patterns[0].EventNames) == eventsHash {
 			pattern = patterns[0]
 			// Add it to cache.
@@ -98,10 +97,10 @@ func (pw *PatternServiceWrapper) GetPattern(eventNames []string) *P.Pattern {
 	return pattern
 }
 
-func (pw *PatternServiceWrapper) GetAllPatterns(
-	startEvent string, endEvent string) ([]*P.Pattern, error) {
+func (pw *PatternServiceWrapper) GetAllPatterns(reqId,
+	startEvent, endEvent string) ([]*P.Pattern, error) {
 	// Fetch from server.
-	patterns, err := PC.GetAllPatterns(pw.projectId, pw.modelId, startEvent, endEvent)
+	patterns, err := PC.GetAllPatterns(reqId, pw.projectId, pw.modelId, startEvent, endEvent)
 	// Add it to cache.
 	for _, p := range patterns {
 		pw.pMap[P.EventArrayToString(p.EventNames)] = p
@@ -340,7 +339,7 @@ func barGraphHeaderString(
 	return header, headerExplanation
 }
 
-func buildFunnelData(
+func buildFunnelData(reqId string,
 	funnelEvents []string, funnelConstraints []P.EventConstraints,
 	node *ItreeNode, isBaseFunnel bool,
 	pw PatternServiceWrapperInterface) funnelNodeResults {
@@ -366,14 +365,14 @@ func buildFunnelData(
 				funnelSubsequencePerUserCount = uint(node.Fcr)
 			}
 		} else {
-			funnelSubsequencePerUserCount, found = pw.GetPerUserCount(
+			funnelSubsequencePerUserCount, found = pw.GetPerUserCount(reqId,
 				funnelEvents[:i+1], funnelConstraints[:i+1])
 		}
 		if !found {
 			log.Errorf(fmt.Sprintf(
 				"Subsequence %s not as frequent as sequence %s",
 				P.EventArrayToString(funnelEvents[:i+1]), ","), funnelEvents)
-			funnelSubsequencePerUserCount, _ = pw.GetPerUserCount(funnelEvents, funnelConstraints)
+			funnelSubsequencePerUserCount, _ = pw.GetPerUserCount(reqId, funnelEvents, funnelConstraints)
 		}
 		eventString := eventStringWithConditions(funnelEvents[i], &funnelConstraints[i])
 		if i == 0 {
@@ -481,13 +480,13 @@ func buildFunnelFormats(node *ItreeNode) (
 	return funnelEvents, funnelConstraints, baseFunnelEvents, baseFunnelConstraints
 }
 
-func buildFunnelGraphResult(
+func buildFunnelGraphResult(reqId string,
 	node *ItreeNode, funnelEvents []string, funnelConstraints []P.EventConstraints,
 	baseFunnelEvents []string, baseFunnelConstraints []P.EventConstraints,
 	pw PatternServiceWrapperInterface) (
 	*graphResult, error) {
-	baseFunnelData := buildFunnelData(baseFunnelEvents, baseFunnelConstraints, node, true, pw)
-	funnelData := buildFunnelData(funnelEvents, funnelConstraints, node, false, pw)
+	baseFunnelData := buildFunnelData(reqId, baseFunnelEvents, baseFunnelConstraints, node, true, pw)
+	funnelData := buildFunnelData(reqId, funnelEvents, funnelConstraints, node, false, pw)
 
 	baseFunnelLength := len(baseFunnelData)
 	baseFunnelConversionPercent := baseFunnelData[baseFunnelLength-2].ConversionPercent
@@ -637,7 +636,7 @@ func buildBarGraphResult(node *ItreeNode) (*graphResult, error) {
 	return chart, nil
 }
 
-func buildFactorResultsFromPatterns(nodes []*ItreeNode, pw PatternServiceWrapperInterface) FactorGraphResults {
+func buildFactorResultsFromPatterns(reqId string, nodes []*ItreeNode, pw PatternServiceWrapperInterface) FactorGraphResults {
 	results := FactorGraphResults{Charts: []graphResult{}}
 	/*
 		endEventString := "dummyEvent"
@@ -683,7 +682,7 @@ func buildFactorResultsFromPatterns(nodes []*ItreeNode, pw PatternServiceWrapper
 		if node.NodeType == NODE_TYPE_SEQUENCE || node.NodeType == NODE_TYPE_EVENT_PROPERTY ||
 			node.NodeType == NODE_TYPE_USER_PROPERTY {
 			funnelEvents, funnelConstraints, baseFunnelEvents, baseFunnelConstraints := buildFunnelFormats(node)
-			if c, err := buildFunnelGraphResult(node, funnelEvents, funnelConstraints, baseFunnelEvents, baseFunnelConstraints, pw); err != nil {
+			if c, err := buildFunnelGraphResult(reqId, node, funnelEvents, funnelConstraints, baseFunnelEvents, baseFunnelConstraints, pw); err != nil {
 				log.Error(err)
 				continue
 			} else {
@@ -704,8 +703,8 @@ func buildFactorResultsFromPatterns(nodes []*ItreeNode, pw PatternServiceWrapper
 	return results
 }
 
-func NewPatternServiceWrapper(projectId uint64, modelId uint64) (*PatternServiceWrapper, error) {
-	userAndEventsInfo, respModelId, err := PC.GetUserAndEventsInfo(projectId, modelId)
+func NewPatternServiceWrapper(reqId string, projectId uint64, modelId uint64) (*PatternServiceWrapper, error) {
+	userAndEventsInfo, respModelId, err := PC.GetUserAndEventsInfo(reqId, projectId, modelId)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err, "projectId": projectId}).Error(
@@ -724,12 +723,12 @@ func NewPatternServiceWrapper(projectId uint64, modelId uint64) (*PatternService
 	return &patternServiceWrapper, nil
 }
 
-func Factor(projectId uint64, startEvent string,
+func Factor(reqId string, projectId uint64, startEvent string,
 	startEventConstraints *P.EventConstraints, endEvent string,
 	endEventConstraints *P.EventConstraints,
 	pw PatternServiceWrapperInterface) (FactorGraphResults, error) {
 	iPatternNodes := []*ItreeNode{}
-	if itree, err := BuildNewItree(startEvent, startEventConstraints,
+	if itree, err := BuildNewItree(reqId, startEvent, startEventConstraints,
 		endEvent, endEventConstraints, pw); err != nil {
 		log.Error(err)
 		return FactorGraphResults{}, err
@@ -752,7 +751,7 @@ func Factor(projectId uint64, startEvent string,
 			return (scoreI > scoreJ)
 		})
 
-	results := buildFactorResultsFromPatterns(iPatternNodes, pw)
+	results := buildFactorResultsFromPatterns(reqId, iPatternNodes, pw)
 
 	maxPatterns := 50
 	if len(results.Charts) > maxPatterns {

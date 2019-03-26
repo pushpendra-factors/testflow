@@ -31,9 +31,13 @@ func getSignInParams(c *gin.Context) (*signInParams, error) {
 // curl -X POST -d '{"email":"value1", "password":"value1"}' http://localhost:8080/agents/signin -v
 func Signin(c *gin.Context) {
 
+	logCtx := log.WithFields(log.Fields{
+		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
+	})
+
 	params, err := getSignInParams(c)
 	if err != nil {
-		log.WithError(err).Error("Failed to parse SignInParams")
+		logCtx.WithError(err).Error("Failed to parse SignInParams")
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
@@ -57,7 +61,7 @@ func Signin(c *gin.Context) {
 	ts := time.Now().UTC()
 	errCode := M.UpdateAgentLastLoginInfo(email, ts)
 	if errCode != http.StatusAccepted {
-		log.Error("Failed to update Agent lastLoginInfo")
+		logCtx.WithField("email", email).Error("Failed to update Agent lastLoginInfo")
 	}
 
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, helpers.SecondsInOneMonth*time.Second)
@@ -98,9 +102,13 @@ func getAgentInviteParams(c *gin.Context) (*agentInviteParams, error) {
 // curl -X POST -d '{"email":"value1"}' http://localhost:8080/:project_id/agents/invite -v
 func AgentInvite(c *gin.Context) {
 
+	logCtx := log.WithFields(log.Fields{
+		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
+	})
+
 	params, err := getAgentInviteParams(c)
 	if err != nil {
-		log.WithError(err).Error("Failed to parse AgentInviteParams")
+		logCtx.WithError(err).Error("Failed to parse AgentInviteParams")
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
