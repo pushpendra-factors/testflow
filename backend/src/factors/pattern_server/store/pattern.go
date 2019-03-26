@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime"
+	"time"
 
 	cache "github.com/hashicorp/golang-lru"
 	log "github.com/sirupsen/logrus"
@@ -63,15 +65,21 @@ func getModelChunkCacheKey(projectId, modelId uint64, chunkId string) string {
 
 func (ps *PatternStore) putModelEventInfoInCache(projectId, modelId uint64, eventInfo pattern.UserAndEventsInfo) {
 
-	log.WithFields(log.Fields{
+	logCtx := log.WithFields(log.Fields{
 		"pid": projectId,
 		"mid": modelId,
-	}).Debugln("[PatternStore] putModelEventInfoInCache")
+	})
+	logCtx.Debugln("[PatternStore] putModelEventInfoInCache")
 
 	modelKey := getModelEventInfoCacheKey(projectId, modelId)
-	// return evicted boolean
-	// check if it can be used
-	ps.modelEventInfoCache.Add(modelKey, eventInfo)
+	evict := ps.modelEventInfoCache.Add(modelKey, eventInfo)
+	if evict {
+		start := time.Now()
+		runtime.GC()
+		logCtx.WithFields(log.Fields{
+			"Duration (nanoseconds)": time.Since(start).Nanoseconds(),
+		}).Info("GC Finished [PatternStore] putModelEventInfoInCache")
+	}
 }
 
 func (ps *PatternStore) getModelEventInfoFromCache(projectId, modelId uint64) (pattern.UserAndEventsInfo, bool) {
@@ -265,14 +273,22 @@ func (ps *PatternStore) getPatternsFromDisk(projectId, modelId uint64, chunkId s
 }
 
 func (ps *PatternStore) putPatternsInCache(projectId, modelId uint64, chunkId string, patterns []*pattern.Pattern) {
-	log.WithFields(log.Fields{
+	logCtx := log.WithFields(log.Fields{
 		"pid": projectId,
 		"mid": modelId,
 		"cid": chunkId,
-	}).Debugln("[PatternStore] putPatternsInCache")
+	})
+	logCtx.Debugln("[PatternStore] putPatternsInCache")
 
 	chunkKey := getModelChunkCacheKey(projectId, modelId, chunkId)
-	ps.modelChunkCache.Add(chunkKey, patterns)
+	evict := ps.modelChunkCache.Add(chunkKey, patterns)
+	if evict {
+		start := time.Now()
+		runtime.GC()
+		logCtx.WithFields(log.Fields{
+			"Duration (nanoseconds)": time.Since(start).Nanoseconds(),
+		}).Info("GC Finished [PatternStore] putPatternsInCache")
+	}
 }
 
 func (ps *PatternStore) getPatternsFromCache(projectId, modelId uint64, chunkId string) ([]*pattern.Pattern, bool) {
