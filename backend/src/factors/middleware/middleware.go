@@ -334,17 +334,17 @@ func Logger() gin.HandlerFunc {
 		}
 
 		entry := log.WithFields(log.Fields{
-			"hostname":   hostname,
-			"x-req-id":   U.GetScopeByKeyAsString(c, SCOPE_REQ_ID),
-			"statusCode": statusCode,
-			"latency":    latency,
-			"clientIP":   clientIP,
-			"method":     c.Request.Method,
-			"path":       path,
-			"referer":    referer,
-			"dataLength": dataLength,
-			"userAgent":  clientUserAgent,
-			"type":       "reqlog",
+			"hostname":    hostname,
+			"x-req-id":    U.GetScopeByKeyAsString(c, SCOPE_REQ_ID),
+			"statusCode":  statusCode,
+			"latency(ms)": latency,
+			"clientIP":    clientIP,
+			"method":      c.Request.Method,
+			"path":        path,
+			"referer":     referer,
+			"dataLength":  dataLength,
+			"userAgent":   clientUserAgent,
+			"type":        "reqlog",
 		})
 
 		msg := fmt.Sprintf("%s - %s [%s] \"%s %s\" %d %d \"%s\" \"%s\" (%dms)", clientIP, hostname, time.Now().UTC(), c.Request.Method, path, statusCode, dataLength, referer, clientUserAgent, latency)

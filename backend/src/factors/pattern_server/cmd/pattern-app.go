@@ -11,8 +11,11 @@ import (
 	serviceGCS "factors/services/gcstorage"
 	"flag"
 	"fmt"
+	"math"
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -158,7 +161,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
 	log.SetReportCaller(true)
+	// Log as JSON instead of the default ASCII formatter.
+	log.SetFormatter(&log.JSONFormatter{})
 
 	log.WithFields(log.Fields{
 		"IP":            config.GetIP(),
@@ -399,22 +405,45 @@ func initRpcServer(ps *patternserver.PatternServer) *mux.Router {
 	s.RegisterCodec(rpcjson.NewCodec(), "application/json;charset=UTF-8")
 	s.RegisterService(ps, PC.RPCServiceName)
 	s.RegisterBeforeFunc(func(i *rpc.RequestInfo) {
-		reqId := i.Request.Header["X-Req-Id"]
+		reqId := ""
+		if len(i.Request.Header["X-Req-Id"]) > 0 {
+			reqId = i.Request.Header["X-Req-Id"][0]
+		}
+
 		method := i.Method
+		startedAt := time.Now().UnixNano()
+
+		i.Request.Header["Started-At"] = []string{fmt.Sprintf("%v", startedAt)}
+
 		log.WithFields(log.Fields{
 			"reqId":  reqId,
 			"method": method,
 		}).Info("Seen Request")
 	})
 	s.RegisterAfterFunc(func(i *rpc.RequestInfo) {
-		reqId := i.Request.Header["X-Req-Id"]
+		reqId := ""
+		if len(i.Request.Header["X-Req-Id"]) > 0 {
+			reqId = i.Request.Header["X-Req-Id"][0]
+		}
+
 		method := i.Method
 		err := i.Error
 		statusCode := i.StatusCode
+
+		startedAt := time.Now().UnixNano()
+		if len(i.Request.Header["Started-At"]) > 0 {
+			startedAt, _ = strconv.ParseInt(i.Request.Header["Started-At"][0], 10, 64)
+		}
+
+		endedAt := time.Now().UnixNano()
+
+		latency := endedAt - startedAt
+
 		logCtx := log.WithFields(log.Fields{
-			"reqId":      reqId,
-			"method":     method,
-			"statusCode": statusCode,
+			"reqId":       reqId,
+			"method":      method,
+			"latency(ms)": int(math.Ceil(float64(latency) / 1000000.0)),
+			"statusCode":  statusCode,
 		})
 
 		if err != nil {
