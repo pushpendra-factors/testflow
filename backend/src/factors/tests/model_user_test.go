@@ -28,8 +28,8 @@ func TestDBCreateAndGetUser(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.True(t, len(user.ID) > 30)
 	assert.Equal(t, projectId, user.ProjectId)
-	assert.True(t, user.JoinTimestamp >= start.Unix())
-	assert.InDelta(t, user.JoinTimestamp, start.Unix(), 3)
+	assert.True(t, user.JoinTimestamp >= start.Unix()-60)
+	assert.InDelta(t, user.JoinTimestamp, start.Unix()-60, 3)
 	assert.True(t, user.CreatedAt.After(start))
 	assert.True(t, user.UpdatedAt.After(start))
 	// Not more than 20ms difference.
@@ -39,8 +39,8 @@ func TestDBCreateAndGetUser(t *testing.T) {
 	retUser, errCode := M.GetUser(projectId, user.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	// time.Time is not exactly same. Checking within an error threshold.
-	assert.True(t, user.JoinTimestamp >= start.Unix())
-	assert.InDelta(t, user.JoinTimestamp, start.Unix(), 3)
+	assert.True(t, user.JoinTimestamp >= start.Unix()-60)
+	assert.InDelta(t, user.JoinTimestamp, start.Unix()-60, 3)
 	assert.True(t, math.Abs(user.CreatedAt.Sub(retUser.CreatedAt).Seconds()) < 0.1)
 	assert.True(t, math.Abs(user.UpdatedAt.Sub(retUser.UpdatedAt).Seconds()) < 0.1)
 	user.CreatedAt = time.Time{}
@@ -69,12 +69,12 @@ func TestDBCreateAndGetUser(t *testing.T) {
 	assert.Equal(t, customerUserId, user.CustomerUserId)
 	assert.True(t, len(user.ID) > 30)
 	assert.Equal(t, projectId, user.ProjectId)
-	assert.True(t, user.JoinTimestamp >= start.Unix())
-	assert.InDelta(t, user.JoinTimestamp, start.Unix(), 3)
+	assert.True(t, user.JoinTimestamp >= start.Unix()-60)
+	assert.InDelta(t, user.JoinTimestamp, start.Unix()-60, 3)
 	assert.True(t, user.CreatedAt.After(start))
 	assert.True(t, user.UpdatedAt.After(start))
 	// Not more than 20ms difference.
-	assert.InDelta(t, user.CreatedAt.UnixNano(), user.UpdatedAt.UnixNano(), 2.0e+7)
+	assert.InDelta(t, user.CreatedAt.UnixNano(), user.UpdatedAt.UnixNano(), 5.0e+7)
 	assert.Equal(t, properties, user.Properties)
 
 	// Creating again with the same customer_user_id with no properties.

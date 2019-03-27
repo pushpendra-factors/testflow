@@ -33,7 +33,9 @@ type User struct {
 func (user *User) BeforeCreate(scope *gorm.Scope) error {
 	// Increamenting count based on EventNameId, not by EventName.
 	if user.JoinTimestamp <= 0 {
-		user.JoinTimestamp = time.Now().Unix()
+		// Default to 60 seconds earlier than now, so that if event is also created simultaneously
+		// user join is earlier.
+		user.JoinTimestamp = time.Now().Unix() - 60
 	}
 	return nil
 }
