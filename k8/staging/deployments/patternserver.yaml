@@ -33,7 +33,10 @@ spec:
         volumeMounts:
         - name: workdir
           mountPath: /usr/local/var/factors
-        resources: {}
+        resources:
+          requests:
+            cpu: "1"
+            memory: 2Gi
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         securityContext: {}

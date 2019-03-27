@@ -29,7 +29,13 @@ spec:
       - image: us.gcr.io/factors-staging/frontend:v0.10-beta_ed8453b
         imagePullPolicy: IfNotPresent
         name: frontend
-        resources: {}
+        resources:
+          limits:
+            memory: "200M"
+            cpu: "1"
+          requests:
+            memory: "100M"
+            cpu: ".5"
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         readinessProbe:
