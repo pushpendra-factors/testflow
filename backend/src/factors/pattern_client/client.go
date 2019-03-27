@@ -128,7 +128,7 @@ type ModelInfo struct {
 	EndTimestamp   int64  `json:"et"`
 }
 
-func GetSeenUserProperties(projectId, modelId uint64) (map[string][]string, error) {
+func GetSeenUserProperties(reqId string, projectId, modelId uint64) (map[string][]string, error) {
 	params := GetSeenUserPropertiesRequest{
 		ProjectId: projectId,
 		ModelId:   modelId,
@@ -142,6 +142,7 @@ func GetSeenUserProperties(projectId, modelId uint64) (map[string][]string, erro
 	gatherResp := make(chan httpResp, len(serverAddrs))
 	headers := map[string]string{
 		"content-type": "application/json",
+		"X-Req-Id":     reqId,
 	}
 
 	urls := make([]string, 0, 0)
@@ -183,7 +184,7 @@ func GetSeenUserProperties(projectId, modelId uint64) (map[string][]string, erro
 	return userProps, nil
 }
 
-func GetSeenUserPropertyValues(projectId, modelId uint64, propertyName string) ([]string, error) {
+func GetSeenUserPropertyValues(reqId string, projectId, modelId uint64, propertyName string) ([]string, error) {
 	params := GetSeenUserPropertyValuesRequest{
 		ProjectId:    projectId,
 		ModelId:      modelId,
@@ -200,6 +201,7 @@ func GetSeenUserPropertyValues(projectId, modelId uint64, propertyName string) (
 	gatherResp := make(chan httpResp, len(serverAddrs))
 	headers := map[string]string{
 		"content-type": "application/json",
+		"X-Req-Id":     reqId,
 	}
 
 	urls := make([]string, 0, 0)
@@ -238,7 +240,7 @@ func GetSeenUserPropertyValues(projectId, modelId uint64, propertyName string) (
 	return propValues, nil
 }
 
-func GetAllPatterns(projectId, modelId uint64, startEvent, endEvent string) ([]*pattern.Pattern, error) {
+func GetAllPatterns(reqId string, projectId, modelId uint64, startEvent, endEvent string) ([]*pattern.Pattern, error) {
 	params := GetAllPatternsRequest{
 		ProjectId:  projectId,
 		ModelId:    modelId,
@@ -254,6 +256,7 @@ func GetAllPatterns(projectId, modelId uint64, startEvent, endEvent string) ([]*
 	gatherResp := make(chan httpResp, len(serverAddrs))
 	headers := map[string]string{
 		"content-type": "application/json",
+		"X-Req-Id":     reqId,
 	}
 
 	urls := make([]string, 0, 0)
@@ -292,7 +295,7 @@ func GetAllPatterns(projectId, modelId uint64, startEvent, endEvent string) ([]*
 	return patterns, nil
 }
 
-func GetPatterns(projectId, modelId uint64, patternEvents [][]string) ([]*pattern.Pattern, error) {
+func GetPatterns(reqId string, projectId, modelId uint64, patternEvents [][]string) ([]*pattern.Pattern, error) {
 	params := GetPatternsRequest{
 		ProjectId:     projectId,
 		ModelId:       modelId,
@@ -307,6 +310,7 @@ func GetPatterns(projectId, modelId uint64, patternEvents [][]string) ([]*patter
 	gatherResp := make(chan httpResp, len(serverAddrs))
 	headers := map[string]string{
 		"content-type": "application/json",
+		"X-Req-Id":     reqId,
 	}
 
 	urls := make([]string, 0, 0)
@@ -345,7 +349,7 @@ func GetPatterns(projectId, modelId uint64, patternEvents [][]string) ([]*patter
 	return patterns, nil
 }
 
-func GetProjectModelIntervals(projectId uint64) ([]ModelInfo, error) {
+func GetProjectModelIntervals(reqId string, projectId uint64) ([]ModelInfo, error) {
 	params := GetProjectModelIntervalsRequest{
 		ProjectId: projectId,
 	}
@@ -359,6 +363,7 @@ func GetProjectModelIntervals(projectId uint64) ([]ModelInfo, error) {
 	gatherResp := make(chan httpResp, len(serverAddrs))
 	headers := map[string]string{
 		"content-type": "application/json",
+		"X-Req-Id":     reqId,
 	}
 
 	urls := make([]string, 0, 0)
@@ -399,7 +404,7 @@ func GetProjectModelIntervals(projectId uint64) ([]ModelInfo, error) {
 	return modelInfo, nil
 }
 
-func GetSeenEventPropertyValues(projectId, modelId uint64, eventName, propertyName string) ([]string, error) {
+func GetSeenEventPropertyValues(reqId string, projectId, modelId uint64, eventName, propertyName string) ([]string, error) {
 	params := GetSeenEventPropertyValuesRequest{
 		ProjectId:    projectId,
 		ModelId:      modelId,
@@ -415,6 +420,7 @@ func GetSeenEventPropertyValues(projectId, modelId uint64, eventName, propertyNa
 	gatherResp := make(chan httpResp, len(serverAddrs))
 	headers := map[string]string{
 		"content-type": "application/json",
+		"X-Req-Id":     reqId,
 	}
 
 	urls := make([]string, 0, 0)
@@ -453,7 +459,7 @@ func GetSeenEventPropertyValues(projectId, modelId uint64, eventName, propertyNa
 	return resp, nil
 }
 
-func GetSeenEventProperties(projectId, modelId uint64, eventName string) (map[string][]string, error) {
+func GetSeenEventProperties(reqId string, projectId, modelId uint64, eventName string) (map[string][]string, error) {
 
 	params := GetSeenEventPropertiesRequest{
 		ProjectId: projectId,
@@ -470,6 +476,7 @@ func GetSeenEventProperties(projectId, modelId uint64, eventName string) (map[st
 	gatherResp := make(chan httpResp, len(serverAddrs))
 	headers := map[string]string{
 		"content-type": "application/json",
+		"X-Req-Id":     reqId,
 	}
 
 	urls := make([]string, 0, 0)
@@ -511,7 +518,7 @@ func GetSeenEventProperties(projectId, modelId uint64, eventName string) (map[st
 	return resp, nil
 }
 
-func GetUserAndEventsInfo(projectId, modelId uint64) (*pattern.UserAndEventsInfo, uint64, error) {
+func GetUserAndEventsInfo(reqId string, projectId, modelId uint64) (*pattern.UserAndEventsInfo, uint64, error) {
 
 	params := GetUserAndEventsInfoRequest{
 		ProjectId: projectId,
@@ -527,6 +534,7 @@ func GetUserAndEventsInfo(projectId, modelId uint64) (*pattern.UserAndEventsInfo
 	gatherResp := make(chan httpResp, len(serverAddrs))
 	headers := map[string]string{
 		"content-type": "application/json",
+		"X-Req-Id":     reqId,
 	}
 
 	urls := make([]string, 0, 0)

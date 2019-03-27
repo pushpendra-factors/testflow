@@ -84,7 +84,9 @@ func GetProjectModelsHandler(c *gin.Context) {
 		return
 	}
 
-	modelIntervals, err := PC.GetProjectModelIntervals(projectId)
+	reqId := U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID)
+
+	modelIntervals, err := PC.GetProjectModelIntervals(reqId, projectId)
 	if err != nil {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return

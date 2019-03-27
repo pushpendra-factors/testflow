@@ -92,6 +92,8 @@ func GetUserPropertiesHandler(c *gin.Context) {
 		return
 	}
 
+	reqId := U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID)
+
 	var err error
 	modelId := uint64(0)
 	modelIdParam := c.Query("model_id")
@@ -103,7 +105,7 @@ func GetUserPropertiesHandler(c *gin.Context) {
 		}
 	}
 
-	properties, err := PC.GetSeenUserProperties(projectId, modelId)
+	properties, err := PC.GetSeenUserProperties(reqId, projectId, modelId)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err, "projectId": projectId}).Error(
@@ -122,6 +124,8 @@ func GetUserPropertyValuesHandler(c *gin.Context) {
 		return
 	}
 
+	reqId := U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID)
+
 	var err error
 	modelId := uint64(0)
 	modelIdParam := c.Query("model_id")
@@ -139,7 +143,7 @@ func GetUserPropertyValuesHandler(c *gin.Context) {
 		return
 	}
 
-	propertyValues, err := PC.GetSeenUserPropertyValues(projectId, modelId, propertyName)
+	propertyValues, err := PC.GetSeenUserPropertyValues(reqId, projectId, modelId, propertyName)
 	if err != nil {
 		log.WithError(err).WithFields(log.Fields{
 			"projectId":    projectId,

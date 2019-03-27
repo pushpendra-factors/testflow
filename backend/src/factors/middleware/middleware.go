@@ -6,14 +6,18 @@ import (
 	M "factors/model"
 	U "factors/util"
 	"fmt"
+	"math"
 	"net/http"
 	"net/http/httputil"
+	"os"
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/rs/xid"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -21,6 +25,7 @@ import (
 const SCOPE_PROJECT_ID = "projectId"
 const SCOPE_AUTHORIZED_PROJECTS = "authorizedProjects"
 const SCOPE_LOGGEDIN_AGENT_UUID = "loggedInAgentUUID"
+const SCOPE_REQ_ID = "requestId"
 
 // cors prefix constants.
 const PREFIX_PATH_SDK = "/sdk/"
@@ -295,5 +300,54 @@ func Recovery() gin.HandlerFunc {
 			}
 		}()
 		c.Next()
+	}
+}
+
+func RequestIdGenerator() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		reqId := xid.New().String()
+		U.SetScope(c, SCOPE_REQ_ID, reqId)
+		c.Header("X-Req-Id", reqId)
+		c.Next()
+	}
+}
+
+func Logger() gin.HandlerFunc {
+	hostname, err := os.Hostname()
+	if err != nil {
+		hostname = "unknow"
+	}
+	return func(c *gin.Context) {
+		// other handler can change c.Path so:
+		path := c.Request.URL.Path
+		start := time.Now()
+		c.Next()
+		stop := time.Since(start)
+		latency := int(math.Ceil(float64(stop.Nanoseconds()) / 1000000.0))
+		statusCode := c.Writer.Status()
+		clientIP := c.ClientIP()
+		clientUserAgent := c.Request.UserAgent()
+		referer := c.Request.Referer()
+		dataLength := c.Writer.Size()
+		if dataLength < 0 {
+			dataLength = 0
+		}
+
+		entry := log.WithFields(log.Fields{
+			"hostname":   hostname,
+			"x-req-id":   U.GetScopeByKeyAsString(c, SCOPE_REQ_ID),
+			"statusCode": statusCode,
+			"latency":    latency,
+			"clientIP":   clientIP,
+			"method":     c.Request.Method,
+			"path":       path,
+			"referer":    referer,
+			"dataLength": dataLength,
+			"userAgent":  clientUserAgent,
+			"type":       "reqlog",
+		})
+
+		msg := fmt.Sprintf("%s - %s [%s] \"%s %s\" %d %d \"%s\" \"%s\" (%dms)", clientIP, hostname, time.Now().UTC(), c.Request.Method, path, statusCode, dataLength, referer, clientUserAgent, latency)
+		entry.Info(msg)
 	}
 }

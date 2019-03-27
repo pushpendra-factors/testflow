@@ -252,3 +252,7 @@
 [[constraint]]
   name = "github.com/gorilla/securecookie"
   version = "1.1.1"
+
+[[constraint]]
+  name = "github.com/rs/xid"
+  version = "1.2.1"

@@ -16,7 +16,7 @@ func (pw *MockPatternServiceWrapper) GetUserAndEventsInfo() *P.UserAndEventsInfo
 	return pw.userAndEventsInfo
 }
 
-func (pw *MockPatternServiceWrapper) GetPerUserCount(eventNames []string,
+func (pw *MockPatternServiceWrapper) GetPerUserCount(reqId string, eventNames []string,
 	patternConstraints []P.EventConstraints) (uint, bool) {
 	if p, ok := pw.pMap[P.EventArrayToString(eventNames)]; ok {
 		count, err := p.GetOncePerUserCount(patternConstraints)
@@ -27,13 +27,13 @@ func (pw *MockPatternServiceWrapper) GetPerUserCount(eventNames []string,
 	return 0, false
 }
 
-func (pw *MockPatternServiceWrapper) GetPattern(eventNames []string) *P.Pattern {
+func (pw *MockPatternServiceWrapper) GetPattern(reqId string, eventNames []string) *P.Pattern {
 	p, _ := pw.pMap[P.EventArrayToString(eventNames)]
 	return p
 }
 
-func (pw *MockPatternServiceWrapper) GetAllPatterns(
-	startEvent string, endEvent string) ([]*P.Pattern, error) {
+func (pw *MockPatternServiceWrapper) GetAllPatterns(reqId,
+	startEvent, endEvent string) ([]*P.Pattern, error) {
 	filterPatterns := PS.GetFilter(startEvent, endEvent)
 	patternsToReturn := make([]*pattern.Pattern, 0, 0)
 	for _, p := range pw.patterns {

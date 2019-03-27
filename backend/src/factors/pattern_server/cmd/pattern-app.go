@@ -398,6 +398,31 @@ func initRpcServer(ps *patternserver.PatternServer) *mux.Router {
 	s.RegisterCodec(rpcjson.NewCodec(), "application/json")
 	s.RegisterCodec(rpcjson.NewCodec(), "application/json;charset=UTF-8")
 	s.RegisterService(ps, PC.RPCServiceName)
+	s.RegisterBeforeFunc(func(i *rpc.RequestInfo) {
+		reqId := i.Request.Header["X-Req-Id"]
+		method := i.Method
+		log.WithFields(log.Fields{
+			"reqId":  reqId,
+			"method": method,
+		}).Info("Seen Request")
+	})
+	s.RegisterAfterFunc(func(i *rpc.RequestInfo) {
+		reqId := i.Request.Header["X-Req-Id"]
+		method := i.Method
+		err := i.Error
+		statusCode := i.StatusCode
+		logCtx := log.WithFields(log.Fields{
+			"reqId":      reqId,
+			"method":     method,
+			"statusCode": statusCode,
+		})
+
+		if err != nil {
+			logCtx = logCtx.WithError(err)
+		}
+
+		logCtx.Info("Processed Request")
+	})
 	r := mux.NewRouter()
 	r.Handle(PC.RPCEndpoint, s)
 	return r

@@ -393,6 +393,14 @@
   version = "v1.0.0"
 
 [[projects]]
+  digest = "1:2e76a73cb51f42d63a2a1a85b3dc5731fd4faf6821b434bd0ef2c099186031d6"
+  name = "github.com/rs/xid"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "15d26544def341f036c5f8dca987a4cbe575032c"
+  version = "v1.2.1"
+
+[[projects]]
   digest = "1:69b1cc331fca23d702bd72f860c6a647afd0aa9fcbc1d0659b1365e26546dd70"
   name = "github.com/sirupsen/logrus"
   packages = ["."]
@@ -680,6 +688,7 @@
   input-imports = [
     "cloud.google.com/go/storage",
     "github.com/aws/aws-sdk-go/aws",
+    "github.com/aws/aws-sdk-go/aws/credentials",
     "github.com/aws/aws-sdk-go/aws/session",
     "github.com/aws/aws-sdk-go/service/s3",
     "github.com/aws/aws-sdk-go/service/ses",
@@ -698,6 +707,7 @@
     "github.com/jinzhu/gorm/dialects/postgres",
     "github.com/jinzhu/now",
     "github.com/oschwald/geoip2-golang",
+    "github.com/rs/xid",
     "github.com/sirupsen/logrus",
     "github.com/stretchr/testify/assert",
     "github.com/x-cray/logrus-prefixed-formatter",
