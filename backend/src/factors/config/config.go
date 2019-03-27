@@ -193,7 +193,11 @@ func InitDB(DBInfo DBConf) error {
 	// Connection Pooling and Logging.
 	db.DB().SetMaxIdleConns(10)
 	db.DB().SetMaxOpenConns(100)
-	db.LogMode(true)
+	if IsDevelopment() {
+		db.LogMode(true)
+	} else {
+		db.LogMode(false)
+	}
 
 	if err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("Failed Db Initialization")
