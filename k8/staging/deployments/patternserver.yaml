@@ -65,6 +65,10 @@ spec:
           - $(BUCKET_NAME)
           - --disk_dir
           - $(DISK_DIR)
+          - --chunk_cache_size
+          - $(CHUNK_CACHE_SIZE)
+          - --event_info_cache_size
+          - $(EVENT_INFO_CACHE_SIZE)
         env:
           - name: MY_POD_IP
             valueFrom:

@@ -137,7 +137,7 @@ func (c *config) GetBucketName() string {
 // TTL on etcd is 10 seconds.
 // Monit / Kubernetes will keep trying to restart the process, it should succeed after 10 seconds / till key expires.
 
-// ./pattern-app --env=development --ip=127.0.0.1 --ps_rpc_port=8100 --ps_http_port=8101 --etcd=localhost:2379 --disk_dir=/usr/local/var/factors/local_disk --bucket_name=/usr/local/var/factors/cloud_storage
+// ./pattern-app --env=development --ip=127.0.0.1 --ps_rpc_port=8100 --ps_http_port=8101 --etcd=localhost:2379 --disk_dir=/usr/local/var/factors/local_disk --bucket_name=/usr/local/var/factors/cloud_storage --chunk_cache_size=5 --event_info_cache_size=10
 func main() {
 
 	env := flag.String("env", Development, "")
@@ -148,6 +148,10 @@ func main() {
 
 	diskBaseDir := flag.String("disk_dir", "/usr/local/var/factors/local_disk", "")
 	bucketName := flag.String("bucket_name", "/usr/local/var/factors/cloud_storage", "")
+
+	chunkCacheSize := flag.Int("chunk_cache_size", 5, "")
+	eventInfoCacheSize := flag.Int("event_info_cache_size", 10, "")
+
 	flag.Parse()
 
 	config, err := NewConfig(*env, *ip, *rpc_port, *http_port, *etcd, *diskBaseDir, *bucketName)
@@ -206,7 +210,7 @@ func main() {
 
 	diskManager := serviceDisk.New(config.GetBaseDiskDir())
 
-	ps, err := patternserver.New(config.GetIP(), config.GetRPCPort(), config.GetHTTPPort(), etcdClient, diskManager, cloudManger)
+	ps, err := patternserver.New(config.GetIP(), config.GetRPCPort(), config.GetHTTPPort(), etcdClient, diskManager, cloudManger, *chunkCacheSize, *eventInfoCacheSize)
 	if err != nil {
 		logCtx.WithError(err).Errorln("Failed to init New PatternServer")
 		panic(err)

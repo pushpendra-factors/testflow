@@ -190,7 +190,7 @@ or
 
 Config can be passed using flags
 cd $GOPATH/bin
-./pattern-app --env=development --ip=127.0.0.1 --ps_rpc_port=8100 --etcd=localhost:2379 --disk_dir=/usr/local/var/factors/local_disk --bucket_name=/usr/local/var/factors/cloud_storage
+./pattern-app --env=development --ip=127.0.0.1 --ps_rpc_port=8100 --etcd=localhost:2379 --disk_dir=/usr/local/var/factors/local_disk --bucket_name=/usr/local/var/factors/cloud_storage --chunk_cache_size=5 --event_info_cache_size=10
 ```
 ## Bootstrapping sample data, Building and serving model.
 * Start server on 8080.

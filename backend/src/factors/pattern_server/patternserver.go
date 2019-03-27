@@ -20,8 +20,6 @@ import (
 
 const (
 	IdSeparator           = ":"
-	ChunkCacheSize        = 5
-	EventInfoCacheSize    = 10
 	PatternServerNotFound = -1
 )
 
@@ -95,9 +93,9 @@ type PatternServer struct {
 	store *store.PatternStore
 }
 
-func New(ip, rpcPort, httpPort string, etcdClient *serviceEtcd.EtcdClient, diskFileManager, cloudFileManger filestore.FileManager) (*PatternServer, error) {
+func New(ip, rpcPort, httpPort string, etcdClient *serviceEtcd.EtcdClient, diskFileManager, cloudFileManger filestore.FileManager, chunkCacheSize, eventInfoCacheSize int) (*PatternServer, error) {
 
-	store, err := store.New(ChunkCacheSize, EventInfoCacheSize, diskFileManager, cloudFileManger)
+	store, err := store.New(chunkCacheSize, eventInfoCacheSize, diskFileManager, cloudFileManger)
 	if err != nil {
 		return &PatternServer{}, err
 	}
