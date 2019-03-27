@@ -33,7 +33,7 @@ import (
 const max_SEGMENTS = 100000
 const top_K = 5
 const max_PATTERN_LENGTH = 4
-const max_CHUNK_SIZE_IN_BYTES int64 = 50 * 1000 * 1000 // 50MB
+const max_CHUNK_SIZE_IN_BYTES int64 = 200 * 1000 * 1000 // 200MB
 
 var regex_NUM = regexp.MustCompile("[0-9]+")
 var mineLog = taskLog.WithField("prefix", "Task#PatternMine")
