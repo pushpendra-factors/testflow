@@ -24,6 +24,8 @@ spec:
       labels:
         layer: appserver
     spec:
+      nodeSelector:
+        cloud.google.com/gke-nodepool: default-pool
       containers:
       - name: appserver
         image: us.gcr.io/factors-production/app-server:v0.13-beta_a8862cc
@@ -37,11 +39,11 @@ spec:
         terminationMessagePolicy: File
         resources:
           limits:
-            memory: "1500M"
+            memory: "5Gi"
             cpu: "1"
           requests:
-            memory: "1000M"
-            cpu: ".5"
+            memory: "500Mi"
+            cpu: "0.5"
         securityContext: {}
         readinessProbe:
           httpGet:
