@@ -72,7 +72,7 @@ type frequencyMap struct {
 	Count uint64            `json:"c"`
 }
 
-const fMAP_MAX_SIZE = 5000
+const fMAP_MAX_SIZE = 200
 const fMAP_OTHER_KEY = "__OTHER__"
 
 func (h *CategoricalHistogramStruct) PDF(x []string) (float64, error) {
