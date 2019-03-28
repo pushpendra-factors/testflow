@@ -22,6 +22,8 @@ spec:
       labels:
         layer: etcd
     spec:
+      nodeSelector:
+        cloud.google.com/gke-nodepool: default-pool
       containers:
       - name: etcd
         image: quay.io/coreos/etcd:v3.2.4

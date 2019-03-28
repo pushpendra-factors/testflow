@@ -24,6 +24,8 @@ spec:
       labels:
         layer: patternserver
     spec:
+      nodeSelector:
+        cloud.google.com/gke-nodepool: default-pool
       containers:
       - name: patternserver
         image: us.gcr.io/factors-production/pattern-server:v0.13-beta_a8862cc

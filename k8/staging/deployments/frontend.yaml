@@ -25,6 +25,8 @@ spec:
       labels:
         app: frontend
     spec:
+      nodeSelector:
+        cloud.google.com/gke-nodepool: default-pool
       containers:
       - image: us.gcr.io/factors-staging/frontend:v0.10-beta_ed8453b
         imagePullPolicy: IfNotPresent
