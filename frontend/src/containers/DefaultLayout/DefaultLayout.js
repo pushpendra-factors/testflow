@@ -26,6 +26,7 @@ import Loading from '../../loading';
 import factorsicon from '../../assets/img/brand/factors-icon.svg';
 import { fetchAgentInfo } from '../../actions/agentActions';
 import { hotjar } from 'react-hotjar';
+import { isProduction } from '../../util';
 
 const projectSelectStyles = {
   option: (base, state) => ({
@@ -122,7 +123,10 @@ class DefaultLayout extends Component {
           } 
         });
       });
-      hotjar.initialize(1259925, 6);
+
+      if(isProduction()) {
+        hotjar.initialize(1259925, 6);
+      }
   }
 
   refresh = () => {
