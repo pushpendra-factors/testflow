@@ -28,6 +28,7 @@
     "react-chartjs-2": "^2.7.2",
     "react-date-range": "^1.0.0-beta",
     "react-dom": "^16.4.2",
+    "react-hotjar": "^2.0.0",
     "react-loadable": "^5.4.0",
     "react-redux": "^4.4.5",
     "react-router-config": "^1.0.0-beta.4",
