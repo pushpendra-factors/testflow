@@ -76,11 +76,11 @@ func CreateEvent(event *Event) (*Event, int) {
 	}
 
 	if err := db.Create(event).Error; err != nil {
-		log.WithFields(log.Fields{"event": &event, "error": err}).Error("CreateEvent Failed")
 		if isDuplicateCustomerEventIdError(err) {
 			log.WithError(err).Info("CreateEvent Failed, duplicate customerEventId")
 			return nil, http.StatusFound
 		}
+		log.WithFields(log.Fields{"event": &event, "error": err}).Error("CreateEvent Failed")
 		return nil, http.StatusInternalServerError
 	}
 	return event, http.StatusCreated
