@@ -3,6 +3,7 @@ package model
 import (
 	C "factors/config"
 	"net/http"
+	"strings"
 	"time"
 
 	U "factors/util"
@@ -58,6 +59,8 @@ func CreateAgent(agent *Agent) (*Agent, int) {
 		return nil, http.StatusBadRequest
 	}
 
+	agent.Email = strings.ToLower(agent.Email)
+
 	db := C.GetServices().Db
 
 	if err := db.Create(agent).Error; err != nil {
@@ -78,6 +81,8 @@ func GetAgentByEmail(email string) (*Agent, int) {
 		log.Error("GetAgentByEmail Failed. Email not provided.")
 		return nil, http.StatusBadRequest
 	}
+
+	email = strings.ToLower(email)
 
 	db := C.GetServices().Db
 
@@ -170,6 +175,9 @@ func UpdateAgentLastLoginInfo(email string, ts time.Time) int {
 		log.Error("UpdateAgentLastLoginInfo Failed. Missing params")
 		return http.StatusBadRequest
 	}
+
+	email = strings.ToLower(email)
+
 	db := C.GetServices().Db
 
 	db = db.Model(&Agent{}).Where("email = ?", email).Updates(map[string]interface{}{

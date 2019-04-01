@@ -4,6 +4,7 @@ import (
 	M "factors/model"
 	U "factors/util"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -22,6 +23,10 @@ func TestAgentDBCreateAgent(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, errCode)
 	})
 
+	t.Run("CreateAgentDuplicateEmailUppercase", func(t *testing.T) {
+		_, errCode := M.CreateAgent(&M.Agent{Email: strings.ToUpper(email)})
+		assert.Equal(t, http.StatusBadRequest, errCode)
+	})
 }
 
 func TestAgentDBGetAgentByEmail(t *testing.T) {
@@ -39,6 +44,16 @@ func TestAgentDBGetAgentByEmail(t *testing.T) {
 
 	t.Run("GetAgentByEmailFound", func(t *testing.T) {
 		resultAgent, errCode := M.GetAgentByEmail(email)
+		assert.Equal(t, http.StatusFound, errCode)
+		// assert.Equal(t, agent, resultAgent)
+		assert.Equal(t, email, resultAgent.Email)
+		assert.True(t, resultAgent.CreatedAt.After(start))
+		assert.True(t, resultAgent.UpdatedAt.After(start))
+		assert.True(t, resultAgent.Salt != "")
+	})
+
+	t.Run("GetAgentByUpperCaseEmailFound", func(t *testing.T) {
+		resultAgent, errCode := M.GetAgentByEmail(strings.ToUpper(email))
 		assert.Equal(t, http.StatusFound, errCode)
 		// assert.Equal(t, agent, resultAgent)
 		assert.Equal(t, email, resultAgent.Email)
@@ -123,7 +138,7 @@ func TestDBAgentUpdateAgentLastLoginInfo(t *testing.T) {
 		errCode := M.UpdateAgentLastLoginInfo(email, ts)
 		assert.Equal(t, http.StatusNoContent, errCode)
 	})
-	t.Run("UpdatePasswordAgentLastLoginInfoMissingSuccess", func(t *testing.T) {
+	t.Run("UpdatePasswordAgentLastLoginInfoSuccess", func(t *testing.T) {
 		start := time.Now().UTC()
 		email := getRandomEmail()
 		agent, errCode := M.CreateAgent(&M.Agent{Email: email})
@@ -132,6 +147,23 @@ func TestDBAgentUpdateAgentLastLoginInfo(t *testing.T) {
 
 		ts := time.Now().UTC()
 		errCode = M.UpdateAgentLastLoginInfo(email, ts)
+		assert.Equal(t, http.StatusAccepted, errCode)
+
+		retAgent, errCode := M.GetAgentByEmail(email)
+		assert.Equal(t, http.StatusFound, errCode)
+		assert.Equal(t, uint64(1), retAgent.LoginCount)
+		assert.True(t, (*retAgent.LastLoggedInAt).After(start))
+	})
+
+	t.Run("UpdatePasswordAgentLastLoginInfoSuccessUppercaseEmail", func(t *testing.T) {
+		start := time.Now().UTC()
+		email := getRandomEmail()
+		agent, errCode := M.CreateAgent(&M.Agent{Email: email})
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.Equal(t, uint64(0), agent.LoginCount)
+
+		ts := time.Now().UTC()
+		errCode = M.UpdateAgentLastLoginInfo(strings.ToUpper(email), ts)
 		assert.Equal(t, http.StatusAccepted, errCode)
 
 		retAgent, errCode := M.GetAgentByEmail(email)
