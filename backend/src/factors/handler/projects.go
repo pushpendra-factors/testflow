@@ -17,10 +17,14 @@ import (
 func CreateProjectHandler(c *gin.Context) {
 	r := c.Request
 
+	logCtx := log.WithFields(log.Fields{
+		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
+	})
+
 	var project M.Project
 	err := json.NewDecoder(r.Body).Decode(&project)
 	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("CreateProject Failed. Json Decoding failed.")
+		logCtx.WithError(err).Error("CreateProject Failed. Json Decoding failed.")
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error":  "json decoding : " + err.Error(),
 			"status": http.StatusBadRequest,
@@ -78,16 +82,20 @@ func GetProjectsHandler(c *gin.Context) {
 
 // curl -i -X GET http://localhost:8080/projects/1/models
 func GetProjectModelsHandler(c *gin.Context) {
+	reqId := U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID)
+	logCtx := log.WithFields(log.Fields{
+		"reqId": reqId,
+	})
+
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
 
-	reqId := U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID)
-
 	modelIntervals, err := PC.GetProjectModelIntervals(reqId, projectId)
 	if err != nil {
+		logCtx.WithError(err).Error("falied to get projectModelIntervals")
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}

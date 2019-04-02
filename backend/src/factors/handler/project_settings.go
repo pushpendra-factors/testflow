@@ -14,9 +14,14 @@ import (
 // Test Command
 // curl -i -X GET http://localhost:8080/projects/1/settings
 func GetProjectSettingHandler(c *gin.Context) {
+
+	logCtx := log.WithFields(log.Fields{
+		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
+	})
+
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
-		log.Error("Get project_settings failed. Failed to get project_id.")
+		logCtx.Error("Get project_settings failed. Failed to get project_id.")
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
@@ -34,9 +39,13 @@ func GetProjectSettingHandler(c *gin.Context) {
 func UpdateProjectSettingsHandler(c *gin.Context) {
 	r := c.Request
 
+	logCtx := log.WithFields(log.Fields{
+		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
+	})
+
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
-		log.Error("Update project_settings failed. Failed to get project_id.")
+		logCtx.Error("Update project_settings failed. Failed to get project_id.")
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid project id."})
 		return
 	}
@@ -46,7 +55,7 @@ func UpdateProjectSettingsHandler(c *gin.Context) {
 
 	var projectSetting M.ProjectSetting
 	if err := decoder.Decode(&projectSetting); err != nil {
-		log.WithFields(log.Fields{"error": err}).Error(
+		logCtx.WithError(err).Error(
 			"Project setting update failed. Json Decoding failed.")
 		c.AbortWithStatusJSON(http.StatusBadRequest,
 			gin.H{"error": "Project setting update failed. Invalid payload."})

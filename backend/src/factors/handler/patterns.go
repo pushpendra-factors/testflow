@@ -166,6 +166,11 @@ func addPropertyConstraintsToMap(
 
 // TODO(Ankit): Pass req id to subsequent calls to pattern server
 func FactorHandler(c *gin.Context) {
+
+	logCtx := log.WithFields(log.Fields{
+		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
+	})
+
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
@@ -174,7 +179,7 @@ func FactorHandler(c *gin.Context) {
 
 	reqId := U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID)
 
-	log.WithFields(log.Fields{"projectId": projectId}).Debug("Factor Query")
+	logCtx.WithFields(log.Fields{"projectId": projectId}).Debug("Factor Query")
 
 	modelId := uint64(0)
 	modelIdParam := c.Query("model_id")
@@ -189,7 +194,7 @@ func FactorHandler(c *gin.Context) {
 
 	var requestBodyMap map[string]interface{}
 	if err := json.NewDecoder(c.Request.Body).Decode(&requestBodyMap); err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("Query Patterns JSON Decoding failed.")
+		logCtx.WithError(err).Error("Query Patterns JSON Decoding failed.")
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error":  "json decoding : " + err.Error(),
 			"status": http.StatusBadRequest,
@@ -198,17 +203,17 @@ func FactorHandler(c *gin.Context) {
 	}
 
 	if query, ok := requestBodyMap["query"].(map[string]interface{}); ok {
-		log.WithFields(log.Fields{"query": query}).Debug("Received query")
+		logCtx.WithFields(log.Fields{"query": query}).Debug("Received query")
 		startEvent, startEventConstraints, endEvent, endEventConstraints, err := ParseFactorQuery(query)
 		if err != nil {
-			log.WithFields(log.Fields{"error": err}).Error("Invalid Query.")
+			log.WithError(err).Error("Invalid Query.")
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error":  err.Error(),
 				"status": http.StatusBadRequest,
 			})
 			return
 		}
-		log.WithFields(log.Fields{
+		logCtx.WithFields(log.Fields{
 			"startEvent":            startEvent,
 			"endEvent":              endEvent,
 			"startEventConstraints": startEventConstraints,
@@ -216,7 +221,7 @@ func FactorHandler(c *gin.Context) {
 
 		ps, err := PW.NewPatternServiceWrapper(reqId, projectId, modelId)
 		if err != nil {
-			log.WithFields(log.Fields{"error": err}).Error("Pattern Service initialization failed.")
+			logCtx.WithError(err).Error("Pattern Service initialization failed.")
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error":  err.Error(),
 				"status": http.StatusBadRequest,
@@ -226,7 +231,7 @@ func FactorHandler(c *gin.Context) {
 		if results, err := PW.Factor(reqId,
 			projectId, startEvent, startEventConstraints,
 			endEvent, endEventConstraints, ps); err != nil {
-			log.WithFields(log.Fields{"error": err}).Error("Factors failed.")
+			logCtx.WithError(err).Error("Factors failed.")
 			c.AbortWithStatus(http.StatusBadRequest)
 			return
 		} else {

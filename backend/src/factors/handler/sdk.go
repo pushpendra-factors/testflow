@@ -80,7 +80,7 @@ func sdkTrack(projectId uint64, request *sdkTrackPayload, clientIP string) (int,
 		err := M.FillEventPropertiesByFilterExpr(&request.EventProperties, eventName.FilterExpr, request.Name)
 		if err != nil {
 			log.WithFields(log.Fields{"project_id": projectId, "filter_expr": eventName.FilterExpr,
-				"event_url": request.Name, "error": err}).Error("Failed to fill event url properties for auto tracked event.")
+				"event_url": request.Name, log.ErrorKey: err}).Error("Failed to fill event url properties for auto tracked event.")
 		}
 	} else {
 		eventName, eventNameErrCode = M.CreateOrGetUserCreatedEventName(&M.EventName{Name: request.Name, ProjectId: projectId})
@@ -109,14 +109,14 @@ func sdkTrack(projectId uint64, request *sdkTrackPayload, clientIP string) (int,
 	userPropsJSON, err := json.Marshal(validUserProperties)
 	if err != nil {
 		log.WithFields(log.Fields{"userProperties": validUserProperties,
-			"error": err}).Error("Update user properites on track failed. Unmarshal json failed.")
+			log.ErrorKey: err}).Error("Update user properites on track failed. Unmarshal json failed.")
 		response.Error = "Failed updating user properties."
 	}
 
 	userPropertiesId, errCode := M.UpdateUserProperties(projectId, request.UserId, &postgres.Jsonb{userPropsJSON})
 	if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
 		log.WithFields(log.Fields{"userProperties": validUserProperties,
-			"error": errCode}).Error("Update user properties on track failed. DB update failed.")
+			log.ErrorKey: errCode}).Error("Update user properties on track failed. DB update failed.")
 		response.Error = "Failed updating user properties."
 	}
 
@@ -254,8 +254,12 @@ func sdkAddUserProperties(projectId uint64, request *sdkAddUserPropertiesPayload
 func SDKTrackHandler(c *gin.Context) {
 	r := c.Request
 
+	logCtx := log.WithFields(log.Fields{
+		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
+	})
+
 	if r.Body == nil {
-		log.Error("Invalid request. Request body unavailable.")
+		logCtx.Error("Invalid request. Request body unavailable.")
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Tracking failed. Missing request body."})
 		return
 	}
@@ -265,7 +269,7 @@ func SDKTrackHandler(c *gin.Context) {
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&trackPayload); err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("Tracking failed. Json Decoding failed.")
+		logCtx.WithError(err).Error("Tracking failed. Json Decoding failed.")
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Tracking failed. Invalid payload."})
 		return
 	}
@@ -284,8 +288,13 @@ func SDKTrackHandler(c *gin.Context) {
 // curl -i -H "Content-Type: application/json" -H "Authorization: PROJECT_TOKEN" -X POST http://localhost:8080/sdk/event/bulk -d '[{"user_id": "YOUR_USER_ID", "event_name": "login", "auto": false, "event_properties": {"ip": "10.0.0.1", "mobile": true}, "user_properties": {"$os": "Mac OS"}}]'
 func SDKBulkEventHandler(c *gin.Context) {
 	r := c.Request
+
+	logCtx := log.WithFields(log.Fields{
+		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
+	})
+
 	if r.Body == nil {
-		log.Error("Invalid request. Request body unavailable.")
+		logCtx.Error("Invalid request. Request body unavailable.")
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Tracking failed. Missing request body."})
 		return
 	}
@@ -294,7 +303,7 @@ func SDKBulkEventHandler(c *gin.Context) {
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&sdkTrackPayloads); err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("Tracking failed. Json Decoding failed.")
+		logCtx.WithError(err).Error("Tracking failed. Json Decoding failed.")
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Tracking failed. Invalid payload."})
 		return
 	}
@@ -339,8 +348,12 @@ func SDKBulkEventHandler(c *gin.Context) {
 func SDKIdentifyHandler(c *gin.Context) {
 	r := c.Request
 
+	logCtx := log.WithFields(log.Fields{
+		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
+	})
+
 	if r.Body == nil {
-		log.Error("Invalid request. Request body unavailable.")
+		logCtx.Error("Invalid request. Request body unavailable.")
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Identification failed. Missing request body."})
 		return
 	}
@@ -350,7 +363,7 @@ func SDKIdentifyHandler(c *gin.Context) {
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&request); err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("Identification failed. JSON Decoding failed.")
+		logCtx.WithError(err).Error("Identification failed. JSON Decoding failed.")
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Identification failed. Invalid payload."})
 		return
 	}
@@ -370,8 +383,12 @@ func SDKIdentifyHandler(c *gin.Context) {
 func SDKAddUserPropertiesHandler(c *gin.Context) {
 	r := c.Request
 
+	logCtx := log.WithFields(log.Fields{
+		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
+	})
+
 	if r.Body == nil {
-		log.Error("Invalid request. Request body unavailable.")
+		logCtx.Error("Invalid request. Request body unavailable.")
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Adding user properities failed. Missing request body."})
 		return
 	}
@@ -381,7 +398,7 @@ func SDKAddUserPropertiesHandler(c *gin.Context) {
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&request); err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("Add user properties failed. JSON Decoding failed.")
+		logCtx.WithError(err).Error("Add user properties failed. JSON Decoding failed.")
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Add user properties failed. Invalid payload."})
 		return
 	}

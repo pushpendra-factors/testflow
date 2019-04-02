@@ -34,7 +34,7 @@ func CreateFilterHandler(c *gin.Context) {
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&requestPayload); err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("Creating event_name failed. JSON Decoding failed.")
+		log.WithFields(log.Fields{log.ErrorKey: err}).Error("Creating event_name failed. JSON Decoding failed.")
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Creating event_name failed. Invalid payload."})
 		return
 	}
@@ -92,9 +92,13 @@ func GetFiltersHandler(c *gin.Context) {
 func UpdateFilterHandler(c *gin.Context) {
 	r := c.Request
 
+	logCtx := log.WithFields(log.Fields{
+		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
+	})
+
 	filterId, err := strconv.ParseUint(c.Params.ByName("filter_id"), 10, 64)
 	if err != nil || filterId == 0 {
-		log.WithFields(log.Fields{"error": err}).Error("Updating filter failed. filter_id parse failed.")
+		logCtx.WithFields(log.Fields{log.ErrorKey: err}).Error("Updating filter failed. filter_id parse failed.")
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid filter id."})
 		return
 	}
@@ -104,7 +108,7 @@ func UpdateFilterHandler(c *gin.Context) {
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&requestPayload); err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("Updating filter failed. JSON Decoding failed.")
+		logCtx.WithError(err).Error("Updating filter failed. JSON Decoding failed.")
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Updating filter failed. Invalid payload."})
 		return
 	}
@@ -133,9 +137,14 @@ func UpdateFilterHandler(c *gin.Context) {
 }
 
 func DeleteFilterHandler(c *gin.Context) {
+
+	logCtx := log.WithFields(log.Fields{
+		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
+	})
+
 	filterId, err := strconv.ParseUint(c.Params.ByName("filter_id"), 10, 64)
 	if err != nil || filterId == 0 {
-		log.WithFields(log.Fields{"error": err}).Error("Updating filter failed. filter_id parse failed.")
+		logCtx.WithError(err).Error("Updating filter failed. filter_id parse failed.")
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid filter id."})
 		return
 	}

@@ -18,6 +18,10 @@ import (
 func IntSegmentHandler(c *gin.Context) {
 	r := c.Request
 
+	logCtx := log.WithFields(log.Fields{
+		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
+	})
+
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Creating event_name failed. Invalid project."})
@@ -25,18 +29,18 @@ func IntSegmentHandler(c *gin.Context) {
 	}
 
 	if !M.IsPSettingsIntSegmentEnabled(projectId) {
-		log.WithField("project_id", projectId).Error("Segment webhook failure. Integration not enabled.")
+		logCtx.WithField("project_id", projectId).Error("Segment webhook failure. Integration not enabled.")
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Creating event_name failed. Invalid project."})
 		return
 	}
 
 	var event I.SegmentEvent
 	if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
-		log.WithFields(log.Fields{"project_id": projectId, "error": err}).Error("Segment JSON decode failed")
+		logCtx.WithFields(log.Fields{"project_id": projectId, log.ErrorKey: err}).Error("Segment JSON decode failed")
 	}
-	log.WithFields(log.Fields{"event": event}).Debug("Segment webhook request")
+	logCtx.WithFields(log.Fields{"event": event}).Debug("Segment webhook request")
 
-	logCtx := log.WithFields(log.Fields{
+	logCtx = logCtx.WithFields(log.Fields{
 		"project_id":   projectId,
 		"type":         event.Type,
 		"anonymous_id": event.AnonymousID,
@@ -51,7 +55,10 @@ func IntSegmentHandler(c *gin.Context) {
 
 	var unixTimestamp int64
 	if parsedTimestamp, err := time.Parse(time.RFC3339, event.Timestamp); err != nil {
-		logCtx.WithField("timestamp", event.Timestamp).Error("Failed parsing segment event timestamp.")
+		logCtx.WithFields(log.Fields{
+			"timestamp":  event.Timestamp,
+			log.ErrorKey: err,
+		}).Error("Failed parsing segment event timestamp.")
 	} else {
 		unixTimestamp = parsedTimestamp.Unix()
 	}
@@ -86,7 +93,7 @@ func IntSegmentHandler(c *gin.Context) {
 			Timestamp:       unixTimestamp,
 		}
 		if status, response = sdkTrack(projectId, request, event.Context.IP); status != http.StatusOK {
-			logCtx.WithFields(log.Fields{"track_payload": request, "error_code": status}).Error("Segment event failure. sdk_track call failed.")
+			//logCtx.WithFields(log.Fields{"track_payload": request, "error_code": status}).Error("Segment event failure. sdk_track call failed.")
 		}
 
 	case "page":
@@ -100,7 +107,7 @@ func IntSegmentHandler(c *gin.Context) {
 
 		name, err := U.GetURLHostAndPath(event.Context.Page.RawURL)
 		if err != nil {
-			log.WithFields(log.Fields{"err": err, "name": name}).Error("Falied parsing URL from segment.")
+			logCtx.WithFields(log.Fields{log.ErrorKey: err, "name": name}).Error("Falied parsing URL from segment.")
 			c.AbortWithStatus(http.StatusBadRequest)
 			return
 		}
@@ -115,7 +122,7 @@ func IntSegmentHandler(c *gin.Context) {
 			Timestamp:       unixTimestamp,
 		}
 		if status, response = sdkTrack(projectId, request, event.Context.IP); status != http.StatusOK {
-			logCtx.WithFields(log.Fields{"track_payload": request, "error_code": status}).Error("Segment event failure. sdk_track call failed.")
+			//logCtx.WithFields(log.Fields{"track_payload": request, "error_code": status}).Error("Segment event failure. sdk_track call failed.")
 		}
 
 	case "screen":
@@ -137,7 +144,7 @@ func IntSegmentHandler(c *gin.Context) {
 			Timestamp:       unixTimestamp,
 		}
 		if status, response = sdkTrack(projectId, request, event.Context.IP); status != http.StatusOK {
-			logCtx.WithFields(log.Fields{"track_payload": request, "error_code": status}).Error("Segment event failure. sdk_track call failed.")
+			//logCtx.WithFields(log.Fields{"track_payload": request, "error_code": status}).Error("Segment event failure. sdk_track call failed.")
 		}
 
 	case "identify":
@@ -147,7 +154,7 @@ func IntSegmentHandler(c *gin.Context) {
 
 		_, status := M.UpdateUserProperties(projectId, user.ID, &event.Traits)
 		if status != http.StatusAccepted && status != http.StatusNotModified {
-			logCtx.WithFields(log.Fields{"user_properties": event.Traits, "error_code": status}).Error("Segment event failure. Updating user_properties failed.")
+			//logCtx.WithFields(log.Fields{"user_properties": event.Traits, "error_code": status}).Error("Segment event failure. Updating user_properties failed.")
 			response.Error = "Segment identification failed."
 		}
 

@@ -54,7 +54,7 @@ func GetUsersHandler(c *gin.Context) {
 	if offsets != nil {
 		offsetStr := offsets[0]
 		if offsetParse, err := strconv.ParseUint(offsetStr, 10, 64); err != nil {
-			log.WithFields(log.Fields{"error": err}).Error("GetUsers Failed. Offset parse failed.")
+			log.WithError(err).Error("GetUsers Failed. Offset parse failed.")
 			c.AbortWithStatus(http.StatusBadRequest)
 			return
 		} else {
@@ -67,7 +67,7 @@ func GetUsersHandler(c *gin.Context) {
 	if limits != nil {
 		limitStr := limits[0]
 		if limitParse, err := strconv.ParseUint(limitStr, 10, 64); err != nil {
-			log.WithFields(log.Fields{"error": err}).Error("GetUsers Failed. Limit parse failed.")
+			log.WithError(err).Error("GetUsers Failed. Limit parse failed.")
 			c.AbortWithStatus(http.StatusBadRequest)
 			return
 		} else {
@@ -108,7 +108,7 @@ func GetUserPropertiesHandler(c *gin.Context) {
 	properties, err := PC.GetSeenUserProperties(reqId, projectId, modelId)
 	if err != nil {
 		log.WithFields(log.Fields{
-			"error": err, "projectId": projectId}).Error(
+			log.ErrorKey: err, "projectId": projectId}).Error(
 			"Get User Properties failed.")
 		c.AbortWithStatus(http.StatusBadRequest)
 		return

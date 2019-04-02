@@ -2,6 +2,7 @@ package handler
 
 import (
 	"factors/handler/helpers"
+	mid "factors/middleware"
 	M "factors/model"
 	"fmt"
 	"net/http"
@@ -17,13 +18,17 @@ import (
 // curl -X POST --data "email=value1" http://localhost:8080/accounts/signup
 func SignUp(c *gin.Context) {
 
+	logCtx := log.WithFields(log.Fields{
+		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
+	})
+
 	type signupParams struct {
 		Email string `json:"email" binding:"required"`
 	}
 	params := signupParams{}
 	err := c.BindJSON(&params)
 	if err != nil {
-		log.WithError(err).Error("Failed to parse SignUpParams")
+		logCtx.WithError(err).Error("Failed to parse SignUpParams")
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
@@ -74,7 +79,7 @@ func sendSignUpEmail(agent *M.Agent) error {
 	fe_host := C.GetProtocol() + C.GetAPPDomain()
 	link := fmt.Sprintf("%s/#/activate?token=%s", fe_host, authToken)
 
-	log.WithField("link", link).Debugf("Activation LInk")
+	log.WithField("link", link).Debug("Activation LInk")
 
 	sub, text, html := U.CreateActivationTemplate(link)
 

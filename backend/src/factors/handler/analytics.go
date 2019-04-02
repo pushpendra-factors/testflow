@@ -26,6 +26,11 @@ type QueryRequestPayload struct {
 }
 
 func QueryHandler(c *gin.Context) {
+
+	logCtx := log.WithFields(log.Fields{
+		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
+	})
+
 	r := c.Request
 
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
@@ -39,14 +44,14 @@ func QueryHandler(c *gin.Context) {
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&requestPayload); err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("Query failed. Json decode failed.")
+		logCtx.WithError(err).Error("Query failed. Json decode failed.")
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Query failed. Json decode failed."})
 		return
 	}
 
 	colNames, resultRows, err := M.Analyze(projectId, requestPayload.Query)
 	if err != nil {
-		log.WithError(err).Error("Analyze query execution failure.")
+		logCtx.WithError(err).Error("Analyze query execution failure.")
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Failed processing query."})
 		return
 	}

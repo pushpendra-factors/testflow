@@ -38,13 +38,18 @@ func GetEventNamesHandler(c *gin.Context) {
 // Test command.
 // curl -i -X GET http://localhost:8080/projects/1/event_names/view_100020213/properties?model_id=:model_id
 func GetEventPropertiesHandler(c *gin.Context) {
+
+	reqId := U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID)
+
+	logCtx := log.WithFields(log.Fields{
+		"reqId": reqId,
+	})
+
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-
-	reqId := U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID)
 
 	var err error
 	modelId := uint64(0)
@@ -66,18 +71,18 @@ func GetEventPropertiesHandler(c *gin.Context) {
 
 	decENameInBytes, err := base64.StdEncoding.DecodeString(encodedEName)
 	if err != nil {
-		log.WithField("encodedName", encodedEName).Error("Failed decoding event_name.")
+		logCtx.WithField("encodedName", encodedEName).Error("Failed decoding event_name.")
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
 	eventName := string(decENameInBytes)
 
-	log.WithField("decodedEventName", eventName).Debug("Decoded event name on properties request.")
+	logCtx.WithField("decodedEventName", eventName).Debug("Decoded event name on properties request.")
 
 	properties, err := PC.GetSeenEventProperties(reqId, projectId, modelId, eventName)
 	if err != nil {
-		log.WithFields(log.Fields{
-			"error": err, "projectId": projectId, "eventName": eventName}).Error(
+		logCtx.WithFields(log.Fields{
+			log.ErrorKey: err, "projectId": projectId, "eventName": eventName}).Error(
 			"Get Event Properties failed.")
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
@@ -87,6 +92,11 @@ func GetEventPropertiesHandler(c *gin.Context) {
 
 // curl -i -X GET http://localhost:8080/projects/1/event_names/view_100020213/properties/offer_id?model_id=:model_id
 func GetEventPropertyValuesHandler(c *gin.Context) {
+
+	logCtx := log.WithFields(log.Fields{
+		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
+	})
+
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
@@ -115,7 +125,10 @@ func GetEventPropertyValuesHandler(c *gin.Context) {
 
 	decNameInBytes, err := base64.StdEncoding.DecodeString(encodedEName)
 	if err != nil {
-		log.WithField("encodedName", encodedEName).Error("Failed decoding event_name.")
+		logCtx.WithFields(log.Fields{
+			"encodedName": encodedEName,
+			log.ErrorKey:  err,
+		}).Error("Failed decoding event_name.")
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
@@ -130,8 +143,8 @@ func GetEventPropertyValuesHandler(c *gin.Context) {
 	}
 
 	if propertyValues, err := PC.GetSeenEventPropertyValues(reqId, projectId, modelId, eventName, propertyName); err != nil {
-		log.WithFields(log.Fields{
-			"error":        err,
+		logCtx.WithFields(log.Fields{
+			log.ErrorKey:   err,
 			"projectId":    projectId,
 			"modelId":      modelId,
 			"eventName":    eventName,

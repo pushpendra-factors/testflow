@@ -125,7 +125,7 @@ func AgentInvite(c *gin.Context) {
 
 	invitedAgent, errCode = M.GetAgentByEmail(emailOfAgentToInvite)
 	if errCode == http.StatusInternalServerError {
-		log.Error("Failed to GetAgentByEmail")
+		logCtx.Error("Failed to GetAgentByEmail")
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
@@ -135,7 +135,7 @@ func AgentInvite(c *gin.Context) {
 	if createNewAgent {
 		invitedAgent, errCode = M.CreateAgent(&M.Agent{Email: emailOfAgentToInvite, InvitedBy: &invitedByAgentUUID})
 		if errCode == http.StatusInternalServerError {
-			log.Error("Failed to CreateAgent")
+			logCtx.Error("Failed to CreateAgent")
 			c.AbortWithStatus(http.StatusInternalServerError)
 			return
 		}
@@ -148,7 +148,7 @@ func AgentInvite(c *gin.Context) {
 		Role:      M.AGENT,
 	})
 	if errCode == http.StatusInternalServerError {
-		log.Error("Failed to createProjectAgentMapping")
+		logCtx.Error("Failed to createProjectAgentMapping")
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
@@ -161,13 +161,13 @@ func AgentInvite(c *gin.Context) {
 	if sendVerifyProfileLink {
 		authToken, err := helpers.GetAuthData(invitedAgent.Email, invitedAgent.UUID, invitedAgent.Salt, helpers.SecondsInFifteenDays*time.Second)
 		if err != nil {
-			log.WithError(err).Error("Failed to create auth token for invited agent")
+			logCtx.WithError(err).Error("Failed to create auth token for invited agent")
 			c.AbortWithStatus(http.StatusInternalServerError)
 			return
 		}
 		fe_host := C.GetProtocol() + C.GetAPPDomain()
 		link := fmt.Sprintf("%s/#/activate?token=%s", fe_host, authToken)
-		log.WithField("link", link).Debugf("Verification LInk")
+		logCtx.WithField("link", link).Debugf("Verification LInk")
 	}
 
 	c.JSON(http.StatusCreated, pam)
@@ -191,9 +191,14 @@ func getAgentVerifyParams(c *gin.Context) (*agentVerifyParams, error) {
 
 // curl -X POST -d '{"first_name":"value1", "last_name":"value1", "password":"value"}' http://localhost:8080/agents/activate?token=value -v
 func AgentActivate(c *gin.Context) {
+
+	logCtx := log.WithFields(log.Fields{
+		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
+	})
+
 	params, err := getAgentVerifyParams(c)
 	if err != nil {
-		log.WithError(err).Error("Failed to parse AgentVerifyParams")
+		logCtx.WithError(err).Error("Failed to parse AgentVerifyParams")
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
@@ -233,9 +238,13 @@ func getResetPasswordEmailParams(c *gin.Context) (*resetPasswordEmailParams, err
 // curl -X POST -d '{"email":"value1"}' http://localhost:8080/:project_id/agents/forgotpassword -v
 func AgentGenerateResetPasswordLinkEmail(c *gin.Context) {
 
+	logCtx := log.WithFields(log.Fields{
+		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
+	})
+
 	params, err := getResetPasswordEmailParams(c)
 	if err != nil {
-		log.WithError(err).Error("Failed to parse AgentVerifyParams")
+		logCtx.WithError(err).Error("Failed to parse AgentVerifyParams")
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
@@ -244,7 +253,7 @@ func AgentGenerateResetPasswordLinkEmail(c *gin.Context) {
 
 	agent, errCode := M.GetAgentByEmail(email)
 	if errCode == http.StatusInternalServerError {
-		log.Error("Failed to GetAgentByEmail")
+		logCtx.WithField("email", email).Error("Failed to GetAgentByEmail")
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	} else if errCode == http.StatusNotFound {
@@ -254,6 +263,7 @@ func AgentGenerateResetPasswordLinkEmail(c *gin.Context) {
 
 	err = sendAgentResetPasswordEmail(agent)
 	if err != nil {
+		logCtx.WithField("email", email).Error("Failed to sendAgentResetPasswordEmail")
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
@@ -268,21 +278,17 @@ func AgentGenerateResetPasswordLinkEmail(c *gin.Context) {
 func sendAgentResetPasswordEmail(agent *M.Agent) error {
 	authToken, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, time.Second*helpers.SecondsInOneDay)
 	if err != nil {
-		log.WithField("email", agent.Email).Error("Failed To Create Agent Auth Token")
 		return err
 	}
 	fe_host := C.GetProtocol() + C.GetAPPDomain()
 	link := fmt.Sprintf("%s/#/setpassword?token=%s", fe_host, authToken)
-	log.WithField("link", link).Debugf("Reset Password LInk")
+	log.WithField("link", link).Debug("Reset Password LInk")
 
-	log.WithField("email", agent.Email).Info("Sending Agent Password Reset Email")
+	log.WithField("email", agent.Email).Debug("Sending Agent Password Reset Email")
 
 	sub, text, html := U.CreateForgotPasswordTemplate(agent.Email, link)
 
 	err = C.GetServices().Mailer.SendMail(agent.Email, C.GetFactorsSenderEmail(), sub, html, text)
-	if err != nil {
-		log.WithError(err).Error("Sending Agent Password Reset Email")
-	}
 	return err
 }
 
@@ -300,9 +306,14 @@ func getSetPasswordParams(c *gin.Context) (*setPasswordParams, error) {
 }
 
 func AgentSetPassword(c *gin.Context) {
+
+	logCtx := log.WithFields(log.Fields{
+		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
+	})
+
 	params, err := getSetPasswordParams(c)
 	if err != nil {
-		log.WithError(err).Error("Failed to parse getSetPasswordParams")
+		logCtx.WithError(err).Error("Failed to parse getSetPasswordParams")
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
