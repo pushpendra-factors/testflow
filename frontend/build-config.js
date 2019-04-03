@@ -13,8 +13,7 @@ const CONFIG = {
   },
   production: {
     backend_host: 'https://api.factors.ai',
-    // Use factors.ai for production for rotating asset whenever required.
-    sdk_asset_url: 'https://factors.ai/assets/factors.js'
+    sdk_asset_url: 'https://app.factors.ai/assets/factors.js'
   }
 }
 
