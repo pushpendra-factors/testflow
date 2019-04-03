@@ -41,7 +41,7 @@ class Event extends Component {
       <div>
         <Row style={{marginBottom: '15px'}}>
           <Col xs='12' md='12' style={{marginLeft: '70px'}}>
-            <div style={{display: 'inline-block', width: '15%'}}>
+            <div style={{display: 'inline-block', width: '15%'}} className='fapp-select'>
               <Select
                 onChange={this.props.onNameChange}
                 options={makeSelectOpts(this.props.nameOpts)}

@@ -131,7 +131,7 @@ class Property extends Component {
     
     if (this.state.valueType == 'categorical') {
       return  (
-        <div style={{display: "inline-block", width: "15%", marginLeft: "10px"}}>
+        <div style={{display: "inline-block", width: "15%", marginLeft: "10px"}} className='fapp-select'>
           <CreatableSelect
             onChange={this.onValueChange}
             onFocus={this.fetchPropertyValues}
@@ -158,8 +158,8 @@ class Property extends Component {
     let optSrc = this.state.valueType == 'numerical' ? NUMERICAL_OPERATOR_OPTS : CATEGORICAL_OPERATORS_OPTS;
 
     return (
-      <div style={{display: "inline-block", width: "115px", marginLeft: "10px"}}>
-        <Select
+      <div style={{display: "inline-block", width: "115px", marginLeft: "10px"}} className='fapp-select'>
+        <Select 
           onChange={this.props.onOpChange}
           options={createSelectOpts(optSrc)}
           placeholder="Operator"
@@ -177,7 +177,7 @@ class Property extends Component {
     return <Row style={{marginBottom: "15px"}}>
       <Col xs='12' md='12' style={{marginLeft: "80px"}}>
         <span style={{marginRight: "10px"}}>with</span>
-        <div style={{display: "inline-block", width: "15%"}}>
+        <div style={{display: "inline-block", width: "15%"}} className='fapp-select'>
           <Select
             onChange={this.props.onTypeChange}
             options={createSelectOpts(PROPERTY_TYPE_OPTS)}
@@ -185,7 +185,7 @@ class Property extends Component {
             value={getSelectedOpt(this.props.propertyState.type, PROPERTY_TYPE_OPTS)}
           />
         </div>
-        <div style={{display: this.nameSelectorDisplay(), width: "15%", marginLeft: "10px"}}>
+        <div style={{display: this.nameSelectorDisplay(), width: "15%", marginLeft: "10px"}} className='fapp-select'>
           <Select
             onChange={this.onNameChange}
             onFocus={this.fetchPropertyKeys}

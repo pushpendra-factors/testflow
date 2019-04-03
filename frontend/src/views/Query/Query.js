@@ -548,7 +548,7 @@ class Query extends Component {
           <Row style={{marginBottom: '15px'}}>
             <Col xs='12' md='12'>        
               <span style={{marginRight: '10px'}}> Get </span>
-              <div style={{display: 'inline-block', width: '15%'}}>
+              <div style={{display: 'inline-block', width: '15%'}} className='fapp-select'>
                 <Select
                   value={this.state.type}
                   onChange={this.handleTypeChange}

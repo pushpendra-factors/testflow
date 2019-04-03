@@ -311,6 +311,10 @@ body {
     color: #444444;
 }
 
+.fapp-select .css-11unzgr {
+    overflow-wrap: break-word;
+}
+
 /* On hover class for select */
 .fapp-search-card .css-2o5izw {
     min-height: 55px;
