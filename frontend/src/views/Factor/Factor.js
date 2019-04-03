@@ -470,7 +470,7 @@ class Factor extends Component {
     }
 
     return (
-      <div>
+      <div class="fapp-content" style={{margin: 0}}>
         <div>
           <Row class="fapp-select">
             <Col xs={{size: 10, offset: 1}} md={{ size: 3, offset: 8 }}>

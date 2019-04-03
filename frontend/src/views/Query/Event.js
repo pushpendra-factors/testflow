@@ -1,10 +1,9 @@
-import { makeSelectOpts } from '../../util';
 import React, { Component } from 'react';
 import { Row, Col, Button } from 'reactstrap';
 import Select from 'react-select';
 import Property from './Property';
 
-
+import { makeSelectOpts, getSelectedOpt } from '../../util';
 
 class Event extends Component {
   constructor(props) {
@@ -21,6 +20,7 @@ class Event extends Component {
           projectId={this.props.projectId}
           propertyState={this.props.eventState.properties[i]}
           eventName={this.props.eventState.name}
+          remove={() => this.props.removeProperty(i)}
           
           onTypeChange={(option) => this.props.onPropertyTypeChange(this.props.index, i, option.value)}
           onNameChange={(value) => this.props.onPropertyNameChange(this.props.index, i, value)}
@@ -46,9 +46,11 @@ class Event extends Component {
                 onChange={this.props.onNameChange}
                 options={makeSelectOpts(this.props.nameOpts)}
                 placeholder='Event name'
+                value={getSelectedOpt(this.props.eventState.name)}
               />
             </div>
             <Button outline color='primary' style={{marginLeft: '10px', display: this.addPropertyDisplay()}} onClick={this.props.onAddProperty} >+ Property</Button>
+            <button className='fapp-close-button' onClick={this.props.remove}>x</button>
           </Col>         
         </Row>
         { this.getProperties() }

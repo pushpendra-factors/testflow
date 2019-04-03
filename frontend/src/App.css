@@ -245,6 +245,15 @@ body {
     margin-left: 60px !important;
 }
 
+.fapp-sidebar {
+    background: #192a56 !important;
+}
+
+.fapp-right-pane {
+    height: 100%;
+    padding-top: 65px !important;
+}
+
 .fapp-header {
     padding-left: 50px !important;
     padding-right: 90px !important;
@@ -254,7 +263,17 @@ body {
 }
 
 .fapp-content {
-    margin-top: 120px;
+    padding-top: 50px;
+    padding-bottom: 50px;
+}
+
+.fapp-content-margin {
+    margin-left: 4rem;
+    margin-right: 4rem;
+}
+
+.fapp-header-dropdown {
+    width: 22%;
 }
 
 .fapp-bell {
@@ -262,14 +281,6 @@ body {
     display: block;
     margin-top: 5px;
     color: #404040
-}
-
-.fapp-sidebar {
-    background: #192a56 !important;
-}
-
-.fapp-header-dropdown {
-    width: 22%;
 }
 
 .fapp-search-card {
@@ -397,8 +408,6 @@ body {
 }
 
 .fapp-card {
-    margin-left: 4rem;
-    margin-right: 4rem;
     border: none !important;
     margin-bottom: 2rem !important;
 }
@@ -429,8 +438,7 @@ div.setting-card:hover{
 }
 
 .fapp-bordered-card {
-    margin-left: 4rem;
-    margin-right: 4rem;
+    color: #484848;
 }
 
 .fapp-bordered-card .card-header {
@@ -490,3 +498,54 @@ div.setting-card:hover{
     display: block;
     text-align: center;
 }
+
+.fapp-close-button {
+    border: none;
+    color: #808080;
+    font-size: 20px;
+    margin-left: 5px;
+    font-weight: 500;
+}
+
+.fapp-close-round-button {
+    color: #808080;
+    font-size: 13px;
+    margin-left: 5px;
+    font-weight: 500;
+    float: right;
+    border: 1px solid grey;
+    border-radius: 20px;
+}
+
+.fapp-close-button:hover,
+.fapp-close-button:focus,
+.fapp-close-round-button:hover,
+.fapp-close-round-button:focus {
+    outline: none;
+}
+
+.fapp-table {
+    text-align: center;
+    border: 3px solid #EBEDFD;
+}
+
+.fapp-table thead th {
+    border-bottom: none !important;
+    background: #EBEDFD;
+}
+
+.fapp-table td {
+    border-top: 3px solid #EBEDFD !important;
+    border-right: 3px solid #EBEDFD !important;
+}
+
+.fapp-date-picker {
+    position: absolute;
+    z-index: 100; 
+    display: inline-block;
+}
+
+.fapp-date-picker .rdrDateRangePickerWrapper {
+    border: 2px solid #eff2f7;
+}
+

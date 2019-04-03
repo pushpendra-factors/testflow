@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import Select from 'react-select';
+import CreatableSelect from 'react-select/lib/Creatable';
 import { connect } from 'react-redux';
 // import { bindActionCreators } from 'redux';
 import { Row, Col, Input } from 'reactstrap';
@@ -10,26 +11,24 @@ import {
   fetchProjectUserProperties,
   fetchProjectUserPropertyValues,
 } from '../../actions/projectsActions';
-import { makeSelectOpts } from "../../util";
+import { makeSelectOpts, createSelectOpts, getSelectedOpt } from "../../util";
 
-const PROPERTY_TYPE_OPTS = [
-  { value: "user", label: "User Property" },
-  { value: "event", label: "Event Property" }
-];
+const PROPERTY_TYPE_OPTS = {
+  'user': 'User Property',
+  'event': 'Event Property'
+};
 
-const OPERATOR_EQUALS = { value: 'equals', label: '=' };
+const NUMERICAL_OPERATOR_OPTS = { 
+  'equals': '=',
+  'lesserThan': '<' ,
+  'lesserThanOrEqual': '<=',
+  'greaterThan': '>',
+  'greaterThanOrEqual': '>=',
+};
 
-const NUMERICAL_OPERATOR_OPTS = [
-  OPERATOR_EQUALS,
-  { value: 'lesserThan', label: '<' },
-  { value: 'lesserThanOrEqual', label: '<=' },
-  { value: 'greaterThan', label: '>' },
-  { value: 'greaterThanOrEqual', label: '>=' }
-];
-
-const CATEGORICAL_OPERATORS_OPTS = [
-  OPERATOR_EQUALS
-];
+const CATEGORICAL_OPERATORS_OPTS = {
+  'equals': '='
+}
 
 class Property extends Component {
   constructor(props) {
@@ -118,24 +117,31 @@ class Property extends Component {
     let input = null;
 
     if (this.state.valueType == 'numerical') {
-      return <div style={{display: "inline-block", width: "15%", marginLeft: "10px"}}>
-        <Input
-          type="text"
-          onChange={this.onValueChange}
-          placeholder="Enter a value"
-        />
-      </div>;
+      return (
+        <div style={{display: "inline-block", width: "15%", marginLeft: "10px"}}>
+          <Input
+            type="text"
+            onChange={this.onValueChange}
+            placeholder="Enter a value"
+            value={this.props.propertyState.value}
+          />
+        </div>
+      );
     }
     
     if (this.state.valueType == 'categorical') {
-      return  <div style={{display: "inline-block", width: "15%", marginLeft: "10px"}}>
-        <Select
-          onChange={this.onValueChange}
-          onFocus={this.fetchPropertyValues}
-          options={this.state.valueOpts}
-          placeholder="Enter a value"
-        />
-      </div>;
+      return  (
+        <div style={{display: "inline-block", width: "15%", marginLeft: "10px"}}>
+          <CreatableSelect
+            onChange={this.onValueChange}
+            onFocus={this.fetchPropertyValues}
+            options={this.state.valueOpts}
+            value={getSelectedOpt(this.props.propertyState.value)}
+            placeholder="Enter a value"
+            formatCreateLabel={(value) => (value)}
+          />
+        </div>
+      );
     }
 
     if (this.state.valueType != null) {
@@ -147,22 +153,17 @@ class Property extends Component {
     if (this.state.valueType == null) {
       return;
     }
-
-    let opts = [];
-    if (this.state.valueType == 'numerical') {
-      opts = [ ...NUMERICAL_OPERATOR_OPTS ];
-    }
     
-    if (this.state.valueType == 'categorical') {
-      opts = [ ...CATEGORICAL_OPERATORS_OPTS ];
-    }
+    // categorical_operator_opts as default.
+    let optSrc = this.state.valueType == 'numerical' ? NUMERICAL_OPERATOR_OPTS : CATEGORICAL_OPERATORS_OPTS;
 
     return (
       <div style={{display: "inline-block", width: "115px", marginLeft: "10px"}}>
         <Select
           onChange={this.props.onOpChange}
-          options={opts}
+          options={createSelectOpts(optSrc)}
           placeholder="Operator"
+          value={getSelectedOpt(this.props.propertyState.op, optSrc) }
         />
       </div>
     );
@@ -179,8 +180,9 @@ class Property extends Component {
         <div style={{display: "inline-block", width: "15%"}}>
           <Select
             onChange={this.props.onTypeChange}
-            options={PROPERTY_TYPE_OPTS}
+            options={createSelectOpts(PROPERTY_TYPE_OPTS)}
             placeholder="Property Type"
+            value={getSelectedOpt(this.props.propertyState.type, PROPERTY_TYPE_OPTS)}
           />
         </div>
         <div style={{display: this.nameSelectorDisplay(), width: "15%", marginLeft: "10px"}}>
@@ -189,10 +191,12 @@ class Property extends Component {
             onFocus={this.fetchPropertyKeys}
             options={this.state.nameOpts}
             placeholder="Property Name"
+            value={getSelectedOpt(this.props.propertyState.name)}
           />
-        </div>        
+        </div>
         { this.getOpSelector() }       
         { this.getInputValueElement() }
+        <button className='fapp-close-button' onClick={this.props.remove} >x</button>
       </Col>
     </Row>;
   }

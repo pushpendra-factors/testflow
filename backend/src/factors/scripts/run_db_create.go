@@ -167,9 +167,9 @@ func main() {
 	} else {
 		log.Info("events table is associated with event_names table.")
 	}
-	// Add sort index on project_id and timestamp.
-	if err := db.Exec("CREATE INDEX project_id_user_id_timestamp_idx ON events (project_id, user_id, timestamp DESC);").Error; err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("events table project_id:user_id:timestamp sort index failed.")
+	// Add index on project_id, event_name_id, user_id, timestamp.
+	if err := db.Exec("CREATE INDEX project_id_event_name_id_user_id_timestamp_idx ON events (project_id, event_name_id, user_id, timestamp DESC);").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("events table project_id:event_name_id:user_id:timestamp index failed.")
 	} else {
 		log.Info("events table project_id:user_id:timestamp sort index created.")
 	}

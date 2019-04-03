@@ -33,8 +33,8 @@ class JsSdk extends Component {
 
 	render() {
 		return (
-			<Col md='12'>
-				<Card className="fapp-bordered-card">
+			<div class='fapp-content fapp-content-margin'>
+				<Card className='fapp-bordered-card'>
           <CardHeader>
 						<button className='btn btn-success' style={{float: 'right', padding: '2px 8px'}}> Copy  <i class='fa fa-copy' style={{marginLeft: '4px', fontWeight: 'inherit'}}></i> </button>
             <strong>Code Snippet</strong>
@@ -45,7 +45,7 @@ class JsSdk extends Component {
 						</div>
 					</CardBody>
         </Card>
-			</Col>
+			</div>
 		);
 	}
 }

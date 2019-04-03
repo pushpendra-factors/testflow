@@ -5,6 +5,9 @@ import (
 	C "factors/config"
 	U "factors/util"
 	"fmt"
+	"net/http"
+	"strconv"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -36,6 +39,8 @@ type Query struct {
 	EventsCondition      string                     `json:"eventsCondition"` // all or any
 	EventsWithProperties []QueryEventWithProperties `json:"eventsWithProperties"`
 	GroupByProperties    []QueryGroupByProperty     `json:"groupByProperties"`
+	GroupByTimestamp     bool                       `json:"groupByTimestamp"`
+	Timezone             string                     `json:"timezone"`
 	From                 int64                      `json:"from"`
 	To                   int64                      `json:"to"`
 }
@@ -43,14 +48,29 @@ type Query struct {
 const (
 	PropertyEntityUser  = "user"
 	PropertyEntityEvent = "event"
+
+	ErrUnsupportedGroupByEventPropertyOnUserQuery = "group by event property is not supported for user query"
+	ErrMsgQueryProcessingFailure                  = "Failed processing query"
+
+	SelectDefaultEventFilter              = "distinct(events.id) as event_id, events.user_id as event_user_id"
+	SelectCoalesceCustomerUserIDAndUserID = "COALESCE(users.customer_user_id, event_user_id)"
+
+	GroupKeyPrefix  = "_group_key_"
+	AliasDate       = "date"
+	DefaultTimezone = "UTC"
+)
+
+const (
+	EqualsOpStr = "equals"
+	EqualsOp    = "="
 )
 
 var queryOps = map[string]string{
-	"equals":              "=",
-	"greaterThan":         ">",
-	"lesserThan":          "<",
-	"greaterThanOrEquals": ">=",
-	"lessertThanOrEquals": "<=",
+	EqualsOpStr:          EqualsOp,
+	"greaterThan":        ">",
+	"lesserThan":         "<",
+	"greaterThanOrEqual": ">=",
+	"lesserThanOrEqual":  "<=",
 }
 
 func with(stmnt string) string {
@@ -60,7 +80,8 @@ func with(stmnt string) string {
 func getOp(OpStr string) string {
 	v, ok := queryOps[OpStr]
 	if !ok {
-		log.Fatalf("invalid query operator %s", OpStr)
+		log.Errorf("invalid query operator %s, using default", OpStr)
+		return EqualsOp
 	}
 
 	return v
@@ -71,8 +92,6 @@ func getPropertyEntityField(entityName string) string {
 		return "user_properties.properties"
 	} else if entityName == PropertyEntityEvent {
 		return "events.properties"
-	} else {
-		log.Fatalf("invalid property type %s", entityName)
 	}
 
 	return ""
@@ -106,8 +125,6 @@ func buildWhereFromProperties(mergeCond string,
 			rStmnt = fmt.Sprintf("%s %s %s", rStmnt, mergeCond, pStmnt)
 		}
 
-		// value is kept string always as ? on gorm, prepares
-		// values with '' even for integers.
 		rParams = append(rParams, p.Property, p.Value)
 	}
 
@@ -116,7 +133,7 @@ func buildWhereFromProperties(mergeCond string,
 
 // Alias for group by properties gk_1, gk_2.
 func groupKeyByIndex(i int) string {
-	return fmt.Sprintf("gk_%d", i)
+	return fmt.Sprintf("%s%d", GroupKeyPrefix, i)
 }
 
 // groupBySelect: user_properties.properties->'age' as gk_1, events.properties->'category' as gk_2
@@ -148,18 +165,19 @@ func buildGroupKeys(groupProps []QueryGroupByProperty) (groupSelect string,
 // Adds initial events with props filtering query.
 func addFilterEventsWithPropsQuery(projectId uint64, qStmnt *string,
 	qParams *[]interface{}, qep QueryEventWithProperties, from int64, to int64,
-	stepName string, addSelecStmnt string, addSelectParams []interface{}, addJoinStmnt string) error {
+	stepName string, addSelecStmnt string, addSelectParams []interface{},
+	addJoinStmnt string) error {
 
 	if from == 0 || to == 0 {
-		return errors.New("invalid time range for events filtering")
+		return errors.New("invalid timerange on events filter")
 	}
 
-	rStmnt := ""
-	selectStmnt := "distinct(events.id) as event_id, events.user_id as event_user_id"
-	rStmnt = appendStatement(
-		rStmnt,
-		"SELECT "+joinWithComma(selectStmnt, addSelecStmnt)+" FROM events"+" "+addJoinStmnt,
-	)
+	if addSelecStmnt == "" {
+		return errors.New("invalid select on events filter")
+	}
+
+	rStmnt := "SELECT " + addSelecStmnt + " FROM events" + " " + addJoinStmnt
+
 	// join user property, if user_property present on event with properties list.
 	if hasWhereEntity(qep, PropertyEntityUser) {
 		rStmnt = appendStatement(rStmnt, "LEFT JOIN user_properties ON events.user_properties_id=user_properties.id")
@@ -182,7 +200,10 @@ func addFilterEventsWithPropsQuery(projectId uint64, qStmnt *string,
 		*qParams = append(*qParams, wParams...)
 	}
 
-	rStmnt = as(stepName, rStmnt)
+	if stepName != "" {
+		rStmnt = as(stepName, rStmnt)
+	}
+
 	*qStmnt = appendStatement(*qStmnt, rStmnt)
 
 	return nil
@@ -198,20 +219,19 @@ func hasWhereEntity(ewp QueryEventWithProperties, entity string) bool {
 	return false
 }
 
-func joinWithComma(x, y string) string {
-	if x != "" && y != "" {
-		return fmt.Sprintf("%s, %s", x, y)
+func joinWithComma(x ...string) string {
+	var y string
+	for i, v := range x {
+		if v != "" {
+			if i == 0 || y == "" {
+				y = v
+			} else {
+				y = fmt.Sprintf("%s, %s", y, v)
+			}
+		}
 	}
 
-	if x != "" {
-		return x
-	}
-
-	if y != "" {
-		return y
-	}
-
-	return ""
+	return y
 }
 
 func hasGroupEntity(props []QueryGroupByProperty, entity string) bool {
@@ -224,7 +244,7 @@ func hasGroupEntity(props []QueryGroupByProperty, entity string) bool {
 	return false
 }
 
-func addJoinLatestUserPropsQuery(groupProps []QueryGroupByProperty, refStepName string,
+func addJoinLatestUserPropsQuery(groupProps []QueryGroupByProperty, refStepName string, stepName string,
 	qStmnt *string, qParams *[]interface{}, addSelect string) string {
 
 	groupSelect, gSelectParams, gKeys := buildGroupKeys(groupProps)
@@ -236,7 +256,9 @@ func addJoinLatestUserPropsQuery(groupProps []QueryGroupByProperty, refStepName 
 		rStmnt = rStmnt + " " + " LEFT JOIN user_properties on users.id=user_properties.user_id and user_properties.id=users.properties_id"
 	}
 
-	rStmnt = as("events_with_latest_user_props", rStmnt)
+	if stepName != "" {
+		rStmnt = as(stepName, rStmnt)
+	}
 
 	*qStmnt = appendStatement(*qStmnt, rStmnt)
 	*qParams = append(*qParams, gSelectParams...)
@@ -246,14 +268,15 @@ func addJoinLatestUserPropsQuery(groupProps []QueryGroupByProperty, refStepName 
 
 // Adds additional join to the events filter,  for considering users only from prev
 // step and with diff step names.
-func addFilterEventsWithPropsForUsersQuery(projectId uint64, eventsWithProperties []QueryEventWithProperties,
-	from int64, to int64, qStmnt *string, qParams *[]interface{}) string {
+func addFilterEventsWithPropsForUsersQuery(projectId uint64, query Query,
+	qStmnt *string, qParams *[]interface{}) string {
 
 	var rStmnt string
 	var rParams []interface{}
 
 	stepName := ""
-	for i, ewp := range eventsWithProperties {
+	lastEwpIndex := len(query.EventsWithProperties) - 1
+	for i, ewp := range query.EventsWithProperties {
 		// initially prevStepName will be empty.
 		prevStepName := stepName
 
@@ -268,9 +291,14 @@ func addFilterEventsWithPropsForUsersQuery(projectId uint64, eventsWithPropertie
 			usersFromLastStep = "JOIN " + prevStepName + " ON events.user_id=" + prevStepName + ".event_user_id"
 		}
 
-		addFilterEventsWithPropsQuery(projectId, &rStmnt, &rParams, ewp, from, to,
-			stepName, "", nil, usersFromLastStep)
-		rStmnt = rStmnt + ", "
+		filterSelect := SelectDefaultEventFilter
+		filterSelect = appendSelectTimestampIfRequired(filterSelect, query.Timezone, query.GroupByTimestamp)
+		addFilterEventsWithPropsQuery(projectId, &rStmnt, &rParams, ewp, query.From, query.To,
+			stepName, filterSelect, nil, usersFromLastStep)
+
+		if i != lastEwpIndex {
+			rStmnt = rStmnt + ", "
+		}
 	}
 
 	*qStmnt = appendStatement(*qStmnt, rStmnt)
@@ -288,6 +316,69 @@ func filterGroupPropsByType(gp []QueryGroupByProperty, entity string) []QueryGro
 		}
 	}
 	return groupProps
+}
+
+func appendOrderByLastGroupKey(qStmnt string, groupProps []QueryGroupByProperty) string {
+	if len(groupProps) == 0 {
+		return qStmnt
+	}
+
+	maxIndex := -1
+	for _, v := range groupProps {
+		if v.Index > maxIndex {
+			maxIndex = v.Index
+		}
+	}
+
+	return fmt.Sprintf("%s ORDER BY %s", qStmnt, groupKeyByIndex(maxIndex))
+}
+
+func appendSelectTimestampColIfRequired(stmnt string, isRequired bool) string {
+	if !isRequired {
+		return stmnt
+	}
+
+	return joinWithComma(stmnt, AliasDate)
+}
+
+func getSelectTimestamp(timezone string) string {
+	var selectTz string
+
+	if timezone == "" {
+		selectTz = DefaultTimezone
+	} else {
+		selectTz = timezone
+	}
+
+	return fmt.Sprintf("(to_timestamp(timestamp) AT TIME ZONE '%s')::date as %s",
+		selectTz, AliasDate)
+}
+
+func appendSelectTimestampIfRequired(stmnt string, timezone string, isRequired bool) string {
+	if !isRequired {
+		return stmnt
+	}
+
+	return joinWithComma(stmnt, getSelectTimestamp(timezone))
+}
+
+func appendGroupByTimestamp(qStmnt string, groupByTimestamp bool, groupKeys ...string) string {
+	// Added groups with timestamp.
+	groups := make([]string, 0, 0)
+	if groupByTimestamp {
+		groups = append(groups, AliasDate)
+	}
+	groups = append(groups, groupKeys...)
+	qStmnt = appendGroupBy(qStmnt, groups...)
+	return qStmnt
+}
+
+func appendGroupBy(qStmnt string, gKeys ...string) string {
+	if len(gKeys) == 0 || (len(gKeys) == 1 && gKeys[0] == "") {
+		return qStmnt
+	}
+
+	return fmt.Sprintf("%s GROUP BY %s", qStmnt, joinWithComma(gKeys...))
 }
 
 /*
@@ -315,27 +406,87 @@ WITH
         left join users on e1_e2.event_user_id=users.id
         left join user_properties on users.id=user_properties.user_id and user_properties.id=users.properties_id
     )
-    SELECT group_prop1, count(distinct(real_user_id)) FROM events_with_latest_user_props GROUP BY group_prop1;
+    SELECT group_prop1, count(distinct(real_user_id)) FROM events_with_latest_user_props GROUP BY group_prop1 order by group_prop1;
 */
 func BuildUniqueUsersWithAllGivenEventsQuery(projectId uint64, q Query) (string, []interface{}, error) {
 	if len(q.EventsWithProperties) == 0 {
 		return "", nil, errors.New("zero events on the query")
 	}
 
+	if hasGroupEntity(q.GroupByProperties, PropertyEntityEvent) {
+		return "", nil, errors.New(ErrUnsupportedGroupByEventPropertyOnUserQuery)
+	}
+
 	qStmnt := ""
 	qParams := make([]interface{}, 0, 0)
 
-	refStepName := addFilterEventsWithPropsForUsersQuery(projectId, q.EventsWithProperties, q.From, q.To, &qStmnt, &qParams)
+	refStepName := addFilterEventsWithPropsForUsersQuery(projectId, q, &qStmnt, &qParams)
+	qStmnt = qStmnt + ","
 
-	colasceUser := "COALESCE(users.customer_user_id, event_user_id) as real_user_id"
-	groupKeys := addJoinLatestUserPropsQuery(q.GroupByProperties, refStepName, &qStmnt, &qParams, colasceUser)
+	// Todo(Dinesh): Move these as constants, if multiple funcs use it.
+	stepEventsWithLatestUserProps := "events_with_latest_user_props"
+	aliasRealUserID := "real_user_id"
 
-	// Final unique users.
-	if groupKeys == "" {
-		qStmnt = appendStatement(qStmnt, "SELECT count(distinct(real_user_id)) FROM events_with_latest_user_props;")
-	} else {
-		qStmnt = appendStatement(qStmnt, fmt.Sprintf("SELECT %s count(distinct(real_user_id)) FROM events_with_latest_user_props GROUP BY %s;", groupKeys+" ,", groupKeys))
+	addSelect := SelectCoalesceCustomerUserIDAndUserID + " as " + aliasRealUserID
+	addSelect = appendSelectTimestampColIfRequired(addSelect, q.GroupByTimestamp)
+	groupKeys := addJoinLatestUserPropsQuery(q.GroupByProperties, refStepName,
+		stepEventsWithLatestUserProps, &qStmnt, &qParams, addSelect)
+
+	// select.
+	var qSelect string
+	qSelect = appendSelectTimestampColIfRequired(qSelect, q.GroupByTimestamp)
+	qSelect = joinWithComma(qSelect, groupKeys, fmt.Sprintf("COUNT(DISTINCT(%s))", aliasRealUserID))
+
+	termStmnt := "SELECT " + qSelect + " FROM " + stepEventsWithLatestUserProps
+	termStmnt = appendGroupByTimestamp(termStmnt, q.GroupByTimestamp, groupKeys)
+
+	qStmnt = appendStatement(qStmnt, termStmnt)
+	qStmnt = appendOrderByLastGroupKey(qStmnt, q.GroupByProperties)
+
+	// enclosed by 'with'.
+	qStmnt = with(qStmnt)
+
+	return qStmnt, qParams, nil
+}
+
+/*
+BuildUniqueUsersSingleEventQuery
+Group By: user_properties
+
+WITH
+    step0 AS (
+		SELECT distinct(events.id) as event_id, events.user_id as event_user_id FROM events WHERE events.project_id='2'
+		AND timestamp>='1552450157' AND timestamp<='1553054957'
+		AND events.event_name_id IN ( SELECT id FROM event_names WHERE project_id='2'AND name='View Project' )
+    )
+	SELECT user_properties.properties->'gender' as gk_0, COUNT(DISTINCT(COALESCE(users.customer_user_id, event_user_id)))
+	FROM step0 LEFT JOIN users ON step0.event_user_id=users.id
+	LEFT JOIN user_properties on users.id=user_properties.user_id and user_properties.id=users.properties_id GROUP BY gk_0 order by gk_0;
+*/
+func BuildUniqueUsersSingleEventQuery(projectId uint64, q Query) (string, []interface{}, error) {
+	if len(q.EventsWithProperties) != 1 {
+		return "", nil, errors.New("invalid no.of events for single event query")
 	}
+
+	if hasGroupEntity(q.GroupByProperties, PropertyEntityEvent) {
+		return "", nil, errors.New(ErrUnsupportedGroupByEventPropertyOnUserQuery)
+	}
+
+	qStmnt := ""
+	qParams := make([]interface{}, 0, 0)
+
+	refStepName := addFilterEventsWithPropsForUsersQuery(projectId, q, &qStmnt, &qParams)
+
+	// select
+	var filterSelect string
+	filterSelect = appendSelectTimestampColIfRequired(filterSelect, q.GroupByTimestamp)
+	filterSelect = joinWithComma(filterSelect, fmt.Sprintf("COUNT(DISTINCT(%s))", SelectCoalesceCustomerUserIDAndUserID))
+
+	// group by
+	groupKeys := addJoinLatestUserPropsQuery(q.GroupByProperties, refStepName,
+		"", &qStmnt, &qParams, filterSelect)
+	qStmnt = appendGroupByTimestamp(qStmnt, q.GroupByTimestamp, groupKeys)
+	qStmnt = appendOrderByLastGroupKey(qStmnt, q.GroupByProperties)
 
 	// enclosed by 'with'.
 	qStmnt = with(qStmnt)
@@ -368,7 +519,7 @@ WITH
     SELECT user_properties.properties->'$region' as group_prop2, group_prop1, count(*) from any_event
     left join users on any_event.event_user_id=users.id
     left join user_properties on users.id=user_properties.user_id and user_properties.id=users.properties_id
-    group by group_prop1, group_prop2;
+    group by group_prop1, group_prop2 order by group_prop2;
 */
 func BuildEventsOccurrenceWithAnyGivenEventQuery(projectId uint64, q Query) (string, []interface{}, error) {
 	if len(q.EventsWithProperties) == 0 {
@@ -383,38 +534,37 @@ func BuildEventsOccurrenceWithAnyGivenEventQuery(projectId uint64, q Query) (str
 
 	// event filters.
 	filters := make([]string, 0)
+	efilterStmnt := joinWithComma(SelectDefaultEventFilter, egSelect)
+	efilterStmnt = appendSelectTimestampIfRequired(efilterStmnt, q.Timezone, q.GroupByTimestamp)
 	refStepName := ""
 	for i, ewp := range q.EventsWithProperties {
 		refStepName = fmt.Sprintf("step%d", i)
 		filters = append(filters, refStepName)
 		addFilterEventsWithPropsQuery(projectId, &qStmnt, &qParams, ewp, q.From, q.To,
-			refStepName, egSelect, egSelectParams, "")
+			refStepName, efilterStmnt, egSelectParams, "")
 		if len(q.EventsWithProperties) > 1 {
 			qStmnt = qStmnt + ", "
 		}
 	}
 
-	var eventsSrc string
-	if len(q.EventsWithProperties) == 1 {
-		// one event. no union required.
-		eventsSrc = refStepName
-	} else {
-		// union.
+	// union.
+	if len(filters) > 1 {
+		unionStepName := "any_event"
 		unionStmnt := ""
 		for _, filter := range filters {
 			if unionStmnt != "" {
 				unionStmnt = unionStmnt + " UNION ALL "
 			}
 
-			groupKeys := ""
-			if egKeys != "" {
-				groupKeys = ", " + egKeys
-			}
-			unionStmnt = unionStmnt + " SELECT event_id, event_user_id " + groupKeys + " FROM " + filter
+			qSelect := "event_id, event_user_id"
+			qSelect = appendSelectTimestampColIfRequired(qSelect, q.GroupByTimestamp)
+			qSelect = joinWithComma(qSelect, egKeys)
+			unionStmnt = unionStmnt + " SELECT " + qSelect + " FROM " + filter
 		}
-		unionStmnt = as("any_event", unionStmnt)
+		unionStmnt = as(unionStepName, unionStmnt)
 		qStmnt = appendStatement(qStmnt, unionStmnt)
-		eventsSrc = "any_event"
+
+		refStepName = unionStepName
 	}
 
 	// count.
@@ -422,24 +572,22 @@ func BuildEventsOccurrenceWithAnyGivenEventQuery(projectId uint64, q Query) (str
 	ugSelect, ugSelectParams, _ := buildGroupKeys(userGroupProps)
 	_, _, groupKeys := buildGroupKeys(q.GroupByProperties)
 
-	groupSelect := joinWithComma(ugSelect, egKeys)
-	if groupSelect != "" {
-		groupSelect = groupSelect + ","
-	}
+	// select
+	tSelect := joinWithComma(ugSelect, egKeys)
+	tSelect = appendSelectTimestampColIfRequired(tSelect, q.GroupByTimestamp)
+	tSelect = joinWithComma(tSelect, "COUNT(*)") // aggregator.
 
-	termStmnt := "SELECT " + groupSelect + " count(*) FROM " + eventsSrc
+	termStmnt := "SELECT " + tSelect + " FROM " + refStepName
 	// join lateset user_properties, only if group by user property present.
 	if ugSelect != "" {
-		termStmnt = termStmnt + " " + "LEFT JOIN users ON " + eventsSrc + ".event_user_id=users.id" +
+		termStmnt = termStmnt + " " + "LEFT JOIN users ON " + refStepName + ".event_user_id=users.id" +
 			" " + "LEFT JOIN user_properties ON users.id=user_properties.user_id AND user_properties.id=users.properties_id"
 	}
-	// add group by if group by conditions present.
-	if groupKeys != "" {
-		termStmnt = termStmnt + " " + "GROUP BY" + " " + groupKeys
-	}
+	termStmnt = appendGroupByTimestamp(termStmnt, q.GroupByTimestamp, groupKeys)
 
 	qParams = append(qParams, ugSelectParams...)
 	qStmnt = appendStatement(qStmnt, termStmnt)
+	qStmnt = appendOrderByLastGroupKey(qStmnt, q.GroupByProperties)
 
 	// enclosed by 'with'.
 	qStmnt = with(qStmnt)
@@ -447,11 +595,101 @@ func BuildEventsOccurrenceWithAnyGivenEventQuery(projectId uint64, q Query) (str
 	return qStmnt, qParams, nil
 }
 
-func Analyze(projectId uint64, query Query) ([]string, map[int][]interface{}, error) {
+/*
+BuildEventsOccurrenceWithAnyGivenEventQuery builds query for any given event and single event query,
+Group by: user_properties, event_properties.
+
+* Without group by user_property
+
+WITH
+	SELECT COUNT(*), events.properties->'category' as group_prop1 FROM events
+	LEFT JOIN user_properties ON events.user_properties_id=user_properties.id
+	WHERE events.project_id=2 AND events.timestamp >= 1393632004 AND events.timestamp <= 1396310325
+	AND events.event_name_id IN (SELECT id FROM event_names WHERE project_id='2' AND name='View Project')
+	AND user_properties.properties->>'gender'='M'
+
+
+* With group by user_property
+
+WITH
+    e1 AS (
+        SELECT distinct(events.id) as event_id, events.user_id as event_user_id, events.properties->'category' as group_prop1 FROM events
+        LEFT JOIN user_properties ON events.user_properties_id=user_properties.id
+		WHERE events.project_id=2 AND events.timestamp >= 1393632004 AND events.timestamp <= 1396310325
+		AND events.event_name_id IN (SELECT id FROM event_names WHERE project_id='2' AND name='View Project')
+        AND user_properties.properties->>'gender'='M'
+    )
+    SELECT user_properties.properties->'$region' as group_prop2, group_prop1, count(*) from e1
+    left join users on e1.event_user_id=users.id
+    left join user_properties on users.id=user_properties.user_id and user_properties.id=users.properties_id
+    group by group_prop1, group_prop2 order by group_prop2;
+*/
+
+func BuildEventsOccurrenceSingleEventQuery(projectId uint64, q Query) (string, []interface{}, error) {
+	if len(q.EventsWithProperties) != 1 {
+		return "", nil, errors.New("invalid no.of events for single event query")
+	}
+
+	if hasGroupEntity(q.GroupByProperties, PropertyEntityUser) {
+		// Using any given event query, which handles groups already.
+		return BuildEventsOccurrenceWithAnyGivenEventQuery(projectId, q)
+	}
+
+	var qStmnt string
+	var qParams []interface{}
+
+	eventGroupProps := filterGroupPropsByType(q.GroupByProperties, PropertyEntityEvent)
+	egSelect, egSelectParams, egKeys := buildGroupKeys(eventGroupProps)
+
+	var qSelect string
+	qSelect = appendSelectTimestampIfRequired(qSelect, q.Timezone, q.GroupByTimestamp)
+	qSelect = joinWithComma(qSelect, egSelect, "COUNT(*)")
+
+	addFilterEventsWithPropsQuery(projectId, &qStmnt, &qParams, q.EventsWithProperties[0], q.From, q.To,
+		"", qSelect, egSelectParams, "")
+
+	qStmnt = appendGroupByTimestamp(qStmnt, q.GroupByTimestamp, egKeys)
+	qStmnt = appendOrderByLastGroupKey(qStmnt, q.GroupByProperties)
+
+	return qStmnt, qParams, nil
+}
+
+// getRealColumns - Replaces groupKeys with real column names.
+func getRealColumns(cols []string, groupProps []QueryGroupByProperty) ([]string, error) {
+	rcols := make([]string, 0, 0)
+
+	indexLookup := make(map[int]QueryGroupByProperty, 0)
+	for _, v := range groupProps {
+		indexLookup[v.Index] = v
+	}
+
+	for i := range cols {
+		if strings.HasPrefix(cols[i], GroupKeyPrefix) {
+			gIndexStr := strings.TrimPrefix(cols[i], GroupKeyPrefix)
+			if gIndex, err := strconv.Atoi(gIndexStr); err != nil {
+				log.WithField("group_key", gIndexStr).Error(
+					"Invalid group key index. Failed translating group key to real name.")
+				return nil, errors.New("invalid group key index")
+			} else {
+				rcols = append(rcols, indexLookup[gIndex].Property)
+			}
+		} else {
+			rcols = append(rcols, cols[i])
+		}
+	}
+
+	return rcols, nil
+}
+
+func Analyze(projectId uint64, query Query) ([]string, map[int][]interface{}, int, string) {
 	db := C.GetServices().Db
 
+	if len(query.EventsWithProperties) == 0 {
+		return nil, nil, http.StatusBadRequest, "No events to process"
+	}
+
 	if query.From == 0 || query.To == 0 {
-		return nil, nil, errors.New("invalid time range on query")
+		return nil, nil, http.StatusBadRequest, "Invalid query time range"
 	}
 
 	var stmnt string
@@ -460,27 +698,49 @@ func Analyze(projectId uint64, query Query) ([]string, map[int][]interface{}, er
 
 	// use switch
 	if query.Type == "unique_users" {
-		stmnt, params, err = BuildUniqueUsersWithAllGivenEventsQuery(projectId, query)
+		if len(query.EventsWithProperties) == 1 {
+			stmnt, params, err = BuildUniqueUsersSingleEventQuery(projectId, query)
+		} else {
+			stmnt, params, err = BuildUniqueUsersWithAllGivenEventsQuery(projectId, query)
+		}
 	} else if query.Type == "events_occurrence" {
-		stmnt, params, err = BuildEventsOccurrenceWithAnyGivenEventQuery(projectId, query)
+		if len(query.EventsWithProperties) == 1 {
+			stmnt, params, err = BuildEventsOccurrenceSingleEventQuery(projectId, query)
+		} else {
+			stmnt, params, err = BuildEventsOccurrenceWithAnyGivenEventQuery(projectId, query)
+		}
 	} else {
-		return nil, nil, errors.New("unknown analyze query type")
+		return nil, nil, http.StatusBadRequest, "Invalid query type"
 	}
-
 	if err != nil {
-		return nil, nil, err
+		log.WithError(err).Error(ErrMsgQueryProcessingFailure)
+		return nil, nil, http.StatusInternalServerError, ErrMsgQueryProcessingFailure
 	}
 
+	logCtx := log.WithFields(log.Fields{"analytics_query": query, "statement": stmnt, "params": params})
 	if stmnt == "" || len(params) == 0 {
-		log.WithFields(log.Fields{}).Error("Invalid query statement and params generated.")
-		return nil, nil, errors.New("invalid analyze query statement or params generated")
+		logCtx.Error("Failed generating SQL query from Analyze query")
+		return nil, nil, http.StatusInternalServerError, ErrMsgQueryProcessingFailure
 	}
 
 	rows, err := db.Raw(stmnt, params...).Rows()
 	if err != nil {
-		return nil, nil, err
+		logCtx.WithError(err).Error("Failed executing SQL query generated")
+		return nil, nil, http.StatusInternalServerError, ErrMsgQueryProcessingFailure
 	}
 
 	// Todo(Dinesh): Reomve RowsToMap(inefficient) and use specific struct.
-	return U.DBRowsToMap(rows)
+	resultCols, resulRows, err := U.DBRowsToMap(rows)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed processing SQL query result")
+		return nil, nil, http.StatusInternalServerError, ErrMsgQueryProcessingFailure
+	}
+
+	realCols, err := getRealColumns(resultCols, query.GroupByProperties)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed mapping real column names on SQL query result")
+		return nil, nil, http.StatusInternalServerError, ErrMsgQueryProcessingFailure
+	}
+
+	return realCols, resulRows, http.StatusOK, "Successfully executed query"
 }

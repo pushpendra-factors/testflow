@@ -1,15 +1,18 @@
 import React, { Component } from 'react';
 import Select from 'react-select';
+import CreatableSelect from 'react-select/lib/Creatable';
+import { Button } from 'reactstrap';
 
 import { 
   fetchProjectEventProperties,
   fetchProjectUserProperties,
 } from '../../actions/projectsActions';
+import { makeSelectOpt, getSelectedOpt, createSelectOpts } from '../../util';
 
-const PROPERTY_TYPE_OPTS = [
-  { value: 'user', label: 'User Property' },
-  { value: 'event', label: 'Event Property' }
-];
+const PROPERTY_TYPE_OPTS = {
+  'user': 'User Property',
+  'event': 'Event Property'
+};
 
 class GroupBy extends Component {
   constructor(props) {
@@ -50,12 +53,7 @@ class GroupBy extends Component {
   fetchPropertyKeys = () => {
     this.setState({ nameOpts: [] }); // reset opts
 
-    if (this.props.groupByState.type == 'event') {
-      // // Todo(Dinesh): Temp. Add an action for fetching all event properties.
-      // fetchProjectEventProperties(this.props.projectId, 'View Project', false) 
-      //   .then((r) => this.addToNameOptsState(r.data))
-      //   .catch(r => console.error("Failed fetching event properties on group by.", r));
-      
+    if (this.props.groupByState.type == 'event') {      
       let eventNames = this.props.getSelectedEventNames();
       let fetches = [];
       for(let i=0; i < eventNames.length; i++) {
@@ -79,22 +77,26 @@ class GroupBy extends Component {
 
   render() {
     return (
-      <div style={{ width: '400px', marginTop: '15px', marginLeft: '20px' }}>
+      <div style={{ width: '450px', marginTop: '15px', marginLeft: '20px' }}>
         <div style={{display: 'inline-block', width: '185px'}}>
           <Select
             onChange={this.props.onTypeChange}
-            options={[...PROPERTY_TYPE_OPTS]}
+            options={createSelectOpts(PROPERTY_TYPE_OPTS)}
             placeholder='Property Type'
+            value={getSelectedOpt(this.props.groupByState.type, PROPERTY_TYPE_OPTS)}
           />
         </div>
         <div style={{display: 'inline-block', width: '185px', marginLeft: '10px'}}>
-          <Select
+          <CreatableSelect
             onChange={this.props.onNameChange}
             onFocus={this.fetchPropertyKeys}
             options={this.state.nameOpts}
             placeholder='Property Key'
+            value={getSelectedOpt(this.props.groupByState.name)}
+            formatCreateLabel={(value) => (value)}
           />
         </div>
+        <button className='fapp-close-button' onClick={this.props.remove}>x</button>
       </div>
     );
   }

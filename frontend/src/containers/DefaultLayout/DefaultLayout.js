@@ -192,7 +192,7 @@ class DefaultLayout extends Component {
           <AppHeader className="fapp-header" fixed>
             {this.renderProjectsDropdown()} 
           </AppHeader>
-            <Container className='fapp-content' fluid>
+            <Container className='fapp-right-pane' fluid>
               <Switch>
                 {routes.map((route, idx) => {
                     return route.component ? (<Route key={idx} path={route.path} exact={route.exact} name={route.name} 

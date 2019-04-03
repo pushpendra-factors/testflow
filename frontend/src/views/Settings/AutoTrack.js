@@ -399,7 +399,7 @@ class AutoTrack extends Component {
     if (!this.isLoaded()) return <Loading />;
 
     return (
-      <Col md='12'>
+      <div className='fapp-content fapp-content-margin'>
         <Card className="fapp-card">
           <CardHeader className='fapp-only-header'>
             <strong>AutoTrack</strong>
@@ -470,7 +470,7 @@ class AutoTrack extends Component {
             }
           </CardBody>
         </Card>
-      </Col>
+      </div>
     );
   }
 }

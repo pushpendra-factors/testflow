@@ -58,7 +58,7 @@ class Settings extends Component {
 
   render() {
     return (
-      <div className='animated fadeIn'>
+      <div className='animated fadeIn fapp-content fapp-content-margin'>
         <Row>
           <Col xs='12' md='12'>
             <Card class="fapp-card">
