@@ -23,6 +23,7 @@ func main() {
 	bucketName := flag.String("bucket_name", "/usr/local/var/factors/cloud_storage", "")
 	numRoutinesFlag := flag.Int("num_routines", 3, "No of routines")
 	projectIdFlag := flag.Uint64("project_id", 0, "Optional: Project Id.")
+	maxModelSizeFlag := flag.Int64("max_size", 10000000000, "Max size of the model")
 
 	dbHost := flag.String("db_host", "localhost", "")
 	dbPort := flag.Int("db_port", 5432, "")
@@ -96,5 +97,5 @@ func main() {
 
 	diskManager := serviceDisk.New(*localDiskTmpDirFlag)
 
-	T.BuildSequential(*envFlag, db, &cloudManager, etcdClient, diskManager, *bucketName, *numRoutinesFlag, *projectIdFlag)
+	T.BuildSequential(*envFlag, db, &cloudManager, etcdClient, diskManager, *bucketName, *numRoutinesFlag, *projectIdFlag, *maxModelSizeFlag)
 }

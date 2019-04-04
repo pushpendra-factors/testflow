@@ -2,8 +2,14 @@ package histogram
 
 import (
 	"fmt"
+	"math"
 	"sort"
 )
+
+const fMAP_MAX_SIZE = 2000
+const fMAP_MIN_SIZE = 20
+const CHIST_MIN_BIN_SIZE = 1
+const fMAP_OTHER_KEY = "__OTHER__"
 
 type CategoricalHistogram interface {
 	Add([]string) error
@@ -15,6 +21,8 @@ type CategoricalHistogram interface {
 	PDF(x []string) (float64, error)
 
 	Count() uint64
+	TrimByFmapSize(float64) error
+	TrimByBinSize(float64) error
 
 	// Internal for testing
 	totalBinCount() uint64
@@ -24,6 +32,7 @@ type CategoricalHistogram interface {
 type CategoricalHistogramStruct struct {
 	Bins                        []categoricalBin              `json:"b"`
 	Maxbins                     int                           `json:"mb"`
+	MaxFmapSize                 int                           `json:"mf"`
 	Total                       uint64                        `json:"to"`
 	Dimension                   int                           `json:"d"`
 	Template                    *CategoricalHistogramTemplate `json:"te"`
@@ -52,6 +61,7 @@ func NewCategoricalHistogram(
 	return &CategoricalHistogramStruct{
 		Bins:                        make([]categoricalBin, 0),
 		Maxbins:                     n,
+		MaxFmapSize:                 fMAP_MAX_SIZE,
 		Total:                       0,
 		Dimension:                   d,
 		Template:                    t,
@@ -71,9 +81,6 @@ type frequencyMap struct {
 	Fmap  map[string]uint64 `json:"fm"`
 	Count uint64            `json:"c"`
 }
-
-const fMAP_MAX_SIZE = 200
-const fMAP_OTHER_KEY = "__OTHER__"
 
 func (h *CategoricalHistogramStruct) PDF(x []string) (float64, error) {
 	if h.Dimension != len(x) {
@@ -186,7 +193,7 @@ func (h *CategoricalHistogramStruct) getBinLogLikelihood(bin *categoricalBin) fl
 }
 
 func (h *CategoricalHistogramStruct) getMergedBinLogLikelihood(
-	bin1 *categoricalBin, bin2 *categoricalBin) float64 {
+	bin1 *categoricalBin, bin2 *categoricalBin, maxFmapSize int) float64 {
 	if bin1.uuid == "" {
 		bin1.uuid = randomLowerAphaNumString(32)
 	}
@@ -202,7 +209,7 @@ func (h *CategoricalHistogramStruct) getMergedBinLogLikelihood(
 			return l
 		}
 	}
-	mergedbin := (*bin1).merge(*bin2)
+	mergedbin := (*bin1).merge(*bin2, maxFmapSize)
 	mergedLikelihood := mergedbin.logLikelihood()
 	// Add to cache;
 	lMap, ok := h.mergedBinLogLikelihoodCache[bin1.uuid]
@@ -271,7 +278,7 @@ func (h *CategoricalHistogramStruct) trim() {
 				}
 
 				binJLikelihood := h.getBinLogLikelihood(&h.Bins[j])
-				mergedLikelihood := h.getMergedBinLogLikelihood(&h.Bins[i], &h.Bins[j])
+				mergedLikelihood := h.getMergedBinLogLikelihood(&h.Bins[i], &h.Bins[j], h.MaxFmapSize)
 
 				// Select the bin whose bin1LogLikelihood + bin2LogLikelihood - mergedLogLikelihood is minimum.
 				// i.e. the one which causes minimum drop in the overall likelihood as a result of merging.
@@ -284,7 +291,7 @@ func (h *CategoricalHistogramStruct) trim() {
 		}
 
 		// We need to merge bins min_i-1 and min_j
-		mergedbin := h.Bins[min_i].merge(h.Bins[min_j])
+		mergedbin := h.Bins[min_i].merge(h.Bins[min_j], h.MaxFmapSize)
 
 		// Remove min_i and min_j bins
 		min, max := sortTuple(min_i, min_j)
@@ -301,7 +308,7 @@ func (h *CategoricalHistogramStruct) trim() {
 	h.cleanCache()
 }
 
-func (b *categoricalBin) merge(o categoricalBin) categoricalBin {
+func (b *categoricalBin) merge(o categoricalBin, maxFmapSize int) categoricalBin {
 	dimension := len(b.FrequencyMaps)
 	// Initialize merged Frequency Maps.
 	mergedFmaps := make([]frequencyMap, dimension)
@@ -332,9 +339,9 @@ func (b *categoricalBin) merge(o categoricalBin) categoricalBin {
 				mFmap.Fmap[k] = bCount + oCount
 			}
 		}
-		// Trim the frequency maps to fMAP_MAX_SIZE.
-		if len(mFmap.Fmap) > fMAP_MAX_SIZE {
-			mFmap.Fmap = trimFrequencyMap(mFmap.Fmap, fMAP_MAX_SIZE)
+		// Trim the frequency maps to maxFmapSize.
+		if len(mFmap.Fmap) > maxFmapSize {
+			mFmap.Fmap = trimFrequencyMap(mFmap.Fmap, maxFmapSize)
 		}
 	}
 	return categoricalBin{
@@ -426,4 +433,38 @@ func (h *CategoricalHistogramStruct) totalBinCount() uint64 {
 		c += h.Bins[l].Count
 	}
 	return c
+}
+
+func (h *CategoricalHistogramStruct) TrimByFmapSize(trimFraction float64) error {
+	if trimFraction <= 0 || trimFraction > 1.0 {
+		return fmt.Errorf(fmt.Sprintf("Unexpected value of trimFraction: %f", trimFraction))
+	}
+	newMaxFMapSize := int(math.Max(float64(h.MaxFmapSize)*trimFraction, fMAP_MIN_SIZE))
+	if newMaxFMapSize >= h.MaxFmapSize {
+		return fmt.Errorf(fmt.Sprintf(
+			"No trimming required, h.MaxFmapSize:%d, newMaxFMapSize: %d, trimFraction: %f",
+			h.MaxFmapSize, newMaxFMapSize, trimFraction))
+	}
+	for l := range h.Bins {
+		for m := range h.Bins[l].FrequencyMaps {
+			h.Bins[l].FrequencyMaps[m].Fmap = trimFrequencyMap(
+				h.Bins[l].FrequencyMaps[m].Fmap, newMaxFMapSize)
+		}
+	}
+	return nil
+}
+
+func (h *CategoricalHistogramStruct) TrimByBinSize(trimFraction float64) error {
+	if trimFraction <= 0 || trimFraction > 1.0 {
+		return fmt.Errorf(fmt.Sprintf("Unexpected value of trimFraction: %f", trimFraction))
+	}
+	newMaxbins := int(math.Max(float64(h.Maxbins)*trimFraction, CHIST_MIN_BIN_SIZE))
+	if newMaxbins >= h.Maxbins {
+		return fmt.Errorf(fmt.Sprintf(
+			"No trimming required, h.MaxBins:%d, newMaxbins: %d, trimFraction: %f",
+			h.Maxbins, newMaxbins, trimFraction))
+	}
+	h.Maxbins = newMaxbins
+	h.trim()
+	return nil
 }

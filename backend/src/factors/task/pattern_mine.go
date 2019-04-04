@@ -86,14 +86,183 @@ func computeAllUserPropertiesHistogram(filepath string, pattern *P.Pattern) erro
 }
 
 // Removes all patterns with zero counts.
-func filterPatterns(patterns []*P.Pattern) []*P.Pattern {
-	filteredPatterns := []*P.Pattern{}
+func filterAndCompressPatterns(
+	patterns []*P.Pattern, maxTotalBytes int64, totalConsumedBytes int64,
+	currentPatternsLength int, maxPatternsLength int) ([]*P.Pattern, int64, error) {
+
+	if currentPatternsLength > maxPatternsLength {
+		errorString := fmt.Sprintf(
+			"Current pattern length greater than max length. currentPatternsLength:%d, maxPatternsLength: %d",
+			currentPatternsLength, maxPatternsLength)
+		mineLog.Error(errorString)
+		return []*P.Pattern{}, 0, fmt.Errorf(errorString)
+	}
+	if totalConsumedBytes >= maxTotalBytes {
+		mineLog.Info(fmt.Sprintf("No quota. totalConsumedBytes: %d, maxTotalBytes: %d",
+			totalConsumedBytes, maxTotalBytes))
+		return []*P.Pattern{}, 0, nil
+	}
+
+	countFilteredPatterns := []*P.Pattern{}
 	for _, p := range patterns {
 		if p.Count > 0 {
-			filteredPatterns = append(filteredPatterns, p)
+			countFilteredPatterns = append(countFilteredPatterns, p)
 		}
 	}
-	return filteredPatterns
+
+	// More quota to smaller patterns.
+	// Ex: maxLen = 4, maxTotalBytes = 10G
+	// len1 patterns will get 10 / (4 - 1 + 1) = 2.5G
+	// If len1 actually takes 2G then len2 patterns will get (10 - 2) / (4 - 2 + 1) = 2.66G
+	// Compression is done on best effort. Patterns are retained as long as
+	// totalConsumed Bytes does not cross over maxTotalBytes.
+	// If len1 actually takes 4G then len2 patterns will get (10 - 4) / (4 - 2 + 1) = 2G
+	// If len2 takes 2G then len3 gets (10 - 6) / (4 - 3 + 1) = 2G
+	currentPatternsQuota := int64(float64(maxTotalBytes-totalConsumedBytes) / float64(
+		maxPatternsLength-currentPatternsLength+1))
+	compressedPatterns, compressedPatternsBytes, err := compressPatterns(
+		countFilteredPatterns, currentPatternsQuota)
+	if err != nil {
+		return []*P.Pattern{}, 0, err
+	}
+	if (totalConsumedBytes + compressedPatternsBytes) <= maxTotalBytes {
+		mineLog.WithFields(log.Fields{
+			"numPatterns":          len(compressedPatterns),
+			"maxTotalBytes":        maxTotalBytes,
+			"totalConsumedBytes":   totalConsumedBytes,
+			"currentPatternsBytes": compressedPatternsBytes,
+		}).Info("Returning compressed patterns")
+		return compressedPatterns, compressedPatternsBytes, nil
+	}
+
+	// Patterns are added only till it does not go over maxTotalBytes, in
+	// decreasing order of count.
+	// Sort the patterns in descending order.
+	sort.Slice(compressedPatterns,
+		func(i, j int) bool {
+			return compressedPatterns[i].Count > compressedPatterns[j].Count
+		})
+	var cumulativeBytes int64 = 0
+	compressedAndDroppedPatterns := []*P.Pattern{}
+	for i, pattern := range compressedPatterns {
+		b, err := json.Marshal(pattern)
+		if err != nil {
+			mineLog.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal pattern.")
+			return []*P.Pattern{}, 0, err
+		}
+		pString := string(b)
+		pBytes := int64(len([]byte(pString)))
+		if totalConsumedBytes+cumulativeBytes+pBytes > maxTotalBytes {
+			mineLog.WithFields(log.Fields{
+				"numPatterns":          len(compressedPatterns),
+				"numDroppedPatterns":   len(compressedPatterns) - i,
+				"maxTotalBytes":        maxTotalBytes,
+				"totalConsumedBytes":   totalConsumedBytes,
+				"currentPatternsBytes": cumulativeBytes,
+			}).Info("Dropping patterns")
+			break
+		}
+		compressedAndDroppedPatterns = append(compressedAndDroppedPatterns, pattern)
+		cumulativeBytes += pBytes
+	}
+	return compressedAndDroppedPatterns, cumulativeBytes, nil
+}
+
+// Compress the size of patterns in memory to the desired overall quota
+// in bytes.
+func compressPatterns(patterns []*P.Pattern, maxBytesSize int64) ([]*P.Pattern, int64, error) {
+	if maxBytesSize <= 0 {
+		return patterns, 0, fmt.Errorf(fmt.Sprintf("Incorrect maxBytesSize value. %d", maxBytesSize))
+	}
+	var patternsBytes int64 = 0
+	for _, pattern := range patterns {
+		b, err := json.Marshal(pattern)
+		if err != nil {
+			mineLog.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal pattern.")
+			return []*P.Pattern{}, 0, err
+		}
+		pString := string(b)
+		patternsBytes += int64(len([]byte(pString)))
+	}
+	// Already within quota.
+	if patternsBytes <= maxBytesSize {
+		return patterns, patternsBytes, nil
+	}
+
+	// First try with decreasing frequency map size of categorical histograms proportionally.
+	TRIM_MULTIPLIER := 0.8
+	trimFraction := float64(maxBytesSize) * TRIM_MULTIPLIER / float64(patternsBytes)
+
+	var patternsTrim1Bytes int64 = 0
+	for _, pattern := range patterns {
+		(*pattern.EventCategoricalProperties).TrimByFmapSize(trimFraction)
+		(*pattern.UserCategoricalProperties).TrimByFmapSize(trimFraction)
+		b, err := json.Marshal(pattern)
+		if err != nil {
+			mineLog.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal pattern.")
+			return nil, 0, err
+		}
+		pString := string(b)
+		patternsTrim1Bytes += int64(len([]byte(pString)))
+	}
+
+	mineLog.WithFields(log.Fields{
+		"initialSize":          patternsBytes,
+		"beforeCompressSize":   patternsBytes,
+		"afterCompressSize":    patternsTrim1Bytes,
+		"maxSizeforCurrentSet": maxBytesSize,
+	}).Info("Compression by Trim 1")
+
+	if patternsTrim1Bytes <= maxBytesSize {
+		return patterns, patternsTrim1Bytes, nil
+	}
+	// Next try by decreasing number of bins of numerical histograms.
+	trimFraction = float64(maxBytesSize) * TRIM_MULTIPLIER / float64(patternsTrim1Bytes)
+	var patternsTrim2Bytes int64 = 0.0
+	for _, pattern := range patterns {
+		(*pattern.EventNumericProperties).TrimByBinSize(trimFraction)
+		(*pattern.UserNumericProperties).TrimByBinSize(trimFraction)
+		b, err := json.Marshal(pattern)
+		if err != nil {
+			mineLog.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal pattern.")
+			return nil, 0, err
+		}
+		pString := string(b)
+		patternsTrim2Bytes += int64(len([]byte(pString)))
+	}
+	mineLog.WithFields(log.Fields{
+		"initialSize":          patternsBytes,
+		"beforeCompressSize":   patternsTrim1Bytes,
+		"afterCompressSize":    patternsTrim2Bytes,
+		"maxSizeforCurrentSet": maxBytesSize,
+	}).Info("Compression by Trim 2")
+
+	if patternsTrim2Bytes <= maxBytesSize {
+		return patterns, patternsTrim2Bytes, nil
+	}
+
+	// Next try decreasing the number of bins of categorical histograms.
+	trimFraction = float64(maxBytesSize) * TRIM_MULTIPLIER / float64(patternsTrim2Bytes)
+	var patternsTrim3Bytes int64 = 0
+	for _, pattern := range patterns {
+		(*pattern.EventCategoricalProperties).TrimByBinSize(trimFraction)
+		(*pattern.UserCategoricalProperties).TrimByBinSize(trimFraction)
+		b, err := json.Marshal(pattern)
+		if err != nil {
+			mineLog.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal pattern.")
+			return nil, 0, err
+		}
+		pString := string(b)
+		patternsTrim3Bytes += int64(len([]byte(pString)))
+	}
+	mineLog.WithFields(log.Fields{
+		"initialSize":          patternsBytes,
+		"beforeCompressSize":   patternsTrim2Bytes,
+		"afterCompressSize":    patternsTrim3Bytes,
+		"maxSizeforCurrentSet": maxBytesSize,
+	}).Info("Compression by Trim 3")
+
+	return patterns, patternsTrim3Bytes, nil
 }
 
 func genSegmentedCandidates(
@@ -180,69 +349,90 @@ func genLenThreeSegmentedCandidates(lenTwoPatterns []*P.Pattern,
 func mineAndWriteLenOnePatterns(
 	eventNames []M.EventName, filepath string,
 	userAndEventsInfo *P.UserAndEventsInfo, numRoutines int,
-	chunkDir string) ([]*P.Pattern, error) {
+	chunkDir string, maxModelSize int64, cumulativePatternsSize int64) (
+	[]*P.Pattern, int64, error) {
 	var lenOnePatterns []*P.Pattern
 	for _, eventName := range eventNames {
 		p, err := P.NewPattern([]string{eventName.Name}, userAndEventsInfo)
 		if err != nil {
-			return []*P.Pattern{}, fmt.Errorf("Pattern initialization failed")
+			return []*P.Pattern{}, 0, fmt.Errorf("Pattern initialization failed")
 		}
 		lenOnePatterns = append(lenOnePatterns, p)
 	}
 	countPatterns(filepath, lenOnePatterns, numRoutines)
-	filteredLenOnePatterns := filterPatterns(lenOnePatterns)
-	if err := writePatternsAsChunks(filteredLenOnePatterns, chunkDir); err != nil {
-		return []*P.Pattern{}, err
+	filteredLenOnePatterns, patternsSize, err := filterAndCompressPatterns(
+		lenOnePatterns, maxModelSize, cumulativePatternsSize, 1, max_PATTERN_LENGTH)
+	if err != nil {
+		return []*P.Pattern{}, 0, err
 	}
-	return filteredLenOnePatterns, nil
+	if err := writePatternsAsChunks(filteredLenOnePatterns, chunkDir); err != nil {
+		return []*P.Pattern{}, 0, err
+	}
+	return filteredLenOnePatterns, patternsSize, nil
 }
 
 func mineAndWriteLenTwoPatterns(
 	lenOnePatterns []*P.Pattern, filepath string,
 	userAndEventsInfo *P.UserAndEventsInfo, numRoutines int,
-	chunkDir string) ([]*P.Pattern, error) {
+	chunkDir string, maxModelSize int64, cumulativePatternsSize int64) (
+	[]*P.Pattern, int64, error) {
 	// Each event combination is a segment in itself.
 	lenTwoPatterns, _, err := P.GenCandidates(
 		lenOnePatterns, max_SEGMENTS, userAndEventsInfo)
 	if err != nil {
-		return []*P.Pattern{}, err
+		return []*P.Pattern{}, 0, err
 	}
 	countPatterns(filepath, lenTwoPatterns, numRoutines)
-	filteredLenTwoPatterns := filterPatterns(lenTwoPatterns)
-	if err := writePatternsAsChunks(filteredLenTwoPatterns, chunkDir); err != nil {
-		return []*P.Pattern{}, err
+	filteredLenTwoPatterns, patternsSize, err := filterAndCompressPatterns(
+		lenTwoPatterns, maxModelSize, cumulativePatternsSize, 2, max_PATTERN_LENGTH)
+	if err != nil {
+		return []*P.Pattern{}, 0, err
 	}
-	return filteredLenTwoPatterns, nil
+	if err := writePatternsAsChunks(filteredLenTwoPatterns, chunkDir); err != nil {
+		return []*P.Pattern{}, 0, err
+	}
+	return filteredLenTwoPatterns, patternsSize, nil
 }
 
 func mineAndWritePatterns(projectId uint64, filepath string,
-	userAndEventsInfo *P.UserAndEventsInfo, numRoutines int, chunkDir string) error {
+	userAndEventsInfo *P.UserAndEventsInfo, numRoutines int, chunkDir string,
+	maxModelSize int64) error {
 	// Length One Patterns.
 	eventNames, errCode := M.GetEventNames(projectId)
 	if errCode != http.StatusFound {
 		return fmt.Errorf("DB read of event names failed")
 	}
 	var filteredPatterns []*P.Pattern
+	var cumulativePatternsSize int64 = 0
 
 	patternLen := 1
-	filteredPatterns, err := mineAndWriteLenOnePatterns(
-		eventNames, filepath, userAndEventsInfo, numRoutines, chunkDir)
+	filteredPatterns, patternsSize, err := mineAndWriteLenOnePatterns(
+		eventNames, filepath, userAndEventsInfo, numRoutines, chunkDir,
+		maxModelSize, cumulativePatternsSize)
 	if err != nil {
 		return err
 	}
+	cumulativePatternsSize += patternsSize
 	printFilteredPatterns(filteredPatterns, patternLen)
+	if cumulativePatternsSize >= maxModelSize {
+		return nil
+	}
 
 	patternLen++
 	if patternLen > max_PATTERN_LENGTH {
 		return nil
 	}
-	filteredPatterns, err = mineAndWriteLenTwoPatterns(
+	filteredPatterns, patternsSize, err = mineAndWriteLenTwoPatterns(
 		filteredPatterns, filepath, userAndEventsInfo,
-		numRoutines, chunkDir)
+		numRoutines, chunkDir, maxModelSize, cumulativePatternsSize)
 	if err != nil {
 		return err
 	}
+	cumulativePatternsSize += patternsSize
 	printFilteredPatterns(filteredPatterns, patternLen)
+	if cumulativePatternsSize >= maxModelSize {
+		return nil
+	}
 
 	// Len three patterns generation in a block to free up memory of
 	// lenThreeVariables after use.
@@ -261,16 +451,25 @@ func mineAndWritePatterns(projectId uint64, filepath string,
 			lenThreePatterns = append(lenThreePatterns, patterns...)
 		}
 		countPatterns(filepath, lenThreePatterns, numRoutines)
-		filteredPatterns = filterPatterns(lenThreePatterns)
+		filteredPatterns, patternsSize, err = filterAndCompressPatterns(
+			lenThreePatterns, maxModelSize, cumulativePatternsSize,
+			patternLen, max_PATTERN_LENGTH)
+		if err != nil {
+			return err
+		}
+		cumulativePatternsSize += patternsSize
 		if err := writePatternsAsChunks(filteredPatterns, chunkDir); err != nil {
 			return err
 		}
 		printFilteredPatterns(filteredPatterns, patternLen)
+		if cumulativePatternsSize >= maxModelSize {
+			return nil
+		}
 	}
 
 	var candidatePatternsMap map[string][]*P.Pattern
 	var candidatePatterns []*P.Pattern
-	for len(filteredPatterns) > 0 {
+	for len(filteredPatterns) > 0 && cumulativePatternsSize < maxModelSize {
 		patternLen++
 		if patternLen > max_PATTERN_LENGTH {
 			return nil
@@ -286,8 +485,14 @@ func mineAndWritePatterns(projectId uint64, filepath string,
 			candidatePatterns = append(candidatePatterns, patterns...)
 		}
 		countPatterns(filepath, candidatePatterns, numRoutines)
-		filteredPatterns = filterPatterns(candidatePatterns)
+		filteredPatterns, patternsSize, err = filterAndCompressPatterns(
+			candidatePatterns, maxModelSize, cumulativePatternsSize,
+			patternLen, max_PATTERN_LENGTH)
+		if err != nil {
+			return err
+		}
 		if len(filteredPatterns) > 0 {
+			cumulativePatternsSize += patternsSize
 			if err := writePatternsAsChunks(filteredPatterns, chunkDir); err != nil {
 				return err
 			}
@@ -336,20 +541,23 @@ func buildPropertiesInfoFromInput(projectId uint64, filepath string) (*P.UserAnd
 }
 
 func printFilteredPatterns(filteredPatterns []*P.Pattern, iter int) {
-	pnum := 0
-	fmt.Println("----------------------------------")
-	fmt.Println(fmt.Sprintf("-------- Length %d patterns-------", iter))
-	fmt.Println("----------------------------------")
+	mineLog.Info(fmt.Sprintf("Mined %d patterns of length %d", len(filteredPatterns), iter))
+	/*
+		pnum := 0
+		fmt.Println("----------------------------------")
+		fmt.Println(fmt.Sprintf("-------- Length %d patterns-------", iter))
+		fmt.Println("----------------------------------")
 
-	for _, p := range filteredPatterns {
-		pnum++
-		fmt.Printf("User Created")
-		for i := 0; i < len(p.EventNames); i++ {
-			fmt.Printf("-----> %s", p.EventNames[i])
+		for _, p := range filteredPatterns {
+			pnum++
+			fmt.Printf("User Created")
+			for i := 0; i < len(p.EventNames); i++ {
+				fmt.Printf("-----> %s", p.EventNames[i])
+			}
+			fmt.Printf(fmt.Sprintf(" : (Count %d)\n\n\n", p.Count))
 		}
-		fmt.Printf(fmt.Sprintf(" : (Count %d)\n\n\n", p.Count))
-	}
-	fmt.Println("----------------------------------")
+		fmt.Println("----------------------------------")
+	*/
 }
 
 func writeEventInfoFile(projectId, modelId uint64, events *bytes.Reader,
@@ -433,6 +641,14 @@ func writePatternsAsChunks(patterns []*P.Pattern, chunksDir string) error {
 		pString = pString + "\n"
 		pBytes := []byte(pString)
 		pBytesLen := int64(len(pBytes))
+		if pBytesLen >= 10000000 {
+			// Limit is 10MB
+			errorString := fmt.Sprintf(
+				"Too big pattern, chunksDir: %s, pattern: %s",
+				chunksDir, pattern.String())
+			mineLog.Error(errorString)
+			return fmt.Errorf(errorString)
+		}
 
 		fileHasSpace := false
 		if currentFileIndex > 0 {
@@ -503,7 +719,7 @@ func uploadChunksToCloud(tmpChunksDir, cloudChunksDir string, cloudManager *file
 // PatternMine Mine TOP_K Frequent patterns for every event combination (segment) at every iteration.
 func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *filestore.FileManager,
 	diskManager *serviceDisk.DiskDriver, bucketName string, numRoutines int, projectId uint64,
-	modelId uint64, modelType string, startTime int64, endTime int64) (string, error) {
+	modelId uint64, modelType string, startTime int64, endTime int64, maxModelSize int64) (string, int, error) {
 
 	var err error
 
@@ -516,13 +732,13 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err, "eventFilePath": efCloudPath,
 			"eventFileName": efCloudName}).Error("Failed downloading events file from cloud.")
-		return "", err
+		return "", 0, err
 	}
 	err = diskManager.Create(efTmpPath, efTmpName, eReader)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err, "eventFilePath": efTmpPath,
 			"eventFileName": efTmpName}).Error("Failed to create event file on disk.")
-		return "", err
+		return "", 0, err
 	}
 	tmpEventsFilepath := efTmpPath + efTmpName
 	mineLog.Info("Successfuly downloaded events file from cloud.")
@@ -533,17 +749,25 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 	userAndEventsInfo, err := buildPropertiesInfoFromInput(projectId, tmpEventsFilepath)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to build user and event Info.")
-		return "", err
+		return "", 0, err
 	}
 	userAndEventsInfoBytes, err := json.Marshal(userAndEventsInfo)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to unmarshal events Info.")
-		return "", err
+		return "", 0, err
+	}
+	if len(userAndEventsInfoBytes) > 249900000 {
+		// Limit is 250MB
+		errorString := fmt.Sprintf(
+			"Too big properties info, modelId: %d, modelType: %s, projectId: %d",
+			modelId, modelType, projectId)
+		mineLog.Error(errorString)
+		return "", 0, fmt.Errorf(errorString)
 	}
 	err = writeEventInfoFile(projectId, modelId, bytes.NewReader(userAndEventsInfoBytes), (*cloudManager))
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to write events Info.")
-		return "", err
+		return "", 0, err
 	}
 	mineLog.Info("Successfully Built user and event properties info and written it to file.")
 
@@ -552,20 +776,20 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 	allActiveUsersPattern, err := P.NewPattern([]string{U.SEN_ALL_ACTIVE_USERS}, userAndEventsInfo)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to build pattern with histogram of all active user properties.")
-		return "", err
+		return "", 0, err
 	}
 	if err := computeAllUserPropertiesHistogram(tmpEventsFilepath, allActiveUsersPattern); err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to compute user properties.")
-		return "", err
+		return "", 0, err
 	}
 	tmpChunksDir := diskManager.GetPatternChunksDir(projectId, modelId)
 	if err := serviceDisk.MkdirAll(tmpChunksDir); err != nil {
 		mineLog.WithFields(log.Fields{"chunkDir": tmpChunksDir, "error": err}).Error("Unable to create chunks directory.")
-		return "", err
+		return "", 0, err
 	}
 	if err := writePatternsAsChunks([]*P.Pattern{allActiveUsersPattern}, tmpChunksDir); err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to write user properties.")
-		return "", err
+		return "", 0, err
 	}
 	mineLog.Info("Successfully built all user properties histogram.")
 
@@ -573,10 +797,10 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 	mineLog.WithFields(log.Fields{"projectId": projectId, "tmpEventsFilepath": tmpEventsFilepath,
 		"tmpChunksDir": tmpChunksDir, "routines": numRoutines}).Info("Mining patterns and writing it as chunks.")
 	err = mineAndWritePatterns(projectId, tmpEventsFilepath,
-		userAndEventsInfo, numRoutines, tmpChunksDir)
+		userAndEventsInfo, numRoutines, tmpChunksDir, maxModelSize)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to mine patterns.")
-		return "", err
+		return "", 0, err
 	}
 	mineLog.Info("Successfully mined patterns and written it as chunks.")
 
@@ -603,7 +827,7 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 	projectDatas, err := PMM.GetProjectsMetadata(cloudManager, etcdClient)
 	if err != nil {
 		// failures logged already.
-		return "", err
+		return "", 0, err
 	}
 	projectDatas = append(projectDatas, PMM.ProjectData{
 		ID:             projectId,
@@ -617,14 +841,14 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 	err = PMM.WriteProjectDataFile(newVersionId, projectDatas, cloudManager)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to write new version file to cloud.")
-		return "", err
+		return "", 0, err
 	}
 	err = etcdClient.SetProjectVersion(newVersionId)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to write new version id to etcd.")
-		return "", err
+		return "", 0, err
 	}
 	mineLog.WithField("newVersionId", newVersionId).Info("Successfully mined patterns, updated metadata and notified new version id.")
 
-	return newVersionId, nil
+	return newVersionId, len(chunkIds), nil
 }

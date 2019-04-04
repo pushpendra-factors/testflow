@@ -223,7 +223,7 @@ func ComputeAllUserPropertiesHistogram(scanner *bufio.Scanner, pattern *Pattern)
 		userProperties := eventDetails.UserProperties
 
 		numEventsProcessed += 1
-		if math.Mod(float64(numEventsProcessed), 1000.0) == 0.0 {
+		if math.Mod(float64(numEventsProcessed), 10000.0) == 0.0 {
 			log.Info(fmt.Sprintf("ComputeAllUserPropertiesHistogram. Processed %d events", numEventsProcessed))
 		}
 
@@ -280,7 +280,7 @@ func CountPatterns(scanner *bufio.Scanner, patterns []*Pattern) error {
 		eventCardinality := eventDetails.EventCardinality
 
 		numEventsProcessed += 1
-		if math.Mod(float64(numEventsProcessed), 1000.0) == 0.0 {
+		if math.Mod(float64(numEventsProcessed), 10000.0) == 0.0 {
 			log.Info(fmt.Sprintf("Processed %d events", numEventsProcessed))
 		}
 

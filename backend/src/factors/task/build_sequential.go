@@ -5,6 +5,8 @@ import (
 	serviceDisk "factors/services/disk"
 	serviceEtcd "factors/services/etcd"
 	"factors/util"
+	"fmt"
+	"runtime/debug"
 	"time"
 
 	"github.com/jinzhu/gorm"
@@ -17,7 +19,7 @@ var bsLog = taskLog.WithField("prefix", taskID)
 
 type BuildFailure struct {
 	Build   Build  `json:"build"`
-	Error   error  `json:"error"`
+	Error   string `json:"error"`
 	Message string `json:"message"`
 }
 
@@ -25,11 +27,12 @@ type BuildSuccess struct {
 	Build               Build `json:"build"`
 	PullEventsTimeInMS  int64 `json:"pulled_events_in_ms"`
 	PatternMineTimeInMS int64 `json:"mined_patterns_in_ms"`
+	NumberOfChunks      int   `json:num_chunks`
 }
 
 func notifyOnPanic(env string) {
 	if pe := recover(); pe != nil {
-		if ne := util.NotifyThroughSNS(taskID, env, map[string]interface{}{"panic_error": pe}); ne != nil {
+		if ne := util.NotifyThroughSNS(taskID, env, map[string]interface{}{"panic_error": pe, "stacktrace": string(debug.Stack())}); ne != nil {
 			log.Fatal(ne, pe)
 		}
 		log.Fatal(pe)
@@ -39,7 +42,7 @@ func notifyOnPanic(env string) {
 // BuildSequential - runs model building sequenitally for all project intervals.
 func BuildSequential(env string, db *gorm.DB, cloudManager *filestore.FileManager,
 	etcdClient *serviceEtcd.EtcdClient, diskManger *serviceDisk.DiskDriver,
-	bucketName string, noOfPatternWorkers int, projectId uint64) error {
+	bucketName string, noOfPatternWorkers int, projectId uint64, maxModelSize int64) error {
 
 	defer notifyOnPanic(env)
 
@@ -77,7 +80,7 @@ func BuildSequential(env string, db *gorm.DB, cloudManager *filestore.FileManage
 			build.ProjectId, build.StartTimestamp, build.EndTimestamp)
 		if err != nil {
 			logCtx.WithField("error", err).Error("Failed to pull events.")
-			failures = append(failures, BuildFailure{Build: build, Error: err, Message: "Pattern mining failure"})
+			failures = append(failures, BuildFailure{Build: build, Error: fmt.Sprintf("%s", err), Message: "Pattern mining failure"})
 			continue
 		}
 		if eventsCount == 0 {
@@ -90,18 +93,22 @@ func BuildSequential(env string, db *gorm.DB, cloudManager *filestore.FileManage
 
 		// Patten mine
 		startAt = time.Now().UnixNano()
-		newProjectMetaVersion, err := PatternMine(db, etcdClient, cloudManager, diskManger,
+		newProjectMetaVersion, numChunks, err := PatternMine(db, etcdClient, cloudManager, diskManger,
 			bucketName, noOfPatternWorkers, build.ProjectId, modelId, build.ModelType,
-			build.StartTimestamp, build.EndTimestamp)
+			build.StartTimestamp, build.EndTimestamp, maxModelSize)
 		if err != nil {
 			logCtx.Error("Failed to mine patterns.")
-			failures = append(failures, BuildFailure{Build: build, Error: err, Message: "Pattern mining failure"})
+			failures = append(failures, BuildFailure{Build: build, Error: fmt.Sprintf("%s", err), Message: "Pattern mining failure"})
 			continue
 		}
 		logCtx = logCtx.WithFields(log.Fields{"NewProjectMetaVersion": newProjectMetaVersion})
 		timeTakenToMinePatterns := (time.Now().UnixNano() - startAt) / 1000000
 		logCtx = logCtx.WithField("TimeTakenToMinePatternsInMS", timeTakenToMinePatterns)
-		success = append(success, BuildSuccess{Build: build, PullEventsTimeInMS: timeTakenToPullEvents, PatternMineTimeInMS: timeTakenToMinePatterns})
+		success = append(success, BuildSuccess{
+			Build:               build,
+			NumberOfChunks:      numChunks,
+			PullEventsTimeInMS:  timeTakenToPullEvents,
+			PatternMineTimeInMS: timeTakenToMinePatterns})
 	}
 
 	buildStatus := map[string]interface{}{

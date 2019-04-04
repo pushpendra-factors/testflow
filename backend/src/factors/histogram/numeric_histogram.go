@@ -5,6 +5,8 @@ import (
 	"math"
 )
 
+const NHIST_MIN_BIN_SIZE = 3
+
 type NumericHistogram interface {
 	Add(v []float64) error
 
@@ -19,6 +21,8 @@ type NumericHistogram interface {
 	CDF(x []float64) float64
 
 	Count() uint64
+
+	TrimByBinSize(float64) error
 }
 
 type NumericHistogramStruct struct {
@@ -292,4 +296,19 @@ func (h *NumericHistogramStruct) trim() {
 
 func (h *NumericHistogramStruct) Count() uint64 {
 	return h.Total
+}
+
+func (h *NumericHistogramStruct) TrimByBinSize(trimFraction float64) error {
+	if trimFraction <= 0 || trimFraction > 1.0 {
+		return fmt.Errorf(fmt.Sprintf("Unexpected value of trimFraction: %f", trimFraction))
+	}
+	newMaxbins := int(math.Max(float64(h.Maxbins)*trimFraction, NHIST_MIN_BIN_SIZE))
+	if newMaxbins >= h.Maxbins {
+		return fmt.Errorf(fmt.Sprintf(
+			"No trimming required, h.MaxBins:%d, newMaxbins: %d, trimFraction: %f",
+			h.Maxbins, newMaxbins, trimFraction))
+	}
+	h.Maxbins = newMaxbins
+	h.trim()
+	return nil
 }
