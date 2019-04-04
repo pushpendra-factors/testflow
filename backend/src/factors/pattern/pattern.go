@@ -335,7 +335,7 @@ func (p *Pattern) CountForEvent(
 						if duration < 0 {
 							// Ignoring this error for now, since there are no DB checks to avoid
 							// these user input values.
-							log.Error(fmt.Sprintf("Event occurs before creation for user:%s", p.currentUserId))
+							log.Debug(fmt.Sprintf("Event occurs before creation for user:%s", p.currentUserId))
 						}
 					} else {
 						duration := p.currentEventTimestamps[i] - p.currentEventTimestamps[i-1]
@@ -369,7 +369,7 @@ func (p *Pattern) CountForEvent(
 				var cardinalityRepeatTimingsVec []float64 = make([]float64, 6)
 				cardinalityRepeatTimingsVec[0] = float64(p.currentEventCardinalities[0])
 				cardinalityRepeatTimingsVec[1] = float64(p.currentRepeats[0])
-				cardinalityRepeatTimingsVec[2] = float64(p.currentEventTimestamps[0] - userJoinTimestamp)
+				cardinalityRepeatTimingsVec[2] = math.Max(float64(p.currentEventTimestamps[0]-userJoinTimestamp), 0)
 				cardinalityRepeatTimingsVec[3] = float64(p.currentEventCardinalities[pLen-1])
 				cardinalityRepeatTimingsVec[4] = float64(p.currentRepeats[pLen-1])
 				if pLen > 1 {

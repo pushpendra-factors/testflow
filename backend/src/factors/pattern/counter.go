@@ -172,7 +172,7 @@ func CollectPropertiesInfo(scanner *bufio.Scanner, userAndEventsInfo *UserAndEve
 					cmap[categoricalValue] = true
 				}
 			} else {
-				log.WithFields(log.Fields{"property": key, "value": value, "line no": lineNum}).Info(
+				log.WithFields(log.Fields{"property": key, "value": value, "line no": lineNum}).Debug(
 					"Ignoring non string, non numeric user property.")
 			}
 		}
@@ -201,7 +201,7 @@ func CollectPropertiesInfo(scanner *bufio.Scanner, userAndEventsInfo *UserAndEve
 					cmap[categoricalValue] = true
 				}
 			} else {
-				log.WithFields(log.Fields{"event": eventName, "property": key, "value": value, "line no": lineNum}).Info(
+				log.WithFields(log.Fields{"event": eventName, "property": key, "value": value, "line no": lineNum}).Debug(
 					"Ignoring non string, non numeric event property.")
 			}
 		}
