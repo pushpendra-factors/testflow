@@ -99,8 +99,8 @@ class DefaultHeader extends Component {
     }
 
     this.props.createProject(projectName)
-      .then((r) => this.showAddProjectMessage({success: true, message: 'Your project has been created successfully'}))
-      .catch((r) => this.showAddProjectMessage({success: false, message: 'Failed to create project, try again'}))
+      .then((r) => this.setState({ showAddProjectModal: false }))
+      .catch((r) => this.showAddProjectMessage({success: false, message: 'Failed to create your project. Please try again.'}))
   }
 
   handleLogout = () => {
@@ -116,15 +116,6 @@ class DefaultHeader extends Component {
       }
       return state
     });
-  }
-
-  getAddProjectMessageStyle() {
-    if (this.state.addProjectMessage != null) {
-      let style = { display: 'inline-block' };
-      style.color = this.state.addProjectMessage.success ? 'green': 'red';
-      return style;
-    }
-    return { display: 'none' };
   }
 
   showAddProjectMessage(msg) {
@@ -176,9 +167,11 @@ class DefaultHeader extends Component {
         <Modal isOpen={this.state.showAddProjectModal} toggle={this.toggleAddProjectModal} style={{marginTop: '10rem'}}>
           <ModalHeader toggle={this.toggleAddProjectModal}>New Project</ModalHeader>
           <ModalBody style={{padding: '25px 35px'}}>
-            <div style={{textAlign: 'center', marginBottom: '15px'}}><span style={this.getAddProjectMessageStyle()}>{ this.getAddProjectMessage() }</span></div>
+            <div style={{textAlign: 'center', marginBottom: '15px'}}>
+              <span style={{display: 'inline-block'}} className='fapp-error' hidden={this.state.addProjectMessage == null}>{ this.getAddProjectMessage() }</span>
+            </div>
             <Form onSubmit={this.handleCreateProject} >
-              <span class='fapp-label'>Project Name </span>                 
+              <span class='fapp-label'>Project Name </span>         
               <Input className='fapp-input' type="text" placeholder="Your Project Name" onChange={this.handleProjectNameFormChange} />
             </Form>
           </ModalBody>

@@ -539,7 +539,7 @@ class Query extends Component {
 
     return (
       <div className='fapp-content' style={{marginLeft: '2rem', marginRight: '2rem'}}>
-        <div style={{color:'#d64541', fontWeight: '500', textAlign: 'center'}} hidden={!this.state.topError}>
+        <div className='fapp-error' hidden={!this.state.topError}>
             <span>{ this.state.topError }</span>
         </div>
 
