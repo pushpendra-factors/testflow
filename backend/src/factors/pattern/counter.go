@@ -144,6 +144,9 @@ func CollectPropertiesInfo(scanner *bufio.Scanner, userAndEventsInfo *UserAndEve
 	lineNum := 0
 	userPropertiesInfo := userAndEventsInfo.UserPropertiesInfo
 	eventInfoMap := userAndEventsInfo.EventPropertiesInfoMap
+	numUniqueEvents := len(*eventInfoMap)
+	maxProperties := max_SEEN_PROPERTIES / (int(float64(numUniqueEvents)/1000.0) + 1)
+	maxPropertyValues := max_SEEN_PROPERTY_VALUES / (int(float64(numUniqueEvents)/1000.0) + 1)
 
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -155,12 +158,12 @@ func CollectPropertiesInfo(scanner *bufio.Scanner, userAndEventsInfo *UserAndEve
 		}
 		for key, value := range eventDetails.UserProperties {
 			if _, ok := value.(float64); ok {
-				if len(userPropertiesInfo.NumericPropertyKeys) > max_SEEN_PROPERTIES {
+				if len(userPropertiesInfo.NumericPropertyKeys) > maxProperties {
 					continue
 				}
 				userPropertiesInfo.NumericPropertyKeys[key] = true
 			} else if categoricalValue, ok := value.(string); ok {
-				if len(userPropertiesInfo.CategoricalPropertyKeyValues) > max_SEEN_PROPERTIES {
+				if len(userPropertiesInfo.CategoricalPropertyKeyValues) > maxProperties {
 					continue
 				}
 				cmap, ok := userPropertiesInfo.CategoricalPropertyKeyValues[key]
@@ -168,7 +171,7 @@ func CollectPropertiesInfo(scanner *bufio.Scanner, userAndEventsInfo *UserAndEve
 					cmap = make(map[string]bool)
 					userPropertiesInfo.CategoricalPropertyKeyValues[key] = cmap
 				}
-				if len(categoricalValue) < max_SEEN_PROPERTY_VALUES {
+				if len(categoricalValue) < maxPropertyValues {
 					cmap[categoricalValue] = true
 				}
 			} else {
@@ -184,12 +187,12 @@ func CollectPropertiesInfo(scanner *bufio.Scanner, userAndEventsInfo *UserAndEve
 		}
 		for key, value := range eventDetails.EventProperties {
 			if _, ok := value.(float64); ok {
-				if len(eInfo.NumericPropertyKeys) > max_SEEN_PROPERTIES {
+				if len(eInfo.NumericPropertyKeys) > maxProperties {
 					continue
 				}
 				eInfo.NumericPropertyKeys[key] = true
 			} else if categoricalValue, ok := value.(string); ok {
-				if len(eInfo.CategoricalPropertyKeyValues) > max_SEEN_PROPERTIES {
+				if len(eInfo.CategoricalPropertyKeyValues) > maxProperties {
 					continue
 				}
 				cmap, ok := eInfo.CategoricalPropertyKeyValues[key]
@@ -197,7 +200,7 @@ func CollectPropertiesInfo(scanner *bufio.Scanner, userAndEventsInfo *UserAndEve
 					cmap = make(map[string]bool)
 					eInfo.CategoricalPropertyKeyValues[key] = cmap
 				}
-				if len(categoricalValue) < max_SEEN_PROPERTY_VALUES {
+				if len(categoricalValue) < maxPropertyValues {
 					cmap[categoricalValue] = true
 				}
 			} else {
