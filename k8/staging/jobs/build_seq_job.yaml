@@ -9,13 +9,15 @@ spec:
   jobTemplate:
     spec:
       template:
-        metadata:      
+        metadata:
           labels:
             layer: jobs
         spec:
+          nodeSelector:
+            cloud.google.com/gke-nodepool: default-pool
           containers:
           - name: build-seq-job
-            image: us.gcr.io/factors-staging/build-seq-job:v0.15-beta_b606eef
+            image: us.gcr.io/factors-staging/build-seq-job:v0.2-beta_1a6d98e
             imagePullPolicy: IfNotPresent
             args:
             - --env
