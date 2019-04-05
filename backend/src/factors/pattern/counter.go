@@ -145,8 +145,8 @@ func CollectPropertiesInfo(scanner *bufio.Scanner, userAndEventsInfo *UserAndEve
 	userPropertiesInfo := userAndEventsInfo.UserPropertiesInfo
 	eventInfoMap := userAndEventsInfo.EventPropertiesInfoMap
 	numUniqueEvents := len(*eventInfoMap)
-	maxProperties := max_SEEN_PROPERTIES / (int(float64(numUniqueEvents)/1000.0) + 1)
-	maxPropertyValues := max_SEEN_PROPERTY_VALUES / (int(float64(numUniqueEvents)/1000.0) + 1)
+	maxProperties := max_SEEN_PROPERTIES / (int(float64(numUniqueEvents)/150.0) + 1)
+	maxPropertyValues := max_SEEN_PROPERTY_VALUES / (int(float64(numUniqueEvents)/150.0) + 1)
 
 	for scanner.Scan() {
 		line := scanner.Text()

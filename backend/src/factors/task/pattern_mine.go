@@ -644,8 +644,8 @@ func writePatternsAsChunks(patterns []*P.Pattern, chunksDir string) error {
 		if pBytesLen >= 10000000 {
 			// Limit is 10MB
 			errorString := fmt.Sprintf(
-				"Too big pattern, chunksDir: %s, pattern: %s",
-				chunksDir, pattern.String())
+				"Too big pattern, chunksDir: %s, pattern: %s, numBytes: %d",
+				chunksDir, pattern.String(), pBytesLen)
 			mineLog.Error(errorString)
 			return fmt.Errorf(errorString)
 		}
@@ -759,8 +759,8 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 	if len(userAndEventsInfoBytes) > 249900000 {
 		// Limit is 250MB
 		errorString := fmt.Sprintf(
-			"Too big properties info, modelId: %d, modelType: %s, projectId: %d",
-			modelId, modelType, projectId)
+			"Too big properties info, modelId: %d, modelType: %s, projectId: %d, numBytes: %d",
+			modelId, modelType, projectId, len(userAndEventsInfoBytes))
 		mineLog.Error(errorString)
 		return "", 0, fmt.Errorf(errorString)
 	}
