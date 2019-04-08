@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"sync"
 )
 
-const fMAP_MAX_SIZE = 2000
+const fMAP_MAX_SIZE = 100
 const fMAP_MIN_SIZE = 20
 const CHIST_MIN_BIN_SIZE = 1
 const fMAP_OTHER_KEY = "__OTHER__"
@@ -30,14 +31,16 @@ type CategoricalHistogram interface {
 }
 
 type CategoricalHistogramStruct struct {
-	Bins                        []categoricalBin              `json:"b"`
-	Maxbins                     int                           `json:"mb"`
-	MaxFmapSize                 int                           `json:"mf"`
-	Total                       uint64                        `json:"to"`
-	Dimension                   int                           `json:"d"`
-	Template                    *CategoricalHistogramTemplate `json:"te"`
-	binLogLikelihoodCache       map[string]float64
-	mergedBinLogLikelihoodCache map[string]map[string]float64
+	Bins                            []categoricalBin              `json:"b"`
+	Maxbins                         int                           `json:"mb"`
+	MaxFmapSize                     int                           `json:"mf"`
+	Total                           uint64                        `json:"to"`
+	Dimension                       int                           `json:"d"`
+	Template                        *CategoricalHistogramTemplate `json:"te"`
+	binLogLikelihoodCacheLock       sync.RWMutex
+	binLogLikelihoodCache           map[string]float64
+	mergedBinLogLikelihoodCacheLock sync.RWMutex
+	mergedBinLogLikelihoodCache     map[string]map[string]float64
 }
 
 type CategoricalHistogramTemplateUnit struct {
@@ -146,7 +149,7 @@ func (h *CategoricalHistogramStruct) Add(values []string) error {
 			binFrequencyMaps[i].Count = 1
 		}
 	}
-	h.Bins = append(h.Bins, categoricalBin{FrequencyMaps: binFrequencyMaps, Count: 1})
+	h.Bins = append(h.Bins, categoricalBin{FrequencyMaps: binFrequencyMaps, Count: 1, uuid: randomLowerAphaNumString(32)})
 	h.trim()
 	return nil
 }
@@ -181,36 +184,39 @@ func (h *CategoricalHistogramStruct) AddMap(keyValues map[string]string) error {
 }
 
 func (h *CategoricalHistogramStruct) getBinLogLikelihood(bin *categoricalBin) float64 {
-	if bin.uuid == "" {
-		bin.uuid = randomLowerAphaNumString(32)
-	}
+
+	h.binLogLikelihoodCacheLock.RLock()
 	if l, ok := h.binLogLikelihoodCache[bin.uuid]; ok {
+		h.binLogLikelihoodCacheLock.RUnlock()
 		return l
 	}
+	h.binLogLikelihoodCacheLock.RUnlock()
+
 	l := bin.logLikelihood()
+	h.binLogLikelihoodCacheLock.Lock()
 	h.binLogLikelihoodCache[bin.uuid] = l
+	h.binLogLikelihoodCacheLock.Unlock()
 	return l
 }
 
 func (h *CategoricalHistogramStruct) getMergedBinLogLikelihood(
 	bin1 *categoricalBin, bin2 *categoricalBin, maxFmapSize int) float64 {
-	if bin1.uuid == "" {
-		bin1.uuid = randomLowerAphaNumString(32)
-	}
-	if bin2.uuid == "" {
-		bin2.uuid = randomLowerAphaNumString(32)
-	}
+	h.mergedBinLogLikelihoodCacheLock.RLock()
 	if lMap, ok1 := h.mergedBinLogLikelihoodCache[bin1.uuid]; ok1 {
 		if l, ok2 := lMap[bin2.uuid]; ok2 {
+			h.mergedBinLogLikelihoodCacheLock.RUnlock()
 			return l
 		}
 	} else if lMap, ok1 := h.mergedBinLogLikelihoodCache[bin2.uuid]; ok1 {
 		if l, ok2 := lMap[bin1.uuid]; ok2 {
+			h.mergedBinLogLikelihoodCacheLock.RUnlock()
 			return l
 		}
 	}
+	h.mergedBinLogLikelihoodCacheLock.RUnlock()
 	mergedbin := (*bin1).merge(*bin2, maxFmapSize)
 	mergedLikelihood := mergedbin.logLikelihood()
+	h.mergedBinLogLikelihoodCacheLock.Lock()
 	// Add to cache;
 	lMap, ok := h.mergedBinLogLikelihoodCache[bin1.uuid]
 	if !ok {
@@ -218,6 +224,7 @@ func (h *CategoricalHistogramStruct) getMergedBinLogLikelihood(
 	}
 	lMap[bin2.uuid] = mergedLikelihood
 	h.mergedBinLogLikelihoodCache[bin1.uuid] = lMap
+	h.mergedBinLogLikelihoodCacheLock.Unlock()
 	return mergedLikelihood
 }
 
@@ -265,16 +272,29 @@ func (h *CategoricalHistogramStruct) cleanCache() {
 }
 
 func (h *CategoricalHistogramStruct) trim() {
+	h.concurrentTrim()
+	h.cleanCache()
+}
+
+func (h *CategoricalHistogramStruct) linearTrim() {
 	for len(h.Bins) > h.Maxbins {
 		// Find closest bins in terms of value
 		minDelta := 1e99
 		min_i := 0
 		min_j := 0
 		for i := range h.Bins {
+			if h.Bins[i].uuid == "" {
+				h.Bins[i].uuid = randomLowerAphaNumString(32)
+			}
+
 			binILikelihood := h.getBinLogLikelihood(&h.Bins[i])
 			for j := range h.Bins {
 				if j <= i {
 					continue
+				}
+
+				if h.Bins[j].uuid == "" {
+					h.Bins[j].uuid = randomLowerAphaNumString(32)
 				}
 
 				binJLikelihood := h.getBinLogLikelihood(&h.Bins[j])
@@ -305,7 +325,80 @@ func (h *CategoricalHistogramStruct) trim() {
 
 		h.Bins = append(h.Bins, mergedbin)
 	}
-	h.cleanCache()
+}
+
+type result struct {
+	i, j                                             int
+	binILikelihood, binJLikelihood, mergedLikelihood float64
+}
+
+func (h *CategoricalHistogramStruct) concurrentTrim() {
+
+	collectResult := make(chan result, (len(h.Bins)*len(h.Bins))/2)
+	for len(h.Bins) > h.Maxbins {
+		var wg sync.WaitGroup
+
+		for i := range h.Bins {
+			if h.Bins[i].uuid == "" {
+				h.Bins[i].uuid = randomLowerAphaNumString(32)
+			}
+			for j := i + 1; j < len(h.Bins); j++ {
+				if h.Bins[j].uuid == "" {
+					h.Bins[j].uuid = randomLowerAphaNumString(32)
+				}
+				wg.Add(1)
+				go func(x int, y int) {
+					defer wg.Done()
+					h.calculateLikelihood(x, y, collectResult)
+				}(i, j)
+			}
+		}
+
+		wg.Wait()
+		close(collectResult)
+
+		minDelta := 1e99
+		min_i := 0
+		min_j := 0
+
+		for result := range collectResult {
+			if delta := result.binILikelihood + result.binJLikelihood - result.mergedLikelihood; delta < minDelta {
+				minDelta = delta
+				min_i = result.i
+				min_j = result.j
+			}
+		}
+
+		// We need to merge bins min_i-1 and min_j
+		mergedbin := h.Bins[min_i].merge(h.Bins[min_j], h.MaxFmapSize)
+
+		// Remove min_i and min_j bins
+		min, max := sortTuple(min_i, min_j)
+
+		head := h.Bins[0:min]
+		mid := h.Bins[min+1 : max]
+		tail := h.Bins[max+1:]
+
+		h.Bins = append(head, mid...)
+		h.Bins = append(h.Bins, tail...)
+
+		h.Bins = append(h.Bins, mergedbin)
+
+	}
+}
+
+func (h *CategoricalHistogramStruct) calculateLikelihood(i, j int, publishResults chan result) {
+	binILikelihood := h.getBinLogLikelihood(&h.Bins[i])
+	binJLikelihood := h.getBinLogLikelihood(&h.Bins[j])
+	mergedLikelihood := h.getMergedBinLogLikelihood(&h.Bins[i], &h.Bins[j], h.MaxFmapSize)
+
+	publishResults <- result{
+		i:                i,
+		j:                j,
+		binILikelihood:   binILikelihood,
+		binJLikelihood:   binJLikelihood,
+		mergedLikelihood: mergedLikelihood,
+	}
 }
 
 func (b *categoricalBin) merge(o categoricalBin, maxFmapSize int) categoricalBin {
@@ -347,6 +440,7 @@ func (b *categoricalBin) merge(o categoricalBin, maxFmapSize int) categoricalBin
 	return categoricalBin{
 		FrequencyMaps: mergedFmaps,
 		Count:         b.Count + o.Count,
+		uuid:          randomLowerAphaNumString(32),
 	}
 }
 
