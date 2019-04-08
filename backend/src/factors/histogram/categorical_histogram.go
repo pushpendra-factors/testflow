@@ -334,9 +334,9 @@ type result struct {
 
 func (h *CategoricalHistogramStruct) concurrentTrim() {
 
-	collectResult := make(chan result, (len(h.Bins)*len(h.Bins))/2)
 	for len(h.Bins) > h.Maxbins {
 		var wg sync.WaitGroup
+		collectResult := make(chan result, (len(h.Bins)*len(h.Bins))/2)
 
 		for i := range h.Bins {
 			if h.Bins[i].uuid == "" {
