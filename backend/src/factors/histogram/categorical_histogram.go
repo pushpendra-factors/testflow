@@ -58,8 +58,8 @@ type CategoricalHistogramTemplate []CategoricalHistogramTemplateUnit
 func NewCategoricalHistogram(
 	n int, d int, t *CategoricalHistogramTemplate) (*CategoricalHistogramStruct, error) {
 	if t != nil && len(*t) != d {
-		return nil, fmt.Errorf(fmt.Sprintf(
-			"Mismatch in dimension %d and template length %d", d, len(*t)))
+		return nil, fmt.Errorf(
+			"Mismatch in dimension %d and template length %d", d, len(*t))
 	}
 	return &CategoricalHistogramStruct{
 		Bins:                        make([]categoricalBin, 0),
@@ -87,9 +87,9 @@ type frequencyMap struct {
 
 func (h *CategoricalHistogramStruct) PDF(x []string) (float64, error) {
 	if h.Dimension != len(x) {
-		return 0.0, fmt.Errorf(fmt.Sprintf(
+		return 0.0, fmt.Errorf(
 			"Input dimension %d not matching histogram dimension %d.",
-			len(x), h.Dimension))
+			len(x), h.Dimension)
 	}
 	if h.Total < 1 {
 		return 0.0, nil
@@ -133,9 +133,9 @@ func (h *CategoricalHistogramStruct) PDFFromMap(xMap map[string]string) (float64
 
 func (h *CategoricalHistogramStruct) Add(values []string) error {
 	if h.Dimension != len(values) {
-		return fmt.Errorf(fmt.Sprintf(
+		return fmt.Errorf(
 			"Input dimension %d not matching histogram dimension %d.",
-			len(values), h.Dimension))
+			len(values), h.Dimension)
 	}
 	h.Total++
 	binFrequencyMaps := make([]frequencyMap, h.Dimension)
@@ -169,15 +169,15 @@ func (h *CategoricalHistogramStruct) AddMap(keyValues map[string]string) error {
 			// assumed to be missing.
 			vec[i] = template[i].Default
 		} else {
-			return fmt.Errorf(fmt.Sprintf("Missing required key %s in %v",
-				template[i].Name, keyValues))
+			return fmt.Errorf("Missing required key %s in %v",
+				template[i].Name, keyValues)
 		}
 		seenKeys[template[i].Name] = true
 	}
 	for k, _ := range keyValues {
 		if _, ok := seenKeys[k]; !ok {
-			return fmt.Errorf(fmt.Sprintf(
-				"Unexpected key %s in %v", k, keyValues))
+			return fmt.Errorf(
+				"Unexpected key %s in %v", k, keyValues)
 		}
 	}
 	return h.Add(vec)
@@ -531,13 +531,13 @@ func (h *CategoricalHistogramStruct) totalBinCount() uint64 {
 
 func (h *CategoricalHistogramStruct) TrimByFmapSize(trimFraction float64) error {
 	if trimFraction <= 0 || trimFraction > 1.0 {
-		return fmt.Errorf(fmt.Sprintf("Unexpected value of trimFraction: %f", trimFraction))
+		return fmt.Errorf("Unexpected value of trimFraction: %f", trimFraction)
 	}
 	newMaxFMapSize := int(math.Max(float64(h.MaxFmapSize)*trimFraction, fMAP_MIN_SIZE))
 	if newMaxFMapSize >= h.MaxFmapSize {
-		return fmt.Errorf(fmt.Sprintf(
+		return fmt.Errorf(
 			"No trimming required, h.MaxFmapSize:%d, newMaxFMapSize: %d, trimFraction: %f",
-			h.MaxFmapSize, newMaxFMapSize, trimFraction))
+			h.MaxFmapSize, newMaxFMapSize, trimFraction)
 	}
 	for l := range h.Bins {
 		for m := range h.Bins[l].FrequencyMaps {
@@ -550,13 +550,13 @@ func (h *CategoricalHistogramStruct) TrimByFmapSize(trimFraction float64) error 
 
 func (h *CategoricalHistogramStruct) TrimByBinSize(trimFraction float64) error {
 	if trimFraction <= 0 || trimFraction > 1.0 {
-		return fmt.Errorf(fmt.Sprintf("Unexpected value of trimFraction: %f", trimFraction))
+		return fmt.Errorf("Unexpected value of trimFraction: %f", trimFraction)
 	}
 	newMaxbins := int(math.Max(float64(h.Maxbins)*trimFraction, CHIST_MIN_BIN_SIZE))
 	if newMaxbins >= h.Maxbins {
-		return fmt.Errorf(fmt.Sprintf(
+		return fmt.Errorf(
 			"No trimming required, h.MaxBins:%d, newMaxbins: %d, trimFraction: %f",
-			h.Maxbins, newMaxbins, trimFraction))
+			h.Maxbins, newMaxbins, trimFraction)
 	}
 	h.Maxbins = newMaxbins
 	h.trim()
