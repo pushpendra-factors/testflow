@@ -99,3 +99,13 @@ func TestCategoricalDataGeneration(t *testing.T) {
 	}
 }
 */
+
+func BenchmarkNewCategoricalHistogram(b *testing.B) {
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		maxBins := 8
+		dimensions := len(strings.Split(categoricalDataSamples10000[0], ","))
+		h, _ := NewCategoricalHistogram(maxBins, dimensions, nil)
+		h.Add(categoricalDataSamples10000)
+	}
+}
