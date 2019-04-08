@@ -112,8 +112,9 @@ class Query extends Component {
       isResultLoading: true,
       selectedPresentation: null,
 
+      showPresentation: false,
       showDatePicker: false,
-      topError: null
+      topError: null,
     }
   }
 
@@ -362,14 +363,14 @@ class Query extends Component {
 
     this.showTopError(this.validateQuery());
     
-    this.setState({ isResultLoading: true });
+    this.setState({ isResultLoading: true, showPresentation: true });
     runQuery(this.props.currentProjectId, this.getQuery(presentation === PRESENTATION_LINE))
       .then((r) => {
         if(this.isResponseValid(r.data)) {
           this.setState({ 
             result: r.data, 
             selectedPresentation: presentation,
-            isResultLoading: false 
+            isResultLoading: false
           });
         } else {
           console.error('Invalid response');
@@ -392,7 +393,7 @@ class Query extends Component {
     }
 
     return (
-      <Table className='fapp-table'> 
+      <Table className='fapp-table animated fadeIn'> 
         <thead>
           <tr> { headers } </tr>
         </thead>
@@ -457,7 +458,7 @@ class Query extends Component {
       lines.push(line);
     }
     
-    return <div style={{height: '450px'}}> <LineChart lines={lines} /> </div>;
+    return <div style={{height: '450px'}} className='animated fadeIn'> <LineChart lines={lines} /> </div>;
   }
   
 
@@ -495,19 +496,19 @@ class Query extends Component {
     bars.labels = labels;
     bars.y_label = firstToUpperCase(result.headers[countIndex]);
 
-    return <div style={{height: '450px'}}> <BarChart bars={bars} legend={false} /> </div>;
+    return <div style={{height: '450px'}} className='animated fadeIn'> <BarChart bars={bars} legend={false} /> </div>;
   }
 
   getResultAsTabularBarChart() {
     let result = this.state.result;
-    return <TableBarChart data={result} />;
+    return <div className='animated fadeIn'><TableBarChart data={result} /></div>;
   }
 
   getPresentableResult() {
+    if (this.state.isResultLoading) return <Loading paddingTop='10%' />;
+
     if (this.state.result == null) return null;
     let selected = this.state.selectedPresentation;
-
-    if (this.state.isResultLoading) return <Loading paddingTop='10%' />;
     
     if (selected == PRESENTATION_TABLE) {
       return this.getResultAsTable();
@@ -659,7 +660,7 @@ class Query extends Component {
         </div>
         
         {/* Presentation */}
-        <div hidden={ this.state.result == null }>
+        <div hidden={ !this.state.showPresentation }>
           <Row>
             <Col xs='12' md='12'>
                 <div class='pull-right'>
