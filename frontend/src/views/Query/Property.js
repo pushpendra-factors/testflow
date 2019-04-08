@@ -37,7 +37,9 @@ class Property extends Component {
     this.state = {
       nameOpts: [],
       valueOpts: [],
-      valueType: null
+      valueType: null,
+      isNameOptsLoading: false,
+      isValueOptsLoading: false,
     }
   }
 
@@ -50,16 +52,16 @@ class Property extends Component {
         opts.push({value: v, label: v, type: type}); 
       }
     }
-    this.setState({ nameOpts: opts });
+    this.setState({ nameOpts: opts, isNameOptsLoading: false });
   }
 
   addToValueOptsState(values) {
     if (values != undefined && values != null)
-      this.setState({ valueOpts: makeSelectOpts(values)});
+      this.setState({ valueOpts: makeSelectOpts(values), isValueOptsLoading: false });
   }
 
   fetchPropertyKeys = () => {
-    this.setState({ nameOpts: [] }); // reset opts
+    this.setState({ nameOpts: [], isNameOptsLoading: true }); // reset opts.
 
     if (this.props.propertyState.type == 'event') {
       fetchProjectEventProperties(this.props.projectId, this.props.eventName, false)
@@ -75,7 +77,7 @@ class Property extends Component {
   }
 
   fetchPropertyValues = () => {
-    this.setState({ valueOpts: [] }); // reset opts.
+    this.setState({ valueOpts: [], isValueOptsLoading: true }); // reset opts.
 
     if (this.props.propertyState.type == 'event') {
       fetchProjectEventPropertyValues(this.props.projectId, 
@@ -118,7 +120,7 @@ class Property extends Component {
 
     if (this.state.valueType == 'numerical') {
       return (
-        <div style={{display: "inline-block", width: "15%", marginLeft: "10px"}}>
+        <div style={{display: "inline-block", width: "18%", marginLeft: "10px"}}>
           <Input
             type="text"
             onChange={this.onValueChange}
@@ -131,7 +133,7 @@ class Property extends Component {
     
     if (this.state.valueType == 'categorical') {
       return  (
-        <div style={{display: "inline-block", width: "15%", marginLeft: "10px"}} className='fapp-select'>
+        <div style={{display: "inline-block", width: "18%", marginLeft: "10px"}} className='fapp-select'>
           <CreatableSelect
             onChange={this.onValueChange}
             onFocus={this.fetchPropertyValues}
@@ -139,6 +141,7 @@ class Property extends Component {
             value={getSelectedOpt(this.props.propertyState.value)}
             placeholder="Enter a value"
             formatCreateLabel={(value) => (value)}
+            isLoading={this.state.isValueOptsLoading}
           />
         </div>
       );
@@ -185,13 +188,14 @@ class Property extends Component {
             value={getSelectedOpt(this.props.propertyState.type, PROPERTY_TYPE_OPTS)}
           />
         </div>
-        <div style={{display: this.nameSelectorDisplay(), width: "15%", marginLeft: "10px"}} className='fapp-select'>
+        <div style={{display: this.nameSelectorDisplay(), width: "18%", marginLeft: "10px"}} className='fapp-select'>
           <Select
             onChange={this.onNameChange}
             onFocus={this.fetchPropertyKeys}
             options={this.state.nameOpts}
             placeholder="Property Name"
             value={getSelectedOpt(this.props.propertyState.name)}
+            isLoading={this.state.isNameOptsLoading}
           />
         </div>
         { this.getOpSelector() }       

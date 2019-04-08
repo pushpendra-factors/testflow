@@ -32,24 +32,20 @@ class Event extends Component {
     return properties
   }
 
-  addPropertyDisplay() {
-    return this.props.eventState.name != '' ? 'inline-block' : 'none';
-  }
-
   render() {
     return (
       <div>
         <Row style={{marginBottom: '15px'}}>
           <Col xs='12' md='12' style={{marginLeft: '70px'}}>
-            <div style={{display: 'inline-block', width: '15%'}} className='fapp-select'>
+            <div style={{display: 'inline-block', width: '18%'}} className='fapp-select'>
               <Select
                 onChange={this.props.onNameChange}
-                options={makeSelectOpts(this.props.nameOpts)}
+                options={makeSelectOpts(this.props.nameOpts)} 
                 placeholder='Event name'
                 value={getSelectedOpt(this.props.eventState.name)}
               />
             </div>
-            <Button outline color='primary' style={{marginLeft: '10px', display: this.addPropertyDisplay()}} onClick={this.props.onAddProperty} >+ Property</Button>
+            <Button outline color='primary' style={{marginLeft: '10px', display: 'inline-block'}} onClick={this.props.onAddProperty} >+ Property</Button>
             <button className='fapp-close-button' onClick={this.props.remove}>x</button>
           </Col>         
         </Row>

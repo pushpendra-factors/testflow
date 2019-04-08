@@ -18,7 +18,8 @@ class GroupBy extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      nameOpts: []
+      nameOpts: [],
+      isNameOptsLoading: false,
     };
   }
 
@@ -51,7 +52,7 @@ class GroupBy extends Component {
   }
 
   fetchPropertyKeys = () => {
-    this.setState({ nameOpts: [] }); // reset opts
+    this.setState({ nameOpts: [], isNameOptsLoading: true }); // reset opts
 
     if (this.props.groupByState.type == 'event') {      
       let eventNames = this.props.getSelectedEventNames();
@@ -64,13 +65,17 @@ class GroupBy extends Component {
         .then((r) => { 
           // add response from each as opts for selector.
           for(let i=0; i<r.length; i++) this.addToNameOptsState(r[i].data);
+          this.setState({ isNameOptsLoading: false });
         })
         .catch((r) => console.error("Failed fetching event properties on group by.", r))
     }
 
     if (this.props.groupByState.type == 'user') {
       fetchProjectUserProperties(this.props.projectId, false)
-      .then((r) => this.addToNameOptsState(r.data))
+      .then((r) => { 
+        this.addToNameOptsState(r.data);
+        this.setState({ isNameOptsLoading: false });
+      })
       .catch(r => console.error("Failed fetching user property keys.", r));
     }
   }
@@ -94,6 +99,7 @@ class GroupBy extends Component {
             placeholder='Property Key'
             value={getSelectedOpt(this.props.groupByState.name)}
             formatCreateLabel={(value) => (value)}
+            isLoading={this.state.isNameOptsLoading}
           />
         </div>
         <button className='fapp-close-button' onClick={this.props.remove}>x</button>

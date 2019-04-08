@@ -16,12 +16,22 @@ import {
 } from '../../actions/projectsActions';
 import Event from './Event';
 import GroupBy from './GroupBy';
-import { trimQuotes, removeElementByIndex, firstToUpperCase } from '../../util'
+import { trimQuotes, removeElementByIndex, firstToUpperCase, getSelectedOpt } from '../../util'
 import TableBarChart from './TableBarChart';
+import Loading from '../../loading';
 
+const COND_ALL_GIVEN_EVENT = 'all_given_event';
+const COND_ANY_GIVEN_EVENT = 'any_given_event'; 
+const EVENTS_COND_OPTS = [
+  { value: COND_ALL_GIVEN_EVENT, label: 'All given event' },
+  { value: COND_ANY_GIVEN_EVENT, label: 'Any given event' }
+];
+
+const TYPE_EVENT_OCCURRENCE = 'events_occurrence';
+const TYPE_UNIQUE_USERS = 'unique_users';
 const ANALYSIS_TYPE_OPTS = [
-  { value: 'events_occurrence', label: 'Events occurrence' },
-  { value: 'unique_users', label: 'Unique users' }
+  { value: TYPE_EVENT_OCCURRENCE, label: 'Events occurrence' },
+  { value: TYPE_UNIQUE_USERS, label: 'Unique users' }
 ];
 
 const DEFAULT_DATE_RANGE_LABEL = 'Last 7 days';
@@ -91,6 +101,7 @@ class Query extends Component {
       eventNamesLoaded: false,
       eventNamesLoadError: null,
 
+      condition: EVENTS_COND_OPTS[0],
       type: ANALYSIS_TYPE_OPTS[0], // 1st type as default.
       events: [],
       groupBys: [],
@@ -98,6 +109,7 @@ class Query extends Component {
 
       result: null,
       resultError: null,
+      isResultLoading: true,
       selectedPresentation: null,
 
       showDatePicker: false,
@@ -107,12 +119,28 @@ class Query extends Component {
 
   componentWillMount() {
     this.props.fetchProjectEvents(this.props.currentProjectId)
-      .then(() => this.setState({ eventNamesLoaded: true }))
+      .then(() => {
+        this.setState({ eventNamesLoaded: true });
+        this.initWithAnEventRow();
+      })
       .catch((r) => this.setState({ eventNamesLoaded: true, eventNamesLoadError: r.paylaod }));
+  }
+
+  initWithAnEventRow() {
+    this.addEvent();
+    if (this.props.eventNames.length > 0) {
+      this.onEventStateChange(getSelectedOpt(this.props.eventNames[0]), 0);
+    } else {
+      console.error('Query not initialized with an event row. zero events found.');
+    }
   }
 
   handleTypeChange = (option) => {
     this.setState({type: option});
+  }
+  
+  handleEventsConditionChange = (option) => {
+    this.setState({condition: option});
   }
 
   getDefaultEventState() {
@@ -229,8 +257,12 @@ class Query extends Component {
   getQuery(groupByDate=false) {
     let query = {};
     query.type = this.state.type.value;
-    query.eventsCondition = 'all'; // Todo(Dinesh): Add a selector. Make it part of the query.
-
+    query.eventsCondition = this.state.condition.value;
+    // event_occurrence supports only any_given_event.
+    if (query.type == TYPE_EVENT_OCCURRENCE) {
+      query.eventsCondition = COND_ANY_GIVEN_EVENT;
+    }
+    
     if (this.state.resultDateRange.length == 0)
       throw new Error('Invalid date range. No default range given.')
     
@@ -251,6 +283,8 @@ class Query extends Component {
     query.eventsWithProperties = []
     for(let ei=0; ei < this.state.events.length; ei++) {
       let event = this.state.events[ei];
+      
+      if (event.name == "") continue;
       
       let ewp = {};
       ewp.name = event.name;
@@ -304,9 +338,13 @@ class Query extends Component {
   }
 
   validateQuery() {
-    if (this.state.events.length == 0) {
-      return ERROR_NO_EVENT;
+    let hasEvent = false;
+    for(let i=0; i<this.state.events.length; i++) {
+      if (this.state.events[i].name !== "") {
+        hasEvent = true;
+      }
     }
+    if (!hasEvent) return ERROR_NO_EVENT;
   }
 
   showTopError(error) {
@@ -323,11 +361,19 @@ class Query extends Component {
       throw new Error('Invalid presentation');
 
     this.showTopError(this.validateQuery());
-  
+    
+    this.setState({ isResultLoading: true });
     runQuery(this.props.currentProjectId, this.getQuery(presentation === PRESENTATION_LINE))
       .then((r) => {
-        if(this.isResponseValid(r.data)) 
-          this.setState({ result: r.data, selectedPresentation: presentation });
+        if(this.isResponseValid(r.data)) {
+          this.setState({ 
+            result: r.data, 
+            selectedPresentation: presentation,
+            isResultLoading: false 
+          });
+        } else {
+          console.error('Invalid response');
+        }
       })
       .catch(console.error);
   }
@@ -461,6 +507,8 @@ class Query extends Component {
     if (this.state.result == null) return null;
     let selected = this.state.selectedPresentation;
 
+    if (this.state.isResultLoading) return <Loading paddingTop='10%' />;
+    
     if (selected == PRESENTATION_TABLE) {
       return this.getResultAsTable();
     }
@@ -496,7 +544,13 @@ class Query extends Component {
     })
   }
 
+  isLoaded() {
+    return this.state.eventNamesLoaded;
+  }
+
   render() {
+    if (!this.isLoaded()) return <Loading />;
+
     let events = [];
     for(let i=0; i<this.state.events.length; i++) {
       events.push(
@@ -539,16 +593,16 @@ class Query extends Component {
 
     return (
       <div className='fapp-content' style={{marginLeft: '2rem', marginRight: '2rem'}}>
-        <div className='fapp-error' hidden={!this.state.topError}>
+        <div className='fapp-error' style={{marginBottom: '15px'}} hidden={!this.state.topError}>
             <span>{ this.state.topError }</span>
         </div>
 
         {/* Query */}
-        <div style={{ margin: '' }}>
+        <div>
           <Row style={{marginBottom: '15px'}}>
             <Col xs='12' md='12'>        
               <span style={{marginRight: '10px'}}> Get </span>
-              <div style={{display: 'inline-block', width: '15%'}} className='fapp-select'>
+              <div style={{display: 'inline-block', width: '15%', marginRight: '10px'}} className='fapp-select'>
                 <Select
                   value={this.state.type}
                   onChange={this.handleTypeChange}
@@ -556,10 +610,23 @@ class Query extends Component {
                   placeholder='Type'
                 />
               </div>
-              <Button outline color='primary' style={{marginLeft: '10px'}} onClick={this.addEvent}>+ Event</Button>
+              <span style={{marginRight: '10px'}} hidden={this.state.type.value == TYPE_EVENT_OCCURRENCE}> who performed </span>
+              <div style={{display: 'inline-block', width: '15%', marginRight: '10px'}} className='fapp-select' hidden={this.state.type.value == TYPE_EVENT_OCCURRENCE}>
+                <Select
+                  value={this.state.condition}
+                  onChange={this.handleEventsConditionChange}
+                  options={EVENTS_COND_OPTS}
+                  placeholder='Condition'
+                />
+              </div>
             </Col>
           </Row>
           { events }
+          <Row style={{marginBottom: '15px'}}>
+            <Col xs='12' md='12' style={{marginLeft: '70px'}}>
+              <Button outline color='primary' onClick={this.addEvent}>+ Event</Button>
+            </Col>
+          </Row>
           <Row style={{marginBottom: '15px'}}>
             <Col xs='12' md='12'>
               <span style={{marginRight: '10px'}}> During </span>
