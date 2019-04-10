@@ -25,7 +25,7 @@ spec:
         layer: appserver
     spec:
       nodeSelector:
-        cloud.google.com/gke-nodepool: default-pool
+        cloud.google.com/gke-nodepool: factors-staging-node-pool
       containers:
       - name: appserver
         image: us.gcr.io/factors-staging/app-server:v0.12-beta_452f98

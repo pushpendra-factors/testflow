@@ -16,7 +16,7 @@ spec:
         project: factors-staging
     spec:
       nodeSelector:
-        cloud.google.com/gke-nodepool: default-pool
+        cloud.google.com/gke-nodepool: factors-staging-node-pool
       terminationGracePeriodSeconds: 10
       volumes:
         - name: etcd-storage

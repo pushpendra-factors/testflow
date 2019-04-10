@@ -23,7 +23,7 @@ spec:
         layer: etcd
     spec:
       nodeSelector:
-        cloud.google.com/gke-nodepool: default-pool
+        cloud.google.com/gke-nodepool: factors-staging-node-pool
       containers:
       - name: etcd
         image: quay.io/coreos/etcd:v3.2.4

@@ -23,7 +23,7 @@ spec:
         layer: postgres
     spec:
       nodeSelector:
-        cloud.google.com/gke-nodepool: default-pool
+        cloud.google.com/gke-nodepool: factors-staging-node-pool
       containers:
       - name: postgres
         image: postgres:11.1
