@@ -8,6 +8,7 @@ import (
 	M "factors/model"
 	P "factors/pattern"
 	PMM "factors/pattern_model_meta"
+	"factors/pattern_server/store"
 	serviceDisk "factors/services/disk"
 	serviceEtcd "factors/services/etcd"
 	U "factors/util"
@@ -632,12 +633,24 @@ func writePatternsAsChunks(patterns []*P.Pattern, chunksDir string) error {
 	}
 
 	for _, pattern := range patterns {
-		b, err := json.Marshal(pattern)
+		patternBytes, err := json.Marshal(pattern)
 		if err != nil {
-			mineLog.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal pattern.")
+			mineLog.WithFields(log.Fields{"err": err}).Error("Unable to marshal pattern.")
 			return err
 		}
-		pString := string(b)
+
+		patternWithMeta := store.PatternWithMeta{
+			PatternEvents: pattern.EventNames,
+			RawPattern:    json.RawMessage(patternBytes),
+		}
+
+		pwmBytes, err := json.Marshal(patternWithMeta)
+		if err != nil {
+			mineLog.WithFields(log.Fields{"err": err}).Error("Unable to marshal pattern_with_meta.")
+			return err
+		}
+
+		pString := string(pwmBytes)
 		pString = pString + "\n"
 		pBytes := []byte(pString)
 		pBytesLen := int64(len(pBytes))

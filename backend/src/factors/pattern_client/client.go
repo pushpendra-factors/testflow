@@ -10,7 +10,9 @@ import (
 
 	C "factors/config"
 
-	"github.com/gorilla/rpc/json"
+	"encoding/json"
+
+	rpcJson "github.com/gorilla/rpc/json"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -45,7 +47,7 @@ type GetAllPatternsRequest struct {
 
 type GetAllPatternsResponse struct {
 	GenericRPCResp
-	Patterns []*pattern.Pattern `json:"ps"`
+	Patterns []*json.RawMessage `json:"ps"`
 }
 
 type GetPatternsRequest struct {
@@ -56,7 +58,7 @@ type GetPatternsRequest struct {
 
 type GetPatternsResponse struct {
 	GenericRPCResp
-	Patterns []*pattern.Pattern `json:"ps"`
+	Patterns []*json.RawMessage `json:"ps"`
 }
 
 type GetSeenEventPropertiesRequest struct {
@@ -128,12 +130,28 @@ type ModelInfo struct {
 	EndTimestamp   int64  `json:"et"`
 }
 
+func CreatePatternsFromRawPatterns(rawPatterns []*json.RawMessage) ([]*pattern.Pattern, error) {
+	patterns := make([]*pattern.Pattern, 0, 0)
+	for _, rp := range rawPatterns {
+		var p pattern.Pattern
+
+		err := json.Unmarshal(*rp, &p)
+		if err != nil {
+			return patterns, err
+		}
+
+		patterns = append(patterns, &p)
+	}
+
+	return patterns, nil
+}
+
 func GetSeenUserProperties(reqId string, projectId, modelId uint64) (map[string][]string, error) {
 	params := GetSeenUserPropertiesRequest{
 		ProjectId: projectId,
 		ModelId:   modelId,
 	}
-	paramBytes, err := json.EncodeClientRequest(RPCServiceName+Separator+OperationNameGetSeenUserProperties, params)
+	paramBytes, err := rpcJson.EncodeClientRequest(RPCServiceName+Separator+OperationNameGetSeenUserProperties, params)
 	if err != nil {
 		return map[string][]string{}, err
 	}
@@ -162,7 +180,7 @@ func GetSeenUserProperties(reqId string, projectId, modelId uint64) (map[string]
 		}
 		var result GetSeenUserPropertiesResponse
 		defer r.resp.Body.Close()
-		err = json.DecodeClientResponse(r.resp.Body, &result)
+		err = rpcJson.DecodeClientResponse(r.resp.Body, &result)
 		if err != nil {
 			log.WithError(err).Error("Error Decoding response Ignoring GetSeenUserProperties")
 			continue
@@ -191,7 +209,7 @@ func GetSeenUserPropertyValues(reqId string, projectId, modelId uint64, property
 		PropertyName: propertyName,
 	}
 
-	paramBytes, err := json.EncodeClientRequest(RPCServiceName+Separator+OperationNameGetSeenUserPropertyValues, params)
+	paramBytes, err := rpcJson.EncodeClientRequest(RPCServiceName+Separator+OperationNameGetSeenUserPropertyValues, params)
 	if err != nil {
 		return []string{}, err
 	}
@@ -221,7 +239,7 @@ func GetSeenUserPropertyValues(reqId string, projectId, modelId uint64, property
 		}
 		var result GetSeenUserPropertyValuesResponse
 		defer r.resp.Body.Close()
-		err = json.DecodeClientResponse(r.resp.Body, &result)
+		err = rpcJson.DecodeClientResponse(r.resp.Body, &result)
 		if err != nil {
 			log.WithError(err).Error("Error Decoding response Ignoring GetSeenUserPropertyValuesResponse")
 			continue
@@ -247,7 +265,7 @@ func GetAllPatterns(reqId string, projectId, modelId uint64, startEvent, endEven
 		StartEvent: startEvent,
 		EndEvent:   endEvent,
 	}
-	paramBytes, err := json.EncodeClientRequest(RPCServiceName+Separator+OperationNameGetAllPatterns, params)
+	paramBytes, err := rpcJson.EncodeClientRequest(RPCServiceName+Separator+OperationNameGetAllPatterns, params)
 	if err != nil {
 		return []*pattern.Pattern{}, err
 	}
@@ -276,7 +294,7 @@ func GetAllPatterns(reqId string, projectId, modelId uint64, startEvent, endEven
 		}
 		var result GetAllPatternsResponse
 		defer r.resp.Body.Close()
-		err = json.DecodeClientResponse(r.resp.Body, &result)
+		err = rpcJson.DecodeClientResponse(r.resp.Body, &result)
 		if err != nil {
 			log.WithError(err).Error("Error Decoding response Ignoring GetAllPatternsResponse")
 			continue
@@ -289,7 +307,14 @@ func GetAllPatterns(reqId string, projectId, modelId uint64, startEvent, endEven
 			log.WithError(result.Error).Error("Error GetAllPatternsResponse")
 			continue
 		}
-		patterns = append(patterns, result.Patterns...)
+
+		resultPatterns, err := CreatePatternsFromRawPatterns(result.Patterns)
+		if err != nil {
+			log.WithError(err).Error("Error Decoding result patterns on response Ignoring GetAllPatternsResponse")
+			continue
+		}
+
+		patterns = append(patterns, resultPatterns...)
 	}
 
 	return patterns, nil
@@ -301,7 +326,7 @@ func GetPatterns(reqId string, projectId, modelId uint64, patternEvents [][]stri
 		ModelId:       modelId,
 		PatternEvents: patternEvents,
 	}
-	paramBytes, err := json.EncodeClientRequest(RPCServiceName+Separator+OperationNameGetPatterns, params)
+	paramBytes, err := rpcJson.EncodeClientRequest(RPCServiceName+Separator+OperationNameGetPatterns, params)
 	if err != nil {
 		return []*pattern.Pattern{}, err
 	}
@@ -330,7 +355,7 @@ func GetPatterns(reqId string, projectId, modelId uint64, patternEvents [][]stri
 		}
 		defer r.resp.Body.Close()
 		var result GetPatternsResponse
-		err = json.DecodeClientResponse(r.resp.Body, &result)
+		err = rpcJson.DecodeClientResponse(r.resp.Body, &result)
 		if err != nil {
 			log.WithError(err).Error("Error Decoding response Ignoring GetPatternsResponse")
 			continue
@@ -343,7 +368,13 @@ func GetPatterns(reqId string, projectId, modelId uint64, patternEvents [][]stri
 			log.WithError(result.Error).Error("Error GetPatternsResponse")
 			continue
 		}
-		patterns = append(patterns, result.Patterns...)
+
+		resultPatterns, err := CreatePatternsFromRawPatterns(result.Patterns)
+		if err != nil {
+			log.WithError(err).Error("Error Decoding patterns from response Ignoring GetPatternsResponse")
+			continue
+		}
+		patterns = append(patterns, resultPatterns...)
 	}
 
 	return patterns, nil
@@ -353,7 +384,7 @@ func GetProjectModelIntervals(reqId string, projectId uint64) ([]ModelInfo, erro
 	params := GetProjectModelIntervalsRequest{
 		ProjectId: projectId,
 	}
-	paramBytes, err := json.EncodeClientRequest(RPCServiceName+Separator+OperationNameGetProjectModelsIntervals, params)
+	paramBytes, err := rpcJson.EncodeClientRequest(RPCServiceName+Separator+OperationNameGetProjectModelsIntervals, params)
 	if err != nil {
 		return []ModelInfo{}, err
 	}
@@ -383,7 +414,7 @@ func GetProjectModelIntervals(reqId string, projectId uint64) ([]ModelInfo, erro
 
 		var result GetProjectModelIntervalsResponse
 		defer r.resp.Body.Close()
-		err = json.DecodeClientResponse(r.resp.Body, &result)
+		err = rpcJson.DecodeClientResponse(r.resp.Body, &result)
 		if err != nil {
 			log.WithError(err).Error("Error Ignoring GetProjectModelIntervalsResponse")
 			result.Error = err
@@ -411,7 +442,7 @@ func GetSeenEventPropertyValues(reqId string, projectId, modelId uint64, eventNa
 		EventName:    eventName,
 		PropertyName: propertyName,
 	}
-	paramBytes, err := json.EncodeClientRequest(RPCServiceName+Separator+OperationNameGetSeenEventPropertyValues, params)
+	paramBytes, err := rpcJson.EncodeClientRequest(RPCServiceName+Separator+OperationNameGetSeenEventPropertyValues, params)
 	if err != nil {
 		return []string{}, err
 	}
@@ -440,7 +471,7 @@ func GetSeenEventPropertyValues(reqId string, projectId, modelId uint64, eventNa
 
 		var result GetSeenEventPropertyValuesResponse
 		defer r.resp.Body.Close()
-		err = json.DecodeClientResponse(r.resp.Body, &result)
+		err = rpcJson.DecodeClientResponse(r.resp.Body, &result)
 		if err != nil {
 			result.Error = err
 		}
@@ -466,7 +497,7 @@ func GetSeenEventProperties(reqId string, projectId, modelId uint64, eventName s
 		ModelId:   modelId,
 		EventName: eventName,
 	}
-	paramBytes, err := json.EncodeClientRequest(RPCServiceName+Separator+OperationNameGetSeenEventProperties, params)
+	paramBytes, err := rpcJson.EncodeClientRequest(RPCServiceName+Separator+OperationNameGetSeenEventProperties, params)
 	if err != nil {
 		return make(map[string][]string), err
 	}
@@ -496,7 +527,7 @@ func GetSeenEventProperties(reqId string, projectId, modelId uint64, eventName s
 
 		var result GetSeenEvenPropertiesResponse
 		defer r.resp.Body.Close()
-		err = json.DecodeClientResponse(r.resp.Body, &result)
+		err = rpcJson.DecodeClientResponse(r.resp.Body, &result)
 		if err != nil {
 			result.Error = err
 		}
@@ -524,7 +555,7 @@ func GetUserAndEventsInfo(reqId string, projectId, modelId uint64) (*pattern.Use
 		ProjectId: projectId,
 		ModelId:   modelId,
 	}
-	paramBytes, err := json.EncodeClientRequest(RPCServiceName+Separator+OperationNameGetUserAndEventsInfo, params)
+	paramBytes, err := rpcJson.EncodeClientRequest(RPCServiceName+Separator+OperationNameGetUserAndEventsInfo, params)
 	if err != nil {
 		return nil, modelId, err
 	}
@@ -556,7 +587,7 @@ func GetUserAndEventsInfo(reqId string, projectId, modelId uint64) (*pattern.Use
 
 		var result GetUserAndEventsInfoResponse
 		defer r.resp.Body.Close()
-		err = json.DecodeClientResponse(r.resp.Body, &result)
+		err = rpcJson.DecodeClientResponse(r.resp.Body, &result)
 		if err != nil {
 			result.Error = err
 		}

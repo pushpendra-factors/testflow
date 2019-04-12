@@ -10,6 +10,7 @@ import (
 	"io"
 	"os"
 	"runtime"
+	"runtime/debug"
 	"time"
 
 	cache "github.com/hashicorp/golang-lru"
@@ -26,6 +27,11 @@ type PatternStore struct {
 
 	modelChunkCache     *cache.Cache
 	modelEventInfoCache *cache.Cache
+}
+
+type PatternWithMeta struct {
+	PatternEvents []string        `json:"pe"`
+	RawPattern    json.RawMessage `json:"rp"`
 }
 
 func New(chunkCacheSize, eventInfoCacheSize int, diskManager, cloudManager filestore.FileManager) (*PatternStore, error) {
@@ -76,6 +82,9 @@ func (ps *PatternStore) putModelEventInfoInCache(projectId, modelId uint64, even
 	if evict {
 		start := time.Now()
 		runtime.GC()
+		// Releasing memory back to the OS
+		// https://stackoverflow.com/questions/37382600/cannot-free-memory-once-occupied-by-bytes-buffer
+		debug.FreeOSMemory()
 		logCtx.WithFields(log.Fields{
 			"Duration (nanoseconds)": time.Since(start).Nanoseconds(),
 		}).Info("GC Finished [PatternStore] putModelEventInfoInCache")
@@ -202,19 +211,19 @@ func (ps *PatternStore) GetModelEventInfo(projectId, modelId uint64) (pattern.Us
 	return patternEventInfo, err
 }
 
-func getPatternsFromFileManager(fm filestore.FileManager, projectId, modelId uint64, chunkId string) ([]*pattern.Pattern, error) {
+func getPatternsFromFileManager(fm filestore.FileManager, projectId, modelId uint64, chunkId string) ([]*PatternWithMeta, error) {
 	path, fName := fm.GetPatternChunkFilePathAndName(projectId, modelId, chunkId)
 	patternsReader, err := fm.Get(path, fName)
 	if err != nil {
-		return []*pattern.Pattern{}, err
+		return nil, err
 	}
 	defer patternsReader.Close()
 	scanner := CreateScannerFromReader(patternsReader)
-	patterns, err := CreatePatternsFromScanner(scanner)
+	patterns, err := CreatePatternsWithMetaFromScanner(scanner)
 	return patterns, err
 }
 
-func (ps *PatternStore) getPatternsFromCloud(projectId, modelId uint64, chunkId string) ([]*pattern.Pattern, error) {
+func (ps *PatternStore) getPatternsWithMetaFromCloud(projectId, modelId uint64, chunkId string) ([]*PatternWithMeta, error) {
 	log.WithFields(log.Fields{
 		"pid": projectId,
 		"mid": modelId,
@@ -224,14 +233,14 @@ func (ps *PatternStore) getPatternsFromCloud(projectId, modelId uint64, chunkId 
 	return getPatternsFromFileManager(ps.cloudFileManger, projectId, modelId, chunkId)
 }
 
-func (ps *PatternStore) PutPatternsInCloud(projectId, modelId uint64, chunkId string, patterns []*pattern.Pattern) error {
+func (ps *PatternStore) PutPatternsWithMetaInCloud(projectId, modelId uint64, chunkId string, patterns []*PatternWithMeta) error {
 	log.WithFields(log.Fields{
 		"pid": projectId,
 		"mid": modelId,
 		"cid": chunkId,
 	}).Debugln("[PatternStore] putPatternsInCloud")
 
-	reader, err := CreateReaderFromPatterns(patterns)
+	reader, err := CreateReaderFromPatternsWithMeta(patterns)
 	if err != nil {
 		return err
 	}
@@ -243,14 +252,14 @@ func (ps *PatternStore) PutPatternsInCloud(projectId, modelId uint64, chunkId st
 	return err
 }
 
-func (ps *PatternStore) PutPatternsInDisk(projectId, modelId uint64, chunkId string, patterns []*pattern.Pattern) error {
+func (ps *PatternStore) PutPatternsWithMetaInDisk(projectId, modelId uint64, chunkId string, patterns []*PatternWithMeta) error {
 	log.WithFields(log.Fields{
 		"pid": projectId,
 		"mid": modelId,
 		"cid": chunkId,
 	}).Debugln("[PatternStore] putPatternsInDisk")
 
-	reader, err := CreateReaderFromPatterns(patterns)
+	reader, err := CreateReaderFromPatternsWithMeta(patterns)
 	if err != nil {
 		return err
 	}
@@ -262,7 +271,7 @@ func (ps *PatternStore) PutPatternsInDisk(projectId, modelId uint64, chunkId str
 	return err
 }
 
-func (ps *PatternStore) getPatternsFromDisk(projectId, modelId uint64, chunkId string) ([]*pattern.Pattern, error) {
+func (ps *PatternStore) getPatternsWithMetaFromDisk(projectId, modelId uint64, chunkId string) ([]*PatternWithMeta, error) {
 	log.WithFields(log.Fields{
 		"pid": projectId,
 		"mid": modelId,
@@ -272,7 +281,7 @@ func (ps *PatternStore) getPatternsFromDisk(projectId, modelId uint64, chunkId s
 	return getPatternsFromFileManager(ps.diskFileManger, projectId, modelId, chunkId)
 }
 
-func (ps *PatternStore) putPatternsInCache(projectId, modelId uint64, chunkId string, patterns []*pattern.Pattern) {
+func (ps *PatternStore) putPatternsWithMetaInCache(projectId, modelId uint64, chunkId string, patterns []*PatternWithMeta) {
 	logCtx := log.WithFields(log.Fields{
 		"pid": projectId,
 		"mid": modelId,
@@ -285,13 +294,16 @@ func (ps *PatternStore) putPatternsInCache(projectId, modelId uint64, chunkId st
 	if evict {
 		start := time.Now()
 		runtime.GC()
+		// Releasing memory back to the OS
+		// https://stackoverflow.com/questions/37382600/cannot-free-memory-once-occupied-by-bytes-buffer
+		debug.FreeOSMemory()
 		logCtx.WithFields(log.Fields{
 			"Duration (nanoseconds)": time.Since(start).Nanoseconds(),
 		}).Info("GC Finished [PatternStore] putPatternsInCache")
 	}
 }
 
-func (ps *PatternStore) getPatternsFromCache(projectId, modelId uint64, chunkId string) ([]*pattern.Pattern, bool) {
+func (ps *PatternStore) getPatternsWithMetaFromCache(projectId, modelId uint64, chunkId string) ([]*PatternWithMeta, bool) {
 	log.WithFields(log.Fields{
 		"pid": projectId,
 		"mid": modelId,
@@ -299,15 +311,15 @@ func (ps *PatternStore) getPatternsFromCache(projectId, modelId uint64, chunkId 
 	}).Debugln("[PatternStore] getPatternsFromCache")
 
 	chunkKey := getModelChunkCacheKey(projectId, modelId, chunkId)
-	patternsIface, ok := ps.modelChunkCache.Get(chunkKey)
+	pwmIface, ok := ps.modelChunkCache.Get(chunkKey)
 	if !ok {
-		return []*pattern.Pattern{}, ok
+		return nil, false
 	}
-	patterns, ok := patternsIface.([]*pattern.Pattern)
-	return patterns, ok
+	pwm, ok := pwmIface.([]*PatternWithMeta)
+	return pwm, ok
 }
 
-func (ps *PatternStore) GetPatterns(projectId, modelId uint64, chunkId string) ([]*pattern.Pattern, error) {
+func (ps *PatternStore) GetPatternsWithMeta(projectId, modelId uint64, chunkId string) ([]*PatternWithMeta, error) {
 	logCtx := log.WithFields(log.Fields{
 		"pid": projectId,
 		"mid": modelId,
@@ -316,37 +328,37 @@ func (ps *PatternStore) GetPatterns(projectId, modelId uint64, chunkId string) (
 
 	logCtx.Debugln("[PatternStore] GetPatterns")
 
-	patterns, foundInCache := ps.getPatternsFromCache(projectId, modelId, chunkId)
+	patternsWithMeta, foundInCache := ps.getPatternsWithMetaFromCache(projectId, modelId, chunkId)
 	if foundInCache {
-		return patterns, nil
+		return patternsWithMeta, nil
 	}
 
 	writeToCache := !foundInCache
 	writeToDisk := false
 
-	patterns, err := ps.getPatternsFromDisk(projectId, modelId, chunkId)
+	patternsWithMeta, err := ps.getPatternsWithMetaFromDisk(projectId, modelId, chunkId)
 	if err != nil {
 		if os.IsNotExist(err) {
 			writeToDisk = true
-			patterns, err = ps.getPatternsFromCloud(projectId, modelId, chunkId)
+			patternsWithMeta, err = ps.getPatternsWithMetaFromCloud(projectId, modelId, chunkId)
 			if err != nil {
-				return []*pattern.Pattern{}, err
+				return []*PatternWithMeta{}, err
 			}
 		} else {
-			return []*pattern.Pattern{}, err
+			return []*PatternWithMeta{}, err
 		}
 	}
 
 	// This can be done in a separate go routine
 	if writeToCache {
-		ps.putPatternsInCache(projectId, modelId, chunkId, patterns)
+		ps.putPatternsWithMetaInCache(projectId, modelId, chunkId, patternsWithMeta)
 	}
 
 	if writeToDisk {
-		err = ps.PutPatternsInDisk(projectId, modelId, chunkId, patterns)
+		err = ps.PutPatternsWithMetaInDisk(projectId, modelId, chunkId, patternsWithMeta)
 	}
 
-	return patterns, nil
+	return patternsWithMeta, nil
 }
 
 func CreateReaderFromEventInfo(eventInfo pattern.UserAndEventsInfo) (*bytes.Reader, error) {
@@ -361,9 +373,11 @@ func CreateReaderFromEventInfo(eventInfo pattern.UserAndEventsInfo) (*bytes.Read
 
 func CreatePatternEventInfoFromScanner(scanner *bufio.Scanner) (pattern.UserAndEventsInfo, error) {
 	patternEventInfo := pattern.UserAndEventsInfo{}
-	// Adjust scanner buffer capacity to 250MB per line.
+	const initBufSize = 100 * 1024 // 100KB
+	buf := make([]byte, initBufSize)
+
+	// Adjust scanner buffer capacity upto 250MB per line.
 	const maxCapacity = 250 * 1024 * 1024
-	buf := make([]byte, maxCapacity)
 	scanner.Buffer(buf, maxCapacity)
 
 	for scanner.Scan() {
@@ -377,14 +391,15 @@ func CreatePatternEventInfoFromScanner(scanner *bufio.Scanner) (pattern.UserAndE
 	return patternEventInfo, err
 }
 
-func CreateReaderFromPatterns(patterns []*pattern.Pattern) (*bytes.Reader, error) {
+func CreateReaderFromPatternsWithMeta(patterns []*PatternWithMeta) (*bytes.Reader, error) {
 	buf := new(bytes.Buffer)
 	for _, pattern := range patterns {
-		b, err := json.Marshal(pattern)
+		pwmBytes, err := json.Marshal(pattern)
 		if err != nil {
 			return nil, err
 		}
-		str := string(b)
+
+		str := string(pwmBytes)
 		_, err = buf.WriteString(fmt.Sprintf("%s\n", str))
 		if err != nil {
 			return nil, err
@@ -393,19 +408,19 @@ func CreateReaderFromPatterns(patterns []*pattern.Pattern) (*bytes.Reader, error
 	return bytes.NewReader(buf.Bytes()), nil
 }
 
-func CreatePatternsFromScanner(scanner *bufio.Scanner) ([]*pattern.Pattern, error) {
-	patterns := make([]*pattern.Pattern, 0, 0)
+func CreatePatternsWithMetaFromScanner(scanner *bufio.Scanner) ([]*PatternWithMeta, error) {
+	patternsWithMeta := make([]*PatternWithMeta, 0, 0)
 	for scanner.Scan() {
 		line := scanner.Bytes()
-		var p pattern.Pattern
-		if err := json.Unmarshal(line, &p); err != nil {
-			return patterns, err
+		var pwm PatternWithMeta
+		if err := json.Unmarshal(line, &pwm); err != nil {
+			return patternsWithMeta, err
 		}
-		patterns = append(patterns, &p)
+		patternsWithMeta = append(patternsWithMeta, &pwm)
 	}
 	err := scanner.Err()
 
-	return patterns, err
+	return patternsWithMeta, err
 }
 
 func CreateScannerFromReader(r io.Reader) *bufio.Scanner {
@@ -415,4 +430,14 @@ func CreateScannerFromReader(r io.Reader) *bufio.Scanner {
 	buf := make([]byte, maxCapacity)
 	scanner.Buffer(buf, maxCapacity)
 	return scanner
+}
+
+func GetAllRawPatterns(patternsWithMeta []*PatternWithMeta) []*json.RawMessage {
+	rawPatterns := make([]*json.RawMessage, 0, 0)
+
+	for _, pwm := range patternsWithMeta {
+		rawPatterns = append(rawPatterns, &pwm.RawPattern)
+	}
+
+	return rawPatterns
 }

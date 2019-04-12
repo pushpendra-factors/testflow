@@ -7,6 +7,7 @@ import (
 	P "factors/pattern"
 	serviceDisk "factors/services/disk"
 	"fmt"
+	"math/rand"
 	"os"
 	"time"
 
@@ -141,7 +142,9 @@ func PullEvents(db *gorm.DB, cloudManager *filestore.FileManager, diskManager *s
 
 	// Todo(Dinesh): Move modelId assignment to build task.
 	// Prefix timestamp with randomAlphanumeric(5).
-	modelId := uint64(time.Now().Unix())
+	curTimeInMilliSecs := time.Now().UnixNano() / 1000000
+	// modelId = time in millisecs + random number upto 3 digits.
+	modelId := uint64(curTimeInMilliSecs + rand.Int63n(999))
 
 	logCtx.Info("Pulling events.")
 	// Writing events to tmp file before upload.

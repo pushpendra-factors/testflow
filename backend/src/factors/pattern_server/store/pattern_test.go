@@ -76,6 +76,20 @@ func TestGetModelChunkCacheKey(t *testing.T) {
 	assert.Equal(t, expectedK, actualK)
 }
 
+func getOriginalPatternsWithMeta(x, y []*PatternWithMeta) ([]PatternWithMeta, []PatternWithMeta) {
+	xpwms := make([]PatternWithMeta, 0, 0)
+	for _, p := range x {
+		xpwms = append(xpwms, *p)
+	}
+
+	ypwms := make([]PatternWithMeta, 0, 0)
+	for _, p := range y {
+		ypwms = append(ypwms, *p)
+	}
+
+	return xpwms, ypwms
+}
+
 func TestGetPutModelEventInfo(t *testing.T) {
 
 	cloudManager := serviceDisk.New(baseCloudDir)
@@ -134,39 +148,41 @@ func TestGetPutPatterns(t *testing.T) {
 	scanner, err := openFileAndGetScanner(patternTestFile)
 	assert.Nil(t, err)
 
-	actualPatterns, err := CreatePatternsFromScanner(scanner)
+	actualPatterns, err := CreatePatternsWithMetaFromScanner(scanner)
 	assert.Nil(t, err)
 
 	store, err := New(5, 5, diskManager, cloudManager)
 	assert.Nil(t, err)
 
 	// should not be present in cloud
-	_, err = store.getPatternsFromCloud(projectId, modelId, chunkId)
+	_, err = store.getPatternsWithMetaFromCloud(projectId, modelId, chunkId)
 	assert.NotNil(t, err)
 
 	// put in cloud
-	err = store.PutPatternsInCloud(projectId, modelId, chunkId, actualPatterns)
+	err = store.PutPatternsWithMetaInCloud(projectId, modelId, chunkId, actualPatterns)
 	assert.Nil(t, err)
 
 	// should not be present in disk
-	_, err = store.getPatternsFromDisk(projectId, modelId, chunkId)
+	_, err = store.getPatternsWithMetaFromDisk(projectId, modelId, chunkId)
 	assert.True(t, os.IsNotExist(err))
 
-	// should not be present in disk
-	_, found := store.getPatternsFromCache(projectId, modelId, chunkId)
+	// should not be present in cache
+	_, found := store.getPatternsWithMetaFromCache(projectId, modelId, chunkId)
 	assert.False(t, found)
 
-	patterns, err := store.GetPatterns(projectId, modelId, chunkId)
+	patterns, err := store.GetPatternsWithMeta(projectId, modelId, chunkId)
 	assert.Nil(t, err)
+	ao, po := getOriginalPatternsWithMeta(actualPatterns, patterns)
+	assert.Equal(t, ao, po)
 	assert.Equal(t, actualPatterns, patterns)
 
 	// read from disk now, should be present
-	diskPatterns, err := store.getPatternsFromDisk(projectId, modelId, chunkId)
+	diskPatterns, err := store.getPatternsWithMetaFromDisk(projectId, modelId, chunkId)
 	assert.Nil(t, err)
 	assert.Equal(t, actualPatterns, diskPatterns)
 
 	// read from cache now, should be present
-	cachePatterns, found := store.getPatternsFromCache(projectId, modelId, chunkId)
+	cachePatterns, found := store.getPatternsWithMetaFromCache(projectId, modelId, chunkId)
 	assert.True(t, found)
 	assert.Equal(t, actualPatterns, cachePatterns)
 }

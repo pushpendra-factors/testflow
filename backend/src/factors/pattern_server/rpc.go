@@ -1,9 +1,10 @@
 package patternserver
 
 import (
+	"encoding/json"
 	"errors"
-	"factors/pattern"
 	client "factors/pattern_client"
+	store "factors/pattern_server/store"
 	U "factors/util"
 	"fmt"
 	"net/http"
@@ -13,19 +14,19 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type FilterPattern func(p *pattern.Pattern, startEvent, endEvent string) bool
+type FilterPattern func(patternEvents []string, startEvent, endEvent string) bool
 
-func filterByStart(p *pattern.Pattern, startEvent, endEvent string) bool {
-	return strings.Compare(startEvent, p.EventNames[0]) == 0
+func filterByStart(patternEvents []string, startEvent, endEvent string) bool {
+	return strings.Compare(startEvent, patternEvents[0]) == 0
 }
 
-func filterByEnd(p *pattern.Pattern, startEvent, endEvent string) bool {
-	pLen := len(p.EventNames)
-	return strings.Compare(endEvent, p.EventNames[pLen-1]) == 0
+func filterByEnd(patternEvents []string, startEvent, endEvent string) bool {
+	pLen := len(patternEvents)
+	return strings.Compare(endEvent, patternEvents[pLen-1]) == 0
 }
 
-func filterByStartAndEnd(p *pattern.Pattern, startEvent, endEvent string) bool {
-	return filterByStart(p, startEvent, "") && filterByEnd(p, "", endEvent)
+func filterByStartAndEnd(patternEvents []string, startEvent, endEvent string) bool {
+	return filterByStart(patternEvents, startEvent, "") && filterByEnd(patternEvents, "", endEvent)
 }
 
 func GetFilter(startEvent, endEvent string) FilterPattern {
@@ -90,11 +91,11 @@ func (ps *PatternServer) GetAllPatterns(
 
 	filterPatterns := GetFilter(args.StartEvent, args.EndEvent)
 
-	patternsToReturn := make([]*pattern.Pattern, 0, 0)
+	patternsToReturn := make([]*json.RawMessage, 0, 0)
 
 	// fetch in go routines to optimize
 	for _, chunkId := range chunksToServe {
-		chunkPatterns, err := ps.store.GetPatterns(args.ProjectId, modelId, chunkId)
+		patternsWithMeta, err := ps.store.GetPatternsWithMeta(args.ProjectId, modelId, chunkId)
 		if err != nil {
 			log.WithError(err).WithFields(log.Fields{
 				"pid": args.ProjectId,
@@ -104,11 +105,12 @@ func (ps *PatternServer) GetAllPatterns(
 			continue
 		}
 		if filterPatterns == nil {
-			patternsToReturn = append(patternsToReturn, chunkPatterns...)
+			rawPatterns := store.GetAllRawPatterns(patternsWithMeta)
+			patternsToReturn = append(patternsToReturn, rawPatterns...)
 		} else {
-			for _, chunkP := range chunkPatterns {
-				if filterPatterns(chunkP, args.StartEvent, args.EndEvent) {
-					patternsToReturn = append(patternsToReturn, chunkP)
+			for _, pwm := range patternsWithMeta {
+				if filterPatterns(pwm.PatternEvents, args.StartEvent, args.EndEvent) {
+					patternsToReturn = append(patternsToReturn, &pwm.RawPattern)
 				}
 			}
 		}
@@ -165,11 +167,11 @@ func (ps *PatternServer) GetPatterns(
 		return nil
 	}
 
-	patternsToReturn := make([]*pattern.Pattern, 0, 0)
+	patternsToReturn := make([]*json.RawMessage, 0, 0)
 
 	// fetch in go routines to optimize
 	for _, chunkId := range chunksToServe {
-		chunkPatterns, err := ps.store.GetPatterns(args.ProjectId, modelId, chunkId)
+		patternsWithMeta, err := ps.store.GetPatternsWithMeta(args.ProjectId, modelId, chunkId)
 		if err != nil {
 			log.WithError(err).WithFields(log.Fields{
 				"pid": args.ProjectId,
@@ -179,10 +181,10 @@ func (ps *PatternServer) GetPatterns(
 			continue
 		}
 
-		for _, chunkP := range chunkPatterns {
+		for _, pwm := range patternsWithMeta {
 			for _, pE := range args.PatternEvents {
-				if reflect.DeepEqual(pE, chunkP.EventNames) {
-					patternsToReturn = append(patternsToReturn, chunkP)
+				if reflect.DeepEqual(pE, pwm.PatternEvents) {
+					patternsToReturn = append(patternsToReturn, &pwm.RawPattern)
 				}
 			}
 		}

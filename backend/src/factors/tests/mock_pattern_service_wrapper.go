@@ -37,7 +37,7 @@ func (pw *MockPatternServiceWrapper) GetAllPatterns(reqId,
 	filterPatterns := PS.GetFilter(startEvent, endEvent)
 	patternsToReturn := make([]*pattern.Pattern, 0, 0)
 	for _, p := range pw.patterns {
-		if filterPatterns(p, startEvent, endEvent) {
+		if filterPatterns(p.EventNames, startEvent, endEvent) {
 			patternsToReturn = append(patternsToReturn, p)
 		}
 	}
