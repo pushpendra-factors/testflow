@@ -6,4 +6,4 @@ metadata:
     env: staging
     project: factors-staging
 data:
-  BUCKET_NAME: "factors-staging"
+  BUCKET_NAME: "factors-staging-v2"

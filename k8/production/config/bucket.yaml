@@ -6,4 +6,4 @@ metadata:
     env: production
     project: factors-production
 data:
-  BUCKET_NAME: "factors-production"
+  BUCKET_NAME: "factors-production-v2"
