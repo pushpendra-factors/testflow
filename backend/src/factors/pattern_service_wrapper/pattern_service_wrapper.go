@@ -636,51 +636,59 @@ func buildBarGraphResult(node *ItreeNode) (*graphResult, error) {
 	return chart, nil
 }
 
+func isDupResult(node *ItreeNode,
+	seenPropertyConstraints *map[string]bool,
+	seenEvents *map[string]bool) bool {
+	isDup := false
+	if node.NodeType == NODE_TYPE_SEQUENCE {
+		nodePLen := len(node.Pattern.EventNames)
+		addedEvent := node.Pattern.EventNames[nodePLen-2]
+		if _, found := (*seenEvents)[addedEvent]; found {
+			isDup = true
+		}
+		// Updates seen events.
+		(*seenEvents)[addedEvent] = true
+	} else if node.NodeType == NODE_TYPE_EVENT_PROPERTY || node.NodeType == NODE_TYPE_USER_PROPERTY {
+		// Not deduping on graph results.
+		propertyConstraints := []string{}
+		for _, c := range node.AddedConstraint.EPCategoricalConstraints {
+			propertyConstraints = append(propertyConstraints, c.PropertyName)
+		}
+		for _, c := range node.AddedConstraint.EPNumericConstraints {
+			propertyConstraints = append(propertyConstraints, c.PropertyName)
+		}
+		for _, c := range node.AddedConstraint.UPCategoricalConstraints {
+			propertyConstraints = append(propertyConstraints, c.PropertyName)
+		}
+		for _, c := range node.AddedConstraint.UPNumericConstraints {
+			propertyConstraints = append(propertyConstraints, c.PropertyName)
+		}
+		for _, pc := range propertyConstraints {
+			if _, found := (*seenPropertyConstraints)[pc]; found {
+				isDup = true
+				break
+			}
+		}
+		for _, pc := range propertyConstraints {
+			(*seenPropertyConstraints)[pc] = true
+		}
+	}
+	return isDup
+}
+
 func buildFactorResultsFromPatterns(reqId string, nodes []*ItreeNode, pw PatternServiceWrapperInterface) FactorGraphResults {
 	results := FactorGraphResults{Charts: []graphResult{}}
-	/*
-		endEventString := "dummyEvent"
-		// Dummy Line Chart.
-		chart := graphResult{
-			Type:   "line",
-			Header: fmt.Sprintf("Average %s per month", endEventString),
-			Labels: []string{"January", "February", "March", "April", "May", "June", "July"},
-			Datasets: []map[string]interface{}{
-				map[string]interface{}{
-					"label": "Users with country:US",
-					"data":  []float64{65, 59, 80, 81, 56, 55, 40},
-				},
-				map[string]interface{}{
-					"label": "All Users",
-					"data":  []float64{45, 50, 70, 101, 95, 80, 64},
-				},
-			},
-		}
-		results.Charts = append(results.Charts, chart)
-		// Dummy Bar Chart.
-		chart = graphResult{
-			Type:   "bar",
-			Header: fmt.Sprintf("Users with country US have 30%% higher average %s than others.", endEventString),
-			Labels: []string{"All Users", "US", "India", "UK", "Australia", "Egypt", "Iran"},
-			Datasets: []map[string]interface{}{
-				map[string]interface{}{
-					"label": fmt.Sprintf("Average %s", endEventString),
-					"data":  []float64{65, 59, 80, 81, 56, 55, 40},
-				},
-				map[string]interface{}{
-					"label": "All Users",
-					"data":  []float64{45, 50, 70, 101, 95, 80, 64},
-				},
-			},
-		}
-		results.Charts = append(results.Charts, chart)
-	*/
-	// Actual funnel results.
+	seenPropertyConstraints := make(map[string]bool)
+	seenEvents := make(map[string]bool)
 
 	for _, node := range nodes {
 		var chart *graphResult = nil
 		if node.NodeType == NODE_TYPE_SEQUENCE || node.NodeType == NODE_TYPE_EVENT_PROPERTY ||
 			node.NodeType == NODE_TYPE_USER_PROPERTY {
+			// Dedup results to show more novel results as user scrolls down.
+			if isDupResult(node, &seenPropertyConstraints, &seenEvents) {
+				continue
+			}
 			funnelEvents, funnelConstraints, baseFunnelEvents, baseFunnelConstraints := buildFunnelFormats(node)
 			if c, err := buildFunnelGraphResult(reqId, node, funnelEvents, funnelConstraints, baseFunnelEvents, baseFunnelConstraints, pw); err != nil {
 				log.Error(err)
@@ -689,6 +697,9 @@ func buildFactorResultsFromPatterns(reqId string, nodes []*ItreeNode, pw Pattern
 				chart = c
 			}
 		} else if node.NodeType == NODE_TYPE_GRAPH_EVENT_PROPERTIES || node.NodeType == NODE_TYPE_GRAPH_USER_PROPERTIES {
+			if isDupResult(node, &seenPropertyConstraints, &seenEvents) {
+				continue
+			}
 			if c, err := buildBarGraphResult(node); err != nil {
 				log.Error(err)
 				continue
