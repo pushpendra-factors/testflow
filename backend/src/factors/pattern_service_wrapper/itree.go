@@ -644,6 +644,27 @@ func (it *Itree) buildAndAddSequenceChildNodes(reqId string,
 	return addedChildNodes, nil
 }
 
+func getPropertyNamesMapFromConstraints(
+	patternConstraints []P.EventConstraints) *map[string]bool {
+	seenPropertyConstraints := make(map[string]bool)
+	// Initialize seen properties with that of parent properties.
+	for _, pcs := range patternConstraints {
+		for _, ecc := range pcs.EPCategoricalConstraints {
+			seenPropertyConstraints[ecc.PropertyName] = true
+		}
+		for _, enc := range pcs.EPNumericConstraints {
+			seenPropertyConstraints[enc.PropertyName] = true
+		}
+		for _, ucc := range pcs.UPCategoricalConstraints {
+			seenPropertyConstraints[ucc.PropertyName] = true
+		}
+		for _, upc := range pcs.UPNumericConstraints {
+			seenPropertyConstraints[upc.PropertyName] = true
+		}
+	}
+	return &seenPropertyConstraints
+}
+
 func (it *Itree) buildCategoricalPropertyChildNodes(reqId string,
 	categoricalPropertyKeyValues map[string]map[string]bool,
 	nodeType int, maxNumProperties int, maxNumValues int,
@@ -651,9 +672,13 @@ func (it *Itree) buildCategoricalPropertyChildNodes(reqId string,
 	allActiveUsersPattern *P.Pattern, pLen int, fpr float64, fpp float64) []*ItreeNode {
 	propertyChildNodes := []*ItreeNode{}
 	numP := 0
+	seenProperties := getPropertyNamesMapFromConstraints(parentNode.PatternConstraints)
 	for propertyName, seenValues := range categoricalPropertyKeyValues {
 		if numP > maxNumProperties {
 			break
+		}
+		if _, found := (*seenProperties)[propertyName]; found {
+			continue
 		}
 		if nodeType == NODE_TYPE_EVENT_PROPERTY && U.IsInternalEventProperty(&propertyName) {
 			continue
@@ -766,9 +791,13 @@ func (it *Itree) buildNumericalPropertyChildNodes(reqId string,
 	parentPattern := parentNode.Pattern
 	propertyChildNodes := []*ItreeNode{}
 	numP := 0
+	seenProperties := getPropertyNamesMapFromConstraints(parentNode.PatternConstraints)
 	for propertyName, _ := range numericPropertyKeys {
 		if numP > maxNumProperties {
 			break
+		}
+		if _, found := (*seenProperties)[propertyName]; found {
+			continue
 		}
 		if nodeType == NODE_TYPE_EVENT_PROPERTY && U.IsInternalEventProperty(&propertyName) {
 			continue
@@ -982,28 +1011,20 @@ func (it *Itree) buildAndAddPropertyChildNodes(reqId string,
 
 	addedChildNodes := []*ItreeNode{}
 	numAddedChildNodes := 0
-	seenPropertyConstraints := make(map[string]bool)
+	// Initialize seen properties with that of parent properties.
+	seenPropertyConstraints := getPropertyNamesMapFromConstraints(
+		parentNode.PatternConstraints)
+
 	for _, cNode := range childNodes {
 		if cNode.InformationDrop <= 0.0 {
 			continue
 		}
 		// Dedup repeated constraints on different values.
-		propertyConstraints := []string{}
-		for _, c := range cNode.AddedConstraint.EPCategoricalConstraints {
-			propertyConstraints = append(propertyConstraints, c.PropertyName)
-		}
-		for _, c := range cNode.AddedConstraint.EPNumericConstraints {
-			propertyConstraints = append(propertyConstraints, c.PropertyName)
-		}
-		for _, c := range cNode.AddedConstraint.UPCategoricalConstraints {
-			propertyConstraints = append(propertyConstraints, c.PropertyName)
-		}
-		for _, c := range cNode.AddedConstraint.UPNumericConstraints {
-			propertyConstraints = append(propertyConstraints, c.PropertyName)
-		}
+		childPropertyConstraintsMap := getPropertyNamesMapFromConstraints(
+			[]P.EventConstraints{cNode.AddedConstraint})
 		isDup := false
-		for _, pc := range propertyConstraints {
-			if _, found := seenPropertyConstraints[pc]; found {
+		for childPropertyName, _ := range *childPropertyConstraintsMap {
+			if _, found := (*seenPropertyConstraints)[childPropertyName]; found {
 				isDup = true
 				break
 			}
@@ -1013,8 +1034,8 @@ func (it *Itree) buildAndAddPropertyChildNodes(reqId string,
 		}
 		it.addNode(cNode)
 		addedChildNodes = append(addedChildNodes, cNode)
-		for _, pc := range propertyConstraints {
-			seenPropertyConstraints[pc] = true
+		for pc, _ := range *childPropertyConstraintsMap {
+			(*seenPropertyConstraints)[pc] = true
 		}
 		numAddedChildNodes++
 		// Only top MAX_PROPERTY_CHILD_NODES in order of drop in GiniImpurity are selected.
