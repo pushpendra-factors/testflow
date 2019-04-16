@@ -6,10 +6,6 @@
 TAG?=
 export TAG
 
-# staging | production
-ENV?=staging
-export ENV
-
 #  export FACTORS_REPO=~/repos/factors
 
 build-staging:
@@ -18,8 +14,14 @@ build-staging:
 build-production:
 	npm run build-prod
 
-pack-fe: build-$(ENV)
-	docker build -t us.gcr.io/factors-$(ENV)/frontend:$(TAG) -f Dockerfile.frontend .
+pack-fe-staging: build-staging
+	docker build -t us.gcr.io/factors-staging/frontend:$(TAG) -f Dockerfile.staging .
 
-upload-fe:
-	docker push us.gcr.io/factors-$(ENV)/frontend:$(TAG)
+pack-fe-prod: build-production
+	docker build -t us.gcr.io/factors-production/frontend:$(TAG) -f Dockerfile.production .
+
+upload-fe-prod:
+	docker push us.gcr.io/factors-production/frontend:$(TAG)
+
+upload-fe-staging:
+	docker push us.gcr.io/factors-staging/frontend:$(TAG)

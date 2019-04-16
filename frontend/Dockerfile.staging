@@ -1,0 +1,9 @@
+FROM node:8.15.0-alpine
+
+WORKDIR /frontend
+COPY dist/production dist
+COPY serve-dist.js .
+RUN npm install express
+
+ENTRYPOINT ["node", "serve-dist.js"]
+EXPOSE 3000

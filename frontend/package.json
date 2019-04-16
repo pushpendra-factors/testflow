@@ -81,10 +81,11 @@
   },
   "scripts": {
     "dev": "export NODE_ENV=development && ./node_modules/.bin/webpack-dev-server --host factors-dev.com --port 3000 --content-base src --inline --hot",
-    "build-copy-sdk": "cd $FACTORS_REPO/sdk/javascript; npm run build-prod; cp $FACTORS_REPO/sdk/javascript/dist/factors.prod.js $FACTORS_REPO/frontend/dist/assets/factors.js",
-    "build-staging": "export NODE_ENV=staging; rm -rf ./dist; ./node_modules/.bin/webpack --config webpack.config.js; cp -R ./src/assets dist/assets; npm run build-copy-sdk",
+    "copy-sdk-to-staging": "cd $FACTORS_REPO/sdk/javascript; npm run build-prod; cp $FACTORS_REPO/sdk/javascript/dist/factors.prod.js $FACTORS_REPO/frontend/dist/staging/assets/factors.js",
+    "copy-sdk-to-prod": "cd $FACTORS_REPO/sdk/javascript; npm run build-prod; cp $FACTORS_REPO/sdk/javascript/dist/factors.prod.js $FACTORS_REPO/frontend/dist/production/assets/factors.js",
+    "build-staging": "export NODE_ENV=staging; rm -rf ./dist/staging; mkdir -p ./dist/staging; ./node_modules/.bin/webpack --config webpack.config.js; cp -R ./src/assets dist/staging/assets; npm run copy-sdk-to-staging",
     "serve-staging": "npm run build-staging; node serve-dist.js",
-    "build-prod": "export NODE_ENV=production; rm -rf ./dist; ./node_modules/.bin/webpack --config webpack.config.js; cp -R ./src/assets dist/assets; npm run build-copy-sdk",
+    "build-prod": "export NODE_ENV=production; rm -rf ./dist/production; mkdir -p ./dist/production; ./node_modules/.bin/webpack --config webpack.config.js; cp -R ./src/assets dist/production/assets; npm run copy-sdk-to-prod",
     "serve-prod": "npm run build-prod; node serve-dist.js"
   }
 }

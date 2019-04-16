@@ -13,6 +13,10 @@ var buildConfigPlugin = new webpack.DefinePlugin({
 
 var devEnv = process.env.NODE_ENV === "development";
 
+function getBuildPath() {
+  return __dirname + "/dist/" + process.env.NODE_ENV;
+}
+
 module.exports = {
   context: path.join(__dirname, "src"),
   devtool: devEnv ? "inline-sourcemap" : false,
@@ -47,7 +51,7 @@ module.exports = {
     ]
   },
   output: {
-    path: __dirname + "/dist/",
+    path: getBuildPath(),
     filename: "index.min.js"
   },
   plugins: devEnv ? [buildConfigPlugin] : [
@@ -67,7 +71,8 @@ module.exports = {
         join_vars: true
       },
       output: {
-        comments: false
+        comments: false,
+        path: getBuildPath(),
       }
     }),
     new webpack.optimize.AggressiveMergingPlugin(),
