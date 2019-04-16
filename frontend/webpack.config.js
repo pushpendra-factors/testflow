@@ -71,8 +71,7 @@ module.exports = {
         join_vars: true
       },
       output: {
-        comments: false,
-        path: getBuildPath(),
+        comments: false
       }
     }),
     new webpack.optimize.AggressiveMergingPlugin(),
