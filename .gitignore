@@ -13,6 +13,7 @@ backend/src/golang.org/**
 # sdk
 sdk/javascript/dist
 sdk/javascript/node_modules
+sdk/javascript/npm_package/index.js
 
 # misc
 misc/ingest_events/pkg/**

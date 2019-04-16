@@ -1,0 +1,9 @@
+{
+  "name": "factorsai",
+  "version": "0.1.1",
+  "description": "FactorsAI JS SDK",
+  "main": "./index.js",
+  "scripts": {},
+  "author": "team@factors.ai",
+  "license": "ISC"
+}

@@ -13,6 +13,7 @@ import { login } from "../../../actions/agentActions";
 import  { InvalidEmail, MissingEmail, MissingPassword } from '../ValidationMessages';
 import HalfScreen from '../HalfScreen';
 import SubmissionError from '../SubmissionError';
+import factorsai from '../../../factorsaiObj';
 
 const mapDispatchToProps = dispatch => {
   return bindActionCreators({ login }, dispatch);
@@ -52,13 +53,16 @@ class Login extends Component {
             })
         }
         onSubmit={(values, {setSubmitting}) => {
+          let eventProperties = { email: values.email };
           this.props.login(values.email, values.password)
           .then(() => {
-            setSubmitting(false);            
+            setSubmitting(false);
+            factorsai.track('login', eventProperties);    
           })
           .catch((msg) => {
             setSubmitting(false);
             this.setState({ error: msg });
+            factorsai.track('login_failed', eventProperties);
           });                      
         }}
       >

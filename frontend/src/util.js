@@ -73,11 +73,11 @@ export function firstToUpperCase(str) {
 }
     
 export function getColor(index) {
-if (index == undefined || index == null) {
-    // default color.
-    return COLORS[0];
-}
+    if (index == undefined || index == null) {
+        // default color.
+        return COLORS[0];
+    }
 
-let ci = ((index + 1) % COLORS.length) - 1;
-return COLORS[ci];
+    let ci = ((index + 1) % COLORS.length) - 1;
+    return COLORS[ci];
 }

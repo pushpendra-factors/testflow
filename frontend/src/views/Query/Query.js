@@ -19,6 +19,7 @@ import GroupBy from './GroupBy';
 import { trimQuotes, removeElementByIndex, firstToUpperCase, getSelectedOpt } from '../../util'
 import TableBarChart from './TableBarChart';
 import Loading from '../../loading';
+import factorsai from '../../factorsaiObj';
 
 const COND_ALL_GIVEN_EVENT = 'all_given_event';
 const COND_ANY_GIVEN_EVENT = 'any_given_event'; 
@@ -335,7 +336,7 @@ class Query extends Component {
       return false;
     }
 
-    return true;
+    return !!result.headers;
   }
 
   validateQuery() {
@@ -364,19 +365,44 @@ class Query extends Component {
     this.showTopError(this.validateQuery());
     
     this.setState({ isResultLoading: true, showPresentation: true });
-    runQuery(this.props.currentProjectId, this.getQuery(presentation === PRESENTATION_LINE))
+    let query = this.getQuery(presentation === PRESENTATION_LINE);
+
+    let eventProperties = { 
+      projectId: this.props.currentProjectId,
+      query: JSON.stringify(query),
+      queryType: query.type,
+      eventsCondition: query.eventsCondition,
+      presentation: presentation,
+    };
+    let startTime = new Date().getTime();
+    
+    runQuery(this.props.currentProjectId, query)
       .then((r) => {
         if(this.isResponseValid(r.data)) {
           this.setState({ 
             result: r.data, 
             selectedPresentation: presentation,
-            isResultLoading: false
+            isResultLoading: false,
           });
         } else {
-          console.error('Invalid response');
+          console.log('Failed to run query. Invalid response.');
         }
+
+        let endTime = new Date().getTime();
+        eventProperties['time_taken_in_ms'] = endTime - startTime;
+        eventProperties['request_failed'] = (!r.ok).toString();
+        if (!r.ok) eventProperties['error'] = JSON.stringify(r.data);
+        factorsai.track('run_query', eventProperties);
       })
-      .catch(console.error);
+      .catch((err) => {
+        console.log(err);
+
+        let endTime = new Date().getTime();
+        eventProperties['time_taken_in_ms'] = endTime - startTime;
+        eventProperties['error'] = err.message;
+        eventProperties['request_failed'] = 'true';
+        factorsai.track('run_query', eventProperties);
+      });
   }
 
   getResultAsTable() {

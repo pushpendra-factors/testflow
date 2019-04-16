@@ -21,10 +21,11 @@ import {
   STATE_USER_NUMERIC_PROPERTY_VALUE, STATE_USER_STRING_PROPERTY_VALUE
 } from './QueryBuilderCard';
 import Loading from '../../loading';
-import loadingImage from '../../assets/img/loading.gif';
+import loadingImage from '../../assets/img/loading_gray.gif';
 
 
 import Select from 'react-select';
+import factorsai from '../../factorsaiObj';
 
 const EVENT_NAME_TYPE = "eventName";
 const EVENT_PROPERTY_START_TYPE = "eventPropertyStart";
@@ -90,6 +91,7 @@ class Factor extends Component {
       isModelSelectorDropdownOpen: false,
       selectedModelInterval: null
     }
+
   }
 
   componentWillMount() {
@@ -379,13 +381,38 @@ class Factor extends Component {
     console.log('Fire Query: ' + JSON.stringify(query));
 
     this.setState({ factors: { loading: LOADING_INIT } });
+
+    let eventProperties = {
+      projectId: this.props.currentProjectId,
+      modelId: this.state.selectedModelInterval.mid,
+      interval: this.getReadableInterval(this.state.selectedModelInterval),
+      query: JSON.stringify(query),
+    };
+    let startTime = new Date().getTime();
+
     this.props.fetchFactors(this.props.currentProjectId,
-      this.state.selectedModelInterval.mid,{ query: query }, this.props.location.search)
-      .then(() => {
-        console.log('Factors completed');
-        this.setState({ factors: { loading: LOADING_DONE } });
-      });
-    // Todo(Dinesh): handle error here on factors failure.
+      this.state.selectedModelInterval.mid, { query: query }, this.props.location.search)
+        .then((response) => {
+          console.log('Factors completed');
+          this.setState({ factors: { loading: LOADING_DONE } });
+
+          let endTime = new Date().getTime();
+          eventProperties['time_taken_in_ms'] = endTime - startTime;
+          eventProperties['results_count'] = response.data.charts.length;
+          eventProperties['request_failed'] = (!response.ok).toString();
+          if (!response.ok) eventProperties['error'] = JSON.stringify(response.data);
+          factorsai.track('factor', eventProperties);
+        })
+        .catch((err) => {
+          console.error(err);
+
+          let endTime = new Date().getTime();
+          eventProperties['time_taken_in_ms'] = endTime - startTime;
+          eventProperties['error'] = err.message;
+          eventProperties['request_failed'] = 'true';
+          factorsai.track('factor', eventProperties);
+        })
+
   }
 
   readableTimstamp(unixTime) {

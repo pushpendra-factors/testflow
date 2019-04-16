@@ -104,7 +104,7 @@ App.prototype.track = function(eventName, eventProperties, auto=false) {
 
 App.prototype.autoTrack = function(enabled=false) {
     if (!enabled) return false; // not enabled.
-    this.track(window.location.host+window.location.pathname, 
+    this.track(window.location.host+window.location.pathname+window.location.hash, 
         Properties.parseFromQueryString(window.location.search), true);
     
     // Todo(Dinesh): Find ways to automate tests for SPA support.
@@ -122,7 +122,7 @@ App.prototype.autoTrack = function(enabled=false) {
             logger.debug("Triggered window.onpopstate: "+window.location.href);
             // Track only if URL or QueryParam changed.
             if (_land_location !== window.location.href)
-                _this.track(window.location.host+window.location.pathname, 
+                _this.track(window.location.host+window.location.pathname+window.location.hash, 
                     Properties.parseFromQueryString(window.location.search), true);
         }
     }

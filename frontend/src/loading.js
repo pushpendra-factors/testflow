@@ -1,5 +1,5 @@
 import React from 'react';
-import loadingImage from './assets/img/loading.gif';
+import loadingImage from './assets/img/loading_gray.gif';
 
 
 const Loading = (props) => {

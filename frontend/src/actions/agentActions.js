@@ -7,13 +7,14 @@ export function fetchAgentInfo(){
     return new Promise((resolve,reject) => {
       get(dispatch, host + "agents/info")
         .then((response) => {        
-          resolve(dispatch({type:"FETCH_AGENT_INFO_FULFILLED", payload: response.data}));
+          dispatch({type:"FETCH_AGENT_INFO_FULFILLED", 
+            payload: response.data});
+          resolve(response);
         })
-        .catch(() => {       
-          reject(dispatch({
-            type:"FETCH_AGENT_INFO_REJECTED", 
-            payload: 'Failed to fetch agent info',
-          }));
+        .catch((err) => {       
+          dispatch({type:"FETCH_AGENT_INFO_REJECTED", 
+            payload: 'Failed to fetch agent info'});
+          reject(err);
         });
     });
   }

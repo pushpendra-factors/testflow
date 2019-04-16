@@ -42,6 +42,7 @@ type Agent struct {
 
 // AgentInfo - Exposable Info.
 type AgentInfo struct {
+	Email     string `json:"email"`
 	FirstName string `json:"first_name"`
 }
 
@@ -124,7 +125,7 @@ func GetAgentInfo(uuid string) (*AgentInfo, int) {
 		return nil, errCode
 	}
 
-	agentInfo := &AgentInfo{FirstName: agent.FirstName}
+	agentInfo := &AgentInfo{FirstName: agent.FirstName, Email: agent.Email}
 	return agentInfo, errCode
 }
 

@@ -13,7 +13,7 @@ function APIClient(token, host="") {
 
 APIClient.prototype.getURL = function(uri) {
     // use given host if available.
-    return this.host != "" ? this.host : (config.api.host+uri);
+    return this.host != "" ? this.host+uri : (config.api.host+uri);
 }
 
 APIClient.prototype.setToken = function(token) {

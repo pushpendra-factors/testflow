@@ -1,4 +1,4 @@
-import {post} from "./request.js";
+import { post } from "./request.js";
 import { getHostURL } from "../util";
 
 var host = getHostURL();
@@ -13,13 +13,17 @@ export function fetchFactors(currentProjectId, modelId, query, queryParams) {
       separator = "&"
     }
 
-    return post(dispatch, host + "projects/" + currentProjectId + "/factor"+ queryParams + separator + mid, query)
-      .then((response) => {
-        dispatch({type: "FETCH_FACTORS_FULFILLED", payload: response.data})
-      })
-      .catch((err) => {
-        dispatch({type: "FETCH_FACTORS_REJECTED", payload: err});
-      });
+    return new Promise((resolve, reject) => {
+      post(dispatch, host + "projects/" + currentProjectId + "/factor"+ queryParams + separator + mid, query)
+        .then((response) => {
+          dispatch({type: "FETCH_FACTORS_FULFILLED", payload: response.data});
+          resolve(response);
+        })
+        .catch((err) => {
+          dispatch({type: "FETCH_FACTORS_REJECTED", payload: err});
+          reject(err);
+        });
+    });
   }
 }
 

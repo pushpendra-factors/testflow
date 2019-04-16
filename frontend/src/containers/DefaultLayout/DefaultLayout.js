@@ -28,6 +28,9 @@ import { fetchAgentInfo } from '../../actions/agentActions';
 import { hotjar } from 'react-hotjar';
 import { isProduction } from '../../util';
 
+// inits factorsai sdk for app.
+import factorsai from '../../factorsaiObj';
+
 const projectSelectStyles = {
   option: (base, state) => ({
     ...base,
@@ -113,7 +116,9 @@ class DefaultLayout extends Component {
           agent: {
             loaded: true
           }
-        })
+        });
+
+        factorsai.identify(r.data.email);
       })
       .catch((r) => {
         this.setState({ 
@@ -127,6 +132,7 @@ class DefaultLayout extends Component {
       if(isProduction()) {
         hotjar.initialize(1259925, 6);
       }
+
   }
 
   refresh = () => {
@@ -154,10 +160,14 @@ class DefaultLayout extends Component {
     )
 
     if (selectableProjects.length == 0 ){
-      return <DefaultHeader refresh={this.refresh} getProfileName={this.getAgentName} /> 
+      return <DefaultHeader 
+        refresh={this.refresh} 
+        getProfileName={this.getAgentName} 
+        agentEmail={this.props.agent.email} 
+      /> 
     }
 
-    return <DefaultHeader 
+    return <DefaultHeader
       refresh={this.refresh} 
       selectableProjects={selectableProjects}
       selectedProject={{
@@ -165,6 +175,7 @@ class DefaultLayout extends Component {
         value: this.props.currentProjectId 
       }}
       getProfileName={this.getAgentName}
+      agentEmail={this.props.agent.email}
     />
   }
 

@@ -11,6 +11,7 @@ import Avatar from 'react-avatar';
 
 import { changeProject, createProject } from '../../actions/projectsActions';
 import { signout } from '../../actions/agentActions';
+import factorsai from '../../factorsaiObj';
 
 const propTypes = {
   children: PropTypes.node,
@@ -105,6 +106,7 @@ class DefaultHeader extends Component {
 
   handleLogout = () => {
     this.props.signout();
+    factorsai.track('logout', { email: this.props.agentEmail });
   }
 
   toggleAddProjectModal = () => {
