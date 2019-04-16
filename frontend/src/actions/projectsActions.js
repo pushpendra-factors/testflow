@@ -220,18 +220,25 @@ export function createFilter(projectId, payload) {
     return new Promise((resolve, reject) => {
       post(dispatch, host + "projects/" + projectId +"/filters", payload)
         .then((r) => {
-          dispatch({
-            type: "CREATE_FILTER_FULFILLED",
-            payload: r.data
-          });
-          resolve(r.data);
+          if (r.ok) {
+            dispatch({
+              type: "CREATE_FILTER_FULFILLED",
+              payload: r.data
+            });
+          } else {
+            dispatch({
+              type: "CREATE_FILTER_REJECTED",
+              error: r.data
+            })
+          }
+          resolve(r);
         })
         .catch((r) => {
           dispatch({
             type: "CREATE_FILTER_REJECTED",
             error: r
           })
-          reject({body: r.data, status: r.status});
+          reject(r);
         });
     })
   }

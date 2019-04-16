@@ -280,13 +280,18 @@ class AutoTrack extends Component {
 
     this.props.createFilter(this.props.currentProjectId, payload)
       .then((r) => {
-        this.setState((prevState) => this.setFilterSettingsState(prevState, {formSubmitSuccess: true}))
+        if(r.ok) {
+          this.setState((prevState) => this.setFilterSettingsState(prevState, {formSubmitSuccess: true}));
+          this.resetFilterForm();
+        } else {
+          let error = "";
+          if (r.status == 409) error = "Virtual event already exists";
+          else error = "Failed creating virtual event";
+          this.setState((prevState) => this.setFilterSettingsState(prevState, {formExprError: error, 
+            formExpr: null, formSubmitSuccess: false}))
+        }
       })
-      .catch((e) => {
-        // Todo(Dinesh): Error message should be from backend.
-        this.setState((prevState) => this.setFilterSettingsState(prevState, 
-          {formExprError: "Invalid or duplicate expression.", formExpr: null, formSubmitSuccess: false}))
-      });
+      .catch(console.error);
   }
 
   formSelectCreateLabel = (inputValue) => {
@@ -465,7 +470,12 @@ class AutoTrack extends Component {
               // existing filters list.
               this.props.filters.map((v, i) => {
                 let exprURL = this.parseFilterExprURL(v.expr);
-                return <FilterRecord name={this.getFilterEventName(i)} domain={exprURL.host} expr={exprURL.path} key={"filter_"+v.id} handleEventNameChange={(e) => this.setStateFilterEventName(i, e)} handleUpdate={() => this.updateFilterEventName(i)} handleDelete={() => this.deleteFilter(i)} getUpdateButtonColor={() => this.getFilterUpdateButtonColor(i)}/> 
+                return <FilterRecord 
+                  name={this.getFilterEventName(i)} domain={exprURL.host} 
+                  expr={exprURL.path} key={"filter_"+v.id} handleEventNameChange={(e) => this.setStateFilterEventName(i, e)} 
+                  handleUpdate={() => this.updateFilterEventName(i)} handleDelete={() => this.deleteFilter(i)} 
+                  getUpdateButtonColor={() => this.getFilterUpdateButtonColor(i)}
+                /> 
               })
             }
           </CardBody>
