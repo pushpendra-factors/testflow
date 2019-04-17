@@ -21,7 +21,7 @@ import {
   STATE_USER_NUMERIC_PROPERTY_VALUE, STATE_USER_STRING_PROPERTY_VALUE
 } from './QueryBuilderCard';
 import Loading from '../../loading';
-import loadingImage from '../../assets/img/loading_gray.gif';
+import loadingImage from '../../assets/img/loading_g1.gif';
 
 
 import Select from 'react-select';
