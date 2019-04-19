@@ -519,6 +519,7 @@ class Query extends Component {
       throw new Error('Invalid query result for bar chart.');
     }
     
+    let maxScale = 0;
     let data = [], labels = [];
     if (result.headers.length == 2) {
       // Other col apart from count is group col.
@@ -528,12 +529,14 @@ class Query extends Component {
         if (cols != undefined && cols[countIndex] != undefined) {
           data.push(cols[countIndex]);
           labels.push(trimQuotes(cols[groupIndex]));
+          if (maxScale < cols[countIndex]) maxScale = cols[countIndex];
         }
       }
       bars.x_label = firstToUpperCase(result.headers[groupIndex]);
     } else if (result.headers.length == 1) {
       let col = result.rows["0"];
       data.push(col[countIndex]);
+      if (maxScale < col[countIndex]) maxScale = col[countIndex];
       bars.x_label = "";
     } else {
       throw new Error("Invalid no.of result columns for vertical bar.");
@@ -541,9 +544,9 @@ class Query extends Component {
 
     bars.datasets = [{ data: data  }];
     bars.labels = labels;
-    bars.y_label = firstToUpperCase(result.headers[countIndex]);
+    bars.y_label = "";
 
-    return <div style={{height: '450px'}} className='animated fadeIn'> <BarChart bars={bars} legend={false} /> </div>;
+    return <div style={{height: '450px'}} className='animated fadeIn'> <BarChart bars={bars} legend={false} maxYScale={maxScale} /> </div>;
   }
 
   getResultAsTabularBarChart() {

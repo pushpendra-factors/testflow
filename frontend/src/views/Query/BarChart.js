@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import { Bar } from 'react-chartjs-2';
-
+import { getChartScaleWithSpace } from '../../util';
 import { CustomTooltips } from '@coreui/coreui-plugin-chartjs-custom-tooltips';
 
 const barBackgroundColors = ['rgba(75,192,192,0.4)', 'rgba(255,99,132,0.2)'];
@@ -35,6 +35,11 @@ class BarChart extends Component {
         yAxes: [{
           scaleLabel: {
             display: false,
+          },
+          display: true,
+          ticks: {
+            beginAtZero: true,
+            max: getChartScaleWithSpace(this.props.maxYScale) 
           }
         }],
       },
@@ -62,7 +67,7 @@ class BarChart extends Component {
       chartOptions.scales.yAxes[0].scaleLabel.display = true
       chartOptions.scales.yAxes[0].scaleLabel.labelString = chartData.y_label
     }
-
+    
     return <Bar data={bar} options={chartOptions} />
   }
 

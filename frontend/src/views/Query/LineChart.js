@@ -1,6 +1,6 @@
 import React, { Component } from 'react'
 import { Line } from 'react-chartjs-2';
-import { getColor } from '../../util';
+import { getColor, getChartScaleWithSpace } from '../../util';
 
 class LineChart extends Component {
   constructor(props) {
@@ -33,12 +33,7 @@ class LineChart extends Component {
     return dataset;
   }
 
-  getMaxYScale() {
-    if (!this.props.maxYScale || this.props.maxYScale < 10) return 100;
-    let multi10 = Math.pow(10, Math.floor(Math.log10(this.props.maxYScale)))
-    let buff = multi10 - (this.props.maxYScale % multi10);
-    return this.props.maxYScale + buff;
-  }
+  
 
   render() {
     let options = {
@@ -49,7 +44,7 @@ class LineChart extends Component {
           display: true,
           ticks: {
             beginAtZero: true,
-            max: this.getMaxYScale()
+            max: getChartScaleWithSpace(this.props.maxYScale)
           }
         }]
       }

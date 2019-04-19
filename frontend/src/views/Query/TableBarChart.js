@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import { HorizontalBar } from 'react-chartjs-2';
 import { Table } from 'reactstrap';
 
-import { trimQuotes, firstToUpperCase } from '../../util'
+import { trimQuotes, firstToUpperCase, getChartScaleWithSpace } from '../../util'
 
 const barBackgroundColors = ['rgba(75,192,192,0.4)', 'rgba(255,99,132,0.2)'];
 const barBorderColors = ['rgba(75,192,192,1)', 'rgba(255,99,132,1)'];
@@ -27,7 +27,7 @@ class TableBarChart extends Component {
         xAxes: [{
           ticks: {
             beginAtZero: true,
-            max: maxXScale + 10,
+            max: getChartScaleWithSpace(maxXScale)
           },
           scaleLabel: {
             display: false,

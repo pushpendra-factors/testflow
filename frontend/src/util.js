@@ -78,10 +78,18 @@ export function getColor(index) {
         return COLORS[0];
     }
 
-let ci = ((index + 1) % COLORS.length) - 1;
-return COLORS[ci];
+    let ci = ((index + 1) % COLORS.length) - 1;
+    return COLORS[ci];
 }
 
 export function isNumber(numString) {
     return numString.match(/^[+-]?\d+(\.\d+)?$/)
+}
+
+export function getChartScaleWithSpace(scale) {
+    if (!scale || scale < 10) return 100;
+    let multi10 = Math.pow(10, Math.floor(Math.log10(scale)))
+    let buff = multi10 - (scale % multi10);
+    buff = buff + multi10; 
+    return scale + buff;
 }
