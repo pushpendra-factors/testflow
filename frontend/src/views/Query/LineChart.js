@@ -14,9 +14,9 @@ class LineChart extends Component {
       backgroundColor: color,
       borderColor: color,
       borderCapStyle: 'butt',
+      borderWidth: 2,
       borderDash: [],
       borderDashOffset: 0.0,
-      borderJoinStyle: 'miter',
       pointBorderColor: color,
       pointBackgroundColor: '#fff',
       pointBorderWidth: 3,
@@ -24,7 +24,7 @@ class LineChart extends Component {
       pointHoverBackgroundColor: color,
       pointHoverBorderColor: color,
       pointHoverBorderWidth: 3,
-      pointRadius: 1,
+      pointRadius: 0,
       pointHitRadius: 5,
     }
 
@@ -33,10 +33,26 @@ class LineChart extends Component {
     return dataset;
   }
 
+  getMaxYScale() {
+    if (!this.props.maxYScale || this.props.maxYScale < 10) return 100;
+    let multi10 = Math.pow(10, Math.floor(Math.log10(this.props.maxYScale)))
+    let buff = multi10 - (this.props.maxYScale % multi10);
+    return this.props.maxYScale + buff;
+  }
+
   render() {
     let options = {
       maintainAspectRatio: false,
-      responsive: true
+      responsive: true,
+      scales: {
+        yAxes: [{
+          display: true,
+          ticks: {
+            beginAtZero: true,
+            max: this.getMaxYScale()
+          }
+        }]
+      }
     };
 
     let lines = this.props.lines;

@@ -438,6 +438,7 @@ class Query extends Component {
   getLinesByGroupsIfExist(rows, countIndex, dateIndex) {
     let lines = {}
     let keySep = " / ";
+    let maxScale = 0;
 
     for(let i=0; i<Object.keys(rows).length; i++) {
       let row = rows[i.toString()];
@@ -464,9 +465,11 @@ class Query extends Component {
       
       lines[key].counts.push(row[countIndex]);
       lines[key].timestamps.push(moment(row[dateIndex]).format('MMM DD, YYYY'));
+
+      if (maxScale < row[countIndex]) maxScale = row[countIndex];
     }
     
-    return lines;
+    return { lines: lines, maxScale: maxScale };
   }
 
   getResultAsLineChart() {
@@ -483,13 +486,13 @@ class Query extends Component {
       throw new Error('No dates to plot as lines.');
     }
       
-    let pLines = this.getLinesByGroupsIfExist(result.rows, countIndex, dateIndex);
-    for(let key in pLines) {
-      let line = { title: key, xAxisLabels: pLines[key].timestamps, yAxisLabels: pLines[key].counts };
+    let groups = this.getLinesByGroupsIfExist(result.rows, countIndex, dateIndex);
+    for(let key in groups.lines) {
+      let line = { title: key, xAxisLabels: groups.lines[key].timestamps, yAxisLabels: groups.lines[key].counts };
       lines.push(line);
     }
     
-    return <div style={{height: '450px'}} className='animated fadeIn'> <LineChart lines={lines} /> </div>;
+    return <div style={{height: '450px'}} className='animated fadeIn'> <LineChart lines={lines} maxYScale={groups.maxScale} /> </div>;
   }
   
 
