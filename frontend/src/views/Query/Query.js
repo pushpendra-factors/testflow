@@ -256,6 +256,23 @@ class Query extends Component {
     this.setState({ showDatePicker: !this.state.showDatePicker });
   }
 
+  setQueryDuration(query) {
+    let selectedRange = this.state.resultDateRange[0];
+    let isEndDateToday = selectedRange.endDate.getDate() == (new Date()).getDate();
+    let from =  moment(selectedRange.startDate).unix();
+    let to = moment(selectedRange.endDate).unix();
+
+    // Adjust the duration window respective to current time.
+    if (isEndDateToday) {
+      let diff = to - from;
+      to =  moment(new Date()).unix();
+      from = to - diff;
+    }
+
+    query.from = from; // in utc.
+    query.to = to; // in utc.
+  }
+
   getQuery(groupByDate=false) {
     let query = {};
     query.type = this.state.type.value;
@@ -268,19 +285,7 @@ class Query extends Component {
     if (this.state.resultDateRange.length == 0)
       throw new Error('Invalid date range. No default range given.')
     
-    let from = null, to = null;
-    let selRange = this.state.resultDateRange[0];
-    if (selRange.label !== DEFAULT_DATE_RANGE_LABEL) {
-      from = selRange.startDate;
-      to = selRange.endDate;
-    } else {
-      // Resets the range based on current timestamp.
-      from = moment(new Date()).subtract(7, 'days').toDate();
-      to = new Date();
-    }
-    
-    query.from = moment(from).unix(); // in utc.
-    query.to = moment(to).unix(); // in utc.
+    this.setQueryDuration(query);
 
     query.eventsWithProperties = []
     for(let ei=0; ei < this.state.events.length; ei++) {
