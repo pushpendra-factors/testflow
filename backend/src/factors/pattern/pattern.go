@@ -297,10 +297,19 @@ func (p *Pattern) CountForEvent(
 		return "", fmt.Errorf("Missing eventId or eventTimestamp.")
 	}
 
-	if userId != p.currentUserId || p.currentUserJoinTimestamp != userJoinTimestamp {
+	if userId != p.currentUserId {
 		return "", fmt.Errorf(
 			fmt.Sprintf("Mismatch in User data. userId: %s, userJoinTime: %v, pattern userId: %s, pattern userJoinTime: %d",
 				userId, userJoinTimestamp, p.currentUserId, p.currentUserJoinTimestamp))
+	}
+
+	if p.currentUserJoinTimestamp != userJoinTimestamp {
+		// Can happen when multiple userId's have the same customerUserId.
+		minJoinTimestamp := int64(math.Max(math.Min(
+			float64(userJoinTimestamp), float64(p.currentUserJoinTimestamp)), 0.0))
+		log.Errorf(fmt.Sprintf("Mismatch in User data.userJoinTime: %v, pattern userJoinTime: %d. Pattern timestamp will change to %d",
+			userJoinTimestamp, p.currentUserJoinTimestamp, minJoinTimestamp))
+		p.currentUserJoinTimestamp = minJoinTimestamp
 	}
 
 	if p.waitIndex > 0 && eventName == p.EventNames[p.waitIndex-1] {
@@ -331,7 +340,7 @@ func (p *Pattern) CountForEvent(
 				// Check whether events are in order.
 				for i := 0; i < pLen; i++ {
 					if i == 0 {
-						duration := p.currentEventTimestamps[0] - userJoinTimestamp
+						duration := p.currentEventTimestamps[0] - p.currentUserJoinTimestamp
 						if duration < 0 {
 							// Ignoring this error for now, since there are no DB checks to avoid
 							// these user input values.
@@ -369,7 +378,7 @@ func (p *Pattern) CountForEvent(
 				var cardinalityRepeatTimingsVec []float64 = make([]float64, 6)
 				cardinalityRepeatTimingsVec[0] = float64(p.currentEventCardinalities[0])
 				cardinalityRepeatTimingsVec[1] = float64(p.currentRepeats[0])
-				cardinalityRepeatTimingsVec[2] = math.Max(float64(p.currentEventTimestamps[0]-userJoinTimestamp), 0)
+				cardinalityRepeatTimingsVec[2] = math.Max(float64(p.currentEventTimestamps[0]-p.currentUserJoinTimestamp), 0)
 				cardinalityRepeatTimingsVec[3] = float64(p.currentEventCardinalities[pLen-1])
 				cardinalityRepeatTimingsVec[4] = float64(p.currentRepeats[pLen-1])
 				if pLen > 1 {

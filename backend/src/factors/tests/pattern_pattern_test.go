@@ -279,10 +279,10 @@ func TestPatternEdgeConditions(t *testing.T) {
 	_, err = p.CountForEvent("J", eventCreatedTime.Unix(), make(map[string]interface{}),
 		make(map[string]interface{}), 1, "user2", userCreatedTime.Unix())
 	assert.NotNil(t, err)
-	// Wrong userCreatedTime
+	// Wrong userCreatedTime. Error is ignored.
 	_, err = p.CountForEvent("J", eventCreatedTime.Unix(), make(map[string]interface{}),
 		make(map[string]interface{}), 1, "user1", eventCreatedTime.Unix())
-	assert.NotNil(t, err)
+	assert.Nil(t, err)
 
 	// Test Events out of order. Out of order events are noticed only when
 	// the whole pattern is observed.
