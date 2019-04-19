@@ -7,6 +7,7 @@ import (
 	PC "factors/pattern_client"
 	U "factors/util"
 	"net/http"
+	"sort"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -22,17 +23,50 @@ func GetEventNamesHandler(c *gin.Context) {
 		return
 	}
 
-	ens, errCode := M.GetEventNames(projectId)
+	eventNames, errCode := M.GetEventNames(projectId)
 	if errCode == http.StatusInternalServerError {
 		c.AbortWithStatus(errCode)
 		return
 	}
 
-	eventNames := []string{}
-	for _, en := range ens {
-		eventNames = append(eventNames, en.Name)
+	reqId := U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID)
+
+	candidatePatterns := make([][]string, len(eventNames))
+	for ei, en := range eventNames {
+		candidatePatterns[ei] = []string{en.Name}
 	}
-	c.JSON(http.StatusOK, eventNames)
+
+	logCtx := log.WithFields(log.Fields{
+		"reqId":      reqId,
+		"projectId":  projectId,
+		"eventNames": eventNames,
+	})
+
+	resultPatterns, err := PC.GetPatterns(reqId, projectId, 0, candidatePatterns)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get event names with occurrence count.")
+	}
+
+	sort.Slice(resultPatterns, func(i int, j int) bool {
+		return resultPatterns[i].Count > resultPatterns[j].Count
+	})
+
+	resultEventNames := make([]string, 0, 0)
+	// existence look up map.
+	eventNameLookupMap := make(map[string]bool, 0)
+	for _, p := range resultPatterns {
+		name := p.EventNames[0]
+		resultEventNames = append(resultEventNames, name)
+		eventNameLookupMap[name] = true
+	}
+
+	for _, en := range eventNames {
+		if _, exists := eventNameLookupMap[en.Name]; !exists {
+			resultEventNames = append(resultEventNames, en.Name)
+		}
+	}
+
+	c.JSON(http.StatusOK, resultEventNames)
 }
 
 // Test command.
