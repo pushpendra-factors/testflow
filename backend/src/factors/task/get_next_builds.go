@@ -162,11 +162,11 @@ func GetNextBuilds(db *gorm.DB, cloudManager *filestore.FileManager,
 		gnbLog.Infof("Last build info - ProjectId: %d LastBuildEndTimeByType: %+v", pid, buildTimeByType)
 		if (*pEventTimeInfo)[pid] != nil {
 			addNextIntervalsForProjectByType(&builds, pid, ModelTypeWeek,
-				buildTimeByType[ModelTypeWeek], (*pEventTimeInfo)[pid].First,
-				(*pEventTimeInfo)[pid].Last)
+				buildTimeByType[ModelTypeWeek], (*pEventTimeInfo)[pid].FirstEvent,
+				(*pEventTimeInfo)[pid].LastEvent)
 			addNextIntervalsForProjectByType(&builds, pid, ModelTypeMonth,
-				buildTimeByType[ModelTypeMonth], (*pEventTimeInfo)[pid].First,
-				(*pEventTimeInfo)[pid].Last)
+				buildTimeByType[ModelTypeMonth], (*pEventTimeInfo)[pid].FirstEvent,
+				(*pEventTimeInfo)[pid].LastEvent)
 		} else {
 			gnbLog.WithField("ProjectId", pid).Error("No events for a project found on meta.")
 		}
@@ -182,9 +182,9 @@ func GetNextBuilds(db *gorm.DB, cloudManager *filestore.FileManager,
 
 	for _, pid := range noMetaProjects {
 		addPendingIntervalsForProjectByType(&builds, pid, ModelTypeWeek,
-			(*pEventTimeInfo)[pid].First, (*pEventTimeInfo)[pid].Last)
+			(*pEventTimeInfo)[pid].FirstEvent, (*pEventTimeInfo)[pid].LastEvent)
 		addPendingIntervalsForProjectByType(&builds, pid, ModelTypeMonth,
-			(*pEventTimeInfo)[pid].First, (*pEventTimeInfo)[pid].Last)
+			(*pEventTimeInfo)[pid].FirstEvent, (*pEventTimeInfo)[pid].LastEvent)
 	}
 
 	return builds, nil

@@ -375,3 +375,61 @@ func TestDBGetSegmentUser(t *testing.T) {
 	assert.Equal(t, segAid2, user7.SegmentAnonymousId)
 	assert.Equal(t, custId2, user7.CustomerUserId)
 }
+
+func TestGetRecentUserPropertyKeys(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	props1 := json.RawMessage(`{"prop1": "value1", "prop2": "1"}`)
+	_, errCode1 := M.CreateUser(&M.User{ProjectId: project.ID, Properties: postgres.Jsonb{props1}})
+	assert.Equal(t, http.StatusCreated, errCode1)
+	props2 := json.RawMessage(`{"prop3": "value2", "prop4": "2"}`)
+	_, errCode2 := M.CreateUser(&M.User{ProjectId: project.ID, Properties: postgres.Jsonb{props2}})
+	assert.Equal(t, http.StatusCreated, errCode2)
+
+	// recent users limited to 1.
+	props, errCode := M.GetRecentUserPropertyKeysWithLimits(project.ID, 1)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Contains(t, props, U.PropertyTypeCategorical)
+	assert.Contains(t, props, U.PropertyTypeNumerical)
+	assert.Len(t, props[U.PropertyTypeCategorical], 1)
+	assert.Len(t, props[U.PropertyTypeNumerical], 1)
+	// validates classification.
+	assert.Contains(t, props[U.PropertyTypeCategorical], "prop3")
+	assert.Contains(t, props[U.PropertyTypeNumerical], "prop4")
+	// old user properties shoult not exist.
+	assert.NotContains(t, props[U.PropertyTypeCategorical], "prop1")
+	assert.NotContains(t, props[U.PropertyTypeNumerical], "prop2")
+}
+
+func TestGetRecentUserPropertyValues(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	props1 := json.RawMessage(`{"prop3": "value1", "prop4": "1"}`)
+	_, errCode1 := M.CreateUser(&M.User{ProjectId: project.ID, Properties: postgres.Jsonb{props1}})
+	assert.Equal(t, http.StatusCreated, errCode1)
+	props2 := json.RawMessage(`{"prop3": "value2", "prop4": "2"}`)
+	_, errCode2 := M.CreateUser(&M.User{ProjectId: project.ID, Properties: postgres.Jsonb{props2}})
+	assert.Equal(t, http.StatusCreated, errCode2)
+	// different user with same properties as previous and different values.
+	props3 := json.RawMessage(`{"prop3": "value3", "prop4": "3"}`)
+	_, errCode3 := M.CreateUser(&M.User{ProjectId: project.ID, Properties: postgres.Jsonb{props3}})
+	assert.Equal(t, http.StatusCreated, errCode3)
+
+	t.Run("RecentPropertyValuesLimitedByUsers", func(t *testing.T) {
+		// recent users limited to 2.
+		values, errCode := M.GetRecentUserPropertyValuesWithLimits(project.ID, "prop3", 2, 100)
+		assert.Equal(t, http.StatusFound, errCode)
+		assert.Len(t, values, 2)
+		assert.NotContains(t, values, "value1")
+	})
+
+	t.Run("RecentPropertyValuesLimitedByValues", func(t *testing.T) {
+		// recent users limited to 3 but values limited to 2.
+		values, errCode := M.GetRecentUserPropertyValuesWithLimits(project.ID, "prop4", 3, 2)
+		assert.Equal(t, http.StatusFound, errCode)
+		assert.Len(t, values, 2)
+		assert.NotContains(t, values, "3")
+	})
+}

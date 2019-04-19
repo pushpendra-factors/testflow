@@ -14,7 +14,7 @@ class TableBarChart extends Component {
     super(props);
   }
 
-  getBarChart(bars, legend=false) {
+  getBarChart(bars, maxXScale, legend=false) {
     var chartData = bars;
     let displayLegend = legend == false ? false : true;
 
@@ -25,6 +25,10 @@ class TableBarChart extends Component {
       maintainAspectRatio: false,
       scales: {
         xAxes: [{
+          ticks: {
+            beginAtZero: true,
+            max: maxXScale + 10,
+          },
           scaleLabel: {
             display: false,
           }
@@ -52,6 +56,20 @@ class TableBarChart extends Component {
     }
 
     return <HorizontalBar data={bar} options={chartOptions} />;
+  }
+
+  getMaxXScaleFromGroups(groups) {
+    let keys = Object.keys(groups);
+    let maxAcrossGroups = 0;
+    for(let k=0; k<keys.length; k++) {
+      let g = groups[keys[k]];
+      for(let di = 0; di < g.datasets.length; di++) {
+        if(maxAcrossGroups < g.datasets[di])
+          maxAcrossGroups = g.datasets[di];
+      }
+    }
+    
+    return maxAcrossGroups;
   }
 
   render() {
@@ -97,11 +115,12 @@ class TableBarChart extends Component {
     }
 
     let rows = [];
-    let keys = Object.keys(groups)
+    let maxXScale = this.getMaxXScaleFromGroups(groups);
+    let keys = Object.keys(groups);
     for(let k=0; k<keys.length; k++) {
       let g = groups[keys[k]];
       let tds = g.row.map((r) => { return <td>{trimQuotes(r)}</td> });
-      let gtd = <td> { this.getBarChart({ labels: g.labels, datasets:[{data: g.datasets}] }, false) } </td>;
+      let gtd = <td> { this.getBarChart({ labels: g.labels, datasets:[{data: g.datasets}] }, maxXScale, false) } </td>;
       tds.push(gtd)
       rows.push(<tr> {tds} </tr>)
     }

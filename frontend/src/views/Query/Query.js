@@ -16,7 +16,7 @@ import {
 } from '../../actions/projectsActions';
 import Event from './Event';
 import GroupBy from './GroupBy';
-import { trimQuotes, removeElementByIndex, firstToUpperCase, getSelectedOpt } from '../../util'
+import { trimQuotes, removeElementByIndex, firstToUpperCase, getSelectedOpt, isNumber, createSelectOpts } from '../../util'
 import TableBarChart from './TableBarChart';
 import Loading from '../../loading';
 import factorsai from '../../factorsaiObj';
@@ -76,6 +76,11 @@ const DEFAULT_PRESENTATION = PRESENTATION_TABLE;
 
 const HEADER_COUNT = "count";
 const HEADER_DATE = "date";
+
+const PROPERTY_TYPE_OPTS = {
+  'user': 'User Property',
+  'event': 'Event Property'
+};
 
 const mapStateToProps = store => {
   return {
@@ -169,7 +174,7 @@ class Query extends Component {
   }
 
   getDefaultPropertyState() {
-    return { type: '',  name: '', op: '', value: ''};
+    return { entity: '',  name: '', op: '', value: '', valueType: '' }; 
   }
 
   addProperty(eventIndex) {
@@ -191,8 +196,8 @@ class Query extends Component {
     })
   }
 
-  onPropertyTypeChange = (eventIndex, propertyIndex, value) => {
-    this.setPropertyAttr(eventIndex, propertyIndex, 'type', value)
+  onPropertyEntityChange = (eventIndex, propertyIndex, value) => {
+    this.setPropertyAttr(eventIndex, propertyIndex, 'entity', value)
   }
 
   onPropertyNameChange = (eventIndex, propertyIndex, value) => {
@@ -203,8 +208,9 @@ class Query extends Component {
     this.setPropertyAttr(eventIndex, propertyIndex, 'op', value)
   }
 
-  onPropertyValueChange = (eventIndex, propertyIndex, value) => {
-    this.setPropertyAttr(eventIndex, propertyIndex, 'value', value)
+  onPropertyValueChange = (eventIndex, propertyIndex, value, type) => {
+    this.setPropertyAttr(eventIndex, propertyIndex, 'value', value);
+    this.setPropertyAttr(eventIndex, propertyIndex, 'valueType', type);
   }
 
   getDefaultGroupByState() {
@@ -301,13 +307,20 @@ class Query extends Component {
         let property = event.properties[pi];
         let cProperty = {}
         
-        if (property.type != '' && property.name != '' &&
-            property.operator != '' && property.value != '') {
+        if (property.entity != '' && property.name != '' &&
+            property.operator != '' && property.value != '' &&
+            property.valueType != '') {
 
-            cProperty.entity = property.type;
+            // Todo: show validation error.
+            if (property.valueType == 'numerical' && 
+              !isNumber(property.value))
+              continue;
+
+            cProperty.entity = property.entity;
             cProperty.property = property.name;
             cProperty.operator = property.op;
             cProperty.value = property.value;
+            cProperty.type = property.valueType; 
             ewp.properties.push(cProperty);
         }
       }
@@ -583,6 +596,14 @@ class Query extends Component {
     return this.state.eventNamesLoaded;
   }
 
+  getGroupByOpts = () => {
+    if (this.state.type.value == TYPE_UNIQUE_USERS) {
+      return createSelectOpts({'user': PROPERTY_TYPE_OPTS['user']});
+    } else {
+      return createSelectOpts(PROPERTY_TYPE_OPTS);
+    }
+  }
+
   render() {
     if (!this.isLoaded()) return <Loading />;
 
@@ -601,7 +622,7 @@ class Query extends Component {
           onNameChange={(value) => this.onEventStateChange(value, i)} 
           // property handlers.
           onAddProperty={() => this.addProperty(i)}
-          onPropertyTypeChange={this.onPropertyTypeChange}
+          onPropertyEntityChange={this.onPropertyEntityChange}
           onPropertyNameChange={this.onPropertyNameChange}
           onPropertyOpChange={this.onPropertyOpChange}
           onPropertyValueChange={this.onPropertyValueChange}
@@ -620,6 +641,7 @@ class Query extends Component {
           groupByState={this.state.groupBys[i]}
           onTypeChange={(option) => this.onGroupByTypeChange(i, option)}
           onNameChange={(option) => this.onGroupByNameChange(i, option)}
+          getOpts={this.getGroupByOpts}
         />
       );
     }

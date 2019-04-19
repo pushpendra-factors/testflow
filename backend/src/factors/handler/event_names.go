@@ -87,6 +87,16 @@ func GetEventPropertiesHandler(c *gin.Context) {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
+
+	var errCode int
+	if len(properties) == 0 {
+		properties, errCode = M.GetRecentEventPropertyKeys(projectId, eventName)
+		if errCode == http.StatusInternalServerError {
+			c.AbortWithStatus(errCode)
+			return
+		}
+	}
+
 	c.JSON(http.StatusOK, properties)
 }
 
@@ -142,7 +152,8 @@ func GetEventPropertyValuesHandler(c *gin.Context) {
 		return
 	}
 
-	if propertyValues, err := PC.GetSeenEventPropertyValues(reqId, projectId, modelId, eventName, propertyName); err != nil {
+	propertyValues, err := PC.GetSeenEventPropertyValues(reqId, projectId, modelId, eventName, propertyName)
+	if err != nil {
 		logCtx.WithFields(log.Fields{
 			log.ErrorKey:   err,
 			"projectId":    projectId,
@@ -152,7 +163,16 @@ func GetEventPropertyValuesHandler(c *gin.Context) {
 			"Get Event Properties failed.")
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
-	} else {
-		c.JSON(http.StatusOK, propertyValues)
 	}
+
+	var errCode int
+	if len(propertyValues) == 0 {
+		propertyValues, errCode = M.GetRecentEventPropertyValues(projectId, eventName, propertyName)
+		if errCode == http.StatusInternalServerError {
+			c.AbortWithStatus(errCode)
+			return
+		}
+	}
+
+	c.JSON(http.StatusOK, propertyValues)
 }

@@ -13,10 +13,13 @@ import {
 } from '../../actions/projectsActions';
 import { makeSelectOpts, createSelectOpts, getSelectedOpt } from "../../util";
 
-const PROPERTY_TYPE_OPTS = {
+const PROPERTY_ENTITY_OPTS = {
   'user': 'User Property',
   'event': 'Event Property'
 };
+
+const TYPE_NUMERICAL = 'numerical';
+const TYPE_CATEGORICAL = 'categorical';
 
 const NUMERICAL_OPERATOR_OPTS = { 
   'equals': '=',
@@ -63,30 +66,30 @@ class Property extends Component {
   fetchPropertyKeys = () => {
     this.setState({ nameOpts: [], isNameOptsLoading: true }); // reset opts.
 
-    if (this.props.propertyState.type == 'event') {
+    if (this.props.propertyState.entity == 'event') {
       fetchProjectEventProperties(this.props.projectId, this.props.eventName, false)
         .then((r) => this.addToNameOptsState(r.data))
         .catch(r => console.error("Failed fetching event property keys.", r));
     }
 
-    if (this.props.propertyState.type == 'user') {
+    if (this.props.propertyState.entity == 'user') {
       fetchProjectUserProperties(this.props.projectId, false)
       .then((r) => this.addToNameOptsState(r.data))
       .catch(r => console.error("Failed fetching user property keys.", r));
     }
   }
 
-  fetchPropertyValues = () => {
+  fetchPropertyValues = () => { 
     this.setState({ valueOpts: [], isValueOptsLoading: true }); // reset opts.
 
-    if (this.props.propertyState.type == 'event') {
+    if (this.props.propertyState.entity == 'event') {
       fetchProjectEventPropertyValues(this.props.projectId, 
         this.props.eventName, this.props.propertyState.name, false)
         .then(r => this.addToValueOptsState(r.data))
         .catch(r => console.error("Failed fetching event property values.", r));
     }
     
-    if (this.props.propertyState.type == 'user') {
+    if (this.props.propertyState.entity == 'user') {
       fetchProjectUserPropertyValues(this.props.projectId, 
         this.props.propertyState.name, false)
         .then(r => this.addToValueOptsState(r.data))
@@ -96,8 +99,8 @@ class Property extends Component {
 
   onNameChange = (option) => {
     if (option.type != null && 
-      option.type != 'numerical' && 
-      option.type != 'categorical') {
+      option.type != TYPE_NUMERICAL && 
+      option.type != TYPE_CATEGORICAL) {
       
       throw new Error('Unknown property value type.');
     }
@@ -106,19 +109,19 @@ class Property extends Component {
   }
 
   onValueChange = (v) => {
-    if (this.state.valueType == 'numerical') {
-      this.props.onValueChange(v.target.value.trim());
+    if (this.state.valueType == TYPE_NUMERICAL) {
+      this.props.onValueChange(v.target.value.trim(), this.state.valueType);
     }
     
-    if (this.state.valueType == 'categorical') {
-      this.props.onValueChange(v.value);
+    if (this.state.valueType == TYPE_CATEGORICAL) {
+      this.props.onValueChange(v.value, this.state.valueType);
     }
   }
 
   getInputValueElement() {
     let input = null;
 
-    if (this.state.valueType == 'numerical') {
+    if (this.state.valueType == TYPE_NUMERICAL) {
       return (
         <div style={{display: "inline-block", width: "18%", marginLeft: "10px"}}>
           <Input
@@ -126,12 +129,13 @@ class Property extends Component {
             onChange={this.onValueChange}
             placeholder="Enter a value"
             value={this.props.propertyState.value}
+            style={{border: "1px solid #8f9ba6", color: "#444444"}} 
           />
         </div>
       );
     }
     
-    if (this.state.valueType == 'categorical') {
+    if (this.state.valueType == TYPE_CATEGORICAL) {
       return  (
         <div style={{display: "inline-block", width: "18%", marginLeft: "10px"}} className='fapp-select'>
           <CreatableSelect
@@ -158,7 +162,7 @@ class Property extends Component {
     }
     
     // categorical_operator_opts as default.
-    let optSrc = this.state.valueType == 'numerical' ? NUMERICAL_OPERATOR_OPTS : CATEGORICAL_OPERATORS_OPTS;
+    let optSrc = this.state.valueType == TYPE_NUMERICAL ? NUMERICAL_OPERATOR_OPTS : CATEGORICAL_OPERATORS_OPTS;
 
     return (
       <div style={{display: "inline-block", width: "115px", marginLeft: "10px"}} className='fapp-select'>
@@ -173,7 +177,7 @@ class Property extends Component {
   }
 
   nameSelectorDisplay() {
-    return this.props.propertyState.type != '' ? 'inline-block' : 'none';
+    return this.props.propertyState.entity != '' ? 'inline-block' : 'none';
   }
 
   render() {
@@ -182,10 +186,10 @@ class Property extends Component {
         <span style={{marginRight: "10px"}}>with</span>
         <div style={{display: "inline-block", width: "15%"}} className='fapp-select'>
           <Select
-            onChange={this.props.onTypeChange}
-            options={createSelectOpts(PROPERTY_TYPE_OPTS)}
+            onChange={this.props.onEntityChange}
+            options={createSelectOpts(PROPERTY_ENTITY_OPTS)}
             placeholder="Property Type"
-            value={getSelectedOpt(this.props.propertyState.type, PROPERTY_TYPE_OPTS)}
+            value={getSelectedOpt(this.props.propertyState.entity, PROPERTY_ENTITY_OPTS)}
           />
         </div>
         <div style={{display: this.nameSelectorDisplay(), width: "18%", marginLeft: "10px"}} className='fapp-select'>

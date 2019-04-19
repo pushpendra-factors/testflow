@@ -1,6 +1,7 @@
 package util
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -139,6 +140,13 @@ const QUERY_PARAM_PROPERTY_PREFIX = "$qp_"
 // Platforms
 const PLATFORM_WEB = "web"
 
+const (
+	PropertyTypeNumerical   = "numerical"
+	PropertyTypeCategorical = "categorical"
+)
+
+const SamplePropertyValuesLimit = 100
+
 // isValidProperty - Validate property type.
 func isPropertyTypeValid(value interface{}) error {
 	switch valueType := value.(type) {
@@ -218,4 +226,60 @@ func GetValidatedEventProperties(properties *PropertiesMap) *PropertiesMap {
 		}
 	}
 	return &validatedProperties
+}
+
+// ClassifyPropertiesByType - Classifies categorical and numerical properties
+// by checking type of values. properties -> map[propertyKey]map[propertyValue]true
+func ClassifyPropertiesByType(properties *map[string]map[interface{}]bool) (map[string][]string, error) {
+	numProperties := make([]string, 0, 0)
+	catProperties := make([]string, 0, 0)
+
+	for propertyKey, v := range *properties {
+		isNumericalProperty := true
+		for propertyValue := range v {
+			switch t := propertyValue.(type) {
+			case int, float64:
+			case string:
+				if !IsNumber(propertyValue.(string)) {
+					isNumericalProperty = false
+				}
+			default:
+				return nil, fmt.Errorf("unsupported type %s on property type classification", t)
+			}
+		}
+
+		if isNumericalProperty {
+			numProperties = append(numProperties, propertyKey)
+		} else {
+			catProperties = append(catProperties, propertyKey)
+		}
+	}
+
+	propsByType := make(map[string][]string, 0)
+	propsByType[PropertyTypeNumerical] = numProperties
+	propsByType[PropertyTypeCategorical] = catProperties
+
+	return propsByType, nil
+}
+
+// FillPropertyKvsFromPropertiesJson - Fills properties key with limited
+// no.of of values propertiesKvs -> map[propertyKey]map[propertyValue]true
+func FillPropertyKvsFromPropertiesJson(propertiesJson []byte,
+	propertiesKvs *map[string]map[interface{}]bool, valuesLimit int) error {
+	var rowProperties map[string]interface{}
+	err := json.Unmarshal(propertiesJson, &rowProperties)
+	if err != nil {
+		return err
+	}
+
+	for k, v := range rowProperties {
+		if _, ok := (*propertiesKvs)[k]; !ok {
+			(*propertiesKvs)[k] = make(map[interface{}]bool, 0)
+		}
+		if len((*propertiesKvs)[k]) < valuesLimit {
+			(*propertiesKvs)[k][v] = true
+		}
+	}
+
+	return nil
 }

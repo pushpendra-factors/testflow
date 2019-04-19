@@ -2,6 +2,7 @@ package model
 
 import (
 	C "factors/config"
+	U "factors/util"
 	"net/http"
 	"time"
 
@@ -32,15 +33,16 @@ type Event struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+type EventTimestamp struct {
+	FirstEvent int64
+	LastEvent  int64
+}
+
 const error_Duplicate_event_customerEventID = "pq: duplicate key value violates unique constraint \"project_id_customer_event_id_unique_idx\""
+const eventsLimitForProperites = 50000
 
 func isDuplicateCustomerEventIdError(err error) bool {
 	return err.Error() == error_Duplicate_event_customerEventID
-}
-
-type EventTimestamp struct {
-	First int64
-	Last  int64
 }
 
 func (event *Event) BeforeCreate(scope *gorm.Scope) error {
@@ -133,7 +135,7 @@ func GetProjectEventTimeInfo() (*(map[uint64]*EventTimestamp), int) {
 		}
 
 		if firstTimestamp > 0 {
-			projectEventsTime[projectId] = &EventTimestamp{First: firstTimestamp, Last: lastTimestamp}
+			projectEventsTime[projectId] = &EventTimestamp{FirstEvent: firstTimestamp, LastEvent: lastTimestamp}
 		}
 
 		count++
@@ -143,4 +145,98 @@ func GetProjectEventTimeInfo() (*(map[uint64]*EventTimestamp), int) {
 	}
 
 	return &projectEventsTime, http.StatusFound
+}
+
+// GetRecentEventPropertyKeys - Returns unique event property
+// keys from last 24 hours.
+func GetRecentEventPropertyKeysWithLimits(projectId uint64, eventName string, eventsLimit int) (map[string][]string, int) {
+	db := C.GetServices().Db
+
+	eventsAfterTimestamp := U.UnixTimeBefore24Hours()
+	logCtx := log.WithFields(log.Fields{"project_id": projectId, "events_after_timestamp": eventsAfterTimestamp})
+
+	queryStr := "SELECT distinct(properties) AS keys FROM events WHERE project_id = ?" +
+		" " + "AND event_name_id IN (SELECT id FROM event_names WHERE project_id = ? AND name = ?)" +
+		" " + "AND timestamp > ? AND properties != 'null' LIMIT ?"
+
+	rows, err := db.Raw(queryStr, projectId, projectId, eventName, eventsAfterTimestamp, eventsLimit).Rows()
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get event properties.")
+		return nil, http.StatusInternalServerError
+	}
+	defer rows.Close()
+
+	propertiesMap := make(map[string]map[interface{}]bool, 0)
+	for rows.Next() {
+		var propertiesJson []byte
+		rows.Scan(&propertiesJson)
+
+		err := U.FillPropertyKvsFromPropertiesJson(propertiesJson, &propertiesMap, U.SamplePropertyValuesLimit)
+		if err != nil {
+			log.WithError(err).WithField("properties_json",
+				string(propertiesJson)).Error("Failed to unmarshal json properties.")
+			return nil, http.StatusInternalServerError
+		}
+	}
+
+	err = rows.Err()
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to scan recent property keys.")
+		return nil, http.StatusInternalServerError
+	}
+
+	propsByType, err := U.ClassifyPropertiesByType(&propertiesMap)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to classify properties on get recent property keys.")
+		return nil, http.StatusInternalServerError
+	}
+
+	return propsByType, http.StatusFound
+}
+
+func GetRecentEventPropertyKeys(projectId uint64, eventName string) (map[string][]string, int) {
+	return GetRecentEventPropertyKeysWithLimits(projectId, eventName, eventsLimitForProperites)
+}
+
+// GetRecentEventPropertyValues - Returns unique event property
+// values of given property from last 24 hours.
+func GetRecentEventPropertyValuesWithLimits(projectId uint64, eventName string,
+	property string, eventsLimit, valuesLimit int) ([]string, int) {
+
+	db := C.GetServices().Db
+
+	logCtx := log.WithFields(log.Fields{"projectId": projectId, "eventName": eventName, "property": property})
+
+	eventsAfterTimestamp := U.UnixTimeBefore24Hours()
+	values := make([]string, 0, 0)
+	queryStr := "SELECT DISTINCT(value) FROM" +
+		" " + "(SELECT properties->? AS value FROM events WHERE project_id = ? AND event_name_id IN" +
+		" " + "(SELECT id FROM event_names WHERE project_id = ? AND name = ?) AND timestamp > ? AND properties->? IS NOT NULL LIMIT ?)" +
+		" " + "AS property_values LIMIT ?"
+
+	rows, err := db.Raw(queryStr, property, projectId, projectId, eventName,
+		eventsAfterTimestamp, property, eventsLimit, valuesLimit).Rows()
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get recent property keys.")
+		return values, http.StatusInternalServerError
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var value string
+		rows.Scan(&value)
+		value = U.TrimQuotes(value)
+		values = append(values, value)
+	}
+
+	err = rows.Err()
+	if err != nil {
+		logCtx.WithError(err).Error("Failed scanning property value on type classifcation.")
+		return values, http.StatusInternalServerError
+	}
+	return values, http.StatusFound
+}
+
+func GetRecentEventPropertyValues(projectId uint64, eventName string, property string) ([]string, int) {
+	return GetRecentEventPropertyValuesWithLimits(projectId, eventName, property, eventsLimitForProperites, 2000)
 }

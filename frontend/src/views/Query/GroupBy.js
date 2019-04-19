@@ -86,7 +86,7 @@ class GroupBy extends Component {
         <div style={{display: 'inline-block', width: '185px'}} className='fapp-select'>
           <Select
             onChange={this.props.onTypeChange}
-            options={createSelectOpts(PROPERTY_TYPE_OPTS)}
+            options={this.props.getOpts()}
             placeholder='Property Type'
             value={getSelectedOpt(this.props.groupByState.type, PROPERTY_TYPE_OPTS)}
           />

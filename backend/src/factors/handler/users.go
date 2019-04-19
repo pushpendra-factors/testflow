@@ -113,6 +113,16 @@ func GetUserPropertiesHandler(c *gin.Context) {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
+
+	var errCode int
+	if len(properties) == 0 {
+		properties, errCode = M.GetRecentUserPropertyKeys(projectId)
+		if errCode == http.StatusInternalServerError {
+			c.AbortWithStatus(errCode)
+			return
+		}
+	}
+
 	c.JSON(http.StatusOK, properties)
 }
 
@@ -151,6 +161,14 @@ func GetUserPropertyValuesHandler(c *gin.Context) {
 			"Get User Properties failed.")
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
+	}
+
+	var errCode int
+	if len(propertyValues) == 0 {
+		propertyValues, errCode = M.GetRecentUserPropertyValues(projectId, propertyName)
+		if errCode == http.StatusInternalServerError {
+			c.AbortWithStatus(errCode)
+		}
 	}
 
 	c.JSON(http.StatusOK, propertyValues)

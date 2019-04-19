@@ -147,15 +147,95 @@ func TestGetFirstLastEventTimestamp(t *testing.T) {
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, ts1)
 	assert.NotNil(t, (*ts1)[project.ID])
-	assert.Equal(t, firstTimestamp, (*ts1)[project.ID].First)
-	assert.Equal(t, thirdTimestamp, (*ts1)[project.ID].Last)
+	assert.Equal(t, firstTimestamp, (*ts1)[project.ID].FirstEvent)
+	assert.Equal(t, thirdTimestamp, (*ts1)[project.ID].LastEvent)
 
 	// Test with increased limit timestamp
 	ts1, errCode = M.GetProjectEventTimeInfo() // adds 3 secs.
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, ts1)
 	assert.NotNil(t, (*ts1)[project.ID])
-	assert.Equal(t, firstTimestamp, (*ts1)[project.ID].First)
-	assert.Equal(t, thirdTimestamp, (*ts1)[project.ID].Last)
+	assert.Equal(t, firstTimestamp, (*ts1)[project.ID].FirstEvent)
+	assert.Equal(t, thirdTimestamp, (*ts1)[project.ID].LastEvent)
 	assert.Nil(t, (*ts1)[999999])
+}
+
+func createEventWithTimestampAndPrperties(t *testing.T, project *M.Project, user *M.User, timestamp int64, properties json.RawMessage) (*M.EventName, *M.Event) {
+	eventName, errCode := M.CreateOrGetUserCreatedEventName(&M.EventName{ProjectId: project.ID, Name: fmt.Sprintf("event_%d", timestamp)})
+	assert.NotNil(t, eventName)
+	event, errCode := M.CreateEvent(&M.Event{ProjectId: project.ID, EventNameId: eventName.ID, UserId: user.ID, Timestamp: timestamp, Properties: postgres.Jsonb{properties}})
+	assert.Equal(t, http.StatusCreated, errCode)
+	return eventName, event
+}
+
+func TestGetRecentEventPropertyKeys(t *testing.T) {
+	project, user, _ := SetupProjectUserReturnDAO()
+	assert.NotNil(t, project)
+
+	t.Run("RecentPropertiesWithLimit", func(t *testing.T) {
+		timestamp := time.Now().Unix()
+		eventName, _ := createEventWithTimestampAndPrperties(t, project, user, timestamp, json.RawMessage(`{"rProp1": "value1", "rProp2": "1"}`))
+		_, errCode1 := M.CreateEvent(&M.Event{ProjectId: project.ID, EventNameId: eventName.ID, UserId: user.ID, Timestamp: timestamp, Properties: postgres.Jsonb{json.RawMessage(`{"rProp3": "value2", "rProp4": "2"}`)}})
+		assert.Equal(t, http.StatusCreated, errCode1)
+
+		props, errCode := M.GetRecentEventPropertyKeysWithLimits(project.ID, eventName.Name, 1)
+		assert.Equal(t, http.StatusFound, errCode)
+		assert.Contains(t, props, U.PropertyTypeNumerical)
+		assert.Contains(t, props, U.PropertyTypeNumerical)
+		assert.Len(t, props[U.PropertyTypeCategorical], 1)
+		assert.Len(t, props[U.PropertyTypeNumerical], 1)
+		// validates classification.
+		assert.Contains(t, props[U.PropertyTypeCategorical], "rProp1")
+		assert.Contains(t, props[U.PropertyTypeNumerical], "rProp2")
+		// validates limit.
+		assert.NotContains(t, props[U.PropertyTypeCategorical], "rProp3")
+		assert.NotContains(t, props[U.PropertyTypeNumerical], "rProp4")
+	})
+
+	t.Run("PropertiesOlderThan24Hours", func(t *testing.T) {
+		timestamp := U.UnixTimeBefore24Hours()
+		eventName, _ := createEventWithTimestampAndPrperties(t, project, user, timestamp, json.RawMessage(`{"rProp1": "value1", "rProp2": "1"}`))
+
+		props, errCode := M.GetRecentEventPropertyKeysWithLimits(project.ID, eventName.Name, 100)
+		assert.Equal(t, http.StatusFound, errCode)
+		assert.Contains(t, props, U.PropertyTypeNumerical)
+		assert.Contains(t, props, U.PropertyTypeNumerical)
+		assert.Len(t, props[U.PropertyTypeCategorical], 0)
+		assert.Len(t, props[U.PropertyTypeNumerical], 0)
+	})
+}
+
+func TestGetRecentEventPropertyValues(t *testing.T) {
+	project, user, _ := SetupProjectUserReturnDAO()
+	assert.NotNil(t, project)
+
+	t.Run("RecentPropertyValues", func(t *testing.T) {
+		timestamp := time.Now().Unix()
+		eventName, _ := createEventWithTimestampAndPrperties(t, project, user, timestamp, json.RawMessage(`{"rProp1": "value1"}`))
+		_, errCode1 := M.CreateEvent(&M.Event{ProjectId: project.ID, EventNameId: eventName.ID, UserId: user.ID, Timestamp: timestamp, Properties: postgres.Jsonb{json.RawMessage(`{"rProp1": "value2"}`)}})
+		assert.Equal(t, http.StatusCreated, errCode1)
+
+		// limited events to 1.
+		values, errCode2 := M.GetRecentEventPropertyValuesWithLimits(project.ID, eventName.Name, "rProp1", 1, 100)
+		assert.Equal(t, http.StatusFound, errCode2)
+		assert.Len(t, values, 1)
+		assert.Contains(t, values, "value2")
+
+		// limited values to 1.
+		values1, errCode3 := M.GetRecentEventPropertyValuesWithLimits(project.ID, eventName.Name, "rProp1", 10, 1)
+		assert.Equal(t, http.StatusFound, errCode3)
+		assert.Len(t, values1, 1)
+		assert.Contains(t, values1, "value1")
+	})
+
+	t.Run("PropertyValuesOlderThan24Hour", func(t *testing.T) {
+		timestamp := U.UnixTimeBefore24Hours()
+		eventName, _ := createEventWithTimestampAndPrperties(t, project, user, timestamp, json.RawMessage(`{"rProp1": "value1"}`))
+		_, errCode1 := M.CreateEvent(&M.Event{ProjectId: project.ID, EventNameId: eventName.ID, UserId: user.ID, Timestamp: timestamp, Properties: postgres.Jsonb{json.RawMessage(`{"rProp1": "value2"}`)}})
+		assert.Equal(t, http.StatusCreated, errCode1)
+
+		values, errCode2 := M.GetRecentEventPropertyValuesWithLimits(project.ID, eventName.Name, "rProp1", 100, 100)
+		assert.Equal(t, http.StatusFound, errCode2)
+		assert.Empty(t, values)
+	})
 }

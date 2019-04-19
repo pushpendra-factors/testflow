@@ -22,10 +22,10 @@ class Event extends Component {
           eventName={this.props.eventState.name}
           remove={() => this.props.removeProperty(i)}
           
-          onTypeChange={(option) => this.props.onPropertyTypeChange(this.props.index, i, option.value)}
+          onEntityChange={(option) => this.props.onPropertyEntityChange(this.props.index, i, option.value)}
           onNameChange={(value) => this.props.onPropertyNameChange(this.props.index, i, value)}
           onOpChange={(option) => this.props.onPropertyOpChange(this.props.index, i, option.value)}
-          onValueChange={(value) => this.props.onPropertyValueChange(this.props.index, i, value)}
+          onValueChange={(value, type) => this.props.onPropertyValueChange(this.props.index, i, value, type)}
         />
       );
     }

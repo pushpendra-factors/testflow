@@ -2,6 +2,7 @@ package model
 
 import (
 	C "factors/config"
+	U "factors/util"
 	"net/http"
 	"strings"
 	"time"
@@ -29,6 +30,8 @@ type User struct {
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
 }
+
+const usersLimitForProperties = 1000
 
 func (user *User) BeforeCreate(scope *gorm.Scope) error {
 	// Increamenting count based on EventNameId, not by EventName.
@@ -281,4 +284,93 @@ func GetSegmentUser(projectId uint64, segAnonId, custUserId string) (*User, int)
 
 	// provided and fetched c_uid are same.
 	return user, http.StatusOK
+}
+
+func GetRecentUserPropertyKeysWithLimits(projectId uint64, usersLimit int) (map[string][]string, int) {
+	db := C.GetServices().Db
+
+	logCtx := log.WithField("project_id", projectId)
+
+	queryStr := "WITH recent_users AS (SELECT id FROM users WHERE project_id = ? ORDER BY created_at DESC LIMIT ?)" +
+		" " + "SELECT DISTINCT(user_properties.properties) FROM recent_users" +
+		" " + "LEFT JOIN user_properties ON recent_users.id = user_properties.user_id WHERE user_properties.project_id = ?" +
+		" " + "AND user_properties.properties != 'null'"
+
+	rows, err := db.Raw(queryStr, projectId, usersLimit, projectId).Rows()
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get recent user property keys.")
+		return nil, http.StatusInternalServerError
+	}
+
+	propertiesMap := make(map[string]map[interface{}]bool, 0)
+	for rows.Next() {
+		var propertiesJson []byte
+		rows.Scan(&propertiesJson)
+
+		err := U.FillPropertyKvsFromPropertiesJson(propertiesJson, &propertiesMap, U.SamplePropertyValuesLimit)
+		if err != nil {
+			log.WithError(err).WithField("properties_json",
+				string(propertiesJson)).Error("Failed to unmarshal json properties.")
+			return nil, http.StatusInternalServerError
+		}
+	}
+
+	err = rows.Err()
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to scan recent property keys.")
+		return nil, http.StatusInternalServerError
+	}
+
+	propsByType, err := U.ClassifyPropertiesByType(&propertiesMap)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to classify properties on get recent property keys.")
+		return nil, http.StatusInternalServerError
+	}
+
+	return propsByType, http.StatusFound
+}
+
+func GetRecentUserPropertyKeys(projectId uint64) (map[string][]string, int) {
+	return GetRecentUserPropertyKeysWithLimits(projectId, usersLimitForProperties)
+}
+
+func GetRecentUserPropertyValuesWithLimits(projectId uint64, propertyKey string, usersLimit, valuesLimit int) ([]string, int) {
+	db := C.GetServices().Db
+
+	// limit on values returned.
+	values := make([]string, 0, 0)
+	queryStmnt := "WITH recent_users AS (SELECT id FROM users WHERE project_id = ? ORDER BY created_at DESC limit ?)" +
+		" " + "SELECT DISTINCT(user_properties.properties->?) AS values FROM recent_users" +
+		" " + "LEFT JOIN user_properties ON recent_users.id = user_properties.user_id WHERE user_properties.project_id = ?" +
+		" " + "AND user_properties.properties != 'null' AND user_properties.properties->? IS NOT NULL limit ?"
+
+	queryParams := make([]interface{}, 0, 0)
+	queryParams = append(queryParams, projectId, usersLimit, propertyKey, projectId, propertyKey, valuesLimit)
+
+	logCtx := log.WithFields(log.Fields{"project_id": projectId, "property_key": propertyKey, "values_limit": valuesLimit})
+
+	rows, err := db.Raw(queryStmnt, queryParams...).Rows()
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get property values.")
+		return values, http.StatusInternalServerError
+	}
+
+	for rows.Next() {
+		var value string
+		rows.Scan(&value)
+		value = U.TrimQuotes(value)
+		values = append(values, value)
+	}
+
+	err = rows.Err()
+	if err != nil {
+		logCtx.WithError(err).Error("Failed scanning rows on get property values.")
+		return values, http.StatusInternalServerError
+	}
+
+	return values, http.StatusFound
+}
+
+func GetRecentUserPropertyValues(projectId uint64, propertyKey string) ([]string, int) {
+	return GetRecentUserPropertyValuesWithLimits(projectId, propertyKey, usersLimitForProperties, 2000)
 }

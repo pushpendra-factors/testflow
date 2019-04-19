@@ -123,8 +123,13 @@ func buildWhereFromProperties(mergeCond string,
 
 	rParams = make([]interface{}, 0, 0)
 	for i, p := range properties {
-		pStmnt := fmt.Sprintf("%s->>?%s?",
-			getPropertyEntityField(p.Entity), getOp(p.Operator))
+		var pStr string
+		if p.Type == U.PropertyTypeNumerical {
+			pStr = "(%s->>?)::numeric%s?"
+		} else {
+			pStr = "%s->>?%s?"
+		}
+		pStmnt := fmt.Sprintf(pStr, getPropertyEntityField(p.Entity), getOp(p.Operator))
 
 		if i == 0 {
 			rStmnt = pStmnt

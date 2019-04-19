@@ -54,9 +54,9 @@ export function removeElementByIndex(list=[], index) {
 
 // Create opts from src opts.
 // opts src: { <value>: <label> }
-export function createSelectOpts(opts=[]) {
+export function createSelectOpts(opts) {
     let ropts = [];
-    for(let k in opts) ropts.push(makeSelectOpt (k, opts[k]));
+    for(let k in opts) ropts.push(makeSelectOpt(k, opts[k]));
     return ropts;
 }
 
@@ -78,6 +78,10 @@ export function getColor(index) {
         return COLORS[0];
     }
 
-    let ci = ((index + 1) % COLORS.length) - 1;
-    return COLORS[ci];
+let ci = ((index + 1) % COLORS.length) - 1;
+return COLORS[ci];
+}
+
+export function isNumber(numString) {
+    return numString.match(/^[+-]?\d+(\.\d+)?$/)
 }

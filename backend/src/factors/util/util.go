@@ -2,6 +2,8 @@ package util
 
 import (
 	"math/rand"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -31,4 +33,21 @@ func RandomLowerAphaNumString(n int) string {
 
 func RandomUint64() uint64 {
 	return rand.Uint64()
+}
+
+func UnixTimeBefore24Hours() int64 {
+	return time.Now().Unix() - 86401
+}
+
+func IsNumber(num string) bool {
+	// Use regex.
+	_, err := strconv.ParseFloat(num, 64)
+	if err != nil {
+		return false
+	}
+	return true
+}
+
+func TrimQuotes(str string) string {
+	return strings.TrimSuffix(strings.TrimPrefix(str, "\""), "\"")
 }
