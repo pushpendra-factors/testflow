@@ -23,6 +23,9 @@ type NumericHistogram interface {
 	Count() uint64
 
 	TrimByBinSize(float64) error
+
+	// Internal for testing.
+	numBins() int
 }
 
 type NumericHistogramStruct struct {
@@ -311,4 +314,8 @@ func (h *NumericHistogramStruct) TrimByBinSize(trimFraction float64) error {
 	h.Maxbins = newMaxbins
 	h.trim()
 	return nil
+}
+
+func (h *NumericHistogramStruct) numBins() int {
+	return len(h.Bins)
 }

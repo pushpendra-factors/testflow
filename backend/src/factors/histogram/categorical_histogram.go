@@ -28,6 +28,8 @@ type CategoricalHistogram interface {
 	// Internal for testing
 	totalBinCount() uint64
 	frequency(symbol string) uint64
+	numBins() int
+	maxFmapSize() int
 }
 
 type CategoricalHistogramStruct struct {
@@ -529,6 +531,14 @@ func (h *CategoricalHistogramStruct) totalBinCount() uint64 {
 	return c
 }
 
+func (h *CategoricalHistogramStruct) numBins() int {
+	return len(h.Bins)
+}
+
+func (h *CategoricalHistogramStruct) maxFmapSize() int {
+	return h.MaxFmapSize
+}
+
 func (h *CategoricalHistogramStruct) TrimByFmapSize(trimFraction float64) error {
 	if trimFraction <= 0 || trimFraction > 1.0 {
 		return fmt.Errorf("Unexpected value of trimFraction: %f", trimFraction)
@@ -545,6 +555,7 @@ func (h *CategoricalHistogramStruct) TrimByFmapSize(trimFraction float64) error 
 				h.Bins[l].FrequencyMaps[m].Fmap, newMaxFMapSize)
 		}
 	}
+	h.MaxFmapSize = newMaxFMapSize
 	return nil
 }
 

@@ -135,3 +135,71 @@ func TestNumericalSampleData(t *testing.T) {
 		}
 	}
 }
+
+func TestNumericTrimByBinSize(t *testing.T) {
+	data := dataDimension5
+	dimensions := len(data[0])
+	var actualMean []float64 = make([]float64, dimensions)
+	for i := range actualMean {
+		actualMean[i] = 0.0
+	}
+	var actualVariance []float64 = make([]float64, dimensions)
+	for i := range actualVariance {
+		actualVariance[i] = 10000.0
+	}
+	evaluationPoints, actualCDFs := getEvaluationPointsAndActualCDFs(actualMean, actualVariance)
+	numDataSamples := len(data)
+	numBins := 128
+
+	fmt.Println("------------------------------------------------------------")
+	fmt.Println(fmt.Sprintf("EVALUATING FOR DIMENSIONS:%d  BINS:%d NUM_SAMPLES:%d",
+		dimensions, numBins, numDataSamples))
+	fmt.Println("------------------------------------------------------------")
+
+	hist := buildNumericHistogramFromData(numBins, dimensions, data)
+	assert.Equal(t, uint64(numDataSamples), hist.Count(), "Mismatch in number of samples.")
+	assert.Equal(t, hist.numBins(), 128, "Mismatch in number of bins.")
+
+	// Check error before trimming.
+	// Empirically determined upper bound for error.
+	// 7.0 represents log2(numBins).
+	maxError := 0.25 * float64(dimensions) / float64(7.0)
+	for k, evalPoint := range evaluationPoints {
+		histCDF := hist.CDF(evalPoint)
+		actualCDF := actualCDFs[k]
+		actualCDFError := actualCDF - histCDF
+		sampleCDF := computeCDFUsingData(data, evalPoint)
+		sampleCDFError := sampleCDF - histCDF
+		fmt.Println(fmt.Sprintf(
+			"EVALPOINT%d:%v, ACTUAL_CDF:%.2f, SAMPLE_CDF:%.2f, HIST_CDF:%.2f, ACTUAL_CDF_ERROR:%.2f, SAMPLE_CDF_ERROR:%.2f",
+			k+1, evalPoint, actualCDF, sampleCDF, histCDF, actualCDFError, sampleCDFError))
+		assert.InDelta(t, actualCDF, histCDF, maxError, "High Histogram CDF error")
+		assert.InDelta(t, sampleCDF, histCDF, maxError, "High Sample CDF error")
+	}
+	fmt.Println("---------------------------------------------------")
+
+	// Trim histogram.
+	hist.TrimByBinSize(0.5)
+	assert.Equal(t, uint64(numDataSamples), hist.Count(), "Mismatch in number of samples.")
+	assert.Equal(t, hist.numBins(), 64, "Mismatch in number of bins.")
+	// Check error after trimming.
+	for k, evalPoint := range evaluationPoints {
+		histCDF := hist.CDF(evalPoint)
+		actualCDF := actualCDFs[k]
+		actualCDFError := actualCDF - histCDF
+		sampleCDF := computeCDFUsingData(data, evalPoint)
+		sampleCDFError := sampleCDF - histCDF
+		fmt.Println(fmt.Sprintf(
+			"EVALPOINT%d:%v, ACTUAL_CDF:%.2f, SAMPLE_CDF:%.2f, HIST_CDF:%.2f, ACTUAL_CDF_ERROR:%.2f, SAMPLE_CDF_ERROR:%.2f",
+			k+1, evalPoint, actualCDF, sampleCDF, histCDF, actualCDFError, sampleCDFError))
+		assert.InDelta(t, actualCDF, histCDF, maxError, "High Histogram CDF error")
+		assert.InDelta(t, sampleCDF, histCDF, maxError, "High Sample CDF error")
+	}
+	fmt.Println("---------------------------------------------------")
+
+	// Minimum 3 bin.
+	hist.TrimByBinSize(0.01)
+	assert.Equal(t, uint64(numDataSamples), hist.Count(),
+		"Mismatch in number of samples.")
+	assert.Equal(t, hist.numBins(), 3, "Mismatch in number of bins.")
+}
