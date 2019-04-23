@@ -148,7 +148,7 @@ func GetEventNames(projectId uint64) ([]EventName, int) {
 	db := C.GetServices().Db
 
 	var eventNames []EventName
-	if err := db.Where("project_id = ?", projectId).Limit(2000).Find(&eventNames).Error; err != nil {
+	if err := db.Order("created_at ASC").Where("project_id = ?", projectId).Limit(2000).Find(&eventNames).Error; err != nil {
 		return nil, http.StatusInternalServerError
 	}
 	if len(eventNames) == 0 {
