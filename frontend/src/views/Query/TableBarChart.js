@@ -73,6 +73,11 @@ class TableBarChart extends Component {
   }
 
   render() {
+    // Temp fix for chart breakage on query change after render.
+    if (this.props.data.headers != undefined &&
+        this.props.data.rows != undefined &&  
+        this.props.data.headers.length != this.props.data.rows[0].length) return <div></div>;
+
     let data = this.props.data;
     let headers = data.headers.map((h, i) => { return <th key={'header_'+i}>{ h }</th> });
     const HEADER_COUNT= "count";
@@ -120,7 +125,7 @@ class TableBarChart extends Component {
     for(let k=0; k<keys.length; k++) {
       let g = groups[keys[k]];
       let tds = g.row.map((r) => { return <td>{trimQuotes(r)}</td> });
-      let gtd = <td> { this.getBarChart({ labels: g.labels, datasets:[{data: g.datasets}] }, maxXScale, false) } </td>;
+      let gtd = <td style={{height: (g.datasets.length * 22.5)}}>{ this.getBarChart({ labels: g.labels, datasets:[{data: g.datasets}] }, maxXScale, false) } </td>;
       tds.push(gtd)
       rows.push(<tr> {tds} </tr>)
     }

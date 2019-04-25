@@ -7,9 +7,9 @@ import (
 	"strings"
 )
 
-// RowsToMap Creates map[string]interface{} from sql result rows.
+// ReadRows Creates [][]interface{} from sql result rows.
 // Ref: https://kylewbanks.com/blog/query-result-to-map-in-golang
-func DBRowsToMap(rows *sql.Rows) ([]string, map[int][]interface{}, error) {
+func ReadRows(rows *sql.Rows) ([]string, [][]interface{}, error) {
 	defer rows.Close()
 
 	cols, err := rows.Columns()
@@ -17,9 +17,8 @@ func DBRowsToMap(rows *sql.Rows) ([]string, map[int][]interface{}, error) {
 		return nil, nil, err
 	}
 
-	resultRows := make(map[int][]interface{}, 0)
+	resultRows := make([][]interface{}, 0, 0)
 
-	rowIndex := 0
 	for rows.Next() {
 		columns := make([]interface{}, len(cols))
 		columnPointers := make([]interface{}, len(cols))
@@ -47,8 +46,7 @@ func DBRowsToMap(rows *sql.Rows) ([]string, map[int][]interface{}, error) {
 			}
 		}
 
-		resultRows[rowIndex] = resultRow
-		rowIndex++
+		resultRows = append(resultRows, resultRow)
 	}
 
 	return cols, resultRows, nil

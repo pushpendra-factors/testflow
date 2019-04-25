@@ -335,7 +335,6 @@ class Query extends Component {
       if (groupBy.name != '' && groupBy.type != '') {
         cGroupBy.property = groupBy.name;
         cGroupBy.entity = groupBy.type;
-        cGroupBy.index = i;
         query.groupByProperties.push(cGroupBy)
       }
     }
@@ -700,7 +699,7 @@ class Query extends Component {
                   minDate={new Date('01 Jan 2000 00:00:00 GMT')} // range starts from given date.
                   maxDate={new Date()}
                 />
-                <button className='fapp-close-round-button' style={{float: 'right'}} onClick={this.toggleDatePickerDisplay}>x</button>
+                <button className='fapp-close-round-button' style={{float: 'right', marginLeft: '0px', borderLeft: 'none'}} onClick={this.toggleDatePickerDisplay}>x</button>
               </div>
             </Col>
           </Row>
@@ -718,6 +717,9 @@ class Query extends Component {
           </Row>
         </div>
         
+
+        <div style={{borderTop: '1px solid rgb(221, 221, 221)', paddingTop: '20px', marginTop: '25px', marginLeft: '-60px', marginRight: '-60px'}} hidden={ !this.state.showPresentation }></div>
+
         {/* Presentation */}
         <div hidden={ !this.state.showPresentation }>
           <Row>
