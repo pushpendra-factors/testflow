@@ -13,6 +13,7 @@
         s.onload = function(){ c(); };
     }
     s.src = "/dist/factors.prod.js";
+    s.async = true;
     d = !!document.body ? document.body : document.head;
     d.appendChild(s);
 })(function() { factors.init("YOUR_TOKEN"); });
