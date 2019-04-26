@@ -77,6 +77,7 @@ const (
 
 var queryOps = map[string]string{
 	EqualsOpStr:          EqualsOp,
+	"notEqual":           "!=",
 	"greaterThan":        ">",
 	"lesserThan":         "<",
 	"greaterThanOrEqual": ">=",

@@ -23,6 +23,7 @@ const TYPE_CATEGORICAL = 'categorical';
 
 const NUMERICAL_OPERATOR_OPTS = { 
   'equals': '=',
+  'notEqual': '!=',
   'lesserThan': '<' ,
   'lesserThanOrEqual': '<=',
   'greaterThan': '>',
@@ -30,7 +31,8 @@ const NUMERICAL_OPERATOR_OPTS = {
 };
 
 const CATEGORICAL_OPERATORS_OPTS = {
-  'equals': '='
+  'equals': '=',
+  'notEqual': '!=',
 }
 
 class Property extends Component {
