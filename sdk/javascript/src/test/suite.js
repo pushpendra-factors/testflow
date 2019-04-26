@@ -7,6 +7,7 @@ const Cookie = require("../utils/cookie");
 const Request = require("../utils/request");
 const APIClient = require("../api-client");
 const Properties = require("../properties");
+const util = require("../utils/util");
 
 const config = require("../config");
 const constant = require("../constant");
@@ -173,7 +174,7 @@ SuitePrivateMethod.testGetEventDefaultProperties = function() {
     let props =  Properties.getEventDefault();
     // No empty values.
     for (let k in props) 
-        if(k != "$pageTitle") // pageTitle can be empty.
+        if(k != "$pageTitle" && k != "$referrer") // pageTitle and referrer can be empty.
             assert.isNotEmpty(props[k].toString(), "Empty: "+k);
     
     // Check individual keys needed.
@@ -193,6 +194,30 @@ SuitePrivateMethod.testGetTypeValidatedProperties = function() {
     assert.containsAllKeys(vprops, ["int_prop", "float_prop", "string_prop"], "Should allow number and string.");
     assert.isFalse(!!vprops["obj_prop"], "Should not allow anything other than number or string.");
     assert.isFalse(!!vprops["obj_num_prop"], "Should not allow object prop.");
+}
+
+SuitePrivateMethod.testGetPropertiesFromQueryParams = function() {
+    // use window.location mock object.
+    let qprops = Properties.getFromQueryParams({hash: "#/activate?token=xxx", search: "?a=10"});
+    assert.containsAllKeys(qprops, ["$qp_token", "$qp_a"])
+    assert.equal(qprops["$qp_token"], "xxx")
+    assert.equal(qprops["$qp_a"], "10")
+
+    qprops = Properties.getFromQueryParams({hash: "", search: "?a=10"});
+    assert.containsAllDeepKeys(qprops, ["$qp_a"])
+    assert.equal(qprops["$qp_a"], "10")
+
+    qprops = Properties.getFromQueryParams({hash: "#/activate?token=xxx", search: ""});
+    assert.containsAllKeys(qprops, ["$qp_token"])
+    assert.equal(qprops["$qp_token"], "xxx")
+}
+
+SuitePrivateMethod.testGetCleanHash = function() {
+    assert.equal(util.getCleanHash("#/factors?q=10"), "#/factors")
+    assert.equal(util.getCleanHash("#/factors?"), "#/factors")
+    assert.equal(util.getCleanHash("#/factors"), "#/factors")
+    assert.equal(util.getCleanHash("#/?q=10"), "#/")
+    assert.equal(util.getCleanHash(""), "")
 }
 
 /**

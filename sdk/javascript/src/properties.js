@@ -370,9 +370,25 @@ function getTypeValidated(props={}) {
     return vprops;
 }
 
+// Merges query params on hash with URL query params.
+function getAllQueryParamStr(location) {
+    let hashStr = location.hash;
+    let queryStr = location.search;
+
+    let hashQuery = hashStr.split("?")[1];
+    if (hashQuery == undefined || hashQuery == "") return queryStr;
+    if (queryStr == "") return "?" + hashQuery;
+    return queryStr + "&" + hashQuery
+}
+
+function getFromQueryParams(location) {
+    return parseFromQueryString(getAllQueryParamStr(location));
+}
+
 module.exports = {
     getUserDefault: getUserDefault,
     getEventDefault: getEventDefault,
+    getFromQueryParams: getFromQueryParams,
     parseFromQueryString: parseFromQueryString,
     getTypeValidated: getTypeValidated
 }

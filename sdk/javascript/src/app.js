@@ -32,6 +32,9 @@ function updatePayloadWithUserIdFromCookie(payload) {
     return payload;
 }
 
+function getAutoTrackURL() {
+    return window.location.host + window.location.pathname + util.getCleanHash(window.location.hash);
+}
 
 /**
  * App prototype.
@@ -61,7 +64,7 @@ App.prototype.init = function(token, opts={}) {
     
     // Gets settings using temp client with given token, if succeeds, 
     // set temp client as app client and set response as app config 
-    // or else app is stays unintialized.
+    // or else app stays unintialized.
     return _client.getProjectSettings()
         .then((response) => {
             if (response.status < 200 || response.status > 308) {
@@ -104,8 +107,7 @@ App.prototype.track = function(eventName, eventProperties, auto=false) {
 
 App.prototype.autoTrack = function(enabled=false) {
     if (!enabled) return false; // not enabled.
-    this.track(window.location.host+window.location.pathname+window.location.hash, 
-        Properties.parseFromQueryString(window.location.search), true);
+    this.track(getAutoTrackURL(), Properties.getFromQueryParams(window.location), true);
     
     // Todo(Dinesh): Find ways to automate tests for SPA support.
     
@@ -122,8 +124,7 @@ App.prototype.autoTrack = function(enabled=false) {
             logger.debug("Triggered window.onpopstate: "+window.location.href);
             // Track only if URL or QueryParam changed.
             if (_land_location !== window.location.href)
-                _this.track(window.location.host+window.location.pathname+window.location.hash, 
-                    Properties.parseFromQueryString(window.location.search), true);
+                _this.track(getAutoTrackURL(), Properties.getFromQueryParams(window.location), true);
         }
     }
 }

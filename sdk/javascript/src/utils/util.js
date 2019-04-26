@@ -15,8 +15,14 @@ function convertIfNumber(nString) {
     return n;
 }
 
+function getCleanHash(hash) {
+    // excludes query params on hash if any.
+    return hash.split("?")[0];
+}
+
 module.exports = exports =  { 
     validatedStringArg: validatedStringArg,
-    convertIfNumber: convertIfNumber
+    convertIfNumber: convertIfNumber,
+    getCleanHash: getCleanHash,
 };
 
