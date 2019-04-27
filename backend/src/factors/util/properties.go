@@ -240,9 +240,7 @@ func ClassifyPropertiesByType(properties *map[string]map[interface{}]bool) (map[
 			switch t := propertyValue.(type) {
 			case int, float64:
 			case string:
-				if !IsNumber(propertyValue.(string)) {
-					isNumericalProperty = false
-				}
+				isNumericalProperty = false
 			default:
 				return nil, fmt.Errorf("unsupported type %s on property type classification", t)
 			}
