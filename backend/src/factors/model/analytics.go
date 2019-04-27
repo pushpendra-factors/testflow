@@ -127,13 +127,7 @@ func buildWhereFromProperties(mergeCond string,
 
 	rParams = make([]interface{}, 0, 0)
 	for i, p := range properties {
-		var pStr string
-		if p.Type == U.PropertyTypeNumerical {
-			pStr = "(%s->>?)::numeric%s?"
-		} else {
-			pStr = "%s->>?%s?"
-		}
-		pStmnt := fmt.Sprintf(pStr, getPropertyEntityField(p.Entity), getOp(p.Operator))
+		pStmnt := fmt.Sprintf("%s->>?%s?", getPropertyEntityField(p.Entity), getOp(p.Operator))
 
 		if i == 0 {
 			rStmnt = pStmnt
@@ -152,10 +146,10 @@ func groupKeyByIndex(i int) string {
 	return fmt.Sprintf("%s%d", GroupKeyPrefix, i)
 }
 
-// groupBySelect: user_properties.properties->'age' as gk_1, events.properties->'category' as gk_2
+// groupBySelect: user_properties.properties->>'age' as gk_1, events.properties->>'category' as gk_2
 // groupByKeys: gk_1, gk_2
 // How to use?
-// select user_properties.properties->'age' as gk_1, events.properties->'category' as gk_2 from events
+// select user_properties.properties->>'age' as gk_1, events.properties->>'category' as gk_2 from events
 // group by gk_1, gk_2
 func buildGroupKeys(groupProps []QueryGroupByProperty) (groupSelect string,
 	groupSelectParams []interface{}, groupKeys string) {
@@ -165,7 +159,7 @@ func buildGroupKeys(groupProps []QueryGroupByProperty) (groupSelect string,
 	for i, v := range groupProps {
 		// Order of group is preserved as received.
 		gKey := groupKeyByIndex(v.Index)
-		groupSelect = groupSelect + fmt.Sprintf("%s->? as %s",
+		groupSelect = groupSelect + fmt.Sprintf("%s->>? as %s",
 			getPropertyEntityField(v.Entity), gKey)
 		groupKeys = groupKeys + gKey
 		if i < len(groupProps)-1 {
@@ -482,7 +476,7 @@ WITH
 		AND events.event_name_id IN (SELECT id FROM event_names WHERE project_id='1' AND name='Fund Project')
         AND events.properties->>'category'='Sports' AND user_properties.properties->>'gender'='M'
     )
-    SELECT user_properties.properties->'$region' as group_prop1, COUNT(DISTINCT(COALESCE(users.customer_user_id, event_user_id))) from e1_e2
+    SELECT user_properties.properties->>'$region' as group_prop1, COUNT(DISTINCT(COALESCE(users.customer_user_id, event_user_id))) from e1_e2
     left join users on e1_e2.event_user_id=users.id
     left join user_properties on users.id=user_properties.user_id and user_properties.id=users.properties_id
     GROUP BY group_prop1 order by count desc;
@@ -544,7 +538,7 @@ WITH
 	any_event AS (
         SELECT event_user_id FROM e1 UNION SELECT event_user_id FROM e2
 	)
-	SELECT user_properties.properties->'gender' as gk_0, COUNT(DISTINCT(COALESCE(users.customer_user_id, event_user_id)))
+	SELECT user_properties.properties->>'gender' as gk_0, COUNT(DISTINCT(COALESCE(users.customer_user_id, event_user_id)))
 	FROM any_event LEFT JOIN users ON any_event.event_user_id=users.id
 	LEFT JOIN user_properties on users.id=user_properties.user_id and user_properties.id=users.properties_id GROUP BY gk_0 order by gk_0;
 
@@ -592,7 +586,7 @@ WITH
 		AND timestamp>='1552450157' AND timestamp<='1553054957'
 		AND events.event_name_id IN ( SELECT id FROM event_names WHERE project_id='2'AND name='View Project' )
     )
-	SELECT user_properties.properties->'gender' as gk_0, COUNT(DISTINCT(COALESCE(users.customer_user_id, event_user_id)))
+	SELECT user_properties.properties->>'gender' as gk_0, COUNT(DISTINCT(COALESCE(users.customer_user_id, event_user_id)))
 	FROM step0 LEFT JOIN users ON step0.event_user_id=users.id
 	LEFT JOIN user_properties on users.id=user_properties.user_id and user_properties.id=users.properties_id GROUP BY gk_0 order by gk_0;
 */
@@ -637,14 +631,14 @@ Group by: user_properties, event_properties.
 
 WITH
     e1 AS (
-        SELECT distinct(events.id) as event_id, events.user_id as event_user_id, events.properties->'category' as group_prop1 FROM events
+        SELECT distinct(events.id) as event_id, events.user_id as event_user_id, events.properties->>'category' as group_prop1 FROM events
         LEFT JOIN user_properties ON events.user_properties_id=user_properties.id
 		WHERE events.project_id=2 AND events.timestamp >= 1393632004 AND events.timestamp <= 1396310325
 		AND events.event_name_id IN (SELECT id FROM event_names WHERE project_id='2' AND name='View Project')
         AND user_properties.properties->>'gender'='M'
     ),
     e2 AS (
-        SELECT distinct(events.id) as event_id, events.user_id as event_user_id, events.properties->'category' as group_prop1 FROM events
+        SELECT distinct(events.id) as event_id, events.user_id as event_user_id, events.properties->>'category' as group_prop1 FROM events
         LEFT JOIN user_properties ON events.user_properties_id=user_properties.id
 		WHERE events.project_id=2 AND events.timestamp >= 1393632004 AND events.timestamp <= 1396310325
 		AND events.event_name_id IN (SELECT id FROM event_names WHERE project_id='2' AND name='Fund Project')
@@ -653,7 +647,7 @@ WITH
     any_event AS (
         SELECT event_id, event_user_id, group_prop1 FROM e1 UNION ALL SELECT event_id, event_user_id, group_prop1 FROM e2
     )
-    SELECT user_properties.properties->'$region' as group_prop2, group_prop1, count(*) from any_event
+    SELECT user_properties.properties->>'$region' as group_prop2, group_prop1, count(*) from any_event
     left join users on any_event.event_user_id=users.id
     left join user_properties on users.id=user_properties.user_id and user_properties.id=users.properties_id
     group by group_prop1, group_prop2 order by group_prop2;
@@ -702,7 +696,7 @@ Group by: user_properties, event_properties.
 * Without group by user_property
 
 WITH
-	SELECT COUNT(*), events.properties->'category' as group_prop1 FROM events
+	SELECT COUNT(*), events.properties->>'category' as group_prop1 FROM events
 	LEFT JOIN user_properties ON events.user_properties_id=user_properties.id
 	WHERE events.project_id=2 AND events.timestamp >= 1393632004 AND events.timestamp <= 1396310325
 	AND events.event_name_id IN (SELECT id FROM event_names WHERE project_id='2' AND name='View Project')
@@ -713,13 +707,13 @@ WITH
 
 WITH
     e1 AS (
-        SELECT distinct(events.id) as event_id, events.user_id as event_user_id, events.properties->'category' as group_prop1 FROM events
+        SELECT distinct(events.id) as event_id, events.user_id as event_user_id, events.properties->>'category' as group_prop1 FROM events
         LEFT JOIN user_properties ON events.user_properties_id=user_properties.id
 		WHERE events.project_id=2 AND events.timestamp >= 1393632004 AND events.timestamp <= 1396310325
 		AND events.event_name_id IN (SELECT id FROM event_names WHERE project_id='2' AND name='View Project')
         AND user_properties.properties->>'gender'='M'
     )
-    SELECT user_properties.properties->'$region' as group_prop2, group_prop1, count(*) from e1
+    SELECT user_properties.properties->>'$region' as group_prop2, group_prop1, count(*) from e1
     left join users on e1.event_user_id=users.id
     left join user_properties on users.id=user_properties.user_id and user_properties.id=users.properties_id
     group by group_prop1, group_prop2 order by group_prop2;
