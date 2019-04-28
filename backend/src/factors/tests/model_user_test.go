@@ -380,10 +380,10 @@ func TestGetRecentUserPropertyKeys(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 
-	props1 := json.RawMessage(`{"prop1": "value1", "prop2": "1"}`)
+	props1 := json.RawMessage(`{"prop1": "value1", "prop2": 1}`)
 	_, errCode1 := M.CreateUser(&M.User{ProjectId: project.ID, Properties: postgres.Jsonb{props1}})
 	assert.Equal(t, http.StatusCreated, errCode1)
-	props2 := json.RawMessage(`{"prop3": "value2", "prop4": "2"}`)
+	props2 := json.RawMessage(`{"prop3": "value2", "prop4": 2}`)
 	_, errCode2 := M.CreateUser(&M.User{ProjectId: project.ID, Properties: postgres.Jsonb{props2}})
 	assert.Equal(t, http.StatusCreated, errCode2)
 

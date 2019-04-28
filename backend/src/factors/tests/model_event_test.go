@@ -174,8 +174,8 @@ func TestGetRecentEventPropertyKeys(t *testing.T) {
 
 	t.Run("RecentPropertiesWithLimit", func(t *testing.T) {
 		timestamp := time.Now().Unix()
-		eventName, _ := createEventWithTimestampAndPrperties(t, project, user, timestamp, json.RawMessage(`{"rProp1": "value1", "rProp2": "1"}`))
-		_, errCode1 := M.CreateEvent(&M.Event{ProjectId: project.ID, EventNameId: eventName.ID, UserId: user.ID, Timestamp: timestamp, Properties: postgres.Jsonb{json.RawMessage(`{"rProp3": "value2", "rProp4": "2"}`)}})
+		eventName, _ := createEventWithTimestampAndPrperties(t, project, user, timestamp, json.RawMessage(`{"rProp1": "value1", "rProp2": 1}`))
+		_, errCode1 := M.CreateEvent(&M.Event{ProjectId: project.ID, EventNameId: eventName.ID, UserId: user.ID, Timestamp: timestamp, Properties: postgres.Jsonb{json.RawMessage(`{"rProp3": "value2", "rProp4": 2}`)}})
 		assert.Equal(t, http.StatusCreated, errCode1)
 
 		props, errCode := M.GetRecentEventPropertyKeysWithLimits(project.ID, eventName.Name, 1)
@@ -194,7 +194,7 @@ func TestGetRecentEventPropertyKeys(t *testing.T) {
 
 	t.Run("PropertiesOlderThan24Hours", func(t *testing.T) {
 		timestamp := U.UnixTimeBefore24Hours()
-		eventName, _ := createEventWithTimestampAndPrperties(t, project, user, timestamp, json.RawMessage(`{"rProp1": "value1", "rProp2": "1"}`))
+		eventName, _ := createEventWithTimestampAndPrperties(t, project, user, timestamp, json.RawMessage(`{"rProp1": "value1", "rProp2": 1}`))
 
 		props, errCode := M.GetRecentEventPropertyKeysWithLimits(project.ID, eventName.Name, 100)
 		assert.Equal(t, http.StatusFound, errCode)
