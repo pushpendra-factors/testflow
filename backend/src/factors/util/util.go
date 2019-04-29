@@ -39,6 +39,10 @@ func UnixTimeBefore24Hours() int64 {
 	return time.Now().Unix() - 86401
 }
 
+func UnixTimeBeforeAWeek() int64 {
+	return time.Now().Unix() - 604801
+}
+
 func IsNumber(num string) bool {
 	// Use regex.
 	_, err := strconv.ParseFloat(num, 64)

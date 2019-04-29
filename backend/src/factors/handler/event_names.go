@@ -7,7 +7,6 @@ import (
 	PC "factors/pattern_client"
 	U "factors/util"
 	"net/http"
-	"sort"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -29,39 +28,28 @@ func GetEventNamesHandler(c *gin.Context) {
 		return
 	}
 
-	reqId := U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID)
-
-	candidatePatterns := make([][]string, len(eventNames))
-	for ei, en := range eventNames {
-		candidatePatterns[ei] = []string{en.Name}
+	eventNamesByIdLookup := make(map[uint64]string, 0)
+	for _, en := range eventNames {
+		eventNamesByIdLookup[en.ID] = en.Name
 	}
 
-	logCtx := log.WithFields(log.Fields{
-		"reqId":      reqId,
-		"projectId":  projectId,
-		"eventNames": eventNames,
-	})
-
-	resultPatterns, err := PC.GetPatterns(reqId, projectId, 0, candidatePatterns)
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to get event names with occurrence count.")
+	eventsOccurrence, errCode := M.GetEventsOccurrenceCount(projectId)
+	if errCode == http.StatusInternalServerError {
+		log.WithField("projectId", projectId).Error("Failed to get occurrence count for ordering event names.")
 	}
-
-	sort.Slice(resultPatterns, func(i int, j int) bool {
-		return resultPatterns[i].Count > resultPatterns[j].Count
-	})
 
 	resultEventNames := make([]string, 0, 0)
-	// existence look up map.
-	eventNameLookupMap := make(map[string]bool, 0)
-	for _, p := range resultPatterns {
-		name := p.EventNames[0]
-		resultEventNames = append(resultEventNames, name)
-		eventNameLookupMap[name] = true
+	resultEventLookup := make(map[uint64]bool, 0)
+	// Adds result event names by event occurrence count desc.
+	for _, eo := range eventsOccurrence {
+		resultEventNames = append(resultEventNames, eventNamesByIdLookup[eo.EventNameId])
+		resultEventLookup[eo.EventNameId] = true
 	}
 
+	// Adds event names not available on events occurrence
+	// by created_at on asc.
 	for _, en := range eventNames {
-		if _, exists := eventNameLookupMap[en.Name]; !exists {
+		if _, exists := resultEventLookup[en.ID]; !exists {
 			resultEventNames = append(resultEventNames, en.Name)
 		}
 	}

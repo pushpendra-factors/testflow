@@ -38,6 +38,11 @@ type EventTimestamp struct {
 	LastEvent  int64
 }
 
+type EventOccurrence struct {
+	EventNameId uint64
+	Count       int
+}
+
 const error_Duplicate_event_customerEventID = "pq: duplicate key value violates unique constraint \"project_id_customer_event_id_unique_idx\""
 const eventsLimitForProperites = 50000
 
@@ -239,4 +244,35 @@ func GetRecentEventPropertyValuesWithLimits(projectId uint64, eventName string,
 
 func GetRecentEventPropertyValues(projectId uint64, eventName string, property string) ([]string, int) {
 	return GetRecentEventPropertyValuesWithLimits(projectId, eventName, property, eventsLimitForProperites, 2000)
+}
+
+func GetEventsOccurrenceCount(projectId uint64) ([]EventOccurrence, int) {
+	db := C.GetServices().Db
+
+	eventsAfterTimestamp := U.UnixTimeBeforeAWeek()
+
+	logCtx := log.WithFields(log.Fields{"projectId": projectId, "eventsAfterTimestamp": eventsAfterTimestamp})
+	queryStr := "SELECT event_name_id, COUNT(*) FROM events WHERE project_id=? AND timestamp > ?" +
+		" " + "GROUP BY event_name_id ORDER BY count DESC LIMIT ?"
+
+	eventsOccurrence := make([]EventOccurrence, 0, 0)
+	rows, err := db.Raw(queryStr, projectId, eventsAfterTimestamp, 100000).Rows()
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to read rows on get events occurrence count.")
+		return eventsOccurrence, http.StatusInternalServerError
+	}
+
+	for rows.Next() {
+		var eventNameId uint64
+		var count int
+		if err := rows.Scan(&eventNameId, &count); err != nil {
+			logCtx.WithError(err).Error("Failed to read rows on get events occurrence count.")
+			return eventsOccurrence, http.StatusInternalServerError
+		}
+
+		eventsOccurrence = append(eventsOccurrence,
+			EventOccurrence{EventNameId: eventNameId, Count: count})
+	}
+
+	return eventsOccurrence, http.StatusFound
 }
