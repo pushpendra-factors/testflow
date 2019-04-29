@@ -8,11 +8,7 @@ import {
   fetchProjectUserProperties,
 } from '../../actions/projectsActions';
 import { makeSelectOpt, getSelectedOpt, createSelectOpts } from '../../util';
-
-const PROPERTY_TYPE_OPTS = {
-  'user': 'User Property',
-  'event': 'Event Property'
-};
+import { PROPERTY_TYPE_OPTS } from './common';
 
 class GroupBy extends Component {
   constructor(props) {

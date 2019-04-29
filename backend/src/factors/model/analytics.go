@@ -49,6 +49,8 @@ const (
 	PropertyEntityUser  = "user"
 	PropertyEntityEvent = "event"
 
+	PropertyValueNone = "$none"
+
 	EventCondAnyGivenEvent = "any_given_event"
 	EventCondAllGivenEvent = "all_given_event"
 
@@ -71,13 +73,15 @@ const (
 )
 
 const (
-	EqualsOpStr = "equals"
-	EqualsOp    = "="
+	EqualsOpStr   = "equals"
+	EqualsOp      = "="
+	NotEqualOpStr = "notEqual"
+	NotEqualOp    = "!="
 )
 
 var queryOps = map[string]string{
 	EqualsOpStr:          EqualsOp,
-	"notEqual":           "!=",
+	NotEqualOpStr:        NotEqualOp,
 	"greaterThan":        ">",
 	"lesserThan":         "<",
 	"greaterThanOrEqual": ">=",
@@ -117,33 +121,67 @@ func appendStatement(x, y string) string {
 }
 
 func buildWhereFromProperties(mergeCond string,
-	properties []QueryProperty) (rStmnt string, rParams []interface{}) {
+	properties []QueryProperty) (rStmnt string, rParams []interface{}, err error) {
 
 	pLen := len(properties)
-
 	if pLen == 0 {
-		return rStmnt, rParams
+		return rStmnt, rParams, nil
 	}
 
 	rParams = make([]interface{}, 0, 0)
 	for i, p := range properties {
-		pStmnt := fmt.Sprintf("%s->>?%s?", getPropertyEntityField(p.Entity), getOp(p.Operator))
+		propertyEntity := getPropertyEntityField(p.Entity)
+		propertyOp := getOp(p.Operator)
 
-		if i == 0 {
-			rStmnt = pStmnt
-		} else {
-			rStmnt = fmt.Sprintf("%s %s %s", rStmnt, mergeCond, pStmnt)
+		if p.Value != PropertyValueNone {
+			pStmnt := fmt.Sprintf("%s->>?%s?", propertyEntity, propertyOp)
+			if i == 0 {
+				rStmnt = pStmnt
+			} else {
+				rStmnt = fmt.Sprintf("%s %s %s", rStmnt, mergeCond, pStmnt)
+			}
+
+			rParams = append(rParams, p.Property, p.Value)
+			continue
 		}
 
-		rParams = append(rParams, p.Property, p.Value)
+		var whereCond string
+		if propertyOp == EqualsOp {
+			// i.e: (NOT jsonb_exists(events.properties, 'property_name') OR events.properties->>'property_name'='')
+			whereCond = fmt.Sprintf("(NOT jsonb_exists(%s, ?) OR %s->>?='')", propertyEntity, propertyEntity)
+		} else if propertyOp == NotEqualOp {
+			// i.e: (jsonb_exists(events.properties, 'property_name') AND events.properties->>'property_name'!='')
+			whereCond = fmt.Sprintf("(jsonb_exists(%s, ?) AND %s->>?!='')", propertyEntity, propertyEntity)
+		} else {
+			return "", nil, fmt.Errorf("unsupported opertator %s for property value none", propertyOp)
+		}
+
+		if i == 0 {
+			rStmnt = whereCond
+		} else {
+			rStmnt = fmt.Sprintf("%s %s %s", rStmnt, mergeCond, whereCond)
+		}
+
+		rParams = append(rParams, p.Property, p.Property)
 	}
 
-	return rStmnt, rParams
+	return rStmnt, rParams, nil
 }
 
 // Alias for group by properties gk_1, gk_2.
 func groupKeyByIndex(i int) string {
 	return fmt.Sprintf("%s%d", GroupKeyPrefix, i)
+}
+
+// Translates empty and null group by property values as $none on select.
+// CASE WHEN events.properties->>'x' IS NULL THEN '$none' WHEN events.properties->>'x' = '' THEN '$none'
+// ELSE events.properties->>'x' END as _group_key_0
+func getNoneHandledGroupBySelect(groupProp QueryGroupByProperty, groupKey string) (string, []interface{}) {
+	entityField := getPropertyEntityField(groupProp.Entity)
+	groupSelect := fmt.Sprintf("CASE WHEN %s->>? IS NULL THEN '%s' WHEN %s->>? = '' THEN '%s' ELSE %s->>? END AS %s",
+		entityField, PropertyValueNone, entityField, PropertyValueNone, entityField, groupKey)
+	groupSelectParams := []interface{}{groupProp.Property, groupProp.Property, groupProp.Property}
+	return groupSelect, groupSelectParams
 }
 
 // groupBySelect: user_properties.properties->>'age' as gk_1, events.properties->>'category' as gk_2
@@ -159,14 +197,14 @@ func buildGroupKeys(groupProps []QueryGroupByProperty) (groupSelect string,
 	for i, v := range groupProps {
 		// Order of group is preserved as received.
 		gKey := groupKeyByIndex(v.Index)
-		groupSelect = groupSelect + fmt.Sprintf("%s->>? as %s",
-			getPropertyEntityField(v.Entity), gKey)
+		noneSelect, noneParams := getNoneHandledGroupBySelect(v, gKey)
+		groupSelect = groupSelect + noneSelect
 		groupKeys = groupKeys + gKey
 		if i < len(groupProps)-1 {
 			groupSelect = groupSelect + ", "
 			groupKeys = groupKeys + ", "
 		}
-		groupSelectParams = append(groupSelectParams, v.Property)
+		groupSelectParams = append(groupSelectParams, noneParams...)
 	}
 
 	return groupSelect, groupSelectParams, groupKeys
@@ -204,7 +242,11 @@ func addFilterEventsWithPropsQuery(projectId uint64, qStmnt *string,
 	*qParams = append(*qParams, projectId, from, to, projectId, qep.Name)
 
 	// mergeCond for whereProperties can also be 'OR'.
-	wStmnt, wParams := buildWhereFromProperties("AND", qep.Properties)
+	wStmnt, wParams, err := buildWhereFromProperties("AND", qep.Properties)
+	if err != nil {
+		return err
+	}
+
 	if wStmnt != "" {
 		rStmnt = rStmnt + " AND " + fmt.Sprintf("( %s )", wStmnt)
 		*qParams = append(*qParams, wParams...)
@@ -862,7 +904,7 @@ func BuildQuery(projectId uint64, query Query) (string, []interface{}, error) {
 // Limits results by left and right keys. Assumes result is already
 // sorted by count and all group keys are used on SQL group by (makes all three group by
 // values together as unique). Limited set dimension = ResultLimit * ResultLimit.
-func limitMultiGroupByPropertiesQueryResult(groupProps []QueryGroupByProperty, groupByTimestamp bool,
+func limitMultiGroupByPropertiesQueryResult(groupPropsLen int, groupByTimestamp bool,
 	resultCols []string, resultRows [][]interface{}) ([][]interface{}, error) {
 
 	limitedResult := make([][]interface{}, 0, 0)
@@ -871,7 +913,7 @@ func limitMultiGroupByPropertiesQueryResult(groupProps []QueryGroupByProperty, g
 	if err != nil {
 		return limitedResult, err
 	}
-	end := len(groupProps) - 1
+	end := groupPropsLen - 1
 
 	// Lookup based on left key (encoded key of all group key values excluding last)
 	// right key (last group key value) ie: g1, g2, g3 -> map[c1:g1_c2:g2]map[g3]bool
@@ -906,7 +948,7 @@ func limitMultiGroupByPropertiesQueryResult(groupProps []QueryGroupByProperty, g
 
 // Limits top results and makes sure same group key combination available on different
 // datetime, if exists on SQL result. Assumes result is sorted by count.
-func limitGroupByTimestampQueryResult(groupProps []QueryGroupByProperty,
+func limitGroupByTimestampQueryResult(groupPropsLen int,
 	groupByTimestamp bool, resultCols []string, resultRows [][]interface{}) ([][]interface{}, error) {
 
 	limitedResult := make([][]interface{}, 0, 0)
@@ -915,7 +957,7 @@ func limitGroupByTimestampQueryResult(groupProps []QueryGroupByProperty,
 	if err != nil {
 		return limitedResult, err
 	}
-	end := len(groupProps)
+	end := groupPropsLen
 
 	keyLookup := make(map[string]bool, 0)
 	for _, row := range resultRows {
@@ -937,15 +979,15 @@ func limitGroupByTimestampQueryResult(groupProps []QueryGroupByProperty,
 	return limitedResult, nil
 }
 
-func LimitQueryResults(groupProps []QueryGroupByProperty, groupByTimestamp bool,
+func LimitQueryResults(groupPropsLen int, groupByTimestamp bool,
 	resultCols []string, resultRows [][]interface{}) ([][]interface{}, error) {
 
-	if len(groupProps) > 0 && groupByTimestamp {
-		return limitGroupByTimestampQueryResult(groupProps, groupByTimestamp, resultCols, resultRows)
+	if groupPropsLen > 0 && groupByTimestamp {
+		return limitGroupByTimestampQueryResult(groupPropsLen, groupByTimestamp, resultCols, resultRows)
 	}
 
-	if len(groupProps) > 1 {
-		return limitMultiGroupByPropertiesQueryResult(groupProps, groupByTimestamp, resultCols, resultRows)
+	if groupPropsLen > 1 {
+		return limitMultiGroupByPropertiesQueryResult(groupPropsLen, groupByTimestamp, resultCols, resultRows)
 	}
 
 	// limited already on SQL.
@@ -987,7 +1029,9 @@ func Analyze(projectId uint64, query Query) ([]string, [][]interface{}, int, str
 		return nil, nil, http.StatusInternalServerError, ErrMsgQueryProcessingFailure
 	}
 
-	resultRows, err = LimitQueryResults(query.GroupByProperties, query.GroupByTimestamp, resultCols, resultRows)
+	groupPropsLen := len(query.GroupByProperties)
+
+	resultRows, err = LimitQueryResults(groupPropsLen, query.GroupByTimestamp, resultCols, resultRows)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed processing query results for limiting")
 		return nil, nil, http.StatusInternalServerError, ErrMsgQueryProcessingFailure

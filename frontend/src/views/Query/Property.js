@@ -11,12 +11,8 @@ import {
   fetchProjectUserProperties,
   fetchProjectUserPropertyValues,
 } from '../../actions/projectsActions';
-import { makeSelectOpts, createSelectOpts, getSelectedOpt } from "../../util";
-
-const PROPERTY_ENTITY_OPTS = {
-  'user': 'User Property',
-  'event': 'Event Property'
-};
+import { makeSelectOpts, createSelectOpts, getSelectedOpt, makeSelectOpt } from "../../util";
+import { PROPERTY_VALUE_NONE, PROPERTY_TYPE_OPTS } from "./common";
 
 const TYPE_NUMERICAL = 'numerical';
 const TYPE_CATEGORICAL = 'categorical';
@@ -61,8 +57,11 @@ class Property extends Component {
   }
 
   addToValueOptsState(values) {
+    let valuesOpts = makeSelectOpts(values);
+    valuesOpts.unshift(makeSelectOpt(PROPERTY_VALUE_NONE));
+
     if (values != undefined && values != null)
-      this.setState({ valueOpts: makeSelectOpts(values), isValueOptsLoading: false });
+      this.setState({ valueOpts: valuesOpts, isValueOptsLoading: false });
   }
 
   fetchPropertyKeys = () => {
@@ -189,9 +188,9 @@ class Property extends Component {
         <div style={{display: "inline-block", width: "15%"}} className='fapp-select'>
           <Select
             onChange={this.props.onEntityChange}
-            options={createSelectOpts(PROPERTY_ENTITY_OPTS)}
+            options={createSelectOpts(PROPERTY_TYPE_OPTS)}
             placeholder="Property Type"
-            value={getSelectedOpt(this.props.propertyState.entity, PROPERTY_ENTITY_OPTS)}
+            value={getSelectedOpt(this.props.propertyState.entity, PROPERTY_TYPE_OPTS)}
           />
         </div>
         <div style={{display: this.nameSelectorDisplay(), width: "18%", marginLeft: "10px"}} className='fapp-select'>
