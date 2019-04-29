@@ -2,7 +2,8 @@ import React, { Component } from 'react';
 import Select from 'react-select';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
-import { Row, Col, Button, Table } from 'reactstrap';
+import { Row, Col, Button, Table, ButtonGroup, ButtonToolbar, 
+  ButtonDropdown, DropdownToggle, DropdownMenu, DropdownItem } from 'reactstrap'; 
 import 'react-date-range/dist/styles.css';
 import 'react-date-range/dist/theme/default.css';
 import { DateRangePicker, createStaticRanges } from 'react-date-range'; 
@@ -121,6 +122,7 @@ class Query extends Component {
       showPresentation: false,
       showDatePicker: false,
       topError: null,
+      showDashboardsList: false,
     }
   }
 
@@ -340,7 +342,7 @@ class Query extends Component {
     }
 
     if (groupByDate) {
-      query.gbp = true;
+      query.gbt = true;
     }
   
     console.debug(query);
@@ -594,6 +596,10 @@ class Query extends Component {
     })
   }
 
+  toggleDashboardsList = () => {
+    this.setState({ showDashboardsList: !this.state.showDashboardsList });
+  }
+
   isLoaded() {
     return this.state.eventNamesLoaded;
   }
@@ -724,13 +730,21 @@ class Query extends Component {
         <div hidden={ !this.state.showPresentation }>
           <Row>
             <Col xs='12' md='12'>
-                <div class='pull-right'>
-                  <div style={{ marginBottom: '10px'}}>
-                    <button className={this.getPresentationSelectorClass(PRESENTATION_TABLE)} style={{marginRight: '10px', fontWeight: 500}} onClick={() => this.run(PRESENTATION_TABLE)}>Table</button>
-                    <button className={this.getPresentationSelectorClass(PRESENTATION_BAR)}  style={{marginRight: '10px', fontWeight: 500}} onClick={() => this.run(PRESENTATION_BAR)}>Bar</button>
-                    <button className={this.getPresentationSelectorClass(PRESENTATION_LINE)}  style={{marginRight: '10px', fontWeight: 500}} onClick={() => this.run(PRESENTATION_LINE)}>Line</button>
-                  </div>
-                </div>
+              <ButtonToolbar class='pull-right' style={{ marginBottom: '10px' }}>
+                <ButtonGroup style={{ marginRight: '10px' }}>
+                  <button className={this.getPresentationSelectorClass(PRESENTATION_TABLE)} style={{fontWeight: 500}} onClick={() => this.run(PRESENTATION_TABLE)}>Table</button>
+                  <button className={this.getPresentationSelectorClass(PRESENTATION_BAR)}  style={{fontWeight: 500}} onClick={() => this.run(PRESENTATION_BAR)}>Bar</button>
+                  <button className={this.getPresentationSelectorClass(PRESENTATION_LINE)}  style={{fontWeight: 500}} onClick={() => this.run(PRESENTATION_LINE)}>Line</button>
+                </ButtonGroup>
+                <ButtonDropdown isOpen={this.state.showDashboardsList} toggle={this.toggleDashboardsList} >
+                  <DropdownToggle caret outline color="primary">
+                    Dashboard
+                  </DropdownToggle>
+                  <DropdownMenu right>
+                    <DropdownItem>My Dashboard</DropdownItem>
+                  </DropdownMenu>
+                </ButtonDropdown>
+              </ButtonToolbar>
             </Col>
           </Row>
           <Row>
