@@ -275,17 +275,17 @@ class Query extends Component {
       from = to - diff;
     }
 
-    query.from = from; // in utc.
+    query.fr = from; // in utc.
     query.to = to; // in utc.
   }
 
   getQuery(groupByDate=false) {
     let query = {};
-    query.type = this.state.type.value;
-    query.eventsCondition = this.state.condition.value;
+    query.ty = this.state.type.value;
+    query.ec = this.state.condition.value;
     // event_occurrence supports only any_given_event.
-    if (query.type == TYPE_EVENT_OCCURRENCE) {
-      query.eventsCondition = COND_ANY_GIVEN_EVENT;
+    if (query.ty == TYPE_EVENT_OCCURRENCE) {
+      query.ec = COND_ANY_GIVEN_EVENT;
     }
     
     if (this.state.resultDateRange.length == 0)
@@ -293,15 +293,15 @@ class Query extends Component {
     
     this.setQueryDuration(query);
 
-    query.eventsWithProperties = []
+    query.ewp = []
     for(let ei=0; ei < this.state.events.length; ei++) {
       let event = this.state.events[ei];
       
       if (event.name == "") continue;
       
       let ewp = {};
-      ewp.name = event.name;
-      ewp.properties = [];
+      ewp.na = event.name;
+      ewp.pr = [];
 
       for(let pi=0; pi < event.properties.length; pi++) {
         let property = event.properties[pi];
@@ -316,31 +316,31 @@ class Query extends Component {
               !isNumber(property.value))
               continue;
 
-            cProperty.entity = property.entity;
-            cProperty.property = property.name;
-            cProperty.operator = property.op;
-            cProperty.value = property.value;
-            cProperty.type = property.valueType; 
-            ewp.properties.push(cProperty);
+            cProperty.en = property.entity;
+            cProperty.pr = property.name;
+            cProperty.op = property.op;
+            cProperty.va = property.value;
+            cProperty.ty = property.valueType; 
+            ewp.pr.push(cProperty);
         }
       }
-      query.eventsWithProperties.push(ewp)
+      query.ewp.push(ewp)
     }
 
-    query.groupByProperties = [];
+    query.gbp = [];
     for(let i=0; i < this.state.groupBys.length; i++) {
       let groupBy = this.state.groupBys[i];
       let cGroupBy = {};
 
       if (groupBy.name != '' && groupBy.type != '') {
-        cGroupBy.property = groupBy.name;
-        cGroupBy.entity = groupBy.type;
-        query.groupByProperties.push(cGroupBy)
+        cGroupBy.pr = groupBy.name;
+        cGroupBy.en = groupBy.type;
+        query.gbp.push(cGroupBy)
       }
     }
 
     if (groupByDate) {
-      query.groupByTimestamp = true;
+      query.gbp = true;
     }
   
     console.debug(query);

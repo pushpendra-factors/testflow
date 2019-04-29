@@ -14,34 +14,34 @@ import (
 
 type QueryProperty struct {
 	// Entity: user or event.
-	Entity string `json:"entity"`
+	Entity string `json:"en"`
 	// Type: categorical or numerical
-	Type     string `json:"type"`
-	Property string `json:"property"`
-	Operator string `json:"operator"`
-	Value    string `json:"value"`
+	Type     string `json:"ty"`
+	Property string `json:"pr"`
+	Operator string `json:"op"`
+	Value    string `json:"va"`
 }
 
 type QueryGroupByProperty struct {
 	// Entity: user or event.
-	Entity   string `json:"entity"`
-	Property string `json:"property"`
-	Index    int    `json:"index"`
+	Entity   string `json:"en"`
+	Property string `json:"pr"`
+	Index    int    `json:"in"`
 }
 
 type QueryEventWithProperties struct {
-	Name       string          `json:"name"`
-	Properties []QueryProperty `json:"properties"`
+	Name       string          `json:"na"`
+	Properties []QueryProperty `json:"pr"`
 }
 
 type Query struct {
-	Type                 string                     `json:"type"`
-	EventsCondition      string                     `json:"eventsCondition"` // all or any
-	EventsWithProperties []QueryEventWithProperties `json:"eventsWithProperties"`
-	GroupByProperties    []QueryGroupByProperty     `json:"groupByProperties"`
-	GroupByTimestamp     bool                       `json:"groupByTimestamp"`
-	Timezone             string                     `json:"timezone"`
-	From                 int64                      `json:"from"`
+	Type                 string                     `json:"ty"`
+	EventsCondition      string                     `json:"ec"` // all or any
+	EventsWithProperties []QueryEventWithProperties `json:"ewp"`
+	GroupByProperties    []QueryGroupByProperty     `json:"gbp"`
+	GroupByTimestamp     bool                       `json:"gbt"`
+	Timezone             string                     `json:"tz"`
+	From                 int64                      `json:"fr"`
 	To                   int64                      `json:"to"`
 }
 
