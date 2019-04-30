@@ -100,6 +100,12 @@ func createProjectDependencies(project *Project) (*Project, int) {
 		return nil, errCode
 	}
 
+	// Associated personal dashboard creation.
+	if _, errCode := CreatePersonalDashboard(project.ID); errCode != http.StatusCreated {
+		log.WithFields(log.Fields{"project": project}).Error("Creating personal dashboard failed")
+		return nil, errCode
+	}
+
 	return project, http.StatusCreated
 }
 

@@ -1,6 +1,11 @@
 import React, { Component } from 'react';
+import { connect } from 'react-redux';
+import { bindActionCreators } from 'redux';
 import { Row, Col, Card, CardHeader, CardBody } from 'reactstrap';
-import {Bar} from 'react-chartjs-2';
+import { fetchDashboards } from '../../actions/dashboardActions';
+
+// To be removed.
+import { Bar } from 'react-chartjs-2';
 
 const data = {
   labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'January', 'February', 'March', 'April', 'May', 'June', 'July'],
@@ -17,6 +22,18 @@ const data = {
   ]
 };
 
+const mapStateToProps = store => {
+  return {
+    currentProjectId: store.projects.currentProjectId,
+    dashboards: store.dashboards.dashboards,
+  };
+}
+
+const mapDispatchToProps = dispatch => {
+  return bindActionCreators({ 
+    fetchDashboards
+  }, dispatch);
+}
 
 class Dashboard extends Component {
   constructor(props) {
@@ -25,11 +42,15 @@ class Dashboard extends Component {
       this.state = {}
   }
 
+  componentWillMount() {
+    this.props.fetchDashboards(this.props.currentProjectId);
+  }
+
   render() {
     return (
       <div className='fapp-content' style={{marginLeft: '1rem', marginRight: '1rem'}}>
         <Row class="fapp-select">
-          <Col md={{ size: 6 }} style={{padding: '0 15px'}}>
+          <Col md={{ size: 6 }}  style={{padding: '0 15px'}}>
             <Card className='fapp-bordered-card' style={{marginTop: '15px'}}>
               <CardHeader>
                 <strong>Chart Title</strong>
@@ -86,4 +107,4 @@ class Dashboard extends Component {
   }
 }
 
-export default Dashboard;
+export default connect(mapStateToProps, mapDispatchToProps)(Dashboard);

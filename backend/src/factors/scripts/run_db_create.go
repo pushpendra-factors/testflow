@@ -223,4 +223,31 @@ func main() {
 		log.Info("project_agent_mappings table is associated with agents table.")
 	}
 
+	// Create dashboard table.
+	if err := db.CreateTable(&M.Dashboard{}).Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("dashboard table creation failed.")
+	} else {
+		log.Info("Created dashboard table")
+	}
+
+	// Add foreign key constraints.
+	if err := db.Model(&M.Dashboard{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("dashboard table association with projects table failed.")
+	} else {
+		log.Info("dashboard table is associated with projects table.")
+	}
+
+	// Create dashboard_unit table.
+	if err := db.CreateTable(&M.DashboardUnit{}).Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("dashboard_unit table creation failed.")
+	} else {
+		log.Info("Created dashboard_unit table")
+	}
+
+	// Add foreign key constraints.
+	if err := db.Model(&M.DashboardUnit{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("dashboard_unit table association with projects table failed.")
+	} else {
+		log.Info("dashboard_unit table is associated with projects table.")
+	}
 }
