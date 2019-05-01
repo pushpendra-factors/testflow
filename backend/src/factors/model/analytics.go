@@ -853,27 +853,27 @@ func getEncodedKeyForCols(cols []interface{}) string {
 	return key
 }
 
-// Validates and returns errMsg which is used as response.
-func validateQuery(query Query) string {
+// IsValidQuery Validates and returns errMsg which is used as response.
+func IsValidQuery(query *Query) (bool, string) {
 	if query.Type != QueryTypeEventsOccurrence &&
 		query.Type != QueryTypeUniqueUsers {
-		return "Unknown query type given"
+		return false, "Invalid query type given"
 	}
 
 	if query.EventsCondition != EventCondAllGivenEvent &&
 		query.EventsCondition != EventCondAnyGivenEvent {
-		return "Unknown events condition given"
+		return false, "Invalid events condition given"
 	}
 
 	if len(query.EventsWithProperties) == 0 {
-		return "No events to process"
+		return false, "No events to process"
 	}
 
 	if query.From == 0 || query.To == 0 {
-		return "Invalid query time range"
+		return false, "Invalid query time range"
 	}
 
-	return ""
+	return true, ""
 }
 
 // BuildQuery - Dispatches corresponding build method based on attributes.
@@ -997,8 +997,8 @@ func LimitQueryResults(groupPropsLen int, groupByTimestamp bool,
 func Analyze(projectId uint64, query Query) ([]string, [][]interface{}, int, string) {
 	db := C.GetServices().Db
 
-	errMsg := validateQuery(query)
-	if errMsg != "" {
+	valid, errMsg := IsValidQuery(&query)
+	if !valid {
 		return nil, nil, http.StatusBadRequest, errMsg
 	}
 

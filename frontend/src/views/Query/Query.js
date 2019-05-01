@@ -15,7 +15,7 @@ import {
   fetchProjectEvents,
   runQuery,
 } from '../../actions/projectsActions';
-import { fetchDashboards } from '../../actions/dashboardActions';
+import { fetchDashboards, createDashboardUnit } from '../../actions/dashboardActions';
 import Event from './Event';
 import GroupBy from './GroupBy';
 import { trimQuotes, removeElementByIndex, firstToUpperCase, getSelectedOpt, isNumber, createSelectOpts } from '../../util'
@@ -70,9 +70,9 @@ const DEFINED_DATE_RANGES = createStaticRanges([
 
 const ERROR_NO_EVENT = 'No events given. Please add atleast one event by clicking +Event button.';
 
-const PRESENTATION_TABLE = 'table';
-const PRESENTATION_LINE =  'line';
-const PRESENTATION_BAR = 'bar';
+const PRESENTATION_TABLE = 'pt';
+const PRESENTATION_LINE =  'pl';
+const PRESENTATION_BAR = 'pb';
 
 const DEFAULT_PRESENTATION = PRESENTATION_TABLE;
 
@@ -100,6 +100,7 @@ const mapDispatchToProps = dispatch => {
   return bindActionCreators({ 
     fetchProjectEvents,
     fetchDashboards,
+    createDashboardUnit,
   }, dispatch)
 }
 
@@ -617,6 +618,25 @@ class Query extends Component {
     }
   }
 
+  addToDashboard = (event) => {
+    let dashboardId = event.currentTarget.getAttribute('value');
+
+    if (this.state.selectedPresentation == null) {
+      console.error('Invalid presentation');
+      return;
+    }
+    let presentation = this.state.selectedPresentation;
+    let query = this.getQuery(presentation === PRESENTATION_LINE);
+    let payload = {
+      presentation: presentation,
+      query: query,
+      title: "Chart Title", // Use modal to get chart title from user.
+    };
+    this.props.createDashboardUnit(this.props.currentProjectId, dashboardId, payload)
+      .then(console.log)
+      .catch(console.error);
+  }
+
   render() {
     if (!this.isLoaded()) return <Loading />;
 
@@ -665,11 +685,9 @@ class Query extends Component {
     for(let i=0; i<this.props.dashboards.length; i++){
       let dashboard = this.props.dashboards[i];
       if (dashboard) {
-        dashboardsDropdown.push(<DropdownItem>{dashboard.name}</DropdownItem>)
+        dashboardsDropdown.push(<DropdownItem onClick={this.addToDashboard} value={dashboard.id}>{dashboard.name}</DropdownItem>)
       }
     }
-
-    console.log(dashboardsDropdown);
 
     return (
       <div className='fapp-content' style={{marginLeft: '2rem', marginRight: '2rem'}}>

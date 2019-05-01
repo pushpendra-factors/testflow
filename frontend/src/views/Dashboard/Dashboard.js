@@ -4,11 +4,12 @@ import { bindActionCreators } from 'redux';
 import { Row, Col, Card, CardHeader, CardBody } from 'reactstrap';
 import Select from 'react-select';
 
-import { fetchDashboards } from '../../actions/dashboardActions';
+import { fetchDashboards, fetchDashboardUnits } from '../../actions/dashboardActions';
+import { createSelectOpts, makeSelectOpt } from '../../util';
+import Loading from '../../loading';
 
 // To be removed.
 import { Bar } from 'react-chartjs-2';
-import { createSelectOpts, getSelectedOpt, makeSelectOpt } from '../../util';
 
 const data = {
   labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'January', 'February', 'March', 'April', 'May', 'June', 'July'],
@@ -29,12 +30,14 @@ const mapStateToProps = store => {
   return {
     currentProjectId: store.projects.currentProjectId,
     dashboards: store.dashboards.dashboards,
+    dashboardUnits: store.dashboards.dashboardUnits,
   };
 }
 
 const mapDispatchToProps = dispatch => {
   return bindActionCreators({ 
-    fetchDashboards
+    fetchDashboards,
+    fetchDashboardUnits,
   }, dispatch);
 }
 
@@ -43,12 +46,21 @@ class Dashboard extends Component {
       super(props);
 
       this.state = {
-        selectedDashboard: null
+        loaded: false,
+
+        selectedDashboard: null,
+        loadingDashboard: false,
       }
   }
 
   componentWillMount() {
-    this.props.fetchDashboards(this.props.currentProjectId);
+    this.props.fetchDashboards(this.props.currentProjectId)
+      .then(() => {
+        let selectedDashboard = this.getSelectedDashboard();
+        this.props.fetchDashboardUnits(this.props.currentProjectId, selectedDashboard.value)
+          .then(() => this.setState({ loaded: true }))
+          .catch(console.error);
+      })
   }
 
   getDashboardsOptSrc() {
@@ -61,15 +73,19 @@ class Dashboard extends Component {
   }
 
   onSelectDashboard = (option) => {
-    this.setState({selectedDashboard: option});
+    this.setState({ selectedDashboard: option, loadingDashboard: true });
+    this.props.fetchDashboardUnits(this.props.currentProjectId, option.value)
+      .then(() => this.setState({ loadingDashboard: false }))
+      .catch(console.error);
   }
 
   getSelectedDashboard() {
     if (this.state.selectedDashboard != null) 
       return this.state.selectedDashboard;
 
-    if (this.props.dashboards && 
-      this.props.dashboards.length > 0) {
+    // inits selector with first dashboard.
+    if (this.props.dashboards  
+      && this.props.dashboards.length > 0) {
       return makeSelectOpt(this.props.dashboards[0].id, 
         this.props.dashboards[0].name);
     }
@@ -77,7 +93,71 @@ class Dashboard extends Component {
     return null;
   }
 
+  renderDashboard() {
+    if (this.state.loadingDashboard) return <Loading paddingTop='10%' />
+
+    return <Row class="fapp-select">
+      <Col md={{ size: 6 }}  style={{padding: '0 15px'}}>
+        <Card className='fapp-bordered-card' style={{marginTop: '15px'}}>
+          <CardHeader>
+            <strong>Chart Title</strong>
+          </CardHeader>
+          <CardBody style={{padding: '1.5rem 0.5rem'}}>
+            <div style={{height: '250px'}}>
+              <Bar
+                data={data}
+                options={{
+                  maintainAspectRatio: false
+                }}
+              />
+            </div>
+          </CardBody>
+        </Card>
+      </Col>
+      <Col md={{ size: 6 }} style={{padding: '0 15px'}}>
+        <Card className='fapp-bordered-card' style={{marginTop: '15px'}}>
+          <CardHeader>
+            <strong>Chart Title</strong>
+          </CardHeader>
+          <CardBody style={{padding: '1.5rem 0.5rem'}}>
+            <div style={{height: '250px'}}>
+              <Bar
+                data={data}
+                options={{
+                  maintainAspectRatio: false
+                }}
+              />
+            </div>
+          </CardBody>
+        </Card>
+      </Col>
+      <Col md={{ size: 6 }} style={{padding: '0 15px'}}>
+        <Card className='fapp-bordered-card' style={{marginTop: '15px'}}>
+          <CardHeader>
+            <strong>Chart Title</strong>
+          </CardHeader>
+          <CardBody style={{padding: '1.5rem 0.5rem'}}>
+            <div style={{height: '250px'}}>
+              <Bar
+                data={data}
+                options={{
+                  maintainAspectRatio: false
+                }}
+              />
+            </div>
+          </CardBody>
+        </Card>
+      </Col>
+    </Row>
+  }
+
+  isLoading() {
+    return !this.state.loaded;
+  }
+
   render() {
+    if (this.isLoading()) return <Loading paddingTop='20%'/>;
+
     return (
       <div className='fapp-content' style={{marginLeft: '1rem', marginRight: '1rem'}}>
         <div class="fapp-select" style={{width: '300px', marginBottom: '20px'}}>
@@ -89,60 +169,7 @@ class Dashboard extends Component {
             value={this.getSelectedDashboard()}
           />
         </div>
-
-        <Row class="fapp-select">
-          <Col md={{ size: 6 }}  style={{padding: '0 15px'}}>
-            <Card className='fapp-bordered-card' style={{marginTop: '15px'}}>
-              <CardHeader>
-                <strong>Chart Title</strong>
-              </CardHeader>
-              <CardBody style={{padding: '1.5rem 0.5rem'}}>
-                <div style={{height: '250px'}}>
-                  <Bar
-                    data={data}
-                    options={{
-                      maintainAspectRatio: false
-                    }}
-                  />
-                </div>
-              </CardBody>
-            </Card>
-          </Col>
-          <Col md={{ size: 6 }} style={{padding: '0 15px'}}>
-            <Card className='fapp-bordered-card' style={{marginTop: '15px'}}>
-              <CardHeader>
-                <strong>Chart Title</strong>
-              </CardHeader>
-              <CardBody style={{padding: '1.5rem 0.5rem'}}>
-                <div style={{height: '250px'}}>
-                  <Bar
-                    data={data}
-                    options={{
-                      maintainAspectRatio: false
-                    }}
-                  />
-                </div>
-              </CardBody>
-            </Card>
-          </Col>
-          <Col md={{ size: 6 }} style={{padding: '0 15px'}}>
-            <Card className='fapp-bordered-card' style={{marginTop: '15px'}}>
-              <CardHeader>
-                <strong>Chart Title</strong>
-              </CardHeader>
-              <CardBody style={{padding: '1.5rem 0.5rem'}}>
-                <div style={{height: '250px'}}>
-                  <Bar
-                    data={data}
-                    options={{
-                      maintainAspectRatio: false
-                    }}
-                  />
-                </div>
-              </CardBody>
-            </Card>
-          </Col>
-        </Row>
+        { this.renderDashboard() }
       </div>
     );
   }
