@@ -15,6 +15,7 @@ import {
   fetchProjectEvents,
   runQuery,
 } from '../../actions/projectsActions';
+import { fetchDashboards } from '../../actions/dashboardActions';
 import Event from './Event';
 import GroupBy from './GroupBy';
 import { trimQuotes, removeElementByIndex, firstToUpperCase, getSelectedOpt, isNumber, createSelectOpts } from '../../util'
@@ -88,6 +89,7 @@ const mapStateToProps = store => {
     currentProjectId: store.projects.currentProjectId,
     projects: store.projects.projects,
     eventNames: store.projects.currentProjectEventNames,
+    dashboards: store.dashboards.dashboards,
 
     eventPropertiesMap: store.projects.queryEventPropertiesMap,
     eventPropertyValuesMap: store.projects.queryEventPropertyValuesMap
@@ -96,7 +98,8 @@ const mapStateToProps = store => {
 
 const mapDispatchToProps = dispatch => {
   return bindActionCreators({ 
-    fetchProjectEvents
+    fetchProjectEvents,
+    fetchDashboards,
   }, dispatch)
 }
 
@@ -133,6 +136,8 @@ class Query extends Component {
         this.initWithAnEventRow();
       })
       .catch((r) => this.setState({ eventNamesLoaded: true, eventNamesLoadError: r.paylaod }));
+
+    this.props.fetchDashboards(this.props.currentProjectId);
   }
 
   initWithAnEventRow() {
@@ -656,6 +661,16 @@ class Query extends Component {
 
     console.debug('Query State : ', this.state);
 
+    let dashboardsDropdown = [];
+    for(let i=0; i<this.props.dashboards.length; i++){
+      let dashboard = this.props.dashboards[i];
+      if (dashboard) {
+        dashboardsDropdown.push(<DropdownItem>{dashboard.name}</DropdownItem>)
+      }
+    }
+
+    console.log(dashboardsDropdown);
+
     return (
       <div className='fapp-content' style={{marginLeft: '2rem', marginRight: '2rem'}}>
         <div className='fapp-error' style={{marginBottom: '15px'}} hidden={!this.state.topError}>
@@ -741,7 +756,7 @@ class Query extends Component {
                     Dashboard
                   </DropdownToggle>
                   <DropdownMenu right>
-                    <DropdownItem>My Dashboard</DropdownItem>
+                    { dashboardsDropdown }
                   </DropdownMenu>
                 </ButtonDropdown>
               </ButtonToolbar>

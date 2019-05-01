@@ -1,4 +1,6 @@
-export default function reducer(state={}, action) {
+export default function reducer(state={
+  dashboards: []
+}, action) {
 
     switch (action.type) {
       case "FETCH_PROJECT_DASHBOARDS_FULFILLED": {
