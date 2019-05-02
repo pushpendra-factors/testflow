@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import { Bar } from 'react-chartjs-2';
 import { CustomTooltips } from '@coreui/coreui-plugin-chartjs-custom-tooltips';
 
-import { getChartScaleWithSpace, firstToUpperCase } from '../../util';
+import { getChartScaleWithSpace, firstToUpperCase, isSingleCountResult } from '../../util';
 import { HEADER_COUNT } from './common';
 
 const barBackgroundColors = ['rgba(75,192,192,0.4)', 'rgba(255,99,132,0.2)'];
@@ -13,6 +13,22 @@ const barHoverBorderColors = ['rgba(220,220,220,1)', 'rgba(255,99,132,0.4)'];
 class BarChart extends Component {
   constructor(props) {
     super(props);
+  }
+
+  sortByLabel(labels, counts) {
+    let cLabels = [ ...labels ];
+    let cCounts = [];
+    let labelCountLookup = {}
+    for (let i in cLabels) {
+      labelCountLookup[cLabels[i]] = counts[i]
+    }
+
+    cLabels.sort();
+    for (let i in cLabels) {
+      cCounts.push(labelCountLookup[cLabels[i]]);
+    }
+
+    return { labels: cLabels, counts: cCounts };
   }
 
   getBarsAndScaleFromResult(result) {
@@ -47,8 +63,9 @@ class BarChart extends Component {
       throw new Error("Invalid no.of result columns for vertical bar.");
     }
 
-    bars.datasets = [{ data: data  }];
-    bars.labels = labels;
+    let labelsCounts = this.sortByLabel(labels, data);
+    bars.datasets = [{ data: labelsCounts.counts  }];
+    bars.labels = labelsCounts.labels;
     bars.y_label = "";
 
     return { bars: bars, maxScale: maxScale };
