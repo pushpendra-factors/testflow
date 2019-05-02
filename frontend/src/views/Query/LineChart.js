@@ -65,8 +65,11 @@ class LineChart extends Component {
       }
       
       lines[key].counts.push(row[countIndex]);
-      lines[key].timestamps.push(moment(row[dateIndex]).format('MMM DD, YYYY'));
 
+      let isToday = moment(row[dateIndex]).isSame(moment(), 'year');
+      let formatStr = isToday ? 'MMM DD' : 'MMM DD, YYYY';
+      lines[key].timestamps.push(moment(row[dateIndex]).format(formatStr));
+      
       if (maxScale < row[countIndex]) maxScale = row[countIndex];
     }
     
