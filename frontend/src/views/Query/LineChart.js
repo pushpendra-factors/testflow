@@ -75,6 +75,7 @@ class LineChart extends Component {
 
   render() {
     let result = this.props.queryResult;
+    let displayLegend = this.props.legend === false ? false : true;
 
     let countIndex = result.headers.indexOf(HEADER_COUNT);
     if (countIndex == -1) { 
@@ -96,6 +97,9 @@ class LineChart extends Component {
     let options = {
       maintainAspectRatio: false,
       responsive: true,
+      legend: {
+        display: displayLegend
+      },
       scales: {
         yAxes: [{
           display: true,

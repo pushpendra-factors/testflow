@@ -9,8 +9,10 @@ import BarChart from '../Query/BarChart';
 import LineChart from '../Query/LineChart';
 import TableChart from '../Query/TableChart';
 import { PRESENTATION_BAR, PRESENTATION_LINE, 
-  PRESENTATION_TABLE, PRESENTATION_CARD } from '../Query/common';
+  PRESENTATION_TABLE, PRESENTATION_CARD, HEADER_COUNT, HEADER_DATE } from '../Query/common';
 import { isSingleCountResult } from '../../util';
+
+const LINE_LEGEND_DISPLAY_LIMIT = 10;
 
 const mapStateToProps = store => {
   return {
@@ -34,6 +36,27 @@ class DashboardUnit extends Component {
     }
   }
 
+  showLineChartLegend(result) {
+    let isMultiGroupBy = result.headers.length > 3;
+    
+    let uniqueGroups = [];
+    let countIndex = result.headers.indexOf(HEADER_COUNT);
+    let dateIndex = result.headers.indexOf(HEADER_DATE);
+    for(let r=0; r<result.rows.length; r++) {
+      for (let c=0; c<result.rows[r].length; c++) {
+        if (c != countIndex 
+          && c != dateIndex 
+          && uniqueGroups.indexOf(result.rows[r][c]) == -1)
+            uniqueGroups.push(result.rows[r][c]);
+      }
+    }
+
+    if (uniqueGroups.length < LINE_LEGEND_DISPLAY_LIMIT && isMultiGroupBy) return false;
+    if (uniqueGroups.length > LINE_LEGEND_DISPLAY_LIMIT) return false;
+
+    return true;
+  }
+
   setPresentation(result) {
     let presentation = null;
     if (this.props.data.presentation === PRESENTATION_BAR) {
@@ -41,7 +64,7 @@ class DashboardUnit extends Component {
     }
 
     if (this.props.data.presentation === PRESENTATION_LINE) {
-      presentation = <LineChart queryResult={result} />
+      presentation = <LineChart legend={this.showLineChartLegend(result)} queryResult={result} />
     }
 
     if (this.props.data.presentation === PRESENTATION_TABLE) {
