@@ -1,6 +1,6 @@
 export default function reducer(state={
   dashboards: [],
-  dashboardUnits: [],
+  units: [],
 }, action) {
 
   switch (action.type) { 
@@ -10,7 +10,7 @@ export default function reducer(state={
     case "FETCH_DASHBOARD_UNITS_FULFILLED": {
       return {
         ...state,
-        dashboardUnits: action.payload
+        units: action.payload
       }
     }
   }

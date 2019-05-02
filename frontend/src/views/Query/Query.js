@@ -660,7 +660,7 @@ class Query extends Component {
                 </ButtonGroup>
                 <ButtonDropdown isOpen={this.state.showDashboardsList} toggle={this.toggleDashboardsList} >
                   <DropdownToggle caret outline color="primary">
-                    Dashboard
+                    Add to dashboard
                   </DropdownToggle>
                   <DropdownMenu right>
                     { dashboardsDropdown }

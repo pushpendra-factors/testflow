@@ -13,7 +13,7 @@ const mapStateToProps = store => {
   return {
     currentProjectId: store.projects.currentProjectId,
     dashboards: store.dashboards.dashboards,
-    dashboardUnits: store.dashboards.dashboardUnits,
+    dashboardUnits: store.dashboards.units,
   };
 }
 
