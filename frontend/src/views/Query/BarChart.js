@@ -1,7 +1,9 @@
 import React, { Component } from 'react';
 import { Bar } from 'react-chartjs-2';
-import { getChartScaleWithSpace } from '../../util';
 import { CustomTooltips } from '@coreui/coreui-plugin-chartjs-custom-tooltips';
+
+import { getChartScaleWithSpace, firstToUpperCase } from '../../util';
+import { HEADER_COUNT } from './common';
 
 const barBackgroundColors = ['rgba(75,192,192,0.4)', 'rgba(255,99,132,0.2)'];
 const barBorderColors = ['rgba(75,192,192,1)', 'rgba(255,99,132,1)'];
@@ -13,9 +15,49 @@ class BarChart extends Component {
     super(props);
   }
 
+  getBarsAndScaleFromResult(result) {
+    let bars = {};
+
+    let countIndex = result.headers.indexOf(HEADER_COUNT);
+    // Need a count and a group col for bar.
+    if (countIndex == -1) { 
+      throw new Error('Invalid query result for bar chart.');
+    }
+    
+    let maxScale = 0;
+    let data = [], labels = [];
+    if (result.headers.length == 2) {
+      // Other col apart from count is group col.
+      let groupIndex = countIndex == 0 ? 1 : 0;
+      for(let i=0; i<Object.keys(result.rows).length; i++) {
+        let cols = result.rows[i.toString()];
+        if (cols != undefined && cols[countIndex] != undefined) {
+          data.push(cols[countIndex]);
+          labels.push(cols[groupIndex]);
+          if (maxScale < cols[countIndex]) maxScale = cols[countIndex];
+        }
+      }
+      bars.x_label = firstToUpperCase(result.headers[groupIndex]);
+    } else if (result.headers.length == 1) {
+      let col = result.rows["0"];
+      data.push(col[countIndex]);
+      if (maxScale < col[countIndex]) maxScale = col[countIndex];
+      bars.x_label = "";
+    } else {
+      throw new Error("Invalid no.of result columns for vertical bar.");
+    }
+
+    bars.datasets = [{ data: data  }];
+    bars.labels = labels;
+    bars.y_label = "";
+
+    return { bars: bars, maxScale: maxScale };
+  }
+
   render() {
-    var chartData = this.props.bars;
+    var barsAndScale = this.getBarsAndScaleFromResult(this.props.queryResult);
     let displayLegend = this.props.legend == false ? false : true;
+    var chartData = barsAndScale.bars;
 
     var chartOptions = {
       legend: {
@@ -39,7 +81,7 @@ class BarChart extends Component {
           display: true,
           ticks: {
             beginAtZero: true,
-            max: getChartScaleWithSpace(this.props.maxYScale) 
+            max: getChartScaleWithSpace(barsAndScale.maxScale) 
           }
         }],
       },
@@ -68,7 +110,7 @@ class BarChart extends Component {
       chartOptions.scales.yAxes[0].scaleLabel.labelString = chartData.y_label
     }
     
-    return <Bar data={bar} options={chartOptions} />
+    return <Bar data={bar} options={chartOptions} /> 
   }
 
 }

@@ -1,6 +1,9 @@
 import React, { Component } from 'react'
 import { Line } from 'react-chartjs-2';
+import moment from 'moment';
+
 import { getColor, getChartScaleWithSpace } from '../../util';
+import { HEADER_COUNT, HEADER_DATE } from './common';
 
 class LineChart extends Component {
   constructor(props) {
@@ -33,9 +36,63 @@ class LineChart extends Component {
     return dataset;
   }
 
-  
+  getLinesByGroupsIfExist(rows, countIndex, dateIndex) { 
+    let lines = {}
+    let keySep = " / ";
+    let maxScale = 0;
+
+    for(let i=0; i<Object.keys(rows).length; i++) {
+      let row = rows[i.toString()];
+      if (row == undefined) continue;
+
+      // All group properties joined together 
+      // with a seperator is a key.
+      let key = "";
+      for(let c=0; c < row.length; c++) {
+        if(c != countIndex && c != dateIndex) {
+          let prop = row[c];
+          if (key === "") {
+            key = prop;
+            continue;
+          }
+          key = key + keySep + prop;
+        }
+      }
+      
+      // init.
+      if (!(key in lines)) {
+        lines[key] = { counts: [], timestamps: [] }
+      }
+      
+      lines[key].counts.push(row[countIndex]);
+      lines[key].timestamps.push(moment(row[dateIndex]).format('MMM DD, YYYY'));
+
+      if (maxScale < row[countIndex]) maxScale = row[countIndex];
+    }
+    
+    return { lines: lines, maxScale: maxScale };
+  }
 
   render() {
+    let result = this.props.queryResult;
+
+    let countIndex = result.headers.indexOf(HEADER_COUNT);
+    if (countIndex == -1) { 
+        throw new Error('No counts to plot as lines.');
+    }
+
+    let dateIndex = result.headers.indexOf(HEADER_DATE);
+    if (dateIndex == -1) { 
+        throw new Error('No dates to plot as lines.');
+    }
+
+    let lines = [];
+    let groups = this.getLinesByGroupsIfExist(result.rows, countIndex, dateIndex);
+    for(let key in groups.lines) {
+      let line = { title: key, xAxisLabels: groups.lines[key].timestamps, yAxisLabels: groups.lines[key].counts };
+      lines.push(line);
+    }
+
     let options = {
       maintainAspectRatio: false,
       responsive: true,
@@ -44,13 +101,12 @@ class LineChart extends Component {
           display: true,
           ticks: {
             beginAtZero: true,
-            max: getChartScaleWithSpace(this.props.maxYScale)
+            max: getChartScaleWithSpace(groups.maxScale) 
           }
         }]
       }
     };
 
-    let lines = this.props.lines;
     let datasets = [];
     let plotXAxisLabels = [];
 

@@ -11,6 +11,8 @@ import moment from 'moment';
 
 import LineChart from './LineChart';
 import BarChart from './BarChart';
+import TableChart from './TableChart'
+import { PRESENTATION_BAR, PRESENTATION_LINE, PRESENTATION_TABLE } from './common';
 import { 
   fetchProjectEvents,
   runQuery,
@@ -18,7 +20,7 @@ import {
 import { fetchDashboards, createDashboardUnit } from '../../actions/dashboardActions';
 import Event from './Event';
 import GroupBy from './GroupBy';
-import { trimQuotes, removeElementByIndex, firstToUpperCase, getSelectedOpt, isNumber, createSelectOpts } from '../../util'
+import { removeElementByIndex, getSelectedOpt, isNumber, createSelectOpts } from '../../util'
 import TableBarChart from './TableBarChart';
 import Loading from '../../loading';
 import factorsai from '../../factorsaiObj';
@@ -69,10 +71,6 @@ const DEFINED_DATE_RANGES = createStaticRanges([
 ]);
 
 const ERROR_NO_EVENT = 'No events given. Please add atleast one event by clicking +Event button.';
-
-const PRESENTATION_TABLE = 'pt';
-const PRESENTATION_LINE =  'pl';
-const PRESENTATION_BAR = 'pb';
 
 const DEFAULT_PRESENTATION = PRESENTATION_TABLE;
 
@@ -431,129 +429,20 @@ class Query extends Component {
   }
 
   getResultAsTable() {
-    let result = this.state.result;
-    let headers = result.headers.map((h, i) => { return <th key={'header_'+i}>{ h }</th> });
-    let rows = [];
-
-    for(let i=0; i<Object.keys(result.rows).length; i++) {
-      let cols = result.rows[i.toString()];
-      if (cols != undefined) {
-        let tds = cols.map((c) => { return <td> { trimQuotes(c) } </td> });
-        rows.push(<tr>{tds}</tr>);
-      }
-    }
-
-    return (
-      <Table className='fapp-table animated fadeIn'> 
-        <thead>
-          <tr> { headers } </tr>
-        </thead>
-        <tbody>
-          { rows }
-        </tbody>
-      </Table>
-    );
-  }
-
-  getLinesByGroupsIfExist(rows, countIndex, dateIndex) {
-    let lines = {}
-    let keySep = " / ";
-    let maxScale = 0;
-
-    for(let i=0; i<Object.keys(rows).length; i++) {
-      let row = rows[i.toString()];
-      if (row == undefined) continue;
-
-      // All group properties joined together 
-      // with a seperator is a key.
-      let key = "";
-      for(let c=0; c < row.length; c++) {
-        if(c != countIndex && c != dateIndex) {
-          let prop = trimQuotes(row[c]);
-          if (key === "") {
-            key = prop;
-            continue;
-          }
-          key = key + keySep + prop;
-        }
-      }
-      
-      // init.
-      if (!(key in lines)) {
-        lines[key] = { counts: [], timestamps: [] }
-      }
-      
-      lines[key].counts.push(row[countIndex]);
-      lines[key].timestamps.push(moment(row[dateIndex]).format('MMM DD, YYYY'));
-
-      if (maxScale < row[countIndex]) maxScale = row[countIndex];
-    }
-    
-    return { lines: lines, maxScale: maxScale };
+    return <TableChart queryResult={this.state.result} />;
   }
 
   getResultAsLineChart() {
-    let result = this.state.result;
-    let lines = [];
-
-    let countIndex = result.headers.indexOf(HEADER_COUNT);
-    if (countIndex == -1) { 
-      throw new Error('No counts to plot as lines.');
-    }
-  
-    let dateIndex = result.headers.indexOf(HEADER_DATE);
-    if (dateIndex == -1) { 
-      throw new Error('No dates to plot as lines.');
-    }
-      
-    let groups = this.getLinesByGroupsIfExist(result.rows, countIndex, dateIndex);
-    for(let key in groups.lines) {
-      let line = { title: key, xAxisLabels: groups.lines[key].timestamps, yAxisLabels: groups.lines[key].counts };
-      lines.push(line);
-    }
-    
-    return <div style={{height: '450px'}} className='animated fadeIn'> <LineChart lines={lines} maxYScale={groups.maxScale} /> </div>;
+    return <div style={{height: '450px'}} className='animated fadeIn'> 
+      <LineChart queryResult={this.state.result} /> 
+    </div>;
   }
   
 
   getResultAsVerticalBarChart() {
-    let result = this.state.result;
-    let bars = {};
-
-    let countIndex = result.headers.indexOf(HEADER_COUNT);
-    // Need a count and a group col for bar.
-    if (countIndex == -1) { 
-      throw new Error('Invalid query result for bar chart.');
-    }
-    
-    let maxScale = 0;
-    let data = [], labels = [];
-    if (result.headers.length == 2) {
-      // Other col apart from count is group col.
-      let groupIndex = countIndex == 0 ? 1 : 0;
-      for(let i=0; i<Object.keys(result.rows).length; i++) {
-        let cols = result.rows[i.toString()];
-        if (cols != undefined && cols[countIndex] != undefined) {
-          data.push(cols[countIndex]);
-          labels.push(trimQuotes(cols[groupIndex]));
-          if (maxScale < cols[countIndex]) maxScale = cols[countIndex];
-        }
-      }
-      bars.x_label = firstToUpperCase(result.headers[groupIndex]);
-    } else if (result.headers.length == 1) {
-      let col = result.rows["0"];
-      data.push(col[countIndex]);
-      if (maxScale < col[countIndex]) maxScale = col[countIndex];
-      bars.x_label = "";
-    } else {
-      throw new Error("Invalid no.of result columns for vertical bar.");
-    }
-
-    bars.datasets = [{ data: data  }];
-    bars.labels = labels;
-    bars.y_label = "";
-
-    return <div style={{height: '450px'}} className='animated fadeIn'> <BarChart bars={bars} legend={false} maxYScale={maxScale} /> </div>;
+    return <div style={{height: '450px'}} className='animated fadeIn'> 
+      <BarChart queryResult={this.state.result} legend={false} />
+    </div>;
   }
 
   getResultAsTabularBarChart() {
