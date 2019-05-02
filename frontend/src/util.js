@@ -93,3 +93,8 @@ export function getChartScaleWithSpace(scale) {
     buff = buff + multi10; 
     return scale + buff;
 }
+
+export function isSingleCountResult(result) {
+    let rowKeys = Object.keys(result.rows);
+    return rowKeys.length == 1 && result.rows[rowKeys[0]].length == 1;
+}

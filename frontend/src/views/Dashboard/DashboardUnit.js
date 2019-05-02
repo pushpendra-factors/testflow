@@ -8,7 +8,9 @@ import Loading from '../../loading';
 import BarChart from '../Query/BarChart';
 import LineChart from '../Query/LineChart';
 import TableChart from '../Query/TableChart';
-import { PRESENTATION_BAR, PRESENTATION_LINE, PRESENTATION_TABLE } from '../Query/common';
+import { PRESENTATION_BAR, PRESENTATION_LINE, 
+  PRESENTATION_TABLE, PRESENTATION_CARD } from '../Query/common';
+import { isSingleCountResult } from '../../util';
 
 const mapStateToProps = store => {
   return {
@@ -44,6 +46,10 @@ class DashboardUnit extends Component {
 
     if (this.props.data.presentation === PRESENTATION_TABLE) {
       presentation = <TableChart queryResult={result} />
+    }
+
+    if (this.props.data.presentation == PRESENTATION_CARD) {
+      presentation = <TableChart noHeader card queryResult={result} />
     }
 
     this.setState({ presentation: presentation });

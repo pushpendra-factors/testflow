@@ -26,9 +26,10 @@ const (
 	presentationLine  = "pl"
 	presentationBar   = "pb"
 	presentationTable = "pt"
+	presentationCard  = "pc"
 )
 
-var presentations = [...]string{presentationLine, presentationBar, presentationTable}
+var presentations = [...]string{presentationLine, presentationBar, presentationTable, presentationCard}
 
 func isValidDashboardUnit(dashboardUnit *DashboardUnit) (bool, string) {
 	if dashboardUnit.DashboardId == 0 {
@@ -87,7 +88,7 @@ func GetDashboardUnits(projectId uint64, dashboardId uint64) ([]DashboardUnit, i
 		return dashboardUnits, http.StatusInternalServerError
 	}
 
-	err := db.Where("project_id = ? AND dashboard_id = ?",
+	err := db.Order("created_at DESC").Where("project_id = ? AND dashboard_id = ?",
 		projectId, dashboardId).Find(&dashboardUnits).Error
 	if err != nil {
 		log.WithField("project_id", projectId).WithError(err).Error("Failed to get dashboard units.")

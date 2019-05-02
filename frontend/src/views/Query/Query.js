@@ -9,10 +9,11 @@ import 'react-date-range/dist/theme/default.css';
 import { DateRangePicker, createStaticRanges } from 'react-date-range'; 
 import moment from 'moment';
 
+import TableChart from './TableChart'
 import LineChart from './LineChart';
 import BarChart from './BarChart';
-import TableChart from './TableChart'
-import { PRESENTATION_BAR, PRESENTATION_LINE, PRESENTATION_TABLE } from './common';
+import TableBarChart from './TableBarChart';
+import { PRESENTATION_BAR, PRESENTATION_LINE, PRESENTATION_TABLE, PRESENTATION_CARD } from './common';
 import { 
   fetchProjectEvents,
   runQuery,
@@ -20,8 +21,7 @@ import {
 import { fetchDashboards, createDashboardUnit } from '../../actions/dashboardActions';
 import Event from './Event';
 import GroupBy from './GroupBy';
-import { removeElementByIndex, getSelectedOpt, isNumber, createSelectOpts } from '../../util'
-import TableBarChart from './TableBarChart';
+import { removeElementByIndex, getSelectedOpt, isNumber, createSelectOpts, isSingleCountResult } from '../../util'
 import Loading from '../../loading';
 import factorsai from '../../factorsaiObj';
 
@@ -514,7 +514,13 @@ class Query extends Component {
       console.error('Invalid presentation');
       return;
     }
-    let presentation = this.state.selectedPresentation;
+    let presentation = this.state.selectedPresentation; 
+
+    if (presentation === PRESENTATION_TABLE 
+      && isSingleCountResult(this.state.result)) {
+      presentation = PRESENTATION_CARD;
+    }
+
     let query = this.getQuery(presentation === PRESENTATION_LINE);
     let payload = {
       presentation: presentation,
