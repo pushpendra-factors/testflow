@@ -10,7 +10,7 @@ backend/bin/**
 backend/src/github.com/**
 backend/src/golang.org/**
 
-# sdk
+# js sdk
 sdk/javascript/dist
 sdk/javascript/node_modules
 sdk/javascript/npm_package/index.js
@@ -25,5 +25,14 @@ misc/ingest_events/src/github.com/**
 **/.DS_Store
 .vscode
 
-
-
+# Android SDK
+sdk/android/*.iml
+sdk/android/.gradle
+sdk/android/local.properties
+sdk/android/.idea/*
+sdk/android/build/
+sdk/android/captures/
+sdk/android/.externalNativeBuild
+sdk/android/dist/
+# https://stackoverflow.com/questions/28708531/what-does-do-in-a-gitignore-file
+sdk/android/*~
