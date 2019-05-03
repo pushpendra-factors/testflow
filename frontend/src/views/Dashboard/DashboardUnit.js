@@ -153,12 +153,16 @@ class DashboardUnit extends Component {
 
   render() {
     let data = this.props.data;
+    let isCard = this.props.data.presentation === PRESENTATION_CARD;
 
     return (
       <Col md={{ size: this.getColSizeByProps() }}  style={{padding: '0 15px'}}>
         <Card className='fapp-dunit' style={this.getCardStyleByProps()}>
           <CardHeader style={this.getCardHeaderStyleByProps()}>
-            <strong>{ data.title }</strong>
+            <div style={{ textAlign: 'right', marginTop: '-10px', marginRight: '-18px', height: '18px' }}>
+              <strong style={{ fontSize: '15px', cursor: 'pointer', padding: '0 10px', color: isCard ? '#FFF' : '#AAA' }} hidden={!this.props.showClose}>x</strong>
+            </div>
+            <div style={{ marginTop: isCard ? '-10px' : '-5px' }}><strong>{ data.title }</strong></div>
           </CardHeader>
           <CardBody style={this.getCardBodyStyleByProps()}>
             { this.present() }

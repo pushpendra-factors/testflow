@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
-import { Row } from 'reactstrap';
+import { Row, Button } from 'reactstrap';
 import Select from 'react-select';
 import DashboardUnit from './DashboardUnit';
 
@@ -33,7 +33,8 @@ class Dashboard extends Component {
         loaded: false,
 
         selectedDashboard: null,
-        loadingDashboard: false,
+        loadingUnits: false,
+        editDashboard: false,
       }
   }
 
@@ -57,9 +58,9 @@ class Dashboard extends Component {
   }
 
   onSelectDashboard = (option) => {
-    this.setState({ selectedDashboard: option, loadingDashboard: true });
+    this.setState({ selectedDashboard: option, loadingUnits: true });
     this.props.fetchDashboardUnits(this.props.currentProjectId, option.value)
-      .then(() => this.setState({ loadingDashboard: false }))
+      .then(() => this.setState({ loadingUnits: false }))
       .catch(console.error);
   }
 
@@ -77,8 +78,12 @@ class Dashboard extends Component {
     return null;
   }
 
+  isEditable() {
+    return this.props.dashboardUnits && this.props.dashboardUnits.length > 0;
+  }
+
   renderDashboard() {
-    if (this.state.loadingDashboard) return <Loading paddingTop='10%' />
+    if (this.state.loadingUnits) return <Loading paddingTop='10%' />
     let pDashUnits = this.props.dashboardUnits;
 
     let largeUnits = [];
@@ -88,22 +93,32 @@ class Dashboard extends Component {
     for (let i=0; i < pDashUnits.length; i++) {
       let pUnit = pDashUnits[i];
       if (pUnit.presentation && pUnit.presentation === PRESENTATION_CARD) {
-        cardUnits.push(<DashboardUnit card cardIndex={cardIndex} data={pUnit} />)
+        cardUnits.push(<DashboardUnit showClose={this.state.editDashboard} card cardIndex={cardIndex} data={pUnit} />)
         cardIndex++;
       } else {
-        largeUnits.push(<DashboardUnit data={pUnit} />);
+        largeUnits.push(<DashboardUnit showClose={this.state.editDashboard} data={pUnit} />);
       }
     }
       
-
     return <div>
       <Row class="fapp-select"> { cardUnits } </Row>
       <Row class="fapp-select"> { largeUnits } </Row>
     </div>
   }
 
+  toggleEditDashboard = () => {
+    this.setState({ editDashboard: !this.state.editDashboard });
+  }
+
   isLoading() {
     return !this.state.loaded;
+  }
+
+  renderEditButton() {
+    if (!this.isEditable()) return null;
+    let text = this.state.editDashboard ? 'Save' : 'Edit';
+    let color = this.state.editDashboard ? 'success' : 'danger' 
+    return <Button style={{ marginLeft: '10px', height: 'auto', marginBottom: '4px' }} onClick={this.toggleEditDashboard} outline={!this.state.editDashboard} color={color}> { text } </Button>
   }
 
   render() {
@@ -111,14 +126,18 @@ class Dashboard extends Component {
 
     return (
       <div className='fapp-content' style={{marginLeft: '1rem', marginRight: '1rem', paddingTop: '30px' }}>
-        <div class="fapp-select" style={{width: '300px', marginBottom: '45px'}}>
-          <span style={{ fontSize: '11px', color: '#444', fontWeight: '500'}}> Select Dashboard </span>
-          <Select
-            onChange={this.onSelectDashboard}
-            options={createSelectOpts(this.getDashboardsOptSrc())}
-            placeholder='Select a dashboard'
-            value={this.getSelectedDashboard()}
-          />
+        <div style={{ marginBottom: '45px', width: '100%'}}>
+          <div class="fapp-select" style={{ width: '300px', display: 'inline-block' }}>
+            <span style={{ fontSize: '11px', color: '#444', fontWeight: '500'}}> Dashboards </span>
+            <Select
+              onChange={this.onSelectDashboard}
+              options={createSelectOpts(this.getDashboardsOptSrc())}
+              placeholder='Select a dashboard'
+              value={this.getSelectedDashboard()}
+            />
+          </div>
+          <Button style={{ marginLeft: '10px', height: 'auto', marginBottom: '4px' }} outline color='primary'> Create </Button>
+          { this.renderEditButton() }
         </div>
         { this.renderDashboard() }
       </div>

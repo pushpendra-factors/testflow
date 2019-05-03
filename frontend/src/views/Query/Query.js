@@ -732,8 +732,8 @@ class Query extends Component {
               <span style={{display: 'inline-block'}} className='fapp-error' hidden={this.state.addToDashboardMessage == null}>{ this.state.addToDashboardMessage }</span>
             </div>
             <Form >
-              <span class='fapp-label'>Chart Title</span>         
-              <Input className='fapp-input' type="text" placeholder="Enter chart title" onChange={this.setDashboardUnitTitle} />
+              <span class='fapp-label'>Chart title</span>         
+              <Input className='fapp-input' type="text" placeholder="Your chart title" onChange={this.setDashboardUnitTitle} />
             </Form>
           </ModalBody>
           <ModalFooter style={{borderTop: 'none', paddingBottom: '30px', paddingRight: '35px'}}>
