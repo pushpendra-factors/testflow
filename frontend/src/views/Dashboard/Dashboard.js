@@ -8,6 +8,7 @@ import DashboardUnit from './DashboardUnit';
 import { fetchDashboards, fetchDashboardUnits } from '../../actions/dashboardActions';
 import { createSelectOpts, makeSelectOpt } from '../../util';
 import Loading from '../../loading';
+import { PRESENTATION_CARD } from '../Query/common';
 
 const mapStateToProps = store => {
   return {
@@ -78,13 +79,27 @@ class Dashboard extends Component {
 
   renderDashboard() {
     if (this.state.loadingDashboard) return <Loading paddingTop='10%' />
-    
-    let units = [];
     let pDashUnits = this.props.dashboardUnits;
-    for (let i=0; i < pDashUnits.length; i++) 
-      units.push(<DashboardUnit data={pDashUnits[i]} />);
 
-    return <Row class="fapp-select"> { units } </Row>
+    let largeUnits = [];
+    let cardUnits = [];
+
+    let cardIndex = 1;
+    for (let i=0; i < pDashUnits.length; i++) {
+      let pUnit = pDashUnits[i];
+      if (pUnit.presentation && pUnit.presentation === PRESENTATION_CARD) {
+        cardUnits.push(<DashboardUnit card cardIndex={cardIndex} data={pUnit} />)
+        cardIndex++;
+      } else {
+        largeUnits.push(<DashboardUnit data={pUnit} />);
+      }
+    }
+      
+
+    return <div>
+      <Row class="fapp-select"> { cardUnits } </Row>
+      <Row class="fapp-select"> { largeUnits } </Row>
+    </div>
   }
 
   isLoading() {

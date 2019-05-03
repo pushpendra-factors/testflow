@@ -13,6 +13,8 @@ import { PRESENTATION_BAR, PRESENTATION_LINE,
 import { slideUnixTimeWindowToCurrentTime } from '../../util';
 
 const LINE_LEGEND_DISPLAY_LIMIT = 10;
+const CARD_FONT_COLOR = '#FFF';
+const CARD_BACKGROUNDS = ['#63c2de', '#eb9532', '#20a8d8', '#4dbd74', '#f86c6b' ]
 
 const mapStateToProps = store => {
   return {
@@ -55,6 +57,12 @@ class DashboardUnit extends Component {
     if (uniqueGroups.length > LINE_LEGEND_DISPLAY_LIMIT) return false;
 
     return true;
+  }
+
+  getUnitBackground() {
+    let cardIndex = this.props.cardIndex;
+    let poolLength = CARD_BACKGROUNDS.length;
+    return CARD_BACKGROUNDS[cardIndex % poolLength];
   }
 
   setPresentation(result) {
@@ -103,14 +111,43 @@ class DashboardUnit extends Component {
     return this.state.presentation;
   }
 
-  cardStyleByPresentation() {
+  getCardBodyStyleByProps() {
     let style = { padding: '1.5rem 1.5rem', height: '300px' };
 
     if (this.props.data.presentation === PRESENTATION_TABLE) {
       let changes = { padding: '0', 'overflowX': 'scroll' };
       style = { ...style, ...changes };
     }
-    
+
+    if (this.props.data.presentation === PRESENTATION_CARD) {
+      style.height = '150px';
+      style.padding = '0';
+      style.background = this.getUnitBackground();
+      style.color = CARD_FONT_COLOR;
+    }
+
+    return style;
+  }
+
+  getCardHeaderStyleByProps() {
+    if (this.props.data.presentation !== PRESENTATION_CARD) return null;
+    let style = {};
+    style.textAlign = 'center';
+    style.background = this.getUnitBackground();
+    style.color = CARD_FONT_COLOR;
+    return style;
+  }
+
+  getColSizeByProps() {
+    return this.props.card ? 3 : 6;
+  }
+
+  getCardStyleByProps() {
+    let style = { marginBottom: '30px' };
+    if (this.props.data.presentation === PRESENTATION_CARD) {
+      style.border = 'none';
+    }
+
     return style;
   }
 
@@ -118,12 +155,12 @@ class DashboardUnit extends Component {
     let data = this.props.data;
 
     return (
-      <Col md={{ size: 6 }}  style={{padding: '0 15px'}}>
-        <Card className='fapp-dunit' style={{ marginBottom: '30px' }}>
-          <CardHeader>
+      <Col md={{ size: this.getColSizeByProps() }}  style={{padding: '0 15px'}}>
+        <Card className='fapp-dunit' style={this.getCardStyleByProps()}>
+          <CardHeader style={this.getCardHeaderStyleByProps()}>
             <strong>{ data.title }</strong>
           </CardHeader>
-          <CardBody style={this.cardStyleByPresentation()}>
+          <CardBody style={this.getCardBodyStyleByProps()}>
             { this.present() }
           </CardBody>
         </Card>
