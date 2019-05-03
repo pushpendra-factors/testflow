@@ -23,7 +23,10 @@ import {
 import { fetchDashboards, createDashboardUnit } from '../../actions/dashboardActions';
 import Event from './Event';
 import GroupBy from './GroupBy';
-import { removeElementByIndex, getSelectedOpt, isNumber, createSelectOpts, isSingleCountResult } from '../../util'
+import { 
+  removeElementByIndex, getSelectedOpt, isNumber, createSelectOpts, 
+  isSingleCountResult, slideUnixTimeWindowToCurrentTime,
+} from '../../util'
 import Loading from '../../loading';
 import factorsai from '../../factorsaiObj';
 
@@ -275,24 +278,25 @@ class Query extends Component {
     this.setState({ showDatePicker: !this.state.showDatePicker });
   }
 
-  setQueryDuration(query) {
+  setQueryPeriod(query, toSave=false) {
     let selectedRange = this.state.resultDateRange[0];
-    let isEndDateToday = selectedRange.endDate.getDate() == (new Date()).getDate();
+    let isEndDateToday = moment(selectedRange.endDate).isSame(moment(), 'day');
     let from =  moment(selectedRange.startDate).unix();
     let to = moment(selectedRange.endDate).unix();
 
     // Adjust the duration window respective to current time.
     if (isEndDateToday) {
-      let diff = to - from;
-      to =  moment(new Date()).unix();
-      from = to - diff;
+      let newRange = slideUnixTimeWindowToCurrentTime(from, to)
+      from = newRange.from;
+      to = newRange.to;
     }
 
+    if (toSave) query.ovp = isEndDateToday;
     query.fr = from; // in utc.
     query.to = to; // in utc.
   }
 
-  getQuery(groupByDate=false) {
+  getQuery(groupByDate=false, toSave=false) {
     let query = {};
     query.ty = this.state.type.value;
     query.ec = this.state.condition.value;
@@ -304,7 +308,7 @@ class Query extends Component {
     if (this.state.resultDateRange.length == 0)
       throw new Error('Invalid date range. No default range given.')
     
-    this.setQueryDuration(query);
+    this.setQueryPeriod(query, toSave);
 
     query.ewp = []
     for(let ei=0; ei < this.state.events.length; ei++) {
@@ -529,12 +533,13 @@ class Query extends Component {
       && isSingleCountResult(this.state.result)) {
       presentation = PRESENTATION_CARD;
     }
-
-    let query = this.getQuery(presentation === PRESENTATION_LINE);
+    
+    let groupByTimestamp = presentation === PRESENTATION_LINE;
+    let query = this.getQuery(groupByTimestamp, true);
     let payload = {
       presentation: presentation,
       query: query,
-      title: this.state.inputDashboardUnitTitle, // Use modal to get chart title from user.
+      title: this.state.inputDashboardUnitTitle,
     };
 
     if (this.state.selectedDashboardId == null) {
@@ -550,7 +555,7 @@ class Query extends Component {
   }
 
   toggleAddToDashboardModal = () =>  {
-    this.setState({ showAddToDashboardModal: !this.state.showAddToDashboardModal });
+    this.setState({ showAddToDashboardModal: !this.state.showAddToDashboardModal, addToDashboardMessage: null });
   }
 
   setDashboardUnitTitle = (e) => {

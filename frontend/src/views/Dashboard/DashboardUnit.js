@@ -10,7 +10,7 @@ import LineChart from '../Query/LineChart';
 import TableChart from '../Query/TableChart';
 import { PRESENTATION_BAR, PRESENTATION_LINE, 
   PRESENTATION_TABLE, PRESENTATION_CARD, HEADER_COUNT, HEADER_DATE } from '../Query/common';
-import { isSingleCountResult } from '../../util';
+import { slideUnixTimeWindowToCurrentTime } from '../../util';
 
 const LINE_LEGEND_DISPLAY_LIMIT = 10;
 
@@ -80,7 +80,15 @@ class DashboardUnit extends Component {
 
   componentWillMount() {
     this.setState({ loading: true });
-    runQuery(this.props.currentProjectId, this.props.data.query)
+    
+    let query = this.props.data.query;
+    if (query && query.ovp) {
+      let newPeriod = slideUnixTimeWindowToCurrentTime(query.fr, query.to);
+      query.fr = newPeriod.from;
+      query.to = newPeriod.to;
+    }
+
+    runQuery(this.props.currentProjectId, query)
       .then((r) => {
         this.setState({ loading: false });
         this.setPresentation(r.data);

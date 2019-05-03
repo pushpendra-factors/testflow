@@ -1,3 +1,5 @@
+import moment from 'moment';
+
 const COLORS = [
     "rgba(30, 139, 195, 1.0)",
     "rgba(39, 174, 96, 1.0)",
@@ -97,4 +99,11 @@ export function getChartScaleWithSpace(scale) {
 export function isSingleCountResult(result) {
     let rowKeys = Object.keys(result.rows);
     return rowKeys.length == 1 && result.rows[rowKeys[0]].length == 1;
+}
+
+export function slideUnixTimeWindowToCurrentTime(from, to) {
+    let diff = to - from;
+    let resultTo =  moment(new Date()).unix();
+    let resultFrom = resultTo - diff;
+    return { from: resultFrom, to: resultTo };
 }
