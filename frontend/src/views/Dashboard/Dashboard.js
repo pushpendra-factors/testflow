@@ -110,8 +110,8 @@ class Dashboard extends Component {
     if (this.isLoading()) return <Loading paddingTop='20%'/>;
 
     return (
-      <div className='fapp-content' style={{marginLeft: '1rem', marginRight: '1rem'}}>
-        <div class="fapp-select" style={{width: '300px', marginBottom: '25px'}}>
+      <div className='fapp-content' style={{marginLeft: '1rem', marginRight: '1rem', paddingTop: '30px' }}>
+        <div class="fapp-select" style={{width: '300px', marginBottom: '45px'}}>
           <span style={{ fontSize: '11px', color: '#444', fontWeight: '500'}}> Select Dashboard </span>
           <Select
             onChange={this.onSelectDashboard}
