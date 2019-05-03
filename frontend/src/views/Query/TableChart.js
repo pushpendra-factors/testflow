@@ -25,6 +25,17 @@ class TableChart extends Component {
     );
   }
 
+  getCountStyleByProps() {
+    if (!this.props.bordered) return null;
+    
+    let style = {};
+    style.padding = '60px 100px';
+    style.border = '1px solid #AAA';
+    style.borderRadius = '5px';
+
+    return style;
+  }
+
   render() {
     let result = this.props.queryResult;
     let rows = [];
@@ -35,9 +46,9 @@ class TableChart extends Component {
     // card.
     if (cardable) {
       return (
-        <Table className='animated fadeIn' style={{fontSize: '45px', textAlign: 'center', border: 'none', marginTop: '8%' }} >
+        <Table className='animated fadeIn' style={{fontSize: '45px', textAlign: 'center', border: 'none', marginTop: '4%' }} >
           { this.tableHeader() }
-          <tbody> { result.rows[rowKeys[0]][0] } </tbody>
+          <tbody> <span style={this.getCountStyleByProps()}> { result.rows[rowKeys[0]][0] } </span> </tbody>
         </Table>
       )
     }

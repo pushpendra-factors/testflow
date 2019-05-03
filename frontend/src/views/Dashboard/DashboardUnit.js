@@ -120,7 +120,7 @@ class DashboardUnit extends Component {
     }
 
     if (this.props.data.presentation === PRESENTATION_CARD) {
-      style.height = '155px';
+      style.height = '130px';
       style.padding = '0';
       style.background = this.getUnitBackground();
       style.color = CARD_FONT_COLOR;

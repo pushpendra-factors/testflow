@@ -440,7 +440,10 @@ class Query extends Component {
   }
 
   getResultAsTable() {
-    return <TableChart queryResult={this.state.result} />;
+    if (!isSingleCountResult(this.state.result)) 
+      return <TableChart queryResult={this.state.result} />;
+    
+    return <TableChart card noHeader bordered queryResult={this.state.result} />;
   }
 
   getResultAsLineChart() {
