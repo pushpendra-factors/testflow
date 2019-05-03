@@ -2,8 +2,10 @@ import React, { Component } from 'react';
 import Select from 'react-select';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
-import { Row, Col, Button, Table, ButtonGroup, ButtonToolbar, 
-  ButtonDropdown, DropdownToggle, DropdownMenu, DropdownItem } from 'reactstrap'; 
+import { Row, Col, Button, ButtonGroup, ButtonToolbar, 
+  ButtonDropdown, DropdownToggle, DropdownMenu, 
+  Modal, ModalHeader, ModalBody, Form, DropdownItem,
+  ModalFooter, Input } from 'reactstrap'; 
 import 'react-date-range/dist/styles.css';
 import 'react-date-range/dist/theme/default.css';
 import { DateRangePicker, createStaticRanges } from 'react-date-range'; 
@@ -124,7 +126,12 @@ class Query extends Component {
       showPresentation: false,
       showDatePicker: false,
       topError: null,
+
       showDashboardsList: false,
+      showAddToDashboardModal: false,
+      addToDashboardMessage: null,
+      inputDashboardUnitTitle: null,
+      selectedDashboardId: null,
     }
   }
 
@@ -507,9 +514,11 @@ class Query extends Component {
     }
   }
 
-  addToDashboard = (event) => {
-    let dashboardId = event.currentTarget.getAttribute('value');
+  showAddToDashboardFailure() {
+    this.setState({ addToDashboardMessage: 'Failed to add chart to dashboard' });
+  }
 
+  addToDashboard = () => {
     if (this.state.selectedPresentation == null) {
       console.error('Invalid presentation');
       return;
@@ -525,11 +534,37 @@ class Query extends Component {
     let payload = {
       presentation: presentation,
       query: query,
-      title: "Chart Title", // Use modal to get chart title from user.
+      title: this.state.inputDashboardUnitTitle, // Use modal to get chart title from user.
     };
-    this.props.createDashboardUnit(this.props.currentProjectId, dashboardId, payload)
-      .then(console.log)
-      .catch(console.error);
+
+    if (this.state.selectedDashboardId == null) {
+      throw new Error('Invalid dashboard to add.');
+    }
+
+    this.props.createDashboardUnit(this.props.currentProjectId, this.state.selectedDashboardId, payload)
+      .then((r) => { 
+        if (!r.ok) this.showAddToDashboardFailure(); 
+        else this.toggleAddToDashboardModal(); 
+      })
+      .catch(() => { this.showAddToDashboardFailure(); });
+  }
+
+  toggleAddToDashboardModal = () =>  {
+    this.setState({ showAddToDashboardModal: !this.state.showAddToDashboardModal });
+  }
+
+  setDashboardUnitTitle = (e) => {
+    this.setState({ addToDashboardMessage: null });
+
+    let title = e.target.value.trim();
+    if (title == "") console.error("chart title cannot be empty");
+    this.setState({ inputDashboardUnitTitle: title });
+  }
+
+  selectDashboardToAdd = (event) => {
+    let dashboardId = event.currentTarget.getAttribute('value');
+    this.setState({ selectedDashboardId: dashboardId })
+    this.toggleAddToDashboardModal();
   }
 
   render() {
@@ -567,7 +602,7 @@ class Query extends Component {
           projectId={this.props.currentProjectId}
           getSelectedEventNames={this.getEventNames}
           groupByState={this.state.groupBys[i]}
-          onTypeChange={(option) => this.onGroupByTypeChange(i, option)}
+          onTypeChange={(option) => this.onGroupByTypeChange(i, option)} 
           onNameChange={(option) => this.onGroupByNameChange(i, option)}
           getOpts={this.getGroupByOpts}
         />
@@ -580,7 +615,7 @@ class Query extends Component {
     for(let i=0; i<this.props.dashboards.length; i++){
       let dashboard = this.props.dashboards[i];
       if (dashboard) {
-        dashboardsDropdown.push(<DropdownItem onClick={this.addToDashboard} value={dashboard.id}>{dashboard.name}</DropdownItem>)
+        dashboardsDropdown.push(<DropdownItem onClick={this.selectDashboardToAdd} value={dashboard.id}>{dashboard.name}</DropdownItem>)
       }
     }
 
@@ -681,6 +716,23 @@ class Query extends Component {
             </Col>
           </Row>
         </div>
+
+        <Modal isOpen={this.state.showAddToDashboardModal} toggle={this.toggleAddToDashboardModal} style={{marginTop: '10rem'}}>
+          <ModalHeader toggle={this.toggleAddToDashboardModal}>Add to dashboard</ModalHeader>
+          <ModalBody style={{padding: '25px 35px'}}>
+            <div style={{textAlign: 'center', marginBottom: '15px'}}>
+              <span style={{display: 'inline-block'}} className='fapp-error' hidden={this.state.addToDashboardMessage == null}>{ this.state.addToDashboardMessage }</span>
+            </div>
+            <Form >
+              <span class='fapp-label'>Chart Title</span>         
+              <Input className='fapp-input' type="text" placeholder="Enter chart title" onChange={this.setDashboardUnitTitle} />
+            </Form>
+          </ModalBody>
+          <ModalFooter style={{borderTop: 'none', paddingBottom: '30px', paddingRight: '35px'}}>
+            <Button outline color="success" onClick={this.addToDashboard}>Add</Button>
+            <Button outline color='danger' onClick={this.toggleAddToDashboardModal}>Cancel</Button>
+          </ModalFooter>
+        </Modal>
       </div>
     );
   }

@@ -96,13 +96,13 @@ class DashboardUnit extends Component {
   }
 
   cardStyleByPresentation() {
-    let style = { padding: '1.5rem 0.5rem', height: '300px' };
+    let style = { padding: '1.5rem 1.5rem', height: '300px' };
 
     if (this.props.data.presentation === PRESENTATION_TABLE) {
       let changes = { padding: '0', 'overflowX': 'scroll' };
       style = { ...style, ...changes };
     }
-       
+    
     return style;
   }
 
@@ -111,7 +111,7 @@ class DashboardUnit extends Component {
 
     return (
       <Col md={{ size: 6 }}  style={{padding: '0 15px'}}>
-        <Card className='fapp-bordered-card' style={{marginTop: '15px'}}>
+        <Card className='fapp-dunit' style={{ marginBottom: '30px' }}>
           <CardHeader>
             <strong>{ data.title }</strong>
           </CardHeader>

@@ -96,7 +96,7 @@ class Dashboard extends Component {
 
     return (
       <div className='fapp-content' style={{marginLeft: '1rem', marginRight: '1rem'}}>
-        <div class="fapp-select" style={{width: '300px', marginBottom: '20px'}}>
+        <div class="fapp-select" style={{width: '300px', marginBottom: '25px'}}>
           <span style={{ fontSize: '11px', color: '#444', fontWeight: '500'}}> Select Dashboard </span>
           <Select
             onChange={this.onSelectDashboard}
