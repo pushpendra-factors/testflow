@@ -189,7 +189,7 @@ class Dashboard extends Component {
             </Form>
           </ModalBody>
           <ModalFooter style={{borderTop: 'none', paddingBottom: '30px', paddingRight: '35px'}}>
-            <Button outline color="success" onClick={this.create}>Add</Button>
+            <Button outline color="success" onClick={this.create}>Create</Button>
             <Button outline color='danger' onClick={this.toggleCreateModal}>Cancel</Button>
           </ModalFooter>
         </Modal>
