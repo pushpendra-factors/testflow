@@ -620,7 +620,6 @@ class Query extends Component {
     console.debug('Query State : ', this.state);
 
     let dashboardsDropdown = [];
-    dashboardsDropdown.push(<DropdownItem style={{ color: '#20a8d8', fontWeight: '500' }}>Create dashboard</DropdownItem>)
     for(let i=0; i<this.props.dashboards.length; i++){
       let dashboard = this.props.dashboards[i];
       if (dashboard) {
