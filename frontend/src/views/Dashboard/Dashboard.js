@@ -1,11 +1,13 @@
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
-import { Row, Button } from 'reactstrap';
+import { Row, Button, Modal, ModalHeader, 
+  ModalBody, ModalFooter, Form, Input } from 'reactstrap';
 import Select from 'react-select';
 import DashboardUnit from './DashboardUnit';
 
-import { fetchDashboards, fetchDashboardUnits } from '../../actions/dashboardActions';
+import { fetchDashboards, createDashboard, 
+  fetchDashboardUnits } from '../../actions/dashboardActions';
 import { createSelectOpts, makeSelectOpt } from '../../util';
 import Loading from '../../loading';
 import { PRESENTATION_CARD } from '../Query/common';
@@ -22,6 +24,7 @@ const mapDispatchToProps = dispatch => {
   return bindActionCreators({ 
     fetchDashboards,
     fetchDashboardUnits,
+    createDashboard,
   }, dispatch);
 }
 
@@ -34,7 +37,11 @@ class Dashboard extends Component {
 
         selectedDashboard: null,
         loadingUnits: false,
+
         editDashboard: false,
+        showCreateModal: false,
+        createModalMessage: null,
+        createName: null,
       }
   }
 
@@ -121,6 +128,35 @@ class Dashboard extends Component {
     return <Button style={{ marginLeft: '10px', height: 'auto', marginBottom: '4px' }} onClick={this.toggleEditDashboard} outline={!this.state.editDashboard} color={color}> { text } </Button>
   }
 
+  toggleCreateModal = () => {
+    this.setState({ showCreateModal: !this.state.showCreateModal });
+  }
+
+  setCreateDashboardName = (e) => {
+    this.setState({ createModalMessage: null });
+
+    let name = e.target.value.trim();
+    if (name == "") console.error("Dashboard name cannot be empty.");
+    this.setState({ createName: name });
+  }
+
+  showCreateFailure(msg='Failed to create dashboard') {
+    this.setState({ createModalMessage: msg });
+  }
+
+  create = () => {
+    if (this.state.createName == null || this.state.createName == "" ){
+      this.showCreateFailure('Dashboard name cannot be empty');
+      return
+    }
+    this.props.createDashboard(this.props.currentProjectId, { name: this.state.createName })
+      .then((r) => {
+        if (!r.ok) this.showCreateFailure();
+        else this.toggleCreateModal();
+      })
+      .catch(this.showCreateFailure);
+  }
+
   render() {
     if (this.isLoading()) return <Loading paddingTop='20%'/>;
 
@@ -136,10 +172,27 @@ class Dashboard extends Component {
               value={this.getSelectedDashboard()}
             />
           </div>
-          <Button style={{ marginLeft: '10px', height: 'auto', marginBottom: '4px' }} outline color='primary'> Create </Button>
+          <Button onClick={this.toggleCreateModal} style={{ marginLeft: '10px', height: 'auto', marginBottom: '4px' }} outline color='primary'> Create </Button>
           { this.renderEditButton() }
         </div>
         { this.renderDashboard() }
+
+        <Modal isOpen={this.state.showCreateModal} toggle={this.toggleCreateModal} style={{marginTop: '10rem'}}>
+          <ModalHeader toggle={this.toggleCreateModal}>Create dashboard</ModalHeader>
+          <ModalBody style={{padding: '25px 35px'}}>
+            <div style={{textAlign: 'center', marginBottom: '15px'}}>
+              <span style={{display: 'inline-block'}} className='fapp-error' hidden={this.state.createModalMessage == null}>{ this.state.createModalMessage }</span>
+            </div>
+            <Form >
+              <span class='fapp-label'>Name</span>         
+              <Input className='fapp-input' type="text" placeholder="Your dashboard name" onChange={this.setCreateDashboardName} />
+            </Form>
+          </ModalBody>
+          <ModalFooter style={{borderTop: 'none', paddingBottom: '30px', paddingRight: '35px'}}>
+            <Button outline color="success" onClick={this.create}>Add</Button>
+            <Button outline color='danger' onClick={this.toggleCreateModal}>Cancel</Button>
+          </ModalFooter>
+        </Modal>
       </div>
     );
   }

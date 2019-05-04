@@ -7,6 +7,12 @@ export default function reducer(state={
     case "FETCH_DASHBOARDS_FULFILLED": {
       return { ...state, dashboards: action.payload }
     }
+    case "CREATE_DASHBOARD_FULFILLED": {
+      let _state = { ...state };
+      _state.dashboards = [ ...state.dashboards ];
+      _state.dashboards.push(action.payload);
+      return _state;
+    }
     case "FETCH_DASHBOARD_UNITS_FULFILLED": {
       return {
         ...state,

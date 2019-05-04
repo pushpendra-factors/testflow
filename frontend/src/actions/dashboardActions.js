@@ -24,6 +24,35 @@ export function fetchDashboards(projectId) {
   }
 }
 
+export function createDashboard(projectId, payload) {
+  return function(dispatch) { 
+    return new Promise((resolve, reject) => {
+      post(dispatch, host + "projects/" + projectId + "/dashboards", payload)
+        .then((r) => {
+          if (r.ok) {
+            dispatch({
+              type: "CREATE_DASHBOARD_FULFILLED",
+              payload: r.data
+            });
+          } else {
+            dispatch({
+              type: "CREATE_DASHBOARD_REJECTED",
+              error: r.data.error
+            });
+          }
+          resolve(r);
+        })
+        .catch((r) => {
+          dispatch({
+            type: "CREATE_DASHBOARD_REJECTED",
+            error: r
+          })
+          reject(r);
+        });
+    })
+  }
+}
+
 export function fetchDashboardUnits(projectId, dashboardId) {
     return function(dispatch){
       return new Promise((resolve, reject) => {
@@ -65,7 +94,7 @@ export function createDashboardUnit(projectId, dashboardId, payload) {
         })
         .catch((r) => {
           dispatch({
-            type: "CREATE_FILTER_REJECTED",
+            type: "CREATE_DASHBOARD_UNIT_REJECTED",
             error: r
           })
           reject(r);
