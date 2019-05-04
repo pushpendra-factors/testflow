@@ -4,6 +4,7 @@ import { bindActionCreators } from 'redux';
 import { Col, Card, CardHeader, CardBody } from 'reactstrap';
 
 import { runQuery } from '../../actions/projectsActions';
+import { deleteDashboardUnit } from '../../actions/dashboardActions';
 import Loading from '../../loading';
 import BarChart from '../Query/BarChart';
 import LineChart from '../Query/LineChart';
@@ -24,7 +25,8 @@ const mapStateToProps = store => {
 
 const mapDispatchToProps = dispatch => {
   return bindActionCreators({ 
-    runQuery
+    runQuery,
+    deleteDashboardUnit
   }, dispatch);
 }
 
@@ -151,6 +153,11 @@ class DashboardUnit extends Component {
     return style;
   }
 
+  delete = () => {
+    let unit = this.props.data;
+    this.props.deleteDashboardUnit(unit.project_id, unit.dashboard_id, unit.id);
+  }
+
   render() {
     let data = this.props.data;
     let isCard = this.props.data.presentation === PRESENTATION_CARD;
@@ -159,8 +166,8 @@ class DashboardUnit extends Component {
       <Col md={{ size: this.getColSizeByProps() }}  style={{padding: '0 15px'}}>
         <Card className='fapp-dunit' style={this.getCardStyleByProps()}>
           <CardHeader style={this.getCardHeaderStyleByProps()}>
-            <div style={{ textAlign: 'right', marginTop: '-10px', marginRight: '-18px', height: '18px' }}>
-              <strong style={{ fontSize: '15px', cursor: 'pointer', padding: '0 10px', color: isCard ? '#FFF' : '#AAA' }} hidden={!this.props.showClose}>x</strong>
+            <div onClick={this.delete} style={{ textAlign: 'right', marginTop: '-10px', marginRight: '-18px', height: '18px', cursor: 'pointer' }}>
+              <strong style={{ fontSize: '15px', padding: '0 10px', color: isCard ? '#FFF' : '#AAA' }} hidden={!this.props.showClose}>x</strong>
             </div>
             <div style={{ marginTop: isCard ? '-10px' : '-5px' }}><strong>{ data.title }</strong></div>
           </CardHeader>

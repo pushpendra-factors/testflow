@@ -13,6 +13,27 @@ export default function reducer(state={
         units: action.payload
       }
     }
+    case "DELETE_DASHBOARD_UNIT_FULFILLED": {
+      let _state = { ...state };
+      _state.units = [ ...state.units ];
+      let delUnit = action.payload;
+
+      // Get unit index to delete from store.
+      let delIndex = -1;
+      for (let i in _state.units) {
+        let unit = _state.units[i];
+        if (unit.project_id == delUnit.project_id
+          && unit.dashboard_id == delUnit.dashboard_id
+          && unit.id == delUnit.id) {
+            delIndex = i;
+          }
+      }
+
+      if (delIndex != -1) 
+        _state.units.splice(delIndex, 1);
+      
+      return _state;
+    }
   }
   return state
 }
