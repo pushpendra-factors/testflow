@@ -251,7 +251,7 @@ func main() {
 		log.Info("dashboard_unit table is associated with projects table.")
 	}
 
-	// Add foreign key constraints dashboard_id, dashboards(id).
+	// Add foreign key constraints dashboard_id, dashboards(project_id, id).
 	if err := db.Model(&M.DashboardUnit{}).AddForeignKey("project_id, dashboard_id", "dashboards(project_id, id)", "RESTRICT", "RESTRICT").Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("dashboard_unit table association with dashboards table failed.")
 	} else {

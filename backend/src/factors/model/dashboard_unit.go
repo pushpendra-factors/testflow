@@ -11,10 +11,10 @@ import (
 
 type DashboardUnit struct {
 	// Composite primary key, id + project_id.
-	ID        uint64 `gorm:"primary_key:true" json:"id"`
-	ProjectId uint64 `gorm:"primary_key:true" json:"project_id"`
-	// Foreign key dashboard(id).
-	DashboardId  uint64         `json:"dashboard_id"`
+	ID uint64 `gorm:"primary_key:true" json:"id"`
+	// Foreign keys projects(id) and dashboards(id).
+	ProjectId    uint64         `gorm:"primary_key:true" json:"project_id"`
+	DashboardId  uint64         `gorm:"primary_key:true" json:"dashboard_id"`
 	Title        string         `gorm:"not null" json:"title"`
 	Query        postgres.Jsonb `gorm:"not null" json:"query"`
 	Presentation string         `gorm:"not null" json:"presentation"`
@@ -83,9 +83,9 @@ func GetDashboardUnits(projectId uint64, dashboardId uint64) ([]DashboardUnit, i
 	db := C.GetServices().Db
 
 	var dashboardUnits []DashboardUnit
-	if projectId == 0 {
-		log.Error("Failed to get dashboard units. Invalid project_id.")
-		return dashboardUnits, http.StatusInternalServerError
+	if projectId == 0 || dashboardId == 0 {
+		log.Error("Failed to get dashboard units. Invalid project_id or dashboard_id.")
+		return dashboardUnits, http.StatusBadRequest
 	}
 
 	err := db.Order("created_at DESC").Where("project_id = ? AND dashboard_id = ?",
@@ -96,4 +96,22 @@ func GetDashboardUnits(projectId uint64, dashboardId uint64) ([]DashboardUnit, i
 	}
 
 	return dashboardUnits, http.StatusFound
+}
+
+func DeleteDashboardUnit(projectId uint64, dashbordId uint64, id uint64) int {
+	db := C.GetServices().Db
+
+	if projectId == 0 || dashbordId == 0 || id == 0 {
+		log.Error("Failed to get dashboard units. Invalid project_id or dashboard_id or unit_id")
+		return http.StatusBadRequest
+	}
+
+	err := db.Where("id = ? AND project_id = ? AND dashboard_id = ?", id, projectId, dashbordId).Delete(&DashboardUnit{}).Error
+	if err != nil {
+		log.WithFields(log.Fields{"project_id": projectId, "dashboard_id": dashbordId,
+			"unit_id": id}).WithError(err).Error("Failed to delete dashboard unit.")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusAccepted
 }
