@@ -9,6 +9,7 @@ import DashboardUnit from './DashboardUnit';
 import { fetchDashboards, createDashboard, 
   fetchDashboardUnits } from '../../actions/dashboardActions';
 import { createSelectOpts, makeSelectOpt } from '../../util';
+import NoContent from '../../common/NoContent';
 import Loading from '../../loading';
 import { PRESENTATION_CARD } from '../Query/common';
 
@@ -91,8 +92,10 @@ class Dashboard extends Component {
 
   renderDashboard() {
     if (this.state.loadingUnits) return <Loading paddingTop='10%' />
-    let pDashUnits = this.props.dashboardUnits;
+    if (this.props.dashboardUnits.length == 0) 
+      return <NoContent center msg='No charts' />
 
+    let pDashUnits = this.props.dashboardUnits;
     let largeUnits = [];
     let cardUnits = [];
 

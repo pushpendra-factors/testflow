@@ -107,3 +107,4 @@ export function slideUnixTimeWindowToCurrentTime(from, to) {
     let resultFrom = resultTo - diff;
     return { from: resultFrom, to: resultTo };
 }
+
