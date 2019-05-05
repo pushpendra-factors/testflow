@@ -28,7 +28,7 @@ import {
   isSingleCountResult, slideUnixTimeWindowToCurrentTime,
 } from '../../util'
 import Loading from '../../loading';
-import factorsai from '../../factorsaiObj';
+import factorsai from '../../common/factorsaiObj';
 
 const COND_ALL_GIVEN_EVENT = 'all_given_event';
 const COND_ANY_GIVEN_EVENT = 'any_given_event'; 

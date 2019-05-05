@@ -11,7 +11,7 @@ import Avatar from 'react-avatar';
 
 import { changeProject, createProject } from '../../actions/projectsActions';
 import { signout } from '../../actions/agentActions';
-import factorsai from '../../factorsaiObj';
+import factorsai from '../../common/factorsaiObj';
 
 const propTypes = {
   children: PropTypes.node,

@@ -25,8 +25,8 @@ import loadingImage from '../../assets/img/loading_gray.gif';
 
 
 import Select from 'react-select';
-import factorsai from '../../factorsaiObj';
-import NoContent from '../../common/NoContent';
+import factorsai from '../../common/factorsaiObj';
+import NoContent from '../../common/NoContent'; 
 
 const EVENT_NAME_TYPE = "eventName";
 const EVENT_PROPERTY_START_TYPE = "eventPropertyStart";
