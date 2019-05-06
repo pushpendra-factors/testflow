@@ -25,7 +25,7 @@ const (
 	TypeSharable = "ts"
 )
 
-const defaultNamePersonalDashboard = "My Dashboard"
+const DefaultNamePersonalDashboard = "My Dashboard"
 
 func createDashboard(projectId uint64, dashboard *Dashboard) (*Dashboard, int) {
 	db := C.GetServices().Db
@@ -45,7 +45,7 @@ func createDashboard(projectId uint64, dashboard *Dashboard) (*Dashboard, int) {
 }
 
 func CreatePersonalDashboard(projectId uint64) (*Dashboard, int) {
-	return createDashboard(projectId, &Dashboard{Name: defaultNamePersonalDashboard, Type: TypePersonal})
+	return createDashboard(projectId, &Dashboard{Name: DefaultNamePersonalDashboard, Type: TypePersonal})
 }
 
 func CreateSharableDashboard(projectId uint64, dashboard *Dashboard) (*Dashboard, int) {

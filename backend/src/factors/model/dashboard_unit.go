@@ -23,13 +23,13 @@ type DashboardUnit struct {
 }
 
 const (
-	presentationLine  = "pl"
-	presentationBar   = "pb"
-	presentationTable = "pt"
-	presentationCard  = "pc"
+	PresentationLine  = "pl"
+	PresentationBar   = "pb"
+	PresentationTable = "pt"
+	PresentationCard  = "pc"
 )
 
-var presentations = [...]string{presentationLine, presentationBar, presentationTable, presentationCard}
+var presentations = [...]string{PresentationLine, PresentationBar, PresentationTable, PresentationCard}
 
 func isValidDashboardUnit(dashboardUnit *DashboardUnit) (bool, string) {
 	if dashboardUnit.DashboardId == 0 {
