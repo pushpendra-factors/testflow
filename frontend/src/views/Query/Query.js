@@ -711,7 +711,7 @@ class Query extends Component {
                   <DropdownToggle caret outline color="primary">
                     Add to dashboard
                   </DropdownToggle>
-                  <DropdownMenu style={{height: '210px', overflowX: 'scroll'}} right>
+                  <DropdownMenu style={{height: 'auto', maxHeight: '210px', overflowX: 'scroll'}} right>
                     { dashboardsDropdown }
                   </DropdownMenu>
                 </ButtonDropdown>

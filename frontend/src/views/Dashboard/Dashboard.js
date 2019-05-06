@@ -49,10 +49,16 @@ class Dashboard extends Component {
   componentWillMount() {
     this.props.fetchDashboards(this.props.currentProjectId)
       .then(() => {
+        if (this.props.dashboards.length == 0) {
+          this.setState({ loaded: true })
+        }
+        
         let selectedDashboard = this.getSelectedDashboard();
-        this.props.fetchDashboardUnits(this.props.currentProjectId, selectedDashboard.value)
-          .then(() => this.setState({ loaded: true }))
-          .catch(console.error);
+        if (selectedDashboard != null) {
+          this.props.fetchDashboardUnits(this.props.currentProjectId, selectedDashboard.value)
+            .then(() => this.setState({ loaded: true }))
+            .catch(console.error);
+        }
       })
   }
 

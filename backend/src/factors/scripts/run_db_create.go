@@ -237,6 +237,13 @@ func main() {
 		log.Info("dashboard table is associated with projects table.")
 	}
 
+	// Adding unique index on dashboards id, project_id for dashboard units foreign referrence.
+	if err := db.Exec("CREATE UNIQUE INDEX project_id_id_unique_idx ON dashboards (project_id, id);").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("Failed to create unique index dashboards(project_id, id).")
+	} else {
+		log.Info("Created unique index on dashboards(project_id, id).")
+	}
+
 	// Create dashboard_unit table.
 	if err := db.CreateTable(&M.DashboardUnit{}).Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("dashboard_unit table creation failed.")

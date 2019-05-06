@@ -9,9 +9,10 @@ import (
 )
 
 type Dashboard struct {
-	// Composite primary key, id + project_id.
+	// Composite primary key, id + project_id + agent_id.
 	ID        uint64 `gorm:"primary_key:true;" json:"id"`
 	ProjectId uint64 `gorm:"primary_key:true;" json:"project_id"`
+	AgentUUID string `gorm:"primary_key:true"; json:"-"`
 	Name      string `gorm:"not null" json:"name"`
 	Type      string `gorm:"not null" json:"type"`
 	// User should be able to mark it as primary dashboard.
@@ -21,20 +22,44 @@ type Dashboard struct {
 }
 
 const (
-	TypePersonal = "tp"
-	TypeSharable = "ts"
+	TypePrivate        = "pr"
+	TypeProjectVisible = "pv"
 )
 
-const DefaultNamePersonalDashboard = "My Dashboard"
+var types = []string{TypePrivate, TypeProjectVisible}
 
-func createDashboard(projectId uint64, dashboard *Dashboard) (*Dashboard, int) {
+const AgentProjectPersonalDashboardName = "My Dashboard"
+
+func isValidDashboard(dashboard *Dashboard) bool {
+	if dashboard.Name == "" {
+		return false
+	}
+
+	validType := false
+	for _, t := range types {
+		if t == dashboard.Type {
+			validType = true
+			break
+		}
+	}
+
+	return validType
+}
+
+func createDashboard(projectId uint64, agentUUID string, dashboard *Dashboard) (*Dashboard, int) {
 	db := C.GetServices().Db
 
-	if projectId == 0 || dashboard.Name == "" {
+	if projectId == 0 || agentUUID == "" {
+		return nil, http.StatusBadRequest
+	}
+
+	if !isValidDashboard(dashboard) {
 		return nil, http.StatusBadRequest
 	}
 
 	dashboard.ProjectId = projectId
+	dashboard.AgentUUID = agentUUID
+
 	if err := db.Create(dashboard).Error; err != nil {
 		log.WithFields(log.Fields{"dashboard": dashboard,
 			"project_id": projectId}).WithError(err).Error("Failed to create dashboard.")
@@ -44,31 +69,53 @@ func createDashboard(projectId uint64, dashboard *Dashboard) (*Dashboard, int) {
 	return dashboard, http.StatusCreated
 }
 
-func CreatePersonalDashboard(projectId uint64) (*Dashboard, int) {
-	return createDashboard(projectId, &Dashboard{Name: DefaultNamePersonalDashboard, Type: TypePersonal})
+func CreateAgentPersonalDashboardForProject(projectId uint64, agentUUID string) (*Dashboard, int) {
+	return createDashboard(projectId, agentUUID, &Dashboard{Name: AgentProjectPersonalDashboardName, Type: TypePrivate})
 }
 
-func CreateSharableDashboard(projectId uint64, dashboard *Dashboard) (*Dashboard, int) {
-	dashboard.Type = TypeSharable
-	return createDashboard(projectId, dashboard)
+func CreatePrivateDashboard(projectId uint64, agentUUID string, dashboard *Dashboard) (*Dashboard, int) {
+	dashboard.Type = TypePrivate
+	return createDashboard(projectId, agentUUID, dashboard)
 }
 
-// Todo: Manage ACLs for dashboards and return dashboards
-// to which the requesting agent has permissions to.
-func GetDashboards(projectId uint64) ([]Dashboard, int) {
+func CreateProjectVisibleDashboard(projectId uint64, agentUUID string, dashboard *Dashboard) (*Dashboard, int) {
+	dashboard.Type = TypeProjectVisible
+	return createDashboard(projectId, agentUUID, dashboard)
+}
+
+func GetDashboards(projectId uint64, agentUUID string) ([]Dashboard, int) {
 	db := C.GetServices().Db
 
 	var dashboards []Dashboard
-	if projectId == 0 {
+	if projectId == 0 || agentUUID == "" {
 		log.Error("Failed to get dashboards. Invalid project_id.")
-		return dashboards, http.StatusInternalServerError
+		return dashboards, http.StatusBadRequest
 	}
 
-	err := db.Order("created_at ASC").Where("project_id = ?", projectId).Find(&dashboards).Error
+	err := db.Order("created_at ASC").Where("project_id = ? AND (type = ? OR agent_uuid = ?)", projectId, TypeProjectVisible, agentUUID).Find(&dashboards).Error
 	if err != nil {
 		log.WithField("project_id", projectId).WithError(err).Error("Failed to get dashboards.")
 		return dashboards, http.StatusInternalServerError
 	}
 
 	return dashboards, http.StatusFound
+}
+
+// HasAccessToDashboard validates access to dashboard by project_id,
+// agent_id considering type.
+func HasAccessToDashboard(projectId uint64, agentUUID string, id uint64) bool {
+	dashboards, errCode := GetDashboards(projectId, agentUUID)
+	if errCode != http.StatusFound {
+		return false
+	}
+
+	hasAccess := false
+	for _, dashboard := range dashboards {
+		if dashboard.ID == id {
+			hasAccess = true
+			break
+		}
+	}
+
+	return hasAccess
 }

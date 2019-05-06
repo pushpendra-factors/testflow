@@ -15,7 +15,8 @@ import (
 )
 
 type DashboardRequestPayload struct {
-	Name string `json:"name"`
+	Name           string `json:"name"`
+	ProjectVisible bool   `json:"project_visible"`
 }
 
 type DashboardUnitRequestPayload struct {
@@ -31,7 +32,9 @@ func GetDashboardsHanlder(c *gin.Context) {
 		return
 	}
 
-	dashboards, errCode := M.GetDashboards(projectId)
+	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+
+	dashboards, errCode := M.GetDashboards(projectId, agentUUID)
 	if errCode != http.StatusFound {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Get dashboards failed."})
 		return
@@ -47,6 +50,8 @@ func CreateDashboardHandler(c *gin.Context) {
 		return
 	}
 
+	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+
 	var requestPayload DashboardRequestPayload
 
 	r := c.Request
@@ -58,7 +63,16 @@ func CreateDashboardHandler(c *gin.Context) {
 		return
 	}
 
-	dashboard, errCode := M.CreateSharableDashboard(projectId, &M.Dashboard{Name: requestPayload.Name})
+	var dashboard *M.Dashboard
+	var errCode int
+	if requestPayload.ProjectVisible {
+		dashboard, errCode = M.CreateProjectVisibleDashboard(projectId, agentUUID,
+			&M.Dashboard{Name: requestPayload.Name})
+	} else {
+		dashboard, errCode = M.CreatePrivateDashboard(projectId, agentUUID,
+			&M.Dashboard{Name: requestPayload.Name})
+	}
+
 	if errCode != http.StatusCreated {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Failed to create dashboard."})
 		return
@@ -74,6 +88,8 @@ func GetDashboardUnitsHandler(c *gin.Context) {
 		return
 	}
 
+	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+
 	dashboardId, err := strconv.ParseUint(c.Params.ByName("dashboard_id"), 10, 64)
 	if err != nil || dashboardId == 0 {
 		log.WithError(err).Error("Get dashboard units failed. Invalid dashboard.")
@@ -81,7 +97,7 @@ func GetDashboardUnitsHandler(c *gin.Context) {
 		return
 	}
 
-	dashboardUnits, errCode := M.GetDashboardUnits(projectId, dashboardId)
+	dashboardUnits, errCode := M.GetDashboardUnits(projectId, agentUUID, dashboardId)
 	if errCode != http.StatusFound {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Get dashboard units failed."})
 		return
@@ -97,6 +113,8 @@ func CreateDashboardUnitHandler(c *gin.Context) {
 			gin.H{"error": "Get dashboard units failed. Invalid project."})
 		return
 	}
+
+	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 
 	dashboardId, err := strconv.ParseUint(c.Params.ByName("dashboard_id"), 10, 64)
 	if err != nil || dashboardId == 0 {
@@ -130,12 +148,13 @@ func CreateDashboardUnitHandler(c *gin.Context) {
 		return
 	}
 
-	dashboardUnit, errCode, errMsg := M.CreateDashboardUnit(projectId, &M.DashboardUnit{
-		DashboardId:  dashboardId,
-		Query:        postgres.Jsonb{queryAsJson},
-		Title:        requestPayload.Title,
-		Presentation: requestPayload.Presentation,
-	})
+	dashboardUnit, errCode, errMsg := M.CreateDashboardUnit(projectId, agentUUID,
+		&M.DashboardUnit{
+			DashboardId:  dashboardId,
+			Query:        postgres.Jsonb{queryAsJson},
+			Title:        requestPayload.Title,
+			Presentation: requestPayload.Presentation,
+		})
 	if errCode != http.StatusCreated {
 		c.AbortWithStatusJSON(errCode, errMsg)
 		return
@@ -152,6 +171,8 @@ func DeleteDashboardUnitHandler(c *gin.Context) {
 		return
 	}
 
+	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+
 	dashboardId, err := strconv.ParseUint(c.Params.ByName("dashboard_id"), 10, 64)
 	if err != nil || dashboardId == 0 {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid dashboard id."})
@@ -164,7 +185,7 @@ func DeleteDashboardUnitHandler(c *gin.Context) {
 		return
 	}
 
-	errCode := M.DeleteDashboardUnit(projectId, dashboardId, unitId)
+	errCode := M.DeleteDashboardUnit(projectId, agentUUID, dashboardId, unitId)
 	if errCode != http.StatusAccepted {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Failed to delete dashboard unit."})
 		return

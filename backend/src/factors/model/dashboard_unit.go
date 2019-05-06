@@ -12,7 +12,7 @@ import (
 type DashboardUnit struct {
 	// Composite primary key, id + project_id.
 	ID uint64 `gorm:"primary_key:true" json:"id"`
-	// Foreign keys projects(id) and dashboards(id).
+	// Foreign keys projects(id) and dashboards(id, project_id).
 	ProjectId    uint64         `gorm:"primary_key:true" json:"project_id"`
 	DashboardId  uint64         `gorm:"primary_key:true" json:"dashboard_id"`
 	Title        string         `gorm:"not null" json:"title"`
@@ -54,16 +54,20 @@ func isValidDashboardUnit(dashboardUnit *DashboardUnit) (bool, string) {
 	return true, ""
 }
 
-func CreateDashboardUnit(projectId uint64, dashboardUnit *DashboardUnit) (*DashboardUnit, int, string) {
+func CreateDashboardUnit(projectId uint64, agentUUID string, dashboardUnit *DashboardUnit) (*DashboardUnit, int, string) {
 	db := C.GetServices().Db
 
-	if projectId == 0 {
-		return nil, http.StatusBadRequest, "Invalid project id"
+	if projectId == 0 || agentUUID == "" {
+		return nil, http.StatusBadRequest, "Invalid request"
 	}
 
 	valid, errMsg := isValidDashboardUnit(dashboardUnit)
 	if !valid {
 		return nil, http.StatusBadRequest, errMsg
+	}
+
+	if !HasAccessToDashboard(projectId, agentUUID, dashboardUnit.DashboardId) {
+		return nil, http.StatusUnauthorized, "Unauthorized to access dashboard"
 	}
 
 	dashboardUnit.ProjectId = projectId
@@ -77,15 +81,17 @@ func CreateDashboardUnit(projectId uint64, dashboardUnit *DashboardUnit) (*Dashb
 	return dashboardUnit, http.StatusCreated, ""
 }
 
-// Todo: Manage ACLs for dashboards and return dashboards_units
-// to which the requesting agent has permissions by dashboard ACL.
-func GetDashboardUnits(projectId uint64, dashboardId uint64) ([]DashboardUnit, int) {
+func GetDashboardUnits(projectId uint64, agentUUID string, dashboardId uint64) ([]DashboardUnit, int) {
 	db := C.GetServices().Db
 
 	var dashboardUnits []DashboardUnit
-	if projectId == 0 || dashboardId == 0 {
-		log.Error("Failed to get dashboard units. Invalid project_id or dashboard_id.")
+	if projectId == 0 || dashboardId == 0 || agentUUID == "" {
+		log.Error("Failed to get dashboard units. Invalid project_id or dashboard_id or agent_id")
 		return dashboardUnits, http.StatusBadRequest
+	}
+
+	if !HasAccessToDashboard(projectId, agentUUID, dashboardId) {
+		return nil, http.StatusUnauthorized
 	}
 
 	err := db.Order("created_at DESC").Where("project_id = ? AND dashboard_id = ?",
@@ -98,17 +104,23 @@ func GetDashboardUnits(projectId uint64, dashboardId uint64) ([]DashboardUnit, i
 	return dashboardUnits, http.StatusFound
 }
 
-func DeleteDashboardUnit(projectId uint64, dashbordId uint64, id uint64) int {
+func DeleteDashboardUnit(projectId uint64, agentUUID string, dashboardId uint64, id uint64) int {
 	db := C.GetServices().Db
 
-	if projectId == 0 || dashbordId == 0 || id == 0 {
-		log.Error("Failed to get dashboard units. Invalid project_id or dashboard_id or unit_id")
+	if projectId == 0 || agentUUID == "" ||
+		dashboardId == 0 || id == 0 {
+
+		log.Error("Failed to get dashboard units. Invalid scope ids.")
 		return http.StatusBadRequest
 	}
 
-	err := db.Where("id = ? AND project_id = ? AND dashboard_id = ?", id, projectId, dashbordId).Delete(&DashboardUnit{}).Error
+	if !HasAccessToDashboard(projectId, agentUUID, dashboardId) {
+		return http.StatusUnauthorized
+	}
+
+	err := db.Where("id = ? AND project_id = ? AND dashboard_id = ?", id, projectId, dashboardId).Delete(&DashboardUnit{}).Error
 	if err != nil {
-		log.WithFields(log.Fields{"project_id": projectId, "dashboard_id": dashbordId,
+		log.WithFields(log.Fields{"project_id": projectId, "dashboard_id": dashboardId,
 			"unit_id": id}).WithError(err).Error("Failed to delete dashboard unit.")
 		return http.StatusInternalServerError
 	}
