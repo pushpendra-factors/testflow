@@ -13,6 +13,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/coreos/etcd/mvcc/mvccpb"
 
 	"github.com/jinzhu/gorm"
@@ -120,7 +122,7 @@ func initServices(config *Configuration) error {
 
 	err = InitEtcd(config.EtcdEndpoints)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Failed to initialize etcd")
 	}
 
 	InitMailClient(config.AWSKey, config.AWSSecret, config.AWSRegion)
