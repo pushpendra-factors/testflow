@@ -22,11 +22,11 @@ type Dashboard struct {
 }
 
 const (
-	TypePrivate        = "pr"
-	TypeProjectVisible = "pv"
+	DashboardTypePrivate        = "pr"
+	DashboardTypeProjectVisible = "pv"
 )
 
-var types = []string{TypePrivate, TypeProjectVisible}
+var types = []string{DashboardTypePrivate, DashboardTypeProjectVisible}
 
 const AgentProjectPersonalDashboardName = "My Dashboard"
 
@@ -46,7 +46,7 @@ func isValidDashboard(dashboard *Dashboard) bool {
 	return validType
 }
 
-func createDashboard(projectId uint64, agentUUID string, dashboard *Dashboard) (*Dashboard, int) {
+func CreateDashboard(projectId uint64, agentUUID string, dashboard *Dashboard) (*Dashboard, int) {
 	db := C.GetServices().Db
 
 	if projectId == 0 || agentUUID == "" {
@@ -70,17 +70,8 @@ func createDashboard(projectId uint64, agentUUID string, dashboard *Dashboard) (
 }
 
 func CreateAgentPersonalDashboardForProject(projectId uint64, agentUUID string) (*Dashboard, int) {
-	return createDashboard(projectId, agentUUID, &Dashboard{Name: AgentProjectPersonalDashboardName, Type: TypePrivate})
-}
-
-func CreatePrivateDashboard(projectId uint64, agentUUID string, dashboard *Dashboard) (*Dashboard, int) {
-	dashboard.Type = TypePrivate
-	return createDashboard(projectId, agentUUID, dashboard)
-}
-
-func CreateProjectVisibleDashboard(projectId uint64, agentUUID string, dashboard *Dashboard) (*Dashboard, int) {
-	dashboard.Type = TypeProjectVisible
-	return createDashboard(projectId, agentUUID, dashboard)
+	return CreateDashboard(projectId, agentUUID,
+		&Dashboard{Name: AgentProjectPersonalDashboardName, Type: DashboardTypePrivate})
 }
 
 func GetDashboards(projectId uint64, agentUUID string) ([]Dashboard, int) {
@@ -92,7 +83,8 @@ func GetDashboards(projectId uint64, agentUUID string) ([]Dashboard, int) {
 		return dashboards, http.StatusBadRequest
 	}
 
-	err := db.Order("created_at ASC").Where("project_id = ? AND (type = ? OR agent_uuid = ?)", projectId, TypeProjectVisible, agentUUID).Find(&dashboards).Error
+	err := db.Order("created_at ASC").Where("project_id = ? AND (type = ? OR agent_uuid = ?)",
+		projectId, DashboardTypeProjectVisible, agentUUID).Find(&dashboards).Error
 	if err != nil {
 		log.WithField("project_id", projectId).WithError(err).Error("Failed to get dashboards.")
 		return dashboards, http.StatusInternalServerError

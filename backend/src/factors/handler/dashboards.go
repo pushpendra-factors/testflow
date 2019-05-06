@@ -15,8 +15,8 @@ import (
 )
 
 type DashboardRequestPayload struct {
-	Name           string `json:"name"`
-	ProjectVisible bool   `json:"project_visible"`
+	Name string `json:"name"`
+	Type string `json:"type"`
 }
 
 type DashboardUnitRequestPayload struct {
@@ -63,16 +63,8 @@ func CreateDashboardHandler(c *gin.Context) {
 		return
 	}
 
-	var dashboard *M.Dashboard
-	var errCode int
-	if requestPayload.ProjectVisible {
-		dashboard, errCode = M.CreateProjectVisibleDashboard(projectId, agentUUID,
-			&M.Dashboard{Name: requestPayload.Name})
-	} else {
-		dashboard, errCode = M.CreatePrivateDashboard(projectId, agentUUID,
-			&M.Dashboard{Name: requestPayload.Name})
-	}
-
+	dashboard, errCode := M.CreateDashboard(projectId, agentUUID,
+		&M.Dashboard{Name: requestPayload.Name, Type: requestPayload.Type})
 	if errCode != http.StatusCreated {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Failed to create dashboard."})
 		return

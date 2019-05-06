@@ -13,6 +13,11 @@ import NoContent from '../../common/NoContent';
 import Loading from '../../loading';
 import { PRESENTATION_CARD } from '../Query/common';
 
+const TYPE_OPTS = [
+  { label: "Only me", value: "pr" },
+  { label: "All agents", value: "pv" }
+]
+
 const mapStateToProps = store => {
   return {
     currentProjectId: store.projects.currentProjectId,
@@ -41,7 +46,9 @@ class Dashboard extends Component {
 
         editDashboard: false,
         showCreateModal: false,
+
         createModalMessage: null,
+        createSelectedType: null,
         createName: null,
       }
   }
@@ -132,7 +139,7 @@ class Dashboard extends Component {
 
   renderEditButton() {
     if (!this.isEditable()) return null;
-    let text = this.state.editDashboard ? 'Save' : 'Edit';
+    let text = this.state.editDashboard ? 'Done Editing' : 'Edit Charts';
     let color = this.state.editDashboard ? 'success' : 'danger' 
     return <Button style={{ marginLeft: '10px', height: 'auto', marginBottom: '4px' }} onClick={this.toggleEditDashboard} outline={!this.state.editDashboard} color={color}> { text } </Button>
   }
@@ -158,12 +165,25 @@ class Dashboard extends Component {
       this.showCreateFailure('Dashboard name cannot be empty');
       return
     }
-    this.props.createDashboard(this.props.currentProjectId, { name: this.state.createName })
+    
+    let selectedType = this.getSelectedCreateType();
+    this.props.createDashboard(this.props.currentProjectId, { name: this.state.createName, type: selectedType.value })
       .then((r) => {
         if (!r.ok) this.showCreateFailure();
         else this.toggleCreateModal();
       })
       .catch(this.showCreateFailure);
+  }
+
+  onCreateTypeChange = (option) => {
+    this.setState({ createSelectedType: option });
+  }
+
+  getSelectedCreateType() {
+    if (this.state.createSelectedType != null) 
+      return this.state.createSelectedType;
+
+    return TYPE_OPTS[0];
   }
 
   render() {
@@ -188,13 +208,22 @@ class Dashboard extends Component {
 
         <Modal isOpen={this.state.showCreateModal} toggle={this.toggleCreateModal} style={{marginTop: '10rem'}}>
           <ModalHeader toggle={this.toggleCreateModal}>Create dashboard</ModalHeader>
-          <ModalBody style={{padding: '25px 35px'}}>
+          <ModalBody style={{padding: '15px 35px'}}>
             <div style={{textAlign: 'center', marginBottom: '15px'}}>
               <span style={{display: 'inline-block'}} className='fapp-error' hidden={this.state.createModalMessage == null}>{ this.state.createModalMessage }</span>
             </div>
             <Form >
               <span class='fapp-label'>Name</span>         
               <Input className='fapp-input' type="text" placeholder="Your dashboard name" onChange={this.setCreateDashboardName} />
+              <span class='fapp-label' style={{ marginTop: '18px', marginBottom: '10px', display: 'block' }}>Visiblity</span> 
+              <div class='fapp-select'>
+                <Select
+                  onChange={this.onCreateTypeChange}
+                  options={TYPE_OPTS}
+                  placeholder='Select visiblity'
+                  value={this.getSelectedCreateType()}
+                />
+              </div>        
             </Form>
           </ModalBody>
           <ModalFooter style={{borderTop: 'none', paddingBottom: '30px', paddingRight: '35px'}}>
