@@ -191,9 +191,8 @@ class Dashboard extends Component {
 
     return (
       <div className='fapp-content' style={{marginLeft: '1rem', marginRight: '1rem', paddingTop: '30px' }}>
-        <div style={{ marginBottom: '45px', width: '100%'}}>
+        <div style={{ marginBottom: '32px', width: '100%', textAlign: 'center'}}>
           <div class="fapp-select" style={{ width: '300px', display: 'inline-block' }}>
-            <span style={{ fontSize: '11px', color: '#444', fontWeight: '500'}}> Dashboards </span>
             <Select
               onChange={this.onSelectDashboard}
               options={createSelectOpts(this.getDashboardsOptSrc())}
