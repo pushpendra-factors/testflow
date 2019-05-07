@@ -14,34 +14,35 @@ import (
 
 type QueryProperty struct {
 	// Entity: user or event.
-	Entity string `json:"entity"`
+	Entity string `json:"en"`
 	// Type: categorical or numerical
-	Type     string `json:"type"`
-	Property string `json:"property"`
-	Operator string `json:"operator"`
-	Value    string `json:"value"`
+	Type     string `json:"ty"`
+	Property string `json:"pr"`
+	Operator string `json:"op"`
+	Value    string `json:"va"`
 }
 
 type QueryGroupByProperty struct {
 	// Entity: user or event.
-	Entity   string `json:"entity"`
-	Property string `json:"property"`
-	Index    int    `json:"index"`
+	Entity   string `json:"en"`
+	Property string `json:"pr"`
+	Index    int    `json:"in"`
 }
 
 type QueryEventWithProperties struct {
-	Name       string          `json:"name"`
-	Properties []QueryProperty `json:"properties"`
+	Name       string          `json:"na"`
+	Properties []QueryProperty `json:"pr"`
 }
 
 type Query struct {
-	Type                 string                     `json:"type"`
-	EventsCondition      string                     `json:"eventsCondition"` // all or any
-	EventsWithProperties []QueryEventWithProperties `json:"eventsWithProperties"`
-	GroupByProperties    []QueryGroupByProperty     `json:"groupByProperties"`
-	GroupByTimestamp     bool                       `json:"groupByTimestamp"`
-	Timezone             string                     `json:"timezone"`
-	From                 int64                      `json:"from"`
+	Type                 string                     `json:"ty"`
+	EventsCondition      string                     `json:"ec"` // all or any
+	EventsWithProperties []QueryEventWithProperties `json:"ewp"`
+	GroupByProperties    []QueryGroupByProperty     `json:"gbp"`
+	GroupByTimestamp     bool                       `json:"gbt"`
+	Timezone             string                     `json:"tz"`
+	OverridePeriod       bool                       `json:"ovp"`
+	From                 int64                      `json:"fr"`
 	To                   int64                      `json:"to"`
 }
 
@@ -853,27 +854,27 @@ func getEncodedKeyForCols(cols []interface{}) string {
 	return key
 }
 
-// Validates and returns errMsg which is used as response.
-func validateQuery(query Query) string {
+// IsValidQuery Validates and returns errMsg which is used as response.
+func IsValidQuery(query *Query) (bool, string) {
 	if query.Type != QueryTypeEventsOccurrence &&
 		query.Type != QueryTypeUniqueUsers {
-		return "Unknown query type given"
+		return false, "Invalid query type given"
 	}
 
 	if query.EventsCondition != EventCondAllGivenEvent &&
 		query.EventsCondition != EventCondAnyGivenEvent {
-		return "Unknown events condition given"
+		return false, "Invalid events condition given"
 	}
 
 	if len(query.EventsWithProperties) == 0 {
-		return "No events to process"
+		return false, "No events to process"
 	}
 
 	if query.From == 0 || query.To == 0 {
-		return "Invalid query time range"
+		return false, "Invalid query time range"
 	}
 
-	return ""
+	return true, ""
 }
 
 // BuildQuery - Dispatches corresponding build method based on attributes.
@@ -997,8 +998,8 @@ func LimitQueryResults(groupPropsLen int, groupByTimestamp bool,
 func Analyze(projectId uint64, query Query) ([]string, [][]interface{}, int, string) {
 	db := C.GetServices().Db
 
-	errMsg := validateQuery(query)
-	if errMsg != "" {
+	valid, errMsg := IsValidQuery(&query)
+	if !valid {
 		return nil, nil, http.StatusBadRequest, errMsg
 	}
 

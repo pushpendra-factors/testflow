@@ -142,7 +142,7 @@ func AgentInvite(c *gin.Context) {
 		}
 	}
 
-	pam, errCode := M.CreateProjectAgentMapping(&M.ProjectAgentMapping{
+	pam, errCode := M.CreateProjectAgentMappingWithDependencies(&M.ProjectAgentMapping{
 		ProjectID: projectId,
 		AgentUUID: invitedAgent.UUID,
 		InvitedBy: &invitedByAgentUUID,

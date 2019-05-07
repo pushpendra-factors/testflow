@@ -38,7 +38,7 @@ type ProjectAgentMapping struct {
 
 // Add Check
 // Project should not have more than 100 Agents
-func CreateProjectAgentMapping(pam *ProjectAgentMapping) (*ProjectAgentMapping, int) {
+func createProjectAgentMapping(pam *ProjectAgentMapping) (*ProjectAgentMapping, int) {
 	if pam == nil {
 		return nil, http.StatusBadRequest
 	}
@@ -52,6 +52,24 @@ func CreateProjectAgentMapping(pam *ProjectAgentMapping) (*ProjectAgentMapping, 
 	}
 
 	return pam, http.StatusCreated
+}
+
+func CreateProjectAgentMappingWithDependencies(pam *ProjectAgentMapping) (*ProjectAgentMapping, int) {
+	cPam, errCode := createProjectAgentMapping(pam)
+	if errCode != http.StatusCreated {
+		return cPam, errCode
+	}
+
+	// dependencies.
+	_, errCode = CreateAgentPersonalDashboardForProject(pam.ProjectID, pam.AgentUUID)
+	if errCode != http.StatusCreated {
+		// Should not fail agent creation if failed. log and continue.
+		// User will be able to create a dashboard himself.
+		log.WithFields(log.Fields{"project_id": pam.ProjectID,
+			"agent_uuid": pam.AgentUUID}).Error("Failed to create agent's personal dashboard for project.")
+	}
+
+	return cPam, http.StatusCreated
 }
 
 func GetProjectAgentMapping(projectId uint64, agentUUID string) (*ProjectAgentMapping, int) {

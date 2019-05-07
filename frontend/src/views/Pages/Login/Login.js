@@ -13,7 +13,7 @@ import { login } from "../../../actions/agentActions";
 import  { InvalidEmail, MissingEmail, MissingPassword } from '../ValidationMessages';
 import HalfScreen from '../HalfScreen';
 import SubmissionError from '../SubmissionError';
-import factorsai from '../../../factorsaiObj';
+import factorsai from '../../../common/factorsaiObj';
 
 const mapDispatchToProps = dispatch => {
   return bindActionCreators({ login }, dispatch);

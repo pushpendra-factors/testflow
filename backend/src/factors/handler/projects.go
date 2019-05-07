@@ -46,7 +46,7 @@ func CreateProjectHandler(c *gin.Context) {
 	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 
 	// create project agent mapping
-	_, errCode = M.CreateProjectAgentMapping(&M.ProjectAgentMapping{
+	_, errCode = M.CreateProjectAgentMappingWithDependencies(&M.ProjectAgentMapping{
 		ProjectID: project.ID,
 		AgentUUID: loggedInAgentUUID,
 		Role:      M.ADMIN,

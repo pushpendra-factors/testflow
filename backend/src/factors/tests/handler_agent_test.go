@@ -164,7 +164,7 @@ func TestAPIAgentInvite(t *testing.T) {
 		agent, errCode := M.CreateAgent(&M.Agent{Email: getRandomEmail()})
 		assert.Equal(t, http.StatusCreated, errCode)
 
-		_, errCode = M.CreateProjectAgentMapping(&M.ProjectAgentMapping{
+		_, errCode = M.CreateProjectAgentMappingWithDependencies(&M.ProjectAgentMapping{
 			ProjectID: project.ID,
 			AgentUUID: agent.UUID,
 		})

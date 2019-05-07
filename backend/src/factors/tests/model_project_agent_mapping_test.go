@@ -22,7 +22,7 @@ func TestCreateProjectAgentMapping(t *testing.T) {
 		AgentUUID: agent.UUID,
 		Role:      M.AGENT,
 	}
-	_, errCode = M.CreateProjectAgentMapping(pam)
+	_, errCode = M.CreateProjectAgentMappingWithDependencies(pam)
 	assert.Equal(t, http.StatusCreated, errCode)
 }
 
@@ -39,7 +39,7 @@ func TestGetProjectAgentMapping(t *testing.T) {
 		AgentUUID: agent.UUID,
 		Role:      M.AGENT,
 	}
-	_, errCode = M.CreateProjectAgentMapping(pam)
+	_, errCode = M.CreateProjectAgentMappingWithDependencies(pam)
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	t.Run("MappingMissing", func(t *testing.T) {
@@ -80,7 +80,7 @@ func TestDBGetProjectAgentMappingsByProjectId(t *testing.T) {
 		// create project agent mapping
 		for _, createdAgent := range createdAgents {
 
-			_, errCode := M.CreateProjectAgentMapping(&M.ProjectAgentMapping{
+			_, errCode := M.CreateProjectAgentMappingWithDependencies(&M.ProjectAgentMapping{
 				ProjectID: project.ID,
 				AgentUUID: createdAgent.UUID,
 			})
@@ -115,7 +115,7 @@ func TestDBGetProjectAgentMappingsByAgentUUID(t *testing.T) {
 			projects = append(projects, project)
 		}
 		for _, project := range projects {
-			_, errCode := M.CreateProjectAgentMapping(&M.ProjectAgentMapping{
+			_, errCode := M.CreateProjectAgentMappingWithDependencies(&M.ProjectAgentMapping{
 				ProjectID: project.ID,
 				AgentUUID: agent.UUID,
 			})

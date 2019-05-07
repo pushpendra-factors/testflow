@@ -2,24 +2,33 @@ import React, { Component } from 'react';
 import Select from 'react-select';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
-import { Row, Col, Button, Table } from 'reactstrap';
+import { Row, Col, Button, ButtonGroup, ButtonToolbar, 
+  ButtonDropdown, DropdownToggle, DropdownMenu, 
+  Modal, ModalHeader, ModalBody, Form, DropdownItem,
+  ModalFooter, Input } from 'reactstrap'; 
 import 'react-date-range/dist/styles.css';
 import 'react-date-range/dist/theme/default.css';
 import { DateRangePicker, createStaticRanges } from 'react-date-range'; 
 import moment from 'moment';
 
+import TableChart from './TableChart'
 import LineChart from './LineChart';
 import BarChart from './BarChart';
+import TableBarChart from './TableBarChart';
+import { PRESENTATION_BAR, PRESENTATION_LINE, PRESENTATION_TABLE, PRESENTATION_CARD } from './common';
 import { 
   fetchProjectEvents,
   runQuery,
 } from '../../actions/projectsActions';
+import { fetchDashboards, createDashboardUnit } from '../../actions/dashboardActions';
 import Event from './Event';
 import GroupBy from './GroupBy';
-import { trimQuotes, removeElementByIndex, firstToUpperCase, getSelectedOpt, isNumber, createSelectOpts } from '../../util'
-import TableBarChart from './TableBarChart';
+import { 
+  removeElementByIndex, getSelectedOpt, isNumber, createSelectOpts, 
+  isSingleCountResult, slideUnixTimeWindowToCurrentTime,
+} from '../../util'
 import Loading from '../../loading';
-import factorsai from '../../factorsaiObj';
+import factorsai from '../../common/factorsaiObj';
 
 const COND_ALL_GIVEN_EVENT = 'all_given_event';
 const COND_ANY_GIVEN_EVENT = 'any_given_event'; 
@@ -68,10 +77,6 @@ const DEFINED_DATE_RANGES = createStaticRanges([
 
 const ERROR_NO_EVENT = 'No events given. Please add atleast one event by clicking +Event button.';
 
-const PRESENTATION_TABLE = 'table';
-const PRESENTATION_LINE =  'line';
-const PRESENTATION_BAR = 'bar';
-
 const DEFAULT_PRESENTATION = PRESENTATION_TABLE;
 
 const HEADER_COUNT = "count";
@@ -87,6 +92,7 @@ const mapStateToProps = store => {
     currentProjectId: store.projects.currentProjectId,
     projects: store.projects.projects,
     eventNames: store.projects.currentProjectEventNames,
+    dashboards: store.dashboards.dashboards,
 
     eventPropertiesMap: store.projects.queryEventPropertiesMap,
     eventPropertyValuesMap: store.projects.queryEventPropertyValuesMap
@@ -95,7 +101,9 @@ const mapStateToProps = store => {
 
 const mapDispatchToProps = dispatch => {
   return bindActionCreators({ 
-    fetchProjectEvents
+    fetchProjectEvents,
+    fetchDashboards,
+    createDashboardUnit,
   }, dispatch)
 }
 
@@ -121,6 +129,12 @@ class Query extends Component {
       showPresentation: false,
       showDatePicker: false,
       topError: null,
+
+      showDashboardsList: false,
+      showAddToDashboardModal: false,
+      addToDashboardMessage: null,
+      inputDashboardUnitTitle: null,
+      selectedDashboardId: null,
     }
   }
 
@@ -131,6 +145,8 @@ class Query extends Component {
         this.initWithAnEventRow();
       })
       .catch((r) => this.setState({ eventNamesLoaded: true, eventNamesLoadError: r.paylaod }));
+
+    this.props.fetchDashboards(this.props.currentProjectId);
   }
 
   initWithAnEventRow() {
@@ -262,46 +278,47 @@ class Query extends Component {
     this.setState({ showDatePicker: !this.state.showDatePicker });
   }
 
-  setQueryDuration(query) {
+  setQueryPeriod(query, toSave=false) {
     let selectedRange = this.state.resultDateRange[0];
-    let isEndDateToday = selectedRange.endDate.getDate() == (new Date()).getDate();
+    let isEndDateToday = moment(selectedRange.endDate).isSame(moment(), 'day');
     let from =  moment(selectedRange.startDate).unix();
     let to = moment(selectedRange.endDate).unix();
 
     // Adjust the duration window respective to current time.
     if (isEndDateToday) {
-      let diff = to - from;
-      to =  moment(new Date()).unix();
-      from = to - diff;
+      let newRange = slideUnixTimeWindowToCurrentTime(from, to)
+      from = newRange.from;
+      to = newRange.to;
     }
 
-    query.from = from; // in utc.
+    if (toSave) query.ovp = isEndDateToday;
+    query.fr = from; // in utc.
     query.to = to; // in utc.
   }
 
-  getQuery(groupByDate=false) {
+  getQuery(groupByDate=false, toSave=false) {
     let query = {};
-    query.type = this.state.type.value;
-    query.eventsCondition = this.state.condition.value;
+    query.ty = this.state.type.value;
+    query.ec = this.state.condition.value;
     // event_occurrence supports only any_given_event.
-    if (query.type == TYPE_EVENT_OCCURRENCE) {
-      query.eventsCondition = COND_ANY_GIVEN_EVENT;
+    if (query.ty == TYPE_EVENT_OCCURRENCE) {
+      query.ec = COND_ANY_GIVEN_EVENT;
     }
     
     if (this.state.resultDateRange.length == 0)
       throw new Error('Invalid date range. No default range given.')
     
-    this.setQueryDuration(query);
+    this.setQueryPeriod(query, toSave);
 
-    query.eventsWithProperties = []
+    query.ewp = []
     for(let ei=0; ei < this.state.events.length; ei++) {
       let event = this.state.events[ei];
       
       if (event.name == "") continue;
       
       let ewp = {};
-      ewp.name = event.name;
-      ewp.properties = [];
+      ewp.na = event.name;
+      ewp.pr = [];
 
       for(let pi=0; pi < event.properties.length; pi++) {
         let property = event.properties[pi];
@@ -316,31 +333,31 @@ class Query extends Component {
               !isNumber(property.value))
               continue;
 
-            cProperty.entity = property.entity;
-            cProperty.property = property.name;
-            cProperty.operator = property.op;
-            cProperty.value = property.value;
-            cProperty.type = property.valueType; 
-            ewp.properties.push(cProperty);
+            cProperty.en = property.entity;
+            cProperty.pr = property.name;
+            cProperty.op = property.op;
+            cProperty.va = property.value;
+            cProperty.ty = property.valueType; 
+            ewp.pr.push(cProperty);
         }
       }
-      query.eventsWithProperties.push(ewp)
+      query.ewp.push(ewp)
     }
 
-    query.groupByProperties = [];
+    query.gbp = [];
     for(let i=0; i < this.state.groupBys.length; i++) {
       let groupBy = this.state.groupBys[i];
       let cGroupBy = {};
 
       if (groupBy.name != '' && groupBy.type != '') {
-        cGroupBy.property = groupBy.name;
-        cGroupBy.entity = groupBy.type;
-        query.groupByProperties.push(cGroupBy)
+        cGroupBy.pr = groupBy.name;
+        cGroupBy.en = groupBy.type;
+        query.gbp.push(cGroupBy)
       }
     }
 
     if (groupByDate) {
-      query.groupByTimestamp = true;
+      query.gbt = true;
     }
   
     console.debug(query);
@@ -423,129 +440,23 @@ class Query extends Component {
   }
 
   getResultAsTable() {
-    let result = this.state.result;
-    let headers = result.headers.map((h, i) => { return <th key={'header_'+i}>{ h }</th> });
-    let rows = [];
-
-    for(let i=0; i<Object.keys(result.rows).length; i++) {
-      let cols = result.rows[i.toString()];
-      if (cols != undefined) {
-        let tds = cols.map((c) => { return <td> { trimQuotes(c) } </td> });
-        rows.push(<tr>{tds}</tr>);
-      }
-    }
-
-    return (
-      <Table className='fapp-table animated fadeIn'> 
-        <thead>
-          <tr> { headers } </tr>
-        </thead>
-        <tbody>
-          { rows }
-        </tbody>
-      </Table>
-    );
-  }
-
-  getLinesByGroupsIfExist(rows, countIndex, dateIndex) {
-    let lines = {}
-    let keySep = " / ";
-    let maxScale = 0;
-
-    for(let i=0; i<Object.keys(rows).length; i++) {
-      let row = rows[i.toString()];
-      if (row == undefined) continue;
-
-      // All group properties joined together 
-      // with a seperator is a key.
-      let key = "";
-      for(let c=0; c < row.length; c++) {
-        if(c != countIndex && c != dateIndex) {
-          let prop = trimQuotes(row[c]);
-          if (key === "") {
-            key = prop;
-            continue;
-          }
-          key = key + keySep + prop;
-        }
-      }
-      
-      // init.
-      if (!(key in lines)) {
-        lines[key] = { counts: [], timestamps: [] }
-      }
-      
-      lines[key].counts.push(row[countIndex]);
-      lines[key].timestamps.push(moment(row[dateIndex]).format('MMM DD, YYYY'));
-
-      if (maxScale < row[countIndex]) maxScale = row[countIndex];
-    }
+    if (!isSingleCountResult(this.state.result)) 
+      return <TableChart queryResult={this.state.result} />;
     
-    return { lines: lines, maxScale: maxScale };
+    return <TableChart card noHeader bordered queryResult={this.state.result} />;
   }
 
   getResultAsLineChart() {
-    let result = this.state.result;
-    let lines = [];
-
-    let countIndex = result.headers.indexOf(HEADER_COUNT);
-    if (countIndex == -1) { 
-      throw new Error('No counts to plot as lines.');
-    }
-  
-    let dateIndex = result.headers.indexOf(HEADER_DATE);
-    if (dateIndex == -1) { 
-      throw new Error('No dates to plot as lines.');
-    }
-      
-    let groups = this.getLinesByGroupsIfExist(result.rows, countIndex, dateIndex);
-    for(let key in groups.lines) {
-      let line = { title: key, xAxisLabels: groups.lines[key].timestamps, yAxisLabels: groups.lines[key].counts };
-      lines.push(line);
-    }
-    
-    return <div style={{height: '450px'}} className='animated fadeIn'> <LineChart lines={lines} maxYScale={groups.maxScale} /> </div>;
+    return <div style={{height: '450px'}} className='animated fadeIn'> 
+      <LineChart queryResult={this.state.result} /> 
+    </div>;
   }
   
 
   getResultAsVerticalBarChart() {
-    let result = this.state.result;
-    let bars = {};
-
-    let countIndex = result.headers.indexOf(HEADER_COUNT);
-    // Need a count and a group col for bar.
-    if (countIndex == -1) { 
-      throw new Error('Invalid query result for bar chart.');
-    }
-    
-    let maxScale = 0;
-    let data = [], labels = [];
-    if (result.headers.length == 2) {
-      // Other col apart from count is group col.
-      let groupIndex = countIndex == 0 ? 1 : 0;
-      for(let i=0; i<Object.keys(result.rows).length; i++) {
-        let cols = result.rows[i.toString()];
-        if (cols != undefined && cols[countIndex] != undefined) {
-          data.push(cols[countIndex]);
-          labels.push(trimQuotes(cols[groupIndex]));
-          if (maxScale < cols[countIndex]) maxScale = cols[countIndex];
-        }
-      }
-      bars.x_label = firstToUpperCase(result.headers[groupIndex]);
-    } else if (result.headers.length == 1) {
-      let col = result.rows["0"];
-      data.push(col[countIndex]);
-      if (maxScale < col[countIndex]) maxScale = col[countIndex];
-      bars.x_label = "";
-    } else {
-      throw new Error("Invalid no.of result columns for vertical bar.");
-    }
-
-    bars.datasets = [{ data: data  }];
-    bars.labels = labels;
-    bars.y_label = "";
-
-    return <div style={{height: '450px'}} className='animated fadeIn'> <BarChart bars={bars} legend={false} maxYScale={maxScale} /> </div>;
+    return <div style={{height: '450px'}} className='animated fadeIn'> 
+      <BarChart queryResult={this.state.result} legend={false} />
+    </div>;
   }
 
   getResultAsTabularBarChart() {
@@ -594,6 +505,10 @@ class Query extends Component {
     })
   }
 
+  toggleDashboardsList = () => {
+    this.setState({ showDashboardsList: !this.state.showDashboardsList });
+  }
+
   isLoaded() {
     return this.state.eventNamesLoaded;
   }
@@ -604,6 +519,60 @@ class Query extends Component {
     } else {
       return createSelectOpts(PROPERTY_TYPE_OPTS);
     }
+  }
+
+  showAddToDashboardFailure() {
+    this.setState({ addToDashboardMessage: 'Failed to add chart to dashboard' });
+  }
+
+  addToDashboard = () => {
+    if (this.state.selectedPresentation == null) {
+      console.error('Invalid presentation');
+      return;
+    }
+    let presentation = this.state.selectedPresentation; 
+
+    if (presentation === PRESENTATION_TABLE 
+      && isSingleCountResult(this.state.result)) {
+      presentation = PRESENTATION_CARD;
+    }
+    
+    let groupByTimestamp = presentation === PRESENTATION_LINE;
+    let query = this.getQuery(groupByTimestamp, true);
+    let payload = {
+      presentation: presentation,
+      query: query,
+      title: this.state.inputDashboardUnitTitle,
+    };
+
+    if (this.state.selectedDashboardId == null) {
+      throw new Error('Invalid dashboard to add.');
+    }
+
+    this.props.createDashboardUnit(this.props.currentProjectId, this.state.selectedDashboardId, payload)
+      .then((r) => { 
+        if (!r.ok) this.showAddToDashboardFailure(); 
+        else this.toggleAddToDashboardModal(); 
+      })
+      .catch(() => { this.showAddToDashboardFailure(); });
+  }
+
+  toggleAddToDashboardModal = () =>  {
+    this.setState({ showAddToDashboardModal: !this.state.showAddToDashboardModal, addToDashboardMessage: null });
+  }
+
+  setDashboardUnitTitle = (e) => {
+    this.setState({ addToDashboardMessage: null });
+
+    let title = e.target.value.trim();
+    if (title == "") console.error("chart title cannot be empty");
+    this.setState({ inputDashboardUnitTitle: title });
+  }
+
+  selectDashboardToAdd = (event) => {
+    let dashboardId = event.currentTarget.getAttribute('value');
+    this.setState({ selectedDashboardId: dashboardId })
+    this.toggleAddToDashboardModal();
   }
 
   render() {
@@ -641,7 +610,7 @@ class Query extends Component {
           projectId={this.props.currentProjectId}
           getSelectedEventNames={this.getEventNames}
           groupByState={this.state.groupBys[i]}
-          onTypeChange={(option) => this.onGroupByTypeChange(i, option)}
+          onTypeChange={(option) => this.onGroupByTypeChange(i, option)} 
           onNameChange={(option) => this.onGroupByNameChange(i, option)}
           getOpts={this.getGroupByOpts}
         />
@@ -649,6 +618,14 @@ class Query extends Component {
     }
 
     console.debug('Query State : ', this.state);
+
+    let dashboardsDropdown = [];
+    for(let i=0; i<this.props.dashboards.length; i++){
+      let dashboard = this.props.dashboards[i];
+      if (dashboard) {
+        dashboardsDropdown.push(<DropdownItem onClick={this.selectDashboardToAdd} value={dashboard.id}>{dashboard.name}</DropdownItem>)
+      }
+    }
 
     return (
       <div className='fapp-content' style={{marginLeft: '2rem', marginRight: '2rem'}}>
@@ -724,13 +701,21 @@ class Query extends Component {
         <div hidden={ !this.state.showPresentation }>
           <Row>
             <Col xs='12' md='12'>
-                <div class='pull-right'>
-                  <div style={{ marginBottom: '10px'}}>
-                    <button className={this.getPresentationSelectorClass(PRESENTATION_TABLE)} style={{marginRight: '10px', fontWeight: 500}} onClick={() => this.run(PRESENTATION_TABLE)}>Table</button>
-                    <button className={this.getPresentationSelectorClass(PRESENTATION_BAR)}  style={{marginRight: '10px', fontWeight: 500}} onClick={() => this.run(PRESENTATION_BAR)}>Bar</button>
-                    <button className={this.getPresentationSelectorClass(PRESENTATION_LINE)}  style={{marginRight: '10px', fontWeight: 500}} onClick={() => this.run(PRESENTATION_LINE)}>Line</button>
-                  </div>
-                </div>
+              <ButtonToolbar class='pull-right' style={{ marginBottom: '10px' }}>
+                <ButtonGroup style={{ marginRight: '10px' }}>
+                  <button className={this.getPresentationSelectorClass(PRESENTATION_TABLE)} style={{fontWeight: 500}} onClick={() => this.run(PRESENTATION_TABLE)}>Table</button>
+                  <button className={this.getPresentationSelectorClass(PRESENTATION_BAR)}  style={{fontWeight: 500}} onClick={() => this.run(PRESENTATION_BAR)}>Bar</button>
+                  <button className={this.getPresentationSelectorClass(PRESENTATION_LINE)}  style={{fontWeight: 500}} onClick={() => this.run(PRESENTATION_LINE)}>Line</button>
+                </ButtonGroup>
+                <ButtonDropdown isOpen={this.state.showDashboardsList} toggle={this.toggleDashboardsList} >
+                  <DropdownToggle caret outline color="primary">
+                    Add to dashboard
+                  </DropdownToggle>
+                  <DropdownMenu style={{height: 'auto', maxHeight: '210px', overflowX: 'scroll'}} right>
+                    { dashboardsDropdown }
+                  </DropdownMenu>
+                </ButtonDropdown>
+              </ButtonToolbar>
             </Col>
           </Row>
           <Row>
@@ -739,6 +724,23 @@ class Query extends Component {
             </Col>
           </Row>
         </div>
+
+        <Modal isOpen={this.state.showAddToDashboardModal} toggle={this.toggleAddToDashboardModal} style={{marginTop: '10rem'}}>
+          <ModalHeader toggle={this.toggleAddToDashboardModal}>Add to dashboard</ModalHeader>
+          <ModalBody style={{padding: '25px 35px'}}>
+            <div style={{textAlign: 'center', marginBottom: '15px'}}>
+              <span style={{display: 'inline-block'}} className='fapp-error' hidden={this.state.addToDashboardMessage == null}>{ this.state.addToDashboardMessage }</span>
+            </div>
+            <Form >
+              <span class='fapp-label'>Chart title</span>         
+              <Input className='fapp-input' type="text" placeholder="Your chart title" onChange={this.setDashboardUnitTitle} />
+            </Form>
+          </ModalBody>
+          <ModalFooter style={{borderTop: 'none', paddingBottom: '30px', paddingRight: '35px'}}>
+            <Button outline color="success" onClick={this.addToDashboard}>Add</Button>
+            <Button outline color='danger' onClick={this.toggleAddToDashboardModal}>Cancel</Button>
+          </ModalFooter>
+        </Modal>
       </div>
     );
   }

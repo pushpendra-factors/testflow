@@ -5,6 +5,11 @@ import { Redirect } from 'react-router-dom';
 import DefaultLayout from './containers/DefaultLayout';
 import Loading from './loading';
 
+const Dashboard = Loadable({
+  loader: () => import('./views/Dashboard'),
+  loading: Loading,
+});
+
 const Query = Loadable({
   loader: () => import('./views/Query'),
   loading: Loading,
@@ -54,6 +59,7 @@ const ReloadComponent = (props) => {
 // https://github.com/ReactTraining/react-router/tree/master/packages/react-router-config
 const routes = [
   { path: '/', exact: true, name: 'Home', component: DefaultLayout },
+  { path: '/dashboard', name: 'Dashboard', component: Dashboard },
   { path: '/core', name: 'Query', component: Query },
   { path: '/factor', name: 'Factor', component: Factor },
   { path: '/settings/segment', exact: true, name: 'Segment', component: SettingsSegment },

@@ -29,7 +29,7 @@ import { hotjar } from 'react-hotjar';
 import { isProduction } from '../../util';
 
 // inits factorsai sdk for app.
-import factorsai from '../../factorsaiObj';
+import factorsai from '../../common/factorsaiObj';
 
 const projectSelectStyles = {
   option: (base, state) => ({

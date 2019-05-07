@@ -223,4 +223,45 @@ func main() {
 		log.Info("project_agent_mappings table is associated with agents table.")
 	}
 
+	// Create dashboard table.
+	if err := db.CreateTable(&M.Dashboard{}).Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("dashboard table creation failed.")
+	} else {
+		log.Info("Created dashboard table")
+	}
+
+	// Add foreign key constraints.
+	if err := db.Model(&M.Dashboard{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("dashboard table association with projects table failed.")
+	} else {
+		log.Info("dashboard table is associated with projects table.")
+	}
+
+	// Adding unique index on dashboards id, project_id for dashboard units foreign referrence.
+	if err := db.Exec("CREATE UNIQUE INDEX project_id_id_unique_idx ON dashboards (project_id, id);").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("Failed to create unique index dashboards(project_id, id).")
+	} else {
+		log.Info("Created unique index on dashboards(project_id, id).")
+	}
+
+	// Create dashboard_unit table.
+	if err := db.CreateTable(&M.DashboardUnit{}).Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("dashboard_unit table creation failed.")
+	} else {
+		log.Info("Created dashboard_unit table")
+	}
+
+	// Add foreign key constraints.
+	if err := db.Model(&M.DashboardUnit{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("dashboard_unit table association with projects table failed.")
+	} else {
+		log.Info("dashboard_unit table is associated with projects table.")
+	}
+
+	// Add foreign key constraints dashboard_id, dashboards(project_id, id).
+	if err := db.Model(&M.DashboardUnit{}).AddForeignKey("project_id, dashboard_id", "dashboards(project_id, id)", "RESTRICT", "RESTRICT").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("dashboard_unit table association with dashboards table failed.")
+	} else {
+		log.Info("dashboard_unit table is associated with dashboards table.")
+	}
 }

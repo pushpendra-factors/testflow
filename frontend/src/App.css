@@ -450,7 +450,7 @@ div.setting-card:hover{
 
 .fapp-input {
     border: 1px solid #8f9ba6 !important;
-    padding: 1.5rem 1rem !important;
+    padding: 1.2rem 0.8rem !important;
     color: #484848 !important;
     margin-top: 10px;
     margin-bottom: 10px;
@@ -553,3 +553,11 @@ div.setting-card:hover{
     border: 2px solid #eff2f7;
 }
 
+.fapp-dunit .card-header {
+    padding-left: 30px;
+    padding-right: 30px;
+    padding-top: 20px;
+    background: #fff;
+    border-bottom: none;
+    color: #444;
+}

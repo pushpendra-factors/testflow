@@ -124,7 +124,8 @@ func SetupProjectWithAgentDAO() (*M.Project, *M.Agent, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	_, errCode := M.CreateProjectAgentMapping(&M.ProjectAgentMapping{ProjectID: project.ID, AgentUUID: agent.UUID})
+	_, errCode := M.CreateProjectAgentMappingWithDependencies(&M.ProjectAgentMapping{
+		ProjectID: project.ID, AgentUUID: agent.UUID})
 	if errCode != http.StatusCreated {
 		return nil, nil, fmt.Errorf("ProjectAgentMapping Creation failed.")
 	}

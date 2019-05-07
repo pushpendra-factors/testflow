@@ -25,7 +25,8 @@ import loadingImage from '../../assets/img/loading_gray.gif';
 
 
 import Select from 'react-select';
-import factorsai from '../../factorsaiObj';
+import factorsai from '../../common/factorsaiObj';
+import NoContent from '../../common/NoContent'; 
 
 const EVENT_NAME_TYPE = "eventName";
 const EVENT_PROPERTY_START_TYPE = "eventPropertyStart";
@@ -452,13 +453,12 @@ class Factor extends Component {
     if (this.state.factors.loading == LOADING_DEFAULT || 
       this.state.factors.loading == LOADING_INIT) return null;
     
-    if (charts.length == 0) {
+    if (charts.length == 0)
       return (
-        <Col md={{ size: 'auto', offset: 5 }} style={{paddingTop:'8%', color: '#c0c0c0'}}>
-          <h2> No results </h2>
+        <Col md={{ size: 'auto', offset: 5 }}>
+          <NoContent paddingTop='10%' msg='No results' />
         </Col>
-      )
-    }
+      );
 
     return charts;
   }

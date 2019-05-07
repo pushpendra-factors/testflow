@@ -1,5 +1,5 @@
 import factorsai from 'factorsai';
-import { isProduction } from './util'
+import { isProduction } from '../util'
 
 if (isProduction()) {
     factorsai.init(BUILD_CONFIG.factors_sdk_token); 
