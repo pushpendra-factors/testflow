@@ -59,6 +59,12 @@ func TestGetDashboards(t *testing.T) {
 	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
 
+	agent2, err := SetupAgentReturnDAO()
+	assert.Nil(t, err)
+	_, errCode := M.CreateProjectAgentMappingWithDependencies(&M.ProjectAgentMapping{
+		ProjectID: project.ID, AgentUUID: agent2.UUID})
+	assert.Equal(t, http.StatusCreated, errCode)
+
 	t.Run("GetDashboards:NotCreated", func(t *testing.T) {
 		dashboards, errCode := M.GetDashboards(project.ID, agent.UUID)
 		assert.Equal(t, http.StatusFound, errCode)
@@ -68,10 +74,12 @@ func TestGetDashboards(t *testing.T) {
 	t.Run("GetDashboards:AfterCreation", func(t *testing.T) {
 		rName1 := U.RandomString(5)
 		dashboard, errCode := M.CreateDashboard(project.ID, agent.UUID, &M.Dashboard{Name: rName1, Type: M.DashboardTypePrivate})
+		assert.Equal(t, http.StatusCreated, errCode)
 		assert.NotNil(t, dashboard)
 		assert.Equal(t, http.StatusCreated, errCode)
 		rName2 := U.RandomString(5)
 		dashboard, errCode = M.CreateDashboard(project.ID, agent.UUID, &M.Dashboard{Name: rName2, Type: M.DashboardTypePrivate})
+		assert.Equal(t, http.StatusCreated, errCode)
 		assert.NotNil(t, dashboard)
 		assert.Equal(t, http.StatusCreated, errCode)
 
@@ -82,5 +90,41 @@ func TestGetDashboards(t *testing.T) {
 		assert.Equal(t, M.AgentProjectPersonalDashboardName, dashboards[0].Name)
 		assert.Equal(t, rName1, dashboards[1].Name)
 		assert.Equal(t, rName2, dashboards[2].Name)
+	})
+
+	t.Run("GetDashboards:AccessPrivate", func(t *testing.T) {
+		rName1 := U.RandomString(5)
+		dashboard, errCode := M.CreateDashboard(project.ID, agent.UUID, &M.Dashboard{Name: rName1, Type: M.DashboardTypePrivate})
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.NotNil(t, dashboard)
+
+		// Other agent sholuld not be able to access my private dashboard.
+		dashboards, errCode := M.GetDashboards(project.ID, agent2.UUID)
+		assert.Equal(t, http.StatusFound, errCode)
+		for _, d := range dashboards {
+			assert.NotEqual(t, rName1, d.Name)
+		}
+
+		// Creator should have access to private dashboard.
+		dashboards, errCode = M.GetDashboards(project.ID, agent.UUID)
+		assert.Equal(t, http.StatusFound, errCode)
+		assert.Equal(t, rName1, dashboards[len(dashboards)-1].Name)
+	})
+
+	t.Run("GetDashboards:AccessProjectVisible", func(t *testing.T) {
+		rName1 := U.RandomString(5)
+		dashboard, errCode := M.CreateDashboard(project.ID, agent.UUID, &M.Dashboard{Name: rName1, Type: M.DashboardTypeProjectVisible})
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.NotNil(t, dashboard)
+
+		// All agents should be able to access a ProjectVisible dashboard.
+		dashboards, errCode := M.GetDashboards(project.ID, agent2.UUID)
+		assert.Equal(t, http.StatusFound, errCode)
+		assert.Equal(t, rName1, dashboards[len(dashboards)-1].Name)
+
+		// Creator should have access to project visible dashboard.
+		dashboards, errCode = M.GetDashboards(project.ID, agent.UUID)
+		assert.Equal(t, http.StatusFound, errCode)
+		assert.Equal(t, rName1, dashboards[len(dashboards)-1].Name)
 	})
 }

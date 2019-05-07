@@ -16,6 +16,12 @@ func TestCreateDashboardUnit(t *testing.T) {
 	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
 
+	agent2, err := SetupAgentReturnDAO()
+	assert.Nil(t, err)
+	_, errCode := M.CreateProjectAgentMappingWithDependencies(&M.ProjectAgentMapping{
+		ProjectID: project.ID, AgentUUID: agent2.UUID})
+	assert.Equal(t, http.StatusCreated, errCode)
+
 	rName := U.RandomString(5)
 	dashboard, errCode := M.CreateDashboard(project.ID, agent.UUID, &M.Dashboard{Name: rName, Type: M.DashboardTypeProjectVisible})
 	assert.NotNil(t, dashboard)
@@ -66,11 +72,31 @@ func TestCreateDashboardUnit(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, errCode)
 		assert.Nil(t, dashboardUnit)
 	})
+
+	t.Run("CreateDashboardUnit:WithoutAccessToDashboard", func(t *testing.T) {
+		rName := U.RandomString(5)
+		dashboard, errCode := M.CreateDashboard(project.ID, agent.UUID, &M.Dashboard{Name: rName, Type: M.DashboardTypePrivate})
+		assert.NotNil(t, dashboard)
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.Equal(t, rName, dashboard.Name)
+
+		rTitle := U.RandomString(5)
+		dashboardUnit, errCode, _ := M.CreateDashboardUnit(project.ID, agent2.UUID, &M.DashboardUnit{DashboardId: dashboard.ID,
+			Title: rTitle, Presentation: M.PresentationLine, Query: postgres.Jsonb{json.RawMessage(`{}`)}})
+		assert.Equal(t, http.StatusUnauthorized, errCode)
+		assert.Nil(t, dashboardUnit)
+	})
 }
 
 func TestGetDashboardUnits(t *testing.T) {
 	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
+
+	agent2, err := SetupAgentReturnDAO()
+	assert.Nil(t, err)
+	_, errCode := M.CreateProjectAgentMappingWithDependencies(&M.ProjectAgentMapping{
+		ProjectID: project.ID, AgentUUID: agent2.UUID})
+	assert.Equal(t, http.StatusCreated, errCode)
 
 	rName := U.RandomString(5)
 	dashboard, errCode := M.CreateDashboard(project.ID, agent.UUID, &M.Dashboard{Name: rName, Type: M.DashboardTypeProjectVisible})
@@ -122,11 +148,35 @@ func TestGetDashboardUnits(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, errCode)
 		assert.Nil(t, units)
 	})
+
+	t.Run("GetDashboardUnits:WithoutAccessToDashboard", func(t *testing.T) {
+		rName := U.RandomString(5)
+		dashboard, errCode := M.CreateDashboard(project.ID, agent.UUID, &M.Dashboard{Name: rName, Type: M.DashboardTypePrivate})
+		assert.NotNil(t, dashboard)
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.Equal(t, rName, dashboard.Name)
+
+		rTitle := U.RandomString(5)
+		dashboardUnit, errCode, _ := M.CreateDashboardUnit(project.ID, agent.UUID, &M.DashboardUnit{DashboardId: dashboard.ID,
+			Title: rTitle, Presentation: M.PresentationLine, Query: postgres.Jsonb{json.RawMessage(`{}`)}})
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.NotNil(t, dashboardUnit)
+
+		units, errCode := M.GetDashboardUnits(project.ID, agent2.UUID, dashboard.ID)
+		assert.Equal(t, http.StatusUnauthorized, errCode)
+		assert.Nil(t, units)
+	})
 }
 
 func TestDeleteDashboardUnit(t *testing.T) {
 	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
+
+	agent2, err := SetupAgentReturnDAO()
+	assert.Nil(t, err)
+	_, errCode := M.CreateProjectAgentMappingWithDependencies(&M.ProjectAgentMapping{
+		ProjectID: project.ID, AgentUUID: agent2.UUID})
+	assert.Equal(t, http.StatusCreated, errCode)
 
 	rName := U.RandomString(5)
 	dashboard, errCode := M.CreateDashboard(project.ID, agent.UUID, &M.Dashboard{Name: rName, Type: M.DashboardTypeProjectVisible})
@@ -163,5 +213,22 @@ func TestDeleteDashboardUnit(t *testing.T) {
 		// invalid unit.
 		errCode = M.DeleteDashboardUnit(project.ID, agent.UUID, dashboard.ID, 0)
 		assert.Equal(t, http.StatusBadRequest, errCode)
+	})
+
+	t.Run("DeleteDashboardUnit:WithoutAccessToDashboard", func(t *testing.T) {
+		rName := U.RandomString(5)
+		dashboard, errCode := M.CreateDashboard(project.ID, agent.UUID, &M.Dashboard{Name: rName, Type: M.DashboardTypePrivate})
+		assert.NotNil(t, dashboard)
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.Equal(t, rName, dashboard.Name)
+
+		rTitle := U.RandomString(5)
+		dashboardUnit, errCode, _ := M.CreateDashboardUnit(project.ID, agent.UUID, &M.DashboardUnit{DashboardId: dashboard.ID,
+			Title: rTitle, Presentation: M.PresentationLine, Query: postgres.Jsonb{json.RawMessage(`{}`)}})
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.NotNil(t, dashboardUnit)
+
+		errCode = M.DeleteDashboardUnit(project.ID, agent2.UUID, dashboard.ID, dashboardUnit.ID)
+		assert.Equal(t, http.StatusUnauthorized, errCode)
 	})
 }
