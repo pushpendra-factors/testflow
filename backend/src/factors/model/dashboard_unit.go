@@ -12,12 +12,12 @@ import (
 type DashboardUnit struct {
 	// Composite primary key, id + project_id.
 	ID uint64 `gorm:"primary_key:true" json:"id"`
-	// Foreign keys projects(id) and dashboards(id, project_id).
+	// Foreign key dashboard_units(project_id) ref projects(id).
 	ProjectId    uint64         `gorm:"primary_key:true" json:"project_id"`
 	DashboardId  uint64         `gorm:"primary_key:true" json:"dashboard_id"`
 	Title        string         `gorm:"not null" json:"title"`
 	Query        postgres.Jsonb `gorm:"not null" json:"query"`
-	Presentation string         `gorm:"not null" json:"presentation"`
+	Presentation string         `gorm:"type:varchar(5);not null" json:"presentation"`
 	CreatedAt    time.Time      `json:"created_at"`
 	UpdatedAt    time.Time      `json:"updated_at"`
 }

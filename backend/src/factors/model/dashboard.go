@@ -10,11 +10,12 @@ import (
 
 type Dashboard struct {
 	// Composite primary key, id + project_id + agent_id.
-	ID        uint64 `gorm:"primary_key:true;" json:"id"`
-	ProjectId uint64 `gorm:"primary_key:true;" json:"project_id"`
-	AgentUUID string `gorm:"primary_key:true"; json:"-"`
+	ID uint64 `gorm:"primary_key:true" json:"id"`
+	// Foreign key dashboards(project_id) ref projects(id).
+	ProjectId uint64 `gorm:"primary_key:true" json:"project_id"`
+	AgentUUID string `gorm:"primary_key:true" json:"-"`
 	Name      string `gorm:"not null" json:"name"`
-	Type      string `gorm:"not null" json:"type"`
+	Type      string `gorm:"type:varchar(5);not null" json:"type"`
 	// User should be able to mark it as primary dashboard.
 	// Primary   bool   `json:"primary"`
 	CreatedAt time.Time `json:"created_at"`

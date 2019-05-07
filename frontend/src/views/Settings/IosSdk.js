@@ -7,7 +7,7 @@ import {
 		Button,
 } from 'reactstrap';
 import Loading from '../../loading';
-import factorsai from '../../factorsaiObj';
+import factorsai from '../../common/factorsaiObj';
 
 const mapStateToProps = store => {
   return {
