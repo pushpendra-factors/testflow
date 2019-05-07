@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -161,7 +162,8 @@ func AgentInvite(c *gin.Context) {
 	if sendVerifyProfileLink {
 		authToken, err := helpers.GetAuthData(invitedAgent.Email, invitedAgent.UUID, invitedAgent.Salt, helpers.SecondsInFifteenDays*time.Second)
 		if err != nil {
-			logCtx.WithError(err).Error("Failed to create auth token for invited agent")
+			wrapErr := errors.Wrap(err, "Failed to create auth token for invited agent")
+			logCtx.WithError(wrapErr).Error("Failed to create auth token for invited agent")
 			c.AbortWithStatus(http.StatusInternalServerError)
 			return
 		}

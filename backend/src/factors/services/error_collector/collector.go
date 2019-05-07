@@ -8,8 +8,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
+
+type stackTracer interface {
+	StackTrace() errors.StackTrace
+}
 
 type Entry struct {
 	e *logrus.Entry
@@ -73,16 +78,25 @@ func (c *Collector) Flush() {
 	}
 
 	var dataToSend strings.Builder
-
+	stackStrace := ""
 	for _, entry := range c.entries {
 		reqId := entry.e.Data["reqId"]
 		err := entry.e.Data[logrus.ErrorKey]
-		allEntries, err := json.Marshal(entry.e.Data)
+
+		if errWithStacktrace, ok := err.(stackTracer); ok {
+			stackStrace = fmt.Sprintf("%+v", errWithStacktrace)
+		}
+
+		delete(entry.e.Data, logrus.ErrorKey)
+
+		allEntries, _ := json.Marshal(entry.e.Data)
 		// not logging error to avoid cycling hook calls
-		dataToSend.WriteString(fmt.Sprintf("ReqId: %v, Error: %+v, Data: %v\n\n", reqId, err, string(allEntries)))
+		dataToSend.WriteString(fmt.Sprintf("ReqId: %v\n, Error: %v\n, Stacktrace: %v\n, Data: %v\n\n", reqId, err, stackStrace, string(allEntries)))
 	}
 
-	if err := c.mailer.SendMail(c.toEmail, c.fromEmail, c.env+" Errors Noticed", dataToSend.String(), dataToSend.String()); err != nil {
+	str := dataToSend.String()
+
+	if err := c.mailer.SendMail(c.toEmail, c.fromEmail, c.env+" Errors Noticed", str, str); err != nil {
 	}
 
 	emptyEntries := make([]*Entry, 0, 0)

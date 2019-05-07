@@ -1,0 +1,314 @@
+ /* mobile or only mobile */
+ @media (max-width: 767px) {
+  .hero .content {
+    padding-top: 40px !important;
+  }
+
+  .hero .content input {
+    width: 100% !important;
+    margin-bottom: 15px !important;
+  }
+
+  .hero .content button {
+    width: 100% !important;
+  }
+
+  .no-mobile {
+    display: none;
+  }
+
+  .tabs .content {
+    display: block !important;
+    margin-bottom: 50px;
+  }
+
+  .nav-exclude-margin {
+    margin-top: 30px !important;
+  }
+
+  #blog-single .blog-post .post-content {
+      padding: 50px 45px 50px 45px !important;
+      text-align: justify;
+  }
+}
+
+
+body {
+  font-family: 'Nunito', sans-serif;
+  color: #263453;
+  letter-spacing: 0.03rem;
+}
+
+h1, h2, h3, h4, h5 {
+  font-family: 'Lato', sans-serif;
+}
+
+h1, h2 {
+  font-weight: 900;
+  letter-spacing: 0.05rem;
+  line-height: 2.2rem;
+}
+
+h3, h4, h5 {
+  font-weight: 700;
+  letter-spacing: 0.05rem;
+  line-height: 2.2rem;
+}
+
+p {
+  font-size: 18px;
+  font-weight: 300;
+}
+
+select:focus,
+textarea:focus,
+button:focus {
+    outline: none;
+}
+
+button:hover {
+  cursor: pointer;
+}
+
+.bborder {
+  border: 1px solid; 
+}
+
+.navbar {
+  background: #fff;
+}
+
+.nav-item {
+  font-weight: 400;
+  padding: 0 10px;
+}
+
+.nav-item a {
+  color: inherit;
+}
+
+.nav-item.active a {
+  color: #005B96;
+}
+
+.nav-exclude-margin {
+  margin-top: 90px;
+}
+
+.hero .sub-text {
+  font-size: 20px;
+  font-weight: 400;
+  padding-bottom: 10px;
+  padding-top: 20px;
+}
+
+.hero {
+  padding-bottom: 8%;
+}
+
+.hero .content {
+  padding: 50px;
+}
+
+.hero .content h2 {
+  padding-bottom: 5px;
+  padding-top: 10px;
+  line-height: 2.8rem;
+}
+
+.hero .content img {
+  width: 100%;
+}
+
+.hero .content input {
+  border: 2px solid #03396C;
+  height: 50px;
+  margin-right: 10px;
+  width: 60%;
+  padding: 15px;
+  font-size: 18px;
+  font-weight: 300;
+  letter-spacing: inherit;
+}
+
+.hero .content input::placeholder {
+  color: #8E9EAC;
+}
+
+.hero .content button {
+  padding: 10px 15px;
+  background: #03396C;
+  color: #ffffff;
+  border: 1px solid #03396C;
+  font-size: 18px;
+  letter-spacing: inherit;
+}
+
+.hero-content p {
+  padding-bottom: 10px;
+}
+
+.hero-content img {
+  width: 100%
+}
+
+.top-banner {
+  padding-top: 35px !important;
+  padding-bottom: 10px !important;
+}
+
+.banner {
+  background: #011F4B;
+  color: #fff;
+  text-align: center;
+  padding: 50px;
+  letter-spacing: 0.08rem;
+}
+
+.banner h3 {
+  font-weight: 400;
+  padding-bottom: 5px;
+  letter-spacing: inherit;
+}
+
+.banner button {
+  background: #005B96;
+  border: none;
+  font-size: 18px;
+  color: inherit;
+  padding: 13px 18px;
+  letter-spacing: inherit;
+}
+
+.banner button:focus {
+  border: none;
+}
+
+.banner p {
+  font-weight: 300;
+  padding-bottom: 5px;
+  letter-spacing: inherit;
+}
+
+.tabs .header {
+  padding-bottom: 60px;
+  text-align: center;
+}
+
+.tabs .header h4 {
+  display: inline-block;
+  width: auto;
+  border-bottom: 5px solid #fff;
+  border-radius: 2px;
+}
+
+.tabs .header h4:hover {
+  border-bottom-color: #005B96 !important;
+  cursor: pointer;
+}
+
+.active-tab {
+  border-bottom-color: #005B96 !important;
+}
+
+.tabs {
+  margin-top: 70px;
+  margin-bottom: 90px;
+}
+
+.tabs .content p {
+  font-size: 18px;
+  font-weight: 300;
+  text-align: justify;
+  margin-bottom: 5px;
+  margin-top: 5px;
+}
+
+.tabs .content .txt {
+  padding: 20px 45px;
+}
+
+.tabs .content .image {
+  padding: 0 80px;
+}
+
+.shaded-background {
+  background: #F8FBFE;
+}
+
+.screenshot img {
+  width: 100%;
+  margin-top: 15px;
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+}
+
+.gda {
+  padding: 50px 30px;
+}
+
+.centered-title {
+  text-align: center;
+  padding-bottom: 15px;
+  font-weight: 700;
+}
+
+.gda p, .gda span {
+  font-size: 18px;
+  font-weight: 300;
+  text-align: justify;
+}
+
+.gda p {
+  padding-bottom: 15px;
+}
+
+.blog {
+  padding: 50px 30px;
+  text-align: justify;
+}
+
+.bottom-banner h3 {
+  padding-bottom: 20px;
+  line-height: 2.5rem;
+}
+
+.tabular {
+  text-align: center;
+}
+
+.tabular .content {
+  padding-bottom: 20px;
+}
+
+.footer {
+  padding-top: 40px;
+  padding-bottom: 15px;
+  background: #283655;
+  color: #fff;
+  text-align: center;
+}
+
+.footer img {
+  margin: 10px;
+  margin-bottom: 50px
+}
+
+.copyright {
+  font-size: 16px;
+}
+
+.break {
+  width: 30%;
+  background: #91CFF0;
+  height: 6px;
+  border: 1px solid #fff;
+  border-radius: 6px;
+}
+
+.error {
+  color: #d91e18;
+}
+
+.success {
+  color: #26a65b;
+}
