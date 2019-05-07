@@ -5,7 +5,14 @@ export default function reducer(state={
 
   switch (action.type) { 
     case "FETCH_DASHBOARDS_FULFILLED": {
-      return { ...state, dashboards: action.payload }
+      let _state = { ...state }
+      _state.dashboards = action.payload;
+
+      // reset units.
+      if (_state.dashboards.length == 0)
+        _state.units = [];
+
+      return _state;
     }
     case "CREATE_DASHBOARD_FULFILLED": {
       let _state = { ...state };

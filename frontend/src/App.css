@@ -561,3 +561,9 @@ div.setting-card:hover{
     border-bottom: none;
     color: #444;
 }
+
+div .fapp-overflow-dot {
+    white-space: nowrap; 
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
