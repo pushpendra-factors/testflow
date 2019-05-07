@@ -575,6 +575,11 @@ class Query extends Component {
     this.toggleAddToDashboardModal();
   }
 
+  disableAddToDashboard() {
+    return this.state.selectedPresentation === PRESENTATION_BAR 
+      && this.state.groupBys.length > 1;
+  }
+
   render() {
     if (!this.isLoaded()) return <Loading />;
 
@@ -708,7 +713,7 @@ class Query extends Component {
                   <button className={this.getPresentationSelectorClass(PRESENTATION_LINE)}  style={{fontWeight: 500}} onClick={() => this.run(PRESENTATION_LINE)}>Line</button>
                 </ButtonGroup>
                 <ButtonDropdown isOpen={this.state.showDashboardsList} toggle={this.toggleDashboardsList} >
-                  <DropdownToggle caret outline color="primary">
+                  <DropdownToggle disabled={this.disableAddToDashboard()} caret outline color="primary">
                     Add to dashboard
                   </DropdownToggle>
                   <DropdownMenu style={{height: 'auto', maxHeight: '210px', overflowX: 'scroll'}} right>
