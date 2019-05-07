@@ -166,8 +166,8 @@ class DashboardUnit extends Component {
       <Col md={{ size: this.getColSizeByProps() }}  style={{padding: '0 15px'}}>
         <Card className='fapp-dunit' style={this.getCardStyleByProps()}>
           <CardHeader style={this.getCardHeaderStyleByProps()}>
-            <div onClick={this.delete} style={{ textAlign: 'right', marginTop: '-10px', marginRight: '-18px', height: '18px', cursor: 'pointer' }}>
-              <strong style={{ fontSize: '15px', padding: '0 10px', color: isCard ? '#FFF' : '#AAA' }} hidden={!this.props.showClose}>x</strong>
+            <div style={{ textAlign: 'right', marginTop: '-10px', marginRight: '-18px', height: '18px' }}>
+              <strong onClick={this.delete} style={{ fontSize: '15px', cursor: 'pointer', padding: '0 10px', color: isCard ? '#FFF' : '#AAA' }} hidden={!this.props.showClose}>x</strong>
             </div>
             <div className='fapp-overflow-dot' style={{ marginTop: isCard ? '-10px' : '-5px' }}><strong>{ data.title }</strong></div>
           </CardHeader>
