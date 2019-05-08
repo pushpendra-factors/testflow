@@ -38,10 +38,10 @@ function App() {
       </nav>
 
       <Switch>
-+        <Route exact path="/" component={Home} />
-         <Route path="/blog/big-data-analytics-next-1/" component={BlogBigData1} />
-+        <Route path="/blog/big-data-analytics-next-2/" component={BlogBigData2} />
-+        <Route path="/blog/" component={Blog} />
+        <Route exact path="/" component={Home} />
+        <Route path="/blog/big-data-analytics-next-1" component={BlogBigData1} />
++       <Route path="/blog/big-data-analytics-next-2" component={BlogBigData2} />
++       <Route path="/blog" component={Blog} />
 +     </Switch>
 
       <div className="container-fluid footer" id="contact">

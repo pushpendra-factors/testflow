@@ -55,9 +55,9 @@ h3, h4, h5 {
   line-height: 2.2rem;
 }
 
-p {
+p, span {
   font-size: 18px;
-  font-weight: 300;
+  font-weight: 500;
 }
 
 select:focus,
@@ -135,6 +135,10 @@ button:hover {
   color: #8E9EAC;
 }
 
+button {
+  font-weight: 700;
+}
+
 .hero .content button {
   padding: 10px 15px;
   background: #03396C;
@@ -185,7 +189,6 @@ button:hover {
 }
 
 .banner p {
-  font-weight: 300;
   padding-bottom: 5px;
   letter-spacing: inherit;
 }
@@ -218,7 +221,7 @@ button:hover {
 
 .tabs .content p {
   font-size: 18px;
-  font-weight: 300;
+  font-weight: 500;
   text-align: justify;
   margin-bottom: 5px;
   margin-top: 5px;
@@ -254,7 +257,6 @@ button:hover {
 
 .gda p, .gda span {
   font-size: 18px;
-  font-weight: 300;
   text-align: justify;
 }
 

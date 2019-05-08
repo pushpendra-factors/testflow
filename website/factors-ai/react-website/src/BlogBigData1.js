@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { Component } from 'react'
 import Disqus from "disqus-react"
 import './assets/css/blog.css'
 import relationalDatabasePNG from './assets/img/blog/relational-database.png'
@@ -6,13 +6,14 @@ import dynamoBigtablePNG from './assets/img/blog/dynamo-bigtable.png'
 import mapReducePNG from './assets/img/blog/map-reduce.png'
 import aravindAuthorPNG from './assets/img/blog/aravind_author.jpg'
 
-class BlogBigData1 extends React.Component {
+class BlogBigData1 extends Component {
     render() {
-    const disqusShortname = 'factorsai';
-    const disqusConfig = {
-        url: 'www.factors.ai/blog/big-data-analytics-next-1',
-        identifier: 'big-data-analytics-next-1',
-    };
+      const disqusShortname = 'factorsai';
+      const disqusConfig = {
+          url: 'www.factors.ai/blog/big-data-analytics-next-1',
+          identifier: 'big-data-analytics-next-1',
+      };
+
       return (
         <div id="blog-single">
         <div className="container">
@@ -39,7 +40,7 @@ class BlogBigData1 extends React.Component {
                   <p>Take the example of data from a retail store.  The database could have 3 tables, one for the Products it sells, one for Customers of the store and one for Orders of the products bought in the store. Each entity can have multiple attributes and is stored in different columns of the corresponding table. Each data point is stored as rows in the table. The Orders table contains entries of products bought by different customers and hence related to both Products and Customers table, using the columns product_id and customer_id.</p>
                   <br />
                   <div className="post-thumb">
-                    <img src={relationalDatabasePNG} alt />
+                    <img src={relationalDatabasePNG} />
                   </div>
                   <p>
                     Few implications of this structure are
@@ -71,7 +72,7 @@ class BlogBigData1 extends React.Component {
                   </p>
                   <br />
                   <div className="post-thumb">
-                    <img src={dynamoBigtablePNG} alt className="blog-img-full-width" />
+                    <img src={dynamoBigtablePNG} className="blog-img-full-width" />
                   </div>
                   <br />
                   <p>
@@ -100,7 +101,7 @@ class BlogBigData1 extends React.Component {
                   </p>
                   <br />
                   <div className="post-thumb">
-                    <img src={mapReducePNG} alt className="blog-img-full-width" />
+                    <img src={mapReducePNG} className="blog-img-full-width" />
                   </div>
                   <br />
                   <p>
@@ -115,7 +116,7 @@ class BlogBigData1 extends React.Component {
               <div className="blog-comment">
                 <div className="the-comment">
                   <div className="avatar">
-                    <img src={aravindAuthorPNG} alt />
+                    <img src={aravindAuthorPNG} />
                   </div>
                   <div className="comment-box">
                     <div className="comment-author">
