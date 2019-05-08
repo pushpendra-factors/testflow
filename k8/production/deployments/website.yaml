@@ -1,0 +1,46 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    app: website
+    env: production
+    project: factors-production
+  name: website
+  namespace: default
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 2
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: website
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: website
+    spec:
+      nodeSelector:
+        cloud.google.com/gke-nodepool: default-pool
+      containers:
+      - image: us.gcr.io/factors-production/website:v0.01-beta_d917791
+        imagePullPolicy: IfNotPresent
+        name: website
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        readinessProbe:
+          tcpSocket:
+            port: 3001
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        livenessProbe:
+          tcpSocket:
+            port: 3001
+          initialDelaySeconds: 10
+          periodSeconds: 10

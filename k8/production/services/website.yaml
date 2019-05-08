@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: website
+    env: production
+    project: factors-production
+  name: website
+  namespace: default  
+spec:
+  ports:
+  - nodePort: 31978
+    port: 80
+    protocol: TCP
+    targetPort: 3001
+  selector:
+    app: website
+  sessionAffinity: None
+  type: NodePort
