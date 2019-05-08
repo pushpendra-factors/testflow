@@ -1,4 +1,4 @@
-.PHONY: build-staging pack-fe upload-fe
+.PHONY: build-staging build-prod pack-fe-staging pack-fe-prod upload-fe-staging upload-fe-prod
 
 # Update tag with the latest release version
 # Ex format: v0.09-beta_8bfe4e0
@@ -11,13 +11,13 @@ export TAG
 build-staging:
 	npm run build-staging
 
-build-production:
+build-prod:
 	npm run build-prod
 
 pack-fe-staging: build-staging
 	docker build -t us.gcr.io/factors-staging/frontend:$(TAG) -f Dockerfile.staging .
 
-pack-fe-prod: build-production
+pack-fe-prod: build-prod
 	docker build -t us.gcr.io/factors-production/frontend:$(TAG) -f Dockerfile.production .
 
 upload-fe-prod:
