@@ -6,8 +6,10 @@ import (
 	U "factors/util"
 	"fmt"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -984,15 +986,58 @@ func LimitQueryResults(groupPropsLen int, groupByTimestamp bool,
 	resultCols []string, resultRows [][]interface{}) ([][]interface{}, error) {
 
 	if groupPropsLen > 0 && groupByTimestamp {
-		return limitGroupByTimestampQueryResult(groupPropsLen, groupByTimestamp, resultCols, resultRows)
+		return limitGroupByTimestampQueryResult(groupPropsLen,
+			groupByTimestamp, resultCols, resultRows)
 	}
 
 	if groupPropsLen > 1 {
-		return limitMultiGroupByPropertiesQueryResult(groupPropsLen, groupByTimestamp, resultCols, resultRows)
+		return limitMultiGroupByPropertiesQueryResult(groupPropsLen,
+			groupByTimestamp, resultCols, resultRows)
 	}
 
 	// limited already on SQL.
 	return resultRows, nil
+}
+
+func getTimstampIndexOnResult(resultCols []string) (int, error) {
+	timeIndex := -1
+	for i, c := range resultCols {
+		if c == AliasDate {
+			timeIndex = i
+			break
+		}
+	}
+	if timeIndex == -1 {
+		return timeIndex, errors.New("invalid result without timestamp")
+	}
+
+	return timeIndex, nil
+}
+
+func sortResultByTimestamp(resultRows [][]interface{}, timestampIndex int) {
+	sort.Slice(resultRows, func(i, j int) bool {
+		return (resultRows[i][timestampIndex].(time.Time)).Unix() < (resultRows[j][timestampIndex].(time.Time)).Unix()
+	})
+}
+
+func sanitizeGroupByTimestampQueryResult(resultCols []string, resultRows [][]interface{}, query *Query) ([][]interface{}, error) {
+	timeIndex, err := getTimstampIndexOnResult(resultCols)
+	if err != nil {
+		return nil, err
+	}
+
+	sortResultByTimestamp(resultRows, timeIndex)
+	// Todo(Dinesh): fill missing timestamps between query from and to.
+	return resultRows, nil
+}
+
+// Converts DB rows into plottable results.
+func sanitizeQueryResults(resultCols []string, resultRows [][]interface{}, query *Query) ([][]interface{}, error) {
+	if !query.GroupByTimestamp {
+		return resultRows, nil
+	}
+
+	return sanitizeGroupByTimestampQueryResult(resultCols, resultRows, query)
 }
 
 func Analyze(projectId uint64, query Query) ([]string, [][]interface{}, int, string) {
@@ -1035,6 +1080,12 @@ func Analyze(projectId uint64, query Query) ([]string, [][]interface{}, int, str
 	resultRows, err = LimitQueryResults(groupPropsLen, query.GroupByTimestamp, resultCols, resultRows)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed processing query results for limiting")
+		return nil, nil, http.StatusInternalServerError, ErrMsgQueryProcessingFailure
+	}
+
+	resultRows, err = sanitizeQueryResults(resultCols, resultRows, &query)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed sanitizing query results")
 		return nil, nil, http.StatusInternalServerError, ErrMsgQueryProcessingFailure
 	}
 
