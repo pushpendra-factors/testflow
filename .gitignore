@@ -36,3 +36,6 @@ sdk/android/.externalNativeBuild
 sdk/android/dist/
 # https://stackoverflow.com/questions/28708531/what-does-do-in-a-gitignore-file
 sdk/android/*~
+
+# website
+website/factors-ai/react-website/dist
