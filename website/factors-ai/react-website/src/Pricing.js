@@ -81,7 +81,7 @@ class Pricing extends Component {
                 <p>Above 5M user actions per month</p>
                 <p style={{ fontWeight: "700", letterSpacing: "0.05rem" }}>Tailored Solutions</p>
               </div>
-              <button className="no-cta-msg">Contact us</button>
+              <a href="mailto:team@factors.ai"><button className="no-cta-msg">Contact us</button></a>
             </div>
           </div>
         </div>
