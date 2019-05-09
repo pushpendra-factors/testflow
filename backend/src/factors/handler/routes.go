@@ -41,7 +41,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.Use(mid.SetAuthorizedProjectsByLoggedInAgent())
 	authRouteGroup.Use(mid.ValidateLoggedInAgentHasAccessToRequestProject())
 
-	authRouteGroup.GET("/:project_id/dashboards", GetDashboardsHanlder)
+	authRouteGroup.GET("/:project_id/dashboards", GetDashboardsHandler)
 	authRouteGroup.POST("/:project_id/dashboards", CreateDashboardHandler)
 	authRouteGroup.GET("/:project_id/dashboards/:dashboard_id/units", GetDashboardUnitsHandler)
 	authRouteGroup.POST("/:project_id/dashboards/:dashboard_id/units", CreateDashboardUnitHandler)

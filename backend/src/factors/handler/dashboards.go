@@ -25,7 +25,7 @@ type DashboardUnitRequestPayload struct {
 	Presentation string  `json:"presentation"`
 }
 
-func GetDashboardsHanlder(c *gin.Context) {
+func GetDashboardsHandler(c *gin.Context) {
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Get dashboards failed. Invalid project."})
