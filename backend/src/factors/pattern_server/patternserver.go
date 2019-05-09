@@ -14,6 +14,7 @@ import (
 	"sync"
 
 	"github.com/gin-gonic/gin"
+	E "github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"go.etcd.io/etcd/clientv3"
 )
@@ -97,7 +98,7 @@ func New(ip, rpcPort, httpPort string, etcdClient *serviceEtcd.EtcdClient, diskF
 
 	store, err := store.New(chunkCacheSize, eventInfoCacheSize, diskFileManager, cloudFileManger)
 	if err != nil {
-		return &PatternServer{}, err
+		return &PatternServer{}, E.Wrap(err, "Failed To Create Pattern Store")
 	}
 
 	state := &state{
@@ -255,7 +256,7 @@ func (ps *PatternServer) GetProjectModelIntervals(projectId uint64) ([]client.Mo
 	modelChunkData, exists := ps.GetProjectModels(projectId)
 	if !exists {
 		err := errors.New("MissingModelChunkData")
-		return modelInfos, err
+		return modelInfos, E.Wrap(err, fmt.Sprintf("ProjectID %d, Missing ModelChunkData", projectId))
 	}
 
 	for mid, modelData := range modelChunkData {
@@ -279,7 +280,7 @@ func (ps *PatternServer) GetProjectModelIntervals(projectId uint64) ([]client.Mo
 func (ps *PatternServer) GetProjectModelLatestInterval(projectId uint64) (client.ModelInfo, error) {
 	modelInfos, err := ps.GetProjectModelIntervals(projectId)
 	if err != nil {
-		return client.ModelInfo{}, err
+		return client.ModelInfo{}, E.Wrap(err, fmt.Sprintf("ProjectID %d, Missing ProjectModelIntervals", projectId))
 	}
 
 	return modelInfos[0], nil

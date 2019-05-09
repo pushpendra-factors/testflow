@@ -87,7 +87,7 @@ func CreateEvent(event *Event) (*Event, int) {
 			log.WithError(err).Info("CreateEvent Failed, duplicate customerEventId")
 			return nil, http.StatusFound
 		}
-		log.WithFields(log.Fields{"event": &event, "error": err}).Error("CreateEvent Failed")
+		log.WithFields(log.Fields{"event": &event}).WithError(err).Error("CreateEvent Failed")
 		return nil, http.StatusInternalServerError
 	}
 	return event, http.StatusCreated
@@ -124,7 +124,7 @@ func GetProjectEventTimeInfo() (*(map[uint64]*EventTimestamp), int) {
 
 	rows, err := db.Raw("SELECT project_id, min(timestamp) as first_timestamp, max(timestamp) as last_timestamp FROM events GROUP BY project_id").Rows()
 	if err != nil {
-		log.Error("Failed to get events timestamp info.")
+		log.WithError(err).Error("Failed to get events timestamp info.")
 		return nil, http.StatusInternalServerError
 	}
 	defer rows.Close()

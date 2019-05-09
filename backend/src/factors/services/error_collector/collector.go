@@ -91,7 +91,7 @@ func (c *Collector) Flush() {
 
 		allEntries, _ := json.Marshal(entry.e.Data)
 		// not logging error to avoid cycling hook calls
-		dataToSend.WriteString(fmt.Sprintf("ReqId: %v\n, Error: %v\n, Stacktrace: %v\n, Data: %v\n\n", reqId, err, stackStrace, string(allEntries)))
+		dataToSend.WriteString(fmt.Sprintf("ReqId: %v\n, Msg: %s, Error: %v\n, Stacktrace: %v\n, Data: %v\n\n", reqId, entry.e.Message, err, stackStrace, string(allEntries)))
 	}
 
 	str := dataToSend.String()

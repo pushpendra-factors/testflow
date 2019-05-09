@@ -11,6 +11,7 @@ import (
 	"reflect"
 	"strings"
 
+	E "github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -47,7 +48,7 @@ func GetFilter(startEvent, endEvent string) FilterPattern {
 func (ps *PatternServer) GetAllPatterns(
 	r *http.Request, args *client.GetAllPatternsRequest, result *client.GetAllPatternsResponse) error {
 	if args == nil || args.ProjectId == 0 {
-		err := errors.New("MissingParams")
+		err := E.Wrap(errors.New("MissingParams"), "GetAllPatterns missing param projectID")
 		result.Error = err
 		return err
 	}
@@ -72,7 +73,7 @@ func (ps *PatternServer) GetAllPatterns(
 
 	chunkIds, found := ps.GetProjectModelChunks(args.ProjectId, modelId)
 	if !found {
-		err := errors.New("ProjectModelChunks not found")
+		err := E.Wrap(errors.New("ProjectModelChunks Not Found"), fmt.Sprintf("GetAllPatterns failed to fetch ProjectModelChunks, ProjectID: %d, ModelID: %d", args.ProjectId, modelId))
 		result.Error = err
 		return err
 	}
@@ -126,7 +127,7 @@ func (ps *PatternServer) GetAllPatterns(
 func (ps *PatternServer) GetPatterns(
 	r *http.Request, args *client.GetPatternsRequest, result *client.GetPatternsResponse) error {
 	if args == nil || args.ProjectId == 0 {
-		err := errors.New("MissingParams")
+		err := E.Wrap(errors.New("MissingParams"), fmt.Sprintf("%s", "GetPatterns missing param projectID"))
 		result.Error = err
 		return err
 	}
@@ -150,7 +151,7 @@ func (ps *PatternServer) GetPatterns(
 
 	chunkIds, found := ps.GetProjectModelChunks(args.ProjectId, modelId)
 	if !found {
-		err := errors.New("ProjectModelChunks not found")
+		err := E.Wrap(errors.New("ProjectModelChunks Not Found"), fmt.Sprintf("GetAllPatterns failed to fetch ProjectModelChunks, ProjectID: %d, ModelID: %d", args.ProjectId, modelId))
 		result.Error = err
 		return err
 	}
@@ -202,7 +203,7 @@ func (ps *PatternServer) GetSeenEventProperties(
 	result *client.GetSeenEvenPropertiesResponse) error {
 
 	if args == nil || args.ProjectId == 0 || args.EventName == "" {
-		err := errors.New("MissingParams")
+		err := E.Wrap(errors.New("MissingParams"), "GetSeenEventProperties Missing Param")
 		result.Error = err
 		return err
 	}
@@ -258,7 +259,7 @@ func (ps *PatternServer) GetSeenEventPropertyValues(
 	result *client.GetSeenEventPropertyValuesResponse) error {
 
 	if args == nil || args.ProjectId == 0 || args.EventName == "" || args.PropertyName == "" {
-		err := errors.New("MissingParams")
+		err := E.Wrap(errors.New("MissingParams"), "GetSeenEventPropertyValues Missing Param")
 		result.Error = err
 		return err
 	}
@@ -286,7 +287,7 @@ func (ps *PatternServer) GetSeenEventPropertyValues(
 
 	eventInfo, exists := (*userAndEventsInfoMap.EventPropertiesInfoMap)[args.EventName]
 	if !exists {
-		err := fmt.Errorf("EventInfo not found for EventName: %s", args.EventName)
+		err := E.Wrap(errors.New("EventInfo NotFound"), fmt.Sprintf("ProjectId: %d, ModelId: %d, Eventname: %s", args.ProjectId, modelId, args.EventName))
 		result.Error = err
 		return err
 	}
@@ -313,7 +314,7 @@ func (ps *PatternServer) GetProjectModelsIntervals(
 	r *http.Request, args *client.GetProjectModelIntervalsRequest,
 	result *client.GetProjectModelIntervalsResponse) error {
 	if args == nil || args.ProjectId == 0 {
-		err := errors.New("MissingParams")
+		err := E.Wrap(errors.New("MissingParams"), "GetProjectModelsIntervals Missing Param")
 		result.Error = err
 		return err
 	}
@@ -350,7 +351,7 @@ func (ps *PatternServer) GetSeenUserProperties(
 	result *client.GetSeenUserPropertiesResponse) error {
 
 	if args == nil || args.ProjectId == 0 {
-		err := errors.New("MissingParams")
+		err := E.Wrap(errors.New("MissingParams"), "GetSeenUserProperties Missing Param")
 		result.Error = err
 		return err
 	}
@@ -401,7 +402,7 @@ func (ps *PatternServer) GetSeenUserPropertyValues(
 	r *http.Request, args *client.GetSeenUserPropertyValuesRequest,
 	result *client.GetSeenUserPropertyValuesResponse) error {
 	if args == nil || args.ProjectId == 0 || args.PropertyName == "" {
-		err := errors.New("MissingParams")
+		err := E.Wrap(errors.New("MissingParams"), "GetSeenUserPropertyValues Missing Param")
 		result.Error = err
 		return err
 	}
@@ -428,14 +429,14 @@ func (ps *PatternServer) GetSeenUserPropertyValues(
 	}
 
 	if userAndEventsInfoMap.UserPropertiesInfo == nil {
-		err := errors.New("UserPropertyValues not found")
+		err := E.Wrap(errors.New("UserPropertiesInfo NotFound"), fmt.Sprintf("ProjectId: %d, ModelId: %d", args.ProjectId, modelId))
 		result.Error = err
 		return err
 	}
 
 	propValuesMap, ok := userAndEventsInfoMap.UserPropertiesInfo.CategoricalPropertyKeyValues[args.PropertyName]
 	if !ok {
-		err := errors.New("UserPropertyValues not found")
+		err := E.Wrap(errors.New("UserPropertiesValue NotFound"), fmt.Sprintf("ProjectId: %d, ModelId: %d, PropertyName: %s", args.ProjectId, modelId, args.PropertyName))
 		result.Error = err
 		return err
 	}
@@ -456,7 +457,7 @@ func (ps *PatternServer) GetUserAndEventsInfo(
 	result *client.GetUserAndEventsInfoResponse) error {
 
 	if args == nil || args.ProjectId == 0 {
-		err := errors.New("MissingParams")
+		err := E.Wrap(errors.New("MissingParams"), "GetUserAndEventsInfo missing param projectID")
 		result.Error = err
 		return err
 	}
@@ -479,6 +480,7 @@ func (ps *PatternServer) GetUserAndEventsInfo(
 
 	userAndEventsInfo, err := ps.GetModelEventInfo(args.ProjectId, modelId)
 	if err != nil {
+		err = E.Wrap(errors.New("GetUserAndEventsInfo GetModelEventInfo NotFound"), fmt.Sprintf("ProjectId: %d, ModelId: %d", args.ProjectId, modelId))
 		result.Error = err
 		return err
 	}

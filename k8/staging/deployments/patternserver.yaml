@@ -85,6 +85,8 @@ spec:
             name: config-env
         - configMapRef:
             name: config-bucket
+        - secretRef:
+            name: secret-aws
       volumes:
       - name: workdir
         emptyDir: {}

@@ -66,7 +66,7 @@ func createUserPropertiesIfChanged(projectId uint64, userId string,
 	log.WithFields(log.Fields{"UserProperties": &userProperties}).Info("Creating user properties")
 
 	if err := db.Create(&userProperties).Error; err != nil {
-		log.WithFields(log.Fields{"userProperties": &userProperties, "error": err}).Error("createUserProperties Failed")
+		log.WithFields(log.Fields{"userProperties": &userProperties}).WithError(err).Error("createUserProperties Failed")
 		return "", http.StatusInternalServerError
 	}
 	return userProperties.ID, http.StatusCreated
@@ -96,7 +96,7 @@ func FillLocationUserProperties(properties *U.PropertiesMap, clientIP string) er
 
 	city, err := geo.City(net.ParseIP(clientIP))
 	if err != nil {
-		log.WithFields(log.Fields{"clientIP": clientIP, "error": err}).Error(
+		log.WithFields(log.Fields{"clientIP": clientIP}).WithError(err).Error(
 			"Failed to get city information from geodb")
 		return err
 	}

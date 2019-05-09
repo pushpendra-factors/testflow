@@ -3,12 +3,17 @@ package main
 import (
 	"errors"
 	"factors/filestore"
+	"factors/interfaces/maileriface"
 	PC "factors/pattern_client"
 	PMM "factors/pattern_model_meta"
 	patternserver "factors/pattern_server"
 	serviceDisk "factors/services/disk"
+	"factors/services/error_collector"
 	serviceEtcd "factors/services/etcd"
 	serviceGCS "factors/services/gcstorage"
+	"factors/services/mailer"
+	serviceSes "factors/services/ses"
+	U "factors/util"
 	"flag"
 	"fmt"
 	"math"
@@ -140,7 +145,7 @@ func (c *config) GetBucketName() string {
 // TTL on etcd is 10 seconds.
 // Monit / Kubernetes will keep trying to restart the process, it should succeed after 10 seconds / till key expires.
 
-// ./pattern-app --env=development --ip=127.0.0.1 --ps_rpc_port=8100 --ps_http_port=8101 --etcd=localhost:2379 --disk_dir=/usr/local/var/factors/local_disk --bucket_name=/usr/local/var/factors/cloud_storage --chunk_cache_size=5 --event_info_cache_size=10
+// ./pattern-app --env=development --ip=127.0.0.1 --ps_rpc_port=8100 --ps_http_port=8101 --etcd=localhost:2379 --disk_dir=/usr/local/var/factors/local_disk --bucket_name=/usr/local/var/factors/cloud_storage --chunk_cache_size=5 --event_info_cache_size=10 --aws_region=us-east-1 --aws_key=dummy --aws_secret=dummy --email_sender=support@factors.ai --error_reporting_interval=300
 func main() {
 
 	env := flag.String("env", Development, "")
@@ -155,11 +160,33 @@ func main() {
 	chunkCacheSize := flag.Int("chunk_cache_size", 5, "")
 	eventInfoCacheSize := flag.Int("event_info_cache_size", 10, "")
 
+	awsRegion := flag.String("aws_region", "us-east-1", "")
+	awsAccessKeyId := flag.String("aws_key", "dummy", "")
+	awsSecretAccessKey := flag.String("aws_secret", "dummy", "")
+
+	factorsEmailSender := flag.String("email_sender", "support-dev@factors.ai", "")
+	errorReportingInterval := flag.Int("error_reporting_interval", 300, "")
+
 	flag.Parse()
 
 	config, err := NewConfig(*env, *ip, *rpc_port, *http_port, *etcd, *diskBaseDir, *bucketName)
 	if err != nil {
 		panic(err)
+	}
+
+	var mailClient maileriface.Mailer
+	if *env == Development {
+		mailClient = mailer.New()
+	} else {
+		mailClient = serviceSes.New(*awsAccessKeyId, *awsSecretAccessKey, *awsRegion)
+	}
+
+	dur := time.Second * time.Duration(*errorReportingInterval)
+	ErrorCollector := error_collector.New(mailClient, dur, *env, "team@factors.ai", *factorsEmailSender)
+
+	if ErrorCollector != nil {
+		hook := &U.Hook{C: ErrorCollector}
+		log.AddHook(hook)
 	}
 
 	log.SetReportCaller(true)
@@ -447,10 +474,10 @@ func initRpcServer(ps *patternserver.PatternServer) *mux.Router {
 		})
 
 		if err != nil {
-			logCtx = logCtx.WithError(err)
+			logCtx.WithError(err).Error("Error Processing Request")
+		} else {
+			logCtx.Info("Processed Request")
 		}
-
-		logCtx.Info("Processed Request")
 	})
 	r := mux.NewRouter()
 	r.Handle(PC.RPCEndpoint, s)

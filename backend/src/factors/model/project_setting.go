@@ -47,8 +47,7 @@ func createProjectSetting(ps *ProjectSetting) (*ProjectSetting, int) {
 	}
 
 	if err := db.Create(ps).Error; err != nil {
-		log.WithFields(log.Fields{"ProjectSetting": ps,
-			"error": err}).Error("Failed creating ProjectSetting.")
+		log.WithFields(log.Fields{"ProjectSetting": ps}).WithError(err).Error("Failed creating ProjectSetting.")
 		return nil, http.StatusInternalServerError
 	}
 
@@ -70,8 +69,7 @@ func UpdateProjectSettings(projectId uint64, settings *ProjectSetting) (*Project
 			return nil, http.StatusNotFound
 		}
 
-		log.WithFields(log.Fields{"ProjectSetting": settings,
-			"error": err}).Error("Failed updating ProjectSettings.")
+		log.WithFields(log.Fields{"ProjectSetting": settings}).WithError(err).Error("Failed updating ProjectSettings.")
 		return nil, http.StatusInternalServerError
 	}
 

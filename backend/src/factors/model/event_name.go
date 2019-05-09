@@ -61,7 +61,7 @@ func createOrGetEventName(eventName *EventName) (*EventName, int) {
 	}
 
 	if err := db.FirstOrInit(&eventName, &eventName).Error; err != nil {
-		log.WithFields(log.Fields{"eventName": &eventName, "error": err}).Error("CreateEventName Failed")
+		log.WithFields(log.Fields{"eventName": &eventName}).WithError(err).Error("CreateEventName Failed")
 		return nil, http.StatusInternalServerError
 	}
 
@@ -70,7 +70,7 @@ func createOrGetEventName(eventName *EventName) (*EventName, int) {
 		log.WithFields(log.Fields{"eventName": &eventName}).Info("Event Name already exists.")
 		return eventName, http.StatusConflict
 	} else if err := db.Create(eventName).Error; err != nil {
-		log.WithFields(log.Fields{"eventName": &eventName, "error": err}).Error("CreateEventName Failed")
+		log.WithFields(log.Fields{"eventName": &eventName}).WithError(err).Error("CreateEventName Failed")
 		// Todo(Dinesh): should return validation errors along with status.
 		if isDuplicateFilterExprError(err) {
 			return nil, http.StatusBadRequest
@@ -163,7 +163,7 @@ func GetFilterEventNames(projectId uint64) ([]EventName, int) {
 	var eventNames []EventName
 	if err := db.Where("project_id = ? AND type = ? AND deleted = 'false'",
 		projectId, TYPE_FILTER_EVENT_NAME).Find(&eventNames).Error; err != nil {
-		log.WithFields(log.Fields{"error": err, "project_id": projectId}).Error("Failed getting filter_event_names")
+		log.WithFields(log.Fields{"project_id": projectId}).WithError(err).Error("Failed getting filter_event_names")
 
 		return nil, http.StatusInternalServerError
 	}
@@ -217,8 +217,8 @@ func UpdateEventName(projectId uint64, id uint64,
 
 	if err := query.Error; err != nil {
 		log.WithFields(log.Fields{"event_name": eventName,
-			"error": err, "update_fields": updateFields,
-		}).Error("Failed updating filter.")
+			"update_fields": updateFields,
+		}).WithError(err).Error("Failed updating filter.")
 
 		return nil, http.StatusInternalServerError
 	}
@@ -250,7 +250,7 @@ func DeleteEventName(projectId uint64, id uint64,
 		projectId, id, nameType).Updates(updateFields)
 
 	if err := query.Error; err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("Failed deleting filter.")
+		log.WithError(err).Error("Failed deleting filter.")
 
 		return http.StatusInternalServerError
 	}
@@ -410,10 +410,10 @@ func makeFilterInfos(eventNames []EventName) (*[]FilterInfo, error) {
 		// Todo(Dinesh): Can be removed if we store domain seperately.
 		parsedFilterExpr, err := U.ParseURLWithoutProtocol(eventNames[i].FilterExpr)
 		if err != nil {
-			log.WithFields(log.Fields{"error": err,
-				"filter_expr": eventNames[i].FilterExpr}).Error(
+			log.WithFields(log.Fields{
+				"filter_expr": eventNames[i].FilterExpr,
+			}).WithError(err).Error(
 				"Failed parsing filter_expr. Insert validator might be failing.")
-
 			return nil, err
 		}
 
@@ -435,8 +435,9 @@ func FilterEventNameByEventURL(projectId uint64, eventURL string) (*EventName, i
 
 	parsedEventURL, err := U.ParseURLStable(eventURL)
 	if err != nil {
-		log.WithFields(log.Fields{"error": err,
-			"event_url": eventURL}).Error("Failed parsing event_url.")
+		log.WithFields(log.Fields{
+			"event_url": eventURL,
+		}).WithError(err).Error("Failed parsing event_url.")
 		return nil, http.StatusBadRequest
 	}
 
