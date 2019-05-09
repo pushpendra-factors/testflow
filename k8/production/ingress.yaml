@@ -15,6 +15,17 @@ spec:
     - "*.factors.ai"
     secretName: secret-tls
   rules:
+  - host: "www.factors.ai"
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: website-service
+          servicePort: 80
+      - path: /*
+        backend:
+          serviceName: website-service
+          servicePort: 80
   - host: "api.factors.ai"
     http:
       paths:
