@@ -70,6 +70,14 @@ spec:
           - $(CHUNK_CACHE_SIZE)
           - --event_info_cache_size
           - $(EVENT_INFO_CACHE_SIZE)
+          - --aws_region
+          - $(AWS_REGION)
+          - --aws_key
+          - $(AWS_KEY)
+          - --aws_secret
+          - $(AWS_SECRET)
+          - --email_sender
+          - $(EMAIL_SENDER)
         env:
           - name: MY_POD_IP
             valueFrom:
