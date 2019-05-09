@@ -53,7 +53,7 @@ class ForgotPassword extends Component {
                             </div>
                             <SubmissionError message={this.state.error} marginTop='-15px' />
                             <span class='fapp-label'>Email</span>
-                            <Input className='fapp-input fapp-big-font' tag={Field} type="email" name="email" placeholder="Your Email"/>
+                            <Input className='fapp-page-input fapp-big-font' tag={Field} type="email" name="email" placeholder="Your Email"/>
                             {touched.email &&
                                 <ErrorMessage name="email">
                                     {msg => <span style={{color:'#d64541', fontWeight: '700', textAlign: 'center', display: 'block', marginTop: '-8px'}}>{msg}</span>}    

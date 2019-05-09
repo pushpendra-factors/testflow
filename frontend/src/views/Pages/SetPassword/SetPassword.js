@@ -50,14 +50,14 @@ class SetPassword extends Component {
                         <Form noValidate>
                             <h3 style={{textAlign: 'center', marginBottom: '30px', color: '#484848'}}>Reset Password</h3>
                             <SubmissionError message={this.state.error} />
-                            <Input className='fapp-input fapp-big-font' style={{marginBottom: '20px'}} tag={Field} type="password" name="password" placeholder="Password"/>
+                            <Input className='fapp-page-input fapp-big-font' style={{marginBottom: '20px'}} tag={Field} type="password" name="password" placeholder="Password"/>
                             {
                                 touched.password &&
                                 <ErrorMessage name="password">
                                     {msg => <span className='fapp-error-span' style={{marginTop: '-15px'}}>{msg}</span>}    
                                 </ErrorMessage>
                             }
-                            <Input className='fapp-input fapp-big-font' style={{marginBottom: '20px'}} tag={Field} type="password" name="ReenterPassword" placeholder="Re-enter Password"/>
+                            <Input className='fapp-page-input fapp-big-font' style={{marginBottom: '20px'}} tag={Field} type="password" name="ReenterPassword" placeholder="Re-enter Password"/>
                             {   
                                 touched.ReenterPassword &&
                                 <ErrorMessage name="ReenterPassword">

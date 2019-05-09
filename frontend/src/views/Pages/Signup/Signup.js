@@ -69,7 +69,7 @@ class Signup extends Component {
               <h3 style={{textAlign: 'center', marginBottom: '30px', color: '#484848'}}>Sign up to factors.ai</h3>
               <SubmissionError message={this.state.error} />
               <span class='fapp-label'>Email</span>
-              <Input className='fapp-input fapp-big-font' style={{marginBottom: '20px'}} tag={Field} type="email" name="email" placeholder="Your Work Email"/>
+              <Input className='fapp-page-input fapp-big-font' style={{marginBottom: '20px'}} tag={Field} type="email" name="email" placeholder="Your Work Email"/>
               {
                 touched.email &&
                 <ErrorMessage name="email">

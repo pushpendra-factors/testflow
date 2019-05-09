@@ -56,7 +56,7 @@ class Activate extends Component {
             <h3 style={{textAlign: 'center', marginBottom: '30px', color: '#484848'}}>Activate your account</h3>
             <SubmissionError message={this.state.error} />
             <span class='fapp-label'> Firstname* </span>                 
-            <Input className='fapp-input fapp-big-font' style={{marginBottom: '20px'}} tag={Field} type="text" name="firstName" placeholder="Your Firstname"/>
+            <Input className='fapp-page-input fapp-big-font' style={{marginBottom: '20px'}} tag={Field} type="text" name="firstName" placeholder="Your Firstname"/>
             {
               touched.firstName &&
               <ErrorMessage name="firstName">
@@ -64,7 +64,7 @@ class Activate extends Component {
               </ErrorMessage>
             }                  
             <span class='fapp-label'> Lastname </span>            
-            <Input className='fapp-input fapp-big-font' style={{marginBottom: '20px'}} tag={Field} type="text" name="lastName" placeholder="Your Lastname"/>
+            <Input className='fapp-page-input fapp-big-font' style={{marginBottom: '20px'}} tag={Field} type="text" name="lastName" placeholder="Your Lastname"/>
             {
               touched.lastName &&
               <ErrorMessage name="lastName">
@@ -72,7 +72,7 @@ class Activate extends Component {
               </ErrorMessage>
             }
             <span class='fapp-label'>Password*</span>                                      
-            <Input className='fapp-input fapp-big-font' style={{marginBottom: '20px'}} tag={Field} type="password" name="password" placeholder="Password"/>
+            <Input className='fapp-page-input fapp-big-font' style={{marginBottom: '20px'}} tag={Field} type="password" name="password" placeholder="Password"/>
             {
               touched.password &&
                 <ErrorMessage name="password">
@@ -80,7 +80,7 @@ class Activate extends Component {
                 </ErrorMessage>
             }
             <span class='fapp-label'>Confirm Password*</span>                           
-            <Input className='fapp-input fapp-big-font' style={{marginBottom: '20px'}} tag={Field} type="password" name="confirmPassword" placeholder="Re-enter Password"/>
+            <Input className='fapp-page-input fapp-big-font' style={{marginBottom: '20px'}} tag={Field} type="password" name="confirmPassword" placeholder="Re-enter Password"/>
             {   
               touched.confirmPassword &&
                 <ErrorMessage name="confirmPassword">

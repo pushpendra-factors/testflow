@@ -456,6 +456,14 @@ div.setting-card:hover{
     margin-bottom: 10px;
 }
 
+.fapp-page-input {
+    border: 1px solid #8f9ba6 !important;
+    padding: 1.5rem 1rem !important;
+    color: #484848 !important;
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
 .fapp-only-header {
     border: 1px solid #ddd !important; 
     background: #F3F4FB !important;

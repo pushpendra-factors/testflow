@@ -71,7 +71,7 @@ class Login extends Component {
               <h3 style={{textAlign: 'center', marginBottom: '30px', color: '#484848'}}>Log in to factors.ai</h3>
               <SubmissionError message={this.state.error} />
               <span class='fapp-label'>Email</span>
-              <Input className='fapp-input fapp-big-font' style={{marginBottom: '20px'}} tag={Field} type="email" name="email" placeholder="Your Email"/>
+              <Input className='fapp-page-input fapp-big-font' style={{marginBottom: '20px'}} tag={Field} type="email" name="email" placeholder="Your Email"/>
               {
                 touched.email &&
                 <ErrorMessage name="email">
@@ -79,7 +79,7 @@ class Login extends Component {
                 </ErrorMessage>
               } 
               <span class='fapp-label'>Password</span>
-              <Input className='fapp-input fapp-big-font' style={{marginBottom: '20px'}} tag={Field} type="password" name="password" placeholder="Your Password"/>
+              <Input className='fapp-page-input fapp-big-font' style={{marginBottom: '20px'}} tag={Field} type="password" name="password" placeholder="Your Password"/>
               {
                 touched.password &&
                   <ErrorMessage name="password">
