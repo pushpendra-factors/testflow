@@ -69,6 +69,10 @@
         $('#valid-email').hide();
         $('#invalid-email').show();
       }
+
+      function redirectToAppSignup() {
+        window.location = 'https://app.factors.ai/#/signup';
+      }
     
       function getInvite(email) { 
         let validation = /^([A-Za-z0-9_\-\.])+\@([A-Za-z0-9_\-\.])+\.([A-Za-z]{2,4})$/;
@@ -120,9 +124,9 @@
             analytics.track('segment_clicked_twitter');
         });
 
-        $("#get-invite-button").on('click', function(){
-            getInvite(document.querySelector("#work-email").value);
-        });
+        $("#signup-button").on('click', redirectToAppSignup);
+        $("#signup-button-footer").on('click', redirectToAppSignup);
+
         // on enter work email.
         $("#work-email").on('keypress', function(e) {
           if(e.which == 13) {
