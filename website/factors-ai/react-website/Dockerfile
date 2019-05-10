@@ -1,6 +1,6 @@
 FROM node:8.15.0-alpine
 
-WORKDIR /frontend
+WORKDIR /website
 COPY dist dist
 COPY serve-dist.js .
 RUN npm install express
