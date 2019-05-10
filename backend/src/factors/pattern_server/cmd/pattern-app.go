@@ -189,6 +189,10 @@ func main() {
 		log.AddHook(hook)
 	}
 
+	// TODO(Ankit):
+	// This needs to be handled with graceful shutdown
+	// defer ErrorCollector.Flush()
+
 	log.SetReportCaller(true)
 	// Log as JSON instead of the default ASCII formatter.
 	log.SetFormatter(&log.JSONFormatter{})
@@ -318,8 +322,9 @@ func handlePatternServerNodeUpdates(ps *patternserver.PatternServer) error {
 
 	n := patternserver.CalculateMyNum(ps.GetIp(), ps.GetRPCPort(), psNodes)
 	if n == patternserver.PatternServerNotFound {
-		log.WithError(err).Errorln("pattern server not registered")
-		return errors.New("pattern server not registered")
+		err := errors.New("pattern server not registered")
+		log.WithError(err).Errorln("handlePatternServerNodeUpdates pattern server not registered")
+		return err
 	}
 
 	// no of pattern servers have changed
@@ -332,7 +337,7 @@ func handlePatternServerNodeUpdates(ps *patternserver.PatternServer) error {
 func handlerVersionFileUpdates(ps *patternserver.PatternServer, newVersion string, cloudManger filestore.FileManager) error {
 	newProjectModelChunkData, err := getProjectsDataFromVersion(newVersion, cloudManger)
 	if err != nil {
-		log.WithError(err).Errorln("failed to get updated projectModelChunkData")
+		log.WithError(err).Errorln("handlerVersionFileUpdates failed to get updated projectModelChunkData")
 		return err
 	}
 	// only version file has changed
@@ -351,6 +356,12 @@ func watchAndHandleEtcdEvents(ps *patternserver.PatternServer, cloudManger files
 	for {
 		select {
 		case psUpdateEvent := <-psUpdateChan:
+
+			if err := psUpdateEvent.Err(); err != nil {
+				logCtx.WithError(err).Errorln("psUpdateEvent Channel Received err from etcd")
+				panic(err)
+			}
+
 			if len(psUpdateEvent.Events) > 0 {
 				for _, event := range psUpdateEvent.Events {
 					logCtx.WithFields(log.Fields{
@@ -362,10 +373,17 @@ func watchAndHandleEtcdEvents(ps *patternserver.PatternServer, cloudManger files
 				err := handlePatternServerNodeUpdates(ps)
 				if err != nil {
 					logCtx.WithError(err).Errorln("failed to Update list of pattern servers")
+					panic(err)
 				}
 			}
 
 		case versionFileUpdateEvent := <-versionFileUpdateChan:
+
+			if err := versionFileUpdateEvent.Err(); err != nil {
+				logCtx.WithError(err).Errorln("versionFileUpdateEvent Channel Received err from etcd")
+				panic(err)
+			}
+
 			for _, event := range versionFileUpdateEvent.Events {
 				logCtx.WithFields(log.Fields{
 					"Type":  event.Type,
@@ -377,6 +395,7 @@ func watchAndHandleEtcdEvents(ps *patternserver.PatternServer, cloudManger files
 				err := handlerVersionFileUpdates(ps, newVersion, cloudManger)
 				if err != nil {
 					logCtx.WithError(err).Errorln("failed to Update ProjectFileVersion")
+					panic(err)
 				}
 			}
 		}
