@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Switch, Route } from 'react-router-dom';
 import Home from './Home';
 import Blog from './Blog';
+import Pricing from './Pricing';
 import BlogBigData1 from './BlogBigData1'
 import BlogBigData2 from './BlogBigData2'
 import facebookSVG from './assets/img/facebook.svg'
@@ -28,6 +29,11 @@ function App() {
                 </a>
               </li>
               <li className="nav-item">
+                <a id="blog-nav-link" className="nav-link" href="/pricing">
+                  Pricing
+                </a>
+              </li>
+              <li className="nav-item">
                 <a id="blog-nav-link" className="nav-link" href="/blog">
                   Blog
                 </a>
@@ -42,6 +48,7 @@ function App() {
         <Route path="/blog/big-data-analytics-next-1" component={BlogBigData1} />
 +       <Route path="/blog/big-data-analytics-next-2" component={BlogBigData2} />
 +       <Route path="/blog" component={Blog} />
+        <Route path="/pricing" component={Pricing} />
 +     </Switch>
 
       <div className="container-fluid footer" id="contact">
@@ -49,7 +56,7 @@ function App() {
           <div className="container">
             <div className="row">
               <div className="col-md-12">
-                <p style={{fontSize: '16px', fontWeight: 100}}>
+                <p style={{fontSize: '16px'}}>
                   <i className="fa fa-envelope-o" />  hello@factors.ai
                 </p>
                 <a id="footer-linkedin" className="linkedin" href="https://www.linkedin.com/company/factors-ai" target="_blank"><img src={linkedinSVG} alt="linkedin" /></a>

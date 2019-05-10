@@ -1,5 +1,6 @@
 // Home.js
 import React from 'react';
+
 import factorsPNG from './assets/img/factors_app.png'
 import tabMeasureSVG from './assets/img/tab_measure.svg'
 import tabTrackSVG from './assets/img/tab_track.svg'
@@ -19,8 +20,7 @@ class Home extends React.Component {
                 <p className="sub-text">Automatically discover what’s working and not working for your users.</p>
                 <span className="error" id="invalid-email" style={{display: 'none'}}>Please enter a valid email</span>
                 <span className="success" id="valid-email" style={{display: 'none'}}>Thanks, we will get back to you soon</span>
-                <input id="work-email" placeholder="Your work email" />
-                <button id="get-invite-button">Get Invite</button>
+                <button id="signup-button" className='primary-cta'>SIGN UP FOR FREE</button>
               </div>
               <div className="col-md-7 content">
                 <img src={heroSVG} />
@@ -143,8 +143,8 @@ class Home extends React.Component {
           <div className="container-fluid bottom-banner">
             <div className="row">
               <div className="col-md-12 banner">
-                <h3>FactorsAI is now available on request</h3>
-                <button id="bottom-signup">Get early access</button>
+                <h3>FactorsAI is now available for everyone</h3>
+                <button id="signup-button-footer" className="primary-cta">SIGN UP NOW</button>
               </div>
             </div>
           </div>
