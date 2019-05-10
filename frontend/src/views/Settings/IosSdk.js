@@ -33,9 +33,9 @@ class IosSdk extends Component {
 		return (
 			<div class='fapp-content fapp-content-margin'>
 				<Row style={{paddingTop: '12%'}}>
-						<div style={{width: '100%', textAlign: 'center', fontSize: '40px', fontWeight: '500', color: '#484848', marginBottom: '15px', letterSpacing: '0.1rem'}}>Coming Soon<span style={{marginLeft: '3px'}}>!</span></div>
+						<div style={{width: '100%', textAlign: 'center', fontSize: '32px', fontWeight: '700', color: '#666', marginBottom: '15px', letterSpacing: '0.1rem'}}>Coming Soon<span style={{marginLeft: '3px'}}>!</span></div>
 						<div style={{width: '100%', textAlign: 'center'}}>
-							<Button style={{ fontSize: '16px', padding: '8px 20px', fontWeight: '700 !important', letterSpacing: '0.05rem' }} color='success' onClick = {this.trackIosSDKRequest} >Request</Button>
+							<Button style={{ fontSize: '16px', padding: '8px 20px', letterSpacing: '0.05rem' }} color='success' onClick = {this.trackIosSDKRequest} >Request</Button>
 						</div>
 				</Row>
 			</div>
