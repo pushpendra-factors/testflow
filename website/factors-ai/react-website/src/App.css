@@ -392,3 +392,33 @@ button {
 .container-bottom {
   margin-bottom: 90px;
 }
+
+.feature-card {
+  text-align: center;
+  margin: 12px;
+  margin-bottom: 35px;
+}
+
+.feature-card img {
+  width: 100%;
+  height: 100%;
+}
+
+.feature-card .image {
+  height: 50px;
+  width: auto;
+  display: inline-block;
+  margin: 10px;
+}
+
+.feature-card p {
+  font-size: 16px;
+}
+
+.feature-card span.tag {
+  color: #d64541;
+  font-size: 13px;
+  border: 1px solid #d64541;
+  border-radius: 5px;
+  padding: 1px 6px;
+}
