@@ -84,7 +84,7 @@ button:hover {
 }
 
 .nav-item a {
-  color: inherit;
+  color: rgba(0,0,0,.8) !important;
 }
 
 .nav-item.active a {

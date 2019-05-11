@@ -64,10 +64,9 @@ class Pricing extends Component {
                 <p>Upto 500K user actions / month</p>
                 <p>3 months data retention</p>
                 <p>3 member license</p>
-                <p>Query (Core analytics)</p>
+                <p>Query (Basic analytics)</p>
                 <p>Explain (Advanced analytics)</p>
                 <p>Dashboards</p>
-                <p>Smart Reports</p>
               </div>
               <button onClick={() => { this.selectPlan("free") }} className="no-cta-msg">Get started</button>
             </div>
@@ -86,7 +85,7 @@ class Pricing extends Component {
                 <p>Upto 5M user actions / month</p>
                 <p>1 year data retention</p>
                 <p>20 member license</p>
-                <p>Query (Core analytics)</p>
+                <p>Query (Basic analytics)</p>
                 <p>Explain (Advanced analytics)</p>
                 <p>Dashboards</p>
                 <p>Smart Reports</p>
@@ -122,42 +121,41 @@ class Pricing extends Component {
         <div className="row">
           <div className="col-md-4">
             <FeatureCard image={featQuerySVG} imgHeight="40px" title="Query">
-              Run queries and get interesting metrics about users and their actions.
+              Basic analytics to get metrics and charts of users and their actions.
             </FeatureCard>
           </div>
           <div className="col-md-4">
             <FeatureCard image={featFactorSVG} imgHeight="40px" title="Explain">
-              Derive a set of explanations for an end goal, optionally with a start action.
+              Automatic and instant explanations of factors that positively and negatively affect goals.
             </FeatureCard>
           </div>
           <div className="col-md-4">
             <FeatureCard image={featDashboardSVG} imgHeight="40px" title="Dashboard">
-              Stay on top of your key metrics by adding them to your dashboard.
+              Individual and Team Dashboards to stay on top of all metrics of interest.
             </FeatureCard>
           </div>
           <div className="col-md-4">
             <FeatureCard image={featJSSDKSVG} title="Javascript SDK">
-              Track all user actions on your website using our JS SDK.
-            </FeatureCard>
-          </div>
-          <div className="col-md-4">
-            <FeatureCard image={featAndroidSDK} title="Android SDK">
-              Track user actions on android application using our SDK for android.
-            </FeatureCard>
-          </div>
-          <div className="col-md-4">
-            <FeatureCard image={featIOSSDKSVG} title="IOS SDK" tag="coming soon">
-              Tracking user actions on your IOS application made easy with our IOS SDK.
+              Simple SDK to identify and track custom user actions on web pages.
             </FeatureCard>
           </div>
           <div className="col-md-4">
             <FeatureCard image={featAutotrackSVG} title="Autotrack">
-              Automatically track user visits to your website / product. Group a set of actions into a new virtual action. 
+              Automatically track all web pageviews. Define rules to map them to virtual actions. 
+            </FeatureCard>
+          </div>
+          <div className="col-md-4">
+            <FeatureCard image={featAndroidSDK} title="Android SDK">
+              Identify and track user actions on android applications.
             </FeatureCard>
           </div>
           <div className="col-md-4">
             <FeatureCard image={featSegmentSVG} title="Segment Integration">
-              Hook segment with FactorsAI and start analyzing your data in no time.
+              Hook with Segment to have data flowing in and to start analyzing in no time.
+            </FeatureCard>
+          </div>
+          <div className="col-md-4">
+            <FeatureCard image={featIOSSDKSVG} title="IOS SDK" tag="coming soon">
             </FeatureCard>
           </div>
         </div>
