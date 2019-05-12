@@ -16,6 +16,7 @@ class Event extends Component {
       let key = 'event_'+this.props.index+'_prop_'+i;
       properties.push(
         <Property 
+          index={i}
           key={key} 
           projectId={this.props.projectId}
           propertyState={this.props.eventState.properties[i]}
@@ -36,16 +37,16 @@ class Event extends Component {
     return (
       <div>
         <Row style={{marginBottom: '15px'}}>
-          <Col xs='12' md='12' style={{marginLeft: '70px'}}>
-            <div style={{display: 'inline-block', width: '18%'}} className='fapp-select'>
+          <Col xs='12' md='12'>
+            <div style={{display: 'inline-block', width: '18%'}} className='fapp-select light'>
               <Select
                 onChange={this.props.onNameChange}
                 options={makeSelectOpts(this.props.nameOpts)} 
-                placeholder='Event name'
+                placeholder='Select Event'
                 value={getSelectedOpt(this.props.eventState.name)}
               />
             </div>
-            <Button outline color='primary' style={{marginLeft: '10px', display: 'inline-block'}} onClick={this.props.onAddProperty} >+ Property</Button>
+            <Button outline color='primary' style={{marginLeft: '10px', display: 'inline-block', height: '100%'}} onClick={this.props.onAddProperty} >+ Property</Button>
             <button className='fapp-close-button' onClick={this.props.remove}>x</button>
           </Col>         
         </Row>

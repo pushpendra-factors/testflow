@@ -78,8 +78,8 @@ class GroupBy extends Component {
 
   render() {
     return (
-      <div style={{ width: '450px', marginTop: '15px', marginLeft: '20px' }}>
-        <div style={{display: 'inline-block', width: '185px'}} className='fapp-select'>
+      <div style={{ width: '450px', marginBottom: '15px' }}>
+        <div style={{display: 'inline-block', width: '185px'}} className='fapp-select light'>
           <Select
             onChange={this.props.onTypeChange}
             options={this.props.getOpts()}
@@ -87,12 +87,12 @@ class GroupBy extends Component {
             value={getSelectedOpt(this.props.groupByState.type, PROPERTY_TYPE_OPTS)}
           />
         </div>
-        <div style={{display: 'inline-block', width: '185px', marginLeft: '10px'}} className='fapp-select'>
+        <div style={{display: 'inline-block', width: '195px', marginLeft: '10px'}} className='fapp-select light'>
           <CreatableSelect
             onChange={this.props.onNameChange}
             onFocus={this.fetchPropertyKeys}
             options={this.state.nameOpts}
-            placeholder='Property Key'
+            placeholder='Select Property'
             value={getSelectedOpt(this.props.groupByState.name)}
             formatCreateLabel={(value) => (value)}
             isLoading={this.state.isNameOptsLoading}

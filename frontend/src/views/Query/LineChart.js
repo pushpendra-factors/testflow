@@ -76,9 +76,13 @@ class LineChart extends Component {
     return { lines: lines, maxScale: maxScale };
   }
 
+  isResultWithGroupBy(result) {
+    return result.headers.length > 2
+  }
+
   render() {
     let result = this.props.queryResult;
-    let displayLegend = this.props.legend === false ? false : true;
+    let displayLegend = this.isResultWithGroupBy(result);
 
     let countIndex = result.headers.indexOf(HEADER_COUNT);
     if (countIndex == -1) { 

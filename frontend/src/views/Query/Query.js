@@ -15,7 +15,7 @@ import TableChart from './TableChart'
 import LineChart from './LineChart';
 import BarChart from './BarChart';
 import TableBarChart from './TableBarChart';
-import { PRESENTATION_BAR, PRESENTATION_LINE, PRESENTATION_TABLE, PRESENTATION_CARD } from './common';
+import { PRESENTATION_BAR, PRESENTATION_LINE, PRESENTATION_TABLE, PRESENTATION_CARD, isLineResultWithGroupBy } from './common';
 import { 
   fetchProjectEvents,
   runQuery,
@@ -29,19 +29,21 @@ import {
 } from '../../util'
 import Loading from '../../loading';
 import factorsai from '../../common/factorsaiObj';
+import { PROPERTY_TYPE_OPTS } from './common';
 
 const COND_ALL_GIVEN_EVENT = 'all_given_event';
 const COND_ANY_GIVEN_EVENT = 'any_given_event'; 
 const EVENTS_COND_OPTS = [
-  { value: COND_ALL_GIVEN_EVENT, label: 'All given event' },
-  { value: COND_ANY_GIVEN_EVENT, label: 'Any given event' }
+  { value: COND_ALL_GIVEN_EVENT, label: 'all' },
+  { value: COND_ANY_GIVEN_EVENT, label: 'any' }
 ];
+const LABEL_STYLE = { marginRight: '10px', fontWeight: '600', color: '#777' };
 
 const TYPE_EVENT_OCCURRENCE = 'events_occurrence';
 const TYPE_UNIQUE_USERS = 'unique_users';
 const ANALYSIS_TYPE_OPTS = [
-  { value: TYPE_EVENT_OCCURRENCE, label: 'Events occurrence' },
-  { value: TYPE_UNIQUE_USERS, label: 'Unique users' }
+  { value: TYPE_EVENT_OCCURRENCE, label: 'events occurrence' },
+  { value: TYPE_UNIQUE_USERS, label: 'unique users' }
 ];
 
 const DEFAULT_DATE_RANGE_LABEL = 'Last 7 days';
@@ -81,11 +83,6 @@ const DEFAULT_PRESENTATION = PRESENTATION_TABLE;
 
 const HEADER_COUNT = "count";
 const HEADER_DATE = "date";
-
-const PROPERTY_TYPE_OPTS = {
-  'user': 'User Property',
-  'event': 'Event Property'
-};
 
 const mapStateToProps = store => {
   return {
@@ -190,7 +187,8 @@ class Query extends Component {
   }
 
   getDefaultPropertyState() {
-    return { entity: '',  name: '', op: '', value: '', valueType: '' }; 
+    let keys = Object.keys(PROPERTY_TYPE_OPTS)
+    return { entity: keys[0],  name: '', op: 'equals', value: '', valueType: '' };
   }
 
   addProperty(eventIndex) {
@@ -230,7 +228,8 @@ class Query extends Component {
   }
 
   getDefaultGroupByState() {
-    return { type: '', name: '' };
+    let groupByOpts = this.getGroupByOpts();
+    return { type: groupByOpts[0].value, name: '' };
   }
 
   addGroupBy = () => {
@@ -452,7 +451,6 @@ class Query extends Component {
     </div>;
   }
   
-
   getResultAsVerticalBarChart() {
     return <div style={{height: '450px'}} className='animated fadeIn'> 
       <BarChart queryResult={this.state.result} legend={false} />
@@ -642,8 +640,17 @@ class Query extends Component {
         <div>
           <Row style={{marginBottom: '15px'}}>
             <Col xs='12' md='12'>        
-              <span style={{marginRight: '10px'}}> Get </span>
-              <div style={{display: 'inline-block', width: '15%', marginRight: '10px'}} className='fapp-select'>
+              <span style={LABEL_STYLE}> Show </span>
+              <div style={{display: 'inline-block', width: '85px', marginRight: '10px'}} className='fapp-select light'>
+                <Select
+                  value={{label: 'count', value: 'count'}}
+                  // onChange={}
+                  options={[{label: 'count', value: 'count'}]}
+                  placeholder='Function'
+                />
+              </div>
+              <span style={LABEL_STYLE}>of</span>
+              <div style={{display: 'inline-block', width: '168px', marginRight: '10px'}} className='fapp-select light'>
                 <Select
                   value={this.state.type}
                   onChange={this.handleTypeChange}
@@ -651,8 +658,9 @@ class Query extends Component {
                   placeholder='Type'
                 />
               </div>
-              <span style={{marginRight: '10px'}} hidden={this.state.type.value == TYPE_EVENT_OCCURRENCE}> who performed </span>
-              <div style={{display: 'inline-block', width: '15%', marginRight: '10px'}} className='fapp-select' hidden={this.state.type.value == TYPE_EVENT_OCCURRENCE}>
+              <span style={LABEL_STYLE} hidden={this.state.type.value == TYPE_UNIQUE_USERS}> matches the following, </span>
+              <span style={LABEL_STYLE} hidden={this.state.type.value == TYPE_EVENT_OCCURRENCE}> who performed </span>
+              <div style={{display: 'inline-block', width: '80px', marginRight: '10px'}} className='fapp-select light' hidden={this.state.type.value == TYPE_EVENT_OCCURRENCE}>
                 <Select
                   value={this.state.condition}
                   onChange={this.handleEventsConditionChange}
@@ -660,18 +668,19 @@ class Query extends Component {
                   placeholder='Condition'
                 />
               </div>
+              <span style={LABEL_STYLE} hidden={this.state.type.value == TYPE_EVENT_OCCURRENCE}> of the following, </span>
             </Col>
           </Row>
           { events }
           <Row style={{marginBottom: '15px'}}>
-            <Col xs='12' md='12' style={{marginLeft: '70px'}}>
+            <Col xs='12' md='12'>
               <Button outline color='primary' onClick={this.addEvent}>+ Event</Button>
             </Col>
           </Row>
           <Row style={{marginBottom: '15px'}}>
             <Col xs='12' md='12'>
-              <span style={{marginRight: '10px'}}> During </span>
-              <Button outline style={{border: '1px solid grey', color: 'grey', marginRight: '10px' }} onClick={this.toggleDatePickerDisplay}><i class="fa fa-calendar" style={{marginRight: '10px'}}></i>{this.readableDateRange(this.state.resultDateRange[0])}</Button>
+              <span style={LABEL_STYLE}> during </span>
+              <Button outline style={{border: '1px solid #ccc', color: 'grey', marginRight: '10px' }} onClick={this.toggleDatePickerDisplay}><i class="fa fa-calendar" style={{marginRight: '10px'}}></i>{this.readableDateRange(this.state.resultDateRange[0])}</Button>
               <div class='fapp-date-picker' hidden={!this.state.showDatePicker}>
                 <DateRangePicker
                   ranges={this.state.resultDateRange}
@@ -687,9 +696,9 @@ class Query extends Component {
           </Row>
           <Row style={{marginBottom: '15px'}}>
             <Col xs='12' md='12'>
-              <span style={{marginRight: '10px'}}>Group by</span>
-              <Button outline color='primary' onClick={this.addGroupBy}>+ Group By</Button>
+              <div style={{ marginBottom: '15px' }} hidden={this.state.groupBys.length == 0}><span style={LABEL_STYLE}> Grouped by </span></div>
               {groupBys}
+              <Button outline color='primary' onClick={this.addGroupBy}>+ Group</Button>
             </Col>  
           </Row>
           <Row style={{marginBottom: '15px'}}>

@@ -17,6 +17,8 @@ import { PROPERTY_VALUE_NONE, PROPERTY_TYPE_OPTS } from "./common";
 const TYPE_NUMERICAL = 'numerical';
 const TYPE_CATEGORICAL = 'categorical';
 
+const LABEL_STYLE = { marginRight: '10px', fontWeight: '600', color: '#777' };
+
 const NUMERICAL_OPERATOR_OPTS = { 
   'equals': '=',
   'notEqual': '!=',
@@ -130,7 +132,7 @@ class Property extends Component {
             onChange={this.onValueChange}
             placeholder="Enter a value"
             value={this.props.propertyState.value}
-            style={{border: "1px solid #8f9ba6", color: "#444444"}} 
+            style={{ border: "1px solid #8f9ba6", color: "#444444" }} 
           />
         </div>
       );
@@ -138,7 +140,7 @@ class Property extends Component {
     
     if (this.state.valueType == TYPE_CATEGORICAL) {
       return  (
-        <div style={{display: "inline-block", width: "18%", marginLeft: "10px"}} className='fapp-select'>
+        <div style={{display: "inline-block", width: "18%", marginLeft: "10px"}} className='fapp-select light'>
           <CreatableSelect
             onChange={this.onValueChange}
             onFocus={this.fetchPropertyValues}
@@ -166,39 +168,42 @@ class Property extends Component {
     let optSrc = this.state.valueType == TYPE_NUMERICAL ? NUMERICAL_OPERATOR_OPTS : CATEGORICAL_OPERATORS_OPTS;
 
     return (
-      <div style={{display: "inline-block", width: "115px", marginLeft: "10px"}} className='fapp-select'>
+      <div style={{display: "inline-block", width: "65px", marginLeft: "10px"}} className='fapp-select light'>
         <Select 
           onChange={this.props.onOpChange}
           options={createSelectOpts(optSrc)}
-          placeholder="Operator"
           value={getSelectedOpt(this.props.propertyState.op, optSrc) }
         />
       </div>
     );
   }
 
-  nameSelectorDisplay() {
-    return this.props.propertyState.entity != '' ? 'inline-block' : 'none';
+  isAndJoin() {
+    return this.props.index > 0
+  }
+
+  getJoinStr() {
+    return this.isAndJoin() ? "and" : "with";
   }
 
   render() {
     return <Row style={{marginBottom: "15px"}}>
-      <Col xs='12' md='12' style={{marginLeft: "80px"}}>
-        <span style={{marginRight: "10px"}}>with</span>
-        <div style={{display: "inline-block", width: "15%"}} className='fapp-select'>
+      <Col xs='12' md='12'>
+        <span style={LABEL_STYLE}> { this.getJoinStr() } </span>
+        <div style={{display: "inline-block", width: "15%", marginLeft: this.isAndJoin() ? "5px" : null}} className='fapp-select light'>
           <Select
             onChange={this.props.onEntityChange}
             options={createSelectOpts(PROPERTY_TYPE_OPTS)}
-            placeholder="Property Type"
+            placeholder="Select Type"
             value={getSelectedOpt(this.props.propertyState.entity, PROPERTY_TYPE_OPTS)}
           />
         </div>
-        <div style={{display: this.nameSelectorDisplay(), width: "18%", marginLeft: "10px"}} className='fapp-select'>
+        <div style={{display: "inline-block", width: "18%", marginLeft: "10px"}} className='fapp-select light'>
           <Select
             onChange={this.onNameChange}
             onFocus={this.fetchPropertyKeys}
             options={this.state.nameOpts}
-            placeholder="Property Name"
+            placeholder="Select Property"
             value={getSelectedOpt(this.props.propertyState.name)}
             isLoading={this.state.isNameOptsLoading}
           />
