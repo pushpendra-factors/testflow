@@ -210,7 +210,7 @@ class DefaultLayout extends Component {
                       render={props => (<route.component {...props} />)} />) : (null);
                   },
                 )}
-                <Redirect from="/" to="/factor" />
+                <Redirect from="/" to="/dashboard" />
               </Switch>
             </Container>
           </main>
