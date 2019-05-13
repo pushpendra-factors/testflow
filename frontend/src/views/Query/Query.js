@@ -696,7 +696,7 @@ class Query extends Component {
           </Row>
           <Row style={{marginBottom: '15px'}}>
             <Col xs='12' md='12'>
-              <div style={{ marginBottom: '15px' }} hidden={this.state.groupBys.length == 0}><span style={LABEL_STYLE}> Grouped by </span></div>
+              <div style={{ marginBottom: '15px' }} hidden={this.state.groupBys.length == 0}><span style={LABEL_STYLE}> Group by </span></div>
               {groupBys}
               <Button outline color='primary' onClick={this.addGroupBy}>+ Group</Button>
             </Col>  
@@ -709,13 +709,13 @@ class Query extends Component {
         </div>
         
 
-        <div style={{borderTop: '1px solid rgb(221, 221, 221)', paddingTop: '20px', marginTop: '25px', marginLeft: '-60px', marginRight: '-60px'}} hidden={ !this.state.showPresentation }></div>
+        <div style={{borderTop: '1px solid rgb(221, 221, 221)', paddingTop: '20px', marginTop: '30px', marginLeft: '-60px', marginRight: '-60px'}} hidden={ !this.state.showPresentation }></div>
 
         {/* Presentation */}
         <div hidden={ !this.state.showPresentation }>
-          <Row>
+          <Row style={{ marginTop: '15px', marginRight: '10px' }} >
             <Col xs='12' md='12'>
-              <ButtonToolbar class='pull-right' style={{ marginBottom: '10px' }}>
+              <ButtonToolbar class='pull-right'>
                 <ButtonGroup style={{ marginRight: '10px' }}>
                   <button className={this.getPresentationSelectorClass(PRESENTATION_TABLE)} style={{fontWeight: 500}} onClick={() => this.run(PRESENTATION_TABLE)}>Table</button>
                   <button className={this.getPresentationSelectorClass(PRESENTATION_BAR)}  style={{fontWeight: 500}} onClick={() => this.run(PRESENTATION_BAR)}>Bar</button>
@@ -732,8 +732,8 @@ class Query extends Component {
               </ButtonToolbar>
             </Col>
           </Row>
-          <Row>
-            <Col xs='12' md='12' style={{marginTop: '20px'}}>
+          <Row style={{ marginTop: '35px' }}> 
+            <Col xs='12' md='12' >
                 { this.getPresentableResult() }
             </Col>
           </Row>

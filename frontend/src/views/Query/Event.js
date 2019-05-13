@@ -42,7 +42,7 @@ class Event extends Component {
               <Select
                 onChange={this.props.onNameChange}
                 options={makeSelectOpts(this.props.nameOpts)} 
-                placeholder='Select Event'
+                placeholder='Select an event'
                 value={getSelectedOpt(this.props.eventState.name)}
               />
             </div>

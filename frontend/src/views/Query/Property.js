@@ -132,7 +132,7 @@ class Property extends Component {
             onChange={this.onValueChange}
             placeholder="Enter a value"
             value={this.props.propertyState.value}
-            style={{ border: "1px solid #8f9ba6", color: "#444444" }} 
+            style={{ border: "1px solid #ddd", color: "#444444" }}
           />
         </div>
       );
@@ -146,7 +146,7 @@ class Property extends Component {
             onFocus={this.fetchPropertyValues}
             options={this.state.valueOpts}
             value={getSelectedOpt(this.props.propertyState.value)}
-            placeholder="Enter a value"
+            placeholder="Select a value"
             formatCreateLabel={(value) => (value)}
             isLoading={this.state.isValueOptsLoading}
           />
