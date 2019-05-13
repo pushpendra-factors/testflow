@@ -674,7 +674,7 @@ class Query extends Component {
           { events }
           <Row style={{marginBottom: '15px'}}>
             <Col xs='12' md='12'>
-              <Button outline color='primary' onClick={this.addEvent}>+ Event</Button>
+              <Button outline color='primary' onClick={this.addEvent} style={{ marginTop: '3px' }}>+ Event</Button>
             </Col>
           </Row>
           <Row style={{marginBottom: '15px'}}>
@@ -698,7 +698,7 @@ class Query extends Component {
             <Col xs='12' md='12'>
               <div style={{ marginBottom: '15px' }} hidden={this.state.groupBys.length == 0}><span style={LABEL_STYLE}> Group by </span></div>
               {groupBys}
-              <Button outline color='primary' onClick={this.addGroupBy}>+ Group</Button>
+              <Button outline color='primary' onClick={this.addGroupBy} style={{ marginTop: '3px' }}>+ Group</Button>
             </Col>  
           </Row>
           <Row style={{marginBottom: '15px'}}>
