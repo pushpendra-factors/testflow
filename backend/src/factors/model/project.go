@@ -24,6 +24,7 @@ type Project struct {
 }
 
 const TOKEN_GEN_RETRY_LIMIT = 5
+const DefaultProjectName = "My Project"
 
 // Checks for the existence of token already.
 func isTokenExist(token string) (exists int, err error) {
@@ -111,6 +112,37 @@ func CreateProjectWithDependencies(project *Project) (*Project, int) {
 	}
 
 	return createProjectDependencies(cProject)
+}
+
+// CreateDefaultProjectForAgent creates project for an agent if there is no project
+func CreateDefaultProjectForAgent(agentUUID string) (*Project, int) {
+	if agentUUID == "" {
+		return nil, http.StatusBadRequest
+	}
+
+	errCode := DoesAgentHaveProject(agentUUID)
+	if errCode == http.StatusFound {
+		return nil, http.StatusConflict
+	}
+	if errCode != http.StatusNotFound {
+		return nil, errCode
+	}
+
+	cProject, errCode := CreateProjectWithDependencies(&Project{Name: DefaultProjectName})
+	if errCode != http.StatusCreated {
+		return nil, errCode
+	}
+
+	_, errCode = CreateProjectAgentMappingWithDependencies(&ProjectAgentMapping{
+		ProjectID: cProject.ID,
+		AgentUUID: agentUUID,
+		Role:      ADMIN,
+	})
+	if errCode != http.StatusCreated {
+		return nil, errCode
+	}
+
+	return cProject, http.StatusCreated
 }
 
 func GetProject(id uint64) (*Project, int) {

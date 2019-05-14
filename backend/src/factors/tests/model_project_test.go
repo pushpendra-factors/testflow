@@ -124,3 +124,30 @@ func TestDBGetProjectByIDs(t *testing.T) {
 		assert.Equal(t, noOfProjects, len(retProjects))
 	})
 }
+
+func TestCreateDefaultProjectForAgent(t *testing.T) {
+	t.Run("CreateDefaultProjectForAgent", func(t *testing.T) {
+		agent, err := SetupAgentReturnDAO()
+		assert.Nil(t, err)
+
+		project, errCode := M.CreateDefaultProjectForAgent(agent.UUID)
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.NotNil(t, project)
+		assert.Equal(t, M.DefaultProjectName, project.Name)
+	})
+
+	t.Run("CreateDefaultProjectForAgent:AgentAlreadyWithProject", func(t *testing.T) {
+		_, agent, err := SetupProjectWithAgentDAO()
+		assert.Nil(t, err)
+
+		// should not create if agent has a project associated.
+		_, errCode := M.CreateDefaultProjectForAgent(agent.UUID)
+		assert.Equal(t, http.StatusConflict, errCode)
+	})
+
+	t.Run("CreateDefaultProjectForAgent:Invalid", func(t *testing.T) {
+		project, errCode := M.CreateDefaultProjectForAgent("")
+		assert.Equal(t, http.StatusBadRequest, errCode)
+		assert.Nil(t, project)
+	})
+}

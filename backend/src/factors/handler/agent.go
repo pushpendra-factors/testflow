@@ -217,6 +217,12 @@ func AgentActivate(c *gin.Context) {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
+
+	_, errCode = M.CreateDefaultProjectForAgent(agentUUID)
+	if errCode != http.StatusConflict && errCode != http.StatusCreated {
+		logCtx.WithField("agent_uuid", agentUUID).Error("Failed to create default project for agent.")
+	}
+
 	resp := map[string]string{
 		"status": "success",
 	}

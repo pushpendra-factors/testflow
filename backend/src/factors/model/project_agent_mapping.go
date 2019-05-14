@@ -123,3 +123,23 @@ func GetProjectAgentMappingsByAgentUUID(agentUUID string) ([]ProjectAgentMapping
 
 	return pam, http.StatusFound
 }
+
+func DoesAgentHaveProject(agentUUID string) int {
+	if agentUUID == "" {
+		return http.StatusBadRequest
+	}
+
+	db := C.GetServices().Db
+	var pam ProjectAgentMapping
+	if err := db.Where("agent_uuid = ?", agentUUID).First(&pam).Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return http.StatusNotFound
+		}
+
+		log.WithField("agent_uuid",
+			agentUUID).WithError(err).Error("Failed to check does agent have project.")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusFound
+}
