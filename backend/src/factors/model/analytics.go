@@ -829,17 +829,35 @@ func addIndexToGroupByProperties(query *Query) {
 	}
 }
 
-// Returns beginning index of group keys on result.
-func getGroupKeyStartIndex(cols []string) (int, error) {
+func getGroupKeyIndexesForSlicing(cols []string) (int, int, error) {
+	start := -1
+	end := -1
+
 	index := 0
 	for _, col := range cols {
 		if strings.HasPrefix(col, GroupKeyPrefix) {
-			return index, nil
+			if start == -1 {
+				start = index
+			} else {
+				end = index
+			}
 		}
 		index++
 	}
 
-	return index, errors.New("no group keys found")
+	// single element.
+	if start > -1 && end == -1 {
+		end = start
+	}
+
+	if start == -1 {
+		return start, end, errors.New("no group keys found")
+	}
+
+	// end index + 1 reads till end index on slice.
+	end = end + 1
+
+	return start, end, nil
 }
 
 // Creates encoded key by cols position and value.
@@ -907,22 +925,22 @@ func BuildQuery(projectId uint64, query Query) (string, []interface{}, error) {
 // Limits results by left and right keys. Assumes result is already
 // sorted by count and all group keys are used on SQL group by (makes all three group by
 // values together as unique). Limited set dimension = ResultLimit * ResultLimit.
-func limitMultiGroupByPropertiesQueryResult(groupPropsLen int, groupByTimestamp bool,
-	resultCols []string, resultRows [][]interface{}) ([][]interface{}, error) {
+func limitMultiGroupByPropertiesResult(groupByTimestamp bool, resultCols []string,
+	resultRows [][]interface{}) ([][]interface{}, error) {
 
 	limitedResult := make([][]interface{}, 0, 0)
 
-	start, err := getGroupKeyStartIndex(resultCols)
+	start, end, err := getGroupKeyIndexesForSlicing(resultCols)
 	if err != nil {
 		return limitedResult, err
 	}
-	end := groupPropsLen - 1
 
 	// Lookup based on left key (encoded key of all group key values excluding last)
 	// right key (last group key value) ie: g1, g2, g3 -> map[c1:g1_c2:g2]map[g3]bool
+	leftKeyEnd := end - 1
 	keyLookup := make(map[string]map[interface{}]bool, 0)
 	for _, row := range resultRows {
-		leftKey := getEncodedKeyForCols(row[start:end])
+		leftKey := getEncodedKeyForCols(row[start:leftKeyEnd])
 
 		_, leftKeyExists := keyLookup[leftKey]
 		// Limits no.of left keys to ResultsLimit.
@@ -934,9 +952,9 @@ func limitMultiGroupByPropertiesQueryResult(groupPropsLen int, groupByTimestamp 
 		var rightKeyExists bool
 		if leftKeyExists {
 			// Limits no.of right keys to ResultsLimit.
-			_, rightKeyExits := keyLookup[leftKey][row[end]]
+			_, rightKeyExits := keyLookup[leftKey][row[leftKeyEnd]]
 			if !rightKeyExits && len(keyLookup[leftKey]) < ResultsLimit {
-				keyLookup[leftKey][row[end]] = true
+				keyLookup[leftKey][row[leftKeyEnd]] = true
 				rightKeyExists = true
 			}
 		}
@@ -950,18 +968,19 @@ func limitMultiGroupByPropertiesQueryResult(groupPropsLen int, groupByTimestamp 
 }
 
 // Limits top results and makes sure same group key combination available on different
-// datetime, if exists on SQL result. Assumes result is sorted by count.
-func limitGroupByTimestampQueryResult(groupPropsLen int,
-	groupByTimestamp bool, resultCols []string, resultRows [][]interface{}) ([][]interface{}, error) {
+// datetime, if exists on SQL result. Assumes result is sorted by count. Preserves all
+// datetime for the limited combination of group keys.
+func limitGroupByTimestampResult(groupByTimestamp bool, resultCols []string,
+	resultRows [][]interface{}) ([][]interface{}, error) {
 
 	limitedResult := make([][]interface{}, 0, 0)
 
-	start, err := getGroupKeyStartIndex(resultCols)
+	start, end, err := getGroupKeyIndexesForSlicing(resultCols)
 	if err != nil {
 		return limitedResult, err
 	}
-	end := groupPropsLen
 
+	// map[gk1:gk2] -> true
 	keyLookup := make(map[string]bool, 0)
 	for _, row := range resultRows {
 		// all group keys used as enc key.
@@ -982,62 +1001,186 @@ func limitGroupByTimestampQueryResult(groupPropsLen int,
 	return limitedResult, nil
 }
 
-func LimitQueryResults(groupPropsLen int, groupByTimestamp bool,
-	resultCols []string, resultRows [][]interface{}) ([][]interface{}, error) {
+func LimitQueryResult(resultCols []string, resultRows [][]interface{},
+	groupPropsLen int, groupByTimestamp bool) ([][]interface{}, error) {
 
 	if groupPropsLen > 0 && groupByTimestamp {
-		return limitGroupByTimestampQueryResult(groupPropsLen,
-			groupByTimestamp, resultCols, resultRows)
+		return limitGroupByTimestampResult(groupByTimestamp, resultCols, resultRows)
 	}
 
 	if groupPropsLen > 1 {
-		return limitMultiGroupByPropertiesQueryResult(groupPropsLen,
-			groupByTimestamp, resultCols, resultRows)
+		return limitMultiGroupByPropertiesResult(groupByTimestamp, resultCols, resultRows)
 	}
 
 	// limited already on SQL.
 	return resultRows, nil
 }
 
-func getTimstampIndexOnResult(resultCols []string) (int, error) {
+func getTimstampAndAggregateIndexOnResult(resultCols []string) (int, int, error) {
 	timeIndex := -1
+	aggrIndex := -1
+
 	for i, c := range resultCols {
 		if c == AliasDate {
 			timeIndex = i
-			break
+		}
+
+		if c == AliasAggr {
+			aggrIndex = i
 		}
 	}
+
+	var err error
 	if timeIndex == -1 {
-		return timeIndex, errors.New("invalid result without timestamp")
+		err = errors.New("invalid result without timestamp")
+	}
+	if aggrIndex == -1 {
+		err = errors.New("invalid result without aggregate")
 	}
 
-	return timeIndex, nil
+	return aggrIndex, timeIndex, err
 }
 
 func sortResultByTimestamp(resultRows [][]interface{}, timestampIndex int) {
 	sort.Slice(resultRows, func(i, j int) bool {
-		return (resultRows[i][timestampIndex].(time.Time)).Unix() < (resultRows[j][timestampIndex].(time.Time)).Unix()
+		return (resultRows[i][timestampIndex].(time.Time)).Unix() <
+			(resultRows[j][timestampIndex].(time.Time)).Unix()
 	})
 }
 
-func sanitizeGroupByTimestampQueryResult(resultCols []string, resultRows [][]interface{}, query *Query) ([][]interface{}, error) {
-	timeIndex, err := getTimstampIndexOnResult(resultCols)
+func addMissingTimestampsOnResultWithoutGroupByProps(resultCols []string, resultRows [][]interface{},
+	query *Query, aggrIndex int, timestampIndex int) ([][]interface{}, error) {
+
+	rowsByTimestamp := make(map[string][]interface{}, 0)
+	for _, row := range resultRows {
+		ts := row[timestampIndex].(time.Time)
+		rowsByTimestamp[U.GetDateOnlyTimestampStr(ts)] = row
+	}
+
+	timestamps := U.GetAllDatesAsTimestamp(query.From, query.To)
+
+	filledResult := make([][]interface{}, 0, 0)
+	// range over timestamps between given from and to.
+	// uses timstamp string for comparison.
+	for _, ts := range timestamps {
+		if row, exists := rowsByTimestamp[U.GetDateOnlyTimestampStr(ts)]; exists {
+			filledResult = append(filledResult, row)
+		} else {
+			newRow := make([]interface{}, 2, 2)
+			newRow[timestampIndex] = ts
+			newRow[aggrIndex] = 0
+			filledResult = append(filledResult, newRow)
+		}
+	}
+
+	return filledResult, nil
+}
+
+// Fills missing timestamp between given from and to timestamp for all group key combinations,
+// on the limited result.
+func addMissingTimestampsOnResultWithGroupByProps(resultCols []string, resultRows [][]interface{},
+	query *Query, aggrIndex int, timestampIndex int) ([][]interface{}, error) {
+
+	gkStart, gkEnd, err := getGroupKeyIndexesForSlicing(resultCols)
+	if err != nil {
+		return resultRows, err
+	}
+
+	filledResult := make([][]interface{}, 0, 0)
+
+	rowsByGroupAndTimestamp := make(map[string]bool, 0)
+	for _, row := range resultRows {
+		encCols := make([]interface{}, 0, 0)
+		encCols = append(encCols, row[gkStart:gkEnd]...)
+		// encoded key with group values and timestamp from db row.
+		encCols = append(encCols, U.GetDateOnlyTimestampStr(row[timestampIndex].(time.Time)))
+		encKey := getEncodedKeyForCols(encCols)
+
+		rowsByGroupAndTimestamp[encKey] = true
+		filledResult = append(filledResult, row)
+	}
+
+	timestamps := U.GetAllDatesAsTimestamp(query.From, query.To)
+
+	for _, row := range resultRows {
+		for _, ts := range timestamps {
+			encCols := make([]interface{}, 0, 0)
+			encCols = append(encCols, row[gkStart:gkEnd]...)
+			// encoded key with generated timestamp.
+			encCols = append(encCols, U.GetDateOnlyTimestampStr(ts))
+			encKey := getEncodedKeyForCols(encCols)
+
+			_, exists := rowsByGroupAndTimestamp[encKey]
+			if !exists {
+				// create new row with group values and missing date
+				// for those group combination and aggr 0.
+				rowLen := len(resultCols)
+				newRow := make([]interface{}, rowLen, rowLen)
+				groupValues := row[gkStart:gkEnd]
+
+				for i := 0; i < rowLen; {
+					if i == gkStart {
+						for _, gv := range groupValues {
+							newRow[i] = gv
+							i++
+						}
+					}
+
+					if i == aggrIndex {
+						newRow[i] = 0
+						i++
+					}
+
+					if i == timestampIndex {
+						newRow[i] = ts
+						i++
+					}
+				}
+				rowsByGroupAndTimestamp[encKey] = true
+				filledResult = append(filledResult, newRow)
+			}
+		}
+	}
+
+	return filledResult, nil
+}
+
+func sanitizeGroupByTimestampResult(resultCols []string,
+	resultRows [][]interface{}, query *Query) ([][]interface{}, error) {
+
+	aggrIndex, timeIndex, err := getTimstampAndAggregateIndexOnResult(resultCols)
 	if err != nil {
 		return nil, err
 	}
 
-	sortResultByTimestamp(resultRows, timeIndex)
-	// Todo(Dinesh): fill missing timestamps between query from and to.
-	return resultRows, nil
+	// Todo: Supports only date as timestamp, add support for hour and month.
+	var sResultRows [][]interface{}
+	if len(query.GroupByProperties) == 0 {
+		sResultRows, err = addMissingTimestampsOnResultWithoutGroupByProps(resultCols, resultRows,
+			query, aggrIndex, timeIndex)
+	} else {
+		sResultRows, err = addMissingTimestampsOnResultWithGroupByProps(resultCols, resultRows,
+			query, aggrIndex, timeIndex)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	sortResultByTimestamp(sResultRows, timeIndex)
+
+	return sResultRows, nil
 }
 
 // Converts DB rows into plottable results.
-func sanitizeQueryResults(resultCols []string, resultRows [][]interface{}, query *Query) ([][]interface{}, error) {
+func SanitizeQueryResult(resultCols []string, resultRows [][]interface{},
+	query *Query) ([][]interface{}, error) {
+
 	if !query.GroupByTimestamp {
 		return resultRows, nil
 	}
 
-	return sanitizeGroupByTimestampQueryResult(resultCols, resultRows, query)
+	return sanitizeGroupByTimestampResult(resultCols, resultRows, query)
 }
 
 func Analyze(projectId uint64, query Query) ([]string, [][]interface{}, int, string) {
@@ -1068,7 +1211,7 @@ func Analyze(projectId uint64, query Query) ([]string, [][]interface{}, int, str
 		return nil, nil, http.StatusInternalServerError, ErrMsgQueryProcessingFailure
 	}
 
-	// Todo(Dinesh): Remove ReadRows(inefficient) and use specific struct.
+	// Todo(Dinesh): Use a type for result.
 	resultCols, resultRows, err := U.ReadRows(rows)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed processing SQL query result")
@@ -1077,15 +1220,15 @@ func Analyze(projectId uint64, query Query) ([]string, [][]interface{}, int, str
 
 	groupPropsLen := len(query.GroupByProperties)
 
-	resultRows, err = LimitQueryResults(groupPropsLen, query.GroupByTimestamp, resultCols, resultRows)
+	resultRows, err = LimitQueryResult(resultCols, resultRows, groupPropsLen, query.GroupByTimestamp)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed processing query results for limiting")
 		return nil, nil, http.StatusInternalServerError, ErrMsgQueryProcessingFailure
 	}
 
-	resultRows, err = sanitizeQueryResults(resultCols, resultRows, &query)
+	resultRows, err = SanitizeQueryResult(resultCols, resultRows, &query)
 	if err != nil {
-		logCtx.WithError(err).Error("Failed sanitizing query results")
+		logCtx.WithError(err).Error("Failed to sanitize query results")
 		return nil, nil, http.StatusInternalServerError, ErrMsgQueryProcessingFailure
 	}
 
