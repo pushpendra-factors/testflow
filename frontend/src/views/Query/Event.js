@@ -33,12 +33,16 @@ class Event extends Component {
     return properties
   }
 
+  getAddPropertyText() {
+    return this.props.eventState.properties.length == 0 ? "with property" : "+ Property";
+  }
+
   render() {
     return (
       <div>
         <Row style={{marginBottom: '15px'}}>
           <Col xs='12' md='12'>
-            <div style={{display: 'inline-block', width: '18%'}} className='fapp-select light'>
+            <div style={{display: 'inline-block', width: '240px'}} className='fapp-select light'>
               <Select
                 onChange={this.props.onNameChange}
                 options={makeSelectOpts(this.props.nameOpts)} 
@@ -46,7 +50,7 @@ class Event extends Component {
                 value={getSelectedOpt(this.props.eventState.name)}
               />
             </div>
-            <Button outline color='primary' style={{marginLeft: '10px', display: 'inline-block', height: '100%'}} onClick={this.props.onAddProperty} >+ Property</Button>
+            <Button outline color='primary' style={{marginLeft: '10px', display: 'inline-block', height: '100%'}} onClick={this.props.onAddProperty} >{ this.getAddPropertyText() }</Button>
             <button className='fapp-close-button' onClick={this.props.remove}>x</button>
           </Col>         
         </Row>

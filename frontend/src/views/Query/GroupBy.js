@@ -79,7 +79,7 @@ class GroupBy extends Component {
   render() {
     return (
       <div style={{ width: '450px', marginBottom: '15px' }}>
-        <div style={{display: 'inline-block', width: '185px'}} className='fapp-select light'>
+        <div style={{display: 'inline-block', width: '150px'}} className='fapp-select light'>
           <Select
             onChange={this.props.onTypeChange}
             options={this.props.getOpts()}
