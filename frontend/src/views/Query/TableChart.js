@@ -46,12 +46,10 @@ class TableChart extends Component {
     // card.
     if (cardable) {
       return (
-        <div style={{ marginTop: '75px', marginBottom: '100px' }}>
-          <Table className='animated fadeIn' style={{fontSize: '45px', textAlign: 'center', border: 'none' }} >
-            { this.tableHeader() }
-            <tbody> <span style={this.getCountStyleByProps()}> { result.rows[rowKeys[0]][0] } </span> </tbody>
-          </Table>
-        </div>
+        <Table className='animated fadeIn' style={{fontSize: '45px', textAlign: 'center', border: 'none', marginTop: '10px' }} >
+          { this.tableHeader() }
+          <tbody> <span style={this.getCountStyleByProps()}> { result.rows[rowKeys[0]][0] } </span> </tbody>
+        </Table>
       )
     }
 
