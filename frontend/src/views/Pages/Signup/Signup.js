@@ -9,7 +9,7 @@ import { signup } from "../../../actions/agentActions";
 import  { InvalidEmail, MissingEmail } from '../ValidationMessages';
 import HalfScreen from '../HalfScreen';
 import SubmissionError from '../SubmissionError';
-
+import factorsai from '../../../common/factorsaiObj';
 
 const mapDispatchToProps = dispatch => {
   return bindActionCreators({ signup }, dispatch);
@@ -52,15 +52,18 @@ class Signup extends Component {
                 email: yup.string().email(InvalidEmail).required(MissingEmail)
             })
         }
-        onSubmit={(values, {setSubmitting}) => {            
+        onSubmit={(values, {setSubmitting}) => {
+            let eventProperties = { email: values.email };          
             this.props.signup(values.email)
             .then(() => {
                 setSubmitting(false);
                 this.setState({signupPerformed: true, agentEmail: values.email });
+                factorsai.track('signup', eventProperties);    
             })
             .catch((msg) => {
                 setSubmitting(false);
                 this.setState({ error: msg });
+                factorsai.track('signup_failed', eventProperties);
             });                             
         }}
       >
