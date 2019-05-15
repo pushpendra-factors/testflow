@@ -308,6 +308,10 @@ func UseSecureCookie() bool {
 	return !IsDevelopment()
 }
 
+func UseHTTPOnlyCookie() bool {
+	return !IsDevelopment()
+}
+
 func GetProtocol() string {
 	if IsDevelopment() {
 		return "http://"

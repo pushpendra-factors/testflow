@@ -73,6 +73,7 @@ func main() {
 
 	r := gin.New()
 	// Group based middlewares should be registered on corresponding init methods.
+	r.Use(mid.AddSecurityHeadersForAppRoutes())
 	// Root middleware for cors.
 	r.Use(mid.CustomCors())
 	r.Use(mid.RequestIdGenerator())

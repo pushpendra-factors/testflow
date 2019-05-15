@@ -29,6 +29,7 @@ const SCOPE_REQ_ID = "requestId"
 
 // cors prefix constants.
 const PREFIX_PATH_SDK = "/sdk/"
+const PREFIX_PATH_INTEGRATIONS = "/integrations"
 
 // SetScopeProjectIdByToken - Request scope set by token on 'Authorization' header.
 func SetScopeProjectIdByToken() gin.HandlerFunc {
@@ -79,13 +80,32 @@ func SetScopeProjectIdByPrivateToken() gin.HandlerFunc {
 	}
 }
 
+func isSDKRequest(path string) bool {
+	return strings.HasPrefix(path, PREFIX_PATH_SDK)
+}
+
+func isIntergrationsRequest(path string) bool {
+	return strings.HasPrefix(path, PREFIX_PATH_INTEGRATIONS)
+}
+
+const SAMEORIGIN = "SAMEORIGIN"
+
+func AddSecurityHeadersForAppRoutes() gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		if !isSDKRequest(c.Request.URL.Path) && !isIntergrationsRequest(c.Request.URL.Path) {
+			c.Header("X-Frame-Options", SAMEORIGIN)
+		}
+		c.Next()
+	}
+}
+
 func CustomCors() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		corsConfig := cors.DefaultConfig()
 		corsConfig.AllowMethods = []string{"GET", "POST", "PUT", "HEAD", "DELETE"}
 
-		if strings.HasPrefix(c.Request.URL.Path, PREFIX_PATH_SDK) {
-			log.Info(c.Request.URL.Path)
+		if isSDKRequest(c.Request.URL.Path) {
 			corsConfig.AllowAllOrigins = true
 			corsConfig.AddAllowHeaders("Authorization")
 		} else {
