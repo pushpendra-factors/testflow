@@ -94,7 +94,7 @@ class Pricing extends Component {
               <div className="cta-msg">
                 <p>$10 / 100K user actions for above 1M</p>
               </div>
-              <button  onClick={() => { this.selectPlan("enterprise") }}>Start for free</button>
+              <button  onClick={() => { this.selectPlan("startup") }}>Start for free</button>
             </div>
           </div>
           <div className="col-md-4">
