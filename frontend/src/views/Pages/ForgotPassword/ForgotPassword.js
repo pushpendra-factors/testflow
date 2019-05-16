@@ -60,7 +60,7 @@ class ForgotPassword extends Component {
                                 </ErrorMessage>
                             }
                             <div style={{textAlign: 'center'}}>
-                                <Button color='success' type='submit' disabled={isSubmitting} className='fapp-cta-button' style={{marginTop: '15px'}}>Send Reset Link</Button>
+                                <Button color='success' type='submit' disabled={isSubmitting} className='fapp-cta-button' style={{marginTop: '15px'}}>SEND RESET LINK</Button>
                             </div>
                         </Form>
                     )}

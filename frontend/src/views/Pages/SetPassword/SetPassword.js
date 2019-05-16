@@ -65,7 +65,7 @@ class SetPassword extends Component {
                                 </ErrorMessage>
                             }
                             <div style={{textAlign: 'center'}}>
-                                <Button color='success' type='submit' disabled={isSubmitting} className='fapp-cta-button' style={{marginTop: '15px'}}>Reset Password</Button>
+                                <Button color='success' type='submit' disabled={isSubmitting} className='fapp-cta-button' style={{marginTop: '15px'}}>RESET PASSWORD</Button>
                             </div>
                         </Form>
                     )}

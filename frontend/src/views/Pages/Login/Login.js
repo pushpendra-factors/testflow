@@ -87,7 +87,7 @@ class Login extends Component {
                   </ErrorMessage>
               }
               <div style={{textAlign: 'center'}}>
-                <Button color='success' type='submit' disabled={isSubmitting} className='fapp-cta-button' style={{marginTop: '15px'}}>Log in</Button>
+                <Button color='success' type='submit' disabled={isSubmitting} className='fapp-cta-button' style={{marginTop: '15px'}}>LOGIN</Button>
               </div>
               <Button color='link'  onClick={this.redirectToSignup} style={{fontWeight: '300'}} className="px-0"> I don't have an account </Button>
               <Button color='link' onClick={this.redirectToForgotPassword} style={{float: 'right', fontWeight: '300'}} className="px-0"> Forgot password? </Button>

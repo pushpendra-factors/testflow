@@ -88,7 +88,7 @@ class Activate extends Component {
                 </ErrorMessage>
             }
             <div style={{textAlign: 'center'}}>
-              <Button color='success' type='submit' disabled={isSubmitting} className='fapp-cta-button' style={{marginTop: '15px'}}>Activate</Button>
+              <Button color='success' type='submit' disabled={isSubmitting} className='fapp-cta-button' style={{marginTop: '15px'}}>ACTIVATE</Button>
             </div>
           </Form>
         )}

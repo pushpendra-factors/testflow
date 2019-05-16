@@ -80,7 +80,7 @@ class Signup extends Component {
                 </ErrorMessage>
               }
               <div style={{textAlign: 'center'}}>
-                <Button color='success' type='submit' disabled={isSubmitting} className='fapp-cta-button' style={{marginTop: '15px'}}>Create Account</Button>
+                <Button color='success' type='submit' disabled={isSubmitting} className='fapp-cta-button' style={{marginTop: '8px'}}>CREATE ACCOUNT</Button>
               </div>
               <Button color='link' onClick={this.redirectToLogin} style={{float: 'right', fontWeight: '300'}} className="px-0"> I have an account already. Sign in now. </Button>
           </Form>
