@@ -7,9 +7,9 @@ import (
 	"strings"
 )
 
-// ReadRows Creates [][]interface{} from sql result rows.
+// DBReadRows Creates [][]interface{} from sql result rows.
 // Ref: https://kylewbanks.com/blog/query-result-to-map-in-golang
-func ReadRows(rows *sql.Rows) ([]string, [][]interface{}, error) {
+func DBReadRows(rows *sql.Rows) ([]string, [][]interface{}, error) {
 	defer rows.Close()
 
 	cols, err := rows.Columns()
