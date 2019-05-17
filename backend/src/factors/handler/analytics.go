@@ -49,11 +49,11 @@ func QueryHandler(c *gin.Context) {
 		return
 	}
 
-	headers, rows, errCode, errMsg := M.Analyze(projectId, requestPayload.Query)
+	result, errCode, errMsg := M.Analyze(projectId, requestPayload.Query)
 	if errCode != http.StatusOK {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": errMsg})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"headers": headers, "rows": rows})
+	c.JSON(http.StatusOK, result)
 }
