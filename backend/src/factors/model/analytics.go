@@ -68,7 +68,8 @@ const (
 	ErrUnsupportedGroupByEventPropertyOnUserQuery = "group by event property is not supported for user query"
 	ErrMsgQueryProcessingFailure                  = "Failed processing query"
 
-	SelectDefaultEventFilter              = "DISTINCT(events.id) as event_id, events.user_id as event_user_id"
+	SelectDefaultEventFilter              = "events.id as event_id, events.user_id as event_user_id"
+	SelectDefaultEventFilterWithDistinct  = "DISTINCT(events.id) as event_id, events.user_id as event_user_id"
 	SelectDefaultEventFilterByAlias       = "event_id, event_user_id"
 	SelectCoalesceCustomerUserIDAndUserID = "COALESCE(users.customer_user_id, event_user_id)"
 
@@ -346,12 +347,15 @@ func addFilterEventsWithPropsForUsersQuery(projectId uint64, query Query,
 			stepName = fmt.Sprintf("%s_step%d", stepName, i)
 		}
 
+		var filterSelect string
 		var usersFromLastStep string
 		if i > 0 {
+			filterSelect = SelectDefaultEventFilterWithDistinct
 			usersFromLastStep = "JOIN " + prevStepName + " ON events.user_id=" + prevStepName + ".event_user_id"
+		} else {
+			filterSelect = SelectDefaultEventFilter
 		}
 
-		filterSelect := SelectDefaultEventFilter
 		filterSelect = appendSelectTimestampIfRequired(filterSelect, query.Timezone, query.GroupByTimestamp)
 		addFilterEventsWithPropsQuery(projectId, &rStmnt, &rParams, ewp, query.From, query.To,
 			stepName, filterSelect, nil, usersFromLastStep)
