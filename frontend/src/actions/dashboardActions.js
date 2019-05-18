@@ -1,4 +1,4 @@
-import { get, post, del } from "./request.js";
+import { get, post, put, del } from "./request.js";
 import { getHostURL } from "../util";
 
 var host = getHostURL();
@@ -102,6 +102,32 @@ export function createDashboardUnit(projectId, dashboardId, payload) {
     })
   }
 }
+
+export function updateDashboardUnit(projectId, dashboardId, unitId, payload) {
+  return function(dispatch){
+    return new Promise((resolve, reject) => {
+      return put(dispatch, host + "projects/" + projectId + "/dashboards/" + dashboardId + "/units/" + unitId, payload)
+        .then((r) => {
+          if (r.ok) {
+            let data = { project_id: projectId, dashboard_id: dashboardId, id: unitId, ...payload };
+            dispatch({ type: "UPDATE_DASHBOARD_UNIT_FULFILLED", payload: data}); 
+            resolve(data);
+          } else {
+            dispatch({ type: "UPDATE_DASHBOARD_UNIT_REJECTED", payload: {}, code: r.status });
+            resolve({ error: "Failed to update unit." });
+          }
+        })
+        .catch((r) => {
+          if (r.status) {
+            dispatch({ type: "UPDATE_DASHBOARD_UNIT_REJECTED", payload: r.data, code: r.status });
+            reject(r);
+          } else {
+            console.error("Network error");
+          }
+        });
+      });
+  }
+} 
 
 export function deleteDashboardUnit(projectId, dashboardId, unitId) {
   return function(dispatch){

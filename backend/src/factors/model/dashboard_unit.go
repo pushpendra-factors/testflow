@@ -110,7 +110,7 @@ func DeleteDashboardUnit(projectId uint64, agentUUID string, dashboardId uint64,
 	if projectId == 0 || agentUUID == "" ||
 		dashboardId == 0 || id == 0 {
 
-		log.Error("Failed to get dashboard units. Invalid scope ids.")
+		log.Error("Failed to delete dashboard unit. Invalid scope ids.")
 		return http.StatusBadRequest
 	}
 
@@ -118,7 +118,8 @@ func DeleteDashboardUnit(projectId uint64, agentUUID string, dashboardId uint64,
 		return http.StatusUnauthorized
 	}
 
-	err := db.Where("id = ? AND project_id = ? AND dashboard_id = ?", id, projectId, dashboardId).Delete(&DashboardUnit{}).Error
+	err := db.Where("id = ? AND project_id = ? AND dashboard_id = ?",
+		id, projectId, dashboardId).Delete(&DashboardUnit{}).Error
 	if err != nil {
 		log.WithFields(log.Fields{"project_id": projectId, "dashboard_id": dashboardId,
 			"unit_id": id}).WithError(err).Error("Failed to delete dashboard unit.")
@@ -126,4 +127,41 @@ func DeleteDashboardUnit(projectId uint64, agentUUID string, dashboardId uint64,
 	}
 
 	return http.StatusAccepted
+}
+
+func UpdateDashboardUnit(projectId uint64, agentUUID string,
+	dashboardId uint64, id uint64, unit *DashboardUnit) (*DashboardUnit, int) {
+
+	if projectId == 0 || agentUUID == "" ||
+		dashboardId == 0 || id == 0 {
+
+		log.Error("Failed to update dashboard unit title. Invalid scope ids.")
+		return nil, http.StatusBadRequest
+	}
+
+	if !HasAccessToDashboard(projectId, agentUUID, dashboardId) {
+		return nil, http.StatusUnauthorized
+	}
+
+	db := C.GetServices().Db
+
+	// update allowed fields.
+	updateFields := make(map[string]interface{}, 0)
+	if unit.Title != "" {
+		updateFields["title"] = unit.Title
+	}
+
+	// nothing to update.
+	if len(updateFields) == 0 {
+		return nil, http.StatusBadRequest
+	}
+	var updatedDashboardUnitFields DashboardUnit
+	err := db.Model(&updatedDashboardUnitFields).Where("id = ? AND project_id = ? AND dashboard_id = ?",
+		id, projectId, dashboardId).Update(updateFields).Error
+	if err != nil {
+		return nil, http.StatusInternalServerError
+	}
+
+	// returns only updated fields, avoid using it on DashboardUnit API.
+	return &updatedDashboardUnitFields, http.StatusAccepted
 }

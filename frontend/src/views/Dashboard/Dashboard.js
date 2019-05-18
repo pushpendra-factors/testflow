@@ -116,10 +116,10 @@ class Dashboard extends Component {
     for (let i=0; i < pDashUnits.length; i++) {
       let pUnit = pDashUnits[i];
       if (pUnit.presentation && pUnit.presentation === PRESENTATION_CARD) {
-        cardUnits.push(<DashboardUnit showClose={this.state.editDashboard} card cardIndex={cardIndex} data={pUnit} />)
+        cardUnits.push(<DashboardUnit editDashboard={this.state.editDashboard} card cardIndex={cardIndex} data={pUnit} />)
         cardIndex++;
       } else {
-        largeUnits.push(<DashboardUnit showClose={this.state.editDashboard} data={pUnit} />);
+        largeUnits.push(<DashboardUnit editDashboard={this.state.editDashboard} data={pUnit} />);
       }
     }
       
@@ -139,7 +139,7 @@ class Dashboard extends Component {
 
   renderEditButton() {
     if (!this.isEditable()) return null;
-    let text = this.state.editDashboard ? 'Done Editing' : 'Edit Charts';
+    let text = this.state.editDashboard ? 'Save' : 'Edit';
     let color = this.state.editDashboard ? 'success' : 'danger' 
     return <Button style={{ marginLeft: '10px', height: 'auto', marginBottom: '4px' }} onClick={this.toggleEditDashboard} outline={!this.state.editDashboard} color={color}> { text } </Button>
   }

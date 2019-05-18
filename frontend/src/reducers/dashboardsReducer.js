@@ -23,15 +23,40 @@ export default function reducer(state={
     case "FETCH_DASHBOARD_UNITS_FULFILLED": {
       return {
         ...state,
-        units: action.payload
+        units: action.payload,
       }
+    }
+    case "UPDATE_DASHBOARD_UNIT_FULFILLED": {
+      let _state = { ...state };
+      _state.units = [ ...state.units ];
+      let updateUnit = action.payload;
+
+      // Get unit index to update, from store.
+      let updateIndex = -1;
+      for (let i in _state.units) {
+        let unit = _state.units[i];
+        if (unit.project_id == updateUnit.project_id
+          && unit.dashboard_id == updateUnit.dashboard_id
+          && unit.id == updateUnit.id) {
+            updateIndex = i;
+          }
+      }
+
+      if (updateIndex != -1) {
+        _state.units[updateIndex] = { 
+          ..._state.units[updateIndex],
+          ...updateUnit,
+        }
+      }
+
+      return _state;
     }
     case "DELETE_DASHBOARD_UNIT_FULFILLED": {
       let _state = { ...state };
       _state.units = [ ...state.units ];
       let delUnit = action.payload;
 
-      // Get unit index to delete from store.
+      // Get unit index to delete, from store.
       let delIndex = -1;
       for (let i in _state.units) {
         let unit = _state.units[i];

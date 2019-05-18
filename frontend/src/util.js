@@ -93,7 +93,7 @@ export function isNumber(numString) {
 }
 
 export function getChartScaleWithSpace(scale) {
-    if (!scale || scale < 10) return 15;
+    if (!scale || scale < 10) return 10;
     let multi10 = Math.pow(10, Math.floor(Math.log10(scale)))
     let buff = multi10 - (scale % multi10);
     if (buff < (multi10/2)) buff = buff + multi10; 

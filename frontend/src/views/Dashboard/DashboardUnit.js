@@ -1,10 +1,10 @@
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
-import { Col, Card, CardHeader, CardBody } from 'reactstrap';
+import { Col, Card, CardHeader, CardBody, Input, Button } from 'reactstrap';
 
 import { runQuery } from '../../actions/projectsActions';
-import { deleteDashboardUnit } from '../../actions/dashboardActions';
+import { deleteDashboardUnit, updateDashboardUnit } from '../../actions/dashboardActions';
 import Loading from '../../loading';
 import BarChart from '../Query/BarChart';
 import LineChart from '../Query/LineChart';
@@ -26,7 +26,8 @@ const mapStateToProps = store => {
 const mapDispatchToProps = dispatch => {
   return bindActionCreators({ 
     runQuery,
-    deleteDashboardUnit
+    deleteDashboardUnit,
+    updateDashboardUnit,
   }, dispatch);
 }
 
@@ -37,6 +38,9 @@ class DashboardUnit extends Component {
     this.state = {
       loading: false,
       presentation: null,
+
+      title: null,
+      editTitle: false
     }
   }
 
@@ -131,6 +135,16 @@ class DashboardUnit extends Component {
     return style;
   }
 
+  getInlineButtonStyle() {
+    return { 
+      background: 'none', 
+      border: 'none',
+      padding: '0 4px', 
+      fontSize: '17px', 
+      color: this.isCard() ? '#FFF' : '#444'
+    }
+  }
+
   getCardHeaderStyleByProps() {
     if (this.props.data.presentation !== PRESENTATION_CARD) return null;
     let style = {};
@@ -158,18 +172,116 @@ class DashboardUnit extends Component {
     this.props.deleteDashboardUnit(unit.project_id, unit.dashboard_id, unit.id);
   }
 
-  render() {
-    let data = this.props.data;
-    let isCard = this.props.data.presentation === PRESENTATION_CARD;
+  isCard() {
+    return this.props.data.presentation === PRESENTATION_CARD;
+  }
 
+  onTitleChange = (e) => {
+    this.setState({ title: e.target.value });
+  }
+
+  getTitleInputStyle() {
+    let style = {
+      width: '70%',
+      background: 'transparent',
+      fontWeight: '500',
+      borderRadius: '4px',
+      marginRight: '6px'
+    }
+
+    let isCard = this.isCard();
+    style.color = isCard ? '#fff' : '#444';
+    style.border = isCard ? '1px solid #fff' : '1px solid #DDD'; 
+    style.padding = isCard ? '0 7px' : '3px 7px';
+
+    return style;
+  }
+
+  editTitle = () => {
+    this.setState({ editTitle: true });
+  }
+
+  isTitleChanged() {
+    return this.state.title != null && this.state.title.trim() != "" &&
+      this.state.title != this.props.data.title;
+  }
+
+  closeEditTitle = () => {
+    let state = { editTitle : false };
+    // reset state.
+    if (this.isTitleChanged()) state.title = this.props.data.title;
+  
+    this.setState(state);
+  }
+
+  showTitleEditor() {
+    return this.state.editTitle && this.props.editDashboard
+  }
+
+  showTitle() {
+    return (!this.props.editDashboard || !this.state.editTitle);
+  }
+
+  getTitle() {
+    return this.state.title == null ? this.props.data.title : this.state.title;
+  }
+  
+  handleUpdateTitleFailure() {
+    this.setState({ title: this.props.data.title });
+    // Todo: show title update failure on UI.
+    console.error("Failed to update title.");
+  }
+
+  saveEditedTitle = () => {
+    let unit = this.props.data;
+
+    if (!this.isTitleChanged()) {
+      this.setState({ editTitle: false, title: unit.title });
+      return;
+    }
+    
+    
+    this.props.updateDashboardUnit(unit.project_id, unit.dashboard_id, 
+      unit.id, {title: this.state.title})
+      .then((r) => {
+        if (r.error) this.handleUpdateTitleFailure();
+      })
+      .catch(this.handleUpdateTitleFailure);
+    // close editor.
+    this.setState({ editTitle: false });
+  }
+
+  getTitleStyle() {
+    if (!this.props.editDashboard) return null;
+
+    return { 
+      maxWidth: this.isCard() ? '180px' : null, display: 'inline-block' 
+    }
+  }
+
+  render() {
     return (
       <Col md={{ size: this.getColSizeByProps() }}  style={{padding: '0 15px'}}>
         <Card className='fapp-dunit' style={this.getCardStyleByProps()}>
           <CardHeader style={this.getCardHeaderStyleByProps()}>
             <div style={{ textAlign: 'right', marginTop: '-10px', marginRight: '-18px', height: '18px' }}>
-              <strong onClick={this.delete} style={{ fontSize: '15px', cursor: 'pointer', padding: '0 10px', color: isCard ? '#FFF' : '#AAA' }} hidden={!this.props.showClose}>x</strong>
+              <strong onClick={this.delete} style={{ fontSize: '15px', cursor: 'pointer', padding: '0 10px', color: this.isCard() ? '#FFF' : '#AAA' }} hidden={!this.props.editDashboard}>x</strong>
             </div>
-            <div className='fapp-overflow-dot' style={{ marginTop: isCard ? '-10px' : '-5px' }}><strong>{ data.title }</strong></div>
+
+            <div style={{ marginTop: '-5px' }} hidden={!this.showTitle()}>
+              <div className='fapp-overflow-dot' style={this.getTitleStyle()}> <strong>{ this.getTitle() }</strong> </div>
+              <button style={this.getInlineButtonStyle()} onClick={this.editTitle} hidden={!this.props.editDashboard}><i className='icon-pencil'></i></button>
+            </div>
+
+            <div hidden={!this.showTitleEditor()}>
+              <input className='no-outline' style={this.getTitleInputStyle()} value={this.getTitle()} onChange={this.onTitleChange} />
+              <button style={this.getInlineButtonStyle()} onClick={this.saveEditedTitle}>
+                <i className='icon-check'></i>
+              </button>
+              <button style={this.getInlineButtonStyle()} onClick={this.closeEditTitle}>
+                <i className='icon-close'></i>
+              </button>
+            </div>
           </CardHeader>
           <CardBody style={this.getCardBodyStyleByProps()}>
             { this.present() }

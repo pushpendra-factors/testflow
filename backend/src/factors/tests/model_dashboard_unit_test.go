@@ -232,3 +232,72 @@ func TestDeleteDashboardUnit(t *testing.T) {
 		assert.Equal(t, http.StatusUnauthorized, errCode)
 	})
 }
+
+func TestUpdateDashboardUnit(t *testing.T) {
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	agent2, err := SetupAgentReturnDAO()
+	assert.Nil(t, err)
+	_, errCode := M.CreateProjectAgentMappingWithDependencies(&M.ProjectAgentMapping{
+		ProjectID: project.ID, AgentUUID: agent2.UUID})
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	t.Run("UpdateDashboardUnit:Title", func(t *testing.T) {
+		rName := U.RandomString(5)
+		dashboard, errCode := M.CreateDashboard(project.ID, agent.UUID, &M.Dashboard{Name: rName, Type: M.DashboardTypeProjectVisible})
+		assert.NotNil(t, dashboard)
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.Equal(t, rName, dashboard.Name)
+
+		unitName1 := U.RandomString(5)
+		unit, errCode, _ := M.CreateDashboardUnit(project.ID, agent.UUID, &M.DashboardUnit{DashboardId: dashboard.ID,
+			Title: unitName1, Presentation: M.PresentationLine, Query: postgres.Jsonb{json.RawMessage(`{}`)}})
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.NotNil(t, unit)
+
+		unitName2 := U.RandomString(5)
+		updatedDashboard, errCode := M.UpdateDashboardUnit(project.ID, agent.UUID, dashboard.ID, unit.ID, &M.DashboardUnit{Title: unitName2})
+		assert.Equal(t, http.StatusAccepted, errCode)
+		assert.Equal(t, unitName2, updatedDashboard.Title)
+
+		// invalid title.
+		updatedDashboard, errCode = M.UpdateDashboardUnit(project.ID, agent.UUID, dashboard.ID, unit.ID, &M.DashboardUnit{Title: ""})
+		assert.Equal(t, http.StatusBadRequest, errCode)
+
+		// invalid projectId.
+		unitName3 := U.RandomString(5)
+		updatedDashboard, errCode = M.UpdateDashboardUnit(0, agent.UUID, dashboard.ID, unit.ID, &M.DashboardUnit{Title: unitName3})
+		assert.Equal(t, http.StatusBadRequest, errCode)
+
+		// invalid agentUUID.
+		updatedDashboard, errCode = M.UpdateDashboardUnit(project.ID, "", dashboard.ID, unit.ID, &M.DashboardUnit{Title: unitName3})
+		assert.Equal(t, http.StatusBadRequest, errCode)
+
+		// invalid dashboardId.
+		updatedDashboard, errCode = M.UpdateDashboardUnit(project.ID, agent.UUID, 0, unit.ID, &M.DashboardUnit{Title: unitName3})
+		assert.Equal(t, http.StatusBadRequest, errCode)
+
+		// invalid unitId.
+		updatedDashboard, errCode = M.UpdateDashboardUnit(project.ID, agent.UUID, dashboard.ID, 0, &M.DashboardUnit{Title: unitName3})
+		assert.Equal(t, http.StatusBadRequest, errCode)
+	})
+
+	t.Run("UpdateDashboardUnit:WithoutAccessToDashboard", func(t *testing.T) {
+		rName := U.RandomString(5)
+		dashboard, errCode := M.CreateDashboard(project.ID, agent.UUID, &M.Dashboard{Name: rName, Type: M.DashboardTypePrivate})
+		assert.NotNil(t, dashboard)
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.Equal(t, rName, dashboard.Name)
+
+		rTitle := U.RandomString(5)
+		dashboardUnit, errCode, _ := M.CreateDashboardUnit(project.ID, agent.UUID, &M.DashboardUnit{DashboardId: dashboard.ID,
+			Title: rTitle, Presentation: M.PresentationLine, Query: postgres.Jsonb{json.RawMessage(`{}`)}})
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.NotNil(t, dashboardUnit)
+
+		rTitle2 := U.RandomString(5)
+		_, errCode = M.UpdateDashboardUnit(project.ID, agent2.UUID, dashboard.ID, dashboardUnit.ID, &M.DashboardUnit{Title: rTitle2})
+		assert.Equal(t, http.StatusUnauthorized, errCode)
+	})
+}
