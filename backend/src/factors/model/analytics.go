@@ -1181,17 +1181,13 @@ func sanitizeGroupByTimestampResult(result *QueryResult, query *Query) error {
 
 // Converts DB results into plottable query results.
 func SanitizeQueryResult(result *QueryResult, query *Query) error {
-	// Replace group keys with real column names.
-	err := translateGroupKeysIntoColumnNames(result, query.GroupByProperties)
-	if err != nil {
-		return err
-	}
-
 	if query.GroupByTimestamp {
 		return sanitizeGroupByTimestampResult(result, query)
 	}
 
-	return nil
+	// Replace group keys with real column names. should be last step.
+	// of sanitization.
+	return translateGroupKeysIntoColumnNames(result, query.GroupByProperties)
 }
 
 func ExecQuery(stmnt string, params []interface{}) (*QueryResult, error) {
