@@ -411,7 +411,7 @@ body {
 }
 
 .fapp-input-disabled {
-    background: #F8F8F8
+    background: #F8F8F8 !important;
 }
 
 .fapp-card {

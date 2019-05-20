@@ -39,7 +39,7 @@ const FilterRecord = (props) => {
         <Input type="text" value={props.expr} className="fapp-input-disabled" readOnly />
       </Col>
       <Col md={{size: 3}}>
-      < Input type="text" value={props.name} onChange={props.handleEventNameChange}/>
+        <Input type="text" value={props.name} style={{ border: "1px solid #ccc" }} onChange={props.handleEventNameChange}/>
       </Col>
       <Col>
         <Button className="fapp-inline-button" >
@@ -428,33 +428,37 @@ class AutoTrack extends Component {
                 <div style={{height: "20px"}}>
                   <span className="fapp-error" style={{display: this.getErrorDisplayState(this.state.filterSettings.formDomainError)}}>{this.state.filterSettings.formDomainError}</span>
                 </div>
-                <CreatableSelect
-                  value={this.state.filterSettings.formDomain}
-                  onChange={this.handleFilterFormDomainChange}
-                  options={this.getFilterDomainOptions()}
-                  placeholder="Domain"
-                  formatCreateLabel={this.formSelectCreateLabel}
-                  ref={this.refFilterDomainSelect}
-                />
+                <div className='fapp-select light'>
+                  <CreatableSelect
+                    value={this.state.filterSettings.formDomain}
+                    onChange={this.handleFilterFormDomainChange}
+                    options={this.getFilterDomainOptions()}
+                    placeholder="Domain"
+                    formatCreateLabel={this.formSelectCreateLabel}
+                    ref={this.refFilterDomainSelect}
+                  />
+                </div>
               </Col>
               <Col md={{size: 4}}>
                 <div style={{height: "20px"}}>
                   <span className="fapp-error" style={{display: this.getErrorDisplayState(this.state.filterSettings.formExprError)}}>{this.state.filterSettings.formExprError}</span>
                 </div>
-                <CreatableSelect
-                  value={this.state.filterSettings.formExpr}
-                  onChange={this.handleFilterFormExprChange}
-                  options={this.getFilterExprOptions()}
-                  placeholder="Path"
-                  formatCreateLabel={this.formSelectCreateLabel}
-                  ref={this.refFilterExprSelect}
-                />
+                <div className='fapp-select light'>
+                  <CreatableSelect
+                    value={this.state.filterSettings.formExpr}
+                    onChange={this.handleFilterFormExprChange}
+                    options={this.getFilterExprOptions()}
+                    placeholder="URI Path"
+                    formatCreateLabel={this.formSelectCreateLabel}
+                    ref={this.refFilterExprSelect}
+                  />
+                </div>
               </Col>
               <Col md={{size: 3}}>
                 <div style={{height: "20px"}}>
                   <span className="fapp-error" style={{display: this.getErrorDisplayState(this.state.filterSettings.formNameError)}}>{this.state.filterSettings.formNameError}</span>
                 </div>
-                <Input type="text" placeholder="Event Name" onChange={this.handleFilterFormNameChange} value={this.state.filterSettings.formName} />
+                <Input type="text" placeholder="Virtual Event Name" style={{ border: "1px solid #ccc" }} onChange={this.handleFilterFormNameChange} value={this.state.filterSettings.formName} />
               </Col>
               <Col>
                 <Button className="fapp-inline-button" style={{marginTop: "20px", color: this.getFormCreateButtonColor()}} onClick={this.createFilter}>
