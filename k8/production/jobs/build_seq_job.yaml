@@ -14,10 +14,10 @@ spec:
             layer: jobs
         spec:
           nodeSelector:
-            cloud.google.com/gke-nodepool: default-pool
+            cloud.google.com/gke-nodepool: job-pool
           containers:
           - name: build-seq-job
-            image: us.gcr.io/factors-production/build-seq-job:v0.21-beta_7f0d428
+            image: us.gcr.io/factors-production/build-seq-job:v0.22-beta_d15674f
             imagePullPolicy: IfNotPresent
             args:
             - --env
