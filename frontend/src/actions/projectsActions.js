@@ -105,8 +105,11 @@ export function udpateProjectSettings(projectId, payload) {
   }
 }
 
-export function fetchProjectEventProperties(projectId, eventName, useStore=true) {
+export function fetchProjectEventProperties(projectId, eventName, modelId="", useStore=true) {
   let url = host + "projects/" + projectId + "/event_names/" + btoa(eventName) + "/properties";
+  if (!!modelId) {
+    url += "?model_id=" + modelId;
+  }
 
   if (useStore){
     return function(dispatch) {
@@ -149,9 +152,12 @@ export function fetchProjectEventPropertyValues(projectId, eventName, propertyNa
   return get(null, url);
 }
 
-export function fetchProjectUserProperties(projectId, useStore=true) {
+export function fetchProjectUserProperties(projectId, modelId="", useStore=true) {
   let url = host + "projects/" + projectId + "/user_properties";
-  
+  if (!!modelId) {
+    url += "?model_id=" + modelId;
+  }
+
   if (useStore) {
     return function(dispatch) {
       get(dispatch, url)

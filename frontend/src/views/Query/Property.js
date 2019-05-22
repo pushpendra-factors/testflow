@@ -70,13 +70,13 @@ class Property extends Component {
     this.setState({ nameOpts: [], isNameOptsLoading: true }); // reset opts.
 
     if (this.props.propertyState.entity == 'event') {
-      fetchProjectEventProperties(this.props.projectId, this.props.eventName, false)
+      fetchProjectEventProperties(this.props.projectId, this.props.eventName, "", false)
         .then((r) => this.addToNameOptsState(r.data))
         .catch(r => console.error("Failed fetching event property keys.", r));
     }
 
     if (this.props.propertyState.entity == 'user') {
-      fetchProjectUserProperties(this.props.projectId, false)
+      fetchProjectUserProperties(this.props.projectId, "", false)
       .then((r) => this.addToNameOptsState(r.data))
       .catch(r => console.error("Failed fetching user property keys.", r));
     }

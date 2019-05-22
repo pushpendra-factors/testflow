@@ -3,6 +3,7 @@ package tests
 import (
 	P "factors/pattern"
 	U "factors/util"
+	"fmt"
 	"math"
 	"testing"
 	"time"
@@ -26,32 +27,35 @@ func TestPatternCountEvents(t *testing.T) {
 	assert.Equal(t, uint(0), p.OncePerUserCount)
 	// User 1 events.
 	userId := "user1"
-	userCreatedTime, _ := time.Parse(time.RFC3339, "2017-06-01T00:00:00Z")
-	err = p.ResetForNewUser(userId, userCreatedTime.Unix())
+	user1CreatedTime, _ := time.Parse(time.RFC3339, "2017-06-01T00:00:00Z")
+	err = p.ResetForNewUser(userId, user1CreatedTime.Unix())
 	assert.Nil(t, err)
 	nextEventCreatedTime, _ := time.Parse(time.RFC3339, "2017-06-01T01:00:00Z")
-	events := []string{"F", "G", "A", "L", "B", "A", "B", "C"}
-	cardinalities := []uint{1, 2, 2, 1, 5, 3, 6, 1}
+	events := []string{"F", "B", "A", "C", "B", "A", "B", "C"}
+	cardinalities := []uint{1, 4, 2, 1, 5, 3, 6, 2}
 	for i, event := range events {
-		_, err = p.CountForEvent(event, nextEventCreatedTime.Unix(), make(map[string]interface{}),
-			make(map[string]interface{}), cardinalities[i], userId, userCreatedTime.Unix())
+		err = p.CountForEvent(event, nextEventCreatedTime.Unix(), make(map[string]interface{}),
+			make(map[string]interface{}), cardinalities[i], userId, user1CreatedTime.Unix())
 		assert.Nil(t, err)
 		nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
 	}
 	// User 2 events.
 	userId = "user2"
-	userCreatedTime, _ = time.Parse(time.RFC3339, "2017-06-01T00:01:00Z")
-	err = p.ResetForNewUser(userId, userCreatedTime.Unix())
+	user2CreatedTime, _ := time.Parse(time.RFC3339, "2017-06-01T00:01:00Z")
+	err = p.ResetForNewUser(userId, user2CreatedTime.Unix())
 	assert.Nil(t, err)
 	nextEventCreatedTime, _ = time.Parse(time.RFC3339, "2017-06-01T01:01:00Z")
-	events = []string{"F", "A", "A", "K", "B", "Z", "C", "A", "B", "C"}
-	cardinalities = []uint{1, 1, 2, 1, 1, 1, 1, 3, 2, 2}
+	events = []string{"B", "A", "A", "C", "B", "Z", "C", "A", "B", "C"}
+	cardinalities = []uint{1, 1, 2, 1, 2, 1, 2, 3, 3, 3}
 	for i, event := range events {
-		_, err = p.CountForEvent(event, nextEventCreatedTime.Unix(), make(map[string]interface{}),
-			make(map[string]interface{}), cardinalities[i], userId, userCreatedTime.Unix())
+		err = p.CountForEvent(event, nextEventCreatedTime.Unix(), make(map[string]interface{}),
+			make(map[string]interface{}), cardinalities[i], userId, user2CreatedTime.Unix())
 		assert.Nil(t, err)
 		nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
 	}
+
+	err = p.ResetAfterLastUser()
+	assert.Nil(t, err)
 
 	assert.Equal(t, uint(3), p.Count)
 	assert.Equal(t, uint(2), p.UserCount)
@@ -60,30 +64,66 @@ func TestPatternCountEvents(t *testing.T) {
 	for i := 0; i < pLen; i++ {
 		assert.Equal(t, pEvents[i], p.EventNames[i])
 	}
-	// A-B-C occurs twice oncePerUser , with first A occurring after 3720s in User1 and
-	// 3660s in User 2.
-	// Repeats once before the  next B occurs in User2.
-	assert.Equal(t, uint64(2), p.CardinalityRepeatTimings.Count())
-	assert.Equal(t, float64((2.0+1.0)/2), p.CardinalityRepeatTimings.Mean()[0])
-	assert.Equal(t, float64((1.0+2.0)/2), p.CardinalityRepeatTimings.Mean()[1])
-	assert.Equal(t, float64((3720.0+3660.0)/2), p.CardinalityRepeatTimings.Mean()[2])
 
-	// A-B-C occurs twice oncePerUser, with first B following first A after 120s in User1 and
-	// 180 in User 2.
-	// Repeats once before the  next C occurs in User1.
-	/* Only start and end event are tracked currently.
-	assert.Equal(t, float64(2), p.Timings[1].Count())
-	assert.Equal(t, float64((120.0+180.0)/2), p.Timings[1].Mean())
-	assert.Equal(t, float64((5.0+1.0)/2), p.EventCardinalities[1].Mean())
-	assert.Equal(t, float64((2.0+1.0)/2), p.Repeats[1].Mean())
-	*/
+	// A-B-C occurs twice OncePerUser with the following Generic Properties.
 
-	// A-B-C occurs twice oncePerUser, with first C following first B after 180s in User1 and
-	// 120s in User 2.
-	// Last event always is counted once.
-	assert.Equal(t, float64((1.0+1.0)/2), p.CardinalityRepeatTimings.Mean()[3])
-	assert.Equal(t, float64((1.0+1.0)/2), p.CardinalityRepeatTimings.Mean()[4])
-	assert.Equal(t, float64((180.0+120.0)/2), p.CardinalityRepeatTimings.Mean()[5])
+	// A: firstSeenOccurrenceCount -> 2 and 1.
+	// A: lastSeenOccurrenceCount -> 3 and 3.
+	// A: firstSeenTime -> user1CreatedTime+1hour+120seconds and user2CreatedTime+1hour+60seconds.
+	// A: lastSeenTime -> user1CreatedTime+1hour+300seconds and user2CreatedTime+1hour+420seconds.
+	// A: firstSeenSinceUserJoin -> 1hour+120seconds and 1hour+60seconds.
+	// A: lastSeenSinceUserJoin -> 1hour+300seconds and 1hour+420seconds.
+
+	// B: firstSeenOccurrenceCount -> 5 and 2.
+	// B: lastSeenOccurrenceCount -> 6 and 3.
+	// B: firstSeenTime -> user1CreatedTime+1hour+240seconds and user2CreatedTime+1hour+240seconds.
+	// B: lastSeenTime -> user1CreatedTime+1hour+360seconds and user2CreatedTime+1hour+480seconds.
+	// B: firstSeenSinceUserJoin -> 1hour+240seconds and 1hour+240seconds.
+	// B: lastSeenSinceUserJoin -> 1hour+360seconds and 1hour+480seconds.
+
+	// C: firstSeenOccurrenceCount -> 2 and 2.
+	// C: lastSeenOccurrenceCount -> 2 and 3.
+	// C: firstSeenTime -> user1CreatedTime+1hour+420seconds and user2CreatedTime+1hour+360seconds.
+	// C: lastSeenTime -> user1CreatedTime+1hour+420seconds and user2CreatedTime+1hour+540seconds.
+	// C: firstSeenSinceUserJoin -> 1hour+240seconds and 1hour+240seconds.
+	// C: lastSeenSinceUserJoin -> 1hour+360seconds and 1hour+540seconds.
+	assert.Equal(t, uint64(2), p.GenericPropertiesHistogram.Count())
+	expectedMeanMap := map[string]float64{
+		U.UP_JOIN_TIME: float64((user1CreatedTime.Unix() + user2CreatedTime.Unix()) / 2.0),
+		// Event A Generic Properties.
+		P.PatternPropertyKey(0, U.EP_FIRST_SEEN_OCCURRENCE_COUNT): float64((2.0 + 1.0) / 2),
+		P.PatternPropertyKey(0, U.EP_LAST_SEEN_OCCURRENCE_COUNT):  float64((3.0 + 3.0) / 2),
+		P.PatternPropertyKey(0, U.EP_FIRST_SEEN_TIME): float64(
+			(user1CreatedTime.Unix() + 3600 + 120 + user2CreatedTime.Unix() + 3600 + 60) / 2),
+		P.PatternPropertyKey(0, U.EP_LAST_SEEN_TIME): float64(
+			(user1CreatedTime.Unix() + 3600 + 300 + user2CreatedTime.Unix() + 3600 + 420) / 2),
+		P.PatternPropertyKey(0, U.EP_FIRST_SEEN_SINCE_USER_JOIN): float64((3600 + 120 + 3600 + 60) / 2),
+		P.PatternPropertyKey(0, U.EP_LAST_SEEN_SINCE_USER_JOIN):  float64((3600 + 300 + 3600 + 420) / 2),
+
+		// Event B Generic Properties.
+		P.PatternPropertyKey(1, U.EP_FIRST_SEEN_OCCURRENCE_COUNT): float64((5.0 + 2.0) / 2),
+		P.PatternPropertyKey(1, U.EP_LAST_SEEN_OCCURRENCE_COUNT):  float64((6.0 + 3.0) / 2),
+		P.PatternPropertyKey(1, U.EP_FIRST_SEEN_TIME): float64(
+			(user1CreatedTime.Unix() + 3600 + 240 + user2CreatedTime.Unix() + 3600 + 240) / 2),
+		P.PatternPropertyKey(1, U.EP_LAST_SEEN_TIME): float64(
+			(user1CreatedTime.Unix() + 3600 + 360 + user2CreatedTime.Unix() + 3600 + 480) / 2),
+		P.PatternPropertyKey(1, U.EP_FIRST_SEEN_SINCE_USER_JOIN): float64((3600 + 240 + 3600 + 240) / 2),
+		P.PatternPropertyKey(1, U.EP_LAST_SEEN_SINCE_USER_JOIN):  float64((3600 + 360 + 3600 + 480) / 2),
+
+		// Event C Generic Properties.
+		P.PatternPropertyKey(2, U.EP_FIRST_SEEN_OCCURRENCE_COUNT): float64((2.0 + 2.0) / 2),
+		P.PatternPropertyKey(2, U.EP_LAST_SEEN_OCCURRENCE_COUNT):  float64((2.0 + 3.0) / 2),
+		P.PatternPropertyKey(2, U.EP_FIRST_SEEN_TIME): float64(
+			(user1CreatedTime.Unix() + 3600 + 420 + user2CreatedTime.Unix() + 3600 + 360) / 2),
+		P.PatternPropertyKey(2, U.EP_LAST_SEEN_TIME): float64(
+			(user1CreatedTime.Unix() + 3600 + 420 + user2CreatedTime.Unix() + 3600 + 540) / 2),
+		P.PatternPropertyKey(2, U.EP_FIRST_SEEN_SINCE_USER_JOIN): float64((3600 + 420 + 3600 + 360) / 2),
+		P.PatternPropertyKey(2, U.EP_LAST_SEEN_SINCE_USER_JOIN):  float64((3600 + 420 + 3600 + 540) / 2),
+	}
+	actualMeanMap := p.GenericPropertiesHistogram.MeanMap()
+	for k, expectedMean := range expectedMeanMap {
+		assert.Equal(t, expectedMean, actualMeanMap[k], fmt.Sprintf("Failed for Key: %s", k))
+	}
 }
 
 func TestPatternGetOncePerUserCount(t *testing.T) {
@@ -95,134 +135,220 @@ func TestPatternGetOncePerUserCount(t *testing.T) {
 	p, err := P.NewPattern(pEvents, nil)
 	// User 1 events.
 	userId := "user1"
-	userCreatedTime, _ := time.Parse(time.RFC3339, "2017-06-01T00:00:00Z")
-	err = p.ResetForNewUser(userId, userCreatedTime.Unix())
+	user1CreatedTime, _ := time.Parse(time.RFC3339, "2017-06-01T00:00:00Z")
+	err = p.ResetForNewUser(userId, user1CreatedTime.Unix())
 	assert.Nil(t, err)
 	nextEventCreatedTime, _ := time.Parse(time.RFC3339, "2017-06-01T01:00:00Z")
-	events := []string{"F", "G", "A", "L", "B", "A", "B", "C"}
-	cardinalities := []uint{1, 2, 2, 1, 5, 3, 6, 1}
+	events := []string{"F", "B", "A", "C", "B", "A", "B", "C"}
+	cardinalities := []uint{1, 4, 2, 1, 5, 3, 6, 2}
 	for i, event := range events {
-		_, err = p.CountForEvent(event, nextEventCreatedTime.Unix(), make(map[string]interface{}),
-			make(map[string]interface{}), cardinalities[i], userId, userCreatedTime.Unix())
+		err = p.CountForEvent(event, nextEventCreatedTime.Unix(), make(map[string]interface{}),
+			make(map[string]interface{}), cardinalities[i], userId, user1CreatedTime.Unix())
 		assert.Nil(t, err)
 		nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
 	}
 	// User 2 events.
 	userId = "user2"
-	userCreatedTime, _ = time.Parse(time.RFC3339, "2017-06-01T00:01:00Z")
-	err = p.ResetForNewUser(userId, userCreatedTime.Unix())
+	user2CreatedTime, _ := time.Parse(time.RFC3339, "2017-06-01T00:01:00Z")
+	err = p.ResetForNewUser(userId, user2CreatedTime.Unix())
 	assert.Nil(t, err)
 	nextEventCreatedTime, _ = time.Parse(time.RFC3339, "2017-06-01T01:01:00Z")
-	events = []string{"F", "A", "A", "K", "B", "Z", "C", "A", "B", "C"}
-	cardinalities = []uint{1, 1, 2, 1, 1, 1, 2, 3, 2, 3}
+	events = []string{"B", "A", "A", "C", "B", "Z", "C", "A", "B", "C"}
+	cardinalities = []uint{1, 1, 2, 1, 2, 1, 2, 3, 3, 3}
 	for i, event := range events {
-		_, err = p.CountForEvent(event, nextEventCreatedTime.Unix(), make(map[string]interface{}),
-			make(map[string]interface{}), cardinalities[i], userId, userCreatedTime.Unix())
+		err = p.CountForEvent(event, nextEventCreatedTime.Unix(), make(map[string]interface{}),
+			make(map[string]interface{}), cardinalities[i], userId, user2CreatedTime.Unix())
 		assert.Nil(t, err)
 		nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
 	}
 
-	// A-B-C occurs 2 times, with cardinality of C 1, 2.
+	err = p.ResetAfterLastUser()
+	assert.Nil(t, err)
+
+	// A-B-C occurs twice OncePerUser with the following Generic Properties.
+
+	// A: firstSeenOccurrenceCount -> 2 and 1.
+	// A: lastSeenOccurrenceCount -> 3 and 3.
+	// A: firstSeenTime -> user1CreatedTime+1hour+120seconds and user2CreatedTime+1hour+60seconds.
+	// A: lastSeenTime -> user1CreatedTime+1hour+300seconds and user2CreatedTime+1hour+420seconds.
+	// A: firstSeenSinceUserJoin -> 1hour+120seconds and 1hour+60seconds.
+	// A: lastSeenSinceUserJoin -> 1hour+300seconds and 1hour+420seconds.
+
+	// B: firstSeenOccurrenceCount -> 5 and 2.
+	// B: lastSeenOccurrenceCount -> 6 and 3.
+	// B: firstSeenTime -> user1CreatedTime+1hour+240seconds and user2CreatedTime+1hour+240seconds.
+	// B: lastSeenTime -> user1CreatedTime+1hour+360seconds and user2CreatedTime+1hour+480seconds.
+	// B: firstSeenSinceUserJoin -> 1hour+240seconds and 1hour+240seconds.
+	// B: lastSeenSinceUserJoin -> 1hour+360seconds and 1hour+480seconds.
+
+	// C: firstSeenOccurrenceCount -> 2 and 2.
+	// C: lastSeenOccurrenceCount -> 2 and 3.
+	// C: firstSeenTime -> user1CreatedTime+1hour+420seconds and user2CreatedTime+1hour+360seconds.
+	// C: lastSeenTime -> user1CreatedTime+1hour+420seconds and user2CreatedTime+1hour+540seconds.
+	// C: firstSeenSinceUserJoin -> 1hour+240seconds and 1hour+240seconds.
+	// C: lastSeenSinceUserJoin -> 1hour+360seconds and 1hour+540seconds.
+
 	assert.Equal(t, uint(3), p.Count)
 	assert.Equal(t, uint(2), p.UserCount)
 	assert.Equal(t, uint(2), p.OncePerUserCount)
-	assert.Equal(t, float64((1.0+2.0)/2), p.CardinalityRepeatTimings.Mean()[3])
+
+	assert.Equal(t, uint64(2), p.GenericPropertiesHistogram.Count())
+	expectedMeanMap := map[string]float64{
+		U.UP_JOIN_TIME: float64((user1CreatedTime.Unix() + user2CreatedTime.Unix()) / 2.0),
+		// Event A Generic Properties.
+		P.PatternPropertyKey(0, U.EP_FIRST_SEEN_OCCURRENCE_COUNT): float64((2.0 + 1.0) / 2),
+		P.PatternPropertyKey(0, U.EP_LAST_SEEN_OCCURRENCE_COUNT):  float64((3.0 + 3.0) / 2),
+		P.PatternPropertyKey(0, U.EP_FIRST_SEEN_TIME): float64(
+			(user1CreatedTime.Unix() + 3600 + 120 + user2CreatedTime.Unix() + 3600 + 60) / 2),
+		P.PatternPropertyKey(0, U.EP_LAST_SEEN_TIME): float64(
+			(user1CreatedTime.Unix() + 3600 + 300 + user2CreatedTime.Unix() + 3600 + 420) / 2),
+		P.PatternPropertyKey(0, U.EP_FIRST_SEEN_SINCE_USER_JOIN): float64((3600 + 120 + 3600 + 60) / 2),
+		P.PatternPropertyKey(0, U.EP_LAST_SEEN_SINCE_USER_JOIN):  float64((3600 + 300 + 3600 + 420) / 2),
+
+		// Event B Generic Properties.
+		P.PatternPropertyKey(1, U.EP_FIRST_SEEN_OCCURRENCE_COUNT): float64((5.0 + 2.0) / 2),
+		P.PatternPropertyKey(1, U.EP_LAST_SEEN_OCCURRENCE_COUNT):  float64((6.0 + 3.0) / 2),
+		P.PatternPropertyKey(1, U.EP_FIRST_SEEN_TIME): float64(
+			(user1CreatedTime.Unix() + 3600 + 240 + user2CreatedTime.Unix() + 3600 + 240) / 2),
+		P.PatternPropertyKey(1, U.EP_LAST_SEEN_TIME): float64(
+			(user1CreatedTime.Unix() + 3600 + 360 + user2CreatedTime.Unix() + 3600 + 480) / 2),
+		P.PatternPropertyKey(1, U.EP_FIRST_SEEN_SINCE_USER_JOIN): float64((3600 + 240 + 3600 + 240) / 2),
+		P.PatternPropertyKey(1, U.EP_LAST_SEEN_SINCE_USER_JOIN):  float64((3600 + 360 + 3600 + 480) / 2),
+
+		// Event C Generic Properties.
+		P.PatternPropertyKey(2, U.EP_FIRST_SEEN_OCCURRENCE_COUNT): float64((2.0 + 2.0) / 2),
+		P.PatternPropertyKey(2, U.EP_LAST_SEEN_OCCURRENCE_COUNT):  float64((2.0 + 3.0) / 2),
+		P.PatternPropertyKey(2, U.EP_FIRST_SEEN_TIME): float64(
+			(user1CreatedTime.Unix() + 3600 + 420 + user2CreatedTime.Unix() + 3600 + 360) / 2),
+		P.PatternPropertyKey(2, U.EP_LAST_SEEN_TIME): float64(
+			(user1CreatedTime.Unix() + 3600 + 420 + user2CreatedTime.Unix() + 3600 + 540) / 2),
+		P.PatternPropertyKey(2, U.EP_FIRST_SEEN_SINCE_USER_JOIN): float64((3600 + 420 + 3600 + 360) / 2),
+		P.PatternPropertyKey(2, U.EP_LAST_SEEN_SINCE_USER_JOIN):  float64((3600 + 420 + 3600 + 540) / 2),
+	}
+	actualMeanMap := p.GenericPropertiesHistogram.MeanMap()
+	for k, expectedMean := range expectedMeanMap {
+		assert.Equal(t, expectedMean, actualMeanMap[k], fmt.Sprintf("Failed for Key: %s", k))
+	}
+
 	count, err := p.GetOncePerUserCount(nil)
 	assert.Nil(t, err)
 	assert.Equal(t, uint(2), count)
-	lastEventCardinalityConstraints := []P.EventConstraints{
+	genericPropertiesConstraints := []P.EventConstraints{
 		P.EventConstraints{},
 		P.EventConstraints{},
 		P.EventConstraints{},
 	}
-	count, err = p.GetOncePerUserCount(lastEventCardinalityConstraints)
+	count, err = p.GetOncePerUserCount(genericPropertiesConstraints)
 	assert.Nil(t, err)
 	assert.Equal(t, uint(2), count)
-	lastEventCardinalityConstraints[2].EPNumericConstraints = []P.NumericConstraint{
-		P.NumericConstraint{
-			PropertyName: U.EP_OCCURRENCE_COUNT,
-			LowerBound:   0.5,
-			UpperBound:   math.MaxFloat64,
+
+	genericPropertiesConstraints = []P.EventConstraints{
+		P.EventConstraints{},
+		P.EventConstraints{},
+		P.EventConstraints{
+			UPNumericConstraints: []P.NumericConstraint{
+				P.NumericConstraint{
+					PropertyName: U.UP_JOIN_TIME,
+					LowerBound:   -math.MaxFloat64,
+					UpperBound:   float64((user1CreatedTime.Unix() + user2CreatedTime.Unix()) / 2.0),
+				},
+			},
 		},
 	}
-	count, err = p.GetOncePerUserCount(lastEventCardinalityConstraints)
-	assert.Nil(t, err)
-	assert.Equal(t, uint(2), count)
-	lastEventCardinalityConstraints[2].EPNumericConstraints = []P.NumericConstraint{
-		P.NumericConstraint{
-			PropertyName: U.EP_OCCURRENCE_COUNT,
-			LowerBound:   -math.MaxFloat64,
-			UpperBound:   1.5,
-		},
-	}
-	count, err = p.GetOncePerUserCount(lastEventCardinalityConstraints)
-	assert.Nil(t, err)
-	assert.Equal(t, uint(1), count)
-	lastEventCardinalityConstraints[2].EPNumericConstraints = []P.NumericConstraint{
-		P.NumericConstraint{
-			PropertyName: U.EP_OCCURRENCE_COUNT,
-			LowerBound:   0.5,
-			UpperBound:   1.5,
-		},
-	}
-	count, err = p.GetOncePerUserCount(lastEventCardinalityConstraints)
-	assert.Nil(t, err)
-	assert.Equal(t, uint(1), count)
-	lastEventCardinalityConstraints[2].EPNumericConstraints = []P.NumericConstraint{
-		P.NumericConstraint{
-			PropertyName: U.EP_OCCURRENCE_COUNT,
-			LowerBound:   1.5,
-			UpperBound:   2.5,
-		},
-	}
-	count, err = p.GetOncePerUserCount(lastEventCardinalityConstraints)
-	assert.Nil(t, err)
-	assert.Equal(t, uint(1), count)
-	lastEventCardinalityConstraints[2].EPNumericConstraints = []P.NumericConstraint{
-		P.NumericConstraint{
-			PropertyName: U.EP_OCCURRENCE_COUNT,
-			LowerBound:   1.5,
-			UpperBound:   3.5,
-		},
-	}
-	count, err = p.GetOncePerUserCount(lastEventCardinalityConstraints)
+	count, err = p.GetOncePerUserCount(genericPropertiesConstraints)
 	assert.Nil(t, err)
 	assert.Equal(t, uint(1), count)
 
-	// A-B-C occurrs twice with cardinality of A 2, 1.
-	startEventCardinalityConstraints := []P.EventConstraints{
-		P.EventConstraints{},
-		P.EventConstraints{},
-		P.EventConstraints{},
-	}
-	startEventCardinalityConstraints[0].EPNumericConstraints = []P.NumericConstraint{
-		P.NumericConstraint{
-			PropertyName: U.EP_OCCURRENCE_COUNT,
-			LowerBound:   0.5,
-			UpperBound:   1.5,
+	genericPropertiesConstraints = []P.EventConstraints{
+		P.EventConstraints{
+			EPNumericConstraints: []P.NumericConstraint{
+				P.NumericConstraint{
+					PropertyName: U.EP_FIRST_SEEN_OCCURRENCE_COUNT,
+					LowerBound:   1.5,
+					UpperBound:   math.MaxFloat64,
+				},
+			},
 		},
+		P.EventConstraints{},
+		P.EventConstraints{},
 	}
-	count, err = p.GetOncePerUserCount(startEventCardinalityConstraints)
+	count, err = p.GetOncePerUserCount(genericPropertiesConstraints)
 	assert.Nil(t, err)
 	assert.Equal(t, uint(1), count)
-	startEventCardinalityConstraints[0].EPNumericConstraints = []P.NumericConstraint{
-		P.NumericConstraint{
-			PropertyName: U.EP_OCCURRENCE_COUNT,
-			LowerBound:   -math.MaxFloat64,
-			UpperBound:   0.5,
+
+	genericPropertiesConstraints = []P.EventConstraints{
+		P.EventConstraints{},
+		P.EventConstraints{
+			EPNumericConstraints: []P.NumericConstraint{
+				P.NumericConstraint{
+					PropertyName: U.EP_LAST_SEEN_OCCURRENCE_COUNT,
+					LowerBound:   4.0,
+					UpperBound:   7.0,
+				},
+			},
 		},
+		P.EventConstraints{},
 	}
-	count, err = p.GetOncePerUserCount(startEventCardinalityConstraints)
+	count, err = p.GetOncePerUserCount(genericPropertiesConstraints)
 	assert.Nil(t, err)
-	assert.Equal(t, uint(0), count)
-	startEventCardinalityConstraints[0].EPNumericConstraints = []P.NumericConstraint{
-		P.NumericConstraint{
-			PropertyName: U.EP_OCCURRENCE_COUNT,
-			LowerBound:   1.5,
-			UpperBound:   math.MaxFloat64,
+	assert.Equal(t, uint(1), count)
+
+	genericPropertiesConstraints = []P.EventConstraints{
+		P.EventConstraints{},
+		P.EventConstraints{
+			EPNumericConstraints: []P.NumericConstraint{
+				P.NumericConstraint{
+					PropertyName: U.EP_FIRST_SEEN_TIME,
+					LowerBound:   float64(user1CreatedTime.Unix() + 3600 + 230),
+					UpperBound:   float64(user1CreatedTime.Unix() + 3600 + 250),
+				},
+			},
+		},
+		P.EventConstraints{},
+	}
+	count, err = p.GetOncePerUserCount(genericPropertiesConstraints)
+	assert.Nil(t, err)
+	assert.Equal(t, uint(1), count)
+
+	genericPropertiesConstraints = []P.EventConstraints{
+		P.EventConstraints{},
+		P.EventConstraints{
+			EPNumericConstraints: []P.NumericConstraint{
+				P.NumericConstraint{
+					PropertyName: U.EP_LAST_SEEN_TIME,
+					LowerBound:   float64(user1CreatedTime.Unix() + 3600 + 350),
+					UpperBound:   float64(user1CreatedTime.Unix() + 3600 + 370),
+				},
+			},
+		},
+		P.EventConstraints{},
+	}
+	count, err = p.GetOncePerUserCount(genericPropertiesConstraints)
+	assert.Nil(t, err)
+	assert.Equal(t, uint(1), count)
+
+	genericPropertiesConstraints = []P.EventConstraints{
+		P.EventConstraints{
+			EPNumericConstraints: []P.NumericConstraint{
+				P.NumericConstraint{
+					PropertyName: U.EP_FIRST_SEEN_SINCE_USER_JOIN,
+					LowerBound:   float64(3600 + 110),
+					UpperBound:   float64(3600 + 130),
+				},
+			},
+		},
+		P.EventConstraints{},
+		P.EventConstraints{
+			EPNumericConstraints: []P.NumericConstraint{
+				P.NumericConstraint{
+					PropertyName: U.EP_LAST_SEEN_SINCE_USER_JOIN,
+					LowerBound:   float64(3600 + 410),
+					UpperBound:   float64(3600 + 430),
+				},
+			},
 		},
 	}
-	count, err = p.GetOncePerUserCount(startEventCardinalityConstraints)
+	count, err = p.GetOncePerUserCount(genericPropertiesConstraints)
 	assert.Nil(t, err)
 	assert.Equal(t, uint(1), count)
 }
@@ -261,7 +387,7 @@ func TestPatternEdgeConditions(t *testing.T) {
 	assert.Nil(t, err)
 	userCreatedTime, _ = time.Parse(time.RFC3339, "2017-06-01T00:00:00Z")
 	eventCreatedTime, _ := time.Parse(time.RFC3339, "2017-06-01T01:00:00Z")
-	_, err = p.CountForEvent("J", eventCreatedTime.Unix(), make(map[string]interface{}),
+	err = p.CountForEvent("J", eventCreatedTime.Unix(), make(map[string]interface{}),
 		make(map[string]interface{}), 1, "user1", userCreatedTime.Unix())
 	assert.NotNil(t, err)
 
@@ -272,15 +398,15 @@ func TestPatternEdgeConditions(t *testing.T) {
 	eventCreatedTime, _ = time.Parse(time.RFC3339, "2017-06-01T01:00:00Z")
 	err = p.ResetForNewUser("user1", userCreatedTime.Unix())
 	assert.Nil(t, err)
-	_, err = p.CountForEvent("J", eventCreatedTime.Unix(), make(map[string]interface{}),
+	err = p.CountForEvent("J", eventCreatedTime.Unix(), make(map[string]interface{}),
 		make(map[string]interface{}), 1, "user1", userCreatedTime.Unix())
 	assert.Nil(t, err)
 	// Wrong userId.
-	_, err = p.CountForEvent("J", eventCreatedTime.Unix(), make(map[string]interface{}),
+	err = p.CountForEvent("J", eventCreatedTime.Unix(), make(map[string]interface{}),
 		make(map[string]interface{}), 1, "user2", userCreatedTime.Unix())
 	assert.NotNil(t, err)
 	// Wrong userCreatedTime. Error is ignored.
-	_, err = p.CountForEvent("J", eventCreatedTime.Unix(), make(map[string]interface{}),
+	err = p.CountForEvent("J", eventCreatedTime.Unix(), make(map[string]interface{}),
 		make(map[string]interface{}), 1, "user1", eventCreatedTime.Unix())
 	assert.Nil(t, err)
 
@@ -311,10 +437,10 @@ func TestPatternEdgeConditions(t *testing.T) {
 	event2CreatedTime, _ := time.Parse(time.RFC3339, "2017-06-01T00:59:59Z")
 	err = p.ResetForNewUser(userId, userCreatedTime.Unix())
 	assert.Nil(t, err)
-	_, err = p.CountForEvent("A", event1CreatedTime.Unix(), make(map[string]interface{}),
+	err = p.CountForEvent("A", event1CreatedTime.Unix(), make(map[string]interface{}),
 		make(map[string]interface{}), 1, userId, userCreatedTime.Unix())
 	assert.Nil(t, err)
-	_, err = p.CountForEvent("B", event2CreatedTime.Unix(), make(map[string]interface{}),
+	err = p.CountForEvent("B", event2CreatedTime.Unix(), make(map[string]interface{}),
 		make(map[string]interface{}), 1, userId, userCreatedTime.Unix())
 	assert.NotNil(t, err)
 }

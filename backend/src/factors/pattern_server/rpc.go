@@ -232,8 +232,11 @@ func (ps *PatternServer) GetSeenEventProperties(
 	numericalProperties := []string{}
 	categoricalProperties := []string{}
 
-	for _, dnp := range U.VISIBLE_DEFAULT_NUMERIC_EVENT_PROPERTIES {
-		numericalProperties = append(numericalProperties, dnp)
+	if args.ModelId == modelId && userAndEventsInfo.ModelVersion >= 2.0 {
+		// Supported only in these versions. Is sent only if modelId is explicitly stated.
+		for _, dnp := range U.GENERIC_NUMERIC_EVENT_PROPERTIES {
+			numericalProperties = append(numericalProperties, dnp)
+		}
 	}
 
 	if eventInfo, exists := (*userAndEventsInfo.EventPropertiesInfoMap)[args.EventName]; exists {
@@ -378,6 +381,13 @@ func (ps *PatternServer) GetSeenUserProperties(
 	}
 	numericalProperties := []string{}
 	categoricalProperties := []string{}
+
+	if args.ModelId == modelId && userAndEventsInfo.ModelVersion >= 2.0 {
+		// Supported only in these versions. Is sent only if modelId is explicitly stated.
+		for _, dnp := range U.GENERIC_NUMERIC_USER_PROPERTIES {
+			numericalProperties = append(numericalProperties, dnp)
+		}
+	}
 
 	if userAndEventsInfo.UserPropertiesInfo != nil {
 		for nprop := range userAndEventsInfo.UserPropertiesInfo.NumericPropertyKeys {

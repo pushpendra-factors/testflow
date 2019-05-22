@@ -272,7 +272,7 @@ class QueryBuilderCard extends Component {
     }
     if (this.state.queryStates[nextState][DYNAMIC_FETCH_EVENT_PROPERTIES]) {
       this.props.fetchProjectEventProperties(this.props.currentProjectId,
-        this.latestSelectedEventName);
+        this.latestSelectedEventName, this.props.selectedModelId);
       this.setState({
         currentOptions: [],
         currentQueryState: nextState,
@@ -294,7 +294,7 @@ class QueryBuilderCard extends Component {
         isLoadingOptions: true,
       });
     } else if (this.state.queryStates[nextState][DYNAMIC_FETCH_USER_PROPERTIES]) {
-      this.props.fetchProjectUserProperties(this.props.currentProjectId);
+      this.props.fetchProjectUserProperties(this.props.currentProjectId, this.props.selectedModelId);
       this.setState({
         currentOptions: [],
         currentQueryState: nextState,

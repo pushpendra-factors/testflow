@@ -13,7 +13,7 @@ import (
 type Pattern struct {
 	EventNames []string `json:"en"`
 	// Histograms.
-	CardinalityRepeatTimings   *Hist.NumericHistogramStruct     `json:"crt"`
+	GenericPropertiesHistogram *Hist.NumericHistogramStruct     `json:gph`
 	EventNumericProperties     *Hist.NumericHistogramStruct     `json:"enp"`
 	EventCategoricalProperties *Hist.CategoricalHistogramStruct `json:"ecp"`
 	UserNumericProperties      *Hist.NumericHistogramStruct     `json:"unp"`
@@ -27,17 +27,19 @@ type Pattern struct {
 	UserCount uint `json:"uc"`
 
 	// Private variables.
-	waitIndex                  int
-	currentUserId              string
-	currentUserJoinTimestamp   int64
-	currentUserOccurrenceCount uint
-	currentEventTimestamps     []int64
-	currentEventCardinalities  []uint
-	currentRepeats             []uint
-	currentEPropertiesNMap     map[string]float64
-	currentEPropertiesCMap     map[string]string
-	currentUPropertiesNMap     map[string]float64
-	currentUPropertiesCMap     map[string]string
+	waitIndex                       int
+	currentUserId                   string
+	currentUserJoinTimestamp        int64
+	previousEventTimestamp          int64
+	currentUserOccurrenceCount      uint
+	currentUserEventTimestamps      map[string][]int64
+	currentUserEventOccurenceCounts map[string][]uint
+
+	// These are tracked by default for first seen events.
+	currentEPropertiesNMap map[string]float64
+	currentEPropertiesCMap map[string]string
+	currentUPropertiesNMap map[string]float64
+	currentUPropertiesCMap map[string]string
 }
 
 const num_T_BINS = 20
@@ -76,7 +78,29 @@ func NewPattern(events []string, userAndEventsInfo *UserAndEventsInfo) (*Pattern
 		err := fmt.Errorf("Events are not unique")
 		return nil, err
 	}
-	defaultHist, err := Hist.NewNumericHistogram(num_DEFAULT_MULTI_BINS, 6, nil)
+	defaultHistTemplate := Hist.NumericHistogramTemplate{}
+	for _, propertyName := range U.GENERIC_NUMERIC_USER_PROPERTIES {
+		nptu := Hist.NumericHistogramTemplateUnit{
+			Name:       propertyName,
+			IsRequired: false,
+			Default:    0.0,
+		}
+		defaultHistTemplate = append(defaultHistTemplate, nptu)
+	}
+	for i, _ := range events {
+		for _, propertyName := range U.GENERIC_NUMERIC_EVENT_PROPERTIES {
+			// User properties is tracked at each event level.
+			nptu := Hist.NumericHistogramTemplateUnit{
+				Name:       PatternPropertyKey(i, propertyName),
+				IsRequired: false,
+				Default:    0.0,
+			}
+			defaultHistTemplate = append(defaultHistTemplate, nptu)
+		}
+	}
+
+	defaultHist, err := Hist.NewNumericHistogram(
+		num_DEFAULT_MULTI_BINS, len(defaultHistTemplate), &defaultHistTemplate)
 	if err != nil {
 		return nil, err
 	}
@@ -84,24 +108,24 @@ func NewPattern(events []string, userAndEventsInfo *UserAndEventsInfo) (*Pattern
 		EventNames: events,
 		// 6 dimensional histogram - Cardinalties, Repeats, Timings of start_event
 		// and last_event.
-		CardinalityRepeatTimings:   defaultHist,
+		GenericPropertiesHistogram: defaultHist,
 		EventNumericProperties:     nil,
 		EventCategoricalProperties: nil,
 		UserNumericProperties:      nil,
 		UserCategoricalProperties:  nil,
-		Count:                      0,
-		OncePerUserCount:           0,
-		waitIndex:                  0,
-		currentUserId:              "",
-		currentUserJoinTimestamp:   0,
-		currentUserOccurrenceCount: 0,
-		currentEventTimestamps:     make([]int64, pLen),
-		currentEventCardinalities:  make([]uint, pLen),
-		currentRepeats:             make([]uint, pLen),
-		currentEPropertiesNMap:     make(map[string]float64),
-		currentEPropertiesCMap:     make(map[string]string),
-		currentUPropertiesNMap:     make(map[string]float64),
-		currentUPropertiesCMap:     make(map[string]string),
+		Count:                           0,
+		OncePerUserCount:                0,
+		waitIndex:                       0,
+		currentUserId:                   "",
+		currentUserJoinTimestamp:        0,
+		previousEventTimestamp:          0,
+		currentUserEventTimestamps:      make(map[string][]int64),
+		currentUserEventOccurenceCounts: make(map[string][]uint),
+		currentUserOccurrenceCount:      0,
+		currentEPropertiesNMap:          make(map[string]float64),
+		currentEPropertiesCMap:          make(map[string]string),
+		currentUPropertiesNMap:          make(map[string]float64),
+		currentUPropertiesCMap:          make(map[string]string),
 	}
 	if userAndEventsInfo == nil {
 		return &pattern, nil
@@ -246,20 +270,57 @@ func buildPropertiesHistogramTemplates(
 		&eventPropertiesNTemplate, &eventPropertiesCTemplate, nil
 }
 
+func (p *Pattern) updateGenericHistogram() error {
+	if p.currentUserOccurrenceCount > 0 {
+		// Update Generic Histogram.
+		histMap := map[string]float64{}
+		histMap[U.UP_JOIN_TIME] = float64(p.currentUserJoinTimestamp)
+		for i, eventName := range p.EventNames {
+			ocList := p.currentUserEventOccurenceCounts[eventName]
+			histMap[PatternPropertyKey(i, U.EP_FIRST_SEEN_OCCURRENCE_COUNT)] = float64(ocList[0])
+			histMap[PatternPropertyKey(i, U.EP_LAST_SEEN_OCCURRENCE_COUNT)] = float64(ocList[len(ocList)-1])
+
+			stList := p.currentUserEventTimestamps[eventName]
+			histMap[PatternPropertyKey(i, U.EP_FIRST_SEEN_TIME)] = float64(stList[0])
+			histMap[PatternPropertyKey(i, U.EP_LAST_SEEN_TIME)] = float64(stList[len(ocList)-1])
+			firstSeenSinceUserJoin := math.Max(0, float64(stList[0]-p.currentUserJoinTimestamp))
+			lastSeenSinceUserJoin := math.Max(0, float64(stList[len(stList)-1]-p.currentUserJoinTimestamp))
+			histMap[PatternPropertyKey(i, U.EP_FIRST_SEEN_SINCE_USER_JOIN)] = firstSeenSinceUserJoin
+			histMap[PatternPropertyKey(i, U.EP_LAST_SEEN_SINCE_USER_JOIN)] = lastSeenSinceUserJoin
+		}
+		err := p.GenericPropertiesHistogram.AddMap(histMap)
+		return err
+	}
+	return nil
+}
+
+func (p *Pattern) ResetAfterLastUser() error {
+	err := p.updateGenericHistogram()
+	return err
+}
+
 func (p *Pattern) ResetForNewUser(userId string, userJoinTimestamp int64) error {
 	if userId == "" || userJoinTimestamp <= 0 {
 		return fmt.Errorf("Missing userId or userCreatedTime.")
 	}
 
 	p.UserCount += 1
+	if err := p.updateGenericHistogram(); err != nil {
+		return err
+	}
+
 	// Reinitialize all private variables maintained per user event stream.
 	p.waitIndex = 0
 	p.currentUserId = userId
 	p.currentUserJoinTimestamp = userJoinTimestamp
+	p.previousEventTimestamp = 0
 	p.currentUserOccurrenceCount = 0
-	pLen := len(p.EventNames)
-	p.currentEventTimestamps = make([]int64, pLen)
-	p.currentRepeats = make([]uint, pLen)
+	p.currentUserEventTimestamps = make(map[string][]int64)
+	p.currentUserEventOccurenceCounts = make(map[string][]uint)
+	p.currentEPropertiesNMap = make(map[string]float64)
+	p.currentEPropertiesCMap = make(map[string]string)
+	p.currentUPropertiesNMap = make(map[string]float64)
+	p.currentUPropertiesCMap = make(map[string]string)
 	return nil
 }
 
@@ -291,14 +352,14 @@ func addNumericAndCategoricalProperties(
 func (p *Pattern) CountForEvent(
 	eventName string, eventTimestamp int64, eventProperties map[string]interface{},
 	userProperties map[string]interface{}, eventCardinality uint, userId string,
-	userJoinTimestamp int64) (string, error) {
+	userJoinTimestamp int64) error {
 
 	if eventName == "" || eventTimestamp <= 0 {
-		return "", fmt.Errorf("Missing eventId or eventTimestamp.")
+		return fmt.Errorf("Missing eventId or eventTimestamp.")
 	}
 
 	if userId != p.currentUserId {
-		return "", fmt.Errorf(
+		return fmt.Errorf(
 			fmt.Sprintf("Mismatch in User data. userId: %s, userJoinTime: %v, pattern userId: %s, pattern userJoinTime: %d",
 				userId, userJoinTimestamp, p.currentUserId, p.currentUserJoinTimestamp))
 	}
@@ -312,15 +373,40 @@ func (p *Pattern) CountForEvent(
 		p.currentUserJoinTimestamp = minJoinTimestamp
 	}
 
-	if p.waitIndex > 0 && eventName == p.EventNames[p.waitIndex-1] {
-		// Repeats count the number of times the current event has occurred
-		// before seeing the next event being waited upon.
-		p.currentRepeats[p.waitIndex-1] += 1
-	} else if eventName == p.EventNames[p.waitIndex] {
-		// Record the event occurrence and wait on the next one.
-		p.currentEventTimestamps[p.waitIndex] = eventTimestamp
-		p.currentEventCardinalities[p.waitIndex] = eventCardinality
-		p.currentRepeats[p.waitIndex] = 1
+	// Check whether events are in order.
+	if eventTimestamp < p.previousEventTimestamp {
+		return fmt.Errorf(
+			"Event Timings not in order. user: %s, event %s, userJoinTime:%d, eventTimestamp :%d, previousEventTimestamp: %d",
+			userId, eventName, p.currentUserJoinTimestamp, eventTimestamp, p.previousEventTimestamp)
+	}
+	if eventTimestamp < p.currentUserJoinTimestamp {
+		// Ignoring this error for now, since there are no DB checks to avoid
+		// these user input values.
+		log.Debug(fmt.Sprintf("Event occurs before creation for user:%s", p.currentUserId))
+	}
+	p.previousEventTimestamp = eventTimestamp
+
+	// Start collecting timestamps and occurrences of an event
+	// only after we have seen atleast one occurrence of
+	// preceding events in sequence.
+	if len(p.currentUserEventTimestamps[eventName]) == 0 {
+		if eventName == p.EventNames[p.waitIndex] {
+			p.currentUserEventTimestamps[eventName] = []int64{eventTimestamp}
+		}
+	} else {
+		p.currentUserEventTimestamps[eventName] = append(
+			p.currentUserEventTimestamps[eventName], eventTimestamp)
+	}
+	if len(p.currentUserEventOccurenceCounts[eventName]) == 0 {
+		if eventName == p.EventNames[p.waitIndex] {
+			p.currentUserEventOccurenceCounts[eventName] = []uint{eventCardinality}
+		}
+	} else {
+		p.currentUserEventOccurenceCounts[eventName] = append(
+			p.currentUserEventOccurenceCounts[eventName], eventCardinality)
+	}
+
+	if eventName == p.EventNames[p.waitIndex] {
 		// Update seen properties.
 		addNumericAndCategoricalProperties(
 			p.waitIndex, eventProperties, p.currentEPropertiesNMap, p.currentEPropertiesCMap)
@@ -337,62 +423,30 @@ func (p *Pattern) CountForEvent(
 			if p.currentUserOccurrenceCount == 1 {
 				p.OncePerUserCount += 1
 
-				// Check whether events are in order.
-				for i := 0; i < pLen; i++ {
-					if i == 0 {
-						duration := p.currentEventTimestamps[0] - p.currentUserJoinTimestamp
-						if duration < 0 {
-							// Ignoring this error for now, since there are no DB checks to avoid
-							// these user input values.
-							log.Debug(fmt.Sprintf("Event occurs before creation for user:%s", p.currentUserId))
-						}
-					} else {
-						duration := p.currentEventTimestamps[i] - p.currentEventTimestamps[i-1]
-						if duration < 0 {
-							return "", fmt.Errorf("Event Timings not in order")
-						}
-					}
-				}
 				// Update properties histograms.
 				if p.EventNumericProperties != nil {
 					if err := p.EventNumericProperties.AddMap(p.currentEPropertiesNMap); err != nil {
-						return "", err
+						return err
 					}
 				}
 				if p.EventCategoricalProperties != nil {
 					if err := p.EventCategoricalProperties.AddMap(p.currentEPropertiesCMap); err != nil {
-						return "", err
+						return err
 					}
 				}
 				if p.UserNumericProperties != nil {
 					if err := p.UserNumericProperties.AddMap(p.currentUPropertiesNMap); err != nil {
-						return "", err
+						return err
 					}
 				}
 				if p.UserCategoricalProperties != nil {
 					if err := p.UserCategoricalProperties.AddMap(p.currentUPropertiesCMap); err != nil {
-						return "", err
+						return err
 					}
 				}
-				// Update multi histogram of cardinalities, repeats and timings.
-				var cardinalityRepeatTimingsVec []float64 = make([]float64, 6)
-				cardinalityRepeatTimingsVec[0] = float64(p.currentEventCardinalities[0])
-				cardinalityRepeatTimingsVec[1] = float64(p.currentRepeats[0])
-				cardinalityRepeatTimingsVec[2] = math.Max(float64(p.currentEventTimestamps[0]-p.currentUserJoinTimestamp), 0)
-				cardinalityRepeatTimingsVec[3] = float64(p.currentEventCardinalities[pLen-1])
-				cardinalityRepeatTimingsVec[4] = float64(p.currentRepeats[pLen-1])
-				if pLen > 1 {
-					cardinalityRepeatTimingsVec[5] = float64(p.currentEventTimestamps[pLen-1] - p.currentEventTimestamps[pLen-2])
-				} else {
-					cardinalityRepeatTimingsVec[5] = cardinalityRepeatTimingsVec[2]
-				}
-				p.CardinalityRepeatTimings.Add(cardinalityRepeatTimingsVec)
 			}
 
 			// Reset.
-			p.currentEventTimestamps = make([]int64, pLen)
-			p.currentEventCardinalities = make([]uint, pLen)
-			p.currentRepeats = make([]uint, pLen)
 			p.waitIndex = 0
 			p.currentEPropertiesNMap = make(map[string]float64)
 			p.currentEPropertiesCMap = make(map[string]string)
@@ -400,7 +454,7 @@ func (p *Pattern) CountForEvent(
 			p.currentUPropertiesCMap = make(map[string]string)
 		}
 	}
-	return p.EventNames[p.waitIndex], nil
+	return nil
 }
 
 func (p *Pattern) GetOncePerUserCount(
@@ -413,35 +467,20 @@ func (p *Pattern) GetOncePerUserCount(
 		log.Error(errorString)
 		return 0, fmt.Errorf(errorString)
 	}
-	crtLowerBounds := make([]float64, 6)
-	crtUpperBounds := make([]float64, 6)
-	for i := 0; i < 6; i++ {
-		crtLowerBounds[i] = math.MaxFloat64
-		crtUpperBounds[i] = math.MaxFloat64
-	}
 	EPNMapUpperBounds := make(map[string]float64)
 	EPNMapLowerBounds := make(map[string]float64)
 	EPCMapEquality := make(map[string]string)
 	UPNMapUpperBounds := make(map[string]float64)
 	UPNMapLowerBounds := make(map[string]float64)
 	UPCMapEquality := make(map[string]string)
-	hasCrtConstraints := false
+	GPMapUpperBounds := make(map[string]float64)
+	GPMapLowerBounds := make(map[string]float64)
 	for i, ecs := range patternConstraints {
-		eventName := p.EventNames[i]
 		for _, ncs := range ecs.EPNumericConstraints {
-			if ncs.PropertyName == U.EP_OCCURRENCE_COUNT {
-				hasCrtConstraints = true
-				if i == 0 {
-					crtLowerBounds[0] = ncs.LowerBound
-					crtUpperBounds[0] = ncs.UpperBound
-				} else if i == pLen-1 {
-					crtLowerBounds[3] = ncs.LowerBound
-					crtUpperBounds[3] = ncs.UpperBound
-				} else {
-					errorString := fmt.Sprintf(
-						"Cardinality is not maintained for event %v in pattern %s", eventName, p.EventNames)
-					return 0, fmt.Errorf(errorString)
-				}
+			if U.IsGenericEventProperty(&ncs.PropertyName) {
+				key := PatternPropertyKey(i, ncs.PropertyName)
+				GPMapLowerBounds[key] = ncs.LowerBound
+				GPMapUpperBounds[key] = ncs.UpperBound
 			} else {
 				key := PatternPropertyKey(i, ncs.PropertyName)
 				EPNMapLowerBounds[key] = ncs.LowerBound
@@ -454,9 +493,15 @@ func (p *Pattern) GetOncePerUserCount(
 		}
 
 		for _, ncs := range ecs.UPNumericConstraints {
-			key := PatternPropertyKey(i, ncs.PropertyName)
-			UPNMapLowerBounds[key] = ncs.LowerBound
-			UPNMapUpperBounds[key] = ncs.UpperBound
+			if U.IsGenericUserProperty(&ncs.PropertyName) {
+				key := ncs.PropertyName
+				GPMapLowerBounds[key] = ncs.LowerBound
+				GPMapUpperBounds[key] = ncs.UpperBound
+			} else {
+				key := PatternPropertyKey(i, ncs.PropertyName)
+				UPNMapLowerBounds[key] = ncs.LowerBound
+				UPNMapUpperBounds[key] = ncs.UpperBound
+			}
 		}
 		for _, ccs := range ecs.UPCategoricalConstraints {
 			key := PatternPropertyKey(i, ccs.PropertyName)
@@ -464,11 +509,11 @@ func (p *Pattern) GetOncePerUserCount(
 		}
 	}
 
-	crtUpperCDF := 1.0
-	crtLowerCDF := 0.0
-	if hasCrtConstraints {
-		crtUpperCDF = p.CardinalityRepeatTimings.CDF(crtUpperBounds)
-		crtLowerCDF = p.CardinalityRepeatTimings.CDF(crtLowerBounds)
+	GPNumericUpperCDF := 1.0
+	GPNumericLowerCDF := 0.0
+	if p.GenericPropertiesHistogram != nil && len(GPMapLowerBounds) > 0 {
+		GPNumericUpperCDF = p.GenericPropertiesHistogram.CDFFromMap(GPMapUpperBounds)
+		GPNumericLowerCDF = p.GenericPropertiesHistogram.CDFFromMap(GPMapLowerBounds)
 	}
 
 	EPNumericUpperCDF := 1.0
@@ -502,7 +547,7 @@ func (p *Pattern) GetOncePerUserCount(
 	}
 
 	count := (float64(p.OncePerUserCount) *
-		(crtUpperCDF - crtLowerCDF) *
+		(GPNumericUpperCDF - GPNumericLowerCDF) *
 		(EPNumericUpperCDF - EPNumericLowerCDF) *
 		EPCategoricalPDF *
 		(UPNumericUpperCDF - UPNumericLowerCDF) *
@@ -510,10 +555,8 @@ func (p *Pattern) GetOncePerUserCount(
 
 	if count < 0 {
 		log.WithFields(log.Fields{
-			"crtUpperCDF":        crtUpperCDF,
-			"crtUpperBounds":     crtUpperBounds,
-			"crtLowerCDF":        crtLowerCDF,
-			"crtLowerBounds":     crtLowerBounds,
+			"GPNumericUpperCDF":  GPNumericUpperCDF,
+			"GPNumericLowerCDF":  GPNumericLowerCDF,
 			"EPNumericUpperCDF":  EPNumericUpperCDF,
 			"EPNumericLowerCDF":  EPNumericLowerCDF,
 			"EPCategoricalPDF":   EPCategoricalPDF,
@@ -530,17 +573,6 @@ func (p *Pattern) GetOncePerUserCount(
 		return 0, fmt.Errorf(errorString)
 	}
 	return uint(count), nil
-}
-
-func (p *Pattern) WaitingOn() string {
-	return p.EventNames[p.waitIndex]
-}
-
-func (p *Pattern) PrevWaitingOn() string {
-	if p.waitIndex > 0 {
-		return p.EventNames[p.waitIndex-1]
-	}
-	return ""
 }
 
 func (p *Pattern) GetEventPropertyRanges(

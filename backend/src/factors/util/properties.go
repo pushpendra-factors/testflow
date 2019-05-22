@@ -17,8 +17,29 @@ const SEN_ALL_ACTIVE_USERS_DISPLAY_STRING = "All Active Users"
 
 /* Properties Constants */
 
-// Event Properties.
-var EP_OCCURRENCE_COUNT string = "$occurrenceCount"
+// Generic Event Properties.
+var EP_FIRST_SEEN_OCCURRENCE_COUNT string = "$firstSeenOccurrenceCount"
+var EP_LAST_SEEN_OCCURRENCE_COUNT string = "$lastSeenOccurrenceCount"
+var EP_FIRST_SEEN_TIME string = "$firstSeenTime"
+var EP_LAST_SEEN_TIME string = "$lastSeenTime"
+var EP_FIRST_SEEN_SINCE_USER_JOIN string = "$firstSeenSinceUserJoin"
+var EP_LAST_SEEN_SINCE_USER_JOIN string = "$lastSeenSinceUserJoin"
+
+var GENERIC_NUMERIC_EVENT_PROPERTIES = [...]string{
+	EP_FIRST_SEEN_OCCURRENCE_COUNT,
+	EP_LAST_SEEN_OCCURRENCE_COUNT,
+	EP_FIRST_SEEN_TIME,
+	EP_LAST_SEEN_TIME,
+	EP_FIRST_SEEN_SINCE_USER_JOIN,
+	EP_LAST_SEEN_SINCE_USER_JOIN,
+}
+
+// Generic User Properties.
+var UP_JOIN_TIME string = "$joinTime"
+
+var GENERIC_NUMERIC_USER_PROPERTIES = [...]string{
+	UP_JOIN_TIME,
+}
 
 // Default Event Properites
 var EP_INTERNAL_IP string = "$ip"
@@ -131,8 +152,6 @@ var INTERNAL_USER_PROPERTIES = [...]string{
 	"_$deviceId", // Here for legacy reason.
 }
 
-var VISIBLE_DEFAULT_NUMERIC_EVENT_PROPERTIES = [...]string{EP_OCCURRENCE_COUNT}
-
 const NAME_PREFIX = "$"
 const NAME_PREFIX_ESCAPE_CHAR = "_"
 const QUERY_PARAM_PROPERTY_PREFIX = "$qp_"
@@ -190,6 +209,24 @@ func IsInternalEventProperty(key *string) bool {
 
 func IsInternalUserProperty(key *string) bool {
 	for _, k := range INTERNAL_USER_PROPERTIES {
+		if k == *key {
+			return true
+		}
+	}
+	return false
+}
+
+func IsGenericEventProperty(key *string) bool {
+	for _, k := range GENERIC_NUMERIC_EVENT_PROPERTIES {
+		if k == *key {
+			return true
+		}
+	}
+	return false
+}
+
+func IsGenericUserProperty(key *string) bool {
+	for _, k := range GENERIC_NUMERIC_USER_PROPERTIES {
 		if k == *key {
 			return true
 		}

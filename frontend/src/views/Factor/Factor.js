@@ -521,6 +521,7 @@ class Factor extends Component {
                     onKeyDown={this.factor}
                     holderText="Enter goal."
                     resetCharts={this.props.resetFactors}
+                    selectedModelId={this.state.selectedModelInterval !=null ? this.state.selectedModelInterval.mid: ""}
                   />
                 </Col>
               </Row>

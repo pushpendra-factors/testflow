@@ -505,13 +505,13 @@ func mineAndWritePatterns(projectId uint64, filepath string,
 }
 
 func buildPropertiesInfoFromInput(projectId uint64, filepath string) (*P.UserAndEventsInfo, error) {
-	eMap := make(map[string]*P.PropertiesInfo)
-
 	// Length One Patterns.
 	eventNames, errCode := M.GetEventNames(projectId)
 	if errCode != http.StatusFound {
 		return nil, fmt.Errorf("DB read of event names failed")
 	}
+	userAndEventsInfo := P.NewUserAndEventsInfo()
+	eMap := *userAndEventsInfo.EventPropertiesInfoMap
 	for _, eventName := range eventNames {
 		// Initialize info.
 		eMap[eventName.Name] = &P.PropertiesInfo{
@@ -526,13 +526,6 @@ func buildPropertiesInfoFromInput(projectId uint64, filepath string) (*P.UserAnd
 	}
 	defer file.Close()
 
-	userAndEventsInfo := &P.UserAndEventsInfo{
-		UserPropertiesInfo: &P.PropertiesInfo{
-			NumericPropertyKeys:          make(map[string]bool),
-			CategoricalPropertyKeyValues: make(map[string]map[string]bool),
-		},
-		EventPropertiesInfoMap: &eMap,
-	}
 	scanner := bufio.NewScanner(file)
 	err = P.CollectPropertiesInfo(scanner, userAndEventsInfo)
 	if err != nil {

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	P "factors/pattern"
+	U "factors/util"
 	"fmt"
 	"math"
 	"strings"
@@ -29,24 +30,24 @@ func TestCountPatterns(t *testing.T) {
 	eventsInput := []P.CounterEventFormat{
 		// User 1.
 		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "F", EventTimestamp: u1ETimestamp, EventCardinality: uint(1)},
-		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "G", EventTimestamp: u1ETimestamp + (1 * 60), EventCardinality: uint(2)},
+		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "B", EventTimestamp: u1ETimestamp + (1 * 60), EventCardinality: uint(4)},
 		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "A", EventTimestamp: u1ETimestamp + (2 * 60), EventCardinality: uint(2)},
-		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "L", EventTimestamp: u1ETimestamp + (3 * 60), EventCardinality: uint(1)},
+		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "C", EventTimestamp: u1ETimestamp + (3 * 60), EventCardinality: uint(1)},
 		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "B", EventTimestamp: u1ETimestamp + (4 * 60), EventCardinality: uint(5)},
 		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "A", EventTimestamp: u1ETimestamp + (5 * 60), EventCardinality: uint(3)},
 		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "B", EventTimestamp: u1ETimestamp + (6 * 60), EventCardinality: uint(6)},
-		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "C", EventTimestamp: u1ETimestamp + (7 * 60), EventCardinality: uint(1)},
+		P.CounterEventFormat{UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "C", EventTimestamp: u1ETimestamp + (7 * 60), EventCardinality: uint(2)},
 		// User 2.
-		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "F", EventTimestamp: u2ETimestamp, EventCardinality: uint(1)},
+		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "B", EventTimestamp: u2ETimestamp, EventCardinality: uint(1)},
 		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "A", EventTimestamp: u2ETimestamp + (1 * 60), EventCardinality: uint(1)},
-		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "A", EventTimestamp: u2ETimestamp + (2 * 60), EventCardinality: uint(1)},
-		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "K", EventTimestamp: u2ETimestamp + (3 * 60), EventCardinality: uint(2)},
-		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "B", EventTimestamp: u2ETimestamp + (4 * 60), EventCardinality: uint(1)},
+		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "A", EventTimestamp: u2ETimestamp + (2 * 60), EventCardinality: uint(2)},
+		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "C", EventTimestamp: u2ETimestamp + (3 * 60), EventCardinality: uint(1)},
+		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "B", EventTimestamp: u2ETimestamp + (4 * 60), EventCardinality: uint(2)},
 		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "Z", EventTimestamp: u2ETimestamp + (5 * 60), EventCardinality: uint(1)},
-		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "C", EventTimestamp: u2ETimestamp + (6 * 60), EventCardinality: uint(1)},
+		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "C", EventTimestamp: u2ETimestamp + (6 * 60), EventCardinality: uint(2)},
 		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "A", EventTimestamp: u2ETimestamp + (7 * 60), EventCardinality: uint(3)},
-		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "B", EventTimestamp: u2ETimestamp + (8 * 60), EventCardinality: uint(2)},
-		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "C", EventTimestamp: u2ETimestamp + (9 * 60), EventCardinality: uint(2)},
+		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "B", EventTimestamp: u2ETimestamp + (8 * 60), EventCardinality: uint(3)},
+		P.CounterEventFormat{UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "C", EventTimestamp: u2ETimestamp + (9 * 60), EventCardinality: uint(3)},
 	}
 	eventsInputString := ""
 	for _, event := range eventsInput {
@@ -62,7 +63,7 @@ func TestCountPatterns(t *testing.T) {
 	pABC, _ := P.NewPattern(pABCEvents, nil)
 	pAB, _ := P.NewPattern([]string{"A", "B"}, nil)
 	pBC, _ := P.NewPattern([]string{"B", "C"}, nil)
-	pAC, _ := P.NewPattern([]string{"B", "C"}, nil)
+	pAC, _ := P.NewPattern([]string{"A", "C"}, nil)
 	pA, _ := P.NewPattern([]string{"A"}, nil)
 	pB, _ := P.NewPattern([]string{"B"}, nil)
 	pC, _ := P.NewPattern([]string{"C"}, nil)
@@ -79,40 +80,78 @@ func TestCountPatterns(t *testing.T) {
 	for i := 0; i < pLen; i++ {
 		assert.Equal(t, pABCEvents[i], pABC.EventNames[i])
 	}
-	// A-B-C occurs twice oncePerUser , with first A occurring after 3720s in User1 and
-	// 3660s in User 2.
-	// Repeats once before the  next B occurs in User2.
-	assert.Equal(t, uint64(2), pABC.CardinalityRepeatTimings.Count())
-	assert.Equal(t, float64((2.0+1.0)/2), pABC.CardinalityRepeatTimings.Mean()[0])
-	assert.Equal(t, float64((1.0+2.0)/2), pABC.CardinalityRepeatTimings.Mean()[1])
-	assert.Equal(t, float64((3720.0+3660.0)/2), pABC.CardinalityRepeatTimings.Mean()[2])
 
-	// A-B-C occurs twice oncePerUser, with first B following first A after 120s in User1 and
-	// 180 in User 2.
-	// Repeats once before the  next C occurs in User1.
-	/* Only start and end event are tracked currently.
-	assert.Equal(t, float64(2), pABC.Timings[1].Count())
-	assert.Equal(t, float64((120.0+180.0)/2), pABC.Timings[1].Mean())
-	assert.Equal(t, float64((5.0+1.0)/2), pABC.EventCardinalities[1].Mean())
-	assert.Equal(t, float64((2.0+1.0)/2), pABC.Repeats[1].Mean())*/
 
-	// A-B-C occurs twice oncePerUser, with first C following first B after 180s in User1 and
-	// 120s in User 2.
-	// Last event always is counted once.
-	assert.Equal(t, float64((1.0+1.0)/2), pABC.CardinalityRepeatTimings.Mean()[3])
-	assert.Equal(t, float64((1.0+1.0)/2), pABC.CardinalityRepeatTimings.Mean()[4])
-	assert.Equal(t, float64((180.0+120.0)/2), pABC.CardinalityRepeatTimings.Mean()[5])
+	// A-B-C occurs twice OncePerUser with the following Generic Properties.
+
+	// A: firstSeenOccurrenceCount -> 2 and 1.
+	// A: lastSeenOccurrenceCount -> 3 and 3.
+	// A: firstSeenTime -> user1CreatedTime+1hour+120seconds and user2CreatedTime+1hour+60seconds.
+	// A: lastSeenTime -> user1CreatedTime+1hour+300seconds and user2CreatedTime+1hour+420seconds.
+	// A: firstSeenSinceUserJoin -> 1hour+120seconds and 1hour+60seconds.
+	// A: lastSeenSinceUserJoin -> 1hour+300seconds and 1hour+420seconds.
+
+	// B: firstSeenOccurrenceCount -> 5 and 2.
+	// B: lastSeenOccurrenceCount -> 6 and 3.
+	// B: firstSeenTime -> user1CreatedTime+1hour+240seconds and user2CreatedTime+1hour+240seconds.
+	// B: lastSeenTime -> user1CreatedTime+1hour+360seconds and user2CreatedTime+1hour+480seconds.
+	// B: firstSeenSinceUserJoin -> 1hour+240seconds and 1hour+240seconds.
+	// B: lastSeenSinceUserJoin -> 1hour+360seconds and 1hour+480seconds.
+
+	// C: firstSeenOccurrenceCount -> 2 and 2.
+	// C: lastSeenOccurrenceCount -> 2 and 3.
+	// C: firstSeenTime -> user1CreatedTime+1hour+420seconds and user2CreatedTime+1hour+360seconds.
+	// C: lastSeenTime -> user1CreatedTime+1hour+420seconds and user2CreatedTime+1hour+540seconds.
+	// C: firstSeenSinceUserJoin -> 1hour+240seconds and 1hour+240seconds.
+	// C: lastSeenSinceUserJoin -> 1hour+360seconds and 1hour+540seconds.
+	assert.Equal(t, uint64(2), pABC.GenericPropertiesHistogram.Count())
+	expectedMeanMap := map[string]float64{
+		U.UP_JOIN_TIME: float64((u1CTimestamp + u2CTimestamp) / 2.0),
+		// Event A Generic Properties.
+		P.PatternPropertyKey(0, U.EP_FIRST_SEEN_OCCURRENCE_COUNT): float64((2.0 + 1.0) / 2),
+		P.PatternPropertyKey(0, U.EP_LAST_SEEN_OCCURRENCE_COUNT):  float64((3.0 + 3.0) / 2),
+		P.PatternPropertyKey(0, U.EP_FIRST_SEEN_TIME): float64(
+			(u1CTimestamp + 3600 + 120 + u2CTimestamp + 3600 + 60) / 2),
+		P.PatternPropertyKey(0, U.EP_LAST_SEEN_TIME): float64(
+			(u1CTimestamp + 3600 + 300 + u2CTimestamp + 3600 + 420) / 2),
+		P.PatternPropertyKey(0, U.EP_FIRST_SEEN_SINCE_USER_JOIN): float64((3600 + 120 + 3600 + 60) / 2),
+		P.PatternPropertyKey(0, U.EP_LAST_SEEN_SINCE_USER_JOIN):  float64((3600 + 300 + 3600 + 420) / 2),
+
+		// Event B Generic Properties.
+		P.PatternPropertyKey(1, U.EP_FIRST_SEEN_OCCURRENCE_COUNT): float64((5.0 + 2.0) / 2),
+		P.PatternPropertyKey(1, U.EP_LAST_SEEN_OCCURRENCE_COUNT):  float64((6.0 + 3.0) / 2),
+		P.PatternPropertyKey(1, U.EP_FIRST_SEEN_TIME): float64(
+			(u1CTimestamp + 3600 + 240 + u2CTimestamp + 3600 + 240) / 2),
+		P.PatternPropertyKey(1, U.EP_LAST_SEEN_TIME): float64(
+			(u1CTimestamp + 3600 + 360 + u2CTimestamp + 3600 + 480) / 2),
+		P.PatternPropertyKey(1, U.EP_FIRST_SEEN_SINCE_USER_JOIN): float64((3600 + 240 + 3600 + 240) / 2),
+		P.PatternPropertyKey(1, U.EP_LAST_SEEN_SINCE_USER_JOIN):  float64((3600 + 360 + 3600 + 480) / 2),
+
+		// Event C Generic Properties.
+		P.PatternPropertyKey(2, U.EP_FIRST_SEEN_OCCURRENCE_COUNT): float64((2.0 + 2.0) / 2),
+		P.PatternPropertyKey(2, U.EP_LAST_SEEN_OCCURRENCE_COUNT):  float64((2.0 + 3.0) / 2),
+		P.PatternPropertyKey(2, U.EP_FIRST_SEEN_TIME): float64(
+			(u1CTimestamp + 3600 + 420 + u2CTimestamp + 3600 + 360) / 2),
+		P.PatternPropertyKey(2, U.EP_LAST_SEEN_TIME): float64(
+			(u1CTimestamp + 3600 + 420 + u2CTimestamp + 3600 + 540) / 2),
+		P.PatternPropertyKey(2, U.EP_FIRST_SEEN_SINCE_USER_JOIN): float64((3600 + 420 + 3600 + 360) / 2),
+		P.PatternPropertyKey(2, U.EP_LAST_SEEN_SINCE_USER_JOIN):  float64((3600 + 420 + 3600 + 540) / 2),
+	}
+	actualMeanMap := pABC.GenericPropertiesHistogram.MeanMap()
+	for k, expectedMean := range expectedMeanMap {
+		assert.Equal(t, expectedMean, actualMeanMap[k], fmt.Sprintf("Failed for Key: %s", k))
+	}
 
 	// Test output on other patterns.
 	assert.Equal(t, uint(4), pAB.Count)
 	assert.Equal(t, uint(2), pAB.OncePerUserCount)
 	assert.Equal(t, uint(2), pAB.UserCount)
 
-	assert.Equal(t, uint(3), pBC.Count)
+	assert.Equal(t, uint(5), pBC.Count)
 	assert.Equal(t, uint(2), pBC.OncePerUserCount)
 	assert.Equal(t, uint(2), pBC.UserCount)
 
-	assert.Equal(t, uint(3), pAC.Count)
+	assert.Equal(t, uint(4), pAC.Count)
 	assert.Equal(t, uint(2), pAC.OncePerUserCount)
 	assert.Equal(t, uint(2), pAC.UserCount)
 
@@ -120,11 +159,11 @@ func TestCountPatterns(t *testing.T) {
 	assert.Equal(t, uint(2), pA.OncePerUserCount)
 	assert.Equal(t, uint(2), pA.UserCount)
 
-	assert.Equal(t, uint(4), pB.Count)
+	assert.Equal(t, uint(6), pB.Count)
 	assert.Equal(t, uint(2), pB.OncePerUserCount)
 	assert.Equal(t, uint(2), pB.UserCount)
 
-	assert.Equal(t, uint(3), pC.Count)
+	assert.Equal(t, uint(5), pC.Count)
 	assert.Equal(t, uint(2), pC.OncePerUserCount)
 	assert.Equal(t, uint(2), pC.UserCount)
 }
@@ -274,8 +313,8 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 			UserProperties: map[string]interface{}{"$country": "India", "paymentStatus": "Free", "age": 20.0},
 		},
 		P.CounterEventFormat{
-			UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "G", EventProperties: map[string]interface{}{"ComNum": 2.0,
-				"ComCat": "com2", "IgnoredKey": []string{"check"}}, EventTimestamp: u1ETimestamp + (1 * 60), EventCardinality: uint(2),
+			UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "B", EventProperties: map[string]interface{}{"ComNum": 2.0,
+				"ComCat": "com2", "IgnoredKey": []string{"check"}}, EventTimestamp: u1ETimestamp + (1 * 60), EventCardinality: uint(4),
 			UserProperties: map[string]interface{}{"$country": "India", "paymentStatus": "Free", "age": 20.0},
 		},
 		P.CounterEventFormat{
@@ -284,7 +323,7 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 			EventCardinality: uint(2), UserProperties: map[string]interface{}{"$country": "India", "paymentStatus": "Free", "age": 20.0},
 		},
 		P.CounterEventFormat{
-			UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "L", EventProperties: map[string]interface{}{"ComNum": 1.0,
+			UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "C", EventProperties: map[string]interface{}{"ComNum": 1.0,
 				"ComCat": "com1"}, EventTimestamp: u1ETimestamp + (3 * 60), EventCardinality: uint(1),
 			UserProperties: map[string]interface{}{"$country": "India", "paymentStatus": "Free", "age": 20.0},
 		},
@@ -305,12 +344,12 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 		},
 		P.CounterEventFormat{
 			UserId: "U1", UserJoinTimestamp: u1CTimestamp, EventName: "C", EventProperties: map[string]interface{}{"ComNum": 2.0,
-				"ComCat": "com2", "CNum": 1.0, "CCat": "ccat1"}, EventTimestamp: u1ETimestamp + (7 * 60), EventCardinality: uint(1),
+				"ComCat": "com2", "CNum": 1.0, "CCat": "ccat1"}, EventTimestamp: u1ETimestamp + (7 * 60), EventCardinality: uint(2),
 			UserProperties: map[string]interface{}{"$country": "India", "paymentStatus": "Paid", "age": 20.0},
 		},
 		// User 2.
 		P.CounterEventFormat{
-			UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "F", EventProperties: map[string]interface{}{"ComNum": 3.0,
+			UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "B", EventProperties: map[string]interface{}{"ComNum": 3.0,
 				"ComCat": "com3", "IgnoredKey": []string{"check"}}, EventTimestamp: u2ETimestamp, EventCardinality: uint(1),
 			UserProperties: map[string]interface{}{"$country": "USA", "paymentStatus": "Free", "age": 30.0},
 		},
@@ -321,16 +360,16 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 		},
 		P.CounterEventFormat{
 			UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "A", EventProperties: map[string]interface{}{"ComNum": 2.0,
-				"ComCat": "com2", "ANum": 2, "ACat": "acat2"}, EventTimestamp: u2ETimestamp + (2 * 60), EventCardinality: uint(1),
+				"ComCat": "com2", "ANum": 2, "ACat": "acat2"}, EventTimestamp: u2ETimestamp + (2 * 60), EventCardinality: uint(2),
 			UserProperties: map[string]interface{}{"$country": "USA", "paymentStatus": "Free", "age": 30.0},
 		},
 		P.CounterEventFormat{
-			UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "K", EventProperties: map[string]interface{}{"ComNum": 3.0,
-				"ComCat": "com3"}, EventTimestamp: u2ETimestamp + (3 * 60), EventCardinality: uint(2),
+			UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "C", EventProperties: map[string]interface{}{"ComNum": 3.0,
+				"ComCat": "com3"}, EventTimestamp: u2ETimestamp + (3 * 60), EventCardinality: uint(1),
 			UserProperties: map[string]interface{}{"$country": "USA", "paymentStatus": "Free", "age": 30.0}},
 		P.CounterEventFormat{
 			UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "B", EventProperties: map[string]interface{}{"ComNum": 1.0,
-				"ComCat": "com1", "BNum": 1, "BCat": "bcat1"}, EventTimestamp: u2ETimestamp + (4 * 60), EventCardinality: uint(1),
+				"ComCat": "com1", "BNum": 1, "BCat": "bcat1"}, EventTimestamp: u2ETimestamp + (4 * 60), EventCardinality: uint(2),
 			UserProperties: map[string]interface{}{"$country": "USA", "paymentStatus": "Free", "age": 30.0},
 		},
 		P.CounterEventFormat{
@@ -340,7 +379,7 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 		},
 		P.CounterEventFormat{
 			UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "C", EventProperties: map[string]interface{}{"ComNum": 3.0,
-				"ComCat": "com3", "CNum": 2.0, "CCat": "ccat2"}, EventTimestamp: u2ETimestamp + (6 * 60), EventCardinality: uint(1),
+				"ComCat": "com3", "CNum": 2.0, "CCat": "ccat2"}, EventTimestamp: u2ETimestamp + (6 * 60), EventCardinality: uint(2),
 			UserProperties: map[string]interface{}{"$country": "USA", "paymentStatus": "Paid", "age": 30.0},
 		},
 		P.CounterEventFormat{
@@ -350,12 +389,12 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 		},
 		P.CounterEventFormat{
 			UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "B", EventProperties: map[string]interface{}{"ComNum": 2.0,
-				"ComCat": "com2", "BNum": 2, "BCat": "bcat2"}, EventTimestamp: u2ETimestamp + (8 * 60), EventCardinality: uint(2),
+				"ComCat": "com2", "BNum": 2, "BCat": "bcat2"}, EventTimestamp: u2ETimestamp + (8 * 60), EventCardinality: uint(3),
 			UserProperties: map[string]interface{}{"$country": "USA", "paymentStatus": "Paid", "age": 30.0},
 		},
 		P.CounterEventFormat{
 			UserId: "U2", UserJoinTimestamp: u2CTimestamp, EventName: "C", EventProperties: map[string]interface{}{"ComNum": 3.0,
-				"ComCat": "com3", "CNum": 1.0, "CCat": "ccat1"}, EventTimestamp: u2ETimestamp + (9 * 60), EventCardinality: uint(2),
+				"ComCat": "com3", "CNum": 1.0, "CCat": "ccat1"}, EventTimestamp: u2ETimestamp + (9 * 60), EventCardinality: uint(3),
 			UserProperties: map[string]interface{}{"$country": "USA", "paymentStatus": "Paid", "age": 30.0},
 		},
 	}
@@ -391,9 +430,6 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 		"B": []string{"BNum", "ComNum"},
 		"C": []string{"CNum", "ComNum"},
 		"F": []string{"ComNum"},
-		"G": []string{"ComNum"},
-		"K": []string{"ComNum"},
-		"L": []string{"ComNum"},
 		"Z": []string{"ComNum"},
 	}
 	expectedCategoricalKeyValues := map[string]map[string][]string{
@@ -403,22 +439,13 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 		},
 		"B": map[string][]string{
 			"BCat":   []string{"bcat1", "bcat2"},
-			"ComCat": []string{"com1", "com2"}, // Only those seen with this event.
+			"ComCat": []string{"com1", "com2", "com3"},
 		},
 		"C": map[string][]string{
 			"CCat":   []string{"ccat1", "ccat2"},
-			"ComCat": []string{"com2", "com3"},
+			"ComCat": []string{"com1", "com2", "com3"},
 		},
 		"F": map[string][]string{
-			"ComCat": []string{"com1", "com3"},
-		},
-		"G": map[string][]string{
-			"ComCat": []string{"com2"},
-		},
-		"K": map[string][]string{
-			"ComCat": []string{"com3"},
-		},
-		"L": map[string][]string{
 			"ComCat": []string{"com1"},
 		},
 		"Z": map[string][]string{
@@ -431,8 +458,8 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 		assert.True(t, ok, fmt.Sprintf(
 			"Missing event %s, actualEventInfoMap: %v", e, actualEventInfoMap))
 		assert.Equal(t, len(keys), len(eInfo.NumericPropertyKeys),
-			fmt.Sprintf("Mismatch numeric keys. Expected %v. Actual: %v",
-				keys, eInfo.NumericPropertyKeys))
+			fmt.Sprintf("Mismatch numeric keys. event: %s, Expected %v. Actual: %v",
+				e, keys, eInfo.NumericPropertyKeys))
 		for _, expectedKey := range keys {
 			trueBool, ok := eInfo.NumericPropertyKeys[expectedKey]
 			assert.True(t, ok, fmt.Sprintf("event %s, key %s", e, expectedKey))
@@ -470,7 +497,7 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 	pABC, _ := P.NewPattern(pABCEvents, &userAndEventsInfo)
 	pAB, _ := P.NewPattern([]string{"A", "B"}, &userAndEventsInfo)
 	pBC, _ := P.NewPattern([]string{"B", "C"}, &userAndEventsInfo)
-	pAC, _ := P.NewPattern([]string{"B", "C"}, &userAndEventsInfo)
+	pAC, _ := P.NewPattern([]string{"A", "C"}, &userAndEventsInfo)
 	pA, _ := P.NewPattern([]string{"A"}, &userAndEventsInfo)
 	pB, _ := P.NewPattern([]string{"B"}, &userAndEventsInfo)
 	pC, _ := P.NewPattern([]string{"C"}, &userAndEventsInfo)
@@ -479,7 +506,28 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 	err = P.CountPatterns(scanner, patterns)
 	assert.Nil(t, err)
 
-	// Test pABC output.
+	// A-B-C occurs twice OncePerUser with the following Generic Properties.
+
+	// A: firstSeenOccurrenceCount -> 2 and 1.
+	// A: lastSeenOccurrenceCount -> 3 and 3.
+	// A: firstSeenTime -> user1CreatedTime+1hour+120seconds and user2CreatedTime+1hour+60seconds.
+	// A: lastSeenTime -> user1CreatedTime+1hour+300seconds and user2CreatedTime+1hour+420seconds.
+	// A: firstSeenSinceUserJoin -> 1hour+120seconds and 1hour+60seconds.
+	// A: lastSeenSinceUserJoin -> 1hour+300seconds and 1hour+420seconds.
+
+	// B: firstSeenOccurrenceCount -> 5 and 2.
+	// B: lastSeenOccurrenceCount -> 6 and 3.
+	// B: firstSeenTime -> user1CreatedTime+1hour+240seconds and user2CreatedTime+1hour+240seconds.
+	// B: lastSeenTime -> user1CreatedTime+1hour+360seconds and user2CreatedTime+1hour+480seconds.
+	// B: firstSeenSinceUserJoin -> 1hour+240seconds and 1hour+240seconds.
+	// B: lastSeenSinceUserJoin -> 1hour+360seconds and 1hour+480seconds.
+
+	// C: firstSeenOccurrenceCount -> 2 and 2.
+	// C: lastSeenOccurrenceCount -> 2 and 3.
+	// C: firstSeenTime -> user1CreatedTime+1hour+420seconds and user2CreatedTime+1hour+360seconds.
+	// C: lastSeenTime -> user1CreatedTime+1hour+420seconds and user2CreatedTime+1hour+540seconds.
+	// C: firstSeenSinceUserJoin -> 1hour+240seconds and 1hour+240seconds.
+	// C: lastSeenSinceUserJoin -> 1hour+360seconds and 1hour+540seconds.
 	assert.Equal(t, uint(3), pABC.Count)
 	assert.Equal(t, uint(2), pABC.UserCount)
 	assert.Equal(t, uint(2), pABC.OncePerUserCount)
@@ -487,20 +535,43 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 	for i := 0; i < pLen; i++ {
 		assert.Equal(t, pABCEvents[i], pABC.EventNames[i])
 	}
-	// A-B-C occurs twice oncePerUser , with first A occurring after 3720s in User1 and
-	// 3660s in User 2.
-	// Repeats once before the  next B occurs in User2.
-	assert.Equal(t, uint64(2), pABC.CardinalityRepeatTimings.Count())
-	assert.Equal(t, float64((2.0+1.0)/2), pABC.CardinalityRepeatTimings.Mean()[0])
-	assert.Equal(t, float64((1.0+2.0)/2), pABC.CardinalityRepeatTimings.Mean()[1])
-	assert.Equal(t, float64((3720.0+3660.0)/2), pABC.CardinalityRepeatTimings.Mean()[2])
+	assert.Equal(t, uint64(2), pABC.GenericPropertiesHistogram.Count())
+	expectedMeanMap := map[string]float64{
+		U.UP_JOIN_TIME: float64((u1CTimestamp + u2CTimestamp) / 2.0),
+		// Event A Generic Properties.
+		P.PatternPropertyKey(0, U.EP_FIRST_SEEN_OCCURRENCE_COUNT): float64((2.0 + 1.0) / 2),
+		P.PatternPropertyKey(0, U.EP_LAST_SEEN_OCCURRENCE_COUNT):  float64((3.0 + 3.0) / 2),
+		P.PatternPropertyKey(0, U.EP_FIRST_SEEN_TIME): float64(
+			(u1CTimestamp + 3600 + 120 + u2CTimestamp + 3600 + 60) / 2),
+		P.PatternPropertyKey(0, U.EP_LAST_SEEN_TIME): float64(
+			(u1CTimestamp + 3600 + 300 + u2CTimestamp + 3600 + 420) / 2),
+		P.PatternPropertyKey(0, U.EP_FIRST_SEEN_SINCE_USER_JOIN): float64((3600 + 120 + 3600 + 60) / 2),
+		P.PatternPropertyKey(0, U.EP_LAST_SEEN_SINCE_USER_JOIN):  float64((3600 + 300 + 3600 + 420) / 2),
 
-	// A-B-C occurs twice oncePerUser, with first C following first B after 180s in User1 and
-	// 120s in User 2.
-	// Last event always is counted once.
-	assert.Equal(t, float64((1.0+1.0)/2), pABC.CardinalityRepeatTimings.Mean()[3])
-	assert.Equal(t, float64((1.0+1.0)/2), pABC.CardinalityRepeatTimings.Mean()[4])
-	assert.Equal(t, float64((180.0+120.0)/2), pABC.CardinalityRepeatTimings.Mean()[5])
+		// Event B Generic Properties.
+		P.PatternPropertyKey(1, U.EP_FIRST_SEEN_OCCURRENCE_COUNT): float64((5.0 + 2.0) / 2),
+		P.PatternPropertyKey(1, U.EP_LAST_SEEN_OCCURRENCE_COUNT):  float64((6.0 + 3.0) / 2),
+		P.PatternPropertyKey(1, U.EP_FIRST_SEEN_TIME): float64(
+			(u1CTimestamp + 3600 + 240 + u2CTimestamp + 3600 + 240) / 2),
+		P.PatternPropertyKey(1, U.EP_LAST_SEEN_TIME): float64(
+			(u1CTimestamp + 3600 + 360 + u2CTimestamp + 3600 + 480) / 2),
+		P.PatternPropertyKey(1, U.EP_FIRST_SEEN_SINCE_USER_JOIN): float64((3600 + 240 + 3600 + 240) / 2),
+		P.PatternPropertyKey(1, U.EP_LAST_SEEN_SINCE_USER_JOIN):  float64((3600 + 360 + 3600 + 480) / 2),
+
+		// Event C Generic Properties.
+		P.PatternPropertyKey(2, U.EP_FIRST_SEEN_OCCURRENCE_COUNT): float64((2.0 + 2.0) / 2),
+		P.PatternPropertyKey(2, U.EP_LAST_SEEN_OCCURRENCE_COUNT):  float64((2.0 + 3.0) / 2),
+		P.PatternPropertyKey(2, U.EP_FIRST_SEEN_TIME): float64(
+			(u1CTimestamp + 3600 + 420 + u2CTimestamp + 3600 + 360) / 2),
+		P.PatternPropertyKey(2, U.EP_LAST_SEEN_TIME): float64(
+			(u1CTimestamp + 3600 + 420 + u2CTimestamp + 3600 + 540) / 2),
+		P.PatternPropertyKey(2, U.EP_FIRST_SEEN_SINCE_USER_JOIN): float64((3600 + 420 + 3600 + 360) / 2),
+		P.PatternPropertyKey(2, U.EP_LAST_SEEN_SINCE_USER_JOIN):  float64((3600 + 420 + 3600 + 540) / 2),
+	}
+	actualMeanMap := pABC.GenericPropertiesHistogram.MeanMap()
+	for k, expectedMean := range expectedMeanMap {
+		assert.Equal(t, expectedMean, actualMeanMap[k], fmt.Sprintf("Failed for Key: %s", k))
+	}
 
 	// A-B-C occurs twice oncePerUser with the following six dimensional event numerical
 	// distribution.
@@ -510,7 +581,7 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 	// 1.ComNum: 2.0 and 1.0
 	// 2.CNum: 1.0 and 2.0
 	// 2.ComNum 2.0 and 3.0
-	expectedMeanMap := map[string]float64{
+	expectedMeanMap = map[string]float64{
 		"0.ANum":   float64((1.0 + 1.0) / 2),
 		"0.ComNum": float64((3.0 + 1.0) / 2),
 		"1.BNum":   float64((1.0 + 1.0) / 2),
@@ -518,7 +589,7 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 		"2.CNum":   float64((1.0 + 2.0) / 2),
 		"2.ComNum": float64((2.0 + 3.0) / 2),
 	}
-	actualMeanMap := pABC.EventNumericProperties.MeanMap()
+	actualMeanMap = pABC.EventNumericProperties.MeanMap()
 	assert.Equal(t, expectedMeanMap, actualMeanMap)
 
 	actualCdf := pABC.EventNumericProperties.CDFFromMap(
@@ -593,11 +664,11 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 	assert.Equal(t, uint(2), pAB.OncePerUserCount)
 	assert.Equal(t, uint(2), pAB.UserCount)
 
-	assert.Equal(t, uint(3), pBC.Count)
+	assert.Equal(t, uint(5), pBC.Count)
 	assert.Equal(t, uint(2), pBC.OncePerUserCount)
 	assert.Equal(t, uint(2), pBC.UserCount)
 
-	assert.Equal(t, uint(3), pAC.Count)
+	assert.Equal(t, uint(4), pAC.Count)
 	assert.Equal(t, uint(2), pAC.OncePerUserCount)
 	assert.Equal(t, uint(2), pAC.UserCount)
 
@@ -605,11 +676,11 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 	assert.Equal(t, uint(2), pA.OncePerUserCount)
 	assert.Equal(t, uint(2), pA.UserCount)
 
-	assert.Equal(t, uint(4), pB.Count)
+	assert.Equal(t, uint(6), pB.Count)
 	assert.Equal(t, uint(2), pB.OncePerUserCount)
 	assert.Equal(t, uint(2), pB.UserCount)
 
-	assert.Equal(t, uint(3), pC.Count)
+	assert.Equal(t, uint(5), pC.Count)
 	assert.Equal(t, uint(2), pC.OncePerUserCount)
 	assert.Equal(t, uint(2), pC.UserCount)
 
