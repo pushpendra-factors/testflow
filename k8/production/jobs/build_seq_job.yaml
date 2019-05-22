@@ -17,7 +17,7 @@ spec:
             cloud.google.com/gke-nodepool: job-pool
           containers:
           - name: build-seq-job
-            image: us.gcr.io/factors-production/build-seq-job:v0.22-beta_d15674f
+            image: us.gcr.io/factors-production/build-seq-job:v0.4-beta_d2a218b
             imagePullPolicy: IfNotPresent
             args:
             - --env
