@@ -196,8 +196,6 @@ class DefaultLayout extends Component {
           <AppSidebar minimized className="fapp-sidebar" fixed display="lg">
             <img style={{marginTop: '12px', marginBottom: '20px'}} src={factorsicon} />
             <AppSidebarNav navConfig={navigation} {...this.props} />
-            <AppSidebarFooter />
-            <AppSidebarMinimizer />
           </AppSidebar>
           <main className="main fapp-main">
           <AppHeader className="fapp-header" fixed>
