@@ -30,7 +30,7 @@ import NoContent from '../../common/NoContent';
 
 const EVENT_NAME_TYPE = "eventName";
 const EVENT_PROPERTY_START_TYPE = "eventPropertyStart";
-const USER_PROPERTY_STARTY_TYPE = "userPropertyStart";
+const USER_PROPERTY_START_TYPE = "userPropertyStart";
 const TO_TYPE = "to";
 const EVENT_PROPERTY_NAME_TYPE = "eventPropertyName";
 const USER_PROPERTY_NAME_TYPE = "userPropertyName";
@@ -204,7 +204,7 @@ class Factor extends Component {
           { label: '', isDisabled: false, type: SUBMIT_QUERY_TYPE },
           { label: 'to', value: 1, currentState: STATE_PROPERTY_TYPE, nextState: STATE_EVENTS, onlyOnce: true, type: TO_TYPE },
           { label: 'with event property', value: 2, currentState: STATE_PROPERTY_TYPE, nextState: STATE_EVENT_PROPERTY_NAME, type: EVENT_PROPERTY_START_TYPE },
-          { label: 'with user property', value: 3, currentState: STATE_PROPERTY_TYPE, nextState: STATE_USER_PROPERTY_NAME, type: USER_PROPERTY_STARTY_TYPE },
+          { label: 'with user property', value: 3, currentState: STATE_PROPERTY_TYPE, nextState: STATE_USER_PROPERTY_NAME, type: USER_PROPERTY_START_TYPE },
         ],
       },
       [STATE_EVENT_PROPERTY_NAME]: {
@@ -308,7 +308,7 @@ class Factor extends Component {
           query.eventsWithProperties[numEvents - 1].properties.push(newEventProperty);
           nextExpectedTypes = [EVENT_PROPERTY_NAME_TYPE];
           break;
-        case USER_PROPERTY_STARTY_TYPE:
+        case USER_PROPERTY_START_TYPE:
           // Create a new user property condition type.
           var newUserProperty = {}
           var numEvents = query.eventsWithProperties.length;
