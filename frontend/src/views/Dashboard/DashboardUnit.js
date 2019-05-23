@@ -116,7 +116,7 @@ class DashboardUnit extends Component {
 
   present() {
     if (this.state.loading)
-      return <Loading paddingTop='12%' />;
+      return <Loading paddingTop={ this.isCard() ? '6%':'12%' } />;
     
     return this.state.presentation;
   }
