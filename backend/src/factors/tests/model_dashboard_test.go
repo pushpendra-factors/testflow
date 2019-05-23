@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"encoding/json"
 	M "factors/model"
 	U "factors/util"
 	"net/http"
@@ -126,5 +127,73 @@ func TestGetDashboards(t *testing.T) {
 		dashboards, errCode = M.GetDashboards(project.ID, agent.UUID)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.Equal(t, rName1, dashboards[len(dashboards)-1].Name)
+	})
+}
+
+func TestUpdateDashboard(t *testing.T) {
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	agent2, err := SetupAgentReturnDAO()
+	assert.Nil(t, err)
+	_, errCode := M.CreateProjectAgentMappingWithDependencies(&M.ProjectAgentMapping{
+		ProjectID: project.ID, AgentUUID: agent2.UUID})
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	t.Run("UpdateDashboard:Name", func(t *testing.T) {
+		rName1 := U.RandomString(5)
+		dashboard, errCode := M.CreateDashboard(project.ID, agent.UUID, &M.Dashboard{Name: rName1, Type: M.DashboardTypePrivate})
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.NotNil(t, dashboard)
+		assert.Equal(t, http.StatusCreated, errCode)
+
+		rName2 := U.RandomString(5)
+		errCode = M.UpdateDashboard(project.ID, agent.UUID, dashboard.ID, &M.UpdatableDashboard{Name: rName2})
+		assert.Equal(t, http.StatusAccepted, errCode)
+		gDashboard, errCode := M.GetDashboard(project.ID, agent.UUID, dashboard.ID)
+		assert.Equal(t, http.StatusFound, errCode)
+		assert.Equal(t, rName2, gDashboard.Name)
+	})
+
+	t.Run("UpdateDashboard:UnitsPosition", func(t *testing.T) {
+		rName1 := U.RandomString(5)
+		dashboard, errCode := M.CreateDashboard(project.ID, agent.UUID, &M.Dashboard{Name: rName1, Type: M.DashboardTypePrivate})
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.NotNil(t, dashboard)
+		assert.Equal(t, http.StatusCreated, errCode)
+
+		positions := map[string]map[uint64]int{
+			M.UnitChart: map[uint64]int{
+				1: 0,
+				2: 1,
+			},
+		}
+		errCode = M.UpdateDashboard(project.ID, agent.UUID, dashboard.ID, &M.UpdatableDashboard{UnitsPosition: &positions})
+		assert.Equal(t, http.StatusAccepted, errCode)
+		gDashboard, errCode := M.GetDashboard(project.ID, agent.UUID, dashboard.ID)
+		assert.Equal(t, http.StatusFound, errCode)
+		var gPositions map[string]map[uint64]int
+		err := json.Unmarshal((gDashboard.UnitsPosition).RawMessage, &gPositions)
+		assert.Nil(t, err)
+		assert.Equal(t, positions, gPositions)
+
+		// invalid unit positions.
+		invalidPositions := map[string]map[uint64]int{
+			M.UnitChart: map[uint64]int{
+				1: 1,
+				2: 2,
+			},
+		}
+		errCode = M.UpdateDashboard(project.ID, agent.UUID, dashboard.ID, &M.UpdatableDashboard{UnitsPosition: &invalidPositions})
+		assert.Equal(t, http.StatusBadRequest, errCode)
+
+		invalidPositions = map[string]map[uint64]int{
+			M.UnitChart: map[uint64]int{
+				1: 3,
+				2: 1,
+			},
+		}
+		errCode = M.UpdateDashboard(project.ID, agent.UUID, dashboard.ID, &M.UpdatableDashboard{UnitsPosition: &invalidPositions})
+		assert.Equal(t, http.StatusBadRequest, errCode)
 	})
 }

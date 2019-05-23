@@ -1,12 +1,14 @@
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
-import { Row, Button, Modal, ModalHeader, 
+import { Row, Col, Button, Modal, ModalHeader, 
   ModalBody, ModalFooter, Form, Input } from 'reactstrap';
 import Select from 'react-select';
-import DashboardUnit from './DashboardUnit';
+import arrayMove from 'array-move';
+import { SortableContainer, SortableElement } from 'react-sortable-hoc';
 
-import { fetchDashboards, createDashboard, 
+import DashboardUnit from './DashboardUnit';
+import { fetchDashboards, createDashboard, updateDashboard,
   fetchDashboardUnits } from '../../actions/dashboardActions';
 import { createSelectOpts, makeSelectOpt } from '../../util';
 import NoContent from '../../common/NoContent';
@@ -17,6 +19,18 @@ const TYPE_OPTS = [
   { label: "Only me", value: "pr" },
   { label: "All agents", value: "pv" }
 ]
+
+const UNIT_TYPE_CARD = "card";
+const UNIT_TYPE_CHART = "chart";
+
+const SortableUnit = SortableElement(({ value, card }) => {
+  let size = card ? 3 : 6;
+  return <Col md={size} style={{ display:'inline-block', padding: '0 15px' }}> { value } </Col>
+});
+
+const SortableUnitList = SortableContainer(({ children }) => {
+  return <Row> { children } </Row>;
+});
 
 const mapStateToProps = store => {
   return {
@@ -31,6 +45,7 @@ const mapDispatchToProps = dispatch => {
     fetchDashboards,
     fetchDashboardUnits,
     createDashboard,
+    updateDashboard,
   }, dispatch);
 }
 
@@ -103,30 +118,101 @@ class Dashboard extends Component {
     return this.props.dashboardUnits && this.props.dashboardUnits.length > 0;
   }
 
-  renderDashboard() {
+  getPositionsMapFromList(order) {
+    let positions = {}
+    // uses array index as position.
+    for (let i=0; i < order.length; i++) 
+      positions[order[i]] = i;
+    
+    return positions;
+  }
+
+  handleUnitPositionChange(unitType, oldIndex, newIndex) {
+    let positionMap = this.getUnitsPositionByType(unitType);
+    let currentPositionById = [];
+    
+    for(let k in positionMap) {
+      currentPositionById[positionMap[k]] = k;
+    }
+
+    // moves the id as per position change.
+    let newPosition = arrayMove(currentPositionById, oldIndex, newIndex);
+    let newPositionMap = this.getPositionsMapFromList(newPosition);
+    
+    let dashboard = this.getCurrentDashboard();
+    let updatablePosition = { ...dashboard.units_position };
+    // updates positions only for the changed type.
+    updatablePosition[unitType] = newPositionMap;
+
+    let dashboardOption = this.getSelectedDashboard();
+    let currentDashboardId = dashboardOption.value;
+
+    // drags without position change should no trigger update.
+    if (JSON.stringify(positionMap) != JSON.stringify(newPositionMap))
+      this.props.updateDashboard(this.props.currentProjectId, 
+        currentDashboardId, { units_position: updatablePosition });
+  }
+
+  handleCardUnitPositionChange = ({ oldIndex, newIndex }) => {
+    this.handleUnitPositionChange(UNIT_TYPE_CARD, oldIndex, newIndex);
+  }
+
+  handleChartUnitPositionChange = ({ oldIndex, newIndex }) => {
+    this.handleUnitPositionChange(UNIT_TYPE_CHART, oldIndex, newIndex);
+  }
+
+  getCurrentDashboard() {
+    let dashboard = this.getSelectedDashboard()
+    let dashboardId = dashboard.value;
+
+    for(let i in this.props.dashboards) 
+      if (dashboardId == this.props.dashboards[i].id)
+        return this.props.dashboards[i];
+  }
+
+  getUnitsPositionByType(unitType) {
+    let dashboard = this.getCurrentDashboard();
+    return dashboard['units_position'][unitType];
+  }
+  
+  renderDashboard() { 
     if (this.state.loadingUnits) return <Loading paddingTop='10%' />
     if (this.props.dashboardUnits.length == 0) 
       return <NoContent center msg='No charts' />
 
     let pDashUnits = this.props.dashboardUnits;
-    let largeUnits = [];
-    let cardUnits = [];
+    let cardPositions = this.getUnitsPositionByType(UNIT_TYPE_CARD);
+    let chartPositions = this.getUnitsPositionByType(UNIT_TYPE_CHART);
+    let chartUnits = [], cardUnits = [];
 
+    // Arranges units by position from dashboard.
     let cardIndex = 1;
     for (let i=0; i < pDashUnits.length; i++) {
       let pUnit = pDashUnits[i];
       if (pUnit.presentation && pUnit.presentation === PRESENTATION_CARD) {
-        cardUnits.push(<DashboardUnit editDashboard={this.state.editDashboard} card cardIndex={cardIndex} data={pUnit} />)
+        cardUnits[cardPositions[pUnit.id]] = {
+          unit: <DashboardUnit editDashboard={this.state.editDashboard} cardIndex={cardIndex} data={pUnit} position={cardPositions[pUnit.id]} />,
+          position: cardPositions[pUnit.id],
+        };
         cardIndex++;
       } else {
-        largeUnits.push(<DashboardUnit editDashboard={this.state.editDashboard} data={pUnit} />);
+        chartUnits[chartPositions[pUnit.id]] = {
+          unit: <DashboardUnit editDashboard={this.state.editDashboard} data={pUnit} position={cardPositions[pUnit.id]} />,
+          position: chartPositions[pUnit.id],
+        };
       }
     }
-      
-    return <div>
-      <Row class="fapp-select"> { cardUnits } </Row>
-      <Row class="fapp-select"> { largeUnits } </Row>
-    </div>
+
+    return (
+      <div>
+        <SortableUnitList distance={10} axis='xy' onSortEnd={this.handleCardUnitPositionChange}>
+          { cardUnits.map((value) => (<SortableUnit disabled={!this.state.editDashboard} key={`card-${value.position}`} index={value.position} value={value.unit} card />)) }
+        </SortableUnitList>
+        <SortableUnitList distance={10} axis='xy' onSortEnd={this.handleChartUnitPositionChange}>
+          { chartUnits.map((value) => (<SortableUnit disabled={!this.state.editDashboard} key={`chart-${value.position}`} index={value.position} value={value.unit} />)) }
+        </SortableUnitList>
+      </div>
+    )
   }
 
   toggleEditDashboard = () => {
@@ -139,9 +225,10 @@ class Dashboard extends Component {
 
   renderEditButton() {
     if (!this.isEditable()) return null;
-    let text = this.state.editDashboard ? 'Save' : 'Edit';
+    let text = this.state.editDashboard ? 'Done Editing' : 'Edit';
     let color = this.state.editDashboard ? 'success' : 'danger' 
-    return <Button style={{ marginLeft: '10px', height: 'auto', marginBottom: '4px' }} onClick={this.toggleEditDashboard} outline={!this.state.editDashboard} color={color}> { text } </Button>
+    return <Button style={{ marginLeft: '10px', height: 'auto', marginBottom: '4px' }} 
+      onClick={this.toggleEditDashboard} outline={!this.state.editDashboard} color={color}> { text } </Button>
   }
 
   toggleCreateModal = () => {

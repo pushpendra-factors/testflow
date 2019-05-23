@@ -20,6 +20,29 @@ export default function reducer(state={
       _state.dashboards.push(action.payload);
       return _state;
     }
+    case "UPDATE_DASHBOARD_FULFILLED": {
+      let _state = { ...state };
+      _state.dashboards = [ ...state.dashboards ];
+      let updateDashboard = action.payload;
+      
+      let updateIndex = -1;
+      for (let i in _state.dashboards) {
+        let dashboard = _state.dashboards[i];
+        if(dashboard.project_id == updateDashboard.project_id
+          && dashboard.id == updateDashboard.id) {
+            updateIndex = i;
+        }
+      }
+      
+      if (updateIndex != -1) {
+        _state.dashboards[updateIndex] = { 
+          ..._state.dashboards[updateIndex],
+          ...updateDashboard,
+        }
+      }
+
+      return _state;
+    }
     case "FETCH_DASHBOARD_UNITS_FULFILLED": {
       return {
         ...state,

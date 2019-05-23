@@ -73,6 +73,43 @@ func CreateDashboardHandler(c *gin.Context) {
 	c.JSON(http.StatusCreated, dashboard)
 }
 
+func UpdateDashboardHandler(c *gin.Context) {
+	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Update dashboard failed. Invalid project."})
+		return
+	}
+
+	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+
+	dashboardId, err := strconv.ParseUint(c.Params.ByName("dashboard_id"), 10, 64)
+	if err != nil || dashboardId == 0 {
+		log.WithError(err).Error("Update dashboard failed. Invalid dashboard.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid dashboard id."})
+		return
+	}
+
+	var requestPayload M.UpdatableDashboard
+
+	r := c.Request
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&requestPayload); err != nil {
+		errMsg := "Update dashboard failed. Invalid JSON"
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": errMsg})
+		return
+	}
+
+	errCode := M.UpdateDashboard(projectId, agentUUID, dashboardId, &requestPayload)
+	if errCode != http.StatusAccepted {
+		errMsg := "Update dashboard failed."
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": errMsg})
+		return
+	}
+
+	c.JSON(http.StatusAccepted, gin.H{})
+}
+
 func GetDashboardUnitsHandler(c *gin.Context) {
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {

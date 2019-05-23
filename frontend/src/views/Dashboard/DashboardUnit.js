@@ -92,7 +92,7 @@ class DashboardUnit extends Component {
     this.setState({ presentation: presentation });
   }
 
-  componentWillMount() {
+  execQuery() {
     this.setState({ loading: true });
     
     let query = this.props.data.query;
@@ -108,6 +108,10 @@ class DashboardUnit extends Component {
         this.setPresentation(r.data);
       })
       .catch(console.error);
+  }
+
+  componentWillMount() {
+    this.execQuery();
   }
 
   present() {
@@ -153,13 +157,10 @@ class DashboardUnit extends Component {
     style.color = CARD_FONT_COLOR;
     return style;
   }
-
-  getColSizeByProps() {
-    return this.props.card ? 3 : 6;
-  }
-
+  
   getCardStyleByProps() {
     let style = { marginBottom: '30px' };
+    if (this.props.editDashboard) style.cursor = 'all-scroll';
     if (this.props.data.presentation === PRESENTATION_CARD) {
       style.border = 'none';
     }
@@ -259,35 +260,41 @@ class DashboardUnit extends Component {
     }
   }
 
+  // Todo: Avoid execQuery on position change by
+  // moving the query result to ParentComponent (dashboard).
+  componentDidUpdate(prevProps) {
+    if (prevProps.data.id != this.props.data.id) {
+      this.execQuery();
+    }
+  }
+
   render() {
     return (
-      <Col md={{ size: this.getColSizeByProps() }}  style={{padding: '0 15px'}}>
-        <Card className='fapp-dunit' style={this.getCardStyleByProps()}>
-          <CardHeader style={this.getCardHeaderStyleByProps()}>
-            <div style={{ textAlign: 'right', marginTop: '-10px', marginRight: '-18px', height: '18px' }}>
-              <strong onClick={this.delete} style={{ fontSize: '15px', cursor: 'pointer', padding: '0 10px', color: this.isCard() ? '#FFF' : '#AAA' }} hidden={!this.props.editDashboard}>x</strong>
-            </div>
+      <Card className='fapp-dunit' style={this.getCardStyleByProps()}>
+        <CardHeader style={this.getCardHeaderStyleByProps()}>
+          <div style={{ textAlign: 'right', marginTop: '-10px', marginRight: '-18px', height: '18px' }}>
+            <strong onClick={this.delete} style={{ fontSize: '15px', cursor: 'pointer', padding: '0 10px', color: this.isCard() ? '#FFF' : '#AAA' }} hidden={!this.props.editDashboard}>x</strong>
+          </div>
 
-            <div style={{ marginTop: '-5px' }} hidden={!this.showTitle()}>
-              <div className='fapp-overflow-dot' style={this.getTitleStyle()}> <strong>{ this.getTitle() }</strong> </div>
-              <button style={this.getInlineButtonStyle()} onClick={this.editTitle} hidden={!this.props.editDashboard}><i className='icon-pencil'></i></button>
-            </div>
+          <div style={{ marginTop: '-5px' }} hidden={!this.showTitle()}>
+            <div className='fapp-overflow-dot' style={this.getTitleStyle()}> <strong>{ this.getTitle() }</strong> </div>
+            <button style={this.getInlineButtonStyle()} onClick={this.editTitle} hidden={!this.props.editDashboard}><i className='icon-pencil'></i></button>
+          </div>
 
-            <div hidden={!this.showTitleEditor()}>
-              <input className='no-outline' style={this.getTitleInputStyle()} value={this.getTitle()} onChange={this.onTitleChange} />
-              <button style={this.getInlineButtonStyle()} onClick={this.saveEditedTitle}>
-                <i className='icon-check'></i>
-              </button>
-              <button style={this.getInlineButtonStyle()} onClick={this.closeEditTitle}>
-                <i className='icon-close'></i>
-              </button>
-            </div>
-          </CardHeader>
-          <CardBody style={this.getCardBodyStyleByProps()}>
-            { this.present() }
-          </CardBody>
-        </Card>
-      </Col>
+          <div hidden={!this.showTitleEditor()}>
+            <input className='no-outline' style={this.getTitleInputStyle()} value={this.getTitle()} onChange={this.onTitleChange} />
+            <button style={this.getInlineButtonStyle()} onClick={this.saveEditedTitle}>
+              <i className='icon-check'></i>
+            </button>
+            <button style={this.getInlineButtonStyle()} onClick={this.closeEditTitle}>
+              <i className='icon-close'></i>
+            </button>
+          </div>
+        </CardHeader>
+        <CardBody style={this.getCardBodyStyleByProps()}>
+          { this.present() }
+        </CardBody>
+      </Card>
     );
   }
 }

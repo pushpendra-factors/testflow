@@ -1,9 +1,13 @@
 package model
 
 import (
+	"encoding/json"
 	C "factors/config"
 	"net/http"
 	"time"
+
+	"github.com/jinzhu/gorm"
+	"github.com/jinzhu/gorm/dialects/postgres"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -12,14 +16,18 @@ type Dashboard struct {
 	// Composite primary key, id + project_id + agent_id.
 	ID uint64 `gorm:"primary_key:true" json:"id"`
 	// Foreign key dashboards(project_id) ref projects(id).
-	ProjectId uint64 `gorm:"primary_key:true" json:"project_id"`
-	AgentUUID string `gorm:"primary_key:true" json:"-"`
-	Name      string `gorm:"not null" json:"name"`
-	Type      string `gorm:"type:varchar(5);not null" json:"type"`
-	// User should be able to mark it as primary dashboard.
-	// Primary   bool   `json:"primary"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ProjectId     uint64          `gorm:"primary_key:true" json:"project_id"`
+	AgentUUID     string          `gorm:"primary_key:true" json:"-"`
+	Name          string          `gorm:"not null" json:"name"`
+	Type          string          `gorm:"type:varchar(5);not null" json:"type"`
+	UnitsPosition *postgres.Jsonb `json:"units_position"` // map[string]map[uint64]int -> map[unit_type]unit_id:unit_position
+	CreatedAt     time.Time       `json:"created_at"`
+	UpdatedAt     time.Time       `json:"updated_at"`
+}
+
+type UpdatableDashboard struct {
+	Name          string                     `json:"name"`
+	UnitsPosition *map[string]map[uint64]int `json:"units_position"`
 }
 
 const (
@@ -94,21 +102,206 @@ func GetDashboards(projectId uint64, agentUUID string) ([]Dashboard, int) {
 	return dashboards, http.StatusFound
 }
 
-// HasAccessToDashboard validates access to dashboard by project_id,
-// agent_id considering type.
-func HasAccessToDashboard(projectId uint64, agentUUID string, id uint64) bool {
-	dashboards, errCode := GetDashboards(projectId, agentUUID)
-	if errCode != http.StatusFound {
-		return false
+func GetDashboard(projectId uint64, agentUUID string, id uint64) (*Dashboard, int) {
+	db := C.GetServices().Db
+
+	var dashboard Dashboard
+	if projectId == 0 || agentUUID == "" {
+		log.Error("Failed to get dashboard. Invalid project_id or agent_id")
+		return nil, http.StatusBadRequest
 	}
 
-	hasAccess := false
-	for _, dashboard := range dashboards {
-		if dashboard.ID == id {
-			hasAccess = true
-			break
+	if err := db.Where("project_id = ? AND id = ? AND (type = ? OR agent_uuid = ?)", projectId, id,
+		DashboardTypeProjectVisible, agentUUID).First(&dashboard).Error; err != nil {
+
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+
+		return nil, http.StatusInternalServerError
+	}
+
+	return &dashboard, http.StatusFound
+}
+
+// HasAccessToDashboard validates access to dashboard.
+func HasAccessToDashboard(projectId uint64, agentUUID string, id uint64) (bool, *Dashboard) {
+	dashboard, errCode := GetDashboard(projectId, agentUUID, id)
+	if errCode != http.StatusFound {
+		return false, nil
+	}
+
+	return true, dashboard
+}
+
+// Adds a position to the given unit on dashboard by unit_type.
+func addUnitPositionOnDashboard(projectId uint64, agentUUID string,
+	id uint64, unitId uint64, unitType string, currentUnitsPos *postgres.Jsonb) int {
+
+	if projectId == 0 || agentUUID == "" || id == 0 || unitId == 0 {
+		return http.StatusBadRequest
+	}
+
+	var currentPosition map[string]map[uint64]int
+	newPos := 0
+	if currentUnitsPos != nil {
+		err := json.Unmarshal((*currentUnitsPos).RawMessage, &currentPosition)
+		if err != nil {
+			log.WithFields(log.Fields{"project_id": projectId, "id": id,
+				"unit_position": currentPosition}).WithError(err).Error("Failed decoding current units position.")
+			return http.StatusInternalServerError
+		}
+	} else {
+		currentPosition = make(map[string]map[uint64]int, 0)
+	}
+
+	if _, typeExists := currentPosition[unitType]; !typeExists {
+		currentPosition[unitType] = make(map[uint64]int, 0)
+	}
+
+	maxPos := -1
+	for _, pos := range currentPosition[unitType] {
+		if pos > maxPos {
+			maxPos = pos
 		}
 	}
 
-	return hasAccess
+	// if maxPos exists, increament the maxPos by one for newPos.
+	// else start positions from 0.
+	if maxPos > -1 {
+		newPos = maxPos + 1
+	}
+	currentPosition[unitType][unitId] = newPos
+
+	return UpdateDashboard(projectId, agentUUID, id, &UpdatableDashboard{UnitsPosition: &currentPosition})
+}
+
+func removeAndRebalanceUnitsPositionByType(positions *map[string]map[uint64]int, unitId uint64, unitType string) {
+	removedPos := (*positions)[unitType][unitId]
+	delete((*positions)[unitType], unitId)
+
+	// reposition units positioned after removed unit.
+	for id, pos := range (*positions)[unitType] {
+		if pos > removedPos {
+			(*positions)[unitType][id] = pos - 1
+		}
+	}
+}
+
+func removeUnitPositionOnDashboard(projectId uint64, agentUUID string,
+	id uint64, unitId uint64, currentUnitsPos *postgres.Jsonb) int {
+
+	if projectId == 0 || agentUUID == "" || id == 0 ||
+		unitId == 0 || currentUnitsPos == nil {
+		return http.StatusBadRequest
+	}
+
+	var currentPositions map[string]map[uint64]int
+	err := json.Unmarshal((*currentUnitsPos).RawMessage, &currentPositions)
+	if err != nil {
+		log.WithFields(log.Fields{"project_id": projectId, "id": id,
+			"unit_position": currentUnitsPos}).WithError(err).Error("Failed decoding current units position.")
+		return http.StatusInternalServerError
+	}
+
+	var sourceUnitType string
+	for typ := range currentPositions {
+		for id := range currentPositions[typ] {
+			if id == unitId {
+				sourceUnitType = typ
+				break
+			}
+		}
+	}
+
+	if sourceUnitType == "" {
+		return http.StatusBadRequest
+	}
+
+	removeAndRebalanceUnitsPositionByType(&currentPositions, unitId, sourceUnitType)
+
+	return UpdateDashboard(projectId, agentUUID, id, &UpdatableDashboard{UnitsPosition: &currentPositions})
+}
+
+func isValidUnitsPosition(positions *map[string]map[uint64]int) bool {
+	if positions == nil {
+		return false
+	}
+
+	for _, typ := range UnitTypes {
+		if posMap, exists := (*positions)[typ]; exists && len(posMap) > 0 {
+			min := 0
+			max := -1
+
+			for _, p := range posMap {
+				if p < min {
+					min = p
+				}
+
+				if p > max {
+					max = p
+				}
+			}
+
+			// positions should be starting from 0
+			// inc upto len - 1 for each type.
+			if min != 0 || max == -1 || max != len(posMap)-1 {
+				return false
+			}
+		}
+	}
+
+	return true
+}
+
+func UpdateDashboard(projectId uint64, agentUUID string, id uint64, dashboard *UpdatableDashboard) int {
+	if projectId == 0 || agentUUID == "" || id == 0 {
+		log.Error("Failed to update dashboard. Invalid scope ids.")
+		return http.StatusBadRequest
+	}
+
+	db := C.GetServices().Db
+
+	// use HasAccessToDashboard maintain consistency on checking accessibility.
+	if hasAccess, _ := HasAccessToDashboard(projectId, agentUUID, id); !hasAccess {
+		return http.StatusUnauthorized
+	}
+
+	// update allowed fields.
+	updateFields := make(map[string]interface{}, 0)
+	if dashboard.UnitsPosition != nil {
+		logCtx := log.WithFields(log.Fields{"project_id": projectId, "id": id,
+			"positions": dashboard.UnitsPosition})
+
+		if !isValidUnitsPosition(dashboard.UnitsPosition) {
+			logCtx.Error("Invalid units position.")
+			return http.StatusBadRequest
+		}
+
+		currentPositionBytes, err := json.Marshal(dashboard.UnitsPosition)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to JSON encode new units position.")
+			return http.StatusInternalServerError
+		}
+		currentPositionJsonb := &postgres.Jsonb{RawMessage: json.RawMessage(currentPositionBytes)}
+		updateFields["units_position"] = currentPositionJsonb
+	}
+
+	if dashboard.Name != "" {
+		updateFields["name"] = dashboard.Name
+	}
+
+	// nothing to update.
+	if len(updateFields) == 0 {
+		return http.StatusBadRequest
+	}
+
+	err := db.Model(&Dashboard{}).Where("project_id = ? AND id = ?", projectId, id).Update(updateFields).Error
+	if err != nil {
+		log.WithFields(log.Fields{"project_id": projectId, "id": id,
+			"update": updateFields}).WithError(err).Error("Failed to update dashboard.")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusAccepted
 }

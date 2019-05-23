@@ -53,6 +53,35 @@ export function createDashboard(projectId, payload) {
   }
 }
 
+export function updateDashboard(projectId, dashboardId, payload) {
+  return function(dispatch) {
+    return new Promise((resolve, reject) => {
+      // immediate local state update.
+      let data = { project_id: projectId, id: dashboardId, ...payload };
+      dispatch({ type: "UPDATE_DASHBOARD_FULFILLED", payload: data });
+
+      // lazy remote update.
+      put(dispatch, host + "projects/" + projectId + "/dashboards/" + dashboardId, payload)
+        .then((r) => {
+          if (!r.ok) {
+            dispatch({
+              type: "UPDATE_DASHBOARD_REJECTED",
+              error: r.data.error
+            });
+          }
+          resolve(r);
+        })
+        .catch((r) => {
+          dispatch({
+            type: "UPDATE_DASHBOARD_REJECTED",
+            error: r
+          })
+          reject(r);
+        });
+    })
+  }
+}
+
 export function fetchDashboardUnits(projectId, dashboardId) {
     return function(dispatch){
       return new Promise((resolve, reject) => {

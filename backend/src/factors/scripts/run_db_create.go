@@ -167,11 +167,17 @@ func main() {
 	} else {
 		log.Info("events table is associated with event_names table.")
 	}
-	// Add index on project_id, event_name_id, user_id, timestamp.
-	if err := db.Exec("CREATE INDEX project_id_event_name_id_user_id_timestamp_idx ON events (project_id, event_name_id, user_id, timestamp DESC);").Error; err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("events table project_id:event_name_id:user_id:timestamp index failed.")
+	// Add index on project_id, event_name_id, timestamp.
+	if err := db.Exec("CREATE INDEX project_id_event_name_id_timestamp_idx ON events(project_id, event_name_id, timestamp DESC);").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("events table project_id:event_name_id:timestamp index failed.")
 	} else {
-		log.Info("events table project_id:user_id:timestamp sort index created.")
+		log.Info("events table project_id:event_name_id:timestamp index created.")
+	}
+	// Add index on project_id, event_name_id, user_id.
+	if err := db.Exec("CREATE INDEX project_id_event_name_id_user_id_idx ON events(project_id, event_name_id, user_id);").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("events table project_id:event_name_id:user_id index failed.")
+	} else {
+		log.Info("events table project_id:event_name_id:user_id index created.")
 	}
 
 	// Create agents table.

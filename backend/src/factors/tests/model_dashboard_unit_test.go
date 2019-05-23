@@ -35,6 +35,36 @@ func TestCreateDashboardUnit(t *testing.T) {
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.NotNil(t, dashboardUnit)
 		assert.Empty(t, errMsg)
+
+		rName1 := U.RandomString(5)
+		dashboardUnit1, errCode, errMsg := M.CreateDashboardUnit(project.ID, agent.UUID, &M.DashboardUnit{DashboardId: dashboard.ID,
+			Title: rName1, Presentation: M.PresentationBar, Query: postgres.Jsonb{json.RawMessage(`{}`)}})
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.NotNil(t, dashboardUnit1)
+		assert.Empty(t, errMsg)
+
+		rName2 := U.RandomString(5)
+		dashboardUnit2, errCode, errMsg := M.CreateDashboardUnit(project.ID, agent.UUID, &M.DashboardUnit{DashboardId: dashboard.ID,
+			Title: rName2, Presentation: M.PresentationCard, Query: postgres.Jsonb{json.RawMessage(`{}`)}})
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.NotNil(t, dashboardUnit2)
+		assert.Empty(t, errMsg)
+
+		// should be given a positions on dashboard.
+		gDashboard, errCode := M.GetDashboard(project.ID, agent.UUID, dashboard.ID)
+		assert.Equal(t, http.StatusFound, errCode)
+		var currentPosition map[string]map[uint64]int
+		err := json.Unmarshal((*gDashboard.UnitsPosition).RawMessage, &currentPosition)
+		assert.Nil(t, err)
+		// inc position on unit type chart.
+		assert.Contains(t, currentPosition[M.GetUnitType(M.PresentationLine)], dashboardUnit.ID)
+		assert.Contains(t, currentPosition[M.GetUnitType(M.PresentationBar)], dashboardUnit1.ID)
+		assert.Equal(t, currentPosition[M.GetUnitType(M.PresentationLine)][dashboardUnit.ID], 0)
+		assert.Equal(t, currentPosition[M.GetUnitType(M.PresentationLine)][dashboardUnit1.ID], 1)
+		// inc position on unit type card.
+		assert.Contains(t, currentPosition[M.GetUnitType(M.PresentationCard)], dashboardUnit2.ID)
+		assert.Equal(t, currentPosition[M.GetUnitType(M.PresentationCard)][dashboardUnit2.ID], 0)
+
 	})
 
 	t.Run("CreateDashboardUnit:Invalid", func(t *testing.T) {
@@ -191,8 +221,32 @@ func TestDeleteDashboardUnit(t *testing.T) {
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.NotNil(t, unit)
 
+		unit1, errCode, _ := M.CreateDashboardUnit(project.ID, agent.UUID, &M.DashboardUnit{DashboardId: dashboard.ID,
+			Title: rName, Presentation: M.PresentationBar, Query: postgres.Jsonb{json.RawMessage(`{}`)}})
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.NotNil(t, unit1)
+
+		unit2, errCode, _ := M.CreateDashboardUnit(project.ID, agent.UUID, &M.DashboardUnit{DashboardId: dashboard.ID,
+			Title: rName, Presentation: M.PresentationCard, Query: postgres.Jsonb{json.RawMessage(`{}`)}})
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.NotNil(t, unit2)
+
 		errCode = M.DeleteDashboardUnit(project.ID, agent.UUID, dashboard.ID, unit.ID)
 		assert.Equal(t, http.StatusAccepted, errCode)
+
+		// should remove position given for unit on dashboard and rebalanced positions.
+		gDashboard, errCode := M.GetDashboard(project.ID, agent.UUID, dashboard.ID)
+		assert.Equal(t, http.StatusFound, errCode)
+		var currentPosition map[string]map[uint64]int
+		err := json.Unmarshal((*gDashboard.UnitsPosition).RawMessage, &currentPosition)
+		assert.Nil(t, err)
+		assert.NotContains(t, currentPosition[M.GetUnitType(M.PresentationLine)], unit.ID)
+		assert.Contains(t, currentPosition[M.GetUnitType(M.PresentationBar)], unit1.ID)
+		// unit1 should be repositioned to 0.
+		assert.Equal(t, currentPosition[M.GetUnitType(M.PresentationBar)][unit1.ID], 0)
+		// delete should not affect postions other unit type.
+		assert.Contains(t, currentPosition, M.GetUnitType(M.PresentationCard))
+		assert.Equal(t, currentPosition[M.GetUnitType(M.PresentationCard)][unit2.ID], 0)
 	})
 
 	t.Run("DeleteDashboardUnit:Invalid", func(t *testing.T) {

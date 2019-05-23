@@ -31,6 +31,13 @@ const (
 
 var presentations = [...]string{PresentationLine, PresentationBar, PresentationTable, PresentationCard}
 
+const (
+	UnitCard  = "card"
+	UnitChart = "chart"
+)
+
+var UnitTypes = [...]string{UnitCard, UnitChart}
+
 func isValidDashboardUnit(dashboardUnit *DashboardUnit) (bool, string) {
 	if dashboardUnit.DashboardId == 0 {
 		return false, "Invalid dashboard"
@@ -54,6 +61,14 @@ func isValidDashboardUnit(dashboardUnit *DashboardUnit) (bool, string) {
 	return true, ""
 }
 
+func GetUnitType(presentation string) string {
+	if presentation == PresentationCard {
+		return UnitCard
+	}
+
+	return UnitChart
+}
+
 func CreateDashboardUnit(projectId uint64, agentUUID string, dashboardUnit *DashboardUnit) (*DashboardUnit, int, string) {
 	db := C.GetServices().Db
 
@@ -66,7 +81,8 @@ func CreateDashboardUnit(projectId uint64, agentUUID string, dashboardUnit *Dash
 		return nil, http.StatusBadRequest, errMsg
 	}
 
-	if !HasAccessToDashboard(projectId, agentUUID, dashboardUnit.DashboardId) {
+	hasAccess, dashboard := HasAccessToDashboard(projectId, agentUUID, dashboardUnit.DashboardId)
+	if !hasAccess {
 		return nil, http.StatusUnauthorized, "Unauthorized to access dashboard"
 	}
 
@@ -76,6 +92,15 @@ func CreateDashboardUnit(projectId uint64, agentUUID string, dashboardUnit *Dash
 		log.WithFields(log.Fields{"dashboard_unit": dashboardUnit,
 			"project_id": projectId}).WithError(err).Error(errMsg)
 		return nil, http.StatusInternalServerError, errMsg
+	}
+
+	errCode := addUnitPositionOnDashboard(projectId, agentUUID, dashboardUnit.DashboardId,
+		dashboardUnit.ID, GetUnitType(dashboardUnit.Presentation), dashboard.UnitsPosition)
+	if errCode != http.StatusAccepted {
+		errMsg := "Failed add position for new dashboard unit."
+		log.WithFields(log.Fields{"project_id": projectId,
+			"dashboardUnitId": dashboardUnit.ID}).Error(errMsg)
+		return nil, http.StatusInternalServerError, ""
 	}
 
 	return dashboardUnit, http.StatusCreated, ""
@@ -90,7 +115,7 @@ func GetDashboardUnits(projectId uint64, agentUUID string, dashboardId uint64) (
 		return dashboardUnits, http.StatusBadRequest
 	}
 
-	if !HasAccessToDashboard(projectId, agentUUID, dashboardId) {
+	if hasAccess, _ := HasAccessToDashboard(projectId, agentUUID, dashboardId); !hasAccess {
 		return nil, http.StatusUnauthorized
 	}
 
@@ -114,7 +139,8 @@ func DeleteDashboardUnit(projectId uint64, agentUUID string, dashboardId uint64,
 		return http.StatusBadRequest
 	}
 
-	if !HasAccessToDashboard(projectId, agentUUID, dashboardId) {
+	hasAccess, dashboard := HasAccessToDashboard(projectId, agentUUID, dashboardId)
+	if !hasAccess {
 		return http.StatusUnauthorized
 	}
 
@@ -123,6 +149,13 @@ func DeleteDashboardUnit(projectId uint64, agentUUID string, dashboardId uint64,
 	if err != nil {
 		log.WithFields(log.Fields{"project_id": projectId, "dashboard_id": dashboardId,
 			"unit_id": id}).WithError(err).Error("Failed to delete dashboard unit.")
+		return http.StatusInternalServerError
+	}
+
+	errCode := removeUnitPositionOnDashboard(projectId, agentUUID, dashboardId, id, dashboard.UnitsPosition)
+	if errCode != http.StatusAccepted {
+		errMsg := "Failed remove position for unit on dashboard."
+		log.WithFields(log.Fields{"project_id": projectId, "unitId": id}).Error(errMsg)
 		return http.StatusInternalServerError
 	}
 
@@ -135,11 +168,11 @@ func UpdateDashboardUnit(projectId uint64, agentUUID string,
 	if projectId == 0 || agentUUID == "" ||
 		dashboardId == 0 || id == 0 {
 
-		log.Error("Failed to update dashboard unit title. Invalid scope ids.")
+		log.Error("Failed to update dashboard unit. Invalid scope ids.")
 		return nil, http.StatusBadRequest
 	}
 
-	if !HasAccessToDashboard(projectId, agentUUID, dashboardId) {
+	if hasAccess, _ := HasAccessToDashboard(projectId, agentUUID, dashboardId); !hasAccess {
 		return nil, http.StatusUnauthorized
 	}
 
