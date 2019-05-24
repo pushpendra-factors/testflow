@@ -43,12 +43,12 @@ class JsSdk extends Component {
 
 	render() {
 		return (
-			<div class='fapp-content fapp-content-margin'>
+			<div className='fapp-content fapp-content-margin'>
 				<Card className='fapp-bordered-card'>
           <CardHeader>
 						{
 							/* Todo(Dinesh): Add copy to clipboard, Use the button below. */
-							/* <button className='btn btn-success' style={{float: 'right', padding: '2px 8px'}}> Copy  <i class='fa fa-copy' style={{marginLeft: '4px', fontWeight: 'inherit'}}></i> </button> */
+							/* <button className='btn btn-success' style={{float: 'right', padding: '2px 8px'}}> Copy  <i className='fa fa-copy' style={{marginLeft: '4px', fontWeight: 'inherit'}}></i> </button> */
 						}
             <strong>Code Snippet</strong>
           </CardHeader>

@@ -367,7 +367,7 @@ class QueryBuilderCard extends Component {
 
   render() {
     return (
-      <Card class="fapp-search-card fapp-select">
+      <Card className="fapp-search-card fapp-select">
         <CardBody>
           <Row>
             <Col md={{ size: '8', offset: 2 }}>

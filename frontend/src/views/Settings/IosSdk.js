@@ -31,7 +31,7 @@ class IosSdk extends Component {
 
 	render() {
 		return (
-			<div class='fapp-content fapp-content-margin'>
+			<div className='fapp-content fapp-content-margin'>
 				<Row style={{paddingTop: '12%'}}>
 						<div style={{width: '100%', textAlign: 'center', fontSize: '32px', fontWeight: '700', color: '#666', marginBottom: '15px', letterSpacing: '0.1rem'}}>Coming Soon<span style={{marginLeft: '3px'}}>!</span></div>
 						<div style={{width: '100%', textAlign: 'center'}}>

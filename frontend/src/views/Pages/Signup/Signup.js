@@ -71,7 +71,7 @@ class Signup extends Component {
           <Form noValidate>
               <h3 style={{textAlign: 'center', marginBottom: '30px', color: '#484848'}}>Sign up to factors.ai</h3>
               <SubmissionError message={this.state.error} />
-              <span class='fapp-label'>Email</span>
+              <span className='fapp-label'>Email</span>
               <Input className='fapp-page-input fapp-big-font' style={{marginBottom: '20px'}} tag={Field} type="email" name="email" placeholder="Your Work Email"/>
               {
                 touched.email &&

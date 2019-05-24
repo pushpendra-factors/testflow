@@ -684,8 +684,8 @@ class Query extends Component {
           <Row style={{marginBottom: '15px'}}>
             <Col xs='12' md='12'>
               <span style={LABEL_STYLE}> during </span>
-              <Button outline style={{border: '1px solid #ccc', color: 'grey', marginRight: '10px' }} onClick={this.toggleDatePickerDisplay}><i class="fa fa-calendar" style={{marginRight: '10px'}}></i>{this.readableDateRange(this.state.resultDateRange[0])}</Button>
-              <div class='fapp-date-picker' hidden={!this.state.showDatePicker}>
+              <Button outline style={{border: '1px solid #ccc', color: 'grey', marginRight: '10px' }} onClick={this.toggleDatePickerDisplay}><i className="fa fa-calendar" style={{marginRight: '10px'}}></i>{this.readableDateRange(this.state.resultDateRange[0])}</Button>
+              <div className='fapp-date-picker' hidden={!this.state.showDatePicker}>
                 <DateRangePicker
                   ranges={this.state.resultDateRange}
                   onChange={this.handleResultDateRangeSelect}
@@ -719,7 +719,7 @@ class Query extends Component {
         <div hidden={ !this.state.showPresentation }>
           <Row style={{ marginTop: '15px', marginRight: '10px' }} >
             <Col xs='12' md='12'>
-              <ButtonToolbar class='pull-right'>
+              <ButtonToolbar className='pull-right'>
                 <ButtonGroup style={{ marginRight: '10px' }}>
                   <button className={this.getPresentationSelectorClass(PRESENTATION_TABLE)} style={{fontWeight: 500}} onClick={() => this.run(PRESENTATION_TABLE)}>Table</button>
                   <button className={this.getPresentationSelectorClass(PRESENTATION_BAR)}  style={{fontWeight: 500}} onClick={() => this.run(PRESENTATION_BAR)}>Bar</button>
@@ -750,7 +750,7 @@ class Query extends Component {
               <span style={{display: 'inline-block'}} className='fapp-error' hidden={this.state.addToDashboardMessage == null}>{ this.state.addToDashboardMessage }</span>
             </div>
             <Form >
-              <span class='fapp-label'>Chart title</span>         
+              <span className='fapp-label'>Chart title</span>         
               <Input className='fapp-input' type="text" placeholder="Your chart title" onChange={this.setDashboardUnitTitle} />
             </Form>
           </ModalBody>

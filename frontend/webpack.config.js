@@ -3,12 +3,19 @@ var path = require('path');
 var config = require('./build-config');
 
 // plugins
-var HtmlWebpackPlugin = require('html-webpack-plugin');
+const HtmlWebPackPlugin = require("html-webpack-plugin");
+var CopyWebpackPlugin = require('copy-webpack-plugin');
+
 var buildConfigPlugin = new webpack.DefinePlugin({
   "ENV": JSON.stringify(process.env.NODE_ENV),
   "BUILD_CONFIG": JSON.stringify(config[process.env.NODE_ENV]),
   // Fix: To use production build, if not dev.
   'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV === 'development' ? 'development' : 'production')
+});
+
+const HtmlPlugin = new HtmlWebPackPlugin({
+  template: "./src/index.template.html",
+  filename: "./index.html" 
 });
 
 var devEnv = process.env.NODE_ENV === "development";
@@ -18,65 +25,51 @@ function getBuildPath() {
 }
 
 module.exports = {
-  context: path.join(__dirname, "src"),
+  entry: './src/index.js',
   devtool: devEnv ? "inline-sourcemap" : false,
-  entry: "./index.js",
   module: {
-    loaders: [
+    rules: [
       {
-        test: /\.jsx?$/,
-        exclude: /(node_modules|bower_components)/,
-        loader: 'babel-loader',
-        query: {
-          presets: ['react', 'es2015', 'stage-0'],
-          plugins: ['react-html-attrs', 'transform-class-properties', 'transform-decorators-legacy'],
-        }
+        test: /\.(js|jsx)$/,
+        exclude: /node_modules/,
+        use: ['babel-loader']
       },
       {
-          test: /\.css$/,
-          loader: 'style-loader!css-loader'
+        test: /\.(css|sass)$/,
+        use: [
+          { loader: 'style-loader' },
+          { loader: 'css-loader' },
+          { loader: 'sass-loader' },
+        ]
       },
       {
-          test: /\.(eot|woff|woff2|ttf|svg|png|jpg|jpeg|gif)(\?\S*)?$/,
-          use: [
-            {
-              loader: 'url-loader',
-              options: {
-                limit: 100000,
-                name: '[name].[ext]',
-              },
+        test: /\.(eot|woff|woff2|ttf|svg|png|jpg|jpeg|gif)(\?\S*)?$/,
+        use: [
+          {
+            loader: 'url-loader',
+            options: {
+              limit: 100000,
+              name: '[name].[ext]',
             },
-          ],
-      },
+          },
+        ],
+      }
     ]
+  },
+  plugins: [
+    buildConfigPlugin,
+    HtmlPlugin,
+    new CopyWebpackPlugin([{ from: './src/assets', to: 'assets' }]),
+  ],
+  resolve: {
+    extensions: ['*', '.js', '.jsx']
   },
   output: {
     path: getBuildPath(),
-    filename: "index.min.js"
+    publicPath: '/',
+    filename: 'index.min.js'
   },
-  plugins: devEnv ? [buildConfigPlugin] : [
-    buildConfigPlugin, 
-    new webpack.optimize.DedupePlugin(),
-    new webpack.optimize.OccurrenceOrderPlugin(),
-    new webpack.optimize.UglifyJsPlugin({
-      compress: {
-        warnings: false,
-        conditionals: true,
-        unused: true,
-        comparisons: true,
-        sequences: true,
-        dead_code: true,
-        evaluate: true,
-        if_return: true,
-        join_vars: true
-      },
-      output: {
-        comments: false
-      }
-    }),
-    new webpack.optimize.AggressiveMergingPlugin(),
-    new HtmlWebpackPlugin({
-      template: './index.template.html'
-    })
-  ],
+  devServer: {
+    historyApiFallback: true,
+  }
 };

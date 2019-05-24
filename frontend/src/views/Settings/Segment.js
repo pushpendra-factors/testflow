@@ -84,7 +84,7 @@ class Segment extends Component {
     return (
       <Col md={{ size:6, offset:3 }} className='fapp-content fapp-content-margin' style={{padding: '5rem'}}>
         <Card className='fapp-bordered-card'>
-            <div class='fapp-block-shadow'>
+            <div className='fapp-block-shadow'>
               <CardHeader className='fapp-button-header' style={{marginBottom: '0'}}>
                 <strong>Segment</strong>
                 <div style={{display: 'inline-block', float: 'right'}}>
@@ -97,12 +97,12 @@ class Segment extends Component {
               </CardHeader>
               <CardBody>
                 <div style={{marginBottom: '25px'}}>
-                  <span class='fapp-label'>Webhook URL</span>
-                  <Input class='fapp-input' defaultValue={segmentWebhookURL}/>
+                  <span className='fapp-label'>Webhook URL</span>
+                  <Input className='fapp-input' defaultValue={segmentWebhookURL}/>
                 </div>
                 <div>
-                  <span class='fapp-label'>Token</span>
-                  <Input class='fapp-input' defaultValue={segmentPrivateToken}/>
+                  <span className='fapp-label'>Token</span>
+                  <Input className='fapp-input' defaultValue={segmentPrivateToken}/>
                 </div>
               </CardBody>
             </div>

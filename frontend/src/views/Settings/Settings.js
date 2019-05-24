@@ -63,7 +63,7 @@ class Settings extends Component {
       <div className='animated fadeIn fapp-content fapp-content-margin'>
         <Row>
           <Col xs='12' md='12'>
-            <Card class="fapp-card">
+            <Card className="fapp-card">
               <CardHeader>
                 <strong>General Settings</strong>
               </CardHeader>
@@ -76,7 +76,7 @@ class Settings extends Component {
                 </Row>
               </CardBody>
             </Card>
-            <Card class="fapp-card">
+            <Card className="fapp-card">
               <CardHeader>
                 <strong>Integrations</strong>
               </CardHeader>

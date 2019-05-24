@@ -52,7 +52,7 @@ class ForgotPassword extends Component {
                                 <span>We'll mail you a link to create a new password</span>
                             </div>
                             <SubmissionError message={this.state.error} marginTop='-15px' />
-                            <span class='fapp-label'>Email</span>
+                            <span className='fapp-label'>Email</span>
                             <Input className='fapp-page-input fapp-big-font' tag={Field} type="email" name="email" placeholder="Your Email"/>
                             {touched.email &&
                                 <ErrorMessage name="email">

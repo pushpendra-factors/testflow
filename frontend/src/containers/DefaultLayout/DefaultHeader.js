@@ -152,7 +152,7 @@ class DefaultHeader extends Component {
                 {/* <Badge pill color="danger">5</Badge> */}	
             </DropdownToggle>	
             <DropdownMenu right style={{ right: 'auto' }}>
-              <DropdownItem disabled><span class="text-muted">No messages here.</span></DropdownItem>	
+              <DropdownItem disabled><span className="text-muted">No messages here.</span></DropdownItem>	
             </DropdownMenu>
           </AppHeaderDropdown>
           <AppHeaderDropdown direction="down">  
@@ -173,7 +173,7 @@ class DefaultHeader extends Component {
               <span style={{display: 'inline-block'}} className='fapp-error' hidden={this.state.addProjectMessage == null}>{ this.getAddProjectMessage() }</span>
             </div>
             <Form onSubmit={this.handleCreateProject} >
-              <span class='fapp-label'>Project Name </span>         
+              <span className='fapp-label'>Project Name </span>         
               <Input className='fapp-input' type="text" placeholder="Your Project Name" onChange={this.handleProjectNameFormChange} />
             </Form>
           </ModalBody>

@@ -497,9 +497,9 @@ class Factor extends Component {
     }
 
     return (
-      <div class="fapp-content" style={{margin: 0}}>
+      <div className="fapp-content" style={{margin: 0}}>
         <div>
-          <Row class="fapp-select">
+          <Row className="fapp-select">
             <Col xs={{size: 10, offset: 1}} md={{ size: 3, offset: 8 }}>
               <Select
                 value={this.getIntervalDisplayValue()}
