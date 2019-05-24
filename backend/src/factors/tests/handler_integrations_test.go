@@ -28,11 +28,11 @@ func assertKeysExistAndNotEmpty(t *testing.T, obj map[string]interface{}, keys [
 }
 
 // expected event properties from segment.
-var genericEventProps = []string{U.EP_LOCATION_LATITUDE, U.EP_LOCATION_LONGITUDE}
+var genericEventProps = []string{U.EP_LOCATION_LATITUDE, U.EP_LOCATION_LONGITUDE, U.EP_EVENT_VERSION}
 var webEventProps = []string{U.EP_RAW_URL, U.EP_PAGE_TITLE, U.EP_REFERRER}
 
 // expected user properties from segment.
-var genericUserProps = []string{U.UP_PLATFORM, U.UP_USER_AGENT, U.UP_COUNTRY, U.UP_CITY, U.UP_OS, U.UP_OS_VERSION,
+var genericUserProps = []string{U.UP_PLATFORM, U.UP_CHANNEL, U.UP_USER_AGENT, U.UP_COUNTRY, U.UP_CITY, U.UP_OS, U.UP_OS_VERSION,
 	U.UP_SCREEN_WIDTH, U.UP_SCREEN_HEIGHT}
 var webUserProps = []string{U.UP_CAMPAIGN_CONTENT, U.UP_CAMPAIGN_MEDIUM, U.UP_CAMPAIGN_NAME,
 	U.UP_CAMPAIGN_SOURCE, U.UP_CAMPAIGN_TERM}
@@ -228,7 +228,7 @@ func TestIntSegmentHandler(t *testing.T) {
 		"name": "screen_1",
 		"type": "screen",
 		"userId": "",
-		"version": 2
+		"version": "1.1"
 	  }
 	`
 
@@ -362,7 +362,7 @@ func TestIntSegmentHandlerWithPageEvent(t *testing.T) {
 		"timestamp": "2019-01-08T16:21:54.101Z",
 		"type": "page",
 		"userId": "",
-		"version": 2
+		"version": "1.1"
 	  }
 	`
 	w = ServePostRequestWithHeaders(r, uri, []byte(samplePagePayload),
@@ -404,6 +404,8 @@ func TestIntSegmentHandlerWithTrackEvent(t *testing.T) {
 	_, errCode := M.UpdateProjectSettings(project.ID, &M.ProjectSetting{IntSegment: &enable})
 	assert.Equal(t, http.StatusAccepted, errCode)
 
+	// Inconsistent datatype tested with App(build, version),
+	// OS(version) and Event(version) as numbers.
 	sampleTrackPayload := `
 	{
 		"_metadata": {
@@ -420,8 +422,8 @@ func TestIntSegmentHandlerWithTrackEvent(t *testing.T) {
 			"active": true,
 			"app": {
 			  "name": "InitechGlobal",
-			  "version": "545",
-			  "build": "3.0.1.545",
+			  "version": 5.6,
+			  "build": 1.1,
 			  "namespace": "com.production.segment"
 			},
 			"campaign": {
@@ -462,7 +464,7 @@ func TestIntSegmentHandlerWithTrackEvent(t *testing.T) {
 			},
 			"os": {
 			  "name": "iPhone OS",
-			  "version": "8.1.3"
+			  "version": 2.4
 			},
 			"page": {
 			  "path": "/academy/",
@@ -501,7 +503,7 @@ func TestIntSegmentHandlerWithTrackEvent(t *testing.T) {
 		"event": "click_1",
 		"type": "track",
 		"userId": "",
-		"version": 2
+		"version": 3.1
 	  }
 	`
 
@@ -631,7 +633,7 @@ func TestIntSegmentHandlerWithTrackEvent(t *testing.T) {
 		"event": "click_1",
 		"type": "track",
 		"userId": "",
-		"version": 2
+		"version": "2"
 	  }
 	`
 
@@ -772,7 +774,7 @@ func TestIntSegmentHandlerWithScreenEvent(t *testing.T) {
 		"name": "screen_1",
 		"type": "screen",
 		"userId": "",
-		"version": 2
+		"version": "2"
 	  }
 	`
 

@@ -48,9 +48,11 @@ var EP_LOCATION_LONGITUDE string = "$locationLng"
 var EP_REFERRER string = "$referrer"
 var EP_PAGE_TITLE string = "$pageTitle"
 var EP_RAW_URL string = "$rawURL"
+var EP_EVENT_VERSION string = "$eventVersion"
 
 // Default User Properties
 var UP_PLATFORM string = "$platform"
+var UP_CHANNEL string = "$channel" // from segement (browser, client, etc.,).
 var UP_BROWSER string = "$browser"
 var UP_BROWSER_VERSION string = "$browserVersion"
 var UP_USER_AGENT string = "$userAgent"
@@ -96,6 +98,7 @@ var ALLOWED_SDK_DEFAULT_EVENT_PROPERTIES = [...]string{
 	EP_REFERRER,
 	EP_PAGE_TITLE,
 	EP_RAW_URL,
+	EP_EVENT_VERSION,
 }
 
 // Event properties that are not visible to user for analysis.
@@ -107,6 +110,7 @@ var INTERNAL_EVENT_PROPERTIES = [...]string{
 
 var ALLOWED_SDK_DEFAULT_USER_PROPERTIES = [...]string{
 	UP_PLATFORM,
+	UP_CHANNEL,
 	UP_BROWSER,
 	UP_BROWSER_VERSION,
 	UP_USER_AGENT,

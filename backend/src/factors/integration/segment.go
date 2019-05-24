@@ -30,10 +30,10 @@ type SegmentPage struct {
 }
 
 type SegmentApp struct {
-	Name      string `json:"name"`
-	Version   string `json:"version"`
-	Build     string `json:"build"`
-	Namespace string `json:"namespace"`
+	Name      string       `json:"name"`
+	Version   *interface{} `json:"version"`
+	Build     *interface{} `json:"build"`
+	Namespace string       `json:"namespace"`
 }
 
 type SegmentLocation struct {
@@ -45,8 +45,8 @@ type SegmentLocation struct {
 }
 
 type SegmentOS struct {
-	Name    string `json:"name"`
-	Version string `json:"version"`
+	Name    string       `json:"name"`
+	Version *interface{} `json:"version"`
 }
 
 type SegmentScreen struct {
@@ -97,10 +97,13 @@ type SegmentEvent struct {
 	Type        string          `json:"type"`
 	Properties  U.PropertiesMap `json:"properties"`
 	Traits      postgres.Jsonb  `json:"traits"`
-	// Version     float64         `json:"version"` // inconsistent type.
+	Version     *interface{}    `json:"version"`
 }
 
 func FillSegmentGenericEventProperties(properties *U.PropertiesMap, event *SegmentEvent) {
+	if event.Version != nil {
+		(*properties)[U.EP_EVENT_VERSION] = *event.Version
+	}
 	if event.Context.Location.Lat != 0 {
 		(*properties)[U.EP_LOCATION_LATITUDE] = event.Context.Location.Lat
 	}
@@ -111,6 +114,9 @@ func FillSegmentGenericEventProperties(properties *U.PropertiesMap, event *Segme
 
 func FillSegmentGenericUserProperties(properties *U.PropertiesMap, event *SegmentEvent) {
 	(*properties)[U.UP_PLATFORM] = U.PLATFORM_WEB
+	if event.Channel != "" {
+		(*properties)[U.UP_CHANNEL] = event.Channel
+	}
 	if event.Context.UserAgent != "" {
 		(*properties)[U.UP_USER_AGENT] = event.Context.UserAgent
 	}
@@ -128,8 +134,8 @@ func FillSegmentGenericUserProperties(properties *U.PropertiesMap, event *Segmen
 	if event.Context.OS.Name != "" {
 		(*properties)[U.UP_OS] = event.Context.OS.Name
 	}
-	if event.Context.OS.Version != "" {
-		(*properties)[U.UP_OS_VERSION] = event.Context.OS.Version
+	if event.Context.OS.Version != nil {
+		(*properties)[U.UP_OS_VERSION] = *event.Context.OS.Version
 	}
 	if event.Context.Screen.Width != 0 {
 		(*properties)[U.UP_SCREEN_WIDTH] = event.Context.Screen.Width
@@ -146,11 +152,11 @@ func FillSegmentMobileUserProperties(properties *U.PropertiesMap, event *Segment
 	if event.Context.App.Namespace != "" {
 		(*properties)[U.UP_APP_NAMESPACE] = event.Context.App.Namespace
 	}
-	if event.Context.App.Build != "" {
-		(*properties)[U.UP_APP_BUILD] = event.Context.App.Build
+	if event.Context.App.Build != nil {
+		(*properties)[U.UP_APP_BUILD] = *event.Context.App.Build
 	}
-	if event.Context.App.Version != "" {
-		(*properties)[U.UP_APP_VERSION] = event.Context.App.Version
+	if event.Context.App.Version != nil {
+		(*properties)[U.UP_APP_VERSION] = *event.Context.App.Version
 	}
 	if event.Context.Device.ID != "" {
 		(*properties)[U.UP_DEVICE_ID] = event.Context.Device.ID
