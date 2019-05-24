@@ -170,8 +170,32 @@ class Dashboard extends Component {
         return this.props.dashboards[i];
   }
 
+  getUnitType(presentation) {
+    return presentation === PRESENTATION_CARD ? UNIT_TYPE_CARD : UNIT_TYPE_CHART;
+  }
+
+  getInitialPositionFromOrderOfUnits(unitType) {
+    let positionMap = {}
+    
+    let position = 0;
+    for (let i in this.props.dashboardUnits) {
+      let unit = this.props.dashboardUnits[i];
+      if (this.getUnitType(unit.presentation) == unitType) {
+        positionMap[unit.id] = position;
+        position++;
+      }
+    }
+    console.warn("Positioning charts by given order as positions of "+unitType+" is null.");
+
+    return positionMap;
+  }
+
   getUnitsPositionByType(unitType) {
     let dashboard = this.getCurrentDashboard();
+
+    if (!dashboard.units_position || !dashboard.units_position[unitType]) 
+      return this.getInitialPositionFromOrderOfUnits(unitType);
+
     return dashboard['units_position'][unitType];
   }
   
@@ -279,7 +303,7 @@ class Dashboard extends Component {
     return (
       <div className='fapp-content' style={{marginLeft: '1rem', marginRight: '1rem', paddingTop: '30px' }}>
         <div style={{ marginBottom: '32px', width: '100%', textAlign: 'center'}}>
-          <div class="fapp-select" style={{ width: '300px', display: 'inline-block' }}>
+          <div className="fapp-select" style={{ width: '300px', display: 'inline-block' }}>
             <Select
               onChange={this.onSelectDashboard}
               options={createSelectOpts(this.getDashboardsOptSrc())}
@@ -299,10 +323,10 @@ class Dashboard extends Component {
               <span style={{display: 'inline-block'}} className='fapp-error' hidden={this.state.createModalMessage == null}>{ this.state.createModalMessage }</span>
             </div>
             <Form >
-              <span class='fapp-label'>Name</span>         
+              <span className='fapp-label'>Name</span>         
               <Input className='fapp-input' type="text" placeholder="Your dashboard name" onChange={this.setCreateDashboardName} />
-              <span class='fapp-label' style={{ marginTop: '18px', marginBottom: '10px', display: 'block' }}>Visiblity</span> 
-              <div class='fapp-select'>
+              <span className='fapp-label' style={{ marginTop: '18px', marginBottom: '10px', display: 'block' }}>Visiblity</span> 
+              <div className='fapp-select'>
                 <Select
                   onChange={this.onCreateTypeChange}
                   options={TYPE_OPTS}
