@@ -200,8 +200,8 @@ func InitDB(DBInfo DBConf) error {
 		DBInfo.Name,
 		DBInfo.Password))
 	// Connection Pooling and Logging.
-	db.DB().SetMaxIdleConns(5)
-	db.DB().SetMaxOpenConns(10)
+	db.DB().SetMaxIdleConns(10)
+	db.DB().SetMaxOpenConns(100)
 	if IsDevelopment() {
 		db.LogMode(true)
 	} else {
