@@ -50,22 +50,6 @@ func isDuplicateCustomerEventIdError(err error) bool {
 	return err.Error() == error_Duplicate_event_customerEventID
 }
 
-func (event *Event) BeforeCreate(scope *gorm.Scope) error {
-	db := C.GetServices().Db
-
-	// Increamenting count based on EventNameId, not by EventName.
-	var count uint64
-	if err := db.Model(&Event{}).Where("project_id = ? AND user_id = ? AND event_name_id = ?",
-		event.ProjectId, event.UserId, event.EventNameId).Count(&count).Error; err != nil {
-		return err
-	}
-	event.Count = count + 1
-	if event.Timestamp <= 0 {
-		event.Timestamp = time.Now().Unix()
-	}
-	return nil
-}
-
 func CreateEvent(event *Event) (*Event, int) {
 	db := C.GetServices().Db
 
@@ -82,14 +66,42 @@ func CreateEvent(event *Event) (*Event, int) {
 		return nil, http.StatusBadRequest
 	}
 
-	if err := db.Create(event).Error; err != nil {
+	// Increamenting count based on EventNameId, not by EventName.
+	var count uint64
+	if err := db.Model(&Event{}).Where("project_id = ? AND user_id = ? AND event_name_id = ?",
+		event.ProjectId, event.UserId, event.EventNameId).Count(&count).Error; err != nil {
+		return nil, http.StatusInternalServerError
+	}
+	event.Count = count + 1
+
+	if event.Timestamp <= 0 {
+		event.Timestamp = time.Now().Unix()
+	}
+
+	transTime := gorm.NowFunc()
+	rows, err := db.Raw("INSERT INTO events (customer_event_id,project_id,user_id,user_properties_id,event_name_id,count,properties,timestamp,created_at,updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING events.id",
+		event.CustomerEventId, event.ProjectId, event.UserId, event.UserPropertiesId, event.EventNameId, event.Count, event.Properties, event.Timestamp, transTime, transTime).Rows()
+	if err != nil {
 		if isDuplicateCustomerEventIdError(err) {
 			log.WithError(err).Info("CreateEvent Failed, duplicate customerEventId")
 			return nil, http.StatusFound
 		}
+
 		log.WithFields(log.Fields{"event": &event}).WithError(err).Error("CreateEvent Failed")
 		return nil, http.StatusInternalServerError
 	}
+
+	var eventId string
+	for rows.Next() {
+		if err = rows.Scan(&eventId); err != nil {
+			log.WithError(err).Error("CreateEvent Failed. Failed to read event id.")
+			return nil, http.StatusInternalServerError
+		}
+	}
+	event.ID = eventId
+	event.CreatedAt = transTime
+	event.UpdatedAt = transTime
+
 	return event, http.StatusCreated
 }
 
