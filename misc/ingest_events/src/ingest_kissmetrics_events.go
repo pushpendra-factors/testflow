@@ -21,6 +21,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -35,6 +36,11 @@ var clientUserIdAliasKey string = "_p2"
 var eventNameKey string = "_n"
 var eventCreationTimeKey string = "_t"
 
+const MAX_BATCH_SIZE = 10000
+const NUM_BATCHES_TO_SKIP = 0
+const NUM_PARALLEL_CONNECTIONS = 10
+
+var mutex = &sync.Mutex{}
 var clientUserIdToUserIdMap map[string]string = make(map[string]string)
 
 func closeResp(resp *http.Response) {
@@ -81,10 +87,12 @@ func getUserId(clientUserId string, clientUserIdAlias string, currentEventTimest
 		userId = jsonResponseMap["user_id"].(string)
 		// always close the response-body, even if content is not required
 		closeResp(resp)
+		mutex.Lock()
 		clientUserIdToUserIdMap[clientUserId] = userId
 		if clientUserIdAlias != "" {
 			clientUserIdToUserIdMap[clientUserIdAlias] = userId
 		}
+		mutex.Unlock()
 	}
 	return userId, nil
 }
@@ -197,36 +205,36 @@ func getFileEvents(filepath string) []map[string]interface{} {
 	return fileEvents
 }
 
-func ingestEvents(events []map[string]interface{}) error {
+func ingestEvents(events []map[string]interface{}, httpClient *http.Client, wg *sync.WaitGroup) {
 	reqBody, err := json.Marshal(events)
 	if err != nil {
-		return err
+		log.Fatal(err)
+		return
 	}
 
 	url := fmt.Sprintf("%s/sdk/event/track/bulk", *serverFlag)
 	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(reqBody))
 	if err != nil {
-		return err
+		log.Fatal(err)
+		return
 	}
 	req.Header.Add("Authorization", *projectTokenFlag)
-	client := &http.Client{}
 
-	resp, err := client.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		log.Fatal(fmt.Sprintf("Http Post event creation failed. Url: %s, reqBody: %s", url, reqBody))
-		return err
+		return
 	}
 	closeResp(resp)
-	return nil
+	wg.Done()
 }
 
 func batchAndIngestEvents(eventsData []map[string]interface{}) {
-	maxBatchSize := 10000
 	size := len(eventsData)
 
-	noOfBatches := size / maxBatchSize
+	noOfBatches := size / MAX_BATCH_SIZE
 
-	if size%maxBatchSize != 0 {
+	if size%MAX_BATCH_SIZE != 0 {
 		noOfBatches++
 	}
 
@@ -234,12 +242,19 @@ func batchAndIngestEvents(eventsData []map[string]interface{}) {
 
 	log.WithFields(log.Fields{
 		"Batches":      noOfBatches,
-		"MaxBatchSize": maxBatchSize,
+		"MaxBatchSize": MAX_BATCH_SIZE,
 	}).Info("No Of Batches")
 
-	for batch := 0; batch < noOfBatches; batch++ {
-		start := batch * maxBatchSize
-		end := start + min(size-start, maxBatchSize)
+	// Pool of connections.
+	httpClients := []*http.Client{}
+	for i := 0; i < NUM_PARALLEL_CONNECTIONS; i++ {
+		httpClients = append(httpClients, &http.Client{})
+	}
+	var wg sync.WaitGroup
+
+	for batch := NUM_BATCHES_TO_SKIP; batch < noOfBatches; batch++ {
+		start := batch * MAX_BATCH_SIZE
+		end := start + min(size-start, MAX_BATCH_SIZE)
 		events := eventsData[start:end]
 		log.WithFields(log.Fields{
 			"start": start,
@@ -255,9 +270,11 @@ func batchAndIngestEvents(eventsData []map[string]interface{}) {
 			}
 		}
 
-		err := ingestEvents(translatedEvents)
-		if err != nil {
-			log.WithError(err).Fatal("Error ingesting events")
+		mod := batch % NUM_PARALLEL_CONNECTIONS
+		wg.Add(1)
+		go ingestEvents(translatedEvents, httpClients[mod], &wg)
+		if mod == NUM_PARALLEL_CONNECTIONS-1 {
+			wg.Wait()
 		}
 	}
 }
