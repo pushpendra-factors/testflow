@@ -54,7 +54,7 @@ class GroupBy extends Component {
       let eventNames = this.props.getSelectedEventNames();
       let fetches = [];
       for(let i=0; i < eventNames.length; i++) {
-        fetches.push(fetchProjectEventProperties(this.props.projectId, eventNames[i], false));
+        fetches.push(fetchProjectEventProperties(this.props.projectId, eventNames[i], "", false));
       }
 
       Promise.all(fetches)
@@ -67,7 +67,7 @@ class GroupBy extends Component {
     }
 
     if (this.props.groupByState.type == 'user') {
-      fetchProjectUserProperties(this.props.projectId, false)
+      fetchProjectUserProperties(this.props.projectId, "", false)
       .then((r) => { 
         this.addToNameOptsState(r.data);
         this.setState({ isNameOptsLoading: false });
