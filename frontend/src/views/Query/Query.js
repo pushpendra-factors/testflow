@@ -662,7 +662,7 @@ class Query extends Component {
                   placeholder='Type'
                 />
               </div>
-              <span style={LABEL_STYLE} hidden={this.state.type.value == TYPE_UNIQUE_USERS}> matches the following, </span>
+              <span style={LABEL_STYLE} hidden={this.state.type.value == TYPE_UNIQUE_USERS}> matches the following events, </span>
               <span style={LABEL_STYLE} hidden={this.state.type.value == TYPE_EVENT_OCCURRENCE}> who performed </span>
               <div style={{display: 'inline-block', width: '80px', marginRight: '10px'}} className='fapp-select light' hidden={this.state.type.value == TYPE_EVENT_OCCURRENCE}>
                 <Select
@@ -672,7 +672,7 @@ class Query extends Component {
                   placeholder='Condition'
                 />
               </div>
-              <span style={LABEL_STYLE} hidden={this.state.type.value == TYPE_EVENT_OCCURRENCE}> of the following, </span>
+              <span style={LABEL_STYLE} hidden={this.state.type.value == TYPE_EVENT_OCCURRENCE}> of the following events, </span>
             </Col>
           </Row>
           { events }
