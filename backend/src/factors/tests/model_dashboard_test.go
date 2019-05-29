@@ -195,5 +195,40 @@ func TestUpdateDashboard(t *testing.T) {
 		}
 		errCode = M.UpdateDashboard(project.ID, agent.UUID, dashboard.ID, &M.UpdatableDashboard{UnitsPosition: &invalidPositions})
 		assert.Equal(t, http.StatusBadRequest, errCode)
+
+		invalidPositions = map[string]map[uint64]int{
+			M.UnitChart: map[uint64]int{
+				1: 0,
+				2: 2, // out of order position
+			},
+		}
+		errCode = M.UpdateDashboard(project.ID, agent.UUID, dashboard.ID, &M.UpdatableDashboard{UnitsPosition: &invalidPositions})
+		assert.Equal(t, http.StatusBadRequest, errCode)
+
+		invalidPositions = map[string]map[uint64]int{
+			M.UnitChart: map[uint64]int{
+				1: 0,
+				2: 2,
+			},
+			M.UnitCard: map[uint64]int{
+				1: 0, // duplicate id
+				3: 1,
+			},
+		}
+		errCode = M.UpdateDashboard(project.ID, agent.UUID, dashboard.ID, &M.UpdatableDashboard{UnitsPosition: &invalidPositions})
+		assert.Equal(t, http.StatusBadRequest, errCode)
+
+		validPositions := map[string]map[uint64]int{
+			M.UnitChart: map[uint64]int{
+				1: 0,
+				2: 1,
+			},
+			M.UnitCard: map[uint64]int{
+				4: 1,
+				3: 0,
+			},
+		}
+		errCode = M.UpdateDashboard(project.ID, agent.UUID, dashboard.ID, &M.UpdatableDashboard{UnitsPosition: &validPositions})
+		assert.Equal(t, http.StatusAccepted, errCode)
 	})
 }

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	C "factors/config"
 	"net/http"
+	"sort"
 	"time"
 
 	"github.com/jinzhu/gorm"
@@ -228,25 +229,43 @@ func isValidUnitsPosition(positions *map[string]map[uint64]int) bool {
 		return false
 	}
 
+	idsByTypeMap := make(map[string]map[uint64]bool, 0)
+
 	for _, typ := range UnitTypes {
+		if _, exists := idsByTypeMap[typ]; !exists {
+			idsByTypeMap[typ] = make(map[uint64]bool, 0)
+		}
+
 		if posMap, exists := (*positions)[typ]; exists && len(posMap) > 0 {
-			min := 0
-			max := -1
+			actualPos := make([]int, 0, 0)
 
-			for _, p := range posMap {
-				if p < min {
-					min = p
-				}
-
-				if p > max {
-					max = p
-				}
+			for id, pos := range posMap {
+				actualPos = append(actualPos, pos)
+				// populate idsByType for id dup check.
+				idsByTypeMap[typ][id] = true
 			}
 
-			// positions should be starting from 0
-			// inc upto len - 1 for each type.
-			if min != 0 || max == -1 || max != len(posMap)-1 {
-				return false
+			// validates positions.
+			sort.Sort(sort.IntSlice(actualPos))
+			// positions should be 0 to len(actualPos) - 1
+			// after sort, which is equivalent to array indexes.
+			for index, pos := range actualPos {
+				if pos != index {
+					return false
+				}
+			}
+		}
+	}
+
+	// id should be unique across different unit types.
+	for idType, ids := range idsByTypeMap {
+		for _, typ := range UnitTypes {
+			if idType != typ {
+				for id := range ids {
+					if _, exists := idsByTypeMap[typ][id]; exists {
+						return false
+					}
+				}
 			}
 		}
 	}
