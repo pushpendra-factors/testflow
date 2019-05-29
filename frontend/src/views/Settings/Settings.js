@@ -9,7 +9,6 @@ import {
 } from 'reactstrap';
 
 import jsSvg from '../../assets/img/settings/js.svg';
-import autotrackSvg from '../../assets/img/settings/autotrack.svg';
 import segmentSvg from '../../assets/img/integrations/segment.svg';
 import androidSvg from '../../assets/img/settings/android.svg';
 import iosSvg from '../../assets/img/settings/iOS.svg';
@@ -65,14 +64,13 @@ class Settings extends Component {
           <Col xs='12' md='12'>
             <Card className="fapp-card">
               <CardHeader>
-                <strong>General Settings</strong>
+                <strong>SDKs</strong>
               </CardHeader>
               <CardBody style={{padding: '0 10px'}}>
                 <Row>
                   <SettingsCard title='Javascript SDK' img={jsSvg} href='/settings/jssdk' />
                   <SettingsCard title='Android SDK' img={androidSvg} href='/settings/androidsdk' />
                   <SettingsCard title='IOS SDK' img={iosSvg} href='/settings/iossdk'/>
-                  <SettingsCard title='AutoTrack' img={autotrackSvg} href='/settings/autotrack' />
                 </Row>
               </CardBody>
             </Card>

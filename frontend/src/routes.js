@@ -45,11 +45,6 @@ const SettingsIosSdk = Loadable({
   loading: Loading,
 });
 
-const SettingsAutoTrack = Loadable({
-  loader: () => import('./views/Settings/AutoTrack'),
-  loading: Loading,
-});
-
 const ReloadComponent = (props) => {
   // Todo(Dinesh): Fix browser forward after go(-1).
   props.history.go(-1);
@@ -63,7 +58,6 @@ const routes = [
   { path: '/core', name: 'Query', component: Query },
   { path: '/factor', name: 'Factor', component: Factor },
   { path: '/settings/segment', exact: true, name: 'Segment', component: SettingsSegment },
-  { path: '/settings/autotrack', exact: true, name: 'AutoTrack', component: SettingsAutoTrack },
   { path: '/settings/jssdk', exact: true, name: 'JsSdk', component: SettingsJsSdk },
   { path: '/settings/androidsdk', exact: true, name: 'AndroidSdk', component: SettingsAndroidSdk },
   { path: '/settings/iossdk', exact: true, name: 'IosSdk', component: SettingsIosSdk },
