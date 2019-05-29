@@ -120,7 +120,7 @@ class Query extends Component {
 
       result: null,
       resultError: null,
-      isResultLoading: true,
+      isResultLoading: false,
       selectedPresentation: null,
 
       showPresentation: false,
@@ -392,6 +392,8 @@ class Query extends Component {
   }
 
   run = (presentation) => {
+    this.scrollToBottom();
+
     if (presentation == "")
       throw new Error('Invalid presentation');
 
@@ -443,7 +445,7 @@ class Query extends Component {
       return <TableChart queryResult={this.state.result} />;
     
     return (
-      <div style={{ marginTop: '65px', marginBottom: '100px' }} >
+      <div style={{ marginTop: '150px', marginBottom: '100px' }} >
         <TableChart card noHeader bordered queryResult={this.state.result} />
       </div>
     );
@@ -466,8 +468,8 @@ class Query extends Component {
     return <div className='animated fadeIn'><TableBarChart data={result} /></div>;
   }
 
-  getPresentableResult() {
-    if (this.state.isResultLoading) return <Loading paddingTop='10%' />;
+  getPresentableResult = () => {
+    if (this.state.isResultLoading) return <Loading paddingTop='14%' />;
 
     if (this.state.result == null) return null;
     let selected = this.state.selectedPresentation;
@@ -580,6 +582,11 @@ class Query extends Component {
   disableAddToDashboard() {
     return this.state.selectedPresentation === PRESENTATION_BAR 
       && this.state.groupBys.length > 1;
+  }
+
+  scrollToBottom = () => {
+    if (this.endOfPresentation != undefined)
+      this.endOfPresentation.scrollIntoView({ behavior: "smooth" });
   }
 
   render() {
@@ -716,8 +723,8 @@ class Query extends Component {
         <div style={{borderTop: '1px solid rgb(221, 221, 221)', paddingTop: '20px', marginTop: '30px', marginLeft: '-60px', marginRight: '-60px'}} hidden={ !this.state.showPresentation }></div>
 
         {/* Presentation */}
-        <div hidden={ !this.state.showPresentation }>
-          <Row style={{ marginTop: '15px', marginRight: '10px' }} >
+        <div style={{ minHeight: '530px' }}>
+          <Row style={{ marginTop: '15px', marginRight: '10px' }} hidden={ !this.state.showPresentation }>
             <Col xs='12' md='12'>
               <ButtonToolbar className='pull-right'>
                 <ButtonGroup style={{ marginRight: '10px' }}>
@@ -736,12 +743,13 @@ class Query extends Component {
               </ButtonToolbar>
             </Col>
           </Row>
-          <Row style={{ marginTop: '35px' }}> 
+          <Row style={{ marginTop: '45px' }}> 
             <Col xs='12' md='12' >
                 { this.getPresentableResult() }
             </Col>
           </Row>
         </div>
+        <div ref={(el) => { this.endOfPresentation = el; }}></div>
 
         <Modal isOpen={this.state.showAddToDashboardModal} toggle={this.toggleAddToDashboardModal} style={{marginTop: '10rem'}}>
           <ModalHeader toggle={this.toggleAddToDashboardModal}>Add to dashboard</ModalHeader>

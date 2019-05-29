@@ -317,7 +317,7 @@ class Dashboard extends Component {
         { this.renderDashboard() }
 
         <Modal isOpen={this.state.showCreateModal} toggle={this.toggleCreateModal} style={{marginTop: '10rem'}}>
-          <ModalHeader toggle={this.toggleCreateModal}>Create dashboard</ModalHeader>
+          <ModalHeader toggle={this.toggleCreateModal}>New dashboard</ModalHeader>
           <ModalBody style={{padding: '15px 35px'}}>
             <div style={{textAlign: 'center', marginBottom: '15px'}}>
               <span style={{display: 'inline-block'}} className='fapp-error' hidden={this.state.createModalMessage == null}>{ this.state.createModalMessage }</span>
