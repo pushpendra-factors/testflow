@@ -404,7 +404,7 @@ func TestSDKAddUserPropertiesHandler(t *testing.T) {
 	fakeUserId := U.RandomLowerAphaNumString(16)
 	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"user_id": "%s" , "properties": {"name": "%s"}}`, fakeUserId, uniqueName)),
 		map[string]string{"Authorization": project.Token})
-	assert.Equal(t, http.StatusNotFound, w.Code)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
 
 	// Test default user properties.
 	uniqueName = U.RandomLowerAphaNumString(16)

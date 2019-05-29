@@ -62,16 +62,14 @@ func CreateUser(user *User) (*User, int) {
 		log.WithFields(log.Fields{"user": &user}).WithError(err).Error("CreateUser Failed")
 		return nil, http.StatusInternalServerError
 	}
-	propertiesId, success := createUserPropertiesIfChanged(
-		user.ProjectId, user.ID, user.PropertiesId, &user.Properties)
-	if success != http.StatusCreated {
-		return nil, http.StatusInternalServerError
-	}
 
-	if err := db.Model(&user).Where("project_id = ?", user.ProjectId).Where("id = ?", user.ID).Update("properties_id", propertiesId).Error; err != nil {
-		log.WithFields(log.Fields{"user": user}).WithError(err).Error("Failed updating propertyId")
-		return nil, http.StatusInternalServerError
+	propertiesId, errCode := UpdateUserPropertiesByCurrentProperties(user.ProjectId, user.ID,
+		user.PropertiesId, &user.Properties)
+	if errCode == http.StatusInternalServerError {
+		return nil, errCode
 	}
+	// assign propertiesId with created propertiesId.
+	user.PropertiesId = propertiesId
 
 	return user, http.StatusCreated
 }
@@ -98,45 +96,61 @@ func UpdateUser(projectId uint64, id string, user *User) (*User, int) {
 	}
 
 	var updatedUser User
-	if err := db.Model(&updatedUser).Where("project_id = ?", projectId).Where("id = ?", cleanId).Updates(user).Error; err != nil {
+	if err := db.Model(&updatedUser).Where("project_id = ?", projectId).Where("id = ?",
+		cleanId).Updates(user).Error; err != nil {
+
 		log.WithFields(log.Fields{"user": user}).WithError(err).Error("Failed updating fields by user_id")
 		return nil, http.StatusInternalServerError
 	}
-	// Update properties.
-	propertiesId, success := createUserPropertiesIfChanged(
-		projectId, id, user.PropertiesId, &user.Properties)
-	if success != http.StatusCreated && success != http.StatusNotModified {
-		return nil, http.StatusInternalServerError
+
+	// update only if non-empty properties given.
+	if !U.IsEmptyPostgresJsonb(&user.Properties) {
+		_, errCode := UpdateUserProperties(projectId, id, &user.Properties)
+		if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
+			return nil, http.StatusInternalServerError
+		}
 	}
-	if err := db.Model(&updatedUser).Where("project_id = ?", projectId).Where("id = ?", cleanId).Update("properties_id", propertiesId).Error; err != nil {
-		log.WithFields(log.Fields{"user": user}).WithError(err).Error("Failed updating propertyId")
-		return nil, http.StatusInternalServerError
-	}
+
 	return &updatedUser, http.StatusAccepted
 }
 
 // UpdateUserProperties only if there is a change in properties values.
 func UpdateUserProperties(projectId uint64, id string, properties *postgres.Jsonb) (string, int) {
-	userPropertiesId, status := getUserPropertiesId(projectId, id)
+	currentPropertiesId, status := getUserPropertiesId(projectId, id)
 	if status != http.StatusFound {
 		return "", status
 	}
+
+	return UpdateUserPropertiesByCurrentProperties(projectId, id,
+		currentPropertiesId, properties)
+}
+
+// UpdateUser
+func UpdateUserPropertiesByCurrentProperties(projectId uint64, id string,
+	currentPropertiesId string, properties *postgres.Jsonb) (string, int) {
+
 	db := C.GetServices().Db
+
 	// Update properties.
 	newPropertiesId, statusCode := createUserPropertiesIfChanged(
-		projectId, id, userPropertiesId, properties)
+		projectId, id, currentPropertiesId, properties)
 	if statusCode != http.StatusCreated && statusCode != http.StatusNotModified {
 		return "", http.StatusInternalServerError
 	}
-	if newPropertiesId != userPropertiesId {
-		user := User{ID: id, ProjectId: projectId}
-		if err := db.Model(&user).Where("project_id = ?", projectId).Where("id = ?", id).Update("properties_id", newPropertiesId).Error; err != nil {
-			log.WithFields(log.Fields{"user": user}).WithError(err).Error("Failed updating propertyId")
-			return "", http.StatusInternalServerError
-		}
-		return newPropertiesId, http.StatusAccepted
+
+	if newPropertiesId == currentPropertiesId {
+		return currentPropertiesId, http.StatusNotModified
 	}
-	return userPropertiesId, http.StatusNotModified
+
+	if err := db.Model(&User{}).Where("project_id = ?", projectId).Where("id = ?",
+		id).Update("properties_id", newPropertiesId).Error; err != nil {
+
+		log.WithFields(log.Fields{"projectId": projectId,
+			"id": id}).WithError(err).Error("Failed updating propertyId")
+		return "", http.StatusInternalServerError
+	}
+
+	return newPropertiesId, http.StatusAccepted
 }
 
 func getUserPropertiesId(projectId uint64, id string) (string, int) {
@@ -164,7 +178,7 @@ func GetUser(projectId uint64, id string) (*User, int) {
 		return nil, http.StatusInternalServerError
 	}
 	if user.PropertiesId != "" {
-		properties, errCode := getUserProperties(projectId, id, user.PropertiesId)
+		properties, errCode := GetUserProperties(projectId, id, user.PropertiesId)
 		if errCode != http.StatusFound {
 			return nil, errCode
 		}

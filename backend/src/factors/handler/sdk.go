@@ -234,15 +234,16 @@ func sdkAddUserProperties(projectId uint64, request *sdkAddUserPropertiesPayload
 		return http.StatusOK, gin.H{"user_id": newUser.ID, "message": "User properties added successfully."}
 	}
 
-	// Todo(Dinesh): Make UpdateUser to return 404 on 0 rows affected and remove this.
-	scopeUser, errCode := M.GetUser(projectId, request.UserId)
-	if errCode != http.StatusFound {
-		return errCode, gin.H{"error": "Add user properties failed. Invalid user_id."}
-
+	user, errCode := M.GetUser(projectId, request.UserId)
+	if errCode == http.StatusNotFound {
+		return http.StatusBadRequest, gin.H{"error": "Add user properties failed. Invalid user_id."}
+	} else if errCode == http.StatusInternalServerError {
+		return errCode, gin.H{"error": "Add user properties failed"}
 	}
 
-	if _, errCode = M.UpdateUser(projectId, scopeUser.ID,
-		&M.User{Properties: postgres.Jsonb{propertiesJSON}}); errCode != http.StatusAccepted {
+	_, errCode = M.UpdateUserPropertiesByCurrentProperties(projectId, user.ID,
+		user.PropertiesId, &postgres.Jsonb{propertiesJSON})
+	if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
 		return errCode, gin.H{"error": "Add user properties failed."}
 	}
 

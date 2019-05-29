@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/jinzhu/gorm/dialects/postgres"
 )
 
 // DBReadRows Creates [][]interface{} from sql result rows.
@@ -54,4 +56,8 @@ func DBReadRows(rows *sql.Rows) ([]string, [][]interface{}, error) {
 
 func DBDebugPreparedStatement(stmnt string, params []interface{}) string {
 	return fmt.Sprintf(strings.Replace(stmnt, "?", "'%v'", len(params)), params...)
+}
+
+func IsEmptyPostgresJsonb(jsonb *postgres.Jsonb) bool {
+	return string((*jsonb).RawMessage) == ""
 }

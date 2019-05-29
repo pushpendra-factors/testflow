@@ -43,7 +43,7 @@ func createUserPropertiesIfChanged(projectId uint64, userId string,
 	json.Unmarshal((*newProperties).RawMessage, &newPropertiesMap)
 
 	if currentPropertiesId != "" {
-		currentProperties, statusCode = getUserProperties(
+		currentProperties, statusCode = GetUserProperties(
 			projectId, userId, currentPropertiesId)
 		json.Unmarshal((*currentProperties).RawMessage, &currentPropertiesMap)
 		if statusCode == http.StatusFound {
@@ -72,7 +72,7 @@ func createUserPropertiesIfChanged(projectId uint64, userId string,
 	return userProperties.ID, http.StatusCreated
 }
 
-func getUserProperties(projectId uint64, userId string, id string) (*postgres.Jsonb, int) {
+func GetUserProperties(projectId uint64, userId string, id string) (*postgres.Jsonb, int) {
 	db := C.GetServices().Db
 
 	var userProperties UserProperties

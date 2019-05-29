@@ -55,7 +55,9 @@ func TestDBCreateAndGetUser(t *testing.T) {
 	user.Properties = postgres.Jsonb{RawMessage: json.RawMessage([]byte(`null`))}
 	retUser.CreatedAt = time.Time{}
 	retUser.UpdatedAt = time.Time{}
-	assert.Equal(t, user, retUser)
+	assert.Equal(t, user.ProjectId, retUser.ProjectId)
+	// id of null user_properties row. updated as user_properties_id.
+	assert.True(t, len(retUser.PropertiesId) > 0)
 	// Test Get User with wrong project id.
 	retUser, errCode = M.GetUser(projectId+1, user.ID)
 	assert.Equal(t, http.StatusNotFound, errCode)
@@ -210,6 +212,9 @@ func TestDBUpdateUserById(t *testing.T) {
 	assert.Equal(t, http.StatusFound, gErrCode)
 	// Test CustomerUserId updated or not.
 	assert.Equal(t, rCustomerUserId, gUser.CustomerUserId)
+	// Update user should not create properties while updating
+	// other fields (identify).
+	assert.Equal(t, user.PropertiesId, gUser.PropertiesId)
 
 	segAid := "seg_aid_1"
 	_, errCode = M.UpdateUser(project.ID, user.ID, &M.User{SegmentAnonymousId: segAid})
@@ -287,6 +292,19 @@ func TestDBUpdateUserProperties(t *testing.T) {
 	newPropertiesId, status = M.UpdateUserProperties(project.ID, user.ID, newProperties)
 	assert.Equal(t, http.StatusNotModified, status)
 	assert.Equal(t, oldPropertiesId, newPropertiesId)
+
+	// New key should merge with existing keys.
+	oldPropertiesId = newPropertiesId
+	newProperties = &postgres.Jsonb{RawMessage: json.RawMessage([]byte(
+		`{"prop1": "value1"}`))}
+	newPropertiesId, status = M.UpdateUserProperties(project.ID, user.ID, newProperties)
+	assert.Equal(t, http.StatusAccepted, status)
+	properties, status := M.GetUserProperties(project.ID, user.ID, newPropertiesId)
+	var propertiesMap map[string]interface{}
+	err = json.Unmarshal((*properties).RawMessage, &propertiesMap)
+	assert.Nil(t, err)
+	assert.Len(t, propertiesMap, 5)
+	assert.Equal(t, "value1", propertiesMap["prop1"])
 }
 
 func TestDBFillUserDefaultProperties(t *testing.T) {
