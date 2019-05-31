@@ -723,7 +723,7 @@ class Query extends Component {
         <div style={{borderTop: '1px solid rgb(221, 221, 221)', paddingTop: '20px', marginTop: '30px', marginLeft: '-60px', marginRight: '-60px'}} hidden={ !this.state.showPresentation }></div>
 
         {/* Presentation */}
-        <div style={{ minHeight: '530px', maxHeight: '530px' }}>
+        <div style={{ minHeight: '530px' }}>
           <Row style={{ marginTop: '15px', marginRight: '10px' }} hidden={ !this.state.showPresentation }>
             <Col xs='12' md='12'>
               <ButtonToolbar className='pull-right'>
@@ -758,7 +758,7 @@ class Query extends Component {
               <span style={{display: 'inline-block'}} className='fapp-error' hidden={this.state.addToDashboardMessage == null}>{ this.state.addToDashboardMessage }</span>
             </div>
             <Form >
-              <span className='fapp-label'>Chart title</span>         
+                <span className='fapp-label'>Chart title</span>         
               <Input className='fapp-input' type="text" placeholder="Your chart title" onChange={this.setDashboardUnitTitle} />
             </Form>
           </ModalBody>
