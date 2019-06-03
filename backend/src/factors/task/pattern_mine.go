@@ -47,10 +47,8 @@ func countPatternsWorker(filepath string,
 	}
 
 	scanner := bufio.NewScanner(file)
-	// 10 MB buffer.
-	const maxCapacity = 10 * 1024 * 1024
-	buf := make([]byte, maxCapacity)
-	scanner.Buffer(buf, maxCapacity)
+	buf := make([]byte, P.MAX_PATTERN_BYTES)
+	scanner.Buffer(buf, P.MAX_PATTERN_BYTES)
 	P.CountPatterns(scanner, patterns)
 	file.Close()
 	wg.Done()
@@ -106,7 +104,7 @@ func filterAndCompressPatterns(
 
 	countFilteredPatterns := []*P.Pattern{}
 	for _, p := range patterns {
-		if p.Count > 0 {
+		if p.PerOccurrenceCount > 0 {
 			countFilteredPatterns = append(countFilteredPatterns, p)
 		}
 	}
@@ -141,7 +139,7 @@ func filterAndCompressPatterns(
 	// Sort the patterns in descending order.
 	sort.Slice(compressedPatterns,
 		func(i, j int) bool {
-			return compressedPatterns[i].Count > compressedPatterns[j].Count
+			return compressedPatterns[i].PerOccurrenceCount > compressedPatterns[j].PerOccurrenceCount
 		})
 	var cumulativeBytes int64 = 0
 	compressedAndDroppedPatterns := []*P.Pattern{}
@@ -196,8 +194,10 @@ func compressPatterns(patterns []*P.Pattern, maxBytesSize int64) ([]*P.Pattern, 
 
 	var patternsTrim1Bytes int64 = 0
 	for _, pattern := range patterns {
-		(*pattern.EventCategoricalProperties).TrimByFmapSize(trimFraction)
-		(*pattern.UserCategoricalProperties).TrimByFmapSize(trimFraction)
+		(*pattern.PerUserEventCategoricalProperties).TrimByFmapSize(trimFraction)
+		(*pattern.PerUserUserCategoricalProperties).TrimByFmapSize(trimFraction)
+		(*pattern.PerOccurrenceEventCategoricalProperties).TrimByFmapSize(trimFraction)
+		(*pattern.PerOccurrenceUserCategoricalProperties).TrimByFmapSize(trimFraction)
 		b, err := json.Marshal(pattern)
 		if err != nil {
 			mineLog.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal pattern.")
@@ -221,8 +221,10 @@ func compressPatterns(patterns []*P.Pattern, maxBytesSize int64) ([]*P.Pattern, 
 	trimFraction = float64(maxBytesSize) * TRIM_MULTIPLIER / float64(patternsTrim1Bytes)
 	var patternsTrim2Bytes int64 = 0.0
 	for _, pattern := range patterns {
-		(*pattern.EventNumericProperties).TrimByBinSize(trimFraction)
-		(*pattern.UserNumericProperties).TrimByBinSize(trimFraction)
+		(*pattern.PerUserEventNumericProperties).TrimByBinSize(trimFraction)
+		(*pattern.PerUserUserNumericProperties).TrimByBinSize(trimFraction)
+		(*pattern.PerOccurrenceEventNumericProperties).TrimByBinSize(trimFraction)
+		(*pattern.PerOccurrenceUserNumericProperties).TrimByBinSize(trimFraction)
 		b, err := json.Marshal(pattern)
 		if err != nil {
 			mineLog.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal pattern.")
@@ -246,8 +248,10 @@ func compressPatterns(patterns []*P.Pattern, maxBytesSize int64) ([]*P.Pattern, 
 	trimFraction = float64(maxBytesSize) * TRIM_MULTIPLIER / float64(patternsTrim2Bytes)
 	var patternsTrim3Bytes int64 = 0
 	for _, pattern := range patterns {
-		(*pattern.EventCategoricalProperties).TrimByBinSize(trimFraction)
-		(*pattern.UserCategoricalProperties).TrimByBinSize(trimFraction)
+		(*pattern.PerUserEventCategoricalProperties).TrimByBinSize(trimFraction)
+		(*pattern.PerUserUserCategoricalProperties).TrimByBinSize(trimFraction)
+		(*pattern.PerOccurrenceEventCategoricalProperties).TrimByBinSize(trimFraction)
+		(*pattern.PerOccurrenceUserCategoricalProperties).TrimByBinSize(trimFraction)
 		b, err := json.Marshal(pattern)
 		if err != nil {
 			mineLog.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal pattern.")
@@ -320,13 +324,13 @@ func genLenThreeSegmentedCandidates(lenTwoPatterns []*P.Pattern,
 	for _, patterns := range startPatternsMap {
 		sort.Slice(patterns,
 			func(i, j int) bool {
-				return patterns[i].Count > patterns[j].Count
+				return patterns[i].PerOccurrenceCount > patterns[j].PerOccurrenceCount
 			})
 	}
 	for _, patterns := range endPatternsMap {
 		sort.Slice(patterns,
 			func(i, j int) bool {
-				return patterns[i].Count > patterns[j].Count
+				return patterns[i].PerOccurrenceCount > patterns[j].PerOccurrenceCount
 			})
 	}
 

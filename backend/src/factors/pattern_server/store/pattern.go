@@ -425,10 +425,9 @@ func CreatePatternsWithMetaFromScanner(scanner *bufio.Scanner) ([]*PatternWithMe
 
 func CreateScannerFromReader(r io.Reader) *bufio.Scanner {
 	scanner := bufio.NewScanner(r)
-	// Adjust scanner buffer capacity to 10MB per line.
-	const maxCapacity = 10 * 1024 * 1024
-	buf := make([]byte, maxCapacity)
-	scanner.Buffer(buf, maxCapacity)
+	// Adjust scanner buffer capacity to MAX_PATTERN_BYTES per line.
+	buf := make([]byte, pattern.MAX_PATTERN_BYTES)
+	scanner.Buffer(buf, pattern.MAX_PATTERN_BYTES)
 	return scanner
 }
 

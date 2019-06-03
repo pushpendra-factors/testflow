@@ -13,18 +13,22 @@ import (
 type Pattern struct {
 	EventNames []string `json:"en"`
 	// Histograms.
-	GenericPropertiesHistogram *Hist.NumericHistogramStruct     `json:gph`
-	EventNumericProperties     *Hist.NumericHistogramStruct     `json:"enp"`
-	EventCategoricalProperties *Hist.CategoricalHistogramStruct `json:"ecp"`
-	UserNumericProperties      *Hist.NumericHistogramStruct     `json:"unp"`
-	UserCategoricalProperties  *Hist.CategoricalHistogramStruct `json:"ucp"`
+	GenericPropertiesHistogram              *Hist.NumericHistogramStruct     `json:gph`
+	PerUserEventNumericProperties           *Hist.NumericHistogramStruct     `json:"enp"`
+	PerUserEventCategoricalProperties       *Hist.CategoricalHistogramStruct `json:"ecp"`
+	PerUserUserNumericProperties            *Hist.NumericHistogramStruct     `json:"unp"`
+	PerUserUserCategoricalProperties        *Hist.CategoricalHistogramStruct `json:"ucp"`
+	PerOccurrenceEventNumericProperties     *Hist.NumericHistogramStruct     `json:"oenp"`
+	PerOccurrenceEventCategoricalProperties *Hist.CategoricalHistogramStruct `json:"oecp"`
+	PerOccurrenceUserNumericProperties      *Hist.NumericHistogramStruct     `json:"ounp"`
+	PerOccurrenceUserCategoricalProperties  *Hist.CategoricalHistogramStruct `json:"oucp"`
 	// The total number of times this pattern occurs allowing multiple counts
 	// per user.
-	Count uint `json:"c"`
+	PerOccurrenceCount uint `json:"c"`
 	// Counted only once per user.
-	OncePerUserCount uint `json:"ouc"`
+	PerUserCount uint `json:"ouc"`
 	// Number of users the pattern was counted on.
-	UserCount uint `json:"uc"`
+	TotalUserCount uint `json:"uc"`
 
 	// Private variables.
 	waitIndex                       int
@@ -50,6 +54,7 @@ const num_NUMERIC_BINS_PER_DIMENSION = 3
 const num_MAX_NUMERIC_MULTI_BINS = 128
 const num_CATEGORICAL_BINS_PER_DIMENSION = 1
 const num_MAX_CATEGORICAL_MULTI_BINS = 6
+const MAX_PATTERN_BYTES = 20 * 1024 * 1024
 
 type NumericConstraint struct {
 	PropertyName string
@@ -108,24 +113,29 @@ func NewPattern(events []string, userAndEventsInfo *UserAndEventsInfo) (*Pattern
 		EventNames: events,
 		// 6 dimensional histogram - Cardinalties, Repeats, Timings of start_event
 		// and last_event.
-		GenericPropertiesHistogram: defaultHist,
-		EventNumericProperties:     nil,
-		EventCategoricalProperties: nil,
-		UserNumericProperties:      nil,
-		UserCategoricalProperties:  nil,
-		Count:                           0,
-		OncePerUserCount:                0,
-		waitIndex:                       0,
-		currentUserId:                   "",
-		currentUserJoinTimestamp:        0,
-		previousEventTimestamp:          0,
-		currentUserEventTimestamps:      make(map[string][]int64),
-		currentUserEventOccurenceCounts: make(map[string][]uint),
-		currentUserOccurrenceCount:      0,
-		currentEPropertiesNMap:          make(map[string]float64),
-		currentEPropertiesCMap:          make(map[string]string),
-		currentUPropertiesNMap:          make(map[string]float64),
-		currentUPropertiesCMap:          make(map[string]string),
+		GenericPropertiesHistogram:              defaultHist,
+		PerUserEventNumericProperties:           nil,
+		PerUserEventCategoricalProperties:       nil,
+		PerUserUserNumericProperties:            nil,
+		PerUserUserCategoricalProperties:        nil,
+		PerOccurrenceEventNumericProperties:     nil,
+		PerOccurrenceEventCategoricalProperties: nil,
+		PerOccurrenceUserNumericProperties:      nil,
+		PerOccurrenceUserCategoricalProperties:  nil,
+		PerOccurrenceCount:                      0,
+		PerUserCount:                            0,
+		TotalUserCount:                          0,
+		waitIndex:                               0,
+		currentUserId:                           "",
+		currentUserJoinTimestamp:                0,
+		previousEventTimestamp:                  0,
+		currentUserEventTimestamps:              make(map[string][]int64),
+		currentUserEventOccurenceCounts:         make(map[string][]uint),
+		currentUserOccurrenceCount:              0,
+		currentEPropertiesNMap:                  make(map[string]float64),
+		currentEPropertiesCMap:                  make(map[string]string),
+		currentUPropertiesNMap:                  make(map[string]float64),
+		currentUPropertiesCMap:                  make(map[string]string),
 	}
 	if userAndEventsInfo == nil {
 		return &pattern, nil
@@ -141,11 +151,16 @@ func NewPattern(events []string, userAndEventsInfo *UserAndEventsInfo) (*Pattern
 		nBinsFloat := math.Min(float64(nDimensions*num_NUMERIC_BINS_PER_DIMENSION),
 			float64(num_MAX_NUMERIC_MULTI_BINS))
 		nBins := int(math.Max(1.0, nBinsFloat))
-		nHist, err := Hist.NewNumericHistogram(nBins, nDimensions, userPropertiesNTemplate)
+		puNHist, err := Hist.NewNumericHistogram(nBins, nDimensions, userPropertiesNTemplate)
 		if err != nil {
 			return nil, err
 		}
-		pattern.UserNumericProperties = nHist
+		pattern.PerUserUserNumericProperties = puNHist
+		poNHist, err := Hist.NewNumericHistogram(nBins, nDimensions, userPropertiesNTemplate)
+		if err != nil {
+			return nil, err
+		}
+		pattern.PerOccurrenceUserNumericProperties = poNHist
 	}
 
 	if userPropertiesCTemplate != nil {
@@ -153,11 +168,16 @@ func NewPattern(events []string, userAndEventsInfo *UserAndEventsInfo) (*Pattern
 		cBinsFloat := math.Min(float64(cDimensions*num_CATEGORICAL_BINS_PER_DIMENSION),
 			float64(num_MAX_CATEGORICAL_MULTI_BINS))
 		cBins := int(math.Max(1.0, cBinsFloat))
-		cHist, err := Hist.NewCategoricalHistogram(cBins, cDimensions, userPropertiesCTemplate)
+		puCHist, err := Hist.NewCategoricalHistogram(cBins, cDimensions, userPropertiesCTemplate)
 		if err != nil {
 			return nil, err
 		}
-		pattern.UserCategoricalProperties = cHist
+		pattern.PerUserUserCategoricalProperties = puCHist
+		poCHist, err := Hist.NewCategoricalHistogram(cBins, cDimensions, userPropertiesCTemplate)
+		if err != nil {
+			return nil, err
+		}
+		pattern.PerOccurrenceUserCategoricalProperties = poCHist
 	}
 
 	if eventPropertiesNTemplate != nil {
@@ -165,11 +185,16 @@ func NewPattern(events []string, userAndEventsInfo *UserAndEventsInfo) (*Pattern
 		nBinsFloat := math.Min(float64(nDimensions*num_NUMERIC_BINS_PER_DIMENSION),
 			float64(num_MAX_NUMERIC_MULTI_BINS))
 		nBins := int(math.Max(1.0, nBinsFloat))
-		nHist, err := Hist.NewNumericHistogram(nBins, nDimensions, eventPropertiesNTemplate)
+		puNHist, err := Hist.NewNumericHistogram(nBins, nDimensions, eventPropertiesNTemplate)
 		if err != nil {
 			return nil, err
 		}
-		pattern.EventNumericProperties = nHist
+		pattern.PerUserEventNumericProperties = puNHist
+		poNHist, err := Hist.NewNumericHistogram(nBins, nDimensions, eventPropertiesNTemplate)
+		if err != nil {
+			return nil, err
+		}
+		pattern.PerOccurrenceEventNumericProperties = poNHist
 	}
 
 	if eventPropertiesCTemplate != nil {
@@ -177,11 +202,16 @@ func NewPattern(events []string, userAndEventsInfo *UserAndEventsInfo) (*Pattern
 		cBinsFloat := math.Min(float64(cDimensions*num_CATEGORICAL_BINS_PER_DIMENSION),
 			float64(num_MAX_CATEGORICAL_MULTI_BINS))
 		cBins := int(math.Max(1.0, cBinsFloat))
-		cHist, err := Hist.NewCategoricalHistogram(cBins, cDimensions, eventPropertiesCTemplate)
+		puCHist, err := Hist.NewCategoricalHistogram(cBins, cDimensions, eventPropertiesCTemplate)
 		if err != nil {
 			return nil, err
 		}
-		pattern.EventCategoricalProperties = cHist
+		pattern.PerUserEventCategoricalProperties = puCHist
+		poCHist, err := Hist.NewCategoricalHistogram(cBins, cDimensions, eventPropertiesCTemplate)
+		if err != nil {
+			return nil, err
+		}
+		pattern.PerOccurrenceEventCategoricalProperties = poCHist
 	}
 	return &pattern, nil
 }
@@ -304,7 +334,7 @@ func (p *Pattern) ResetForNewUser(userId string, userJoinTimestamp int64) error 
 		return fmt.Errorf("Missing userId or userCreatedTime.")
 	}
 
-	p.UserCount += 1
+	p.TotalUserCount += 1
 	if err := p.updateGenericHistogram(); err != nil {
 		return err
 	}
@@ -418,29 +448,50 @@ func (p *Pattern) CountForEvent(
 		pLen := len(p.EventNames)
 		if p.waitIndex == pLen {
 			// Record the pattern occurrence.
-			p.Count += 1
+			p.PerOccurrenceCount += 1
 			p.currentUserOccurrenceCount += 1
+			// Update properties histograms.
+			if p.PerOccurrenceEventNumericProperties != nil {
+				if err := p.PerOccurrenceEventNumericProperties.AddMap(p.currentEPropertiesNMap); err != nil {
+					return err
+				}
+			}
+			if p.PerOccurrenceEventCategoricalProperties != nil {
+				if err := p.PerOccurrenceEventCategoricalProperties.AddMap(p.currentEPropertiesCMap); err != nil {
+					return err
+				}
+			}
+			if p.PerOccurrenceUserNumericProperties != nil {
+				if err := p.PerOccurrenceUserNumericProperties.AddMap(p.currentUPropertiesNMap); err != nil {
+					return err
+				}
+			}
+			if p.PerOccurrenceUserCategoricalProperties != nil {
+				if err := p.PerOccurrenceUserCategoricalProperties.AddMap(p.currentUPropertiesCMap); err != nil {
+					return err
+				}
+			}
 			if p.currentUserOccurrenceCount == 1 {
-				p.OncePerUserCount += 1
+				p.PerUserCount += 1
 
 				// Update properties histograms.
-				if p.EventNumericProperties != nil {
-					if err := p.EventNumericProperties.AddMap(p.currentEPropertiesNMap); err != nil {
+				if p.PerUserEventNumericProperties != nil {
+					if err := p.PerUserEventNumericProperties.AddMap(p.currentEPropertiesNMap); err != nil {
 						return err
 					}
 				}
-				if p.EventCategoricalProperties != nil {
-					if err := p.EventCategoricalProperties.AddMap(p.currentEPropertiesCMap); err != nil {
+				if p.PerUserEventCategoricalProperties != nil {
+					if err := p.PerUserEventCategoricalProperties.AddMap(p.currentEPropertiesCMap); err != nil {
 						return err
 					}
 				}
-				if p.UserNumericProperties != nil {
-					if err := p.UserNumericProperties.AddMap(p.currentUPropertiesNMap); err != nil {
+				if p.PerUserUserNumericProperties != nil {
+					if err := p.PerUserUserNumericProperties.AddMap(p.currentUPropertiesNMap); err != nil {
 						return err
 					}
 				}
-				if p.UserCategoricalProperties != nil {
-					if err := p.UserCategoricalProperties.AddMap(p.currentUPropertiesCMap); err != nil {
+				if p.PerUserUserCategoricalProperties != nil {
+					if err := p.PerUserUserCategoricalProperties.AddMap(p.currentUPropertiesCMap); err != nil {
 						return err
 					}
 				}
@@ -518,14 +569,14 @@ func (p *Pattern) GetOncePerUserCount(
 
 	EPNumericUpperCDF := 1.0
 	EPNumericLowerCDF := 0.0
-	if p.EventNumericProperties != nil && len(EPNMapLowerBounds) > 0 {
-		EPNumericUpperCDF = p.EventNumericProperties.CDFFromMap(EPNMapUpperBounds)
-		EPNumericLowerCDF = p.EventNumericProperties.CDFFromMap(EPNMapLowerBounds)
+	if p.PerUserEventNumericProperties != nil && len(EPNMapLowerBounds) > 0 {
+		EPNumericUpperCDF = p.PerUserEventNumericProperties.CDFFromMap(EPNMapUpperBounds)
+		EPNumericLowerCDF = p.PerUserEventNumericProperties.CDFFromMap(EPNMapLowerBounds)
 	}
 	EPCategoricalPDF := 1.0
-	if p.EventCategoricalProperties != nil && len(EPCMapEquality) > 0 {
+	if p.PerUserEventCategoricalProperties != nil && len(EPCMapEquality) > 0 {
 		var err error
-		EPCategoricalPDF, err = p.EventCategoricalProperties.PDFFromMap(EPCMapEquality)
+		EPCategoricalPDF, err = p.PerUserEventCategoricalProperties.PDFFromMap(EPCMapEquality)
 		if err != nil {
 			return 0, err
 		}
@@ -533,20 +584,20 @@ func (p *Pattern) GetOncePerUserCount(
 
 	UPNumericUpperCDF := 1.0
 	UPNumericLowerCDF := 0.0
-	if p.UserNumericProperties != nil && len(UPNMapLowerBounds) > 0 {
-		UPNumericUpperCDF = p.UserNumericProperties.CDFFromMap(UPNMapUpperBounds)
-		UPNumericLowerCDF = p.UserNumericProperties.CDFFromMap(UPNMapLowerBounds)
+	if p.PerUserUserNumericProperties != nil && len(UPNMapLowerBounds) > 0 {
+		UPNumericUpperCDF = p.PerUserUserNumericProperties.CDFFromMap(UPNMapUpperBounds)
+		UPNumericLowerCDF = p.PerUserUserNumericProperties.CDFFromMap(UPNMapLowerBounds)
 	}
 	UPCategoricalPDF := 1.0
-	if p.UserCategoricalProperties != nil && len(UPCMapEquality) > 0 {
+	if p.PerUserUserCategoricalProperties != nil && len(UPCMapEquality) > 0 {
 		var err error
-		UPCategoricalPDF, err = p.UserCategoricalProperties.PDFFromMap(UPCMapEquality)
+		UPCategoricalPDF, err = p.PerUserUserCategoricalProperties.PDFFromMap(UPCMapEquality)
 		if err != nil {
 			return 0, err
 		}
 	}
 
-	count := (float64(p.OncePerUserCount) *
+	count := (float64(p.PerUserCount) *
 		(GPNumericUpperCDF - GPNumericLowerCDF) *
 		(EPNumericUpperCDF - EPNumericLowerCDF) *
 		EPCategoricalPDF *
@@ -565,7 +616,7 @@ func (p *Pattern) GetOncePerUserCount(
 			"UPCategoricalPDF":   UPCategoricalPDF,
 			"pattern":            p.String(),
 			"patternConstraints": patternConstraints,
-			"patternCount":       p.OncePerUserCount,
+			"patternCount":       p.PerUserCount,
 			"finalCount":         count,
 		}).Info("Computed CDF's and PDF's")
 		errorString := "Final count is less than 0."
@@ -575,16 +626,16 @@ func (p *Pattern) GetOncePerUserCount(
 	return uint(count), nil
 }
 
-func (p *Pattern) GetEventPropertyRanges(
+func (p *Pattern) GetPerUserEventPropertyRanges(
 	eventIndex int, propertyName string) [][2]float64 {
 	// Return the ranges of the bin [min, max], in which the numeric values for the event property occurr.
-	return p.EventNumericProperties.GetBinRanges(PatternPropertyKey(eventIndex, propertyName))
+	return p.PerUserEventNumericProperties.GetBinRanges(PatternPropertyKey(eventIndex, propertyName))
 }
 
-func (p *Pattern) GetUserPropertyRanges(
+func (p *Pattern) GetPerUserUserPropertyRanges(
 	eventIndex int, propertyName string) [][2]float64 {
 	// Return the ranges of the bin [min, max], in which the numeric values for the event property occurr.
-	return p.UserNumericProperties.GetBinRanges(PatternPropertyKey(eventIndex, propertyName))
+	return p.PerUserUserNumericProperties.GetBinRanges(PatternPropertyKey(eventIndex, propertyName))
 }
 
 func (p *Pattern) String() string {

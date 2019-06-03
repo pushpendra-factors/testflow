@@ -73,14 +73,13 @@ func TestCountPatterns(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Test pABC output.
-	assert.Equal(t, uint(3), pABC.Count)
-	assert.Equal(t, uint(2), pABC.UserCount)
-	assert.Equal(t, uint(2), pABC.OncePerUserCount)
+	assert.Equal(t, uint(3), pABC.PerOccurrenceCount)
+	assert.Equal(t, uint(2), pABC.TotalUserCount)
+	assert.Equal(t, uint(2), pABC.PerUserCount)
 	assert.Equal(t, pLen, len(pABC.EventNames))
 	for i := 0; i < pLen; i++ {
 		assert.Equal(t, pABCEvents[i], pABC.EventNames[i])
 	}
-
 
 	// A-B-C occurs twice OncePerUser with the following Generic Properties.
 
@@ -143,29 +142,29 @@ func TestCountPatterns(t *testing.T) {
 	}
 
 	// Test output on other patterns.
-	assert.Equal(t, uint(4), pAB.Count)
-	assert.Equal(t, uint(2), pAB.OncePerUserCount)
-	assert.Equal(t, uint(2), pAB.UserCount)
+	assert.Equal(t, uint(4), pAB.PerOccurrenceCount)
+	assert.Equal(t, uint(2), pAB.PerUserCount)
+	assert.Equal(t, uint(2), pAB.TotalUserCount)
 
-	assert.Equal(t, uint(5), pBC.Count)
-	assert.Equal(t, uint(2), pBC.OncePerUserCount)
-	assert.Equal(t, uint(2), pBC.UserCount)
+	assert.Equal(t, uint(5), pBC.PerOccurrenceCount)
+	assert.Equal(t, uint(2), pBC.PerUserCount)
+	assert.Equal(t, uint(2), pBC.TotalUserCount)
 
-	assert.Equal(t, uint(4), pAC.Count)
-	assert.Equal(t, uint(2), pAC.OncePerUserCount)
-	assert.Equal(t, uint(2), pAC.UserCount)
+	assert.Equal(t, uint(4), pAC.PerOccurrenceCount)
+	assert.Equal(t, uint(2), pAC.PerUserCount)
+	assert.Equal(t, uint(2), pAC.TotalUserCount)
 
-	assert.Equal(t, uint(5), pA.Count)
-	assert.Equal(t, uint(2), pA.OncePerUserCount)
-	assert.Equal(t, uint(2), pA.UserCount)
+	assert.Equal(t, uint(5), pA.PerOccurrenceCount)
+	assert.Equal(t, uint(2), pA.PerUserCount)
+	assert.Equal(t, uint(2), pA.TotalUserCount)
 
-	assert.Equal(t, uint(6), pB.Count)
-	assert.Equal(t, uint(2), pB.OncePerUserCount)
-	assert.Equal(t, uint(2), pB.UserCount)
+	assert.Equal(t, uint(6), pB.PerOccurrenceCount)
+	assert.Equal(t, uint(2), pB.PerUserCount)
+	assert.Equal(t, uint(2), pB.TotalUserCount)
 
-	assert.Equal(t, uint(5), pC.Count)
-	assert.Equal(t, uint(2), pC.OncePerUserCount)
-	assert.Equal(t, uint(2), pC.UserCount)
+	assert.Equal(t, uint(5), pC.PerOccurrenceCount)
+	assert.Equal(t, uint(2), pC.PerUserCount)
+	assert.Equal(t, uint(2), pC.TotalUserCount)
 }
 
 func TestGenCandidatesPair(t *testing.T) {
@@ -506,7 +505,7 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 	err = P.CountPatterns(scanner, patterns)
 	assert.Nil(t, err)
 
-	// A-B-C occurs twice OncePerUser with the following Generic Properties.
+	// A-B-C occurs twice PerUser with the following Generic Properties.
 
 	// A: firstSeenOccurrenceCount -> 2 and 1.
 	// A: lastSeenOccurrenceCount -> 3 and 3.
@@ -528,9 +527,9 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 	// C: lastSeenTime -> user1CreatedTime+1hour+420seconds and user2CreatedTime+1hour+540seconds.
 	// C: firstSeenSinceUserJoin -> 1hour+240seconds and 1hour+240seconds.
 	// C: lastSeenSinceUserJoin -> 1hour+360seconds and 1hour+540seconds.
-	assert.Equal(t, uint(3), pABC.Count)
-	assert.Equal(t, uint(2), pABC.UserCount)
-	assert.Equal(t, uint(2), pABC.OncePerUserCount)
+	assert.Equal(t, uint(3), pABC.PerOccurrenceCount)
+	assert.Equal(t, uint(2), pABC.TotalUserCount)
+	assert.Equal(t, uint(2), pABC.PerUserCount)
 	assert.Equal(t, pLen, len(pABC.EventNames))
 	for i := 0; i < pLen; i++ {
 		assert.Equal(t, pABCEvents[i], pABC.EventNames[i])
@@ -589,10 +588,10 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 		"2.CNum":   float64((1.0 + 2.0) / 2),
 		"2.ComNum": float64((2.0 + 3.0) / 2),
 	}
-	actualMeanMap = pABC.EventNumericProperties.MeanMap()
+	actualMeanMap = pABC.PerUserEventNumericProperties.MeanMap()
 	assert.Equal(t, expectedMeanMap, actualMeanMap)
 
-	actualCdf := pABC.EventNumericProperties.CDFFromMap(
+	actualCdf := pABC.PerUserEventNumericProperties.CDFFromMap(
 		map[string]float64{
 			"0.ANum":   2.0,
 			"0.ComNum": 2.0,
@@ -606,7 +605,7 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 	// 1.ComCat: "com2" and "com1"
 	// 2.CCat: "ccat1" and "ccat2"
 	// 2.ComCat: "com2" and "com3"
-	actualPdf, err := pABC.EventCategoricalProperties.PDFFromMap(
+	actualPdf, err := pABC.PerUserEventCategoricalProperties.PDFFromMap(
 		map[string]string{
 			"0.ACat":   "acat1",
 			"0.ComCat": "com3",
@@ -628,10 +627,10 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 		"1.age": float64((20.0 + 30.0) / 2),
 		"2.age": float64((20.0 + 30.0) / 2),
 	}
-	actualMeanMap = pABC.UserNumericProperties.MeanMap()
+	actualMeanMap = pABC.PerUserUserNumericProperties.MeanMap()
 	assert.Equal(t, expectedMeanMap, actualMeanMap)
 
-	actualCdf = pABC.UserNumericProperties.CDFFromMap(
+	actualCdf = pABC.PerUserUserNumericProperties.CDFFromMap(
 		map[string]float64{
 			"0.age": 25.0,
 			"1.age": 25.0,
@@ -647,7 +646,7 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 	// 1.paymentStatus: "Free" and "Free"
 	// 2.$country: "India" and "USA"
 	// 2.paymentStatus: "Paid" and "Paid"
-	actualPdf, err = pABC.UserCategoricalProperties.PDFFromMap(
+	actualPdf, err = pABC.PerUserUserCategoricalProperties.PDFFromMap(
 		map[string]string{
 			"0.$country":      "USA",
 			"0.paymentStatus": "Free",
@@ -659,30 +658,116 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 	assert.Nil(t, err, fmt.Sprintf("Error: %v", err))
 	assert.InDelta(t, actualPdf, 0.5, 0.01)
 
+	// A-B-C occurs thrice across users with the following six dimensional event numerical
+	// distribution.
+	// 0.ANum: 1.0 and 1.0
+	// 0.ComNum: 3.0 and 1.0
+	// 1.BNum: 1.0 and 1.0
+	// 1.ComNum: 2.0 and 1.0
+	// 2.CNum: 1.0 and 2.0
+	// 2.ComNum 2.0 and 3.0
+	expectedMeanMap = map[string]float64{
+		"0.ANum":   float64((1.0 + 1.0 + 1.0) / 3),
+		"0.ComNum": float64((3.0 + 1.0 + 1.0) / 3),
+		"1.BNum":   float64((1.0 + 1.0 + 2.0) / 3),
+		"1.ComNum": float64((2.0 + 1.0 + 2.0) / 3),
+		"2.CNum":   float64((1.0 + 2.0 + 1.0) / 3),
+		"2.ComNum": float64((2.0 + 3.0 + 3.0) / 3),
+	}
+	actualMeanMap = pABC.PerOccurrenceEventNumericProperties.MeanMap()
+	assert.Equal(t, expectedMeanMap, actualMeanMap)
+
+	actualCdf = pABC.PerOccurrenceEventNumericProperties.CDFFromMap(
+		map[string]float64{
+			"0.ANum":   2.0,
+			"0.ComNum": 2.0,
+			"1.ComNum": 1.5,
+		})
+	assert.InDelta(t, actualCdf, 0.33, 0.01)
+
+	// 0.ACat: "acat1" and "acat1" and "acat1"
+	// 0.ComCat: "com3" and "com1" and "com1"
+	// 1.BCat: "bcat1" and "bcat1" and "bcat2"
+	// 1.ComCat: "com2" and "com1" and "com2"
+	// 2.CCat: "ccat1" and "ccat2" and "ccat1"
+	// 2.ComCat: "com2" and "com3" and "com3"
+	actualPdf, err = pABC.PerOccurrenceEventCategoricalProperties.PDFFromMap(
+		map[string]string{
+			"0.ACat":   "acat1",
+			"0.ComCat": "com3",
+			"1.BCat":   "bcat1",
+			"1.ComCat": "com2",
+			"2.CCat":   "ccat1",
+			"2.ComCat": "com2",
+		})
+	assert.Nil(t, err, fmt.Sprintf("Error: %v", err))
+	assert.InDelta(t, actualPdf, 0.33, 0.01)
+
+	// A-B-C occurs thrice with the following six dimensional user numerical
+	// distribution.
+	// 0.age: 20.0 and 30.0 and 30.0
+	// 1.age: 20.0 and 30.0 and 30.0
+	// 2.age: 20.0 and 30.0 and 30.0
+	expectedMeanMap = map[string]float64{
+		"0.age": float64((20.0 + 30.0 + 30.0) / 3),
+		"1.age": float64((20.0 + 30.0 + 30.0) / 3),
+		"2.age": float64((20.0 + 30.0 + 30.0) / 3),
+	}
+	actualMeanMap = pABC.PerOccurrenceUserNumericProperties.MeanMap()
+	assert.Equal(t, expectedMeanMap, actualMeanMap)
+
+	actualCdf = pABC.PerOccurrenceUserNumericProperties.CDFFromMap(
+		map[string]float64{
+			"0.age": 25.0,
+			"1.age": 25.0,
+			"2.age": 25.0,
+		})
+	assert.InDelta(t, actualCdf, 0.33, 0.01)
+
+	// ABC occurs thrice, once with U1 country India and twice with U2 country USA.
+	// Payment status changes from Free to Paid on first occurrence of C.
+	// 0.$country: "India" and "USA" and "USA"
+	// 0.paymentStatus: "Free" and "Free" and "Paid"
+	// 1.$country: "India" and "USA" and "USA"
+	// 1.paymentStatus: "Free" and "Free" and "Paid"
+	// 2.$country: "India" and "USA" and "USA"
+	// 2.paymentStatus: "Paid" and "Paid" and "Paid"
+	actualPdf, err = pABC.PerOccurrenceUserCategoricalProperties.PDFFromMap(
+		map[string]string{
+			"0.$country":      "USA",
+			"0.paymentStatus": "Free",
+			"1.$country":      "USA",
+			"1.paymentStatus": "Free",
+			"2.$country":      "USA",
+			"2.paymentStatus": "Paid",
+		})
+	assert.Nil(t, err, fmt.Sprintf("Error: %v", err))
+	assert.InDelta(t, actualPdf, 0.33, 0.01)
+
 	// Test output on other patterns.
-	assert.Equal(t, uint(4), pAB.Count)
-	assert.Equal(t, uint(2), pAB.OncePerUserCount)
-	assert.Equal(t, uint(2), pAB.UserCount)
+	assert.Equal(t, uint(4), pAB.PerOccurrenceCount)
+	assert.Equal(t, uint(2), pAB.PerUserCount)
+	assert.Equal(t, uint(2), pAB.TotalUserCount)
 
-	assert.Equal(t, uint(5), pBC.Count)
-	assert.Equal(t, uint(2), pBC.OncePerUserCount)
-	assert.Equal(t, uint(2), pBC.UserCount)
+	assert.Equal(t, uint(5), pBC.PerOccurrenceCount)
+	assert.Equal(t, uint(2), pBC.PerUserCount)
+	assert.Equal(t, uint(2), pBC.TotalUserCount)
 
-	assert.Equal(t, uint(4), pAC.Count)
-	assert.Equal(t, uint(2), pAC.OncePerUserCount)
-	assert.Equal(t, uint(2), pAC.UserCount)
+	assert.Equal(t, uint(4), pAC.PerOccurrenceCount)
+	assert.Equal(t, uint(2), pAC.PerUserCount)
+	assert.Equal(t, uint(2), pAC.TotalUserCount)
 
-	assert.Equal(t, uint(5), pA.Count)
-	assert.Equal(t, uint(2), pA.OncePerUserCount)
-	assert.Equal(t, uint(2), pA.UserCount)
+	assert.Equal(t, uint(5), pA.PerOccurrenceCount)
+	assert.Equal(t, uint(2), pA.PerUserCount)
+	assert.Equal(t, uint(2), pA.TotalUserCount)
 
-	assert.Equal(t, uint(6), pB.Count)
-	assert.Equal(t, uint(2), pB.OncePerUserCount)
-	assert.Equal(t, uint(2), pB.UserCount)
+	assert.Equal(t, uint(6), pB.PerOccurrenceCount)
+	assert.Equal(t, uint(2), pB.PerUserCount)
+	assert.Equal(t, uint(2), pB.TotalUserCount)
 
-	assert.Equal(t, uint(5), pC.Count)
-	assert.Equal(t, uint(2), pC.OncePerUserCount)
-	assert.Equal(t, uint(2), pC.UserCount)
+	assert.Equal(t, uint(5), pC.PerOccurrenceCount)
+	assert.Equal(t, uint(2), pC.PerUserCount)
+	assert.Equal(t, uint(2), pC.TotalUserCount)
 
 	// Test GetOncePerUserCount with properties constraints.
 	count, err := pABC.GetOncePerUserCount(nil)

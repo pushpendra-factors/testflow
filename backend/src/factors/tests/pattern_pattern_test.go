@@ -22,9 +22,9 @@ func TestPatternCountEvents(t *testing.T) {
 	assert.NotNil(t, p)
 	pLen := len(pEvents)
 	assert.Equal(t, pLen, len(p.EventNames))
-	assert.Equal(t, uint(0), p.Count)
-	assert.Equal(t, uint(0), p.UserCount)
-	assert.Equal(t, uint(0), p.OncePerUserCount)
+	assert.Equal(t, uint(0), p.PerOccurrenceCount)
+	assert.Equal(t, uint(0), p.TotalUserCount)
+	assert.Equal(t, uint(0), p.PerUserCount)
 	// User 1 events.
 	userId := "user1"
 	user1CreatedTime, _ := time.Parse(time.RFC3339, "2017-06-01T00:00:00Z")
@@ -57,9 +57,9 @@ func TestPatternCountEvents(t *testing.T) {
 	err = p.ResetAfterLastUser()
 	assert.Nil(t, err)
 
-	assert.Equal(t, uint(3), p.Count)
-	assert.Equal(t, uint(2), p.UserCount)
-	assert.Equal(t, uint(2), p.OncePerUserCount)
+	assert.Equal(t, uint(3), p.PerOccurrenceCount)
+	assert.Equal(t, uint(2), p.TotalUserCount)
+	assert.Equal(t, uint(2), p.PerUserCount)
 	assert.Equal(t, pLen, len(p.EventNames))
 	for i := 0; i < pLen; i++ {
 		assert.Equal(t, pEvents[i], p.EventNames[i])
@@ -188,9 +188,9 @@ func TestPatternGetOncePerUserCount(t *testing.T) {
 	// C: firstSeenSinceUserJoin -> 1hour+240seconds and 1hour+240seconds.
 	// C: lastSeenSinceUserJoin -> 1hour+360seconds and 1hour+540seconds.
 
-	assert.Equal(t, uint(3), p.Count)
-	assert.Equal(t, uint(2), p.UserCount)
-	assert.Equal(t, uint(2), p.OncePerUserCount)
+	assert.Equal(t, uint(3), p.PerOccurrenceCount)
+	assert.Equal(t, uint(2), p.TotalUserCount)
+	assert.Equal(t, uint(2), p.PerUserCount)
 
 	assert.Equal(t, uint64(2), p.GenericPropertiesHistogram.Count())
 	expectedMeanMap := map[string]float64{
@@ -368,9 +368,9 @@ func TestPatternEdgeConditions(t *testing.T) {
 	p, err = P.NewPattern([]string{"A", "B", "C"}, nil)
 	assert.Nil(t, err)
 	assert.NotNil(t, p)
-	assert.Equal(t, uint(0), p.Count)
-	assert.Equal(t, uint(0), p.UserCount)
-	assert.Equal(t, uint(0), p.OncePerUserCount)
+	assert.Equal(t, uint(0), p.PerOccurrenceCount)
+	assert.Equal(t, uint(0), p.TotalUserCount)
+	assert.Equal(t, uint(0), p.PerUserCount)
 
 	// Test ResetForNewUser without time or Id.
 	p, err = P.NewPattern([]string{"A", "B", "C"}, nil)

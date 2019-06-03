@@ -107,7 +107,7 @@ func GenCandidates(currentPatterns []*Pattern, maxCandidates int, userAndEventsI
 	sort.Slice(
 		currentPatterns,
 		func(i, j int) bool {
-			return currentPatterns[i].Count > currentPatterns[j].Count
+			return currentPatterns[i].PerOccurrenceCount > currentPatterns[j].PerOccurrenceCount
 		})
 	candidatesMap := make(map[string]*Pattern)
 	// Candidates are formed in decreasing order of frequent patterns till maxCandidates.
@@ -115,7 +115,7 @@ func GenCandidates(currentPatterns []*Pattern, maxCandidates int, userAndEventsI
 		for j := i + 1; j < numPatterns; j++ {
 			if c1, c2, ok := GenCandidatesPair(
 				currentPatterns[i], currentPatterns[j], userAndEventsInfo); ok {
-				currentMinCount = currentPatterns[j].Count
+				currentMinCount = currentPatterns[j].PerOccurrenceCount
 				candidatesMap[c1.String()] = c1
 				if len(candidatesMap) >= maxCandidates {
 					return candidatesMapToSlice(candidatesMap), currentMinCount, nil
@@ -252,19 +252,19 @@ func ComputeAllUserPropertiesHistogram(scanner *bufio.Scanner, pattern *Pattern)
 			cMap := make(map[string]string)
 			// Histogram of all user properties as seen in their first event is tracked.
 			addNumericAndCategoricalProperties(0, userProperties, nMap, cMap)
-			if err := pattern.UserNumericProperties.AddMap(nMap); err != nil {
+			if err := pattern.PerUserUserNumericProperties.AddMap(nMap); err != nil {
 				return err
 			}
-			if err := pattern.UserCategoricalProperties.AddMap(cMap); err != nil {
+			if err := pattern.PerUserUserCategoricalProperties.AddMap(cMap); err != nil {
 				return err
 			}
 		}
 		seenUsers[userId] = true
 	}
-	count := uint(pattern.UserCategoricalProperties.Count())
-	pattern.UserCount = count
-	pattern.OncePerUserCount = count
-	pattern.Count = count
+	count := uint(pattern.PerUserUserCategoricalProperties.Count())
+	pattern.TotalUserCount = count
+	pattern.PerUserCount = count
+	pattern.PerOccurrenceCount = count
 	return nil
 }
 
@@ -317,15 +317,11 @@ func CountPatterns(scanner *bufio.Scanner, patterns []*Pattern) error {
 			if err := p.CountForEvent(eventName, eventTimestamp, eventProperties,
 				userProperties, uint(eventCardinality), userId, userJoinTimestamp); err != nil {
 				log.WithFields(log.Fields{
-					"error":                    err,
-					"pattern":                  p.EventNames,
-					"eventName":                eventName,
-					"eventProperties":          eventProperties,
-					"userProperties":           userProperties,
-					"userNumericTemplate":      p.UserNumericProperties,
-					"userCategoricalTemplate":  p.UserCategoricalProperties,
-					"eventNumericTemplate":     p.EventNumericProperties,
-					"eventCategoricalTemplate": p.EventCategoricalProperties,
+					"error":           err,
+					"pattern":         p.EventNames,
+					"eventName":       eventName,
+					"eventProperties": eventProperties,
+					"userProperties":  userProperties,
 				}).Error("Error when counting event")
 			}
 		}

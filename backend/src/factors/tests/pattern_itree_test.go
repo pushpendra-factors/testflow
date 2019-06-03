@@ -70,9 +70,9 @@ func TestBuildNewItree(t *testing.T) {
 	patterns := []*P.Pattern{}
 	for _, tpi := range tpis {
 		p, _ := P.NewPattern(tpi.eventNames, nil)
-		p.Count = tpi.count
-		p.OncePerUserCount = tpi.perUserCount
-		p.UserCount = userCount
+		p.PerOccurrenceCount = tpi.count
+		p.PerUserCount = tpi.perUserCount
+		p.TotalUserCount = userCount
 		patterns = append(patterns, p)
 	}
 	pw := NewMockPatternServiceWrapper(patterns, nil)

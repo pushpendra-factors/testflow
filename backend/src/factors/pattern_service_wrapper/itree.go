@@ -189,7 +189,7 @@ func (it *Itree) buildRootNode(reqId string,
 	}
 	var p float64
 	if len(pattern.EventNames) == 1 {
-		p = float64(patternCount) / float64(pattern.UserCount)
+		p = float64(patternCount) / float64(pattern.TotalUserCount)
 	} else if len(pattern.EventNames) == 2 {
 		c, ok := patternWrapper.GetPerUserCount(reqId, pattern.EventNames[:1],
 			patternConstraints[:1])
@@ -582,7 +582,7 @@ func (it *Itree) buildAndAddSequenceChildNodes(reqId string,
 	var fpp float64
 	if peLen == 1 {
 		// Parent is root node. Count is all users.
-		fpp = float64(parentPattern.UserCount)
+		fpp = float64(parentPattern.TotalUserCount)
 	} else {
 		var subParentConstraints []P.EventConstraints
 		if parentNode.PatternConstraints == nil {
@@ -808,9 +808,9 @@ func (it *Itree) buildNumericalPropertyChildNodes(reqId string,
 		numP++
 		binRanges := [][2]float64{}
 		if nodeType == NODE_TYPE_EVENT_PROPERTY {
-			binRanges = parentPattern.GetEventPropertyRanges(pLen-2, propertyName)
+			binRanges = parentPattern.GetPerUserEventPropertyRanges(pLen-2, propertyName)
 		} else if nodeType == NODE_TYPE_USER_PROPERTY {
-			binRanges = parentPattern.GetUserPropertyRanges(pLen-2, propertyName)
+			binRanges = parentPattern.GetPerUserUserPropertyRanges(pLen-2, propertyName)
 		}
 
 		for _, pRange := range binRanges {
@@ -928,7 +928,7 @@ func (it *Itree) buildAndAddPropertyChildNodes(reqId string,
 	var eventName string
 	if pLen == 1 {
 		// Parent is root node. Count is all users.
-		fpp = float64(parentPattern.UserCount)
+		fpp = float64(parentPattern.TotalUserCount)
 	} else {
 		eventName = parentPattern.EventNames[pLen-2]
 		eventInfo, _ = (*userAndEventsInfo.EventPropertiesInfoMap)[eventName]
