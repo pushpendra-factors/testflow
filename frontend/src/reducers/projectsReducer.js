@@ -13,7 +13,9 @@ const DEFAULT_PROJECT_STATE = {
   filters: [],
   filtersError: null,
   intervals: [],
-  defaultModelInterval: null
+  defaultModelInterval: null,
+  projectAgents: [],
+  agents: {}
 }
 
 export default function reducer(state=DEFAULT_PROJECT_STATE, action) {
@@ -216,6 +218,41 @@ export default function reducer(state=DEFAULT_PROJECT_STATE, action) {
           ...state,
           intervals: []
         }
+      }
+      case "FETCH_PROJECT_AGENTS_FULFILLED":{
+        return {
+          ...state,
+          projectAgents: action.payload.project_agent_mappings,
+          agents: action.payload.agents,
+        }
+      }
+      case "FETCH_PROJECT_AGENTS_REJECTED":{
+        return {
+          ...state,
+          projectAgents: {},
+          agents: {},
+        }
+      }
+      case "PROJECT_AGENT_INVITE_FULFILLED": {
+        let nextState = { ...state };
+        
+        let projectAgentMapping = action.payload.project_agent_mappings[0];
+        nextState.projectAgents = [...state.projectAgents];
+        nextState.projectAgents.push(projectAgentMapping);
+        nextState.agents[projectAgentMapping.agent_uuid] = action.payload.agents[projectAgentMapping.agent_uuid];        
+        return nextState
+      }
+      case "PROJECT_AGENT_INVITE_REJECTED": {
+        return {
+          ...state
+        }
+      }
+      case "PROJECT_AGENT_REMOVE_FULFILLED":{
+        let nextState = { ...state };
+        nextState.projectAgents = state.projectAgents.filter((projectAgent)=>{
+          return projectAgent.agent_uuid != action.payload.agent_uuid
+        })
+        return nextState
       }
     }
     return state

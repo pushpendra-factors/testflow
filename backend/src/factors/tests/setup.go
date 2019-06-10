@@ -9,24 +9,22 @@ import (
 
 // TODO: Use testify.suites to avoid multiple initializations across these tests.
 
-// Todo(Dinesh): To be replaced with SetupProjectReturnDAO.
-func SetupProject() (uint64, error) {
-	var projectId uint64
-
-	// Create random project.
-	random_project_name := U.RandomLowerAphaNumString(15)
-	project, err_code := M.CreateProjectWithDependencies(&M.Project{Name: random_project_name})
-	if err_code != http.StatusCreated {
-		return projectId, fmt.Errorf("Project Creation failed.")
-	}
-	projectId = project.ID
-	return projectId, nil
-}
-
 func SetupProjectReturnDAO() (*M.Project, error) {
+
+	agent, errCode := SetupAgentReturnDAO(getRandomEmail())
+	if errCode != http.StatusCreated {
+		return nil, fmt.Errorf("Project Creation failed, agentCreation failed")
+	}
+
+	billingAccount, errCode := M.GetBillingAccountByAgentUUID(agent.UUID)
+	if errCode != http.StatusFound {
+		return nil, fmt.Errorf("Project Creation failed, agent billing account not found")
+	}
+
 	// Create random project.
 	random_project_name := U.RandomLowerAphaNumString(15)
-	project, err_code := M.CreateProjectWithDependencies(&M.Project{Name: random_project_name})
+
+	project, err_code := M.CreateProjectWithDependencies(&M.Project{Name: random_project_name}, agent.UUID, M.ADMIN, billingAccount.ID)
 	if err_code != http.StatusCreated {
 		return nil, fmt.Errorf("Project Creation failed.")
 	}
@@ -35,10 +33,9 @@ func SetupProjectReturnDAO() (*M.Project, error) {
 
 func SetupProjectUserReturnDAO() (*M.Project, *M.User, error) {
 	// Create random project and user.
-	random_project_name := U.RandomLowerAphaNumString(15)
-	project, err_code := M.CreateProjectWithDependencies(&M.Project{Name: random_project_name})
-	if err_code != http.StatusCreated {
-		return nil, nil, fmt.Errorf("Project Creation failed.")
+	project, err := SetupProjectReturnDAO()
+	if err != nil {
+		return nil, nil, err
 	}
 
 	user, err_code := M.CreateUser(&M.User{ProjectId: project.ID})
@@ -56,10 +53,10 @@ func SetupProjectUserEventName() (uint64, string, uint64, error) {
 	var eventNameId uint64
 
 	// Create random project and a corresponding eventName and user.
-	random_project_name := U.RandomLowerAphaNumString(15)
-	project, err_code := M.CreateProjectWithDependencies(&M.Project{Name: random_project_name})
-	if err_code != http.StatusCreated {
-		return projectId, userId, eventNameId, fmt.Errorf("Project Creation failed.")
+
+	project, err := SetupProjectReturnDAO()
+	if err != nil {
+		return projectId, userId, eventNameId, err
 	}
 	user, err_code := M.CreateUser(&M.User{ProjectId: project.ID})
 	if err_code != http.StatusCreated {
@@ -76,11 +73,11 @@ func SetupProjectUserEventName() (uint64, string, uint64, error) {
 }
 
 func SetupProjectUserEventNameReturnDAO() (*M.Project, *M.User, *M.EventName, error) {
+
 	// Create random project and a corresponding eventName and user.
-	random_project_name := U.RandomLowerAphaNumString(15)
-	project, err_code := M.CreateProjectWithDependencies(&M.Project{Name: random_project_name})
-	if err_code != http.StatusCreated {
-		return nil, nil, nil, fmt.Errorf("Project Creation failed.")
+	project, err := SetupProjectReturnDAO()
+	if err != nil {
+		return nil, nil, nil, err
 	}
 
 	user, err_code := M.CreateUser(&M.User{ProjectId: project.ID})
@@ -105,14 +102,18 @@ func getRandomAgentUUID() string {
 	return "6ba7b814-9dad-11d1-80b4-00c04fd430c8"
 }
 
-func SetupAgentReturnDAO() (*M.Agent, error) {
-	agent, errCode := M.CreateAgent(&M.Agent{
-		Email: getRandomEmail(),
-	})
-	if errCode != http.StatusCreated {
-		return nil, fmt.Errorf("Agent Creation failed.")
+func SetupAgentReturnDAO(email string) (*M.Agent, int) {
+
+	if email == "" {
+		email = getRandomEmail()
 	}
-	return agent, nil
+
+	createAgentParams := &M.CreateAgentParams{Agent: &M.Agent{Email: email}, PlanCode: M.FreePlanCode}
+	resp, errCode := M.CreateAgentWithDependencies(createAgentParams)
+	if errCode != http.StatusCreated {
+		return nil, errCode
+	}
+	return resp.Agent, http.StatusCreated
 }
 
 func SetupProjectWithAgentDAO() (*M.Project, *M.Agent, error) {
@@ -120,14 +121,46 @@ func SetupProjectWithAgentDAO() (*M.Project, *M.Agent, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	agent, err := SetupAgentReturnDAO()
-	if err != nil {
-		return nil, nil, err
+	agent, errCode := SetupAgentReturnDAO(getRandomEmail())
+	if errCode != http.StatusCreated {
+		return nil, nil, fmt.Errorf("Agent Creation failed.")
 	}
-	_, errCode := M.CreateProjectAgentMappingWithDependencies(&M.ProjectAgentMapping{
+	_, errCode = M.CreateProjectAgentMappingWithDependencies(&M.ProjectAgentMapping{
 		ProjectID: project.ID, AgentUUID: agent.UUID})
 	if errCode != http.StatusCreated {
 		return nil, nil, fmt.Errorf("ProjectAgentMapping Creation failed.")
 	}
 	return project, agent, nil
+}
+
+type testData struct {
+	Agent          *M.Agent
+	Project        *M.Project
+	BillingAccount *M.BillingAccount
+}
+
+func SetupTestData() (*testData, int) {
+	agent, errCode := SetupAgentReturnDAO(getRandomEmail())
+	if errCode != http.StatusCreated {
+		return nil, http.StatusInternalServerError
+	}
+
+	billingAccount, errCode := M.GetBillingAccountByAgentUUID(agent.UUID)
+	if errCode != http.StatusFound {
+		return nil, http.StatusInternalServerError
+	}
+
+	// Create random project.
+	random_project_name := U.RandomLowerAphaNumString(15)
+
+	project, err_code := M.CreateProjectWithDependencies(&M.Project{Name: random_project_name}, agent.UUID, M.ADMIN, billingAccount.ID)
+	if err_code != http.StatusCreated {
+		return nil, http.StatusInternalServerError
+	}
+
+	return &testData{
+		Agent:          agent,
+		Project:        project,
+		BillingAccount: billingAccount,
+	}, http.StatusCreated
 }

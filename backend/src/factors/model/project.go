@@ -94,24 +94,38 @@ func createProject(project *Project) (*Project, int) {
 	return project, http.StatusCreated
 }
 
-func createProjectDependencies(project *Project) (*Project, int) {
+func createProjectDependencies(projectID uint64) int {
 	// Associated project setting creation.
-	if _, errCode := createProjectSetting(&ProjectSetting{ProjectId: project.ID}); errCode != http.StatusCreated {
-		log.WithFields(log.Fields{"project": project}).Error("Creating project_settings failed")
-		return nil, errCode
+	if _, errCode := createProjectSetting(&ProjectSetting{ProjectId: projectID}); errCode != http.StatusCreated {
+		log.WithFields(log.Fields{"projectID": projectID}).Error("Creating project_settings failed")
+		return errCode
 	}
 
-	return project, http.StatusCreated
+	return http.StatusCreated
 }
 
 // CreateProjectWithDependencies seperate create method with dependencies to avoid breaking tests.
-func CreateProjectWithDependencies(project *Project) (*Project, int) {
+func CreateProjectWithDependencies(project *Project, agentUUID string, agentRole uint64, billingAccountID uint64) (*Project, int) {
 	cProject, errCode := createProject(project)
 	if errCode != http.StatusCreated {
 		return nil, errCode
 	}
+	errCode = createProjectDependencies(cProject.ID)
+	if errCode != http.StatusCreated {
+		return nil, errCode
+	}
 
-	return createProjectDependencies(cProject)
+	_, errCode = CreateProjectAgentMappingWithDependencies(&ProjectAgentMapping{
+		ProjectID: cProject.ID,
+		AgentUUID: agentUUID,
+		Role:      agentRole,
+	})
+	if errCode != http.StatusCreated {
+		return nil, errCode
+	}
+
+	_, errCode = createProjectBillingAccountMapping(project.ID, billingAccountID)
+	return cProject, errCode
 }
 
 // CreateDefaultProjectForAgent creates project for an agent if there is no project
@@ -128,16 +142,13 @@ func CreateDefaultProjectForAgent(agentUUID string) (*Project, int) {
 		return nil, errCode
 	}
 
-	cProject, errCode := CreateProjectWithDependencies(&Project{Name: DefaultProjectName})
-	if errCode != http.StatusCreated {
+	billingAcc, errCode := GetBillingAccountByAgentUUID(agentUUID)
+	if errCode != http.StatusFound {
+		log.WithField("err_code", errCode).Error("CreateDefaultProjectForAgent Failed, billing account error")
 		return nil, errCode
 	}
 
-	_, errCode = CreateProjectAgentMappingWithDependencies(&ProjectAgentMapping{
-		ProjectID: cProject.ID,
-		AgentUUID: agentUUID,
-		Role:      ADMIN,
-	})
+	cProject, errCode := CreateProjectWithDependencies(&Project{Name: DefaultProjectName}, agentUUID, ADMIN, billingAcc.ID)
 	if errCode != http.StatusCreated {
 		return nil, errCode
 	}

@@ -17,8 +17,10 @@ import (
 func CreateProjectHandler(c *gin.Context) {
 	r := c.Request
 
+	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 	logCtx := log.WithFields(log.Fields{
-		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
+		"reqId":      U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
+		"agent_uuid": loggedInAgentUUID,
 	})
 
 	var project M.Project
@@ -37,24 +39,19 @@ func CreateProjectHandler(c *gin.Context) {
 		return
 	}
 
-	var errCode int
-	_, errCode = M.CreateProjectWithDependencies(&project)
-	if errCode != http.StatusCreated {
-		c.AbortWithStatusJSON(errCode, gin.H{"error": "Creating project failed."})
+	billingAcc, errCode := M.GetBillingAccountByAgentUUID(loggedInAgentUUID)
+	if errCode != http.StatusFound {
+		logCtx.WithField("err_code", errCode).Error("CreateProject Failed, billing account error")
+		c.AbortWithStatusJSON(errCode, gin.H{"error": "Creating project failed"})
 		return
 	}
-	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 
-	// create project agent mapping
-	_, errCode = M.CreateProjectAgentMappingWithDependencies(&M.ProjectAgentMapping{
-		ProjectID: project.ID,
-		AgentUUID: loggedInAgentUUID,
-		Role:      M.ADMIN,
-	})
+	_, errCode = M.CreateProjectWithDependencies(&project, loggedInAgentUUID, M.ADMIN, billingAcc.ID)
 	if errCode != http.StatusCreated {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Creating project failed."})
 		return
 	}
+
 	c.JSON(http.StatusCreated, project)
 	return
 }

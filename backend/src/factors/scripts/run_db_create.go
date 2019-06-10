@@ -270,4 +270,53 @@ func main() {
 	} else {
 		log.Info("dashboard_unit table is associated with dashboards table.")
 	}
+
+	// Create billing_accounts table
+	if err := db.CreateTable(&M.BillingAccount{}).Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("billing_accounts table creation failed.")
+	} else {
+		log.Info("Created billing_accounts table")
+	}
+
+	// Add foreign key constraints.
+	if err := db.Model(&M.BillingAccount{}).AddForeignKey("agent_uuid", "agents(uuid)", "RESTRICT", "RESTRICT").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("billing_accounts table association with agents table failed.")
+	} else {
+		log.Info("billing_accounts table is associated with projects table.")
+	}
+
+	// Adding unique index on billing_accounts agent_uuid.
+	if err := db.Exec("CREATE UNIQUE INDEX agent_uuid_unique_idx ON billing_accounts(agent_uuid);").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("Failed to create unique index billing_accounts(agent_uuid).")
+	} else {
+		log.Info("Created unique index on billing_accounts(agent_uuid).")
+	}
+
+	// Create project_billing_account_mappings table
+	if err := db.CreateTable(&M.ProjectBillingAccountMapping{}).Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("project_billing_account_mappings table creation failed.")
+	} else {
+		log.Info("project_billing_account_mappings table creation failed.")
+	}
+
+	// Add foreign key constraints.
+	if err := db.Model(&M.ProjectBillingAccountMapping{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("project_billing_account_mappings table association with projects table failed.")
+	} else {
+		log.Info("project_billing_account_mappings table is associated with projects table.")
+	}
+
+	// Add foreign key constraints.
+	if err := db.Model(&M.ProjectBillingAccountMapping{}).AddForeignKey("billing_account_id", "billing_accounts(id)", "RESTRICT", "RESTRICT").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("project_billing_account_mappings table association with billing_accounts table failed.")
+	} else {
+		log.Info("project_billing_account_mappings table is associated with billing_accounts table.")
+	}
+
+	// Add sort index on billing_account_id, project_id
+	if err := db.Exec("CREATE INDEX billing_account_id_project_id_idx ON project_billing_account_mappings (billing_account_id ,project_id) ;").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("project_billing_account_mappings table billing_account_id_project_id_idx sort index failed.")
+	} else {
+		log.Info("project_billing_account_mappings table billing_account_id_project_id_idx sort index created.")
+	}
 }

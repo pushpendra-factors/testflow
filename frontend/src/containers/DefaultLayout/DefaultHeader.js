@@ -1,8 +1,8 @@
 import React, { Component } from 'react';
 import { DropdownItem, DropdownMenu, DropdownToggle, Input, Button, Form, Nav,
-  Modal, ModalHeader, ModalBody, ModalFooter } from 'reactstrap';
+  Modal, ModalHeader, ModalBody, ModalFooter, Badge } from 'reactstrap';
 import PropTypes from 'prop-types';
-import { AppHeaderDropdown, AppSidebarToggler, AppNavbarBrand } from '@coreui/react';
+import { AppHeaderDropdown, AppSidebarToggler } from '@coreui/react';
 import { AppSidebarForm } from '@coreui/react';
 import Select from 'react-select';
 import { bindActionCreators } from 'redux';
@@ -45,6 +45,12 @@ const projectSelectStyles = {
   }),
 }
 
+const mapStateToProps = store => {
+  return {
+    billingAccount: store.agents.billing.billingAccount,
+    accountPlan: store.agents.billing.plan,
+  }
+}
 
 const mapDispatchToProps = dispatch => {
   return bindActionCreators({ 
@@ -62,7 +68,7 @@ class DefaultHeader extends Component {
         showForm: false,
         projectName : ""
       },
-
+      
       showAddProjectModal: false,
       addProjectMessage: null,
     }
@@ -80,6 +86,14 @@ class DefaultHeader extends Component {
     let name = e.target.value.trim();
     if(name == "") console.error("project name cannot be empty");
     this.setState({ createProject: { projectName: name } });
+  }
+
+  changeViewToAccountSettings = () => {
+    this.props.changeViewToAccountSettings();
+  }
+
+  changeViewToUserProfile = () => {
+    this.props.changeViewToUserProfile();
   }
 
   toggleCreateProjectForm = () => {
@@ -120,6 +134,37 @@ class DefaultHeader extends Component {
     });
   }
 
+  renderNotifications = () => {
+
+    if (!this.props.billingAccount){
+      return
+    }
+    let noOfNotifications = 0;
+    let dropDownItems = [];
+    if (this.props.accountPlan.code != "free" && !this.props.billingAccount.organization_name){
+      dropDownItems.push(<DropdownItem key={1} onClick={this.changeViewToAccountSettings}><span className="text-muted">Complete Billing Info</span></DropdownItem>);
+      noOfNotifications++;
+    }else{
+      dropDownItems.push(<DropdownItem disabled key={0}><span className="text-muted">No messages here.</span></DropdownItem>);
+    }
+
+    return (
+      <AppHeaderDropdown direction="down">
+        <DropdownToggle nav>	
+          <i className="icon-bell fapp-bell"></i>	
+          { noOfNotifications > 0 && <Badge pill color="danger">{noOfNotifications}</Badge> }	
+        </DropdownToggle>	
+        <DropdownMenu right style={{ right: 'auto' }}>
+          {
+            dropDownItems.map((item) => {
+              return item;
+            })
+          }
+        </DropdownMenu>
+      </AppHeaderDropdown>
+    )
+  }
+
   showAddProjectMessage(msg) {
     this.setState({addProjectMessage: msg});
   }
@@ -130,6 +175,7 @@ class DefaultHeader extends Component {
   }
 
   render() {
+
     // eslint-disable-next-line
     const { children, ...attributes } = this.props;
 
@@ -145,23 +191,15 @@ class DefaultHeader extends Component {
           <div style={{display: 'inline-block', width: '60%', marginRight: '5px'}}> { selectProjectDropDown } </div>
           <Button outline color="primary" onClick={this.toggleAddProjectModal} style={{fontSize: '20px', padding: '0 10px', height: '38px'}}>+</Button>
         </AppSidebarForm>
-        <Nav className="ml-auto fapp-header-right" navbar>          
-          <AppHeaderDropdown direction="down">
-            <DropdownToggle nav>	
-                <i className="icon-bell fapp-bell"></i>	
-                {/* <Badge pill color="danger">5</Badge> */}	
-            </DropdownToggle>	
-            <DropdownMenu right style={{ right: 'auto' }}>
-              <DropdownItem disabled><span className="text-muted">No messages here.</span></DropdownItem>	
-            </DropdownMenu>
-          </AppHeaderDropdown>
+        <Nav className="ml-auto fapp-header-right" navbar>
+            { this.renderNotifications() }
           <AppHeaderDropdown direction="down">  
             <DropdownToggle nav>
               <Avatar name={this.props.getProfileName()}  maxInitials={1} round={true} color='#3a539b' textSizeRatio={2} size='35' style={{fontWeight: '700', marginTop: '5px'}} />
             </DropdownToggle>
             <DropdownMenu right style={{ right: 'auto' }}>
-              {/* <DropdownItem><i className="fa fa-user"></i> Profile</DropdownItem> */}
-              {/* <DropdownItem><i className="fa fa-wrench"></i> Settings</DropdownItem> */}
+              <DropdownItem onClick = {() => {this.changeViewToUserProfile();}}><i className="fa fa-user"></i> Profile</DropdownItem>
+              <DropdownItem onClick={()=>{this.changeViewToAccountSettings();}} ><i className="fa fa-wrench"></i>Account Settings</DropdownItem>
               <DropdownItem onClick={this.handleLogout}><i className="fa fa-lock"></i> Logout</DropdownItem>
             </DropdownMenu>
           </AppHeaderDropdown>
@@ -190,4 +228,4 @@ class DefaultHeader extends Component {
 DefaultHeader.propTypes = propTypes;
 DefaultHeader.defaultProps = defaultProps;
 
-export default connect(null, mapDispatchToProps)(DefaultHeader);
+export default connect(mapStateToProps, mapDispatchToProps)(DefaultHeader);

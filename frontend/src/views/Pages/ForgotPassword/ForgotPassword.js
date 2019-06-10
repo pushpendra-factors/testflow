@@ -42,7 +42,7 @@ class ForgotPassword extends Component {
                         .catch((msg) => {
                             setSubmitting(false);
                             this.setState({ error: msg });
-                        });                             
+                        });
                     }}
                 >
                     {({isSubmitting, touched})=> (

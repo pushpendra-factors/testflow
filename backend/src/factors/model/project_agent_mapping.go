@@ -36,18 +36,26 @@ type ProjectAgentMapping struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+const error_Duplicate_project_agent_mapping_error = "pq: duplicate key value violates unique constraint \"project_agent_mappings_pkey\""
+
 // Add Check
 // Project should not have more than 100 Agents
 func createProjectAgentMapping(pam *ProjectAgentMapping) (*ProjectAgentMapping, int) {
-	if pam == nil {
+	if pam == nil || pam.AgentUUID == "" || pam.ProjectID == 0 {
 		return nil, http.StatusBadRequest
+	}
+
+	if pam.Role == 0 {
+		pam.Role = AGENT
 	}
 
 	db := C.GetServices().Db
 
 	if err := db.Create(pam).Error; err != nil {
+		if err.Error() == error_Duplicate_project_agent_mapping_error {
+			return nil, http.StatusFound
+		}
 		log.WithError(err).Error("CreateProjectAgentMapping Failed.")
-		// TODO(Ankit): check if is duplicate error
 		return nil, http.StatusInternalServerError
 	}
 
@@ -107,6 +115,23 @@ func GetProjectAgentMappingsByProjectId(projectId uint64) ([]ProjectAgentMapping
 	return pam, http.StatusFound
 }
 
+func GetProjectAgentMappingsByProjectIds(projectIds []uint64) ([]ProjectAgentMapping, int) {
+	if len(projectIds) == 0 {
+		return nil, http.StatusBadRequest
+	}
+	db := C.GetServices().Db
+	var pam []ProjectAgentMapping
+	if err := db.Where("project_id IN (?)", projectIds).Find(&pam).Error; err != nil {
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(pam) == 0 {
+		return nil, http.StatusNotFound
+	}
+
+	return pam, http.StatusFound
+}
+
 func GetProjectAgentMappingsByAgentUUID(agentUUID string) ([]ProjectAgentMapping, int) {
 	if agentUUID == "" {
 		return nil, http.StatusBadRequest
@@ -142,4 +167,23 @@ func DoesAgentHaveProject(agentUUID string) int {
 	}
 
 	return http.StatusFound
+}
+
+func DeleteProjectAgentMapping(projectId uint64, agentUUIDToRemove string) int {
+	if projectId == 0 || agentUUIDToRemove == "" {
+		return http.StatusBadRequest
+	}
+	db := C.GetServices().Db
+
+	db = db.Where("project_id = ?", projectId).Where("agent_uuid = ? ", agentUUIDToRemove).Delete(&ProjectAgentMapping{})
+
+	if db.Error != nil {
+		return http.StatusInternalServerError
+	}
+
+	if db.RowsAffected == 0 {
+		return http.StatusNotFound
+	}
+
+	return http.StatusAccepted
 }

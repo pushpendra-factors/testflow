@@ -1,5 +1,5 @@
 import { getHostURL } from "../util";
-import {get, post} from "./request.js";
+import {get, post, put} from "./request.js";
 var host = getHostURL();
 
 export function fetchAgentInfo(){
@@ -19,6 +19,44 @@ export function fetchAgentInfo(){
     });
   }
 }
+
+export function updateAgentInfo(params){
+  return function(dispatch){
+    return new Promise((resolve, reject)=> {
+      put(dispatch, host + "agents/info", params)
+      .then((response) => {
+        dispatch({type:"UPDATE_AGENT_INFO_FULFILLED", 
+            payload: response.data});
+          resolve(response);
+      })
+      .catch((err) => {
+        dispatch({type:"UPDATE_AGENT_INFO_REJECTED", 
+            payload: 'Failed to update agent info'});
+          reject(err);
+      })
+    });
+  }
+}
+
+export function updateAgentPassword(params){
+  return function(dispatch){
+    return new Promise((resolve, reject)=> {
+      put(dispatch, host + "agents/updatepassword", params)
+      .then((response) => {
+        dispatch({type:"UPDATE_AGENT_PASSWORD_FULFILLED", 
+            payload: response.data});
+          resolve(response);
+      })
+      .catch((err) => {
+        dispatch({type:"UPDATE_AGENT_PASSWORD_REJECTED", 
+            payload: 'Failed to update agent password'});
+          reject(err);
+      })
+    });
+  }
+}
+
+
 
 export function login(email, password) {
     return function(dispatch) {
@@ -154,4 +192,40 @@ export function login(email, password) {
     }
   }
 
-  
+export function fetchAgentBillingAccount(){
+  return function(dispatch){
+    return get(dispatch, host + "agents/billing")
+      .then((r) => {
+        dispatch({type: "FETCH_AGENT_BILLING_ACCOUNT_FULFILLED", payload: r.data });
+      })
+      .catch((r) => {
+        if (r.status) {
+          // use this pattern for error handling. 
+          // decided to use redux store.
+          dispatch({type: "FETCH_AGENT_BILLING_ACCOUNT_REJECTED", payload: r.data, code: r.status });        
+        } else {
+          // network error. Idea: Use a global error component for this.
+          console.log("network error");
+        }
+      });
+  }
+}
+
+export function updateBillingAccount(params){
+  return function(dispatch){
+    return put(dispatch, host + "agents/billing", params)
+      .then((r) => {
+        dispatch({type: "UPDATE_AGENT_BILLING_ACCOUNT_FULFILLED", payload: r.data });
+      })
+      .catch((r) => {
+        if (r.status) {
+          // use this pattern for error handling. 
+          // decided to use redux store.
+          dispatch({type: "UPDATE_AGENT_BILLING_ACCOUNT_REJECTED", payload: r.data, code: r.status });        
+        } else {
+          // network error. Idea: Use a global error component for this.
+          console.log("network error");
+        }
+      });
+  }
+}

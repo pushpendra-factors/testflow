@@ -25,8 +25,12 @@ func InitAppRoutes(r *gin.Engine) {
 	r.GET("/agents/signout", Signout)
 	r.POST("/agents/forgotpassword", AgentGenerateResetPasswordLinkEmail)
 	r.POST("/agents/setpassword", mid.ValidateAgentSetPasswordRequest(), AgentSetPassword)
+	r.PUT("/agents/updatepassword", mid.SetLoggedInAgent(), UpdateAgentPassword)
 	r.POST("/agents/activate", mid.ValidateAgentActivationRequest(), AgentActivate)
+	r.GET("/agents/billing", mid.SetLoggedInAgent(), GetAgentBillingAccount)
+	r.PUT("/agents/billing", mid.SetLoggedInAgent(), UpdateAgentBillingAccount)
 	r.GET("/agents/info", mid.SetLoggedInAgent(), AgentInfo)
+	r.PUT("/agents/info", mid.SetLoggedInAgent(), UpdateAgentInfo)
 
 	r.POST(ROUTE_PROJECTS_ROOT, mid.SetLoggedInAgent(), CreateProjectHandler)
 
@@ -48,8 +52,6 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.POST("/:project_id/dashboards/:dashboard_id/units", CreateDashboardUnitHandler)
 	authRouteGroup.PUT("/:project_id/dashboards/:dashboard_id/units/:unit_id", UpdateDashboardUnitHandler)
 	authRouteGroup.DELETE("/:project_id/dashboards/:dashboard_id/units/:unit_id", DeleteDashboardUnitHandler)
-	authRouteGroup.GET("/:project_id/settings", GetProjectSettingHandler)
-	authRouteGroup.PUT("/:project_id/settings", UpdateProjectSettingsHandler)
 	authRouteGroup.GET("/:project_id/event_names", GetEventNamesHandler)
 	authRouteGroup.GET("/:project_id/models", GetProjectModelsHandler)
 	authRouteGroup.GET("/:project_id/filters", GetFiltersHandler)
@@ -64,7 +66,14 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/user_properties/:property_name/values", GetUserPropertyValuesHandler)
 	authRouteGroup.POST("/:project_id/factor", FactorHandler)
 	authRouteGroup.POST("/:project_id/query", QueryHandler)
+
+	// TODO
+	// Scope this with Project Admin
+	authRouteGroup.GET("/:project_id/agents", GetProjectAgentsHandler)
 	authRouteGroup.POST("/:project_id/agents/invite", AgentInvite)
+	authRouteGroup.PUT("/:project_id/agents/remove", RemoveProjectAgent)
+	authRouteGroup.GET("/:project_id/settings", GetProjectSettingHandler)
+	authRouteGroup.PUT("/:project_id/settings", UpdateProjectSettingsHandler)
 }
 
 func InitSDKRoutes(r *gin.Engine) {

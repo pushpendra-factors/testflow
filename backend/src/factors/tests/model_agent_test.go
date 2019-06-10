@@ -4,6 +4,7 @@ import (
 	M "factors/model"
 	U "factors/util"
 	"net/http"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -14,17 +15,17 @@ import (
 func TestAgentDBCreateAgent(t *testing.T) {
 	email := getRandomEmail()
 	t.Run("CreateAgent", func(t *testing.T) {
-		_, errCode := M.CreateAgent(&M.Agent{Email: email})
+		_, errCode := SetupAgentReturnDAO(email)
 		assert.Equal(t, http.StatusCreated, errCode)
 	})
 
 	t.Run("CreateAgentDuplicateEmail", func(t *testing.T) {
-		_, errCode := M.CreateAgent(&M.Agent{Email: email})
+		_, errCode := SetupAgentReturnDAO(email)
 		assert.Equal(t, http.StatusBadRequest, errCode)
 	})
 
 	t.Run("CreateAgentDuplicateEmailUppercase", func(t *testing.T) {
-		_, errCode := M.CreateAgent(&M.Agent{Email: strings.ToUpper(email)})
+		_, errCode := SetupAgentReturnDAO(strings.ToUpper(email))
 		assert.Equal(t, http.StatusBadRequest, errCode)
 	})
 }
@@ -39,7 +40,7 @@ func TestAgentDBGetAgentByEmail(t *testing.T) {
 	start := time.Now()
 
 	// Create agent
-	_, errCode := M.CreateAgent(&M.Agent{Email: email})
+	_, errCode := SetupAgentReturnDAO(email)
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	t.Run("GetAgentByEmailFound", func(t *testing.T) {
@@ -73,7 +74,7 @@ func TestAgentDBGetAgentByUUID(t *testing.T) {
 
 	t.Run("GetAgentByUUIDAgentFound", func(t *testing.T) {
 		email := getRandomEmail()
-		agent, errCode := M.CreateAgent(&M.Agent{Email: email})
+		agent, errCode := SetupAgentReturnDAO(email)
 		assert.Equal(t, http.StatusCreated, errCode)
 
 		uuid := agent.UUID
@@ -82,6 +83,35 @@ func TestAgentDBGetAgentByUUID(t *testing.T) {
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.Equal(t, agent.UUID, retAgent.UUID)
 		assert.Equal(t, agent.Email, retAgent.Email)
+	})
+}
+
+func TestAgentDBGetAgentsByUUIDs(t *testing.T) {
+	t.Run("GetAgentsByUUIDsAgentsFound", func(t *testing.T) {
+		noOfAgentsToCreate := 3
+		expEmails := make([]string, 0, 0)
+		expUUIDs := make([]string, 0, 0)
+		for i := 0; i < noOfAgentsToCreate; i++ {
+			email := getRandomEmail()
+			expEmails = append(expEmails, email)
+			agent, errCode := SetupAgentReturnDAO(email)
+			assert.Equal(t, http.StatusCreated, errCode)
+			expUUIDs = append(expUUIDs, agent.UUID)
+		}
+
+		agents, errCode := M.GetAgentsByUUIDs(expUUIDs)
+		assert.Equal(t, http.StatusFound, errCode)
+		assert.Equal(t, noOfAgentsToCreate, len(agents))
+
+		resultEmails := make([]string, 0, 0)
+		for _, agent := range agents {
+			resultEmails = append(resultEmails, agent.Email)
+		}
+
+		sort.Strings(expEmails)
+		sort.Strings(resultEmails)
+
+		assert.Equal(t, expEmails, resultEmails)
 	})
 }
 
@@ -110,7 +140,7 @@ func TestAgentDBUpdatePassword(t *testing.T) {
 	t.Run("UpdatePasswordSuccess", func(t *testing.T) {
 		start := time.Now().UTC()
 		email := getRandomEmail()
-		agent, errCode := M.CreateAgent(&M.Agent{Email: email})
+		agent, errCode := SetupAgentReturnDAO(email)
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.True(t, agent.Password == "")
 
@@ -133,37 +163,19 @@ func TestAgentDBUpdatePassword(t *testing.T) {
 
 func TestDBAgentUpdateAgentLastLoginInfo(t *testing.T) {
 	t.Run("UpdatePasswordAgentLastLoginInfoMissingAgent", func(t *testing.T) {
-		email := getRandomEmail()
 		ts := time.Now().UTC()
-		errCode := M.UpdateAgentLastLoginInfo(email, ts)
+		errCode := M.UpdateAgentLastLoginInfo(getRandomAgentUUID(), ts)
 		assert.Equal(t, http.StatusNoContent, errCode)
 	})
 	t.Run("UpdatePasswordAgentLastLoginInfoSuccess", func(t *testing.T) {
 		start := time.Now().UTC()
 		email := getRandomEmail()
-		agent, errCode := M.CreateAgent(&M.Agent{Email: email})
+		agent, errCode := SetupAgentReturnDAO(email)
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.Equal(t, uint64(0), agent.LoginCount)
 
 		ts := time.Now().UTC()
-		errCode = M.UpdateAgentLastLoginInfo(email, ts)
-		assert.Equal(t, http.StatusAccepted, errCode)
-
-		retAgent, errCode := M.GetAgentByEmail(email)
-		assert.Equal(t, http.StatusFound, errCode)
-		assert.Equal(t, uint64(1), retAgent.LoginCount)
-		assert.True(t, (*retAgent.LastLoggedInAt).After(start))
-	})
-
-	t.Run("UpdatePasswordAgentLastLoginInfoSuccessUppercaseEmail", func(t *testing.T) {
-		start := time.Now().UTC()
-		email := getRandomEmail()
-		agent, errCode := M.CreateAgent(&M.Agent{Email: email})
-		assert.Equal(t, http.StatusCreated, errCode)
-		assert.Equal(t, uint64(0), agent.LoginCount)
-
-		ts := time.Now().UTC()
-		errCode = M.UpdateAgentLastLoginInfo(strings.ToUpper(email), ts)
+		errCode = M.UpdateAgentLastLoginInfo(agent.UUID, ts)
 		assert.Equal(t, http.StatusAccepted, errCode)
 
 		retAgent, errCode := M.GetAgentByEmail(email)
@@ -185,7 +197,7 @@ func TestDBAgentUpdateAgentVerificationDetails(t *testing.T) {
 	})
 	t.Run("Success", func(t *testing.T) {
 		email := getRandomEmail()
-		agent, errCode := M.CreateAgent(&M.Agent{Email: email})
+		agent, errCode := SetupAgentReturnDAO(email)
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.False(t, agent.IsEmailVerified)
 		assert.Empty(t, agent.FirstName)

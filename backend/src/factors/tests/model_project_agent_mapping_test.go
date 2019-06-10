@@ -14,7 +14,7 @@ func TestCreateProjectAgentMapping(t *testing.T) {
 	assert.Nil(t, err)
 
 	email := getRandomEmail()
-	agent, errCode := M.CreateAgent(&M.Agent{Email: email})
+	agent, errCode := SetupAgentReturnDAO(email)
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	pam := &M.ProjectAgentMapping{
@@ -26,12 +26,33 @@ func TestCreateProjectAgentMapping(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, errCode)
 }
 
+func TestCreateDuplicateProjectAgentMapping(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	email := getRandomEmail()
+	agent, errCode := SetupAgentReturnDAO(email)
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	pam := &M.ProjectAgentMapping{
+		ProjectID: project.ID,
+		AgentUUID: agent.UUID,
+		Role:      M.AGENT,
+	}
+	_, errCode = M.CreateProjectAgentMappingWithDependencies(pam)
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	_, errCode = M.CreateProjectAgentMappingWithDependencies(pam)
+	assert.Equal(t, http.StatusFound, errCode)
+
+}
+
 func TestGetProjectAgentMapping(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 
 	email := getRandomEmail()
-	agent, errCode := M.CreateAgent(&M.Agent{Email: email})
+	agent, errCode := SetupAgentReturnDAO(email)
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	pam := &M.ProjectAgentMapping{
@@ -73,7 +94,7 @@ func TestDBGetProjectAgentMappingsByProjectId(t *testing.T) {
 		noOfAgents := int(U.RandomUint64()%10 + 5)
 		createdAgents := make([]*M.Agent, 0, 0)
 		for i := 0; i < noOfAgents; i++ {
-			ag, errCode := M.CreateAgent(&M.Agent{Email: getRandomEmail()})
+			ag, errCode := SetupAgentReturnDAO(getRandomEmail())
 			assert.Equal(t, http.StatusCreated, errCode)
 			createdAgents = append(createdAgents, ag)
 		}
@@ -90,7 +111,8 @@ func TestDBGetProjectAgentMappingsByProjectId(t *testing.T) {
 		// fetch all
 		retPams, errCode := M.GetProjectAgentMappingsByProjectId(project.ID)
 		assert.Equal(t, http.StatusFound, errCode)
-		assert.Equal(t, len(createdAgents), len(retPams))
+		noOfDefautsAgentsPerProject := 1
+		assert.Equal(t, len(createdAgents)+noOfDefautsAgentsPerProject, len(retPams))
 	})
 }
 
@@ -105,7 +127,7 @@ func TestDBGetProjectAgentMappingsByAgentUUID(t *testing.T) {
 	})
 
 	t.Run("Found", func(t *testing.T) {
-		agent, errCode := M.CreateAgent(&M.Agent{Email: getRandomEmail()})
+		agent, errCode := SetupAgentReturnDAO(getRandomEmail())
 		assert.Equal(t, http.StatusCreated, errCode)
 		noOfProjects := int(U.RandomUint64()%10 + 5)
 		var projects []*M.Project
@@ -125,4 +147,41 @@ func TestDBGetProjectAgentMappingsByAgentUUID(t *testing.T) {
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.Equal(t, len(projects), len(retPams))
 	})
+}
+
+func TestDeleteProjectAgentMapping(t *testing.T) {
+
+	t.Run("NotFound", func(t *testing.T) {
+		testData, errCode := SetupTestData()
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.NotNil(t, testData)
+
+		project := testData.Project
+
+		agent, errCode := SetupAgentReturnDAO(getRandomEmail())
+		assert.Equal(t, http.StatusCreated, errCode)
+		errCode = M.DeleteProjectAgentMapping(project.ID, agent.UUID)
+		assert.Equal(t, http.StatusNotFound, errCode)
+	})
+
+	t.Run("Success", func(t *testing.T) {
+		testData, errCode := SetupTestData()
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.NotNil(t, testData)
+
+		project := testData.Project
+		agent, errCode := SetupAgentReturnDAO(getRandomEmail())
+		assert.Equal(t, http.StatusCreated, errCode)
+
+		_, errCode = M.CreateProjectAgentMappingWithDependencies(&M.ProjectAgentMapping{
+			ProjectID: project.ID,
+			AgentUUID: agent.UUID,
+			Role:      M.AGENT,
+		})
+		assert.Equal(t, http.StatusCreated, errCode)
+
+		errCode = M.DeleteProjectAgentMapping(project.ID, agent.UUID)
+		assert.Equal(t, http.StatusAccepted, errCode)
+	})
+
 }

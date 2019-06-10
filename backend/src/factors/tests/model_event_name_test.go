@@ -15,9 +15,9 @@ import (
 
 func TestDBCreateAndGetEventName(t *testing.T) {
 	// Initialize a project for the event.
-	randomProjectName := U.RandomLowerAphaNumString(15)
-	project, errCode := M.CreateProjectWithDependencies(&M.Project{Name: randomProjectName})
-	assert.Equal(t, http.StatusCreated, errCode)
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
 	assert.NotNil(t, project)
 	projectId := project.ID
 
@@ -104,9 +104,10 @@ func TestDBCreateAndGetEventName(t *testing.T) {
 
 func TestDBGetEventNames(t *testing.T) {
 	// Initialize a project for the event.
-	randomProjectName := U.RandomLowerAphaNumString(15)
-	project, errCode := M.CreateProjectWithDependencies(&M.Project{Name: randomProjectName})
-	assert.Equal(t, http.StatusCreated, errCode)
+
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
 	assert.NotNil(t, project)
 	projectId := project.ID
 
@@ -312,9 +313,9 @@ func TestDBFillEventPropertiesByFilterExpr(t *testing.T) {
 }
 
 func TestDBCreateOrGetFilterEventName(t *testing.T) {
-	randomProjectName := U.RandomLowerAphaNumString(15)
-	project, errCode := M.CreateProjectWithDependencies(&M.Project{Name: randomProjectName})
-	assert.Equal(t, http.StatusCreated, errCode)
+
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
 	assert.NotNil(t, project)
 
 	expr := "a.com/u1/u2/u3"
@@ -394,9 +395,9 @@ func TestDBCreateOrGetFilterEventName(t *testing.T) {
 }
 
 func TestDBGetFilterEventNames(t *testing.T) {
-	randomProjectName := U.RandomLowerAphaNumString(15)
-	project, errCode := M.CreateProjectWithDependencies(&M.Project{Name: randomProjectName})
-	assert.Equal(t, http.StatusCreated, errCode)
+
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
 	assert.NotNil(t, project)
 
 	// No filter event_names available.
@@ -430,9 +431,8 @@ func TestDBGetFilterEventNames(t *testing.T) {
 }
 
 func TestDBUpdateFilterEventName(t *testing.T) {
-	randomProjectName := U.RandomLowerAphaNumString(15)
-	project, errCode := M.CreateProjectWithDependencies(&M.Project{Name: randomProjectName})
-	assert.Equal(t, http.StatusCreated, errCode)
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
 	assert.NotNil(t, project)
 
 	// Invalid event_name id.
@@ -471,13 +471,12 @@ func TestDBUpdateFilterEventName(t *testing.T) {
 }
 
 func TestDBDeleteFilterEventName(t *testing.T) {
-	randomProjectName := U.RandomLowerAphaNumString(15)
-	project, errCode := M.CreateProjectWithDependencies(&M.Project{Name: randomProjectName})
-	assert.Equal(t, http.StatusCreated, errCode)
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
 	assert.NotNil(t, project)
 
 	// Invalid event_name id.
-	errCode = M.DeleteFilterEventName(project.ID, 9999)
+	errCode := M.DeleteFilterEventName(project.ID, 9999)
 	assert.Equal(t, http.StatusBadRequest, errCode)
 
 	expr := "a.com/u1/u2/u3"

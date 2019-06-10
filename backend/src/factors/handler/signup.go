@@ -23,7 +23,8 @@ func SignUp(c *gin.Context) {
 	})
 
 	type signupParams struct {
-		Email string `json:"email" binding:"required"`
+		Email    string `json:"email" binding:"required"`
+		PlanCode string `json:"plan_code"`
 	}
 	params := signupParams{}
 	err := c.BindJSON(&params)
@@ -34,6 +35,10 @@ func SignUp(c *gin.Context) {
 	}
 
 	email := params.Email
+	planCode := params.PlanCode
+	if planCode == "" {
+		planCode = M.FreePlanCode
+	}
 
 	if existingAgent, code := M.GetAgentByEmail(email); code == http.StatusInternalServerError {
 		c.AbortWithStatus(http.StatusInternalServerError)
@@ -49,13 +54,17 @@ func SignUp(c *gin.Context) {
 		c.AbortWithStatus(http.StatusFound)
 		return
 	}
-
-	agent, code := M.CreateAgent(&M.Agent{Email: email})
+	createAgentParams := M.CreateAgentParams{
+		Agent:    &M.Agent{Email: email},
+		PlanCode: planCode,
+	}
+	createAgentResp, code := M.CreateAgentWithDependencies(&createAgentParams)
 	if code == http.StatusInternalServerError {
 		log.WithField("email", email).Error("Failed To Create Agent")
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
+	agent := createAgentResp.Agent
 	err = sendSignUpEmail(agent)
 	if err != nil {
 		c.AbortWithStatus(http.StatusInternalServerError)

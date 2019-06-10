@@ -1,6 +1,4 @@
-import React from 'react';
 import Loadable from 'react-loadable';
-import { Redirect } from 'react-router-dom';
 
 import DefaultLayout from './containers/DefaultLayout';
 import Loading from './loading';
@@ -45,11 +43,26 @@ const SettingsIosSdk = Loadable({
   loading: Loading,
 });
 
+const Profile = Loadable({
+  loader: () => import('./views/Profile'),
+  loading: Loading,
+});
+
+const SettingsAgents = Loadable({
+  loader: () => import('./views/Settings/Agents'),
+  loading: Loading,
+});
+
 const ReloadComponent = (props) => {
   // Todo(Dinesh): Fix browser forward after go(-1).
   props.history.go(-1);
   return "";
 }
+
+const AccountSettings = Loadable({
+  loader: () => import('./views/AccountSettings'),
+  loading: Loading,
+})
 
 // https://github.com/ReactTraining/react-router/tree/master/packages/react-router-config
 const routes = [
@@ -61,7 +74,10 @@ const routes = [
   { path: '/settings/jssdk', exact: true, name: 'JsSdk', component: SettingsJsSdk },
   { path: '/settings/androidsdk', exact: true, name: 'AndroidSdk', component: SettingsAndroidSdk },
   { path: '/settings/iossdk', exact: true, name: 'IosSdk', component: SettingsIosSdk },
+  { path: '/settings/agents', exact: true, name: 'Agents', component: SettingsAgents },
   { path: '/settings', name: 'Settings', component: Settings },
+  { path: '/account_settings', name: 'AccountSettings', component: AccountSettings },
+  { path: '/profile', name: 'Profile', component: Profile },
   { path: '/refresh', exact: true, name: 'Refresh', component: ReloadComponent },
 ];
 

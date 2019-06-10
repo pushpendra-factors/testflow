@@ -317,3 +317,62 @@ export function runQuery(projectId, query) {
   let url = host + "projects/" + projectId + "/query";
   return post(null, url , {query: query});
 }
+
+export function fetchProjectAgents(projectId){
+  return function(dispatch){
+    return get(dispatch, host + "projects/" + projectId + "/agents")
+      .then((r) => {
+        dispatch({type: "FETCH_PROJECT_AGENTS_FULFILLED", payload: r.data });
+      })
+      .catch((r) => {
+        if (r.status) {
+          // use this pattern for error handling. 
+          // decided to use redux store.
+          dispatch({type: "FETCH_PROJECT_AGENTS_REJECTED", payload: r.data, code: r.status });        
+        } else {
+          // network error. Idea: Use a global error component for this.
+          console.log("network error");
+        }
+      });
+  }
+}
+
+export function projectAgentInvite(projectId, emailId){
+  return function(dispatch){
+    let payload = {"email":emailId};
+    return post(dispatch, host + "projects/" + projectId + "/agents/invite", payload)
+      .then((r) => {
+        if (r.ok && r.status && r.status == 201){
+          dispatch({type: "PROJECT_AGENT_INVITE_FULFILLED", payload: r.data });
+        }
+        else {
+          dispatch({type: "PROJECT_AGENT_INVITE_REJECTED", payload: r.data.error });
+        }
+      })
+      .catch((r) => {
+        dispatch({type: "PROJECT_AGENT_INVITE_REJECTED", payload: r.data.error });
+      });
+  }
+}
+
+export function projectAgentRemove(projectId, agentUUID){
+  return function(dispatch){
+    return new Promise((resolve, reject) => {
+      put(dispatch, host + "projects/" + projectId +"/agents/remove", {"agent_uuid":agentUUID})
+        .then((r) => {
+          dispatch({
+            type: "PROJECT_AGENT_REMOVE_FULFILLED",
+            payload: r.data
+          });
+          resolve(r.data);
+        })
+        .catch((r) => {
+          dispatch({
+            type: "PROJECT_AGENT_REMOVE_REJECTED",
+            error: r
+          });
+          reject({body: r.data, status: r.status});
+        });
+    })
+  }
+}

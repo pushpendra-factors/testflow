@@ -24,7 +24,7 @@ import {
 } from "../../actions/projectsActions";
 import Loading from '../../loading';
 import factorsicon from '../../assets/img/brand/factors-icon.svg';
-import { fetchAgentInfo } from '../../actions/agentActions';
+import { fetchAgentInfo, fetchAgentBillingAccount } from '../../actions/agentActions';
 import { hotjar } from 'react-hotjar';
 import { isProduction } from '../../util';
 
@@ -73,6 +73,7 @@ const mapDispatchToProps = dispatch => {
     fetchProjectSettings,
     fetchProjectModels,
     fetchAgentInfo,
+    fetchAgentBillingAccount
   }, dispatch);
 }
 
@@ -129,6 +130,8 @@ class DefaultLayout extends Component {
         });
       });
 
+      this.props.fetchAgentBillingAccount();
+
       if(isProduction()) {
         hotjar.initialize(1259925, 6);
       }
@@ -137,6 +140,14 @@ class DefaultLayout extends Component {
 
   refresh = () => {
     this.props.history.push('/refresh');
+  }
+
+  changeViewToAccountSettings = () => {
+    this.props.history.push('/account_settings');
+  }
+
+  changeViewToUserProfile = () => {
+    this.props.history.push('/profile');
   }
 
   isLoaded() {
@@ -161,14 +172,18 @@ class DefaultLayout extends Component {
 
     if (selectableProjects.length == 0 ){
       return <DefaultHeader 
-        refresh={this.refresh} 
+        refresh={this.refresh}
+        changeViewToAccountSettings= {this.changeViewToAccountSettings}
+        changeViewToUserProfile = {this.changeViewToUserProfile}
         getProfileName={this.getAgentName} 
         agentEmail={this.props.agent.email} 
       /> 
     }
 
     return <DefaultHeader
-      refresh={this.refresh} 
+      refresh={this.refresh}
+      changeViewToAccountSettings= {this.changeViewToAccountSettings}
+      changeViewToUserProfile = {this.changeViewToUserProfile}
       selectableProjects={selectableProjects}
       selectedProject={{
         label: this.props.projects[this.props.currentProjectId].name,

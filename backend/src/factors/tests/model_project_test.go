@@ -12,11 +12,17 @@ import (
 )
 
 func TestDBCreateAndGetProject(t *testing.T) {
+
+	agent, errCode := SetupAgentReturnDAO(getRandomEmail())
+	assert.Equal(t, http.StatusCreated, errCode)
+	billingAccount, errCode := M.GetBillingAccountByAgentUUID(agent.UUID)
+	assert.Equal(t, http.StatusFound, errCode)
+
 	start := time.Now()
 
 	// Test successful create project.
 	projectName := U.RandomLowerAphaNumString(15)
-	project, errCode := M.CreateProjectWithDependencies(&M.Project{Name: projectName})
+	project, errCode := M.CreateProjectWithDependencies(&M.Project{Name: projectName}, agent.UUID, M.ADMIN, billingAccount.ID)
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.True(t, project.ID > 0)
 	assert.Equal(t, projectName, project.Name)
@@ -30,7 +36,7 @@ func TestDBCreateAndGetProject(t *testing.T) {
 	// Random Token.
 	providedToken := U.RandomLowerAphaNumString(32)
 	// Reusing the same name. Name is not meant to be unique.
-	project, errCode = M.CreateProjectWithDependencies(&M.Project{Name: projectName, Token: providedToken})
+	project, errCode = M.CreateProjectWithDependencies(&M.Project{Name: projectName, Token: providedToken}, agent.UUID, M.ADMIN, billingAccount.ID)
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.True(t, project.ID > previousProjectId)
 	assert.Equal(t, projectName, project.Name)
@@ -59,7 +65,7 @@ func TestDBCreateAndGetProject(t *testing.T) {
 
 	// Test Bad input by providing id.
 	// Reusing the same name. Name is not meant to be unique.
-	project, errCode = M.CreateProjectWithDependencies(&M.Project{Name: projectName, ID: previousProjectId + 10})
+	project, errCode = M.CreateProjectWithDependencies(&M.Project{Name: projectName, ID: previousProjectId + 10}, agent.UUID, M.ADMIN, billingAccount.ID)
 	assert.Equal(t, http.StatusBadRequest, errCode)
 	assert.Nil(t, project)
 
@@ -73,14 +79,14 @@ func TestDBCreateAndGetProject(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, errCode)
 
 	// Check corresponding project returned with token.
-	project, errCode = M.CreateProjectWithDependencies(&M.Project{Name: projectName})
+	project, errCode = M.CreateProjectWithDependencies(&M.Project{Name: projectName}, agent.UUID, M.ADMIN, billingAccount.ID)
 	rProject, rErrCode := M.GetProjectByToken(project.Token)
 	assert.Equal(t, http.StatusFound, rErrCode)
 	assert.Equal(t, project.ID, rProject.ID)
 
 	// Test CreateProjectWithDependencies
 	start = time.Now()
-	projectWithDeps, errCode := M.CreateProjectWithDependencies(&M.Project{Name: U.RandomLowerAphaNumString(15)})
+	projectWithDeps, errCode := M.CreateProjectWithDependencies(&M.Project{Name: projectName}, agent.UUID, M.ADMIN, billingAccount.ID)
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.True(t, projectWithDeps.ID > 0)
 	assert.Equal(t, 32, len(projectWithDeps.Token))
@@ -115,8 +121,8 @@ func TestDBGetProjectByIDs(t *testing.T) {
 		noOfProjects := int(U.RandomUint64()%5 + 2)
 		idsToFetch := make([]uint64, 0, 0)
 		for i := 0; i < noOfProjects; i++ {
-			project, errCode := M.CreateProjectWithDependencies(&M.Project{Name: U.RandomLowerAphaNumString(15)})
-			assert.Equal(t, http.StatusCreated, errCode)
+			project, err := SetupProjectReturnDAO()
+			assert.Nil(t, err)
 			idsToFetch = append(idsToFetch, project.ID)
 		}
 		retProjects, errCode := M.GetProjectsByIDs(idsToFetch)
@@ -127,8 +133,8 @@ func TestDBGetProjectByIDs(t *testing.T) {
 
 func TestCreateDefaultProjectForAgent(t *testing.T) {
 	t.Run("CreateDefaultProjectForAgent", func(t *testing.T) {
-		agent, err := SetupAgentReturnDAO()
-		assert.Nil(t, err)
+		agent, errCode := SetupAgentReturnDAO(getRandomEmail())
+		assert.Equal(t, http.StatusCreated, errCode)
 
 		project, errCode := M.CreateDefaultProjectForAgent(agent.UUID)
 		assert.Equal(t, http.StatusCreated, errCode)

@@ -60,7 +60,7 @@ func Signin(c *gin.Context) {
 		return
 	}
 	ts := time.Now().UTC()
-	errCode := M.UpdateAgentLastLoginInfo(email, ts)
+	errCode := M.UpdateAgentLastLoginInfo(agent.UUID, ts)
 	if errCode != http.StatusAccepted {
 		logCtx.WithField("email", email).Error("Failed to update Agent lastLoginInfo")
 	}
@@ -119,12 +119,18 @@ func AgentInvite(c *gin.Context) {
 
 	invitedByAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 
-	// check if project has less than 500 agents
+	createProjectAgentMapping, errCode := M.IsNewProjectAgentMappingCreationAllowed(projectId, emailOfAgentToInvite)
+	if errCode != http.StatusOK {
+		c.AbortWithStatus(errCode)
+		return
+	}
 
-	var invitedAgent *M.Agent
-	var errCode int
+	if !createProjectAgentMapping {
+		c.AbortWithStatus(http.StatusConflict)
+		return
+	}
 
-	invitedAgent, errCode = M.GetAgentByEmail(emailOfAgentToInvite)
+	invitedAgent, errCode := M.GetAgentByEmail(emailOfAgentToInvite)
 	if errCode == http.StatusInternalServerError {
 		logCtx.Error("Failed to GetAgentByEmail")
 		c.AbortWithStatus(http.StatusInternalServerError)
@@ -134,12 +140,17 @@ func AgentInvite(c *gin.Context) {
 	createNewAgent := errCode == http.StatusNotFound
 
 	if createNewAgent {
-		invitedAgent, errCode = M.CreateAgent(&M.Agent{Email: emailOfAgentToInvite, InvitedBy: &invitedByAgentUUID})
+		createAgentParams := M.CreateAgentParams{
+			Agent:    &M.Agent{Email: emailOfAgentToInvite, InvitedBy: &invitedByAgentUUID},
+			PlanCode: M.FreePlanCode,
+		}
+		resp, errCode := M.CreateAgentWithDependencies(&createAgentParams)
 		if errCode == http.StatusInternalServerError {
 			logCtx.Error("Failed to CreateAgent")
 			c.AbortWithStatus(http.StatusInternalServerError)
 			return
 		}
+		invitedAgent = resp.Agent
 	}
 
 	pam, errCode := M.CreateProjectAgentMappingWithDependencies(&M.ProjectAgentMapping{
@@ -151,6 +162,9 @@ func AgentInvite(c *gin.Context) {
 	if errCode == http.StatusInternalServerError {
 		logCtx.Error("Failed to createProjectAgentMapping")
 		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	} else if errCode == http.StatusFound {
+		c.AbortWithStatusJSON(http.StatusFound, gin.H{"error": "Agent is already mapped to project"})
 		return
 	}
 
@@ -172,8 +186,77 @@ func AgentInvite(c *gin.Context) {
 		logCtx.WithField("link", link).Debugf("Verification LInk")
 	}
 
-	c.JSON(http.StatusCreated, pam)
+	invitedAgentInfo := M.CreateAgentInfo(invitedAgent)
+	agentInfoMap := make(map[string]*M.AgentInfo)
+
+	agentInfoMap[invitedAgentInfo.UUID] = invitedAgentInfo
+
+	resp := make(map[string]interface{})
+	resp["status"] = "success"
+	resp["agents"] = agentInfoMap
+	resp["project_agent_mappings"] = []M.ProjectAgentMapping{*pam}
+
+	c.JSON(http.StatusCreated, resp)
 	return
+}
+
+type removeProjectAgentParams struct {
+	AgentUUID string `json:"agent_uuid" binding:"required"`
+}
+
+func getRemoveProjectAgentParams(c *gin.Context) (*removeProjectAgentParams, error) {
+	params := removeProjectAgentParams{}
+	err := c.BindJSON(&params)
+	if err != nil {
+		return nil, err
+	}
+	return &params, nil
+}
+
+// curl -X POST -d '{"agent_uuid":"value1"}' http://localhost:8080/:project_id/agents/remove -v
+func RemoveProjectAgent(c *gin.Context) {
+	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	logCtx := log.WithFields(log.Fields{
+		"reqId":         U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
+		"loggedInAgent": loggedInAgentUUID,
+		"projectId":     projectId,
+	})
+
+	params, err := getRemoveProjectAgentParams(c)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to parse removeProjectAgentParams")
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	agentUUIDToRemove := params.AgentUUID
+
+	if loggedInAgentUUID == agentUUIDToRemove {
+		loggedInAgentPAM, errCode := M.GetProjectAgentMapping(projectId, loggedInAgentUUID)
+		if errCode != http.StatusFound {
+			c.AbortWithStatus(http.StatusInternalServerError)
+			logCtx.Errorln("Failed to fetch loggedInAgentPAM")
+			return
+		}
+		if loggedInAgentPAM.Role == M.ADMIN {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Agent Admin cannot remove himself"})
+			return
+		}
+	}
+
+	errCode := M.DeleteProjectAgentMapping(projectId, agentUUIDToRemove)
+	if errCode == http.StatusInternalServerError {
+		c.AbortWithStatus(errCode)
+		return
+	}
+
+	resp := map[string]interface{}{
+		"project_id": projectId,
+		"agent_uuid": agentUUIDToRemove,
+	}
+	c.JSON(http.StatusAccepted, resp)
+
 }
 
 type agentVerifyParams struct {
@@ -355,4 +438,244 @@ func AgentInfo(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, agentInfo)
+}
+
+func GetProjectAgentsHandler(c *gin.Context) {
+	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	projectAgentMappings, errCode := M.GetProjectAgentMappingsByProjectId(projectId)
+	if errCode != http.StatusFound {
+		c.AbortWithStatus(errCode)
+		return
+	}
+
+	agentUUIDs := make([]string, 0, 0)
+	for _, pam := range projectAgentMappings {
+		agentUUIDs = append(agentUUIDs, pam.AgentUUID)
+	}
+
+	agents, errCode := M.GetAgentsByUUIDs(agentUUIDs)
+	if errCode != http.StatusFound {
+		c.AbortWithStatus(errCode)
+		return
+	}
+
+	agentInfos := M.CreateAgentInfos(agents)
+	agentInfoMap := make(map[string]*M.AgentInfo)
+	for _, agentInfo := range agentInfos {
+		agentInfoMap[agentInfo.UUID] = agentInfo
+	}
+
+	resp := make(map[string]interface{})
+	resp["agents"] = agentInfoMap
+	resp["project_agent_mappings"] = projectAgentMappings
+
+	c.JSON(http.StatusOK, resp)
+}
+
+func GetAgentBillingAccount(c *gin.Context) {
+	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+
+	bA, errCode := M.GetBillingAccountByAgentUUID(loggedInAgentUUID)
+	if errCode != http.StatusFound {
+		c.AbortWithStatus(errCode)
+		return
+	}
+
+	projects, errCode := M.GetProjectsUnderBillingAccountID(bA.ID)
+
+	projectIDs := make([]uint64, len(projects), len(projects))
+	for i := range projects {
+		projectIDs[i] = projects[i].ID
+	}
+
+	plan, errCode := M.GetPlanByID(bA.PlanID)
+	if errCode != http.StatusFound {
+		c.AbortWithStatus(errCode)
+		return
+	}
+
+	agents, errCode := M.GetAgentsByProjectIDs(projectIDs)
+	if errCode != http.StatusFound {
+		c.AbortWithStatus(errCode)
+		return
+	}
+
+	agentsInfo := M.CreateAgentInfos(agents)
+
+	resp := make(map[string]interface{})
+	resp["billing_account"] = bA
+	resp["projects"] = projects
+	resp["agents"] = agentsInfo
+	resp["plan"] = plan
+	resp["available_plans"] = map[string]string{
+		M.FreePlanCode:    "Free",
+		M.StartupPlanCode: "Startup",
+	}
+	c.JSON(http.StatusOK, resp)
+}
+
+type updateAgentBillingAccParams struct {
+	OrganizationName string `json:"organization_name"`
+	BillingAddress   string `json:"billing_address"`
+	Pincode          string `json:"pincode"`
+	PhoneNo          string `json:"phone_no"`
+	PlanCode         string `json:"plan_code"`
+}
+
+func getUpdateAgentBillingAccountParams(c *gin.Context) (*updateAgentBillingAccParams, error) {
+	params := updateAgentBillingAccParams{}
+	err := c.BindJSON(&params)
+	if err != nil {
+		return nil, err
+	}
+	return &params, nil
+}
+
+func UpdateAgentBillingAccount(c *gin.Context) {
+	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+	logCtx := log.WithFields(log.Fields{
+		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
+	})
+
+	params, err := getUpdateAgentBillingAccountParams(c)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to parse getUpdateAgentBillingAccountParams")
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	bA, errCode := M.GetBillingAccountByAgentUUID(loggedInAgentUUID)
+	if errCode != http.StatusFound {
+		c.AbortWithStatus(errCode)
+		return
+	}
+
+	currPlan, errCode := M.GetPlanByID(bA.PlanID)
+	if errCode != http.StatusFound {
+		c.AbortWithStatus(errCode)
+		return
+	}
+
+	newPlan, errCode := M.GetPlanByCode(params.PlanCode)
+	if errCode != http.StatusFound {
+		c.AbortWithStatus(errCode)
+		return
+	}
+
+	planToSet := currPlan
+	if newPlan.ID != currPlan.ID {
+		planToSet = newPlan
+	}
+
+	errCode = M.UpdateBillingAccount(bA.ID, planToSet.ID, params.OrganizationName, params.BillingAddress, params.Pincode, params.PhoneNo)
+	if errCode != http.StatusAccepted {
+		c.AbortWithStatus(errCode)
+		return
+	}
+
+	// Fetch the updated billing_account and return
+	bA, errCode = M.GetBillingAccountByAgentUUID(loggedInAgentUUID)
+	if errCode != http.StatusFound {
+		c.AbortWithStatus(errCode)
+		return
+	}
+
+	resp := make(map[string]interface{})
+	resp["billing_account"] = bA
+	resp["plan"] = planToSet
+	c.JSON(http.StatusOK, resp)
+}
+
+type updateAgentParams struct {
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+}
+
+func getUpdateAgentParams(c *gin.Context) (*updateAgentParams, error) {
+	params := updateAgentParams{}
+	err := c.BindJSON(&params)
+	if err != nil {
+		return nil, err
+	}
+	return &params, nil
+}
+
+func UpdateAgentInfo(c *gin.Context) {
+	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+	logCtx := log.WithFields(log.Fields{
+		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
+	})
+	params, err := getUpdateAgentParams(c)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to parse UpdateAgent params")
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	errCode := M.UpdateAgentInformation(loggedInAgentUUID, params.FirstName, params.LastName)
+	if errCode == http.StatusInternalServerError {
+		c.AbortWithStatus(errCode)
+		return
+	}
+
+	agent, errCode := M.GetAgentInfo(loggedInAgentUUID)
+	if errCode != http.StatusFound {
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+
+	resp := make(map[string]interface{})
+	resp["status"] = "success"
+	resp["agent"] = agent
+	c.JSON(http.StatusOK, agent)
+}
+
+type updateAgentPasswordParams struct {
+	CurrentPassword string `json:"current_password" binding:"required"`
+	NewPassword     string `json:"new_password" binding:"required"`
+}
+
+func getUpdateAgentPasswordParams(c *gin.Context) (*updateAgentPasswordParams, error) {
+	params := updateAgentPasswordParams{}
+	err := c.BindJSON(&params)
+	if err != nil {
+		return nil, err
+	}
+	return &params, nil
+}
+
+func UpdateAgentPassword(c *gin.Context) {
+	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+	logCtx := log.WithFields(log.Fields{
+		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
+	})
+	params, err := getUpdateAgentPasswordParams(c)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to parse UpdateAgentPassword params")
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	agent, errCode := M.GetAgentByUUID(loggedInAgentUUID)
+	if errCode == http.StatusInternalServerError {
+		logCtx.WithField("uuid", loggedInAgentUUID).Error("Failed to GetAgentByUUID")
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	} else if errCode == http.StatusNotFound {
+		c.AbortWithStatus(http.StatusNotFound)
+		return
+	}
+
+	if !M.IsPasswordAndHashEqual(params.CurrentPassword, agent.Password) {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Incorrect Current Password"})
+		return
+	}
+
+	errCode = M.UpdateAgentPassword(loggedInAgentUUID, params.NewPassword, time.Now().UTC())
+	c.Status(errCode)
 }

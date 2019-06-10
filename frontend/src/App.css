@@ -443,6 +443,10 @@ div.setting-card:hover{
     font-weight: 600;
 }
 
+.fapp-label.light {
+    color: #999;
+}
+
 .fapp-bordered-card {
     color: #484848;
     margin-bottom: 2.5rem !important;
@@ -488,6 +492,10 @@ div.setting-card:hover{
     box-shadow: 0 2px 4px 0 rgba(0,0,0,0.16),0 2px 10px 0 rgba(0,0,0,0.12);
 }
 
+.fapp-medium-font {
+    font-size: 15px !important;
+}
+
 .fapp-big-font {
     font-size: 17px !important;
     color: #000 !important;
@@ -519,6 +527,10 @@ div.setting-card:hover{
     font-weight: 700;
     display: block;
     text-align: center;
+}
+
+.fapp-error-span.light {
+    font-weight: 400;
 }
 
 .fapp-close-button {
@@ -589,4 +601,15 @@ div .fapp-overflow-dot {
 .no-outline:focus,
 .no-outline:hover {
     outline: 0;
+}
+
+span.fapp-button {
+    color: #20a8d8;
+    font-weight: 500;
+}
+
+span.fapp-button:hover,
+span.fapp-button:focus {
+    text-decoration: underline;
+    cursor: pointer;
 }

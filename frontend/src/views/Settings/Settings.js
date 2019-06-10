@@ -8,6 +8,7 @@ import {
     CardHeader,
 } from 'reactstrap';
 
+import projectUsersSvg from '../../assets/img/settings/project_users.svg';
 import jsSvg from '../../assets/img/settings/js.svg';
 import segmentSvg from '../../assets/img/integrations/segment.svg';
 import androidSvg from '../../assets/img/settings/android.svg';
@@ -28,11 +29,12 @@ class SettingsCard extends Component {
 
   render() {
     if (this.state.clicked) return <Redirect to={this.props.href} />;
+    let size = this.props.size ? this.props.size : '65px';
 
     return (
       <Col xs='12' md={{size: 2}} sm={{size: 6}} style={{marginBottom: '1rem', marginTop: '1rem'}} onClick={this.handleClick}>
         <div style={{border: '2px solid #ddd'}} className='setting-card'> 
-          <div style={{width: '65px', height: '65px', margin: '25px auto'}}>
+          <div style={{width: size, height: size, margin: '25px auto'}}>
             <img src={this.props.img} style={{ width: '100%', height:'100%'}} />
           </div>
           <strong style={{textAlign: 'center', display: 'inherit', fontSize: '15px', fontWeight: 500, color: '#484848', paddingBottom: '25px'}}>{this.props.title}</strong>
@@ -62,6 +64,16 @@ class Settings extends Component {
       <div className='animated fadeIn fapp-content fapp-content-margin'>
         <Row>
           <Col xs='12' md='12'>
+            <Card className="fapp-card">
+              <CardHeader>
+                <strong>General Settings</strong>
+              </CardHeader>
+              <CardBody style={{padding: '0 10px'}}>
+                <Row>
+                  <SettingsCard title='Project Users' img={projectUsersSvg} size='75px' href='/settings/agents' />
+                </Row>
+              </CardBody>
+            </Card>
             <Card className="fapp-card">
               <CardHeader>
                 <strong>SDKs</strong>

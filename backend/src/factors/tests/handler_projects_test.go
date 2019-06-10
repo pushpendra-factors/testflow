@@ -49,8 +49,8 @@ func TestAPICreateProject(t *testing.T) {
 
 	t.Run("CreateProject", func(t *testing.T) {
 		projectName := "test_project_name"
-		agent, err := SetupAgentReturnDAO()
-		assert.Nil(t, err)
+		agent, errCode := SetupAgentReturnDAO(getRandomEmail())
+		assert.Equal(t, http.StatusCreated, errCode)
 		w := sendCreateProjectRequest(r, projectName, agent)
 		assert.Equal(t, http.StatusCreated, w.Code)
 		jsonResponse, _ := ioutil.ReadAll(w.Body)

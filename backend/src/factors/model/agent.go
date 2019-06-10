@@ -42,8 +42,11 @@ type Agent struct {
 
 // AgentInfo - Exposable Info.
 type AgentInfo struct {
-	Email     string `json:"email"`
-	FirstName string `json:"first_name"`
+	UUID            string `json:"uuid"`
+	Email           string `json:"email"`
+	FirstName       string `json:"first_name"`
+	LastName        string `json:"last_name"`
+	IsEmailVerified bool   `json:"is_email_verified"`
 }
 
 func (a *Agent) BeforeCreate(scope *gorm.Scope) error {
@@ -54,7 +57,7 @@ func (a *Agent) BeforeCreate(scope *gorm.Scope) error {
 // TODO: Make index name a constant and read it
 const error_Duplicate_email_error = "pq: duplicate key value violates unique constraint \"agent_email_unique_idx\""
 
-func CreateAgent(agent *Agent) (*Agent, int) {
+func createAgent(agent *Agent) (*Agent, int) {
 	if agent.Email == "" {
 		log.Error("CreateAgent Failed. Email not provided.")
 		return nil, http.StatusBadRequest
@@ -74,6 +77,40 @@ func CreateAgent(agent *Agent) (*Agent, int) {
 	}
 
 	return agent, http.StatusCreated
+}
+
+type CreateAgentParams struct {
+	Agent    *Agent
+	PlanCode string
+}
+
+type CreateAgentResponse struct {
+	Agent          *Agent
+	BillingAccount *BillingAccount
+}
+
+func CreateAgentWithDependencies(params *CreateAgentParams) (*CreateAgentResponse, int) {
+
+	if params == nil || params.PlanCode == "" || params.Agent == nil || params.Agent.Email == "" {
+		return nil, http.StatusBadRequest
+	}
+
+	resp := &CreateAgentResponse{}
+
+	agent, errCode := createAgent(params.Agent)
+	if errCode != http.StatusCreated {
+		return nil, errCode
+	}
+	resp.Agent = agent
+
+	billingAccount, errCode := createBillingAccount(params.PlanCode, agent.UUID)
+	if errCode != http.StatusCreated {
+		return nil, errCode
+	}
+
+	resp.BillingAccount = billingAccount
+
+	return resp, http.StatusCreated
 }
 
 func GetAgentByEmail(email string) (*Agent, int) {
@@ -119,20 +156,61 @@ func GetAgentByUUID(uuid string) (*Agent, int) {
 	return &agent, http.StatusFound
 }
 
+func GetAgentsByUUIDs(uuids []string) ([]*Agent, int) {
+	if len(uuids) == 0 {
+		return nil, http.StatusBadRequest
+	}
+	db := C.GetServices().Db
+
+	agents := make([]*Agent, 0, 0)
+
+	if err := db.Limit(len(uuids)).Where("uuid IN (?)", uuids).Find(&agents).Error; err != nil {
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(agents) == 0 {
+		return nil, http.StatusNotFound
+	}
+
+	return agents, http.StatusFound
+}
+
 func GetAgentInfo(uuid string) (*AgentInfo, int) {
 	agent, errCode := GetAgentByUUID(uuid)
 	if errCode != http.StatusFound {
 		return nil, errCode
 	}
 
-	agentInfo := &AgentInfo{FirstName: agent.FirstName, Email: agent.Email}
+	agentInfo := CreateAgentInfo(agent)
 	return agentInfo, errCode
+}
+
+func CreateAgentInfo(agent *Agent) *AgentInfo {
+	if agent == nil {
+		return nil
+	}
+	return &AgentInfo{
+		FirstName:       agent.FirstName,
+		LastName:        agent.LastName,
+		Email:           agent.Email,
+		UUID:            agent.UUID,
+		IsEmailVerified: agent.IsEmailVerified,
+	}
+}
+
+func CreateAgentInfos(agents []*Agent) []*AgentInfo {
+	agentInfos := make([]*AgentInfo, 0, 0)
+	for _, agent := range agents {
+		agentInfos = append(agentInfos, CreateAgentInfo(agent))
+	}
+	return agentInfos
 }
 
 func HashPassword(password string) (string, error) {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
 	return string(bytes), err
 }
+
 func IsPasswordAndHashEqual(password, hash string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 	return err == nil
@@ -150,51 +228,16 @@ func UpdateAgentPassword(uuid, plainTextPassword string, passUpdatedAt time.Time
 		return http.StatusInternalServerError
 	}
 
-	db := C.GetServices().Db
-
-	db = db.Model(&Agent{}).Where("uuid = ?", uuid).
-		Updates(map[string]interface{}{
-			"password":            hashedPassword,
-			"password_created_at": passUpdatedAt,
-			"salt":                U.RandomString(SALT_LEN),
-		})
-
-	if db.Error != nil {
-		log.WithError(db.Error).Error("UpdateAgentPassword Failed")
-		return http.StatusInternalServerError
-	}
-
-	if db.RowsAffected == 0 {
-		return http.StatusNoContent
-	}
-
-	return http.StatusAccepted
+	return updateAgent(uuid, PasswordAndPasswordCreatedAt(hashedPassword, passUpdatedAt), Salt(U.RandomString(SALT_LEN)))
 }
 
-func UpdateAgentLastLoginInfo(email string, ts time.Time) int {
-	if email == "" {
+func UpdateAgentLastLoginInfo(agentUUID string, ts time.Time) int {
+	if agentUUID == "" {
 		log.Error("UpdateAgentLastLoginInfo Failed. Missing params")
 		return http.StatusBadRequest
 	}
 
-	email = strings.ToLower(email)
-
-	db := C.GetServices().Db
-
-	db = db.Model(&Agent{}).Where("email = ?", email).Updates(map[string]interface{}{
-		"last_logged_in_at": ts,
-		"login_count":       gorm.Expr("login_count + ? ", 1)})
-
-	if db.Error != nil {
-		log.WithError(db.Error).Error("UpdateAgentLastLoginInfo Failed")
-		return http.StatusInternalServerError
-	}
-
-	if db.RowsAffected == 0 {
-		return http.StatusNoContent
-	}
-
-	return http.StatusAccepted
+	return updateAgent(agentUUID, LastLoggedInAtAndIncrLoginCount(ts))
 }
 
 func UpdateAgentVerificationDetails(agentUUID, password, firstName, lastName string, verified bool, passUpdatedAt time.Time) int {
@@ -209,18 +252,79 @@ func UpdateAgentVerificationDetails(agentUUID, password, firstName, lastName str
 		return http.StatusInternalServerError
 	}
 
+	return updateAgent(agentUUID, Firstname(firstName), Lastname(lastName), IsEmailVerified(verified), PasswordAndPasswordCreatedAt(hashedPassword, passUpdatedAt))
+}
+
+func UpdateAgentInformation(agentUUID, firstName, lastName string) int {
+	if agentUUID == "" || firstName == "" {
+		return http.StatusBadRequest
+	}
+	return updateAgent(agentUUID, Firstname(firstName), Lastname(lastName))
+}
+
+type fieldsToUpdate map[string]interface{}
+
+type Option func(fieldsToUpdate)
+
+func Firstname(firstName string) Option {
+	return func(fields fieldsToUpdate) {
+		fields["first_name"] = firstName
+	}
+}
+
+func Lastname(lastName string) Option {
+	return func(fields fieldsToUpdate) {
+		fields["last_name"] = lastName
+	}
+}
+
+func PasswordAndPasswordCreatedAt(password string, ts time.Time) Option {
+	return func(fields fieldsToUpdate) {
+		fields["password"] = password
+		fields["password_created_at"] = ts
+	}
+}
+
+func Salt(salt string) Option {
+	return func(fields fieldsToUpdate) {
+		fields["salt"] = salt
+	}
+}
+
+func LastLoggedInAtAndIncrLoginCount(time time.Time) Option {
+	return func(fields fieldsToUpdate) {
+		fields["last_logged_in_at"] = time
+		fields["login_count"] = gorm.Expr("login_count + ? ", 1)
+	}
+}
+
+func IsEmailVerified(verified bool) Option {
+	return func(fields fieldsToUpdate) {
+		fields["is_email_verified"] = verified
+	}
+}
+
+func updateAgent(agentUUID string, options ...Option) int {
+	if agentUUID == "" {
+		return http.StatusBadRequest
+	}
+
+	fields := fieldsToUpdate{}
+
+	for _, option := range options {
+		option(fields)
+	}
+
+	if len(fields) == 0 {
+		return http.StatusBadRequest
+	}
+
 	db := C.GetServices().Db
 
-	db = db.Model(&Agent{}).Where("uuid = ?", agentUUID).Updates(map[string]interface{}{
-		"is_email_verified":   verified,
-		"first_name":          firstName,
-		"last_name":           lastName,
-		"password":            hashedPassword,
-		"password_created_at": passUpdatedAt,
-	})
+	db = db.Model(&Agent{}).Where("uuid = ?", agentUUID).Updates(fields)
 
 	if db.Error != nil {
-		log.WithError(db.Error).Error("UpdateAgentVerificationDetails Failed")
+		log.WithError(db.Error).Error("UpdateAgent Failed")
 		return http.StatusInternalServerError
 	}
 

@@ -1,12 +1,14 @@
 package tests
 
 import (
+	"encoding/json"
 	C "factors/config"
 	H "factors/handler"
 	"factors/handler/helpers"
 	M "factors/model"
 	U "factors/util"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -52,7 +54,7 @@ func TestAPIAgentSignin(t *testing.T) {
 
 	t.Run("SigninSuccess", func(t *testing.T) {
 		email := getRandomEmail()
-		agent, errCode := M.CreateAgent(&M.Agent{Email: email})
+		agent, errCode := SetupAgentReturnDAO(email)
 		assert.Equal(t, http.StatusCreated, errCode)
 
 		plainTextPassword := U.RandomLowerAphaNumString(6)
@@ -161,7 +163,7 @@ func TestAPIAgentInvite(t *testing.T) {
 	t.Run("InviteAgentSuccess", func(t *testing.T) {
 		project, err := SetupProjectReturnDAO()
 		assert.Nil(t, err)
-		agent, errCode := M.CreateAgent(&M.Agent{Email: getRandomEmail()})
+		agent, errCode := SetupAgentReturnDAO(getRandomEmail())
 		assert.Equal(t, http.StatusCreated, errCode)
 
 		_, errCode = M.CreateProjectAgentMappingWithDependencies(&M.ProjectAgentMapping{
@@ -177,6 +179,84 @@ func TestAPIAgentInvite(t *testing.T) {
 		assert.Equal(t, http.StatusCreated, w.Code)
 	})
 
+	t.Run("InviteAgentLimitExceeded", func(t *testing.T) {
+		td, errCode := SetupTestData()
+		assert.Equal(t, http.StatusCreated, errCode)
+
+		for i := 0; i < 2; i++ {
+			agent, errCode := SetupAgentReturnDAO(getRandomEmail())
+			assert.Equal(t, http.StatusCreated, errCode)
+
+			_, errCode = M.CreateProjectAgentMappingWithDependencies(&M.ProjectAgentMapping{
+				ProjectID: td.Project.ID,
+				AgentUUID: agent.UUID,
+			})
+			assert.Equal(t, http.StatusCreated, errCode)
+		}
+		emailToAdd := getRandomEmail()
+		authData, err := helpers.GetAuthData(td.Agent.Email, td.Agent.UUID, td.Agent.Salt, time.Second*1000)
+		assert.Nil(t, err)
+		w := sendAgentInviteRequest(emailToAdd, td.Project.ID, authData, 100, r)
+		assert.Equal(t, http.StatusConflict, w.Code)
+	})
+
+}
+
+func sendProjectAgentRemoveRequest(r *gin.Engine, projectId uint64, agentToRemoveUUID string, agent *M.Agent) *httptest.ResponseRecorder {
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	if err != nil {
+		log.WithError(err).Error("Error Creating cookieData")
+	}
+	rb := U.NewRequestBuilder(http.MethodPut, fmt.Sprintf("/projects/%d/agents/remove", projectId)).
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		}).WithPostParams(map[string]string{
+		"agent_uuid": agentToRemoveUUID,
+	})
+
+	w := httptest.NewRecorder()
+	req, err := rb.Build()
+	if err != nil {
+		log.WithError(err).Error("Error Creating getAgentBillingAccount Req")
+	}
+	r.ServeHTTP(w, req)
+	return w
+}
+
+func TestAPIRemoveAgentFromProject(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	t.Run("FailAdminTryingToRemoveHimself", func(t *testing.T) {
+		testData, errCode := SetupTestData()
+		assert.Equal(t, http.StatusCreated, errCode)
+
+		project := testData.Project
+
+		w := sendProjectAgentRemoveRequest(r, project.ID, testData.Agent.UUID, testData.Agent)
+		assert.Equal(t, http.StatusForbidden, w.Code)
+	})
+
+	t.Run("Success", func(t *testing.T) {
+		testData, errCode := SetupTestData()
+		assert.Equal(t, http.StatusCreated, errCode)
+
+		project := testData.Project
+		agentToRemove, errCode := SetupAgentReturnDAO(getRandomEmail())
+		assert.Equal(t, http.StatusCreated, errCode)
+
+		_, errCode = M.CreateProjectAgentMappingWithDependencies(&M.ProjectAgentMapping{
+			ProjectID: project.ID,
+			AgentUUID: agentToRemove.UUID,
+			Role:      M.AGENT,
+		})
+		assert.Equal(t, http.StatusCreated, errCode)
+
+		w := sendProjectAgentRemoveRequest(r, project.ID, agentToRemove.UUID, testData.Agent)
+		assert.Equal(t, http.StatusAccepted, w.Code)
+	})
 }
 
 func sendAgentVerifyRequest(r *gin.Engine, authData, password, firstName, lastName string) *httptest.ResponseRecorder {
@@ -225,7 +305,7 @@ func TestAPIAgentVerify(t *testing.T) {
 
 	t.Run("Success", func(t *testing.T) {
 		email := getRandomEmail()
-		agent, errCode := M.CreateAgent(&M.Agent{Email: email})
+		agent, errCode := SetupAgentReturnDAO(email)
 		assert.Equal(t, http.StatusCreated, errCode)
 
 		firstName := U.RandomLowerAphaNumString(8)
@@ -278,8 +358,8 @@ func TestAPIAgentGenerateResetPasswordEmail(t *testing.T) {
 	})
 
 	t.Run("AgentExists", func(t *testing.T) {
-		agent, err := SetupAgentReturnDAO()
-		assert.Nil(t, err)
+		agent, errCode := SetupAgentReturnDAO(getRandomEmail())
+		assert.Equal(t, http.StatusCreated, errCode)
 
 		w := sendAgentResetPasswordEmailReq(r, agent.Email)
 		assert.Equal(t, http.StatusOK, w.Code)
@@ -325,7 +405,7 @@ func TestAPIAgentSetPassword(t *testing.T) {
 
 	t.Run("MissingPassword", func(t *testing.T) {
 		email := getRandomEmail()
-		agent, errCode := M.CreateAgent(&M.Agent{Email: email})
+		agent, errCode := SetupAgentReturnDAO(email)
 		assert.Equal(t, http.StatusCreated, errCode)
 
 		authData, err := helpers.GetAuthData(email, agent.UUID, agent.Salt, helpers.SecondsInFifteenDays*time.Second)
@@ -337,7 +417,7 @@ func TestAPIAgentSetPassword(t *testing.T) {
 
 	t.Run("Success", func(t *testing.T) {
 		email := getRandomEmail()
-		agent, errCode := M.CreateAgent(&M.Agent{Email: email})
+		agent, errCode := SetupAgentReturnDAO(email)
 		assert.Equal(t, http.StatusCreated, errCode)
 
 		password := U.RandomLowerAphaNumString(8)
@@ -351,5 +431,164 @@ func TestAPIAgentSetPassword(t *testing.T) {
 		// on retrying should return unauthorised
 		w = sendAgentSetPasswordRequest(r, authData, password)
 		assert.Equal(t, http.StatusUnauthorized, w.Code)
+	})
+}
+
+func sendGetProjectAgentsRequest(r *gin.Engine, projectId uint64, agent *M.Agent) *httptest.ResponseRecorder {
+
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	if err != nil {
+		log.WithError(err).Error("Error Creating cookieData")
+	}
+	rb := U.NewRequestBuilder(http.MethodGet, fmt.Sprintf("/projects/%d/agents", projectId)).
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		})
+
+	w := httptest.NewRecorder()
+	req, err := rb.Build()
+	if err != nil {
+		log.WithError(err).Error("Error Creating getProjectSetting Req")
+	}
+	r.ServeHTTP(w, req)
+	return w
+}
+
+func TestAPIGetProjectAgentsHandler(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	t.Run("Success", func(t *testing.T) {
+		td, errCode := SetupTestData()
+		assert.Equal(t, http.StatusCreated, errCode)
+		agent := td.Agent
+		w := sendGetProjectAgentsRequest(r, td.Project.ID, agent)
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		type Resp struct {
+			Agents               map[string]*M.AgentInfo `json:"agents"`
+			ProjectAgentMappings []M.ProjectAgentMapping `json:"project_agent_mappings"`
+		}
+
+		resp := Resp{}
+		jsonResponse, _ := ioutil.ReadAll(w.Body)
+		json.Unmarshal(jsonResponse, &resp)
+
+		assert.Equal(t, agent.Email, resp.Agents[agent.UUID].Email)
+		assert.Equal(t, 1, len(resp.ProjectAgentMappings))
+		assert.Equal(t, agent.UUID, resp.ProjectAgentMappings[0].AgentUUID)
+	})
+}
+
+func sendGetAgentBillingAccountRequest(r *gin.Engine, agent *M.Agent) *httptest.ResponseRecorder {
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	if err != nil {
+		log.WithError(err).Error("Error Creating cookieData")
+	}
+	rb := U.NewRequestBuilder(http.MethodGet, "/agents/billing").
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		})
+
+	w := httptest.NewRecorder()
+	req, err := rb.Build()
+	if err != nil {
+		log.WithError(err).Error("Error Creating getAgentBillingAccount Req")
+	}
+	r.ServeHTTP(w, req)
+	return w
+}
+
+func TestAPIGetAgentBillingAccount(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	t.Run("Success", func(t *testing.T) {
+		td, errCode := SetupTestData()
+		assert.Equal(t, http.StatusCreated, errCode)
+		agent := td.Agent
+		expBA := td.BillingAccount
+		w := sendGetAgentBillingAccountRequest(r, agent)
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		type Resp struct {
+			BillingAcc M.BillingAccount `json:"billing_account"`
+		}
+
+		resp := Resp{}
+		jsonResponse, err := ioutil.ReadAll(w.Body)
+		assert.Nil(t, err)
+		json.Unmarshal(jsonResponse, &resp)
+
+		assert.NotNil(t, resp.BillingAcc)
+		assert.Equal(t, expBA.AgentUUID, resp.BillingAcc.AgentUUID)
+		assert.Equal(t, expBA.ID, resp.BillingAcc.ID)
+	})
+}
+
+func sendUpdateAgentBillingAccountRequest(r *gin.Engine, orgName, billingAddr, pincode, phoneNo, planCode string, agent *M.Agent) *httptest.ResponseRecorder {
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	if err != nil {
+		log.WithError(err).Error("Error Creating cookieData")
+	}
+	rb := U.NewRequestBuilder(http.MethodPut, "/agents/billing").
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		}).WithPostParams(map[string]string{
+		"organization_name": orgName,
+		"pincode":           pincode,
+		"phone_no":          phoneNo,
+		"billing_address":   billingAddr,
+		"plan_code":         planCode,
+	})
+
+	w := httptest.NewRecorder()
+	req, err := rb.Build()
+	if err != nil {
+		log.WithError(err).Error("Error Creating getAgentBillingAccount Req")
+	}
+	r.ServeHTTP(w, req)
+	return w
+}
+
+func TestAPIUpdateAgentBillingAccount(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	t.Run("Success", func(t *testing.T) {
+		td, errCode := SetupTestData()
+		assert.Equal(t, http.StatusCreated, errCode)
+		agent := td.Agent
+		expBA := td.BillingAccount
+
+		orgName := "test org " + U.RandomString(4)
+		addr := "test addr " + U.RandomString(4)
+		pincode := "600322"
+		phoneNo := "1232452"
+		w := sendUpdateAgentBillingAccountRequest(r, orgName, addr, pincode, phoneNo, M.StartupPlanCode, agent)
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		type Resp struct {
+			BillingAcc M.BillingAccount `json:"billing_account"`
+		}
+
+		resp := Resp{}
+		jsonResponse, err := ioutil.ReadAll(w.Body)
+		assert.Nil(t, err)
+		json.Unmarshal(jsonResponse, &resp)
+
+		assert.NotNil(t, resp.BillingAcc)
+		assert.Equal(t, expBA.AgentUUID, resp.BillingAcc.AgentUUID)
+		assert.Equal(t, expBA.ID, resp.BillingAcc.ID)
+		assert.Equal(t, orgName, resp.BillingAcc.OrganizationName)
+		assert.Equal(t, pincode, resp.BillingAcc.Pincode)
+		assert.Equal(t, addr, resp.BillingAcc.BillingAddress)
+		assert.Equal(t, phoneNo, resp.BillingAcc.PhoneNo)
 	})
 }
