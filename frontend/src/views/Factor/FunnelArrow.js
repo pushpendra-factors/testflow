@@ -10,7 +10,7 @@ class FunnelArrow extends Component {
             <path d="M0,0 L0,6 L9,3 z" fill={this.props.color} />
           </marker>
         </defs>
-        <text x="10" y="10">{this.props.conversionString}</text>
+        <text x="2" y="10">{this.props.conversionString}</text>
         <line x1="0" y1="25" x2="30" y2="25" stroke={this.props.color} strokeWidth="5" markerEnd={"url(#" + arrowId+ ")"} />
       </svg>
     );

@@ -52,11 +52,13 @@ class FunnelChartCard extends Component {
         arrowColor = '#f86c6b';
       }
 
+      // Empty labels.
+      let labels = funnelData[i].data.map(() => (''));
+      
       var donutGraphData = {
-        labels: [
-        ],
+        labels: labels,
         datasets: [
-          {
+          { 
             data: funnelData[i].data,
             backgroundColor: [
               nodeColor,
