@@ -346,6 +346,43 @@ func handlerVersionFileUpdates(ps *patternserver.PatternServer, newVersion strin
 	return nil
 }
 
+func isListOfServersEqual(curNodes, newNodes []serviceEtcd.KV) bool {
+	if len(curNodes) != len(newNodes) {
+		return false
+	}
+	for i := 0; i < len(newNodes); i++ {
+		if newNodes[i] != curNodes[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func handleRecomputation(ps *patternserver.PatternServer) error {
+	psNodes, err := ps.GetEtcdClient().DiscoverPatternServers()
+	if err != nil {
+		log.WithError(err).Errorln("failed to disover pattern servers")
+		return err
+	}
+
+	n := patternserver.CalculateMyNum(ps.GetIp(), ps.GetRPCPort(), psNodes)
+	if n == patternserver.PatternServerNotFound {
+		err := errors.New("pattern server not registered")
+		log.WithError(err).Errorln("handleRecomputation pattern server not registered")
+		return err
+	}
+
+	if n == ps.GetMyNum() && isListOfServersEqual(ps.GetPatternServerNodes(), psNodes) {
+		log.Debugf("MyNum: %d, NewNum: %d Same Returning", ps.GetMyNum(), n)
+		return nil
+	}
+
+	// my num has changed, update
+	ps.SetState(n, psNodes, ps.GetProjectDataVersion(), ps.GetProjectModelChunkData())
+
+	return nil
+}
+
 func watchAndHandleEtcdEvents(ps *patternserver.PatternServer, cloudManger filestore.FileManager) {
 	logCtx := log.WithFields(log.Fields{
 		"IP":      ps.GetIp(),
@@ -353,8 +390,19 @@ func watchAndHandleEtcdEvents(ps *patternserver.PatternServer, cloudManger files
 	})
 	psUpdateChan := ps.WatchPatternServers()
 	versionFileUpdateChan := ps.WatchProjectsFile()
+
+	ticker := time.NewTicker(5 * time.Minute)
+
 	for {
 		select {
+
+		case t := <-ticker.C:
+			logCtx.Debugf("Recomputing State at: %v", t)
+			err := handleRecomputation(ps)
+			if err != nil {
+				logCtx.WithError(err).Errorln("recomputation failed to Update list of pattern servers")
+				panic(err)
+			}
 		case psUpdateEvent := <-psUpdateChan:
 
 			if err := psUpdateEvent.Err(); err != nil {
