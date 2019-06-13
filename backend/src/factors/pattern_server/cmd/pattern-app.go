@@ -372,10 +372,14 @@ func handleRecomputation(ps *patternserver.PatternServer) error {
 		return err
 	}
 
-	if n == ps.GetMyNum() && isListOfServersEqual(ps.GetPatternServerNodes(), psNodes) {
-		log.Debugf("MyNum: %d, NewNum: %d Same Returning", ps.GetMyNum(), n)
+	oldNum := ps.GetMyNum()
+	oldNodes := ps.GetPatternServerNodes()
+	if n == oldNum && isListOfServersEqual(oldNodes, psNodes) {
+		log.Debugf("OldNum: %d, NewNum: %d Same Returning", oldNum, n)
 		return nil
 	}
+
+	log.Infof("OldNum: %d, NewNum: %d Same Returning, OldNodes: %+v, NewNodes: %+v", oldNum, n, oldNodes, psNodes)
 
 	// my num has changed, update
 	ps.SetState(n, psNodes, ps.GetProjectDataVersion(), ps.GetProjectModelChunkData())
