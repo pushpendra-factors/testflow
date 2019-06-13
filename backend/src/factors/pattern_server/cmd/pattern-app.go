@@ -379,7 +379,7 @@ func handleRecomputation(ps *patternserver.PatternServer) error {
 		return nil
 	}
 
-	log.Infof("OldNum: %d, NewNum: %d changed, Recomputing, OldNodes: %+v, NewNodes: %+v", oldNum, n, oldNodes, psNodes)
+	log.Errorf("State Error, Rebalancing OldNum: %d, NewNum: %d changed, Recomputing, OldNodes: %+v, NewNodes: %+v", oldNum, n, oldNodes, psNodes)
 
 	// my num has changed, update
 	ps.SetState(n, psNodes, ps.GetProjectDataVersion(), ps.GetProjectModelChunkData())
