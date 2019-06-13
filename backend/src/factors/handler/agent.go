@@ -164,7 +164,7 @@ func AgentInvite(c *gin.Context) {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	} else if errCode == http.StatusFound {
-		c.AbortWithStatusJSON(http.StatusFound, gin.H{"error": "Agent is already mapped to project"})
+		c.AbortWithStatusJSON(http.StatusFound, gin.H{"error": "User is already mapped to project"})
 		return
 	}
 

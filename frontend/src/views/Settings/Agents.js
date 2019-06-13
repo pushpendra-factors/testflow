@@ -14,6 +14,7 @@ import { fetchProjectAgents, projectAgentInvite, projectAgentRemove } from "../.
 import * as yup from 'yup';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import  { InvalidEmail, MissingEmail } from '../Pages/ValidationMessages';
+import SubmissionError from '../Pages/SubmissionError';
 
 const ROLE_AGENT = 1;
 const ROLE_ADMIN = 2;
@@ -45,9 +46,6 @@ const mapDispatchToProps = dispatch => {
 class Agents extends Component {
   constructor(props) {
     super(props);
-    this.state = {
-      inviteError: null, // TODO(Ankit): Use this for displaying agentInviteErrors
-  }
   }
 
   componentWillMount(){
@@ -60,7 +58,7 @@ class Agents extends Component {
       validationSchema = {yup.object().shape({
           email: yup.string().email(InvalidEmail).required(MissingEmail)
       })}
-      onSubmit={(values, {setSubmitting, resetForm}) => {
+      onSubmit={(values, {setSubmitting, resetForm, setFieldError}) => {
           this.props.projectAgentInvite(this.props.currentProjectId, values.email)
           .then(() => {
               setSubmitting(false);
@@ -68,11 +66,11 @@ class Agents extends Component {
           })
           .catch((msg) => {
               setSubmitting(false);
-              this.setState({ error: msg });
+              setFieldError('general', msg);
           });
       }}
     >
-      {({isSubmitting, touched})=> (
+      {({isSubmitting, touched, errors})=> (
         <Form noValidate>
             <Row>
             <Col md={{size: 3}} >
@@ -80,11 +78,12 @@ class Agents extends Component {
               {
                 touched.email &&
                   <ErrorMessage name="email">
-                      {msg => <span style={{ color:'#d64541', textAlign: 'center', display: 'block', marginTop: '-6px', fontSize: '14px' }}>{msg}</span>}    
+                      {msg => <span style={{ color:'#d64541', textAlign: 'center', display: 'block', marginTop: '-6px', fontSize: '14px' }}>{msg}</span>}
                   </ErrorMessage>
               }
+              { errors.general && <span style={{ color:'#d64541', textAlign: 'center', display: 'block', marginTop: '-6px', fontSize: '14px' }}>{errors.general}</span>}
             </Col>
-            <Col style={{ marginLeft: '-18px', paddingTop: '12px' }}> <Button type='submit' outline color='primary' disabled={isSubmitting} style={{ padding: '8px 15px' }}> Send Invitation </Button> </Col>
+            <Col style={{ marginLeft: '-18px', paddingTop: '12px' }}> <Button type='submit' outline color='primary' disabled={isSubmitting} style={{ padding: '8px 15px' }}> Send Invitation </Button> </Col> 
           </Row>
         </Form>
       )}

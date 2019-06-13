@@ -340,18 +340,25 @@ export function fetchProjectAgents(projectId){
 export function projectAgentInvite(projectId, emailId){
   return function(dispatch){
     let payload = {"email":emailId};
-    return post(dispatch, host + "projects/" + projectId + "/agents/invite", payload)
+    return new Promise((resolve, reject) => {
+      post(dispatch, host + "projects/" + projectId + "/agents/invite", payload)
       .then((r) => {
         if (r.ok && r.status && r.status == 201){
           dispatch({type: "PROJECT_AGENT_INVITE_FULFILLED", payload: r.data });
+          resolve(r.data);
+        }else if (r.status && r.status == 409){
+          dispatch({type: "PROJECT_AGENT_INVITE_REJECTED", payload: r.data.error }); 
+          reject("User Seats limit reached");
         }
         else {
           dispatch({type: "PROJECT_AGENT_INVITE_REJECTED", payload: r.data.error });
+          reject(r.data.error);
         }
       })
       .catch((r) => {
         dispatch({type: "PROJECT_AGENT_INVITE_REJECTED", payload: r.data.error });
       });
+    });
   }
 }
 
