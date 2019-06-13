@@ -22,7 +22,7 @@ const AgentRecord = (props) => {
   return (
     <Row>      
       <Col md={{size: props.emailColSize}} style={{ paddingTop: '5px' }}> { props.email } </Col>
-      <Col md={{size: 1}} style={{ paddingTop: '5px' }}> { props.role == ROLE_ADMIN ? "Admin" : "Agent" } </Col>
+      <Col md={{size: 1}} style={{ paddingTop: '5px' }}> { props.role == ROLE_ADMIN ? "Admin" : "User" } </Col>
       <div> { props.email != props.currentAgentEmail && <Button className="fapp-inline-button" onClick={props.handleDelete}><i className="icon-close" style={{ fontSize: '17px', fontWeight: 700, color: '#888' }}></i></Button> }</div>
       { props.isEmailVerified === false ?  <Col md={{ size: 2 }} style={{ paddingTop: '5px' }} className="fapp-label light"> Pending </Col> : null }
     </Row>
@@ -159,7 +159,7 @@ class Agents extends Component {
         {this.renderInviteAgentsForm()}
         <Card className='fapp-card' style={{ marginTop: '-30px' }}>
           <CardHeader style={{ marginBottom: '5px' }}>
-              <strong>Agents</strong>
+              <strong>Users</strong>
           </CardHeader>
           <CardBody className='fapp-medium-font'>
               <Row style={{ marginBottom: '4px' }}>
