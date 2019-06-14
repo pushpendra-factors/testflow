@@ -130,6 +130,12 @@ func AgentInvite(c *gin.Context) {
 		return
 	}
 
+	project, errCode := M.GetProject(projectId)
+	if errCode != http.StatusFound {
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+
 	invitedAgent, errCode := M.GetAgentByEmail(emailOfAgentToInvite)
 	if errCode == http.StatusInternalServerError {
 		logCtx.Error("Failed to GetAgentByEmail")
@@ -172,7 +178,7 @@ func AgentInvite(c *gin.Context) {
 
 	// Send email
 	// You have been added to this project
-
+	link := ""
 	if sendVerifyProfileLink {
 		authToken, err := helpers.GetAuthData(invitedAgent.Email, invitedAgent.UUID, invitedAgent.Salt, helpers.SecondsInFifteenDays*time.Second)
 		if err != nil {
@@ -182,7 +188,7 @@ func AgentInvite(c *gin.Context) {
 			return
 		}
 		fe_host := C.GetProtocol() + C.GetAPPDomain()
-		link := fmt.Sprintf("%s/#/activate?token=%s", fe_host, authToken)
+		link = fmt.Sprintf("%s/#/activate?token=%s", fe_host, authToken)
 		logCtx.WithField("link", link).Debugf("Verification LInk")
 	}
 
@@ -190,6 +196,14 @@ func AgentInvite(c *gin.Context) {
 	agentInfoMap := make(map[string]*M.AgentInfo)
 
 	agentInfoMap[invitedAgentInfo.UUID] = invitedAgentInfo
+
+	sub, text, html := U.CreateAgentInviteTemplate(project.Name, link)
+	err = C.GetServices().Mailer.SendMail(invitedAgent.Email, C.GetFactorsSenderEmail(), sub, html, text)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to send activation email")
+		c.AbortWithStatusJSON(http.StatusFound, gin.H{"error": "Failed to send invitation email"})
+		return
+	}
 
 	resp := make(map[string]interface{})
 	resp["status"] = "success"

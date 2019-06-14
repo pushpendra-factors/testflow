@@ -63,3 +63,49 @@ func CreateForgotPasswordTemplate(agentEmail, link string) (subject, text, html 
 	html = fmt.Sprintf("%s<br><br>%s(%s).<br><br>%s<br><br>%s<br><br>%s<br>%s", AFPHeading, AFPLine1, agentEmail, link, AFPLine2, AFPFooter1, AFPFooter2)
 	return
 }
+
+const (
+	AISubject = "factors.ai invited to project"
+	AIHeading = "Welcome to factors.ai!"
+	AIFooter1 = "Regards,"
+	AIFooter2 = "factors.ai Team"
+)
+
+// Without activation link
+/*
+Welcome to factors.ai!
+
+You have been added to < project-name > project on factors.ai.
+
+Regards,
+factors.ai Team
+*/
+
+// With activation link
+/*
+Welcome to factors.ai!
+
+You have been added to < project-name > project on factors.ai.
+
+To activate your account, please follow this link:
+
+http://factors-dev.com:3000/#/activate?token=eyJhdSI6ImY2OTE5MGQwLWQ0N2YtNDUyMS04ODJiLTViOWEwZWU4MDZkYyIsInBmIjoiTVRVMU1UUXpPRFE0TW54eFpWbzFZbkJoZDJ4cmNrTlZVRXhCV20wMVoyRkJNMFEyUlY5VFNGVnNWbFJpTWtGMVFtSlhNbUUyZVdJdFIwRlVjSFppUWpOTWRscDJlRUpFZHpod2NYZEtVa3hXUVU5U2FGTjFOVE5PWjB0blBUMTh2UUludnNPWk1xeExFSXFuQXZ1cU13RkJhcFhqVktNSTFtdi1zWUJIbUJ3PSJ9
+
+Once there, create a password for your account, and you're good to go!
+Please feel free to contact us by replying to this email if you face any issues.
+
+Regards,
+factors.ai Team
+*/
+func CreateAgentInviteTemplate(projectName, link string) (subject, text, html string) {
+	subject = AISubject
+	text = fmt.Sprintf("%s\n\n%s\n\n", AIHeading, fmt.Sprintf("You have been added to %s project on factors.ai.", projectName))
+	html = fmt.Sprintf("%s<br><br>%s<br><br>", AIHeading, fmt.Sprintf("You have been added to %s project on factors.ai", projectName))
+	if link != "" {
+		text = fmt.Sprintf("%sTo activate your account, please follow this link:\n\n%s\n", text, link)
+		html = fmt.Sprintf("%sTo activate your account, please follow this link:<br><br>%s<br>", html, link)
+	}
+	text = fmt.Sprintf("%s\n%s\n%s", text, AIFooter1, AIFooter2)
+	html = fmt.Sprintf("%s<br>%s<br>%s", html, AIFooter1, AIFooter2)
+	return
+}
