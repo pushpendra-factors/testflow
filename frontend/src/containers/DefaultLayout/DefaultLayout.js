@@ -57,6 +57,11 @@ const projectSelectStyles = {
   }),
 }
 
+const isHotJarExcludedEmail = (email) => {
+  const excludedEmailDomains = [ "factors.ai" ];
+  return email && excludedEmailDomains.indexOf(email.split("@")[1]) > -1;
+}
+
 const mapStateToProps = store => {
   return {
     currentProjectId: store.projects.currentProjectId,
@@ -131,11 +136,13 @@ class DefaultLayout extends Component {
       });
 
       this.props.fetchAgentBillingAccount();
+  }
 
-      if(isProduction()) {
+  componentDidUpdate(prevProps, prevState) {
+    if (prevProps.agent && this.props.agent && prevProps.agent.email != this.props.agent.email) {
+      if (isProduction() && !isHotJarExcludedEmail(this.props.agent.email))
         hotjar.initialize(1259925, 6);
-      }
-
+    }
   }
 
   refresh = () => {
@@ -195,7 +202,6 @@ class DefaultLayout extends Component {
   }
 
   render() {
-
     if (!this.isAgentLoggedIn()){
       return <Redirect to='/login' />
     }
