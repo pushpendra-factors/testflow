@@ -152,10 +152,10 @@ export function fetchProjectEventPropertyValues(projectId, eventName, propertyNa
   return get(null, url);
 }
 
-export function fetchProjectUserProperties(projectId, modelId="", useStore=true) {
-  let url = host + "projects/" + projectId + "/user_properties";
+export function fetchProjectUserProperties(projectId, queryType, modelId="", useStore=true) {
+  let url = host + "projects/" + projectId + "/user_properties?query_type="+queryType;
   if (!!modelId) {
-    url += "?model_id=" + modelId;
+    url += "&model_id=" + modelId;
   }
 
   if (useStore) {

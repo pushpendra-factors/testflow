@@ -34,7 +34,6 @@ func TestDBCreateAndGetUser(t *testing.T) {
 	assert.True(t, user.UpdatedAt.After(start))
 	// Not more than 20ms difference.
 	assert.InDelta(t, user.CreatedAt.UnixNano(), user.UpdatedAt.UnixNano(), 2.0e+7)
-	assert.Equal(t, postgres.Jsonb{RawMessage: json.RawMessage(nil)}, user.Properties)
 	// Test Get User on the created one.
 	retUser, errCode := M.GetUser(projectId, user.ID)
 	assert.Equal(t, http.StatusFound, errCode)
@@ -48,8 +47,8 @@ func TestDBCreateAndGetUser(t *testing.T) {
 	var userProperties, retUserProperties map[string]interface{}
 	json.Unmarshal(user.Properties.RawMessage, &userProperties)
 	json.Unmarshal(retUser.Properties.RawMessage, &retUserProperties)
-	assert.Equal(t, len(userProperties), 0)
-	assert.Equal(t, len(retUserProperties), 0)
+	assert.Equal(t, 1, len(userProperties))
+	assert.Equal(t, 1, len(retUserProperties))
 	// nil gets changed to null.
 	// A row in user_properties is created even when properties is nil.
 	user.Properties = postgres.Jsonb{RawMessage: json.RawMessage([]byte(`null`))}
@@ -77,7 +76,13 @@ func TestDBCreateAndGetUser(t *testing.T) {
 	assert.True(t, user.UpdatedAt.After(start))
 	// Not more than 20ms difference.
 	assert.InDelta(t, user.CreatedAt.UnixNano(), user.UpdatedAt.UnixNano(), 5.0e+7)
-	assert.Equal(t, properties, user.Properties)
+	var retProperties map[string]interface{}
+	err := json.Unmarshal(user.Properties.RawMessage, &retProperties)
+	assert.Nil(t, err)
+	assert.Contains(t, retProperties, "country")
+	assert.Contains(t, retProperties, "age")
+	assert.Contains(t, retProperties, "paid")
+	assert.Contains(t, retProperties, U.UP_JOIN_TIME)
 
 	// Creating again with the same customer_user_id with no properties.
 	// Should respond with last user of customer_user instead of creating.
@@ -157,7 +162,12 @@ func assertUsersWithOffset(t *testing.T, expectedUsers []M.User, actualUsers []M
 		expectedUser.UpdatedAt = time.Time{}
 		actualUser.CreatedAt = time.Time{}
 		actualUser.UpdatedAt = time.Time{}
-		assert.Equal(t, expectedUser, actualUser)
+
+		assert.Equal(t, expectedUser.ProjectId, actualUser.ProjectId)
+		assert.Equal(t, expectedUser.ID, actualUser.ID)
+		assert.Equal(t, expectedUser.CustomerUserId, actualUser.CustomerUserId)
+		assert.Equal(t, expectedUser.PropertiesId, actualUser.PropertiesId)
+		assert.Equal(t, expectedUser.SegmentAnonymousId, actualUser.SegmentAnonymousId)
 	}
 }
 
@@ -303,7 +313,7 @@ func TestDBUpdateUserProperties(t *testing.T) {
 	var propertiesMap map[string]interface{}
 	err = json.Unmarshal((*properties).RawMessage, &propertiesMap)
 	assert.Nil(t, err)
-	assert.Len(t, propertiesMap, 5)
+	assert.Len(t, propertiesMap, 6) // including joinTime.
 	assert.Equal(t, "value1", propertiesMap["prop1"])
 }
 
@@ -411,7 +421,7 @@ func TestGetRecentUserPropertyKeys(t *testing.T) {
 	assert.Contains(t, props, U.PropertyTypeCategorical)
 	assert.Contains(t, props, U.PropertyTypeNumerical)
 	assert.Len(t, props[U.PropertyTypeCategorical], 1)
-	assert.Len(t, props[U.PropertyTypeNumerical], 1)
+	assert.Len(t, props[U.PropertyTypeNumerical], 2) // including joinTime.
 	// validates classification.
 	assert.Contains(t, props[U.PropertyTypeCategorical], "prop3")
 	assert.Contains(t, props[U.PropertyTypeNumerical], "prop4")

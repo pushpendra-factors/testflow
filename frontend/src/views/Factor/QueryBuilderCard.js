@@ -16,7 +16,7 @@ import {
   fetchProjectUserProperties, 
   fetchProjectUserPropertyValues
 } from '../../actions/projectsActions';
-import { deepEqual } from '../../util';
+import { deepEqual, QUERY_TYPE_FACTOR } from '../../util';
 
 const queryBuilderStyles = {
   multiValue: () => ({
@@ -294,7 +294,7 @@ class QueryBuilderCard extends Component {
         isLoadingOptions: true,
       });
     } else if (this.state.queryStates[nextState][DYNAMIC_FETCH_USER_PROPERTIES]) {
-      this.props.fetchProjectUserProperties(this.props.currentProjectId, this.props.selectedModelId);
+      this.props.fetchProjectUserProperties(this.props.currentProjectId, QUERY_TYPE_FACTOR, this.props.selectedModelId);
       this.setState({
         currentOptions: [],
         currentQueryState: nextState,

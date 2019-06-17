@@ -319,6 +319,12 @@ body {
     color: #444444;
 }
 
+/* center selected option */
+.fapp-select.center .css-va7pk8 {
+    width: 100%;
+    text-align: center;
+}
+
 .fapp-select .css-11unzgr {
     overflow-wrap: break-word;
 }

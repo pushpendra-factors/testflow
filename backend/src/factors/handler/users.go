@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"factors/handler/helpers"
 	mid "factors/middleware"
 	M "factors/model"
 	PC "factors/pattern_client"
@@ -92,6 +93,12 @@ func GetUserPropertiesHandler(c *gin.Context) {
 		return
 	}
 
+	queryType := c.Query("query_type")
+	if !helpers.IsValidQueryType(queryType) {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
 	reqId := U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID)
 
 	var err error
@@ -121,6 +128,11 @@ func GetUserPropertiesHandler(c *gin.Context) {
 			c.AbortWithStatus(errCode)
 			return
 		}
+	}
+
+	// Adds datetime property type only for analytics.
+	if queryType == helpers.QueryTypeAnalytics {
+		properties = U.ClassifyDateTimePropertyKeys(&properties)
 	}
 
 	c.JSON(http.StatusOK, properties)

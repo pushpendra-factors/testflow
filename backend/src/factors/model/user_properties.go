@@ -33,6 +33,11 @@ type UserProperties struct {
 
 func createUserPropertiesIfChanged(projectId uint64, userId string,
 	currentPropertiesId string, newProperties *postgres.Jsonb) (string, int) {
+
+	if U.IsEmptyPostgresJsonb(newProperties) {
+		return currentPropertiesId, http.StatusNotModified
+	}
+
 	db := C.GetServices().Db
 
 	currentProperties := &postgres.Jsonb{}
@@ -40,21 +45,29 @@ func createUserPropertiesIfChanged(projectId uint64, userId string,
 
 	var currentPropertiesMap map[string]interface{}
 	var newPropertiesMap map[string]interface{}
-	json.Unmarshal((*newProperties).RawMessage, &newPropertiesMap)
+	var mergedPropertiesMap map[string]interface{}
 
+	json.Unmarshal((*newProperties).RawMessage, &newPropertiesMap)
 	if currentPropertiesId != "" {
 		currentProperties, statusCode = GetUserProperties(
 			projectId, userId, currentPropertiesId)
 		json.Unmarshal((*currentProperties).RawMessage, &currentPropertiesMap)
+		// init mergedProperties with currentProperties.
+		json.Unmarshal((*currentProperties).RawMessage, &mergedPropertiesMap)
 		if statusCode == http.StatusFound {
-			if reflect.DeepEqual(currentPropertiesMap, newPropertiesMap) {
+			// Using merged properties for equality check to achieve
+			// currentPropertiesMap {x: 1, y: 2} newPropertiesMap {x: 1} -> true
+			mergo.Merge(&mergedPropertiesMap, newPropertiesMap, mergo.WithOverride)
+			if reflect.DeepEqual(currentPropertiesMap, mergedPropertiesMap) {
 				return currentPropertiesId, http.StatusNotModified
 			}
 		}
+	} else {
+		mergedPropertiesMap = newPropertiesMap
 	}
+
 	// Overwrite only given values.
-	mergo.Merge(&currentPropertiesMap, newPropertiesMap, mergo.WithOverride)
-	updatedPropertiesBytes, err := json.Marshal(currentPropertiesMap)
+	updatedPropertiesBytes, err := json.Marshal(mergedPropertiesMap)
 	if err != nil {
 		return "", http.StatusInternalServerError
 	}
@@ -115,4 +128,89 @@ func FillLocationUserProperties(properties *U.PropertiesMap, clientIP string) er
 	}
 
 	return nil
+}
+
+func GetUserPropertyRecordsByUserId(projectId uint64, userId string) ([]UserProperties, int) {
+	db := C.GetServices().Db
+
+	var userProperties []UserProperties
+	if err := db.Where("project_id = ? AND user_id = ?", projectId, userId).Find(&userProperties).Error; err != nil {
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(userProperties) == 0 {
+		return nil, http.StatusNotFound
+	}
+
+	return userProperties, http.StatusFound
+}
+
+func OverwriteUserProperties(projectId uint64, userId string, id string, propertiesJsonb *postgres.Jsonb) int {
+	if projectId == 0 || userId == "" || id == "" {
+		return http.StatusBadRequest
+	}
+
+	db := C.GetServices().Db
+	if err := db.Model(&UserProperties{}).Where("project_id = ? AND user_id = ? AND id = ?",
+		projectId, userId, id).Update("properties", propertiesJsonb).Error; err != nil {
+		log.WithFields(log.Fields{"project_id": projectId, "id": id}).Error("Failed to replace properties.")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusAccepted
+}
+
+// Updates given property with value on all user properties for the given user
+// adds property if not exist.
+func UpdatePropertyOnAllUserPropertyRecords(projectId uint64, userId string,
+	property string, value interface{}) int {
+
+	userPropertyRecords, errCode := GetUserPropertyRecordsByUserId(projectId, userId)
+	if errCode == http.StatusInternalServerError {
+		return errCode
+	} else if errCode == http.StatusNotFound {
+		return http.StatusBadRequest
+	}
+
+	logCtx := log.WithFields(log.Fields{"project_id": projectId, "user_id": userId})
+
+	for _, userProperties := range userPropertyRecords {
+		var propertiesMap map[string]interface{}
+
+		if !U.IsEmptyPostgresJsonb(&userProperties.Properties) {
+			err := json.Unmarshal(userProperties.Properties.RawMessage, &propertiesMap)
+			if err != nil {
+				logCtx.Error("Failed to update user property record. JSON unmarshal failed.")
+				continue
+			}
+		} else {
+			propertiesMap = make(map[string]interface{}, 0)
+		}
+
+		// update not required. Not using AddToPostgresJsonb
+		// for this check.
+		if pValue, _ := propertiesMap[property]; pValue == value {
+			continue
+		}
+
+		logCtx = logCtx.WithFields(log.Fields{"properties_id": userProperties.ID, "property": property, "value": value})
+
+		propertiesMap[property] = value
+		properitesBytes, err := json.Marshal(propertiesMap)
+		if err != nil {
+			// log and continue update next user property.
+			logCtx.Error("Failed to update user property record. JSON marshal failed.")
+			continue
+		}
+		updatedProperties := postgres.Jsonb{RawMessage: json.RawMessage(properitesBytes)}
+
+		// Triggers multiple updates.
+		errCode := OverwriteUserProperties(projectId, userId, userProperties.ID, &updatedProperties)
+		if errCode == http.StatusInternalServerError {
+			logCtx.WithError(err).Error("Failed to update user property record. DB query failed.")
+			continue
+		}
+	}
+
+	return http.StatusAccepted
 }

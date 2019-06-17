@@ -211,6 +211,11 @@ func sdkIdentify(projectId uint64, request *sdkIdentifyPayload) (int, gin.H) {
 		return errCode, gin.H{"error": "Identification failed. Failed mapping customer_user to user"}
 	}
 
+	errCode = M.UpdateUserJoinTimePropertyForCustomerUser(projectId, request.CustomerUserId)
+	if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
+		return errCode, gin.H{"error": "Identification failed."}
+	}
+
 	return http.StatusOK, gin.H{"message": "User has been identified successfully."}
 }
 

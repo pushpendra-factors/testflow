@@ -13,3 +13,4 @@ export const PRESENTATION_LINE =  'pl';
 export const PRESENTATION_BAR = 'pb';
 // alias for single count table view.
 export const PRESENTATION_CARD = 'pc';
+

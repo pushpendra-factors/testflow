@@ -40,6 +40,17 @@ func (user *User) BeforeCreate(scope *gorm.Scope) error {
 		// user join is earlier.
 		user.JoinTimestamp = time.Now().Unix() - 60
 	}
+
+	// adds join timestamp to user properties.
+	newProperties := map[string]interface{}{
+		U.UP_JOIN_TIME: user.JoinTimestamp,
+	}
+	newPropertiesJsonb, err := U.AddToPostgresJsonb(&user.Properties, newProperties)
+	if err != nil {
+		return err
+	}
+	user.Properties = *newPropertiesJsonb
+
 	return nil
 }
 
@@ -103,12 +114,9 @@ func UpdateUser(projectId uint64, id string, user *User) (*User, int) {
 		return nil, http.StatusInternalServerError
 	}
 
-	// update only if non-empty properties given.
-	if !U.IsEmptyPostgresJsonb(&user.Properties) {
-		_, errCode := UpdateUserProperties(projectId, id, &user.Properties)
-		if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
-			return nil, http.StatusInternalServerError
-		}
+	_, errCode := UpdateUserProperties(projectId, id, &user.Properties)
+	if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
+		return nil, http.StatusInternalServerError
 	}
 
 	return &updatedUser, http.StatusAccepted
@@ -387,4 +395,41 @@ func GetRecentUserPropertyValuesWithLimits(projectId uint64, propertyKey string,
 
 func GetRecentUserPropertyValues(projectId uint64, propertyKey string) ([]string, int) {
 	return GetRecentUserPropertyValuesWithLimits(projectId, propertyKey, usersLimitForProperties, 2000)
+}
+
+// Updates user join time with min join time among all users with same customer user id.
+func UpdateUserJoinTimePropertyForCustomerUser(projectId uint64, customerUserId string) int {
+	db := C.GetServices().Db
+
+	if projectId == 0 || customerUserId == "" {
+		return http.StatusBadRequest
+	}
+
+	var users []User
+	if err := db.Order("join_timestamp ASC").Where("project_id = ? AND customer_user_id = ?",
+		projectId, customerUserId).Find(&users).Error; err != nil {
+
+		return http.StatusInternalServerError
+	}
+
+	if len(users) == 0 {
+		return http.StatusNotFound
+	}
+
+	if len(users) == 1 {
+		return http.StatusNotModified
+	}
+
+	// sorted result from DB by joinTimestamp by ASC.
+	minJoinTimestamp := users[0].JoinTimestamp
+
+	for _, user := range users {
+		errCode := UpdatePropertyOnAllUserPropertyRecords(projectId, user.ID, U.UP_JOIN_TIME, minJoinTimestamp)
+		if errCode == http.StatusInternalServerError {
+			// log failure and continue with next user.
+			log.WithFields(log.Fields{"project_id": projectId, "user_id": user.ID}).Error("Failed to update user join time by customer user id.")
+		}
+	}
+
+	return http.StatusAccepted
 }

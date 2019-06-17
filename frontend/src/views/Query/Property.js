@@ -3,7 +3,9 @@ import Select from 'react-select';
 import CreatableSelect from 'react-select/lib/Creatable';
 import { connect } from 'react-redux';
 // import { bindActionCreators } from 'redux';
-import { Row, Col, Input } from 'reactstrap';
+import { Row, Col, Input, Button } from 'reactstrap';
+import moment from 'moment';
+import { DateRangePicker, createStaticRanges } from 'react-date-range'; 
 
 import { 
   fetchProjectEventProperties,
@@ -11,11 +13,12 @@ import {
   fetchProjectUserProperties,
   fetchProjectUserPropertyValues,
 } from '../../actions/projectsActions';
-import { makeSelectOpts, createSelectOpts, getSelectedOpt, makeSelectOpt } from "../../util";
+import { makeSelectOpts, createSelectOpts, getSelectedOpt, makeSelectOpt, QUERY_TYPE_ANALYTICS } from "../../util";
 import { PROPERTY_VALUE_NONE, PROPERTY_TYPE_OPTS } from "./common";
 
 const TYPE_NUMERICAL = 'numerical';
 const TYPE_CATEGORICAL = 'categorical';
+const TYPE_DATETIME = 'datetime';
 
 const LABEL_STYLE = { marginRight: '10px', fontWeight: '600', color: '#777' };
 
@@ -33,6 +36,37 @@ const CATEGORICAL_OPERATORS_OPTS = {
   'notEqual': '!=',
 }
 
+const DEFAULT_DATE_RANGE_LABEL = 'Last 7 days';
+const DEFAULT_DATE_RANGE = {
+  startDate: moment(new Date()).subtract(7, 'days').toDate(),
+  endDate: new Date(),
+  label: DEFAULT_DATE_RANGE_LABEL,
+  key: 'selected'
+}
+const DEFINED_DATE_RANGES = createStaticRanges([
+  {
+    label: 'Last 24 hours',
+    range: () => ({
+      startDate: moment(new Date()).subtract(24, 'hours').toDate(),
+      endDate: new Date(),
+    }),
+  },
+  {
+    label: DEFAULT_DATE_RANGE_LABEL,
+    range: () => ({
+      startDate: DEFAULT_DATE_RANGE.startDate,
+      endDate: DEFAULT_DATE_RANGE.endDate
+    }),
+  },
+  {
+    label: 'Last 30 days',
+    range: () => ({
+      startDate: moment(new Date()).subtract(30, 'days').toDate(),
+      endDate: new Date(),
+    })
+  },
+]);
+
 class Property extends Component {
   constructor(props) {
     super(props);
@@ -43,6 +77,9 @@ class Property extends Component {
       valueType: null,
       isNameOptsLoading: false,
       isValueOptsLoading: false,
+
+      showDatePicker: false,
+      resultDateRange: [DEFAULT_DATE_RANGE],
     }
   }
 
@@ -76,7 +113,7 @@ class Property extends Component {
     }
 
     if (this.props.propertyState.entity == 'user') {
-      fetchProjectUserProperties(this.props.projectId, "", false)
+      fetchProjectUserProperties(this.props.projectId, QUERY_TYPE_ANALYTICS, "", false)
       .then((r) => this.addToNameOptsState(r.data))
       .catch(r => console.error("Failed fetching user property keys.", r));
     }
@@ -103,15 +140,42 @@ class Property extends Component {
   onNameChange = (option) => {
     if (option.type != null && 
       option.type != TYPE_NUMERICAL && 
-      option.type != TYPE_CATEGORICAL) {
+      option.type != TYPE_CATEGORICAL && 
+      option.type != TYPE_DATETIME) {
       
       throw new Error('Unknown property value type.');
     }
     this.setState({ valueType: option.type });
     this.props.onNameChange(option.value);
+
+    // set default date range if type is datetime.
+    if (option.type == TYPE_DATETIME) {
+      this.setState((prevState) => {
+        let _state = { ...prevState };
+        _state.resultDateRange = [DEFAULT_DATE_RANGE];
+        return _state;
+      });
+
+      this.props.onValueChange(this.getDateRangeAsStr(DEFAULT_DATE_RANGE), TYPE_DATETIME);
+    }
+    // reset default state on change of prop 
+    // after selecting periodical type.
+    else this.props.onValueChange('', '');
+  }
+
+  getDateRangeAsStr(range) {
+    return moment(range.startDate).unix() + ":" + moment(range.endDate).unix();
   }
 
   onValueChange = (v) => {
+    if (this.state.valueType == TYPE_DATETIME) {
+      v.selected.label = null; // set null on custom range.
+      this.setState({ resultDateRange: [v.selected] });
+      // date range on string format: startDate:endDate.
+      this.props.onValueChange(this.getDateRangeAsStr(v.selected), this.state.valueType);
+      return
+    }
+
     if (this.state.valueType == TYPE_NUMERICAL) {
       this.props.onValueChange(v.target.value.trim(), this.state.valueType);
     }
@@ -121,8 +185,41 @@ class Property extends Component {
     }
   }
 
+  toggleDatePickerDisplay = () => {
+    this.setState({ showDatePicker: !this.state.showDatePicker });
+  }
+
+  readableDateRange(range) {
+    // Use label for default date range.
+    if(range.startDate ==  DEFAULT_DATE_RANGE.startDate 
+      && range.endDate == DEFAULT_DATE_RANGE.endDate)
+      return DEFAULT_DATE_RANGE.label;
+
+    return moment(range.startDate).format('MMM DD, YYYY') + " - " +
+      moment(range.endDate).format('MMM DD, YYYY');
+  }
+
   getInputValueElement() {
     let input = null;
+
+    if (this.state.valueType == TYPE_DATETIME) {
+      return (
+        <div style={{display: "inline-block", marginLeft: "10px"}}>
+          <Button outline style={{ border: '1px solid #ccc', color: 'grey', padding: '8px 12px', marginBottom: '3px' }} onClick={this.toggleDatePickerDisplay}><i className="fa fa-calendar" style={{marginRight: '10px'}}></i>{this.readableDateRange(this.state.resultDateRange[0])}</Button>
+          <div className='fapp-date-picker' style={{ display: 'block', marginTop: '10px' }} hidden={!this.state.showDatePicker}>
+            <DateRangePicker
+              ranges={this.state.resultDateRange}
+              onChange={this.onValueChange}
+              staticRanges={ DEFINED_DATE_RANGES }
+              inputRanges={[]}
+              minDate={new Date('01 Jan 2000 00:00:00 GMT')} // range starts from given date.
+              maxDate={new Date()}
+            />
+            <button className='fapp-close-round-button' style={{float: 'right', marginLeft: '0px', borderLeft: 'none'}} onClick={this.toggleDatePickerDisplay}>x</button>
+          </div>
+        </div>
+      );
+    }
 
     if (this.state.valueType == TYPE_NUMERICAL) {
       return (
@@ -159,8 +256,13 @@ class Property extends Component {
     }
   }
 
+  isOpRequired() {
+    // Op not required for DATETIME.
+    return this.state.valueType != TYPE_DATETIME;
+  }
+
   getOpSelector() {
-    if (this.state.valueType == null) {
+    if (this.state.valueType == null || !this.isOpRequired()) {
       return;
     }
     
@@ -172,7 +274,7 @@ class Property extends Component {
         <Select 
           onChange={this.props.onOpChange}
           options={createSelectOpts(optSrc)}
-          value={getSelectedOpt(this.props.propertyState.op, optSrc) }
+          value={getSelectedOpt(this.props.propertyState.op, optSrc)}
         />
       </div>
     );

@@ -41,6 +41,10 @@ var GENERIC_NUMERIC_USER_PROPERTIES = [...]string{
 	UP_JOIN_TIME,
 }
 
+var PROPERTIES_TYPE_DATE_TIME = [...]string{
+	UP_JOIN_TIME,
+}
+
 // Default Event Properites
 var EP_INTERNAL_IP string = "$ip"
 var EP_LOCATION_LATITUDE string = "$locationLat"
@@ -166,6 +170,7 @@ const PLATFORM_WEB = "web"
 const (
 	PropertyTypeNumerical   = "numerical"
 	PropertyTypeCategorical = "categorical"
+	PropertyTypeDateTime    = "datetime"
 )
 
 const SamplePropertyValuesLimit = 100
@@ -321,4 +326,32 @@ func FillPropertyKvsFromPropertiesJson(propertiesJson []byte,
 	}
 
 	return nil
+}
+
+// Moves datetime properties from categorical properties to a seperate type datetime.
+func ClassifyDateTimePropertyKeys(properties *map[string][]string) map[string][]string {
+	cProperties := make(map[string][]string, 0)
+	cProperties[PropertyTypeCategorical] = (*properties)[PropertyTypeCategorical]
+
+	numerical := make([]string, 0, 0)
+	datetime := make([]string, 0, 0)
+	for _, prop := range (*properties)[PropertyTypeNumerical] {
+		isDatetime := false
+		for _, dtProp := range PROPERTIES_TYPE_DATE_TIME {
+			if prop == dtProp {
+				datetime = append(datetime, prop)
+				isDatetime = true
+				break
+			}
+		}
+
+		if !isDatetime {
+			numerical = append(numerical, prop)
+		}
+	}
+
+	cProperties[PropertyTypeNumerical] = numerical
+	cProperties[PropertyTypeDateTime] = datetime
+
+	return cProperties
 }

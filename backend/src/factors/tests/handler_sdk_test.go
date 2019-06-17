@@ -327,6 +327,68 @@ func TestSDKIdentifyHandler(t *testing.T) {
 	assert.NotEqual(t, responseMap["user_id"], user.ID)
 }
 
+func assertEqualJoinTimePropertyOnAllRecords(t *testing.T, records []M.UserProperties, expectedJoinTime int64) {
+	for _, userProperties := range records {
+		var propertiesMap map[string]interface{}
+		err := json.Unmarshal(userProperties.Properties.RawMessage, &propertiesMap)
+		assert.Nil(t, err)
+
+		assert.Contains(t, propertiesMap, U.UP_JOIN_TIME)
+		assert.Equal(t, float64(expectedJoinTime), propertiesMap[U.UP_JOIN_TIME])
+	}
+}
+
+func TestUpdateJoinTimeOnSDKIdentify(t *testing.T) {
+	// Initialize routes and dependent data.
+	r := gin.Default()
+	H.InitSDKRoutes(r)
+	uri := "/sdk/user/identify"
+
+	project, user1, err := SetupProjectUserReturnDAO()
+	assert.Nil(t, err)
+
+	user2, errCode := M.CreateUser(&M.User{ProjectId: project.ID})
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	user3, errCode := M.CreateUser(&M.User{ProjectId: project.ID})
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	// identify all users with same c_uid.
+	customerUserId := U.RandomLowerAphaNumString(15)
+	w := ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"c_uid": "%s", "user_id": "%s"}`,
+		customerUserId, user1.ID)), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"c_uid": "%s", "user_id": "%s"}`,
+		customerUserId, user2.ID)), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	// all user properties of all users with same c_uid should have joinTime as min of joinTime
+	// among users.
+	userPropertiesRecords, errCode := M.GetUserPropertyRecordsByUserId(project.ID, user1.ID)
+	assert.Equal(t, errCode, http.StatusFound)
+	assertEqualJoinTimePropertyOnAllRecords(t, userPropertiesRecords, user1.JoinTimestamp)
+	userPropertiesRecords, errCode = M.GetUserPropertyRecordsByUserId(project.ID, user2.ID)
+	assert.Equal(t, errCode, http.StatusFound)
+	assertEqualJoinTimePropertyOnAllRecords(t, userPropertiesRecords, user1.JoinTimestamp)
+
+	// identify with same customer user id after new user properties addition,
+	// should update join time on new user_properties record also.
+	addPropertiesURI := "/sdk/user/add_properties"
+	uniqueName := U.RandomLowerAphaNumString(16)
+	uniqueEmail := fmt.Sprintf(`%s@example.com`, U.RandomLowerAphaNumString(10))
+	w = ServePostRequestWithHeaders(r, addPropertiesURI, []byte(fmt.Sprintf(
+		`{"user_id": "%s", "properties": {"name": "%s", "email": "%s"}}`, user3.ID, uniqueName, uniqueEmail)),
+		map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"c_uid": "%s", "user_id": "%s"}`,
+		customerUserId, user3.ID)), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	userPropertiesRecords, errCode = M.GetUserPropertyRecordsByUserId(project.ID, user3.ID)
+	assert.Equal(t, errCode, http.StatusFound)
+	assertEqualJoinTimePropertyOnAllRecords(t, userPropertiesRecords, user1.JoinTimestamp)
+}
+
 func TestSDKAddUserPropertiesHandler(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()

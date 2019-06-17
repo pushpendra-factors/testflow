@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jinzhu/now"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -129,6 +130,24 @@ func appendStatement(x, y string) string {
 	return fmt.Sprintf("%s %s", x, y)
 }
 
+func getIntervalFromRangeStrAsUnix(rangeStr string) (int64, int64, error) {
+	splitedRange := strings.Split(rangeStr, ":")
+
+	startAsInt, err := strconv.ParseInt(splitedRange[0], 10, 64)
+	if err != nil {
+		return 0, 0, err
+	}
+	endAsInt, err := strconv.ParseInt(splitedRange[1], 10, 64)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	actStart := now.New(time.Unix(startAsInt, 0).UTC()).BeginningOfDay().Unix()
+	actEnd := now.New(time.Unix(endAsInt, 0).UTC()).EndOfDay().Unix()
+
+	return actStart, actEnd, nil
+}
+
 func buildWhereFromProperties(mergeCond string,
 	properties []QueryProperty) (rStmnt string, rParams []interface{}, err error) {
 
@@ -143,14 +162,27 @@ func buildWhereFromProperties(mergeCond string,
 		propertyOp := getOp(p.Operator)
 
 		if p.Value != PropertyValueNone {
-			pStmnt := fmt.Sprintf("%s->>?%s?", propertyEntity, propertyOp)
+			var pStmnt string
+			if p.Type == U.PropertyTypeDateTime {
+				pStmnt = fmt.Sprintf("(%s->>?>=? AND %s->>?<=?)", propertyEntity, propertyEntity)
+
+				start, end, err := getIntervalFromRangeStrAsUnix(p.Value)
+				if err != nil {
+					log.WithError(err).Error("Failed reading timestamp on user join query.")
+					return "", nil, err
+				}
+				rParams = append(rParams, p.Property, start, p.Property, end)
+			} else {
+				pStmnt = fmt.Sprintf("%s->>?%s?", propertyEntity, propertyOp)
+				rParams = append(rParams, p.Property, p.Value)
+			}
+
 			if i == 0 {
 				rStmnt = pStmnt
 			} else {
 				rStmnt = fmt.Sprintf("%s %s %s", rStmnt, mergeCond, pStmnt)
 			}
 
-			rParams = append(rParams, p.Property, p.Value)
 			continue
 		}
 

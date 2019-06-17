@@ -7,8 +7,12 @@ import {
   fetchProjectEventProperties,
   fetchProjectUserProperties,
 } from '../../actions/projectsActions';
-import { makeSelectOpt, getSelectedOpt, createSelectOpts } from '../../util';
+import { getSelectedOpt, QUERY_TYPE_ANALYTICS } from '../../util';
 import { PROPERTY_TYPE_OPTS } from './common';
+
+export const USER_PROPERTY_JOIN_TIME = '$joinTime'
+
+const EXCLUDE_PROPS = [ USER_PROPERTY_JOIN_TIME ];
 
 class GroupBy extends Component {
   constructor(props) {
@@ -39,7 +43,7 @@ class GroupBy extends Component {
               break;
             } 
           }
-          if(!exist)
+          if(!exist && EXCLUDE_PROPS.indexOf(v) == -1)
             state.nameOpts.push({value: v, label: v, type: type});
         }
       }
@@ -67,7 +71,7 @@ class GroupBy extends Component {
     }
 
     if (this.props.groupByState.type == 'user') {
-      fetchProjectUserProperties(this.props.projectId, "", false)
+      fetchProjectUserProperties(this.props.projectId, QUERY_TYPE_ANALYTICS, "", false)
       .then((r) => { 
         this.addToNameOptsState(r.data);
         this.setState({ isNameOptsLoading: false });

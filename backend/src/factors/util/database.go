@@ -2,6 +2,7 @@ package util
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -59,5 +60,32 @@ func DBDebugPreparedStatement(stmnt string, params []interface{}) string {
 }
 
 func IsEmptyPostgresJsonb(jsonb *postgres.Jsonb) bool {
-	return string((*jsonb).RawMessage) == ""
+	strJson := string((*jsonb).RawMessage)
+	return strJson == "" || strJson == "null"
+}
+
+// AddToJsonb adds key values to the jsonb, overwrites
+// if key already exists.
+func AddToPostgresJsonb(sourceJsonb *postgres.Jsonb,
+	newKvs map[string]interface{}) (*postgres.Jsonb, error) {
+
+	var sourceMap map[string]interface{}
+	if !IsEmptyPostgresJsonb(sourceJsonb) {
+		if err := json.Unmarshal((*sourceJsonb).RawMessage, &sourceMap); err != nil {
+			return nil, err
+		}
+	} else {
+		sourceMap = make(map[string]interface{}, 0)
+	}
+
+	for k, v := range newKvs {
+		sourceMap[k] = v
+	}
+
+	newJsonb, err := json.Marshal(sourceMap)
+	if err != nil {
+		return nil, err
+	}
+
+	return &postgres.Jsonb{newJsonb}, nil
 }

@@ -15,6 +15,9 @@ const COLORS = [
     "rgba(255, 193, 7, 1.0)",
 ];
 
+export const QUERY_TYPE_FACTOR = "factor";
+export const QUERY_TYPE_ANALYTICS = "analytics";
+
 export function isStaging() {
     return ENV === "staging";
 }

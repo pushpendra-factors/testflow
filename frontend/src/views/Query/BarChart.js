@@ -53,7 +53,7 @@ class BarChart extends Component {
           if (maxScale < cols[countIndex]) maxScale = cols[countIndex];
         }
       }
-      bars.x_label = firstToUpperCase(result.headers[groupIndex]);
+      bars.x_label = result.headers[groupIndex];
     } else if (result.headers.length == 1) {
       let col = result.rows["0"];
       data.push(col[countIndex]);
