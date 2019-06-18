@@ -175,6 +175,13 @@ const (
 
 const SamplePropertyValuesLimit = 100
 
+// Properties should be present always for queries.
+var DefaultUserPropertiesByType = map[string][]string{
+	PropertyTypeDateTime: []string{
+		"$joinTime",
+	},
+}
+
 // isValidProperty - Validate property type.
 func isPropertyTypeValid(value interface{}) error {
 	switch valueType := value.(type) {
@@ -354,4 +361,26 @@ func ClassifyDateTimePropertyKeys(properties *map[string][]string) map[string][]
 	cProperties[PropertyTypeDateTime] = datetime
 
 	return cProperties
+}
+
+// Fills all missing default user properties to the properites list.
+func FillDefaultUserProperties(properties *map[string][]string) {
+	for propType, props := range *properties {
+		if _, exists := DefaultUserPropertiesByType[propType]; exists {
+			for _, dProp := range DefaultUserPropertiesByType[propType] {
+				dPropExists := false
+				for _, prop := range props {
+					if prop == dProp {
+						dPropExists = true
+						break
+					}
+				}
+
+				// adds missing default property.
+				if !dPropExists {
+					(*properties)[propType] = append((*properties)[propType], dProp)
+				}
+			}
+		}
+	}
 }

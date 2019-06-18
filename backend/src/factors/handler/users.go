@@ -130,10 +130,8 @@ func GetUserPropertiesHandler(c *gin.Context) {
 		}
 	}
 
-	// Adds datetime property type only for analytics.
-	if queryType == helpers.QueryTypeAnalytics {
-		properties = U.ClassifyDateTimePropertyKeys(&properties)
-	}
+	properties = U.ClassifyDateTimePropertyKeys(&properties)
+	U.FillDefaultUserProperties(&properties)
 
 	c.JSON(http.StatusOK, properties)
 }
