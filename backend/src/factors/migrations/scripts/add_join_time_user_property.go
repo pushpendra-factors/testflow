@@ -8,6 +8,7 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	"sync"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -20,6 +21,8 @@ func main() {
 	dbUser := flag.String("db_user", "autometa", "")
 	dbName := flag.String("db_name", "autometa", "")
 	dbPass := flag.String("db_pass", "@ut0me7a", "")
+
+	numRoutines := flag.Int("num_routines", 2, "")
 
 	flag.Parse()
 
@@ -126,19 +129,58 @@ func main() {
 	}
 
 	// Update join time for identified users using an existing method.
-	var counter int
+	joinTimeUpdates := make([][]interface{}, 0, 0)
 	for projectId, customerUsers := range projectCustomerUser {
 		for _, usersMinJoinTimestamp := range customerUsers {
+			update := make([]interface{}, 0, 0)
 			for _, userId := range usersMinJoinTimestamp.userIds {
-				errCode := M.UpdatePropertyOnAllUserPropertyRecords(projectId, userId, U.UP_JOIN_TIME, usersMinJoinTimestamp.timestamp)
-				if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
-					log.Fatal("Failed to update user properties with join time.")
-				}
+				update = append(update, projectId, userId, U.UP_JOIN_TIME, usersMinJoinTimestamp.timestamp)
 			}
-			counter++
-
-			log.Infof("Updated %d customer users.", counter)
+			joinTimeUpdates = append(joinTimeUpdates, update)
 		}
 	}
 
+	// Use go routines.
+	joinTimeUpdatesSplit := splitArray(joinTimeUpdates, *numRoutines)
+	var wg sync.WaitGroup
+	var routineId int
+	for _, updates := range joinTimeUpdatesSplit {
+		wg.Add(1)
+		go updateJoinTimeForIdentifiedUsers(&wg, updates, routineId)
+		routineId++
+	}
+
+	wg.Wait()
+}
+
+func updateJoinTimeForIdentifiedUsers(wg *sync.WaitGroup, joinTimeUpdates [][]interface{}, routineId int) {
+	total := len(joinTimeUpdates)
+	var updated int
+	for _, col := range joinTimeUpdates {
+		errCode := M.UpdatePropertyOnAllUserPropertyRecords(col[0].(uint64), col[1].(string), col[2].(string), col[3])
+		if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
+			log.Error("Failed to update user properties with join time.")
+		}
+		log.Infof("Routine [%d]: updated %d of %d..", routineId, updated, total)
+		updated++
+	}
+
+	wg.Done()
+}
+
+func splitArray(src [][]interface{}, nos int) [][][]interface{} {
+	var divided [][][]interface{}
+
+	chunkSize := (len(src) + nos - 1) / nos
+	for i := 0; i < len(src); i += chunkSize {
+		end := i + chunkSize
+
+		if end > len(src) {
+			end = len(src)
+		}
+
+		divided = append(divided, src[i:end])
+	}
+
+	return divided
 }
