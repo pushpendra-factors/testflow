@@ -335,7 +335,7 @@ func FillPropertyKvsFromPropertiesJson(propertiesJson []byte,
 	return nil
 }
 
-// Moves datetime properties from categorical properties to a seperate type datetime.
+// Moves datetime properties from numerical properties to a seperate type datetime.
 func ClassifyDateTimePropertyKeys(properties *map[string][]string) map[string][]string {
 	cProperties := make(map[string][]string, 0)
 	cProperties[PropertyTypeCategorical] = (*properties)[PropertyTypeCategorical]
