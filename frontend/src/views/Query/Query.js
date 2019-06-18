@@ -626,8 +626,8 @@ class Query extends Component {
   }
 
   disableAddToDashboard() {
-    return this.state.selectedPresentation === PRESENTATION_BAR 
-      && this.state.groupBys.length > 1;
+    return this.state.class.value == QUERY_CLASS_FUNNEL || 
+      (this.state.selectedPresentation === PRESENTATION_BAR && this.state.groupBys.length > 1);
   }
 
   scrollToBottom = () => {
