@@ -820,6 +820,7 @@ class Query extends Component {
         <div style={{borderTop: '1px solid rgb(221, 221, 221)', paddingTop: '20px', marginTop: '30px', 
           marginLeft: '-60px', marginRight: '-60px'}} hidden={ !this.state.showPresentation }></div>
         <div style={{ minHeight: '530px' }}>
+          {/* 
           <Row style={{ marginTop: '15px', marginRight: '10px' }} hidden={ !this.state.showPresentation }>
             <Col xs='12' md='12'>
               <ButtonToolbar className='pull-right'>
@@ -834,8 +835,9 @@ class Query extends Component {
                 </ButtonDropdown>
               </ButtonToolbar>
             </Col>
-          </Row>
-          <Row style={{ marginTop: '45px' }}> 
+          </Row> 
+          */}
+          <Row style={{ marginTop: '60px' }}> 
             <Col xs='12' md='12' > { presentationByClass() } </Col>
           </Row>
         </div>
@@ -930,7 +932,14 @@ class Query extends Component {
     );
   }
 
+  getDisplayName(name, count) {
+    return name+" ("+count+")";
+  }
+
   getResultAsFunnel() {
+    // get funnel step names from result meta.
+    let stepNames = this.state.result.meta.ewp.map((e) => (e.na));
+
     let stepsIndexes = [];
     let conversionIndexes = [];
     let conversionHeaders = [];
@@ -951,15 +960,19 @@ class Query extends Component {
     }
 
     let rows = this.state.result.rows;
+
     let funnelData = [];
     for (let i=0; i<stepsIndexes.length; i++) {
       let data = null;
       if (i == 0) data = [rows[0][stepsIndexes[0]], 0];
       else data = [rows[0][stepsIndexes[i]], [rows[0][stepsIndexes[i-1]] - rows[0][stepsIndexes[i]]]];
+      let stepName = this.getDisplayName(stepNames[i], rows[0][stepsIndexes[i]])
 
       let comp = {};
       comp.conversion_percent = rows[0][conversionIndexes[i]];
       comp.data = data;
+      comp.event = stepName;
+
       funnelData.push(comp);
     }
 
@@ -973,7 +986,8 @@ class Query extends Component {
         let row = [];
         // adds group values to row.
         for (let r=0; r<groupIndexes.length; r++) {
-          row.push(this.state.result.rows[i][groupIndexes[r]]);
+          row.push(this.getDisplayName(this.state.result.rows[i][groupIndexes[r]], 
+            this.state.result.rows[i][stepsIndexes[0]]));
         }
         // adds conversions to row.
         for (let c=0; c<conversionIndexes.length; c++) {

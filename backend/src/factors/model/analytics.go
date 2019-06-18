@@ -50,9 +50,15 @@ type Query struct {
 	To                   int64                      `json:"to"`
 }
 
+type QueryResutlMeta struct {
+	EventsWithProperties []QueryEventWithProperties `json:"ewp"`
+	GroupByProperties    []QueryGroupByProperty     `json:"gbp"`
+}
+
 type QueryResult struct {
 	Headers []string        `json:"headers"`
 	Rows    [][]interface{} `json:"rows"`
+	Meta    QueryResutlMeta `json:"meta"`
 }
 
 const (
@@ -1471,6 +1477,11 @@ func ExecQuery(stmnt string, params []interface{}) (*QueryResult, error) {
 	return result, nil
 }
 
+func addMetaToQueryResult(result *QueryResult, query Query) {
+	result.Meta.EventsWithProperties = query.EventsWithProperties
+	result.Meta.GroupByProperties = query.GroupByProperties
+}
+
 func RunInsightsQuery(projectId uint64, query Query) (*QueryResult, int, string) {
 	stmnt, params, err := BuildInsightsQuery(projectId, query)
 	if err != nil {
@@ -1504,6 +1515,8 @@ func RunInsightsQuery(projectId uint64, query Query) (*QueryResult, int, string)
 		return nil, http.StatusInternalServerError, ErrMsgQueryProcessingFailure
 	}
 
+	addMetaToQueryResult(result, query)
+
 	return result, http.StatusOK, "Successfully executed query"
 }
 
@@ -1534,6 +1547,8 @@ func RunFunnelQuery(projectId uint64, query Query) (*QueryResult, int, string) {
 		logCtx.WithError(err).Error("Failed translating group keys on result.")
 		return nil, http.StatusInternalServerError, ErrMsgQueryProcessingFailure
 	}
+
+	addMetaToQueryResult(result, query)
 
 	return result, http.StatusOK, "Successfully executed query"
 }
