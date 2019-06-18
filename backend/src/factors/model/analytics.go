@@ -38,6 +38,7 @@ type QueryEventWithProperties struct {
 }
 
 type Query struct {
+	Class                string                     `json:"cl"`
 	Type                 string                     `json:"ty"`
 	EventsCondition      string                     `json:"ec"` // all or any
 	EventsWithProperties []QueryEventWithProperties `json:"ewp"`
@@ -63,6 +64,9 @@ const (
 	EventCondAnyGivenEvent = "any_given_event"
 	EventCondAllGivenEvent = "all_given_event"
 
+	QueryClassInsights = "insights"
+	QueryClassFunnel   = "funnel"
+
 	QueryTypeEventsOccurrence = "events_occurrence"
 	QueryTypeUniqueUsers      = "unique_users"
 
@@ -80,6 +84,9 @@ const (
 	DefaultTimezone = "UTC"
 	ResultsLimit    = 20
 	MaxResultsLimit = 100000
+
+	FunnelConversionPrefix = "conversion"
+	FunnelStepPrefix       = "step"
 )
 
 const (
@@ -251,13 +258,13 @@ func buildGroupKeys(groupProps []QueryGroupByProperty) (groupSelect string,
 	return groupSelect, groupSelectParams, groupKeys
 }
 
-// Adds initial events with props filtering query.
-func addFilterEventsWithPropsQuery(projectId uint64, qStmnt *string,
-	qParams *[]interface{}, qep QueryEventWithProperties, from int64, to int64,
+// Adds a step of events filter with QueryEventWithProperties.
+func addFilterEventsWithPropsQuery(projectId uint64, qStmnt *string, qParams *[]interface{},
+	qep QueryEventWithProperties, from int64, to int64, fromStr string,
 	stepName string, addSelecStmnt string, addSelectParams []interface{},
-	addJoinStmnt string) error {
+	addJoinStmnt string, filterGroupBy string) error {
 
-	if from == 0 || to == 0 {
+	if (from == 0 && fromStr == "") || to == 0 {
 		return errors.New("invalid timerange on events filter")
 	}
 
@@ -271,16 +278,27 @@ func addFilterEventsWithPropsQuery(projectId uint64, qStmnt *string,
 	if hasWhereEntity(qep, PropertyEntityUser) {
 		rStmnt = appendStatement(rStmnt, "LEFT JOIN user_properties ON events.user_properties_id=user_properties.id")
 	}
-	rStmnt = appendStatement(
-		rStmnt,
-		"WHERE events.project_id=? AND timestamp>=? AND timestamp<=?"+
-			" "+"AND events.event_name_id IN ( SELECT id FROM event_names WHERE project_id=? AND name=? )",
-	)
 
+	var fromTimestamp string
+	if from > 0 {
+		fromTimestamp = "?"
+	} else if fromStr != "" {
+		fromTimestamp = fromStr // allows from_timestamp from another step.
+	}
+
+	whereCond := fmt.Sprintf("WHERE events.project_id=? AND timestamp>=%s AND timestamp<=?"+
+		" "+"AND events.event_name_id IN ( SELECT id FROM event_names WHERE project_id=? AND name=? )", fromTimestamp)
+	rStmnt = appendStatement(rStmnt, whereCond)
+
+	// adds params in order of '?'.
 	if addSelecStmnt != "" && addSelectParams != nil {
 		*qParams = append(*qParams, addSelectParams...)
 	}
-	*qParams = append(*qParams, projectId, from, to, projectId, qep.Name)
+	*qParams = append(*qParams, projectId)
+	if from > 0 {
+		*qParams = append(*qParams, from)
+	}
+	*qParams = append(*qParams, to, projectId, qep.Name)
 
 	// mergeCond for whereProperties can also be 'OR'.
 	wStmnt, wParams, err := buildWhereFromProperties("AND", qep.Properties)
@@ -291,6 +309,10 @@ func addFilterEventsWithPropsQuery(projectId uint64, qStmnt *string,
 	if wStmnt != "" {
 		rStmnt = rStmnt + " AND " + fmt.Sprintf("( %s )", wStmnt)
 		*qParams = append(*qParams, wParams...)
+	}
+
+	if filterGroupBy != "" {
+		rStmnt = fmt.Sprintf("%s group by %s", rStmnt, filterGroupBy)
 	}
 
 	if stepName != "" {
@@ -389,8 +411,8 @@ func addFilterEventsWithPropsForUsersQuery(projectId uint64, query Query,
 		}
 
 		filterSelect = appendSelectTimestampIfRequired(filterSelect, query.Timezone, query.GroupByTimestamp)
-		addFilterEventsWithPropsQuery(projectId, &rStmnt, &rParams, ewp, query.From, query.To,
-			stepName, filterSelect, nil, usersFromLastStep)
+		addFilterEventsWithPropsQuery(projectId, &rStmnt, &rParams, ewp, query.From, query.To, "",
+			stepName, filterSelect, nil, usersFromLastStep, "")
 
 		if i != lastEwpIndex {
 			rStmnt = rStmnt + ", "
@@ -497,8 +519,8 @@ func buildAnyGivenEventFilterQuery(projectId uint64, q Query) (string, []interfa
 	for i, ewp := range q.EventsWithProperties {
 		refStepName = fmt.Sprintf("step%d", i)
 		filters = append(filters, refStepName)
-		addFilterEventsWithPropsQuery(projectId, &qStmnt, &qParams, ewp, q.From, q.To,
-			refStepName, filterSelect, groupParams, "")
+		addFilterEventsWithPropsQuery(projectId, &qStmnt, &qParams, ewp, q.From, q.To, "",
+			refStepName, filterSelect, groupParams, "", "")
 		if len(q.EventsWithProperties) > 1 {
 			qStmnt = qStmnt + ", "
 		}
@@ -826,11 +848,189 @@ func buildEventsOccurrenceSingleEventQuery(projectId uint64, q Query) (string, [
 	qSelect = joinWithComma(qSelect, egSelect, fmt.Sprintf("COUNT(*) AS %s", AliasAggr))
 
 	addFilterEventsWithPropsQuery(projectId, &qStmnt, &qParams, q.EventsWithProperties[0], q.From, q.To,
-		"", qSelect, egSelectParams, "")
+		"", "", qSelect, egSelectParams, "", "")
 
 	qStmnt = appendGroupByTimestampIfRequired(qStmnt, q.GroupByTimestamp, egKeys)
 	qStmnt = appendOrderByAggr(qStmnt)
 	qStmnt = appendLimitByCondition(qStmnt, q.GroupByProperties, q.GroupByTimestamp)
+
+	return qStmnt, qParams, nil
+}
+
+/*
+buildUniqueUsersFunnelQuery
+
+WITH
+	step1 AS (
+		SELECT events.user_id, 1 as step1, min(timestamp) as step1_timestamp from events
+		LEFT JOIN users on events.user_id=users.id where events.project_id = 1
+		and event_name_id IN (select id from event_names where project_id=1 and name = 'localhost:3000/#/core')
+		and timestamp between 1393632004 and 1560231260 group by events.user_id
+	),
+	step2 as (
+		SELECT events.user_id, 1 as step2, min(timestamp) as step2_timestamp from events
+		LEFT JOIN step1 on events.user_id=step1.user_id where events.project_id = 1
+		and event_name_id IN (select id from event_names where project_id=1 and name = 'run_query')
+		and timestamp between step1.step1_timestamp and 1560231260 group by events.user_id -- from timestamp, after step1 --
+	),
+	step3 as (
+		SELECT events.user_id, 1 as step3 from events
+		LEFT JOIN step2 on events.user_id=step2.user_id where events.project_id = 1
+		and event_name_id IN (select id from event_names where project_id=1 and name = 'localhost:3000/#/dashboard')
+		and timestamp between step2.step2_timestamp and 1560231260 group by events.user_id
+	),
+	funnel as (
+		SELECT CASE WHEN user_properties.properties->>'$city' IS NULL THEN '$none'
+        WHEN user_properties.properties->>'$city' = '' THEN '$none'
+        ELSE user_properties.properties->>'$city' END AS group_key_0,
+        step1, step2, step3 from step1
+        LEFT JOIN users on step1.user_id=users.id -- join users and user_properties only if group by available --
+        LEFT JOIN user_properties on users.properties_id=user_properties.id
+		LEFT JOIN step2 on step1.user_id=step2.user_id
+		LEFT JOIN step3 on step2.user_id=step3.user_id
+	)
+	SELECT '$no_group' as group_key_0, SUM(step1) as step1, SUM(step2) as step2, SUM(step3) as step3,
+	ROUND((SUM(step2)::DECIMAL/SUM(step1)::DECIMAL) * 100) as step1_step2_conversion,
+	ROUND((SUM(step3)::DECIMAL/SUM(step2)::DECIMAL) * 100) as step2_step3_conversion,
+	ROUND((SUM(step3)::DECIMAL/SUM(step1)::DECIMAL) * 100) as overall_conversion from funnel
+    UNION ALL
+	SELECT group_key_0, SUM(step1) as step1, SUM(step2) as step2, SUM(step3) as step3,
+	ROUND((SUM(step2)::DECIMAL/SUM(step1)::DECIMAL) * 100) as step1_step2_conversion,
+	ROUND((SUM(step3)::DECIMAL/SUM(step2)::DECIMAL) * 100) as step2_step3_conversion,
+	ROUND((SUM(step3)::DECIMAL/SUM(step1)::DECIMAL) * 100) as overall_conversion from funnel
+    group by group_key_0;
+*/
+func buildUniqueUsersFunnelQuery(projectId uint64, q Query) (string, []interface{}, error) {
+	if len(q.EventsWithProperties) == 0 {
+		return "", nil, errors.New("invalid no.of events for funnel query")
+	}
+
+	if hasGroupEntity(q.GroupByProperties, PropertyEntityEvent) {
+		return "", nil, errors.New("user funnel doesn't support group by event property")
+	}
+
+	var qStmnt string
+	var qParams []interface{}
+
+	var funnelSteps []string
+	for i := range q.EventsWithProperties {
+		var addParams []interface{}
+		stepName := fmt.Sprintf("%s_%d", FunnelStepPrefix, i)
+		// builds "events.user_id, 1 AS step1, min(timestamp) AS step1_timestamp"
+		addSelect := "events.user_id, 1 AS " + stepName + ", min(timestamp) AS " + fmt.Sprintf("%s_timestamp", stepName)
+
+		var from int64
+		var fromStr string
+		// use actual from for first step,
+		// and min timestamp from prev step
+		// for next step's from.
+		if i == 0 {
+			from = q.From
+		} else {
+			// builds "step_2.step_2_timestamp"
+			prevStepName := fmt.Sprintf("%s_%d", FunnelStepPrefix, i-1)
+			fromStr = fmt.Sprintf("%s.%s_timestamp", prevStepName, prevStepName)
+		}
+
+		var usersJoinStmnt string
+		if i == 0 {
+			usersJoinStmnt = "LEFT JOIN users ON events.user_id=users.id"
+		} else {
+			// builds "LEFT JOIN step_0 on events.user_id=step_0.user_id"
+			prevStepName := fmt.Sprintf("%s_%d", FunnelStepPrefix, i-1)
+			usersJoinStmnt = fmt.Sprintf("LEFT JOIN %s on events.user_id=%s.user_id", prevStepName, prevStepName)
+		}
+
+		err := addFilterEventsWithPropsQuery(projectId, &qStmnt, &qParams, q.EventsWithProperties[i],
+			from, q.To, fromStr, stepName, addSelect, addParams, usersJoinStmnt, "events.user_id")
+		if err != nil {
+			return "", nil, err
+		}
+
+		if i < len(q.EventsWithProperties)-1 {
+			qStmnt = qStmnt + ", "
+		}
+
+		funnelSteps = append(funnelSteps, stepName)
+	}
+
+	var funnelStepsForSelect string
+	for i, fs := range funnelSteps {
+		// builds "step1, step2, step3"
+		funnelStepsForSelect = funnelStepsForSelect + fs
+		if i != len(funnelSteps)-1 {
+			funnelStepsForSelect = funnelStepsForSelect + ","
+		}
+	}
+
+	groupSelect, groupParams, groupKeys := buildGroupKeys(q.GroupByProperties)
+	qParams = append(qParams, groupParams...)
+
+	// Join user properties if group by propertie given.
+	var properitesJoinStmnt string
+	if len(q.GroupByProperties) > 0 {
+		// builds "LEFT JOIN users on step1.user_id=users.id LEFT JOIN user_properties on users.properties_id=user_properties.id"
+		properitesJoinStmnt = fmt.Sprintf("LEFT JOIN users on %s.user_id=users.id LEFT JOIN user_properties on users.properties_id=user_properties.id", funnelSteps[0])
+	}
+
+	var stepsJoinStmnt string
+	for i, fs := range funnelSteps {
+		if i > 0 {
+			// builds "LEFT JOIN step2 on step1.user_id=step2.user_id"
+			stepsJoinStmnt = appendStatement(stepsJoinStmnt,
+				fmt.Sprintf("LEFT JOIN %s ON %s.user_id=%s.user_id", fs, funnelSteps[i-1], fs))
+		}
+	}
+
+	funnelStepName := "funnel"
+	funnelStmnt := "SELECT" + " " + joinWithComma(groupSelect, funnelStepsForSelect) + " " + "FROM" + " " +
+		funnelSteps[0] + " " + properitesJoinStmnt + " " + stepsJoinStmnt
+	funnelStmnt = as(funnelStepName, funnelStmnt)
+	qStmnt = joinWithComma(qStmnt, funnelStmnt)
+
+	// builds "SUM(step1) AS step1, SUM(step1) AS step2",
+	var rawCountSelect string
+	for _, fs := range funnelSteps {
+		rawCountSelect = joinWithComma(rawCountSelect, fmt.Sprintf("SUM(%s) AS %s", fs, fs))
+	}
+
+	var aggrSelect string
+	for i, fs := range funnelSteps {
+		if i > 0 {
+			aggrSelect = appendStatement(aggrSelect,
+				fmt.Sprintf("ROUND((SUM(%s)::DECIMAL/SUM(%s)::DECIMAL) * 100) AS %s_%s_%s,",
+					fs, funnelSteps[i-1], FunnelConversionPrefix, funnelSteps[i-1], fs))
+		}
+	}
+	// append overall conversion.
+	aggrSelect = appendStatement(aggrSelect,
+		fmt.Sprintf("ROUND((SUM(%s)::DECIMAL/SUM(%s)::DECIMAL) * 100) AS %s_overall",
+			funnelSteps[len(funnelSteps)-1], funnelSteps[0], FunnelConversionPrefix))
+
+	aggrSelect = joinWithComma(rawCountSelect, aggrSelect)
+
+	var termStmnt string
+	if len(q.GroupByProperties) == 0 {
+		termStmnt = "SELECT" + " " + aggrSelect + " " + "FROM" + " " + funnelStepName
+	} else {
+		// builds UNION ALL with overall conversion and grouped conversion.
+		noGroupAlias := "$no_group"
+		var groupKeysPlaceholder string
+		for i, group := range q.GroupByProperties {
+			groupKeysPlaceholder = groupKeysPlaceholder + fmt.Sprintf("'%s' AS %s", noGroupAlias, groupKeyByIndex(group.Index))
+			if i < len(q.GroupByProperties)-1 {
+				groupKeysPlaceholder = groupKeysPlaceholder + ","
+			}
+		}
+		noGroupSelect := "SELECT" + " " + joinWithComma(groupKeysPlaceholder, aggrSelect) +
+			" " + "FROM" + " " + funnelStepName
+		groupBySelect := "SELECT" + " " + joinWithComma(groupKeys, aggrSelect) + " " +
+			"FROM" + " " + funnelStepName + " " + "GROUP BY" + " " + groupKeys
+		termStmnt = noGroupSelect + " " + "UNION ALL" + " " + groupBySelect
+	}
+
+	qStmnt = appendStatement(qStmnt, termStmnt)
+	qStmnt = with(qStmnt)
 
 	return qStmnt, qParams, nil
 }
@@ -942,8 +1142,8 @@ func IsValidQuery(query *Query) (bool, string) {
 	return true, ""
 }
 
-// BuildQuery - Dispatches corresponding build method based on attributes.
-func BuildQuery(projectId uint64, query Query) (string, []interface{}, error) {
+// BuildInsightsQuery - Dispatches corresponding build method for insights.
+func BuildInsightsQuery(projectId uint64, query Query) (string, []interface{}, error) {
 	addIndexToGroupByProperties(&query)
 
 	if query.Type == QueryTypeEventsOccurrence {
@@ -967,6 +1167,35 @@ func BuildQuery(projectId uint64, query Query) (string, []interface{}, error) {
 	}
 
 	return "", nil, errors.New("invalid query")
+}
+
+func BuildFunnelQuery(projectId uint64, query Query) (string, []interface{}, error) {
+	addIndexToGroupByProperties(&query)
+
+	if query.EventsCondition == QueryTypeEventsOccurrence {
+		return "", nil, errors.New("funnel on events occurrence is not supported")
+	}
+
+	return buildUniqueUsersFunnelQuery(projectId, query)
+}
+
+func translateNullToZeroOnFunnelResult(result *QueryResult) {
+	var percentageIndexes []int
+	var index int
+	for _, h := range result.Headers {
+		if strings.HasPrefix(h, FunnelConversionPrefix) || strings.HasPrefix(h, FunnelStepPrefix) {
+			percentageIndexes = append(percentageIndexes, index)
+		}
+		index++
+	}
+
+	for i := range result.Rows {
+		for _, ci := range percentageIndexes {
+			if result.Rows[i][ci] == nil {
+				result.Rows[i][ci] = 0
+			}
+		}
+	}
 }
 
 // Limits results by left and right keys. Assumes result is already
@@ -1193,7 +1422,6 @@ func addMissingTimestampsOnResultWithGroupByProps(result *QueryResult, query *Qu
 }
 
 func sanitizeGroupByTimestampResult(result *QueryResult, query *Query) error {
-
 	aggrIndex, timeIndex, err := getTimstampAndAggregateIndexOnResult(result.Headers)
 	if err != nil {
 		return err
@@ -1243,13 +1471,8 @@ func ExecQuery(stmnt string, params []interface{}) (*QueryResult, error) {
 	return result, nil
 }
 
-func Analyze(projectId uint64, query Query) (*QueryResult, int, string) {
-	valid, errMsg := IsValidQuery(&query)
-	if !valid {
-		return nil, http.StatusBadRequest, errMsg
-	}
-
-	stmnt, params, err := BuildQuery(projectId, query)
+func RunInsightsQuery(projectId uint64, query Query) (*QueryResult, int, string) {
+	stmnt, params, err := BuildInsightsQuery(projectId, query)
 	if err != nil {
 		log.WithError(err).Error(ErrMsgQueryProcessingFailure)
 		return nil, http.StatusInternalServerError, ErrMsgQueryProcessingFailure
@@ -1282,4 +1505,47 @@ func Analyze(projectId uint64, query Query) (*QueryResult, int, string) {
 	}
 
 	return result, http.StatusOK, "Successfully executed query"
+}
+
+func RunFunnelQuery(projectId uint64, query Query) (*QueryResult, int, string) {
+	stmnt, params, err := BuildFunnelQuery(projectId, query)
+	if err != nil {
+		log.WithError(err).Error(ErrMsgQueryProcessingFailure)
+		return nil, http.StatusInternalServerError, ErrMsgQueryProcessingFailure
+	}
+
+	logCtx := log.WithFields(log.Fields{"analytics_query": query, "statement": stmnt, "params": params})
+	if stmnt == "" || len(params) == 0 {
+		logCtx.Error("Failed generating SQL query from analytics query.")
+		return nil, http.StatusInternalServerError, ErrMsgQueryProcessingFailure
+	}
+
+	result, err := ExecQuery(stmnt, params)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed executing SQL query generated.")
+		return nil, http.StatusInternalServerError, ErrMsgQueryProcessingFailure
+	}
+
+	// should be done before translation of group keys
+	translateNullToZeroOnFunnelResult(result)
+
+	err = translateGroupKeysIntoColumnNames(result, query.GroupByProperties)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed translating group keys on result.")
+		return nil, http.StatusInternalServerError, ErrMsgQueryProcessingFailure
+	}
+
+	return result, http.StatusOK, "Successfully executed query"
+}
+
+func Analyze(projectId uint64, query Query) (*QueryResult, int, string) {
+	if valid, errMsg := IsValidQuery(&query); !valid {
+		return nil, http.StatusBadRequest, errMsg
+	}
+
+	if query.Class == QueryClassFunnel {
+		return RunFunnelQuery(projectId, query)
+	}
+
+	return RunInsightsQuery(projectId, query)
 }

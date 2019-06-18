@@ -15,6 +15,7 @@ import TableChart from './TableChart'
 import LineChart from './LineChart';
 import BarChart from './BarChart';
 import TableBarChart from './TableBarChart';
+import Funnel from './Funnel';
 import { PRESENTATION_BAR, PRESENTATION_LINE, PRESENTATION_TABLE, PRESENTATION_CARD, isLineResultWithGroupBy } from './common';
 import { 
   fetchProjectEvents,
@@ -39,11 +40,21 @@ const EVENTS_COND_OPTS = [
 ];
 const LABEL_STYLE = { marginRight: '10px', fontWeight: '600', color: '#777' };
 
+const QUERY_CLASS_INSIGHTS = 'insights';
+const QUERY_CLASS_FUNNEL = 'funnel';
+const QUERY_CLASS_OPTS = [
+  { value: QUERY_CLASS_INSIGHTS, label: 'Insights' },
+  { value: QUERY_CLASS_FUNNEL, label: 'Funnel' }
+];
+
 const TYPE_EVENT_OCCURRENCE = 'events_occurrence';
 const TYPE_UNIQUE_USERS = 'unique_users';
-const ANALYSIS_TYPE_OPTS = [
+const INSIGHTS_QUERY_TYPE_OPTS = [
   { value: TYPE_EVENT_OCCURRENCE, label: 'events occurrence' },
-  { value: TYPE_UNIQUE_USERS, label: 'unique users' }
+  { value: TYPE_UNIQUE_USERS, label: 'unique users' },
+];
+const FUNNEL_QUERY_TYPE_OPTS = [
+  { value: TYPE_UNIQUE_USERS, label: 'unique users' },
 ];
 
 const DEFAULT_DATE_RANGE_LABEL = 'Last 7 days';
@@ -112,8 +123,11 @@ class Query extends Component {
       eventNamesLoaded: false,
       eventNamesLoadError: null,
 
+      // add to resetQueryInterface to reset on
+      // interface change.
+      class: QUERY_CLASS_OPTS[0],
       condition: EVENTS_COND_OPTS[0],
-      type: ANALYSIS_TYPE_OPTS[0], // 1st type as default.
+      type: INSIGHTS_QUERY_TYPE_OPTS[0], // 1st type as default.
       events: [],
       groupBys: [],
       resultDateRange: [DEFAULT_DATE_RANGE],
@@ -135,6 +149,32 @@ class Query extends Component {
     }
   }
 
+  getQueryTypeOptsByClass = () => {
+    return this.state.class.value == QUERY_CLASS_FUNNEL ? FUNNEL_QUERY_TYPE_OPTS : INSIGHTS_QUERY_TYPE_OPTS;
+  }
+  
+  resetQueryInterfaceOnClassChange() {
+    this.setState({
+      // reset query state.
+      condition: EVENTS_COND_OPTS[0],
+      type: this.getQueryTypeOptsByClass()[0],
+      events: [],
+      groupBys: [],
+      resultDateRange: [DEFAULT_DATE_RANGE],
+      // reset presentation.
+      result: null,
+      showPresentation: false,
+    });
+
+    this.initWithAnEventRow();
+  }
+
+  componentDidUpdate(prevProps, prevState) {
+    if (prevState.class.value != this.state.class.value) {
+      this.resetQueryInterfaceOnClassChange();
+    }
+  }
+
   componentWillMount() {
     this.props.fetchProjectEvents(this.props.currentProjectId)
       .then(() => {
@@ -153,6 +193,10 @@ class Query extends Component {
     } else {
       console.error('Query not initialized with an event row. zero events found.');
     }
+  }
+
+  handleClassChange = (option) => {
+    this.setState({class: option});
   }
 
   handleTypeChange = (option) => {
@@ -297,6 +341,8 @@ class Query extends Component {
 
   getQuery(groupByDate=false, toSave=false) {
     let query = {};
+    
+    query.cl = this.state.class.value;
     query.ty = this.state.type.value;
     query.ec = this.state.condition.value;
     // event_occurrence supports only any_given_event.
@@ -468,7 +514,7 @@ class Query extends Component {
     return <div className='animated fadeIn'><TableBarChart data={result} /></div>;
   }
 
-  getPresentableResult = () => {
+  renderInsightsPresentation = () => {
     if (this.state.isResultLoading) return <Loading paddingTop='14%' />;
 
     if (this.state.result == null) return null;
@@ -518,7 +564,7 @@ class Query extends Component {
   }
 
   getGroupByOpts = () => {
-    if (this.state.type.value == TYPE_UNIQUE_USERS) {
+    if (this.state.type.value == TYPE_UNIQUE_USERS || this.state.class.value == QUERY_CLASS_FUNNEL) {
       return createSelectOpts({'user': PROPERTY_TYPE_OPTS['user']});
     } else {
       return createSelectOpts(PROPERTY_TYPE_OPTS);
@@ -589,9 +635,7 @@ class Query extends Component {
       this.endOfPresentation.scrollIntoView({ behavior: "smooth" });
   }
 
-  render() {
-    if (!this.isLoaded()) return <Loading />;
-
+  renderEventsWithProperties() {
     let events = [];
     for(let i=0; i<this.state.events.length; i++) {
       events.push(
@@ -615,6 +659,43 @@ class Query extends Component {
       )
     }
 
+    let addEventButton = <Row style={{marginBottom: '15px'}}>
+      <Col xs='12' md='12'>
+        <Button outline color='primary' onClick={this.addEvent} style={{ marginTop: '3px' }}>+ Event</Button>
+      </Col>
+    </Row>
+
+    return [events, addEventButton];
+  }
+
+  renderDateRangeSelector() {
+    return (
+      <Row style={{marginBottom: '15px'}}>
+        <Col xs='12' md='12'>
+          <span style={LABEL_STYLE}> during </span>
+          <Button outline style={{border: '1px solid #ccc', color: 'grey', marginRight: '10px' }} 
+            onClick={this.toggleDatePickerDisplay}>
+            <i className="fa fa-calendar" style={{marginRight: '10px'}}></i>
+            {this.readableDateRange(this.state.resultDateRange[0])}
+          </Button>
+          <div className='fapp-date-picker' hidden={!this.state.showDatePicker}>
+            <DateRangePicker
+              ranges={this.state.resultDateRange}
+              onChange={this.handleResultDateRangeSelect}
+              staticRanges={ DEFINED_DATE_RANGES }
+              inputRanges={[]}
+              minDate={new Date('01 Jan 2000 00:00:00 GMT')} // range starts from given date.
+              maxDate={new Date()}
+            />
+            <button className='fapp-close-round-button' style={{float: 'right', marginLeft: '0px', borderLeft: 'none'}} 
+            onClick={this.toggleDatePickerDisplay}>x</button>
+          </div>
+        </Col>
+      </Row>
+    );
+  }
+
+  renderGroupBys() {
     let groupBys = [];
     for(let i=0; i<this.state.groupBys.length; i++) {
       groupBys.push(
@@ -631,142 +712,315 @@ class Query extends Component {
       );
     }
 
-    console.debug('Query State : ', this.state);
+    let addGroupByButton = <Button outline color='primary' 
+      onClick={this.addGroupBy} style={{ marginTop: '3px' }}>
+      + Group
+    </Button>;
 
+    let groupBysRow = <Row style={{marginBottom: '15px'}}>
+      <Col xs='12' md='12'>
+        <div style={{ marginBottom: '15px' }} hidden={this.state.groupBys.length == 0}>
+          <span style={LABEL_STYLE}> group by </span>
+        </div>
+        { [ groupBys, addGroupByButton ] }
+      </Col>  
+    </Row>
+
+    return groupBysRow;
+  }
+
+  renderDashboardDropdownOptions() {
     let dashboardsDropdown = [];
     for(let i=0; i<this.props.dashboards.length; i++){
       let dashboard = this.props.dashboards[i];
       if (dashboard) {
-        dashboardsDropdown.push(<DropdownItem onClick={this.selectDashboardToAdd} value={dashboard.id}>{dashboard.name}</DropdownItem>)
+        dashboardsDropdown.push(<DropdownItem onClick={this.selectDashboardToAdd} 
+          value={dashboard.id}>{dashboard.name}</DropdownItem>)
       }
     }
+    
+    return dashboardsDropdown;
+  }
 
+  renderRunQuery() {
     return (
-      <div className='fapp-content' style={{marginLeft: '2rem', marginRight: '2rem'}}>
-        <div className='fapp-error' style={{marginBottom: '15px'}} hidden={!this.state.topError}>
-            <span>{ this.state.topError }</span>
-        </div>
+      <Row style={{marginBottom: '15px'}}>
+        <div style={{width:'100%', textAlign: 'center'}}>
+          <Button color='primary' style={{fontSize: '0.9rem', padding: '8px 18px', fontWeight: '500'}} 
+            onClick={() =>  this.run(DEFAULT_PRESENTATION)}>Run Query</Button>
+        </div>  
+      </Row>
+    );
+  }
 
-        {/* Query */}
-        <div>
-          <Row style={{marginBottom: '15px'}}>
-            <Col xs='12' md='12'>        
-              <span style={LABEL_STYLE}> Show </span>
-              <div style={{display: 'inline-block', width: '85px', marginRight: '10px'}} className='fapp-select light'>
-                <Select
-                  value={{label: 'count', value: 'count'}}
-                  // onChange={}
-                  options={[{label: 'count', value: 'count'}]}
-                  placeholder='Function'
-                />
-              </div>
-              <span style={LABEL_STYLE}>of</span>
-              <div style={{display: 'inline-block', width: '168px', marginRight: '10px'}} className='fapp-select light'>
-                <Select
-                  value={this.state.type}
-                  onChange={this.handleTypeChange}
-                  options={ANALYSIS_TYPE_OPTS}
-                  placeholder='Type'
-                />
-              </div>
-              <span style={LABEL_STYLE} hidden={this.state.type.value == TYPE_UNIQUE_USERS}> matches the following events, </span>
-              <span style={LABEL_STYLE} hidden={this.state.type.value == TYPE_EVENT_OCCURRENCE}> who performed </span>
-              <div style={{display: 'inline-block', width: '80px', marginRight: '10px'}} className='fapp-select light' hidden={this.state.type.value == TYPE_EVENT_OCCURRENCE}>
-                <Select
-                  value={this.state.condition}
-                  onChange={this.handleEventsConditionChange}
-                  options={EVENTS_COND_OPTS}
-                  placeholder='Condition'
-                />
-              </div>
-              <span style={LABEL_STYLE} hidden={this.state.type.value == TYPE_EVENT_OCCURRENCE}> of the following events, </span>
-            </Col>
-          </Row>
-          { events }
-          <Row style={{marginBottom: '15px'}}>
-            <Col xs='12' md='12'>
-              <Button outline color='primary' onClick={this.addEvent} style={{ marginTop: '3px' }}>+ Event</Button>
-            </Col>
-          </Row>
-          <Row style={{marginBottom: '15px'}}>
-            <Col xs='12' md='12'>
-              <span style={LABEL_STYLE}> during </span>
-              <Button outline style={{border: '1px solid #ccc', color: 'grey', marginRight: '10px' }} onClick={this.toggleDatePickerDisplay}><i className="fa fa-calendar" style={{marginRight: '10px'}}></i>{this.readableDateRange(this.state.resultDateRange[0])}</Button>
-              <div className='fapp-date-picker' hidden={!this.state.showDatePicker}>
-                <DateRangePicker
-                  ranges={this.state.resultDateRange}
-                  onChange={this.handleResultDateRangeSelect}
-                  staticRanges={ DEFINED_DATE_RANGES }
-                  inputRanges={[]}
-                  minDate={new Date('01 Jan 2000 00:00:00 GMT')} // range starts from given date.
-                  maxDate={new Date()}
-                />
-                <button className='fapp-close-round-button' style={{float: 'right', marginLeft: '0px', borderLeft: 'none'}} onClick={this.toggleDatePickerDisplay}>x</button>
-              </div>
-            </Col>
-          </Row>
-          <Row style={{marginBottom: '15px'}}>
-            <Col xs='12' md='12'>
-              <div style={{ marginBottom: '15px' }} hidden={this.state.groupBys.length == 0}><span style={LABEL_STYLE}> group by </span></div>
-              {groupBys}
-              <Button outline color='primary' onClick={this.addGroupBy} style={{ marginTop: '3px' }}>+ Group</Button>
-            </Col>  
-          </Row>
-          <Row style={{marginBottom: '15px'}}>
-            <div style={{width:'100%', textAlign: 'center'}}>
-              <Button color='primary' style={{fontSize: '0.9rem', padding: '8px 18px', fontWeight: '500'}} onClick={() =>  this.run(DEFAULT_PRESENTATION)}>Run Query</Button>
-            </div>  
-          </Row>
-        </div>
-        
+  renderInsightsQueryBuilder() {
+    return (
+      <div>
+        <Row style={{marginBottom: '15px'}}>
+          <Col xs='12' md='12'>        
+            <span style={LABEL_STYLE}> Show </span>
+            <div style={{display: 'inline-block', width: '85px', marginRight: '10px'}} className='fapp-select light'>
+              <Select
+                value={{label: 'count', value: 'count'}}
+                // onChange={}
+                options={[{label: 'count', value: 'count'}]}
+                placeholder='Function'
+              />
+            </div>
+            <span style={LABEL_STYLE}>of</span>
+            <div style={{display: 'inline-block', width: '168px', marginRight: '10px'}} className='fapp-select light'>
+              <Select
+                value={this.state.type}
+                onChange={this.handleTypeChange}
+                options={this.getQueryTypeOptsByClass()}
+                placeholder='Type'
+              />
+            </div>
+            <span style={LABEL_STYLE} hidden={this.state.type.value == TYPE_UNIQUE_USERS}> matches the following events, </span>
+            <span style={LABEL_STYLE} hidden={this.state.type.value == TYPE_EVENT_OCCURRENCE}> who performed </span>
+            <div style={{display: 'inline-block', width: '80px', marginRight: '10px'}} className='fapp-select light' 
+              hidden={this.state.type.value == TYPE_EVENT_OCCURRENCE}>
+              <Select
+                value={this.state.condition}
+                onChange={this.handleEventsConditionChange}
+                options={EVENTS_COND_OPTS}
+                placeholder='Condition'
+              />
+            </div>
+            <span style={LABEL_STYLE} hidden={this.state.type.value == TYPE_EVENT_OCCURRENCE}> 
+              of the following events, 
+            </span>
+          </Col>
+        </Row>
 
-        <div style={{borderTop: '1px solid rgb(221, 221, 221)', paddingTop: '20px', marginTop: '30px', marginLeft: '-60px', marginRight: '-60px'}} hidden={ !this.state.showPresentation }></div>
+        { this.renderEventsWithProperties() }
+        { this.renderDateRangeSelector() }
+        { this.renderGroupBys() }
+        { this.renderRunQuery() }
+      </div>
+    );
+  }
 
-        {/* Presentation */}
+  renderInsightsPresentationOptions = () => {
+    return (
+      <ButtonGroup style={{ marginRight: '10px' }}>
+        <button className={this.getPresentationSelectorClass(PRESENTATION_TABLE)} style={{fontWeight: 500}} 
+          onClick={() => this.run(PRESENTATION_TABLE)}>Table</button>
+        <button className={this.getPresentationSelectorClass(PRESENTATION_BAR)}  style={{fontWeight: 500}} 
+          onClick={() => this.run(PRESENTATION_BAR)}>Bar</button>
+        <button className={this.getPresentationSelectorClass(PRESENTATION_LINE)}  style={{fontWeight: 500}}  
+          onClick={() => this.run(PRESENTATION_LINE)}>Line</button>
+      </ButtonGroup>
+    );
+  } 
+
+  renderPresentationPane(presentationOptionsByClass=null, presentationByClass=null) {
+    return (
+      <div>
+        <div style={{borderTop: '1px solid rgb(221, 221, 221)', paddingTop: '20px', marginTop: '30px', 
+          marginLeft: '-60px', marginRight: '-60px'}} hidden={ !this.state.showPresentation }></div>
         <div style={{ minHeight: '530px' }}>
           <Row style={{ marginTop: '15px', marginRight: '10px' }} hidden={ !this.state.showPresentation }>
             <Col xs='12' md='12'>
               <ButtonToolbar className='pull-right'>
-                <ButtonGroup style={{ marginRight: '10px' }}>
-                  <button className={this.getPresentationSelectorClass(PRESENTATION_TABLE)} style={{fontWeight: 500}} onClick={() => this.run(PRESENTATION_TABLE)}>Table</button>
-                  <button className={this.getPresentationSelectorClass(PRESENTATION_BAR)}  style={{fontWeight: 500}} onClick={() => this.run(PRESENTATION_BAR)}>Bar</button>
-                  <button className={this.getPresentationSelectorClass(PRESENTATION_LINE)}  style={{fontWeight: 500}} onClick={() => this.run(PRESENTATION_LINE)}>Line</button>
-                </ButtonGroup>
+                { presentationOptionsByClass == null ? null : presentationOptionsByClass() }
                 <ButtonDropdown isOpen={this.state.showDashboardsList} toggle={this.toggleDashboardsList} >
                   <DropdownToggle disabled={this.disableAddToDashboard()} caret outline color="primary">
                     Add to dashboard
                   </DropdownToggle>
                   <DropdownMenu style={{height: 'auto', maxHeight: '210px', overflowX: 'scroll'}} right>
-                    { dashboardsDropdown }
+                    { this.renderDashboardDropdownOptions() }
                   </DropdownMenu>
                 </ButtonDropdown>
               </ButtonToolbar>
             </Col>
           </Row>
           <Row style={{ marginTop: '45px' }}> 
-            <Col xs='12' md='12' >
-                { this.getPresentableResult() }
-            </Col>
+            <Col xs='12' md='12' > { presentationByClass() } </Col>
           </Row>
         </div>
         <div ref={(el) => { this.endOfPresentation = el; }}></div>
+      </div>
+    );
+  }
 
-        <Modal isOpen={this.state.showAddToDashboardModal} toggle={this.toggleAddToDashboardModal} style={{marginTop: '10rem'}}>
-          <ModalHeader toggle={this.toggleAddToDashboardModal}>Add to dashboard</ModalHeader>
-          <ModalBody style={{padding: '25px 35px'}}>
-            <div style={{textAlign: 'center', marginBottom: '15px'}}>
-              <span style={{display: 'inline-block'}} className='fapp-error' hidden={this.state.addToDashboardMessage == null}>{ this.state.addToDashboardMessage }</span>
+  renderGlobalError() {
+    return (
+      <div className='fapp-error' style={{marginBottom: '15px'}} hidden={!this.state.topError}>
+        <span>{ this.state.topError }</span>
+      </div>
+    );
+  }
+
+  renderInterfaceSelector() {
+    return (
+      <Row style={{marginBottom: '16px'}}>
+        <Col xs='12' md='12'>
+          <span style={LABEL_STYLE}> Get </span>
+          <div style={{display: 'inline-block', width: '100px', marginRight: '10px'}} className='fapp-select light'>
+            <Select
+              value={this.state.class}
+              options={QUERY_CLASS_OPTS}
+              onChange={this.handleClassChange}
+            />
+          </div>
+          <span style={LABEL_STYLE}> for below query, </span>
+        </Col>
+      </Row>
+    );
+  }
+
+  renderAddToDashboardModal() {
+    return (
+      <Modal isOpen={this.state.showAddToDashboardModal} toggle={this.toggleAddToDashboardModal} style={{marginTop: '10rem'}}>
+        <ModalHeader toggle={this.toggleAddToDashboardModal}>Add to dashboard</ModalHeader>
+        <ModalBody style={{padding: '25px 35px'}}>
+          <div style={{textAlign: 'center', marginBottom: '15px'}}>
+            <span style={{display: 'inline-block'}} className='fapp-error' hidden={this.state.addToDashboardMessage == null}>
+              { this.state.addToDashboardMessage }
+            </span>
+          </div>
+          <Form>
+            <span className='fapp-label'>Chart title</span>         
+            <Input className='fapp-input' type="text" placeholder="Your chart title" onChange={this.setDashboardUnitTitle} />
+          </Form>
+        </ModalBody>
+        <ModalFooter style={{borderTop: 'none', paddingBottom: '30px', paddingRight: '35px'}}>
+          <Button outline color="success" onClick={this.addToDashboard}>Add</Button>
+          <Button outline color='danger' onClick={this.toggleAddToDashboardModal}>Cancel</Button>
+        </ModalFooter>
+      </Modal>
+    );
+  }
+
+  renderInsightsQueryInterface = () => {
+    return [
+      this.renderInsightsQueryBuilder(),       
+      this.renderPresentationPane(
+        this.renderInsightsPresentationOptions, 
+        this.renderInsightsPresentation,
+      )
+    ];
+  }
+
+  renderFunnelQueryBuilder() {
+    return (
+      <div>
+        <Row style={{marginBottom: '15px'}}>
+          <Col xs='12' md='12'>        
+            <span style={LABEL_STYLE}> Show conversion of </span>
+            <div style={{display: 'inline-block', width: '168px', marginRight: '10px'}} className='fapp-select light'>
+              <Select
+                value={this.state.type}
+                onChange={this.handleTypeChange}
+                options={this.getQueryTypeOptsByClass()}
+                placeholder='Type'
+              />
             </div>
-            <Form >
-                <span className='fapp-label'>Chart title</span>         
-              <Input className='fapp-input' type="text" placeholder="Your chart title" onChange={this.setDashboardUnitTitle} />
-            </Form>
-          </ModalBody>
-          <ModalFooter style={{borderTop: 'none', paddingBottom: '30px', paddingRight: '35px'}}>
-            <Button outline color="success" onClick={this.addToDashboard}>Add</Button>
-            <Button outline color='danger' onClick={this.toggleAddToDashboardModal}>Cancel</Button>
-          </ModalFooter>
-        </Modal>
+            <span style={LABEL_STYLE} hidden={this.state.type.value != TYPE_UNIQUE_USERS}> who has perfomed events on the below given order, </span>
+            <span style={LABEL_STYLE} hidden={this.state.type.value != TYPE_EVENT_OCCURRENCE}> on the below given order, </span>
+          </Col>
+        </Row>
+
+        { this.renderEventsWithProperties() }
+        { this.renderDateRangeSelector() }
+        { this.renderGroupBys() }
+        { this.renderRunQuery() }
+      </div>
+    );
+  }
+
+  getResultAsFunnel() {
+    let stepsIndexes = [];
+    let conversionIndexes = [];
+    let conversionHeaders = [];
+    let groupIndexes = [];
+    let groupHeaders = [];
+    
+    for (let i=0; i<this.state.result.headers.length; i++) {
+      if (this.state.result.headers[i].indexOf('step_') == 0)
+        stepsIndexes.push(i);
+      else if (this.state.result.headers[i].indexOf('conversion_') == 0) {
+        conversionIndexes.push(i);
+        conversionHeaders.push(this.state.result.headers[i]);
+      }
+      else {
+        groupIndexes.push(i);
+        groupHeaders.push(this.state.result.headers[i]);
+      }
+    }
+
+    let rows = this.state.result.rows;
+    let funnelData = [];
+    for (let i=0; i<stepsIndexes.length; i++) {
+      let data = null;
+      if (i == 0) data = [rows[0][stepsIndexes[0]], 0];
+      else data = [rows[0][stepsIndexes[i]], [rows[0][stepsIndexes[i-1]] - rows[0][stepsIndexes[i]]]];
+
+      let comp = {};
+      comp.conversion_percent = rows[0][conversionIndexes[i]];
+      comp.data = data;
+      funnelData.push(comp);
+    }
+
+    let showGroupsTable = groupIndexes.length > 0;
+    let groupRows = [];
+    if (showGroupsTable) {
+      groupHeaders.push(...conversionHeaders)
+
+      // Row 0 is $no_group.
+      for(let i=1; i<this.state.result.rows.length; i++) {
+        let row = [];
+        // adds group values to row.
+        for (let r=0; r<groupIndexes.length; r++) {
+          row.push(this.state.result.rows[i][groupIndexes[r]]);
+        }
+        // adds conversions to row.
+        for (let c=0; c<conversionIndexes.length; c++) {
+          row.push(this.state.result.rows[i][conversionIndexes[c]] + '%');
+        }
+        groupRows.push(row);
+      }
+    }
+
+    let tableGroupResult = { headers: groupHeaders, rows: groupRows };
+    let present = [];
+    present.push(<div style={{ marginTop: '30px' }}><Funnel data={funnelData} /></div>);
+    if (showGroupsTable) present.push(<div style={{ marginTop: '50px' }}>
+      <TableChart queryResult={tableGroupResult} /></div>);
+
+    return <div style={{height: '450px'}} className='animated fadeIn'> { present } </div>;
+  }
+
+  renderFunnelPresentation = () => {
+    if (this.state.isResultLoading) return <Loading paddingTop='14%' />;
+    if (this.state.result == null) return null;
+
+    return this.getResultAsFunnel();
+  }
+
+  renderFunnelQueryInterface = () => {
+    return [
+      this.renderFunnelQueryBuilder(),
+      this.renderPresentationPane(
+        null, this.renderFunnelPresentation,
+      )
+    ];
+  }
+
+
+  render() {
+    if (!this.isLoaded()) return <Loading />;
+    var renderQueryInterface = this.renderInsightsQueryInterface;
+
+    if (this.state.class.value == QUERY_CLASS_FUNNEL) {
+      renderQueryInterface = this.renderFunnelQueryInterface;
+    }
+
+    console.debug('Query State : ', this.state);
+    return (
+      <div className='fapp-content' style={{ marginLeft: '2rem', marginRight: '2rem' }}>
+        {[ this.renderGlobalError(), this.renderInterfaceSelector(), renderQueryInterface(), this.renderAddToDashboardModal() ]}
       </div>
     );
   }
