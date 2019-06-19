@@ -641,6 +641,12 @@ func (p *Pattern) GetPerOccurrenceCount(
 		log.Error(errorString)
 		return 0, fmt.Errorf(errorString)
 	}
+	if p.PerOccurrenceEventCategoricalProperties == nil ||
+		p.PerOccurrenceEventNumericProperties == nil ||
+		p.PerOccurrenceUserCategoricalProperties == nil ||
+		p.PerOccurrenceUserNumericProperties == nil {
+		return 0, fmt.Errorf("Unsupported pattern for per occurrence count")
+	}
 	EPNMapUpperBounds := make(map[string]float64)
 	EPNMapLowerBounds := make(map[string]float64)
 	EPCMapEquality := make(map[string]string)
