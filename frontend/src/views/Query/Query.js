@@ -5,7 +5,7 @@ import { bindActionCreators } from 'redux';
 import { Row, Col, Button, ButtonGroup, ButtonToolbar, 
   ButtonDropdown, DropdownToggle, DropdownMenu, 
   Modal, ModalHeader, ModalBody, Form, DropdownItem,
-  ModalFooter, Input } from 'reactstrap'; 
+  ModalFooter, Input, Table } from 'reactstrap'; 
 import 'react-date-range/dist/styles.css';
 import 'react-date-range/dist/theme/default.css';
 import { DateRangePicker, createStaticRanges } from 'react-date-range'; 
@@ -934,13 +934,38 @@ class Query extends Component {
     return name+" ("+count+")";
   }
 
+  buildFunnelsFromResultRows(rows, stepNames, stepsIndexes, conversionIndexes) {
+    let funnels = [];
+    for (let ri = 0; ri < rows.length; ri++) {
+      let funnelData = [];
+
+      for (let i=0; i<stepsIndexes.length; i++) {
+        let data = null;
+        if (i == 0) data = [rows[ri][stepsIndexes[0]], 0];
+        else data = [rows[0][stepsIndexes[i]], [rows[ri][stepsIndexes[i-1]] - rows[ri][stepsIndexes[i]]]];
+        let stepName = this.getDisplayName(stepNames[i], rows[ri][stepsIndexes[i]])
+
+        let comp = {};
+        comp.conversion_percent = rows[ri][conversionIndexes[i]];
+        comp.data = data;
+        comp.event = stepName;
+
+        funnelData.push(comp);
+      }
+
+      let totalConversionIndex = conversionIndexes[conversionIndexes.length - 1];
+      funnels.push(<Funnel data={{ funnels: funnelData, totalConversion: rows[ri][totalConversionIndex] }} />);
+    }
+
+    return funnels;
+  }
+
   getResultAsFunnel() {
     // get funnel step names from result meta.
     let stepNames = this.state.result.meta.ewp.map((e) => (e.na));
 
     let stepsIndexes = [];
     let conversionIndexes = [];
-    let conversionHeaders = [];
     let groupIndexes = [];
     let groupHeaders = [];
     
@@ -949,7 +974,6 @@ class Query extends Component {
         stepsIndexes.push(i);
       else if (this.state.result.headers[i].indexOf('conversion_') == 0) {
         conversionIndexes.push(i);
-        conversionHeaders.push(this.state.result.headers[i]);
       }
       else {
         groupIndexes.push(i);
@@ -958,48 +982,60 @@ class Query extends Component {
     }
 
     let rows = this.state.result.rows;
-
-    let funnelData = [];
-    for (let i=0; i<stepsIndexes.length; i++) {
-      let data = null;
-      if (i == 0) data = [rows[0][stepsIndexes[0]], 0];
-      else data = [rows[0][stepsIndexes[i]], [rows[0][stepsIndexes[i-1]] - rows[0][stepsIndexes[i]]]];
-      let stepName = this.getDisplayName(stepNames[i], rows[0][stepsIndexes[i]])
-
-      let comp = {};
-      comp.conversion_percent = rows[0][conversionIndexes[i]];
-      comp.data = data;
-      comp.event = stepName;
-
-      funnelData.push(comp);
-    }
+    let funnels = this.buildFunnelsFromResultRows(rows, stepNames, stepsIndexes, conversionIndexes);
 
     let showGroupsTable = groupIndexes.length > 0;
     let groupRows = [];
     if (showGroupsTable) {
-      groupHeaders.push(...conversionHeaders)
-
-      // Row 0 is $no_group.
+      let conversionsHeader = "conversions";
+      groupHeaders.push(conversionsHeader);
+      
+      // excluding main funnel which is index 0;
       for(let i=1; i<this.state.result.rows.length; i++) {
         let row = [];
         // adds group values to row.
         for (let r=0; r<groupIndexes.length; r++) {
-          row.push(this.getDisplayName(this.state.result.rows[i][groupIndexes[r]], 
-            this.state.result.rows[i][stepsIndexes[0]]));
+          row.push(this.state.result.rows[i][groupIndexes[r]]);
         }
-        // adds conversions to row.
-        for (let c=0; c<conversionIndexes.length; c++) {
-          row.push(this.state.result.rows[i][conversionIndexes[c]] + '%');
-        }
+        row.push(funnels[i]);
         groupRows.push(row);
       }
     }
 
-    let tableGroupResult = { headers: groupHeaders, rows: groupRows };
+    let tableHeaders = [];
+    for (let hi=0; hi<groupHeaders.length; hi++) {
+      tableHeaders.push(<th>{groupHeaders[hi]}</th>)
+    }
+    
+    let tableRows = [];
+    for (let ri=0; ri<groupRows.length; ri++) {
+      let tableCols = [];
+      let rowLength = groupRows[ri].length
+      for (let ci=0; ci<rowLength; ci++) {
+        let style = null;
+        if (ci == rowLength-1) style = { padding: '30px' }; // conversion col.
+        else style = { paddingTop: '30px' }; // group cols.
+
+        tableCols.push(<td style={style}>{groupRows[ri][ci]}</td>);
+      }
+      tableRows.push(<tr>{tableCols}</tr>)
+    }
+
+    
     let present = [];
-    present.push(<div style={{ marginTop: '30px' }}><Funnel data={funnelData} /></div>);
-    if (showGroupsTable) present.push(<div style={{ marginTop: '50px' }}>
-      <TableChart queryResult={tableGroupResult} /></div>);
+    // main funnel.
+    present.push(<div style={{ marginTop: '30px' }}>{ funnels[0] }</div>);
+    // group based funnels.
+    if (showGroupsTable) {
+      present.push(
+        <div style={{ marginTop: '85px' }}>
+          <Table className="fapp-table">
+            <thead>{ tableHeaders }</thead>
+            <tbody>{ tableRows }</tbody>
+          </Table>
+        </div>
+      );
+    }
 
     return <div style={{height: '450px'}} className='animated fadeIn'> { present } </div>;
   }

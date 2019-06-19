@@ -30,7 +30,7 @@ const arrowStyle = {
 }
 
 const Funnel = (props) => {
-  var funnelData = props.data;
+  var funnelData = props.data.funnels;
 
   var graphCols = [];
   var eventCols = [];
@@ -76,28 +76,41 @@ const Funnel = (props) => {
     if (i < funnelData.length - 1) {
       graphCols.push(
         <Col xs={{ size: '1' }} key={i*4 + 1}>
-        <div style={arrowStyle}><FunnelArrow color={arrowColor} conversionString={conversionString} uid={UUID.v4()} /></div>
+          <div style={arrowStyle}><FunnelArrow color={arrowColor} conversionString={conversionString} uid={UUID.v4()} /></div>
         </Col>);
     }
 
     if (i == 0) {
       eventCols.push(
         <Col xs={{ size: '2' }} key={i*4 + 2}>
-        <div style={eventTextStyle}>{funnelData[i].event}</div>
+          <div style={eventTextStyle}>{funnelData[i].event}</div>
         </Col>
       );
     } else {
       eventCols.push(
         <Col xs={{ size: '2', offset: '1'}} key={i*4 + 3}>
-        <div style={eventTextStyle}>{funnelData[i].event}</div>
+          <div style={eventTextStyle}>{funnelData[i].event}</div>
         </Col>
       );
     }
-
   }
 
+  let offset = 0
+  if (graphCols.length == 1) offset = 5;
+  if (graphCols.length == 3) offset = 3;
+  if (graphCols.length == 5) offset = 2;
+  
+  if (offset > 0) {
+    graphCols.unshift(<Col xs={{ offset: offset }}></Col>);
+    eventCols.unshift(<Col xs={{ offset: offset }}></Col>);
+  }
+
+  let totalConvStr = props.data.totalConversion + '%';
   return (
     <Col md='12'>
+      <div style={{textAlign: 'center', marginBottom: '30px'}}> 
+        <span style={{fontWeight: '600', color: '#777', fontSize: '15px'}}> Total Conversion Rate: { totalConvStr } </span> 
+      </div>
       <Row noGutters={true}>{graphCols}</Row>
       <Row noGutters={true}>{eventCols} </Row>
     </Col>
