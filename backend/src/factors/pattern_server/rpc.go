@@ -499,3 +499,88 @@ func (ps *PatternServer) GetUserAndEventsInfo(
 	result.UserAndEventsInfo = userAndEventsInfo
 	return nil
 }
+
+func (ps *PatternServer) GetTotalEventCount(
+	r *http.Request, args *client.GetTotalEventCountRequest,
+	result *client.GetTotalEventCountResponse) error {
+	if args == nil || args.ProjectId == 0 {
+		err := E.Wrap(errors.New("MissingParams"), "GetTotalEventCount missing param projectID")
+		result.Error = err
+		return err
+	}
+
+	modelId := args.ModelId
+
+	if modelId == 0 {
+		latestInterval, err := ps.GetProjectModelLatestInterval(args.ProjectId)
+		if err != nil {
+			result.Error = err
+			return err
+		}
+		modelId = latestInterval.ModelId
+	}
+
+	log.WithFields(log.Fields{
+		"pid": args.ProjectId,
+		"mid": modelId,
+	}).Debugln("RPC Fetching Total Event COunt")
+
+	chunkIds, found := ps.GetProjectModelChunks(args.ProjectId, modelId)
+	if !found {
+		err := E.Wrap(
+			errors.New("ProjectModelChunks Not Found"),
+			fmt.Sprintf(
+				"GetTotalEventCount failed to fetch ProjectModelChunks, ProjectID: %d, ModelID: %d",
+				args.ProjectId, modelId))
+		result.Error = err
+		return err
+	}
+
+	chunksToServe := make([]string, 0, 0)
+	for _, chunkId := range chunkIds {
+		if ps.IsProjectModelChunkServable(args.ProjectId, modelId, chunkId) {
+			chunksToServe = append(chunksToServe, chunkId)
+		}
+	}
+
+	if len(chunksToServe) == 0 {
+		result.Ignored = true
+		return nil
+	}
+
+	singleEventRawPatterns := make([]*json.RawMessage, 0, 0)
+	var totalEventCount uint64 = 0
+
+	// fetch in go routines to optimize
+	for _, chunkId := range chunksToServe {
+		patternsWithMeta, err := ps.store.GetPatternsWithMeta(args.ProjectId, modelId, chunkId)
+		if err != nil {
+			log.WithError(err).WithFields(log.Fields{
+				"pid": args.ProjectId,
+				"mid": modelId,
+				"cid": chunkId,
+			}).Error("Failed To get chunk patterns")
+			continue
+		}
+		for _, pwm := range patternsWithMeta {
+			if len(pwm.PatternEvents) == 1 {
+				singleEventRawPatterns = append(singleEventRawPatterns, &pwm.RawPattern)
+			}
+		}
+	}
+
+	if singleEventPatterns, err := client.CreatePatternsFromRawPatterns(singleEventRawPatterns); err != nil {
+		result.Error = err
+		return err
+	} else {
+		for _, p := range singleEventPatterns {
+			totalEventCount += uint64(p.PerOccurrenceCount)
+		}
+	}
+
+	result.ProjectId = args.ProjectId
+	result.ModelId = modelId
+	result.TotalEventCount = totalEventCount
+
+	return nil
+}

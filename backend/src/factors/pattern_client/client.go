@@ -28,6 +28,7 @@ const (
 	OperationNameGetSeenUserProperties      = "GetSeenUserProperties"
 	OperationNameGetSeenUserPropertyValues  = "GetSeenUserPropertyValues"
 	OperationNameGetUserAndEventsInfo       = "GetUserAndEventsInfo"
+	OperationNameGetTotalEventCount         = "GetTotalEventCount"
 	Separator                               = "."
 )
 
@@ -121,6 +122,16 @@ type GetUserAndEventsInfoRequest struct {
 type GetUserAndEventsInfoResponse struct {
 	GenericRPCResp
 	UserAndEventsInfo pattern.UserAndEventsInfo `json:"uei"`
+}
+
+type GetTotalEventCountRequest struct {
+	ProjectId uint64 `json:"pid"`
+	ModelId   uint64 `json:"mid"` // Optional, if not passed latest modelId will be used
+}
+
+type GetTotalEventCountResponse struct {
+	GenericRPCResp
+	TotalEventCount uint64 `json:"tec"`
 }
 
 type ModelInfo struct {
@@ -605,6 +616,61 @@ func GetUserAndEventsInfo(reqId string, projectId, modelId uint64) (*pattern.Use
 	}
 
 	return &respUserAndEventsInfo, respModelId, nil
+}
+
+func GetTotalEventCount(reqId string, projectId, modelId uint64) (uint64, error) {
+	params := GetTotalEventCountRequest{
+		ProjectId: projectId,
+		ModelId:   modelId,
+	}
+	paramBytes, err := rpcJson.EncodeClientRequest(RPCServiceName+Separator+OperationNameGetTotalEventCount, params)
+	if err != nil {
+		return 0, err
+	}
+
+	serverAddrs := C.GetServices().GetPatternServerAddresses()
+
+	gatherResp := make(chan httpResp, len(serverAddrs))
+	headers := map[string]string{
+		"content-type": "application/json",
+		"X-Req-Id":     reqId,
+	}
+
+	urls := make([]string, 0, 0)
+	for _, serverAddr := range serverAddrs {
+		url := fmt.Sprintf("http://%s%s", serverAddr, RPCEndpoint)
+		urls = append(urls, url)
+	}
+
+	httpDo(http.MethodPost, urls, paramBytes, headers, gatherResp)
+
+	var totalEventCount uint64 = 0
+	for r := range gatherResp {
+		if r.err != nil {
+			log.WithError(r.err).Error("Error Ignoring GetTotalEventCountResponse")
+			continue
+		}
+
+		var result GetTotalEventCountResponse
+		defer r.resp.Body.Close()
+		err = rpcJson.DecodeClientResponse(r.resp.Body, &result)
+		if err != nil {
+			result.Error = err
+		}
+		if result.Ignored {
+			log.Debugln("Ignoring GetTotalEventCountResponse")
+			continue
+		}
+
+		if result.Error != nil {
+			log.WithError(result.Error).Error("Error GetTotalEventCountResponse")
+			continue
+		}
+
+		totalEventCount += result.TotalEventCount
+	}
+
+	return totalEventCount, nil
 }
 
 type httpResp struct {

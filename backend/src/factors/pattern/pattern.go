@@ -54,7 +54,12 @@ const num_NUMERIC_BINS_PER_DIMENSION = 3
 const num_MAX_NUMERIC_MULTI_BINS = 128
 const num_CATEGORICAL_BINS_PER_DIMENSION = 1
 const num_MAX_CATEGORICAL_MULTI_BINS = 6
+
+// 20 MB.
 const MAX_PATTERN_BYTES = 20 * 1024 * 1024
+
+const COUNT_TYPE_PER_USER = "ct_per_user"
+const COUNT_TYPE_PER_OCCURRENCE = "ct_per_occurrence"
 
 type NumericConstraint struct {
 	PropertyName string
@@ -508,7 +513,7 @@ func (p *Pattern) CountForEvent(
 	return nil
 }
 
-func (p *Pattern) GetOncePerUserCount(
+func (p *Pattern) GetPerUserCount(
 	patternConstraints []EventConstraints) (uint, error) {
 	pLen := len(p.EventNames)
 	if patternConstraints != nil && (len(patternConstraints) != pLen) {
@@ -626,6 +631,109 @@ func (p *Pattern) GetOncePerUserCount(
 	return uint(count), nil
 }
 
+func (p *Pattern) GetPerOccurrenceCount(
+	patternConstraints []EventConstraints) (uint, error) {
+	pLen := len(p.EventNames)
+	if patternConstraints != nil && (len(patternConstraints) != pLen) {
+		errorString := fmt.Sprintf(
+			"Constraint length %d does not match pattern length %d for pattern %v",
+			len(patternConstraints), pLen, p.EventNames)
+		log.Error(errorString)
+		return 0, fmt.Errorf(errorString)
+	}
+	EPNMapUpperBounds := make(map[string]float64)
+	EPNMapLowerBounds := make(map[string]float64)
+	EPCMapEquality := make(map[string]string)
+	UPNMapUpperBounds := make(map[string]float64)
+	UPNMapLowerBounds := make(map[string]float64)
+	UPCMapEquality := make(map[string]string)
+	for i, ecs := range patternConstraints {
+		for _, ncs := range ecs.EPNumericConstraints {
+			key := PatternPropertyKey(i, ncs.PropertyName)
+			EPNMapLowerBounds[key] = ncs.LowerBound
+			EPNMapUpperBounds[key] = ncs.UpperBound
+		}
+		for _, ccs := range ecs.EPCategoricalConstraints {
+			key := PatternPropertyKey(i, ccs.PropertyName)
+			EPCMapEquality[key] = ccs.PropertyValue
+		}
+
+		for _, ncs := range ecs.UPNumericConstraints {
+			key := PatternPropertyKey(i, ncs.PropertyName)
+			UPNMapLowerBounds[key] = ncs.LowerBound
+			UPNMapUpperBounds[key] = ncs.UpperBound
+		}
+		for _, ccs := range ecs.UPCategoricalConstraints {
+			key := PatternPropertyKey(i, ccs.PropertyName)
+			UPCMapEquality[key] = ccs.PropertyValue
+		}
+	}
+
+	EPNumericUpperCDF := 1.0
+	EPNumericLowerCDF := 0.0
+	if p.PerOccurrenceEventNumericProperties != nil && len(EPNMapLowerBounds) > 0 {
+		EPNumericUpperCDF = p.PerOccurrenceEventNumericProperties.CDFFromMap(EPNMapUpperBounds)
+		EPNumericLowerCDF = p.PerOccurrenceEventNumericProperties.CDFFromMap(EPNMapLowerBounds)
+	}
+	EPCategoricalPDF := 1.0
+	if p.PerOccurrenceEventCategoricalProperties != nil && len(EPCMapEquality) > 0 {
+		var err error
+		EPCategoricalPDF, err = p.PerOccurrenceEventCategoricalProperties.PDFFromMap(EPCMapEquality)
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	UPNumericUpperCDF := 1.0
+	UPNumericLowerCDF := 0.0
+	if p.PerOccurrenceUserNumericProperties != nil && len(UPNMapLowerBounds) > 0 {
+		UPNumericUpperCDF = p.PerOccurrenceUserNumericProperties.CDFFromMap(UPNMapUpperBounds)
+		UPNumericLowerCDF = p.PerOccurrenceUserNumericProperties.CDFFromMap(UPNMapLowerBounds)
+	}
+	UPCategoricalPDF := 1.0
+	if p.PerOccurrenceUserCategoricalProperties != nil && len(UPCMapEquality) > 0 {
+		var err error
+		UPCategoricalPDF, err = p.PerOccurrenceUserCategoricalProperties.PDFFromMap(UPCMapEquality)
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	count := (float64(p.PerOccurrenceCount) *
+		(EPNumericUpperCDF - EPNumericLowerCDF) *
+		EPCategoricalPDF *
+		(UPNumericUpperCDF - UPNumericLowerCDF) *
+		UPCategoricalPDF)
+
+	if count < 0 {
+		log.WithFields(log.Fields{
+			"EPNumericUpperCDF":      EPNumericUpperCDF,
+			"EPNumericLowerCDF":      EPNumericLowerCDF,
+			"EPCategoricalPDF":       EPCategoricalPDF,
+			"UPNumericUpperCDF":      UPNumericUpperCDF,
+			"UPNumericLowerCDF":      UPNumericLowerCDF,
+			"UPCategoricalPDF":       UPCategoricalPDF,
+			"pattern":                p.String(),
+			"patternConstraints":     patternConstraints,
+			"patternOccurrenceCount": p.PerOccurrenceCount,
+			"finalCount":             count,
+		}).Info("Computed CDF's and PDF's")
+		errorString := "Final count is less than 0."
+		log.Error(errorString)
+		return 0, fmt.Errorf(errorString)
+	}
+	return uint(count), nil
+}
+
+func (p *Pattern) GetCount(patternConstraints []EventConstraints, countType string) (uint, error) {
+	if countType == COUNT_TYPE_PER_USER {
+		return p.GetPerUserCount(patternConstraints)
+	} else if countType == COUNT_TYPE_PER_OCCURRENCE {
+		return p.GetPerOccurrenceCount(patternConstraints)
+	}
+	return 0, fmt.Errorf(fmt.Sprintf("Unrecognized count type: %s", countType))
+}
+
 func (p *Pattern) GetPerUserEventPropertyRanges(
 	eventIndex int, propertyName string) [][2]float64 {
 	// Return the ranges of the bin [min, max], in which the numeric values for the event property occurr.
@@ -636,6 +744,18 @@ func (p *Pattern) GetPerUserUserPropertyRanges(
 	eventIndex int, propertyName string) [][2]float64 {
 	// Return the ranges of the bin [min, max], in which the numeric values for the event property occurr.
 	return p.PerUserUserNumericProperties.GetBinRanges(PatternPropertyKey(eventIndex, propertyName))
+}
+
+func (p *Pattern) GetPerOccurrenceEventPropertyRanges(
+	eventIndex int, propertyName string) [][2]float64 {
+	// Return the ranges of the bin [min, max], in which the numeric values for the event property occurr.
+	return p.PerOccurrenceEventNumericProperties.GetBinRanges(PatternPropertyKey(eventIndex, propertyName))
+}
+
+func (p *Pattern) GetPerOccurrenceUserPropertyRanges(
+	eventIndex int, propertyName string) [][2]float64 {
+	// Return the ranges of the bin [min, max], in which the numeric values for the event property occurr.
+	return p.PerOccurrenceUserNumericProperties.GetBinRanges(PatternPropertyKey(eventIndex, propertyName))
 }
 
 func (p *Pattern) String() string {

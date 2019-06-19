@@ -276,9 +276,10 @@ class Factor extends Component {
     this.setState((prevState) => { return { fadeIn: !prevState } });
   }
 
-  factor = (queryElements) => {
+  factor = (queryElements, queryType) => {
 
     var query = {
+      queryType: queryType,
       eventsWithProperties: [],
     }
 

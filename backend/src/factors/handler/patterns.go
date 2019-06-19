@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	mid "factors/middleware"
+	M "factors/model"
 	P "factors/pattern"
 	PW "factors/pattern_service_wrapper"
 	U "factors/util"
@@ -16,9 +17,24 @@ import (
 )
 
 func ParseFactorQuery(query map[string]interface{}) (
-	string, *P.EventConstraints, string, *P.EventConstraints, error) {
+	startEvent string, startEventConstraints *P.EventConstraints,
+	endEvent string, endEventConstraints *P.EventConstraints,
+	countType string, err error) {
 	var startEventWithProperties map[string]interface{}
 	var endEventWithProperties map[string]interface{}
+	if queryType, ok := query["queryType"]; ok {
+		if queryType == M.QueryTypeEventsOccurrence {
+			countType = P.COUNT_TYPE_PER_OCCURRENCE
+		} else if queryType == M.QueryTypeUniqueUsers {
+			countType = P.COUNT_TYPE_PER_USER
+		} else {
+			err := fmt.Errorf(fmt.Sprintf("Unknown queryType %s in query", queryType))
+			return "", nil, "", nil, "", err
+		}
+	} else {
+		err := fmt.Errorf("Missing query type")
+		return "", nil, "", nil, "", err
+	}
 	if ewp, ok := query["eventsWithProperties"]; ok {
 		eventsWithProperties := ewp.([]interface{})
 		numEvents := len(eventsWithProperties)
@@ -30,24 +46,24 @@ func ParseFactorQuery(query map[string]interface{}) (
 		} else {
 			err := fmt.Errorf(fmt.Sprintf(
 				"Unexpected number of events in query: %d", numEvents))
-			return "", nil, "", nil, err
+			return "", nil, "", nil, "", err
 		}
 	} else {
 		err := fmt.Errorf("Missing eventsWithProperties")
-		return "", nil, "", nil, err
+		return "", nil, "", nil, "", err
 	}
-	endEvent, endEventConstraints, err := parseQueryEventWithProperties(endEventWithProperties)
+	endEvent, endEventConstraints, err = parseQueryEventWithProperties(endEventWithProperties)
 	if err != nil {
-		return "", nil, "", nil, err
+		return "", nil, "", nil, "", err
 	}
 	if len(startEventWithProperties) == 0 {
-		return "", nil, endEvent, endEventConstraints, nil
+		return "", nil, endEvent, endEventConstraints, countType, nil
 	}
-	startEvent, startEventConstraints, err := parseQueryEventWithProperties(startEventWithProperties)
+	startEvent, startEventConstraints, err = parseQueryEventWithProperties(startEventWithProperties)
 	if err != nil {
-		return "", nil, "", nil, err
+		return "", nil, "", nil, "", err
 	}
-	return startEvent, startEventConstraints, endEvent, endEventConstraints, nil
+	return startEvent, startEventConstraints, endEvent, endEventConstraints, countType, nil
 }
 
 func parseQueryEventWithProperties(eventWithProperties map[string]interface{}) (
@@ -204,7 +220,7 @@ func FactorHandler(c *gin.Context) {
 
 	if query, ok := requestBodyMap["query"].(map[string]interface{}); ok {
 		logCtx.WithFields(log.Fields{"query": query}).Debug("Received query")
-		startEvent, startEventConstraints, endEvent, endEventConstraints, err := ParseFactorQuery(query)
+		startEvent, startEventConstraints, endEvent, endEventConstraints, countType, err := ParseFactorQuery(query)
 		if err != nil {
 			log.WithError(err).Error("Invalid Query.")
 			c.JSON(http.StatusBadRequest, gin.H{
@@ -217,7 +233,9 @@ func FactorHandler(c *gin.Context) {
 			"startEvent":            startEvent,
 			"endEvent":              endEvent,
 			"startEventConstraints": startEventConstraints,
-			"endEventConstraints":   endEventConstraints}).Debug("Factor query parse")
+			"endEventConstraints":   endEventConstraints,
+			"countType":             countType,
+		}).Debug("Factor query parse")
 
 		ps, err := PW.NewPatternServiceWrapper(reqId, projectId, modelId)
 		if err != nil {
@@ -230,7 +248,7 @@ func FactorHandler(c *gin.Context) {
 		}
 		if results, err := PW.Factor(reqId,
 			projectId, startEvent, startEventConstraints,
-			endEvent, endEventConstraints, ps); err != nil {
+			endEvent, endEventConstraints, countType, ps); err != nil {
 			logCtx.WithError(err).Error("Factors failed.")
 			c.AbortWithStatus(http.StatusBadRequest)
 			return

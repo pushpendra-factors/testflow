@@ -15,6 +15,9 @@ type PropertiesMap map[string]interface{}
 const SEN_ALL_ACTIVE_USERS = "$AllActiveUsers"
 const SEN_ALL_ACTIVE_USERS_DISPLAY_STRING = "All Active Users"
 
+const SEN_ALL_EVENTS = "$AllEvents"
+const SEN_ALL_EVENTS_DISPLAY_STRING = "All Events"
+
 /* Properties Constants */
 
 // Generic Event Properties.

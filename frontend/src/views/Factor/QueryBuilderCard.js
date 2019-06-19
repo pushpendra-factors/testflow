@@ -10,6 +10,7 @@ import {
   Row,
 } from 'reactstrap';
 import CreatableSelect from 'react-select/lib/Creatable';
+import Select from 'react-select';
 import { 
   fetchProjectEventProperties, 
   fetchProjectEventPropertyValues,
@@ -60,6 +61,13 @@ export const STATE_EVENT_STRING_PROPERTY_VALUE = 5;
 export const STATE_USER_NUMERIC_PROPERTY_VALUE = 6;
 export const STATE_USER_STRING_PROPERTY_VALUE = 7;
 
+const TYPE_EVENT_OCCURRENCE = 'events_occurrence';
+const TYPE_UNIQUE_USERS = 'unique_users';
+const ANALYSIS_TYPE_OPTS = [
+  { value: TYPE_EVENT_OCCURRENCE, label: 'Number of occurrences of' },
+  { value: TYPE_UNIQUE_USERS, label: 'Number of users with action' }
+];
+
 const mapStateToProps = store => {
   return {
     currentProjectId: store.projects.currentProjectId,
@@ -92,6 +100,7 @@ class QueryBuilderCard extends Component {
     var queryStates;
     queryStates = this.props.getQueryStates(this.props.currentProjectEventNames)
     this.state = {
+      type: ANALYSIS_TYPE_OPTS[1], // TYPE_UNIQUE_USERS as default.
       menuIsOpen: false,
       queryStates: queryStates,
       currentQueryState: STATE_EVENTS,
@@ -229,7 +238,7 @@ class QueryBuilderCard extends Component {
       
       if(currentEnteredOption['type'] === SUBMIT_QUERY_TYPE){
         this.creatableSelect.current.select.select.blur(); // Hide options menu.
-        this.props.onKeyDown(this.state.values); // Submit factor.
+        this.props.onKeyDown(this.state.values, this.state.type.value); // Submit factor.
         return
       }
 
@@ -336,9 +345,13 @@ class QueryBuilderCard extends Component {
           console.log(event);
           console.log(this.state.values);
           event.preventDefault();
-          this.props.onKeyDown(this.state.values);
+          this.props.onKeyDown(this.state.values, this.state.type.value);
         }
     }
+  };
+
+  handleTypeChange = (option) => {
+    this.setState({type: option});
   };
 
   disallowNewOption = (inputOption, valueType, optionsType) => {
@@ -367,8 +380,20 @@ class QueryBuilderCard extends Component {
 
   render() {
     return (
-      <Card className="fapp-search-card fapp-select">
+      <Card className="fapp-search-card fapp-select light">
         <CardBody>
+          <Row>
+            <Col md={{ size: '3', offset: 2 }}>
+              <div style={{display: 'inline-block', width: '280px', marginRight: '10px', marginBottom: "10px"}} className='fapp-select light'>
+              <Select
+                value={this.state.type}
+                onChange={this.handleTypeChange}
+                options={ANALYSIS_TYPE_OPTS}
+                placeholder='Type'
+              />
+              </div>
+            </Col>
+          </Row>
           <Row>
             <Col md={{ size: '8', offset: 2 }}>
               <FormGroup>
@@ -396,7 +421,7 @@ class QueryBuilderCard extends Component {
           </Row>
           <Row>
             <Col md={{ size: 'auto', offset: 5 }}>
-              <Button block color='primary' onClick={() => { this.props.onKeyDown(this.state.values) }}>Factor</Button>
+              <Button block color='primary' onClick={() => { this.props.onKeyDown(this.state.values, this.state.type.value) }}>Factor</Button>
             </Col>
             <Col md={{ size: 'auto' }} style={{ display: 'none' }}>
               <Button block color='primary'>Paths!</Button>

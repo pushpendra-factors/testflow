@@ -76,7 +76,7 @@ func TestBuildNewItree(t *testing.T) {
 		patterns = append(patterns, p)
 	}
 	pw := NewMockPatternServiceWrapper(patterns, nil)
-	itree, err := PW.BuildNewItree("", "", nil, "Y", nil, pw)
+	itree, err := PW.BuildNewItree("", "", nil, "Y", nil, pw, P.COUNT_TYPE_PER_USER)
 	assert.Nil(t, err)
 	assert.NotNil(t, itree)
 
@@ -182,7 +182,7 @@ func TestBuildNewItree(t *testing.T) {
 	}
 
 	// Build withs start and end event. Expected tree would be the subtree of above tree with root node AY.
-	itree, err = PW.BuildNewItree("", "A", nil, "Y", nil, pw)
+	itree, err = PW.BuildNewItree("", "A", nil, "Y", nil, pw, P.COUNT_TYPE_PER_USER)
 	assert.Nil(t, err)
 	assert.NotNil(t, itree)
 	node0 = expectedNode{

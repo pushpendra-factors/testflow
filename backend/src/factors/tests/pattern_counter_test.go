@@ -660,12 +660,12 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 
 	// A-B-C occurs thrice across users with the following six dimensional event numerical
 	// distribution.
-	// 0.ANum: 1.0 and 1.0
-	// 0.ComNum: 3.0 and 1.0
-	// 1.BNum: 1.0 and 1.0
-	// 1.ComNum: 2.0 and 1.0
-	// 2.CNum: 1.0 and 2.0
-	// 2.ComNum 2.0 and 3.0
+	// 0.ANum: 1.0 and 1.0 and 1.0
+	// 0.ComNum: 3.0 and 1.0 and 1.0
+	// 1.BNum: 1.0 and 1.0 and 2.0
+	// 1.ComNum: 2.0 and 1.0 and 2.0
+	// 2.CNum: 1.0 and 2.0 and 1.0
+	// 2.ComNum 2.0 and 3.0 and 3.0
 	expectedMeanMap = map[string]float64{
 		"0.ANum":   float64((1.0 + 1.0 + 1.0) / 3),
 		"0.ComNum": float64((3.0 + 1.0 + 1.0) / 3),
@@ -769,15 +769,21 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 	assert.Equal(t, uint(2), pC.PerUserCount)
 	assert.Equal(t, uint(2), pC.TotalUserCount)
 
-	// Test GetOncePerUserCount with properties constraints.
-	count, err := pABC.GetOncePerUserCount(nil)
+	// Test GetPerUserCount and GetPerOccurrenceCount with properties constraints.
+	count, err := pABC.GetPerUserCount(nil)
 	assert.Nil(t, err)
 	assert.Equal(t, uint(2), count)
+	count, err = pABC.GetPerOccurrenceCount(nil)
+	assert.Nil(t, err)
+	assert.Equal(t, uint(3), count)
 
 	patternConstraints := make([]P.EventConstraints, 3)
-	count, err = pABC.GetOncePerUserCount(patternConstraints)
+	count, err = pABC.GetPerUserCount(patternConstraints)
 	assert.Nil(t, err)
 	assert.Equal(t, uint(2), count)
+	count, err = pABC.GetPerOccurrenceCount(patternConstraints)
+	assert.Nil(t, err)
+	assert.Equal(t, uint(3), count)
 
 	patternConstraints = make([]P.EventConstraints, 3)
 	patternConstraints[0] = P.EventConstraints{
@@ -803,30 +809,34 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 			},
 		},
 	}
-	count, err = pABC.GetOncePerUserCount(patternConstraints)
+	count, err = pABC.GetPerUserCount(patternConstraints)
 	assert.Nil(t, err)
 	assert.Equal(t, uint(1), count)
+	count, err = pABC.GetPerOccurrenceCount(patternConstraints)
+	assert.Nil(t, err)
+	assert.Equal(t, uint(2), count)
 
 	patternConstraints = make([]P.EventConstraints, 3)
 	patternConstraints[0] = P.EventConstraints{
 		EPNumericConstraints: []P.NumericConstraint{
 			P.NumericConstraint{
 				PropertyName: "ANum",
-				LowerBound:   -0.5,
-				UpperBound:   +0.5,
+				LowerBound:   0.5,
+				UpperBound:   1.5,
 			},
 			P.NumericConstraint{
 				PropertyName: "ComNum",
-				LowerBound:   -0.5,
-				UpperBound:   +0.5,
+				LowerBound:   0.5,
+				UpperBound:   1.5,
 			},
 		},
 	}
-	count, err = pABC.GetOncePerUserCount(patternConstraints)
+	count, err = pABC.GetPerUserCount(patternConstraints)
 	assert.Nil(t, err)
-	// This combination of 0.Anum=1 and 0.ComNum=1 does not occur together,
-	// though they take individually these values.
-	assert.Equal(t, uint(0), count)
+	assert.Equal(t, uint(1), count)
+	count, err = pABC.GetPerOccurrenceCount(patternConstraints)
+	assert.Nil(t, err)
+	assert.Equal(t, uint(2), count)
 
 	patternConstraints = make([]P.EventConstraints, 3)
 	// Below categorical combination occurs in the first occurrence.
@@ -846,7 +856,10 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 			},
 		},
 	}
-	count, err = pABC.GetOncePerUserCount(patternConstraints)
+	count, err = pABC.GetPerUserCount(patternConstraints)
+	assert.Nil(t, err)
+	assert.Equal(t, uint(1), count)
+	count, err = pABC.GetPerOccurrenceCount(patternConstraints)
 	assert.Nil(t, err)
 	assert.Equal(t, uint(1), count)
 
@@ -861,9 +874,12 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 			},
 		},
 	}
-	count, err = pABC.GetOncePerUserCount(patternConstraints)
+	count, err = pABC.GetPerUserCount(patternConstraints)
 	assert.Nil(t, err)
 	// U1 is age 20.0.
+	assert.Equal(t, uint(1), count)
+	count, err = pABC.GetPerOccurrenceCount(patternConstraints)
+	assert.Nil(t, err)
 	assert.Equal(t, uint(1), count)
 
 	patternConstraints = make([]P.EventConstraints, 3)
@@ -892,7 +908,10 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 			},
 		},
 	}
-	count, err = pABC.GetOncePerUserCount(patternConstraints)
+	count, err = pABC.GetPerUserCount(patternConstraints)
+	assert.Nil(t, err)
+	assert.Equal(t, uint(1), count)
+	count, err = pABC.GetPerOccurrenceCount(patternConstraints)
 	assert.Nil(t, err)
 	assert.Equal(t, uint(1), count)
 }

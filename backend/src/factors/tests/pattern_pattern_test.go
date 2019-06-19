@@ -126,7 +126,7 @@ func TestPatternCountEvents(t *testing.T) {
 	}
 }
 
-func TestPatternGetOncePerUserCount(t *testing.T) {
+func TestPatternGetPerUserCount(t *testing.T) {
 	// Count A -> B -> C
 	// U1: F, G, A, L, B, A, B, C   (A(1) -> B(2) -> C(1):1)
 	// U2: F, A, A, K, B, Z, C, A, B, C  (A(2,1) -> B (1, 1) -> C(1, 1)
@@ -230,7 +230,7 @@ func TestPatternGetOncePerUserCount(t *testing.T) {
 		assert.Equal(t, expectedMean, actualMeanMap[k], fmt.Sprintf("Failed for Key: %s", k))
 	}
 
-	count, err := p.GetOncePerUserCount(nil)
+	count, err := p.GetPerUserCount(nil)
 	assert.Nil(t, err)
 	assert.Equal(t, uint(2), count)
 	genericPropertiesConstraints := []P.EventConstraints{
@@ -238,7 +238,7 @@ func TestPatternGetOncePerUserCount(t *testing.T) {
 		P.EventConstraints{},
 		P.EventConstraints{},
 	}
-	count, err = p.GetOncePerUserCount(genericPropertiesConstraints)
+	count, err = p.GetPerUserCount(genericPropertiesConstraints)
 	assert.Nil(t, err)
 	assert.Equal(t, uint(2), count)
 
@@ -255,7 +255,7 @@ func TestPatternGetOncePerUserCount(t *testing.T) {
 			},
 		},
 	}
-	count, err = p.GetOncePerUserCount(genericPropertiesConstraints)
+	count, err = p.GetPerUserCount(genericPropertiesConstraints)
 	assert.Nil(t, err)
 	assert.Equal(t, uint(1), count)
 
@@ -272,7 +272,7 @@ func TestPatternGetOncePerUserCount(t *testing.T) {
 		P.EventConstraints{},
 		P.EventConstraints{},
 	}
-	count, err = p.GetOncePerUserCount(genericPropertiesConstraints)
+	count, err = p.GetPerUserCount(genericPropertiesConstraints)
 	assert.Nil(t, err)
 	assert.Equal(t, uint(1), count)
 
@@ -289,7 +289,7 @@ func TestPatternGetOncePerUserCount(t *testing.T) {
 		},
 		P.EventConstraints{},
 	}
-	count, err = p.GetOncePerUserCount(genericPropertiesConstraints)
+	count, err = p.GetPerUserCount(genericPropertiesConstraints)
 	assert.Nil(t, err)
 	assert.Equal(t, uint(1), count)
 
@@ -306,7 +306,7 @@ func TestPatternGetOncePerUserCount(t *testing.T) {
 		},
 		P.EventConstraints{},
 	}
-	count, err = p.GetOncePerUserCount(genericPropertiesConstraints)
+	count, err = p.GetPerUserCount(genericPropertiesConstraints)
 	assert.Nil(t, err)
 	assert.Equal(t, uint(1), count)
 
@@ -323,7 +323,7 @@ func TestPatternGetOncePerUserCount(t *testing.T) {
 		},
 		P.EventConstraints{},
 	}
-	count, err = p.GetOncePerUserCount(genericPropertiesConstraints)
+	count, err = p.GetPerUserCount(genericPropertiesConstraints)
 	assert.Nil(t, err)
 	assert.Equal(t, uint(1), count)
 
@@ -348,7 +348,7 @@ func TestPatternGetOncePerUserCount(t *testing.T) {
 			},
 		},
 	}
-	count, err = p.GetOncePerUserCount(genericPropertiesConstraints)
+	count, err = p.GetPerUserCount(genericPropertiesConstraints)
 	assert.Nil(t, err)
 	assert.Equal(t, uint(1), count)
 }
