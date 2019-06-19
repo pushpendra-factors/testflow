@@ -115,13 +115,14 @@ func main() {
 				projectCustomerUser[user.ProjectId][user.CustomerUserId] = usersMinJointimestamp
 
 			} else {
+				projectCustomerUser[user.ProjectId][user.CustomerUserId].userIds = append(
+					projectCustomerUser[user.ProjectId][user.CustomerUserId].userIds,
+					user.ID,
+				)
+
 				// min join timestamp with same customer user_id.
 				if user.JoinTimestamp < projectCustomerUser[user.ProjectId][user.CustomerUserId].timestamp {
 					projectCustomerUser[user.ProjectId][user.CustomerUserId].timestamp = user.JoinTimestamp
-					projectCustomerUser[user.ProjectId][user.CustomerUserId].userIds = append(
-						projectCustomerUser[user.ProjectId][user.CustomerUserId].userIds,
-						user.ID,
-					)
 				}
 			}
 		}
