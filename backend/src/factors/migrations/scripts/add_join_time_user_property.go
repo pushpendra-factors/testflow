@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -112,6 +113,7 @@ func main() {
 					userIds:   userIds,
 				}
 				projectCustomerUser[user.ProjectId][user.CustomerUserId] = usersMinJointimestamp
+
 			} else {
 				// min join timestamp with same customer user_id.
 				if user.JoinTimestamp < projectCustomerUser[user.ProjectId][user.CustomerUserId].timestamp {
@@ -130,7 +132,7 @@ func main() {
 	for projectId, customerUsers := range projectCustomerUser {
 		for _, usersMinJoinTimestamp := range customerUsers {
 			for _, userId := range usersMinJoinTimestamp.userIds {
-				errCode := M.UpdatePropertyOnAllUserPropertyRecords(projectId, userId, U.UP_JOIN_TIME, usersMinJoinTimestamp.timestamp)
+				errCode := UpdatePropertyOnAllUserPropertyRecordsIfPropertyNotExist(projectId, userId, U.UP_JOIN_TIME, usersMinJoinTimestamp.timestamp)
 				if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
 					log.Fatal("Failed to update user properties with join time.")
 				}
@@ -141,4 +143,57 @@ func main() {
 		}
 	}
 
+}
+
+func UpdatePropertyOnAllUserPropertyRecordsIfPropertyNotExist(projectId uint64, userId string,
+	property string, value interface{}) int {
+
+	userPropertyRecords, errCode := M.GetUserPropertyRecordsByUserId(projectId, userId)
+	if errCode == http.StatusInternalServerError {
+		return errCode
+	} else if errCode == http.StatusNotFound {
+		return http.StatusBadRequest
+	}
+
+	logCtx := log.WithFields(log.Fields{"project_id": projectId, "user_id": userId})
+
+	for _, userProperties := range userPropertyRecords {
+		var propertiesMap map[string]interface{}
+
+		if !U.IsEmptyPostgresJsonb(&userProperties.Properties) {
+			err := json.Unmarshal(userProperties.Properties.RawMessage, &propertiesMap)
+			if err != nil {
+				logCtx.Error("Failed to update user property record. JSON unmarshal failed.")
+				continue
+			}
+		} else {
+			propertiesMap = make(map[string]interface{}, 0)
+		}
+
+		// Script changes: donot update if property key exist.
+		if _, exists := propertiesMap[property]; exists {
+			log.Info("No update required. Property already exists.")
+			continue
+		}
+
+		logCtx = logCtx.WithFields(log.Fields{"properties_id": userProperties.ID, "property": property, "value": value})
+
+		propertiesMap[property] = value
+		properitesBytes, err := json.Marshal(propertiesMap)
+		if err != nil {
+			// log and continue update next user property.
+			logCtx.Error("Failed to update user property record. JSON marshal failed.")
+			continue
+		}
+		updatedProperties := postgres.Jsonb{RawMessage: json.RawMessage(properitesBytes)}
+
+		// Triggers multiple updates.
+		errCode := M.OverwriteUserProperties(projectId, userId, userProperties.ID, &updatedProperties)
+		if errCode == http.StatusInternalServerError {
+			logCtx.WithError(err).Error("Failed to update user property record. DB query failed.")
+			continue
+		}
+	}
+
+	return http.StatusAccepted
 }
