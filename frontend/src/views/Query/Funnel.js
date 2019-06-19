@@ -95,10 +95,15 @@ const Funnel = (props) => {
     }
   }
 
-  let offset = 0
+  let offset = 0;
+  let totalConversionLeft = null;
+
   if (graphCols.length == 1) offset = 5;
-  if (graphCols.length == 3) offset = 3;
   if (graphCols.length == 5) offset = 2;
+  if (graphCols.length == 3) {
+    totalConversionLeft = '-90px';
+    offset = 3;
+  }
   
   if (offset > 0) {
     graphCols.unshift(<Col xs={{ offset: offset }}></Col>);
@@ -108,7 +113,7 @@ const Funnel = (props) => {
   let totalConvStr = props.data.totalConversion + '%';
   return (
     <Col md='12'>
-      <div style={{textAlign: 'center', marginBottom: '30px'}}> 
+      <div style={{textAlign: 'center', marginBottom: '40px', marginLeft: totalConversionLeft}}> 
         <span style={{fontWeight: '600', color: '#777', fontSize: '15px'}}> Total Conversion Rate: { totalConvStr } </span> 
       </div>
       <Row noGutters={true}>{graphCols}</Row>

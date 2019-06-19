@@ -1028,7 +1028,7 @@ class Query extends Component {
     // group based funnels.
     if (showGroupsTable) {
       present.push(
-        <div style={{ marginTop: '85px' }}>
+        <div style={{ marginTop: '55px' }}>
           <Table className="fapp-table">
             <thead>{ tableHeaders }</thead>
             <tbody>{ tableRows }</tbody>
