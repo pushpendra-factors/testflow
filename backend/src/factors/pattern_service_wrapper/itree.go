@@ -1008,8 +1008,8 @@ func (it *Itree) buildAndAddPropertyChildNodes(reqId string,
 
 	// Add children by splitting on constraints on categorical properties.
 	pLen = len(parentPattern.EventNames)
-	MAX_CAT_PROPERTIES_EVALUATED := 500
-	MAX_CAT_VALUES_EVALUATED := 1000
+	MAX_CAT_PROPERTIES_EVALUATED := 50
+	MAX_CAT_VALUES_EVALUATED := 100
 
 	if eventInfo != nil && pLen > 1 {
 		childNodes = append(childNodes, it.buildCategoricalPropertyChildNodes(reqId,
@@ -1025,7 +1025,7 @@ func (it *Itree) buildAndAddPropertyChildNodes(reqId string,
 
 	// Add children by splitting on constraints on categorical properties.
 	pLen = len(parentPattern.EventNames)
-	MAX_NUM_PROPERTIES_EVALUATED := 500
+	MAX_NUM_PROPERTIES_EVALUATED := 50
 	if eventInfo != nil && pLen > 1 {
 		childNodes = append(childNodes, it.buildNumericalPropertyChildNodes(reqId,
 			eventInfo.NumericPropertyKeys, NODE_TYPE_EVENT_PROPERTY, MAX_NUM_PROPERTIES_EVALUATED,
