@@ -638,8 +638,9 @@ func buildBarGraphResult(node *ItreeNode, countType string) (*graphResult, error
 		ruleCounts = append(ruleCounts, node.KLDistances[i].Fcr)
 		rulePercentages[node.KLDistances[i].PropertyValue] = rulePercentage
 
-		if len(node.KLDistances[i].PropertyValue) > 50 {
-			node.KLDistances[i].PropertyValue = node.KLDistances[i].PropertyValue[:50] + "..."
+		MAX_LABEL_LENGTH := 30
+		if len(node.KLDistances[i].PropertyValue) > MAX_LABEL_LENGTH {
+			node.KLDistances[i].PropertyValue = node.KLDistances[i].PropertyValue[:MAX_LABEL_LENGTH] + "..."
 		}
 		propertyValues = append(propertyValues, node.KLDistances[i].PropertyValue)
 		if node.KLDistances[i].PropertyValue != OTHER_PROPERTY_VALUES_LABEL &&
@@ -795,7 +796,7 @@ func buildFactorResultsFromPatterns(reqId string, nodes []*ItreeNode,
 		var chart *graphResult = nil
 		// Change URL events names to Visited URL for better readability.
 		for i, en := range node.Pattern.EventNames {
-			if strings.HasSuffix(en, "/") {
+			if strings.HasSuffix(en, "/") && !strings.HasPrefix(en, "Visited") {
 				node.Pattern.EventNames[i] = "Visited " + en
 			}
 		}
