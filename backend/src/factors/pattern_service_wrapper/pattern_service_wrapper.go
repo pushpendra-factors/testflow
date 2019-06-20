@@ -208,6 +208,10 @@ func eventStringWithConditions(eventName string, eventConstraints *P.EventConstr
 	if eventString == U.SEN_ALL_EVENTS {
 		eventString = U.SEN_ALL_EVENTS_DISPLAY_STRING
 	}
+	// Change URL events names to Visited URL for better readability.
+	if strings.HasSuffix(eventString, "/") && !strings.HasPrefix(eventString, "Visited") {
+		eventString = "Visited " + eventString
+	}
 	var seenProperty bool = false
 	if eventConstraints != nil {
 		for _, nC := range eventConstraints.EPNumericConstraints {
@@ -342,10 +346,12 @@ func barGraphHeaderString(
 		impactString = fmt.Sprintf("with %s in %s", propertyName, propertyValuesString)
 	} else {
 		if countType == P.COUNT_TYPE_PER_USER {
-			impactString = fmt.Sprintf("who have %s with %s in %s", patternEvents[pLen-2],
+			impactString = fmt.Sprintf("who have %s with %s in %s",
+				eventStringWithConditions(patternEvents[pLen-2], nil),
 				propertyName, propertyValuesString)
 		} else if countType == P.COUNT_TYPE_PER_OCCURRENCE {
-			impactString = fmt.Sprintf("of %s with %s in %s", patternEvents[pLen-2],
+			impactString = fmt.Sprintf("of %s with %s in %s",
+				eventStringWithConditions(patternEvents[pLen-2], nil),
 				propertyName, propertyValuesString)
 		}
 	}
@@ -374,7 +380,7 @@ func barGraphHeaderString(
 	if countType == P.COUNT_TYPE_PER_USER {
 		header = fmt.Sprintf("Users %s%s%s %s.", impactString, otherEventString, conversionChangeString, endEventString)
 	} else if countType == P.COUNT_TYPE_PER_OCCURRENCE {
-		header = fmt.Sprintf("Occurrences of %s%s%s convert to %s.", impactString, otherEventString, conversionChangeString, endEventString)
+		header = fmt.Sprintf("Occurrences %s%s%s convert to %s.", impactString, otherEventString, conversionChangeString, endEventString)
 	}
 
 	totalPatternPercentage := 0.0
@@ -665,11 +671,6 @@ func buildBarGraphResult(node *ItreeNode, countType string) (*graphResult, error
 			patternsLabel += U.SEN_ALL_ACTIVE_USERS_DISPLAY_STRING
 		}
 	} else {
-		if countType == P.COUNT_TYPE_PER_USER {
-			patternsLabel += "Users who "
-		} else if countType == P.COUNT_TYPE_PER_OCCURRENCE {
-			patternsLabel += "Occurrences of "
-		}
 		for i := 0; i < pLen-3; i++ {
 			patternsLabel += eventStringWithConditions(
 				node.Pattern.EventNames[i], &node.PatternConstraints[i])
@@ -680,13 +681,8 @@ func buildBarGraphResult(node *ItreeNode, countType string) (*graphResult, error
 	}
 	rulesLabel := ""
 	if pLen == 1 {
-		if countType == P.COUNT_TYPE_PER_USER {
-			rulesLabel += "Users who " + eventStringWithConditions(
-				node.Pattern.EventNames[0], &node.PatternConstraints[0])
-		} else if countType == P.COUNT_TYPE_PER_OCCURRENCE {
-			rulesLabel += "Occurrences of " + eventStringWithConditions(
-				node.Pattern.EventNames[0], &node.PatternConstraints[0])
-		}
+		rulesLabel += eventStringWithConditions(
+			node.Pattern.EventNames[0], &node.PatternConstraints[0])
 	} else {
 		rulesLabel += patternsLabel + " and " + eventStringWithConditions(
 			node.Pattern.EventNames[pLen-1], &node.PatternConstraints[pLen-1])
@@ -718,6 +714,39 @@ func buildBarGraphResult(node *ItreeNode, countType string) (*graphResult, error
 			increasedValues, decreasedValues, percentageGain, percentageLoss))
 	}
 
+	yLabel := ""
+	if countType == P.COUNT_TYPE_PER_USER {
+		yLabel = "Percentage of users"
+	} else if countType == P.COUNT_TYPE_PER_OCCURRENCE {
+		yLabel = "Percentage of occurrences"
+	}
+
+	// Compute percentages.
+	totalPatternCounts := 0.0
+	for _, c := range patternCounts {
+		totalPatternCounts += float64(c)
+	}
+	patternPercentagesArray := []float64{}
+	for _, c := range patternCounts {
+		x := float64(c) * 100 / totalPatternCounts
+		patternPercentagesArray = append(
+			patternPercentagesArray,
+			math.Floor(x*10)/10.0) // Round to one decimal point.
+	}
+
+	totalRuleCounts := 0.0
+	for _, c := range ruleCounts {
+		totalRuleCounts += float64(c)
+	}
+	rulePercentagesArray := []float64{}
+	for _, c := range ruleCounts {
+		x := float64(c) * 100 / totalRuleCounts
+
+		rulePercentagesArray = append(
+			rulePercentagesArray,
+			math.Floor(x*10)/10.0) // Round to one decimal point.
+	}
+
 	// Bar Chart.
 	chart := &graphResult{
 		Type:         "bar",
@@ -727,15 +756,15 @@ func buildBarGraphResult(node *ItreeNode, countType string) (*graphResult, error
 		Datasets: []map[string]interface{}{
 			map[string]interface{}{
 				"label": patternsLabel,
-				"data":  patternCounts,
+				"data":  patternPercentagesArray,
 			},
 			map[string]interface{}{
 				"label": rulesLabel,
-				"data":  ruleCounts,
+				"data":  rulePercentagesArray,
 			},
 		},
 		XLabel: node.PropertyName,
-		YLabel: "Number of users",
+		YLabel: yLabel,
 	}
 	return chart, nil
 }
@@ -794,12 +823,6 @@ func buildFactorResultsFromPatterns(reqId string, nodes []*ItreeNode,
 
 	for _, node := range nodes {
 		var chart *graphResult = nil
-		// Change URL events names to Visited URL for better readability.
-		for i, en := range node.Pattern.EventNames {
-			if strings.HasSuffix(en, "/") && !strings.HasPrefix(en, "Visited") {
-				node.Pattern.EventNames[i] = "Visited " + en
-			}
-		}
 		if node.NodeType == NODE_TYPE_SEQUENCE || node.NodeType == NODE_TYPE_EVENT_PROPERTY ||
 			node.NodeType == NODE_TYPE_USER_PROPERTY {
 			// Dedup results to show more novel results as user scrolls down.
