@@ -465,8 +465,9 @@ class Query extends Component {
     let eventProperties = { 
       projectId: this.props.currentProjectId,
       query: JSON.stringify(query),
-      queryType: query.type,
-      eventsCondition: query.eventsCondition,
+      class: query.cl,
+      type: query.ty,
+      condition: query.ec,
       presentation: presentation,
     };
     let startTime = new Date().getTime();
