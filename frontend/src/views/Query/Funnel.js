@@ -101,7 +101,7 @@ const Funnel = (props) => {
   if (graphCols.length == 1) offset = 5;
   if (graphCols.length == 5) offset = 2;
   if (graphCols.length == 3) {
-    totalConversionLeft = '-90px';
+    totalConversionLeft = '-9%';
     offset = 3;
   }
   

@@ -78,6 +78,7 @@ const (
 
 	ErrUnsupportedGroupByEventPropertyOnUserQuery = "group by event property is not supported for user query"
 	ErrMsgQueryProcessingFailure                  = "Failed processing query"
+	ErrMsgMaxFunnelStepsExceeded                  = "Max funnel steps exceeded"
 
 	SelectDefaultEventFilter              = "events.id as event_id, events.user_id as event_user_id"
 	SelectDefaultEventFilterWithDistinct  = "DISTINCT(events.id) as event_id, events.user_id as event_user_id"
@@ -1520,7 +1521,15 @@ func RunInsightsQuery(projectId uint64, query Query) (*QueryResult, int, string)
 	return result, http.StatusOK, "Successfully executed query"
 }
 
+func isValidFunnelQuery(query *Query) bool {
+	return len(query.EventsWithProperties) <= 4
+}
+
 func RunFunnelQuery(projectId uint64, query Query) (*QueryResult, int, string) {
+	if !isValidFunnelQuery(&query) {
+		return nil, http.StatusBadRequest, ErrMsgMaxFunnelStepsExceeded
+	}
+
 	stmnt, params, err := BuildFunnelQuery(projectId, query)
 	if err != nil {
 		log.WithError(err).Error(ErrMsgQueryProcessingFailure)

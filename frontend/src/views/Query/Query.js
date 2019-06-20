@@ -89,6 +89,7 @@ const DEFINED_DATE_RANGES = createStaticRanges([
 ]);
 
 const ERROR_NO_EVENT = 'No events given. Please add atleast one event by clicking +Event button.';
+const ERROR_FUNNEL_EXCEEDED_EVENTS = 'Funnel queries supports upto 4 events. Please ensure that you have the same.';
 
 const DEFAULT_PRESENTATION = PRESENTATION_TABLE;
 
@@ -426,25 +427,38 @@ class Query extends Component {
       }
     }
     if (!hasEvent) return ERROR_NO_EVENT;
+    if (this.state.class.value == QUERY_CLASS_FUNNEL && this.state.events.length > 4)
+      return ERROR_FUNNEL_EXCEEDED_EVENTS;
+
+    return "";
   }
 
   showTopError(error) {
-    if (!error) {
-      this.setState({ topError: null });
-      return;
-    }
-
     this.setState({ topError: error });
   }
 
-  run = (presentation) => {
-    this.scrollToBottom();
+  resetTopError() {
+    this.setState({ topError: null });
+  }
+  
+  resetResult() {
+    this.setState({ result: null });
+  }
 
+  run = (presentation) => {
     if (presentation == "")
       throw new Error('Invalid presentation');
 
-    this.showTopError(this.validateQuery());
-    
+    let err = this.validateQuery();
+    if (err != "") {
+      this.showTopError(err);
+      this.resetResult();
+      return;
+    } else {
+      this.resetTopError();
+    }
+
+    this.scrollToBottom();
     this.setState({ isResultLoading: true, showPresentation: true });
     let query = this.getQuery(presentation === PRESENTATION_LINE);
 
