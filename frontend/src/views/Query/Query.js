@@ -136,7 +136,7 @@ class Query extends Component {
       result: null,
       resultError: null,
       isResultLoading: false,
-      selectedPresentation: null,
+      selectedPresentation: DEFAULT_PRESENTATION,
 
       showPresentation: false,
       showDatePicker: false,
@@ -762,7 +762,7 @@ class Query extends Component {
       <Row style={{marginBottom: '15px'}}>
         <div style={{width:'100%', textAlign: 'center'}}>
           <Button color='primary' style={{fontSize: '0.9rem', padding: '8px 18px', fontWeight: '500'}} 
-            onClick={() =>  this.run(DEFAULT_PRESENTATION)}>Run Query</Button>
+            onClick={() =>  this.run(this.state.selectedPresentation)}>Run Query</Button>
         </div>  
       </Row>
     );
