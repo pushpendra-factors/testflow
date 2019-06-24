@@ -5,6 +5,7 @@ import (
 	U "factors/util"
 	"fmt"
 	"math"
+	"net/url"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -359,14 +360,35 @@ func (p *Pattern) ResetForNewUser(userId string, userJoinTimestamp int64) error 
 	return nil
 }
 
+func clipCategoricalValue(catValue string) string {
+	MAX_CATEGORICAL_STRING_LENGTH := 50
+	if len(catValue) < MAX_CATEGORICAL_STRING_LENGTH {
+		return catValue
+	}
+	// If it is a url just use the Hostname+Path.
+	// It's a common case.
+	u, err := url.Parse(catValue)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"err":      err,
+			"catValue": catValue,
+		}).Fatal(err)
+	}
+	hostPath := fmt.Sprintf("%s%s", u.Hostname(), u.EscapedPath())
+	if len(hostPath) > 0 && len(hostPath) < MAX_CATEGORICAL_STRING_LENGTH {
+		return hostPath
+	}
+	return catValue[:MAX_CATEGORICAL_STRING_LENGTH]
+}
+
 func addNumericAndCategoricalProperties(
 	eventIndex int, properties map[string]interface{},
 	nMap map[string]float64, cMap map[string]string) {
-
 	for key, value := range properties {
 		if numericValue, ok := value.(float64); ok {
 			nMap[PatternPropertyKey(eventIndex, key)] = numericValue
 		} else if categoricalValue, ok := value.(string); ok {
+			categoricalValue = clipCategoricalValue(categoricalValue)
 			cMap[PatternPropertyKey(eventIndex, key)] = categoricalValue
 		}
 	}

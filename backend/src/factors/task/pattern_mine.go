@@ -411,6 +411,8 @@ func mineAndWritePatterns(projectId uint64, filepath string,
 	var cumulativePatternsSize int64 = 0
 
 	patternLen := 1
+	limitRoundOffFraction := 0.99
+
 	filteredPatterns, patternsSize, err := mineAndWriteLenOnePatterns(
 		eventNames, filepath, userAndEventsInfo, numRoutines, chunkDir,
 		maxModelSize, cumulativePatternsSize)
@@ -419,7 +421,7 @@ func mineAndWritePatterns(projectId uint64, filepath string,
 	}
 	cumulativePatternsSize += patternsSize
 	printFilteredPatterns(filteredPatterns, patternLen)
-	if cumulativePatternsSize >= maxModelSize {
+	if cumulativePatternsSize >= int64(float64(maxModelSize)*limitRoundOffFraction) {
 		return nil
 	}
 
@@ -435,7 +437,7 @@ func mineAndWritePatterns(projectId uint64, filepath string,
 	}
 	cumulativePatternsSize += patternsSize
 	printFilteredPatterns(filteredPatterns, patternLen)
-	if cumulativePatternsSize >= maxModelSize {
+	if cumulativePatternsSize >= int64(float64(maxModelSize)*limitRoundOffFraction) {
 		return nil
 	}
 
@@ -467,7 +469,7 @@ func mineAndWritePatterns(projectId uint64, filepath string,
 			return err
 		}
 		printFilteredPatterns(filteredPatterns, patternLen)
-		if cumulativePatternsSize >= maxModelSize {
+		if cumulativePatternsSize >= int64(float64(maxModelSize)*limitRoundOffFraction) {
 			return nil
 		}
 	}
