@@ -5,6 +5,13 @@ export const PROPERTY_TYPE_OPTS = {
     'user': 'user property'
 };
 
+export const USER_PREF_PROPERTY_TYPE_OPTS = {
+    // user property preferred on top/default.
+    'user': 'user property', 
+    'event': 'event property'
+};
+
+
 export const HEADER_COUNT = "count";
 export const HEADER_DATE = "date";
 

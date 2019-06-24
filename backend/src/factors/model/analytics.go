@@ -269,7 +269,7 @@ func buildGroupKeys(groupProps []QueryGroupByProperty) (groupSelect string,
 func addFilterEventsWithPropsQuery(projectId uint64, qStmnt *string, qParams *[]interface{},
 	qep QueryEventWithProperties, from int64, to int64, fromStr string,
 	stepName string, addSelecStmnt string, addSelectParams []interface{},
-	addJoinStmnt string, filterGroupBy string) error {
+	addJoinStmnt string, groupBy string, orderBy string) error {
 
 	if (from == 0 && fromStr == "") || to == 0 {
 		return errors.New("invalid timerange on events filter")
@@ -318,8 +318,12 @@ func addFilterEventsWithPropsQuery(projectId uint64, qStmnt *string, qParams *[]
 		*qParams = append(*qParams, wParams...)
 	}
 
-	if filterGroupBy != "" {
-		rStmnt = fmt.Sprintf("%s group by %s", rStmnt, filterGroupBy)
+	if groupBy != "" {
+		rStmnt = fmt.Sprintf("%s GROUP BY %s", rStmnt, groupBy)
+	}
+
+	if orderBy != "" {
+		rStmnt = fmt.Sprintf("%s ORDER BY %s", rStmnt, orderBy)
 	}
 
 	if stepName != "" {
@@ -386,51 +390,6 @@ func addJoinLatestUserPropsQuery(groupProps []QueryGroupByProperty, refStepName 
 	*qParams = append(*qParams, gSelectParams...)
 
 	return gKeys
-}
-
-// Adds additional join to the events filter,  for considering users only from prev
-// step and with diff step names.
-func addFilterEventsWithPropsForUsersQuery(projectId uint64, query Query,
-	qStmnt *string, qParams *[]interface{}) string {
-
-	var rStmnt string
-	var rParams []interface{}
-
-	stepName := ""
-	lastEwpIndex := len(query.EventsWithProperties) - 1
-	for i, ewp := range query.EventsWithProperties {
-		// initially prevStepName will be empty.
-		prevStepName := stepName
-
-		if stepName == "" {
-			stepName = fmt.Sprintf("step%d", i)
-		} else {
-			stepName = fmt.Sprintf("%s_step%d", stepName, i)
-		}
-
-		var filterSelect string
-		var usersFromLastStep string
-		if i > 0 {
-			filterSelect = SelectDefaultEventFilterWithDistinct
-			usersFromLastStep = "JOIN " + prevStepName + " ON events.user_id=" + prevStepName + ".event_user_id"
-		} else {
-			filterSelect = SelectDefaultEventFilter
-		}
-
-		filterSelect = appendSelectTimestampIfRequired(filterSelect, query.Timezone, query.GroupByTimestamp)
-		addFilterEventsWithPropsQuery(projectId, &rStmnt, &rParams, ewp, query.From, query.To, "",
-			stepName, filterSelect, nil, usersFromLastStep, "")
-
-		if i != lastEwpIndex {
-			rStmnt = rStmnt + ", "
-		}
-	}
-
-	*qStmnt = appendStatement(*qStmnt, rStmnt)
-	*qParams = append(*qParams, rParams...)
-
-	// last step name for ref.
-	return stepName
 }
 
 func filterGroupPropsByType(gp []QueryGroupByProperty, entity string) []QueryGroupByProperty {
@@ -504,128 +463,245 @@ func appendLimitByCondition(qStmnt string, groupProps []QueryGroupByProperty, gr
 	return fmt.Sprintf("%s LIMIT %d", qStmnt, MaxResultsLimit)
 }
 
-func buildAnyGivenEventFilterQuery(projectId uint64, q Query) (string, []interface{}, string, string) {
-	qStmnt := ""
-	qParams := make([]interface{}, 0, 0)
+/*
+addEventFilterStepsForUniqueUsersQuery - Builds and adds events filter steps
+for unique users queries with group by properties and date.
+
+Example:
+
+step0 AS (
+	-- Using DISTINCT ON user_id for getting unique users and event properties on
+	first occurrence of the event done by the user --
+    SELECT DISTINCT ON(events.user_id) events.user_id as event_user_id,
+    events.properties->>'category' as group_prop2 FROM events
+    LEFT JOIN user_properties ON events.user_properties_id=user_properties.id
+    WHERE events.project_id='1' AND timestamp>='1393632004' AND timestamp<='1396310325'
+    AND events.event_name_id IN (SELECT id FROM event_names WHERE project_id='1' AND name='View Project')
+    ORDER BY events.user_id, events.timestamp ASC
+),
+step1 AS (
+    SELECT DISTINCT ON(events.user_id) events.user_id as event_user_id,
+    events.properties->>'category' as group_prop2 FROM events
+    LEFT JOIN user_properties ON events.user_properties_id=user_properties.id
+    WHERE events.project_id='1' AND timestamp>='1393632004' AND timestamp<='1396310325'
+    AND events.event_name_id IN (SELECT id FROM event_names WHERE project_id='1' AND name='Fund Project')
+    ORDER BY events.user_id, events.timestamp ASC
+)
+*/
+
+func addEventFilterStepsForUniqueUsersQuery(projectId uint64, q *Query,
+	qStmnt *string, qParams *[]interface{}) []string {
+
+	var stepSelect string
+	var stepOrderBy string
+
+	if q.GroupByTimestamp {
+		// select and order by with date.
+		stepSelect = "DISTINCT ON(events.user_id, (to_timestamp(timestamp) AT TIME ZONE 'UTC')::date)" +
+			" " + joinWithComma("events.user_id as event_user_id",
+			fmt.Sprintf("(to_timestamp(timestamp) AT TIME ZONE 'UTC')::date as %s", AliasDate))
+		stepOrderBy = fmt.Sprintf("events.user_id, %s, events.timestamp ASC", AliasDate)
+	} else {
+		// default select.
+		stepSelect = "DISTINCT ON(events.user_id) events.user_id as event_user_id"
+	}
 
 	eventGroupProps := filterGroupPropsByType(q.GroupByProperties, PropertyEntityEvent)
-	groupSelect, groupParams, groupKeys := buildGroupKeys(eventGroupProps)
+	egSelect, egParams, _ := buildGroupKeys(eventGroupProps)
 
-	var filterSelect string
-	if q.Type == QueryTypeUniqueUsers {
-		filterSelect = "DISTINCT(events.user_id) as event_user_id"
-	} else {
-		filterSelect = SelectDefaultEventFilter
+	if hasGroupEntity(q.GroupByProperties, PropertyEntityEvent) {
+		stepSelect = joinWithComma(stepSelect, egSelect)
+
+		if stepOrderBy == "" {
+			// Using first occurred event_properites after distinct on user_id.
+			stepOrderBy = "events.user_id, events.timestamp ASC"
+		}
 	}
 
-	filterSelect = joinWithComma(filterSelect, groupSelect)
-	filterSelect = appendSelectTimestampIfRequired(filterSelect, q.Timezone, q.GroupByTimestamp)
-
-	refStepName := ""
-	filters := make([]string, 0)
+	steps := make([]string, 0, 0)
 	for i, ewp := range q.EventsWithProperties {
-		refStepName = fmt.Sprintf("step%d", i)
-		filters = append(filters, refStepName)
-		addFilterEventsWithPropsQuery(projectId, &qStmnt, &qParams, ewp, q.From, q.To, "",
-			refStepName, filterSelect, groupParams, "", "")
-		if len(q.EventsWithProperties) > 1 {
-			qStmnt = qStmnt + ", "
+		refStepName := fmt.Sprintf("step%d", i)
+		steps = append(steps, refStepName)
+
+		var stepJoin string
+		if hasWhereEntity(ewp, PropertyEntityUser) {
+			// Join user_properties if where with user_properties exist.
+			stepJoin = "LEFT JOIN user_properties ON events.user_properties_id=user_properties.id"
+		}
+
+		addFilterEventsWithPropsQuery(projectId, qStmnt, qParams, ewp, q.From, q.To,
+			"", refStepName, stepSelect, egParams, stepJoin, "", stepOrderBy)
+
+		if i < len(q.EventsWithProperties)-1 {
+			*qStmnt = *qStmnt + ","
 		}
 	}
 
-	// union.
-	if len(filters) > 1 {
-		var unionType string
-		if q.Type == QueryTypeUniqueUsers {
-			// event_user_id is not unique after filtering.
-			unionType = "UNION"
-		} else {
-			// event_id is already unique.
-			unionType = "UNION ALL"
-		}
+	return steps
+}
 
-		unionStepName := "any_event"
-		unionStmnt := ""
-		for _, filter := range filters {
-			if unionStmnt != "" {
-				unionStmnt = appendStatement(unionStmnt, unionType)
-			}
+/*
+addUniqueUsersAggregationQuery - Builds and adds final aggregation query for Unique Users queries
+with group by properties and date.
 
-			var qSelect string
-			if q.Type == QueryTypeUniqueUsers {
-				qSelect = "event_user_id"
-			} else {
-				qSelect = SelectDefaultEventFilterByAlias
-			}
+Example:
 
-			qSelect = appendSelectTimestampColIfRequired(qSelect, q.GroupByTimestamp)
-			qSelect = joinWithComma(qSelect, groupKeys)
-			unionStmnt = unionStmnt + " SELECT " + qSelect + " FROM " + filter
-		}
-		unionStmnt = as(unionStepName, unionStmnt)
-		qStmnt = appendStatement(qStmnt, unionStmnt)
+SELECT user_properties.properties->>'gender' as gk_0, gk_1,
+COUNT(DISTINCT(COALESCE(users.customer_user_id, event_user_id))) FROM users_union
+LEFT JOIN users ON users_union.event_user_id=users.id
+LEFT JOIN user_properties ON users.id=user_properties.user_id and user_properties.id=users.properties_id
+GROUP BY gk_0, gk_1 ORDER BY count DESC LIMIT 10000;
+*/
 
-		refStepName = unionStepName
+func addUniqueUsersAggregationQuery(query *Query, qStmnt *string, qParams *[]interface{}, refStep string) {
+	eventGroupProps := filterGroupPropsByType(query.GroupByProperties, PropertyEntityEvent)
+	_, _, egKeys := buildGroupKeys(eventGroupProps)
+
+	// select
+	userGroupProps := filterGroupPropsByType(query.GroupByProperties, PropertyEntityUser)
+	ugSelect, ugSelectParams, _ := buildGroupKeys(userGroupProps)
+	*qParams = append(*qParams, ugSelectParams...)
+	// order of group keys changes here if users and event
+	// group by used together, but translated correctly.
+	termSelect := joinWithComma(ugSelect, egKeys)
+	termSelect = appendSelectTimestampColIfRequired(termSelect, query.GroupByTimestamp)
+	termSelect = joinWithComma(termSelect, fmt.Sprintf("COUNT(DISTINCT(%s)) AS %s",
+		SelectCoalesceCustomerUserIDAndUserID, AliasAggr))
+
+	// group by
+	termStmnt := "SELECT " + termSelect + " FROM " + refStep
+	termStmnt = termStmnt + " " + "LEFT JOIN users ON " + refStep + ".event_user_id=users.id"
+	// join latest user_properties, only if group by user property present.
+	if ugSelect != "" {
+		termStmnt = termStmnt + " " + "LEFT JOIN user_properties ON users.id=user_properties.user_id AND user_properties.id=users.properties_id"
 	}
+	_, _, groupKeys := buildGroupKeys(query.GroupByProperties)
+	termStmnt = appendGroupByTimestampIfRequired(termStmnt, query.GroupByTimestamp, groupKeys)
+	termStmnt = appendOrderByAggr(termStmnt)
+	termStmnt = appendLimitByCondition(termStmnt, query.GroupByProperties, query.GroupByTimestamp)
 
-	return qStmnt, qParams, groupKeys, refStepName
+	*qStmnt = appendStatement(*qStmnt, termStmnt)
 }
 
 /*
 buildUniqueUsersWithAllGivenEventsQuery builds a query like below,
-Group by: user_properties.
+Group by: user_properties, event_properties
+
+Example: Query without date and with group by properties.
 
 WITH
-    e1 AS (
-        SELECT distinct(events.id) as event_id, events.user_id as event_user_id FROM events
-        LEFT JOIN user_properties ON events.user_properties_id=user_properties.id
-		WHERE events.project_id=1 AND events.timestamp >= 1393632004 AND events.timestamp <= 1396310325
-		AND events.event_name_id IN (SELECT id FROM event_names WHERE project_id='1' AND name='View Project')
-        AND events.properties->>'category'='Sports' AND user_properties.properties->>'gender'='M'
-    ),
-    e1_e2 AS (
-        SELECT distinct(events.id) as event_id, events.user_id as event_user_id FROM events
-        JOIN e1 ON events.user_id=e1.event_user_id
-        LEFT JOIN user_properties ON events.user_properties_id=user_properties.id
-		WHERE events.project_id=1 AND events.timestamp >= 1393632004 AND events.timestamp <= 1396310325
-		AND events.event_name_id IN (SELECT id FROM event_names WHERE project_id='1' AND name='Fund Project')
-        AND events.properties->>'category'='Sports' AND user_properties.properties->>'gender'='M'
-    )
-    SELECT user_properties.properties->>'$region' as group_prop1, COUNT(DISTINCT(COALESCE(users.customer_user_id, event_user_id))) from e1_e2
-    left join users on e1_e2.event_user_id=users.id
-    left join user_properties on users.id=user_properties.user_id and user_properties.id=users.properties_id
-    GROUP BY group_prop1 order by count desc;
-*/
-func buildUniqueUsersWithAllGivenEventsQuery(projectId uint64, q Query) (string, []interface{}, error) {
-	if len(q.EventsWithProperties) == 0 {
-		return "", nil, errors.New("zero events on the query")
-	}
+step0 AS (
+	-- Using DISTINCT ON user_id for getting unique users and event properties on
+	first occurrence of the event done by the user --
+    SELECT DISTINCT ON(events.user_id) events.user_id as event_user_id,
+    events.properties->>'category' as group_prop2 FROM events
+    LEFT JOIN user_properties ON events.user_properties_id=user_properties.id
+    WHERE events.project_id='1' AND timestamp>='1393632004' AND timestamp<='1396310325'
+    AND events.event_name_id IN (SELECT id FROM event_names WHERE project_id='1' AND name='View Project')
+    ORDER BY events.user_id, events.timestamp ASC
+),
+step1 AS (
+    SELECT DISTINCT ON(events.user_id) events.user_id as event_user_id,
+    events.properties->>'category' as group_prop2 FROM events
+    LEFT JOIN user_properties ON events.user_properties_id=user_properties.id
+    WHERE events.project_id='1' AND timestamp>='1393632004' AND timestamp<='1396310325'
+    AND events.event_name_id IN (SELECT id FROM event_names WHERE project_id='1' AND name='Fund Project')
+    ORDER BY events.user_id, events.timestamp ASC
+),
+users_intersect AS (
+    SELECT step0.event_user_id as event_user_id, step0.group_prop2 as group_prop2 from step0
+    JOIN step1 ON step0.event_user_id = step1.event_user_id
+)
+SELECT user_properties.properties->>'$region' as group_prop1, group_prop2,
+COUNT(DISTINCT(COALESCE(users.customer_user_id, event_user_id))) FROM users_intersect
+LEFT JOIN users ON users_intersect.event_user_id=users.id
+LEFT JOIN user_properties ON users.id=user_properties.user_id and user_properties.id=users.properties_id
+GROUP BY group_prop1, group_prop2 ORDER BY count DESC LIMIT 10000;
 
-	if hasGroupEntity(q.GroupByProperties, PropertyEntityEvent) {
-		return "", nil, errors.New(ErrUnsupportedGroupByEventPropertyOnUserQuery)
+-- Expanded replacement for COUNT(DISTINCT(COALESCE(users.customer_user_id, event_user_id))):
+real_users AS (SELECT date, COALESCE(users.customer_user_id, event_user_id) as real_user_id FROM
+users_intersect LEFT JOIN users ON users_intersect.event_user_id=users.id GROUP BY date, real_user_id)
+SELECT date, COUNT(real_user_id) AS count from real_users GROUP BY date ORDER BY count DESC
+--
+
+Example: Query with date
+
+WITH
+step0 AS (
+	-- DISTINCT ON user_id, date preserves users on each date --
+	SELECT DISTINCT ON(events.user_id, (to_timestamp(timestamp) AT TIME ZONE 'UTC')::date) events.user_id as event_user_id,
+	(to_timestamp(timestamp) AT TIME ZONE 'UTC')::date as date FROM events
+	WHERE events.project_id='1' AND timestamp>='1561091973' AND timestamp<='1561178373'
+	AND events.event_name_id IN (SELECT id FROM event_names WHERE project_id='1' AND name='localhost:3000/#/core')
+	ORDER BY events.user_id, date, events.timestamp ASC
+	-- Order by user_id, timestamp is not possible as we need to preserve unique user with date using DISTINCT ON (user_id, date) --
+),
+step1 AS (
+	SELECT DISTINCT ON(events.user_id, (to_timestamp(timestamp) AT TIME ZONE 'UTC')::date) events.user_id as event_user_id,
+	(to_timestamp(timestamp) AT TIME ZONE 'UTC')::date as date FROM events
+	WHERE events.project_id='1' AND timestamp>='1561091973' AND timestamp<='1561178373'
+	AND events.event_name_id IN (SELECT id FROM event_names WHERE project_id='1' AND name='run_query')
+	ORDER BY events.user_id, date, events.timestamp ASC
+),
+users_intersect AS (
+	-- Users who have done all the steps on each date. Join by user, date. --
+	SELECT step0.event_user_id as event_user_id, step0.date as date FROM step0
+	JOIN step1 ON step0.event_user_id = step1.event_user_id AND step0.date = step1.date
+)
+SELECT date, COUNT(DISTINCT(COALESCE(users.customer_user_id, event_user_id))) AS count FROM users_intersect
+LEFT JOIN users ON users_intersect.event_user_id=users.id GROUP BY date ORDER BY count DESC LIMIT 100000;
+
+*/
+func buildUniqueUsersWithAllGivenEventsQuery(projectId uint64, query Query) (string, []interface{}, error) {
+	if len(query.EventsWithProperties) == 0 {
+		return "", nil, errors.New("zero events on the query")
 	}
 
 	qStmnt := ""
 	qParams := make([]interface{}, 0, 0)
 
-	refStepName := addFilterEventsWithPropsForUsersQuery(projectId, q, &qStmnt, &qParams)
+	steps := addEventFilterStepsForUniqueUsersQuery(projectId, &query, &qStmnt, &qParams)
 
-	// select
-	var termSelect string
-	termSelect = appendSelectTimestampColIfRequired(termSelect, q.GroupByTimestamp)
-	termSelect = joinWithComma(termSelect, fmt.Sprintf("COUNT(DISTINCT(%s)) AS %s", SelectCoalesceCustomerUserIDAndUserID, AliasAggr))
+	// users intersection
+	intersectSelect := fmt.Sprintf("%s.event_user_id as event_user_id", steps[0])
+	if query.GroupByTimestamp {
+		intersectSelect = joinWithComma(intersectSelect,
+			fmt.Sprintf("%s.%s as %s", steps[0], AliasDate, AliasDate))
+	}
 
-	// group by
-	var termStmnt string
-	groupKeys := addJoinLatestUserPropsQuery(q.GroupByProperties, refStepName,
-		"", &termStmnt, &qParams, termSelect)
-	termStmnt = appendGroupByTimestampIfRequired(termStmnt, q.GroupByTimestamp, groupKeys)
-	termStmnt = appendOrderByAggr(termStmnt)
-	termStmnt = appendLimitByCondition(termStmnt, q.GroupByProperties, q.GroupByTimestamp)
+	eventGroupProps := filterGroupPropsByType(query.GroupByProperties, PropertyEntityEvent)
 
-	qStmnt = appendStatement(qStmnt, termStmnt)
+	// Todo: Use user selected step with group key for group by.
+	// added step0.__group_key_0 for now.
+	var groupKeysByStep string
+	for i, group := range eventGroupProps {
+		key := groupKeyByIndex(group.Index)
+		groupKeysByStep = groupKeysByStep + fmt.Sprintf("%s.%s", steps[0], key)
+		if i < len(eventGroupProps)-1 {
+			groupKeysByStep = groupKeysByStep + ", "
+		}
+	}
+	intersectSelect = joinWithComma(intersectSelect, groupKeysByStep)
 
-	// enclosed by 'with'.
+	var intersectJoin string
+	for i := range steps {
+		if i > 0 {
+			intersectJoin = intersectJoin + " " + fmt.Sprintf("JOIN %s ON %s.event_user_id = %s.event_user_id",
+				steps[i], steps[i], steps[i-1])
+
+			// include date also intersection condition on
+			// group by timestamp.
+			if query.GroupByTimestamp {
+				intersectJoin = intersectJoin + " " + fmt.Sprintf("AND %s.%s = %s.%s",
+					steps[i], AliasDate, steps[i-1], AliasDate)
+			}
+		}
+	}
+	stepUsersIntersect := "users_intersect"
+	qStmnt = joinWithComma(qStmnt, as(stepUsersIntersect,
+		fmt.Sprintf("SELECT %s FROM %s %s", intersectSelect, steps[0], intersectJoin)))
+
+	addUniqueUsersAggregationQuery(&query, &qStmnt, &qParams, stepUsersIntersect)
 	qStmnt = with(qStmnt)
 
 	return qStmnt, qParams, nil
@@ -633,59 +709,98 @@ func buildUniqueUsersWithAllGivenEventsQuery(projectId uint64, q Query) (string,
 
 /*
 buildUniqueUsersWithAnyGivenEventsQuery
-Group By: user_properties
+Group By: user_properties, event_properties
+
+Example: Query without date and with group by properties.
 
 WITH
-	e1 AS (
-        SELECT  DISTINCT(events.user_id) as event_user_id FROM events
-        LEFT JOIN user_properties ON events.user_properties_id=user_properties.id
-		WHERE events.project_id=2 AND events.timestamp >= 1393632004 AND events.timestamp <= 1396310325
-		AND events.event_name_id IN (SELECT id FROM event_names WHERE project_id='2' AND name='View Project')
-        AND events.properties->>'category'='Sports'
-    ),
-    e2 AS (
-        SELECT DISTINCT(events.user_id) as event_user_id FROM events
-        LEFT JOIN user_properties ON events.user_properties_id=user_properties.id
-		WHERE events.project_id=2 AND events.timestamp >= 1393632004 AND events.timestamp <= 1396310325
-		AND events.event_name_id IN (SELECT id FROM event_names WHERE project_id='2' AND name='Fund Project')
-        AND events.properties->>'category'='Sports'
-    ),
-	any_event AS (
-        SELECT event_user_id FROM e1 UNION SELECT event_user_id FROM e2
+	step0 AS (
+		-- Using DISTINCT ON user_id for getting unique users and event properties on first
+		occurrence of the event done by the user --
+		SELECT DISTINCT ON(events.user_id) events.user_id as event_user_id,
+		events.properties->>'category' as gk_1 FROM events
+		LEFT JOIN user_properties ON events.user_properties_id=user_properties.id
+		WHERE events.project_id='1' AND timestamp>='1393632004' AND timestamp<='1396310325'
+		AND events.event_name_id IN (SELECT id FROM event_names WHERE project_id='1' AND name='View Project')
+		ORDER BY events.user_id, events.timestamp ASC
+	),
+	step1 AS (
+		SELECT DISTINCT ON(events.user_id) events.user_id as event_user_id,
+		events.properties->>'category' as gk_1 FROM events
+		LEFT JOIN user_properties ON events.user_properties_id=user_properties.id
+		WHERE events.project_id='1' AND timestamp>='1393632004' AND timestamp<='1396310325'
+		AND events.event_name_id IN (SELECT id FROM event_names WHERE project_id='1' AND name='Fund Project')
+		ORDER BY events.user_id, events.timestamp ASC
+	),
+	users_union AS (
+		-- Using union all instead of union for avoiding unwanted
+		dedeuplication involving event_property from steps --
+		SELECT step0.event_user_id as event_user_id, gk_1 FROM step0 UNION ALL
+		SELECT step1.event_user_id as event_user_id, gk_1 FROM step1
 	)
-	SELECT user_properties.properties->>'gender' as gk_0, COUNT(DISTINCT(COALESCE(users.customer_user_id, event_user_id)))
-	FROM any_event LEFT JOIN users ON any_event.event_user_id=users.id
-	LEFT JOIN user_properties on users.id=user_properties.user_id and user_properties.id=users.properties_id GROUP BY gk_0 order by gk_0;
+	SELECT user_properties.properties->>'gender' as gk_0, gk_1,
+	COUNT(DISTINCT(COALESCE(users.customer_user_id, event_user_id))) FROM users_union
+	LEFT JOIN users ON users_union.event_user_id=users.id
+	LEFT JOIN user_properties ON users.id=user_properties.user_id and user_properties.id=users.properties_id
+	GROUP BY gk_0, gk_1 ORDER BY count DESC LIMIT 10000;
 
+Example: Query with date.
+
+WITH
+	step0 AS (
+		-- DISTINCT ON user_id, date preserves users on each date --
+		SELECT DISTINCT ON(events.user_id, (to_timestamp(timestamp) AT TIME ZONE 'UTC')::date) events.user_id as event_user_id,
+		(to_timestamp(timestamp) AT TIME ZONE 'UTC')::date as date FROM events
+		WHERE events.project_id='1' AND timestamp>='1393632004' AND timestamp<='1396310325'
+		AND events.event_name_id IN (SELECT id FROM event_names WHERE project_id='1' AND name='View Project')
+		ORDER BY events.user_id, date, events.timestamp ASC
+		-- Order by user_id, timestamp is not possible as we need to preserve unique user with date using DISTINCT ON (user_id, date) --
+	),
+	step1 AS (
+		SELECT DISTINCT ON(events.user_id, (to_timestamp(timestamp) AT TIME ZONE 'UTC')::date) events.user_id as event_user_id,
+		(to_timestamp(timestamp) AT TIME ZONE 'UTC')::date as date FROM events
+		WHERE events.project_id='1' AND timestamp>='1393632004' AND timestamp<='1396310325'
+		AND events.event_name_id IN (SELECT id FROM event_names WHERE project_id='1' AND name='Fund Project')
+		ORDER BY events.user_id, date, events.timestamp ASC
+	),
+	users_union AS (
+		SELECT step0.event_user_id as event_user_id, step0.date as date FROM step0 UNION ALL
+    	SELECT step1.event_user_id as event_user_id, step1.date as date FROM step1
+	)
+	SELECT date, COUNT(DISTINCT(COALESCE(users.customer_user_id, event_user_id))) AS count FROM users_union
+	LEFT JOIN users ON users_union.event_user_id=users.id GROUP BY date ORDER BY count DESC LIMIT 100000;
 */
-func buildUniqueUsersWithAnyGivenEventsQuery(projectId uint64, q Query) (string, []interface{}, error) {
-	if len(q.EventsWithProperties) == 0 {
+func buildUniqueUsersWithAnyGivenEventsQuery(projectId uint64, query Query) (string, []interface{}, error) {
+	if len(query.EventsWithProperties) == 0 {
 		return "", nil, errors.New("zero events on the query")
 	}
 
-	if hasGroupEntity(q.GroupByProperties, PropertyEntityEvent) {
-		return "", nil, errors.New(ErrUnsupportedGroupByEventPropertyOnUserQuery)
+	qStmnt := ""
+	qParams := make([]interface{}, 0, 0)
+
+	steps := addEventFilterStepsForUniqueUsersQuery(projectId, &query, &qStmnt, &qParams)
+
+	eventGroupProps := filterGroupPropsByType(query.GroupByProperties, PropertyEntityEvent)
+	_, _, egKeys := buildGroupKeys(eventGroupProps)
+
+	var unionStmnt string
+	for i, step := range steps {
+		selectStr := fmt.Sprintf("%s.event_user_id as event_user_id", step)
+		selectStr = appendSelectTimestampColIfRequired(selectStr, query.GroupByTimestamp)
+		selectStr = joinWithComma(selectStr, egKeys)
+
+		selectStmnt := fmt.Sprintf("SELECT %s FROM %s", selectStr, step)
+		if i == 0 {
+			unionStmnt = selectStmnt
+		} else {
+			unionStmnt = unionStmnt + " UNION ALL " + selectStmnt
+		}
 	}
 
-	// init with any given event filter query.
-	qStmnt, qParams, _, refStepName := buildAnyGivenEventFilterQuery(projectId, q)
+	stepUsersUnion := "users_union"
+	qStmnt = joinWithComma(qStmnt, as(stepUsersUnion, unionStmnt))
 
-	// select
-	var termSelect string
-	termSelect = appendSelectTimestampColIfRequired(termSelect, q.GroupByTimestamp)
-	termSelect = joinWithComma(termSelect, fmt.Sprintf("COUNT(DISTINCT(%s)) AS %s", SelectCoalesceCustomerUserIDAndUserID, AliasAggr))
-
-	// group by
-	var termStmnt string
-	groupKeys := addJoinLatestUserPropsQuery(q.GroupByProperties, refStepName,
-		"", &termStmnt, &qParams, termSelect)
-	termStmnt = appendGroupByTimestampIfRequired(termStmnt, q.GroupByTimestamp, groupKeys)
-	termStmnt = appendOrderByAggr(termStmnt)
-	termStmnt = appendLimitByCondition(termStmnt, q.GroupByProperties, q.GroupByTimestamp)
-
-	qStmnt = appendStatement(qStmnt, termStmnt)
-
-	// enclosed by 'with'.
+	addUniqueUsersAggregationQuery(&query, &qStmnt, &qParams, stepUsersUnion)
 	qStmnt = with(qStmnt)
 
 	return qStmnt, qParams, nil
@@ -693,48 +808,30 @@ func buildUniqueUsersWithAnyGivenEventsQuery(projectId uint64, q Query) (string,
 
 /*
 buildUniqueUsersSingleEventQuery
-Group By: user_properties
+Group By: user_properties, event_properties
 
 WITH
     step0 AS (
-		SELECT distinct(events.id) as event_id, events.user_id as event_user_id FROM events WHERE events.project_id='2'
-		AND timestamp>='1552450157' AND timestamp<='1553054957'
-		AND events.event_name_id IN ( SELECT id FROM event_names WHERE project_id='2'AND name='View Project' )
+		SELECT DISTINCT ON(events.user_id, (to_timestamp(timestamp) AT TIME ZONE 'UTC')::date) events.user_id as event_user_id,
+		(to_timestamp(timestamp) AT TIME ZONE 'UTC')::date as date FROM events
+		WHERE events.project_id='1' AND timestamp>='1393632004' AND timestamp<='1396310325'
+		AND events.event_name_id IN (SELECT id FROM event_names WHERE project_id='1' AND name='View Project')
+		ORDER BY events.user_id, date, events.timestamp ASC
     )
-	SELECT user_properties.properties->>'gender' as gk_0, COUNT(DISTINCT(COALESCE(users.customer_user_id, event_user_id)))
+	SELECT COUNT(DISTINCT(COALESCE(users.customer_user_id, event_user_id))), date
 	FROM step0 LEFT JOIN users ON step0.event_user_id=users.id
-	LEFT JOIN user_properties on users.id=user_properties.user_id and user_properties.id=users.properties_id GROUP BY gk_0 order by gk_0;
+	GROUP BY date, gk_0 order by gk_0;
 */
-func buildUniqueUsersSingleEventQuery(projectId uint64, q Query) (string, []interface{}, error) {
-	if len(q.EventsWithProperties) != 1 {
-		return "", nil, errors.New("invalid no.of events for single event query")
-	}
-
-	if hasGroupEntity(q.GroupByProperties, PropertyEntityEvent) {
-		return "", nil, errors.New(ErrUnsupportedGroupByEventPropertyOnUserQuery)
+func buildUniqueUsersSingleEventQuery(projectId uint64, query Query) (string, []interface{}, error) {
+	if len(query.EventsWithProperties) == 0 {
+		return "", nil, errors.New("zero events on the query")
 	}
 
 	qStmnt := ""
 	qParams := make([]interface{}, 0, 0)
 
-	refStepName := addFilterEventsWithPropsForUsersQuery(projectId, q, &qStmnt, &qParams)
-
-	// select
-	var filterSelect string
-	filterSelect = appendSelectTimestampColIfRequired(filterSelect, q.GroupByTimestamp)
-	filterSelect = joinWithComma(filterSelect, fmt.Sprintf("COUNT(DISTINCT(%s)) AS %s", SelectCoalesceCustomerUserIDAndUserID, AliasAggr))
-
-	// group by
-	var termStmnt string
-	groupKeys := addJoinLatestUserPropsQuery(q.GroupByProperties, refStepName,
-		"", &termStmnt, &qParams, filterSelect)
-	termStmnt = appendGroupByTimestampIfRequired(termStmnt, q.GroupByTimestamp, groupKeys)
-	termStmnt = appendOrderByAggr(termStmnt)
-	termStmnt = appendLimitByCondition(termStmnt, q.GroupByProperties, q.GroupByTimestamp)
-
-	qStmnt = appendStatement(qStmnt, termStmnt)
-
-	// enclosed by 'with'.
+	steps := addEventFilterStepsForUniqueUsersQuery(projectId, &query, &qStmnt, &qParams)
+	addUniqueUsersAggregationQuery(&query, &qStmnt, &qParams, steps[0])
 	qStmnt = with(qStmnt)
 
 	return qStmnt, qParams, nil
@@ -772,8 +869,46 @@ func buildEventsOccurrenceWithGivenEventQuery(projectId uint64, q Query) (string
 		return "", nil, errors.New("zero events on the query")
 	}
 
-	// init with any given event filter query.
-	qStmnt, qParams, egKeys, refStepName := buildAnyGivenEventFilterQuery(projectId, q)
+	qStmnt := ""
+	qParams := make([]interface{}, 0, 0)
+
+	eventGroupProps := filterGroupPropsByType(q.GroupByProperties, PropertyEntityEvent)
+	egSelect, egParams, egKeys := buildGroupKeys(eventGroupProps)
+
+	filterSelect := joinWithComma(SelectDefaultEventFilter, egSelect)
+	filterSelect = appendSelectTimestampIfRequired(filterSelect, q.Timezone, q.GroupByTimestamp)
+
+	refStepName := ""
+	filters := make([]string, 0)
+	for i, ewp := range q.EventsWithProperties {
+		refStepName = fmt.Sprintf("step%d", i)
+		filters = append(filters, refStepName)
+		addFilterEventsWithPropsQuery(projectId, &qStmnt, &qParams, ewp, q.From, q.To, "",
+			refStepName, filterSelect, egParams, "", "", "")
+		if len(q.EventsWithProperties) > 1 {
+			qStmnt = qStmnt + ", "
+		}
+	}
+
+	// union.
+	if len(filters) > 1 {
+		// event_id is already unique.
+		unionStepName := "any_event"
+		unionStmnt := ""
+		for _, filter := range filters {
+			if unionStmnt != "" {
+				unionStmnt = appendStatement(unionStmnt, "UNION ALL")
+			}
+
+			qSelect := appendSelectTimestampColIfRequired(SelectDefaultEventFilterByAlias, q.GroupByTimestamp)
+			qSelect = joinWithComma(qSelect, egKeys)
+			unionStmnt = unionStmnt + " SELECT " + qSelect + " FROM " + filter
+		}
+		unionStmnt = as(unionStepName, unionStmnt)
+		qStmnt = appendStatement(qStmnt, unionStmnt)
+
+		refStepName = unionStepName
+	}
 
 	// count.
 	userGroupProps := filterGroupPropsByType(q.GroupByProperties, PropertyEntityUser)
@@ -855,7 +990,7 @@ func buildEventsOccurrenceSingleEventQuery(projectId uint64, q Query) (string, [
 	qSelect = joinWithComma(qSelect, egSelect, fmt.Sprintf("COUNT(*) AS %s", AliasAggr))
 
 	addFilterEventsWithPropsQuery(projectId, &qStmnt, &qParams, q.EventsWithProperties[0], q.From, q.To,
-		"", "", qSelect, egSelectParams, "", "")
+		"", "", qSelect, egSelectParams, "", "", "")
 
 	qStmnt = appendGroupByTimestampIfRequired(qStmnt, q.GroupByTimestamp, egKeys)
 	qStmnt = appendOrderByAggr(qStmnt)
@@ -869,62 +1004,68 @@ buildUniqueUsersFunnelQuery
 
 WITH
 	step1 AS (
-		SELECT events.user_id, 1 as step1, min(timestamp) as step1_timestamp from events
+		SELECT DISTINCT ON(events.user_id) events.user_id as user_id, 1 as step1, events.timestamp as step1_timestamp,
+        events.properties->>'presentation' as group_key_1 from events
 		LEFT JOIN users on events.user_id=users.id where events.project_id = 1
 		and event_name_id IN (select id from event_names where project_id=1 and name = 'localhost:3000/#/core')
-		and timestamp between 1393632004 and 1560231260 group by events.user_id
+		and timestamp between 1393632004 and 1560231260 order by events.user_id, events.timestamp ASC
 	),
 	step2 as (
-		SELECT events.user_id, 1 as step2, min(timestamp) as step2_timestamp from events
+		SELECT DISTINCT ON(events.user_id) events.user_id as user_id, 1 as step2, events.timestamp as step2_timestamp,
+        events.properties->>'presentation' as group_key_1 from events
 		LEFT JOIN step1 on events.user_id=step1.user_id where events.project_id = 1
 		and event_name_id IN (select id from event_names where project_id=1 and name = 'run_query')
-		and timestamp between step1.step1_timestamp and 1560231260 group by events.user_id -- from timestamp, after step1 --
+		and timestamp between step1.step1_timestamp and 1560231260 order by events.user_id, events.timestamp ASC
 	),
 	step3 as (
-		SELECT events.user_id, 1 as step3 from events
+		SELECT DISTINCT ON(events.user_id) events.user_id as user_id, 1 as step3, events.timestamp as step3_timestamp,
+        events.properties->>'presentation' as group_key_1  from events
 		LEFT JOIN step2 on events.user_id=step2.user_id where events.project_id = 1
 		and event_name_id IN (select id from event_names where project_id=1 and name = 'localhost:3000/#/dashboard')
-		and timestamp between step2.step2_timestamp and 1560231260 group by events.user_id
+		and timestamp between step2.step2_timestamp and 1560231260 order by events.user_id, events.timestamp ASC
 	),
 	funnel as (
 		SELECT CASE WHEN user_properties.properties->>'$city' IS NULL THEN '$none'
         WHEN user_properties.properties->>'$city' = '' THEN '$none'
         ELSE user_properties.properties->>'$city' END AS group_key_0,
-        step1, step2, step3 from step1
-        LEFT JOIN users on step1.user_id=users.id -- join users and user_properties only if group by available --
+        step1, step2, step3, step2.group_key_1 as group_key_1 from step1
+        LEFT JOIN users on step1.user_id=users.id
         LEFT JOIN user_properties on users.properties_id=user_properties.id
 		LEFT JOIN step2 on step1.user_id=step2.user_id
 		LEFT JOIN step3 on step2.user_id=step3.user_id
 	)
-	SELECT '$no_group' as group_key_0, SUM(step1) as step1, SUM(step2) as step2, SUM(step3) as step3,
+	SELECT '$no_group' as group_key_0, '$no_group' as group_key_1, SUM(step1) as step1,
+    SUM(step2) as step2, SUM(step3) as step3,
 	ROUND((SUM(step2)::DECIMAL/SUM(step1)::DECIMAL) * 100) as step1_step2_conversion,
 	ROUND((SUM(step3)::DECIMAL/SUM(step2)::DECIMAL) * 100) as step2_step3_conversion,
 	ROUND((SUM(step3)::DECIMAL/SUM(step1)::DECIMAL) * 100) as overall_conversion from funnel
     UNION ALL
-	SELECT group_key_0, SUM(step1) as step1, SUM(step2) as step2, SUM(step3) as step3,
+	SELECT group_key_0, group_key_1, SUM(step1) as step1, SUM(step2) as step2, SUM(step3) as step3,
 	ROUND((SUM(step2)::DECIMAL/SUM(step1)::DECIMAL) * 100) as step1_step2_conversion,
 	ROUND((SUM(step3)::DECIMAL/SUM(step2)::DECIMAL) * 100) as step2_step3_conversion,
 	ROUND((SUM(step3)::DECIMAL/SUM(step1)::DECIMAL) * 100) as overall_conversion from funnel
-    group by group_key_0;
+    group by group_key_0, group_key_1;
 */
 func buildUniqueUsersFunnelQuery(projectId uint64, q Query) (string, []interface{}, error) {
 	if len(q.EventsWithProperties) == 0 {
 		return "", nil, errors.New("invalid no.of events for funnel query")
 	}
 
-	if hasGroupEntity(q.GroupByProperties, PropertyEntityEvent) {
-		return "", nil, errors.New("user funnel doesn't support group by event property")
-	}
-
 	var qStmnt string
 	var qParams []interface{}
+
+	eventGroupProps := filterGroupPropsByType(q.GroupByProperties, PropertyEntityEvent)
+	egSelect, egParams, _ := buildGroupKeys(eventGroupProps)
 
 	var funnelSteps []string
 	for i := range q.EventsWithProperties {
 		var addParams []interface{}
 		stepName := fmt.Sprintf("%s_%d", FunnelStepPrefix, i)
-		// builds "events.user_id, 1 AS step1, min(timestamp) AS step1_timestamp"
-		addSelect := "events.user_id, 1 AS " + stepName + ", min(timestamp) AS " + fmt.Sprintf("%s_timestamp", stepName)
+		// builds DISTINCT ON(events.user_id) events.user_id as user_id, 1 as step1, events.timestamp as step1_timestamp
+		addSelect := "DISTINCT ON(events.user_id) events.user_id as user_id, 1 as " + stepName + ", events.timestamp as " + fmt.Sprintf("%s_timestamp", stepName)
+		// adds event properties to select
+		addSelect = joinWithComma(addSelect, egSelect)
+		addParams = egParams
 
 		var from int64
 		var fromStr string
@@ -948,8 +1089,13 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q Query) (string, []interface
 			usersJoinStmnt = fmt.Sprintf("LEFT JOIN %s on events.user_id=%s.user_id", prevStepName, prevStepName)
 		}
 
+		var addOrderBy string
+		if hasGroupEntity(q.GroupByProperties, PropertyEntityEvent) {
+			addOrderBy = "events.user_id, events.timestamp ASC"
+		}
+
 		err := addFilterEventsWithPropsQuery(projectId, &qStmnt, &qParams, q.EventsWithProperties[i],
-			from, q.To, fromStr, stepName, addSelect, addParams, usersJoinStmnt, "events.user_id")
+			from, q.To, fromStr, stepName, addSelect, addParams, usersJoinStmnt, "", addOrderBy)
 		if err != nil {
 			return "", nil, err
 		}
@@ -970,8 +1116,8 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q Query) (string, []interface
 		}
 	}
 
-	groupSelect, groupParams, groupKeys := buildGroupKeys(q.GroupByProperties)
-	qParams = append(qParams, groupParams...)
+	userGroupProps := filterGroupPropsByType(q.GroupByProperties, PropertyEntityUser)
+	ugSelect, ugParams, _ := buildGroupKeys(userGroupProps)
 
 	// Join user properties if group by propertie given.
 	var properitesJoinStmnt string
@@ -989,11 +1135,24 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q Query) (string, []interface
 		}
 	}
 
+	// Todo: Use user selected step with group key for group by.
+	// added step0.__group_key_0 for now.
+	groupStep := fmt.Sprintf("%s_%d", FunnelStepPrefix, 0)
+	var eventGroupKeysByStep string
+	for i, group := range eventGroupProps {
+		key := groupKeyByIndex(group.Index)
+		eventGroupKeysByStep = eventGroupKeysByStep + fmt.Sprintf("%s.%s", groupStep, key)
+		if i < len(eventGroupProps)-1 {
+			eventGroupKeysByStep = eventGroupKeysByStep + ", "
+		}
+	}
+
 	funnelStepName := "funnel"
-	funnelStmnt := "SELECT" + " " + joinWithComma(groupSelect, funnelStepsForSelect) + " " + "FROM" + " " +
+	funnelStmnt := "SELECT" + " " + joinWithComma(ugSelect, eventGroupKeysByStep, funnelStepsForSelect) + " " + "FROM" + " " +
 		funnelSteps[0] + " " + properitesJoinStmnt + " " + stepsJoinStmnt
 	funnelStmnt = as(funnelStepName, funnelStmnt)
 	qStmnt = joinWithComma(qStmnt, funnelStmnt)
+	qParams = append(qParams, ugParams...)
 
 	// builds "SUM(step1) AS step1, SUM(step1) AS step2",
 	var rawCountSelect string
@@ -1031,6 +1190,8 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q Query) (string, []interface
 		}
 		noGroupSelect := "SELECT" + " " + joinWithComma(groupKeysPlaceholder, aggrSelect) +
 			" " + "FROM" + " " + funnelStepName
+
+		_, _, groupKeys := buildGroupKeys(q.GroupByProperties)
 		groupBySelect := "SELECT" + " " + joinWithComma(groupKeys, aggrSelect) + " " +
 			"FROM" + " " + funnelStepName + " " + "GROUP BY" + " " + groupKeys
 		termStmnt = noGroupSelect + " " + "UNION ALL" + " " + groupBySelect

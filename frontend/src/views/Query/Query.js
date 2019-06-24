@@ -16,7 +16,7 @@ import LineChart from './LineChart';
 import BarChart from './BarChart';
 import TableBarChart from './TableBarChart';
 import Funnel from './Funnel';
-import { PRESENTATION_BAR, PRESENTATION_LINE, PRESENTATION_TABLE, PRESENTATION_CARD, isLineResultWithGroupBy } from './common';
+import { PRESENTATION_BAR, PRESENTATION_LINE, PRESENTATION_TABLE, PRESENTATION_CARD } from './common';
 import { 
   fetchProjectEvents,
   runQuery,
@@ -30,7 +30,7 @@ import {
 } from '../../util'
 import Loading from '../../loading';
 import factorsai from '../../common/factorsaiObj';
-import { PROPERTY_TYPE_OPTS } from './common';
+import { PROPERTY_TYPE_OPTS, USER_PREF_PROPERTY_TYPE_OPTS } from './common';
 
 const COND_ALL_GIVEN_EVENT = 'all_given_event';
 const COND_ANY_GIVEN_EVENT = 'any_given_event'; 
@@ -579,11 +579,14 @@ class Query extends Component {
   }
 
   getGroupByOpts = () => {
-    if (this.state.type.value == TYPE_UNIQUE_USERS || this.state.class.value == QUERY_CLASS_FUNNEL) {
-      return createSelectOpts({'user': PROPERTY_TYPE_OPTS['user']});
-    } else {
-      return createSelectOpts(PROPERTY_TYPE_OPTS);
+    // user property on top.
+    if (this.state.type.value == TYPE_UNIQUE_USERS || 
+      this.state.class.value == QUERY_CLASS_FUNNEL) {
+      
+      return createSelectOpts(USER_PREF_PROPERTY_TYPE_OPTS);
     }
+
+    return createSelectOpts(PROPERTY_TYPE_OPTS);
   }
 
   showAddToDashboardFailure() {
