@@ -6,4 +6,4 @@ metadata:
     env: production
     project: factors-production
 data:
-  NUM_ROUTINES: "16"
+  NUM_ROUTINES: "60"
