@@ -372,12 +372,16 @@ func clipCategoricalValue(catValue string) string {
 		log.WithFields(log.Fields{
 			"err":      err,
 			"catValue": catValue,
-		}).Fatal(err)
+		}).Error(err)
+
+		return catValue[:MAX_CATEGORICAL_STRING_LENGTH]
 	}
+
 	hostPath := fmt.Sprintf("%s%s", u.Hostname(), u.EscapedPath())
 	if len(hostPath) > 0 && len(hostPath) < MAX_CATEGORICAL_STRING_LENGTH {
 		return hostPath
 	}
+
 	return catValue[:MAX_CATEGORICAL_STRING_LENGTH]
 }
 
