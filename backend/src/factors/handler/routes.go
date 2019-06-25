@@ -94,4 +94,8 @@ func InitIntRoutes(r *gin.Engine) {
 	intRouteGroup.POST("/segment",
 		mid.SetScopeProjectIdByPrivateToken(),
 		IntSegmentHandler)
+
+	intRouteGroup.POST("/segment_platform",
+		mid.SetScopeProjectIdByPrivateTokenUsingBasicAuth(),
+		IntSegmentHandler)
 }

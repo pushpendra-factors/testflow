@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"encoding/base64"
 	C "factors/config"
 	"factors/handler/helpers"
 	M "factors/model"
@@ -56,6 +57,8 @@ func SetScopeProjectIdByToken() gin.HandlerFunc {
 	}
 }
 
+// SetScopeProjectIdByPrivateToken - Set project id scope by private
+// token on 'Authorization' header.
 func SetScopeProjectIdByPrivateToken() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := c.Request.Header.Get("Authorization")
@@ -71,6 +74,39 @@ func SetScopeProjectIdByPrivateToken() gin.HandlerFunc {
 		if errCode != http.StatusFound {
 			errorMessage := "Invalid token"
 			log.WithFields(log.Fields{"error": errorMessage}).Error("Request failed because of invalid private token.")
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": errorMessage})
+			return
+		}
+		U.SetScope(c, SCOPE_PROJECT_ID, project.ID)
+
+		c.Next()
+	}
+}
+
+// SetScopeProjectIdByPrivateTokenUsingBasicAuth - Set project id scope by private
+// token on header 'Authorization': 'Basic <TOKEN>:'
+func SetScopeProjectIdByPrivateTokenUsingBasicAuth() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		basicAuthToken := c.Request.Header.Get("Authorization")
+		basicAuthToken = strings.TrimSpace(basicAuthToken)
+		if basicAuthToken == "" {
+			errorMessage := "Missing authorization header"
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": errorMessage})
+			return
+		}
+
+		base64TokenWithColon := strings.TrimPrefix(basicAuthToken, "Basic ")
+		tokenWithColon, err := base64.StdEncoding.DecodeString(base64TokenWithColon)
+		if err != nil {
+			errorMessage := "Invalid basic auth token"
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": errorMessage})
+			return
+		}
+		token := strings.TrimSuffix(string(tokenWithColon), ":")
+
+		project, errCode := M.GetProjectByPrivateToken(token)
+		if errCode != http.StatusFound {
+			errorMessage := "Invalid token"
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": errorMessage})
 			return
 		}

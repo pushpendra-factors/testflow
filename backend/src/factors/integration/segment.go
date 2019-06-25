@@ -100,6 +100,21 @@ type SegmentEvent struct {
 	Version     *interface{}    `json:"version"`
 }
 
+const SegmentPagePropertyURL = "url"
+
+func GetURLFromPageEvent(event *SegmentEvent) string {
+	if event.Context.Page.RawURL != "" {
+		return event.Context.Page.RawURL
+	}
+
+	url, exists := event.Properties[SegmentPagePropertyURL]
+	if exists && url != nil {
+		return url.(string)
+	}
+
+	return ""
+}
+
 func FillSegmentGenericEventProperties(properties *U.PropertiesMap, event *SegmentEvent) {
 	if event.Version != nil {
 		(*properties)[U.EP_EVENT_VERSION] = *event.Version
@@ -197,9 +212,10 @@ func FillSegmentMobileUserProperties(properties *U.PropertiesMap, event *Segment
 }
 
 func FillSegmentWebEventProperties(properties *U.PropertiesMap, event *SegmentEvent) {
-	if event.Context.Page.RawURL != "" {
-		(*properties)[U.EP_RAW_URL] = event.Context.Page.RawURL
+	if url := GetURLFromPageEvent(event); url != "" {
+		(*properties)[U.EP_RAW_URL] = url
 	}
+
 	if event.Context.Page.Title != "" {
 		(*properties)[U.EP_PAGE_TITLE] = event.Context.Page.Title
 	}

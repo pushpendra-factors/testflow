@@ -77,7 +77,7 @@ func TestDBCreateAndGetUser(t *testing.T) {
 	// Not more than 20ms difference.
 	assert.InDelta(t, user.CreatedAt.UnixNano(), user.UpdatedAt.UnixNano(), 5.0e+7)
 	var retProperties map[string]interface{}
-	err := json.Unmarshal(user.Properties.RawMessage, &retProperties)
+	err = json.Unmarshal(user.Properties.RawMessage, &retProperties)
 	assert.Nil(t, err)
 	assert.Contains(t, retProperties, "country")
 	assert.Contains(t, retProperties, "age")

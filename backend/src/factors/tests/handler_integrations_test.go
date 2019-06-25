@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	H "factors/handler"
 	M "factors/model"
@@ -867,4 +868,161 @@ func TestIntSegmentHandlerWithIdentifyEvent(t *testing.T) {
 	assertKeysExistAndNotEmpty(t, userPropertiesMap, []string{"email", "address", "plan"})
 	// validates nested properties.
 	assertKeysExistAndNotEmpty(t, userPropertiesMap["address"].(map[string]interface{}), []string{"street", "city"})
+}
+
+func TestIntSegmentHandlerWithPayloadFromSegmentPlatform(t *testing.T) {
+	// Initialize routes and dependent data.
+	r := gin.Default()
+	H.InitIntRoutes(r)
+	uri := "/integrations/segment_platform"
+
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+
+	enable := true
+	_, errCode := M.UpdateProjectSettings(project.ID, &M.ProjectSetting{IntSegment: &enable})
+	assert.Equal(t, http.StatusAccepted, errCode)
+
+	// create basic auth token.
+	tokenWithColon := fmt.Sprintf("%s:", project.PrivateToken)
+	base64TokenWithColon := base64.StdEncoding.EncodeToString([]byte(tokenWithColon))
+	basicAuthToken := fmt.Sprintf("Basic %s", base64TokenWithColon)
+
+	t.Run("PlatformTestIdentifyPayload", func(t *testing.T) {
+		payload := `
+		{
+			"anonymousId": "anonymous-1",
+			"userId": "identified-1",
+			"type": "identify",
+			"timestamp": "2019-06-24T15:32:33Z",
+			"traits": {
+				"email": "calvinfo@segment.com",
+				"first_name": "Calvin",
+				"last_name": "French-Owen",
+				"phone": "555-555-5555"
+			}
+		}
+		`
+
+		w := ServePostRequestWithHeaders(r, uri, []byte(payload),
+			map[string]string{"Authorization": basicAuthToken})
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
+	t.Run("PlatformTestIdentify:UserSignupPayload", func(t *testing.T) {
+		payload := `
+		{
+			"anonymousId": "anonymous-1",
+			"userId": "identified-1",
+			"type": "track",
+			"timestamp": "2019-06-24T15:32:33Z",
+			"event": "Signed up",
+			"properties": {
+				"referrer": "paid"
+			}
+		}
+		`
+
+		w := ServePostRequestWithHeaders(r, uri, []byte(payload),
+			map[string]string{"Authorization": basicAuthToken})
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
+	t.Run("PlatformTestGroup:UserIsGroupedIntoMyUsersPayload", func(t *testing.T) {
+		payload := `
+		{
+			"anonymousId": "anonymous-1",
+			"userId": "identified-1",
+			"type": "group",
+			"groupId": "myUsers",
+			"timestamp": "2019-06-24T15:32:33Z",
+			"traits": {
+				"name": "Initech",
+				"industry": "Technology",
+				"employees": 329,
+				"plan": "enterprise",
+				"total billed": 830
+			}
+		}
+		`
+
+		w := ServePostRequestWithHeaders(r, uri, []byte(payload),
+			map[string]string{"Authorization": basicAuthToken})
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
+	t.Run("PlatformTestTrack:UserEnablesIntegrationPayload", func(t *testing.T) {
+		payload := `
+		{
+			"anonymousId": "anonymous-1",
+			"userId": "identified-1",
+			"type": "track",
+			"timestamp": "2019-06-24T15:32:33Z",
+			"event": "Integration Enabled",
+			"properties": {
+				"name": "Google Analytics"
+			}
+		}
+		`
+
+		w := ServePostRequestWithHeaders(r, uri, []byte(payload),
+			map[string]string{"Authorization": basicAuthToken})
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
+	t.Run("PlatformTestScreen:UsersOpensMobileApplicationPayload", func(t *testing.T) {
+		payload := `
+		{
+			"anonymousId": "anonymous-1",
+			"userId": "identified-1",
+			"type": "track",
+			"timestamp": "2019-06-24T15:32:33Z",
+			"event": "Integration Enabled",
+			"properties": {
+				"name": "Google Analytics"
+			}
+		}
+		`
+
+		w := ServePostRequestWithHeaders(r, uri, []byte(payload),
+			map[string]string{"Authorization": basicAuthToken})
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
+	t.Run("PlatformTestPage:AnonymousUserNavigationToHomePagePayload", func(t *testing.T) {
+		payload := `
+		{
+			"anonymousId": "anonymous-1",
+			"type": "page",
+			"timestamp": "2019-06-24T15:32:33Z",
+			"name": "Home",
+			"properties": {
+				"url": "https://segment.com"
+			}
+		}
+		`
+
+		w := ServePostRequestWithHeaders(r, uri, []byte(payload),
+			map[string]string{"Authorization": basicAuthToken})
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
+	t.Run("PlatformTestPage:AnonymousUserNavigationToSignupPagePayload", func(t *testing.T) {
+		payload := `
+		{
+			"anonymousId": "anonymous-1",
+			"type": "page",
+			"timestamp": "2019-06-24T15:32:33Z",
+			"name": "Signup",
+			"properties": {
+				"url": "https://segment.com/signup" 
+			}
+		}
+		`
+
+		w := ServePostRequestWithHeaders(r, uri, []byte(payload),
+			map[string]string{"Authorization": basicAuthToken})
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
 }
