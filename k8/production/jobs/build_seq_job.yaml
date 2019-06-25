@@ -17,7 +17,7 @@ spec:
             cloud.google.com/gke-nodepool: job-pool
           containers:
           - name: build-seq-job
-            image: us.gcr.io/factors-production/build-seq-job:v0.5-beta_adc1743
+            image: us.gcr.io/factors-production/build-seq-job:v0.6-beta_b796eee
             imagePullPolicy: IfNotPresent
             args:
             - --env
@@ -38,6 +38,8 @@ spec:
             - $(POSTGRES_USER)
             - --db_pass
             - $(POSTGRES_PASSWORD)
+            - --num_routines
+            - $(NUM_ROUTINES)
             envFrom:
             - configMapRef:
                 name: config-etcd
@@ -47,6 +49,8 @@ spec:
                 name: config-bucket
             - configMapRef:
                 name: config-postgres
+            - configMapRef:
+                name: config-buildseqjob
             - secretRef:
                 name: secret-postgres
           restartPolicy: OnFailure
