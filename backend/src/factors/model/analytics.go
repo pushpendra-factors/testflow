@@ -1039,12 +1039,14 @@ WITH
 	ROUND((SUM(step2)::DECIMAL/SUM(step1)::DECIMAL) * 100) as step1_step2_conversion,
 	ROUND((SUM(step3)::DECIMAL/SUM(step2)::DECIMAL) * 100) as step2_step3_conversion,
 	ROUND((SUM(step3)::DECIMAL/SUM(step1)::DECIMAL) * 100) as overall_conversion from funnel
-    UNION ALL
-	SELECT group_key_0, group_key_1, SUM(step1) as step1, SUM(step2) as step2, SUM(step3) as step3,
-	ROUND((SUM(step2)::DECIMAL/SUM(step1)::DECIMAL) * 100) as step1_step2_conversion,
-	ROUND((SUM(step3)::DECIMAL/SUM(step2)::DECIMAL) * 100) as step2_step3_conversion,
-	ROUND((SUM(step3)::DECIMAL/SUM(step1)::DECIMAL) * 100) as overall_conversion from funnel
-    group by group_key_0, group_key_1;
+	UNION ALL
+	SELECT * FROM (
+		SELECT group_key_0, group_key_1, SUM(step1) as step1, SUM(step2) as step2, SUM(step3) as step3,
+		ROUND((SUM(step2)::DECIMAL/SUM(step1)::DECIMAL) * 100) as step1_step2_conversion,
+		ROUND((SUM(step3)::DECIMAL/SUM(step2)::DECIMAL) * 100) as step2_step3_conversion,
+		ROUND((SUM(step3)::DECIMAL/SUM(step1)::DECIMAL) * 100) as overall_conversion from funnel
+		group by group_key_0, group_key_1 order by step1 desc limit 10
+	) AS grouped_results
 */
 func buildUniqueUsersFunnelQuery(projectId uint64, q Query) (string, []interface{}, error) {
 	if len(q.EventsWithProperties) == 0 {
@@ -1192,8 +1194,14 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q Query) (string, []interface
 			" " + "FROM" + " " + funnelStepName
 
 		_, _, groupKeys := buildGroupKeys(q.GroupByProperties)
-		groupBySelect := "SELECT" + " " + joinWithComma(groupKeys, aggrSelect) + " " +
-			"FROM" + " " + funnelStepName + " " + "GROUP BY" + " " + groupKeys
+		limitedGroupBySelect := "SELECT" + " " + joinWithComma(groupKeys, aggrSelect) + " " +
+			"FROM" + " " + funnelStepName + " " + "GROUP BY" + " " + groupKeys + " " +
+			// limits result by count of step_1 to ResultsLimit.
+			fmt.Sprintf("ORDER BY %s DESC LIMIT %d", funnelSteps[0], ResultsLimit)
+
+		// wrapped with select to apply limits only to grouped select rows.
+		groupBySelect := fmt.Sprintf("SELECT * FROM ( %s ) AS group_funnel", limitedGroupBySelect)
+
 		termStmnt = noGroupSelect + " " + "UNION ALL" + " " + groupBySelect
 	}
 
