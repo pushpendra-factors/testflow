@@ -7,8 +7,8 @@ import {
   fetchProjectEventProperties,
   fetchProjectUserProperties,
 } from '../../actions/projectsActions';
-import { getSelectedOpt, QUERY_TYPE_ANALYTICS } from '../../util';
-import { PROPERTY_TYPE_OPTS } from './common';
+import { getSelectedOpt, QUERY_TYPE_ANALYTICS, makeSelectOpt, makeSelectOpts } from '../../util';
+import { PROPERTY_TYPE_OPTS, PROPERTY_TYPE_EVENT, PROPERTY_TYPE_USER } from './common';
 
 export const USER_PROPERTY_JOIN_TIME = '$joinTime'
 
@@ -54,13 +54,21 @@ class GroupBy extends Component {
   fetchPropertyKeys = () => {
     this.setState({ nameOpts: [], isNameOptsLoading: true }); // reset opts
 
-    if (this.props.groupByState.type == 'event') {      
-      let eventNames = this.props.getSelectedEventNames();
+    if (this.props.groupByState.type == PROPERTY_TYPE_EVENT) {
+      
       let fetches = [];
-      for(let i=0; i < eventNames.length; i++) {
-        fetches.push(fetchProjectEventProperties(this.props.projectId, eventNames[i], "", false));
+      if (this.showEventNameSelector() && this.props.groupByState.eventName != '') {
+        // fetch properties of selected group by event name.
+        fetches.push(fetchProjectEventProperties(this.props.projectId, 
+          this.props.groupByState.eventName, "", false));
+      } else {
+        // fetch event properties of all selected event names.
+        let eventNames = this.props.getSelectedEventNames();
+        for(let i=0; i < eventNames.length; i++) {
+          fetches.push(fetchProjectEventProperties(this.props.projectId, eventNames[i], "", false));
+        }
       }
-
+      
       Promise.all(fetches)
         .then((r) => { 
           // add response from each as opts for selector.
@@ -70,7 +78,7 @@ class GroupBy extends Component {
         .catch((r) => console.error("Failed fetching event properties on group by.", r))
     }
 
-    if (this.props.groupByState.type == 'user') {
+    if (this.props.groupByState.type == PROPERTY_TYPE_USER) {
       fetchProjectUserProperties(this.props.projectId, QUERY_TYPE_ANALYTICS, "", false)
       .then((r) => { 
         this.addToNameOptsState(r.data);
@@ -80,9 +88,15 @@ class GroupBy extends Component {
     }
   }
 
+  // show event name selector when group by event property
+  // and show is true by other state of query.
+  showEventNameSelector() {
+    return this.props.isEventNameRequired() && this.props.groupByState.type == PROPERTY_TYPE_EVENT;
+  }
+
   render() {
     return (
-      <div style={{ width: '450px', marginBottom: '15px' }}>
+      <div style={{ width: '700px', marginBottom: '15px' }}>
         <div style={{display: 'inline-block', width: '150px'}} className='fapp-select light'>
           <Select
             onChange={this.props.onTypeChange}
@@ -91,12 +105,21 @@ class GroupBy extends Component {
             value={getSelectedOpt(this.props.groupByState.type, PROPERTY_TYPE_OPTS)}
           />
         </div>
+        <div style={{display: 'inline-block', width: '275px', marginLeft: '10px'}} className='fapp-select light' 
+          hidden={!this.showEventNameSelector()}>
+          <Select
+            onChange={this.props.onEventNameChange}
+            options={makeSelectOpts(this.props.getSelectedEventNames())}
+            placeholder='Select Event'
+            value={getSelectedOpt(this.props.groupByState.eventName)}
+          />
+        </div>
         <div style={{display: 'inline-block', width: '195px', marginLeft: '10px'}} className='fapp-select light'>
           <CreatableSelect
             onChange={this.props.onNameChange}
             onFocus={this.fetchPropertyKeys}
             options={this.state.nameOpts}
-            placeholder='Select Property'
+            placeholder='Enter Property'
             value={getSelectedOpt(this.props.groupByState.name)}
             formatCreateLabel={(value) => (value)}
             isLoading={this.state.isNameOptsLoading}

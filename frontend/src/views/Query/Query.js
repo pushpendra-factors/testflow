@@ -16,7 +16,7 @@ import LineChart from './LineChart';
 import BarChart from './BarChart';
 import TableBarChart from './TableBarChart';
 import Funnel from './Funnel';
-import { PRESENTATION_BAR, PRESENTATION_LINE, PRESENTATION_TABLE, PRESENTATION_CARD } from './common';
+import { PRESENTATION_BAR, PRESENTATION_LINE, PRESENTATION_TABLE, PRESENTATION_CARD, PROPERTY_TYPE_EVENT } from './common';
 import { 
   fetchProjectEvents,
   runQuery,
@@ -35,8 +35,8 @@ import { PROPERTY_TYPE_OPTS, USER_PREF_PROPERTY_TYPE_OPTS } from './common';
 const COND_ALL_GIVEN_EVENT = 'all_given_event';
 const COND_ANY_GIVEN_EVENT = 'any_given_event'; 
 const EVENTS_COND_OPTS = [
-  { value: COND_ALL_GIVEN_EVENT, label: 'all' },
-  { value: COND_ANY_GIVEN_EVENT, label: 'any' }
+  { value: COND_ANY_GIVEN_EVENT, label: 'any' },
+  { value: COND_ALL_GIVEN_EVENT, label: 'all' }
 ];
 const LABEL_STYLE = { marginRight: '10px', fontWeight: '600', color: '#777' };
 
@@ -274,7 +274,12 @@ class Query extends Component {
 
   getDefaultGroupByState() {
     let groupByOpts = this.getGroupByOpts();
-    return { type: groupByOpts[0].value, name: '' };
+
+    let defaultEventName = '';
+    if (this.state.events.length > 0) 
+      defaultEventName = this.state.events[0].name;
+
+    return { type: groupByOpts[0].value, name: '', eventName: defaultEventName };
   }
 
   addGroupBy = () => {
@@ -301,6 +306,10 @@ class Query extends Component {
 
   onGroupByNameChange = (groupByIndex, option) => {
     this.setGroupByAttr(groupByIndex, 'name', option.value);
+  }
+
+  onGroupByEventNameChange = (groupByIndex, option) => {
+    this.setGroupByAttr(groupByIndex, 'eventName', option.value);
   }
 
   handleResultDateRangeSelect = (range) => {
@@ -398,6 +407,11 @@ class Query extends Component {
       if (groupBy.name != '' && groupBy.type != '') {
         cGroupBy.pr = groupBy.name;
         cGroupBy.en = groupBy.type;
+
+        // add group by event name.
+        if (groupBy.type == PROPERTY_TYPE_EVENT && this.isEventNameRequiredForGroupBy() &&  
+          groupBy.eventName != '') cGroupBy.ena = groupBy.eventName;
+          
         query.gbp.push(cGroupBy)
       }
     }
@@ -589,6 +603,12 @@ class Query extends Component {
     return createSelectOpts(PROPERTY_TYPE_OPTS);
   }
 
+  isEventNameRequiredForGroupBy = () => {
+    return (this.state.type.value == TYPE_UNIQUE_USERS && 
+      this.state.condition.value == COND_ALL_GIVEN_EVENT) || 
+      this.state.class.value == QUERY_CLASS_FUNNEL;
+  }
+
   showAddToDashboardFailure() {
     this.setState({ addToDashboardMessage: 'Failed to add chart to dashboard' });
   }
@@ -725,7 +745,9 @@ class Query extends Component {
           groupByState={this.state.groupBys[i]}
           onTypeChange={(option) => this.onGroupByTypeChange(i, option)} 
           onNameChange={(option) => this.onGroupByNameChange(i, option)}
+          onEventNameChange={(option) => this.onGroupByEventNameChange(i, option)}
           getOpts={this.getGroupByOpts}
+          isEventNameRequired={this.isEventNameRequiredForGroupBy}
         />
       );
     }

@@ -30,6 +30,8 @@ type QueryGroupByProperty struct {
 	Entity   string `json:"en"`
 	Property string `json:"pr"`
 	Index    int    `json:"in"`
+	// group by specific event name.
+	EventName string `json:"ena"`
 }
 
 type QueryEventWithProperties struct {
@@ -92,8 +94,8 @@ const (
 	ResultsLimit    = 20
 	MaxResultsLimit = 100000
 
-	FunnelConversionPrefix = "conversion"
-	FunnelStepPrefix       = "step"
+	StepPrefix             = "step_"
+	FunnelConversionPrefix = "conversion_"
 )
 
 const (
@@ -228,6 +230,10 @@ func groupKeyByIndex(i int) string {
 	return fmt.Sprintf("%s%d", GroupKeyPrefix, i)
 }
 
+func stepNameByIndex(i int) string {
+	return fmt.Sprintf("%s%d", StepPrefix, i)
+}
+
 // Translates empty and null group by property values as $none on select.
 // CASE WHEN events.properties->>'x' IS NULL THEN '$none' WHEN events.properties->>'x' = '' THEN '$none'
 // ELSE events.properties->>'x' END as _group_key_0
@@ -263,6 +269,40 @@ func buildGroupKeys(groupProps []QueryGroupByProperty) (groupSelect string,
 	}
 
 	return groupSelect, groupSelectParams, groupKeys
+}
+
+// builds group keys with step of corresponding user given event name.
+// i.e step_0.__group_key_0, step_1.group_key_1
+func buildEventGroupKeysWithStep(groupProps []QueryGroupByProperty,
+	ewps []QueryEventWithProperties) (groupKeys string) {
+
+	eventGroupProps := filterGroupPropsByType(groupProps, PropertyEntityEvent)
+	stepIndexByEventName := make(map[string]int, 0)
+	for i, ewp := range ewps {
+		stepIndexByEventName[ewp.Name] = i
+	}
+
+	for _, gp := range eventGroupProps {
+		var groupKey string
+
+		if gp.EventName != "" {
+			if stepIndex, exists := stepIndexByEventName[gp.EventName]; exists {
+				groupKey = fmt.Sprintf("%s.%s", stepNameByIndex(stepIndex),
+					groupKeyByIndex(gp.Index))
+			}
+		}
+
+		if groupKey == "" {
+			// if group by property not provided with an event name.
+			// refer to the first step(step_0) by default.
+			groupKey = fmt.Sprintf("%s.%s", stepNameByIndex(0),
+				groupKeyByIndex(gp.Index))
+		}
+
+		groupKeys = joinWithComma(groupKeys, groupKey)
+	}
+
+	return groupKeys
 }
 
 // Adds a step of events filter with QueryEventWithProperties.
@@ -520,7 +560,7 @@ func addEventFilterStepsForUniqueUsersQuery(projectId uint64, q *Query,
 
 	steps := make([]string, 0, 0)
 	for i, ewp := range q.EventsWithProperties {
-		refStepName := fmt.Sprintf("step%d", i)
+		refStepName := stepNameByIndex(i)
 		steps = append(steps, refStepName)
 
 		var stepJoin string
@@ -670,18 +710,10 @@ func buildUniqueUsersWithAllGivenEventsQuery(projectId uint64, query Query) (str
 	}
 
 	eventGroupProps := filterGroupPropsByType(query.GroupByProperties, PropertyEntityEvent)
-
-	// Todo: Use user selected step with group key for group by.
-	// added step0.__group_key_0 for now.
-	var groupKeysByStep string
-	for i, group := range eventGroupProps {
-		key := groupKeyByIndex(group.Index)
-		groupKeysByStep = groupKeysByStep + fmt.Sprintf("%s.%s", steps[0], key)
-		if i < len(eventGroupProps)-1 {
-			groupKeysByStep = groupKeysByStep + ", "
-		}
-	}
-	intersectSelect = joinWithComma(intersectSelect, groupKeysByStep)
+	// adds group by event property with user selected event (step).
+	eventGroupKeysWithStep := buildEventGroupKeysWithStep(eventGroupProps,
+		query.EventsWithProperties)
+	intersectSelect = joinWithComma(intersectSelect, eventGroupKeysWithStep)
 
 	var intersectJoin string
 	for i := range steps {
@@ -1036,17 +1068,17 @@ WITH
 	)
 	SELECT '$no_group' as group_key_0, '$no_group' as group_key_1, SUM(step1) as step1,
     SUM(step2) as step2, SUM(step3) as step3,
-	ROUND((SUM(step2)::DECIMAL/SUM(step1)::DECIMAL) * 100) as step1_step2_conversion,
-	ROUND((SUM(step3)::DECIMAL/SUM(step2)::DECIMAL) * 100) as step2_step3_conversion,
-	ROUND((SUM(step3)::DECIMAL/SUM(step1)::DECIMAL) * 100) as overall_conversion from funnel
+	ROUND((SUM(step2)::DECIMAL/SUM(step1)::DECIMAL) * 100) as conversion_step1_step2,
+	ROUND((SUM(step3)::DECIMAL/SUM(step2)::DECIMAL) * 100) as conversion_step2_step3,
+	ROUND((SUM(step3)::DECIMAL/SUM(step1)::DECIMAL) * 100) as conversion_overall from funnel
 	UNION ALL
 	SELECT * FROM (
 		SELECT group_key_0, group_key_1, SUM(step1) as step1, SUM(step2) as step2, SUM(step3) as step3,
-		ROUND((SUM(step2)::DECIMAL/SUM(step1)::DECIMAL) * 100) as step1_step2_conversion,
-		ROUND((SUM(step3)::DECIMAL/SUM(step2)::DECIMAL) * 100) as step2_step3_conversion,
-		ROUND((SUM(step3)::DECIMAL/SUM(step1)::DECIMAL) * 100) as overall_conversion from funnel
+		ROUND((SUM(step2)::DECIMAL/SUM(step1)::DECIMAL) * 100) as conversion_step1_step2,
+		ROUND((SUM(step3)::DECIMAL/SUM(step2)::DECIMAL) * 100) as conversion_step2_step3,
+		ROUND((SUM(step3)::DECIMAL/SUM(step1)::DECIMAL) * 100) as conversion_overall from funnel
 		group by group_key_0, group_key_1 order by step1 desc limit 10
-	) AS grouped_results
+	) AS group_funnel
 */
 func buildUniqueUsersFunnelQuery(projectId uint64, q Query) (string, []interface{}, error) {
 	if len(q.EventsWithProperties) == 0 {
@@ -1062,7 +1094,7 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q Query) (string, []interface
 	var funnelSteps []string
 	for i := range q.EventsWithProperties {
 		var addParams []interface{}
-		stepName := fmt.Sprintf("%s_%d", FunnelStepPrefix, i)
+		stepName := stepNameByIndex(i)
 		// builds DISTINCT ON(events.user_id) events.user_id as user_id, 1 as step1, events.timestamp as step1_timestamp
 		addSelect := "DISTINCT ON(events.user_id) events.user_id as user_id, 1 as " + stepName + ", events.timestamp as " + fmt.Sprintf("%s_timestamp", stepName)
 		// adds event properties to select
@@ -1078,7 +1110,7 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q Query) (string, []interface
 			from = q.From
 		} else {
 			// builds "step_2.step_2_timestamp"
-			prevStepName := fmt.Sprintf("%s_%d", FunnelStepPrefix, i-1)
+			prevStepName := stepNameByIndex(i - 1)
 			fromStr = fmt.Sprintf("%s.%s_timestamp", prevStepName, prevStepName)
 		}
 
@@ -1087,7 +1119,7 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q Query) (string, []interface
 			usersJoinStmnt = "LEFT JOIN users ON events.user_id=users.id"
 		} else {
 			// builds "LEFT JOIN step_0 on events.user_id=step_0.user_id"
-			prevStepName := fmt.Sprintf("%s_%d", FunnelStepPrefix, i-1)
+			prevStepName := stepNameByIndex(i - 1)
 			usersJoinStmnt = fmt.Sprintf("LEFT JOIN %s on events.user_id=%s.user_id", prevStepName, prevStepName)
 		}
 
@@ -1136,21 +1168,12 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q Query) (string, []interface
 				fmt.Sprintf("LEFT JOIN %s ON %s.user_id=%s.user_id", fs, funnelSteps[i-1], fs))
 		}
 	}
-
-	// Todo: Use user selected step with group key for group by.
-	// added step0.__group_key_0 for now.
-	groupStep := fmt.Sprintf("%s_%d", FunnelStepPrefix, 0)
-	var eventGroupKeysByStep string
-	for i, group := range eventGroupProps {
-		key := groupKeyByIndex(group.Index)
-		eventGroupKeysByStep = eventGroupKeysByStep + fmt.Sprintf("%s.%s", groupStep, key)
-		if i < len(eventGroupProps)-1 {
-			eventGroupKeysByStep = eventGroupKeysByStep + ", "
-		}
-	}
+	// adds group by event property with user selected event (step).
+	eventGroupKeysWithStep := buildEventGroupKeysWithStep(eventGroupProps,
+		q.EventsWithProperties)
 
 	funnelStepName := "funnel"
-	funnelStmnt := "SELECT" + " " + joinWithComma(ugSelect, eventGroupKeysByStep, funnelStepsForSelect) + " " + "FROM" + " " +
+	funnelStmnt := "SELECT" + " " + joinWithComma(ugSelect, eventGroupKeysWithStep, funnelStepsForSelect) + " " + "FROM" + " " +
 		funnelSteps[0] + " " + properitesJoinStmnt + " " + stepsJoinStmnt
 	funnelStmnt = as(funnelStepName, funnelStmnt)
 	qStmnt = joinWithComma(qStmnt, funnelStmnt)
@@ -1166,13 +1189,13 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q Query) (string, []interface
 	for i, fs := range funnelSteps {
 		if i > 0 {
 			aggrSelect = appendStatement(aggrSelect,
-				fmt.Sprintf("ROUND((SUM(%s)::DECIMAL/SUM(%s)::DECIMAL) * 100) AS %s_%s_%s,",
+				fmt.Sprintf("ROUND((SUM(%s)::DECIMAL/SUM(%s)::DECIMAL) * 100) AS %s%s_%s,",
 					fs, funnelSteps[i-1], FunnelConversionPrefix, funnelSteps[i-1], fs))
 		}
 	}
 	// append overall conversion.
 	aggrSelect = appendStatement(aggrSelect,
-		fmt.Sprintf("ROUND((SUM(%s)::DECIMAL/SUM(%s)::DECIMAL) * 100) AS %s_overall",
+		fmt.Sprintf("ROUND((SUM(%s)::DECIMAL/SUM(%s)::DECIMAL) * 100) AS %soverall",
 			funnelSteps[len(funnelSteps)-1], funnelSteps[0], FunnelConversionPrefix))
 
 	aggrSelect = joinWithComma(rawCountSelect, aggrSelect)
@@ -1359,7 +1382,7 @@ func translateNullToZeroOnFunnelResult(result *QueryResult) {
 	var percentageIndexes []int
 	var index int
 	for _, h := range result.Headers {
-		if strings.HasPrefix(h, FunnelConversionPrefix) || strings.HasPrefix(h, FunnelStepPrefix) {
+		if strings.HasPrefix(h, FunnelConversionPrefix) || strings.HasPrefix(h, StepPrefix) {
 			percentageIndexes = append(percentageIndexes, index)
 		}
 		index++
