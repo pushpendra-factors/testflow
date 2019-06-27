@@ -10,8 +10,9 @@ import BarChart from '../Query/BarChart';
 import LineChart from '../Query/LineChart';
 import TableChart from '../Query/TableChart';
 import { PRESENTATION_BAR, PRESENTATION_LINE, 
-  PRESENTATION_TABLE, PRESENTATION_CARD, HEADER_COUNT, HEADER_DATE } from '../Query/common';
+  PRESENTATION_TABLE, PRESENTATION_CARD, HEADER_COUNT, HEADER_DATE, PRESENTATION_FUNNEL } from '../Query/common';
 import { slideUnixTimeWindowToCurrentTime } from '../../util';
+import FunnelChart from '../Query/FunnelChart';
 
 const LINE_LEGEND_DISPLAY_LIMIT = 10;
 const CARD_FONT_COLOR = '#FFF';
@@ -87,6 +88,10 @@ class DashboardUnit extends Component {
 
     if (this.props.data.presentation == PRESENTATION_CARD) {
       presentation = <TableChart noHeader card queryResult={result} />
+    }
+
+    if (this.props.data.presentation == PRESENTATION_FUNNEL) {
+      presentation = <FunnelChart queryResult={result} />
     }
 
     this.setState({ presentation: presentation });

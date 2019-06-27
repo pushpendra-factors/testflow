@@ -23,13 +23,15 @@ type DashboardUnit struct {
 }
 
 const (
-	PresentationLine  = "pl"
-	PresentationBar   = "pb"
-	PresentationTable = "pt"
-	PresentationCard  = "pc"
+	PresentationLine   = "pl"
+	PresentationBar    = "pb"
+	PresentationTable  = "pt"
+	PresentationCard   = "pc"
+	PresentationFunnel = "pf"
 )
 
-var presentations = [...]string{PresentationLine, PresentationBar, PresentationTable, PresentationCard}
+var presentations = [...]string{PresentationLine, PresentationBar,
+	PresentationTable, PresentationCard, PresentationFunnel}
 
 const (
 	UnitCard  = "card"

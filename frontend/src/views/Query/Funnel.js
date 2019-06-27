@@ -110,6 +110,13 @@ const Funnel = (props) => {
     eventCols.unshift(<Col xs={{ offset: offset }}></Col>);
   }
 
+  // fix for 4 donuts.
+  if (graphCols.length == 7) {
+    // adds half size of col-1 div.
+    graphCols.unshift(<div style={{width:'4%'}}></div>)
+    eventCols.unshift(<div style={{width:'4%'}}></div>)
+  }
+
   let totalConvStr = props.data.totalConversion + '%';
   return (
     <Col md='12'>

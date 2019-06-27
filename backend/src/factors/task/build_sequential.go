@@ -27,7 +27,7 @@ type BuildSuccess struct {
 	Build               Build `json:"build"`
 	PullEventsTimeInMS  int64 `json:"pulled_events_in_ms"`
 	PatternMineTimeInMS int64 `json:"mined_patterns_in_ms"`
-	NumberOfChunks      int   `json:num_chunks`
+	NumberOfChunks      int   `json:"num_chunks"`
 }
 
 func notifyOnPanic(env string) {
