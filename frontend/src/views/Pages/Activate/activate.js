@@ -4,6 +4,7 @@ import { connect } from 'react-redux';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import { bindActionCreators } from 'redux';
 import * as yup from 'yup';
+import queryString from 'query-string';
 
 import  { MissingFirstname, PasswordsDoNotMatch, MissingPassword, PasswordMinEightChars} from '../ValidationMessages';
 import { activate } from "../../../actions/agentActions";
@@ -23,7 +24,7 @@ class Activate extends Component {
     }
   }
   
-  renderActivateForm = () => {
+  renderActivateForm = (token) => {
     return (
       <Formik
         initialValues={{firstName:'', lastName:'', password:'', confirmPassword:''}}
@@ -36,9 +37,7 @@ class Activate extends Component {
           })
         }
         onSubmit={(values, {setSubmitting}) => {
-          const hash = window.location.hash;
-          var paramToken = "token=";
-          const token = hash.substring(hash.indexOf(paramToken)+paramToken.length);
+          
         
           this.props.activate(values.firstName, values.lastName, values.password, token)
           .then(() => {
@@ -97,13 +96,14 @@ class Activate extends Component {
   }
 
   render() {
+    let parsed = queryString.parse(this.props.location.search)
     return (
       <Container fluid>
         <Row style={{backgroundColor: '#F7F8FD', height: '100vh'}}>
           <Col md={{size: 6, offset: 3}}>
             <Card style={{marginTop: '4rem', width: '65%', marginLeft: '15%'}} className="p-4 fapp-block-shadow">
               <CardBody>
-                { this.renderActivateForm() }
+                { this.renderActivateForm(parsed.token) }
               </CardBody>
             </Card>
           </Col>

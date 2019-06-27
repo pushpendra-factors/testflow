@@ -4,6 +4,7 @@ import { Button, Card, CardBody, Col, Container, Alert, Input, InputGroup, Input
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import * as yup from 'yup';
+import queryString from 'query-string';
 
 import { signup } from "../../../actions/agentActions";
 import  { InvalidEmail, MissingEmail } from '../ValidationMessages';
@@ -53,8 +54,10 @@ class Signup extends Component {
             })
         }
         onSubmit={(values, {setSubmitting}) => {
-            let eventProperties = { email: values.email };          
-            this.props.signup(values.email)
+          let parsed = queryString.parse(this.props.location.search);
+            let planCode = parsed.plan;
+            let eventProperties = { email: values.email, plan_code: planCode };
+            this.props.signup(values.email, planCode)
             .then(() => {
                 setSubmitting(false);
                 this.setState({signupPerformed: true, agentEmail: values.email });

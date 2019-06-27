@@ -102,12 +102,12 @@ export function login(email, password) {
     }
   }
 
-  export function signup(email){
+  export function signup(email, planCode){
     return function(dispatch){
       return new Promise((resolve, reject) => {
         dispatch({type: "AGENT_SIGNUP"});
 
-        post(dispatch, host+"accounts/signup", { email: email })
+        post(dispatch, host+"accounts/signup", { email: email, plan_code: planCode })
           .then(() => {
             resolve(dispatch({
               type: "AGENT_SIGNUP_FULFILLED",

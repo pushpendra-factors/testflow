@@ -4,7 +4,7 @@ import { Container, Input, Button, Row, Col, CardGroup, CardBody, Card} from 're
 import { bindActionCreators } from 'redux';
 import { connect } from 'react-redux';
 import * as yup from 'yup';
-
+import queryString from 'query-string';
 import { setPassword } from "../../../actions/agentActions";
 import  {  MissingPassword, PasswordsDoNotMatch, PasswordMinEightChars } from '../ValidationMessages';
 import SubmissionError from '../SubmissionError';
@@ -21,7 +21,7 @@ class SetPassword extends Component {
         }
     }
 
-    renderForm() {
+    renderForm(token) {
         return(
             <Formik
                     initialValues={{password:'', ReenterPassword:''}}
@@ -31,10 +31,7 @@ class SetPassword extends Component {
                             ReenterPassword: yup.string().required().oneOf([yup.ref('password'),null], PasswordsDoNotMatch)
                         })
                     }
-                    onSubmit={(values, {setSubmitting}) => {                            
-                        const hash = window.location.hash;
-                        let paramToken = "token=";
-                        let token = hash.substring(hash.indexOf(paramToken)+paramToken.length);
+                    onSubmit={(values, {setSubmitting}) => {
                         this.props.setPassword(values.password, token)
                         .then(() => {
                             setSubmitting(false);
@@ -73,13 +70,14 @@ class SetPassword extends Component {
         );
     }
     render(){
+        let parsed = queryString.parse(this.props.location.search)
         return (
                 <Container fluid>
                     <Row style={{backgroundColor: '#F7F8FD', height: '100vh'}}>
                         <Col md={{size: 6, offset: 3}}>
                         <Card style={{marginTop: '8rem', width: '65%', marginLeft: '15%'}} className="p-4 fapp-block-shadow">
                             <CardBody>
-                            { this.renderForm() }
+                            { this.renderForm(parsed.token) }
                             </CardBody>
                         </Card>
                         </Col>
