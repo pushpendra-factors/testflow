@@ -8,7 +8,7 @@ import {
 import { Bar } from 'react-chartjs-2';
 import { CustomTooltips } from '@coreui/coreui-plugin-chartjs-custom-tooltips';	
 
-const barBackgroundColors = ['rgba(75,192,192,0.4)', 'rgba(255,99,132,0.2)'];	import BarChart from '../Query/BarChart';
+const barBackgroundColors = ['rgba(75,192,192,0.4)', 'rgba(255,99,132,0.2)'];
 const barBorderColors = ['rgba(75,192,192,1)', 'rgba(255,99,132,1)'];	
 const barHoverBackgroundColors = ['rgba(75,192,192,1)', 'rgba(255,99,132,0.4)'];	
 const barHoverBorderColors = ['rgba(220,220,220,1)', 'rgba(255,99,132,0.4)'];
@@ -70,8 +70,8 @@ class BarChartCard extends Component {
       </CardHeader>
       {explanations}
       <CardBody className="fapp-chart-card-body">
-      <div className="chart-wrapper">
-      {chart}
+      <div className="chart-wrapper" style={{ minHeight: '450px' }}>
+        {chart}
       </div>
       </CardBody>
       </Card>
