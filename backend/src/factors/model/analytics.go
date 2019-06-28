@@ -1067,7 +1067,7 @@ WITH
 		LEFT JOIN step2 on step1.user_id=step2.user_id
 		LEFT JOIN step3 on step2.user_id=step3.user_id
         -- ORDER BY real_user_id, step1, step2, step3 makes sure to count every step he did being anonymous, after COALESCE --
-        ORDER BY real_user_id, step1, step2, step3 DESC
+        ORDER BY real_user_id, step1, step2, step3
 	)
 	SELECT '$no_group' as group_key_0, '$no_group' as group_key_1, SUM(step1) as step1,
     SUM(step2) as step2, SUM(step3) as step3,
@@ -1173,12 +1173,11 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q Query) (string, []interface
 	eventGroupKeysWithStep := buildEventGroupKeysWithStep(eventGroupProps,
 		q.EventsWithProperties)
 
-	// builds ORDER BY real_user_id, step_1, step_2 DESC
+	// builds ORDER BY real_user_id, step_1, step_2 ASC
 	funnelOrderBy := "real_user_id"
 	for _, fs := range funnelSteps {
 		funnelOrderBy = joinWithComma(funnelOrderBy, fs)
 	}
-	funnelOrderBy = funnelOrderBy + " DESC"
 
 	funnelStepName := "funnel"
 	coalesceRealUser := fmt.Sprintf("COALESCE(users.customer_user_id, %s.user_id)", funnelSteps[0])
