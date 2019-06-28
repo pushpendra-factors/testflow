@@ -1037,8 +1037,7 @@ buildUniqueUsersFunnelQuery
 WITH
 	step1 AS (
 		SELECT DISTINCT ON(events.user_id) events.user_id as user_id, 1 as step1, events.timestamp as step1_timestamp,
-        events.properties->>'presentation' as group_key_1 from events
-		LEFT JOIN users on events.user_id=users.id where events.project_id = 1
+        events.properties->>'presentation' as group_key_1 from events where events.project_id = 1
 		and event_name_id IN (select id from event_names where project_id=1 and name = 'localhost:3000/#/core')
 		and timestamp between 1393632004 and 1560231260 order by events.user_id, events.timestamp ASC
 	),
@@ -1115,9 +1114,7 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q Query) (string, []interface
 		}
 
 		var usersJoinStmnt string
-		if i == 0 {
-			usersJoinStmnt = "LEFT JOIN users ON events.user_id=users.id"
-		} else {
+		if i > 0 {
 			// builds "LEFT JOIN step_0 on events.user_id=step_0.user_id"
 			prevStepName := stepNameByIndex(i - 1)
 			usersJoinStmnt = fmt.Sprintf("LEFT JOIN %s on events.user_id=%s.user_id", prevStepName, prevStepName)
