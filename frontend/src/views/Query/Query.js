@@ -167,6 +167,7 @@ class Query extends Component {
       resultDateRange: [DEFAULT_DATE_RANGE],
       // reset presentation.
       result: null,
+      selectedPresentation: DEFAULT_PRESENTATION,
       showPresentation: false,
     });
 
@@ -936,7 +937,7 @@ class Query extends Component {
   renderAddToDashboardModal() {
     return (
       <Modal isOpen={this.state.showAddToDashboardModal} toggle={this.toggleAddToDashboardModal} style={{marginTop: '10rem'}}>
-        <ModalHeader toggle={this.toggleAddToDashboardModal}>Add to dashboard</ModalHeader>
+        <ModalHeader toggle={this.toggleAddToDashboardModal}>Add to Dashboard</ModalHeader>
         <ModalBody style={{padding: '25px 35px'}}>
           <div style={{textAlign: 'center', marginBottom: '15px'}}>
             <span style={{display: 'inline-block'}} className='fapp-error' hidden={this.state.addToDashboardMessage == null}>
@@ -944,8 +945,8 @@ class Query extends Component {
             </span>
           </div>
           <Form>
-            <span className='fapp-label'>Chart title</span>         
-            <Input className='fapp-input' type="text" placeholder="Your chart title" onChange={this.setDashboardUnitTitle} />
+            <span className='fapp-label'>Chart Title</span>         
+            <Input className='fapp-input' type="text" placeholder="Your Chart Title" onChange={this.setDashboardUnitTitle} />
           </Form>
         </ModalBody>
         <ModalFooter style={{borderTop: 'none', paddingBottom: '30px', paddingRight: '35px'}}>
