@@ -1056,7 +1056,9 @@ WITH
 		and timestamp between step2.step2_timestamp and 1560231260 order by events.user_id, events.timestamp ASC
 	),
 	funnel as (
-		SELECT CASE WHEN user_properties.properties->>'$city' IS NULL THEN '$none'
+		SELECT DISTINCT ON(COALESCE(users.customer_user_id, step1.user_id))
+        COALESCE(users.customer_user_id, step1.user_id) AS real_user_id,
+        CASE WHEN user_properties.properties->>'$city' IS NULL THEN '$none'
         WHEN user_properties.properties->>'$city' = '' THEN '$none'
         ELSE user_properties.properties->>'$city' END AS group_key_0,
         step1, step2, step3, step2.group_key_1 as group_key_1 from step1
@@ -1064,6 +1066,8 @@ WITH
         LEFT JOIN user_properties on users.properties_id=user_properties.id
 		LEFT JOIN step2 on step1.user_id=step2.user_id
 		LEFT JOIN step3 on step2.user_id=step3.user_id
+        -- ORDER BY real_user_id, step1, step2, step3 makes sure to count every step he did being anonymous, after COALESCE --
+        ORDER BY real_user_id, step1, step2, step3 DESC
 	)
 	SELECT '$no_group' as group_key_0, '$no_group' as group_key_1, SUM(step1) as step1,
     SUM(step2) as step2, SUM(step3) as step3,
@@ -1151,10 +1155,10 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q Query) (string, []interface
 	ugSelect, ugParams, _ := buildGroupKeys(userGroupProps)
 
 	// Join user properties if group by propertie given.
-	var properitesJoinStmnt string
-	if len(q.GroupByProperties) > 0 {
-		// builds "LEFT JOIN users on step1.user_id=users.id LEFT JOIN user_properties on users.properties_id=user_properties.id"
-		properitesJoinStmnt = fmt.Sprintf("LEFT JOIN users on %s.user_id=users.id LEFT JOIN user_properties on users.properties_id=user_properties.id", funnelSteps[0])
+	// builds "LEFT JOIN users on step1.user_id=users.id LEFT JOIN user_properties on users.properties_id=user_properties.id"
+	properitesJoinStmnt := fmt.Sprintf("LEFT JOIN users on %s.user_id=users.id", funnelSteps[0])
+	if hasGroupEntity(q.GroupByProperties, PropertyEntityUser) {
+		properitesJoinStmnt = properitesJoinStmnt + " " + "LEFT JOIN user_properties on users.properties_id=user_properties.id"
 	}
 
 	var stepsJoinStmnt string
@@ -1169,9 +1173,18 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q Query) (string, []interface
 	eventGroupKeysWithStep := buildEventGroupKeysWithStep(eventGroupProps,
 		q.EventsWithProperties)
 
+	// builds ORDER BY real_user_id, step_1, step_2 DESC
+	funnelOrderBy := "real_user_id"
+	for _, fs := range funnelSteps {
+		funnelOrderBy = joinWithComma(funnelOrderBy, fs)
+	}
+	funnelOrderBy = funnelOrderBy + " DESC"
+
 	funnelStepName := "funnel"
-	funnelStmnt := "SELECT" + " " + joinWithComma(ugSelect, eventGroupKeysWithStep, funnelStepsForSelect) + " " + "FROM" + " " +
-		funnelSteps[0] + " " + properitesJoinStmnt + " " + stepsJoinStmnt
+	coalesceRealUser := fmt.Sprintf("COALESCE(users.customer_user_id, %s.user_id)", funnelSteps[0])
+	coalesceUserSelect := fmt.Sprintf("DISTINCT ON(%s) %s AS real_user_id", coalesceRealUser, coalesceRealUser)
+	funnelStmnt := "SELECT" + " " + joinWithComma(coalesceUserSelect, ugSelect, eventGroupKeysWithStep, funnelStepsForSelect) + " " + "FROM" + " " +
+		funnelSteps[0] + " " + properitesJoinStmnt + " " + stepsJoinStmnt + " " + "ORDER BY" + " " + funnelOrderBy
 	funnelStmnt = as(funnelStepName, funnelStmnt)
 	qStmnt = joinWithComma(qStmnt, funnelStmnt)
 	qParams = append(qParams, ugParams...)
