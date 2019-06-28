@@ -32,6 +32,8 @@ import {
 import Loading from '../../loading';
 import factorsai from '../../common/factorsaiObj';
 import { PROPERTY_TYPE_OPTS, USER_PREF_PROPERTY_TYPE_OPTS } from './common';
+import insightsSVG from '../../assets/img/analytics/insights.svg';
+import funnelSVG from '../../assets/img/analytics/funnel.svg';
 
 const COND_ALL_GIVEN_EVENT = 'all_given_event';
 const COND_ANY_GIVEN_EVENT = 'any_given_event'; 
@@ -896,19 +898,36 @@ class Query extends Component {
     );
   }
 
+  getInterfaceSelectorStyle(queryClass) {
+    let style = { display: 'inline-block', fontSize: '15px', fontWeight: '600', 
+    border: '1px solid', padding: '10px 20px', borderWidth: '0.1rem', borderRadius: '5px', 
+    marginRight: '18px', cursor: 'pointer' }
+
+    if (queryClass == this.state.class.value) {
+      style.borderColor = '#20a8d8';
+    } else {
+      style.borderColor = '#DDD';
+    }
+
+    return style; 
+  }
+
   renderInterfaceSelector() {
     return (
-      <Row style={{marginBottom: '16px'}}>
+      <Row style={{ marginBottom: '16px' }}>
         <Col xs='12' md='12'>
-          <span style={LABEL_STYLE}> Get </span>
-          <div style={{display: 'inline-block', width: '100px', marginRight: '10px'}} className='fapp-select light'>
-            <Select
-              value={this.state.class}
-              options={QUERY_CLASS_OPTS}
-              onChange={this.handleClassChange}
-            />
+          <div style={{ textAlign: 'center', marginBottom: '15px' }}>
+            <div onClick={() => this.handleClassChange({ value: QUERY_CLASS_INSIGHTS })} 
+              style={this.getInterfaceSelectorStyle(QUERY_CLASS_INSIGHTS)}> 
+              <img src={insightsSVG} style={{ marginRight: '5px',  marginBottom: '4px', height: '25px' }} />  
+              <span className='fapp-text'> Insights </span> 
+            </div>
+            <div onClick={() => this.handleClassChange({ value: QUERY_CLASS_FUNNEL })} 
+              style={this.getInterfaceSelectorStyle(QUERY_CLASS_FUNNEL)}>
+              <img src={funnelSVG} style={{ marginRight: '5px', marginBottom: '2px', height: '25px' }} /> 
+              <span className='fapp-text'> Funnel </span> 
+            </div>
           </div>
-          <span style={LABEL_STYLE}> for below query, </span>
         </Col>
       </Row>
     );
@@ -1007,7 +1026,7 @@ class Query extends Component {
 
     console.debug('Query State : ', this.state);
     return (
-      <div className='fapp-content' style={{ marginLeft: '2rem', marginRight: '2rem' }}>
+      <div className='fapp-content' style={{ marginLeft: '2rem', marginRight: '2rem', paddingTop: '30px' }}>
         {[ this.renderGlobalError(), this.renderInterfaceSelector(), renderQueryInterface(), this.renderAddToDashboardModal() ]}
       </div>
     );

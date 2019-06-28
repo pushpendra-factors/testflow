@@ -457,6 +457,10 @@ div.setting-card:hover{
     color: #999;
 }
 
+.fapp-text {
+    color: #777;
+}
+
 .fapp-bordered-card {
     color: #484848;
     margin-bottom: 2.5rem !important;
