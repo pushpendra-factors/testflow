@@ -563,14 +563,8 @@ func addEventFilterStepsForUniqueUsersQuery(projectId uint64, q *Query,
 		refStepName := stepNameByIndex(i)
 		steps = append(steps, refStepName)
 
-		var stepJoin string
-		if hasWhereEntity(ewp, PropertyEntityUser) {
-			// Join user_properties if where with user_properties exist.
-			stepJoin = "LEFT JOIN user_properties ON events.user_properties_id=user_properties.id"
-		}
-
 		addFilterEventsWithPropsQuery(projectId, qStmnt, qParams, ewp, q.From, q.To,
-			"", refStepName, stepSelect, egParams, stepJoin, "", stepOrderBy)
+			"", refStepName, stepSelect, egParams, "", "", stepOrderBy)
 
 		if i < len(q.EventsWithProperties)-1 {
 			*qStmnt = *qStmnt + ","
