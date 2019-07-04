@@ -4,17 +4,18 @@ import { bindActionCreators } from 'redux';
 import {
   Col,
   Input,
-  InputGroup,
   Card,
   CardBody,
   CardHeader
 } from 'reactstrap';
 import Toggle from 'react-toggle';
+
 import Loading from '../../loading';
 import { 
   fetchProjectSettings,
   udpateProjectSettings,
 } from '../../actions/projectsActions';
+import NoContent from '../../common/NoContent';
 
 const INT_SEGMENT_URI="/integrations/segment";
 
@@ -75,11 +76,33 @@ class Segment extends Component {
     return this.state.loaded;
   }
 
-  render() {
-    if (!this.isLoaded()) return <Loading />;
+  renderSegmentConfig() {
+    if (!this.isIntSegmentEnabled()) {
+      return <CardBody style={{fontWeight: 700, color: '#BBB', fontSize: '20px', textAlign: 'center', paddingTop: '110px', paddingBottom: '130px'}}> 
+        Integration is disabled
+      </CardBody>
+    }
 
     let segmentWebhookURL = this.getSegmentWebhookURL();
     let segmentPrivateToken = this.getPrivateToken();
+
+    return (
+      <CardBody>
+        <div style={{marginBottom: '25px'}}>
+          <span className='fapp-label'>Webhook URL</span>
+          <Input className='fapp-input' defaultValue={segmentWebhookURL}/>
+        </div>
+        <div>
+          <span className='fapp-label'>API Key</span>
+          <Input className='fapp-input' defaultValue={segmentPrivateToken}/>
+        </div>
+      </CardBody>
+    ); 
+  }
+  
+
+  render() {
+    if (!this.isLoaded()) return <Loading />;
 
     return (
       <Col md={{ size:6, offset:3 }} className='fapp-content fapp-content-margin' style={{padding: '5rem'}}>
@@ -95,16 +118,7 @@ class Segment extends Component {
                   />
                 </div>
               </CardHeader>
-              <CardBody>
-                <div style={{marginBottom: '25px'}}>
-                  <span className='fapp-label'>Webhook URL</span>
-                  <Input className='fapp-input' defaultValue={segmentWebhookURL}/>
-                </div>
-                <div>
-                  <span className='fapp-label'>Token</span>
-                  <Input className='fapp-input' defaultValue={segmentPrivateToken}/>
-                </div>
-              </CardBody>
+              { this.renderSegmentConfig() }
             </div>
         </Card>
       </Col>
