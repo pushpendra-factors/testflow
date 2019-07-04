@@ -5,11 +5,13 @@ import Blog from './Blog';
 import Pricing from './Pricing';
 import BlogBigData1 from './BlogBigData1'
 import BlogBigData2 from './BlogBigData2'
+import ResourcesDropdown from './ResourcesDropdown'
 import facebookSVG from './assets/img/facebook.svg'
 import linkedinSVG from './assets/img/linkedin.svg'
 import logoFactorsPNG from './assets/img/logo_factors.png'
 import twitterSVG from './assets/img/twitter.svg'
 import './App.css';
+import IntegrationsSegment from './IntegrationsSegment';
 
 function App() {
   return (
@@ -34,9 +36,7 @@ function App() {
                 </a>
               </li>
               <li className="nav-item">
-                <a id="blog-nav-link" className="nav-link" href="/blog">
-                  Blog
-                </a>
+               <ResourcesDropdown></ResourcesDropdown>
               </li>
             </ul>
           </div>
@@ -49,6 +49,7 @@ function App() {
 +       <Route path="/blog/big-data-analytics-next-2" component={BlogBigData2} />
 +       <Route path="/blog" component={Blog} />
         <Route path="/pricing" component={Pricing} />
+        <Route path="/integrations/segment" component={IntegrationsSegment} />
 +     </Switch>
 
       <div className="container-fluid footer" id="contact">
