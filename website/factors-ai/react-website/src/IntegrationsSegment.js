@@ -73,6 +73,10 @@ class IntegrationsSegment extends Component {
                          src={enableFactorsDestination2PNG}/>
                   </div>
                   <br />
+                  <p>
+                        After you've created your Segment + FactorsAI integration, we'll immediately start ingesting your user data. We'll need a minimum of 1 week of data to build descriptive models and give deeper insights for your goals.
+                  </p>
+                  <br />
                 </div>
               </div>
             </div>
