@@ -36,7 +36,7 @@ function App() {
                 </a>
               </li>
               <li className="nav-item">
-               <ResourcesDropdown></ResourcesDropdown>
+               <ResourcesDropdown />
               </li>
             </ul>
           </div>

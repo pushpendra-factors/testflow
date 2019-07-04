@@ -87,6 +87,21 @@ button:hover {
   color: rgba(0,0,0,.8) !important;
 }
 
+.nav-item .dropdown button {
+  color: rgba(0,0,0,.8) !important;
+  background: #fff !important;
+  border: none !important;
+}
+
+.nav-item .dropdown button:focus {
+  box-shadow: none;
+}
+
+.nav-item a:hover,
+.nav-item button:hover {
+  color: #20a8d8 !important;
+}
+
 .nav-item.active a {
   color: #005B96;
 }
