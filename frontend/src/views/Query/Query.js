@@ -10,6 +10,7 @@ import 'react-date-range/dist/styles.css';
 import 'react-date-range/dist/theme/default.css';
 import { DateRangePicker, createStaticRanges } from 'react-date-range'; 
 import moment from 'moment';
+import onClickOutside from 'react-onclickoutside';
 
 import TableChart from './TableChart'
 import LineChart from './LineChart';
@@ -118,6 +119,23 @@ const mapDispatchToProps = dispatch => {
     createDashboardUnit,
   }, dispatch)
 }
+
+
+class DateRangePickerWithCloseHandler extends Component {
+  constructor(props) {
+    super(props);
+  }
+
+  handleClickOutside = () => {
+    this.props.closeDatePicker();
+  }
+
+  render() {
+    return <DateRangePicker {...this.props} />
+  }
+}
+const ClosableDateRangePicker = onClickOutside(DateRangePickerWithCloseHandler);
+
 
 class Query extends Component {
   constructor(props) {
@@ -713,6 +731,11 @@ class Query extends Component {
     return [events, addEventButton];
   }
 
+
+  closeDatePicker = () => {
+    this.setState({ showDatePicker: false });
+  }
+
   renderDateRangeSelector() {
     return (
       <Row style={{marginBottom: '15px'}}>
@@ -724,13 +747,14 @@ class Query extends Component {
             {this.readableDateRange(this.state.resultDateRange[0])}
           </Button>
           <div className='fapp-date-picker' hidden={!this.state.showDatePicker}>
-            <DateRangePicker
+            <ClosableDateRangePicker
               ranges={this.state.resultDateRange}
               onChange={this.handleResultDateRangeSelect}
               staticRanges={ DEFINED_DATE_RANGES }
               inputRanges={[]}
               minDate={new Date('01 Jan 2000 00:00:00 GMT')} // range starts from given date.
               maxDate={new Date()}
+              closeDatePicker={this.closeDatePicker}
             />
             <button className='fapp-close-round-button' style={{float: 'right', marginLeft: '0px', borderLeft: 'none'}} 
             onClick={this.toggleDatePickerDisplay}>x</button>

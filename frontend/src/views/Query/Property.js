@@ -5,7 +5,8 @@ import { connect } from 'react-redux';
 // import { bindActionCreators } from 'redux';
 import { Row, Col, Input, Button } from 'reactstrap';
 import moment from 'moment';
-import { DateRangePicker, createStaticRanges } from 'react-date-range'; 
+import { DateRangePicker, createStaticRanges } from 'react-date-range';
+import onClickOutside from 'react-onclickoutside';
 
 import { 
   fetchProjectEventProperties,
@@ -66,6 +67,21 @@ const DEFINED_DATE_RANGES = createStaticRanges([
     })
   },
 ]);
+
+class DateRangePickerWithCloseHandler extends Component {
+  constructor(props) {
+    super(props);
+  }
+
+  handleClickOutside = () => {
+    this.props.closeDatePicker();
+  }
+
+  render() {
+    return <DateRangePicker {...this.props} />
+  }
+}
+const ClosableDateRangePicker = onClickOutside(DateRangePickerWithCloseHandler);
 
 class Property extends Component {
   constructor(props) {
@@ -189,6 +205,10 @@ class Property extends Component {
     this.setState({ showDatePicker: !this.state.showDatePicker });
   }
 
+  closeDatePicker = () => {
+    this.setState({ showDatePicker: false });
+  }
+
   readableDateRange(range) {
     // Use label for default date range.
     if(range.startDate ==  DEFAULT_DATE_RANGE.startDate 
@@ -207,13 +227,14 @@ class Property extends Component {
         <div style={{display: "inline-block", marginLeft: "10px"}}>
           <Button outline style={{ border: '1px solid #ccc', color: 'grey', padding: '8px 12px', marginBottom: '3px' }} onClick={this.toggleDatePickerDisplay}><i className="fa fa-calendar" style={{marginRight: '10px'}}></i>{this.readableDateRange(this.state.resultDateRange[0])}</Button>
           <div className='fapp-date-picker' style={{ display: 'block', marginTop: '10px' }} hidden={!this.state.showDatePicker}>
-            <DateRangePicker
+            <ClosableDateRangePicker
               ranges={this.state.resultDateRange}
               onChange={this.onValueChange}
               staticRanges={ DEFINED_DATE_RANGES }
               inputRanges={[]}
               minDate={new Date('01 Jan 2000 00:00:00 GMT')} // range starts from given date.
               maxDate={new Date()}
+              closeDatePicker={this.closeDatePicker}
             />
             <button className='fapp-close-round-button' style={{float: 'right', marginLeft: '0px', borderLeft: 'none'}} onClick={this.toggleDatePickerDisplay}>x</button>
           </div>
