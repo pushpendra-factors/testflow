@@ -5,6 +5,7 @@ import Blog from './Blog';
 import Pricing from './Pricing';
 import BlogBigData1 from './BlogBigData1'
 import BlogBigData2 from './BlogBigData2'
+import BlogSegmentLaunch from './BlogSegmentLaunch'
 import ResourcesDropdown from './ResourcesDropdown'
 import facebookSVG from './assets/img/facebook.svg'
 import linkedinSVG from './assets/img/linkedin.svg'
@@ -49,6 +50,7 @@ function App() {
         <Route exact path="/" component={Home} />
         <Route path="/blog/big-data-analytics-next-1" component={BlogBigData1} />
 +       <Route path="/blog/big-data-analytics-next-2" component={BlogBigData2} />
+        <Route path="/blog/segment-integration-launch" component={BlogSegmentLaunch} />
 +       <Route path="/blog" component={Blog} />
         <Route path="/pricing" component={Pricing} />
         <Route path="/integrations/segment" component={IntegrationsSegment} />
