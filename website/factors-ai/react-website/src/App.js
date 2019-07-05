@@ -8,7 +8,7 @@ import BlogBigData2 from './BlogBigData2'
 import ResourcesDropdown from './ResourcesDropdown'
 import facebookSVG from './assets/img/facebook.svg'
 import linkedinSVG from './assets/img/linkedin.svg'
-import logoFactorsPNG from './assets/img/logo_factors.png'
+import logoFactorsPNG from './assets/img/logo_factors.svg'
 import twitterSVG from './assets/img/twitter.svg'
 import './App.css';
 import IntegrationsSegment from './IntegrationsSegment';
@@ -17,9 +17,11 @@ function App() {
   return (
     <BrowserRouter>
       <div className="App">
-      <nav className="navbar navbar-expand-md navbar-light">
+      <nav className="navbar navbar-expand-md navbar-light" style={{ marginTop: '10px' }}>
         <div className="container">
-          <a href="/" className="navbar-brand"><img src={logoFactorsPNG} alt="true" /></a>       
+          <a href="/" className="navbar-brand" style={{paddingLeft: '30px'}}>
+            <img src={logoFactorsPNG} alt="true" />
+          </a>       
           <button className="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
             <span className="navbar-toggler-icon" />
           </button>
