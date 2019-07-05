@@ -22,14 +22,14 @@
 #blog .blog-item-wrapper {
   background: #fff;
   border-radius: 4px;
-  box-shadow: 0px 0px 40px 0px rgba(0, 0, 0, 0.1);
+  box-shadow: 0px 0px 20px 0px rgba(0, 0, 0, 0.1);
   -webkit-transition: transform 0.2s linear, -webkit-box-shadow 0.2s linear;
   -moz-transition: transform 0.2s linear, -moz-box-shadow 0.2s linear;
   transition: transform 0.2s linear, box-shadow 0.2s linear;
 }
 
 #blog .blog-item-wrapper:hover {
-  box-shadow: 0 20px 30px 0 rgba(0, 0, 0, 0.08);
+  box-shadow: 0 30px 30px 0 rgba(0, 0, 0, 0.2);
 }
 
 #blog .blog-item-wrapper:hover .blog-item-img:before {
@@ -79,7 +79,7 @@
   
   #blog-single .blog-post {
     background: #fff;
-    box-shadow: 0px 0px 40px 0px rgba(0, 0, 0, 0.1);
+    box-shadow: 0px 0px 15px 0px rgba(0, 0, 0, 0.1);
     overflow: hidden;
     margin-bottom: 40px;
   }
@@ -116,7 +116,7 @@
 
   .blog-comment {
     background: #fff;
-    box-shadow: 0px 0px 40px 0px rgba(0, 0, 0, 0.1);
+    box-shadow: 0px 0px 15px 0px rgba(0, 0, 0, 0.1);
     padding: 50px 30px;
     margin-top: 30px;
     overflow: hidden;

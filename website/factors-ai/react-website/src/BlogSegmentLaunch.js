@@ -1,7 +1,8 @@
 import React, { Component } from 'react'
 import Disqus from "disqus-react"
 import './assets/css/blog.css'
-import aravindAuthorPNG from './assets/img/blog/aravind_author.jpg'
+import aravindAuthorPNG from './assets/img/blog/aravind_author.jpg';
+import segmentFactorsAISVG from './assets/img/blog/blog-segment-launch.svg';
 
 class BlogSegmentLaunch extends Component {
     render() {
@@ -18,10 +19,13 @@ class BlogSegmentLaunch extends Component {
             <div className="col-lg-12 col-md-16 col-xs-16">
               <div className="blog-post">
                 <div className="post-content">
-                  <h3>FactorsAI + Segment: Easy and instant analytics to drive growth.</h3>
+                  <h3>FactorsAI + Segment: Easy and instant analytics to drive growth</h3>
                   <p>
                   We are excited to announce our integration with Segment, further enabling companies to easily instrument user interactions across platforms and push different types of customer data, from any 3rd party source in realtime to FactorsAI.
                   </p>
+                  <div className="col-md-12" style={{textAlign: "center", marginTop: "70px", marginBottom: "65px"}}>
+                    <img src={segmentFactorsAISVG}/>
+                  </div>
                   <br />
                   <p>
                   FactorsAI provides advanced and intuitive analytics for marketers and product managers, to help drive growth. With FactorsAI you get immediate insights to optimize marketing campaigns, improve conversions and understand user behaviours that drive feature adoption and retention.
