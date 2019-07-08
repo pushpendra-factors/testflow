@@ -10,7 +10,7 @@ import { SortableContainer, SortableElement } from 'react-sortable-hoc';
 import DashboardUnit from './DashboardUnit';
 import { fetchDashboards, createDashboard, updateDashboard,
   fetchDashboardUnits } from '../../actions/dashboardActions';
-import { createSelectOpts, makeSelectOpt } from '../../util';
+import { createSelectOpts, makeSelectOpt, getSelectedOpt } from '../../util';
 import NoContent from '../../common/NoContent';
 import Loading from '../../loading';
 import { PRESENTATION_CARD } from '../Query/common';
@@ -35,6 +35,7 @@ const SortableUnitList = SortableContainer(({ children }) => {
 const mapStateToProps = store => {
   return {
     currentProjectId: store.projects.currentProjectId,
+    currentAgent: store.agents.agent,
     dashboards: store.dashboards.dashboards,
     dashboardUnits: store.dashboards.units,
   };
@@ -95,14 +96,43 @@ class Dashboard extends Component {
 
   onSelectDashboard = (option) => {
     this.setState({ selectedDashboard: option, loadingUnits: true });
+    this.setLastSeenDashboard(option.value);
+
     this.props.fetchDashboardUnits(this.props.currentProjectId, option.value)
       .then(() => this.setState({ loadingUnits: false }))
       .catch(console.error);
   }
 
+  getLastSeenDashboardKey() {
+    //_dashboard_ls:<agent_id>:<project_id>
+    return this.props.currentAgent && this.props.currentProjectId ? 
+      '_dashboard_ls:'+this.props.currentAgent.uuid+':'+this.props.currentProjectId : '';
+  }
+
+  setLastSeenDashboard(dashboardId) {
+    let dashboardKey = this.getLastSeenDashboardKey();
+    if (dashboardKey == '') return;
+    localStorage.setItem(dashboardKey, dashboardId);
+  }
+
+  getLastSeenDashboard() {
+    let dashboardKey = this.getLastSeenDashboardKey();
+    if (dashboardKey == '') return null;
+    return localStorage.getItem(dashboardKey);
+  }
+
   getSelectedDashboard() {
     if (this.state.selectedDashboard != null) 
       return this.state.selectedDashboard;
+
+    let lsDashboardId = this.getLastSeenDashboard();
+    // if user seen dashboard found.
+    if (lsDashboardId) {
+      let lsDashboardName = this.getDashboardsOptSrc()[lsDashboardId];
+      // if dashboard found on existing accessible dashboards list.
+      if (lsDashboardName) return makeSelectOpt(lsDashboardId, lsDashboardName)
+    }
+    
 
     // inits selector with first dashboard.
     if (this.props.dashboards  
