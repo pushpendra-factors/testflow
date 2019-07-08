@@ -74,10 +74,47 @@ class DefaultHeader extends Component {
     }
   }
 
-  handleChange = (selectedProject) => {
+  componentDidUpdate() {
+    // change to project last seen by user if any.
+    let lsProjectId = this.getLastSeenProject();
+    if (lsProjectId && this.props.selectedProject && 
+      this.props.selectedProject.value != lsProjectId && 
+      this.hasProject(lsProjectId))
+        this.props.changeProject(lsProjectId);
+  }
+
+  handleProjectChange = (selectedProject) => {
     let projectId = selectedProject.value;
     this.props.changeProject(projectId);
+    this.setLastSeenProject(projectId);
+
     this.props.refresh();
+  }
+
+  getLastSeenProjectKey() {
+    // _project_ls:<agent_id>
+    return this.props.currentAgent ? '_project_ls:'+this.props.currentAgent.uuid : '';
+  }
+  
+  setLastSeenProject(projectId) {
+    let projectKey = this.getLastSeenProjectKey();
+    if (projectKey == '') return;
+    localStorage.setItem(projectKey, projectId);
+  }
+
+  getLastSeenProject() {
+    let projectKey = this.getLastSeenProjectKey();
+    if (projectKey == '') return null;
+    return localStorage.getItem(projectKey);
+  }
+
+  hasProject(projectId) {
+    for(let i=0; i<this.props.selectableProjects.length; i++) {
+      let sProject = this.props.selectableProjects[i];
+      if (sProject.value == projectId) return true;
+    }
+
+    return false;
   }
 
   handleProjectNameFormChange = (e) => {
@@ -120,7 +157,7 @@ class DefaultHeader extends Component {
 
   handleLogout = () => {
     this.props.signout();
-    factorsai.track('logout', { email: this.props.agentEmail });
+    factorsai.track('logout', { email: this.props.currentAgent.email });
   }
 
   toggleAddProjectModal = () => {
@@ -175,14 +212,20 @@ class DefaultHeader extends Component {
   }
 
   render() {
-
     // eslint-disable-next-line
     const { children, ...attributes } = this.props;
 
-    let selectProjectDropDown = "";
-    if(!!this.props.selectableProjects ){
-      selectProjectDropDown = <Select options={this.props.selectableProjects} value={this.props.selectedProject} onChange={this.handleChange} styles={projectSelectStyles} placeholder={"Select Project ..."} blurInputOnSelect={true}/>;
-    }
+    let selectProjectDropDown = null;
+    if (!!this.props.selectableProjects)
+      selectProjectDropDown = <Select 
+        options={this.props.selectableProjects} 
+        value={this.props.selectedProject} 
+        onChange={this.handleProjectChange} 
+        styles={projectSelectStyles} 
+        placeholder={"Select Project ..."} 
+        blurInputOnSelect={true}
+      />;
+
     return (
       <React.Fragment>
         <AppSidebarToggler className="d-lg-none" display="md" mobile />

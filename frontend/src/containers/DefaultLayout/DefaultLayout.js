@@ -180,24 +180,24 @@ class DefaultLayout extends Component {
     if (selectableProjects.length == 0 ){
       return <DefaultHeader 
         refresh={this.refresh}
-        changeViewToAccountSettings= {this.changeViewToAccountSettings}
-        changeViewToUserProfile = {this.changeViewToUserProfile}
+        changeViewToAccountSettings={this.changeViewToAccountSettings}
+        changeViewToUserProfile={this.changeViewToUserProfile}
         getProfileName={this.getAgentName} 
-        agentEmail={this.props.agent.email} 
+        currentAgent={this.props.agent}
       /> 
     }
 
     return <DefaultHeader
       refresh={this.refresh}
-      changeViewToAccountSettings= {this.changeViewToAccountSettings}
-      changeViewToUserProfile = {this.changeViewToUserProfile}
+      changeViewToAccountSettings={this.changeViewToAccountSettings}
+      changeViewToUserProfile={this.changeViewToUserProfile}
       selectableProjects={selectableProjects}
       selectedProject={{
         label: this.props.projects[this.props.currentProjectId].name,
         value: this.props.currentProjectId 
       }}
       getProfileName={this.getAgentName}
-      agentEmail={this.props.agent.email}
+      currentAgent={this.props.agent}
     />
   }
 
