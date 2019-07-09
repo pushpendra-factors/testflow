@@ -31,32 +31,6 @@ import { isProduction } from '../../util';
 // inits factorsai sdk for app.
 import factorsai from '../../common/factorsaiObj';
 
-const projectSelectStyles = {
-  option: (base, state) => ({
-    ...base,
-    color: '#5c6873',
-    background: '#fff',
-  }),
-  singleValue: base => ({
-    ...base,
-    background: '#fff',
-    color: '#5c6873',
-  }),
-  valueContainer: base => ({
-    ...base,
-    background: '#fff',
-    color: '#5c6873',
-  }),
-  container: base => ({
-    ...base,
-    background: '#fff',
-    border: 'none',
-  }),
-  indicatorSeparator: () => ({
-    display: 'none',
-  }),
-}
-
 const isHotJarExcludedEmail = (email) => {
   const excludedEmailDomains = [ "factors.ai" ];
   return email && excludedEmailDomains.indexOf(email.split("@")[1]) > -1;
@@ -99,6 +73,11 @@ class DefaultLayout extends Component {
   }
 
   componentWillMount() {
+    window.fcWidget.init({
+      token: "3208785c-3624-47c7-be9a-4f60aa0e60f9",
+      host: "https://wchat.freshchat.com"
+    });
+
     this.props.fetchProjects()
       .then((action) => {
         this.setState({ 
@@ -125,6 +104,10 @@ class DefaultLayout extends Component {
         });
 
         factorsai.identify(r.data.email);
+
+        window.fcWidget.setExternalId(r.data.email);
+        window.fcWidget.user.setEmail(r.data.email);
+        window.fcWidget.user.setFirstName(r.data.first_name);
       })
       .catch((r) => {
         this.setState({ 
@@ -142,6 +125,13 @@ class DefaultLayout extends Component {
     if (prevProps.agent && this.props.agent && prevProps.agent.email != this.props.agent.email) {
       if (isProduction() && !isHotJarExcludedEmail(this.props.agent.email))
         hotjar.initialize(1259925, 6);
+    }
+
+    if (this.props.currentProjectId && this.props.projects) {
+      window.fcWidget.user.setProperties({
+        "Project Id": this.props.currentProjectId,
+        "Project Name": this.props.projects[this.props.currentProjectId].name,
+      });
     }
   }
 
