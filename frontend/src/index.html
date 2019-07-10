@@ -14,6 +14,18 @@
     <link rel="manifest" href="assets/manifest.json">
     <link rel="shortcut icon" href="assets/favico.ico">
     <script src="https://wchat.freshchat.com/js/widget.js"></script>
+
+    <!-- Global site tag (gtag.js) - Google Ads: 727256945 -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=AW-727256945"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'AW-727256945');
+  </script>
+
+
   </head>
 
   <!-- BODY options, add following classes to body to change options
@@ -49,6 +61,22 @@
       You need to enable JavaScript to run this app.
     </noscript>
     <div id="root"></div>
+
+    <script>
+      function gtag_report_conversion(url) {
+        var callback = function () {
+          if (typeof(url) != 'undefined') {
+            window.location = url;
+          }
+        };
+        gtag('event', 'conversion', {
+            'send_to': 'AW-727256945/CkHKCPzooaUBEPGe5NoC',
+            'event_callback': callback
+        });
+        return false;
+      }
+    </script>
+
     <script src="index.min.js"></script>
   </body>
 </html>

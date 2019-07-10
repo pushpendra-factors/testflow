@@ -11,6 +11,7 @@ import  { InvalidEmail, MissingEmail } from '../ValidationMessages';
 import HalfScreen from '../HalfScreen';
 import SubmissionError from '../SubmissionError';
 import factorsai from '../../../common/factorsaiObj';
+import { isProduction } from '../../../util';
 
 const mapDispatchToProps = dispatch => {
   return bindActionCreators({ signup }, dispatch);
@@ -54,6 +55,9 @@ class Signup extends Component {
             })
         }
         onSubmit={(values, {setSubmitting}) => {
+          // track create account conversion.
+          if (isProduction()) gtag_report_conversion();
+
           let parsed = queryString.parse(this.props.location.search);
             let planCode = parsed.plan;
             let eventProperties = { email: values.email, plan_code: planCode };

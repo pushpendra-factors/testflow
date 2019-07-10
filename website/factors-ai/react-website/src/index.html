@@ -74,6 +74,8 @@
       }
 
       function redirectToAppSignup() {
+        // track signup conversion.
+        gtag_report_conversion();
         window.location = 'https://app.factors.ai/#/signup';
       }
     
@@ -169,11 +171,37 @@
         })
       });
     </script>
+
+    <!-- Global site tag (gtag.js) - Google Ads: 727256945 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=AW-727256945"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'AW-727256945');
+    </script>
+
+    <script>
+      function gtag_report_conversion(url) {
+        var callback = function () {
+          if (typeof(url) != 'undefined') {
+            window.location = url;
+          }
+        };
+        
+        gtag('event', 'conversion', {
+            'send_to': 'AW-727256945/e0OhCOiZnqUBEPGe5NoC',
+            'event_callback': callback
+        });
+        return false;
+      }
+    </script>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
-    
+
     <script>
       window.fcWidget.init({
         token: "3208785c-3624-47c7-be9a-4f60aa0e60f9",
