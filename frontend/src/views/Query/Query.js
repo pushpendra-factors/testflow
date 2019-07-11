@@ -197,9 +197,15 @@ class Query extends Component {
   }
 
   componentDidUpdate(prevProps, prevState) {
-    if (prevState.class.value != this.state.class.value) {
+    if (!this.isViewQuery() && prevState.class.value != this.state.class.value) {
       this.resetQueryInterfaceOnClassChange();
     }
+  }
+
+  isViewQuery() {
+    let queryParams = queryString.parse(this.props.location.search);
+    return queryParams && queryParams.view && queryParams.view != "" && 
+          Object.keys(this.props.viewQuery).length > 0;
   }
 
   componentWillMount() {
@@ -208,9 +214,7 @@ class Query extends Component {
         this.setState({ eventNamesLoaded: true });
 
         // init query builder.
-        let queryParams = queryString.parse(this.props.location.search);
-        if (queryParams && queryParams.view && queryParams.view != "" && 
-          Object.keys(this.props.viewQuery).length > 0 ) {
+        if (this.isViewQuery()) {
           this.initWithViewQuery();
         } else {
           this.initWithAnEventRow();
