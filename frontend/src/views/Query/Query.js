@@ -180,6 +180,17 @@ class Query extends Component {
   }
   
   resetQueryInterfaceOnClassChange() {
+    if (this.isViewQuery()) {
+      // reset presentation alone.
+      this.setState({
+        result: null,
+        selectedPresentation: DEFAULT_PRESENTATION,
+        showPresentation: false
+      });
+
+      return;
+    }
+
     this.setState({
       // reset query state.
       condition: EVENTS_COND_OPTS[0],
@@ -197,7 +208,7 @@ class Query extends Component {
   }
 
   componentDidUpdate(prevProps, prevState) {
-    if (!this.isViewQuery() && prevState.class.value != this.state.class.value) {
+    if (prevState.class.value != this.state.class.value) {
       this.resetQueryInterfaceOnClassChange();
     }
   }
