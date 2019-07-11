@@ -194,7 +194,8 @@ class DashboardUnit extends Component {
     let style = {
       width: '70%',
       background: 'transparent',
-      fontWeight: '700',
+      fontWeight: '500',
+      fontSize: '13px',
       borderRadius: '4px',
       marginRight: '6px'
     }
@@ -304,7 +305,7 @@ class DashboardUnit extends Component {
             <div className='fapp-overflow-dot' style={this.getEditTitleStyle()}> 
               <strong style={{ fontWeight: !this.isCard() ? '500' : null, fontSize: '13px' }} >{ this.getTitle() }</strong> 
             </div>
-            <button style={this.getInlineButtonStyle()} onClick={this.editTitle} hidden={!this.props.editDashboard}><i className='icon-pencil'></i></button>
+            <button style={{...this.getInlineButtonStyle(), fontSize: '14px'}} onClick={this.editTitle} hidden={!this.props.editDashboard}><i className='icon-pencil'></i></button>
           </div>
 
           <div hidden={!this.showTitleEditor()}>
