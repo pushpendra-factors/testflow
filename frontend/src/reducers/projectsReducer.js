@@ -15,7 +15,8 @@ const DEFAULT_PROJECT_STATE = {
   intervals: [],
   defaultModelInterval: null,
   projectAgents: [],
-  agents: {}
+  agents: {},
+  viewQuery: {},
 }
 
 export default function reducer(state=DEFAULT_PROJECT_STATE, action) {
@@ -247,12 +248,18 @@ export default function reducer(state=DEFAULT_PROJECT_STATE, action) {
           ...state
         }
       }
-      case "PROJECT_AGENT_REMOVE_FULFILLED":{
+      case "PROJECT_AGENT_REMOVE_FULFILLED": {
         let nextState = { ...state };
         nextState.projectAgents = state.projectAgents.filter((projectAgent)=>{
           return projectAgent.agent_uuid != action.payload.agent_uuid
         })
         return nextState
+      }
+      case "VIEW_QUERY": {
+        return {
+          ...state,
+          viewQuery: action.payload,
+        }
       }
     }
     return state

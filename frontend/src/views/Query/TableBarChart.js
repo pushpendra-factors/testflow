@@ -3,6 +3,7 @@ import { HorizontalBar } from 'react-chartjs-2';
 import { Table } from 'reactstrap';
 
 import { trimQuotes, firstToUpperCase, getChartScaleWithSpace } from '../../util'
+import NoContent from '../../common/NoContent';
 
 const barBackgroundColors = ['rgba(75,192,192,0.4)', 'rgba(255,99,132,0.2)'];
 const barBorderColors = ['rgba(75,192,192,1)', 'rgba(255,99,132,1)'];
@@ -73,10 +74,14 @@ class TableBarChart extends Component {
   }
 
   render() {
+    if (this.props.data.rows && this.props.data.rows.length == 0)
+      return <NoContent center msg='No Result' />;
+
     // Temp fix for chart breakage on query change after render.
     if (this.props.data.headers != undefined &&
-        this.props.data.rows != undefined &&  
-        this.props.data.headers.length != this.props.data.rows[0].length) return <div></div>;
+        this.props.data.rows != undefined &&
+        this.props.data.headers.length != this.props.data.rows[0].length)
+          return <NoContent center msg='No Result' />;
 
     let data = this.props.data;
     let headers = data.headers.map((h, i) => { return <th key={'header_'+i}>{ h }</th> });

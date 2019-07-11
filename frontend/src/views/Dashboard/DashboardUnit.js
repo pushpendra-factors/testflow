@@ -1,9 +1,10 @@
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
-import { Col, Card, CardHeader, CardBody, Input, Button } from 'reactstrap';
+import { Card, CardHeader, CardBody } from 'reactstrap';
+import { Redirect } from 'react-router-dom';
 
-import { runQuery } from '../../actions/projectsActions';
+import { runQuery, viewQuery } from '../../actions/projectsActions';
 import { deleteDashboardUnit, updateDashboardUnit } from '../../actions/dashboardActions';
 import Loading from '../../loading';
 import BarChart from '../Query/BarChart';
@@ -27,6 +28,7 @@ const mapStateToProps = store => {
 const mapDispatchToProps = dispatch => {
   return bindActionCreators({ 
     runQuery,
+    viewQuery,
     deleteDashboardUnit,
     updateDashboardUnit,
   }, dispatch);
@@ -41,7 +43,9 @@ class DashboardUnit extends Component {
       presentation: null,
 
       title: null,
-      editTitle: false
+      editTitle: false,
+
+      redirectToViewQuery: false,
     }
   }
 
@@ -190,7 +194,7 @@ class DashboardUnit extends Component {
     let style = {
       width: '70%',
       background: 'transparent',
-      fontWeight: '500',
+      fontWeight: '700',
       borderRadius: '4px',
       marginRight: '6px'
     }
@@ -257,11 +261,12 @@ class DashboardUnit extends Component {
     this.setState({ editTitle: false });
   }
 
-  getTitleStyle() {
+  getEditTitleStyle() {
     if (!this.props.editDashboard) return null;
 
     return { 
-      maxWidth: this.isCard() ? '180px' : null, display: 'inline-block' 
+      maxWidth: this.isCard() ? '180px' : null, 
+      display: 'inline-block'
     }
   }
 
@@ -273,7 +278,17 @@ class DashboardUnit extends Component {
     }
   }
 
+  addQueryToViewStore = () => {
+    if (this.props.data && this.props.data.query) {
+      this.props.viewQuery(this.props.data.query);
+      this.setState({ redirectToViewQuery: true })
+    }
+  }
+
   render() {
+    if (this.state.redirectToViewQuery) 
+      return <Redirect to='/core?view=true' />;
+
     return (
       <Card className='fapp-dunit' style={this.getCardStyleByProps()}>
         <CardHeader style={this.getCardHeaderStyleByProps()}>
@@ -281,8 +296,14 @@ class DashboardUnit extends Component {
             <strong onClick={this.delete} style={{ fontSize: '15px', cursor: 'pointer', padding: '0 10px', color: this.isCard() ? '#FFF' : '#AAA' }} hidden={!this.props.editDashboard}>x</strong>
           </div>
 
+          <div style={{ textAlign: 'right', marginTop: '-15px', marginRight: '-18px', height: '18px' }}>
+            <strong onClick={this.addQueryToViewStore} style={{ fontSize: '14px', cursor: 'pointer', padding: '0 10px', color: this.isCard() ? '#FFF' : '#444' }} hidden={this.props.editDashboard} ><i className='cui-graph'></i></strong>
+          </div>
+
           <div style={{ marginTop: '-5px' }} hidden={!this.showTitle()}>
-            <div className='fapp-overflow-dot' style={this.getTitleStyle()}> <strong>{ this.getTitle() }</strong> </div>
+            <div className='fapp-overflow-dot' style={this.getEditTitleStyle()}> 
+              <strong style={{ fontWeight: !this.isCard() ? '500' : null }} >{ this.getTitle() }</strong> 
+            </div>
             <button style={this.getInlineButtonStyle()} onClick={this.editTitle} hidden={!this.props.editDashboard}><i className='icon-pencil'></i></button>
           </div>
 

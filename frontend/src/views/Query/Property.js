@@ -283,10 +283,15 @@ class Property extends Component {
   }
 
   getOpSelector() {
-    if (this.state.valueType == null || !this.isOpRequired()) {
-      return;
+    if (!this.isOpRequired()) return;
+    if (this.props.propertyState.valueType == '' && this.state.valueType == null) return;
+
+    // state updated for view query. where valueType updated
+    // without using the property component.
+    if (this.state.valueType == null) {
+      this.setState({ valueType: this.props.propertyState.valueType });
     }
-    
+
     // categorical_operator_opts as default.
     let optSrc = this.state.valueType == TYPE_NUMERICAL ? NUMERICAL_OPERATOR_OPTS : CATEGORICAL_OPERATORS_OPTS;
 

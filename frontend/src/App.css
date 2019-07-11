@@ -597,6 +597,10 @@ div.setting-card:hover{
     border: 2px solid #eff2f7;
 }
 
+.fapp-dunit {
+    border-radius: 0 !important;
+}
+
 .fapp-dunit .card-header {
     padding-left: 30px;
     padding-right: 30px;
@@ -604,6 +608,7 @@ div.setting-card:hover{
     background: #fff;
     border-bottom: none;
     color: #444;
+    border-radius: 0 !important;
 }
 
 div .fapp-overflow-dot {

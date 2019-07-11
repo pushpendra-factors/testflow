@@ -75,10 +75,12 @@ class DefaultLayout extends Component {
   }
 
   componentWillMount() {
-    window.fcWidget.init({
-      token: "3208785c-3624-47c7-be9a-4f60aa0e60f9",
-      host: "https://wchat.freshchat.com"
-    });
+    if (window.fcWidget) {
+      window.fcWidget.init({
+        token: "3208785c-3624-47c7-be9a-4f60aa0e60f9",
+        host: "https://wchat.freshchat.com"
+      });
+    }
 
     this.props.fetchProjects()
       .then((action) => {
@@ -107,9 +109,11 @@ class DefaultLayout extends Component {
 
         factorsai.identify(r.data.email);
 
-        window.fcWidget.setExternalId(r.data.email);
-        window.fcWidget.user.setEmail(r.data.email);
-        window.fcWidget.user.setFirstName(r.data.first_name);
+        if (window.fcWidget) {
+          window.fcWidget.setExternalId(r.data.email);
+          window.fcWidget.user.setEmail(r.data.email);
+          window.fcWidget.user.setFirstName(r.data.first_name);
+        }
       })
       .catch((r) => {
         this.setState({ 
@@ -129,7 +133,7 @@ class DefaultLayout extends Component {
         hotjar.initialize(1259925, 6);
     }
 
-    if (this.props.currentProjectId && this.props.projects) {
+    if (window.fcWidget && this.props.currentProjectId && this.props.projects) {
       window.fcWidget.user.setProperties({
         "Project Id": this.props.currentProjectId,
         "Project Name": this.props.projects[this.props.currentProjectId].name,

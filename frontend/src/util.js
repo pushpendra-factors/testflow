@@ -77,6 +77,16 @@ export function getSelectedOpt(opt, src) {
     return { value: opt, label: src[opt] };
 }
 
+// opts: [{value: a, label: A} ...] value: a -> A
+export function getLabelByValueFromOpts(opts, value) {
+    for (let i=0; i<opts.length; i++) {
+        if (opts[i].value == value)
+        return opts[i].label ? opts[i].label : opts[i].value;
+    }
+
+    return null;
+}
+
 export function firstToUpperCase(str) {
     return str.charAt(0).toUpperCase() + str.slice(1);
 }

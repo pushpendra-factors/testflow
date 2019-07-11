@@ -337,6 +337,12 @@ export function fetchProjectAgents(projectId){
   }
 }
 
+export function viewQuery(query={}) {
+  return function(dispatch) {
+    dispatch({ type: "VIEW_QUERY", payload: query });
+  }
+}
+
 export function projectAgentInvite(projectId, emailId){
   return function(dispatch){
     let payload = {"email":emailId};

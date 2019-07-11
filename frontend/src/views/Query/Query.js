@@ -5,12 +5,13 @@ import { bindActionCreators } from 'redux';
 import { Row, Col, Button, ButtonGroup, ButtonToolbar, 
   ButtonDropdown, DropdownToggle, DropdownMenu, 
   Modal, ModalHeader, ModalBody, Form, DropdownItem,
-  ModalFooter, Input, Table } from 'reactstrap'; 
+  ModalFooter, Input } from 'reactstrap'; 
 import 'react-date-range/dist/styles.css';
 import 'react-date-range/dist/theme/default.css';
 import { DateRangePicker, createStaticRanges } from 'react-date-range'; 
 import moment from 'moment';
 import onClickOutside from 'react-onclickoutside';
+import queryString from 'query-string';
 
 import TableChart from './TableChart'
 import LineChart from './LineChart';
@@ -29,6 +30,7 @@ import GroupBy from './GroupBy';
 import { 
   removeElementByIndex, getSelectedOpt, isNumber, createSelectOpts, 
   isSingleCountResult, slideUnixTimeWindowToCurrentTime,
+  getLabelByValueFromOpts
 } from '../../util'
 import Loading from '../../loading';
 import factorsai from '../../common/factorsaiObj';
@@ -53,10 +55,12 @@ const QUERY_CLASS_OPTS = [
 
 const TYPE_EVENT_OCCURRENCE = 'events_occurrence';
 const TYPE_UNIQUE_USERS = 'unique_users';
-const INSIGHTS_QUERY_TYPE_OPTS = [
+
+const QUERY_TYPE_OPTS = [
   { value: TYPE_EVENT_OCCURRENCE, label: 'events occurrence' },
   { value: TYPE_UNIQUE_USERS, label: 'unique users' },
 ];
+const INSIGHTS_QUERY_TYPE_OPTS = QUERY_TYPE_OPTS;
 const FUNNEL_QUERY_TYPE_OPTS = [
   { value: TYPE_UNIQUE_USERS, label: 'unique users' },
 ];
@@ -104,6 +108,7 @@ const mapStateToProps = store => {
   return {
     currentProjectId: store.projects.currentProjectId,
     projects: store.projects.projects,
+    viewQuery: store.projects.viewQuery,
     eventNames: store.projects.currentProjectEventNames,
     dashboards: store.dashboards.dashboards,
 
@@ -119,7 +124,6 @@ const mapDispatchToProps = dispatch => {
     createDashboardUnit,
   }, dispatch)
 }
-
 
 class DateRangePickerWithCloseHandler extends Component {
   constructor(props) {
@@ -202,15 +206,80 @@ class Query extends Component {
     this.props.fetchProjectEvents(this.props.currentProjectId)
       .then(() => {
         this.setState({ eventNamesLoaded: true });
-        this.initWithAnEventRow();
+
+        // init query builder.
+        let queryParams = queryString.parse(this.props.location.search);
+        if (queryParams && queryParams.view && queryParams.view != "" && 
+          Object.keys(this.props.viewQuery).length > 0 ) {
+          this.initWithViewQuery();
+        } else {
+          this.initWithAnEventRow();
+        }
       })
       .catch((r) => this.setState({ eventNamesLoaded: true, eventNamesLoadError: r.paylaod }));
 
     this.props.fetchDashboards(this.props.currentProjectId);
   }
 
+  initWithViewQuery() {
+    let storeQuery = this.props.viewQuery;
+
+    let queryState = {};
+    queryState.class = { 
+      value: storeQuery.cl ? storeQuery.cl : QUERY_CLASS_INSIGHTS 
+    }
+    queryState.type = {
+      value: storeQuery.ty,
+      label: getLabelByValueFromOpts(QUERY_TYPE_OPTS, storeQuery.ty)
+    }
+    queryState.condition = {
+      value: storeQuery.ec,
+      label: getLabelByValueFromOpts(EVENTS_COND_OPTS, storeQuery.ec)
+    }
+
+    let events = [];
+    for (let ei=0; ei<storeQuery.ewp.length; ei++) {
+      let event = storeQuery.ewp[ei];
+
+      let properties = [];
+      for (let pi=0; pi<event.pr.length; pi++) {
+        let prop = event.pr[pi];
+
+        let vProp = {};
+        vProp.entity = prop.en;
+        vProp.name = prop.pr;
+        vProp.op = prop.op;
+        vProp.value = prop.va;
+        vProp.valueType = prop.ty;
+        
+        properties.push(vProp);
+      }
+
+      events.push({ name: event.na, properties: properties });
+    }
+    queryState.events = events;
+
+    let groupBys = [];
+    for (let gi=0; gi<storeQuery.gbp.length; gi++) {
+      let prop = storeQuery.gbp[gi];
+
+      let group = {};
+      group.type = prop.en;
+      group.name = prop.pr;
+      group.eventName = prop.ena;
+
+      groupBys.push(group);
+    }
+    queryState.groupBys = groupBys;
+
+    console.log("Stored Query : ", storeQuery);
+    console.log("View Query State : ", queryState);
+    this.setState(queryState);
+  }
+
   initWithAnEventRow() {
     this.addEvent();
+
     if (this.props.eventNames.length > 0) {
       this.onEventStateChange(getSelectedOpt(this.props.eventNames[0]), 0);
     } else {
