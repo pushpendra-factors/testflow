@@ -131,7 +131,7 @@ class DashboardUnit extends Component {
   }
 
   getCardBodyStyleByProps() {
-    let style = { padding: '1.5rem 1.5rem', height: '300px' };
+    let style = { padding: '1.5rem 1.5rem', paddingTop: '0.6rem', height: '320px' };
 
     if (this.props.data.presentation === PRESENTATION_TABLE) {
       let changes = { padding: '0', 'overflowX': 'scroll' };
@@ -303,7 +303,7 @@ class DashboardUnit extends Component {
 
           <div style={{ marginTop: '-5px' }} hidden={!this.showTitle()}>
             <div className='fapp-overflow-dot' style={this.getEditTitleStyle()}> 
-              <strong style={{ fontWeight: !this.isCard() ? '500' : null, fontSize: '13px' }} >{ this.getTitle() }</strong> 
+              <strong style={{ fontWeight: !this.isCard() ? '500' : null, fontSize: '0.85rem' }} >{ this.getTitle() }</strong> 
             </div>
             <button style={{...this.getInlineButtonStyle(), fontSize: '14px'}} onClick={this.editTitle} hidden={!this.props.editDashboard}><i className='icon-pencil'></i></button>
           </div>
