@@ -131,6 +131,29 @@ func GetDashboardUnits(projectId uint64, agentUUID string, dashboardId uint64) (
 	return dashboardUnits, http.StatusFound
 }
 
+func GetDashboardUnitsByProjectIDAndDashboardIDAndTypes(projectID, dashboardID uint64, types []string) ([]DashboardUnit, int) {
+	db := C.GetServices().Db
+
+	var dashboardUnits []DashboardUnit
+	if projectID == 0 || dashboardID == 0 {
+		log.Error("Failed to get dashboard units. Invalid project_id or dashboard_id ")
+		return dashboardUnits, http.StatusBadRequest
+	}
+
+	err := db.Order("created_at DESC").Where("project_id = ? AND dashboard_id = ? ",
+		projectID, dashboardID).Where("presentation IN (?)", types).Find(&dashboardUnits).Error
+	if err != nil {
+		log.WithField("project_id", projectID).WithError(err).Error("Failed to get dashboard units.")
+		return dashboardUnits, http.StatusInternalServerError
+	}
+
+	if len(dashboardUnits) == 0 {
+		return dashboardUnits, http.StatusNotFound
+	}
+
+	return dashboardUnits, http.StatusFound
+}
+
 func DeleteDashboardUnit(projectId uint64, agentUUID string, dashboardId uint64, id uint64) int {
 	db := C.GetServices().Db
 

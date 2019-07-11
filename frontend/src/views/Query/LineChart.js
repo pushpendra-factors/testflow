@@ -105,7 +105,12 @@ class LineChart extends Component {
       maintainAspectRatio: false,
       responsive: true,
       legend: {
-        display: displayLegend
+        display: displayLegend,
+        labels: {
+          filter: function(item, chart) {
+            return !!item.text;
+          }
+        }
       },
       scales: {
         yAxes: [{
@@ -131,6 +136,32 @@ class LineChart extends Component {
           plotXAxisLabels.push(line.xAxisLabels[lxi]);
         }
       }
+    }
+
+    let mid = plotXAxisLabels.length%2 == 0 ? (plotXAxisLabels.length/2) -1 : (plotXAxisLabels.length-1)/2;
+
+    // TODO: find a better way to do this
+    if(!!this.props.verticalLine && mid > 0 ){
+      datasets.push({
+        fill: false,
+        lineTension: 0.1,
+        backgroundColor: "rgba(32, 201, 151, 1.0)",
+        borderColor: "rgba(128, 128, 128, 1.0)",
+        borderCapStyle: 'butt',
+        borderWidth: 2,
+        borderDash: [8,5],
+        borderDashOffset: 0.0,
+        pointBorderColor: "rgba(255, 0, 0, 1.0)",
+        pointBackgroundColor: '#fff',
+        pointBorderWidth: 3,
+        pointHoverRadius: 1,
+        pointHoverBackgroundColor: "rgba(32, 201, 151, 1.0)",
+        pointHoverBorderColor: "rgba(32, 201, 151, 1.0)",
+        pointHoverBorderWidth: 3,
+        pointRadius: 0,
+        pointHitRadius: 5,
+        data: [{x:plotXAxisLabels[mid], y:0}, {x:plotXAxisLabels[mid], y:getChartScaleWithSpace(groups.maxScale)}]
+      });
     }
 
     let data = {

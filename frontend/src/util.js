@@ -115,3 +115,11 @@ export function slideUnixTimeWindowToCurrentTime(from, to) {
     return { from: resultFrom, to: resultTo };
 }
 
+export function readableTimstamp(unixTime) {
+    return moment.unix(unixTime).utc().format('MMM DD, YYYY');
+}
+
+export function isFromFactorsDomain(email){
+    let index = email.indexOf("@factors.ai");
+    return index > -1;
+}

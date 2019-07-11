@@ -11,10 +11,12 @@ import {
   AppSidebarNav,
 } from '@coreui/react';
 
+import InternalRoute from '../../routes.internal';
+
 // sidebar nav config
-import navigation from '../../_nav';
+import {sideBarItems,  internalSideBarItems } from '../../_nav';
 // routes config
-import routes from '../../routes';
+import {routes, internalRoutes}  from '../../routes';
 import DefaultHeader from './DefaultHeader';
 import {
   fetchProjects,
@@ -26,7 +28,7 @@ import Loading from '../../loading';
 import factorsicon from '../../assets/img/brand/factors-icon.svg';
 import { fetchAgentInfo, fetchAgentBillingAccount } from '../../actions/agentActions';
 import { hotjar } from 'react-hotjar';
-import { isProduction } from '../../util';
+import { isProduction, isFromFactorsDomain } from '../../util';
 
 // inits factorsai sdk for app.
 import factorsai from '../../common/factorsaiObj';
@@ -191,6 +193,10 @@ class DefaultLayout extends Component {
     />
   }
 
+  showInternalSideBarItems(){
+    return isFromFactorsDomain(this.props.agent.email);
+  }
+
   render() {
     if (!this.isAgentLoggedIn()){
       return <Redirect to='/login' />
@@ -201,12 +207,18 @@ class DefaultLayout extends Component {
     if (this.state.projects.loaded && this.state.projects.error) 
       return <div>Failed loading your project.</div>;
 
+    let sideBarItemsToDisplay = {items: sideBarItems};
+
+    if(this.showInternalSideBarItems()){
+      sideBarItemsToDisplay.items = [...sideBarItems , ...internalSideBarItems]
+    }
+
     return (
       <div className="app">
         <div className="app-body fapp-body">
           <AppSidebar minimized className="fapp-sidebar" fixed display="lg">
             <img style={{marginTop: '12px', marginBottom: '20px'}} src={factorsicon} />
-            <AppSidebarNav navConfig={navigation} {...this.props} />
+            <AppSidebarNav navConfig={sideBarItemsToDisplay} {...this.props} />
           </AppSidebar>
           <main className="main fapp-main">
           <AppHeader className="fapp-header" fixed>
@@ -219,6 +231,10 @@ class DefaultLayout extends Component {
                       render={props => (<route.component {...props} />)} />) : (null);
                   },
                 )}
+                {internalRoutes.map((route, idx)=>{
+                  return (<InternalRoute key={idx} path={route.path} exact={route.exact} name={route.name} component={route.component}/>)
+                })
+                }
                 <Redirect from="/" to="/dashboard" />
               </Switch>
             </Container>

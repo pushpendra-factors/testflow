@@ -229,6 +229,13 @@ func InitMailClient(key, secret, region string) {
 	services.Mailer = serviceSes.New(key, secret, region)
 }
 
+func InitSenderEmail(senderEmail string) {
+	if services == nil {
+		services = &Services{}
+	}
+	configuration.EmailSender = senderEmail
+}
+
 func initCollectorClient(env, toMail, fromMail string) {
 	if services == nil {
 		services = &Services{}

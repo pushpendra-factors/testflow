@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import { Bar } from 'react-chartjs-2';
 import { CustomTooltips } from '@coreui/coreui-plugin-chartjs-custom-tooltips';
 
-import { getChartScaleWithSpace, firstToUpperCase, getShortenedLabel, isSingleCountResult } from '../../util';
+import { getChartScaleWithSpace, isSingleCountResult } from '../../util';
 import { HEADER_COUNT } from './common';
 
 const barBackgroundColors = ['rgba(75,192,192,0.4)', 'rgba(255,99,132,0.2)'];
@@ -77,12 +77,8 @@ class BarChart extends Component {
     return { bars: bars, maxScale: maxScale };
   }
 
-  render() {
-    var barsAndScale = this.getBarsAndScaleFromResult(this.props.queryResult);
-    let displayLegend = this.props.legend == false ? false : true;
-    var chartData = barsAndScale.bars;
-
-    var chartOptions = {
+  getChartOptions(displayLegend, maxScale){
+    return {
       legend: {
         display: displayLegend
       },
@@ -104,16 +100,42 @@ class BarChart extends Component {
           display: true,
           ticks: {
             beginAtZero: true,
-            max: getChartScaleWithSpace(barsAndScale.maxScale) 
+            max: maxScale
           }
         }],
       },
     };
+  }
+
+  render() {
+
+
+    var barsAndScale = this.getBarsAndScaleFromResult(this.props.queryResult);
+    let displayLegend = this.props.legend == false ? false : true;
+    var chartData = barsAndScale.bars;
 
     var bar = {
       labels: chartData.labels,
       datasets: chartData.datasets,
     };
+
+    let maxScale = getChartScaleWithSpace(barsAndScale.maxScale);
+
+    if (this.props.compareWithQueryResult ){
+      var barsAndScaleComp = this.getBarsAndScaleFromResult(this.props.compareWithQueryResult);
+      var chartDataComp = barsAndScaleComp.bars;
+      bar.labels = bar.labels.concat(chartDataComp.labels);
+      bar.datasets = bar.datasets.concat(chartDataComp.datasets);
+
+      let maxScale2 = getChartScaleWithSpace(barsAndScaleComp.maxScale);
+      if(maxScale < maxScale2){
+        maxScale = maxScale2;
+      }
+      bar.datasets[0].label = this.props.queryResultLabel;
+      bar.datasets[1].label = this.props.compareWithQueryResultLabel;
+    }
+
+    var chartOptions = this.getChartOptions(displayLegend, maxScale);
 
     // Styling.
     for (var i = 0; i < bar.datasets.length; i++) {
@@ -121,7 +143,7 @@ class BarChart extends Component {
       bar.datasets[i].borderColor = barBorderColors[i % barBorderColors.length];
       bar.datasets[i].borderWidth = 1;
       bar.datasets[i].hoverBackgroundColor = barHoverBackgroundColors[i % barHoverBackgroundColors.length];
-      bar.datasets[i].hoverBorderColor = barHoverBorderColors[i % barHoverBorderColors.length];
+      bar.datasets[i].hoverBorderColor = barHoverBorderColors[i % barHoverBorderColors.length]; 
     }
 
     if (chartData.x_label != "") {
