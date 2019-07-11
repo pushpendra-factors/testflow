@@ -48,5 +48,12 @@ pack-build-seq:
 
 upload-build-seq:
 	docker push us.gcr.io/factors-$(ENV)/build-seq-job:$(TAG)
+
+pack-build-reports:
+	docker build -t us.gcr.io/factors-$(ENV)/build-reports-job:$(TAG) -f Dockerfile.build_reports .
+
+upload-build-reports:
+	docker push us.gcr.io/factors-$(ENV)/build-reports-job:$(TAG)
+
 test: 
 	go test -v $(GOPATH)/src/factors/tests && go test -v $(GOPATH)/src/factors/pattern_server/store

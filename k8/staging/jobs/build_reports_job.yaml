@@ -1,0 +1,58 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: build-reports-job
+spec:
+  schedule: "0 22 * * *" # In UTC
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            layer: jobs
+        spec:
+          nodeSelector:
+            cloud.google.com/gke-nodepool: factors-staging-node-pool
+          containers:
+          - name: build-reports-job
+            image: us.gcr.io/factors-staging/build-reports-job:v0.67-d810261c
+            imagePullPolicy: IfNotPresent
+            args:
+            - --env
+            - $(ENV)
+            - --db_host
+            - $(DB_HOST)
+            - --db_port
+            - $(DB_PORT)
+            - --db_name
+            - $(POSTGRES_DB)
+            - --db_user
+            - $(POSTGRES_USER)
+            - --db_pass
+            - $(POSTGRES_PASSWORD)
+            - --aws_region
+            - $(AWS_REGION)
+            - --aws_key
+            - $(AWS_KEY)
+            - --aws_secret
+            - $(AWS_SECRET)
+            - --mail_reports
+            - $(MAIL_REPORTS)
+            - --build_for_projects
+            - $(BUILD_FOR_PROJECTS)
+            - --skip_for_projects
+            - $(SKIP_FOR_PROJECTS)
+            envFrom:
+            - configMapRef:
+                name: config-env
+            - configMapRef:
+                name: config-postgres
+            - configMapRef:
+                name: config-build-reports-job
+            - secretRef:
+                name: secret-postgres
+            - secretRef:
+                name: secret-aws
+          restartPolicy: OnFailure
