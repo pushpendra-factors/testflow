@@ -1,4 +1,4 @@
-.PHONY: build-api serve-api build-ps serve-ps clean pack-api upload-api pack-ps upload-ps pack-debug upload-debug pack-build-seq upload-build-seq test
+.PHONY: build-api serve-api build-ps serve-ps clean pack-api upload-api pack-ps upload-ps pack-debug upload-debug pack-build-seq upload-build-seq pack-build-reports upload-build-reports test 
 
 # Update tag with the latest release version
 # Ex format: v0.05-beta_d0e9ed9 
