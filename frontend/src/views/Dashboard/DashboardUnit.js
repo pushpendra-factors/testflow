@@ -293,16 +293,16 @@ class DashboardUnit extends Component {
       <Card className='fapp-dunit' style={this.getCardStyleByProps()}>
         <CardHeader style={this.getCardHeaderStyleByProps()}>
           <div style={{ textAlign: 'right', marginTop: '-10px', marginRight: '-18px', height: '18px' }}>
-            <strong onClick={this.delete} style={{ fontSize: '15px', cursor: 'pointer', padding: '0 10px', color: this.isCard() ? '#FFF' : '#AAA' }} hidden={!this.props.editDashboard}>x</strong>
+            <strong onClick={this.delete} style={{ fontSize: '14px', cursor: 'pointer', padding: '0 10px', color: this.isCard() ? '#FFF' : '#AAA' }} hidden={!this.props.editDashboard}>x</strong>
           </div>
 
-          <div style={{ textAlign: 'right', marginTop: '-15px', marginRight: '-18px', height: '18px' }}>
-            <strong onClick={this.addQueryToViewStore} style={{ fontSize: '14px', cursor: 'pointer', padding: '0 10px', color: this.isCard() ? '#FFF' : '#444' }} hidden={this.props.editDashboard} ><i className='cui-graph'></i></strong>
+          <div style={{ textAlign: 'right', marginTop: '-15px', marginRight: '-22px', height: '18px' }}>
+            <strong onClick={this.addQueryToViewStore} style={{ fontSize: '13px', cursor: 'pointer', padding: '0 10px', color: this.isCard() ? '#FFF' : '#444' }} hidden={this.props.editDashboard} ><i className='cui-graph'></i></strong>
           </div>
 
           <div style={{ marginTop: '-5px' }} hidden={!this.showTitle()}>
             <div className='fapp-overflow-dot' style={this.getEditTitleStyle()}> 
-              <strong style={{ fontWeight: !this.isCard() ? '500' : null }} >{ this.getTitle() }</strong> 
+              <strong style={{ fontWeight: !this.isCard() ? '500' : null, fontSize: '13px' }} >{ this.getTitle() }</strong> 
             </div>
             <button style={this.getInlineButtonStyle()} onClick={this.editTitle} hidden={!this.props.editDashboard}><i className='icon-pencil'></i></button>
           </div>
