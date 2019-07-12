@@ -77,7 +77,7 @@ class Home extends React.Component {
                 <h4 id="feat_discover">Discover</h4>            
               </div>
             </div>
-            <div className="row content" id="tab_track" style={{marginLeft: '60px'}}>
+            <div className="row content" id="tab_track">
               <div className="col-md-5 txt">
                 <h4>Capture your customer data</h4>
                 <p>Track and define all relavant user actions data using simple to add SDKs.</p>
@@ -88,7 +88,7 @@ class Home extends React.Component {
                 <div id="gda"> </div> {/* anchor for gda */}
               </div>
             </div>
-            <div className="row content" id="tab_measure" style={{display: 'none', marginLeft: '60px'}}>
+            <div className="row content" id="tab_measure" style={{display: 'none'}}>
               <div className="col-md-5 txt">
                 <h4>Measure your Product's performance</h4>
                 <p>Define and measure any metric of interest - Visits, Signups, Funnel Conversions, Feature usage, Retention, Revenue or Profits. </p>
@@ -99,7 +99,7 @@ class Home extends React.Component {
                 <div id="gda"> </div> {/* anchor for gda */}
               </div>
             </div>
-            <div className="row content" id="tab_discover" style={{display: 'none', marginLeft: '60px'}}>
+            <div className="row content" id="tab_discover" style={{display: 'none'}}>
               <div className="col-md-5 txt">
                 <h4>Discover what is working and not working</h4>
                 <p>Automatically discover user behaviors that positively and negatively affect your goals. Further, instantly drill down goals to sub-goals and discover influencing sub-factors.</p>
