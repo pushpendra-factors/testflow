@@ -4,7 +4,7 @@ import React from 'react';
 import factorsPNG from './assets/img/factors_app.png'
 import tabMeasureSVG from './assets/img/tab_measure.svg'
 import tabTrackSVG from './assets/img/tab_track.svg'
-import tabDiscoverSVG from './assets/img/tab_discover1.svg'
+import tabDiscoverSVG from './assets/img/tab_discover.svg'
 import heroSVG from './assets/img/hero.svg'
 
 class Home extends React.Component {
@@ -77,36 +77,36 @@ class Home extends React.Component {
                 <h4 id="feat_discover">Discover</h4>            
               </div>
             </div>
-            <div className="row content" id="tab_track">
+            <div className="row content" id="tab_track" style={{marginLeft: '60px'}}>
               <div className="col-md-5 txt">
                 <h4>Capture your customer data</h4>
                 <p>Track and define all relavant user actions data using simple to add SDKs.</p>
                 <p>Pull data from multiple sources using rich set of integrations.</p>
               </div>
               <div className="col-md-7 image">
-                <img src={tabTrackSVG} style={{width: '100%'}} />
+                <img src={tabTrackSVG} style={{width: '95%'}} />
                 <div id="gda"> </div> {/* anchor for gda */}
               </div>
             </div>
-            <div className="row content" id="tab_measure" style={{display: 'none'}}>
+            <div className="row content" id="tab_measure" style={{display: 'none', marginLeft: '60px'}}>
               <div className="col-md-5 txt">
                 <h4>Measure your Product's performance</h4>
                 <p>Define and measure any metric of interest - Visits, Signups, Funnel Conversions, Feature usage, Retention, Revenue or Profits. </p>
                 <p>Setup dashboards to keep real time tab on metrics.</p>
               </div>
               <div className="col-md-7 image">
-                <img src={tabMeasureSVG} style={{width: '100%'}} />
+                <img src={tabMeasureSVG} style={{width: '87%'}} />
                 <div id="gda"> </div> {/* anchor for gda */}
               </div>
             </div>
-            <div className="row content" id="tab_discover" style={{display: 'none'}}>
+            <div className="row content" id="tab_discover" style={{display: 'none', marginLeft: '60px'}}>
               <div className="col-md-5 txt">
                 <h4>Discover what is working and not working</h4>
                 <p>Automatically discover user behaviors that positively and negatively affect your goals. Further, instantly drill down goals to sub-goals and discover influencing sub-factors.</p>
                 <p>Get insights in understandable natural language, aided with relevant charts.</p>
               </div>
               <div className="col-md-7 image">
-                <img src={tabDiscoverSVG} style={{width: '85%'}} />
+                <img src={tabDiscoverSVG} style={{width: '87%'}} />
                 <div id="gda"> </div> {/* anchor for gda */}
               </div>
             </div>
@@ -125,7 +125,7 @@ class Home extends React.Component {
             </div>
           </div>
           {/* screenshot */}
-          <div className="container" style={{paddingTop: '50px', paddingBottom: '60px'}}>
+          <div className="container" style={{paddingTop: '120px', paddingBottom: '120px'}}>
             <div className="container screenshot">
               <div className="row">
                 <div className="col-md-12">
@@ -140,9 +140,9 @@ class Home extends React.Component {
             </div>
           </div>
           {/* signup banner */}
-          <div className="container-fluid bottom-banner">
+          <div className="container-fluid">
             <div className="row">
-              <div className="col-md-12 banner">
+              <div className="col-md-12 banner bottom-banner">
                 <h3>FactorsAI is now available for everyone</h3>
                 <button id="signup-button-footer" className="primary-cta">SIGN UP NOW</button>
               </div>
