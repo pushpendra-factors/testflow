@@ -141,6 +141,7 @@ class DashboardUnit extends Component {
     if (this.props.data.presentation === PRESENTATION_CARD) {
       style.height = '130px';
       style.padding = '0';
+      style.paddingTop = '0';
       style.background = this.getUnitBackground();
       style.color = CARD_FONT_COLOR;
     }
@@ -301,7 +302,7 @@ class DashboardUnit extends Component {
             <strong onClick={this.addQueryToViewStore} style={{ fontSize: '13px', cursor: 'pointer', padding: '0 10px', color: this.isCard() ? '#FFF' : '#444' }} hidden={this.props.editDashboard} ><i className='cui-graph'></i></strong>
           </div>
 
-          <div style={{ marginTop: '-5px' }} hidden={!this.showTitle()}>
+          <div hidden={!this.showTitle()}>
             <div className='fapp-overflow-dot' style={this.getEditTitleStyle()}> 
               <strong style={{ fontWeight: !this.isCard() ? '500' : null, fontSize: '0.85rem' }} >{ this.getTitle() }</strong> 
             </div>
