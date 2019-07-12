@@ -287,6 +287,18 @@ class Query extends Component {
     }
     queryState.groupBys = groupBys;
 
+    if (storeQuery.ovp) {
+      let newInterval = slideUnixTimeWindowToCurrentTime(storeQuery.fr, storeQuery.to);
+      storeQuery.fr = newInterval.from;
+      storeQuery.to = newInterval.to;
+    }
+
+    queryState.resultDateRange = [{ 
+      startDate: moment.unix(storeQuery.fr).toDate(), 
+      endDate: moment.unix(storeQuery.to).toDate(),
+      key: "selected",
+    }];
+
     console.log("Stored Query : ", storeQuery);
     console.log("View Query State : ", queryState);
     this.setState(queryState);
