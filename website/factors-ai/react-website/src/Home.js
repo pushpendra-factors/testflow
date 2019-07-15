@@ -1,10 +1,11 @@
 // Home.js
 import React from 'react';
 
-import factorsPNG from './assets/img/factors_app.png'
-import tabMeasureSVG from './assets/img/tab_measure.svg'
-import tabTrackSVG from './assets/img/tab_track.svg'
-import tabDiscoverSVG from './assets/img/tab_discover.svg'
+import advancedAnalyticsPNG from './assets/img/advanced-analytics.png'
+import basicAnalyticsPNG from './assets/img/basic-analytics.png'
+import dashboardsPNG from './assets/img/dashboards.png'
+import funnelPNG from './assets/img/funnel.png'
+
 import heroSVG from './assets/img/hero.svg'
 
 class Home extends React.Component {
@@ -15,9 +16,9 @@ class Home extends React.Component {
           <div className="container nav-exclude-margin hero" id="home">
             <div className="row">
               <div className="col-md-5 content">
-                <h2 className="heading">Does Analytics feel like a lot of work?</h2>
+                <h2 className="heading">Intelligent user analytics to help grow your business</h2>
                 <div className="break" />
-                <p className="sub-text">Automatically discover what’s working and not working for your users.</p>
+                <p className="sub-text">Software that <b>explains</b> - how to optimise marketing campaigns, improve website conversions and drive user engagement.</p>
                 <span className="error" id="invalid-email" style={{display: 'none'}}>Please enter a valid email</span>
                 <span className="success" id="valid-email" style={{display: 'none'}}>Thanks, we will get back to you soon</span>
                 <button id="signup-button" className='primary-cta'>SIGN UP FOR FREE</button>
@@ -30,85 +31,63 @@ class Home extends React.Component {
           {/* hero banner */}
           <div className="container-fluid">
             <div className="row">
-              <div className="col-md-12 banner top-banner">
+              <div className="col-md-12 banner banner-dark top-banner">
                 <h3>Goal Driven Analytics</h3>
                 <p>Introducing the new way to do analytics</p>
               </div>
             </div>
           </div>
-          {/* goal driven analytics description */}
           <div className="container-fluid shaded-background">
+           <div className="container gda">
             <div className="row">
-              <div className="container gda">
-                <div className="row">
-                  <div className="col-md-12">
-                    <p>Getting insights out of user data can’t be easier than this. Enter your goal and instantly get factors affecting it. Avoid the labor of guessing multiple hypothesis and firing multiple queries, plotting multiple charts or spending hours viewing multiple individual user sessions to validate your theories. Get answers for a completely different class of questions, compared to traditional analytics products.</p>
-                  </div>
-                </div>
-                <div className="row tabular justify-content-center">
-                  <div className="col-md-4 content">
-                    <h5>Traditional Products</h5>
-                    <span>How many signups?</span><br />
-                    <span>What’s the revenue?</span><br />
-                    <span>What’s the week one retention?</span><br />
-                    <span>What’s the number of orders?</span><br />
-                  </div>
-                  <div className="col-md-4 content">
-                    <h5>FactorsAI</h5>                
-                    <span>How to increase signups?</span><br />
-                    <span>How to increase revenue?</span><br />
-                    <span>How to increase week one retention?</span><br />
-                    <span>How to increase the number of orders?</span><br />
-                  </div>
-                </div>
+              <div className="col-md-3 txt" style={{marginTop: '10px'}}>
+                <h5>Goal Driven Analytics</h5>
+                <p>Enter your goal and instantly get factors affecting it.</p>
+                <p>Avoid spending hours slicing and dicing the data or viewing multiple user sessions.</p>
+              </div>
+              <div className="col-md-9 image screenshot">
+                <img src={advancedAnalyticsPNG} style={{width: '100%', marginLeft: '50px'}} />
               </div>
             </div>
           </div>
-          {/* features */}
-          <div className="container tabs">
-            <div className="row header no-mobile">
-              <div className="col-md-4">
-                <h4 id="feat_track" className="active-tab">Capture</h4>
+          </div>
+          <div className="container-fluid">
+           <div className="container gda">
+           <div className="row">
+              <div className="col-md-9 image screenshot">
+                <img src={basicAnalyticsPNG} style={{width: '97%', marginRight: '50px'}} />
               </div>
-              <div className="col-md-4">
-                <h4 id="feat_measure">Measure</h4>            
-              </div>
-              <div className="col-md-4">
-                <h4 id="feat_discover">Discover</h4>            
-              </div>
-            </div>
-            <div className="row content" id="tab_track">
-              <div className="col-md-5 txt">
-                <h4>Capture your customer data</h4>
-                <p>Track and define all relavant user actions data using simple to add SDKs.</p>
-                <p>Pull data from multiple sources using rich set of integrations.</p>
-              </div>
-              <div className="col-md-7 image">
-                <img src={tabTrackSVG} style={{width: '95%'}} />
-                <div id="gda"> </div> {/* anchor for gda */}
+              <div className="col-md-3 txt" style={{marginTop: '12px'}}>
+                <h5>Basic Analytics</h5>
+                <p>Flexible query interface and visualizations to allow for in-depth and granular analysis.</p>
               </div>
             </div>
-            <div className="row content" id="tab_measure" style={{display: 'none'}}>
-              <div className="col-md-5 txt">
-                <h4>Measure your Product's performance</h4>
-                <p>Define and measure any metric of interest - Visits, Signups, Funnel Conversions, Feature usage, Retention, Revenue or Profits. </p>
-                <p>Setup dashboards to keep real time tab on metrics.</p>
+            </div>
+          </div>
+          <div className="container-fluid shaded-background">
+           <div className="container gda">
+            <div className="row">
+              <div className="col-md-3 txt" style={{marginTop: '10px'}}>
+                <h5>Custom Dashboards</h5>
+                <p>Intuitive and realtime dashboards to stay on top of your metrics and KPI’s.</p>
               </div>
-              <div className="col-md-7 image">
-                <img src={tabMeasureSVG} style={{width: '87%'}} />
-                <div id="gda"> </div> {/* anchor for gda */}
+              <div className="col-md-9 image screenshot">
+                <img src={dashboardsPNG} style={{width: '100%', marginLeft: '50px'}} />
               </div>
             </div>
-            <div className="row content" id="tab_discover" style={{display: 'none'}}>
-              <div className="col-md-5 txt">
-                <h4>Discover what is working and not working</h4>
-                <p>Automatically discover user behaviors that positively and negatively affect your goals. Further, instantly drill down goals to sub-goals and discover influencing sub-factors.</p>
-                <p>Get insights in understandable natural language, aided with relevant charts.</p>
+          </div>
+          </div>
+          <div className="container-fluid">
+           <div className="container gda">
+           <div className="row">
+              <div className="col-md-9 image screenshot">
+                <img src={funnelPNG} style={{width: '100%', marginRight: '50px'}} />
               </div>
-              <div className="col-md-7 image">
-                <img src={tabDiscoverSVG} style={{width: '87%'}} />
-                <div id="gda"> </div> {/* anchor for gda */}
+              <div className="col-md-3 txt" style={{marginTop: '12px'}}>
+                <h5>Customer Journey Funnels</h5>
+                <p>Track funnels and the conversion ratios at every step of the customer journey.</p>
               </div>
+            </div>
             </div>
           </div>
           {/* tech blog */}
@@ -117,24 +96,9 @@ class Home extends React.Component {
               <div className="container blog">
                 <div className="row">
                   <div className="col-md-12">
-                    <h4 className="centered-title">AI that makes sense of data</h4>
-                    <p>Take analytics beyond raw storage and retreival of data - using our inhouse datastore that uses AI and advanced statistical modeling techinques to make sense of your data. This next generation, first of it's kind datastore, pulls out probabilistic inferences from data for a given query - rather than just pulling out the data points that match the query. Built to seamlessly scale to billions of data points.</p>
+                    <h4 className="centered-title">AI to help make sense of data</h4>
+                    <p>What makes us truly unique is that we are taking analytics beyond raw storage and retreival of data - using our inhouse datastore that uses advanced statistical modeling techinques to make sense and help understand user behavioural data.</p>
                   </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          {/* screenshot */}
-          <div className="container" style={{paddingTop: '120px', paddingBottom: '120px'}}>
-            <div className="container screenshot">
-              <div className="row">
-                <div className="col-md-12">
-                  <h4 className="centered-title">Enable Data Driven Decision Making</h4>
-                </div>
-              </div>
-              <div className="row">
-                <div className="col-md-12" align="center">
-                  <img src={factorsPNG} />
                 </div>
               </div>
             </div>
@@ -142,8 +106,8 @@ class Home extends React.Component {
           {/* signup banner */}
           <div className="container-fluid">
             <div className="row">
-              <div className="col-md-12 banner bottom-banner">
-                <h3>FactorsAI is now available for everyone</h3>
+              <div className="col-md-12 banner banner-light bottom-banner">
+                <h3>Try FactorsAI today</h3>
                 <button id="signup-button-footer" className="primary-cta">SIGN UP NOW</button>
               </div>
             </div>
