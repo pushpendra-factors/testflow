@@ -881,13 +881,13 @@ class Query extends Component {
 
     let addGroupByButton = <Button outline color='primary' 
       onClick={this.addGroupBy} style={{ marginTop: '3px' }}>
-      + Group
+      + Breakdown
     </Button>;
 
     let groupBysRow = <Row style={{marginBottom: '15px'}}>
       <Col xs='12' md='12'>
         <div style={{ marginBottom: '15px' }} hidden={this.state.groupBys.length == 0}>
-          <span style={LABEL_STYLE}> group by </span>
+          <span style={LABEL_STYLE}> breakdown by </span>
         </div>
         { [ groupBys, addGroupByButton ] }
       </Col>  
