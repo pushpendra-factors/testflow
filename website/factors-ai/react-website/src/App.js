@@ -20,7 +20,7 @@ function App() {
       <div className="App">
       <nav className="navbar navbar-expand-md navbar-light" style={{ marginTop: '10px' }}>
         <div className="container">
-          <a href="/" className="navbar-brand" style={{paddingLeft: '30px'}}>
+          <a href="/" className="navbar-brand" style={{paddingLeft: '15px'}}>
             <img src={logoFactorsPNG} alt="true" />
           </a>       
           <button className="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
