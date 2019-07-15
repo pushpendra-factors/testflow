@@ -40,13 +40,13 @@ class Home extends React.Component {
           <div className="container-fluid shaded-background">
            <div className="container gda">
             <div className="row">
-              <div className="col-md-3 txt" style={{marginTop: '10px'}}>
+              <div className="col-md-3 top-margin">
                 <h5>Goal Driven Analytics</h5>
                 <p>Enter your goal and instantly get factors affecting it.</p>
                 <p>Avoid spending hours slicing and dicing the data or viewing multiple user sessions.</p>
               </div>
-              <div className="col-md-9 image screenshot">
-                <img src={advancedAnalyticsPNG} style={{width: '100%', marginLeft: '50px'}} />
+              <div className="col-md-9 top-margin image screenshot">
+                <img src={advancedAnalyticsPNG} style={{width: '100%'}} />
               </div>
             </div>
           </div>
@@ -54,10 +54,10 @@ class Home extends React.Component {
           <div className="container-fluid">
            <div className="container gda">
            <div className="row">
-              <div className="col-md-9 image screenshot">
-                <img src={basicAnalyticsPNG} style={{width: '97%', marginRight: '50px'}} />
+              <div className="col-md-9 top-margin image screenshot">
+                <img src={basicAnalyticsPNG} style={{width: '100%'}} />
               </div>
-              <div className="col-md-3 txt" style={{marginTop: '12px'}}>
+              <div className="col-md-3 top-margin">
                 <h5>Basic Analytics</h5>
                 <p>Flexible query interface and visualizations to allow for in-depth and granular analysis.</p>
               </div>
@@ -67,12 +67,12 @@ class Home extends React.Component {
           <div className="container-fluid shaded-background">
            <div className="container gda">
             <div className="row">
-              <div className="col-md-3 txt" style={{marginTop: '10px'}}>
+              <div className="col-md-3 top-margin">
                 <h5>Custom Dashboards</h5>
                 <p>Intuitive and realtime dashboards to stay on top of your metrics and KPI’s.</p>
               </div>
-              <div className="col-md-9 image screenshot">
-                <img src={dashboardsPNG} style={{width: '100%', marginLeft: '50px'}} />
+              <div className="col-md-9 top-margin image screenshot">
+                <img src={dashboardsPNG} style={{width: '100%'}} />
               </div>
             </div>
           </div>
@@ -80,10 +80,10 @@ class Home extends React.Component {
           <div className="container-fluid">
            <div className="container gda">
            <div className="row">
-              <div className="col-md-9 image screenshot">
-                <img src={funnelPNG} style={{width: '100%', marginRight: '50px'}} />
+              <div className="col-md-9 top-margin image screenshot">
+                <img src={funnelPNG} style={{width: '100%'}} />
               </div>
-              <div className="col-md-3 txt" style={{marginTop: '12px'}}>
+              <div className="col-md-3 top-margin">
                 <h5>Customer Journey Funnels</h5>
                 <p>Track funnels and the conversion ratios at every step of the customer journey.</p>
               </div>
@@ -97,7 +97,7 @@ class Home extends React.Component {
                 <div className="row">
                   <div className="col-md-12">
                     <h4 className="centered-title">AI to help make sense of data</h4>
-                    <p>What makes us truly unique is that we are taking analytics beyond raw storage and retreival of data - using our inhouse datastore that uses advanced statistical modeling techinques to make sense and help understand user behavioural data.</p>
+                    <p>What makes us truly unique is that we are taking analytics beyond raw storage and retreival of data. Using our inhouse datastore, that uses advanced statistical modeling techinques, to help understand user behavioural data.</p>
                   </div>
                 </div>
               </div>
