@@ -108,8 +108,6 @@ class BarChart extends Component {
   }
 
   render() {
-
-
     var barsAndScale = this.getBarsAndScaleFromResult(this.props.queryResult);
     let displayLegend = this.props.legend == false ? false : true;
     var chartData = barsAndScale.bars;

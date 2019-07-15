@@ -50,15 +50,15 @@ class LineChartCard extends Component {
     var chart = <Line data={line} options={chartOptions} />
 
     return (
-      <Card>
-      <CardHeader className="fapp-chart-card-header">
-        {chartData.header}
-      </CardHeader>
-      <CardBody className="fapp-chart-card-body">
-      <div className="chart-wrapper">
-      {chart}
-      </div>
-      </CardBody>
+      <Card className="fapp-chart-card">
+        <CardHeader>
+          {chartData.header}
+        </CardHeader>
+        <CardBody>
+          <div className="chart-wrapper">
+            {chart}
+          </div>
+        </CardBody>
       </Card>
     );
   }

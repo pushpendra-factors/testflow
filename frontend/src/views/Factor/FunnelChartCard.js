@@ -107,16 +107,16 @@ class FunnelChartCard extends Component {
     var funnelGraphCols, funnelEventCols;
     [funnelGraphCols, funnelEventCols] = this.buildFunnelUI(chartData.datasets[0].funnel_data);
     const explanations = chartData.explanations.map((explainText) =>
-      <CardTitle className="fapp-chart-card-title">{explainText}</CardTitle>
+      <CardTitle>{explainText}</CardTitle>
     );
 
     return (
-      <Card>
-        <CardHeader className="fapp-chart-card-header">
+      <Card className="fapp-chart-card">
+        <CardHeader>
           {chartData.header}
         </CardHeader>
         {explanations}
-        <CardBody className="fapp-chart-card-body">
+        <CardBody>
 
         <Row noGutters={true}>
         {

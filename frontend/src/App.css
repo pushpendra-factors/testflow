@@ -365,7 +365,7 @@ body {
     border-radius: 10px;
 }
 
-.fapp-chart-card-header {
+.fapp-chart-card .card-header {
     background: none !important;
     border-bottom: none !important;
     line-height: 1.5rem;
@@ -375,11 +375,11 @@ body {
     color: #23282c;
 }
 
-.fapp-chart-card-body {
+.fapp-chart-card .card-body {
     padding: 1rem 1.25rem 0.5rem 1.25rem !important;
 }
 
-.fapp-chart-card-title {
+.fapp-chart-card .card-title {
     margin-top: 0 !important;
     margin-bottom: 0 !important;
     padding: 0rem 0.0rem 0.25rem 2.5rem !important;
@@ -459,6 +459,11 @@ div.setting-card:hover{
 
 .fapp-text {
     color: #777;
+}
+
+.fapp-text.small {
+    font-weight: 700;
+    font-size: 12px;
 }
 
 .fapp-bordered-card {
@@ -638,3 +643,33 @@ span.fapp-button:focus {
     cursor: pointer;
     color: #20a8d8;
 }
+
+.fapp-report-card {
+    margin-top: 50px;
+}
+
+.fapp-report-card .card-header {
+    margin-top: 10px;
+    margin-left: 20px;
+    margin-right: 20px;
+
+    background: none;
+    border-bottom: none;
+    color: #555;
+}
+
+.fapp-report-card .card-title {
+    padding: 0 1.25rem;
+    margin-left: 20px;
+    margin-right: 20px;
+
+    font-weight: 500;
+    font-size: 14px;
+    color: #555;
+}
+
+.fapp-report-card .card-body {
+    margin-left: 20px;
+    margin-right: 20px;
+}
+

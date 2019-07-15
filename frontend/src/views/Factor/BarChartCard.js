@@ -60,20 +60,20 @@ class BarChartCard extends Component {
     var chart = <Bar data={bar} options={chartOptions} />
 
     const explanations = chartData.explanations.map((explainText) =>
-      <CardTitle className="fapp-chart-card-title">{explainText}</CardTitle>
+      <CardTitle>{explainText}</CardTitle>
     );
 
     return (
-      <Card>
-      <CardHeader className="fapp-chart-card-header">
-        {chartData.header}
-      </CardHeader>
-      {explanations}
-      <CardBody className="fapp-chart-card-body">
-      <div className="chart-wrapper" style={{ minHeight: '450px' }}>
-        {chart}
-      </div>
-      </CardBody>
+      <Card className="fapp-chart-card">
+        <CardHeader>
+          {chartData.header}
+        </CardHeader>
+        {explanations}
+        <CardBody>
+          <div className="chart-wrapper" style={{ minHeight: '450px' }}>
+            {chart}
+          </div>
+        </CardBody>
       </Card>
     );
   }
