@@ -632,3 +632,9 @@ span.fapp-button:focus {
     text-decoration: underline;
     cursor: pointer;
 }
+
+.fapp-clickable:hover,
+.fapp-clickable:focus {
+    cursor: pointer;
+    color: #20a8d8;
+}
