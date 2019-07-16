@@ -109,7 +109,7 @@ const CardUnit = (props) => {
         <CardBody>
           <div style={{ textAlign: 'center', marginBottom: '30px' }}>
             <div style={{ border: '1px solid #AAA', padding: '20px 30px', display: 'inline-block', textAlign: 'center', marginRight: '60px' }}>
-              <div className='fapp-label' style={{ marginBottom: '15px' }} >
+              <div style={{ marginBottom: '15px' }} >
                 <span> 
                   { readableTimstamp(props.intervalBeforeThat.st) + " - " + readableTimstamp(props.intervalBeforeThat.et) } 
                 </span>
@@ -121,7 +121,7 @@ const CardUnit = (props) => {
             </div>
 
             <div style={{ border: '1px solid #AAA', padding: '20px 30px', display: 'inline-block', textAlign: 'center' }}>
-              <div className='fapp-label' style={{ marginBottom: '15px' }} >
+              <div style={{ marginBottom: '15px' }} >
                 <span> 
                   { readableTimstamp(props.interval.st) + " - " + readableTimstamp(props.interval.et) } 
                 </span>
@@ -175,7 +175,7 @@ class Report extends Component {
 
   renderReport(report) {
     return (
-      <div>
+      <div className='fapp-gray'>
         <div style={{ textAlign: 'center' }}>
           <h4 style={{ marginBottom: '0.2rem', color: '#555' }}> { 'Weekly Report - ' + report.dashboard_name } </h4>
           <span className='fapp-text light small'> { readableTimstamp(report.start_time) + " - " + readableTimstamp(report.end_time) } </span>

@@ -280,7 +280,11 @@ body {
     font-size: 1.6rem;
     display: block;
     margin-top: 5px;
-    color: #404040
+    color: #404040;
+}
+
+.fapp-gray {
+    color: #444 !important;
 }
 
 .fapp-search-card {
@@ -655,7 +659,6 @@ span.fapp-button:focus {
 
     background: none;
     border-bottom: none;
-    color: #555;
 }
 
 .fapp-report-card .card-title {
@@ -663,9 +666,8 @@ span.fapp-button:focus {
     margin-left: 20px;
     margin-right: 20px;
 
-    font-weight: 500;
+    font-weight: 400;
     font-size: 14px;
-    color: #555;
 }
 
 .fapp-report-card .card-body {

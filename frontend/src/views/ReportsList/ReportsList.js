@@ -29,10 +29,8 @@ const mapStateToProps = store => {
 const ReportRecord = (props) => {
   return (
     <Row style={{ marginBottom: '10px' }}>
-        <Col md={3} className='fapp-clickable' onClick={ props.onClick }>{props.name}</Col>
-        <Col md={{size:3}} >
-          { props.start_time + " - " + props.end_time }
-        </Col>
+        <Col md={2} className='fapp-clickable' onClick={ props.onClick }>{props.name}</Col>
+        <Col md={2} > { props.start_time + " - " + props.end_time } </Col>
     </Row>
   )
 }
@@ -80,10 +78,10 @@ class ReportsList extends Component {
           <CardHeader style={{ marginBottom: '5px' }}>
             <strong>Reports</strong>
           </CardHeader>
-          <CardBody className='fapp-medium-font'>
+          <CardBody style={{ fontSize: '0.95em' }}>
             <Row style={{ marginBottom: '10px' }} >
-              <Col md={3} className='fapp-label light'>Name</Col>
-              <Col md={3} className='fapp-label light'>Period</Col>
+              <Col md={2} className='fapp-label light'>Name</Col>
+              <Col md={2} className='fapp-label light'>Period</Col>
             </Row>
             { this.renderReportsList() }
           </CardBody>
