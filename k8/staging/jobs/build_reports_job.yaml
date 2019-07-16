@@ -17,7 +17,7 @@ spec:
             cloud.google.com/gke-nodepool: factors-staging-node-pool
           containers:
           - name: build-reports-job
-            image: us.gcr.io/factors-staging/build-reports-job:v0.67-d810261c
+            image: us.gcr.io/factors-staging/build-reports-job:v0.01-cfbb5ba
             imagePullPolicy: IfNotPresent
             args:
             - --env
@@ -40,10 +40,6 @@ spec:
             - $(AWS_SECRET)
             - --mail_reports
             - $(MAIL_REPORTS)
-            - --build_for_projects
-            - $(BUILD_FOR_PROJECTS)
-            - --skip_for_projects
-            - $(SKIP_FOR_PROJECTS)
             envFrom:
             - configMapRef:
                 name: config-env
