@@ -7,5 +7,3 @@ metadata:
     project: factors-staging
 data:
   MAIL_REPORTS: "false"
-  BUILD_FOR_PROJECTS: ""
-  SKIP_FOR_PROJECTS: ""
