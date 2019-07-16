@@ -18,7 +18,7 @@ class IntegrationsSegment extends Component {
                 <div className="post-content">
                   <h3>Integrating with Segment</h3>
                   <p>
-                    FactorsAI automatically connects to your user data in Segment. Segment allows you to easily manage integrations with multiple analytics services. By tracking events and users via Segment’s API and libraries, you can send your product’s data to all of your analytics/marketing platforms, with minimal instrumentation code. We collect all your Segment identifies, pages, screens, and track events and is immediately available on FactorsAI for analysis.
+                    FactorsAI automatically connects to your user data in Segment. Segment allows you to easily manage integrations with multiple analytics services. By tracking events and users via Segment’s API and libraries, you can send your product’s data to all of your analytics/marketing platforms, with minimal instrumentation code. After enabling this integration, all the Segment identifies, pages, screens, and track events data will also be sent to FactorsAI. The sent data will be immediately available for analysis..
                   </p>
                   <br />
                   <br />
