@@ -49,7 +49,11 @@ func main() {
 	awsSecretAccessKey := flag.String("aws_secret", "dummy", "")
 
 	buildForProjects := flag.String("build_for_projects", "", "")
+	buildForDashboards := flag.String("build_for_dashboards", "", "")
 	skipForProjects := flag.String("skip_for_projects", "", "")
+
+	customStartTime := flag.Int64("start_time", 0, "Custom start time from which reports to be generated.")
+	customEndTime := flag.Int64("end_time", 0, "Custom end time till which reports to be generated.")
 
 	mailReports := flag.Bool("mail_reports", false, "")
 
@@ -66,6 +70,12 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	dashboardsToBuildFor, err := getIds(*buildForDashboards, ",")
+	if err != nil {
+		panic(err)
+	}
+
 	projectsToSkipFor, err := getIds(*skipForProjects, ",")
 	if err != nil {
 		panic(err)
@@ -96,19 +106,33 @@ func main() {
 	db := C.GetServices().Db
 	defer db.Close()
 
-	dashboards, errCode := fetchDashboards(db, 10000, 0, projectsToBuildFor, projectsToSkipFor)
+	dashboards, errCode := fetchDashboards(db, 10000, 0, projectsToBuildFor, dashboardsToBuildFor, projectsToSkipFor)
 	if errCode != http.StatusFound {
 		panic("Failed to fetch dashboards")
 		return
 	}
 
-	reports.BuildReports(*env, db, dashboards, *mailReports)
+	reports.BuildReports(*env, db, dashboards, *customStartTime, *customEndTime, *mailReports)
 }
 
-func fetchDashboards(gormDB *gorm.DB, limit, lastSeenID uint64, projectsToBuildFor, projectsToSkipFor []uint64) ([]*M.Dashboard, int) {
+func fetchDashboards(gormDB *gorm.DB, limit, lastSeenID uint64, projectsToBuildFor,
+	dashboardsToBuildFor, projectsToSkipFor []uint64) ([]*M.Dashboard, int) {
+
+	if len(projectsToBuildFor) == 0 && len(dashboardsToBuildFor) > 0 {
+		log.WithField("dashboardIds", dashboardsToBuildFor).Error(
+			"No projectIds given to associate with the given dashboardIds")
+		return nil, http.StatusBadRequest
+	}
+
 	var dashboards []*M.Dashboard
 
-	db := gormDB.Limit(limit).Where("ID > ?", lastSeenID).Order("ID ASC")
+	db := gormDB.Limit(limit).Order("id ASC")
+
+	if len(dashboardsToBuildFor) > 0 {
+		db = db.Where("id IN (?)", dashboardsToBuildFor)
+	} else {
+		db = db.Where("id > ?", lastSeenID)
+	}
 
 	if len(projectsToBuildFor) > 0 {
 		db = db.Where("project_id IN (?)", projectsToBuildFor)
@@ -119,7 +143,6 @@ func fetchDashboards(gormDB *gorm.DB, limit, lastSeenID uint64, projectsToBuildF
 	}
 
 	err := db.Find(&dashboards).Error
-
 	if err != nil {
 		return nil, http.StatusInternalServerError
 	}

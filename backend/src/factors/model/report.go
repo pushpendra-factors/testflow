@@ -224,7 +224,6 @@ func (ReportDescription) TableName() string {
 }
 
 func GetValidReportsListAgentHasAccessTo(projectID uint64, agentUUID string) ([]*ReportDescription, int) {
-
 	if projectID == 0 || agentUUID == "" {
 		return nil, http.StatusBadRequest
 	}
@@ -246,7 +245,7 @@ func GetValidReportsListAgentHasAccessTo(projectID uint64, agentUUID string) ([]
 	dbReportDecs := make([]*ReportDescription, 0, 0)
 
 	db := C.GetServices().Db
-	if err := db.Limit(10).Where("project_id = ?", projectID).Where("dashboard_id IN (?)", dashboardIDs).Where("invalid = ?", false).Find(&dbReportDecs).Error; err != nil {
+	if err := db.Limit(100).Where("project_id = ?", projectID).Where("dashboard_id IN (?)", dashboardIDs).Where("invalid = ?", false).Find(&dbReportDecs).Error; err != nil {
 		return nil, http.StatusInternalServerError
 	}
 

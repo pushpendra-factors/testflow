@@ -54,7 +54,7 @@ func fetchMostRecentReport(reports []*M.Report, projectID, dashboardID uint64, r
 	return mostRecentReport, status
 }
 
-func findStartTimeForDashboard(existingReports []*M.Report, dashboard *M.Dashboard) time.Time {
+func findStartTimeForDashboard(dashboard *M.Dashboard, existingReports []*M.Report) time.Time {
 
 	mostRecentReport, errCode := fetchMostRecentReport(existingReports, dashboard.ProjectId, dashboard.ID, M.ReportTypeWeekly)
 	if errCode == http.StatusNotFound {
