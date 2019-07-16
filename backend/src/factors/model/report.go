@@ -286,7 +286,7 @@ func GenerateReport(projectID, dashboardID uint64, dashboardName string, interva
 		DashboardID:   dashboardID,
 		DashboardName: dashboardName,
 		Type:          ReportTypeWeekly,
-		StartTime:     intervalBeforeThat.StartTime,
+		StartTime:     interval.StartTime,
 		EndTime:       interval.EndTime,
 		Contents:      reportContents,
 	}
