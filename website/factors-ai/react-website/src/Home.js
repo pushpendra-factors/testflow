@@ -18,7 +18,7 @@ class Home extends React.Component {
               <div className="col-md-5 content">
                 <h2 className="heading">Intelligent user analytics to help grow your business</h2>
                 <div className="break" />
-                <p className="sub-text">Software that <b>explains</b> - how to optimise marketing campaigns, improve website conversions and drive user engagement.</p>
+                <p className="sub-text">Software that <b>explains</b> - ways to optimise marketing campaigns, improve website conversions and drive user engagement.</p>
                 <span className="error" id="invalid-email" style={{display: 'none'}}>Please enter a valid email</span>
                 <span className="success" id="valid-email" style={{display: 'none'}}>Thanks, we will get back to you soon</span>
                 <button id="signup-button" className='primary-cta'>SIGN UP FOR FREE</button>
