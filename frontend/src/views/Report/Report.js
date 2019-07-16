@@ -76,7 +76,7 @@ const LineUnit = (props) => {
           <strong>{props.name}</strong>
         </CardHeader>
         <CardBody>
-          <div style={{ height: '450px' }}>
+          <div style={{ height: '400px' }}>
             <LineChart queryResult={mergedQR} verticalLine={true}/>
           </div>
         </CardBody>
@@ -189,7 +189,7 @@ class Report extends Component {
     if (!this.props.report) return <Loading />;
 
     return (
-      <div className='fapp-content' style={{ marginLeft: '5rem', marginRight: '5rem', paddingTop: '50px' }}>
+      <div className='fapp-content' style={{ marginLeft: '7rem', marginRight: '7rem', paddingTop: '50px' }}>
         { this.renderReport(this.props.report) }
       </div>
     );
