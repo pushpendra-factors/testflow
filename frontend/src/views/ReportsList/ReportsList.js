@@ -12,6 +12,7 @@ import {
 import { fetchProjectReportsList } from '../../actions/reportActions';
 import { readableTimstamp } from '../../util';
 import Loading from '../../loading';
+import NoContent from '../../common/NoContent';
 
 const mapStateToProps = store => {
   return {
@@ -71,6 +72,9 @@ class ReportsList extends Component {
 
   render() {
     if (this.state.loading) return <Loading />;
+
+    if (this.props.reports && this.props.reports.length == 0)
+      return <NoContent paddingTop='18%' center msg='No Reports' />;
 
     return (
       <div className='fapp-content' style={{ marginLeft: '2rem', marginRight: '2rem', paddingTop: '30px' }}>

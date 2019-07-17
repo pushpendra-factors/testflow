@@ -659,6 +659,7 @@ span.fapp-button:focus {
 
     background: none;
     border-bottom: none;
+    color: #444;
 }
 
 .fapp-report-card .card-title {
