@@ -107,6 +107,44 @@ class BarChart extends Component {
     };
   }
 
+  getValueByLabel(bar, datasetIndex=0) {
+    let map = {};
+    for(let i=0; i<bar.labels.length; i++)
+      map[bar.labels[i]] = bar.datasets[datasetIndex].data[i];
+
+    return map;
+  }
+
+  createDataByLookup(labels, valueByLabel) {
+    let data = [];
+    for (let i=0; i<labels.length; i++) {
+      let label = labels[i];
+      if (valueByLabel[label]) data.push(valueByLabel[label]);
+      else data.push(0);
+    }
+
+    return data;
+  }
+
+  mergeBars(bar1, bar2) {
+    let bar1Lookup = this.getValueByLabel(bar1);
+    let bar2Lookup = this.getValueByLabel(bar2);
+    
+    let labels = bar1.labels;
+    for(let i=0; i<bar2.labels.length; i++) {
+      if (labels.indexOf(bar2.labels[i]) == -1)
+        labels.push(bar2.labels[i]);
+    }
+
+    // using bar1 to preserve style attributes 
+    // which is common for both.
+    bar1.labels = labels;
+    bar1.datasets[0].data = this.createDataByLookup(labels, bar1Lookup);
+    bar1.datasets.push({ data: this.createDataByLookup(labels, bar2Lookup) });
+
+    return bar1;
+  }
+
   render() {
     var barsAndScale = this.getBarsAndScaleFromResult(this.props.queryResult);
     let displayLegend = this.props.legend == false ? false : true;
@@ -121,14 +159,13 @@ class BarChart extends Component {
 
     if (this.props.compareWithQueryResult ){
       var barsAndScaleComp = this.getBarsAndScaleFromResult(this.props.compareWithQueryResult);
-      var chartDataComp = barsAndScaleComp.bars;
-      bar.labels = bar.labels.concat(chartDataComp.labels);
-      bar.datasets = bar.datasets.concat(chartDataComp.datasets);
+      var barComp = barsAndScaleComp.bars;
+      // overrides with merged values.
+      bar = this.mergeBars(bar, barComp);
 
       let maxScale2 = getChartScaleWithSpace(barsAndScaleComp.maxScale);
-      if(maxScale < maxScale2){
-        maxScale = maxScale2;
-      }
+      if (maxScale < maxScale2) maxScale = maxScale2;
+
       bar.datasets[0].label = this.props.queryResultLabel;
       bar.datasets[1].label = this.props.compareWithQueryResultLabel;
     }
