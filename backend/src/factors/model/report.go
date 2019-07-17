@@ -61,12 +61,18 @@ type DashboardUnitReport struct {
 	Title        string       `json:"t"`
 	Presentation string       `json:"p"`
 	Results      []ReportUnit `json:"r"`
+	Explanations []string     `json:"e"`
 }
 
 type ReportUnit struct {
 	StartTime   int64       `json:"st"`
 	EndTime     int64       `json:"et"`
 	QueryResult QueryResult `json:"qr"`
+}
+
+type Interval struct {
+	StartTime int64
+	EndTime   int64
 }
 
 func TranslateDBReportToReport(dbReport *DBReport) (*Report, error) {
@@ -152,9 +158,8 @@ func CreateReport(report *Report) (*Report, int) {
 	return createdReport, http.StatusCreated
 }
 
-func GetValidReportByID(ReportID uint64) (*Report, int) {
-
-	if ReportID == 0 {
+func GetReportByID(id uint64) (*Report, int) {
+	if id == 0 {
 		log.Error("GetReportByID Failed. ID not provided.")
 		return nil, http.StatusBadRequest
 	}
@@ -162,7 +167,7 @@ func GetValidReportByID(ReportID uint64) (*Report, int) {
 	db := C.GetServices().Db
 	dbReport := DBReport{}
 
-	if err := db.Limit(1).Where("id = ?", ReportID).Find(&dbReport).Error; err != nil {
+	if err := db.Limit(1).Where("id = ?", id).Find(&dbReport).Error; err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound
 		}
@@ -174,10 +179,13 @@ func GetValidReportByID(ReportID uint64) (*Report, int) {
 	if err != nil {
 		return nil, http.StatusInternalServerError
 	}
-
 	if report.Invalid {
-		return nil, http.StatusUnauthorized
+		return nil, http.StatusNotFound
 	}
+
+	// Explanations are not stored.
+	// Adding it on runtime.
+	addExplanationsToReports(report)
 
 	return report, http.StatusFound
 }
@@ -245,7 +253,8 @@ func GetValidReportsListAgentHasAccessTo(projectID uint64, agentUUID string) ([]
 	dbReportDecs := make([]*ReportDescription, 0, 0)
 
 	db := C.GetServices().Db
-	if err := db.Limit(100).Where("project_id = ?", projectID).Where("dashboard_id IN (?)", dashboardIDs).Where("invalid = ?", false).Find(&dbReportDecs).Error; err != nil {
+	if err := db.Limit(100).Where("project_id = ?", projectID).Where("dashboard_id IN (?)",
+		dashboardIDs).Where("invalid = ?", false).Find(&dbReportDecs).Error; err != nil {
 		return nil, http.StatusInternalServerError
 	}
 
@@ -256,14 +265,11 @@ func GetValidReportsListAgentHasAccessTo(projectID uint64, agentUUID string) ([]
 	return dbReportDecs, http.StatusFound
 }
 
-type Interval struct {
-	StartTime int64
-	EndTime   int64
-}
+func GenerateReport(projectID, dashboardID uint64, dashboardName string,
+	intervalBeforeThat, interval Interval) (*Report, int) {
 
-func GenerateReport(projectID, dashboardID uint64, dashboardName string, intervalBeforeThat, interval Interval) (*Report, int) {
-
-	dashboardUnits, errCode := GetDashboardUnitsByProjectIDAndDashboardIDAndTypes(projectID, dashboardID, dashBoardUnitTypesToIncludeInReport)
+	dashboardUnits, errCode := GetDashboardUnitsByProjectIDAndDashboardIDAndTypes(projectID,
+		dashboardID, dashBoardUnitTypesToIncludeInReport)
 	if errCode != http.StatusFound {
 		return nil, errCode
 	}
@@ -273,7 +279,8 @@ func GenerateReport(projectID, dashboardID uint64, dashboardName string, interva
 	}
 
 	for _, dashboardUnit := range dashboardUnits {
-		dashboardUnitReport, errCode := getDashboardUnitReport(projectID, dashboardUnit, intervalBeforeThat, interval)
+		dashboardUnitReport, errCode := getDashboardUnitReport(projectID, dashboardUnit,
+			intervalBeforeThat, interval)
 		if errCode != http.StatusOK {
 			return nil, errCode
 		}
@@ -312,7 +319,53 @@ func getReportUnit(projectID uint64, query Query, interval Interval) (*ReportUni
 	return &reportUnit, http.StatusOK
 }
 
-func getDashboardUnitReport(projectID uint64, dashboardUnit DashboardUnit, intervalBeforeThat, interval Interval) (*DashboardUnitReport, int) {
+func addExplanationsForPresentationCard(duReport *DashboardUnitReport) {
+	prevCount := duReport.Results[0].QueryResult.Rows[0][0].(float64)
+	curCount := duReport.Results[1].QueryResult.Rows[0][0].(float64)
+
+	var percentChange float64
+	if prevCount > 0 {
+		percentChange = ((curCount - prevCount) / prevCount) * 100
+	} else {
+		percentChange = 100 // 0 -> 10 = 100% increase. For consistency.
+	}
+
+	var effect string
+	if percentChange > 0 {
+		effect = "increase in"
+	} else {
+		effect = "decreased in"
+	}
+
+	if percentChange < 0 {
+		percentChange = percentChange * -1
+	}
+
+	explanation := fmt.Sprintf("%0.2f%% %s %s", percentChange, effect, duReport.Title)
+	duReport.Explanations = []string{explanation}
+}
+
+func addExplanationsByPresentation(duReport DashboardUnitReport) DashboardUnitReport {
+	if duReport.Presentation == "" || len(duReport.Results) < 2 {
+		return duReport
+	}
+
+	switch duReport.Presentation {
+	case PresentationCard:
+		addExplanationsForPresentationCard(&duReport)
+	}
+
+	return duReport
+}
+
+func addExplanationsToReports(report *Report) {
+	for unitId, dashboardUnitReport := range report.Contents.DashboardUnitIDToDashboardUnitReport {
+		report.Contents.DashboardUnitIDToDashboardUnitReport[unitId] = addExplanationsByPresentation(dashboardUnitReport)
+	}
+}
+
+func getDashboardUnitReport(projectID uint64, dashboardUnit DashboardUnit,
+	intervalBeforeThat, interval Interval) (*DashboardUnitReport, int) {
 
 	query := Query{}
 	err := json.Unmarshal(dashboardUnit.Query.RawMessage, &query)
@@ -414,10 +467,12 @@ func (r *Report) GetHTMLContent() string {
 		output.WriteString("<table>")
 		output.WriteString("<tr>")
 		output.WriteString("<th style='padding-left:15px;'>")
-		output.WriteString(fmt.Sprintf("%s- %s", unixToHumanTime(dshBU.Results[0].StartTime), unixToHumanTime(dshBU.Results[0].EndTime)))
+		output.WriteString(fmt.Sprintf("%s- %s", unixToHumanTime(dshBU.Results[0].StartTime),
+			unixToHumanTime(dshBU.Results[0].EndTime)))
 		output.WriteString("</th>")
 		output.WriteString("<th style='padding-left:15px;'>")
-		output.WriteString(fmt.Sprintf("%s- %s", unixToHumanTime(dshBU.Results[1].StartTime), unixToHumanTime(dshBU.Results[1].EndTime)))
+		output.WriteString(fmt.Sprintf("%s- %s", unixToHumanTime(dshBU.Results[1].StartTime),
+			unixToHumanTime(dshBU.Results[1].EndTime)))
 		output.WriteString("</th>")
 		output.WriteString("</tr>")
 		output.WriteString("<tr>")

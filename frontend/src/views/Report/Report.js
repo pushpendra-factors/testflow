@@ -38,6 +38,13 @@ const mergeLineQR = function(intervalBeforeQR, intervalQR) {
   return mergedQR;
 }
 
+const renderExplanations = function(explanations) {
+  if (!explanations || explanations.length == 0)
+    return null;
+
+  return explanations.map((exp) => <p>{ exp }</p>);
+}
+
 const BarUnit = (props) => {
   let interval =  props.interval;
   let intervalBefore = props.intervalBeforeThat ;
@@ -87,54 +94,42 @@ const LineUnit = (props) => {
 const CardUnit = (props) => {
   let intervalVal =  props.interval.qr.rows[0][0];
   let intervalBeforeVal = props.intervalBeforeThat.qr.rows[0][0];
-  
-  let calculatePercentage = !(intervalVal == 0 || intervalBeforeVal == 0);
-  let percentChange = 0 ;
-  let effect = "";
-  if (calculatePercentage) {
-    // Todo: Move this as part array of insights from backend.
-    percentChange = ((intervalVal-intervalBeforeVal) / intervalBeforeVal) * 100;
-    effect = percentChange > 0 ? "Increase in" : "decreased in";
-    percentChange = percentChange > 0 ? percentChange : -1 * percentChange;
-  }
     
-    return (
-      <Card className='fapp-report-card'>
-        <CardHeader>
-          <strong>{props.name}</strong>
-        </CardHeader>
-        <CardTitle>
-          { calculatePercentage ? percentChange.toFixed(2) + "% " + effect + " " + props.name : null }
-        </CardTitle>
-        <CardBody>
-          <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-            <div style={{ border: '1px solid #AAA', padding: '20px 30px', display: 'inline-block', textAlign: 'center', marginRight: '60px' }}>
-              <div style={{ marginBottom: '15px' }} >
-                <span> 
-                  { readableTimstamp(props.intervalBeforeThat.st) + " - " + readableTimstamp(props.intervalBeforeThat.et) } 
-                </span>
-                <div style={{ fontSize: '12px', color: '#999' }}>Week before last</div>
-              </div>
-              <div style={{ fontSize: '40px', marginBottom: '12px' }}>
-                <span> { intervalBeforeVal } </span>
-              </div>
+  return (
+    <Card className='fapp-report-card'>
+      <CardHeader>
+        <strong>{props.name}</strong>
+      </CardHeader>
+      <CardTitle> { renderExplanations(props.explanations) } </CardTitle>
+      <CardBody>
+        <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+          <div style={{ border: '1px solid #AAA', padding: '20px 30px', display: 'inline-block', textAlign: 'center', marginRight: '60px' }}>
+            <div style={{ marginBottom: '15px' }} >
+              <span> 
+                { readableTimstamp(props.intervalBeforeThat.st) + " - " + readableTimstamp(props.intervalBeforeThat.et) } 
+              </span>
+              <div style={{ fontSize: '12px', color: '#999' }}>Week before last</div>
             </div>
-
-            <div style={{ border: '1px solid #AAA', padding: '20px 30px', display: 'inline-block', textAlign: 'center' }}>
-              <div style={{ marginBottom: '15px' }} >
-                <span> 
-                  { readableTimstamp(props.interval.st) + " - " + readableTimstamp(props.interval.et) } 
-                </span>
-                <div style={{ fontSize: '12px', color: '#999' }}>Last Week</div>
-              </div>
-              <div style={{ fontSize: '40px', marginBottom: '12px' }}>
-                <span> { intervalVal } </span>
-              </div>
+            <div style={{ fontSize: '40px', marginBottom: '12px' }}>
+              <span> { intervalBeforeVal } </span>
             </div>
           </div>
-        </CardBody>
-      </Card>
-    )
+
+          <div style={{ border: '1px solid #AAA', padding: '20px 30px', display: 'inline-block', textAlign: 'center' }}>
+            <div style={{ marginBottom: '15px' }} >
+              <span> 
+                { readableTimstamp(props.interval.st) + " - " + readableTimstamp(props.interval.et) } 
+              </span>
+              <div style={{ fontSize: '12px', color: '#999' }}>Last Week</div>
+            </div>
+            <div style={{ fontSize: '40px', marginBottom: '12px' }}>
+              <span> { intervalVal } </span>
+            </div>
+          </div>
+        </div>
+      </CardBody>
+    </Card>
+  )
 }
 
 class Report extends Component {
@@ -162,11 +157,11 @@ class Report extends Component {
         let unit = units[id];
         
         if (unit.p === PRESENTATION_CARD) {
-            reportUnits.push(<CardUnit name={unit.t} intervalBeforeThat={unit.r[0]} interval={unit.r[1]} />);
+            reportUnits.push(<CardUnit name={unit.t} intervalBeforeThat={unit.r[0]} interval={unit.r[1]} explanations={unit.e} />);
         } else if (unit.p === PRESENTATION_LINE){
-            reportUnits.push(<LineUnit name={unit.t} intervalBeforeThat={unit.r[0]} interval={unit.r[1]} />);
+            reportUnits.push(<LineUnit name={unit.t} intervalBeforeThat={unit.r[0]} interval={unit.r[1]} explanations={unit.e} />);
         } else if(unit.p === PRESENTATION_BAR){
-            reportUnits.push(<BarUnit name={unit.t} intervalBeforeThat={unit.r[0]} interval={unit.r[1]} />);
+            reportUnits.push(<BarUnit name={unit.t} intervalBeforeThat={unit.r[0]} interval={unit.r[1]} explanations={unit.e} />);
         }
     }
 

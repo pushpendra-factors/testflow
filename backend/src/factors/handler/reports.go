@@ -49,14 +49,13 @@ func GetReportHandler(c *gin.Context) {
 
 	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 
-	report, errCode := M.GetValidReportByID(reportId)
+	report, errCode := M.GetReportByID(reportId)
 	if errCode != http.StatusFound {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Failed to fetch report"})
 		return
 	}
 
 	hasAccess, _ := M.HasAccessToDashboard(report.ProjectID, agentUUID, report.DashboardID)
-
 	if !hasAccess {
 		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Get Report failed. Report cannot be accessed."})
 		return
