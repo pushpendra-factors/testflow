@@ -2,6 +2,7 @@ package tests
 
 import (
 	H "factors/handler"
+	M "factors/model"
 	P "factors/pattern"
 	"math"
 	"testing"
@@ -58,7 +59,7 @@ func assertEqualConstraints(
 func TestParseFactorQuery(t *testing.T) {
 	// No events.
 	var query = make(map[string]interface{})
-	startEvent, startEventConstraints, endEvent, endEventConstraints, err := H.ParseFactorQuery(query)
+	startEvent, startEventConstraints, endEvent, endEventConstraints, _, err := H.ParseFactorQuery(query)
 	assert.NotNil(t, err)
 	assert.Equal(t, startEvent, "")
 	assert.Nil(t, startEventConstraints)
@@ -70,7 +71,8 @@ func TestParseFactorQuery(t *testing.T) {
 	event1["name"] = "endEvent"
 	event1["properties"] = []interface{}{}
 	query["eventsWithProperties"] = []interface{}{event1}
-	startEvent, startEventConstraints, endEvent, endEventConstraints, err = H.ParseFactorQuery(query)
+	query["queryType"] = M.QueryTypeUniqueUsers
+	startEvent, startEventConstraints, endEvent, endEventConstraints, _, err = H.ParseFactorQuery(query)
 	assert.Nil(t, err)
 	assert.Equal(t, startEvent, "")
 	assert.Nil(t, startEventConstraints)
@@ -135,7 +137,7 @@ func TestParseFactorQuery(t *testing.T) {
 	uProperty2["operator"] = "equals"
 	event2["user_properties"] = []interface{}{uProperty2}
 	query["eventsWithProperties"] = []interface{}{event1, event2}
-	startEvent, startEventConstraints, endEvent, endEventConstraints, err = H.ParseFactorQuery(query)
+	startEvent, startEventConstraints, endEvent, endEventConstraints, _, err = H.ParseFactorQuery(query)
 	assert.Nil(t, err)
 	assert.Equal(t, startEvent, "startEvent")
 	assertEqualConstraints(t, P.EventConstraints{
@@ -205,7 +207,7 @@ func TestParseFactorQuery(t *testing.T) {
 	event3 := make(map[string]interface{})
 	event3["name"] = "event3"
 	query["eventsWithProperties"] = []interface{}{event1, event2, event3}
-	startEvent, startEventConstraints, endEvent, endEventConstraints, err = H.ParseFactorQuery(query)
+	startEvent, startEventConstraints, endEvent, endEventConstraints, _, err = H.ParseFactorQuery(query)
 	assert.NotNil(t, err)
 	assert.Equal(t, startEvent, "")
 	assert.Nil(t, startEventConstraints)
