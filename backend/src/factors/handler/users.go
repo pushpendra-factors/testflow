@@ -116,9 +116,8 @@ func GetUserPropertiesHandler(c *gin.Context) {
 	if err != nil {
 		log.WithFields(log.Fields{
 			log.ErrorKey: err, "projectId": projectId}).Error(
-			"Get User Properties failed.")
-		c.AbortWithStatus(http.StatusBadRequest)
-		return
+			"Get User Properties from pattern servers failed.")
+		properties = make(map[string][]string)
 	}
 
 	var errCode int
