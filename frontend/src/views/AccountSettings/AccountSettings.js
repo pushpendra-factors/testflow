@@ -185,7 +185,7 @@ class AccountSettings extends Component {
               }
               <span className='fapp-label'> Plan* </span>
               <div style={{ marginTop: '10px', marginBottom: '10px' }}>
-                <Select className='fapp-select'
+                <Select className='fapp-select light'
                   placeholder="plan"
                   onBlur={() => setFieldTouched("planCode", true)}
                   onChange={(item) => setFieldValue("planCode", item.value)}

@@ -1,4 +1,6 @@
 import Loadable from 'react-loadable';
+import React from 'react';
+import { Redirect } from 'react-router-dom';
 
 import DefaultLayout from './containers/DefaultLayout';
 import Loading from './loading';
@@ -64,9 +66,11 @@ const SettingsAgents = Loadable({
 });
 
 const ReloadComponent = (props) => {
-  // Todo(Dinesh): Fix browser forward after go(-1).
-  props.history.go(-1);
-  return "";
+  // Not using props history to avoid multiple backs.
+  // props.history.go(-1);
+  // return "";
+  
+  return <Redirect to='/dashboard' />
 }
 
 const AccountSettings = Loadable({

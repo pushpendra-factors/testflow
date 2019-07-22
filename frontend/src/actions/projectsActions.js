@@ -12,11 +12,19 @@ export function changeProject(projectId) {
 export function createProject(projectName){
   return function(dispatch){
     return new Promise((resolve, reject) => {
-      post(dispatch, host + "projects", {name:projectName})
-        .then((response)=>{
-          resolve(dispatch({type: "CREATE_PROJECT_FULFILLED", payload: response.data}))
-        }).catch((err)=>{
-          reject(dispatch({type:"CREATE_PROJECT_REJECTED", payload: err}))
+      post(dispatch, host + "projects", { name: projectName })
+        .then((r) => {
+          if (r.ok) {
+            dispatch({ type: "CREATE_PROJECT_FULFILLED", payload: r.data })
+            resolve(r);
+          } else {
+            dispatch({ type:"CREATE_PROJECT_REJECTED", payload: "Failed to create project." });
+            reject(r);
+          }
+        })
+        .catch((err) => {
+          dispatch({ type:"CREATE_PROJECT_REJECTED", payload: err });
+          reject(err);
         })
     })
   }
@@ -39,16 +47,25 @@ export function fetchProjectEvents(projectId) {
   return function(dispatch) {
     return new Promise((resolve, reject) => {
       get(dispatch, host + "projects/" + projectId + "/event_names")
-        .then((response) => {
-          resolve(dispatch({type: "FETCH_PROJECT_EVENTS_FULFILLED",
-                  payload: { currentProjectId: projectId, eventNames: response.data,
-                    eventPropertiesMap: {} }}));
+        .then((r) => {
+          dispatch({
+            type: "FETCH_PROJECT_EVENTS_FULFILLED",
+            payload: { 
+              currentProjectId: projectId, 
+              eventNames: r.ok ? r.data : [], 
+              eventPropertiesMap: {}
+            }
+          });
+          
+          resolve(r);
         })
         .catch((err) => {
-          reject(dispatch({type: "FETCH_PROJECT_EVENTS_REJECTED",
-                  payload: { currentProjectId: projectId, eventNames: [],
-                    eventPropertiesMap: {}, err: err }}));
-                    
+          dispatch({
+            type: "FETCH_PROJECT_EVENTS_REJECTED",
+            payload: { currentProjectId: projectId, eventNames: [], eventPropertiesMap: {}, err: err }
+          });
+
+          reject(err);       
         });
     });
   }
@@ -58,25 +75,41 @@ export function fetchProjectSettings(projectId) {
   return function(dispatch) {
     return new Promise((resolve, reject) => {
       get(dispatch, host + "projects/" + projectId + "/settings")
-        .then((response) => {
-          resolve(dispatch({
-            type: "FETCH_PROJECT_SETTINGS_FULFILLED", 
-            payload: {
-              currentProjectId: projectId,
-              settings: response.data
-            }
-          }));
+        .then((r) => {
+          if (r.ok) {
+            dispatch({
+              type: "FETCH_PROJECT_SETTINGS_FULFILLED", 
+              payload: {
+                currentProjectId: projectId,
+                settings: r.data,
+              }
+            });
+
+            resolve(r);
+          } else {
+            dispatch({
+              type: "FETCH_PROJECT_SETTINGS_REJECTED", 
+              payload: {
+                currentProjectId: projectId, 
+                settings: {}, 
+                err: "Failed to get project settings.",
+              }
+            });
+
+            reject(r);
+          }
         })
         .catch((err) => {
-          reject(
-            dispatch({
+          dispatch({
             type: "FETCH_PROJECT_SETTINGS_REJECTED", 
             payload: {
               currentProjectId: projectId, 
               settings: {}, 
               err: err
             }
-          }));
+          });
+
+          reject(err);
         });
       });
   }

@@ -401,32 +401,22 @@ class JsSdk extends Component {
 	getSDKScript() {
     let token = this.getToken();
 		let assetURL = BUILD_CONFIG.sdk_asset_url;
-    return '(function(c){var s=document.createElement("script");s.type="text/javascript";if(s.readyState){s.onreadystatechange=function(){if(s.readyState=="loaded"||s.readyState=="complete"){s.onreadystatechange=null;c()}}}else{s.onload=function(){c()}}s.src="'+assetURL+'";s.async=true;d=!!document.body?document.body:document.head;d.appendChild(s)})(function(){factors.init("'+token+'")})';
-	}
-	
-	renderScriptCode() {
-		return (
-			<div className='fapp-code'>
-				<span style={{display: 'block'}}>{'<script>'}</span>
-				<div style={{marginLeft: '15px'}}><span>{this.getSDKScript()}</span></div>
-				<span style={{display: 'block'}}>{'</script>'}</span>
-			</div>
-		);
+    return <span className='green'>{'(function(c){var s=document.createElement("script");s.type="text/javascript";if(s.readyState){s.onreadystatechange=function(){if(s.readyState=="loaded"||s.readyState=="complete"){s.onreadystatechange=null;c()}}}else{s.onload=function(){c()}}s.src="'+assetURL+'";s.async=true;d=!!document.body?document.body:document.head;d.appendChild(s)})(function(){factors.init("'}<span className='red'>{token}</span>{'")})'}</span>
 	}
 
 	isLoaded() {
+    if (this.props.cardOnly) return this.state.autoTrackSettings.loaded;
+
     return this.state.autoTrackSettings.loaded &&
       this.state.filterSettings.loaded;
   }
 
-	render() {
-		if (!this.isLoaded()) return <Loading />;
-
-		return (
-			<div className='fapp-content fapp-content-margin'>
-				<Card className="fapp-card">
+  renderJavascriptSettings() {
+    return (
+      <div>
+        <Card className="fapp-card">
           <CardHeader className='fapp-only-header'>
-            <strong>AutoTrack</strong>
+            <strong>Auto-track</strong>
             <div style={{display: 'inline-block', float: 'right'}}>
               <Toggle
                 checked={this.isAutoTrackEnabled()}
@@ -436,85 +426,114 @@ class JsSdk extends Component {
             </div>
           </CardHeader>
         </Card>
-				<Card className='fapp-bordered-card'>
+        <Card className='fapp-bordered-card'>
           <CardHeader>
-						{
-							/* Todo(Dinesh): Add copy to clipboard, Use the button below. */
-							/* <button className='btn btn-success' style={{float: 'right', padding: '2px 8px'}}> Copy  <i className='fa fa-copy' style={{marginLeft: '4px', fontWeight: 'inherit'}}></i> </button> */
-						}
-            <strong>Code Snippet</strong>
-          </CardHeader>
-					<CardBody style={{padding: '1.5rem 1.5rem'}}>
-						{ this.renderScriptCode() }
-					</CardBody>
-        </Card>
-				<Card className="fapp-bordered-card">
-          <CardHeader style={{marginBottom: '0'}}>
-            <strong>Virtual Events</strong>
-          </CardHeader>
-          <CardBody style={{paddingTop: '1.5rem'}}>
-            <span className="fapp-label" style={{marginTop: "15px", marginBottom: "20px"}}>Create an event</span>
-            <Row style={{padding: "10px 0"}}>
-              <Col md={{size: 4}}>
-                <div style={{height: "20px"}}>
-                  <span className="fapp-error" style={{display: this.getErrorDisplayState(this.state.filterSettings.formDomainError)}}>{this.state.filterSettings.formDomainError}</span>
-                </div>
-                <div className='fapp-select light'>
-                  <CreatableSelect
-                    value={this.state.filterSettings.formDomain}
-                    onChange={this.handleFilterFormDomainChange}
-                    options={this.getFilterDomainOptions()}
-                    placeholder="Domain"
-                    formatCreateLabel={this.formSelectCreateLabel}
-                    ref={this.refFilterDomainSelect}
-                  />
-                </div>
-              </Col>
-              <Col md={{size: 4}}>
-                <div style={{height: "20px"}}>
-                  <span className="fapp-error" style={{display: this.getErrorDisplayState(this.state.filterSettings.formExprError)}}>{this.state.filterSettings.formExprError}</span>
-                </div>
-                <div className='fapp-select light'>
-                  <CreatableSelect
-                    value={this.state.filterSettings.formExpr}
-                    onChange={this.handleFilterFormExprChange}
-                    options={this.getFilterExprOptions()}
-                    placeholder="URI Path"
-                    formatCreateLabel={this.formSelectCreateLabel}
-                    ref={this.refFilterExprSelect}
-                  />
-                </div>
-              </Col>
-              <Col md={{size: 3}}>
-                <div style={{height: "20px"}}>
-                  <span className="fapp-error" style={{display: this.getErrorDisplayState(this.state.filterSettings.formNameError)}}>{this.state.filterSettings.formNameError}</span>
-                </div>
-                <Input type="text" placeholder="Virtual Event Name" style={{ border: "1px solid #ccc" }} onChange={this.handleFilterFormNameChange} value={this.state.filterSettings.formName} />
-              </Col>
-              <Col>
-                <Button className="fapp-inline-button" style={{marginTop: "20px", color: this.getFormCreateButtonColor()}} onClick={this.createFilter}>
-                  <i className="icon-check"></i>
-                </Button>
-                <Button className="fapp-inline-button" style={{marginTop: "20px"}} onClick={this.resetFilterForm}>
-                  <i className="icon-close"></i>
-                </Button>
-              </Col>
-            </Row>
-            <span className="fapp-label" style={{display: this.props.filters.length > 0 ? "inline-block" : "none", marginTop: "15px", marginBottom: "20px"}}>Available events</span>
-            { 
-              // existing filters list.
-              this.props.filters.map((v, i) => {
-                let exprURL = this.parseFilterExprURL(v.expr);
-                return <FilterRecord 
-                  name={this.getFilterEventName(i)} domain={exprURL.host} 
-                  expr={exprURL.path} key={"filter_"+v.id} handleEventNameChange={(e) => this.setStateFilterEventName(i, e)} 
-                  handleUpdate={() => this.updateFilterEventName(i)} handleDelete={() => this.deleteFilter(i)} 
-                  getUpdateButtonColor={() => this.getFilterUpdateButtonColor(i)}
-                /> 
-              })
+            {
+              /* Todo(Dinesh): Add copy to clipboard, Use the button below. */
+              /* <button className='btn btn-success' style={{float: 'right', padding: '2px 8px'}}> Copy  <i className='fa fa-copy' style={{marginLeft: '4px', fontWeight: 'inherit'}}></i> </button> */
             }
+            <strong>Javascript SDK</strong>
+          </CardHeader>
+          <CardBody style={{padding: '1.5rem 2.5rem'}}>
+            <p className='card-text'> { "Add the below javascript code on every page between the <head> and </head> tags." } </p>
+            <div className='fapp-code'>
+              <p className='blue'>{'<script>'}</p>
+              <div style={{ marginLeft: '15px' }}>
+                { this.getSDKScript() }
+              </div>
+              <p className='blue'>{'</script>'}</p>
+            </div>
+
+            <p className='card-text' style={{ marginTop: "20px" }}>Send us an event (Enable Auto-track for capturing user visits automatically). </p>
+            <div className='fapp-code'>
+              <p className='green'>factors.track("<span className='red'>YOUR_EVENT</span>");</p>
+            </div>
           </CardBody>
         </Card>
+      </div>
+    )
+  }
+
+  renderVirtualEventSettings() {
+    return (
+      <Card className="fapp-bordered-card">
+        <CardHeader style={{marginBottom: '0'}}>
+          <strong>Virtual Events</strong>
+        </CardHeader>
+        <CardBody style={{paddingTop: '1.5rem'}}>
+          <span className="fapp-label" style={{marginTop: "15px", marginBottom: "20px"}}>Create an event</span>
+          <Row style={{padding: "10px 0"}}>
+            <Col md={{size: 4}}>
+              <div style={{height: "20px"}}>
+                <span className="fapp-error" style={{display: this.getErrorDisplayState(this.state.filterSettings.formDomainError)}}>{this.state.filterSettings.formDomainError}</span>
+              </div>
+              <div className='fapp-select light'>
+                <CreatableSelect
+                  value={this.state.filterSettings.formDomain}
+                  onChange={this.handleFilterFormDomainChange}
+                  options={this.getFilterDomainOptions()}
+                  placeholder="Domain"
+                  formatCreateLabel={this.formSelectCreateLabel}
+                  ref={this.refFilterDomainSelect}
+                />
+              </div>
+            </Col>
+            <Col md={{size: 4}}>
+              <div style={{height: "20px"}}>
+                <span className="fapp-error" style={{display: this.getErrorDisplayState(this.state.filterSettings.formExprError)}}>{this.state.filterSettings.formExprError}</span>
+              </div>
+              <div className='fapp-select light'>
+                <CreatableSelect
+                  value={this.state.filterSettings.formExpr}
+                  onChange={this.handleFilterFormExprChange}
+                  options={this.getFilterExprOptions()}
+                  placeholder="URI Path"
+                  formatCreateLabel={this.formSelectCreateLabel}
+                  ref={this.refFilterExprSelect}
+                />
+              </div>
+            </Col>
+            <Col md={{size: 3}}>
+              <div style={{height: "20px"}}>
+                <span className="fapp-error" style={{display: this.getErrorDisplayState(this.state.filterSettings.formNameError)}}>{this.state.filterSettings.formNameError}</span>
+              </div>
+              <Input type="text" placeholder="Virtual Event Name" style={{ border: "1px solid #ccc" }} onChange={this.handleFilterFormNameChange} value={this.state.filterSettings.formName} />
+            </Col>
+            <Col>
+              <Button className="fapp-inline-button" style={{marginTop: "20px", color: this.getFormCreateButtonColor()}} onClick={this.createFilter}>
+                <i className="icon-check"></i>
+              </Button>
+              <Button className="fapp-inline-button" style={{marginTop: "20px"}} onClick={this.resetFilterForm}>
+                <i className="icon-close"></i>
+              </Button>
+            </Col>
+          </Row>
+          <span className="fapp-label" style={{display: this.props.filters.length > 0 ? "inline-block" : "none", marginTop: "15px", marginBottom: "20px"}}>Available events</span>
+          { 
+            // existing filters list.
+            this.props.filters.map((v, i) => {
+              let exprURL = this.parseFilterExprURL(v.expr);
+              return <FilterRecord 
+                name={this.getFilterEventName(i)} domain={exprURL.host} 
+                expr={exprURL.path} key={"filter_"+v.id} handleEventNameChange={(e) => this.setStateFilterEventName(i, e)} 
+                handleUpdate={() => this.updateFilterEventName(i)} handleDelete={() => this.deleteFilter(i)} 
+                getUpdateButtonColor={() => this.getFilterUpdateButtonColor(i)}
+              /> 
+            })
+          }
+        </CardBody>
+      </Card>
+    );
+  }
+
+	render() {
+    if (!this.isLoaded()) return <Loading />;
+    
+    if (this.props.cardOnly) return this.renderJavascriptSettings();
+
+		return (
+			<div className='fapp-content fapp-content-margin'>
+        {[ this.renderJavascriptSettings(), this.renderVirtualEventSettings() ]}
 			</div>
 		);
 	}

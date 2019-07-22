@@ -6,8 +6,6 @@ import { Container } from 'reactstrap';
 import {
   AppHeader,
   AppSidebar,
-  AppSidebarFooter,
-  AppSidebarMinimizer,
   AppSidebarNav,
 } from '@coreui/react';
 
@@ -21,7 +19,6 @@ import DefaultHeader from './DefaultHeader';
 import {
   fetchProjects,
   fetchProjectEvents, 
-  fetchProjectSettings,
   fetchProjectModels
 } from "../../actions/projectsActions";
 import Loading from '../../loading';
@@ -44,6 +41,7 @@ const mapStateToProps = store => {
     projects: store.projects.projects,
     isAgentLoggedIn: store.agents.isLoggedIn,
     agent: store.agents.agent,
+    eventNames: store.projects.currentProjectEventNames,
   }
 }
 
@@ -51,7 +49,6 @@ const mapDispatchToProps = dispatch => {
   return bindActionCreators({ 
     fetchProjects,
     fetchProjectEvents, 
-    fetchProjectSettings,
     fetchProjectModels,
     fetchAgentInfo,
     fetchAgentBillingAccount
@@ -59,7 +56,6 @@ const mapDispatchToProps = dispatch => {
 }
 
 class DefaultLayout extends Component {
-
   constructor(props) {
     super(props);
     this.state = {
@@ -124,7 +120,7 @@ class DefaultLayout extends Component {
         });
       });
 
-      this.props.fetchAgentBillingAccount();
+    this.props.fetchAgentBillingAccount();    
   }
 
   componentDidUpdate(prevProps, prevState) {
@@ -194,6 +190,7 @@ class DefaultLayout extends Component {
       }}
       getProfileName={this.getAgentName}
       currentAgent={this.props.agent}
+      eventNames={this.props.eventNames}
     />
   }
 
@@ -202,10 +199,7 @@ class DefaultLayout extends Component {
   }
 
   render() {
-    if (!this.isAgentLoggedIn()){
-      return <Redirect to='/login' />
-    }
-
+    if (!this.isAgentLoggedIn()) return <Redirect to='/login' />;
     if (!this.isLoaded()) return <Loading />;
 
     if (this.state.projects.loaded && this.state.projects.error) 
@@ -230,14 +224,16 @@ class DefaultLayout extends Component {
           </AppHeader>
             <Container className='fapp-right-pane' fluid>
               <Switch>
-                {routes.map((route, idx) => {
+                {
+                  routes.map((route, idx) => {
                     return route.component ? (<Route key={idx} path={route.path} exact={route.exact} name={route.name} 
                       render={props => (<route.component {...props} />)} />) : (null);
-                  },
-                )}
-                {internalRoutes.map((route, idx)=>{
-                  return (<InternalRoute key={idx} path={route.path} exact={route.exact} name={route.name} component={route.component}/>)
-                })
+                  })
+                }
+                {
+                  internalRoutes.map((route, idx) => {
+                    return (<InternalRoute key={idx} path={route.path} exact={route.exact} name={route.name} component={route.component}/>)
+                  })
                 }
                 <Redirect from="/" to="/dashboard" />
               </Switch>

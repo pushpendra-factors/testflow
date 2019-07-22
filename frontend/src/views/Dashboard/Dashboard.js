@@ -333,7 +333,7 @@ class Dashboard extends Component {
     return (
       <div className='fapp-content' style={{marginLeft: '1rem', marginRight: '1rem', paddingTop: '30px' }}>
         <div style={{ marginBottom: '32px', width: '100%', textAlign: 'center'}}>
-          <div className="fapp-select center" style={{ width: '260px', display: 'inline-block' }}>
+          <div className="fapp-select light center" style={{ width: '260px', display: 'inline-block' }}>
             <Select
               onChange={this.onSelectDashboard}
               options={createSelectOpts(this.getDashboardsOptSrc())}

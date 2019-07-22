@@ -308,7 +308,7 @@ body {
 }
 
 .fapp-select.light .css-1aya2g8 {
-    border-color: #ccc;
+    border-color: #bbb;
 }
 
 .fapp-select.light .css-d8oujb {
@@ -396,11 +396,28 @@ body {
 }
 
 .fapp-code {
-    padding: 5px 10px;
     font-family: monospace;
     font-size: 13px;
     color: #444;
     font-weight: 500;
+    padding: 15px 25px;
+    background: #f7f7f7;
+}
+
+.fapp-code p {
+    margin-bottom: 0.2rem;
+}
+
+.fapp-code .green {
+    color: #1e824c; 
+}
+
+.fapp-code .blue {
+    color: #015cd2;
+}
+
+.fapp-code .red {
+    color: #d64541;
 }
 
 .fapp-toggle-label {
@@ -479,12 +496,17 @@ div.setting-card:hover{
     background: #F3F4FB;
 }
 
+.fapp-bordered-card .card-body .card-text {
+    font-size: 14px;
+    font-weight: 400;
+}
+
 .fapp-bordered-card .card-body {
     padding: 3rem 3rem;
 }
 
 .fapp-input {
-    border: 1px solid #8f9ba6 !important;
+    border: 1px solid #bbb !important;
     padding: 1.2rem 0.8rem !important;
     color: #484848 !important;
     margin-top: 10px;
@@ -674,5 +696,24 @@ span.fapp-button:focus {
 .fapp-report-card .card-body {
     margin-left: 20px;
     margin-right: 20px;
+}
+
+.fapp-small-button {
+    background: #20a8d8;
+    border: 1px solid #20a8d8;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 5px;
+    color: #FFF;
+}
+
+.fapp-rounded-tag {
+    font-weight: 900;
+    color: #fff;
+    border: 1px solid #20c997;
+    background: #20c997;
+    padding: 1px 6px;
+    border-radius: 100px;
+    margin-right: 2px;
 }
 

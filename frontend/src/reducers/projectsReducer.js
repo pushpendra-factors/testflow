@@ -1,6 +1,7 @@
 const DEFAULT_PROJECT_STATE = {
   projects: {},
   projectsError: null,
+  currentProjectSettings: {},
   currentProjectEventNames: [],
   eventPropertiesMap: {},
   eventPropertyValuesMap: {},
@@ -60,7 +61,7 @@ export default function reducer(state=DEFAULT_PROJECT_STATE, action) {
           fetchingProjects: false,
           fetchedProjects: true,
           projects: projects,
-          currentProjectId: currentProjectId
+          currentProjectId: currentProjectId,
         }
       }
       case "FETCH_PROJECT_SETTINGS_FULFILLED": {
@@ -91,14 +92,17 @@ export default function reducer(state=DEFAULT_PROJECT_STATE, action) {
         }
       }
       case "FETCH_PROJECT_EVENTS_FULFILLED": {
-        return {...state,
-                currentProjectEventNames: action.payload.eventNames
-              }
+        return {
+          ...state,
+          currentProjectEventNames: action.payload.eventNames
+        }
       }
       case "FETCH_PROJECT_EVENTS_REJECTED": {
-        return {...state,
-                currentProjectEventNames: action.payload.eventNames,
-                projectEventsError: action.payload.err}
+        return {
+          ...state,
+          currentProjectEventNames: action.payload.eventNames,
+          projectEventsError: action.payload.err,
+        }
       }
       case "FETCH_PROJECT_EVENT_PROPERTIES_FULFILLED": {
         // Only the latest fetch is maintained.

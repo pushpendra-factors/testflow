@@ -78,14 +78,19 @@ class Segment extends Component {
 
   renderSegmentConfig() {
     if (!this.isIntSegmentEnabled()) {
-      return <CardBody style={{fontWeight: 700, color: '#BBB', fontSize: '20px', textAlign: 'center', paddingTop: '110px', paddingBottom: '130px'}}> 
-        Integration is disabled
-      </CardBody>
+      let style = { 
+        fontWeight: 700, 
+        color: '#BBB', 
+        fontSize: '20px', 
+        textAlign: 'center', 
+        paddingTop: '110px', 
+        paddingBottom: '130px'
+      }
+      return <CardBody style={style}> Integration is disabled </CardBody>
     }
 
     let segmentWebhookURL = this.getSegmentWebhookURL();
     let segmentPrivateToken = this.getPrivateToken();
-
     return (
       <CardBody>
         <div style={{marginBottom: '25px'}}>
@@ -99,28 +104,35 @@ class Segment extends Component {
       </CardBody>
     ); 
   }
-  
 
+  renderCard() {
+    return (
+      <Card className='fapp-bordered-card'>
+        <div className={!this.props.cardOnly ? 'fapp-block-shadow' : null}>
+          <CardHeader className='fapp-button-header' style={{ marginBottom: '0' }}>
+            <strong>Segment</strong>
+            <div style={{display: 'inline-block', float: 'right'}}>
+              <Toggle
+                checked={this.isIntSegmentEnabled()}
+                icons={false}
+                onChange={this.toggleIntSegment} 
+              />
+            </div>
+          </CardHeader>
+          { this.renderSegmentConfig() }
+        </div>
+      </Card>
+    );
+  }
+  
   render() {
     if (!this.isLoaded()) return <Loading />;
 
+    if (this.props.cardOnly) return this.renderCard();
+
     return (
-      <Col md={{ size:6, offset:3 }} className='fapp-content fapp-content-margin' style={{padding: '5rem'}}>
-        <Card className='fapp-bordered-card'>
-            <div className='fapp-block-shadow'>
-              <CardHeader className='fapp-button-header' style={{marginBottom: '0'}}>
-                <strong>Segment</strong>
-                <div style={{display: 'inline-block', float: 'right'}}>
-                  <Toggle
-                    checked={this.isIntSegmentEnabled()}
-                    icons={false}
-                    onChange={this.toggleIntSegment} 
-                  />
-                </div>
-              </CardHeader>
-              { this.renderSegmentConfig() }
-            </div>
-        </Card>
+      <Col md={{ size:6, offset:3 }} className='fapp-content fapp-content-margin' style={{ padding: '5rem' }}>
+        { this.renderCard() }
       </Col>
     )
   }

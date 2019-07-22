@@ -1,7 +1,9 @@
 import React, { Component } from 'react';
 import { DropdownItem, DropdownMenu, DropdownToggle, Input, Button, Form, Nav,
-  Modal, ModalHeader, ModalBody, ModalFooter, Badge } from 'reactstrap';
+  Modal, ModalHeader, ModalBody, ModalFooter, Badge, TabContent, TabPane, NavItem, 
+  NavLink, Card, CardTitle, CardText, Row, Col } from 'reactstrap';
 import PropTypes from 'prop-types';
+import classnames from 'classnames';
 import { AppHeaderDropdown, AppSidebarToggler } from '@coreui/react';
 import { AppSidebarForm } from '@coreui/react';
 import Select from 'react-select';
@@ -9,15 +11,27 @@ import { bindActionCreators } from 'redux';
 import { connect } from 'react-redux';
 import Avatar from 'react-avatar';
 
-import { changeProject, createProject } from '../../actions/projectsActions';
+import { 
+  changeProject, 
+  createProject, 
+  fetchProjectEvents, 
+  fetchProjectSettings,
+} from '../../actions/projectsActions';
 import { signout } from '../../actions/agentActions';
 import factorsai from '../../common/factorsaiObj';
+
+import JsSdk from '../../views/settings/JsSdk';
+import AndroidSdk from '../../views/settings/AndroidSdk';
+import Segment from '../../views/settings/Segment';
+import NoContent from '../../common/NoContent';
 
 const propTypes = {
   children: PropTypes.node,
 };
-
 const defaultProps = {};
+
+const EVENT_POLL_LIMIT = 20;
+const EVENT_POLL_INTERVAL = 30000; // 30sec
 
 const projectSelectStyles = {
   option: (base, state) => ({
@@ -57,37 +71,84 @@ const mapDispatchToProps = dispatch => {
     changeProject, 
     createProject, 
     signout,
+    fetchProjectEvents,
+    fetchProjectSettings,
   }, dispatch);
 }
 
 class DefaultHeader extends Component {
-  constructor(props){
+  constructor(props) {
     super(props);
+
     this.state = {
       createProject: {
-        showForm: false,
-        projectName : ""
+        allow: true,
+        projectName : '',
       },
       
       showAddProjectModal: false,
       addProjectMessage: null,
+      eventNamePollStarted: false,
+      changeToLastSeen: true,
+      activeTab: '1',
     }
   }
 
-  componentDidUpdate() {
-    // change to project last seen by user if any.
-    let lsProjectId = this.getLastSeenProject();
-    if (lsProjectId && this.props.selectedProject && 
-      this.props.selectedProject.value != lsProjectId && 
-      this.hasProject(lsProjectId))
+  projectHasEvents() {
+    return this.props.eventNames && this.props.eventNames.length > 0
+  }
+
+  componentDidUpdate(prevProps) {
+    if (this.state.changeToLastSeen) {
+      // change to project last seen by user if any.
+      let lsProjectId = this.getLastSeenProject();
+      if (lsProjectId && this.props.selectedProject && 
+        this.props.selectedProject.value != lsProjectId && 
+        this.hasProject(lsProjectId)) {
+        
         this.props.changeProject(lsProjectId);
+      }
+    }
+    
+
+    // on initial project selected and when changed.
+    if ((!prevProps.selectedProject && this.props.selectedProject) || 
+      prevProps.selectedProject.value != this.props.selectedProject.value) {
+      
+      this.props.fetchProjectEvents(this.props.selectedProject.value)
+        .then((r) => {
+          if (r.status == 404) {
+            this.setState({ showAddProjectModal: true });
+
+            let pollCount = 0;
+            // start first event poll, if not started.
+            if (!this.state.eventNamePollStarted) {
+              this.setState({ eventNamePollStarted: true });
+              setInterval(() => {
+                if (!this.projectHasEvents() && pollCount < EVENT_POLL_LIMIT) {
+                  this.props.fetchProjectEvents(this.props.selectedProject.value);
+                  pollCount++;
+                }
+              }, EVENT_POLL_INTERVAL)
+            }
+          } 
+        })
+        .catch(console.debug);
+    }
+
+    
   }
 
   handleProjectChange = (selectedProject) => {
     let projectId = selectedProject.value;
-    this.props.changeProject(projectId);
-    this.setLastSeenProject(projectId);
 
+    // change the project and update the
+    // project's settings on the store.
+    this.props.changeProject(projectId);
+    this.props.fetchProjectSettings(projectId);
+
+    this.setLastSeenProject(projectId);
+    
     this.props.refresh();
   }
 
@@ -122,7 +183,7 @@ class DefaultHeader extends Component {
 
     let name = e.target.value.trim();
     if(name == "") console.error("project name cannot be empty");
-    this.setState({ createProject: { projectName: name } });
+    this.setState({ createProject: { projectName: name, allow: true } });
   }
 
   changeViewToAccountSettings = () => {
@@ -131,14 +192,6 @@ class DefaultHeader extends Component {
 
   changeViewToUserProfile = () => {
     this.props.changeViewToUserProfile();
-  }
-
-  toggleCreateProjectForm = () => {
-    this.setState(prevState => {
-      let _state = { ...prevState };
-      _state.createProject.showForm = !prevState.createProject.showForm;
-      return _state;
-    })
   }
   
   handleCreateProject = (e) => {
@@ -150,9 +203,21 @@ class DefaultHeader extends Component {
       return;
     }
 
+    // disable create action.
+    this.setState({ createProject: { allow: false } });
+
     this.props.createProject(projectName)
-      .then((r) => this.setState({ showAddProjectModal: false }))
-      .catch((r) => this.showAddProjectMessage({success: false, message: 'Failed to create your project. Please try again.'}))
+      .then((r) => {
+        this.handleProjectChange({ label: r.data.name, value: r.data.id });
+        this.showAddProjectMessage({ 
+          success: true,
+          message: 'Successfully created your project.'
+        });
+      })
+      .catch((r) => this.showAddProjectMessage({ 
+        success: false, 
+        message: 'Failed to create your project. Please try again.'
+      }));
   }
 
   handleLogout = () => {
@@ -172,17 +237,23 @@ class DefaultHeader extends Component {
   }
 
   renderNotifications = () => {
+    if (!this.props.billingAccount) return;
 
-    if (!this.props.billingAccount){
-      return
-    }
     let noOfNotifications = 0;
     let dropDownItems = [];
     if (this.props.accountPlan.code != "free" && !this.props.billingAccount.organization_name){
-      dropDownItems.push(<DropdownItem key={1} onClick={this.changeViewToAccountSettings}><span className="text-muted">Complete Billing Info</span></DropdownItem>);
+      dropDownItems.push(
+        <DropdownItem key={1} onClick={this.changeViewToAccountSettings}>
+        <span className="text-muted">Complete Billing Info</span>
+        </DropdownItem>
+      );
       noOfNotifications++;
-    }else{
-      dropDownItems.push(<DropdownItem disabled key={0}><span className="text-muted">No messages here.</span></DropdownItem>);
+    } else {
+      dropDownItems.push(
+        <DropdownItem disabled key={0}>
+          <span className="text-muted">No messages here.</span>
+        </DropdownItem>
+      );
     }
 
     return (
@@ -211,26 +282,121 @@ class DefaultHeader extends Component {
     return this.state.addProjectMessage.message;
   }
 
-  render() {
-    // eslint-disable-next-line
-    const { children, ...attributes } = this.props;
+  getAddProjectMessageStyle() {
+    if (this.state.addProjectMessage == null) return null;
+    return {
+      paddingLeft: '10px',
+      color: this.state.addProjectMessage.success ? '#4dbd74' : '#d64541' 
+    };
+  }
 
-    let selectProjectDropDown = null;
-    if (!!this.props.selectableProjects)
-      selectProjectDropDown = <Select 
+
+  toggleTab(tab) {
+    if (this.state.activeTab !== tab) {
+      this.setState({
+        activeTab: tab
+      });
+    }
+  }
+
+  renderSetupProjectModal() {
+    return (
+      <Modal isOpen={this.state.showAddProjectModal} toggle={this.toggleAddProjectModal} style={{ marginTop: "3rem", minWidth: "52rem" }}>
+        <ModalHeader toggle={this.toggleAddProjectModal}>Setup your project (3 Steps)</ModalHeader>
+        <ModalBody style={{ height: "40rem", padding: "10px 40px", overflow: "scroll" }}>
+          <h5 style={{ margin: "15px 0", fontWeight: "500", fontSize: "15px", color: "#444" }}>
+            <span className="fapp-rounded-tag">1</span> Select or create a project
+          </h5>
+          <Row>
+            <Col md={5} className="fapp-select light" style={{ padding: "20px", paddingLeft: "30px" }}>
+              { this.renderProjectSelector() }
+            </Col>
+            <Col md={1} style={{ padding: "23px", textAlign: "center" }}>
+              <span style={{ textAlign: "center", fontSize: "18px", fontWeight: "600", color:" #777" }}> OR </span>
+            </Col>
+            <Col md={6} style={{ padding: "20px", paddingRight: "30px" }}>
+              <Input style={{ display: "inline-block", width: "70%", marginRight: "10px", height: "40px", border: "1px solid #bbb" }} 
+                type="text" placeholder="Your Project Name" onChange={this.handleProjectNameFormChange} />
+              <Button outline color="primary" onClick={this.handleCreateProject} disabled={!this.state.createProject.allow}>Create</Button>
+              <span style={this.getAddProjectMessageStyle()} hidden={this.state.addProjectMessage == null}>
+                { this.getAddProjectMessage() }
+              </span>
+            </Col>
+          </Row>
+
+          <hr style={{ margin: "30px -40px" }} />
+          <h5 style={{ margin: "25px 0", fontWeight: "500", fontSize: "15px", color: "#444" }}>
+            <span className="fapp-rounded-tag">2</span> Integrate SDK
+          </h5>
+          <Nav tabs>
+            <NavItem>
+              <NavLink className={classnames({ active: this.state.activeTab === "1" })} onClick={() => this.toggleTab("1")}>
+                Javascript
+              </NavLink>
+            </NavItem>
+            <NavItem>
+              <NavLink className={classnames({ active: this.state.activeTab === "2" })} onClick={() => this.toggleTab("2")}>
+                Android
+              </NavLink>
+            </NavItem>
+            <NavItem>
+              <NavLink className={classnames({ active: this.state.activeTab === "3" })} onClick={() => this.toggleTab("3")}>
+                Segment
+              </NavLink>
+            </NavItem>
+          </Nav>
+          <TabContent activeTab={this.state.activeTab}>
+            <TabPane style={{ padding: "30px", paddingBottom: "0" }} tabId="1"><JsSdk cardOnly /></TabPane>
+            <TabPane style={{ padding: "30px", paddingBottom: "0" }} tabId="2"><AndroidSdk cardOnly /></TabPane> 
+            <TabPane style={{ padding: "70px", paddingBottom: "30px" }} tabId="3"><Segment cardOnly /></TabPane>
+          </TabContent>
+
+          <hr style={{ margin: "30px -40px" }} />
+          <h5 style={{ margin: "25px 0", fontWeight: "500", fontSize: "15px", color: "#444" }}>
+            <span className="fapp-rounded-tag">3</span> Send us an event
+          </h5>
+          <div style={{ textAlign: "center", padding: "30px", paddingBottom: "65px" }}>
+            <h4 className="fapp-gray">
+              { this.projectHasEvents() ? "We've received your first event successfully." : "We're listening for your first event..." }
+            </h4>
+          </div>
+
+          <div style={{ textAlign: "center", marginBottom: "20px"}}>
+            { "Having some trouble? Let us fix it for you. " }
+            <button className="fapp-small-button" 
+            onClick={() => { factorsai.track("clicked_setup_talk_to_us"); window.fcWidget.open(); }}>
+              Talk to us
+            </button>
+          </div>
+        </ModalBody>
+      </Modal>
+    );
+  }
+
+  renderProjectSelector() {
+    return (
+      <Select
         options={this.props.selectableProjects} 
         value={this.props.selectedProject} 
         onChange={this.handleProjectChange} 
         styles={projectSelectStyles} 
-        placeholder={"Select Project ..."} 
+        placeholder={"Select Project ..."}
         blurInputOnSelect={true}
-      />;
+      />
+    );
+  }
 
+  render() {
+    // eslint-disable-next-line
+    const { children, ...attributes } = this.props;
+
+    let selectProjectDropDown = !!this.props.selectableProjects ? this.renderProjectSelector() : null;
+          
     return (
       <React.Fragment>
         <AppSidebarToggler className="d-lg-none" display="md" mobile />
         {/* <AppSidebarToggler className="d-md-down-none fapp-navbar-toggler" display="lg" /> */}
-        <AppSidebarForm className="fapp-select fapp-header-dropdown" style={{width: '40%'}}>
+        <AppSidebarForm className="fapp-select light fapp-header-dropdown" style={{width: '40%'}}>
           <div style={{display: 'inline-block', width: '60%', marginRight: '5px'}}> { selectProjectDropDown } </div>
           <Button outline color="primary" onClick={this.toggleAddProjectModal} style={{fontSize: '20px', padding: '0 10px', height: '38px'}}>+</Button>
         </AppSidebarForm>
@@ -247,22 +413,7 @@ class DefaultHeader extends Component {
             </DropdownMenu>
           </AppHeaderDropdown>
         </Nav>
-        <Modal isOpen={this.state.showAddProjectModal} toggle={this.toggleAddProjectModal} style={{marginTop: '10rem'}}>
-          <ModalHeader toggle={this.toggleAddProjectModal}>New Project</ModalHeader>
-          <ModalBody style={{padding: '25px 35px'}}>
-            <div style={{textAlign: 'center', marginBottom: '15px'}}>
-              <span style={{display: 'inline-block'}} className='fapp-error' hidden={this.state.addProjectMessage == null}>{ this.getAddProjectMessage() }</span>
-            </div>
-            <Form onSubmit={this.handleCreateProject} >
-              <span className='fapp-label'>Project Name </span>         
-              <Input className='fapp-input' type="text" placeholder="Your Project Name" onChange={this.handleProjectNameFormChange} />
-            </Form>
-          </ModalBody>
-          <ModalFooter style={{borderTop: 'none', paddingBottom: '30px', paddingRight: '35px'}}>
-            <Button outline color="success" onClick={this.handleCreateProject}>Create</Button>
-            <Button outline color='danger' onClick={this.toggleAddProjectModal}>Cancel</Button>
-          </ModalFooter>
-        </Modal>
+        { this.renderSetupProjectModal() }
       </React.Fragment>
     );
   }
