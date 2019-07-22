@@ -327,6 +327,10 @@ func FillPropertyKvsFromPropertiesJson(propertiesJson []byte,
 	}
 
 	for k, v := range rowProperties {
+		if _, ok := v.(interface{}); !ok {
+			log.Error(fmt.Sprintf("Ignoring value %s as it cannot be converted to interface{} for key %s", v, k))
+			continue
+		}
 		if _, ok := (*propertiesKvs)[k]; !ok {
 			(*propertiesKvs)[k] = make(map[interface{}]bool, 0)
 		}
