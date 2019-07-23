@@ -18,7 +18,7 @@ function App() {
   return (
     <BrowserRouter>
       <div className="App">
-      <nav className="navbar navbar-expand-md navbar-light" style={{ marginTop: '10px' }}>
+      <nav className="navbar navbar-expand-md navbar-light fixed-top" style={{ paddingTop: "15px", paddingBottom: "15px" }}>
         <div className="container">
           <a href="/" className="navbar-brand" style={{paddingLeft: '15px'}}>
             <img src={logoFactorsPNG} alt="true" />
@@ -26,7 +26,7 @@ function App() {
           <button className="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
             <span className="navbar-toggler-icon" />
           </button>
-          <div className="collapse navbar-collapse" id="navbarCollapse">
+          <div className="collapse navbar-collapse" id="navbarCollapse" style={{ marginRight: "30px" }}>
             <ul className="navbar-nav mr-auto w-100 justify-content-end clearfix">
               <li className="nav-item">
                 <a id="home-nav-link" className="nav-link" href="/">
@@ -40,6 +40,14 @@ function App() {
               </li>
               <li className="nav-item">
                <ResourcesDropdown />
+              </li>
+              <li className="nav-item">
+                <a id="login-button" className="nav-link" style={{ cursor: "pointer" }}>
+                  Log in
+                </a>
+              </li>
+              <li style={{ padding: "0 5px" }}>
+                <button id="signup-button" className='primary-cta cta-nav'>Sign Up</button>
               </li>
             </ul>
           </div>

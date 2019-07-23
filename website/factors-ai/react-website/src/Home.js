@@ -23,7 +23,7 @@ class Home extends React.Component {
                 <span className="success" id="valid-email" style={{display: 'none'}}>Thanks, we will get back to you soon</span>
                 <button id="signup-button" className='primary-cta'>SIGN UP FOR FREE</button>
               </div>
-              <div className="col-md-7 content">
+              <div className="col-md-7 content" style={{ textAlign: "center" }}>
                 <img src={heroSVG} />
               </div>
             </div>

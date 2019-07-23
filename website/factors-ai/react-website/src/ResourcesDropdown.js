@@ -28,7 +28,7 @@ class ResourcesDropdownOpen extends React.Component {
         <DropdownToggle>
           Resources
         </DropdownToggle>
-        <DropdownMenu>
+        <DropdownMenu style={{ fontSize: "14px", border: "none", boxShadow: "rgba(0, 0, 0, 0.2) 0px 2px 4px 0px, rgba(0, 0, 0, 0) 0px 2px 10px 0px", zIndex: "100"  }}>
           <DropdownItem onClick={() => this.redirectTo('/blog')}>
             Blog
           </DropdownItem>

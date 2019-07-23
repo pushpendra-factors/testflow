@@ -6,7 +6,7 @@ import bigData2PNG from './assets/img/blog/big_data_analytics_2.jpg'
 class Blog extends React.Component {
     render() {
       return (
-        <section id="blog" className="section-padding">
+        <section id="blog" className="section-padding main-container">
           <div className="container">
             <div className="section-header text-center">
               <h2 className="section-title">Latest Posts</h2>

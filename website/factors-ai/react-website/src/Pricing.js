@@ -113,7 +113,7 @@ class Pricing extends Component {
           </div>
         </div>
 
-        <div className="row" style={{ marginTop: '30px' }}>
+        <div className="row" style={{ marginTop: '100px' }}>
           <div className="col-md-12" style={{ marginBottom: '10px' }}>
             <h3 className="centered-title">Features</h3>
           </div>

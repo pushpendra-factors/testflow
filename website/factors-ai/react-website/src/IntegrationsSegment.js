@@ -10,7 +10,7 @@ class IntegrationsSegment extends Component {
     render() {
 
       return (
-        <div id="blog-single">
+        <div id="blog-single" className="main-container">
         <div className="container">
           <div className="row justify-content-center">
             <div className="col-lg-12 col-md-16 col-xs-16">

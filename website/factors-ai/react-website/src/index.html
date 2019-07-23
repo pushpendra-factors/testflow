@@ -19,7 +19,7 @@
 
 
     <title>FactorsAI | Goal Driven Analytics</title>
-    <link rel="shortcut icon" href="/assets/js/favico.ico" />
+    <link rel="shortcut icon" href="/assets/img/favico.ico" />
 
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="/assets/css/bootstrap.min.css">
@@ -131,6 +131,9 @@
 
         $("#signup-button").on('click', redirectToAppSignup);
         $("#signup-button-footer").on('click', redirectToAppSignup);
+        $("#login-button").on('click', function() {
+          window.location = 'https://app.factors.ai';
+        })
 
         // on enter work email.
         $("#work-email").on('keypress', function(e) {
@@ -169,6 +172,11 @@
           $("html, body").animate({ scrollTop: $("#gda").offset().top }, 600);
           return false;
         })
+
+        $(window).scroll(function() {
+            if ($(window).scrollTop() >= 30) $('.navbar.fixed-top').addClass('nav-shadow');
+            else $('.navbar.fixed-top').removeClass('nav-shadow');
+        });
       });
     </script>
 
