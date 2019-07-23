@@ -43,11 +43,11 @@ function App() {
               </li>
               <li className="nav-item">
                 <a id="login-button" className="nav-link" style={{ cursor: "pointer" }}>
-                  Log in
+                  Login
                 </a>
               </li>
               <li style={{ padding: "0 5px" }}>
-                <button id="signup-button" className='primary-cta cta-nav'>Sign Up</button>
+                <button id="signup-button-nav" className='primary-cta cta-nav'>Sign Up</button>
               </li>
             </ul>
           </div>
