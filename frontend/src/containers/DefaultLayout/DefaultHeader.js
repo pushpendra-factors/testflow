@@ -91,11 +91,38 @@ class DefaultHeader extends Component {
       eventNamePollStarted: false,
       changeToLastSeen: true,
       activeTab: '1',
+      loggedOut: false,
     }
   }
 
   projectHasEvents() {
     return this.props.eventNames && this.props.eventNames.length > 0
+  }
+
+  triggerSetupProjectIfRequired = () => {
+    this.props.fetchProjectEvents(this.props.selectedProject.value)
+      .then((r) => {
+        if (r.status == 404) {
+          this.setState({ showAddProjectModal: true });
+
+          let pollCount = 0;
+          // start first event poll, if not started.
+          if (!this.state.eventNamePollStarted) {
+            this.setState({ eventNamePollStarted: true });
+            setInterval(() => {
+              if (!this.projectHasEvents() && !this.state.loggedOut && pollCount < EVENT_POLL_LIMIT) {
+                this.props.fetchProjectEvents(this.props.selectedProject.value);
+                pollCount++;
+              }
+            }, EVENT_POLL_INTERVAL)
+          }
+        } 
+      })
+      .catch(console.debug);
+  }
+
+  componentWillMount() {
+    this.triggerSetupProjectIfRequired();
   }
 
   componentDidUpdate(prevProps) {
@@ -110,33 +137,10 @@ class DefaultHeader extends Component {
       }
     }
     
-
     // on initial project selected and when changed.
     if ((!prevProps.selectedProject && this.props.selectedProject) || 
-      prevProps.selectedProject.value != this.props.selectedProject.value) {
-      
-      this.props.fetchProjectEvents(this.props.selectedProject.value)
-        .then((r) => {
-          if (r.status == 404) {
-            this.setState({ showAddProjectModal: true });
-
-            let pollCount = 0;
-            // start first event poll, if not started.
-            if (!this.state.eventNamePollStarted) {
-              this.setState({ eventNamePollStarted: true });
-              setInterval(() => {
-                if (!this.projectHasEvents() && pollCount < EVENT_POLL_LIMIT) {
-                  this.props.fetchProjectEvents(this.props.selectedProject.value);
-                  pollCount++;
-                }
-              }, EVENT_POLL_INTERVAL)
-            }
-          } 
-        })
-        .catch(console.debug);
-    }
-
-    
+      prevProps.selectedProject.value != this.props.selectedProject.value)
+        this.triggerSetupProjectIfRequired();
   }
 
   handleProjectChange = (selectedProject) => {
@@ -221,6 +225,7 @@ class DefaultHeader extends Component {
   }
 
   handleLogout = () => {
+    this.setState({ loggedOut: true });
     this.props.signout();
     factorsai.track('logout', { email: this.props.currentAgent.email });
   }
