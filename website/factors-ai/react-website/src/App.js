@@ -18,7 +18,7 @@ function App() {
   return (
     <BrowserRouter>
       <div className="App">
-      <nav className="navbar navbar-expand-md navbar-light fixed-top" style={{ paddingTop: "15px", paddingBottom: "15px" }}>
+      <nav className="navbar navbar-expand-md navbar-light fixed-top" style={{ paddingTop: "12px", paddingBottom: "12px" }}>
         <div className="container">
           <a href="/" className="navbar-brand" style={{paddingLeft: '15px'}}>
             <img src={logoFactorsPNG} alt="true" />
