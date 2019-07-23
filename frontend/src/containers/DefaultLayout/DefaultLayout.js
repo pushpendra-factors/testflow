@@ -104,6 +104,11 @@ class DefaultLayout extends Component {
         });
 
         factorsai.identify(r.data.email);
+        factorsai.addUserProperties({
+          "email": r.data.email,
+          "firstName": r.data.first_name,
+          "lastName": r.data.last_name,
+        });
 
         if (window.fcWidget) {
           window.fcWidget.setExternalId(r.data.email);

@@ -116,13 +116,16 @@ class DefaultHeader extends Component {
               }
             }, EVENT_POLL_INTERVAL)
           }
-        } 
+        }
       })
       .catch(console.debug);
   }
 
   componentWillMount() {
     this.triggerSetupProjectIfRequired();
+    if (this.projectHasEvents()) {
+       factorsai.addUserProperties({"state": "seen_project_with_events"})
+    }
   }
 
   componentDidUpdate(prevProps) {
