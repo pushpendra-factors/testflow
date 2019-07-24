@@ -30,6 +30,15 @@
     margin-top: 35px !important;
   }
 
+  .blog-container {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .author-card {
+    padding-left: 20px;
+  }
+
   #blog-single .blog-post .post-content {
       padding: 50px 45px 50px 45px !important;
       text-align: justify;

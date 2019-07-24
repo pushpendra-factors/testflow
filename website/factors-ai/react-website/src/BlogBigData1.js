@@ -113,7 +113,7 @@ class BlogBigData1 extends Component {
                   </p>
                 </div>
               </div>
-              <div className="blog-comment">
+              <div className="blog-comment author-card ">
                 <div className="the-comment">
                   <div className="avatar">
                     <img src={aravindAuthorPNG} />

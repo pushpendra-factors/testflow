@@ -42,7 +42,7 @@ class BlogSegmentLaunch extends Component {
                   <p>To integrate with Segment, follow the steps <a href="../integrations/segment">here</a>. Happy Analyzing!</p>
                 </div>
               </div>
-              <div className="blog-comment">
+              <div className="blog-comment author-card">
                 <div className="the-comment">
                   <div className="avatar">
                     <img src={aravindAuthorPNG} />

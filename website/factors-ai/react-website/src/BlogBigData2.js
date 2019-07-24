@@ -96,7 +96,7 @@ class BlogBigData2 extends React.Component {
                   </p>
                 </div>
               </div>
-              <div className="blog-comment">
+              <div className="blog-comment author-card">
                 <div className="the-comment">
                   <div className="avatar">
                     <img src={aravindAuthorPNG} alt />
