@@ -1,17 +1,23 @@
+import moment from 'moment';
+
+import { slideUnixTimeWindowToCurrentTime } from '../../util';
+
+
 export const PROPERTY_VALUE_NONE = "$none";
 
 export const PROPERTY_TYPE_EVENT = 'event';
 export const PROPERTY_TYPE_USER = 'user';
-
 export const PROPERTY_TYPE_OPTS = {
-    'event': 'event property',
-    'user': 'user property'
+  'event': 'event property',
+  'user': 'user property'
 };
 
+export const PROPERTY_VALUE_TYPE_DATE_TIME = 'datetime';
+
 export const USER_PREF_PROPERTY_TYPE_OPTS = {
-    // user property preferred on top/default.
-    'user': 'user property', 
-    'event': 'event property'
+  // user property preferred on top/default.
+  'user': 'user property', 
+  'event': 'event property'
 };
 
 export const HEADER_COUNT = "count";
@@ -24,3 +30,20 @@ export const PRESENTATION_BAR = 'pb';
 export const PRESENTATION_CARD = 'pc';
 export const PRESENTATION_FUNNEL = 'pf';
 
+// returns datepicker daterange for stored daterange.
+// updates the daterange with currentTime, if ovp true.
+// stored = { fr: UNIX_TIMESTAMP, to: UNIX_TIMESTAMP, ovp: true }
+// datepicker = [{ startDate: DATE, endDate: DATE, key: 'selected' }]
+export const getDateRangeFromStoredDateRange = (storedRange) => {
+  if (storedRange.ovp) {
+    let newInterval = slideUnixTimeWindowToCurrentTime(storedRange.fr, storedRange.to);
+    storedRange.fr = newInterval.from;
+    storedRange.to = newInterval.to;
+  }
+
+  return [{ 
+    startDate: moment.unix(storedRange.fr).toDate(), 
+    endDate: moment.unix(storedRange.to).toDate(),
+    key: "selected",
+  }];
+}

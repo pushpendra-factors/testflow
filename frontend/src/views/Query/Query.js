@@ -19,7 +19,8 @@ import BarChart from './BarChart';
 import TableBarChart from './TableBarChart';
 import FunnelChart from './FunnelChart';
 import { PRESENTATION_BAR, PRESENTATION_LINE, PRESENTATION_TABLE, 
-  PRESENTATION_CARD, PRESENTATION_FUNNEL, PROPERTY_TYPE_EVENT } from './common';
+  PRESENTATION_CARD, PRESENTATION_FUNNEL, PROPERTY_TYPE_EVENT,
+  getDateRangeFromStoredDateRange } from './common';
 import { 
   fetchProjectEvents,
   runQuery,
@@ -34,7 +35,8 @@ import {
 } from '../../util'
 import Loading from '../../loading';
 import factorsai from '../../common/factorsaiObj';
-import { PROPERTY_TYPE_OPTS, USER_PREF_PROPERTY_TYPE_OPTS } from './common';
+import { PROPERTY_TYPE_OPTS, USER_PREF_PROPERTY_TYPE_OPTS, 
+  PROPERTY_VALUE_TYPE_DATE_TIME } from './common';
 import insightsSVG from '../../assets/img/analytics/insights.svg';
 import funnelSVG from '../../assets/img/analytics/funnel.svg';
 
@@ -264,9 +266,9 @@ class Query extends Component {
         vProp.entity = prop.en;
         vProp.name = prop.pr;
         vProp.op = prop.op;
-        vProp.value = prop.va;
         vProp.valueType = prop.ty;
-        
+        vProp.value = prop.va;
+
         properties.push(vProp);
       }
 
@@ -287,17 +289,7 @@ class Query extends Component {
     }
     queryState.groupBys = groupBys;
 
-    if (storeQuery.ovp) {
-      let newInterval = slideUnixTimeWindowToCurrentTime(storeQuery.fr, storeQuery.to);
-      storeQuery.fr = newInterval.from;
-      storeQuery.to = newInterval.to;
-    }
-
-    queryState.resultDateRange = [{ 
-      startDate: moment.unix(storeQuery.fr).toDate(), 
-      endDate: moment.unix(storeQuery.to).toDate(),
-      key: "selected",
-    }];
+    queryState.resultDateRange = getDateRangeFromStoredDateRange(storeQuery);
 
     console.log("Stored Query : ", storeQuery);
     console.log("View Query State : ", queryState);
@@ -510,7 +502,20 @@ class Query extends Component {
             cProperty.pr = property.name;
             cProperty.op = property.op;
             cProperty.va = property.value;
-            cProperty.ty = property.valueType; 
+            cProperty.ty = property.valueType;
+
+            // update datetime with current time window if ovp is true.
+            if (property.valueType == PROPERTY_VALUE_TYPE_DATE_TIME) {
+              let dateRange = JSON.parse(cProperty.va);
+
+              if (dateRange.ovp) {
+                let newRange = slideUnixTimeWindowToCurrentTime(dateRange.fr, dateRange.to);
+                dateRange.fr = newRange.from;
+                dateRange.to = newRange.to;
+                cProperty.va = JSON.stringify(dateRange); 
+              }
+            }
+
             ewp.pr.push(cProperty);
         }
       }

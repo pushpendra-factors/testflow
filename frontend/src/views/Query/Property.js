@@ -14,8 +14,10 @@ import {
   fetchProjectUserProperties,
   fetchProjectUserPropertyValues,
 } from '../../actions/projectsActions';
-import { makeSelectOpts, createSelectOpts, getSelectedOpt, makeSelectOpt, QUERY_TYPE_ANALYTICS } from "../../util";
-import { PROPERTY_VALUE_NONE, PROPERTY_TYPE_OPTS } from "./common";
+import { makeSelectOpts, createSelectOpts, getSelectedOpt, 
+  makeSelectOpt, QUERY_TYPE_ANALYTICS } from "../../util";
+import { PROPERTY_VALUE_NONE, PROPERTY_TYPE_OPTS, 
+  getDateRangeFromStoredDateRange } from "./common";
 
 const TYPE_NUMERICAL = 'numerical';
 const TYPE_CATEGORICAL = 'categorical';
@@ -95,7 +97,6 @@ class Property extends Component {
       isValueOptsLoading: false,
 
       showDatePicker: false,
-      resultDateRange: [DEFAULT_DATE_RANGE],
     }
   }
 
@@ -163,32 +164,27 @@ class Property extends Component {
     }
     this.setState({ valueType: option.type });
     this.props.onNameChange(option.value);
-
-    // set default date range if type is datetime.
-    if (option.type == TYPE_DATETIME) {
-      this.setState((prevState) => {
-        let _state = { ...prevState };
-        _state.resultDateRange = [DEFAULT_DATE_RANGE];
-        return _state;
-      });
-
-      this.props.onValueChange(this.getDateRangeAsStr(DEFAULT_DATE_RANGE), TYPE_DATETIME);
-    }
-    // reset default state on change of prop 
-    // after selecting periodical type.
-    else this.props.onValueChange('', '');
   }
 
-  getDateRangeAsStr(range) {
-    return moment(range.startDate).unix() + ":" + moment(range.endDate).unix();
+  getDateRangeAsStr(range, overridePeriod=false) {
+    return (
+      JSON.stringify({
+        fr: moment(range.startDate).unix(), 
+        to: moment(range.endDate).unix(),
+        ovp: overridePeriod,
+      })
+    );
+  }
+
+  getDateRangeFromStr(rangeStr) {
+    let dateRange = JSON.parse(rangeStr);
+    return getDateRangeFromStoredDateRange(dateRange);
   }
 
   onValueChange = (v) => {
     if (this.state.valueType == TYPE_DATETIME) {
-      v.selected.label = null; // set null on custom range.
-      this.setState({ resultDateRange: [v.selected] });
-      // date range on string format: startDate:endDate.
-      this.props.onValueChange(this.getDateRangeAsStr(v.selected), this.state.valueType);
+      let isEndDateToday = moment(v.selected.endDate).isSame(moment(), 'day');
+      this.props.onValueChange(this.getDateRangeAsStr(v.selected, isEndDateToday), this.state.valueType);
       return
     }
 
@@ -219,16 +215,26 @@ class Property extends Component {
       moment(range.endDate).format('MMM DD, YYYY');
   }
 
+  getDateRangeFromPropertyState() {
+    if (this.props.propertyState.value == '') 
+      return [DEFAULT_DATE_RANGE];
+    
+    return this.getDateRangeFromStr(this.props.propertyState.value);  
+  }
+
   getInputValueElement() {
     let input = null;
 
     if (this.state.valueType == TYPE_DATETIME) {
       return (
         <div style={{display: "inline-block", marginLeft: "10px"}}>
-          <Button outline style={{ border: '1px solid #ccc', color: 'grey', padding: '8px 12px', marginBottom: '3px' }} onClick={this.toggleDatePickerDisplay}><i className="fa fa-calendar" style={{marginRight: '10px'}}></i>{this.readableDateRange(this.state.resultDateRange[0])}</Button>
+          <Button outline style={{ border: '1px solid #ccc', color: 'grey', padding: '8px 12px', marginBottom: '3px' }} onClick={this.toggleDatePickerDisplay}>
+            <i className="fa fa-calendar" style={{marginRight: '10px'}}></i>
+            {this.readableDateRange(this.getDateRangeFromPropertyState()[0])}
+          </Button>
           <div className='fapp-date-picker' style={{ display: 'block', marginTop: '10px' }} hidden={!this.state.showDatePicker}>
             <ClosableDateRangePicker
-              ranges={this.state.resultDateRange}
+              ranges={this.getDateRangeFromPropertyState()}
               onChange={this.onValueChange}
               staticRanges={ DEFINED_DATE_RANGES }
               inputRanges={[]}

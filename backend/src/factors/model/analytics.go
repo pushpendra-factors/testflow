@@ -1,6 +1,7 @@
 package model
 
 import (
+	"encoding/json"
 	"errors"
 	C "factors/config"
 	U "factors/util"
@@ -11,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jinzhu/now"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -61,6 +61,12 @@ type QueryResult struct {
 	Headers []string        `json:"headers"`
 	Rows    [][]interface{} `json:"rows"`
 	Meta    QueryResutlMeta `json:"meta"`
+}
+
+type DateTimePropertyValue struct {
+	From           int64 `json:"fr"`
+	To             int64 `json:"to"`
+	OverridePeriod bool  `json:"ovp"`
 }
 
 const (
@@ -146,22 +152,14 @@ func appendStatement(x, y string) string {
 	return fmt.Sprintf("%s %s", x, y)
 }
 
-func getIntervalFromRangeStrAsUnix(rangeStr string) (int64, int64, error) {
-	splitedRange := strings.Split(rangeStr, ":")
-
-	startAsInt, err := strconv.ParseInt(splitedRange[0], 10, 64)
-	if err != nil {
-		return 0, 0, err
-	}
-	endAsInt, err := strconv.ParseInt(splitedRange[1], 10, 64)
+func decodeDateTimeValue(dateTimeJson string) (int64, int64, error) {
+	var dateTimeProperty DateTimePropertyValue
+	err := json.Unmarshal([]byte(dateTimeJson), &dateTimeProperty)
 	if err != nil {
 		return 0, 0, err
 	}
 
-	actStart := now.New(time.Unix(startAsInt, 0).UTC()).BeginningOfDay().Unix()
-	actEnd := now.New(time.Unix(endAsInt, 0).UTC()).EndOfDay().Unix()
-
-	return actStart, actEnd, nil
+	return dateTimeProperty.From, dateTimeProperty.To, nil
 }
 
 func buildWhereFromProperties(mergeCond string,
@@ -182,7 +180,7 @@ func buildWhereFromProperties(mergeCond string,
 			if p.Type == U.PropertyTypeDateTime {
 				pStmnt = fmt.Sprintf("(%s->>?>=? AND %s->>?<=?)", propertyEntity, propertyEntity)
 
-				start, end, err := getIntervalFromRangeStrAsUnix(p.Value)
+				start, end, err := decodeDateTimeValue(p.Value)
 				if err != nil {
 					log.WithError(err).Error("Failed reading timestamp on user join query.")
 					return "", nil, err
