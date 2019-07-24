@@ -216,8 +216,11 @@ class Property extends Component {
   }
 
   getDateRangeFromPropertyState() {
-    if (this.props.propertyState.value == '') 
+    if (this.props.propertyState.value == '') {
+      // set default property state.
+      this.props.onValueChange(this.getDateRangeAsStr(DEFAULT_DATE_RANGE, true), this.state.valueType);
       return [DEFAULT_DATE_RANGE];
+    }
     
     return this.getDateRangeFromStr(this.props.propertyState.value);  
   }
