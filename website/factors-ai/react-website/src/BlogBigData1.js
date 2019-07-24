@@ -18,7 +18,7 @@ class BlogBigData1 extends Component {
         <div id="blog-single" className="main-container">
         <div className="container">
           <div className="row justify-content-center">
-            <div className="col-lg-12 col-md-16 col-xs-16">
+            <div className="col-lg-12 col-md-16 col-xs-16 blog-container">
               <div className="blog-post">
                 <div className="post-content">
                   <h3>Big Data and Analytics - What's next?  (Part 1)</h3>

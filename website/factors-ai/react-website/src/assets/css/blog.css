@@ -1,17 +1,19 @@
 
-  .section-padding {
-    padding: 60px 0;
-  }
 
-  .section-header {
-    margin-bottom: 30px;
-  }
+.section-padding {
+  padding: 60px 0;
+}
+
+.section-header {
+  margin-bottom: 70px;
+  margin-top: 30px;
+}
 
 .section-header p {
-  text: center;
   font-weight: 400;
   line-height: 26px;
 }
+
 .section-title {
   font-size: 30px;
   color: #222222;
@@ -19,6 +21,12 @@
   font-weight: 700;
   position: relative;
 }
+
+.blog-container {
+  padding-left: 100px;
+  padding-right: 100px;
+}
+
 #blog .blog-item-wrapper {
   background: #fff;
   border-radius: 4px;
@@ -74,91 +82,94 @@
 }
 
 #blog-single {
-    padding: 60px 0;
+    padding: 100px 0;
   }
   
-  #blog-single .blog-post {
-    background: #fff;
-    box-shadow: 0px 0px 15px 0px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
-    margin-bottom: 40px;
-  }
-  
-  #blog-single .blog-post .post-thumb img {
-    width: 70%;
-    padding: 30px 30px 30px 50px;
-  }
-  
-  .blog-img-full-width {
-    width: 100% !important;
-    padding: 0px !important;
-  }
+#blog-single .blog-post {
+  background: #fff;
+  overflow: hidden;
+  margin-bottom: 40px;
+}
 
-  #blog-single .blog-post .post-content {
-    padding: 100px 100px 30px 100px;
-  }
-  
-  #blog-single .blog-post .post-content h3 {
-    font-size: 23px;
-    padding-bottom: 30px;
-    font-weight: bolder;
-  }
+#blog-single .blog-post .post-thumb img {
+  width: 70%;
+  padding: 30px 30px 30px 50px;
+}
 
-  #blog-single .blog-post .post-content h5 {
-    font-size: 18px;
-    font-weight: bolder;
-  }
+.blog-img-full-width {
+  width: 100% !important;
+  padding: 0px !important;
+}
 
-  .post-content li {
-    font-size: 18;
-    font-weight: 100
-  }
+#blog-single .blog-post .post-content h3 {
+  font-size: 30px;
+  margin-bottom: 40px;
+  font-weight: bolder;
+}
 
-  .blog-comment {
-    background: #fff;
-    box-shadow: 0px 0px 15px 0px rgba(0, 0, 0, 0.1);
-    padding: 50px 30px;
-    margin-top: 30px;
-    overflow: hidden;
-  }
-  
-  .blog-comment h4 {
-    font-size: 24px;
-    margin-bottom: 30px;
-  }
-  
-  .blog-comment .comment-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    margin-bottom: 50px;
-  }
-  
-  .blog-comment .comment-list .the-comment {
-    border-bottom: 1px solid #e7e6e6;
-    padding-bottom: 25px;
-    margin-bottom: 25px;
-  }
-  
-  .blog-comment .comment-list .children {
-    padding-left: 40px;
-  }
-  
-  .blog-comment .avatar {
-    float: left;
-    margin-right: 15px;
-    padding: 5px;
-    border-radius: 4px;
-    background: #ffffff;
-    border: 1px solid #f1f1f1;
-  }
-  
-  .blog-comment .comment-author {
-    margin-bottom: 10px;
-  }
-  
-  .blog-comment .meta {
-    margin-bottom: 10px;
-    color: #999;
-  }
-  
+#blog-single .blog-post .post-content h5 {
+  font-size: 18px;
+  font-weight: bolder;
+}
+
+.post-content li {
+  font-size: 18;
+  font-weight: 100
+}
+
+.blog-comment {
+  background: #fff;
+  box-shadow: 0px 0px 15px 0px rgba(0, 0, 0, 0.1);
+  padding: 50px 30px;
+  margin-top: 30px;
+  overflow: hidden;
+}
+
+.blog-comment h4 {
+  font-size: 24px;
+  margin-bottom: 30px;
+}
+
+.blog-comment .comment-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  margin-bottom: 50px;
+}
+
+.blog-comment .comment-list .the-comment {
+  border-bottom: 1px solid #e7e6e6;
+  padding-bottom: 25px;
+  margin-bottom: 25px;
+}
+
+.blog-comment .comment-list .children {
+  padding-left: 40px;
+}
+
+.blog-comment .avatar {
+  float: left;
+  margin-right: 15px;
+  padding: 5px;
+  border-radius: 4px;
+  background: #ffffff;
+  border: 1px solid #f1f1f1;
+}
+
+.blog-comment .comment-author {
+  margin-bottom: 10px;
+}
+
+.blog-comment .meta {
+  margin-bottom: 10px;
+  color: #999;
+}
+
+.post-content p {
+  text-align: justify;
+}
+
+.post-content img {
+  margin-top: 40px;
+  margin-bottom: 40px;
+}
