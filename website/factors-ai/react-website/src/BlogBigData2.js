@@ -8,8 +8,8 @@ class BlogBigData2 extends React.Component {
     render() {
       const disqusShortname = 'factorsai';
       const disqusConfig = {
-        url: 'www.factors.ai/blog/big-data-analytics-next-2',
-        identifier: 'big-data-analytics-next-2',
+          url: window.location.href,
+          identifier: window.location.pathname,
       };
 
       return (

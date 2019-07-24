@@ -6,10 +6,10 @@ import segmentFactorsAISVG from './assets/img/blog/blog-segment-launch.svg';
 
 class BlogSegmentLaunch extends Component {
     render() {
-      const disqusShortname = 'factorsai';
-      const disqusConfig = {
-          url: 'www.factors.ai/blog/segment-integration-launch',
-          identifier: 'segment-integration-launch',
+     const disqusShortname = 'factorsai';
+     const disqusConfig = {
+        url: window.location.href,
+        identifier: window.location.pathname,
       };
 
       return (
