@@ -11,7 +11,7 @@ import BarChart from '../Query/BarChart';
 import LineChart from '../Query/LineChart';
 import TableChart from '../Query/TableChart';
 import { PRESENTATION_BAR, PRESENTATION_LINE, 
-  PRESENTATION_TABLE, PRESENTATION_CARD, HEADER_COUNT, HEADER_DATE, PRESENTATION_FUNNEL } from '../Query/common';
+  PRESENTATION_TABLE, PRESENTATION_CARD, HEADER_COUNT, HEADER_DATE, PRESENTATION_FUNNEL, PROPERTY_VALUE_TYPE_DATE_TIME } from '../Query/common';
 import { slideUnixTimeWindowToCurrentTime } from '../../util';
 import FunnelChart from '../Query/FunnelChart';
 
@@ -109,6 +109,23 @@ class DashboardUnit extends Component {
       let newPeriod = slideUnixTimeWindowToCurrentTime(query.fr, query.to);
       query.fr = newPeriod.from;
       query.to = newPeriod.to;
+    }
+
+    // override datetime property value.
+    for(let ei=0; ei<query.ewp.length; ei++) {
+      let ewp = query.ewp[ei];
+
+      for(let pi=0; pi < ewp.pr.length; pi++) {
+        if (ewp.pr[pi].ty == PROPERTY_VALUE_TYPE_DATE_TIME) {
+          let propertyValue = JSON.parse(ewp.pr[pi].va);
+          if (propertyValue.ovp) {
+            let newPeriod = slideUnixTimeWindowToCurrentTime(propertyValue.fr, propertyValue.to);
+            propertyValue.fr = newPeriod.from;
+            propertyValue.to = newPeriod.to;
+            ewp.pr[pi].va = JSON.stringify(propertyValue);
+          }
+        }
+      }
     }
 
     runQuery(this.props.currentProjectId, query)
