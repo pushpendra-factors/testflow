@@ -17,7 +17,7 @@ spec:
             cloud.google.com/gke-nodepool: factors-staging-node-pool
           containers:
           - name: build-reports-job
-            image: us.gcr.io/factors-staging/build-reports-job:v0.01-cfbb5ba
+            image: us.gcr.io/factors-staging/build-reports-job:v0.02-174d6a2
             imagePullPolicy: IfNotPresent
             args:
             - --env
@@ -32,14 +32,6 @@ spec:
             - $(POSTGRES_USER)
             - --db_pass
             - $(POSTGRES_PASSWORD)
-            - --aws_region
-            - $(AWS_REGION)
-            - --aws_key
-            - $(AWS_KEY)
-            - --aws_secret
-            - $(AWS_SECRET)
-            - --mail_reports
-            - $(MAIL_REPORTS)
             envFrom:
             - configMapRef:
                 name: config-env
@@ -49,6 +41,4 @@ spec:
                 name: config-build-reports-job
             - secretRef:
                 name: secret-postgres
-            - secretRef:
-                name: secret-aws
           restartPolicy: OnFailure
