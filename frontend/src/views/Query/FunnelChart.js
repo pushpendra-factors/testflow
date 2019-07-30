@@ -41,7 +41,7 @@ class FunnelChart extends Component {
   render() {
     let result = this.props.queryResult;
     // get funnel step names from result meta.
-    let stepNames = result.meta.ewp.map((e) => (e.na));
+    let stepNames = result.meta.query.ewp.map((e) => (e.na));
 
     let stepsIndexes = [];
     let conversionIndexes = [];

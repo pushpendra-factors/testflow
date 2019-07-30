@@ -42,7 +42,7 @@ const renderExplanations = function(explanations) {
   if (!explanations || explanations.length == 0)
     return null;
 
-  return explanations.map((exp) => <p>{ exp }</p>);
+  return explanations.map((exp) => <div style={{ marginBottom: '0.4rem' }}>{ exp }</div>);
 }
 
 const BarUnit = (props) => {
@@ -54,6 +54,7 @@ const BarUnit = (props) => {
       <CardHeader>
         <strong>{props.name}</strong>
       </CardHeader>
+      <CardTitle> { renderExplanations(props.explanations) } </CardTitle>
       <CardBody>
         <div style={{ height: '400px' }}>
           <BarChart
@@ -82,6 +83,7 @@ const LineUnit = (props) => {
         <CardHeader>
           <strong>{props.name}</strong>
         </CardHeader>
+        <CardTitle> { renderExplanations(props.explanations) } </CardTitle>
         <CardBody>
           <div style={{ height: '400px' }}>
             <LineChart queryResult={mergedQR} verticalLine={true}/>

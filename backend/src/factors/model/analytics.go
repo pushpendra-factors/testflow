@@ -53,8 +53,7 @@ type Query struct {
 }
 
 type QueryResutlMeta struct {
-	EventsWithProperties []QueryEventWithProperties `json:"ewp"`
-	GroupByProperties    []QueryGroupByProperty     `json:"gbp"`
+	Query Query `json:"query"`
 }
 
 type QueryResult struct {
@@ -1490,11 +1489,11 @@ func LimitQueryResult(result *QueryResult, groupPropsLen int, groupByTimestamp b
 	return nil
 }
 
-func getTimstampAndAggregateIndexOnResult(resultCols []string) (int, int, error) {
+func GetTimstampAndAggregateIndexOnQueryResult(cols []string) (int, int, error) {
 	timeIndex := -1
 	aggrIndex := -1
 
-	for i, c := range resultCols {
+	for i, c := range cols {
 		if c == AliasDate {
 			timeIndex = i
 		}
@@ -1622,7 +1621,7 @@ func addMissingTimestampsOnResultWithGroupByProps(result *QueryResult, query *Qu
 }
 
 func sanitizeGroupByTimestampResult(result *QueryResult, query *Query) error {
-	aggrIndex, timeIndex, err := getTimstampAndAggregateIndexOnResult(result.Headers)
+	aggrIndex, timeIndex, err := GetTimstampAndAggregateIndexOnQueryResult(result.Headers)
 	if err != nil {
 		return err
 	}
@@ -1672,8 +1671,7 @@ func ExecQuery(stmnt string, params []interface{}) (*QueryResult, error) {
 }
 
 func addMetaToQueryResult(result *QueryResult, query Query) {
-	result.Meta.EventsWithProperties = query.EventsWithProperties
-	result.Meta.GroupByProperties = query.GroupByProperties
+	result.Meta.Query = query
 }
 
 func RunInsightsQuery(projectId uint64, query Query) (*QueryResult, int, string) {

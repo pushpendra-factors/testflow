@@ -2,9 +2,11 @@ package model
 
 import (
 	"encoding/json"
+	"errors"
 	C "factors/config"
 	"fmt"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -58,6 +60,7 @@ type ReportContent struct {
 }
 
 type DashboardUnitReport struct {
+	ProjectID    uint64       `json:"pid"`
 	Title        string       `json:"t"`
 	Presentation string       `json:"p"`
 	Results      []ReportUnit `json:"r"`
@@ -74,6 +77,18 @@ type Interval struct {
 	StartTime int64
 	EndTime   int64
 }
+
+type ReportExplanation struct {
+	Percentage  float64
+	Effect      string
+	Attribution string
+}
+
+const effectIncrease = "increase"
+const effectDecrease = "decrease"
+const explanationsLimit = 5
+const primaryExplanationPrefix = "Total"
+const secondaryExplanationPrefix = "-"
 
 func TranslateDBReportToReport(dbReport *DBReport) (*Report, error) {
 
@@ -182,10 +197,6 @@ func GetReportByID(id uint64) (*Report, int) {
 	if report.Invalid {
 		return nil, http.StatusNotFound
 	}
-
-	// Explanations are not stored.
-	// Adding it on runtime.
-	addExplanationsToReports(report)
 
 	return report, http.StatusFound
 }
@@ -297,6 +308,8 @@ func GenerateReport(projectID, dashboardID uint64, dashboardName string,
 		Contents:      reportContents,
 	}
 
+	addExplanationsToReportUnits(report)
+
 	return report, http.StatusOK
 }
 
@@ -319,10 +332,7 @@ func getReportUnit(projectID uint64, query Query, interval Interval) (*ReportUni
 	return &reportUnit, http.StatusOK
 }
 
-func addExplanationsForPresentationCard(duReport *DashboardUnitReport) {
-	prevCount := duReport.Results[0].QueryResult.Rows[0][0].(float64)
-	curCount := duReport.Results[1].QueryResult.Rows[0][0].(float64)
-
+func getPercentageChange(prevCount float64, curCount float64) (float64, string) {
 	var percentChange float64
 	if prevCount > 0 {
 		percentChange = ((curCount - prevCount) / prevCount) * 100
@@ -332,17 +342,259 @@ func addExplanationsForPresentationCard(duReport *DashboardUnitReport) {
 
 	var effect string
 	if percentChange > 0 {
-		effect = "increase in"
+		effect = effectIncrease
 	} else {
-		effect = "decreased in"
+		effect = effectDecrease
 	}
 
 	if percentChange < 0 {
 		percentChange = percentChange * -1
 	}
 
-	explanation := fmt.Sprintf("%0.2f%% %s %s", percentChange, effect, duReport.Title)
-	duReport.Explanations = []string{explanation}
+	return percentChange, effect
+}
+
+func explainPercentageChange(percentChange float64, effect string,
+	attribution string, prefix string) string {
+
+	return fmt.Sprintf("%s %0.0f%% %s in %s.", prefix, percentChange, effect, attribution)
+}
+
+func addExplanationsForPresentationCard(duReport *DashboardUnitReport) {
+	prevCount, _ := getAggrAsFloat64(duReport.Results[0].QueryResult.Rows[0][0])
+	curCount, _ := getAggrAsFloat64(duReport.Results[1].QueryResult.Rows[0][0])
+
+	percentChange, effect := getPercentageChange(prevCount, curCount)
+	duReport.Explanations = []string{explainPercentageChange(percentChange, effect, duReport.Title, primaryExplanationPrefix)}
+}
+
+func getAggrByGroup(queryResult *QueryResult,
+	uniqueGroupsSet *map[string]bool) (map[string]float64, float64, string) {
+	aggrIndex, _, _ := GetTimstampAndAggregateIndexOnQueryResult(queryResult.Headers)
+	aggrByGroupMap := make(map[string]float64)
+
+	var groupIndex int
+	if aggrIndex == 0 {
+		groupIndex = 1
+	}
+
+	var totalCount float64
+	for _, row := range queryResult.Rows {
+		group := row[groupIndex].(string)
+		aggr, _ := getAggrAsFloat64(row[aggrIndex])
+		aggrByGroupMap[group] = aggr
+		totalCount = totalCount + aggr
+		(*uniqueGroupsSet)[group] = true
+	}
+
+	return aggrByGroupMap, totalCount, queryResult.Headers[groupIndex]
+}
+
+func sortAndLimitExplanations(explanations []ReportExplanation) []ReportExplanation {
+	sort.SliceStable(explanations, func(i, j int) bool {
+		return explanations[i].Percentage > explanations[j].Percentage
+	})
+
+	if len(explanations) < explanationsLimit {
+		return explanations
+	}
+
+	return explanations[:explanationsLimit]
+}
+
+func addExplanationsForPresentationBar(duReport *DashboardUnitReport) {
+	prevResult := duReport.Results[0].QueryResult
+	curResult := duReport.Results[1].QueryResult
+
+	uniqueGroupsSet := make(map[string]bool)
+	prevAggrByGroup, prevResultTotal, prevResultGroupName := getAggrByGroup(&prevResult, &uniqueGroupsSet)
+	curAggrByGroup, curResultTotal, curResultGroupName := getAggrByGroup(&curResult, &uniqueGroupsSet)
+
+	if prevResultGroupName != curResultGroupName {
+		log.WithFields(log.Fields{"prev_group_name": prevResultGroupName,
+			"cur_group_name": curResultGroupName}).Error("Group name on reports query results are not mathcing.")
+	}
+
+	explanations := make([]string, 0, 0)
+	percentChange, totalEffect := getPercentageChange(prevResultTotal, curResultTotal)
+	explanations = append(explanations, explainPercentageChange(percentChange, totalEffect,
+		duReport.Title, primaryExplanationPrefix))
+
+	secExplanations := make([]ReportExplanation, 0, 0)
+	for group := range uniqueGroupsSet {
+		var prevAggr, curAggr float64
+
+		if _, exists := prevAggrByGroup[group]; exists {
+			prevAggr = prevAggrByGroup[group]
+		}
+
+		if _, exists := curAggrByGroup[group]; exists {
+			curAggr = curAggrByGroup[group]
+		}
+
+		percentChange, effect := getPercentageChange(prevAggr, curAggr)
+		if percentChange >= 5.0 && effect == totalEffect {
+			secExplanations = append(secExplanations, ReportExplanation{Percentage: percentChange, Effect: effect,
+				Attribution: fmt.Sprintf("%s %s", curResultGroupName, group)})
+		}
+	}
+
+	secExplanations = sortAndLimitExplanations(secExplanations)
+	for _, explanation := range secExplanations {
+		explanations = append(explanations, explainPercentageChange(explanation.Percentage,
+			explanation.Effect, explanation.Attribution, secondaryExplanationPrefix))
+	}
+
+	duReport.Explanations = explanations
+}
+
+func getAggrAsFloat64(aggrInt interface{}) (float64, error) {
+	switch aggrInt.(type) {
+	case int:
+		return float64(aggrInt.(int)), nil
+	case int64:
+		return float64(aggrInt.(int64)), nil
+	case float32:
+		return float64(aggrInt.(float32)), nil
+	case float64:
+		return aggrInt.(float64), nil
+	default:
+		return float64(0), errors.New("invalid aggregate value type")
+	}
+}
+
+func getTimestampAsString(timestampInt interface{}) (string, error) {
+	switch timestampInt.(type) {
+	case time.Time:
+		return (timestampInt.(time.Time)).Format(time.RFC3339), nil
+	case string:
+		return timestampInt.(string), nil
+	default:
+		return "", errors.New("invalid timestamp value type")
+	}
+}
+
+func getAggrByTimestampAndGroup(queryResult *QueryResult,
+	uniqueGroupsSet *map[string]string) (map[string]map[string]float64, []string, float64) {
+
+	var totalAggr float64
+	aggrIndex, timestampIndex, _ := GetTimstampAndAggregateIndexOnQueryResult(queryResult.Headers)
+	aggrByTimestampAndGroup := make(map[string]map[string]float64, 0)
+	timestamps := make([]string, 0, 0)
+
+	for _, row := range queryResult.Rows {
+		timestamp, _ := getTimestampAsString(row[timestampIndex])
+		aggr, _ := getAggrAsFloat64(row[aggrIndex])
+
+		if _, tsExists := aggrByTimestampAndGroup[timestamp]; !tsExists {
+			aggrByTimestampAndGroup[timestamp] = make(map[string]float64, 0)
+			// list of ordered timestamps.
+			timestamps = append(timestamps, timestamp)
+		}
+
+		var groupValue string
+		var displayGroupValue string
+		for i, col := range row {
+			colValue := fmt.Sprintf("%s", col)
+
+			if i != aggrIndex && i != timestampIndex {
+				encGroupValueKey := fmt.Sprintf("c%d:%s", i, colValue)
+				if groupValue == "" {
+					groupValue = encGroupValueKey
+				} else {
+					groupValue = groupValue + "_" + encGroupValueKey
+				}
+
+				if displayGroupValue == "" {
+					displayGroupValue = colValue
+				} else {
+					displayGroupValue = groupValue + " / " + colValue
+				}
+			}
+		}
+
+		(*uniqueGroupsSet)[groupValue] = displayGroupValue
+		aggrByTimestampAndGroup[timestamp][groupValue] = aggr
+		totalAggr = totalAggr + aggr
+	}
+
+	return aggrByTimestampAndGroup, timestamps, totalAggr
+}
+
+func getDayFromTimestampStr(timestampStr string) string {
+	timestamp, _ := time.Parse(time.RFC3339, timestampStr)
+	return fmt.Sprintf("%s (%s)", timestamp.Weekday().String(), timestamp.Format("Jan 02"))
+}
+
+// getTotalAggrForUniqueUsersQuery - Runs same query without group by timestamp.
+func getTotalAggrForUniqueUsersQuery(projectId uint64, uuQuery Query) float64 {
+	uuQuery.GroupByTimestamp = false
+
+	queryResult, _, _ := Analyze(projectId, uuQuery)
+
+	aggrIndex, _, _ := GetTimstampAndAggregateIndexOnQueryResult(queryResult.Headers)
+	var total float64
+	for _, row := range queryResult.Rows {
+		total = total + float64(row[aggrIndex].(int64))
+	}
+
+	return total
+}
+
+func addExplanationsForPresentationLine(duReport *DashboardUnitReport) {
+	prevResult := duReport.Results[0].QueryResult
+	curResult := duReport.Results[1].QueryResult
+
+	uniqueGroupsSet := make(map[string]string)
+	prevAggrMap, prevTimestamps, prevTotal := getAggrByTimestampAndGroup(&prevResult, &uniqueGroupsSet)
+	curAggrMap, curTimestamps, curTotal := getAggrByTimestampAndGroup(&curResult, &uniqueGroupsSet)
+
+	if curResult.Meta.Query.Type == QueryTypeUniqueUsers {
+		prevTotal = getTotalAggrForUniqueUsersQuery(duReport.ProjectID, prevResult.Meta.Query)
+		curTotal = getTotalAggrForUniqueUsersQuery(duReport.ProjectID, curResult.Meta.Query)
+	}
+
+	explanations := make([]string, 0, 0)
+	percentChange, totalEffect := getPercentageChange(prevTotal, curTotal)
+	explanations = append(explanations, explainPercentageChange(percentChange, totalEffect,
+		duReport.Title, primaryExplanationPrefix))
+
+	secExplanations := make([]ReportExplanation, 0, 0)
+	for i := range curTimestamps {
+		curTimestamp := curTimestamps[i]
+		prevTimestamp := prevTimestamps[i]
+
+		for group, displayGroup := range uniqueGroupsSet {
+			var prevAggr, curAggr float64
+
+			if _, exists := prevAggrMap[prevTimestamp][group]; exists {
+				prevAggr = prevAggrMap[prevTimestamp][group]
+			}
+
+			if _, exists := curAggrMap[curTimestamp][group]; exists {
+				curAggr = curAggrMap[curTimestamp][group]
+			}
+
+			// atleast one should have an aggr greater than 0.
+			if prevAggr == 0 && curAggr == 0 {
+				continue
+			}
+
+			percentChange, effect := getPercentageChange(prevAggr, curAggr)
+			if percentChange >= 5.0 && effect == totalEffect {
+				secExplanations = append(secExplanations, ReportExplanation{Percentage: percentChange, Effect: effect,
+					Attribution: fmt.Sprintf("%s last %s", displayGroup, getDayFromTimestampStr(curTimestamp))})
+			}
+		}
+	}
+
+	secExplanations = sortAndLimitExplanations(secExplanations)
+	for _, explanation := range secExplanations {
+		explanations = append(explanations, explainPercentageChange(explanation.Percentage,
+			explanation.Effect, explanation.Attribution, secondaryExplanationPrefix))
+	}
+
+	duReport.Explanations = explanations
 }
 
 func addExplanationsByPresentation(duReport DashboardUnitReport) DashboardUnitReport {
@@ -353,12 +605,16 @@ func addExplanationsByPresentation(duReport DashboardUnitReport) DashboardUnitRe
 	switch duReport.Presentation {
 	case PresentationCard:
 		addExplanationsForPresentationCard(&duReport)
+	case PresentationBar:
+		addExplanationsForPresentationBar(&duReport)
+	case PresentationLine:
+		addExplanationsForPresentationLine(&duReport)
 	}
 
 	return duReport
 }
 
-func addExplanationsToReports(report *Report) {
+func addExplanationsToReportUnits(report *Report) {
 	for unitId, dashboardUnitReport := range report.Contents.DashboardUnitIDToDashboardUnitReport {
 		report.Contents.DashboardUnitIDToDashboardUnitReport[unitId] = addExplanationsByPresentation(dashboardUnitReport)
 	}
@@ -383,6 +639,7 @@ func getDashboardUnitReport(projectID uint64, dashboardUnit DashboardUnit,
 	}
 
 	dashboardUnitReport := &DashboardUnitReport{
+		ProjectID:    projectID,
 		Title:        dashboardUnit.Title,
 		Presentation: dashboardUnit.Presentation,
 		Results:      []ReportUnit{*intervalBeforeReportUnit, *intervalReportUnit},
@@ -393,8 +650,10 @@ func getDashboardUnitReport(projectID uint64, dashboardUnit DashboardUnit,
 
 func getCount(r ReportUnit) float64 {
 	if len(r.QueryResult.Rows) > 0 && len(r.QueryResult.Rows[0]) > 0 {
-		return (r.QueryResult.Rows[0][0]).(float64)
+		count, _ := getAggrAsFloat64(r.QueryResult.Rows[0][0])
+		return count
 	}
+
 	return 0
 }
 
