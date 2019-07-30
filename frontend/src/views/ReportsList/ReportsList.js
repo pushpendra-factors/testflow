@@ -58,6 +58,9 @@ class ReportsList extends Component {
         return reportRecords;
     }
 
+    // order reports by start time.
+    reports.sort((x, y) => (y.start_time - x.start_time));
+
     reportRecords = reports.map((report) => (
       <ReportRecord 
         key = {report.id}
