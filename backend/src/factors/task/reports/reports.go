@@ -33,6 +33,7 @@ func BuildReports(env string, db *gorm.DB, dashboards []*M.Dashboard,
 	store := newStore(dashboards)
 
 	buildReportsFor := make([]*ReportBuild, 0, 0)
+	buildReportsDedupe := make(map[string]bool, 0)
 
 	for _, dashboard := range dashboards {
 		reportLog.Infof("Finding which reports to Build for dashboardID: %d", dashboard.ID)
@@ -43,14 +44,14 @@ func BuildReports(env string, db *gorm.DB, dashboards []*M.Dashboard,
 
 		// custom start_time and end_time will be used for every dashboard, if given.
 		buildReportsForDashboard, errCode := findWhichWeeklyReportsToBuildForDashboard(db,
-			dashboard, dashboardReports, customStartTime, customEndTime)
+			dashboard, dashboardReports, customStartTime, customEndTime, &buildReportsDedupe)
 		if errCode != http.StatusOK {
 			continue
 		}
 		buildReportsFor = append(buildReportsFor, buildReportsForDashboard...)
 		reportLog.Infof("Finding which reports to Re-Build for dashboardID: %d", dashboard.ID)
 
-		rebuildReports := findWhichInvalidReportsToRebuild(dashboardReports, store)
+		rebuildReports := findWhichInvalidReportsToRebuild(dashboardReports, store, &buildReportsDedupe)
 		buildReportsFor = append(buildReportsFor, rebuildReports...)
 	}
 
@@ -79,8 +80,12 @@ type ReportBuild struct {
 	Interval           M.Interval
 }
 
+func getDashboardReportDedupeKey(projectId, dashboardId uint64, startTime int64, endTime int64) string {
+	return fmt.Sprintf("%d:%d_%d:%d", projectId, dashboardId, startTime, endTime)
+}
+
 func findWhichWeeklyReportsToBuildForDashboard(db *gorm.DB, dashboard *M.Dashboard,
-	existingReports []*M.Report, customStartTime, customEndTime int64) ([]*ReportBuild, int) {
+	existingReports []*M.Report, customStartTime, customEndTime int64, buildReportsDedupe *map[string]bool) ([]*ReportBuild, int) {
 
 	var startTime time.Time
 	if customStartTime > 0 {
@@ -96,10 +101,25 @@ func findWhichWeeklyReportsToBuildForDashboard(db *gorm.DB, dashboard *M.Dashboa
 		endTime = getLastWeekEndTime()
 	}
 
-	intervals := getWeeklyIntervals(startTime, endTime)
+	existingReportsLookup := make(map[string]bool, 0)
+	for _, eReport := range existingReports {
+		encDedupeKey := getDashboardReportDedupeKey(eReport.ProjectID, eReport.DashboardID,
+			eReport.StartTime, eReport.EndTime)
+		existingReportsLookup[encDedupeKey] = true
+	}
 
+	intervals := getWeeklyIntervals(startTime, endTime)
 	reportBuilds := make([]*ReportBuild, 0, 0)
 	for i := 1; i < len(intervals); i++ {
+		key := getDashboardReportDedupeKey(dashboard.ProjectId, dashboard.ID,
+			intervals[i].StartTime, intervals[i].EndTime)
+
+		_, exists := existingReportsLookup[key]
+		_, added := (*buildReportsDedupe)[key]
+		if exists || added {
+			continue
+		}
+
 		reportBuild := &ReportBuild{
 			ProjectID:          dashboard.ProjectId,
 			DashboardID:        dashboard.ID,
@@ -108,6 +128,7 @@ func findWhichWeeklyReportsToBuildForDashboard(db *gorm.DB, dashboard *M.Dashboa
 			Interval:           intervals[i],
 		}
 		reportBuilds = append(reportBuilds, reportBuild)
+		(*buildReportsDedupe)[key] = true
 	}
 
 	return reportBuilds, http.StatusOK
@@ -147,17 +168,15 @@ func buildReports(buildReportsFor []*ReportBuild) (reports []*M.Report, successL
 	return
 }
 
-func findWhichInvalidReportsToRebuild(reports []*M.Report, store *store) []*ReportBuild {
+func findWhichInvalidReportsToRebuild(reports []*M.Report, store *store, buildReportsDedupe *map[string]bool) []*ReportBuild {
 	reportBuilds := make([]*ReportBuild, 0, 0)
 	for _, report := range reports {
-
 		if !report.Invalid {
 			continue
 		}
 
 		_, errCode := findValidReportBy(reports, report.ProjectID, report.DashboardID, report.StartTime, report.EndTime)
 		validReportPresentForSameInterval := errCode == http.StatusFound
-
 		if validReportPresentForSameInterval {
 			continue
 		}
@@ -173,16 +192,22 @@ func findWhichInvalidReportsToRebuild(reports []*M.Report, store *store) []*Repo
 			continue
 		}
 
-		intervals := getWeeklyIntervals(unixToUTCTime(report.StartTime), unixToUTCTime(report.EndTime))
+		interval := getWeekInterval(report.StartTime, report.EndTime)
+		key := getDashboardReportDedupeKey(report.ProjectID, report.DashboardID, interval.StartTime, interval.EndTime)
+		if _, added := (*buildReportsDedupe)[key]; added {
+			continue
+		}
 
-		rb := &ReportBuild{
+		intervalBefore := getPrevWeekInterval(report.StartTime, report.EndTime)
+		reportBuild := &ReportBuild{
 			ProjectID:          report.ProjectID,
 			DashboardID:        report.DashboardID,
 			DashboardName:      dashboard.Name,
-			IntervalBeforeThat: intervals[0],
-			Interval:           intervals[1],
+			Interval:           interval,
+			IntervalBeforeThat: intervalBefore,
 		}
-		reportBuilds = append(reportBuilds, rb)
+		reportBuilds = append(reportBuilds, reportBuild)
+		(*buildReportsDedupe)[key] = true
 
 	}
 	return reportBuilds

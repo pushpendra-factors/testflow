@@ -112,6 +112,22 @@ func getWeeklyIntervals(startTime, endTime time.Time) []M.Interval {
 	return intervals
 }
 
+func getWeekInterval(startUnix, endUnix int64) M.Interval {
+	startTime := unixToUTCTime(startUnix)
+	endTime := unixToUTCTime(endUnix)
+
+	return M.Interval{StartTime: now.New(startTime).BeginningOfWeek().UTC().Unix(), EndTime: now.New(endTime).EndOfWeek().UTC().Unix()}
+}
+
+func getPrevWeekInterval(startUnix, endUnix int64) M.Interval {
+	startTime := unixToUTCTime(startUnix)
+
+	startOfGivenWeek := now.New(startTime).BeginningOfWeek()
+	prevWeek := now.New(startOfGivenWeek.Add(-24 * time.Hour))
+
+	return M.Interval{StartTime: prevWeek.BeginningOfWeek().UTC().Unix(), EndTime: prevWeek.EndOfWeek().UTC().Unix()}
+}
+
 func findValidReportBy(reports []*M.Report, projectID, dashboardID uint64, startTime, endTime int64) (*M.Report, int) {
 	for _, report := range reports {
 		if report.ProjectID == projectID && report.DashboardID == dashboardID && report.StartTime == startTime && report.EndTime == endTime && !report.Invalid {
