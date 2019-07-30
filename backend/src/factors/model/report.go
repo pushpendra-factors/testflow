@@ -337,7 +337,7 @@ func getPercentageChange(prevCount float64, curCount float64) (float64, string) 
 	if prevCount > 0 {
 		percentChange = ((curCount - prevCount) / prevCount) * 100
 	} else {
-		percentChange = 100 // 0 -> 10 = 100% increase. For consistency.
+		percentChange = curCount
 	}
 
 	var effect string
