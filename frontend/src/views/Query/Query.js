@@ -67,6 +67,11 @@ const FUNNEL_QUERY_TYPE_OPTS = [
   { value: TYPE_UNIQUE_USERS, label: 'unique users' },
 ];
 
+const AGGR_COUNT_OPT = {label: 'count', value: 'count'};
+const AGGR_OPTS = [
+  AGGR_COUNT_OPT,
+]
+
 const DEFAULT_DATE_RANGE_LABEL = 'Last 7 days';
 const DEFAULT_DATE_RANGE = {
   startDate: moment(new Date()).subtract(7, 'days').toDate(),
@@ -154,6 +159,7 @@ class Query extends Component {
       // add to resetQueryInterface to reset on
       // interface change.
       class: QUERY_CLASS_OPTS[0],
+      aggr: AGGR_OPTS[0],
       condition: EVENTS_COND_OPTS[0],
       type: INSIGHTS_QUERY_TYPE_OPTS[0], // 1st type as default.
       events: [],
@@ -650,7 +656,7 @@ class Query extends Component {
   }
 
   getResultAsLineChart() {
-    return <div style={{height: '450px'}} className='animated fadeIn'> 
+    return <div style={{height: '450px'}} className='animated fadeIn'>
       <LineChart queryResult={this.state.result} /> 
     </div>;
   }
@@ -933,9 +939,9 @@ class Query extends Component {
             <span style={LABEL_STYLE}> Show </span>
             <div style={{display: 'inline-block', width: '85px', marginRight: '10px'}} className='fapp-select light'>
               <Select
-                value={{label: 'count', value: 'count'}}
+                value={this.state.aggr}
                 // onChange={}
-                options={[{label: 'count', value: 'count'}]}
+                options={[AGGR_OPTS]}
                 placeholder='Function'
               />
             </div>

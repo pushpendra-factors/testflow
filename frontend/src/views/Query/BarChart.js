@@ -3,7 +3,7 @@ import { Bar } from 'react-chartjs-2';
 import { CustomTooltips } from '@coreui/coreui-plugin-chartjs-custom-tooltips';
 
 import { getChartScaleWithSpace, isSingleCountResult } from '../../util';
-import { HEADER_COUNT } from './common';
+import { HEADER_COUNT, getYAxesStr } from './common';
 
 const barBackgroundColors = ['rgba(75,192,192,0.4)', 'rgba(255,99,132,0.2)'];
 const barBorderColors = ['rgba(75,192,192,1)', 'rgba(255,99,132,1)'];
@@ -65,7 +65,8 @@ class BarChart extends Component {
 
     if (isSingleCountResult(result)) {
       bars.datasets = [{ data: data  }];
-      bars.labels = labels;
+      // use event name as xAxisLabel when no groups available.
+      bars.labels = [result.meta.query.ewp[0].na];
     } else {
       let labelsCounts = this.sortByLabel(labels, data);
       bars.datasets = [{ data: labelsCounts.counts  }];
@@ -95,7 +96,8 @@ class BarChart extends Component {
         }],
         yAxes: [{
           scaleLabel: {
-            display: false,
+            display: true,
+            labelString: getYAxesStr(this.props.queryResult.meta.query.ty)
           },
           display: true,
           ticks: {
@@ -182,13 +184,9 @@ class BarChart extends Component {
       bar.datasets[i].hoverBorderColor = barHoverBorderColors[i % barHoverBorderColors.length]; 
     }
 
-    if (chartData.x_label != "") {
+    if (chartData.x_label != '') {
       chartOptions.scales.xAxes[0].scaleLabel.display = true;
-      chartOptions.scales.xAxes[0].scaleLabel.labelString = chartData.x_label;
-    }
-    if (chartData.y_label != "") {
-      chartOptions.scales.yAxes[0].scaleLabel.display = true
-      chartOptions.scales.yAxes[0].scaleLabel.labelString = chartData.y_label
+      chartOptions.scales.xAxes[0].scaleLabel.labelString = "Property: " + chartData.x_label;
     }
     
     return <Bar data={bar} options={chartOptions} /> 

@@ -3,7 +3,7 @@ import { Line } from 'react-chartjs-2';
 import moment from 'moment';
 
 import { getColor, getChartScaleWithSpace } from '../../util';
-import { HEADER_COUNT, HEADER_DATE } from './common';
+import { HEADER_COUNT, HEADER_DATE, getYAxesStr } from './common';
 
 class LineChart extends Component {
   constructor(props) {
@@ -113,7 +113,17 @@ class LineChart extends Component {
         }
       },
       scales: {
+        xAxes: [{
+          scaleLabel: {
+            display: true,
+            labelString: 'Date of Occurrence'
+          },
+        }],
         yAxes: [{
+          scaleLabel: {
+            display: true,
+            labelString: getYAxesStr(result.meta.query.ty)
+          },
           display: true,
           ticks: {
             beginAtZero: true,

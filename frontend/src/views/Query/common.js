@@ -1,7 +1,9 @@
 import moment from 'moment';
 
-import { slideUnixTimeWindowToCurrentTime } from '../../util';
+import { slideUnixTimeWindowToCurrentTime, firstToUpperCase } from '../../util';
 
+export const QUERY_TYPE_UNIQUE_USERS = "unique_users";
+export const QUERY_TYPE_EVENTS_OCCURRENCE = "events_occurrence";
 
 export const PROPERTY_VALUE_NONE = "$none";
 
@@ -46,4 +48,11 @@ export const getDateRangeFromStoredDateRange = (storedRange) => {
     endDate: moment.unix(storedRange.to).toDate(),
     key: "selected",
   }];
+}
+
+export const getYAxesStr = function(queryType, aggr="count") {
+  let dAggr = firstToUpperCase(aggr);
+  if (!queryType || queryType == "") return dAggr;
+  let entity = queryType == QUERY_TYPE_UNIQUE_USERS ? "Users" : "Events";
+  return dAggr+" of "+entity;
 }

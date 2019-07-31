@@ -99,7 +99,7 @@ class TableBarChart extends Component {
     let labelIndex = countIndex - 1;
     
     let heads = headers.slice(0, headers.length - 2);
-    heads.push(<th>{ firstToUpperCase(data.headers[countIndex]) + " by " + data.headers[labelIndex] }</th>);
+    heads.push(<th>{ firstToUpperCase(data.headers[countIndex]) + " by Property - " + data.headers[labelIndex] }</th>);
     
     let groups = {};
     for(let i=0; i<Object.keys(data.rows).length; i++) {
