@@ -35,6 +35,7 @@ const mergeLineQR = function(intervalBeforeQR, intervalQR) {
   let mergedQR = {};
   mergedQR.headers = intervalQR.headers;
   mergedQR.rows = intervalBeforeRows.concat(intervalQR.rows);
+  mergedQR.meta = intervalQR.meta;
   return mergedQR;
 }
 
