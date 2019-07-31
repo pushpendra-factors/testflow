@@ -49,27 +49,6 @@ class DashboardUnit extends Component {
     }
   }
 
-  showLineChartLegend(result) {
-    let isMultiGroupBy = result.headers.length > 3;
-    
-    let uniqueGroups = [];
-    let countIndex = result.headers.indexOf(HEADER_COUNT);
-    let dateIndex = result.headers.indexOf(HEADER_DATE);
-    for(let r=0; r<result.rows.length; r++) {
-      for (let c=0; c<result.rows[r].length; c++) {
-        if (c != countIndex 
-          && c != dateIndex 
-          && uniqueGroups.indexOf(result.rows[r][c]) == -1)
-            uniqueGroups.push(result.rows[r][c]);
-      }
-    }
-
-    if (uniqueGroups.length < LINE_LEGEND_DISPLAY_LIMIT && isMultiGroupBy) return false;
-    if (uniqueGroups.length > LINE_LEGEND_DISPLAY_LIMIT) return false;
-
-    return true;
-  }
-
   getUnitBackground() {
     let cardIndex = this.props.cardIndex;
     let poolLength = CARD_BACKGROUNDS.length;
@@ -83,7 +62,7 @@ class DashboardUnit extends Component {
     }
 
     if (this.props.data.presentation === PRESENTATION_LINE) {
-      presentation = <LineChart legend={this.showLineChartLegend(result)} queryResult={result} />
+      presentation = <LineChart hideLegend queryResult={result} />
     }
 
     if (this.props.data.presentation === PRESENTATION_TABLE) {

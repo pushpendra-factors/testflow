@@ -82,7 +82,7 @@ class LineChart extends Component {
 
   render() {
     let result = this.props.queryResult;
-    let displayLegend = this.isResultWithGroupBy(result);
+    let displayLegend = this.props.hideLegend ? false : this.isResultWithGroupBy(result);
 
     let countIndex = result.headers.indexOf(HEADER_COUNT);
     if (countIndex == -1) { 
