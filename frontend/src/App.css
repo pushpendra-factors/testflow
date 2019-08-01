@@ -633,9 +633,10 @@ div.setting-card:hover{
 }
 
 .fapp-dunit .card-header {
-    padding-left: 30px;
-    padding-right: 30px;
-    padding-top: 20px;
+    padding-left: 40px;
+    padding-right: 32px;
+    padding-top: 18px;
+    padding-bottom: 12px;
     background: #fff;
     border-bottom: none;
     color: #444;
