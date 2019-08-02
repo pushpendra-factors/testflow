@@ -103,7 +103,7 @@ class FunnelChart extends Component {
     
     let present = [];
     // main funnel.
-    present.push(<div style={{ marginTop: '30px' }}>{ funnels[0] }</div>);
+    present.push(<div style={{ marginTop: !this.props.noMargin ? '30px': null }}>{ funnels[0] }</div>);
     // group based funnels.
     if (showGroupsTable) {
       present.push(

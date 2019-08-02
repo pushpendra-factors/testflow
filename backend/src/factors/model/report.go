@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -19,7 +20,12 @@ const (
 	ReportTypeWeekly = "w"
 )
 
-var dashBoardUnitTypesToIncludeInReport = []string{PresentationLine, PresentationBar, PresentationCard}
+var dashBoardUnitTypesToIncludeInReport = []string{
+	PresentationLine,
+	PresentationBar,
+	PresentationCard,
+	PresentationFunnel,
+}
 
 // DBReport represents structure to be used for storing report in database
 type DBReport struct {
@@ -86,6 +92,7 @@ type ReportExplanation struct {
 
 const effectIncrease = "increase"
 const effectDecrease = "decrease"
+const effectEqual = "equal"
 const explanationsLimit = 5
 const primaryExplanationPrefix = "Total"
 const secondaryExplanationPrefix = "-"
@@ -448,16 +455,19 @@ func addExplanationsForPresentationBar(duReport *DashboardUnitReport) {
 	duReport.Explanations = explanations
 }
 
-func getAggrAsFloat64(aggrInt interface{}) (float64, error) {
-	switch aggrInt.(type) {
+func getAggrAsFloat64(aggr interface{}) (float64, error) {
+	switch aggr.(type) {
 	case int:
-		return float64(aggrInt.(int)), nil
+		return float64(aggr.(int)), nil
 	case int64:
-		return float64(aggrInt.(int64)), nil
+		return float64(aggr.(int64)), nil
 	case float32:
-		return float64(aggrInt.(float32)), nil
+		return float64(aggr.(float32)), nil
 	case float64:
-		return aggrInt.(float64), nil
+		return aggr.(float64), nil
+	case string:
+		aggrInt, err := strconv.ParseInt(aggr.(string), 10, 64)
+		return float64(aggrInt), err
 	default:
 		return float64(0), errors.New("invalid aggregate value type")
 	}
@@ -597,6 +607,71 @@ func addExplanationsForPresentationLine(duReport *DashboardUnitReport) {
 	duReport.Explanations = explanations
 }
 
+func getFunnelConversionsFromResult(queryResult *QueryResult) ([]float64, float64) {
+	conversionIndexes := make([]int, 0, 0)
+	var overallIndex int
+	for i, col := range queryResult.Headers {
+		if strings.HasPrefix(col, FunnelConversionPrefix) {
+			if strings.HasSuffix(col, "overall") {
+				overallIndex = i
+			} else {
+				conversionIndexes = append(conversionIndexes, i)
+			}
+		}
+	}
+
+	conversions := make([]float64, 0, 0)
+	for _, i := range conversionIndexes {
+		conversion, _ := getAggrAsFloat64(queryResult.Rows[0][i])
+		conversions = append(conversions, conversion)
+	}
+	total, _ := getAggrAsFloat64(queryResult.Rows[0][overallIndex])
+
+	return conversions, total
+}
+
+func getEffect(prev float64, curr float64) string {
+	diffTotal := curr - prev
+	if diffTotal > 0 {
+		return effectIncrease
+	} else if diffTotal < 0 {
+		return effectDecrease
+	}
+
+	return effectEqual
+}
+
+func addExplanationsForPresentationFunnel(duReport *DashboardUnitReport) {
+	prevResult := duReport.Results[0].QueryResult
+	curResult := duReport.Results[1].QueryResult
+
+	prevConversions, prevTotal := getFunnelConversionsFromResult(&prevResult)
+	curConversions, curTotal := getFunnelConversionsFromResult(&curResult)
+
+	totalEffect := getEffect(prevTotal, curTotal)
+	if totalEffect == effectEqual {
+		return
+	}
+
+	explanations := make([]string, 0, 0)
+	explanations = append(explanations,
+		fmt.Sprintf("Total conversion %sd from %0.0f%% to %0.0f%%.", totalEffect, prevTotal, curTotal))
+
+	steps := curResult.Meta.Query.EventsWithProperties
+	for i := range curConversions {
+		convEffect := getEffect(prevConversions[i], curConversions[i])
+		if convEffect != totalEffect {
+			continue
+		}
+
+		explanations = append(explanations,
+			fmt.Sprintf("- %s to %s conversion %sd from %0.0f%% to %0.0f%%.",
+				steps[i].Name, steps[i+1].Name, convEffect, prevConversions[i], curConversions[i]))
+	}
+
+	duReport.Explanations = explanations
+}
+
 func addExplanationsByPresentation(duReport DashboardUnitReport) DashboardUnitReport {
 	if duReport.Presentation == "" || len(duReport.Results) < 2 {
 		return duReport
@@ -609,6 +684,8 @@ func addExplanationsByPresentation(duReport DashboardUnitReport) DashboardUnitRe
 		addExplanationsForPresentationBar(&duReport)
 	case PresentationLine:
 		addExplanationsForPresentationLine(&duReport)
+	case PresentationFunnel:
+		addExplanationsForPresentationFunnel(&duReport)
 	}
 
 	return duReport
