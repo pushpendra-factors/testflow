@@ -657,6 +657,12 @@ func addExplanationsForPresentationFunnel(duReport *DashboardUnitReport) {
 	explanations = append(explanations,
 		fmt.Sprintf("Total conversion %sd from %0.0f%% to %0.0f%%.", totalEffect, prevTotal, curTotal))
 
+	// one conversion is equal to total conversion.
+	if len(curConversions) == 1 {
+		duReport.Explanations = explanations
+		return
+	}
+
 	steps := curResult.Meta.Query.EventsWithProperties
 	for i := range curConversions {
 		convEffect := getEffect(prevConversions[i], curConversions[i])
