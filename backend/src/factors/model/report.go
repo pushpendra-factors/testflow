@@ -570,6 +570,12 @@ func addExplanationsForPresentationLine(duReport *DashboardUnitReport) {
 		duReport.Title, primaryExplanationPrefix))
 
 	secExplanations := make([]ReportExplanation, 0, 0)
+
+	if len(prevTimestamps) != len(curTimestamps) {
+		duReport.Explanations = explanations
+		return
+	}
+
 	for i := range curTimestamps {
 		curTimestamp := curTimestamps[i]
 		prevTimestamp := prevTimestamps[i]
@@ -658,7 +664,7 @@ func addExplanationsForPresentationFunnel(duReport *DashboardUnitReport) {
 		fmt.Sprintf("Total conversion %sd from %0.0f%% to %0.0f%%.", totalEffect, prevTotal, curTotal))
 
 	// one conversion is equal to total conversion.
-	if len(curConversions) == 1 {
+	if len(curConversions) == 1 || len(prevConversions) != len(curConversions) {
 		duReport.Explanations = explanations
 		return
 	}
