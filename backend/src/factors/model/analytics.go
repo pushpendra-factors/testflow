@@ -1061,17 +1061,10 @@ WITH
         ORDER BY real_user_id, step1, step2, step3
 	)
 	SELECT '$no_group' as group_key_0, '$no_group' as group_key_1, SUM(step1) as step1,
-    SUM(step2) as step2, SUM(step3) as step3,
-	ROUND((SUM(step2)::DECIMAL/SUM(step1)::DECIMAL) * 100) as conversion_step1_step2,
-	ROUND((SUM(step3)::DECIMAL/SUM(step2)::DECIMAL) * 100) as conversion_step2_step3,
-	ROUND((SUM(step3)::DECIMAL/SUM(step1)::DECIMAL) * 100) as conversion_overall from funnel
+    SUM(step2) as step2, SUM(step3) as step3 from funnel
 	UNION ALL
 	SELECT * FROM (
-		SELECT group_key_0, group_key_1, SUM(step1) as step1, SUM(step2) as step2, SUM(step3) as step3,
-		ROUND((SUM(step2)::DECIMAL/SUM(step1)::DECIMAL) * 100) as conversion_step1_step2,
-		ROUND((SUM(step3)::DECIMAL/SUM(step2)::DECIMAL) * 100) as conversion_step2_step3,
-		ROUND((SUM(step3)::DECIMAL/SUM(step1)::DECIMAL) * 100) as conversion_overall from funnel
-		group by group_key_0, group_key_1 order by step1 desc limit 10
+		SELECT group_key_0, group_key_1, SUM(step1) as step1, SUM(step2) as step2, SUM(step3) as step3 from funnel group by group_key_0, group_key_1 order by step1 desc limit 10
 	) AS group_funnel
 */
 func buildUniqueUsersFunnelQuery(projectId uint64, q Query) (string, []interface{}, error) {
@@ -1185,24 +1178,9 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q Query) (string, []interface
 		rawCountSelect = joinWithComma(rawCountSelect, fmt.Sprintf("SUM(%s) AS %s", fs, fs))
 	}
 
-	var aggrSelect string
-	for i, fs := range funnelSteps {
-		if i > 0 {
-			aggrSelect = appendStatement(aggrSelect,
-				fmt.Sprintf("ROUND((SUM(%s)::DECIMAL/SUM(%s)::DECIMAL) * 100) AS %s%s_%s,",
-					fs, funnelSteps[i-1], FunnelConversionPrefix, funnelSteps[i-1], fs))
-		}
-	}
-	// append overall conversion.
-	aggrSelect = appendStatement(aggrSelect,
-		fmt.Sprintf("ROUND((SUM(%s)::DECIMAL/SUM(%s)::DECIMAL) * 100) AS %soverall",
-			funnelSteps[len(funnelSteps)-1], funnelSteps[0], FunnelConversionPrefix))
-
-	aggrSelect = joinWithComma(rawCountSelect, aggrSelect)
-
 	var termStmnt string
 	if len(q.GroupByProperties) == 0 {
-		termStmnt = "SELECT" + " " + aggrSelect + " " + "FROM" + " " + funnelStepName
+		termStmnt = "SELECT" + " " + rawCountSelect + " " + "FROM" + " " + funnelStepName
 	} else {
 		// builds UNION ALL with overall conversion and grouped conversion.
 		noGroupAlias := "$no_group"
@@ -1213,11 +1191,11 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q Query) (string, []interface
 				groupKeysPlaceholder = groupKeysPlaceholder + ","
 			}
 		}
-		noGroupSelect := "SELECT" + " " + joinWithComma(groupKeysPlaceholder, aggrSelect) +
+		noGroupSelect := "SELECT" + " " + joinWithComma(groupKeysPlaceholder, rawCountSelect) +
 			" " + "FROM" + " " + funnelStepName
 
 		_, _, groupKeys := buildGroupKeys(q.GroupByProperties)
-		limitedGroupBySelect := "SELECT" + " " + joinWithComma(groupKeys, aggrSelect) + " " +
+		limitedGroupBySelect := "SELECT" + " " + joinWithComma(groupKeys, rawCountSelect) + " " +
 			"FROM" + " " + funnelStepName + " " + "GROUP BY" + " " + groupKeys + " " +
 			// limits result by count of step_1 to ResultsLimit.
 			fmt.Sprintf("ORDER BY %s DESC LIMIT %d", funnelSteps[0], ResultsLimit)
@@ -1395,6 +1373,79 @@ func translateNullToZeroOnFunnelResult(result *QueryResult) {
 			}
 		}
 	}
+}
+
+func getConversionPercentage(prevCount float64, curCount float64) float64 {
+	if prevCount == 0 {
+		return float64(0)
+	}
+
+	return (curCount / prevCount) * 100
+}
+
+func addStepConversionPercentageToFunnel(result *QueryResult) error {
+	if len(result.Rows) == 0 {
+		return errors.New("invalid funnel result")
+	}
+
+	stepIndexes := make([]int, 0, 0)
+	for i, header := range result.Headers {
+		if strings.HasPrefix(header, StepPrefix) {
+			stepIndexes = append(stepIndexes, i)
+		}
+	}
+
+	for ri := range result.Rows {
+		// add step conversions.
+		conversions := make([]interface{}, 0, 0)
+		for _, ci := range stepIndexes {
+			if ci == stepIndexes[0] {
+				continue
+			}
+
+			prevCount, err := getAggrAsFloat64(result.Rows[ri][ci-1])
+			if err != nil {
+				return err
+			}
+
+			curCount, err := getAggrAsFloat64(result.Rows[ri][ci])
+			if err != nil {
+				return err
+			}
+
+			conversion := getConversionPercentage(prevCount, curCount)
+			conversions = append(conversions, fmt.Sprintf("%0.0f", conversion))
+		}
+
+		// add overall conversion.
+		firstStepCount, err := getAggrAsFloat64(result.Rows[ri][stepIndexes[0]])
+		if err != nil {
+			return err
+		}
+
+		lastIndex := stepIndexes[len(stepIndexes)-1]
+		lastStepCount, err := getAggrAsFloat64(result.Rows[ri][lastIndex])
+		if err != nil {
+			return err
+		}
+
+		conversion := getConversionPercentage(firstStepCount, lastStepCount)
+		conversions = append(conversions, fmt.Sprintf("%0.0f", conversion))
+		result.Rows[ri] = append(result.Rows[ri], conversions...)
+	}
+
+	// add conversion headers.
+	conversionStrs := make([]string, 0, 0)
+	for _, si := range stepIndexes {
+		if si > stepIndexes[0] {
+			conversionStrs = append(conversionStrs, fmt.Sprintf("%s%s_%s",
+				FunnelConversionPrefix, result.Headers[si-1], result.Headers[si]))
+		}
+	}
+	conversionStrs = append(conversionStrs, fmt.Sprintf("%s%s", FunnelConversionPrefix, "overall"))
+	result.Headers = append(result.Headers, conversionStrs...)
+
+	return nil
 }
 
 // Limits results by left and right keys. Assumes result is already
@@ -1741,6 +1792,12 @@ func RunFunnelQuery(projectId uint64, query Query) (*QueryResult, int, string) {
 
 	// should be done before translation of group keys
 	translateNullToZeroOnFunnelResult(result)
+
+	err = addStepConversionPercentageToFunnel(result)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed adding funnel step conversion percentage.")
+		return nil, http.StatusInternalServerError, ErrMsgQueryProcessingFailure
+	}
 
 	err = translateGroupKeysIntoColumnNames(result, query.GroupByProperties)
 	if err != nil {
