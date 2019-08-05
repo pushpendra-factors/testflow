@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import { connect } from "react-redux";
 import { bindActionCreators } from 'redux';
 import { Redirect, Route, Switch } from 'react-router-dom';
-import { Container } from 'reactstrap';
+import { Container, Button } from 'reactstrap';
 import {
   AppHeader,
   AppSidebar,
@@ -18,7 +18,6 @@ import {routes, internalRoutes}  from '../../routes';
 import DefaultHeader from './DefaultHeader';
 import {
   fetchProjects,
-  fetchProjectEvents, 
   fetchProjectModels
 } from "../../actions/projectsActions";
 import Loading from '../../loading';
@@ -48,7 +47,6 @@ const mapStateToProps = store => {
 const mapDispatchToProps = dispatch => {
   return bindActionCreators({ 
     fetchProjects,
-    fetchProjectEvents, 
     fetchProjectModels,
     fetchAgentInfo,
     fetchAgentBillingAccount
@@ -66,7 +64,9 @@ class DefaultLayout extends Component {
       agent: {
         loaded: false,
         error: null
-      }
+      },
+      showSetupProjectNotification: false,
+      showSetupProjectModal: false,
     }
   }
 
@@ -159,7 +159,7 @@ class DefaultLayout extends Component {
   }
 
   isAgentLoggedIn(){
-    return this.props.isAgentLoggedIn
+    return this.props.isAgentLoggedIn;
   }
 
   getAgentName = () => {
@@ -167,7 +167,7 @@ class DefaultLayout extends Component {
       && this.props.agent.first_name) ? this.props.agent.first_name : '';
   }
 
-  renderProjectsDropdown(){    
+  renderProjectsDropdown() {    
     const selectableProjects = Array.from(
       Object.values(this.props.projects), 
       // selectable_projects object structure.
@@ -181,7 +181,10 @@ class DefaultLayout extends Component {
         changeViewToUserProfile={this.changeViewToUserProfile}
         getProfileName={this.getAgentName} 
         currentAgent={this.props.agent}
-      /> 
+        showSetupProjectNotification={this.showSetupProjectNotification}
+        showSetupProjectModal={this.state.showSetupProjectModal}
+        closeSetupProjectModal={this.closeSetupProjectModal}
+      />
     }
 
     return <DefaultHeader
@@ -195,12 +198,38 @@ class DefaultLayout extends Component {
       }}
       getProfileName={this.getAgentName}
       currentAgent={this.props.agent}
-      eventNames={this.props.eventNames}
+      showSetupProjectNotification={this.showSetupProjectNotification}
+      showSetupProjectModal={this.state.showSetupProjectModal}
+      closeSetupProjectModal={this.closeSetupProjectModal}
     />
   }
 
   showInternalSideBarItems(){
     return isFromFactorsDomain(this.props.agent.email);
+  }
+
+  renderSetupProjectNotification() {
+    if (!this.state.showSetupProjectNotification) return null;
+  
+    return (
+      <div style={{ width: '105%', textAlign: 'center', background: '#6610f2', margin: '0 -30px', fontSize: '13px', fontWeight: '700', background: '#6f42c1', color: '#FFF' }}>
+        Please complete setting up your project to use FactorsAI.
+        <Button color='warning' style={{ margin: '5px', marginLeft: '10px', padding: '1px 7px', fontSize: '12px' }} 
+          onClick={() => { this.toggleSetupProjectModal(); factorsai.track('clicked_complete_project_setup') }}>Setup Project</Button>
+      </div>
+    );
+  }
+
+  showSetupProjectNotification = (value) => {
+    this.setState({ showSetupProjectNotification: value });
+  }
+
+  toggleSetupProjectModal = () => {
+    this.setState({ showSetupProjectModal: !this.state.showSetupProjectModal });
+  }
+
+  closeSetupProjectModal = () => {
+    this.setState({ showSetupProjectModal: false });
   }
 
   render() {
@@ -224,10 +253,11 @@ class DefaultLayout extends Component {
             <AppSidebarNav navConfig={sideBarItemsToDisplay} {...this.props} />
           </AppSidebar>
           <main className="main fapp-main">
-          <AppHeader className="fapp-header" fixed>
-            {this.renderProjectsDropdown()} 
-          </AppHeader>
+            <AppHeader className="fapp-header" fixed>
+              { this.renderProjectsDropdown() }
+            </AppHeader>
             <Container className='fapp-right-pane' fluid>
+              { this.renderSetupProjectNotification() }
               <Switch>
                 {
                   routes.map((route, idx) => {

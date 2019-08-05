@@ -63,6 +63,7 @@ const mapStateToProps = store => {
   return {
     billingAccount: store.agents.billing.billingAccount,
     accountPlan: store.agents.billing.plan,
+    eventNames: store.projects.currentProjectEventNames,
   }
 }
 
@@ -116,10 +117,15 @@ class DefaultHeader extends Component {
               }
             }, EVENT_POLL_INTERVAL)
           }
+          
+          this.props.showSetupProjectNotification(true);
+        } else {
+          this.props.showSetupProjectNotification(false);
         }
+
         if (this.projectHasEvents()) {
           factorsai.addUserProperties({"activationState": "seenProjectWithEvents"})
-       }
+        }
       })
       .catch(console.debug);
   }
@@ -234,6 +240,7 @@ class DefaultHeader extends Component {
   }
 
   toggleAddProjectModal = () => {
+    this.props.closeSetupProjectModal();
     this.setState((pState) => {
       let state = { showAddProjectModal: !pState.showAddProjectModal }
       if (!state.showAddProjectModal) {
@@ -309,7 +316,7 @@ class DefaultHeader extends Component {
 
   renderSetupProjectModal() {
     return (
-      <Modal isOpen={this.state.showAddProjectModal} toggle={this.toggleAddProjectModal} style={{ marginTop: "3rem", minWidth: "52rem" }}>
+      <Modal isOpen={this.state.showAddProjectModal || this.props.showSetupProjectModal} toggle={this.toggleAddProjectModal} style={{ marginTop: "3rem", minWidth: "52rem" }}>
         <ModalHeader toggle={this.toggleAddProjectModal}>Setup your project (3 Steps)</ModalHeader>
         <ModalBody style={{ height: "40rem", padding: "10px 40px", overflow: "scroll" }}>
           <h5 style={{ margin: "15px 0", fontWeight: "500", fontSize: "15px", color: "#444" }}>
