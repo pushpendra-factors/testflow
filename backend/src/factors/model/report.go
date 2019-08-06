@@ -85,9 +85,15 @@ type Interval struct {
 }
 
 type ReportExplanation struct {
-	Percentage  float64
-	Effect      string
-	Attribution string
+	Percentage   float64
+	Effect       string
+	CurValue     float64
+	PrevValue    float64
+	Diff         float64
+	Type         string
+	GroupName    string
+	GroupValue   string
+	TimestampStr string
 }
 
 const effectIncrease = "increase"
@@ -361,18 +367,31 @@ func getPercentageChange(prevCount float64, curCount float64) (float64, string) 
 	return percentChange, effect
 }
 
-func explainPercentageChange(percentChange float64, effect string,
-	attribution string, prefix string) string {
+func explainTotalChange(percentage float64, effect, title, from, to string) string {
+	return fmt.Sprintf("Total %0.0f%% %s in %s from week %s to week %s.", percentage, effect, title, from, to)
+}
 
-	return fmt.Sprintf("%s %0.0f%% %s in %s.", prefix, percentChange, effect, attribution)
+func explainChange(exp *ReportExplanation) string {
+	// No.of users with $property as $value increased from 10 to 20 (50%).
+	expStr := fmt.Sprintf("- No.of %s with %s as %s has %sd from %0.0f to %0.0f (%0.0f%%)",
+		exp.Type, exp.GroupName, exp.GroupValue, exp.Effect, exp.PrevValue, exp.CurValue, exp.Percentage)
+
+	if exp.TimestampStr != "" {
+		expStr = expStr + " " + fmt.Sprintf("on %s", exp.TimestampStr)
+	}
+
+	return expStr + "."
 }
 
 func addExplanationsForPresentationCard(duReport *DashboardUnitReport) {
 	prevCount, _ := getAggrAsFloat64(duReport.Results[0].QueryResult.Rows[0][0])
 	curCount, _ := getAggrAsFloat64(duReport.Results[1].QueryResult.Rows[0][0])
 
+	fromWeek := getReadableIntervalFromUnix(duReport.Results[0].StartTime, duReport.Results[0].EndTime)
+	toWeek := getReadableIntervalFromUnix(duReport.Results[1].StartTime, duReport.Results[1].EndTime)
+
 	percentChange, effect := getPercentageChange(prevCount, curCount)
-	duReport.Explanations = []string{explainPercentageChange(percentChange, effect, duReport.Title, primaryExplanationPrefix)}
+	duReport.Explanations = []string{explainTotalChange(percentChange, effect, duReport.Title, fromWeek, toWeek)}
 }
 
 func getAggrByGroup(queryResult *QueryResult,
@@ -399,7 +418,7 @@ func getAggrByGroup(queryResult *QueryResult,
 
 func sortAndLimitExplanations(explanations []ReportExplanation) []ReportExplanation {
 	sort.SliceStable(explanations, func(i, j int) bool {
-		return explanations[i].Percentage > explanations[j].Percentage
+		return explanations[i].Diff < explanations[j].Diff
 	})
 
 	if len(explanations) < explanationsLimit {
@@ -409,9 +428,25 @@ func sortAndLimitExplanations(explanations []ReportExplanation) []ReportExplanat
 	return explanations[:explanationsLimit]
 }
 
+func getEntityFromQueryType(queryType string) string {
+	if queryType == QueryTypeEventsOccurrence {
+		return "occurrences"
+	}
+
+	if queryType == QueryTypeUniqueUsers {
+		return "users"
+	}
+
+	return ""
+}
+
 func addExplanationsForPresentationBar(duReport *DashboardUnitReport) {
 	prevResult := duReport.Results[0].QueryResult
 	curResult := duReport.Results[1].QueryResult
+	resultEntity := getEntityFromQueryType(duReport.Results[1].QueryResult.Meta.Query.Type)
+
+	fromWeek := getReadableIntervalFromUnix(duReport.Results[0].StartTime, duReport.Results[0].EndTime)
+	toWeek := getReadableIntervalFromUnix(duReport.Results[1].StartTime, duReport.Results[1].EndTime)
 
 	uniqueGroupsSet := make(map[string]bool)
 	prevAggrByGroup, prevResultTotal, prevResultGroupName := getAggrByGroup(&prevResult, &uniqueGroupsSet)
@@ -424,8 +459,8 @@ func addExplanationsForPresentationBar(duReport *DashboardUnitReport) {
 
 	explanations := make([]string, 0, 0)
 	percentChange, totalEffect := getPercentageChange(prevResultTotal, curResultTotal)
-	explanations = append(explanations, explainPercentageChange(percentChange, totalEffect,
-		duReport.Title, primaryExplanationPrefix))
+	explanations = append(explanations, explainTotalChange(percentChange, totalEffect,
+		duReport.Title, fromWeek, toWeek))
 
 	secExplanations := make([]ReportExplanation, 0, 0)
 	for group := range uniqueGroupsSet {
@@ -441,15 +476,16 @@ func addExplanationsForPresentationBar(duReport *DashboardUnitReport) {
 
 		percentChange, effect := getPercentageChange(prevAggr, curAggr)
 		if percentChange >= 5.0 && effect == totalEffect {
-			secExplanations = append(secExplanations, ReportExplanation{Percentage: percentChange, Effect: effect,
-				Attribution: fmt.Sprintf("%s %s", curResultGroupName, group)})
+			secExplanations = append(secExplanations,
+				ReportExplanation{Type: resultEntity, Percentage: percentChange, Effect: effect,
+					GroupName: curResultGroupName, GroupValue: group, Diff: curAggr - prevAggr,
+					CurValue: curAggr, PrevValue: prevAggr})
 		}
 	}
 
 	secExplanations = sortAndLimitExplanations(secExplanations)
 	for _, explanation := range secExplanations {
-		explanations = append(explanations, explainPercentageChange(explanation.Percentage,
-			explanation.Effect, explanation.Attribution, secondaryExplanationPrefix))
+		explanations = append(explanations, explainChange(&explanation))
 	}
 
 	duReport.Explanations = explanations
@@ -518,7 +554,7 @@ func getAggrByTimestampAndGroup(queryResult *QueryResult,
 				if displayGroupValue == "" {
 					displayGroupValue = colValue
 				} else {
-					displayGroupValue = groupValue + " / " + colValue
+					displayGroupValue = displayGroupValue + " / " + colValue
 				}
 			}
 		}
@@ -531,9 +567,14 @@ func getAggrByTimestampAndGroup(queryResult *QueryResult,
 	return aggrByTimestampAndGroup, timestamps, totalAggr
 }
 
-func getDayFromTimestampStr(timestampStr string) string {
+func getReadableTimestampWithDay(timestampStr string) string {
 	timestamp, _ := time.Parse(time.RFC3339, timestampStr)
-	return fmt.Sprintf("%s (%s)", timestamp.Weekday().String(), timestamp.Format("Jan 02"))
+	return fmt.Sprintf("%s (%s)", timestamp.Format("Jan 02"), timestamp.Weekday().String())
+}
+
+func getReadableTimestamp(timestampStr string) string {
+	timestamp, _ := time.Parse(time.RFC3339, timestampStr)
+	return timestamp.Format("Jan 02")
 }
 
 // getTotalAggrForUniqueUsersQuery - Runs same query without group by timestamp.
@@ -551,9 +592,27 @@ func getTotalAggrForUniqueUsersQuery(projectId uint64, uuQuery Query) float64 {
 	return total
 }
 
+func getGroupNameForPresentationLine(query Query) string {
+	var groupName string
+	for i, group := range query.GroupByProperties {
+		if i > 0 {
+			groupName = groupName + " / "
+		}
+
+		groupName = groupName + group.Property
+	}
+
+	return groupName
+}
+
 func addExplanationsForPresentationLine(duReport *DashboardUnitReport) {
 	prevResult := duReport.Results[0].QueryResult
 	curResult := duReport.Results[1].QueryResult
+	resultEntity := getEntityFromQueryType(duReport.Results[1].QueryResult.Meta.Query.Type)
+	groupName := getGroupNameForPresentationLine(duReport.Results[1].QueryResult.Meta.Query)
+
+	fromWeek := getReadableIntervalFromUnix(duReport.Results[0].StartTime, duReport.Results[0].EndTime)
+	toWeek := getReadableIntervalFromUnix(duReport.Results[1].StartTime, duReport.Results[1].EndTime)
 
 	uniqueGroupsSet := make(map[string]string)
 	prevAggrMap, prevTimestamps, prevTotal := getAggrByTimestampAndGroup(&prevResult, &uniqueGroupsSet)
@@ -566,8 +625,8 @@ func addExplanationsForPresentationLine(duReport *DashboardUnitReport) {
 
 	explanations := make([]string, 0, 0)
 	percentChange, totalEffect := getPercentageChange(prevTotal, curTotal)
-	explanations = append(explanations, explainPercentageChange(percentChange, totalEffect,
-		duReport.Title, primaryExplanationPrefix))
+	explanations = append(explanations, explainTotalChange(percentChange, totalEffect,
+		duReport.Title, fromWeek, toWeek))
 
 	secExplanations := make([]ReportExplanation, 0, 0)
 
@@ -598,16 +657,17 @@ func addExplanationsForPresentationLine(duReport *DashboardUnitReport) {
 
 			percentChange, effect := getPercentageChange(prevAggr, curAggr)
 			if percentChange >= 5.0 && effect == totalEffect {
-				secExplanations = append(secExplanations, ReportExplanation{Percentage: percentChange, Effect: effect,
-					Attribution: fmt.Sprintf("%s last %s", displayGroup, getDayFromTimestampStr(curTimestamp))})
+				secExplanations = append(secExplanations,
+					ReportExplanation{Type: resultEntity, Percentage: percentChange, Effect: effect,
+						Diff: curAggr - prevAggr, CurValue: curAggr, PrevValue: prevAggr, GroupName: groupName,
+						GroupValue: displayGroup, TimestampStr: getReadableTimestampWithDay(curTimestamp)})
 			}
 		}
 	}
 
 	secExplanations = sortAndLimitExplanations(secExplanations)
 	for _, explanation := range secExplanations {
-		explanations = append(explanations, explainPercentageChange(explanation.Percentage,
-			explanation.Effect, explanation.Attribution, secondaryExplanationPrefix))
+		explanations = append(explanations, explainChange(&explanation))
 	}
 
 	duReport.Explanations = explanations
@@ -839,4 +899,12 @@ func (r *Report) GetHTMLContent() string {
 
 func unixToHumanTime(timestamp int64) string {
 	return time.Unix(timestamp, 0).UTC().Format(time.RFC3339)
+}
+
+func unixToReadableDate(timestamp int64) string {
+	return time.Unix(timestamp, 0).UTC().Format("Jan 02")
+}
+
+func getReadableIntervalFromUnix(from, to int64) string {
+	return unixToReadableDate(from) + "-" + unixToReadableDate(to)
 }
