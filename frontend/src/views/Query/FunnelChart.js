@@ -19,10 +19,17 @@ class FunnelChart extends Component {
 
       for (let i=0; i<stepsIndexes.length; i++) {
         let data = null;
-        if (i == 0) data = [rows[ri][stepsIndexes[0]], 0];
+        if (i == 0) {
+          if (rows[ri][stepsIndexes[0]] == 0) {
+            data = [0, 1];
+          } 
+          else {
+            data = [rows[ri][stepsIndexes[0]], 0];
+          }
+        }
         else {
           if (rows[ri][stepsIndexes[i-1]] == 0) {
-            data = [0, 1]
+            data = [0, 1];
           } else {
             data = [rows[0][stepsIndexes[i]], [rows[ri][stepsIndexes[i-1]] - rows[ri][stepsIndexes[i]]]]
           }
