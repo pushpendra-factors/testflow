@@ -99,7 +99,7 @@ type ReportExplanation struct {
 const effectIncrease = "increase"
 const effectDecrease = "decrease"
 const effectEqual = "equal"
-const explanationsLimit = 5
+const explanationsLimit = 3
 const primaryExplanationPrefix = "Total"
 const secondaryExplanationPrefix = "-"
 
@@ -372,9 +372,15 @@ func explainTotalChange(percentage float64, effect, title, from, to string) stri
 }
 
 func explainChange(exp *ReportExplanation) string {
-	// No.of users with $property as $value increased from 10 to 20 (50%).
-	expStr := fmt.Sprintf("- No.of %s with %s as %s %sd from %0.0f to %0.0f (%0.0f%%)",
-		exp.Type, exp.GroupName, exp.GroupValue, exp.Effect, exp.PrevValue, exp.CurValue, exp.Percentage)
+
+	expStr := fmt.Sprintf("- No.of %s", exp.Type)
+
+	if exp.GroupName != "" && exp.GroupValue != "" {
+		expStr = expStr + " " + fmt.Sprintf("with %s as %s", exp.GroupName, exp.GroupValue)
+	}
+
+	expStr = expStr + " " + fmt.Sprintf("%sd from %0.0f to %0.0f (%0.0f%%)",
+		exp.Effect, exp.PrevValue, exp.CurValue, exp.Percentage)
 
 	if exp.TimestampStr != "" {
 		expStr = expStr + " " + fmt.Sprintf("on %s", exp.TimestampStr)
