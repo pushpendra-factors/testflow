@@ -113,7 +113,6 @@ const CardUnit = (props) => {
               <span> 
                 { readableTimstamp(props.intervalBeforeThat.st) + " - " + readableTimstamp(props.intervalBeforeThat.et) } 
               </span>
-              <div style={{ fontSize: '12px', color: '#999' }}>Week before last</div>
             </div>
             <div style={{ fontSize: '40px', marginBottom: '12px' }}>
               <span> { intervalBeforeVal } </span>
@@ -125,7 +124,6 @@ const CardUnit = (props) => {
               <span> 
                 { readableTimstamp(props.interval.st) + " - " + readableTimstamp(props.interval.et) } 
               </span>
-              <div style={{ fontSize: '12px', color: '#999' }}>Last Week</div>
             </div>
             <div style={{ fontSize: '40px', marginBottom: '12px' }}>
               <span> { intervalVal } </span>

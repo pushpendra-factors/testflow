@@ -373,7 +373,7 @@ func explainTotalChange(percentage float64, effect, title, from, to string) stri
 
 func explainChange(exp *ReportExplanation) string {
 	// No.of users with $property as $value increased from 10 to 20 (50%).
-	expStr := fmt.Sprintf("- No.of %s with %s as %s has %sd from %0.0f to %0.0f (%0.0f%%)",
+	expStr := fmt.Sprintf("- No.of %s with %s as %s %sd from %0.0f to %0.0f (%0.0f%%)",
 		exp.Type, exp.GroupName, exp.GroupValue, exp.Effect, exp.PrevValue, exp.CurValue, exp.Percentage)
 
 	if exp.TimestampStr != "" {
