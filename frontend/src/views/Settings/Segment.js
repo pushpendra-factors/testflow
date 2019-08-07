@@ -83,24 +83,17 @@ class Segment extends Component {
         color: '#BBB', 
         fontSize: '20px', 
         textAlign: 'center', 
-        paddingTop: '110px', 
-        paddingBottom: '130px'
+        paddingTop: '60px', 
+        paddingBottom: '60px'
       }
       return <CardBody style={style}> Integration is disabled </CardBody>
     }
 
-    let segmentWebhookURL = this.getSegmentWebhookURL();
     let segmentPrivateToken = this.getPrivateToken();
     return (
-      <CardBody>
-        <div style={{marginBottom: '25px'}}>
-          <span className='fapp-label'>Webhook URL</span>
-          <Input className='fapp-input' defaultValue={segmentWebhookURL}/>
-        </div>
-        <div>
-          <span className='fapp-label'>API Key</span>
-          <Input className='fapp-input' defaultValue={segmentPrivateToken}/>
-        </div>
+      <CardBody style={{ padding: '2.5rem 2.5rem' }}>
+        <p><strong>API Key: </strong>{segmentPrivateToken}</p>
+        Copy the API Key and Follow the <a target='_blank' href='https://www.factors.ai/integrations/segment'>link</a> for instructions. 
       </CardBody>
     ); 
   }
@@ -108,7 +101,7 @@ class Segment extends Component {
   renderCard() {
     return (
       <Card className='fapp-bordered-card'>
-        <div className={!this.props.cardOnly ? 'fapp-block-shadow' : null}>
+        <div>
           <CardHeader className='fapp-button-header' style={{ marginBottom: '0' }}>
             <strong>Segment</strong>
             <div style={{display: 'inline-block', float: 'right'}}>
@@ -127,13 +120,12 @@ class Segment extends Component {
   
   render() {
     if (!this.isLoaded()) return <Loading />;
-
     if (this.props.cardOnly) return this.renderCard();
 
     return (
-      <Col md={{ size:6, offset:3 }} className='fapp-content fapp-content-margin' style={{ padding: '5rem' }}>
+      <div className='fapp-content fapp-content-margin'>
         { this.renderCard() }
-      </Col>
+      </div>
     )
   }
 }

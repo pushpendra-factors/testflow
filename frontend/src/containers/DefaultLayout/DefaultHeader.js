@@ -363,7 +363,7 @@ class DefaultHeader extends Component {
           <TabContent activeTab={this.state.activeTab}>
             <TabPane style={{ padding: "30px", paddingBottom: "0" }} tabId="1"><JsSdk cardOnly /></TabPane>
             <TabPane style={{ padding: "30px", paddingBottom: "0" }} tabId="2"><AndroidSdk cardOnly /></TabPane> 
-            <TabPane style={{ padding: "70px", paddingBottom: "30px" }} tabId="3"><Segment cardOnly /></TabPane>
+            <TabPane style={{ padding: "30px", paddingBottom: "0" }} tabId="3"><Segment cardOnly /></TabPane>
           </TabContent>
 
           <hr style={{ margin: "30px -40px" }} />
