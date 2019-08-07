@@ -139,6 +139,10 @@ class DefaultLayout extends Component {
         "Project Id": this.props.currentProjectId,
         "Project Name": this.props.projects[this.props.currentProjectId].name,
       });
+
+      factorsai.addUserProperties({
+        projectId: this.props.currentProjectId,
+      });
     }
   }
 
