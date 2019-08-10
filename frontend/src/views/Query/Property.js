@@ -16,7 +16,7 @@ import {
 } from '../../actions/projectsActions';
 import { makeSelectOpts, createSelectOpts, getSelectedOpt, 
   makeSelectOpt, QUERY_TYPE_ANALYTICS } from "../../util";
-import { PROPERTY_VALUE_NONE, PROPERTY_TYPE_OPTS, 
+import { PROPERTY_VALUE_NONE, PROPERTY_TYPE_OPTS, PROPERTY_LOGICAL_OP_OPTS,
   getDateRangeFromStoredDateRange } from "./common";
 
 const TYPE_NUMERICAL = 'numerical';
@@ -37,6 +37,8 @@ const NUMERICAL_OPERATOR_OPTS = {
 const CATEGORICAL_OPERATORS_OPTS = {
   'equals': '=',
   'notEqual': '!=',
+  'contains': 'contains',
+  'notContains': 'not contains',
 }
 
 const DEFAULT_DATE_RANGE_LABEL = 'Last 7 days';
@@ -305,7 +307,7 @@ class Property extends Component {
     let optSrc = this.state.valueType == TYPE_NUMERICAL ? NUMERICAL_OPERATOR_OPTS : CATEGORICAL_OPERATORS_OPTS;
 
     return (
-      <div style={{display: "inline-block", width: "65px", marginLeft: "10px"}} className='fapp-select light'>
+      <div style={{display: "inline-block", width: "130px", marginLeft: "10px"}} className='fapp-select light'>
         <Select 
           onChange={this.props.onOpChange}
           options={createSelectOpts(optSrc)}
@@ -315,22 +317,29 @@ class Property extends Component {
     );
   }
 
-  isAndJoin() {
+  isCondRequired() {
     return this.props.index > 0
   }
 
-  getJoinStr() {
-    return this.isAndJoin() ? "and" : "with";
-  }
-
   render() {
-    return <Row style={{marginBottom: "15px"}}>
+    return <Row style={{ marginBottom: "15px" }}>
       <Col xs='12' md='12'>
-        <span style={LABEL_STYLE}> { this.getJoinStr() } </span>
-        <div style={{display: "inline-block", width: "150px", marginLeft: this.isAndJoin() ? "5px" : null}} className='fapp-select light'>
+        {
+          !this.isCondRequired() ? <span style={LABEL_STYLE}> with </span> : (
+            <div style={{display: "inline-block", width: "75px"}} className='fapp-select light'>
+              <Select
+                onChange={this.props.onLogicalOpChange}
+                options={createSelectOpts(PROPERTY_LOGICAL_OP_OPTS)}
+                placeholder="Select Op"
+                value={getSelectedOpt(this.props.propertyState.logicalOp, PROPERTY_LOGICAL_OP_OPTS)}
+              />
+            </div>
+          )
+        }
+        <div style={{display: "inline-block", width: "150px", marginLeft: this.isCondRequired() ? '10px' : null }} className='fapp-select light'>
           <Select
             onChange={this.props.onEntityChange}
-            options={createSelectOpts(PROPERTY_TYPE_OPTS)}
+            options={createSelectOpts(PROPERTY_TYPE_OPTS)} 
             placeholder="Select Type"
             value={getSelectedOpt(this.props.propertyState.entity, PROPERTY_TYPE_OPTS)}
           />

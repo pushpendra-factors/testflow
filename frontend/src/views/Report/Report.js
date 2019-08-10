@@ -148,10 +148,10 @@ const FunnelUnit = (props) => {
       <CardBody style={{ marginBottom: '30px' }}>
         <Row>
           <Col md={6}>
-            <FunnelChart queryResult={prevResult} noMargin /> 
+            <FunnelChart queryResult={prevResult} noMargin small /> 
           </Col>
           <Col md={6}>
-            <FunnelChart queryResult={curResult} noMargin />
+            <FunnelChart queryResult={curResult} noMargin small />
           </Col>
         </Row>
       </CardBody>

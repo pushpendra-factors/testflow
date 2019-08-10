@@ -74,7 +74,7 @@ class DashboardUnit extends Component {
     }
 
     if (this.props.data.presentation == PRESENTATION_FUNNEL) {
-      presentation = <FunnelChart queryResult={result} />
+      presentation = <FunnelChart queryResult={result} small />
     }
 
     this.setState({ presentation: presentation });

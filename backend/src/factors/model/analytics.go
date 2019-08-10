@@ -19,10 +19,11 @@ type QueryProperty struct {
 	// Entity: user or event.
 	Entity string `json:"en"`
 	// Type: categorical or numerical
-	Type     string `json:"ty"`
-	Property string `json:"pr"`
-	Operator string `json:"op"`
-	Value    string `json:"va"`
+	Type      string `json:"ty"`
+	Property  string `json:"pr"`
+	Operator  string `json:"op"`
+	Value     string `json:"va"`
+	LogicalOp string `json:"lop"`
 }
 
 type QueryGroupByProperty struct {
@@ -117,6 +118,8 @@ var queryOps = map[string]string{
 	"lesserThan":         "<",
 	"greaterThanOrEqual": ">=",
 	"lesserThanOrEqual":  "<=",
+	"contains":           "LIKE",
+	"notContains":        "NOT LIKE",
 }
 
 func with(stmnt string) string {
@@ -161,8 +164,11 @@ func decodeDateTimeValue(dateTimeJson string) (int64, int64, error) {
 	return dateTimeProperty.From, dateTimeProperty.To, nil
 }
 
-func buildWhereFromProperties(mergeCond string,
-	properties []QueryProperty) (rStmnt string, rParams []interface{}, err error) {
+func isValidLogicalOp(op string) bool {
+	return op == "AND" || op == "OR"
+}
+
+func buildWhereFromProperties(properties []QueryProperty) (rStmnt string, rParams []interface{}, err error) {
 
 	pLen := len(properties)
 	if pLen == 0 {
@@ -171,6 +177,15 @@ func buildWhereFromProperties(mergeCond string,
 
 	rParams = make([]interface{}, 0, 0)
 	for i, p := range properties {
+		// defaults logic op if not given.
+		if p.LogicalOp == "" {
+			p.LogicalOp = "AND"
+		}
+
+		if !isValidLogicalOp(p.LogicalOp) {
+			return rStmnt, rParams, errors.New("invalid logical op on where condition")
+		}
+
 		propertyEntity := getPropertyEntityField(p.Entity)
 		propertyOp := getOp(p.Operator)
 
@@ -186,14 +201,21 @@ func buildWhereFromProperties(mergeCond string,
 				}
 				rParams = append(rParams, p.Property, start, p.Property, end)
 			} else {
-				pStmnt = fmt.Sprintf("%s->>?%s?", propertyEntity, propertyOp)
-				rParams = append(rParams, p.Property, p.Value)
+				var pValue string
+				if p.Operator == "contains" || p.Operator == "notContains" {
+					pValue = fmt.Sprintf("%%%s%%", p.Value)
+				} else {
+					pValue = p.Value
+				}
+
+				pStmnt = fmt.Sprintf("%s->>? %s ?", propertyEntity, propertyOp)
+				rParams = append(rParams, p.Property, pValue)
 			}
 
 			if i == 0 {
 				rStmnt = pStmnt
 			} else {
-				rStmnt = fmt.Sprintf("%s %s %s", rStmnt, mergeCond, pStmnt)
+				rStmnt = fmt.Sprintf("%s %s %s", rStmnt, p.LogicalOp, pStmnt)
 			}
 
 			continue
@@ -213,7 +235,7 @@ func buildWhereFromProperties(mergeCond string,
 		if i == 0 {
 			rStmnt = whereCond
 		} else {
-			rStmnt = fmt.Sprintf("%s %s %s", rStmnt, mergeCond, whereCond)
+			rStmnt = fmt.Sprintf("%s %s %s", rStmnt, p.LogicalOp, whereCond)
 		}
 
 		rParams = append(rParams, p.Property, p.Property)
@@ -345,7 +367,7 @@ func addFilterEventsWithPropsQuery(projectId uint64, qStmnt *string, qParams *[]
 	*qParams = append(*qParams, to, projectId, qep.Name)
 
 	// mergeCond for whereProperties can also be 'OR'.
-	wStmnt, wParams, err := buildWhereFromProperties("AND", qep.Properties)
+	wStmnt, wParams, err := buildWhereFromProperties(qep.Properties)
 	if err != nil {
 		return err
 	}

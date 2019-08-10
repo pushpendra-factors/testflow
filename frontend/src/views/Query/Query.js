@@ -20,7 +20,7 @@ import TableBarChart from './TableBarChart';
 import FunnelChart from './FunnelChart';
 import { PRESENTATION_BAR, PRESENTATION_LINE, PRESENTATION_TABLE, 
   PRESENTATION_CARD, PRESENTATION_FUNNEL, PROPERTY_TYPE_EVENT,
-  getDateRangeFromStoredDateRange } from './common';
+  getDateRangeFromStoredDateRange, PROPERTY_LOGICAL_OP_OPTS} from './common';
 import { 
   fetchProjectEvents,
   runQuery,
@@ -348,8 +348,9 @@ class Query extends Component {
   }
 
   getDefaultPropertyState() {
-    let keys = Object.keys(PROPERTY_TYPE_OPTS)
-    return { entity: keys[0],  name: '', op: 'equals', value: '', valueType: '' };
+    let entities = Object.keys(PROPERTY_TYPE_OPTS);
+    let logicalOps = Object.keys(PROPERTY_LOGICAL_OP_OPTS);
+    return { entity: entities[0],  name: '', op: 'equals', value: '', valueType: '', logicalOp: logicalOps[0] };
   }
 
   addProperty(eventIndex) {
@@ -373,6 +374,10 @@ class Query extends Component {
 
   onPropertyEntityChange = (eventIndex, propertyIndex, value) => {
     this.setPropertyAttr(eventIndex, propertyIndex, 'entity', value)
+  }
+
+  onPropertyLogicalOpChange = (eventIndex, propertyIndex, value) => {
+    this.setPropertyAttr(eventIndex, propertyIndex, 'logicalOp', value)
   }
 
   onPropertyNameChange = (eventIndex, propertyIndex, value) => {
@@ -509,6 +514,7 @@ class Query extends Component {
             cProperty.op = property.op;
             cProperty.va = property.value;
             cProperty.ty = property.valueType;
+            cProperty.lop = property.logicalOp;
 
             // update datetime with current time window if ovp is true.
             if (property.valueType == PROPERTY_VALUE_TYPE_DATE_TIME) {
@@ -822,6 +828,7 @@ class Query extends Component {
           // property handlers.
           onAddProperty={() => this.addProperty(i)}
           onPropertyEntityChange={this.onPropertyEntityChange}
+          onPropertyLogicalOpChange={this.onPropertyLogicalOpChange}
           onPropertyNameChange={this.onPropertyNameChange}
           onPropertyOpChange={this.onPropertyOpChange}
           onPropertyValueChange={this.onPropertyValueChange}

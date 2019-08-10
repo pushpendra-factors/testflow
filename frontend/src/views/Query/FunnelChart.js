@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import { Table } from 'reactstrap';
 
 import Funnel from './Funnel';
+import SmallFunnel from './SmallFunnel';
 
 class FunnelChart extends Component {
   constructor(props) {
@@ -45,7 +46,10 @@ class FunnelChart extends Component {
       }
 
       let totalConversionIndex = conversionIndexes[conversionIndexes.length - 1];
-      funnels.push(<Funnel data={{ funnels: funnelData, totalConversion: rows[ri][totalConversionIndex] }} />);
+      
+      let elemData = { funnels: funnelData, totalConversion: rows[ri][totalConversionIndex] };
+      let elem = this.props.small ? <SmallFunnel data={elemData} /> : <Funnel data={elemData} />;
+      funnels.push(elem);
     }
 
     return funnels;

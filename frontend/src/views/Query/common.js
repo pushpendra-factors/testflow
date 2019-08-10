@@ -13,6 +13,10 @@ export const PROPERTY_TYPE_OPTS = {
   'event': 'event property',
   'user': 'user property'
 };
+export const PROPERTY_LOGICAL_OP_OPTS = {
+  'AND': 'and',
+  'OR': 'or',
+}; 
 
 export const PROPERTY_VALUE_TYPE_DATE_TIME = 'datetime';
 

@@ -24,6 +24,7 @@ class Event extends Component {
           remove={() => this.props.removeProperty(i)}
           
           onEntityChange={(option) => this.props.onPropertyEntityChange(this.props.index, i, option.value)}
+          onLogicalOpChange={(option) => this.props.onPropertyLogicalOpChange(this.props.index, i, option.value)}
           onNameChange={(value) => this.props.onPropertyNameChange(this.props.index, i, value)}
           onOpChange={(option) => this.props.onPropertyOpChange(this.props.index, i, option.value)}
           onValueChange={(value, type) => this.props.onPropertyValueChange(this.props.index, i, value, type)}
