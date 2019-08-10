@@ -39,6 +39,11 @@ const getGraphColClassName = function(data) {
   return data.length <= 3 ? 'col-3' : null;
 }
 
+const getMarginLeftForGraphParent = function(data) {
+  if (data.length == 3) return '6%';
+  return data.length == 2 ? '20%' : null;
+}
+
 const SmallFunnel = (props) => {
   var funnelData = props.data.funnels;
 
@@ -109,10 +114,10 @@ const SmallFunnel = (props) => {
   let totalConvStr = props.data.totalConversion + '%';
   return (
     <Col md='12'>
-      <div style={{textAlign: 'center', marginBottom: '40px', marginLeft: '10px'}}> 
+      <div style={{ textAlign: 'center', marginBottom: '40px' }}>  
         <span style={{fontWeight: '600', color: '#777', fontSize: '15px'}}> Total Conversion Rate: { totalConvStr } </span> 
       </div>
-      <div style={{ marginLeft: funnelData.length == 2 ? '20%' : null }}>
+      <div style={{ marginLeft: getMarginLeftForGraphParent(funnelData) }}>
         <Row noGutters={true}>{graphCols}</Row>
         <Row noGutters={true}>{eventCols} </Row>
       </div>
