@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
-import { Card, CardHeader, CardBody } from 'reactstrap';
+import { Card, CardHeader, CardBody, Modal, ModalBody } from 'reactstrap';
 import { Redirect } from 'react-router-dom';
 
 import { runQuery, viewQuery } from '../../actions/projectsActions';
@@ -11,7 +11,8 @@ import BarChart from '../Query/BarChart';
 import LineChart from '../Query/LineChart';
 import TableChart from '../Query/TableChart';
 import { PRESENTATION_BAR, PRESENTATION_LINE, 
-  PRESENTATION_TABLE, PRESENTATION_CARD, HEADER_COUNT, HEADER_DATE, PRESENTATION_FUNNEL, PROPERTY_VALUE_TYPE_DATE_TIME } from '../Query/common';
+  PRESENTATION_TABLE, PRESENTATION_CARD, 
+  PRESENTATION_FUNNEL, PROPERTY_VALUE_TYPE_DATE_TIME } from '../Query/common';
 import { slideUnixTimeWindowToCurrentTime } from '../../util';
 import FunnelChart from '../Query/FunnelChart';
 
@@ -40,11 +41,12 @@ class DashboardUnit extends Component {
 
     this.state = {
       loading: false,
-      presentation: null,
+      presentationProps: null,
 
       title: null,
       editTitle: false,
 
+      fullScreen: false,
       redirectToViewQuery: false,
     }
   }
@@ -55,29 +57,30 @@ class DashboardUnit extends Component {
     return CARD_BACKGROUNDS[cardIndex % poolLength];
   }
 
-  setPresentation(result) {
-    let presentation = null;
+  setPresentationProps(result) {
+    let props = null;
+
     if (this.props.data.presentation === PRESENTATION_BAR) {
-      presentation = <BarChart queryResult={result} legend={false} />
+      props = { queryResult: result, legend: false } 
     }
 
     if (this.props.data.presentation === PRESENTATION_LINE) {
-      presentation = <LineChart hideLegend queryResult={result} />
+      props = { hideLegend: true, queryResult: result }
     }
 
     if (this.props.data.presentation === PRESENTATION_TABLE) {
-      presentation = <TableChart queryResult={result} />
+      props = { queryResult: result }
     }
 
     if (this.props.data.presentation == PRESENTATION_CARD) {
-      presentation = <TableChart noHeader card queryResult={result} />
+      props = { noHeader: true,  card: true, queryResult: result }
     }
 
     if (this.props.data.presentation == PRESENTATION_FUNNEL) {
-      presentation = <FunnelChart queryResult={result} small />
+      props = { queryResult: result, small: true }
     }
 
-    this.setState({ presentation: presentation });
+    this.setState({ presentationProps: props });
   }
 
   execQuery() {
@@ -110,7 +113,7 @@ class DashboardUnit extends Component {
     runQuery(this.props.currentProjectId, query)
       .then((r) => {
         this.setState({ loading: false });
-        this.setPresentation(r.data);
+        this.setPresentationProps(r.data);
       })
       .catch(console.error);
   }
@@ -119,11 +122,35 @@ class DashboardUnit extends Component {
     this.execQuery();
   }
 
-  present() {
-    if (this.state.loading)
+  present(props, showLegend=false) {
+    if (this.state.loading) {
       return <Loading paddingTop={ this.isCard() ? '6%':'12%' } />;
+    }
+
+    if (!props) return null;
+
+    if (this.props.data.presentation === PRESENTATION_BAR) {
+      return <BarChart {...props} />;
+    }
+
+    if (this.props.data.presentation === PRESENTATION_LINE) {
+      let lineProps = { ...props, hideLegend: !showLegend }
+      return <LineChart {...lineProps} />;
+    }
+
+    if (this.props.data.presentation === PRESENTATION_TABLE) {
+      return <TableChart {...props} />;
+    }
+
+    if (this.props.data.presentation == PRESENTATION_CARD) {
+      return <TableChart {...props} />;
+    }
+
+    if (this.props.data.presentation == PRESENTATION_FUNNEL) {
+      return <FunnelChart {...props} />;
+    }
     
-    return this.state.presentation;
+    return null;
   }
 
   getCardBodyStyleByProps() {
@@ -283,6 +310,14 @@ class DashboardUnit extends Component {
     }
   }
 
+  toggleFullScreen = () => {
+    this.setState({ fullScreen: !this.state.fullScreen });
+  }
+
+  renderPresentation(props) {
+
+  }
+
   render() {
     if (this.state.redirectToViewQuery) 
       return <Redirect to='/core?view=true' />;
@@ -294,8 +329,16 @@ class DashboardUnit extends Component {
             <strong onClick={this.delete} style={{ fontSize: '14px', cursor: 'pointer', padding: '0 10px', color: this.isCard() ? '#FFF' : '#AAA' }} hidden={!this.props.editDashboard}>x</strong>
           </div>
 
-          <div style={{ textAlign: 'right', marginTop: '-15px', marginRight: '-22px', height: '18px' }}>
-            <strong onClick={this.addQueryToViewStore} style={{ fontSize: '13px', cursor: 'pointer', padding: '0 10px', color: this.isCard() ? '#FFF' : '#444' }} hidden={this.props.editDashboard} ><i className='cui-graph'></i></strong>
+          <div style={{ textAlign: 'right', marginTop: '-15px', marginRight: '-22px', height: '18px' }} hidden={this.isCard()}>
+            <strong onClick={this.toggleFullScreen} style={{ fontSize: '13px', cursor: 'pointer', padding: '0 10px', color: '#888' }} hidden={this.props.editDashboard} >
+              <i className='fa fa-expand'></i>
+            </strong>
+          </div>
+
+          <div style={{ textAlign: 'right', marginTop: this.isCard() ? '-17px' : '-18px', height: '18px', marginRight: this.isCard() ? '-22px' : null }}>
+            <strong onClick={this.addQueryToViewStore} style={{ fontSize: '13px', cursor: 'pointer', padding: '0 10px', color: this.isCard() ? '#FFF' : '#444' }} hidden={this.props.editDashboard} >
+              <i className='cui-graph'></i>
+            </strong>
           </div>
 
           <div hidden={!this.showTitle()}>
@@ -316,8 +359,19 @@ class DashboardUnit extends Component {
           </div>
         </CardHeader>
         <CardBody style={this.getCardBodyStyleByProps()}>
-          { this.present() }
+          { this.present(this.state.presentationProps) }
         </CardBody>
+
+        <Modal isOpen={this.state.fullScreen} toggle={this.toggleFullScreen} style={{ marginTop: "5rem", minWidth: "60rem" }}> 
+          <ModalBody>
+            <div>
+              <span onClick={this.toggleFullScreen} style={{ position: 'absolute', right: '25px', fontSize: '18px', fontWeight: '600', color: '#888', cursor: 'pointer' }}>x</span>
+            </div>
+            <div style={{ height: "550px", padding: "40px" }}>
+              { this.present(this.state.presentationProps, true) }
+            </div>
+          </ModalBody>
+        </Modal>
       </Card>
     );
   }
