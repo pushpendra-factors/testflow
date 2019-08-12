@@ -269,6 +269,7 @@ class Query extends Component {
         let prop = event.pr[pi];
 
         let vProp = {};
+        vProp.logicalOp = prop.lop;
         vProp.entity = prop.en;
         vProp.name = prop.pr;
         vProp.op = prop.op;

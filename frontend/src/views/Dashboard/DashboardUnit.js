@@ -367,7 +367,7 @@ class DashboardUnit extends Component {
             <div>
               <span onClick={this.toggleFullScreen} style={{ position: 'absolute', right: '25px', fontSize: '18px', fontWeight: '600', color: '#888', cursor: 'pointer' }}>x</span>
             </div>
-            <div style={{ height: "550px", padding: "40px" }}>
+            <div style={{ height: "550px", padding: "40px", overflow: "scroll" }}>
               { this.present(this.state.presentationProps, true) }
             </div>
           </ModalBody>
