@@ -100,7 +100,6 @@ const effectIncrease = "increase"
 const effectDecrease = "decrease"
 const effectEqual = "equal"
 const explanationsLimit = 3
-const primaryExplanationPrefix = "Total"
 const secondaryExplanationPrefix = "-"
 
 func TranslateDBReportToReport(dbReport *DBReport) (*Report, error) {
@@ -368,7 +367,7 @@ func getPercentageChange(prevCount float64, curCount float64) (float64, string) 
 }
 
 func explainTotalChange(percentage float64, effect, title, from, to string) string {
-	return fmt.Sprintf("Total %0.0f%% %s in %s from week %s to week %s.", percentage, effect, title, from, to)
+	return fmt.Sprintf("%0.0f%% %s in '%s' from week %s to week %s.", percentage, effect, title, from, to)
 }
 
 func explainChange(exp *ReportExplanation) string {
@@ -573,9 +572,9 @@ func getAggrByTimestampAndGroup(queryResult *QueryResult,
 	return aggrByTimestampAndGroup, timestamps, totalAggr
 }
 
-func getReadableTimestampWithDay(timestampStr string) string {
+func getDayOfTimestamp(timestampStr string) string {
 	timestamp, _ := time.Parse(time.RFC3339, timestampStr)
-	return fmt.Sprintf("%s (%s)", timestamp.Format("Jan 02"), timestamp.Weekday().String())
+	return timestamp.Weekday().String()
 }
 
 func getReadableTimestamp(timestampStr string) string {
@@ -663,10 +662,11 @@ func addExplanationsForPresentationLine(duReport *DashboardUnitReport) {
 
 			percentChange, effect := getPercentageChange(prevAggr, curAggr)
 			if percentChange >= 5.0 && effect == totalEffect {
+				timestampStr := fmt.Sprintf("%s (between %s and %s)", getDayOfTimestamp(curTimestamp), getReadableTimestamp(prevTimestamp), getReadableTimestamp(curTimestamp))
 				secExplanations = append(secExplanations,
 					ReportExplanation{Type: resultEntity, Percentage: percentChange, Effect: effect,
 						Diff: curAggr - prevAggr, CurValue: curAggr, PrevValue: prevAggr, GroupName: groupName,
-						GroupValue: displayGroup, TimestampStr: getReadableTimestampWithDay(curTimestamp)})
+						GroupValue: displayGroup, TimestampStr: timestampStr})
 			}
 		}
 	}
@@ -743,7 +743,7 @@ func addExplanationsForPresentationFunnel(duReport *DashboardUnitReport) {
 		}
 
 		explanations = append(explanations,
-			fmt.Sprintf("- %s to %s conversion %sd from %0.0f%% to %0.0f%%.",
+			fmt.Sprintf("- '%s' to '%s' conversion %sd from %0.0f%% to %0.0f%%.",
 				steps[i].Name, steps[i+1].Name, convEffect, prevConversions[i], curConversions[i]))
 	}
 
