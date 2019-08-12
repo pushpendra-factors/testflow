@@ -362,12 +362,12 @@ class DashboardUnit extends Component {
           { this.present(this.state.presentationProps) }
         </CardBody>
 
-        <Modal isOpen={this.state.fullScreen} toggle={this.toggleFullScreen} style={{ marginTop: "5rem", minWidth: "60rem" }}> 
+        <Modal isOpen={this.state.fullScreen} toggle={this.toggleFullScreen} style={{ marginTop: "2.5rem", minWidth: "80rem"  }}> 
           <ModalBody>
             <div>
               <span onClick={this.toggleFullScreen} style={{ position: 'absolute', right: '25px', fontSize: '18px', fontWeight: '600', color: '#888', cursor: 'pointer' }}>x</span>
             </div>
-            <div style={{ height: "550px", padding: "40px", overflow: "scroll" }}>
+            <div style={{ height: "40rem", padding: "40px", overflow: "scroll" }}>
               { this.present(this.state.presentationProps, true) }
             </div>
           </ModalBody>
