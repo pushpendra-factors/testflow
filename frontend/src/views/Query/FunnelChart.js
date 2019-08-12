@@ -29,10 +29,10 @@ class FunnelChart extends Component {
           }
         }
         else {
-          if (rows[ri][stepsIndexes[i-1]] == 0) {
+          if (rows[ri][stepsIndexes[0]] == 0) {
             data = [0, 1];
           } else {
-            data = [rows[0][stepsIndexes[i]], [rows[ri][stepsIndexes[i-1]] - rows[ri][stepsIndexes[i]]]]
+            data = [rows[ri][stepsIndexes[i]], rows[0][stepsIndexes[0]] - rows[ri][stepsIndexes[i]]];
           }
         }
         let stepName = this.getDisplayName(stepNames[i], rows[ri][stepsIndexes[i]])
