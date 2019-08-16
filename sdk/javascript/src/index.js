@@ -14,7 +14,7 @@ var app = new App();
  */
 function init(appToken, opts={}) {
     app.init(appToken, opts)
-        .catch(logger.debug);
+        .catch(logger.errorLine);
     return;
 }
 
@@ -33,7 +33,7 @@ function reset() {
  */
 function track(eventName, eventProperties={}) {
     app.track(eventName, eventProperties, false)
-        .catch(logger.debug);
+        .catch(logger.errorLine);
     return;
 }
 
@@ -43,7 +43,7 @@ function track(eventName, eventProperties={}) {
  */
 function identify(customerUserId) {
     app.identify(customerUserId)
-        .catch(logger.debug);
+        .catch(logger.errorLine);
     return;
 }
 
@@ -53,7 +53,7 @@ function identify(customerUserId) {
  */
 function addUserProperties(properties={}) {
     app.addUserProperties(properties)
-        .catch(logger.debug);
+        .catch(logger.errorLine);
     return;
 }
 

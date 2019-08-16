@@ -7,7 +7,7 @@ var APIClient = require("./api-client");
 const constant = require("./constant");
 const Properties = require("./properties");
 
-const SDK_NOT_INIT_ERROR = new Error("FactorsError: SDK is not initialized with token.");
+const SDK_NOT_INIT_ERROR = new Error("Factors SDK is not initialized.");
 
 function isAllowedEventName(eventName) {
     // Don't allow event_name starts with '$'.
@@ -50,9 +50,9 @@ App.prototype.init = function(token, opts={}) {
 
     // Doesn't allow initialize with different token as it needs _fuid reset.
     if (this.isInitialized() && !this.isSameToken(token))
-        throw new Error("FactorsInitError: Initialized already. Use reset() and init(), if you really want to do this.");
+        return Promise.reject(new Error("FactorsInitError: Initialized already. Use reset() and init(), if you really want to do this."));
 
-    if (!token) throw new Error("FactorsArgumentError: Invalid token.");
+    if (!token) return Promise.reject(new Error("FactorsArgumentError: Invalid token."));
 
     let _this = this; // Remove arrows;
     
@@ -68,7 +68,7 @@ App.prototype.init = function(token, opts={}) {
     return _client.getProjectSettings()
         .then((response) => {
             if (response.status < 200 || response.status > 308) {
-                throw new Error("FactorsRequestError: Init failed. App configuration failed.");
+                return Promise.reject(new Error("FactorsRequestError: Init failed. App configuration failed."));
             }
             return response;
         })
@@ -79,15 +79,18 @@ App.prototype.init = function(token, opts={}) {
         })
         .then(function() {
             return _this.autoTrack(_this.getConfig("auto_track"));
+        })
+        .catch(() => {
+            return Promise.reject(new Error("FactorsRequestError: Init failed. App configuration failed."));
         });
 }
 
 App.prototype.track = function(eventName, eventProperties, auto=false) {
-    if (!this.isInitialized()) throw SDK_NOT_INIT_ERROR;
+    if (!this.isInitialized()) return Promise.reject(SDK_NOT_INIT_ERROR);
 
     eventName = util.validatedStringArg("event_name", eventName) // Clean event name.
     if (!isAllowedEventName(eventName)) 
-        throw new Error("FactorsError: Invalid event name.");
+        return Promise.reject(new Error("FactorsError: Invalid event name."));
     
     // Other property validations done on backend.
     eventProperties = Properties.getTypeValidated(eventProperties);
@@ -130,7 +133,7 @@ App.prototype.autoTrack = function(enabled=false) {
 }
 
 App.prototype.identify = function(customerUserId) {
-    if (!this.isInitialized()) throw SDK_NOT_INIT_ERROR;
+    if (!this.isInitialized()) return Promise.reject(SDK_NOT_INIT_ERROR);
     
     customerUserId = util.validatedStringArg("customer_user_id", customerUserId);
     
@@ -143,10 +146,11 @@ App.prototype.identify = function(customerUserId) {
 }
 
 App.prototype.addUserProperties = function (properties={}) {
-    if (!this.isInitialized()) throw SDK_NOT_INIT_ERROR;
+    if (!this.isInitialized()) 
+        return Promise.reject(SDK_NOT_INIT_ERROR);
 
     if (typeof(properties) != "object")
-        throw new Error("FactorsArgumentError: Properties should be an Object(key/values).");
+        return Promise.reject(new Error("FactorsArgumentError: Properties should be an Object(key/values)."));
     
     if (Object.keys(properties).length == 0)
         return Promise.reject("No changes. Empty properties.");
@@ -179,7 +183,7 @@ App.prototype.getClient = function() {
 
 App.prototype.getConfig = function(name) {
     if (this.config[name] == undefined)
-        throw new Error("FactorsConfigError: Config not present.");
+        logger.errorLine(new Error("FactorsConfigError: Config not present."));
 
     return this.config[name];
 }
