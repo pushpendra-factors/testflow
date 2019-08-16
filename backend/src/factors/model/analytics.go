@@ -48,9 +48,10 @@ type Query struct {
 	GroupByProperties    []QueryGroupByProperty     `json:"gbp"`
 	GroupByTimestamp     bool                       `json:"gbt"`
 	Timezone             string                     `json:"tz"`
-	OverridePeriod       bool                       `json:"ovp"`
 	From                 int64                      `json:"fr"`
 	To                   int64                      `json:"to"`
+	// Todo: Remove OverridePeriod after removing ovp from old dashboard units.
+	OverridePeriod bool `json:"ovp"`
 }
 
 type QueryResutlMeta struct {

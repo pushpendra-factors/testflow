@@ -3,6 +3,7 @@ import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { Card, CardHeader, CardBody, Modal, ModalBody } from 'reactstrap';
 import { Redirect } from 'react-router-dom';
+import moment from 'moment';
 
 import { runQuery, viewQuery } from '../../actions/projectsActions';
 import { deleteDashboardUnit, updateDashboardUnit } from '../../actions/dashboardActions';
@@ -83,15 +84,19 @@ class DashboardUnit extends Component {
     this.setState({ presentationProps: props });
   }
 
+  setQueryPeriod(query, dateRange) {
+    let from =  moment(dateRange[0].startDate).unix();
+    let to = moment(dateRange[0].endDate).unix();
+
+    query.fr = from; // in utc.
+    query.to = to; // in utc.
+  }
+
   execQuery() {
     this.setState({ loading: true });
     
     let query = this.props.data.query;
-    if (query && query.ovp) {
-      let newPeriod = slideUnixTimeWindowToCurrentTime(query.fr, query.to);
-      query.fr = newPeriod.from;
-      query.to = newPeriod.to;
-    }
+    this.setQueryPeriod(query, this.props.dateRange);
 
     // override datetime property value.
     for(let ei=0; ei<query.ewp.length; ei++) {
@@ -221,7 +226,7 @@ class DashboardUnit extends Component {
       fontWeight: '500',
       fontSize: '13px',
       borderRadius: '4px',
-      marginRight: '6px'
+      marginRight: '6px',
     }
 
     let isCard = this.isCard();
@@ -298,7 +303,8 @@ class DashboardUnit extends Component {
   // Todo: Avoid execQuery on position change by
   // moving the query result to ParentComponent (dashboard).
   componentDidUpdate(prevProps) {
-    if (prevProps.data.id != this.props.data.id) {
+    if (prevProps.data.id != this.props.data.id || 
+      JSON.stringify(prevProps.dateRange) != JSON.stringify(this.props.dateRange)) {
       this.execQuery();
     }
   }
@@ -312,11 +318,7 @@ class DashboardUnit extends Component {
 
   toggleFullScreen = () => {
     this.setState({ fullScreen: !this.state.fullScreen });
-  }
-
-  renderPresentation(props) {
-
-  }
+  } 
 
   render() {
     if (this.state.redirectToViewQuery) 

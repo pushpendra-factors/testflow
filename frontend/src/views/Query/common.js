@@ -1,4 +1,5 @@
 import moment from 'moment';
+import { createStaticRanges } from 'react-date-range';
 
 import { slideUnixTimeWindowToCurrentTime, firstToUpperCase } from '../../util';
 
@@ -35,6 +36,39 @@ export const PRESENTATION_BAR = 'pb';
 // alias for single count table view.
 export const PRESENTATION_CARD = 'pc';
 export const PRESENTATION_FUNNEL = 'pf';
+
+
+export const DEFAULT_DATE_RANGE_LABEL = 'Last 7 days';
+export const DEFAULT_DATE_RANGE = {
+  startDate: moment(new Date()).subtract(7, 'days').toDate(),
+  endDate: new Date(),
+  label: DEFAULT_DATE_RANGE_LABEL,
+  key: 'selected'
+}
+export const DEFINED_DATE_RANGES = createStaticRanges([
+  {
+    label: 'Last 24 hours',
+    range: () => ({
+      startDate: moment(new Date()).subtract(24, 'hours').toDate(),
+      endDate: new Date(),
+    }),
+  },
+  {
+    label: DEFAULT_DATE_RANGE_LABEL,
+    range: () => ({
+      startDate: DEFAULT_DATE_RANGE.startDate,
+      endDate: DEFAULT_DATE_RANGE.endDate
+    }),
+  },
+  {
+    label: 'Last 30 days',
+    range: () => ({
+      startDate: moment(new Date()).subtract(30, 'days').toDate(),
+      endDate: new Date(),
+    })
+  },
+]);
+
 
 // returns datepicker daterange for stored daterange.
 // updates the daterange with currentTime, if ovp true.

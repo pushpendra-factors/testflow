@@ -1,13 +1,10 @@
 import React, { Component } from 'react';
 import Select from 'react-select';
 import CreatableSelect from 'react-select/lib/Creatable';
-import { connect } from 'react-redux';
-// import { bindActionCreators } from 'redux';
 import { Row, Col, Input, Button } from 'reactstrap';
 import moment from 'moment';
-import { DateRangePicker, createStaticRanges } from 'react-date-range';
-import onClickOutside from 'react-onclickoutside';
 
+import ClosableDateRangePicker from '../../common/ClosableDatePicker';
 import { 
   fetchProjectEventProperties,
   fetchProjectEventPropertyValues,
@@ -17,7 +14,8 @@ import {
 import { makeSelectOpts, createSelectOpts, getSelectedOpt, 
   makeSelectOpt, QUERY_TYPE_ANALYTICS } from "../../util";
 import { PROPERTY_VALUE_NONE, PROPERTY_TYPE_OPTS, PROPERTY_LOGICAL_OP_OPTS,
-  getDateRangeFromStoredDateRange } from "./common";
+  getDateRangeFromStoredDateRange, DEFAULT_DATE_RANGE, DEFINED_DATE_RANGES 
+} from "./common";
 
 const TYPE_NUMERICAL = 'numerical';
 const TYPE_CATEGORICAL = 'categorical';
@@ -40,52 +38,6 @@ const CATEGORICAL_OPERATORS_OPTS = {
   'contains': 'contains',
   'notContains': 'not contains',
 }
-
-const DEFAULT_DATE_RANGE_LABEL = 'Last 7 days';
-const DEFAULT_DATE_RANGE = {
-  startDate: moment(new Date()).subtract(7, 'days').toDate(),
-  endDate: new Date(),
-  label: DEFAULT_DATE_RANGE_LABEL,
-  key: 'selected'
-}
-const DEFINED_DATE_RANGES = createStaticRanges([
-  {
-    label: 'Last 24 hours',
-    range: () => ({
-      startDate: moment(new Date()).subtract(24, 'hours').toDate(),
-      endDate: new Date(),
-    }),
-  },
-  {
-    label: DEFAULT_DATE_RANGE_LABEL,
-    range: () => ({
-      startDate: DEFAULT_DATE_RANGE.startDate,
-      endDate: DEFAULT_DATE_RANGE.endDate
-    }),
-  },
-  {
-    label: 'Last 30 days',
-    range: () => ({
-      startDate: moment(new Date()).subtract(30, 'days').toDate(),
-      endDate: new Date(),
-    })
-  },
-]);
-
-class DateRangePickerWithCloseHandler extends Component {
-  constructor(props) {
-    super(props);
-  }
-
-  handleClickOutside = () => {
-    this.props.closeDatePicker();
-  }
-
-  render() {
-    return <DateRangePicker {...this.props} />
-  }
-}
-const ClosableDateRangePicker = onClickOutside(DateRangePickerWithCloseHandler);
 
 class Property extends Component {
   constructor(props) {

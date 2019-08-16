@@ -8,9 +8,7 @@ import { Row, Col, Button, ButtonGroup, ButtonToolbar,
   ModalFooter, Input } from 'reactstrap'; 
 import 'react-date-range/dist/styles.css';
 import 'react-date-range/dist/theme/default.css';
-import { DateRangePicker, createStaticRanges } from 'react-date-range'; 
 import moment from 'moment';
-import onClickOutside from 'react-onclickoutside';
 import queryString from 'query-string';
 
 import TableChart from './TableChart'
@@ -20,11 +18,11 @@ import TableBarChart from './TableBarChart';
 import FunnelChart from './FunnelChart';
 import { PRESENTATION_BAR, PRESENTATION_LINE, PRESENTATION_TABLE, 
   PRESENTATION_CARD, PRESENTATION_FUNNEL, PROPERTY_TYPE_EVENT,
-  getDateRangeFromStoredDateRange, PROPERTY_LOGICAL_OP_OPTS} from './common';
-import { 
-  fetchProjectEvents,
-  runQuery,
-} from '../../actions/projectsActions';
+  getDateRangeFromStoredDateRange, PROPERTY_LOGICAL_OP_OPTS,
+  DEFAULT_DATE_RANGE, DEFINED_DATE_RANGES,
+} from './common';
+import ClosableDateRangePicker from '../../common/ClosableDatePicker';
+import { fetchProjectEvents, runQuery } from '../../actions/projectsActions';
 import { fetchDashboards, createDashboardUnit } from '../../actions/dashboardActions';
 import Event from './Event';
 import GroupBy from './GroupBy';
@@ -69,39 +67,8 @@ const FUNNEL_QUERY_TYPE_OPTS = [
 
 const AGGR_COUNT_OPT = {label: 'count', value: 'count'};
 const AGGR_OPTS = [
-  AGGR_COUNT_OPT,
+  AGGR_COUNT_OPT, 
 ]
-
-const DEFAULT_DATE_RANGE_LABEL = 'Last 7 days';
-const DEFAULT_DATE_RANGE = {
-  startDate: moment(new Date()).subtract(7, 'days').toDate(),
-  endDate: new Date(),
-  label: DEFAULT_DATE_RANGE_LABEL,
-  key: 'selected'
-}
-const DEFINED_DATE_RANGES = createStaticRanges([
-  {
-    label: 'Last 24 hours',
-    range: () => ({
-      startDate: moment(new Date()).subtract(24, 'hours').toDate(),
-      endDate: new Date(),
-    }),
-  },
-  {
-    label: DEFAULT_DATE_RANGE_LABEL,
-    range: () => ({
-      startDate: DEFAULT_DATE_RANGE.startDate,
-      endDate: DEFAULT_DATE_RANGE.endDate
-    }),
-  },
-  {
-    label: 'Last 30 days',
-    range: () => ({
-      startDate: moment(new Date()).subtract(30, 'days').toDate(),
-      endDate: new Date(),
-    })
-  },
-]);
 
 const ERROR_NO_EVENT = 'No events given. Please add atleast one event by clicking +Event button.';
 const ERROR_FUNNEL_EXCEEDED_EVENTS = 'Funnel queries supports upto 4 events. Please ensure that you have the same.';
@@ -131,22 +98,6 @@ const mapDispatchToProps = dispatch => {
     createDashboardUnit,
   }, dispatch)
 }
-
-class DateRangePickerWithCloseHandler extends Component {
-  constructor(props) {
-    super(props);
-  }
-
-  handleClickOutside = () => {
-    this.props.closeDatePicker();
-  }
-
-  render() {
-    return <DateRangePicker {...this.props} />
-  }
-}
-const ClosableDateRangePicker = onClickOutside(DateRangePickerWithCloseHandler);
-
 
 class Query extends Component {
   constructor(props) {
@@ -453,7 +404,7 @@ class Query extends Component {
     this.setState({ showDatePicker: !this.state.showDatePicker });
   }
 
-  setQueryPeriod(query, toSave=false) {
+  setQueryPeriod(query) { 
     let selectedRange = this.state.resultDateRange[0];
     let isEndDateToday = moment(selectedRange.endDate).isSame(moment(), 'day');
     let from =  moment(selectedRange.startDate).unix();
@@ -466,12 +417,11 @@ class Query extends Component {
       to = newRange.to;
     }
 
-    if (toSave) query.ovp = isEndDateToday;
     query.fr = from; // in utc.
     query.to = to; // in utc.
   }
 
-  getQuery(groupByDate=false, toSave=false) {
+  getQuery(groupByDate=false) {
     let query = {};
     
     query.cl = this.state.class.value;
@@ -485,7 +435,7 @@ class Query extends Component {
     if (this.state.resultDateRange.length == 0)
       throw new Error('Invalid date range. No default range given.')
     
-    this.setQueryPeriod(query, toSave);
+    this.setQueryPeriod(query);
 
     query.ewp = []
     for(let ei=0; ei < this.state.events.length; ei++) {
@@ -765,7 +715,7 @@ class Query extends Component {
     }
     
     let groupByTimestamp = presentation === PRESENTATION_LINE;
-    let query = this.getQuery(groupByTimestamp, true);
+    let query = this.getQuery(groupByTimestamp);
     let payload = {
       presentation: presentation,
       query: query,
@@ -859,7 +809,7 @@ class Query extends Component {
           <Button outline style={{border: '1px solid #ccc', color: 'grey', marginRight: '10px' }} 
             onClick={this.toggleDatePickerDisplay}>
             <i className="fa fa-calendar" style={{marginRight: '10px'}}></i>
-            {this.readableDateRange(this.state.resultDateRange[0])}
+            { this.readableDateRange(this.state.resultDateRange[0]) } 
           </Button>
           <div className='fapp-date-picker' hidden={!this.state.showDatePicker}>
             <ClosableDateRangePicker

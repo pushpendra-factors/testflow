@@ -6,14 +6,19 @@ import { Row, Col, Button, Modal, ModalHeader,
 import Select from 'react-select';
 import arrayMove from 'array-move';
 import { SortableContainer, SortableElement } from 'react-sortable-hoc';
+import 'react-date-range/dist/styles.css';
+import 'react-date-range/dist/theme/default.css';
+import moment from 'moment';
 
 import DashboardUnit from './DashboardUnit';
 import { fetchDashboards, createDashboard, updateDashboard,
   fetchDashboardUnits } from '../../actions/dashboardActions';
-import { createSelectOpts, makeSelectOpt, getSelectedOpt } from '../../util';
+import { createSelectOpts, makeSelectOpt } from '../../util';
 import NoContent from '../../common/NoContent';
+import ClosableDateRangePicker from '../../common/ClosableDatePicker';
 import Loading from '../../loading';
-import { PRESENTATION_CARD } from '../Query/common';
+import { PRESENTATION_CARD, DEFAULT_DATE_RANGE, 
+  DEFINED_DATE_RANGES } from '../Query/common';
 
 const TYPE_OPTS = [
   { label: "Only me", value: "pr" },
@@ -66,6 +71,9 @@ class Dashboard extends Component {
         createModalMessage: null,
         createSelectedType: null,
         createName: null,
+
+        showDatePicker: false,
+        dateRange: [DEFAULT_DATE_RANGE],
       }
   }
 
@@ -229,7 +237,7 @@ class Dashboard extends Component {
     return dashboard['units_position'][unitType];
   }
   
-  renderDashboard() { 
+  renderDashboard() {
     if (this.state.loadingUnits) return <Loading paddingTop='10%' />
     if (this.props.dashboardUnits.length == 0) 
       return <NoContent center msg='No charts' />
@@ -245,13 +253,13 @@ class Dashboard extends Component {
       let pUnit = pDashUnits[i];
       if (pUnit.presentation && pUnit.presentation === PRESENTATION_CARD) {
         cardUnits[cardPositions[pUnit.id]] = {
-          unit: <DashboardUnit editDashboard={this.state.editDashboard} cardIndex={cardIndex} data={pUnit} position={cardPositions[pUnit.id]} />,
+          unit: <DashboardUnit dateRange={this.state.dateRange} editDashboard={this.state.editDashboard} cardIndex={cardIndex} data={pUnit} position={cardPositions[pUnit.id]} />,
           position: cardPositions[pUnit.id],
         };
         cardIndex++;
       } else {
         chartUnits[chartPositions[pUnit.id]] = {
-          unit: <DashboardUnit editDashboard={this.state.editDashboard} data={pUnit} position={cardPositions[pUnit.id]} />,
+          unit: <DashboardUnit dateRange={this.state.dateRange} editDashboard={this.state.editDashboard} data={pUnit} position={cardPositions[pUnit.id]} />,
           position: chartPositions[pUnit.id],
         };
       }
@@ -327,6 +335,29 @@ class Dashboard extends Component {
     return TYPE_OPTS[0];
   }
 
+  handleDateRangeSelect = (range) => {
+    range.selected.label = null; // set null on custom range.
+    this.setState({ dateRange: [range.selected] }); 
+  }
+
+  closeDatePicker = () => {
+    this.setState({ showDatePicker: false }); 
+  }
+
+  toggleDatePickerDisplay = () => {
+    this.setState({ showDatePicker: !this.state.showDatePicker });
+  }
+
+  readableDateRange(range) {
+    // Use label for default date range.
+    if(range.startDate ==  DEFAULT_DATE_RANGE.startDate 
+      && range.endDate == DEFAULT_DATE_RANGE.endDate)
+      return DEFAULT_DATE_RANGE.label;
+
+    return moment(range.startDate).format('MMM DD, YYYY') + " - " +
+      moment(range.endDate).format('MMM DD, YYYY');
+  }
+
   render() {
     if (this.isLoading()) return <Loading paddingTop='20%'/>;
 
@@ -343,7 +374,25 @@ class Dashboard extends Component {
           </div>
           <Button onClick={this.toggleCreateModal} style={{ marginLeft: '10px', height: 'auto', marginBottom: '4px' }} outline color='primary'> Create </Button>
           { this.renderEditButton() }
+
+          <button style={{ border: '1px solid #bbb', color: '#444', right: '45px', position: 'absolute', marginTop: '5px', padding: '7px 15px', borderRadius: '5px', outline: 'none' }} 
+            onClick={this.toggleDatePickerDisplay}>
+            <i className="fa fa-calendar" style={{marginRight: '10px'}}></i>
+            { this.readableDateRange(this.state.dateRange[0]) }
+          </button>
+          <div className='fapp-date-picker' style={{ display: 'block', marginTop: '10px', right: '45px' }} hidden={!this.state.showDatePicker}>
+            <ClosableDateRangePicker
+              ranges={this.state.dateRange}
+              onChange={this.handleDateRangeSelect}
+              staticRanges={ DEFINED_DATE_RANGES }
+              inputRanges={[]}
+              minDate={new Date('01 Jan 2000 00:00:00 GMT')} // range starts from given date.
+              maxDate={new Date()}
+              closeDatePicker={this.closeDatePicker}
+            />
+          </div>
         </div>
+
         { this.renderDashboard() }
 
         <Modal isOpen={this.state.showCreateModal} toggle={this.toggleCreateModal} style={{marginTop: '10rem'}}>
