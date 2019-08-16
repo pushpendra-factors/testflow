@@ -86,12 +86,14 @@ class LineChart extends Component {
 
     let countIndex = result.headers.indexOf(HEADER_COUNT);
     if (countIndex == -1) { 
-        throw new Error('No counts to plot as lines.');
+      console.error('No counts to plot as lines.');
+      return null;
     }
 
     let dateIndex = result.headers.indexOf(HEADER_DATE);
     if (dateIndex == -1) { 
-        throw new Error('No dates to plot as lines.');
+      console.error('No dates to plot as lines.');
+      return null;
     }
 
     let lines = [];

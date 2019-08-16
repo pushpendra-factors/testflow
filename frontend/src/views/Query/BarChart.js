@@ -37,7 +37,8 @@ class BarChart extends Component {
     let countIndex = result.headers.indexOf(HEADER_COUNT);
     // Need a count and a group col for bar.
     if (countIndex == -1) { 
-      throw new Error('Invalid query result for bar chart.');
+      console.error("Invalid query result for bar chart.");
+      return null;
     }
     
     let maxScale = 0;
@@ -60,7 +61,8 @@ class BarChart extends Component {
       if (maxScale < col[countIndex]) maxScale = col[countIndex];
       bars.x_label = "";
     } else {
-      throw new Error("Invalid no.of result columns for vertical bar.");
+      console.error("Invalid no.of result columns for vertical bar.");
+      return null;
     }
 
     if (isSingleCountResult(result)) {
@@ -150,6 +152,8 @@ class BarChart extends Component {
 
   render() {
     var barsAndScale = this.getBarsAndScaleFromResult(this.props.queryResult);
+    if (!barsAndScale) return null;
+
     let displayLegend = this.props.legend == false ? false : true;
     var chartData = barsAndScale.bars;
 
