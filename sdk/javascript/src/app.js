@@ -182,8 +182,10 @@ App.prototype.getClient = function() {
 }
 
 App.prototype.getConfig = function(name) {
-    if (this.config[name] == undefined)
+    if (this.config[name] == undefined) {
         logger.errorLine(new Error("FactorsConfigError: Config not present."));
+        return
+    }
 
     return this.config[name];
 }
