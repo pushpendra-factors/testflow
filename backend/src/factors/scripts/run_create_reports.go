@@ -55,6 +55,9 @@ func main() {
 	customStartTime := flag.Int64("start_time", 0, "Custom start time from which reports to be generated.")
 	customEndTime := flag.Int64("end_time", 0, "Custom end time till which reports to be generated.")
 
+	addWeekly := flag.Bool("weekly", false, "")
+	addMonthly := flag.Bool("monthly", false, "")
+
 	mailReports := flag.Bool("mail_reports", false, "")
 
 	flag.Parse()
@@ -112,7 +115,23 @@ func main() {
 		return
 	}
 
-	reports.BuildReports(*env, db, dashboards, *customStartTime, *customEndTime, *mailReports)
+	reportTypes := make([]string, 0, 0)
+
+	if *addWeekly {
+		reportTypes = append(reportTypes, M.ReportTypeWeekly)
+	}
+
+	if *addMonthly {
+		reportTypes = append(reportTypes, M.ReportTypeMonthly)
+	}
+
+	// if no specific type given: create all.
+	if len(reportTypes) == 0 {
+		reportTypes = append(reportTypes, M.ReportTypeWeekly, M.ReportTypeMonthly)
+	}
+
+	reports.BuildReports(*env, db, dashboards, reportTypes,
+		*customStartTime, *customEndTime, *mailReports)
 }
 
 func fetchDashboards(gormDB *gorm.DB, limit, lastSeenID uint64, projectsToBuildFor,

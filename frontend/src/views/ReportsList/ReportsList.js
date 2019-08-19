@@ -30,8 +30,9 @@ const mapStateToProps = store => {
 const ReportRecord = (props) => {
   return (
     <Row style={{ marginBottom: '10px' }}>
-        <Col md={2} className='fapp-clickable' onClick={ props.onClick }>{props.name}</Col>
-        <Col md={2} > { props.start_time + " - " + props.end_time } </Col>
+        <Col md={2} className='fapp-clickable' onClick={ props.onClick }> { props.name } </Col>
+        <Col md={1} > { props.type } </Col>
+        <Col md={3} > { props.start_time + " - " + props.end_time } </Col>
     </Row>
   )
 }
@@ -50,6 +51,12 @@ class ReportsList extends Component {
         .then(() => { this.setState({ loading: false }) });
   }
 
+  getReadableType(typ) {
+    if (typ == 'w') return 'Weekly';
+    else if (typ == 'm') return 'Monthly';
+    return "";
+  } 
+
   renderReportsList() {
     let reportRecords = [];
     let reports = this.props.reports;
@@ -65,6 +72,7 @@ class ReportsList extends Component {
       <ReportRecord 
         key = {report.id}
         name = {report.dashboard_name}
+        type = {this.getReadableType(report.type)}
         start_time = {readableTimstamp(report.start_time)}
         end_time = {readableTimstamp(report.end_time)}
         onClick = {()=>{ this.props.history.push("/reports/"+report.id) }}
@@ -88,6 +96,7 @@ class ReportsList extends Component {
           <CardBody style={{ fontSize: '0.95em' }}>
             <Row style={{ marginBottom: '10px' }} >
               <Col md={2} className='fapp-label light'>Name</Col>
+              <Col md={1} className='fapp-label light'>Type</Col>
               <Col md={2} className='fapp-label light'>Period</Col>
             </Row>
             { this.renderReportsList() }

@@ -11,10 +11,13 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func fetchDashboardReports(db *gorm.DB, projectID, dashboardID uint64) ([]*M.Report, int) {
+func fetchDashboardReportsByType(db *gorm.DB, projectID, dashboardID uint64,
+	reportType string) ([]*M.Report, int) {
+
 	var dbReports []*M.DBReport
 
-	err := db.Where("project_id = ? ", projectID).Where("dashboard_id = ?", dashboardID).Order("ID ASC").Find(&dbReports).Error
+	err := db.Where("project_id = ? ", projectID).Where("dashboard_id = ? AND type = ?",
+		dashboardID, reportType).Order("ID ASC").Find(&dbReports).Error
 
 	if err != nil {
 		return nil, http.StatusInternalServerError
@@ -37,12 +40,17 @@ func fetchDashboardReports(db *gorm.DB, projectID, dashboardID uint64) ([]*M.Rep
 	return reports, http.StatusFound
 }
 
-func fetchMostRecentReport(reports []*M.Report, projectID, dashboardID uint64, reportType string) (*M.Report, int) {
+func fetchMostRecentReportByType(reports []*M.Report, projectID, dashboardID uint64,
+	reportType string) (*M.Report, int) {
+
 	var mostRecentReport *M.Report
 	status := http.StatusNotFound
 	mostRecentTs := int64(0)
 	for _, report := range reports {
-		if report.ProjectID == projectID && report.DashboardID == dashboardID {
+		if report.ProjectID == projectID &&
+			report.DashboardID == dashboardID &&
+			report.Type == reportType {
+
 			if report.StartTime > mostRecentTs {
 				mostRecentReport = report
 				mostRecentTs = report.StartTime
@@ -54,9 +62,11 @@ func fetchMostRecentReport(reports []*M.Report, projectID, dashboardID uint64, r
 	return mostRecentReport, status
 }
 
-func findStartTimeForDashboard(dashboard *M.Dashboard, existingReports []*M.Report) time.Time {
+func findStartTimeForDashboardByType(dashboard *M.Dashboard,
+	existingReports []*M.Report, reportType string) time.Time {
 
-	mostRecentReport, errCode := fetchMostRecentReport(existingReports, dashboard.ProjectId, dashboard.ID, M.ReportTypeWeekly)
+	mostRecentReport, errCode := fetchMostRecentReportByType(existingReports,
+		dashboard.ProjectId, dashboard.ID, reportType)
 	if errCode == http.StatusNotFound {
 		// no reports for this dashboard add intervals after dashboard's creation time
 		return dashboard.CreatedAt
@@ -66,8 +76,15 @@ func findStartTimeForDashboard(dashboard *M.Dashboard, existingReports []*M.Repo
 	// next report should be created for W2 and W3
 	// Report creation should happen from starting of W2
 	reportEndTimeTs := unixToUTCTime(mostRecentReport.EndTime)
-	beginingOfEndWeek := now.New(reportEndTimeTs).BeginningOfWeek()
-	return beginingOfEndWeek
+
+	var beginingOfPeriod time.Time
+	if reportType == M.ReportTypeWeekly {
+		beginingOfPeriod = now.New(reportEndTimeTs).BeginningOfWeek()
+	} else if reportType == M.ReportTypeMonthly {
+		beginingOfPeriod = now.New(reportEndTimeTs).BeginningOfMonth()
+	}
+
+	return beginingOfPeriod
 }
 
 func notifyStatus(env, tag string, success, noContent, failures []string) {
@@ -91,23 +108,44 @@ func getLastWeekEndTime() time.Time {
 	return lastWeekEndTs
 }
 
-// startTime is rounded off to begining of the week
-// endTime is rounded off to end of the week
-func getWeeklyIntervals(startTime, endTime time.Time) []M.Interval {
+func getLastMonthEndTime() time.Time {
+	currentMonthStart := now.BeginningOfMonth().UTC()
+	lastMonthEndTs := now.New(currentMonthStart.Add(-24 * time.Hour)).EndOfMonth()
+	return lastMonthEndTs
+}
+
+// startTime is rounded off to begining of the period type
+// endTime is rounded off to end of the period type
+func getIntervalsByType(startTime, endTime time.Time, reportType string) []M.Interval {
 	intervals := make([]M.Interval, 0, 0)
 	startTs := startTime
 
-	endTs := now.New(endTime).EndOfWeek().UTC()
+	var endTs time.Time
+	if reportType == M.ReportTypeWeekly {
+		endTs = now.New(endTime).EndOfWeek()
+	} else if reportType == M.ReportTypeMonthly {
+		endTs = now.New(endTime).EndOfMonth()
+	} else {
+		log.Fatalf("Invalid report type give on get_intervals: %s", reportType)
+	}
+	endTs = endTs.UTC()
 
 	for startTs.Before(endTs) {
+		var periodStart, periodEnd time.Time
+		if reportType == M.ReportTypeWeekly {
+			periodStart = now.New(startTs).BeginningOfWeek()
+			periodEnd = now.New(periodStart).EndOfWeek()
+		} else if reportType == M.ReportTypeMonthly {
+			periodStart = now.New(startTs).BeginningOfMonth()
+			periodEnd = now.New(periodStart).EndOfMonth()
+		} else {
+			log.Fatalf("Invalid report type give on get_intervals: %s", reportType)
+		}
 
-		weekStart := now.New(startTs).BeginningOfWeek()
-		weekEnd := now.New(weekStart).EndOfWeek()
-
-		interval := M.Interval{StartTime: weekStart.UTC().Unix(), EndTime: weekEnd.UTC().Unix()}
+		interval := M.Interval{StartTime: periodStart.UTC().Unix(), EndTime: periodEnd.UTC().Unix()}
 		intervals = append(intervals, interval)
 
-		startTs = weekEnd.Add(24 * time.Hour)
+		startTs = periodEnd.Add(24 * time.Hour)
 	}
 	return intervals
 }
@@ -116,7 +154,8 @@ func getWeekInterval(startUnix, endUnix int64) M.Interval {
 	startTime := unixToUTCTime(startUnix)
 	endTime := unixToUTCTime(endUnix)
 
-	return M.Interval{StartTime: now.New(startTime).BeginningOfWeek().UTC().Unix(), EndTime: now.New(endTime).EndOfWeek().UTC().Unix()}
+	return M.Interval{StartTime: now.New(startTime).BeginningOfWeek().UTC().Unix(),
+		EndTime: now.New(endTime).EndOfWeek().UTC().Unix()}
 }
 
 func getPrevWeekInterval(startUnix, endUnix int64) M.Interval {
@@ -125,12 +164,17 @@ func getPrevWeekInterval(startUnix, endUnix int64) M.Interval {
 	startOfGivenWeek := now.New(startTime).BeginningOfWeek()
 	prevWeek := now.New(startOfGivenWeek.Add(-24 * time.Hour))
 
-	return M.Interval{StartTime: prevWeek.BeginningOfWeek().UTC().Unix(), EndTime: prevWeek.EndOfWeek().UTC().Unix()}
+	return M.Interval{StartTime: prevWeek.BeginningOfWeek().UTC().Unix(),
+		EndTime: prevWeek.EndOfWeek().UTC().Unix()}
 }
 
-func findValidReportBy(reports []*M.Report, projectID, dashboardID uint64, startTime, endTime int64) (*M.Report, int) {
+func findValidReportBy(reports []*M.Report, projectID, dashboardID uint64,
+	startTime, endTime int64) (*M.Report, int) {
+
 	for _, report := range reports {
-		if report.ProjectID == projectID && report.DashboardID == dashboardID && report.StartTime == startTime && report.EndTime == endTime && !report.Invalid {
+		if report.ProjectID == projectID && report.DashboardID == dashboardID &&
+			report.StartTime == startTime && report.EndTime == endTime && !report.Invalid {
+
 			return report, http.StatusFound
 		}
 	}

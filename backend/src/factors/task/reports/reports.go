@@ -17,8 +17,44 @@ const (
 
 var reportLog = baseLog.WithField("prefix", buildReportTag)
 
-func BuildReports(env string, db *gorm.DB, dashboards []*M.Dashboard,
+func BuildReports(env string, db *gorm.DB, dashboards []*M.Dashboard, reportTypes []string,
 	customStartTime int64, customEndTime int64, mailReports bool) {
+	reportLog.Infof("Start Creating Reports")
+
+	createdReports := make([]*M.Report, 0, 0)
+	successList := make([]string, 0, 0)
+	noContentList := make([]string, 0, 0)
+	failureList := make([]string, 0, 0)
+
+	for _, reportType := range reportTypes {
+		reports, success, noContents, failures := buildReportsByType(env, db, dashboards, reportType,
+			customStartTime, customEndTime, mailReports)
+
+		createdReports = append(createdReports, reports...)
+		successList = append(successList, success...)
+		noContentList = append(noContentList, noContents...)
+		failureList = append(failureList, failures...)
+	}
+
+	if len(createdReports) == 0 {
+		reportLog.Infof("No New Reports Created")
+		notifyStatus(env, buildReportTag, successList, noContentList, failureList)
+		return
+	}
+
+	/*
+		if mailReports {
+			reportLog.Infof("Start Emailing Reports")
+			sendReportsEmail(store, createdReports)
+		}
+	*/
+
+	notifyStatus(env, buildReportTag, successList, noContentList, failureList)
+}
+
+func buildReportsByType(env string, db *gorm.DB, dashboards []*M.Dashboard, reportType string,
+	customStartTime int64, customEndTime int64, mailReports bool) (reports []*M.Report,
+	successList, noContentList, failureList []string) {
 
 	defer func() {
 		reportLog.Infof("Successfully built reports")
@@ -32,86 +68,114 @@ func BuildReports(env string, db *gorm.DB, dashboards []*M.Dashboard,
 
 	store := newStore(dashboards)
 
-	buildReportsFor := make([]*ReportBuild, 0, 0)
+	reportBuilds := make([]*ReportBuild, 0, 0)
 	buildReportsDedupe := make(map[string]bool, 0)
 
 	for _, dashboard := range dashboards {
 		reportLog.Infof("Finding which reports to Build for dashboardID: %d", dashboard.ID)
-		dashboardReports, errCode := fetchDashboardReports(db, dashboard.ProjectId, dashboard.ID)
+		dashboardReports, errCode := fetchDashboardReportsByType(db, dashboard.ProjectId, dashboard.ID, reportType)
 		if errCode == http.StatusInternalServerError {
 			continue
 		}
 
 		// custom start_time and end_time will be used for every dashboard, if given.
-		buildReportsForDashboard, errCode := findWhichWeeklyReportsToBuildForDashboard(db,
-			dashboard, dashboardReports, customStartTime, customEndTime, &buildReportsDedupe)
+		buildReportsForDashboard, errCode := findWhichReportsToBuild(db,
+			dashboard, dashboardReports, reportType, customStartTime, customEndTime, &buildReportsDedupe)
 		if errCode != http.StatusOK {
 			continue
 		}
-		buildReportsFor = append(buildReportsFor, buildReportsForDashboard...)
+		reportBuilds = append(reportBuilds, buildReportsForDashboard...)
 		reportLog.Infof("Finding which reports to Re-Build for dashboardID: %d", dashboard.ID)
 
-		rebuildReports := findWhichInvalidReportsToRebuild(dashboardReports, store, &buildReportsDedupe)
-		buildReportsFor = append(buildReportsFor, rebuildReports...)
+		rebuildReportsForDashboard := findWhichInvalidReportsToRebuild(dashboardReports, reportType, store, &buildReportsDedupe)
+		reportBuilds = append(reportBuilds, rebuildReportsForDashboard...)
 	}
 
-	reportLog.Infof("Start Creating Reports")
-	createdReports, successList, noContentList, failureList := buildReports(buildReportsFor)
-	if len(createdReports) == 0 {
-		reportLog.Infof("No New Reports Created")
-		notifyStatus(env, buildReportTag, successList, noContentList, failureList)
-		return
-	}
-
-	if mailReports {
-		reportLog.Infof("Start Emailing Reports")
-		sendReportsEmail(store, createdReports)
-	}
-
-	notifyStatus(env, buildReportTag, successList, noContentList, failureList)
-
+	return buildReportsByBuildConfig(reportBuilds)
 }
 
 type ReportBuild struct {
 	ProjectID          uint64
 	DashboardID        uint64
 	DashboardName      string
+	Type               string
 	IntervalBeforeThat M.Interval
 	Interval           M.Interval
 }
 
-func getDashboardReportDedupeKey(projectId, dashboardId uint64, startTime int64, endTime int64) string {
-	return fmt.Sprintf("%d:%d_%d:%d", projectId, dashboardId, startTime, endTime)
+func getDashboardReportDedupeKey(projectId, dashboardId uint64, reportType string,
+	startTime int64, endTime int64) string {
+
+	return fmt.Sprintf("%d:%d_%d:%d", projectId, dashboardId, reportType, startTime, endTime)
 }
 
-func findWhichWeeklyReportsToBuildForDashboard(db *gorm.DB, dashboard *M.Dashboard,
-	existingReports []*M.Report, customStartTime, customEndTime int64, buildReportsDedupe *map[string]bool) ([]*ReportBuild, int) {
+func getWeeklyStartAndEndTime(dashboard *M.Dashboard, reportType string, eReports []*M.Report,
+	cStartTimeUnix, cEndTimeUnix int64) (time.Time, time.Time) {
 
 	var startTime time.Time
-	if customStartTime > 0 {
-		startTime = now.New(unixToUTCTime(customStartTime)).BeginningOfWeek()
+	if cStartTimeUnix > 0 {
+		startTime = now.New(unixToUTCTime(cStartTimeUnix)).BeginningOfWeek()
 	} else {
-		startTime = findStartTimeForDashboard(dashboard, existingReports)
+		startTime = findStartTimeForDashboardByType(dashboard, eReports, reportType)
 	}
 
 	var endTime time.Time
-	if customEndTime > 0 && customEndTime > customStartTime {
-		endTime = now.New(unixToUTCTime(customEndTime)).EndOfWeek()
+	if cEndTimeUnix > 0 && cEndTimeUnix > cStartTimeUnix {
+		endTime = now.New(unixToUTCTime(cEndTimeUnix)).EndOfWeek()
 	} else {
 		endTime = getLastWeekEndTime()
 	}
 
+	return startTime, endTime
+}
+
+func getMonthlyStartAndEndTime(dashboard *M.Dashboard, reportType string, eReports []*M.Report,
+	cStartTimeUnix, cEndTimeUnix int64) (time.Time, time.Time) {
+
+	var startTime time.Time
+	if cStartTimeUnix > 0 {
+		startTime = now.New(unixToUTCTime(cStartTimeUnix)).BeginningOfMonth()
+	} else {
+		startTime = findStartTimeForDashboardByType(dashboard, eReports, reportType)
+	}
+
+	var endTime time.Time
+	if cEndTimeUnix > 0 && cEndTimeUnix > cStartTimeUnix {
+		endTime = now.New(unixToUTCTime(cEndTimeUnix)).EndOfMonth()
+	} else {
+		endTime = getLastMonthEndTime()
+	}
+
+	return startTime, endTime
+}
+
+func findWhichReportsToBuild(db *gorm.DB, dashboard *M.Dashboard, existingReports []*M.Report,
+	reportType string, customStartTime, customEndTime int64,
+	buildReportsDedupe *map[string]bool) ([]*ReportBuild, int) {
+
+	var startTime, endTime time.Time
+	if reportType == M.ReportTypeWeekly {
+		startTime, endTime = getWeeklyStartAndEndTime(dashboard, reportType, existingReports,
+			customStartTime, customEndTime)
+	} else if reportType == M.ReportTypeMonthly {
+		startTime, endTime = getMonthlyStartAndEndTime(dashboard, reportType, existingReports,
+			customStartTime, customEndTime)
+	} else {
+		log.Errorf("invalid report type given : %s", reportType)
+		return nil, http.StatusBadRequest
+	}
+
 	existingReportsLookup := make(map[string]bool, 0)
 	for _, eReport := range existingReports {
-		encDedupeKey := getDashboardReportDedupeKey(eReport.ProjectID, eReport.DashboardID,
+		encDedupeKey := getDashboardReportDedupeKey(eReport.ProjectID, eReport.DashboardID, reportType,
 			eReport.StartTime, eReport.EndTime)
 		existingReportsLookup[encDedupeKey] = true
 	}
 
-	intervals := getWeeklyIntervals(startTime, endTime)
+	intervals := getIntervalsByType(startTime, endTime, reportType)
 	reportBuilds := make([]*ReportBuild, 0, 0)
 	for i := 1; i < len(intervals); i++ {
-		key := getDashboardReportDedupeKey(dashboard.ProjectId, dashboard.ID,
+		key := getDashboardReportDedupeKey(dashboard.ProjectId, dashboard.ID, reportType,
 			intervals[i].StartTime, intervals[i].EndTime)
 
 		_, exists := existingReportsLookup[key]
@@ -126,6 +190,7 @@ func findWhichWeeklyReportsToBuildForDashboard(db *gorm.DB, dashboard *M.Dashboa
 			DashboardName:      dashboard.Name,
 			IntervalBeforeThat: intervals[i-1],
 			Interval:           intervals[i],
+			Type:               reportType,
 		}
 		reportBuilds = append(reportBuilds, reportBuild)
 		(*buildReportsDedupe)[key] = true
@@ -134,14 +199,17 @@ func findWhichWeeklyReportsToBuildForDashboard(db *gorm.DB, dashboard *M.Dashboa
 	return reportBuilds, http.StatusOK
 }
 
-func buildReports(buildReportsFor []*ReportBuild) (reports []*M.Report, successList, noContentList, failureList []string) {
+func buildReportsByBuildConfig(buildReportsFor []*ReportBuild) (reports []*M.Report,
+	successList, noContentList, failureList []string) {
+
 	failureList = make([]string, 0, 0)
 	successList = make([]string, 0, 0)
 	noContentList = make([]string, 0, 0)
 	reports = make([]*M.Report, 0, 0)
 
 	for _, bR := range buildReportsFor {
-		report, errCode := M.GenerateReport(bR.ProjectID, bR.DashboardID, bR.DashboardName, bR.IntervalBeforeThat, bR.Interval)
+		report, errCode := M.GenerateReport(bR.ProjectID, bR.DashboardID, bR.DashboardName,
+			bR.Type, bR.IntervalBeforeThat, bR.Interval)
 		if errCode == http.StatusInternalServerError {
 			failureList = append(failureList,
 				fmt.Sprintf("Failed to generate report, ProjectID: %d, DashboardID: %d, IntervalStart: %d",
@@ -153,6 +221,7 @@ func buildReports(buildReportsFor []*ReportBuild) (reports []*M.Report, successL
 					bR.ProjectID, bR.DashboardID, bR.IntervalBeforeThat.StartTime))
 			continue
 		}
+
 		report, errCode = M.CreateReport(report)
 		if errCode != http.StatusCreated {
 			failureList = append(failureList,
@@ -168,14 +237,16 @@ func buildReports(buildReportsFor []*ReportBuild) (reports []*M.Report, successL
 	return
 }
 
-func findWhichInvalidReportsToRebuild(reports []*M.Report, store *store, buildReportsDedupe *map[string]bool) []*ReportBuild {
+func findWhichInvalidReportsToRebuild(existingReports []*M.Report, reportType string,
+	store *store, buildReportsDedupe *map[string]bool) []*ReportBuild {
+
 	reportBuilds := make([]*ReportBuild, 0, 0)
-	for _, report := range reports {
+	for _, report := range existingReports {
 		if !report.Invalid {
 			continue
 		}
 
-		_, errCode := findValidReportBy(reports, report.ProjectID, report.DashboardID, report.StartTime, report.EndTime)
+		_, errCode := findValidReportBy(existingReports, report.ProjectID, report.DashboardID, report.StartTime, report.EndTime)
 		validReportPresentForSameInterval := errCode == http.StatusFound
 		if validReportPresentForSameInterval {
 			continue
@@ -193,7 +264,7 @@ func findWhichInvalidReportsToRebuild(reports []*M.Report, store *store, buildRe
 		}
 
 		interval := getWeekInterval(report.StartTime, report.EndTime)
-		key := getDashboardReportDedupeKey(report.ProjectID, report.DashboardID, interval.StartTime, interval.EndTime)
+		key := getDashboardReportDedupeKey(report.ProjectID, report.DashboardID, reportType, interval.StartTime, interval.EndTime)
 		if _, added := (*buildReportsDedupe)[key]; added {
 			continue
 		}
@@ -205,6 +276,7 @@ func findWhichInvalidReportsToRebuild(reports []*M.Report, store *store, buildRe
 			DashboardName:      dashboard.Name,
 			Interval:           interval,
 			IntervalBeforeThat: intervalBefore,
+			Type:               reportType,
 		}
 		reportBuilds = append(reportBuilds, reportBuild)
 		(*buildReportsDedupe)[key] = true

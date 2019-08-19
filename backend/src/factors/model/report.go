@@ -16,17 +16,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const (
-	ReportTypeWeekly = "w"
-)
-
-var dashBoardUnitTypesToIncludeInReport = []string{
-	PresentationLine,
-	PresentationBar,
-	PresentationCard,
-	PresentationFunnel,
-}
-
 // DBReport represents structure to be used for storing report in database
 type DBReport struct {
 	ID            uint64 `gorm:"primary_key:true;"`
@@ -96,11 +85,22 @@ type ReportExplanation struct {
 	TimestampStr string
 }
 
+const (
+	ReportTypeWeekly  = "w"
+	ReportTypeMonthly = "m"
+)
+
+var dashBoardUnitTypesToIncludeInReport = []string{
+	PresentationLine,
+	PresentationBar,
+	PresentationCard,
+	PresentationFunnel,
+}
+
 const effectIncrease = "increase"
 const effectDecrease = "decrease"
 const effectEqual = "equal"
 const explanationsLimit = 3
-const secondaryExplanationPrefix = "-"
 
 func TranslateDBReportToReport(dbReport *DBReport) (*Report, error) {
 
@@ -288,7 +288,7 @@ func GetValidReportsListAgentHasAccessTo(projectID uint64, agentUUID string) ([]
 	return dbReportDecs, http.StatusFound
 }
 
-func GenerateReport(projectID, dashboardID uint64, dashboardName string,
+func GenerateReport(projectID, dashboardID uint64, dashboardName string, reportType string,
 	intervalBeforeThat, interval Interval) (*Report, int) {
 
 	dashboardUnits, errCode := GetDashboardUnitsByProjectIDAndDashboardIDAndTypes(projectID,
@@ -302,8 +302,13 @@ func GenerateReport(projectID, dashboardID uint64, dashboardName string,
 	}
 
 	for _, dashboardUnit := range dashboardUnits {
-		dashboardUnitReport, errCode := getDashboardUnitReport(projectID, dashboardUnit,
-			intervalBeforeThat, interval)
+		query := Query{}
+		err := json.Unmarshal(dashboardUnit.Query.RawMessage, &query)
+		if err != nil {
+			return nil, http.StatusInternalServerError
+		}
+
+		dashboardUnitReport, errCode := getDashboardUnitReport(projectID, dashboardUnit, query, intervalBeforeThat, interval)
 		if errCode != http.StatusOK {
 			return nil, errCode
 		}
@@ -314,7 +319,7 @@ func GenerateReport(projectID, dashboardID uint64, dashboardName string,
 		ProjectID:     projectID,
 		DashboardID:   dashboardID,
 		DashboardName: dashboardName,
-		Type:          ReportTypeWeekly,
+		Type:          reportType,
 		StartTime:     interval.StartTime,
 		EndTime:       interval.EndTime,
 		Contents:      reportContents,
@@ -366,12 +371,21 @@ func getPercentageChange(prevCount float64, curCount float64) (float64, string) 
 	return percentChange, effect
 }
 
-func explainTotalChange(percentage float64, effect, title, from, to string) string {
-	return fmt.Sprintf("%0.0f%% %s in '%s' from week %s to week %s.", percentage, effect, title, from, to)
+func explainTotalChange(percentage float64, effect, title, from, to, reportType string) string {
+	if reportType == ReportTypeWeekly {
+		return fmt.Sprintf("%0.0f%% %s in '%s' from week %s to week %s.", percentage,
+			effect, title, from, to)
+	}
+
+	if reportType == ReportTypeMonthly {
+		return fmt.Sprintf("%0.0f%% %s in '%s' from month %s to %s.", percentage,
+			effect, title, from, to)
+	}
+
+	return ""
 }
 
 func explainChange(exp *ReportExplanation) string {
-
 	expStr := fmt.Sprintf("- No.of %s", exp.Type)
 
 	if exp.GroupName != "" && exp.GroupValue != "" {
@@ -388,15 +402,18 @@ func explainChange(exp *ReportExplanation) string {
 	return expStr + "."
 }
 
-func addExplanationsForPresentationCard(duReport *DashboardUnitReport) {
+func addExplanationsForPresentationCard(duReport *DashboardUnitReport, reportType string) {
 	prevCount, _ := getAggrAsFloat64(duReport.Results[0].QueryResult.Rows[0][0])
 	curCount, _ := getAggrAsFloat64(duReport.Results[1].QueryResult.Rows[0][0])
 
-	fromWeek := getReadableIntervalFromUnix(duReport.Results[0].StartTime, duReport.Results[0].EndTime)
-	toWeek := getReadableIntervalFromUnix(duReport.Results[1].StartTime, duReport.Results[1].EndTime)
+	fromPeriod := getReadableIntervalByType(duReport.Results[0].StartTime,
+		duReport.Results[0].EndTime, reportType)
+	toPeriod := getReadableIntervalByType(duReport.Results[1].StartTime,
+		duReport.Results[1].EndTime, reportType)
 
 	percentChange, effect := getPercentageChange(prevCount, curCount)
-	duReport.Explanations = []string{explainTotalChange(percentChange, effect, duReport.Title, fromWeek, toWeek)}
+	duReport.Explanations = []string{explainTotalChange(percentChange, effect,
+		duReport.Title, fromPeriod, toPeriod, reportType)}
 }
 
 func getAggrByGroup(queryResult *QueryResult,
@@ -445,13 +462,15 @@ func getEntityFromQueryType(queryType string) string {
 	return ""
 }
 
-func addExplanationsForPresentationBar(duReport *DashboardUnitReport) {
+func addExplanationsForPresentationBar(duReport *DashboardUnitReport, reportType string) {
 	prevResult := duReport.Results[0].QueryResult
 	curResult := duReport.Results[1].QueryResult
 	resultEntity := getEntityFromQueryType(duReport.Results[1].QueryResult.Meta.Query.Type)
 
-	fromWeek := getReadableIntervalFromUnix(duReport.Results[0].StartTime, duReport.Results[0].EndTime)
-	toWeek := getReadableIntervalFromUnix(duReport.Results[1].StartTime, duReport.Results[1].EndTime)
+	fromPeriod := getReadableIntervalByType(duReport.Results[0].StartTime,
+		duReport.Results[0].EndTime, reportType)
+	toPeriod := getReadableIntervalByType(duReport.Results[1].StartTime,
+		duReport.Results[1].EndTime, reportType)
 
 	uniqueGroupsSet := make(map[string]bool)
 	prevAggrByGroup, prevResultTotal, prevResultGroupName := getAggrByGroup(&prevResult, &uniqueGroupsSet)
@@ -465,7 +484,7 @@ func addExplanationsForPresentationBar(duReport *DashboardUnitReport) {
 	explanations := make([]string, 0, 0)
 	percentChange, totalEffect := getPercentageChange(prevResultTotal, curResultTotal)
 	explanations = append(explanations, explainTotalChange(percentChange, totalEffect,
-		duReport.Title, fromWeek, toWeek))
+		duReport.Title, fromPeriod, toPeriod, reportType))
 
 	secExplanations := make([]ReportExplanation, 0, 0)
 	for group := range uniqueGroupsSet {
@@ -610,14 +629,16 @@ func getGroupNameForPresentationLine(query Query) string {
 	return groupName
 }
 
-func addExplanationsForPresentationLine(duReport *DashboardUnitReport) {
+func addExplanationsForPresentationLine(duReport *DashboardUnitReport, reportType string) {
 	prevResult := duReport.Results[0].QueryResult
 	curResult := duReport.Results[1].QueryResult
 	resultEntity := getEntityFromQueryType(duReport.Results[1].QueryResult.Meta.Query.Type)
 	groupName := getGroupNameForPresentationLine(duReport.Results[1].QueryResult.Meta.Query)
 
-	fromWeek := getReadableIntervalFromUnix(duReport.Results[0].StartTime, duReport.Results[0].EndTime)
-	toWeek := getReadableIntervalFromUnix(duReport.Results[1].StartTime, duReport.Results[1].EndTime)
+	fromPeriod := getReadableIntervalByType(duReport.Results[0].StartTime,
+		duReport.Results[0].EndTime, reportType)
+	toPeriod := getReadableIntervalByType(duReport.Results[1].StartTime,
+		duReport.Results[1].EndTime, reportType)
 
 	uniqueGroupsSet := make(map[string]string)
 	prevAggrMap, prevTimestamps, prevTotal := getAggrByTimestampAndGroup(&prevResult, &uniqueGroupsSet)
@@ -631,7 +652,7 @@ func addExplanationsForPresentationLine(duReport *DashboardUnitReport) {
 	explanations := make([]string, 0, 0)
 	percentChange, totalEffect := getPercentageChange(prevTotal, curTotal)
 	explanations = append(explanations, explainTotalChange(percentChange, totalEffect,
-		duReport.Title, fromWeek, toWeek))
+		duReport.Title, fromPeriod, toPeriod, reportType))
 
 	secExplanations := make([]ReportExplanation, 0, 0)
 
@@ -713,7 +734,7 @@ func getEffect(prev float64, curr float64) string {
 	return effectEqual
 }
 
-func addExplanationsForPresentationFunnel(duReport *DashboardUnitReport) {
+func addExplanationsForPresentationFunnel(duReport *DashboardUnitReport, reportType string) {
 	prevResult := duReport.Results[0].QueryResult
 	curResult := duReport.Results[1].QueryResult
 
@@ -750,20 +771,20 @@ func addExplanationsForPresentationFunnel(duReport *DashboardUnitReport) {
 	duReport.Explanations = explanations
 }
 
-func addExplanationsByPresentation(duReport DashboardUnitReport) DashboardUnitReport {
+func addExplanationsByPresentation(duReport DashboardUnitReport, reportType string) DashboardUnitReport {
 	if duReport.Presentation == "" || len(duReport.Results) < 2 {
 		return duReport
 	}
 
 	switch duReport.Presentation {
 	case PresentationCard:
-		addExplanationsForPresentationCard(&duReport)
+		addExplanationsForPresentationCard(&duReport, reportType)
 	case PresentationBar:
-		addExplanationsForPresentationBar(&duReport)
+		addExplanationsForPresentationBar(&duReport, reportType)
 	case PresentationLine:
-		addExplanationsForPresentationLine(&duReport)
+		addExplanationsForPresentationLine(&duReport, reportType)
 	case PresentationFunnel:
-		addExplanationsForPresentationFunnel(&duReport)
+		addExplanationsForPresentationFunnel(&duReport, reportType)
 	}
 
 	return duReport
@@ -771,18 +792,12 @@ func addExplanationsByPresentation(duReport DashboardUnitReport) DashboardUnitRe
 
 func addExplanationsToReportUnits(report *Report) {
 	for unitId, dashboardUnitReport := range report.Contents.DashboardUnitIDToDashboardUnitReport {
-		report.Contents.DashboardUnitIDToDashboardUnitReport[unitId] = addExplanationsByPresentation(dashboardUnitReport)
+		report.Contents.DashboardUnitIDToDashboardUnitReport[unitId] = addExplanationsByPresentation(dashboardUnitReport, report.Type)
 	}
 }
 
-func getDashboardUnitReport(projectID uint64, dashboardUnit DashboardUnit,
+func getDashboardUnitReport(projectID uint64, dashboardUnit DashboardUnit, query Query,
 	intervalBeforeThat, interval Interval) (*DashboardUnitReport, int) {
-
-	query := Query{}
-	err := json.Unmarshal(dashboardUnit.Query.RawMessage, &query)
-	if err != nil {
-		return nil, http.StatusInternalServerError
-	}
 
 	intervalBeforeReportUnit, errCode := getReportUnit(projectID, query, intervalBeforeThat)
 	if errCode != http.StatusOK {
@@ -911,6 +926,10 @@ func unixToReadableDate(timestamp int64) string {
 	return time.Unix(timestamp, 0).UTC().Format("Jan 02")
 }
 
-func getReadableIntervalFromUnix(from, to int64) string {
+func getReadableIntervalByType(from, to int64, typ string) string {
+	if typ == ReportTypeMonthly {
+		return time.Unix(from, 0).UTC().Format("January")
+	}
+
 	return unixToReadableDate(from) + "-" + unixToReadableDate(to)
 }

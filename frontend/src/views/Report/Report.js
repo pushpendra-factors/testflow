@@ -197,11 +197,19 @@ class Report extends Component {
     return reportUnits;
   }
 
+  getTitle(report) {
+    let typ = '';
+    if (report.type == 'w') typ = 'Weekly';
+    else if (report.type == 'm') typ = 'Monthly';
+    
+    return typ + ' Report - ' + report.dashboard_name; 
+  }
+
   renderReport(report) {
     return (
       <div className='fapp-gray'>
         <div style={{ textAlign: 'center' }}>
-          <h4 style={{ marginBottom: '0.2rem', color: '#555' }}> { 'Weekly Report - ' + report.dashboard_name } </h4>
+          <h4 style={{ marginBottom: '0.2rem', color: '#555' }}> { this.getTitle(report) } </h4>
           <span className='fapp-text light small'> { readableTimstamp(report.start_time) + " - " + readableTimstamp(report.end_time) } </span>
         </div>
         { this.renderReportUnits(report) }
