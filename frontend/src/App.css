@@ -462,6 +462,7 @@ body {
 
 .fapp-card.secondary-list {
     margin-bottom: 5px !important;
+    font-size: 13px !important;
 }
 
 .fapp-card.secondary-list .card-header {

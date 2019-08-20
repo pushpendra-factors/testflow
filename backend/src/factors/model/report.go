@@ -276,7 +276,7 @@ func GetValidReportsListAgentHasAccessTo(projectID uint64, agentUUID string) ([]
 	dbReportDecs := make([]*ReportDescription, 0, 0)
 
 	db := C.GetServices().Db
-	if err := db.Limit(100).Where("project_id = ?", projectID).Where("dashboard_id IN (?)",
+	if err := db.Order("end_time DESC").Limit(100).Where("project_id = ?", projectID).Where("dashboard_id IN (?)",
 		dashboardIDs).Where("invalid = ?", false).Find(&dbReportDecs).Error; err != nil {
 		return nil, http.StatusInternalServerError
 	}
