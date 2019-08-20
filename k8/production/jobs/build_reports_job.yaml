@@ -1,0 +1,44 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: build-reports-job
+spec:
+  schedule: "0 22 * * *" # In UTC
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            layer: jobs
+        spec:
+          nodeSelector:
+            cloud.google.com/gke-nodepool: default-pool
+          containers:
+          - name: build-reports-job
+            image: us.gcr.io/factors-production/build-reports-job:v0.04-0658d7f
+            imagePullPolicy: IfNotPresent
+            args:
+            - --env
+            - $(ENV)
+            - --db_host
+            - $(DB_HOST)
+            - --db_port
+            - $(DB_PORT)
+            - --db_name
+            - $(POSTGRES_DB)
+            - --db_user
+            - $(POSTGRES_USER)
+            - --db_pass
+            - $(POSTGRES_PASSWORD)
+            envFrom:
+            - configMapRef:
+                name: config-env
+            - configMapRef:
+                name: config-postgres
+            - configMapRef:
+                name: config-build-reports-job
+            - secretRef:
+                name: secret-postgres
+          restartPolicy: OnFailure
