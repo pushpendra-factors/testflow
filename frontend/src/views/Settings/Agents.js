@@ -160,7 +160,7 @@ class Agents extends Component {
           <CardHeader style={{ marginBottom: '5px' }}>
               <strong>Users</strong>
           </CardHeader>
-          <CardBody className='fapp-medium-font'>
+          <CardBody className='fapp-small-font'>
               <Row style={{ marginBottom: '4px' }}>
                 <Col md={emailColSize} className='fapp-label light'>Email</Col>
                 <Col md={1} className='fapp-label light'>Role</Col>

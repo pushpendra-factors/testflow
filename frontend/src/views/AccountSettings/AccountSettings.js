@@ -45,7 +45,7 @@ class AccountSettings extends Component {
   renderProjects = () => {
     return (
       this.props.projects.map((project, i) => {
-        return <div className='fapp-medium-font' key={i}>{project.name}</div>
+        return <div className='fapp-small-font ' key={i}>{project.name}</div>
       })
     )
   }
@@ -55,7 +55,7 @@ class AccountSettings extends Component {
       <div>
         {
           this.props.accountAgents.map((agent, i) => {
-            return <div className='fapp-medium-font' key={i}>{agent.email}</div>
+            return <div className='fapp-small-font ' key={i}>{agent.email}</div>
           })
         }
       </div>
