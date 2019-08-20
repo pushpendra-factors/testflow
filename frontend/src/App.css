@@ -460,6 +460,18 @@ body {
     padding-right: 5px;
 }
 
+.fapp-card.secondary-list {
+    margin-bottom: 5px !important;
+}
+
+.fapp-card.secondary-list .card-header {
+    color: #666;
+}
+
+.fapp-card.secondary-list .card-body {
+    padding-bottom: 5px !important;
+}
+
 div.setting-card:hover{
     box-shadow: 0 1px 5px 0 rgba(0, 0, 0, 0.1), 0 5px 10px 0 rgba(0, 0, 0, 0);
     cursor: pointer;
@@ -539,6 +551,10 @@ div.setting-card:hover{
 
 .fapp-medium-font {
     font-size: 15px !important;
+}
+
+.fapp-small-font {
+    font-size: 0.85rem !important;
 }
 
 .fapp-big-font {
@@ -717,4 +733,3 @@ span.fapp-button:focus {
     border-radius: 100px;
     margin-right: 2px;
 }
-
