@@ -1117,7 +1117,7 @@ class Query extends Component {
     console.debug('Query State : ', this.state);
     return (
       <div className='fapp-content' style={{ marginLeft: '2rem', marginRight: '2rem', paddingTop: '30px' }}>
-        {[ this.renderGlobalError(), this.renderInterfaceSelector(), renderQueryInterface(), this.renderAddToDashboardModal() ]}
+        {[ this.renderInterfaceSelector(), this.renderGlobalError(), renderQueryInterface(), this.renderAddToDashboardModal() ]}
       </div>
     );
   }
