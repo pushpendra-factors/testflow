@@ -154,7 +154,7 @@ class ReportsList extends Component {
       dashboards.push(
         <Card className='fapp-card secondary-list'>
           <CardHeader style={{ marginBottom: '5px' }}>
-            <strong> { "Report - " + reports[dashboardId][0].dashboardName } </strong>
+            <strong> { "Reports - " + reports[dashboardId][0].dashboardName } </strong>
           </CardHeader>
           <CardBody>
             <Row style={{ marginBottom: '10px' }} >

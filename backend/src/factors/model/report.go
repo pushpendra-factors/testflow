@@ -37,29 +37,25 @@ func (DBReport) TableName() string {
 }
 
 type Report struct {
-	ID            uint64    `json:"id"`
-	ProjectID     uint64    `json:"project_id"`
-	DashboardID   uint64    `json:"dashboard_id"`
-	DashboardName string    `json:"dashboard_name"`
-	CreatedAt     time.Time `json:"created_at"`
-	Type          string    `json:"type"`
-	StartTime     int64     `json:"start_time"`
-	EndTime       int64     `json:"end_time"`
-	Invalid       bool      `json:"invalid"`
-
-	Contents ReportContent `json:"contents"`
-}
-
-type ReportContent struct {
-	DashboardUnitIDToDashboardUnitReport map[uint64]DashboardUnitReport `json:"dashboardunitid_to_dashboardunitreport"`
+	ID            uint64                `json:"id"`
+	ProjectID     uint64                `json:"project_id"`
+	DashboardID   uint64                `json:"dashboard_id"`
+	DashboardName string                `json:"dashboard_name"`
+	CreatedAt     time.Time             `json:"created_at"`
+	Type          string                `json:"type"`
+	StartTime     int64                 `json:"start_time"`
+	EndTime       int64                 `json:"end_time"`
+	Invalid       bool                  `json:"invalid"`
+	Units         []DashboardUnitReport `json:"units"`
 }
 
 type DashboardUnitReport struct {
-	ProjectID    uint64       `json:"pid"`
-	Title        string       `json:"t"`
-	Presentation string       `json:"p"`
-	Results      []ReportUnit `json:"r"`
-	Explanations []string     `json:"e"`
+	ProjectID          uint64       `json:"pid"`
+	Title              string       `json:"t"`
+	Presentation       string       `json:"p"`
+	Results            []ReportUnit `json:"r"`
+	Explanations       []string     `json:"e"`
+	ChangeInPercentage float64      `json:"ord"`
 }
 
 type ReportUnit struct {
@@ -103,10 +99,9 @@ const effectEqual = "equal"
 const explanationsLimit = 3
 
 func TranslateDBReportToReport(dbReport *DBReport) (*Report, error) {
+	units := make([]DashboardUnitReport, 0, 0)
 
-	contents := ReportContent{}
-
-	err := json.Unmarshal(dbReport.Contents.RawMessage, &contents)
+	err := json.Unmarshal(dbReport.Contents.RawMessage, &units)
 	if err != nil {
 		return nil, err
 	}
@@ -121,20 +116,19 @@ func TranslateDBReportToReport(dbReport *DBReport) (*Report, error) {
 		StartTime:     dbReport.StartTime,
 		EndTime:       dbReport.EndTime,
 		Invalid:       dbReport.Invalid,
-		Contents:      contents,
+		Units:         units,
 	}
 
 	return &report, nil
 }
 
 func TranslateReportToDBReport(report *Report) (*DBReport, error) {
-
-	contentJSONBytes, err := json.Marshal(report.Contents)
+	unitsJsonBytes, err := json.Marshal(report.Units)
 	if err != nil {
 		return nil, err
 	}
 
-	postgresJson := postgres.Jsonb{RawMessage: contentJSONBytes}
+	postgresJson := postgres.Jsonb{RawMessage: unitsJsonBytes}
 
 	dbReport := DBReport{
 		ID:            report.ID,
@@ -254,7 +248,9 @@ func (ReportDescription) TableName() string {
 	return "reports"
 }
 
-func GetValidReportsListAgentHasAccessTo(projectID uint64, agentUUID string) ([]*ReportDescription, int) {
+func GetValidReportsListAgentHasAccessTo(projectID uint64,
+	agentUUID string) ([]*ReportDescription, int) {
+
 	if projectID == 0 || agentUUID == "" {
 		return nil, http.StatusBadRequest
 	}
@@ -276,8 +272,10 @@ func GetValidReportsListAgentHasAccessTo(projectID uint64, agentUUID string) ([]
 	dbReportDecs := make([]*ReportDescription, 0, 0)
 
 	db := C.GetServices().Db
-	if err := db.Order("end_time DESC").Limit(100).Where("project_id = ?", projectID).Where("dashboard_id IN (?)",
-		dashboardIDs).Where("invalid = ?", false).Find(&dbReportDecs).Error; err != nil {
+	if err := db.Order("end_time DESC").Limit(100).Where("project_id = ?",
+		projectID).Where("dashboard_id IN (?)", dashboardIDs).Where("invalid = ?",
+		false).Find(&dbReportDecs).Error; err != nil {
+
 		return nil, http.StatusInternalServerError
 	}
 
@@ -291,16 +289,13 @@ func GetValidReportsListAgentHasAccessTo(projectID uint64, agentUUID string) ([]
 func GenerateReport(projectID, dashboardID uint64, dashboardName string, reportType string,
 	intervalBeforeThat, interval Interval) (*Report, int) {
 
-	dashboardUnits, errCode := GetDashboardUnitsByProjectIDAndDashboardIDAndTypes(projectID,
-		dashboardID, dashBoardUnitTypesToIncludeInReport)
+	dashboardUnits, errCode := GetDashboardUnitsByProjectIDAndDashboardIDAndTypes(
+		projectID, dashboardID, dashBoardUnitTypesToIncludeInReport)
 	if errCode != http.StatusFound {
 		return nil, errCode
 	}
 
-	reportContents := ReportContent{
-		DashboardUnitIDToDashboardUnitReport: make(map[uint64]DashboardUnitReport),
-	}
-
+	reportUnits := make([]DashboardUnitReport, 0, 0)
 	for _, dashboardUnit := range dashboardUnits {
 		query := Query{}
 		err := json.Unmarshal(dashboardUnit.Query.RawMessage, &query)
@@ -308,11 +303,13 @@ func GenerateReport(projectID, dashboardID uint64, dashboardName string, reportT
 			return nil, http.StatusInternalServerError
 		}
 
-		dashboardUnitReport, errCode := getDashboardUnitReport(projectID, dashboardUnit, query, intervalBeforeThat, interval)
+		dashboardUnitReport, errCode := getDashboardUnitReport(projectID, dashboardUnit,
+			query, intervalBeforeThat, interval)
 		if errCode != http.StatusOK {
 			return nil, errCode
 		}
-		reportContents.DashboardUnitIDToDashboardUnitReport[dashboardUnit.ID] = *dashboardUnitReport
+
+		reportUnits = append(reportUnits, *dashboardUnitReport)
 	}
 
 	report := &Report{
@@ -322,10 +319,10 @@ func GenerateReport(projectID, dashboardID uint64, dashboardName string, reportT
 		Type:          reportType,
 		StartTime:     interval.StartTime,
 		EndTime:       interval.EndTime,
-		Contents:      reportContents,
+		Units:         reportUnits,
 	}
 
-	addExplanationsToReportUnits(report)
+	addExplanationsAndOrderReportUnits(report)
 
 	return report, http.StatusOK
 }
@@ -351,10 +348,15 @@ func getReportUnit(projectID uint64, query Query, interval Interval) (*ReportUni
 
 func getPercentageChange(prevCount float64, curCount float64) (float64, string) {
 	var percentChange float64
-	if prevCount > 0 {
-		percentChange = ((curCount - prevCount) / prevCount) * 100
-	} else {
+
+	if prevCount == 0 && curCount == 0 {
+		percentChange = 0
+	} else if prevCount == 0 && curCount > 0 {
 		percentChange = curCount
+	} else if curCount == 0 && prevCount > 0 {
+		percentChange = prevCount * -1
+	} else {
+		percentChange = ((curCount - prevCount) / prevCount) * 100
 	}
 
 	var effect string
@@ -414,6 +416,7 @@ func addExplanationsForPresentationCard(duReport *DashboardUnitReport, reportTyp
 	percentChange, effect := getPercentageChange(prevCount, curCount)
 	duReport.Explanations = []string{explainTotalChange(percentChange, effect,
 		duReport.Title, fromPeriod, toPeriod, reportType)}
+	duReport.ChangeInPercentage = percentChange
 }
 
 func getAggrByGroup(queryResult *QueryResult,
@@ -483,6 +486,8 @@ func addExplanationsForPresentationBar(duReport *DashboardUnitReport, reportType
 
 	explanations := make([]string, 0, 0)
 	percentChange, totalEffect := getPercentageChange(prevResultTotal, curResultTotal)
+	duReport.ChangeInPercentage = percentChange
+
 	explanations = append(explanations, explainTotalChange(percentChange, totalEffect,
 		duReport.Title, fromPeriod, toPeriod, reportType))
 
@@ -651,6 +656,8 @@ func addExplanationsForPresentationLine(duReport *DashboardUnitReport, reportTyp
 
 	explanations := make([]string, 0, 0)
 	percentChange, totalEffect := getPercentageChange(prevTotal, curTotal)
+	duReport.ChangeInPercentage = percentChange
+
 	explanations = append(explanations, explainTotalChange(percentChange, totalEffect,
 		duReport.Title, fromPeriod, toPeriod, reportType))
 
@@ -741,6 +748,9 @@ func addExplanationsForPresentationFunnel(duReport *DashboardUnitReport, reportT
 	prevConversions, prevTotal := getFunnelConversionsFromResult(&prevResult)
 	curConversions, curTotal := getFunnelConversionsFromResult(&curResult)
 
+	percentageChange, _ := getPercentageChange(prevTotal, curTotal)
+	duReport.ChangeInPercentage = percentageChange
+
 	totalEffect := getEffect(prevTotal, curTotal)
 	if totalEffect == effectEqual {
 		return
@@ -790,10 +800,18 @@ func addExplanationsByPresentation(duReport DashboardUnitReport, reportType stri
 	return duReport
 }
 
-func addExplanationsToReportUnits(report *Report) {
-	for unitId, dashboardUnitReport := range report.Contents.DashboardUnitIDToDashboardUnitReport {
-		report.Contents.DashboardUnitIDToDashboardUnitReport[unitId] = addExplanationsByPresentation(dashboardUnitReport, report.Type)
+func addExplanationsAndOrderReportUnits(report *Report) {
+	dashboardUnitReports := make([]DashboardUnitReport, 0, 0)
+	for _, dashboardUnitReport := range report.Units {
+		dashboardUnitReports = append(dashboardUnitReports, addExplanationsByPresentation(dashboardUnitReport, report.Type))
 	}
+
+	// orders units by percentage change.
+	sort.SliceStable(dashboardUnitReports, func(i, j int) bool {
+		return dashboardUnitReports[i].ChangeInPercentage > dashboardUnitReports[j].ChangeInPercentage
+	})
+
+	report.Units = dashboardUnitReports
 }
 
 func getDashboardUnitReport(projectID uint64, dashboardUnit DashboardUnit, query Query,
@@ -838,7 +856,7 @@ func (r *Report) GetTextContent() string {
 	output.WriteString(r.DashboardName)
 	output.WriteString("\n\n")
 
-	for _, dshBU := range r.Contents.DashboardUnitIDToDashboardUnitReport {
+	for _, dshBU := range r.Units {
 		if dshBU.Presentation != PresentationCard {
 			continue
 		}
@@ -886,7 +904,7 @@ func (r *Report) GetHTMLContent() string {
 	output.WriteString("</p>")
 
 	output.WriteString("<div>")
-	for _, dshBU := range r.Contents.DashboardUnitIDToDashboardUnitReport {
+	for _, dshBU := range r.Units {
 		if dshBU.Presentation != PresentationCard {
 			continue
 		}

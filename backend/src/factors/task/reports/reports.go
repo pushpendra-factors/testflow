@@ -19,7 +19,7 @@ var reportLog = baseLog.WithField("prefix", buildReportTag)
 
 func BuildReports(env string, db *gorm.DB, dashboards []*M.Dashboard, reportTypes []string,
 	customStartTime int64, customEndTime int64, mailReports bool) {
-	reportLog.Infof("Start Creating Reports")
+	reportLog.Infof("Build reports started.")
 
 	createdReports := make([]*M.Report, 0, 0)
 	successList := make([]string, 0, 0)
@@ -37,7 +37,7 @@ func BuildReports(env string, db *gorm.DB, dashboards []*M.Dashboard, reportType
 	}
 
 	if len(createdReports) == 0 {
-		reportLog.Infof("No New Reports Created")
+		reportLog.Infof("No new reports created.")
 		notifyStatus(env, buildReportTag, successList, noContentList, failureList)
 		return
 	}
@@ -57,13 +57,13 @@ func buildReportsByType(env string, db *gorm.DB, dashboards []*M.Dashboard, repo
 	successList, noContentList, failureList []string) {
 
 	defer func() {
-		reportLog.Infof("Successfully built reports")
+		reportLog.Infof("Successfully built reports.")
 	}()
 
 	if mailReports {
-		reportLog.Infof("Reports mailing enabled")
+		reportLog.Infof("Reports mailing enabled.")
 	} else {
-		reportLog.Infof("Reports mailing disabled")
+		reportLog.Infof("Reports mailing disabled.")
 	}
 
 	store := newStore(dashboards)
@@ -72,7 +72,7 @@ func buildReportsByType(env string, db *gorm.DB, dashboards []*M.Dashboard, repo
 	buildReportsDedupe := make(map[string]bool, 0)
 
 	for _, dashboard := range dashboards {
-		reportLog.Infof("Finding which reports to Build for dashboardID: %d", dashboard.ID)
+		reportLog.Infof("Finding which reports to Build for dashboard_id %d.", dashboard.ID)
 		dashboardReports, errCode := fetchDashboardReportsByType(db, dashboard.ProjectId, dashboard.ID, reportType)
 		if errCode == http.StatusInternalServerError {
 			continue
@@ -85,7 +85,7 @@ func buildReportsByType(env string, db *gorm.DB, dashboards []*M.Dashboard, repo
 			continue
 		}
 		reportBuilds = append(reportBuilds, buildReportsForDashboard...)
-		reportLog.Infof("Finding which reports to Re-Build for dashboardID: %d", dashboard.ID)
+		reportLog.Infof("Finding which reports to Re-Build for dashboard_id %d.", dashboard.ID)
 
 		rebuildReportsForDashboard := findWhichInvalidReportsToRebuild(dashboardReports, reportType, store, &buildReportsDedupe)
 		reportBuilds = append(reportBuilds, rebuildReportsForDashboard...)
@@ -208,6 +208,8 @@ func buildReportsByBuildConfig(buildReportsFor []*ReportBuild) (reports []*M.Rep
 	reports = make([]*M.Report, 0, 0)
 
 	for _, bR := range buildReportsFor {
+		reportLog.Infof("Building report for project_id %d dashboard_id %d.", bR.ProjectID, bR.DashboardID)
+
 		report, errCode := M.GenerateReport(bR.ProjectID, bR.DashboardID, bR.DashboardName,
 			bR.Type, bR.IntervalBeforeThat, bR.Interval)
 		if errCode == http.StatusInternalServerError {

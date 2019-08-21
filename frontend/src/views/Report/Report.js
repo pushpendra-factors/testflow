@@ -177,12 +177,11 @@ class Report extends Component {
   
   renderReportUnits(report) {
     let reportUnits = [];
-    let units = report.contents.dashboardunitid_to_dashboardunitreport;
+    let units = report.units;
 
-    for(let id in units){
-        if (!units.hasOwnProperty(id)) continue;
-        let unit = units[id];
-        
+    for(let i=0; i<units.length; i++){
+        let unit = units[i];
+
         if (unit.p === PRESENTATION_CARD) {
           reportUnits.push(<CardUnit name={unit.t} intervalBeforeThat={unit.r[0]} interval={unit.r[1]} explanations={unit.e} />);
         } else if (unit.p === PRESENTATION_LINE){
