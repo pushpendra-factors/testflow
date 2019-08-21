@@ -372,7 +372,7 @@ func clipCategoricalValue(catValue string) string {
 		log.WithFields(log.Fields{
 			"err":      err,
 			"catValue": catValue,
-		}).Error(err)
+		}).Debug(err)
 
 		return catValue[:MAX_CATEGORICAL_STRING_LENGTH]
 	}
@@ -429,7 +429,7 @@ func (p *Pattern) CountForEvent(
 		// Can happen when multiple userId's have the same customerUserId.
 		minJoinTimestamp := int64(math.Max(math.Min(
 			float64(userJoinTimestamp), float64(p.currentUserJoinTimestamp)), 0.0))
-		log.Errorf(fmt.Sprintf("Mismatch in User data.userJoinTime: %v, pattern userJoinTime: %d. Pattern timestamp will change to %d",
+		log.Debug(fmt.Sprintf("Mismatch in User data.userJoinTime: %v, pattern userJoinTime: %d. Pattern timestamp will change to %d",
 			userJoinTimestamp, p.currentUserJoinTimestamp, minJoinTimestamp))
 		p.currentUserJoinTimestamp = minJoinTimestamp
 	}
