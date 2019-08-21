@@ -37,7 +37,7 @@ class ReportsList extends Component {
 
     this.state = {
       loading: true,
-      listByName: null,
+      listByDashboard: null,
       showMore: null,
     }
   }
@@ -45,29 +45,29 @@ class ReportsList extends Component {
   componentWillMount() {
       this.props.fetchProjectReportsList(this.props.currentProjectId)
         .then(() => { 
-          let reportsByName = this.getReportsByName();
+          let reportsByDashboard = this.getReportsByDashboard();
 
           this.setState({ 
             loading: false, 
-            listByName: this.getInitListByName(reportsByName),
-            showMore: this.getInitShowMore(reportsByName),
+            listByDashboard: this.getInitListByName(reportsByDashboard),
+            showMore: this.getInitShowMore(reportsByDashboard),
           });
       });
   }
 
-  getInitListByName(reportsByName) {
-    let names = Object.keys(reportsByName);
+  getInitListByName(reportsByDashboard) {
+    let names = Object.keys(reportsByDashboard);
 
     let initReports = {};
     for (let i=0; i<names.length; i++) {
-      initReports[names[i]] = reportsByName[names[i]].slice(0, 5);
+      initReports[names[i]] = reportsByDashboard[names[i]].slice(0, 5);
     }
 
     return initReports;
   }
 
-  getInitShowMore(reportsByName) {
-    let names = Object.keys(reportsByName);
+  getInitShowMore(reportsByDashboard) {
+    let names = Object.keys(reportsByDashboard);
 
     let showMore = {};
     for (let i=0; i<names.length; i++) {
@@ -89,44 +89,45 @@ class ReportsList extends Component {
     return "";
   }
 
-  getReportsByName() {
-    let reportsByName = {};
+  getReportsByDashboard() {
+    let reportsByDashboard = {};
 
-    if (!this.props.reports) return reportsByName;
+    if (!this.props.reports) return reportsByDashboard;
     
     let reports = this.props.reports;
     for (let i=0; i<reports.length; i++) {
-      if (!reportsByName[reports[i].dashboard_name])
-        reportsByName[reports[i].dashboard_name] = [];
+      if (!reportsByDashboard[reports[i].dashboard_id])
+        reportsByDashboard[reports[i].dashboard_id] = [];
 
       let period = reports[i].type == "m" ? moment.unix(reports[i].start_time).utc().format('MMMM, YYYY') : 
         (readableTimstamp(reports[i].start_time) + " - "  + readableTimstamp(reports[i].end_time));
-      reportsByName[reports[i].dashboard_name].push({
+        reportsByDashboard[reports[i].dashboard_id].push({
         id: reports[i].id,
         typeName: this.getTypeName(reports[i].type),
         period: period,
+        dashboardName: reports[i].dashboard_name,
       })
     }
 
-    return reportsByName;
+    return reportsByDashboard;
   }
 
-  loadListByName = (name) => {
-    let reports = this.getReportsByName();
-    let list = reports[name].slice(INIT_LIST_SIZE); 
+  loadListByDashboard = (dashboardId) => {
+    let reports = this.getReportsByDashboard();
+    let list = reports[dashboardId].slice(INIT_LIST_SIZE); 
 
     this.setState((prevState) => {
       let _state = prevState;
-      _state.listByName[name] = [...prevState.listByName[name], ...list];
-      _state.showMore[name] = false;
+      _state.listByDashboard[dashboardId] = [...prevState.listByDashboard[dashboardId], ...list];
+      _state.showMore[dashboardId] = false;
       return _state;
     });
   }
 
-  renderListByName(name) {
+  renderList(dashboardId) {
     let list = [];
     
-    let reports = this.state.listByName[name];
+    let reports = this.state.listByDashboard[dashboardId];
     for(let i=0; i<reports.length; i++) {
       list.push(
         <Row style={{ marginBottom: '5px' }} > 
@@ -144,26 +145,26 @@ class ReportsList extends Component {
   renderListByDashboard() {
     let dashboards = [];
 
-    let reports = this.state.listByName;
-    let names = Object.keys(reports);
+    let reports = this.state.listByDashboard;
+    let dashboardIds = Object.keys(reports);
 
-    for (let i=0; i<names.length; i++) {
-      let name = names[i];
+    for (let i=0; i<dashboardIds.length; i++) {
+      let dashboardId = dashboardIds[i];
 
       dashboards.push(
         <Card className='fapp-card secondary-list'>
           <CardHeader style={{ marginBottom: '5px' }}>
-            <strong> { "Report - " + name } </strong>
+            <strong> { "Report - " + reports[dashboardId][0].dashboardName } </strong>
           </CardHeader>
           <CardBody>
             <Row style={{ marginBottom: '10px' }} >
               <Col md={2} className='fapp-label light'>Type</Col>
               <Col md={3} className='fapp-label light'>Period</Col>
             </Row>
-            { this.renderListByName(name) }
+            { this.renderList(dashboardId) }
 
-            <Button style={{ marginTop: '5px' }} size='sm' color='primary' hidden={!this.state.showMore[name]}
-              outline onClick={() => this.loadListByName(name)}>
+            <Button style={{ marginTop: '5px' }} size='sm' color='primary' hidden={!this.state.showMore[dashboardId]}
+              outline onClick={() => this.loadListByDashboard(dashboardId)}>
               Show more
             </Button>
           </CardBody>
@@ -180,7 +181,7 @@ class ReportsList extends Component {
     if (this.props.reports && this.props.reports.length == 0)
       return <NoContent paddingTop='18%' center msg='No Reports' />;
 
-    let reportsByName = this.getReportsByName();
+    let reportsByName = this.getReportsByDashboard();
     return (
       <div className='fapp-content' style={{ marginLeft: '2rem', marginRight: '2rem', paddingTop: '30px' }}>
         { this.renderListByDashboard(reportsByName) }
