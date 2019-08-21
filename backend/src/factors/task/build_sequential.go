@@ -28,6 +28,7 @@ type BuildSuccess struct {
 	PullEventsTimeInMS  int64 `json:"pulled_events_in_ms"`
 	PatternMineTimeInMS int64 `json:"mined_patterns_in_ms"`
 	NumberOfChunks      int   `json:"num_chunks"`
+	NumberOfEvents      int   `json:"num_events"`
 }
 
 func notifyOnPanic(env string) {
@@ -42,7 +43,8 @@ func notifyOnPanic(env string) {
 // BuildSequential - runs model building sequenitally for all project intervals.
 func BuildSequential(env string, db *gorm.DB, cloudManager *filestore.FileManager,
 	etcdClient *serviceEtcd.EtcdClient, diskManger *serviceDisk.DiskDriver,
-	bucketName string, noOfPatternWorkers int, projectId uint64, maxModelSize int64) error {
+	bucketName string, noOfPatternWorkers int, projectId uint64,
+	projectIdsToSkip map[uint64]bool, maxModelSize int64) error {
 
 	defer notifyOnPanic(env)
 
@@ -62,6 +64,10 @@ func BuildSequential(env string, db *gorm.DB, cloudManager *filestore.FileManage
 		// Build model, for projectId if given, else for all.
 		if projectId > 0 && build.ProjectId != projectId {
 			bsLog.WithField("ProjectId", build.ProjectId).Info("Skipping build for the non-given project.")
+			continue
+		}
+		if _, ok := projectIdsToSkip[build.ProjectId]; ok {
+			bsLog.WithField("ProjectId", build.ProjectId).Info("Skipping build for the project.")
 			continue
 		}
 
@@ -107,6 +113,7 @@ func BuildSequential(env string, db *gorm.DB, cloudManager *filestore.FileManage
 		success = append(success, BuildSuccess{
 			Build:               build,
 			NumberOfChunks:      numChunks,
+			NumberOfEvents:      eventsCount,
 			PullEventsTimeInMS:  timeTakenToPullEvents,
 			PatternMineTimeInMS: timeTakenToMinePatterns})
 	}
