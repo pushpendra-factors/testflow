@@ -7,13 +7,16 @@ import {
   Row,
   Card,
   CardHeader,
-  CardBody
+  CardBody,
+  Button,
 } from 'reactstrap';
 
 import { fetchProjectReportsList } from '../../actions/reportActions';
 import { readableTimstamp } from '../../util';
 import Loading from '../../loading';
 import NoContent from '../../common/NoContent';
+
+const INIT_LIST_SIZE = 5;
 
 const mapStateToProps = store => {
   return {
@@ -33,14 +36,33 @@ class ReportsList extends Component {
     super(props);
 
     this.state = {
-      loading: true
+      loading: true,
+      listByName: null,
     }
   }
   
   componentWillMount() {
       this.props.fetchProjectReportsList(this.props.currentProjectId)
-        .then(() => { this.setState({ loading: false }) });
+        .then(() => { 
+          this.setState({ 
+            loading: false, 
+            listByName: this.getInitListByName(),
+          });
+      });
   }
+
+  getInitListByName() {
+    let reports = this.getReportsByName();
+    let names = Object.keys(reports);
+
+    let initReports = {};
+    for (let i=0; i<names.length; i++) {
+      initReports[names[i]] = reports[names[i]].slice(0, 5);
+    }
+
+    return initReports;
+  }
+
 
   getReadableType(typ) {
     if (typ == 'w') return 'Weekly';
@@ -56,6 +78,8 @@ class ReportsList extends Component {
 
   getReportsByName() {
     let reportsByName = {};
+
+    if (!this.props.reports) return reportsByName;
     
     let reports = this.props.reports;
     for (let i=0; i<reports.length; i++) {
@@ -71,12 +95,26 @@ class ReportsList extends Component {
       })
     }
 
-    return reportsByName
+    return reportsByName;
   }
 
-  renderList(reports) {
+  loadListByName = (name) => {
+    console.log(name);
+
+    let reports = this.getReportsByName();
+    let list = reports[name].slice(INIT_LIST_SIZE); 
+
+    this.setState((prevState) => {
+      let _state = prevState;
+      _state.listByName[name] = [...prevState.listByName[name], ...list];
+      return _state;
+    });
+  }
+
+  renderListByName(name) {
     let list = [];
     
+    let reports = this.state.listByName[name];
     for(let i=0; i<reports.length; i++) {
       list.push(
         <Row style={{ marginBottom: '5px' }} >
@@ -91,10 +129,12 @@ class ReportsList extends Component {
     return list;
   }
 
-  renderListByDashboard(reports) {
+  renderListByDashboard() {
     let dashboards = [];
 
+    let reports = this.state.listByName;
     let names = Object.keys(reports);
+
     for (let i=0; i<names.length; i++) {
       let name = names[i];
 
@@ -108,7 +148,11 @@ class ReportsList extends Component {
               <Col md={2} className='fapp-label light'>Type</Col>
               <Col md={3} className='fapp-label light'>Period</Col>
             </Row>
-            { this.renderList(reports[names[i]]) }
+            { this.renderListByName(name) }
+
+            <Button size='sm' color='primary' outline onClick={() => this.loadListByName(name)}>
+              show more
+            </Button>
           </CardBody>
         </Card>
       );
