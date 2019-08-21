@@ -14,10 +14,10 @@ spec:
             layer: jobs
         spec:
           nodeSelector:
-            cloud.google.com/gke-nodepool: job-pool
+            cloud.google.com/gke-nodepool: default-pool
           containers:
           - name: build-seq-job
-            image: us.gcr.io/factors-production/build-seq-job:v0.7-beta_5d8c816
+            image: us.gcr.io/factors-production/build-seq-job:v0.8-beta_1e00503
             imagePullPolicy: IfNotPresent
             args:
             - --env
@@ -40,6 +40,8 @@ spec:
             - $(POSTGRES_PASSWORD)
             - --num_routines
             - $(NUM_ROUTINES)
+            - --project_ids_to_skip
+            - "11"
             envFrom:
             - configMapRef:
                 name: config-etcd
