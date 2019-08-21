@@ -34,8 +34,9 @@ type Event struct {
 }
 
 type EventTimestamp struct {
-	FirstEvent int64
-	LastEvent  int64
+	FirstEvent  int64
+	LastEvent   int64
+	ProjectName string
 }
 
 type EventOccurrence struct {
@@ -134,7 +135,7 @@ func GetEventById(projectId uint64, id string) (*Event, int) {
 func GetProjectEventTimeInfo() (*(map[uint64]*EventTimestamp), int) {
 	db := C.GetServices().Db
 
-	rows, err := db.Raw("SELECT project_id, min(timestamp) as first_timestamp, max(timestamp) as last_timestamp FROM events GROUP BY project_id").Rows()
+	rows, err := db.Raw("SELECT events.project_id, projects.name, min(events.timestamp) as first_timestamp, max(events.timestamp) as last_timestamp FROM events LEFT JOIN projects on events.project_id = projects.id GROUP BY events.project_id,projects.id").Rows()
 	if err != nil {
 		log.WithError(err).Error("Failed to get events timestamp info.")
 		return nil, http.StatusInternalServerError
@@ -147,12 +148,14 @@ func GetProjectEventTimeInfo() (*(map[uint64]*EventTimestamp), int) {
 	for rows.Next() {
 		var projectId uint64
 		var firstTimestamp, lastTimestamp int64
-		if err = rows.Scan(&projectId, &firstTimestamp, &lastTimestamp); err != nil {
+		var projectName string
+		if err = rows.Scan(&projectId, &projectName, &firstTimestamp, &lastTimestamp); err != nil {
 			return nil, http.StatusInternalServerError
 		}
 
 		if firstTimestamp > 0 {
-			projectEventsTime[projectId] = &EventTimestamp{FirstEvent: firstTimestamp, LastEvent: lastTimestamp}
+			projectEventsTime[projectId] = &EventTimestamp{
+				FirstEvent: firstTimestamp, LastEvent: lastTimestamp, ProjectName: projectName}
 		}
 
 		count++
