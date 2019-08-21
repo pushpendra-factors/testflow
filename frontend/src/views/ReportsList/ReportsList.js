@@ -38,31 +38,44 @@ class ReportsList extends Component {
     this.state = {
       loading: true,
       listByName: null,
+      showMore: null,
     }
   }
   
   componentWillMount() {
       this.props.fetchProjectReportsList(this.props.currentProjectId)
         .then(() => { 
+          let reportsByName = this.getReportsByName();
+
           this.setState({ 
             loading: false, 
-            listByName: this.getInitListByName(),
+            listByName: this.getInitListByName(reportsByName),
+            showMore: this.getInitShowMore(reportsByName),
           });
       });
   }
 
-  getInitListByName() {
-    let reports = this.getReportsByName();
-    let names = Object.keys(reports);
+  getInitListByName(reportsByName) {
+    let names = Object.keys(reportsByName);
 
     let initReports = {};
     for (let i=0; i<names.length; i++) {
-      initReports[names[i]] = reports[names[i]].slice(0, 5);
+      initReports[names[i]] = reportsByName[names[i]].slice(0, 5);
     }
 
     return initReports;
   }
 
+  getInitShowMore(reportsByName) {
+    let names = Object.keys(reportsByName);
+
+    let showMore = {};
+    for (let i=0; i<names.length; i++) {
+      showMore[names[i]] = true;
+    }
+
+    return showMore;
+  }
 
   getReadableType(typ) {
     if (typ == 'w') return 'Weekly';
@@ -99,14 +112,13 @@ class ReportsList extends Component {
   }
 
   loadListByName = (name) => {
-    console.log(name);
-
     let reports = this.getReportsByName();
     let list = reports[name].slice(INIT_LIST_SIZE); 
 
     this.setState((prevState) => {
       let _state = prevState;
       _state.listByName[name] = [...prevState.listByName[name], ...list];
+      _state.showMore[name] = false;
       return _state;
     });
   }
@@ -117,7 +129,7 @@ class ReportsList extends Component {
     let reports = this.state.listByName[name];
     for(let i=0; i<reports.length; i++) {
       list.push(
-        <Row style={{ marginBottom: '5px' }} >
+        <Row style={{ marginBottom: '5px' }} > 
           <Col md={2} className="fapp-clickable" style={{ cursor: "pointer" }} onClick={() => { this.props.history.push("/reports/"+reports[i].id) }}>
             { reports[i].typeName }
           </Col>
@@ -141,7 +153,7 @@ class ReportsList extends Component {
       dashboards.push(
         <Card className='fapp-card secondary-list'>
           <CardHeader style={{ marginBottom: '5px' }}>
-            <strong> { "Report - " + name + " (" + reports[name].length + ")" } </strong>
+            <strong> { "Report - " + name } </strong>
           </CardHeader>
           <CardBody>
             <Row style={{ marginBottom: '10px' }} >
@@ -150,8 +162,9 @@ class ReportsList extends Component {
             </Row>
             { this.renderListByName(name) }
 
-            <Button size='sm' color='primary' outline onClick={() => this.loadListByName(name)}>
-              show more
+            <Button style={{ marginTop: '5px' }} size='sm' color='primary' hidden={!this.state.showMore[name]}
+              outline onClick={() => this.loadListByName(name)}>
+              Show more
             </Button>
           </CardBody>
         </Card>
