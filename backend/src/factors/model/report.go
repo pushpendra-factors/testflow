@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	C "factors/config"
+	U "factors/util"
 	"fmt"
 	"net/http"
 	"sort"
@@ -327,16 +328,50 @@ func GenerateReport(projectID, dashboardID uint64, dashboardName string, reportT
 	return report, http.StatusOK
 }
 
-func getReportUnit(projectID uint64, query Query, interval Interval) (*ReportUnit, int) {
+func overrideDateTimePropertyValue(property *QueryProperty, interval *Interval) error {
+	dateTimeValue, err := DecodeDateTimePropertyValue(property.Value)
+	if err != nil {
+		return err
+	}
 
+	dateTimeValue.From = interval.StartTime
+	dateTimeValue.To = interval.EndTime
+
+	newDateTimeBytes, err := json.Marshal(dateTimeValue)
+	if err != nil {
+		return err
+	}
+
+	property.Value = string(newDateTimeBytes)
+	return nil
+}
+
+func getReportUnit(projectID uint64, query Query, interval Interval) (*ReportUnit, int) {
 	query.From = interval.StartTime
 	query.To = interval.EndTime
+
+	for _, ewp := range query.EventsWithProperties {
+		for i := range ewp.Properties {
+			// override user join time with report unit interval.
+			if ewp.Properties[i].Type == U.PropertyTypeDateTime &&
+				ewp.Properties[i].Property == U.UP_JOIN_TIME {
+
+				err := overrideDateTimePropertyValue(&ewp.Properties[i], &interval)
+				if err != nil {
+					log.WithField("property", ewp.Properties[i]).Error(
+						"Failed overriding user join time by interval.")
+					return nil, http.StatusInternalServerError
+				}
+			}
+		}
+	}
 
 	queryResult, errCode, errMsg := Analyze(projectID, query)
 	if errCode != http.StatusOK {
 		log.Errorf("Error creating ReportUnit, ErrMsg: %s", errMsg)
 		return nil, http.StatusInternalServerError
 	}
+
 	reportUnit := ReportUnit{
 		StartTime:   interval.StartTime,
 		EndTime:     interval.EndTime,

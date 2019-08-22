@@ -181,7 +181,7 @@ const SamplePropertyValuesLimit = 100
 // Properties should be present always for queries.
 var DefaultUserPropertiesByType = map[string][]string{
 	PropertyTypeDateTime: []string{
-		"$joinTime",
+		UP_JOIN_TIME,
 	},
 }
 

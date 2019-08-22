@@ -155,14 +155,14 @@ func appendStatement(x, y string) string {
 	return fmt.Sprintf("%s %s", x, y)
 }
 
-func decodeDateTimeValue(dateTimeJson string) (int64, int64, error) {
+func DecodeDateTimePropertyValue(dateTimeJson string) (*DateTimePropertyValue, error) {
 	var dateTimeProperty DateTimePropertyValue
 	err := json.Unmarshal([]byte(dateTimeJson), &dateTimeProperty)
 	if err != nil {
-		return 0, 0, err
+		return &dateTimeProperty, err
 	}
 
-	return dateTimeProperty.From, dateTimeProperty.To, nil
+	return &dateTimeProperty, nil
 }
 
 func isValidLogicalOp(op string) bool {
@@ -195,12 +195,12 @@ func buildWhereFromProperties(properties []QueryProperty) (rStmnt string, rParam
 			if p.Type == U.PropertyTypeDateTime {
 				pStmnt = fmt.Sprintf("(%s->>?>=? AND %s->>?<=?)", propertyEntity, propertyEntity)
 
-				start, end, err := decodeDateTimeValue(p.Value)
+				dateTimeValue, err := DecodeDateTimePropertyValue(p.Value)
 				if err != nil {
 					log.WithError(err).Error("Failed reading timestamp on user join query.")
 					return "", nil, err
 				}
-				rParams = append(rParams, p.Property, start, p.Property, end)
+				rParams = append(rParams, p.Property, dateTimeValue.From, p.Property, dateTimeValue.To)
 			} else {
 				var pValue string
 				if p.Operator == "contains" || p.Operator == "notContains" {
