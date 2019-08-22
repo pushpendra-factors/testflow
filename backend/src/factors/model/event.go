@@ -135,7 +135,7 @@ func GetEventById(projectId uint64, id string) (*Event, int) {
 func GetProjectEventTimeInfo() (*(map[uint64]*EventTimestamp), int) {
 	db := C.GetServices().Db
 
-	rows, err := db.Raw("SELECT events.project_id, projects.name, min(events.timestamp) as first_timestamp, max(events.timestamp) as last_timestamp FROM events LEFT JOIN projects on events.project_id = projects.id GROUP BY events.project_id,projects.id").Rows()
+	rows, err := db.Raw("SELECT projects.id, projects.name, min(events.timestamp) as first_timestamp, max(events.timestamp) as last_timestamp FROM events LEFT JOIN projects on events.project_id = projects.id GROUP BY projects.id").Rows()
 	if err != nil {
 		log.WithError(err).Error("Failed to get events timestamp info.")
 		return nil, http.StatusInternalServerError
