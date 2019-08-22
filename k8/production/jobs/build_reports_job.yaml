@@ -17,7 +17,7 @@ spec:
             cloud.google.com/gke-nodepool: default-pool
           containers:
           - name: build-reports-job
-            image: us.gcr.io/factors-production/build-reports-job:v0.04-0658d7f
+            image: us.gcr.io/factors-production/build-reports-job:v0.05-a3f064a
             imagePullPolicy: IfNotPresent
             args:
             - --env
