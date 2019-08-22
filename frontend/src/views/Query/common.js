@@ -6,6 +6,7 @@ import { slideUnixTimeWindowToCurrentTime, firstToUpperCase } from '../../util';
 export const QUERY_TYPE_UNIQUE_USERS = "unique_users";
 export const QUERY_TYPE_EVENTS_OCCURRENCE = "events_occurrence";
 
+export const PROPERTY_KEY_JOIN_TIME = "$joinTime";
 export const PROPERTY_VALUE_NONE = "$none";
 
 export const PROPERTY_TYPE_EVENT = 'event';

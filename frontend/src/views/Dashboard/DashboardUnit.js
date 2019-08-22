@@ -13,7 +13,8 @@ import LineChart from '../Query/LineChart';
 import TableChart from '../Query/TableChart';
 import { PRESENTATION_BAR, PRESENTATION_LINE, 
   PRESENTATION_TABLE, PRESENTATION_CARD, 
-  PRESENTATION_FUNNEL, PROPERTY_VALUE_TYPE_DATE_TIME } from '../Query/common';
+  PRESENTATION_FUNNEL, PROPERTY_VALUE_TYPE_DATE_TIME, 
+  PROPERTY_KEY_JOIN_TIME } from '../Query/common';
 import { slideUnixTimeWindowToCurrentTime } from '../../util';
 import FunnelChart from '../Query/FunnelChart';
 
@@ -85,8 +86,17 @@ class DashboardUnit extends Component {
   }
 
   setQueryPeriod(query, dateRange) {
-    let from =  moment(dateRange[0].startDate).unix();
-    let to = moment(dateRange[0].endDate).unix();
+    let selectedRange = dateRange[0];
+    let isEndDateToday = moment(selectedRange.endDate).isSame(moment(), 'day');
+    let from =  moment(selectedRange.startDate).unix();
+    let to = moment(selectedRange.endDate).unix();
+
+    // Adjust the duration window respective to current time.
+    if (isEndDateToday) {
+      let newRange = slideUnixTimeWindowToCurrentTime(from, to)
+      from = newRange.from;
+      to = newRange.to;
+    }
 
     query.fr = from; // in utc.
     query.to = to; // in utc.
@@ -105,6 +115,13 @@ class DashboardUnit extends Component {
       for(let pi=0; pi < ewp.pr.length; pi++) {
         if (ewp.pr[pi].ty == PROPERTY_VALUE_TYPE_DATE_TIME) {
           let propertyValue = JSON.parse(ewp.pr[pi].va);
+
+          // match user join time property value to dashboard datetime.
+          if (ewp.pr[pi].pr == PROPERTY_KEY_JOIN_TIME) {
+            propertyValue.fr = query.fr;
+            propertyValue.to = query.to;
+          }
+
           if (propertyValue.ovp) {
             let newPeriod = slideUnixTimeWindowToCurrentTime(propertyValue.fr, propertyValue.to);
             propertyValue.fr = newPeriod.from;
