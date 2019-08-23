@@ -408,6 +408,16 @@ func getPercentageChange(prevCount float64, curCount float64) (float64, string) 
 	return percentChange, effect
 }
 
+func getPositiveDiff(prevCount, curCount float64) float64 {
+	diff := curCount - prevCount
+
+	if diff < 0 {
+		diff = diff * -1
+	}
+
+	return diff
+}
+
 func explainTotalChange(percentage float64, effect, title, from, to, reportType string) string {
 	if reportType == ReportTypeWeekly {
 		return fmt.Sprintf("%0.0f%% %s in '%s' from week %s to week %s.", percentage,
@@ -478,7 +488,7 @@ func getAggrByGroup(queryResult *QueryResult,
 
 func sortAndLimitExplanations(explanations []ReportExplanation) []ReportExplanation {
 	sort.SliceStable(explanations, func(i, j int) bool {
-		return explanations[i].Diff < explanations[j].Diff
+		return explanations[i].Diff > explanations[j].Diff
 	})
 
 	if len(explanations) < explanationsLimit {
@@ -542,7 +552,7 @@ func addExplanationsForPresentationBar(duReport *DashboardUnitReport, reportType
 		if percentChange >= 5.0 && effect == totalEffect {
 			secExplanations = append(secExplanations,
 				ReportExplanation{Type: resultEntity, Percentage: percentChange, Effect: effect,
-					GroupName: curResultGroupName, GroupValue: group, Diff: curAggr - prevAggr,
+					GroupName: curResultGroupName, GroupValue: group, Diff: getPositiveDiff(prevAggr, curAggr),
 					CurValue: curAggr, PrevValue: prevAggr})
 		}
 	}
@@ -728,7 +738,7 @@ func addExplanationsForPresentationLine(duReport *DashboardUnitReport, reportTyp
 				timestampStr := fmt.Sprintf("%s (between %s and %s)", getDayOfTimestamp(curTimestamp), getReadableTimestamp(prevTimestamp), getReadableTimestamp(curTimestamp))
 				secExplanations = append(secExplanations,
 					ReportExplanation{Type: resultEntity, Percentage: percentChange, Effect: effect,
-						Diff: curAggr - prevAggr, CurValue: curAggr, PrevValue: prevAggr, GroupName: groupName,
+						Diff: getPositiveDiff(prevAggr, curAggr), CurValue: curAggr, PrevValue: prevAggr, GroupName: groupName,
 						GroupValue: displayGroup, TimestampStr: timestampStr})
 			}
 		}
