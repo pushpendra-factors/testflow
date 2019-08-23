@@ -443,7 +443,7 @@ func explainChange(exp *ReportExplanation) string {
 		exp.Effect, exp.PrevValue, exp.CurValue, exp.Percentage)
 
 	if exp.TimestampStr != "" {
-		expStr = expStr + " " + fmt.Sprintf("on %s", exp.TimestampStr)
+		expStr = expStr + " " + fmt.Sprintf("%s", exp.TimestampStr)
 	}
 
 	return expStr + "."
@@ -708,12 +708,15 @@ func addExplanationsForPresentationLine(duReport *DashboardUnitReport, reportTyp
 
 	secExplanations := make([]ReportExplanation, 0, 0)
 
-	if len(prevTimestamps) != len(curTimestamps) {
-		duReport.Explanations = explanations
-		return
+	var comparisonLen int
+	if len(prevTimestamps) < len(curTimestamps) {
+		comparisonLen = len(prevTimestamps)
+	} else {
+		comparisonLen = len(curTimestamps)
 	}
 
-	for i := range curTimestamps {
+	// compare based on array position.
+	for i := 0; i < comparisonLen; i++ {
 		curTimestamp := curTimestamps[i]
 		prevTimestamp := prevTimestamps[i]
 
@@ -735,7 +738,12 @@ func addExplanationsForPresentationLine(duReport *DashboardUnitReport, reportTyp
 
 			percentChange, effect := getPercentageChange(prevAggr, curAggr)
 			if percentChange >= 5.0 && effect == totalEffect {
-				timestampStr := fmt.Sprintf("%s (between %s and %s)", getDayOfTimestamp(curTimestamp), getReadableTimestamp(prevTimestamp), getReadableTimestamp(curTimestamp))
+				timestampStr := fmt.Sprintf("between %s and %s", getReadableTimestamp(prevTimestamp),
+					getReadableTimestamp(curTimestamp))
+				if reportType == ReportTypeWeekly {
+					timestampStr = fmt.Sprintf("on %s (%s)", getDayOfTimestamp(curTimestamp), timestampStr)
+				}
+
 				secExplanations = append(secExplanations,
 					ReportExplanation{Type: resultEntity, Percentage: percentChange, Effect: effect,
 						Diff: getPositiveDiff(prevAggr, curAggr), CurValue: curAggr, PrevValue: prevAggr, GroupName: groupName,
