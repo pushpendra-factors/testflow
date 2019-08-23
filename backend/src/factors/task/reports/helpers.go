@@ -65,23 +65,24 @@ func fetchMostRecentReportByType(reports []*M.Report, projectID, dashboardID uin
 func findStartTimeForDashboardByType(dashboard *M.Dashboard,
 	existingReports []*M.Report, reportType string) time.Time {
 
+	var startTime time.Time
 	mostRecentReport, errCode := fetchMostRecentReportByType(existingReports,
 		dashboard.ProjectId, dashboard.ID, reportType)
 	if errCode == http.StatusNotFound {
 		// no reports for this dashboard add intervals after dashboard's creation time
-		return dashboard.CreatedAt
+		startTime = dashboard.CreatedAt
+	} else {
+		// If most recent report is for weeks W1 and W2,
+		// next report should be created for W2 and W3
+		// Report creation should happen from starting of W2
+		startTime = unixToUTCTime(mostRecentReport.EndTime)
 	}
-
-	// If most recent report is for weeks W1 and W2,
-	// next report should be created for W2 and W3
-	// Report creation should happen from starting of W2
-	reportEndTimeTs := unixToUTCTime(mostRecentReport.EndTime)
 
 	var beginingOfPeriod time.Time
 	if reportType == M.ReportTypeWeekly {
-		beginingOfPeriod = now.New(reportEndTimeTs).BeginningOfWeek()
+		beginingOfPeriod = now.New(startTime).BeginningOfWeek()
 	} else if reportType == M.ReportTypeMonthly {
-		beginingOfPeriod = now.New(reportEndTimeTs).BeginningOfMonth()
+		beginingOfPeriod = now.New(startTime).BeginningOfMonth()
 	}
 
 	return beginingOfPeriod
@@ -118,7 +119,7 @@ func getLastMonthEndTime() time.Time {
 // endTime is rounded off to end of the period type
 func getIntervalsByType(startTime, endTime time.Time, reportType string) []M.Interval {
 	intervals := make([]M.Interval, 0, 0)
-	startTs := startTime
+	startTs := startTime.UTC()
 
 	var endTs time.Time
 	if reportType == M.ReportTypeWeekly {
@@ -142,11 +143,12 @@ func getIntervalsByType(startTime, endTime time.Time, reportType string) []M.Int
 			log.Fatalf("Invalid report type give on get_intervals: %s", reportType)
 		}
 
-		interval := M.Interval{StartTime: periodStart.UTC().Unix(), EndTime: periodEnd.UTC().Unix()}
+		interval := M.Interval{StartTime: periodStart.Unix(), EndTime: periodEnd.Unix()}
 		intervals = append(intervals, interval)
 
 		startTs = periodEnd.Add(24 * time.Hour)
 	}
+
 	return intervals
 }
 
