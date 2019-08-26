@@ -47,7 +47,7 @@ function App() {
                 </a>
               </li>
               <li style={{ padding: "0 5px" }}>
-                <button id="signup-button-nav" className='primary-cta cta-nav'>Sign Up</button>
+                <button id="signup-button-nav" className='cta primary cta-nav'>Sign Up</button>
               </li>
             </ul>
           </div>

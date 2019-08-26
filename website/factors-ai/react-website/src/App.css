@@ -176,21 +176,33 @@ button {
   font-weight: 700;
 }
 
-.primary-cta {
-  padding: 15px 30px;
+.cta {
+  padding: 15px 20px;
   color: #ffffff;
-  background: #019875;
-  font-size: 18px;
+  font-size: 15px;
   letter-spacing: 0.1rem;
   border: none;
   border-radius: 2px;
 }
 
-.primary-cta:hover {
+.cta.primary {
+  margin-right: 15px;
+  background: #019875;
+}
+
+.cta.primary:hover {
   background: #4daf7c;
 }
 
-.primary-cta.cta-nav {
+.cta.secondary {
+  background: #20a8d8;
+}
+
+.cta.secondary:hover {
+  background: #5cb7d8;
+}
+
+.cta.primary.cta-nav {
   padding: 10px 16px;
   font-size: 14px;
 }

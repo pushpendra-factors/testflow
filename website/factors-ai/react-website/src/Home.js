@@ -21,7 +21,8 @@ class Home extends React.Component {
                 <p className="sub-text">Software that <b>explains</b> - ways to optimise marketing campaigns, improve website conversions and drive user engagement.</p>
                 <span className="error" id="invalid-email" style={{display: 'none'}}>Please enter a valid email</span>
                 <span className="success" id="valid-email" style={{display: 'none'}}>Thanks, we will get back to you soon</span>
-                <button id="signup-button" className='primary-cta'>SIGN UP FOR FREE</button>
+                <button id="signup-button" className='cta primary'>SIGN UP FOR FREE</button>
+                <button id="demo-button" className='cta secondary'>BOOK A DEMO</button>
               </div>
               <div className="col-md-7 content" style={{ textAlign: "center" }}>
                 <img src={heroSVG} />
@@ -108,7 +109,8 @@ class Home extends React.Component {
             <div className="row">
               <div className="col-md-12 banner banner-light bottom-banner">
                 <h3>Try FactorsAI today</h3>
-                <button id="signup-button-footer" className="primary-cta">SIGN UP NOW</button>
+                <button id="signup-button-footer" className="cta primary">SIGN UP FOR FREE</button>
+                <button id="demo-button-footer" className="cta secondary">BOOK A DEMO</button>
               </div>
             </div>
           </div>
