@@ -469,21 +469,32 @@ func getAggrByGroup(queryResult *QueryResult,
 	aggrIndex, _, _ := GetTimstampAndAggregateIndexOnQueryResult(queryResult.Headers)
 	aggrByGroupMap := make(map[string]float64)
 
+	// len should be aggr + 1, if group exist.
+	hasGroup := len(queryResult.Headers) > 1
 	var groupIndex int
-	if aggrIndex == 0 {
+	if hasGroup && aggrIndex == 0 {
 		groupIndex = 1
 	}
 
 	var totalCount float64
 	for _, row := range queryResult.Rows {
-		group := row[groupIndex].(string)
+		var group string
+		if hasGroup {
+			group = row[groupIndex].(string)
+		}
+
 		aggr, _ := getAggrAsFloat64(row[aggrIndex])
 		aggrByGroupMap[group] = aggr
 		totalCount = totalCount + aggr
 		(*uniqueGroupsSet)[group] = true
 	}
 
-	return aggrByGroupMap, totalCount, queryResult.Headers[groupIndex]
+	var groupHeader string
+	if hasGroup {
+		groupHeader = queryResult.Headers[groupIndex]
+	}
+
+	return aggrByGroupMap, totalCount, groupHeader
 }
 
 func sortAndLimitExplanations(explanations []ReportExplanation) []ReportExplanation {
