@@ -43,6 +43,15 @@
       padding: 50px 45px 50px 45px !important;
       text-align: justify;
   }
+
+  .cta {
+    width: 100%;
+    margin-bottom: 15px;
+  }
+
+  .cta.primary {
+    margin-right: 0 !important;
+  }
 }
 
 
