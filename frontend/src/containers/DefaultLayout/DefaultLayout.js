@@ -208,8 +208,14 @@ class DefaultLayout extends Component {
     />
   }
 
-  showInternalSideBarItems(){
+  showInternalSideBarItems() {
     return isFromFactorsDomain(this.props.agent.email);
+  }
+
+  popBookDemo = () => {
+    Calendly.initPopupWidget({ url: 'https://calendly.com/factorsai/demo' });
+    factorsai.track('clicked_book_demo', { 'source': 'app' });
+    return false;
   }
 
   renderSetupProjectNotification() {
@@ -220,6 +226,9 @@ class DefaultLayout extends Component {
         Please complete setting up your project to use FactorsAI.
         <Button color='warning' style={{ margin: '5px', marginLeft: '10px', padding: '1px 7px', fontSize: '12px' }} 
           onClick={() => { this.toggleSetupProjectModal(); factorsai.track('clicked_complete_project_setup') }}>Setup Project</Button>
+        { " or " } 
+        <Button color='warning' style={{ margin: '5px', padding: '1px 7px', fontSize: '12px' }} 
+          onClick={this.popBookDemo}>Book A Demo</Button>
       </div>
     );
   }

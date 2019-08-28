@@ -85,7 +85,7 @@
 
       function popBookDemo() {
         Calendly.initPopupWidget({ url: 'https://calendly.com/factorsai/demo' });
-        if (factors) factors.track('clicked_book_demo');
+        if (factors) factors.track('clicked_book_demo', { 'source': 'website' });
         return false;
       }
     
