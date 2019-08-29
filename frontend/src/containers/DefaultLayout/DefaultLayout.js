@@ -222,12 +222,12 @@ class DefaultLayout extends Component {
     if (!this.state.showSetupProjectNotification) return null;
   
     return (
-      <div style={{ width: '105%', textAlign: 'center', background: '#6610f2', margin: '0 -30px', fontSize: '13px', fontWeight: '700', background: '#6f42c1', color: '#FFF' }}>
-        Please complete setting up your project to use FactorsAI.
-        <Button color='warning' style={{ margin: '5px', marginLeft: '10px', padding: '1px 7px', fontSize: '12px' }} 
+      <div style={{ width: '105%', textAlign: 'center', background: '#6610f2', margin: '0 -30px', 
+        padding: '2px', fontSize: '13px', fontWeight: '700', background: '#6f42c1', color: '#FFF' }}>
+        Setup your project to use FactorsAI
+        <Button color='warning' style={{ margin: '5px', marginLeft: '10px', padding: '1px 7px', fontSize: '12px', color: '#333' }} 
           onClick={() => { this.toggleSetupProjectModal(); factorsai.track('clicked_complete_project_setup') }}>Setup Project</Button>
-        { " or " } 
-        <Button color='warning' style={{ margin: '5px', padding: '1px 7px', fontSize: '12px' }} 
+        <Button color='warning' style={{ margin: '5px', padding: '1px 7px', fontSize: '12px', color: '#333' }}
           onClick={this.popBookDemo}>Book A Demo</Button>
       </div>
     );
