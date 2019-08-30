@@ -199,6 +199,18 @@ func findWhichReportsToBuild(db *gorm.DB, dashboard *M.Dashboard, existingReport
 	return reportBuilds, http.StatusOK
 }
 
+func getReportType(typ string) string {
+	if typ == M.ReportTypeWeekly {
+		return "weekly"
+	}
+
+	if typ == M.ReportTypeMonthly {
+		return "weekly"
+	}
+
+	return ""
+}
+
 func buildReportsByBuildConfig(buildReportsFor []*ReportBuild) (reports []*M.Report,
 	successList, noContentList, failureList []string) {
 
@@ -208,33 +220,32 @@ func buildReportsByBuildConfig(buildReportsFor []*ReportBuild) (reports []*M.Rep
 	reports = make([]*M.Report, 0, 0)
 
 	for _, bR := range buildReportsFor {
-		reportLog.Infof("Building report for project_id %d dashboard_id %d.", bR.ProjectID, bR.DashboardID)
+		readableType := getReportType(bR.Type)
 
+		reportLog.Infof("Building %s report for project_id %d, dashboard_id %d.", bR.Type, bR.ProjectID, bR.DashboardID)
 		report, errCode := M.GenerateReport(bR.ProjectID, bR.DashboardID, bR.DashboardName,
 			bR.Type, bR.IntervalBeforeThat, bR.Interval)
 		if errCode == http.StatusInternalServerError {
 			failureList = append(failureList,
-				fmt.Sprintf("Failed to generate report, ProjectID: %d, DashboardID: %d, IntervalStart: %d",
-					bR.ProjectID, bR.DashboardID, bR.IntervalBeforeThat.StartTime))
+				fmt.Sprintf("Failed to generate %s report, project_id: %d, dashboard_id: %d, interval_start: %d.",
+					readableType, bR.ProjectID, bR.DashboardID, bR.IntervalBeforeThat.StartTime))
 			continue
 		} else if errCode == http.StatusNotFound {
-			noContentList = append(noContentList,
-				fmt.Sprintf("No Content, ProjectID: %d, DashboardID: %d, IntervalStart: %d",
-					bR.ProjectID, bR.DashboardID, bR.IntervalBeforeThat.StartTime))
+			noContentList = append(noContentList, fmt.Sprintf("%d", bR.DashboardID))
 			continue
 		}
 
 		report, errCode = M.CreateReport(report)
 		if errCode != http.StatusCreated {
 			failureList = append(failureList,
-				fmt.Sprintf("failed to store report in DB, ProjectID: %d, DashboardID: %d, IntervalStart: %d",
-					bR.ProjectID, bR.DashboardID, bR.IntervalBeforeThat.StartTime))
+				fmt.Sprintf("Failed to store %s report in DB for project_id: %d, dashboard_id: %d, interval_start: %d.",
+					readableType, bR.ProjectID, bR.DashboardID, bR.IntervalBeforeThat.StartTime))
 			continue
 		}
 		reports = append(reports, report)
 		successList = append(successList,
-			fmt.Sprintf("ReportID: %d, ProjectID: %d, DashboardID: %d, Type: %s, IntervalStart: %d, IntervalEnd: %d",
-				report.ID, bR.ProjectID, bR.DashboardID, report.Type, bR.IntervalBeforeThat.StartTime, bR.Interval.EndTime))
+			fmt.Sprintf("Built %s report %d for project_id: %d, dashboard_id: %d, interval_start: %d.",
+				readableType, report.ID, bR.ProjectID, bR.DashboardID, bR.IntervalBeforeThat.StartTime))
 	}
 	return
 }

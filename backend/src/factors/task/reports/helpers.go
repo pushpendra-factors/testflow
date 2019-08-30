@@ -90,9 +90,12 @@ func findStartTimeForDashboardByType(dashboard *M.Dashboard,
 
 func notifyStatus(env, tag string, success, noContent, failures []string) {
 	buildStatus := map[string]interface{}{
-		"success":   success,
-		"noContent": noContent,
-		"failures":  failures,
+		"1.no_of_success":                  len(success),
+		"2.no_of_failures":                 len(failures),
+		"3.no_of_empty_dashboards_skipped": len(noContent),
+
+		"4.success":  success,
+		"5.failures": failures,
 	}
 	if err := util.NotifyThroughSNS(tag, env, buildStatus); err != nil {
 		log.WithError(err).Error("Failed to notify report build status.")
