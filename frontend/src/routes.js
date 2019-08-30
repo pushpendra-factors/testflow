@@ -93,12 +93,12 @@ const routes = [
   { path: '/account_settings', name: 'AccountSettings', component: AccountSettings },
   { path: '/profile', name: 'Profile', component: Profile },
   { path: '/refresh', exact: true, name: 'Refresh', component: ReloadComponent },
-];
-
-const internalRoutes = [
   { path: '/reports', exact: true, name: 'ReportsList', component: ReportsList },
   { path: '/reports/:id', name: 'Report', component: Report },
 ];
+
+// routes only for email@factors.ai.
+const internalRoutes = [];
 
 export  {
   routes,
