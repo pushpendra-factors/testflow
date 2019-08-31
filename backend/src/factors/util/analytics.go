@@ -3,29 +3,89 @@ package util
 import (
 	"fmt"
 	"time"
+
+	"github.com/jinzhu/now"
+	log "github.com/sirupsen/logrus"
 )
 
-// Keeps date and reset others.
-func getDateOnlyTimestamp(t time.Time) time.Time {
-	ts, _ := time.Parse(time.RFC3339, GetDateOnlyTimestampStr(t))
+func GetTimeFromTimestampStr(timestampStr string) time.Time {
+	ts, _ := time.Parse(time.RFC3339, timestampStr)
 	return ts
 }
 
-func GetDateOnlyTimestampStr(t time.Time) string {
-	return fmt.Sprintf("%d-%02d-%02dT00:00:00Z", t.Year(), t.Month(), t.Day())
+func getTimezoneOffsetFromString(timezone string) string {
+	loc, err := time.LoadLocation(timezone)
+	if err != nil {
+		return "+00:00"
+	}
+
+	return time.Now().In(loc).Format("-07:00")
 }
 
-func GetAllDatesAsTimestamp(fromUnix int64, toUnix int64) []time.Time {
-	from := getDateOnlyTimestamp(time.Unix(fromUnix, 0))
-	to := getDateOnlyTimestamp(time.Unix(toUnix, 0))
+// GetTimestampAsStrWithTimezone - Appends timezone doesn't converts.
+func GetTimestampAsStrWithTimezone(t time.Time, timezone string) string {
+	return fmt.Sprintf("%d-%02d-%02dT%02d:00:00%s", t.Year(),
+		t.Month(), t.Day(), t.Hour(), getTimezoneOffsetFromString(timezone))
+}
 
-	toStr := GetDateOnlyTimestampStr(to)
+func getTimeFromUnixTimestampWithZone(unix int64, timezone string) (time.Time, error) {
+	// if timezone is "", uses UTC.
+	loc, err := time.LoadLocation(timezone)
+	if err != nil {
+		log.WithField("timezone", timezone).WithField("unix_timestamp",
+			unix).Error("invalid unix timestamp with timezone.")
+		return time.Time{}, err
+	}
+
+	return time.Unix(unix, 0).UTC().In(loc), nil
+}
+
+func GetAllDatesAsTimestamp(fromUnix int64, toUnix int64, timezone string) []time.Time {
 	rTimestamps := make([]time.Time, 0, 0)
 
+	from, err := getTimeFromUnixTimestampWithZone(fromUnix, timezone)
+	if err != nil {
+		return rTimestamps
+	}
+	from = now.New(from).BeginningOfDay()
+
+	to, err := getTimeFromUnixTimestampWithZone(toUnix, timezone)
+	if err != nil {
+		return rTimestamps
+	}
+	to = now.New(to).BeginningOfDay()
+
+	toStr := GetTimestampAsStrWithTimezone(to, timezone)
+
 	for t, tStr := from, ""; tStr != toStr; {
-		tStr = GetDateOnlyTimestampStr(t)
+		tStr = GetTimestampAsStrWithTimezone(t, timezone)
 		rTimestamps = append(rTimestamps, t)
 		t = t.AddDate(0, 0, 1) // next day.
+	}
+
+	return rTimestamps
+}
+
+func GetAllHoursAsTimestamp(fromUnix int64, toUnix int64, timezone string) []time.Time {
+	rTimestamps := make([]time.Time, 0, 0)
+
+	from, err := getTimeFromUnixTimestampWithZone(fromUnix, timezone)
+	if err != nil {
+		return rTimestamps
+	}
+	from = now.New(from).BeginningOfHour()
+
+	to, err := getTimeFromUnixTimestampWithZone(toUnix, timezone)
+	if err != nil {
+		return rTimestamps
+	}
+	to = now.New(to).BeginningOfHour()
+
+	toStr := GetTimestampAsStrWithTimezone(to, timezone)
+	for t, tStr := from, ""; tStr != toStr; {
+		tStr = GetTimestampAsStrWithTimezone(t, timezone)
+		rTimestamps = append(rTimestamps, t)
+		t = t.Add(1 * time.Hour) // next hour.
 	}
 
 	return rTimestamps

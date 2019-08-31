@@ -133,3 +133,7 @@ export function isFromFactorsDomain(email){
     let index = email.indexOf("@factors.ai");
     return index > -1;
 }
+
+export function getTimezoneString() {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+}

@@ -11,11 +11,13 @@ import Loading from '../../loading';
 import BarChart from '../Query/BarChart';
 import LineChart from '../Query/LineChart';
 import TableChart from '../Query/TableChart';
-import { PRESENTATION_BAR, PRESENTATION_LINE, 
+import { 
+  PRESENTATION_BAR, PRESENTATION_LINE, 
   PRESENTATION_TABLE, PRESENTATION_CARD, 
   PRESENTATION_FUNNEL, PROPERTY_VALUE_TYPE_DATE_TIME, 
-  PROPERTY_KEY_JOIN_TIME } from '../Query/common';
-import { slideUnixTimeWindowToCurrentTime } from '../../util';
+  PROPERTY_KEY_JOIN_TIME, getGroupByTimestampType, 
+} from '../Query/common';
+import { slideUnixTimeWindowToCurrentTime, getTimezoneString } from '../../util';
 import FunnelChart from '../Query/FunnelChart';
 
 const LINE_LEGEND_DISPLAY_LIMIT = 10;
@@ -131,6 +133,13 @@ class DashboardUnit extends Component {
         }
       }
     }
+
+    let presentation = this.props.data.presentation;
+    query.gbt = (presentation == PRESENTATION_LINE) ? 
+      getGroupByTimestampType(query.fr, query.to) : '';
+
+    let timezone = getTimezoneString();
+    query.tz = (timezone && timezone != '') ? timezone : '';
 
     runQuery(this.props.currentProjectId, query)
       .then((r) => {

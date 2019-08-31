@@ -19,7 +19,7 @@ import FunnelChart from './FunnelChart';
 import { PRESENTATION_BAR, PRESENTATION_LINE, PRESENTATION_TABLE, 
   PRESENTATION_CARD, PRESENTATION_FUNNEL, PROPERTY_TYPE_EVENT,
   getDateRangeFromStoredDateRange, PROPERTY_LOGICAL_OP_OPTS,
-  DEFAULT_DATE_RANGE, DEFINED_DATE_RANGES,
+  DEFAULT_DATE_RANGE, DEFINED_DATE_RANGES, getGroupByTimestampType,
 } from './common';
 import ClosableDateRangePicker from '../../common/ClosableDatePicker';
 import { fetchProjectEvents, runQuery } from '../../actions/projectsActions';
@@ -29,7 +29,7 @@ import GroupBy from './GroupBy';
 import { 
   removeElementByIndex, getSelectedOpt, isNumber, createSelectOpts, 
   isSingleCountResult, slideUnixTimeWindowToCurrentTime,
-  getLabelByValueFromOpts
+  getLabelByValueFromOpts, getTimezoneString,
 } from '../../util'
 import Loading from '../../loading';
 import factorsai from '../../common/factorsaiObj';
@@ -421,7 +421,7 @@ class Query extends Component {
     query.to = to; // in utc.
   }
 
-  getQuery(groupByDate=false) {
+  getQuery(presentation, toSave=false) {
     let query = {};
     
     query.cl = this.state.class.value;
@@ -502,11 +502,12 @@ class Query extends Component {
       }
     }
 
-    if (groupByDate) {
-      query.gbt = true;
-    }
+    query.gbt = (presentation == PRESENTATION_LINE) ? 
+      getGroupByTimestampType(query.fr, query.to) : '';
+
+    let timezone = getTimezoneString();
+    query.tz = (!toSave && timezone && timezone != '') ? timezone : '';
   
-    console.debug(query);
     return query
   }
 
@@ -559,8 +560,12 @@ class Query extends Component {
     }
 
     this.scrollToBottom();
-    this.setState({ isResultLoading: true, showPresentation: true });
-    let query = this.getQuery(presentation === PRESENTATION_LINE);
+    this.setState({ 
+      isResultLoading: true, 
+      showPresentation: true, 
+      selectedPresentation: presentation,
+    });
+    let query = this.getQuery(presentation);
 
     let eventProperties = { 
       projectId: this.props.currentProjectId,
@@ -577,7 +582,6 @@ class Query extends Component {
         if(this.isResponseValid(r.data)) {
           this.setState({ 
             result: r.data, 
-            selectedPresentation: presentation,
             isResultLoading: false,
           });
         } else {
@@ -714,8 +718,7 @@ class Query extends Component {
       presentation = PRESENTATION_CARD;
     }
     
-    let groupByTimestamp = presentation === PRESENTATION_LINE;
-    let query = this.getQuery(groupByTimestamp);
+    let query = this.getQuery(this.state.selectedPresentation, true);
     let payload = {
       presentation: presentation,
       query: query,
@@ -728,7 +731,7 @@ class Query extends Component {
 
     this.props.createDashboardUnit(this.props.currentProjectId, this.state.selectedDashboardId, payload)
       .then((r) => { 
-        if (!r.ok) this.showAddToDashboardFailure(); 
+        if (!r.ok) this.showAddToDashboardFailure();
         else this.toggleAddToDashboardModal(); 
       })
       .catch(() => { this.showAddToDashboardFailure(); });
@@ -1104,7 +1107,6 @@ class Query extends Component {
       )
     ];
   }
-
 
   render() {
     if (!this.isLoaded()) return <Loading />;

@@ -29,7 +29,7 @@ export const USER_PREF_PROPERTY_TYPE_OPTS = {
 };
 
 export const HEADER_COUNT = "count";
-export const HEADER_DATE = "date";
+export const HEADER_DATE = "datetime";
 
 export const PRESENTATION_TABLE = 'pt';
 export const PRESENTATION_LINE =  'pl';
@@ -94,4 +94,14 @@ export const getYAxesStr = function(queryType, aggr="count") {
   if (!queryType || queryType == "") return dAggr;
   let entity = queryType == QUERY_TYPE_UNIQUE_USERS ? "Users" : "Events";
   return dAggr+" of "+entity;
+}
+
+export const isGroupByHourWindow = function(from, to) {
+  let windowInSecs = to - from;
+  return windowInSecs <= 86400;
+}
+
+export const getGroupByTimestampType = function(from, to) {
+  // group by hour if window is <= 24hrs.
+  return isGroupByHourWindow(from, to) ? 'hour' : 'date';
 }

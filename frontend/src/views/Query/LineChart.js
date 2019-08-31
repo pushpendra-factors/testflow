@@ -36,7 +36,7 @@ class LineChart extends Component {
     return dataset;
   }
 
-  getLinesByGroupsIfExist(rows, countIndex, dateIndex) { 
+  getLinesByGroupsIfExist(rows, timestampType, countIndex, dateTimeIndex) { 
     let lines = {}
     let keySep = " / ";
     let maxScale = 0;
@@ -49,7 +49,7 @@ class LineChart extends Component {
       // with a seperator is a key.
       let key = "";
       for(let c=0; c < row.length; c++) {
-        if(c != countIndex && c != dateIndex) {
+        if(c != countIndex && c != dateTimeIndex) {
           let prop = row[c];
           if (key === "") {
             key = prop;
@@ -66,9 +66,12 @@ class LineChart extends Component {
       
       lines[key].counts.push(row[countIndex]);
 
-      let isToday = moment(row[dateIndex]).isSame(moment(), 'year');
-      let formatStr = isToday ? 'MMM DD' : 'MMM DD, YYYY';
-      lines[key].timestamps.push(moment(row[dateIndex]).format(formatStr));
+      let isThisYear = moment(row[dateTimeIndex]).isSame(moment(), 'year');
+      let formatStr = isThisYear ? 'MMM DD' : 'MMM DD, YYYY';
+      if (timestampType == 'hour') formatStr = 'MMM DD, HH:mm';
+
+      // moment uses user's current location timezone.
+      lines[key].timestamps.push(moment(row[dateTimeIndex]).format(formatStr));
       
       if (maxScale < row[countIndex]) maxScale = row[countIndex];
     }
@@ -97,7 +100,7 @@ class LineChart extends Component {
     }
 
     let lines = [];
-    let groups = this.getLinesByGroupsIfExist(result.rows, countIndex, dateIndex);
+    let groups = this.getLinesByGroupsIfExist(result.rows, result.meta.query.gbt, countIndex, dateIndex);
     for(let key in groups.lines) {
       let line = { title: key, xAxisLabels: groups.lines[key].timestamps, yAxisLabels: groups.lines[key].counts };
       lines.push(line);

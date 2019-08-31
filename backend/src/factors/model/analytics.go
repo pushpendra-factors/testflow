@@ -46,11 +46,11 @@ type Query struct {
 	EventsCondition      string                     `json:"ec"` // all or any
 	EventsWithProperties []QueryEventWithProperties `json:"ewp"`
 	GroupByProperties    []QueryGroupByProperty     `json:"gbp"`
-	GroupByTimestamp     bool                       `json:"gbt"`
+	GroupByTimestamp     interface{}                `json:"gbt"`
 	Timezone             string                     `json:"tz"`
 	From                 int64                      `json:"fr"`
 	To                   int64                      `json:"to"`
-	// Todo: Remove OverridePeriod after removing ovp from old dashboard units.
+	// Deprecated: Keeping it for old dashboard units.
 	OverridePeriod bool `json:"ovp"`
 }
 
@@ -95,7 +95,7 @@ const (
 	SelectCoalesceCustomerUserIDAndUserID = "COALESCE(users.customer_user_id, event_user_id)"
 
 	GroupKeyPrefix  = "_group_key_"
-	AliasDate       = "date"
+	AliasDateTime   = "datetime"
 	AliasAggr       = "count"
 	DefaultTimezone = "UTC"
 	ResultsLimit    = 20
@@ -121,6 +121,37 @@ var queryOps = map[string]string{
 	"lesserThanOrEqual":  "<=",
 	"contains":           "LIKE",
 	"notContains":        "NOT LIKE",
+}
+
+const (
+	GroupByTimestampHour = "hour"
+	GroupByTimestampDate = "date"
+)
+
+var groupByTimestampTypes = []string{
+	GroupByTimestampDate,
+	GroupByTimestampHour,
+}
+
+func (query *Query) GetGroupByTimestamp() string {
+	switch query.GroupByTimestamp.(type) {
+	case bool:
+		// For query objects on old dashboard units,
+		// with GroupByTimestamp as bool and true, to work.
+		if query.GroupByTimestamp.(bool) {
+			windowInSecs := query.To - query.From
+			if windowInSecs <= 86400 {
+				return GroupByTimestampHour
+			}
+			return GroupByTimestampDate
+		}
+
+		return ""
+	case string:
+		return query.GroupByTimestamp.(string)
+	default:
+		return ""
+	}
 }
 
 func with(stmnt string) string {
@@ -471,10 +502,10 @@ func appendSelectTimestampColIfRequired(stmnt string, isRequired bool) string {
 		return stmnt
 	}
 
-	return joinWithComma(stmnt, AliasDate)
+	return joinWithComma(stmnt, AliasDateTime)
 }
 
-func getSelectTimestamp(timezone string) string {
+func getSelectTimestampByType(timestampType, timezone string) string {
 	var selectTz string
 
 	if timezone == "" {
@@ -483,23 +514,31 @@ func getSelectTimestamp(timezone string) string {
 		selectTz = timezone
 	}
 
-	return fmt.Sprintf("(to_timestamp(timestamp) AT TIME ZONE '%s')::date as %s",
-		selectTz, AliasDate)
+	var selectStr string
+	if timestampType == GroupByTimestampHour {
+		selectStr = fmt.Sprintf("date_trunc('hour', to_timestamp(timestamp) AT TIME ZONE '%s')", selectTz)
+	} else {
+		// defaults to GroupByTimestampDate.
+		selectStr = fmt.Sprintf("date_trunc('day', to_timestamp(timestamp) AT TIME ZONE '%s')", selectTz)
+	}
+
+	return selectStr
 }
 
-func appendSelectTimestampIfRequired(stmnt string, timezone string, isRequired bool) string {
-	if !isRequired {
+func appendSelectTimestampIfRequired(stmnt string, groupByTimestamp string, timezone string) string {
+	if groupByTimestamp == "" {
 		return stmnt
 	}
 
-	return joinWithComma(stmnt, getSelectTimestamp(timezone))
+	return joinWithComma(stmnt, fmt.Sprintf("%s as %s",
+		getSelectTimestampByType(groupByTimestamp, timezone), AliasDateTime))
 }
 
 func appendGroupByTimestampIfRequired(qStmnt string, isRequired bool, groupKeys ...string) string {
 	// Added groups with timestamp.
 	groups := make([]string, 0, 0)
 	if isRequired {
-		groups = append(groups, AliasDate)
+		groups = append(groups, AliasDateTime)
 	}
 	groups = append(groups, groupKeys...)
 	qStmnt = appendGroupBy(qStmnt, groups...)
@@ -555,12 +594,14 @@ func addEventFilterStepsForUniqueUsersQuery(projectId uint64, q *Query,
 	var stepSelect string
 	var stepOrderBy string
 
-	if q.GroupByTimestamp {
-		// select and order by with date.
-		stepSelect = "DISTINCT ON(events.user_id, (to_timestamp(timestamp) AT TIME ZONE 'UTC')::date)" +
+	if q.GetGroupByTimestamp() != "" {
+		selectTimestamp := getSelectTimestampByType(q.GetGroupByTimestamp(), q.Timezone)
+		// select and order by with datetime.
+		stepSelect = fmt.Sprintf("DISTINCT ON(events.user_id, %s)", selectTimestamp) +
 			" " + joinWithComma("events.user_id as event_user_id",
-			fmt.Sprintf("(to_timestamp(timestamp) AT TIME ZONE 'UTC')::date as %s", AliasDate))
-		stepOrderBy = fmt.Sprintf("events.user_id, %s, events.timestamp ASC", AliasDate)
+			fmt.Sprintf("%s as %s", selectTimestamp, AliasDateTime))
+
+		stepOrderBy = fmt.Sprintf("events.user_id, %s, events.timestamp ASC", AliasDateTime)
 	} else {
 		// default select.
 		stepSelect = "DISTINCT ON(events.user_id) events.user_id as event_user_id"
@@ -618,7 +659,9 @@ func addUniqueUsersAggregationQuery(query *Query, qStmnt *string, qParams *[]int
 	// order of group keys changes here if users and event
 	// group by used together, but translated correctly.
 	termSelect := joinWithComma(ugSelect, egKeys)
-	termSelect = appendSelectTimestampColIfRequired(termSelect, query.GroupByTimestamp)
+
+	isGroupByTimestamp := query.GetGroupByTimestamp() != ""
+	termSelect = appendSelectTimestampColIfRequired(termSelect, isGroupByTimestamp)
 	termSelect = joinWithComma(termSelect, fmt.Sprintf("COUNT(DISTINCT(%s)) AS %s",
 		SelectCoalesceCustomerUserIDAndUserID, AliasAggr))
 
@@ -630,9 +673,9 @@ func addUniqueUsersAggregationQuery(query *Query, qStmnt *string, qParams *[]int
 		termStmnt = termStmnt + " " + "LEFT JOIN user_properties ON users.id=user_properties.user_id AND user_properties.id=users.properties_id"
 	}
 	_, _, groupKeys := buildGroupKeys(query.GroupByProperties)
-	termStmnt = appendGroupByTimestampIfRequired(termStmnt, query.GroupByTimestamp, groupKeys)
+	termStmnt = appendGroupByTimestampIfRequired(termStmnt, isGroupByTimestamp, groupKeys)
 	termStmnt = appendOrderByAggr(termStmnt)
-	termStmnt = appendLimitByCondition(termStmnt, query.GroupByProperties, query.GroupByTimestamp)
+	termStmnt = appendLimitByCondition(termStmnt, query.GroupByProperties, isGroupByTimestamp)
 
 	*qStmnt = appendStatement(*qStmnt, termStmnt)
 }
@@ -718,9 +761,9 @@ func buildUniqueUsersWithAllGivenEventsQuery(projectId uint64, query Query) (str
 
 	// users intersection
 	intersectSelect := fmt.Sprintf("%s.event_user_id as event_user_id", steps[0])
-	if query.GroupByTimestamp {
+	if query.GetGroupByTimestamp() != "" {
 		intersectSelect = joinWithComma(intersectSelect,
-			fmt.Sprintf("%s.%s as %s", steps[0], AliasDate, AliasDate))
+			fmt.Sprintf("%s.%s as %s", steps[0], AliasDateTime, AliasDateTime))
 	}
 
 	eventGroupProps := filterGroupPropsByType(query.GroupByProperties, PropertyEntityEvent)
@@ -737,9 +780,9 @@ func buildUniqueUsersWithAllGivenEventsQuery(projectId uint64, query Query) (str
 
 			// include date also intersection condition on
 			// group by timestamp.
-			if query.GroupByTimestamp {
+			if query.GetGroupByTimestamp() != "" {
 				intersectJoin = intersectJoin + " " + fmt.Sprintf("AND %s.%s = %s.%s",
-					steps[i], AliasDate, steps[i-1], AliasDate)
+					steps[i], AliasDateTime, steps[i-1], AliasDateTime)
 			}
 		}
 	}
@@ -829,10 +872,11 @@ func buildUniqueUsersWithAnyGivenEventsQuery(projectId uint64, query Query) (str
 	eventGroupProps := filterGroupPropsByType(query.GroupByProperties, PropertyEntityEvent)
 	_, _, egKeys := buildGroupKeys(eventGroupProps)
 
+	isGroupByTimestamp := query.GetGroupByTimestamp() != ""
 	var unionStmnt string
 	for i, step := range steps {
 		selectStr := fmt.Sprintf("%s.event_user_id as event_user_id", step)
-		selectStr = appendSelectTimestampColIfRequired(selectStr, query.GroupByTimestamp)
+		selectStr = appendSelectTimestampColIfRequired(selectStr, isGroupByTimestamp)
 		selectStr = joinWithComma(selectStr, egKeys)
 
 		selectStmnt := fmt.Sprintf("SELECT %s FROM %s", selectStr, step)
@@ -920,9 +964,10 @@ func buildEventsOccurrenceWithGivenEventQuery(projectId uint64, q Query) (string
 
 	eventGroupProps := filterGroupPropsByType(q.GroupByProperties, PropertyEntityEvent)
 	egSelect, egParams, egKeys := buildGroupKeys(eventGroupProps)
+	isGroupByTimestamp := q.GetGroupByTimestamp() != ""
 
 	filterSelect := joinWithComma(SelectDefaultEventFilter, egSelect)
-	filterSelect = appendSelectTimestampIfRequired(filterSelect, q.Timezone, q.GroupByTimestamp)
+	filterSelect = appendSelectTimestampIfRequired(filterSelect, q.GetGroupByTimestamp(), q.Timezone)
 
 	refStepName := ""
 	filters := make([]string, 0)
@@ -946,7 +991,7 @@ func buildEventsOccurrenceWithGivenEventQuery(projectId uint64, q Query) (string
 				unionStmnt = appendStatement(unionStmnt, "UNION ALL")
 			}
 
-			qSelect := appendSelectTimestampColIfRequired(SelectDefaultEventFilterByAlias, q.GroupByTimestamp)
+			qSelect := appendSelectTimestampColIfRequired(SelectDefaultEventFilterByAlias, isGroupByTimestamp)
 			qSelect = joinWithComma(qSelect, egKeys)
 			unionStmnt = unionStmnt + " SELECT " + qSelect + " FROM " + filter
 		}
@@ -963,7 +1008,7 @@ func buildEventsOccurrenceWithGivenEventQuery(projectId uint64, q Query) (string
 
 	// select
 	tSelect := joinWithComma(ugSelect, egKeys)
-	tSelect = appendSelectTimestampColIfRequired(tSelect, q.GroupByTimestamp)
+	tSelect = appendSelectTimestampColIfRequired(tSelect, isGroupByTimestamp)
 	tSelect = joinWithComma(tSelect, fmt.Sprintf("COUNT(*) AS %s", AliasAggr)) // aggregator.
 
 	termStmnt := "SELECT " + tSelect + " FROM " + refStepName
@@ -972,9 +1017,9 @@ func buildEventsOccurrenceWithGivenEventQuery(projectId uint64, q Query) (string
 		termStmnt = termStmnt + " " + "LEFT JOIN users ON " + refStepName + ".event_user_id=users.id" +
 			" " + "LEFT JOIN user_properties ON users.id=user_properties.user_id AND user_properties.id=users.properties_id"
 	}
-	termStmnt = appendGroupByTimestampIfRequired(termStmnt, q.GroupByTimestamp, groupKeys)
+	termStmnt = appendGroupByTimestampIfRequired(termStmnt, isGroupByTimestamp, groupKeys)
 	termStmnt = appendOrderByAggr(termStmnt)
-	termStmnt = appendLimitByCondition(termStmnt, q.GroupByProperties, q.GroupByTimestamp)
+	termStmnt = appendLimitByCondition(termStmnt, q.GroupByProperties, isGroupByTimestamp)
 
 	qParams = append(qParams, ugSelectParams...)
 	qStmnt = appendStatement(qStmnt, termStmnt)
@@ -1030,17 +1075,18 @@ func buildEventsOccurrenceSingleEventQuery(projectId uint64, q Query) (string, [
 
 	eventGroupProps := filterGroupPropsByType(q.GroupByProperties, PropertyEntityEvent)
 	egSelect, egSelectParams, egKeys := buildGroupKeys(eventGroupProps)
+	isGroupByTimestamp := q.GetGroupByTimestamp() != ""
 
 	var qSelect string
-	qSelect = appendSelectTimestampIfRequired(qSelect, q.Timezone, q.GroupByTimestamp)
+	qSelect = appendSelectTimestampIfRequired(qSelect, q.GetGroupByTimestamp(), q.Timezone)
 	qSelect = joinWithComma(qSelect, egSelect, fmt.Sprintf("COUNT(*) AS %s", AliasAggr))
 
 	addFilterEventsWithPropsQuery(projectId, &qStmnt, &qParams, q.EventsWithProperties[0], q.From, q.To,
 		"", "", qSelect, egSelectParams, "", "", "")
 
-	qStmnt = appendGroupByTimestampIfRequired(qStmnt, q.GroupByTimestamp, egKeys)
+	qStmnt = appendGroupByTimestampIfRequired(qStmnt, isGroupByTimestamp, egKeys)
 	qStmnt = appendOrderByAggr(qStmnt)
-	qStmnt = appendLimitByCondition(qStmnt, q.GroupByProperties, q.GroupByTimestamp)
+	qStmnt = appendLimitByCondition(qStmnt, q.GroupByProperties, isGroupByTimestamp)
 
 	return qStmnt, qParams, nil
 }
@@ -1319,6 +1365,20 @@ func getEncodedKeyForCols(cols []interface{}) string {
 	return key
 }
 
+func isValidGroupByTimestamp(groupByTimestamp string) bool {
+	if groupByTimestamp == "" {
+		return true
+	}
+
+	for _, gbtType := range groupByTimestampTypes {
+		if gbtType == groupByTimestamp {
+			return true
+		}
+	}
+
+	return false
+}
+
 // IsValidQuery Validates and returns errMsg which is used as response.
 func IsValidQuery(query *Query) (bool, string) {
 	if query.Type != QueryTypeEventsOccurrence &&
@@ -1337,6 +1397,10 @@ func IsValidQuery(query *Query) (bool, string) {
 
 	if query.From == 0 || query.To == 0 {
 		return false, "Invalid query time range"
+	}
+
+	if !isValidGroupByTimestamp(query.GetGroupByTimestamp()) {
+		return false, "Invalid group by timestamp"
 	}
 
 	return true, ""
@@ -1568,7 +1632,7 @@ func GetTimstampAndAggregateIndexOnQueryResult(cols []string) (int, int, error) 
 	aggrIndex := -1
 
 	for i, c := range cols {
-		if c == AliasDate {
+		if c == AliasDateTime {
 			timeIndex = i
 		}
 
@@ -1595,22 +1659,38 @@ func sortResultRowsByTimestamp(resultRows [][]interface{}, timestampIndex int) {
 	})
 }
 
+func getAllTimestampsBetweenByType(from, to int64, typ, timezone string) []time.Time {
+	if typ == GroupByTimestampDate {
+		return U.GetAllDatesAsTimestamp(from, to, timezone)
+	}
+
+	if typ == GroupByTimestampHour {
+		return U.GetAllHoursAsTimestamp(from, to, timezone)
+	}
+
+	return []time.Time{}
+}
+
 func addMissingTimestampsOnResultWithoutGroupByProps(result *QueryResult, query *Query,
 	aggrIndex int, timestampIndex int) error {
 
 	rowsByTimestamp := make(map[string][]interface{}, 0)
 	for _, row := range result.Rows {
 		ts := row[timestampIndex].(time.Time)
-		rowsByTimestamp[U.GetDateOnlyTimestampStr(ts)] = row
+		rowsByTimestamp[U.GetTimestampAsStrWithTimezone(ts, query.Timezone)] = row
 	}
 
-	timestamps := U.GetAllDatesAsTimestamp(query.From, query.To)
+	timestamps := getAllTimestampsBetweenByType(query.From, query.To,
+		query.GetGroupByTimestamp(), query.Timezone)
 
 	filledResult := make([][]interface{}, 0, 0)
 	// range over timestamps between given from and to.
 	// uses timstamp string for comparison.
 	for _, ts := range timestamps {
-		if row, exists := rowsByTimestamp[U.GetDateOnlyTimestampStr(ts)]; exists {
+		if row, exists := rowsByTimestamp[U.GetTimestampAsStrWithTimezone(ts, query.Timezone)]; exists {
+			// overrides timestamp with user timezone as sql results doesn't
+			// return timezone used to query.
+			row[timestampIndex] = ts
 			filledResult = append(filledResult, row)
 		} else {
 			newRow := make([]interface{}, 2, 2)
@@ -1640,22 +1720,29 @@ func addMissingTimestampsOnResultWithGroupByProps(result *QueryResult, query *Qu
 	for _, row := range result.Rows {
 		encCols := make([]interface{}, 0, 0)
 		encCols = append(encCols, row[gkStart:gkEnd]...)
-		// encoded key with group values and timestamp from db row.
-		encCols = append(encCols, U.GetDateOnlyTimestampStr(row[timestampIndex].(time.Time)))
-		encKey := getEncodedKeyForCols(encCols)
 
+		timestampWithTimezone := U.GetTimestampAsStrWithTimezone(
+			row[timestampIndex].(time.Time), query.Timezone)
+		// encoded key with group values and timestamp from db row.
+		encCols = append(encCols, timestampWithTimezone)
+		encKey := getEncodedKeyForCols(encCols)
 		rowsByGroupAndTimestamp[encKey] = true
+
+		// overrides timestamp with user timezone as sql results doesn't
+		// return timezone used to query.
+		row[timestampIndex] = U.GetTimeFromTimestampStr(timestampWithTimezone)
 		filledResult = append(filledResult, row)
 	}
 
-	timestamps := U.GetAllDatesAsTimestamp(query.From, query.To)
+	timestamps := getAllTimestampsBetweenByType(query.From, query.To,
+		query.GetGroupByTimestamp(), query.Timezone)
 
 	for _, row := range result.Rows {
 		for _, ts := range timestamps {
 			encCols := make([]interface{}, 0, 0)
 			encCols = append(encCols, row[gkStart:gkEnd]...)
 			// encoded key with generated timestamp.
-			encCols = append(encCols, U.GetDateOnlyTimestampStr(ts))
+			encCols = append(encCols, U.GetTimestampAsStrWithTimezone(ts, query.Timezone))
 			encKey := getEncodedKeyForCols(encCols)
 
 			_, exists := rowsByGroupAndTimestamp[encKey]
@@ -1718,7 +1805,7 @@ func sanitizeGroupByTimestampResult(result *QueryResult, query *Query) error {
 
 // Converts DB results into plottable query results.
 func SanitizeQueryResult(result *QueryResult, query *Query) error {
-	if query.GroupByTimestamp {
+	if query.GetGroupByTimestamp() != "" {
 		return sanitizeGroupByTimestampResult(result, query)
 	}
 
@@ -1755,7 +1842,8 @@ func RunInsightsQuery(projectId uint64, query Query) (*QueryResult, int, string)
 		return nil, http.StatusInternalServerError, ErrMsgQueryProcessingFailure
 	}
 
-	logCtx := log.WithFields(log.Fields{"analytics_query": query, "statement": stmnt, "params": params})
+	logCtx := log.WithFields(log.Fields{"analytics_query": query,
+		"statement": stmnt, "params": params})
 	if stmnt == "" || len(params) == 0 {
 		logCtx.Error("Failed generating SQL query from analytics query.")
 		return nil, http.StatusInternalServerError, ErrMsgQueryProcessingFailure
@@ -1769,7 +1857,7 @@ func RunInsightsQuery(projectId uint64, query Query) (*QueryResult, int, string)
 
 	groupPropsLen := len(query.GroupByProperties)
 
-	err = LimitQueryResult(result, groupPropsLen, query.GroupByTimestamp)
+	err = LimitQueryResult(result, groupPropsLen, query.GetGroupByTimestamp() != "")
 	if err != nil {
 		logCtx.WithError(err).Error("Failed processing query results for limiting.")
 		return nil, http.StatusInternalServerError, ErrMsgQueryProcessingFailure

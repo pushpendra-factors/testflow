@@ -664,7 +664,7 @@ func getReadableTimestamp(timestampStr string) string {
 
 // getTotalAggrForUniqueUsersQuery - Runs same query without group by timestamp.
 func getTotalAggrForUniqueUsersQuery(projectId uint64, uuQuery Query) float64 {
-	uuQuery.GroupByTimestamp = false
+	uuQuery.GroupByTimestamp = ""
 
 	queryResult, _, _ := Analyze(projectId, uuQuery)
 
