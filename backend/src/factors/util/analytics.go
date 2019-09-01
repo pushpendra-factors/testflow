@@ -32,7 +32,7 @@ func getTimeFromUnixTimestampWithZone(unix int64, timezone string) (time.Time, e
 	// if timezone is "", uses UTC.
 	loc, err := time.LoadLocation(timezone)
 	if err != nil {
-		log.WithField("timezone", timezone).WithField("unix_timestamp",
+		log.WithError(err).WithField("timezone", timezone).WithField("unix_timestamp",
 			unix).Error("invalid unix timestamp with timezone.")
 		return time.Time{}, err
 	}
