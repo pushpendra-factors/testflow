@@ -271,6 +271,7 @@ const BrowserInfo = {
         }
     }
 }
+
 /**
  * @param {string} pfix Prefix to be added to default properties.
  * Property - Example
@@ -278,9 +279,19 @@ const BrowserInfo = {
  * */
 function getEventDefault(pfix="$") {
     let dp = {};
-    dp[pfix+"referrer"] = document.referrer;
-    dp[pfix+"rawURL"] = window.location.href;
     dp[pfix+"pageTitle"] = document.title;
+
+    dp[pfix+"referrer"] = document.referrer;
+    let referrerURL = util.parseURLString(document.referrer);
+    dp[pfix+"referrerDomain"] = referrerURL.host;
+    // url domain with path and without query params.
+    dp[pfix+"referrerURL"] = referrerURL.host + referrerURL.path + util.getCleanHash(referrerURL.hash);
+    
+    dp[pfix+"pageRawURL"] = window.location.href;
+    dp[pfix+"pageDomain"] = window.location.host;
+    // url domain with path and without query params.
+    dp[pfix+"pageURL"] = window.location.host + window.location.pathname + util.getCleanHash(window.location.hash);
+
     return dp;
 }
 

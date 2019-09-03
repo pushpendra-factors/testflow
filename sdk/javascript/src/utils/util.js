@@ -20,9 +20,24 @@ function getCleanHash(hash) {
     return hash.split("?")[0];
 }
 
+function parseURLString(urlString="") {
+    if (urlString == "") return {
+        host: "", path: "", hash: "",
+    };
+    
+    var tempAnchor = document.createElement("a");
+    tempAnchor.setAttribute("href", tempAnchor); 
+    return { 
+        host: tempAnchor.host,
+        path: tempAnchor.pathname,
+        hash: tempAnchor.hash,
+    }
+}
+
 module.exports = exports =  { 
     validatedStringArg: validatedStringArg,
     convertIfNumber: convertIfNumber,
     getCleanHash: getCleanHash,
+    parseURLString: parseURLString,
 };
 
