@@ -26,3 +26,15 @@ func TestFillPropertyKvsFromPropertiesJson(t *testing.T) {
 	assert.Contains(t, propertiesKvs["prop1"], "value11")
 	assert.Contains(t, propertiesKvs["prop2"], "value2")
 }
+
+func TestGetPropertyKeyValueType(t *testing.T) {
+	assert.Equal(t, U.PropertyTypeCategorical, U.GetPropertyKeyValueType("testKey", "10.24string"))
+	assert.Equal(t, U.PropertyTypeCategorical, U.GetPropertyKeyValueType("testKey", "10.24"))
+	assert.Equal(t, U.PropertyTypeNumerical, U.GetPropertyKeyValueType("testKey", 10.24))
+	assert.Equal(t, U.PropertyTypeCategorical, U.GetPropertyKeyValueType("$qp_utm_campaignid", "10.24"))
+	assert.Equal(t, U.PropertyTypeCategorical, U.GetPropertyKeyValueType("$qp_utm_adgroupid", "10.35"))
+	assert.Equal(t, U.PropertyTypeCategorical, U.GetPropertyKeyValueType("utm_creative", "10"))
+	assert.Equal(t, U.PropertyTypeNumerical, U.GetPropertyKeyValueType("testKey", 10.24))
+	assert.Equal(t, U.PropertyTypeUnknown, U.GetPropertyKeyValueType("testKey", true))
+	assert.Equal(t, U.PropertyTypeUnknown, U.GetPropertyKeyValueType("testKey", []string{"value1", "value2"}))
+}

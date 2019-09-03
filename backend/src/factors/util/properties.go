@@ -182,6 +182,7 @@ const (
 	PropertyTypeNumerical   = "numerical"
 	PropertyTypeCategorical = "categorical"
 	PropertyTypeDateTime    = "datetime"
+	PropertyTypeUnknown     = "unknown"
 )
 
 const SamplePropertyValuesLimit = 100
@@ -292,6 +293,24 @@ func GetValidatedEventProperties(properties *PropertiesMap) *PropertiesMap {
 	return &validatedProperties
 }
 
+func IsUTMTagPropertyKey(propertyKey string) bool {
+	return strings.Contains(propertyKey, "utm_")
+}
+
+func GetPropertyKeyValueType(propertyKey string, propertyValue interface{}) string {
+	switch propertyValue.(type) {
+	case int, float64:
+		if IsUTMTagPropertyKey(propertyKey) {
+			return PropertyTypeCategorical
+		}
+		return PropertyTypeNumerical
+	case string:
+		return PropertyTypeCategorical
+	default:
+		return PropertyTypeUnknown
+	}
+}
+
 // ClassifyPropertiesByType - Classifies categorical and numerical properties
 // by checking type of values. properties -> map[propertyKey]map[propertyValue]true
 func ClassifyPropertiesByType(properties *map[string]map[interface{}]bool) (map[string][]string, error) {
@@ -301,12 +320,13 @@ func ClassifyPropertiesByType(properties *map[string]map[interface{}]bool) (map[
 	for propertyKey, v := range *properties {
 		isNumericalProperty := true
 		for propertyValue := range v {
-			switch t := propertyValue.(type) {
-			case int, float64:
-			case string:
+			propertyType := GetPropertyKeyValueType(propertyKey, propertyValue)
+			switch propertyType {
+			case PropertyTypeNumerical:
+			case PropertyTypeCategorical:
 				isNumericalProperty = false
 			default:
-				return nil, fmt.Errorf("unsupported type %s on property type classification", t)
+				return nil, fmt.Errorf("unsupported type %s on property type classification", propertyType)
 			}
 		}
 

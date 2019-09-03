@@ -3,6 +3,7 @@ package pattern
 import (
 	"bufio"
 	"encoding/json"
+	U "factors/util"
 	"fmt"
 	"math"
 	"reflect"
@@ -173,15 +174,17 @@ func CollectPropertiesInfo(scanner *bufio.Scanner, userAndEventsInfo *UserAndEve
 			return err
 		}
 		for key, value := range eventDetails.UserProperties {
-			if _, ok := value.(float64); ok {
+			propertyType := U.GetPropertyKeyValueType(key, value)
+			if propertyType == U.PropertyTypeNumerical {
 				if len(userPropertiesInfo.NumericPropertyKeys) > maxProperties {
 					continue
 				}
 				userPropertiesInfo.NumericPropertyKeys[key] = true
-			} else if categoricalValue, ok := value.(string); ok {
+			} else if propertyType == U.PropertyTypeCategorical {
 				if len(userPropertiesInfo.CategoricalPropertyKeyValues) > maxProperties {
 					continue
 				}
+				categoricalValue, _ := value.(string)
 				cmap, ok := userPropertiesInfo.CategoricalPropertyKeyValues[key]
 				if !ok {
 					cmap = make(map[string]bool)
@@ -202,15 +205,17 @@ func CollectPropertiesInfo(scanner *bufio.Scanner, userAndEventsInfo *UserAndEve
 			continue
 		}
 		for key, value := range eventDetails.EventProperties {
-			if _, ok := value.(float64); ok {
+			propertyType := U.GetPropertyKeyValueType(key, value)
+			if propertyType == U.PropertyTypeNumerical {
 				if len(eInfo.NumericPropertyKeys) > maxProperties {
 					continue
 				}
 				eInfo.NumericPropertyKeys[key] = true
-			} else if categoricalValue, ok := value.(string); ok {
+			} else if propertyType == U.PropertyTypeCategorical {
 				if len(eInfo.CategoricalPropertyKeyValues) > maxProperties {
 					continue
 				}
+				categoricalValue, _ := value.(string)
 				cmap, ok := eInfo.CategoricalPropertyKeyValues[key]
 				if !ok {
 					cmap = make(map[string]bool)
