@@ -21,12 +21,12 @@ function getCleanHash(hash) {
 }
 
 function parseURLString(urlString="") {
-    if (urlString == "") return {
+    if (urlString == "" || !urlString) return {
         host: "", path: "", hash: "",
     };
     
     var tempAnchor = document.createElement("a");
-    tempAnchor.setAttribute("href", tempAnchor); 
+    tempAnchor.setAttribute("href", urlString); 
     return { 
         host: tempAnchor.host,
         path: tempAnchor.pathname,
