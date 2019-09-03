@@ -214,13 +214,20 @@ func FillSegmentMobileUserProperties(properties *U.PropertiesMap, event *Segment
 func FillSegmentWebEventProperties(properties *U.PropertiesMap, event *SegmentEvent) {
 	if url := GetURLFromPageEvent(event); url != "" {
 		(*properties)[U.EP_PAGE_RAW_URL] = url
+		pageURL, _ := U.ParseURLStable(url)
+		(*properties)[U.EP_PAGE_DOMAIN] = pageURL.Host
+		(*properties)[U.EP_PAGE_URL] = pageURL.Host + pageURL.Path + U.GetPathAppendableURLHash(pageURL.Fragment)
 	}
 
 	if event.Context.Page.Title != "" {
 		(*properties)[U.EP_PAGE_TITLE] = event.Context.Page.Title
 	}
+
 	if event.Context.Page.Referrer != "" {
 		(*properties)[U.EP_REFERRER] = event.Context.Page.Referrer
+		referrerURL, _ := U.ParseURLStable(event.Context.Page.Referrer)
+		(*properties)[U.EP_REFERRER_DOMAIN] = referrerURL.Host
+		(*properties)[U.EP_REFERRER_URL] = referrerURL.Host + referrerURL.Path + U.GetPathAppendableURLHash(referrerURL.Fragment)
 	}
 }
 

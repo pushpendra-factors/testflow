@@ -74,3 +74,7 @@ func GetURLHostAndPath(parseURL string) (string, error) {
 
 	return fmt.Sprintf("%s%s", pURL.Host, path), nil
 }
+
+func GetPathAppendableURLHash(urlHash string) string {
+	return strings.Split(urlHash, "?")[0]
+}
