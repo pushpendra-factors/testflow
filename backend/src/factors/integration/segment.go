@@ -213,7 +213,7 @@ func FillSegmentMobileUserProperties(properties *U.PropertiesMap, event *Segment
 
 func FillSegmentWebEventProperties(properties *U.PropertiesMap, event *SegmentEvent) {
 	if url := GetURLFromPageEvent(event); url != "" {
-		(*properties)[U.EP_RAW_URL] = url
+		(*properties)[U.EP_PAGE_RAW_URL] = url
 	}
 
 	if event.Context.Page.Title != "" {

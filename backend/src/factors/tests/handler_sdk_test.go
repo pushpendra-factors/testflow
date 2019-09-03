@@ -111,7 +111,7 @@ func TestSDKTrackHandler(t *testing.T) {
 
 	// Should not allow $ prefixes apart from default properties.
 	rEventName = U.RandomLowerAphaNumString(10)
-	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "%s", "event_properties": {"mobile": "true", "$referrer": "http://google.com", "$rawURL": "https://factors.ai/login", "$pageTitle": "Login"}, "user_properties": {"$dollar_key": "unknow_value", "$os": "mac osx", "$osVersion": "1_2_3", "$screenWidth": 10, "$screenHeight": 11, "$browser": "mozilla", "$platform": "web", "$browserVersion": "10_2_3"}}`,
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "%s", "event_properties": {"mobile": "true", "$referrer": "http://google.com", "$pageRawURL": "https://factors.ai/login", "$pageTitle": "Login"}, "user_properties": {"$dollar_key": "unknow_value", "$os": "mac osx", "$osVersion": "1_2_3", "$screenWidth": 10, "$screenHeight": 11, "$browser": "mozilla", "$platform": "web", "$browserVersion": "10_2_3"}}`,
 		user.ID, rEventName)), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 	propsResponseMap1 := DecodeJSONResponseToMap(w.Body)
@@ -126,11 +126,11 @@ func TestSDKTrackHandler(t *testing.T) {
 	json.Unmarshal(eventPropertiesBytes.([]byte), &eventProperties1)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, eventProperties1["$referrer"])
-	assert.NotNil(t, eventProperties1["$rawURL"])
+	assert.NotNil(t, eventProperties1["$pageRawURL"])
 	assert.NotNil(t, eventProperties1["$pageTitle"])
 	assert.NotNil(t, eventProperties1["mobile"])
 	assert.Nil(t, eventProperties1["_$referrer"])
-	assert.Nil(t, eventProperties1["_$rawURL"])
+	assert.Nil(t, eventProperties1["_$pageRawURL"])
 	assert.Nil(t, eventProperties1["_$pageTitle"])
 	// check user default properties.
 	retUser, errCode := M.GetUser(project.ID, user.ID)

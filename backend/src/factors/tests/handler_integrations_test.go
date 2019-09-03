@@ -30,7 +30,7 @@ func assertKeysExistAndNotEmpty(t *testing.T, obj map[string]interface{}, keys [
 
 // expected event properties from segment.
 var genericEventProps = []string{U.EP_LOCATION_LATITUDE, U.EP_LOCATION_LONGITUDE, U.EP_EVENT_VERSION}
-var webEventProps = []string{U.EP_RAW_URL, U.EP_PAGE_TITLE, U.EP_REFERRER}
+var webEventProps = []string{U.EP_PAGE_RAW_URL, U.EP_PAGE_TITLE, U.EP_REFERRER}
 
 // expected user properties from segment.
 var genericUserProps = []string{U.UP_PLATFORM, U.UP_CHANNEL, U.UP_USER_AGENT, U.UP_COUNTRY, U.UP_CITY, U.UP_OS, U.UP_OS_VERSION,

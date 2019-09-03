@@ -52,10 +52,14 @@ var PROPERTIES_TYPE_DATE_TIME = [...]string{
 var EP_INTERNAL_IP string = "$ip"
 var EP_LOCATION_LATITUDE string = "$locationLat"
 var EP_LOCATION_LONGITUDE string = "$locationLng"
-var EP_REFERRER string = "$referrer"
-var EP_PAGE_TITLE string = "$pageTitle"
-var EP_RAW_URL string = "$rawURL"
 var EP_EVENT_VERSION string = "$eventVersion"
+var EP_PAGE_TITLE string = "$pageTitle"
+var EP_PAGE_DOMAIN string = "$pageDomain"
+var EP_PAGE_RAW_URL string = "$pageRawURL"
+var EP_PAGE_URL string = "$pageURL"
+var EP_REFERRER string = "$referrer"
+var EP_REFERRER_DOMAIN string = "$referrerDomain"
+var EP_REFERRER_URL string = "$referrerURL"
 
 // Default User Properties
 var UP_PLATFORM string = "$platform"
@@ -102,10 +106,14 @@ var ALLOWED_SDK_DEFAULT_EVENT_PROPERTIES = [...]string{
 	EP_INTERNAL_IP,
 	EP_LOCATION_LATITUDE,
 	EP_LOCATION_LONGITUDE,
-	EP_REFERRER,
-	EP_PAGE_TITLE,
-	EP_RAW_URL,
 	EP_EVENT_VERSION,
+	EP_PAGE_TITLE,
+	EP_PAGE_DOMAIN,
+	EP_PAGE_RAW_URL,
+	EP_PAGE_URL,
+	EP_REFERRER,
+	EP_REFERRER_DOMAIN,
+	EP_REFERRER_URL,
 }
 
 // Event properties that are not visible to user for analysis.
