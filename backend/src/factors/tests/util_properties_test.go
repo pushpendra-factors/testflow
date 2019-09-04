@@ -38,3 +38,8 @@ func TestGetPropertyKeyValueType(t *testing.T) {
 	assert.Equal(t, U.PropertyTypeUnknown, U.GetPropertyKeyValueType("testKey", true))
 	assert.Equal(t, U.PropertyTypeUnknown, U.GetPropertyKeyValueType("testKey", []string{"value1", "value2"}))
 }
+
+func TestGetCleanPropertyValue(t *testing.T) {
+	assert.Equal(t, "value with?reserved+characters$are(properties)",
+		U.GetUnEscapedPropertyValue("value%20with%3Freserved%2Bcharacters%24are%28properties%29"))
+}

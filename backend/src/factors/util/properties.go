@@ -3,6 +3,7 @@ package util
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -262,6 +263,18 @@ func IsGenericUserProperty(key *string) bool {
 	return false
 }
 
+func GetUnEscapedPropertyValue(v interface{}) interface{} {
+	switch v.(type) {
+	case string:
+		strValue := v.(string)
+		if escapedPath, err := url.PathUnescape(strValue); err == nil {
+			return escapedPath
+		}
+	}
+
+	return v
+}
+
 func GetValidatedUserProperties(properties *PropertiesMap) *PropertiesMap {
 	validatedProperties := make(PropertiesMap)
 	for k, v := range *properties {
@@ -280,13 +293,21 @@ func GetValidatedEventProperties(properties *PropertiesMap) *PropertiesMap {
 	validatedProperties := make(PropertiesMap)
 	for k, v := range *properties {
 		if err := isPropertyTypeValid(v); err == nil {
-			// Escape properties with $ prefix but allow query_params_props with $qp_ prrefix and default properties.
+			var propertyKey string
+			// Escape properties with $ prefix but allow query_params_props
+			// with $qp_ prrefix and default properties.
 			if strings.HasPrefix(k, NAME_PREFIX) &&
 				!strings.HasPrefix(k, QUERY_PARAM_PROPERTY_PREFIX) &&
 				!isSDKEventDefaultProperty(&k) {
-				validatedProperties[fmt.Sprintf("%s%s", NAME_PREFIX_ESCAPE_CHAR, k)] = v
+				propertyKey = fmt.Sprintf("%s%s", NAME_PREFIX_ESCAPE_CHAR, k)
 			} else {
-				validatedProperties[k] = v
+				propertyKey = k
+			}
+
+			if strings.HasPrefix(k, QUERY_PARAM_PROPERTY_PREFIX) {
+				validatedProperties[propertyKey] = GetUnEscapedPropertyValue(v)
+			} else {
+				validatedProperties[propertyKey] = v
 			}
 		}
 	}
