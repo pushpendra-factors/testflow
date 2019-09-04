@@ -81,7 +81,7 @@ func TestSDKTrackHandler(t *testing.T) {
 	// Test auto tracked event.
 	rEventName := U.RandomLowerAphaNumString(10)
 	w = ServePostRequestWithHeaders(r, uri,
-		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true"}, "user_properties": {"$os": "Mac OS"}}`, user.ID, rEventName)),
+		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search"}, "user_properties": {"$os": "Mac OS"}}`, user.ID, rEventName)),
 		map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 	responseMap = DecodeJSONResponseToMap(w.Body)
@@ -99,6 +99,8 @@ func TestSDKTrackHandler(t *testing.T) {
 	assert.NotNil(t, eventProperties["$qp_search"])                                                 // $qp should exist.
 	assert.Nil(t, eventProperties[fmt.Sprintf("%s$qp_search", U.NAME_PREFIX_ESCAPE_CHAR)])          // $qp should not be escaped.
 	assert.NotNil(t, eventProperties["mobile"])                                                     // no dollar properties should exist.
+	assert.NotNil(t, eventProperties["$qp_encoded"])                                                // URL encoded property should exist.
+	assert.Equal(t, "google search", eventProperties["$qp_encoded"])                                // decoded property value should have been stored.
 	assert.True(t, len(rEvent.UserPropertiesId) > 0)
 	rUser, errCode := M.GetUser(rEvent.ProjectId, rEvent.UserId)
 	assert.Equal(t, http.StatusFound, errCode)
