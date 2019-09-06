@@ -34,10 +34,15 @@ function parseURLString(urlString="") {
     }
 }
 
-module.exports = exports =  { 
+function getCurrentUnixTimestampInMs() {
+    return new Date().getTime(); 
+}
+
+module.exports = exports =  {
     validatedStringArg: validatedStringArg,
     convertIfNumber: convertIfNumber,
     getCleanHash: getCleanHash,
     parseURLString: parseURLString,
+    getCurrentUnixTimestampInMs: getCurrentUnixTimestampInMs,
 };
 

@@ -61,6 +61,8 @@ var EP_PAGE_URL string = "$pageURL"
 var EP_REFERRER string = "$referrer"
 var EP_REFERRER_DOMAIN string = "$referrerDomain"
 var EP_REFERRER_URL string = "$referrerURL"
+var EP_PAGE_LOAD_TIME string = "$page_load_time"
+var EP_PAGE_SPENT_TIME string = "$page_spent_time"
 
 // Default User Properties
 var UP_PLATFORM string = "$platform"
@@ -115,6 +117,8 @@ var ALLOWED_SDK_DEFAULT_EVENT_PROPERTIES = [...]string{
 	EP_REFERRER,
 	EP_REFERRER_DOMAIN,
 	EP_REFERRER_URL,
+	EP_PAGE_LOAD_TIME,
+	EP_PAGE_SPENT_TIME,
 }
 
 // Event properties that are not visible to user for analysis.
@@ -170,6 +174,11 @@ var ALLOWED_SDK_DEFAULT_USER_PROPERTIES = [...]string{
 var INTERNAL_USER_PROPERTIES = [...]string{
 	UP_DEVICE_ID,
 	"_$deviceId", // Here for legacy reason.
+}
+
+var UPDATE_ALLOWED_EVENT_PROPERTIES = [...]string{
+	EP_PAGE_LOAD_TIME,
+	EP_PAGE_SPENT_TIME,
 }
 
 const NAME_PREFIX = "$"
@@ -330,6 +339,17 @@ func GetPropertyKeyValueType(propertyKey string, propertyValue interface{}) stri
 	default:
 		return PropertyTypeUnknown
 	}
+}
+
+func GetUpdateAllowedEventProperties(properties *PropertiesMap) *PropertiesMap {
+	allowedProperties := make(PropertiesMap)
+	for _, k := range UPDATE_ALLOWED_EVENT_PROPERTIES {
+		if v, allowed := (*properties)[k]; allowed {
+			allowedProperties[k] = v
+		}
+	}
+
+	return &allowedProperties
 }
 
 // ClassifyPropertiesByType - Classifies categorical and numerical properties

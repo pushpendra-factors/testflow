@@ -36,6 +36,38 @@ function getAutoTrackURL() {
     return window.location.host + window.location.pathname + util.getCleanHash(window.location.hash);
 }
 
+function factorsWindow() { 
+    if (!window._FactorsCache) window._FactorsCache={}; 
+    return window._FactorsCache; 
+}
+
+function addCurrentPageAutoTrackEventIdToStore(eventId) {
+    if (!eventId || eventId == "") return;
+    factorsWindow().currentPageTrackEventId = eventId;
+}
+
+function getCurrentPageAutoTrackEventIdFromStore() {
+    if (!factorsWindow().currentPageTrackEventId) return;
+    return factorsWindow().currentPageTrackEventId;    
+}
+
+function setLastActivityTime() {
+    factorsWindow().lastActivityTime = util.getCurrentUnixTimestampInMs();
+}
+
+function getLastActivityTime() {
+    var lastActivityTime = factorsWindow().lastActivityTime;
+    if (!lastActivityTime) lastActivityTime = 0;
+    return lastActivityTime
+}
+
+function getCurrentPageSpentTime(startTime) {
+    var lastActivityTime = getLastActivityTime();
+    if (lastActivityTime == 0) return lastActivityTime;
+
+    return (lastActivityTime - startTime) / 1000;
+}
+
 /**
  * App prototype.
  */
@@ -105,12 +137,37 @@ App.prototype.track = function(eventName, eventProperties, auto=false) {
     payload.auto = auto;
 
     return this.client.track(payload)
-        .then(updateCookieIfUserIdInResponse);
+        .then(updateCookieIfUserIdInResponse)
+        .then((response) => {
+            if (auto && response.body && response.body) 
+                addCurrentPageAutoTrackEventIdToStore(response.body.event_id);
+            return response;
+        })
+}
+
+App.prototype.updatePageTimeProperties = function(startOfPageSpentTime) {
+    var eventId = getCurrentPageAutoTrackEventIdFromStore();
+    var pageSpentTime = getCurrentPageSpentTime(startOfPageSpentTime);
+    var pageLoadTime = Properties.getPageLoadTime();
+
+    let properties = {};
+    if (pageSpentTime > 0) properties[Properties.PAGE_SPENT_TIME] = pageSpentTime;
+    if (pageLoadTime > 0) properties[Properties.PAGE_LOAD_TIME] = pageLoadTime;
+    this.client.updateEventProperties({event_id: eventId, properties: properties});
 }
 
 App.prototype.autoTrack = function(enabled=false) {
     if (!enabled) return false; // not enabled.
+    var _this = this;
+    
+    var startOfPageSpentTime = util.getCurrentUnixTimestampInMs();
     this.track(getAutoTrackURL(), Properties.getFromQueryParams(window.location), true);
+    window.addEventListener("beforeunload", function() {
+        _this.updatePageTimeProperties(startOfPageSpentTime);
+        return;
+    });
+    window.addEventListener("scroll", setLastActivityTime);
+    window.addEventListener("mouseover", setLastActivityTime);
     
     // Todo(Dinesh): Find ways to automate tests for SPA support.
     
@@ -121,13 +178,18 @@ App.prototype.autoTrack = function(enabled=false) {
             logger.debug("Failed. Already a function attached on window.onpopstate.");
             return;
         }
-        var _land_location = window.location.href;
-        var _this = this;
+
+        var prevLocation = window.location.href;
         window.onpopstate = function() {
-            logger.debug("Triggered window.onpopstate: "+window.location.href);
-            // Track only if URL or QueryParam changed.
-            if (_land_location !== window.location.href)
+            logger.debug("Triggered window.onpopstate goto: "+window.location.href+", prev: "+prevLocation);
+            if (prevLocation !== window.location.href) {
+                // should be called before next page track.
+                _this.updatePageTimeProperties(startOfPageSpentTime);
+                
                 _this.track(getAutoTrackURL(), Properties.getFromQueryParams(window.location), true);
+                startOfPageSpentTime = util.getCurrentUnixTimestampInMs();
+                prevLocation = window.location.href;
+            }
         }
     }
 }

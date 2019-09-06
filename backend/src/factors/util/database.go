@@ -89,3 +89,16 @@ func AddToPostgresJsonb(sourceJsonb *postgres.Jsonb,
 
 	return &postgres.Jsonb{newJsonb}, nil
 }
+
+func DecodePostgresJsonb(sourceJsonb *postgres.Jsonb) (*map[string]interface{}, error) {
+	var sourceMap map[string]interface{}
+	if !IsEmptyPostgresJsonb(sourceJsonb) {
+		if err := json.Unmarshal((*sourceJsonb).RawMessage, &sourceMap); err != nil {
+			return nil, err
+		}
+	} else {
+		sourceMap = make(map[string]interface{}, 0)
+	}
+
+	return &sourceMap, nil
+}

@@ -44,6 +44,11 @@ type sdkAddUserPropertiesPayload struct {
 	Properties U.PropertiesMap `json:"properties"`
 }
 
+type sdkUpdateEventPropertiesPayload struct {
+	EventId    string          `json:"event_id"`
+	Properties U.PropertiesMap `json:"properties"`
+}
+
 func sdkTrack(projectId uint64, request *sdkTrackPayload, clientIP string) (int, *SDKTrackResponse) {
 	// Precondition: Fails if event_name not provided.
 	request.Name = strings.TrimSpace(request.Name) // Discourage whitespace on the end.
@@ -436,4 +441,50 @@ func SDKGetProjectSettingsHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, projectSetting)
+}
+
+func SDKUpdateEventProperties(c *gin.Context) {
+	r := c.Request
+
+	logCtx := log.WithFields(log.Fields{
+		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
+	})
+
+	if r.Body == nil {
+		logCtx.Error("Invalid request. Request body unavailable.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+			"error": "Updating event properities failed. Missing request body."})
+		return
+	}
+
+	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+			"error": "Update event properties failed. Invalid project."})
+		return
+	}
+
+	var request sdkUpdateEventPropertiesPayload
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&request); err != nil {
+		logCtx.WithError(err).Error("Update event properties failed. JSON Decoding failed.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+			"error": "Update event properties failed. Invalid payload."})
+		return
+	}
+
+	updateAllowedProperties := U.GetUpdateAllowedEventProperties(&request.Properties)
+	validatedProperties := U.GetValidatedEventProperties(updateAllowedProperties)
+	if len(*validatedProperties) == 0 {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "No valid properties given to update."})
+	}
+
+	errCode := M.UpdateEventProperties(projectId, request.EventId, validatedProperties)
+	if errCode != http.StatusAccepted {
+		c.AbortWithStatusJSON(errCode, gin.H{"error": "Update event properties failed."})
+		return
+	}
+
+	c.JSON(http.StatusAccepted, gin.H{"message": "Updated event properties successfully."})
 }

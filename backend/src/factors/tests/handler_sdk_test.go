@@ -602,3 +602,63 @@ func TestSDKBulk(t *testing.T) {
 	})
 
 }
+
+func getAutoTrackedEventId(t *testing.T, projectAuthToken string) string {
+	r := gin.Default()
+	H.InitSDKRoutes(r)
+	uri := "/sdk/event/track"
+
+	w := ServePostRequestWithHeaders(r, uri,
+		[]byte(fmt.Sprintf(`{"event_name": "%s", "auto": true, "event_properties": {"mobile" : "true"}}`,
+			"https://example.com/")), map[string]string{"Authorization": projectAuthToken})
+	assert.Equal(t, http.StatusOK, w.Code)
+	responseMap := DecodeJSONResponseToMap(w.Body)
+	assert.NotEmpty(t, responseMap)
+	assert.NotNil(t, responseMap["event_id"])
+
+	return responseMap["event_id"].(string)
+}
+
+func TestSDKUpdateEventPropertiesHandler(t *testing.T) {
+	// Initialize routes and dependent data.
+	r := gin.Default()
+	H.InitSDKRoutes(r)
+	uri := "/sdk/event/update_properties"
+
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	// Test without project_id scope and with non-existing project.
+	w := ServePostRequest(r, uri, []byte("{}"))
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+	responseMap := DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, responseMap["error"])
+
+	// Test with invalid token.
+	w = ServePostRequestWithHeaders(r, uri, []byte(`{}`), map[string]string{"Authorization": "INVALID_TOKEN"})
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+	responseMap = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, responseMap["error"])
+
+	// Test with invalid event_id in the payload.
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"event_id": "%s", "properties": {"$page_spent_time": "%d"}}`,
+		"", 1)), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	// Test with disallowed property in the payload.
+	eventId := getAutoTrackedEventId(t, project.Token)
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"event_id": "%s", "properties": {"$not_allowed": "%d"}}`,
+		eventId, 1)), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.NotNil(t, responseMap["error"])
+
+	eventId = getAutoTrackedEventId(t, project.Token)
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"event_id": "%s", "properties": {"$page_spent_time": "%d"}}`,
+		eventId, 1)), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusAccepted, w.Code)
+
+	eventId = getAutoTrackedEventId(t, project.Token)
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"event_id": "%s", "properties": {"$page_load_time": "%d"}}`,
+		eventId, 1)), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusAccepted, w.Code)
+}

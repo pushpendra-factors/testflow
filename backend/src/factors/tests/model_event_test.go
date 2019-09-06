@@ -239,3 +239,43 @@ func TestGetRecentEventPropertyValues(t *testing.T) {
 		assert.Empty(t, values)
 	})
 }
+
+func TestUpdateEventProperties(t *testing.T) {
+	project, user, _ := SetupProjectUserReturnDAO()
+	assert.NotNil(t, project)
+
+	timestamp := time.Now().Unix()
+	_, event := createEventWithTimestampAndPrperties(t, project, user, timestamp,
+		json.RawMessage(`{"rProp1": "value1", "rProp2": 1}`))
+
+	// should add properties if not exist.
+	errCode := M.UpdateEventProperties(project.ID, event.ID, &U.PropertiesMap{
+		"$page_spent_time": 1.346, "$page_load_time": 1.594})
+	assert.Equal(t, http.StatusAccepted, errCode)
+	updatedEvent, errCode := M.GetEventById(project.ID, event.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+	eventProperties, err := U.DecodePostgresJsonb(&updatedEvent.Properties)
+	assert.Nil(t, err)
+	assert.Contains(t, *eventProperties, "$page_spent_time")
+	assert.Contains(t, *eventProperties, "$page_load_time")
+	assert.Contains(t, *eventProperties, "rProp1") // should not remove old properties.
+	// values should be unchanged.
+	assert.Equal(t, float64(1.594), (*eventProperties)["$page_load_time"])
+	assert.Equal(t, float64(1.346), (*eventProperties)["$page_spent_time"])
+	assert.Equal(t, "value1", (*eventProperties)["rProp1"])
+
+	// should update properties if exist.
+	errCode = M.UpdateEventProperties(project.ID, event.ID, &U.PropertiesMap{
+		"$page_spent_time": 3})
+	assert.Equal(t, http.StatusAccepted, errCode)
+	updatedEvent, errCode = M.GetEventById(project.ID, event.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+	eventProperties, err = U.DecodePostgresJsonb(&updatedEvent.Properties)
+	assert.Contains(t, *eventProperties, "$page_spent_time")
+	assert.Contains(t, *eventProperties, "$page_load_time")
+	assert.Contains(t, *eventProperties, "rProp1") // should not remove old properties.
+	// should update the property alone.
+	assert.Equal(t, float64(3), (*eventProperties)["$page_spent_time"])
+	assert.Equal(t, float64(1.594), (*eventProperties)["$page_load_time"])
+	assert.Equal(t, "value1", (*eventProperties)["rProp1"])
+}

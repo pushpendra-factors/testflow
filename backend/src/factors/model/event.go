@@ -291,3 +291,30 @@ func GetEventsOccurrenceCount(projectId uint64) ([]EventOccurrence, int) {
 
 	return eventsOccurrence, http.StatusFound
 }
+
+func UpdateEventProperties(projectId uint64, id string, properties *U.PropertiesMap) int {
+	if projectId == 0 || id == "" {
+		return http.StatusBadRequest
+	}
+
+	event, errCode := GetEventById(projectId, id)
+	if errCode != http.StatusFound {
+		return errCode
+	}
+
+	updatedPostgresJsonb, err := U.AddToPostgresJsonb(&event.Properties, *properties)
+	if err != nil {
+		return http.StatusInternalServerError
+	}
+
+	db := C.GetServices().Db
+	updatedFields := map[string]interface{}{"properties": updatedPostgresJsonb}
+	err = db.Model(&Event{}).Where("project_id = ? AND id = ?", projectId, id).Update(updatedFields).Error
+	if err != nil {
+		log.WithFields(log.Fields{"project_id": projectId, "id": id,
+			"update": updatedFields}).WithError(err).Error("Failed to update event properties.")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusAccepted
+}

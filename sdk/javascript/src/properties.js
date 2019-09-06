@@ -4,6 +4,11 @@ const util = require("./utils/util");
 
 const PLATFORM_WEB = "web";
 
+// properties
+const PREFIX = "$";
+const PAGE_SPENT_TIME = PREFIX+"page_spent_time";
+const PAGE_LOAD_TIME = PREFIX+"page_load_time";
+
 const BrowserInfo = {
     getBrowser: function () {
         // initial values for checks
@@ -273,6 +278,15 @@ const BrowserInfo = {
 }
 
 /**
+ * @returns Page load time in seconds.
+ */
+function getPageLoadTime() {
+    if (!window.performance) return 0;
+    // ref:https://www.html5rocks.com/en/tutorials/webperformance/basics
+    return (window.performance.timing.domContentLoadedEventEnd - window.performance.timing.navigationStart)/1000;
+}
+
+/**
  * @param {string} pfix Prefix to be added to default properties.
  * Property - Example
  * referrer - https://google.com/search
@@ -291,7 +305,7 @@ function getEventDefault(pfix="$") {
     dp[pfix+"pageDomain"] = window.location.host;
     // url domain with path and without query params.
     dp[pfix+"pageURL"] = window.location.host + window.location.pathname + util.getCleanHash(window.location.hash);
-
+    
     return dp;
 }
 
@@ -401,5 +415,9 @@ module.exports = {
     getEventDefault: getEventDefault,
     getFromQueryParams: getFromQueryParams,
     parseFromQueryString: parseFromQueryString,
-    getTypeValidated: getTypeValidated
+    getTypeValidated: getTypeValidated,
+    getPageLoadTime: getPageLoadTime,
+
+    PAGE_SPENT_TIME: PAGE_SPENT_TIME,
+    PAGE_LOAD_TIME: PAGE_LOAD_TIME,
 }
