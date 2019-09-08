@@ -98,10 +98,8 @@ class Login extends Component {
   }
 
   render() {
-    if(this.props.isLoggedIn){
-      return <Redirect to='/' />
-    }
-    
+    if (this.props.isLoggedIn) return <Redirect to='/' />;
+
     return <HalfScreen renderForm={this.renderLoginForm} marginTop='8rem' />;
   }
 }

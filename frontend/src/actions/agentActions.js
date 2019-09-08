@@ -61,27 +61,40 @@ export function updateAgentPassword(params){
 export function login(email, password) {
     return function(dispatch) {
       return new Promise((resolve, reject) => {
+        let invalidMsg = "Invalid email or password";
+        let loginFailMsg = "Login failed. Please try again.";
+
         post(dispatch, host + "agents/signin", {
           "email":email,
           "password":password,
         })       
         .then((r) => {
+          if (r.ok) {
             dispatch({
               type: "AGENT_LOGIN_FULFILLED",
               payload: r.data
             });
 
             resolve(r.data);
-          })
-          .catch((r) => {
+          } else {
             dispatch({
               type: "AGENT_LOGIN_REJECTED",
               payload: null
             });
 
-            if(r.status && r.status == 401) reject("Invalid email or password");
-            else reject("Login failed. Please try again.");
+            if (r.status == 404) reject(invalidMsg);
+            else reject(loginFailMsg);
+          }
+        })
+        .catch((r) => {
+          dispatch({
+            type: "AGENT_LOGIN_REJECTED",
+            payload: null
           });
+
+          if(r.status && r.status == 401) reject(invalidMsg);
+          else reject(loginFailMsg);
+        });
       })
     }
   }
