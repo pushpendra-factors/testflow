@@ -201,8 +201,10 @@ class JsSdk extends Component {
 
   parseFilterExprURL(expr) {
     let parser = document.createElement('a');
-    parser.href = "http://"+expr;
-    return { host: parser.host, path: parser.pathname };
+    parser.href = "https://"+expr;
+    let path = parser.pathname;
+    if (parser.hash != "") path = path + parser.hash;
+    return { host: parser.host, path: path };
   }
 
   makeFilterExpr(host, path) {
@@ -465,7 +467,9 @@ class JsSdk extends Component {
           <Row style={{padding: "10px 0"}}>
             <Col md={{size: 4}}>
               <div style={{height: "20px"}}>
-                <span className="fapp-error" style={{display: this.getErrorDisplayState(this.state.filterSettings.formDomainError)}}>{this.state.filterSettings.formDomainError}</span>
+                <span className="fapp-error" style={{display: this.getErrorDisplayState(this.state.filterSettings.formDomainError)}}>
+                  {this.state.filterSettings.formDomainError}
+                </span>
               </div>
               <div className='fapp-select light'>
                 <CreatableSelect
@@ -480,7 +484,9 @@ class JsSdk extends Component {
             </Col>
             <Col md={{size: 4}}>
               <div style={{height: "20px"}}>
-                <span className="fapp-error" style={{display: this.getErrorDisplayState(this.state.filterSettings.formExprError)}}>{this.state.filterSettings.formExprError}</span>
+                <span className="fapp-error" style={{display: this.getErrorDisplayState(this.state.filterSettings.formExprError)}}>
+                  {this.state.filterSettings.formExprError}
+                </span>
               </div>
               <div className='fapp-select light'>
                 <CreatableSelect
@@ -497,7 +503,8 @@ class JsSdk extends Component {
               <div style={{height: "20px"}}>
                 <span className="fapp-error" style={{display: this.getErrorDisplayState(this.state.filterSettings.formNameError)}}>{this.state.filterSettings.formNameError}</span>
               </div>
-              <Input type="text" placeholder="Virtual Event Name" style={{ border: "1px solid #ccc" }} onChange={this.handleFilterFormNameChange} value={this.state.filterSettings.formName} />
+              <Input type="text" placeholder="Virtual Event Name" style={{ border: "1px solid #ccc" }} 
+                onChange={this.handleFilterFormNameChange} value={this.state.filterSettings.formName} />
             </Col>
             <Col>
               <Button className="fapp-inline-button" style={{marginTop: "20px", color: this.getFormCreateButtonColor()}} onClick={this.createFilter}>
@@ -508,7 +515,8 @@ class JsSdk extends Component {
               </Button>
             </Col>
           </Row>
-          <span className="fapp-label" style={{display: this.props.filters.length > 0 ? "inline-block" : "none", marginTop: "15px", marginBottom: "20px"}}>Available events</span>
+          <span className="fapp-label" style={{display: this.props.filters.length > 0 ? "inline-block" : "none", 
+            marginTop: "15px", marginBottom: "20px"}}>Available events</span>
           { 
             // existing filters list.
             this.props.filters.map((v, i) => {

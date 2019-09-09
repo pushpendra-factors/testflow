@@ -272,23 +272,26 @@ func getValidatedFilterExpr(filterExpr string) (string, bool) {
 		return "", false
 	}
 
-	parsed, err := U.ParseURLStable(filterExpr)
+	parsedURL, err := U.ParseURLStable(filterExpr)
 	if err != nil {
 		return "", false
 	}
 
-	if parsed.Host == "" {
+	if parsedURL.Host == "" {
 		return "", false
 	}
 
-	var uri string
-	if parsed.Path == "" || parsed.Path == U.URI_SLASH {
-		uri = U.URI_SLASH
+	noPath := parsedURL.Path == "" || parsedURL.Path == U.URI_SLASH
+	noHashPath := parsedURL.Fragment == ""
+
+	var path string
+	if noPath && noHashPath {
+		path = U.URI_SLASH
 	} else {
-		uri = strings.TrimSuffix(parsed.Path, U.URI_SLASH)
+		path = U.GetURLPathWithHash(parsedURL)
 	}
 
-	return fmt.Sprintf("%s%s", parsed.Host, uri), true
+	return fmt.Sprintf("%s%s", parsedURL.Host, path), true
 }
 
 // IsFilterMatch checks for exact match of filter and uri passed.
@@ -417,7 +420,7 @@ func makeFilterInfos(eventNames []EventName) (*[]FilterInfo, error) {
 			return nil, err
 		}
 
-		tokenizedFilter := U.TokenizeURI(U.CleanURI(parsedFilterExpr.Path))
+		tokenizedFilter := U.TokenizeURI(U.GetURLPathWithHash(parsedFilterExpr))
 
 		filters[i] = FilterInfo{
 			tokenizedFilter: tokenizedFilter,
@@ -435,9 +438,8 @@ func FilterEventNameByEventURL(projectId uint64, eventURL string) (*EventName, i
 
 	parsedEventURL, err := U.ParseURLStable(eventURL)
 	if err != nil {
-		log.WithFields(log.Fields{
-			"event_url": eventURL,
-		}).WithError(err).Error("Failed parsing event_url.")
+		log.WithFields(log.Fields{"event_url": eventURL}).WithError(err).Error(
+			"Failed parsing event_url.")
 		return nil, http.StatusBadRequest
 	}
 
@@ -458,7 +460,7 @@ func FilterEventNameByEventURL(projectId uint64, eventURL string) (*EventName, i
 	}
 
 	filterInfo, matched := popAndMatchEventURIWithFilters(filters,
-		U.CleanURI(parsedEventURL.Path))
+		U.GetURLPathWithHash(parsedEventURL))
 	if !matched {
 		return nil, http.StatusNotFound
 	}
@@ -475,13 +477,13 @@ func FillEventPropertiesByFilterExpr(eventProperties *U.PropertiesMap,
 	if err != nil {
 		return err
 	}
-	tokenizedEventURI := U.TokenizeURI(strings.TrimSuffix(parsedEventURL.Path, U.URI_SLASH))
+	tokenizedEventURI := U.TokenizeURI(U.GetURLPathWithHash(parsedEventURL))
 
 	parsedFilterExpr, err := U.ParseURLWithoutProtocol(filterExpr)
 	if err != nil {
 		return err
 	}
-	tokenizedFilterExpr := U.TokenizeURI(strings.TrimSuffix(parsedFilterExpr.Path, U.URI_SLASH))
+	tokenizedFilterExpr := U.TokenizeURI(U.GetURLPathWithHash(parsedFilterExpr))
 
 	for pos := 0; pos < len(tokenizedFilterExpr); pos++ {
 		if strings.HasPrefix(tokenizedFilterExpr[pos], URI_PROPERTY_PREFIX) {

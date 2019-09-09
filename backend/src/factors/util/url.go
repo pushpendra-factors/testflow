@@ -78,3 +78,13 @@ func GetURLHostAndPath(parseURL string) (string, error) {
 func GetPathAppendableURLHash(urlHash string) string {
 	return strings.Split(urlHash, "?")[0]
 }
+
+func GetURLPathWithHash(url *url.URL) string {
+	path := url.Path
+	if url.Fragment != "" {
+		// URL fragment removes #. added # back.
+		path = path + "#" + url.Fragment
+	}
+
+	return CleanURI(path)
+}

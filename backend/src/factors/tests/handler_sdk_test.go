@@ -243,6 +243,38 @@ func TestSDKTrackHandler(t *testing.T) {
 	assert.NotEqual(t, filterEventName.ID, eventName.ID)            // should not use deleted filter.
 	assert.Equal(t, M.TYPE_AUTO_TRACKED_EVENT_NAME, eventName.Type) // should create auto created event.
 
+	t.Run("FilterExpressionWithHash", func(t *testing.T) {
+		expr := "factors-dev.com/#/reports/:report_id"
+		name := "seen_reports"
+		filterEventName, errCode := M.CreateOrGetFilterEventName(&M.EventName{
+			ProjectId:  project.ID,
+			FilterExpr: expr,
+			Name:       name,
+		})
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.NotNil(t, filterEventName)
+		assert.NotZero(t, filterEventName.ID)
+		assert.Equal(t, name, filterEventName.Name)
+		assert.Equal(t, expr, filterEventName.FilterExpr)
+		assert.Equal(t, M.TYPE_FILTER_EVENT_NAME, filterEventName.Type)
+
+		rEventName = "factors-dev.com/#/reports/1234"
+		w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(
+			`{"user_id": "%s", "event_name": "%s", "auto": true, "event_properties": {"mobile": "true"}, "user_properties": {"$os": "mac osx", "$osVersion": "1_2_3"}}`,
+			user.ID, rEventName)), map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusOK, w.Code)
+		responseMap = DecodeJSONResponseToMap(w.Body)
+		assert.NotEmpty(t, responseMap)
+		assert.Nil(t, responseMap["user_id"])
+		rEvent, errCode = M.GetEvent(project.ID, user.ID, responseMap["event_id"].(string))
+		assert.Equal(t, http.StatusFound, errCode)
+		assert.NotNil(t, rEvent)
+		assert.Equal(t, filterEventName.ID, rEvent.EventNameId)
+		var rEventProperties map[string]interface{}
+		json.Unmarshal(rEvent.Properties.RawMessage, &rEventProperties)
+		assert.NotNil(t, rEventProperties["report_id"])
+		assert.Equal(t, "1234", rEventProperties["report_id"])
+	})
 }
 
 func TestSDKIdentifyHandler(t *testing.T) {
