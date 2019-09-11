@@ -152,15 +152,15 @@ const BrowserInfo = {
             is_phone = false,
             device = "";
 
-        for (i in tabletStrings) {
-            if (tabletStrings[i].r.test(nAgt)) {
+        for (var i=0; i<tabletStrings.length; i++) {
+            if (tabletStrings[i].r.test(nAgt)) { 
                 device = tabletStrings[i].s;
                 is_tablet = true;
                 break;
             }
         }
         if (device === "") {
-            for (i in phoneStrings) {
+            for (var i=0; i<phoneStrings.length; i++) {
                 if (phoneStrings[i].r.test(nAgt)) {
                     device = phoneStrings[i].s;
                     is_phone = true;
@@ -220,7 +220,7 @@ const BrowserInfo = {
             { s: 'OS/2', r: /OS\/2/ },
             { s: 'Search Bot', r: /(nuhk|Googlebot|Yammybot|Openbot|Slurp|MSNBot|Ask Jeeves\/Teoma|ia_archiver)/ }
         ];
-        for (var id in clientStrings) {
+        for (var id=0; id<clientStrings.length; id++) {
             var cs = clientStrings[id];
             if (cs.r.test(nAgt)) {
                 os = cs.s;
