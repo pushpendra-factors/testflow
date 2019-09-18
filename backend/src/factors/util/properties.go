@@ -708,3 +708,18 @@ func FillMandatoryDefaultUserProperties(propertiesByType *map[string][]string) {
 		}
 	}
 }
+
+func FillPropertiesFromURL(properties *PropertiesMap, url *url.URL) error {
+	queryParams := url.Query()
+	for k, v := range queryParams {
+		// param can have multiple values as array, using 1st alone.
+		(*properties)[QUERY_PARAM_PROPERTY_PREFIX+k] = v[0]
+	}
+
+	fragmentParams := GetQueryParamsFromURLFragment(url.Fragment)
+	for k, v := range fragmentParams {
+		(*properties)[QUERY_PARAM_PROPERTY_PREFIX+k] = v
+	}
+
+	return nil
+}

@@ -1,7 +1,6 @@
 package util
 
 import (
-	"errors"
 	"fmt"
 	"net/url"
 	"regexp"
@@ -54,25 +53,20 @@ func CleanURI(uri string) string {
 	return strings.TrimSuffix(uri, URI_SLASH)
 }
 
-func GetURLHostAndPath(parseURL string) (string, error) {
-	cURL := strings.TrimSpace(parseURL)
-
-	if cURL == "" {
-		return "", errors.New("parsing failed empty url")
-	}
-
-	pURL, err := ParseURLStable(cURL)
-	if err != nil {
-		return "", err
-	}
-
-	// adds / as suffix for root.
+func GetURLHostAndPath(pURL *url.URL) string {
 	path := GetURLPathWithHash(pURL)
+
+	// removes query params.
+	qpSplit := strings.Split(path, "?")
+	if len(qpSplit) == 2 {
+		path = qpSplit[0]
+	}
+
 	if path == "" {
 		path = "/"
 	}
 
-	return fmt.Sprintf("%s%s", pURL.Host, path), nil
+	return fmt.Sprintf("%s%s", pURL.Host, path)
 }
 
 func GetPathAppendableURLHash(urlHash string) string {
@@ -82,9 +76,26 @@ func GetPathAppendableURLHash(urlHash string) string {
 func GetURLPathWithHash(url *url.URL) string {
 	path := url.Path
 	if url.Fragment != "" {
-		// URL fragment removes #. added # back.
 		path = path + "#" + url.Fragment
 	}
 
 	return CleanURI(path)
+}
+
+func GetQueryParamsFromURLFragment(fragment string) map[string]interface{} {
+	paramsMap := make(map[string]interface{}, 0)
+
+	if fragment == "" {
+		return paramsMap
+	}
+
+	ampSplit := strings.Split(fragment, "&")
+	for _, keyWithValue := range ampSplit {
+		keyValue := strings.Split(keyWithValue, "=")
+		if len(keyValue) == 2 && keyValue[0] != "" && keyValue[1] != "" {
+			paramsMap[keyValue[0]] = keyValue[1]
+		}
+	}
+
+	return paramsMap
 }

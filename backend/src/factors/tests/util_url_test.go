@@ -49,19 +49,39 @@ func TestUtilURLParseWithoutProtocol(t *testing.T) {
 }
 
 func TestUtilGetURLHostAndPath(t *testing.T) {
-	p1, err := U.GetURLHostAndPath("https://www.factors.ai/?fclid=token")
+	url, err := U.ParseURLStable("https://www.factors.ai/?param=1")
 	assert.Nil(t, err)
+	p1 := U.GetURLHostAndPath(url)
 	assert.Equal(t, "www.factors.ai/", p1)
 
-	p2, err := U.GetURLHostAndPath("https://www.factors.ai")
+	// hash should be allowed on path.
+	url2, err := U.ParseURLStable("https://app.factors.ai/#/core")
 	assert.Nil(t, err)
-	assert.Equal(t, "www.factors.ai/", p2)
+	p2 := U.GetURLHostAndPath(url2)
+	assert.Equal(t, "app.factors.ai/#/core", p2)
 
-	p3, err := U.GetURLHostAndPath(" ")
-	assert.NotNil(t, err)
-	assert.Empty(t, p3)
-
-	p4, err := U.GetURLHostAndPath("https://app.factors.ai/#/core")
+	// query params on fragment should not exist.
+	url3, err := U.ParseURLStable("https://app.factors.ai/#/core?param=1")
 	assert.Nil(t, err)
-	assert.Equal(t, "app.factors.ai/#/core", p4)
+	p3 := U.GetURLHostAndPath(url3)
+	assert.Equal(t, "app.factors.ai/#/core", p3)
+}
+
+func TestUtilGetQueryParamsFromURLFragment(t *testing.T) {
+	paramsMap := U.GetQueryParamsFromURLFragment("a=10&b=20")
+	assert.Len(t, paramsMap, 2)
+	assert.NotNil(t, paramsMap["a"])
+	assert.NotNil(t, paramsMap["b"])
+	assert.Equal(t, "10", paramsMap["a"])
+	assert.Equal(t, "20", paramsMap["b"])
+
+	paramsMap = U.GetQueryParamsFromURLFragment("a=10&b=")
+	assert.Len(t, paramsMap, 1)
+	assert.NotNil(t, paramsMap["a"])
+	assert.Nil(t, paramsMap["b"])
+
+	paramsMap = U.GetQueryParamsFromURLFragment("a=&b=20")
+	assert.Len(t, paramsMap, 1)
+	assert.Nil(t, paramsMap["a"])
+	assert.NotNil(t, paramsMap["b"])
 }
