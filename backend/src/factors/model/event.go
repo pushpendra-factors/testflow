@@ -46,6 +46,7 @@ type EventOccurrence struct {
 
 const error_Duplicate_event_customerEventID = "pq: duplicate key value violates unique constraint \"project_id_customer_event_id_unique_idx\""
 const eventsLimitForProperites = 50000
+const NewUserSessionInactivityDuration = time.Minute * 30
 
 func isDuplicateCustomerEventIdError(err error) bool {
 	return err.Error() == error_Duplicate_event_customerEventID
@@ -132,6 +133,27 @@ func GetEventById(projectId uint64, id string) (*Event, int) {
 	return &event, http.StatusFound
 }
 
+func IsAnyEventByUserInDuration(projectId uint64, userId string, duration time.Duration) int {
+	db := C.GetServices().Db
+
+	if duration == 0 {
+		return http.StatusBadRequest
+	}
+
+	var events []Event
+	if err := db.Limit(1).Where("project_id = ? AND user_id = ? AND timestamp > ?", projectId, userId,
+		U.UnixTimeBeforeDuration(duration)).Find(&events).Error; err != nil {
+
+		return http.StatusInternalServerError
+	}
+
+	if len(events) == 0 {
+		return http.StatusNotFound
+	}
+
+	return http.StatusFound
+}
+
 func GetProjectEventTimeInfo() (*(map[uint64]*EventTimestamp), int) {
 	db := C.GetServices().Db
 
@@ -172,7 +194,7 @@ func GetProjectEventTimeInfo() (*(map[uint64]*EventTimestamp), int) {
 func GetRecentEventPropertyKeysWithLimits(projectId uint64, eventName string, eventsLimit int) (map[string][]string, int) {
 	db := C.GetServices().Db
 
-	eventsAfterTimestamp := U.UnixTimeBefore24Hours()
+	eventsAfterTimestamp := U.UnixTimeBeforeDuration(24 * time.Hour)
 	logCtx := log.WithFields(log.Fields{"project_id": projectId, "events_after_timestamp": eventsAfterTimestamp})
 
 	queryStr := "SELECT distinct(properties) AS keys FROM events WHERE project_id = ?" +
@@ -205,7 +227,7 @@ func GetRecentEventPropertyKeysWithLimits(projectId uint64, eventName string, ev
 		return nil, http.StatusInternalServerError
 	}
 
-	propsByType, err := U.ClassifyPropertiesByType(&propertiesMap)
+	propsByType, err := U.ClassifyPropertiesType(&propertiesMap)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to classify properties on get recent property keys.")
 		return nil, http.StatusInternalServerError
@@ -227,7 +249,7 @@ func GetRecentEventPropertyValuesWithLimits(projectId uint64, eventName string,
 
 	logCtx := log.WithFields(log.Fields{"projectId": projectId, "eventName": eventName, "property": property})
 
-	eventsAfterTimestamp := U.UnixTimeBefore24Hours()
+	eventsAfterTimestamp := U.UnixTimeBeforeDuration(24 * time.Hour)
 	values := make([]string, 0, 0)
 	queryStr := "SELECT DISTINCT(value) FROM" +
 		" " + "(SELECT properties->? AS value FROM events WHERE project_id = ? AND event_name_id IN" +
@@ -317,4 +339,25 @@ func UpdateEventProperties(projectId uint64, id string, properties *U.Properties
 	}
 
 	return http.StatusAccepted
+}
+
+func GetUserEventsByEventNameId(projectId uint64, userId string, eventNameId uint64) ([]Event, int) {
+	if projectId == 0 {
+		return nil, http.StatusBadRequest
+	}
+
+	db := C.GetServices().Db
+
+	var events []Event
+	if err := db.Order("timestamp DESC").Where("project_id = ? AND user_id = ? AND event_name_id = ?",
+		projectId, userId, eventNameId).Find(&events).Error; err != nil {
+
+		return events, http.StatusInternalServerError
+	}
+
+	if len(events) == 0 {
+		return events, http.StatusNotFound
+	}
+
+	return events, http.StatusFound
 }

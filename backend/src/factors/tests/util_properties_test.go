@@ -27,16 +27,20 @@ func TestFillPropertyKvsFromPropertiesJson(t *testing.T) {
 	assert.Contains(t, propertiesKvs["prop2"], "value2")
 }
 
-func TestGetPropertyKeyValueType(t *testing.T) {
-	assert.Equal(t, U.PropertyTypeCategorical, U.GetPropertyKeyValueType("testKey", "10.24string"))
-	assert.Equal(t, U.PropertyTypeCategorical, U.GetPropertyKeyValueType("testKey", "10.24"))
-	assert.Equal(t, U.PropertyTypeNumerical, U.GetPropertyKeyValueType("testKey", 10.24))
-	assert.Equal(t, U.PropertyTypeCategorical, U.GetPropertyKeyValueType("$qp_utm_campaignid", "10.24"))
-	assert.Equal(t, U.PropertyTypeCategorical, U.GetPropertyKeyValueType("$qp_utm_adgroupid", "10.35"))
-	assert.Equal(t, U.PropertyTypeCategorical, U.GetPropertyKeyValueType("utm_creative", "10"))
-	assert.Equal(t, U.PropertyTypeNumerical, U.GetPropertyKeyValueType("testKey", 10.24))
-	assert.Equal(t, U.PropertyTypeUnknown, U.GetPropertyKeyValueType("testKey", true))
-	assert.Equal(t, U.PropertyTypeUnknown, U.GetPropertyKeyValueType("testKey", []string{"value1", "value2"}))
+func TestGetPropertyTypeByKeyValue(t *testing.T) {
+	assert.Equal(t, U.PropertyTypeCategorical, U.GetPropertyTypeByKeyValue("testKey", "10.24string"))
+	assert.Equal(t, U.PropertyTypeCategorical, U.GetPropertyTypeByKeyValue("testKey", "10.24"))
+	assert.Equal(t, U.PropertyTypeNumerical, U.GetPropertyTypeByKeyValue("testKey", 10.24))
+	assert.Equal(t, U.PropertyTypeUnknown, U.GetPropertyTypeByKeyValue("testKey", true))
+	assert.Equal(t, U.PropertyTypeUnknown, U.GetPropertyTypeByKeyValue("testKey", []string{"value1", "value2"}))
+
+	// numerical property by name.
+	assert.Equal(t, U.PropertyTypeNumerical, U.GetPropertyTypeByKeyValue(U.EP_PAGE_LOAD_TIME, "10.24"))
+	assert.Equal(t, U.PropertyTypeNumerical, U.GetPropertyTypeByKeyValue(U.EP_PAGE_SPENT_TIME, 1234))
+	assert.Equal(t, U.PropertyTypeNumerical, U.GetPropertyTypeByKeyValue(U.EP_REVENUE, "10"))
+	// categorical property by name.
+	assert.Equal(t, U.PropertyTypeCategorical, U.GetPropertyTypeByKeyValue(U.EP_CAMPAIGN, 10.24))
+	assert.Equal(t, U.PropertyTypeCategorical, U.GetPropertyTypeByKeyValue(U.EP_CAMPAIGN_ID, "10.24"))
 }
 
 func TestGetCleanPropertyValue(t *testing.T) {

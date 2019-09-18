@@ -49,67 +49,109 @@ var PROPERTIES_TYPE_DATE_TIME = [...]string{
 	UP_JOIN_TIME,
 }
 
-// Default Event Properites
+// Event Properites
 var EP_INTERNAL_IP string = "$ip"
-var EP_LOCATION_LATITUDE string = "$locationLat"
-var EP_LOCATION_LONGITUDE string = "$locationLng"
-var EP_EVENT_VERSION string = "$eventVersion"
-var EP_PAGE_TITLE string = "$pageTitle"
-var EP_PAGE_DOMAIN string = "$pageDomain"
-var EP_PAGE_RAW_URL string = "$pageRawURL"
-var EP_PAGE_URL string = "$pageURL"
+var EP_LOCATION_LATITUDE string = "$location_lat"
+var EP_LOCATION_LONGITUDE string = "$location_lng"
+var EP_PAGE_TITLE string = "$page_title"
+var EP_PAGE_DOMAIN string = "$page_domain"
+var EP_PAGE_RAW_URL string = "$page_raw_url"
+var EP_PAGE_URL string = "$page_url"
 var EP_REFERRER string = "$referrer"
-var EP_REFERRER_DOMAIN string = "$referrerDomain"
-var EP_REFERRER_URL string = "$referrerURL"
+var EP_REFERRER_DOMAIN string = "$referrer_domain"
+var EP_REFERRER_URL string = "$referrer_url"
 var EP_PAGE_LOAD_TIME string = "$page_load_time"
 var EP_PAGE_SPENT_TIME string = "$page_spent_time"
+var EP_SEGMENT_EVENT_VERSION string = "$segment_event_version"
+var EP_CAMPAIGN string = "$campaign"
+var EP_CAMPAIGN_ID string = "$campaign_id"
+var EP_SOURCE string = "$source"
+var EP_MEDIUM string = "$medium"
+var EP_KEYWORD string = "$keyword"
+var EP_KEYWORD_MATCH_TYPE string = "$keyword_match_type"
+var EP_CONTENT string = "$content"
+var EP_ADGROUP string = "$adgroup"
+var EP_ADGROUP_ID string = "$adgroup_id"
+var EP_CREATIVE string = "$creative"
+var EP_GCLID string = "$gclid"
+var EP_FBCLIID string = "$fbclid"
+var EP_COST string = "$cost"
+var EP_REVENUE string = "$revenue"
 
-// Default User Properties
+// User Properties
 var UP_PLATFORM string = "$platform"
-var UP_CHANNEL string = "$channel" // from segement (browser, client, etc.,).
 var UP_BROWSER string = "$browser"
-var UP_BROWSER_VERSION string = "$browserVersion"
-var UP_USER_AGENT string = "$userAgent"
+var UP_BROWSER_VERSION string = "$browser_version"
+var UP_BROWSER_WITH_VERSION string = "$browser_with_version"
+var UP_USER_AGENT string = "$user_agent"
 var UP_OS string = "$os"
-var UP_OS_VERSION string = "$osVersion"
-var UP_SCREEN_WIDTH string = "$screenWidth"
-var UP_SCREEN_HEIGHT string = "$screenHeight"
-var UP_SCREEN_DENSITY string = "$screenDensity"
+var UP_OS_VERSION string = "$os_version"
+var UP_OS_WITH_VERSION string = "$os_with_version"
+var UP_SCREEN_WIDTH string = "$screen_width"
+var UP_SCREEN_HEIGHT string = "$screen_height"
+var UP_SCREEN_DENSITY string = "$screen_density"
 var UP_LANGUAGE string = "$language"
 var UP_LOCALE string = "$locale"
-var UP_DEVICE_ID string = "$deviceId"
-var UP_DEVICE_NAME string = "$deviceName"
-var UP_DEVICE_ADVERTISING_ID string = "$deviceAdvertisingId"
-var UP_DEVICE_BRAND string = "$deviceBrand"
-var UP_DEVICE_MODEL string = "$deviceModel"
-var UP_DEVICE_TYPE string = "$deviceType"
-var UP_DEVICE_FAMILY string = "$deviceFamily"
-var UP_DEVICE_MANUFACTURER string = "$deviceManufacturer"
-var UP_DEVICE_CARRIER string = "$deviceCarrier"
-var UP_DEVICE_ADTRACKING_ENABLED string = "$deviceAdTrackingEnabled"
-var UP_NETWORK_BLUETOOTH string = "$networkBluetooth"
-var UP_NETWORK_CARRIER string = "$networkCarrier"
-var UP_NETWORK_CELLULAR string = "$networkCellular"
-var UP_NETWORK_WIFI string = "$networkWifi"
-var UP_APP_NAME string = "$appName"
-var UP_APP_NAMESPACE string = "$appNamespace"
-var UP_APP_VERSION string = "$appVersion"
-var UP_APP_BUILD string = "$appBuild"
+var UP_DEVICE_ID string = "$device_id"
+var UP_DEVICE_NAME string = "$device_name"
+var UP_DEVICE_ADVERTISING_ID string = "$device_advertising_id"
+var UP_DEVICE_BRAND string = "$device_brand"
+var UP_DEVICE_MODEL string = "$device_model"
+var UP_DEVICE_TYPE string = "$device_type"
+var UP_DEVICE_FAMILY string = "$device_family"
+var UP_DEVICE_MANUFACTURER string = "$device_manufacturer"
+var UP_DEVICE_CARRIER string = "$device_carrier"
+var UP_DEVICE_ADTRACKING_ENABLED string = "$device_ad_tracking_enabled"
+var UP_NETWORK_BLUETOOTH string = "$network_bluetooth"
+var UP_NETWORK_CARRIER string = "$network_carrier"
+var UP_NETWORK_CELLULAR string = "$network_cellular"
+var UP_NETWORK_WIFI string = "$network_wifi"
+var UP_APP_NAME string = "$app_name"
+var UP_APP_NAMESPACE string = "$app_namespace"
+var UP_APP_VERSION string = "$app_version"
+var UP_APP_BUILD string = "$app_build"
 var UP_COUNTRY string = "$country"
 var UP_CITY string = "$city"
 var UP_REGION string = "$region"
-var UP_CAMPAIGN_NAME string = "$campaignName"
-var UP_CAMPAIGN_SOURCE string = "$campaignSource"
-var UP_CAMPAIGN_MEDIUM string = "$campaignMedium"
-var UP_CAMPAIGN_TERM string = "$campaignTerm"
-var UP_CAMPAIGN_CONTENT string = "$campaignContent"
 var UP_TIMEZONE string = "$timezone"
+var UP_SEGMENT_CHANNEL string = "$segment_channel" // from segement (browser, client, etc.,).
+var UP_CUSTOMER_USER_ID string = "$customer_user_id"
+var UP_EMAIL string = "$email"
+var UP_FIRST_NAME string = "$first_name"
+var UP_LAST_NAME string = "$last_name"
+var UP_PHONE string = "$phone"
+var UP_INITIAL_PAGE_URL string = "$initial_page_url"
+var UP_INITIAL_PAGE_DOMAIN string = "$initial_page_domain"
+var UP_INITIAL_PAGE_RAW_URL string = "$initial_page_raw_url"
+var UP_INITIAL_PAGE_LOAD_TIME string = "$initial_page_load_time"
+var UP_INITIAL_PAGE_SPENT_TIME string = "$initial_page_spent_time"
+var UP_INITIAL_CAMPAIGN string = "$initial_campaign"
+var UP_INITIAL_CAMPAIGN_ID string = "$initial_campaign_id"
+var UP_INITIAL_SOURCE string = "$initial_source"
+var UP_INITIAL_MEDIUM string = "$initial_medium"
+var UP_INITIAL_KEYWORD string = "$initial_keyword"
+var UP_INITIAL_KEYWORD_MATCH_TYPE string = "$initial_keyword_match_type"
+var UP_INITIAL_CONTENT string = "$initial_content"
+var UP_INITIAL_ADGROUP string = "$initial_adgroup"
+var UP_INITIAL_ADGROUP_ID string = "$initial_adgroup_id"
+var UP_INITIAL_CREATIVE string = "$initial_creative"
+var UP_INITIAL_GCLID string = "$initial_gclid"
+var UP_INITIAL_FBCLID string = "$initial_fbclid"
+var UP_INITIAL_COST string = "$initial_cost"
+var UP_TOTAL_COST string = "$total_cost"
+var UP_INITIAL_REVENUE string = "$initial_revenue"
+var UP_TOTAL_REVENUE string = "$total_revenue"
 
-var ALLOWED_SDK_DEFAULT_EVENT_PROPERTIES = [...]string{
+// session properties
+var SP_IS_FIRST_SESSION = "$is_first_session"
+var SP_PAGE_VIEWS = "$page_views"
+var SP_SESSION_TIME = "$session_time"
+
+var SDK_ALLOWED_EVENT_PROPERTIES = [...]string{
 	EP_INTERNAL_IP,
 	EP_LOCATION_LATITUDE,
 	EP_LOCATION_LONGITUDE,
-	EP_EVENT_VERSION,
+	EP_SEGMENT_EVENT_VERSION,
 	EP_PAGE_TITLE,
 	EP_PAGE_DOMAIN,
 	EP_PAGE_RAW_URL,
@@ -119,6 +161,20 @@ var ALLOWED_SDK_DEFAULT_EVENT_PROPERTIES = [...]string{
 	EP_REFERRER_URL,
 	EP_PAGE_LOAD_TIME,
 	EP_PAGE_SPENT_TIME,
+	EP_CAMPAIGN,
+	EP_CAMPAIGN_ID,
+	EP_SOURCE,
+	EP_MEDIUM,
+	EP_KEYWORD,
+	EP_KEYWORD_MATCH_TYPE,
+	EP_CONTENT,
+	EP_ADGROUP,
+	EP_ADGROUP_ID,
+	EP_CREATIVE,
+	EP_GCLID,
+	EP_FBCLIID,
+	EP_COST,
+	EP_REVENUE,
 }
 
 // Event properties that are not visible to user for analysis.
@@ -128,14 +184,16 @@ var INTERNAL_EVENT_PROPERTIES = [...]string{
 	EP_LOCATION_LONGITUDE,
 }
 
-var ALLOWED_SDK_DEFAULT_USER_PROPERTIES = [...]string{
+var SDK_ALLOWED_USER_PROPERTIES = [...]string{
 	UP_PLATFORM,
-	UP_CHANNEL,
+	UP_SEGMENT_CHANNEL,
 	UP_BROWSER,
 	UP_BROWSER_VERSION,
+	UP_BROWSER_WITH_VERSION,
 	UP_USER_AGENT,
 	UP_OS,
 	UP_OS_VERSION,
+	UP_OS_WITH_VERSION,
 	UP_SCREEN_WIDTH,
 	UP_SCREEN_HEIGHT,
 	UP_SCREEN_DENSITY,
@@ -162,12 +220,33 @@ var ALLOWED_SDK_DEFAULT_USER_PROPERTIES = [...]string{
 	UP_COUNTRY,
 	UP_CITY,
 	UP_REGION,
-	UP_CAMPAIGN_NAME,
-	UP_CAMPAIGN_SOURCE,
-	UP_CAMPAIGN_MEDIUM,
-	UP_CAMPAIGN_TERM,
-	UP_CAMPAIGN_CONTENT,
 	UP_TIMEZONE,
+	UP_CUSTOMER_USER_ID,
+	UP_EMAIL,
+	UP_FIRST_NAME,
+	UP_LAST_NAME,
+	UP_PHONE,
+	UP_INITIAL_PAGE_URL,
+	UP_INITIAL_PAGE_DOMAIN,
+	UP_INITIAL_PAGE_RAW_URL,
+	UP_INITIAL_PAGE_LOAD_TIME,
+	UP_INITIAL_PAGE_SPENT_TIME,
+	UP_INITIAL_CAMPAIGN,
+	UP_INITIAL_CAMPAIGN_ID,
+	UP_INITIAL_SOURCE,
+	UP_INITIAL_MEDIUM,
+	UP_INITIAL_KEYWORD,
+	UP_INITIAL_KEYWORD_MATCH_TYPE,
+	UP_INITIAL_CONTENT,
+	UP_INITIAL_ADGROUP,
+	UP_INITIAL_ADGROUP_ID,
+	UP_INITIAL_CREATIVE,
+	UP_INITIAL_GCLID,
+	UP_INITIAL_FBCLID,
+	UP_INITIAL_COST,
+	UP_TOTAL_COST,
+	UP_INITIAL_REVENUE,
+	UP_TOTAL_REVENUE,
 }
 
 // Event properties that are not visible to user for analysis.
@@ -184,6 +263,7 @@ var UPDATE_ALLOWED_EVENT_PROPERTIES = [...]string{
 const NAME_PREFIX = "$"
 const NAME_PREFIX_ESCAPE_CHAR = "_"
 const QUERY_PARAM_PROPERTY_PREFIX = "$qp_"
+const QUERY_PARAM_UTM_PREFIX = QUERY_PARAM_PROPERTY_PREFIX + "utm_"
 
 // Platforms
 const PLATFORM_WEB = "web"
@@ -195,10 +275,91 @@ const (
 	PropertyTypeUnknown     = "unknown"
 )
 
+var NUMERICAL_PROPERTY_BY_NAME = [...]string{
+	EP_PAGE_LOAD_TIME,
+	EP_PAGE_SPENT_TIME,
+	EP_REVENUE,
+	EP_COST,
+	UP_INITIAL_PAGE_LOAD_TIME,
+	UP_INITIAL_PAGE_SPENT_TIME,
+	UP_INITIAL_COST,
+	UP_TOTAL_COST,
+	UP_INITIAL_REVENUE,
+	UP_TOTAL_REVENUE,
+	UP_SCREEN_WIDTH,
+	UP_SCREEN_HEIGHT,
+	UP_SCREEN_DENSITY,
+	UP_JOIN_TIME, // Todo: move this to property type datetime.
+}
+
+var EVENT_TO_USER_INITIAL_PROPERTIES = map[string]string{
+	EP_PAGE_URL:           UP_INITIAL_PAGE_URL,
+	EP_PAGE_RAW_URL:       UP_INITIAL_PAGE_RAW_URL,
+	EP_PAGE_DOMAIN:        UP_INITIAL_PAGE_DOMAIN,
+	EP_PAGE_LOAD_TIME:     UP_INITIAL_PAGE_LOAD_TIME,
+	EP_PAGE_SPENT_TIME:    UP_INITIAL_PAGE_SPENT_TIME,
+	EP_CAMPAIGN:           UP_INITIAL_CAMPAIGN,
+	EP_CAMPAIGN_ID:        UP_INITIAL_CAMPAIGN_ID,
+	EP_SOURCE:             UP_INITIAL_SOURCE,
+	EP_MEDIUM:             UP_INITIAL_MEDIUM,
+	EP_KEYWORD:            UP_INITIAL_KEYWORD,
+	EP_KEYWORD_MATCH_TYPE: UP_INITIAL_KEYWORD_MATCH_TYPE,
+	EP_CONTENT:            UP_INITIAL_CONTENT,
+	EP_ADGROUP:            UP_INITIAL_ADGROUP,
+	EP_ADGROUP_ID:         UP_INITIAL_ADGROUP_ID,
+	EP_CREATIVE:           UP_INITIAL_CREATIVE,
+	EP_GCLID:              UP_INITIAL_GCLID,
+	EP_FBCLIID:            UP_INITIAL_FBCLID,
+	EP_COST:               UP_INITIAL_COST,
+	EP_REVENUE:            UP_INITIAL_REVENUE,
+}
+
+// Uses same name as source user properties.
+var USER_TO_SESSION_PROPERTIES = [...]string{
+	UP_PLATFORM,
+	UP_BROWSER,
+	UP_BROWSER_VERSION,
+	UP_BROWSER_WITH_VERSION,
+	UP_USER_AGENT,
+	UP_OS,
+	UP_OS_VERSION,
+	UP_OS_WITH_VERSION,
+	UP_COUNTRY,
+	UP_CITY,
+	UP_REGION,
+	UP_TIMEZONE,
+	UP_TOTAL_COST,
+	UP_TOTAL_REVENUE,
+}
+
+var EVENT_TO_SESSION_PROPERTIES = map[string]string{
+	EP_PAGE_URL:        UP_INITIAL_PAGE_URL,
+	EP_PAGE_RAW_URL:    UP_INITIAL_PAGE_RAW_URL,
+	EP_PAGE_DOMAIN:     UP_INITIAL_PAGE_DOMAIN,
+	EP_PAGE_LOAD_TIME:  UP_INITIAL_PAGE_LOAD_TIME,
+	EP_PAGE_SPENT_TIME: UP_INITIAL_PAGE_SPENT_TIME,
+	EP_COST:            UP_INITIAL_COST,
+	EP_REVENUE:         UP_INITIAL_REVENUE,
+
+	// Uses same name as source event properties.
+	EP_CAMPAIGN:           EP_CAMPAIGN,
+	EP_CAMPAIGN_ID:        EP_CAMPAIGN_ID,
+	EP_SOURCE:             EP_SOURCE,
+	EP_MEDIUM:             EP_MEDIUM,
+	EP_KEYWORD:            EP_KEYWORD,
+	EP_KEYWORD_MATCH_TYPE: EP_KEYWORD_MATCH_TYPE,
+	EP_CONTENT:            EP_CONTENT,
+	EP_ADGROUP:            EP_ADGROUP,
+	EP_ADGROUP_ID:         EP_ADGROUP_ID,
+	EP_CREATIVE:           EP_CREATIVE,
+	EP_GCLID:              EP_GCLID,
+	EP_FBCLIID:            EP_FBCLIID,
+}
+
 const SamplePropertyValuesLimit = 100
 
-// Properties should be present always for queries.
-var DefaultUserPropertiesByType = map[string][]string{
+// Properties should be present always, mainly for queries.
+var MandatoryDefaultUserPropertiesByType = map[string][]string{
 	PropertyTypeDateTime: []string{
 		UP_JOIN_TIME,
 	},
@@ -218,8 +379,8 @@ func isPropertyTypeValid(value interface{}) error {
 	return nil
 }
 
-func isSDKUserDefaultProperty(key *string) bool {
-	for _, k := range ALLOWED_SDK_DEFAULT_USER_PROPERTIES {
+func isSDKAllowedUserProperty(key *string) bool {
+	for _, k := range SDK_ALLOWED_USER_PROPERTIES {
 		if k == *key {
 			return true
 		}
@@ -227,8 +388,8 @@ func isSDKUserDefaultProperty(key *string) bool {
 	return false
 }
 
-func isSDKEventDefaultProperty(key *string) bool {
-	for _, k := range ALLOWED_SDK_DEFAULT_EVENT_PROPERTIES {
+func isSDKAllowedEventProperty(key *string) bool {
+	for _, k := range SDK_ALLOWED_EVENT_PROPERTIES {
 		if k == *key {
 			return true
 		}
@@ -288,7 +449,7 @@ func GetValidatedUserProperties(properties *PropertiesMap) *PropertiesMap {
 	validatedProperties := make(PropertiesMap)
 	for k, v := range *properties {
 		if err := isPropertyTypeValid(v); err == nil {
-			if strings.HasPrefix(k, NAME_PREFIX) && !isSDKUserDefaultProperty(&k) {
+			if strings.HasPrefix(k, NAME_PREFIX) && !isSDKAllowedUserProperty(&k) {
 				validatedProperties[fmt.Sprintf("%s%s", NAME_PREFIX_ESCAPE_CHAR, k)] = v
 			} else {
 				validatedProperties[k] = v
@@ -307,7 +468,7 @@ func GetValidatedEventProperties(properties *PropertiesMap) *PropertiesMap {
 			// with $qp_ prrefix and default properties.
 			if strings.HasPrefix(k, NAME_PREFIX) &&
 				!strings.HasPrefix(k, QUERY_PARAM_PROPERTY_PREFIX) &&
-				!isSDKEventDefaultProperty(&k) {
+				!isSDKAllowedEventProperty(&k) {
 				propertyKey = fmt.Sprintf("%s%s", NAME_PREFIX_ESCAPE_CHAR, k)
 			} else {
 				propertyKey = k
@@ -323,16 +484,66 @@ func GetValidatedEventProperties(properties *PropertiesMap) *PropertiesMap {
 	return &validatedProperties
 }
 
-func IsUTMTagPropertyKey(propertyKey string) bool {
-	return strings.Contains(propertyKey, "utm_")
+func MapEventPropertiesToDefinedProperties(properties *PropertiesMap) *PropertiesMap {
+	mappedProperties := make(PropertiesMap)
+
+	for k, v := range *properties {
+		var property string
+		switch k {
+		case QUERY_PARAM_UTM_PREFIX + "campaign", QUERY_PARAM_UTM_PREFIX + "campaign_name":
+			property = EP_CAMPAIGN
+		case QUERY_PARAM_UTM_PREFIX + "campaignid", QUERY_PARAM_UTM_PREFIX + "campaign_id":
+			property = EP_CAMPAIGN_ID
+		case QUERY_PARAM_UTM_PREFIX + "source":
+			property = EP_SOURCE
+		case QUERY_PARAM_UTM_PREFIX + "medium":
+			property = EP_MEDIUM
+		case QUERY_PARAM_UTM_PREFIX + "keyword", QUERY_PARAM_UTM_PREFIX + "term", QUERY_PARAM_UTM_PREFIX + "key_word":
+			property = EP_KEYWORD
+		case QUERY_PARAM_UTM_PREFIX + "matchtype", QUERY_PARAM_UTM_PREFIX + "match_type":
+			property = EP_KEYWORD_MATCH_TYPE
+		case QUERY_PARAM_UTM_PREFIX + "content":
+			property = EP_CONTENT
+		case QUERY_PARAM_UTM_PREFIX + "adgroup", QUERY_PARAM_UTM_PREFIX + "ad_group":
+			property = EP_ADGROUP
+		case QUERY_PARAM_UTM_PREFIX + "adgroupid", QUERY_PARAM_UTM_PREFIX + "adgroup_id", QUERY_PARAM_UTM_PREFIX + "ad_group_id":
+			property = EP_ADGROUP_ID
+		case QUERY_PARAM_UTM_PREFIX + "creative", QUERY_PARAM_UTM_PREFIX + "creative_id", QUERY_PARAM_UTM_PREFIX + "creativeid":
+			property = EP_CREATIVE
+		case QUERY_PARAM_PROPERTY_PREFIX + "gclid":
+			property = EP_GCLID
+		case QUERY_PARAM_PROPERTY_PREFIX + "fbclid":
+			property = EP_FBCLIID
+		default:
+			property = k
+		}
+
+		mappedProperties[property] = v
+	}
+
+	return &mappedProperties
 }
 
-func GetPropertyKeyValueType(propertyKey string, propertyValue interface{}) string {
+func isNumericalPropertyByName(propertyKey string) bool {
+	for _, key := range NUMERICAL_PROPERTY_BY_NAME {
+		if key == propertyKey {
+			return true
+		}
+	}
+
+	return false
+}
+
+func GetPropertyTypeByKeyValue(propertyKey string, propertyValue interface{}) string {
+	if strings.HasPrefix(propertyKey, NAME_PREFIX) {
+		if isNumericalPropertyByName(propertyKey) {
+			return PropertyTypeNumerical
+		}
+		return PropertyTypeCategorical
+	}
+
 	switch propertyValue.(type) {
 	case int, float64:
-		if IsUTMTagPropertyKey(propertyKey) {
-			return PropertyTypeCategorical
-		}
 		return PropertyTypeNumerical
 	case string:
 		return PropertyTypeCategorical
@@ -352,16 +563,53 @@ func GetUpdateAllowedEventProperties(properties *PropertiesMap) *PropertiesMap {
 	return &allowedProperties
 }
 
-// ClassifyPropertiesByType - Classifies categorical and numerical properties
-// by checking type of values. properties -> map[propertyKey]map[propertyValue]true
-func ClassifyPropertiesByType(properties *map[string]map[interface{}]bool) (map[string][]string, error) {
+func GetInitialUserProperties(eventProperties *PropertiesMap) *PropertiesMap {
+	initialUserProperties := make(PropertiesMap)
+	for k, v := range *eventProperties {
+		if userPropertyKey, exists := EVENT_TO_USER_INITIAL_PROPERTIES[k]; exists {
+			initialUserProperties[userPropertyKey] = v
+		}
+	}
+
+	return &initialUserProperties
+}
+
+func GetSessionProperties(isFirstSession bool, eventProperties,
+	userProperties *PropertiesMap) *PropertiesMap {
+	sessionProperties := make(PropertiesMap)
+
+	if isFirstSession {
+		sessionProperties[SP_IS_FIRST_SESSION] = isFirstSession
+	}
+
+	for k, v := range *userProperties {
+		for _, property := range USER_TO_SESSION_PROPERTIES {
+			if property == k {
+				sessionProperties[k] = v
+				break
+			}
+		}
+	}
+
+	for k, v := range *eventProperties {
+		if property, exists := EVENT_TO_SESSION_PROPERTIES[k]; exists {
+			sessionProperties[property] = v
+		}
+	}
+
+	return &sessionProperties
+}
+
+// ClassifyPropertiesType - Classifies type of properties as categorical and numerical
+// properties -> map[propertyKey]map[propertyValue]true
+func ClassifyPropertiesType(properties *map[string]map[interface{}]bool) (map[string][]string, error) {
 	numProperties := make([]string, 0, 0)
 	catProperties := make([]string, 0, 0)
 
 	for propertyKey, v := range *properties {
 		isNumericalProperty := true
 		for propertyValue := range v {
-			propertyType := GetPropertyKeyValueType(propertyKey, propertyValue)
+			propertyType := GetPropertyTypeByKeyValue(propertyKey, propertyValue)
 			switch propertyType {
 			case PropertyTypeNumerical:
 			case PropertyTypeCategorical:
@@ -411,14 +659,14 @@ func FillPropertyKvsFromPropertiesJson(propertiesJson []byte,
 	return nil
 }
 
-// Moves datetime properties from numerical properties to a seperate type datetime.
-func ClassifyDateTimePropertyKeys(properties *map[string][]string) map[string][]string {
+// Moves datetime properties from numerical properties to type datetime.
+func ClassifyDateTimePropertyKeys(propertiesByType *map[string][]string) map[string][]string {
 	cProperties := make(map[string][]string, 0)
-	cProperties[PropertyTypeCategorical] = (*properties)[PropertyTypeCategorical]
+	cProperties[PropertyTypeCategorical] = (*propertiesByType)[PropertyTypeCategorical]
 
 	numerical := make([]string, 0, 0)
 	datetime := make([]string, 0, 0)
-	for _, prop := range (*properties)[PropertyTypeNumerical] {
+	for _, prop := range (*propertiesByType)[PropertyTypeNumerical] {
 		isDatetime := false
 		for _, dtProp := range PROPERTIES_TYPE_DATE_TIME {
 			if prop == dtProp {
@@ -439,11 +687,11 @@ func ClassifyDateTimePropertyKeys(properties *map[string][]string) map[string][]
 	return cProperties
 }
 
-// Fills all missing default user properties to the properites list.
-func FillDefaultUserProperties(properties *map[string][]string) {
-	for propType, props := range *properties {
-		if _, exists := DefaultUserPropertiesByType[propType]; exists {
-			for _, dProp := range DefaultUserPropertiesByType[propType] {
+// Fills default user propertie which should be present on properties list always.
+func FillMandatoryDefaultUserProperties(propertiesByType *map[string][]string) {
+	for propType, props := range *propertiesByType {
+		if _, exists := MandatoryDefaultUserPropertiesByType[propType]; exists {
+			for _, dProp := range MandatoryDefaultUserPropertiesByType[propType] {
 				dPropExists := false
 				for _, prop := range props {
 					if prop == dProp {
@@ -454,7 +702,7 @@ func FillDefaultUserProperties(properties *map[string][]string) {
 
 				// adds missing default property.
 				if !dPropExists {
-					(*properties)[propType] = append((*properties)[propType], dProp)
+					(*propertiesByType)[propType] = append((*propertiesByType)[propType], dProp)
 				}
 			}
 		}

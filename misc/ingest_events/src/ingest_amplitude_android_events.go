@@ -23,6 +23,7 @@ import (
 	"sync"
 	"time"
 
+	U "./util"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -93,6 +94,7 @@ func getUserId(clientUserId string, eventMap map[string]interface{}, httpClient 
 		clientUserIdToUserIdMap[clientUserId] = userId
 		mutex.Unlock()
 	}
+
 	return userId, nil
 }
 
@@ -139,28 +141,28 @@ func lineIngest(eventMap map[string]interface{}, httpClient *http.Client, wg *sy
 	//eventPropertiesMap["event_type"], _ = eventMap["event_type"]
 	eventPropertiesMap["version_name"], _ = eventMap["version_name"]
 	//eventPropertiesMap["session_id"], _ = eventMap["session_id"]
-	eventPropertiesMap["$ip"], _ = eventMap["ip_address"]
-	eventPropertiesMap["$locationLng"], _ = eventMap["location_lng"]
-	eventPropertiesMap["$locationLat"], _ = eventMap["location_lat"]
+	eventPropertiesMap[U.EP_INTERNAL_IP], _ = eventMap["ip_address"]
+	eventPropertiesMap[U.EP_LOCATION_LONGITUDE], _ = eventMap["location_lng"]
+	eventPropertiesMap[U.EP_LOCATION_LATITUDE], _ = eventMap["location_lat"]
 	eventRequestMap["event_properties"] = eventPropertiesMap
 
 	// User properties associatied with event.
 	userPropertiesMap := make(map[string]interface{})
 	// Keys that will go into eventProperties.
-	userPropertiesMap["$deviceBrand"], _ = eventMap["device_brand"]
-	userPropertiesMap["$deviceModel"], _ = eventMap["device_model"]
-	userPropertiesMap["$country"], _ = eventMap["country"]
-	userPropertiesMap["$os"], _ = eventMap["os_name"]
-	userPropertiesMap["$deviceId"], _ = eventMap["device_id"]
-	userPropertiesMap["$deviceType"], _ = eventMap["device_type"]
-	userPropertiesMap["$language"], _ = eventMap["language"]
-	userPropertiesMap["$deviceCarrier"], _ = eventMap["device_carrier"]
-	userPropertiesMap["$osVersion"], _ = eventMap["os_version"]
-	userPropertiesMap["$city"], _ = eventMap["city"]
-	userPropertiesMap["$region"], _ = eventMap["region"]
-	userPropertiesMap["$deviceManufacturer"], _ = eventMap["device_manufacturer"]
-	userPropertiesMap["$deviceFamily"], _ = eventMap["device_family"]
-	userPropertiesMap["$platform"], _ = eventMap["platform"]
+	userPropertiesMap[U.UP_DEVICE_BRAND], _ = eventMap["device_brand"]
+	userPropertiesMap[U.UP_DEVICE_MODEL], _ = eventMap["device_model"]
+	userPropertiesMap[U.UP_COUNTRY], _ = eventMap["country"]
+	userPropertiesMap[U.UP_OS], _ = eventMap["os_name"]
+	userPropertiesMap[U.UP_DEVICE_ID], _ = eventMap["device_id"]
+	userPropertiesMap[U.UP_DEVICE_TYPE], _ = eventMap["device_type"]
+	userPropertiesMap[U.UP_LANGUAGE], _ = eventMap["language"]
+	userPropertiesMap[U.UP_DEVICE_CARRIER], _ = eventMap["device_carrier"]
+	userPropertiesMap[U.UP_OS_VERSION], _ = eventMap["os_version"]
+	userPropertiesMap[U.UP_CITY], _ = eventMap["city"]
+	userPropertiesMap[U.UP_REGION], _ = eventMap["region"]
+	userPropertiesMap[U.UP_DEVICE_MANUFACTURER], _ = eventMap["device_manufacturer"]
+	userPropertiesMap[U.UP_DEVICE_FAMILY], _ = eventMap["device_family"]
+	userPropertiesMap[U.UP_PLATFORM], _ = eventMap["platform"]
 	eventRequestMap["user_properties"] = userPropertiesMap
 
 	reqBody, _ := json.Marshal(eventRequestMap)

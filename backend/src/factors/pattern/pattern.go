@@ -389,7 +389,7 @@ func addNumericAndCategoricalProperties(
 	eventIndex int, properties map[string]interface{},
 	nMap map[string]float64, cMap map[string]string) {
 	for key, value := range properties {
-		propertyType := U.GetPropertyKeyValueType(key, value)
+		propertyType := U.GetPropertyTypeByKeyValue(key, value)
 		if propertyType == U.PropertyTypeNumerical {
 			numericValue, _ := value.(float64)
 			nMap[PatternPropertyKey(eventIndex, key)] = numericValue

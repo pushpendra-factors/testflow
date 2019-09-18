@@ -19,6 +19,7 @@ import (
 	"strconv"
 	"strings"
 
+	U "./util"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -136,8 +137,8 @@ func translateEvent(event string) (map[string]interface{}, error) {
 	eventRequestMap["c_event_id"] = eventFields[0]
 	eventPropertiesMap["consumptionType"] = eventFields[4]
 	eventPropertiesMap["ipaddress1"] = eventFields[5]
-	eventPropertiesMap["locationLat"] = eventFields[12]
-	eventPropertiesMap["locationLng"] = eventFields[13]
+	eventPropertiesMap[U.EP_LOCATION_LATITUDE] = eventFields[12]
+	eventPropertiesMap[U.EP_LOCATION_LONGITUDE] = eventFields[13]
 	eventPropertiesMap["ipaddress2"] = eventFields[15]
 	eventPropertiesMap["category"] = eventFields[25]
 	eventPropertiesMap["background"] = eventFields[27]
@@ -169,16 +170,16 @@ func translateEvent(event string) (map[string]interface{}, error) {
 	}
 
 	userPropertiesMap := make(map[string]interface{})
-	userPropertiesMap["userAgent"] = eventFields[6]
+	userPropertiesMap[U.UP_BROWSER] = eventFields[6]
 	userPropertiesMap["country1"] = eventFields[7]
 	userPropertiesMap["network"] = eventFields[8]
-	userPropertiesMap["device"] = eventFields[9]
-	userPropertiesMap["os"] = eventFields[11]
-	userPropertiesMap["carrier"] = eventFields[18]
+	userPropertiesMap[U.UP_DEVICE_TYPE] = eventFields[9]
+	userPropertiesMap[U.UP_OS] = eventFields[11]
+	userPropertiesMap[U.UP_DEVICE_CARRIER] = eventFields[18]
 	userPropertiesMap["placeName"] = eventFields[23]
 	userPropertiesMap["placeId"] = eventFields[24]
 	userPropertiesMap["country2"] = eventFields[26]
-	userPropertiesMap["deviceModel"] = eventFields[28]
+	userPropertiesMap[U.UP_DEVICE_MODEL] = eventFields[28]
 	userPropertiesMap["partner"] = eventFields[29]
 
 	eventRequestMap["event_properties"] = eventPropertiesMap

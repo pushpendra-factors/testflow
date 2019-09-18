@@ -113,7 +113,7 @@ func TestSDKTrackHandler(t *testing.T) {
 
 	// Should not allow $ prefixes apart from default properties.
 	rEventName = U.RandomLowerAphaNumString(10)
-	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "%s", "event_properties": {"mobile": "true", "$referrer": "http://google.com", "$pageRawURL": "https://factors.ai/login", "$pageTitle": "Login"}, "user_properties": {"$dollar_key": "unknow_value", "$os": "mac osx", "$osVersion": "1_2_3", "$screenWidth": 10, "$screenHeight": 11, "$browser": "mozilla", "$platform": "web", "$browserVersion": "10_2_3"}}`,
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "%s", "event_properties": {"mobile": "true", "$referrer": "http://google.com", "$page_raw_url": "https://factors.ai/login", "$page_title": "Login"}, "user_properties": {"$dollar_key": "unknow_value", "$os": "mac osx", "$os_version": "1_2_3", "$screen_width": 10, "$screen_height": 11, "$browser": "mozilla", "$platform": "web", "$browser_version": "10_2_3"}}`,
 		user.ID, rEventName)), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 	propsResponseMap1 := DecodeJSONResponseToMap(w.Body)
@@ -127,13 +127,13 @@ func TestSDKTrackHandler(t *testing.T) {
 	var eventProperties1 map[string]interface{}
 	json.Unmarshal(eventPropertiesBytes.([]byte), &eventProperties1)
 	assert.Equal(t, http.StatusFound, errCode)
-	assert.NotNil(t, eventProperties1["$referrer"])
-	assert.NotNil(t, eventProperties1["$pageRawURL"])
-	assert.NotNil(t, eventProperties1["$pageTitle"])
 	assert.NotNil(t, eventProperties1["mobile"])
-	assert.Nil(t, eventProperties1["_$referrer"])
-	assert.Nil(t, eventProperties1["_$pageRawURL"])
-	assert.Nil(t, eventProperties1["_$pageTitle"])
+	assert.NotNil(t, eventProperties1[U.EP_REFERRER])
+	assert.NotNil(t, eventProperties1[U.EP_PAGE_RAW_URL])
+	assert.NotNil(t, eventProperties1[U.EP_PAGE_TITLE])
+	assert.Nil(t, eventProperties1[U.NAME_PREFIX_ESCAPE_CHAR+U.EP_REFERRER])
+	assert.Nil(t, eventProperties1[U.NAME_PREFIX_ESCAPE_CHAR+U.EP_PAGE_RAW_URL])
+	assert.Nil(t, eventProperties1[U.NAME_PREFIX_ESCAPE_CHAR+U.EP_PAGE_TITLE])
 	// check user default properties.
 	retUser, errCode := M.GetUser(project.ID, user.ID)
 	assert.Equal(t, http.StatusFound, errCode)
@@ -144,19 +144,19 @@ func TestSDKTrackHandler(t *testing.T) {
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Nil(t, userPropertiesMap3["$dollar_key"])                                              // dollar prefix not allowed.
 	assert.NotNil(t, userPropertiesMap3[fmt.Sprintf("%s$dollar_key", U.NAME_PREFIX_ESCAPE_CHAR)]) // Escaped key should exist.
-	assert.NotNil(t, userPropertiesMap3["$os"])
-	assert.NotNil(t, userPropertiesMap3["$osVersion"])
-	assert.NotNil(t, userPropertiesMap3["$browser"])
-	assert.NotNil(t, userPropertiesMap3["$platform"])
-	assert.NotNil(t, userPropertiesMap3["$screenWidth"])
-	assert.NotNil(t, userPropertiesMap3["$screenHeight"])
+	assert.NotNil(t, userPropertiesMap3[U.UP_OS])
+	assert.NotNil(t, userPropertiesMap3[U.UP_OS_VERSION])
+	assert.NotNil(t, userPropertiesMap3[U.UP_BROWSER])
+	assert.NotNil(t, userPropertiesMap3[U.UP_PLATFORM])
+	assert.NotNil(t, userPropertiesMap3[U.UP_SCREEN_WIDTH])
+	assert.NotNil(t, userPropertiesMap3[U.UP_SCREEN_HEIGHT])
 	// should not be escaped.
-	assert.Nil(t, userPropertiesMap3["_$os"])
-	assert.Nil(t, userPropertiesMap3["_$osVersion"])
-	assert.Nil(t, userPropertiesMap3["_$browser"])
-	assert.Nil(t, userPropertiesMap3["_$platform"])
-	assert.Nil(t, userPropertiesMap3["_$screenWidth"])
-	assert.Nil(t, userPropertiesMap3["_$screenHeight"])
+	assert.Nil(t, userPropertiesMap3[U.NAME_PREFIX_ESCAPE_CHAR+U.UP_OS])
+	assert.Nil(t, userPropertiesMap3[U.NAME_PREFIX_ESCAPE_CHAR+U.UP_OS_VERSION])
+	assert.Nil(t, userPropertiesMap3[U.NAME_PREFIX_ESCAPE_CHAR+U.UP_BROWSER])
+	assert.Nil(t, userPropertiesMap3[U.NAME_PREFIX_ESCAPE_CHAR+U.UP_PLATFORM])
+	assert.Nil(t, userPropertiesMap3[U.NAME_PREFIX_ESCAPE_CHAR+U.UP_SCREEN_WIDTH])
+	assert.Nil(t, userPropertiesMap3[U.NAME_PREFIX_ESCAPE_CHAR+U.UP_SCREEN_HEIGHT])
 
 	// Test event is using existing filter or not.
 	// Created filter.
@@ -176,7 +176,7 @@ func TestSDKTrackHandler(t *testing.T) {
 
 	// Test filter_event_name hit with exact match.
 	rEventName = "a.com/u1/u2/i1"
-	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "%s", "auto": true, "event_properties": {"mobile": "true"}, "user_properties": {"$os": "mac osx", "$osVersion": "1_2_3"}}`,
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "%s", "auto": true, "event_properties": {"mobile": "true"}, "user_properties": {"$os": "mac osx", "$os_version": "1_2_3"}}`,
 		user.ID, rEventName)), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 	responseMap = DecodeJSONResponseToMap(w.Body)
@@ -193,7 +193,7 @@ func TestSDKTrackHandler(t *testing.T) {
 
 	// Test filter_event_name hit with raw event_url.
 	rEventName = "https://a.com/u1/u2/i2/u4/u5?q=search_string"
-	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "%s", "auto": true, "event_properties": {"mobile": "true"}, "user_properties": {"$os": "mac osx", "$osVersion": "1_2_3"}}`,
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "%s", "auto": true, "event_properties": {"mobile": "true"}, "user_properties": {"$os": "mac osx", "$os_version": "1_2_3"}}`,
 		user.ID, rEventName)), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 	responseMap = DecodeJSONResponseToMap(w.Body)
@@ -210,7 +210,7 @@ func TestSDKTrackHandler(t *testing.T) {
 
 	// Test filter_event_name miss created auto_tracked event_name.
 	rEventName = fmt.Sprintf("%s/%s", "a.com/u1/u5/u7", U.RandomLowerAphaNumString(5))
-	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "%s", "auto": true, "event_properties": {"mobile": "true"}, "user_properties": {"$os": "mac osx", "$osVersion": "1_2_3"}}`,
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "%s", "auto": true, "event_properties": {"mobile": "true"}, "user_properties": {"$os": "mac osx", "$os_version": "1_2_3"}}`,
 		user.ID, rEventName)), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 	responseMap = DecodeJSONResponseToMap(w.Body)
@@ -228,7 +228,7 @@ func TestSDKTrackHandler(t *testing.T) {
 	errCode = M.DeleteFilterEventName(project.ID, filterEventName.ID)
 	assert.Equal(t, http.StatusAccepted, errCode)
 	rEventName = "a.com/u1/u2/i1"
-	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "%s", "auto": true, "event_properties": {"mobile": "true"}, "user_properties": {"$os": "mac osx", "$osVersion": "1_2_3"}}`,
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "%s", "auto": true, "event_properties": {"mobile": "true"}, "user_properties": {"$os": "mac osx", "$os_version": "1_2_3"}}`,
 		user.ID, rEventName)), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 	responseMap = DecodeJSONResponseToMap(w.Body)
@@ -260,7 +260,7 @@ func TestSDKTrackHandler(t *testing.T) {
 
 		rEventName = "factors-dev.com/#/reports/1234"
 		w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(
-			`{"user_id": "%s", "event_name": "%s", "auto": true, "event_properties": {"mobile": "true"}, "user_properties": {"$os": "mac osx", "$osVersion": "1_2_3"}}`,
+			`{"user_id": "%s", "event_name": "%s", "auto": true, "event_properties": {"mobile": "true"}, "user_properties": {"$os": "mac osx", "$os_version": "1_2_3"}}`,
 			user.ID, rEventName)), map[string]string{"Authorization": project.Token})
 		assert.Equal(t, http.StatusOK, w.Code)
 		responseMap = DecodeJSONResponseToMap(w.Body)
@@ -275,6 +275,189 @@ func TestSDKTrackHandler(t *testing.T) {
 		assert.NotNil(t, rEventProperties["report_id"])
 		assert.Equal(t, "1234", rEventProperties["report_id"])
 	})
+
+	t.Run("MapEventPropertiesToDefaultProperties", func(t *testing.T) {
+		rEventName := "https://example.com/" + U.RandomLowerAphaNumString(10)
+		w = ServePostRequestWithHeaders(r, uri,
+			[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "event_properties": {"mobile": "true", "$qp_utm_campaign": "google", "$qp_utm_campaignid": "12345", "$qp_utm_source": "google", "$qp_utm_medium": "email", "$qp_utm_keyword": "analytics", "$qp_utm_matchtype": "exact", "$qp_utm_content": "analytics", "$qp_utm_adgroup": "ad-xxx", "$qp_utm_adgroup_id": "xyz123", "$qp_utm_creativeid": "creative-xxx", "$qp_gclid": "xxx123", "$qp_fbclid": "zzz123"}, "user_properties": {"$os": "Mac OS"}}`, user.ID, rEventName)),
+			map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusOK, w.Code)
+		responseMap = DecodeJSONResponseToMap(w.Body)
+		assert.NotEmpty(t, responseMap)
+		rEvent, errCode := M.GetEvent(project.ID, user.ID, responseMap["event_id"].(string))
+		assert.Equal(t, http.StatusFound, errCode)
+		assert.NotNil(t, rEvent)
+		eventPropertiesBytes, err := rEvent.Properties.Value()
+		assert.Nil(t, err)
+		var eventProperties map[string]interface{}
+		json.Unmarshal(eventPropertiesBytes.([]byte), &eventProperties)
+		// other properties should be present.
+		assert.NotNil(t, eventProperties["mobile"])
+
+		// property name should be replaced with corresponding
+		// default property.
+		assert.Nil(t, eventProperties["$qp_utm_campaign"])
+		assert.NotNil(t, eventProperties[U.EP_CAMPAIGN])
+		assert.Nil(t, eventProperties["$qp_utm_campaignid"])
+		assert.NotNil(t, eventProperties[U.EP_CAMPAIGN_ID])
+		assert.Nil(t, eventProperties["$qp_utm_source"])
+		assert.NotNil(t, eventProperties[U.EP_SOURCE])
+		assert.Nil(t, eventProperties["$qp_utm_medium"])
+		assert.NotNil(t, eventProperties[U.EP_MEDIUM])
+		assert.Nil(t, eventProperties["$qp_utm_keyword"])
+		assert.NotNil(t, eventProperties[U.EP_KEYWORD])
+		assert.Nil(t, eventProperties["$qp_utm_matchtype"])
+		assert.NotNil(t, eventProperties[U.EP_KEYWORD_MATCH_TYPE])
+		assert.Nil(t, eventProperties["$qp_utm_content"])
+		assert.NotNil(t, eventProperties[U.EP_CONTENT])
+		assert.Nil(t, eventProperties["$qp_utm_adgroup"])
+		assert.NotNil(t, eventProperties[U.EP_ADGROUP])
+		assert.Nil(t, eventProperties["$qp_gclid"])
+		assert.NotNil(t, eventProperties[U.EP_GCLID])
+		assert.Nil(t, eventProperties["$qp_fbclid"])
+		assert.NotNil(t, eventProperties[U.EP_FBCLIID])
+		// test map from second option.
+		assert.Nil(t, eventProperties["$qp_utm_adgroup_id"])
+		assert.NotNil(t, eventProperties[U.EP_ADGROUP_ID])
+		assert.Nil(t, eventProperties["$qp_utm_creativeid"])
+		assert.NotNil(t, eventProperties[U.EP_CREATIVE])
+	})
+
+	t.Run("AddInitialUserPropertiesFromEventProperties", func(t *testing.T) {
+		rEventName := "https://example.com/" + U.RandomLowerAphaNumString(10)
+		w := ServePostRequestWithHeaders(r, uri,
+			[]byte(fmt.Sprintf(`{"event_name": "%s", "event_properties": {"mobile": "true", "$page_url": "https://example.com/xyz", "$page_raw_url": "https://example.com/xyz?utm_campaign=google", "$page_domain": "example.com", "$page_load_time": 100, "$page_spent_time": 120, "$qp_utm_campaign": "google", "$qp_utm_campaignid": "12345", "$qp_utm_source": "google", "$qp_utm_medium": "email", "$qp_utm_keyword": "analytics", "$qp_utm_matchtype": "exact", "$qp_utm_content": "analytics", "$qp_utm_adgroup": "ad-xxx", "$qp_utm_adgroupid": "xyz123", "$qp_utm_creative": "creative-xxx", "$qp_gclid": "xxx123", "$qp_fbclid": "zzz123"}, "user_properties": {"$os": "Mac OS"}}`, rEventName)),
+			map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusOK, w.Code)
+		responseMap = DecodeJSONResponseToMap(w.Body)
+		assert.NotEmpty(t, responseMap)
+		assert.NotNil(t, responseMap["event_id"])
+		assert.NotNil(t, responseMap["user_id"])
+		eventUserId := responseMap["user_id"].(string)
+		rUser, errCode := M.GetUser(project.ID, eventUserId)
+		assert.Equal(t, http.StatusFound, errCode)
+		assert.NotNil(t, rUser)
+		userPropertiesBytes, err := rUser.Properties.Value()
+		assert.Nil(t, err)
+		var userProperties map[string]interface{}
+		json.Unmarshal(userPropertiesBytes.([]byte), &userProperties)
+		// other user properties should exist after adding initial.
+		assert.NotNil(t, userProperties["$os"])
+		assert.NotNil(t, userProperties[U.UP_JOIN_TIME])
+		// initial user properties.
+		assert.NotNil(t, userProperties[U.UP_INITIAL_PAGE_URL])
+		assert.NotNil(t, userProperties[U.UP_INITIAL_PAGE_RAW_URL])
+		assert.NotNil(t, userProperties[U.UP_INITIAL_PAGE_DOMAIN])
+		assert.NotNil(t, userProperties[U.UP_INITIAL_PAGE_LOAD_TIME])
+		assert.NotNil(t, userProperties[U.UP_INITIAL_PAGE_SPENT_TIME])
+		assert.NotNil(t, userProperties[U.UP_INITIAL_CAMPAIGN])
+		assert.NotNil(t, userProperties[U.UP_INITIAL_CAMPAIGN_ID])
+		assert.NotNil(t, userProperties[U.UP_INITIAL_SOURCE])
+		assert.NotNil(t, userProperties[U.UP_INITIAL_MEDIUM])
+		assert.NotNil(t, userProperties[U.UP_INITIAL_KEYWORD])
+		assert.NotNil(t, userProperties[U.UP_INITIAL_KEYWORD_MATCH_TYPE])
+		assert.NotNil(t, userProperties[U.UP_INITIAL_CONTENT])
+		assert.NotNil(t, userProperties[U.UP_INITIAL_ADGROUP])
+		assert.NotNil(t, userProperties[U.UP_INITIAL_ADGROUP_ID])
+		assert.NotNil(t, userProperties[U.UP_INITIAL_CREATIVE])
+		assert.NotNil(t, userProperties[U.UP_INITIAL_GCLID])
+		assert.NotNil(t, userProperties[U.UP_INITIAL_FBCLID])
+		assert.Nil(t, userProperties[U.UP_INITIAL_COST])
+		assert.Nil(t, userProperties[U.UP_INITIAL_REVENUE])
+
+		// initial user properties should not get updated on existing user's track call.
+		rEventName = "https://example.com/" + U.RandomLowerAphaNumString(10)
+		w = ServePostRequestWithHeaders(r, uri,
+			[]byte(fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "event_properties": {"$qp_utm_campaign": "producthunt", "$qp_utm_campaignid": "78910"}, "user_properties": {"$os": "Mac OS"}}`,
+				rEventName, eventUserId)), map[string]string{"Authorization": project.Token}) // user from prev track used.
+		assert.Equal(t, http.StatusOK, w.Code)
+		responseMap = DecodeJSONResponseToMap(w.Body)
+		assert.NotEmpty(t, responseMap)
+		assert.NotNil(t, responseMap["event_id"])
+		assert.Nil(t, responseMap["user_id"]) // no new user.
+		rUser, errCode = M.GetUser(project.ID, eventUserId)
+		assert.Equal(t, http.StatusFound, errCode)
+		assert.NotNil(t, rUser)
+		userPropertiesBytes, err = rUser.Properties.Value()
+		assert.Nil(t, err)
+		var userProperties2 map[string]interface{}
+		json.Unmarshal(userPropertiesBytes.([]byte), &userProperties2)
+		assert.NotNil(t, userProperties2["$os"])
+		assert.NotNil(t, userProperties[U.UP_JOIN_TIME])
+		// initial user properties.
+		assert.NotNil(t, userProperties2[U.UP_INITIAL_CAMPAIGN])
+		assert.Equal(t, "google", userProperties2[U.UP_INITIAL_CAMPAIGN])
+		assert.NotEqual(t, "producthunt", userProperties2[U.UP_INITIAL_CAMPAIGN])
+		assert.NotNil(t, userProperties2[U.UP_INITIAL_CAMPAIGN_ID])
+		assert.Equal(t, "12345", userProperties2[U.UP_INITIAL_CAMPAIGN_ID])
+		assert.NotEqual(t, "78910", userProperties2[U.UP_INITIAL_CAMPAIGN_ID])
+	})
+}
+
+func TestTrackHandlerForCreateUserSessionOnInactivity(t *testing.T) {
+	// Initialize routes and dependent data.
+	r := gin.Default()
+	H.InitSDKRoutes(r)
+	uri := "/sdk/event/track"
+
+	project, _, err := SetupProjectUserReturnDAO()
+	assert.Nil(t, err)
+
+	eventName := U.RandomLowerAphaNumString(10)
+	w := ServePostRequestWithHeaders(r, uri,
+		[]byte(fmt.Sprintf(`{"event_name": "%s", "event_properties": {"$page_url": "https://example.com/xyz", "$page_raw_url": "https://example.com/xyz?utm_campaign=google", "$page_domain": "example.com", "$page_load_time": 100, "$page_spent_time": 120, "$qp_utm_campaign": "google", "$qp_utm_campaignid": "12345", "$qp_utm_source": "google", "$qp_utm_medium": "email", "$qp_utm_keyword": "analytics", "$qp_utm_matchtype": "exact", "$qp_utm_content": "analytics", "$qp_utm_adgroup": "ad-xxx", "$qp_utm_adgroupid": "xyz123", "$qp_utm_creative": "creative-xxx", "$qp_gclid": "xxx123", "$qp_fbclid": "zzz123"}, "user_properties": {"$platform": "web", "$browser": "Mozilla", "$browser_version": "v0.1", "$browser_with_version": "Mozilla_v0.1", "$user_agent": "browser", "$os": "Linux", "$os_version": "v0.1", "$os_with_version": "Linux_v0.1", "$country": "india", "$region": "karnataka", "$city": "bengaluru", "$timezone": "Asia/Calcutta"}}`,
+			eventName)), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	responseMap := DecodeJSONResponseToMap(w.Body)
+	assert.NotEmpty(t, responseMap)
+	assert.NotNil(t, responseMap["event_id"])
+	assert.NotNil(t, responseMap["user_id"])
+	sessionEventName, errCode := M.GetEventName(M.EVENT_NAME_SESSION, project.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotNil(t, sessionEventName)
+	userSessionEvents, errCode := M.GetUserEventsByEventNameId(project.ID,
+		responseMap["user_id"].(string), sessionEventName.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.True(t, len(userSessionEvents) == 1)
+
+	sessionPropertiesBytes, err := userSessionEvents[0].Properties.Value()
+	assert.Nil(t, err)
+	var sessionProperties map[string]interface{}
+	json.Unmarshal(sessionPropertiesBytes.([]byte), &sessionProperties)
+
+	assert.NotEmpty(t, sessionProperties[U.SP_IS_FIRST_SESSION])
+	assert.True(t, sessionProperties[U.SP_IS_FIRST_SESSION].(bool))
+	// session properties from user properties.
+	assert.NotEmpty(t, sessionProperties[U.UP_BROWSER])
+	assert.NotEmpty(t, sessionProperties[U.UP_BROWSER_VERSION])
+	assert.NotEmpty(t, sessionProperties[U.UP_BROWSER_WITH_VERSION])
+	assert.NotEmpty(t, sessionProperties[U.UP_USER_AGENT])
+	assert.NotEmpty(t, sessionProperties[U.UP_OS])
+	assert.NotEmpty(t, sessionProperties[U.UP_OS_VERSION])
+	assert.NotEmpty(t, sessionProperties[U.UP_OS_WITH_VERSION])
+	assert.NotEmpty(t, sessionProperties[U.UP_COUNTRY])
+	assert.NotEmpty(t, sessionProperties[U.UP_CITY])
+	assert.NotEmpty(t, sessionProperties[U.UP_REGION])
+	assert.NotEmpty(t, sessionProperties[U.UP_TIMEZONE])
+
+	// session properties from event properties.
+	assert.NotEmpty(t, sessionProperties[U.UP_INITIAL_PAGE_URL])
+	assert.NotEmpty(t, sessionProperties[U.UP_INITIAL_PAGE_RAW_URL])
+	assert.NotEmpty(t, sessionProperties[U.UP_INITIAL_PAGE_DOMAIN])
+	assert.NotEmpty(t, sessionProperties[U.UP_INITIAL_PAGE_LOAD_TIME])
+	assert.NotEmpty(t, sessionProperties[U.UP_INITIAL_PAGE_SPENT_TIME])
+	assert.NotEmpty(t, sessionProperties[U.EP_CAMPAIGN])
+	assert.NotEmpty(t, sessionProperties[U.EP_CAMPAIGN_ID])
+	assert.NotEmpty(t, sessionProperties[U.EP_SOURCE])
+	assert.NotEmpty(t, sessionProperties[U.EP_MEDIUM])
+	assert.NotEmpty(t, sessionProperties[U.EP_KEYWORD])
+	assert.NotEmpty(t, sessionProperties[U.EP_KEYWORD_MATCH_TYPE])
+	assert.NotEmpty(t, sessionProperties[U.EP_CONTENT])
+	assert.NotEmpty(t, sessionProperties[U.EP_ADGROUP])
+	assert.NotEmpty(t, sessionProperties[U.EP_ADGROUP_ID])
+	assert.NotEmpty(t, sessionProperties[U.EP_CREATIVE])
+	assert.NotEmpty(t, sessionProperties[U.EP_GCLID])
+	assert.NotEmpty(t, sessionProperties[U.EP_FBCLIID])
 }
 
 func TestSDKIdentifyHandler(t *testing.T) {
@@ -541,7 +724,7 @@ func TestSDKAddUserPropertiesHandler(t *testing.T) {
 	assert.Nil(t, userPropertiesMap2["map_prop"])
 
 	// Should not allow $ prefixes apart from default properties.
-	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"user_id": "%s", "properties": {"$dollar_key": "unknow_value", "$os": "mac osx", "$osVersion": "1_2_3", "$platform": "web", "$screenWidth": 10, "$screenHeight": 11, "$browser": "mozilla", "$browserVersion": "10_2_3"}}`,
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"user_id": "%s", "properties": {"$dollar_key": "unknow_value", "$os": "mac osx", "$os_version": "1_2_3", "$platform": "web", "$screen_width": 10, "$screen_height": 11, "$browser": "mozilla", "$browser_version": "10_2_3"}}`,
 		user.ID)), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 	propsResponseMap1 := DecodeJSONResponseToMap(w.Body)
@@ -556,19 +739,19 @@ func TestSDKAddUserPropertiesHandler(t *testing.T) {
 	assert.Nil(t, userPropertiesMap3["$dollar_key"])                                              // dollar prefix not allowed.
 	assert.NotNil(t, userPropertiesMap3[fmt.Sprintf("%s$dollar_key", U.NAME_PREFIX_ESCAPE_CHAR)]) // Escaped key should exist.
 	// check for default props. Hardcoded property name as request payload.
-	assert.NotNil(t, userPropertiesMap3["$os"])
-	assert.NotNil(t, userPropertiesMap3["$osVersion"])
-	assert.NotNil(t, userPropertiesMap3["$browser"])
-	assert.NotNil(t, userPropertiesMap3["$platform"])
-	assert.NotNil(t, userPropertiesMap3["$screenWidth"])
-	assert.NotNil(t, userPropertiesMap3["$screenHeight"])
+	assert.NotNil(t, userPropertiesMap3[U.UP_OS])
+	assert.NotNil(t, userPropertiesMap3[U.UP_OS_VERSION])
+	assert.NotNil(t, userPropertiesMap3[U.UP_BROWSER])
+	assert.NotNil(t, userPropertiesMap3[U.UP_PLATFORM])
+	assert.NotNil(t, userPropertiesMap3[U.UP_SCREEN_WIDTH])
+	assert.NotNil(t, userPropertiesMap3[U.UP_SCREEN_HEIGHT])
 	// should not be escaped.
-	assert.Nil(t, userPropertiesMap3["_$os"])
-	assert.Nil(t, userPropertiesMap3["_$osVersion"])
-	assert.Nil(t, userPropertiesMap3["_$browser"])
-	assert.Nil(t, userPropertiesMap3["_$platform"])
-	assert.Nil(t, userPropertiesMap3["_$screenWidth"])
-	assert.Nil(t, userPropertiesMap3["_$screenHeight"])
+	assert.Nil(t, userPropertiesMap3[U.NAME_PREFIX_ESCAPE_CHAR+U.UP_OS])
+	assert.Nil(t, userPropertiesMap3[U.NAME_PREFIX_ESCAPE_CHAR+U.UP_OS_VERSION])
+	assert.Nil(t, userPropertiesMap3[U.NAME_PREFIX_ESCAPE_CHAR+U.UP_BROWSER])
+	assert.Nil(t, userPropertiesMap3[U.NAME_PREFIX_ESCAPE_CHAR+U.UP_PLATFORM])
+	assert.Nil(t, userPropertiesMap3[U.NAME_PREFIX_ESCAPE_CHAR+U.UP_SCREEN_WIDTH])
+	assert.Nil(t, userPropertiesMap3[U.NAME_PREFIX_ESCAPE_CHAR+U.UP_SCREEN_HEIGHT])
 }
 
 func TestSDKGetProjectSettingsHandler(t *testing.T) {

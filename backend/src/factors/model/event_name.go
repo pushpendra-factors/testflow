@@ -33,11 +33,19 @@ type FilterInfo struct {
 	eventName       *EventName
 }
 
+const EVENT_NAME_SESSION = "$session"
+
 const TYPE_USER_CREATED_EVENT_NAME = "UC"
 const TYPE_AUTO_TRACKED_EVENT_NAME = "AT"
 const TYPE_FILTER_EVENT_NAME = "FE"
+const TYPE_INTERNAL_EVENT_NAME = "IE"
 
-var ALLOWED_TYPES = [...]string{TYPE_USER_CREATED_EVENT_NAME, TYPE_AUTO_TRACKED_EVENT_NAME, TYPE_FILTER_EVENT_NAME}
+var ALLOWED_TYPES = [...]string{
+	TYPE_USER_CREATED_EVENT_NAME,
+	TYPE_AUTO_TRACKED_EVENT_NAME,
+	TYPE_FILTER_EVENT_NAME,
+	TYPE_INTERNAL_EVENT_NAME,
+}
 
 const URI_PROPERTY_PREFIX = ":"
 
@@ -53,9 +61,8 @@ func createOrGetEventName(eventName *EventName) (*EventName, int) {
 	db := C.GetServices().Db
 
 	// Validation.
-	if eventName.ProjectId == 0 ||
-		!isValidName(eventName.Name) ||
-		!isValidType(eventName.Type) {
+	if eventName.ProjectId == 0 || !isValidType(eventName.Type) ||
+		!isValidName(eventName.Name, eventName.Type) {
 
 		return nil, http.StatusBadRequest
 	}
@@ -103,6 +110,11 @@ func CreateOrGetFilterEventName(eventName *EventName) (*EventName, int) {
 	return createOrGetEventName(eventName)
 }
 
+func CreateOrGetSessionEventName(projectId uint64) (*EventName, int) {
+	return createOrGetEventName(&EventName{ProjectId: projectId, Name: EVENT_NAME_SESSION,
+		Type: TYPE_INTERNAL_EVENT_NAME})
+}
+
 func isValidType(nameType string) bool {
 	if nameType == "" {
 		return false
@@ -116,8 +128,12 @@ func isValidType(nameType string) bool {
 	return false
 }
 
-func isValidName(name string) bool {
-	return name != "" && !strings.HasPrefix(name, U.NAME_PREFIX)
+func isValidName(name string, typ string) bool {
+	if name == "" {
+		return false
+	}
+
+	return typ == TYPE_INTERNAL_EVENT_NAME || !strings.HasPrefix(name, U.NAME_PREFIX)
 }
 
 func GetEventName(name string, projectId uint64) (*EventName, int) {
@@ -199,11 +215,15 @@ func UpdateEventName(projectId uint64, id uint64,
 	nameType string, eventName *EventName) (*EventName, int) {
 	db := C.GetServices().Db
 
+	// update not allowed for internal event names.
+	if nameType == TYPE_INTERNAL_EVENT_NAME {
+		return nil, http.StatusBadRequest
+	}
+
 	// Validation
-	if projectId == 0 ||
-		eventName.ProjectId != 0 ||
-		!isValidType(nameType) ||
-		!isValidName(eventName.Name) {
+	if projectId == 0 || eventName.ProjectId != 0 || !isValidType(nameType) ||
+		!isValidName(eventName.Name, eventName.Type) {
+
 		return nil, http.StatusBadRequest
 	}
 

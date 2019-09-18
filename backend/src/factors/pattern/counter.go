@@ -174,7 +174,7 @@ func CollectPropertiesInfo(scanner *bufio.Scanner, userAndEventsInfo *UserAndEve
 			return err
 		}
 		for key, value := range eventDetails.UserProperties {
-			propertyType := U.GetPropertyKeyValueType(key, value)
+			propertyType := U.GetPropertyTypeByKeyValue(key, value)
 			if propertyType == U.PropertyTypeNumerical {
 				if len(userPropertiesInfo.NumericPropertyKeys) > maxProperties {
 					continue
@@ -205,7 +205,7 @@ func CollectPropertiesInfo(scanner *bufio.Scanner, userAndEventsInfo *UserAndEve
 			continue
 		}
 		for key, value := range eventDetails.EventProperties {
-			propertyType := U.GetPropertyKeyValueType(key, value)
+			propertyType := U.GetPropertyTypeByKeyValue(key, value)
 			if propertyType == U.PropertyTypeNumerical {
 				if len(eInfo.NumericPropertyKeys) > maxProperties {
 					continue

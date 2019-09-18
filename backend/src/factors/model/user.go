@@ -343,7 +343,7 @@ func GetRecentUserPropertyKeysWithLimits(projectId uint64, usersLimit int) (map[
 		return nil, http.StatusInternalServerError
 	}
 
-	propsByType, err := U.ClassifyPropertiesByType(&propertiesMap)
+	propsByType, err := U.ClassifyPropertiesType(&propertiesMap)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to classify properties on get recent property keys.")
 		return nil, http.StatusInternalServerError

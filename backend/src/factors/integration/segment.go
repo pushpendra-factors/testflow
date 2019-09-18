@@ -117,7 +117,7 @@ func GetURLFromPageEvent(event *SegmentEvent) string {
 
 func FillSegmentGenericEventProperties(properties *U.PropertiesMap, event *SegmentEvent) {
 	if event.Version != nil {
-		(*properties)[U.EP_EVENT_VERSION] = *event.Version
+		(*properties)[U.EP_SEGMENT_EVENT_VERSION] = *event.Version
 	}
 	if event.Context.Location.Lat != 0 {
 		(*properties)[U.EP_LOCATION_LATITUDE] = event.Context.Location.Lat
@@ -130,7 +130,7 @@ func FillSegmentGenericEventProperties(properties *U.PropertiesMap, event *Segme
 func FillSegmentGenericUserProperties(properties *U.PropertiesMap, event *SegmentEvent) {
 	(*properties)[U.UP_PLATFORM] = U.PLATFORM_WEB
 	if event.Channel != "" {
-		(*properties)[U.UP_CHANNEL] = event.Channel
+		(*properties)[U.UP_SEGMENT_CHANNEL] = event.Channel
 	}
 	if event.Context.UserAgent != "" {
 		(*properties)[U.UP_USER_AGENT] = event.Context.UserAgent
@@ -229,22 +229,22 @@ func FillSegmentWebEventProperties(properties *U.PropertiesMap, event *SegmentEv
 		(*properties)[U.EP_REFERRER_DOMAIN] = referrerURL.Host
 		(*properties)[U.EP_REFERRER_URL] = referrerURL.Host + referrerURL.Path + U.GetPathAppendableURLHash(referrerURL.Fragment)
 	}
-}
 
-func FillSegmentWebUserProperties(properties *U.PropertiesMap, event *SegmentEvent) {
 	if event.Context.Campaign.Name != "" {
-		(*properties)[U.UP_CAMPAIGN_NAME] = event.Context.Campaign.Name
+		(*properties)[U.EP_CAMPAIGN] = event.Context.Campaign.Name
 	}
 	if event.Context.Campaign.Source != "" {
-		(*properties)[U.UP_CAMPAIGN_SOURCE] = event.Context.Campaign.Source
+		(*properties)[U.EP_SOURCE] = event.Context.Campaign.Source
 	}
 	if event.Context.Campaign.Medium != "" {
-		(*properties)[U.UP_CAMPAIGN_MEDIUM] = event.Context.Campaign.Medium
+		(*properties)[U.EP_MEDIUM] = event.Context.Campaign.Medium
 	}
 	if event.Context.Campaign.Term != "" {
-		(*properties)[U.UP_CAMPAIGN_TERM] = event.Context.Campaign.Term
+		(*properties)[U.EP_KEYWORD] = event.Context.Campaign.Term
 	}
 	if event.Context.Campaign.Content != "" {
-		(*properties)[U.UP_CAMPAIGN_CONTENT] = event.Context.Campaign.Content
+		(*properties)[U.EP_CONTENT] = event.Context.Campaign.Content
 	}
 }
+
+func FillSegmentWebUserProperties(properties *U.PropertiesMap, event *SegmentEvent) {}

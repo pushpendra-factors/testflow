@@ -193,7 +193,7 @@ func TestGetRecentEventPropertyKeys(t *testing.T) {
 	})
 
 	t.Run("PropertiesOlderThan24Hours", func(t *testing.T) {
-		timestamp := U.UnixTimeBefore24Hours()
+		timestamp := U.UnixTimeBeforeDuration(24 * time.Hour)
 		eventName, _ := createEventWithTimestampAndPrperties(t, project, user, timestamp, json.RawMessage(`{"rProp1": "value1", "rProp2": 1}`))
 
 		props, errCode := M.GetRecentEventPropertyKeysWithLimits(project.ID, eventName.Name, 100)
@@ -229,7 +229,7 @@ func TestGetRecentEventPropertyValues(t *testing.T) {
 	})
 
 	t.Run("PropertyValuesOlderThan24Hour", func(t *testing.T) {
-		timestamp := U.UnixTimeBefore24Hours()
+		timestamp := U.UnixTimeBeforeDuration(24 * time.Hour)
 		eventName, _ := createEventWithTimestampAndPrperties(t, project, user, timestamp, json.RawMessage(`{"rProp1": "value1"}`))
 		_, errCode1 := M.CreateEvent(&M.Event{ProjectId: project.ID, EventNameId: eventName.ID, UserId: user.ID, Timestamp: timestamp, Properties: postgres.Jsonb{json.RawMessage(`{"rProp1": "value2"}`)}})
 		assert.Equal(t, http.StatusCreated, errCode1)
@@ -278,4 +278,22 @@ func TestUpdateEventProperties(t *testing.T) {
 	assert.Equal(t, float64(3), (*eventProperties)["$page_spent_time"])
 	assert.Equal(t, float64(1.594), (*eventProperties)["$page_load_time"])
 	assert.Equal(t, "value1", (*eventProperties)["rProp1"])
+}
+
+func TestIsAnyEventByUserInDuration(t *testing.T) {
+	projectId, userId, eventNameId, err := SetupProjectUserEventName()
+	assert.Nil(t, err)
+
+	// no event exist in 10 secs.
+	assert.Equal(t, http.StatusNotFound,
+		M.IsAnyEventByUserInDuration(projectId, userId, 30*time.Minute))
+
+	// event exist in 10 secs.
+	_, errCode := M.CreateEvent(&M.Event{EventNameId: eventNameId, ProjectId: projectId, UserId: userId})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.Equal(t, http.StatusFound, M.IsAnyEventByUserInDuration(projectId, userId, 10*time.Second))
+
+	// inactivity for duration.
+	time.Sleep(3 * time.Second)
+	assert.Equal(t, http.StatusNotFound, M.IsAnyEventByUserInDuration(projectId, userId, 2*time.Second))
 }

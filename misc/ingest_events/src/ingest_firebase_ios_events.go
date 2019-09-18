@@ -19,6 +19,7 @@ import (
 	"strconv"
 	"sync"
 
+	U "./util"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -214,19 +215,19 @@ func lineIngest(eventMap map[string]interface{}, httpClient *http.Client, wg *sy
 		for k, value := range deviceProperties {
 			switch k {
 			case "mobile_brand_name":
-				userPropertiesMap["$deviceBrand"] = value
+				userPropertiesMap[U.UP_DEVICE_BRAND] = value
 			case "mobile_model_name":
-				userPropertiesMap["$deviceModel"] = value
+				userPropertiesMap[U.UP_DEVICE_MODEL] = value
 			case "mobile_os_hardware_model":
-				userPropertiesMap["$deviceType"] = value
+				userPropertiesMap[U.UP_DEVICE_TYPE] = value
 			case "vendor_id":
-				userPropertiesMap["$deviceId"] = value
+				userPropertiesMap[U.UP_DEVICE_ID] = value
 			case "operating_system":
-				userPropertiesMap["$os"] = value
+				userPropertiesMap[U.UP_OS] = value
 			case "operating_system_version":
-				userPropertiesMap["$osVersion"] = value
+				userPropertiesMap[U.UP_OS_VERSION] = value
 			case "language":
-				userPropertiesMap["$language"] = value
+				userPropertiesMap[U.UP_LANGUAGE] = value
 			default:
 				userPropertiesMap["device."+k] = value
 			}
@@ -238,11 +239,11 @@ func lineIngest(eventMap map[string]interface{}, httpClient *http.Client, wg *sy
 		for k, value := range geoProperties {
 			switch k {
 			case "country":
-				userPropertiesMap["$country"] = value
+				userPropertiesMap[U.UP_COUNTRY] = value
 			case "region":
-				userPropertiesMap["$region"] = value
+				userPropertiesMap[U.UP_REGION] = value
 			case "city":
-				userPropertiesMap["$city"] = value
+				userPropertiesMap[U.UP_CITY] = value
 			default:
 				userPropertiesMap["geo."+k] = value
 			}
@@ -254,7 +255,7 @@ func lineIngest(eventMap map[string]interface{}, httpClient *http.Client, wg *sy
 		for k, value := range appProperties {
 			switch k {
 			case "version":
-				userPropertiesMap["$appVersion"] = value
+				userPropertiesMap[U.UP_APP_VERSION] = value
 			default:
 				userPropertiesMap["app."+k] = value
 			}
@@ -268,7 +269,7 @@ func lineIngest(eventMap map[string]interface{}, httpClient *http.Client, wg *sy
 		}
 	}
 	// Platform
-	userPropertiesMap["$platform"], _ = eventMap["platform"]
+	userPropertiesMap[U.UP_PLATFORM], _ = eventMap["platform"]
 	eventRequestMap["user_properties"] = userPropertiesMap
 
 	reqBody, _ := json.Marshal(eventRequestMap)

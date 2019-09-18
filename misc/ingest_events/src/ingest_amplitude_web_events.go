@@ -23,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	U "./util"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -171,9 +172,9 @@ func translateEvent(eventMap map[string]interface{}) map[string]interface{} {
 			log.Fatal(fmt.Sprintf("event: %s, err: %s", eventMap, err))
 		}
 		eventRequestMap["event_name"] = urlName
-		eventPropertiesMap["$rawURL"] = pageEP["url"]
-		eventPropertiesMap["$pageTitle"] = pageEP["title"]
-		eventPropertiesMap["$referrer"] = pageEP["referrer"]
+		eventPropertiesMap[U.EP_PAGE_RAW_URL] = pageEP["url"]
+		eventPropertiesMap[U.EP_PAGE_TITLE] = pageEP["title"]
+		eventPropertiesMap[U.EP_REFERRER] = pageEP["referrer"]
 	}
 
 	eventRequestMap["user_id"] = userId
@@ -188,29 +189,29 @@ func translateEvent(eventMap map[string]interface{}) map[string]interface{} {
 	//eventPropertiesMap["event_type"], _ = eventMap["event_type"]
 	//eventPropertiesMap["version_name"], _ = eventMap["version_name"]
 	//eventPropertiesMap["session_id"], _ = eventMap["session_id"]
-	eventPropertiesMap["$ip"], _ = eventMap["ip_address"]
-	eventPropertiesMap["$locationLng"], _ = eventMap["location_lng"]
-	eventPropertiesMap["$locationLat"], _ = eventMap["location_lat"]
+	eventPropertiesMap[U.EP_INTERNAL_IP], _ = eventMap["ip_address"]
+	eventPropertiesMap[U.EP_LOCATION_LONGITUDE], _ = eventMap["location_lng"]
+	eventPropertiesMap[U.EP_LOCATION_LATITUDE], _ = eventMap["location_lat"]
 	eventRequestMap["event_properties"] = eventPropertiesMap
 
 	// User properties associatied with event.
 	// Initialize it with, customer sent user properties.
 	userPropertiesMap := eventMap["user_properties"].(map[string]interface{})
 	// Keys that will go into eventProperties.
-	userPropertiesMap["$deviceBrand"], _ = eventMap["device_brand"]
-	userPropertiesMap["$deviceModel"], _ = eventMap["device_model"]
-	userPropertiesMap["$country"], _ = eventMap["country"]
-	userPropertiesMap["$os"], _ = eventMap["os_name"]
-	userPropertiesMap["$deviceId"], _ = eventMap["device_id"]
-	userPropertiesMap["$deviceType"], _ = eventMap["device_type"]
-	userPropertiesMap["$language"], _ = eventMap["language"]
-	userPropertiesMap["$networkCarrier"], _ = eventMap["device_carrier"]
-	userPropertiesMap["$osVersion"], _ = eventMap["os_version"]
-	userPropertiesMap["$city"], _ = eventMap["city"]
-	userPropertiesMap["$region"], _ = eventMap["region"]
-	userPropertiesMap["$deviceManufacturer"], _ = eventMap["device_manufacturer"]
-	userPropertiesMap["$deviceFamily"], _ = eventMap["device_family"]
-	userPropertiesMap["$platform"], _ = eventMap["platform"]
+	userPropertiesMap[U.UP_DEVICE_BRAND], _ = eventMap["device_brand"]
+	userPropertiesMap[U.UP_DEVICE_MODEL], _ = eventMap["device_model"]
+	userPropertiesMap[U.UP_COUNTRY], _ = eventMap["country"]
+	userPropertiesMap[U.UP_OS], _ = eventMap["os_name"]
+	userPropertiesMap[U.UP_DEVICE_ID], _ = eventMap["device_id"]
+	userPropertiesMap[U.UP_DEVICE_TYPE], _ = eventMap["device_type"]
+	userPropertiesMap[U.UP_LANGUAGE], _ = eventMap["language"]
+	userPropertiesMap[U.UP_NETWORK_CARRIER], _ = eventMap["device_carrier"]
+	userPropertiesMap[U.UP_OS_VERSION], _ = eventMap["os_version"]
+	userPropertiesMap[U.UP_CITY], _ = eventMap["city"]
+	userPropertiesMap[U.UP_REGION], _ = eventMap["region"]
+	userPropertiesMap[U.UP_DEVICE_MANUFACTURER], _ = eventMap["device_manufacturer"]
+	userPropertiesMap[U.UP_DEVICE_FAMILY], _ = eventMap["device_family"]
+	userPropertiesMap[U.UP_PLATFORM], _ = eventMap["platform"]
 	eventRequestMap["user_properties"] = userPropertiesMap
 
 	return eventRequestMap

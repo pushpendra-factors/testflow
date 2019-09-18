@@ -6,6 +6,7 @@ const PLATFORM_WEB = "web";
 
 // properties
 const PREFIX = "$";
+
 const PAGE_SPENT_TIME = PREFIX+"page_spent_time";
 const PAGE_LOAD_TIME = PREFIX+"page_load_time";
 
@@ -291,20 +292,20 @@ function getPageLoadTime() {
  * Property - Example
  * referrer - https://google.com/search
  * */
-function getEventDefault(pfix="$") {
+function getEventDefault() {
     let dp = {};
-    dp[pfix+"pageTitle"] = document.title;
+    dp[PREFIX+"page_title"] = document.title;
 
-    dp[pfix+"referrer"] = document.referrer;
+    dp[PREFIX+"referrer"] = document.referrer;
     let referrerURL = util.parseURLString(document.referrer);
-    dp[pfix+"referrerDomain"] = referrerURL.host;
+    dp[PREFIX+"referrer_domain"] = referrerURL.host;
     // url domain with path and without query params.
-    dp[pfix+"referrerURL"] = referrerURL.host + referrerURL.path + util.getCleanHash(referrerURL.hash);
+    dp[PREFIX+"referrer_url"] = referrerURL.host + referrerURL.path + util.getCleanHash(referrerURL.hash);
     
-    dp[pfix+"pageRawURL"] = window.location.href;
-    dp[pfix+"pageDomain"] = window.location.host;
+    dp[PREFIX+"page_raw_url"] = window.location.href;
+    dp[PREFIX+"page_domain"] = window.location.host;
     // url domain with path and without query params.
-    dp[pfix+"pageURL"] = window.location.host + window.location.pathname + util.getCleanHash(window.location.hash);
+    dp[PREFIX+"page_url"] = window.location.host + window.location.pathname + util.getCleanHash(window.location.hash);
     
     return dp;
 }
@@ -319,23 +320,28 @@ function getEventDefault(pfix="$") {
  * os - Mac OSX
  * os_version_string - 10_13_6
  * */
-function getUserDefault(pfix="$") {
+function getUserDefault() {
     let dp = {};
-    dp[pfix+"platform"] = PLATFORM_WEB;
+    dp[PREFIX+"platform"] = PLATFORM_WEB;
 
     let browser = BrowserInfo.getBrowser();
-    if (browser.name) dp[pfix+"browser"] = browser.name;
-    if (browser.versionString) dp[pfix+"browserVersion"] = browser.versionString;
+    if (browser.name) dp[PREFIX+"browser"] = browser.name;
+    if (browser.versionString) dp[PREFIX+"browser_version"] = browser.versionString;
+    if (browser.name && browser.versionString) 
+        dp[PREFIX+"browser_with_version"] = browser.name + '-' + browser.versionString;
+    
 
     let os = BrowserInfo.getOS();
-    if (os.name) dp[pfix+"os"] = os.name;
-    if (os.versionString) dp[pfix+"osVersion"] = os.versionString;
+    if (os.name) dp[PREFIX+"os"] = os.name;
+    if (os.versionString) dp[PREFIX+"os_version"] = os.versionString;
+    if (os.name && os.versionString)
+        dp[PREFIX+"os_with_version"] = os.name + '-' + os.versionString;
 
     let device = BrowserInfo.getDevice();
     if (device.screen && device.screen.width > 0) 
-        dp[pfix+"screenWidth"] = device.screen.width;
+        dp[PREFIX+"screen_width"] = device.screen.width;
     if (device.screen && device.screen.height > 0) 
-        dp[pfix+"screenHeight"] = device.screen.height;
+        dp[PREFIX+"screen_height"] = device.screen.height;
 
     // Device name added, if mobile.
     if (device.device) dp[prefix+"device"] = device.device;

@@ -16,6 +16,7 @@ import (
 	"net/http"
 	"os"
 
+	U "./util"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -110,11 +111,11 @@ func translateEvent(eventMap map[string]interface{}) map[string]interface{} {
 	eventPropertiesMap := make(map[string]interface{})
 	userPropertiesMap := make(map[string]interface{})
 	if locationInfo, ok := eventMap["location"].(map[string]interface{}); ok {
-		eventPropertiesMap["$locationLat"], _ = locationInfo["latitude"]
-		eventPropertiesMap["$locationLng"], _ = locationInfo["longitude"]
+		eventPropertiesMap[U.EP_LOCATION_LATITUDE], _ = locationInfo["latitude"]
+		eventPropertiesMap[U.EP_LOCATION_LONGITUDE], _ = locationInfo["longitude"]
 
-		userPropertiesMap["$city"], _ = locationInfo["city"]
-		userPropertiesMap["$region"], _ = locationInfo["state"]
+		userPropertiesMap[U.UP_CITY], _ = locationInfo["city"]
+		userPropertiesMap[U.UP_REGION], _ = locationInfo["state"]
 		userPropertiesMap["zip_code"], _ = locationInfo["zip_code"]
 	}
 	eventPropertiesMap["category"], _ = eventMap["category"]
@@ -122,7 +123,7 @@ func translateEvent(eventMap map[string]interface{}) map[string]interface{} {
 	userPropertiesMap["gender"], _ = eventMap["gender"]
 	userPropertiesMap["age"], _ = eventMap["age"]
 	userPropertiesMap["marital_status"], _ = eventMap["marital_status"]
-	userPropertiesMap["$platform"], _ = eventMap["device"]
+	userPropertiesMap[U.UP_PLATFORM], _ = eventMap["device"]
 
 	eventRequestMap["event_properties"] = eventPropertiesMap
 	eventRequestMap["user_properties"] = userPropertiesMap

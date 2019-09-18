@@ -49,6 +49,42 @@ type sdkUpdateEventPropertiesPayload struct {
 	Properties U.PropertiesMap `json:"properties"`
 }
 
+// createNewSession - if there is an inactivity for the given duration,
+// creates a new session event.
+func createNewSession(projectId uint64, userId string, isFirstSession bool, requestTimestamp int64,
+	userPropertiesId string, eventProperties, userProperties *U.PropertiesMap) string {
+
+	var errMsg string
+	if errCode := M.IsAnyEventByUserInDuration(projectId, userId,
+		M.NewUserSessionInactivityDuration); errCode == http.StatusNotFound {
+
+		sessionEventName, errCode := M.CreateOrGetSessionEventName(projectId)
+		if errCode == http.StatusCreated || errCode == http.StatusConflict {
+			sessionEventProps := U.GetSessionProperties(isFirstSession, eventProperties, userProperties)
+			sessionPropsJson, err := json.Marshal(sessionEventProps)
+			if err != nil {
+				log.WithError(err).Error("Failed to add session event properties. JSON marshal failed.")
+				errMsg = "Failed to add session properties."
+			}
+
+			M.CreateEvent(&M.Event{
+				EventNameId:      sessionEventName.ID,
+				Timestamp:        requestTimestamp,
+				Properties:       postgres.Jsonb{sessionPropsJson},
+				ProjectId:        projectId,
+				UserId:           userId,
+				UserPropertiesId: userPropertiesId,
+			})
+		} else {
+			// continues with previous session on failure.
+			log.WithField("errCode", errCode).Error("Failed to create session event.")
+			errMsg = "Failed to associate event with user session."
+		}
+	}
+
+	return errMsg
+}
+
 func sdkTrack(projectId uint64, request *sdkTrackPayload, clientIP string) (int, *SDKTrackResponse) {
 	// Precondition: Fails if event_name not provided.
 	request.Name = strings.TrimSpace(request.Name) // Discourage whitespace on the end.
@@ -57,18 +93,6 @@ func sdkTrack(projectId uint64, request *sdkTrackPayload, clientIP string) (int,
 	}
 
 	response := &SDKTrackResponse{}
-
-	// Precondition: if user_id not given, create new user and respond.
-	if request.UserId == "" {
-		newUser := M.User{ProjectId: projectId}
-		_, errCode := M.CreateUser(&newUser)
-		if errCode != http.StatusCreated {
-			return errCode, &SDKTrackResponse{Error: "Tracking failed. User creation failed."}
-		}
-		request.UserId = newUser.ID
-		response.UserId = newUser.ID
-	}
-
 	var eventName *M.EventName
 	var eventNameErrCode int
 
@@ -79,16 +103,19 @@ func sdkTrack(projectId uint64, request *sdkTrackPayload, clientIP string) (int,
 		eventName, eventNameErrCode = M.FilterEventNameByEventURL(projectId, request.Name)
 		if eventNameErrCode != http.StatusFound {
 			// create a auto tracked event name if no filter_expr match.
-			eventName, eventNameErrCode = M.CreateOrGetAutoTrackedEventName(&M.EventName{Name: request.Name, ProjectId: projectId})
+			eventName, eventNameErrCode = M.CreateOrGetAutoTrackedEventName(
+				&M.EventName{Name: request.Name, ProjectId: projectId})
 		}
 
 		err := M.FillEventPropertiesByFilterExpr(&request.EventProperties, eventName.FilterExpr, request.Name)
 		if err != nil {
 			log.WithFields(log.Fields{"project_id": projectId, "filter_expr": eventName.FilterExpr,
-				"event_url": request.Name, log.ErrorKey: err}).Error("Failed to fill event url properties for auto tracked event.")
+				"event_url": request.Name, log.ErrorKey: err}).Error(
+				"Failed to fill event url properties for auto tracked event.")
 		}
 	} else {
-		eventName, eventNameErrCode = M.CreateOrGetUserCreatedEventName(&M.EventName{Name: request.Name, ProjectId: projectId})
+		eventName, eventNameErrCode = M.CreateOrGetUserCreatedEventName(
+			&M.EventName{Name: request.Name, ProjectId: projectId})
 	}
 
 	if eventNameErrCode != http.StatusCreated && eventNameErrCode != http.StatusConflict &&
@@ -97,43 +124,73 @@ func sdkTrack(projectId uint64, request *sdkTrackPayload, clientIP string) (int,
 	}
 
 	// Event Properties
-	validEventProperties := U.GetValidatedEventProperties(&request.EventProperties)
-	if ip, ok := (*validEventProperties)[U.EP_INTERNAL_IP]; ok && ip != "" {
+	definedEventProperties := U.MapEventPropertiesToDefinedProperties(&request.EventProperties)
+	eventProperties := U.GetValidatedEventProperties(definedEventProperties)
+	if ip, ok := (*eventProperties)[U.EP_INTERNAL_IP]; ok && ip != "" {
 		clientIP = ip.(string)
 	}
 	// Added IP to event proerties for internal usage.
-	(*validEventProperties)[U.EP_INTERNAL_IP] = clientIP
-	eventPropsJSON, err := json.Marshal(validEventProperties)
+	(*eventProperties)[U.EP_INTERNAL_IP] = clientIP
+	eventPropsJSON, err := json.Marshal(eventProperties)
 	if err != nil {
 		return http.StatusBadRequest, &SDKTrackResponse{Error: "Tracking failed. Invalid properties."}
 	}
 
-	// User Properties
-	validUserProperties := U.GetValidatedUserProperties(&request.UserProperties)
-	_ = M.FillLocationUserProperties(validUserProperties, clientIP)
-	userPropsJSON, err := json.Marshal(validUserProperties)
+	// Precondition: if user_id not given, create new user and respond.
+	newUserRequired := request.UserId == ""
+	if newUserRequired {
+		// initial user properties defined from event properties on user create.
+		initialUserProperties := U.GetInitialUserProperties(eventProperties)
+		initialUserPropsJSON, err := json.Marshal(initialUserProperties)
+		if err != nil {
+			log.WithFields(log.Fields{"initialUserProperties": initialUserProperties,
+				log.ErrorKey: err}).Error("Add initial user properties failed. JSON marshal failed.")
+			response.Error = "Failed adding initial user properties."
+		}
+
+		newUser := M.User{ProjectId: projectId, Properties: postgres.Jsonb{initialUserPropsJSON}}
+		_, errCode := M.CreateUser(&newUser)
+		if errCode != http.StatusCreated {
+			return errCode, &SDKTrackResponse{Error: "Tracking failed. User creation failed."}
+		}
+
+		request.UserId = newUser.ID
+		response.UserId = newUser.ID
+	}
+
+	userProperties := U.GetValidatedUserProperties(&request.UserProperties)
+	_ = M.FillLocationUserProperties(userProperties, clientIP)
+	userPropsJSON, err := json.Marshal(userProperties)
 	if err != nil {
-		log.WithFields(log.Fields{"userProperties": validUserProperties,
-			log.ErrorKey: err}).Error("Update user properites on track failed. Unmarshal json failed.")
+		log.WithFields(log.Fields{"userProperties": userProperties,
+			log.ErrorKey: err}).Error("Update user properites on track failed. JSON marshal failed.")
 		response.Error = "Failed updating user properties."
 	}
 
 	userPropertiesId, errCode := M.UpdateUserProperties(projectId, request.UserId, &postgres.Jsonb{userPropsJSON})
 	if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
-		log.WithFields(log.Fields{"userProperties": validUserProperties,
+		log.WithFields(log.Fields{"userProperties": userProperties,
 			log.ErrorKey: errCode}).Error("Update user properties on track failed. DB update failed.")
 		response.Error = "Failed updating user properties."
 	}
 
+	if errMsg := createNewSession(projectId, request.UserId, newUserRequired, request.Timestamp,
+		userPropertiesId, eventProperties, userProperties); errMsg != "" {
+		response.Error = errMsg
+	}
+
 	createdEvent, errCode := M.CreateEvent(&M.Event{
-		EventNameId:     eventName.ID,
-		CustomerEventId: request.CustomerEventId,
-		Timestamp:       request.Timestamp,
-		Properties:      postgres.Jsonb{eventPropsJSON},
-		ProjectId:       projectId, UserId: request.UserId, UserPropertiesId: userPropertiesId,
+		EventNameId:      eventName.ID,
+		CustomerEventId:  request.CustomerEventId,
+		Timestamp:        request.Timestamp,
+		Properties:       postgres.Jsonb{eventPropsJSON},
+		ProjectId:        projectId,
+		UserId:           request.UserId,
+		UserPropertiesId: userPropertiesId,
 	})
 	if errCode == http.StatusFound {
-		return errCode, &SDKTrackResponse{Error: "Tracking failed. Event creation failed. Duplicate CustomerEventID", CustomerEventId: request.CustomerEventId}
+		return errCode, &SDKTrackResponse{Error: "Tracking failed. Event creation failed. Duplicate CustomerEventID",
+			CustomerEventId: request.CustomerEventId}
 	} else if errCode != http.StatusCreated {
 		return errCode, &SDKTrackResponse{Error: "Tracking failed. Event creation failed."}
 	}

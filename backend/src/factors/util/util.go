@@ -35,12 +35,12 @@ func RandomUint64() uint64 {
 	return rand.Uint64()
 }
 
-func UnixTimeBefore24Hours() int64 {
-	return time.Now().Unix() - 86401
+func UnixTimeBeforeAWeek() int64 {
+	return UnixTimeBeforeDuration(168 * time.Hour) // 7 days.
 }
 
-func UnixTimeBeforeAWeek() int64 {
-	return time.Now().Unix() - 604801
+func UnixTimeBeforeDuration(duration time.Duration) int64 {
+	return time.Now().UTC().Unix() - int64(duration.Seconds())
 }
 
 func IsNumber(num string) bool {

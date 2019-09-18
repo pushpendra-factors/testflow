@@ -17,6 +17,7 @@ import (
 	"strings"
 	"time"
 
+	U "./util"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -100,7 +101,7 @@ func lineIngest(line string) {
 	eventRequestMap["event_properties"] = eventRequestPropertiesMap
 
 	userRequestPropertiesMap := make(map[string]interface{})
-	userRequestPropertiesMap["$country"] = country
+	userRequestPropertiesMap[U.UP_COUNTRY] = country
 	eventRequestMap["user_properties"] = userRequestPropertiesMap
 
 	reqBody, _ := json.Marshal(eventRequestMap)

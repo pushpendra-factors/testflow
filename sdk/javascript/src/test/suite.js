@@ -163,7 +163,8 @@ SuitePrivateMethod.testGetUserDefaultProperties = function() {
 
     // Check individual keys needed.
     assert.containsAllKeys(props, 
-        ["$platform", "$browser", "$browserVersion", "$os", "$osVersion", "$screenWidth", "$screenHeight"]);
+        ["$platform", "$browser", "$browser_version", "$browser_with_version", 
+        "$os", "$os_version", "$os_with_version", "$screen_width", "$screen_height"]);
     
     props = Properties.getUserDefault();
     if (props.$device) assert.isTrue(props.$device != "");
@@ -172,13 +173,16 @@ SuitePrivateMethod.testGetUserDefaultProperties = function() {
 SuitePrivateMethod.testGetEventDefaultProperties = function() {
     assert.isNotEmpty(Properties.getEventDefault())
     let props =  Properties.getEventDefault();
+    let emptyAllowed = ["$page_title", "$referrer", "$referrer_domain", "$referrer_url"];
     // No empty values.
-    for (let k in props) 
-        if(k != "$pageTitle" && k != "$referrer") // pageTitle and referrer can be empty.
+    for (let k in props)
+        // properties can be empty.
+        if(emptyAllowed.indexOf(k) == -1) 
             assert.isNotEmpty(props[k].toString(), "Empty: "+k);
     
     // Check individual keys needed.
-    assert.containsAllKeys(props, ["$referrer", "$pageTitle", "$rawURL"]);
+    assert.containsAllKeys(props, ["$page_domain", "$page_raw_url", "$page_title", "$page_url", 
+    "$referrer", "$referrer_domain", "$referrer_url"]);
 }
 
 SuitePrivateMethod.testGetTypeValidatedProperties = function() {
