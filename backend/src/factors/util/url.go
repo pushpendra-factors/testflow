@@ -67,7 +67,7 @@ func GetURLHostAndPath(parseURL string) (string, error) {
 	}
 
 	// adds / as suffix for root.
-	path := pURL.Path
+	path := GetURLPathWithHash(pURL)
 	if path == "" {
 		path = "/"
 	}

@@ -60,4 +60,8 @@ func TestUtilGetURLHostAndPath(t *testing.T) {
 	p3, err := U.GetURLHostAndPath(" ")
 	assert.NotNil(t, err)
 	assert.Empty(t, p3)
+
+	p4, err := U.GetURLHostAndPath("https://app.factors.ai/#/core")
+	assert.Nil(t, err)
+	assert.Equal(t, "app.factors.ai/#/core", p4)
 }
