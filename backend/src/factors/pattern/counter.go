@@ -184,7 +184,7 @@ func CollectPropertiesInfo(scanner *bufio.Scanner, userAndEventsInfo *UserAndEve
 				if len(userPropertiesInfo.CategoricalPropertyKeyValues) > maxProperties {
 					continue
 				}
-				categoricalValue := fmt.Sprintf("%v", value)
+				categoricalValue := U.GetPropertyValueAsString(value)
 				cmap, ok := userPropertiesInfo.CategoricalPropertyKeyValues[key]
 				if !ok {
 					cmap = make(map[string]bool)
@@ -215,7 +215,7 @@ func CollectPropertiesInfo(scanner *bufio.Scanner, userAndEventsInfo *UserAndEve
 				if len(eInfo.CategoricalPropertyKeyValues) > maxProperties {
 					continue
 				}
-				categoricalValue := fmt.Sprintf("%v", value)
+				categoricalValue := U.GetPropertyValueAsString(value)
 				cmap, ok := eInfo.CategoricalPropertyKeyValues[key]
 				if !ok {
 					cmap = make(map[string]bool)

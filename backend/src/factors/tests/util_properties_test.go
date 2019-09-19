@@ -47,3 +47,18 @@ func TestGetCleanPropertyValue(t *testing.T) {
 	assert.Equal(t, "value with?reserved+characters$are(properties)",
 		U.GetUnEscapedPropertyValue("value%20with%3Freserved%2Bcharacters%24are%28properties%29"))
 }
+
+func TestGetPropertyValueAsString(t *testing.T) {
+	var value interface{}
+	value = float64(6444173670)
+	assert.Equal(t, "6444173670", U.GetPropertyValueAsString(value))
+
+	value = int64(6444173670)
+	assert.Equal(t, "6444173670", U.GetPropertyValueAsString(value))
+
+	value = "google"
+	assert.Equal(t, "google", U.GetPropertyValueAsString(value))
+
+	value = true
+	assert.Equal(t, "true", U.GetPropertyValueAsString(value))
+}

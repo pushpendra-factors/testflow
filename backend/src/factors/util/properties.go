@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"strconv"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -722,4 +723,20 @@ func FillPropertiesFromURL(properties *PropertiesMap, url *url.URL) error {
 	}
 
 	return nil
+}
+
+func GetPropertyValueAsString(value interface{}) string {
+	switch valueType := value.(type) {
+	case float32, float64:
+		return fmt.Sprintf("%0.0f", value)
+	case int, int32, int64:
+		return fmt.Sprintf("%v", value)
+	case string:
+		return value.(string)
+	case bool:
+		return strconv.FormatBool(value.(bool))
+	default:
+		log.Error("Invalid value type on GetPropertyValueAsString : ", valueType)
+		return ""
+	}
 }
