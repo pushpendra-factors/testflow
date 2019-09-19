@@ -351,7 +351,7 @@ func TestDBGetSegmentUser(t *testing.T) {
 	// no customer uid. create new user with seg_aid.
 	segAid := U.RandomLowerAphaNumString(15)
 	user1, errCode := M.GetSegmentUser(project.ID, segAid, "")
-	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotNil(t, user1)
 	assert.Equal(t, segAid, user1.SegmentAnonymousId)
 	assert.Empty(t, user1.CustomerUserId)
@@ -398,7 +398,7 @@ func TestDBGetSegmentUser(t *testing.T) {
 	custId2 := U.RandomLowerAphaNumString(15)
 	segAid2 := U.RandomLowerAphaNumString(15)
 	user7, errCode := M.GetSegmentUser(project.ID, segAid2, custId2)
-	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, http.StatusCreated, errCode)
 	// new user with new seg_aid and c_uid.
 	assert.Equal(t, segAid2, user7.SegmentAnonymousId)
 	assert.Equal(t, custId2, user7.CustomerUserId)

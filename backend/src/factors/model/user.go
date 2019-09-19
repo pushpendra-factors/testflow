@@ -284,7 +284,7 @@ func GetSegmentUser(projectId uint64, segAnonId, custUserId string) (*User, int)
 			logCtx.WithField("err_code", errCode).Error("Failed creating user with c_uid. get_segment_user failed.")
 			return nil, errCode
 		}
-		return user, http.StatusOK
+		return user, errCode
 	}
 
 	logCtx = logCtx.WithField("provided_c_uid", custUserId).WithField("fetched_c_uid", user.CustomerUserId)

@@ -48,17 +48,16 @@ func IntSegmentHandler(c *gin.Context) {
 	})
 
 	user, errCode := M.GetSegmentUser(projectId, event.AnonymousID, event.UserId)
-	if errCode != http.StatusOK {
+	if errCode != http.StatusOK && errCode != http.StatusCreated {
 		c.AbortWithStatus(errCode)
 		return
 	}
+	isNewUser := errCode == http.StatusCreated
 
 	var unixTimestamp int64
 	if parsedTimestamp, err := time.Parse(time.RFC3339, event.Timestamp); err != nil {
-		logCtx.WithFields(log.Fields{
-			"timestamp":  event.Timestamp,
-			log.ErrorKey: err,
-		}).Error("Failed parsing segment event timestamp.")
+		logCtx.WithFields(log.Fields{"timestamp": event.Timestamp,
+			log.ErrorKey: err}).Error("Failed parsing segment event timestamp.")
 	} else {
 		unixTimestamp = parsedTimestamp.Unix()
 	}
@@ -86,6 +85,7 @@ func IntSegmentHandler(c *gin.Context) {
 		request := &sdkTrackPayload{
 			Name:            event.TrackName,
 			CustomerEventId: event.MessageID,
+			IsNewUser:       isNewUser,
 			UserId:          user.ID,
 			Auto:            false,
 			EventProperties: eventProperties,
@@ -118,6 +118,7 @@ func IntSegmentHandler(c *gin.Context) {
 		request := &sdkTrackPayload{
 			Name:            name,
 			UserId:          user.ID,
+			IsNewUser:       isNewUser,
 			Auto:            true,
 			CustomerEventId: event.MessageID,
 			EventProperties: eventProperties,
@@ -140,6 +141,7 @@ func IntSegmentHandler(c *gin.Context) {
 		request := &sdkTrackPayload{
 			Name:            event.ScreenName,
 			UserId:          user.ID,
+			IsNewUser:       isNewUser,
 			Auto:            false,
 			CustomerEventId: event.MessageID,
 			EventProperties: eventProperties,

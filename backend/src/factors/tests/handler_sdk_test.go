@@ -394,7 +394,7 @@ func TestSDKTrackHandler(t *testing.T) {
 	})
 }
 
-func TestTrackHandlerForCreateUserSessionOnInactivity(t *testing.T) {
+func TestTrackHandlerWithUserSession(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
 	H.InitSDKRoutes(r)
@@ -412,6 +412,7 @@ func TestTrackHandlerForCreateUserSessionOnInactivity(t *testing.T) {
 	assert.NotEmpty(t, responseMap)
 	assert.NotNil(t, responseMap["event_id"])
 	assert.NotNil(t, responseMap["user_id"])
+	responseUserId := responseMap["user_id"].(string)
 	sessionEventName, errCode := M.GetEventName(M.EVENT_NAME_SESSION, project.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, sessionEventName)
@@ -419,12 +420,10 @@ func TestTrackHandlerForCreateUserSessionOnInactivity(t *testing.T) {
 		responseMap["user_id"].(string), sessionEventName.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.True(t, len(userSessionEvents) == 1)
-
 	sessionPropertiesBytes, err := userSessionEvents[0].Properties.Value()
 	assert.Nil(t, err)
 	var sessionProperties map[string]interface{}
 	json.Unmarshal(sessionPropertiesBytes.([]byte), &sessionProperties)
-
 	assert.NotEmpty(t, sessionProperties[U.SP_IS_FIRST_SESSION])
 	assert.True(t, sessionProperties[U.SP_IS_FIRST_SESSION].(bool))
 	// session properties from user properties.
@@ -439,7 +438,6 @@ func TestTrackHandlerForCreateUserSessionOnInactivity(t *testing.T) {
 	assert.NotEmpty(t, sessionProperties[U.UP_CITY])
 	assert.NotEmpty(t, sessionProperties[U.UP_REGION])
 	assert.NotEmpty(t, sessionProperties[U.UP_TIMEZONE])
-
 	// session properties from event properties.
 	assert.NotEmpty(t, sessionProperties[U.UP_INITIAL_PAGE_URL])
 	assert.NotEmpty(t, sessionProperties[U.UP_INITIAL_PAGE_RAW_URL])
@@ -458,6 +456,25 @@ func TestTrackHandlerForCreateUserSessionOnInactivity(t *testing.T) {
 	assert.NotEmpty(t, sessionProperties[U.EP_CREATIVE])
 	assert.NotEmpty(t, sessionProperties[U.EP_GCLID])
 	assert.NotEmpty(t, sessionProperties[U.EP_FBCLIID])
+
+	// session with existing user and active.
+	eventName = U.RandomLowerAphaNumString(10)
+	// using user created on prev request.
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "event_properties": {}}`, eventName, responseUserId)), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	responseMap = DecodeJSONResponseToMap(w.Body)
+	assert.NotEmpty(t, responseMap)
+	assert.NotNil(t, responseMap["event_id"])
+	assert.Nil(t, responseMap["user_id"])
+	sessionEventName, errCode = M.GetEventName(M.EVENT_NAME_SESSION, project.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotNil(t, sessionEventName)
+	userSessionEvents2, errCode := M.GetUserEventsByEventNameId(project.ID, responseUserId,
+		sessionEventName.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+	// should not create new session.
+	assert.True(t, len(userSessionEvents2) == 1)
+	assert.Equal(t, userSessionEvents[0].ID, userSessionEvents2[0].ID)
 }
 
 func TestSDKIdentifyHandler(t *testing.T) {

@@ -20,6 +20,7 @@ type sdkTrackPayload struct {
 	UserProperties  U.PropertiesMap `json:"user_properties"`
 	ProjectId       uint64          `json:"project_id"`
 	UserId          string          `json:"user_id"`
+	IsNewUser       bool            `json:"-"` // Not part of request json payload.
 	Auto            bool            `json:"auto"`
 	Timestamp       int64           `json:"timestamp`
 }
@@ -137,8 +138,8 @@ func sdkTrack(projectId uint64, request *sdkTrackPayload, clientIP string) (int,
 	}
 
 	// Precondition: if user_id not given, create new user and respond.
-	newUserRequired := request.UserId == ""
-	if newUserRequired {
+	isUserFirstSession := request.IsNewUser
+	if request.UserId == "" {
 		// initial user properties defined from event properties on user create.
 		initialUserProperties := U.GetInitialUserProperties(eventProperties)
 		initialUserPropsJSON, err := json.Marshal(initialUserProperties)
@@ -156,6 +157,7 @@ func sdkTrack(projectId uint64, request *sdkTrackPayload, clientIP string) (int,
 
 		request.UserId = newUser.ID
 		response.UserId = newUser.ID
+		isUserFirstSession = true
 	}
 
 	userProperties := U.GetValidatedUserProperties(&request.UserProperties)
@@ -174,7 +176,7 @@ func sdkTrack(projectId uint64, request *sdkTrackPayload, clientIP string) (int,
 		response.Error = "Failed updating user properties."
 	}
 
-	if errMsg := createNewSession(projectId, request.UserId, newUserRequired, request.Timestamp,
+	if errMsg := createNewSession(projectId, request.UserId, isUserFirstSession, request.Timestamp,
 		userPropertiesId, eventProperties, userProperties); errMsg != "" {
 		response.Error = errMsg
 	}
