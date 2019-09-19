@@ -385,7 +385,7 @@ func clipCategoricalValue(catValue string) string {
 	return catValue[:MAX_CATEGORICAL_STRING_LENGTH]
 }
 
-func addNumericAndCategoricalProperties(
+func AddNumericAndCategoricalProperties(
 	eventIndex int, properties map[string]interface{},
 	nMap map[string]float64, cMap map[string]string) {
 	for key, value := range properties {
@@ -472,9 +472,9 @@ func (p *Pattern) CountForEvent(
 
 	if eventName == p.EventNames[p.waitIndex] {
 		// Update seen properties.
-		addNumericAndCategoricalProperties(
+		AddNumericAndCategoricalProperties(
 			p.waitIndex, eventProperties, p.currentEPropertiesNMap, p.currentEPropertiesCMap)
-		addNumericAndCategoricalProperties(
+		AddNumericAndCategoricalProperties(
 			p.waitIndex, userProperties, p.currentUPropertiesNMap, p.currentUPropertiesCMap)
 
 		p.waitIndex += 1

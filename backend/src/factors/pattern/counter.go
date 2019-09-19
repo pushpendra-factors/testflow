@@ -184,7 +184,7 @@ func CollectPropertiesInfo(scanner *bufio.Scanner, userAndEventsInfo *UserAndEve
 				if len(userPropertiesInfo.CategoricalPropertyKeyValues) > maxProperties {
 					continue
 				}
-				categoricalValue, _ := value.(string)
+				categoricalValue := fmt.Sprintf("%v", value)
 				cmap, ok := userPropertiesInfo.CategoricalPropertyKeyValues[key]
 				if !ok {
 					cmap = make(map[string]bool)
@@ -256,7 +256,7 @@ func ComputeAllUserPropertiesHistogram(scanner *bufio.Scanner, pattern *Pattern)
 			nMap := make(map[string]float64)
 			cMap := make(map[string]string)
 			// Histogram of all user properties as seen in their first event is tracked.
-			addNumericAndCategoricalProperties(0, userProperties, nMap, cMap)
+			AddNumericAndCategoricalProperties(0, userProperties, nMap, cMap)
 			if err := pattern.PerUserUserNumericProperties.AddMap(nMap); err != nil {
 				return err
 			}

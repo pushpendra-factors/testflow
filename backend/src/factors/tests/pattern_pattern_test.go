@@ -444,3 +444,30 @@ func TestPatternEdgeConditions(t *testing.T) {
 		make(map[string]interface{}), 1, userId, userCreatedTime.Unix())
 	assert.NotNil(t, err)
 }
+
+func TestAddNumericAndCategoricalProperties(t *testing.T) {
+	properties := map[string]interface{}{
+		"catProperty":      "1",
+		"numProperty":      1,
+		"$qp_utm_campaign": 123456,
+		"$qp_utm_keyword":  "analytics",
+		"$campaign_id":     23456,
+		"$cost":            10.0,
+	}
+	nMap := make(map[string]float64)
+	cMap := make(map[string]string)
+	P.AddNumericAndCategoricalProperties(0, properties, nMap, cMap)
+	assert.Contains(t, cMap, "0.catProperty")
+	assert.Contains(t, nMap, "0.numProperty")
+	assert.Contains(t, cMap, "0.$qp_utm_campaign")
+	assert.Contains(t, cMap, "0.$qp_utm_keyword")
+	assert.Contains(t, cMap, "0.$campaign_id")
+	assert.Contains(t, nMap, "0.$cost")
+
+	utm_campaign, _ := cMap["0.$qp_utm_campaign"]
+	assert.Equal(t, "123456", utm_campaign)
+	campaign_id, _ := cMap["0.$campaign_id"]
+	assert.Equal(t, "23456", campaign_id)
+	cost, _ := nMap["0.$cost"]
+	assert.Equal(t, 10.0, cost)
+}
