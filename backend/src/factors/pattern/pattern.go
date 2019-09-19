@@ -394,7 +394,7 @@ func addNumericAndCategoricalProperties(
 			numericValue, _ := value.(float64)
 			nMap[PatternPropertyKey(eventIndex, key)] = numericValue
 		} else if propertyType == U.PropertyTypeCategorical {
-			categoricalValue, _ := value.(string)
+			categoricalValue := fmt.Sprintf("%v", value)
 			categoricalValue = clipCategoricalValue(categoricalValue)
 			cMap[PatternPropertyKey(eventIndex, key)] = categoricalValue
 		}
