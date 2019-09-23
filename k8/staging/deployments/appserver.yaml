@@ -28,7 +28,7 @@ spec:
         cloud.google.com/gke-nodepool: factors-staging-node-pool
       containers:
       - name: appserver
-        image: us.gcr.io/factors-staging/app-server:v0.12-beta_452f98
+        image: us.gcr.io/factors-staging/app-server:v1.09-b868b72
         ports:
         - containerPort: 8080
         volumeMounts:
@@ -92,6 +92,8 @@ spec:
           - $(EMAIL_SENDER)
           - --error_reporting_interval
           - $(ERROR_REPORTING_INTERVAL)
+          - --login_token_map
+          - $(LOGIN_TOKEN_MAP)
         env:
           - name: MY_POD_IP
             valueFrom:
@@ -110,7 +112,9 @@ spec:
         - secretRef:
             name: secret-postgres
         - secretRef:
-            name: secret-aws    
+            name: secret-aws
+        - secretRef:
+            name: secret-login-token-map
       initContainers:
       - name: fetch-geolocation-file
         image: google/cloud-sdk:229.0.0-alpine

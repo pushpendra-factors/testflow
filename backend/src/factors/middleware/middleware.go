@@ -158,6 +158,7 @@ func CustomCors() gin.HandlerFunc {
 				corsConfig.AddAllowHeaders("Access-Control-Allow-Headers")
 				corsConfig.AddAllowHeaders("Access-Control-Allow-Origin")
 				corsConfig.AddAllowHeaders("content-type")
+				corsConfig.AddAllowHeaders("Authorization")
 			} else {
 				corsConfig.AllowOrigins = []string{
 					"http://app.factors.ai",
@@ -169,6 +170,7 @@ func CustomCors() gin.HandlerFunc {
 				corsConfig.AddAllowHeaders("Access-Control-Allow-Headers")
 				corsConfig.AddAllowHeaders("Access-Control-Allow-Origin")
 				corsConfig.AddAllowHeaders("content-type")
+				corsConfig.AddAllowHeaders("Authorization")
 			}
 		}
 		// Applys custom cors and proceed
@@ -239,33 +241,56 @@ func validateAuthData(authDataStr string) (*M.Agent, string, int) {
 
 func SetLoggedInAgent() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		cookieStr, err := c.Cookie(C.GetFactorsCookieName())
-		if err != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"error": "session cookie not found",
-			})
-			return
-		}
-		if cookieStr == "" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"error": "missing session cookie data",
-			})
-			return
-		}
+		var loginAgent *M.Agent
 
-		agent, errMsg, errCode := validateAuthData(cookieStr)
-		if errCode != http.StatusOK {
-			c.AbortWithStatusJSON(errCode, gin.H{
-				"error": errMsg,
-			})
-			return
+		authToken := c.Request.Header.Get("Authorization")
+		authToken = strings.TrimSpace(authToken)
+
+		if authToken != "" {
+			// Token login.
+			agentLoginTokenMap := C.GetConfig().LoginTokenMap
+			for token, email := range agentLoginTokenMap {
+				if authToken == token {
+					agent, errCode := M.GetAgentByEmail(email)
+					if errCode != http.StatusFound {
+						c.AbortWithStatusJSON(errCode, gin.H{"error": "invalid token"})
+						return
+					}
+
+					loginAgent = agent
+					break
+				}
+			}
+
+		} else {
+			// Cookie login.
+			cookieStr, err := c.Cookie(C.GetFactorsCookieName())
+			if err != nil {
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+					"error": "session cookie not found"})
+				return
+			}
+
+			if cookieStr == "" {
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+					"error": "missing session cookie data"})
+				return
+			}
+
+			agent, errMsg, errCode := validateAuthData(cookieStr)
+			if errCode != http.StatusOK {
+				c.AbortWithStatusJSON(errCode, gin.H{"error": errMsg})
+				return
+			}
+
+			loginAgent = agent
 		}
 
 		// TODO
 		// check if agent email is not verified
 		// send to verification page
 
-		U.SetScope(c, SCOPE_LOGGEDIN_AGENT_UUID, agent.UUID)
+		U.SetScope(c, SCOPE_LOGGEDIN_AGENT_UUID, loginAgent.UUID)
 		c.Next()
 	}
 }

@@ -20,6 +20,10 @@ function request(dispatch, method, url, headers, data) {
         options.headers["Content-Type"] = "application/json";
     }
 
+    if(window.FACTORS_AI_LOGIN_TOKEN && window.FACTORS_AI_LOGIN_TOKEN != "") {
+        options.headers["Authorization"] = window.FACTORS_AI_LOGIN_TOKEN;
+    }
+
     return fetch(url, options)
         .then((response) => { 
             if (response.status === 401){

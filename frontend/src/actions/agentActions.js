@@ -2,6 +2,14 @@ import { getHostURL } from "../util";
 import {get, post, put} from "./request.js";
 var host = getHostURL();
 
+export function setLoginToken(token="") {
+  return function(dispatch) {
+    if (token == "") return;
+    window.FACTORS_AI_LOGIN_TOKEN = token;
+    dispatch({ type: "AGENT_LOGIN_FULFILLED" });
+  }
+}
+
 export function fetchAgentInfo(){
   return function(dispatch) {
     return new Promise((resolve,reject) => {
@@ -11,7 +19,7 @@ export function fetchAgentInfo(){
             payload: response.data});
           resolve(response);
         })
-        .catch((err) => {       
+        .catch((err) => {
           dispatch({type:"FETCH_AGENT_INFO_REJECTED", 
             payload: 'Failed to fetch agent info'});
           reject(err);

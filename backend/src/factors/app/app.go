@@ -37,6 +37,8 @@ func main() {
 	factorsEmailSender := flag.String("email_sender", "support-dev@factors.ai", "")
 	errorReportingInterval := flag.Int("error_reporting_interval", 300, "")
 
+	loginTokenMap := flag.String("login_token_map", "", "Map of token and agent email to authenticate")
+
 	flag.Parse()
 
 	config := &C.Configuration{
@@ -58,6 +60,7 @@ func main() {
 		AWSRegion:              *awsRegion,
 		EmailSender:            *factorsEmailSender,
 		ErrorReportingInterval: *errorReportingInterval,
+		LoginTokenMap:          C.ParseConfigStringToMap(*loginTokenMap), // Map of "<token>": "<agent_email>".
 	}
 
 	// Initialize configs and connections.

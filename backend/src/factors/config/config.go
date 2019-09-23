@@ -54,6 +54,7 @@ type Configuration struct {
 	Cookiename             string
 	EmailSender            string
 	ErrorReportingInterval int
+	LoginTokenMap          map[string]string
 }
 
 type Services struct {
@@ -341,4 +342,28 @@ func GetCookieDomian() string {
 
 func GetFactorsCookieName() string {
 	return configuration.Cookiename
+}
+
+// ParseConfigStringToMap - Parses config string
+// "k1:v1,k2:v2"-> map[string]string{k1: v1, k2: v2}
+func ParseConfigStringToMap(configStr string) map[string]string {
+	configMap := make(map[string]string, 0)
+
+	if configStr == "" {
+		return configMap
+	}
+
+	commaSplit := strings.Split(configStr, ",")
+	if len(commaSplit) == 0 {
+		return configMap
+	}
+
+	for _, cs := range commaSplit {
+		kv := strings.Split(cs, ":")
+		if len(kv) == 2 && kv[0] != "" && kv[1] != "" {
+			configMap[kv[0]] = kv[1]
+		}
+	}
+
+	return configMap
 }

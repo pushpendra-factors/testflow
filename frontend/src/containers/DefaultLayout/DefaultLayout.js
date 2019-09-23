@@ -22,7 +22,7 @@ import {
 } from "../../actions/projectsActions";
 import Loading from '../../loading';
 import factorsicon from '../../assets/img/brand/factors-icon.svg';
-import { fetchAgentInfo, fetchAgentBillingAccount } from '../../actions/agentActions';
+import { fetchAgentInfo, fetchAgentBillingAccount, setLoginToken } from '../../actions/agentActions';
 import { hotjar } from 'react-hotjar';
 import { isProduction, isFromFactorsDomain } from '../../util';
 
@@ -49,7 +49,8 @@ const mapDispatchToProps = dispatch => {
     fetchProjects,
     fetchProjectModels,
     fetchAgentInfo,
-    fetchAgentBillingAccount
+    fetchAgentBillingAccount,
+    setLoginToken,
   }, dispatch);
 }
 
@@ -70,7 +71,21 @@ class DefaultLayout extends Component {
     }
   }
 
+  getLoginTokenFromQueryParams() {
+    let qParams = window.location.href.split("?");
+    if (qParams.length < 2) return "";
+
+    // no other params allowed when token given.
+    let params = qParams[1].split("=");
+    if (params.length < 2 || params[0] != "token") return "";
+
+    return params[1].trim();
+  }
+
   componentWillMount() {
+    let loginToken = this.getLoginTokenFromQueryParams();
+    if (loginToken != "") this.props.setLoginToken(loginToken);
+
     if (window.fcWidget) {
       window.fcWidget.init({
         token: "3208785c-3624-47c7-be9a-4f60aa0e60f9",
@@ -283,6 +298,7 @@ class DefaultLayout extends Component {
                     return (<InternalRoute key={idx} path={route.path} exact={route.exact} name={route.name} component={route.component}/>)
                   })
                 }
+
                 <Redirect from="/" to="/dashboard" />
               </Switch>
             </Container>
