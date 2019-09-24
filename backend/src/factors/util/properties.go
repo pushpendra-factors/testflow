@@ -475,14 +475,18 @@ func GetValidatedEventProperties(properties *PropertiesMap) *PropertiesMap {
 				propertyKey = k
 			}
 
-			if strings.HasPrefix(k, QUERY_PARAM_PROPERTY_PREFIX) {
-				validatedProperties[propertyKey] = GetUnEscapedPropertyValue(v)
-			} else {
-				validatedProperties[propertyKey] = v
-			}
+			validatedProperties[propertyKey] = v
 		}
 	}
 	return &validatedProperties
+}
+
+func UnEscapeQueryParamProperties(properties *PropertiesMap) {
+	for k := range *properties {
+		if strings.HasPrefix(k, QUERY_PARAM_PROPERTY_PREFIX) {
+			(*properties)[k] = GetUnEscapedPropertyValue((*properties)[k])
+		}
+	}
 }
 
 func MapEventPropertiesToDefinedProperties(properties *PropertiesMap) *PropertiesMap {

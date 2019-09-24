@@ -125,6 +125,7 @@ func sdkTrack(projectId uint64, request *sdkTrackPayload, clientIP string) (int,
 	}
 
 	// Event Properties
+	U.UnEscapeQueryParamProperties(&request.EventProperties)
 	definedEventProperties := U.MapEventPropertiesToDefinedProperties(&request.EventProperties)
 	eventProperties := U.GetValidatedEventProperties(definedEventProperties)
 	if ip, ok := (*eventProperties)[U.EP_INTERNAL_IP]; ok && ip != "" {
