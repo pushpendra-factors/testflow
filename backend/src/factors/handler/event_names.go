@@ -41,20 +41,20 @@ func GetEventNamesHandler(c *gin.Context) {
 	resultEventNames := make([]string, 0, 0)
 	resultEventLookup := make(map[uint64]bool, 0)
 
-	emptyEventNameIds := make([]uint64, 0, 0)
+	eventNameIdsOccuredNotExistOnResult := make([]uint64, 0, 0)
 	// Adds result event names by event occurrence count desc.
 	for _, eo := range eventsOccurrence {
-		if eventNamesByIdLookup[eo.EventNameId] != "" {
+		if _, exists := eventNamesByIdLookup[eo.EventNameId]; exists {
 			resultEventNames = append(resultEventNames, eventNamesByIdLookup[eo.EventNameId])
 			resultEventLookup[eo.EventNameId] = true
 		} else {
-			emptyEventNameIds = append(emptyEventNameIds, eo.EventNameId)
+			eventNameIdsOccuredNotExistOnResult = append(eventNameIdsOccuredNotExistOnResult, eo.EventNameId)
 		}
 	}
 
-	// For debugging empty event names on event_names response.
-	if len(emptyEventNameIds) > 0 {
-		log.WithField("emptyEventNameIds", emptyEventNameIds).Error("Invalid event names found.")
+	if len(eventNameIdsOccuredNotExistOnResult) > 0 {
+		log.WithField("eventNameIdsOccuredNotExistOnResult", eventNameIdsOccuredNotExistOnResult).WithField("projectId", projectId).Error(
+			"Event name occurred but not found on event names result.")
 	}
 
 	// Adds event names not available on events occurrence
