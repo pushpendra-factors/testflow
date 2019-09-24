@@ -89,7 +89,9 @@ spec:
           - --aws_secret
           - $(AWS_SECRET)
           - --email_sender
-          - $(EMAIL_SENDER)  
+          - $(EMAIL_SENDER)
+          - --login_token_map
+          - $(LOGIN_TOKEN_MAP)
         env:
           - name: MY_POD_IP
             valueFrom:
@@ -108,7 +110,9 @@ spec:
         - secretRef:
             name: secret-postgres
         - secretRef:
-            name: secret-aws    
+            name: secret-aws
+        - secretRef:
+            name: secret-login-token-map 
       initContainers:
       - name: fetch-geolocation-file
         image: google/cloud-sdk:229.0.0-alpine
