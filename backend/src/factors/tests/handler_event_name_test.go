@@ -66,19 +66,29 @@ func TestGetEventNamesHandler(t *testing.T) {
 	createEventWithTimestampByName(t, project, user, "event3", timeBeforeWeek)
 	createEventWithTimestampByName(t, project, user, "event4", timeBeforeWeek)
 
-	createEventWithTimestampByName(t, project, user, "event1", timeWithinWeek)
-	createEventWithTimestampByName(t, project, user, "event1", timeWithinWeek)
-	createEventWithTimestampByName(t, project, user, "event2", timeWithinWeek)
-	createEventWithTimestampByName(t, project, user, "event2", timeWithinWeek)
-	createEventWithTimestampByName(t, project, user, "event2", timeWithinWeek)
-
+	// Test zero events occurred on the occurrence count window.
 	w := sendGetEventNamesRequest(project.ID, agent, r)
 	assert.Equal(t, http.StatusOK, w.Code)
 	jsonResponse, _ := ioutil.ReadAll(w.Body)
 	eventNames := make([]string, 0, 0)
 	json.Unmarshal(jsonResponse, &eventNames)
-	assert.Len(t, eventNames, 4)
+	// should contain all event names.
+	assert.Len(t, eventNames, 2)
+	assert.Equal(t, "event3", eventNames[0])
+	assert.Equal(t, "event4", eventNames[1])
 
+	createEventWithTimestampByName(t, project, user, "event1", timeWithinWeek)
+	createEventWithTimestampByName(t, project, user, "event1", timeWithinWeek)
+	createEventWithTimestampByName(t, project, user, "event2", timeWithinWeek)
+	createEventWithTimestampByName(t, project, user, "event2", timeWithinWeek)
+	createEventWithTimestampByName(t, project, user, "event2", timeWithinWeek)
+
+	w = sendGetEventNamesRequest(project.ID, agent, r)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	eventNames = make([]string, 0, 0)
+	json.Unmarshal(jsonResponse, &eventNames)
+	assert.Len(t, eventNames, 4)
 	// should contain events ordered by occurrence count.
 	assert.Equal(t, "event2", eventNames[0])
 	assert.Equal(t, "event1", eventNames[1])

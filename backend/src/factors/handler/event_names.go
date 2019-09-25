@@ -23,7 +23,7 @@ func GetEventNamesHandler(c *gin.Context) {
 	}
 
 	occurredEventNames, errCode := M.GetEventNamesOrderedByOccurrence(projectId)
-	if errCode == http.StatusInternalServerError || errCode == http.StatusNotFound {
+	if errCode == http.StatusInternalServerError {
 		c.AbortWithStatus(errCode)
 		return
 	}
