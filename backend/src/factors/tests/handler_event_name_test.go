@@ -64,7 +64,7 @@ func TestGetEventNamesHandler(t *testing.T) {
 	timeWithinWeek := timestamp + 3600
 	timeBeforeWeek := timestamp - 3600
 	createEventWithTimestampByName(t, project, user, "event3", timeBeforeWeek)
-	createEventWithTimestampByName(t, project, user, "event3", timeBeforeWeek)
+	createEventWithTimestampByName(t, project, user, "event4", timeBeforeWeek)
 
 	createEventWithTimestampByName(t, project, user, "event1", timeWithinWeek)
 	createEventWithTimestampByName(t, project, user, "event1", timeWithinWeek)
@@ -77,13 +77,14 @@ func TestGetEventNamesHandler(t *testing.T) {
 	jsonResponse, _ := ioutil.ReadAll(w.Body)
 	eventNames := make([]string, 0, 0)
 	json.Unmarshal(jsonResponse, &eventNames)
-	assert.Len(t, eventNames, 2)
-
-	// should not contain event name didn't occur on the
-	// occurrence count window.
-	assert.NotContains(t, eventNames, "event3")
+	assert.Len(t, eventNames, 4)
 
 	// should contain events ordered by occurrence count.
 	assert.Equal(t, "event2", eventNames[0])
 	assert.Equal(t, "event1", eventNames[1])
+	// should contain all event names even though not
+	// occurred on the window.
+	assert.Equal(t, "event3", eventNames[2])
+	assert.Equal(t, "event4", eventNames[3])
+
 }

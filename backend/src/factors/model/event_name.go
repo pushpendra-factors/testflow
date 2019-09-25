@@ -48,6 +48,7 @@ var ALLOWED_TYPES = [...]string{
 }
 
 const URI_PROPERTY_PREFIX = ":"
+const EVENT_NAMES_LIMIT = 5000
 
 // TODO: Make index name a constant and read it
 // error constants
@@ -182,16 +183,14 @@ func GetEventNamesOrderedByOccurrence(projectId uint64) ([]EventName, int) {
 
 	// Gets occurrence count of event from events table for a limited time window
 	// and order by count then left join with event names.
-	queryStr := "SELECT name FROM (SELECT event_name_id, COUNT(*) FROM events" +
+	queryStr := "SELECT * FROM (SELECT event_name_id, COUNT(*) FROM events" +
 		" " + "WHERE project_id=? AND timestamp > ? GROUP BY event_name_id ORDER BY count DESC LIMIT ?)" +
 		" " + "AS event_occurrence LEFT JOIN event_names ON event_occurrence.event_name_id=event_names.id LIMIT ?"
 
 	const noOfEventsToLoadForOccurrenceSort = 100000
-	const noOfEventNamesToReturn = 5000
-
 	eventNames := make([]EventName, 0, 0)
 	rows, err := db.Raw(queryStr, projectId, eventsAfterTimestamp, noOfEventsToLoadForOccurrenceSort,
-		noOfEventNamesToReturn).Rows()
+		EVENT_NAMES_LIMIT).Rows()
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to execute query of get event names ordered by occurrence.")
 		return eventNames, http.StatusInternalServerError
