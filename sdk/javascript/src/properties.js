@@ -10,6 +10,10 @@ const PREFIX = "$";
 const PAGE_SPENT_TIME = PREFIX+"page_spent_time";
 const PAGE_LOAD_TIME = PREFIX+"page_load_time";
 
+function getURLsFromString(urlString='') {
+    return urlString.match(/(https?:\/\/[^\s]+)/g);
+}
+
 const BrowserInfo = {
     getBrowser: function () {
         // initial values for checks
@@ -71,21 +75,40 @@ const BrowserInfo = {
             }
 
 
-        // Firefox
+            // Firefox
         } else if ((verOffset = nAgt.indexOf('Firefox')) !== -1) {
             browser = 'Firefox';
             version = nAgt.substring(verOffset + 8);
 
 
-        // Other browsers
+            // Bots
+        } else if (nAgt && (nAgt.indexOf('http') || nAgt.toLowerCase().indexOf('bot') > -1)) {
+            let browserName = 'Bot';
+            let urls = getURLsFromString(nAgt);
+            if (urls && urls.length > 0) browserName = browserName + '-' + urls[0];
+
+            // name: Bot - https://googleads.com
+            return { name: browserName, version: '', versionString: '' }
+
+
+            // Others - Parsable.
         } else if ((nameOffset = nAgt.lastIndexOf(' ') + 1) < (verOffset = nAgt.lastIndexOf('/'))) {
             browser = nAgt.substring(nameOffset, verOffset);
             version = nAgt.substring(verOffset + 1);
             if (browser.toLowerCase() === browser.toUpperCase()) {
                 browser = navigator.appName;
             }
-        }
 
+
+            // Others - Not Parsable.
+        } else {
+            let browserName = '';
+            if (nAgt != '') browserName = nAgt;
+            else if (browser != '') browserName = browser;
+            else browserName = 'Unknown';
+
+            return { name: browserName, version: '', versionString: '' }
+        }
 
         // trim the version string
         if ((ix = version.indexOf(';')) !== -1) version = version.substring(0, ix);
@@ -101,8 +124,8 @@ const BrowserInfo = {
         }
 
         return {
-            name:browser,
-            version:majorVersion,
+            name: browser,
+            version :majorVersion,
             versionString: version
         };
     },
