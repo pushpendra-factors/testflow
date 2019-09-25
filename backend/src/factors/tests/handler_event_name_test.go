@@ -63,21 +63,27 @@ func TestGetEventNamesHandler(t *testing.T) {
 	timestamp := U.UnixTimeBeforeAWeek()
 	timeWithinWeek := timestamp + 3600
 	timeBeforeWeek := timestamp - 3600
-	createEventWithTimestampByName(t, project, user, "event1", timeWithinWeek)
-	createEventWithTimestampByName(t, project, user, "event1", timeWithinWeek)
-	createEventWithTimestampByName(t, project, user, "event2", timeBeforeWeek)
 	createEventWithTimestampByName(t, project, user, "event3", timeBeforeWeek)
 	createEventWithTimestampByName(t, project, user, "event3", timeBeforeWeek)
+
+	createEventWithTimestampByName(t, project, user, "event1", timeWithinWeek)
+	createEventWithTimestampByName(t, project, user, "event1", timeWithinWeek)
+	createEventWithTimestampByName(t, project, user, "event2", timeWithinWeek)
+	createEventWithTimestampByName(t, project, user, "event2", timeWithinWeek)
+	createEventWithTimestampByName(t, project, user, "event2", timeWithinWeek)
 
 	w := sendGetEventNamesRequest(project.ID, agent, r)
 	assert.Equal(t, http.StatusOK, w.Code)
 	jsonResponse, _ := ioutil.ReadAll(w.Body)
 	eventNames := make([]string, 0, 0)
 	json.Unmarshal(jsonResponse, &eventNames)
-	assert.Len(t, eventNames, 3)
+	assert.Len(t, eventNames, 2)
 
-	// validates order of event names.
-	assert.Equal(t, "event1", eventNames[0])
-	assert.Equal(t, "event2", eventNames[1])
-	assert.Equal(t, "event3", eventNames[2])
+	// should not contain event name didn't occur on the
+	// occurrence count window.
+	assert.NotContains(t, eventNames, "event3")
+
+	// should contain events ordered by occurrence count.
+	assert.Equal(t, "event2", eventNames[0])
+	assert.Equal(t, "event1", eventNames[1])
 }

@@ -22,50 +22,18 @@ func GetEventNamesHandler(c *gin.Context) {
 		return
 	}
 
-	eventNames, errCode := M.GetEventNames(projectId)
+	eventNames, errCode := M.GetEventNamesOrderedByOccurrence(projectId)
 	if errCode == http.StatusInternalServerError || errCode == http.StatusNotFound {
 		c.AbortWithStatus(errCode)
 		return
 	}
 
-	eventNamesByIdLookup := make(map[uint64]string, 0)
-	for _, en := range eventNames {
-		eventNamesByIdLookup[en.ID] = en.Name
+	names := make([]string, 0, 0)
+	for _, eventName := range eventNames {
+		names = append(names, eventName.Name)
 	}
 
-	eventsOccurrence, errCode := M.GetEventsOccurrenceCount(projectId)
-	if errCode == http.StatusInternalServerError {
-		log.WithField("projectId", projectId).Error("Failed to get occurrence count for ordering event names.")
-	}
-
-	resultEventNames := make([]string, 0, 0)
-	resultEventLookup := make(map[uint64]bool, 0)
-
-	eventNameIdsOccuredNotExistOnResult := make([]uint64, 0, 0)
-	// Adds result event names by event occurrence count desc.
-	for _, eo := range eventsOccurrence {
-		if _, exists := eventNamesByIdLookup[eo.EventNameId]; exists {
-			resultEventNames = append(resultEventNames, eventNamesByIdLookup[eo.EventNameId])
-			resultEventLookup[eo.EventNameId] = true
-		} else {
-			eventNameIdsOccuredNotExistOnResult = append(eventNameIdsOccuredNotExistOnResult, eo.EventNameId)
-		}
-	}
-
-	if len(eventNameIdsOccuredNotExistOnResult) > 0 {
-		log.WithField("eventNameIdsOccuredNotExistOnResult", eventNameIdsOccuredNotExistOnResult).WithField("projectId", projectId).Error(
-			"Event name occurred but not found on event names result.")
-	}
-
-	// Adds event names not available on events occurrence
-	// by created_at on asc.
-	for _, en := range eventNames {
-		if _, exists := resultEventLookup[en.ID]; !exists {
-			resultEventNames = append(resultEventNames, en.Name)
-		}
-	}
-
-	c.JSON(http.StatusOK, resultEventNames)
+	c.JSON(http.StatusOK, names)
 }
 
 // Test command.

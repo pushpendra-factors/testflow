@@ -173,6 +173,47 @@ func GetEventNames(projectId uint64) ([]EventName, int) {
 	return eventNames, http.StatusFound
 }
 
+func GetEventNamesOrderedByOccurrence(projectId uint64) ([]EventName, int) {
+	db := C.GetServices().Db
+
+	eventsAfterTimestamp := U.UnixTimeBeforeAWeek()
+
+	logCtx := log.WithFields(log.Fields{"projectId": projectId, "eventsAfterTimestamp": eventsAfterTimestamp})
+
+	// Gets occurrence count of event from events table for a limited time window
+	// and order by count then left join with event names.
+	queryStr := "SELECT name FROM (SELECT event_name_id, COUNT(*) FROM events" +
+		" " + "WHERE project_id=? AND timestamp > ? GROUP BY event_name_id ORDER BY count DESC LIMIT ?)" +
+		" " + "AS event_occurrence LEFT JOIN event_names ON event_occurrence.event_name_id=event_names.id LIMIT ?"
+
+	const noOfEventsToLoadForOccurrenceSort = 100000
+	const noOfEventNamesToReturn = 5000
+
+	eventNames := make([]EventName, 0, 0)
+	rows, err := db.Raw(queryStr, projectId, eventsAfterTimestamp, noOfEventsToLoadForOccurrenceSort,
+		noOfEventNamesToReturn).Rows()
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to execute query of get event names ordered by occurrence.")
+		return eventNames, http.StatusInternalServerError
+	}
+
+	for rows.Next() {
+		var eventName EventName
+		if err := db.ScanRows(rows, &eventName); err != nil {
+			logCtx.WithError(err).Error("Failed scanning rows on get event names ordered by occurrence.")
+			return eventNames, http.StatusInternalServerError
+		}
+
+		eventNames = append(eventNames, eventName)
+	}
+
+	if len(eventNames) == 0 {
+		return eventNames, http.StatusNotFound
+	}
+
+	return eventNames, http.StatusFound
+}
+
 func GetFilterEventNames(projectId uint64) ([]EventName, int) {
 	db := C.GetServices().Db
 
