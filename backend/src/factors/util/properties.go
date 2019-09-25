@@ -147,6 +147,9 @@ var UP_TOTAL_REVENUE string = "$total_revenue"
 var SP_IS_FIRST_SESSION = "$is_first_session"
 var SP_PAGE_VIEWS = "$page_views"
 var SP_SESSION_TIME = "$session_time"
+var SP_INITIAL_REFERRER = "$initial_referrer"
+var SP_INITIAL_REFERRER_URL = "$initial_referrer_url"
+var SP_INITIAL_REFERRER_DOMAIN = "$initial_referrer_domain"
 
 var SDK_ALLOWED_EVENT_PROPERTIES = [...]string{
 	EP_INTERNAL_IP,
@@ -334,6 +337,7 @@ var USER_TO_SESSION_PROPERTIES = [...]string{
 }
 
 var EVENT_TO_SESSION_PROPERTIES = map[string]string{
+	// Uses user property names.
 	EP_PAGE_URL:        UP_INITIAL_PAGE_URL,
 	EP_PAGE_RAW_URL:    UP_INITIAL_PAGE_RAW_URL,
 	EP_PAGE_DOMAIN:     UP_INITIAL_PAGE_DOMAIN,
@@ -342,7 +346,7 @@ var EVENT_TO_SESSION_PROPERTIES = map[string]string{
 	EP_COST:            UP_INITIAL_COST,
 	EP_REVENUE:         UP_INITIAL_REVENUE,
 
-	// Uses same name as source event properties.
+	// Uses same name as event properties.
 	EP_CAMPAIGN:           EP_CAMPAIGN,
 	EP_CAMPAIGN_ID:        EP_CAMPAIGN_ID,
 	EP_SOURCE:             EP_SOURCE,
@@ -355,6 +359,11 @@ var EVENT_TO_SESSION_PROPERTIES = map[string]string{
 	EP_CREATIVE:           EP_CREATIVE,
 	EP_GCLID:              EP_GCLID,
 	EP_FBCLIID:            EP_FBCLIID,
+
+	// Uses session property names.
+	EP_REFERRER:        SP_INITIAL_REFERRER,
+	EP_REFERRER_URL:    SP_INITIAL_REFERRER_URL,
+	EP_REFERRER_DOMAIN: SP_INITIAL_REFERRER_DOMAIN,
 }
 
 const SamplePropertyValuesLimit = 100
