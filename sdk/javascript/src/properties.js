@@ -10,11 +10,19 @@ const PREFIX = "$";
 const PAGE_SPENT_TIME = PREFIX+"page_spent_time";
 const PAGE_LOAD_TIME = PREFIX+"page_load_time";
 
-function getURLsFromString(urlString='') {
-    return urlString.match(/(https?:\/\/[^\s]+)/g);
+const isBotUserAgent = function(nAgt) {
+    let lcaseAgt = nAgt.toLowerCase();
+    return lcaseAgt.indexOf('http://') > -1 || lcaseAgt.indexOf('https://') > -1 || 
+        lcaseAgt.indexOf('bot') > -1 || lcaseAgt.indexOf('spider') > -1 || lcaseAgt.indexOf('crawler') > -1;
 }
 
 const BrowserInfo = {
+    getUserAgent: function() {
+        if (navigator.userAgent != '') return navigator.userAgent;
+        // support for Netscape.
+        if (navigator.appName != '') return navigator.appName;
+        return null;
+    },
     getBrowser: function () {
         // initial values for checks
         var
@@ -52,7 +60,7 @@ const BrowserInfo = {
             if ((verOffset = nAgt.indexOf('rv:')) !== -1) {
                 version = nAgt.substring(verOffset + 3);
             }
-        
+
 
             // Chrome
         } else if ((verOffset = nAgt.indexOf('Chrome')) !== -1) {
@@ -81,33 +89,15 @@ const BrowserInfo = {
             version = nAgt.substring(verOffset + 8);
 
 
-            // Bots
-        } else if (nAgt && (nAgt.indexOf('http') || nAgt.toLowerCase().indexOf('bot') > -1)) {
-            let browserName = 'Bot';
-            let urls = getURLsFromString(nAgt);
-            if (urls && urls.length > 0) browserName = browserName + '-' + urls[0];
+            // Bot
+        } else if (nAgt && isBotUserAgent(nAgt)) {
+            // storing raw user agent as property separately.
+            return { name: 'Bot' };
 
-            // name: Bot - https://googleads.com
-            return { name: browserName, version: '', versionString: '' }
-
-
-            // Others - Parsable.
-        } else if ((nameOffset = nAgt.lastIndexOf(' ') + 1) < (verOffset = nAgt.lastIndexOf('/'))) {
-            browser = nAgt.substring(nameOffset, verOffset);
-            version = nAgt.substring(verOffset + 1);
-            if (browser.toLowerCase() === browser.toUpperCase()) {
-                browser = navigator.appName;
-            }
-
-
-            // Others - Not Parsable.
+            // Unknown
         } else {
-            let browserName = '';
-            if (nAgt != '') browserName = nAgt;
-            else if (browser != '') browserName = browser;
-            else browserName = 'Unknown';
-
-            return { name: browserName, version: '', versionString: '' }
+            // storing raw user agent as property separately.
+            return { name: 'Unknown' };
         }
 
         // trim the version string
@@ -347,13 +337,15 @@ function getUserDefault() {
     let dp = {};
     dp[PREFIX+"platform"] = PLATFORM_WEB;
 
+    let userAgent = BrowserInfo.getUserAgent();
+    if (userAgent && userAgent != '') dp[PREFIX+"user_agent"] = userAgent;
+
     let browser = BrowserInfo.getBrowser();
     if (browser.name) dp[PREFIX+"browser"] = browser.name;
     if (browser.versionString) dp[PREFIX+"browser_version"] = browser.versionString;
     if (browser.name && browser.versionString) 
         dp[PREFIX+"browser_with_version"] = browser.name + '-' + browser.versionString;
     
-
     let os = BrowserInfo.getOS();
     if (os.name) dp[PREFIX+"os"] = os.name;
     if (os.versionString) dp[PREFIX+"os_version"] = os.versionString;
