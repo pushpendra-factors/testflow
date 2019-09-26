@@ -144,6 +144,23 @@ class QueryBuilderCard extends Component {
     }
   }
 
+  componentDidMount() {
+    if (this.props.initEventName && this.props.initEventName != "") {
+      let eventName = this.props.initEventName;
+      let values = [{ label: eventName, value: eventName, currentState: STATE_EVENTS, nextState: STATE_PROPERTY_TYPE, type: "eventName" }];
+      let actionMeta = { 
+        action: "select-option", 
+        option: { label: eventName, value: eventName, currentState: STATE_EVENTS, nextState: STATE_PROPERTY_TYPE, type: "eventName" } 
+      }
+
+      // initialize query with event name using
+      // existing handle change method.
+      this.handleChange(values, actionMeta);
+      // trigger factor.
+      this.props.onKeyDown(values, this.state.type.value);
+    }
+  }
+
   shouldComponentUpdate(nextProps, nextState) {
     // Deep equal is not required, if we don't copy eventNames to components state.
     if (!deepEqual(this.props.currentProjectEventNames, nextProps.currentProjectEventNames)) {

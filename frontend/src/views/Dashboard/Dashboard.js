@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
+import { Redirect } from 'react-router-dom';
 import { Row, Col, Button, Modal, ModalHeader, 
   ModalBody, ModalFooter, Form, Input } from 'reactstrap';
 import Select from 'react-select';
@@ -13,7 +14,7 @@ import moment from 'moment';
 import DashboardUnit from './DashboardUnit';
 import { fetchDashboards, createDashboard, updateDashboard,
   fetchDashboardUnits } from '../../actions/dashboardActions';
-import { createSelectOpts, makeSelectOpt } from '../../util';
+import { createSelectOpts, makeSelectOpt, isTokenLogin } from '../../util';
 import NoContent from '../../common/NoContent';
 import ClosableDateRangePicker from '../../common/ClosableDatePicker';
 import Loading from '../../loading';
@@ -359,6 +360,7 @@ class Dashboard extends Component {
   }
 
   render() {
+    if (isTokenLogin()) return <Redirect to='/factor' />;
     if (this.isLoading()) return <Loading paddingTop='20%'/>;
 
     return (

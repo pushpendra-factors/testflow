@@ -137,3 +137,12 @@ export function isFromFactorsDomain(email){
 export function getTimezoneString() {
     return Intl.DateTimeFormat().resolvedOptions().timeZone;
 }
+
+export function getLoginToken() {
+    return window.FACTORS_AI_LOGIN_TOKEN;
+}
+
+export function isTokenLogin() {
+    let loginToken = getLoginToken();
+    return loginToken && loginToken != '';
+}

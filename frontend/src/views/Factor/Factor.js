@@ -22,6 +22,7 @@ import {
 } from './QueryBuilderCard';
 import Loading from '../../loading';
 import loadingImage from '../../assets/img/loading_gray.gif';
+import { getLoginToken } from '../../util';
 
 
 import Select from 'react-select';
@@ -464,6 +465,14 @@ class Factor extends Component {
     return charts;
   }
 
+  getInitEventName() {
+    let loginToken = getLoginToken();
+    let isLoginWithToken = loginToken && loginToken != '';
+
+    // init event name based on login token.
+    if (isLoginWithToken) return "signup";
+  }
+
   isLoaded() {
     if(!this.props.currentProjectId){
       return true;
@@ -523,6 +532,7 @@ class Factor extends Component {
                     holderText="Enter goal."
                     resetCharts={this.props.resetFactors}
                     selectedModelId={this.state.selectedModelInterval !=null ? this.state.selectedModelInterval.mid: ""}
+                    initEventName={this.getInitEventName()}
                   />
                 </Col>
               </Row>
