@@ -12,8 +12,9 @@ const PAGE_LOAD_TIME = PREFIX+"page_load_time";
 
 const isBotUserAgent = function(nAgt) {
     let lcaseAgt = nAgt.toLowerCase();
-    return lcaseAgt.indexOf('http://') > -1 || lcaseAgt.indexOf('https://') > -1 || 
-        lcaseAgt.indexOf('bot') > -1 || lcaseAgt.indexOf('spider') > -1 || lcaseAgt.indexOf('crawler') > -1;
+    // ref: https://stackoverflow.com/a/15047834, https://webmasters.stackexchange.com/a/64805
+    return lcaseAgt.indexOf('bot') > -1 || lcaseAgt.indexOf('spider') > -1 || lcaseAgt.indexOf('crawl') > -1 || 
+        lcaseAgt.indexOf('slurp') > -1 || lcaseAgt.indexOf('mediapartners') > -1;
 }
 
 const BrowserInfo = {
