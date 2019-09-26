@@ -313,10 +313,9 @@ func GetRecentUserPropertyKeysWithLimits(projectId uint64, usersLimit int) (map[
 
 	logCtx := log.WithField("project_id", projectId)
 
-	queryStr := "WITH recent_users AS (SELECT id FROM users WHERE project_id = ? ORDER BY created_at DESC LIMIT ?)" +
-		" " + "SELECT DISTINCT(user_properties.properties) FROM recent_users" +
-		" " + "LEFT JOIN user_properties ON recent_users.id = user_properties.user_id WHERE user_properties.project_id = ?" +
-		" " + "AND user_properties.properties != 'null'"
+	queryStr := "WITH recent_users AS (SELECT properties_id FROM users WHERE project_id = ? ORDER BY created_at DESC LIMIT ?)" +
+		" " + "SELECT user_properties.properties FROM recent_users LEFT JOIN user_properties ON recent_users.properties_id = user_properties.id" +
+		" " + "WHERE user_properties.project_id = ? AND user_properties.properties != 'null';"
 
 	rows, err := db.Raw(queryStr, projectId, usersLimit, projectId).Rows()
 	if err != nil {
