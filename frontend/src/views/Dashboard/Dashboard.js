@@ -14,7 +14,7 @@ import moment from 'moment';
 import DashboardUnit from './DashboardUnit';
 import { fetchDashboards, createDashboard, updateDashboard,
   fetchDashboardUnits } from '../../actions/dashboardActions';
-import { createSelectOpts, makeSelectOpt, isTokenLogin } from '../../util';
+import { createSelectOpts, makeSelectOpt } from '../../util';
 import NoContent from '../../common/NoContent';
 import ClosableDateRangePicker from '../../common/ClosableDatePicker';
 import Loading from '../../loading';
@@ -360,7 +360,6 @@ class Dashboard extends Component {
   }
 
   render() {
-    if (isTokenLogin()) return <Redirect to='/factor' />;
     if (this.isLoading()) return <Loading paddingTop='20%'/>;
 
     return (
