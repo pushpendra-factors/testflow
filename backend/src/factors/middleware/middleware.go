@@ -290,6 +290,11 @@ func SetLoggedInAgent() gin.HandlerFunc {
 		// check if agent email is not verified
 		// send to verification page
 
+		if loginAgent == nil {
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "unable to authenticate"})
+			return
+		}
+
 		U.SetScope(c, SCOPE_LOGGEDIN_AGENT_UUID, loginAgent.UUID)
 		c.Next()
 	}
