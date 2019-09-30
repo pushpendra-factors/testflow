@@ -92,6 +92,10 @@ spec:
           - $(EMAIL_SENDER)
           - --login_token_map
           - $(LOGIN_TOKEN_MAP)
+          - --admin_login_email
+          - $(ADMIN_LOGIN_EMAIL)
+          - --admin_login_token
+          - $(ADMIN_LOGIN_TOKEN)
         env:
           - name: MY_POD_IP
             valueFrom:
@@ -112,7 +116,7 @@ spec:
         - secretRef:
             name: secret-aws
         - secretRef:
-            name: secret-login-token-map 
+            name: secret-login-token
       initContainers:
       - name: fetch-geolocation-file
         image: google/cloud-sdk:229.0.0-alpine
