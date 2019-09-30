@@ -384,15 +384,16 @@ class Factor extends Component {
     console.log('Fire Query: ' + JSON.stringify(query));
 
     this.setState({ factors: { loading: LOADING_INIT } });
+    if (!this.state.selectedModelInterval) return;
 
     let eventProperties = {
       projectId: this.props.currentProjectId,
       modelId: this.state.selectedModelInterval.mid,
       interval: this.getReadableInterval(this.state.selectedModelInterval),
-      query: JSON.stringify(query),
+      query: JSON.stringify(query), 
     };
-    let startTime = new Date().getTime();
 
+    let startTime = new Date().getTime();
     this.props.fetchFactors(this.props.currentProjectId,
       this.state.selectedModelInterval.mid, { query: query }, this.props.location.search)
         .then((response) => {
@@ -408,13 +409,12 @@ class Factor extends Component {
         })
         .catch((err) => {
           console.error(err);
-
           let endTime = new Date().getTime();
           eventProperties['time_taken_in_ms'] = endTime - startTime;
           eventProperties['error'] = err.message;
           eventProperties['request_failed'] = 'true';
           factorsai.track('factor', eventProperties);
-        })
+        });
 
   }
 
@@ -423,6 +423,8 @@ class Factor extends Component {
   }
 
   getReadableInterval = (interval) => {
+    if (!interval) return null;
+
     let prefix = ''
     if (interval.mt === 'w') { prefix = '[w]'; }
     else if (interval.mt === 'm') { prefix = '[m]'; }

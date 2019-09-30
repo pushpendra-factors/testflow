@@ -54,6 +54,8 @@ type Configuration struct {
 	Cookiename             string
 	EmailSender            string
 	ErrorReportingInterval int
+	AdminLoginEmail        string
+	AdminLoginToken        string
 	LoginTokenMap          map[string]string
 }
 

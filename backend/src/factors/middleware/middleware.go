@@ -32,6 +32,8 @@ const SCOPE_REQ_ID = "requestId"
 const PREFIX_PATH_SDK = "/sdk/"
 const PREFIX_PATH_INTEGRATIONS = "/integrations"
 
+const ADMIN_LOGIN_TOKEN_SEP = ":"
+
 // SetScopeProjectIdByToken - Request scope set by token on 'Authorization' header.
 func SetScopeProjectIdByToken() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -239,29 +241,49 @@ func validateAuthData(authDataStr string) (*M.Agent, string, int) {
 	return agent, "", http.StatusOK
 }
 
+func isAdminTokenLogin(token string) bool {
+	configAdminEmail := C.GetConfig().AdminLoginEmail
+	configAdminToken := C.GetConfig().AdminLoginToken
+	token = strings.TrimSpace(token)
+
+	return configAdminEmail != "" && configAdminToken != "" && token != "" &&
+		// login token for admin would be <token>:<project_id>.
+		strings.HasPrefix(token, configAdminToken+ADMIN_LOGIN_TOKEN_SEP)
+}
+
 func SetLoggedInAgent() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var loginAgent *M.Agent
 
-		authToken := c.Request.Header.Get("Authorization")
-		authToken = strings.TrimSpace(authToken)
+		loginAuthToken := c.Request.Header.Get("Authorization")
+		loginAuthToken = strings.TrimSpace(loginAuthToken)
 
-		if authToken != "" {
-			// Token login.
-			agentLoginTokenMap := C.GetConfig().LoginTokenMap
-			for token, email := range agentLoginTokenMap {
-				if authToken == token {
-					agent, errCode := M.GetAgentByEmail(email)
-					if errCode != http.StatusFound {
-						c.AbortWithStatusJSON(errCode, gin.H{"error": "invalid token"})
-						return
+		if loginAuthToken != "" {
+			// Admin token login.
+			if isAdminTokenLogin(loginAuthToken) {
+				agent, errCode := M.GetAgentByEmail(C.GetConfig().AdminLoginEmail)
+				if errCode != http.StatusFound {
+					c.AbortWithStatus(errCode)
+					return
+				}
+
+				loginAgent = agent
+			} else {
+				// Agent token login.
+				agentLoginTokenMap := C.GetConfig().LoginTokenMap
+				for token, email := range agentLoginTokenMap {
+					if loginAuthToken == token {
+						agent, errCode := M.GetAgentByEmail(email)
+						if errCode != http.StatusFound {
+							c.AbortWithStatusJSON(errCode, gin.H{"error": "invalid token"})
+							return
+						}
+
+						loginAgent = agent
+						break
 					}
-
-					loginAgent = agent
-					break
 				}
 			}
-
 		} else {
 			// Cookie login.
 			cookieStr, err := c.Cookie(C.GetFactorsCookieName())
@@ -305,16 +327,39 @@ func SetAuthorizedProjectsByLoggedInAgent() gin.HandlerFunc {
 
 		loggedInAgentUUID := U.GetScopeByKeyAsString(c, SCOPE_LOGGEDIN_AGENT_UUID)
 
-		projectAgentMappings, errCode := M.GetProjectAgentMappingsByAgentUUID(loggedInAgentUUID)
-		if errCode == http.StatusInternalServerError {
-			c.AbortWithStatusJSON(http.StatusInternalServerError,
-				gin.H{"error": "Failed to get projects."})
-			return
-		}
+		loginAdminToken := c.Request.Header.Get("Authorization")
+		loginAdminToken = strings.TrimSpace(loginAdminToken)
 
 		var projectIds []uint64
-		for _, pam := range projectAgentMappings {
-			projectIds = append(projectIds, pam.ProjectID)
+
+		if isAdminTokenLogin(loginAdminToken) {
+			// Set project with admin token.
+			// Login token for admin would be like, <token>:<project_id>.
+			splitToken := strings.Split(loginAdminToken, ADMIN_LOGIN_TOKEN_SEP)
+			if len(splitToken) != 2 {
+				c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid token."})
+				return
+			}
+
+			tokenProjectId := strings.TrimSpace(splitToken[1])
+			projectId, err := strconv.ParseUint(tokenProjectId, 10, 64)
+			if err != nil {
+				c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid token and project_id."})
+				return
+			}
+			projectIds = append(projectIds, projectId)
+		} else {
+			// Set project with project agent mapping.
+
+			projectAgentMappings, errCode := M.GetProjectAgentMappingsByAgentUUID(loggedInAgentUUID)
+			if errCode == http.StatusInternalServerError {
+				c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Failed to get projects."})
+				return
+			}
+
+			for _, pam := range projectAgentMappings {
+				projectIds = append(projectIds, pam.ProjectID)
+			}
 		}
 
 		U.SetScope(c, SCOPE_AUTHORIZED_PROJECTS, projectIds)
