@@ -5,6 +5,12 @@ var DIST_DIR = path.join(__dirname, "dist");
 var PORT = 3000;
 var app = express();
 
+app.use((req, res, next) => {
+  res.set("Cache-Control", "no-cache, no-store, must-revalidate");
+  res.set("Pragma", "no-cache");
+  res.set("Expires", "0");
+  next();
+});
 app.use(express.static(DIST_DIR));
 
 app.get("*", function (req, res) {
