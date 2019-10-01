@@ -24,7 +24,7 @@ import Loading from '../../loading';
 import factorsicon from '../../assets/img/brand/factors-icon.svg';
 import { fetchAgentInfo, fetchAgentBillingAccount, setLoginToken } from '../../actions/agentActions';
 import { hotjar } from 'react-hotjar';
-import { isProduction, isFromFactorsDomain } from '../../util';
+import { isProduction, isFromFactorsDomain, isTokenLogin } from '../../util';
 
 // inits factorsai sdk for app.
 import factorsai from '../../common/factorsaiObj';
@@ -273,6 +273,9 @@ class DefaultLayout extends Component {
       sideBarItemsToDisplay.items = [...sideBarItems , ...internalSideBarItems]
     }
 
+    let appHomePath = "/dashboard";
+    if (isTokenLogin()) appHomePath = "/factor";
+
     return (
       <div className="app">
         <div className="app-body fapp-body">
@@ -299,7 +302,7 @@ class DefaultLayout extends Component {
                   })
                 }
 
-                <Redirect from="/" to="/dashboard" />
+                <Redirect from="/" to={appHomePath} />
               </Switch>
             </Container>
           </main>
