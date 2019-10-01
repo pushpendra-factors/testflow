@@ -26,6 +26,7 @@ const OneSec = 1
 type Build struct {
 	ProjectId      uint64 `json:"pid"`
 	ProjectName    string `json:"pname"`
+	Creator        string `json:"creator"`
 	ModelType      string `json:"mt"`
 	StartTimestamp int64  `json:"st"`
 	EndTimestamp   int64  `json:"et"`
@@ -88,8 +89,8 @@ func unixToHumanTime(timestamp int64) string {
 	return time.Unix(timestamp, 0).UTC().Format(time.RFC3339)
 }
 
-func addPendingIntervalsForProjectByType(builds *[]Build, projectId uint64,
-	modelType string, initTimestamp int64, limitTimestamp int64, projectName string) {
+func addPendingIntervalsForProjectByType(builds *[]Build, projectId uint64, modelType string,
+	initTimestamp int64, limitTimestamp int64, projectName string, creatorEmail string) {
 
 	logCtx := gnbLog.WithFields(log.Fields{"ProjectId": projectId, "ModelType": modelType,
 		"InitTimestamp": initTimestamp, "LimitTimestamp": limitTimestamp})
@@ -119,23 +120,25 @@ func addPendingIntervalsForProjectByType(builds *[]Build, projectId uint64,
 			StartTimestamp: startTimestamp,
 			EndTimestamp:   endTimestamp,
 			ProjectName:    projectName,
-			ModelType:      modelType})
+			ModelType:      modelType,
+			Creator:        creatorEmail,
+		})
 		startTimestamp = endTimestamp + OneSec
 	}
 }
 
 func addNextIntervalsForProjectByType(builds *[]Build, projectId uint64, modelType string,
-	prevBuildEndTime int64, startEventTime int64, endEventTime int64, projectName string) {
+	prevBuildEndTime int64, startEventTime int64, endEventTime int64, projectName string, creatorEmail string) {
 
 	gnbLog.WithFields(log.Fields{"ProjectId": projectId, "ModelType": modelType,
 		"PrevBuildEndTime": prevBuildEndTime}).Debug("Adding next intervals to build.")
 
 	if prevBuildEndTime > 0 {
 		addPendingIntervalsForProjectByType(builds, projectId, modelType,
-			prevBuildEndTime+OneSec, endEventTime, projectName)
+			prevBuildEndTime+OneSec, endEventTime, projectName, creatorEmail)
 	} else {
 		addPendingIntervalsForProjectByType(builds, projectId, modelType,
-			startEventTime, endEventTime, projectName)
+			startEventTime, endEventTime, projectName, creatorEmail)
 	}
 }
 
@@ -156,7 +159,7 @@ func GetNextBuilds(db *gorm.DB, cloudManager *filestore.FileManager,
 	}
 
 	// All project event timestamp info.
-	pEventTimeInfo, errCode := M.GetProjectEventTimeInfo()
+	pEventTimeInfo, errCode := M.GetProjectEventsInfo()
 	if errCode != http.StatusFound {
 		return nil, errors.New("unable to fetch projects")
 	}
@@ -166,12 +169,12 @@ func GetNextBuilds(db *gorm.DB, cloudManager *filestore.FileManager,
 	for pid, buildTimeByType := range *lastBuildOfProjects {
 		gnbLog.Infof("Last build info - ProjectId: %d LastBuildEndTimeByType: %+v", pid, buildTimeByType)
 		if (*pEventTimeInfo)[pid] != nil {
-			addNextIntervalsForProjectByType(&builds, pid, ModelTypeWeek,
-				buildTimeByType[ModelTypeWeek], (*pEventTimeInfo)[pid].FirstEvent,
-				(*pEventTimeInfo)[pid].LastEvent, (*pEventTimeInfo)[pid].ProjectName)
-			addNextIntervalsForProjectByType(&builds, pid, ModelTypeMonth,
-				buildTimeByType[ModelTypeMonth], (*pEventTimeInfo)[pid].FirstEvent,
-				(*pEventTimeInfo)[pid].LastEvent, (*pEventTimeInfo)[pid].ProjectName)
+			addNextIntervalsForProjectByType(&builds, pid, ModelTypeWeek, buildTimeByType[ModelTypeWeek],
+				(*pEventTimeInfo)[pid].FirstEventTimestamp, (*pEventTimeInfo)[pid].LastEventTimestamp, (*pEventTimeInfo)[pid].ProjectName,
+				(*pEventTimeInfo)[pid].CreatorEmail)
+			addNextIntervalsForProjectByType(&builds, pid, ModelTypeMonth, buildTimeByType[ModelTypeMonth],
+				(*pEventTimeInfo)[pid].FirstEventTimestamp, (*pEventTimeInfo)[pid].LastEventTimestamp, (*pEventTimeInfo)[pid].ProjectName,
+				(*pEventTimeInfo)[pid].CreatorEmail)
 		} else {
 			gnbLog.WithField("ProjectId", pid).Error("No events for a project found on meta.")
 		}
@@ -187,11 +190,11 @@ func GetNextBuilds(db *gorm.DB, cloudManager *filestore.FileManager,
 
 	for _, pid := range noMetaProjects {
 		addPendingIntervalsForProjectByType(&builds, pid, ModelTypeWeek,
-			(*pEventTimeInfo)[pid].FirstEvent, (*pEventTimeInfo)[pid].LastEvent,
-			(*pEventTimeInfo)[pid].ProjectName)
+			(*pEventTimeInfo)[pid].FirstEventTimestamp, (*pEventTimeInfo)[pid].LastEventTimestamp,
+			(*pEventTimeInfo)[pid].ProjectName, (*pEventTimeInfo)[pid].CreatorEmail)
 		addPendingIntervalsForProjectByType(&builds, pid, ModelTypeMonth,
-			(*pEventTimeInfo)[pid].FirstEvent, (*pEventTimeInfo)[pid].LastEvent,
-			(*pEventTimeInfo)[pid].ProjectName)
+			(*pEventTimeInfo)[pid].FirstEventTimestamp, (*pEventTimeInfo)[pid].LastEventTimestamp,
+			(*pEventTimeInfo)[pid].ProjectName, (*pEventTimeInfo)[pid].CreatorEmail)
 	}
 
 	return builds, nil

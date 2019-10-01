@@ -403,7 +403,7 @@ func mineAndWritePatterns(projectId uint64, filepath string,
 	userAndEventsInfo *P.UserAndEventsInfo, numRoutines int, chunkDir string,
 	maxModelSize int64) error {
 	// Length One Patterns.
-	eventNames, errCode := M.GetEventNames(projectId)
+	eventNames, errCode := M.GetEventNamesOrderedByOccurrence(projectId)
 	if errCode != http.StatusFound {
 		return fmt.Errorf("DB read of event names failed")
 	}
@@ -512,7 +512,7 @@ func mineAndWritePatterns(projectId uint64, filepath string,
 
 func buildPropertiesInfoFromInput(projectId uint64, filepath string) (*P.UserAndEventsInfo, error) {
 	// Length One Patterns.
-	eventNames, errCode := M.GetEventNames(projectId)
+	eventNames, errCode := M.GetEventNamesOrderedByOccurrence(projectId)
 	if errCode != http.StatusFound {
 		return nil, fmt.Errorf("DB read of event names failed")
 	}

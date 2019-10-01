@@ -1,6 +1,7 @@
 package model
 
 import (
+	"database/sql"
 	C "factors/config"
 	U "factors/util"
 	"net/http"
@@ -33,10 +34,12 @@ type Event struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-type EventTimestamp struct {
-	FirstEvent  int64
-	LastEvent   int64
-	ProjectName string
+type ProjectEventsInfo struct {
+	ProjectId           uint64
+	ProjectName         string
+	CreatorEmail        string
+	FirstEventTimestamp int64
+	LastEventTimestamp  int64
 }
 
 const error_Duplicate_event_customerEventID = "pq: duplicate key value violates unique constraint \"project_id_customer_event_id_unique_idx\""
@@ -149,34 +152,43 @@ func IsAnyEventByUserInDuration(projectId uint64, userId string, duration time.D
 	return http.StatusFound
 }
 
-func GetProjectEventTimeInfo() (*(map[uint64]*EventTimestamp), int) {
+func GetProjectEventsInfo() (*(map[uint64]*ProjectEventsInfo), int) {
 	db := C.GetServices().Db
 
-	rows, err := db.Raw("SELECT projects.id, projects.name, min(events.timestamp) as first_timestamp, max(events.timestamp) as last_timestamp FROM events LEFT JOIN projects on events.project_id = projects.id GROUP BY projects.id").Rows()
+	queryStr := "SELECT events_info.*, agents.email FROM" +
+		" " + "(SELECT projects.id, projects.name, min(events.timestamp) as first_timestamp, max(events.timestamp) as last_timestamp FROM events" +
+		" " + "LEFT JOIN projects on events.project_id = projects.id GROUP BY projects.id) as events_info" +
+		" " + "LEFT JOIN project_agent_mappings ON project_agent_mappings.project_id=events_info.id AND project_agent_mappings.role=2" +
+		" " + "LEFT JOIN agents ON project_agent_mappings.agent_uuid=agents.uuid ORDER BY events_info.id"
+
+	rows, err := db.Raw(queryStr).Rows()
 	if err != nil {
 		log.WithError(err).Error("Failed to get events timestamp info.")
 		return nil, http.StatusInternalServerError
 	}
 	defer rows.Close()
 
-	projectEventsTime := make(map[uint64]*EventTimestamp, 0)
+	projectEventsTime := make(map[uint64]*ProjectEventsInfo, 0)
 
 	count := 0
 	for rows.Next() {
 		var projectId uint64
 		var firstTimestamp, lastTimestamp int64
 		var projectName string
-		if err = rows.Scan(&projectId, &projectName, &firstTimestamp, &lastTimestamp); err != nil {
+		var creatorEmail sql.NullString
+		if err = rows.Scan(&projectId, &projectName, &firstTimestamp, &lastTimestamp, &creatorEmail); err != nil {
+			log.Error(err)
 			return nil, http.StatusInternalServerError
 		}
 
 		if firstTimestamp > 0 {
-			projectEventsTime[projectId] = &EventTimestamp{
-				FirstEvent: firstTimestamp, LastEvent: lastTimestamp, ProjectName: projectName}
+			projectEventsTime[projectId] = &ProjectEventsInfo{ProjectId: projectId, FirstEventTimestamp: firstTimestamp,
+				LastEventTimestamp: lastTimestamp, ProjectName: projectName, CreatorEmail: creatorEmail.String}
 		}
 
 		count++
 	}
+
 	if count == 0 {
 		return nil, http.StatusNotFound
 	}
