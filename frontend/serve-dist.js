@@ -9,7 +9,7 @@ app.use((req, res, next) => {
   // invalidate cache always for sdk.
   if (req.originalUrl == "/assets/factors.js") {
     console.log("Warn: No cache request for SDK..");
-    res.set("Cache-Control", "no-cache, no-store, must-revalidate");
+    res.set("Cache-Control", "max-age=0, no-cache, no-store, must-revalidate");
     res.set("Pragma", "no-cache");
     res.set("Expires", "0");
   }
