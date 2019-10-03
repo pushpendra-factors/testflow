@@ -97,7 +97,10 @@ func createProject(project *Project) (*Project, int) {
 func createProjectDependencies(projectID uint64) int {
 	// Associated project setting creation with default state.
 	defaultAutoTrackState := true
-	_, errCode := createProjectSetting(&ProjectSetting{ProjectId: projectID, AutoTrack: &defaultAutoTrackState})
+	defaultExcludebotState := true
+
+	_, errCode := createProjectSetting(&ProjectSetting{ProjectId: projectID,
+		AutoTrack: &defaultAutoTrackState, ExcludeBot: &defaultExcludebotState})
 	if errCode != http.StatusCreated {
 		log.WithFields(log.Fields{"projectID": projectID}).Error("Creating project_settings failed")
 		return errCode

@@ -31,9 +31,10 @@ func TestDBUpdateProjectSettings(t *testing.T) {
 	projectSetting, errCode := M.GetProjectSetting(project.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, projectSetting)
-	// auto_track should stay true.
+	// auto_track should stay false.
 	assert.Equal(t, autoTrack, *projectSetting.AutoTrack)
 	assert.Equal(t, intSegment, *projectSetting.IntSegment)
+	assert.Equal(t, true, *projectSetting.ExcludeBot) // default state
 
 	// Test UpdateProjectSetting without projectId.
 	autoTrack = true

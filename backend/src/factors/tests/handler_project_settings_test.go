@@ -104,7 +104,7 @@ func TestAPIUpdateProjectSettingsHandler(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, project)
 
-	t.Run("Success", func(t *testing.T) {
+	t.Run("UpdateAutoTrack", func(t *testing.T) {
 		w := sendUpdateProjectSettingReq(r, project.ID, agent, map[string]interface{}{
 			"auto_track": true,
 		})
@@ -113,6 +113,17 @@ func TestAPIUpdateProjectSettingsHandler(t *testing.T) {
 		var jsonResponseMap map[string]interface{}
 		json.Unmarshal(jsonResponse, &jsonResponseMap)
 		assert.NotNil(t, jsonResponseMap["auto_track"])
+	})
+
+	t.Run("UpdateExcludeBot", func(t *testing.T) {
+		w := sendUpdateProjectSettingReq(r, project.ID, agent, map[string]interface{}{
+			"exclude_bot": false,
+		})
+		assert.Equal(t, http.StatusOK, w.Code)
+		jsonResponse, _ := ioutil.ReadAll(w.Body)
+		var jsonResponseMap map[string]interface{}
+		json.Unmarshal(jsonResponse, &jsonResponseMap)
+		assert.NotNil(t, jsonResponseMap["exclude_bot"])
 	})
 
 	// Test updating project id.

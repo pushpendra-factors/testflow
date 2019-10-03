@@ -136,9 +136,19 @@ class JsSdk extends Component {
       this.props.currentProjectSettings.auto_track;
   }
 
+  isExcludeBotEnabled() {
+    return this.props.currentProjectSettings && 
+      this.props.currentProjectSettings.exclude_bot;
+  }
+
   toggleAutoTrack = () =>  {
     this.props.udpateProjectSettings(this.props.currentProjectId, 
       { 'auto_track': !this.isAutoTrackEnabled() });
+  }
+
+  toggleExcludeBot = () =>  {
+    this.props.udpateProjectSettings(this.props.currentProjectId, 
+      { 'exclude_bot': !this.isExcludeBotEnabled() });
   }
 
   isDomainValid(d) {
@@ -416,18 +426,6 @@ class JsSdk extends Component {
   renderJavascriptSettings() {
     return (
       <div>
-        <Card className="fapp-card">
-          <CardHeader className='fapp-only-header'>
-            <strong>Auto-track</strong>
-            <div style={{display: 'inline-block', float: 'right'}}>
-              <Toggle
-                checked={this.isAutoTrackEnabled()}
-                icons={false}
-                onChange={this.toggleAutoTrack}
-              />
-            </div>
-          </CardHeader>
-        </Card>
         <Card className='fapp-bordered-card'>
           <CardHeader>
             {
@@ -451,6 +449,30 @@ class JsSdk extends Component {
               <p className='green'>factors.track("<span className='red'>YOUR_EVENT</span>");</p>
             </div>
           </CardBody>
+        </Card>
+        <Card className="fapp-card">
+          <CardHeader className='fapp-only-header'>
+            <strong>Auto-track</strong>
+            <div style={{display: 'inline-block', float: 'right'}}>
+              <Toggle
+                checked={this.isAutoTrackEnabled()}
+                icons={false}
+                onChange={this.toggleAutoTrack}
+              />
+            </div>
+          </CardHeader>
+        </Card>
+        <Card className="fapp-card">
+          <CardHeader className='fapp-only-header'>
+            <strong>Exclude Bot</strong>
+            <div style={{display: 'inline-block', float: 'right'}}>
+              <Toggle
+                checked={this.isExcludeBotEnabled()}
+                icons={false}
+                onChange={this.toggleExcludeBot}
+              />
+            </div>
+          </CardHeader>
         </Card>
       </div>
     )

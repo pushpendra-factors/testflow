@@ -93,7 +93,16 @@ func sdkTrack(projectId uint64, request *sdkTrackPayload, clientIP, userAgent st
 		return http.StatusBadRequest, &SDKTrackResponse{Error: "Tracking failed. Event name cannot be omitted or left empty."}
 	}
 
-	response := &SDKTrackResponse{}
+	projectSettings, errCode := M.GetProjectSetting(projectId)
+	if errCode != http.StatusFound {
+		return http.StatusInternalServerError, &SDKTrackResponse{Error: "Tracking failed. Invalid project."}
+	}
+
+	// Terminate track calls from bot user_agent.
+	if *projectSettings.ExcludeBot && U.IsBotUserAgent(userAgent) {
+		return http.StatusNotModified, &SDKTrackResponse{}
+	}
+
 	var eventName *M.EventName
 	var eventNameErrCode int
 
@@ -137,6 +146,8 @@ func sdkTrack(projectId uint64, request *sdkTrackPayload, clientIP, userAgent st
 	if err != nil {
 		return http.StatusBadRequest, &SDKTrackResponse{Error: "Tracking failed. Invalid properties."}
 	}
+
+	response := &SDKTrackResponse{}
 
 	// Precondition: if user_id not given, create new user and respond.
 	isUserFirstSession := request.IsNewUser

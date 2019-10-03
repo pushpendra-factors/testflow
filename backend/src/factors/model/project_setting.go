@@ -17,6 +17,7 @@ type ProjectSetting struct {
 	// omit empty to avoid nil(filelds not updated) on resp json.
 	AutoTrack  *bool     `gorm:"not null;default:false" json:"auto_track,omitempty"`
 	IntSegment *bool     `gorm:"not null;default:false" json:"int_segment,omitempty"`
+	ExcludeBot *bool     `gorm:"not null;default:false" json:"exclude_bot,omitempty"`
 	CreatedAt  time.Time `json:"created_at"`
 	UpdatedAt  time.Time `json:"updated_at"`
 }

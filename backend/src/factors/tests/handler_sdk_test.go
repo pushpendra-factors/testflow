@@ -46,6 +46,26 @@ func TestSDKTrackHandler(t *testing.T) {
 		map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 
+	// Test track bot with exclude_bot on.
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"event_name": "%s", "event_properties": {"mobile" : "true"}}`, U.RandomString(8))),
+		map[string]string{
+			"Authorization": project.Token,
+			"User-Agent":    "Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2272.96 Mobile Safari/537.36 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+		})
+	assert.Equal(t, http.StatusNotModified, w.Code)
+
+	// Test track bot with exclude_bot off.
+	botState := false
+	M.UpdateProjectSettings(project.ID, &M.ProjectSetting{ExcludeBot: &botState})
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"event_name": "%s", "event_properties": {"mobile" : "true"}}`, U.RandomString(8))),
+		map[string]string{
+			"Authorization": project.Token,
+			"User-Agent":    "Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2272.96 Mobile Safari/537.36 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+		})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response := DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
 	// Test without properties and with empty properites in the payload.
 	w = ServePostRequestWithHeaders(r, uri,
 		[]byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "event_1", "event_properties": {}, "user_properties": {"$os": "Mac OS"}}`, user.ID)),
