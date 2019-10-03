@@ -92,8 +92,10 @@ func IntSegmentHandler(c *gin.Context) {
 			UserProperties:  userProperties,
 			Timestamp:       unixTimestamp,
 		}
-		if status, response = sdkTrack(projectId, request, event.Context.IP); status != http.StatusOK {
-			//logCtx.WithFields(log.Fields{"track_payload": request, "error_code": status}).Error("Segment event failure. sdk_track call failed.")
+		status, response = sdkTrack(projectId, request, event.Context.IP, event.Context.UserAgent)
+		if status != http.StatusOK {
+			logCtx.WithFields(log.Fields{"track_payload": request,
+				"error_code": status}).Error("Segment event failure. sdk_track call failed.")
 		}
 
 	case "page":
@@ -125,8 +127,10 @@ func IntSegmentHandler(c *gin.Context) {
 			UserProperties:  userProperties,
 			Timestamp:       unixTimestamp,
 		}
-		if status, response = sdkTrack(projectId, request, event.Context.IP); status != http.StatusOK {
-			//logCtx.WithFields(log.Fields{"track_payload": request, "error_code": status}).Error("Segment event failure. sdk_track call failed.")
+		status, response = sdkTrack(projectId, request, event.Context.IP, event.Context.UserAgent)
+		if status != http.StatusOK {
+			logCtx.WithFields(log.Fields{"track_payload": request,
+				"error_code": status}).Error("Segment event failure. sdk_track call failed.")
 		}
 
 	case "screen":
@@ -148,8 +152,10 @@ func IntSegmentHandler(c *gin.Context) {
 			UserProperties:  userProperties,
 			Timestamp:       unixTimestamp,
 		}
-		if status, response = sdkTrack(projectId, request, event.Context.IP); status != http.StatusOK {
-			//logCtx.WithFields(log.Fields{"track_payload": request, "error_code": status}).Error("Segment event failure. sdk_track call failed.")
+		status, response = sdkTrack(projectId, request, event.Context.IP, event.Context.UserAgent)
+		if status != http.StatusOK {
+			logCtx.WithFields(log.Fields{"track_payload": request,
+				"error_code": status}).Error("Segment event failure. sdk_track call failed.")
 		}
 
 	case "identify":

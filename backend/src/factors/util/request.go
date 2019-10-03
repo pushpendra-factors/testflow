@@ -71,3 +71,10 @@ func IsRequestFromLocalhost(host string) bool {
 
 	return true
 }
+
+// IsBotUserAgent - Check request user agent is bot or not.
+func IsBotUserAgent(userAgent string) bool {
+	lua := strings.ToLower(userAgent)
+	return strings.Contains(lua, "bot") || strings.Contains(lua, "spider") || strings.Contains(lua, "crawl") ||
+		strings.Contains(lua, "slurp") || strings.Contains(lua, "mediapartners")
+}

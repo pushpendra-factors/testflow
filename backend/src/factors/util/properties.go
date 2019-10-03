@@ -753,3 +753,16 @@ func GetPropertyValueAsString(value interface{}) string {
 		return ""
 	}
 }
+
+func FillUserAgentUserProperties(userProperties *PropertiesMap, userAgent string) {
+	if userAgent == "" {
+		return
+	}
+
+	if _, exists := (*userProperties)[UP_USER_AGENT]; !exists {
+		(*userProperties)[UP_USER_AGENT] = userAgent
+		if IsBotUserAgent(userAgent) {
+			(*userProperties)[UP_BROWSER] = "Bot"
+		}
+	}
+}

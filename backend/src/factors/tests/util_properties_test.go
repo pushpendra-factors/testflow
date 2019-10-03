@@ -62,3 +62,13 @@ func TestGetPropertyValueAsString(t *testing.T) {
 	value = true
 	assert.Equal(t, "true", U.GetPropertyValueAsString(value))
 }
+
+func TestFillUserAgentUserProperties(t *testing.T) {
+	userProperties := make(U.PropertiesMap, 0)
+	userAgent := "Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2272.96 Mobile Safari/537.36 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
+	U.FillUserAgentUserProperties(&userProperties, userAgent)
+	assert.NotNil(t, userProperties[U.UP_USER_AGENT])
+	assert.Equal(t, userAgent, userProperties[U.UP_USER_AGENT])
+	assert.NotNil(t, userProperties[U.UP_BROWSER])
+	assert.Equal(t, "Bot", userProperties[U.UP_BROWSER])
+}

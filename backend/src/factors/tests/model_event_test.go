@@ -143,20 +143,20 @@ func TestGetFirstLastEventTimestamp(t *testing.T) {
 	createEventWithTimestamp(t, project, user, thirdTimestamp)
 
 	// Test with exact limit timestamp
-	ts1, errCode := M.GetProjectEventTimeInfo()
+	ts1, errCode := M.GetProjectEventsInfo()
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, ts1)
 	assert.NotNil(t, (*ts1)[project.ID])
-	assert.Equal(t, firstTimestamp, (*ts1)[project.ID].FirstEvent)
-	assert.Equal(t, thirdTimestamp, (*ts1)[project.ID].LastEvent)
+	assert.Equal(t, firstTimestamp, (*ts1)[project.ID].FirstEventTimestamp)
+	assert.Equal(t, thirdTimestamp, (*ts1)[project.ID].LastEventTimestamp)
 
 	// Test with increased limit timestamp
-	ts1, errCode = M.GetProjectEventTimeInfo() // adds 3 secs.
+	ts1, errCode = M.GetProjectEventsInfo() // adds 3 secs.
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, ts1)
 	assert.NotNil(t, (*ts1)[project.ID])
-	assert.Equal(t, firstTimestamp, (*ts1)[project.ID].FirstEvent)
-	assert.Equal(t, thirdTimestamp, (*ts1)[project.ID].LastEvent)
+	assert.Equal(t, firstTimestamp, (*ts1)[project.ID].FirstEventTimestamp)
+	assert.Equal(t, thirdTimestamp, (*ts1)[project.ID].LastEventTimestamp)
 	assert.Nil(t, (*ts1)[999999])
 }
 

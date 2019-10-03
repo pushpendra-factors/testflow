@@ -86,7 +86,7 @@ func createNewSession(projectId uint64, userId string, isFirstSession bool, requ
 	return errMsg
 }
 
-func sdkTrack(projectId uint64, request *sdkTrackPayload, clientIP string) (int, *SDKTrackResponse) {
+func sdkTrack(projectId uint64, request *sdkTrackPayload, clientIP, userAgent string) (int, *SDKTrackResponse) {
 	// Precondition: Fails if event_name not provided.
 	request.Name = strings.TrimSpace(request.Name) // Discourage whitespace on the end.
 	if request.Name == "" {
@@ -163,6 +163,7 @@ func sdkTrack(projectId uint64, request *sdkTrackPayload, clientIP string) (int,
 
 	userProperties := U.GetValidatedUserProperties(&request.UserProperties)
 	_ = M.FillLocationUserProperties(userProperties, clientIP)
+	U.FillUserAgentUserProperties(userProperties, userAgent)
 	userPropsJSON, err := json.Marshal(userProperties)
 	if err != nil {
 		log.WithFields(log.Fields{"userProperties": userProperties,
@@ -352,7 +353,7 @@ func SDKTrackHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(sdkTrack(projectId, &trackPayload, c.ClientIP()))
+	c.JSON(sdkTrack(projectId, &trackPayload, c.ClientIP(), c.Request.UserAgent()))
 }
 
 // Test command.
@@ -392,14 +393,13 @@ func SDKBulkEventHandler(c *gin.Context) {
 	}
 
 	clientIP := c.ClientIP()
+	userAgent := c.Request.UserAgent()
 
 	response := make([]*SDKTrackResponse, len(sdkTrackPayloads), len(sdkTrackPayloads))
-
 	hasError := false
 
 	for i, sdkTrackPayload := range sdkTrackPayloads {
-
-		errCode, resp := sdkTrack(projectId, &sdkTrackPayload, clientIP)
+		errCode, resp := sdkTrack(projectId, &sdkTrackPayload, clientIP, userAgent)
 		if errCode != http.StatusOK {
 			hasError = true
 		}
