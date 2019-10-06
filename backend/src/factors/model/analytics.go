@@ -384,8 +384,17 @@ func addFilterEventsWithPropsQuery(projectId uint64, qStmnt *string, qParams *[]
 		fromTimestamp = fromStr // allows from_timestamp from another step.
 	}
 
+	var eventNamesCacheStmnt string
+	eventNamesRef := "event_names"
+	if stepName != "" {
+		eventNamesRef = fmt.Sprintf("%s_names", stepName)
+		eventNamesCacheStmnt = as(eventNamesRef, "SELECT id FROM event_names WHERE project_id=? AND name=?")
+		*qParams = append(*qParams, projectId, qep.Name)
+	}
+
 	whereCond := fmt.Sprintf("WHERE events.project_id=? AND timestamp>=%s AND timestamp<=?"+
-		" "+"AND events.event_name_id IN ( SELECT id FROM event_names WHERE project_id=? AND name=? )", fromTimestamp)
+		// select id of event_names from names step.
+		" "+"AND events.event_name_id IN ( SELECT id FROM %s )", fromTimestamp, eventNamesRef)
 	rStmnt = appendStatement(rStmnt, whereCond)
 
 	// adds params in order of '?'.
@@ -396,7 +405,7 @@ func addFilterEventsWithPropsQuery(projectId uint64, qStmnt *string, qParams *[]
 	if from > 0 {
 		*qParams = append(*qParams, from)
 	}
-	*qParams = append(*qParams, to, projectId, qep.Name)
+	*qParams = append(*qParams, to)
 
 	// mergeCond for whereProperties can also be 'OR'.
 	wStmnt, wParams, err := buildWhereFromProperties(qep.Properties)
@@ -419,6 +428,10 @@ func addFilterEventsWithPropsQuery(projectId uint64, qStmnt *string, qParams *[]
 
 	if stepName != "" {
 		rStmnt = as(stepName, rStmnt)
+	}
+
+	if eventNamesCacheStmnt != "" {
+		rStmnt = joinWithComma(eventNamesCacheStmnt, rStmnt)
 	}
 
 	*qStmnt = appendStatement(*qStmnt, rStmnt)
