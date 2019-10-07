@@ -15,7 +15,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func TestFunnelQuery(t *testing.T) {
+func TestAnalyticsFunnelQuery(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
 	H.InitSDKRoutes(r)

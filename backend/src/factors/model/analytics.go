@@ -1190,13 +1190,13 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q Query) (string, []interface
 			usersJoinStmnt = fmt.Sprintf("LEFT JOIN %s on events.user_id=%s.user_id", prevStepName, prevStepName)
 		}
 
-		var addOrderBy string
-		if hasGroupEntity(q.GroupByProperties, PropertyEntityEvent) {
-			addOrderBy = "events.user_id, events.timestamp ASC"
-		}
+		// ordered to get first occurrence on DISTINCT ON(user_id).
+		// occurrence: e0, e0, e1, e0, e2 funnel: e0 -> e1 -> e2.
+		// Should consider first occurrence of e0 followed by e1 and e2.
+		orderBy := "events.user_id, events.timestamp ASC"
 
-		err := addFilterEventsWithPropsQuery(projectId, &qStmnt, &qParams, q.EventsWithProperties[i],
-			from, q.To, fromStr, stepName, addSelect, addParams, usersJoinStmnt, "", addOrderBy)
+		err := addFilterEventsWithPropsQuery(projectId, &qStmnt, &qParams, q.EventsWithProperties[i], from, q.To,
+			fromStr, stepName, addSelect, addParams, usersJoinStmnt, "", orderBy)
 		if err != nil {
 			return "", nil, err
 		}
