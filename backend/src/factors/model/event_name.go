@@ -174,10 +174,14 @@ func GetEventNames(projectId uint64) ([]EventName, int) {
 	return eventNames, http.StatusFound
 }
 
-func GetEventNamesOrderedByOccurrence(projectId uint64) ([]EventName, int) {
+// GetEventNamesOrderedByOccurrenceWithLimit - Returns event names ordered by occurrence
+// and back fills event names which haven't occurred ordered by created_at.
+// limit = 0, for no limit.
+func GetEventNamesOrderedByOccurrenceWithLimit(projectId uint64, limit int) ([]EventName, int) {
 	db := C.GetServices().Db
 
 	eventsAfterTimestamp := U.UnixTimeBeforeAWeek()
+	hasLimit := limit > 0
 
 	logCtx := log.WithFields(log.Fields{"projectId": projectId, "eventsAfterTimestamp": eventsAfterTimestamp})
 
@@ -185,25 +189,68 @@ func GetEventNamesOrderedByOccurrence(projectId uint64) ([]EventName, int) {
 	// and order by count then left join with event names.
 	queryStr := "SELECT * FROM (SELECT event_name_id, COUNT(*) FROM events" +
 		" " + "WHERE project_id=? AND timestamp > ? GROUP BY event_name_id ORDER BY count DESC LIMIT ?)" +
-		" " + "AS event_occurrence LEFT JOIN event_names ON event_occurrence.event_name_id=event_names.id LIMIT ?"
+		" " + "AS event_occurrence LEFT JOIN event_names ON event_occurrence.event_name_id=event_names.id"
+
+	if hasLimit {
+		queryStr = queryStr + " " + "LIMIT ?"
+	}
 
 	const noOfEventsToLoadForOccurrenceSort = 100000
-	eventNames := make([]EventName, 0, 0)
-	rows, err := db.Raw(queryStr, projectId, eventsAfterTimestamp, noOfEventsToLoadForOccurrenceSort,
-		EVENT_NAMES_LIMIT).Rows()
+	occurredEventNames := make([]EventName, 0, 0)
+
+	params := make([]interface{}, 0)
+	params = append(params, projectId, eventsAfterTimestamp, noOfEventsToLoadForOccurrenceSort)
+	if hasLimit {
+		params = append(params, limit)
+	}
+
+	rows, err := db.Raw(queryStr, params...).Rows()
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to execute query of get event names ordered by occurrence.")
-		return eventNames, http.StatusInternalServerError
+		return occurredEventNames, http.StatusInternalServerError
 	}
 
 	for rows.Next() {
 		var eventName EventName
 		if err := db.ScanRows(rows, &eventName); err != nil {
 			logCtx.WithError(err).Error("Failed scanning rows on get event names ordered by occurrence.")
-			return eventNames, http.StatusInternalServerError
+			return occurredEventNames, http.StatusInternalServerError
+		}
+
+		occurredEventNames = append(occurredEventNames, eventName)
+	}
+
+	eventNames := make([]EventName, 0)
+	addedNamesLookup := make(map[uint64]bool, 0)
+
+	for _, eventName := range occurredEventNames {
+		if hasLimit && len(eventNames) == limit {
+			break
 		}
 
 		eventNames = append(eventNames, eventName)
+		addedNamesLookup[eventName.ID] = true
+	}
+
+	// return, if limit reached already.
+	if hasLimit && len(eventNames) == limit {
+		return eventNames, http.StatusFound
+	}
+
+	allEventNames, errCode := GetEventNames(projectId)
+	if errCode == http.StatusInternalServerError || errCode == http.StatusNotFound {
+		return eventNames, errCode
+	}
+
+	// fill event names not on occurred list.
+	for _, eventName := range allEventNames {
+		if hasLimit && len(eventNames) == limit {
+			break
+		}
+
+		if _, exists := addedNamesLookup[eventName.ID]; !exists {
+			eventNames = append(eventNames, eventName)
+		}
 	}
 
 	if len(eventNames) == 0 {
@@ -211,6 +258,10 @@ func GetEventNamesOrderedByOccurrence(projectId uint64) ([]EventName, int) {
 	}
 
 	return eventNames, http.StatusFound
+}
+
+func GetEventNamesOrderedByOccurrence(projectId uint64) ([]EventName, int) {
+	return GetEventNamesOrderedByOccurrenceWithLimit(projectId, EVENT_NAMES_LIMIT)
 }
 
 func GetFilterEventNames(projectId uint64) ([]EventName, int) {

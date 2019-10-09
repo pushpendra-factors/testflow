@@ -22,44 +22,15 @@ func GetEventNamesHandler(c *gin.Context) {
 		return
 	}
 
-	occurredEventNames, errCode := M.GetEventNamesOrderedByOccurrence(projectId)
-	if errCode == http.StatusInternalServerError {
+	eventNames, errCode := M.GetEventNamesOrderedByOccurrence(projectId)
+	if errCode != http.StatusFound {
 		c.AbortWithStatus(errCode)
 		return
 	}
 
 	names := make([]string, 0, 0)
-	addedNamesLookup := make(map[uint64]bool, 0)
-	for _, eventName := range occurredEventNames {
-		if len(names) == M.EVENT_NAMES_LIMIT {
-			break
-		}
-
-		names = append(names, eventName.Name)
-		addedNamesLookup[eventName.ID] = true
-	}
-
-	// return, if event names limit reached already.
-	if len(names) == M.EVENT_NAMES_LIMIT {
-		c.JSON(http.StatusOK, names)
-		return
-	}
-
-	// fill event names not on occurred list.
-	eventNames, errCode := M.GetEventNames(projectId)
-	if errCode == http.StatusInternalServerError || errCode == http.StatusNotFound {
-		c.AbortWithStatus(errCode)
-		return
-	}
-
 	for _, eventName := range eventNames {
-		if len(names) == M.EVENT_NAMES_LIMIT {
-			break
-		}
-
-		if _, exists := addedNamesLookup[eventName.ID]; !exists {
-			names = append(names, eventName.Name)
-		}
+		names = append(names, eventName.Name)
 	}
 
 	c.JSON(http.StatusOK, names)

@@ -56,6 +56,9 @@ func TestGetEventNamesHandler(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, project)
 
+	w := sendGetEventNamesRequest(project.ID, agent, r)
+	assert.Equal(t, http.StatusNotFound, w.Code) // Should be 404 for no event_names.
+
 	user, errCode := M.CreateUser(&M.User{ProjectId: project.ID})
 	assert.NotNil(t, user)
 	assert.Equal(t, http.StatusCreated, errCode)
@@ -67,7 +70,7 @@ func TestGetEventNamesHandler(t *testing.T) {
 	createEventWithTimestampByName(t, project, user, "event4", timeBeforeWeek)
 
 	// Test zero events occurred on the occurrence count window.
-	w := sendGetEventNamesRequest(project.ID, agent, r)
+	w = sendGetEventNamesRequest(project.ID, agent, r)
 	assert.Equal(t, http.StatusOK, w.Code)
 	jsonResponse, _ := ioutil.ReadAll(w.Body)
 	eventNames := make([]string, 0, 0)
@@ -96,5 +99,4 @@ func TestGetEventNamesHandler(t *testing.T) {
 	// occurred on the window.
 	assert.Equal(t, "event3", eventNames[2])
 	assert.Equal(t, "event4", eventNames[3])
-
 }

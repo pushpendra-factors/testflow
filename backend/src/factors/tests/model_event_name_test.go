@@ -492,3 +492,31 @@ func TestDBDeleteFilterEventName(t *testing.T) {
 	errCode = M.DeleteFilterEventName(project.ID, createdEN.ID)
 	assert.Equal(t, http.StatusAccepted, errCode)
 }
+
+func TestDBGetEventNamesOrderedByOccurrenceWithLimit(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+
+	eventName1 := U.RandomLowerAphaNumString(5)
+	_, errCode := M.CreateOrGetAutoTrackedEventName(&M.EventName{ProjectId: project.ID, Name: eventName1})
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	eventName2 := U.RandomLowerAphaNumString(5)
+	_, errCode = M.CreateOrGetAutoTrackedEventName(&M.EventName{ProjectId: project.ID, Name: eventName2})
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	// with limit.
+	getEventNames1, errCode := M.GetEventNamesOrderedByOccurrenceWithLimit(project.ID, 1)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Len(t, getEventNames1, 1)
+	assert.Equal(t, getEventNames1[0].Name, eventName1)
+
+	// no limit.
+	getEventNames2, errCode := M.GetEventNamesOrderedByOccurrenceWithLimit(project.ID, 0)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Len(t, getEventNames2, 2)
+	// ordered by created at since not occurred.
+	assert.Equal(t, getEventNames2[0].Name, eventName1)
+	assert.Equal(t, getEventNames2[1].Name, eventName2)
+}
