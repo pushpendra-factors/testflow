@@ -434,6 +434,7 @@ func TestTrackHandlerWithUserSession(t *testing.T) {
 	assert.NotEmpty(t, responseMap)
 	assert.NotNil(t, responseMap["event_id"])
 	assert.NotNil(t, responseMap["user_id"])
+	responseEventId := responseMap["event_id"].(string)
 	responseUserId := responseMap["user_id"].(string)
 	sessionEventName, errCode := M.GetEventName(M.EVENT_NAME_SESSION, project.ID)
 	assert.Equal(t, http.StatusFound, errCode)
@@ -481,6 +482,15 @@ func TestTrackHandlerWithUserSession(t *testing.T) {
 	assert.NotEmpty(t, sessionProperties[U.EP_CREATIVE])
 	assert.NotEmpty(t, sessionProperties[U.EP_GCLID])
 	assert.NotEmpty(t, sessionProperties[U.EP_FBCLIID])
+	// Tracked event should have latest session of user associated with it.
+	rEvent, errCode := M.GetEvent(project.ID, responseUserId, responseEventId)
+	assert.Equal(t, http.StatusFound, errCode)
+	latestSessionEvent, errCode := M.GetLatestEventOfUserByEventNameId(rEvent.ProjectId, rEvent.UserId,
+		sessionEventName.ID, rEvent.Timestamp-86400, rEvent.Timestamp)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotNil(t, rEvent.SessionId)
+	assert.NotEmpty(t, *rEvent.SessionId)
+	assert.Equal(t, latestSessionEvent.ID, *rEvent.SessionId)
 
 	// session with existing user and active.
 	eventName = U.RandomLowerAphaNumString(10)
@@ -491,6 +501,7 @@ func TestTrackHandlerWithUserSession(t *testing.T) {
 	assert.NotEmpty(t, responseMap)
 	assert.NotNil(t, responseMap["event_id"])
 	assert.Nil(t, responseMap["user_id"])
+	responseEventId2 := responseMap["event_id"].(string)
 	sessionEventName, errCode = M.GetEventName(M.EVENT_NAME_SESSION, project.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, sessionEventName)
@@ -500,6 +511,12 @@ func TestTrackHandlerWithUserSession(t *testing.T) {
 	// should not create new session.
 	assert.True(t, len(userSessionEvents2) == 1)
 	assert.Equal(t, userSessionEvents[0].ID, userSessionEvents2[0].ID)
+	// Tracked event should have latest session of active user associated with it.
+	rEvent2, errCode := M.GetEvent(project.ID, responseUserId, responseEventId2)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotNil(t, rEvent2.SessionId)
+	assert.NotEmpty(t, *rEvent2.SessionId)
+	assert.Equal(t, latestSessionEvent.ID, *rEvent2.SessionId)
 }
 
 func TestSDKIdentifyHandler(t *testing.T) {

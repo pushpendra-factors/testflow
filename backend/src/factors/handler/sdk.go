@@ -50,42 +50,6 @@ type sdkUpdateEventPropertiesPayload struct {
 	Properties U.PropertiesMap `json:"properties"`
 }
 
-// createNewSession - if there is an inactivity for the given duration,
-// creates a new session event.
-func createNewSession(projectId uint64, userId string, isFirstSession bool, requestTimestamp int64,
-	userPropertiesId string, eventProperties, userProperties *U.PropertiesMap) string {
-
-	var errMsg string
-	if errCode := M.IsAnyEventByUserInDuration(projectId, userId,
-		M.NewUserSessionInactivityDuration); errCode == http.StatusNotFound {
-
-		sessionEventName, errCode := M.CreateOrGetSessionEventName(projectId)
-		if errCode == http.StatusCreated || errCode == http.StatusConflict {
-			sessionEventProps := U.GetSessionProperties(isFirstSession, eventProperties, userProperties)
-			sessionPropsJson, err := json.Marshal(sessionEventProps)
-			if err != nil {
-				log.WithError(err).Error("Failed to add session event properties. JSON marshal failed.")
-				errMsg = "Failed to add session properties."
-			}
-
-			M.CreateEvent(&M.Event{
-				EventNameId:      sessionEventName.ID,
-				Timestamp:        requestTimestamp,
-				Properties:       postgres.Jsonb{sessionPropsJson},
-				ProjectId:        projectId,
-				UserId:           userId,
-				UserPropertiesId: userPropertiesId,
-			})
-		} else {
-			// continues with previous session on failure.
-			log.WithField("errCode", errCode).Error("Failed to create session event.")
-			errMsg = "Failed to associate event with user session."
-		}
-	}
-
-	return errMsg
-}
-
 func sdkTrack(projectId uint64, request *sdkTrackPayload, clientIP, userAgent string) (int, *SDKTrackResponse) {
 	// Precondition: Fails if event_name not provided.
 	request.Name = strings.TrimSpace(request.Name) // Discourage whitespace on the end.
@@ -189,10 +153,12 @@ func sdkTrack(projectId uint64, request *sdkTrackPayload, clientIP, userAgent st
 		response.Error = "Failed updating user properties."
 	}
 
-	if errMsg := createNewSession(projectId, request.UserId, isUserFirstSession, request.Timestamp,
-		userPropertiesId, eventProperties, userProperties); errMsg != "" {
-		response.Error = errMsg
+	session, errCode := M.CreateOrGetSessionEvent(projectId, request.UserId, isUserFirstSession, request.Timestamp,
+		eventProperties, userProperties, userPropertiesId)
+	if errCode != http.StatusCreated && errCode != http.StatusFound {
+		response.Error = "Failed to associate with a session."
 	}
+	currentSessionId := session.ID
 
 	createdEvent, errCode := M.CreateEvent(&M.Event{
 		EventNameId:      eventName.ID,
@@ -202,6 +168,7 @@ func sdkTrack(projectId uint64, request *sdkTrackPayload, clientIP, userAgent st
 		ProjectId:        projectId,
 		UserId:           request.UserId,
 		UserPropertiesId: userPropertiesId,
+		SessionId:        &currentSessionId,
 	})
 	if errCode == http.StatusFound {
 		return errCode, &SDKTrackResponse{Error: "Tracking failed. Event creation failed. Duplicate CustomerEventID",

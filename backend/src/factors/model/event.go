@@ -2,6 +2,7 @@ package model
 
 import (
 	"database/sql"
+	"encoding/json"
 	C "factors/config"
 	U "factors/util"
 	"net/http"
@@ -21,11 +22,12 @@ type Event struct {
 	// project_id -> projects(id)
 	// (project_id, user_id) -> users(project_id, id)
 	// (project_id, event_name_id) -> event_names(project_id, id)
-	ProjectId        uint64 `gorm:"primary_key:true;" json:"project_id"`
-	UserId           string `json:"user_id"`
-	UserPropertiesId string `json:"user_properties_id"`
-	EventNameId      uint64 `json:"event_name_id"`
-	Count            uint64 `json:"count"`
+	ProjectId        uint64  `gorm:"primary_key:true;" json:"project_id"`
+	UserId           string  `json:"user_id"`
+	UserPropertiesId string  `json:"user_properties_id"`
+	SessionId        *string `json:session_id`
+	EventNameId      uint64  `json:"event_name_id"`
+	Count            uint64  `json:"count"`
 	// JsonB of postgres with gorm. https://github.com/jinzhu/gorm/issues/1183
 	Properties postgres.Jsonb `json:"properties,omitempty"`
 	// unix epoch timestamp in seconds.
@@ -79,8 +81,8 @@ func CreateEvent(event *Event) (*Event, int) {
 	}
 
 	transTime := gorm.NowFunc()
-	rows, err := db.Raw("INSERT INTO events (customer_event_id,project_id,user_id,user_properties_id,event_name_id,count,properties,timestamp,created_at,updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING events.id",
-		event.CustomerEventId, event.ProjectId, event.UserId, event.UserPropertiesId, event.EventNameId, event.Count, event.Properties, event.Timestamp, transTime, transTime).Rows()
+	rows, err := db.Raw("INSERT INTO events (customer_event_id,project_id,user_id,user_properties_id,session_id,event_name_id,count,properties,timestamp,created_at,updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING events.id",
+		event.CustomerEventId, event.ProjectId, event.UserId, event.UserPropertiesId, event.SessionId, event.EventNameId, event.Count, event.Properties, event.Timestamp, transTime, transTime).Rows()
 	if err != nil {
 		if isDuplicateCustomerEventIdError(err) {
 			log.WithError(err).Info("CreateEvent Failed, duplicate customerEventId")
@@ -131,25 +133,49 @@ func GetEventById(projectId uint64, id string) (*Event, int) {
 	return &event, http.StatusFound
 }
 
-func IsAnyEventByUserInDuration(projectId uint64, userId string, duration time.Duration) int {
+func GetLatestAnyEventOfUserInDuration(projectId uint64, userId string, duration time.Duration) (*Event, int) {
 	db := C.GetServices().Db
 
 	if duration == 0 {
-		return http.StatusBadRequest
+		return nil, http.StatusBadRequest
 	}
 
 	var events []Event
-	if err := db.Limit(1).Where("project_id = ? AND user_id = ? AND timestamp > ?", projectId, userId,
-		U.UnixTimeBeforeDuration(duration)).Find(&events).Error; err != nil {
+	if err := db.Limit(1).Order("timestamp desc").Where("project_id = ? AND user_id = ? AND timestamp > ?",
+		projectId, userId, U.UnixTimeBeforeDuration(duration)).Find(&events).Error; err != nil {
 
-		return http.StatusInternalServerError
+		return nil, http.StatusInternalServerError
 	}
 
 	if len(events) == 0 {
-		return http.StatusNotFound
+		return nil, http.StatusNotFound
 	}
 
-	return http.StatusFound
+	return &events[0], http.StatusFound
+}
+
+func GetLatestEventOfUserByEventNameId(projectId uint64, userId string, eventNameId uint64,
+	startTimestamp, endTimestamp int64) (*Event, int) {
+
+	db := C.GetServices().Db
+
+	if startTimestamp == 0 || endTimestamp == 0 {
+		return nil, http.StatusBadRequest
+	}
+
+	var events []Event
+	if err := db.Limit(1).Order("timestamp desc").Where(
+		"project_id = ? AND event_name_id = ? AND user_id = ? AND timestamp > ? AND timestamp <= ?",
+		projectId, eventNameId, userId, startTimestamp, endTimestamp).Find(&events).Error; err != nil {
+
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(events) == 0 {
+		return nil, http.StatusNotFound
+	}
+
+	return &events[0], http.StatusFound
 }
 
 func GetProjectEventsInfo() (*(map[uint64]*ProjectEventsInfo), int) {
@@ -336,4 +362,70 @@ func GetUserEventsByEventNameId(projectId uint64, userId string, eventNameId uin
 	}
 
 	return events, http.StatusFound
+}
+
+func createSessionEvent(projectId uint64, userId string, sessionEventNameId uint64,
+	isFirstSession bool, requestTimestamp int64, eventProperties,
+	userProperties *U.PropertiesMap, userPropertiesId string) (*Event, int) {
+
+	sessionEventProps := U.GetSessionProperties(isFirstSession, eventProperties, userProperties)
+	sessionPropsJson, err := json.Marshal(sessionEventProps)
+	if err != nil {
+		log.WithError(err).Error("Failed to add session event properties. JSON marshal failed.")
+		return nil, http.StatusInternalServerError
+	}
+
+	newSessionEvent, errCode := CreateEvent(&Event{
+		EventNameId:      sessionEventNameId,
+		Timestamp:        requestTimestamp,
+		Properties:       postgres.Jsonb{sessionPropsJson},
+		ProjectId:        projectId,
+		UserId:           userId,
+		UserPropertiesId: userPropertiesId,
+	})
+	return newSessionEvent, errCode
+}
+
+func CreateOrGetSessionEvent(projectId uint64, userId string, isFirstSession bool, requestTimestamp int64,
+	eventProperties, userProperties *U.PropertiesMap, userPropertiesId string) (*Event, int) {
+
+	sessionEventName, errCode := CreateOrGetSessionEventName(projectId)
+	if errCode != http.StatusCreated && errCode != http.StatusConflict {
+		log.WithField("project_id", projectId).Error("Failed to create session event name.")
+		return nil, http.StatusInternalServerError
+	}
+
+	latestUserEvent, errCode := GetLatestAnyEventOfUserInDuration(projectId, userId,
+		NewUserSessionInactivityDuration)
+
+	if errCode == http.StatusNotFound {
+		return createSessionEvent(projectId, userId, sessionEventName.ID, isFirstSession, requestTimestamp,
+			eventProperties, userProperties, userPropertiesId)
+	}
+
+	// Get latest session event of user from events between user's last event timestamp and
+	// one day before user's last event timestamp.
+	latestSessionEvent, errCode := GetLatestEventOfUserByEventNameId(projectId, userId, sessionEventName.ID,
+		latestUserEvent.Timestamp-86400, latestUserEvent.Timestamp)
+
+	logCtx := log.WithFields(log.Fields{"project_id": projectId, "user_id": userId,
+		"latest_event_timestamp": latestUserEvent.Timestamp})
+
+	if errCode == http.StatusFound {
+		if latestUserEvent.SessionId != nil && *latestUserEvent.SessionId != "" &&
+			latestSessionEvent.ID != *latestUserEvent.SessionId {
+			logCtx.WithField("latest_session_id", latestSessionEvent.ID).WithField("user_lastest_event_session_id",
+				latestUserEvent.SessionId).Error("Latest session's id and session_id on last event of user not matching.")
+		}
+
+		return latestSessionEvent, http.StatusFound
+	}
+
+	if errCode == http.StatusNotFound {
+		logCtx.Error("Session length of user exceeded 1 day. Created new session.")
+		return createSessionEvent(projectId, userId, sessionEventName.ID, isFirstSession, requestTimestamp,
+			eventProperties, userProperties, userPropertiesId)
+	}
+
+	return latestSessionEvent, http.StatusFound
 }

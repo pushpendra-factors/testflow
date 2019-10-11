@@ -280,20 +280,49 @@ func TestUpdateEventProperties(t *testing.T) {
 	assert.Equal(t, "value1", (*eventProperties)["rProp1"])
 }
 
-func TestIsAnyEventByUserInDuration(t *testing.T) {
+func TestGetLatestAnyEventOfUserInDuration(t *testing.T) {
 	projectId, userId, eventNameId, err := SetupProjectUserEventName()
 	assert.Nil(t, err)
 
 	// no event exist in 10 secs.
-	assert.Equal(t, http.StatusNotFound,
-		M.IsAnyEventByUserInDuration(projectId, userId, 30*time.Minute))
+	event, errCode := M.GetLatestAnyEventOfUserInDuration(projectId, userId, 30*time.Minute)
+	assert.Equal(t, http.StatusNotFound, errCode)
+	assert.Nil(t, event)
 
 	// event exist in 10 secs.
-	_, errCode := M.CreateEvent(&M.Event{EventNameId: eventNameId, ProjectId: projectId, UserId: userId})
+	createdEvent, errCode := M.CreateEvent(&M.Event{EventNameId: eventNameId, ProjectId: projectId, UserId: userId})
 	assert.Equal(t, http.StatusCreated, errCode)
-	assert.Equal(t, http.StatusFound, M.IsAnyEventByUserInDuration(projectId, userId, 10*time.Second))
+	event, errCode = M.GetLatestAnyEventOfUserInDuration(projectId, userId, 10*time.Second)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotNil(t, errCode)
+	assert.Equal(t, createdEvent.ID, event.ID)
 
 	// inactivity for duration.
 	time.Sleep(3 * time.Second)
-	assert.Equal(t, http.StatusNotFound, M.IsAnyEventByUserInDuration(projectId, userId, 2*time.Second))
+	_, errCode = M.GetLatestAnyEventOfUserInDuration(projectId, userId, 2*time.Second)
+	assert.Equal(t, http.StatusNotFound, errCode)
+}
+
+func TestCreateOrGetSessionEvent(t *testing.T) {
+	projectId, userId, eventNameId, err := SetupProjectUserEventName()
+	assert.Nil(t, err)
+
+	t.Run("ShouldCreateNewSessionAsNoEventInLast30Mins", func(t *testing.T) {
+		requestTimestamp := U.UnixTimeBeforeDuration(time.Minute * 32)
+		session, errCode := M.CreateOrGetSessionEvent(projectId, userId, true, requestTimestamp,
+			&U.PropertiesMap{}, &U.PropertiesMap{}, "")
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.NotNil(t, session)
+	})
+
+	t.Run("ShouldReturnLatestSessionAsUserWasActive", func(t *testing.T) {
+		_, errCode := M.CreateEvent(&M.Event{EventNameId: eventNameId,
+			ProjectId: projectId, UserId: userId})
+
+		requestTimestamp := time.Now().UTC().Unix()
+		session, errCode := M.CreateOrGetSessionEvent(projectId, userId, true, requestTimestamp,
+			&U.PropertiesMap{}, &U.PropertiesMap{}, "")
+		assert.Equal(t, http.StatusFound, errCode)
+		assert.NotNil(t, session)
+	})
 }
