@@ -1,10 +1,4 @@
-.PHONY: build-staging build-prod pack-fe-staging pack-fe-prod upload-fe-staging upload-fe-prod
-
-# Update tag with the latest release version
-# Ex format: v0.09-beta_8bfe4e0
-# git rev-list HEAD --max-count=1 --abbrev-commit
-TAG?=
-export TAG
+.PHONY: build-staging build-prod deploy-staging deploy-prod
 
 #  export FACTORS_REPO=~/repos/factors
 
@@ -14,14 +8,8 @@ build-staging:
 build-prod:
 	npm run build-prod
 
-pack-fe-staging: build-staging
-	docker build -t us.gcr.io/factors-staging/frontend:$(TAG) -f Dockerfile.staging .
+deploy-staging: build-staging
+	firebase use factors-staging; firebase deploy --only hosting:staging
 
-pack-fe-prod: build-prod
-	docker build -t us.gcr.io/factors-production/frontend:$(TAG) -f Dockerfile.production .
-
-upload-fe-prod:
-	docker push us.gcr.io/factors-production/frontend:$(TAG)
-
-upload-fe-staging:
-	docker push us.gcr.io/factors-staging/frontend:$(TAG)
+deploy-prod: build-prod
+	firebase use factors-production; firebase deploy --only hosting:production
