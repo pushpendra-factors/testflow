@@ -55,7 +55,8 @@ func sdkTrack(projectId uint64, request *sdkTrackPayload, clientIP, userAgent st
 	// Skipping track for configured projects.
 	for _, skipProjectId := range C.GetSkipTrackProjectIds() {
 		if skipProjectId == projectId {
-			return http.StatusBadRequest, &SDKTrackResponse{Error: "Tracking skipped."}
+			// Todo: Change status to StatusBadRequest, using StatusOk to avoid retries.
+			return http.StatusOK, &SDKTrackResponse{Error: "Tracking skipped."}
 		}
 	}
 
