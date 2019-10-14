@@ -57,6 +57,7 @@ type Configuration struct {
 	AdminLoginEmail        string
 	AdminLoginToken        string
 	LoginTokenMap          map[string]string
+	SkipTrackProjectIds    []uint64
 }
 
 type Services struct {
@@ -346,6 +347,10 @@ func GetFactorsCookieName() string {
 	return configuration.Cookiename
 }
 
+func GetSkipTrackProjectIds() []uint64 {
+	return configuration.SkipTrackProjectIds
+}
+
 // ParseConfigStringToMap - Parses config string
 // "k1:v1,k2:v2"-> map[string]string{k1: v1, k2: v2}
 func ParseConfigStringToMap(configStr string) map[string]string {
@@ -368,4 +373,23 @@ func ParseConfigStringToMap(configStr string) map[string]string {
 	}
 
 	return configMap
+}
+
+func GetProjectIdsFromStringList(projectsList string) []uint64 {
+	projectIds := make([]uint64, 0, 0)
+
+	if projectsList == "" {
+		return projectIds
+	}
+
+	tokens := strings.Split(projectsList, ",")
+	for _, token := range tokens {
+		projectId, err := strconv.ParseUint(strings.TrimSpace(token), 10, 64)
+		if err != nil {
+			return projectIds
+		}
+
+		projectIds = append(projectIds, projectId)
+	}
+	return projectIds
 }

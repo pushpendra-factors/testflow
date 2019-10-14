@@ -41,6 +41,8 @@ func main() {
 	adminLoginToken := flag.String("admin_login_token", "", "Admin token for login")
 	loginTokenMap := flag.String("login_token_map", "", "Map of token and agent email to authenticate")
 
+	skipTrackProjectIds := flag.String("skip_track_project_ids", "", "List or projects to skip track")
+
 	flag.Parse()
 
 	config := &C.Configuration{
@@ -64,7 +66,8 @@ func main() {
 		ErrorReportingInterval: *errorReportingInterval,
 		AdminLoginEmail:        *adminLoginEmail,
 		AdminLoginToken:        *adminLoginToken,
-		LoginTokenMap:          C.ParseConfigStringToMap(*loginTokenMap), // Map of "<token>": "<agent_email>".
+		LoginTokenMap:          C.ParseConfigStringToMap(*loginTokenMap),            // Map of "<token>": "<agent_email>".
+		SkipTrackProjectIds:    C.GetProjectIdsFromStringList(*skipTrackProjectIds), // comma seperated project ids.
 	}
 
 	// Initialize configs and connections.

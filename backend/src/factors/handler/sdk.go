@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	C "factors/config"
 	mid "factors/middleware"
 	M "factors/model"
 	U "factors/util"
@@ -51,6 +52,13 @@ type sdkUpdateEventPropertiesPayload struct {
 }
 
 func sdkTrack(projectId uint64, request *sdkTrackPayload, clientIP, userAgent string) (int, *SDKTrackResponse) {
+	// Skipping track for configured projects.
+	for _, skipProjectId := range C.GetSkipTrackProjectIds() {
+		if skipProjectId == projectId {
+			return http.StatusBadRequest, &SDKTrackResponse{Error: "Tracking skipped."}
+		}
+	}
+
 	// Precondition: Fails if event_name not provided.
 	request.Name = strings.TrimSpace(request.Name) // Discourage whitespace on the end.
 	if request.Name == "" {
