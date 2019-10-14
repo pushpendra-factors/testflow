@@ -389,14 +389,20 @@ func createSessionEvent(projectId uint64, userId string, sessionEventNameId uint
 func CreateOrGetSessionEvent(projectId uint64, userId string, isFirstSession bool, requestTimestamp int64,
 	eventProperties, userProperties *U.PropertiesMap, userPropertiesId string) (*Event, int) {
 
+	logCtx := log.WithField("project_id", projectId).WithField("user_id", userId)
+
 	sessionEventName, errCode := CreateOrGetSessionEventName(projectId)
 	if errCode != http.StatusCreated && errCode != http.StatusConflict {
-		log.WithField("project_id", projectId).Error("Failed to create session event name.")
+		logCtx.Error("Failed to create session event name.")
 		return nil, http.StatusInternalServerError
 	}
 
 	latestUserEvent, errCode := GetLatestAnyEventOfUserInDuration(projectId, userId,
 		NewUserSessionInactivityDuration)
+	if errCode == http.StatusInternalServerError {
+		logCtx.Error("Failed to get latest any event of user in duration.")
+		return nil, http.StatusInternalServerError
+	}
 
 	if errCode == http.StatusNotFound {
 		return createSessionEvent(projectId, userId, sessionEventName.ID, isFirstSession, requestTimestamp,
@@ -408,8 +414,12 @@ func CreateOrGetSessionEvent(projectId uint64, userId string, isFirstSession boo
 	latestSessionEvent, errCode := GetLatestEventOfUserByEventNameId(projectId, userId, sessionEventName.ID,
 		latestUserEvent.Timestamp-86400, latestUserEvent.Timestamp)
 
-	logCtx := log.WithFields(log.Fields{"project_id": projectId, "user_id": userId,
-		"latest_event_timestamp": latestUserEvent.Timestamp})
+	if errCode == http.StatusInternalServerError {
+		logCtx.Error("Failed to get latest session event of user.")
+		return nil, http.StatusInternalServerError
+	}
+
+	logCtx = logCtx.WithField("latest_event_timestamp", latestUserEvent.Timestamp)
 
 	if errCode == http.StatusFound {
 		if latestUserEvent.SessionId != nil && *latestUserEvent.SessionId != "" &&
