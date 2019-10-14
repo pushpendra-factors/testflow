@@ -158,6 +158,11 @@ func sdkTrack(projectId uint64, request *sdkTrackPayload, clientIP, userAgent st
 	if errCode != http.StatusCreated && errCode != http.StatusFound {
 		response.Error = "Failed to associate with a session."
 	}
+
+	if session == nil || errCode == http.StatusNotFound || errCode == http.StatusInternalServerError {
+		log.Error("Session is nil even after CreateOrGetSessionEvent.")
+		return errCode, &SDKTrackResponse{Error: "Tracking failed. Unable to associate with a session."}
+	}
 	currentSessionId := session.ID
 
 	createdEvent, errCode := M.CreateEvent(&M.Event{
@@ -170,6 +175,7 @@ func sdkTrack(projectId uint64, request *sdkTrackPayload, clientIP, userAgent st
 		UserPropertiesId: userPropertiesId,
 		SessionId:        &currentSessionId,
 	})
+
 	if errCode == http.StatusFound {
 		return errCode, &SDKTrackResponse{Error: "Tracking failed. Event creation failed. Duplicate CustomerEventID",
 			CustomerEventId: request.CustomerEventId}
