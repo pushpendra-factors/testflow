@@ -310,9 +310,19 @@ func TestCreateOrGetSessionEvent(t *testing.T) {
 	t.Run("ShouldCreateNewSessionAsNoEventInLast30Mins", func(t *testing.T) {
 		requestTimestamp := U.UnixTimeBeforeDuration(time.Minute * 32)
 		session, errCode := M.CreateOrGetSessionEvent(projectId, userId, true, requestTimestamp,
-			&U.PropertiesMap{}, &U.PropertiesMap{}, "")
+			&U.PropertiesMap{U.EP_PAGE_LOAD_TIME: 0.10}, &U.PropertiesMap{}, "")
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.NotNil(t, session)
+
+		// Session event should exist with initial event properites.
+		sessionEvent, errCode := M.GetEvent(projectId, userId, session.ID)
+		assert.Equal(t, http.StatusFound, errCode)
+		eventPropertiesBytes, err := sessionEvent.Properties.Value()
+		assert.Nil(t, err)
+		var eventPropertiesMap map[string]interface{}
+		json.Unmarshal(eventPropertiesBytes.([]byte), &eventPropertiesMap)
+		assert.NotNil(t, eventPropertiesMap[U.UP_INITIAL_PAGE_LOAD_TIME])
+		assert.Equal(t, 0.10, eventPropertiesMap[U.UP_INITIAL_PAGE_LOAD_TIME])
 	})
 
 	t.Run("ShouldReturnLatestSessionAsUserWasActive", func(t *testing.T) {
