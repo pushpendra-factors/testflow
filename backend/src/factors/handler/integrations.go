@@ -29,7 +29,7 @@ func IntSegmentHandler(c *gin.Context) {
 		return
 	}
 
-	// Skipping track for configured projects.
+	// Skipping configured projects.
 	for _, skipProjectId := range C.GetSkipTrackProjectIds() {
 		if skipProjectId == projectId {
 			c.AbortWithStatusJSON(http.StatusOK, gin.H{"error": "Track skipped."})
