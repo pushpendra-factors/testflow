@@ -136,6 +136,11 @@ App.prototype.track = function(eventName, eventProperties, auto=false) {
     payload.user_properties = Properties.getUserDefault();
     payload.auto = auto;
 
+    if (auto) {
+        var pageLoadTime = Properties.getPageLoadTime();
+        if (pageLoadTime > 0) eventProperties[Properties.PAGE_LOAD_TIME] = pageLoadTime;
+    }
+
     return this.client.track(payload)
         .then(updateCookieIfUserIdInResponse)
         .then((response) => {
@@ -148,11 +153,9 @@ App.prototype.track = function(eventName, eventProperties, auto=false) {
 App.prototype.updatePageTimeProperties = function(startOfPageSpentTime) {
     var eventId = getCurrentPageAutoTrackEventIdFromStore();
     var pageSpentTime = getCurrentPageSpentTime(startOfPageSpentTime);
-    var pageLoadTime = Properties.getPageLoadTime();
 
     let properties = {};
     if (pageSpentTime > 0) properties[Properties.PAGE_SPENT_TIME] = pageSpentTime;
-    if (pageLoadTime > 0) properties[Properties.PAGE_LOAD_TIME] = pageLoadTime;
     this.client.updateEventProperties({event_id: eventId, properties: properties});
 }
 
