@@ -52,7 +52,7 @@ func createUserPropertiesIfChanged(projectId uint64, userId string,
 		currentProperties, statusCode = GetUserProperties(
 			projectId, userId, currentPropertiesId)
 
-		if statusCode == http.StatusNotFound || statusCode == http.StatusInternalServerError {
+		if statusCode == http.StatusInternalServerError {
 			log.WithField("current_properties_id", currentPropertiesId).Error(
 				"Failed to GetUserProperties on createUserPropertiesIfChanged.")
 			return "", http.StatusInternalServerError
