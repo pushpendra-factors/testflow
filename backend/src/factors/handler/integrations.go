@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	C "factors/config"
 	I "factors/integration"
 	mid "factors/middleware"
 	M "factors/model"
@@ -26,6 +27,14 @@ func IntSegmentHandler(c *gin.Context) {
 	if projectId == 0 {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Creating event_name failed. Invalid project."})
 		return
+	}
+
+	// Skipping track for configured projects.
+	for _, skipProjectId := range C.GetSkipTrackProjectIds() {
+		if skipProjectId == projectId {
+			c.AbortWithStatusJSON(http.StatusOK, gin.H{"error": "Track skipped."})
+			return
+		}
 	}
 
 	if !M.IsPSettingsIntSegmentEnabled(projectId) {
