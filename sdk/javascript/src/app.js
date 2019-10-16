@@ -177,13 +177,8 @@ App.prototype.autoTrack = function(enabled=false) {
     // AutoTrack SPA
     // checks support for history and onpopstate listener.
     if (window.history && window.onpopstate !== undefined) {
-        if (window.onpopstate != null) {
-            logger.debug("Failed. Already a function attached on window.onpopstate.");
-            return;
-        }
-
         var prevLocation = window.location.href;
-        window.onpopstate = function() {
+        window.addEventListener('popstate', function() {
             logger.debug("Triggered window.onpopstate goto: "+window.location.href+", prev: "+prevLocation);
             if (prevLocation !== window.location.href) {
                 // should be called before next page track.
@@ -193,7 +188,7 @@ App.prototype.autoTrack = function(enabled=false) {
                 startOfPageSpentTime = util.getCurrentUnixTimestampInMs();
                 prevLocation = window.location.href;
             }
-        }
+        })
     }
 }
 
