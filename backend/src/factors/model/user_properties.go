@@ -152,23 +152,6 @@ func GetUserPropertyRecordsByUserId(projectId uint64, userId string) ([]UserProp
 	return userProperties, http.StatusFound
 }
 
-func GetLatestUserPropertiesByUserId(projectId uint64, userId string) (*UserProperties, int) {
-	db := C.GetServices().Db
-
-	var userProperties []UserProperties
-	if err := db.Limit(1).Order("created_at DESC").Where("project_id = ? AND user_id = ?",
-		projectId, userId).Find(&userProperties).Error; err != nil {
-
-		return nil, http.StatusInternalServerError
-	}
-
-	if len(userProperties) == 0 {
-		return nil, http.StatusNotFound
-	}
-
-	return &userProperties[0], http.StatusFound
-}
-
 func OverwriteUserProperties(projectId uint64, userId string, id string, propertiesJsonb *postgres.Jsonb) int {
 	if projectId == 0 || userId == "" || id == "" {
 		return http.StatusBadRequest

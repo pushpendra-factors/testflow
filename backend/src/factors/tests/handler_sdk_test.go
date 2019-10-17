@@ -879,66 +879,6 @@ func TestSDKBulk(t *testing.T) {
 
 }
 
-func getAutoTrackedEventId(t *testing.T, projectAuthToken string) string {
-	r := gin.Default()
-	H.InitSDKRoutes(r)
-	uri := "/sdk/event/track"
-
-	w := ServePostRequestWithHeaders(r, uri,
-		[]byte(fmt.Sprintf(`{"event_name": "%s", "auto": true, "event_properties": {"mobile" : "true"}}`,
-			"https://example.com/")), map[string]string{"Authorization": projectAuthToken})
-	assert.Equal(t, http.StatusOK, w.Code)
-	responseMap := DecodeJSONResponseToMap(w.Body)
-	assert.NotEmpty(t, responseMap)
-	assert.NotNil(t, responseMap["event_id"])
-
-	return responseMap["event_id"].(string)
-}
-
-func TestSDKUpdateEventPropertiesHandler(t *testing.T) {
-	// Initialize routes and dependent data.
-	r := gin.Default()
-	H.InitSDKRoutes(r)
-	uri := "/sdk/event/update_properties"
-
-	project, err := SetupProjectReturnDAO()
-	assert.Nil(t, err)
-
-	// Test without project_id scope and with non-existing project.
-	w := ServePostRequest(r, uri, []byte("{}"))
-	assert.Equal(t, http.StatusUnauthorized, w.Code)
-	responseMap := DecodeJSONResponseToMap(w.Body)
-	assert.NotNil(t, responseMap["error"])
-
-	// Test with invalid token.
-	w = ServePostRequestWithHeaders(r, uri, []byte(`{}`), map[string]string{"Authorization": "INVALID_TOKEN"})
-	assert.Equal(t, http.StatusUnauthorized, w.Code)
-	responseMap = DecodeJSONResponseToMap(w.Body)
-	assert.NotNil(t, responseMap["error"])
-
-	// Test with invalid event_id in the payload.
-	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"event_id": "%s", "properties": {"$page_spent_time": "%d"}}`,
-		"", 1)), map[string]string{"Authorization": project.Token})
-	assert.Equal(t, http.StatusBadRequest, w.Code)
-
-	// Test with disallowed property in the payload.
-	eventId := getAutoTrackedEventId(t, project.Token)
-	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"event_id": "%s", "properties": {"$not_allowed": "%d"}}`,
-		eventId, 1)), map[string]string{"Authorization": project.Token})
-	assert.Equal(t, http.StatusBadRequest, w.Code)
-	assert.NotNil(t, responseMap["error"])
-
-	eventId = getAutoTrackedEventId(t, project.Token)
-	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"event_id": "%s", "properties": {"$page_spent_time": "%d"}}`,
-		eventId, 1)), map[string]string{"Authorization": project.Token})
-	assert.Equal(t, http.StatusAccepted, w.Code)
-
-	eventId = getAutoTrackedEventId(t, project.Token)
-	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"event_id": "%s", "properties": {"$page_load_time": "%d"}}`,
-		eventId, 1)), map[string]string{"Authorization": project.Token})
-	assert.Equal(t, http.StatusAccepted, w.Code)
-}
-
 func getAutoTrackedEventIdWithPageRawURL(t *testing.T, projectAuthToken, pageRawURL string) (string, string) {
 	r := gin.Default()
 	H.InitSDKRoutes(r)
@@ -971,6 +911,52 @@ func getAutoTrackedEventIdWithUserIdAndPageRawURL(t *testing.T, projectAuthToken
 	return responseMap["event_id"].(string)
 }
 
+func TestSDKUpdateEventPropertiesHandler(t *testing.T) {
+	// Initialize routes and dependent data.
+	r := gin.Default()
+	H.InitSDKRoutes(r)
+	uri := "/sdk/event/update_properties"
+
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	// Test without project_id scope and with non-existing project.
+	w := ServePostRequest(r, uri, []byte("{}"))
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+	responseMap := DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, responseMap["error"])
+
+	// Test with invalid token.
+	w = ServePostRequestWithHeaders(r, uri, []byte(`{}`), map[string]string{"Authorization": "INVALID_TOKEN"})
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+	responseMap = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, responseMap["error"])
+
+	rawPageUrl := "https://example.com/url"
+
+	// Test with invalid event_id in the payload.
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"event_id": "%s", "properties": {"$page_spent_time": "%d"}}`,
+		"", 1)), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	// Test with disallowed property in the payload.
+	eventId, _ := getAutoTrackedEventIdWithPageRawURL(t, project.Token, rawPageUrl)
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"event_id": "%s", "properties": {"$not_allowed": "%d"}}`,
+		eventId, 1)), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.NotNil(t, responseMap["error"])
+
+	eventId, _ = getAutoTrackedEventIdWithPageRawURL(t, project.Token, rawPageUrl)
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"event_id": "%s", "properties": {"$page_spent_time": "%d"}}`,
+		eventId, 1)), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusAccepted, w.Code)
+
+	eventId, _ = getAutoTrackedEventIdWithPageRawURL(t, project.Token, rawPageUrl)
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"event_id": "%s", "properties": {"$page_load_time": "%d"}}`,
+		eventId, 1)), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusAccepted, w.Code)
+}
+
 func TestSessionAndUserInitialPropertiesUpdateOnSDKUpdateEventPropertiesHandler(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
@@ -997,9 +983,9 @@ func TestSessionAndUserInitialPropertiesUpdateOnSDKUpdateEventPropertiesHandler(
 	assert.Equal(t, pageRawURL, (*sessionProperites)[U.UP_INITIAL_PAGE_RAW_URL])
 	assert.Equal(t, float64(100), (*sessionProperites)[U.UP_INITIAL_PAGE_SPENT_TIME])
 	// Should update initial user properties on initial call.
-	userPropertiesRecord, errCode := M.GetLatestUserPropertiesByUserId(project.ID, userId)
+	user, errCode := M.GetUser(project.ID, userId)
 	assert.Equal(t, http.StatusFound, errCode)
-	userProperties, err := U.DecodePostgresJsonb(&userPropertiesRecord.Properties)
+	userProperties, err := U.DecodePostgresJsonb(&user.Properties)
 	assert.Nil(t, err)
 	assert.Equal(t, pageRawURL, (*userProperties)[U.UP_INITIAL_PAGE_RAW_URL])
 	assert.Equal(t, float64(100), (*userProperties)[U.UP_INITIAL_PAGE_SPENT_TIME])
@@ -1023,9 +1009,9 @@ func TestSessionAndUserInitialPropertiesUpdateOnSDKUpdateEventPropertiesHandler(
 	assert.NotEqual(t, float64(200), (*sessionProperites)[U.UP_INITIAL_PAGE_SPENT_TIME])
 	assert.Equal(t, float64(100), (*sessionProperites)[U.UP_INITIAL_PAGE_SPENT_TIME])
 	// Should not update user properties on consequtive calls.
-	userPropertiesRecord, errCode = M.GetLatestUserPropertiesByUserId(project.ID, userId)
+	user, errCode = M.GetUser(project.ID, userId)
 	assert.Equal(t, http.StatusFound, errCode)
-	userProperties, err = U.DecodePostgresJsonb(&userPropertiesRecord.Properties)
+	userProperties, err = U.DecodePostgresJsonb(&user.Properties)
 	assert.Nil(t, err)
 	assert.Equal(t, pageRawURL, (*userProperties)[U.UP_INITIAL_PAGE_RAW_URL])
 	assert.NotEqual(t, float64(200), (*userProperties)[U.UP_INITIAL_PAGE_SPENT_TIME])

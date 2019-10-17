@@ -612,14 +612,14 @@ func SDKUpdateEventProperties(c *gin.Context) {
 	}
 
 	newUserProperties := U.GetInitialUserProperties(validatedProperties)
-	userPropertiesRecord, errCode := M.GetLatestUserPropertiesByUserId(projectId, updatedEvent.UserId)
+	user, errCode := M.GetUser(projectId, updatedEvent.UserId)
 	if errCode != http.StatusFound {
 		logCtx.Error("Failed to get user properties of user on update event properties.")
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Update event properties failed."})
 		return
 	}
 
-	userPropertiesMap, err := U.DecodePostgresJsonb(&userPropertiesRecord.Properties)
+	userPropertiesMap, err := U.DecodePostgresJsonb(&user.Properties)
 	if err != nil {
 		logCtx.Error("Failed to unmarshal existing user properties on update event properties.")
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Update event properties failed."})
@@ -656,7 +656,7 @@ func SDKUpdateEventProperties(c *gin.Context) {
 			return
 		}
 
-		_, errCode := M.UpdateUserPropertiesByCurrentProperties(projectId, updatedEvent.UserId, userPropertiesRecord.ID, userPropertiesJsonb)
+		_, errCode := M.UpdateUserProperties(projectId, updatedEvent.UserId, userPropertiesJsonb)
 		if errCode != http.StatusAccepted {
 			c.AbortWithStatusJSON(errCode, gin.H{"error": "Update event properties failed."})
 			return
