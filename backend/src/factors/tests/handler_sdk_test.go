@@ -415,6 +415,35 @@ func TestSDKTrackHandler(t *testing.T) {
 		assert.Equal(t, "12345", userProperties2[U.UP_INITIAL_CAMPAIGN_ID])
 		assert.NotEqual(t, "78910", userProperties2[U.UP_INITIAL_CAMPAIGN_ID])
 	})
+
+	t.Run("IgnoreFilterPropertyAtTheEndOnmatch", func(t *testing.T) {
+		expr := "example.com/profile/id"
+		name := "seen_reports"
+		filterEventName, errCode := M.CreateOrGetFilterEventName(&M.EventName{
+			ProjectId:  project.ID,
+			FilterExpr: expr,
+			Name:       name,
+		})
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.NotNil(t, filterEventName)
+		assert.NotZero(t, filterEventName.ID)
+		assert.Equal(t, name, filterEventName.Name)
+		assert.Equal(t, expr, filterEventName.FilterExpr)
+		assert.Equal(t, M.TYPE_FILTER_EVENT_NAME, filterEventName.Type)
+
+		rEventName = "example.com/profile/id/1"
+		w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(
+			`{"user_id": "%s", "event_name": "%s", "auto": true, "event_properties": {"mobile": "true"}, "user_properties": {"$os": "mac osx", "$os_version": "1_2_3"}}`,
+			user.ID, rEventName)), map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusOK, w.Code)
+		responseMap = DecodeJSONResponseToMap(w.Body)
+		assert.NotEmpty(t, responseMap)
+		assert.Nil(t, responseMap["user_id"])
+		rEvent, errCode = M.GetEvent(project.ID, user.ID, responseMap["event_id"].(string))
+		assert.Equal(t, http.StatusFound, errCode)
+		assert.NotNil(t, rEvent)
+		assert.Equal(t, filterEventName.ID, rEvent.EventNameId)
+	})
 }
 
 func TestTrackHandlerWithUserSession(t *testing.T) {
