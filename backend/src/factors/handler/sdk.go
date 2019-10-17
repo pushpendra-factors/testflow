@@ -517,6 +517,8 @@ func SDKUpdateEventProperties(c *gin.Context) {
 		return
 	}
 
+	logCtx = logCtx.WithField("project_id", projectId)
+
 	var request sdkUpdateEventPropertiesPayload
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
@@ -537,6 +539,128 @@ func SDKUpdateEventProperties(c *gin.Context) {
 	if errCode != http.StatusAccepted {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Update event properties failed."})
 		return
+	}
+
+	updatedEvent, errCode := M.GetEventById(projectId, request.EventId)
+	if errCode != http.StatusFound {
+		c.AbortWithStatusJSON(errCode, gin.H{"error": "Update event properties failed."})
+		return
+	}
+
+	logCtx = logCtx.WithField("event_id", request.EventId)
+
+	if updatedEvent.SessionId == nil || *updatedEvent.SessionId == "" {
+		logCtx.Error("Session id does not exist to update session properties on update event properties.")
+		c.AbortWithStatusJSON(http.StatusInternalServerError,
+			gin.H{"error": "Update event properties failed. No session associated."})
+		return
+	}
+
+	newSessionProperties := U.GetSessionProperties(false, validatedProperties, &U.PropertiesMap{})
+	sessionEvent, errCode := M.GetEventById(projectId, *updatedEvent.SessionId)
+	if errCode != http.StatusFound {
+		c.AbortWithStatusJSON(errCode, gin.H{"error": "Update event properties failed."})
+		return
+	}
+
+	updatedEventPropertiesMap, err := U.DecodePostgresJsonb(&updatedEvent.Properties)
+	if err != nil {
+		logCtx.Error("Failed to unmarshal updated event properties on update event properties.")
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Update event properties failed."})
+		return
+	}
+
+	sessionPropertiesMap, err := U.DecodePostgresJsonb(&sessionEvent.Properties)
+	if err != nil {
+		logCtx.Error("Failed to unmarshal existing session properties on update event properties.")
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Update event properties failed."})
+		return
+	}
+
+	eventPageURL, eventPageURLExists := (*updatedEventPropertiesMap)[U.EP_PAGE_RAW_URL]
+
+	sessionInitialPageURL, sessionInitialPageURLExists := (*sessionPropertiesMap)[U.UP_INITIAL_PAGE_RAW_URL]
+	if !eventPageURLExists || !sessionInitialPageURLExists {
+		logCtx.Error("No page URL property to compare for session properties update.")
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Update event properties failed."})
+		return
+	}
+
+	// session properties updated only if page raw url and initial
+	// page raw url matches.
+	if eventPageURL != sessionInitialPageURL {
+		c.JSON(http.StatusAccepted, gin.H{"message": "Updated event properties successfully."})
+		return
+	}
+
+	isSessionPropertiesUpdateRequired := false
+	for property, value := range *newSessionProperties {
+		if _, exists := (*sessionPropertiesMap)[property]; !exists {
+			(*sessionPropertiesMap)[property] = value
+			isSessionPropertiesUpdateRequired = true
+		}
+	}
+
+	// updates only when new properties added.
+	if isSessionPropertiesUpdateRequired {
+		updateSesssionProperties := U.PropertiesMap(*sessionPropertiesMap)
+		errCode := M.UpdateEventProperties(projectId, sessionEvent.ID, &updateSesssionProperties)
+		if errCode != http.StatusAccepted {
+			c.AbortWithStatusJSON(errCode, gin.H{"error": "Update event properties failed."})
+			return
+		}
+	}
+
+	newUserProperties := U.GetInitialUserProperties(validatedProperties)
+	userPropertiesRecord, errCode := M.GetLatestUserPropertiesByUserId(projectId, updatedEvent.UserId)
+	if errCode != http.StatusFound {
+		logCtx.Error("Failed to get user properties of user on update event properties.")
+		c.AbortWithStatusJSON(errCode, gin.H{"error": "Update event properties failed."})
+		return
+	}
+
+	userPropertiesMap, err := U.DecodePostgresJsonb(&userPropertiesRecord.Properties)
+	if err != nil {
+		logCtx.Error("Failed to unmarshal existing user properties on update event properties.")
+		c.AbortWithStatusJSON(errCode, gin.H{"error": "Update event properties failed."})
+		return
+	}
+
+	userInitialPageURL, userInitialPageURLExists := (*userPropertiesMap)[U.UP_INITIAL_PAGE_RAW_URL]
+	if !userInitialPageURLExists {
+		logCtx.Error("No initial page raw url on user properties to compare on update event properties.")
+		c.AbortWithStatusJSON(errCode, gin.H{"error": "Update event properties failed."})
+		return
+	}
+
+	// user properties updated only if initial_raw_page url of user_properties
+	// and raw_page_url of event properties matches.
+	if userInitialPageURL != eventPageURL {
+		c.JSON(http.StatusAccepted, gin.H{"message": "Updated event properties successfully."})
+		return
+	}
+
+	isUserPropertiesUpdateRequired := false
+	for property, value := range *newUserProperties {
+		if _, exists := (*userPropertiesMap)[property]; !exists {
+			(*userPropertiesMap)[property] = value
+			isUserPropertiesUpdateRequired = true
+		}
+	}
+
+	if isUserPropertiesUpdateRequired {
+		userPropertiesJsonb, err := U.EncodeToPostgresJsonb(userPropertiesMap)
+		if err != nil {
+			logCtx.Error("Failed to marshal user properties with initial user properties on updated event properties.")
+			c.AbortWithStatusJSON(errCode, gin.H{"error": "Update event properties failed."})
+			return
+		}
+
+		_, errCode := M.UpdateUserPropertiesByCurrentProperties(projectId, updatedEvent.UserId, userPropertiesRecord.ID, userPropertiesJsonb)
+		if errCode != http.StatusAccepted {
+			c.AbortWithStatusJSON(errCode, gin.H{"error": "Update event properties failed."})
+			return
+		}
 	}
 
 	c.JSON(http.StatusAccepted, gin.H{"message": "Updated event properties successfully."})

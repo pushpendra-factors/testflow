@@ -371,6 +371,7 @@ func TestSDKTrackHandler(t *testing.T) {
 		assert.NotNil(t, userProperties[U.UP_INITIAL_PAGE_RAW_URL])
 		assert.NotNil(t, userProperties[U.UP_INITIAL_PAGE_DOMAIN])
 		assert.NotNil(t, userProperties[U.UP_INITIAL_PAGE_LOAD_TIME])
+		assert.Equal(t, float64(100), userProperties[U.UP_INITIAL_PAGE_LOAD_TIME])
 		assert.NotNil(t, userProperties[U.UP_INITIAL_PAGE_SPENT_TIME])
 		assert.NotNil(t, userProperties[U.UP_INITIAL_CAMPAIGN])
 		assert.NotNil(t, userProperties[U.UP_INITIAL_CAMPAIGN_ID])
@@ -469,6 +470,7 @@ func TestTrackHandlerWithUserSession(t *testing.T) {
 	assert.NotEmpty(t, sessionProperties[U.SP_INITIAL_REFERRER_URL])
 	assert.NotEmpty(t, sessionProperties[U.SP_INITIAL_REFERRER_DOMAIN])
 	assert.NotEmpty(t, sessionProperties[U.UP_INITIAL_PAGE_LOAD_TIME])
+	assert.Equal(t, float64(100), sessionProperties[U.UP_INITIAL_PAGE_LOAD_TIME])
 	assert.NotEmpty(t, sessionProperties[U.UP_INITIAL_PAGE_SPENT_TIME])
 	assert.NotEmpty(t, sessionProperties[U.EP_CAMPAIGN])
 	assert.NotEmpty(t, sessionProperties[U.EP_CAMPAIGN_ID])
@@ -935,4 +937,97 @@ func TestSDKUpdateEventPropertiesHandler(t *testing.T) {
 	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"event_id": "%s", "properties": {"$page_load_time": "%d"}}`,
 		eventId, 1)), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusAccepted, w.Code)
+}
+
+func getAutoTrackedEventIdWithPageRawURL(t *testing.T, projectAuthToken, pageRawURL string) (string, string) {
+	r := gin.Default()
+	H.InitSDKRoutes(r)
+	uri := "/sdk/event/track"
+
+	w := ServePostRequestWithHeaders(r, uri,
+		[]byte(fmt.Sprintf(`{"event_name": "%s", "auto": true, "event_properties": {"mobile" : "true", "$page_raw_url": "%s"}}`,
+			"https://example.com/", pageRawURL)), map[string]string{"Authorization": projectAuthToken})
+	assert.Equal(t, http.StatusOK, w.Code)
+	responseMap := DecodeJSONResponseToMap(w.Body)
+	assert.NotEmpty(t, responseMap)
+	assert.NotNil(t, responseMap["event_id"])
+	assert.NotNil(t, responseMap["user_id"])
+	return responseMap["event_id"].(string), responseMap["user_id"].(string)
+}
+
+func getAutoTrackedEventIdWithUserIdAndPageRawURL(t *testing.T, projectAuthToken, userId, pageRawURL string) string {
+	r := gin.Default()
+	H.InitSDKRoutes(r)
+	uri := "/sdk/event/track"
+
+	w := ServePostRequestWithHeaders(r, uri,
+		[]byte(fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "auto": true, "event_properties": {"mobile" : "true", "$page_raw_url": "%s"}}`,
+			"https://example.com/", userId, pageRawURL)), map[string]string{"Authorization": projectAuthToken})
+	assert.Equal(t, http.StatusOK, w.Code)
+	responseMap := DecodeJSONResponseToMap(w.Body)
+	assert.NotEmpty(t, responseMap)
+	assert.NotNil(t, responseMap["event_id"])
+
+	return responseMap["event_id"].(string)
+}
+
+func TestSessionAndUserInitialPropertiesUpdateOnSDKUpdateEventPropertiesHandler(t *testing.T) {
+	// Initialize routes and dependent data.
+	r := gin.Default()
+	H.InitSDKRoutes(r)
+	uri := "/sdk/event/update_properties"
+
+	project, _, err := SetupProjectUserReturnDAO()
+	assert.Nil(t, err)
+
+	pageRawURL := "https://page.url.com/1"
+	eventId, userId := getAutoTrackedEventIdWithPageRawURL(t, project.Token, pageRawURL)
+	w := ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"event_id": "%s", "properties": {"$page_spent_time": %d}}`,
+		eventId, 100)), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusAccepted, w.Code)
+	updatedEvent, errCode := M.GetEventById(project.ID, eventId)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotEmpty(t, *updatedEvent.SessionId)
+	// Should update initial session properties on initial call.
+	sessionEvent, errCode := M.GetEventById(project.ID, *updatedEvent.SessionId)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Equal(t, *updatedEvent.SessionId, sessionEvent.ID)
+	sessionProperites, err := U.DecodePostgresJsonb(&sessionEvent.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, pageRawURL, (*sessionProperites)[U.UP_INITIAL_PAGE_RAW_URL])
+	assert.Equal(t, float64(100), (*sessionProperites)[U.UP_INITIAL_PAGE_SPENT_TIME])
+	// Should update initial user properties on initial call.
+	userPropertiesRecord, errCode := M.GetLatestUserPropertiesByUserId(project.ID, userId)
+	assert.Equal(t, http.StatusFound, errCode)
+	userProperties, err := U.DecodePostgresJsonb(&userPropertiesRecord.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, pageRawURL, (*userProperties)[U.UP_INITIAL_PAGE_RAW_URL])
+	assert.Equal(t, float64(100), (*userProperties)[U.UP_INITIAL_PAGE_SPENT_TIME])
+
+	// same page_raw_url with same user and session should not
+	// update $initial_page_spent_time again.
+	eventId = getAutoTrackedEventIdWithUserIdAndPageRawURL(t, project.Token, userId, pageRawURL)
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"event_id": "%s", "properties": {"$page_spent_time": %d}}`,
+		eventId, 200)), map[string]string{"Authorization": project.Token})
+	updatedEvent2, errCode := M.GetEventById(project.ID, eventId)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotEmpty(t, *updatedEvent.SessionId)
+	// Should use the same session.
+	assert.Equal(t, *updatedEvent.SessionId, *updatedEvent2.SessionId)
+	// Should not update session properties on consequtive calls.
+	sessionEvent, errCode = M.GetEventById(project.ID, *updatedEvent2.SessionId)
+	assert.Equal(t, http.StatusFound, errCode)
+	sessionProperites, err = U.DecodePostgresJsonb(&sessionEvent.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, pageRawURL, (*sessionProperites)[U.UP_INITIAL_PAGE_RAW_URL])
+	assert.NotEqual(t, float64(200), (*sessionProperites)[U.UP_INITIAL_PAGE_SPENT_TIME])
+	assert.Equal(t, float64(100), (*sessionProperites)[U.UP_INITIAL_PAGE_SPENT_TIME])
+	// Should not update user properties on consequtive calls.
+	userPropertiesRecord, errCode = M.GetLatestUserPropertiesByUserId(project.ID, userId)
+	assert.Equal(t, http.StatusFound, errCode)
+	userProperties, err = U.DecodePostgresJsonb(&userPropertiesRecord.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, pageRawURL, (*userProperties)[U.UP_INITIAL_PAGE_RAW_URL])
+	assert.NotEqual(t, float64(200), (*userProperties)[U.UP_INITIAL_PAGE_SPENT_TIME])
+	assert.Equal(t, float64(100), (*userProperties)[U.UP_INITIAL_PAGE_SPENT_TIME])
 }

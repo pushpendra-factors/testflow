@@ -102,3 +102,12 @@ func DecodePostgresJsonb(sourceJsonb *postgres.Jsonb) (*map[string]interface{}, 
 
 	return &sourceMap, nil
 }
+
+func EncodeToPostgresJsonb(sourceMap *map[string]interface{}) (*postgres.Jsonb, error) {
+	sourceJsonBytes, err := json.Marshal(sourceMap)
+	if err != nil {
+		return nil, err
+	}
+
+	return &postgres.Jsonb{sourceJsonBytes}, nil
+}
