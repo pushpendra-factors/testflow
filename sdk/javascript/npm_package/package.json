@@ -1,6 +1,6 @@
 {
   "name": "factorsai",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "FactorsAI JS SDK",
   "main": "./index.js",
   "scripts": {},
