@@ -788,7 +788,7 @@ func (it *Itree) buildCategoricalPropertyChildNodes(reqId string,
 				klDistanceUnits = append(klDistanceUnits, noneKLDistanceUnit)
 			}
 
-			nodeGraphType := NODE_TYPE_GRAPH_USER_PROPERTIES
+			/*nodeGraphType := NODE_TYPE_GRAPH_USER_PROPERTIES
 			if nodeType == NODE_TYPE_EVENT_PROPERTY {
 				nodeGraphType = NODE_TYPE_GRAPH_EVENT_PROPERTIES
 			}
@@ -798,7 +798,7 @@ func (it *Itree) buildCategoricalPropertyChildNodes(reqId string,
 				log.WithFields(log.Fields{"err": err}).Errorf("Couldn't build graph child node")
 			} else {
 				propertyChildNodes = append(propertyChildNodes, cGraphNode)
-			}
+			}*/
 		}
 	}
 	return propertyChildNodes
