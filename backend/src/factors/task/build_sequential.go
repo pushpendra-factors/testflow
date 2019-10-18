@@ -2,8 +2,10 @@ package task
 
 import (
 	"factors/filestore"
+	M "factors/model"
 	serviceDisk "factors/services/disk"
 	serviceEtcd "factors/services/etcd"
+
 	"factors/util"
 	"fmt"
 	"runtime/debug"
@@ -50,7 +52,7 @@ func BuildSequential(env string, db *gorm.DB, cloudManager *filestore.FileManage
 
 	// Todo(Dinesh): Add success and failure notification.
 	// Idea: []Builds from this can be queued and workers can process.
-	builds, err := GetNextBuilds(db, cloudManager, etcdClient)
+	builds, activeProjects, err := GetNextBuilds(db, cloudManager, etcdClient)
 	if err != nil {
 		bsLog.WithField("error", err).Error("Failed to get next build info.")
 	}
@@ -118,9 +120,19 @@ func BuildSequential(env string, db *gorm.DB, cloudManager *filestore.FileManage
 			PatternMineTimeInMS: timeTakenToMinePatterns})
 	}
 
+	newActiveProjects := make([]M.ProjectEventsInfo, 0, 0)
+	for _, pei := range activeProjects {
+		// Adds new projects with first event timestamp within last 24 hours.
+		if pei.FirstEventTimestamp >= util.UnixTimeBeforeDuration(time.Hour*24) {
+			newActiveProjects = append(newActiveProjects, pei)
+		}
+	}
+
 	buildStatus := map[string]interface{}{
-		"success":  success,
-		"failures": failures,
+		"success":             success,
+		"failures":            failures,
+		"all_active_projects": activeProjects,
+		"new_active_projects": newActiveProjects,
 	}
 	if err := util.NotifyThroughSNS(taskID, env, buildStatus); err != nil {
 		log.WithError(err).Error("Failed to notify build status.")

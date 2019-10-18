@@ -6,6 +6,7 @@ import (
 	M "factors/model"
 	PMM "factors/pattern_model_meta"
 	serviceEtcd "factors/services/etcd"
+	U "factors/util"
 	"time"
 
 	"fmt"
@@ -144,10 +145,10 @@ func addNextIntervalsForProjectByType(builds *[]Build, projectId uint64, modelTy
 
 // GetNextBuilds - Gets next batch of intervals by project, for building models.
 func GetNextBuilds(db *gorm.DB, cloudManager *filestore.FileManager,
-	etcdClient *serviceEtcd.EtcdClient) ([]Build, error) {
+	etcdClient *serviceEtcd.EtcdClient) ([]Build, []M.ProjectEventsInfo, error) {
 
 	if db == nil {
-		return nil, fmt.Errorf("db cannot be nil, get build info failed")
+		return nil, nil, fmt.Errorf("db cannot be nil, get build info failed")
 	}
 
 	builds := make([]Build, 0, 0)
@@ -155,26 +156,26 @@ func GetNextBuilds(db *gorm.DB, cloudManager *filestore.FileManager,
 	projectsMeta, err := PMM.GetProjectsMetadata(cloudManager, etcdClient)
 	if err != nil {
 		gnbLog.Error("Failed to get current project metadata")
-		return nil, err
+		return nil, nil, err
 	}
 
 	// All project event timestamp info.
-	pEventTimeInfo, errCode := M.GetProjectEventsInfo()
+	projectsEventInfo, errCode := M.GetProjectEventsInfo()
 	if errCode != http.StatusFound {
-		return nil, errors.New("unable to fetch projects")
+		return nil, nil, errors.New("unable to fetch projects")
 	}
 
 	// Intervals for existing projects on meta.
 	lastBuildOfProjects := makeLastBuildTimestampMap(projectsMeta)
 	for pid, buildTimeByType := range *lastBuildOfProjects {
 		gnbLog.Infof("Last build info - ProjectId: %d LastBuildEndTimeByType: %+v", pid, buildTimeByType)
-		if (*pEventTimeInfo)[pid] != nil {
+		if (*projectsEventInfo)[pid] != nil {
 			addNextIntervalsForProjectByType(&builds, pid, ModelTypeWeek, buildTimeByType[ModelTypeWeek],
-				(*pEventTimeInfo)[pid].FirstEventTimestamp, (*pEventTimeInfo)[pid].LastEventTimestamp, (*pEventTimeInfo)[pid].ProjectName,
-				(*pEventTimeInfo)[pid].CreatorEmail)
+				(*projectsEventInfo)[pid].FirstEventTimestamp, (*projectsEventInfo)[pid].LastEventTimestamp, (*projectsEventInfo)[pid].ProjectName,
+				(*projectsEventInfo)[pid].CreatorEmail)
 			addNextIntervalsForProjectByType(&builds, pid, ModelTypeMonth, buildTimeByType[ModelTypeMonth],
-				(*pEventTimeInfo)[pid].FirstEventTimestamp, (*pEventTimeInfo)[pid].LastEventTimestamp, (*pEventTimeInfo)[pid].ProjectName,
-				(*pEventTimeInfo)[pid].CreatorEmail)
+				(*projectsEventInfo)[pid].FirstEventTimestamp, (*projectsEventInfo)[pid].LastEventTimestamp, (*projectsEventInfo)[pid].ProjectName,
+				(*projectsEventInfo)[pid].CreatorEmail)
 		} else {
 			gnbLog.WithField("ProjectId", pid).Error("No events for a project found on meta.")
 		}
@@ -182,7 +183,7 @@ func GetNextBuilds(db *gorm.DB, cloudManager *filestore.FileManager,
 
 	// Intervals for non existing projects on metadata.
 	noMetaProjects := make([]uint64, 0, 0)
-	for pid := range *pEventTimeInfo {
+	for pid := range *projectsEventInfo {
 		if _, exist := (*lastBuildOfProjects)[pid]; !exist {
 			noMetaProjects = append(noMetaProjects, pid)
 		}
@@ -190,12 +191,21 @@ func GetNextBuilds(db *gorm.DB, cloudManager *filestore.FileManager,
 
 	for _, pid := range noMetaProjects {
 		addPendingIntervalsForProjectByType(&builds, pid, ModelTypeWeek,
-			(*pEventTimeInfo)[pid].FirstEventTimestamp, (*pEventTimeInfo)[pid].LastEventTimestamp,
-			(*pEventTimeInfo)[pid].ProjectName, (*pEventTimeInfo)[pid].CreatorEmail)
+			(*projectsEventInfo)[pid].FirstEventTimestamp, (*projectsEventInfo)[pid].LastEventTimestamp,
+			(*projectsEventInfo)[pid].ProjectName, (*projectsEventInfo)[pid].CreatorEmail)
 		addPendingIntervalsForProjectByType(&builds, pid, ModelTypeMonth,
-			(*pEventTimeInfo)[pid].FirstEventTimestamp, (*pEventTimeInfo)[pid].LastEventTimestamp,
-			(*pEventTimeInfo)[pid].ProjectName, (*pEventTimeInfo)[pid].CreatorEmail)
+			(*projectsEventInfo)[pid].FirstEventTimestamp, (*projectsEventInfo)[pid].LastEventTimestamp,
+			(*projectsEventInfo)[pid].ProjectName, (*projectsEventInfo)[pid].CreatorEmail)
 	}
 
-	return builds, nil
+	// list of projects with events
+	projectsWithEvents := make([]M.ProjectEventsInfo, 0, 0)
+	for _, pei := range *projectsEventInfo {
+		// Adds only active projects with events within last 3 days.
+		if pei.EventsCount > 0 && pei.LastEventTimestamp > U.UnixTimeBeforeDuration(time.Hour*24*3) {
+			projectsWithEvents = append(projectsWithEvents, *pei)
+		}
+	}
+
+	return builds, projectsWithEvents, nil
 }

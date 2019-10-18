@@ -158,6 +158,7 @@ func TestGetFirstLastEventTimestamp(t *testing.T) {
 	assert.Equal(t, firstTimestamp, (*ts1)[project.ID].FirstEventTimestamp)
 	assert.Equal(t, thirdTimestamp, (*ts1)[project.ID].LastEventTimestamp)
 	assert.Nil(t, (*ts1)[999999])
+	assert.Equal(t, 3, (*ts1)[project.ID].EventsCount)
 }
 
 func createEventWithTimestampAndPrperties(t *testing.T, project *M.Project, user *M.User, timestamp int64, properties json.RawMessage) (*M.EventName, *M.Event) {

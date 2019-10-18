@@ -37,11 +37,12 @@ type Event struct {
 }
 
 type ProjectEventsInfo struct {
-	ProjectId           uint64
-	ProjectName         string
-	CreatorEmail        string
-	FirstEventTimestamp int64
-	LastEventTimestamp  int64
+	ProjectId           uint64 `json:"project_id"`
+	ProjectName         string `json:"project_name"`
+	EventsCount         int    `json:"events_count"`
+	CreatorEmail        string `json:"creator_email"`
+	FirstEventTimestamp int64  `json:"first_event_timestamp"`
+	LastEventTimestamp  int64  `json:"last_event_timestamp"`
 }
 
 const error_Duplicate_event_customerEventID = "pq: duplicate key value violates unique constraint \"project_id_customer_event_id_unique_idx\""
@@ -182,7 +183,7 @@ func GetProjectEventsInfo() (*(map[uint64]*ProjectEventsInfo), int) {
 	db := C.GetServices().Db
 
 	queryStr := "SELECT events_info.*, agents.email FROM" +
-		" " + "(SELECT projects.id, projects.name, min(events.timestamp) as first_timestamp, max(events.timestamp) as last_timestamp FROM events" +
+		" " + "(SELECT projects.id, projects.name, min(events.timestamp) as first_timestamp, max(events.timestamp) as last_timestamp, count(*) as events_count FROM events" +
 		" " + "LEFT JOIN projects on events.project_id = projects.id GROUP BY projects.id) as events_info" +
 		" " + "LEFT JOIN project_agent_mappings ON project_agent_mappings.project_id=events_info.id AND project_agent_mappings.role=2" +
 		" " + "LEFT JOIN agents ON project_agent_mappings.agent_uuid=agents.uuid ORDER BY events_info.id"
@@ -202,14 +203,15 @@ func GetProjectEventsInfo() (*(map[uint64]*ProjectEventsInfo), int) {
 		var firstTimestamp, lastTimestamp int64
 		var projectName string
 		var creatorEmail sql.NullString
-		if err = rows.Scan(&projectId, &projectName, &firstTimestamp, &lastTimestamp, &creatorEmail); err != nil {
+		var eventsCount int
+		if err = rows.Scan(&projectId, &projectName, &firstTimestamp, &lastTimestamp, &eventsCount, &creatorEmail); err != nil {
 			log.Error(err)
 			return nil, http.StatusInternalServerError
 		}
 
 		if firstTimestamp > 0 {
 			projectEventsTime[projectId] = &ProjectEventsInfo{ProjectId: projectId, FirstEventTimestamp: firstTimestamp,
-				LastEventTimestamp: lastTimestamp, ProjectName: projectName, CreatorEmail: creatorEmail.String}
+				LastEventTimestamp: lastTimestamp, ProjectName: projectName, CreatorEmail: creatorEmail.String, EventsCount: eventsCount}
 		}
 
 		count++
