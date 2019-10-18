@@ -41,8 +41,8 @@ type ProjectEventsInfo struct {
 	ProjectName         string `json:"project_name"`
 	EventsCount         int    `json:"events_count"`
 	CreatorEmail        string `json:"creator_email"`
-	FirstEventTimestamp int64  `json:"first_event_timestamp"`
-	LastEventTimestamp  int64  `json:"last_event_timestamp"`
+	FirstEventTimestamp int64  `json:"-"`
+	LastEventTimestamp  int64  `json:"-"`
 }
 
 const error_Duplicate_event_customerEventID = "pq: duplicate key value violates unique constraint \"project_id_customer_event_id_unique_idx\""
