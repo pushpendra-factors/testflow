@@ -628,6 +628,13 @@ func SDKUpdateEventProperties(c *gin.Context) {
 
 	userInitialPageURL, userInitialPageURLExists := (*userPropertiesMap)[U.UP_INITIAL_PAGE_RAW_URL]
 	if !userInitialPageURLExists {
+		// skip error for old users.
+		initialPageRawUrlAvailabilityTimestamp := 1569369600
+		if user.JoinTimestamp < int64(initialPageRawUrlAvailabilityTimestamp) {
+			c.JSON(http.StatusAccepted, gin.H{"message": "Updated event properties successfully."})
+			return
+		}
+
 		logCtx.Error("No initial page raw url on user properties to compare on update event properties.")
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Update event properties failed."})
 		return
