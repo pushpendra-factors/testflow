@@ -40,3 +40,4 @@ sdk/android/*~
 
 # website
 website/factors-ai/react-website/dist
+website/factors-ai/react-website/.firebase
