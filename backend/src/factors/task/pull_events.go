@@ -50,35 +50,43 @@ func pullAndWriteEventsToFile(db *gorm.DB, projectId uint64, startTime int64,
 		var eventTimestamp int64
 		var userJoinTimestamp int64
 		var eventCardinality uint
-		var eventProperties postgres.Jsonb
-		var userProperties postgres.Jsonb
+		var eventProperties *postgres.Jsonb
+		var userProperties *postgres.Jsonb
 		if err = rows.Scan(&userId, &eventName, &eventTimestamp,
 			&eventCardinality, &eventProperties, &userJoinTimestamp, &userProperties); err != nil {
 			peLog.WithFields(log.Fields{"err": err}).Error("SQL Parse failed.")
 			return 0, "", err
 		}
-		eventPropertiesBytes, err := eventProperties.Value()
-		if err != nil {
-			peLog.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal event property.")
-			return 0, "", err
-		}
+
 		var eventPropertiesMap map[string]interface{}
-		err = json.Unmarshal(eventPropertiesBytes.([]byte), &eventPropertiesMap)
-		if err != nil {
-			peLog.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal event property.")
-			return 0, "", err
+		if eventProperties != nil {
+			eventPropertiesBytes, err := eventProperties.Value()
+			if err != nil {
+				peLog.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal event property.")
+				return 0, "", err
+			}
+			err = json.Unmarshal(eventPropertiesBytes.([]byte), &eventPropertiesMap)
+			if err != nil {
+				peLog.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal event property.")
+				return 0, "", err
+			}
 		}
-		userPropertiesBytes, err := userProperties.Value()
-		if err != nil {
-			peLog.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal user property.")
-			return 0, "", err
-		}
+
 		var userPropertiesMap map[string]interface{}
-		err = json.Unmarshal(userPropertiesBytes.([]byte), &userPropertiesMap)
-		if err != nil {
-			peLog.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal user property.")
-			return 0, "", err
+		if userProperties != nil {
+			userPropertiesBytes, err := userProperties.Value()
+			if err != nil {
+				peLog.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal user property.")
+				return 0, "", err
+			}
+
+			err = json.Unmarshal(userPropertiesBytes.([]byte), &userPropertiesMap)
+			if err != nil {
+				peLog.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal user property.")
+				return 0, "", err
+			}
 		}
+
 		event := P.CounterEventFormat{
 			UserId:            userId,
 			UserJoinTimestamp: userJoinTimestamp,
