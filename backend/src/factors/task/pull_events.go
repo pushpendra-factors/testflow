@@ -70,6 +70,8 @@ func pullAndWriteEventsToFile(db *gorm.DB, projectId uint64, startTime int64,
 				peLog.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal event property.")
 				return 0, "", err
 			}
+		} else {
+			peLog.WithFields(log.Fields{"err": err, "project_id": projectId}).Error("Nil event properties.")
 		}
 
 		var userPropertiesMap map[string]interface{}
@@ -85,6 +87,8 @@ func pullAndWriteEventsToFile(db *gorm.DB, projectId uint64, startTime int64,
 				peLog.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal user property.")
 				return 0, "", err
 			}
+		} else {
+			peLog.WithFields(log.Fields{"err": err, "project_id": projectId}).Error("Nil user properties.")
 		}
 
 		event := P.CounterEventFormat{
