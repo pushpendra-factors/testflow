@@ -815,6 +815,10 @@ func isDupResult(node *ItreeNode,
 	return isDup
 }
 
+// Minimum Frequency of child rule to be considered as a valuable insight.
+const MIN_FCR = 5
+const MIN_FCP = 100
+
 func buildFactorResultsFromPatterns(reqId string, nodes []*ItreeNode,
 	countType string, pw PatternServiceWrapperInterface) FactorGraphResults {
 	results := FactorGraphResults{Charts: []graphResult{}}
@@ -827,6 +831,9 @@ func buildFactorResultsFromPatterns(reqId string, nodes []*ItreeNode,
 			node.NodeType == NODE_TYPE_USER_PROPERTY {
 			// Dedup results to show more novel results as user scrolls down.
 			if isDupResult(node, &seenPropertyConstraints, &seenEvents) {
+				continue
+			}
+			if node.Fcr < MIN_FCR && node.Fcp < MIN_FCP {
 				continue
 			}
 			funnelEvents, funnelConstraints, baseFunnelEvents, baseFunnelConstraints := buildFunnelFormats(node, countType)

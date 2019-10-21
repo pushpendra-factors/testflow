@@ -466,7 +466,7 @@ func TestTrackHandlerWithUserSession(t *testing.T) {
 	assert.NotNil(t, responseMap["user_id"])
 	responseEventId := responseMap["event_id"].(string)
 	responseUserId := responseMap["user_id"].(string)
-	sessionEventName, errCode := M.GetEventName(M.EVENT_NAME_SESSION, project.ID)
+	sessionEventName, errCode := M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, sessionEventName)
 	userSessionEvents, errCode := M.GetUserEventsByEventNameId(project.ID,
@@ -533,7 +533,7 @@ func TestTrackHandlerWithUserSession(t *testing.T) {
 	assert.NotNil(t, responseMap["event_id"])
 	assert.Nil(t, responseMap["user_id"])
 	responseEventId2 := responseMap["event_id"].(string)
-	sessionEventName, errCode = M.GetEventName(M.EVENT_NAME_SESSION, project.ID)
+	sessionEventName, errCode = M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, sessionEventName)
 	userSessionEvents2, errCode := M.GetUserEventsByEventNameId(project.ID, responseUserId,

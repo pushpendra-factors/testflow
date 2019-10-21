@@ -637,7 +637,7 @@ func TestIntSegmentHandlerWithSession(t *testing.T) {
 		json.Unmarshal(jsonResponse2, &jsonResponseMap2)
 		assert.Nil(t, jsonResponseMap2["error"])
 		assert.NotNil(t, jsonResponseMap2["event_id"])
-		sessionEventName, errCode := M.GetEventName(M.EVENT_NAME_SESSION, project.ID)
+		sessionEventName, errCode := M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, sessionEventName)
 		segmentUser, errCode := M.GetSegmentUser(project.ID, "80444c7e-1580-4d3c-a77a-2f3427ed7d990", "xxx123")

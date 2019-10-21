@@ -685,6 +685,54 @@ func getPropertyNamesMapFromConstraints(
 	return &seenPropertyConstraints
 }
 
+// Predefined properties that do not add much insights.
+var USER_PROPERTIES_TO_IGNORE = map[string]bool{
+	U.UP_BROWSER_VERSION: true,
+	"$browserVersion":    true, // Deprecated standard properties.
+	"_$browserVersion":   true,
+	U.UP_SCREEN_HEIGHT:   true,
+	"$screenHeight":      true,
+	"_$screenHeight":     true,
+	U.UP_SCREEN_WIDTH:    true,
+	"$screenWidth":       true,
+	"_$screenWidth":      true,
+	U.UP_OS_VERSION:      true,
+	"$osVersion":         true,
+	"_$osVersion":        true,
+	U.UP_JOIN_TIME:       true,
+}
+
+func shouldIgnoreUserProperty(propertyName string) bool {
+	if _, found := USER_PROPERTIES_TO_IGNORE[propertyName]; found {
+		return true
+	}
+	return U.IsInternalUserProperty(&propertyName)
+}
+
+// Predefined properties that do not add much insights.
+var EVENT_PROPERTIES_TO_IGNORE = map[string]bool{
+	U.UP_BROWSER_VERSION: true,
+	"$browserVersion":    true, // Deprecated standard properties.
+	"_$browserVersion":   true,
+	U.UP_SCREEN_HEIGHT:   true,
+	"$screenHeight":      true,
+	"_$screenHeight":     true,
+	U.UP_SCREEN_WIDTH:    true,
+	"$screenWidth":       true,
+	"_$screenWidth":      true,
+	U.UP_OS_VERSION:      true,
+	"$osVersion":         true,
+	"_$osVersion":        true,
+	U.UP_JOIN_TIME:       true,
+}
+
+func shouldIgnoreEventProperty(propertyName string) bool {
+	if _, found := EVENT_PROPERTIES_TO_IGNORE[propertyName]; found {
+		return true
+	}
+	return U.IsInternalEventProperty(&propertyName)
+}
+
 func (it *Itree) buildCategoricalPropertyChildNodes(reqId string,
 	categoricalPropertyKeyValues map[string]map[string]bool,
 	nodeType int, maxNumProperties int, maxNumValues int,
@@ -701,10 +749,10 @@ func (it *Itree) buildCategoricalPropertyChildNodes(reqId string,
 		if _, found := (*seenProperties)[propertyName]; found {
 			continue
 		}
-		if nodeType == NODE_TYPE_EVENT_PROPERTY && U.IsInternalEventProperty(&propertyName) {
+		if nodeType == NODE_TYPE_EVENT_PROPERTY && shouldIgnoreEventProperty(propertyName) {
 			continue
 		}
-		if nodeType == NODE_TYPE_USER_PROPERTY && U.IsInternalUserProperty(&propertyName) {
+		if nodeType == NODE_TYPE_USER_PROPERTY && shouldIgnoreUserProperty(propertyName) {
 			continue
 		}
 		numP++
@@ -820,10 +868,10 @@ func (it *Itree) buildNumericalPropertyChildNodes(reqId string,
 		if _, found := (*seenProperties)[propertyName]; found {
 			continue
 		}
-		if nodeType == NODE_TYPE_EVENT_PROPERTY && U.IsInternalEventProperty(&propertyName) {
+		if nodeType == NODE_TYPE_EVENT_PROPERTY && shouldIgnoreEventProperty(propertyName) {
 			continue
 		}
-		if nodeType == NODE_TYPE_USER_PROPERTY && U.IsInternalUserProperty(&propertyName) {
+		if nodeType == NODE_TYPE_USER_PROPERTY && shouldIgnoreUserProperty(propertyName) {
 			continue
 		}
 		numP++
@@ -1100,10 +1148,11 @@ func BuildNewItree(reqId,
 	if err != nil {
 		return nil, err
 	}
-	allActiveUsersPattern = patternWrapper.GetPattern(reqId, []string{U.SEN_ALL_ACTIVE_USERS})
-	if allActiveUsersPattern == nil {
-		return nil, fmt.Errorf("All active users pattern not found")
-	}
+		allActiveUsersPattern = patternWrapper.GetPattern(reqId, []string{U.SEN_ALL_ACTIVE_USERS})
+		if allActiveUsersPattern == nil {
+			return nil, fmt.Errorf("All active users pattern not found")
+		}
+
 	for _, p := range candidatePatterns {
 		pLen := len(p.EventNames)
 		if (startEvent == "" && pLen == 1) || (startEvent != "" && pLen == 2) {

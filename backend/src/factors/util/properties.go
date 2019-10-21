@@ -20,6 +20,8 @@ const SEN_ALL_ACTIVE_USERS_DISPLAY_STRING = "All Active Users"
 const SEN_ALL_EVENTS = "$AllEvents"
 const SEN_ALL_EVENTS_DISPLAY_STRING = "All Events"
 
+const EVENT_NAME_SESSION = "$session"
+
 /* Properties Constants */
 
 // Generic Event Properties.

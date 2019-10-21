@@ -33,8 +33,6 @@ type FilterInfo struct {
 	eventName       *EventName
 }
 
-const EVENT_NAME_SESSION = "$session"
-
 const TYPE_USER_CREATED_EVENT_NAME = "UC"
 const TYPE_AUTO_TRACKED_EVENT_NAME = "AT"
 const TYPE_FILTER_EVENT_NAME = "FE"
@@ -112,7 +110,7 @@ func CreateOrGetFilterEventName(eventName *EventName) (*EventName, int) {
 }
 
 func CreateOrGetSessionEventName(projectId uint64) (*EventName, int) {
-	return createOrGetEventName(&EventName{ProjectId: projectId, Name: EVENT_NAME_SESSION,
+	return createOrGetEventName(&EventName{ProjectId: projectId, Name: U.EVENT_NAME_SESSION,
 		Type: TYPE_INTERNAL_EVENT_NAME})
 }
 
