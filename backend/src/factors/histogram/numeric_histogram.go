@@ -5,7 +5,7 @@ import (
 	"math"
 )
 
-const NHIST_MIN_BIN_SIZE = 3
+const NHIST_MIN_BIN_SIZE = 6
 
 type NumericHistogram interface {
 	Add(v []float64) error

@@ -31,7 +31,7 @@ import (
 // The number of patterns generated is bounded to max_SEGMENTS * top_K per iteration.
 // The amount of data and the time computed to generate this data is bounded
 // by these constants.
-const max_SEGMENTS = 100000
+const max_SEGMENTS = 25000
 const top_K = 5
 const max_PATTERN_LENGTH = 4
 const max_CHUNK_SIZE_IN_BYTES int64 = 200 * 1000 * 1000 // 200MB
