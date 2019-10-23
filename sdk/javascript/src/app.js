@@ -98,13 +98,13 @@ App.prototype.init = function(token, opts={}) {
     // set temp client as app client and set response as app config 
     // or else app stays unintialized.
     return _client.getProjectSettings()
-        .then((response) => {
+        .then(function(response) {
             if (response.status < 200 || response.status > 308) {
                 return Promise.reject(new Error("FactorsRequestError: Init failed. App configuration failed."));
             }
             return response;
         })
-        .then((response) => {
+        .then(function(response) {
             _this.config = response.body;
             _this.client = _client;
             return response;
@@ -112,7 +112,7 @@ App.prototype.init = function(token, opts={}) {
         .then(function() {
             return _this.autoTrack(_this.getConfig("auto_track"));
         })
-        .catch(() => {
+        .catch(function() {
             return Promise.reject(new Error("FactorsRequestError: Init failed. App configuration failed."));
         });
 }
@@ -190,6 +190,12 @@ App.prototype.autoTrack = function(enabled=false) {
             }
         })
     }
+}
+
+App.prototype.page = function() {
+    if (!this.isInitialized()) return Promise.reject(SDK_NOT_INIT_ERROR);
+    
+    return Promise.resolve(this.autoTrack(this.getConfig("auto_track")));
 }
 
 App.prototype.identify = function(customerUserId) {

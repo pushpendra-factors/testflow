@@ -36,6 +36,13 @@ function track(eventName, eventProperties={}) {
         .catch(logger.errorLine);
     return;
 }
+/**
+ * Track visit to page as event.
+ */
+function page() {
+    app.page().catch(logger.errorLine);
+    return;
+}
 
 /**
  * Identify user with original userId from the application.
@@ -57,7 +64,7 @@ function addUserProperties(properties={}) {
     return;
 }
 
-let exposed = { init, reset, track, identify, addUserProperties };
+let exposed = { init, reset, track, page, identify, addUserProperties };
 if (process.env.NODE_ENV === "development") {
     exposed["test"] = require("./test/suite.js");
     exposed["app"] = app;

@@ -14,11 +14,12 @@ function request(method, url, headers, data) {
     }
 
     return fetch(url, options)
-        .then((response) =>  {
-            return response.json()
-                .then((responseJSON) => {
-                    if (!response.ok) return Promise.reject("Failed on fetch.");
-                    return { status: response.status, body: responseJSON };
+        .then(function(response) {
+            var _response = response;
+            return _response.json()
+                .then(function(responseJSON) {
+                    if (!_response.ok) return Promise.reject("Failed to fetch.");
+                    return { status: _response.status, body: responseJSON };
                 })
         });
 }
