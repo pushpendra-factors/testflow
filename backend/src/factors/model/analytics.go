@@ -232,7 +232,12 @@ func buildWhereFromProperties(properties []QueryProperty) (rStmnt string, rParam
 					return "", nil, err
 				}
 				rParams = append(rParams, p.Property, dateTimeValue.From, p.Property, dateTimeValue.To)
+			} else if p.Type == U.PropertyTypeNumerical {
+				// convert to float for numerical properties.
+				pStmnt = fmt.Sprintf("(%s->>?)::float %s ?", propertyEntity, propertyOp)
+				rParams = append(rParams, p.Property, p.Value)
 			} else {
+				// categorical property type.
 				var pValue string
 				if p.Operator == "contains" || p.Operator == "notContains" {
 					pValue = fmt.Sprintf("%%%s%%", p.Value)
@@ -253,6 +258,7 @@ func buildWhereFromProperties(properties []QueryProperty) (rStmnt string, rParam
 			continue
 		}
 
+		// where condition for $none value.
 		var whereCond string
 		if propertyOp == EqualsOp {
 			// i.e: (NOT jsonb_exists(events.properties, 'property_name') OR events.properties->>'property_name'='')
