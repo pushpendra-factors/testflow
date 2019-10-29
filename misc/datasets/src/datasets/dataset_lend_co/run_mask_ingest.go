@@ -48,11 +48,11 @@ import (
 
 // Masks each line of Json string.
 func maskJson(srcJson string) string {
-	s1 := strings.Replace(srcJson, "loantap.in", "lend.co", -1)
-	s2 := strings.Replace(s1, "loantap", "lend.co", -1)
-	s3 := strings.Replace(s2, "LoanTap", "LendCo", -1)
-	s4 := strings.Replace(s3, "Loantap", "LendCo", -1)
-	s5 := strings.Replace(s4, "LOANTAP", "LENDCO", -1)
+	s1 := strings.Replace(srcJson, "loantap.in", "lending.company", -1)
+	s2 := strings.Replace(s1, "loantap", "lending company", -1)
+	s3 := strings.Replace(s2, "LoanTap", "LendingCompany", -1)
+	s4 := strings.Replace(s3, "Loantap", "LendingCompany", -1)
+	s5 := strings.Replace(s4, "LOANTAP", "LENDING COMPANY", -1)
 	return s5
 }
 
@@ -125,5 +125,5 @@ func main() {
 	err = U.IngestEventsFromFile(maskedFile, *apiHost, *apiToken, &clientUserIdToUserIdMap)
 	if err != nil {
 		log.WithError(err).Fatal("Failed to ingest from file.")
-	} 
+	}
 }

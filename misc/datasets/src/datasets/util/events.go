@@ -20,7 +20,7 @@ import (
 )
 
 const EmptyJsonStr = "{}"
-const DbLimit = 500000
+const DbLimit = 5000000
 
 const SourceEventsFileName = "src_events.json"
 const MaskedEventsFileName = "masked_events.json"
