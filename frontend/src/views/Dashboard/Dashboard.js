@@ -74,7 +74,7 @@ class Dashboard extends Component {
         createName: null,
 
         showDatePicker: false,
-        dateRange: [DEFAULT_DATE_RANGE],
+        dateRange: null,
       }
   }
 
@@ -118,6 +118,16 @@ class Dashboard extends Component {
       '_dashboard_ls:'+this.props.currentAgent.uuid+':'+this.props.currentProjectId : '';
   }
 
+  getLastSeenDateRangeForDashboardKey() {
+    //_dashboard_daterange_ls:<agent_id>:<project_id>:<dashboard_id>
+    let key = this.props.currentAgent && this.props.currentProjectId ? 
+    '_dashboard_daterange_ls:'+this.props.currentAgent.uuid+':'+this.props.currentProjectId : '';
+
+    let currentDashboard = this.getCurrentDashboard();
+    return key != '' && currentDashboard && currentDashboard.id ?
+      key + ':' + currentDashboard.id : '';
+  }
+
   setLastSeenDashboard(dashboardId) {
     let dashboardKey = this.getLastSeenDashboardKey();
     if (dashboardKey == '') return;
@@ -128,6 +138,18 @@ class Dashboard extends Component {
     let dashboardKey = this.getLastSeenDashboardKey();
     if (dashboardKey == '') return null;
     return localStorage.getItem(dashboardKey);
+  }
+
+  setLastSeenDateRangeForDashboard(range) {
+    let dateRangeKey = this.getLastSeenDateRangeForDashboardKey();
+    if (dateRangeKey == '') return null;
+    return localStorage.setItem(dateRangeKey, range);
+  }
+
+  getLastSeenDateRangeForDashboard() {
+    let dateRangeKey = this.getLastSeenDateRangeForDashboardKey();
+    if (dateRangeKey == '') return null;
+    return localStorage.getItem(dateRangeKey);
   }
 
   getSelectedDashboard() {
@@ -254,13 +276,13 @@ class Dashboard extends Component {
       let pUnit = pDashUnits[i];
       if (pUnit.presentation && pUnit.presentation === PRESENTATION_CARD) {
         cardUnits[cardPositions[pUnit.id]] = {
-          unit: <DashboardUnit dateRange={this.state.dateRange} editDashboard={this.state.editDashboard} cardIndex={cardIndex} data={pUnit} position={cardPositions[pUnit.id]} />,
+          unit: <DashboardUnit dateRange={this.getCurrentDateRange()} editDashboard={this.state.editDashboard} cardIndex={cardIndex} data={pUnit} position={cardPositions[pUnit.id]} />,
           position: cardPositions[pUnit.id],
         };
         cardIndex++;
       } else {
         chartUnits[chartPositions[pUnit.id]] = {
-          unit: <DashboardUnit dateRange={this.state.dateRange} editDashboard={this.state.editDashboard} data={pUnit} position={cardPositions[pUnit.id]} />,
+          unit: <DashboardUnit dateRange={this.getCurrentDateRange()} editDashboard={this.state.editDashboard} data={pUnit} position={cardPositions[pUnit.id]} />,
           position: chartPositions[pUnit.id],
         };
       }
@@ -338,7 +360,8 @@ class Dashboard extends Component {
 
   handleDateRangeSelect = (range) => {
     range.selected.label = null; // set null on custom range.
-    this.setState({ dateRange: [range.selected] }); 
+    this.setState({ dateRange: [range.selected] });
+    this.setLastSeenDateRangeForDashboard(JSON.stringify(range.selected));
   }
 
   closeDatePicker = () => {
@@ -357,6 +380,13 @@ class Dashboard extends Component {
 
     return moment(range.startDate).format('MMM DD, YYYY') + " - " +
       moment(range.endDate).format('MMM DD, YYYY');
+  }
+
+  getCurrentDateRange() {
+    if (this.state.dateRange) return this.state.dateRange;
+
+    let lsDateRangeStr = this.getLastSeenDateRangeForDashboard()
+    return lsDateRangeStr ? [JSON.parse(lsDateRangeStr)] : [DEFAULT_DATE_RANGE]
   }
 
   render() {
@@ -379,11 +409,11 @@ class Dashboard extends Component {
           <button style={{ border: '1px solid #bbb', color: '#444', right: '45px', position: 'absolute', marginTop: '5px', padding: '7px 15px', borderRadius: '5px', outline: 'none' }} 
             onClick={this.toggleDatePickerDisplay}>
             <i className="fa fa-calendar" style={{marginRight: '10px'}}></i>
-            { this.readableDateRange(this.state.dateRange[0]) }
+            { this.readableDateRange(this.getCurrentDateRange()[0]) }
           </button>
           <div className='fapp-date-picker' style={{ display: 'block', marginTop: '10px', right: '45px' }} hidden={!this.state.showDatePicker}>
             <ClosableDateRangePicker
-              ranges={this.state.dateRange}
+              ranges={this.getCurrentDateRange()}
               onChange={this.handleDateRangeSelect}
               staticRanges={ DEFINED_DATE_RANGES }
               inputRanges={[]}
