@@ -257,15 +257,58 @@ func bulkIngestEvents(events []TrackableEvent, apiHost string, apiToken string) 
 	return nil
 }
 
-func isAutoTrackedEvent(event *Event) bool {
+func isAutoTrackedEvent(eventProperties *postgres.Jsonb) bool {
 	var properties map[string]interface{}
-	json.Unmarshal(event.Properties.RawMessage, &properties)
-	_, exists := properties["$rawURL"]
-	return exists
+	json.Unmarshal(eventProperties.RawMessage, &properties)
+	_, pageRawUrlExists := properties["$page_raw_url"]
+	_, rawUrlExists := properties["$rawURL"]
+	return pageRawUrlExists || rawUrlExists
+}
+
+func IsEmptyPostgresJsonb(jsonb *postgres.Jsonb) bool {
+	strJson := string((*jsonb).RawMessage)
+	return strJson == "" || strJson == "null"
+}
+
+func DecodePostgresJsonb(sourceJsonb *postgres.Jsonb) (*map[string]interface{}, error) {
+	var sourceMap map[string]interface{}
+	if !IsEmptyPostgresJsonb(sourceJsonb) {
+		if err := json.Unmarshal((*sourceJsonb).RawMessage, &sourceMap); err != nil {
+			return nil, err
+		}
+	} else {
+		sourceMap = make(map[string]interface{}, 0)
+	}
+
+	return &sourceMap, nil
+}
+
+func EncodeToPostgresJsonb(sourceMap *map[string]interface{}) (*postgres.Jsonb, error) {
+	sourceJsonBytes, err := json.Marshal(sourceMap)
+	if err != nil {
+		return nil, err
+	}
+
+	return &postgres.Jsonb{sourceJsonBytes}, nil
+}
+
+func renameProperties(src *map[string]interface{}, 
+	renameMap *map[string]string) *map[string]interface{} {
+
+	dest := make(map[string]interface{}, 0)
+	for k, v := range *src {
+		if _, exists := (*renameMap)[k]; exists {
+			dest[(*renameMap)[k]] = v
+		} else {
+			dest[k] = v
+		}
+	}
+
+	return &dest
 }
 
 func convEventAsTrackable(eventJson string, clientUserIdToUserIdMap *map[string]string,
-	apiHost string, apiToken string) (*TrackableEvent, error) {
+	apiHost string, apiToken string, eventPropertiesRenameMap, userPropertiesRenameMap *map[string]string) (*TrackableEvent, error) {
 
 	var event Event
 	err := json.Unmarshal([]byte(eventJson), &event)
@@ -273,12 +316,48 @@ func convEventAsTrackable(eventJson string, clientUserIdToUserIdMap *map[string]
 		return nil, err
 	}
 
+	var eventProperties *postgres.Jsonb
+	if eventPropertiesRenameMap != nil {
+		eventPropertiesMap, err := DecodePostgresJsonb(event.Properties)
+		if err != nil {
+			log.WithError(err).Error("Failed to unmarshal event properties on rename.")
+			return nil, err
+		}
+
+		eventPropertiesRenamed := renameProperties(eventPropertiesMap, eventPropertiesRenameMap)
+		eventProperties, err = EncodeToPostgresJsonb(eventPropertiesRenamed)
+		if err != nil {
+			log.WithError(err).Error("Failed to marshal event properties after rename.")
+			return nil, err 
+		}
+	} else {
+		eventProperties = event.Properties
+	}
+
+	var userProperties *postgres.Jsonb
+	if userPropertiesRenameMap != nil {
+		userPropertiesMap, err := DecodePostgresJsonb(event.UserProperties)
+		if err != nil {
+			log.WithError(err).Error("Failed to unmarshal user properties on rename.")
+			return nil, err
+		}
+
+		userPropertiesRenamed := renameProperties(userPropertiesMap, userPropertiesRenameMap)
+		userProperties, err = EncodeToPostgresJsonb(userPropertiesRenamed)
+		if err != nil {
+			log.WithError(err).Error("Failed to marshal user properties after rename.")
+			return nil, err
+		}
+	} else {
+		userProperties = event.UserProperties
+	}
+
 	var trackEvent TrackableEvent
 	trackEvent.Name = event.Name
-	trackEvent.Properties = event.Properties
-	trackEvent.UserProperties = event.Properties
+	trackEvent.Properties = eventProperties
+	trackEvent.UserProperties = userProperties
 	trackEvent.Timestamp = event.Timestamp
-	trackEvent.Auto = isAutoTrackedEvent(&event)
+	trackEvent.Auto = isAutoTrackedEvent(eventProperties)
 
 	// using src event's id as customer_event_id.
 	trackEvent.CustomerEventId = event.ID
@@ -304,7 +383,8 @@ func convEventAsTrackable(eventJson string, clientUserIdToUserIdMap *map[string]
 }
 
 func IngestEventsFromFile(filepath string, apiHost string, apiToken string,
-	clientUserIdToUserIdMap *map[string]string) error {
+	clientUserIdToUserIdMap *map[string]string,
+	eventPropertiesRenameMap, userPropertiesRenameMap *map[string]string) error {
 
 	file, err := os.Open(filepath)
 	if err != nil {
@@ -327,7 +407,8 @@ func IngestEventsFromFile(filepath string, apiHost string, apiToken string,
 		eventLines, tmpEof := getFileEvents(scanner, maxBatchSize)
 		translatedEvents := make([]TrackableEvent, 0, 0)
 		for _, eventJson := range eventLines {
-			trEvent, err := convEventAsTrackable(eventJson, clientUserIdToUserIdMap, apiHost, apiToken)
+			trEvent, err := convEventAsTrackable(eventJson, clientUserIdToUserIdMap, apiHost, apiToken,
+				eventPropertiesRenameMap, userPropertiesRenameMap)
 			if err == nil {
 				translatedEvents = append(translatedEvents, *trEvent)
 			} else {

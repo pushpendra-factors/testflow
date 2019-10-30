@@ -120,9 +120,22 @@ func main() {
 		log.Fatal("Failed to ingest. api_host or api_token is missing.")
 	}
 
+	eventPropertiesRenameMap := map[string]string{
+		"$rawURL":    "$page_raw_url",
+		"$pageTitle": "$page_title",
+	}
+
+	userPropertiesRenameMap := map[string]string{
+		"$osVersion":      "$os_version",
+		"$screenWidth":    "$screen_width",
+		"$screenHeight":   "$screen_height",
+		"$browserVersion": "$browser_version",
+	}
+
 	// customer_user_id to user_id cache.
 	var clientUserIdToUserIdMap map[string]string = make(map[string]string, 0)
-	err = U.IngestEventsFromFile(maskedFile, *apiHost, *apiToken, &clientUserIdToUserIdMap)
+	err = U.IngestEventsFromFile(maskedFile, *apiHost, *apiToken, &clientUserIdToUserIdMap,
+		&eventPropertiesRenameMap, &userPropertiesRenameMap)
 	if err != nil {
 		log.WithError(err).Fatal("Failed to ingest from file.")
 	}
