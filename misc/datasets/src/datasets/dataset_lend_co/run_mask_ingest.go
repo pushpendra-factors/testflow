@@ -132,10 +132,14 @@ func main() {
 		"$browserVersion": "$browser_version",
 	}
 
+	excludeEventNamePrefixes := []string{
+		"dev-", // exclude event names with 'dev-' prefix.
+	}
+
 	// customer_user_id to user_id cache.
 	var clientUserIdToUserIdMap map[string]string = make(map[string]string, 0)
-	err = U.IngestEventsFromFile(maskedFile, *apiHost, *apiToken, &clientUserIdToUserIdMap,
-		&eventPropertiesRenameMap, &userPropertiesRenameMap)
+	err = U.IngestEventsFromFile(maskedFile, *apiHost, *apiToken, &clientUserIdToUserIdMap, 
+		excludeEventNamePrefixes, &eventPropertiesRenameMap, &userPropertiesRenameMap)
 	if err != nil {
 		log.WithError(err).Fatal("Failed to ingest from file.")
 	}

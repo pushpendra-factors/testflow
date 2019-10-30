@@ -308,7 +308,8 @@ func renameProperties(src *map[string]interface{},
 }
 
 func convEventAsTrackable(eventJson string, clientUserIdToUserIdMap *map[string]string,
-	apiHost string, apiToken string, eventPropertiesRenameMap, userPropertiesRenameMap *map[string]string) (*TrackableEvent, error) {
+	apiHost string, apiToken string, eventPropertiesRenameMap, 
+	userPropertiesRenameMap *map[string]string) (*TrackableEvent, error) {
 
 	var event Event
 	err := json.Unmarshal([]byte(eventJson), &event)
@@ -383,7 +384,7 @@ func convEventAsTrackable(eventJson string, clientUserIdToUserIdMap *map[string]
 }
 
 func IngestEventsFromFile(filepath string, apiHost string, apiToken string,
-	clientUserIdToUserIdMap *map[string]string,
+	clientUserIdToUserIdMap *map[string]string, excludeEventNamePrefixes []string,
 	eventPropertiesRenameMap, userPropertiesRenameMap *map[string]string) error {
 
 	file, err := os.Open(filepath)
@@ -410,7 +411,16 @@ func IngestEventsFromFile(filepath string, apiHost string, apiToken string,
 			trEvent, err := convEventAsTrackable(eventJson, clientUserIdToUserIdMap, apiHost, apiToken,
 				eventPropertiesRenameMap, userPropertiesRenameMap)
 			if err == nil {
-				translatedEvents = append(translatedEvents, *trEvent)
+				exclude := false
+				for _, exName := range excludeEventNamePrefixes {
+					if strings.HasPrefix(trEvent.Name, exName) {
+						exclude = true
+					}
+				}
+
+				if !exclude {
+					translatedEvents = append(translatedEvents, *trEvent)
+				}
 			} else {
 				log.WithError(err).Error("Failed to translate event into trackable. Skipped.")
 			}
