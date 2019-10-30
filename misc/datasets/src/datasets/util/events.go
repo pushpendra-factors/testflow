@@ -29,7 +29,6 @@ type Event struct {
 	ID                string          `json:"id"`
 	Name              string          `json:"na"`
 	Count             uint64          `json:"co"`
-	Auto              *bool           `json:"au"`
 	Properties        *postgres.Jsonb `json:"pr"`
 	Timestamp         int64           `json:"ti"`
 	UserId            string          `json:"uid"`
@@ -77,7 +76,7 @@ func PullEvents(projectId uint64, startTimestamp int64, endTimestamp int64, pull
 	}
 	defer eventsFile.Close()
 
-	rows, _ := db.Raw("SELECT events.id, events.user_id, events.auto, users.customer_user_id, users.join_timestamp, event_names.name, events.count, events.timestamp, events.properties, user_properties.properties FROM events"+
+	rows, _ := db.Raw("SELECT events.id, events.user_id, users.customer_user_id, users.join_timestamp, event_names.name, events.count, events.timestamp, events.properties, user_properties.properties FROM events"+
 		" "+"LEFT JOIN event_names ON event_names.id = events.event_name_id"+
 		" "+"LEFT JOIN users ON users.id = events.user_id"+
 		" "+"LEFT JOIN user_properties ON user_properties.id = events.user_properties_id"+
@@ -88,7 +87,6 @@ func PullEvents(projectId uint64, startTimestamp int64, endTimestamp int64, pull
 	for rows.Next() {
 		var id string
 		var userId string
-		var auto *bool
 		var customerUserId *string
 		var userJoinTimestamp int64
 		var name string
@@ -97,7 +95,7 @@ func PullEvents(projectId uint64, startTimestamp int64, endTimestamp int64, pull
 		var properties *postgres.Jsonb
 		var userProperties *postgres.Jsonb
 
-		if err := rows.Scan(&id, &userId, &auto, &customerUserId, &userJoinTimestamp, &name, &count, &timestamp, &properties, &userProperties); err != nil {
+		if err := rows.Scan(&id, &userId, &customerUserId, &userJoinTimestamp, &name, &count, &timestamp, &properties, &userProperties); err != nil {
 			log.WithError(err).Error("Failed to scan rows")
 			return "", err
 		}
@@ -142,7 +140,6 @@ func PullEvents(projectId uint64, startTimestamp int64, endTimestamp int64, pull
 			ID:                id,
 			Name:              name,
 			Count:             count,
-			Auto:              auto,
 			Timestamp:         timestamp,
 			Properties:        properties,
 			UserId:            userId,
@@ -261,7 +258,10 @@ func bulkIngestEvents(events []TrackableEvent, apiHost string, apiToken string) 
 }
 
 func isAutoTrackedEvent(event *Event) bool {
-	return event.Auto != nil && *event.Auto
+	var properties map[string]interface{}
+	json.Unmarshal(event.Properties.RawMessage, &properties)
+	_, exists := properties["$rawURL"]
+	return exists
 }
 
 func convEventAsTrackable(eventJson string, clientUserIdToUserIdMap *map[string]string,

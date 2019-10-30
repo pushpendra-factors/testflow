@@ -48,11 +48,11 @@ import (
 
 // Masks each line of Json string.
 func maskJson(srcJson string) string {
-	s1 := strings.Replace(srcJson, "loantap.in", "lend.go", -1)
-	s2 := strings.Replace(s1, "loantap", "lending_company", -1)
+	s1 := strings.Replace(srcJson, "loantap.in", "lending.company", -1)
+	s2 := strings.Replace(s1, "loantap", "lending company", -1)
 	s3 := strings.Replace(s2, "LoanTap", "LendingCompany", -1)
 	s4 := strings.Replace(s3, "Loantap", "LendingCompany", -1)
-	s5 := strings.Replace(s4, "LOANTAP", "LENDING_COMPANY", -1)
+	s5 := strings.Replace(s4, "LOANTAP", "LENDING COMPANY", -1)
 	return s5
 }
 
