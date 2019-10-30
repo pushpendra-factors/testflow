@@ -122,14 +122,31 @@ func main() {
 
 	eventPropertiesRenameMap := map[string]string{
 		"$rawURL":    "$page_raw_url",
+		"_$rawURL":    "$page_raw_url",
+		"$pageRawURL": "$page_raw_url",
+		"_$pageRawURL" : "$page_raw_url",
+		"_$page_raw_url" : "$page_raw_url",
 		"$pageTitle": "$page_title",
+		"_$pageTitle": "$page_title",
+		"$pageURL": "$page_url",
+		"_$pageURL": "$page_url",
+		"$pageDomain": "$page_domain",
+		"_$pageDomain": "$page_domain",
+		"$referrerURL": "$referrer_url",
+		"_$referrerURL": "$referrer_url",
+		"$referrerDomain": "$referrer_domain",
+		"_$referrerDomain": "$referrer_domain",
 	}
 
 	userPropertiesRenameMap := map[string]string{
 		"$osVersion":      "$os_version",
+		"_$osVersion":      "$os_version",
 		"$screenWidth":    "$screen_width",
+		"_$screenWidth":    "$screen_width",
 		"$screenHeight":   "$screen_height",
+		"_$screenHeight":   "$screen_height",
 		"$browserVersion": "$browser_version",
+		"_$browserVersion": "$browser_version",
 	}
 
 	excludeEventNamePrefixes := []string{

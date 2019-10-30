@@ -261,11 +261,15 @@ func isAutoTrackedEvent(eventProperties *postgres.Jsonb) bool {
 	var properties map[string]interface{}
 	json.Unmarshal(eventProperties.RawMessage, &properties)
 	_, pageRawUrlExists := properties["$page_raw_url"]
+	_, pageRawUrl2Exists := properties["$pageRawURL"]
+	_, pageRawUrl3Exists := properties["_$pageRawURL"]
+	_, pageRawUrl4Exists := properties["_$page_raw_url"]
 	_, rawUrlExists := properties["$rawURL"]
-	return pageRawUrlExists || rawUrlExists
+	_, rawUrl2Exists := properties["_$rawURL"]
+	return pageRawUrlExists || pageRawUrl2Exists || pageRawUrl3Exists || pageRawUrl4Exists || rawUrlExists || rawUrl2Exists
 }
 
-func IsEmptyPostgresJsonb(jsonb *postgres.Jsonb) bool {
+func IsEmptyPostgresJsonb(jsonb *postgres.Jsonb) bool { 
 	strJson := string((*jsonb).RawMessage)
 	return strJson == "" || strJson == "null"
 }
