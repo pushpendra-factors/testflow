@@ -93,6 +93,12 @@ App.prototype.init = function(token, opts={}) {
         _client = new APIClient(token, opts.host);
     else 
         _client = new APIClient(token);
+
+    // Turn off auto_track on init with additional opts.
+    var trackOnInit = true;
+    if (opts.track_on_init === false) {
+        trackOnInit = false;
+    }
     
     // Gets settings using temp client with given token, if succeeds, 
     // set temp client as app client and set response as app config 
@@ -110,7 +116,7 @@ App.prototype.init = function(token, opts={}) {
             return response;
         })
         .then(function() {
-            return _this.autoTrack(_this.getConfig("auto_track"));
+            return trackOnInit ? _this.autoTrack(_this.getConfig("auto_track")) : null;
         })
         .catch(function() {
             return Promise.reject(new Error("FactorsRequestError: Init failed. App configuration failed."));

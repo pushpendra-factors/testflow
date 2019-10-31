@@ -11,6 +11,7 @@ var app = new App();
 /**
  * Initializes sdk environment on user application. Overwrites if initialized already.
  * @param {string} appToken Unique application token.
+ * @param {object} opts Additional opts: {track_on_init: false}
  */
 function init(appToken, opts={}) {
     app.init(appToken, opts)
