@@ -14,9 +14,8 @@ var app = new App();
  * @param {object} opts Additional opts: {track_on_init: false}
  */
 function init(appToken, opts={}) {
-    app.init(appToken, opts)
+    return app.init(appToken, opts)
         .catch(logger.errorLine);
-    return;
 }
 
 /**
