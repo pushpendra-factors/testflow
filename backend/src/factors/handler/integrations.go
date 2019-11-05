@@ -147,8 +147,13 @@ func IntSegmentHandler(c *gin.Context) {
 		I.FillSegmentGenericUserProperties(&userProperties, &event)
 		I.FillSegmentMobileUserProperties(&userProperties, &event)
 
-		// Initialized with already existing event props.
-		eventProperties := event.Properties
+		var eventProperties U.PropertiesMap
+		if event.Properties != nil {
+			// Initialized with already existing event props.
+			eventProperties = event.Properties
+		} else {
+			eventProperties = make(U.PropertiesMap, 0)
+		}
 		I.FillSegmentGenericEventProperties(&eventProperties, &event)
 
 		request := &sdkTrackPayload{
