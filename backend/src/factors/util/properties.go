@@ -660,11 +660,15 @@ func FillPropertyKvsFromPropertiesJson(propertiesJson []byte,
 	}
 
 	for k, v := range rowProperties {
+		// allow only string, float and bool valued
+		// properties.
 		_, strOk := v.(string)
 		_, fltOk := v.(float64)
-		if !strOk && !fltOk {
+		_, boolOk := v.(bool)
+		if !strOk && !fltOk && !boolOk {
 			continue
 		}
+
 		if _, ok := (*propertiesKvs)[k]; !ok {
 			(*propertiesKvs)[k] = make(map[interface{}]bool, 0)
 		}
