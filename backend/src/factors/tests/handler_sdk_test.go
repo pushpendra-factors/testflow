@@ -348,7 +348,7 @@ func TestSDKTrackHandler(t *testing.T) {
 	t.Run("AddInitialUserPropertiesFromEventProperties", func(t *testing.T) {
 		rEventName := "https://example.com/" + U.RandomLowerAphaNumString(10)
 		w := ServePostRequestWithHeaders(r, uri,
-			[]byte(fmt.Sprintf(`{"event_name": "%s", "event_properties": {"mobile": "true", "$page_url": "https://example.com/xyz", "$page_raw_url": "https://example.com/xyz?utm_campaign=google", "$page_domain": "example.com", "$page_load_time": 100, "$page_spent_time": 120, "$qp_utm_campaign": "google", "$qp_utm_campaignid": "12345", "$qp_utm_source": "google", "$qp_utm_medium": "email", "$qp_utm_keyword": "analytics", "$qp_utm_matchtype": "exact", "$qp_utm_content": "analytics", "$qp_utm_adgroup": "ad-xxx", "$qp_utm_adgroupid": "xyz123", "$qp_utm_creative": "creative-xxx", "$qp_gclid": "xxx123", "$qp_fbclid": "zzz123"}, "user_properties": {"$os": "Mac OS"}}`, rEventName)),
+			[]byte(fmt.Sprintf(`{"event_name": "%s", "event_properties": {"mobile": "true", "$page_url": "https://example.com/xyz", "$page_raw_url": "https://example.com/xyz?utm_campaign=google", "$page_domain": "example.com", "$referrer_domain": "gartner.com", "$referrer_url": "https://gartner.com/product_of_the_month?ref=google", "$referrer": "https://gartner.com/product_of_the_month", "$page_load_time": 100, "$page_spent_time": 120, "$qp_utm_campaign": "google", "$qp_utm_campaignid": "12345", "$qp_utm_source": "google", "$qp_utm_medium": "email", "$qp_utm_keyword": "analytics", "$qp_utm_matchtype": "exact", "$qp_utm_content": "analytics", "$qp_utm_adgroup": "ad-xxx", "$qp_utm_adgroupid": "xyz123", "$qp_utm_creative": "creative-xxx", "$qp_gclid": "xxx123", "$qp_fbclid": "zzz123"}, "user_properties": {"$os": "Mac OS"}}`, rEventName)),
 			map[string]string{"Authorization": project.Token})
 		assert.Equal(t, http.StatusOK, w.Code)
 		responseMap = DecodeJSONResponseToMap(w.Body)
@@ -385,6 +385,10 @@ func TestSDKTrackHandler(t *testing.T) {
 		assert.NotNil(t, userProperties[U.UP_INITIAL_CREATIVE])
 		assert.NotNil(t, userProperties[U.UP_INITIAL_GCLID])
 		assert.NotNil(t, userProperties[U.UP_INITIAL_FBCLID])
+		assert.NotNil(t, userProperties[U.UP_INITIAL_REFERRER])
+		assert.NotNil(t, userProperties[U.UP_INITIAL_REFERRER_URL])
+		assert.NotNil(t, userProperties[U.UP_INITIAL_REFERRER_DOMAIN])
+		assert.Equal(t, "gartner.com", userProperties[U.UP_INITIAL_REFERRER_DOMAIN])
 		assert.Nil(t, userProperties[U.UP_INITIAL_COST])
 		assert.Nil(t, userProperties[U.UP_INITIAL_REVENUE])
 
