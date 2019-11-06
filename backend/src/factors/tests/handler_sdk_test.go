@@ -444,6 +444,62 @@ func TestSDKTrackHandler(t *testing.T) {
 		assert.NotNil(t, rEvent)
 		assert.Equal(t, filterEventName.ID, rEvent.EventNameId)
 	})
+
+	t.Run("InitialUserPropertiesAfterUserCreation", func(t *testing.T) {
+		project, user, err := SetupProjectUserReturnDAO()
+		assert.Nil(t, err)
+
+		rEventName := "https://example.com/xyz"
+		w := ServePostRequestWithHeaders(r, uri,
+			[]byte(fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "event_properties": {"mobile": "true", "$page_url": "https://example.com/xyz", "$page_raw_url": "https://example.com/xyz?utm_campaign=google", "$page_domain": "example.com", "$page_load_time": 100, "$page_spent_time": 120, "$qp_utm_campaign": "google", "$qp_utm_campaignid": "12345", "$qp_utm_source": "google", "$qp_utm_medium": "email", "$qp_utm_keyword": "analytics", "$qp_utm_matchtype": "exact", "$qp_utm_content": "analytics", "$qp_utm_adgroup": "ad-xxx", "$qp_utm_adgroupid": "xyz123", "$qp_utm_creative": "creative-xxx", "$qp_gclid": "xxx123", "$qp_fbclid": "zzz123"}, "user_properties": {"$os": "Mac OS"}}`,
+				rEventName, user.ID)), map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusOK, w.Code)
+		responseMap = DecodeJSONResponseToMap(w.Body)
+		assert.NotEmpty(t, responseMap)
+		assert.NotNil(t, responseMap["event_id"])
+		assert.Nil(t, responseMap["user_id"])
+		rUser, errCode := M.GetUser(project.ID, user.ID)
+		assert.Equal(t, http.StatusFound, errCode)
+		assert.NotNil(t, rUser)
+		userPropertiesBytes, err := rUser.Properties.Value()
+		assert.Nil(t, err)
+		var userProperties map[string]interface{}
+		json.Unmarshal(userPropertiesBytes.([]byte), &userProperties)
+		// Other user properties should also be there.
+		assert.NotNil(t, userProperties[U.UP_OS])
+		// Initial user properties should be there.
+		assert.NotNil(t, userProperties[U.UP_INITIAL_PAGE_URL])
+		assert.NotNil(t, userProperties[U.UP_INITIAL_PAGE_RAW_URL])
+		assert.Equal(t, "https://example.com/xyz", userProperties[U.UP_INITIAL_PAGE_URL])
+		assert.Equal(t, "https://example.com/xyz?utm_campaign=google", userProperties[U.UP_INITIAL_PAGE_RAW_URL])
+
+		// initial properties should not be overwritten
+		// on consecutive track calls.
+		rEventName = "https://domain.com/xyz"
+		w = ServePostRequestWithHeaders(r, uri,
+			[]byte(fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "event_properties": {"$page_url": "https://domain.com/xyz", "$page_raw_url": "https://domain.com/xyz?utm_campaign=pd", "$page_domain": "example.com", "$page_load_time": 100, "$page_spent_time": 120, "$qp_utm_campaign": "google", "$qp_utm_campaignid": "12345", "$qp_utm_source": "google", "$qp_utm_medium": "email", "$qp_utm_keyword": "analytics", "$qp_utm_matchtype": "exact", "$qp_utm_content": "analytics", "$qp_utm_adgroup": "ad-xxx", "$qp_utm_adgroupid": "xyz123", "$qp_utm_creative": "creative-xxx", "$qp_gclid": "xxx123", "$qp_fbclid": "zzz123"}, "user_properties": {"$os": "Mac OS"}}`,
+				rEventName, user.ID)), map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusOK, w.Code)
+		responseMap = DecodeJSONResponseToMap(w.Body)
+		assert.NotEmpty(t, responseMap)
+		assert.NotNil(t, responseMap["event_id"])
+		assert.Nil(t, responseMap["user_id"])
+		rUser, errCode = M.GetUser(project.ID, user.ID)
+		assert.Equal(t, http.StatusFound, errCode)
+		assert.NotNil(t, rUser)
+		userPropertiesBytes, err = rUser.Properties.Value()
+		assert.Nil(t, err)
+		var userProperties2 map[string]interface{}
+		json.Unmarshal(userPropertiesBytes.([]byte), &userProperties2)
+		// Other user properties should also be there.
+		assert.NotNil(t, userProperties2[U.UP_OS])
+		// Initial user properties should be there.
+		assert.NotNil(t, userProperties2[U.UP_INITIAL_PAGE_URL])
+		assert.NotNil(t, userProperties2[U.UP_INITIAL_PAGE_RAW_URL])
+		// values should not be updated with current event properties.
+		assert.Equal(t, "https://example.com/xyz", userProperties2[U.UP_INITIAL_PAGE_URL])
+		assert.Equal(t, "https://example.com/xyz?utm_campaign=google", userProperties2[U.UP_INITIAL_PAGE_RAW_URL])
+	})
 }
 
 func TestTrackHandlerWithUserSession(t *testing.T) {

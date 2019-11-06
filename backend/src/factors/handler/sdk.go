@@ -120,22 +120,16 @@ func sdkTrack(projectId uint64, request *sdkTrackPayload, clientIP, userAgent st
 		return http.StatusBadRequest, &SDKTrackResponse{Error: "Tracking failed. Invalid properties."}
 	}
 
+	var userProperties *U.PropertiesMap
+
 	response := &SDKTrackResponse{}
-
-	// Precondition: if user_id not given, create new user and respond.
+	initialUserProperties := U.GetInitialUserProperties(eventProperties)
 	isUserFirstSession := request.IsNewUser
-	if request.UserId == "" {
-		// initial user properties defined from event properties on user create.
-		initialUserProperties := U.GetInitialUserProperties(eventProperties)
-		initialUserPropsJSON, err := json.Marshal(initialUserProperties)
-		if err != nil {
-			log.WithFields(log.Fields{"initialUserProperties": initialUserProperties,
-				log.ErrorKey: err}).Error("Add initial user properties failed. JSON marshal failed.")
-			response.Error = "Failed adding initial user properties."
-		}
 
-		newUser := M.User{ProjectId: projectId, Properties: postgres.Jsonb{initialUserPropsJSON}}
-		_, errCode := M.CreateUser(&newUser)
+	if request.UserId == "" {
+		// Precondition: if user_id not given, create new user and respond.
+
+		newUser, errCode := M.CreateUser(&M.User{ProjectId: projectId})
 		if errCode != http.StatusCreated {
 			return errCode, &SDKTrackResponse{Error: "Tracking failed. User creation failed."}
 		}
@@ -143,9 +137,50 @@ func sdkTrack(projectId uint64, request *sdkTrackPayload, clientIP, userAgent st
 		request.UserId = newUser.ID
 		response.UserId = newUser.ID
 		isUserFirstSession = true
+
+		// Initialize with initial user properties.
+		userProperties = initialUserProperties
+	} else {
+		// Adding initial user properties if user_id exists,
+		// but initial properties are not. i.e user created on identify.
+
+		user, errCode := M.GetUser(projectId, request.UserId)
+		if errCode != http.StatusFound {
+			return errCode, &SDKTrackResponse{Error: "Tracking failed. Invalid user."}
+		}
+
+		exsitingUserProperties, err := U.DecodePostgresJsonb(&user.Properties)
+		if err != nil {
+			log.WithField("user_id", request.UserId).Error(
+				"Failed to unmarshal existing user properties. Tracking failed.")
+			return errCode, &SDKTrackResponse{Error: "Tracking failed."}
+		}
+
+		// Is any initial user properties exists already.
+		initialUserPropertyExists := false
+		for k := range *initialUserProperties {
+			if _, exists := (*exsitingUserProperties)[k]; exists {
+				initialUserPropertyExists = true
+				break
+			}
+		}
+
+		if !initialUserPropertyExists {
+			userProperties = initialUserProperties
+		}
 	}
 
-	userProperties := U.GetValidatedUserProperties(&request.UserProperties)
+	requestUserProperties := U.GetValidatedUserProperties(&request.UserProperties)
+	if userProperties != nil {
+		for k, v := range *requestUserProperties {
+			if _, exists := (*userProperties)[k]; !exists {
+				(*userProperties)[k] = v
+			}
+		}
+	} else {
+		userProperties = requestUserProperties
+	}
+
 	_ = M.FillLocationUserProperties(userProperties, clientIP)
 	U.FillUserAgentUserProperties(userProperties, userAgent)
 	userPropsJSON, err := json.Marshal(userProperties)
