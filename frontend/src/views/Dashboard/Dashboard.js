@@ -119,11 +119,13 @@ class Dashboard extends Component {
   }
 
   getLastSeenDateRangeForDashboardKey() {
+    let currentDashboard = this.getCurrentDashboard();
+    if (currentDashboard == null) return '';
+
     //_dashboard_daterange_ls:<agent_id>:<project_id>:<dashboard_id>
     let key = this.props.currentAgent && this.props.currentProjectId ? 
     '_dashboard_daterange_ls:'+this.props.currentAgent.uuid+':'+this.props.currentProjectId : '';
 
-    let currentDashboard = this.getCurrentDashboard();
     return key != '' && currentDashboard && currentDashboard.id ?
       key + ':' + currentDashboard.id : '';
   }
@@ -164,7 +166,6 @@ class Dashboard extends Component {
       if (lsDashboardName) return makeSelectOpt(lsDashboardId, lsDashboardName)
     }
     
-
     // inits selector with first dashboard.
     if (this.props.dashboards  
       && this.props.dashboards.length > 0) {
@@ -223,9 +224,10 @@ class Dashboard extends Component {
   }
 
   getCurrentDashboard() {
-    let dashboard = this.getSelectedDashboard()
-    let dashboardId = dashboard.value;
+    let dashboard = this.getSelectedDashboard();
+    if (!dashboard) return null;
 
+    let dashboardId = dashboard.value;
     for(let i in this.props.dashboards) 
       if (dashboardId == this.props.dashboards[i].id)
         return this.props.dashboards[i];
