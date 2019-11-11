@@ -110,12 +110,15 @@ class DefaultHeader extends Component {
           // start first event poll, if not started.
           if (!this.state.eventNamePollStarted) {
             this.setState({ eventNamePollStarted: true });
+            // Todo: Fix force logout on event_name poll. Soln: stop polling on logout.
+            /*
             setInterval(() => {
               if (!this.projectHasEvents() && !this.state.loggedOut && pollCount < EVENT_POLL_LIMIT) {
                 this.props.fetchProjectEvents(this.props.selectedProject.value);
                 pollCount++;
               }
             }, EVENT_POLL_INTERVAL)
+            */
           }
           
           this.props.showSetupProjectNotification(true);
