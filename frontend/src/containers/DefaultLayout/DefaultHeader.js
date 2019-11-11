@@ -104,23 +104,8 @@ class DefaultHeader extends Component {
     this.props.fetchProjectEvents(this.props.selectedProject.value)
       .then((r) => {
         if (r.status == 404) {
+          // show modal and notification when no event_names.
           this.setState({ showAddProjectModal: true });
-
-          let pollCount = 0;
-          // start first event poll, if not started.
-          if (!this.state.eventNamePollStarted) {
-            this.setState({ eventNamePollStarted: true });
-            // Todo: Fix force logout on event_name poll. Soln: stop polling on logout.
-            /*
-            setInterval(() => {
-              if (!this.projectHasEvents() && !this.state.loggedOut && pollCount < EVENT_POLL_LIMIT) {
-                this.props.fetchProjectEvents(this.props.selectedProject.value);
-                pollCount++;
-              }
-            }, EVENT_POLL_INTERVAL)
-            */
-          }
-          
           this.props.showSetupProjectNotification(true);
         } else {
           this.props.showSetupProjectNotification(false);
@@ -320,7 +305,7 @@ class DefaultHeader extends Component {
   renderSetupProjectModal() {
     return (
       <Modal isOpen={this.state.showAddProjectModal || this.props.showSetupProjectModal} toggle={this.toggleAddProjectModal} style={{ marginTop: "3rem", minWidth: "52rem" }}>
-        <ModalHeader toggle={this.toggleAddProjectModal}>Setup your project (3 Steps)</ModalHeader>
+        <ModalHeader toggle={this.toggleAddProjectModal}>Setup your project (2 Steps)</ModalHeader>
         <ModalBody style={{ height: "40rem", padding: "10px 40px", overflow: "scroll" }}>
           <h5 style={{ margin: "15px 0", fontWeight: "500", fontSize: "15px", color: "#444" }}>
             <span className="fapp-rounded-tag">1</span> Select or create a project
@@ -369,17 +354,7 @@ class DefaultHeader extends Component {
             <TabPane style={{ padding: "30px", paddingBottom: "0" }} tabId="3"><Segment cardOnly /></TabPane>
           </TabContent>
 
-          <hr style={{ margin: "30px -40px" }} />
-          <h5 style={{ margin: "25px 0", fontWeight: "500", fontSize: "15px", color: "#444" }}>
-            <span className="fapp-rounded-tag">3</span> Send us an event
-          </h5>
-          <div style={{ textAlign: "center", padding: "30px", paddingBottom: "65px" }}>
-            <h4 className="fapp-gray">
-              { this.projectHasEvents() ? "We've received your first event successfully." : "We're listening for your first event..." }
-            </h4>
-          </div>
-
-          <div style={{ textAlign: "center", marginBottom: "20px"}}>
+          <div style={{ textAlign: "center", marginBottom: "20px", marginTop: "20px"}}>
             { "Having some trouble? Let us fix it for you. " }
             <button className="fapp-small-button" 
             onClick={() => { factorsai.track("clicked_setup_talk_to_us"); window.fcWidget.open(); }}>

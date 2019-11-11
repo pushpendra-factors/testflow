@@ -283,7 +283,8 @@ func UpdateDashboard(projectId uint64, agentUUID string, id uint64, dashboard *U
 
 	// use HasAccessToDashboard maintain consistency on checking accessibility.
 	if hasAccess, _ := HasAccessToDashboard(projectId, agentUUID, id); !hasAccess {
-		return http.StatusUnauthorized
+		// do not use http.StatusUnauthorised, breaks UI.
+		return http.StatusForbidden
 	}
 
 	// update allowed fields.

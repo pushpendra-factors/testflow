@@ -85,7 +85,7 @@ func CreateDashboardUnit(projectId uint64, agentUUID string, dashboardUnit *Dash
 
 	hasAccess, dashboard := HasAccessToDashboard(projectId, agentUUID, dashboardUnit.DashboardId)
 	if !hasAccess {
-		return nil, http.StatusUnauthorized, "Unauthorized to access dashboard"
+		return nil, http.StatusForbidden, "Unauthorized to access dashboard"
 	}
 
 	dashboardUnit.ProjectId = projectId
@@ -118,7 +118,7 @@ func GetDashboardUnits(projectId uint64, agentUUID string, dashboardId uint64) (
 	}
 
 	if hasAccess, _ := HasAccessToDashboard(projectId, agentUUID, dashboardId); !hasAccess {
-		return nil, http.StatusUnauthorized
+		return nil, http.StatusForbidden
 	}
 
 	err := db.Order("created_at DESC").Where("project_id = ? AND dashboard_id = ?",
@@ -166,7 +166,7 @@ func DeleteDashboardUnit(projectId uint64, agentUUID string, dashboardId uint64,
 
 	hasAccess, dashboard := HasAccessToDashboard(projectId, agentUUID, dashboardId)
 	if !hasAccess {
-		return http.StatusUnauthorized
+		return http.StatusForbidden
 	}
 
 	err := db.Where("id = ? AND project_id = ? AND dashboard_id = ?",
@@ -198,7 +198,7 @@ func UpdateDashboardUnit(projectId uint64, agentUUID string,
 	}
 
 	if hasAccess, _ := HasAccessToDashboard(projectId, agentUUID, dashboardId); !hasAccess {
-		return nil, http.StatusUnauthorized
+		return nil, http.StatusForbidden
 	}
 
 	db := C.GetServices().Db

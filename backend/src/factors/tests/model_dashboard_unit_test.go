@@ -113,7 +113,7 @@ func TestCreateDashboardUnit(t *testing.T) {
 		rTitle := U.RandomString(5)
 		dashboardUnit, errCode, _ := M.CreateDashboardUnit(project.ID, agent2.UUID, &M.DashboardUnit{DashboardId: dashboard.ID,
 			Title: rTitle, Presentation: M.PresentationLine, Query: postgres.Jsonb{json.RawMessage(`{}`)}})
-		assert.Equal(t, http.StatusUnauthorized, errCode)
+		assert.Equal(t, http.StatusForbidden, errCode)
 		assert.Nil(t, dashboardUnit)
 	})
 }
@@ -193,7 +193,7 @@ func TestGetDashboardUnits(t *testing.T) {
 		assert.NotNil(t, dashboardUnit)
 
 		units, errCode := M.GetDashboardUnits(project.ID, agent2.UUID, dashboard.ID)
-		assert.Equal(t, http.StatusUnauthorized, errCode)
+		assert.Equal(t, http.StatusForbidden, errCode)
 		assert.Nil(t, units)
 	})
 }
@@ -283,7 +283,7 @@ func TestDeleteDashboardUnit(t *testing.T) {
 		assert.NotNil(t, dashboardUnit)
 
 		errCode = M.DeleteDashboardUnit(project.ID, agent2.UUID, dashboard.ID, dashboardUnit.ID)
-		assert.Equal(t, http.StatusUnauthorized, errCode)
+		assert.Equal(t, http.StatusForbidden, errCode)
 	})
 }
 
@@ -352,6 +352,6 @@ func TestUpdateDashboardUnit(t *testing.T) {
 
 		rTitle2 := U.RandomString(5)
 		_, errCode = M.UpdateDashboardUnit(project.ID, agent2.UUID, dashboard.ID, dashboardUnit.ID, &M.DashboardUnit{Title: rTitle2})
-		assert.Equal(t, http.StatusUnauthorized, errCode)
+		assert.Equal(t, http.StatusForbidden, errCode)
 	})
 }

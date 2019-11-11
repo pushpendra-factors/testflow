@@ -28,7 +28,7 @@ type DashboardUnitRequestPayload struct {
 func GetDashboardsHandler(c *gin.Context) {
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Get dashboards failed. Invalid project."})
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Get dashboards failed. Invalid project."})
 		return
 	}
 
@@ -46,7 +46,7 @@ func GetDashboardsHandler(c *gin.Context) {
 func CreateDashboardHandler(c *gin.Context) {
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Create dashboard failed. Invalid project."})
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Create dashboard failed. Invalid project."})
 		return
 	}
 
@@ -76,7 +76,7 @@ func CreateDashboardHandler(c *gin.Context) {
 func UpdateDashboardHandler(c *gin.Context) {
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Update dashboard failed. Invalid project."})
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Update dashboard failed. Invalid project."})
 		return
 	}
 
@@ -113,7 +113,7 @@ func UpdateDashboardHandler(c *gin.Context) {
 func GetDashboardUnitsHandler(c *gin.Context) {
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Get dashboard units failed. Invalid project."})
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Get dashboard units failed. Invalid project."})
 		return
 	}
 
@@ -138,7 +138,7 @@ func GetDashboardUnitsHandler(c *gin.Context) {
 func CreateDashboardUnitHandler(c *gin.Context) {
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
-		c.AbortWithStatusJSON(http.StatusUnauthorized,
+		c.AbortWithStatusJSON(http.StatusForbidden,
 			gin.H{"error": "Get dashboard units failed. Invalid project."})
 		return
 	}
@@ -195,7 +195,7 @@ func CreateDashboardUnitHandler(c *gin.Context) {
 func UpdateDashboardUnitHandler(c *gin.Context) {
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
-		c.AbortWithStatusJSON(http.StatusUnauthorized,
+		c.AbortWithStatusJSON(http.StatusForbidden,
 			gin.H{"error": "Delete dashboard unit failed. Invalid project."})
 		return
 	}
@@ -238,7 +238,7 @@ func UpdateDashboardUnitHandler(c *gin.Context) {
 func DeleteDashboardUnitHandler(c *gin.Context) {
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
-		c.AbortWithStatusJSON(http.StatusUnauthorized,
+		c.AbortWithStatusJSON(http.StatusForbidden,
 			gin.H{"error": "Delete dashboard unit failed. Invalid project."})
 		return
 	}
