@@ -26,9 +26,9 @@ func TestHistogramFrequencyMaps(t *testing.T) {
 				for j := 0; j < numSamples; j++ {
 					var sample = []string{}
 					for i := 0; i < dimensions; i++ {
-						// Samples look like
+						// Each dimension in samples look like
 						// 11, 12, ""    -> Dimension 1, numAllowedValues 2
-						// 21, 22, 23  -> Dimension 2, numAllowedValues 3 and so on.
+						// 21, 22, 23, ""  -> Dimension 2, numAllowedValues 3 and so on.
 						// Empty String means missing value.
 						v := ""
 						if rand.Intn(10) > 1 {
@@ -61,34 +61,38 @@ func TestHistogramFrequencyMaps(t *testing.T) {
 				}
 
 				for _, vec := range allSamples {
-					numSymbolCombinations := 1
-					for vecI, symbol := range vec {
-						if symbol != "" {
-							// The number of combinations in the marginal
-							// probability distribution function with missing
-							// dimensions is lower.
-							numSymbolCombinations *= numAllowedValues[vecI]
+					numVecOccurrences := 0.0
+					for _, vec2 := range allSamples {
+						isMatch := true
+						for vecI, symbol1 := range vec {
+							if symbol1 != "" && symbol1 != vec2[vecI] {
+								// if symbol1 is specific and vec2[vecI] is empty,
+								// it is not counted against symbol1 as it is a missing value
+								// and could be any value.
+								// A missing value in a query however (i.e symbol is empty)
+								// means to count only combinations that have a value. (marginal distribution)
+								isMatch = false
+								break
+							}
+						}
+						if isMatch {
+							numVecOccurrences += 1
 						}
 					}
+					expectedPdf := numVecOccurrences / float64(numSamples)
 					actualPdf, err := h.PDF(vec)
 					assert.Nil(t, err, fmt.Sprintf("Failed for string vec %v, error: %v", vec, err))
-					expectedPdf := 1.0 / float64(numSymbolCombinations)
-					// The expected error can be calculated by modelling this as binomial distribution.
-					// If p = 1/numSymbolCombinations is the probability of the sample occurring.
-					// 1 - p is the probability of it not occurrint.
-					// N = numSamples, is the number of trials.
-					// expected mean number of times of sample occurring = np
-					// expected variance = np(1-p)
-					// The actual value should not be more than 4 standard deviation from the mean.
-					// give or take 5 whole numbers for edge conditions.
-					maxDelta := 4.0*math.Sqrt(float64(numSamples)*expectedPdf*(1.0-expectedPdf)) + 5.0
+					// The actual value should not be off by more than 20% factored down by number of bins
+					// give or take 5 for edge conditions.
+					maxDelta := float64(numSamples)*expectedPdf*0.20/float64(maxBins) + 5.0
 					assert.InDelta(t, int(expectedPdf*float64(numSamples)),
 						int(actualPdf*float64(numSamples)), maxDelta,
 						fmt.Sprintf(
-							"Mismatch for vec %v, dimensions %d, numSymbolCombinations %d,"+
-								"numSamples %d, numBins: %d, actualPDF %.3f, expectedPDF %.3f",
-							vec, dimensions, numSymbolCombinations, numSamples,
-							maxBins, actualPdf, expectedPdf))
+							"Mismatch for vec %v, dimensions %d,"+
+								"numSamples %d, numBins: %d, actualPDF %.3f, expectedPDF %.3f,"+
+								"numAllowedValues %v",
+							vec, dimensions, numSamples,
+							maxBins, actualPdf, expectedPdf, numAllowedValues))
 				}
 			}
 		}

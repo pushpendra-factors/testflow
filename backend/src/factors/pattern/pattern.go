@@ -51,7 +51,7 @@ const num_T_BINS = 20
 const num_C_BINS = 10
 const num_R_BINS = 10
 const num_DEFAULT_MULTI_BINS = 64
-const num_NUMERIC_BINS_PER_DIMENSION = 3
+const num_NUMERIC_BINS_PER_DIMENSION = 9
 const num_MAX_NUMERIC_MULTI_BINS = 128
 const num_CATEGORICAL_BINS_PER_DIMENSION = 1
 const num_MAX_CATEGORICAL_MULTI_BINS = 6
@@ -154,7 +154,11 @@ func NewPattern(events []string, userAndEventsInfo *UserAndEventsInfo) (*Pattern
 	// Setup Histograms.
 	if userPropertiesNTemplate != nil {
 		nDimensions := len(*userPropertiesNTemplate)
-		nBinsFloat := math.Min(float64(nDimensions*num_NUMERIC_BINS_PER_DIMENSION),
+		// Restrict between NHIST_MIN_BIN_SIZE to num_MAX_NUMERIC_MULTI_BINS.
+		nBinsFloat := math.Min(
+			math.Max(
+				float64(nDimensions*num_NUMERIC_BINS_PER_DIMENSION),
+				float64(Hist.NHIST_MIN_BIN_SIZE)),
 			float64(num_MAX_NUMERIC_MULTI_BINS))
 		nBins := int(math.Max(1.0, nBinsFloat))
 		puNHist, err := Hist.NewNumericHistogram(nBins, nDimensions, userPropertiesNTemplate)

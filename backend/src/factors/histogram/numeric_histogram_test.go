@@ -190,7 +190,7 @@ func TestNumericHistogramAddWithTemplate(t *testing.T) {
 			expectedCDF *= v / 100.0
 		}
 		actualCDF := h.CDFFromMap(sample)
-		assert.InDelta(t, expectedCDF, actualCDF, 0.2,
+		assert.InDelta(t, expectedCDF, actualCDF, 0.25,
 			fmt.Sprintf(
 				"Mismatch for vec %v, dimensions %d, "+
 					"numSamples %d, numBins: %d, actualCDF %.3f, expectedCDF %.3f",
@@ -210,10 +210,10 @@ func TestNumericHistogramAddWithTemplate(t *testing.T) {
 	}
 
 	mean := h.Mean()
-	// 6% error from exact value with one dimension
-	// and 30% for 5 dimensions. Not a stable test.
+	// 7% error from exact value with one dimension
+	// and 35% for 5 dimensions. Not a stable test.
 	// Can fail occassionally.
-	allowedMismatchFraction := 0.06 * float64(dimensions)
+	allowedMismatchFraction := 0.07 * float64(dimensions)
 	for k, _ := range sum {
 		assert.InDelta(t, sum[k], mean[k],
 			sum[k]*allowedMismatchFraction,

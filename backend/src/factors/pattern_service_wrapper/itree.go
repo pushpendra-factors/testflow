@@ -700,6 +700,22 @@ var USER_PROPERTIES_TO_IGNORE = map[string]bool{
 	"$osVersion":         true,
 	"_$osVersion":        true,
 	U.UP_JOIN_TIME:       true,
+	"_$joinTime":         true,
+
+	U.UP_INITIAL_PAGE_DOMAIN:  true,
+	U.UP_INITIAL_PAGE_URL:     true,
+	U.UP_INITIAL_PAGE_RAW_URL: true,
+	U.EP_PAGE_DOMAIN:          true,
+	U.EP_PAGE_URL:             true,
+	U.EP_PAGE_RAW_URL:         true,
+	U.EP_PAGE_TITLE:           true,
+
+	// Temporary fix.
+	U.EP_REFERRER:                true,
+	U.EP_REFERRER_URL:            true,
+	U.EP_REFERRER_DOMAIN:         true,
+	U.SP_INITIAL_REFERRER_DOMAIN: true,
+	U.SP_INITIAL_REFERRER:        true,
 }
 
 func shouldIgnoreUserProperty(propertyName string) bool {
@@ -724,6 +740,22 @@ var EVENT_PROPERTIES_TO_IGNORE = map[string]bool{
 	"$osVersion":         true,
 	"_$osVersion":        true,
 	U.UP_JOIN_TIME:       true,
+	"_$joinTime":         true,
+
+	U.UP_INITIAL_PAGE_DOMAIN:  true,
+	U.UP_INITIAL_PAGE_URL:     true,
+	U.UP_INITIAL_PAGE_RAW_URL: true,
+	U.EP_PAGE_DOMAIN:          true,
+	U.EP_PAGE_URL:             true,
+	U.EP_PAGE_RAW_URL:         true,
+	U.EP_PAGE_TITLE:           true,
+
+	// Temporary fix.
+	U.EP_REFERRER:                true,
+	U.EP_REFERRER_URL:            true,
+	U.EP_REFERRER_DOMAIN:         true,
+	U.SP_INITIAL_REFERRER_DOMAIN: true,
+	U.SP_INITIAL_REFERRER:        true,
 }
 
 func shouldIgnoreEventProperty(propertyName string) bool {
@@ -836,7 +868,8 @@ func (it *Itree) buildCategoricalPropertyChildNodes(reqId string,
 				klDistanceUnits = append(klDistanceUnits, noneKLDistanceUnit)
 			}
 
-			/*nodeGraphType := NODE_TYPE_GRAPH_USER_PROPERTIES
+			/* Not showing graph results for now as it was confusing for users to interpret.
+			nodeGraphType := NODE_TYPE_GRAPH_USER_PROPERTIES
 			if nodeType == NODE_TYPE_EVENT_PROPERTY {
 				nodeGraphType = NODE_TYPE_GRAPH_EVENT_PROPERTIES
 			}
@@ -919,17 +952,20 @@ func (it *Itree) buildNumericalPropertyChildNodes(reqId string,
 				UPNumericConstraints:     []P.NumericConstraint{},
 				UPCategoricalConstraints: []P.CategoricalConstraint{},
 			}
-			greaterThanConstraint := []P.NumericConstraint{
+			intervalConstraint := []P.NumericConstraint{
 				P.NumericConstraint{
 					PropertyName: propertyName,
 					LowerBound:   minValue,
 					UpperBound:   maxValue,
 				},
 			}
-			if nodeType == NODE_TYPE_EVENT_PROPERTY {
-				constraint2ToAdd.EPNumericConstraints = greaterThanConstraint
-			} else if nodeType == NODE_TYPE_USER_PROPERTY {
-				constraint2ToAdd.UPNumericConstraints = greaterThanConstraint
+			if minValue > 0 && maxValue > 0 {
+				// Interval constraint is considered only for positive values.
+				if nodeType == NODE_TYPE_EVENT_PROPERTY {
+					constraint2ToAdd.EPNumericConstraints = intervalConstraint
+				} else if nodeType == NODE_TYPE_USER_PROPERTY {
+					constraint2ToAdd.UPNumericConstraints = intervalConstraint
+				}
 			}
 
 			constraint3ToAdd := P.EventConstraints{
@@ -938,21 +974,27 @@ func (it *Itree) buildNumericalPropertyChildNodes(reqId string,
 				UPNumericConstraints:     []P.NumericConstraint{},
 				UPCategoricalConstraints: []P.CategoricalConstraint{},
 			}
-			intervalConstraint := []P.NumericConstraint{
+			greaterThanConstraint := []P.NumericConstraint{
 				P.NumericConstraint{
 					PropertyName: propertyName,
 					LowerBound:   maxValue,
 					UpperBound:   math.MaxFloat64,
 				},
 			}
-			if nodeType == NODE_TYPE_EVENT_PROPERTY {
-				constraint3ToAdd.EPNumericConstraints = intervalConstraint
-			} else if nodeType == NODE_TYPE_USER_PROPERTY {
-				constraint3ToAdd.UPNumericConstraints = intervalConstraint
+			if maxValue > 0 {
+				// Greater than constraint is considered only for positive values.
+				if nodeType == NODE_TYPE_EVENT_PROPERTY {
+					constraint3ToAdd.EPNumericConstraints = greaterThanConstraint
+				} else if nodeType == NODE_TYPE_USER_PROPERTY {
+					constraint3ToAdd.UPNumericConstraints = greaterThanConstraint
+				}
 			}
 
 			for _, constraintToAdd := range []P.EventConstraints{
-				constraint1ToAdd, constraint2ToAdd, constraint3ToAdd} {
+				constraint2ToAdd, constraint3ToAdd} {
+				// Avoiding less than constraint now since, zero values.
+				//constraint1ToAdd, constraint2ToAdd, constraint3ToAdd} {
+				// TODO (aravind): Why $page_load_time < 0 patterns appear in results.
 				if cNode, err := it.buildChildNode(reqId,
 					parentPattern, &constraintToAdd, nodeType,
 					parentNode.Index, patternWrapper, allActiveUsersPattern,
@@ -1148,10 +1190,10 @@ func BuildNewItree(reqId,
 	if err != nil {
 		return nil, err
 	}
-		allActiveUsersPattern = patternWrapper.GetPattern(reqId, []string{U.SEN_ALL_ACTIVE_USERS})
-		if allActiveUsersPattern == nil {
-			return nil, fmt.Errorf("All active users pattern not found")
-		}
+	allActiveUsersPattern = patternWrapper.GetPattern(reqId, []string{U.SEN_ALL_ACTIVE_USERS})
+	if allActiveUsersPattern == nil {
+		return nil, fmt.Errorf("All active users pattern not found")
+	}
 
 	for _, p := range candidatePatterns {
 		pLen := len(p.EventNames)

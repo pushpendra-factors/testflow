@@ -8,7 +8,7 @@ import (
 )
 
 const fMAP_MAX_SIZE = 500
-const fMAP_MIN_SIZE = 100
+const fMAP_MIN_SIZE = 50
 const CHIST_MIN_BIN_SIZE = 1
 const fMAP_OTHER_KEY = "__OTHER__"
 
@@ -96,6 +96,12 @@ func (h *CategoricalHistogramStruct) PDF(x []string) (float64, error) {
 	if h.Total < 1 {
 		return 0.0, nil
 	}
+	// Assume there are k Bins B1, B2 ... Bk
+	// Assume there are N items with A1, A2, .. Ak items in each bin
+	// such that A1 + A2 + ... Ak = N
+	// The final probability of one variable P(X=x1) = (n1 / A1 + n2 / A2 + ... nk / Ak)
+	// where n1 is the number of time x1 is seen.
+	// TODO(If count for x1 is missing in bin, it should be considered from the _OTHER_ bin rather than zero).
 	totalProb := 0.0
 	for i := range h.Bins {
 		binProb := 1.0
@@ -112,7 +118,7 @@ func (h *CategoricalHistogramStruct) PDF(x []string) (float64, error) {
 			if count, ok := fMaps[j].Fmap[x[j]]; ok {
 				varFreq = count
 			}
-			binProb *= float64(varFreq) / float64(fMaps[j].Count)
+			binProb *= float64(varFreq) / float64(h.Bins[i].Count)
 		}
 		binFraction := float64(h.Bins[i].Count) / float64(h.Total)
 		totalProb += (binFraction * binProb)

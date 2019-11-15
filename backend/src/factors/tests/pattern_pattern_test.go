@@ -1,15 +1,77 @@
 package tests
 
 import (
+	"bufio"
+	"encoding/json"
 	P "factors/pattern"
+	PS "factors/pattern_server/store"
 	U "factors/util"
 	"fmt"
 	"math"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 )
+
+func TestPatternFromFile(t *testing.T) {
+	file, err := os.Open("./data/pattern.json")
+	assert.Nil(t, err)
+	scanner := bufio.NewScanner(file)
+	const initBufSize = 100 * 1024 // 100KB
+	buf := make([]byte, initBufSize)
+	const maxCapacity = 250 * 1024 * 1024
+	scanner.Buffer(buf, maxCapacity)
+
+	scanner.Split(bufio.ScanLines)
+	var txtlines []string
+
+	for scanner.Scan() {
+		txtlines = append(txtlines, scanner.Text())
+	}
+	err = scanner.Err()
+	assert.Nil(t, err)
+	file.Close()
+
+	pwm := PS.PatternWithMeta{}
+	err = json.Unmarshal([]byte(txtlines[0]), &pwm)
+	assert.Nil(t, err)
+	p := P.Pattern{}
+	err = json.Unmarshal([]byte(pwm.RawPattern), &p)
+	assert.Equal(t, 1, len(p.EventNames))
+
+	totalCount, _ := p.GetCount([]P.EventConstraints{P.EventConstraints{}}, P.COUNT_TYPE_PER_USER)
+	assert.Equal(t, 893.0, float64(totalCount))
+
+	patternConstraints := []P.EventConstraints{
+		P.EventConstraints{
+			EPCategoricalConstraints: []P.CategoricalConstraint{
+				P.CategoricalConstraint{
+					PropertyName:  "$keyword",
+					PropertyValue: "lending_company",
+				},
+			},
+		},
+	}
+	constraintCount, _ := p.GetCount(patternConstraints, P.COUNT_TYPE_PER_USER)
+	assert.Equal(t, 31.0, float64(constraintCount))
+
+	patternConstraints = []P.EventConstraints{
+		P.EventConstraints{
+			EPNumericConstraints: []P.NumericConstraint{
+				P.NumericConstraint{
+					PropertyName: "$page_load_time",
+					LowerBound:   0.78,
+					UpperBound:   7.28,
+					IsEquality:   false,
+				},
+			},
+		},
+	}
+	constraintCount, _ = p.GetCount(patternConstraints, P.COUNT_TYPE_PER_USER)
+	assert.Equal(t, 304.0, float64(constraintCount))
+}
 
 func TestPatternCountEvents(t *testing.T) {
 	// Count A -> B -> C

@@ -271,9 +271,10 @@ func funnelHeaderString(funnelData funnelNodeResults, nodeType int,
 	// Impact event.
 	if nodeType == NODE_TYPE_SEQUENCE {
 		if countType == P.COUNT_TYPE_PER_USER {
-			impactString = fmt.Sprintf("who have %s", funnelData[pLen-2].EventName)
+			impactString = fmt.Sprintf("who have %s", eventStringWithConditions(
+				funnelData[pLen-2].EventName, nil))
 		} else if countType == P.COUNT_TYPE_PER_OCCURRENCE {
-			impactString = fmt.Sprintf("of %s", funnelData[pLen-2].EventName)
+			impactString = fmt.Sprintf("of %s", eventStringWithConditions(funnelData[pLen-2].EventName, nil))
 		}
 	} else if nodeType == NODE_TYPE_EVENT_PROPERTY || nodeType == NODE_TYPE_USER_PROPERTY {
 		if funnelData[pLen-2].EventName == U.SEN_ALL_ACTIVE_USERS {
@@ -769,9 +770,24 @@ func buildBarGraphResult(node *ItreeNode, countType string) (*graphResult, error
 	return chart, nil
 }
 
-func isDupResult(node *ItreeNode,
+func shouldFilterResult(node *ItreeNode,
 	seenPropertyConstraints *map[string]bool,
 	seenEvents *map[string]bool) bool {
+	if len(node.Pattern.EventNames) == 1 || (node.NodeType == NODE_TYPE_SEQUENCE && len(node.Pattern.EventNames) == 2) {
+		// Ignore, AllActiveUsers results, since they are captured with session.
+		return true
+	}
+	sessionIndex := 0
+	for i, e := range node.Pattern.EventNames {
+		if e == U.EVENT_NAME_SESSION {
+			sessionIndex = i
+		}
+	}
+	if sessionIndex > 0 {
+		// Session event occurring in between a pattern is non intuitive.
+		return true
+	}
+
 	isDup := false
 	if node.NodeType == NODE_TYPE_SEQUENCE {
 		nodePLen := len(node.Pattern.EventNames)
@@ -785,13 +801,13 @@ func isDupResult(node *ItreeNode,
 		// Not deduping on graph results.
 		propertyConstraints := []string{}
 		for _, c := range node.AddedConstraint.EPCategoricalConstraints {
-			propertyConstraints = append(propertyConstraints, c.PropertyName)
+			propertyConstraints = append(propertyConstraints, fmt.Sprintf("%s:%s", c.PropertyName, c.PropertyValue))
 		}
 		for _, c := range node.AddedConstraint.EPNumericConstraints {
 			propertyConstraints = append(propertyConstraints, c.PropertyName)
 		}
 		for _, c := range node.AddedConstraint.UPCategoricalConstraints {
-			propertyConstraints = append(propertyConstraints, c.PropertyName)
+			propertyConstraints = append(propertyConstraints, fmt.Sprintf("%s:%s", c.PropertyName, c.PropertyValue))
 		}
 		for _, c := range node.AddedConstraint.UPNumericConstraints {
 			propertyConstraints = append(propertyConstraints, c.PropertyName)
@@ -830,7 +846,7 @@ func buildFactorResultsFromPatterns(reqId string, nodes []*ItreeNode,
 		if node.NodeType == NODE_TYPE_SEQUENCE || node.NodeType == NODE_TYPE_EVENT_PROPERTY ||
 			node.NodeType == NODE_TYPE_USER_PROPERTY {
 			// Dedup results to show more novel results as user scrolls down.
-			if isDupResult(node, &seenPropertyConstraints, &seenEvents) {
+			if shouldFilterResult(node, &seenPropertyConstraints, &seenEvents) {
 				continue
 			}
 			if node.Fcr < MIN_FCR && node.Fcp < MIN_FCP {
@@ -845,7 +861,7 @@ func buildFactorResultsFromPatterns(reqId string, nodes []*ItreeNode,
 				chart = c
 			}
 		} else if node.NodeType == NODE_TYPE_GRAPH_EVENT_PROPERTIES || node.NodeType == NODE_TYPE_GRAPH_USER_PROPERTIES {
-			if isDupResult(node, &seenPropertyConstraints, &seenEvents) {
+			if shouldFilterResult(node, &seenPropertyConstraints, &seenEvents) {
 				continue
 			}
 			if c, err := buildBarGraphResult(node, countType); err != nil {

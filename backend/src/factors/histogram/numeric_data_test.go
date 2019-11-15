@@ -197,9 +197,9 @@ func TestNumericTrimByBinSize(t *testing.T) {
 	}
 	fmt.Println("---------------------------------------------------")
 
-	// Minimum 3 bin.
+	// Minimum 12 bin.
 	hist.TrimByBinSize(0.01)
 	assert.Equal(t, uint64(numDataSamples), hist.Count(),
 		"Mismatch in number of samples.")
-	assert.Equal(t, hist.numBins(), 3, "Mismatch in number of bins.")
+	assert.Equal(t, hist.numBins(), 12, "Mismatch in number of bins.")
 }

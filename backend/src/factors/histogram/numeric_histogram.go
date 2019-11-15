@@ -5,7 +5,7 @@ import (
 	"math"
 )
 
-const NHIST_MIN_BIN_SIZE = 6
+const NHIST_MIN_BIN_SIZE = 12
 
 type NumericHistogram interface {
 	Add(v []float64) error
@@ -78,13 +78,23 @@ func (b *numericBin) merge(o numericBin) numericBin {
 	max := make([]float64, dimension)
 
 	for i := 0; i < dimension; i++ {
-		if b.Min.Values[i] <= o.Min.Values[i] {
+		if b.Min.Values[i] == math.NaN() {
+			// If one of them is Nan choose the other as min.
+			min[i] = o.Min.Values[i]
+		} else if o.Min.Values[i] == math.NaN() {
+			min[i] = b.Min.Values[i]
+		} else if b.Min.Values[i] <= o.Min.Values[i] {
 			min[i] = b.Min.Values[i]
 		} else {
 			min[i] = o.Min.Values[i]
 		}
 
-		if b.Max.Values[i] >= o.Max.Values[i] {
+		if b.Max.Values[i] == math.NaN() {
+			// If one of them is Nan choose the other as max.
+			max[i] = o.Max.Values[i]
+		} else if o.Max.Values[i] == math.NaN() {
+			max[i] = b.Max.Values[i]
+		} else if b.Max.Values[i] >= o.Max.Values[i] {
 			max[i] = b.Max.Values[i]
 		} else {
 			max[i] = o.Max.Values[i]
@@ -120,6 +130,9 @@ func (h *NumericHistogramStruct) AddMap(keyValues map[string]float64) error {
 	vec := make([]float64, h.Dimension)
 	template := *h.Template
 	for i := range template {
+		// Initialize the vector with NaN.
+		// Missing values in te map are treated as NaN.
+		vec[i] = math.NaN()
 		if value, ok := keyValues[template[i].Name]; ok {
 			vec[i] = value
 		} else if !template[i].IsRequired {
@@ -254,13 +267,32 @@ func (h *NumericHistogramStruct) trim() {
 				for k := 0; k < h.Dimension; k++ {
 					val_max_i := h.Bins[i].Max.Values[k]
 					val_min_i := h.Bins[i].Min.Values[k]
+					length_i := val_max_i - val_min_i
+					if length_i == math.NaN() {
+						// If one of the values is NaN, this dimension is not considered
+						// for change in volume.
+						length_i = 1.0
+					}
 
 					val_max_j := h.Bins[j].Max.Values[k]
 					val_min_j := h.Bins[j].Min.Values[k]
+					length_j := val_max_j - val_min_j
+					if length_j == math.NaN() {
+						// If one of the values is NaN, this dimension is not considered
+						// for change in volume.
+						length_j = 1.0
+					}
 
-					vol_i *= val_max_i - val_min_i
-					vol_j *= val_max_j - val_min_j
-					vol *= max(val_max_i, val_max_j) - min(val_min_i, val_min_j)
+					vol_i *= length_i
+					vol_j *= length_j
+					length_i_j := max(val_max_i, val_max_j) - min(val_min_i, val_min_j)
+					if length_i_j == 0.0 || length_i_j == math.NaN() {
+						// Compute the area from other dimensions as volume for the merged bin,
+						// if the length of the current dimension is zero.
+						// Can happen if max value and min value are same in one of the dimension.
+						length_i_j = 1.0
+					}
+					vol *= length_i_j
 				}
 
 				count_i := h.Bins[i].Count

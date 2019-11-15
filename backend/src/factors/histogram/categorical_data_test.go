@@ -40,11 +40,11 @@ func TestCategoricalSampleData(t *testing.T) {
 
 			// Empirically determined upper bound for distance between Histogram / Sample PDF
 			// and actual generating PDF.
-			// With 8 bins and 1 dimensions the maximum error is 0.08
-			// With 128 bins and 1 dimensions the maximum error is 0.035
-			// With 8 bins and 5 dimensions the maximum error is 0.41
-			// With 128 bins and 5 dimensions the maximum error is 0.17
-			maxKLDistance := 6500.0 / float64(numDataSamples) / float64(numBins)
+			// With 8 bins and 1 dimensions the maximum error is 0.093
+			// With 128 bins and 1 dimensions the maximum error is 0.04
+			// With 8 bins and 5 dimensions the maximum error is 0.47
+			// With 128 bins and 5 dimensions the maximum error is 0.2
+			maxKLDistance := 7500.0 / float64(numDataSamples) / float64(numBins)
 			KLHistogramActual := 0.0
 			KLSampleActual := 0.0
 
