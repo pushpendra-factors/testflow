@@ -25,7 +25,7 @@ parser.add_option("--api_host_url", default="http://localhost:8080", help="API h
 parser.add_option("--app_host_url", default="http://localhost:3000", help="App host url")
 parser.add_option("--oauth_secret", default="", help="OAuth2 client secret JSON string")
 
-SESSION_COOKIE_NAME = "factors-sidd"
+SESSION_COOKIE_NAME = "factors-sid"
 STATUS_FAILURE = "failure"
 ADWORDS_CLIENT_USER_AGENT = "FactorsAI (https://www.factors.ai)"
 
@@ -65,7 +65,11 @@ class App():
     def get_developer_token(cls):
         return cls._developer_token
 
-
+    @classmethod
+    def get_session_cookie_name(cls):
+        if cls._env == "production": return SESSION_COOKIE_NAME
+        if cls._env == "staging": return SESSION_COOKIE_NAME+"s"
+        return SESSION_COOKIE_NAME+"d"
 
 class OAuthManager():
     _redirect_url = None
@@ -135,7 +139,7 @@ class APIClientWithSession():
         url = App.get_api_host() + "/integrations/adwords/add_refresh_token"
         
         cookies = {}
-        cookies[SESSION_COOKIE_NAME] = session
+        cookies[App.get_session_cookie_name()] = session
         response = requests.post(url, json=payload, cookies=cookies)
         if not response.ok:
             log.error("Failed updating adwords integration with response : %d, %s", 
@@ -148,7 +152,7 @@ class APIClientWithSession():
     def get_adwords_refresh_token(session, project_id):
         url = App.get_api_host() + "/integrations/adwords/get_refresh_token"
         cookies = {}
-        cookies[SESSION_COOKIE_NAME] = session
+        cookies[App.get_session_cookie_name()] = session
         # project_id as str for consistency on json.
         payload = { "project_id": str(project_id) }
         response = requests.post(url, json=payload, cookies=cookies)
@@ -169,10 +173,11 @@ class OAuthRedirectHandler(tornado.web.RequestHandler):
             log.error("No project_id given on query param: %s", e)
             self.redirect(App.get_app_login_redirect_url(), True)
             return
-            
-        session_cookie_str = self.get_cookie(SESSION_COOKIE_NAME)
+        
+        session_cookie_name = App.get_session_cookie_name()
+        session_cookie_str = self.get_cookie(session_cookie_name)
         if session_cookie_str == None:
-            log.error("Session cookie not found on oauth redirect handler.")
+            log.error("Session %s cookie not found on oauth redirect handler.", session_cookie_name)
             self.redirect(App.get_app_login_redirect_url(), True)
             return
 
@@ -258,9 +263,10 @@ class GetCustomerAccountsHandler(tornado.web.RequestHandler):
             self.finish({ "message": "invalid project_id" })
             return
         
-        session_cookie_str = self.get_cookie(SESSION_COOKIE_NAME)
+        session_cookie_name = App.get_session_cookie_name()
+        session_cookie_str = self.get_cookie(session_cookie_name)
         if session_cookie_str == None:
-            log.error("Session cookie not found on request.")
+            log.error("Session %s cookie not found on request.", session_cookie_name)
             self.set_status(401)
             self.finish({ "message": "access unauthorized" })
             return
