@@ -16,6 +16,7 @@ parser.add_option("--data_service_host", dest="data_service_host",
     help="Data service host", default="http://localhost:8089")
 
 ADWORDS_CLIENT_USER_AGENT = "FactorsAI (https://www.factors.ai)"
+PAGE_SIZE = 200
 
 # Cache permission denied customer_acc_id + token and avoid 
 # sync for similar requests.
@@ -97,12 +98,11 @@ def get_campaigns(adwords_client, timestamp):
     "Labels", "CampaignTrialType", "BaseCampaignId", "TrackingUrlTemplate", "FinalUrlSuffix", 
     "UrlCustomParameters", "SelectiveOptimization"]
     offset = 0
-    page_size = 100
     selector = {
         'fields': fields,
         'paging': {
             'startIndex': str(offset),
-            'numberResults': str(page_size)
+            'numberResults': str(PAGE_SIZE)
         }
     }
 
@@ -122,7 +122,7 @@ def get_campaigns(adwords_client, timestamp):
                 rows.append(doc)
         else:
             log.warning('No campaigns were found.')
-        offset += page_size
+        offset += PAGE_SIZE
         selector['paging']['startIndex'] = str(offset)
         more_pages = offset < int(page['totalNumEntries'])
 
@@ -137,12 +137,11 @@ def get_ads(adwords_client, timestamp):
 
     fields = ["AdGroupId", "Status", "BaseCampaignId", "BaseAdGroupId"]
     offset = 0
-    page_size = 100
     selector = {
         'fields': fields,
         'paging': {
             'startIndex': str(offset),
-            'numberResults': str(page_size)
+            'numberResults': str(PAGE_SIZE)
         }
     }
 
@@ -169,7 +168,7 @@ def get_ads(adwords_client, timestamp):
                 rows.append(doc)
         else:
             log.warning('No ads were found.')
-        offset += page_size
+        offset += PAGE_SIZE
         selector['paging']['startIndex'] = str(offset)
         more_pages = offset < int(page['totalNumEntries'])
 
@@ -186,12 +185,11 @@ def get_ad_groups(adwords_client, timestamp):
     fields = ["Id", "CampaignId", "CampaignName", "Name", "Status", "Settings", "Labels", 
     "ContentBidCriterionTypeGroup", "BaseCampaignId", "BaseAdGroupId", "AdGroupType"]
     offset = 0
-    page_size = 100
     selector = {
         'fields': fields,
         'paging': {
             'startIndex': str(offset),
-            'numberResults': str(page_size)
+            'numberResults': str(PAGE_SIZE)
         }
     }
 
@@ -211,7 +209,7 @@ def get_ad_groups(adwords_client, timestamp):
                 rows.append(doc)
         else:
             log.warning('No ad_groups were found.')
-        offset += page_size
+        offset += PAGE_SIZE
         selector['paging']['startIndex'] = str(offset)
         more_pages = offset < int(page['totalNumEntries'])
 
