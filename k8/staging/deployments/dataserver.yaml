@@ -2,10 +2,10 @@ apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   labels:
-    layer: adwordsserver
+    layer: dataserver
     env: staging
     project: factors-staging
-  name: adwordsserver
+  name: dataserver
   namespace: default
 spec:
   progressDeadlineSeconds: 600
@@ -13,7 +13,7 @@ spec:
   revisionHistoryLimit: 10
   selector:
     matchLabels:
-      layer: adwordsserver
+      layer: dataserver
   strategy:
     rollingUpdate:
       maxSurge: 1
@@ -22,16 +22,16 @@ spec:
   template:
     metadata:      
       labels:
-        layer: adwordsserver
+        layer: dataserver
     spec:
       nodeSelector:
         cloud.google.com/gke-nodepool: factors-staging-node-pool
       containers:
-      - name: adwordsserver
-        image: us.gcr.io/factors-staging/adwords-server:v0.01-9fc8a35
+      - name: dataserver
+        image: us.gcr.io/factors-staging/data-server:v0.01-b545b6f
         imagePullPolicy: IfNotPresent
         ports:
-        - containerPort: 8091
+        - containerPort: 8089
         volumeMounts:
         - name: workdir
           mountPath: /usr/local/var/factors
@@ -43,36 +43,48 @@ spec:
         securityContext: {}
         readinessProbe:
           tcpSocket:
-            port: 8091
+            port: 8089
           initialDelaySeconds: 10
           periodSeconds: 10
         livenessProbe:
           tcpSocket:
-            port: 8091
+            port: 8089
           initialDelaySeconds: 10
           periodSeconds: 10
         args:
           - --env
           - $(ENV)
           - --port
-          - $(ADWORDS_SERVER_PORT)
-          - --host_url
-          - $(API_HOST_URL)
-          - --api_host_url
-          - $(API_HOST_URL)
-          - --app_host_url
-          - $(APP_HOST_URL)
-          - --oauth_secret
-          - $(GOOGLE_OAUTH_SECRET)
-          - --developer_token
-          - $(GOOGLE_ADWORDS_DEVELOPER_TOKEN)
+          - "8089"
+          - --db_host
+          - $(DB_HOST)
+          - --db_port
+          - $(DB_PORT)
+          - --db_name
+          - $(POSTGRES_DB)
+          - --db_user
+          - $(POSTGRES_USER)
+          - --db_pass
+          - $(POSTGRES_PASSWORD)
+          - --aws_region
+          - $(AWS_REGION)
+          - --aws_key
+          - $(AWS_KEY)
+          - --aws_secret
+          - $(AWS_SECRET)
+          - --email_sender
+          - $(EMAIL_SENDER)
+          - --error_reporting_interval
+          - $(ERROR_REPORTING_INTERVAL)
         envFrom:
         - configMapRef:
-            name: config-adwordsserver
-        - configMapRef:
             name: config-env
+        - configMapRef:
+            name: config-postgres
         - secretRef:
-            name: secret-google
+            name: secret-postgres
+        - secretRef:
+            name: secret-aws
       volumes:
       - name: workdir
         emptyDir: {}

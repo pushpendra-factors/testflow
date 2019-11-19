@@ -1,4 +1,4 @@
-.PHONY: build-api serve-api build-ps serve-ps clean pack-api upload-api pack-ps upload-ps pack-debug upload-debug pack-build-seq upload-build-seq pack-build-reports upload-build-reports test 
+.PHONY: build-api serve-api build-ps serve-ps build-ds serve-ds clean pack-api upload-api pack-ps upload-ps pack-ds upload-ds pack-debug upload-debug pack-build-seq upload-build-seq pack-build-reports upload-build-reports test 
 
 # Update tag with the latest release version
 # Ex format: v0.05-beta_d0e9ed9 
@@ -22,8 +22,14 @@ build-ps:
 serve-ps:
 	$(GOPATH)/bin/pattern-app
 
+build-ds:
+	go build -o $(GOPATH)/bin/data-service $(GOPATH)/src/factors/data_service/data-service.go
+
+serve-ds:
+	$(GOPATH)/bin/data-service
+
 clean:
-	rm $(GOPATH)/bin/pattern-app $(GOPATH)/bin/app
+	rm $(GOPATH)/bin/pattern-app $(GOPATH)/bin/app $(GOPATH)/bin/data-service
 
 pack-api:
 	docker build -t us.gcr.io/factors-$(ENV)/app-server:$(TAG) -f Dockerfile.appserver .
@@ -36,6 +42,12 @@ pack-ps:
 
 upload-ps:
 	docker push us.gcr.io/factors-$(ENV)/pattern-server:$(TAG)
+
+pack-ds:
+	docker build -t us.gcr.io/factors-$(ENV)/data-server:$(TAG) -f Dockerfile.dataserver .
+
+upload-ds:
+	docker push us.gcr.io/factors-$(ENV)/data-server:$(TAG)
 
 pack-debug:
 	docker build --no-cache -t us.gcr.io/factors-$(ENV)/debug:$(TAG) -f Dockerfile.debug .
