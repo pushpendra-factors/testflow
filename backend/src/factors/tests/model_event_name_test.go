@@ -161,6 +161,8 @@ func TestDBIsFilterMatch(t *testing.T) {
 	assert.False(t, M.IsFilterMatch(U.TokenizeURI("/u1/:v1/u2"), U.TokenizeURI("/u1/a2")))
 	assert.False(t, M.IsFilterMatch(U.TokenizeURI("/u1/:v1/u2"), U.TokenizeURI("/a2/u2")))
 
+	assert.True(t, M.IsFilterMatch(U.TokenizeURI("/u1/:v1/u2/:v2"), U.TokenizeURI("/u1/l1/u2/l2")))
+
 	// Empty filter.
 	assert.False(t, M.IsFilterMatch(U.TokenizeURI(""), U.TokenizeURI("/u1")))
 

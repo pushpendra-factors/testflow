@@ -2,6 +2,7 @@ package tests
 
 import (
 	M "factors/model"
+	U "factors/util"
 	"net/http"
 	"testing"
 
@@ -35,6 +36,18 @@ func TestDBUpdateProjectSettings(t *testing.T) {
 	assert.Equal(t, autoTrack, *projectSetting.AutoTrack)
 	assert.Equal(t, intSegment, *projectSetting.IntSegment)
 	assert.Equal(t, true, *projectSetting.ExcludeBot) // default state
+
+	accountId := U.RandomLowerAphaNumString(6)
+	agentUUID := U.RandomLowerAphaNumString(8)
+	updatedPSettings, errCode = M.UpdateProjectSettings(project.ID, &M.ProjectSetting{
+		IntAdwordsCustomerAccountId: &accountId, IntAdwordsEnabledAgentUUID: &agentUUID})
+	assert.Equal(t, errCode, http.StatusAccepted)
+	projectSetting, errCode = M.GetProjectSetting(project.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotNil(t, projectSetting)
+	assert.Equal(t, true, *projectSetting.ExcludeBot)
+	assert.Equal(t, accountId, *projectSetting.IntAdwordsCustomerAccountId)
+	assert.Equal(t, agentUUID, *projectSetting.IntAdwordsEnabledAgentUUID)
 
 	// Test UpdateProjectSetting without projectId.
 	autoTrack = true

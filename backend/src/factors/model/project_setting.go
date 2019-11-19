@@ -10,16 +10,19 @@ import (
 )
 
 type ProjectSetting struct {
-	// Foreign key constraing project_id -> projects(id)
+	// Foreign key constraint project_id -> projects(id)
 	// Used project_id as primary key also, becase of 1-1 relationship.
 	ProjectId uint64 `gorm:"primary_key:true" json:"-"` // exclude on JSON response.
 	// Using pointers to avoid update by default value.
 	// omit empty to avoid nil(filelds not updated) on resp json.
-	AutoTrack  *bool     `gorm:"not null;default:false" json:"auto_track,omitempty"`
-	IntSegment *bool     `gorm:"not null;default:false" json:"int_segment,omitempty"`
-	ExcludeBot *bool     `gorm:"not null;default:false" json:"exclude_bot,omitempty"`
-	CreatedAt  time.Time `json:"created_at"`
-	UpdatedAt  time.Time `json:"updated_at"`
+	AutoTrack  *bool `gorm:"not null;default:false" json:"auto_track,omitempty"`
+	IntSegment *bool `gorm:"not null;default:false" json:"int_segment,omitempty"`
+	ExcludeBot *bool `gorm:"not null;default:false" json:"exclude_bot,omitempty"`
+	// Foreign key constraint int_adwords_enabled_agent_uuid -> agents(uuid)
+	IntAdwordsEnabledAgentUUID  *string   `json:"int_adwords_enabled_agent_uuid,omitempty"`
+	IntAdwordsCustomerAccountId *string   `json:"int_adwords_customer_account_id,omitempty"`
+	CreatedAt                   time.Time `json:"created_at"`
+	UpdatedAt                   time.Time `json:"updated_at"`
 }
 
 func GetProjectSetting(projectId uint64) (*ProjectSetting, int) {
@@ -85,4 +88,69 @@ func IsPSettingsIntSegmentEnabled(projectId uint64) bool {
 	}
 
 	return *settings.IntSegment
+}
+
+func GetIntAdwordsRefreshTokenForProject(projectId uint64) (string, int) {
+	settings, errCode := GetProjectSetting(projectId)
+	if errCode != http.StatusFound {
+		return "", errCode
+	}
+
+	if settings.IntAdwordsEnabledAgentUUID == nil || *settings.IntAdwordsEnabledAgentUUID == "" {
+		return "", http.StatusNotFound
+	}
+
+	logCtx := log.WithField("agent_uuid",
+		*settings.IntAdwordsEnabledAgentUUID).WithField("project_id", projectId)
+
+	agent, errCode := GetAgentByUUID(*settings.IntAdwordsEnabledAgentUUID)
+	if errCode != http.StatusFound {
+		logCtx.Error("Adwords enabled agent not found on agents table.")
+		return "", errCode
+	}
+
+	refreshToken := agent.IntAdwordsRefreshToken
+	if refreshToken == "" {
+		logCtx.Error("Adwords enabled agent refresh token is empty.")
+		return "", http.StatusInternalServerError
+	}
+
+	return refreshToken, http.StatusFound
+}
+
+type AdwordsProjectSettings struct {
+	ProjectId         uint64
+	CustomerAccountId string
+	AgentUUID         string
+	RefreshToken      string
+}
+
+func GetAllIntAdwordsProjectSettings() ([]AdwordsProjectSettings, int) {
+	db := C.GetServices().Db
+
+	adwordsProjectSettings := make([]AdwordsProjectSettings, 0, 0)
+
+	queryStr := "SELECT project_settings.project_id, project_settings.int_adwords_customer_account_id as customer_account_id," +
+		" " + "agents.int_adwords_refresh_token as refresh_token, project_settings.int_adwords_enabled_agent_uuid as agent_uuid" +
+		" " + "FROM project_settings LEFT JOIN agents ON project_settings.int_adwords_enabled_agent_uuid = agents.uuid" +
+		" " + "WHERE project_settings.int_adwords_customer_account_id IS NOT NULL" +
+		" " + "AND project_settings.int_adwords_enabled_agent_uuid IS NOT NULL"
+
+	rows, err := db.Raw(queryStr).Rows()
+	if err != nil {
+		log.WithError(err).Error("Failed to get all adwords project settings.")
+		return adwordsProjectSettings, http.StatusInternalServerError
+	}
+
+	for rows.Next() {
+		var adwordsSettings AdwordsProjectSettings
+		if err := db.ScanRows(rows, &adwordsSettings); err != nil {
+			log.WithError(err).Error("Failed to scan get all adwords project settings.")
+			return adwordsProjectSettings, http.StatusInternalServerError
+		}
+
+		adwordsProjectSettings = append(adwordsProjectSettings, adwordsSettings)
+	}
+
+	return adwordsProjectSettings, http.StatusOK
 }

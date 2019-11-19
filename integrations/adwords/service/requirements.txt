@@ -1,0 +1,4 @@
+googleads==21.0.0
+google==2.0.2
+google_auth_oauthlib==0.4.1
+tornado

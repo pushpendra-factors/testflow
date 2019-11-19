@@ -9,6 +9,7 @@ import (
 	U "factors/util"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -191,4 +192,168 @@ func IntSegmentHandler(c *gin.Context) {
 
 	// Always return HTTP STATUS_OK with original response.
 	c.JSON(http.StatusOK, response)
+}
+
+// Verifies agent access to projectc using middlewares.
+func IsAgentAuthorizedToAccessProject(projectId uint64, c *gin.Context) bool {
+	agentAuthorizedProjectIds := U.GetScopeByKey(c, mid.SCOPE_AUTHORIZED_PROJECTS)
+	for _, authorizedProjectId := range agentAuthorizedProjectIds.([]uint64) {
+		if projectId == authorizedProjectId {
+			return true
+		}
+	}
+
+	return false
+}
+
+type AdwordsAddRefreshTokenPayload struct {
+	// project_id conv from string to uint64 explicitly.
+	ProjectId    string `json:"project_id"`
+	RefreshToken string `json:"refresh_token"`
+}
+
+type AdwordsRequestPayload struct {
+	ProjectId string `json:"project_id"`
+}
+
+// Updates projects settings required for Adwords.
+// Uses session cookie for auth on middleware.
+func IntAdwordsAddRefreshTokenHandler(c *gin.Context) {
+	r := c.Request
+
+	var requestPayload AdwordsAddRefreshTokenPayload
+
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&requestPayload); err != nil {
+		log.WithError(err).Error("Adwords update payload JSON decode failure.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid json payload. update failed."})
+		return
+	}
+
+	if requestPayload.ProjectId == "" || requestPayload.RefreshToken == "" {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid json payload. empty mandatory fields."})
+		return
+	}
+
+	projectId, err := strconv.ParseUint(requestPayload.ProjectId, 10, 64)
+	if err != nil {
+		log.WithError(err).Error("Failed to convert project_id as uint64.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid json payload. empty mandatory fields."})
+		return
+	}
+
+	if !IsAgentAuthorizedToAccessProject(projectId, c) {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "not authorized to access project"})
+		return
+	}
+
+	currentAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+
+	errCode := M.UpdateAgentIntAdwordsRefreshToken(currentAgentUUID, requestPayload.RefreshToken)
+	if errCode != http.StatusAccepted {
+		log.WithField("agent_uuid", currentAgentUUID).Error("Failed to update adwords refresh token for agent.")
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "failed updating adwords refresh token for agent"})
+		return
+	}
+
+	_, errCode = M.UpdateProjectSettings(projectId, &M.ProjectSetting{IntAdwordsEnabledAgentUUID: &currentAgentUUID})
+	if errCode != http.StatusAccepted {
+		log.WithField("project_id", projectId).Error("Failed to update project settings adwords enable agent uuid.")
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "failed updating adwords enabled agent uuid project settings"})
+		return
+	}
+
+	if errCode != http.StatusAccepted {
+		log.WithField("project_id", projectId).WithField("agent_id", currentAgentUUID).Error(
+			"Failed to update project settings for adwords enable.")
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "failed to enable adwords"})
+		return
+	}
+
+	c.JSON(errCode, gin.H{})
+}
+
+func IntAdwordsGetRefreshTokenHandler(c *gin.Context) {
+	r := c.Request
+
+	var requestPayload AdwordsRequestPayload
+
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&requestPayload); err != nil {
+		log.WithError(err).Error("Adwords get refresh token payload JSON decode failure.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid json payload. fetch failed."})
+		return
+	}
+
+	if requestPayload.ProjectId == "" {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid project."})
+		return
+	}
+
+	projectId, err := strconv.ParseUint(requestPayload.ProjectId, 10, 64)
+	if err != nil {
+		log.WithError(err).Error("Failed to convert project_id as uint64.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid project."})
+		return
+	}
+
+	refreshToken, errCode := M.GetIntAdwordsRefreshTokenForProject(projectId)
+	if errCode != http.StatusFound {
+		c.AbortWithStatusJSON(errCode, gin.H{"error": "failed to get adwords refresh token for project."})
+		return
+	}
+
+	c.JSON(http.StatusFound, gin.H{"refresh_token": refreshToken})
+}
+
+// IntEnableAdwordsHandler - Checks for refresh_token for the
+// agent if exists: then add the agent_uuid as adwords_enabled_agent_uuid
+// on project settings. if not exists: return 304.
+func IntEnableAdwordsHandler(c *gin.Context) {
+	r := c.Request
+
+	var requestPayload AdwordsRequestPayload
+
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&requestPayload); err != nil {
+		log.WithError(err).Error("Adwords get refresh token payload JSON decode failure.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid json payload. enable failed."})
+		return
+	}
+
+	if requestPayload.ProjectId == "" {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid project."})
+		return
+	}
+
+	projectId, err := strconv.ParseUint(requestPayload.ProjectId, 10, 64)
+	if err != nil {
+		log.WithError(err).Error("Failed to convert project_id as uint64.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid project."})
+		return
+	}
+
+	currentAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+	agent, errCode := M.GetAgentByUUID(currentAgentUUID)
+	if errCode != http.StatusFound {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid agent."})
+		return
+	}
+
+	if agent.IntAdwordsRefreshToken == "" {
+		c.JSON(http.StatusNotModified, gin.H{})
+		return
+	}
+
+	addEnableAgentUUIDSetting := M.ProjectSetting{IntAdwordsEnabledAgentUUID: &currentAgentUUID}
+	_, errCode = M.UpdateProjectSettings(projectId, &addEnableAgentUUIDSetting)
+	if errCode != http.StatusAccepted {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "failed to enable adwords"})
+		return
+	}
+
+	c.JSON(http.StatusOK, addEnableAgentUUIDSetting)
 }

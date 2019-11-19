@@ -1,4 +1,4 @@
-import { getHostURL } from "../util";
+import { getHostURL, getAdwordsHostURL } from "../util";
 import {get, post, put} from "./request.js";
 var host = getHostURL();
 

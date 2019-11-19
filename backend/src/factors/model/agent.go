@@ -38,6 +38,8 @@ type Agent struct {
 
 	LastLoggedInAt *time.Time `json:"last_logged_in_at"`
 	LoginCount     uint64     `json:"login_count"`
+
+	IntAdwordsRefreshToken string `json:"-"`
 }
 
 // AgentInfo - Exposable Info.
@@ -216,6 +218,16 @@ func IsPasswordAndHashEqual(password, hash string) bool {
 	return err == nil
 }
 
+func UpdateAgentIntAdwordsRefreshToken(uuid, refreshToken string) int {
+	if uuid == "" || refreshToken == "" {
+		log.WithField("agent_uuid", uuid).Error(
+			"UpdateAgentAdwordsRefreshToken failed. Invalid params.")
+		return http.StatusBadRequest
+	}
+
+	return updateAgent(uuid, IntAdwordsRefreshToken(refreshToken))
+}
+
 func UpdateAgentPassword(uuid, plainTextPassword string, passUpdatedAt time.Time) int {
 
 	if uuid == "" || plainTextPassword == "" {
@@ -228,7 +240,8 @@ func UpdateAgentPassword(uuid, plainTextPassword string, passUpdatedAt time.Time
 		return http.StatusInternalServerError
 	}
 
-	return updateAgent(uuid, PasswordAndPasswordCreatedAt(hashedPassword, passUpdatedAt), Salt(U.RandomString(SALT_LEN)))
+	return updateAgent(uuid, PasswordAndPasswordCreatedAt(hashedPassword, passUpdatedAt),
+		Salt(U.RandomString(SALT_LEN)))
 }
 
 func UpdateAgentLastLoginInfo(agentUUID string, ts time.Time) int {
@@ -240,7 +253,8 @@ func UpdateAgentLastLoginInfo(agentUUID string, ts time.Time) int {
 	return updateAgent(agentUUID, LastLoggedInAtAndIncrLoginCount(ts))
 }
 
-func UpdateAgentVerificationDetails(agentUUID, password, firstName, lastName string, verified bool, passUpdatedAt time.Time) int {
+func UpdateAgentVerificationDetails(agentUUID, password, firstName,
+	lastName string, verified bool, passUpdatedAt time.Time) int {
 
 	if agentUUID == "" || firstName == "" || password == "" {
 		log.Error("UpdateAgentVerificationDetails Failed. Missing params")
@@ -252,7 +266,8 @@ func UpdateAgentVerificationDetails(agentUUID, password, firstName, lastName str
 		return http.StatusInternalServerError
 	}
 
-	return updateAgent(agentUUID, Firstname(firstName), Lastname(lastName), IsEmailVerified(verified), PasswordAndPasswordCreatedAt(hashedPassword, passUpdatedAt))
+	return updateAgent(agentUUID, Firstname(firstName), Lastname(lastName),
+		IsEmailVerified(verified), PasswordAndPasswordCreatedAt(hashedPassword, passUpdatedAt))
 }
 
 func UpdateAgentInformation(agentUUID, firstName, lastName string) int {
@@ -295,6 +310,12 @@ func LastLoggedInAtAndIncrLoginCount(time time.Time) Option {
 	return func(fields fieldsToUpdate) {
 		fields["last_logged_in_at"] = time
 		fields["login_count"] = gorm.Expr("login_count + ? ", 1)
+	}
+}
+
+func IntAdwordsRefreshToken(refreshToken string) Option {
+	return func(fields fieldsToUpdate) {
+		fields["int_adwords_refresh_token"] = refreshToken
 	}
 }
 

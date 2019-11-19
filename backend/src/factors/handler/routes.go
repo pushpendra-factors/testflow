@@ -4,12 +4,15 @@ import (
 	mid "factors/middleware"
 	"net/http"
 
+	IH "factors/handler/internal"
+
 	"github.com/gin-gonic/gin"
 )
 
 const ROUTE_SDK_ROOT = "/sdk"
 const ROUTE_PROJECTS_ROOT = "/projects"
 const ROUTE_INTEGRATIONS_ROOT = "/integrations"
+const ROUTE_DATA_SERVICE_ROOT = "/data_service"
 
 func InitAppRoutes(r *gin.Engine) {
 	r.GET("/status", func(c *gin.Context) {
@@ -102,4 +105,31 @@ func InitIntRoutes(r *gin.Engine) {
 	intRouteGroup.POST("/segment_platform",
 		mid.SetScopeProjectIdByPrivateTokenUsingBasicAuth(),
 		IntSegmentHandler)
+
+	// Todo: Move /adwords routes under /data_service, as these
+	// are internal routes used by python adwords service.
+	intRouteGroup.POST("/adwords/add_refresh_token",
+		mid.SetLoggedInAgent(),
+		mid.SetAuthorizedProjectsByLoggedInAgent(),
+		IntAdwordsAddRefreshTokenHandler)
+
+	intRouteGroup.POST("/adwords/get_refresh_token",
+		mid.SetLoggedInAgent(),
+		mid.SetAuthorizedProjectsByLoggedInAgent(),
+		IntAdwordsGetRefreshTokenHandler)
+
+	intRouteGroup.POST("/adwords/enable",
+		mid.SetLoggedInAgent(),
+		mid.SetAuthorizedProjectsByLoggedInAgent(),
+		IntEnableAdwordsHandler)
+}
+
+func InitDataServiceRoutes(r *gin.Engine) {
+	dataServiceRouteGroup := r.Group(ROUTE_DATA_SERVICE_ROOT)
+
+	dataServiceRouteGroup.POST("/adwords/add_document",
+		IH.DataServiceAdwordsAddDocumentHandler)
+
+	dataServiceRouteGroup.GET("/adwords/get_last_sync_info",
+		IH.DataServiceAdwordsGetLastSyncInfoHandler)
 }

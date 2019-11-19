@@ -1,0 +1,12 @@
+FROM golang:1.11-alpine AS builder
+
+WORKDIR /go/src/factors
+ADD /factors .
+RUN go build -o $GOPATH/bin/data-service $GOPATH/src/factors/data_service/data-service.go
+
+# Create stripped down version without go and source code
+FROM alpine:3.7
+RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
+COPY --from=builder /go/bin/data-service /go/bin/data-service
+ENTRYPOINT [ "/go/bin/data-service"]
+EXPOSE 8089

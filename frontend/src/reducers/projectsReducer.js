@@ -18,6 +18,7 @@ const DEFAULT_PROJECT_STATE = {
   projectAgents: [],
   agents: {},
   viewQuery: {},
+  adwordsCustomerAccounts: null,
 }
 
 export default function reducer(state=DEFAULT_PROJECT_STATE, action) {
@@ -265,6 +266,24 @@ export default function reducer(state=DEFAULT_PROJECT_STATE, action) {
           viewQuery: action.payload,
         }
       }
+      case "FETCH_ADWORDS_CUSTOMER_ACCOUNTS_FULFILLED": {
+        let _state = { ...state }
+        _state.adwordsCustomerAccounts = [...action.payload.customer_accounts];
+        return _state;
+      }
+      case "ENABLE_ADWORDS_FULFILLED": {
+        let enabledAgentUUID = action.payload.int_adwords_enabled_agent_uuid;
+        if (!enabledAgentUUID || enabledAgentUUID == "")
+          return state;
+
+        let _state = { ...state };
+        _state.currentProjectSettings = {
+          ...state.currentProjectSettings,
+          int_adwords_enabled_agent_uuid: enabledAgentUUID,
+        }
+        return _state;
+      }
     }
+
     return state
 }

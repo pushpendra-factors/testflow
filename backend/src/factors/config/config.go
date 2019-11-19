@@ -287,6 +287,26 @@ func Init(config *Configuration) error {
 	return nil
 }
 
+func InitDataService(config *Configuration) error {
+	if initiated {
+		return fmt.Errorf("Config already initialized")
+	}
+
+	configuration = config
+	err := InitDB(config.DBInfo)
+	if err != nil {
+		return err
+	}
+
+	// init error collector, error mailer, and log hook.
+	InitMailClient(config.AWSKey, config.AWSSecret, config.AWSRegion)
+	initCollectorClient(config.Env, "team@factors.ai", config.EmailSender) // inits error_collector.
+	initLogging(services.ErrorCollector)
+
+	initiated = true
+	return nil
+}
+
 func GetConfig() *Configuration {
 	return configuration
 }

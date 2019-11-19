@@ -84,6 +84,13 @@ func main() {
 		log.Info("project_settings table is associated with projects table.")
 	}
 
+	// Add foreign key constraints.
+	if err := db.Model(&M.ProjectSetting{}).AddForeignKey("int_adwords_enabled_agent_uuid", "agents(uuid)", "RESTRICT", "RESTRICT").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("project_settings_table table association with agents table failed.")
+	} else {
+		log.Info("project_settings table is associated with agents table.")
+	}
+
 	// Create users table.
 	if err := db.CreateTable(&M.User{}).Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("users table creation failed.")
@@ -346,5 +353,12 @@ func main() {
 		log.WithFields(log.Fields{"err": err}).Error("reports table association with dashboards table failed.")
 	} else {
 		log.Info("reports table is associated with dashboards table.")
+	}
+
+	// Create  table
+	if err := db.CreateTable(&M.AdwordsDocument{}).Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("adwords document table creation failed.")
+	} else {
+		log.Info("created adwords document table.")
 	}
 }

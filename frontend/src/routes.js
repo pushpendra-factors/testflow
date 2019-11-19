@@ -40,6 +40,11 @@ const SettingsSegment =  Loadable({
   loading: Loading,
 });
 
+const SettingsAdwords =  Loadable({
+  loader: () => import('./views/Settings/Adwords'),
+  loading: Loading,
+});
+
 const SettingsJsSdk = Loadable({
   loader: () => import('./views/Settings/JsSdk'),
   loading: Loading,
@@ -85,6 +90,7 @@ const routes = [
   { path: '/core', name: 'Query', component: Query },
   { path: '/factor', name: 'Factor', component: Factor },
   { path: '/settings/segment', exact: true, name: 'Segment', component: SettingsSegment },
+  { path: '/settings/adwords', exact: true, name: 'Adwords', component: SettingsAdwords },  
   { path: '/settings/jssdk', exact: true, name: 'JsSdk', component: SettingsJsSdk },
   { path: '/settings/androidsdk', exact: true, name: 'AndroidSdk', component: SettingsAndroidSdk },
   { path: '/settings/iossdk', exact: true, name: 'IosSdk', component: SettingsIosSdk },

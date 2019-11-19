@@ -216,6 +216,27 @@ func TestDBAgentUpdateAgentVerificationDetails(t *testing.T) {
 		assert.Equal(t, firstName, updatedAgent.FirstName)
 		assert.Equal(t, lastName, updatedAgent.LastName)
 		assert.True(t, M.IsPasswordAndHashEqual(password, updatedAgent.Password))
-
+		assert.Nil(t, updatedAgent.IntAdwordsRefreshToken)
 	})
+}
+
+func TestUpdateAgentIntAdwordsRefreshToken(t *testing.T) {
+	email := getRandomEmail()
+	agent, errCode := SetupAgentReturnDAO(email)
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	token := U.RandomLowerAphaNumString(10)
+	errCode = M.UpdateAgentIntAdwordsRefreshToken(agent.UUID, token)
+	assert.Equal(t, http.StatusAccepted, errCode)
+	updatedAgent, errCode := M.GetAgentByEmail(email)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Equal(t, false, updatedAgent.IsEmailVerified)
+
+	// updating other cols should not affect token.
+	ts := time.Now().UTC()
+	errCode = M.UpdateAgentLastLoginInfo(agent.UUID, ts)
+	assert.Equal(t, http.StatusAccepted, errCode)
+	updatedAgent, errCode = M.GetAgentByEmail(email)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Equal(t, token, updatedAgent.IntAdwordsRefreshToken)
 }

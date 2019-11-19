@@ -22,6 +22,9 @@ misc/ingest_events/bin/**
 misc/ingest_events/src/golang.org/**
 misc/ingest_events/src/github.com/**
 
+# adwords
+integrations/adwords/**/.swp
+
 */.DS_Store
 **/.DS_Store
 .vscode

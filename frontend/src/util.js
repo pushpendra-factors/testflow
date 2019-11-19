@@ -26,9 +26,17 @@ export function isProduction() {
     return ENV === "production"
 }
 
+export function isDevelopment() {
+    return ENV === "development"
+}
+
 export function getHostURL() {
     let host = BUILD_CONFIG.backend_host;
     return (host[host.length-1] === "/") ? host : host+"/";
+}
+
+export function getAdwordsHostURL() {
+    return isDevelopment() ? BUILD_CONFIG.adwords_service_host : BUILD_CONFIG.backend_host;
 }
 
 export function deepEqual(x, y) {

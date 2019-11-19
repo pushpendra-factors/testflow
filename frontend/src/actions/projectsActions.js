@@ -1,5 +1,5 @@
 import {get, post, del, put} from "./request.js";
-import { getHostURL } from "../util";
+import { getHostURL, getAdwordsHostURL } from "../util";
 
 var host = getHostURL();
 
@@ -419,6 +419,50 @@ export function projectAgentRemove(projectId, agentUUID){
           });
           reject({body: r.data, status: r.status});
         });
+    })
+  }
+}
+
+export function fetchAdwordsCustomerAccounts(payload) {
+  return function(dispatch){
+    return new Promise((resolve, reject) => {
+      post(dispatch, getAdwordsHostURL()+"/adwords/get_customer_accounts", payload)
+        .then((r) => {
+          if (r.ok) {
+            dispatch({ type: "FETCH_ADWORDS_CUSTOMER_ACCOUNTS_FULFILLED", payload: r.data })
+            resolve(r.data);
+          } else {
+            dispatch({ type:"FETCH_ADWORDS_CUSTOMER_ACCOUNTS_REJECTED" });
+            reject(r);
+          }
+        })
+        .catch((err) => {
+          dispatch({ type:"FETCH_ADWORDS_CUSTOMER_ACCOUNTS_REJECTED", payload: err });
+          reject(err);
+        })
+    })
+  }
+}
+
+export function enableAdwordsIntegration(projectId) {
+  return function(dispatch){
+    return new Promise((resolve, reject) => {
+      let payload = { project_id: projectId.toString() }
+
+      post(dispatch, getHostURL()+"integrations/adwords/enable", payload)
+        .then((r) => {
+          if (r.ok) {
+            dispatch({ type: "ENABLE_ADWORDS_FULFILLED", payload: r.data })
+            resolve(r);
+          } else {
+            dispatch({ type:"ENABLE_ADWORDS_REJECTED" });
+            reject(r); 
+          }
+        })
+        .catch((err) => {
+          dispatch({ type:"ENABLE_ADWORDS_REJECTED", payload: err });
+          reject(err);
+        })
     })
   }
 }
