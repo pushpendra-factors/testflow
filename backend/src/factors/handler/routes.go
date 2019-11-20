@@ -106,8 +106,6 @@ func InitIntRoutes(r *gin.Engine) {
 		mid.SetScopeProjectIdByPrivateTokenUsingBasicAuth(),
 		IntSegmentHandler)
 
-	// Todo: Move /adwords routes under /data_service, as these
-	// are internal routes used by python adwords service.
 	intRouteGroup.POST("/adwords/add_refresh_token",
 		mid.SetLoggedInAgent(),
 		mid.SetAuthorizedProjectsByLoggedInAgent(),
