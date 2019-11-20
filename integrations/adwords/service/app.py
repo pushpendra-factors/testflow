@@ -219,7 +219,7 @@ class OAuthCallbackHandler(tornado.web.RequestHandler):
 
         if flow.credentials.refresh_token == None or flow.credentials.refresh_token == "":
             log.error("No refresh token on callback.")
-            self.redirect(App.get_app_settings_redirect_url(STATUS_FAILURE), True)
+            self.redirect(App.get_app_settings_redirect_url("ACCESS_TOKEN_FAILURE"), True)
             return
 
         state_payload = json.loads(b64decode(state).decode())

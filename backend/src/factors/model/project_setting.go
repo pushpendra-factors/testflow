@@ -19,6 +19,8 @@ type ProjectSetting struct {
 	IntSegment *bool `gorm:"not null;default:false" json:"int_segment,omitempty"`
 	ExcludeBot *bool `gorm:"not null;default:false" json:"exclude_bot,omitempty"`
 	// Foreign key constraint int_adwords_enabled_agent_uuid -> agents(uuid)
+	// Todo: Set int_adwords_enabled_agent_uuid, int_adwords_customer_account_id to NULL
+	// for disabling adwords integration for the project.
 	IntAdwordsEnabledAgentUUID  *string   `json:"int_adwords_enabled_agent_uuid,omitempty"`
 	IntAdwordsCustomerAccountId *string   `json:"int_adwords_customer_account_id,omitempty"`
 	CreatedAt                   time.Time `json:"created_at"`
