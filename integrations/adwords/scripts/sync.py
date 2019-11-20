@@ -282,6 +282,42 @@ def get_campaign_performance_report(adwords_client, timestamp):
     lines = report.split('\n')
     return csv_to_dict_list(seg_fields, lines)
 
+def get_ad_performance_report(adwords_client, timestamp):
+    if adwords_client == None:
+            raise Exception('no adwords client')
+
+    if (timestamp == None or timestamp == ""):
+        raise Exception("invalid date string for report download")
+    
+    str_timestamp = str(timestamp)
+    during = str_timestamp + "," + str_timestamp
+    downloader = adwords_client.GetReportDownloader(version='v201809')
+    
+    seg_fields = ['account_currency_code', 'account_descriptive_name', 'active_view_impressions', 
+        'active_view_measurability', 'active_view_measurable_cost', 'active_view_measurable_impressions',
+        'active_view_viewability', 'ad_group_id', 'ad_id', 'adwords_customer_id', 'all_conversion_rate', 
+        'all_conversion_value', 'all_conversions', 'average_cost', 'average_position', 'average_time_on_site',
+        'bounce_rate', 'click_assisted_conversion_value', 'click_assisted_conversions', 
+        'click_assisted_conversions_over_last_click_conversions',
+        'clicks', 'conversion_value', 'conversions', 'cost', 'date_start', 'date_stop', 'engagements', 'gmail_forwards',
+        'gmail_saves', 'gmail_secondary_clicks', 'impression_assisted_conversions', 'impressions', 'interaction_types',
+        'interactions', 'value_per_all_conversion', 'video_quartile_100_rate', 'video_quartile_25_rate', 
+        'video_quartile_50_rate', 'video_quartile_75_rate', 'video_view_rate', 'video_views', 'view_through_conversions']
+    fields = snake_to_pascal_case(seg_fields)
+
+    # Create report query.
+    report_query = (adwords.ReportQueryBuilder()
+        .Select(*fields)
+        .From('AD_PERFORMANCE_REPORT')
+        .Where('CampaignStatus').In('ENABLED', 'PAUSED')
+        .During(during).Build())
+
+    report = downloader.DownloadReportAsStringWithAwql(report_query, 'CSV', 
+        skip_report_header=True, skip_column_header=True) 
+
+    lines = report.split('\n')
+    return csv_to_dict_list(seg_fields, lines)
+
 
 def get_search_performance_report(adwords_client, timestamp):
     if adwords_client == None:
@@ -478,6 +514,10 @@ def sync(next_info):
 
         elif doc_type == "campaign_performance_report":
             doc = get_campaign_performance_report(adwords_client, timestamp)
+            add_adwords_document(project_id, customer_acc_id, doc, doc_type, timestamp)
+        
+        elif doc_type == "ad_performance_report":
+            doc = get_ad_performance_report(adwords_client, timestamp)
             add_adwords_document(project_id, customer_acc_id, doc, doc_type, timestamp)
 
         elif doc_type == "search_performance_report":

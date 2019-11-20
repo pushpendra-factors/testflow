@@ -30,8 +30,9 @@ var documentTypeByAlias = map[string]int{
 	"ad_groups":                   3,
 	"click_performance_report":    4,
 	"campaign_performance_report": 5,
-	"search_performance_report":   6,
-	"keyword_performance_report":  7,
+	"ad_performance_report":       6,
+	"search_performance_report":   7,
+	"keyword_performance_report":  8,
 }
 
 // Builds a new adword document with each values on values list.
