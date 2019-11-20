@@ -535,6 +535,10 @@ def sync(next_info):
             permission_error_cache[permission_error_key] = str_exception
             return
 
+        if "ReportDefinitionError.CUSTOMER_SERVING_TYPE_REPORT_MISMATCH" in str_exception:
+            log.error("Project %s type %s, Trying to download report from manager account.", str(project_id), doc_type)
+            return
+
         log.error("Project %s, sync failed with exception: %s", str(project_id), str_exception)
         return
 
