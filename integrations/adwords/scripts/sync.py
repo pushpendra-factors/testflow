@@ -10,8 +10,8 @@ import re
 import sys
 
 parser = OptionParser()
-parser.add_option("--developer_token", dest="developer_token", help="", default=None)
-parser.add_option("--oauth_secret", dest="oauth_secret", help="", default=None)
+parser.add_option("--developer_token", dest="developer_token", help="", default="")
+parser.add_option("--oauth_secret", dest="oauth_secret", help="", default="")
 parser.add_option("--data_service_host", dest="data_service_host", 
     help="Data service host", default="http://localhost:8089")
 
@@ -541,6 +541,10 @@ def get_next_sync_info(last_sync_info):
 
 if __name__ == "__main__":
     (options, args) = parser.parse_args()
+
+    if options.developer_token == "":
+        log.error("Option: developer_token cannot be empty.")
+        sys.exit(1)
 
     oauth_secret_str = options.oauth_secret.strip()
     if oauth_secret_str == "":
