@@ -264,13 +264,6 @@ func IntAdwordsAddRefreshTokenHandler(c *gin.Context) {
 		return
 	}
 
-	if errCode != http.StatusAccepted {
-		log.WithField("project_id", projectId).WithField("agent_id", currentAgentUUID).Error(
-			"Failed to update project settings for adwords enable.")
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "failed to enable adwords"})
-		return
-	}
-
 	c.JSON(errCode, gin.H{})
 }
 
