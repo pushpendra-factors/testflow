@@ -12,6 +12,7 @@ import sys
 parser = OptionParser()
 parser.add_option("--developer_token", dest="developer_token", help="", default="")
 parser.add_option("--oauth_secret", dest="oauth_secret", help="", default="")
+parser.add_option("--project_id", dest="project_id", help="", default=None, type=int)
 parser.add_option("--data_service_host", dest="data_service_host", 
     help="Data service host", default="http://localhost:8089")
 
@@ -240,7 +241,8 @@ def get_click_performance_report(adwords_client, timestamp):
         .During(during).Build())
 
     report = downloader.DownloadReportAsStringWithAwql(
-        report_query, 'CSV', skip_report_header=True, skip_column_header=True)
+        report_query, 'CSV', skip_report_header=True, 
+        skip_column_header=True, skip_report_summary=True)
 
     lines = report.split('\n')
     return csv_to_dict_list(seg_fields, lines)
@@ -277,7 +279,7 @@ def get_campaign_performance_report(adwords_client, timestamp):
         .During(during).Build())
 
     report = downloader.DownloadReportAsStringWithAwql(report_query, 'CSV', 
-        skip_report_header=True, skip_column_header=True) 
+        skip_report_header=True, skip_column_header=True, skip_report_summary=True) 
 
     lines = report.split('\n')
     return csv_to_dict_list(seg_fields, lines)
@@ -313,7 +315,7 @@ def get_ad_performance_report(adwords_client, timestamp):
         .During(during).Build())
 
     report = downloader.DownloadReportAsStringWithAwql(report_query, 'CSV', 
-        skip_report_header=True, skip_column_header=True) 
+        skip_report_header=True, skip_column_header=True, skip_report_summary=True) 
 
     lines = report.split('\n')
     return csv_to_dict_list(seg_fields, lines)
@@ -349,7 +351,8 @@ def get_search_performance_report(adwords_client, timestamp):
         .During(during).Build())
 
     report = downloader.DownloadReportAsStringWithAwql(
-        report_query, 'CSV', skip_report_header=True, skip_column_header=True)
+        report_query, 'CSV', skip_report_header=True, 
+        skip_column_header=True, skip_report_summary=True)
 
     lines = report.split('\n')
     return csv_to_dict_list(seg_fields, lines)
@@ -381,13 +384,16 @@ def get_keywords_performance_report(adwords_client, timestamp):
         .During(during).Build())
 
     report = downloader.DownloadReportAsStringWithAwql(
-        report_query, 'CSV', skip_report_header=True, skip_column_header=True)
+        report_query, 'CSV', skip_report_header=True, 
+        skip_column_header=True, skip_report_summary=True)
 
     lines = report.split('\n')
     return csv_to_dict_list(seg_fields, lines)
 
 
 def add_adwords_document(project_id, customer_acc_id, values, value_type, timestamp):    
+    log.warning("Adding adwords document to db..")
+
     uri = "/data_service/adwords/add_document"
     url = options.data_service_host + uri
 
@@ -492,7 +498,7 @@ def sync(next_info):
         oauth2_client, ADWORDS_CLIENT_USER_AGENT)
     adwords_client.SetClientCustomerId(customer_acc_id)
 
-    log.warning("Syncing project: %s, cutomer_account_id: %s, document_type: %s, timestamp: %s",
+    log.warning("Downloading project: %s, cutomer_account_id: %s, document_type: %s, timestamp: %s",
         str(project_id), customer_acc_id, doc_type, str(timestamp))
 
     try:
@@ -614,6 +620,12 @@ if __name__ == "__main__":
 
     # Todo: Use multiple python process to distrubute.
     for last_sync in last_sync_infos:
+        # add next_sync_info only for the selected project.
+        if options.project_id != None:
+            project_id = last_sync.get("project_id")
+            if project_id != options.project_id:
+                continue
+        
         next_sync_infos = get_next_sync_info(last_sync)
         if next_sync_infos == None: continue
         for next_sync in next_sync_infos:

@@ -1,6 +1,8 @@
 package util
 
 import (
+	"errors"
+	"fmt"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -54,4 +56,19 @@ func IsNumber(num string) bool {
 
 func TrimQuotes(str string) string {
 	return strings.TrimSuffix(strings.TrimPrefix(str, "\""), "\"")
+}
+
+func GetValueAsString(value interface{}) (string, error) {
+	switch value.(type) {
+	case float32, float64:
+		return fmt.Sprintf("%0.0f", value), nil
+	case int, int32, int64:
+		return fmt.Sprintf("%v", value), nil
+	case string:
+		return value.(string), nil
+	case bool:
+		return strconv.FormatBool(value.(bool)), nil
+	default:
+		return "", errors.New("invalid type to convert as string")
+	}
 }

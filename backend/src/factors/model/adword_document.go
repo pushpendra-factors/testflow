@@ -1,7 +1,10 @@
 package model
 
 import (
+	"errors"
 	C "factors/config"
+	U "factors/util"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -10,14 +13,12 @@ import (
 )
 
 type AdwordsDocument struct {
-	// Todo: Add id based on type for dedupe and make
-	// project_id, id, type, timestamp as primary key.
-	// ID string `json:"id"`
-	ProjectId         uint64           `gorm:"not null" json:"project_id"`
-	CustomerAccountId string           `gorm:"not null" json:"customer_acc_id"`
+	ProjectId         uint64           `gorm:"primary_key:true" json:"project_id"`
+	CustomerAccountId string           `gorm:"primary_key:true" json:"customer_acc_id"`
 	TypeAlias         string           `gorm:"-" json:"type_alias"`
-	Type              int              `gorm:"not null" json:"-"`
-	Timestamp         int64            `gorm:"not null" json:"timestamp"`
+	Type              int              `gorm:"primary_key:true" json:"-"`
+	Timestamp         int64            `gorm:"primary_key:true" json:"timestamp"`
+	ID                string           `gorm:"primary_key:true" json:"id"`
 	Values            []postgres.Jsonb `gorm: "-" json:"values"` // List of value.
 	Value             *postgres.Jsonb  `json:"-"`
 	CreatedAt         time.Time        `json:"created_at"`
@@ -35,12 +36,65 @@ var documentTypeByAlias = map[string]int{
 	"keyword_performance_report":  8,
 }
 
-// Builds a new adword document with each values on values list.
+func getIdFieldNameByType(docType int) string {
+	switch docType {
+	case 4: // click_performance_report
+		return "gcl_id"
+	case 5: // campaign_performance_report
+		return "campaign_id"
+	case 7: // search_performance_report
+		return "query"
+	default: // others
+		return "id"
+	}
+}
+
+func getIdByType(docType int, valueJson *postgres.Jsonb) (string, error) {
+	if docType > len(documentTypeByAlias) {
+		return "", errors.New("invalid document type")
+	}
+
+	valueMap, err := U.DecodePostgresJsonb(valueJson)
+	if err != nil {
+		return "", err
+	}
+
+	idFieldName := getIdFieldNameByType(docType)
+	id, exists := (*valueMap)[idFieldName]
+	if !exists {
+		return "", fmt.Errorf("id field %s does not exist on doc of type %s", idFieldName, docType)
+	}
+
+	if id == nil {
+		return "", fmt.Errorf("id field %s has empty value on doc of type %s", idFieldName, docType)
+	}
+
+	idStr, err := U.GetValueAsString(id)
+	if err != nil {
+		return "", err
+	}
+
+	// Id as string always.
+	return idStr, nil
+}
+
+// Builds a new adword document with each value on values list.
 func getNewAdwordsDocumentFromValuesList(adwordsDocumentWithValues *AdwordsDocument) []AdwordsDocument {
 	adwordsDocuments := make([]AdwordsDocument, 0, 0)
 
 	for i := range adwordsDocumentWithValues.Values {
+		// Skip insert, if not able to get an id.
+		id, err := getIdByType(adwordsDocumentWithValues.Type, &adwordsDocumentWithValues.Values[i])
+		if err != nil {
+			log.WithFields(log.Fields{"project_id": adwordsDocumentWithValues.ProjectId,
+				"timestamp": adwordsDocumentWithValues.Timestamp,
+				"value":     adwordsDocumentWithValues.Values[i]}).WithError(err).Error(
+				"Failed to add adwords document.")
+			continue
+		}
+
 		newAdwordsDoc := AdwordsDocument{
+			ID:                id,
 			ProjectId:         adwordsDocumentWithValues.ProjectId,
 			CustomerAccountId: adwordsDocumentWithValues.CustomerAccountId,
 			Type:              adwordsDocumentWithValues.Type,
@@ -76,9 +130,13 @@ func CreateAdwordsDocument(adwordsDoc *AdwordsDocument) int {
 	failure := false
 	db := C.GetServices().Db
 	for i := range newAdwordsDocs {
-		if err := db.Create(newAdwordsDocs[i]).Error; err != nil {
-			// set failure flag and continue insertion.
-			logCtx.WithError(err).Error("Failed to create an adwords doc. Continued inserting other docs.")
+		// Todo: db.Create(newAdwordsDocs[i]) causes unaddressable value error. Find why?
+		_, err := db.Raw("INSERT INTO adwords_documents (project_id,customer_account_id,type,timestamp,id,value) VALUES (?, ?, ?, ?, ?, ?)",
+			newAdwordsDocs[i].ProjectId, newAdwordsDocs[i].CustomerAccountId, newAdwordsDocs[i].Type,
+			newAdwordsDocs[i].Timestamp, newAdwordsDocs[i].ID, newAdwordsDocs[i].Value).Rows()
+		if err != nil {
+			logCtx.WithError(err).Error(
+				"Failed to create an adwords doc. Continued inserting other docs.")
 			failure = true
 		}
 	}
