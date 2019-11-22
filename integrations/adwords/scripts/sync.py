@@ -547,6 +547,10 @@ def sync(next_info):
             return
 
         log.error("[Project: %s, Type: %s] Sync failed with exception: %s", str(project_id), doc_type, str_exception)
+        if "RateExceededError.RATE_EXCEEDED" in str_exception:
+            sys.exit(1)
+            return
+
         return
 
 # generates next sync info with all missing timestamps 

@@ -109,7 +109,8 @@ func getNewAdwordsDocumentFromValuesList(adwordsDocumentWithValues *AdwordsDocum
 }
 
 func CreateAdwordsDocument(adwordsDoc *AdwordsDocument) int {
-	logCtx := log.WithField("customer_acc_id", adwordsDoc.CustomerAccountId)
+	logCtx := log.WithField("customer_acc_id", adwordsDoc.CustomerAccountId).WithField(
+		"project_id", adwordsDoc.ProjectId)
 
 	if adwordsDoc.CustomerAccountId == "" || adwordsDoc.TypeAlias == "" {
 		logCtx.Error("Invalid adwords document.")
@@ -135,7 +136,7 @@ func CreateAdwordsDocument(adwordsDoc *AdwordsDocument) int {
 			newAdwordsDocs[i].ProjectId, newAdwordsDocs[i].CustomerAccountId, newAdwordsDocs[i].Type,
 			newAdwordsDocs[i].Timestamp, newAdwordsDocs[i].ID, newAdwordsDocs[i].Value).Rows()
 		if err != nil {
-			logCtx.WithError(err).Error(
+			logCtx.WithError(err).WithField("id", newAdwordsDocs[i].ID).Error(
 				"Failed to create an adwords doc. Continued inserting other docs.")
 			failure = true
 		}
