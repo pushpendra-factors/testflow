@@ -548,6 +548,9 @@ def sync(next_info):
 
         log.error("[Project: %s, Type: %s] Sync failed with exception: %s", str(project_id), doc_type, str_exception)
         if "RateExceededError.RATE_EXCEEDED" in str_exception:
+            # Todo: Do not exit? Stop downloading reports. 
+            # Continue downloading other objects.
+            # Todo: Send email.
             sys.exit(1)
             return
 
@@ -634,4 +637,6 @@ if __name__ == "__main__":
         if next_sync_infos == None: continue
         for next_sync in next_sync_infos:
             sync(next_sync)
+
+    # Todo: Send status email with failures and successs.
 
