@@ -355,17 +355,10 @@ func main() {
 		log.Info("reports table is associated with dashboards table.")
 	}
 
-	// Create  table
+	// Create adwords document table
 	if err := db.CreateTable(&M.AdwordsDocument{}).Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("adwords document table creation failed.")
 	} else {
 		log.Info("created adwords document table.")
-	}
-
-	// Create adwords documents table.
-	if err := db.CreateTable(&M.AdwordsDocument{}).Error; err != nil {
-		log.WithFields(log.Fields{"err": err}).Error("adwords_documents table creation failed.")
-	} else {
-		log.Info("Created adwords_documents table.")
 	}
 }
