@@ -20,7 +20,8 @@ func ChannelQueryHandler(c *gin.Context) {
 
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Channel query failed. Invalid project."})
+		c.AbortWithStatusJSON(http.StatusUnauthorized,
+			gin.H{"error": "Channel query failed. Invalid project."})
 		return
 	}
 
@@ -36,7 +37,7 @@ func ChannelQueryHandler(c *gin.Context) {
 		return
 	}
 
-	queryResult, errCode := M.ExecuteChannelQuery(&queryPayload)
+	queryResult, errCode := M.ExecuteChannelQuery(projectId, &queryPayload)
 	if errCode != http.StatusOK {
 		c.AbortWithStatusJSON(http.StatusInternalServerError,
 			gin.H{"error": "Channel query failed. Execution failure."})
