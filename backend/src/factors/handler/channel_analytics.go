@@ -33,7 +33,8 @@ func ChannelQueryHandler(c *gin.Context) {
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&queryPayload); err != nil {
 		logCtx.WithError(err).Error("Channel query failed. Json decode failed.")
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Channel query failed. Json decode failed."})
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+			"error": "Channel query failed. Json decode failed."})
 		return
 	}
 

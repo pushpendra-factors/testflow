@@ -28,8 +28,8 @@ type ChannelBreakdownResult struct {
 }
 
 type ChannelQueryResult struct {
-	WidgetKvs      *map[string]interface{} `json:"widget_kvs"`
-	BreakdownTable *ChannelBreakdownResult `json:"breakdown_table"`
+	Metrics          *map[string]interface{} `json:"metrics"`
+	MetricsBreakdown *ChannelBreakdownResult `json:"metrics_breakdown"`
 }
 
 const CAChannelGoogleAds = "google_ads"
@@ -85,11 +85,30 @@ func isValidChannel(channel string) bool {
 	return false
 }
 
+func getAdwordsDocumentTypeForFilterKey(filter string) (int, error) {
+	var docType int
+
+	switch filter {
+	case CAFilterCampaign:
+		docType = documentTypeByAlias["campaign_performance_report"]
+	case CAFilterAd:
+		docType = documentTypeByAlias["ad_performance_report"]
+	case CAFilterKeyword:
+		docType = documentTypeByAlias["keyword_performance_report"]
+	}
+
+	if docType == 0 {
+		return docType, errors.New("no adwords document type for filter")
+	}
+
+	return docType, nil
+}
+
 // select value->>'impressions' as impressions, value->>'clicks' as clicks,
 // value->>'average_cost' as cost_per_click, value->>'cost' as total_cost,
 // value->>'conversions' as conversions, value->>'all_conversions' as all_conversions
 // from adwords_documents where type=8 and timestamp between 20191120 and 20191120;
-func getAdwordsWidgetKvs(projectId uint64, query *ChannelQuery) (*map[string]interface{}, error) {
+func getAdwordsMetricKvs(projectId uint64, query *ChannelQuery) (*map[string]interface{}, error) {
 	// Todo: Add cost_per_click.
 	sqlStmnt := "SELECT SUM((value->>'impressions')::float) as %s, SUM((value->>'clicks')::float) as %s," +
 		" " + "SUM((value->>'cost')::float) as %s, SUM((value->>'conversions')::float) as %s," +
@@ -99,12 +118,13 @@ func getAdwordsWidgetKvs(projectId uint64, query *ChannelQuery) (*map[string]int
 	stmnt := fmt.Sprintf(sqlStmnt, CAColumnImpressions, CAColumnClicks,
 		CAColumnTotalCost, CAColumnAllConversions, CAColumnAllConversions)
 
-	if _, exists := documentTypeByAlias[query.FilterKey]; !exists {
-		return nil, errors.New("no matching type alias for filter key in adwords document")
+	docType, err := getAdwordsDocumentTypeForFilterKey(query.FilterKey)
+	if err != nil {
+		return nil, err
 	}
 
 	params := []interface{}{
-		documentTypeByAlias[query.FilterKey],
+		docType,
 		query.DateFrom,
 		query.DateTo,
 	}
@@ -126,15 +146,15 @@ func getAdwordsWidgetKvs(projectId uint64, query *ChannelQuery) (*map[string]int
 	}
 
 	if len(resultRows) > 1 {
-		log.Error("Aggregate query returned more than one row on get adwords widget kvs.")
+		log.Error("Aggregate query returned more than one row on get adwords metric kvs.")
 	}
 
-	widgetKvs := make(map[string]interface{})
+	metricKvs := make(map[string]interface{})
 	for i, k := range resultHeaders {
-		widgetKvs[k] = resultRows[0][i]
+		metricKvs[k] = resultRows[0][i]
 	}
 
-	return &widgetKvs, nil
+	return &metricKvs, nil
 }
 
 func ExecuteChannelQuery(projectId uint64, query *ChannelQuery) (*ChannelQueryResult, int) {
@@ -143,12 +163,12 @@ func ExecuteChannelQuery(projectId uint64, query *ChannelQuery) (*ChannelQueryRe
 		return nil, http.StatusBadRequest
 	}
 
-	widgetKvs, err := getAdwordsWidgetKvs(projectId, query)
+	metricKvs, err := getAdwordsMetricKvs(projectId, query)
 	if err != nil {
 		log.WithField("project_id", projectId).WithError(err).Error(
-			"Failed to get adowords widget kvs.")
+			"Failed to get adowords metric kvs.")
 		return nil, http.StatusInternalServerError
 	}
 
-	return &ChannelQueryResult{WidgetKvs: widgetKvs}, http.StatusOK
+	return &ChannelQueryResult{Metrics: metricKvs}, http.StatusOK
 }
