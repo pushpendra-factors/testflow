@@ -388,8 +388,8 @@ func createSessionEvent(projectId uint64, userId string, sessionEventNameId uint
 	return newSessionEvent, errCode
 }
 
-func CreateOrGetSessionEvent(projectId uint64, userId string, isFirstSession bool, requestTimestamp int64,
-	eventProperties, userProperties *U.PropertiesMap, userPropertiesId string) (*Event, int) {
+func CreateOrGetSessionEvent(projectId uint64, userId string, isFirstSession bool, hasDefinedMarketingProperty bool,
+	requestTimestamp int64, eventProperties, userProperties *U.PropertiesMap, userPropertiesId string) (*Event, int) {
 
 	logCtx := log.WithField("project_id", projectId).WithField("user_id", userId)
 
@@ -397,6 +397,14 @@ func CreateOrGetSessionEvent(projectId uint64, userId string, isFirstSession boo
 	if errCode != http.StatusCreated && errCode != http.StatusConflict {
 		logCtx.Error("Failed to create session event name.")
 		return nil, http.StatusInternalServerError
+	}
+
+	if hasDefinedMarketingProperty {
+		// If the event has a marketing property, then the user is visiting again from a marketing channel.
+		// Creating a new session event irrespective of timing to keep track of multiple marketing touch points
+		// from the same user.
+		return createSessionEvent(projectId, userId, sessionEventName.ID, isFirstSession, requestTimestamp,
+			eventProperties, userProperties, userPropertiesId)
 	}
 
 	latestUserEvent, errCode := GetLatestAnyEventOfUserInDuration(projectId, userId,

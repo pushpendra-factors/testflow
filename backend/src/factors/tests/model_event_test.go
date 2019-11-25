@@ -310,7 +310,7 @@ func TestCreateOrGetSessionEvent(t *testing.T) {
 
 	t.Run("ShouldCreateNewSessionAsNoEventInLast30Mins", func(t *testing.T) {
 		requestTimestamp := U.UnixTimeBeforeDuration(time.Minute * 32)
-		session, errCode := M.CreateOrGetSessionEvent(projectId, userId, true, requestTimestamp,
+		session, errCode := M.CreateOrGetSessionEvent(projectId, userId, true, false, requestTimestamp,
 			&U.PropertiesMap{U.EP_PAGE_LOAD_TIME: 0.10}, &U.PropertiesMap{}, "")
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.NotNil(t, session)
@@ -331,9 +331,33 @@ func TestCreateOrGetSessionEvent(t *testing.T) {
 			ProjectId: projectId, UserId: userId})
 
 		requestTimestamp := time.Now().UTC().Unix()
-		session, errCode := M.CreateOrGetSessionEvent(projectId, userId, true, requestTimestamp,
+		session, errCode := M.CreateOrGetSessionEvent(projectId, userId, true, false, requestTimestamp,
 			&U.PropertiesMap{}, &U.PropertiesMap{}, "")
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, session)
+	})
+
+	t.Run("ShouldCreateNewSessionAsHasMarketingProperty", func(t *testing.T) {
+		_, errCode := M.CreateEvent(&M.Event{EventNameId: eventNameId,
+			ProjectId: projectId, UserId: userId})
+
+		requestTimestamp := time.Now().UTC().Unix()
+		session, errCode := M.CreateOrGetSessionEvent(projectId, userId, true, true, requestTimestamp,
+			&U.PropertiesMap{U.EP_PAGE_LOAD_TIME: 0.10, U.EP_CAMPAIGN: "test-campaign"},
+			&U.PropertiesMap{}, "")
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.NotNil(t, session)
+
+		// Session event should exist with initial event properites.
+		sessionEvent, errCode := M.GetEvent(projectId, userId, session.ID)
+		assert.Equal(t, http.StatusFound, errCode)
+		eventPropertiesBytes, err := sessionEvent.Properties.Value()
+		assert.Nil(t, err)
+		var eventPropertiesMap map[string]interface{}
+		json.Unmarshal(eventPropertiesBytes.([]byte), &eventPropertiesMap)
+		assert.NotNil(t, eventPropertiesMap[U.UP_INITIAL_PAGE_LOAD_TIME])
+		assert.Equal(t, 0.10, eventPropertiesMap[U.UP_INITIAL_PAGE_LOAD_TIME])
+		assert.NotNil(t, eventPropertiesMap[U.EP_CAMPAIGN])
+		assert.Equal(t, "test-campaign", eventPropertiesMap[U.EP_CAMPAIGN])
 	})
 }
