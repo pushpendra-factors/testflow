@@ -175,6 +175,15 @@ func GetEventNames(projectId uint64) ([]EventName, int) {
 // GetEventNamesOrderedByOccurrenceWithLimit - Returns event names ordered by occurrence
 // and back fills event names which haven't occurred ordered by created_at.
 // limit = 0, for no limit.
+// TODO(aravind): Hack below to force some important but not frequent events to show up on production.
+var FORCED_NAMES_LOOKUP = map[uint64]map[uint64]bool{
+	215: map[uint64]bool{
+		// Project ExpertRec.
+		// Event is payment: "cse.expertrec.com/payments/success"
+		110782: true,
+	},
+}
+
 func GetEventNamesOrderedByOccurrenceWithLimit(projectId uint64, limit int) ([]EventName, int) {
 	db := C.GetServices().Db
 
@@ -248,6 +257,17 @@ func GetEventNamesOrderedByOccurrenceWithLimit(projectId uint64, limit int) ([]E
 
 		if _, exists := addedNamesLookup[eventName.ID]; !exists {
 			eventNames = append(eventNames, eventName)
+		}
+	}
+
+	// Force add specific events.
+	if _, pExists := FORCED_NAMES_LOOKUP[projectId]; pExists {
+		for _, eventName := range allEventNames {
+			_, shouldBeAdded := FORCED_NAMES_LOOKUP[projectId][eventName.ID]
+			_, isAdded := addedNamesLookup[eventName.ID]
+			if shouldBeAdded && !isAdded {
+				eventNames = append(eventNames, eventName)
+			}
 		}
 	}
 
