@@ -15,6 +15,14 @@ import (
 
 // Test command.
 // curl -i -X GET http://localhost:8080/projects/1/event_names
+// TODO(aravind): Hack below to force some important but not frequent events to show up on production.
+var FORCED_EVENT_NAMES = map[uint64][]string{
+	215: []string{
+		// Project ExpertRec.
+		"cse.expertrec.com/payments/success",
+	},
+}
+
 func GetEventNamesHandler(c *gin.Context) {
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
@@ -31,6 +39,11 @@ func GetEventNamesHandler(c *gin.Context) {
 	names := make([]string, 0, 0)
 	for _, eventName := range eventNames {
 		names = append(names, eventName.Name)
+	}
+
+	// Force add specific events.
+	if fNames, pExists := FORCED_EVENT_NAMES[projectId]; pExists {
+		names = append(names, fNames...)
 	}
 
 	c.JSON(http.StatusOK, names)
