@@ -1,0 +1,219 @@
+import React, { Component } from 'react';
+import Select from 'react-select';
+import { Button, Row, Col } from 'reactstrap';
+import { connect } from 'react-redux';
+import { bindActionCreators } from 'redux';
+import 'react-date-range/dist/styles.css';
+import 'react-date-range/dist/theme/default.css';
+import moment from 'moment';
+
+import { runChannelQuery } from '../../actions/projectsActions';
+import { DEFAULT_DATE_RANGE, DEFINED_DATE_RANGES, 
+  readableDateRange } from '../Query/common';
+import ClosableDateRangePicker from '../../common/ClosableDatePicker';
+
+const CHANNEL_GOOGLE_ADS = { label: 'Google Ads', value: 'google_ads' }
+const CHANNEL_OPTS = [CHANNEL_GOOGLE_ADS]
+
+const FILTER_KEY_CAMPAIGN = { label: 'Campaigns', value: 'campaign' }
+const FILTER_KEY_AD = { label: 'Ads', value: 'ad' }
+const FILTER_KEY_KEYWORD = { label: 'Keywords', value: 'keyword' }
+const FILTER_KEY_OPTS = [ FILTER_KEY_CAMPAIGN, FILTER_KEY_AD, FILTER_KEY_KEYWORD ]
+
+const ALL_OPT = { label: 'All', value: 'all' }
+const FILTER_VALUE_OPTS = [ ALL_OPT ]
+const STATUS_OPTS = [ ALL_OPT ]
+const MATCH_TYPE_OPTS = [ ALL_OPT ]
+
+const LABEL_STYLE = { marginRight: '10px', fontWeight: '600', color: '#777' };
+
+const mapStateToProps = store => {
+  return { 
+    currentProjectId: store.projects.currentProjectId
+  }
+}
+
+const mapDispatchToProps = dispatch => {
+  return bindActionCreators({}, dispatch)
+}
+
+class ChannelQuery extends Component {
+  constructor(props) {
+    super(props);
+
+    this.state = {
+      channel: CHANNEL_GOOGLE_ADS,
+      filterKey: FILTER_KEY_CAMPAIGN,
+      filterValue: ALL_OPT,
+      duringDateRange: [DEFAULT_DATE_RANGE],
+
+      present: false,
+      presentationWidgets: {},
+      topError: null,
+    }
+  }
+  // Returns: 20191026
+  getDateOnlyTimestamp(datetime) {
+    return parseInt(moment(datetime).format('YYYYMMDD'));
+  }
+
+  runQuery = () => {
+    let query = {};
+    query.channel = this.state.channel.value;
+    query.filter_key = this.state.filterKey.value;
+    query.filter_value = this.state.filterValue.value;
+    query.date_from = this.getDateOnlyTimestamp(this.state.duringDateRange[0].startDate);
+    query.date_to = this.getDateOnlyTimestamp(this.state.duringDateRange[0].endDate);
+
+    runChannelQuery(this.props.currentProjectId, query)
+      .then((r) => {
+        if (!r.ok) {
+          this.setState({ topError: 'Failed to run query.' });
+          return
+        }
+
+        if (r.data.metrics) 
+          this.setState({ present: true, presentationWidgets: r.data.metrics });
+      });
+  }
+
+  getReadableMetricKey(k) {
+    let kSplits = k.split('_');
+
+    let key = '';
+    for (let i=0; i<kSplits.length; i++)
+      key = key + ' ' + kSplits[i].charAt(0).toUpperCase() + kSplits[i].slice(1);
+    
+    return key
+  }
+
+  presentMetricsOnWidgets() {
+    let widgets = [];
+
+    for (let k in this.state.presentationWidgets) {
+      let value = (this.state.presentationWidgets[k] == null || this.state.presentationWidgets[k] == undefined) ? 
+        'NA' : this.state.presentationWidgets[k];
+      
+      widgets.push(
+        <Col md={3} style={{ padding: '0 15px', marginTop: '30px'}}>
+          <div style={{ border: '1px solid #AAA', padding: '35px' }}>
+            <span style={{display: 'block', textAlign: 'center', fontSize: '20px', 
+              fontWeight: '600', marginBottom: '15px', color: '#555'}}> 
+              { this.getReadableMetricKey(k) } 
+            </span>
+            <span style={{display: 'block', textAlign: 'center', fontSize: '25px', fontWeight: '400' }}> 
+              { value } 
+            </span>
+          </div>
+        </Col>
+      );
+    }
+
+    return widgets;
+  }
+
+  handleFilterKeyChange = (option) => {
+    this.setState({ filterKey: option });
+  }
+
+  handleDuringDateRangeSelect = (range) => {
+    range.selected.label = null; // set null on custom range.
+    this.setState({ duringDateRange: [range.selected] });
+  }
+
+  closeDatePicker = () => {
+    this.setState({ showDatePicker: false }); 
+  }
+
+  toggleDatePickerDisplay = () => {
+    this.setState({ showDatePicker: !this.state.showDatePicker });
+  }
+
+  render() {
+    return <div>
+      <Row style={{marginBottom: '15px'}}>
+        <Col xs='12' md='12'>
+          <span style={LABEL_STYLE}>Channel</span>
+          <div className='fapp-select light' style={{ display: 'inline-block', width: '150px' }}>
+            <Select value={this.state.channel} options={CHANNEL_OPTS} placeholder='Channel'/>
+          </div>
+        </Col>
+      </Row>
+
+      <Row style={{marginBottom: '15px'}}>
+        <Col xs='12' md='12'>
+          <span style={LABEL_STYLE}>Filter</span>
+          <div className='fapp-select light' style={{ display: 'inline-block', width: '150px', marginRight: '15px' }}>
+            <Select value={this.state.filterKey} onChange={this.handleFilterKeyChange} options={FILTER_KEY_OPTS} placeholder='Channel'/>
+          </div>
+          <div className='fapp-select light' style={{ display: 'inline-block', width: '150px' }}>
+            <Select value={this.state.filterValue} options={FILTER_VALUE_OPTS} placeholder='Channel'/>
+          </div>
+        </Col>
+      </Row>
+
+      <Row style={{marginBottom: '15px'}}>
+        <Col xs='12' md='12'>
+          <span style={LABEL_STYLE}>Status</span>
+          <div className='fapp-select light' style={{ display: 'inline-block', width: '150px' }}>
+            <Select value={ALL_OPT} options={STATUS_OPTS} placeholder='Status'/>
+          </div>
+        </Col>
+      </Row>
+
+      {/* 
+      <Row style={{marginBottom: '15px'}}>
+        <Col xs='12' md='12'>
+          <span style={LABEL_STYLE}>Match Type</span>
+          <div className='fapp-select light' style={{ display: 'inline-block', width: '150px' }}>
+            <Select value={ALL_OPT} options={MATCH_TYPE_OPTS} placeholder='Match Type'/>
+          </div>
+        </Col>
+      </Row> 
+      */}
+
+      <Row style={{marginBottom: '15px'}}>
+        <Col xs='12' md='12'>
+          <span style={LABEL_STYLE}> During </span>
+          <Button outline style={{border: '1px solid #ccc', color: 'grey', marginRight: '10px' }} 
+            onClick={this.toggleDatePickerDisplay}>
+            <i className="fa fa-calendar" style={{marginRight: '10px'}}></i>
+            { readableDateRange(this.state.duringDateRange[0]) } 
+          </Button>
+          <div className='fapp-date-picker' hidden={!this.state.showDatePicker}>
+            <ClosableDateRangePicker
+              ranges={this.state.duringDateRange}
+              onChange={this.handleDuringDateRangeSelect}
+              staticRanges={ DEFINED_DATE_RANGES }
+              inputRanges={[]}
+              minDate={new Date('01 Jan 2000 00:00:00 GMT')} // range starts from given date.
+              maxDate={new Date()}
+              closeDatePicker={this.closeDatePicker}
+            />
+            <button className='fapp-close-round-button' style={{float: 'right', marginLeft: '0px', borderLeft: 'none'}} 
+            onClick={this.toggleDatePickerDisplay}>x</button>
+          </div>
+        </Col>
+      </Row>
+
+      <div style={{ width: '100%', textAlign: 'center', marginTop: '15px' }}>
+        <Button 
+          color='primary' style={{ fontSize: '0.9rem', padding: '8px 18px', fontWeight: 500 }}
+          onClick = {this.runQuery}
+        > Run Query 
+        </Button>
+      </div>
+
+      <div hidden={!this.state.present} style={{borderTop: '1px solid rgb(221, 221, 221)', paddingTop: '20px', 
+        marginTop: '30px', marginLeft: '-60px', marginRight: '-60px'}} hidden={false}></div>
+
+      {/* presentation */}
+      <div style={{ paddingLeft: '30px', paddingRight: '30px', paddingTop: '10px' }}>
+        <Row> { this.presentMetricsOnWidgets() } </Row>
+      </div>
+
+    </div>
+  }
+}
+
+export default connect(mapStateToProps, mapDispatchToProps)(ChannelQuery);

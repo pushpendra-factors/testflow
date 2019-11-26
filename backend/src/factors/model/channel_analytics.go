@@ -19,7 +19,6 @@ type ChannelQuery struct {
 	Status      string   `json:"status"`
 	MatchType   string   `json:"match_type"` // optional
 	Breakdowns  []string `json:"breakdowns"`
-	ResultCols  string   `json:"result_cols"`
 }
 
 type ChannelBreakdownResult struct {
@@ -123,11 +122,8 @@ func getAdwordsMetricKvs(projectId uint64, query *ChannelQuery) (*map[string]int
 		return nil, err
 	}
 
-	params := []interface{}{
-		docType,
-		query.DateFrom,
-		query.DateTo,
-	}
+	// Todo: Add stmnt and params for filter value.
+	params := []interface{}{docType, query.DateFrom, query.DateTo}
 
 	db := C.GetServices().Db
 	rows, err := db.Raw(stmnt, params...).Rows()

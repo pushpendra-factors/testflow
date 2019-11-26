@@ -466,3 +466,8 @@ export function enableAdwordsIntegration(projectId) {
     })
   }
 }
+
+export function runChannelQuery(projectId, query) {
+  let url = host + "projects/" + projectId + "/channel_query";
+  return post(null, url , query);
+}

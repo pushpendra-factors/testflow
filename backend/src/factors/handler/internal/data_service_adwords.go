@@ -23,6 +23,11 @@ func DataServiceAdwordsAddDocumentHandler(c *gin.Context) {
 	}
 
 	errCode := M.CreateAdwordsDocument(&adwordsDocument)
+	if errCode == http.StatusConflict {
+		c.AbortWithStatusJSON(errCode, gin.H{"error": "Duplicate documents."})
+		return
+	}
+
 	if errCode != http.StatusCreated {
 		c.AbortWithStatusJSON(errCode,
 			gin.H{"error": "Falied creating adwords document."})
