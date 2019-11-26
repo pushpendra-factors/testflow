@@ -36,6 +36,12 @@ var documentTypeByAlias = map[string]int{
 	"keyword_performance_report":  8,
 }
 
+const error_DuplicateAdwordsDocument = "pq: duplicate key value violates unique constraint \"adwords_documents_pkey\""
+
+func isDuplicateAdwordsDocumentError(err error) bool {
+	return err.Error() == error_DuplicateAdwordsDocument
+}
+
 func getIdFieldNameByType(docType int) string {
 	switch docType {
 	case 4: // click_performance_report
@@ -129,6 +135,7 @@ func CreateAdwordsDocument(adwordsDoc *AdwordsDocument) int {
 
 	// Todo: Make it bulk insert.
 	failure := false
+	duplicates := false
 	db := C.GetServices().Db
 	for i := range newAdwordsDocs {
 		// Todo: db.Create(newAdwordsDocs[i]) causes unaddressable value error. Find why?
@@ -136,10 +143,18 @@ func CreateAdwordsDocument(adwordsDoc *AdwordsDocument) int {
 			newAdwordsDocs[i].ProjectId, newAdwordsDocs[i].CustomerAccountId, newAdwordsDocs[i].Type,
 			newAdwordsDocs[i].Timestamp, newAdwordsDocs[i].ID, newAdwordsDocs[i].Value).Rows()
 		if err != nil {
-			logCtx.WithError(err).WithField("id", newAdwordsDocs[i].ID).Error(
-				"Failed to create an adwords doc. Continued inserting other docs.")
-			failure = true
+			if isDuplicateAdwordsDocumentError(err) {
+				duplicates = true
+			} else {
+				logCtx.WithError(err).WithField("id", newAdwordsDocs[i].ID).Error(
+					"Failed to create an adwords doc. Continued inserting other docs.")
+				failure = true
+			}
 		}
+	}
+
+	if duplicates {
+		return http.StatusConflict
 	}
 
 	if failure {
