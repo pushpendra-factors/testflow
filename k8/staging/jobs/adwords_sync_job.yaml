@@ -17,7 +17,7 @@ spec:
             cloud.google.com/gke-nodepool: factors-staging-node-pool
           containers:
           - name: adwords-sync
-            image: us.gcr.io/factors-staging/adwords-sync:v0.01-97d6d94
+            image: us.gcr.io/factors-staging/adwords-sync:v0.10-c259cba
             imagePullPolicy: IfNotPresent
             args:
             - --oauth_secret
