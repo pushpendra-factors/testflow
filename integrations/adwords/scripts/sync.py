@@ -393,8 +393,6 @@ def get_keywords_performance_report(adwords_client, timestamp):
 
 
 def add_adwords_document(project_id, customer_acc_id, doc, doc_type, timestamp):    
-    log.warning("Adding adwords document to db..")
-
     uri = "/data_service/adwords/add_document"
     url = options.data_service_host + uri
 
@@ -418,7 +416,7 @@ def add_all_adwords_documents(project_id, customer_acc_id, docs, doc_type, times
     for doc in docs:
         add_adwords_document(project_id, customer_acc_id, 
             doc, doc_type, timestamp)
-        log.warning("sleeping for a sec..")
+        # Intentional: Sleep 1s to slowdown network activity and db insert.
         time.sleep(1)
 
 def get_last_sync_info():
@@ -629,12 +627,11 @@ if __name__ == "__main__":
         log.error("Failed to init oauth manager with error %s", str(e))
         sys.exit(1)
 
-    log.warning("Started adwords sync job..")
-
+    log.warning("Started adwords sync job.")
+    
     last_sync_response = get_last_sync_info()
     last_sync_infos = last_sync_response.json()
-
-    log.warning("Got adwords last sync info..")
+    log.warning("Got adwords last sync info.")
 
     # Todo: Use multiple python process to distrubute.
     for last_sync in last_sync_infos:
@@ -650,6 +647,6 @@ if __name__ == "__main__":
             sync(next_sync)
 
     # Todo: Send status email with failures and successs.
-    log.warning("End of adwords sync job")
+    log.warning("Successfully synced. End of adwords sync job.")
     sys.exit(0)
 

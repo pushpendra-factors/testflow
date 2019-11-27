@@ -109,10 +109,9 @@ func CreateAdwordsDocument(adwordsDoc *AdwordsDocument) int {
 
 	db := C.GetServices().Db
 	// Todo: db.Create(newAdwordsDocs[i]) causes unaddressable value error. Find why?
-	_, err = db.Raw("INSERT INTO adwords_documents (project_id,customer_account_id,type,timestamp,id,value) VALUES (?, ?, ?, ?, ?, ?)",
+	rows, err := db.Raw("INSERT INTO adwords_documents (project_id,customer_account_id,type,timestamp,id,value) VALUES (?, ?, ?, ?, ?, ?)",
 		adwordsDoc.ProjectId, adwordsDoc.CustomerAccountId, adwordsDoc.Type, adwordsDoc.Timestamp,
 		adwordsDoc.ID, adwordsDoc.Value).Rows()
-
 	if err != nil {
 		if isDuplicateAdwordsDocumentError(err) {
 			logCtx.WithError(err).WithField("id", adwordsDoc.ID).Error(
@@ -124,6 +123,7 @@ func CreateAdwordsDocument(adwordsDoc *AdwordsDocument) int {
 			return http.StatusInternalServerError
 		}
 	}
+	defer rows.Close()
 
 	return http.StatusCreated
 }
@@ -159,6 +159,7 @@ func GetAllAdwordsLastSyncInfoByProjectAndType() ([]AdwordsLastSyncInfo, int) {
 		log.WithError(err).Error("Failed to get last adwords documents by type for sync info.")
 		return adwordsLastSyncInfos, http.StatusInternalServerError
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 		var adwordsLastSyncInfo AdwordsLastSyncInfo
