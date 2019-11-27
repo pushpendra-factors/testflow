@@ -13,16 +13,15 @@ import (
 )
 
 type AdwordsDocument struct {
-	ProjectId         uint64           `gorm:"primary_key:true" json:"project_id"`
-	CustomerAccountId string           `gorm:"primary_key:true" json:"customer_acc_id"`
-	TypeAlias         string           `gorm:"-" json:"type_alias"`
-	Type              int              `gorm:"primary_key:true" json:"-"`
-	Timestamp         int64            `gorm:"primary_key:true" json:"timestamp"`
-	ID                string           `gorm:"primary_key:true" json:"id"`
-	Values            []postgres.Jsonb `gorm: "-" json:"values"` // List of value.
-	Value             *postgres.Jsonb  `json:"-"`
-	CreatedAt         time.Time        `json:"created_at"`
-	UpdatedAt         time.Time        `json:"updated_at"`
+	ProjectId         uint64          `gorm:"primary_key:true" json:"project_id"`
+	CustomerAccountId string          `gorm:"primary_key:true" json:"customer_acc_id"`
+	TypeAlias         string          `gorm:"-" json:"type_alias"`
+	Type              int             `gorm:"primary_key:true" json:"-"`
+	Timestamp         int64           `gorm:"primary_key:true" json:"timestamp"`
+	ID                string          `gorm:"primary_key:true" json:"id"`
+	Value             *postgres.Jsonb `json:"value"`
+	CreatedAt         time.Time       `json:"created_at"`
+	UpdatedAt         time.Time       `json:"updated_at"`
 }
 
 var documentTypeByAlias = map[string]int{
@@ -84,36 +83,6 @@ func getIdByType(docType int, valueJson *postgres.Jsonb) (string, error) {
 	return idStr, nil
 }
 
-// Builds a new adword document with each value on values list.
-func getNewAdwordsDocumentFromValuesList(adwordsDocumentWithValues *AdwordsDocument) []AdwordsDocument {
-	adwordsDocuments := make([]AdwordsDocument, 0, 0)
-
-	for i := range adwordsDocumentWithValues.Values {
-		// Skip insert, if not able to get an id.
-		id, err := getIdByType(adwordsDocumentWithValues.Type, &adwordsDocumentWithValues.Values[i])
-		if err != nil {
-			log.WithFields(log.Fields{"project_id": adwordsDocumentWithValues.ProjectId,
-				"timestamp": adwordsDocumentWithValues.Timestamp,
-				"value":     adwordsDocumentWithValues.Values[i]}).WithError(err).Error(
-				"Failed to add adwords document.")
-			continue
-		}
-
-		newAdwordsDoc := AdwordsDocument{
-			ID:                id,
-			ProjectId:         adwordsDocumentWithValues.ProjectId,
-			CustomerAccountId: adwordsDocumentWithValues.CustomerAccountId,
-			Type:              adwordsDocumentWithValues.Type,
-			Timestamp:         adwordsDocumentWithValues.Timestamp,
-			Value:             &adwordsDocumentWithValues.Values[i],
-		}
-
-		adwordsDocuments = append(adwordsDocuments, newAdwordsDoc)
-	}
-
-	return adwordsDocuments
-}
-
 func CreateAdwordsDocument(adwordsDoc *AdwordsDocument) int {
 	logCtx := log.WithField("customer_acc_id", adwordsDoc.CustomerAccountId).WithField(
 		"project_id", adwordsDoc.ProjectId)
@@ -131,34 +100,29 @@ func CreateAdwordsDocument(adwordsDoc *AdwordsDocument) int {
 	}
 	adwordsDoc.Type = docType
 
-	newAdwordsDocs := getNewAdwordsDocumentFromValuesList(adwordsDoc)
-
-	// Todo: Make it bulk insert.
-	failure := false
-	duplicates := false
-	db := C.GetServices().Db
-	for i := range newAdwordsDocs {
-		// Todo: db.Create(newAdwordsDocs[i]) causes unaddressable value error. Find why?
-		_, err := db.Raw("INSERT INTO adwords_documents (project_id,customer_account_id,type,timestamp,id,value) VALUES (?, ?, ?, ?, ?, ?)",
-			newAdwordsDocs[i].ProjectId, newAdwordsDocs[i].CustomerAccountId, newAdwordsDocs[i].Type,
-			newAdwordsDocs[i].Timestamp, newAdwordsDocs[i].ID, newAdwordsDocs[i].Value).Rows()
-		if err != nil {
-			if isDuplicateAdwordsDocumentError(err) {
-				duplicates = true
-			} else {
-				logCtx.WithError(err).WithField("id", newAdwordsDocs[i].ID).Error(
-					"Failed to create an adwords doc. Continued inserting other docs.")
-				failure = true
-			}
-		}
-	}
-
-	if duplicates {
-		return http.StatusConflict
-	}
-
-	if failure {
+	adwordsDocId, err := getIdByType(adwordsDoc.Type, adwordsDoc.Value)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get id by adowords doc type.")
 		return http.StatusInternalServerError
+	}
+	adwordsDoc.ID = adwordsDocId
+
+	db := C.GetServices().Db
+	// Todo: db.Create(newAdwordsDocs[i]) causes unaddressable value error. Find why?
+	_, err = db.Raw("INSERT INTO adwords_documents (project_id,customer_account_id,type,timestamp,id,value) VALUES (?, ?, ?, ?, ?, ?)",
+		adwordsDoc.ProjectId, adwordsDoc.CustomerAccountId, adwordsDoc.Type, adwordsDoc.Timestamp,
+		adwordsDoc.ID, adwordsDoc.Value).Rows()
+
+	if err != nil {
+		if isDuplicateAdwordsDocumentError(err) {
+			logCtx.WithError(err).WithField("id", adwordsDoc.ID).Error(
+				"Failed to create an adwords doc. Duplicate.")
+			return http.StatusConflict
+		} else {
+			logCtx.WithError(err).WithField("id", adwordsDoc.ID).Error(
+				"Failed to create an adwords doc. Continued inserting other docs.")
+			return http.StatusInternalServerError
+		}
 	}
 
 	return http.StatusCreated

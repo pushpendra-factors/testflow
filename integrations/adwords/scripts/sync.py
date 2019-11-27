@@ -8,6 +8,7 @@ import requests
 import datetime
 import re
 import sys
+import time
 
 parser = OptionParser()
 parser.add_option("--developer_token", dest="developer_token", help="", default="")
@@ -391,7 +392,7 @@ def get_keywords_performance_report(adwords_client, timestamp):
     return csv_to_dict_list(seg_fields, lines)
 
 
-def add_adwords_document(project_id, customer_acc_id, values, value_type, timestamp):    
+def add_adwords_document(project_id, customer_acc_id, doc, doc_type, timestamp):    
     log.warning("Adding adwords document to db..")
 
     uri = "/data_service/adwords/add_document"
@@ -400,18 +401,25 @@ def add_adwords_document(project_id, customer_acc_id, values, value_type, timest
     payload = {
         "project_id": project_id,
         "customer_acc_id": customer_acc_id,
-        "type_alias": value_type,
-        "values": values,
+        "type_alias": doc_type,
+        "value": doc,
         "timestamp": timestamp,
     }
 
     response = requests.post(url, json=payload)
     if not response.ok:
         log.error("Failed to add response %s to adwords warehouse: %d, %s", 
-            value_type, response.status_code, response.json())
+            doc_type, response.status_code, response.json())
     
     return response
 
+def add_all_adwords_documents(project_id, customer_acc_id, docs, doc_type, timestamp):
+    # Add each doc from adwords response which is list of docs.
+    for doc in docs:
+        add_adwords_document(project_id, customer_acc_id, 
+            doc, doc_type, timestamp)
+        log.warning("sleeping for a sec..")
+        time.sleep(1)
 
 def get_last_sync_info():
     uri = "/data_service/adwords/get_last_sync_info"
@@ -423,7 +431,6 @@ def get_last_sync_info():
             response.status_code, response.json())
     
     return response
-
 
 def get_adwords_timestamp_from_datetime(dt):
     if dt == None: return
@@ -503,36 +510,36 @@ def sync(next_info):
 
     try:
         if doc_type == "campaigns":
-            doc = get_campaigns(adwords_client, timestamp)
-            add_adwords_document(project_id, customer_acc_id, doc, doc_type, timestamp)
+            docs = get_campaigns(adwords_client, timestamp)
+            add_all_adwords_documents(project_id, customer_acc_id, docs, doc_type, timestamp)
 
         elif doc_type == "ads":
-            doc = get_ads(adwords_client, timestamp)
-            add_adwords_document(project_id, customer_acc_id, doc, doc_type, timestamp)
+            docs = get_ads(adwords_client, timestamp)
+            add_all_adwords_documents(project_id, customer_acc_id, docs, doc_type, timestamp)
 
         elif doc_type == "ad_groups":
-            doc = get_ad_groups(adwords_client, timestamp)
-            add_adwords_document(project_id, customer_acc_id, doc, doc_type, timestamp)
+            docs = get_ad_groups(adwords_client, timestamp)
+            add_all_adwords_documents(project_id, customer_acc_id, docs, doc_type, timestamp)
 
         elif doc_type == "click_performance_report":
-            doc = get_click_performance_report(adwords_client, timestamp)
-            add_adwords_document(project_id, customer_acc_id, doc, doc_type, timestamp)
+            docs = get_click_performance_report(adwords_client, timestamp)
+            add_all_adwords_documents(project_id, customer_acc_id, docs, doc_type, timestamp)
 
         elif doc_type == "campaign_performance_report":
-            doc = get_campaign_performance_report(adwords_client, timestamp)
-            add_adwords_document(project_id, customer_acc_id, doc, doc_type, timestamp)
+            docs = get_campaign_performance_report(adwords_client, timestamp)
+            add_all_adwords_documents(project_id, customer_acc_id, docs, doc_type, timestamp)
         
         elif doc_type == "ad_performance_report":
-            doc = get_ad_performance_report(adwords_client, timestamp)
-            add_adwords_document(project_id, customer_acc_id, doc, doc_type, timestamp)
+            docs = get_ad_performance_report(adwords_client, timestamp)
+            add_all_adwords_documents(project_id, customer_acc_id, docs, doc_type, timestamp)
 
         elif doc_type == "search_performance_report":
-            doc = get_search_performance_report(adwords_client, timestamp)
-            add_adwords_document(project_id, customer_acc_id, doc, doc_type, timestamp)
+            docs = get_search_performance_report(adwords_client, timestamp)
+            add_all_adwords_documents(project_id, customer_acc_id, docs, doc_type, timestamp)
 
         elif doc_type == "keyword_performance_report":
-            doc = get_keywords_performance_report(adwords_client, timestamp)
-            add_adwords_document(project_id, customer_acc_id, doc, doc_type, timestamp)
+            docs = get_keywords_performance_report(adwords_client, timestamp)
+            add_all_adwords_documents(project_id, customer_acc_id, docs, doc_type, timestamp)
 
         else: log.error("Invalid document to sync from adwords: %s", str(doc_type))
     except Exception as e:
@@ -622,8 +629,12 @@ if __name__ == "__main__":
         log.error("Failed to init oauth manager with error %s", str(e))
         sys.exit(1)
 
+    log.warning("Started adwords sync job..")
+
     last_sync_response = get_last_sync_info()
     last_sync_infos = last_sync_response.json()
+
+    log.warning("Got adwords last sync info..")
 
     # Todo: Use multiple python process to distrubute.
     for last_sync in last_sync_infos:
@@ -639,4 +650,6 @@ if __name__ == "__main__":
             sync(next_sync)
 
     # Todo: Send status email with failures and successs.
+    log.warning("End of adwords sync job")
+    sys.exit(0)
 
