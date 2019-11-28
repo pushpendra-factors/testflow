@@ -509,36 +509,49 @@ func UnEscapeQueryParamProperties(properties *PropertiesMap) {
 	}
 }
 
-func MapEventPropertiesToDefinedProperties(properties *PropertiesMap) *PropertiesMap {
+func MapEventPropertiesToDefinedProperties(properties *PropertiesMap) (*PropertiesMap, bool) {
 	mappedProperties := make(PropertiesMap)
 
+	hasDefinedMarketingProperty := false
 	for k, v := range *properties {
 		var property string
 		switch k {
 		case QUERY_PARAM_UTM_PREFIX + "campaign", QUERY_PARAM_UTM_PREFIX + "campaign_name":
 			property = EP_CAMPAIGN
+			hasDefinedMarketingProperty = true
 		case QUERY_PARAM_UTM_PREFIX + "campaignid", QUERY_PARAM_UTM_PREFIX + "campaign_id":
 			property = EP_CAMPAIGN_ID
+			hasDefinedMarketingProperty = true
 		case QUERY_PARAM_UTM_PREFIX + "source":
 			property = EP_SOURCE
+			hasDefinedMarketingProperty = true
 		case QUERY_PARAM_UTM_PREFIX + "medium":
 			property = EP_MEDIUM
+			hasDefinedMarketingProperty = true
 		case QUERY_PARAM_UTM_PREFIX + "keyword", QUERY_PARAM_UTM_PREFIX + "term", QUERY_PARAM_UTM_PREFIX + "key_word":
 			property = EP_KEYWORD
+			hasDefinedMarketingProperty = true
 		case QUERY_PARAM_UTM_PREFIX + "matchtype", QUERY_PARAM_UTM_PREFIX + "match_type":
 			property = EP_KEYWORD_MATCH_TYPE
+			hasDefinedMarketingProperty = true
 		case QUERY_PARAM_UTM_PREFIX + "content":
 			property = EP_CONTENT
+			hasDefinedMarketingProperty = true
 		case QUERY_PARAM_UTM_PREFIX + "adgroup", QUERY_PARAM_UTM_PREFIX + "ad_group":
 			property = EP_ADGROUP
+			hasDefinedMarketingProperty = true
 		case QUERY_PARAM_UTM_PREFIX + "adgroupid", QUERY_PARAM_UTM_PREFIX + "adgroup_id", QUERY_PARAM_UTM_PREFIX + "ad_group_id":
 			property = EP_ADGROUP_ID
+			hasDefinedMarketingProperty = true
 		case QUERY_PARAM_UTM_PREFIX + "creative", QUERY_PARAM_UTM_PREFIX + "creative_id", QUERY_PARAM_UTM_PREFIX + "creativeid":
 			property = EP_CREATIVE
+			hasDefinedMarketingProperty = true
 		case QUERY_PARAM_PROPERTY_PREFIX + "gclid":
 			property = EP_GCLID
+			hasDefinedMarketingProperty = true
 		case QUERY_PARAM_PROPERTY_PREFIX + "fbclid":
 			property = EP_FBCLIID
+			hasDefinedMarketingProperty = true
 		default:
 			property = k
 		}
@@ -546,7 +559,7 @@ func MapEventPropertiesToDefinedProperties(properties *PropertiesMap) *Propertie
 		mappedProperties[property] = v
 	}
 
-	return &mappedProperties
+	return &mappedProperties, hasDefinedMarketingProperty
 }
 
 func isNumericalPropertyByName(propertyKey string) bool {

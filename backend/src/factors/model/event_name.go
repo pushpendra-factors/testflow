@@ -175,6 +175,7 @@ func GetEventNames(projectId uint64) ([]EventName, int) {
 // GetEventNamesOrderedByOccurrenceWithLimit - Returns event names ordered by occurrence
 // and back fills event names which haven't occurred ordered by created_at.
 // limit = 0, for no limit.
+
 func GetEventNamesOrderedByOccurrenceWithLimit(projectId uint64, limit int) ([]EventName, int) {
 	db := C.GetServices().Db
 

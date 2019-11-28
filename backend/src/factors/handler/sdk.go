@@ -108,7 +108,7 @@ func sdkTrack(projectId uint64, request *sdkTrackPayload, clientIP, userAgent st
 
 	// Event Properties
 	U.UnEscapeQueryParamProperties(&request.EventProperties)
-	definedEventProperties := U.MapEventPropertiesToDefinedProperties(&request.EventProperties)
+	definedEventProperties, hasDefinedMarketingProperty := U.MapEventPropertiesToDefinedProperties(&request.EventProperties)
 	eventProperties := U.GetValidatedEventProperties(definedEventProperties)
 	if ip, ok := (*eventProperties)[U.EP_INTERNAL_IP]; ok && ip != "" {
 		clientIP = ip.(string)
@@ -197,8 +197,8 @@ func sdkTrack(projectId uint64, request *sdkTrackPayload, clientIP, userAgent st
 		response.Error = "Failed updating user properties."
 	}
 
-	session, errCode := M.CreateOrGetSessionEvent(projectId, request.UserId, isUserFirstSession, request.Timestamp,
-		eventProperties, userProperties, userPropertiesId)
+	session, errCode := M.CreateOrGetSessionEvent(projectId, request.UserId, isUserFirstSession, hasDefinedMarketingProperty,
+		request.Timestamp, eventProperties, userProperties, userPropertiesId)
 	if errCode != http.StatusCreated && errCode != http.StatusFound {
 		response.Error = "Failed to associate with a session."
 	}
