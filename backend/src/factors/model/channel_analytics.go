@@ -153,6 +153,24 @@ func getAdwordsMetricKvs(projectId uint64, query *ChannelQuery) (*map[string]int
 	return &metricKvs, nil
 }
 
+func GetChannelFilterValues(projectId uint64, channel, filter string) ([]string, int) {
+	if !isValidChannel(channel) || !isValidFilterKey(filter) {
+		return []string{}, http.StatusBadRequest
+	}
+
+	docType, err := getAdwordsDocumentTypeForFilterKey(filter)
+	if err != nil {
+		return []string{}, http.StatusInternalServerError
+	}
+
+	filterValues, errCode := GetAdwordsDocumentIdsByTypeWithLimit(projectId, docType)
+	if errCode != http.StatusFound {
+		return []string{}, http.StatusInternalServerError
+	}
+
+	return filterValues, http.StatusFound
+}
+
 func ExecuteChannelQuery(projectId uint64, query *ChannelQuery) (*ChannelQueryResult, int) {
 	if !isValidChannel(query.Channel) || !isValidFilterKey(query.FilterKey) ||
 		query.DateFrom == 0 || query.DateTo == 0 {

@@ -257,3 +257,36 @@ func GetAllAdwordsLastSyncInfoByProjectAndType() ([]AdwordsLastSyncInfo, int) {
 
 	return selectedLastSyncInfos, http.StatusOK
 }
+
+func GetAdwordsDocumentIdsByTypeWithLimit(projectId uint64, docType int) ([]string, int) {
+	projectSetting, errCode := GetProjectSetting(projectId)
+	if errCode != http.StatusFound {
+		return []string{}, http.StatusInternalServerError
+	}
+	customerAccountId := projectSetting.IntAdwordsCustomerAccountId
+
+	db := C.GetServices().Db
+	logCtx := log.WithField("project_id", projectId).WithField("doc_type", docType)
+
+	queryStr := "SELECT DISTINCT(id) as id FROM adwords_documents WHERE project_id = ? AND" +
+		" " + "customer_account_id = ? AND type = ? LIMIT 5000"
+	rows, err := db.Raw(queryStr, projectId, customerAccountId, docType).Rows()
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get distinct of ids by type from adwords documents.")
+		return []string{}, http.StatusInternalServerError
+	}
+	defer rows.Close()
+
+	documentIds := make([]string, 0, 0)
+	for rows.Next() {
+		var documentId string
+		if err := rows.Scan(&documentId); err != nil {
+			logCtx.WithError(err).Error("Failed to get distinct of ids by type from adwords documents.")
+			return []string{}, http.StatusInternalServerError
+		}
+
+		documentIds = append(documentIds, documentId)
+	}
+
+	return documentIds, http.StatusFound
+}

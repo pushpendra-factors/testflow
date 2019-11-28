@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import Select from 'react-select';
+import CreatableSelect from 'react-select/lib/Creatable';
 import { Button, Row, Col } from 'reactstrap';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
@@ -7,10 +8,12 @@ import 'react-date-range/dist/styles.css';
 import 'react-date-range/dist/theme/default.css';
 import moment from 'moment';
 
-import { runChannelQuery } from '../../actions/projectsActions';
+import { runChannelQuery, fetchChannelFilterValues } from '../../actions/projectsActions';
 import { DEFAULT_DATE_RANGE, DEFINED_DATE_RANGES, 
   readableDateRange } from '../Query/common';
 import ClosableDateRangePicker from '../../common/ClosableDatePicker';
+import { makeSelectOpts } from '../../util';
+
 
 const CHANNEL_GOOGLE_ADS = { label: 'Google Ads', value: 'google_ads' }
 const CHANNEL_OPTS = [CHANNEL_GOOGLE_ADS]
@@ -29,12 +32,15 @@ const LABEL_STYLE = { marginRight: '10px', fontWeight: '600', color: '#777' };
 
 const mapStateToProps = store => {
   return { 
-    currentProjectId: store.projects.currentProjectId
+    currentProjectId: store.projects.currentProjectId,
+    channelFilterValues: store.projects.channelFilterValues,
   }
 }
 
 const mapDispatchToProps = dispatch => {
-  return bindActionCreators({}, dispatch)
+  return bindActionCreators({
+    fetchChannelFilterValues,
+  }, dispatch)
 }
 
 class ChannelQuery extends Component {
@@ -46,6 +52,7 @@ class ChannelQuery extends Component {
       filterKey: FILTER_KEY_CAMPAIGN,
       filterValue: ALL_OPT,
       duringDateRange: [DEFAULT_DATE_RANGE],
+      isFilterValuesLoading: false,
 
       present: false,
       presentationWidgets: {},
@@ -129,6 +136,30 @@ class ChannelQuery extends Component {
     this.setState({ showDatePicker: !this.state.showDatePicker });
   }
 
+  isChannelFilterValuesExists() {
+    return this.props.channelFilterValues[this.state.channel.value] &&
+    this.props.channelFilterValues[this.state.channel.value][this.state.filterKey.value];
+  }
+
+  getChannelFilterValues = () => {
+    // Do not fetch from remote if exists on store.
+    if (this.isChannelFilterValuesExists()) return;
+
+    this.setState({ isFilterValuesLoading: true });
+    this.props.fetchChannelFilterValues(this.props.currentProjectId, 
+      this.state.channel.value, this.state.filterKey.value)
+      .then(() => { this.setState({ isFilterValuesLoading: false }); });
+  }
+
+  getChannelFilterValuesOpts() {
+    if (!this.isChannelFilterValuesExists()) return [];
+    return makeSelectOpts(this.props.channelFilterValues[this.state.channel.value][this.state.filterKey.value]);
+  }
+
+  onChannelFilterValueChange = (value) => {
+    this.setState({ filterValue: value });
+  }
+
   render() {
     return <div>
       <Row style={{marginBottom: '15px'}}>
@@ -144,10 +175,17 @@ class ChannelQuery extends Component {
         <Col xs='12' md='12'>
           <span style={LABEL_STYLE}>Filter</span>
           <div className='fapp-select light' style={{ display: 'inline-block', width: '150px', marginRight: '15px' }}>
-            <Select value={this.state.filterKey} onChange={this.handleFilterKeyChange} options={FILTER_KEY_OPTS} placeholder='Channel'/>
+            <Select value={this.state.filterKey} onChange={this.handleFilterKeyChange} options={FILTER_KEY_OPTS} placeholder='Filter'/>
           </div>
           <div className='fapp-select light' style={{ display: 'inline-block', width: '150px' }}>
-            <Select value={this.state.filterValue} options={FILTER_VALUE_OPTS} placeholder='Channel'/>
+            <CreatableSelect 
+              value={this.state.filterValue} 
+              options={this.getChannelFilterValuesOpts()}
+              placeholder='Filter Value'
+              onChange={this.onChannelFilterValueChange}
+              onFocus={this.getChannelFilterValues}
+              isLoading={this.isFilterValuesLoading}
+            />
           </div>
         </Col>
       </Row>

@@ -47,3 +47,27 @@ func ChannelQueryHandler(c *gin.Context) {
 
 	c.JSON(http.StatusOK, queryResult)
 }
+
+func GetChannelFilterValuesHandler(c *gin.Context) {
+	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
+		c.AbortWithStatusJSON(http.StatusUnauthorized,
+			gin.H{"error": "Channel query failed. Invalid project."})
+		return
+	}
+
+	channel := c.Query("channel")
+	filter := c.Query("filter")
+	if channel == "" || filter == "" {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Missing params channel and filter."})
+		return
+	}
+
+	filterValues, errCode := M.GetChannelFilterValues(projectId, channel, filter)
+	if errCode != http.StatusFound {
+		c.AbortWithStatusJSON(errCode, gin.H{"error": "Failed to get filter values for channel."})
+		return
+	}
+
+	c.JSON(http.StatusFound, gin.H{"filter_values": filterValues})
+}
