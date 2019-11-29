@@ -24,6 +24,8 @@ const FILTER_KEY_KEYWORD = { label: 'Keywords', value: 'keyword' }
 const FILTER_KEY_OPTS = [ FILTER_KEY_CAMPAIGN, FILTER_KEY_AD, FILTER_KEY_KEYWORD ]
 
 const ALL_OPT = { label: 'All', value: 'all' }
+const NONE_OPT = { label: 'None', value: 'none' }
+
 const STATUS_OPTS = [ ALL_OPT ]
 const MATCH_TYPE_OPTS = [ ALL_OPT ]
 
@@ -52,6 +54,7 @@ class ChannelQuery extends Component {
       filterValue: ALL_OPT,
       duringDateRange: [DEFAULT_DATE_RANGE],
       isFilterValuesLoading: false,
+      breakdownKey: NONE_OPT,
 
       present: false,
       presentationWidgets: {},
@@ -70,6 +73,7 @@ class ChannelQuery extends Component {
     query.filter_value = this.state.filterValue.value;
     query.date_from = this.getDateOnlyTimestamp(this.state.duringDateRange[0].startDate);
     query.date_to = this.getDateOnlyTimestamp(this.state.duringDateRange[0].endDate);
+    query.breakdowns = [this.state.breakdownKey.value] // breakdown by one value supported.
 
     runChannelQuery(this.props.currentProjectId, query)
       .then((r) => {
@@ -120,6 +124,14 @@ class ChannelQuery extends Component {
 
   handleFilterKeyChange = (option) => {
     this.setState({ filterKey: option, filterValue: ALL_OPT });
+  }
+
+  handleBreakdownKeyChange = (option) => {
+    this.setState({ breakdownKey: option });
+  }
+
+  getBreakdownKeysOpts() {
+    return [NONE_OPT, ...FILTER_KEY_OPTS];
   }
 
   handleDuringDateRangeSelect = (range) => {
@@ -174,7 +186,7 @@ class ChannelQuery extends Component {
 
       <Row style={{marginBottom: '15px'}}>
         <Col xs='12' md='12'>
-          <span style={LABEL_STYLE}>Filter</span>
+          <span style={LABEL_STYLE}>Filter by</span>
           <div className='fapp-select light' style={{ display: 'inline-block', width: '200px', marginRight: '15px' }}>
             <Select value={this.state.filterKey} onChange={this.handleFilterKeyChange} options={FILTER_KEY_OPTS} placeholder='Filter'/>
           </div>
@@ -191,6 +203,7 @@ class ChannelQuery extends Component {
         </Col>
       </Row>
 
+      {/* 
       <Row style={{marginBottom: '15px'}}>
         <Col xs='12' md='12'>
           <span style={LABEL_STYLE}>Status</span>
@@ -198,7 +211,8 @@ class ChannelQuery extends Component {
             <Select value={ALL_OPT} options={STATUS_OPTS} placeholder='Status'/>
           </div>
         </Col>
-      </Row>
+      </Row> 
+      */}
 
       {/* 
       <Row style={{marginBottom: '15px'}}>
@@ -231,6 +245,15 @@ class ChannelQuery extends Component {
             />
             <button className='fapp-close-round-button' style={{float: 'right', marginLeft: '0px', borderLeft: 'none'}} 
             onClick={this.toggleDatePickerDisplay}>x</button>
+          </div>
+        </Col>
+      </Row>
+
+      <Row style={{marginBottom: '15px'}}>
+        <Col xs='12' md='12'>
+          <span style={LABEL_STYLE}>Breakdown by</span>
+          <div className='fapp-select light' style={{ display: 'inline-block', width: '200px', marginRight: '15px' }}>
+            <Select value={this.state.breakdownKey} onChange={this.handleBreakdownKeyChange} options={this.getBreakdownKeysOpts()} placeholder='Breakdown'/>
           </div>
         </Col>
       </Row>
