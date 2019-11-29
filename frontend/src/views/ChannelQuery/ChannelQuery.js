@@ -24,7 +24,6 @@ const FILTER_KEY_KEYWORD = { label: 'Keywords', value: 'keyword' }
 const FILTER_KEY_OPTS = [ FILTER_KEY_CAMPAIGN, FILTER_KEY_AD, FILTER_KEY_KEYWORD ]
 
 const ALL_OPT = { label: 'All', value: 'all' }
-const FILTER_VALUE_OPTS = [ ALL_OPT ]
 const STATUS_OPTS = [ ALL_OPT ]
 const MATCH_TYPE_OPTS = [ ALL_OPT ]
 
@@ -120,7 +119,7 @@ class ChannelQuery extends Component {
   }
 
   handleFilterKeyChange = (option) => {
-    this.setState({ filterKey: option });
+    this.setState({ filterKey: option, filterValue: ALL_OPT });
   }
 
   handleDuringDateRangeSelect = (range) => {
@@ -152,8 +151,10 @@ class ChannelQuery extends Component {
   }
 
   getChannelFilterValuesOpts() {
-    if (!this.isChannelFilterValuesExists()) return [];
-    return makeSelectOpts(this.props.channelFilterValues[this.state.channel.value][this.state.filterKey.value]);
+    if (!this.isChannelFilterValuesExists()) return [ALL_OPT];
+    let valueOpts = makeSelectOpts(this.props.channelFilterValues[this.state.channel.value][this.state.filterKey.value]);
+    valueOpts.unshift(ALL_OPT);
+    return valueOpts;
   }
 
   onChannelFilterValueChange = (value) => {
@@ -174,10 +175,10 @@ class ChannelQuery extends Component {
       <Row style={{marginBottom: '15px'}}>
         <Col xs='12' md='12'>
           <span style={LABEL_STYLE}>Filter</span>
-          <div className='fapp-select light' style={{ display: 'inline-block', width: '150px', marginRight: '15px' }}>
+          <div className='fapp-select light' style={{ display: 'inline-block', width: '200px', marginRight: '15px' }}>
             <Select value={this.state.filterKey} onChange={this.handleFilterKeyChange} options={FILTER_KEY_OPTS} placeholder='Filter'/>
           </div>
-          <div className='fapp-select light' style={{ display: 'inline-block', width: '150px' }}>
+          <div className='fapp-select light' style={{ display: 'inline-block', width: '275px' }}>
             <CreatableSelect 
               value={this.state.filterValue} 
               options={this.getChannelFilterValuesOpts()}

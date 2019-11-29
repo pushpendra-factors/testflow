@@ -36,12 +36,13 @@ var documentTypeByAlias = map[string]int{
 }
 
 const error_DuplicateAdwordsDocument = "pq: duplicate key value violates unique constraint \"adwords_documents_pkey\""
+const filterValueAll = "all"
 
 func isDuplicateAdwordsDocumentError(err error) bool {
 	return err.Error() == error_DuplicateAdwordsDocument
 }
 
-func getIdFieldNameByType(docType int) string {
+func getAdwordsIdFieldNameByType(docType int) string {
 	switch docType {
 	case 4: // click_performance_report
 		return "gcl_id"
@@ -54,7 +55,7 @@ func getIdFieldNameByType(docType int) string {
 	}
 }
 
-func getIdByType(docType int, valueJson *postgres.Jsonb) (string, error) {
+func getAdwordsIdByType(docType int, valueJson *postgres.Jsonb) (string, error) {
 	if docType > len(documentTypeByAlias) {
 		return "", errors.New("invalid document type")
 	}
@@ -64,7 +65,7 @@ func getIdByType(docType int, valueJson *postgres.Jsonb) (string, error) {
 		return "", err
 	}
 
-	idFieldName := getIdFieldNameByType(docType)
+	idFieldName := getAdwordsIdFieldNameByType(docType)
 	id, exists := (*valueMap)[idFieldName]
 	if !exists {
 		return "", fmt.Errorf("id field %s does not exist on doc of type %s", idFieldName, docType)
@@ -100,7 +101,7 @@ func CreateAdwordsDocument(adwordsDoc *AdwordsDocument) int {
 	}
 	adwordsDoc.Type = docType
 
-	adwordsDocId, err := getIdByType(adwordsDoc.Type, adwordsDoc.Value)
+	adwordsDocId, err := getAdwordsIdByType(adwordsDoc.Type, adwordsDoc.Value)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get id by adowords doc type.")
 		return http.StatusInternalServerError
@@ -109,9 +110,9 @@ func CreateAdwordsDocument(adwordsDoc *AdwordsDocument) int {
 
 	db := C.GetServices().Db
 	// Todo: db.Create(newAdwordsDocs[i]) causes unaddressable value error. Find why?
-	rows, err := db.Raw("INSERT INTO adwords_documents (project_id,customer_account_id,type,timestamp,id,value) VALUES (?, ?, ?, ?, ?, ?)",
-		adwordsDoc.ProjectId, adwordsDoc.CustomerAccountId, adwordsDoc.Type, adwordsDoc.Timestamp,
-		adwordsDoc.ID, adwordsDoc.Value).Rows()
+	queryStr := "INSERT INTO adwords_documents (project_id,customer_account_id,type,timestamp,id,value) VALUES (?, ?, ?, ?, ?, ?)"
+	rows, err := db.Raw(queryStr, adwordsDoc.ProjectId, adwordsDoc.CustomerAccountId,
+		adwordsDoc.Type, adwordsDoc.Timestamp, adwordsDoc.ID, adwordsDoc.Value).Rows()
 	if err != nil {
 		if isDuplicateAdwordsDocumentError(err) {
 			logCtx.WithError(err).WithField("id", adwordsDoc.ID).Error(
@@ -238,7 +239,22 @@ func GetAllAdwordsLastSyncInfoByProjectAndType() ([]AdwordsLastSyncInfo, int) {
 	return selectedLastSyncInfos, http.StatusOK
 }
 
-func GetAdwordsDocumentIdsByTypeWithLimit(projectId uint64, docType int) ([]string, int) {
+func getAdwordsFilterKeyByType(docType int) (string, error) {
+	filterKeyByType := map[int]string{
+		5: "campaign_name",
+		8: "criteria",
+		6: "id",
+	}
+
+	filterKey, filterKeyExists := filterKeyByType[docType]
+	if !filterKeyExists {
+		return "", errors.New("no filter key found for document type")
+	}
+
+	return filterKey, nil
+}
+
+func GetAdwordsFilterValuesByType(projectId uint64, docType int) ([]string, int) {
 	projectSetting, errCode := GetProjectSetting(projectId)
 	if errCode != http.StatusFound {
 		return []string{}, http.StatusInternalServerError
@@ -248,25 +264,117 @@ func GetAdwordsDocumentIdsByTypeWithLimit(projectId uint64, docType int) ([]stri
 	db := C.GetServices().Db
 	logCtx := log.WithField("project_id", projectId).WithField("doc_type", docType)
 
-	queryStr := "SELECT DISTINCT(id) as id FROM adwords_documents WHERE project_id = ? AND" +
-		" " + "customer_account_id = ? AND type = ? LIMIT 5000"
-	rows, err := db.Raw(queryStr, projectId, customerAccountId, docType).Rows()
+	filterValueKey, err := getAdwordsFilterKeyByType(docType)
 	if err != nil {
-		logCtx.WithError(err).Error("Failed to get distinct of ids by type from adwords documents.")
+		logCtx.WithError(err).Error("Unknown doc type for get adwords filter key.")
+		return []string{}, http.StatusBadRequest
+	}
+
+	queryStr := "SELECT DISTINCT(value->>?) as filter_value FROM adwords_documents WHERE project_id = ? AND" +
+		" " + "customer_account_id = ? AND type = ? LIMIT 5000"
+	rows, err := db.Raw(queryStr, filterValueKey, projectId, customerAccountId, docType).Rows()
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to distinct filter values by type from adwords documents.")
 		return []string{}, http.StatusInternalServerError
 	}
 	defer rows.Close()
 
-	documentIds := make([]string, 0, 0)
+	filterValues := make([]string, 0, 0)
 	for rows.Next() {
-		var documentId string
-		if err := rows.Scan(&documentId); err != nil {
-			logCtx.WithError(err).Error("Failed to get distinct of ids by type from adwords documents.")
-			return []string{}, http.StatusInternalServerError
+		var filterValue string
+		if err := rows.Scan(&filterValue); err != nil {
+			logCtx.WithError(err).Error("Failed to distinct filter values by type from adwords documents.")
+			return filterValues, http.StatusInternalServerError
 		}
 
-		documentIds = append(documentIds, documentId)
+		filterValues = append(filterValues, filterValue)
 	}
 
-	return documentIds, http.StatusFound
+	return filterValues, http.StatusFound
+}
+
+func GetAdwordsDocumentTypeForFilterKey(filter string) (int, error) {
+	var docType int
+
+	switch filter {
+	case CAFilterCampaign:
+		docType = documentTypeByAlias["campaign_performance_report"]
+	case CAFilterAd:
+		docType = documentTypeByAlias["ad_performance_report"]
+	case CAFilterKeyword:
+		docType = documentTypeByAlias["keyword_performance_report"]
+	}
+
+	if docType == 0 {
+		return docType, errors.New("no adwords document type for filter")
+	}
+
+	return docType, nil
+}
+
+// select value->>'impressions' as impressions, value->>'clicks' as clicks,
+// value->>'average_cost' as cost_per_click, value->>'cost' as total_cost,
+// value->>'conversions' as conversions, value->>'all_conversions' as all_conversions
+// from adwords_documents where type=8 and timestamp between 20191120 and 20191120;
+func GetAdwordsMetricKvs(projectId uint64, query *ChannelQuery) (*map[string]interface{}, error) {
+	stmntWithoutAlias := "SELECT SUM((value->>'impressions')::float) as %s, SUM((value->>'clicks')::float) as %s," +
+		" " + "SUM((value->>'cost')::float) as %s, SUM((value->>'conversions')::float) as %s," +
+		" " + "SUM((value->>'all_conversions')::float) as %s FROM adwords_documents"
+
+	stmnt := fmt.Sprintf(stmntWithoutAlias, CAColumnImpressions, CAColumnClicks,
+		CAColumnTotalCost, CAColumnAllConversions, CAColumnAllConversions)
+
+	stmntWhere := "WHERE type=? AND timestamp BETWEEN ? and ?"
+
+	isWhereByFilterRequired := query.FilterValue != filterValueAll
+	if isWhereByFilterRequired {
+		stmntWhere = stmntWhere + " " + "and" + " " + "value->>?=?"
+	}
+
+	docType, err := GetAdwordsDocumentTypeForFilterKey(query.FilterKey)
+	if err != nil {
+		return nil, err
+	}
+
+	params := make([]interface{}, 0, 0)
+	params = append(params, docType, query.DateFrom, query.DateTo)
+
+	if isWhereByFilterRequired {
+		filterKey, err := getAdwordsFilterKeyByType(docType)
+		if err != nil {
+			return nil, err
+		}
+
+		params = append(params, filterKey, query.FilterValue)
+	}
+
+	// append where to stmnt.
+	stmnt = stmnt + " " + stmntWhere
+
+	db := C.GetServices().Db
+	rows, err := db.Raw(stmnt, params...).Rows()
+	if err != nil {
+		return nil, err
+	}
+
+	resultHeaders, resultRows, err := U.DBReadRows(rows)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(resultRows) == 0 {
+		log.Error("Aggregate query returned zero rows.")
+		return nil, errors.New("no rows returned")
+	}
+
+	if len(resultRows) > 1 {
+		log.Error("Aggregate query returned more than one row on get adwords metric kvs.")
+	}
+
+	metricKvs := make(map[string]interface{})
+	for i, k := range resultHeaders {
+		metricKvs[k] = resultRows[0][i]
+	}
+
+	return &metricKvs, nil
 }
