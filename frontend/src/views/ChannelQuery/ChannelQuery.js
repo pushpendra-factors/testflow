@@ -13,7 +13,7 @@ import { DEFAULT_DATE_RANGE, DEFINED_DATE_RANGES,
   readableDateRange } from '../Query/common';
 import ClosableDateRangePicker from '../../common/ClosableDatePicker';
 import { makeSelectOpts } from '../../util';
-
+import TableChart from '../Query/TableChart';
 
 const CHANNEL_GOOGLE_ADS = { label: 'Google Ads', value: 'google_ads' }
 const CHANNEL_OPTS = [CHANNEL_GOOGLE_ADS]
@@ -57,13 +57,24 @@ class ChannelQuery extends Component {
       breakdownKey: NONE_OPT,
 
       present: false,
-      presentationWidgets: {},
+      resultMetrics: {},
+      resultMetricsBreakdown: null,
       topError: null,
     }
   }
   // Returns: 20191026
   getDateOnlyTimestamp(datetime) {
     return parseInt(moment(datetime).format('YYYYMMDD'));
+  }
+
+  getDisplayMetricsBreakdown(metricsBreakdown) {
+    if (!metricsBreakdown) return;
+
+    let result = { ...metricsBreakdown };
+    for (let i=0; i<result.headers.length; i++)
+      result.headers[i] = this.getSnakeToReadableKey(result.headers[i]);
+
+    return result;
   }
 
   runQuery = () => {
@@ -84,12 +95,16 @@ class ChannelQuery extends Component {
           return
         }
 
-        if (r.data.metrics) 
-          this.setState({ present: true, presentationWidgets: r.data.metrics });
+        if (r.data.metrics)
+          this.setState({ present: true, resultMetrics: r.data.metrics });
+
+        if (r.data.metrics_breakdown)
+          this.setState({ present: true, 
+            resultMetricsBreakdown: this.getDisplayMetricsBreakdown(r.data.metrics_breakdown) });
       });
   }
 
-  getReadableMetricKey(k) {
+  getSnakeToReadableKey(k) { 
     let kSplits = k.split('_');
 
     let key = '';
@@ -99,21 +114,20 @@ class ChannelQuery extends Component {
     return key
   }
 
-  presentMetricsOnWidgets() {
+  presentMetrics() {
     let widgets = [];
 
-    for (let k in this.state.presentationWidgets) {
-      let value = (this.state.presentationWidgets[k] == null || this.state.presentationWidgets[k] == undefined) ? 
-        'NA' : this.state.presentationWidgets[k];
+    for (let k in this.state.resultMetrics) {
+      let value = (this.state.resultMetrics[k] == null || this.state.resultMetrics[k] == undefined) ? 
+        'NA' : this.state.resultMetrics[k];
       
       widgets.push(
         <Col md={3} style={{ padding: '0 15px', marginTop: '30px'}}>
           <div style={{ border: '1px solid #AAA', padding: '35px' }}>
-            <span style={{display: 'block', textAlign: 'center', fontSize: '20px', 
-              fontWeight: '600', marginBottom: '15px', color: '#555'}}> 
-              { this.getReadableMetricKey(k) } 
+            <span style={{display: 'block', textAlign: 'center', fontSize: '18px', marginBottom: '15px'}}> 
+              { this.getSnakeToReadableKey(k) } 
             </span>
-            <span style={{display: 'block', textAlign: 'center', fontSize: '25px', fontWeight: '400' }}> 
+            <span style={{display: 'block', textAlign: 'center', fontSize: '20px', fontWeight: '500' }}> 
               { value } 
             </span>
           </div>
@@ -122,6 +136,15 @@ class ChannelQuery extends Component {
     }
 
     return widgets;
+  }
+
+  presentMetricsBreakdown() {
+    if (!this.state.resultMetricsBreakdown || !this.state.resultMetricsBreakdown.rows) return;
+    if (this.state.resultMetricsBreakdown.rows.length <= 1) return;
+
+    return <Col md={12} style={{ marginTop: '50px' }}>
+      <TableChart queryResult={this.state.resultMetricsBreakdown} />
+    </Col>;
   }
 
   handleFilterKeyChange = (option) => {
@@ -269,11 +292,12 @@ class ChannelQuery extends Component {
       </div>
 
       <div hidden={!this.state.present} style={{borderTop: '1px solid rgb(221, 221, 221)', paddingTop: '20px', 
-        marginTop: '30px', marginLeft: '-60px', marginRight: '-60px'}} hidden={false}></div>
+        marginTop: '30px', marginLeft: '-60px', marginRight: '-60px'}}></div>
 
       {/* presentation */}
-      <div style={{ paddingLeft: '30px', paddingRight: '30px', paddingTop: '10px' }}>
-        <Row> { this.presentMetricsOnWidgets() } </Row>
+      <div style={{ paddingLeft: '30px', paddingRight: '30px', paddingTop: '10px', minHeight: '500px' }}>
+        <Row> { this.presentMetrics() } </Row>
+        <Row> { this.presentMetricsBreakdown() } </Row>
       </div>
 
     </div>

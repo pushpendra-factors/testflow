@@ -1,0 +1,18 @@
+<svg width="36px" height="35px" viewBox="0 0 36 35" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="Reports-List" transform="translate(-311.000000, -713.000000)">
+            <g id="Group" transform="translate(312.000000, 714.000000)">
+                <ellipse id="Oval" stroke="#373535" cx="16.6530612" cy="16.3478261" rx="4.16326531" ry="3.82608696"></ellipse>
+                <ellipse id="Oval" stroke="#373535" stroke-width="1.5" cx="16.6530612" cy="16.3478261" rx="4.16326531" ry="3.82608696"></ellipse>
+                <ellipse id="Oval" stroke="#373535" stroke-width="1.2" cx="16.3061224" cy="3.13043478" rx="3.12244898" ry="3.13043478"></ellipse>
+                <ellipse id="Oval" stroke="#373535" stroke-width="1.2" cx="3.12244898" cy="16.3478261" rx="3.12244898" ry="3.13043478"></ellipse>
+                <ellipse id="Oval" stroke="#373535" stroke-width="1.2" cx="17" cy="29.8695652" rx="3.12244898" ry="3.13043478"></ellipse>
+                <ellipse id="Oval" stroke="#373535" stroke-width="1.2" cx="30.877551" cy="16.3478261" rx="3.12244898" ry="3.13043478"></ellipse>
+                <path d="M6.24489796,16.3478261 L12.4897959,16.3478261" id="Line-15" stroke="#000000" stroke-width="0.8" stroke-linecap="square"></path>
+                <path d="M16.6530612,6.60869565 L16.6530612,12.5217391" id="Line-15" stroke="#000000" stroke-width="0.8" stroke-linecap="square"></path>
+                <path d="M16.6530612,20.173913 L16.6530612,26.7391304" id="Line-15" stroke="#000000" stroke-width="0.8" stroke-linecap="square"></path>
+                <path d="M20.8163265,16.3478261 L27.4081633,16.3478261" id="Line-15" stroke="#000000" stroke-width="0.8" stroke-linecap="square"></path>
+            </g>
+        </g>
+    </g>
+</svg>

@@ -330,7 +330,7 @@ func getAdwordsMetricsQuery(projectId uint64, query *ChannelQuery,
 		" " + "SUM((value->>'cost')::float) as %s, SUM((value->>'conversions')::float) as %s," +
 		" " + "SUM((value->>'all_conversions')::float) as %s FROM adwords_documents"
 	selectCols := fmt.Sprintf(selectColstWithoutAlias, CAColumnImpressions, CAColumnClicks,
-		CAColumnTotalCost, CAColumnAllConversions, CAColumnAllConversions)
+		CAColumnTotalCost, CAColumnConversions, CAColumnAllConversions)
 
 	// Where handling.
 	stmntWhere := "WHERE project_id=? AND type=? AND timestamp BETWEEN ? AND ?"
@@ -372,9 +372,12 @@ func getAdwordsMetricsQuery(projectId uint64, query *ChannelQuery,
 		}
 
 		// prepend group by col on select.
-		selectCols = "value->>? as group_key" + ", " + selectCols
+		selectCols = "value->>? as %s" + ", " + selectCols
+		selectCols = fmt.Sprintf(selectCols, CAChannelGroupKey)
 		paramsSelect = append(paramsSelect, propertyKey)
-		stmntGroupBy = "GROUP BY" + " " + "group_key"
+
+		stmntGroupBy = "GROUP BY" + " " + "%s"
+		stmntGroupBy = fmt.Sprintf(stmntGroupBy, CAChannelGroupKey)
 	}
 
 	params := make([]interface{}, 0, 0)
@@ -439,6 +442,13 @@ func getAdwordsMetricsBreakdown(projectId uint64, query *ChannelQuery) (*Channel
 	resultHeaders, resultRows, err := U.DBReadRows(rows)
 	if err != nil {
 		return nil, err
+	}
+
+	// Translate group key.
+	for i := range resultHeaders {
+		if resultHeaders[i] == CAChannelGroupKey {
+			resultHeaders[i] = query.Breakdown
+		}
 	}
 
 	return &ChannelBreakdownResult{Headers: resultHeaders, Rows: resultRows}, nil

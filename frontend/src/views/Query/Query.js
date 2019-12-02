@@ -41,6 +41,7 @@ import { PROPERTY_TYPE_OPTS, USER_PREF_PROPERTY_TYPE_OPTS,
   PROPERTY_VALUE_TYPE_DATE_TIME } from './common';
 import insightsSVG from '../../assets/img/analytics/insights.svg';
 import funnelSVG from '../../assets/img/analytics/funnel.svg';
+import channelSVG from '../../assets/img/analytics/channel.svg';
 
 const COND_ALL_GIVEN_EVENT = 'all_given_event';
 const COND_ANY_GIVEN_EVENT = 'any_given_event'; 
@@ -1028,8 +1029,8 @@ class Query extends Component {
             </div>
             <div onClick={() => this.handleClassChange({ value: QUERY_CLASS_CHANNEL_REPORTS })} 
               style={this.getInterfaceSelectorStyle(QUERY_CLASS_CHANNEL_REPORTS)}>
-              <img src={funnelSVG} style={{ marginRight: '5px', marginBottom: '2px', height: '25px' }} /> 
-              <span className='fapp-text'> Channels </span> 
+              <img src={channelSVG} style={{ height: '26px' }} /> 
+              <span style={{ marginLeft: '5px' }} className='fapp-text'> Channels </span> 
             </div>
           </div>
         </Col>

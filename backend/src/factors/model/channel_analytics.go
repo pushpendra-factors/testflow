@@ -28,6 +28,7 @@ type ChannelQueryResult struct {
 }
 
 const CAChannelGoogleAds = "google_ads"
+const CAChannelGroupKey = "group_key"
 
 var CAChannels = []string{
 	CAChannelGoogleAds,
