@@ -19,6 +19,7 @@ const DEFAULT_PROJECT_STATE = {
   agents: {},
   viewQuery: {},
   adwordsCustomerAccounts: null,
+  channelFilterValues: {},
 }
 
 export default function reducer(state=DEFAULT_PROJECT_STATE, action) {
@@ -281,6 +282,15 @@ export default function reducer(state=DEFAULT_PROJECT_STATE, action) {
           ...state.currentProjectSettings,
           int_adwords_enabled_agent_uuid: enabledAgentUUID,
         }
+        return _state;
+      }
+      case "FETCH_CHANNEL_FILTER_VALUES_FULFILLED": {
+        let _state = { ...state };
+        if (!_state.channelFilterValues[action.payload.channel]) {
+          _state.channelFilterValues[action.payload.channel] = {};
+        }
+        _state.channelFilterValues[action.payload.channel][action.payload.filter] = action.payload.values;
+
         return _state;
       }
     }

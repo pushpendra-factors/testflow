@@ -264,7 +264,7 @@ def get_campaign_performance_report(adwords_client, timestamp):
     seg_fields = ['active_view_impressions', 'active_view_measurability', 'active_view_measurable_cost', 
     'active_view_measurable_impressions', 'active_view_viewability', 'advertising_channel_sub_type', 'all_conversion_rate', 
     'all_conversion_value', 'all_conversions', 'amount', 'average_cost', 'average_position', 'average_time_on_site', 
-    'base_campaign_id', 'bounce_rate', 'budget_id', 'campaign_id', 'campaign_status', 'campaign_trial_type', 'click_assisted_conversion_value', 
+    'base_campaign_id', 'bounce_rate', 'budget_id', 'campaign_id', 'campaign_name', 'campaign_status', 'campaign_trial_type', 'click_assisted_conversion_value', 
     'click_assisted_conversions', 'click_assisted_conversions_over_last_click_conversions', 'clicks', 'conversion_value', 'conversions', 
     'cost', 'start_date', 'end_date', 'engagements', 'gmail_forwards', 'gmail_saves', 'gmail_secondary_clicks', 'impression_assisted_conversions', 
     'impression_reach', 'impressions', 'interaction_types', 'interactions', 'invalid_clicks', 'is_budget_explicitly_shared', 'url_custom_parameters', 
@@ -416,8 +416,6 @@ def add_all_adwords_documents(project_id, customer_acc_id, docs, doc_type, times
     for doc in docs:
         add_adwords_document(project_id, customer_acc_id, 
             doc, doc_type, timestamp)
-        # Intentional: Sleep 1s to slowdown network activity and db insert.
-        time.sleep(1)
 
 def get_last_sync_info():
     uri = "/data_service/adwords/get_last_sync_info"

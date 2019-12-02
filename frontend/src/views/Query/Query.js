@@ -16,6 +16,10 @@ import LineChart from './LineChart';
 import BarChart from './BarChart';
 import TableBarChart from './TableBarChart';
 import FunnelChart from './FunnelChart';
+
+// Channel query is a different kind of component linked to Query.
+import ChannelQuery from '../ChannelQuery/ChannelQuery';
+
 import { PRESENTATION_BAR, PRESENTATION_LINE, PRESENTATION_TABLE, 
   PRESENTATION_CARD, PRESENTATION_FUNNEL, PROPERTY_TYPE_EVENT,
   getDateRangeFromStoredDateRange, PROPERTY_LOGICAL_OP_OPTS,
@@ -48,9 +52,11 @@ const LABEL_STYLE = { marginRight: '10px', fontWeight: '600', color: '#777' };
 
 const QUERY_CLASS_INSIGHTS = 'insights';
 const QUERY_CLASS_FUNNEL = 'funnel';
+const QUERY_CLASS_CHANNEL_REPORTS = 'channel'
 const QUERY_CLASS_OPTS = [
   { value: QUERY_CLASS_INSIGHTS, label: 'Insights' },
-  { value: QUERY_CLASS_FUNNEL, label: 'Funnel' }
+  { value: QUERY_CLASS_FUNNEL, label: 'Funnel' },
+  { value: QUERY_CLASS_CHANNEL_REPORTS, label: 'Channel' }
 ];
 
 const TYPE_EVENT_OCCURRENCE = 'events_occurrence';
@@ -1020,6 +1026,11 @@ class Query extends Component {
               <img src={funnelSVG} style={{ marginRight: '5px', marginBottom: '2px', height: '25px' }} /> 
               <span className='fapp-text'> Funnel </span> 
             </div>
+            <div onClick={() => this.handleClassChange({ value: QUERY_CLASS_CHANNEL_REPORTS })} 
+              style={this.getInterfaceSelectorStyle(QUERY_CLASS_CHANNEL_REPORTS)}>
+              <img src={funnelSVG} style={{ marginRight: '5px', marginBottom: '2px', height: '25px' }} /> 
+              <span className='fapp-text'> Channels </span> 
+            </div>
           </div>
         </Col>
       </Row>
@@ -1108,12 +1119,20 @@ class Query extends Component {
     ];
   }
 
+  renderChannelReportsInterface = () => {
+    return <ChannelQuery />;
+  }
+
   render() {
     if (!this.isLoaded()) return <Loading />;
     var renderQueryInterface = this.renderInsightsQueryInterface;
 
     if (this.state.class.value == QUERY_CLASS_FUNNEL) {
       renderQueryInterface = this.renderFunnelQueryInterface;
+    }
+
+    if (this.state.class.value == QUERY_CLASS_CHANNEL_REPORTS) {
+      renderQueryInterface = this.renderChannelReportsInterface;
     }
 
     console.debug('Query State : ', this.state);

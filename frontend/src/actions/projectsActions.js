@@ -466,3 +466,41 @@ export function enableAdwordsIntegration(projectId) {
     })
   }
 }
+
+export function runChannelQuery(projectId, query) {
+  let url = host + "projects/" + projectId + "/channels/query";
+  return post(null, url , query);
+}
+
+export function fetchChannelFilterValues(projectId, channel, filter) {
+  return function(dispatch){
+    return new Promise((resolve, reject) => {
+      if (!projectId || !channel || channel == "" || !filter || filter == "") return;
+      let url = getHostURL() + "projects/" + projectId + "/channels/filter_values?channel="+channel+"&filter="+filter;
+
+      get(dispatch, url)
+        .then((r) => {
+          if (r.ok) {
+            if (!r.data.filter_values) {
+              console.error("Missing filter values on response.");
+              return
+            }
+
+            let responsePayload = { projectId: projectId, 
+              channel: channel, filter: filter, values: r.data.filter_values}
+            
+            dispatch({ type: "FETCH_CHANNEL_FILTER_VALUES_FULFILLED", payload: responsePayload })
+            resolve(r);
+          } else {
+            dispatch({ type:"FETCH_CHANNEL_FILTER_VALUES_REJECTED" });
+            reject(r); 
+          }
+        })
+        .catch((err) => {
+          dispatch({ type:"FETCH_CHANNEL_FILTER_VALUES_REJECTED", payload: err });
+          reject(err);
+        })
+
+    })
+  }  
+}

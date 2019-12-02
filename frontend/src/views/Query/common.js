@@ -1,5 +1,5 @@
-import moment from 'moment';
 import { createStaticRanges } from 'react-date-range';
+import moment from 'moment';
 
 import { slideUnixTimeWindowToCurrentTime, firstToUpperCase } from '../../util';
 
@@ -104,4 +104,14 @@ export const isGroupByHourWindow = function(from, to) {
 export const getGroupByTimestampType = function(from, to) {
   // group by hour if window is <= 24hrs.
   return isGroupByHourWindow(from, to) ? 'hour' : 'date';
+}
+
+export const readableDateRange = function(range) {
+  // Use label for default date range.
+  if(range.startDate ==  DEFAULT_DATE_RANGE.startDate 
+    && range.endDate == DEFAULT_DATE_RANGE.endDate)
+    return DEFAULT_DATE_RANGE.label;
+
+  return moment(range.startDate).format('MMM DD, YYYY') + " - " +
+    moment(range.endDate).format('MMM DD, YYYY');
 }
