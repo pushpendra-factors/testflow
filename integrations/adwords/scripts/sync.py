@@ -457,9 +457,9 @@ def get_adwords_timestamp_range(from_timestamp, to_timestamp=None):
     if from_timestamp == None:
         return date_range
     
-    # if to_timestamp not given: range till today. 
+    # if to_timestamp not given: range till yesterday. 
     if to_timestamp == None:
-        to_timestamp = get_adwords_timestamp_from_datetime(datetime.datetime.today())
+        to_timestamp = get_adwords_timestamp_before_days(1)
 
     start_timestamp = from_timestamp
     while start_timestamp <= to_timestamp:
@@ -471,7 +471,7 @@ def get_adwords_timestamp_range(from_timestamp, to_timestamp=None):
 
 def get_adwords_timestamp_before_days(days):
     return get_adwords_timestamp_from_datetime(
-        datetime.datetime.today() - datetime.timedelta(days=days))
+        datetime.datetime.utcnow() - datetime.timedelta(days=days))
 
 
 def sync(next_info):
@@ -578,7 +578,7 @@ def get_next_sync_info(last_sync_info):
     # as no historical data would be available.
     if doc_type == "campaigns" or doc_type == "ads" or doc_type == "ad_groups":
         sync_info = last_sync_info.copy()
-        sync_info['next_timestamp'] = get_adwords_timestamp_from_datetime(datetime.datetime.today())
+        sync_info['next_timestamp'] = get_adwords_timestamp_from_datetime(datetime.datetime.utcnow())
         next_sync_info.append(sync_info)
         return next_sync_info
     
