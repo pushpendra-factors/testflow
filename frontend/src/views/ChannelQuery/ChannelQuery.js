@@ -73,7 +73,9 @@ class ChannelQuery extends Component {
     query.filter_value = this.state.filterValue.value;
     query.date_from = this.getDateOnlyTimestamp(this.state.duringDateRange[0].startDate);
     query.date_to = this.getDateOnlyTimestamp(this.state.duringDateRange[0].endDate);
-    query.breakdowns = [this.state.breakdownKey.value] // breakdown by one value supported.
+
+    if (this.state.breakdownKey.value != "none") 
+      query.breakdown = this.state.breakdownKey.value;
 
     runChannelQuery(this.props.currentProjectId, query)
       .then((r) => {

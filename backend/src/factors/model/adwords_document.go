@@ -239,7 +239,7 @@ func GetAllAdwordsLastSyncInfoByProjectAndType() ([]AdwordsLastSyncInfo, int) {
 	return selectedLastSyncInfos, http.StatusOK
 }
 
-func getAdwordsFilterKeyByType(docType int) (string, error) {
+func GetAdwordsFilterPropertyKeyByType(docType int) (string, error) {
 	filterKeyByType := map[int]string{
 		5: "campaign_name",
 		8: "criteria",
@@ -264,7 +264,7 @@ func GetAdwordsFilterValuesByType(projectId uint64, docType int) ([]string, int)
 	db := C.GetServices().Db
 	logCtx := log.WithField("project_id", projectId).WithField("doc_type", docType)
 
-	filterValueKey, err := getAdwordsFilterKeyByType(docType)
+	filterValueKey, err := GetAdwordsFilterPropertyKeyByType(docType)
 	if err != nil {
 		logCtx.WithError(err).Error("Unknown doc type for get adwords filter key.")
 		return []string{}, http.StatusBadRequest
@@ -315,53 +315,80 @@ func GetAdwordsDocumentTypeForFilterKey(filter string) (int, error) {
 /*
 GetAdwordsMetricsQuery
 
-SELECT SUM((value->>'impressions')::float) as impressions, SUM((value->>'clicks')::float) as clicks,
+SELECT value->>'criteria', SUM((value->>'impressions')::float) as impressions, SUM((value->>'clicks')::float) as clicks,
 SUM((value->>'cost')::float) as total_cost, SUM((value->>'conversions')::float) as all_conversions,
 SUM((value->>'all_conversions')::float) as all_conversions FROM adwords_documents
-WHERE type='5' AND timestamp BETWEEN '20191122' and '20191129' AND value->>'campaign_name'='Desktop Only';
+WHERE type='5' AND timestamp BETWEEN '20191122' and '20191129' AND value->>'campaign_name'='Desktop Only'
+GROUP BY value->>'criteria';
 */
-func GetAdwordsMetricsQuery(projectId uint64, query *ChannelQuery) (string, []interface{}, error) {
-	stmntWithoutAlias := "SELECT SUM((value->>'impressions')::float) as %s, SUM((value->>'clicks')::float) as %s," +
+func getAdwordsMetricsQuery(projectId uint64, query *ChannelQuery,
+	withBreakdown bool) (string, []interface{}, error) {
+
+	// select handling.
+	paramsSelect := make([]interface{}, 0, 0)
+	selectColstWithoutAlias := "SUM((value->>'impressions')::float) as %s, SUM((value->>'clicks')::float) as %s," +
 		" " + "SUM((value->>'cost')::float) as %s, SUM((value->>'conversions')::float) as %s," +
 		" " + "SUM((value->>'all_conversions')::float) as %s FROM adwords_documents"
-
-	stmnt := fmt.Sprintf(stmntWithoutAlias, CAColumnImpressions, CAColumnClicks,
+	selectCols := fmt.Sprintf(selectColstWithoutAlias, CAColumnImpressions, CAColumnClicks,
 		CAColumnTotalCost, CAColumnAllConversions, CAColumnAllConversions)
 
+	// Where handling.
 	stmntWhere := "WHERE project_id=? AND type=? AND timestamp BETWEEN ? AND ?"
+	paramsWhere := make([]interface{}, 0, 0)
+
+	docType, err := GetAdwordsDocumentTypeForFilterKey(query.FilterKey)
+	if err != nil {
+		return "", []interface{}{}, err
+	}
+	// Todo: Add current customer_account_id from project settings.
+	paramsWhere = append(paramsWhere, projectId, docType, query.DateFrom, query.DateTo)
 
 	isWhereByFilterRequired := query.FilterValue != filterValueAll
 	if isWhereByFilterRequired {
-		stmntWhere = stmntWhere + " " + "and" + " " + "value->>?=?"
+		stmntWhere = stmntWhere + " " + "AND" + " " + "value->>?=?"
+
+		filterKey, err := GetAdwordsFilterPropertyKeyByType(docType)
+		if err != nil {
+			return "", []interface{}{}, err
+		}
+
+		paramsWhere = append(paramsWhere, filterKey, query.FilterValue)
+	}
+
+	// group by handling.
+	var stmntGroupBy string
+	paramsGroupBy := make([]interface{}, 0, 0)
+	if withBreakdown {
+		docType, err := GetAdwordsDocumentTypeForFilterKey(query.Breakdown)
+		if err != nil {
+			log.WithError(err).Error("Failed to get adwords doc type by filter key.")
+			return "", []interface{}{}, err
+		}
+
+		propertyKey, err := GetAdwordsFilterPropertyKeyByType(docType)
+		if err != nil {
+			log.WithError(err).Error("Failed to get filter propery key by type.")
+			return "", []interface{}{}, err
+		}
+
+		// prepend group by col on select.
+		selectCols = "value->>? as group_key" + ", " + selectCols
+		paramsSelect = append(paramsSelect, propertyKey)
+		stmntGroupBy = "GROUP BY" + " " + "group_key"
 	}
 
 	params := make([]interface{}, 0, 0)
 
-	docType, err := GetAdwordsDocumentTypeForFilterKey(query.FilterKey)
-	if err != nil {
-		return "", params, err
-	}
-
-	// Todo: Add current customer_account_id from project settings.
-	params = append(params, projectId, docType, query.DateFrom, query.DateTo)
-
-	if isWhereByFilterRequired {
-		filterKey, err := getAdwordsFilterKeyByType(docType)
-		if err != nil {
-			return "", params, err
-		}
-
-		params = append(params, filterKey, query.FilterValue)
-	}
-
-	// append where to stmnt.
-	stmnt = stmnt + " " + stmntWhere
+	stmnt := "SELECT" + " " + selectCols + " " + stmntWhere + " " + stmntGroupBy
+	params = append(params, paramsSelect...)
+	params = append(params, paramsWhere...)
+	params = append(params, paramsGroupBy...)
 
 	return stmnt, params, nil
 }
 
-func GetAdwordsMetricKvs(projectId uint64, query *ChannelQuery) (*map[string]interface{}, error) {
-	stmnt, params, err := GetAdwordsMetricsQuery(projectId, query)
+func getAdwordsMetrics(projectId uint64, query *ChannelQuery) (*map[string]interface{}, error) {
+	stmnt, params, err := getAdwordsMetricsQuery(projectId, query, false)
 	if err != nil {
 		return nil, err
 	}
@@ -392,4 +419,54 @@ func GetAdwordsMetricKvs(projectId uint64, query *ChannelQuery) (*map[string]int
 	}
 
 	return &metricKvs, nil
+}
+
+func getAdwordsMetricsBreakdown(projectId uint64, query *ChannelQuery) (*ChannelBreakdownResult, error) {
+	logCtx := log.WithField("project_id", projectId)
+
+	stmnt, params, err := getAdwordsMetricsQuery(projectId, query, true)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get adwords metrics query.")
+		return nil, err
+	}
+
+	db := C.GetServices().Db
+	rows, err := db.Raw(stmnt, params...).Rows()
+	if err != nil {
+		return nil, err
+	}
+
+	resultHeaders, resultRows, err := U.DBReadRows(rows)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ChannelBreakdownResult{Headers: resultHeaders, Rows: resultRows}, nil
+}
+
+func ExecuteAdwordsChannelQuery(projectId uint64, query *ChannelQuery) (*ChannelQueryResult, int) {
+	queryResult := &ChannelQueryResult{}
+
+	logCtx := log.WithField("project_id", projectId)
+
+	metricKvs, err := getAdwordsMetrics(projectId, query)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get adwords metric kvs.")
+		return queryResult, http.StatusInternalServerError
+	}
+	queryResult.Metrics = metricKvs
+
+	// Return, if no breakdown.
+	if query.Breakdown == "" {
+		return queryResult, http.StatusOK
+	}
+
+	metricBreakdown, err := getAdwordsMetricsBreakdown(projectId, query)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get adwords metric breakdown.")
+		return queryResult, http.StatusInternalServerError
+	}
+	queryResult.MetricsBreakdown = metricBreakdown
+
+	return queryResult, http.StatusOK
 }

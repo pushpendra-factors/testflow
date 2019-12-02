@@ -7,14 +7,14 @@ import (
 )
 
 type ChannelQuery struct {
-	Channel     string   `json:"channel"`
-	FilterKey   string   `json:"filter_key"`
-	FilterValue string   `json:"filter_value"`
-	DateFrom    int64    `json:"date_from"`
-	DateTo      int64    `json:"date_to"`
-	Status      string   `json:"status"`
-	MatchType   string   `json:"match_type"` // optional
-	Breakdowns  []string `json:"breakdowns"`
+	Channel     string `json:"channel"`
+	FilterKey   string `json:"filter_key"`
+	FilterValue string `json:"filter_value"`
+	DateFrom    int64  `json:"date_from"`
+	DateTo      int64  `json:"date_to"`
+	Status      string `json:"status"`
+	MatchType   string `json:"match_type"` // optional
+	Breakdown   string `json:"breakdown"`
 }
 
 type ChannelBreakdownResult struct {
@@ -106,12 +106,11 @@ func ExecuteChannelQuery(projectId uint64, query *ChannelQuery) (*ChannelQueryRe
 	}
 
 	// supports only adwords now.
-	metricKvs, err := GetAdwordsMetricKvs(projectId, query)
-	if err != nil {
-		log.WithField("project_id", projectId).WithError(err).Error(
-			"Failed to get adowords metric kvs.")
+	result, errCode := ExecuteAdwordsChannelQuery(projectId, query)
+	if errCode != http.StatusOK {
+		log.WithField("project_id", projectId).Error("Failed to execute adwords channel query.")
 		return nil, http.StatusInternalServerError
 	}
 
-	return &ChannelQueryResult{Metrics: metricKvs}, http.StatusOK
+	return result, http.StatusOK
 }
