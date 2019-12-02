@@ -1,0 +1,88 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    layer: dataserver
+    env: production
+    project: factors-production
+  name: dataserver
+  namespace: default
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 4
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      layer: dataserver
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:      
+      labels:
+        layer: dataserver
+    spec:
+      nodeSelector:
+        cloud.google.com/gke-nodepool: default-pool
+      containers:
+      - name: dataserver
+        image: us.gcr.io/factors-production/data-server:v0.01-c4141cb
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8089
+        volumeMounts:
+        - name: workdir
+          mountPath: /usr/local/var/factors
+        resources:
+          requests:
+            memory: "400M"
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        securityContext: {}
+        readinessProbe:
+          tcpSocket:
+            port: 8089
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        livenessProbe:
+          tcpSocket:
+            port: 8089
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        args:
+          - --env
+          - $(ENV)
+          - --port
+          - "8089"
+          - --db_host
+          - $(DB_HOST)
+          - --db_port
+          - $(DB_PORT)
+          - --db_name
+          - $(POSTGRES_DB)
+          - --db_user
+          - $(POSTGRES_USER)
+          - --db_pass
+          - $(POSTGRES_PASSWORD)
+          - --aws_region
+          - $(AWS_REGION)
+          - --aws_key
+          - $(AWS_KEY)
+          - --aws_secret
+          - $(AWS_SECRET)
+          - --email_sender
+          - $(EMAIL_SENDER)
+        envFrom:
+        - configMapRef:
+            name: config-env
+        - configMapRef:
+            name: config-postgres
+        - secretRef:
+            name: secret-postgres
+        - secretRef:
+            name: secret-aws
+      volumes:
+      - name: workdir
+        emptyDir: {}

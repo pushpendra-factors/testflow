@@ -1,0 +1,78 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    layer: adwordsserver
+    env: production
+    project: factors-production
+  name: adwordsserver
+  namespace: default
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 4
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      layer: adwordsserver
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:      
+      labels:
+        layer: adwordsserver
+    spec:
+      nodeSelector:
+        cloud.google.com/gke-nodepool: default-pool
+      containers:
+      - name: adwordsserver
+        image: us.gcr.io/factors-production/adwords-server:v0.01-c4141cb
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8091
+        volumeMounts:
+        - name: workdir
+          mountPath: /usr/local/var/factors
+        resources:
+          requests:
+            memory: "400M"
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        securityContext: {}
+        readinessProbe:
+          tcpSocket:
+            port: 8091
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        livenessProbe:
+          tcpSocket:
+            port: 8091
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        args:
+          - --env
+          - $(ENV)
+          - --port
+          - $(ADWORDS_SERVER_PORT)
+          - --host_url
+          - $(API_HOST_URL)
+          - --api_host_url
+          - $(API_HOST_URL)
+          - --app_host_url
+          - $(APP_HOST_URL)
+          - --oauth_secret
+          - $(GOOGLE_OAUTH_SECRET)
+          - --developer_token
+          - $(GOOGLE_ADWORDS_DEVELOPER_TOKEN)
+        envFrom:
+        - configMapRef:
+            name: config-adwordsserver
+        - configMapRef:
+            name: config-env
+        - secretRef:
+            name: secret-google
+      volumes:
+      - name: workdir
+        emptyDir: {}
