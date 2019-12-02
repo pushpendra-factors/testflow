@@ -312,11 +312,15 @@ func GetAdwordsDocumentTypeForFilterKey(filter string) (int, error) {
 	return docType, nil
 }
 
-// select value->>'impressions' as impressions, value->>'clicks' as clicks,
-// value->>'average_cost' as cost_per_click, value->>'cost' as total_cost,
-// value->>'conversions' as conversions, value->>'all_conversions' as all_conversions
-// from adwords_documents where type=8 and timestamp between 20191120 and 20191120;
-func GetAdwordsMetricKvs(projectId uint64, query *ChannelQuery) (*map[string]interface{}, error) {
+/*
+GetAdwordsMetricsQuery
+
+SELECT SUM((value->>'impressions')::float) as impressions, SUM((value->>'clicks')::float) as clicks,
+SUM((value->>'cost')::float) as total_cost, SUM((value->>'conversions')::float) as all_conversions,
+SUM((value->>'all_conversions')::float) as all_conversions FROM adwords_documents
+WHERE type='5' AND timestamp BETWEEN '20191122' and '20191129' AND value->>'campaign_name'='Desktop Only';
+*/
+func GetAdwordsMetricsQuery(projectId uint64, query *ChannelQuery) (string, []interface{}, error) {
 	stmntWithoutAlias := "SELECT SUM((value->>'impressions')::float) as %s, SUM((value->>'clicks')::float) as %s," +
 		" " + "SUM((value->>'cost')::float) as %s, SUM((value->>'conversions')::float) as %s," +
 		" " + "SUM((value->>'all_conversions')::float) as %s FROM adwords_documents"
@@ -324,25 +328,27 @@ func GetAdwordsMetricKvs(projectId uint64, query *ChannelQuery) (*map[string]int
 	stmnt := fmt.Sprintf(stmntWithoutAlias, CAColumnImpressions, CAColumnClicks,
 		CAColumnTotalCost, CAColumnAllConversions, CAColumnAllConversions)
 
-	stmntWhere := "WHERE type=? AND timestamp BETWEEN ? and ?"
+	stmntWhere := "WHERE project_id=? AND type=? AND timestamp BETWEEN ? AND ?"
 
 	isWhereByFilterRequired := query.FilterValue != filterValueAll
 	if isWhereByFilterRequired {
 		stmntWhere = stmntWhere + " " + "and" + " " + "value->>?=?"
 	}
 
+	params := make([]interface{}, 0, 0)
+
 	docType, err := GetAdwordsDocumentTypeForFilterKey(query.FilterKey)
 	if err != nil {
-		return nil, err
+		return "", params, err
 	}
 
-	params := make([]interface{}, 0, 0)
-	params = append(params, docType, query.DateFrom, query.DateTo)
+	// Todo: Add current customer_account_id from project settings.
+	params = append(params, projectId, docType, query.DateFrom, query.DateTo)
 
 	if isWhereByFilterRequired {
 		filterKey, err := getAdwordsFilterKeyByType(docType)
 		if err != nil {
-			return nil, err
+			return "", params, err
 		}
 
 		params = append(params, filterKey, query.FilterValue)
@@ -350,6 +356,15 @@ func GetAdwordsMetricKvs(projectId uint64, query *ChannelQuery) (*map[string]int
 
 	// append where to stmnt.
 	stmnt = stmnt + " " + stmntWhere
+
+	return stmnt, params, nil
+}
+
+func GetAdwordsMetricKvs(projectId uint64, query *ChannelQuery) (*map[string]interface{}, error) {
+	stmnt, params, err := GetAdwordsMetricsQuery(projectId, query)
+	if err != nil {
+		return nil, err
+	}
 
 	db := C.GetServices().Db
 	rows, err := db.Raw(stmnt, params...).Rows()
