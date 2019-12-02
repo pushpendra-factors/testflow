@@ -16,7 +16,7 @@ WITH (
 )
 TABLESPACE pg_default;
 
-ALTER TABLE public.agents OWNER to postgres;
+ALTER TABLE public.adwords_documents OWNER to postgres;
 
 -- DOWN
 -- DROP TABLE adwords_documents;
