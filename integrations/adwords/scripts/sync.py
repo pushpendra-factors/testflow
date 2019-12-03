@@ -229,10 +229,10 @@ def get_click_performance_report(adwords_client, timestamp):
     during = str_timestamp + "," + str_timestamp
     downloader = adwords_client.GetReportDownloader(version='v201809')
 
-    seg_fields = ['ad_format', 'ad_group_id', 'ad_network_type_1', 'ad_network_type_2', 
+    query_fields = ['ad_format', 'ad_group_id', 'ad_network_type_1', 'ad_network_type_2', 
     'aoi_most_specific_target_id', 'campaign_id', 'click_type', 'creative_id', 'criteria_parameters', 
     'date', 'device', 'gcl_id', 'page', 'slot', 'user_list_id'] 
-    fields = snake_to_pascal_case(seg_fields)
+    fields = snake_to_pascal_case(query_fields)
     
     # Create report query.
     report_query = (adwords.ReportQueryBuilder()
@@ -246,7 +246,7 @@ def get_click_performance_report(adwords_client, timestamp):
         skip_column_header=True, skip_report_summary=True)
 
     lines = report.split('\n')
-    return csv_to_dict_list(seg_fields, lines)
+    return csv_to_dict_list(query_fields, lines)
 
 
 
@@ -261,7 +261,7 @@ def get_campaign_performance_report(adwords_client, timestamp):
     during = str_timestamp + "," + str_timestamp
     downloader = adwords_client.GetReportDownloader(version='v201809')
     
-    seg_fields = ['active_view_impressions', 'active_view_measurability', 'active_view_measurable_cost', 
+    query_fields = ['active_view_impressions', 'active_view_measurability', 'active_view_measurable_cost', 
     'active_view_measurable_impressions', 'active_view_viewability', 'advertising_channel_sub_type', 'all_conversion_rate', 
     'all_conversion_value', 'all_conversions', 'amount', 'average_cost', 'average_position', 'average_time_on_site', 
     'base_campaign_id', 'bounce_rate', 'budget_id', 'campaign_id', 'campaign_name', 'campaign_status', 'campaign_trial_type', 'click_assisted_conversion_value', 
@@ -270,7 +270,7 @@ def get_campaign_performance_report(adwords_client, timestamp):
     'impression_reach', 'impressions', 'interaction_types', 'interactions', 'invalid_clicks', 'is_budget_explicitly_shared', 'url_custom_parameters', 
     'value_per_all_conversion', 'video_quartile_100_rate', 'video_quartile_25_rate', 'video_quartile_50_rate', 'video_quartile_75_rate',
     'video_view_rate', 'video_views', 'view_through_conversions']
-    fields = snake_to_pascal_case(seg_fields)
+    fields = snake_to_pascal_case(query_fields)
 
     # Create report query.
     report_query = (adwords.ReportQueryBuilder()
@@ -283,7 +283,7 @@ def get_campaign_performance_report(adwords_client, timestamp):
         skip_report_header=True, skip_column_header=True, skip_report_summary=True) 
 
     lines = report.split('\n')
-    return csv_to_dict_list(seg_fields, lines)
+    return csv_to_dict_list(query_fields, lines)
 
 def get_ad_performance_report(adwords_client, timestamp):
     if adwords_client == None:
@@ -296,7 +296,7 @@ def get_ad_performance_report(adwords_client, timestamp):
     during = str_timestamp + "," + str_timestamp
     downloader = adwords_client.GetReportDownloader(version='v201809')
     
-    seg_fields = ['id', 'account_currency_code', 'account_descriptive_name', 'active_view_impressions', 
+    query_fields = ['id', 'account_currency_code', 'account_descriptive_name', 'active_view_impressions', 
         'active_view_measurability', 'active_view_measurable_cost', 'active_view_measurable_impressions',
         'active_view_viewability', 'ad_group_id', 'all_conversion_rate', 
         'all_conversion_value', 'all_conversions', 'average_cost', 'average_position', 'average_time_on_site',
@@ -306,7 +306,7 @@ def get_ad_performance_report(adwords_client, timestamp):
         'gmail_saves', 'gmail_secondary_clicks', 'impression_assisted_conversions', 'impressions', 'interaction_types',
         'interactions', 'value_per_all_conversion', 'video_quartile_100_rate', 'video_quartile_25_rate', 
         'video_quartile_50_rate', 'video_quartile_75_rate', 'video_view_rate', 'video_views', 'view_through_conversions']
-    fields = snake_to_pascal_case(seg_fields)
+    fields = snake_to_pascal_case(query_fields)
 
     # Create report query.
     report_query = (adwords.ReportQueryBuilder()
@@ -319,7 +319,7 @@ def get_ad_performance_report(adwords_client, timestamp):
         skip_report_header=True, skip_column_header=True, skip_report_summary=True) 
 
     lines = report.split('\n')
-    return csv_to_dict_list(seg_fields, lines)
+    return csv_to_dict_list(query_fields, lines)
 
 
 def get_search_performance_report(adwords_client, timestamp):
@@ -333,7 +333,7 @@ def get_search_performance_report(adwords_client, timestamp):
     during = str_timestamp + "," + str_timestamp
     downloader = adwords_client.GetReportDownloader(version='v201809')
 
-    seg_fields = ['ad_group_id', 'ad_group_name', 'all_conversion_rate',
+    query_fields = ['ad_group_id', 'ad_group_name', 'all_conversion_rate',
     'all_conversion_value', 'all_conversions', 'average_cost', 'average_cpc', 'average_cpe', 
     'average_cpm', 'average_cpv', 'average_position', 'campaign_id', 'clicks', 'conversion_value', 'conversions',
     'cost', 'cost_per_all_conversion', 'cost_per_conversion', 'cross_device_conversions', 'ctr', 'date', 
@@ -342,7 +342,7 @@ def get_search_performance_report(adwords_client, timestamp):
     'query', 'query_match_type_with_variant', 'tracking_url_template', 'value_per_all_conversion', 
     'value_per_conversion', 'video_quartile_100_rate', 'video_quartile_25_rate', 'video_quartile_50_rate', 
     'video_quartile_75_rate', 'video_view_rate', 'video_views', 'view_through_conversions', 'week', 'year']
-    fields = snake_to_pascal_case(seg_fields)
+    fields = snake_to_pascal_case(query_fields)
     
     # Create report query.
     report_query = (adwords.ReportQueryBuilder()
@@ -356,7 +356,7 @@ def get_search_performance_report(adwords_client, timestamp):
         skip_column_header=True, skip_report_summary=True)
 
     lines = report.split('\n')
-    return csv_to_dict_list(seg_fields, lines)
+    return csv_to_dict_list(query_fields, lines)
 
 
 def get_keywords_performance_report(adwords_client, timestamp):
@@ -370,12 +370,12 @@ def get_keywords_performance_report(adwords_client, timestamp):
     during = str_timestamp + "," + str_timestamp
     downloader = adwords_client.GetReportDownloader(version='v201809')
     
-    seg_fields = ['id', 'ad_group_id', 'all_conversion_rate', 'all_conversion_value', 'all_conversions', 
+    query_fields = ['id', 'ad_group_id', 'all_conversion_rate', 'all_conversion_value', 'all_conversions', 
     'approval_status', 'average_cost', 'average_cpc', 'average_cpm', 'average_cpv', 
     'average_pageviews', 'average_position', 'average_time_on_site', 'campaign_id', 'click_assisted_conversion_value',
     'click_assisted_conversions', 'clicks', 'conversions', 'cpc_bid', 'cpc_bid_source', 'criteria',
     'ctr', 'date', 'impression_assisted_conversions', 'impressions', 'keyword_match_type']
-    fields = snake_to_pascal_case(seg_fields)
+    fields = snake_to_pascal_case(query_fields)
 
     # Create report query.
     report_query = (adwords.ReportQueryBuilder()
@@ -389,7 +389,7 @@ def get_keywords_performance_report(adwords_client, timestamp):
         skip_column_header=True, skip_report_summary=True)
 
     lines = report.split('\n')
-    return csv_to_dict_list(seg_fields, lines)
+    return csv_to_dict_list(query_fields, lines)
 
 
 def add_adwords_document(project_id, customer_acc_id, doc, doc_type, timestamp):    
