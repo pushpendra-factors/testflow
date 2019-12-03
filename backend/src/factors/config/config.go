@@ -30,6 +30,8 @@ const DEVELOPMENT = "development"
 const STAGING = "staging"
 const PRODUCTION = "production"
 
+// Warning: Any changes to the cookie name has to be
+// in sync with other services which uses the cookie.
 const FactorsSessionCookieName = "factors-sid"
 
 type DBConf struct {
@@ -162,6 +164,9 @@ func initServices(config *Configuration) error {
 }
 
 func initCookieInfo(env string) {
+	// Warning: Any changes to the cookie name has to be
+	// in sync with other services which uses the cookie.
+
 	cookieName := fmt.Sprintf("%s%s", FactorsSessionCookieName, "d")
 
 	if env == STAGING {

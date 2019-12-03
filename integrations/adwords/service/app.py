@@ -67,6 +67,8 @@ class App():
 
     @classmethod
     def get_session_cookie_name(cls):
+        # Warning: Any changes to the cookie name has to be in sync with
+        # App Server which is setting the cookie.
         if cls._env == "production": return SESSION_COOKIE_NAME
         if cls._env == "staging": return SESSION_COOKIE_NAME+"s"
         return SESSION_COOKIE_NAME+"d"
