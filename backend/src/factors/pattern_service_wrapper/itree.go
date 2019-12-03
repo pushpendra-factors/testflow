@@ -716,6 +716,8 @@ var USER_PROPERTIES_TO_IGNORE = map[string]bool{
 	U.EP_REFERRER_DOMAIN:         true,
 	U.SP_INITIAL_REFERRER_DOMAIN: true,
 	U.SP_INITIAL_REFERRER:        true,
+	U.EP_PAGE_LOAD_TIME:          true,
+	U.UP_INITIAL_PAGE_SPENT_TIME: true,
 }
 
 func shouldIgnoreUserProperty(propertyName string) bool {
@@ -756,6 +758,8 @@ var EVENT_PROPERTIES_TO_IGNORE = map[string]bool{
 	U.EP_REFERRER_DOMAIN:         true,
 	U.SP_INITIAL_REFERRER_DOMAIN: true,
 	U.SP_INITIAL_REFERRER:        true,
+	U.EP_PAGE_LOAD_TIME:          true,
+	U.UP_INITIAL_PAGE_SPENT_TIME: true,
 }
 
 func shouldIgnoreEventProperty(propertyName string) bool {
