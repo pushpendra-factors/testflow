@@ -56,7 +56,11 @@ class TableChart extends Component {
     for(let i=0; i<rowKeys.length; i++) {
       let cols = result.rows[i.toString()];
       if (cols != undefined) {
-        let tds = cols.map((c) => { return <td style={{ maxWidth: '40px', overflowWrap: 'break-word' }}> { c } </td> });
+        let tds = cols.map((c, i) => {
+          // Remove max width to allow larger col size for upto given initial no.of cols.
+          let maxWidth = (this.props.bigWidthUptoCols && i < this.props.bigWidthUptoCols) ? null : '40px';
+          return <td style={{ maxWidth: maxWidth, overflowWrap: 'break-word' }}> { c } </td> 
+        });
         rows.push(<tr> { tds } </tr>);
       }
     }

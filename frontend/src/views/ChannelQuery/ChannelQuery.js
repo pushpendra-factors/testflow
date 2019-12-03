@@ -144,7 +144,7 @@ class ChannelQuery extends Component {
     if (!this.state.resultMetricsBreakdown || !this.state.resultMetricsBreakdown.rows) return;
 
     return <Col md={12} style={{ marginTop: '50px' }}>
-      <TableChart queryResult={this.state.resultMetricsBreakdown} />
+      <TableChart bigWidthUptoCols={1} queryResult={this.state.resultMetricsBreakdown} />
     </Col>;
   }
 
