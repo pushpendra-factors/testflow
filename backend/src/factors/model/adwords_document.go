@@ -327,10 +327,14 @@ func getAdwordsMetricsQuery(projectId uint64, query *ChannelQuery,
 	// select handling.
 	paramsSelect := make([]interface{}, 0, 0)
 	selectColstWithoutAlias := "SUM((value->>'impressions')::float) as %s, SUM((value->>'clicks')::float) as %s," +
-		" " + "SUM((value->>'cost')::float) as %s, SUM((value->>'conversions')::float) as %s," +
-		" " + "SUM((value->>'all_conversions')::float) as %s FROM adwords_documents"
+		" " + "SUM((value->>'cost')::float)/1000000 as %s, SUM((value->>'conversions')::float) as %s," +
+		" " + "SUM((value->>'all_conversions')::float) as %s," +
+		" " + "SUM((value->>'clicks')::float * (value->>'average_cost')::float)/NULLIF(SUM((value->>'clicks')::float), 0)/1000000 as %s," +
+		" " + "SUM((value->>'clicks')::float * (value->>'conversion_rate')::float)/NULLIF(SUM((value->>'clicks')::float), 0) as %s," +
+		" " + "SUM((value->>'conversions')::float * (value->>'cost_per_conversion')::float)/NULLIF(SUM((value->>'conversions')::float), 0)/1000000 as %s"
 	selectCols := fmt.Sprintf(selectColstWithoutAlias, CAColumnImpressions, CAColumnClicks,
-		CAColumnTotalCost, CAColumnConversions, CAColumnAllConversions)
+		CAColumnTotalCost, CAColumnConversions, CAColumnAllConversions,
+		CAColumnCostPerClick, CAColumnConversionRate, CAColumnCostPerConversion)
 
 	// Where handling.
 	stmntWhere := "WHERE project_id=? AND type=? AND timestamp BETWEEN ? AND ?"
@@ -359,12 +363,14 @@ func getAdwordsMetricsQuery(projectId uint64, query *ChannelQuery,
 	var stmntGroupBy string
 	paramsGroupBy := make([]interface{}, 0, 0)
 	if withBreakdown {
+		// Todo: Use a seperate or a generic method for getting property key to group by
+		// for a specific key type. Now using method which does same for filterKey
+		// for breakdownKey. Say campaigns, group by campaign_name.
 		docType, err := GetAdwordsDocumentTypeForFilterKey(query.Breakdown)
 		if err != nil {
 			log.WithError(err).Error("Failed to get adwords doc type by filter key.")
 			return "", []interface{}{}, err
 		}
-
 		propertyKey, err := GetAdwordsFilterPropertyKeyByType(docType)
 		if err != nil {
 			log.WithError(err).Error("Failed to get filter propery key by type.")
@@ -382,7 +388,7 @@ func getAdwordsMetricsQuery(projectId uint64, query *ChannelQuery,
 
 	params := make([]interface{}, 0, 0)
 
-	stmnt := "SELECT" + " " + selectCols + " " + stmntWhere + " " + stmntGroupBy
+	stmnt := "SELECT" + " " + selectCols + " " + "FROM adwords_documents" + " " + stmntWhere + " " + stmntGroupBy
 	params = append(params, paramsSelect...)
 	params = append(params, paramsWhere...)
 	params = append(params, paramsGroupBy...)
@@ -448,6 +454,16 @@ func getAdwordsMetricsBreakdown(projectId uint64, query *ChannelQuery) (*Channel
 	for i := range resultHeaders {
 		if resultHeaders[i] == CAChannelGroupKey {
 			resultHeaders[i] = query.Breakdown
+		}
+	}
+
+	// Fill null with zero for aggr.
+	// Do I need to show this as NA?
+	for ri := range resultRows {
+		for ci := range resultRows[ri] {
+			if resultRows[ri][ci] == nil {
+				resultRows[ri][ci] = 0
+			}
 		}
 	}
 

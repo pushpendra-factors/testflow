@@ -97,6 +97,8 @@ class ChannelQuery extends Component {
 
         if (r.data.metrics)
           this.setState({ present: true, resultMetrics: r.data.metrics });
+        else
+          console.error('No metrics on channel query response.');
 
         if (r.data.metrics_breakdown)
           this.setState({ present: true, 
@@ -140,7 +142,6 @@ class ChannelQuery extends Component {
 
   presentMetricsBreakdown() {
     if (!this.state.resultMetricsBreakdown || !this.state.resultMetricsBreakdown.rows) return;
-    if (this.state.resultMetricsBreakdown.rows.length <= 1) return;
 
     return <Col md={12} style={{ marginTop: '50px' }}>
       <TableChart queryResult={this.state.resultMetricsBreakdown} />

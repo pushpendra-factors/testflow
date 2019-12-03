@@ -37,12 +37,14 @@ var CAChannels = []string{
 const CAColumnValueAll = "all"
 
 const (
-	CAColumnImpressions    = "impressions"
-	CAColumnClicks         = "clicks"
-	CAColumnCostPerClick   = "cost_per_click"
-	CAColumnTotalCost      = "total_cost"
-	CAColumnConversions    = "conversions"
-	CAColumnAllConversions = "all_conversions"
+	CAColumnImpressions       = "impressions"
+	CAColumnClicks            = "clicks"
+	CAColumnTotalCost         = "total_cost"
+	CAColumnConversions       = "conversions"
+	CAColumnAllConversions    = "all_conversions"
+	CAColumnCostPerClick      = "cost_per_click"
+	CAColumnConversionRate    = "conversion_rate"
+	CAColumnCostPerConversion = "cost_per_conversion"
 )
 
 const (
