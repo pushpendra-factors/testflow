@@ -227,11 +227,11 @@ pip install -r requirements.txt
 ```
 cd $PATH_TO_FACTORS/factors/integrations/service
 
-python app.py --env development --developer_token <ADS_DEVELOPER_TOKEN> --oauth_secret <GOOGLE_OAUTH_CLIENT_JSON>
+python app.py --env development --developer_token <ADS_DEVELOPER_TOKEN> --oauth_secret  $(cat <GOOGLE_OAUTH_CLIENT_JSON_FILEPATH>)
 
 or
 
-python app.py --env development --port 8091 --host_url http://localhost:8091 --developer_token <ADS_DEVELOPER_TOKEN> --oauth_secret <GOOGLE_OAUTH_CLIENT_JSON> --api_host_url http://localhost:8080 ----app_host_url http://localhost:3000
+python app.py --env development --port 8091 --host_url http://localhost:8091 --developer_token <ADS_DEVELOPER_TOKEN> --oauth_secret $(cat <GOOGLE_OAUTH_CLIENT_JSON_FILEPATH>) --api_host_url http://localhost:8080 ----app_host_url http://localhost:3000
 ```
 
 
@@ -284,8 +284,24 @@ go run run_build_seq.go --etcd=localhost:2379 --local_disk_tmp_dir=/usr/local/va
 go run run_build_seq.go --etcd=localhost:2379 --local_disk_tmp_dir=/usr/local/var/factors/local_disk/tmp --bucket_name=/usr/local/var/factors/cloud_storage --project_id=1
 ```
 
-
 * Verify factors in action on Frontend.
+
+## Running Adwords Sync
+
+* Setup
+```
+cd $PATH_TO_FACTORS/factors/integrations/adwords/scripts
+pip install -r requirements.txt
+```
+
+* Run
+```
+python sync.py --developer_token=<ADS_DEVELOPER_TOKEN> --oauth_secret=$(cat <GOOGLE_OAUTH_CLIENT_JSON_FILEPATH>)
+
+# Running sync for specific project.
+
+python sync.py --developer_token=<ADS_DEVELOPER_TOKEN> --oauth_secret=$(cat <GOOGLE_OAUTH_CLIENT_JSON_FILEPATH>) --project_id=1
+```
 
 ## Setting up debugging in VSCode
 
