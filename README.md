@@ -192,6 +192,49 @@ Config can be passed using flags
 cd $GOPATH/bin
 ./pattern-app --env=development --ip=127.0.0.1 --ps_rpc_port=8100 --etcd=localhost:2379 --disk_dir=/usr/local/var/factors/local_disk --bucket_name=/usr/local/var/factors/cloud_storage --chunk_cache_size=5 --event_info_cache_size=10
 ```
+
+### Data Server
+* Build
+```
+cd $PATH_TO_FACTORS/factors/backend/src
+make build-ds
+```
+
+* Run
+```
+make serve-ds
+
+or
+
+$GOPATH/bin/./data-service --env=development --port=8089 --db_host=localhost --db_port=5432 --db_user=autometa --db_name=autometa --db_pass=@ut0me7a --aws_region=us-east-1 --aws_key=dummy --aws_secret=dummy --email_sender=support@factors.ai --error_reporting_interval=300
+```
+
+### Adwords Server
+* Install python3
+```
+brew install python3
+
+# Note: If you have multiple versions of python. Make sure python refers to python3 and corresponding pip.
+```
+
+* Install dependencies
+```
+cd $PATH_TO_FACTORS/factors/integrations/adwords/service
+pip install -r requirements.txt
+```
+
+* Run
+```
+cd $PATH_TO_FACTORS/factors/integrations/service
+
+python app.py --env development --developer_token <ADS_DEVELOPER_TOKEN> --oauth_secret <GOOGLE_OAUTH_CLIENT_JSON>
+
+or
+
+python app.py --env development --port 8091 --host_url http://localhost:8091 --developer_token <ADS_DEVELOPER_TOKEN> --oauth_secret <GOOGLE_OAUTH_CLIENT_JSON> --api_host_url http://localhost:8080 ----app_host_url http://localhost:3000
+```
+
+
 ## Bootstrapping sample data, Building and serving model.
 * Start server on 8080.
 * Using Localytics challenge data. (https://github.com/localytics/data-viz-challenge)  (https://medium.com/@aabraahaam/localytics-data-visualization-challengue-81ed409471e)
