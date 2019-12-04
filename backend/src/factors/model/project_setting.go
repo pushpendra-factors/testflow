@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/jinzhu/gorm/dialects/postgres"
+
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 )
@@ -19,12 +21,14 @@ type ProjectSetting struct {
 	IntSegment *bool `gorm:"not null;default:false" json:"int_segment,omitempty"`
 	ExcludeBot *bool `gorm:"not null;default:false" json:"exclude_bot,omitempty"`
 	// Foreign key constraint int_adwords_enabled_agent_uuid -> agents(uuid)
-	// Todo: Set int_adwords_enabled_agent_uuid, int_adwords_customer_account_id to NULL
-	// for disabling adwords integration for the project.
-	IntAdwordsEnabledAgentUUID  *string   `json:"int_adwords_enabled_agent_uuid,omitempty"`
-	IntAdwordsCustomerAccountId *string   `json:"int_adwords_customer_account_id,omitempty"`
-	CreatedAt                   time.Time `json:"created_at"`
-	UpdatedAt                   time.Time `json:"updated_at"`
+	// Todo: Set int_adwords_enabled_agent_uuid, int_adwords_customer_account_id,
+	// int_adwords_customer_account_properties to NULL for disabling adwords
+	// integration for the project.
+	IntAdwordsEnabledAgentUUID          *string         `json:"int_adwords_enabled_agent_uuid,omitempty"`
+	IntAdwordsCustomerAccountId         *string         `json:"int_adwords_customer_account_id,omitempty"`
+	IntAdwordsCustomerAccountProperties *postgres.Jsonb `json:"int_adwords_customer_account_properties,omitempty"`
+	CreatedAt                           time.Time       `json:"created_at"`
+	UpdatedAt                           time.Time       `json:"updated_at"`
 }
 
 func GetProjectSetting(projectId uint64) (*ProjectSetting, int) {

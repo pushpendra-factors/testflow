@@ -307,6 +307,15 @@ class GetCustomerAccountsHandler(tornado.web.RequestHandler):
         for account in customer_accounts:
             resp_account = {}
 
+            # Manager account doesn't support reports download.
+            # Skip listing it.
+            try:
+                if account["canManageClients"]:
+                    log.warning("Skipping manager accounts on get customer accounts.")
+                    continue
+            except Exception:
+                continue
+
             try:
                 resp_account["customer_id"] = account["customerId"]
             except Exception:
@@ -323,6 +332,16 @@ class GetCustomerAccountsHandler(tornado.web.RequestHandler):
             except Exception:
                 log.error("descriptive name is missing on response from adwords")
                 continue
+
+            properties = {}
+            try:
+                properties["currency_code"] = account["currencyCode"]
+                properties["date_timezone"] = account["dateTimeZone"]
+                properties["can_manage_clients"] = account["canManageClients"]
+            except:
+                log.error("failed adding properties to customer account")
+                continue
+            resp_account["properties"] = properties
 
             response.append(resp_account)
 

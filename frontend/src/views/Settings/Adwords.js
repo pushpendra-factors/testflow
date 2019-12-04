@@ -84,9 +84,26 @@ class Adwords extends Component {
     this.setState({ selectedAdwordsAccount: e.currentTarget.value });
   }
 
+  getSelectedAdwordsAccountProperties() {
+    let accounts = this.props.adwordsCustomerAccounts;
+    for (let i=0; i<accounts.length; i++) {
+      if (accounts[i].customer_id 
+        && accounts[i].customer_id == this.state.selectedAdwordsAccount
+        && accounts[i].properties) {
+          return accounts[i].properties;
+      }
+    }
+
+    return null;
+  }
+
   onClickFinishSetup = () => {
-    this.props.udpateProjectSettings(this.props.currentProjectId, 
-      { 'int_adwords_customer_account_id': this.state.selectedAdwordsAccount });
+    let properties = this.getSelectedAdwordsAccountProperties(this.state.selectedAdwordsAccount);
+
+    this.props.udpateProjectSettings(this.props.currentProjectId, { 
+      'int_adwords_customer_account_id': this.state.selectedAdwordsAccount,
+      'int_adwords_customer_account_properties': properties,
+    });
   }
 
   renderAccountsList = () => {
