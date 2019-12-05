@@ -33,6 +33,7 @@ var documentTypeByAlias = map[string]int{
 	"ad_performance_report":       6,
 	"search_performance_report":   7,
 	"keyword_performance_report":  8,
+	"customer_account_properties": 9,
 }
 
 const error_DuplicateAdwordsDocument = "pq: duplicate key value violates unique constraint \"adwords_documents_pkey\""
@@ -50,6 +51,8 @@ func getAdwordsIdFieldNameByType(docType int) string {
 		return "campaign_id"
 	case 7: // search_performance_report
 		return "query"
+	case 9: // customer_account_properties
+		return "customer_id"
 	default: // others
 		return "id"
 	}

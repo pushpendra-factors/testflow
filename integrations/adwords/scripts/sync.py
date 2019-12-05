@@ -87,6 +87,32 @@ def csv_to_dict_list(headers, csv_list):
     return resp_rows
         
 
+def get_customer_account_properties(adwords_client, customer_account_id, timestmap):
+    customer_service = adwords_client.GetService('CustomerService', version='v201809')
+    customer_accounts = customer_service.getCustomers()
+
+    current_account = None
+    for account in customer_accounts:
+        if str(account["customerId"]) == customer_account_id:
+            current_account = account
+
+    if current_account is None:
+        log.error("Customer account not found on list of accounts. Failed to get properties.")
+        return []
+
+    properties = {}
+    try:
+        properties["customer_id"] = current_account["customerId"]
+        properties["currency_code"] = current_account["currencyCode"]
+        properties["date_timezone"] = current_account["dateTimeZone"]
+        properties["can_manage_clients"] = current_account["canManageClients"]
+        properties["test_account"] = current_account["testAccount"]
+    except Exception as e:
+        log.error("Failed to get customer account properties: %s", str(e))
+        return [properties]
+
+    return [properties]
+
 
 def get_campaigns(adwords_client, timestamp):
     if adwords_client == None:
@@ -505,7 +531,11 @@ def sync(next_info):
         str(project_id), customer_acc_id, doc_type, str(timestamp))
 
     try:
-        if doc_type == "campaigns":
+        if doc_type == "customer_account_properties":
+            docs = get_customer_account_properties(adwords_client, customer_acc_id, timestamp)
+            add_all_adwords_documents(project_id, customer_acc_id, docs, doc_type, timestamp) 
+            
+        elif doc_type == "campaigns":
             docs = get_campaigns(adwords_client, timestamp)
             add_all_adwords_documents(project_id, customer_acc_id, docs, doc_type, timestamp)
 
@@ -576,7 +606,7 @@ def get_next_sync_info(last_sync_info):
 
     # For non report doc_type sync only for current timestamp.
     # as no historical data would be available.
-    if doc_type == "campaigns" or doc_type == "ads" or doc_type == "ad_groups":
+    if doc_type == "campaigns" or doc_type == "ads" or doc_type == "ad_groups" or doc_type == "customer_account_properties":
         sync_info = last_sync_info.copy()
         sync_info['next_timestamp'] = get_adwords_timestamp_from_datetime(datetime.datetime.utcnow())
         next_sync_info.append(sync_info)
