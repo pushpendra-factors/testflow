@@ -188,8 +188,9 @@ func GetAllAdwordsLastSyncInfoByProjectAndType() ([]AdwordsLastSyncInfo, int) {
 	documentTypeAliasByType := getDocumentTypeAliasByType()
 
 	// add settings for project_id existing on adwords documents.
-	existingProjects := make(map[uint64]bool, 0)
+	existingProjectsWithTypes := make(map[uint64]map[string]bool, 0)
 	selectedLastSyncInfos := make([]AdwordsLastSyncInfo, 0, 0)
+
 	for i := range adwordsLastSyncInfos {
 		logCtx := log.WithField("project_id", adwordsLastSyncInfos[i].ProjectId)
 
@@ -198,11 +199,9 @@ func GetAllAdwordsLastSyncInfoByProjectAndType() ([]AdwordsLastSyncInfo, int) {
 			logCtx.Error("Adwords project settings not found for project adwords synced earlier.")
 		}
 
-		// Do not select sync info, if customer_account_id mismatch, as user
-		// would have changed customer_account mapped to project.
+		// customer_account_id mismatch, as user would have changed customer_account mapped to project.
 		if adwordsLastSyncInfos[i].CustomerAccountId != settings.CustomerAccountId {
 			logCtx.Warn("customer_account_id mapped to project has been changed.")
-			continue
 		}
 
 		typeAlias, typeAliasExists := documentTypeAliasByType[adwordsLastSyncInfos[i].DocumentType]
@@ -216,27 +215,32 @@ func GetAllAdwordsLastSyncInfoByProjectAndType() ([]AdwordsLastSyncInfo, int) {
 		adwordsLastSyncInfos[i].RefreshToken = settings.RefreshToken
 
 		selectedLastSyncInfos = append(selectedLastSyncInfos, adwordsLastSyncInfos[i])
-		existingProjects[adwordsLastSyncInfos[i].ProjectId] = true
+
+		if _, projectExists := existingProjectsWithTypes[adwordsLastSyncInfos[i].ProjectId]; !projectExists {
+			existingProjectsWithTypes[adwordsLastSyncInfos[i].ProjectId] = make(map[string]bool, 0)
+		}
+
+		existingProjectsWithTypes[adwordsLastSyncInfos[i].ProjectId][adwordsLastSyncInfos[i].DocumentTypeAlias] = true
 	}
 
-	// add new projects.
+	// add all types for missing projects and
+	// add missing types for existing projects.
 	for _, settings := range adwordsSettings {
-		if _, exists := existingProjects[settings.ProjectId]; exists {
-			continue
-		}
+		existingTypesForProject, projectExists := existingProjectsWithTypes[settings.ProjectId]
+		for docTypeAlias, _ := range documentTypeByAlias {
+			if !projectExists || (projectExists && existingTypesForProject[docTypeAlias] == false) {
+				syncInfo := AdwordsLastSyncInfo{
+					ProjectId:         settings.ProjectId,
+					RefreshToken:      settings.RefreshToken,
+					CustomerAccountId: settings.CustomerAccountId,
+					LastTimestamp:     0, // no sync yet.
+					DocumentTypeAlias: docTypeAlias,
+				}
 
-		// add sync info for each document type.
-		for docType, _ := range documentTypeByAlias {
-			syncInfo := AdwordsLastSyncInfo{
-				ProjectId:         settings.ProjectId,
-				RefreshToken:      settings.RefreshToken,
-				CustomerAccountId: settings.CustomerAccountId,
-				LastTimestamp:     0, // no sync yet.
-				DocumentTypeAlias: docType,
+				selectedLastSyncInfos = append(selectedLastSyncInfos, syncInfo)
 			}
-
-			selectedLastSyncInfos = append(selectedLastSyncInfos, syncInfo)
 		}
+
 	}
 
 	return selectedLastSyncInfos, http.StatusOK

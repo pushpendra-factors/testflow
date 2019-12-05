@@ -438,6 +438,10 @@ def add_adwords_document(project_id, customer_acc_id, doc, doc_type, timestamp):
     return response
 
 def add_all_adwords_documents(project_id, customer_acc_id, docs, doc_type, timestamp):
+    if len(docs) == 0:
+        log.error("Empty response for project %s doc_type %s timestamp %s.", 
+            str(project_id), str(doc_type), str(timestamp))
+
     # Add each doc from adwords response which is list of docs.
     for doc in docs:
         add_adwords_document(project_id, customer_acc_id, 
@@ -493,7 +497,6 @@ def get_adwords_timestamp_range(from_timestamp, to_timestamp=None):
         start_timestamp = inc_day_adwords_timestamp(start_timestamp)
     
     return date_range
-
 
 def get_adwords_timestamp_before_days(days):
     return get_adwords_timestamp_from_datetime(
@@ -606,9 +609,11 @@ def get_next_sync_info(last_sync_info):
 
     # For non report doc_type sync only for current timestamp.
     # as no historical data would be available.
-    if doc_type == "campaigns" or doc_type == "ads" or doc_type == "ad_groups" or doc_type == "customer_account_properties":
+    adwords_timestamp_today = get_adwords_timestamp_from_datetime(datetime.datetime.utcnow())
+    is_non_report_doc_type = doc_type == "campaigns" or doc_type == "ads" or doc_type == "ad_groups" or doc_type == "customer_account_properties"
+    if is_non_report_doc_type and last_timestmap != adwords_timestamp_today:
         sync_info = last_sync_info.copy()
-        sync_info['next_timestamp'] = get_adwords_timestamp_from_datetime(datetime.datetime.utcnow())
+        sync_info['next_timestamp'] = adwords_timestamp_today
         next_sync_info.append(sync_info)
         return next_sync_info
     
