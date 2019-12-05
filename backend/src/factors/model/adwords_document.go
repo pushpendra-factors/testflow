@@ -477,10 +477,47 @@ func getAdwordsMetricsBreakdown(projectId uint64, query *ChannelQuery) (*Channel
 	return &ChannelBreakdownResult{Headers: resultHeaders, Rows: resultRows}, nil
 }
 
+func getAdwordsChannelResultMeta(projectId uint64, query *ChannelQuery) (*ChannelQueryResultMeta, error) {
+	stmnt := "SELECT value->>'currency_code' as currency FROM adwords_documents" +
+		" " + "WHERE project_id=? AND type=? AND timestamp BETWEEN ? AND ?" +
+		" " + "ORDER BY timestamp DESC LIMIT 1"
+
+	logCtx := log.WithField("project_id", projectId)
+
+	db := C.GetServices().Db
+	rows, err := db.Raw(stmnt, projectId, documentTypeByAlias["customer_account_properties"],
+		query.DateFrom, query.DateTo).Rows()
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to build meta for channel query result.")
+		return nil, err
+	}
+	defer rows.Close()
+
+	var currency string
+	for rows.Next() {
+		rows.Scan(&currency)
+	}
+
+	err = rows.Err()
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to build meta for channel query result.")
+		return nil, err
+	}
+
+	return &ChannelQueryResultMeta{Currency: currency}, nil
+}
+
 func ExecuteAdwordsChannelQuery(projectId uint64, query *ChannelQuery) (*ChannelQueryResult, int) {
 	queryResult := &ChannelQueryResult{}
 
 	logCtx := log.WithField("project_id", projectId)
+
+	meta, err := getAdwordsChannelResultMeta(projectId, query)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get adwords channel result meta.")
+		return queryResult, http.StatusInternalServerError
+	}
+	queryResult.Meta = meta
 
 	metricKvs, err := getAdwordsMetrics(projectId, query)
 	if err != nil {

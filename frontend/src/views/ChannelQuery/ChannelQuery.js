@@ -59,6 +59,7 @@ class ChannelQuery extends Component {
       present: false,
       resultMetrics: {},
       resultMetricsBreakdown: null,
+      resultMeta: null,
       topError: null,
     }
   }
@@ -95,13 +96,16 @@ class ChannelQuery extends Component {
           return
         }
 
+        if (r.data.meta)
+          this.setState({ resultMeta: r.data.meta });
+
         if (r.data.metrics)
           this.setState({ present: true, resultMetrics: r.data.metrics });
         else
           console.error('No metrics on channel query response.');
 
         if (r.data.metrics_breakdown)
-          this.setState({ present: true, 
+          this.setState({ present: true,
             resultMetricsBreakdown: this.getDisplayMetricsBreakdown(r.data.metrics_breakdown) });
       });
   }
@@ -116,13 +120,25 @@ class ChannelQuery extends Component {
     return key
   }
 
+  getReadableMetricValue(key, value) {
+    if (value == null || value == undefined) return 'NA';
+
+    let rValue = value;
+    let isFloat = (value % 1) > 0
+    if (isFloat) rValue = value.toFixed(2);
+
+    if (this.state.resultMeta && 
+      this.state.resultMeta.currency && 
+      key.indexOf('cost') > -1)
+      rValue = rValue + ' ' + this.state.resultMeta.currency;
+
+    return rValue;
+  }
+
   presentMetrics() {
     let widgets = [];
 
-    for (let k in this.state.resultMetrics) {
-      let value = (this.state.resultMetrics[k] == null || this.state.resultMetrics[k] == undefined) ? 
-        'NA' : this.state.resultMetrics[k];
-      
+    for (let k in this.state.resultMetrics) {      
       widgets.push(
         <Col md={3} style={{ padding: '0 15px', marginTop: '30px'}}>
           <div style={{ border: '1px solid #AAA', padding: '35px' }}>
@@ -130,7 +146,7 @@ class ChannelQuery extends Component {
               { this.getSnakeToReadableKey(k) } 
             </span>
             <span style={{display: 'block', textAlign: 'center', fontSize: '20px', fontWeight: '500' }}> 
-              { value } 
+              { this.getReadableMetricValue(k, this.state.resultMetrics[k]) } 
             </span>
           </div>
         </Col>

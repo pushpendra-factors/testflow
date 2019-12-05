@@ -22,9 +22,14 @@ type ChannelBreakdownResult struct {
 	Rows    [][]interface{} `json:"rows"`
 }
 
+type ChannelQueryResultMeta struct {
+	Currency string `json:"currency"`
+}
+
 type ChannelQueryResult struct {
 	Metrics          *map[string]interface{} `json:"metrics"`
 	MetricsBreakdown *ChannelBreakdownResult `json:"metrics_breakdown"`
+	Meta             *ChannelQueryResultMeta `json:"meta"`
 }
 
 const CAChannelGoogleAds = "google_ads"
