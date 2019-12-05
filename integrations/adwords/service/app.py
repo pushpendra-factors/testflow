@@ -307,6 +307,15 @@ class GetCustomerAccountsHandler(tornado.web.RequestHandler):
         for account in customer_accounts:
             resp_account = {}
 
+            # Manager account doesn't support reports download.
+            # Skip listing it.
+            try:
+                if account["canManageClients"]:
+                    log.warning("Skipping manager accounts on get customer accounts.")
+                    continue
+            except Exception:
+                pass
+
             try:
                 resp_account["customer_id"] = account["customerId"]
             except Exception:
