@@ -121,7 +121,8 @@ class ChannelQuery extends Component {
   }
 
   getReadableMetricValue(key, value) {
-    if (value == null || value == undefined) return 'NA';
+    if (value == null || value == undefined) return 0;
+    if (typeof(value) != "number") return value;
 
     let rValue = value;
     let isFloat = (value % 1) > 0
@@ -129,7 +130,7 @@ class ChannelQuery extends Component {
 
     if (this.state.resultMeta && 
       this.state.resultMeta.currency && 
-      key.indexOf('cost') > -1)
+      key.toLowerCase().indexOf('cost') > -1)
       rValue = rValue + ' ' + this.state.resultMeta.currency;
 
     return rValue;
@@ -157,10 +158,20 @@ class ChannelQuery extends Component {
   }
 
   presentMetricsBreakdown() {
-    if (!this.state.resultMetricsBreakdown || !this.state.resultMetricsBreakdown.rows) return;
+    if (!this.state.resultMetricsBreakdown ||  !this.state.resultMetricsBreakdown.headers ||
+      !this.state.resultMetricsBreakdown.rows) return;
+
+    let resultMetricsBreakdown = { ...this.state.resultMetricsBreakdown };
+    for (let ri=0; ri < resultMetricsBreakdown.rows.length; ri++ ) {
+      for (let ci=0; ci < resultMetricsBreakdown.rows[ri].length; ci++) {
+        let key = resultMetricsBreakdown.headers[ci];
+        resultMetricsBreakdown.rows[ri][ci] = this.getReadableMetricValue(key, 
+          resultMetricsBreakdown.rows[ri][ci]);
+      }
+    }
 
     return <Col md={12} style={{ marginTop: '50px' }}>
-      <TableChart bigWidthUptoCols={1} queryResult={this.state.resultMetricsBreakdown} />
+      <TableChart bigWidthUptoCols={1} queryResult={resultMetricsBreakdown} />
     </Col>;
   }
 
