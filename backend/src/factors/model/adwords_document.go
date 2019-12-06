@@ -337,7 +337,7 @@ func getAdwordsMetricsQuery(projectId uint64, query *ChannelQuery,
 		" " + "SUM((value->>'cost')::float)/1000000 as %s, SUM((value->>'conversions')::float) as %s," +
 		" " + "SUM((value->>'all_conversions')::float) as %s," +
 		" " + "SUM((value->>'clicks')::float * (value->>'average_cost')::float)/NULLIF(SUM((value->>'clicks')::float), 0)/1000000 as %s," +
-		" " + "SUM((value->>'clicks')::float * (value->>'conversion_rate')::float)/NULLIF(SUM((value->>'clicks')::float), 0) as %s," +
+		" " + "SUM((value->>'clicks')::float * (value->>'all_conversion_rate')::float)/NULLIF(SUM((value->>'clicks')::float), 0) as %s," +
 		" " + "SUM((value->>'conversions')::float * (value->>'cost_per_conversion')::float)/NULLIF(SUM((value->>'conversions')::float), 0)/1000000 as %s"
 	selectCols := fmt.Sprintf(selectColstWithoutAlias, CAColumnImpressions, CAColumnClicks,
 		CAColumnTotalCost, CAColumnConversions, CAColumnAllConversions,
