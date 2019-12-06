@@ -332,16 +332,17 @@ func getAdwordsMetricsQuery(projectId uint64, query *ChannelQuery,
 	withBreakdown bool) (string, []interface{}, error) {
 
 	// select handling.
-	paramsSelect := make([]interface{}, 0, 0)
 	selectColstWithoutAlias := "SUM((value->>'impressions')::float) as %s, SUM((value->>'clicks')::float) as %s," +
 		" " + "SUM((value->>'cost')::float)/1000000 as %s, SUM((value->>'conversions')::float) as %s," +
 		" " + "SUM((value->>'all_conversions')::float) as %s," +
 		" " + "SUM((value->>'clicks')::float * (value->>'average_cost')::float)/NULLIF(SUM((value->>'clicks')::float), 0)/1000000 as %s," +
-		" " + "SUM((value->>'clicks')::float * (value->>'conversion_rate')::float)/NULLIF(SUM((value->>'clicks')::float), 0) as %s," +
+		" " + "SUM((value->>'clicks')::float * regexp_replace(value->>'conversion_rate', ?, '')::float)/NULLIF(SUM((value->>'clicks')::float), 0) as %s," +
 		" " + "SUM((value->>'conversions')::float * (value->>'cost_per_conversion')::float)/NULLIF(SUM((value->>'conversions')::float), 0)/1000000 as %s"
 	selectCols := fmt.Sprintf(selectColstWithoutAlias, CAColumnImpressions, CAColumnClicks,
 		CAColumnTotalCost, CAColumnConversions, CAColumnAllConversions,
 		CAColumnCostPerClick, CAColumnConversionRate, CAColumnCostPerConversion)
+
+	paramsSelect := make([]interface{}, 0, 0)
 
 	// Where handling.
 	stmntWhere := "WHERE project_id=? AND type=? AND timestamp BETWEEN ? AND ?"
@@ -392,6 +393,10 @@ func getAdwordsMetricsQuery(projectId uint64, query *ChannelQuery,
 		stmntGroupBy = "GROUP BY" + " " + "%s"
 		stmntGroupBy = fmt.Sprintf(stmntGroupBy, CAChannelGroupKey)
 	}
+
+	// Using prepared statement to replace '%', to avoid
+	// query breakage with "!%(MISSING)" on gorm.
+	paramsSelect = append(paramsSelect, "%")
 
 	params := make([]interface{}, 0, 0)
 
@@ -468,7 +473,8 @@ func getAdwordsMetricsBreakdown(projectId uint64, query *ChannelQuery) (*Channel
 	// Do I need to show this as NA?
 	for ri := range resultRows {
 		for ci := range resultRows[ri] {
-			if resultRows[ri][ci] == nil {
+			// if not group key and nil: zero.
+			if ci > 0 && resultRows[ri][ci] == nil {
 				resultRows[ri][ci] = 0
 			}
 		}

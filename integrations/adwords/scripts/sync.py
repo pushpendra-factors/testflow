@@ -288,7 +288,7 @@ def get_campaign_performance_report(adwords_client, timestamp):
     downloader = adwords_client.GetReportDownloader(version='v201809')
     
     query_fields = ['active_view_impressions', 'active_view_measurability', 'active_view_measurable_cost', 
-    'active_view_measurable_impressions', 'active_view_viewability', 'advertising_channel_sub_type', 'all_conversion_rate', 
+    'active_view_measurable_impressions', 'active_view_viewability', 'advertising_channel_sub_type', 'all_conversion_rate', 'conversion_rate', 'cost_per_conversion', 
     'all_conversion_value', 'all_conversions', 'amount', 'average_cost', 'average_position', 'average_time_on_site', 
     'base_campaign_id', 'bounce_rate', 'budget_id', 'campaign_id', 'campaign_name', 'campaign_status', 'campaign_trial_type', 'click_assisted_conversion_value', 
     'click_assisted_conversions', 'click_assisted_conversions_over_last_click_conversions', 'clicks', 'conversion_value', 'conversions', 
@@ -324,7 +324,7 @@ def get_ad_performance_report(adwords_client, timestamp):
     
     query_fields = ['id', 'account_currency_code', 'account_descriptive_name', 'active_view_impressions', 
         'active_view_measurability', 'active_view_measurable_cost', 'active_view_measurable_impressions',
-        'active_view_viewability', 'ad_group_id', 'all_conversion_rate', 
+        'active_view_viewability', 'ad_group_id', 'all_conversion_rate', 'conversion_rate', 'cost_per_conversion', 
         'all_conversion_value', 'all_conversions', 'average_cost', 'average_position', 'average_time_on_site',
         'bounce_rate', 'click_assisted_conversion_value', 'click_assisted_conversions', 
         'click_assisted_conversions_over_last_click_conversions',
@@ -359,10 +359,10 @@ def get_search_performance_report(adwords_client, timestamp):
     during = str_timestamp + "," + str_timestamp
     downloader = adwords_client.GetReportDownloader(version='v201809')
 
-    query_fields = ['ad_group_id', 'ad_group_name', 'all_conversion_rate',
+    query_fields = ['ad_group_id', 'ad_group_name', 'all_conversion_rate', 'conversion_rate', 'cost_per_conversion',
     'all_conversion_value', 'all_conversions', 'average_cost', 'average_cpc', 'average_cpe', 
     'average_cpm', 'average_cpv', 'average_position', 'campaign_id', 'clicks', 'conversion_value', 'conversions',
-    'cost', 'cost_per_all_conversion', 'cost_per_conversion', 'cross_device_conversions', 'ctr', 'date', 
+    'cost', 'cost_per_all_conversion', 'cross_device_conversions', 'ctr', 'date', 
     'device', 'engagement_rate', 'engagements', 'external_customer_id',
     'final_url', 'impressions', 'interaction_rate', 'interaction_types', 'interactions', 'keyword_id', 
     'query', 'query_match_type_with_variant', 'tracking_url_template', 'value_per_all_conversion', 
@@ -396,7 +396,8 @@ def get_keywords_performance_report(adwords_client, timestamp):
     during = str_timestamp + "," + str_timestamp
     downloader = adwords_client.GetReportDownloader(version='v201809')
     
-    query_fields = ['id', 'ad_group_id', 'all_conversion_rate', 'all_conversion_value', 'all_conversions', 
+    query_fields = ['id', 'ad_group_id', 'all_conversion_rate', 'conversion_rate', 
+    'cost_per_conversion', 'all_conversion_value', 'all_conversions', 
     'approval_status', 'average_cost', 'average_cpc', 'average_cpm', 'average_cpv', 
     'average_pageviews', 'average_position', 'average_time_on_site', 'campaign_id', 'click_assisted_conversion_value',
     'click_assisted_conversions', 'clicks', 'conversions', 'cpc_bid', 'cpc_bid_source', 'criteria',
