@@ -11,6 +11,7 @@ import sys
 import time
 
 parser = OptionParser()
+parser.add_option("--env", dest="env", default="development")
 parser.add_option("--developer_token", dest="developer_token", help="", default="")
 parser.add_option("--oauth_secret", dest="oauth_secret", help="", default="")
 parser.add_option("--project_id", dest="project_id", help="", default=None, type=int)
@@ -19,6 +20,9 @@ parser.add_option("--data_service_host", dest="data_service_host",
 
 ADWORDS_CLIENT_USER_AGENT = "FactorsAI (https://www.factors.ai)"
 PAGE_SIZE = 200
+
+APP_NAME = "adwords_sync"
+STATUS_FAILED = "failed"
 
 # Cache permission denied customer_acc_id + token and avoid 
 # sync for similar requests.
@@ -43,6 +47,16 @@ class OAuthManager():
     @classmethod
     def get_client_id(cls):
         return OAuthManager._client_id
+
+def notify(env, source, message):
+    if env != "production": 
+        log.warning("Skipped notification for env %s payload %s", env, str(message))
+
+    sns_url = "https://fjnvg9a8wi.execute-api.us-east-1.amazonaws.com/v1/notify"
+    payload = { "env": env, "message": message, "source": source }
+    response = requests.post(sns_url, json=payload)
+    if not response.ok: log.error("Failed to notify through sns.")
+    return response
 
 def first_letter_to_lower(s):
     if len(s) == 0: return ''
@@ -442,6 +456,7 @@ def add_all_adwords_documents(project_id, customer_acc_id, docs, doc_type, times
     if len(docs) == 0:
         log.error("Empty response for project %s doc_type %s timestamp %s.", 
             str(project_id), str(doc_type), str(timestamp))
+        raise Exception("empty response from adwords")
 
     # Add each doc from adwords response which is list of docs.
     for doc in docs:
@@ -477,7 +492,6 @@ def get_datetime_from_adwords_timestamp(timestamp):
     if timestamp == None: return
     return datetime.datetime.strptime(str(timestamp), '%Y%m%d')
 
-
 def inc_day_adwords_timestamp(timestamp):
     start_datetime = get_datetime_from_adwords_timestamp(timestamp)
     return get_adwords_timestamp_from_datetime(start_datetime + datetime.timedelta(days=1))
@@ -504,25 +518,33 @@ def get_adwords_timestamp_before_days(days):
         datetime.datetime.utcnow() - datetime.timedelta(days=days))
 
 
-def sync(next_info):
-    if not isinstance(next_info, dict): return
-    
+def sync(env, next_info):    
     project_id = next_info.get("project_id")
     customer_acc_id = next_info.get("customer_acc_id")
     refresh_token = next_info.get("refresh_token")
     timestamp = next_info.get("next_timestamp")
     doc_type = next_info.get("doc_type_alias")
 
-    if project_id == None or project_id == 0 or customer_acc_id == None or customer_acc_id == "" or refresh_token == None or refresh_token == "" or doc_type == None or doc_type == "" or timestamp == None:
-        log.error("Invalid project_id: %s or customer_account_id: %s or refresh_token: %s or document_type: %s or timestamp: %s", 
-            str(project_id), str(customer_acc_id), str(refresh_token), str(doc_type), str(timestamp))
-        return
+    status = { "project_id": project_id, "timestamp": timestamp, "doc_type": doc_type }
+
+    if project_id == None or project_id == 0 or customer_acc_id == None or customer_acc_id == "" or doc_type == None or doc_type == "" or timestamp == None:
+        log.error("Invalid project_id: %s or customer_account_id: %s or document_type: %s or timestamp: %s", 
+            str(project_id), str(customer_acc_id), str(doc_type), str(timestamp))
+        status["status"] = STATUS_FAILED
+        status["message"] = "Invalid params project_id or customer_account_id or type or timestamp."
+        return status
+
+    if refresh_token == None or refresh_token == "":
+        log.error("Invalid refresh token for project_id %s", refresh_token)
+        status["status"] = STATUS_FAILED
+        status["message"] = "Invalid refresh token."
+        return status
 
     permission_error_key = str(customer_acc_id) + ':' + str(refresh_token)
     if permission_error_key in permission_error_cache:
         log.error("Skipping sync user permission denied already for project %s, 'customer_acc_id:refresh_token' : %s", 
             str(project_id), permission_error_key)
-        return
+        return status
 
     # Todo: Reuse adwords_client, cache by refresh token.
     oauth2_client = oauth2.GoogleRefreshTokenClient(OAuthManager.get_client_id(), 
@@ -576,22 +598,30 @@ def sync(next_info):
         str_exception = str(e)
         if "AuthorizationError.USER_PERMISSION_DENIED" in str_exception:
             permission_error_cache[permission_error_key] = str_exception
-            return
+            status["status"] = STATUS_FAILED
+            status["message"] = "Failed with exception: " + str_exception
+            return status
 
         if "ReportDefinitionError.CUSTOMER_SERVING_TYPE_REPORT_MISMATCH" in str_exception:
             log.error("[Project: %s, Type: %s] Sync failed, Trying to download report from manager account.", 
                 str(project_id), doc_type)
-            return
+            status["status"] = STATUS_FAILED
+            status["message"] = "Download failed for manager account with exception: " + str_exception
+            return status
 
         log.error("[Project: %s, Type: %s] Sync failed with exception: %s", str(project_id), doc_type, str_exception)
         if "RateExceededError.RATE_EXCEEDED" in str_exception:
             # Todo: Do not exit? Stop downloading reports. 
             # Continue downloading other objects.
-            # Todo: Send email.
+            notify(env, APP_NAME, { "status": STATUS_FAILED, "exception": str_exception })
             sys.exit(1)
-            return
 
-        return
+        status["status"] = STATUS_FAILED
+        status["message"] = "Failed with exception: " + str_exception
+        return status
+
+    status["status"] = "success"
+    return status
 
 # generates next sync info with all missing timestamps 
 # for each document type.
@@ -667,6 +697,8 @@ if __name__ == "__main__":
     last_sync_infos = last_sync_response.json()
     log.warning("Got adwords last sync info.")
 
+    next_sync_failures = []
+    next_sync_success = {}
     # Todo: Use multiple python process to distrubute.
     for last_sync in last_sync_infos:
         # add next_sync_info only for the selected project.
@@ -678,9 +710,22 @@ if __name__ == "__main__":
         next_sync_infos = get_next_sync_info(last_sync)
         if next_sync_infos == None: continue
         for next_sync in next_sync_infos:
-            sync(next_sync)
+            response = sync(options.env, next_sync)
+            if response["status"] == STATUS_FAILED:
+                next_sync_failures.append(response)
+            else:
+                next_sync_success[next_sync.get("project_id")] = next_sync.get("customer_acc_id")
 
-    # Todo: Send status email with failures and successs.
+    status_msg = ""
+    if len(next_sync_failures) > 0: status_msg = "Failures on sync."
+    else: status_msg = "Successfully synced."
+    notify_payload = { 
+        "status": status_msg, 
+        "failures": next_sync_failures, 
+        "success": { "projects": next_sync_success }
+    }
+    notify(options.env, APP_NAME, notify_payload)
+
     log.warning("Successfully synced. End of adwords sync job.")
     sys.exit(0)
 
