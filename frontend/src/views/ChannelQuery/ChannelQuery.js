@@ -1,11 +1,13 @@
 import React, { Component } from 'react';
 import Select from 'react-select';
 import CreatableSelect from 'react-select/lib/Creatable';
-import { Button, Row, Col } from 'reactstrap';
+import { Button, Row, Col, DropdownItem, ButtonDropdown, 
+  DropdownToggle, DropdownMenu, Modal, ModalHeader, 
+  ModalBody, ModalFooter, Input } from 'reactstrap';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import 'react-date-range/dist/styles.css';
-import 'react-date-range/dist/theme/default.css';
+import 'react-date-range/dist/theme/default.css'; 
 import moment from 'moment';
 
 import { runChannelQuery, fetchChannelFilterValues } from '../../actions/projectsActions';
@@ -34,6 +36,7 @@ const LABEL_STYLE = { marginRight: '10px', fontWeight: '600', color: '#777' };
 const mapStateToProps = store => {
   return { 
     currentProjectId: store.projects.currentProjectId,
+    dashboards: store.dashboards.dashboards,
     channelFilterValues: store.projects.channelFilterValues,
   }
 }
@@ -61,11 +64,18 @@ class ChannelQuery extends Component {
       resultMetricsBreakdown: null,
       resultMeta: null,
       topError: null,
+
+      showDashboardsList: false,
+      showAddToDashboardModal: false,
+      addToDashboardMessage: null,
+      selectedDashboardId: null,
+      addToDashboardMetricUnits: [],
+      addToDashboardMeticBreakdown: false,
     }
   }
   // Returns: 20191026
   getDateOnlyTimestamp(datetime) {
-    return parseInt(moment(datetime).format('YYYYMMDD'));
+    return parseInt(moment(datetime).format('YYYYMMDD')); 
   }
 
   getDisplayMetricsBreakdown(metricsBreakdown) {
@@ -108,6 +118,9 @@ class ChannelQuery extends Component {
           this.setState({ present: true,
             resultMetricsBreakdown: this.getDisplayMetricsBreakdown(r.data.metrics_breakdown) });
       });
+
+    // reset the add to dashbaord units as result changes.
+    this.setState({ addToDashboardMetricUnits: [] });
   }
 
   getSnakeToReadableKey(k) { 
@@ -136,19 +149,44 @@ class ChannelQuery extends Component {
     return rValue;
   }
 
-  presentMetrics() {
+  onSelectMetricUnitAddToDashboard = (k) => {
+    let selectedUnits = [ ...this.state.addToDashboardMetricUnits ];
+
+    if (!this.isMetricUnitAddedToDashboard(k)) {
+      // add if not exist.
+      selectedUnits.push(k);
+    } else {
+      // remove if key exists.
+      selectedUnits.splice(selectedUnits.indexOf(k), 1)
+    }
+    
+    this.setState({ addToDashboardMetricUnits: selectedUnits });
+  }
+
+  isMetricUnitAddedToDashboard(k) {
+    return this.state.addToDashboardMetricUnits.indexOf(k) > -1;
+  }
+
+  presentMetrics(addToDashboard) {
     let widgets = [];
 
     for (let k in this.state.resultMetrics) {      
       widgets.push(
         <Col md={3} style={{ padding: '0 15px', marginTop: '30px'}}>
-          <div style={{ border: '1px solid #AAA', padding: '35px' }}>
-            <span style={{display: 'block', textAlign: 'center', fontSize: '18px', marginBottom: '15px'}}> 
-              { this.getSnakeToReadableKey(k) } 
-            </span>
-            <span style={{display: 'block', textAlign: 'center', fontSize: '20px', fontWeight: '500' }}> 
-              { this.getReadableMetricValue(k, this.state.resultMetrics[k]) } 
-            </span>
+          <div style={{ border: '1px solid #AAA' }}>
+
+            { addToDashboard ? <div style={{ textAlign: "right", padding: "5px" }} >
+              <Input onChange={() => this.onSelectMetricUnitAddToDashboard(k)} 
+              checked={this.isMetricUnitAddedToDashboard(k)} type="checkbox"/></div> : null } 
+
+            <div style={{ padding: '35px' }}>
+              <span style={{display: 'block', textAlign: 'center', fontSize: '18px', marginBottom: '15px'}}> 
+                { this.getSnakeToReadableKey(k) } 
+              </span>
+              <span style={{display: 'block', textAlign: 'center', fontSize: '20px', fontWeight: '500' }}> 
+                { this.getReadableMetricValue(k, this.state.resultMetrics[k]) } 
+              </span>
+            </div>
           </div>
         </Col>
       );
@@ -157,7 +195,11 @@ class ChannelQuery extends Component {
     return widgets;
   }
 
-  presentMetricsBreakdown() {
+  onSelectMetricBreakdownAddToDashboard = () => {
+    this.setState({ addToDashboardMeticBreakdown: !this.state.addToDashboardMeticBreakdown });
+  }
+
+  presentMetricsBreakdown(addToDashboard) {
     if (!this.state.resultMetricsBreakdown ||  !this.state.resultMetricsBreakdown.headers ||
       !this.state.resultMetricsBreakdown.rows) return;
 
@@ -171,7 +213,18 @@ class ChannelQuery extends Component {
     }
 
     return <Col md={12} style={{ marginTop: '50px' }}>
-      <TableChart bigWidthUptoCols={1} queryResult={resultMetricsBreakdown} />
+      { 
+        addToDashboard ? <Row >
+          <Col md={12}>
+            <div style={{ background: '#EBEDFD', width: '100%', height:'25px', 
+              textAlign: 'right', paddingRight: '5px', paddingTop: '5px' }}>
+              <Input onChange={this.onSelectMetricBreakdownAddToDashboard} 
+                checked={this.state.addToDashboardMeticBreakdown} type='checkbox' />
+            </div>
+          </Col>
+        </Row> : null
+      }
+      <Row><Col md={12}><TableChart bigWidthUptoCols={1} queryResult={resultMetricsBreakdown} /></Col></Row>
     </Col>;
   }
 
@@ -224,6 +277,57 @@ class ChannelQuery extends Component {
 
   onChannelFilterValueChange = (value) => {
     this.setState({ filterValue: value });
+  }
+
+  renderDashboardDropdownOptions() {
+    let dashboardsDropdown = [];
+    for(let i=0; i<this.props.dashboards.length; i++){
+      let dashboard = this.props.dashboards[i];
+      if (dashboard) {
+        dashboardsDropdown.push(
+          <DropdownItem onClick={this.selectDashboardToAdd} 
+            value={dashboard.id}>{dashboard.name}</DropdownItem>
+        )
+      }
+    }
+    
+    return dashboardsDropdown;
+  }
+
+  toggleDashboardsList = () => {
+    this.setState({ showDashboardsList: !this.state.showDashboardsList });
+  }
+
+  toggleAddToDashboardModal = () =>  {
+    this.setState({ showAddToDashboardModal: !this.state.showAddToDashboardModal, addToDashboardMessage: null });
+  }
+
+  selectDashboardToAdd = (event) => {
+    let dashboardId = event.currentTarget.getAttribute('value');
+    this.setState({ selectedDashboardId: dashboardId })
+    this.toggleAddToDashboardModal();
+  }
+
+  renderAddToDashboardModal() {
+    return (
+      <Modal isOpen={this.state.showAddToDashboardModal} toggle={this.toggleAddToDashboardModal} style={{ marginTop: "3rem", minWidth: "80rem" }}>
+        <ModalHeader toggle={this.toggleAddToDashboardModal}>Add to Dashboard</ModalHeader>
+        <ModalBody style={{padding: '25px 35px'}}>
+          <Row> { this.presentMetrics(true) } </Row>
+          <Row> { this.presentMetricsBreakdown(true) } </Row>
+        </ModalBody>
+        <ModalFooter style={{borderTop: 'none', paddingBottom: '30px', paddingRight: '35px'}}>
+          <Button outline color="success" onClick={this.addToDashboard}>Add</Button>
+          <Button outline color='danger' onClick={this.toggleAddToDashboardModal}>Cancel</Button>
+        </ModalFooter>
+      </Modal>
+    );
+  }
+
+  addToDashboard = () => {
+    // Todo: build query for dashboard units from this.
+    console.log(this.state.addToDashboardMetricUnits);
+    console.log(this.state.addToDashboardMeticBreakdown);
   }
 
   render() {
@@ -319,13 +423,28 @@ class ChannelQuery extends Component {
         </Button>
       </div>
 
-      <div hidden={!this.state.present} style={{borderTop: '1px solid rgb(221, 221, 221)', paddingTop: '20px', 
+      <div hidden={!this.state.present} style={{borderTop: '1px solid rgb(221, 221, 221)', 
         marginTop: '30px', marginLeft: '-60px', marginRight: '-60px'}}></div>
 
       {/* presentation */}
       <div style={{ paddingLeft: '30px', paddingRight: '30px', paddingTop: '10px', minHeight: '500px' }}>
+        <Row style={{ marginTop: '15px', marginRight: '10px' }} hidden={ !this.state.present }>
+          <Col xs='12' md='12'>
+            <ButtonDropdown style={{ float: 'right', marginRight: '-20px' }} 
+              isOpen={this.state.showDashboardsList} toggle={this.toggleDashboardsList}> 
+              <DropdownToggle caret outline color="primary">
+                Add to dashboard
+              </DropdownToggle>
+              <DropdownMenu style={{ height: 'auto', maxHeight: '210px', overflowX: 'scroll' }} right>
+                { this.renderDashboardDropdownOptions() }
+              </DropdownMenu>
+            </ButtonDropdown>
+          </Col>
+        </Row>
         <Row> { this.presentMetrics() } </Row>
         <Row> { this.presentMetricsBreakdown() } </Row>
+
+        { this.renderAddToDashboardModal() }
       </div>
 
     </div>
