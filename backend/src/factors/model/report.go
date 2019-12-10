@@ -90,6 +90,7 @@ const (
 var dashBoardUnitTypesToIncludeInReport = []string{
 	PresentationLine,
 	PresentationBar,
+	PresentationTable,
 	PresentationCard,
 	PresentationFunnel,
 }
@@ -576,6 +577,61 @@ func addExplanationsForPresentationBar(duReport *DashboardUnitReport, reportType
 	duReport.Explanations = explanations
 }
 
+func addExplanationsForPresentationTable(duReport *DashboardUnitReport, reportType string) {
+	prevResult := duReport.Results[0].QueryResult
+	curResult := duReport.Results[1].QueryResult
+	resultEntity := getEntityFromQueryType(duReport.Results[1].QueryResult.Meta.Query.Type)
+
+	fromPeriod := getReadableIntervalByType(duReport.Results[0].StartTime,
+		duReport.Results[0].EndTime, reportType)
+	toPeriod := getReadableIntervalByType(duReport.Results[1].StartTime,
+		duReport.Results[1].EndTime, reportType)
+
+	uniqueGroupsSet := make(map[string]bool)
+	prevAggrByGroup, prevResultTotal, prevResultGroupName := getAggrByGroup(&prevResult, &uniqueGroupsSet)
+	curAggrByGroup, curResultTotal, curResultGroupName := getAggrByGroup(&curResult, &uniqueGroupsSet)
+
+	if prevResultGroupName != curResultGroupName {
+		log.WithFields(log.Fields{"prev_group_name": prevResultGroupName,
+			"cur_group_name": curResultGroupName}).Error("Group name on reports query results are not mathcing.")
+	}
+
+	explanations := make([]string, 0, 0)
+	percentChange, totalEffect := getPercentageChange(prevResultTotal, curResultTotal)
+	duReport.ChangeInPercentage = percentChange
+
+	explanations = append(explanations, explainTotalChange(percentChange, totalEffect,
+		duReport.Title, fromPeriod, toPeriod, reportType))
+
+	secExplanations := make([]ReportExplanation, 0, 0)
+	for group := range uniqueGroupsSet {
+		var prevAggr, curAggr float64
+
+		if _, exists := prevAggrByGroup[group]; exists {
+			prevAggr = prevAggrByGroup[group]
+		}
+
+		if _, exists := curAggrByGroup[group]; exists {
+			curAggr = curAggrByGroup[group]
+		}
+
+		percentChange, effect := getPercentageChange(prevAggr, curAggr)
+		if percentChange >= 5.0 && effect == totalEffect {
+			secExplanations = append(secExplanations,
+				ReportExplanation{Type: resultEntity, Percentage: percentChange, Effect: effect,
+					GroupName: curResultGroupName, GroupValue: group, Diff: getPositiveDiff(prevAggr, curAggr),
+					CurValue: curAggr, PrevValue: prevAggr})
+		}
+	}
+
+	secExplanations = sortAndLimitExplanations(secExplanations)
+	for _, explanation := range secExplanations {
+		explanations = append(explanations, explainChange(&explanation))
+	}
+
+	duReport.Explanations = explanations
+}
+
 func getAggrAsFloat64(aggr interface{}) (float64, error) {
 	switch aggr.(type) {
 	case int:
@@ -855,6 +911,8 @@ func addExplanationsByPresentation(duReport DashboardUnitReport, reportType stri
 		addExplanationsForPresentationCard(&duReport, reportType)
 	case PresentationBar:
 		addExplanationsForPresentationBar(&duReport, reportType)
+	case PresentationTable:
+		addExplanationsForPresentationTable(&duReport, reportType)
 	case PresentationLine:
 		addExplanationsForPresentationLine(&duReport, reportType)
 	case PresentationFunnel:

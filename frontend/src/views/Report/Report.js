@@ -15,8 +15,9 @@ import { fetchReport } from '../../actions/reportActions';
 import LineChart from '../Query/LineChart';
 import BarChart from '../Query/BarChart';
 import FunnelChart from '../Query/FunnelChart';
+import TableChart from '../Query/TableChart';
 import { PRESENTATION_LINE, PRESENTATION_CARD, 
-  PRESENTATION_BAR, PRESENTATION_FUNNEL } from '../Query/common';
+  PRESENTATION_BAR, PRESENTATION_TABLE, PRESENTATION_FUNNEL } from '../Query/common';
 import Loading from '../../loading';
 
 const mapStateToProps = store => {
@@ -63,6 +64,30 @@ const BarUnit = (props) => {
           <BarChart
             queryResultLabel={readableTimstamp(intervalBefore.st) + " - " + readableTimstamp(intervalBefore.et)}
             queryResult={intervalBefore.qr}
+            compareWithQueryResultLabel={readableTimstamp(interval.st) + " - " + readableTimstamp(interval.et)}
+            compareWithQueryResult={interval.qr}
+          />
+        </div>
+      </CardBody>
+    </Card>
+  );
+}
+
+const TableUnit = (props) => {
+  let interval =  props.interval;
+  let intervalBefore = props.intervalBeforeThat ;
+
+  return (
+    <Card className='fapp-report-card'>
+      <CardHeader>
+        <strong>{props.name}</strong>
+      </CardHeader>
+      <CardTitle> { renderExplanations(props.explanations) } </CardTitle>
+      <CardBody>
+        <div style={{ padding: '0', 'overflowX': 'scroll' }}>
+          <TableChart
+            queryResult={intervalBefore.qr}
+            queryResultLabel={readableTimstamp(intervalBefore.st) + " - " + readableTimstamp(intervalBefore.et)}
             compareWithQueryResultLabel={readableTimstamp(interval.st) + " - " + readableTimstamp(interval.et)}
             compareWithQueryResult={interval.qr}
           />
@@ -188,6 +213,8 @@ class Report extends Component {
           reportUnits.push(<LineUnit name={unit.t} intervalBeforeThat={unit.r[0]} interval={unit.r[1]} explanations={unit.e} />);
         } else if(unit.p === PRESENTATION_BAR){
           reportUnits.push(<BarUnit name={unit.t} intervalBeforeThat={unit.r[0]} interval={unit.r[1]} explanations={unit.e} />);
+        } else if (unit.p === PRESENTATION_TABLE) {
+          reportUnits.push(<TableUnit name={unit.t} intervalBeforeThat={unit.r[0]} interval={unit.r[1]} explanations={unit.e} />);
         } else if(unit.p === PRESENTATION_FUNNEL) {
           reportUnits.push(<FunnelUnit name={unit.t} intervalBeforeThat={unit.r[0]} interval={unit.r[1]} explanations={unit.e} />);
         }

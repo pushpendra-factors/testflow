@@ -13,16 +13,36 @@ class TableChart extends Component {
 
     let result = this.props.queryResult;
     let cardable = this.props.card && isSingleCountResult(result);
-    let headers = result.headers.map((h, i) => {
-      let style = cardable ? { border: 'none', fontSize: '40px', padding: '0' } : null;
-      return <th style={style} key={'header_'+i}>{ h }</th> 
-    });
-
-    return (
-      <thead>
-        <tr> { headers } </tr>
-      </thead>
-    );
+    if (this.props.compareWithQueryResult) {
+      // For reports. Tables with comparision.
+      var headerCols = [];
+      for (var i = 0; i < result.headers.length - 1; i++) {
+        headerCols.push(
+          <th>{result.headers[i]}</th>
+        )
+      }
+      headerCols.push(
+        <th>{result.headers[result.headers.length - 1] + ' for ' + this.props.queryResultLabel }</th>
+      )
+      headerCols.push(
+        <th>{result.headers[result.headers.length - 1] + ' for ' + this.props.compareWithQueryResultLabel }</th>
+      )
+      return (
+        <thead>
+          {headerCols}
+        </thead>
+      );
+    } else {
+      let headers = result.headers.map((h, i) => {
+        let style = cardable ? { border: 'none', fontSize: '40px', padding: '0' } : null;
+        return <th style={style} key={'header_'+i}>{ h }</th> 
+      });
+      return (
+        <thead>
+          <tr> { headers } </tr>
+        </thead>
+      );
+    }
   }
 
   getCountStyleByProps() {
@@ -61,6 +81,14 @@ class TableChart extends Component {
           let maxWidth = (this.props.bigWidthUptoCols && i < this.props.bigWidthUptoCols) ? null : '40px';
           return <td style={{ maxWidth: maxWidth, overflowWrap: 'break-word' }}> { c } </td> 
         });
+        if (this.props.compareWithQueryResult) {
+          let compareCols = this.props.compareWithQueryResult.rows[i.toString()];
+          // Remove max width to allow larger col size for upto given initial no.of cols.
+          let maxWidth = (this.props.bigWidthUptoCols && i < this.props.bigWidthUptoCols) ? null : '40px';
+          tds.push(
+            <td style={{ maxWidth: maxWidth, overflowWrap: 'break-word' }}> { compareCols[compareCols.length - 1] } </td>
+          );
+        }
         rows.push(<tr> { tds } </tr>);
       }
     }
