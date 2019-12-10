@@ -60,6 +60,8 @@ func isValidDashboardUnit(dashboardUnit *DashboardUnit) (bool, string) {
 		return false, "Invalid presentation"
 	}
 
+	// Todo(Dinesh): Validate query based on query class here.
+
 	return true, ""
 }
 
@@ -181,7 +183,9 @@ func DeleteDashboardUnit(projectId uint64, agentUUID string, dashboardId uint64,
 	if errCode != http.StatusAccepted {
 		errMsg := "Failed remove position for unit on dashboard."
 		log.WithFields(log.Fields{"project_id": projectId, "unitId": id}).Error(errMsg)
-		return http.StatusInternalServerError
+		// log error and continue to delete dashboard unit.
+		// To avoid improper experience.
+		return http.StatusAccepted
 	}
 
 	return http.StatusAccepted

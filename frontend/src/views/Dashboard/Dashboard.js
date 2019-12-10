@@ -259,7 +259,26 @@ class Dashboard extends Component {
     if (!dashboard.units_position || !dashboard.units_position[unitType]) 
       return this.getInitialPositionFromOrderOfUnits(unitType);
 
-    return dashboard['units_position'][unitType];
+    let positions = dashboard['units_position'][unitType];
+    let maxPosition = 0;
+
+    // add units without position to the last and 
+    // allow user to re-position.
+    for (let k in positions) {
+      if (positions[k] > maxPosition) 
+        maxPosition = positions[k]; 
+    }
+
+    let pDashUnits = this.props.dashboardUnits;
+    for (let i=0; i < pDashUnits.length; i++) {
+      let pUnit = pDashUnits[i];
+      if (positions[pUnit.id] == null || positions[pUnit.id] == undefined) {
+        maxPosition = maxPosition + 1;
+        positions[pUnit.id] = maxPosition;
+      }
+    }
+
+    return positions;
   }
   
   renderDashboard() {
