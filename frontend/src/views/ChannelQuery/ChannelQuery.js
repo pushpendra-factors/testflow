@@ -11,11 +11,16 @@ import 'react-date-range/dist/theme/default.css';
 import moment from 'moment';
 
 import { runChannelQuery, fetchChannelFilterValues } from '../../actions/projectsActions';
+import { createDashboardUnit } from '../../actions/dashboardActions'
 import { DEFAULT_DATE_RANGE, DEFINED_DATE_RANGES, 
-  readableDateRange } from '../Query/common';
+  readableDateRange, 
+  PRESENTATION_CARD,
+  PRESENTATION_TABLE,
+  QUERY_CLASS_CHANNEL} from '../Query/common';
 import ClosableDateRangePicker from '../../common/ClosableDatePicker';
 import { makeSelectOpts } from '../../util';
 import TableChart from '../Query/TableChart';
+import { getReadableChannelMetricValue } from './common'
 
 const CHANNEL_GOOGLE_ADS = { label: 'Google Ads', value: 'google_ads' }
 const CHANNEL_OPTS = [CHANNEL_GOOGLE_ADS]
@@ -44,6 +49,7 @@ const mapStateToProps = store => {
 const mapDispatchToProps = dispatch => {
   return bindActionCreators({
     fetchChannelFilterValues,
+    createDashboardUnit,
   }, dispatch)
 }
 
@@ -73,6 +79,7 @@ class ChannelQuery extends Component {
       addToDashboardMeticBreakdown: false,
     }
   }
+
   // Returns: 20191026
   getDateOnlyTimestamp(datetime) {
     return parseInt(moment(datetime).format('YYYYMMDD')); 
@@ -88,7 +95,7 @@ class ChannelQuery extends Component {
     return result;
   }
 
-  runQuery = () => {
+  getQuery = () => {
     let query = {};
     query.channel = this.state.channel.value;
     query.filter_key = this.state.filterKey.value;
@@ -98,7 +105,12 @@ class ChannelQuery extends Component {
 
     if (this.state.breakdownKey.value != "none") 
       query.breakdown = this.state.breakdownKey.value;
+    
+    return query
+  }
 
+  runQuery = () => {
+    let query = this.getQuery();
     runChannelQuery(this.props.currentProjectId, query)
       .then((r) => {
         if (!r.ok) {
@@ -133,22 +145,6 @@ class ChannelQuery extends Component {
     return key
   }
 
-  getReadableMetricValue(key, value) {
-    if (value == null || value == undefined) return 0;
-    if (typeof(value) != "number") return value;
-
-    let rValue = value;
-    let isFloat = (value % 1) > 0
-    if (isFloat) rValue = value.toFixed(2);
-
-    if (this.state.resultMeta && 
-      this.state.resultMeta.currency && 
-      key.toLowerCase().indexOf('cost') > -1)
-      rValue = rValue + ' ' + this.state.resultMeta.currency;
-
-    return rValue;
-  }
-
   onSelectMetricUnitAddToDashboard = (k) => {
     let selectedUnits = [ ...this.state.addToDashboardMetricUnits ];
 
@@ -170,6 +166,10 @@ class ChannelQuery extends Component {
   presentMetrics(addToDashboard) {
     let widgets = [];
 
+    // Todo: Re-order metrics widget by preferred order of metrics, 
+    // clicks, impressions, conversions, conversion_rate, total_cost, 
+    // cost_per_click, cost_per_conversion
+
     for (let k in this.state.resultMetrics) {      
       widgets.push(
         <Col md={3} style={{ padding: '0 15px', marginTop: '30px'}}>
@@ -184,7 +184,7 @@ class ChannelQuery extends Component {
                 { this.getSnakeToReadableKey(k) } 
               </span>
               <span style={{display: 'block', textAlign: 'center', fontSize: '20px', fontWeight: '500' }}> 
-                { this.getReadableMetricValue(k, this.state.resultMetrics[k]) } 
+                { getReadableChannelMetricValue(k, this.state.resultMetrics[k], this.state.resultMeta) } 
               </span>
             </div>
           </div>
@@ -207,8 +207,8 @@ class ChannelQuery extends Component {
     for (let ri=0; ri < resultMetricsBreakdown.rows.length; ri++ ) {
       for (let ci=0; ci < resultMetricsBreakdown.rows[ri].length; ci++) {
         let key = resultMetricsBreakdown.headers[ci];
-        resultMetricsBreakdown.rows[ri][ci] = this.getReadableMetricValue(key, 
-          resultMetricsBreakdown.rows[ri][ci]);
+        resultMetricsBreakdown.rows[ri][ci] = getReadableChannelMetricValue(key, 
+          resultMetricsBreakdown.rows[ri][ci], this.state.resultMeta);
       }
     }
 
@@ -325,9 +325,46 @@ class ChannelQuery extends Component {
   }
 
   addToDashboard = () => {
-    // Todo: build query for dashboard units from this.
-    console.log(this.state.addToDashboardMetricUnits);
-    console.log(this.state.addToDashboardMeticBreakdown);
+    let queryUnit = {};
+    queryUnit.cl = QUERY_CLASS_CHANNEL;
+    queryUnit.query = this.getQuery();;
+
+    // add individual dashboard unit for each selected key.
+    for (let i=0; i < this.state.addToDashboardMetricUnits.length; i++) {
+      let metricQueryUnit = { ...queryUnit };
+      metricQueryUnit.meta = { metric: this.state.addToDashboardMetricUnits[i] };
+
+
+      let title = this.getSnakeToReadableKey(this.state.addToDashboardMetricUnits[i]);
+      let payload = {
+        presentation: PRESENTATION_CARD,
+        query: metricQueryUnit,
+        title: title,
+      };
+
+      this.props.createDashboardUnit(this.props.currentProjectId, 
+        this.state.selectedDashboardId, payload)
+        .then(() => { this.toggleAddToDashboardModal() })
+        .catch(() => console.error("Failed adding to channel metric to dashboard."))
+    }
+
+    // add metric breakdown to dashboard only if selected.
+    if (this.state.addToDashboardMeticBreakdown) {
+      let metricBreakdownQueryUnit = { ...queryUnit };
+      metricBreakdownQueryUnit.meta = { metrics_breakdown: true };
+
+      let title = "Google Ads: Metrics by " + queryUnit.query.breakdown;
+      let payload = {
+        presentation: PRESENTATION_TABLE,
+        query: metricBreakdownQueryUnit,
+        title: title,
+      };
+
+      this.props.createDashboardUnit(this.props.currentProjectId, 
+        this.state.selectedDashboardId, payload)
+        .then(() => { this.toggleAddToDashboardModal() })
+        .catch(() => console.error("Failed adding to channel metrics breakdown to dashboard."))
+    }
   }
 
   render() {

@@ -5,7 +5,7 @@ import { Card, CardHeader, CardBody, Modal, ModalBody } from 'reactstrap';
 import { Redirect } from 'react-router-dom';
 import moment from 'moment';
 
-import { runQuery, viewQuery } from '../../actions/projectsActions';
+import { runQuery, viewQuery, runChannelQuery } from '../../actions/projectsActions';
 import { deleteDashboardUnit, updateDashboardUnit } from '../../actions/dashboardActions';
 import Loading from '../../loading';
 import BarChart from '../Query/BarChart';
@@ -15,10 +15,12 @@ import {
   PRESENTATION_BAR, PRESENTATION_LINE, 
   PRESENTATION_TABLE, PRESENTATION_CARD, 
   PRESENTATION_FUNNEL, PROPERTY_VALUE_TYPE_DATE_TIME, 
-  PROPERTY_KEY_JOIN_TIME, getGroupByTimestampType, 
+  PROPERTY_KEY_JOIN_TIME, getGroupByTimestampType,
+  QUERY_CLASS_CHANNEL
 } from '../Query/common';
 import { slideUnixTimeWindowToCurrentTime, getTimezoneString } from '../../util';
 import FunnelChart from '../Query/FunnelChart';
+import { getReadableChannelMetricValue } from '../ChannelQuery/common';
 
 const LINE_LEGEND_DISPLAY_LIMIT = 10;
 const CARD_FONT_COLOR = '#FFF';
@@ -104,7 +106,7 @@ class DashboardUnit extends Component {
     query.to = to; // in utc.
   }
 
-  execQuery() {
+  execAnalyticsQuery() {
     this.setState({ loading: true });
     
     let query = this.props.data.query;
@@ -149,7 +151,41 @@ class DashboardUnit extends Component {
       .catch(console.error);
   }
 
-  componentWillMount() {
+  execChannelAnalyticsQuery() {
+    this.setState({ loading: true });
+
+    runChannelQuery(this.props.currentProjectId, this.props.data.query.query)
+      .then((r) => {
+        if (this.props.data.presentation == PRESENTATION_CARD) {
+          // select the value of the metric key to show on card.
+          let key = this.props.data.query.meta.metric;
+          let value = r.data.metrics[key];
+          if (value == null) value = 0;
+          value = getReadableChannelMetricValue(key, value, r.data.meta);
+          this.setState({ loading: false });
+          this.setPresentationProps({ headers: [], rows: [[value]] });
+          return
+        }
+
+        if (this.props.data.presentation == PRESENTATION_TABLE) {
+          this.setState({ loading: false });
+          this.setPresentationProps(r.data.metrics_breakdown);
+          return
+        }
+
+        console.error("Invalid presentation for channel query.")
+      })
+      .catch(console.error);
+  }
+
+  execQuery() {
+    if (this.props.data.query.cl == QUERY_CLASS_CHANNEL) 
+      this.execChannelAnalyticsQuery();
+    else 
+      this.execAnalyticsQuery();
+  }
+
+  componentWillMount() { 
     this.execQuery();
   }
 

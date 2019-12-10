@@ -32,6 +32,14 @@ type ChannelQueryResult struct {
 	Meta             *ChannelQueryResultMeta `json:"meta"`
 }
 
+type ChannelQueryUnit struct {
+	// Json tag should match with Query's class,
+	// query dispatched based on this.
+	Class string                  `json:"cl"`
+	Query *ChannelQuery           `json:"query"`
+	Meta  *map[string]interface{} `json:"meta"`
+}
+
 const CAChannelGoogleAds = "google_ads"
 const CAChannelGroupKey = "group_key"
 

@@ -20,6 +20,8 @@ export const PROPERTY_LOGICAL_OP_OPTS = {
   'OR': 'or',
 }; 
 
+export const QUERY_CLASS_CHANNEL = "channel";
+
 export const PROPERTY_VALUE_TYPE_DATE_TIME = 'datetime';
 
 export const USER_PREF_PROPERTY_TYPE_OPTS = {

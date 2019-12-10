@@ -53,11 +53,11 @@ const LABEL_STYLE = { marginRight: '10px', fontWeight: '600', color: '#777' };
 
 const QUERY_CLASS_INSIGHTS = 'insights';
 const QUERY_CLASS_FUNNEL = 'funnel';
-const QUERY_CLASS_CHANNEL_REPORTS = 'channel'
+const QUERY_CLASS_CHANNEL = 'channel'
 const QUERY_CLASS_OPTS = [
   { value: QUERY_CLASS_INSIGHTS, label: 'Insights' },
   { value: QUERY_CLASS_FUNNEL, label: 'Funnel' },
-  { value: QUERY_CLASS_CHANNEL_REPORTS, label: 'Channel' }
+  { value: QUERY_CLASS_CHANNEL, label: 'Channel' }
 ];
 
 const TYPE_EVENT_OCCURRENCE = 'events_occurrence';
@@ -1027,8 +1027,8 @@ class Query extends Component {
               <img src={funnelSVG} style={{ marginRight: '5px', marginBottom: '2px', height: '25px' }} /> 
               <span className='fapp-text'> Funnel </span> 
             </div>
-            <div onClick={() => this.handleClassChange({ value: QUERY_CLASS_CHANNEL_REPORTS })} 
-              style={this.getInterfaceSelectorStyle(QUERY_CLASS_CHANNEL_REPORTS)}>
+            <div onClick={() => this.handleClassChange({ value: QUERY_CLASS_CHANNEL })} 
+              style={this.getInterfaceSelectorStyle(QUERY_CLASS_CHANNEL)}>
               <img src={channelSVG} style={{ height: '26px' }} /> 
               <span style={{ marginLeft: '5px' }} className='fapp-text'> Channels </span> 
             </div>
@@ -1132,7 +1132,7 @@ class Query extends Component {
       renderQueryInterface = this.renderFunnelQueryInterface;
     }
 
-    if (this.state.class.value == QUERY_CLASS_CHANNEL_REPORTS) {
+    if (this.state.class.value == QUERY_CLASS_CHANNEL) {
       renderQueryInterface = this.renderChannelReportsInterface;
     }
 
