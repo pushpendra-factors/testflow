@@ -8,20 +8,17 @@ import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import 'react-date-range/dist/styles.css';
 import 'react-date-range/dist/theme/default.css'; 
-import moment from 'moment';
 
 import { runChannelQuery, fetchChannelFilterValues } from '../../actions/projectsActions';
 import { createDashboardUnit } from '../../actions/dashboardActions'
 import { DEFAULT_DATE_RANGE, DEFINED_DATE_RANGES, 
-  readableDateRange, 
-  PRESENTATION_CARD,
-  PRESENTATION_TABLE,
-  QUERY_CLASS_CHANNEL,
-  getQueryPeriod} from '../Query/common';
+  readableDateRange, PRESENTATION_CARD, PRESENTATION_TABLE,
+  QUERY_CLASS_CHANNEL, getQueryPeriod} from '../Query/common';
 import ClosableDateRangePicker from '../../common/ClosableDatePicker';
 import { makeSelectOpts, getReadableKeyFromSnakeKey } from '../../util';
 import TableChart from '../Query/TableChart';
-import { getReadableChannelMetricValue } from './common'
+import { getReadableChannelMetricValue } from './common';
+import Loading from '../../loading';
 
 const CHANNEL_METRIC_ORDER = [ "clicks", "impressions", "conversions", 
 "conversion_rate", "total_cost", "cost_per_click", "cost_per_conversion" ]
@@ -76,6 +73,7 @@ class ChannelQuery extends Component {
       isFilterValuesLoading: false,
       breakdownKey: NONE_OPT,
 
+      isPresentationLoading: false,
       present: false,
       resultMetrics: {},
       resultMetricsBreakdown: null,
@@ -118,6 +116,8 @@ class ChannelQuery extends Component {
   }
 
   runQuery = () => {
+    this.setState({ isPresentationLoading: true });
+
     let query = this.getQuery();
     runChannelQuery(this.props.currentProjectId, query)
       .then((r) => {
@@ -137,6 +137,8 @@ class ChannelQuery extends Component {
         if (r.data.metrics_breakdown)
           this.setState({ present: true,
             resultMetricsBreakdown: this.getDisplayMetricsBreakdown(r.data.metrics_breakdown) });
+
+        this.setState({ isPresentationLoading: false });
       });
 
     // reset the add to dashbaord units as result changes.
@@ -285,7 +287,8 @@ class ChannelQuery extends Component {
 
   getChannelFilterValuesOpts() {
     if (!this.isChannelFilterValuesExists()) return [ALL_OPT];
-    let valueOpts = makeSelectOpts(this.props.channelFilterValues[this.state.channel.value][this.state.filterKey.value]);
+    let valueOpts = makeSelectOpts(
+      this.props.channelFilterValues[this.state.channel.value][this.state.filterKey.value]);
     valueOpts.unshift(ALL_OPT);
     return valueOpts;
   }
@@ -325,7 +328,8 @@ class ChannelQuery extends Component {
 
   renderAddToDashboardModal() {
     return (
-      <Modal isOpen={this.state.showAddToDashboardModal} toggle={this.toggleAddToDashboardModal} style={{ marginTop: "3rem", minWidth: "80rem" }}>
+      <Modal isOpen={this.state.showAddToDashboardModal} toggle={this.toggleAddToDashboardModal} 
+        style={{ marginTop: "3rem", minWidth: "80rem" }}>
         <ModalHeader toggle={this.toggleAddToDashboardModal}>Add to Dashboard</ModalHeader>
         <ModalBody style={{padding: '25px 35px'}}>
           <Row> { this.presentMetrics(true) } </Row>
@@ -398,7 +402,8 @@ class ChannelQuery extends Component {
         <Col xs='12' md='12'>
           <span style={LABEL_STYLE}>Filter by</span>
           <div className='fapp-select light' style={{ display: 'inline-block', width: '200px', marginRight: '15px' }}>
-            <Select value={this.state.filterKey} onChange={this.handleFilterKeyChange} options={FILTER_KEY_OPTS} placeholder='Filter'/>
+            <Select value={this.state.filterKey} onChange={this.handleFilterKeyChange} 
+              options={FILTER_KEY_OPTS} placeholder='Filter'/>
           </div>
           <div className='fapp-select light' style={{ display: 'inline-block', width: '275px' }}>
             <CreatableSelect 
@@ -472,8 +477,12 @@ class ChannelQuery extends Component {
             </ButtonDropdown>
           </Col>
         </Row>
-        <Row> { this.presentMetrics() } </Row>
-        <Row> { this.presentMetricsBreakdown() } </Row>
+
+        { this.state.isPresentationLoading ? <Loading paddingTop='12%' /> : null }
+        <div className='animated fadeIn' hidden={this.state.isPresentationLoading}>
+          <Row> { this.presentMetrics() } </Row>
+          <Row> { this.presentMetricsBreakdown() } </Row>
+        </div>
 
         { this.renderAddToDashboardModal() }
       </div>
