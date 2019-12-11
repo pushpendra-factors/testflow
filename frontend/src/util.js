@@ -154,3 +154,13 @@ export function isTokenLogin() {
     let loginToken = getLoginToken();
     return loginToken && loginToken != '';
 }
+
+export function getReadableKeyFromSnakeKey(k) { 
+    let kSplits = k.split('_');
+
+    let key = '';
+    for (let i=0; i<kSplits.length; i++)
+      key = key + ' ' + kSplits[i].charAt(0).toUpperCase() + kSplits[i].slice(1);
+    
+    return key
+  }

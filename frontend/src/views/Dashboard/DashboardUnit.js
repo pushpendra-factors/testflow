@@ -19,7 +19,8 @@ import {
   QUERY_CLASS_CHANNEL,
   getQueryPeriod
 } from '../Query/common';
-import { slideUnixTimeWindowToCurrentTime, getTimezoneString } from '../../util';
+import { slideUnixTimeWindowToCurrentTime, getTimezoneString, 
+  getReadableKeyFromSnakeKey } from '../../util';
 import FunnelChart from '../Query/FunnelChart';
 import { getReadableChannelMetricValue } from '../ChannelQuery/common';
 
@@ -373,7 +374,20 @@ class DashboardUnit extends Component {
 
   toggleFullScreen = () => {
     this.setState({ fullScreen: !this.state.fullScreen });
-  } 
+  }
+
+  renderChannelTag() {
+    if (!this.isCard()) return null;
+    // show channel name only for channel query class.
+    if (!this.props.data || !this.props.data.query ||!this.props.data.query.cl || 
+      this.props.data.query.cl != QUERY_CLASS_CHANNEL ) return null;
+    // channel name not exist.
+    if (!this.props.data.query.query || !this.props.data.query.query.channel) return null;
+
+    return <div style={{ float: 'left', fontSize: '11px', fontWeight: '700' }}> 
+      { getReadableKeyFromSnakeKey(this.props.data.query.query.channel) } 
+    </div>;
+  }
 
   render() {
     if (this.state.redirectToViewQuery) 
@@ -382,27 +396,36 @@ class DashboardUnit extends Component {
     return (
       <Card className='fapp-dunit' style={this.getCardStyleByProps()}>
         <CardHeader style={this.getCardHeaderStyleByProps()}>
+          
+
           <div style={{ textAlign: 'right', marginTop: '-10px', marginRight: '-18px', height: '18px' }}>
-            <strong onClick={this.delete} style={{ fontSize: '14px', cursor: 'pointer', padding: '0 10px', color: this.isCard() ? '#FFF' : '#AAA' }} hidden={!this.props.editDashboard}>x</strong>
+            <strong onClick={this.delete} style={{ fontSize: '14px', cursor: 'pointer', padding: '0 10px', color: this.isCard() ? '#FFF' : '#AAA' }} 
+              hidden={!this.props.editDashboard}>x</strong>
           </div>
 
-          <div style={{ textAlign: 'right', marginTop: '-15px', marginRight: '-22px', height: '18px' }} hidden={this.isCard()}>
-            <strong onClick={this.toggleFullScreen} style={{ fontSize: '13px', cursor: 'pointer', padding: '0 10px', color: '#888' }} hidden={this.props.editDashboard} >
+          <div style={{ textAlign: 'right', marginTop: '-15px', marginRight: '-22px', height: '22px' }} hidden={this.isCard()}>
+            <strong onClick={this.toggleFullScreen} style={{ fontSize: '13px', cursor: 'pointer', padding: '0 10px', color: '#888' }} 
+              hidden={this.props.editDashboard} >
               <i className='fa fa-expand'></i>
             </strong>
           </div>
 
-          <div style={{ textAlign: 'right', marginTop: this.isCard() ? '-17px' : '-18px', height: '18px', marginRight: this.isCard() ? '-22px' : null }}>
-            <strong onClick={this.addQueryToViewStore} style={{ fontSize: '13px', cursor: 'pointer', padding: '0 10px', color: this.isCard() ? '#FFF' : '#444' }} hidden={this.props.editDashboard} >
+          <div style={{ marginTop: this.isCard() ? '-17px' : '-18px', height: '22px', marginRight: this.isCard() ? '-22px' : null, 
+            marginLeft: this.isCard() ? '-22px' : null }}>
+            { this.renderChannelTag() }
+            <strong onClick={this.addQueryToViewStore} style={{ float: 'right', fontSize: '13px', cursor: 'pointer', 
+              padding: '0 10px', color: this.isCard() ? '#FFF' : '#444' }} hidden={this.props.editDashboard} >
               <i className='cui-graph'></i>
             </strong>
           </div>
 
           <div hidden={!this.showTitle()}>
             <div className='fapp-overflow-dot' style={this.getEditTitleStyle()}> 
-              <strong style={{ fontWeight: !this.isCard() ? '500' : null, fontSize: '0.85rem' }} >{ this.getTitle() }</strong> 
+              <strong style={{ fontWeight: 500, fontSize: !this.isCard() ? '0.85rem' : '0.95rem' }} >{ this.getTitle() }</strong> 
             </div>
-            <button style={{...this.getInlineButtonStyle(), fontSize: '14px'}} onClick={this.editTitle} hidden={!this.props.editDashboard}><i className='icon-pencil'></i></button>
+            <button style={{...this.getInlineButtonStyle(), fontSize: '14px'}} onClick={this.editTitle} hidden={!this.props.editDashboard}>
+              <i className='icon-pencil'></i>
+            </button>
           </div>
 
           <div hidden={!this.showTitleEditor()}>

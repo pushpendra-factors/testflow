@@ -19,7 +19,7 @@ import { DEFAULT_DATE_RANGE, DEFINED_DATE_RANGES,
   QUERY_CLASS_CHANNEL,
   getQueryPeriod} from '../Query/common';
 import ClosableDateRangePicker from '../../common/ClosableDatePicker';
-import { makeSelectOpts } from '../../util';
+import { makeSelectOpts, getReadableKeyFromSnakeKey } from '../../util';
 import TableChart from '../Query/TableChart';
 import { getReadableChannelMetricValue } from './common'
 
@@ -86,7 +86,7 @@ class ChannelQuery extends Component {
 
     let result = { ...metricsBreakdown };
     for (let i=0; i<result.headers.length; i++)
-      result.headers[i] = this.getSnakeToReadableKey(result.headers[i]);
+      result.headers[i] = getReadableKeyFromSnakeKey(result.headers[i]);
 
     return result;
   }
@@ -133,16 +133,6 @@ class ChannelQuery extends Component {
     this.setState({ addToDashboardMetricUnits: [] });
   }
 
-  getSnakeToReadableKey(k) { 
-    let kSplits = k.split('_');
-
-    let key = '';
-    for (let i=0; i<kSplits.length; i++)
-      key = key + ' ' + kSplits[i].charAt(0).toUpperCase() + kSplits[i].slice(1);
-    
-    return key
-  }
-
   onSelectMetricUnitAddToDashboard = (k) => {
     let selectedUnits = [ ...this.state.addToDashboardMetricUnits ];
 
@@ -179,7 +169,7 @@ class ChannelQuery extends Component {
 
             <div style={{ padding: '35px' }}>
               <span style={{display: 'block', textAlign: 'center', fontSize: '18px', marginBottom: '15px'}}> 
-                { this.getSnakeToReadableKey(k) } 
+                { getReadableKeyFromSnakeKey(k) } 
               </span>
               <span style={{display: 'block', textAlign: 'center', fontSize: '20px', fontWeight: '500' }}> 
                 { getReadableChannelMetricValue(k, this.state.resultMetrics[k], this.state.resultMeta) } 
@@ -333,7 +323,7 @@ class ChannelQuery extends Component {
       metricQueryUnit.meta = { metric: this.state.addToDashboardMetricUnits[i] };
 
 
-      let title = this.getSnakeToReadableKey(this.state.addToDashboardMetricUnits[i]);
+      let title = getReadableKeyFromSnakeKey(this.state.addToDashboardMetricUnits[i]);
       let payload = {
         presentation: PRESENTATION_CARD,
         query: metricQueryUnit,
