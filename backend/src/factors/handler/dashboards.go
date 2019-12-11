@@ -20,9 +20,9 @@ type DashboardRequestPayload struct {
 }
 
 type DashboardUnitRequestPayload struct {
-	Title        string  `json:"title"`
-	Query        M.Query `json:"query"`
-	Presentation string  `json:"presentation"`
+	Title        string          `json:"title"`
+	Presentation string          `json:"presentation"`
+	Query        *postgres.Jsonb `json:"query"`
 }
 
 func GetDashboardsHandler(c *gin.Context) {
@@ -164,23 +164,15 @@ func CreateDashboardUnitHandler(c *gin.Context) {
 		return
 	}
 
-	queryValid, errMsg := M.IsValidQuery(&requestPayload.Query)
-	if !queryValid {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": errMsg})
-		return
-	}
-
-	queryAsJson, err := json.Marshal(requestPayload.Query)
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to marshal query.")
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": errMsg})
+	if requestPayload.Query == nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid query. empty query."})
 		return
 	}
 
 	dashboardUnit, errCode, errMsg := M.CreateDashboardUnit(projectId, agentUUID,
 		&M.DashboardUnit{
 			DashboardId:  dashboardId,
-			Query:        postgres.Jsonb{queryAsJson},
+			Query:        *requestPayload.Query,
 			Title:        requestPayload.Title,
 			Presentation: requestPayload.Presentation,
 		})

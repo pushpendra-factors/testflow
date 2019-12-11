@@ -1,19 +1,27 @@
 import React, { Component } from 'react';
 import Select from 'react-select';
 import CreatableSelect from 'react-select/lib/Creatable';
-import { Button, Row, Col } from 'reactstrap';
+import { Button, Row, Col, DropdownItem, ButtonDropdown, 
+  DropdownToggle, DropdownMenu, Modal, ModalHeader, 
+  ModalBody, ModalFooter, Input } from 'reactstrap';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import 'react-date-range/dist/styles.css';
-import 'react-date-range/dist/theme/default.css';
-import moment from 'moment';
+import 'react-date-range/dist/theme/default.css'; 
 
 import { runChannelQuery, fetchChannelFilterValues } from '../../actions/projectsActions';
+import { createDashboardUnit } from '../../actions/dashboardActions'
 import { DEFAULT_DATE_RANGE, DEFINED_DATE_RANGES, 
-  readableDateRange } from '../Query/common';
+  readableDateRange, PRESENTATION_CARD, PRESENTATION_TABLE,
+  QUERY_CLASS_CHANNEL, getQueryPeriod} from '../Query/common';
 import ClosableDateRangePicker from '../../common/ClosableDatePicker';
-import { makeSelectOpts } from '../../util';
+import { makeSelectOpts, getReadableKeyFromSnakeKey } from '../../util';
 import TableChart from '../Query/TableChart';
+import { getReadableChannelMetricValue } from './common';
+import Loading from '../../loading';
+
+const CHANNEL_METRIC_ORDER = [ "clicks", "impressions", "conversions", 
+"conversion_rate", "total_cost", "cost_per_click", "cost_per_conversion" ]
 
 const CHANNEL_GOOGLE_ADS = { label: 'Google Ads', value: 'google_ads' }
 const CHANNEL_OPTS = [CHANNEL_GOOGLE_ADS]
@@ -21,7 +29,14 @@ const CHANNEL_OPTS = [CHANNEL_GOOGLE_ADS]
 const FILTER_KEY_CAMPAIGN = { label: 'Campaigns', value: 'campaign' }
 const FILTER_KEY_AD = { label: 'Ads', value: 'ad' }
 const FILTER_KEY_KEYWORD = { label: 'Keywords', value: 'keyword' }
-const FILTER_KEY_OPTS = [ FILTER_KEY_CAMPAIGN, FILTER_KEY_AD, FILTER_KEY_KEYWORD ]
+const FILTER_KEY_OPTS = [ FILTER_KEY_CAMPAIGN, FILTER_KEY_AD, FILTER_KEY_KEYWORD ];
+
+// supported breakdown opts for each filter key.
+const BREAKDOWN_KEY_OPT_MAP = {
+  [FILTER_KEY_CAMPAIGN.value]: [FILTER_KEY_CAMPAIGN],
+  [FILTER_KEY_AD.value]: [FILTER_KEY_AD],
+  [FILTER_KEY_KEYWORD.value]: [FILTER_KEY_KEYWORD],  
+}
 
 const ALL_OPT = { label: 'All', value: 'all' }
 const NONE_OPT = { label: 'None', value: 'none' }
@@ -34,6 +49,7 @@ const LABEL_STYLE = { marginRight: '10px', fontWeight: '600', color: '#777' };
 const mapStateToProps = store => {
   return { 
     currentProjectId: store.projects.currentProjectId,
+    dashboards: store.dashboards.dashboards,
     channelFilterValues: store.projects.channelFilterValues,
   }
 }
@@ -41,6 +57,7 @@ const mapStateToProps = store => {
 const mapDispatchToProps = dispatch => {
   return bindActionCreators({
     fetchChannelFilterValues,
+    createDashboardUnit,
   }, dispatch)
 }
 
@@ -56,16 +73,20 @@ class ChannelQuery extends Component {
       isFilterValuesLoading: false,
       breakdownKey: NONE_OPT,
 
+      isPresentationLoading: false,
       present: false,
       resultMetrics: {},
       resultMetricsBreakdown: null,
       resultMeta: null,
       topError: null,
+
+      showDashboardsList: false,
+      showAddToDashboardModal: false,
+      addToDashboardMessage: null,
+      selectedDashboardId: null,
+      addToDashboardMetricUnits: [],
+      addToDashboardMeticBreakdown: false,
     }
-  }
-  // Returns: 20191026
-  getDateOnlyTimestamp(datetime) {
-    return parseInt(moment(datetime).format('YYYYMMDD'));
   }
 
   getDisplayMetricsBreakdown(metricsBreakdown) {
@@ -73,22 +94,31 @@ class ChannelQuery extends Component {
 
     let result = { ...metricsBreakdown };
     for (let i=0; i<result.headers.length; i++)
-      result.headers[i] = this.getSnakeToReadableKey(result.headers[i]);
+      result.headers[i] = getReadableKeyFromSnakeKey(result.headers[i]);
 
     return result;
   }
 
-  runQuery = () => {
+  getQuery = () => {
     let query = {};
     query.channel = this.state.channel.value;
     query.filter_key = this.state.filterKey.value;
     query.filter_value = this.state.filterValue.value;
-    query.date_from = this.getDateOnlyTimestamp(this.state.duringDateRange[0].startDate);
-    query.date_to = this.getDateOnlyTimestamp(this.state.duringDateRange[0].endDate);
+
+    let period = getQueryPeriod(this.state.duringDateRange[0]);
+    query.from = period.from;
+    query.to = period.to;
 
     if (this.state.breakdownKey.value != "none") 
       query.breakdown = this.state.breakdownKey.value;
+    
+    return query
+  }
 
+  runQuery = () => {
+    this.setState({ isPresentationLoading: true });
+
+    let query = this.getQuery();
     runChannelQuery(this.props.currentProjectId, query)
       .then((r) => {
         if (!r.ok) {
@@ -107,57 +137,79 @@ class ChannelQuery extends Component {
         if (r.data.metrics_breakdown)
           this.setState({ present: true,
             resultMetricsBreakdown: this.getDisplayMetricsBreakdown(r.data.metrics_breakdown) });
+
+        this.setState({ isPresentationLoading: false });
       });
+
+    // reset the add to dashbaord units as result changes.
+    this.setState({ addToDashboardMetricUnits: [] });
   }
 
-  getSnakeToReadableKey(k) { 
-    let kSplits = k.split('_');
+  onSelectMetricUnitAddToDashboard = (k) => {
+    let selectedUnits = [ ...this.state.addToDashboardMetricUnits ];
 
-    let key = '';
-    for (let i=0; i<kSplits.length; i++)
-      key = key + ' ' + kSplits[i].charAt(0).toUpperCase() + kSplits[i].slice(1);
+    if (!this.isMetricUnitAddedToDashboard(k)) {
+      // add if not exist.
+      selectedUnits.push(k);
+    } else {
+      // remove if key exists.
+      selectedUnits.splice(selectedUnits.indexOf(k), 1)
+    }
     
-    return key
+    this.setState({ addToDashboardMetricUnits: selectedUnits });
   }
 
-  getReadableMetricValue(key, value) {
-    if (value == null || value == undefined) return 0;
-    if (typeof(value) != "number") return value;
-
-    let rValue = value;
-    let isFloat = (value % 1) > 0
-    if (isFloat) rValue = value.toFixed(2);
-
-    if (this.state.resultMeta && 
-      this.state.resultMeta.currency && 
-      key.toLowerCase().indexOf('cost') > -1)
-      rValue = rValue + ' ' + this.state.resultMeta.currency;
-
-    return rValue;
+  isMetricUnitAddedToDashboard(k) {
+    return this.state.addToDashboardMetricUnits.indexOf(k) > -1;
   }
 
-  presentMetrics() {
+  getMetricWidget(k, isAddToDashboardModal) {
+    return <Col md={3} style={{ padding: '0 15px', marginTop: '30px'}}>
+      <div style={{ border: '1px solid #AAA' }}>
+
+        { isAddToDashboardModal ? <div style={{ textAlign: "right", padding: "5px" }} >
+          <Input onChange={() => this.onSelectMetricUnitAddToDashboard(k)} 
+          checked={this.isMetricUnitAddedToDashboard(k)} type="checkbox"/></div> : null } 
+
+        <div style={{ padding: '35px' }}>
+          <span style={{display: 'block', textAlign: 'center', fontSize: '18px', marginBottom: '15px'}}> 
+            { getReadableKeyFromSnakeKey(k) } 
+          </span>
+          <span style={{display: 'block', textAlign: 'center', fontSize: '20px', fontWeight: '500' }}> 
+            { getReadableChannelMetricValue(k, this.state.resultMetrics[k], this.state.resultMeta) } 
+          </span>
+        </div>
+      </div>
+    </Col>;
+  }
+
+  presentMetrics(isAddToDashboardModal) {
     let widgets = [];
+    let addedMetrics = [];
 
-    for (let k in this.state.resultMetrics) {      
-      widgets.push(
-        <Col md={3} style={{ padding: '0 15px', marginTop: '30px'}}>
-          <div style={{ border: '1px solid #AAA', padding: '35px' }}>
-            <span style={{display: 'block', textAlign: 'center', fontSize: '18px', marginBottom: '15px'}}> 
-              { this.getSnakeToReadableKey(k) } 
-            </span>
-            <span style={{display: 'block', textAlign: 'center', fontSize: '20px', fontWeight: '500' }}> 
-              { this.getReadableMetricValue(k, this.state.resultMetrics[k]) } 
-            </span>
-          </div>
-        </Col>
-      );
+    // add metrics by order pref.
+    for (let i=0; i<CHANNEL_METRIC_ORDER.length; i++) {     
+      if (this.state.resultMetrics.hasOwnProperty(CHANNEL_METRIC_ORDER[i])) { 
+        widgets.push(this.getMetricWidget(CHANNEL_METRIC_ORDER[i], isAddToDashboardModal));
+        addedMetrics.push(CHANNEL_METRIC_ORDER[i]);
+      }
+    }
+
+    // add metrics without order pref at the end. 
+    for (let k in this.state.resultMetrics) {
+      if (addedMetrics.indexOf(k) == -1) {
+        widgets.push(this.getMetricWidget(k, isAddToDashboardModal));
+      }
     }
 
     return widgets;
   }
 
-  presentMetricsBreakdown() {
+  onSelectMetricBreakdownAddToDashboard = () => {
+    this.setState({ addToDashboardMeticBreakdown: !this.state.addToDashboardMeticBreakdown });
+  }
+
+  presentMetricsBreakdown(isAddToDashboardModal) {
     if (!this.state.resultMetricsBreakdown ||  !this.state.resultMetricsBreakdown.headers ||
       !this.state.resultMetricsBreakdown.rows) return;
 
@@ -165,13 +217,24 @@ class ChannelQuery extends Component {
     for (let ri=0; ri < resultMetricsBreakdown.rows.length; ri++ ) {
       for (let ci=0; ci < resultMetricsBreakdown.rows[ri].length; ci++) {
         let key = resultMetricsBreakdown.headers[ci];
-        resultMetricsBreakdown.rows[ri][ci] = this.getReadableMetricValue(key, 
-          resultMetricsBreakdown.rows[ri][ci]);
+        resultMetricsBreakdown.rows[ri][ci] = getReadableChannelMetricValue(key, 
+          resultMetricsBreakdown.rows[ri][ci], this.state.resultMeta);
       }
     }
 
     return <Col md={12} style={{ marginTop: '50px' }}>
-      <TableChart bigWidthUptoCols={1} queryResult={resultMetricsBreakdown} />
+      { 
+        isAddToDashboardModal ? <Row >
+          <Col md={12}>
+            <div style={{ background: '#EBEDFD', width: '100%', height:'25px', 
+              textAlign: 'right', paddingRight: '5px', paddingTop: '5px' }}>
+              <Input onChange={this.onSelectMetricBreakdownAddToDashboard} 
+                checked={this.state.addToDashboardMeticBreakdown} type='checkbox' />
+            </div>
+          </Col>
+        </Row> : null
+      }
+      <Row><Col md={12}><TableChart bigWidthUptoCols={1} queryResult={resultMetricsBreakdown} /></Col></Row>
     </Col>;
   }
 
@@ -183,8 +246,15 @@ class ChannelQuery extends Component {
     this.setState({ breakdownKey: option });
   }
 
-  getBreakdownKeysOpts() {
-    return [NONE_OPT, ...FILTER_KEY_OPTS];
+  getBreakdownKeysOpts(filterKey) {
+    let opts = [ NONE_OPT ];
+    if (!filterKey || filterKey == "") return opts;
+    if (!BREAKDOWN_KEY_OPT_MAP.hasOwnProperty(filterKey)) {
+      console.error("No breakdown key opts for selected filter key.");
+      return opts;
+    }
+    
+    return [...opts, ...BREAKDOWN_KEY_OPT_MAP[filterKey]];
   }
 
   handleDuringDateRangeSelect = (range) => {
@@ -217,13 +287,104 @@ class ChannelQuery extends Component {
 
   getChannelFilterValuesOpts() {
     if (!this.isChannelFilterValuesExists()) return [ALL_OPT];
-    let valueOpts = makeSelectOpts(this.props.channelFilterValues[this.state.channel.value][this.state.filterKey.value]);
+    let valueOpts = makeSelectOpts(
+      this.props.channelFilterValues[this.state.channel.value][this.state.filterKey.value]);
     valueOpts.unshift(ALL_OPT);
     return valueOpts;
   }
 
   onChannelFilterValueChange = (value) => {
     this.setState({ filterValue: value });
+  }
+
+  renderDashboardDropdownOptions() {
+    let dashboardsDropdown = [];
+    for(let i=0; i<this.props.dashboards.length; i++){
+      let dashboard = this.props.dashboards[i];
+      if (dashboard) {
+        dashboardsDropdown.push(
+          <DropdownItem onClick={this.selectDashboardToAdd} 
+            value={dashboard.id}>{dashboard.name}</DropdownItem>
+        )
+      }
+    }
+    
+    return dashboardsDropdown;
+  }
+
+  toggleDashboardsList = () => {
+    this.setState({ showDashboardsList: !this.state.showDashboardsList });
+  }
+
+  toggleAddToDashboardModal = () =>  {
+    this.setState({ showAddToDashboardModal: !this.state.showAddToDashboardModal, addToDashboardMessage: null });
+  }
+
+  selectDashboardToAdd = (event) => {
+    let dashboardId = event.currentTarget.getAttribute('value');
+    this.setState({ selectedDashboardId: dashboardId })
+    this.toggleAddToDashboardModal();
+  }
+
+  renderAddToDashboardModal() {
+    return (
+      <Modal isOpen={this.state.showAddToDashboardModal} toggle={this.toggleAddToDashboardModal} 
+        style={{ marginTop: "3rem", minWidth: "80rem" }}>
+        <ModalHeader toggle={this.toggleAddToDashboardModal}>Add to Dashboard</ModalHeader>
+        <ModalBody style={{padding: '25px 35px'}}>
+          <Row> { this.presentMetrics(true) } </Row>
+          <Row> { this.presentMetricsBreakdown(true) } </Row>
+        </ModalBody>
+        <ModalFooter style={{borderTop: 'none', paddingBottom: '30px', paddingRight: '35px'}}>
+          <Button outline color="success" onClick={this.addToDashboard}>Add</Button>
+          <Button outline color='danger' onClick={this.toggleAddToDashboardModal}>Cancel</Button>
+        </ModalFooter>
+      </Modal>
+    );
+  }
+
+  addToDashboard = () => {
+    let queryUnit = {};
+    queryUnit.cl = QUERY_CLASS_CHANNEL;
+    queryUnit.query = this.getQuery();;
+
+    // add individual dashboard unit for each selected key.
+    for (let i=0; i < this.state.addToDashboardMetricUnits.length; i++) {
+      let metricQueryUnit = { ...queryUnit };
+      metricQueryUnit.meta = { metric: this.state.addToDashboardMetricUnits[i] };
+
+
+      let title = getReadableKeyFromSnakeKey(this.state.addToDashboardMetricUnits[i]);
+      let payload = {
+        presentation: PRESENTATION_CARD,
+        query: metricQueryUnit,
+        title: title,
+      };
+
+      this.props.createDashboardUnit(this.props.currentProjectId, 
+        this.state.selectedDashboardId, payload)
+        .catch(() => console.error("Failed adding to channel metric to dashboard."))
+    }
+
+    // add metric breakdown to dashboard only if selected.
+    if (this.state.addToDashboardMeticBreakdown) {
+      let metricBreakdownQueryUnit = { ...queryUnit };
+      metricBreakdownQueryUnit.meta = { metrics_breakdown: true };
+
+      let title = "Google Ads: Metrics by " + queryUnit.query.breakdown;
+      let payload = {
+        presentation: PRESENTATION_TABLE,
+        query: metricBreakdownQueryUnit,
+        title: title, 
+      };
+
+      this.props.createDashboardUnit(this.props.currentProjectId, 
+        this.state.selectedDashboardId, payload)
+        .catch(() => console.error("Failed adding to channel metrics breakdown to dashboard."))
+    }
+
+    // close modal.
+    this.toggleAddToDashboardModal();
   }
 
   render() {
@@ -241,7 +402,8 @@ class ChannelQuery extends Component {
         <Col xs='12' md='12'>
           <span style={LABEL_STYLE}>Filter by</span>
           <div className='fapp-select light' style={{ display: 'inline-block', width: '200px', marginRight: '15px' }}>
-            <Select value={this.state.filterKey} onChange={this.handleFilterKeyChange} options={FILTER_KEY_OPTS} placeholder='Filter'/>
+            <Select value={this.state.filterKey} onChange={this.handleFilterKeyChange} 
+              options={FILTER_KEY_OPTS} placeholder='Filter'/>
           </div>
           <div className='fapp-select light' style={{ display: 'inline-block', width: '275px' }}>
             <CreatableSelect 
@@ -256,32 +418,10 @@ class ChannelQuery extends Component {
         </Col>
       </Row>
 
-      {/* 
-      <Row style={{marginBottom: '15px'}}>
-        <Col xs='12' md='12'>
-          <span style={LABEL_STYLE}>Status</span>
-          <div className='fapp-select light' style={{ display: 'inline-block', width: '150px' }}>
-            <Select value={ALL_OPT} options={STATUS_OPTS} placeholder='Status'/>
-          </div>
-        </Col>
-      </Row> 
-      */}
-
-      {/* 
-      <Row style={{marginBottom: '15px'}}>
-        <Col xs='12' md='12'>
-          <span style={LABEL_STYLE}>Match Type</span>
-          <div className='fapp-select light' style={{ display: 'inline-block', width: '150px' }}>
-            <Select value={ALL_OPT} options={MATCH_TYPE_OPTS} placeholder='Match Type'/>
-          </div>
-        </Col>
-      </Row> 
-      */}
-
       <Row style={{marginBottom: '15px'}}>
         <Col xs='12' md='12'>
           <span style={LABEL_STYLE}> During </span>
-          <Button outline style={{border: '1px solid #ccc', color: 'grey', marginRight: '10px' }} 
+          <Button outline style={{ border: '1px solid #ccc', color: 'grey', marginRight: '10px' }} 
             onClick={this.toggleDatePickerDisplay}>
             <i className="fa fa-calendar" style={{marginRight: '10px'}}></i>
             { readableDateRange(this.state.duringDateRange[0]) } 
@@ -306,7 +446,7 @@ class ChannelQuery extends Component {
         <Col xs='12' md='12'>
           <span style={LABEL_STYLE}>Breakdown by</span>
           <div className='fapp-select light' style={{ display: 'inline-block', width: '200px', marginRight: '15px' }}>
-            <Select value={this.state.breakdownKey} onChange={this.handleBreakdownKeyChange} options={this.getBreakdownKeysOpts()} placeholder='Breakdown'/>
+            <Select value={this.state.breakdownKey} onChange={this.handleBreakdownKeyChange} options={this.getBreakdownKeysOpts(this.state.filterKey.value)} placeholder='Breakdown'/>
           </div>
         </Col>
       </Row>
@@ -319,13 +459,32 @@ class ChannelQuery extends Component {
         </Button>
       </div>
 
-      <div hidden={!this.state.present} style={{borderTop: '1px solid rgb(221, 221, 221)', paddingTop: '20px', 
+      <div hidden={!this.state.present} style={{borderTop: '1px solid rgb(221, 221, 221)', 
         marginTop: '30px', marginLeft: '-60px', marginRight: '-60px'}}></div>
 
       {/* presentation */}
       <div style={{ paddingLeft: '30px', paddingRight: '30px', paddingTop: '10px', minHeight: '500px' }}>
-        <Row> { this.presentMetrics() } </Row>
-        <Row> { this.presentMetricsBreakdown() } </Row>
+        <Row style={{ marginTop: '15px', marginRight: '10px' }} hidden={ !this.state.present }>
+          <Col xs='12' md='12'>
+            <ButtonDropdown style={{ float: 'right', marginRight: '-20px' }} 
+              isOpen={this.state.showDashboardsList} toggle={this.toggleDashboardsList}> 
+              <DropdownToggle caret outline color="primary">
+                Add to dashboard
+              </DropdownToggle>
+              <DropdownMenu style={{ height: 'auto', maxHeight: '210px', overflowX: 'scroll' }} right>
+                { this.renderDashboardDropdownOptions() }
+              </DropdownMenu>
+            </ButtonDropdown>
+          </Col>
+        </Row>
+
+        { this.state.isPresentationLoading ? <Loading paddingTop='12%' /> : null }
+        <div className='animated fadeIn' hidden={this.state.isPresentationLoading}>
+          <Row> { this.presentMetrics() } </Row>
+          <Row> { this.presentMetricsBreakdown() } </Row>
+        </div>
+
+        { this.renderAddToDashboardModal() }
       </div>
 
     </div>

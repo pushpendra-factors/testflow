@@ -66,7 +66,7 @@ class TableChart extends Component {
     // card.
     if (cardable) {
       return (
-        <Table className='animated fadeIn' style={{fontSize: '45px', textAlign: 'center', border: 'none', marginTop: '10px' }} >
+        <Table className='animated fadeIn' style={{fontSize: '40px', textAlign: 'center', border: 'none', marginTop: '10px' }} >
           { this.tableHeader() }
           <tbody> <span style={this.getCountStyleByProps()}> { result.rows[rowKeys[0]][0] } </span> </tbody>
         </Table>

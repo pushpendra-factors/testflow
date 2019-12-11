@@ -20,6 +20,8 @@ export const PROPERTY_LOGICAL_OP_OPTS = {
   'OR': 'or',
 }; 
 
+export const QUERY_CLASS_CHANNEL = "channel";
+
 export const PROPERTY_VALUE_TYPE_DATE_TIME = 'datetime';
 
 export const USER_PREF_PROPERTY_TYPE_OPTS = {
@@ -114,4 +116,25 @@ export const readableDateRange = function(range) {
 
   return moment(range.startDate).format('MMM DD, YYYY') + " - " +
     moment(range.endDate).format('MMM DD, YYYY');
+}
+
+export const getQueryPeriod = function(selectedRange)  {
+  if (!selectedRange) {
+    console.error("Invalid selected date range. Failed to get query period.");
+    return
+  }
+  
+  let isEndDateToday = moment(selectedRange.endDate).isSame(moment(), 'day');
+  let from =  moment(selectedRange.startDate).unix();
+  let to = moment(selectedRange.endDate).unix();
+
+  // Adjust the duration window respective to current time.
+  if (isEndDateToday) {
+    let newRange = slideUnixTimeWindowToCurrentTime(from, to)
+    from = newRange.from;
+    to = newRange.to;
+  }
+
+  // in utc.
+  return { from: from, to: to }
 }
