@@ -58,6 +58,12 @@ func getAdwordsIdFieldNameByType(docType int) string {
 	}
 }
 
+// Date only timestamp to query adwords documents.
+func getAdwordsDateOnlyTimestamp(unixTimestamp int64) string {
+	// Todo: Add timezone support using util.getTimeFromUnixTimestampWithZone.
+	return time.Unix(unixTimestamp, 0).UTC().Format("20060102")
+}
+
 func getAdwordsIdByType(docType int, valueJson *postgres.Jsonb) (string, error) {
 	if docType > len(documentTypeByAlias) {
 		return "", errors.New("invalid document type")
@@ -353,7 +359,8 @@ func getAdwordsMetricsQuery(projectId uint64, query *ChannelQuery,
 		return "", []interface{}{}, err
 	}
 	// Todo: Add current customer_account_id from project settings.
-	paramsWhere = append(paramsWhere, projectId, docType, query.DateFrom, query.DateTo)
+	paramsWhere = append(paramsWhere, projectId, docType,
+		getAdwordsDateOnlyTimestamp(query.From), getAdwordsDateOnlyTimestamp(query.To))
 
 	isWhereByFilterRequired := query.FilterValue != filterValueAll
 	if isWhereByFilterRequired {
@@ -492,7 +499,7 @@ func getAdwordsChannelResultMeta(projectId uint64, query *ChannelQuery) (*Channe
 
 	db := C.GetServices().Db
 	rows, err := db.Raw(stmnt, projectId, documentTypeByAlias["customer_account_properties"],
-		query.DateFrom, query.DateTo).Rows()
+		getAdwordsDateOnlyTimestamp(query.From), getAdwordsDateOnlyTimestamp(query.To)).Rows()
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to build meta for channel query result.")
 		return nil, err

@@ -413,6 +413,8 @@ class Query extends Component {
 
   setQueryPeriod(query) { 
     let selectedRange = this.state.resultDateRange[0];
+
+    // Todo: Replace with getQueryPeriod from common. Redundant.
     let isEndDateToday = moment(selectedRange.endDate).isSame(moment(), 'day');
     let from =  moment(selectedRange.startDate).unix();
     let to = moment(selectedRange.endDate).unix();

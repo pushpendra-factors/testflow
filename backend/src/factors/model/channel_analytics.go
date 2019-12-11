@@ -10,8 +10,8 @@ type ChannelQuery struct {
 	Channel     string `json:"channel"`
 	FilterKey   string `json:"filter_key"`
 	FilterValue string `json:"filter_value"`
-	DateFrom    int64  `json:"date_from"`
-	DateTo      int64  `json:"date_to"`
+	From        int64  `json:"from"` // unix timestamp
+	To          int64  `json:"to"`   // unix timestamp
 	Status      string `json:"status"`
 	MatchType   string `json:"match_type"` // optional
 	Breakdown   string `json:"breakdown"`
@@ -117,7 +117,7 @@ func GetChannelFilterValues(projectId uint64, channel, filter string) ([]string,
 
 func ExecuteChannelQuery(projectId uint64, query *ChannelQuery) (*ChannelQueryResult, int) {
 	if !isValidChannel(query.Channel) || !isValidFilterKey(query.FilterKey) ||
-		query.DateFrom == 0 || query.DateTo == 0 {
+		query.From == 0 || query.To == 0 {
 		return nil, http.StatusBadRequest
 	}
 

@@ -16,7 +16,8 @@ import { DEFAULT_DATE_RANGE, DEFINED_DATE_RANGES,
   readableDateRange, 
   PRESENTATION_CARD,
   PRESENTATION_TABLE,
-  QUERY_CLASS_CHANNEL} from '../Query/common';
+  QUERY_CLASS_CHANNEL,
+  getQueryPeriod} from '../Query/common';
 import ClosableDateRangePicker from '../../common/ClosableDatePicker';
 import { makeSelectOpts } from '../../util';
 import TableChart from '../Query/TableChart';
@@ -80,11 +81,6 @@ class ChannelQuery extends Component {
     }
   }
 
-  // Returns: 20191026
-  getDateOnlyTimestamp(datetime) {
-    return parseInt(moment(datetime).format('YYYYMMDD')); 
-  }
-
   getDisplayMetricsBreakdown(metricsBreakdown) {
     if (!metricsBreakdown) return;
 
@@ -100,8 +96,10 @@ class ChannelQuery extends Component {
     query.channel = this.state.channel.value;
     query.filter_key = this.state.filterKey.value;
     query.filter_value = this.state.filterValue.value;
-    query.date_from = this.getDateOnlyTimestamp(this.state.duringDateRange[0].startDate);
-    query.date_to = this.getDateOnlyTimestamp(this.state.duringDateRange[0].endDate);
+
+    let period = getQueryPeriod(this.state.duringDateRange[0]);
+    query.from = period.from;
+    query.to = period.to;
 
     if (this.state.breakdownKey.value != "none") 
       query.breakdown = this.state.breakdownKey.value;
