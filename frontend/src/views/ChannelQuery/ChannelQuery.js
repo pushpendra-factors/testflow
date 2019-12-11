@@ -23,13 +23,23 @@ import { makeSelectOpts, getReadableKeyFromSnakeKey } from '../../util';
 import TableChart from '../Query/TableChart';
 import { getReadableChannelMetricValue } from './common'
 
+const CHANNEL_METRIC_ORDER = [ "clicks", "impressions", "conversions", 
+"conversion_rate", "total_cost", "cost_per_click", "cost_per_conversion" ]
+
 const CHANNEL_GOOGLE_ADS = { label: 'Google Ads', value: 'google_ads' }
 const CHANNEL_OPTS = [CHANNEL_GOOGLE_ADS]
 
 const FILTER_KEY_CAMPAIGN = { label: 'Campaigns', value: 'campaign' }
 const FILTER_KEY_AD = { label: 'Ads', value: 'ad' }
 const FILTER_KEY_KEYWORD = { label: 'Keywords', value: 'keyword' }
-const FILTER_KEY_OPTS = [ FILTER_KEY_CAMPAIGN, FILTER_KEY_AD, FILTER_KEY_KEYWORD ]
+const FILTER_KEY_OPTS = [ FILTER_KEY_CAMPAIGN, FILTER_KEY_AD, FILTER_KEY_KEYWORD ];
+
+// supported breakdown opts for each filter key.
+const BREAKDOWN_KEY_OPT_MAP = {
+  [FILTER_KEY_CAMPAIGN.value]: [FILTER_KEY_CAMPAIGN],
+  [FILTER_KEY_AD.value]: [FILTER_KEY_AD],
+  [FILTER_KEY_KEYWORD.value]: [FILTER_KEY_KEYWORD],  
+}
 
 const ALL_OPT = { label: 'All', value: 'all' }
 const NONE_OPT = { label: 'None', value: 'none' }
@@ -151,33 +161,43 @@ class ChannelQuery extends Component {
     return this.state.addToDashboardMetricUnits.indexOf(k) > -1;
   }
 
-  presentMetrics(addToDashboard) {
+  getMetricWidget(k, isAddToDashboardModal) {
+    return <Col md={3} style={{ padding: '0 15px', marginTop: '30px'}}>
+      <div style={{ border: '1px solid #AAA' }}>
+
+        { isAddToDashboardModal ? <div style={{ textAlign: "right", padding: "5px" }} >
+          <Input onChange={() => this.onSelectMetricUnitAddToDashboard(k)} 
+          checked={this.isMetricUnitAddedToDashboard(k)} type="checkbox"/></div> : null } 
+
+        <div style={{ padding: '35px' }}>
+          <span style={{display: 'block', textAlign: 'center', fontSize: '18px', marginBottom: '15px'}}> 
+            { getReadableKeyFromSnakeKey(k) } 
+          </span>
+          <span style={{display: 'block', textAlign: 'center', fontSize: '20px', fontWeight: '500' }}> 
+            { getReadableChannelMetricValue(k, this.state.resultMetrics[k], this.state.resultMeta) } 
+          </span>
+        </div>
+      </div>
+    </Col>;
+  }
+
+  presentMetrics(isAddToDashboardModal) {
     let widgets = [];
+    let addedMetrics = [];
 
-    // Todo: Re-order metrics widget by preferred order of metrics, 
-    // clicks, impressions, conversions, conversion_rate, total_cost, 
-    // cost_per_click, cost_per_conversion
+    // add metrics by order pref.
+    for (let i=0; i<CHANNEL_METRIC_ORDER.length; i++) {     
+      if (this.state.resultMetrics.hasOwnProperty(CHANNEL_METRIC_ORDER[i])) { 
+        widgets.push(this.getMetricWidget(CHANNEL_METRIC_ORDER[i], isAddToDashboardModal));
+        addedMetrics.push(CHANNEL_METRIC_ORDER[i]);
+      }
+    }
 
-    for (let k in this.state.resultMetrics) {      
-      widgets.push(
-        <Col md={3} style={{ padding: '0 15px', marginTop: '30px'}}>
-          <div style={{ border: '1px solid #AAA' }}>
-
-            { addToDashboard ? <div style={{ textAlign: "right", padding: "5px" }} >
-              <Input onChange={() => this.onSelectMetricUnitAddToDashboard(k)} 
-              checked={this.isMetricUnitAddedToDashboard(k)} type="checkbox"/></div> : null } 
-
-            <div style={{ padding: '35px' }}>
-              <span style={{display: 'block', textAlign: 'center', fontSize: '18px', marginBottom: '15px'}}> 
-                { getReadableKeyFromSnakeKey(k) } 
-              </span>
-              <span style={{display: 'block', textAlign: 'center', fontSize: '20px', fontWeight: '500' }}> 
-                { getReadableChannelMetricValue(k, this.state.resultMetrics[k], this.state.resultMeta) } 
-              </span>
-            </div>
-          </div>
-        </Col>
-      );
+    // add metrics without order pref at the end. 
+    for (let k in this.state.resultMetrics) {
+      if (addedMetrics.indexOf(k) == -1) {
+        widgets.push(this.getMetricWidget(k, isAddToDashboardModal));
+      }
     }
 
     return widgets;
@@ -187,7 +207,7 @@ class ChannelQuery extends Component {
     this.setState({ addToDashboardMeticBreakdown: !this.state.addToDashboardMeticBreakdown });
   }
 
-  presentMetricsBreakdown(addToDashboard) {
+  presentMetricsBreakdown(isAddToDashboardModal) {
     if (!this.state.resultMetricsBreakdown ||  !this.state.resultMetricsBreakdown.headers ||
       !this.state.resultMetricsBreakdown.rows) return;
 
@@ -202,7 +222,7 @@ class ChannelQuery extends Component {
 
     return <Col md={12} style={{ marginTop: '50px' }}>
       { 
-        addToDashboard ? <Row >
+        isAddToDashboardModal ? <Row >
           <Col md={12}>
             <div style={{ background: '#EBEDFD', width: '100%', height:'25px', 
               textAlign: 'right', paddingRight: '5px', paddingTop: '5px' }}>
@@ -224,8 +244,15 @@ class ChannelQuery extends Component {
     this.setState({ breakdownKey: option });
   }
 
-  getBreakdownKeysOpts() {
-    return [NONE_OPT, ...FILTER_KEY_OPTS];
+  getBreakdownKeysOpts(filterKey) {
+    let opts = [ NONE_OPT ];
+    if (!filterKey || filterKey == "") return opts;
+    if (!BREAKDOWN_KEY_OPT_MAP.hasOwnProperty(filterKey)) {
+      console.error("No breakdown key opts for selected filter key.");
+      return opts;
+    }
+    
+    return [...opts, ...BREAKDOWN_KEY_OPT_MAP[filterKey]];
   }
 
   handleDuringDateRangeSelect = (range) => {
@@ -344,7 +371,7 @@ class ChannelQuery extends Component {
       let payload = {
         presentation: PRESENTATION_TABLE,
         query: metricBreakdownQueryUnit,
-        title: title,
+        title: title, 
       };
 
       this.props.createDashboardUnit(this.props.currentProjectId, 
@@ -386,32 +413,10 @@ class ChannelQuery extends Component {
         </Col>
       </Row>
 
-      {/* 
-      <Row style={{marginBottom: '15px'}}>
-        <Col xs='12' md='12'>
-          <span style={LABEL_STYLE}>Status</span>
-          <div className='fapp-select light' style={{ display: 'inline-block', width: '150px' }}>
-            <Select value={ALL_OPT} options={STATUS_OPTS} placeholder='Status'/>
-          </div>
-        </Col>
-      </Row> 
-      */}
-
-      {/* 
-      <Row style={{marginBottom: '15px'}}>
-        <Col xs='12' md='12'>
-          <span style={LABEL_STYLE}>Match Type</span>
-          <div className='fapp-select light' style={{ display: 'inline-block', width: '150px' }}>
-            <Select value={ALL_OPT} options={MATCH_TYPE_OPTS} placeholder='Match Type'/>
-          </div>
-        </Col>
-      </Row> 
-      */}
-
       <Row style={{marginBottom: '15px'}}>
         <Col xs='12' md='12'>
           <span style={LABEL_STYLE}> During </span>
-          <Button outline style={{border: '1px solid #ccc', color: 'grey', marginRight: '10px' }} 
+          <Button outline style={{ border: '1px solid #ccc', color: 'grey', marginRight: '10px' }} 
             onClick={this.toggleDatePickerDisplay}>
             <i className="fa fa-calendar" style={{marginRight: '10px'}}></i>
             { readableDateRange(this.state.duringDateRange[0]) } 
@@ -436,7 +441,7 @@ class ChannelQuery extends Component {
         <Col xs='12' md='12'>
           <span style={LABEL_STYLE}>Breakdown by</span>
           <div className='fapp-select light' style={{ display: 'inline-block', width: '200px', marginRight: '15px' }}>
-            <Select value={this.state.breakdownKey} onChange={this.handleBreakdownKeyChange} options={this.getBreakdownKeysOpts()} placeholder='Breakdown'/>
+            <Select value={this.state.breakdownKey} onChange={this.handleBreakdownKeyChange} options={this.getBreakdownKeysOpts(this.state.filterKey.value)} placeholder='Breakdown'/>
           </div>
         </Col>
       </Row>

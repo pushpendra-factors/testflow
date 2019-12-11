@@ -1051,8 +1051,8 @@ class Query extends Component {
             </span>
           </div>
           <Form>
-            <span className='fapp-label'>Chart Title</span>         
-            <Input className='fapp-input' type="text" placeholder="Your Chart Title" onChange={this.setDashboardUnitTitle} />
+            <span className='fapp-label'>Title</span>         
+            <Input className='fapp-input' type="text" placeholder="Your Title" onChange={this.setDashboardUnitTitle} />
           </Form>
         </ModalBody>
         <ModalFooter style={{borderTop: 'none', paddingBottom: '30px', paddingRight: '35px'}}>
