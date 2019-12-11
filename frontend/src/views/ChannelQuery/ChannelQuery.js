@@ -344,7 +344,6 @@ class ChannelQuery extends Component {
 
       this.props.createDashboardUnit(this.props.currentProjectId, 
         this.state.selectedDashboardId, payload)
-        .then(() => { this.toggleAddToDashboardModal() })
         .catch(() => console.error("Failed adding to channel metric to dashboard."))
     }
 
@@ -362,9 +361,11 @@ class ChannelQuery extends Component {
 
       this.props.createDashboardUnit(this.props.currentProjectId, 
         this.state.selectedDashboardId, payload)
-        .then(() => { this.toggleAddToDashboardModal() })
         .catch(() => console.error("Failed adding to channel metrics breakdown to dashboard."))
     }
+
+    // close modal.
+    this.toggleAddToDashboardModal();
   }
 
   render() {
