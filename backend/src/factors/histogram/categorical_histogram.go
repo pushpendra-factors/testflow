@@ -7,7 +7,7 @@ import (
 	"sync"
 )
 
-const fMAP_MAX_SIZE = 500
+const fMAP_MAX_SIZE = 200
 const fMAP_MIN_SIZE = 50
 const CHIST_MIN_BIN_SIZE = 1
 const fMAP_OTHER_KEY = "__OTHER__"
