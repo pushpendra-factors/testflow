@@ -16,7 +16,8 @@ import {
   PRESENTATION_TABLE, PRESENTATION_CARD, 
   PRESENTATION_FUNNEL, PROPERTY_VALUE_TYPE_DATE_TIME, 
   PROPERTY_KEY_JOIN_TIME, getGroupByTimestampType,
-  QUERY_CLASS_CHANNEL
+  QUERY_CLASS_CHANNEL,
+  getQueryPeriod
 } from '../Query/common';
 import { slideUnixTimeWindowToCurrentTime, getTimezoneString } from '../../util';
 import FunnelChart from '../Query/FunnelChart';
@@ -89,28 +90,14 @@ class DashboardUnit extends Component {
     this.setState({ presentationProps: props });
   }
 
-  setQueryPeriod(query, dateRange) {
-    let selectedRange = dateRange[0];
-    let isEndDateToday = moment(selectedRange.endDate).isSame(moment(), 'day');
-    let from =  moment(selectedRange.startDate).unix();
-    let to = moment(selectedRange.endDate).unix();
-
-    // Adjust the duration window respective to current time.
-    if (isEndDateToday) {
-      let newRange = slideUnixTimeWindowToCurrentTime(from, to)
-      from = newRange.from;
-      to = newRange.to;
-    }
-
-    query.fr = from; // in utc.
-    query.to = to; // in utc.
-  }
-
   execAnalyticsQuery() {
     this.setState({ loading: true });
-    
     let query = this.props.data.query;
-    this.setQueryPeriod(query, this.props.dateRange);
+
+    // set query period.
+    let period = getQueryPeriod(this.props.dateRange[0]);
+    query.fr = period.from;
+    query.to = period.to;
 
     // override datetime property value.
     for(let ei=0; ei<query.ewp.length; ei++) {
@@ -154,7 +141,13 @@ class DashboardUnit extends Component {
   execChannelAnalyticsQuery() {
     this.setState({ loading: true });
 
-    runChannelQuery(this.props.currentProjectId, this.props.data.query.query)
+    let query = this.props.data.query.query;
+    // set query period.
+    let period = getQueryPeriod(this.props.dateRange[0]);
+    query.from = period.from;
+    query.to = period.to;
+
+    runChannelQuery(this.props.currentProjectId, query) 
       .then((r) => {
         if (this.props.data.presentation == PRESENTATION_CARD) {
           // select the value of the metric key to show on card.
