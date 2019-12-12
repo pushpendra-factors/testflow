@@ -3,6 +3,7 @@ package util
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/url"
 	"strconv"
 	"strings"
@@ -375,6 +376,41 @@ var EVENT_TO_SESSION_PROPERTIES = map[string]string{
 	EP_REFERRER:        SP_INITIAL_REFERRER,
 	EP_REFERRER_URL:    SP_INITIAL_REFERRER_URL,
 	EP_REFERRER_DOMAIN: SP_INITIAL_REFERRER_DOMAIN,
+}
+
+var PREDEFINED_BIN_RANGES_FOR_PROPERTY = map[string][][2]float64{
+	EP_PAGE_LOAD_TIME: [][2]float64{
+		[2]float64{0, 1},
+		[2]float64{1, 2},
+		[2]float64{2, 5},
+		[2]float64{5, 10},
+		[2]float64{10, 20},
+		[2]float64{20, math.MaxFloat64},
+	},
+	UP_INITIAL_PAGE_LOAD_TIME: [][2]float64{
+		[2]float64{0, 1},
+		[2]float64{1, 2},
+		[2]float64{2, 5},
+		[2]float64{5, 10},
+		[2]float64{10, 20},
+		[2]float64{20, math.MaxFloat64},
+	},
+	EP_PAGE_SPENT_TIME: [][2]float64{
+		[2]float64{0, 30},
+		[2]float64{30, 120},
+		[2]float64{120, 300},
+		[2]float64{300, 600},
+		[2]float64{600, 1800},
+		[2]float64{1800, math.MaxFloat64},
+	},
+	UP_INITIAL_PAGE_SPENT_TIME: [][2]float64{
+		[2]float64{0, 30},
+		[2]float64{30, 120},
+		[2]float64{120, 300},
+		[2]float64{300, 600},
+		[2]float64{600, 1800},
+		[2]float64{1800, math.MaxFloat64},
+	},
 }
 
 const SamplePropertyValuesLimit = 100
@@ -793,4 +829,9 @@ func FillUserAgentUserProperties(userProperties *PropertiesMap, userAgent string
 			(*userProperties)[UP_BROWSER] = "Bot"
 		}
 	}
+}
+
+func GetPredefinedBinRanges(propertyName string) ([][2]float64, bool) {
+	predfinedBinRanges, found := PREDEFINED_BIN_RANGES_FOR_PROPERTY[propertyName]
+	return predfinedBinRanges, found
 }
