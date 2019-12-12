@@ -17,7 +17,7 @@ spec:
             cloud.google.com/gke-nodepool: factors-staging-node-pool
           containers:
           - name: build-reports-job
-            image: us.gcr.io/factors-staging/build-reports-job:v0.12-4895613
+            image: us.gcr.io/factors-staging/build-reports-job:v0.12_a9bb38c
             imagePullPolicy: IfNotPresent
             args:
             - --env
