@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"encoding/json"
 	C "factors/config"
 	H "factors/handler"
 	"factors/handler/helpers"
@@ -13,6 +14,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
@@ -70,8 +72,12 @@ func TestAPICreateDashboardUnitHandler(t *testing.T) {
 			},
 			OverridePeriod: true,
 		}
+
+		queryJson, err := json.Marshal(query)
+		assert.Nil(t, err)
+
 		w := sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &H.DashboardUnitRequestPayload{Title: rTitle,
-			Query: query, Presentation: M.PresentationLine})
+			Query: &postgres.Jsonb{queryJson}, Presentation: M.PresentationLine})
 		assert.Equal(t, http.StatusCreated, w.Code)
 	})
 
@@ -85,8 +91,12 @@ func TestAPICreateDashboardUnitHandler(t *testing.T) {
 			EventsWithProperties: []M.QueryEventWithProperties{}, // invalid, no events.
 			OverridePeriod:       true,
 		}
+		queryJson, err := json.Marshal(query)
+		assert.Nil(t, err)
+
 		w := sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &H.DashboardUnitRequestPayload{Title: rTitle,
-			Query: query, Presentation: M.PresentationLine})
+			Query: &postgres.Jsonb{queryJson}, Presentation: M.PresentationLine})
+
 		assert.Equal(t, http.StatusBadRequest, w.Code)
 	})
 }
