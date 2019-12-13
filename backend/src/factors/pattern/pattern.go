@@ -774,39 +774,39 @@ func (p *Pattern) GetCount(patternConstraints []EventConstraints, countType stri
 }
 
 func (p *Pattern) GetPerUserEventPropertyRanges(
-	eventIndex int, propertyName string) [][2]float64 {
+	eventIndex int, propertyName string) ([][2]float64, bool) {
 	if predefinedBinRanges, found := U.GetPredefinedBinRanges(propertyName); found {
-		return predefinedBinRanges
+		return predefinedBinRanges, true
 	}
 	// Return the ranges of the bin [min, max], in which the numeric values for the event property occurr.
-	return p.PerUserEventNumericProperties.GetBinRanges(PatternPropertyKey(eventIndex, propertyName))
+	return p.PerUserEventNumericProperties.GetBinRanges(PatternPropertyKey(eventIndex, propertyName)), false
 }
 
 func (p *Pattern) GetPerUserUserPropertyRanges(
-	eventIndex int, propertyName string) [][2]float64 {
+	eventIndex int, propertyName string) ([][2]float64, bool) {
 	if predefinedBinRanges, found := U.GetPredefinedBinRanges(propertyName); found {
-		return predefinedBinRanges
+		return predefinedBinRanges, true
 	}
 	// Return the ranges of the bin [min, max], in which the numeric values for the event property occurr.
-	return p.PerUserUserNumericProperties.GetBinRanges(PatternPropertyKey(eventIndex, propertyName))
+	return p.PerUserUserNumericProperties.GetBinRanges(PatternPropertyKey(eventIndex, propertyName)), false
 }
 
 func (p *Pattern) GetPerOccurrenceEventPropertyRanges(
-	eventIndex int, propertyName string) [][2]float64 {
+	eventIndex int, propertyName string) ([][2]float64, bool) {
 	if predefinedBinRanges, found := U.GetPredefinedBinRanges(propertyName); found {
-		return predefinedBinRanges
+		return predefinedBinRanges, true
 	}
 	// Return the ranges of the bin [min, max], in which the numeric values for the event property occurr.
-	return p.PerOccurrenceEventNumericProperties.GetBinRanges(PatternPropertyKey(eventIndex, propertyName))
+	return p.PerOccurrenceEventNumericProperties.GetBinRanges(PatternPropertyKey(eventIndex, propertyName)), false
 }
 
 func (p *Pattern) GetPerOccurrenceUserPropertyRanges(
-	eventIndex int, propertyName string) [][2]float64 {
+	eventIndex int, propertyName string) ([][2]float64, bool) {
 	if predefinedBinRanges, found := U.GetPredefinedBinRanges(propertyName); found {
-		return predefinedBinRanges
+		return predefinedBinRanges, true
 	}
 	// Return the ranges of the bin [min, max], in which the numeric values for the event property occurr.
-	return p.PerOccurrenceUserNumericProperties.GetBinRanges(PatternPropertyKey(eventIndex, propertyName))
+	return p.PerOccurrenceUserNumericProperties.GetBinRanges(PatternPropertyKey(eventIndex, propertyName)), false
 }
 
 func (p *Pattern) String() string {
