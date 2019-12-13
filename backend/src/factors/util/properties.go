@@ -380,7 +380,7 @@ var EVENT_TO_SESSION_PROPERTIES = map[string]string{
 
 var PREDEFINED_BIN_RANGES_FOR_PROPERTY = map[string][][2]float64{
 	EP_PAGE_LOAD_TIME: [][2]float64{
-		[2]float64{0, 1},
+		//[2]float64{0, 1},
 		[2]float64{1, 2},
 		[2]float64{2, 5},
 		[2]float64{5, 10},
@@ -388,7 +388,7 @@ var PREDEFINED_BIN_RANGES_FOR_PROPERTY = map[string][][2]float64{
 		[2]float64{20, math.MaxFloat64},
 	},
 	UP_INITIAL_PAGE_LOAD_TIME: [][2]float64{
-		[2]float64{0, 1},
+		//[2]float64{0, 1},
 		[2]float64{1, 2},
 		[2]float64{2, 5},
 		[2]float64{5, 10},

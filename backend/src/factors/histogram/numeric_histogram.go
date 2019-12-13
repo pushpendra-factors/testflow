@@ -202,6 +202,11 @@ func (h *NumericHistogramStruct) CDF(x []float64) float64 {
 				min    = h.Bins[i].Min.Values[j]
 				max    = h.Bins[i].Max.Values[j]
 			)
+			if min == math.NaN() || max == math.NaN() {
+				// Ignore bins with NaN values.
+				continue
+			}
+
 			if x < min {
 				factor = 0
 			} else if x >= max {
