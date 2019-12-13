@@ -19,7 +19,9 @@ import NoContent from '../../common/NoContent';
 import ClosableDateRangePicker from '../../common/ClosableDatePicker';
 import Loading from '../../loading';
 import { PRESENTATION_CARD, DEFAULT_DATE_RANGE, 
-  DEFINED_DATE_RANGES } from '../Query/common';
+  DEFINED_DATE_RANGES, 
+  PRESENTATION_TABLE,
+  QUERY_CLASS_CHANNEL} from '../Query/common';
 
 const TYPE_OPTS = [
   { label: "Only me", value: "pr" },
@@ -28,9 +30,10 @@ const TYPE_OPTS = [
 
 const UNIT_TYPE_CARD = "card";
 const UNIT_TYPE_CHART = "chart";
+const UNIT_TYPE_BIG_CHART = "big_chart";
 
-const SortableUnit = SortableElement(({ value, card }) => {
-  let size = card ? 3 : 6;
+const SortableUnit = SortableElement(({ value, card, bigChart }) => {
+  let size = bigChart ? 12 : card ? 3 : 6;
   return <Col md={size} style={{ display:'inline-block', padding: '0 15px' }}> { value } </Col>
 });
 
@@ -223,6 +226,10 @@ class Dashboard extends Component {
     this.handleUnitPositionChange(UNIT_TYPE_CHART, oldIndex, newIndex);
   }
 
+  handleBigChartUnitPositionChange = ({ oldIndex, newIndex }) => {
+    this.handleUnitPositionChange(UNIT_TYPE_BIG_CHART, oldIndex, newIndex);
+  }
+
   getCurrentDashboard() {
     let dashboard = this.getSelectedDashboard();
     if (!dashboard) return null;
@@ -233,8 +240,9 @@ class Dashboard extends Component {
         return this.props.dashboards[i];
   }
 
-  getUnitType(presentation) {
-    return presentation === PRESENTATION_CARD ? UNIT_TYPE_CARD : UNIT_TYPE_CHART;
+  getUnitType(unit) {
+    if (this.isBigChartUnit(unit)) return UNIT_TYPE_BIG_CHART;
+    return unit.presentation === PRESENTATION_CARD ? UNIT_TYPE_CARD : UNIT_TYPE_CHART;
   }
 
   getInitialPositionFromOrderOfUnits(unitType) {
@@ -243,11 +251,12 @@ class Dashboard extends Component {
     let position = 0;
     for (let i in this.props.dashboardUnits) {
       let unit = this.props.dashboardUnits[i];
-      if (this.getUnitType(unit.presentation) == unitType) {
+      if (this.getUnitType(unit) == unitType) {
         positionMap[unit.id] = position;
         position++;
       }
     }
+
     console.warn("Positioning charts by given order as positions of "+unitType+" is null.");
 
     return positionMap;
@@ -280,6 +289,12 @@ class Dashboard extends Component {
 
     return positions;
   }
+
+  isBigChartUnit(unit) {
+    // only channel queries with presentation table added as big chart unit.
+    return unit.presentation && unit.presentation == PRESENTATION_TABLE &&
+      unit.query && unit.query.cl && unit.query.cl == QUERY_CLASS_CHANNEL;
+  }
   
   renderDashboard() {
     if (this.state.loadingUnits) return <Loading paddingTop='10%' />
@@ -289,7 +304,10 @@ class Dashboard extends Component {
     let pDashUnits = this.props.dashboardUnits;
     let cardPositions = this.getUnitsPositionByType(UNIT_TYPE_CARD);
     let chartPositions = this.getUnitsPositionByType(UNIT_TYPE_CHART);
-    let chartUnits = [], cardUnits = [];
+    let bigChartPositions = this.getUnitsPositionByType(UNIT_TYPE_BIG_CHART);
+
+    // card: col-3, chartUnit: col-6, bigChartUnit: col-12.
+    let cardUnits = [], chartUnits = [], bigChartUnits = [];
 
     // Arranges units by position from dashboard.
     let cardIndex = 1;
@@ -297,13 +315,23 @@ class Dashboard extends Component {
       let pUnit = pDashUnits[i];
       if (pUnit.presentation && pUnit.presentation === PRESENTATION_CARD) {
         cardUnits[cardPositions[pUnit.id]] = {
-          unit: <DashboardUnit dateRange={this.getCurrentDateRange()} editDashboard={this.state.editDashboard} cardIndex={cardIndex} data={pUnit} position={cardPositions[pUnit.id]} />,
+          unit: <DashboardUnit dateRange={this.getCurrentDateRange()} editDashboard={this.state.editDashboard} 
+            cardIndex={cardIndex} data={pUnit} position={cardPositions[pUnit.id]} />,
           position: cardPositions[pUnit.id],
         };
         cardIndex++;
-      } else {
+      } 
+      else if (this.isBigChartUnit(pUnit)) {
+        bigChartUnits[bigChartPositions[pUnit.id]] = {
+          unit: <DashboardUnit dateRange={this.getCurrentDateRange()} editDashboard={this.state.editDashboard} 
+            data={pUnit} position={bigChartPositions[pUnit.id]} />,
+          position: bigChartPositions[pUnit.id],
+        };
+      }
+      else {
         chartUnits[chartPositions[pUnit.id]] = {
-          unit: <DashboardUnit dateRange={this.getCurrentDateRange()} editDashboard={this.state.editDashboard} data={pUnit} position={cardPositions[pUnit.id]} />,
+          unit: <DashboardUnit dateRange={this.getCurrentDateRange()} editDashboard={this.state.editDashboard} 
+            data={pUnit} position={chartPositions[pUnit.id]} />,
           position: chartPositions[pUnit.id],
         };
       }
@@ -312,10 +340,16 @@ class Dashboard extends Component {
     return (
       <div>
         <SortableUnitList distance={10} axis='xy' onSortEnd={this.handleCardUnitPositionChange}>
-          { cardUnits.map((value) => (<SortableUnit disabled={!this.state.editDashboard} key={`card-${value.position}`} index={value.position} value={value.unit} card />)) }
+          { cardUnits.map((value) => (<SortableUnit disabled={!this.state.editDashboard} 
+          key={`card-${value.position}`} index={value.position} value={value.unit} card />)) }
         </SortableUnitList>
         <SortableUnitList distance={10} axis='xy' onSortEnd={this.handleChartUnitPositionChange}>
-          { chartUnits.map((value) => (<SortableUnit disabled={!this.state.editDashboard} key={`chart-${value.position}`} index={value.position} value={value.unit} />)) }
+          { chartUnits.map((value) => (<SortableUnit disabled={!this.state.editDashboard} 
+          key={`chart-${value.position}`} index={value.position} value={value.unit} />)) }
+        </SortableUnitList>
+        <SortableUnitList distance={10} axis='xy' onSortEnd={this.handleBigChartUnitPositionChange}>
+          { bigChartUnits.map((value) => (<SortableUnit disabled={!this.state.editDashboard} 
+          key={`chart-${value.position}`} index={value.position} value={value.unit} bigChart />)) }
         </SortableUnitList>
       </div>
     )
