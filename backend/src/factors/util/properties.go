@@ -22,6 +22,12 @@ const SEN_ALL_EVENTS = "$AllEvents"
 const SEN_ALL_EVENTS_DISPLAY_STRING = "All Events"
 
 const EVENT_NAME_SESSION = "$session"
+const EVENT_NAME_FORM_SUBMITTED = "$form_submitted"
+
+var ALLOWED_INTERNAL_EVENT_NAMES = [...]string{
+	EVENT_NAME_SESSION,
+	EVENT_NAME_FORM_SUBMITTED,
+}
 
 /* Properties Constants */
 

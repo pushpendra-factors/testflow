@@ -132,7 +132,17 @@ func isValidName(name string, typ string) bool {
 		return false
 	}
 
-	return typ == TYPE_INTERNAL_EVENT_NAME || !strings.HasPrefix(name, U.NAME_PREFIX)
+	if typ == TYPE_INTERNAL_EVENT_NAME {
+		return true
+	}
+
+	for _, allowedEventName := range U.ALLOWED_INTERNAL_EVENT_NAMES {
+		if name == allowedEventName {
+			return true
+		}
+	}
+
+	return !strings.HasPrefix(name, U.NAME_PREFIX)
 }
 
 func GetEventName(name string, projectId uint64) (*EventName, int) {
