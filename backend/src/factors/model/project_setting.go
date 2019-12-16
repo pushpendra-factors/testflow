@@ -15,9 +15,10 @@ type ProjectSetting struct {
 	ProjectId uint64 `gorm:"primary_key:true" json:"-"` // exclude on JSON response.
 	// Using pointers to avoid update by default value.
 	// omit empty to avoid nil(filelds not updated) on resp json.
-	AutoTrack  *bool `gorm:"not null;default:false" json:"auto_track,omitempty"`
-	IntSegment *bool `gorm:"not null;default:false" json:"int_segment,omitempty"`
-	ExcludeBot *bool `gorm:"not null;default:false" json:"exclude_bot,omitempty"`
+	AutoTrack       *bool `gorm:"not null;default:false" json:"auto_track,omitempty"`
+	AutoFormCapture *bool `gorm:"not null;default:false" json:"auto_form_capture,omitempty"`
+	IntSegment      *bool `gorm:"not null;default:false" json:"int_segment,omitempty"`
+	ExcludeBot      *bool `gorm:"not null;default:false" json:"exclude_bot,omitempty"`
 	// Foreign key constraint int_adwords_enabled_agent_uuid -> agents(uuid)
 	// Todo: Set int_adwords_enabled_agent_uuid, int_adwords_customer_account_id to NULL
 	// for disabling adwords integration for the project.
