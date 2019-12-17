@@ -12,7 +12,7 @@ const PAGE_SPENT_TIME = PREFIX+"page_spent_time";
 const PAGE_LOAD_TIME = PREFIX+"page_load_time";
 const COMPANY = PREFIX+"company";
 const EMAIL = PREFIX+"email";
-const PHONE = PREFIX="phone";
+const PHONE = PREFIX+"phone";
 const NAME = PREFIX+"name";
 const FIRST_NAME = PREFIX+"first_name";
 const LAST_NAME = PREFIX+"last_name";
