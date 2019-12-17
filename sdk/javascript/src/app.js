@@ -211,7 +211,7 @@ App.prototype.captureAndTrackFormSubmit = function(appInstance, e) {
     if (!e || !e.target)
         logger.debug("Form event or event.target is undefined on capture.");
 
-    var properties = FormCapture.getPropertiesFromForm(e.target);
+    var properties = Properties.getPropertiesFromForm(e.target);
     appInstance.track("$form_submitted", properties);
 }
 

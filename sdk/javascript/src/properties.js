@@ -1,6 +1,7 @@
 "use strict";
 
 const util = require("./utils/util");
+const FormCapture = require("./utils/form_capture");
 
 const PLATFORM_WEB = "web";
 
@@ -9,6 +10,12 @@ const PREFIX = "$";
 
 const PAGE_SPENT_TIME = PREFIX+"page_spent_time";
 const PAGE_LOAD_TIME = PREFIX+"page_load_time";
+const COMPANY = PREFIX+"company";
+const EMAIL = PREFIX+"email";
+const PHONE = PREFIX="phone";
+const NAME = PREFIX+"name";
+const FIRST_NAME = PREFIX+"first_name";
+const LAST_NAME = PREFIX+"last_name";
 
 const isBotUserAgent = function(nAgt) {
     let lcaseAgt = nAgt.toLowerCase();
@@ -432,6 +439,55 @@ function getFromQueryParams(location) {
     return parseFromQueryString(getAllQueryParamStr(location));
 }
 
+function getPropertiesFromForm(form) {
+    var inputs = form.querySelectorAll('input');
+    var properties = {};
+
+    for (var i=0; i<inputs.length; i++) {
+        // exclude password from any processing.
+        if (inputs[i].type == 'password') continue;
+        if (!inputs[i].value) continue;
+        
+        var value = inputs[i].value.trim();
+        if (inputs[i].value == "") continue;
+
+        // any input field with a valid email catuptured as email.
+        if (FormCapture.isEmail(value) && !properties[EMAIL]) 
+            properties[EMAIL] = value;
+
+        if (inputs[i].type == 'tel') properties[PHONE] = value;
+
+        if (!properties[COMPANY] && 
+            (FormCapture.isFieldByMatch(inputs[i], 'company') || FormCapture.isFieldByMatch(inputs[i], 'org')))
+            properties[COMPANY] = value;
+
+        // name or placeholder as first and name tokens.
+        if (FormCapture.isFieldByMatch(inputs[i], 'first', 'name')) {
+            if (!properties[FIRST_NAME]) properties[FIRST_NAME] = value;
+
+            if (!properties[NAME]) properties[NAME] = '';
+            // prepend first name with existing name value.
+            properties[NAME] = value + properties[NAME];
+        }
+
+        // name or placeholder as last and name tokens.
+        if (FormCapture.isFieldByMatch(inputs[i], 'last', 'name')) {
+            if (!properties[LAST_NAME]) properties[LAST_NAME] = value;
+
+            if (!properties[NAME] || properties[NAME] == '') properties[NAME] = value;
+            else properties[NAME] + ' ' + value; // appended with space.
+        }
+
+        // only name.
+        if (FormCapture.isFieldByMatch(inputs[i], 'name')) {
+            // add only if it is not filled by first and last name already.
+            if (!properties[NAME]) properties[NAME] = value;
+        }
+    }
+
+    return properties;
+}
+
 module.exports = {
     getUserDefault: getUserDefault,
     getEventDefault: getEventDefault,
@@ -439,6 +495,7 @@ module.exports = {
     parseFromQueryString: parseFromQueryString,
     getTypeValidated: getTypeValidated,
     getPageLoadTime: getPageLoadTime,
+    getPropertiesFromForm: getPropertiesFromForm,
 
     PAGE_SPENT_TIME: PAGE_SPENT_TIME,
     PAGE_LOAD_TIME: PAGE_LOAD_TIME,

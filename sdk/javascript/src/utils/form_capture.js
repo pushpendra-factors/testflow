@@ -29,51 +29,6 @@ function isFieldByMatch(elem, typeStr1, typeStr2) {
     return false;
 }
 
-function getPropertiesFromForm(form) {
-    var inputs = form.querySelectorAll('input');
-    var properties = {};
-
-    for (var i=0; i<inputs.length; i++) {
-        // exclude password from any processing.
-        if (inputs[i].type == 'password') continue;
-        if (!inputs[i].value) continue;
-        
-        var value = inputs[i].value.trim();
-        if (inputs[i].value == "") continue;
-
-        // any input field with a valid email catuptured as email.
-        if (isEmail(value) && !properties['$email']) 
-            properties['$email'] = value;
-
-        if (inputs[i].type == 'tel') properties['$phone'] = value;
-
-        if (!properties['$company'] && 
-            (isFieldByMatch(inputs[i], 'company') || isFieldByMatch(inputs[i], 'org')))
-            properties['$company'] = value;
-
-        // name or placeholder as first and name tokens.
-        if (isFieldByMatch(inputs[i], 'first', 'name')) {
-            if (!properties['$name']) properties['$name'] = '';
-            // prepend first name with existing name value.
-            properties['$name'] = value + properties['$name'];
-        }
-
-        // name or placeholder as last and name tokens.
-        if (isFieldByMatch(inputs[i], 'last', 'name')) {
-            if (!properties['$name'] || properties['$name'] == "") properties['$name'] = value;
-            else properties['$name'] + ' ' + value; // appended with space.
-        }
-
-        // only name.
-        if (isFieldByMatch(inputs[i], 'name')) {
-            // add only if it is not filled by first and last name already.
-            if (!properties['$name']) properties['$name'] = value;
-        }
-    }
-
-    return properties;
-}
-
 function bindAllFormsOnSubmit(appInstance, processCallback) {
     // bind processForm to onSubmit event for all forms.
     var forms = document.querySelectorAll('form');
@@ -87,4 +42,4 @@ function bindAllFormsOnSubmit(appInstance, processCallback) {
     }
 }
 
-module.exports = exports =  { isEmail, getPropertiesFromForm, bindAllFormsOnSubmit }; 
+module.exports = exports =  { isEmail, isFieldByMatch, bindAllFormsOnSubmit }; 
