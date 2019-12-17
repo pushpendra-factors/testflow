@@ -215,6 +215,9 @@ App.prototype.captureAndTrackFormSubmit = function(appInstance, e) {
     appInstance.track("$form_submitted", properties);
 }
 
+// autoFormCapture - Captures properties from ideal forms which 
+// has a submit button. The fields sumbmitted are processed 
+// on callback onSubmit(form).
 App.prototype.autoFormCapture = function(enabled=false) {
     if (!enabled) return false; // not enabled.
     FormCapture.bindAllFormsOnSubmit(this, this.captureAndTrackFormSubmit);
