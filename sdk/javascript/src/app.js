@@ -2,6 +2,7 @@
 
 var Cookie = require("./utils/cookie");
 const logger = require("./utils/logger");
+const FormCapture = require("./utils/form_capture");
 const util = require("./utils/util");
 var APIClient = require("./api-client");
 const constant = require("./constant");
@@ -10,8 +11,11 @@ const Properties = require("./properties");
 const SDK_NOT_INIT_ERROR = new Error("Factors SDK is not initialized.");
 
 function isAllowedEventName(eventName) {
+    // whitelisted $ event_name.
+    if (eventName == "$form_submitted") return true;
+
     // Don't allow event_name starts with '$'.
-    if (eventName.indexOf("$") == 0) return false; 
+    if (eventName.indexOf("$")  == 0) return false; 
     return true;
 }
 
@@ -118,6 +122,9 @@ App.prototype.init = function(token, opts={}) {
         .then(function() {
             return trackOnInit ? _this.autoTrack(_this.getConfig("auto_track")) : null;
         })
+        .then(function() {
+            return _this.autoFormCapture(_this.getConfig("auto_form_capture"));
+        })
         .catch(function() {
             return Promise.reject(new Error("FactorsRequestError: Init failed. App configuration failed."));
         });
@@ -129,7 +136,7 @@ App.prototype.track = function(eventName, eventProperties, auto=false) {
     eventName = util.validatedStringArg("event_name", eventName) // Clean event name.
     if (!isAllowedEventName(eventName)) 
         return Promise.reject(new Error("FactorsError: Invalid event name."));
-    
+        
     // Other property validations done on backend.
     eventProperties = Properties.getTypeValidated(eventProperties);
     // Merge default properties.
@@ -149,11 +156,11 @@ App.prototype.track = function(eventName, eventProperties, auto=false) {
 
     return this.client.track(payload)
         .then(updateCookieIfUserIdInResponse)
-        .then((response) => {
+        .then(function(response) {
             if (auto && response.body && response.body) 
                 addCurrentPageAutoTrackEventIdToStore(response.body.event_id);
             return response;
-        })
+        });
 }
 
 App.prototype.updatePageTimeProperties = function(startOfPageSpentTime) {
@@ -196,6 +203,25 @@ App.prototype.autoTrack = function(enabled=false) {
             }
         })
     }
+}
+
+// captureTrackFormSubmit - would be attached to 
+// form's onSubmit.
+App.prototype.captureAndTrackFormSubmit = function(appInstance, e) {
+    if (!e || !e.target)
+        logger.debug("Form event or event.target is undefined on capture.");
+
+    var properties = Properties.getPropertiesFromForm(e.target);
+    appInstance.track("$form_submitted", properties);
+}
+
+// autoFormCapture - Captures properties from ideal forms which 
+// has a submit button. The fields sumbmitted are processed 
+// on callback onSubmit(form).
+App.prototype.autoFormCapture = function(enabled=false) {
+    if (!enabled) return false; // not enabled.
+    FormCapture.bindAllFormsOnSubmit(this, this.captureAndTrackFormSubmit);
+    return true;
 }
 
 App.prototype.page = function() {

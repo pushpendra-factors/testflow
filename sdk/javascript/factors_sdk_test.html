@@ -1,0 +1,39 @@
+<html>
+    <head> 
+        <title>factors.ai</title>
+        <script type="text/javascript">
+            (function(c) {
+                var s = document.createElement("script");
+                s.type = "text/javascript";
+                // Load completion check.
+                if (s.readyState){ 
+                    s.onreadystatechange = function(){
+                        if (s.readyState == "loaded" || s.readyState == "complete") {
+                            s.onreadystatechange = null;
+                            c();
+                        }
+                    };
+                } else {
+                    s.onload = function(){ c(); };
+                }
+                s.src = "/dist/factors.prod.js";
+                s.async = true;
+                d = !!document.body ? document.body : document.head;
+                d.appendChild(s);
+            })(function() { factors.init("dummy", { host: "http://localhost:8080" }); });
+        </script>
+    </head>
+    <body> 
+        <h2>Factors SDK Test</h2>
+
+        <h2>Form 1</h2>
+        <form novalidate="novalidate">
+            <input type="text" name="First Name" placeholder="Your first name" /></br></br>
+            <input type="text" name="Last Name" placeholder="Your last name" /></br></br>
+            <input type="email" name="E-mail" placeholder="Your email"/></br></br>
+            <input type="tel" name="Phone Number" placeholder="Your phone number"/></br></br>
+            <input type="text" name="Company" placeholder="Your company" /></br></br>
+            <button type="submit">Submit</button>
+        </form>
+    </body>
+</html>

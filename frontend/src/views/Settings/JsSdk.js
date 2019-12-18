@@ -141,6 +141,12 @@ class JsSdk extends Component {
       this.props.currentProjectSettings.exclude_bot;
   }
 
+
+  isAutoFormCaptureEnabled() {
+    return this.props.currentProjectSettings && 
+      this.props.currentProjectSettings.auto_form_capture;
+  }
+
   toggleAutoTrack = () =>  {
     this.props.udpateProjectSettings(this.props.currentProjectId, 
       { 'auto_track': !this.isAutoTrackEnabled() });
@@ -149,6 +155,11 @@ class JsSdk extends Component {
   toggleExcludeBot = () =>  {
     this.props.udpateProjectSettings(this.props.currentProjectId, 
       { 'exclude_bot': !this.isExcludeBotEnabled() });
+  }
+
+  toggleAutoFormCapture = () => {
+    this.props.udpateProjectSettings(this.props.currentProjectId, 
+      { 'auto_form_capture': !this.isAutoFormCaptureEnabled() });
   }
 
   isDomainValid(d) {
@@ -470,6 +481,18 @@ class JsSdk extends Component {
                 checked={this.isExcludeBotEnabled()}
                 icons={false}
                 onChange={this.toggleExcludeBot}
+              />
+            </div>
+          </CardHeader>
+        </Card>
+        <Card className="fapp-card">
+          <CardHeader className='fapp-only-header'>
+            <strong>Auto Form Capture</strong>
+            <div style={{display: 'inline-block', float: 'right'}}>
+              <Toggle
+                checked={this.isAutoFormCaptureEnabled()}
+                icons={false}
+                onChange={this.toggleAutoFormCapture} 
               />
             </div>
           </CardHeader>

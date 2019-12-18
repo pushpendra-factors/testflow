@@ -512,6 +512,13 @@ func SDKAddUserPropertiesHandler(c *gin.Context) {
 	c.JSON(sdkAddUserProperties(projectId, &request, c.ClientIP()))
 }
 
+type sdkSettingsResponse struct {
+	AutoTrack       bool `json:"auto_track"`
+	AutoFormCapture bool `json:"auto_form_capture"`
+	IntSegment      bool `json:"int_segment"`
+	ExcludeBot      bool `json:"exclude_bot"`
+}
+
 // Test command.
 // curl -i -H "Content-Type: application/json" -H "Authorization: YOUR_TOKEN" -X GET http://localhost:8080/sdk/project/get_settings
 func SDKGetProjectSettingsHandler(c *gin.Context) {
@@ -528,7 +535,14 @@ func SDKGetProjectSettingsHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, projectSetting)
+	response := sdkSettingsResponse{
+		AutoTrack:       *projectSetting.AutoTrack,
+		AutoFormCapture: *projectSetting.AutoFormCapture,
+		IntSegment:      *projectSetting.IntSegment,
+		ExcludeBot:      *projectSetting.ExcludeBot,
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 
 func SDKUpdateEventProperties(c *gin.Context) {

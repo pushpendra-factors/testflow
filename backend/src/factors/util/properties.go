@@ -22,6 +22,12 @@ const SEN_ALL_EVENTS = "$AllEvents"
 const SEN_ALL_EVENTS_DISPLAY_STRING = "All Events"
 
 const EVENT_NAME_SESSION = "$session"
+const EVENT_NAME_FORM_SUBMITTED = "$form_submitted"
+
+var ALLOWED_INTERNAL_EVENT_NAMES = [...]string{
+	EVENT_NAME_SESSION,
+	EVENT_NAME_FORM_SUBMITTED,
+}
 
 /* Properties Constants */
 
@@ -121,6 +127,8 @@ var UP_TIMEZONE string = "$timezone"
 var UP_SEGMENT_CHANNEL string = "$segment_channel" // from segement (browser, client, etc.,).
 var UP_CUSTOMER_USER_ID string = "$customer_user_id"
 var UP_EMAIL string = "$email"
+var UP_COMPANY string = "$company"
+var UP_NAME string = "$name"
 var UP_FIRST_NAME string = "$first_name"
 var UP_LAST_NAME string = "$last_name"
 var UP_PHONE string = "$phone"
@@ -185,6 +193,14 @@ var SDK_ALLOWED_EVENT_PROPERTIES = [...]string{
 	EP_FBCLIID,
 	EP_COST,
 	EP_REVENUE,
+
+	// user_properties captured on event. i.e form_submit.
+	UP_EMAIL,
+	UP_PHONE,
+	UP_COMPANY,
+	UP_NAME,
+	UP_FIRST_NAME,
+	UP_LAST_NAME,
 }
 
 // Event properties that are not visible to user for analysis.
@@ -233,6 +249,8 @@ var SDK_ALLOWED_USER_PROPERTIES = [...]string{
 	UP_TIMEZONE,
 	UP_CUSTOMER_USER_ID,
 	UP_EMAIL,
+	UP_COMPANY,
+	UP_NAME,
 	UP_FIRST_NAME,
 	UP_LAST_NAME,
 	UP_PHONE,
