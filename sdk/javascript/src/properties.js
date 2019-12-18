@@ -499,4 +499,5 @@ module.exports = {
 
     PAGE_SPENT_TIME: PAGE_SPENT_TIME,
     PAGE_LOAD_TIME: PAGE_LOAD_TIME,
+    EMAIL: EMAIL,
 }
