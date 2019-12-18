@@ -513,10 +513,10 @@ func SDKAddUserPropertiesHandler(c *gin.Context) {
 }
 
 type sdkSettingsResponse struct {
-	AutoTrack       bool `json:"auto_track"`
-	AutoFormCapture bool `json:"auto_form_capture"`
-	IntSegment      bool `json:"int_segment"`
-	ExcludeBot      bool `json:"exclude_bot"`
+	AutoTrack       *bool `json:"auto_track"`
+	AutoFormCapture *bool `json:"auto_form_capture"`
+	IntSegment      *bool `json:"int_segment"`
+	ExcludeBot      *bool `json:"exclude_bot"`
 }
 
 // Test command.
@@ -536,10 +536,10 @@ func SDKGetProjectSettingsHandler(c *gin.Context) {
 	}
 
 	response := sdkSettingsResponse{
-		AutoTrack:       *projectSetting.AutoTrack,
-		AutoFormCapture: *projectSetting.AutoFormCapture,
-		IntSegment:      *projectSetting.IntSegment,
-		ExcludeBot:      *projectSetting.ExcludeBot,
+		AutoTrack:       projectSetting.AutoTrack,
+		AutoFormCapture: projectSetting.AutoFormCapture,
+		IntSegment:      projectSetting.IntSegment,
+		ExcludeBot:      projectSetting.ExcludeBot,
 	}
 
 	c.JSON(http.StatusOK, response)
