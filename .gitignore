@@ -27,6 +27,7 @@ integrations/adwords/**/.swp
 
 */.DS_Store
 **/.DS_Store
+**/*.rdb
 .vscode
 
 # Android SDK
