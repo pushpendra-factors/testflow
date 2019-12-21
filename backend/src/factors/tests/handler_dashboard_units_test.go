@@ -53,7 +53,8 @@ func TestAPICreateDashboardUnitHandler(t *testing.T) {
 	assert.NotNil(t, agent)
 
 	rName := U.RandomString(5)
-	dashboard, errCode := M.CreateDashboard(project.ID, agent.UUID, &M.Dashboard{Name: rName, Type: M.DashboardTypeProjectVisible})
+	dashboard, errCode := M.CreateDashboard(project.ID, agent.UUID,
+		&M.Dashboard{Name: rName, Type: M.DashboardTypeProjectVisible})
 	assert.NotNil(t, dashboard)
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.Equal(t, rName, dashboard.Name)
@@ -81,7 +82,7 @@ func TestAPICreateDashboardUnitHandler(t *testing.T) {
 		assert.Equal(t, http.StatusCreated, w.Code)
 	})
 
-	t.Run("CreateDashboardUnit:WithInvalidQuery", func(t *testing.T) {
+	t.Run("CreateDashboardUnit:WithNoEventsQuery", func(t *testing.T) {
 		rTitle := U.RandomString(5)
 		query := M.Query{
 			EventsCondition:      M.EventCondAnyGivenEvent,
@@ -97,6 +98,6 @@ func TestAPICreateDashboardUnitHandler(t *testing.T) {
 		w := sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &H.DashboardUnitRequestPayload{Title: rTitle,
 			Query: &postgres.Jsonb{queryJson}, Presentation: M.PresentationLine})
 
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, http.StatusCreated, w.Code)
 	})
 }

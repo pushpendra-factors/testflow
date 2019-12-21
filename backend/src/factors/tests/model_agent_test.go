@@ -216,7 +216,7 @@ func TestDBAgentUpdateAgentVerificationDetails(t *testing.T) {
 		assert.Equal(t, firstName, updatedAgent.FirstName)
 		assert.Equal(t, lastName, updatedAgent.LastName)
 		assert.True(t, M.IsPasswordAndHashEqual(password, updatedAgent.Password))
-		assert.Nil(t, updatedAgent.IntAdwordsRefreshToken)
+		assert.Empty(t, updatedAgent.IntAdwordsRefreshToken)
 	})
 }
 
