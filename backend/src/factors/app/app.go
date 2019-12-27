@@ -25,6 +25,9 @@ func main() {
 	dbName := flag.String("db_name", "autometa", "")
 	dbPass := flag.String("db_pass", "@ut0me7a", "")
 
+	redisHost := flag.String("redis_host", "localhost", "")
+	redisPort := flag.Int("redis_port", 6379, "")
+
 	geoLocFilePath := flag.String("geo_loc_path", "/usr/local/var/factors/geolocation_data/GeoLite2-City.mmdb", "")
 
 	apiDomain := flag.String("api_domain", "factors-dev.com:8080", "")
@@ -56,6 +59,8 @@ func main() {
 			Name:     *dbName,
 			Password: *dbPass,
 		},
+		RedisHost:              *redisHost,
+		RedisPort:              *redisPort,
 		GeolocationFile:        *geoLocFilePath,
 		APIDomain:              *apiDomain,
 		APPDomain:              *appDomain,

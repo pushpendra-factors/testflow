@@ -1,4 +1,4 @@
-.PHONY: build-api serve-api build-ps serve-ps build-ds serve-ds clean pack-api upload-api pack-ps upload-ps pack-ds upload-ds pack-debug upload-debug pack-build-seq upload-build-seq pack-build-reports upload-build-reports test 
+.PHONY: build-api serve-api build-ps serve-ps build-ds serve-ds serve-redis clean pack-api upload-api pack-ps upload-ps pack-ds upload-ds pack-redis upload-redis pack-debug upload-debug pack-build-seq upload-build-seq pack-build-reports upload-build-reports test 
 
 # Update tag with the latest release version
 # Ex format: v0.05-beta_d0e9ed9 
@@ -28,6 +28,9 @@ build-ds:
 serve-ds:
 	$(GOPATH)/bin/data-service
 
+serve-redis:
+	redis-server $(GOPATH)/src/redis.conf
+
 clean:
 	rm $(GOPATH)/bin/pattern-app $(GOPATH)/bin/app $(GOPATH)/bin/data-service
 
@@ -48,6 +51,12 @@ pack-ds:
 
 upload-ds:
 	docker push us.gcr.io/factors-$(ENV)/data-server:$(TAG)
+
+pack-redis:
+	docker build -t us.gcr.io/factors-$(ENV)/redis:$(TAG) -f Dockerfile.redis .
+
+upload-redis:
+	docker push us.gcr.io/factors-$(ENV)/redis:$(TAG)
 
 pack-debug:
 	docker build --no-cache -t us.gcr.io/factors-$(ENV)/debug:$(TAG) -f Dockerfile.debug .

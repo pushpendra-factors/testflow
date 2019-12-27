@@ -37,6 +37,10 @@ func RandomUint64() uint64 {
 	return rand.Uint64()
 }
 
+func RandomUint64WithUnixNano() uint64 {
+	return uint64(time.Now().UnixNano())
+}
+
 func UnixTimeBeforeAWeek() int64 {
 	return UnixTimeBeforeDuration(168 * time.Hour) // 7 days.
 }

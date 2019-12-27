@@ -178,6 +178,17 @@
   version = "v1.2.0"
 
 [[projects]]
+  digest = "1:38ec74012390146c45af1f92d46e5382b50531247929ff3a685d2b2be65155ac"
+  name = "github.com/gomodule/redigo"
+  packages = [
+    "internal",
+    "redis",
+  ]
+  pruneopts = "UT"
+  revision = "9c11da706d9b7902c6da69c592f75637793fe121"
+  version = "v2.0.0"
+
+[[projects]]
   digest = "1:cd9864c6366515827a759931746738ede6079faa08df9c584596370d6add135c"
   name = "github.com/googleapis/gax-go"
   packages = [
@@ -704,6 +715,7 @@
     "github.com/coreos/etcd/mvcc/mvccpb",
     "github.com/gin-contrib/cors",
     "github.com/gin-gonic/gin",
+    "github.com/gomodule/redigo/redis",
     "github.com/gorilla/mux",
     "github.com/gorilla/rpc",
     "github.com/gorilla/rpc/json",

@@ -12,6 +12,19 @@ brew services stop postgresql
 brew services restart postgresql
 ```
 
+## Redis Setup (Homebrew):
+
+* Install
+```
+brew install redis 
+```
+
+* Run
+```
+# This will start serving redis non-persistent instance.
+cd $GOPATH/src; make serve-redis
+```
+
 ## etcd Setup (Homebrew):
 ```
 brew install etcd

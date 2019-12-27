@@ -57,7 +57,7 @@ func TestDBCreateAndGetProject(t *testing.T) {
 	assert.Equal(t, project, getProject)
 
 	// Test Get Project on random id.
-	var randomId uint64 = U.RandomUint64()%100007 + 5
+	var randomId uint64 = U.RandomUint64WithUnixNano()
 	getProject, errCode = M.GetProject(randomId)
 	assert.Equal(t, http.StatusNotFound, errCode)
 	assert.Nil(t, getProject)

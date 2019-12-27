@@ -83,7 +83,7 @@ func TestDBGetProjectAgentMappingsByProjectId(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, errCode)
 	})
 	t.Run("NotFound", func(t *testing.T) {
-		randProjectId := U.RandomUint64()%100007 + 5
+		randProjectId := U.RandomUint64WithUnixNano()
 		_, errCode := M.GetProjectAgentMappingsByProjectId(randProjectId)
 		assert.Equal(t, http.StatusNotFound, errCode)
 	})

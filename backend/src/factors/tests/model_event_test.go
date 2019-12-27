@@ -304,6 +304,57 @@ func TestGetLatestAnyEventOfUserInDuration(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, errCode)
 }
 
+func TestCacheEvent(t *testing.T) {
+	for i := 0; i < 30; i++ {
+		project, user, eventName, err := SetupProjectUserEventNameReturnDAO()
+		assert.Nil(t, err)
+
+		eventId := U.RandomString(10)
+		timestamp := time.Now().Unix() - 100
+		err = M.SetCacheUserLastEvent(project.ID, user.ID,
+			&M.CacheEvent{ID: eventId, Timestamp: timestamp})
+		assert.Nil(t, err)
+
+		cacheEvent, err := M.GetCacheUserLastEvent(project.ID, user.ID)
+		assert.NotNil(t, cacheEvent)
+		assert.Equal(t, eventId, cacheEvent.ID)
+		assert.Equal(t, timestamp, cacheEvent.Timestamp)
+		assert.Nil(t, err)
+
+		event, errCode := M.CreateEvent(&M.Event{EventNameId: eventName.ID, ProjectId: project.ID, UserId: user.ID})
+		assert.Equal(t, http.StatusCreated, errCode)
+
+		cacheEvent, err = M.GetCacheUserLastEvent(project.ID, user.ID)
+		assert.NotNil(t, cacheEvent)
+		assert.Equal(t, event.ID, cacheEvent.ID)
+		assert.True(t, cacheEvent.Timestamp > timestamp)
+		assert.Nil(t, err)
+	}
+}
+
+func TestGetLatestAnyEventOfUserInDurationFromCache(t *testing.T) {
+	projectId, userId, eventNameId, err := SetupProjectUserEventName()
+	assert.Nil(t, err)
+
+	// no key exist on cache, so not found.
+	event, errCode := M.GetLatestAnyEventOfUserInDurationFromCache(projectId, userId, 30*time.Minute)
+	assert.Equal(t, http.StatusNotFound, errCode)
+	assert.Nil(t, event)
+
+	// event exist in 10 secs.
+	createdEvent, errCode := M.CreateEvent(&M.Event{EventNameId: eventNameId, ProjectId: projectId, UserId: userId})
+	assert.Equal(t, http.StatusCreated, errCode)
+	event, errCode = M.GetLatestAnyEventOfUserInDurationFromCache(projectId, userId, 10*time.Second)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotNil(t, errCode)
+	assert.Equal(t, createdEvent.ID, event.ID)
+
+	// inactivity for duration.
+	time.Sleep(3 * time.Second)
+	_, errCode = M.GetLatestAnyEventOfUserInDurationFromCache(projectId, userId, 2*time.Second)
+	assert.Equal(t, http.StatusNotFound, errCode)
+}
+
 func TestCreateOrGetSessionEvent(t *testing.T) {
 	projectId, userId, eventNameId, err := SetupProjectUserEventName()
 	assert.Nil(t, err)

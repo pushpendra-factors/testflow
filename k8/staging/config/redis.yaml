@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config-redis
+  labels:
+    env: staging
+    project: factors-staging
+data:
+  REDIS_HOST: "localhost"
+  REDIS_PORT: "6379"

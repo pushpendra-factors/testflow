@@ -10,7 +10,7 @@ import (
 )
 
 func TestDBUpdateProjectSettings(t *testing.T) {
-	project, err := SetupProjectReturnDAO()
+	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
 	assert.NotNil(t, project)
 
@@ -37,8 +37,8 @@ func TestDBUpdateProjectSettings(t *testing.T) {
 	assert.Equal(t, intSegment, *projectSetting.IntSegment)
 	assert.Equal(t, true, *projectSetting.ExcludeBot) // default state
 
+	agentUUID := agent.UUID
 	accountId := U.RandomLowerAphaNumString(6)
-	agentUUID := U.RandomLowerAphaNumString(8)
 	updatedPSettings, errCode = M.UpdateProjectSettings(project.ID, &M.ProjectSetting{
 		IntAdwordsCustomerAccountId: &accountId, IntAdwordsEnabledAgentUUID: &agentUUID})
 	assert.Equal(t, errCode, http.StatusAccepted)

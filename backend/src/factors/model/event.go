@@ -3,11 +3,15 @@ package model
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
+	cacheRedis "factors/cache/redis"
 	C "factors/config"
 	U "factors/util"
+	"fmt"
 	"net/http"
 	"time"
 
+	"github.com/gomodule/redigo/redis"
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
@@ -45,12 +49,59 @@ type ProjectEventsInfo struct {
 	LastEventTimestamp  int64  `json:"-"`
 }
 
+type CacheEvent struct {
+	ID        string `json:"id"`
+	Timestamp int64  `json:"ts"`
+}
+
 const error_Duplicate_event_customerEventID = "pq: duplicate key value violates unique constraint \"project_id_customer_event_id_unique_idx\""
 const eventsLimitForProperites = 50000
 const NewUserSessionInactivityDuration = time.Minute * 30
 
+const tableName = "events"
+const cacheIndexUserLastEvent = "user_last_event"
+
 func isDuplicateCustomerEventIdError(err error) bool {
 	return err.Error() == error_Duplicate_event_customerEventID
+}
+
+func getUserLastEventCacheKey(projectId uint64, userId string) (*cacheRedis.Key, error) {
+	suffix := fmt.Sprintf("uid:%s", userId)
+	prefix := fmt.Sprintf("%s:%s", tableName, cacheIndexUserLastEvent)
+	return cacheRedis.NewKey(projectId, prefix, suffix)
+}
+
+func SetCacheUserLastEvent(projectId uint64, userId string, cacheEvent *CacheEvent) error {
+	logCtx := log.WithField("project_id", projectId).WithField("user_id", userId)
+	if projectId == 0 || userId == "" {
+		logCtx.Error("Invalid project or user id on addToCacheUserLastEventTimestamp")
+		return errors.New("invalid project or user id")
+	}
+
+	if cacheEvent == nil {
+		logCtx.Error("Nil cache event on setCacheUserLastEvent")
+		return errors.New("nil cache event")
+	}
+
+	cacheEventJson, err := json.Marshal(cacheEvent)
+	if err != nil {
+		logCtx.Error("Failed cache event json marshal.")
+		return err
+	}
+
+	key, err := getUserLastEventCacheKey(projectId, userId)
+	if err != nil {
+		return err
+	}
+
+	// Expiry: Session inactivity duration + 5 minutes.
+	cacheExpiry := (NewUserSessionInactivityDuration + (time.Minute * 5)).Seconds()
+	err = cacheRedis.Set(key, string(cacheEventJson), cacheExpiry)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to setCacheUserLastEvent.")
+	}
+
+	return err
 }
 
 func CreateEvent(event *Event) (*Event, int) {
@@ -105,6 +156,9 @@ func CreateEvent(event *Event) (*Event, int) {
 	event.CreatedAt = transTime
 	event.UpdatedAt = transTime
 
+	SetCacheUserLastEvent(event.ProjectId, event.UserId,
+		&CacheEvent{ID: event.ID, Timestamp: event.Timestamp})
+
 	return event, http.StatusCreated
 }
 
@@ -132,6 +186,53 @@ func GetEventById(projectId uint64, id string) (*Event, int) {
 		return nil, http.StatusInternalServerError
 	}
 	return &event, http.StatusFound
+}
+
+func GetCacheUserLastEvent(projectId uint64, userId string) (*CacheEvent, error) {
+	key, err := getUserLastEventCacheKey(projectId, userId)
+	if err != nil {
+		return nil, err
+	}
+
+	cacheEventJson, err := cacheRedis.Get(key)
+	if err != nil {
+		return nil, err
+	}
+
+	var cacheEvent CacheEvent
+	err = json.Unmarshal([]byte(cacheEventJson), &cacheEvent)
+	if err != nil {
+		return nil, err
+	}
+
+	return &cacheEvent, nil
+}
+
+func GetLatestAnyEventOfUserInDurationFromCache(projectId uint64, userId string, duration time.Duration) (*Event, int) {
+	logCtx := log.WithFields(log.Fields{"project_id": projectId, "user_id": userId})
+
+	cacheEvent, err := GetCacheUserLastEvent(projectId, userId)
+	if err != nil {
+		if err == redis.ErrNil {
+			return nil, http.StatusNotFound
+		}
+
+		logCtx.Error("Failed to get latest event of user in duration from cache.")
+		return nil, http.StatusInternalServerError
+	}
+
+	// cached event older than given duration.
+	if cacheEvent.Timestamp < U.UnixTimeBeforeDuration(duration) {
+		return nil, http.StatusNotFound
+	}
+
+	event, errCode := GetEventById(projectId, cacheEvent.ID)
+	if errCode != http.StatusFound {
+		logCtx.WithField("err_code", errCode).Error("Failed to get event on using id from cache.")
+		return nil, errCode
+	}
+
+	return event, http.StatusFound
 }
 
 func GetLatestAnyEventOfUserInDuration(projectId uint64, userId string, duration time.Duration) (*Event, int) {
@@ -407,16 +508,23 @@ func CreateOrGetSessionEvent(projectId uint64, userId string, isFirstSession boo
 			eventProperties, userProperties, userPropertiesId)
 	}
 
-	latestUserEvent, errCode := GetLatestAnyEventOfUserInDuration(projectId, userId,
+	latestUserEvent, errCode := GetLatestAnyEventOfUserInDurationFromCache(projectId, userId,
 		NewUserSessionInactivityDuration)
-	if errCode == http.StatusInternalServerError {
-		logCtx.Error("Failed to get latest any event of user in duration.")
-		return nil, http.StatusInternalServerError
-	}
+	if errCode == http.StatusNotFound || errCode == http.StatusInternalServerError {
+		// Double check user's inactivity for the duration.
+		dbLatestUserEvent, errCode := GetLatestAnyEventOfUserInDuration(projectId, userId,
+			NewUserSessionInactivityDuration)
+		if errCode == http.StatusInternalServerError {
+			logCtx.Error("Failed to get latest any event of user in duration.")
+			return nil, http.StatusInternalServerError
+		}
 
-	if errCode == http.StatusNotFound {
-		return createSessionEvent(projectId, userId, sessionEventName.ID, isFirstSession, requestTimestamp,
-			eventProperties, userProperties, userPropertiesId)
+		if errCode == http.StatusNotFound {
+			return createSessionEvent(projectId, userId, sessionEventName.ID, isFirstSession, requestTimestamp,
+				eventProperties, userProperties, userPropertiesId)
+		}
+
+		latestUserEvent = dbLatestUserEvent
 	}
 
 	// Get latest session event of user from events between user's last event timestamp and

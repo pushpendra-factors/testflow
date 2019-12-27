@@ -17,6 +17,7 @@ import (
 
 	"github.com/coreos/etcd/mvcc/mvccpb"
 
+	"github.com/gomodule/redigo/redis"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	geoip2 "github.com/oschwald/geoip2-golang"
@@ -46,6 +47,8 @@ type Configuration struct {
 	Env                    string
 	Port                   int
 	DBInfo                 DBConf
+	RedisHost              string
+	RedisPort              int
 	EtcdEndpoints          []string
 	GeolocationFile        string
 	APIDomain              string
@@ -66,6 +69,7 @@ type Services struct {
 	Db                 *gorm.DB
 	GeoLocation        *geoip2.Reader
 	Etcd               *serviceEtcd.EtcdClient
+	Redis              *redis.Pool
 	patternServersLock sync.RWMutex
 	patternServers     map[string]string
 	Mailer             maileriface.Mailer
@@ -126,6 +130,8 @@ func initServices(config *Configuration) error {
 		return err
 	}
 
+	InitRedis(config.RedisHost, config.RedisPort)
+
 	err = InitEtcd(config.EtcdEndpoints)
 	if err != nil {
 		return errors.Wrap(err, "Failed to initialize etcd")
@@ -138,7 +144,8 @@ func initServices(config *Configuration) error {
 	// Ref: https://geolite.maxmind.com/download/geoip/database/GeoLite2-City.tar.gz
 	geolocation, err := geoip2.Open(config.GeolocationFile)
 	if err != nil {
-		log.WithError(err).WithField("GeolocationFilePath", config.GeolocationFile).Fatal("Failed to initialize geolocation service")
+		log.WithError(err).WithField("GeolocationFilePath",
+			config.GeolocationFile).Fatal("Failed to initialize geolocation service")
 	}
 	log.Info("Geolocation service intialized")
 	services.GeoLocation = geolocation
@@ -227,6 +234,54 @@ func InitDB(DBInfo DBConf) error {
 	return nil
 }
 
+func InitRedis(host string, port int) {
+	if host == "" || port == 0 {
+		log.WithField("host", host).WithField("port", port).Fatal(
+			"Invalid redis host or port.")
+	}
+
+	if services == nil {
+		services = &Services{}
+	}
+
+	conn := fmt.Sprintf("%s:%d", host, port)
+	redisPool := &redis.Pool{
+		MaxActive:   100,
+		MaxIdle:     10,
+		IdleTimeout: 240 * time.Second,
+		Dial: func() (redis.Conn, error) {
+			c, err := redis.Dial("tcp", conn)
+			if err != nil {
+				// do not panic. connection dial would be called
+				// on pool refill too.
+				log.WithError(err).Error("Redis connection dial error.")
+				return nil, err
+			}
+
+			return c, err
+		},
+
+		// Tests connection before idle connection being reused.
+		TestOnBorrow: func(c redis.Conn, t time.Time) error {
+			if time.Since(t) < time.Minute {
+				return nil
+			}
+
+			_, err := c.Do("PING")
+			if err != nil {
+				log.WithError(err).Error("Redis connection test on borrow error.")
+			}
+
+			return err
+		},
+	}
+
+	log.Info("Redis Service initialized.")
+	configuration.RedisHost = host
+	configuration.RedisPort = port
+	services.Redis = redisPool
+}
+
 func InitMailClient(key, secret, region string) {
 	if services == nil {
 		services = &Services{}
@@ -303,6 +358,8 @@ func InitDataService(config *Configuration) error {
 		return err
 	}
 
+	InitRedis(config.RedisHost, config.RedisPort)
+
 	// init error collector, error mailer, and log hook.
 	InitMailClient(config.AWSKey, config.AWSSecret, config.AWSRegion)
 	initCollectorClient(config.Env, "team@factors.ai", config.EmailSender) // inits error_collector.
@@ -318,6 +375,10 @@ func GetConfig() *Configuration {
 
 func GetServices() *Services {
 	return services
+}
+
+func GetRedisConn() redis.Conn {
+	return services.Redis.Get()
 }
 
 func IsDevelopment() bool {
