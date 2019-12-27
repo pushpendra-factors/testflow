@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config-redis
+  labels:
+    env: production
+    project: factors-production
+data:
+  REDIS_HOST: "localhost"
+  REDIS_PORT: "6379"

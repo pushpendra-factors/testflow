@@ -28,7 +28,7 @@ spec:
         cloud.google.com/gke-nodepool: default-pool
       containers:
       - name: appserver
-        image: us.gcr.io/factors-production/app-server:v0.13-beta_a8862cc
+        image: us.gcr.io/factors-production/app-server:v1.70-8b7c088
         ports:
         - containerPort: 8080
         volumeMounts:
@@ -76,6 +76,10 @@ spec:
           - $(POSTGRES_USER)
           - --db_pass
           - $(POSTGRES_PASSWORD)
+          - --redis_host
+          - $(REDIS_HOST)
+          - --redis_port
+          - $(REDIS_PORT)
           - --geo_loc_path
           - $(GEO_LOC_FILE_PATH)
           - --api_domain
@@ -111,6 +115,8 @@ spec:
             name: config-env
         - configMapRef:
             name: config-postgres
+        - configMapRef:
+            name: config-redis
         - secretRef:
             name: secret-postgres
         - secretRef:
