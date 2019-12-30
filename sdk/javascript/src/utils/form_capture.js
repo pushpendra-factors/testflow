@@ -4,14 +4,23 @@ function isEmail(email) {
     return re.test(String(email).toLowerCase());
 }
 
+function isPhone(phone) {
+    // should not be empty.
+    if (!phone || phone.length == 0) return false;
+    var numbers = phone.match(/\d/g);
+    // atleast 4 numbers.
+    if (!numbers || numbers < 4) return false;
+    return true;
+}
+
 // Checks for string on name and placeholder. Say company.
-// Cases:
+// Cases: 
 // isFieldByMatch({name: 'first_name'}, 'name', 'first');
 // isFieldByMatch({name: 'no value', placeholder: 'enter your name'}, 'name');
 function isFieldByMatch(elem, typeStr1, typeStr2) {
     if (!elem || !typeStr1 || typeStr1 == "") return false;
 
-    var lTypeStr1 = typeStr1.toLowerCase();
+    var lTypeStr1 = typeStr1.toLowerCase(); 
     var lTypeStr2 = typeStr2 && typeStr2 != "" ? typeStr2.toLowerCase() : null;
     
     if (elem.name && elem.name.toLowerCase().indexOf(lTypeStr1) > -1) {
@@ -42,4 +51,4 @@ function bindAllFormsOnSubmit(appInstance, processCallback) {
     }
 }
 
-module.exports = exports =  { isEmail, isFieldByMatch, bindAllFormsOnSubmit }; 
+module.exports = exports =  { isEmail, isPhone, isFieldByMatch, bindAllFormsOnSubmit };

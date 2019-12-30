@@ -452,10 +452,11 @@ function getPropertiesFromForm(form) {
         if (inputs[i].value == "") continue;
 
         // any input field with a valid email catuptured as email.
-        if (FormCapture.isEmail(value) && !properties[EMAIL]) 
+        if (FormCapture.isEmail(value) && !properties[EMAIL]) // captures only first email input.
             properties[EMAIL] = value;
 
-        if (inputs[i].type == 'tel') properties[PHONE] = value;
+        if (inputs[i].type == 'tel' && !properties[PHONE] && FormCapture.isPhone(value)) 
+            properties[PHONE] = value;
 
         if (!properties[COMPANY] && 
             (FormCapture.isFieldByMatch(inputs[i], 'company') || FormCapture.isFieldByMatch(inputs[i], 'org')))
@@ -485,7 +486,7 @@ function getPropertiesFromForm(form) {
         }
     }
 
-    return properties;
+    return properties; 
 }
 
 module.exports = {
@@ -500,4 +501,5 @@ module.exports = {
     PAGE_SPENT_TIME: PAGE_SPENT_TIME,
     PAGE_LOAD_TIME: PAGE_LOAD_TIME,
     EMAIL: EMAIL,
+    PHONE, PHONE,
 }

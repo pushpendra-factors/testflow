@@ -213,8 +213,8 @@ App.prototype.captureAndTrackFormSubmit = function(appInstance, e) {
 
     var properties = Properties.getPropertiesFromForm(e.target);
 
-    // do not track if email is not there on captured properties.
-    if (!properties[Properties.EMAIL]) return;
+    // do not track if email and phone is not there on captured properties.
+    if (!properties[Properties.EMAIL] && !properties[Properties.PHONE]) return; 
 
     appInstance.track("$form_submitted", properties);
 }
