@@ -203,6 +203,15 @@ var SDK_ALLOWED_EVENT_PROPERTIES = [...]string{
 	UP_LAST_NAME,
 }
 
+var FORM_SUBMIT_USER_PROPERTIES = [...]string{
+	UP_EMAIL,
+	UP_PHONE,
+	UP_COMPANY,
+	UP_NAME,
+	UP_FIRST_NAME,
+	UP_LAST_NAME,
+}
+
 // Event properties that are not visible to user for analysis.
 var INTERNAL_EVENT_PROPERTIES = [...]string{
 	EP_INTERNAL_IP,
@@ -452,6 +461,15 @@ func isPropertyTypeValid(value interface{}) error {
 		return fmt.Errorf("invalid property type")
 	}
 	return nil
+}
+
+func IsFormSubmitUserProperty(key string) bool {
+	for _, k := range FORM_SUBMIT_USER_PROPERTIES {
+		if k == key {
+			return true
+		}
+	}
+	return false
 }
 
 func isSDKAllowedUserProperty(key *string) bool {

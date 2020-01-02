@@ -461,3 +461,110 @@ func TestGetRecentUserPropertyValues(t *testing.T) {
 		assert.NotContains(t, values, "3")
 	})
 }
+
+func TestFillFormSubmitEventUserProperties(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	t.Run("UserWithoutProperties", func(t *testing.T) {
+		user, errCode1 := M.CreateUser(&M.User{ProjectId: project.ID})
+		assert.Equal(t, http.StatusCreated, errCode1)
+		formSubmitProperties := U.PropertiesMap{
+			U.UP_EMAIL: "xxx@example.com",
+			U.UP_PHONE: "99999999999",
+		}
+		newProperties := U.PropertiesMap{"plan": "enterprise"}
+		customerUserId, errCode := M.FillUserPropertiesAndGetCustomerUserIdFromFormSubmit(project.ID,
+			user.ID, &newProperties, &formSubmitProperties)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.Equal(t, "xxx@example.com", customerUserId)
+		assert.Equal(t, "xxx@example.com", newProperties[U.UP_EMAIL])
+		assert.Equal(t, "99999999999", newProperties[U.UP_PHONE])
+		assert.Equal(t, "enterprise", newProperties["plan"])
+	})
+
+	t.Run("FormSubmitWithEmailAndUserPropertiesWithSameEmail", func(t *testing.T) {
+		user, errCode1 := M.CreateUser(&M.User{ProjectId: project.ID,
+			Properties: postgres.Jsonb{json.RawMessage(`{"$email": "xxx@example.com"}`)}})
+		assert.Equal(t, http.StatusCreated, errCode1)
+		formSubmitProperties := U.PropertiesMap{
+			U.UP_EMAIL:   "xxx@example.com",
+			U.UP_PHONE:   "99999999999",
+			U.UP_COMPANY: "Example Inc",
+		}
+		newProperties := U.PropertiesMap{"plan": "enterprise"}
+		customerUserId, errCode := M.FillUserPropertiesAndGetCustomerUserIdFromFormSubmit(project.ID,
+			user.ID, &newProperties, &formSubmitProperties)
+		assert.Equal(t, http.StatusOK, errCode)
+		// Should add phone and other properties from
+		// form submit as email matches.
+		assert.Equal(t, "xxx@example.com", customerUserId)
+		assert.Equal(t, "xxx@example.com", newProperties[U.UP_EMAIL])
+		assert.Equal(t, "99999999999", newProperties[U.UP_PHONE])
+		assert.Equal(t, "Example Inc", newProperties[U.UP_COMPANY])
+		assert.Equal(t, "enterprise", newProperties["plan"])
+	})
+
+	t.Run("FormSubmitWithEmailAndUserPropertiesWithDifferentEmail", func(t *testing.T) {
+		user, errCode1 := M.CreateUser(&M.User{ProjectId: project.ID,
+			Properties: postgres.Jsonb{json.RawMessage(`{"$email": "yyy@example.com"}`)}})
+		assert.Equal(t, http.StatusCreated, errCode1)
+		formSubmitProperties := U.PropertiesMap{
+			U.UP_EMAIL:   "xxx@example.com",
+			U.UP_PHONE:   "99999999999",
+			U.UP_COMPANY: "Example Inc",
+		}
+		newProperties := U.PropertiesMap{}
+		customerUserId, errCode := M.FillUserPropertiesAndGetCustomerUserIdFromFormSubmit(project.ID,
+			user.ID, &newProperties, &formSubmitProperties)
+		assert.Equal(t, http.StatusBadRequest, errCode)
+		assert.Equal(t, "", customerUserId)
+		// Should not add user properties as email is different
+		// from existing properties.
+		assert.Equal(t, "", customerUserId)
+		assert.Nil(t, newProperties[U.UP_EMAIL])
+		assert.Nil(t, newProperties[U.UP_PHONE])
+		assert.Nil(t, newProperties[U.UP_COMPANY])
+	})
+
+	t.Run("FormSubmitWithPhoneAndUserPropertiesWithSamePhone", func(t *testing.T) {
+		user, errCode1 := M.CreateUser(&M.User{ProjectId: project.ID,
+			Properties: postgres.Jsonb{json.RawMessage(`{"$phone": "99999999999"}`)}})
+		assert.Equal(t, http.StatusCreated, errCode1)
+		formSubmitProperties := U.PropertiesMap{
+			U.UP_EMAIL:   "xxx@example.com",
+			U.UP_PHONE:   "99999999999",
+			U.UP_COMPANY: "Example Inc",
+		}
+		newProperties := U.PropertiesMap{"plan": "enterprise"}
+		customerUserId, errCode := M.FillUserPropertiesAndGetCustomerUserIdFromFormSubmit(project.ID,
+			user.ID, &newProperties, &formSubmitProperties)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.Equal(t, "99999999999", customerUserId)
+		// Should add all other properties from form submit as phone matches.
+		assert.Equal(t, "xxx@example.com", newProperties[U.UP_EMAIL])
+		assert.Equal(t, "99999999999", newProperties[U.UP_PHONE])
+		assert.Equal(t, "Example Inc", newProperties[U.UP_COMPANY])
+		assert.Equal(t, "enterprise", newProperties["plan"])
+	})
+
+	t.Run("FormSubmitWithPhoneAndUserPropertiesWithDifferentPhone", func(t *testing.T) {
+		user, errCode1 := M.CreateUser(&M.User{ProjectId: project.ID,
+			Properties: postgres.Jsonb{json.RawMessage(`{"$phone": "99999999999"}`)}})
+		assert.Equal(t, http.StatusCreated, errCode1)
+		formSubmitProperties := U.PropertiesMap{
+			U.UP_EMAIL:   "xxx@example.com",
+			U.UP_PHONE:   "8888888888",
+			U.UP_COMPANY: "Example Inc",
+		}
+		newProperties := U.PropertiesMap{}
+		customerUserId, errCode := M.FillUserPropertiesAndGetCustomerUserIdFromFormSubmit(project.ID,
+			user.ID, &newProperties, &formSubmitProperties)
+		assert.Equal(t, http.StatusBadRequest, errCode)
+		// Should add all other properties from form submit as phone matches.
+		assert.Equal(t, "", customerUserId)
+		assert.Nil(t, newProperties[U.UP_EMAIL])
+		assert.Nil(t, newProperties[U.UP_PHONE])
+		assert.Nil(t, newProperties[U.UP_COMPANY])
+	})
+}

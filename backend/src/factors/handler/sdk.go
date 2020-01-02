@@ -183,6 +183,27 @@ func sdkTrack(projectId uint64, request *sdkTrackPayload, clientIP, userAgent st
 
 	_ = M.FillLocationUserProperties(userProperties, clientIP)
 	U.FillUserAgentUserProperties(userProperties, userAgent)
+	// Add user properties from form submit event properties.
+	if request.Name == U.EVENT_NAME_FORM_SUBMITTED {
+		customerUserId, errCode := M.FillUserPropertiesAndGetCustomerUserIdFromFormSubmit(
+			projectId, request.UserId, userProperties, eventProperties)
+		if errCode == http.StatusInternalServerError {
+			log.WithFields(log.Fields{"userProperties": userProperties,
+				"eventProperties": eventProperties}).WithError(err).Error(
+				"Failed adding user properties from form submitted event.")
+			response.Error = "Failed adding user properties."
+		}
+
+		if customerUserId != "" {
+			errCode, _ := sdkIdentify(projectId, &sdkIdentifyPayload{UserId: request.UserId,
+				CustomerUserId: customerUserId})
+			if errCode != http.StatusOK {
+				log.WithFields(log.Fields{"projectId": projectId, "userId": request.UserId,
+					"customerUserId": customerUserId}).Error("Failed to identify user on form submit event.")
+			}
+		}
+	}
+
 	userPropsJSON, err := json.Marshal(userProperties)
 	if err != nil {
 		log.WithFields(log.Fields{"userProperties": userProperties,

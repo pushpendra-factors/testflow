@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -608,6 +609,45 @@ func TestTrackHandlerWithUserSession(t *testing.T) {
 	assert.NotNil(t, rEvent2.SessionId)
 	assert.NotEmpty(t, *rEvent2.SessionId)
 	assert.Equal(t, latestSessionEvent.ID, *rEvent2.SessionId)
+}
+
+func TestTrackHandlerWithFormSubmit(t *testing.T) {
+	// Initialize routes and dependent data.
+	r := gin.Default()
+	H.InitSDKRoutes(r)
+	uri := "/sdk/event/track"
+
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	// track form submit event.
+	w := ServePostRequestWithHeaders(r, uri,
+		[]byte(fmt.Sprintf(`{"event_name": "%s", "event_properties": {"$email": "xxx@example.com", "$company": "Example Inc"}}`,
+			U.EVENT_NAME_FORM_SUBMITTED)), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	responseMap := DecodeJSONResponseToMap(w.Body)
+	assert.NotEmpty(t, responseMap)
+	assert.NotNil(t, responseMap["event_id"])
+	assert.NotNil(t, responseMap["user_id"])
+	userId := responseMap["user_id"].(string)
+	userProperties := postgres.Jsonb{json.RawMessage(`{"plan": "enterprise"}`)}
+	_, errCode := M.UpdateUserProperties(project.ID, userId, &userProperties)
+	assert.Equal(t, http.StatusAccepted, errCode)
+	// form submit event name created.
+	formSubmitEventName, errCode := M.GetEventName(U.EVENT_NAME_FORM_SUBMITTED, project.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotNil(t, formSubmitEventName)
+	// form submit event properties added as user properties.
+	user, errCode := M.GetUser(project.ID, userId)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotNil(t, user)
+	userPropertiesMap, err := U.DecodePostgresJsonb(&user.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, "xxx@example.com", (*userPropertiesMap)[U.UP_EMAIL])
+	assert.Equal(t, "Example Inc", (*userPropertiesMap)[U.UP_COMPANY])
+	assert.Equal(t, "enterprise", (*userPropertiesMap)["plan"]) // other properties should not be affected.
+	// identify with form submitted email.
+	assert.Equal(t, "xxx@example.com", user.CustomerUserId)
 }
 
 func TestSDKIdentifyHandler(t *testing.T) {

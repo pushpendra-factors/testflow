@@ -137,6 +137,78 @@ func FillLocationUserProperties(properties *U.PropertiesMap, clientIP string) er
 	return nil
 }
 
+func fillUserPropertiesFromFormSubmitEventProperties(properties *U.PropertiesMap,
+	formSubmitProperties *U.PropertiesMap) {
+
+	for k, v := range *formSubmitProperties {
+		if U.IsFormSubmitUserProperty(k) {
+			(*properties)[k] = v
+		}
+	}
+}
+
+func FillUserPropertiesAndGetCustomerUserIdFromFormSubmit(projectId uint64, userId string,
+	properties, formSubmitProperties *U.PropertiesMap) (string, int) {
+
+	logCtx := log.WithFields(log.Fields{"project_id": projectId, "user_id": userId})
+
+	user, errCode := GetUser(projectId, userId)
+	if errCode != http.StatusFound {
+		logCtx.Error("Failed to get latest user properties on fill form submitted properties.")
+		return "", http.StatusInternalServerError
+	}
+
+	logCtx = logCtx.WithFields(log.Fields{"existing_user_properties": user.Properties,
+		"form_event_properties": formSubmitProperties})
+
+	userProperties, err := U.DecodePostgresJsonb(&user.Properties)
+	if err != nil {
+		logCtx.Error("Failed to decoding latest user properties on fill form submitted properties.")
+	}
+
+	formPropertyEmail, formPropertyEmailExists := (*formSubmitProperties)[U.UP_EMAIL]
+	userPropertyEmail, userPropertyEmailExists := (*userProperties)[U.UP_EMAIL]
+
+	formPropertyPhone, formPropertyPhoneExists := (*formSubmitProperties)[U.UP_PHONE]
+	userPropertyPhone, userPropertyPhoneExists := (*userProperties)[U.UP_PHONE]
+
+	if formPropertyEmailExists && userPropertyEmailExists {
+		if userPropertyEmail != formPropertyEmail {
+			logCtx.Error("Different email seen on form event. User property not updated.")
+			return "", http.StatusBadRequest
+		}
+
+		// form event email is same as user properties, update other user properties.
+		fillUserPropertiesFromFormSubmitEventProperties(properties, formSubmitProperties)
+		return U.GetPropertyValueAsString(formPropertyEmail), http.StatusOK
+	}
+
+	if formPropertyPhoneExists && userPropertyPhoneExists {
+		if userPropertyPhone != formPropertyPhone {
+			logCtx.Error("Different phone seen on form event. User property not updated.")
+			return "", http.StatusBadRequest
+		}
+
+		// form event phone is same as user propertie, update other user properties.
+		fillUserPropertiesFromFormSubmitEventProperties(properties, formSubmitProperties)
+		return U.GetPropertyValueAsString(formPropertyPhone), http.StatusOK
+	}
+
+	if !formPropertyEmailExists && !formPropertyPhoneExists {
+		return "", http.StatusBadRequest
+	}
+
+	var identity string
+	if formPropertyEmailExists {
+		identity = U.GetPropertyValueAsString(formPropertyEmail)
+	} else if formPropertyPhoneExists {
+		identity = U.GetPropertyValueAsString(formPropertyPhone)
+	}
+
+	fillUserPropertiesFromFormSubmitEventProperties(properties, formSubmitProperties)
+	return identity, http.StatusOK
+}
+
 func GetUserPropertyRecordsByUserId(projectId uint64, userId string) ([]UserProperties, int) {
 	db := C.GetServices().Db
 
