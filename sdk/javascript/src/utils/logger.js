@@ -6,9 +6,10 @@ function error(message) {
     console.error(message);
 }
 
-function debug(message) {
+function debug(message, trace=true) {
     if (window.FACTORS_DEBUG == true) {
-        console.trace("%c"+message, 'color: red');
+        if (trace) console.trace("%c"+message, 'color: red');
+        else console.log(message);
     }
 }
 

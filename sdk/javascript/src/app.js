@@ -65,11 +65,11 @@ function getLastActivityTime() {
     return lastActivityTime
 }
 
-function getCurrentPageSpentTime(startTime) {
+function getCurrentPageSpentTimeInSecs(startTimeInMs) {
     var lastActivityTime = getLastActivityTime();
     if (lastActivityTime == 0) return lastActivityTime;
 
-    return (lastActivityTime - startTime) / 1000;
+    return (lastActivityTime - startTimeInMs) / 1000;
 }
 
 /**
@@ -163,12 +163,12 @@ App.prototype.track = function(eventName, eventProperties, auto=false) {
         });
 }
 
-App.prototype.updatePageTimeProperties = function(startOfPageSpentTime) {
+App.prototype.updatePageSpentTimeProperty = function(startOfPageSpentTimeInMs) {
     var eventId = getCurrentPageAutoTrackEventIdFromStore();
-    var pageSpentTime = getCurrentPageSpentTime(startOfPageSpentTime);
+    var pageSpentTimeInSecs = getCurrentPageSpentTimeInSecs(startOfPageSpentTimeInMs);
 
     let properties = {};
-    if (pageSpentTime > 0) properties[Properties.PAGE_SPENT_TIME] = pageSpentTime;
+    if (pageSpentTimeInSecs > 0) properties[Properties.PAGE_SPENT_TIME] = pageSpentTimeInSecs;
     this.client.updateEventProperties({event_id: eventId, properties: properties});
 }
 
@@ -178,10 +178,19 @@ App.prototype.autoTrack = function(enabled=false) {
     
     var startOfPageSpentTime = util.getCurrentUnixTimestampInMs();
     this.track(getAutoTrackURL(), Properties.getFromQueryParams(window.location), true);
+
+    // update page spent time every 20s.
+    setInterval(function() {
+        logger.debug("Updating page spent time property with start as "+startOfPageSpentTime, false);
+        _this.updatePageSpentTimeProperty(startOfPageSpentTime);
+    }, 20000);
+
+    // update page spent time before leaving the page.
     window.addEventListener("beforeunload", function() {
-        _this.updatePageTimeProperties(startOfPageSpentTime);
+        _this.updatePageSpentTimeProperty(startOfPageSpentTime);
         return;
     });
+
     window.addEventListener("scroll", setLastActivityTime);
     window.addEventListener("mouseover", setLastActivityTime);
     
@@ -195,7 +204,7 @@ App.prototype.autoTrack = function(enabled=false) {
             logger.debug("Triggered window.onpopstate goto: "+window.location.href+", prev: "+prevLocation);
             if (prevLocation !== window.location.href) {
                 // should be called before next page track.
-                _this.updatePageTimeProperties(startOfPageSpentTime);
+                _this.updatePageSpentTimeProperty(startOfPageSpentTime);
                 
                 _this.track(getAutoTrackURL(), Properties.getFromQueryParams(window.location), true);
                 startOfPageSpentTime = util.getCurrentUnixTimestampInMs();
