@@ -163,22 +163,37 @@ App.prototype.track = function(eventName, eventProperties, auto=false) {
         });
 }
 
-App.prototype.updatePageSpentTimePropertyIfChanged = function(startOfPageSpentTimeInMs, lastPageSpentTimeInSecs) {
+App.prototype.updatePagePropertiesIfChanged = function(startOfPageSpentTimeInMs, lastPageProperties) {
+    let lastPageSpentTimeInSecs = lastPageProperties && lastPageProperties[Properties.PAGE_SPENT_TIME] ? 
+        lastPageProperties[Properties.PAGE_SPENT_TIME] : 0;
+    
+    let lastPageScrollPercentage = lastPageProperties && lastPageProperties[Properties.PAGE_SCROLL_PERCENT] ?
+        lastPageProperties[Properties.PAGE_SCROLL_PERCENT] : 0;
+
     var pageSpentTimeInSecs = getCurrentPageSpentTimeInSecs(startOfPageSpentTimeInMs);
+    var pageScrollPercentage = Properties.getPageScrollPercent();
 
+    // add properties if changed.
     let properties = {};
-    if (pageSpentTimeInSecs > 0) properties[Properties.PAGE_SPENT_TIME] = pageSpentTimeInSecs;
+    if (pageSpentTimeInSecs > 0 && pageSpentTimeInSecs > lastPageSpentTimeInSecs) 
+        properties[Properties.PAGE_SPENT_TIME] = pageSpentTimeInSecs;
 
-    if (pageSpentTimeInSecs > lastPageSpentTimeInSecs) {
-        logger.debug("Updating page spent time property: " + pageSpentTimeInSecs, false);
+    if (pageScrollPercentage > 0 && pageScrollPercentage > lastPageScrollPercentage )
+        properties[Properties.PAGE_SCROLL_PERCENT] = pageScrollPercentage;
+
+    // update if any properties given.
+    if (Object.keys(properties).length > 0) {
+        logger.debug("Updating page properties : " + JSON.stringify(properties), false);
         var eventId = getCurrentPageAutoTrackEventIdFromStore();
         this.client.updateEventProperties({ event_id: eventId, properties: properties });
     } else {
-        logger.debug("No change skip updating page spent time property: " + lastPageSpentTimeInSecs, false);
+        logger.debug("No change on page properties, skipping update for : " + JSON.stringify(lastPageProperties), false);
     }
 
-    // returns current_page_spent_time.
-    return pageSpentTimeInSecs;
+    return {
+        [Properties.PAGE_SCROLL_PERCENT]: pageScrollPercentage, 
+        [Properties.PAGE_SPENT_TIME]: pageSpentTimeInSecs
+    };
 }
 
 App.prototype.autoTrack = function(enabled=false) {
@@ -187,18 +202,18 @@ App.prototype.autoTrack = function(enabled=false) {
     
     this.track(getAutoTrackURL(), Properties.getFromQueryParams(window.location), true);
 
-    var lastPageSpentTimeInSecs = 0;
+    var lastPageProperties = {};
     var startOfPageSpentTime = util.getCurrentUnixTimestampInMs();
-    // update page spent time every 20s.
+    // update page properties every 20s.
     setInterval(function() {
-        lastPageSpentTimeInSecs = _this.updatePageSpentTimePropertyIfChanged(
-            startOfPageSpentTime, lastPageSpentTimeInSecs);
+        lastPageProperties = _this.updatePagePropertiesIfChanged(
+            startOfPageSpentTime, lastPageProperties);
     }, 20000);
 
-    // update page spent time before leaving the page.
+    // update page properties before leaving the page.
     window.addEventListener("beforeunload", function() {
-        lastPageSpentTimeInSecs = _this.updatePageSpentTimePropertyIfChanged(
-            startOfPageSpentTime, lastPageSpentTimeInSecs);
+        lastPageProperties = _this.updatePagePropertiesIfChanged(
+            startOfPageSpentTime, lastPageProperties);
         return;
     });
 
@@ -215,12 +230,12 @@ App.prototype.autoTrack = function(enabled=false) {
             logger.debug("Triggered window.onpopstate goto: "+window.location.href+", prev: "+prevLocation);
             if (prevLocation !== window.location.href) {
                 // should be called before next page track.
-                lastPageSpentTimeInSecs = _this.updatePageSpentTimePropertyIfChanged(
-                    startOfPageSpentTime, lastPageSpentTimeInSecs);
+                lastPageProperties = _this.updatePagePropertiesIfChanged(
+                    startOfPageSpentTime, lastPageProperties);
                 
                 _this.track(getAutoTrackURL(), Properties.getFromQueryParams(window.location), true);
                 startOfPageSpentTime = util.getCurrentUnixTimestampInMs();
-                prevLocation = window.location.href;
+                prevLocation = window.location.href; 
             }
         })
     }

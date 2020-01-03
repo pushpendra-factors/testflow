@@ -10,6 +10,7 @@ const PREFIX = "$";
 
 const PAGE_SPENT_TIME = PREFIX+"page_spent_time";
 const PAGE_LOAD_TIME = PREFIX+"page_load_time";
+const PAGE_SCROLL_PERCENT = PREFIX+"page_scroll_percent";
 const COMPANY = PREFIX+"company";
 const EMAIL = PREFIX+"email";
 const PHONE = PREFIX+"phone";
@@ -489,6 +490,16 @@ function getPropertiesFromForm(form) {
     return properties; 
 }
 
+function getPageScrollPercent() {
+    var h = document.documentElement, 
+        b = document.body,
+        st = 'scrollTop',
+        sh = 'scrollHeight';
+
+    var top = h[st]||b[st], height = (h[sh]||b[sh]) - h.clientHeight;
+    return height == 0 ? 0 : (top / height) * 100;
+}
+
 module.exports = {
     getUserDefault: getUserDefault,
     getEventDefault: getEventDefault,
@@ -497,9 +508,11 @@ module.exports = {
     getTypeValidated: getTypeValidated,
     getPageLoadTime: getPageLoadTime,
     getPropertiesFromForm: getPropertiesFromForm,
+    getPageScrollPercent: getPageScrollPercent,
 
     PAGE_SPENT_TIME: PAGE_SPENT_TIME,
     PAGE_LOAD_TIME: PAGE_LOAD_TIME,
+    PAGE_SCROLL_PERCENT: PAGE_SCROLL_PERCENT,
     EMAIL: EMAIL,
     PHONE, PHONE,
 }

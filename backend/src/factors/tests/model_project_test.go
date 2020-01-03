@@ -104,8 +104,8 @@ func TestDBCreateAndGetProject(t *testing.T) {
 func TestDBGetProjectByIDs(t *testing.T) {
 	t.Run("NoProjects", func(t *testing.T) {
 		randIds := []uint64{
-			U.RandomUint64()%100007 + 5,
-			U.RandomUint64()%100007 + 5,
+			U.RandomUint64WithUnixNano(),
+			U.RandomUint64WithUnixNano(),
 		}
 		proj, errCode := M.GetProjectsByIDs(randIds)
 		assert.Equal(t, 0, len(proj))

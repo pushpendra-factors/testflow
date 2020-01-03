@@ -1081,9 +1081,16 @@ func TestSDKUpdateEventPropertiesHandler(t *testing.T) {
 	assert.Equal(t, http.StatusAccepted, w.Code)
 
 	eventId, _ = getAutoTrackedEventIdWithPageRawURL(t, project.Token, rawPageUrl)
-	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"event_id": "%s", "properties": {"$page_load_time": "%d"}}`,
-		eventId, 1)), map[string]string{"Authorization": project.Token})
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"event_id": "%s", "properties": {"$page_spent_time": %d, "$page_scroll_percent": %d}}`,
+		eventId, 1, 10)), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusAccepted, w.Code)
+	updatedEvent, errCode := M.GetEventById(project.ID, eventId)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotNil(t, updatedEvent)
+	propertiesMap, err := U.DecodePostgresJsonb(&updatedEvent.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, float64(1), (*propertiesMap)[U.EP_PAGE_SPENT_TIME])
+	assert.Equal(t, float64(10), (*propertiesMap)[U.EP_PAGE_SCROLL_PERCENT])
 }
 
 func TestSessionAndUserInitialPropertiesUpdateOnSDKUpdateEventPropertiesHandler(t *testing.T) {
@@ -1097,8 +1104,8 @@ func TestSessionAndUserInitialPropertiesUpdateOnSDKUpdateEventPropertiesHandler(
 
 	pageRawURL := "https://page.url.com/1"
 	eventId, userId := getAutoTrackedEventIdWithPageRawURL(t, project.Token, pageRawURL)
-	w := ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"event_id": "%s", "properties": {"$page_spent_time": %d}}`,
-		eventId, 100)), map[string]string{"Authorization": project.Token})
+	w := ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"event_id": "%s", "properties": {"$page_spent_time": %d, "$page_scroll_percent": %d}}`,
+		eventId, 100, 10)), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusAccepted, w.Code)
 	updatedEvent, errCode := M.GetEventById(project.ID, eventId)
 	assert.Equal(t, http.StatusFound, errCode)
@@ -1111,6 +1118,7 @@ func TestSessionAndUserInitialPropertiesUpdateOnSDKUpdateEventPropertiesHandler(
 	assert.Nil(t, err)
 	assert.Equal(t, pageRawURL, (*sessionProperites)[U.UP_INITIAL_PAGE_RAW_URL])
 	assert.Equal(t, float64(100), (*sessionProperites)[U.UP_INITIAL_PAGE_SPENT_TIME])
+	assert.Equal(t, float64(10), (*sessionProperites)[U.UP_INITIAL_PAGE_SCROLL_PERCENT])
 	// Should update initial user properties on initial call.
 	user, errCode := M.GetUser(project.ID, userId)
 	assert.Equal(t, http.StatusFound, errCode)
@@ -1118,6 +1126,7 @@ func TestSessionAndUserInitialPropertiesUpdateOnSDKUpdateEventPropertiesHandler(
 	assert.Nil(t, err)
 	assert.Equal(t, pageRawURL, (*userProperties)[U.UP_INITIAL_PAGE_RAW_URL])
 	assert.Equal(t, float64(100), (*userProperties)[U.UP_INITIAL_PAGE_SPENT_TIME])
+	assert.Equal(t, float64(10), (*userProperties)[U.UP_INITIAL_PAGE_SCROLL_PERCENT])
 
 	// same page_raw_url with same user and session should not
 	// update $initial_page_spent_time again.
