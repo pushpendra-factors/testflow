@@ -358,8 +358,6 @@ func InitDataService(config *Configuration) error {
 		return err
 	}
 
-	InitRedis(config.RedisHost, config.RedisPort)
-
 	// init error collector, error mailer, and log hook.
 	InitMailClient(config.AWSKey, config.AWSSecret, config.AWSRegion)
 	initCollectorClient(config.Env, "team@factors.ai", config.EmailSender) // inits error_collector.
