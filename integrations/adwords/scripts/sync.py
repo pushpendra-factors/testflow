@@ -12,10 +12,11 @@ import time
 
 parser = OptionParser()
 parser.add_option("--env", dest="env", default="development")
-parser.add_option("--developer_token", dest="developer_token", help="", default="")
+parser.add_option("--dry", dest="dry", help="", default="False")
+parser.add_option("--developer_token", dest="developer_token", help="", default="") 
 parser.add_option("--oauth_secret", dest="oauth_secret", help="", default="")
 parser.add_option("--project_id", dest="project_id", help="", default=None, type=int)
-parser.add_option("--data_service_host", dest="data_service_host", 
+parser.add_option("--data_service_host", dest="data_service_host",
     help="Data service host", default="http://localhost:8089")
 
 ADWORDS_CLIENT_USER_AGENT = "FactorsAI (https://www.factors.ai)"
@@ -111,7 +112,8 @@ def get_customer_account_properties(adwords_client, customer_account_id, timestm
             current_account = account
 
     if current_account is None:
-        log.error("Customer account not found on list of accounts. Failed to get properties.")
+        log.error("Customer %s account not found on list of accounts %s. Failed to get properties.", 
+            str(customer_account_id), str(customer_accounts))
         return []
 
     properties = {}
@@ -453,11 +455,6 @@ def add_adwords_document(project_id, customer_acc_id, doc, doc_type, timestamp):
     return response
 
 def add_all_adwords_documents(project_id, customer_acc_id, docs, doc_type, timestamp):
-    if len(docs) == 0:
-        log.error("Empty response for project %s doc_type %s timestamp %s.", 
-            str(project_id), str(doc_type), str(timestamp))
-        raise Exception("empty response from adwords")
-
     # Add each doc from adwords response which is list of docs.
     for doc in docs:
         add_adwords_document(project_id, customer_acc_id, 
@@ -517,8 +514,7 @@ def get_adwords_timestamp_before_days(days):
     return get_adwords_timestamp_from_datetime(
         datetime.datetime.utcnow() - datetime.timedelta(days=days))
 
-
-def sync(env, next_info):    
+def sync(env, dry, next_info):    
     project_id = next_info.get("project_id")
     customer_acc_id = next_info.get("customer_acc_id")
     refresh_token = next_info.get("refresh_token")
@@ -556,44 +552,46 @@ def sync(env, next_info):
     log.warning("Downloading project: %s, cutomer_account_id: %s, document_type: %s, timestamp: %s",
         str(project_id), customer_acc_id, doc_type, str(timestamp))
 
+    docs = []
     try:
         if doc_type == "customer_account_properties":
             docs = get_customer_account_properties(adwords_client, customer_acc_id, timestamp)
-            add_all_adwords_documents(project_id, customer_acc_id, docs, doc_type, timestamp) 
             
         elif doc_type == "campaigns":
             docs = get_campaigns(adwords_client, timestamp)
-            add_all_adwords_documents(project_id, customer_acc_id, docs, doc_type, timestamp)
 
         elif doc_type == "ads":
             docs = get_ads(adwords_client, timestamp)
-            add_all_adwords_documents(project_id, customer_acc_id, docs, doc_type, timestamp)
 
         elif doc_type == "ad_groups":
             docs = get_ad_groups(adwords_client, timestamp)
-            add_all_adwords_documents(project_id, customer_acc_id, docs, doc_type, timestamp)
 
         elif doc_type == "click_performance_report":
             docs = get_click_performance_report(adwords_client, timestamp)
-            add_all_adwords_documents(project_id, customer_acc_id, docs, doc_type, timestamp)
 
         elif doc_type == "campaign_performance_report":
             docs = get_campaign_performance_report(adwords_client, timestamp)
-            add_all_adwords_documents(project_id, customer_acc_id, docs, doc_type, timestamp)
         
         elif doc_type == "ad_performance_report":
             docs = get_ad_performance_report(adwords_client, timestamp)
-            add_all_adwords_documents(project_id, customer_acc_id, docs, doc_type, timestamp)
 
         elif doc_type == "search_performance_report":
             docs = get_search_performance_report(adwords_client, timestamp)
-            add_all_adwords_documents(project_id, customer_acc_id, docs, doc_type, timestamp)
 
         elif doc_type == "keyword_performance_report":
             docs = get_keywords_performance_report(adwords_client, timestamp)
-            add_all_adwords_documents(project_id, customer_acc_id, docs, doc_type, timestamp)
 
         else: log.error("Invalid document to sync from adwords: %s", str(doc_type))
+        
+        if len(docs) > 0 and not dry:
+            if dry: 
+                log.error("Dry run. Skipped add adwords documents to db.")
+            add_all_adwords_documents(project_id, customer_acc_id, docs, doc_type, timestamp) 
+        else:
+            log.error("Empty response for project %s doc_type %s timestamp %s.", 
+                str(project_id), str(doc_type), str(timestamp))
+            raise Exception("empty response from adwords")
+
     except Exception as e:
         str_exception = str(e)
         if "AuthorizationError.USER_PERMISSION_DENIED" in str_exception:
@@ -692,7 +690,10 @@ if __name__ == "__main__":
         sys.exit(1)
 
     log.warning("Started adwords sync job.")
-    
+
+    # using string as kubernetes options doesn't 
+    # allow boolean.
+    is_dry = options.dry == "True"
     last_sync_response = get_last_sync_info()
     last_sync_infos = last_sync_response.json()
     log.warning("Got adwords last sync info.")
@@ -710,7 +711,7 @@ if __name__ == "__main__":
         next_sync_infos = get_next_sync_info(last_sync)
         if next_sync_infos == None: continue
         for next_sync in next_sync_infos:
-            response = sync(options.env, next_sync)
+            response = sync(options.env, is_dry, next_sync)
             if response["status"] == STATUS_FAILED:
                 next_sync_failures.append(response)
             else:
