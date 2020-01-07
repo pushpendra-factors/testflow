@@ -3,6 +3,7 @@ package model
 import (
 	C "factors/config"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/jinzhu/gorm"
@@ -66,6 +67,13 @@ func UpdateProjectSettings(projectId uint64, settings *ProjectSetting) (*Project
 
 	if projectId == 0 {
 		return nil, http.StatusBadRequest
+	}
+
+	if settings.IntAdwordsCustomerAccountId != nil {
+		// clean adwords customer_account_id before update.
+		adwordsCustomerAccountId := strings.Replace(
+			*settings.IntAdwordsCustomerAccountId, "-", "", -1)
+		settings.IntAdwordsCustomerAccountId = &adwordsCustomerAccountId
 	}
 
 	var updatedProjectSetting ProjectSetting

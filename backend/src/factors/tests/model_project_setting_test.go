@@ -55,4 +55,14 @@ func TestDBUpdateProjectSettings(t *testing.T) {
 		&M.ProjectSetting{AutoTrack: &autoTrack})
 	assert.Equal(t, http.StatusBadRequest, errCode)
 	assert.Nil(t, updatedPSettings)
+
+	// Test clean adwords customer account id on update.
+	adwordsCustomerAccountId := "899-900-900"
+	updatedPSettings, errCode = M.UpdateProjectSettings(project.ID,
+		&M.ProjectSetting{IntAdwordsCustomerAccountId: &adwordsCustomerAccountId})
+	assert.Equal(t, errCode, http.StatusAccepted)
+	projectSetting, errCode = M.GetProjectSetting(project.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotNil(t, projectSetting)
+	assert.Equal(t, "899900900", *projectSetting.IntAdwordsCustomerAccountId)
 }
