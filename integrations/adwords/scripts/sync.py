@@ -112,9 +112,8 @@ def get_customer_account_properties(adwords_client, customer_account_id, timestm
             current_account = account
 
     if current_account is None:
-        log.error("Customer %s account not found on list of accounts %s. Failed to get properties.", 
-            str(customer_account_id), str(customer_accounts))
-        return []
+        log.error("Customer account not found on list of accounts. Failed to get properties.")
+        raise Exception("Failed to get properties. customer account"+str(customer_account_id)+" not found on list of account "+str(customer_accounts))
 
     properties = {}
     try:
@@ -583,10 +582,9 @@ def sync(env, dry, next_info):
 
         else: log.error("Invalid document to sync from adwords: %s", str(doc_type))
         
-        if len(docs) > 0 and not dry:
-            if dry: 
-                log.error("Dry run. Skipped add adwords documents to db.")
-            add_all_adwords_documents(project_id, customer_acc_id, docs, doc_type, timestamp) 
+        if len(docs) > 0:
+            if dry: log.error("Dry run. Skipped add adwords documents to db.")
+            else: add_all_adwords_documents(project_id, customer_acc_id, docs, doc_type, timestamp) 
         else:
             log.error("Empty response for project %s doc_type %s timestamp %s.", 
                 str(project_id), str(doc_type), str(timestamp))
