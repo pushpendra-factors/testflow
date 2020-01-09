@@ -51,7 +51,8 @@ class OAuthManager():
 
 def notify(env, source, message):
     if env != "production": 
-        log.warning("Skipped notification for env %s payload %s", env, str(message))
+        log.warning("Skipped notification for env %s payload %s", env, str(message)) 
+        return
 
     sns_url = "https://fjnvg9a8wi.execute-api.us-east-1.amazonaws.com/v1/notify"
     payload = { "env": env, "message": message, "source": source }
