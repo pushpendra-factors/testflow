@@ -187,8 +187,8 @@ func GetAllAdwordsLastSyncInfoByProjectAndType() ([]AdwordsLastSyncInfo, int) {
 	}
 
 	adwordsSettingsByProject := make(map[uint64]*AdwordsProjectSettings, 0)
-	for _, settings := range adwordsSettings {
-		adwordsSettingsByProject[settings.ProjectId] = &settings
+	for i := range adwordsSettings {
+		adwordsSettingsByProject[adwordsSettings[i].ProjectId] = &adwordsSettings[i]
 	}
 
 	documentTypeAliasByType := getDocumentTypeAliasByType()
@@ -231,14 +231,14 @@ func GetAllAdwordsLastSyncInfoByProjectAndType() ([]AdwordsLastSyncInfo, int) {
 
 	// add all types for missing projects and
 	// add missing types for existing projects.
-	for _, settings := range adwordsSettings {
-		existingTypesForProject, projectExists := existingProjectsWithTypes[settings.ProjectId]
+	for i := range adwordsSettings {
+		existingTypesForProject, projectExists := existingProjectsWithTypes[adwordsSettings[i].ProjectId]
 		for docTypeAlias, _ := range documentTypeByAlias {
 			if !projectExists || (projectExists && existingTypesForProject[docTypeAlias] == false) {
 				syncInfo := AdwordsLastSyncInfo{
-					ProjectId:         settings.ProjectId,
-					RefreshToken:      settings.RefreshToken,
-					CustomerAccountId: settings.CustomerAccountId,
+					ProjectId:         adwordsSettings[i].ProjectId,
+					RefreshToken:      adwordsSettings[i].RefreshToken,
+					CustomerAccountId: adwordsSettings[i].CustomerAccountId,
 					LastTimestamp:     0, // no sync yet.
 					DocumentTypeAlias: docTypeAlias,
 				}
