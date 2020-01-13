@@ -521,7 +521,7 @@ def sync(env, dry, next_info):
     timestamp = next_info.get("next_timestamp")
     doc_type = next_info.get("doc_type_alias")
 
-    status = { "project_id": project_id, "timestamp": timestamp, "doc_type": doc_type }
+    status = { "project_id": project_id, "timestamp": timestamp, "doc_type": doc_type, "status": "success" }
 
     if project_id == None or project_id == 0 or customer_acc_id == None or customer_acc_id == "" or doc_type == None or doc_type == "" or timestamp == None:
         log.error("Invalid project_id: %s or customer_account_id: %s or document_type: %s or timestamp: %s", 
@@ -711,7 +711,10 @@ if __name__ == "__main__":
         if next_sync_infos == None: continue
         for next_sync in next_sync_infos:
             response = sync(options.env, is_dry, next_sync)
-            if response["status"] == STATUS_FAILED:
+            status = response.get("status")
+            if status == None:
+                next_sync_failures.append("Sync status is missing on response")
+            elif status == STATUS_FAILED:
                 next_sync_failures.append(response)
             else:
                 next_sync_success[next_sync.get("project_id")] = next_sync.get("customer_acc_id")
@@ -719,13 +722,12 @@ if __name__ == "__main__":
     status_msg = ""
     if len(next_sync_failures) > 0: status_msg = "Failures on sync."
     else: status_msg = "Successfully synced."
-    notify_payload = { 
-        "status": status_msg, 
+    notify_payload = {
+        "status": status_msg,
         "failures": next_sync_failures, 
         "success": { "projects": next_sync_success }
     }
     notify(options.env, APP_NAME, notify_payload)
-
     log.warning("Successfully synced. End of adwords sync job.")
     sys.exit(0)
 
