@@ -13,6 +13,7 @@ import time
 parser = OptionParser()
 parser.add_option("--env", dest="env", default="development")
 parser.add_option("--dry", dest="dry", help="", default="False")
+parser.add_option("--skip_today", dest="skip_today", help="", default="False")
 parser.add_option("--developer_token", dest="developer_token", help="", default="") 
 parser.add_option("--oauth_secret", dest="oauth_secret", help="", default="")
 parser.add_option("--project_id", dest="project_id", help="", default=None, type=int)
@@ -24,6 +25,7 @@ PAGE_SIZE = 200
 
 APP_NAME = "adwords_sync"
 STATUS_FAILED = "failed"
+STATUS_SKIPPED = "skipped"
 
 # Cache permission denied customer_acc_id + token and avoid 
 # sync for similar requests.
@@ -514,7 +516,11 @@ def get_adwords_timestamp_before_days(days):
     return get_adwords_timestamp_from_datetime(
         datetime.datetime.utcnow() - datetime.timedelta(days=days))
 
-def sync(env, dry, next_info):    
+def is_today(timestamp):
+    todays_timestamp = int(time.strftime('%Y%m%d'))
+    return timestamp == todays_timestamp
+
+def sync(env, dry, skip_today, next_info):    
     project_id = next_info.get("project_id")
     customer_acc_id = next_info.get("customer_acc_id")
     refresh_token = next_info.get("refresh_token")
@@ -540,6 +546,12 @@ def sync(env, dry, next_info):
     if permission_error_key in permission_error_cache:
         log.error("Skipping sync user permission denied already for project %s, 'customer_acc_id:refresh_token' : %s", 
             str(project_id), permission_error_key)
+        return status
+
+    if skip_today and is_today(timestamp):
+        log.warning("Skipped sync for today for project_id %s doc_type %s.", str(project_id), doc_type)
+        status["status"] = STATUS_SKIPPED
+        status["message"] = "Skipped sync for today."
         return status
 
     # Todo: Reuse adwords_client, cache by refresh token.
@@ -693,11 +705,14 @@ if __name__ == "__main__":
     # using string as kubernetes options doesn't 
     # allow boolean.
     is_dry = options.dry == "True"
+    skip_today = options.skip_today == "True"
+
     last_sync_response = get_last_sync_info()
     last_sync_infos = last_sync_response.json()
     log.warning("Got adwords last sync info.")
 
     next_sync_failures = []
+    next_sync_skipped = []
     next_sync_success = {}
     # Todo: Use multiple python process to distrubute.
     for last_sync in last_sync_infos:
@@ -710,12 +725,14 @@ if __name__ == "__main__":
         next_sync_infos = get_next_sync_info(last_sync)
         if next_sync_infos == None: continue
         for next_sync in next_sync_infos:
-            response = sync(options.env, is_dry, next_sync)
+            response = sync(options.env, is_dry, skip_today, next_sync)
             status = response.get("status")
             if status == None:
                 next_sync_failures.append("Sync status is missing on response")
             elif status == STATUS_FAILED:
                 next_sync_failures.append(response)
+            elif status == STATUS_SKIPPED:
+                next_sync_skipped.append(response)
             else:
                 next_sync_success[next_sync.get("project_id")] = next_sync.get("customer_acc_id")
 
@@ -724,7 +741,8 @@ if __name__ == "__main__":
     else: status_msg = "Successfully synced."
     notify_payload = {
         "status": status_msg,
-        "failures": next_sync_failures, 
+        "failures": next_sync_failures,
+        "skipped": next_sync_skipped,
         "success": { "projects": next_sync_success }
     }
     notify(options.env, APP_NAME, notify_payload)
