@@ -287,6 +287,11 @@ func GetSegmentUser(projectId uint64, segAnonId, custUserId string) (*User, int)
 		return user, errCode
 	}
 
+	// No c_uid provided given, to update.
+	if custUserId == "" {
+		return user, http.StatusOK
+	}
+
 	logCtx = logCtx.WithField("provided_c_uid", custUserId).WithField("fetched_c_uid", user.CustomerUserId)
 
 	// fetched c_uid empty, identify and return.
@@ -299,6 +304,7 @@ func GetSegmentUser(projectId uint64, segAnonId, custUserId string) (*User, int)
 		}
 		user.CustomerUserId = uUser.CustomerUserId
 	}
+
 	// same seg_aid with different c_uid. log error. return user.
 	if user.CustomerUserId != custUserId {
 		logCtx.Error("Tried re-identifying with same seg_aid and different c_uid.")
