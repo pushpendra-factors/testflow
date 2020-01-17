@@ -441,9 +441,26 @@ function getFromQueryParams(location) {
 }
 
 function getPropertiesFromForm(form) {
-    var inputs = form.querySelectorAll('input');
+    return form ? getPropertiesFromInputs(form.querySelectorAll('input')) : {}
+}
+
+function getPropertiesFromAllNonFormInputs() {
+    var inputs = document.querySelectorAll('input');
+    
+    var nonFormInputs = [];
+    for (var i=0; i<inputs.length; i++) {
+        if (!FormCapture.isPartOfForm(inputs[i])) {
+            nonFormInputs.push(inputs[i]);
+        }
+    }
+
+    return getPropertiesFromInputs(nonFormInputs);
+}
+
+function getPropertiesFromInputs(inputs) {
     var properties = {};
 
+    if (!inputs) return properties;    
     for (var i=0; i<inputs.length; i++) {
         // exclude password from any processing.
         if (inputs[i].type == 'password') continue;
@@ -509,6 +526,7 @@ module.exports = {
     getPageLoadTime: getPageLoadTime,
     getPropertiesFromForm: getPropertiesFromForm,
     getPageScrollPercent: getPageScrollPercent,
+    getPropertiesFromAllNonFormInputs: getPropertiesFromAllNonFormInputs,
 
     PAGE_SPENT_TIME: PAGE_SPENT_TIME,
     PAGE_LOAD_TIME: PAGE_LOAD_TIME,

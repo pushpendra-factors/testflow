@@ -51,4 +51,22 @@ function bindAllFormsOnSubmit(appInstance, processCallback) {
     }
 }
 
-module.exports = exports =  { isEmail, isPhone, isFieldByMatch, bindAllFormsOnSubmit };
+function isPartOfForm(e) {
+    return e ? !!e.form : false;
+}
+
+function bindAllNonFormButtonOnClick(appInstance, processCallback) {
+    var buttons = document.querySelectorAll('button');
+    for (var i=0; i<buttons.length; i++) {
+        // do not bind button part of a form.
+        if (isPartOfForm(buttons[i])) continue;
+
+        buttons[i].addEventListener('click', function() {
+            var _appInstance = appInstance;
+            processCallback(_appInstance);
+        });
+    }
+}
+
+module.exports = exports =  { isEmail, isPhone, isFieldByMatch, isPartOfForm,
+    bindAllFormsOnSubmit, bindAllNonFormButtonOnClick };
