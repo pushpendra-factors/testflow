@@ -334,7 +334,7 @@ SUM((value->>'all_conversions')::float) as all_conversions FROM adwords_document
 WHERE type='5' AND timestamp BETWEEN '20191122' and '20191129' AND value->>'campaign_name'='Desktop Only'
 GROUP BY value->>'criteria';
 */
-func getAdwordsMetricsQuery(projectId uint64, query *ChannelQuery,
+func getAdwordsMetricsQuery(projectId uint64, customerAccountId string, query *ChannelQuery,
 	withBreakdown bool) (string, []interface{}, error) {
 
 	// select handling.
@@ -351,15 +351,15 @@ func getAdwordsMetricsQuery(projectId uint64, query *ChannelQuery,
 	paramsSelect := make([]interface{}, 0, 0)
 
 	// Where handling.
-	stmntWhere := "WHERE project_id=? AND type=? AND timestamp BETWEEN ? AND ?"
+	stmntWhere := "WHERE project_id=? AND customer_account_id=? AND type=? AND timestamp BETWEEN ? AND ?"
 	paramsWhere := make([]interface{}, 0, 0)
 
 	docType, err := GetAdwordsDocumentTypeForFilterKey(query.FilterKey)
 	if err != nil {
 		return "", []interface{}{}, err
 	}
-	// Todo: Add current customer_account_id from project settings.
-	paramsWhere = append(paramsWhere, projectId, docType,
+
+	paramsWhere = append(paramsWhere, projectId, customerAccountId, docType,
 		getAdwordsDateOnlyTimestamp(query.From), getAdwordsDateOnlyTimestamp(query.To))
 
 	isWhereByFilterRequired := query.FilterValue != filterValueAll
@@ -415,8 +415,10 @@ func getAdwordsMetricsQuery(projectId uint64, query *ChannelQuery,
 	return stmnt, params, nil
 }
 
-func getAdwordsMetrics(projectId uint64, query *ChannelQuery) (*map[string]interface{}, error) {
-	stmnt, params, err := getAdwordsMetricsQuery(projectId, query, false)
+func getAdwordsMetrics(projectId uint64, customerAccountId string,
+	query *ChannelQuery) (*map[string]interface{}, error) {
+
+	stmnt, params, err := getAdwordsMetricsQuery(projectId, customerAccountId, query, false)
 	if err != nil {
 		return nil, err
 	}
@@ -449,10 +451,12 @@ func getAdwordsMetrics(projectId uint64, query *ChannelQuery) (*map[string]inter
 	return &metricKvs, nil
 }
 
-func getAdwordsMetricsBreakdown(projectId uint64, query *ChannelQuery) (*ChannelBreakdownResult, error) {
-	logCtx := log.WithField("project_id", projectId)
+func getAdwordsMetricsBreakdown(projectId uint64, customerAccountId string,
+	query *ChannelQuery) (*ChannelBreakdownResult, error) {
 
-	stmnt, params, err := getAdwordsMetricsQuery(projectId, query, true)
+	logCtx := log.WithField("project_id", projectId).WithField("customer_account_id", customerAccountId)
+
+	stmnt, params, err := getAdwordsMetricsQuery(projectId, customerAccountId, query, true)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get adwords metrics query.")
 		return nil, err
@@ -521,10 +525,24 @@ func getAdwordsChannelResultMeta(projectId uint64, query *ChannelQuery) (*Channe
 }
 
 func ExecuteAdwordsChannelQuery(projectId uint64, query *ChannelQuery) (*ChannelQueryResult, int) {
+	logCtx := log.WithField("project_id", projectId).WithField("query", query)
+
+	if projectId == 0 || query == nil {
+		logCtx.Error("Invalid project_id or query on execute adwords channel query.")
+		return nil, http.StatusInternalServerError
+	}
+
+	projectSetting, errCode := GetProjectSetting(projectId)
+	if errCode != http.StatusFound {
+		return nil, http.StatusInternalServerError
+	}
+
+	if projectSetting.IntAdwordsCustomerAccountId == nil || *projectSetting.IntAdwordsCustomerAccountId == "" {
+		logCtx.Error("Execute adwords channel query failed. No customer account id.")
+		return nil, http.StatusInternalServerError
+	}
+
 	queryResult := &ChannelQueryResult{}
-
-	logCtx := log.WithField("project_id", projectId)
-
 	meta, err := getAdwordsChannelResultMeta(projectId, query)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get adwords channel result meta.")
@@ -532,7 +550,7 @@ func ExecuteAdwordsChannelQuery(projectId uint64, query *ChannelQuery) (*Channel
 	}
 	queryResult.Meta = meta
 
-	metricKvs, err := getAdwordsMetrics(projectId, query)
+	metricKvs, err := getAdwordsMetrics(projectId, *projectSetting.IntAdwordsCustomerAccountId, query)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get adwords metric kvs.")
 		return queryResult, http.StatusInternalServerError
@@ -544,7 +562,8 @@ func ExecuteAdwordsChannelQuery(projectId uint64, query *ChannelQuery) (*Channel
 		return queryResult, http.StatusOK
 	}
 
-	metricBreakdown, err := getAdwordsMetricsBreakdown(projectId, query)
+	metricBreakdown, err := getAdwordsMetricsBreakdown(projectId,
+		*projectSetting.IntAdwordsCustomerAccountId, query)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get adwords metric breakdown.")
 		return queryResult, http.StatusInternalServerError
