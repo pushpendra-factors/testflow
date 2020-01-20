@@ -305,6 +305,11 @@ func GenerateReport(projectID, dashboardID uint64, dashboardName string, reportT
 			return nil, http.StatusInternalServerError
 		}
 
+		if query.Class == QueryClassChannel {
+			log.Error("Skipped channel query dashboard unit on report.")
+			continue
+		}
+
 		dashboardUnitReport, errCode := getDashboardUnitReport(projectID, dashboardUnit,
 			query, intervalBeforeThat, interval)
 		if errCode != http.StatusOK {

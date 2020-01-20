@@ -81,6 +81,7 @@ const (
 
 	QueryClassInsights = "insights"
 	QueryClassFunnel   = "funnel"
+	QueryClassChannel  = "channel"
 
 	QueryTypeEventsOccurrence = "events_occurrence"
 	QueryTypeUniqueUsers      = "unique_users"
