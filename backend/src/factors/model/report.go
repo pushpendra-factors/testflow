@@ -299,14 +299,8 @@ func GenerateReport(projectID, dashboardID uint64, dashboardName string, reportT
 
 	reportUnits := make([]DashboardUnitReport, 0, 0)
 	for _, dashboardUnit := range dashboardUnits {
-		query := Query{}
-		err := json.Unmarshal(dashboardUnit.Query.RawMessage, &query)
-		if err != nil {
-			return nil, http.StatusInternalServerError
-		}
-
-		dashboardUnitReport, errCode := getDashboardUnitReport(projectID, dashboardUnit,
-			query, intervalBeforeThat, interval)
+		dashboardUnitReport, errCode := getDashboardUnitReport(projectID,
+			dashboardUnit, intervalBeforeThat, interval)
 		if errCode != http.StatusOK {
 			return nil, errCode
 		}
@@ -347,7 +341,7 @@ func overrideDateTimePropertyValue(property *QueryProperty, interval *Interval) 
 	return nil
 }
 
-func getReportUnit(projectID uint64, query Query, interval Interval) (*ReportUnit, int) {
+func getInsightsReportUnit(projectID uint64, query Query, interval Interval) (*ReportUnit, int) {
 	query.From = interval.StartTime
 	query.To = interval.EndTime
 
@@ -377,6 +371,48 @@ func getReportUnit(projectID uint64, query Query, interval Interval) (*ReportUni
 		StartTime:   interval.StartTime,
 		EndTime:     interval.EndTime,
 		QueryResult: *queryResult,
+	}
+
+	return &reportUnit, http.StatusOK
+}
+
+func getChannelReportUnit(projectID uint64, channelQueryUnit ChannelQueryUnit,
+	presentation string, interval Interval) (*ReportUnit, int) {
+
+	logCtx := log.WithField("project_id", projectID)
+	channelQueryResult, errCode := ExecuteChannelQuery(projectID, channelQueryUnit.Query)
+	if errCode != http.StatusOK {
+		logCtx.Error("Failed creating channel report unit")
+		return nil, http.StatusInternalServerError
+	}
+
+	var queryResult QueryResult
+	if channelQueryResult.Metrics != nil && presentation == PresentationCard {
+		metricName, exists := (*channelQueryUnit.Meta)["metric"]
+		if !exists {
+			logCtx.Error("metric name doesn't exist on dashboard unit for creating report unit.")
+			return nil, http.StatusInternalServerError
+		}
+
+		metric := metricName.(string)
+		queryResult.Headers = []string{"count"}
+
+		row := make([]interface{}, 0, 0)
+		value := (*channelQueryResult.Metrics)[metric]
+		if value == nil {
+			value = 0
+		}
+		row = append(row, value)
+		queryResult.Rows = [][]interface{}{row}
+	} else if channelQueryResult.MetricsBreakdown != nil {
+		queryResult.Headers = channelQueryResult.MetricsBreakdown.Headers
+		queryResult.Rows = channelQueryResult.MetricsBreakdown.Rows
+	}
+
+	reportUnit := ReportUnit{
+		StartTime:   interval.StartTime,
+		EndTime:     interval.EndTime,
+		QueryResult: queryResult,
 	}
 
 	return &reportUnit, http.StatusOK
@@ -936,23 +972,58 @@ func addExplanationsAndOrderReportUnits(report *Report) {
 	report.Units = dashboardUnitReports
 }
 
-func getDashboardUnitReport(projectID uint64, dashboardUnit DashboardUnit, query Query,
-	intervalBeforeThat, interval Interval) (*DashboardUnitReport, int) {
+func getDashboardUnitReport(projectID uint64, dashboardUnit DashboardUnit, intervalBeforeThat,
+	interval Interval) (*DashboardUnitReport, int) {
 
-	intervalBeforeReportUnit, errCode := getReportUnit(projectID, query, intervalBeforeThat)
-	if errCode != http.StatusOK {
-		return nil, errCode
-	}
-	intervalReportUnit, errCode := getReportUnit(projectID, query, interval)
-	if errCode != http.StatusOK {
-		return nil, errCode
+	query := Query{}
+	err := json.Unmarshal(dashboardUnit.Query.RawMessage, &query)
+	if err != nil {
+		return nil, http.StatusInternalServerError
 	}
 
-	dashboardUnitReport := &DashboardUnitReport{
-		ProjectID:    projectID,
-		Title:        dashboardUnit.Title,
-		Presentation: dashboardUnit.Presentation,
-		Results:      []ReportUnit{*intervalBeforeReportUnit, *intervalReportUnit},
+	var dashboardUnitReport *DashboardUnitReport
+	if query.Class == QueryClassChannel {
+		channelQueryUnit := ChannelQueryUnit{}
+		err := json.Unmarshal(dashboardUnit.Query.RawMessage, &channelQueryUnit)
+		if err != nil {
+			return nil, http.StatusInternalServerError
+		}
+
+		intervalBeforeReportUnit, errCode := getChannelReportUnit(projectID,
+			channelQueryUnit, dashboardUnit.Presentation, intervalBeforeThat)
+		if errCode != http.StatusOK {
+			return nil, errCode
+		}
+
+		intervalReportUnit, errCode := getChannelReportUnit(projectID,
+			channelQueryUnit, dashboardUnit.Presentation, interval)
+		if errCode != http.StatusOK {
+			return nil, errCode
+		}
+
+		dashboardUnitReport = &DashboardUnitReport{
+			ProjectID:    projectID,
+			Title:        dashboardUnit.Title,
+			Presentation: dashboardUnit.Presentation,
+			Results:      []ReportUnit{*intervalBeforeReportUnit, *intervalReportUnit},
+		}
+	} else {
+		intervalBeforeReportUnit, errCode := getInsightsReportUnit(projectID, query, intervalBeforeThat)
+		if errCode != http.StatusOK {
+			return nil, errCode
+		}
+
+		intervalReportUnit, errCode := getInsightsReportUnit(projectID, query, interval)
+		if errCode != http.StatusOK {
+			return nil, errCode
+		}
+
+		dashboardUnitReport = &DashboardUnitReport{
+			ProjectID:    projectID,
+			Title:        dashboardUnit.Title,
+			Presentation: dashboardUnit.Presentation,
+			Results:      []ReportUnit{*intervalBeforeReportUnit, *intervalReportUnit},
+		}
 	}
 
 	return dashboardUnitReport, http.StatusOK
