@@ -103,7 +103,7 @@ func IntSegmentHandler(c *gin.Context) {
 			Timestamp:       unixTimestamp,
 		}
 		status, response = sdkTrack(projectId, request, event.Context.IP, event.Context.UserAgent)
-		if status != http.StatusOK && status != http.StatusFound {
+		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 			logCtx.WithFields(log.Fields{"track_payload": request,
 				"error_code": status}).Error("Segment event failure. sdk_track call failed.")
 		}
@@ -168,7 +168,7 @@ func IntSegmentHandler(c *gin.Context) {
 			Timestamp:       unixTimestamp,
 		}
 		status, response = sdkTrack(projectId, request, event.Context.IP, event.Context.UserAgent)
-		if status != http.StatusOK && status != http.StatusFound {
+		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 			logCtx.WithFields(log.Fields{"track_payload": request,
 				"error_code": status}).Error("Segment event failure. sdk_track call failed.")
 		}
