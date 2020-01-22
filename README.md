@@ -42,8 +42,6 @@ etcd
 createuser -d -e -P -r autometa
 Enter password for new role:@ut0me7a
 Enter it again:@ut0me7a
-SELECT pg_catalog.set_config('search_path', '', false)
-CREATE ROLE autometa PASSWORD 'md5aa44dccdc9ac7b7a4a2a25e129e95784' NOSUPERUSER CREATEDB CREATEROLE INHERIT LOGIN;
 ```
 
 ### Create database using psql.
@@ -52,6 +50,15 @@ psql -U autometa postgres
 
 postgres=> \conninfo
 You are connected to database "postgres" as user "autometa" via socket in "/tmp" at port "5432".
+
+postgres=> SELECT pg_catalog.set_config('search_path', '', false);
+ set_config 
+------------
+ 
+(1 row)
+
+
+postgres=> CREATE ROLE autometa PASSWORD 'md5aa44dccdc9ac7b7a4a2a25e129e95784' NOSUPERUSER CREATEDB CREATEROLE INHERIT LOGIN;
 
 postgres=> CREATE DATABASE autometa;
 CREATE DATABASE
