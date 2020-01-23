@@ -344,9 +344,11 @@ func TestDBGetSegmentUser(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, project)
 
+	// no seg_aid but c_uid provided. create new user with c_uid.
 	user, errCode := M.GetSegmentUser(project.ID, "", "customer_1")
-	assert.Equal(t, http.StatusBadRequest, errCode)
-	assert.Nil(t, user)
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotNil(t, user)
+	assert.Equal(t, "customer_1", user.CustomerUserId)
 
 	// no customer uid. create new user with seg_aid.
 	segAid := U.RandomLowerAphaNumString(15)

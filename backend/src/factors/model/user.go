@@ -239,24 +239,31 @@ func GetUserBySegmentAnonymousId(projectId uint64, segAnonId string) (*User, int
 }
 
 // GetSegmentUser create or updates(c_uid) and returns user by segement_anonymous_id
-// and customer_user_id.
+// and/or customer_user_id.
 func GetSegmentUser(projectId uint64, segAnonId, custUserId string) (*User, int) {
+	logCtx := log.WithFields(log.Fields{"project_id": projectId, "seg_aid": segAnonId,
+		"provided_c_uid": custUserId})
+
 	// seg_aid not provided.
-	if segAnonId == "" {
-		log.WithFields(log.Fields{"project_id": projectId,
-			"c_uid": custUserId}).Error("No segment user id given")
+	if segAnonId == "" && custUserId == "" {
+		logCtx.Error("No segment user id or customer user id given")
 		return nil, http.StatusBadRequest
 	}
 
-	logCtx := log.WithFields(log.Fields{"project_id": projectId, "seg_aid": segAnonId})
-
-	user, errCode := GetUserBySegmentAnonymousId(projectId, segAnonId)
-	if errCode == http.StatusInternalServerError ||
-		errCode == http.StatusBadRequest {
-		return nil, errCode
+	var user *User
+	var errCode int
+	// fetch user by seg_aid, if given.
+	if segAnonId != "" {
+		user, errCode = GetUserBySegmentAnonymousId(projectId, segAnonId)
+		if errCode == http.StatusInternalServerError ||
+			errCode == http.StatusBadRequest {
+			return nil, errCode
+		}
+	} else {
+		errCode = http.StatusNotFound
 	}
 
-	// fetch by c_uid, if user not found by seg_aid provided.
+	// fetch by c_uid, if user not found by seg_aid provided or c_uid provided.
 	if errCode == http.StatusNotFound {
 		// if found by c_uid return user, else create new user.
 		if custUserId != "" {
@@ -265,7 +272,6 @@ func GetSegmentUser(projectId uint64, segAnonId, custUserId string) (*User, int)
 				return user, http.StatusOK
 			}
 
-			logCtx = logCtx.WithField("provided_c_uid", custUserId)
 			if errCode == http.StatusInternalServerError {
 				logCtx.WithField("err_code", errCode).Error(
 					"Failed to fetching user with segment provided c_uid.")
@@ -273,7 +279,13 @@ func GetSegmentUser(projectId uint64, segAnonId, custUserId string) (*User, int)
 			}
 		}
 
-		cUser := &User{ProjectId: projectId, SegmentAnonymousId: segAnonId}
+		cUser := &User{ProjectId: projectId}
+
+		// add seg_aid, if provided and not exist already.
+		if segAnonId != "" {
+			cUser.SegmentAnonymousId = segAnonId
+		}
+
 		// add c_uid on create, if provided and not exist already.
 		if custUserId != "" {
 			cUser.CustomerUserId = custUserId
@@ -281,7 +293,8 @@ func GetSegmentUser(projectId uint64, segAnonId, custUserId string) (*User, int)
 
 		user, errCode = CreateUser(cUser)
 		if errCode != http.StatusCreated {
-			logCtx.WithField("err_code", errCode).Error("Failed creating user with c_uid. get_segment_user failed.")
+			logCtx.WithField("err_code", errCode).Error(
+				"Failed creating user with c_uid. get_segment_user failed.")
 			return nil, errCode
 		}
 		return user, errCode
@@ -292,7 +305,7 @@ func GetSegmentUser(projectId uint64, segAnonId, custUserId string) (*User, int)
 		return user, http.StatusOK
 	}
 
-	logCtx = logCtx.WithField("provided_c_uid", custUserId).WithField("fetched_c_uid", user.CustomerUserId)
+	logCtx = logCtx.WithField("fetched_c_uid", user.CustomerUserId)
 
 	// fetched c_uid empty, identify and return.
 	if user.CustomerUserId == "" {
