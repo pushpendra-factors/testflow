@@ -3,6 +3,9 @@
 ## Golang
 https://golang.org/doc/install - go for default installation. Not custom installation.
 
+* Clone the repository using personal access token 
+* After cloning export $GOPATH as repository's root/backend/
+
 ## Postgresql Setup (Homebrew):
 ```
 brew install postgres
