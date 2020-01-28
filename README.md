@@ -270,6 +270,7 @@ mkdir -p /usr/local/var/factors/localytics_data
 git clone https://github.com/localytics/data-viz-challenge.git  /usr/local/var/factors/localytics_data
 
 # Create project from UI. Use projectId and project Token value for that project
+go get github.com/sirupsen/logrus
 go run ingest_localytics_events.go --input_file=/usr/local/var/factors/localytics_data/data.json --server=http://factors-dev.com:8080 --project_id= --project_token=
 
 ```
