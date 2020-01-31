@@ -15,17 +15,17 @@ import (
 func TestAgentDBCreateAgent(t *testing.T) {
 	email := getRandomEmail()
 	t.Run("CreateAgent", func(t *testing.T) {
-		_, errCode := SetupAgentReturnDAO(email)
+		_, errCode := SetupAgentReturnDAO(email, "+13425354765")
 		assert.Equal(t, http.StatusCreated, errCode)
 	})
 
 	t.Run("CreateAgentDuplicateEmail", func(t *testing.T) {
-		_, errCode := SetupAgentReturnDAO(email)
+		_, errCode := SetupAgentReturnDAO(email, "+13425354765")
 		assert.Equal(t, http.StatusBadRequest, errCode)
 	})
 
 	t.Run("CreateAgentDuplicateEmailUppercase", func(t *testing.T) {
-		_, errCode := SetupAgentReturnDAO(strings.ToUpper(email))
+		_, errCode := SetupAgentReturnDAO(strings.ToUpper(email), "+1356576")
 		assert.Equal(t, http.StatusBadRequest, errCode)
 	})
 }
@@ -36,11 +36,11 @@ func TestAgentDBGetAgentByEmail(t *testing.T) {
 		_, errCode := M.GetAgentByEmail(email)
 		assert.Equal(t, http.StatusNotFound, errCode)
 	})
-
+	phone:= "+12322365"
 	start := time.Now()
 
 	// Create agent
-	_, errCode := SetupAgentReturnDAO(email)
+	_, errCode := SetupAgentReturnDAO(email, phone)
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	t.Run("GetAgentByEmailFound", func(t *testing.T) {
@@ -74,7 +74,7 @@ func TestAgentDBGetAgentByUUID(t *testing.T) {
 
 	t.Run("GetAgentByUUIDAgentFound", func(t *testing.T) {
 		email := getRandomEmail()
-		agent, errCode := SetupAgentReturnDAO(email)
+		agent, errCode := SetupAgentReturnDAO(email, "+13425354765")
 		assert.Equal(t, http.StatusCreated, errCode)
 
 		uuid := agent.UUID
@@ -94,7 +94,7 @@ func TestAgentDBGetAgentsByUUIDs(t *testing.T) {
 		for i := 0; i < noOfAgentsToCreate; i++ {
 			email := getRandomEmail()
 			expEmails = append(expEmails, email)
-			agent, errCode := SetupAgentReturnDAO(email)
+			agent, errCode := SetupAgentReturnDAO(email, "+13425354765")
 			assert.Equal(t, http.StatusCreated, errCode)
 			expUUIDs = append(expUUIDs, agent.UUID)
 		}
@@ -140,7 +140,7 @@ func TestAgentDBUpdatePassword(t *testing.T) {
 	t.Run("UpdatePasswordSuccess", func(t *testing.T) {
 		start := time.Now().UTC()
 		email := getRandomEmail()
-		agent, errCode := SetupAgentReturnDAO(email)
+		agent, errCode := SetupAgentReturnDAO(email, "+13425354765")
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.True(t, agent.Password == "")
 
@@ -170,7 +170,7 @@ func TestDBAgentUpdateAgentLastLoginInfo(t *testing.T) {
 	t.Run("UpdatePasswordAgentLastLoginInfoSuccess", func(t *testing.T) {
 		start := time.Now().UTC()
 		email := getRandomEmail()
-		agent, errCode := SetupAgentReturnDAO(email)
+		agent, errCode := SetupAgentReturnDAO(email, "+13425354765")
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.Equal(t, uint64(0), agent.LoginCount)
 
@@ -197,7 +197,7 @@ func TestDBAgentUpdateAgentVerificationDetails(t *testing.T) {
 	})
 	t.Run("Success", func(t *testing.T) {
 		email := getRandomEmail()
-		agent, errCode := SetupAgentReturnDAO(email)
+		agent, errCode := SetupAgentReturnDAO(email, "+13425354765")
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.False(t, agent.IsEmailVerified)
 		assert.Empty(t, agent.FirstName)
@@ -222,7 +222,7 @@ func TestDBAgentUpdateAgentVerificationDetails(t *testing.T) {
 
 func TestUpdateAgentIntAdwordsRefreshToken(t *testing.T) {
 	email := getRandomEmail()
-	agent, errCode := SetupAgentReturnDAO(email)
+	agent, errCode := SetupAgentReturnDAO(email, "+13425354765")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	token := U.RandomLowerAphaNumString(10)

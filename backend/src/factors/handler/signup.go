@@ -24,6 +24,7 @@ func SignUp(c *gin.Context) {
 
 	type signupParams struct {
 		Email    string `json:"email" binding:"required"`
+		Phone    string `json:"phone"`
 		PlanCode string `json:"plan_code"`
 	}
 	params := signupParams{}
@@ -33,8 +34,8 @@ func SignUp(c *gin.Context) {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-
 	email := params.Email
+	phone := params.Phone
 	planCode := params.PlanCode
 	if planCode == "" {
 		planCode = M.FreePlanCode
@@ -55,7 +56,7 @@ func SignUp(c *gin.Context) {
 		return
 	}
 	createAgentParams := M.CreateAgentParams{
-		Agent:    &M.Agent{Email: email},
+		Agent:    &M.Agent{Email: email, Phone: phone},
 		PlanCode: planCode,
 	}
 	createAgentResp, code := M.CreateAgentWithDependencies(&createAgentParams)
@@ -88,11 +89,11 @@ func sendSignUpEmail(agent *M.Agent) error {
 	fe_host := C.GetProtocol() + C.GetAPPDomain()
 	link := fmt.Sprintf("%s/#/activate?token=%s", fe_host, authToken)
 
-	log.WithField("link", link).Debug("Activation LInk")
+	log.WithField("link", link).Debug("Activation Link")
 
 	sub, text, html := U.CreateActivationTemplate(link)
-
 	err = C.GetServices().Mailer.SendMail(agent.Email, C.GetFactorsSenderEmail(), sub, html, text)
+
 	if err != nil {
 		log.WithError(err).Error("Failed to send activation email")
 	}

@@ -12,7 +12,7 @@ import (
 )
 
 func TestDBCreateAndGetProject(t *testing.T) {
-	agent, errCode := SetupAgentReturnDAO(getRandomEmail())
+	agent, errCode := SetupAgentReturnDAO(getRandomEmail(), "+13425356")
 	assert.Equal(t, http.StatusCreated, errCode)
 	billingAccount, errCode := M.GetBillingAccountByAgentUUID(agent.UUID)
 	assert.Equal(t, http.StatusFound, errCode)
@@ -134,7 +134,7 @@ func TestDBGetProjectByIDs(t *testing.T) {
 
 func TestCreateDefaultProjectForAgent(t *testing.T) {
 	t.Run("CreateDefaultProjectForAgent", func(t *testing.T) {
-		agent, errCode := SetupAgentReturnDAO(getRandomEmail())
+		agent, errCode := SetupAgentReturnDAO(getRandomEmail(), "+13425356")
 		assert.Equal(t, http.StatusCreated, errCode)
 
 		project, errCode := M.CreateDefaultProjectForAgent(agent.UUID)

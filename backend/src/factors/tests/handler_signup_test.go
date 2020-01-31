@@ -19,28 +19,34 @@ func TestSignUp(t *testing.T) {
 
 	t.Run("CreateAgentSuccess", func(t *testing.T) {
 		email := getRandomEmail()
-		w := sendSignUpRequest(email, r)
+		phone:= "+917"
+		w := sendSignUpRequest(email, phone, r)
 		assert.Equal(t, http.StatusCreated, w.Code)
 	})
 
 	t.Run("CreateAgentMissingEmail", func(t *testing.T) {
-		w := sendSignUpRequest("", r)
+		w := sendSignUpRequest("", "", r)
 		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+	t.Run("CreateAgentMissingPhone", func(t *testing.T) {
+		w := sendSignUpRequest(getRandomEmail(), "", r)
+		assert.Equal(t, http.StatusCreated, w.Code)
 	})
 
 	t.Run("CreateAgentDuplicateEmail", func(t *testing.T) {
 		email := getRandomEmail()
-		w := sendSignUpRequest(email, r)
+		phone:= "+912253467"
+		w := sendSignUpRequest(email, phone, r)
 		assert.Equal(t, http.StatusCreated, w.Code)
 
-		w = sendSignUpRequest(email, r)
+		w = sendSignUpRequest(email, phone, r)
 		assert.Equal(t, http.StatusFound, w.Code)
 	})
 
 }
 
-func sendSignUpRequest(email string, r *gin.Engine) *httptest.ResponseRecorder {
-	params := map[string]string{"email": email}
+func sendSignUpRequest(email string, phone string, r *gin.Engine) *httptest.ResponseRecorder {
+	params := map[string]string{"email": email, "phone": phone}
 	jsonValue, err := json.Marshal(params)
 	if err != nil {
 		log.WithError(err).Error("Error Creating json params")

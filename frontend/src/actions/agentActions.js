@@ -123,21 +123,30 @@ export function login(email, password) {
     }
   }
 
-  export function signup(email, planCode){
+  export function signup(email, phone, planCode){
     return function(dispatch){
       return new Promise((resolve, reject) => {
         dispatch({type: "AGENT_SIGNUP"});
 
-        post(dispatch, host+"accounts/signup", { email: email, plan_code: planCode })
-          .then(() => {
-            resolve(dispatch({
-              type: "AGENT_SIGNUP_FULFILLED",
-              payload: {}
-            }));
+        post(dispatch, host+"accounts/signup", { email: email, phone: phone, plan_code: planCode })
+          .then((r) => {
+            // status 302 for duplicate email
+            if(r.status != 302)
+            {
+              dispatch({
+                type: "AGENT_SIGNUP_FULFILLED",
+                payload: {}
+              });
+              resolve(r);
+            }
+            else
+            {
+              dispatch({type: "AGENT_SIGNUP_REJECTED", payload: null});
+              reject("Email already exists. Try logging in.")
+            }
           })
-          .catch(() => {
+          .catch( () => {
             dispatch({type: "AGENT_SIGNUP_REJECTED", payload: null});
-            
             reject("Sign up failed. Please try again.");
           });
       });

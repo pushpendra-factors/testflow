@@ -49,7 +49,7 @@ func TestAPICreateProject(t *testing.T) {
 
 	t.Run("CreateProject", func(t *testing.T) {
 		projectName := "test_project_name"
-		agent, errCode := SetupAgentReturnDAO(getRandomEmail())
+		agent, errCode := SetupAgentReturnDAO(getRandomEmail(), "+254346477")
 		assert.Equal(t, http.StatusCreated, errCode)
 		w := sendCreateProjectRequest(r, projectName, agent)
 		assert.Equal(t, http.StatusCreated, w.Code)

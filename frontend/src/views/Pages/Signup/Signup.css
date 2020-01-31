@@ -1,0 +1,15 @@
+
+.react-tel-input .form-control{
+    width: 100% !important;
+    height: calc(3.0625rem + 2px);
+     font-size: 17px !important;
+    /* color: #000 !important; */
+    letter-spacing: 0.02rem;
+    font-weight: 300 ;
+    border: 1px solid #8f9ba6 !important;
+    border-radius: 0.25rem;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+.flag-dropdown {
+    border: 1px solid #8f9ba6 !important;
+}

@@ -16,7 +16,7 @@ func TestCreateDashboardUnit(t *testing.T) {
 	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
 
-	agent2, errCode := SetupAgentReturnDAO(getRandomEmail())
+	agent2, errCode := SetupAgentReturnDAO(getRandomEmail(), "+13425356")
 	assert.Equal(t, http.StatusCreated, errCode)
 	_, errCode = M.CreateProjectAgentMappingWithDependencies(&M.ProjectAgentMapping{
 		ProjectID: project.ID, AgentUUID: agent2.UUID})
@@ -122,7 +122,7 @@ func TestGetDashboardUnits(t *testing.T) {
 	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
 
-	agent2, errCode := SetupAgentReturnDAO(getRandomEmail())
+	agent2, errCode := SetupAgentReturnDAO(getRandomEmail(), "+13425356")
 	assert.Equal(t, http.StatusCreated, errCode)
 	_, errCode = M.CreateProjectAgentMappingWithDependencies(&M.ProjectAgentMapping{
 		ProjectID: project.ID, AgentUUID: agent2.UUID})
@@ -202,7 +202,7 @@ func TestDeleteDashboardUnit(t *testing.T) {
 	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
 
-	agent2, errCode := SetupAgentReturnDAO(getRandomEmail())
+	agent2, errCode := SetupAgentReturnDAO(getRandomEmail(), "+13425356")
 	assert.Equal(t, http.StatusCreated, errCode)
 	_, errCode = M.CreateProjectAgentMappingWithDependencies(&M.ProjectAgentMapping{
 		ProjectID: project.ID, AgentUUID: agent2.UUID})
@@ -291,7 +291,7 @@ func TestUpdateDashboardUnit(t *testing.T) {
 	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
 
-	agent2, errCode := SetupAgentReturnDAO("")
+	agent2, errCode := SetupAgentReturnDAO("","")
 	assert.Equal(t, http.StatusCreated, errCode)
 	_, errCode = M.CreateProjectAgentMappingWithDependencies(&M.ProjectAgentMapping{
 		ProjectID: project.ID, AgentUUID: agent2.UUID})

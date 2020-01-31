@@ -60,7 +60,7 @@ func TestGetDashboards(t *testing.T) {
 	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
 
-	agent2, errCode := SetupAgentReturnDAO(getRandomEmail())
+	agent2, errCode := SetupAgentReturnDAO(getRandomEmail(), "+13425356")
 	assert.Equal(t, http.StatusCreated, errCode)
 	_, errCode = M.CreateProjectAgentMappingWithDependencies(&M.ProjectAgentMapping{
 		ProjectID: project.ID, AgentUUID: agent2.UUID})
@@ -134,7 +134,7 @@ func TestUpdateDashboard(t *testing.T) {
 	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
 
-	agent2, errCode := SetupAgentReturnDAO("")
+	agent2, errCode := SetupAgentReturnDAO("","")
 	assert.Equal(t, http.StatusCreated, errCode)
 	_, errCode = M.CreateProjectAgentMappingWithDependencies(&M.ProjectAgentMapping{
 		ProjectID: project.ID, AgentUUID: agent2.UUID})

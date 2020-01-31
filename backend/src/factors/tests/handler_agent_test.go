@@ -54,7 +54,7 @@ func TestAPIAgentSignin(t *testing.T) {
 
 	t.Run("SigninSuccess", func(t *testing.T) {
 		email := getRandomEmail()
-		agent, errCode := SetupAgentReturnDAO(email)
+		agent, errCode := SetupAgentReturnDAO(email,"+93214356")
 		assert.Equal(t, http.StatusCreated, errCode)
 
 		plainTextPassword := U.RandomLowerAphaNumString(6)
@@ -163,7 +163,7 @@ func TestAPIAgentInvite(t *testing.T) {
 	t.Run("InviteAgentSuccess", func(t *testing.T) {
 		project, err := SetupProjectReturnDAO()
 		assert.Nil(t, err)
-		agent, errCode := SetupAgentReturnDAO(getRandomEmail())
+		agent, errCode := SetupAgentReturnDAO(getRandomEmail(), "+3423647568")
 		assert.Equal(t, http.StatusCreated, errCode)
 
 		_, errCode = M.CreateProjectAgentMappingWithDependencies(&M.ProjectAgentMapping{
@@ -184,7 +184,7 @@ func TestAPIAgentInvite(t *testing.T) {
 		assert.Equal(t, http.StatusCreated, errCode)
 
 		for i := 0; i < 2; i++ {
-			agent, errCode := SetupAgentReturnDAO(getRandomEmail())
+			agent, errCode := SetupAgentReturnDAO(getRandomEmail(), "+3423647568")
 			assert.Equal(t, http.StatusCreated, errCode)
 
 			_, errCode = M.CreateProjectAgentMappingWithDependencies(&M.ProjectAgentMapping{
@@ -244,7 +244,7 @@ func TestAPIRemoveAgentFromProject(t *testing.T) {
 		assert.Equal(t, http.StatusCreated, errCode)
 
 		project := testData.Project
-		agentToRemove, errCode := SetupAgentReturnDAO(getRandomEmail())
+		agentToRemove, errCode := SetupAgentReturnDAO(getRandomEmail(), "+3423647568")
 		assert.Equal(t, http.StatusCreated, errCode)
 
 		_, errCode = M.CreateProjectAgentMappingWithDependencies(&M.ProjectAgentMapping{
@@ -305,7 +305,7 @@ func TestAPIAgentVerify(t *testing.T) {
 
 	t.Run("Success", func(t *testing.T) {
 		email := getRandomEmail()
-		agent, errCode := SetupAgentReturnDAO(email)
+		agent, errCode := SetupAgentReturnDAO(email, "+2345634367")
 		assert.Equal(t, http.StatusCreated, errCode)
 
 		firstName := U.RandomLowerAphaNumString(8)
@@ -358,7 +358,7 @@ func TestAPIAgentGenerateResetPasswordEmail(t *testing.T) {
 	})
 
 	t.Run("AgentExists", func(t *testing.T) {
-		agent, errCode := SetupAgentReturnDAO(getRandomEmail())
+		agent, errCode := SetupAgentReturnDAO(getRandomEmail(), "+3423647568")
 		assert.Equal(t, http.StatusCreated, errCode)
 
 		w := sendAgentResetPasswordEmailReq(r, agent.Email)
@@ -405,7 +405,7 @@ func TestAPIAgentSetPassword(t *testing.T) {
 
 	t.Run("MissingPassword", func(t *testing.T) {
 		email := getRandomEmail()
-		agent, errCode := SetupAgentReturnDAO(email)
+		agent, errCode := SetupAgentReturnDAO(email, "+32478243")
 		assert.Equal(t, http.StatusCreated, errCode)
 
 		authData, err := helpers.GetAuthData(email, agent.UUID, agent.Salt, helpers.SecondsInFifteenDays*time.Second)
@@ -417,7 +417,7 @@ func TestAPIAgentSetPassword(t *testing.T) {
 
 	t.Run("Success", func(t *testing.T) {
 		email := getRandomEmail()
-		agent, errCode := SetupAgentReturnDAO(email)
+		agent, errCode := SetupAgentReturnDAO(email, "+224443")
 		assert.Equal(t, http.StatusCreated, errCode)
 
 		password := U.RandomLowerAphaNumString(8)

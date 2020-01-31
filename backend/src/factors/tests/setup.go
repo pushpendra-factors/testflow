@@ -11,7 +11,7 @@ import (
 
 func SetupProjectReturnDAO() (*M.Project, error) {
 
-	agent, errCode := SetupAgentReturnDAO(getRandomEmail())
+	agent, errCode := SetupAgentReturnDAO(getRandomEmail(),"+354522436")
 	if errCode != http.StatusCreated {
 		return nil, fmt.Errorf("Project Creation failed, agentCreation failed")
 	}
@@ -102,13 +102,13 @@ func getRandomAgentUUID() string {
 	return "6ba7b814-9dad-11d1-80b4-00c04fd430c8"
 }
 
-func SetupAgentReturnDAO(email string) (*M.Agent, int) {
+func SetupAgentReturnDAO(email string, phone string) (*M.Agent, int) {
 
 	if email == "" {
 		email = getRandomEmail()
 	}
 
-	createAgentParams := &M.CreateAgentParams{Agent: &M.Agent{Email: email}, PlanCode: M.FreePlanCode}
+	createAgentParams := &M.CreateAgentParams{Agent: &M.Agent{Email: email, Phone: phone}, PlanCode: M.FreePlanCode}
 	resp, errCode := M.CreateAgentWithDependencies(createAgentParams)
 	if errCode != http.StatusCreated {
 		return nil, errCode
@@ -121,7 +121,7 @@ func SetupProjectWithAgentDAO() (*M.Project, *M.Agent, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	agent, errCode := SetupAgentReturnDAO(getRandomEmail())
+	agent, errCode := SetupAgentReturnDAO(getRandomEmail(), "+1343545")
 	if errCode != http.StatusCreated {
 		return nil, nil, fmt.Errorf("Agent Creation failed.")
 	}
@@ -140,7 +140,7 @@ type testData struct {
 }
 
 func SetupTestData() (*testData, int) {
-	agent, errCode := SetupAgentReturnDAO(getRandomEmail())
+	agent, errCode := SetupAgentReturnDAO(getRandomEmail(), "+6753476")
 	if errCode != http.StatusCreated {
 		return nil, http.StatusInternalServerError
 	}

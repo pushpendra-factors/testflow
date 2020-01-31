@@ -26,6 +26,8 @@ type Agent struct {
 	Email           string `gorm:"type:varchar(100)" json:"email"`
 	IsEmailVerified bool   `json:"is_email_verified"`
 
+	Phone string `gorm:"type:varchar(100)" json:"phone"`
+
 	Salt              string     `gorm:"type:varchar(100)" json:"-"` // Should we add a unique on salt ?
 	Password          string     `gorm:"type:varchar(100)" json:"-"`
 	PasswordCreatedAt *time.Time `json:"password_created_at"`
@@ -133,7 +135,6 @@ func GetAgentByEmail(email string) (*Agent, int) {
 		}
 		return nil, http.StatusInternalServerError
 	}
-
 	return &agent, http.StatusFound
 }
 

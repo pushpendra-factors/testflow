@@ -192,7 +192,6 @@ class DefaultLayout extends Component {
       // selectable_projects object structure.
       project => ({ "label": project.name, "value": project.id }) 
     )
-
     if (selectableProjects.length == 0 ){
       return <DefaultHeader 
         refresh={this.refresh}

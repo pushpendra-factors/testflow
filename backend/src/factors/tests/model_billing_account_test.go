@@ -14,7 +14,7 @@ func TestCreateGetBillingAccountByAgentUUID(t *testing.T) {
 	t.Run("CreateDefaultPlan", func(t *testing.T) {
 		// CreateAgent
 		// Creating agent should create default billing account with freePlan
-		agent, errCode := SetupAgentReturnDAO(getRandomEmail())
+		agent, errCode := SetupAgentReturnDAO(getRandomEmail(), "+134325454")
 		assert.Equal(t, http.StatusCreated, errCode)
 
 		ba, errCode := M.GetBillingAccountByAgentUUID(agent.UUID)
@@ -22,7 +22,7 @@ func TestCreateGetBillingAccountByAgentUUID(t *testing.T) {
 		assert.Equal(t, M.FreePlanID, ba.PlanID)
 	})
 	t.Run("SpecificPlan", func(t *testing.T) {
-		cAP := &M.CreateAgentParams{Agent: &M.Agent{Email: getRandomEmail()}, PlanCode: M.StartupPlanCode}
+		cAP := &M.CreateAgentParams{Agent: &M.Agent{Email: getRandomEmail(), Phone: "+2142355"}, PlanCode: M.StartupPlanCode}
 		resp, errCode := M.CreateAgentWithDependencies(cAP)
 		assert.Equal(t, http.StatusCreated, errCode)
 		ba, errCode := M.GetBillingAccountByAgentUUID(resp.Agent.UUID)
@@ -33,7 +33,7 @@ func TestCreateGetBillingAccountByAgentUUID(t *testing.T) {
 
 func TestUpdateBillingAccount(t *testing.T) {
 
-	agent, errCode := SetupAgentReturnDAO(getRandomEmail())
+	agent, errCode := SetupAgentReturnDAO(getRandomEmail(),"+1232545")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	ba, errCode := M.GetBillingAccountByAgentUUID(agent.UUID)
@@ -84,7 +84,7 @@ func TestGetAgentsByProjectIDs(t *testing.T) {
 	td, errCode := SetupTestData()
 	assert.Equal(t, http.StatusCreated, errCode)
 
-	agent2, errCode := SetupAgentReturnDAO(getRandomEmail())
+	agent2, errCode := SetupAgentReturnDAO(getRandomEmail(), "")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	project2, errCode := M.CreateProjectWithDependencies(&M.Project{Name: U.RandomString(6)}, agent2.UUID, M.ADMIN, td.BillingAccount.ID)
@@ -115,7 +115,7 @@ func TestIsNewAgentCreationAllowed(t *testing.T) {
 
 	createdAgents := make([]*M.Agent, 0, 0)
 	for i := 0; i < noOfAgentsToCreate; i++ {
-		ag, errCode := SetupAgentReturnDAO(getRandomEmail())
+		ag, errCode := SetupAgentReturnDAO(getRandomEmail(), "+2353464")
 		assert.Equal(t, http.StatusCreated, errCode)
 		createdAgents = append(createdAgents, ag)
 	}

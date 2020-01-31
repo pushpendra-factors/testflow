@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { Formik, Form, Field, ErrorMessage } from 'formik';
+import { Formik, Form, Field, ErrorMessage, useFormik } from 'formik';
 import { Button, Card, CardBody, Col, Container, Alert, Input, InputGroup, InputGroupAddon, InputGroupText, Row } from 'reactstrap';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
@@ -7,11 +7,14 @@ import * as yup from 'yup';
 import queryString from 'query-string';
 
 import { signup } from "../../../actions/agentActions";
-import  { InvalidEmail, MissingEmail } from '../ValidationMessages';
+import  { InvalidEmail, MissingEmail, MissingPhoneNo } from '../ValidationMessages';
 import HalfScreen from '../HalfScreen';
 import SubmissionError from '../SubmissionError';
 import factorsai from '../../../common/factorsaiObj';
 import { isProduction } from '../../../util';
+import PhoneInput from 'react-phone-input-2'
+import 'react-phone-input-2/lib/style.css'
+import './Signup.css';
 
 const mapDispatchToProps = dispatch => {
   return bindActionCreators({ signup }, dispatch);
@@ -45,36 +48,35 @@ class Signup extends Component {
         </div>
       );
     }
-
     return (
       <Formik
-        initialValues={{email:''}}
+        initialValues={{email:'', phone: ''}}
         validationSchema = {
             yup.object().shape({
-                email: yup.string().email(InvalidEmail).required(MissingEmail)
+                email: yup.string().email(InvalidEmail).required(MissingEmail),
+                phone: yup.string().test('phone number', 'Invalid phone number', val => (val && val.match(/(\d+)/)[0].length >= 6)).required(MissingPhoneNo)
             })
         }
         onSubmit={(values, {setSubmitting}) => {
           // track create account conversion.
           if (isProduction()) gtag_report_conversion();
-
           let parsed = queryString.parse(this.props.location.search);
             let planCode = parsed.plan;
-            let eventProperties = { email: values.email, plan_code: planCode };
-            this.props.signup(values.email, planCode)
+            let eventProperties = { email: values.email, phone: values.phone, plan_code: planCode };
+            this.props.signup(values.email, values.phone, planCode)
             .then(() => {
-                setSubmitting(false);
-                this.setState({signupPerformed: true, agentEmail: values.email });
-                factorsai.track('signup', eventProperties);    
+                  setSubmitting(false);
+                  this.setState({signupPerformed: true, agentEmail: values.email,});
+                  factorsai.track('signup', eventProperties);
             })
             .catch((msg) => {
                 setSubmitting(false);
                 this.setState({ error: msg });
                 factorsai.track('signup_failed', eventProperties);
-            });                             
+            });                       
         }}
       >
-        {({isSubmitting, touched}) => (
+        {({isSubmitting, touched, setFieldValue, values}) => (
           <Form noValidate>
               <h3 style={{textAlign: 'center', marginBottom: '30px', color: '#484848'}}>Sign up to factors.ai</h3>
               <SubmissionError message={this.state.error} />
@@ -84,6 +86,26 @@ class Signup extends Component {
                 touched.email &&
                 <ErrorMessage name="email">
                     {msg => <span style={{color:'#d64541', fontWeight: '700',textAlign: 'center', display: 'block', marginTop: '-15px'}}>{msg}</span>}  
+                </ErrorMessage>
+              }
+              <span className='fapp-label'>Phone</span>
+              <PhoneInput
+                placeholder="Enter phone number"
+                onChange={(e)=> setFieldValue('phone', e)}
+                tag={Field}
+                name="phone"
+                value={values.phone}
+                autoFormat={false}
+                enableLongNumbers={true}
+                enableSearch={true}
+                disableSearchIcon={true}
+                country={'us'}
+                style={{marginBottom: '20px', marginTop: '10px',}}
+              />
+              {
+                touched.phone &&
+                <ErrorMessage name="phone">
+                    {msg => <span style={{color:'#d64541', fontWeight: '700',textAlign: 'center', display: 'block', marginTop: '-15px', marginBottom: '10px'}}>{msg}</span>}  
                 </ErrorMessage>
               }
               <div style={{textAlign: 'center'}}>

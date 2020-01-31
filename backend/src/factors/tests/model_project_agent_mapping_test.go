@@ -14,7 +14,7 @@ func TestCreateProjectAgentMapping(t *testing.T) {
 	assert.Nil(t, err)
 
 	email := getRandomEmail()
-	agent, errCode := SetupAgentReturnDAO(email)
+	agent, errCode := SetupAgentReturnDAO(email, "+13425356")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	pam := &M.ProjectAgentMapping{
@@ -31,7 +31,7 @@ func TestCreateDuplicateProjectAgentMapping(t *testing.T) {
 	assert.Nil(t, err)
 
 	email := getRandomEmail()
-	agent, errCode := SetupAgentReturnDAO(email)
+	agent, errCode := SetupAgentReturnDAO(email, "+13425356")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	pam := &M.ProjectAgentMapping{
@@ -52,7 +52,7 @@ func TestGetProjectAgentMapping(t *testing.T) {
 	assert.Nil(t, err)
 
 	email := getRandomEmail()
-	agent, errCode := SetupAgentReturnDAO(email)
+	agent, errCode := SetupAgentReturnDAO(email, "+13425356")
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	pam := &M.ProjectAgentMapping{
@@ -94,7 +94,7 @@ func TestDBGetProjectAgentMappingsByProjectId(t *testing.T) {
 		noOfAgents := int(U.RandomUint64()%10 + 5)
 		createdAgents := make([]*M.Agent, 0, 0)
 		for i := 0; i < noOfAgents; i++ {
-			ag, errCode := SetupAgentReturnDAO(getRandomEmail())
+			ag, errCode := SetupAgentReturnDAO(getRandomEmail(), "+13425356")
 			assert.Equal(t, http.StatusCreated, errCode)
 			createdAgents = append(createdAgents, ag)
 		}
@@ -127,7 +127,7 @@ func TestDBGetProjectAgentMappingsByAgentUUID(t *testing.T) {
 	})
 
 	t.Run("Found", func(t *testing.T) {
-		agent, errCode := SetupAgentReturnDAO(getRandomEmail())
+		agent, errCode := SetupAgentReturnDAO(getRandomEmail(), "+13425356")
 		assert.Equal(t, http.StatusCreated, errCode)
 		noOfProjects := int(U.RandomUint64()%10 + 5)
 		var projects []*M.Project
@@ -158,7 +158,7 @@ func TestDeleteProjectAgentMapping(t *testing.T) {
 
 		project := testData.Project
 
-		agent, errCode := SetupAgentReturnDAO(getRandomEmail())
+		agent, errCode := SetupAgentReturnDAO(getRandomEmail(), "+13425356")
 		assert.Equal(t, http.StatusCreated, errCode)
 		errCode = M.DeleteProjectAgentMapping(project.ID, agent.UUID)
 		assert.Equal(t, http.StatusNotFound, errCode)
@@ -170,7 +170,7 @@ func TestDeleteProjectAgentMapping(t *testing.T) {
 		assert.NotNil(t, testData)
 
 		project := testData.Project
-		agent, errCode := SetupAgentReturnDAO(getRandomEmail())
+		agent, errCode := SetupAgentReturnDAO(getRandomEmail(), "+13425356")
 		assert.Equal(t, http.StatusCreated, errCode)
 
 		_, errCode = M.CreateProjectAgentMappingWithDependencies(&M.ProjectAgentMapping{
