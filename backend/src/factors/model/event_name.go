@@ -194,11 +194,13 @@ func GetEventNamesOrderedByOccurrenceWithLimit(projectId uint64, limit int) ([]E
 
 	logCtx := log.WithFields(log.Fields{"projectId": projectId, "eventsAfterTimestamp": eventsAfterTimestamp})
 
-	// Gets occurrence count of event from events table for a limited time window
-	// and order by count then left join with event names.
-	queryStr := "SELECT * FROM (SELECT event_name_id, COUNT(*) FROM events" +
-		" " + "WHERE project_id=? AND timestamp > ? GROUP BY event_name_id ORDER BY count DESC LIMIT ?)" +
-		" " + "AS event_occurrence LEFT JOIN event_names ON event_occurrence.event_name_id=event_names.id"
+	// Gets occurrence count of event from events table for a
+	// limited time window and upto 100k and order by count
+	// then join with event names.
+	queryStr := "SELECT * FROM (SELECT event_name_id, COUNT(*) FROM" +
+		" " + "(SELECT event_name_id FROM events WHERE project_id=? AND timestamp > ? LIMIT ?) AS sample_events" +
+		" " + "GROUP BY event_name_id ORDER BY count DESC) AS event_occurrence" +
+		" " + "LEFT JOIN event_names ON event_occurrence.event_name_id=event_names.id"
 
 	if hasLimit {
 		queryStr = queryStr + " " + "LIMIT ?"
