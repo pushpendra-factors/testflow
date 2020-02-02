@@ -1,4 +1,4 @@
-.PHONY: build-api serve-api build-ps serve-ps build-ds serve-ds serve-redis clean pack-api upload-api pack-ps upload-ps pack-ds upload-ds pack-redis upload-redis pack-debug upload-debug pack-build-seq upload-build-seq pack-build-reports upload-build-reports test 
+.PHONY: build-api serve-api build-ps serve-ps build-ds serve-ds serve-redis clean pack-api upload-api pack-ps upload-ps pack-ds upload-ds pack-redis upload-redis pack-debug upload-debug pack-build-seq upload-build-seq pack-build-reports upload-build-reports pack-hubspot-enrich upload-hubspot-enrich test 
 
 # Update tag with the latest release version
 # Ex format: v0.05-beta_d0e9ed9 
@@ -75,6 +75,12 @@ pack-build-reports:
 
 upload-build-reports:
 	docker push us.gcr.io/factors-$(ENV)/build-reports-job:$(TAG)
+
+pack-hubspot-enrich:
+	docker build -t us.gcr.io/factors-$(ENV)/hubspot-enrich-job:$(TAG) -f Dockerfile.hubspot_enrich_job .
+
+upload-hubspot-enrich:
+	docker push us.gcr.io/factors-$(ENV)/hubspot-enrich-job:$(TAG)
 
 test: 
 	go test -v $(GOPATH)/src/factors/tests && go test -v $(GOPATH)/src/factors/pattern_server/store
