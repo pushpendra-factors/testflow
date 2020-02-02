@@ -13,18 +13,18 @@ import (
 )
 
 type AdwordsDocument struct {
-	ProjectId         uint64          `gorm:"primary_key:true" json:"project_id"`
-	CustomerAccountId string          `gorm:"primary_key:true" json:"customer_acc_id"`
+	ProjectId         uint64          `gorm:"primary_key:true;auto_increment:false" json:"project_id"`
+	CustomerAccountId string          `gorm:"primary_key:true;auto_increment:false" json:"customer_acc_id"`
 	TypeAlias         string          `gorm:"-" json:"type_alias"`
-	Type              int             `gorm:"primary_key:true" json:"-"`
-	Timestamp         int64           `gorm:"primary_key:true" json:"timestamp"`
-	ID                string          `gorm:"primary_key:true" json:"id"`
+	Type              int             `gorm:"primary_key:true;auto_increment:false" json:"-"`
+	Timestamp         int64           `gorm:"primary_key:true;auto_increment:false" json:"timestamp"`
+	ID                string          `gorm:"primary_key:true;auto_increment:false" json:"id"`
 	Value             *postgres.Jsonb `json:"value"`
 	CreatedAt         time.Time       `json:"created_at"`
 	UpdatedAt         time.Time       `json:"updated_at"`
 }
 
-var documentTypeByAlias = map[string]int{
+var adwordsDocumentTypeAlias = map[string]int{
 	"campaigns":                   1,
 	"ads":                         2,
 	"ad_groups":                   3,
@@ -65,7 +65,7 @@ func getAdwordsDateOnlyTimestamp(unixTimestamp int64) string {
 }
 
 func getAdwordsIdByType(docType int, valueJson *postgres.Jsonb) (string, error) {
-	if docType > len(documentTypeByAlias) {
+	if docType > len(adwordsDocumentTypeAlias) {
 		return "", errors.New("invalid document type")
 	}
 
@@ -103,7 +103,7 @@ func CreateAdwordsDocument(adwordsDoc *AdwordsDocument) int {
 	}
 
 	logCtx = logCtx.WithField("type_alias", adwordsDoc.TypeAlias)
-	docType, docTypeExists := documentTypeByAlias[adwordsDoc.TypeAlias]
+	docType, docTypeExists := adwordsDocumentTypeAlias[adwordsDoc.TypeAlias]
 	if !docTypeExists {
 		logCtx.Error("Invalid type alias.")
 		return http.StatusBadRequest
@@ -149,7 +149,7 @@ type AdwordsLastSyncInfo struct {
 
 func getDocumentTypeAliasByType() map[int]string {
 	documentTypeMap := make(map[int]string, 0)
-	for alias, typ := range documentTypeByAlias {
+	for alias, typ := range adwordsDocumentTypeAlias {
 		documentTypeMap[typ] = alias
 	}
 
@@ -233,7 +233,7 @@ func GetAllAdwordsLastSyncInfoByProjectAndType() ([]AdwordsLastSyncInfo, int) {
 	// add missing types for existing projects.
 	for i := range adwordsSettings {
 		existingTypesForProject, projectExists := existingProjectsWithTypes[adwordsSettings[i].ProjectId]
-		for docTypeAlias, _ := range documentTypeByAlias {
+		for docTypeAlias, _ := range adwordsDocumentTypeAlias {
 			if !projectExists || (projectExists && existingTypesForProject[docTypeAlias] == false) {
 				syncInfo := AdwordsLastSyncInfo{
 					ProjectId:         adwordsSettings[i].ProjectId,
@@ -311,11 +311,11 @@ func GetAdwordsDocumentTypeForFilterKey(filter string) (int, error) {
 
 	switch filter {
 	case CAFilterCampaign:
-		docType = documentTypeByAlias["campaign_performance_report"]
+		docType = adwordsDocumentTypeAlias["campaign_performance_report"]
 	case CAFilterAd:
-		docType = documentTypeByAlias["ad_performance_report"]
+		docType = adwordsDocumentTypeAlias["ad_performance_report"]
 	case CAFilterKeyword:
-		docType = documentTypeByAlias["keyword_performance_report"]
+		docType = adwordsDocumentTypeAlias["keyword_performance_report"]
 	}
 
 	if docType == 0 {
@@ -506,7 +506,7 @@ func getAdwordsChannelResultMeta(projectId uint64, customerAccountId string,
 	db := C.GetServices().Db
 	rows, err := db.Raw(stmnt,
 		projectId, customerAccountId,
-		documentTypeByAlias["customer_account_properties"],
+		adwordsDocumentTypeAlias["customer_account_properties"],
 		getAdwordsDateOnlyTimestamp(query.From),
 		getAdwordsDateOnlyTimestamp(query.To)).Rows()
 	if err != nil {

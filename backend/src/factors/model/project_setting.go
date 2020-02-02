@@ -18,15 +18,20 @@ type ProjectSetting struct {
 	// omit empty to avoid nil(filelds not updated) on resp json.
 	AutoTrack       *bool `gorm:"not null;default:false" json:"auto_track,omitempty"`
 	AutoFormCapture *bool `gorm:"not null;default:false" json:"auto_form_capture,omitempty"`
-	IntSegment      *bool `gorm:"not null;default:false" json:"int_segment,omitempty"`
 	ExcludeBot      *bool `gorm:"not null;default:false" json:"exclude_bot,omitempty"`
+	// Segment integration settings.
+	IntSegment *bool `gorm:"not null;default:false" json:"int_segment,omitempty"`
+	// Adwords integration settings.
 	// Foreign key constraint int_adwords_enabled_agent_uuid -> agents(uuid)
 	// Todo: Set int_adwords_enabled_agent_uuid, int_adwords_customer_account_id to NULL
 	// for disabling adwords integration for the project.
-	IntAdwordsEnabledAgentUUID  *string   `json:"int_adwords_enabled_agent_uuid,omitempty"`
-	IntAdwordsCustomerAccountId *string   `json:"int_adwords_customer_account_id,omitempty"`
-	CreatedAt                   time.Time `json:"created_at"`
-	UpdatedAt                   time.Time `json:"updated_at"`
+	IntAdwordsEnabledAgentUUID  *string `json:"int_adwords_enabled_agent_uuid,omitempty"`
+	IntAdwordsCustomerAccountId *string `json:"int_adwords_customer_account_id,omitempty"`
+	// Hubspot integration settings.
+	IntHubspot       *bool     `gorm:"not null;default:false" json:"int_hubspot,omitempty"`
+	IntHubspotApiKey string    `json:"int_hubspot_api_key,omitempty"`
+	CreatedAt        time.Time `json:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at"`
 }
 
 func GetProjectSetting(projectId uint64) (*ProjectSetting, int) {
@@ -164,4 +169,25 @@ func GetAllIntAdwordsProjectSettings() ([]AdwordsProjectSettings, int) {
 	}
 
 	return adwordsProjectSettings, http.StatusOK
+}
+
+type HubspotProjectSettings struct {
+	ProjectId uint64 `json:"-"`
+	APIKey    string `json:"api_key"`
+}
+
+func GetAllHubspotProjectSettings() ([]HubspotProjectSettings, int) {
+	var hubspotProjectSettings []HubspotProjectSettings
+
+	db := C.GetServices().Db
+	err := db.Table("project_settings").Where(
+		"int_hubspot='true' AND int_hubspot_api_key IS NOT NULL ").Select(
+		"project_id, int_hubspot_api_key as api_key").Find(
+		&hubspotProjectSettings).Error
+	if err != nil {
+		log.WithError(err).Error("Failed to get hubspot project_settings.")
+		return hubspotProjectSettings, http.StatusInternalServerError
+	}
+
+	return hubspotProjectSettings, http.StatusFound
 }

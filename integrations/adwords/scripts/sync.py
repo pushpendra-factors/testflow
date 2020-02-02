@@ -438,7 +438,7 @@ def get_keywords_performance_report(adwords_client, timestamp):
 
 
 def add_adwords_document(project_id, customer_acc_id, doc, doc_type, timestamp):    
-    uri = "/data_service/adwords/add_document"
+    uri = "/data_service/adwords/documents/add"
     url = options.data_service_host + uri
 
     payload = {
@@ -463,7 +463,7 @@ def add_all_adwords_documents(project_id, customer_acc_id, docs, doc_type, times
             doc, doc_type, timestamp)
 
 def get_last_sync_info():
-    uri = "/data_service/adwords/get_last_sync_info"
+    uri = "/data_service/adwords/documents/last_sync_info"
     url = options.data_service_host + uri
 
     response = requests.get(url)

@@ -13,7 +13,8 @@ import jsSvg from '../../assets/img/settings/js.svg';
 import segmentSvg from '../../assets/img/integrations/segment.svg';
 import androidSvg from '../../assets/img/settings/android.svg';
 import iosSvg from '../../assets/img/settings/iOS.svg';
-import adwordsSvg from '../../assets/img/settings/adwords.svg';
+import adwordsSvg from '../../assets/img/integrations/adwords.svg';
+import hubspotSvg from '../../assets/img/integrations/hubspot.svg'
 
 class SettingsCard extends Component {
   constructor(props) {
@@ -95,6 +96,7 @@ class Settings extends Component {
                 <Row>
                   <SettingsCard title='Segment' img={segmentSvg} href='/settings/segment' />
                   <SettingsCard title='Adwords' img={adwordsSvg} href='/settings/adwords' />
+                  <SettingsCard title='Hubspot' img={hubspotSvg} href='/settings/hubspot' />
                 </Row>
               </CardBody>
             </Card>

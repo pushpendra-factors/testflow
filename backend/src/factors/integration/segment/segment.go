@@ -1,4 +1,4 @@
-package integration
+package segment
 
 import (
 	U "factors/util"

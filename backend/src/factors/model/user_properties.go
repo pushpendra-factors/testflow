@@ -224,7 +224,9 @@ func GetUserPropertyRecordsByUserId(projectId uint64, userId string) ([]UserProp
 	return userProperties, http.StatusFound
 }
 
-func OverwriteUserProperties(projectId uint64, userId string, id string, propertiesJsonb *postgres.Jsonb) int {
+func OverwriteUserProperties(projectId uint64, userId string,
+	id string, propertiesJsonb *postgres.Jsonb) int {
+
 	if projectId == 0 || userId == "" || id == "" {
 		return http.StatusBadRequest
 	}
@@ -292,4 +294,22 @@ func UpdatePropertyOnAllUserPropertyRecords(projectId uint64, userId string,
 	}
 
 	return http.StatusAccepted
+}
+
+func GetUserPropertiesRecordsByProperty(projectId uint64,
+	key string, value interface{}) ([]UserProperties, int) {
+
+	db := C.GetServices().Db
+	var userProperties []UserProperties
+	err := db.Order("created_at").Where("project_id=?", projectId).Where(
+		"properties->>? = ?", key, value).Find(&userProperties).Error
+	if err != nil {
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(userProperties) == 0 {
+		return nil, http.StatusNotFound
+	}
+
+	return userProperties, http.StatusFound
 }

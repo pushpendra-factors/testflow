@@ -1,0 +1,610 @@
+package model
+
+import (
+	"errors"
+	"fmt"
+	"net/http"
+	"strconv"
+	"time"
+
+	"github.com/jinzhu/gorm/dialects/postgres"
+	log "github.com/sirupsen/logrus"
+
+	C "factors/config"
+	U "factors/util"
+)
+
+type HubspotDocument struct {
+	ProjectId uint64 `gorm:"primary_key:true;auto_increment:false" json:"project_id"`
+	ID        string `gorm:"primary_key:true;auto_increment:false" json:"id"`
+	Type      int    `gorm:"primary_key:true;auto_increment:false" json:"-"`
+	Action    int    `gorm:"primary_key:true;auto_increment:false" json:"action"`
+	// created or updated timestamp from hubspot.
+	Timestamp int64           `gorm:"primary_key:true;auto_increment:false" json:"timestamp"`
+	TypeAlias string          `gorm:"-" json:"type_alias"`
+	Value     *postgres.Jsonb `json:"value"`
+	Synced    bool            `gorm:"default:false;not null" json:"synced"`
+	SyncId    string          `gorm:"default:null" json:"sync_id"`
+	CreatedAt time.Time       `json:"created_at"`
+	UpdatedAt time.Time       `json:"updated_at"`
+}
+
+const (
+	HubspotDocumentTypeCompany            = 1
+	HubspotDocumentTypeNameCompany        = "company"
+	HubspotDocumentTypeContact            = 2
+	HubspotDocumentTypeNameContact        = "contact"
+	HubspotDocumentTypeDeal               = 3
+	HubspotDocumentTypeNameDeal           = "deal"
+	HubspotDocumentTypeForm               = 4
+	HubspotDocumentTypeNameForm           = "form"
+	HubspotDocumentTypeFormSubmission     = 5
+	HubspotDocumentTypeNameFormSubmission = "form_submission"
+)
+
+var HubspotDocumentTypeAlias = map[string]int{
+	HubspotDocumentTypeNameCompany:        HubspotDocumentTypeCompany,
+	HubspotDocumentTypeNameContact:        HubspotDocumentTypeContact,
+	HubspotDocumentTypeNameDeal:           HubspotDocumentTypeDeal,
+	HubspotDocumentTypeNameForm:           HubspotDocumentTypeForm,
+	HubspotDocumentTypeNameFormSubmission: HubspotDocumentTypeFormSubmission,
+}
+
+const (
+	HubspotDocumentActionCreated = 1
+	HubspotDocumentActionUpdated = 2
+)
+
+var errorInvalidHubspotDocumentType = errors.New("invalid document type")
+var errorFailedToGetCreatedAtFromHubspotDocument = errors.New("failed to get created_at from document")
+var errorFailedToGetUpdatedAtFromHubspotDocument = errors.New("failed to get updated_at from document")
+
+const error_DuplicateHubspotDocument = "pq: duplicate key value violates unique constraint \"hubspot_documents_pkey\""
+
+func isDuplicateHubspotDocumentError(err error) bool {
+	return err.Error() == error_DuplicateHubspotDocument
+}
+
+func getHubspotTypeByAlias(alias string) (int, error) {
+	if alias == "" {
+		return 0, errors.New("empty document type alias")
+	}
+
+	typ, typExists := HubspotDocumentTypeAlias[alias]
+	if !typExists {
+		return 0, errors.New("invalid document type alias")
+	}
+
+	return typ, nil
+}
+
+func GetHubspotTypeAliasByType(typ int) string {
+	for a, t := range HubspotDocumentTypeAlias {
+		if typ == t {
+			return a
+		}
+	}
+
+	return ""
+}
+
+func getHubspotDocumentId(document *HubspotDocument) (string, error) {
+	if document.Type == 0 {
+		return "", errorInvalidHubspotDocumentType
+	}
+
+	documentMap, err := U.DecodePostgresJsonb(document.Value)
+	if err != nil {
+		return "", err
+	}
+
+	var idKey string
+	switch document.Type {
+	case HubspotDocumentTypeCompany:
+		idKey = "companyId"
+	case HubspotDocumentTypeContact:
+		idKey = "vid"
+	case HubspotDocumentTypeDeal:
+		idKey = "dealId"
+	case HubspotDocumentTypeFormSubmission:
+		idKey = "formId"
+	default:
+		idKey = "guid"
+	}
+
+	if idKey == "" {
+		return "", errors.New("invalid hubspot document key")
+	}
+
+	id, idExists := (*documentMap)[idKey]
+	if !idExists {
+		return "", errors.New("id key not exist on hubspot document")
+	}
+
+	idAsString := U.GetPropertyValueAsString(id)
+	if idAsString == "" {
+		return "", errors.New("invalid id on hubspot document")
+	}
+
+	// No id on form submission doc so Id for form_submission
+	// doc is <form_id>:<submitted_at>.
+	if document.Type == HubspotDocumentTypeFormSubmission {
+		submittedAt, submittedAtExists := (*documentMap)["submittedAt"]
+		if !submittedAtExists {
+			return "", errors.New("submitted not found on form_submission document type")
+		}
+
+		submittedAtAsString := U.GetPropertyValueAsString(submittedAt)
+		idAsString = fmt.Sprintf("%s:%s", idAsString, submittedAtAsString)
+	}
+
+	return idAsString, nil
+}
+
+func getHubspotDocumentByIdAndType(projectId uint64, id string, docType int) ([]HubspotDocument, int) {
+	logCtx := log.WithFields(log.Fields{"project_id": projectId, "id": id, "type": docType})
+
+	var documents []HubspotDocument
+	if projectId == 0 || id == "" || docType == 0 {
+		logCtx.Error("Failed to get hubspot document by id and type. Invalid project_id or id or type.")
+		return documents, http.StatusBadRequest
+	}
+
+	db := C.GetServices().Db
+	err := db.Where("project_id = ? AND id = ? AND type = ?", projectId, id,
+		docType).Find(&documents).Error
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get hubspot documents.")
+		return documents, http.StatusInternalServerError
+	}
+
+	if len(documents) == 0 {
+		return documents, http.StatusNotFound
+	}
+
+	return documents, http.StatusFound
+}
+
+func GetHubspotDocumentByTypeAndActions(projectId uint64, ids []string,
+	docType int, actions []int) ([]HubspotDocument, int) {
+
+	logCtx := log.WithFields(log.Fields{"project_id": projectId, "ids": ids,
+		"type": docType, "actions": actions})
+
+	var documents []HubspotDocument
+	if projectId == 0 || len(ids) == 0 || docType == 0 || len(actions) == 0 {
+		logCtx.Error("Failed to get hubspot document by id and type. Invalid project_id or id or type or action.")
+		return nil, http.StatusBadRequest
+	}
+
+	db := C.GetServices().Db
+	err := db.Order("timestamp").Where(
+		"project_id = ? AND id IN (?) AND type = ? AND action IN (?)",
+		projectId, ids, docType, actions).Find(&documents).Error
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get hubspot documents.")
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(documents) == 0 {
+		return nil, http.StatusNotFound
+	}
+
+	return documents, http.StatusFound
+}
+
+func readHubspotTimestamp(value interface{}) (int64, error) {
+	switch value.(type) {
+	case float64:
+		return int64(uint64(value.(float64))), nil
+	case string:
+		timestamp, err := strconv.ParseInt(value.(string), 10, 64)
+		if err != nil {
+			return 0, err
+		}
+		return timestamp, nil
+	}
+
+	return 0, errors.New("unsupported hubspot timestamp type")
+}
+
+func getHubspotDocumentCreatedTimestamp(document *HubspotDocument) (int64, error) {
+	if document.Type == 0 {
+		return 0, errorInvalidHubspotDocumentType
+	}
+
+	value, err := U.DecodePostgresJsonb(document.Value)
+	if err != nil {
+		return 0, err
+	}
+
+	if document.Type == HubspotDocumentTypeCompany {
+		properties, exists := (*value)["properties"]
+		if !exists || properties == nil {
+			return 0, errorFailedToGetCreatedAtFromHubspotDocument
+		}
+		propertiesMap := properties.(map[string]interface{})
+
+		name, exists := propertiesMap["name"]
+		if !exists || name == nil {
+			return 0, errorFailedToGetCreatedAtFromHubspotDocument
+		}
+
+		nameMap := name.(map[string]interface{})
+		timestamp, exists := nameMap["timestamp"]
+		if !exists || timestamp == nil {
+			return 0, errorFailedToGetCreatedAtFromHubspotDocument
+		}
+
+		createdAt, err := readHubspotTimestamp(timestamp)
+		if err != nil || createdAt == 0 {
+			return 0, errorFailedToGetCreatedAtFromHubspotDocument
+		}
+
+		return createdAt, nil
+	}
+
+	if document.Type == HubspotDocumentTypeDeal {
+		properties, exists := (*value)["properties"]
+		if !exists || properties == nil {
+			return 0, errorFailedToGetCreatedAtFromHubspotDocument
+		}
+		propertiesMap := properties.(map[string]interface{})
+
+		hsCreateDate, exists := propertiesMap["hs_createdate"]
+		if exists {
+			hsCreateDateMap := hsCreateDate.(map[string]interface{})
+			createdAtValue, exists := hsCreateDateMap["value"]
+			if exists && createdAtValue != nil {
+				createdAt, err := readHubspotTimestamp(createdAtValue)
+				if err != nil || createdAt == 0 {
+					return 0, errorFailedToGetCreatedAtFromHubspotDocument
+				}
+
+				return createdAt, nil
+			}
+		}
+
+		dealName, exists := propertiesMap["dealname"]
+		if !exists || dealName == nil {
+			return 0, errorFailedToGetCreatedAtFromHubspotDocument
+		}
+
+		dealNameMap := dealName.(map[string]interface{})
+		timestamp, exists := dealNameMap["timestamp"]
+		if !exists || timestamp == nil {
+			return 0, errorFailedToGetCreatedAtFromHubspotDocument
+		}
+
+		createdAt, err := readHubspotTimestamp(timestamp)
+		if err != nil || createdAt == 0 {
+			return 0, errorFailedToGetCreatedAtFromHubspotDocument
+		}
+
+		return createdAt, nil
+	}
+
+	var createdAtKey string
+	if document.Type == HubspotDocumentTypeContact {
+		createdAtKey = "addedAt"
+	} else if document.Type == HubspotDocumentTypeForm {
+		createdAtKey = "createdAt"
+	} else if document.Type == HubspotDocumentTypeFormSubmission {
+		createdAtKey = "submittedAt"
+	} else {
+		return 0, errorFailedToGetCreatedAtFromHubspotDocument
+	}
+	createdAtInt, exists := (*value)[createdAtKey]
+	if !exists || createdAtInt == nil {
+		return 0, errorFailedToGetCreatedAtFromHubspotDocument
+	}
+
+	createdAt, err := readHubspotTimestamp(createdAtInt)
+	if err != nil || createdAt == 0 {
+		return 0, errorFailedToGetCreatedAtFromHubspotDocument
+	}
+
+	return createdAt, nil
+}
+
+func getHubspotDocumentUpdatedTimestamp(document *HubspotDocument) (int64, error) {
+	if document.Type == 0 {
+		return 0, errorInvalidHubspotDocumentType
+	}
+
+	value, err := U.DecodePostgresJsonb(document.Value)
+	if err != nil {
+		return 0, err
+	}
+
+	// property nested value.
+	var propertyUpdateAtKey string
+	if document.Type == HubspotDocumentTypeCompany || document.Type == HubspotDocumentTypeDeal {
+		propertyUpdateAtKey = "hs_lastmodifieddate"
+	} else if document.Type == HubspotDocumentTypeContact {
+		propertyUpdateAtKey = "lastmodifieddate"
+	}
+	if propertyUpdateAtKey != "" {
+		properties, exists := (*value)["properties"]
+		if !exists || properties == nil {
+			return 0, errorFailedToGetUpdatedAtFromHubspotDocument
+		}
+		propertiesMap := properties.(map[string]interface{})
+
+		propertyUpdateAt, exists := propertiesMap[propertyUpdateAtKey]
+		if !exists || propertyUpdateAt == nil {
+			return 0, errorFailedToGetUpdatedAtFromHubspotDocument
+		}
+
+		propertyUpdateAtMap := propertyUpdateAt.(map[string]interface{})
+		value, exists := propertyUpdateAtMap["value"]
+		if !exists || value == nil {
+			return 0, errorFailedToGetUpdatedAtFromHubspotDocument
+		}
+
+		updatedAt, err := readHubspotTimestamp(value)
+		if err != nil || updatedAt == 0 {
+			return 0, errorFailedToGetUpdatedAtFromHubspotDocument
+		}
+
+		return updatedAt, nil
+	}
+
+	// direct values.
+	var updatedAtKey string
+	if document.Type == HubspotDocumentTypeForm {
+		updatedAtKey = "updatedAt"
+	} else if document.Type == HubspotDocumentTypeFormSubmission {
+		updatedAtKey = "submittedAt"
+	}
+	if updatedAtKey != "" {
+		updatedAtInt, exists := (*value)[updatedAtKey]
+		if !exists || updatedAtInt == nil {
+			return 0, errorFailedToGetUpdatedAtFromHubspotDocument
+		}
+
+		updatedAt, err := readHubspotTimestamp(updatedAtInt)
+		if err != nil || updatedAt == 0 {
+			return 0, errorFailedToGetUpdatedAtFromHubspotDocument
+		}
+
+		return updatedAt, nil
+	}
+
+	return 0, errorFailedToGetUpdatedAtFromHubspotDocument
+}
+
+func CreateHubspotDocument(projectId uint64, document *HubspotDocument) int {
+	logCtx := log.WithField("project_id", document.ProjectId)
+
+	if projectId == 0 {
+		logCtx.Error("Invalid project_id on create hubspot document.")
+		return http.StatusBadRequest
+	}
+	document.ProjectId = projectId
+
+	documentType, err := getHubspotTypeByAlias(document.TypeAlias)
+	if err != nil {
+		logCtx.WithError(err).Error("Invalid type on create hubspot document.")
+		return http.StatusBadRequest
+	}
+	document.Type = documentType
+
+	if U.IsEmptyPostgresJsonb(document.Value) {
+		logCtx.Error("Empty document value on create hubspot document.")
+		return http.StatusBadRequest
+	}
+
+	documentId, err := getHubspotDocumentId(document)
+	if err != nil {
+		logCtx.WithError(err).Error(
+			"Failed to get id for hubspot document on create.")
+		return http.StatusInternalServerError
+	}
+	document.ID = documentId
+
+	logCtx = logCtx.WithField("type", document.Type).WithField("value", document.Value)
+
+	_, errCode := getHubspotDocumentByIdAndType(document.ProjectId,
+		document.ID, document.Type)
+	if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
+		return errCode
+	}
+	isNew := errCode == http.StatusNotFound
+
+	var timestamp int64
+	if isNew {
+		document.Action = HubspotDocumentActionCreated // created
+		timestamp, err = getHubspotDocumentCreatedTimestamp(document)
+	} else {
+		document.Action = HubspotDocumentActionUpdated // updated
+		// Any update on the entity would create a new hubspot document.
+		// i.e, deal will be synced after updating a created deal with a
+		// contact or a company.
+		timestamp, err = getHubspotDocumentUpdatedTimestamp(document)
+	}
+	if err != nil {
+		logCtx.WithField("action", document.Action).Error(
+			"Failed to get timestamp from hubspot document on create.")
+		return http.StatusInternalServerError
+	}
+	document.Timestamp = timestamp
+
+	db := C.GetServices().Db
+	err = db.Create(document).Error
+	if err != nil {
+		if isDuplicateHubspotDocumentError(err) {
+			return http.StatusConflict
+		}
+
+		logCtx.WithError(err).Error("Failed to create hubspot document.")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusCreated
+}
+
+func getHubspotTypeAlias(t int) string {
+	for alias, typ := range HubspotDocumentTypeAlias {
+		if t == typ {
+			return alias
+		}
+	}
+
+	return ""
+}
+
+type HubspotLastSyncInfo struct {
+	ProjectId uint64 `json:"-"`
+	Type      int    `json:"type"`
+	Timestamp int64  `json:"timestamp"`
+}
+
+type HubspotSyncInfo struct {
+	ProjectSettings map[uint64]*HubspotProjectSettings `json:"project_settings"`
+	// project_id: { type: last_sync_info }
+	LastSyncInfo map[uint64]map[string]int64 `json:"last_sync_info"`
+}
+
+func GetHubspotSyncInfo() (*HubspotSyncInfo, int) {
+	var lastSyncInfo []HubspotLastSyncInfo
+
+	db := C.GetServices().Db
+	err := db.Table("hubspot_documents").Select(
+		"project_id, type, MAX(timestamp) as timestamp").Group(
+		"project_id, type").Find(&lastSyncInfo).Error
+	if err != nil {
+		return nil, http.StatusInternalServerError
+	}
+
+	lastSyncInfoByProject := make(map[uint64]map[string]int64, 0)
+	for _, syncInfo := range lastSyncInfo {
+		if _, projectExists := lastSyncInfoByProject[syncInfo.ProjectId]; !projectExists {
+			lastSyncInfoByProject[syncInfo.ProjectId] = make(map[string]int64)
+		}
+
+		lastSyncInfoByProject[syncInfo.ProjectId][getHubspotTypeAlias(syncInfo.Type)] = syncInfo.Timestamp
+	}
+
+	// project sync of hubspot enable projects.
+	enabledProjectLastSync := make(map[uint64]map[string]int64, 0)
+
+	// get project settings of hubspot enaled projects.
+	projectSettings, errCode := GetAllHubspotProjectSettings()
+	if errCode != http.StatusFound {
+		return nil, http.StatusInternalServerError
+	}
+
+	settingsByProject := make(map[uint64]*HubspotProjectSettings, 0)
+	for i, ps := range projectSettings {
+		_, pExists := lastSyncInfoByProject[ps.ProjectId]
+
+		if !pExists {
+			// add projects not synced before.
+			enabledProjectLastSync[ps.ProjectId] = make(map[string]int64, 0)
+		} else {
+			// add sync info if avaliable.
+			enabledProjectLastSync[ps.ProjectId] = lastSyncInfoByProject[ps.ProjectId]
+		}
+
+		// add types not synced before.
+		for typ := range HubspotDocumentTypeAlias {
+			_, typExists := enabledProjectLastSync[ps.ProjectId][typ]
+			if !typExists {
+				// last sync timestamp as zero as type not synced before.
+				enabledProjectLastSync[ps.ProjectId][typ] = 0
+			}
+		}
+
+		settingsByProject[projectSettings[i].ProjectId] = &projectSettings[i]
+	}
+
+	var syncInfo HubspotSyncInfo
+	syncInfo.LastSyncInfo = enabledProjectLastSync
+	syncInfo.ProjectSettings = settingsByProject
+
+	return &syncInfo, http.StatusFound
+}
+
+func GetHubspotFormDocuments(projectId uint64) ([]HubspotDocument, int) {
+	var documents []HubspotDocument
+
+	db := C.GetServices().Db
+	err := db.Where("project_id=? AND type=?",
+		projectId, 4).Find(&documents).Error
+	if err != nil {
+		return nil, http.StatusInternalServerError
+	}
+
+	return documents, http.StatusFound
+}
+
+func GetHubspotDocumentsByTypeForSync(projectId uint64, typ int) ([]HubspotDocument, int) {
+	logCtx := log.WithFields(log.Fields{"project_id": projectId, "type": typ})
+
+	if projectId == 0 || typ == 0 {
+		logCtx.Error("Invalid project_id or type on get hubspot documents by type.")
+		return nil, http.StatusBadRequest
+	}
+
+	var documents []HubspotDocument
+
+	db := C.GetServices().Db
+	err := db.Order("timestamp ASC").Where("project_id=? AND type=? AND synced=false",
+		projectId, typ).Find(&documents).Error
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get hubspot documents by type.")
+		return nil, http.StatusInternalServerError
+	}
+
+	return documents, http.StatusFound
+}
+
+func GetSyncedHubspotDealDocumentByIdAndStage(projectId uint64, id string,
+	stage string) (*HubspotDocument, int) {
+
+	logCtx := log.WithFields(log.Fields{"project_id": projectId, "id": id, "stage": stage})
+
+	if projectId == 0 || id == "" || stage == "" {
+		logCtx.Error(
+			"Invalid project_id or id or stage on get hubspot synced deal by id and stage.")
+		return nil, http.StatusBadRequest
+	}
+
+	var documents []HubspotDocument
+
+	db := C.GetServices().Db
+	err := db.Limit(1).Where(
+		"project_id=? AND id=? AND type=? AND synced=true AND value->'properties'->'dealstage'->>'value'=?",
+		projectId, id, HubspotDocumentTypeDeal, stage).Find(&documents).Error
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get hubspot synced deal by id and stage.")
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(documents) == 0 {
+		return nil, http.StatusNotFound
+	}
+
+	return &documents[0], http.StatusFound
+}
+
+func UpdateHubspotDocumentAsSynced(projectId uint64, id string, syncId string) int {
+	logCtx := log.WithField("project_id", projectId).WithField("id", id)
+
+	updates := make(map[string]interface{}, 0)
+	updates["synced"] = true
+	if syncId != "" {
+		updates["sync_id"] = syncId
+	}
+
+	db := C.GetServices().Db
+	err := db.Model(&HubspotDocument{}).Where("project_id = ? AND id = ?",
+		projectId, id).Updates(updates).Error
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to update hubspot document as synced.")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusAccepted
+}

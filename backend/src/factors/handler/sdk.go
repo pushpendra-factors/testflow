@@ -14,7 +14,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type sdkTrackPayload struct {
+type SDKTrackPayload struct {
 	Name            string          `json:"event_name"`
 	CustomerEventId *string         `json:"c_event_id"`
 	EventProperties U.PropertiesMap `json:"event_properties"`
@@ -35,7 +35,7 @@ type SDKTrackResponse struct {
 	Error           string  `json:"error,omitempty"`
 }
 
-type sdkIdentifyPayload struct {
+type SDKIdentifyPayload struct {
 	UserId         string `json:"user_id"`
 	CustomerUserId string `json:"c_uid"`
 	JoinTimestamp  int64  `json:"join_timestamp"`
@@ -51,7 +51,9 @@ type sdkUpdateEventPropertiesPayload struct {
 	Properties U.PropertiesMap `json:"properties"`
 }
 
-func sdkTrack(projectId uint64, request *sdkTrackPayload, clientIP, userAgent string) (int, *SDKTrackResponse) {
+func SDKTrack(projectId uint64, request *SDKTrackPayload, clientIP,
+	userAgent string, skipSession bool) (int, *SDKTrackResponse) {
+
 	// Skipping track for configured projects.
 	for _, skipProjectId := range C.GetSkipTrackProjectIds() {
 		if skipProjectId == projectId {
@@ -195,8 +197,8 @@ func sdkTrack(projectId uint64, request *sdkTrackPayload, clientIP, userAgent st
 		}
 
 		if customerUserId != "" {
-			errCode, _ := sdkIdentify(projectId, &sdkIdentifyPayload{UserId: request.UserId,
-				CustomerUserId: customerUserId})
+			errCode, _ := SDKIdentify(projectId, &SDKIdentifyPayload{
+				UserId: request.UserId, CustomerUserId: customerUserId})
 			if errCode != http.StatusOK {
 				log.WithFields(log.Fields{"projectId": projectId, "userId": request.UserId,
 					"customerUserId": customerUserId}).Error("Failed to identify user on form submit event.")
@@ -218,19 +220,7 @@ func sdkTrack(projectId uint64, request *sdkTrackPayload, clientIP, userAgent st
 		response.Error = "Failed updating user properties."
 	}
 
-	session, errCode := M.CreateOrGetSessionEvent(projectId, request.UserId, isUserFirstSession, hasDefinedMarketingProperty,
-		request.Timestamp, eventProperties, userProperties, userPropertiesId)
-	if errCode != http.StatusCreated && errCode != http.StatusFound {
-		response.Error = "Failed to associate with a session."
-	}
-
-	if session == nil || errCode == http.StatusNotFound || errCode == http.StatusInternalServerError {
-		log.Error("Session is nil even after CreateOrGetSessionEvent.")
-		return errCode, &SDKTrackResponse{Error: "Tracking failed. Unable to associate with a session."}
-	}
-	currentSessionId := session.ID
-
-	createdEvent, errCode := M.CreateEvent(&M.Event{
+	event := &M.Event{
 		EventNameId:      eventName.ID,
 		CustomerEventId:  request.CustomerEventId,
 		Timestamp:        request.Timestamp,
@@ -238,9 +228,24 @@ func sdkTrack(projectId uint64, request *sdkTrackPayload, clientIP, userAgent st
 		ProjectId:        projectId,
 		UserId:           request.UserId,
 		UserPropertiesId: userPropertiesId,
-		SessionId:        &currentSessionId,
-	})
+	}
 
+	if !skipSession {
+		session, errCode := M.CreateOrGetSessionEvent(projectId, request.UserId, isUserFirstSession, hasDefinedMarketingProperty,
+			request.Timestamp, eventProperties, userProperties, userPropertiesId)
+		if errCode != http.StatusCreated && errCode != http.StatusFound {
+			response.Error = "Failed to associate with a session."
+		}
+
+		if session == nil || errCode == http.StatusNotFound || errCode == http.StatusInternalServerError {
+			log.Error("Session is nil even after CreateOrGetSessionEvent.")
+			return errCode, &SDKTrackResponse{Error: "Tracking failed. Unable to associate with a session."}
+		}
+
+		event.SessionId = &session.ID
+	}
+
+	createdEvent, errCode := M.CreateEvent(event)
 	if errCode == http.StatusFound {
 		return errCode, &SDKTrackResponse{Error: "Tracking failed. Event creation failed. Duplicate CustomerEventID",
 			CustomerEventId: request.CustomerEventId}
@@ -255,7 +260,7 @@ func sdkTrack(projectId uint64, request *sdkTrackPayload, clientIP, userAgent st
 	return http.StatusOK, response
 }
 
-func sdkIdentify(projectId uint64, request *sdkIdentifyPayload) (int, gin.H) {
+func SDKIdentify(projectId uint64, request *SDKIdentifyPayload) (int, gin.H) {
 	// Todo(Dinesh): Add a mandatory field validator and move this.
 	// Precondition: Fails to identify if customer_user_id not present.
 	if request.CustomerUserId == "" {
@@ -385,7 +390,7 @@ func SDKTrackHandler(c *gin.Context) {
 		return
 	}
 
-	var trackPayload sdkTrackPayload
+	var trackPayload SDKTrackPayload
 
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
@@ -402,7 +407,7 @@ func SDKTrackHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(sdkTrack(projectId, &trackPayload, c.ClientIP(), c.Request.UserAgent()))
+	c.JSON(SDKTrack(projectId, &trackPayload, c.ClientIP(), c.Request.UserAgent(), false))
 }
 
 // Test command.
@@ -420,7 +425,7 @@ func SDKBulkEventHandler(c *gin.Context) {
 		return
 	}
 
-	var sdkTrackPayloads []sdkTrackPayload
+	var sdkTrackPayloads []SDKTrackPayload
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&sdkTrackPayloads); err != nil {
@@ -448,7 +453,7 @@ func SDKBulkEventHandler(c *gin.Context) {
 	hasError := false
 
 	for i, sdkTrackPayload := range sdkTrackPayloads {
-		errCode, resp := sdkTrack(projectId, &sdkTrackPayload, clientIP, userAgent)
+		errCode, resp := SDKTrack(projectId, &sdkTrackPayload, clientIP, userAgent, false)
 		if errCode != http.StatusOK {
 			hasError = true
 		}
@@ -478,7 +483,7 @@ func SDKIdentifyHandler(c *gin.Context) {
 		return
 	}
 
-	var request sdkIdentifyPayload
+	var request SDKIdentifyPayload
 
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
@@ -495,7 +500,7 @@ func SDKIdentifyHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(sdkIdentify(projectId, &request))
+	c.JSON(SDKIdentify(projectId, &request))
 }
 
 // Test command.

@@ -361,4 +361,11 @@ func main() {
 	} else {
 		log.Info("created adwords document table.")
 	}
+
+	// Create hubspot documents table.
+	if err := db.CreateTable(&M.HubspotDocument{}).Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("hubspot_documents table creation failed.")
+	} else {
+		log.Info("created hubspot documents table.")
+	}
 }

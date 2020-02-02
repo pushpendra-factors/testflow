@@ -131,9 +131,18 @@ func InitIntRoutes(r *gin.Engine) {
 func InitDataServiceRoutes(r *gin.Engine) {
 	dataServiceRouteGroup := r.Group(ROUTE_DATA_SERVICE_ROOT)
 
-	dataServiceRouteGroup.POST("/adwords/add_document",
+	dataServiceRouteGroup.POST("/adwords/documents/add",
 		IH.DataServiceAdwordsAddDocumentHandler)
 
-	dataServiceRouteGroup.GET("/adwords/get_last_sync_info",
+	dataServiceRouteGroup.GET("/adwords/documents/last_sync_info",
 		IH.DataServiceAdwordsGetLastSyncInfoHandler)
+
+	dataServiceRouteGroup.POST("/hubspot/documents/add",
+		IH.DataServiceHubspotAddDocumentHandler)
+
+	dataServiceRouteGroup.GET("/hubspot/documents/sync_info",
+		IH.DataServiceHubspotGetSyncInfoHandler)
+
+	dataServiceRouteGroup.GET("/hubspot/documents/types/form",
+		IH.DataServiceGetHubspotFormDocumentsHandler)
 }

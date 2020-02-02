@@ -3,7 +3,7 @@ package handler
 import (
 	"encoding/json"
 	C "factors/config"
-	I "factors/integration"
+	IntSegment "factors/integration/segment"
 	mid "factors/middleware"
 	M "factors/model"
 	U "factors/util"
@@ -44,7 +44,7 @@ func IntSegmentHandler(c *gin.Context) {
 		return
 	}
 
-	var event I.SegmentEvent
+	var event IntSegment.SegmentEvent
 	if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
 		logCtx.WithFields(log.Fields{"project_id": projectId, log.ErrorKey: err}).Error("Segment JSON decode failed")
 	}
@@ -78,9 +78,9 @@ func IntSegmentHandler(c *gin.Context) {
 	switch event.Type {
 	case "track":
 		userProperties := U.PropertiesMap{}
-		I.FillSegmentGenericUserProperties(&userProperties, &event)
-		I.FillSegmentWebUserProperties(&userProperties, &event)
-		I.FillSegmentMobileUserProperties(&userProperties, &event)
+		IntSegment.FillSegmentGenericUserProperties(&userProperties, &event)
+		IntSegment.FillSegmentWebUserProperties(&userProperties, &event)
+		IntSegment.FillSegmentMobileUserProperties(&userProperties, &event)
 
 		var eventProperties U.PropertiesMap
 		if event.Properties != nil {
@@ -89,10 +89,10 @@ func IntSegmentHandler(c *gin.Context) {
 		} else {
 			eventProperties = make(U.PropertiesMap, 0)
 		}
-		I.FillSegmentGenericEventProperties(&eventProperties, &event)
-		I.FillSegmentWebEventProperties(&eventProperties, &event)
+		IntSegment.FillSegmentGenericEventProperties(&eventProperties, &event)
+		IntSegment.FillSegmentWebEventProperties(&eventProperties, &event)
 
-		request := &sdkTrackPayload{
+		request := &SDKTrackPayload{
 			Name:            event.TrackName,
 			CustomerEventId: event.MessageID,
 			IsNewUser:       isNewUser,
@@ -102,14 +102,14 @@ func IntSegmentHandler(c *gin.Context) {
 			UserProperties:  userProperties,
 			Timestamp:       unixTimestamp,
 		}
-		status, response = sdkTrack(projectId, request, event.Context.IP, event.Context.UserAgent)
+		status, response = SDKTrack(projectId, request, event.Context.IP, event.Context.UserAgent, false)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 			logCtx.WithFields(log.Fields{"track_payload": request,
 				"error_code": status}).Error("Segment event failure. sdk_track call failed.")
 		}
 
 	case "page":
-		pageURL := I.GetURLFromPageEvent(&event)
+		pageURL := IntSegment.GetURLFromPageEvent(&event)
 		parsedPageURL, err := U.ParseURLStable(pageURL)
 		if err != nil {
 			logCtx.WithFields(log.Fields{log.ErrorKey: err, "page_url": pageURL}).Error("Falied parsing URL from segment.")
@@ -118,16 +118,16 @@ func IntSegmentHandler(c *gin.Context) {
 		}
 
 		userProperties := U.PropertiesMap{}
-		I.FillSegmentGenericUserProperties(&userProperties, &event)
-		I.FillSegmentWebUserProperties(&userProperties, &event)
+		IntSegment.FillSegmentGenericUserProperties(&userProperties, &event)
+		IntSegment.FillSegmentWebUserProperties(&userProperties, &event)
 
 		eventProperties := U.PropertiesMap{}
 		U.FillPropertiesFromURL(&eventProperties, parsedPageURL)
-		I.FillSegmentGenericEventProperties(&eventProperties, &event)
-		I.FillSegmentWebEventProperties(&eventProperties, &event)
+		IntSegment.FillSegmentGenericEventProperties(&eventProperties, &event)
+		IntSegment.FillSegmentWebEventProperties(&eventProperties, &event)
 
 		name := U.GetURLHostAndPath(parsedPageURL)
-		request := &sdkTrackPayload{
+		request := &SDKTrackPayload{
 			Name:            name,
 			UserId:          user.ID,
 			IsNewUser:       isNewUser,
@@ -137,7 +137,7 @@ func IntSegmentHandler(c *gin.Context) {
 			UserProperties:  userProperties,
 			Timestamp:       unixTimestamp,
 		}
-		status, response = sdkTrack(projectId, request, event.Context.IP, event.Context.UserAgent)
+		status, response = SDKTrack(projectId, request, event.Context.IP, event.Context.UserAgent, false)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 			logCtx.WithFields(log.Fields{"track_payload": request,
 				"error_code": status}).Error("Segment event failure. sdk_track call failed.")
@@ -145,8 +145,8 @@ func IntSegmentHandler(c *gin.Context) {
 
 	case "screen":
 		userProperties := U.PropertiesMap{}
-		I.FillSegmentGenericUserProperties(&userProperties, &event)
-		I.FillSegmentMobileUserProperties(&userProperties, &event)
+		IntSegment.FillSegmentGenericUserProperties(&userProperties, &event)
+		IntSegment.FillSegmentMobileUserProperties(&userProperties, &event)
 
 		var eventProperties U.PropertiesMap
 		if event.Properties != nil {
@@ -155,9 +155,9 @@ func IntSegmentHandler(c *gin.Context) {
 		} else {
 			eventProperties = make(U.PropertiesMap, 0)
 		}
-		I.FillSegmentGenericEventProperties(&eventProperties, &event)
+		IntSegment.FillSegmentGenericEventProperties(&eventProperties, &event)
 
-		request := &sdkTrackPayload{
+		request := &SDKTrackPayload{
 			Name:            event.ScreenName,
 			UserId:          user.ID,
 			IsNewUser:       isNewUser,
@@ -167,7 +167,7 @@ func IntSegmentHandler(c *gin.Context) {
 			UserProperties:  userProperties,
 			Timestamp:       unixTimestamp,
 		}
-		status, response = sdkTrack(projectId, request, event.Context.IP, event.Context.UserAgent)
+		status, response = SDKTrack(projectId, request, event.Context.IP, event.Context.UserAgent, false)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 			logCtx.WithFields(log.Fields{"track_payload": request,
 				"error_code": status}).Error("Segment event failure. sdk_track call failed.")
