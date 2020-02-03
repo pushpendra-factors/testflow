@@ -108,6 +108,10 @@ func InitIntRoutes(r *gin.Engine) {
 		mid.SetScopeProjectIdByPrivateTokenUsingBasicAuth(),
 		IntSegmentHandler)
 
+	intRouteGroup.POST("/shopify",
+		mid.SetScopeProjectIdByStoreAndSecret(),
+		IntShopifyHandler)
+
 	intRouteGroup.POST("/adwords/enable",
 		mid.SetLoggedInAgent(),
 		mid.SetAuthorizedProjectsByLoggedInAgent(),

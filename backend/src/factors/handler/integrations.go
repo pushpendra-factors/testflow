@@ -4,12 +4,14 @@ import (
 	"encoding/json"
 	C "factors/config"
 	IntSegment "factors/integration/segment"
+	IntShopify "factors/integration/shopify"
 	mid "factors/middleware"
 	M "factors/model"
 	U "factors/util"
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -107,12 +109,12 @@ func IntSegmentHandler(c *gin.Context) {
 			logCtx.WithFields(log.Fields{"track_payload": request,
 				"error_code": status}).Error("Segment event failure. sdk_track call failed.")
 		}
-
 	case "page":
 		pageURL := IntSegment.GetURLFromPageEvent(&event)
 		parsedPageURL, err := U.ParseURLStable(pageURL)
 		if err != nil {
-			logCtx.WithFields(log.Fields{log.ErrorKey: err, "page_url": pageURL}).Error("Falied parsing URL from segment.")
+			logCtx.WithFields(log.Fields{log.ErrorKey: err, "page_url": pageURL}).Error(
+				"Failed parsing URL from segment.")
 			c.AbortWithStatus(http.StatusBadRequest)
 			return
 		}
@@ -194,7 +196,7 @@ func IntSegmentHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-// Verifies agent access to projectc using middlewares.
+// Verifies agent access to projects using middlewares.
 func IsAgentAuthorizedToAccessProject(projectId uint64, c *gin.Context) bool {
 	agentAuthorizedProjectIds := U.GetScopeByKey(c, mid.SCOPE_AUTHORIZED_PROJECTS)
 	for _, authorizedProjectId := range agentAuthorizedProjectIds.([]uint64) {
@@ -349,4 +351,242 @@ func IntEnableAdwordsHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, addEnableAgentUUIDSetting)
+}
+
+func IntShopifyHandler(c *gin.Context) {
+	r := c.Request
+
+	logCtx := log.WithFields(log.Fields{
+		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
+	})
+
+	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
+		c.AbortWithStatusJSON(
+			http.StatusUnauthorized,
+			gin.H{"error": "Shopify webhook failed. Invalid project."})
+		return
+	}
+
+	if !M.IsPSettingsIntShopifyEnabled(projectId) {
+		logCtx.WithField("project_id", projectId).Error("Shopify webhook failure. Integration not enabled.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Creating event_name failed. Invalid project."})
+		return
+	}
+
+	shopifyTopic := c.Request.Header.Get("X-Shopify-Topic")
+	shopifyTopic = strings.TrimSpace(shopifyTopic)
+
+	decoder := json.NewDecoder(r.Body)
+
+	switch shopifyTopic {
+	case "checkouts/create":
+		var checkoutCreated IntShopify.CheckoutObject
+		if err := decoder.Decode(&checkoutCreated); err != nil {
+			logCtx.WithFields(log.Fields{"project_id": projectId, log.ErrorKey: err}).Error(
+				"Shopify Checkout Create JSON decode failed")
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+				"error": "invalid json payload. checkout create failed."})
+			return
+		}
+		eventName, userId, isNewUser, eventProperties, userProperties, timestamp, err := IntShopify.GetTrackDetailsFromCheckoutObject(
+			projectId, IntShopify.ACTION_SHOPIFY_CHECKOUT_CREATED, &checkoutCreated)
+		if err != nil {
+			logCtx.WithFields(log.Fields{"project_id": projectId, log.ErrorKey: err}).Error(
+				"Shopify Checkout Create JSON track details failed")
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "checkout create failed."})
+			return
+		}
+		request := &SDKTrackPayload{
+			Name:            eventName,
+			IsNewUser:       isNewUser,
+			UserId:          userId,
+			Auto:            false,
+			EventProperties: eventProperties,
+			UserProperties:  userProperties,
+			Timestamp:       timestamp,
+		}
+		status, response := SDKTrack(projectId, request, "", "", false)
+		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
+			logCtx.WithFields(log.Fields{"track_payload": request,
+				"error_code": status, "error": response.Error}).Error(
+				"Shopify checkout create failure. sdk_track call failed.")
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "checkout create failed."})
+		}
+		logCtx.WithFields(log.Fields{"shopify checkout created": checkoutCreated}).Debug("Shopify webhook request")
+		c.JSON(http.StatusOK, response)
+	case "checkouts/update":
+		var checkoutUpdated IntShopify.CheckoutObject
+		if err := decoder.Decode(&checkoutUpdated); err != nil {
+			logCtx.WithFields(log.Fields{"project_id": projectId, log.ErrorKey: err}).Error(
+				"Shopify Checkout Update JSON decode failed")
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+				"error": "invalid json payload. checkout update failed."})
+			return
+		}
+		eventName, userId, isNewUser, eventProperties, userProperties, timestamp, err := IntShopify.GetTrackDetailsFromCheckoutObject(
+			projectId, IntShopify.ACTION_SHOPIFY_CHECKOUT_UPDATED, &checkoutUpdated)
+		if err != nil {
+			logCtx.WithFields(log.Fields{"project_id": projectId, log.ErrorKey: err}).Error(
+				"Shopify Checkout Update JSON track details failed")
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "checkout update failed."})
+			return
+		}
+		request := &SDKTrackPayload{
+			Name:            eventName,
+			IsNewUser:       isNewUser,
+			UserId:          userId,
+			Auto:            false,
+			EventProperties: eventProperties,
+			UserProperties:  userProperties,
+			Timestamp:       timestamp,
+		}
+		status, response := SDKTrack(projectId, request, "", "", false)
+		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
+			logCtx.WithFields(log.Fields{"track_payload": request,
+				"error_code": status, "error": response.Error}).Error(
+				"Shopify checkout update failure. sdk_track call failed.")
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "checkout update failed."})
+		}
+		logCtx.WithFields(log.Fields{"shopify checkout updated": checkoutUpdated}).Debug("Shopify webhook request")
+		c.JSON(http.StatusOK, response)
+	case "orders/create":
+		var orderCreated IntShopify.OrderObject
+		if err := decoder.Decode(&orderCreated); err != nil {
+			logCtx.WithFields(log.Fields{"project_id": projectId, log.ErrorKey: err}).Error(
+				"Shopify Order Create JSON decode failed")
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid json payload. order create failed."})
+			return
+		}
+		eventName, userId, isNewUser, eventProperties, userProperties, timestamp, err := IntShopify.GetTrackDetailsFromOrderObject(
+			projectId, IntShopify.ACTION_SHOPIFY_ORDER_CREATED, &orderCreated)
+		if err != nil {
+			logCtx.WithFields(log.Fields{"project_id": projectId, log.ErrorKey: err}).Error(
+				"Shopify Order Create JSON track details failed")
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "order create failed."})
+			return
+		}
+		request := &SDKTrackPayload{
+			Name:            eventName,
+			IsNewUser:       isNewUser,
+			UserId:          userId,
+			Auto:            false,
+			EventProperties: eventProperties,
+			UserProperties:  userProperties,
+			Timestamp:       timestamp,
+		}
+		status, response := SDKTrack(projectId, request, "", "", false)
+		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
+			logCtx.WithFields(log.Fields{"track_payload": request,
+				"error_code": status, "error": response.Error}).Error(
+				"Shopify order create failure. sdk_track call failed.")
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "order create failed."})
+		}
+		logCtx.WithFields(log.Fields{"shopify order created": orderCreated}).Debug("Shopify webhook request")
+		c.JSON(http.StatusOK, response)
+	case "orders/updated":
+		var orderUpdated IntShopify.OrderObject
+		if err := decoder.Decode(&orderUpdated); err != nil {
+			logCtx.WithFields(log.Fields{"project_id": projectId, log.ErrorKey: err}).Error(
+				"Shopify Order Update JSON decode failed")
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid json payload. order update failed."})
+			return
+		}
+		eventName, userId, isNewUser, eventProperties, userProperties, timestamp, err := IntShopify.GetTrackDetailsFromOrderObject(
+			projectId, IntShopify.ACTION_SHOPIFY_ORDER_UPDATED, &orderUpdated)
+		if err != nil {
+			logCtx.WithFields(log.Fields{"project_id": projectId, log.ErrorKey: err}).Error(
+				"Shopify Order Update JSON track details failed")
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "order update failed."})
+			return
+		}
+		request := &SDKTrackPayload{
+			Name:            eventName,
+			IsNewUser:       isNewUser,
+			UserId:          userId,
+			Auto:            false,
+			EventProperties: eventProperties,
+			UserProperties:  userProperties,
+			Timestamp:       timestamp,
+		}
+		status, response := SDKTrack(projectId, request, "", "", false)
+		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
+			logCtx.WithFields(log.Fields{"track_payload": request,
+				"error_code": status, "error": response.Error}).Error(
+				"Shopify order update failure. sdk_track call failed.")
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "order update failed."})
+		}
+		logCtx.WithFields(log.Fields{"shopify order updated": orderUpdated}).Debug("Shopify webhook request")
+		c.JSON(http.StatusOK, response)
+	case "orders/paid":
+		var orderPaid IntShopify.OrderObject
+		if err := decoder.Decode(&orderPaid); err != nil {
+			logCtx.WithFields(log.Fields{"project_id": projectId, log.ErrorKey: err}).Error(
+				"Shopify Order Paid JSON decode failed")
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+				"error": "invalid json payload. order paid failed."})
+			return
+		}
+		eventName, userId, isNewUser, eventProperties, userProperties, timestamp, err := IntShopify.GetTrackDetailsFromOrderObject(
+			projectId, IntShopify.ACTION_SHOPIFY_ORDER_PAID, &orderPaid)
+		if err != nil {
+			logCtx.WithFields(log.Fields{"project_id": projectId, log.ErrorKey: err}).Error(
+				"Shopify Order Update JSON track details failed")
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "order update failed."})
+			return
+		}
+		request := &SDKTrackPayload{
+			Name:            eventName,
+			IsNewUser:       isNewUser,
+			UserId:          userId,
+			Auto:            false,
+			EventProperties: eventProperties,
+			UserProperties:  userProperties,
+			Timestamp:       timestamp,
+		}
+		status, response := SDKTrack(projectId, request, "", "", false)
+		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
+			logCtx.WithFields(log.Fields{"track_payload": request,
+				"error_code": status, "error": response.Error}).Error(
+				"Shopify order update failure. sdk_track call failed.")
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "order paid failed."})
+		}
+		logCtx.WithFields(log.Fields{"shopify order paid": orderPaid}).Debug("Shopify webhook request")
+		c.JSON(http.StatusOK, response)
+	case "orders/cancelled":
+		var orderCancelled IntShopify.OrderObject
+		if err := decoder.Decode(&orderCancelled); err != nil {
+			logCtx.WithFields(log.Fields{"project_id": projectId, log.ErrorKey: err}).Error(
+				"Shopify order cancelled JSON decode failed")
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+				"error": "invalid json payload. order cancelled failed."})
+			return
+		}
+		eventName, userId, isNewUser, eventProperties, userProperties, timestamp, err := IntShopify.GetTrackDetailsFromOrderObject(
+			projectId, IntShopify.ACTION_SHOPIFY_ORDER_CANCELLED, &orderCancelled)
+		if err != nil {
+			logCtx.WithFields(log.Fields{"project_id": projectId, log.ErrorKey: err}).Error(
+				"Shopify Order Update JSON track details failed")
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "order cancelled failed."})
+			return
+		}
+		request := &SDKTrackPayload{
+			Name:            eventName,
+			IsNewUser:       isNewUser,
+			UserId:          userId,
+			Auto:            false,
+			EventProperties: eventProperties,
+			UserProperties:  userProperties,
+			Timestamp:       timestamp,
+		}
+		status, response := SDKTrack(projectId, request, "", "", false)
+		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
+			logCtx.WithFields(log.Fields{"track_payload": request,
+				"error_code": status, "error": response.Error}).Error(
+				"Shopify order update failure. sdk_track call failed.")
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "order cancelled failed."})
+		}
+		logCtx.WithFields(log.Fields{"shopify order cancelled": orderCancelled}).Debug("Shopify webhook request")
+		c.JSON(http.StatusOK, response)
+	}
 }

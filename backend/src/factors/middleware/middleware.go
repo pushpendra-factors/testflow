@@ -1,12 +1,16 @@
 package middleware
 
 import (
+	"bytes"
+	"crypto/hmac"
+	"crypto/sha256"
 	"encoding/base64"
 	C "factors/config"
 	"factors/handler/helpers"
 	M "factors/model"
 	U "factors/util"
 	"fmt"
+	"io/ioutil"
 	"math"
 	"net/http"
 	"net/http/httputil"
@@ -113,6 +117,59 @@ func SetScopeProjectIdByPrivateTokenUsingBasicAuth() gin.HandlerFunc {
 			return
 		}
 		U.SetScope(c, SCOPE_PROJECT_ID, project.ID)
+
+		c.Next()
+	}
+}
+
+// SetScopeProjectIdByPrivateTokenUsingBasicAuth - Set project id scope by private
+// token on header 'Authorization': 'Basic <TOKEN>:'
+func SetScopeProjectIdByStoreAndSecret() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		actualMacString := c.Request.Header.Get("X-Shopify-Hmac-Sha256")
+		actualMacString = strings.TrimSpace(actualMacString)
+		if actualMacString == "" {
+			errorMessage := "Missing Shopify Hmac header"
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": errorMessage})
+			return
+		}
+
+		shopifyDomain := c.Request.Header.Get("X-Shopify-Shop-Domain")
+		shopifyDomain = strings.TrimSpace(shopifyDomain)
+		if shopifyDomain == "" {
+			errorMessage := "Missing Shopify Shop Domain header"
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": errorMessage})
+			return
+		}
+
+		projectId, secret, errCode := M.GetProjectIdAndSecretByShopifyDomain(shopifyDomain)
+		if errCode != http.StatusFound {
+			errorMessage := "Invalid Domain"
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": errorMessage})
+			return
+		}
+
+		// Read the body content to verify token and restore it for processing later.
+		// https://stackoverflow.com/questions/47186741/how-to-get-the-json-from-the-body-of-a-request-on-go/47295689#47295689
+		var bodyBytes []byte
+		if c.Request.Body != nil {
+			bodyBytes, _ = ioutil.ReadAll(c.Request.Body)
+		}
+		// Restore the io.ReadCloser to its original state
+		c.Request.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
+
+		mac := hmac.New(sha256.New, []byte(secret))
+		mac.Write(bodyBytes)
+		macSum := mac.Sum(nil)
+		expectedMac := []byte(base64.StdEncoding.EncodeToString(macSum))
+		actualMac := []byte(actualMacString)
+		if !hmac.Equal(actualMac, expectedMac) {
+			errorMessage := fmt.Sprintf("Invalid Token. Expected: %s, Actual: %s", expectedMac, actualMac)
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": errorMessage})
+			return
+		}
+
+		U.SetScope(c, SCOPE_PROJECT_ID, projectId)
 
 		c.Next()
 	}

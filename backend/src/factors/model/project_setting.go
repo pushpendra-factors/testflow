@@ -2,6 +2,7 @@ package model
 
 import (
 	C "factors/config"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -106,6 +107,10 @@ func IsPSettingsIntSegmentEnabled(projectId uint64) bool {
 	return *settings.IntSegment
 }
 
+func IsPSettingsIntShopifyEnabled(projectId uint64) bool {
+	return true
+}
+
 func GetIntAdwordsRefreshTokenForProject(projectId uint64) (string, int) {
 	settings, errCode := GetProjectSetting(projectId)
 	if errCode != http.StatusFound {
@@ -190,4 +195,36 @@ func GetAllHubspotProjectSettings() ([]HubspotProjectSettings, int) {
 	}
 
 	return hubspotProjectSettings, http.StatusFound
+}
+
+type shopifyInfoStruct struct {
+	apiKey    string
+	projectId uint64
+}
+
+var developmentShopifyInfo = map[string]shopifyInfoStruct{
+	"aravind-test123.myshopify.com": shopifyInfoStruct{
+		projectId: 2,
+		apiKey:    "93f0ecd1ff038bb0de72ec1f4dcf34b3aecf2a2f15f1f531dbd89bfecb546b1e",
+	},
+}
+var stagingShopifyInfo = map[string]shopifyInfoStruct{}
+var productionShopifyInfo = map[string]shopifyInfoStruct{}
+
+func GetProjectIdAndSecretByShopifyDomain(
+	shopifyDomain string) (uint64, string, int) {
+	var shopifyInfo map[string]shopifyInfoStruct
+	if C.IsDevelopment() {
+		shopifyInfo = developmentShopifyInfo
+	} else if C.IsStaging() {
+		shopifyInfo = stagingShopifyInfo
+	} else if C.IsProduction() {
+		shopifyInfo = productionShopifyInfo
+	}
+	if info, found := shopifyInfo[shopifyDomain]; found {
+		return info.projectId, info.apiKey, http.StatusFound
+	} else {
+		log.Error(fmt.Sprintf("Unknown shopify domain - %s", shopifyDomain))
+	}
+	return 0, "", http.StatusInternalServerError
 }
