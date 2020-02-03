@@ -1,0 +1,30 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: hubspot-sync-job
+spec:
+  schedule: "0 18 * * *" # In UTC
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            layer: jobs
+        spec:
+          nodeSelector:
+            cloud.google.com/gke-nodepool: factors-staging-node-pool
+          containers:
+          - name: hubspot-sync
+            image: us.gcr.io/factors-staging/hubspot-sync:v0.02-c9c3a3a
+            imagePullPolicy: IfNotPresent
+            args:
+            - --env
+            - $(ENV)
+            - --data_service_host
+            - $(DATA_SERVICE_HOST_URL)
+            envFrom:
+            - configMapRef:
+                name: config-env
+          restartPolicy: OnFailure
