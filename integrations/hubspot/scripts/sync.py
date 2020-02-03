@@ -337,7 +337,7 @@ def get_sync_info():
 
     response = requests.get(url)
     if not response.ok:
-        raise Exception('Failed to get sync info with status '+response.status_code)
+        raise Exception('Failed to get sync info with status: '+str(response.status_code))
 
     return response.json()
 
