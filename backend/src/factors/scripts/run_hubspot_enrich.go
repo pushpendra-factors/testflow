@@ -25,6 +25,8 @@ func main() {
 	redisHost := flag.String("redis_host", "localhost", "")
 	redisPort := flag.Int("redis_port", 6379, "")
 
+	flag.Parse()
+
 	if *env != "development" && *env != "staging" && *env != "production" {
 		panic(fmt.Errorf("env [ %s ] not recognised", *env))
 	}
@@ -47,7 +49,8 @@ func main() {
 
 	err := C.InitDB(config.DBInfo)
 	if err != nil {
-		log.WithError(err).Fatal("Failed to initialize DB")
+		log.WithError(err).WithFields(log.Fields{"env": *env,
+			"host": *dbHost, "port": *dbPort}).Fatal("Failed to initialize DB.")
 	}
 	db := C.GetServices().Db
 	defer db.Close()
