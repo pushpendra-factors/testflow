@@ -2,7 +2,7 @@
   "name": "factors-frontend",
   "version": "0.0.1",
   "description": "Factors React Frontend",
-  "author": "Aravind Murthy",
+  "author": "team@factors.ai",
   "main": "webpack.config.js",
   "dependencies": {
     "@coreui/coreui": "^2.0.4",
