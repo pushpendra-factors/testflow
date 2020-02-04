@@ -259,12 +259,19 @@ class DefaultLayout extends Component {
     this.setState({ showSetupProjectModal: false });
   }
 
+  renderErrorPage() {
+    return <div style={{ textAlign: "center", width: "100%", fontWeight: "700", marginTop: "250px"}}>
+      <div style={{color: '#AAA', fontSize: '35px'}}>Oops! Something went wrong.</div>
+      <a href="https://app.factors.ai/" style={{ fontWeight: "500", fontSize: "20px" }}>Go back to home</a>
+    </div>;
+  }
+
   render() {
     if (!this.isAgentLoggedIn()) return <Redirect to='/login' />;
     if (!this.isLoaded()) return <Loading />;
 
     if (this.state.projects.loaded && this.state.projects.error) 
-      return <div>Failed loading your project.</div>;
+      return this.renderErrorPage();
 
     let sideBarItemsToDisplay = {items: sideBarItems};
 
