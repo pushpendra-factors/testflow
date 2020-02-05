@@ -17,7 +17,7 @@ spec:
             cloud.google.com/gke-nodepool: default-pool
           containers:
           - name: adwords-sync
-            image: us.gcr.io/factors-production/adwords-sync:v0.14-29dcf73
+            image: us.gcr.io/factors-production/adwords-sync:v0.26-a3c2505
             imagePullPolicy: IfNotPresent
             args:
             - --env
