@@ -209,7 +209,12 @@ var developmentShopifyInfo = map[string]shopifyInfoStruct{
 	},
 }
 var stagingShopifyInfo = map[string]shopifyInfoStruct{}
-var productionShopifyInfo = map[string]shopifyInfoStruct{}
+var productionShopifyInfo = map[string]shopifyInfoStruct{
+	"aravind-test123.myshopify.com": shopifyInfoStruct{
+		projectId: 395,
+		apiKey:    "93f0ecd1ff038bb0de72ec1f4dcf34b3aecf2a2f15f1f531dbd89bfecb546b1e",
+	},
+}
 
 func GetProjectIdAndSecretByShopifyDomain(
 	shopifyDomain string) (uint64, string, int) {
