@@ -11,7 +11,7 @@ ENV?=staging
 export ENV
 
 build-api:
-	go build -o $(GOPATH)/bin/app $(GOPATH)/src/factors/app/app.go
+	rm $(GOPATH)/bin/app; go build -o $(GOPATH)/bin/app $(GOPATH)/src/factors/app/app.go
 
 serve-api:
 	$(GOPATH)/bin/app

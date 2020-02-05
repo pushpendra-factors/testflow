@@ -22,7 +22,8 @@ func TestDBCreateAndGetEvent(t *testing.T) {
 	start := time.Now()
 
 	// Test successful CreateEvent.
-	event, errCode := M.CreateEvent(&M.Event{EventNameId: eventNameId, ProjectId: projectId, UserId: userId})
+	newEvent := &M.Event{EventNameId: eventNameId, ProjectId: projectId, UserId: userId}
+	event, errCode := M.CreateEvent(newEvent)
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.True(t, len(event.ID) > 30)
 	assert.Equal(t, projectId, event.ProjectId)
@@ -33,7 +34,7 @@ func TestDBCreateAndGetEvent(t *testing.T) {
 	assert.True(t, event.CreatedAt.After(start))
 	assert.True(t, event.UpdatedAt.After(start))
 	assert.Equal(t, event.CreatedAt, event.UpdatedAt)
-	assert.Equal(t, postgres.Jsonb{RawMessage: json.RawMessage(nil)}, event.Properties)
+
 	// Test Get Event on the created.
 	retEvent, errCode := M.GetEvent(projectId, userId, event.ID)
 	assert.Equal(t, http.StatusFound, errCode)
@@ -44,7 +45,16 @@ func TestDBCreateAndGetEvent(t *testing.T) {
 	event.UpdatedAt = time.Time{}
 	retEvent.CreatedAt = time.Time{}
 	retEvent.UpdatedAt = time.Time{}
-	assert.Equal(t, event, retEvent)
+
+	assert.Equal(t, newEvent.EventNameId, retEvent.EventNameId)
+	assert.Equal(t, newEvent.ProjectId, retEvent.ProjectId)
+	assert.Equal(t, newEvent.UserId, retEvent.UserId)
+	assert.True(t, event.Timestamp != 0)
+	eventProperties, _ := U.DecodePostgresJsonb(&event.Properties)
+	assert.True(t, (*eventProperties)["$day_of_week"] != "" && (*eventProperties)["$day_of_week"] == time.Unix(event.Timestamp, 0).Weekday().String())
+	hr, _, _ := time.Unix(event.Timestamp, 0).Clock()
+	assert.True(t, (*eventProperties)["$hour_of_day"] != 0 && (*eventProperties)["$hour_of_day"] == float64(hr))
+
 	// Test Get Event with wrong project id.
 	retEvent, errCode = M.GetEvent(projectId+1, userId, event.ID)
 	assert.Equal(t, http.StatusNotFound, errCode)
@@ -65,7 +75,12 @@ func TestDBCreateAndGetEvent(t *testing.T) {
 	assert.True(t, event.CreatedAt.After(start))
 	assert.True(t, event.UpdatedAt.After(start))
 	assert.Equal(t, event.CreatedAt, event.UpdatedAt)
-	assert.Equal(t, postgres.Jsonb{RawMessage: json.RawMessage(nil)}, event.Properties)
+	assert.True(t, event.Timestamp != 0)
+	eventProperties, err = U.DecodePostgresJsonb(&event.Properties)
+	assert.Equal(t, err, nil)
+	assert.Equal(t, (*eventProperties)["$day_of_week"], time.Unix(event.Timestamp, 0).Weekday().String())
+	hr, _, _ = time.Unix(event.Timestamp, 0).Clock()
+	assert.Equal(t, (*eventProperties)["$hour_of_day"], float64(hr))
 
 	t.Run("DuplicateCustomerEventId", func(t *testing.T) {
 		custEventId := U.RandomString(8)

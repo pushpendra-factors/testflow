@@ -132,6 +132,14 @@ func CreateEvent(event *Event) (*Event, int) {
 		event.Timestamp = time.Now().Unix()
 	}
 
+	eventPropsJSONb, err := U.FillHourAndDayEventProperty(&event.Properties, event.Timestamp)
+	if err != nil {
+		log.WithFields(log.Fields{"projectId": event.ProjectId,
+			"eventTimestamp": event.Timestamp}).WithError(err).Error(
+			"Adding day of week and hour of day properties failed")
+	}
+	event.Properties = *eventPropsJSONb
+
 	transTime := gorm.NowFunc()
 	rows, err := db.Raw("INSERT INTO events (customer_event_id,project_id,user_id,user_properties_id,session_id,event_name_id,count,properties,timestamp,created_at,updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING events.id",
 		event.CustomerEventId, event.ProjectId, event.UserId, event.UserPropertiesId, event.SessionId, event.EventNameId, event.Count, event.Properties, event.Timestamp, transTime, transTime).Rows()
@@ -158,7 +166,6 @@ func CreateEvent(event *Event) (*Event, int) {
 
 	SetCacheUserLastEvent(event.ProjectId, event.UserId,
 		&CacheEvent{ID: event.ID, Timestamp: event.Timestamp})
-
 	return event, http.StatusCreated
 }
 

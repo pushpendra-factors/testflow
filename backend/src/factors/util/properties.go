@@ -7,7 +7,9 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -110,6 +112,8 @@ var EP_GCLID string = "$gclid"
 var EP_FBCLIID string = "$fbclid"
 var EP_COST string = "$cost"
 var EP_REVENUE string = "$revenue"
+var EP_HOUR_OF_DAY string = "$hour_of_day"
+var EP_DAY_OF_WEEK string = "$day_of_week"
 
 // User Properties
 var UP_PLATFORM string = "$platform"
@@ -744,6 +748,20 @@ func GetSessionProperties(isFirstSession bool, eventProperties,
 	}
 
 	return &sessionProperties
+}
+
+// Add day_of_week and hour_of_day event property
+func FillHourAndDayEventProperty(properties *postgres.Jsonb, timestamp int64) (*postgres.Jsonb, error) {
+	unixTimeUTC := time.Unix(timestamp, 0)
+	weekDay := unixTimeUTC.Weekday().String()
+	hr, _, _ := unixTimeUTC.Clock()
+	eventPropsJSON, err := DecodePostgresJsonb(properties)
+	if err != nil {
+		return nil, err
+	}
+	(*eventPropsJSON)[EP_DAY_OF_WEEK] = weekDay
+	(*eventPropsJSON)[EP_HOUR_OF_DAY] = hr
+	return EncodeToPostgresJsonb(eventPropsJSON)
 }
 
 // ClassifyPropertiesType - Classifies type of properties as categorical and numerical

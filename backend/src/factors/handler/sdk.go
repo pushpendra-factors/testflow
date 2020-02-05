@@ -120,7 +120,7 @@ func SDKTrack(projectId uint64, request *SDKTrackPayload, clientIP,
 	if ip, ok := (*eventProperties)[U.EP_INTERNAL_IP]; ok && ip != "" {
 		clientIP = ip.(string)
 	}
-	// Added IP to event proerties for internal usage.
+	// Added IP to event properties for internal usage.
 	(*eventProperties)[U.EP_INTERNAL_IP] = clientIP
 	eventPropsJSON, err := json.Marshal(eventProperties)
 	if err != nil {
