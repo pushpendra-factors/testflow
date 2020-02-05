@@ -148,7 +148,7 @@ var UP_CITY string = "$city"
 var UP_REGION string = "$region"
 var UP_TIMEZONE string = "$timezone"
 var UP_SEGMENT_CHANNEL string = "$segment_channel" // from segement (browser, client, etc.,).
-var UP_CUSTOMER_USER_ID string = "$customer_user_id"
+var UP_USER_ID = "$user_id"
 var UP_EMAIL string = "$email"
 var UP_COMPANY string = "$company"
 var UP_NAME string = "$name"
@@ -281,7 +281,7 @@ var SDK_ALLOWED_USER_PROPERTIES = [...]string{
 	UP_CITY,
 	UP_REGION,
 	UP_TIMEZONE,
-	UP_CUSTOMER_USER_ID,
+	UP_USER_ID,
 	UP_EMAIL,
 	UP_COMPANY,
 	UP_NAME,

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -56,6 +57,11 @@ func IsNumber(num string) bool {
 		return false
 	}
 	return true
+}
+
+func IsEmail(str string) bool {
+	regexpEmail := regexp.MustCompile(`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,4}$`)
+	return regexpEmail.MatchString(str)
 }
 
 func TrimQuotes(str string) string {

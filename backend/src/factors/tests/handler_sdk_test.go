@@ -674,7 +674,8 @@ func TestSDKIdentifyHandler(t *testing.T) {
 	responseMap = DecodeJSONResponseToMap(w.Body)
 	assert.NotNil(t, responseMap["error"])
 
-	rCustomerUserId := U.RandomLowerAphaNumString(15)
+	// Email as customer_user_id.
+	rCustomerUserId := fmt.Sprintf("%s@example.com", U.RandomLowerAphaNumString(5))
 
 	// Test without user_id in the payload.
 	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"c_uid": "%s"}`, rCustomerUserId)),
@@ -684,9 +685,16 @@ func TestSDKIdentifyHandler(t *testing.T) {
 	assert.NotEmpty(t, responseMap)
 	assert.NotNil(t, responseMap["user_id"])
 	assert.NotEmpty(t, responseMap["user_id"].(string))
+	retUser, errCode := M.GetUser(project.ID, responseMap["user_id"].(string))
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotNil(t, retUser)
+	userProperties, err := U.DecodePostgresJsonb(&retUser.Properties)
+	assert.Nil(t, err)
+	assert.NotNil(t, (*userProperties)[U.UP_USER_ID])
+	assert.Equal(t, rCustomerUserId, (*userProperties)[U.UP_USER_ID])
+	assert.Equal(t, rCustomerUserId, (*userProperties)[U.UP_EMAIL])
 
 	rUserId := U.RandomLowerAphaNumString(15)
-
 	// Test without c_uid in the payload and with non-existing c_uid.
 	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"user_id": "%s"}`, rUserId)),
 		map[string]string{"Authorization": project.Token})
@@ -721,6 +729,13 @@ func TestSDKIdentifyHandler(t *testing.T) {
 	responseMap = DecodeJSONResponseToMap(w.Body)
 	assert.NotNil(t, responseMap["user_id"])
 	assert.Equal(t, user.ID, responseMap["user_id"])
+	retUser, errCode = M.GetUser(project.ID, responseMap["user_id"].(string))
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotNil(t, retUser)
+	userProperties, err = U.DecodePostgresJsonb(&retUser.Properties)
+	assert.Nil(t, err)
+	assert.NotNil(t, (*userProperties)[U.UP_USER_ID])
+	assert.Equal(t, r1CustomerUserId, (*userProperties)[U.UP_USER_ID])
 
 	// Test re-identify an identified user with different customer_user
 	// should respond with new user_id mapped to customer_user_id
@@ -732,6 +747,13 @@ func TestSDKIdentifyHandler(t *testing.T) {
 	assert.NotNil(t, responseMap["user_id"])
 	assert.NotEmpty(t, responseMap["user_id"].(string))
 	assert.NotEqual(t, responseMap["user_id"], user.ID)
+	retUser, errCode = M.GetUser(project.ID, responseMap["user_id"].(string))
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotNil(t, retUser)
+	userProperties, err = U.DecodePostgresJsonb(&retUser.Properties)
+	assert.Nil(t, err)
+	assert.NotNil(t, (*userProperties)[U.UP_USER_ID])
+	assert.Equal(t, r2CustomerUserId, (*userProperties)[U.UP_USER_ID])
 }
 
 func assertEqualJoinTimePropertyOnAllRecords(t *testing.T, records []M.UserProperties, expectedJoinTime int64) {

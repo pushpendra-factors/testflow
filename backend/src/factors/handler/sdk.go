@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	C "factors/config"
 	mid "factors/middleware"
 	M "factors/model"
@@ -264,12 +265,36 @@ func SDKTrack(projectId uint64, request *SDKTrackPayload, clientIP,
 	return http.StatusOK, response
 }
 
+func getIdentifiedUserPropertiesAsJsonb(customerUserId string) (*postgres.Jsonb, error) {
+	if customerUserId == "" {
+		return nil, errors.New("invalid customer user id")
+	}
+
+	properties := map[string]interface{}{
+		U.UP_USER_ID: customerUserId,
+	}
+
+	if U.IsEmail(customerUserId) {
+		properties[U.UP_EMAIL] = customerUserId
+	}
+
+	return U.EncodeToPostgresJsonb(&properties)
+}
+
 func SDKIdentify(projectId uint64, request *SDKIdentifyPayload) (int, gin.H) {
 	// Todo(Dinesh): Add a mandatory field validator and move this.
 	// Precondition: Fails to identify if customer_user_id not present.
 	if request.CustomerUserId == "" {
 		log.Error("Identification failed. Missing user_id or c_uid.")
 		return http.StatusBadRequest, gin.H{"error": "Identification failed. Missing mandatory keys c_uid."}
+	}
+
+	logCtx := log.WithFields(log.Fields{"project_id": projectId,
+		"user_id": request.UserId, "customer_user_id": request.CustomerUserId})
+
+	userProperties, err := getIdentifiedUserPropertiesAsJsonb(request.CustomerUserId)
+	if err != nil || userProperties == nil {
+		logCtx.WithError(err).Error("Failed to get and add identified user properties on identify.")
 	}
 
 	// Precondition: customer_user_id present, user_id not.
@@ -288,6 +313,10 @@ func SDKIdentify(projectId uint64, request *SDKIdentifyPayload) (int, gin.H) {
 				CustomerUserId: request.CustomerUserId,
 				JoinTimestamp:  request.JoinTimestamp,
 			}
+			if userProperties != nil {
+				newUser.Properties = *userProperties
+			}
+
 			_, errCode := M.CreateUser(&newUser)
 			if errCode != http.StatusCreated {
 				return errCode, gin.H{"error": "Identification failed. User creation failed."}
@@ -320,6 +349,10 @@ func SDKIdentify(projectId uint64, request *SDKIdentifyPayload) (int, gin.H) {
 			CustomerUserId: scopeUser.CustomerUserId,
 			JoinTimestamp:  request.JoinTimestamp,
 		}
+		if userProperties != nil {
+			newUser.Properties = *userProperties
+		}
+
 		_, errCode := M.CreateUser(&newUser)
 		if errCode != http.StatusCreated {
 			return errCode, gin.H{"error": "Identification failed. User creation failed."}
@@ -329,8 +362,13 @@ func SDKIdentify(projectId uint64, request *SDKIdentifyPayload) (int, gin.H) {
 	}
 
 	// Happy path. Maps customer_user to an user.
-	_, errCode = M.UpdateUser(projectId, request.UserId, &M.User{CustomerUserId: request.CustomerUserId,
-		JoinTimestamp: request.JoinTimestamp})
+	updateUser := &M.User{CustomerUserId: request.CustomerUserId,
+		JoinTimestamp: request.JoinTimestamp}
+	if userProperties != nil {
+		updateUser.Properties = *userProperties
+	}
+
+	_, errCode = M.UpdateUser(projectId, request.UserId, updateUser)
 	if errCode != http.StatusAccepted {
 		return errCode, gin.H{"error": "Identification failed. Failed mapping customer_user to user"}
 	}
