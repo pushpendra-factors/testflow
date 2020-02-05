@@ -355,14 +355,20 @@ func syncCompany(projectId uint64, document *M.HubspotDocument) int {
 		return errCode
 	}
 
-	// build company properties json from properties. make sure company name exist.
-	companyProperties := make(map[string]interface{}, 0)
+	// build user properties from properties.
+	// make sure company name exist.
+	userProperties := make(map[string]interface{}, 0)
 	for key, value := range company.Properties {
+		// add company name to user default property.
+		if key == "name" {
+			userProperties[U.UP_COMPANY] = value.Value
+		}
+
 		propertyKey := getPropertyKeyByType(M.HubspotDocumentTypeNameCompany, key)
-		companyProperties[propertyKey] = value.Value
+		userProperties[propertyKey] = value.Value
 	}
 
-	companyPropertiesJsonb, err := U.EncodeToPostgresJsonb(&companyProperties)
+	userPropertiesJsonb, err := U.EncodeToPostgresJsonb(&userProperties)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to marshal company properties to Jsonb.")
 		return http.StatusInternalServerError
@@ -377,7 +383,7 @@ func syncCompany(projectId uint64, document *M.HubspotDocument) int {
 				contactDocument.SyncId)
 			if errCode == http.StatusFound {
 				_, errCode := M.UpdateUserProperties(projectId,
-					contactSyncEvent.UserId, companyPropertiesJsonb)
+					contactSyncEvent.UserId, userPropertiesJsonb)
 				if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
 					logCtx.WithField("user_id", contactSyncEvent.UserId).Error(
 						"Failed to update user properites with company properties.")
