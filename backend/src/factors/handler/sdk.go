@@ -92,6 +92,10 @@ func SDKTrack(projectId uint64, request *SDKTrackPayload, clientIP,
 				&M.EventName{Name: request.Name, ProjectId: projectId})
 		}
 
+		if request.EventProperties == nil {
+			request.EventProperties = U.PropertiesMap{}
+		}
+
 		err := M.FillEventPropertiesByFilterExpr(&request.EventProperties, eventName.FilterExpr, request.Name)
 		if err != nil {
 			log.WithFields(log.Fields{"project_id": projectId, "filter_expr": eventName.FilterExpr,
