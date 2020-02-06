@@ -17,7 +17,7 @@ spec:
             cloud.google.com/gke-nodepool: default-pool
           containers:
           - name: hubspot-enrich-job
-            image: us.gcr.io/factors-production/hubspot-enrich-job:v0.01-a182c1b
+            image: us.gcr.io/factors-production/hubspot-enrich-job:v0.01-c55ac2a
             imagePullPolicy: IfNotPresent
             args:
             - --env
