@@ -14,10 +14,10 @@ spec:
             layer: jobs
         spec:
           nodeSelector:
-            cloud.google.com/gke-nodepool: factors-staging-node-pool
+            cloud.google.com/gke-nodepool: default-pool
           containers:
           - name: hubspot-sync-job
-            image: us.gcr.io/factors-staging/hubspot-sync-job:v0.02-c9c3a3a
+            image: us.gcr.io/factors-production/hubspot-sync-job:v0.01-a182c1b
             imagePullPolicy: IfNotPresent
             args:
             - --env

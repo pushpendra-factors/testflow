@@ -68,7 +68,7 @@ func main() {
 		statusList = append(statusList, status...)
 	}
 
-	err = util.NotifyThroughSNS("hubspot_sync", *env, statusList)
+	err = util.NotifyThroughSNS("hubspot_enrich", *env, statusList)
 	if err != nil {
 		log.WithError(err).Fatal("Failed to notify through SNS on hubspot sync.")
 	}
