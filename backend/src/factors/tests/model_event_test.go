@@ -232,10 +232,10 @@ func TestGetRecentEventPropertyValues(t *testing.T) {
 		assert.Equal(t, http.StatusCreated, errCode1)
 
 		// limited events to 1.
-		values, errCode2 := M.GetRecentEventPropertyValuesWithLimits(project.ID, eventName.Name, "rProp1", 1, 100)
+		values, errCode2 := M.GetRecentEventPropertyValuesWithLimits(project.ID, eventName.Name, "rProp1", 2, 100)
 		assert.Equal(t, http.StatusFound, errCode2)
-		assert.Len(t, values, 1)
-		assert.Contains(t, values, "value2")
+		assert.Len(t, values, 2)
+		assert.Contains(t, values, "value1")
 
 		// limited values to 1.
 		values1, errCode3 := M.GetRecentEventPropertyValuesWithLimits(project.ID, eventName.Name, "rProp1", 10, 1)
