@@ -111,7 +111,8 @@ func getContactProperties(document *M.HubspotDocument) (map[string]interface{}, 
 
 func getCustomerUserIdFromProperties(properties map[string]interface{}) string {
 	// identify using email if exist on properties.
-	emailInt, emailExists := properties["email"]
+	emailInt, emailExists := properties[getPropertyKeyByType(
+		M.HubspotDocumentTypeNameContact, "email")]
 	if emailExists || emailInt != nil {
 		email, ok := emailInt.(string)
 		if ok && email != "" {
