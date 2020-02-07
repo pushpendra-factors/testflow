@@ -3,6 +3,7 @@ package tests
 import (
 	U "factors/util"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -71,4 +72,15 @@ func TestFillUserAgentUserProperties(t *testing.T) {
 	assert.Equal(t, userAgent, userProperties[U.UP_USER_AGENT])
 	assert.NotNil(t, userProperties[U.UP_BROWSER])
 	assert.Equal(t, "Bot", userProperties[U.UP_BROWSER])
+}
+
+func TestFillFirstEventUserProperties(t *testing.T) {
+	userProperties := make(map[string]interface{}, 0)
+	eventTimestamp := time.Now().Unix()
+	_ = U.FillFirstEventUserProperties(&userProperties, eventTimestamp)
+	assert.NotNil(t, (userProperties)[U.UP_DAY_OF_FIRST_EVENT])
+	assert.Equal(t, (userProperties)[U.UP_DAY_OF_FIRST_EVENT], time.Unix(eventTimestamp, 0).Weekday().String())
+	hourOfFirstEvent, _, _ := time.Unix(eventTimestamp, 0).Clock()
+	assert.NotNil(t, (userProperties)[U.UP_HOUR_OF_FIRST_EVENT])
+	assert.Equal(t, (userProperties)[U.UP_HOUR_OF_FIRST_EVENT], hourOfFirstEvent)
 }

@@ -570,3 +570,18 @@ func TestFillFormSubmitEventUserProperties(t *testing.T) {
 		assert.Nil(t, newProperties[U.UP_COMPANY])
 	})
 }
+
+func TestGetUserPropertiesAsMap(t *testing.T) {
+	project, user, err := SetupProjectUserReturnDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+	assert.NotNil(t, user)
+	assert.True(t, len(user.PropertiesId) > 0)
+
+	//Call get user function
+	userProperties, errCode := M.GetUserPropertiesAsMap(project.ID, user.ID)
+	assert.Equal(t, errCode, http.StatusFound)
+	decodedUserProperties, err := U.DecodePostgresJsonb(&user.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, userProperties, decodedUserProperties)
+}

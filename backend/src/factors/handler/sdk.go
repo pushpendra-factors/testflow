@@ -258,6 +258,14 @@ func SDKTrack(projectId uint64, request *SDKTrackPayload, clientIP,
 		return errCode, &SDKTrackResponse{Error: "Tracking failed. Event creation failed."}
 	}
 
+<<<<<<< HEAD
+=======
+	existingUserProperties, errCode := M.GetUserPropertiesAsMap(projectId, createdEvent.UserId)
+	if errCode != http.StatusAccepted {
+		log.WithField("err_code", errCode).Error("Failed to get user properties for adding first event properties on track")
+	}
+
+>>>>>>> master
 	// check if any of those 2 properties exist.
 	if existingUserProperties != nil && (*existingUserProperties)[U.UP_HOUR_OF_FIRST_EVENT] == nil &&
 		(*existingUserProperties)[U.UP_DAY_OF_FIRST_EVENT] == nil {

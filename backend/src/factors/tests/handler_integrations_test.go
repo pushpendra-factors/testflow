@@ -240,9 +240,9 @@ func TestIntSegmentHandler(t *testing.T) {
 	jsonResponse4, _ := ioutil.ReadAll(w.Body)
 	var jsonResponseMap4 map[string]interface{}
 	json.Unmarshal(jsonResponse4, &jsonResponseMap4)
-	assert.Nil(t, jsonResponseMap4["error"])
-	assert.NotNil(t, jsonResponseMap4["event_id"])
-	retEvent, errCode := M.GetEventById(project.ID, jsonResponseMap4["event_id"].(string))
+	assert.Nil(t, (jsonResponseMap4)["error"])
+	assert.NotNil(t, (jsonResponseMap4)["event_id"])
+	retEvent, errCode := M.GetEventById(project.ID, (jsonResponseMap4)["event_id"].(string))
 	assert.Equal(t, http.StatusFound, errCode)
 	// If parse failed, Timestamp filled with .now()
 	// on event model before callback.
