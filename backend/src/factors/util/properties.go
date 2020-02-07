@@ -188,10 +188,7 @@ var UP_INITIAL_REFERRER_URL = "$initial_referrer_url"
 var UP_INITIAL_REFERRER_DOMAIN = "$initial_referrer_domain"
 var UP_DAY_OF_FIRST_EVENT string = "$day_of_first_event"
 var UP_HOUR_OF_FIRST_EVENT string = "$hour_of_first_event"
-<<<<<<< HEAD
 var UP_SESSION_COUNT string = "$session_count"
-=======
->>>>>>> master
 
 // session properties
 var SP_IS_FIRST_SESSION = "$is_first_session"
@@ -946,7 +943,6 @@ func FillFirstEventUserProperties(initialUserProperties *map[string]interface{},
 		return errors.New("Filling properties (hour and day) failed. Invalid join time.")
 	}
 }
-<<<<<<< HEAD
 
 func FillSessionInUserAndEventProperties(eventProperties postgres.Jsonb, userProperties *map[string]interface{}, sessionCount uint64) (*postgres.Jsonb, error) {
 	decodedEventProperties, _ := DecodePostgresJsonb(&eventProperties)
@@ -954,5 +950,3 @@ func FillSessionInUserAndEventProperties(eventProperties postgres.Jsonb, userPro
 	(*userProperties)[UP_SESSION_COUNT] = sessionCount
 	return EncodeToPostgresJsonb(decodedEventProperties)
 }
-=======
->>>>>>> master
