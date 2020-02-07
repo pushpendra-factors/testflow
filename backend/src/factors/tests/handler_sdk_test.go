@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -173,6 +174,12 @@ func TestSDKTrackHandler(t *testing.T) {
 	assert.NotNil(t, userPropertiesMap3[U.UP_PLATFORM])
 	assert.NotNil(t, userPropertiesMap3[U.UP_SCREEN_WIDTH])
 	assert.NotNil(t, userPropertiesMap3[U.UP_SCREEN_HEIGHT])
+	assert.NotNil(t, userPropertiesMap3[U.UP_DAY_OF_FIRST_EVENT])
+	assert.Equal(t, time.Unix(rEvent.Timestamp, 0).Weekday().String(), userPropertiesMap3[U.UP_DAY_OF_FIRST_EVENT])
+	retUserFirstVisitHour, _, _ := time.Unix(rEvent.Timestamp, 0).Clock()
+	assert.NotNil(t, userPropertiesMap3[U.UP_HOUR_OF_FIRST_EVENT])
+	assert.Equal(t, float64(retUserFirstVisitHour), userPropertiesMap3[U.UP_HOUR_OF_FIRST_EVENT])
+
 	// should not be escaped.
 	assert.Nil(t, userPropertiesMap3[U.NAME_PREFIX_ESCAPE_CHAR+U.UP_OS])
 	assert.Nil(t, userPropertiesMap3[U.NAME_PREFIX_ESCAPE_CHAR+U.UP_OS_VERSION])
@@ -392,6 +399,11 @@ func TestSDKTrackHandler(t *testing.T) {
 		assert.Equal(t, "gartner.com", userProperties[U.UP_INITIAL_REFERRER_DOMAIN])
 		assert.Nil(t, userProperties[U.UP_INITIAL_COST])
 		assert.Nil(t, userProperties[U.UP_INITIAL_REVENUE])
+		assert.NotNil(t, userProperties[U.UP_DAY_OF_FIRST_EVENT])
+		assert.Equal(t, time.Unix(rEvent.Timestamp, 0).Weekday().String(), userProperties[U.UP_DAY_OF_FIRST_EVENT])
+		retUserFirstVisitHour, _, _ := time.Unix(rEvent.Timestamp, 0).Clock()
+		assert.NotNil(t, userProperties[U.UP_HOUR_OF_FIRST_EVENT])
+		assert.Equal(t, float64(retUserFirstVisitHour), userProperties[U.UP_HOUR_OF_FIRST_EVENT])
 
 		// initial user properties should not get updated on existing user's track call.
 		rEventName = "https://example.com/" + U.RandomLowerAphaNumString(10)

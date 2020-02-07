@@ -198,8 +198,8 @@ func TestGetRecentEventPropertyKeys(t *testing.T) {
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.Contains(t, props, U.PropertyTypeNumerical)
 		assert.Contains(t, props, U.PropertyTypeNumerical)
-		assert.Len(t, props[U.PropertyTypeCategorical], 1)
-		assert.Len(t, props[U.PropertyTypeNumerical], 1)
+		assert.Len(t, props[U.PropertyTypeCategorical], 2)
+		assert.Len(t, props[U.PropertyTypeNumerical], 2)
 		// validates classification.
 		assert.Contains(t, props[U.PropertyTypeCategorical], "rProp1")
 		assert.Contains(t, props[U.PropertyTypeNumerical], "rProp2")

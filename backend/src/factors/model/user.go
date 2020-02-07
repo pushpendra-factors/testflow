@@ -451,3 +451,17 @@ func UpdateUserJoinTimePropertyForCustomerUser(projectId uint64, customerUserId 
 
 	return http.StatusAccepted
 }
+
+func GetUserPropertiesAsMap(projectId uint64, id string) (*map[string]interface{}, int) {
+	user, errCode := GetUser(projectId, id)
+	if errCode != http.StatusFound {
+		log.WithField("err_code", errCode).Error("Getting user failed.")
+		return nil, errCode
+	}
+	existingUserProperties, err := U.DecodePostgresJsonb(&user.Properties)
+	if err != nil {
+		log.WithError(err).Error("Unmarshaling user properties failed.")
+		return nil, http.StatusInternalServerError
+	}
+	return existingUserProperties, http.StatusFound
+}

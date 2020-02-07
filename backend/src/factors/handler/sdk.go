@@ -150,23 +150,15 @@ func SDKTrack(projectId uint64, request *SDKTrackPayload, clientIP,
 	} else {
 		// Adding initial user properties if user_id exists,
 		// but initial properties are not. i.e user created on identify.
-
-		user, errCode := M.GetUser(projectId, request.UserId)
+		existingUserProperties, errCode := M.GetUserPropertiesAsMap(projectId, request.UserId)
 		if errCode != http.StatusFound {
-			return errCode, &SDKTrackResponse{Error: "Tracking failed. Invalid user."}
-		}
-
-		exsitingUserProperties, err := U.DecodePostgresJsonb(&user.Properties)
-		if err != nil {
-			log.WithField("user_id", request.UserId).Error(
-				"Failed to unmarshal existing user properties. Tracking failed.")
-			return errCode, &SDKTrackResponse{Error: "Tracking failed."}
+			return errCode, &SDKTrackResponse{Error: "Tracking failed while getting user."}
 		}
 
 		// Is any initial user properties exists already.
 		initialUserPropertyExists := false
 		for k := range *initialUserProperties {
-			if _, exists := (*exsitingUserProperties)[k]; exists {
+			if _, exists := (*existingUserProperties)[k]; exists {
 				initialUserPropertyExists = true
 				break
 			}
@@ -256,6 +248,31 @@ func SDKTrack(projectId uint64, request *SDKTrackPayload, clientIP,
 			CustomerEventId: request.CustomerEventId}
 	} else if errCode != http.StatusCreated {
 		return errCode, &SDKTrackResponse{Error: "Tracking failed. Event creation failed."}
+	}
+
+	existingUserProperties, errCode := M.GetUserPropertiesAsMap(projectId, createdEvent.UserId)
+	if errCode != http.StatusAccepted {
+		log.WithField("err_code", errCode).Error("Failed to get user properties for adding first event properties on track")
+	}
+
+	// check if any of those 2 properties exist.
+	if existingUserProperties != nil && (*existingUserProperties)[U.UP_HOUR_OF_FIRST_EVENT] == nil &&
+		(*existingUserProperties)[U.UP_DAY_OF_FIRST_EVENT] == nil {
+		err = U.FillFirstEventUserProperties(existingUserProperties, createdEvent.Timestamp)
+		if err != nil {
+			log.WithField("user_id", createdEvent.UserId).WithError(err).Error(
+				"Failed to fill day of first event and hour of first event user properties. Tracking failed.")
+		}
+		existingUserPropsJSON, err := json.Marshal(existingUserProperties)
+		if err != nil {
+			log.WithField("user_id", createdEvent.UserId).Error(
+				"Failed to marshal existing user properties. Tracking failed.")
+		}
+		_, errCode := M.UpdateUserProperties(projectId, createdEvent.UserId, &postgres.Jsonb{existingUserPropsJSON})
+		if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
+			log.WithFields(log.Fields{"userProperties": existingUserProperties,
+				log.ErrorKey: errCode}).Error("Update user properties on track failed. DB update failed.")
+		}
 	}
 
 	// Success response.
