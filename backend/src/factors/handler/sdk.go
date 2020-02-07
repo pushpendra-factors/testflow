@@ -262,14 +262,14 @@ func SDKTrack(projectId uint64, request *SDKTrackPayload, clientIP,
 			log.Error("Session is nil even after CreateOrGetSessionEvent.")
 			return errCode, &SDKTrackResponse{Error: "Tracking failed. Unable to associate with a session."}
 		}
-		eventPropsJSONForSession, errDecode := U.DecodePostgresJsonb(&event.Properties)
+		eventPropsJSONForSession, err := U.DecodePostgresJsonb(&event.Properties)
 		if errDecode != nil {
-			log.WithField("UserId:", event.UserId).WithError(errDecode).Error(
+			log.WithField("UserId:", event.UserId).WithError(err).Error(
 				"Failed to decode event properties for session property addition")
 		}
-		eventPropsJSONbWithSession, errFillSession := U.FillSessionInUserAndEventProperties(eventPropsJSONForSession, existingUserProperties, session.Count)
+		eventPropsJSONbWithSession, err := U.FillSessionInUserAndEventProperties(eventPropsJSONForSession, existingUserProperties, session.Count)
 		if err != nil {
-			log.WithField("UserId:", event.UserId).WithError(errFillSession).Error(
+			log.WithField("UserId:", event.UserId).WithError(err).Error(
 				"Failed to add session count to event properties")
 		}
 		event.Properties = *eventPropsJSONbWithSession
