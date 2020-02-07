@@ -944,7 +944,9 @@ func FillFirstEventUserProperties(initialUserProperties *map[string]interface{},
 	}
 }
 
-func FillSessionInUserAndEventProperties(eventProperties *PropertiesMap, userProperties *PropertiesMap, sessionCount uint64) {
-	(*eventProperties)[EP_SESSION] = sessionCount
+func FillSessionInUserAndEventProperties(eventProperties postgres.Jsonb, userProperties *map[string]interface{}, sessionCount uint64) (*postgres.Jsonb, error) {
+	decodedEventProperties, _ := DecodePostgresJsonb(&eventProperties)
+	(*decodedEventProperties)[EP_SESSION] = sessionCount
 	(*userProperties)[UP_SESSION_COUNT] = sessionCount
+	return EncodeToPostgresJsonb(decodedEventProperties)
 }

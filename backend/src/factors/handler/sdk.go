@@ -227,6 +227,10 @@ func SDKTrack(projectId uint64, request *SDKTrackPayload, clientIP,
 		UserPropertiesId: userPropertiesId,
 	}
 
+	existingUserProperties, errCode := M.GetUserPropertiesAsMap(projectId, event.UserId)
+	if errCode != http.StatusAccepted {
+		log.WithField("err_code", errCode).Error("Failed to get user properties for adding first event properties on track")
+	}
 	if !skipSession {
 		session, errCode := M.CreateOrGetSessionEvent(projectId, request.UserId, isUserFirstSession, hasDefinedMarketingProperty,
 			request.Timestamp, eventProperties, userProperties, userPropertiesId)
@@ -239,7 +243,10 @@ func SDKTrack(projectId uint64, request *SDKTrackPayload, clientIP,
 			return errCode, &SDKTrackResponse{Error: "Tracking failed. Unable to associate with a session."}
 		}
 
-		U.FillSessionInUserAndEventProperties(eventProperties, userProperties, session.Count)
+		event.Properties, err = U.FillSessionInUserAndEventProperties(event.Properties, existingUserProperties, session.Count)
+		if err != nil {
+			log.WithField("UserId", event.UserId).Error("Failed to add session count to event properties")
+		}
 		event.SessionId = &session.ID
 	}
 
@@ -249,11 +256,6 @@ func SDKTrack(projectId uint64, request *SDKTrackPayload, clientIP,
 			CustomerEventId: request.CustomerEventId}
 	} else if errCode != http.StatusCreated {
 		return errCode, &SDKTrackResponse{Error: "Tracking failed. Event creation failed."}
-	}
-
-	existingUserProperties, errCode := M.GetUserPropertiesAsMap(projectId, createdEvent.UserId)
-	if errCode != http.StatusAccepted {
-		log.WithField("err_code", errCode).Error("Failed to get user properties for adding first event properties on track")
 	}
 
 	// check if any of those 2 properties exist.
