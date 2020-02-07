@@ -2,6 +2,7 @@ package util
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"net/url"
@@ -114,6 +115,7 @@ var EP_COST string = "$cost"
 var EP_REVENUE string = "$revenue"
 var EP_HOUR_OF_DAY string = "$hour_of_day"
 var EP_DAY_OF_WEEK string = "$day_of_week"
+var EP_SESSION string = "$session"
 
 // User Properties
 var UP_PLATFORM string = "$platform"
@@ -184,6 +186,9 @@ var UP_TOTAL_REVENUE string = "$total_revenue"
 var UP_INITIAL_REFERRER = "$initial_referrer"
 var UP_INITIAL_REFERRER_URL = "$initial_referrer_url"
 var UP_INITIAL_REFERRER_DOMAIN = "$initial_referrer_domain"
+var UP_DAY_OF_FIRST_EVENT string = "$day_of_first_event"
+var UP_HOUR_OF_FIRST_EVENT string = "$hour_of_first_event"
+var UP_SESSION_COUNT string = "$session_count"
 
 // session properties
 var SP_IS_FIRST_SESSION = "$is_first_session"
@@ -317,6 +322,8 @@ var SDK_ALLOWED_USER_PROPERTIES = [...]string{
 	UP_TOTAL_COST,
 	UP_INITIAL_REVENUE,
 	UP_TOTAL_REVENUE,
+	UP_DAY_OF_FIRST_EVENT,
+	UP_HOUR_OF_FIRST_EVENT,
 }
 
 // Event properties that are not visible to user for analysis.
@@ -353,6 +360,7 @@ var NUMERICAL_PROPERTY_BY_NAME = [...]string{
 	EP_PAGE_SCROLL_PERCENT,
 	EP_REVENUE,
 	EP_COST,
+	EP_HOUR_OF_DAY,
 	UP_INITIAL_PAGE_LOAD_TIME,
 	UP_INITIAL_PAGE_SPENT_TIME,
 	UP_INITIAL_PAGE_SCROLL_PERCENT,
@@ -924,4 +932,19 @@ func FillUserAgentUserProperties(userProperties *PropertiesMap, userAgent string
 func GetPredefinedBinRanges(propertyName string) ([][2]float64, bool) {
 	predfinedBinRanges, found := PREDEFINED_BIN_RANGES_FOR_PROPERTY[propertyName]
 	return predfinedBinRanges, found
+}
+
+func FillFirstEventUserProperties(initialUserProperties *map[string]interface{}, eventTimestamp int64) error {
+	if eventTimestamp != 0 {
+		(*initialUserProperties)[UP_DAY_OF_FIRST_EVENT] = time.Unix(eventTimestamp, 0).Weekday().String()
+		(*initialUserProperties)[UP_HOUR_OF_FIRST_EVENT], _, _ = time.Unix(eventTimestamp, 0).Clock()
+		return nil
+	} else {
+		return errors.New("Filling properties (hour and day) failed. Invalid join time.")
+	}
+}
+
+func FillSessionInUserAndEventProperties(eventProperties *PropertiesMap, userProperties *PropertiesMap, sessionCount uint64) {
+	(*eventProperties)[EP_SESSION] = sessionCount
+	(*userProperties)[UP_SESSION_COUNT] = sessionCount
 }
