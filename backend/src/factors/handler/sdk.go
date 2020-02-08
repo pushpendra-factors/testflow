@@ -127,29 +127,17 @@ func SDKTrack(projectId uint64, request *SDKTrackPayload, clientIP,
 	if request.Auto {
 		// Pass eventURL through filter and get corresponding event_name mapped by user.
 		eventName, eventNameErrCode = M.FilterEventNameByEventURL(projectId, request.Name)
-		if eventNameErrCode != http.StatusFound {
-			// create a auto tracked event name if no filter_expr match.
+		if eventName != nil && eventNameErrCode == http.StatusFound {
+			err := M.FillEventPropertiesByFilterExpr(&request.EventProperties, eventName.FilterExpr, request.Name)
+			if err != nil {
+				log.WithFields(log.Fields{"project_id": projectId, "filter_expr": eventName.FilterExpr,
+					"event_url": request.Name, log.ErrorKey: err}).Error(
+					"Failed to fill event url properties for auto tracked event.")
+			}
+		} else {
+			// create a auto tracked event name, if no filter_expr match.
 			eventName, eventNameErrCode = M.CreateOrGetAutoTrackedEventName(
 				&M.EventName{Name: request.Name, ProjectId: projectId})
-		}
-
-		if request.EventProperties == nil {
-			request.EventProperties = U.PropertiesMap{}
-		}
-
-		defer func() {
-			if r := recover(); r != nil {
-				log.WithField("request", request).WithField(
-					"event_name", eventName).WithField(
-					"recovered", r).Error("Recovered from panic on track.")
-			}
-		}()
-
-		err := M.FillEventPropertiesByFilterExpr(&request.EventProperties, eventName.FilterExpr, request.Name)
-		if err != nil {
-			log.WithFields(log.Fields{"project_id": projectId, "filter_expr": eventName.FilterExpr,
-				"event_url": request.Name, log.ErrorKey: err}).Error(
-				"Failed to fill event url properties for auto tracked event.")
 		}
 	} else {
 		eventName, eventNameErrCode = M.CreateOrGetUserCreatedEventName(
