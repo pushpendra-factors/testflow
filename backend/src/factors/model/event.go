@@ -152,6 +152,7 @@ func CreateEvent(event *Event) (*Event, int) {
 		log.WithFields(log.Fields{"event": &event}).WithError(err).Error("CreateEvent Failed")
 		return nil, http.StatusInternalServerError
 	}
+	defer rows.Close()
 
 	var eventId string
 	for rows.Next() {

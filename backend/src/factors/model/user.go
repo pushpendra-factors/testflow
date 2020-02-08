@@ -341,6 +341,7 @@ func GetRecentUserPropertyKeysWithLimits(projectId uint64, usersLimit int) (map[
 		logCtx.WithError(err).Error("Failed to get recent user property keys.")
 		return nil, http.StatusInternalServerError
 	}
+	defer rows.Close()
 
 	propertiesMap := make(map[string]map[interface{}]bool, 0)
 	for rows.Next() {
@@ -394,6 +395,7 @@ func GetRecentUserPropertyValuesWithLimits(projectId uint64, propertyKey string,
 		logCtx.WithError(err).Error("Failed to get property values.")
 		return values, http.StatusInternalServerError
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 		var value string
