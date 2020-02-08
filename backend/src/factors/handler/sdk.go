@@ -89,6 +89,12 @@ func enrichAfterTrack(projectId uint64, event *M.Event, userProperties *map[stri
 func SDKTrack(projectId uint64, request *SDKTrackPayload, clientIP,
 	userAgent string, skipSession bool) (int, *SDKTrackResponse) {
 
+	if projectId == 0 || request == nil {
+		log.WithFields(log.Fields{"project_id": projectId,
+			"request_payload": request}).Error("Invalid track request.")
+		return http.StatusBadRequest, &SDKTrackResponse{}
+	}
+
 	// Skipping track for configured projects.
 	for _, skipProjectId := range C.GetSkipTrackProjectIds() {
 		if skipProjectId == projectId {
