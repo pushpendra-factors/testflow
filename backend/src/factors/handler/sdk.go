@@ -288,9 +288,9 @@ func SDKTrack(projectId uint64, request *SDKTrackPayload, clientIP,
 
 	// Todo: Try to use latest user properties, if available already.
 	existingUserProperties, errCode := M.GetUserPropertiesAsMap(projectId, event.UserId)
-	if errCode != http.StatusAccepted {
+	if errCode != http.StatusFound {
 		log.WithField("err_code", errCode).Error(
-			"Failed to get user properties for adding first event properties on track")
+			"Failed to get user properties for adding first event properties on track.")
 	}
 
 	errCode = enrichAfterTrack(projectId, createdEvent, existingUserProperties)
