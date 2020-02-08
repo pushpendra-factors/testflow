@@ -137,6 +137,14 @@ func SDKTrack(projectId uint64, request *SDKTrackPayload, clientIP,
 			request.EventProperties = U.PropertiesMap{}
 		}
 
+		defer func() {
+			if r := recover(); r != nil {
+				log.WithField("request", request).WithField(
+					"event_name", eventName).WithField(
+					"recovered", r).Error("Recovered from panic on track.")
+			}
+		}()
+
 		err := M.FillEventPropertiesByFilterExpr(&request.EventProperties, eventName.FilterExpr, request.Name)
 		if err != nil {
 			log.WithFields(log.Fields{"project_id": projectId, "filter_expr": eventName.FilterExpr,
