@@ -313,3 +313,16 @@ func GetUserPropertiesRecordsByProperty(projectId uint64,
 
 	return userProperties, http.StatusFound
 }
+
+func GetAndOverWriteUserPropsWithSessionCount(projectId uint64, userId string, userPropertiesId string, sessionCount uint64) int {
+	userProperties, errCode := GetUserPropertiesAsMap(projectId, userId)
+	if errCode != http.StatusFound {
+		return errCode
+	}
+	(*userProperties)[U.UP_SESSION_COUNT] = sessionCount
+	userPropertiesJSONb, err := U.EncodeToPostgresJsonb(userProperties)
+	if err != nil {
+		return http.StatusInternalServerError
+	}
+	return OverwriteUserProperties(projectId, userId, userPropertiesId, userPropertiesJSONb)
+}

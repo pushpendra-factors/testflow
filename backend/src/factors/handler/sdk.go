@@ -68,6 +68,19 @@ func enrichAfterTrack(projectId uint64, event *M.Event, userProperties *map[stri
 			"Failed to fill day of first event and hour of first event user properties on enrich after track.")
 		return http.StatusInternalServerError
 	}
+	userPropsJSON, err := json.Marshal(userProperties)
+	if err != nil {
+		log.WithField("user_id", event.UserId).Error(
+			"Failed to marshal existing user properties on enrich after track.")
+		return http.StatusInternalServerError
+	}
+
+	_, errCode := M.UpdateUserProperties(projectId, event.UserId, &postgres.Jsonb{userPropsJSON})
+	if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
+		log.WithFields(log.Fields{"userProperties": userProperties,
+			log.ErrorKey: errCode}).Error("Update user properties failed on enrich after track.")
+		return http.StatusInternalServerError
+	}
 
 	return http.StatusOK
 }
@@ -247,10 +260,6 @@ func SDKTrack(projectId uint64, request *SDKTrackPayload, clientIP,
 		UserPropertiesId: userPropertiesId,
 	}
 
-	existingUserProperties, errCode := M.GetUserPropertiesAsMap(projectId, event.UserId)
-	if errCode != http.StatusAccepted {
-		log.WithField("err_code", errCode).Error("Failed to get user properties for adding first event properties on track")
-	}
 	if !skipSession {
 		session, errCode := M.CreateOrGetSessionEvent(projectId, request.UserId, isUserFirstSession, hasDefinedMarketingProperty,
 			request.Timestamp, eventProperties, userProperties, userPropertiesId)
@@ -263,11 +272,12 @@ func SDKTrack(projectId uint64, request *SDKTrackPayload, clientIP,
 			return errCode, &SDKTrackResponse{Error: "Tracking failed. Unable to associate with a session."}
 		}
 		eventPropsJSONForSession, err := U.DecodePostgresJsonb(&event.Properties)
-		if errDecode != nil {
+		if err != nil {
 			log.WithField("UserId:", event.UserId).WithError(err).Error(
 				"Failed to decode event properties for session property addition")
 		}
-		eventPropsJSONbWithSession, err := U.FillSessionInUserAndEventProperties(eventPropsJSONForSession, existingUserProperties, session.Count)
+		eventPropsJSONbWithSession, err := U.FillSessionCountInEventProperties(
+			eventPropsJSONForSession, session.Count)
 		if err != nil {
 			log.WithField("UserId:", event.UserId).WithError(err).Error(
 				"Failed to add session count to event properties")
@@ -283,23 +293,16 @@ func SDKTrack(projectId uint64, request *SDKTrackPayload, clientIP,
 	} else if errCode != http.StatusCreated {
 		return errCode, &SDKTrackResponse{Error: "Tracking failed. Event creation failed."}
 	}
+	existingUserProperties, errCode := M.GetUserPropertiesAsMap(projectId, event.UserId)
+	if errCode != http.StatusAccepted {
+		log.WithField("err_code", errCode).Error("Failed to get user properties for adding first event properties on track")
+	}
 
 	// Todo: Try to use latest user properties, if available already.
 	errCode = enrichAfterTrack(projectId, createdEvent, existingUserProperties)
 	if errCode != http.StatusOK {
 		// Logged and skipping failure response on after track enrichement failure.
 		log.WithField("err_code", errCode).Error("Failed to enrich after track.")
-	}
-	existingUserPropsJSON, err := json.Marshal(existingUserProperties)
-	if err != nil {
-		log.WithField("user_id", event.UserId).Error(
-			"Failed to marshal existing user properties on enrich after track.")
-	}
-
-	_, errCode = M.UpdateUserProperties(projectId, event.UserId, &postgres.Jsonb{existingUserPropsJSON})
-	if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
-		log.WithFields(log.Fields{"userProperties": userProperties,
-			log.ErrorKey: errCode}).Error("Update user properties failed on enrich after track.")
 	}
 
 	// Success response.

@@ -493,6 +493,13 @@ func createSessionEvent(projectId uint64, userId string, sessionEventNameId uint
 		UserId:           userId,
 		UserPropertiesId: userPropertiesId,
 	})
+
+	// TODO: update_user_properties_by_id(userPropertiesId, {$session_count: 10});
+	errUserProps := GetAndOverWriteUserPropsWithSessionCount(projectId, userId, userPropertiesId, newSessionEvent.Count)
+	if errUserProps != http.StatusAccepted {
+		return nil, errUserProps
+	}
+
 	return newSessionEvent, errCode
 }
 
