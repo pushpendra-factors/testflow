@@ -378,7 +378,7 @@ func TestCreateOrGetSessionEvent(t *testing.T) {
 		requestTimestamp := U.UnixTimeBeforeDuration(time.Minute * 32)
 		session, errCode := M.CreateOrGetSessionEvent(projectId, userId, true, false, requestTimestamp,
 			&U.PropertiesMap{U.EP_PAGE_LOAD_TIME: 0.10}, &U.PropertiesMap{}, "")
-		assert.Equal(t, http.StatusCreated, errCode)
+		assert.Equal(t, http.StatusAccepted, errCode)
 		assert.NotNil(t, session)
 
 		// Session event should exist with initial event properites.
