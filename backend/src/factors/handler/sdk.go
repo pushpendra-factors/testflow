@@ -263,7 +263,7 @@ func SDKTrack(projectId uint64, request *SDKTrackPayload, clientIP,
 	if !skipSession {
 		session, errCode := M.CreateOrGetSessionEvent(projectId, request.UserId, isUserFirstSession, hasDefinedMarketingProperty,
 			request.Timestamp, eventProperties, userProperties, userPropertiesId)
-		if errCode != http.StatusCreated && errCode != http.StatusFound {
+		if errCode != http.StatusCreated && errCode != http.StatusFound && errCode != http.StatusAccepted {
 			response.Error = "Failed to associate with a session."
 		}
 

@@ -16,7 +16,7 @@ import (
 
 func TestDBCreateAndGetEvent(t *testing.T) {
 	// Initialize a project, user and  the event.
-	projectId, userId, eventNameId, err := SetupProjectUserEventName()
+	projectId, userId, eventNameId, _, err := SetupProjectUserEventName()
 	assert.Nil(t, err)
 
 	start := time.Now()
@@ -297,7 +297,7 @@ func TestUpdateEventProperties(t *testing.T) {
 }
 
 func TestGetLatestAnyEventOfUserInDuration(t *testing.T) {
-	projectId, userId, eventNameId, err := SetupProjectUserEventName()
+	projectId, userId, eventNameId, _, err := SetupProjectUserEventName()
 	assert.Nil(t, err)
 
 	// no event exist in 10 secs.
@@ -348,7 +348,7 @@ func TestCacheEvent(t *testing.T) {
 }
 
 func TestGetLatestAnyEventOfUserInDurationFromCache(t *testing.T) {
-	projectId, userId, eventNameId, err := SetupProjectUserEventName()
+	projectId, userId, eventNameId, _, err := SetupProjectUserEventName()
 	assert.Nil(t, err)
 
 	// no key exist on cache, so not found.
@@ -371,13 +371,13 @@ func TestGetLatestAnyEventOfUserInDurationFromCache(t *testing.T) {
 }
 
 func TestCreateOrGetSessionEvent(t *testing.T) {
-	projectId, userId, eventNameId, err := SetupProjectUserEventName()
+	projectId, userId, eventNameId, userPropertiesId, err := SetupProjectUserEventName()
 	assert.Nil(t, err)
 
 	t.Run("ShouldCreateNewSessionAsNoEventInLast30Mins", func(t *testing.T) {
 		requestTimestamp := U.UnixTimeBeforeDuration(time.Minute * 32)
 		session, errCode := M.CreateOrGetSessionEvent(projectId, userId, true, false, requestTimestamp,
-			&U.PropertiesMap{U.EP_PAGE_LOAD_TIME: 0.10}, &U.PropertiesMap{}, "")
+			&U.PropertiesMap{U.EP_PAGE_LOAD_TIME: 0.10}, &U.PropertiesMap{}, userPropertiesId)
 		assert.Equal(t, http.StatusAccepted, errCode)
 		assert.NotNil(t, session)
 
@@ -398,7 +398,7 @@ func TestCreateOrGetSessionEvent(t *testing.T) {
 
 		requestTimestamp := time.Now().UTC().Unix()
 		session, errCode := M.CreateOrGetSessionEvent(projectId, userId, true, false, requestTimestamp,
-			&U.PropertiesMap{}, &U.PropertiesMap{}, "")
+			&U.PropertiesMap{}, &U.PropertiesMap{}, userPropertiesId)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, session)
 	})
@@ -410,8 +410,8 @@ func TestCreateOrGetSessionEvent(t *testing.T) {
 		requestTimestamp := time.Now().UTC().Unix()
 		session, errCode := M.CreateOrGetSessionEvent(projectId, userId, true, true, requestTimestamp,
 			&U.PropertiesMap{U.EP_PAGE_LOAD_TIME: 0.10, U.EP_CAMPAIGN: "test-campaign"},
-			&U.PropertiesMap{}, "")
-		assert.Equal(t, http.StatusCreated, errCode)
+			&U.PropertiesMap{}, userPropertiesId)
+		assert.Equal(t, http.StatusAccepted, errCode)
 		assert.NotNil(t, session)
 
 		// Session event should exist with initial event properites.

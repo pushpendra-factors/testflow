@@ -11,7 +11,7 @@ import (
 
 func SetupProjectReturnDAO() (*M.Project, error) {
 
-	agent, errCode := SetupAgentReturnDAO(getRandomEmail(),"+354522436")
+	agent, errCode := SetupAgentReturnDAO(getRandomEmail(), "+354522436")
 	if errCode != http.StatusCreated {
 		return nil, fmt.Errorf("Project Creation failed, agentCreation failed")
 	}
@@ -47,29 +47,31 @@ func SetupProjectUserReturnDAO() (*M.Project, *M.User, error) {
 }
 
 // Todo(Dinesh): To be replaced with SetupProjectUserEventNameReturnDAO.
-func SetupProjectUserEventName() (uint64, string, uint64, error) {
+func SetupProjectUserEventName() (uint64, string, uint64, string, error) {
 	var projectId uint64
 	var userId string
 	var eventNameId uint64
+	var userPropertiesId string
 
 	// Create random project and a corresponding eventName and user.
 
 	project, err := SetupProjectReturnDAO()
 	if err != nil {
-		return projectId, userId, eventNameId, err
+		return projectId, userId, eventNameId, userPropertiesId, err
 	}
 	user, err_code := M.CreateUser(&M.User{ProjectId: project.ID})
 	if err_code != http.StatusCreated {
-		return projectId, userId, eventNameId, fmt.Errorf("User Creation failed.")
+		return projectId, userId, eventNameId, userPropertiesId, fmt.Errorf("User Creation failed.")
 	}
 	en, err_code := M.CreateOrGetUserCreatedEventName(&M.EventName{ProjectId: project.ID, Name: "login"})
 	if err_code != http.StatusCreated {
-		return projectId, userId, eventNameId, fmt.Errorf("EventName Creation failed.")
+		return projectId, userId, eventNameId, userPropertiesId, fmt.Errorf("EventName Creation failed.")
 	}
 	projectId = project.ID
 	userId = user.ID
+	userPropertiesId = user.PropertiesId
 	eventNameId = en.ID
-	return projectId, userId, eventNameId, nil
+	return projectId, userId, eventNameId, userPropertiesId, nil
 }
 
 func SetupProjectUserEventNameReturnDAO() (*M.Project, *M.User, *M.EventName, error) {
