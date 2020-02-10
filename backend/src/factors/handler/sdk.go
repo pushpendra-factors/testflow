@@ -155,10 +155,6 @@ func SDKTrack(projectId uint64, request *SDKTrackPayload, clientIP,
 	}
 	// Added IP to event properties for internal usage.
 	(*eventProperties)[U.EP_INTERNAL_IP] = clientIP
-	eventPropsJSON, err := json.Marshal(eventProperties)
-	if err != nil {
-		return http.StatusBadRequest, &SDKTrackResponse{Error: "Tracking failed. Invalid properties."}
-	}
 
 	var userProperties *U.PropertiesMap
 
@@ -221,7 +217,7 @@ func SDKTrack(projectId uint64, request *SDKTrackPayload, clientIP,
 			projectId, request.UserId, userProperties, eventProperties)
 		if errCode == http.StatusInternalServerError {
 			log.WithFields(log.Fields{"userProperties": userProperties,
-				"eventProperties": eventProperties}).WithError(err).Error(
+				"eventProperties": eventProperties}).Error(
 				"Failed adding user properties from form submitted event.")
 			response.Error = "Failed adding user properties."
 		}
@@ -254,7 +250,6 @@ func SDKTrack(projectId uint64, request *SDKTrackPayload, clientIP,
 		EventNameId:      eventName.ID,
 		CustomerEventId:  request.CustomerEventId,
 		Timestamp:        request.Timestamp,
-		Properties:       postgres.Jsonb{eventPropsJSON},
 		ProjectId:        projectId,
 		UserId:           request.UserId,
 		UserPropertiesId: userPropertiesId,
@@ -271,20 +266,15 @@ func SDKTrack(projectId uint64, request *SDKTrackPayload, clientIP,
 			log.Error("Session is nil even after CreateOrGetSessionEvent.")
 			return errCode, &SDKTrackResponse{Error: "Tracking failed. Unable to associate with a session."}
 		}
-		eventPropsJSONForSession, err := U.DecodePostgresJsonb(&event.Properties)
-		if err != nil {
-			log.WithField("UserId:", event.UserId).WithError(err).Error(
-				"Failed to decode event properties for session property addition")
-		}
-		eventPropsJSONbWithSession, err := U.FillSessionCountInEventProperties(
-			eventPropsJSONForSession, session.Count)
-		if err != nil {
-			log.WithField("UserId:", event.UserId).WithError(err).Error(
-				"Failed to add session count to event properties")
-		}
-		event.Properties = *eventPropsJSONbWithSession
+
+		(*eventProperties)[U.EP_SESSION] = session.Count
 		event.SessionId = &session.ID
 	}
+	eventPropsJSON, err := json.Marshal(eventProperties)
+	if err != nil {
+		return http.StatusBadRequest, &SDKTrackResponse{Error: "Tracking failed. Invalid properties."}
+	}
+	event.Properties = postgres.Jsonb{eventPropsJSON}
 
 	createdEvent, errCode := M.CreateEvent(event)
 	if errCode == http.StatusFound {

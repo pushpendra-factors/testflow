@@ -16,7 +16,7 @@ import (
 
 func TestDBCreateAndGetEvent(t *testing.T) {
 	// Initialize a project, user and  the event.
-	projectId, userId, eventNameId, _, err := SetupProjectUserEventName()
+	projectId, userId, eventNameId, err := SetupProjectUserEventName()
 	assert.Nil(t, err)
 
 	start := time.Now()
@@ -297,7 +297,7 @@ func TestUpdateEventProperties(t *testing.T) {
 }
 
 func TestGetLatestAnyEventOfUserInDuration(t *testing.T) {
-	projectId, userId, eventNameId, _, err := SetupProjectUserEventName()
+	projectId, userId, eventNameId, err := SetupProjectUserEventName()
 	assert.Nil(t, err)
 
 	// no event exist in 10 secs.
@@ -348,7 +348,7 @@ func TestCacheEvent(t *testing.T) {
 }
 
 func TestGetLatestAnyEventOfUserInDurationFromCache(t *testing.T) {
-	projectId, userId, eventNameId, _, err := SetupProjectUserEventName()
+	projectId, userId, eventNameId, err := SetupProjectUserEventName()
 	assert.Nil(t, err)
 
 	// no key exist on cache, so not found.
@@ -371,16 +371,21 @@ func TestGetLatestAnyEventOfUserInDurationFromCache(t *testing.T) {
 }
 
 func TestCreateOrGetSessionEvent(t *testing.T) {
-	projectId, userId, eventNameId, userPropertiesId, err := SetupProjectUserEventName()
+	projectId, userId, eventNameId, err := SetupProjectUserEventName()
 	assert.Nil(t, err)
+
+	user, _ := M.GetUser(projectId, userId)
+	userPropertiesId := user.PropertiesId
 
 	t.Run("ShouldCreateNewSessionAsNoEventInLast30Mins", func(t *testing.T) {
 		requestTimestamp := U.UnixTimeBeforeDuration(time.Minute * 32)
 		session, errCode := M.CreateOrGetSessionEvent(projectId, userId, true, false, requestTimestamp,
 			&U.PropertiesMap{U.EP_PAGE_LOAD_TIME: 0.10}, &U.PropertiesMap{}, userPropertiesId)
-		assert.Equal(t, http.StatusAccepted, errCode)
+		assert.Equal(t, http.StatusCreated, errCode)
 		assert.NotNil(t, session)
 
+		userProperties, _ := M.GetUserProperties(projectId, userId, userPropertiesId)
+		userPropertiesMap, _ := U.DecodePostgresJsonb(userProperties)
 		// Session event should exist with initial event properites.
 		sessionEvent, errCode := M.GetEvent(projectId, userId, session.ID)
 		assert.Equal(t, http.StatusFound, errCode)
@@ -389,6 +394,7 @@ func TestCreateOrGetSessionEvent(t *testing.T) {
 		var eventPropertiesMap map[string]interface{}
 		json.Unmarshal(eventPropertiesBytes.([]byte), &eventPropertiesMap)
 		assert.NotNil(t, eventPropertiesMap[U.UP_INITIAL_PAGE_LOAD_TIME])
+		assert.NotNil(t, (*userPropertiesMap)[U.UP_SESSION_COUNT])
 		assert.Equal(t, 0.10, eventPropertiesMap[U.UP_INITIAL_PAGE_LOAD_TIME])
 	})
 
@@ -399,8 +405,12 @@ func TestCreateOrGetSessionEvent(t *testing.T) {
 		requestTimestamp := time.Now().UTC().Unix()
 		session, errCode := M.CreateOrGetSessionEvent(projectId, userId, true, false, requestTimestamp,
 			&U.PropertiesMap{}, &U.PropertiesMap{}, userPropertiesId)
+
+		userProperties, _ := M.GetUserProperties(projectId, userId, userPropertiesId)
+		userPropertiesMap, _ := U.DecodePostgresJsonb(userProperties)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, session)
+		assert.NotNil(t, (*userPropertiesMap)[U.UP_SESSION_COUNT])
 	})
 
 	t.Run("ShouldCreateNewSessionAsHasMarketingProperty", func(t *testing.T) {
@@ -411,8 +421,12 @@ func TestCreateOrGetSessionEvent(t *testing.T) {
 		session, errCode := M.CreateOrGetSessionEvent(projectId, userId, true, true, requestTimestamp,
 			&U.PropertiesMap{U.EP_PAGE_LOAD_TIME: 0.10, U.EP_CAMPAIGN: "test-campaign"},
 			&U.PropertiesMap{}, userPropertiesId)
-		assert.Equal(t, http.StatusAccepted, errCode)
+
+		userProperties, _ := M.GetUserProperties(projectId, userId, userPropertiesId)
+		userPropertiesMap, _ := U.DecodePostgresJsonb(userProperties)
+		assert.Equal(t, http.StatusCreated, errCode)
 		assert.NotNil(t, session)
+		assert.NotNil(t, (*userPropertiesMap)[U.UP_SESSION_COUNT])
 
 		// Session event should exist with initial event properites.
 		sessionEvent, errCode := M.GetEvent(projectId, userId, session.ID)

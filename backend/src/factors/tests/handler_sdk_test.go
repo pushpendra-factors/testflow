@@ -589,12 +589,17 @@ func TestTrackHandlerWithUserSession(t *testing.T) {
 	// Tracked event should have latest session of user associated with it.
 	rEvent, errCode := M.GetEvent(project.ID, responseUserId, responseEventId)
 	assert.Equal(t, http.StatusFound, errCode)
+
 	latestSessionEvent, errCode := M.GetLatestEventOfUserByEventNameId(rEvent.ProjectId, rEvent.UserId,
 		sessionEventName.ID, rEvent.Timestamp-86400, rEvent.Timestamp)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, rEvent.SessionId)
 	assert.NotEmpty(t, *rEvent.SessionId)
 	assert.Equal(t, latestSessionEvent.ID, *rEvent.SessionId)
+
+	eventPropertiesMap, _ := U.DecodePostgresJsonb(&rEvent.Properties)
+	assert.NotNil(t, (*eventPropertiesMap)[U.EP_SESSION])
+	assert.Equal(t, (*eventPropertiesMap)[U.EP_SESSION], float64(latestSessionEvent.Count))
 
 	// session with existing user and active.
 	eventName = U.RandomLowerAphaNumString(10)
@@ -617,6 +622,9 @@ func TestTrackHandlerWithUserSession(t *testing.T) {
 	assert.Equal(t, userSessionEvents[0].ID, userSessionEvents2[0].ID)
 	// Tracked event should have latest session of active user associated with it.
 	rEvent2, errCode := M.GetEvent(project.ID, responseUserId, responseEventId2)
+	eventPropertiesMap, _ = U.DecodePostgresJsonb(&rEvent2.Properties)
+	assert.NotNil(t, (*eventPropertiesMap)[U.EP_SESSION])
+	assert.Equal(t, (*eventPropertiesMap)[U.EP_SESSION], float64(latestSessionEvent.Count))
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, rEvent2.SessionId)
 	assert.NotEmpty(t, *rEvent2.SessionId)

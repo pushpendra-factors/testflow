@@ -314,24 +314,31 @@ func GetUserPropertiesRecordsByProperty(projectId uint64,
 	return userProperties, http.StatusFound
 }
 
-func GetAndOverWriteUserProperties(projectId uint64, userId string, userPropertiesId string, propertyToInsert map[string]interface{}) int {
-	if len(propertyToInsert) == 0 {
+func GetAndOverWriteUserProperties(
+	projectId uint64, userId string, userPropertiesId string, propertiesToInsert map[string]interface{}) int {
+
+	if len(propertiesToInsert) == 0 {
 		return http.StatusBadRequest
 	}
+
 	userProperties, errCode := GetUserProperties(projectId, userId, userPropertiesId)
 	if errCode != http.StatusFound {
 		return errCode
 	}
+
 	userPropertiesMap, err := U.DecodePostgresJsonb(userProperties)
 	if err != nil {
 		return http.StatusInternalServerError
 	}
-	for key, value := range propertyToInsert {
+
+	for key, value := range propertiesToInsert {
 		(*userPropertiesMap)[key] = value
 	}
+
 	userPropertiesJSONb, err := U.EncodeToPostgresJsonb(userPropertiesMap)
 	if err != nil {
 		return http.StatusInternalServerError
 	}
+
 	return OverwriteUserProperties(projectId, userId, userPropertiesId, userPropertiesJSONb)
 }

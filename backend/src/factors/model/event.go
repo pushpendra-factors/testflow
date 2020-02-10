@@ -496,12 +496,15 @@ func createSessionEvent(projectId uint64, userId string, sessionEventNameId uint
 	if errCode != http.StatusCreated {
 		return nil, errCode
 	}
-	// TODO: update_user_properties_by_id(userPropertiesId, {$session_count: 10});
-	propertyToInsert := make(map[string]interface{})
-	(propertyToInsert)[U.UP_SESSION_COUNT] = newSessionEvent.Count
-	errCode = GetAndOverWriteUserProperties(projectId, userId, userPropertiesId, propertyToInsert)
+
+	propertiesToInsert := make(map[string]interface{})
+	(propertiesToInsert)[U.UP_SESSION_COUNT] = newSessionEvent.Count
+
+	errCode = GetAndOverWriteUserProperties(projectId, userId, userPropertiesId, propertiesToInsert)
 	if errCode != http.StatusAccepted {
 		log.WithField("UserId", userId).WithField("ErrCode", errCode).Error("Failed to overwrite user Properties with session count")
+	} else {
+		return newSessionEvent, http.StatusCreated
 	}
 	return newSessionEvent, errCode
 }
