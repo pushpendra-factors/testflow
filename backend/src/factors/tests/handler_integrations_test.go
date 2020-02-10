@@ -237,16 +237,6 @@ func TestIntSegmentHandler(t *testing.T) {
 	w = ServePostRequestWithHeaders(r, uri, []byte(samplePayloadWithInvalidTimestamp),
 		map[string]string{"Authorization": project.PrivateToken})
 	assert.Equal(t, http.StatusOK, w.Code)
-	jsonResponse4, _ := ioutil.ReadAll(w.Body)
-	var jsonResponseMap4 map[string]interface{}
-	json.Unmarshal(jsonResponse4, &jsonResponseMap4)
-	assert.Nil(t, (jsonResponseMap4)["error"])
-	assert.NotNil(t, (jsonResponseMap4)["event_id"])
-	retEvent, errCode := M.GetEventById(project.ID, (jsonResponseMap4)["event_id"].(string))
-	assert.Equal(t, http.StatusFound, errCode)
-	// If parse failed, Timestamp filled with .now()
-	// on event model before callback.
-	assert.NotZero(t, retEvent.Timestamp)
 }
 
 func TestIntSegmentHandlerWithPageEvent(t *testing.T) {

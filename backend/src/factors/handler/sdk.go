@@ -9,6 +9,7 @@ import (
 	U "factors/util"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -93,6 +94,10 @@ func SDKTrack(projectId uint64, request *SDKTrackPayload, clientIP,
 		log.WithFields(log.Fields{"project_id": projectId,
 			"request_payload": request}).Error("Invalid track request.")
 		return http.StatusBadRequest, &SDKTrackResponse{}
+	}
+
+	if request.Timestamp == 0 {
+		request.Timestamp = time.Now().Unix()
 	}
 
 	// Skipping track for configured projects.

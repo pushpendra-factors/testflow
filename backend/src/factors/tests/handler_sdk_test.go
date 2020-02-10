@@ -623,6 +623,77 @@ func TestTrackHandlerWithUserSession(t *testing.T) {
 	assert.Equal(t, latestSessionEvent.ID, *rEvent2.SessionId)
 }
 
+func TestTrackHandlerUserSessionWithTimestamp(t *testing.T) {
+	r := gin.Default()
+	H.InitSDKRoutes(r)
+	uri := "/sdk/event/track"
+
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	timestampBeforeOneDay := U.UnixTimeBeforeDuration(time.Hour * 24)
+	user, errCode := M.CreateUser(&M.User{ProjectId: project.ID,
+		JoinTimestamp: timestampBeforeOneDay})
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	// New session has to created.
+	payload := fmt.Sprintf(`{"user_id": "%s", "timestamp": %d, "event_name": "event_1", "event_properties": {}, "user_properties": {"$os": "Mac OS"}}`,
+		user.ID, timestampBeforeOneDay)
+	w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	responseMap := DecodeJSONResponseToMap(w.Body)
+	assert.NotEmpty(t, responseMap)
+	assert.NotNil(t, responseMap["event_id"])
+	event1, errCode := M.GetEventById(project.ID, responseMap["event_id"].(string))
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotEmpty(t, event1.SessionId)
+
+	// Existing session has to be used.
+	lastEventTimestamp := timestampBeforeOneDay + 10
+	payload = fmt.Sprintf(`{"user_id": "%s", "timestamp": %d, "event_name": "event_1", "event_properties": {}, "user_properties": {"$os": "Mac OS"}}`,
+		user.ID, lastEventTimestamp)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	responseMap = DecodeJSONResponseToMap(w.Body)
+	assert.NotEmpty(t, responseMap)
+	assert.NotNil(t, responseMap["event_id"])
+	event2, errCode := M.GetEventById(project.ID, responseMap["event_id"].(string))
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotEmpty(t, event2.SessionId)
+	assert.Equal(t, event1.SessionId, event2.SessionId)
+	// No of sessions should be 1.
+	sessionEventName, errCode := M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotNil(t, sessionEventName)
+	sessionEvents, errCode := M.GetUserEventsByEventNameId(project.ID, user.ID,
+		sessionEventName.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Len(t, sessionEvents, 1)
+
+	// New session has to be created by even timestamp
+	// as user was inactive.
+	lastEventTimestamp = lastEventTimestamp + 1800
+	payload = fmt.Sprintf(`{"user_id": "%s", "timestamp": %d, "event_name": "event_1", "event_properties": {}, "user_properties": {"$os": "Mac OS"}}`,
+		user.ID, lastEventTimestamp)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	responseMap = DecodeJSONResponseToMap(w.Body)
+	assert.NotEmpty(t, responseMap)
+	assert.NotNil(t, responseMap["event_id"])
+	event3, errCode := M.GetEventById(project.ID, responseMap["event_id"].(string))
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotEmpty(t, event3.SessionId)
+	assert.NotEqual(t, event2.SessionId, event3.SessionId) // new session.
+	// No of sessions should be 2.
+	sessionEventName, errCode = M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotNil(t, sessionEventName)
+	sessionEvents, errCode = M.GetUserEventsByEventNameId(project.ID, user.ID,
+		sessionEventName.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Len(t, sessionEvents, 2)
+}
+
 func TestTrackHandlerWithFormSubmit(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
