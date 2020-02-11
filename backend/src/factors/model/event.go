@@ -478,6 +478,8 @@ func createSessionEvent(projectId uint64, userId string, sessionEventNameId uint
 	isFirstSession bool, requestTimestamp int64, eventProperties,
 	userProperties *U.PropertiesMap, userPropertiesId string) (*Event, int) {
 
+	pageCount, errCode := CountAndUpdatePageCountInSessionEvent(projectId, userId)
+
 	sessionEventProps := U.GetSessionProperties(isFirstSession, eventProperties, userProperties)
 	sessionPropsJson, err := json.Marshal(sessionEventProps)
 	if err != nil {
@@ -499,6 +501,7 @@ func createSessionEvent(projectId uint64, userId string, sessionEventNameId uint
 
 	propertiesToInsert := make(map[string]interface{})
 	(propertiesToInsert)[U.UP_SESSION_COUNT] = newSessionEvent.Count
+	(propertiesToInsert)[U.UP_PAGES_COUNT] = pageCount
 
 	errCode = GetAndOverWriteUserProperties(projectId, userId, userPropertiesId, propertiesToInsert)
 	if errCode != http.StatusAccepted {
@@ -576,4 +579,15 @@ func CreateOrGetSessionEvent(projectId uint64, userId string, isFirstSession boo
 	}
 
 	return latestSessionEvent, http.StatusFound
+}
+
+func OverwriteEventProperties(projectId uint64, userId string, eventId string, newEventProperties *postgres.Jsonb) error {
+	db := C.GetServices().Db
+
+	if err := db.Model(&Event{}).Where("project_id = ? AND user_id = ? AND id = ?",
+		projectId, userId, eventId).Update(
+		"properties", &newEventProperties).Error; err != nil {
+		return err
+	}
+	return nil
 }

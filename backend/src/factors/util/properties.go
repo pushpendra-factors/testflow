@@ -116,6 +116,7 @@ var EP_REVENUE string = "$revenue"
 var EP_HOUR_OF_DAY string = "$hour_of_day"
 var EP_DAY_OF_WEEK string = "$day_of_week"
 var EP_SESSION string = "$session"
+var EP_PAGE_COUNT string = "$page_count"
 
 // User Properties
 var UP_PLATFORM string = "$platform"
@@ -189,6 +190,7 @@ var UP_INITIAL_REFERRER_DOMAIN = "$initial_referrer_domain"
 var UP_DAY_OF_FIRST_EVENT string = "$day_of_first_event"
 var UP_HOUR_OF_FIRST_EVENT string = "$hour_of_first_event"
 var UP_SESSION_COUNT string = "$session_count"
+var UP_PAGES_COUNT string = "$pages_count"
 
 // session properties
 var SP_IS_FIRST_SESSION = "$is_first_session"
