@@ -188,6 +188,8 @@ func GetProjectByToken(token string) (*Project, int) {
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound
 		}
+		log.WithField("token", token).WithError(err).Error(
+			"Failed to get project by token.")
 		return nil, http.StatusInternalServerError
 	}
 
