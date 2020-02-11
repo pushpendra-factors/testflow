@@ -9,6 +9,7 @@ import (
 	U "factors/util"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -88,6 +89,16 @@ func enrichAfterTrack(projectId uint64, event *M.Event, userProperties *map[stri
 func SDKTrack(projectId uint64, request *SDKTrackPayload, clientIP,
 	userAgent string, skipSession bool) (int, *SDKTrackResponse) {
 
+	if projectId == 0 || request == nil {
+		log.WithFields(log.Fields{"project_id": projectId,
+			"request_payload": request}).Error("Invalid track request.")
+		return http.StatusBadRequest, &SDKTrackResponse{}
+	}
+
+	if request.Timestamp == 0 {
+		request.Timestamp = time.Now().Unix()
+	}
+
 	// Skipping track for configured projects.
 	for _, skipProjectId := range C.GetSkipTrackProjectIds() {
 		if skipProjectId == projectId {
@@ -120,21 +131,17 @@ func SDKTrack(projectId uint64, request *SDKTrackPayload, clientIP,
 	if request.Auto {
 		// Pass eventURL through filter and get corresponding event_name mapped by user.
 		eventName, eventNameErrCode = M.FilterEventNameByEventURL(projectId, request.Name)
-		if eventNameErrCode != http.StatusFound {
-			// create a auto tracked event name if no filter_expr match.
+		if eventName != nil && eventNameErrCode == http.StatusFound {
+			err := M.FillEventPropertiesByFilterExpr(&request.EventProperties, eventName.FilterExpr, request.Name)
+			if err != nil {
+				log.WithFields(log.Fields{"project_id": projectId, "filter_expr": eventName.FilterExpr,
+					"event_url": request.Name, log.ErrorKey: err}).Error(
+					"Failed to fill event url properties for auto tracked event.")
+			}
+		} else {
+			// create a auto tracked event name, if no filter_expr match.
 			eventName, eventNameErrCode = M.CreateOrGetAutoTrackedEventName(
 				&M.EventName{Name: request.Name, ProjectId: projectId})
-		}
-
-		if request.EventProperties == nil {
-			request.EventProperties = U.PropertiesMap{}
-		}
-
-		err := M.FillEventPropertiesByFilterExpr(&request.EventProperties, eventName.FilterExpr, request.Name)
-		if err != nil {
-			log.WithFields(log.Fields{"project_id": projectId, "filter_expr": eventName.FilterExpr,
-				"event_url": request.Name, log.ErrorKey: err}).Error(
-				"Failed to fill event url properties for auto tracked event.")
 		}
 	} else {
 		eventName, eventNameErrCode = M.CreateOrGetUserCreatedEventName(
@@ -283,9 +290,11 @@ func SDKTrack(projectId uint64, request *SDKTrackPayload, clientIP,
 	} else if errCode != http.StatusCreated {
 		return errCode, &SDKTrackResponse{Error: "Tracking failed. Event creation failed."}
 	}
+
 	existingUserProperties, errCode := M.GetUserPropertiesAsMap(projectId, event.UserId)
-	if errCode != http.StatusAccepted {
-		log.WithField("err_code", errCode).Error("Failed to get user properties for adding first event properties on track")
+	if errCode != http.StatusFound {
+		log.WithField("err_code", errCode).Error(
+			"Failed to get user properties for adding first event properties on track.")
 	}
 
 	// Todo: Try to use latest user properties, if available already.

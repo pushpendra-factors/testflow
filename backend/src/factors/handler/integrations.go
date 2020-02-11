@@ -66,17 +66,20 @@ func IntSegmentHandler(c *gin.Context) {
 	}
 	isNewUser := errCode == http.StatusCreated
 
-	var unixTimestamp int64
-	if parsedTimestamp, err := time.Parse(time.RFC3339, event.Timestamp); err != nil {
+	response := &SDKTrackResponse{}
+
+	parsedTimestamp, err := time.Parse(time.RFC3339, event.Timestamp)
+	if err != nil {
 		logCtx.WithFields(log.Fields{"timestamp": event.Timestamp,
 			log.ErrorKey: err}).Error("Failed parsing segment event timestamp.")
-	} else {
-		unixTimestamp = parsedTimestamp.Unix()
+		response.Error = "invalid event timestamp"
+		response.Type = event.Type
+		c.AbortWithStatusJSON(http.StatusOK, response) // For avoiding, segment retries.
+		return
 	}
+	unixTimestamp := parsedTimestamp.Unix()
 
-	response := &SDKTrackResponse{}
 	var status int
-
 	switch event.Type {
 	case "track":
 		userProperties := U.PropertiesMap{}

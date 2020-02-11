@@ -56,7 +56,7 @@ type CacheEvent struct {
 
 const error_Duplicate_event_customerEventID = "pq: duplicate key value violates unique constraint \"project_id_customer_event_id_unique_idx\""
 const eventsLimitForProperites = 50000
-const NewUserSessionInactivityDuration = time.Minute * 30
+const NewUserSessionInactivityInSeconds int64 = 30 * 60 // 30 mins
 
 const tableName = "events"
 const cacheIndexUserLastEvent = "user_last_event"
@@ -94,9 +94,9 @@ func SetCacheUserLastEvent(projectId uint64, userId string, cacheEvent *CacheEve
 		return err
 	}
 
-	// Expiry: Session inactivity duration + 5 minutes.
-	cacheExpiry := (NewUserSessionInactivityDuration + (time.Minute * 5)).Seconds()
-	err = cacheRedis.Set(key, string(cacheEventJson), cacheExpiry)
+	var additionalExpiryTime int64 = 5 * 60 // 5 mins
+	cacheExpiry := NewUserSessionInactivityInSeconds + additionalExpiryTime
+	err = cacheRedis.Set(key, string(cacheEventJson), float64(cacheExpiry))
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to setCacheUserLastEvent.")
 	}
@@ -105,8 +105,6 @@ func SetCacheUserLastEvent(projectId uint64, userId string, cacheEvent *CacheEve
 }
 
 func CreateEvent(event *Event) (*Event, int) {
-	db := C.GetServices().Db
-
 	log.WithFields(log.Fields{"event": &event}).Info("Creating event")
 
 	// Input Validation. (ID is to be auto generated)
@@ -120,17 +118,19 @@ func CreateEvent(event *Event) (*Event, int) {
 		return nil, http.StatusBadRequest
 	}
 
+	if event.Timestamp == 0 {
+		log.WithField("timestamp", event.Timestamp).Error("CreateEvent Failed. Invalid timestamp.")
+		return nil, http.StatusBadRequest
+	}
+
 	// Increamenting count based on EventNameId, not by EventName.
 	var count uint64
+	db := C.GetServices().Db
 	if err := db.Model(&Event{}).Where("project_id = ? AND user_id = ? AND event_name_id = ?",
 		event.ProjectId, event.UserId, event.EventNameId).Count(&count).Error; err != nil {
 		return nil, http.StatusInternalServerError
 	}
 	event.Count = count + 1
-
-	if event.Timestamp <= 0 {
-		event.Timestamp = time.Now().Unix()
-	}
 
 	eventPropsJSONb, err := U.FillHourAndDayEventProperty(&event.Properties, event.Timestamp)
 	if err != nil {
@@ -152,6 +152,7 @@ func CreateEvent(event *Event) (*Event, int) {
 		log.WithFields(log.Fields{"event": &event}).WithError(err).Error("CreateEvent Failed")
 		return nil, http.StatusInternalServerError
 	}
+	defer rows.Close()
 
 	var eventId string
 	for rows.Next() {
@@ -215,10 +216,12 @@ func GetCacheUserLastEvent(projectId uint64, userId string) (*CacheEvent, error)
 	return &cacheEvent, nil
 }
 
-func GetLatestAnyEventOfUserInDurationFromCache(projectId uint64, userId string, duration time.Duration) (*Event, int) {
+func GetLatestAnyEventOfUserForSessionFromCache(projectId uint64,
+	userId string, newEventTimestamp int64) (*Event, int) {
+
 	logCtx := log.WithFields(log.Fields{"project_id": projectId, "user_id": userId})
 
-	cacheEvent, err := GetCacheUserLastEvent(projectId, userId)
+	cachedLastEvent, err := GetCacheUserLastEvent(projectId, userId)
 	if err != nil {
 		if err == redis.ErrNil {
 			return nil, http.StatusNotFound
@@ -228,31 +231,34 @@ func GetLatestAnyEventOfUserInDurationFromCache(projectId uint64, userId string,
 		return nil, http.StatusInternalServerError
 	}
 
-	// cached event older than given duration.
-	if cacheEvent.Timestamp < U.UnixTimeBeforeDuration(duration) {
+	isActive := cachedLastEvent.Timestamp > (newEventTimestamp - NewUserSessionInactivityInSeconds)
+	if !isActive {
 		return nil, http.StatusNotFound
 	}
 
-	event, errCode := GetEventById(projectId, cacheEvent.ID)
+	event, errCode := GetEventById(projectId, cachedLastEvent.ID)
 	if errCode != http.StatusFound {
-		logCtx.WithField("err_code", errCode).Error("Failed to get event on using id from cache.")
+		logCtx.WithField("err_code", errCode).Error(
+			"Failed to get event on using id from cache.")
 		return nil, errCode
 	}
 
 	return event, http.StatusFound
 }
 
-func GetLatestAnyEventOfUserInDuration(projectId uint64, userId string, duration time.Duration) (*Event, int) {
-	db := C.GetServices().Db
+func GetLatestAnyEventOfUserForSession(projectId uint64, userId string,
+	newEventTimestamp int64) (*Event, int) {
 
-	if duration == 0 {
+	if newEventTimestamp == 0 {
 		return nil, http.StatusBadRequest
 	}
 
 	var events []Event
-	if err := db.Limit(1).Order("timestamp desc").Where("project_id = ? AND user_id = ? AND timestamp > ?",
-		projectId, userId, U.UnixTimeBeforeDuration(duration)).Find(&events).Error; err != nil {
-
+	// Is there any event in last 30 mins (inactivity) from current event timestamp?
+	db := C.GetServices().Db
+	err := db.Limit(1).Order("timestamp desc").Where("project_id = ? AND user_id = ? AND timestamp > ?",
+		projectId, userId, newEventTimestamp-NewUserSessionInactivityInSeconds).Find(&events).Error
+	if err != nil {
 		return nil, http.StatusInternalServerError
 	}
 
@@ -478,10 +484,13 @@ func createSessionEvent(projectId uint64, userId string, sessionEventNameId uint
 	isFirstSession bool, requestTimestamp int64, eventProperties,
 	userProperties *U.PropertiesMap, userPropertiesId string) (*Event, int) {
 
+	logCtx := log.WithField("project_id", projectId).WithField("user_id", userId)
+
 	sessionEventProps := U.GetSessionProperties(isFirstSession, eventProperties, userProperties)
 	sessionPropsJson, err := json.Marshal(sessionEventProps)
 	if err != nil {
-		log.WithError(err).Error("Failed to add session event properties. JSON marshal failed.")
+		logCtx.WithError(err).Error(
+			"Failed to add session event properties. JSON marshal failed.")
 		return nil, http.StatusInternalServerError
 	}
 
@@ -494,15 +503,17 @@ func createSessionEvent(projectId uint64, userId string, sessionEventNameId uint
 		UserPropertiesId: userPropertiesId,
 	})
 	if errCode != http.StatusCreated {
+		logCtx.Error("Failed to create session event.")
 		return nil, errCode
 	}
 
+	// Adds session count.
 	propertiesToInsert := make(map[string]interface{})
 	(propertiesToInsert)[U.UP_SESSION_COUNT] = newSessionEvent.Count
-
 	errCode = GetAndOverWriteUserProperties(projectId, userId, userPropertiesId, propertiesToInsert)
 	if errCode != http.StatusAccepted {
-		log.WithField("UserId", userId).WithField("ErrCode", errCode).Error("Failed to overwrite user Properties with session count")
+		log.WithField("UserId", userId).WithField("ErrCode", errCode).Error(
+			"Failed to overwrite user Properties with session count")
 	} else {
 		return newSessionEvent, http.StatusCreated
 	}
@@ -510,7 +521,7 @@ func createSessionEvent(projectId uint64, userId string, sessionEventNameId uint
 }
 
 func CreateOrGetSessionEvent(projectId uint64, userId string, isFirstSession bool, hasDefinedMarketingProperty bool,
-	requestTimestamp int64, eventProperties, userProperties *U.PropertiesMap, userPropertiesId string) (*Event, int) {
+	newEventTimestamp int64, eventProperties, userProperties *U.PropertiesMap, userPropertiesId string) (*Event, int) {
 
 	logCtx := log.WithField("project_id", projectId).WithField("user_id", userId)
 
@@ -524,23 +535,22 @@ func CreateOrGetSessionEvent(projectId uint64, userId string, isFirstSession boo
 		// If the event has a marketing property, then the user is visiting again from a marketing channel.
 		// Creating a new session event irrespective of timing to keep track of multiple marketing touch points
 		// from the same user.
-		return createSessionEvent(projectId, userId, sessionEventName.ID, isFirstSession, requestTimestamp,
+		return createSessionEvent(projectId, userId, sessionEventName.ID, isFirstSession, newEventTimestamp,
 			eventProperties, userProperties, userPropertiesId)
 	}
 
-	latestUserEvent, errCode := GetLatestAnyEventOfUserInDurationFromCache(projectId, userId,
-		NewUserSessionInactivityDuration)
+	latestUserEvent, errCode := GetLatestAnyEventOfUserForSessionFromCache(projectId, userId, newEventTimestamp)
 	if errCode == http.StatusNotFound || errCode == http.StatusInternalServerError {
 		// Double check user's inactivity for the duration.
-		dbLatestUserEvent, errCode := GetLatestAnyEventOfUserInDuration(projectId, userId,
-			NewUserSessionInactivityDuration)
+		dbLatestUserEvent, errCode := GetLatestAnyEventOfUserForSession(
+			projectId, userId, newEventTimestamp)
 		if errCode == http.StatusInternalServerError {
 			logCtx.Error("Failed to get latest any event of user in duration.")
 			return nil, http.StatusInternalServerError
 		}
 
 		if errCode == http.StatusNotFound {
-			return createSessionEvent(projectId, userId, sessionEventName.ID, isFirstSession, requestTimestamp,
+			return createSessionEvent(projectId, userId, sessionEventName.ID, isFirstSession, newEventTimestamp,
 				eventProperties, userProperties, userPropertiesId)
 		}
 
@@ -571,7 +581,7 @@ func CreateOrGetSessionEvent(projectId uint64, userId string, isFirstSession boo
 
 	if errCode == http.StatusNotFound {
 		logCtx.Error("Session length of user exceeded 1 day. Created new session.")
-		return createSessionEvent(projectId, userId, sessionEventName.ID, isFirstSession, requestTimestamp,
+		return createSessionEvent(projectId, userId, sessionEventName.ID, isFirstSession, newEventTimestamp,
 			eventProperties, userProperties, userPropertiesId)
 	}
 

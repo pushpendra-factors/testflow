@@ -162,6 +162,7 @@ func GetAllIntAdwordsProjectSettings() ([]AdwordsProjectSettings, int) {
 		log.WithError(err).Error("Failed to get all adwords project settings.")
 		return adwordsProjectSettings, http.StatusInternalServerError
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 		var adwordsSettings AdwordsProjectSettings

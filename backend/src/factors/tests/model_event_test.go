@@ -22,7 +22,8 @@ func TestDBCreateAndGetEvent(t *testing.T) {
 	start := time.Now()
 
 	// Test successful CreateEvent.
-	newEvent := &M.Event{EventNameId: eventNameId, ProjectId: projectId, UserId: userId}
+	newEvent := &M.Event{EventNameId: eventNameId, ProjectId: projectId,
+		UserId: userId, Timestamp: start.Unix()}
 	event, errCode := M.CreateEvent(newEvent)
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.True(t, len(event.ID) > 30)
@@ -64,7 +65,8 @@ func TestDBCreateAndGetEvent(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, errCode)
 	assert.Nil(t, retEvent)
 	// Test successful CreateEvent with count increment
-	event, errCode = M.CreateEvent(&M.Event{EventNameId: eventNameId, ProjectId: projectId, UserId: userId})
+	event, errCode = M.CreateEvent(&M.Event{EventNameId: eventNameId,
+		ProjectId: projectId, UserId: userId, Timestamp: start.Unix()})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.True(t, len(event.ID) > 30)
 	assert.Equal(t, projectId, event.ProjectId)
@@ -87,9 +89,11 @@ func TestDBCreateAndGetEvent(t *testing.T) {
 		//projectId, userId, eventNameId, err := SetupProjectUserEventName()
 		assert.Nil(t, err)
 
-		event, errCode = M.CreateEvent(&M.Event{EventNameId: eventNameId, ProjectId: projectId, UserId: userId, CustomerEventId: &custEventId})
+		event, errCode = M.CreateEvent(&M.Event{EventNameId: eventNameId, ProjectId: projectId,
+			UserId: userId, CustomerEventId: &custEventId, Timestamp: time.Now().Unix()})
 		assert.Equal(t, http.StatusCreated, errCode)
-		_, errCode = M.CreateEvent(&M.Event{EventNameId: eventNameId, ProjectId: projectId, UserId: userId, CustomerEventId: &custEventId})
+		_, errCode = M.CreateEvent(&M.Event{EventNameId: eventNameId, ProjectId: projectId,
+			UserId: userId, CustomerEventId: &custEventId, Timestamp: time.Now().Unix()})
 		assert.Equal(t, http.StatusFound, errCode)
 	})
 
@@ -100,7 +104,8 @@ func TestDBCreateAndGetEvent(t *testing.T) {
 
 	// Test Create Event with properties.
 	properties := json.RawMessage(`{"email": "random@example.com"}`)
-	event, errCode = M.CreateEvent(&M.Event{EventNameId: eventNameId, ProjectId: projectId, UserId: userId, Properties: postgres.Jsonb{properties}})
+	event, errCode = M.CreateEvent(&M.Event{EventNameId: eventNameId, ProjectId: projectId,
+		UserId: userId, Properties: postgres.Jsonb{properties}, Timestamp: time.Now().Unix()})
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotNil(t, event)
 	assert.NotEqual(t, postgres.Jsonb{RawMessage: json.RawMessage(nil)}, event.Properties)
@@ -117,22 +122,26 @@ func TestDBCreateAndGetEvent(t *testing.T) {
 
 	// Test Create Event with id.
 	randomId := "random_id"
-	event, errCode = M.CreateEvent(&M.Event{ID: randomId, EventNameId: eventNameId, ProjectId: projectId, UserId: userId})
+	event, errCode = M.CreateEvent(&M.Event{ID: randomId, EventNameId: eventNameId,
+		ProjectId: projectId, UserId: userId, Timestamp: time.Now().Unix()})
 	assert.Equal(t, http.StatusBadRequest, errCode)
 	assert.Nil(t, event)
 
 	// Test Create Event without projectId.
-	event, errCode = M.CreateEvent(&M.Event{EventNameId: eventNameId, UserId: userId})
+	event, errCode = M.CreateEvent(&M.Event{EventNameId: eventNameId, UserId: userId,
+		Timestamp: time.Now().Unix()})
 	assert.Equal(t, http.StatusBadRequest, errCode)
 	assert.Nil(t, event)
 
 	// Test Create Event without userId.
-	event, errCode = M.CreateEvent(&M.Event{EventNameId: eventNameId, ProjectId: projectId})
+	event, errCode = M.CreateEvent(&M.Event{EventNameId: eventNameId,
+		ProjectId: projectId, Timestamp: time.Now().Unix()})
 	assert.Equal(t, http.StatusBadRequest, errCode)
 	assert.Nil(t, event)
 
 	// Test Create Event without eventNameId.
-	event, errCode = M.CreateEvent(&M.Event{EventNameId: 0, ProjectId: projectId, UserId: userId})
+	event, errCode = M.CreateEvent(&M.Event{EventNameId: 0, ProjectId: projectId, UserId: userId,
+		Timestamp: time.Now().Unix()})
 	assert.Equal(t, http.StatusInternalServerError, errCode)
 	assert.Nil(t, event)
 }
@@ -179,7 +188,8 @@ func TestGetFirstLastEventTimestamp(t *testing.T) {
 func createEventWithTimestampAndPrperties(t *testing.T, project *M.Project, user *M.User, timestamp int64, properties json.RawMessage) (*M.EventName, *M.Event) {
 	eventName, errCode := M.CreateOrGetUserCreatedEventName(&M.EventName{ProjectId: project.ID, Name: fmt.Sprintf("event_%d", timestamp)})
 	assert.NotNil(t, eventName)
-	event, errCode := M.CreateEvent(&M.Event{ProjectId: project.ID, EventNameId: eventName.ID, UserId: user.ID, Timestamp: timestamp, Properties: postgres.Jsonb{properties}})
+	event, errCode := M.CreateEvent(&M.Event{ProjectId: project.ID, EventNameId: eventName.ID, UserId: user.ID,
+		Timestamp: timestamp, Properties: postgres.Jsonb{properties}})
 	assert.Equal(t, http.StatusCreated, errCode)
 	return eventName, event
 }
@@ -191,7 +201,8 @@ func TestGetRecentEventPropertyKeys(t *testing.T) {
 	t.Run("RecentPropertiesWithLimit", func(t *testing.T) {
 		timestamp := time.Now().Unix()
 		eventName, _ := createEventWithTimestampAndPrperties(t, project, user, timestamp, json.RawMessage(`{"rProp1": "value1", "rProp2": 1}`))
-		_, errCode1 := M.CreateEvent(&M.Event{ProjectId: project.ID, EventNameId: eventName.ID, UserId: user.ID, Timestamp: timestamp, Properties: postgres.Jsonb{json.RawMessage(`{"rProp3": "value2", "rProp4": 2}`)}})
+		_, errCode1 := M.CreateEvent(&M.Event{ProjectId: project.ID, EventNameId: eventName.ID, UserId: user.ID,
+			Timestamp: timestamp, Properties: postgres.Jsonb{json.RawMessage(`{"rProp3": "value2", "rProp4": 2}`)}})
 		assert.Equal(t, http.StatusCreated, errCode1)
 
 		props, errCode := M.GetRecentEventPropertyKeysWithLimits(project.ID, eventName.Name, 1)
@@ -228,7 +239,8 @@ func TestGetRecentEventPropertyValues(t *testing.T) {
 	t.Run("RecentPropertyValues", func(t *testing.T) {
 		timestamp := time.Now().Unix()
 		eventName, _ := createEventWithTimestampAndPrperties(t, project, user, timestamp, json.RawMessage(`{"rProp1": "value1"}`))
-		_, errCode1 := M.CreateEvent(&M.Event{ProjectId: project.ID, EventNameId: eventName.ID, UserId: user.ID, Timestamp: timestamp, Properties: postgres.Jsonb{json.RawMessage(`{"rProp1": "value2"}`)}})
+		_, errCode1 := M.CreateEvent(&M.Event{ProjectId: project.ID, EventNameId: eventName.ID, UserId: user.ID,
+			Timestamp: timestamp, Properties: postgres.Jsonb{json.RawMessage(`{"rProp1": "value2"}`)}})
 		assert.Equal(t, http.StatusCreated, errCode1)
 
 		// limited events to 1.
@@ -247,7 +259,8 @@ func TestGetRecentEventPropertyValues(t *testing.T) {
 	t.Run("PropertyValuesOlderThan24Hour", func(t *testing.T) {
 		timestamp := U.UnixTimeBeforeDuration(24 * time.Hour)
 		eventName, _ := createEventWithTimestampAndPrperties(t, project, user, timestamp, json.RawMessage(`{"rProp1": "value1"}`))
-		_, errCode1 := M.CreateEvent(&M.Event{ProjectId: project.ID, EventNameId: eventName.ID, UserId: user.ID, Timestamp: timestamp, Properties: postgres.Jsonb{json.RawMessage(`{"rProp1": "value2"}`)}})
+		_, errCode1 := M.CreateEvent(&M.Event{ProjectId: project.ID, EventNameId: eventName.ID, UserId: user.ID,
+			Timestamp: timestamp, Properties: postgres.Jsonb{json.RawMessage(`{"rProp1": "value2"}`)}})
 		assert.Equal(t, http.StatusCreated, errCode1)
 
 		values, errCode2 := M.GetRecentEventPropertyValuesWithLimits(project.ID, eventName.Name, "rProp1", 100, 100)
@@ -301,21 +314,25 @@ func TestGetLatestAnyEventOfUserInDuration(t *testing.T) {
 	assert.Nil(t, err)
 
 	// no event exist in 10 secs.
-	event, errCode := M.GetLatestAnyEventOfUserInDuration(projectId, userId, 30*time.Minute)
+	event, errCode := M.GetLatestAnyEventOfUserForSession(projectId, userId,
+		U.UnixTimeBeforeDuration(30*time.Minute))
 	assert.Equal(t, http.StatusNotFound, errCode)
 	assert.Nil(t, event)
 
-	// event exist in 10 secs.
-	createdEvent, errCode := M.CreateEvent(&M.Event{EventNameId: eventNameId, ProjectId: projectId, UserId: userId})
+	createEventTimestamp := U.UnixTimeBeforeDuration(time.Minute * 100)
+	// user active.
+	createdEvent, errCode := M.CreateEvent(&M.Event{EventNameId: eventNameId,
+		ProjectId: projectId, UserId: userId, Timestamp: createEventTimestamp})
 	assert.Equal(t, http.StatusCreated, errCode)
-	event, errCode = M.GetLatestAnyEventOfUserInDuration(projectId, userId, 10*time.Second)
+	event, errCode = M.GetLatestAnyEventOfUserForSession(projectId, userId,
+		createEventTimestamp+300) // after 5 mins of last activity.
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, errCode)
 	assert.Equal(t, createdEvent.ID, event.ID)
 
-	// inactivity for duration.
-	time.Sleep(3 * time.Second)
-	_, errCode = M.GetLatestAnyEventOfUserInDuration(projectId, userId, 2*time.Second)
+	// inactivity.
+	_, errCode = M.GetLatestAnyEventOfUserForSession(projectId, userId,
+		createEventTimestamp+1800) // after 30 mins of last activity.
 	assert.Equal(t, http.StatusNotFound, errCode)
 }
 
@@ -336,7 +353,8 @@ func TestCacheEvent(t *testing.T) {
 		assert.Equal(t, timestamp, cacheEvent.Timestamp)
 		assert.Nil(t, err)
 
-		event, errCode := M.CreateEvent(&M.Event{EventNameId: eventName.ID, ProjectId: project.ID, UserId: user.ID})
+		event, errCode := M.CreateEvent(&M.Event{EventNameId: eventName.ID, ProjectId: project.ID,
+			UserId: user.ID, Timestamp: time.Now().Unix()})
 		assert.Equal(t, http.StatusCreated, errCode)
 
 		cacheEvent, err = M.GetCacheUserLastEvent(project.ID, user.ID)
@@ -351,22 +369,26 @@ func TestGetLatestAnyEventOfUserInDurationFromCache(t *testing.T) {
 	projectId, userId, eventNameId, err := SetupProjectUserEventName()
 	assert.Nil(t, err)
 
-	// no key exist on cache, so not found.
-	event, errCode := M.GetLatestAnyEventOfUserInDurationFromCache(projectId, userId, 30*time.Minute)
+	// no event exist in 10 secs.
+	event, errCode := M.GetLatestAnyEventOfUserForSessionFromCache(projectId, userId,
+		U.UnixTimeBeforeDuration(30*time.Minute))
 	assert.Equal(t, http.StatusNotFound, errCode)
 	assert.Nil(t, event)
 
-	// event exist in 10 secs.
-	createdEvent, errCode := M.CreateEvent(&M.Event{EventNameId: eventNameId, ProjectId: projectId, UserId: userId})
+	createEventTimestamp := U.UnixTimeBeforeDuration(time.Minute * 100)
+	// user active.
+	createdEvent, errCode := M.CreateEvent(&M.Event{EventNameId: eventNameId,
+		ProjectId: projectId, UserId: userId, Timestamp: createEventTimestamp})
 	assert.Equal(t, http.StatusCreated, errCode)
-	event, errCode = M.GetLatestAnyEventOfUserInDurationFromCache(projectId, userId, 10*time.Second)
+	event, errCode = M.GetLatestAnyEventOfUserForSessionFromCache(projectId,
+		userId, createEventTimestamp+300) // after 5 mins of last activity.
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, errCode)
 	assert.Equal(t, createdEvent.ID, event.ID)
 
-	// inactivity for duration.
-	time.Sleep(3 * time.Second)
-	_, errCode = M.GetLatestAnyEventOfUserInDurationFromCache(projectId, userId, 2*time.Second)
+	// inactivity.
+	_, errCode = M.GetLatestAnyEventOfUserForSessionFromCache(projectId, userId,
+		createEventTimestamp+1800) // after 30 mins of last activity.
 	assert.Equal(t, http.StatusNotFound, errCode)
 }
 
@@ -376,16 +398,14 @@ func TestCreateOrGetSessionEvent(t *testing.T) {
 
 	user, _ := M.GetUser(projectId, userId)
 	userPropertiesId := user.PropertiesId
+	sessionEventTimestamp := U.UnixTimeBeforeDuration(time.Minute * 32)
 
 	t.Run("ShouldCreateNewSessionAsNoEventInLast30Mins", func(t *testing.T) {
-		requestTimestamp := U.UnixTimeBeforeDuration(time.Minute * 32)
-		session, errCode := M.CreateOrGetSessionEvent(projectId, userId, true, false, requestTimestamp,
+		session, errCode := M.CreateOrGetSessionEvent(projectId, userId, true, false, sessionEventTimestamp,
 			&U.PropertiesMap{U.EP_PAGE_LOAD_TIME: 0.10}, &U.PropertiesMap{}, userPropertiesId)
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.NotNil(t, session)
 
-		userProperties, _ := M.GetUserProperties(projectId, userId, userPropertiesId)
-		userPropertiesMap, _ := U.DecodePostgresJsonb(userProperties)
 		// Session event should exist with initial event properites.
 		sessionEvent, errCode := M.GetEvent(projectId, userId, session.ID)
 		assert.Equal(t, http.StatusFound, errCode)
@@ -394,36 +414,32 @@ func TestCreateOrGetSessionEvent(t *testing.T) {
 		var eventPropertiesMap map[string]interface{}
 		json.Unmarshal(eventPropertiesBytes.([]byte), &eventPropertiesMap)
 		assert.NotNil(t, eventPropertiesMap[U.UP_INITIAL_PAGE_LOAD_TIME])
-		assert.NotNil(t, (*userPropertiesMap)[U.UP_SESSION_COUNT])
-		assert.Equal(t, 0.10, eventPropertiesMap[U.UP_INITIAL_PAGE_LOAD_TIME])
 	})
 
 	t.Run("ShouldReturnLatestSessionAsUserWasActive", func(t *testing.T) {
 		_, errCode := M.CreateEvent(&M.Event{EventNameId: eventNameId,
-			ProjectId: projectId, UserId: userId})
+			ProjectId: projectId, UserId: userId, Timestamp: sessionEventTimestamp + 10})
 
-		requestTimestamp := time.Now().UTC().Unix()
-		session, errCode := M.CreateOrGetSessionEvent(projectId, userId, true, false, requestTimestamp,
-			&U.PropertiesMap{}, &U.PropertiesMap{}, userPropertiesId)
+		session, errCode := M.CreateOrGetSessionEvent(projectId, userId, true,
+			false, sessionEventTimestamp+20, &U.PropertiesMap{}, &U.PropertiesMap{}, userPropertiesId)
+		assert.Equal(t, http.StatusFound, errCode)
+		assert.NotNil(t, session)
 
 		userProperties, _ := M.GetUserProperties(projectId, userId, userPropertiesId)
 		userPropertiesMap, _ := U.DecodePostgresJsonb(userProperties)
-		assert.Equal(t, http.StatusFound, errCode)
-		assert.NotNil(t, session)
 		assert.NotNil(t, (*userPropertiesMap)[U.UP_SESSION_COUNT])
 	})
 
 	t.Run("ShouldCreateNewSessionAsHasMarketingProperty", func(t *testing.T) {
 		_, errCode := M.CreateEvent(&M.Event{EventNameId: eventNameId,
-			ProjectId: projectId, UserId: userId})
-
-		requestTimestamp := time.Now().UTC().Unix()
-		session, errCode := M.CreateOrGetSessionEvent(projectId, userId, true, true, requestTimestamp,
-			&U.PropertiesMap{U.EP_PAGE_LOAD_TIME: 0.10, U.EP_CAMPAIGN: "test-campaign"},
-			&U.PropertiesMap{}, userPropertiesId)
+			ProjectId: projectId, UserId: userId, Timestamp: sessionEventTimestamp + 40})
 
 		userProperties, _ := M.GetUserProperties(projectId, userId, userPropertiesId)
 		userPropertiesMap, _ := U.DecodePostgresJsonb(userProperties)
+
+		session, errCode := M.CreateOrGetSessionEvent(projectId, userId, true, true,
+			sessionEventTimestamp+10, &U.PropertiesMap{U.EP_PAGE_LOAD_TIME: 0.10,
+				U.EP_CAMPAIGN: "test-campaign"}, &U.PropertiesMap{}, userPropertiesId)
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.NotNil(t, session)
 		assert.NotNil(t, (*userPropertiesMap)[U.UP_SESSION_COUNT])
