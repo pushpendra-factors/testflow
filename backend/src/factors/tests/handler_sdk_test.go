@@ -589,8 +589,8 @@ func TestTrackHandlerWithUserSession(t *testing.T) {
 	// Tracked event should have latest session of user associated with it.
 	rEvent, errCode := M.GetEvent(project.ID, responseUserId, responseEventId)
 	assert.Equal(t, http.StatusFound, errCode)
-	latestSessionEvent, errCode := M.GetLatestEventOfUserByEventNameId(rEvent.ProjectId, rEvent.UserId,
-		sessionEventName.ID, rEvent.Timestamp-86400, rEvent.Timestamp)
+	latestSessionEvent, errCode := M.GetLatestEventOfUserByEventNameId(rEvent.ProjectId,
+		rEvent.UserId, sessionEventName.ID, rEvent.Timestamp-86400)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, rEvent.SessionId)
 	assert.NotEmpty(t, *rEvent.SessionId)

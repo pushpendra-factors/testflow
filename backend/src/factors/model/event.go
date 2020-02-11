@@ -269,19 +269,19 @@ func GetLatestAnyEventOfUserForSession(projectId uint64, userId string,
 	return &events[0], http.StatusFound
 }
 
-func GetLatestEventOfUserByEventNameId(projectId uint64, userId string, eventNameId uint64,
-	startTimestamp, endTimestamp int64) (*Event, int) {
+func GetLatestEventOfUserByEventNameId(projectId uint64, userId string,
+	eventNameId uint64, afterTimestamp int64) (*Event, int) {
 
 	db := C.GetServices().Db
 
-	if startTimestamp == 0 || endTimestamp == 0 {
+	if afterTimestamp == 0 {
 		return nil, http.StatusBadRequest
 	}
 
 	var events []Event
 	if err := db.Limit(1).Order("timestamp desc").Where(
-		"project_id = ? AND event_name_id = ? AND user_id = ? AND timestamp > ? AND timestamp <= ?",
-		projectId, eventNameId, userId, startTimestamp, endTimestamp).Find(&events).Error; err != nil {
+		"project_id = ? AND event_name_id = ? AND user_id = ? AND timestamp > ?",
+		projectId, eventNameId, userId, afterTimestamp).Find(&events).Error; err != nil {
 
 		return nil, http.StatusInternalServerError
 	}
@@ -539,10 +539,9 @@ func CreateOrGetSessionEvent(projectId uint64, userId string, isFirstSession boo
 		latestUserEvent = dbLatestUserEvent
 	}
 
-	// Get latest session event of user from events between user's last event timestamp and
-	// one day before user's last event timestamp.
-	latestSessionEvent, errCode := GetLatestEventOfUserByEventNameId(projectId, userId, sessionEventName.ID,
-		latestUserEvent.Timestamp-86400, latestUserEvent.Timestamp)
+	// Get latest session event of user from events last one day window.
+	latestSessionEvent, errCode := GetLatestEventOfUserByEventNameId(projectId, userId,
+		sessionEventName.ID, latestUserEvent.Timestamp-86400)
 
 	if errCode == http.StatusInternalServerError {
 		logCtx.Error("Failed to get latest session event of user.")
