@@ -246,7 +246,7 @@ func InitRedis(host string, port int) {
 
 	conn := fmt.Sprintf("%s:%d", host, port)
 	redisPool := &redis.Pool{
-		MaxActive: 100,
+		MaxActive: 300,
 		MaxIdle:   10,
 		// IdleTimeout: 240 * time.Second,
 		Dial: func() (redis.Conn, error) {
