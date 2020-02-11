@@ -207,6 +207,9 @@ func GetProjectByPrivateToken(privateToken string) (*Project, int) {
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound
 		}
+
+		log.WithField("private_token", privateToken).WithError(err).Error(
+			"Failed to get project by private token.")
 		return nil, http.StatusInternalServerError
 	}
 
