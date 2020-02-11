@@ -943,8 +943,3 @@ func FillFirstEventUserProperties(initialUserProperties *map[string]interface{},
 		return errors.New("Filling properties (hour and day) failed. Invalid join time.")
 	}
 }
-
-func FillSessionCountInEventProperties(eventProperties *map[string]interface{}, sessionCount uint64) (*postgres.Jsonb, error) {
-	(*eventProperties)[EP_SESSION] = sessionCount
-	return EncodeToPostgresJsonb(eventProperties)
-}
