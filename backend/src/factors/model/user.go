@@ -341,6 +341,7 @@ func GetRecentUserPropertyKeysWithLimits(projectId uint64, usersLimit int) (map[
 		logCtx.WithError(err).Error("Failed to get recent user property keys.")
 		return nil, http.StatusInternalServerError
 	}
+	defer rows.Close()
 
 	propertiesMap := make(map[string]map[interface{}]bool, 0)
 	for rows.Next() {
@@ -394,6 +395,7 @@ func GetRecentUserPropertyValuesWithLimits(projectId uint64, propertyKey string,
 		logCtx.WithError(err).Error("Failed to get property values.")
 		return values, http.StatusInternalServerError
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 		var value string
@@ -453,15 +455,21 @@ func UpdateUserJoinTimePropertyForCustomerUser(projectId uint64, customerUserId 
 }
 
 func GetUserPropertiesAsMap(projectId uint64, id string) (*map[string]interface{}, int) {
+	logCtx := log.WithField("project_id", projectId).WithField("id", id)
+
 	user, errCode := GetUser(projectId, id)
 	if errCode != http.StatusFound {
-		log.WithField("err_code", errCode).Error("Getting user failed.")
+		logCtx.WithField("err_code", errCode).Error(
+			"Getting user failed on get user properties as map.")
 		return nil, errCode
 	}
+
 	existingUserProperties, err := U.DecodePostgresJsonb(&user.Properties)
 	if err != nil {
-		log.WithError(err).Error("Unmarshaling user properties failed.")
+		logCtx.WithError(err).Error(
+			"Unmarshaling user properties failed on get user properties as map.")
 		return nil, http.StatusInternalServerError
 	}
+
 	return existingUserProperties, http.StatusFound
 }
