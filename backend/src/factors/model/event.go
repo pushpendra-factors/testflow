@@ -482,7 +482,7 @@ func GetUserEventsByEventNameId(projectId uint64, userId string, eventNameId uin
 
 func createSessionEvent(projectId uint64, userId string, sessionEventNameId uint64,
 	isFirstSession bool, requestTimestamp int64, eventProperties,
-	userProperties *U.PropertiesMap, userPropertiesId string) (*Event, int) {
+	userProperties *U.PropertiesMap, userPropertiesId string, latestUserEventTimestamp int64) (*Event, int) {
 
 	db := C.GetServices().Db
 
@@ -511,7 +511,11 @@ func createSessionEvent(projectId uint64, userId string, sessionEventNameId uint
 			log.WithField("projectId", projectId).Error(
 				"Failed to decode previous session event properties on createSessionEvent.")
 		}
-		timeSpent = float64(time.Now().Unix() - previousSessionEvent.Timestamp)
+		if latestUserEventTimestamp == 0 {
+			timeSpent = 0
+		} else {
+			timeSpent = float64(latestUserEventTimestamp - previousSessionEvent.Timestamp)
+		}
 		(*previousEventProperties)[U.EP_PAGE_COUNT] = count
 		(*previousEventProperties)[U.EP_SESSION_TIME_SPENT] = timeSpent
 		previousEventPropertiesJSONb, err := U.EncodeToPostgresJsonb(previousEventProperties)
@@ -581,7 +585,7 @@ func CreateOrGetSessionEvent(projectId uint64, userId string, isFirstSession boo
 		// Creating a new session event irrespective of timing to keep track of multiple marketing touch points
 		// from the same user.
 		return createSessionEvent(projectId, userId, sessionEventName.ID, isFirstSession, newEventTimestamp,
-			eventProperties, userProperties, userPropertiesId)
+			eventProperties, userProperties, userPropertiesId, 0)
 	}
 
 	latestUserEvent, errCode := GetLatestAnyEventOfUserForSessionFromCache(projectId, userId, newEventTimestamp)
@@ -596,9 +600,8 @@ func CreateOrGetSessionEvent(projectId uint64, userId string, isFirstSession boo
 
 		if errCode == http.StatusNotFound {
 			return createSessionEvent(projectId, userId, sessionEventName.ID, isFirstSession, newEventTimestamp,
-				eventProperties, userProperties, userPropertiesId)
+				eventProperties, userProperties, userPropertiesId, 0)
 		}
-
 		latestUserEvent = dbLatestUserEvent
 	}
 
@@ -627,7 +630,7 @@ func CreateOrGetSessionEvent(projectId uint64, userId string, isFirstSession boo
 	if errCode == http.StatusNotFound {
 		logCtx.Error("Session length of user exceeded 1 day. Created new session.")
 		return createSessionEvent(projectId, userId, sessionEventName.ID, isFirstSession, newEventTimestamp,
-			eventProperties, userProperties, userPropertiesId)
+			eventProperties, userProperties, userPropertiesId, latestUserEvent.Timestamp)
 	}
 
 	return latestSessionEvent, http.StatusFound

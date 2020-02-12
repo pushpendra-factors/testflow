@@ -701,6 +701,7 @@ func TestTrackHandlerUserSessionWithTimestamp(t *testing.T) {
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Len(t, sessionEvents, 2)
 
+	// Check if user Properties have been updated with Page_Count and Total_time_across_sessions
 	user, errCode = M.GetUser(project.ID, user.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 
