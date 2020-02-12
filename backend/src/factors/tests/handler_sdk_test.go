@@ -700,6 +700,14 @@ func TestTrackHandlerUserSessionWithTimestamp(t *testing.T) {
 		sessionEventName.ID)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Len(t, sessionEvents, 2)
+
+	user, errCode = M.GetUser(project.ID, user.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+
+	userProperties, err := U.DecodePostgresJsonb(&user.Properties)
+	assert.Nil(t, err)
+	assert.NotNil(t, (*userProperties)[U.UP_PAGES_COUNT])
+	assert.NotNil(t, (*userProperties)[U.UP_TOTAL_SESSIONS_TIME])
 }
 
 func TestTrackHandlerWithFormSubmit(t *testing.T) {
