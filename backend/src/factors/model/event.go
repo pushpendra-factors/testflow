@@ -638,7 +638,7 @@ func OverwriteEventProperties(projectId uint64, userId string, eventId string, n
 
 	if err := db.Model(&Event{}).Where("project_id = ? AND user_id = ? AND id = ?",
 		projectId, userId, eventId).Update(
-		"properties", &newEventProperties).Error; err != nil {
+		"properties", newEventProperties).Error; err != nil {
 		return err
 	}
 	return nil

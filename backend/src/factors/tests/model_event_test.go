@@ -457,3 +457,60 @@ func TestCreateOrGetSessionEvent(t *testing.T) {
 		assert.Equal(t, "test-campaign", eventPropertiesMap[U.EP_CAMPAIGN])
 	})
 }
+func TestOverwriteEventProperties(t *testing.T) {
+	projectId, userId, eventNameId, err := SetupProjectUserEventName()
+	assert.Nil(t, err)
+
+	event, errCode := M.CreateEvent(&M.Event{EventNameId: eventNameId,
+		ProjectId: projectId, UserId: userId, Timestamp: time.Now().Unix()})
+
+	eventPropertiesMap, err := U.DecodePostgresJsonb(&event.Properties)
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.Nil(t, (*eventPropertiesMap)["Hello"])
+	(*eventPropertiesMap)["Hello"] = "World"
+
+	eventPropertiesJSONb, err := U.EncodeToPostgresJsonb(eventPropertiesMap)
+	assert.Nil(t, err)
+
+	err = M.OverwriteEventProperties(projectId, userId, event.ID, eventPropertiesJSONb)
+	assert.Nil(t, err)
+
+	rEvent, errCode := M.GetEvent(projectId, userId, event.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+
+	rEventPropertiesMap, err := U.DecodePostgresJsonb(&rEvent.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, (*rEventPropertiesMap)["Hello"], "World")
+}
+
+func TestPageCountAndPageTimeSpentProperties(t *testing.T) {
+	projectId, userId, _, err := SetupProjectUserEventName()
+	assert.Nil(t, err)
+	user, _ := M.GetUser(projectId, userId)
+	userPropertiesId := user.PropertiesId
+
+	firstSession, errCode := M.CreateOrGetSessionEvent(projectId, userId, true, false, time.Now().Unix(),
+		&U.PropertiesMap{U.EP_PAGE_LOAD_TIME: 0.10}, &U.PropertiesMap{}, userPropertiesId)
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotNil(t, firstSession)
+
+	secondSession, errCode := M.CreateOrGetSessionEvent(projectId, userId, false, false, time.Now().Unix()+86400,
+		&U.PropertiesMap{U.EP_PAGE_LOAD_TIME: 0.10}, &U.PropertiesMap{}, userPropertiesId)
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotNil(t, secondSession)
+
+	firstSessionEvent, errCode := M.GetEvent(projectId, userId, firstSession.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+	firstSessionEventPropertiesMap, err := U.DecodePostgresJsonb(&firstSessionEvent.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, (*firstSessionEventPropertiesMap)[U.EP_PAGE_COUNT], float64(0))
+	assert.Equal(t, float64(0), (*firstSessionEventPropertiesMap)[U.EP_SESSION_TIME_SPENT])
+
+	user, errCode = M.GetUser(projectId, userId)
+	assert.Equal(t, http.StatusFound, errCode)
+
+	userProperties, err := U.DecodePostgresJsonb(&user.Properties)
+	assert.Nil(t, err)
+	assert.NotNil(t, (*userProperties)[U.UP_PAGES_COUNT])
+	assert.NotNil(t, (*userProperties)[U.UP_TOTAL_SESSIONS_TIME])
+}
