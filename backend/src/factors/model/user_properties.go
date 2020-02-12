@@ -330,16 +330,17 @@ func GetAndOverWriteUserProperties(
 	if err != nil {
 		return http.StatusInternalServerError
 	}
+	if (*userPropertiesMap)[U.UP_PAGES_COUNT] != nil {
+		propertiesToInsert[U.UP_PAGES_COUNT] = propertiesToInsert[U.UP_PAGES_COUNT].(float64) +
+			(*userPropertiesMap)[U.UP_PAGES_COUNT].(float64)
+	}
+	if (*userPropertiesMap)[U.UP_TOTAL_SESSIONS_TIME] != nil {
+		propertiesToInsert[U.UP_TOTAL_SESSIONS_TIME] = propertiesToInsert[U.UP_TOTAL_SESSIONS_TIME].(float64) +
+			(*userPropertiesMap)[U.UP_TOTAL_SESSIONS_TIME].(float64)
+	}
 
 	for key, value := range propertiesToInsert {
-
-		if key != U.UP_PAGES_COUNT {
-			(*userPropertiesMap)[key] = value
-		} else if (*userPropertiesMap)[key] == nil {
-			(*userPropertiesMap)[key] = value
-		} else {
-			(*userPropertiesMap)[key] = ((*userPropertiesMap)[key]).(uint64) + value.(uint64)
-		}
+		(*userPropertiesMap)[key] = value
 	}
 
 	userPropertiesJSONb, err := U.EncodeToPostgresJsonb(userPropertiesMap)
@@ -348,42 +349,4 @@ func GetAndOverWriteUserProperties(
 	}
 
 	return OverwriteUserProperties(projectId, userId, userPropertiesId, userPropertiesJSONb)
-}
-
-func CountAndUpdatePageCountInSessionEvent(projectId uint64, userId string) (uint64, int) {
-	db := C.GetServices().Db
-
-	sessionEventName, errCode := CreateOrGetSessionEventName(projectId)
-	if errCode != http.StatusCreated && errCode != http.StatusConflict {
-		return 0, http.StatusInternalServerError
-	}
-	latestSessionEvent, errCode := GetLatestEventOfUserByEventNameId(
-		projectId, userId, sessionEventName.ID, time.Now().Unix()-86400, time.Now().Unix())
-
-	if errCode == http.StatusFound {
-
-		var count uint64
-		if err := db.Model(&Event{}).Where("project_id = ? AND user_id = ? AND timestamp >= ? AND event_name_id != ?",
-			projectId, userId, latestSessionEvent.Timestamp, sessionEventName.ID).Count(&count).Error; err != nil {
-			return 0, http.StatusInternalServerError
-		}
-
-		eventProperties, err := U.DecodePostgresJsonb(&latestSessionEvent.Properties)
-		if err != nil {
-			return 0, http.StatusInternalServerError
-		}
-
-		(*eventProperties)[U.EP_PAGE_COUNT] = count
-		eventPropertiesJSONb, err := U.EncodeToPostgresJsonb(eventProperties)
-
-		if err != nil {
-			return 0, http.StatusInternalServerError
-		}
-		err = OverwriteEventProperties(projectId, userId, latestSessionEvent.ID, eventPropertiesJSONb)
-		if err != nil {
-			return 0, http.StatusInternalServerError
-		}
-		return count, http.StatusAccepted
-	}
-	return 0, errCode
 }

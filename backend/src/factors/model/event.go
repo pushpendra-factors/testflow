@@ -484,11 +484,49 @@ func createSessionEvent(projectId uint64, userId string, sessionEventNameId uint
 	isFirstSession bool, requestTimestamp int64, eventProperties,
 	userProperties *U.PropertiesMap, userPropertiesId string) (*Event, int) {
 
-<<<<<<< HEAD
-	pageCount, errCode := CountAndUpdatePageCountInSessionEvent(projectId, userId)
-=======
+	db := C.GetServices().Db
+
+	var timeSpent float64
+	var pageCount float64
+
+	// Get previous session
+	sessionEventName, errCode := CreateOrGetSessionEventName(projectId)
+	if errCode != http.StatusCreated && errCode != http.StatusConflict {
+		log.WithField("projectId", projectId).Error("Failed to get or create Session event name on createSessionEvent.")
+	}
+	previousSessionEvent, errCode := GetLatestEventOfUserByEventNameId(
+		projectId, userId, sessionEventName.ID, time.Now().Unix()-86400, time.Now().Unix())
+
+	// get page count and page spent time
+	if errCode == http.StatusFound {
+		var count float64
+		if err := db.Model(&Event{}).Where("project_id = ? AND user_id = ? AND timestamp >= ? AND event_name_id != ?",
+			projectId, userId, previousSessionEvent.Timestamp, sessionEventName.ID).Count(&count).Error; err != nil {
+			log.WithFields(log.Fields{"projectId": projectId, "userId": userId}).Error(
+				"Failed to get page count from db on createSessionEvent.")
+		}
+
+		previousEventProperties, err := U.DecodePostgresJsonb(&previousSessionEvent.Properties)
+		if err != nil {
+			log.WithField("projectId", projectId).Error(
+				"Failed to decode previous session event properties on createSessionEvent.")
+		}
+		timeSpent = float64(time.Now().Unix() - previousSessionEvent.Timestamp)
+		(*previousEventProperties)[U.EP_PAGE_COUNT] = count
+		(*previousEventProperties)[U.EP_SESSION_TIME_SPENT] = timeSpent
+		previousEventPropertiesJSONb, err := U.EncodeToPostgresJsonb(previousEventProperties)
+		if err != nil {
+			log.WithField("projectId", projectId).Error("Failed to encode previous session event on createSessionEvent.")
+		}
+
+		err = OverwriteEventProperties(projectId, userId, previousSessionEvent.ID, previousEventPropertiesJSONb)
+		if err != nil {
+			log.WithField("projectId", projectId).Error("Failed to overWrite previous session event properties on createSessionEvent.")
+		}
+		pageCount = count
+	}
+
 	logCtx := log.WithField("project_id", projectId).WithField("user_id", userId)
->>>>>>> 350013a86b16a045aa4d40e2a96cf36e210db263
 
 	sessionEventProps := U.GetSessionProperties(isFirstSession, eventProperties, userProperties)
 	sessionPropsJson, err := json.Marshal(sessionEventProps)
@@ -511,14 +549,12 @@ func createSessionEvent(projectId uint64, userId string, sessionEventNameId uint
 		return nil, errCode
 	}
 
-	// Adds session count.
+	// Adds session count, page count and time spent.
 	propertiesToInsert := make(map[string]interface{})
 	(propertiesToInsert)[U.UP_SESSION_COUNT] = newSessionEvent.Count
-<<<<<<< HEAD
 	(propertiesToInsert)[U.UP_PAGES_COUNT] = pageCount
+	propertiesToInsert[U.UP_TOTAL_SESSIONS_TIME] = timeSpent
 
-=======
->>>>>>> 350013a86b16a045aa4d40e2a96cf36e210db263
 	errCode = GetAndOverWriteUserProperties(projectId, userId, userPropertiesId, propertiesToInsert)
 	if errCode != http.StatusAccepted {
 		log.WithField("UserId", userId).WithField("ErrCode", errCode).Error(
