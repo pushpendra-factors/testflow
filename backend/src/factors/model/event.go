@@ -502,8 +502,9 @@ func createSessionEvent(projectId uint64, userId string, sessionEventNameId uint
 	return newSessionEvent, errCode
 }
 
-func CreateOrGetSessionEvent(projectId uint64, userId string, isFirstSession bool, hasDefinedMarketingProperty bool,
-	newEventTimestamp int64, eventProperties, userProperties *U.PropertiesMap, userPropertiesId string) (*Event, int) {
+func CreateOrGetSessionEvent(projectId uint64, userId string, isNewUser bool,
+	hasDefinedMarketingProperty bool, newEventTimestamp int64, eventProperties,
+	userProperties *U.PropertiesMap, userPropertiesId string) (*Event, int) {
 
 	logCtx := log.WithField("project_id", projectId).WithField("user_id", userId)
 
@@ -513,11 +514,11 @@ func CreateOrGetSessionEvent(projectId uint64, userId string, isFirstSession boo
 		return nil, http.StatusInternalServerError
 	}
 
-	if hasDefinedMarketingProperty {
+	if isNewUser || hasDefinedMarketingProperty {
 		// If the event has a marketing property, then the user is visiting again from a marketing channel.
 		// Creating a new session event irrespective of timing to keep track of multiple marketing touch points
 		// from the same user.
-		return createSessionEvent(projectId, userId, sessionEventName.ID, isFirstSession, newEventTimestamp,
+		return createSessionEvent(projectId, userId, sessionEventName.ID, isNewUser, newEventTimestamp,
 			eventProperties, userProperties, userPropertiesId)
 	}
 
@@ -532,7 +533,7 @@ func CreateOrGetSessionEvent(projectId uint64, userId string, isFirstSession boo
 		}
 
 		if errCode == http.StatusNotFound {
-			return createSessionEvent(projectId, userId, sessionEventName.ID, isFirstSession, newEventTimestamp,
+			return createSessionEvent(projectId, userId, sessionEventName.ID, isNewUser, newEventTimestamp,
 				eventProperties, userProperties, userPropertiesId)
 		}
 
@@ -562,7 +563,7 @@ func CreateOrGetSessionEvent(projectId uint64, userId string, isFirstSession boo
 
 	if errCode == http.StatusNotFound {
 		logCtx.Error("Session length of user exceeded 1 day. Created new session.")
-		return createSessionEvent(projectId, userId, sessionEventName.ID, isFirstSession, newEventTimestamp,
+		return createSessionEvent(projectId, userId, sessionEventName.ID, isNewUser, newEventTimestamp,
 			eventProperties, userProperties, userPropertiesId)
 	}
 
