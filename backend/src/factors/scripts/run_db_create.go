@@ -123,6 +123,12 @@ func main() {
 		log.Info("user_properties table is associated with users table.")
 	}
 
+	if err := db.Exec("CREATE INDEX users_project_id_customer_user_id_idx ON users(project_id, customer_user_id)").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("users table users_project_id_customer_user_id_idx index creation failed.")
+	} else {
+		log.Info("Created users table users_project_id_customer_user_id_idx index.")
+	}
+
 	// Create event_names table.
 	if err := db.CreateTable(&M.EventName{}).Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("event_names table creation failed.")
