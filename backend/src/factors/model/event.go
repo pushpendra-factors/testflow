@@ -482,7 +482,7 @@ func GetUserEventsByEventNameId(projectId uint64, userId string, eventNameId uin
 
 func createSessionEvent(projectId uint64, userId string, sessionEventNameId uint64,
 	isFirstSession bool, requestTimestamp int64, eventProperties,
-	userProperties *U.PropertiesMap, userPropertiesId string, latestUserEventTimestamp int64) (*Event, int) {
+	userProperties *U.PropertiesMap, userPropertiesId string) (*Event, int) {
 
 	db := C.GetServices().Db
 
@@ -495,26 +495,28 @@ func createSessionEvent(projectId uint64, userId string, sessionEventNameId uint
 		log.WithField("projectId", projectId).Error("Failed to get or create Session event name on createSessionEvent.")
 	}
 	previousSessionEvent, errCode := GetLatestEventOfUserByEventNameId(
-		projectId, userId, sessionEventName.ID, time.Now().Unix()-86400, time.Now().Unix())
+		projectId, userId, sessionEventName.ID, requestTimestamp-86400, requestTimestamp)
 
 	// get page count and page spent time
 	if errCode == http.StatusFound {
-		var count float64
-		if err := db.Model(&Event{}).Where("project_id = ? AND user_id = ? AND timestamp >= ? AND event_name_id != ?",
-			projectId, userId, previousSessionEvent.Timestamp, sessionEventName.ID).Count(&count).Error; err != nil {
-			log.WithFields(log.Fields{"projectId": projectId, "userId": userId}).Error(
-				"Failed to get page count from db on createSessionEvent.")
-		}
+		var count int64
+		var timestamp int64
+
+		var queryStr string
+		queryStr = "SELECT COUNT(*), MAX(timestamp)" +
+			" FROM events WHERE project_id = ? AND user_id = ? AND session_id = ?"
+		row := db.Raw(queryStr, projectId, userId, previousSessionEvent.ID).Row()
+		row.Scan(&count, &timestamp)
 
 		previousEventProperties, err := U.DecodePostgresJsonb(&previousSessionEvent.Properties)
 		if err != nil {
 			log.WithField("projectId", projectId).Error(
 				"Failed to decode previous session event properties on createSessionEvent.")
 		}
-		if latestUserEventTimestamp == 0 {
+		if timestamp == 0 {
 			timeSpent = 0
 		} else {
-			timeSpent = float64(latestUserEventTimestamp - previousSessionEvent.Timestamp)
+			timeSpent = float64(timestamp - previousSessionEvent.Timestamp)
 		}
 		(*previousEventProperties)[U.EP_PAGE_COUNT] = count
 		(*previousEventProperties)[U.EP_SESSION_TIME_SPENT] = timeSpent
@@ -527,7 +529,7 @@ func createSessionEvent(projectId uint64, userId string, sessionEventNameId uint
 		if err != nil {
 			log.WithField("projectId", projectId).Error("Failed to overWrite previous session event properties on createSessionEvent.")
 		}
-		pageCount = count
+		pageCount = float64(count)
 	}
 
 	logCtx := log.WithField("project_id", projectId).WithField("user_id", userId)
@@ -585,7 +587,7 @@ func CreateOrGetSessionEvent(projectId uint64, userId string, isFirstSession boo
 		// Creating a new session event irrespective of timing to keep track of multiple marketing touch points
 		// from the same user.
 		return createSessionEvent(projectId, userId, sessionEventName.ID, isFirstSession, newEventTimestamp,
-			eventProperties, userProperties, userPropertiesId, 0)
+			eventProperties, userProperties, userPropertiesId)
 	}
 
 	latestUserEvent, errCode := GetLatestAnyEventOfUserForSessionFromCache(projectId, userId, newEventTimestamp)
@@ -600,7 +602,7 @@ func CreateOrGetSessionEvent(projectId uint64, userId string, isFirstSession boo
 
 		if errCode == http.StatusNotFound {
 			return createSessionEvent(projectId, userId, sessionEventName.ID, isFirstSession, newEventTimestamp,
-				eventProperties, userProperties, userPropertiesId, 0)
+				eventProperties, userProperties, userPropertiesId)
 		}
 		latestUserEvent = dbLatestUserEvent
 	}
@@ -630,7 +632,7 @@ func CreateOrGetSessionEvent(projectId uint64, userId string, isFirstSession boo
 	if errCode == http.StatusNotFound {
 		logCtx.Error("Session length of user exceeded 1 day. Created new session.")
 		return createSessionEvent(projectId, userId, sessionEventName.ID, isFirstSession, newEventTimestamp,
-			eventProperties, userProperties, userPropertiesId, latestUserEvent.Timestamp)
+			eventProperties, userProperties, userPropertiesId)
 	}
 
 	return latestSessionEvent, http.StatusFound
