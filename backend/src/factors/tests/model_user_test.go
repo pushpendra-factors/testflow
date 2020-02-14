@@ -586,7 +586,7 @@ func TestGetUserPropertiesAsMap(t *testing.T) {
 	assert.Equal(t, userProperties, decodedUserProperties)
 }
 
-func TestGetAndOverWriteUserProperties(t *testing.T) {
+func TestUserPropertiesEnrichmentWithPreviousSessionData(t *testing.T) {
 	project, user, err := SetupProjectUserReturnDAO()
 	assert.Nil(t, err)
 	assert.NotNil(t, project)
@@ -599,7 +599,7 @@ func TestGetAndOverWriteUserProperties(t *testing.T) {
 
 	propertiesToinsert := make(map[string]interface{})
 	propertiesToinsert["Hello"] = "World"
-	errCode := M.GetAndOverWriteUserProperties(project.ID, user.ID, user.PropertiesId, propertiesToinsert)
+	errCode := M.UserPropertiesEnrichmentWithPreviousSessionData(project.ID, user.ID, user.PropertiesId, propertiesToinsert)
 	assert.Equal(t, errCode, http.StatusAccepted)
 
 	userProperties, errCode := M.GetUserProperties(project.ID, user.ID, user.PropertiesId)

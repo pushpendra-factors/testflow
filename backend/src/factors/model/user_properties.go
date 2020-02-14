@@ -314,7 +314,7 @@ func GetUserPropertiesRecordsByProperty(projectId uint64,
 	return userProperties, http.StatusFound
 }
 
-func GetAndOverWriteUserProperties(
+func UserPropertiesEnrichmentWithPreviousSessionData(
 	projectId uint64, userId string, userPropertiesId string, propertiesToInsert map[string]interface{}) int {
 
 	if len(propertiesToInsert) == 0 {
@@ -330,9 +330,9 @@ func GetAndOverWriteUserProperties(
 	if err != nil {
 		return http.StatusInternalServerError
 	}
-	if (*userPropertiesMap)[U.UP_PAGES_COUNT] != nil {
-		propertiesToInsert[U.UP_PAGES_COUNT] = propertiesToInsert[U.UP_PAGES_COUNT].(float64) +
-			(*userPropertiesMap)[U.UP_PAGES_COUNT].(float64)
+	if (*userPropertiesMap)[U.UP_PAGE_COUNT] != nil {
+		propertiesToInsert[U.UP_PAGE_COUNT] = propertiesToInsert[U.UP_PAGE_COUNT].(float64) +
+			(*userPropertiesMap)[U.UP_PAGE_COUNT].(float64)
 	}
 	if (*userPropertiesMap)[U.UP_TOTAL_SESSIONS_TIME] != nil {
 		propertiesToInsert[U.UP_TOTAL_SESSIONS_TIME] = propertiesToInsert[U.UP_TOTAL_SESSIONS_TIME].(float64) +
