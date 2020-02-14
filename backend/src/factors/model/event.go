@@ -479,7 +479,8 @@ func GetUserEventsByEventNameId(projectId uint64, userId string, eventNameId uin
 
 	return events, http.StatusFound
 }
-func enrichmentPreviousSessionEventProperties(projectId uint64, userId string, previousSessionEvent *Event) (float64, float64, int) {
+
+func enrichPreviousSessionEventProperties(projectId uint64, userId string, previousSessionEvent *Event) (float64, float64, int) {
 	db := C.GetServices().Db
 
 	var count int64
@@ -533,7 +534,7 @@ func createSessionEvent(projectId uint64, userId string, sessionEventNameId uint
 
 	// get page count and page spent time
 	if errCode == http.StatusFound {
-		pageCount, timeSpent, errCode = enrichmentPreviousSessionEventProperties(projectId, userId, previousSessionEvent)
+		pageCount, timeSpent, errCode = enrichPreviousSessionEventProperties(projectId, userId, previousSessionEvent)
 		if errCode != http.StatusAccepted {
 			log.WithField("project_id", projectId).Error(
 				"Failed to enrich previous session event properties on createSesseionEvent")
@@ -569,7 +570,7 @@ func createSessionEvent(projectId uint64, userId string, sessionEventNameId uint
 	(propertiesToInsert)[U.UP_PAGE_COUNT] = pageCount
 	propertiesToInsert[U.UP_SESSION_SPENT_TIME] = timeSpent
 
-	errCode = UserPropertiesEnrichmentWithPreviousSessionData(projectId, userId, userPropertiesId, propertiesToInsert)
+	errCode = enrichUserPropertiesByPreviousSession(projectId, userId, userPropertiesId, propertiesToInsert)
 	if errCode != http.StatusAccepted {
 		log.WithField("UserId", userId).WithField("ErrCode", errCode).Error(
 			"Failed to overwrite user Properties with session count")
@@ -659,4 +660,41 @@ func OverwriteEventProperties(projectId uint64, userId string, eventId string, n
 		return http.StatusInternalServerError
 	}
 	return http.StatusAccepted
+}
+
+func enrichUserPropertiesByPreviousSession(
+	projectId uint64, userId string, userPropertiesId string, propertiesToInsert map[string]interface{}) int {
+
+	if len(propertiesToInsert) == 0 {
+		return http.StatusBadRequest
+	}
+
+	userProperties, errCode := GetUserProperties(projectId, userId, userPropertiesId)
+	if errCode != http.StatusFound {
+		return errCode
+	}
+
+	userPropertiesMap, err := U.DecodePostgresJsonb(userProperties)
+	if err != nil {
+		return http.StatusInternalServerError
+	}
+	if (*userPropertiesMap)[U.UP_PAGE_COUNT] != nil {
+		propertiesToInsert[U.UP_PAGE_COUNT] = propertiesToInsert[U.UP_PAGE_COUNT].(float64) +
+			(*userPropertiesMap)[U.UP_PAGE_COUNT].(float64)
+	}
+	if (*userPropertiesMap)[U.UP_SESSION_SPENT_TIME] != nil {
+		propertiesToInsert[U.UP_SESSION_SPENT_TIME] = propertiesToInsert[U.UP_SESSION_SPENT_TIME].(float64) +
+			(*userPropertiesMap)[U.UP_SESSION_SPENT_TIME].(float64)
+	}
+
+	for key, value := range propertiesToInsert {
+		(*userPropertiesMap)[key] = value
+	}
+
+	userPropertiesJSONb, err := U.EncodeToPostgresJsonb(userPropertiesMap)
+	if err != nil {
+		return http.StatusInternalServerError
+	}
+
+	return OverwriteUserProperties(projectId, userId, userPropertiesId, userPropertiesJSONb)
 }
