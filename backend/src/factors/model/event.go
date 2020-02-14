@@ -489,13 +489,8 @@ func createSessionEvent(projectId uint64, userId string, sessionEventNameId uint
 	var timeSpent float64
 	var pageCount float64
 
-	// Get previous session
-	sessionEventName, errCode := CreateOrGetSessionEventName(projectId)
-	if errCode != http.StatusCreated && errCode != http.StatusConflict {
-		log.WithField("projectId", projectId).Error("Failed to get or create Session event name on createSessionEvent.")
-	}
 	previousSessionEvent, errCode := GetLatestEventOfUserByEventNameId(
-		projectId, userId, sessionEventName.ID, requestTimestamp-86400, requestTimestamp)
+		projectId, userId, sessionEventNameId, requestTimestamp-86400, requestTimestamp)
 
 	// get page count and page spent time
 	if errCode == http.StatusFound {
