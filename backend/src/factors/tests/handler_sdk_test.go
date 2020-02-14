@@ -726,7 +726,6 @@ func TestPreviousSessionEventPropertyEnrichment(t *testing.T) {
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotEmpty(t, event1.SessionId)
 
-	// Existing session has to be used.
 	lastEventTimestamp := timestampBeforeOneDay + 10
 	payload = fmt.Sprintf(`{"user_id": "%s", "timestamp": %d, "event_name": "event_1", "event_properties": {}, "user_properties": {"$os": "Mac OS"}}`,
 		user.ID, lastEventTimestamp)
@@ -777,13 +776,13 @@ func TestPreviousSessionEventPropertyEnrichment(t *testing.T) {
 
 	firstSessionEventProps, err := U.DecodePostgresJsonb(&firstSession.Properties)
 	assert.Nil(t, err)
-	assert.Equal(t, (*firstSessionEventProps)["$page_count"], float64(2))
-	assert.Equal(t, (*firstSessionEventProps)["$session_time_spent"], float64(event2.Timestamp-firstSession.Timestamp))
+	assert.Equal(t, (*firstSessionEventProps)[U.SP_PAGE_COUNT], float64(2))
+	assert.Equal(t, (*firstSessionEventProps)[U.SP_SPENT_TIME], float64(event2.Timestamp-firstSession.Timestamp))
 
 	userPropertiesMap, errCode := M.GetUserPropertiesAsMap(project.ID, user.ID)
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.Equal(t, (*userPropertiesMap)[U.UP_PAGE_COUNT], float64(2))
-	assert.Equal(t, (*userPropertiesMap)[U.UP_TOTAL_SESSIONS_TIME], float64(event2.Timestamp-firstSession.Timestamp))
+	assert.Equal(t, (*userPropertiesMap)[U.UP_SESSION_SPENT_TIME], float64(event2.Timestamp-firstSession.Timestamp))
 
 	// creating third session
 	lastEventTimestamp = lastEventTimestamp + 1800
@@ -813,13 +812,13 @@ func TestPreviousSessionEventPropertyEnrichment(t *testing.T) {
 
 	secondSessionEventProps, err := U.DecodePostgresJsonb(&secondSession.Properties)
 	assert.Nil(t, err)
-	assert.Equal(t, (*secondSessionEventProps)["$page_count"], float64(1))
-	assert.Equal(t, (*secondSessionEventProps)["$session_time_spent"], float64(event3.Timestamp-secondSession.Timestamp))
+	assert.Equal(t, (*secondSessionEventProps)[U.SP_PAGE_COUNT], float64(1))
+	assert.Equal(t, (*secondSessionEventProps)[U.SP_SPENT_TIME], float64(event3.Timestamp-secondSession.Timestamp))
 
 	userPropertiesMap, errCode = M.GetUserPropertiesAsMap(project.ID, user.ID)
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.Equal(t, (*userPropertiesMap)[U.UP_PAGE_COUNT], float64(3))
-	assert.Equal(t, (*userPropertiesMap)[U.UP_TOTAL_SESSIONS_TIME], float64(event2.Timestamp-firstSession.Timestamp)+float64(event3.Timestamp-secondSession.Timestamp))
+	assert.Equal(t, (*userPropertiesMap)[U.UP_SESSION_SPENT_TIME], float64(event2.Timestamp-firstSession.Timestamp)+float64(event3.Timestamp-secondSession.Timestamp))
 
 }
 

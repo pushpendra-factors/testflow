@@ -502,7 +502,7 @@ func enrichmentPreviousSessionEventProperties(projectId uint64, userId string, p
 	} else {
 		timeSpent = float64(timestamp - previousSessionEvent.Timestamp)
 	}
-	(*previousEventProperties)[U.EP_PAGE_COUNT] = count
+	(*previousEventProperties)[U.SP_PAGE_COUNT] = count
 	(*previousEventProperties)[U.SP_SPENT_TIME] = timeSpent
 	previousEventPropertiesJSONb, err := U.EncodeToPostgresJsonb(previousEventProperties)
 	if err != nil {
@@ -563,7 +563,7 @@ func createSessionEvent(projectId uint64, userId string, sessionEventNameId uint
 	propertiesToInsert := make(map[string]interface{})
 	(propertiesToInsert)[U.UP_SESSION_COUNT] = newSessionEvent.Count
 	(propertiesToInsert)[U.UP_PAGE_COUNT] = pageCount
-	propertiesToInsert[U.UP_TOTAL_SESSIONS_TIME] = timeSpent
+	propertiesToInsert[U.UP_SESSION_SPENT_TIME] = timeSpent
 
 	errCode = UserPropertiesEnrichmentWithPreviousSessionData(projectId, userId, userPropertiesId, propertiesToInsert)
 	if errCode != http.StatusAccepted {

@@ -334,9 +334,9 @@ func UserPropertiesEnrichmentWithPreviousSessionData(
 		propertiesToInsert[U.UP_PAGE_COUNT] = propertiesToInsert[U.UP_PAGE_COUNT].(float64) +
 			(*userPropertiesMap)[U.UP_PAGE_COUNT].(float64)
 	}
-	if (*userPropertiesMap)[U.UP_TOTAL_SESSIONS_TIME] != nil {
-		propertiesToInsert[U.UP_TOTAL_SESSIONS_TIME] = propertiesToInsert[U.UP_TOTAL_SESSIONS_TIME].(float64) +
-			(*userPropertiesMap)[U.UP_TOTAL_SESSIONS_TIME].(float64)
+	if (*userPropertiesMap)[U.UP_SESSION_SPENT_TIME] != nil {
+		propertiesToInsert[U.UP_SESSION_SPENT_TIME] = propertiesToInsert[U.UP_SESSION_SPENT_TIME].(float64) +
+			(*userPropertiesMap)[U.UP_SESSION_SPENT_TIME].(float64)
 	}
 
 	for key, value := range propertiesToInsert {
