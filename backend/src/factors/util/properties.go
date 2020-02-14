@@ -352,9 +352,8 @@ var SDK_ALLOWED_USER_PROPERTIES = [...]string{
 	UP_TOTAL_REVENUE,
 	UP_DAY_OF_FIRST_EVENT,
 	UP_HOUR_OF_FIRST_EVENT,
-
 	UP_LATEST_PAGE_URL,
-	UP_LATEST_PAGE_DOMAIN ,
+	UP_LATEST_PAGE_DOMAIN,
 	UP_LATEST_PAGE_RAW_URL,
 	UP_LATEST_PAGE_LOAD_TIME,
 	UP_LATEST_PAGE_SPENT_TIME,
@@ -375,7 +374,7 @@ var SDK_ALLOWED_USER_PROPERTIES = [...]string{
 	UP_LATEST_REVENUE,
 	UP_LATEST_REFERRER,
 	UP_LATEST_REFERRER_URL,
-	UP_LATEST_REFERRER_DOMAIN
+	UP_LATEST_REFERRER_DOMAIN,
 }
 
 // Event properties that are not visible to user for analysis.
@@ -808,6 +807,16 @@ func GetInitialUserProperties(eventProperties *PropertiesMap) *PropertiesMap {
 	}
 
 	return &initialUserProperties
+}
+func GetLatestUserProperties(eventProperties *PropertiesMap) *PropertiesMap {
+	latestUserProperties := make(PropertiesMap)
+	for k, v := range *eventProperties {
+		if userPropertyKey, exists := EVENT_TO_USER_LATEST_PROPERTIES[k]; exists {
+			latestUserProperties[userPropertyKey] = v
+		}
+	}
+
+	return &latestUserProperties
 }
 
 func GetSessionProperties(isFirstSession bool, eventProperties,
