@@ -505,7 +505,7 @@ func createSessionEvent(projectId uint64, userId string, sessionEventNameId uint
 
 		previousEventProperties, err := U.DecodePostgresJsonb(&previousSessionEvent.Properties)
 		if err != nil {
-			log.WithField("projectId", projectId).Error(
+			log.WithField("projectId", projectId).WithError(err).Error(
 				"Failed to decode previous session event properties on createSessionEvent.")
 		}
 		if timestamp == 0 {
@@ -517,12 +517,12 @@ func createSessionEvent(projectId uint64, userId string, sessionEventNameId uint
 		(*previousEventProperties)[U.EP_SESSION_TIME_SPENT] = timeSpent
 		previousEventPropertiesJSONb, err := U.EncodeToPostgresJsonb(previousEventProperties)
 		if err != nil {
-			log.WithField("projectId", projectId).Error("Failed to encode previous session event on createSessionEvent.")
+			log.WithField("projectId", projectId).WithError(err).Error("Failed to encode previous session event on createSessionEvent.")
 		}
 
 		err = OverwriteEventProperties(projectId, userId, previousSessionEvent.ID, previousEventPropertiesJSONb)
 		if err != nil {
-			log.WithField("projectId", projectId).Error("Failed to overWrite previous session event properties on createSessionEvent.")
+			log.WithField("projectId", projectId).WithError(err).Error("Failed to overWrite previous session event properties on createSessionEvent.")
 		}
 		pageCount = float64(count)
 	}

@@ -71,7 +71,7 @@ func enrichAfterTrack(projectId uint64, event *M.Event, userProperties *map[stri
 	}
 	userPropsJSON, err := json.Marshal(userProperties)
 	if err != nil {
-		log.WithField("user_id", event.UserId).Error(
+		log.WithField("user_id", event.UserId).WithError(err).Error(
 			"Failed to marshal existing user properties on enrich after track.")
 		return http.StatusInternalServerError
 	}

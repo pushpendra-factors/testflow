@@ -234,7 +234,7 @@ func OverwriteUserProperties(projectId uint64, userId string,
 	db := C.GetServices().Db
 	if err := db.Model(&UserProperties{}).Where("project_id = ? AND user_id = ? AND id = ?",
 		projectId, userId, id).Update("properties", propertiesJsonb).Error; err != nil {
-		log.WithFields(log.Fields{"project_id": projectId, "id": id}).Error("Failed to replace properties.")
+		log.WithFields(log.Fields{"project_id": projectId, "id": id}).WithError(err).Error("Failed to replace properties.")
 		return http.StatusInternalServerError
 	}
 
