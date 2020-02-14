@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"factors/pattern"
 	"fmt"
+	"time"
 
 	"net/http"
 	"sync"
@@ -700,7 +701,10 @@ func httpDo(method string, urls []string, paramBytes []byte, headers map[string]
 			for k, v := range headers {
 				req.Header.Add(k, v)
 			}
-			client := new(http.Client)
+			client := http.Client{
+				// timeout in one minute.
+				Timeout: time.Duration(60 * time.Second),
+			}
 			r, err := client.Do(req)
 			resp.err = err
 			resp.resp = r

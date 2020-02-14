@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -86,8 +87,10 @@ type KLDistanceUnitInfo struct {
 	Fcr           float64
 }
 
-const MAX_SEQUENCE_CHILD_NODES = 10
-const MAX_PROPERTY_CHILD_NODES = 10
+const MAX_SEQUENCE_CHILD_NODES = 5
+const MAX_PROPERTY_CHILD_NODES = 5
+const MAX_NODES_TO_EVALUATE = 100
+
 const NODE_TYPE_ROOT = 0
 const NODE_TYPE_SEQUENCE = 1               // A child node that differs from its parent by an event.
 const NODE_TYPE_EVENT_PROPERTY = 2         // A child node that differs from its parent by an event property constraint.
@@ -1100,7 +1103,7 @@ func (it *Itree) buildAndAddPropertyChildNodes(reqId string,
 	// Add children by splitting on constraints on categorical properties.
 	pLen = len(parentPattern.EventNames)
 	MAX_CAT_PROPERTIES_EVALUATED := 100
-	MAX_CAT_VALUES_EVALUATED := 1000
+	MAX_CAT_VALUES_EVALUATED := 100
 
 	if eventInfo != nil && pLen > 1 {
 		childNodes = append(childNodes, it.buildCategoricalPropertyChildNodes(reqId,
@@ -1187,7 +1190,11 @@ func BuildNewItree(reqId,
 
 	var rootNodePattern *P.Pattern = nil
 	var allActiveUsersPattern *P.Pattern = nil
+	startTime := time.Now().Unix()
 	candidatePatterns, err := patternWrapper.GetAllPatterns(reqId, startEvent, endEvent)
+	endTime := time.Now().Unix()
+	log.WithFields(log.Fields{
+		"time_taken": endTime - startTime}).Error("GetAllPatterns Time taken.")
 	if err != nil {
 		return nil, err
 	}
@@ -1207,6 +1214,8 @@ func BuildNewItree(reqId,
 			}
 		}
 	}
+
+	startTime = time.Now().Unix()
 	if rootNodePattern == nil {
 		return nil, fmt.Errorf("Root node not found or frequency 0")
 	}
@@ -1221,8 +1230,10 @@ func BuildNewItree(reqId,
 
 	itree.addNode(rootNode)
 	queue = append(queue, rootNode)
+	numNodesEvaluated := 0
 
-	for len(queue) > 0 {
+	for len(queue) > 0 && numNodesEvaluated < MAX_NODES_TO_EVALUATE {
+		numNodesEvaluated++
 		parentNode := queue[0]
 		if _, err := itree.buildAndAddPropertyChildNodes(reqId,
 			parentNode, allActiveUsersPattern, patternWrapper, countType); err != nil {
@@ -1239,6 +1250,9 @@ func BuildNewItree(reqId,
 		}
 		queue = queue[1:]
 	}
+	endTime = time.Now().Unix()
+	log.WithFields(log.Fields{
+		"time_taken": endTime - startTime}).Error("Building Tree Time taken.")
 
 	//log.WithFields(log.Fields{"itree": itree}).Info("Returning Itree.")
 	return &itree, nil
