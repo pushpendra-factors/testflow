@@ -590,7 +590,7 @@ func TestTrackHandlerWithUserSession(t *testing.T) {
 	rEvent, errCode := M.GetEvent(project.ID, responseUserId, responseEventId)
 	assert.Equal(t, http.StatusFound, errCode)
 	latestSessionEvent, errCode := M.GetLatestEventOfUserByEventNameId(rEvent.ProjectId,
-		rEvent.UserId, sessionEventName.ID, rEvent.Timestamp-86400)
+		rEvent.UserId, sessionEventName.ID, rEvent.Timestamp-86400, rEvent.Timestamp)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, rEvent.SessionId)
 	assert.NotEmpty(t, *rEvent.SessionId)

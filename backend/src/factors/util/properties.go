@@ -117,7 +117,6 @@ var EP_HOUR_OF_DAY string = "$hour_of_day"
 var EP_DAY_OF_WEEK string = "$day_of_week"
 var EP_SESSION string = "$session"
 var EP_PAGE_COUNT string = "$page_count"
-var EP_SESSION_TIME_SPENT string = "$session_time_spent"
 
 // User Properties
 var UP_PLATFORM string = "$platform"
@@ -191,7 +190,7 @@ var UP_INITIAL_REFERRER_DOMAIN = "$initial_referrer_domain"
 var UP_DAY_OF_FIRST_EVENT string = "$day_of_first_event"
 var UP_HOUR_OF_FIRST_EVENT string = "$hour_of_first_event"
 var UP_SESSION_COUNT string = "$session_count"
-var UP_PAGE_COUNT string = "$pages_count"
+var UP_PAGE_COUNT string = "$page_count"
 var UP_TOTAL_SESSIONS_TIME string = "$total_sessions_time"
 
 // session properties
@@ -201,6 +200,7 @@ var SP_SESSION_TIME = "$session_time"
 var SP_INITIAL_REFERRER = "$initial_referrer"
 var SP_INITIAL_REFERRER_URL = "$initial_referrer_url"
 var SP_INITIAL_REFERRER_DOMAIN = "$initial_referrer_domain"
+var SP_SPENT_TIME string = "$session_spent_time"
 
 var SDK_ALLOWED_EVENT_PROPERTIES = [...]string{
 	EP_INTERNAL_IP,
