@@ -479,7 +479,7 @@ func GetUserEventsByEventNameId(projectId uint64, userId string, eventNameId uin
 
 	return events, http.StatusFound
 }
-func enrichmentPreviousSessionEventProperties(projectId uint64, userId string, previousSessionEvent *Event) (float64, float64, error) {
+func enrichmentPreviousSessionEventProperties(projectId uint64, userId string, previousSessionEvent *Event) (float64, float64, int) {
 	db := C.GetServices().Db
 
 	var count int64
@@ -495,7 +495,7 @@ func enrichmentPreviousSessionEventProperties(projectId uint64, userId string, p
 	if err != nil {
 		log.WithField("projectId", projectId).WithError(err).Error(
 			"Failed to decode previous session event properties on createSessionEvent.")
-		return 0, 0, err
+		return 0, 0, http.StatusInternalServerError
 	}
 	if timestamp == 0 {
 		timeSpent = 0
@@ -508,16 +508,16 @@ func enrichmentPreviousSessionEventProperties(projectId uint64, userId string, p
 	if err != nil {
 		log.WithField("projectId", projectId).WithError(err).Error(
 			"Failed to encode previous session event on createSessionEvent.")
-		return 0, 0, err
+		return 0, 0, http.StatusInternalServerError
 	}
 
-	err = OverwriteEventProperties(projectId, userId, previousSessionEvent.ID, previousEventPropertiesJSONb)
-	if err != nil {
-		log.WithField("projectId", projectId).WithError(err).Error(
+	errCode = OverwriteEventProperties(projectId, userId, previousSessionEvent.ID, previousEventPropertiesJSONb)
+	if errCode != http.StatusAccepted {
+		log.WithField("projectId", projectId).Error(
 			"Failed to overWrite previous session event properties on createSessionEvent.")
-		return 0, 0, err
+		return 0, 0, errCode
 	}
-	return float64(count), timeSpent, err
+	return float64(count), timeSpent, http.StatusAccepted
 }
 
 func createSessionEvent(projectId uint64, userId string, sessionEventNameId uint64,
@@ -533,7 +533,11 @@ func createSessionEvent(projectId uint64, userId string, sessionEventNameId uint
 
 	// get page count and page spent time
 	if errCode == http.StatusFound {
-		pageCount, timeSpent, err = enrichmentPreviousSessionEventProperties(projectId, userId, previousSessionEvent)
+		pageCount, timeSpent, errCode = enrichmentPreviousSessionEventProperties(projectId, userId, previousSessionEvent)
+		if errCode != http.StatusAccepted {
+			log.WithField("project_id", projectId).Error(
+				"Failed to enrich previous session event properties on createSesseionEvent")
+		}
 	}
 
 	logCtx := log.WithField("project_id", projectId).WithField("user_id", userId)
@@ -642,17 +646,17 @@ func CreateOrGetSessionEvent(projectId uint64, userId string, isFirstSession boo
 	return latestSessionEvent, http.StatusFound
 }
 
-func OverwriteEventProperties(projectId uint64, userId string, eventId string, newEventProperties *postgres.Jsonb) error {
+func OverwriteEventProperties(projectId uint64, userId string, eventId string, newEventProperties *postgres.Jsonb) int {
 	db := C.GetServices().Db
 
 	if newEventProperties == nil {
-		return nil
+		return http.StatusBadRequest
 	}
 
 	if err := db.Model(&Event{}).Where("project_id = ? AND user_id = ? AND id = ?",
 		projectId, userId, eventId).Update(
 		"properties", newEventProperties).Error; err != nil {
-		return err
+		return http.StatusInternalServerError
 	}
-	return nil
+	return http.StatusAccepted
 }
