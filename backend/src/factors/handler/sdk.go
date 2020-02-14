@@ -167,7 +167,7 @@ func SDKTrack(projectId uint64, request *SDKTrackPayload, clientIP,
 
 	response := &SDKTrackResponse{}
 	initialUserProperties := U.GetInitialUserProperties(eventProperties)
-	isUserFirstSession := request.IsNewUser
+	isNewUser := request.IsNewUser
 
 	if request.UserId == "" {
 		// Precondition: if user_id not given, create new user and respond.
@@ -179,7 +179,7 @@ func SDKTrack(projectId uint64, request *SDKTrackPayload, clientIP,
 
 		request.UserId = newUser.ID
 		response.UserId = newUser.ID
-		isUserFirstSession = true
+		isNewUser = true
 
 		// Initialize with initial user properties.
 		userProperties = initialUserProperties
@@ -263,9 +263,16 @@ func SDKTrack(projectId uint64, request *SDKTrackPayload, clientIP,
 	}
 
 	if !skipSession {
+<<<<<<< HEAD
 		session, errCode := M.CreateOrGetSessionEvent(projectId, request.UserId, isUserFirstSession, hasDefinedMarketingProperty,
 			request.Timestamp, eventProperties, userProperties, userPropertiesId)
 		if errCode != http.StatusCreated && errCode != http.StatusFound && errCode != http.StatusAccepted {
+=======
+		session, errCode := M.CreateOrGetSessionEvent(projectId, request.UserId,
+			isNewUser, hasDefinedMarketingProperty, request.Timestamp,
+			eventProperties, userProperties, userPropertiesId)
+		if errCode != http.StatusCreated && errCode != http.StatusFound {
+>>>>>>> master
 			response.Error = "Failed to associate with a session."
 		}
 

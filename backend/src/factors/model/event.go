@@ -269,19 +269,19 @@ func GetLatestAnyEventOfUserForSession(projectId uint64, userId string,
 	return &events[0], http.StatusFound
 }
 
-func GetLatestEventOfUserByEventNameId(projectId uint64, userId string, eventNameId uint64,
-	startTimestamp, endTimestamp int64) (*Event, int) {
+func GetLatestEventOfUserByEventNameId(projectId uint64, userId string,
+	eventNameId uint64, afterTimestamp int64) (*Event, int) {
 
 	db := C.GetServices().Db
 
-	if startTimestamp == 0 || endTimestamp == 0 {
+	if afterTimestamp == 0 {
 		return nil, http.StatusBadRequest
 	}
 
 	var events []Event
 	if err := db.Limit(1).Order("timestamp desc").Where(
-		"project_id = ? AND event_name_id = ? AND user_id = ? AND timestamp > ? AND timestamp <= ?",
-		projectId, eventNameId, userId, startTimestamp, endTimestamp).Find(&events).Error; err != nil {
+		"project_id = ? AND event_name_id = ? AND user_id = ? AND timestamp > ?",
+		projectId, eventNameId, userId, afterTimestamp).Find(&events).Error; err != nil {
 
 		return nil, http.StatusInternalServerError
 	}
@@ -575,8 +575,9 @@ func createSessionEvent(projectId uint64, userId string, sessionEventNameId uint
 	return newSessionEvent, errCode
 }
 
-func CreateOrGetSessionEvent(projectId uint64, userId string, isFirstSession bool, hasDefinedMarketingProperty bool,
-	newEventTimestamp int64, eventProperties, userProperties *U.PropertiesMap, userPropertiesId string) (*Event, int) {
+func CreateOrGetSessionEvent(projectId uint64, userId string, isNewUser bool,
+	hasDefinedMarketingProperty bool, newEventTimestamp int64, eventProperties,
+	userProperties *U.PropertiesMap, userPropertiesId string) (*Event, int) {
 
 	logCtx := log.WithField("project_id", projectId).WithField("user_id", userId)
 
@@ -586,11 +587,11 @@ func CreateOrGetSessionEvent(projectId uint64, userId string, isFirstSession boo
 		return nil, http.StatusInternalServerError
 	}
 
-	if hasDefinedMarketingProperty {
+	if isNewUser || hasDefinedMarketingProperty {
 		// If the event has a marketing property, then the user is visiting again from a marketing channel.
 		// Creating a new session event irrespective of timing to keep track of multiple marketing touch points
 		// from the same user.
-		return createSessionEvent(projectId, userId, sessionEventName.ID, isFirstSession, newEventTimestamp,
+		return createSessionEvent(projectId, userId, sessionEventName.ID, isNewUser, newEventTimestamp,
 			eventProperties, userProperties, userPropertiesId)
 	}
 
@@ -605,16 +606,15 @@ func CreateOrGetSessionEvent(projectId uint64, userId string, isFirstSession boo
 		}
 
 		if errCode == http.StatusNotFound {
-			return createSessionEvent(projectId, userId, sessionEventName.ID, isFirstSession, newEventTimestamp,
+			return createSessionEvent(projectId, userId, sessionEventName.ID, isNewUser, newEventTimestamp,
 				eventProperties, userProperties, userPropertiesId)
 		}
 		latestUserEvent = dbLatestUserEvent
 	}
 
-	// Get latest session event of user from events between user's last event timestamp and
-	// one day before user's last event timestamp.
-	latestSessionEvent, errCode := GetLatestEventOfUserByEventNameId(projectId, userId, sessionEventName.ID,
-		latestUserEvent.Timestamp-86400, latestUserEvent.Timestamp)
+	// Get latest session event of user from events last one day window.
+	latestSessionEvent, errCode := GetLatestEventOfUserByEventNameId(projectId, userId,
+		sessionEventName.ID, latestUserEvent.Timestamp-86400)
 
 	if errCode == http.StatusInternalServerError {
 		logCtx.Error("Failed to get latest session event of user.")
@@ -635,7 +635,7 @@ func CreateOrGetSessionEvent(projectId uint64, userId string, isFirstSession boo
 
 	if errCode == http.StatusNotFound {
 		logCtx.Error("Session length of user exceeded 1 day. Created new session.")
-		return createSessionEvent(projectId, userId, sessionEventName.ID, isFirstSession, newEventTimestamp,
+		return createSessionEvent(projectId, userId, sessionEventName.ID, isNewUser, newEventTimestamp,
 			eventProperties, userProperties, userPropertiesId)
 	}
 

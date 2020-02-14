@@ -217,7 +217,7 @@ func InitDB(DBInfo DBConf) error {
 		DBInfo.Password))
 	// Connection Pooling and Logging.
 	db.DB().SetMaxIdleConns(10)
-	db.DB().SetMaxOpenConns(100)
+	db.DB().SetMaxOpenConns(50)
 	if IsDevelopment() {
 		db.LogMode(true)
 	} else {
@@ -246,8 +246,8 @@ func InitRedis(host string, port int) {
 
 	conn := fmt.Sprintf("%s:%d", host, port)
 	redisPool := &redis.Pool{
-		MaxActive: 100,
-		MaxIdle:   10,
+		MaxActive: 300,
+		MaxIdle:   100,
 		// IdleTimeout: 240 * time.Second,
 		Dial: func() (redis.Conn, error) {
 			c, err := redis.Dial("tcp", conn)
