@@ -599,7 +599,7 @@ func TestUserPropertiesEnrichmentWithPreviousSessionData(t *testing.T) {
 
 	propertiesToinsert := make(map[string]interface{})
 	propertiesToinsert["Hello"] = "World"
-	errCode := M.UserPropertiesEnrichmentWithPreviousSessionData(project.ID, user.ID, user.PropertiesId, propertiesToinsert)
+	errCode := M.EnrichUserPropertiesByPreviousSession(project.ID, user.ID, user.PropertiesId, propertiesToinsert)
 	assert.Equal(t, errCode, http.StatusAccepted)
 
 	userProperties, errCode := M.GetUserProperties(project.ID, user.ID, user.PropertiesId)

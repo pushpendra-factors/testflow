@@ -472,8 +472,8 @@ func TestOverwriteEventProperties(t *testing.T) {
 	eventPropertiesJSONb, err := U.EncodeToPostgresJsonb(eventPropertiesMap)
 	assert.Nil(t, err)
 
-	err = M.OverwriteEventProperties(projectId, userId, event.ID, eventPropertiesJSONb)
-	assert.Nil(t, err)
+	errCode = M.OverwriteEventProperties(projectId, userId, event.ID, eventPropertiesJSONb)
+	assert.Equal(t, errCode, http.StatusAccepted)
 
 	rEvent, errCode := M.GetEvent(projectId, userId, event.ID)
 	assert.Equal(t, http.StatusFound, errCode)

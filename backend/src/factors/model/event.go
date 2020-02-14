@@ -512,7 +512,7 @@ func enrichPreviousSessionEventProperties(projectId uint64, userId string, previ
 		return 0, 0, http.StatusInternalServerError
 	}
 
-	errCode = OverwriteEventProperties(projectId, userId, previousSessionEvent.ID, previousEventPropertiesJSONb)
+	errCode := OverwriteEventProperties(projectId, userId, previousSessionEvent.ID, previousEventPropertiesJSONb)
 	if errCode != http.StatusAccepted {
 		log.WithField("projectId", projectId).Error(
 			"Failed to overWrite previous session event properties on createSessionEvent.")
@@ -570,7 +570,7 @@ func createSessionEvent(projectId uint64, userId string, sessionEventNameId uint
 	(propertiesToInsert)[U.UP_PAGE_COUNT] = pageCount
 	propertiesToInsert[U.UP_SESSION_SPENT_TIME] = timeSpent
 
-	errCode = enrichUserPropertiesByPreviousSession(projectId, userId, userPropertiesId, propertiesToInsert)
+	errCode = EnrichUserPropertiesByPreviousSession(projectId, userId, userPropertiesId, propertiesToInsert)
 	if errCode != http.StatusAccepted {
 		log.WithField("UserId", userId).WithField("ErrCode", errCode).Error(
 			"Failed to overwrite user Properties with session count")
@@ -662,7 +662,7 @@ func OverwriteEventProperties(projectId uint64, userId string, eventId string, n
 	return http.StatusAccepted
 }
 
-func enrichUserPropertiesByPreviousSession(
+func EnrichUserPropertiesByPreviousSession(
 	projectId uint64, userId string, userPropertiesId string, propertiesToInsert map[string]interface{}) int {
 
 	if len(propertiesToInsert) == 0 {
