@@ -259,6 +259,170 @@ func TestAnalyticsFunnelQuery(t *testing.T) {
 	})
 }
 
+func TestAnalyticsFunnelQueryWithFilterCondition(t *testing.T) {
+	// Initialize routes and dependent data.
+	r := gin.Default()
+	H.InitSDKRoutes(r)
+	uri := "/sdk/event/track"
+
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	user, errCode := M.CreateUser(&M.User{ProjectId: project.ID})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, user.ID)
+
+	startTimestamp := U.UnixTimeBeforeDuration(time.Hour * 1)
+	stepTimestamp := startTimestamp
+
+	// s0 event property value with 5.
+	for i := 0; i < 5; i++ {
+		payload1 := fmt.Sprintf(`{"event_name": "%s", "timestamp": %d, "event_properties": {"value": 5}}`,
+			"s0", stepTimestamp)
+		w := ServePostRequestWithHeaders(r, uri, []byte(payload1),
+			map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusOK, w.Code)
+		response := DecodeJSONResponseToMap(w.Body)
+		assert.NotNil(t, response["event_id"])
+		assert.NotNil(t, response["user_id"])
+		stepTimestamp = stepTimestamp + 10
+	}
+
+	// s0 event property value greater than 5.
+	userIds := make([]interface{}, 0, 0)
+	for i := 0; i < 5; i++ {
+		payload1 := fmt.Sprintf(`{"event_name": "%s", "timestamp": %d, "event_properties": {"value": 10}}`,
+			"s0", stepTimestamp)
+		w := ServePostRequestWithHeaders(r, uri, []byte(payload1),
+			map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusOK, w.Code)
+		response := DecodeJSONResponseToMap(w.Body)
+		assert.NotNil(t, response["event_id"])
+		assert.NotNil(t, response["user_id"])
+
+		userIds = append(userIds, response["user_id"])
+		stepTimestamp = stepTimestamp + 10
+	}
+
+	// users with value 10 perform s1.
+	for i := range userIds {
+		payload1 := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "timestamp": %d}`,
+			"s1", userIds[i], stepTimestamp)
+		w := ServePostRequestWithHeaders(r, uri, []byte(payload1), map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusOK, w.Code)
+		response := DecodeJSONResponseToMap(w.Body)
+		assert.NotNil(t, response["event_id"])
+		stepTimestamp = stepTimestamp + 10
+	}
+
+	query := M.Query{
+		From: startTimestamp,
+		To:   time.Now().UTC().Unix(),
+		EventsWithProperties: []M.QueryEventWithProperties{
+			M.QueryEventWithProperties{
+				Name: "s0",
+				Properties: []M.QueryProperty{
+					M.QueryProperty{
+						Entity:    M.PropertyEntityEvent,
+						Property:  "value",
+						Operator:  "greaterThan",
+						Value:     "5",
+						Type:      "numerical",
+						LogicalOp: "AND",
+					},
+				},
+			},
+			M.QueryEventWithProperties{
+				Name:       "s1",
+				Properties: []M.QueryProperty{},
+			},
+		},
+		Class:           M.QueryClassFunnel,
+		Type:            M.QueryTypeUniqueUsers,
+		EventsCondition: M.EventCondAllGivenEvent,
+	}
+
+	result, errCode, _ := M.Analyze(project.ID, query)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, M.StepPrefix+"0", result.Headers[0])
+	assert.Equal(t, M.StepPrefix+"1", result.Headers[1])
+	// all 5 users who performed s0 with value greater
+	// 5 has performed s1.
+	assert.Equal(t, int64(5), result.Rows[0][0], "step0")
+	assert.Equal(t, int64(5), result.Rows[0][1], "step1")
+
+	query1 := M.Query{
+		From: startTimestamp,
+		To:   time.Now().UTC().Unix(),
+		EventsWithProperties: []M.QueryEventWithProperties{
+			M.QueryEventWithProperties{
+				Name: "s0",
+				Properties: []M.QueryProperty{
+					M.QueryProperty{
+						Entity:    M.PropertyEntityEvent,
+						Property:  "value",
+						Operator:  "lesserThan",
+						Value:     "11",
+						Type:      "numerical",
+						LogicalOp: "AND",
+					},
+				},
+			},
+			M.QueryEventWithProperties{
+				Name:       "s1",
+				Properties: []M.QueryProperty{},
+			},
+		},
+		Class:           M.QueryClassFunnel,
+		Type:            M.QueryTypeUniqueUsers,
+		EventsCondition: M.EventCondAllGivenEvent,
+	}
+
+	result1, errCode, _ := M.Analyze(project.ID, query1)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, M.StepPrefix+"0", result1.Headers[0])
+	assert.Equal(t, M.StepPrefix+"1", result1.Headers[1])
+	// among 10 users who performed s0 with value lesser
+	// than 11, 5 users has performed s1.
+	assert.Equal(t, int64(10), result1.Rows[0][0], "step0")
+	assert.Equal(t, int64(5), result1.Rows[0][1], "step1")
+
+	query2 := M.Query{
+		From: startTimestamp,
+		To:   time.Now().UTC().Unix(),
+		EventsWithProperties: []M.QueryEventWithProperties{
+			M.QueryEventWithProperties{
+				Name: "s0",
+				Properties: []M.QueryProperty{
+					M.QueryProperty{
+						Entity:    M.PropertyEntityEvent,
+						Property:  "value",
+						Operator:  "equals",
+						Value:     "10",
+						Type:      "numerical",
+						LogicalOp: "AND",
+					},
+				},
+			},
+			M.QueryEventWithProperties{
+				Name:       "s1",
+				Properties: []M.QueryProperty{},
+			},
+		},
+		Class:           M.QueryClassFunnel,
+		Type:            M.QueryTypeUniqueUsers,
+		EventsCondition: M.EventCondAllGivenEvent,
+	}
+
+	result2, errCode, _ := M.Analyze(project.ID, query2)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, M.StepPrefix+"0", result2.Headers[0])
+	assert.Equal(t, M.StepPrefix+"1", result2.Headers[1])
+	// all users performed s0 with value=10 has performed s1.
+	assert.Equal(t, int64(5), result2.Rows[0][0], "step0")
+	assert.Equal(t, int64(5), result2.Rows[0][1], "step1")
+}
+
 func TestAnalyticsInsightsQuery(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
