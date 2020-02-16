@@ -18,7 +18,8 @@ const HtmlPlugin = new HtmlWebPackPlugin({
   filename: "./index.html" 
 });
 
-var devEnv = process.env.NODE_ENV === "development";
+var isDev = process.env.NODE_ENV === "development";
+var isStaging = process.env.NODE_ENV === "staging";
 
 function getBuildPath() {
   return __dirname + "/dist/" + process.env.NODE_ENV;
@@ -26,7 +27,7 @@ function getBuildPath() {
 
 module.exports = {
   entry: './src/index.js',
-  devtool: devEnv ? "inline-sourcemap" : false,
+  devtool: (isDev || isStaging) ? "inline-sourcemap" : false,
   module: {
     rules: [
       {
