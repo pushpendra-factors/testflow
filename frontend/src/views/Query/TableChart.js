@@ -81,19 +81,21 @@ class TableChart extends Component {
           let maxWidth = (this.props.bigWidthUptoCols && i < this.props.bigWidthUptoCols) ? null : '40px';
           return <td style={{ maxWidth: maxWidth, overflowWrap: 'break-word' }}> { c } </td> 
         });
+
         if (this.props.compareWithQueryResult) {
           let compareValue = 0;
           if (this.props.compareWithQueryResult.rows.length > 0) {
             let compareCols = this.props.compareWithQueryResult.rows[i.toString()];
-            compareValue = compareCols[compareCols.length - 1]
+            if (compareCols) compareValue = compareCols[compareCols.length - 1];
           }
-          
+
           // Remove max width to allow larger col size for upto given initial no.of cols.
           let maxWidth = (this.props.bigWidthUptoCols && i < this.props.bigWidthUptoCols) ? null : '40px';
           tds.push(
             <td style={{ maxWidth: maxWidth, overflowWrap: 'break-word' }}> { compareValue } </td>
           );
         }
+        
         rows.push(<tr> { tds } </tr>);
       }
     }
