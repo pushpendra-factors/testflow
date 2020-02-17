@@ -480,7 +480,8 @@ func GetUserEventsByEventNameId(projectId uint64, userId string, eventNameId uin
 	return events, http.StatusFound
 }
 
-func enrichPreviousSessionEventProperties(projectId uint64, userId string, previousSessionEvent *Event) (float64, float64, int) {
+func enrichPreviousSessionEventProperties(projectId uint64, userId string,
+	previousSessionEvent *Event) (float64, float64, int) {
 	db := C.GetServices().Db
 
 	var count int64
@@ -534,7 +535,8 @@ func createSessionEvent(projectId uint64, userId string, sessionEventNameId uint
 
 	// get page count and page spent time
 	if errCode == http.StatusFound {
-		pageCount, timeSpent, errCode = enrichPreviousSessionEventProperties(projectId, userId, previousSessionEvent)
+		pageCount, timeSpent, errCode = enrichPreviousSessionEventProperties(projectId,
+			userId, previousSessionEvent)
 		if errCode != http.StatusAccepted {
 			log.WithField("project_id", projectId).Error(
 				"Failed to enrich previous session event properties on createSesseionEvent")
@@ -564,15 +566,18 @@ func createSessionEvent(projectId uint64, userId string, sessionEventNameId uint
 		return nil, errCode
 	}
 
-	// Adds session count, page count and time spent.
-	propertiesToInsert := make(map[string]interface{})
-	(propertiesToInsert)[U.UP_SESSION_COUNT] = newSessionEvent.Count
-	(propertiesToInsert)[U.UP_PAGE_COUNT] = pageCount
-	propertiesToInsert[U.UP_SESSION_SPENT_TIME] = timeSpent
+	newUserPropertiesFromSession := map[string]interface{}{
+		// Properties from current session.
+		U.UP_SESSION_COUNT: newSessionEvent.Count,
+		// Properties from previous session.
+		U.UP_PAGE_COUNT:         pageCount,
+		U.UP_SESSION_SPENT_TIME: timeSpent,
+	}
 
-	errCode = EnrichUserPropertiesByPreviousSession(projectId, userId, userPropertiesId, propertiesToInsert)
+	errCode = EnrichUserPropertiesWithSessionProperties(projectId, userId,
+		userPropertiesId, newUserPropertiesFromSession)
 	if errCode != http.StatusAccepted {
-		log.WithField("UserId", userId).WithField("ErrCode", errCode).Error(
+		log.WithField("UserId", userId).WithField("err_code", errCode).Error(
 			"Failed to overwrite user Properties with session count")
 	} else {
 		return newSessionEvent, http.StatusCreated
@@ -677,10 +682,10 @@ func OverwriteEventProperties(projectId uint64, userId string, eventId string, n
 	return http.StatusAccepted
 }
 
-func EnrichUserPropertiesByPreviousSession(
-	projectId uint64, userId string, userPropertiesId string, propertiesToInsert map[string]interface{}) int {
+func EnrichUserPropertiesWithSessionProperties(projectId uint64, userId string,
+	userPropertiesId string, sessionProperties map[string]interface{}) int {
 
-	if len(propertiesToInsert) == 0 {
+	if len(sessionProperties) == 0 {
 		return http.StatusBadRequest
 	}
 
@@ -693,23 +698,24 @@ func EnrichUserPropertiesByPreviousSession(
 	if err != nil {
 		return http.StatusInternalServerError
 	}
+
+	// Increament user properties by previous session properties.
 	if (*userPropertiesMap)[U.UP_PAGE_COUNT] != nil {
-		propertiesToInsert[U.UP_PAGE_COUNT] = propertiesToInsert[U.UP_PAGE_COUNT].(float64) +
+		sessionProperties[U.UP_PAGE_COUNT] = sessionProperties[U.UP_PAGE_COUNT].(float64) +
 			(*userPropertiesMap)[U.UP_PAGE_COUNT].(float64)
 	}
 	if (*userPropertiesMap)[U.UP_SESSION_SPENT_TIME] != nil {
-		propertiesToInsert[U.UP_SESSION_SPENT_TIME] = propertiesToInsert[U.UP_SESSION_SPENT_TIME].(float64) +
+		sessionProperties[U.UP_SESSION_SPENT_TIME] = sessionProperties[U.UP_SESSION_SPENT_TIME].(float64) +
 			(*userPropertiesMap)[U.UP_SESSION_SPENT_TIME].(float64)
 	}
-
-	for key, value := range propertiesToInsert {
+	for key, value := range sessionProperties {
 		(*userPropertiesMap)[key] = value
 	}
 
-	userPropertiesJSONb, err := U.EncodeToPostgresJsonb(userPropertiesMap)
+	userPropertiesJsonb, err := U.EncodeToPostgresJsonb(userPropertiesMap)
 	if err != nil {
 		return http.StatusInternalServerError
 	}
 
-	return OverwriteUserProperties(projectId, userId, userPropertiesId, userPropertiesJSONb)
+	return OverwriteUserProperties(projectId, userId, userPropertiesId, userPropertiesJsonb)
 }
