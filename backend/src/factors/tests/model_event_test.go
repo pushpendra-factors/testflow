@@ -396,11 +396,13 @@ func TestCreateOrGetSessionEvent(t *testing.T) {
 	projectId, userId, eventNameId, err := SetupProjectUserEventName()
 	assert.Nil(t, err)
 
+	user, _ := M.GetUser(projectId, userId)
+	userPropertiesId := user.PropertiesId
 	sessionEventTimestamp := U.UnixTimeBeforeDuration(time.Minute * 32)
 
 	t.Run("ShouldCreateNewSessionAsNoEventInLast30Mins", func(t *testing.T) {
 		session, errCode := M.CreateOrGetSessionEvent(projectId, userId, true, false, sessionEventTimestamp,
-			&U.PropertiesMap{U.EP_PAGE_LOAD_TIME: 0.10}, &U.PropertiesMap{}, "")
+			&U.PropertiesMap{U.EP_PAGE_LOAD_TIME: 0.10}, &U.PropertiesMap{}, userPropertiesId)
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.NotNil(t, session)
 
@@ -412,28 +414,45 @@ func TestCreateOrGetSessionEvent(t *testing.T) {
 		var eventPropertiesMap map[string]interface{}
 		json.Unmarshal(eventPropertiesBytes.([]byte), &eventPropertiesMap)
 		assert.NotNil(t, eventPropertiesMap[U.UP_INITIAL_PAGE_LOAD_TIME])
-		assert.Equal(t, 0.10, eventPropertiesMap[U.UP_INITIAL_PAGE_LOAD_TIME])
+
+		userPropertiesMap, errCode := M.GetUserPropertiesAsMap(projectId, userId)
+		assert.Equal(t, errCode, http.StatusFound)
+		assert.Nil(t, (*userPropertiesMap)[U.UP_LATEST_PAGE_LOAD_TIME])
+		assert.Nil(t, (*userPropertiesMap)[U.UP_LATEST_CAMPAIGN])
 	})
 
 	t.Run("ShouldReturnLatestSessionAsUserWasActive", func(t *testing.T) {
 		_, errCode := M.CreateEvent(&M.Event{EventNameId: eventNameId,
 			ProjectId: projectId, UserId: userId, Timestamp: sessionEventTimestamp + 10})
 
-		session, errCode := M.CreateOrGetSessionEvent(projectId, userId, false,
-			false, sessionEventTimestamp+20, &U.PropertiesMap{}, &U.PropertiesMap{}, "")
+		session, errCode := M.CreateOrGetSessionEvent(projectId, userId, true,
+			false, sessionEventTimestamp+20, &U.PropertiesMap{}, &U.PropertiesMap{}, userPropertiesId)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, session)
+
+		userProperties, _ := M.GetUserProperties(projectId, userId, userPropertiesId)
+		userPropertiesMap, _ := U.DecodePostgresJsonb(userProperties)
+		assert.NotNil(t, (*userPropertiesMap)[U.UP_SESSION_COUNT])
+
+		userPropertiesMap, errCode = M.GetUserPropertiesAsMap(projectId, userId)
+		assert.Equal(t, errCode, http.StatusFound)
+		assert.Nil(t, (*userPropertiesMap)[U.UP_LATEST_PAGE_LOAD_TIME])
+		assert.Nil(t, (*userPropertiesMap)[U.UP_LATEST_CAMPAIGN])
 	})
 
 	t.Run("ShouldCreateNewSessionAsHasMarketingProperty", func(t *testing.T) {
 		_, errCode := M.CreateEvent(&M.Event{EventNameId: eventNameId,
 			ProjectId: projectId, UserId: userId, Timestamp: sessionEventTimestamp + 40})
 
-		session, errCode := M.CreateOrGetSessionEvent(projectId, userId, false, true,
+		userProperties, _ := M.GetUserProperties(projectId, userId, userPropertiesId)
+		userPropertiesMap, _ := U.DecodePostgresJsonb(userProperties)
+
+		session, errCode := M.CreateOrGetSessionEvent(projectId, userId, true, true,
 			sessionEventTimestamp+10, &U.PropertiesMap{U.EP_PAGE_LOAD_TIME: 0.10,
-				U.EP_CAMPAIGN: "test-campaign"}, &U.PropertiesMap{}, "")
+				U.EP_CAMPAIGN: "test-campaign"}, &U.PropertiesMap{}, userPropertiesId)
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.NotNil(t, session)
+		assert.NotNil(t, (*userPropertiesMap)[U.UP_SESSION_COUNT])
 
 		// Session event should exist with initial event properites.
 		sessionEvent, errCode := M.GetEvent(projectId, userId, session.ID)
@@ -446,5 +465,73 @@ func TestCreateOrGetSessionEvent(t *testing.T) {
 		assert.Equal(t, 0.10, eventPropertiesMap[U.UP_INITIAL_PAGE_LOAD_TIME])
 		assert.NotNil(t, eventPropertiesMap[U.EP_CAMPAIGN])
 		assert.Equal(t, "test-campaign", eventPropertiesMap[U.EP_CAMPAIGN])
+
+		userPropertiesMap, errCode = M.GetUserPropertiesAsMap(projectId, userId)
+		assert.Equal(t, errCode, http.StatusFound)
+		assert.Equal(t, (*userPropertiesMap)[U.UP_LATEST_PAGE_LOAD_TIME], 0.10)
+		assert.Equal(t, "test-campaign", (*userPropertiesMap)[U.UP_LATEST_CAMPAIGN])
 	})
+	// creating 2 diff sessions. With and without hasDefinedEventProperties
+	t.Run("ShouldNotBeEqualLatestAndInitialUserProperties", func(t *testing.T) {
+		_, errCode := M.CreateEvent(&M.Event{EventNameId: eventNameId,
+			ProjectId: projectId, UserId: userId, Timestamp: sessionEventTimestamp + 70})
+
+		userProperties, _ := M.GetUserProperties(projectId, userId, userPropertiesId)
+		userPropertiesMap, _ := U.DecodePostgresJsonb(userProperties)
+
+		session, errCode := M.CreateOrGetSessionEvent(projectId, userId, true, false,
+			sessionEventTimestamp+40, &U.PropertiesMap{U.EP_PAGE_LOAD_TIME: 0.10,
+				U.EP_CAMPAIGN: "test-campaign"}, &U.PropertiesMap{}, userPropertiesId)
+		assert.Equal(t, http.StatusFound, errCode)
+		assert.NotNil(t, session)
+		assert.NotNil(t, (*userPropertiesMap)[U.UP_SESSION_COUNT])
+
+		session2, errCode := M.CreateOrGetSessionEvent(projectId, userId, true, true,
+			sessionEventTimestamp+10, &U.PropertiesMap{U.EP_PAGE_LOAD_TIME: 0.20,
+				U.EP_CAMPAIGN: "test-campaign1"}, &U.PropertiesMap{}, userPropertiesId)
+		assert.Equal(t, http.StatusCreated, errCode)
+		assert.NotNil(t, session2)
+
+		// Session event should exist with initial event properites.
+		sessionEvent, errCode := M.GetEvent(projectId, userId, session.ID)
+		assert.Equal(t, http.StatusFound, errCode)
+		eventPropertiesBytes, err := sessionEvent.Properties.Value()
+		assert.Nil(t, err)
+		var eventPropertiesMap map[string]interface{}
+		json.Unmarshal(eventPropertiesBytes.([]byte), &eventPropertiesMap)
+		assert.NotNil(t, eventPropertiesMap[U.UP_INITIAL_PAGE_LOAD_TIME])
+		assert.Equal(t, 0.10, eventPropertiesMap[U.UP_INITIAL_PAGE_LOAD_TIME])
+		assert.NotNil(t, eventPropertiesMap[U.EP_CAMPAIGN])
+		assert.Equal(t, "test-campaign", eventPropertiesMap[U.EP_CAMPAIGN])
+
+		userPropertiesMap, errCode = M.GetUserPropertiesAsMap(projectId, userId)
+		assert.Equal(t, errCode, http.StatusFound)
+		assert.Equal(t, (*userPropertiesMap)[U.UP_LATEST_PAGE_LOAD_TIME], 0.20)
+		assert.Equal(t, "test-campaign1", (*userPropertiesMap)[U.UP_LATEST_CAMPAIGN])
+	})
+}
+func TestOverwriteEventProperties(t *testing.T) {
+	projectId, userId, eventNameId, err := SetupProjectUserEventName()
+	assert.Nil(t, err)
+
+	event, errCode := M.CreateEvent(&M.Event{EventNameId: eventNameId,
+		ProjectId: projectId, UserId: userId, Timestamp: time.Now().Unix()})
+
+	eventPropertiesMap, err := U.DecodePostgresJsonb(&event.Properties)
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.Nil(t, (*eventPropertiesMap)["Hello"])
+	(*eventPropertiesMap)["Hello"] = "World"
+
+	eventPropertiesJSONb, err := U.EncodeToPostgresJsonb(eventPropertiesMap)
+	assert.Nil(t, err)
+
+	errCode = M.OverwriteEventProperties(projectId, userId, event.ID, eventPropertiesJSONb)
+	assert.Equal(t, errCode, http.StatusAccepted)
+
+	rEvent, errCode := M.GetEvent(projectId, userId, event.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+
+	rEventPropertiesMap, err := U.DecodePostgresJsonb(&rEvent.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, (*rEventPropertiesMap)["Hello"], "World")
 }

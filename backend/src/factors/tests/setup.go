@@ -11,7 +11,7 @@ import (
 
 func SetupProjectReturnDAO() (*M.Project, error) {
 
-	agent, errCode := SetupAgentReturnDAO(getRandomEmail(),"+354522436")
+	agent, errCode := SetupAgentReturnDAO(getRandomEmail(), "+354522436")
 	if errCode != http.StatusCreated {
 		return nil, fmt.Errorf("Project Creation failed, agentCreation failed")
 	}
