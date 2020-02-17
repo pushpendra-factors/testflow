@@ -414,6 +414,11 @@ func TestCreateOrGetSessionEvent(t *testing.T) {
 		var eventPropertiesMap map[string]interface{}
 		json.Unmarshal(eventPropertiesBytes.([]byte), &eventPropertiesMap)
 		assert.NotNil(t, eventPropertiesMap[U.UP_INITIAL_PAGE_LOAD_TIME])
+
+		userPropertiesMap, errCode := M.GetUserPropertiesAsMap(projectId, userId)
+		assert.Equal(t, errCode, http.StatusFound)
+		assert.Nil(t, (*userPropertiesMap)[U.UP_LATEST_PAGE_LOAD_TIME])
+		assert.Nil(t, (*userPropertiesMap)[U.UP_LATEST_CAMPAIGN])
 	})
 
 	t.Run("ShouldReturnLatestSessionAsUserWasActive", func(t *testing.T) {
@@ -428,6 +433,11 @@ func TestCreateOrGetSessionEvent(t *testing.T) {
 		userProperties, _ := M.GetUserProperties(projectId, userId, userPropertiesId)
 		userPropertiesMap, _ := U.DecodePostgresJsonb(userProperties)
 		assert.NotNil(t, (*userPropertiesMap)[U.UP_SESSION_COUNT])
+
+		userPropertiesMap, errCode = M.GetUserPropertiesAsMap(projectId, userId)
+		assert.Equal(t, errCode, http.StatusFound)
+		assert.Nil(t, (*userPropertiesMap)[U.UP_LATEST_PAGE_LOAD_TIME])
+		assert.Nil(t, (*userPropertiesMap)[U.UP_LATEST_CAMPAIGN])
 	})
 
 	t.Run("ShouldCreateNewSessionAsHasMarketingProperty", func(t *testing.T) {
@@ -455,6 +465,11 @@ func TestCreateOrGetSessionEvent(t *testing.T) {
 		assert.Equal(t, 0.10, eventPropertiesMap[U.UP_INITIAL_PAGE_LOAD_TIME])
 		assert.NotNil(t, eventPropertiesMap[U.EP_CAMPAIGN])
 		assert.Equal(t, "test-campaign", eventPropertiesMap[U.EP_CAMPAIGN])
+
+		userPropertiesMap, errCode = M.GetUserPropertiesAsMap(projectId, userId)
+		assert.Equal(t, errCode, http.StatusFound)
+		assert.Equal(t, (*userPropertiesMap)[U.UP_LATEST_PAGE_LOAD_TIME], 0.10)
+		assert.Equal(t, "test-campaign", (*userPropertiesMap)[U.UP_LATEST_CAMPAIGN])
 	})
 }
 func TestOverwriteEventProperties(t *testing.T) {
