@@ -597,9 +597,10 @@ func CreateOrGetSessionEvent(projectId uint64, userId string, isNewUser bool,
 		return nil, http.StatusInternalServerError
 	}
 
-	if isNewUser || hasDefinedMarketingProperty {
-		// If the event has a marketing property, then the user is visiting again from a marketing channel.
-		// Creating a new session event irrespective of timing to keep track of multiple marketing touch points
+	if hasDefinedMarketingProperty {
+		// If the event has a marketing property, then the user is visiting again
+		// from a marketing channel. Creating a new session event irrespective of
+		// timing to keep track of multiple marketing touch points
 		// from the same user.
 		latestUserProperities := U.GetLatestUserProperties(eventProperties)
 		for key, value := range *latestUserProperities {
@@ -622,6 +623,13 @@ func CreateOrGetSessionEvent(projectId uint64, userId string, isNewUser bool,
 
 		return createSessionEvent(projectId, userId, sessionEventName.ID, isNewUser,
 			newEventTimestamp, eventProperties, userProperties, sessionUserPropertiesId)
+	}
+
+	if isNewUser {
+		// If user is new, it is unneccessary to check for users inactivity
+		// before session creation as no events would be available.
+		return createSessionEvent(projectId, userId, sessionEventName.ID, isNewUser,
+			newEventTimestamp, eventProperties, userProperties, userPropertiesId)
 	}
 
 	latestUserEvent, errCode := GetLatestAnyEventOfUserForSessionFromCache(projectId,
