@@ -585,8 +585,9 @@ func createSessionEvent(projectId uint64, userId string, sessionEventNameId uint
 	return newSessionEvent, errCode
 }
 
-func CreateOrGetSessionEvent(projectId uint64, userId string, isFirstSession bool, hasDefinedMarketingProperty bool,
-	newEventTimestamp int64, eventProperties, userProperties *U.PropertiesMap, userPropertiesId string) (*Event, int) {
+func CreateOrGetSessionEvent(projectId uint64, userId string, isNewUser bool,
+	hasDefinedMarketingProperty bool, newEventTimestamp int64,
+	eventProperties, userProperties *U.PropertiesMap, userPropertiesId string) (*Event, int) {
 
 	logCtx := log.WithField("project_id", projectId).WithField("user_id", userId)
 
@@ -596,7 +597,7 @@ func CreateOrGetSessionEvent(projectId uint64, userId string, isFirstSession boo
 		return nil, http.StatusInternalServerError
 	}
 
-	if hasDefinedMarketingProperty {
+	if isNewUser || hasDefinedMarketingProperty {
 		// If the event has a marketing property, then the user is visiting again from a marketing channel.
 		// Creating a new session event irrespective of timing to keep track of multiple marketing touch points
 		// from the same user.
@@ -604,22 +605,27 @@ func CreateOrGetSessionEvent(projectId uint64, userId string, isFirstSession boo
 		for key, value := range *latestUserProperities {
 			(*userProperties)[key] = value
 		}
+
 		userPropsJSON, err := json.Marshal(userProperties)
 		if err != nil {
-			log.WithField("user_id", userId).Error(
-				"Failed to marshal existing user properties on CreateOrGetSessionEvent.")
+			logCtx.Error("Failed to marshal existing user properties on CreateOrGetSessionEvent.")
 		}
+
+		var sessionUserPropertiesId string
 		newPropertiesId, errCode := UpdateUserProperties(projectId, userId, &postgres.Jsonb{userPropsJSON})
-		if errCode != http.StatusAccepted {
-			log.WithField("projectId", projectId).Error("Failed to add latest event properties on CreateOrGetSessionEvent")
-			return createSessionEvent(projectId, userId, sessionEventName.ID, isFirstSession, newEventTimestamp,
-				eventProperties, userProperties, userPropertiesId)
+		if errCode == http.StatusAccepted {
+			sessionUserPropertiesId = newPropertiesId
+		} else {
+			logCtx.Error("Failed to add latest event properties on CreateOrGetSessionEvent")
+			sessionUserPropertiesId = userPropertiesId
 		}
-		return createSessionEvent(projectId, userId, sessionEventName.ID, isFirstSession, newEventTimestamp,
-			eventProperties, userProperties, newPropertiesId)
+
+		return createSessionEvent(projectId, userId, sessionEventName.ID, isNewUser,
+			newEventTimestamp, eventProperties, userProperties, sessionUserPropertiesId)
 	}
 
-	latestUserEvent, errCode := GetLatestAnyEventOfUserForSessionFromCache(projectId, userId, newEventTimestamp)
+	latestUserEvent, errCode := GetLatestAnyEventOfUserForSessionFromCache(projectId,
+		userId, newEventTimestamp)
 	if errCode == http.StatusNotFound || errCode == http.StatusInternalServerError {
 		// Double check user's inactivity for the duration.
 		dbLatestUserEvent, errCode := GetLatestAnyEventOfUserForSession(
@@ -630,9 +636,11 @@ func CreateOrGetSessionEvent(projectId uint64, userId string, isFirstSession boo
 		}
 
 		if errCode == http.StatusNotFound {
-			return createSessionEvent(projectId, userId, sessionEventName.ID, isFirstSession, newEventTimestamp,
-				eventProperties, userProperties, userPropertiesId)
+			return createSessionEvent(projectId, userId, sessionEventName.ID,
+				isNewUser, newEventTimestamp, eventProperties, userProperties,
+				userPropertiesId)
 		}
+
 		latestUserEvent = dbLatestUserEvent
 	}
 
@@ -651,8 +659,9 @@ func CreateOrGetSessionEvent(projectId uint64, userId string, isFirstSession boo
 	if errCode == http.StatusFound {
 		if latestUserEvent.SessionId != nil && *latestUserEvent.SessionId != "" &&
 			latestSessionEvent.ID != *latestUserEvent.SessionId {
-			logCtx.WithField("latest_session_id", latestSessionEvent.ID).WithField("user_lastest_event_session_id",
-				latestUserEvent.SessionId).Error("Latest session's id and session_id on last event of user not matching.")
+			logCtx.WithField("latest_session_id", latestSessionEvent.ID).WithField(
+				"user_lastest_event_session_id", latestUserEvent.SessionId).Error(
+				"Latest session's id and session_id on last event of user not matching.")
 		}
 
 		return latestSessionEvent, http.StatusFound
@@ -660,20 +669,21 @@ func CreateOrGetSessionEvent(projectId uint64, userId string, isFirstSession boo
 
 	if errCode == http.StatusNotFound {
 		logCtx.Error("Session length of user exceeded 1 day. Created new session.")
-		return createSessionEvent(projectId, userId, sessionEventName.ID, isFirstSession, newEventTimestamp,
-			eventProperties, userProperties, userPropertiesId)
+		return createSessionEvent(projectId, userId, sessionEventName.ID, isNewUser,
+			newEventTimestamp, eventProperties, userProperties, userPropertiesId)
 	}
 
 	return latestSessionEvent, http.StatusFound
 }
 
-func OverwriteEventProperties(projectId uint64, userId string, eventId string, newEventProperties *postgres.Jsonb) int {
-	db := C.GetServices().Db
+func OverwriteEventProperties(projectId uint64, userId string, eventId string,
+	newEventProperties *postgres.Jsonb) int {
 
 	if newEventProperties == nil {
 		return http.StatusBadRequest
 	}
 
+	db := C.GetServices().Db
 	if err := db.Model(&Event{}).Where("project_id = ? AND user_id = ? AND id = ?",
 		projectId, userId, eventId).Update(
 		"properties", newEventProperties).Error; err != nil {

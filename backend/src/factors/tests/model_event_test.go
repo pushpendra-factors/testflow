@@ -401,7 +401,7 @@ func TestCreateOrGetSessionEvent(t *testing.T) {
 	sessionEventTimestamp := U.UnixTimeBeforeDuration(time.Minute * 32)
 
 	t.Run("ShouldCreateNewSessionAsNoEventInLast30Mins", func(t *testing.T) {
-		session, errCode := M.CreateOrGetSessionEvent(projectId, userId, true, false, sessionEventTimestamp,
+		session, errCode := M.CreateOrGetSessionEvent(projectId, userId, false, false, sessionEventTimestamp,
 			&U.PropertiesMap{U.EP_PAGE_LOAD_TIME: 0.10}, &U.PropertiesMap{}, userPropertiesId)
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.NotNil(t, session)
@@ -425,7 +425,7 @@ func TestCreateOrGetSessionEvent(t *testing.T) {
 		_, errCode := M.CreateEvent(&M.Event{EventNameId: eventNameId,
 			ProjectId: projectId, UserId: userId, Timestamp: sessionEventTimestamp + 10})
 
-		session, errCode := M.CreateOrGetSessionEvent(projectId, userId, true,
+		session, errCode := M.CreateOrGetSessionEvent(projectId, userId, false,
 			false, sessionEventTimestamp+20, &U.PropertiesMap{}, &U.PropertiesMap{}, userPropertiesId)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, session)
@@ -447,7 +447,7 @@ func TestCreateOrGetSessionEvent(t *testing.T) {
 		userProperties, _ := M.GetUserProperties(projectId, userId, userPropertiesId)
 		userPropertiesMap, _ := U.DecodePostgresJsonb(userProperties)
 
-		session, errCode := M.CreateOrGetSessionEvent(projectId, userId, true, true,
+		session, errCode := M.CreateOrGetSessionEvent(projectId, userId, false, true,
 			sessionEventTimestamp+10, &U.PropertiesMap{U.EP_PAGE_LOAD_TIME: 0.10,
 				U.EP_CAMPAIGN: "test-campaign"}, &U.PropertiesMap{}, userPropertiesId)
 		assert.Equal(t, http.StatusCreated, errCode)
@@ -479,14 +479,14 @@ func TestCreateOrGetSessionEvent(t *testing.T) {
 		userProperties, _ := M.GetUserProperties(projectId, userId, userPropertiesId)
 		userPropertiesMap, _ := U.DecodePostgresJsonb(userProperties)
 
-		session, errCode := M.CreateOrGetSessionEvent(projectId, userId, true, false,
+		session, errCode := M.CreateOrGetSessionEvent(projectId, userId, false, false,
 			sessionEventTimestamp+40, &U.PropertiesMap{U.EP_PAGE_LOAD_TIME: 0.10,
 				U.EP_CAMPAIGN: "test-campaign"}, &U.PropertiesMap{}, userPropertiesId)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, session)
 		assert.NotNil(t, (*userPropertiesMap)[U.UP_SESSION_COUNT])
 
-		session2, errCode := M.CreateOrGetSessionEvent(projectId, userId, true, true,
+		session2, errCode := M.CreateOrGetSessionEvent(projectId, userId, false, true,
 			sessionEventTimestamp+10, &U.PropertiesMap{U.EP_PAGE_LOAD_TIME: 0.20,
 				U.EP_CAMPAIGN: "test-campaign1"}, &U.PropertiesMap{}, userPropertiesId)
 		assert.Equal(t, http.StatusCreated, errCode)
