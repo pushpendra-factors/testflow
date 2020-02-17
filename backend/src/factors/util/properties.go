@@ -154,7 +154,7 @@ var UP_CITY string = "$city"
 var UP_REGION string = "$region"
 var UP_TIMEZONE string = "$timezone"
 var UP_SEGMENT_CHANNEL string = "$segment_channel" // from segement (browser, client, etc.,).
-var UP_USER_ID = "$user_id"
+var UP_USER_ID string = "$user_id"
 var UP_EMAIL string = "$email"
 var UP_COMPANY string = "$company"
 var UP_NAME string = "$name"
@@ -183,14 +183,38 @@ var UP_INITIAL_COST string = "$initial_cost"
 var UP_TOTAL_COST string = "$total_cost"
 var UP_INITIAL_REVENUE string = "$initial_revenue"
 var UP_TOTAL_REVENUE string = "$total_revenue"
-var UP_INITIAL_REFERRER = "$initial_referrer"
-var UP_INITIAL_REFERRER_URL = "$initial_referrer_url"
-var UP_INITIAL_REFERRER_DOMAIN = "$initial_referrer_domain"
+var UP_INITIAL_REFERRER string = "$initial_referrer"
+var UP_INITIAL_REFERRER_URL string = "$initial_referrer_url"
+var UP_INITIAL_REFERRER_DOMAIN string = "$initial_referrer_domain"
 var UP_DAY_OF_FIRST_EVENT string = "$day_of_first_event"
 var UP_HOUR_OF_FIRST_EVENT string = "$hour_of_first_event"
 var UP_SESSION_COUNT string = "$session_count"
 var UP_PAGE_COUNT string = "$page_count"
 var UP_SESSION_SPENT_TIME string = "$session_spent_time"
+
+var UP_LATEST_PAGE_URL string = "$latest_page_url"
+var UP_LATEST_PAGE_DOMAIN string = "$latest_page_domain"
+var UP_LATEST_PAGE_RAW_URL string = "$latest_page_raw_url"
+var UP_LATEST_PAGE_LOAD_TIME string = "$latest_page_load_time"
+var UP_LATEST_PAGE_SPENT_TIME string = "$latest_page_spent_time"
+var UP_LATEST_PAGE_SCROLL_PERCENT string = "$latest_page_scroll_percent"
+var UP_LATEST_CAMPAIGN string = "$latest_campaign"
+var UP_LATEST_CAMPAIGN_ID string = "$latest_campaign_id"
+var UP_LATEST_SOURCE string = "$latest_source"
+var UP_LATEST_MEDIUM string = "$latest_medium"
+var UP_LATEST_KEYWORD string = "$latest_keyword"
+var UP_LATEST_KEYWORD_MATCH_TYPE string = "$latest_keyword_match_type"
+var UP_LATEST_CONTENT string = "$latest_content"
+var UP_LATEST_ADGROUP string = "$latest_adgroup"
+var UP_LATEST_ADGROUP_ID string = "$latest_adgroup_id"
+var UP_LATEST_CREATIVE string = "$latest_creative"
+var UP_LATEST_GCLID string = "$latest_gclid"
+var UP_LATEST_FBCLID string = "$latest_fbclid"
+var UP_LATEST_COST string = "$latest_cost"
+var UP_LATEST_REVENUE string = "$latest_revenue"
+var UP_LATEST_REFERRER string = "$latest_referrer"
+var UP_LATEST_REFERRER_URL string = "$latest_referrer_url"
+var UP_LATEST_REFERRER_DOMAIN string = "$latest_referrer_domain"
 
 // session properties
 var SP_IS_FIRST_SESSION = "$is_first_session"
@@ -328,6 +352,29 @@ var SDK_ALLOWED_USER_PROPERTIES = [...]string{
 	UP_TOTAL_REVENUE,
 	UP_DAY_OF_FIRST_EVENT,
 	UP_HOUR_OF_FIRST_EVENT,
+	UP_LATEST_PAGE_URL,
+	UP_LATEST_PAGE_DOMAIN,
+	UP_LATEST_PAGE_RAW_URL,
+	UP_LATEST_PAGE_LOAD_TIME,
+	UP_LATEST_PAGE_SPENT_TIME,
+	UP_LATEST_PAGE_SCROLL_PERCENT,
+	UP_LATEST_CAMPAIGN,
+	UP_LATEST_CAMPAIGN_ID,
+	UP_LATEST_SOURCE,
+	UP_LATEST_MEDIUM,
+	UP_LATEST_KEYWORD,
+	UP_LATEST_KEYWORD_MATCH_TYPE,
+	UP_LATEST_CONTENT,
+	UP_LATEST_ADGROUP,
+	UP_LATEST_ADGROUP_ID,
+	UP_LATEST_CREATIVE,
+	UP_LATEST_GCLID,
+	UP_LATEST_FBCLID,
+	UP_LATEST_COST,
+	UP_LATEST_REVENUE,
+	UP_LATEST_REFERRER,
+	UP_LATEST_REFERRER_URL,
+	UP_LATEST_REFERRER_DOMAIN,
 }
 
 // Event properties that are not visible to user for analysis.
@@ -402,6 +449,32 @@ var EVENT_TO_USER_INITIAL_PROPERTIES = map[string]string{
 	EP_FBCLIID:             UP_INITIAL_FBCLID,
 	EP_COST:                UP_INITIAL_COST,
 	EP_REVENUE:             UP_INITIAL_REVENUE,
+}
+
+var EVENT_TO_USER_LATEST_PROPERTIES = map[string]string{
+	EP_PAGE_URL:            UP_LATEST_PAGE_URL,
+	EP_PAGE_RAW_URL:        UP_LATEST_PAGE_RAW_URL,
+	EP_PAGE_DOMAIN:         UP_LATEST_PAGE_DOMAIN,
+	EP_REFERRER_URL:        UP_LATEST_REFERRER_URL,
+	EP_REFERRER_DOMAIN:     UP_LATEST_REFERRER_DOMAIN,
+	EP_REFERRER:            UP_LATEST_REFERRER,
+	EP_PAGE_LOAD_TIME:      UP_LATEST_PAGE_LOAD_TIME,
+	EP_PAGE_SPENT_TIME:     UP_LATEST_PAGE_SPENT_TIME,
+	EP_PAGE_SCROLL_PERCENT: UP_LATEST_PAGE_SCROLL_PERCENT,
+	EP_CAMPAIGN:            UP_LATEST_CAMPAIGN,
+	EP_CAMPAIGN_ID:         UP_LATEST_CAMPAIGN_ID,
+	EP_SOURCE:              UP_LATEST_SOURCE,
+	EP_MEDIUM:              UP_LATEST_MEDIUM,
+	EP_KEYWORD:             UP_LATEST_KEYWORD,
+	EP_KEYWORD_MATCH_TYPE:  UP_LATEST_KEYWORD_MATCH_TYPE,
+	EP_CONTENT:             UP_LATEST_CONTENT,
+	EP_ADGROUP:             UP_LATEST_ADGROUP,
+	EP_ADGROUP_ID:          UP_LATEST_ADGROUP_ID,
+	EP_CREATIVE:            UP_LATEST_CREATIVE,
+	EP_GCLID:               UP_LATEST_GCLID,
+	EP_FBCLIID:             UP_LATEST_FBCLID,
+	EP_COST:                UP_LATEST_COST,
+	EP_REVENUE:             UP_LATEST_REVENUE,
 }
 
 // Uses same name as source user properties.
@@ -734,6 +807,16 @@ func GetInitialUserProperties(eventProperties *PropertiesMap) *PropertiesMap {
 	}
 
 	return &initialUserProperties
+}
+func GetLatestUserProperties(eventProperties *PropertiesMap) *PropertiesMap {
+	latestUserProperties := make(PropertiesMap)
+	for k, v := range *eventProperties {
+		if userPropertyKey, exists := EVENT_TO_USER_LATEST_PROPERTIES[k]; exists {
+			latestUserProperties[userPropertyKey] = v
+		}
+	}
+
+	return &latestUserProperties
 }
 
 func GetSessionProperties(isFirstSession bool, eventProperties,

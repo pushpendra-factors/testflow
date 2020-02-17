@@ -595,8 +595,23 @@ func CreateOrGetSessionEvent(projectId uint64, userId string, isFirstSession boo
 		// If the event has a marketing property, then the user is visiting again from a marketing channel.
 		// Creating a new session event irrespective of timing to keep track of multiple marketing touch points
 		// from the same user.
+		latestUserProperities := U.GetLatestUserProperties(eventProperties)
+		for key, value := range *latestUserProperities {
+			(*userProperties)[key] = value
+		}
+		userPropsJSON, err := json.Marshal(userProperties)
+		if err != nil {
+			log.WithField("user_id", userId).Error(
+				"Failed to marshal existing user properties on CreateOrGetSessionEvent.")
+		}
+		newPropertiesId, errCode := UpdateUserProperties(projectId, userId, &postgres.Jsonb{userPropsJSON})
+		if errCode != http.StatusAccepted {
+			log.WithField("projectId", projectId).Error("Failed to add latest event properties on CreateOrGetSessionEvent")
+			return createSessionEvent(projectId, userId, sessionEventName.ID, isFirstSession, newEventTimestamp,
+				eventProperties, userProperties, userPropertiesId)
+		}
 		return createSessionEvent(projectId, userId, sessionEventName.ID, isFirstSession, newEventTimestamp,
-			eventProperties, userProperties, userPropertiesId)
+			eventProperties, userProperties, newPropertiesId)
 	}
 
 	latestUserEvent, errCode := GetLatestAnyEventOfUserForSessionFromCache(projectId, userId, newEventTimestamp)
