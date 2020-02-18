@@ -163,9 +163,11 @@ func CreateDefaultProjectForAgent(agentUUID string) (*Project, int) {
 
 func GetProject(id uint64) (*Project, int) {
 	db := C.GetServices().Db
+	logCtx := log.WithField("project_id", id)
 
 	var project Project
 	if err := db.Where("id = ?", id).First(&project).Error; err != nil {
+		logCtx.WithError(err).Error("Getting project by id failed")
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound
 		}
@@ -223,6 +225,7 @@ func GetProjects() ([]Project, int) {
 
 	var projects []Project
 	if err := db.Find(&projects).Error; err != nil {
+		log.WithError(err).Error("Getting all projects failed")
 		return nil, http.StatusInternalServerError
 	}
 	if len(projects) == 0 {
@@ -246,6 +249,7 @@ func GetProjectsByIDs(ids []uint64) ([]Project, int) {
 
 	var projects []Project
 	if err := db.Limit(len(ids)).Where(ids).Find(&projects).Error; err != nil {
+		log.WithError(err).Error("Getting projects using ids failed")
 		return nil, http.StatusInternalServerError
 	}
 

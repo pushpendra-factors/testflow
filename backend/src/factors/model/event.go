@@ -128,6 +128,8 @@ func CreateEvent(event *Event) (*Event, int) {
 	db := C.GetServices().Db
 	if err := db.Model(&Event{}).Where("project_id = ? AND user_id = ? AND event_name_id = ?",
 		event.ProjectId, event.UserId, event.EventNameId).Count(&count).Error; err != nil {
+		log.WithFields(log.Fields{"projectId": event.ProjectId, "userId": event.UserId}).WithError(err).Error(
+			"Getting event count on eventNameId failed on CreateEvent")
 		return nil, http.StatusInternalServerError
 	}
 	event.Count = count + 1
@@ -175,6 +177,8 @@ func GetEvent(projectId uint64, userId string, id string) (*Event, int) {
 
 	var event Event
 	if err := db.Where("id = ?", id).Where("project_id = ?", projectId).Where("user_id = ?", userId).First(&event).Error; err != nil {
+		log.WithFields(log.Fields{"projectId": projectId, "userId": userId}).WithError(err).Error(
+			"Getttng event failed on GetEvent")
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound
 		}
@@ -188,6 +192,8 @@ func GetEventById(projectId uint64, id string) (*Event, int) {
 
 	var event Event
 	if err := db.Where("project_id = ?", projectId).Where("id = ?", id).First(&event).Error; err != nil {
+		log.WithFields(log.Fields{"project_id": projectId, "user_id": id}).WithError(err).Error(
+			"Getttng event failed on GetEventbyId")
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound
 		}
@@ -673,6 +679,8 @@ func OverwriteEventProperties(projectId uint64, userId string, eventId string,
 	if err := db.Model(&Event{}).Where("project_id = ? AND user_id = ? AND id = ?",
 		projectId, userId, eventId).Update(
 		"properties", newEventProperties).Error; err != nil {
+		log.WithFields(log.Fields{"projectId": projectId, "userId": userId}).WithError(err).Error(
+			"Updating event properties failed in OverwriteEventProperties")
 		return http.StatusInternalServerError
 	}
 	return http.StatusAccepted

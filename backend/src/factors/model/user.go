@@ -177,12 +177,14 @@ func getUserPropertiesId(projectId uint64, id string) (string, int) {
 
 func GetUser(projectId uint64, id string) (*User, int) {
 	db := C.GetServices().Db
+	logCtx := log.WithFields(log.Fields{"project_id": projectId, "user_id": id})
 
 	var user User
 	if err := db.Where("project_id = ?", projectId).Where("id = ?", id).First(&user).Error; err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound
 		}
+		logCtx.WithError(err).Error("Failed to get user using user_id")
 		return nil, http.StatusInternalServerError
 	}
 	if user.PropertiesId != "" {

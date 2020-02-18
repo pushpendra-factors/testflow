@@ -106,6 +106,8 @@ func GetDashboards(projectId uint64, agentUUID string) ([]Dashboard, int) {
 func GetDashboard(projectId uint64, agentUUID string, id uint64) (*Dashboard, int) {
 	db := C.GetServices().Db
 
+	logCtx := log.WithFields(log.Fields{"projectId": projectId, "agentUUID": agentUUID})
+
 	var dashboard Dashboard
 	if projectId == 0 || agentUUID == "" {
 		log.Error("Failed to get dashboard. Invalid project_id or agent_id")
@@ -114,7 +116,8 @@ func GetDashboard(projectId uint64, agentUUID string, id uint64) (*Dashboard, in
 
 	if err := db.Where("project_id = ? AND id = ? AND (type = ? OR agent_uuid = ?)", projectId, id,
 		DashboardTypeProjectVisible, agentUUID).First(&dashboard).Error; err != nil {
-
+		logCtx.WithError(err).Error(
+			"Getting dashboard failed in GetDashboard")
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound
 		}

@@ -37,6 +37,7 @@ type ProjectSetting struct {
 
 func GetProjectSetting(projectId uint64) (*ProjectSetting, int) {
 	db := C.GetServices().Db
+	logCtx := log.WithField("project_id", projectId)
 
 	if valid := isValidProjectScope(projectId); !valid {
 		return nil, http.StatusBadRequest
@@ -44,6 +45,7 @@ func GetProjectSetting(projectId uint64) (*ProjectSetting, int) {
 
 	var projectSetting ProjectSetting
 	if err := db.Where("project_id = ?", projectId).First(&projectSetting).Error; err != nil {
+		logCtx.WithError(err).Error("Getting Project setting failed")
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound
 		}

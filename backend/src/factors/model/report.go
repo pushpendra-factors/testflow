@@ -170,6 +170,7 @@ func CreateReport(report *Report) (*Report, int) {
 	db := C.GetServices().Db
 
 	if err := db.Create(dbReport).Error; err != nil {
+		log.WithError(err).Error("Failed to create dbReport")
 		return nil, http.StatusInternalServerError
 	}
 

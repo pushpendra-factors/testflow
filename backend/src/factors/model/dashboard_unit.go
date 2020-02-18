@@ -194,6 +194,8 @@ func DeleteDashboardUnit(projectId uint64, agentUUID string, dashboardId uint64,
 func UpdateDashboardUnit(projectId uint64, agentUUID string,
 	dashboardId uint64, id uint64, unit *DashboardUnit) (*DashboardUnit, int) {
 
+	logCtx := log.WithFields(log.Fields{"project_id": projectId, "agentUUID": agentUUID, "dashboard_id": dashboardId})
+
 	if projectId == 0 || agentUUID == "" ||
 		dashboardId == 0 || id == 0 {
 
@@ -221,6 +223,7 @@ func UpdateDashboardUnit(projectId uint64, agentUUID string,
 	err := db.Model(&updatedDashboardUnitFields).Where("id = ? AND project_id = ? AND dashboard_id = ?",
 		id, projectId, dashboardId).Update(updateFields).Error
 	if err != nil {
+		logCtx.WithError(err).Error("updatedDashboardUnitFields failed at UpdateDashboardUnit in dashboard_unit.go")
 		return nil, http.StatusInternalServerError
 	}
 

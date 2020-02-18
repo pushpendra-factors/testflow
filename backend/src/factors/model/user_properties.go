@@ -94,6 +94,7 @@ func createUserPropertiesIfChanged(projectId uint64, userId string,
 
 func GetUserProperties(projectId uint64, userId string, id string) (*postgres.Jsonb, int) {
 	db := C.GetServices().Db
+	logCtx := log.WithFields(log.Fields{"project_id": projectId, "user_id": userId, "user_properties_id": id})
 
 	var userProperties UserProperties
 	if err := db.Where("project_id = ?", projectId).Where("user_id = ?", userId).Where(
@@ -101,6 +102,7 @@ func GetUserProperties(projectId uint64, userId string, id string) (*postgres.Js
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound
 		}
+		logCtx.WithError(err).Error("Getting user properties using projectId, userId, userPropertiesId failed")
 		return nil, http.StatusInternalServerError
 	}
 	return &userProperties.Properties, http.StatusFound
@@ -211,9 +213,11 @@ func FillUserPropertiesAndGetCustomerUserIdFromFormSubmit(projectId uint64, user
 
 func GetUserPropertyRecordsByUserId(projectId uint64, userId string) ([]UserProperties, int) {
 	db := C.GetServices().Db
+	logCtx := log.WithFields(log.Fields{"project_id": projectId, "user_id": userId})
 
 	var userProperties []UserProperties
 	if err := db.Where("project_id = ? AND user_id = ?", projectId, userId).Find(&userProperties).Error; err != nil {
+		logCtx.WithError(err).Error("Getting user property records by user_id failed")
 		return nil, http.StatusInternalServerError
 	}
 

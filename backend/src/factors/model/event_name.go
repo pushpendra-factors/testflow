@@ -156,6 +156,8 @@ func GetEventName(name string, projectId uint64) (*EventName, int) {
 
 	var eventName EventName
 	if err := db.Where(&EventName{Name: name, ProjectId: projectId}).First(&eventName).Error; err != nil {
+		log.WithFields(log.Fields{"projectId": projectId, "Name": name}).WithError(err).Error(
+			"Getting eventName failed on GetEventName")
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound
 		}
@@ -298,6 +300,8 @@ func GetFilterEventNamesByExprPrefix(projectId uint64, prefix string) ([]EventNa
 	var eventNames []EventName
 	if err := db.Where("project_id = ? AND type = ? AND filter_expr LIKE ? AND deleted = 'false'",
 		projectId, TYPE_FILTER_EVENT_NAME, fmt.Sprintf("%s%%", prefix)).Find(&eventNames).Error; err != nil {
+		log.WithFields(log.Fields{"projectId": projectId, "prefix": prefix}).WithError(err).Error(
+			"Filtering eventName failed on GetFilterEventNamesByExprPrefix")
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound
 		}

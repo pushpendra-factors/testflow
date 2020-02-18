@@ -533,6 +533,8 @@ func GetHubspotFormDocuments(projectId uint64) ([]HubspotDocument, int) {
 	err := db.Where("project_id=? AND type=?",
 		projectId, 4).Find(&documents).Error
 	if err != nil {
+		log.WithField("projectId", projectId).WithError(err).Error(
+			"Finding documents failed on GetHubspotFormDocuments")
 		return nil, http.StatusInternalServerError
 	}
 

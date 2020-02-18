@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/jinzhu/gorm"
+	log "github.com/sirupsen/logrus"
 )
 
 type ProjectBillingAccountMapping struct {
@@ -17,6 +18,8 @@ type ProjectBillingAccountMapping struct {
 }
 
 func createProjectBillingAccountMapping(projectID, billingAccID uint64) (*ProjectBillingAccountMapping, int) {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "billing_account_id": billingAccID})
+
 	if projectID == 0 || billingAccID == 0 {
 		return nil, http.StatusBadRequest
 	}
@@ -24,6 +27,7 @@ func createProjectBillingAccountMapping(projectID, billingAccID uint64) (*Projec
 
 	pBAM := &ProjectBillingAccountMapping{ProjectID: projectID, BillingAccountID: billingAccID}
 	if err := db.Create(&pBAM).Error; err != nil {
+		logCtx.WithError(err).Error("Creating ProjectBillingAccountMapping failed")
 		return nil, http.StatusInternalServerError
 	}
 	return pBAM, http.StatusCreated
@@ -38,6 +42,7 @@ func GetProjectBillingAccountMappings(billingAccountID uint64) ([]ProjectBilling
 
 	pBAMS := make([]ProjectBillingAccountMapping, 0, 0)
 	if err := db.Where("billing_account_id = ?", billingAccountID).Find(&pBAMS).Error; err != nil {
+		log.WithField("biling_account_id", billingAccountID).WithError(err).Error("Getting ProjectBillingAccountMappings failed")
 		return nil, http.StatusInternalServerError
 	}
 
@@ -55,6 +60,8 @@ func GetProjectBillingAccountMapping(projectID uint64) (*ProjectBillingAccountMa
 	db := C.GetServices().Db
 	pBAM := ProjectBillingAccountMapping{}
 	if err := db.Where("project_id = ? ", projectID).Limit(1).Find(&pBAM).Error; err != nil {
+		log.WithField("project_id", projectID).WithError(err).Error("Finding ProjectBillingAccountMapping failed using PropjectId")
+
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound
 		}

@@ -122,6 +122,7 @@ func GetProjectAgentMappingsByProjectIds(projectIds []uint64) ([]ProjectAgentMap
 	db := C.GetServices().Db
 	var pam []ProjectAgentMapping
 	if err := db.Where("project_id IN (?)", projectIds).Find(&pam).Error; err != nil {
+		log.WithError(err).Error("Finding ProjectAgentMapping failed using ProjectIds")
 		return nil, http.StatusInternalServerError
 	}
 
@@ -139,6 +140,7 @@ func GetProjectAgentMappingsByAgentUUID(agentUUID string) ([]ProjectAgentMapping
 	db := C.GetServices().Db
 	var pam []ProjectAgentMapping
 	if err := db.Where("agent_uuid = ?", agentUUID).Find(&pam).Error; err != nil {
+		log.WithError(err).Error("Finding ProjectAgentMapping failed using AgentUUID")
 		return nil, http.StatusInternalServerError
 	}
 
@@ -178,6 +180,8 @@ func DeleteProjectAgentMapping(projectId uint64, agentUUIDToRemove string) int {
 	db = db.Where("project_id = ?", projectId).Where("agent_uuid = ? ", agentUUIDToRemove).Delete(&ProjectAgentMapping{})
 
 	if db.Error != nil {
+		log.WithFields(log.Fields{"projectId": projectId, "agentUUID": agentUUIDToRemove}).WithError(db.Error).Error(
+			"Deleting ProjectAgentMapping failed.")
 		return http.StatusInternalServerError
 	}
 
