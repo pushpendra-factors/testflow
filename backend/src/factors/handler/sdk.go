@@ -155,7 +155,8 @@ func SDKTrack(projectId uint64, request *SDKTrackPayload, clientIP,
 
 	// Event Properties
 	U.UnEscapeQueryParamProperties(&request.EventProperties)
-	definedEventProperties, hasDefinedMarketingProperty := U.MapEventPropertiesToDefinedProperties(&request.EventProperties)
+	definedEventProperties, hasDefinedMarketingProperty := U.MapEventPropertiesToDefinedProperties(
+		&request.EventProperties)
 	eventProperties := U.GetValidatedEventProperties(definedEventProperties)
 	if ip, ok := (*eventProperties)[U.EP_INTERNAL_IP]; ok && ip != "" {
 		clientIP = ip.(string)
@@ -218,6 +219,10 @@ func SDKTrack(projectId uint64, request *SDKTrackPayload, clientIP,
 
 	_ = M.FillLocationUserProperties(userProperties, clientIP)
 	U.FillUserAgentUserProperties(userProperties, userAgent)
+	// Add latest touch user properties.
+	if hasDefinedMarketingProperty {
+		U.FillLatestTouchUserProperties(userProperties, eventProperties)
+	}
 	// Add user properties from form submit event properties.
 	if request.Name == U.EVENT_NAME_FORM_SUBMITTED {
 		customerUserId, errCode := M.FillUserPropertiesAndGetCustomerUserIdFromFormSubmit(
@@ -246,7 +251,8 @@ func SDKTrack(projectId uint64, request *SDKTrackPayload, clientIP,
 		response.Error = "Failed updating user properties."
 	}
 
-	userPropertiesId, errCode := M.UpdateUserProperties(projectId, request.UserId, &postgres.Jsonb{userPropsJSON})
+	userPropertiesId, errCode := M.UpdateUserProperties(projectId, request.UserId,
+		&postgres.Jsonb{userPropsJSON})
 	if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
 		log.WithFields(log.Fields{"userProperties": userProperties,
 			log.ErrorKey: errCode}).Error("Update user properties on track failed. DB update failed.")

@@ -433,6 +433,54 @@ func TestSDKTrackHandler(t *testing.T) {
 		assert.NotEqual(t, "78910", userProperties2[U.UP_INITIAL_CAMPAIGN_ID])
 	})
 
+	t.Run("AddLatestTouchUserPropertiesFromEventPropertiesIfHasMarketingProperties", func(t *testing.T) {
+		// New user.
+		rEventName := "https://example.com/" + U.RandomLowerAphaNumString(10)
+		w := ServePostRequestWithHeaders(r, uri,
+			[]byte(fmt.Sprintf(`{"event_name": "%s", "event_properties": {"mobile": "true", "$page_url": "https://example.com/xyz", "$page_raw_url": "https://example.com/xyz?utm_campaign=google", "$page_domain": "example.com", "$referrer_domain": "gartner.com", "$referrer_url": "https://gartner.com/product_of_the_month?ref=google", "$referrer": "https://gartner.com/product_of_the_month", "$page_load_time": 100, "$page_spent_time": 120, "$qp_utm_campaign": "google", "$qp_utm_campaignid": "12345", "$qp_utm_source": "google", "$qp_utm_medium": "email", "$qp_utm_keyword": "analytics", "$qp_utm_matchtype": "exact", "$qp_utm_content": "analytics", "$qp_utm_adgroup": "ad-xxx", "$qp_utm_adgroupid": "xyz123", "$qp_utm_creative": "creative-xxx", "$qp_gclid": "xxx123", "$qp_fbclid": "zzz123"}, "user_properties": {"$os": "Mac OS"}}`, rEventName)),
+			map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusOK, w.Code)
+		responseMap = DecodeJSONResponseToMap(w.Body)
+		assert.NotEmpty(t, responseMap)
+		assert.NotNil(t, responseMap["event_id"])
+		assert.NotNil(t, responseMap["user_id"])
+		eventUserId := responseMap["user_id"].(string)
+		rUser, errCode := M.GetUser(project.ID, eventUserId)
+		assert.Equal(t, http.StatusFound, errCode)
+		assert.NotNil(t, rUser)
+		userPropertiesBytes, err = rUser.Properties.Value()
+		assert.Nil(t, err)
+		var userProperties1 map[string]interface{}
+		json.Unmarshal(userPropertiesBytes.([]byte), &userProperties1)
+		assert.NotNil(t, userProperties1[U.UP_LATEST_CAMPAIGN])
+		assert.Equal(t, "google", userProperties1[U.UP_LATEST_CAMPAIGN])
+		assert.NotEqual(t, "producthunt", userProperties1[U.UP_LATEST_CAMPAIGN])
+		assert.NotNil(t, userProperties1[U.UP_LATEST_CAMPAIGN_ID])
+		assert.Equal(t, "12345", userProperties1[U.UP_LATEST_CAMPAIGN_ID])
+
+		// Existing user.
+		w = ServePostRequestWithHeaders(r, uri,
+			[]byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "%s", "event_properties": {"mobile": "true", "$page_url": "https://example.com/xyz", "$page_raw_url": "https://example.com/xyz?utm_campaign=facebook", "$page_domain": "example.com", "$referrer_domain": "gartner.com", "$referrer_url": "https://gartner.com/product_of_the_month?ref=google", "$referrer": "https://gartner.com/product_of_the_month", "$page_load_time": 100, "$page_spent_time": 120, "$qp_utm_campaign": "facebook", "$qp_utm_campaignid": "7890", "$qp_utm_source": "facebook", "$qp_utm_medium": "email", "$qp_utm_keyword": "analytics", "$qp_utm_matchtype": "exact", "$qp_utm_content": "analytics", "$qp_utm_adgroup": "ad-xxx", "$qp_utm_adgroupid": "xyz123", "$qp_utm_creative": "creative-xxx", "$qp_gclid": "xxx123", "$qp_fbclid": "zzz123"}, "user_properties": {"$os": "Mac OS"}}`,
+				eventUserId, rEventName)), map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusOK, w.Code)
+		responseMap = DecodeJSONResponseToMap(w.Body)
+		assert.NotEmpty(t, responseMap)
+		assert.NotNil(t, responseMap["event_id"])
+		assert.Nil(t, responseMap["user_id"])
+		// latest user properties should have the new campaign values.
+		rUser, errCode = M.GetUser(project.ID, eventUserId)
+		assert.Equal(t, http.StatusFound, errCode)
+		assert.NotNil(t, rUser)
+		userPropertiesBytes, err = rUser.Properties.Value()
+		assert.Nil(t, err)
+		var userProperties2 map[string]interface{}
+		json.Unmarshal(userPropertiesBytes.([]byte), &userProperties2)
+		assert.NotNil(t, userProperties2[U.UP_LATEST_CAMPAIGN])
+		assert.Equal(t, "facebook", userProperties2[U.UP_LATEST_CAMPAIGN])
+		assert.NotNil(t, userProperties2[U.UP_LATEST_CAMPAIGN_ID])
+		assert.Equal(t, "7890", userProperties2[U.UP_LATEST_CAMPAIGN_ID])
+	})
+
 	t.Run("IgnoreFilterPropertyAtTheEndOnmatch", func(t *testing.T) {
 		expr := "example.com/profile/id"
 		name := "seen_reports"

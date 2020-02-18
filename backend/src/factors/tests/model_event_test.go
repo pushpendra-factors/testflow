@@ -439,77 +439,8 @@ func TestCreateOrGetSessionEvent(t *testing.T) {
 		assert.Nil(t, (*userPropertiesMap)[U.UP_LATEST_PAGE_LOAD_TIME])
 		assert.Nil(t, (*userPropertiesMap)[U.UP_LATEST_CAMPAIGN])
 	})
-
-	t.Run("ShouldCreateNewSessionAsHasMarketingProperty", func(t *testing.T) {
-		_, errCode := M.CreateEvent(&M.Event{EventNameId: eventNameId,
-			ProjectId: projectId, UserId: userId, Timestamp: sessionEventTimestamp + 40})
-
-		userProperties, _ := M.GetUserProperties(projectId, userId, userPropertiesId)
-		userPropertiesMap, _ := U.DecodePostgresJsonb(userProperties)
-
-		session, errCode := M.CreateOrGetSessionEvent(projectId, userId, false, true,
-			sessionEventTimestamp+10, &U.PropertiesMap{U.EP_PAGE_LOAD_TIME: 0.10,
-				U.EP_CAMPAIGN: "test-campaign"}, &U.PropertiesMap{}, userPropertiesId)
-		assert.Equal(t, http.StatusCreated, errCode)
-		assert.NotNil(t, session)
-		assert.NotNil(t, (*userPropertiesMap)[U.UP_SESSION_COUNT])
-
-		// Session event should exist with initial event properites.
-		sessionEvent, errCode := M.GetEvent(projectId, userId, session.ID)
-		assert.Equal(t, http.StatusFound, errCode)
-		eventPropertiesBytes, err := sessionEvent.Properties.Value()
-		assert.Nil(t, err)
-		var eventPropertiesMap map[string]interface{}
-		json.Unmarshal(eventPropertiesBytes.([]byte), &eventPropertiesMap)
-		assert.NotNil(t, eventPropertiesMap[U.UP_INITIAL_PAGE_LOAD_TIME])
-		assert.Equal(t, 0.10, eventPropertiesMap[U.UP_INITIAL_PAGE_LOAD_TIME])
-		assert.NotNil(t, eventPropertiesMap[U.EP_CAMPAIGN])
-		assert.Equal(t, "test-campaign", eventPropertiesMap[U.EP_CAMPAIGN])
-
-		userPropertiesMap, errCode = M.GetUserPropertiesAsMap(projectId, userId)
-		assert.Equal(t, errCode, http.StatusFound)
-		assert.Equal(t, (*userPropertiesMap)[U.UP_LATEST_PAGE_LOAD_TIME], 0.10)
-		assert.Equal(t, "test-campaign", (*userPropertiesMap)[U.UP_LATEST_CAMPAIGN])
-	})
-	// creating 2 diff sessions. With and without hasDefinedEventProperties
-	t.Run("ShouldNotBeEqualLatestAndInitialUserProperties", func(t *testing.T) {
-		_, errCode := M.CreateEvent(&M.Event{EventNameId: eventNameId,
-			ProjectId: projectId, UserId: userId, Timestamp: sessionEventTimestamp + 70})
-
-		userProperties, _ := M.GetUserProperties(projectId, userId, userPropertiesId)
-		userPropertiesMap, _ := U.DecodePostgresJsonb(userProperties)
-
-		session, errCode := M.CreateOrGetSessionEvent(projectId, userId, false, false,
-			sessionEventTimestamp+40, &U.PropertiesMap{U.EP_PAGE_LOAD_TIME: 0.10,
-				U.EP_CAMPAIGN: "test-campaign"}, &U.PropertiesMap{}, userPropertiesId)
-		assert.Equal(t, http.StatusFound, errCode)
-		assert.NotNil(t, session)
-		assert.NotNil(t, (*userPropertiesMap)[U.UP_SESSION_COUNT])
-
-		session2, errCode := M.CreateOrGetSessionEvent(projectId, userId, false, true,
-			sessionEventTimestamp+10, &U.PropertiesMap{U.EP_PAGE_LOAD_TIME: 0.20,
-				U.EP_CAMPAIGN: "test-campaign1"}, &U.PropertiesMap{}, userPropertiesId)
-		assert.Equal(t, http.StatusCreated, errCode)
-		assert.NotNil(t, session2)
-
-		// Session event should exist with initial event properites.
-		sessionEvent, errCode := M.GetEvent(projectId, userId, session.ID)
-		assert.Equal(t, http.StatusFound, errCode)
-		eventPropertiesBytes, err := sessionEvent.Properties.Value()
-		assert.Nil(t, err)
-		var eventPropertiesMap map[string]interface{}
-		json.Unmarshal(eventPropertiesBytes.([]byte), &eventPropertiesMap)
-		assert.NotNil(t, eventPropertiesMap[U.UP_INITIAL_PAGE_LOAD_TIME])
-		assert.Equal(t, 0.10, eventPropertiesMap[U.UP_INITIAL_PAGE_LOAD_TIME])
-		assert.NotNil(t, eventPropertiesMap[U.EP_CAMPAIGN])
-		assert.Equal(t, "test-campaign", eventPropertiesMap[U.EP_CAMPAIGN])
-
-		userPropertiesMap, errCode = M.GetUserPropertiesAsMap(projectId, userId)
-		assert.Equal(t, errCode, http.StatusFound)
-		assert.Equal(t, (*userPropertiesMap)[U.UP_LATEST_PAGE_LOAD_TIME], 0.20)
-		assert.Equal(t, "test-campaign1", (*userPropertiesMap)[U.UP_LATEST_CAMPAIGN])
-	})
 }
+
 func TestOverwriteEventProperties(t *testing.T) {
 	projectId, userId, eventNameId, err := SetupProjectUserEventName()
 	assert.Nil(t, err)

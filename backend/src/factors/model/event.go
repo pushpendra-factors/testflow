@@ -586,8 +586,8 @@ func createSessionEvent(projectId uint64, userId string, sessionEventNameId uint
 }
 
 func CreateOrGetSessionEvent(projectId uint64, userId string, isNewUser bool,
-	hasDefinedMarketingProperty bool, newEventTimestamp int64,
-	eventProperties, userProperties *U.PropertiesMap, userPropertiesId string) (*Event, int) {
+	hasDefinedMarketingProperty bool, newEventTimestamp int64, eventProperties,
+	userProperties *U.PropertiesMap, userPropertiesId string) (*Event, int) {
 
 	logCtx := log.WithField("project_id", projectId).WithField("user_id", userId)
 
@@ -597,37 +597,15 @@ func CreateOrGetSessionEvent(projectId uint64, userId string, isNewUser bool,
 		return nil, http.StatusInternalServerError
 	}
 
-	if hasDefinedMarketingProperty {
+	if isNewUser || hasDefinedMarketingProperty {
+		// If user is new, it is unneccessary to check for users inactivity
+		// before session creation as no events would be available.
+
 		// If the event has a marketing property, then the user is visiting again
 		// from a marketing channel. Creating a new session event irrespective of
 		// timing to keep track of multiple marketing touch points
 		// from the same user.
-		latestUserProperities := U.GetLatestUserProperties(eventProperties)
-		for key, value := range *latestUserProperities {
-			(*userProperties)[key] = value
-		}
 
-		userPropsJSON, err := json.Marshal(userProperties)
-		if err != nil {
-			logCtx.Error("Failed to marshal existing user properties on CreateOrGetSessionEvent.")
-		}
-
-		var sessionUserPropertiesId string
-		newPropertiesId, errCode := UpdateUserProperties(projectId, userId, &postgres.Jsonb{userPropsJSON})
-		if errCode == http.StatusAccepted {
-			sessionUserPropertiesId = newPropertiesId
-		} else {
-			logCtx.Error("Failed to add latest event properties on CreateOrGetSessionEvent")
-			sessionUserPropertiesId = userPropertiesId
-		}
-
-		return createSessionEvent(projectId, userId, sessionEventName.ID, isNewUser,
-			newEventTimestamp, eventProperties, userProperties, sessionUserPropertiesId)
-	}
-
-	if isNewUser {
-		// If user is new, it is unneccessary to check for users inactivity
-		// before session creation as no events would be available.
 		return createSessionEvent(projectId, userId, sessionEventName.ID, isNewUser,
 			newEventTimestamp, eventProperties, userProperties, userPropertiesId)
 	}

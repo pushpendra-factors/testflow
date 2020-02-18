@@ -808,16 +808,6 @@ func GetInitialUserProperties(eventProperties *PropertiesMap) *PropertiesMap {
 
 	return &initialUserProperties
 }
-func GetLatestUserProperties(eventProperties *PropertiesMap) *PropertiesMap {
-	latestUserProperties := make(PropertiesMap)
-	for k, v := range *eventProperties {
-		if userPropertyKey, exists := EVENT_TO_USER_LATEST_PROPERTIES[k]; exists {
-			latestUserProperties[userPropertyKey] = v
-		}
-	}
-
-	return &latestUserProperties
-}
 
 func GetSessionProperties(isFirstSession bool, eventProperties,
 	userProperties *PropertiesMap) *PropertiesMap {
@@ -968,6 +958,14 @@ func FillMandatoryDefaultUserProperties(propertiesByType *map[string][]string) {
 					(*propertiesByType)[propType] = append((*propertiesByType)[propType], dProp)
 				}
 			}
+		}
+	}
+}
+
+func FillLatestTouchUserProperties(userProperties, eventProperties *PropertiesMap) {
+	for k, v := range *eventProperties {
+		if userPropertyKey, exists := EVENT_TO_USER_LATEST_PROPERTIES[k]; exists {
+			(*userProperties)[userPropertyKey] = v
 		}
 	}
 }
