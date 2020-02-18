@@ -749,7 +749,7 @@ func TestTrackHandlerUserSessionWithTimestamp(t *testing.T) {
 	assert.Len(t, sessionEvents, 2)
 
 }
-func TestPreviousSessionEventPropertyEnrichment(t *testing.T) {
+func TestOldUserSessionProperties(t *testing.T) {
 	r := gin.Default()
 	H.InitSDKRoutes(r)
 	uri := "/sdk/event/track"
@@ -762,7 +762,7 @@ func TestPreviousSessionEventPropertyEnrichment(t *testing.T) {
 		JoinTimestamp: timestampBeforeOneDay})
 	assert.Equal(t, http.StatusCreated, errCode)
 
-	// New session has to created.
+	// Checking for old users
 	payload := fmt.Sprintf(`{"user_id": "%s", "timestamp": %d, "event_name": "event_1", "event_properties": {}, "user_properties": {"$os": "Mac OS"}}`,
 		user.ID, timestampBeforeOneDay)
 	w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
@@ -770,6 +770,39 @@ func TestPreviousSessionEventPropertyEnrichment(t *testing.T) {
 	responseMap := DecodeJSONResponseToMap(w.Body)
 	assert.NotEmpty(t, responseMap)
 	assert.NotNil(t, responseMap["event_id"])
+	eventOldUser, errCode := M.GetEventById(project.ID, responseMap["event_id"].(string))
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotEmpty(t, eventOldUser.SessionId)
+	oldUserPropertiesMap, errCode := M.GetUserPropertiesAsMap(project.ID, user.ID)
+	assert.Equal(t, errCode, http.StatusFound)
+	assert.Nil(t, (*oldUserPropertiesMap)[U.UP_PAGE_COUNT])
+	assert.Nil(t, (*oldUserPropertiesMap)[U.UP_SESSION_SPENT_TIME])
+	assert.Equal(t, float64(1), (*oldUserPropertiesMap)[U.UP_SESSION_COUNT])
+}
+
+func TestPreviousSessionEventPropertyEnrichment(t *testing.T) {
+	r := gin.Default()
+	H.InitSDKRoutes(r)
+	uri := "/sdk/event/track"
+
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	timestampBeforeOneDay := U.UnixTimeBeforeDuration(time.Hour * 24)
+	// for new users
+	// New session has to created.
+	payload := fmt.Sprintf(`{"timestamp": %d, "event_name": "event_1", "event_properties": {}, "user_properties": {"$os": "Mac OS"}}`,
+		timestampBeforeOneDay)
+	w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	responseMap := DecodeJSONResponseToMap(w.Body)
+	assert.NotEmpty(t, responseMap)
+	assert.NotNil(t, responseMap["event_id"])
+	assert.NotNil(t, responseMap["user_id"])
+	userId := responseMap["user_id"].(string)
+	user, errCode := M.GetUser(project.ID, userId)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotNil(t, user)
 	event1, errCode := M.GetEventById(project.ID, responseMap["event_id"].(string))
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotEmpty(t, event1.SessionId)
@@ -831,6 +864,7 @@ func TestPreviousSessionEventPropertyEnrichment(t *testing.T) {
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.Equal(t, (*userPropertiesMap)[U.UP_PAGE_COUNT], float64(2))
 	assert.Equal(t, (*userPropertiesMap)[U.UP_SESSION_SPENT_TIME], float64(event2.Timestamp-firstSession.Timestamp))
+	assert.Equal(t, float64(2), (*userPropertiesMap)[U.UP_SESSION_COUNT])
 
 	// creating third session
 	lastEventTimestamp = lastEventTimestamp + 1800
@@ -867,7 +901,7 @@ func TestPreviousSessionEventPropertyEnrichment(t *testing.T) {
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.Equal(t, (*userPropertiesMap)[U.UP_PAGE_COUNT], float64(3))
 	assert.Equal(t, (*userPropertiesMap)[U.UP_SESSION_SPENT_TIME], float64(event2.Timestamp-firstSession.Timestamp)+float64(event3.Timestamp-secondSession.Timestamp))
-
+	assert.Equal(t, float64(3), (*userPropertiesMap)[U.UP_SESSION_COUNT])
 }
 
 func TestTrackHandlerWithFormSubmit(t *testing.T) {

@@ -581,7 +581,7 @@ func createSessionEvent(projectId uint64, userId string, sessionEventNameId uint
 	}
 
 	errCode = EnrichUserPropertiesWithSessionProperties(projectId, userId,
-		userPropertiesId, newUserPropertiesFromSession)
+		userPropertiesId, newUserPropertiesFromSession, isFirstSession)
 	if errCode != http.StatusAccepted {
 		log.WithField("UserId", userId).WithField("err_code", errCode).Error(
 			"Failed to overwrite user Properties with session count")
@@ -687,7 +687,7 @@ func OverwriteEventProperties(projectId uint64, userId string, eventId string,
 }
 
 func EnrichUserPropertiesWithSessionProperties(projectId uint64, userId string,
-	userPropertiesId string, sessionProperties map[string]interface{}) int {
+	userPropertiesId string, sessionProperties map[string]interface{}, isFirstSession bool) int {
 
 	if len(sessionProperties) == 0 {
 		return http.StatusBadRequest
@@ -703,17 +703,23 @@ func EnrichUserPropertiesWithSessionProperties(projectId uint64, userId string,
 		return http.StatusInternalServerError
 	}
 
-	// Increament user properties by previous session properties.
-	if (*userPropertiesMap)[U.UP_PAGE_COUNT] != nil {
-		sessionProperties[U.UP_PAGE_COUNT] = sessionProperties[U.UP_PAGE_COUNT].(float64) +
-			(*userPropertiesMap)[U.UP_PAGE_COUNT].(float64)
-	}
-	if (*userPropertiesMap)[U.UP_SESSION_SPENT_TIME] != nil {
-		sessionProperties[U.UP_SESSION_SPENT_TIME] = sessionProperties[U.UP_SESSION_SPENT_TIME].(float64) +
-			(*userPropertiesMap)[U.UP_SESSION_SPENT_TIME].(float64)
-	}
+	// Increment user properties by previous session properties.
 	for key, value := range sessionProperties {
-		(*userPropertiesMap)[key] = value
+		// checking for the 2 properties that are to be updated only for new users
+		if key == U.UP_PAGE_COUNT || key == U.UP_SESSION_SPENT_TIME {
+			// checking for firstSession => new user
+			if isFirstSession {
+				(*userPropertiesMap)[key] = 0
+			} else {
+				// checking if property is already initialized. * property will be initialized only in case of new user
+				if (*userPropertiesMap)[key] != nil {
+					(*userPropertiesMap)[key] = sessionProperties[key].(float64) +
+						(*userPropertiesMap)[key].(float64)
+				}
+			}
+		} else {
+			(*userPropertiesMap)[key] = value
+		}
 	}
 
 	userPropertiesJsonb, err := U.EncodeToPostgresJsonb(userPropertiesMap)
