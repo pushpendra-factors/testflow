@@ -17,7 +17,6 @@ import (
 
 	"github.com/coreos/etcd/mvcc/mvccpb"
 
-	"github.com/gocelery/gocelery"
 	"github.com/gomodule/redigo/redis"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
@@ -71,7 +70,6 @@ type Services struct {
 	GeoLocation        *geoip2.Reader
 	Etcd               *serviceEtcd.EtcdClient
 	Redis              *redis.Pool
-	QueueClient        *gocelery.CeleryClient
 	patternServersLock sync.RWMutex
 	patternServers     map[string]string
 	Mailer             maileriface.Mailer
@@ -284,47 +282,6 @@ func InitRedis(host string, port int) {
 	services.Redis = redisPool
 }
 
-func InitQueue(redisHost string, redisPort int) error {
-	if redisHost == "" || redisPort == 0 {
-		log.WithField("host", redisHost).WithField("port", redisPort).Fatal(
-			"Invalid redis host or port on init queue.")
-	}
-
-	if services == nil {
-		services = &Services{}
-	}
-
-	connectionString := fmt.Sprintf("%s:%d", redisHost, redisPort)
-	redisPool := &redis.Pool{
-		MaxActive: 300,
-		MaxIdle:   100,
-		Dial: func() (redis.Conn, error) {
-			c, err := redis.Dial("tcp", connectionString)
-			if err != nil {
-				// do not panic. connection dial would be called
-				// on pool refill too.
-				log.WithError(err).Error("Queue redis connection dial error.")
-				return nil, err
-			}
-
-			return c, err
-		},
-	}
-
-	client, err := gocelery.NewCeleryClient(
-		&gocelery.RedisCeleryBroker{Pool: redisPool},
-		&gocelery.RedisCeleryBackend{Pool: redisPool},
-		1, // Why do we need workers count here?
-	)
-	if err != nil {
-		log.WithError(err).WithField("redis_host", redisHost).WithField(
-			"redis_port", redisPort).Fatal("Failed to initialize celery client for queue.")
-	}
-
-	services.QueueClient = client
-	return nil
-}
-
 func InitMailClient(key, secret, region string) {
 	if services == nil {
 		services = &Services{}
@@ -400,25 +357,6 @@ func InitDataService(config *Configuration) error {
 	if err != nil {
 		return err
 	}
-
-	// init error collector, error mailer, and log hook.
-	InitMailClient(config.AWSKey, config.AWSSecret, config.AWSRegion)
-	initCollectorClient(config.Env, "team@factors.ai", config.EmailSender) // inits error_collector.
-	initLogging(services.ErrorCollector)
-
-	initiated = true
-	return nil
-}
-
-func InitSDKService(config *Configuration) error {
-	if initiated {
-		return fmt.Errorf("Config already initialized")
-	}
-	configuration = config
-
-	// Todo: Use different redis instance for queue
-	// for production env.
-	InitQueue(config.RedisHost, config.RedisPort)
 
 	// init error collector, error mailer, and log hook.
 	InitMailClient(config.AWSKey, config.AWSSecret, config.AWSRegion)

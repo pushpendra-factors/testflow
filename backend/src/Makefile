@@ -1,4 +1,4 @@
-.PHONY: build-api serve-api build-ps serve-ps build-ds serve-ds build-sdk serve-sdk serve-redis clean pack-api upload-api pack-ps upload-ps pack-ds upload-ds pack-redis upload-redis pack-debug upload-debug pack-build-seq upload-build-seq pack-build-reports upload-build-reports pack-hubspot-enrich upload-hubspot-enrich test 
+.PHONY: build-api serve-api build-ps serve-ps build-ds serve-ds serve-redis clean pack-api upload-api pack-ps upload-ps pack-ds upload-ds pack-redis upload-redis pack-debug upload-debug pack-build-seq upload-build-seq pack-build-reports upload-build-reports pack-hubspot-enrich upload-hubspot-enrich test 
 
 # Update tag with the latest release version
 # Ex format: v0.05-beta_d0e9ed9 
@@ -23,16 +23,10 @@ serve-ps:
 	$(GOPATH)/bin/pattern-app
 
 build-ds:
-	rm $(GOPATH)/bin/data-service; go build -o $(GOPATH)/bin/data-service $(GOPATH)/src/factors/data_service/data-service.go
+	go build -o $(GOPATH)/bin/data-service $(GOPATH)/src/factors/data_service/data-service.go
 
 serve-ds:
 	$(GOPATH)/bin/data-service
-
-build-sdk:
-	rm $(GOPATH)/bin/sdk-service; go build -o $(GOPATH)/bin/sdk-service $(GOPATH)/src/factors/sdk_service/sdk-service.go
-
-serve-sdk:
-	$(GOPATH)/bin/sdk-service
 
 serve-redis:
 	redis-server $(GOPATH)/src/redis.conf

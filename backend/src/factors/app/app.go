@@ -97,6 +97,7 @@ func main() {
 
 	// Initialize routes.
 	H.InitAppRoutes(r)
+	H.InitSDKRoutes(r)
 	H.InitIntRoutes(r)
 	r.Run(":" + strconv.Itoa(C.GetConfig().Port))
 
