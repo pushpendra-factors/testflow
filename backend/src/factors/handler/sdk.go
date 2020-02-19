@@ -702,7 +702,9 @@ func SDKUpdateEventProperties(c *gin.Context) {
 	updateAllowedProperties := U.GetUpdateAllowedEventProperties(&request.Properties)
 	validatedProperties := U.GetValidatedEventProperties(updateAllowedProperties)
 	if len(*validatedProperties) == 0 {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "No valid properties given to update."})
+		c.AbortWithStatusJSON(http.StatusBadRequest,
+			gin.H{"error": "No valid properties given to update."})
+		return
 	}
 
 	errCode := M.UpdateEventProperties(projectId, request.EventId, validatedProperties)
