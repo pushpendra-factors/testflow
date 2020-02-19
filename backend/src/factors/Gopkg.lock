@@ -151,6 +151,14 @@
   revision = "1542eff27f7d67ef56543358e2f623eb4ea8adf9"
 
 [[projects]]
+  digest = "1:ee1b5ac509dc4fa2eeac8c470c6002c0c6002d5c3c79289dff49f8af2010b77b"
+  name = "github.com/gocelery/gocelery"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "1dae15376d0ac58c119bb9cd53914cd15479f320"
+  version = "v1.0"
+
+[[projects]]
   digest = "1:a9c85389dbd301c97a3499fe15a2b65b505b5f0cb0f1120dea59f1f3d6b11d96"
   name = "github.com/gogo/protobuf"
   packages = [
@@ -420,12 +428,28 @@
   version = "v1.2.1"
 
 [[projects]]
+  branch = "master"
+  digest = "1:a3b8912deeef29007fab9a13a9f21b9e9b59c621a2ed61e2fe7b37320a71fbd5"
+  name = "github.com/satori/go.uuid"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "b2ce2384e17bbe0c6d34077efa39dbab3e09123b"
+
+[[projects]]
   digest = "1:69b1cc331fca23d702bd72f860c6a647afd0aa9fcbc1d0659b1365e26546dd70"
   name = "github.com/sirupsen/logrus"
   packages = ["."]
   pruneopts = "UT"
   revision = "bcd833dfe83d3cebad139e4a29ed79cb2318bf95"
   version = "v1.2.0"
+
+[[projects]]
+  branch = "master"
+  digest = "1:5ca236e4ecfeb92a57b7a4c7f139023384e7f726640f61b17820473cc82dfb77"
+  name = "github.com/streadway/amqp"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "1c71cc93ed716f9a6f4c2ae8955c25f9176d9f19"
 
 [[projects]]
   digest = "1:18752d0b95816a1b777505a97f71c7467a8445b8ffb55631a7bf779f6ba4fa83"
@@ -715,6 +739,7 @@
     "github.com/coreos/etcd/mvcc/mvccpb",
     "github.com/gin-contrib/cors",
     "github.com/gin-gonic/gin",
+    "github.com/gocelery/gocelery",
     "github.com/gomodule/redigo/redis",
     "github.com/gorilla/mux",
     "github.com/gorilla/rpc",
