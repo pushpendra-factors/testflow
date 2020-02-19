@@ -9,6 +9,7 @@ import { Row, Col, Button, ButtonGroup, ButtonToolbar,
 import 'react-date-range/dist/styles.css';
 import 'react-date-range/dist/theme/default.css';
 import moment from 'moment';
+import "moment-timezone";
 import queryString from 'query-string';
 
 import TableChart from './TableChart'
@@ -16,6 +17,7 @@ import LineChart from './LineChart';
 import BarChart from './BarChart';
 import TableBarChart from './TableBarChart';
 import FunnelChart from './FunnelChart';
+import { makeSelectOpts } from '../../util';
 
 // Channel query is a different kind of component linked to Query.
 import ChannelQuery from '../ChannelQuery/ChannelQuery';
@@ -88,6 +90,7 @@ const HEADER_DATE = "date";
 const mapStateToProps = store => {
   return {
     currentProjectId: store.projects.currentProjectId,
+    currentAgent: store.agents.agent,
     projects: store.projects.projects,
     viewQuery: store.projects.viewQuery,
     eventNames: store.projects.currentProjectEventNames,
@@ -138,6 +141,8 @@ class Query extends Component {
       addToDashboardMessage: null,
       inputDashboardUnitTitle: null,
       selectedDashboardId: null,
+
+      timeZone:null
     }
   }
 
@@ -188,7 +193,7 @@ class Query extends Component {
   componentWillMount() {
     this.props.fetchProjectEvents(this.props.currentProjectId)
       .then(() => {
-        this.setState({ eventNamesLoaded: true });
+        this.setState({ eventNamesLoaded: true, timeZone: this.getCurrentTimeZone() });
 
         // init query builder.
         if (this.isViewQuery()) {
@@ -413,7 +418,6 @@ class Query extends Component {
 
   setQueryPeriod(query) { 
     let selectedRange = this.state.resultDateRange[0];
-
     // Todo: Replace with getQueryPeriod from common. Redundant.
     let isEndDateToday = moment(selectedRange.endDate).isSame(moment(), 'day');
     let from =  moment(selectedRange.startDate).unix();
@@ -432,7 +436,6 @@ class Query extends Component {
 
   getQuery(presentation, toSave=false) {
     let query = {};
-    
     query.cl = this.state.class.value;
     query.ty = this.state.type.value;
     query.ec = this.state.condition.value;
@@ -449,7 +452,6 @@ class Query extends Component {
     query.ewp = []
     for(let ei=0; ei < this.state.events.length; ei++) {
       let event = this.state.events[ei];
-      
       if (event.name == "") continue;
       
       let ewp = {};
@@ -479,7 +481,6 @@ class Query extends Component {
             // update datetime with current time window if ovp is true.
             if (property.valueType == PROPERTY_VALUE_TYPE_DATE_TIME) {
               let dateRange = JSON.parse(cProperty.va);
-
               if (dateRange.ovp) {
                 let newRange = slideUnixTimeWindowToCurrentTime(dateRange.fr, dateRange.to);
                 dateRange.fr = newRange.from;
@@ -514,7 +515,7 @@ class Query extends Component {
     query.gbt = (presentation == PRESENTATION_LINE) ? 
       getGroupByTimestampType(query.fr, query.to) : '';
 
-    let timezone = getTimezoneString();
+    let timezone = this.state.timeZone;
     query.tz = (!toSave && timezone && timezone != '') ? timezone : '';
   
     return query
@@ -808,9 +809,39 @@ class Query extends Component {
     return [events, addEventButton];
   }
 
-
   closeDatePicker = () => {
     this.setState({ showDatePicker: false });
+  }
+
+  getLastSeenTimeZone(){
+    let timeZoneKey=this.getLastSeenTimeZoneKey();
+    if (timeZoneKey=='') return null;
+    return localStorage.getItem(timeZoneKey);
+  }
+
+  getLastSeenTimeZoneKey(){
+    return this.props.currentAgent && this.props.currentProjectId ? '_query_timezone_ls:'+this.props.currentAgent.uuid+':'+this.props.currentProjectId : '';
+  }
+
+  setLastSeenTimeZone(timeZone){
+    let timeZoneKey=this.getLastSeenTimeZoneKey()
+    if (timeZone=='') return nil;
+    localStorage.setItem(timeZoneKey,timeZone);
+  }
+
+  changeTimeZone= ({value})=>{
+    this.setState({timeZone: value});
+    this.setLastSeenTimeZone(value);
+  }
+
+  getCurrentTimeZone(){
+    let lsTimeZone = this.getLastSeenTimeZone()
+    if (lsTimeZone){
+      return lsTimeZone;
+    }
+    lsTimeZone=getTimezoneString();
+    this.setLastSeenTimeZone(lsTimeZone);
+    return lsTimeZone;
   }
 
   renderDateRangeSelector() {
@@ -823,6 +854,14 @@ class Query extends Component {
             <i className="fa fa-calendar" style={{marginRight: '10px'}}></i>
             { this.readableDateRange(this.state.resultDateRange[0]) } 
           </Button>
+          <span style={LABEL_STYLE}> timezone </span>
+          <div style={{display: 'inline-block', width: '185px', marginRight: '10px'}} className='fapp-select light'>
+          <Select 
+          placeholder={this.state.timeZone} 
+          options={makeSelectOpts(moment.tz.names())}
+          onChange={this.changeTimeZone}
+          />
+          </div>
           <div className='fapp-date-picker' hidden={!this.state.showDatePicker}>
             <ClosableDateRangePicker
               ranges={this.state.resultDateRange}
