@@ -99,7 +99,7 @@ const (
 	AliasDateTime   = "datetime"
 	AliasAggr       = "count"
 	DefaultTimezone = "UTC"
-	ResultsLimit    = 20
+	ResultsLimit    = 100
 	MaxResultsLimit = 100000
 
 	StepPrefix             = "step_"
