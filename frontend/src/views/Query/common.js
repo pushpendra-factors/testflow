@@ -1,5 +1,6 @@
 import { createStaticRanges } from 'react-date-range';
 import moment from 'moment';
+import mt from "moment-timezone";
 
 import { slideUnixTimeWindowToCurrentTime, firstToUpperCase } from '../../util';
 
@@ -137,4 +138,9 @@ export const getQueryPeriod = function(selectedRange)  {
 
   // in utc.
   return { from: from, to: to }
+}
+
+export const convertTimezone=(date, timezone)=>{
+  let dateStr=moment(date).format("YYYY-MM-DD HH:mm:ss")
+  return mt.tz(dateStr, timezone)
 }

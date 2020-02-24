@@ -9,7 +9,6 @@ import { Row, Col, Button, ButtonGroup, ButtonToolbar,
 import 'react-date-range/dist/styles.css';
 import 'react-date-range/dist/theme/default.css';
 import moment from 'moment';
-import "moment-timezone";
 import queryString from 'query-string';
 
 import TableChart from './TableChart'
@@ -25,7 +24,7 @@ import ChannelQuery from '../ChannelQuery/ChannelQuery';
 import { PRESENTATION_BAR, PRESENTATION_LINE, PRESENTATION_TABLE, 
   PRESENTATION_CARD, PRESENTATION_FUNNEL, PROPERTY_TYPE_EVENT,
   getDateRangeFromStoredDateRange, PROPERTY_LOGICAL_OP_OPTS,
-  DEFAULT_DATE_RANGE, DEFINED_DATE_RANGES, getGroupByTimestampType,
+  DEFAULT_DATE_RANGE, DEFINED_DATE_RANGES, getGroupByTimestampType, convertTimezone
 } from './common';
 import ClosableDateRangePicker from '../../common/ClosableDatePicker';
 import { fetchProjectEvents, runQuery } from '../../actions/projectsActions';
@@ -415,13 +414,14 @@ class Query extends Component {
   toggleDatePickerDisplay = () => {
     this.setState({ showDatePicker: !this.state.showDatePicker });
   }
+  
 
   setQueryPeriod(query) { 
     let selectedRange = this.state.resultDateRange[0];
     // Todo: Replace with getQueryPeriod from common. Redundant.
     let isEndDateToday = moment(selectedRange.endDate).isSame(moment(), 'day');
-    let from =  moment(selectedRange.startDate).unix();
-    let to = moment(selectedRange.endDate).unix();
+    let from =  convertTimezone(selectedRange.startDate, this.state.timeZone).unix();
+    let to = convertTimezone(selectedRange.endDate, this.state.timeZone).unix();
 
     // Adjust the duration window respective to current time.
     if (isEndDateToday) {
