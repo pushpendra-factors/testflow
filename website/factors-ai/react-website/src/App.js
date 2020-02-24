@@ -8,11 +8,14 @@ import BlogBigData2 from './BlogBigData2'
 import BlogSegmentLaunch from './BlogSegmentLaunch'
 import ResourcesDropdown from './ResourcesDropdown'
 import facebookSVG from './assets/img/facebook.svg'
+import IntegrationsSegment from './IntegrationsSegment';
 import linkedinSVG from './assets/img/linkedin.svg'
 import logoFactorsPNG from './assets/img/logo_factors.svg'
+import Privacy from './Privacy';
+import TermsOfService from './TermsOfService';
 import twitterSVG from './assets/img/twitter.svg'
 import './App.css';
-import IntegrationsSegment from './IntegrationsSegment';
+
 
 function App() {
   return (
@@ -62,6 +65,8 @@ function App() {
 +       <Route path="/blog" component={Blog} />
         <Route path="/pricing" component={Pricing} />
         <Route path="/integrations/segment" component={IntegrationsSegment} />
+        <Route path="/terms-of-use" component={TermsOfService} />
+        <Route path="/privacy-policy" component={Privacy} />
 +     </Switch>
 
       <div className="container-fluid footer" id="contact">
@@ -76,6 +81,8 @@ function App() {
                 <a id="footer-facebook" className="facebook" href="https://www.facebook.com/factorsai" target="_blank"><img src={facebookSVG} alt="facebook" /></a>
                 <a id="footer-twitter" className="twitter" href="https://twitter.com/factorsai" target="_blank"><img src={twitterSVG} alt="twitter" /></a>
                 <p className="copyright">© Slashbit Technologies Pvt Ltd</p>
+                <a id="footer-terms" className="terms" href="/terms-of-use">Terms Of Use</a>
+                <a id="footer-privacy" className="privacy" href="/privacy-policy">Privacy</a>
               </div>
             </div>
           </div>

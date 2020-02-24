@@ -373,6 +373,15 @@ button {
   font-size: 16px;
 }
 
+.terms {
+  color: #ffffff;
+  margin-right: 30px;
+}
+
+.privacy {
+  color: #ffffff;
+}
+
 .break {
   width: 30%;
   background: #91CFF0;
