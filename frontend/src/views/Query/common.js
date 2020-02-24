@@ -140,7 +140,8 @@ export const getQueryPeriod = function(selectedRange)  {
   return { from: from, to: to }
 }
 
-export const convertTimezone=(date, timezone)=>{
+//overwrites only the timezone on a given date
+export const overwriteTimezone=(date, timezone)=>{
   let dateStr=moment(date).format("YYYY-MM-DD HH:mm:ss")
   return mt.tz(dateStr, timezone)
 }

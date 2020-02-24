@@ -9,6 +9,7 @@ import { Row, Col, Button, ButtonGroup, ButtonToolbar,
 import 'react-date-range/dist/styles.css';
 import 'react-date-range/dist/theme/default.css';
 import moment from 'moment';
+import mt from "moment-timezone"
 import queryString from 'query-string';
 
 import TableChart from './TableChart'
@@ -24,7 +25,7 @@ import ChannelQuery from '../ChannelQuery/ChannelQuery';
 import { PRESENTATION_BAR, PRESENTATION_LINE, PRESENTATION_TABLE, 
   PRESENTATION_CARD, PRESENTATION_FUNNEL, PROPERTY_TYPE_EVENT,
   getDateRangeFromStoredDateRange, PROPERTY_LOGICAL_OP_OPTS,
-  DEFAULT_DATE_RANGE, DEFINED_DATE_RANGES, getGroupByTimestampType, convertTimezone
+  DEFAULT_DATE_RANGE, DEFINED_DATE_RANGES, getGroupByTimestampType, overwriteTimezone
 } from './common';
 import ClosableDateRangePicker from '../../common/ClosableDatePicker';
 import { fetchProjectEvents, runQuery } from '../../actions/projectsActions';
@@ -419,12 +420,13 @@ class Query extends Component {
   setQueryPeriod(query) { 
     let selectedRange = this.state.resultDateRange[0];
     // Todo: Replace with getQueryPeriod from common. Redundant.
-    let isEndDateToday = moment(selectedRange.endDate).isSame(moment(), 'day');
-    let from =  convertTimezone(selectedRange.startDate, this.state.timeZone).unix();
-    let to = convertTimezone(selectedRange.endDate, this.state.timeZone).unix();
+    // isTzEndDateToday tells if the timestamp provided is the same day as current day when shifted to given timezone. 
+    let isTzEndDateToday = mt(selectedRange.endDate).tz(this.state.timeZone).isSame(mt().tz(this.state.timeZone), 'day');
+    let from =  overwriteTimezone(selectedRange.startDate, this.state.timeZone).unix();
+    let to = overwriteTimezone(selectedRange.endDate, this.state.timeZone).unix();
 
     // Adjust the duration window respective to current time.
-    if (isEndDateToday) {
+    if (isTzEndDateToday) {
       let newRange = slideUnixTimeWindowToCurrentTime(from, to)
       from = newRange.from;
       to = newRange.to;
@@ -816,7 +818,8 @@ class Query extends Component {
   getLastSeenTimeZone(){
     let timeZoneKey=this.getLastSeenTimeZoneKey();
     if (timeZoneKey=='') return null;
-    return localStorage.getItem(timeZoneKey);
+    let timezone= localStorage.getItem(timeZoneKey)
+    return mt.tz.zone(timezone) ? timezone : null;
   }
 
   getLastSeenTimeZoneKey(){
@@ -830,8 +833,11 @@ class Query extends Component {
   }
 
   changeTimeZone= ({value})=>{
-    this.setState({timeZone: value});
-    this.setLastSeenTimeZone(value);
+    isValidTimezone= mt.tz.zone(value)
+    if(isValidTimezone){
+      this.setState({timeZone: value});
+      this.setLastSeenTimeZone(value);
+    }
   }
 
   getCurrentTimeZone(){

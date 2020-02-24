@@ -108,7 +108,6 @@ class ReportsList extends Component {
         dashboardName: reports[i].dashboard_name,
       })
     }
-
     return reportsByDashboard;
   }
 

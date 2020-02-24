@@ -1,9 +1,11 @@
 import React, { Component } from 'react'
 import { Line } from 'react-chartjs-2';
 import moment from 'moment';
+import mt from "moment-timezone"
 
 import { getColor, getChartScaleWithSpace } from '../../util';
 import { HEADER_COUNT, HEADER_DATE, getYAxesStr } from './common';
+
 
 class LineChart extends Component {
   constructor(props) {
@@ -36,7 +38,13 @@ class LineChart extends Component {
     return dataset;
   }
 
-  getLinesByGroupsIfExist(rows, timestampType, countIndex, dateTimeIndex) { 
+  getLinesByGroupsIfExist(rows, timestampType, countIndex, dateTimeIndex, timezone) { 
+    let isValidTimezone = mt.tz(timezone)
+    if (!isValidTimezone){
+      console.error("Invalid timezone ", timezone, " default to UTC");
+      timezone = "UTC";
+    }
+
     let lines = {}
     let keySep = " / ";
     let maxScale = 0;
@@ -69,9 +77,8 @@ class LineChart extends Component {
       let isThisYear = moment(row[dateTimeIndex]).isSame(moment(), 'year');
       let formatStr = isThisYear ? 'MMM DD' : 'MMM DD, YYYY';
       if (timestampType == 'hour') formatStr = 'MMM DD, HH:mm';
-
       // moment uses user's current location timezone.
-      lines[key].timestamps.push(moment(row[dateTimeIndex]).format(formatStr));
+      lines[key].timestamps.push(mt(row[dateTimeIndex]).tz(timezone).format(formatStr));
       
       if (maxScale < row[countIndex]) maxScale = row[countIndex];
     }
@@ -98,9 +105,8 @@ class LineChart extends Component {
       console.error('No dates to plot as lines.');
       return null;
     }
-
     let lines = [];
-    let groups = this.getLinesByGroupsIfExist(result.rows, result.meta.query.gbt, countIndex, dateIndex);
+    let groups = this.getLinesByGroupsIfExist(result.rows, result.meta.query.gbt, countIndex, dateIndex, result.meta.query.tz);
     for(let key in groups.lines) {
       let line = { title: key, xAxisLabels: groups.lines[key].timestamps, yAxisLabels: groups.lines[key].counts };
       lines.push(line);
