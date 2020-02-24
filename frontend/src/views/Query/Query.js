@@ -430,6 +430,9 @@ class Query extends Component {
       let newRange = slideUnixTimeWindowToCurrentTime(from, to)
       from = newRange.from;
       to = newRange.to;
+    } else {
+      //add 23:59:59 hours for end day
+      to = mt.unix(to).add("23.9999","Hours").unix()
     }
 
     query.fr = from; // in utc.
@@ -816,9 +819,9 @@ class Query extends Component {
   }
 
   getLastSeenTimeZone(){
-    let timeZoneKey=this.getLastSeenTimeZoneKey();
+    let timeZoneKey = this.getLastSeenTimeZoneKey();
     if (timeZoneKey=='') return null;
-    let timezone= localStorage.getItem(timeZoneKey)
+    let timezone = localStorage.getItem(timeZoneKey)
     return mt.tz.zone(timezone) ? timezone : null;
   }
 
@@ -833,7 +836,7 @@ class Query extends Component {
   }
 
   changeTimeZone= ({value})=>{
-    isValidTimezone= mt.tz.zone(value)
+    let isValidTimezone = mt.tz.zone(value)
     if(isValidTimezone){
       this.setState({timeZone: value});
       this.setLastSeenTimeZone(value);
@@ -845,7 +848,7 @@ class Query extends Component {
     if (lsTimeZone){
       return lsTimeZone;
     }
-    lsTimeZone=getTimezoneString();
+    lsTimeZone = getTimezoneString();
     this.setLastSeenTimeZone(lsTimeZone);
     return lsTimeZone;
   }
