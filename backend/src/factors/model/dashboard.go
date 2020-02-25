@@ -180,7 +180,9 @@ func addUnitPositionOnDashboard(projectId uint64, agentUUID string,
 	return UpdateDashboard(projectId, agentUUID, id, &UpdatableDashboard{UnitsPosition: &currentPosition})
 }
 
-func removeAndRebalanceUnitsPositionByType(positions *map[string]map[uint64]int, unitId uint64, unitType string) {
+func removeAndRebalanceUnitsPositionByType(positions *map[string]map[uint64]int,
+	unitId uint64, unitType string) {
+
 	removedPos := (*positions)[unitType][unitId]
 	delete((*positions)[unitType], unitId)
 
@@ -250,11 +252,12 @@ func isValidUnitsPosition(positions *map[string]map[uint64]int) bool {
 
 			// validates positions.
 			sort.Sort(sort.IntSlice(actualPos))
-			// positions should be 0 to len(actualPos) - 1
-			// after sort, which is equivalent to array indexes.
-			for index, pos := range actualPos {
-				if pos != index {
-					return false
+			// sorted positions should be unique and increamented.
+			for i := range actualPos {
+				for futureIndex := i + 1; futureIndex < len(actualPos)-1; futureIndex++ {
+					if actualPos[i] == actualPos[futureIndex] {
+						return false
+					}
 				}
 			}
 		}
