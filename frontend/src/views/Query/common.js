@@ -134,6 +134,9 @@ export const getQueryPeriod = function(selectedRange)  {
     let newRange = slideUnixTimeWindowToCurrentTime(from, to)
     from = newRange.from;
     to = newRange.to;
+  } else {
+    //add 23:59:59 hours for end day
+    to = mt.unix(to).add("23.9999","Hours").unix()
   }
 
   // in utc.
