@@ -2,6 +2,7 @@ package model
 
 import (
 	"encoding/json"
+	"errors"
 	C "factors/config"
 	"net/http"
 	"sort"
@@ -229,25 +230,17 @@ func removeUnitPositionOnDashboard(projectId uint64, agentUUID string,
 	return UpdateDashboard(projectId, agentUUID, id, &UpdatableDashboard{UnitsPosition: &currentPositions})
 }
 
-func isValidUnitsPosition(positions *map[string]map[uint64]int) bool {
+func isValidUnitsPosition(positions *map[string]map[uint64]int) (bool, error) {
 	if positions == nil {
-		return false
+		return false, errors.New("nil position map")
 	}
 
-	idsByTypeMap := make(map[string]map[uint64]bool, 0)
-
 	for _, typ := range UnitTypes {
-		if _, exists := idsByTypeMap[typ]; !exists {
-			idsByTypeMap[typ] = make(map[uint64]bool, 0)
-		}
-
 		if posMap, exists := (*positions)[typ]; exists && len(posMap) > 0 {
 			actualPos := make([]int, 0, 0)
 
-			for id, pos := range posMap {
+			for _, pos := range posMap {
 				actualPos = append(actualPos, pos)
-				// populate idsByType for id dup check.
-				idsByTypeMap[typ][id] = true
 			}
 
 			// validates positions.
@@ -256,27 +249,18 @@ func isValidUnitsPosition(positions *map[string]map[uint64]int) bool {
 			for i := range actualPos {
 				for futureIndex := i + 1; futureIndex < len(actualPos)-1; futureIndex++ {
 					if actualPos[i] == actualPos[futureIndex] {
-						return false
+						return false, errors.New("duplicate position")
 					}
 				}
 			}
 		}
 	}
 
-	// id should be unique across different unit types.
-	for idType, ids := range idsByTypeMap {
-		for _, typ := range UnitTypes {
-			if idType != typ {
-				for id := range ids {
-					if _, exists := idsByTypeMap[typ][id]; exists {
-						return false
-					}
-				}
-			}
-		}
-	}
+	// Todo: Add duplicate id across different unit types.
+	// Now frontend uses the position by existing dashboard units.
+	// So no duplicates possible.
 
-	return true
+	return true, nil
 }
 
 func UpdateDashboard(projectId uint64, agentUUID string, id uint64, dashboard *UpdatableDashboard) int {
@@ -299,8 +283,8 @@ func UpdateDashboard(projectId uint64, agentUUID string, id uint64, dashboard *U
 		logCtx := log.WithFields(log.Fields{"project_id": projectId, "id": id,
 			"positions": dashboard.UnitsPosition})
 
-		if !isValidUnitsPosition(dashboard.UnitsPosition) {
-			logCtx.Error("Invalid units position.")
+		if valid, err := isValidUnitsPosition(dashboard.UnitsPosition); !valid {
+			logCtx.WithError(err).Error("Invalid units position.")
 			return http.StatusBadRequest
 		}
 
