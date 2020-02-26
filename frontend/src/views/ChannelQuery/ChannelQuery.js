@@ -389,67 +389,75 @@ class ChannelQuery extends Component {
 
   render() {
     return <div>
-      <Row style={{marginBottom: '15px'}}>
-        <Col xs='12' md='12'>
-          <span style={LABEL_STYLE}>Channel</span>
-          <div className='fapp-select light' style={{ display: 'inline-block', width: '150px' }}>
-            <Select value={this.state.channel} options={CHANNEL_OPTS} placeholder='Channel'/>
-          </div>
-        </Col>
-      </Row>
+        <Row style={{ marginBottom: "15px" }}>
+          <Col xs='2' md='2' style={{ paddingTop: "5px" }}>
+            <span style={LABEL_STYLE}>Channel</span>
+          </Col>
+          <Col xs='10' md='10' style={{ marginLeft: "-7%" }}>
+            <div className='fapp-select light' style={{ display: 'inline-block', width: '150px' }}>
+              <Select value={this.state.channel} options={CHANNEL_OPTS} placeholder='Channel'/>
+            </div>
+          </Col>
+        </Row>
 
-      <Row style={{marginBottom: '15px'}}>
-        <Col xs='12' md='12'>
-          <span style={LABEL_STYLE}>Filter by</span>
-          <div className='fapp-select light' style={{ display: 'inline-block', width: '200px', marginRight: '15px' }}>
-            <Select value={this.state.filterKey} onChange={this.handleFilterKeyChange} 
-              options={FILTER_KEY_OPTS} placeholder='Filter'/>
-          </div>
-          <div className='fapp-select light' style={{ display: 'inline-block', width: '275px' }}>
-            <CreatableSelect 
-              value={this.state.filterValue} 
-              options={this.getChannelFilterValuesOpts()}
-              placeholder='Filter Value'
-              onChange={this.onChannelFilterValueChange}
-              onFocus={this.getChannelFilterValues}
-              isLoading={this.isFilterValuesLoading}
-            />
-          </div>
-        </Col>
-      </Row>
+        <Row style={{ marginBottom: "15px" }}>
+          <Col xs='2' md='2' style={{ paddingTop: "5px" }}>
+            <span style={LABEL_STYLE}>Filter by</span>
+          </Col>
+          <Col xs='10' md='10' style={{ marginLeft: "-7%" }}>
+            <div className='fapp-select light' style={{ display: 'inline-block', width: '200px', marginRight: '15px' }}>
+              <Select value={this.state.filterKey} onChange={this.handleFilterKeyChange} 
+                options={FILTER_KEY_OPTS} placeholder='Filter'/>
+            </div>
+            <div className='fapp-select light' style={{ display: 'inline-block', width: '275px' }}>
+              <CreatableSelect 
+                value={this.state.filterValue} 
+                options={this.getChannelFilterValuesOpts()}
+                placeholder='Filter Value'
+                onChange={this.onChannelFilterValueChange}
+                onFocus={this.getChannelFilterValues}
+                isLoading={this.isFilterValuesLoading}
+              />
+            </div>
+          </Col>
+        </Row>
 
-      <Row style={{marginBottom: '15px'}}>
-        <Col xs='12' md='12'>
-          <span style={LABEL_STYLE}> During </span>
-          <Button outline style={{ border: '1px solid #ccc', color: 'grey', marginRight: '10px' }} 
-            onClick={this.toggleDatePickerDisplay}>
-            <i className="fa fa-calendar" style={{marginRight: '10px'}}></i>
-            { readableDateRange(this.state.duringDateRange[0]) } 
-          </Button>
-          <div className='fapp-date-picker' hidden={!this.state.showDatePicker}>
-            <ClosableDateRangePicker
-              ranges={this.state.duringDateRange}
-              onChange={this.handleDuringDateRangeSelect}
-              staticRanges={ DEFINED_DATE_RANGES }
-              inputRanges={[]}
-              minDate={new Date('01 Jan 2000 00:00:00 GMT')} // range starts from given date.
-              maxDate={new Date()}
-              closeDatePicker={this.closeDatePicker}
-            />
-            <button className='fapp-close-round-button' style={{float: 'right', marginLeft: '0px', borderLeft: 'none'}} 
-            onClick={this.toggleDatePickerDisplay}>x</button>
-          </div>
-        </Col>
-      </Row>
+        <Row style={{ marginBottom: "15px" }}>
+          <Col xs='2' md='2' style={{ paddingTop: "5px" }}>
+            <span style={LABEL_STYLE}> During </span>
+          </Col>
+          <Col xs='10' md='10' style={{ marginLeft: "-7%" }}>
+            <Button outline style={{ border: '1px solid #ccc', color: 'grey', marginRight: '10px' }} 
+              onClick={this.toggleDatePickerDisplay}>
+              <i className="fa fa-calendar" style={{marginRight: '10px'}}></i>
+              { readableDateRange(this.state.duringDateRange[0]) } 
+            </Button>
+            <div className='fapp-date-picker' hidden={!this.state.showDatePicker}>
+              <ClosableDateRangePicker
+                ranges={this.state.duringDateRange}
+                onChange={this.handleDuringDateRangeSelect}
+                staticRanges={ DEFINED_DATE_RANGES }
+                inputRanges={[]}
+                minDate={new Date('01 Jan 2000 00:00:00 GMT')} // range starts from given date.
+                maxDate={new Date()}
+                closeDatePicker={this.closeDatePicker}
+              />
+              <button className='fapp-close-round-button' style={{float: 'right', marginLeft: '0px', borderLeft: 'none'}} 
+              onClick={this.toggleDatePickerDisplay}>x</button>
+            </div>
+          </Col>
+        </Row>
 
-      <Row style={{marginBottom: '15px'}}>
-        <Col xs='12' md='12'>
-          <span style={LABEL_STYLE}>Breakdown by</span>
-          <div className='fapp-select light' style={{ display: 'inline-block', width: '200px', marginRight: '15px' }}>
-            <Select value={this.state.breakdownKey} onChange={this.handleBreakdownKeyChange} options={this.getBreakdownKeysOpts(this.state.filterKey.value)} placeholder='Breakdown'/>
-          </div>
-        </Col>
-      </Row>
+        <Row style={{ marginBottom: "15px" }}>
+          <Col xs='2' md='2' style={{ paddingTop: "5px" }}>
+            <span style={LABEL_STYLE}>Breakdown by</span>
+          </Col>
+          <Col xs='10' md='10' style={{ marginLeft: "-7%" }}>
+            <div className='fapp-select light' style={{ display: 'inline-block', width: '200px', marginRight: '15px' }}>
+              <Select value={this.state.breakdownKey} onChange={this.handleBreakdownKeyChange} options={this.getBreakdownKeysOpts(this.state.filterKey.value)} placeholder='Breakdown'/>
+            </div>
+          </Col>
+        </Row>
 
       <div style={{ width: '100%', textAlign: 'center', marginTop: '15px' }}>
         <Button 
