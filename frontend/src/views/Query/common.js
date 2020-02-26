@@ -2,7 +2,7 @@ import { createStaticRanges } from 'react-date-range';
 import moment from 'moment';
 import mt from "moment-timezone";
 
-import { slideUnixTimeWindowToCurrentTime, firstToUpperCase } from '../../util';
+import { slideUnixTimeWindowToCurrentTime, firstToUpperCase, getTimezoneString } from '../../util';
 
 export const QUERY_TYPE_UNIQUE_USERS = "unique_users";
 export const QUERY_TYPE_EVENTS_OCCURRENCE = "events_occurrence";
@@ -119,24 +119,34 @@ export const readableDateRange = function(range) {
     moment(range.endDate).format('MMM DD, YYYY');
 }
 
-export const getQueryPeriod = function(selectedRange)  {
+export const getQueryPeriod = function(selectedRange, timezone)  {
   if (!selectedRange) {
     console.error("Invalid selected date range. Failed to get query period.");
     return
   }
+
+  if (!timezone){
+    timezone=moment.tz.guess();
+    console.error("no timezone provided, default to ", timezone)
+  }
+
+  let isValidTimezone = mt.tz(timezone);
+  if(!isValidTimezone){
+    console.error("Invalid timezone: ", timezone,", default to browser timezone: ", timezone )
+  }
   
-  let isEndDateToday = moment(selectedRange.endDate).isSame(moment(), 'day');
-  let from =  moment(selectedRange.startDate).unix();
-  let to = moment(selectedRange.endDate).unix();
+  let isTzEndDateToday = mt(selectedRange.endDate).tz(timezone).isSame(mt().tz(timezone), 'day');
+  let from =  overwriteTimezone(selectedRange.startDate, timezone).unix();
+  let to = overwriteTimezone(selectedRange.endDate, timezone).unix();
 
   // Adjust the duration window respective to current time.
-  if (isEndDateToday) {
+  if (isTzEndDateToday) {
     let newRange = slideUnixTimeWindowToCurrentTime(from, to)
     from = newRange.from;
     to = newRange.to;
   } else {
-    //add 23:59:59 hours for end day
-    to = mt.unix(to).add("23.9999","Hours").unix()
+    //moves timestamp to end of the day
+    to = moment.unix(to).tz(timezone).endOf("Day").unix()
   }
 
   // in utc.

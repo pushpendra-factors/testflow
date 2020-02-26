@@ -25,7 +25,7 @@ import ChannelQuery from '../ChannelQuery/ChannelQuery';
 import { PRESENTATION_BAR, PRESENTATION_LINE, PRESENTATION_TABLE, 
   PRESENTATION_CARD, PRESENTATION_FUNNEL, PROPERTY_TYPE_EVENT,
   getDateRangeFromStoredDateRange, PROPERTY_LOGICAL_OP_OPTS,
-  DEFAULT_DATE_RANGE, DEFINED_DATE_RANGES, getGroupByTimestampType, overwriteTimezone
+  DEFAULT_DATE_RANGE, DEFINED_DATE_RANGES, getGroupByTimestampType, getQueryPeriod
 } from './common';
 import ClosableDateRangePicker from '../../common/ClosableDatePicker';
 import { fetchProjectEvents, runQuery } from '../../actions/projectsActions';
@@ -417,28 +417,6 @@ class Query extends Component {
   }
   
 
-  setQueryPeriod(query) { 
-    let selectedRange = this.state.resultDateRange[0];
-    // Todo: Replace with getQueryPeriod from common. Redundant.
-    // isTzEndDateToday tells if the timestamp provided is the same day as current day when shifted to given timezone. 
-    let isTzEndDateToday = mt(selectedRange.endDate).tz(this.state.timeZone).isSame(mt().tz(this.state.timeZone), 'day');
-    let from =  overwriteTimezone(selectedRange.startDate, this.state.timeZone).unix();
-    let to = overwriteTimezone(selectedRange.endDate, this.state.timeZone).unix();
-
-    // Adjust the duration window respective to current time.
-    if (isTzEndDateToday) {
-      let newRange = slideUnixTimeWindowToCurrentTime(from, to)
-      from = newRange.from;
-      to = newRange.to;
-    } else {
-      //add 23:59:59 hours for end day
-      to = mt.unix(to).add("23.9999","Hours").unix()
-    }
-
-    query.fr = from; // in utc.
-    query.to = to; // in utc.
-  }
-
   getQuery(presentation, toSave=false) {
     let query = {};
     query.cl = this.state.class.value;
@@ -452,8 +430,9 @@ class Query extends Component {
     if (this.state.resultDateRange.length == 0)
       throw new Error('Invalid date range. No default range given.')
     
-    this.setQueryPeriod(query);
-
+    let period = getQueryPeriod(this.state.resultDateRange[0], this.state.timeZone)
+    query.fr=period.from
+    query.to=period.to
     query.ewp = []
     for(let ei=0; ei < this.state.events.length; ei++) {
       let event = this.state.events[ei];
@@ -818,39 +797,18 @@ class Query extends Component {
     this.setState({ showDatePicker: false });
   }
 
-  getLastSeenTimeZone(){
-    let timeZoneKey = this.getLastSeenTimeZoneKey();
-    if (timeZoneKey=='') return null;
-    let timezone = localStorage.getItem(timeZoneKey)
-    return mt.tz.zone(timezone) ? timezone : null;
-  }
 
-  getLastSeenTimeZoneKey(){
-    return this.props.currentAgent && this.props.currentProjectId ? '_query_timezone_ls:'+this.props.currentAgent.uuid+':'+this.props.currentProjectId : '';
-  }
-
-  setLastSeenTimeZone(timeZone){
-    let timeZoneKey=this.getLastSeenTimeZoneKey()
-    if (timeZone=='') return nil;
-    localStorage.setItem(timeZoneKey,timeZone);
-  }
 
   changeTimeZone= ({value})=>{
     let isValidTimezone = mt.tz.zone(value)
     if(isValidTimezone){
       this.setState({timeZone: value});
-      this.setLastSeenTimeZone(value);
     }
   }
 
   getCurrentTimeZone(){
-    let lsTimeZone = this.getLastSeenTimeZone()
-    if (lsTimeZone){
-      return lsTimeZone;
-    }
-    lsTimeZone = getTimezoneString();
-    this.setLastSeenTimeZone(lsTimeZone);
-    return lsTimeZone;
+    let timeZone = mt.tz.guess();
+    return timeZone;
   }
 
   renderDateRangeSelector() {
