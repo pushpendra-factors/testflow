@@ -211,7 +211,12 @@ var developmentShopifyInfo = map[string]shopifyInfoStruct{
 		apiKey:    "93f0ecd1ff038bb0de72ec1f4dcf34b3aecf2a2f15f1f531dbd89bfecb546b1e",
 	},
 }
-var stagingShopifyInfo = map[string]shopifyInfoStruct{}
+var stagingShopifyInfo = map[string]shopifyInfoStruct{
+	"aravind-test123.myshopify.com": shopifyInfoStruct{
+		projectId: 21,
+		apiKey:    "93f0ecd1ff038bb0de72ec1f4dcf34b3aecf2a2f15f1f531dbd89bfecb546b1e",
+	},
+}
 var productionShopifyInfo = map[string]shopifyInfoStruct{
 	"aravind-test123.myshopify.com": shopifyInfoStruct{
 		projectId: 395,
