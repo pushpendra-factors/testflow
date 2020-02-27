@@ -381,6 +381,7 @@ func IntShopifyHandler(c *gin.Context) {
 	shopifyTopic = strings.TrimSpace(shopifyTopic)
 
 	decoder := json.NewDecoder(r.Body)
+	shouldHashEmail := U.GetScopeByKeyAsBool(c, mid.SCOPE_SHOPIFY_HASH_EMAIL)
 
 	switch shopifyTopic {
 	case "checkouts/create":
@@ -393,7 +394,7 @@ func IntShopifyHandler(c *gin.Context) {
 			return
 		}
 		eventName, userId, isNewUser, eventProperties, userProperties, timestamp, err := IntShopify.GetTrackDetailsFromCheckoutObject(
-			projectId, IntShopify.ACTION_SHOPIFY_CHECKOUT_CREATED, &checkoutCreated)
+			projectId, IntShopify.ACTION_SHOPIFY_CHECKOUT_CREATED, shouldHashEmail, &checkoutCreated)
 		if err != nil {
 			logCtx.WithFields(log.Fields{"project_id": projectId, log.ErrorKey: err}).Error(
 				"Shopify Checkout Create JSON track details failed")
@@ -428,7 +429,7 @@ func IntShopifyHandler(c *gin.Context) {
 			return
 		}
 		eventName, userId, isNewUser, eventProperties, userProperties, timestamp, err := IntShopify.GetTrackDetailsFromCheckoutObject(
-			projectId, IntShopify.ACTION_SHOPIFY_CHECKOUT_UPDATED, &checkoutUpdated)
+			projectId, IntShopify.ACTION_SHOPIFY_CHECKOUT_UPDATED, shouldHashEmail, &checkoutUpdated)
 		if err != nil {
 			logCtx.WithFields(log.Fields{"project_id": projectId, log.ErrorKey: err}).Error(
 				"Shopify Checkout Update JSON track details failed")
@@ -462,7 +463,7 @@ func IntShopifyHandler(c *gin.Context) {
 			return
 		}
 		eventName, userId, isNewUser, eventProperties, userProperties, timestamp, err := IntShopify.GetTrackDetailsFromOrderObject(
-			projectId, IntShopify.ACTION_SHOPIFY_ORDER_CREATED, &orderCreated)
+			projectId, IntShopify.ACTION_SHOPIFY_ORDER_CREATED, shouldHashEmail, &orderCreated)
 		if err != nil {
 			logCtx.WithFields(log.Fields{"project_id": projectId, log.ErrorKey: err}).Error(
 				"Shopify Order Create JSON track details failed")
@@ -496,7 +497,7 @@ func IntShopifyHandler(c *gin.Context) {
 			return
 		}
 		eventName, userId, isNewUser, eventProperties, userProperties, timestamp, err := IntShopify.GetTrackDetailsFromOrderObject(
-			projectId, IntShopify.ACTION_SHOPIFY_ORDER_UPDATED, &orderUpdated)
+			projectId, IntShopify.ACTION_SHOPIFY_ORDER_UPDATED, shouldHashEmail, &orderUpdated)
 		if err != nil {
 			logCtx.WithFields(log.Fields{"project_id": projectId, log.ErrorKey: err}).Error(
 				"Shopify Order Update JSON track details failed")
@@ -531,7 +532,7 @@ func IntShopifyHandler(c *gin.Context) {
 			return
 		}
 		eventName, userId, isNewUser, eventProperties, userProperties, timestamp, err := IntShopify.GetTrackDetailsFromOrderObject(
-			projectId, IntShopify.ACTION_SHOPIFY_ORDER_PAID, &orderPaid)
+			projectId, IntShopify.ACTION_SHOPIFY_ORDER_PAID, shouldHashEmail, &orderPaid)
 		if err != nil {
 			logCtx.WithFields(log.Fields{"project_id": projectId, log.ErrorKey: err}).Error(
 				"Shopify Order Update JSON track details failed")
@@ -566,7 +567,7 @@ func IntShopifyHandler(c *gin.Context) {
 			return
 		}
 		eventName, userId, isNewUser, eventProperties, userProperties, timestamp, err := IntShopify.GetTrackDetailsFromOrderObject(
-			projectId, IntShopify.ACTION_SHOPIFY_ORDER_CANCELLED, &orderCancelled)
+			projectId, IntShopify.ACTION_SHOPIFY_ORDER_CANCELLED, shouldHashEmail, &orderCancelled)
 		if err != nil {
 			logCtx.WithFields(log.Fields{"project_id": projectId, log.ErrorKey: err}).Error(
 				"Shopify Order Update JSON track details failed")

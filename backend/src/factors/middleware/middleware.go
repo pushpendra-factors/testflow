@@ -31,6 +31,7 @@ const SCOPE_PROJECT_ID = "projectId"
 const SCOPE_AUTHORIZED_PROJECTS = "authorizedProjects"
 const SCOPE_LOGGEDIN_AGENT_UUID = "loggedInAgentUUID"
 const SCOPE_REQ_ID = "requestId"
+const SCOPE_SHOPIFY_HASH_EMAIL = "shopifyHashEmail"
 
 // cors prefix constants.
 const PREFIX_PATH_SDK = "/sdk/"
@@ -130,6 +131,7 @@ func SetScopeProjectIdByStoreAndSecret() gin.HandlerFunc {
 		actualMacString = strings.TrimSpace(actualMacString)
 		if actualMacString == "" {
 			errorMessage := "Missing Shopify Hmac header"
+			log.WithFields(log.Fields{"error": errorMessage}).Error("Request failed with missing Mac.")
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": errorMessage})
 			return
 		}
@@ -138,13 +140,16 @@ func SetScopeProjectIdByStoreAndSecret() gin.HandlerFunc {
 		shopifyDomain = strings.TrimSpace(shopifyDomain)
 		if shopifyDomain == "" {
 			errorMessage := "Missing Shopify Shop Domain header"
+			log.WithFields(log.Fields{"error": errorMessage}).Error("Request failed with missing domain.")
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": errorMessage})
 			return
 		}
 
-		projectId, secret, errCode := M.GetProjectIdAndSecretByShopifyDomain(shopifyDomain)
+		projectId, secret, shouldHashEmail, errCode := M.GetProjectDetailsByShopifyDomain(shopifyDomain)
 		if errCode != http.StatusFound {
 			errorMessage := "Invalid Domain"
+			log.WithFields(log.Fields{"error": errorMessage, "domain": shopifyDomain}).Error(
+				"Request failed with invalid domain.")
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": errorMessage})
 			return
 		}
@@ -165,11 +170,14 @@ func SetScopeProjectIdByStoreAndSecret() gin.HandlerFunc {
 		actualMac := []byte(actualMacString)
 		if !hmac.Equal(actualMac, expectedMac) {
 			errorMessage := fmt.Sprintf("Invalid Token. Expected: %s, Actual: %s", expectedMac, actualMac)
+			log.WithFields(log.Fields{"error": errorMessage}).Error(
+				"Request failed with invalid domain.")
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": errorMessage})
 			return
 		}
 
 		U.SetScope(c, SCOPE_PROJECT_ID, projectId)
+		U.SetScope(c, SCOPE_SHOPIFY_HASH_EMAIL, shouldHashEmail)
 
 		c.Next()
 	}

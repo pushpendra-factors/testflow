@@ -203,29 +203,33 @@ func GetAllHubspotProjectSettings() ([]HubspotProjectSettings, int) {
 type shopifyInfoStruct struct {
 	apiKey    string
 	projectId uint64
+	hashEmail bool
 }
 
 var developmentShopifyInfo = map[string]shopifyInfoStruct{
 	"aravind-test123.myshopify.com": shopifyInfoStruct{
 		projectId: 2,
 		apiKey:    "93f0ecd1ff038bb0de72ec1f4dcf34b3aecf2a2f15f1f531dbd89bfecb546b1e",
+		hashEmail: false,
 	},
 }
 var stagingShopifyInfo = map[string]shopifyInfoStruct{
 	"aravind-test123.myshopify.com": shopifyInfoStruct{
 		projectId: 21,
 		apiKey:    "93f0ecd1ff038bb0de72ec1f4dcf34b3aecf2a2f15f1f531dbd89bfecb546b1e",
+		hashEmail: true,
 	},
 }
 var productionShopifyInfo = map[string]shopifyInfoStruct{
 	"aravind-test123.myshopify.com": shopifyInfoStruct{
 		projectId: 395,
 		apiKey:    "93f0ecd1ff038bb0de72ec1f4dcf34b3aecf2a2f15f1f531dbd89bfecb546b1e",
+		hashEmail: false,
 	},
 }
 
-func GetProjectIdAndSecretByShopifyDomain(
-	shopifyDomain string) (uint64, string, int) {
+func GetProjectDetailsByShopifyDomain(
+	shopifyDomain string) (uint64, string, bool, int) {
 	var shopifyInfo map[string]shopifyInfoStruct
 	if C.IsDevelopment() {
 		shopifyInfo = developmentShopifyInfo
@@ -235,9 +239,9 @@ func GetProjectIdAndSecretByShopifyDomain(
 		shopifyInfo = productionShopifyInfo
 	}
 	if info, found := shopifyInfo[shopifyDomain]; found {
-		return info.projectId, info.apiKey, http.StatusFound
+		return info.projectId, info.apiKey, info.hashEmail, http.StatusFound
 	} else {
 		log.Error(fmt.Sprintf("Unknown shopify domain - %s", shopifyDomain))
 	}
-	return 0, "", http.StatusInternalServerError
+	return 0, "", false, http.StatusInternalServerError
 }

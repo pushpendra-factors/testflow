@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"crypto/sha256"
 	M "factors/model"
 	U "factors/util"
 	"fmt"
@@ -39,12 +40,17 @@ const ACTION_SHOPIFY_ORDER_CANCELLED = 6
 
 // Returns eventName, customerEventId, userId, isNewUser, eventProperties, userProperties, timestamp, err
 func GetTrackDetailsFromCheckoutObject(
-	projectId uint64, actionType int64, checkoutObject *CheckoutObject) (
+	projectId uint64, actionType int64, shouldHashEmail bool, checkoutObject *CheckoutObject) (
 	string, string, bool, U.PropertiesMap, U.PropertiesMap, int64, error) {
 	if checkoutObject.Email == "" {
 		return "", "", false, nil, nil, 0, fmt.Errorf("Missing email in CheckoutObject")
 	}
 	custUserId := checkoutObject.Email
+	if shouldHashEmail {
+		h := sha256.New()
+		h.Write([]byte(custUserId))
+		custUserId = fmt.Sprintf("%x", h.Sum(nil))
+	}
 
 	var eventTime time.Time
 	var eventName string
@@ -91,6 +97,11 @@ func GetTrackDetailsFromCheckoutObject(
 	}
 
 	userProperties := U.PropertiesMap{}
+	if shouldHashEmail {
+		userProperties["emailHash"] = custUserId
+	} else {
+		userProperties[U.UP_EMAIL] = custUserId
+	}
 	eventProperties := U.PropertiesMap{
 		"gateway":  checkoutObject.Gateway,
 		"currency": checkoutObject.Currency,
@@ -139,12 +150,17 @@ type OrderObject struct {
 
 // Returns eventName, userId, isNewUser, eventProperties, userProperties, timestamp, err
 func GetTrackDetailsFromOrderObject(
-	projectId uint64, actionType int64, orderObject *OrderObject) (
+	projectId uint64, actionType int64, shouldHashEmail bool, orderObject *OrderObject) (
 	string, string, bool, U.PropertiesMap, U.PropertiesMap, int64, error) {
 	if orderObject.Email == "" {
 		return "", "", false, nil, nil, 0, fmt.Errorf("Missing email in OrderObject")
 	}
 	custUserId := orderObject.Email
+	if shouldHashEmail {
+		h := sha256.New()
+		h.Write([]byte(custUserId))
+		custUserId = fmt.Sprintf("%x", h.Sum(nil))
+	}
 
 	var eventTime time.Time
 	var eventName string
@@ -205,6 +221,11 @@ func GetTrackDetailsFromOrderObject(
 	}
 
 	userProperties := U.PropertiesMap{}
+	if shouldHashEmail {
+		userProperties["emailHash"] = custUserId
+	} else {
+		userProperties[U.UP_EMAIL] = custUserId
+	}
 	eventProperties := U.PropertiesMap{
 		"gateway":      orderObject.Gateway,
 		"currency":     orderObject.Currency,

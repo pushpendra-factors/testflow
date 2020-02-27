@@ -45,6 +45,14 @@ func GetScopeByKeyAsString(c *gin.Context, key string) string {
 	return iface.(string)
 }
 
+func GetScopeByKeyAsBool(c *gin.Context, key string) bool {
+	iface := GetScopeByKey(c, key)
+	if iface == nil {
+		return false
+	}
+	return iface.(bool)
+}
+
 // GetRequestSubdomain returns sample on sample.factors.ai
 func GetRequestSubdomain(host string) (string, error) {
 	splitHost := strings.Split(host, ".")
