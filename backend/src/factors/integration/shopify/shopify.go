@@ -15,20 +15,27 @@ type LineItem struct {
 }
 
 type CheckoutObject struct {
-	ID                  float64    `json:"id"`
-	Token               string     `json:"token"`
-	CartToken           string     `json:"cart_token"`
-	Email               string     `json:"email"`
-	Gateway             string     `json:"gateway"`
-	CreatedAt           string     `json:"created_at"`
-	UpdatedAt           string     `json:"updated_at"`
-	Currency            string     `json:"currency"`
-	PresentmentCurrency string     `json:"presentment_currency"`
-	TotalDiscounts      string     `json:"total_discounts"`
-	TotalLineItemsPrice string     `json:"total_line_items_price"`
-	TotalPrice          string     `json:"total_price"`
-	SubtotalPrice       string     `json:"subtotal_price"`
-	LineItems           []LineItem `json:"line_items"`
+	ID                  float64        `json:"id"`
+	Token               string         `json:"token"`
+	CartToken           string         `json:"cart_token"`
+	Email               string         `json:"email"`
+	UserID              string         `json:"user_id"`
+	Gateway             string         `json:"gateway"`
+	CreatedAt           string         `json:"created_at"`
+	UpdatedAt           string         `json:"updated_at"`
+	Currency            string         `json:"currency"`
+	PresentmentCurrency string         `json:"presentment_currency"`
+	TotalDiscounts      string         `json:"total_discounts"`
+	TotalLineItemsPrice string         `json:"total_line_items_price"`
+	TotalPrice          string         `json:"total_price"`
+	SubtotalPrice       string         `json:"subtotal_price"`
+	LineItems           []LineItem     `json:"line_items"`
+	Customer            CustomerObject `json:"customer"`
+}
+
+type CustomerObject struct {
+	ID    float64 `json:"id"`
+	Email string  `json:"email"`
 }
 
 const ACTION_SHOPIFY_CHECKOUT_CREATED = 1
@@ -42,10 +49,20 @@ const ACTION_SHOPIFY_ORDER_CANCELLED = 6
 func GetTrackDetailsFromCheckoutObject(
 	projectId uint64, actionType int64, shouldHashEmail bool, checkoutObject *CheckoutObject) (
 	string, string, bool, U.PropertiesMap, U.PropertiesMap, int64, error) {
-	if checkoutObject.Email == "" {
+	custUserId := ""
+	if checkoutObject.Email != "" {
+		custUserId = checkoutObject.Email
+	} else if checkoutObject.Customer.Email != "" {
+		custUserId = checkoutObject.Customer.Email
+	} else if checkoutObject.UserID != "" {
+		custUserId = checkoutObject.UserID
+	} else if checkoutObject.ID > 0 {
+		custUserId = fmt.Sprintf("%f", checkoutObject.Customer.ID)
+	}
+
+	if custUserId == "" {
 		return "", "", false, nil, nil, 0, fmt.Errorf("Missing email in CheckoutObject")
 	}
-	custUserId := checkoutObject.Email
 	if shouldHashEmail {
 		h := sha256.New()
 		h.Write([]byte(custUserId))
@@ -123,39 +140,52 @@ func GetTrackDetailsFromCheckoutObject(
 }
 
 type OrderObject struct {
-	ID                  float64 `json:"id"`
-	Email               string  `json:"email"`
-	ClosedAt            string  `json:"closed_at"`
-	CreatedAt           string  `json:"created_at"`
-	UpdatedAt           string  `json:"updated_at"`
-	Number              float64 `json:"number"`
-	Token               string  `json:"token"`
-	Gateway             string  `json:"gateway"`
-	TotalPrice          string  `json:"total_price"`
-	SubtotalPrice       string  `json:"subtotal_price"`
-	TotalDiscounts      string  `json:"total_discounts"`
-	TotalLineItemsPrice string  `json:"total_line_items_price"`
-	Currency            string  `json:"currency"`
-	Confirmed           bool    `json:"confirmed"`
-	CartToken           string  `json:"cart_token"`
-	Name                string  `json:"name"`
-	CancelledAt         string  `json:"cancelled_at"`
-	CancelReason        string  `json:"cancel_reason"`
-	UserID              string  `json:"user_id"`
-	OrderNumber         float64 `json:"order_number"`
-	ProcessingMethod    string  `json:"processing_method"`
-	CheckoutId          string  `json:"checkout_id"`
-	SourceName          string  `json:"source_name"`
+	ID                  float64        `json:"id"`
+	Email               string         `json:"email"`
+	ClosedAt            string         `json:"closed_at"`
+	CreatedAt           string         `json:"created_at"`
+	UpdatedAt           string         `json:"updated_at"`
+	Number              float64        `json:"number"`
+	Token               string         `json:"token"`
+	Gateway             string         `json:"gateway"`
+	TotalPrice          string         `json:"total_price"`
+	SubtotalPrice       string         `json:"subtotal_price"`
+	TotalDiscounts      string         `json:"total_discounts"`
+	TotalLineItemsPrice string         `json:"total_line_items_price"`
+	Currency            string         `json:"currency"`
+	Confirmed           bool           `json:"confirmed"`
+	CartToken           string         `json:"cart_token"`
+	Name                string         `json:"name"`
+	CancelledAt         string         `json:"cancelled_at"`
+	CancelReason        string         `json:"cancel_reason"`
+	UserID              string         `json:"user_id"`
+	OrderNumber         float64        `json:"order_number"`
+	ProcessingMethod    string         `json:"processing_method"`
+	CheckoutId          float64        `json:"checkout_id"`
+	SourceName          string         `json:"source_name"`
+	Customer            CustomerObject `json:"customer"`
 }
 
 // Returns eventName, userId, isNewUser, eventProperties, userProperties, timestamp, err
 func GetTrackDetailsFromOrderObject(
 	projectId uint64, actionType int64, shouldHashEmail bool, orderObject *OrderObject) (
 	string, string, bool, U.PropertiesMap, U.PropertiesMap, int64, error) {
-	if orderObject.Email == "" {
+	custUserId := ""
+
+	if orderObject.Email != "" {
+		custUserId = orderObject.Email
+	} else if orderObject.Customer.Email != "" {
+		custUserId = orderObject.Customer.Email
+	} else if orderObject.UserID != "" {
+		custUserId = orderObject.UserID
+	} else if orderObject.ID > 0 {
+		custUserId = fmt.Sprintf("%f", orderObject.Customer.ID)
+	}
+
+	if custUserId == "" {
 		return "", "", false, nil, nil, 0, fmt.Errorf("Missing email in OrderObject")
 	}
-	custUserId := orderObject.Email
+
 	if shouldHashEmail {
 		h := sha256.New()
 		h.Write([]byte(custUserId))
