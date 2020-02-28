@@ -226,6 +226,11 @@ var productionShopifyInfo = map[string]shopifyInfoStruct{
 		apiKey:    "93f0ecd1ff038bb0de72ec1f4dcf34b3aecf2a2f15f1f531dbd89bfecb546b1e",
 		hashEmail: false,
 	},
+	"quirksmith.myshopify.com": shopifyInfoStruct{
+		projectId: 401,
+		apiKey:    "8dd75ec8aded049912dffe8ecab9591606ac3b0ee389cf2a76b26be88854fff4",
+		hashEmail: true,
+	},
 }
 
 func GetProjectDetailsByShopifyDomain(
