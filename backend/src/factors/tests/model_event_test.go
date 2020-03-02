@@ -466,3 +466,28 @@ func TestOverwriteEventProperties(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, (*rEventPropertiesMap)["Hello"], "World")
 }
+
+func TestGetEventNamesOrderedByOccuranceFromCache(t *testing.T) {
+	project, user, eventName1, err := SetupProjectUserEventNameReturnDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+
+	_, errCode := M.CreateEvent(&M.Event{EventNameId: eventName1.ID,
+		ProjectId: project.ID, UserId: user.ID, Timestamp: time.Now().Unix()})
+
+	eventName2, _ := M.CreateOrGetUserCreatedEventName(&M.EventName{ProjectId: project.ID, Name: "event2"})
+	assert.NotNil(t, eventName2)
+
+	_, errCode = M.CreateEvent(&M.Event{EventNameId: eventName2.ID,
+		ProjectId: project.ID, UserId: user.ID, Timestamp: time.Now().Unix()})
+
+	getEventNames1, errCode := M.GetEventNamesOrderedByOccurrence(project.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Len(t, getEventNames1, 2)
+	assert.Equal(t, eventName1.Name, getEventNames1[0].Name)
+
+	getEventNames2, err := M.GetCacheEventNamesOrderedByOccurrence(project.ID)
+	assert.Equal(t, nil, err)
+	assert.Len(t, getEventNames2, 2)
+	assert.Equal(t, eventName2.Name, getEventNames2[1].Name)
+}

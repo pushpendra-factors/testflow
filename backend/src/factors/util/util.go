@@ -82,3 +82,8 @@ func GetValueAsString(value interface{}) (string, error) {
 		return "", errors.New("invalid type to convert as string")
 	}
 }
+
+func GetCurrentDayTimestamp() int64 {
+	currentTime := time.Now()
+	return time.Date(currentTime.Year(), currentTime.Month(), currentTime.Day(), 0, 0, 0, 0, currentTime.Location()).Unix()
+}
