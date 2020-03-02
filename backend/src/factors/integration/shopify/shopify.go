@@ -19,7 +19,7 @@ type CheckoutObject struct {
 	Token               string         `json:"token"`
 	CartToken           string         `json:"cart_token"`
 	Email               string         `json:"email"`
-	UserID              string         `json:"user_id"`
+	UserID              float64        `json:"user_id"`
 	Gateway             string         `json:"gateway"`
 	CreatedAt           string         `json:"created_at"`
 	UpdatedAt           string         `json:"updated_at"`
@@ -54,8 +54,8 @@ func GetTrackDetailsFromCheckoutObject(
 		custUserId = checkoutObject.Email
 	} else if checkoutObject.Customer.Email != "" {
 		custUserId = checkoutObject.Customer.Email
-	} else if checkoutObject.UserID != "" {
-		custUserId = checkoutObject.UserID
+	} else if checkoutObject.UserID > 0 {
+		custUserId = fmt.Sprintf("%f", checkoutObject.UserID)
 	} else if checkoutObject.ID > 0 {
 		custUserId = fmt.Sprintf("%f", checkoutObject.Customer.ID)
 	}
@@ -158,7 +158,7 @@ type OrderObject struct {
 	Name                string         `json:"name"`
 	CancelledAt         string         `json:"cancelled_at"`
 	CancelReason        string         `json:"cancel_reason"`
-	UserID              string         `json:"user_id"`
+	UserID              float64        `json:"user_id"`
 	OrderNumber         float64        `json:"order_number"`
 	ProcessingMethod    string         `json:"processing_method"`
 	CheckoutId          float64        `json:"checkout_id"`
@@ -176,8 +176,8 @@ func GetTrackDetailsFromOrderObject(
 		custUserId = orderObject.Email
 	} else if orderObject.Customer.Email != "" {
 		custUserId = orderObject.Customer.Email
-	} else if orderObject.UserID != "" {
-		custUserId = orderObject.UserID
+	} else if orderObject.UserID > 0 {
+		custUserId = fmt.Sprintf("%f", orderObject.UserID)
 	} else if orderObject.ID > 0 {
 		custUserId = fmt.Sprintf("%f", orderObject.Customer.ID)
 	}
