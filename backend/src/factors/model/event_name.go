@@ -189,7 +189,7 @@ func GetEventNames(projectId uint64) ([]EventName, int) {
 	return eventNames, http.StatusFound
 }
 
-func getEventNamesOrderedByOccurredWithLimit(projectId uint64, limit int) ([]EventName, error) {
+func getOccurredEventNamesOrderedByOccurrenceWithLimit(projectId uint64, limit int) ([]EventName, error) {
 	eventNames, err := GetCacheEventNamesOrderedByOccurrence(projectId)
 	if err == nil {
 		return eventNames, nil
@@ -240,7 +240,12 @@ func getEventNamesOrderedByOccurredWithLimit(projectId uint64, limit int) ([]Eve
 		eventNames = append(eventNames, eventName)
 	}
 
-	setCacheEventNamesOrderedByOccurrence(projectId, eventNames)
+	err = setCacheEventNamesOrderedByOccurrence(projectId, eventNames)
+	if err != nil {
+		logCtx.WithError(err).Error(
+			"Failed to setCacheEventNamesOrderedByOccurrence on getEventNamesOrderedByOccurredWithLimit.")
+	}
+
 	return eventNames, nil
 }
 
@@ -250,11 +255,13 @@ func getEventNamesOrderedByOccurredWithLimit(projectId uint64, limit int) ([]Eve
 func GetEventNamesOrderedByOccurrenceWithLimit(projectId uint64, limit int) ([]EventName, int) {
 	eventNames := make([]EventName, 0)
 	hasLimit := limit > 0
-	occurredEventNames, err := getEventNamesOrderedByOccurredWithLimit(projectId, limit)
+	// Get event names only occurred on the sample window ordered by occurrence.
+	occurredEventNames, err := getOccurredEventNamesOrderedByOccurrenceWithLimit(projectId, limit)
 	if err != nil {
 		return occurredEventNames, http.StatusInternalServerError
 	}
 
+	// Add all event names not occurred in the sample window with the limit.
 	addedNamesLookup := make(map[uint64]bool, 0)
 
 	for _, eventName := range occurredEventNames {
