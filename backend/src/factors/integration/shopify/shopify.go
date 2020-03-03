@@ -118,10 +118,13 @@ func GetTrackDetailsFromCheckoutObject(
 		userId = user.ID
 	}
 
-	userProperties := U.PropertiesMap{}
+	userProperties := U.PropertiesMap{
+		"userIdType": custUserIdType,
+	}
 	eventProperties := U.PropertiesMap{
-		"gateway":  checkoutObject.Gateway,
-		"currency": checkoutObject.Currency,
+		"gateway":    checkoutObject.Gateway,
+		"currency":   checkoutObject.Currency,
+		"userIdType": custUserIdType,
 	}
 	if shouldHashEmail {
 		userProperties[fmt.Sprintf("%s%s", custUserIdType, "Hash")] = custUserId
@@ -262,12 +265,15 @@ func GetTrackDetailsFromOrderObject(
 		userId = user.ID
 	}
 
-	userProperties := U.PropertiesMap{}
+	userProperties := U.PropertiesMap{
+		"userIdType": custUserIdType,
+	}
 	eventProperties := U.PropertiesMap{
 		"gateway":      orderObject.Gateway,
 		"currency":     orderObject.Currency,
 		"number":       orderObject.Number,
 		"order_number": orderObject.OrderNumber,
+		"userIdType":   custUserIdType,
 	}
 	if shouldHashEmail {
 		userProperties[fmt.Sprintf("%s%s", custUserIdType, "Hash")] = custUserId
