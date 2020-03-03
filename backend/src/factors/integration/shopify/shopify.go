@@ -50,14 +50,19 @@ func GetTrackDetailsFromCheckoutObject(
 	projectId uint64, actionType int64, shouldHashEmail bool, checkoutObject *CheckoutObject) (
 	string, string, bool, U.PropertiesMap, U.PropertiesMap, int64, error) {
 	custUserId := ""
+	custUserIdType := ""
 	if checkoutObject.Email != "" {
 		custUserId = checkoutObject.Email
+		custUserIdType = "checkoutEmail"
 	} else if checkoutObject.Customer.Email != "" {
 		custUserId = checkoutObject.Customer.Email
+		custUserIdType = "checkoutCustomerEmail"
 	} else if checkoutObject.UserID > 0 {
 		custUserId = fmt.Sprintf("%f", checkoutObject.UserID)
+		custUserIdType = "checkoutUserId"
 	} else if checkoutObject.ID > 0 {
 		custUserId = fmt.Sprintf("%f", checkoutObject.Customer.ID)
+		custUserIdType = "checkoutCustomerId"
 	}
 
 	if custUserId == "" {
@@ -114,14 +119,16 @@ func GetTrackDetailsFromCheckoutObject(
 	}
 
 	userProperties := U.PropertiesMap{}
-	if shouldHashEmail {
-		userProperties["emailHash"] = custUserId
-	} else {
-		userProperties[U.UP_EMAIL] = custUserId
-	}
 	eventProperties := U.PropertiesMap{
 		"gateway":  checkoutObject.Gateway,
 		"currency": checkoutObject.Currency,
+	}
+	if shouldHashEmail {
+		userProperties[fmt.Sprintf("%s%s", custUserIdType, "Hash")] = custUserId
+		eventProperties[fmt.Sprintf("%s%s", custUserIdType, "Hash")] = custUserId
+	} else {
+		userProperties[custUserIdType] = custUserId
+		eventProperties[custUserIdType] = custUserId
 	}
 	if f, err := strconv.ParseFloat(checkoutObject.TotalPrice, 64); err == nil {
 		eventProperties["total_price"] = f
@@ -171,15 +178,20 @@ func GetTrackDetailsFromOrderObject(
 	projectId uint64, actionType int64, shouldHashEmail bool, orderObject *OrderObject) (
 	string, string, bool, U.PropertiesMap, U.PropertiesMap, int64, error) {
 	custUserId := ""
+	custUserIdType := ""
 
 	if orderObject.Email != "" {
 		custUserId = orderObject.Email
+		custUserIdType = "orderEmail"
 	} else if orderObject.Customer.Email != "" {
 		custUserId = orderObject.Customer.Email
+		custUserIdType = "orderCustomerEmail"
 	} else if orderObject.UserID > 0 {
 		custUserId = fmt.Sprintf("%f", orderObject.UserID)
+		custUserIdType = "orderUserId"
 	} else if orderObject.ID > 0 {
 		custUserId = fmt.Sprintf("%f", orderObject.Customer.ID)
+		custUserIdType = "orderCustomerId"
 	}
 
 	if custUserId == "" {
@@ -251,16 +263,18 @@ func GetTrackDetailsFromOrderObject(
 	}
 
 	userProperties := U.PropertiesMap{}
-	if shouldHashEmail {
-		userProperties["emailHash"] = custUserId
-	} else {
-		userProperties[U.UP_EMAIL] = custUserId
-	}
 	eventProperties := U.PropertiesMap{
 		"gateway":      orderObject.Gateway,
 		"currency":     orderObject.Currency,
 		"number":       orderObject.Number,
 		"order_number": orderObject.OrderNumber,
+	}
+	if shouldHashEmail {
+		userProperties[fmt.Sprintf("%s%s", custUserIdType, "Hash")] = custUserId
+		eventProperties[fmt.Sprintf("%s%s", custUserIdType, "Hash")] = custUserId
+	} else {
+		userProperties[custUserIdType] = custUserId
+		eventProperties[custUserIdType] = custUserId
 	}
 	if f, err := strconv.ParseFloat(orderObject.TotalPrice, 64); err == nil {
 		eventProperties["total_price"] = f
