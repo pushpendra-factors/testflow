@@ -968,6 +968,7 @@ func addExplanationsByPresentation(duReport DashboardUnitReport, reportType stri
 	if duReport.Presentation == "" || len(duReport.Results) < 2 {
 		return duReport, nil
 	}
+
 	var err error
 	switch duReport.Presentation {
 	case PresentationCard:
@@ -988,6 +989,15 @@ func addExplanationsByPresentation(duReport DashboardUnitReport, reportType stri
 func addExplanationsAndOrderReportUnits(report *Report) (err error) {
 	dashboardUnitReports := make([]DashboardUnitReport, 0, 0)
 	for _, dashboardUnitReport := range report.Units {
+
+		// Temp fix to skip add explanations for Channel query units.
+		// Todo: Fix QueryResult on ReportUnit which only supports analytics queries,
+		// empty struct being added for channel queries.
+		queryClass := dashboardUnitReport.Results[0].QueryResult.Meta.Query.Class
+		if queryClass != QueryClassFunnel && queryClass != QueryClassInsights {
+			continue
+		}
+
 		report, err := addExplanationsByPresentation(dashboardUnitReport, report.Type)
 		if err != nil {
 			log.WithError(err).Error(fmt.Sprintf("Failed to addExplanationsByPresentation for project_id: %d", report.ProjectID))
