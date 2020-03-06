@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
+	"runtime/debug"
 )
 
 // sends email notification to the team.
@@ -46,4 +48,13 @@ func NotifyThroughSNS(source, env, message interface{}) error {
 	defer resp.Body.Close()
 
 	return nil
+}
+
+func NotifyOnPanic(taskID, env string) {
+	if pe := recover(); pe != nil {
+		if ne := NotifyThroughSNS(taskID, env, map[string]interface{}{"panic_error": pe, "stacktrace": string(debug.Stack())}); ne != nil {
+			log.Fatal(ne, pe)
+		}
+		log.Fatal(pe)
+	}
 }

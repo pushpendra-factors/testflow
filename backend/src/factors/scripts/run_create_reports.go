@@ -9,6 +9,7 @@ import (
 
 	C "factors/config"
 	M "factors/model"
+	"factors/util"
 
 	"factors/task/reports"
 
@@ -68,6 +69,8 @@ func main() {
 		err := fmt.Errorf("env [ %s ] not recognised", *env)
 		panic(err)
 	}
+
+	defer util.NotifyOnPanic("Task#CreateReports", *env)
 
 	projectsToBuildFor, err := getIds(*buildForProjects, ",")
 	if err != nil {

@@ -319,7 +319,9 @@ func GenerateReport(projectID, dashboardID uint64, dashboardName string, reportT
 		Units:         reportUnits,
 	}
 
-	addExplanationsAndOrderReportUnits(report)
+	if err := addExplanationsAndOrderReportUnits(report); err != nil {
+		return nil, http.StatusInternalServerError
+	}
 
 	return report, http.StatusOK
 }
@@ -487,7 +489,7 @@ func explainChange(exp *ReportExplanation) string {
 	return expStr + "."
 }
 
-func addExplanationsForPresentationCard(duReport *DashboardUnitReport, reportType string) {
+func addExplanationsForPresentationCard(duReport *DashboardUnitReport, reportType string) error {
 	prevCount, _ := getAggrAsFloat64(duReport.Results[0].QueryResult.Rows[0][0])
 	curCount, _ := getAggrAsFloat64(duReport.Results[1].QueryResult.Rows[0][0])
 
@@ -500,12 +502,18 @@ func addExplanationsForPresentationCard(duReport *DashboardUnitReport, reportTyp
 	duReport.Explanations = []string{explainTotalChange(percentChange, effect,
 		duReport.Title, fromPeriod, toPeriod, reportType)}
 	duReport.ChangeInPercentage = percentChange
+	return nil
 }
 
 func getAggrByGroup(queryResult *QueryResult,
-	uniqueGroupsSet *map[string]bool) (map[string]float64, float64, string) {
-	aggrIndex, _, _ := GetTimstampAndAggregateIndexOnQueryResult(queryResult.Headers)
+	uniqueGroupsSet *map[string]bool) (map[string]float64, float64, string, error) {
+	var totalCount float64
+	var groupHeader string
 	aggrByGroupMap := make(map[string]float64)
+	aggrIndex, _, _ := GetTimstampAndAggregateIndexOnQueryResult(queryResult.Headers)
+	if aggrIndex == -1 {
+		return aggrByGroupMap, totalCount, groupHeader, fmt.Errorf("invalid index on GetTimstampAndAggregateIndexOnQueryResult for queryResult %+v", queryResult)
+	}
 
 	// len should be aggr + 1, if group exist.
 	hasGroup := len(queryResult.Headers) > 1
@@ -514,7 +522,6 @@ func getAggrByGroup(queryResult *QueryResult,
 		groupIndex = 1
 	}
 
-	var totalCount float64
 	for _, row := range queryResult.Rows {
 		var group string
 		if hasGroup {
@@ -527,12 +534,11 @@ func getAggrByGroup(queryResult *QueryResult,
 		(*uniqueGroupsSet)[group] = true
 	}
 
-	var groupHeader string
 	if hasGroup {
 		groupHeader = queryResult.Headers[groupIndex]
 	}
 
-	return aggrByGroupMap, totalCount, groupHeader
+	return aggrByGroupMap, totalCount, groupHeader, nil
 }
 
 func sortAndLimitExplanations(explanations []ReportExplanation) []ReportExplanation {
@@ -559,7 +565,7 @@ func getEntityFromQueryType(queryType string) string {
 	return ""
 }
 
-func addExplanationsForPresentationBar(duReport *DashboardUnitReport, reportType string) {
+func addExplanationsForPresentationBar(duReport *DashboardUnitReport, reportType string) error {
 	prevResult := duReport.Results[0].QueryResult
 	curResult := duReport.Results[1].QueryResult
 	resultEntity := getEntityFromQueryType(duReport.Results[1].QueryResult.Meta.Query.Type)
@@ -570,8 +576,16 @@ func addExplanationsForPresentationBar(duReport *DashboardUnitReport, reportType
 		duReport.Results[1].EndTime, reportType)
 
 	uniqueGroupsSet := make(map[string]bool)
-	prevAggrByGroup, prevResultTotal, prevResultGroupName := getAggrByGroup(&prevResult, &uniqueGroupsSet)
-	curAggrByGroup, curResultTotal, curResultGroupName := getAggrByGroup(&curResult, &uniqueGroupsSet)
+	prevAggrByGroup, prevResultTotal, prevResultGroupName, err := getAggrByGroup(&prevResult, &uniqueGroupsSet)
+	if err != nil {
+		log.WithError(err).Error("Failed to getAggrByGroup")
+		return err
+	}
+	curAggrByGroup, curResultTotal, curResultGroupName, err := getAggrByGroup(&curResult, &uniqueGroupsSet)
+	if err != nil {
+		log.WithError(err).Error("Failed to getAggrByGroup")
+		return err
+	}
 
 	if prevResultGroupName != curResultGroupName {
 		log.WithFields(log.Fields{"prev_group_name": prevResultGroupName,
@@ -612,9 +626,10 @@ func addExplanationsForPresentationBar(duReport *DashboardUnitReport, reportType
 	}
 
 	duReport.Explanations = explanations
+	return nil
 }
 
-func addExplanationsForPresentationTable(duReport *DashboardUnitReport, reportType string) {
+func addExplanationsForPresentationTable(duReport *DashboardUnitReport, reportType string) error {
 	prevResult := duReport.Results[0].QueryResult
 	curResult := duReport.Results[1].QueryResult
 	resultEntity := getEntityFromQueryType(duReport.Results[1].QueryResult.Meta.Query.Type)
@@ -625,8 +640,16 @@ func addExplanationsForPresentationTable(duReport *DashboardUnitReport, reportTy
 		duReport.Results[1].EndTime, reportType)
 
 	uniqueGroupsSet := make(map[string]bool)
-	prevAggrByGroup, prevResultTotal, prevResultGroupName := getAggrByGroup(&prevResult, &uniqueGroupsSet)
-	curAggrByGroup, curResultTotal, curResultGroupName := getAggrByGroup(&curResult, &uniqueGroupsSet)
+	prevAggrByGroup, prevResultTotal, prevResultGroupName, err := getAggrByGroup(&prevResult, &uniqueGroupsSet)
+	if err != nil {
+		log.WithError(err).Error("Failed to getAggrByGroup")
+		return err
+	}
+	curAggrByGroup, curResultTotal, curResultGroupName, err := getAggrByGroup(&curResult, &uniqueGroupsSet)
+	if err != nil {
+		log.WithError(err).Error("Failed to getAggrByGroup")
+		return err
+	}
 
 	if prevResultGroupName != curResultGroupName {
 		log.WithFields(log.Fields{"prev_group_name": prevResultGroupName,
@@ -667,6 +690,7 @@ func addExplanationsForPresentationTable(duReport *DashboardUnitReport, reportTy
 	}
 
 	duReport.Explanations = explanations
+	return nil
 }
 
 func getAggrAsFloat64(aggr interface{}) (float64, error) {
@@ -783,7 +807,7 @@ func getGroupNameForPresentationLine(query Query) string {
 	return groupName
 }
 
-func addExplanationsForPresentationLine(duReport *DashboardUnitReport, reportType string) {
+func addExplanationsForPresentationLine(duReport *DashboardUnitReport, reportType string) error {
 	prevResult := duReport.Results[0].QueryResult
 	curResult := duReport.Results[1].QueryResult
 	resultEntity := getEntityFromQueryType(duReport.Results[1].QueryResult.Meta.Query.Type)
@@ -862,6 +886,7 @@ func addExplanationsForPresentationLine(duReport *DashboardUnitReport, reportTyp
 	}
 
 	duReport.Explanations = explanations
+	return nil
 }
 
 func getFunnelConversionsFromResult(queryResult *QueryResult) ([]float64, float64) {
@@ -898,7 +923,7 @@ func getEffect(prev float64, curr float64) string {
 	return effectEqual
 }
 
-func addExplanationsForPresentationFunnel(duReport *DashboardUnitReport, reportType string) {
+func addExplanationsForPresentationFunnel(duReport *DashboardUnitReport, reportType string) error {
 	prevResult := duReport.Results[0].QueryResult
 	curResult := duReport.Results[1].QueryResult
 
@@ -910,7 +935,7 @@ func addExplanationsForPresentationFunnel(duReport *DashboardUnitReport, reportT
 
 	totalEffect := getEffect(prevTotal, curTotal)
 	if totalEffect == effectEqual {
-		return
+		return nil
 	}
 
 	explanations := make([]string, 0, 0)
@@ -920,7 +945,7 @@ func addExplanationsForPresentationFunnel(duReport *DashboardUnitReport, reportT
 	// one conversion is equal to total conversion.
 	if len(curConversions) == 1 || len(prevConversions) != len(curConversions) {
 		duReport.Explanations = explanations
-		return
+		return nil
 	}
 
 	steps := curResult.Meta.Query.EventsWithProperties
@@ -936,33 +961,39 @@ func addExplanationsForPresentationFunnel(duReport *DashboardUnitReport, reportT
 	}
 
 	duReport.Explanations = explanations
+	return nil
 }
 
-func addExplanationsByPresentation(duReport DashboardUnitReport, reportType string) DashboardUnitReport {
+func addExplanationsByPresentation(duReport DashboardUnitReport, reportType string) (DashboardUnitReport, error) {
 	if duReport.Presentation == "" || len(duReport.Results) < 2 {
-		return duReport
+		return duReport, nil
 	}
-
+	var err error
 	switch duReport.Presentation {
 	case PresentationCard:
-		addExplanationsForPresentationCard(&duReport, reportType)
+		err = addExplanationsForPresentationCard(&duReport, reportType)
 	case PresentationBar:
-		addExplanationsForPresentationBar(&duReport, reportType)
+		err = addExplanationsForPresentationBar(&duReport, reportType)
 	case PresentationTable:
-		addExplanationsForPresentationTable(&duReport, reportType)
+		err = addExplanationsForPresentationTable(&duReport, reportType)
 	case PresentationLine:
-		addExplanationsForPresentationLine(&duReport, reportType)
+		err = addExplanationsForPresentationLine(&duReport, reportType)
 	case PresentationFunnel:
-		addExplanationsForPresentationFunnel(&duReport, reportType)
+		err = addExplanationsForPresentationFunnel(&duReport, reportType)
 	}
 
-	return duReport
+	return duReport, err
 }
 
-func addExplanationsAndOrderReportUnits(report *Report) {
+func addExplanationsAndOrderReportUnits(report *Report) (err error) {
 	dashboardUnitReports := make([]DashboardUnitReport, 0, 0)
 	for _, dashboardUnitReport := range report.Units {
-		dashboardUnitReports = append(dashboardUnitReports, addExplanationsByPresentation(dashboardUnitReport, report.Type))
+		report, err := addExplanationsByPresentation(dashboardUnitReport, report.Type)
+		if err != nil {
+			log.WithError(err).Error(fmt.Sprintf("Failed to addExplanationsByPresentation for project_id: %d", report.ProjectID))
+			return err
+		}
+		dashboardUnitReports = append(dashboardUnitReports, report)
 	}
 
 	// orders units by percentage change.
@@ -971,6 +1002,7 @@ func addExplanationsAndOrderReportUnits(report *Report) {
 	})
 
 	report.Units = dashboardUnitReports
+	return nil
 }
 
 func getDashboardUnitReport(projectID uint64, dashboardUnit DashboardUnit, intervalBeforeThat,

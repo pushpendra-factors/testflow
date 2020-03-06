@@ -8,7 +8,6 @@ import (
 
 	"factors/util"
 	"fmt"
-	"runtime/debug"
 	"time"
 
 	"github.com/jinzhu/gorm"
@@ -33,22 +32,13 @@ type BuildSuccess struct {
 	NumberOfEvents      int   `json:"num_events"`
 }
 
-func notifyOnPanic(env string) {
-	if pe := recover(); pe != nil {
-		if ne := util.NotifyThroughSNS(taskID, env, map[string]interface{}{"panic_error": pe, "stacktrace": string(debug.Stack())}); ne != nil {
-			log.Fatal(ne, pe)
-		}
-		log.Fatal(pe)
-	}
-}
-
 // BuildSequential - runs model building sequenitally for all project intervals.
 func BuildSequential(env string, db *gorm.DB, cloudManager *filestore.FileManager,
 	etcdClient *serviceEtcd.EtcdClient, diskManger *serviceDisk.DiskDriver,
 	bucketName string, noOfPatternWorkers int, projectId uint64,
 	projectIdsToSkip map[uint64]bool, maxModelSize int64) error {
 
-	defer notifyOnPanic(env)
+	defer util.NotifyOnPanic(taskID, env)
 
 	// Todo(Dinesh): Add success and failure notification.
 	// Idea: []Builds from this can be queued and workers can process.
