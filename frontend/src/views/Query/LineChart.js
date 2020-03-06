@@ -39,11 +39,10 @@ class LineChart extends Component {
   }
 
   getLinesByGroupsIfExist(rows, timestampType, countIndex, dateTimeIndex, timezone) { 
-    let isValidTimezone = mt.tz(timezone)
-    if (!isValidTimezone){
-      console.error("Invalid timezone ", timezone, " default to UTC");
+    if (!timezone || timezone == "" || !mt.tz(timezone)){
+      console.error("Invalid timezone ", timezone, " default to UTC.");
       timezone = "UTC";
-    }
+    } 
 
     let lines = {}
     let keySep = " / ";
@@ -77,6 +76,7 @@ class LineChart extends Component {
       let isThisYear = moment(row[dateTimeIndex]).isSame(moment(), 'year');
       let formatStr = isThisYear ? 'MMM DD' : 'MMM DD, YYYY';
       if (timestampType == 'hour') formatStr = 'MMM DD, HH:mm';
+
       // moment uses user's current location timezone.
       lines[key].timestamps.push(mt(row[dateTimeIndex]).tz(timezone).format(formatStr));
       
