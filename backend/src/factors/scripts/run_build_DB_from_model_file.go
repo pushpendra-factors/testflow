@@ -9,7 +9,6 @@ import (
 	"flag"
 	"net/http"
 	"os"
-	"strings"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
@@ -17,23 +16,21 @@ import (
 
 // denormalized event struct
 type denEvent struct {
-	Uid string          `json:uid`
-	Ujt int64           `json:ujt`
-	En  string          `json:en`
-	Et  int64           `json:et`
-	Ecd uint64          `json:ecd`
-	Epr *postgres.Jsonb `json:epr`
-	Upr *postgres.Jsonb `json:upr`
+	UserId            string          `json:"uid"`
+	UserJoinTimestamp int64           `json:"ujt"`
+	EventName         string          `json:"en"`
+	EventTime         int64           `json:"et"`
+	EventCount        uint64          `json:"ecd"`
+	EventProperties   *postgres.Jsonb `json:"epr"`
+	UserProperties    *postgres.Jsonb `json:"upr"`
 }
 
 //agentUUID = "8d6a92d2-a50d-4450-bd27-b9e99e144efb"
-// go run run_build_DB_from_model_file.go --file_parth=<path-to-denormalized-file> --project_name=<new-project-name> --agent_uuid=<agent-uuid>
+// go run run_build_DB_from_model_file.go --file_path=<path-to-denormalized-file> --project_name=<new-project-name> --agent_uuid=<agent-uuid>
 
 func main() {
 
 	env := flag.String("env", "development", "")
-	port := flag.Int("port", 8100, "")
-	etcd := flag.String("etcd", "localhost:2379", "Comma separated list of etcd endpoints localhost:2379,localhost:2378")
 
 	dbHost := flag.String("db_host", "localhost", "")
 	dbPort := flag.Int("db_port", 5432, "")
@@ -47,20 +44,10 @@ func main() {
 	redisHost := flag.String("redis_host", "localhost", "")
 	redisPort := flag.Int("redis_port", 6379, "")
 
-	geoLocFilePath := flag.String("geo_loc_path", "/usr/local/var/factors/geolocation_data/GeoLite2-City.mmdb", "")
-
-	apiDomain := flag.String("api_domain", "factors-dev.com:8080", "")
-	appDomain := flag.String("app_domain", "factors-dev.com:3000", "")
-
-	factorsEmailSender := flag.String("email_sender", "support-dev@factors.ai", "")
-	errorReportingInterval := flag.Int("error_reporting_interval", 300, "")
-
 	flag.Parse()
 
 	config := &C.Configuration{
-		Env:           *env,
-		Port:          *port,
-		EtcdEndpoints: strings.Split(*etcd, ","),
+		Env: *env,
 		DBInfo: C.DBConf{
 			Host:     *dbHost,
 			Port:     *dbPort,
@@ -68,21 +55,21 @@ func main() {
 			Name:     *dbName,
 			Password: *dbPass,
 		},
-		RedisHost:              *redisHost,
-		RedisPort:              *redisPort,
-		GeolocationFile:        *geoLocFilePath,
-		APIDomain:              *apiDomain,
-		APPDomain:              *appDomain,
-		EmailSender:            *factorsEmailSender,
-		ErrorReportingInterval: *errorReportingInterval,
+		RedisHost: *redisHost,
+		RedisPort: *redisPort,
 	}
 
 	// Setup.
 	// Initialize configs and connections.
-	if err := C.Init(config); err != nil {
-		log.Fatal("Failed to initialize config and services.")
+	C.InitConf(config.Env)
+
+	err := C.InitDB(config.DBInfo)
+	if err != nil {
+		log.Error("Failed to initialize DB.")
 		os.Exit(1)
 	}
+
+	C.InitRedis(config.RedisHost, config.RedisPort)
 
 	if filePath == nil || *filePath == "" {
 		log.Error("No file path provided")
@@ -169,15 +156,17 @@ func dbCreateAndGetProjectWithAgentUUID(projectName string, agentUUID string) (*
 
 func EventToDb(event denEvent, project *M.Project) int {
 	user, err := M.CreateUser(&M.User{
-		ProjectId:  project.ID,
-		Properties: *event.Upr,
+		ProjectId:      project.ID,
+		Properties:     *event.UserProperties,
+		CustomerUserId: event.UserId,
+		JoinTimestamp:  event.UserJoinTimestamp,
 	})
 	if err != http.StatusCreated {
 		log.Errorf("Failed to create user status: %d", err)
 		return err
 	}
 
-	eventName, errCode := M.CreateOrGetUserCreatedEventName(&M.EventName{ProjectId: project.ID, Name: event.En})
+	eventName, errCode := M.CreateOrGetUserCreatedEventName(&M.EventName{ProjectId: project.ID, Name: event.EventName})
 	if errCode != http.StatusConflict && errCode != http.StatusCreated {
 		log.Error("failed to create CreateOrGetUserCreatedEventName")
 		return errCode
@@ -187,9 +176,9 @@ func EventToDb(event denEvent, project *M.Project) int {
 		ProjectId:        project.ID,
 		EventNameId:      eventName.ID,
 		UserId:           user.ID,
-		Timestamp:        event.Et,
-		Count:            event.Ecd,
-		Properties:       *event.Epr,
+		Timestamp:        event.EventTime,
+		Count:            event.EventCount,
+		Properties:       *event.EventProperties,
 		UserPropertiesId: user.PropertiesId,
 	})
 	if errCode != http.StatusCreated {
