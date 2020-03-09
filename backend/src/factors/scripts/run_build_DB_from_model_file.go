@@ -109,9 +109,9 @@ func main() {
 func normalizeEventsToDB(events []denEvent, project *M.Project) {
 
 	for _, event := range events {
-		err := EventToDb(event, project)
-		if err != http.StatusCreated {
-			log.Errorf("Failed to create event %+v\n", event)
+		err := eventToDb(event, project)
+		if err != http.StatusOK {
+			log.Errorf("Failed to create event %+v\n ,  %d", event, err)
 		}
 	}
 }
@@ -154,16 +154,16 @@ func dbCreateAndGetProjectWithAgentUUID(projectName string, agentUUID string) (*
 	return cproject, nil
 }
 
-func EventToDb(event denEvent, project *M.Project) int {
-	user, err := M.CreateUser(&M.User{
-		ProjectId:      project.ID,
-		Properties:     *event.UserProperties,
-		CustomerUserId: event.UserId,
-		JoinTimestamp:  event.UserJoinTimestamp,
-	})
-	if err != http.StatusCreated {
-		log.Errorf("Failed to create user status: %d", err)
+func eventToDb(event denEvent, project *M.Project) int {
+	user, err := M.GetSegmentUser(project.ID, "", event.UserId)
+	if err != http.StatusCreated && err != http.StatusOK {
+		log.Errorf("Failed to GetSegmentUser status: %d", err)
 		return err
+	}
+
+	userPropertiesId, errCode := M.UpdateUserProperties(project.ID, user.ID, event.UserProperties)
+	if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
+		return errCode
 	}
 
 	eventName, errCode := M.CreateOrGetUserCreatedEventName(&M.EventName{ProjectId: project.ID, Name: event.EventName})
@@ -179,11 +179,11 @@ func EventToDb(event denEvent, project *M.Project) int {
 		Timestamp:        event.EventTime,
 		Count:            event.EventCount,
 		Properties:       *event.EventProperties,
-		UserPropertiesId: user.PropertiesId,
+		UserPropertiesId: userPropertiesId,
 	})
-	if errCode != http.StatusCreated {
-		log.Error("failed to create event")
+	if errCode != http.StatusFound && errCode != http.StatusCreated {
+		log.Errorf("failed to create event, errCode: %+v\n", errCode)
 		return errCode
 	}
-	return errCode
+	return http.StatusOK
 }
