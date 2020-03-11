@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
@@ -39,6 +40,7 @@ gor run run_build_DB_from_model_file.go --mode=query --project_id=<project-id> -
 
 func main() {
 
+	currentTime := time.Now()
 	env := flag.String("env", "development", "")
 
 	dbHost := flag.String("db_host", "localhost", "")
@@ -53,8 +55,8 @@ func main() {
 	redisHost := flag.String("redis_host", "localhost", "")
 	redisPort := flag.Int("redis_port", 6379, "")
 	mode := flag.String("mode", "ingest", "")
-	customStartTime := flag.Int64("start_time", 0, "")
-	customEndTime := flag.Int64("end_time", 0, "")
+	customStartTime := flag.Int64("start_time", currentTime.AddDate(0, 0, -7).Unix(), "")
+	customEndTime := flag.Int64("end_time", currentTime.Unix(), "")
 	projectIdFlag := flag.Uint64("project_id", 0, "Project Id.")
 
 	flag.Parse()
