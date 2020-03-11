@@ -7,6 +7,7 @@ import (
 	C "factors/config"
 	M "factors/model"
 	"flag"
+	"fmt"
 	"net/http"
 	"os"
 
@@ -25,8 +26,16 @@ type denEvent struct {
 	UserProperties    *postgres.Jsonb `json:"upr"`
 }
 
-//agentUUID = "8d6a92d2-a50d-4450-bd27-b9e99e144efb"
-// go run run_build_DB_from_model_file.go --file_path=<path-to-denormalized-file> --project_name=<new-project-name> --agent_uuid=<agent-uuid>
+/*
+default to ingest mode
+agentUUID = "8d6a92d2-a50d-4450-bd27-b9e99e144efb"
+go run run_build_DB_from_model_file.go --file_path=<path-to-denormalized-file> --project_name=<new-project-name> --agent_uuid=<agent-uuid> --mode=
+*/
+
+/*
+for query mode
+gor run run_build_DB_from_model_file.go --mode=query --project_id=<project-id> --start_time= --end_time=
+*/
 
 func main() {
 
@@ -43,6 +52,10 @@ func main() {
 
 	redisHost := flag.String("redis_host", "localhost", "")
 	redisPort := flag.Int("redis_port", 6379, "")
+	mode := flag.String("mode", "ingest", "")
+	customStartTime := flag.Int64("start_time", 0, "")
+	customEndTime := flag.Int64("end_time", 0, "")
+	projectIdFlag := flag.Uint64("project_id", 0, "Project Id.")
 
 	flag.Parse()
 
@@ -70,6 +83,15 @@ func main() {
 	}
 
 	C.InitRedis(config.RedisHost, config.RedisPort)
+
+	if *mode == "query" {
+		if *customEndTime != 0 && *customStartTime != 0 && *projectIdFlag != 0 {
+			testFunnelQuery(*customStartTime, *customEndTime, *projectIdFlag)
+		} else {
+			log.Error("Not valid parameter for queryMode")
+		}
+		return
+	}
 
 	if filePath == nil || *filePath == "" {
 		log.Error("No file path provided")
@@ -117,11 +139,11 @@ func normalizeEventsToDB(events []denEvent, project *M.Project) {
 }
 
 func getDenormalizedEventsFromFile(file *os.File) ([]denEvent, error) {
-	var decEvent denEvent
 	scanner := bufio.NewScanner(file)
 	var events []denEvent
 	for scanner.Scan() {
 		enEvent := scanner.Text()
+		var decEvent denEvent
 		err := json.Unmarshal([]byte(enEvent), &decEvent)
 		if err != nil {
 			log.WithError(err).Error("failed to unmarshal")
@@ -186,4 +208,57 @@ func eventToDb(event denEvent, project *M.Project) int {
 		return errCode
 	}
 	return http.StatusOK
+}
+
+func testFunnelQuery(startTime int64, endTime int64, projectId uint64) error {
+	var queries = []map[string]string{
+		{"entity": "event", "type": "categorical", "property": "category", "operator": "equals", "value": "Games", "logicalOp": "AND"},
+		{"entity": "event", "type": "categorical", "property": "category", "operator": "equals", "value": "Fashion", "logicalOp": "AND"},
+		{"entity": "user", "type": "categorical", "property": "$day_of_first_event", "operator": "equals", "value": "Wednesday", "logicalOp": "AND"},
+		{"entity": "user", "type": "categorical", "property": "gender", "operator": "equals", "value": "M", "logicalOp": "AND"},
+	}
+
+	var results []M.QueryResult
+	for _, queryParams := range queries {
+		query := M.Query{
+			From: startTime,
+			To:   endTime,
+			EventsWithProperties: []M.QueryEventWithProperties{
+				M.QueryEventWithProperties{
+					Name: "View Project",
+					Properties: []M.QueryProperty{
+						M.QueryProperty{
+							Entity:    queryParams["entity"],
+							Property:  queryParams["property"],
+							Operator:  queryParams["operator"],
+							Value:     queryParams["value"],
+							Type:      queryParams["type"],
+							LogicalOp: queryParams["logicalOp"],
+						},
+					},
+				},
+			},
+			Class:           M.QueryClassFunnel,
+			Type:            M.QueryTypeUniqueUsers,
+			EventsCondition: M.EventCondAnyGivenEvent,
+		}
+
+		result, errCode, _ := M.Analyze(projectId, query)
+		if errCode != http.StatusOK {
+			return errors.New("Failed to analyze query")
+		}
+
+		results = append(results, *result)
+	}
+
+	log.Info("Results:")
+	for _, result := range results {
+		if len(result.Headers) == 2 {
+			log.Info(fmt.Sprintf("Query: %+v\n%s:%d\n%s:%s", result.Meta.Query, result.Headers[0], result.Rows[0][0], result.Headers[1], result.Rows[0][1]))
+		} else {
+			log.Info(fmt.Sprintf("Query: %+v\n%s:%d", result.Meta.Query, result.Headers[0], result.Rows[0][0]))
+		}
+	}
+
+	return nil
 }
