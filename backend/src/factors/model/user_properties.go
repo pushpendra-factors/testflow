@@ -27,7 +27,7 @@ type UserProperties struct {
 
 	// JsonB of postgres with gorm. https://github.com/jinzhu/gorm/issues/1183
 	Properties       postgres.Jsonb `json:"properties"`
-	UpdatedTimestamp int64          `json:"updated_timestamp"`
+	UpdatedTimestamp int64          `gorm:"not null;default:0" json:"updated_timestamp"`
 	CreatedAt        time.Time      `json:"created_at"`
 	UpdatedAt        time.Time      `json:"updated_at"`
 }

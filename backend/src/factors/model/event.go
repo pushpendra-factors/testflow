@@ -34,7 +34,7 @@ type Event struct {
 	Count            uint64  `json:"count"`
 	// JsonB of postgres with gorm. https://github.com/jinzhu/gorm/issues/1183
 	Properties                 postgres.Jsonb `json:"properties,omitempty"`
-	PropertiesUpdatedTimestamp int64          `json:"properties_updated_timestamp,omitempty"`
+	PropertiesUpdatedTimestamp int64          `gorm:"not null;default:0" json:"properties_updated_timestamp,omitempty"`
 	// unix epoch timestamp in seconds.
 	Timestamp int64     `json:"timestamp"`
 	CreatedAt time.Time `json:"created_at"`

@@ -1,6 +1,6 @@
 -- UP
-ALTER TABLE events ADD properties_updated_timestamp bigint NOT NULL DEFAULT 0;
-ALTER TABLE user_properties ADD updated_timestamp bigint NOT NULL DEFAULT 0;
+ALTER TABLE events ADD properties_updated_timestamp bigint;
+ALTER TABLE user_properties ADD updated_timestamp bigint;
 
 --  DOWN
 -- ALTER TABLE events DROP properties_updated_timestamp;
