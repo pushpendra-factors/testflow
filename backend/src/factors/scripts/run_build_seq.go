@@ -44,6 +44,7 @@ func main() {
 
 	// init DB, etcd
 	config := &C.Configuration{
+		AppName:       "build_seq_job",
 		Env:           *envFlag,
 		EtcdEndpoints: strings.Split(*etcd, ","),
 		DBInfo: C.DBConf{

@@ -75,7 +75,7 @@ func TestIntSegmentHandler(t *testing.T) {
 	// Invalid type.
 	w = ServePostRequestWithHeaders(r, uri, []byte(`{"anonymousId": "ranon_1", "type": "random_type"}`),
 		map[string]string{"Authorization": project.PrivateToken})
-	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
 	jsonResponse1, _ := ioutil.ReadAll(w.Body)
 	var jsonResponseMap1 map[string]interface{}
 	json.Unmarshal(jsonResponse1, &jsonResponseMap1)
@@ -236,7 +236,7 @@ func TestIntSegmentHandler(t *testing.T) {
 
 	w = ServePostRequestWithHeaders(r, uri, []byte(samplePayloadWithInvalidTimestamp),
 		map[string]string{"Authorization": project.PrivateToken})
-	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 
 func TestIntSegmentHandlerWithPageEvent(t *testing.T) {
@@ -630,7 +630,8 @@ func TestIntSegmentHandlerWithSession(t *testing.T) {
 		sessionEventName, errCode := M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, sessionEventName)
-		segmentUser, errCode := M.GetSegmentUser(project.ID, "80444c7e-1580-4d3c-a77a-2f3427ed7d990", "xxx123")
+		segmentUser, errCode := M.GetSegmentUser(project.ID, "80444c7e-1580-4d3c-a77a-2f3427ed7d990",
+			"xxx123", time.Now().Unix())
 		assert.NotNil(t, segmentUser)
 		assert.Equal(t, http.StatusOK, errCode)
 		userSessionEvents, errCode := M.GetUserEventsByEventNameId(project.ID, segmentUser.ID, sessionEventName.ID)
@@ -796,8 +797,7 @@ func TestIntSegmentHandlerWithTrackEvent(t *testing.T) {
 	jsonResponse4, _ := ioutil.ReadAll(w.Body)
 	var jsonResponseMap4 map[string]interface{}
 	json.Unmarshal(jsonResponse4, &jsonResponseMap4)
-
-	assert.Equal(t, "Tracking failed. Event creation failed. Duplicate CustomerEventID", jsonResponseMap4["error"])
+	assert.NotEmpty(t, jsonResponseMap4["error"])
 
 	sampleTrackPayloadWithoutProperties := `
 	{

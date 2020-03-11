@@ -87,7 +87,7 @@ func main() {
 				}
 
 				newPropertiesJsonb, err := U.AddToPostgresJsonb(&userProperties.Properties,
-					map[string]interface{}{U.UP_JOIN_TIME: user.JoinTimestamp})
+					map[string]interface{}{U.UP_JOIN_TIME: user.JoinTimestamp}, true)
 				if err != nil {
 					log.WithError(err).Fatal("Failed to add join timestamp to properties.")
 				}

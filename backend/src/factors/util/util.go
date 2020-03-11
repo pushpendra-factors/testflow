@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 func RandomString(n int) string {
@@ -81,6 +83,10 @@ func GetValueAsString(value interface{}) (string, error) {
 	default:
 		return "", errors.New("invalid type to convert as string")
 	}
+}
+
+func GetUUID() string {
+	return uuid.New().String()
 }
 
 func GetCurrentDayTimestamp() int64 {

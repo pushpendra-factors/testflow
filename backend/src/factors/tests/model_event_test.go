@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/stretchr/testify/assert"
 )
@@ -32,6 +33,7 @@ func TestDBCreateAndGetEvent(t *testing.T) {
 	assert.Equal(t, uint64(1), event.Count)
 	assert.True(t, event.Timestamp >= start.Unix())
 	assert.InDelta(t, event.Timestamp, start.Unix(), 3)
+	assert.Equal(t, event.Timestamp, event.PropertiesUpdatedTimestamp)
 	assert.True(t, event.CreatedAt.After(start))
 	assert.True(t, event.UpdatedAt.After(start))
 	assert.Equal(t, event.CreatedAt, event.UpdatedAt)
@@ -51,6 +53,7 @@ func TestDBCreateAndGetEvent(t *testing.T) {
 	assert.Equal(t, newEvent.ProjectId, retEvent.ProjectId)
 	assert.Equal(t, newEvent.UserId, retEvent.UserId)
 	assert.True(t, event.Timestamp != 0)
+	assert.Equal(t, event.Timestamp, event.PropertiesUpdatedTimestamp)
 	eventProperties, _ := U.DecodePostgresJsonb(&event.Properties)
 	assert.True(t, (*eventProperties)["$day_of_week"] != "" && (*eventProperties)["$day_of_week"] == time.Unix(event.Timestamp, 0).Weekday().String())
 	hr, _, _ := time.Unix(event.Timestamp, 0).Clock()
@@ -74,6 +77,7 @@ func TestDBCreateAndGetEvent(t *testing.T) {
 	assert.Equal(t, uint64(2), event.Count)
 	assert.True(t, event.Timestamp >= start.Unix())
 	assert.InDelta(t, event.Timestamp, start.Unix(), 3)
+	assert.Equal(t, event.Timestamp, event.PropertiesUpdatedTimestamp)
 	assert.True(t, event.CreatedAt.After(start))
 	assert.True(t, event.UpdatedAt.After(start))
 	assert.Equal(t, event.CreatedAt, event.UpdatedAt)
@@ -94,7 +98,7 @@ func TestDBCreateAndGetEvent(t *testing.T) {
 		assert.Equal(t, http.StatusCreated, errCode)
 		_, errCode = M.CreateEvent(&M.Event{EventNameId: eventNameId, ProjectId: projectId,
 			UserId: userId, CustomerEventId: &custEventId, Timestamp: time.Now().Unix()})
-		assert.Equal(t, http.StatusFound, errCode)
+		assert.Equal(t, http.StatusNotAcceptable, errCode)
 	})
 
 	// Test Get Event on non existent id.
@@ -120,11 +124,19 @@ func TestDBCreateAndGetEvent(t *testing.T) {
 	assert.Equal(t, http.StatusInternalServerError, errCode)
 	assert.Nil(t, retEvent)
 
-	// Test Create Event with id.
-	randomId := "random_id"
-	event, errCode = M.CreateEvent(&M.Event{ID: randomId, EventNameId: eventNameId,
+	// Test Create Event with external id.
+	eventId := uuid.New().String()
+	event, errCode = M.CreateEvent(&M.Event{ID: eventId, EventNameId: eventNameId,
 		ProjectId: projectId, UserId: userId, Timestamp: time.Now().Unix()})
-	assert.Equal(t, http.StatusBadRequest, errCode)
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotNil(t, event)
+	assert.Equal(t, eventId, event.ID)
+
+	// Test Create Event with invalid uuid as id.
+	eventId = U.RandomLowerAphaNumString(10)
+	event, errCode = M.CreateEvent(&M.Event{ID: eventId, EventNameId: eventNameId,
+		ProjectId: projectId, UserId: userId, Timestamp: time.Now().Unix()})
+	assert.Equal(t, http.StatusInternalServerError, errCode)
 	assert.Nil(t, event)
 
 	// Test Create Event without projectId.
@@ -142,7 +154,7 @@ func TestDBCreateAndGetEvent(t *testing.T) {
 	// Test Create Event without eventNameId.
 	event, errCode = M.CreateEvent(&M.Event{EventNameId: 0, ProjectId: projectId, UserId: userId,
 		Timestamp: time.Now().Unix()})
-	assert.Equal(t, http.StatusInternalServerError, errCode)
+	assert.Equal(t, http.StatusBadRequest, errCode)
 	assert.Nil(t, event)
 }
 
@@ -269,7 +281,7 @@ func TestGetRecentEventPropertyValues(t *testing.T) {
 	})
 }
 
-func TestUpdateEventProperties(t *testing.T) {
+func TestUpdateEventPropertiesByTimestamp(t *testing.T) {
 	project, user, _ := SetupProjectUserReturnDAO()
 	assert.NotNil(t, project)
 
@@ -278,8 +290,8 @@ func TestUpdateEventProperties(t *testing.T) {
 		json.RawMessage(`{"rProp1": "value1", "rProp2": 1}`))
 
 	// should add properties if not exist.
-	errCode := M.UpdateEventProperties(project.ID, event.ID, &U.PropertiesMap{
-		"$page_spent_time": 1.346, "$page_load_time": 1.594})
+	errCode := M.UpdateEventPropertiesByTimestamp(project.ID, event.ID, &U.PropertiesMap{
+		"$page_spent_time": 1.346, "$page_load_time": 1.594}, time.Now().Unix())
 	assert.Equal(t, http.StatusAccepted, errCode)
 	updatedEvent, errCode := M.GetEventById(project.ID, event.ID)
 	assert.Equal(t, http.StatusFound, errCode)
@@ -294,8 +306,8 @@ func TestUpdateEventProperties(t *testing.T) {
 	assert.Equal(t, "value1", (*eventProperties)["rProp1"])
 
 	// should update properties if exist.
-	errCode = M.UpdateEventProperties(project.ID, event.ID, &U.PropertiesMap{
-		"$page_spent_time": 3})
+	errCode = M.UpdateEventPropertiesByTimestamp(project.ID, event.ID, &U.PropertiesMap{
+		"$page_spent_time": 3}, time.Now().Unix())
 	assert.Equal(t, http.StatusAccepted, errCode)
 	updatedEvent, errCode = M.GetEventById(project.ID, event.ID)
 	assert.Equal(t, http.StatusFound, errCode)

@@ -50,7 +50,8 @@ func main() {
 	}
 
 	config := &C.Configuration{
-		Env: *env,
+		AppName: "pull_events_job",
+		Env:     *env,
 		DBInfo: C.DBConf{
 			Host:     *dbHost,
 			Port:     *dbPort,

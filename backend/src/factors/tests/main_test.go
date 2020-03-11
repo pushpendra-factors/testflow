@@ -60,10 +60,14 @@ func TestMain(m *testing.M) {
 		log.Fatal("Failed to initialize config and services.")
 		os.Exit(1)
 	}
+
+	C.InitQueueClient(config.RedisHost, config.RedisPort)
+
 	if C.GetConfig().Env != C.DEVELOPMENT {
 		log.Fatal("Environment is not Development.")
 		os.Exit(1)
 	}
+
 	retCode := m.Run()
 	os.Exit(retCode)
 }

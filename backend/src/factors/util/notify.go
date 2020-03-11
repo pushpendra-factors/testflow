@@ -50,11 +50,13 @@ func NotifyThroughSNS(source, env, message interface{}) error {
 	return nil
 }
 
-func NotifyOnPanic(taskID, env string) {
+func NotifyOnPanic(taskId, env string) {
 	if pe := recover(); pe != nil {
-		if ne := NotifyThroughSNS(taskID, env, map[string]interface{}{"panic_error": pe, "stacktrace": string(debug.Stack())}); ne != nil {
-			log.Fatal(ne, pe)
+		if ne := NotifyThroughSNS(taskId, env,
+			map[string]interface{}{"panic_error": pe, "stacktrace": string(debug.Stack())}); ne != nil {
+			log.Fatal(ne, pe) // using fatal to avoid panic loop.
 		}
-		log.Fatal(pe)
+
+		log.Fatal(pe) // using fatal to avoid panic loop.
 	}
 }

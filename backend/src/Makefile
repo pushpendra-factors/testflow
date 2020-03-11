@@ -1,4 +1,4 @@
-.PHONY: build-api serve-api build-ps serve-ps build-ds serve-ds serve-redis clean pack-api upload-api pack-ps upload-ps pack-ds upload-ds pack-redis upload-redis pack-debug upload-debug pack-build-seq upload-build-seq pack-build-reports upload-build-reports pack-hubspot-enrich upload-hubspot-enrich test 
+.PHONY: build-api serve-api build-ps serve-ps build-ds serve-ds build-sdk serve-sdk serve-redis serve-predis clean pack-api upload-api pack-ps upload-ps pack-ds upload-ds pack-sdk upload-sdk pack-redis upload-redis pack-predis upload-predis pack-debug upload-debug pack-build-seq upload-build-seq pack-build-reports upload-build-reports pack-hubspot-enrich upload-hubspot-enrich pack-sdk-request-worker upload-sdk-request-worker test 
 
 # Update tag with the latest release version
 # Ex format: v0.05-beta_d0e9ed9 
@@ -23,13 +23,22 @@ serve-ps:
 	$(GOPATH)/bin/pattern-app
 
 build-ds:
-	go build -o $(GOPATH)/bin/data-service $(GOPATH)/src/factors/data_service/data-service.go
+	rm $(GOPATH)/bin/data-service; go build -o $(GOPATH)/bin/data-service $(GOPATH)/src/factors/data_service/data-service.go
 
 serve-ds:
 	$(GOPATH)/bin/data-service
 
+build-sdk:
+	rm $(GOPATH)/bin/sdk-service; go build -o $(GOPATH)/bin/sdk-service $(GOPATH)/src/factors/sdk_service/sdk-service.go
+
+serve-sdk:
+	$(GOPATH)/bin/sdk-service
+
 serve-redis:
 	redis-server $(GOPATH)/src/redis.conf
+
+serve-predis:
+	redis-server $(GOPATH)/src/persistent_redis.conf
 
 clean:
 	rm $(GOPATH)/bin/pattern-app $(GOPATH)/bin/app $(GOPATH)/bin/data-service
@@ -52,11 +61,23 @@ pack-ds:
 upload-ds:
 	docker push us.gcr.io/factors-$(ENV)/data-server:$(TAG)
 
+pack-sdk:
+	docker build -t us.gcr.io/factors-$(ENV)/sdk-server:$(TAG) -f Dockerfile.sdkserver .
+
+upload-sdk:
+	docker push us.gcr.io/factors-$(ENV)/sdk-server:$(TAG)
+
 pack-redis:
 	docker build -t us.gcr.io/factors-$(ENV)/redis:$(TAG) -f Dockerfile.redis .
 
 upload-redis:
 	docker push us.gcr.io/factors-$(ENV)/redis:$(TAG)
+
+pack-predis:
+	docker build -t us.gcr.io/factors-$(ENV)/persistent-redis:$(TAG) -f Dockerfile.persistent_redis .
+
+upload-predis:
+	docker push us.gcr.io/factors-$(ENV)/persistent-redis:$(TAG)
 
 pack-debug:
 	docker build --no-cache -t us.gcr.io/factors-$(ENV)/debug:$(TAG) -f Dockerfile.debug .
@@ -81,6 +102,12 @@ pack-hubspot-enrich:
 
 upload-hubspot-enrich:
 	docker push us.gcr.io/factors-$(ENV)/hubspot-enrich-job:$(TAG)
+
+pack-sdk-request-worker:
+	docker build -t us.gcr.io/factors-$(ENV)/sdk-request-worker:$(TAG) -f Dockerfile.sdk_request_worker .
+
+upload-sdk-request-worker:
+	docker push us.gcr.io/factors-$(ENV)/sdk-request-worker:$(TAG)
 
 test: 
 	go test -v $(GOPATH)/src/factors/tests && go test -v $(GOPATH)/src/factors/pattern_server/store

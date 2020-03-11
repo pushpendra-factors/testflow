@@ -45,7 +45,7 @@ func (user *User) BeforeCreate(scope *gorm.Scope) error {
 	newProperties := map[string]interface{}{
 		U.UP_JOIN_TIME: user.JoinTimestamp,
 	}
-	newPropertiesJsonb, err := U.AddToPostgresJsonb(&user.Properties, newProperties)
+	newPropertiesJsonb, err := U.AddToPostgresJsonb(&user.Properties, newProperties, true)
 	if err != nil {
 		return err
 	}
@@ -55,30 +55,35 @@ func (user *User) BeforeCreate(scope *gorm.Scope) error {
 }
 
 func CreateUser(user *User) (*User, int) {
-	db := C.GetServices().Db
+	logCtx := log.WithField("project_id", user.ProjectId)
 
-	log.WithFields(log.Fields{"user": &user}).Info("Creating user")
-
-	// Input Validation. (ID is to be auto generated).
-	if user.ID != "" {
-		log.Error("CreateUser Failed. ID not provided.")
-		return nil, http.StatusBadRequest
-	}
 	if user.ProjectId == 0 {
 		log.Error("CreateUser Failed. ProjectId not provided.")
 		return nil, http.StatusBadRequest
 	}
 
+	// Add id with our uuid generator, if not given.
+	if user.ID == "" {
+		user.ID = U.GetUUID()
+	}
+
+	db := C.GetServices().Db
 	if err := db.Create(user).Error; err != nil {
-		log.WithFields(log.Fields{"user": &user}).WithError(err).Error("CreateUser Failed")
+		if U.IsPostgresIntegrityViolationError(err) {
+			log.WithError(err).Info("CreateUser Failed. Constraint violation.")
+			return nil, http.StatusNotAcceptable
+		}
+
+		logCtx.WithError(err).Error("CreateUser Failed")
 		return nil, http.StatusInternalServerError
 	}
 
 	propertiesId, errCode := UpdateUserPropertiesByCurrentProperties(user.ProjectId, user.ID,
-		user.PropertiesId, &user.Properties)
+		user.PropertiesId, &user.Properties, user.JoinTimestamp)
 	if errCode == http.StatusInternalServerError {
 		return nil, errCode
 	}
+
 	// assign propertiesId with created propertiesId.
 	user.PropertiesId = propertiesId
 
@@ -86,8 +91,7 @@ func CreateUser(user *User) (*User, int) {
 }
 
 // UpdateUser updates user fields by Id.
-func UpdateUser(projectId uint64, id string, user *User) (*User, int) {
-	db := C.GetServices().Db
+func UpdateUser(projectId uint64, id string, user *User, updateTimestamp int64) (*User, int) {
 
 	// Todo(Dinesh): Move to validations.
 	// Ref: https://github.com/qor/validations
@@ -107,6 +111,7 @@ func UpdateUser(projectId uint64, id string, user *User) (*User, int) {
 	}
 
 	var updatedUser User
+	db := C.GetServices().Db
 	if err := db.Model(&updatedUser).Where("project_id = ?", projectId).Where("id = ?",
 		cleanId).Updates(user).Error; err != nil {
 
@@ -114,7 +119,7 @@ func UpdateUser(projectId uint64, id string, user *User) (*User, int) {
 		return nil, http.StatusInternalServerError
 	}
 
-	_, errCode := UpdateUserProperties(projectId, id, &user.Properties)
+	_, errCode := UpdateUserProperties(projectId, id, &user.Properties, updateTimestamp)
 	if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
 		return nil, http.StatusInternalServerError
 	}
@@ -123,25 +128,29 @@ func UpdateUser(projectId uint64, id string, user *User) (*User, int) {
 }
 
 // UpdateUserProperties only if there is a change in properties values.
-func UpdateUserProperties(projectId uint64, id string, properties *postgres.Jsonb) (string, int) {
+func UpdateUserProperties(projectId uint64, id string,
+	properties *postgres.Jsonb, updateTimestamp int64) (string, int) {
+
 	currentPropertiesId, status := getUserPropertiesId(projectId, id)
 	if status != http.StatusFound {
 		return "", status
 	}
 
 	return UpdateUserPropertiesByCurrentProperties(projectId, id,
-		currentPropertiesId, properties)
+		currentPropertiesId, properties, updateTimestamp)
 }
 
 // UpdateUser
 func UpdateUserPropertiesByCurrentProperties(projectId uint64, id string,
-	currentPropertiesId string, properties *postgres.Jsonb) (string, int) {
+	currentPropertiesId string, properties *postgres.Jsonb, updateTimestamp int64) (string, int) {
 
-	db := C.GetServices().Db
+	if updateTimestamp == 0 {
+		return "", http.StatusBadRequest
+	}
 
 	// Update properties.
 	newPropertiesId, statusCode := createUserPropertiesIfChanged(
-		projectId, id, currentPropertiesId, properties)
+		projectId, id, currentPropertiesId, properties, updateTimestamp)
 	if statusCode != http.StatusCreated && statusCode != http.StatusNotModified {
 		return "", http.StatusInternalServerError
 	}
@@ -150,6 +159,7 @@ func UpdateUserPropertiesByCurrentProperties(projectId uint64, id string,
 		return currentPropertiesId, http.StatusNotModified
 	}
 
+	db := C.GetServices().Db
 	if err := db.Model(&User{}).Where("project_id = ?", projectId).Where("id = ?",
 		id).Update("properties_id", newPropertiesId).Error; err != nil {
 
@@ -187,6 +197,7 @@ func GetUser(projectId uint64, id string) (*User, int) {
 		logCtx.WithError(err).Error("Failed to get user using user_id")
 		return nil, http.StatusInternalServerError
 	}
+
 	if user.PropertiesId != "" {
 		properties, errCode := GetUserProperties(projectId, id, user.PropertiesId)
 		if errCode != http.StatusFound {
@@ -242,7 +253,7 @@ func GetUserBySegmentAnonymousId(projectId uint64, segAnonId string) (*User, int
 
 // GetSegmentUser create or updates(c_uid) and returns user by segement_anonymous_id
 // and/or customer_user_id.
-func GetSegmentUser(projectId uint64, segAnonId, custUserId string) (*User, int) {
+func GetSegmentUser(projectId uint64, segAnonId, custUserId string, segReqTimestamp int64) (*User, int) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectId, "seg_aid": segAnonId,
 		"provided_c_uid": custUserId})
 
@@ -311,7 +322,7 @@ func GetSegmentUser(projectId uint64, segAnonId, custUserId string) (*User, int)
 
 	// fetched c_uid empty, identify and return.
 	if user.CustomerUserId == "" {
-		uUser, uErrCode := UpdateUser(projectId, user.ID, &User{CustomerUserId: custUserId})
+		uUser, uErrCode := UpdateUser(projectId, user.ID, &User{CustomerUserId: custUserId}, segReqTimestamp)
 		if uErrCode != http.StatusAccepted {
 			logCtx.WithField("err_code", uErrCode).Error(
 				"Identify failed. Failed updating c_uid failed. get_segment_user failed.")

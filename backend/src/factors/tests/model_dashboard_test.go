@@ -134,7 +134,7 @@ func TestUpdateDashboard(t *testing.T) {
 	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
 
-	agent2, errCode := SetupAgentReturnDAO("","")
+	agent2, errCode := SetupAgentReturnDAO("", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 	_, errCode = M.CreateProjectAgentMappingWithDependencies(&M.ProjectAgentMapping{
 		ProjectID: project.ID, AgentUUID: agent2.UUID})
@@ -176,47 +176,6 @@ func TestUpdateDashboard(t *testing.T) {
 		err := json.Unmarshal((gDashboard.UnitsPosition).RawMessage, &gPositions)
 		assert.Nil(t, err)
 		assert.Equal(t, positions, gPositions)
-
-		// invalid unit positions.
-		invalidPositions := map[string]map[uint64]int{
-			M.UnitChart: map[uint64]int{
-				1: 1,
-				2: 2,
-			},
-		}
-		errCode = M.UpdateDashboard(project.ID, agent.UUID, dashboard.ID, &M.UpdatableDashboard{UnitsPosition: &invalidPositions})
-		assert.Equal(t, http.StatusBadRequest, errCode)
-
-		invalidPositions = map[string]map[uint64]int{
-			M.UnitChart: map[uint64]int{
-				1: 3,
-				2: 1,
-			},
-		}
-		errCode = M.UpdateDashboard(project.ID, agent.UUID, dashboard.ID, &M.UpdatableDashboard{UnitsPosition: &invalidPositions})
-		assert.Equal(t, http.StatusBadRequest, errCode)
-
-		invalidPositions = map[string]map[uint64]int{
-			M.UnitChart: map[uint64]int{
-				1: 0,
-				2: 2, // out of order position
-			},
-		}
-		errCode = M.UpdateDashboard(project.ID, agent.UUID, dashboard.ID, &M.UpdatableDashboard{UnitsPosition: &invalidPositions})
-		assert.Equal(t, http.StatusBadRequest, errCode)
-
-		invalidPositions = map[string]map[uint64]int{
-			M.UnitChart: map[uint64]int{
-				1: 0,
-				2: 2,
-			},
-			M.UnitCard: map[uint64]int{
-				1: 0, // duplicate id
-				3: 1,
-			},
-		}
-		errCode = M.UpdateDashboard(project.ID, agent.UUID, dashboard.ID, &M.UpdatableDashboard{UnitsPosition: &invalidPositions})
-		assert.Equal(t, http.StatusBadRequest, errCode)
 
 		validPositions := map[string]map[uint64]int{
 			M.UnitChart: map[uint64]int{

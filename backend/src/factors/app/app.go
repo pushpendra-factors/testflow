@@ -49,6 +49,7 @@ func main() {
 	flag.Parse()
 
 	config := &C.Configuration{
+		AppName:       "app_server",
 		Env:           *env,
 		Port:          *port,
 		EtcdEndpoints: strings.Split(*etcd, ","),
@@ -71,8 +72,8 @@ func main() {
 		ErrorReportingInterval: *errorReportingInterval,
 		AdminLoginEmail:        *adminLoginEmail,
 		AdminLoginToken:        *adminLoginToken,
-		LoginTokenMap:          C.ParseConfigStringToMap(*loginTokenMap),            // Map of "<token>": "<agent_email>".
-		SkipTrackProjectIds:    C.GetProjectIdsFromStringList(*skipTrackProjectIds), // comma seperated project ids.
+		LoginTokenMap:          C.ParseConfigStringToMap(*loginTokenMap),                // Map of "<token>": "<agent_email>".
+		SkipTrackProjectIds:    C.GetTokensFromStringListAsUint64(*skipTrackProjectIds), // comma seperated project ids.
 	}
 
 	// Initialize configs and connections.
@@ -97,7 +98,6 @@ func main() {
 
 	// Initialize routes.
 	H.InitAppRoutes(r)
-	H.InitSDKRoutes(r)
 	H.InitIntRoutes(r)
 	r.Run(":" + strconv.Itoa(C.GetConfig().Port))
 

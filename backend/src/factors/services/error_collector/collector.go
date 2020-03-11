@@ -25,19 +25,20 @@ type Entity struct {
 }
 
 type Collector struct {
-	mailer                  maileriface.Mailer
-	fromEmail, toEmail, env string
-	entriesLock             sync.RWMutex
-	entries                 []*Entry
-	ticker                  *time.Ticker
+	mailer                           maileriface.Mailer
+	fromEmail, toEmail, env, appName string
+	entriesLock                      sync.RWMutex
+	entries                          []*Entry
+	ticker                           *time.Ticker
 }
 
-func New(m maileriface.Mailer, reportingInterval time.Duration, env, toMail, fromMail string) *Collector {
+func New(m maileriface.Mailer, reportingInterval time.Duration, env, appName, toMail, fromMail string) *Collector {
 	collector := Collector{
 		mailer:    m,
 		entries:   make([]*Entry, 0, 0),
 		fromEmail: fromMail,
 		toEmail:   toMail,
+		appName:   appName,
 		env:       env,
 	}
 
@@ -96,8 +97,7 @@ func (c *Collector) Flush() {
 
 	str := dataToSend.String()
 
-	if err := c.mailer.SendMail(c.toEmail, c.fromEmail, c.env+" Errors Noticed", str, str); err != nil {
-	}
+	c.mailer.SendMail(c.toEmail, c.fromEmail, "Errors on "+c.env+" "+c.appName, str, str)
 
 	emptyEntries := make([]*Entry, 0, 0)
 	c.entries = emptyEntries

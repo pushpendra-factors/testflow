@@ -64,10 +64,10 @@ func IsEmptyPostgresJsonb(jsonb *postgres.Jsonb) bool {
 	return strJson == "" || strJson == "null"
 }
 
-// AddToJsonb adds key values to the jsonb, overwrites
-// if key already exists.
+// AddToJsonb adds key values to the jsonb. To overwrite
+// existing keys set overwriteExisting to true.
 func AddToPostgresJsonb(sourceJsonb *postgres.Jsonb,
-	newKvs map[string]interface{}) (*postgres.Jsonb, error) {
+	newKvs map[string]interface{}, overwriteExisting bool) (*postgres.Jsonb, error) {
 
 	var sourceMap map[string]interface{}
 	if !IsEmptyPostgresJsonb(sourceJsonb) {
@@ -79,6 +79,11 @@ func AddToPostgresJsonb(sourceJsonb *postgres.Jsonb,
 	}
 
 	for k, v := range newKvs {
+		_, exists := sourceMap[k]
+		if exists && !overwriteExisting {
+			continue
+		}
+
 		sourceMap[k] = v
 	}
 
@@ -110,4 +115,9 @@ func EncodeToPostgresJsonb(sourceMap *map[string]interface{}) (*postgres.Jsonb, 
 	}
 
 	return &postgres.Jsonb{sourceJsonBytes}, nil
+}
+
+func IsPostgresIntegrityViolationError(err error) bool {
+	// i.e pq: duplicate key value violates unique constraint \"col_unique_idx\"
+	return strings.Contains(err.Error(), "violates") && strings.Contains(err.Error(), "constraint")
 }
