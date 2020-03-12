@@ -165,7 +165,7 @@ func SDKProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, stri
 	logCtx = logCtx.WithField("status", status).WithField("response", string(responseBytes))
 
 	// Log for analysing queue process status.
-	logCtx.Info("Processed sdk request.")
+	logCtx.WithField("processed", "true").Info("Processed sdk request.")
 
 	// Do not retry on below conditions.
 	if status == http.StatusBadRequest || status == http.StatusNotAcceptable || status == http.StatusUnauthorized {
