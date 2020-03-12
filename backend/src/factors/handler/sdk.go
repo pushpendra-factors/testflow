@@ -176,7 +176,7 @@ func SDKProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, stri
 	// Return error only for retry. Retry after a period till it is successfull.
 	// Retry dependencies not found and failures which can be successful on retries.
 	if status == http.StatusNotFound || status == http.StatusInternalServerError {
-		logCtx.Info("Failed to process sdk request on sdk process queue. Retry.")
+		logCtx.WithField("retry", "true").Info("Failed to process sdk request on sdk process queue. Retry.")
 		return http.StatusInternalServerError, "",
 			tasks.NewErrRetryTaskLater("RETRY_SDK_REQUEST_PROCESSING_FAILURE", 5*time.Minute)
 	}
