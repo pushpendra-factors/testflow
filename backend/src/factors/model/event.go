@@ -528,6 +528,21 @@ func enrichPreviousSessionEventProperties(projectId uint64, userId string,
 	} else {
 		timeSpent = float64(timestamp - previousSessionEvent.Timestamp)
 	}
+	latestEvent, errCode := GetLatestAnyEventOfUserForSession(projectId, userId, previousSessionEvent.Timestamp)
+	if errCode != http.StatusFound {
+		log.WithField("projectId", projectId).WithField("sessionId", previousSessionEvent.ID).Error(
+			"Failed to get latest event of session")
+		return 0, 0, http.StatusInternalServerError
+	}
+	latestEventProperties, err := U.DecodePostgresJsonb(&latestEvent.Properties)
+	if err != nil {
+		log.WithField("projectId", projectId).WithError(err).Error(
+			"Failed to decode latest event's properties for session.")
+		return 0, 0, http.StatusInternalServerError
+	}
+
+	(*previousEventProperties)[U.SP_LATEST_PAGE_RAW_URL] = (*latestEventProperties)[U.EP_PAGE_RAW_URL]
+	(*previousEventProperties)[U.SP_LATEST_PAGE_URL] = (*latestEventProperties)[U.EP_PAGE_URL]
 	(*previousEventProperties)[U.SP_PAGE_COUNT] = count
 	(*previousEventProperties)[U.SP_SPENT_TIME] = timeSpent
 	previousEventPropertiesJSONb, err := U.EncodeToPostgresJsonb(previousEventProperties)
@@ -537,7 +552,7 @@ func enrichPreviousSessionEventProperties(projectId uint64, userId string,
 		return 0, 0, http.StatusInternalServerError
 	}
 
-	errCode := OverwriteEventProperties(projectId, userId, previousSessionEvent.ID, previousEventPropertiesJSONb)
+	errCode = OverwriteEventProperties(projectId, userId, previousSessionEvent.ID, previousEventPropertiesJSONb)
 	if errCode != http.StatusAccepted {
 		log.WithField("projectId", projectId).Error(
 			"Failed to overWrite previous session event properties on createSessionEvent.")

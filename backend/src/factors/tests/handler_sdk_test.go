@@ -1033,7 +1033,7 @@ func TestPreviousSessionEventPropertyEnrichment(t *testing.T) {
 	timestampBeforeOneDay := U.UnixTimeBeforeDuration(time.Hour * 24)
 	// for new users
 	// New session has to created.
-	payload := fmt.Sprintf(`{"timestamp": %d, "event_name": "event_1", "event_properties": {}, "user_properties": {"$os": "Mac OS"}}`,
+	payload := fmt.Sprintf(`{"timestamp": %d, "event_name": "event_1", "event_properties": {"$page_raw_url":"www.google.co.in", "$page_url": "google.com"}, "user_properties": {"$os": "Mac OS"}}`,
 		timestampBeforeOneDay)
 	w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -1050,7 +1050,7 @@ func TestPreviousSessionEventPropertyEnrichment(t *testing.T) {
 	assert.NotEmpty(t, event1.SessionId)
 
 	lastEventTimestamp := timestampBeforeOneDay + 10
-	payload = fmt.Sprintf(`{"user_id": "%s", "timestamp": %d, "event_name": "event_1", "event_properties": {}, "user_properties": {"$os": "Mac OS"}}`,
+	payload = fmt.Sprintf(`{"user_id": "%s", "timestamp": %d, "event_name": "event_1", "event_properties": {"$page_raw_url":"www.yahoo.co.in", "$page_url": "yahoo.com"}, "user_properties": {"$os": "Mac OS"}}`,
 		user.ID, lastEventTimestamp)
 	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -1073,7 +1073,7 @@ func TestPreviousSessionEventPropertyEnrichment(t *testing.T) {
 	// New session has to be created by even timestamp
 	// as user was inactive.
 	lastEventTimestamp = lastEventTimestamp + 1800
-	payload = fmt.Sprintf(`{"user_id": "%s", "timestamp": %d, "event_name": "event_1", "event_properties": {}, "user_properties": {"$os": "Mac OS"}}`,
+	payload = fmt.Sprintf(`{"user_id": "%s", "timestamp": %d, "event_name": "event_1", "event_properties": {"$page_raw_url":"google.co.in", "$page_url": "www.google.com"}, "user_properties": {"$os": "Mac OS"}}`,
 		user.ID, lastEventTimestamp)
 	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -1101,6 +1101,8 @@ func TestPreviousSessionEventPropertyEnrichment(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, (*firstSessionEventProps)[U.SP_PAGE_COUNT], float64(2))
 	assert.Equal(t, (*firstSessionEventProps)[U.SP_SPENT_TIME], float64(event2.Timestamp-firstSession.Timestamp))
+	assert.Equal(t, (*firstSessionEventProps)[U.SP_LATEST_PAGE_RAW_URL], "www.yahoo.co.in")
+	assert.Equal(t, (*firstSessionEventProps)[U.SP_LATEST_PAGE_URL], "yahoo.com")
 
 	userPropertiesMap, errCode := M.GetUserPropertiesAsMap(project.ID, user.ID)
 	assert.Equal(t, errCode, http.StatusFound)
@@ -1110,7 +1112,7 @@ func TestPreviousSessionEventPropertyEnrichment(t *testing.T) {
 
 	// creating third session
 	lastEventTimestamp = lastEventTimestamp + 1800
-	payload = fmt.Sprintf(`{"user_id": "%s", "timestamp": %d, "event_name": "event_1", "event_properties": {}, "user_properties": {"$os": "Mac OS"}}`,
+	payload = fmt.Sprintf(`{"user_id": "%s", "timestamp": %d, "event_name": "event_1", "event_properties": {"$page_raw_url":"google.co.in", "$page_url": "www.google.com"}, "user_properties": {"$os": "Mac OS"}}`,
 		user.ID, lastEventTimestamp)
 	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -1136,6 +1138,8 @@ func TestPreviousSessionEventPropertyEnrichment(t *testing.T) {
 
 	secondSessionEventProps, err := U.DecodePostgresJsonb(&secondSession.Properties)
 	assert.Nil(t, err)
+	assert.Equal(t, (*secondSessionEventProps)[U.SP_LATEST_PAGE_RAW_URL], "google.co.in")
+	assert.Equal(t, (*secondSessionEventProps)[U.SP_LATEST_PAGE_URL], "www.google.com")
 	assert.Equal(t, (*secondSessionEventProps)[U.SP_PAGE_COUNT], float64(1))
 	assert.Equal(t, (*secondSessionEventProps)[U.SP_SPENT_TIME], float64(event3.Timestamp-secondSession.Timestamp))
 
