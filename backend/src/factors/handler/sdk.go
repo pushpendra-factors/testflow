@@ -157,8 +157,7 @@ func SDKProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, stri
 
 		status, response = SDKUpdateEventPropertiesByToken(token, &reqPayload)
 	default:
-		logCtx.WithField("request_type", reqType).Error(
-			"Invalid sdk request type on sdk process queue")
+		logCtx.Error("Invalid sdk request type on sdk process queue")
 		return http.StatusInternalServerError, "", nil
 	}
 
@@ -1144,6 +1143,12 @@ func SDKUpdateEventProperties(projectId uint64,
 	}
 
 	updatedEvent, errCode := M.GetEventById(projectId, request.EventId)
+	if errCode == http.StatusNotFound && request.Timestamp > U.UnixTimeBeforeDuration(time.Hour*5) {
+		logCtx.WithField("event_id", request.EventId).WithField("timestamp", request.Timestamp).Error(
+			"Failed old update event properties request with unavailable event_id permanently.")
+		return http.StatusBadRequest, &SDKUpdateEventPropertiesResponse{
+			Error: "Update event properties failed permanantly."}
+	}
 	if errCode != http.StatusFound {
 		return errCode,
 			&SDKUpdateEventPropertiesResponse{Error: "Update event properties failed."}
