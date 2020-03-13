@@ -64,6 +64,10 @@ function addUserProperties(properties={}) {
     return;
 }
 
+function getUserId() {
+    return app.getUserId();
+}
+
 let exposed = { init, reset, track, page, identify, addUserProperties, getUserId };
 if (process.env.NODE_ENV === "development") {
     exposed["test"] = require("./test/suite.js");
