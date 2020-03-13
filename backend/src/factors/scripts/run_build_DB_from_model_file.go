@@ -6,8 +6,8 @@ import (
 	"errors"
 	C "factors/config"
 	M "factors/model"
+	P "factors/pattern"
 	"flag"
-	"fmt"
 	"net/http"
 	"os"
 	"time"
@@ -29,13 +29,12 @@ type denEvent struct {
 
 /*
 default to ingest mode
-agentUUID = "8d6a92d2-a50d-4450-bd27-b9e99e144efb"
 go run run_build_DB_from_model_file.go --file_path=<path-to-denormalized-file> --project_name=<new-project-name> --agent_uuid=<agent-uuid> --mode=
 */
 
 /*
 for query mode
-gor run run_build_DB_from_model_file.go --mode=query --project_id=<project-id> --start_time= --end_time=
+gor run run_build_DB_from_model_file.go --mode=query --project_id=<project-id> --start_time= --end_time= --file_path=
 */
 
 func main() {
@@ -88,7 +87,10 @@ func main() {
 
 	if *mode == "query" {
 		if *customEndTime != 0 && *customStartTime != 0 && *projectIdFlag != 0 {
-			testFunnelQuery(*customStartTime, *customEndTime, *projectIdFlag)
+			err := testData(*customStartTime, *customEndTime, *projectIdFlag, *filePath)
+			if err != nil {
+				log.Error("Failed to testData ", err)
+			}
 		} else {
 			log.Error("Not valid parameter for queryMode")
 		}
@@ -110,7 +112,7 @@ func main() {
 
 	var project *M.Project
 
-	events, err := getDenormalizedEventsFromFile(file)
+	events, err := getDenormalizedEventsFromFile(*filePath)
 	if err != nil {
 		log.WithError(err).Error("Failed to parse file")
 		os.Exit(1)
@@ -140,7 +142,16 @@ func normalizeEventsToDB(events []denEvent, project *M.Project) {
 	}
 }
 
-func getDenormalizedEventsFromFile(file *os.File) ([]denEvent, error) {
+func getDenormalizedEventsFromFile(filePath string) ([]denEvent, error) {
+	if filePath == "" {
+		return nil, errors.New("No file path")
+	}
+
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, err
+	}
+
 	scanner := bufio.NewScanner(file)
 	var events []denEvent
 	for scanner.Scan() {
@@ -212,55 +223,138 @@ func eventToDb(event denEvent, project *M.Project) int {
 	return http.StatusOK
 }
 
-func testFunnelQuery(startTime int64, endTime int64, projectId uint64) error {
-	var queries = []map[string]string{
-		{"entity": "event", "type": "categorical", "property": "category", "operator": "equals", "value": "Games", "logicalOp": "AND"},
-		{"entity": "event", "type": "categorical", "property": "category", "operator": "equals", "value": "Fashion", "logicalOp": "AND"},
-		{"entity": "user", "type": "categorical", "property": "$day_of_first_event", "operator": "equals", "value": "Wednesday", "logicalOp": "AND"},
-		{"entity": "user", "type": "categorical", "property": "gender", "operator": "equals", "value": "M", "logicalOp": "AND"},
+func testData(startTime int64, endTime int64, projectId uint64, filePath string) error {
+
+	patterns, err := getPatterns(filePath)
+	if err != nil {
+		return err
 	}
 
-	var results []M.QueryResult
-	for _, queryParams := range queries {
-		query := M.Query{
-			From: startTime,
-			To:   endTime,
-			EventsWithProperties: []M.QueryEventWithProperties{
-				M.QueryEventWithProperties{
-					Name: "View Project",
-					Properties: []M.QueryProperty{
-						M.QueryProperty{
-							Entity:    queryParams["entity"],
-							Property:  queryParams["property"],
-							Operator:  queryParams["operator"],
-							Value:     queryParams["value"],
-							Type:      queryParams["type"],
-							LogicalOp: queryParams["logicalOp"],
-						},
-					},
-				},
-			},
-			Class:           M.QueryClassFunnel,
-			Type:            M.QueryTypeUniqueUsers,
-			EventsCondition: M.EventCondAnyGivenEvent,
-		}
-
-		result, errCode, _ := M.Analyze(projectId, query)
-		if errCode != http.StatusOK {
-			return errors.New("Failed to analyze query")
-		}
-
-		results = append(results, *result)
+	query := M.Query{
+		From: startTime,
+		To:   endTime,
 	}
 
-	log.Info("Results:")
-	for _, result := range results {
-		if len(result.Headers) == 2 {
-			log.Info(fmt.Sprintf("Query: %+v\n%s:%d\n%s:%s", result.Meta.Query, result.Headers[0], result.Rows[0][0], result.Headers[1], result.Rows[0][1]))
-		} else {
-			log.Info(fmt.Sprintf("Query: %+v\n%s:%d", result.Meta.Query, result.Headers[0], result.Rows[0][0]))
-		}
+	// FOR SINGLE EVENT(FUND PROJECT) COUNT
+	log.Info("Comparing Fund Project pattern count")
+	// PerOccurrenceCount is calculate using COUNT on EVENT OCCURRENCE in INSIGHT query, since single event pattern is used.
+	enQueries := []byte(`{"cl":"insights","ty":"events_occurrence","ec":"any_given_event","ewp":[{"na":"Fund Project","pr":[]}],"gbp":[],"gbt":"","tz":"UTC","ovp":false}`)
+	err = json.Unmarshal(enQueries, &query)
+	if err != nil {
+		return errors.New("Faile to unmarshal")
+	}
+	result, errCode, _ := M.Analyze(projectId, query)
+	if errCode != http.StatusOK {
+		errors.New("Failed to analyze query")
+	}
+	if result.Rows[0][0].(int64) == int64(patterns[0].PerOccurrenceCount) {
+		log.Info("Success on compare PerOccurrenceCount for single event pattern")
+	} else {
+		log.Errorf("Failed to compare PerOccurrenceCount database-result: %d pattern-result: %d ", result.Rows[0][0], patterns[0].PerOccurrenceCount)
 	}
 
+	//TotalUserCount is calculated using COUNT on UNIQUE USERS in INSIGHT query
+	enQueries = []byte(`{"cl":"insights","ty":"unique_users","ec":"any_given_event","ewp":[{"na":"$session","pr":[]},{"na":"View Project","pr":[]},{"na":"Fund Project","pr":[]}],"gbp":[],"gbt":"","tz":"UTC","ovp":false}`)
+	err = json.Unmarshal(enQueries, &query)
+	if err != nil {
+		return errors.New("Faile to unmarshal")
+	}
+	result, errCode, _ = M.Analyze(projectId, query)
+	if errCode != http.StatusOK {
+		errors.New("Failed to analyze query")
+	}
+	if result.Rows[0][0].(int64) == int64(patterns[0].TotalUserCount) {
+		log.Info("Success on compare TotalUserCount for single event pattern")
+	} else {
+		log.Errorf("Failed to compare TotalUserCount database-result: %d pattern-result: %d ", result.Rows[0][0], patterns[0].TotalUserCount)
+	}
+
+	//PerUserCount is calculated using COUNT on UNIQUE USERS in FUNNEL query. Same as COUNT on UNIQUE USERS in INSIGHT query
+	enQueries = []byte(`{"cl":"funnel","ty":"unique_users","ec":"any_given_event","ewp":[{"na":"Fund Project","pr":[]}],"gbp":[],"gbt":"","tz":"UTC","ovp":false}`)
+	err = json.Unmarshal(enQueries, &query)
+	if err != nil {
+		return errors.New("Faile to unmarshal")
+	}
+	result, errCode, _ = M.Analyze(projectId, query)
+	if errCode != http.StatusOK {
+		errors.New("Failed to analyze query")
+	}
+	if result.Rows[0][0].(int64) == int64(patterns[0].PerUserCount) {
+		log.Info("Success on compare PerUserCount for single event pattern\n")
+	} else {
+		log.Errorf("Failed to compare PerUserCount database-result: %d pattern-result: %d ", result.Rows[0][0], patterns[0].PerUserCount)
+	}
+
+	// FOR DOUBLE EVENTS(SESSION -> FUND PROJECT) COUNT
+	log.Info("Comparing $session -> Fund Project pattern count")
+	//TotalUserCount and PerUserCount is calculated using COUNT on conversion of UNIQUE USERS from $session to Fund Project using FUNNEL query,
+	// where TotalUserCount is step_0 and PerUserCount is step_1
+	enQueries = []byte(`{"cl":"funnel","ty":"unique_users","ec":"any_given_event","ewp":[{"na":"$session","pr":[]},{"na":"Fund Project","pr":[]}],"gbp":[],"gbt":"","tz":"UTC","ovp":false}`)
+	err = json.Unmarshal(enQueries, &query)
+	if err != nil {
+		return errors.New("Faile to unmarshal")
+	}
+	result, errCode, _ = M.Analyze(projectId, query)
+	if errCode != http.StatusOK {
+		errors.New("Failed to analyze query")
+	}
+	if result.Rows[0][0].(int64) == int64(patterns[1].TotalUserCount) {
+		log.Info("Success on compare TotalUserCount for double event pattern")
+	} else {
+		log.Errorf("Failed to compare TotalUserCount database-result: %d pattern-result: %d ", result.Rows[0][0], patterns[1].TotalUserCount)
+	}
+	if result.Rows[0][1].(int64) == int64(patterns[1].PerUserCount) {
+		log.Info("Success on compare PerUserCount for double event pattern\n")
+	} else {
+		log.Errorf("Failed to compare PerUserCount database-result: %d pattern-result: %d ", result.Rows[0][1], patterns[1].PerUserCount)
+	}
+
+	//FOR TRIPLE EVENTS($SESSION -> FUND PROJECT -> VIEW PROJECT)
+	log.Info("Comparing $session -> Fund Project -> View Project pattern count")
+	//TotalUserCount and PerUserCount is calculated using COUNT on conversion of UNIQUE USERS from $session to Fund Project to View Project using FUNNEL query,
+	// where TotalUserCount is step_0 and PerUserCount is step_2
+	enQueries = []byte(`{"cl":"funnel","ty":"unique_users","ec":"any_given_event","ewp":[{"na":"$session","pr":[]},{"na":"Fund Project","pr":[]},{"na":"View Project","pr":[]}],"gbp":[],"gbt":"","tz":"UTC","ovp":false}`)
+	err = json.Unmarshal(enQueries, &query)
+	if err != nil {
+		return errors.New("Faile to unmarshal")
+	}
+	result, errCode, _ = M.Analyze(projectId, query)
+	if errCode != http.StatusOK {
+		return errors.New("Failed to analyze query")
+	}
+	if result.Rows[0][0].(int64) == int64(patterns[2].TotalUserCount) {
+		log.Info("Success on compare TotalUserCount for triple event pattern")
+	} else {
+		log.Errorf("Failed to compare TotalUserCount database-result: %d pattern-result: %d ", result.Rows[0][0], patterns[2].TotalUserCount)
+	}
+	if result.Rows[0][2].(int64) == int64(patterns[2].PerUserCount) {
+		log.Info("Success on compare PerUserCount for triple event pattern")
+	} else {
+		log.Errorf("Failed to compare PerUserCount database-result: %d pattern-result: %d ", result.Rows[0][2], patterns[2].PerUserCount)
+	}
 	return nil
+}
+
+func getPatterns(filePath string) ([]*P.Pattern, error) {
+	if filePath == "" {
+		return nil, errors.New("No file path")
+	}
+
+	// A -> $session , B -> Fund Project , C -> View Project
+	pB, _ := P.NewPattern([]string{"Fund Project"}, nil)
+	pAB, _ := P.NewPattern([]string{"$session", "Fund Project"}, nil)
+	pABC, _ := P.NewPattern([]string{"$session", "Fund Project", "View Project"}, nil)
+	patterns := []*P.Pattern{pB, pAB, pABC}
+
+	file, err := os.Open(filePath)
+	if err != nil {
+		log.Fatal(err)
+		os.Exit(1)
+	}
+	scanner := bufio.NewScanner(file)
+	err = P.CountPatterns(scanner, patterns)
+	if err != nil {
+		return nil, err
+	}
+	return patterns, nil
 }
