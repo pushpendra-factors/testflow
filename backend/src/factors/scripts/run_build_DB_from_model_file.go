@@ -8,9 +8,9 @@ import (
 	M "factors/model"
 	P "factors/pattern"
 	"flag"
+	"fmt"
 	"net/http"
 	"os"
-	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
@@ -34,12 +34,11 @@ go run run_build_DB_from_model_file.go --file_path=<path-to-denormalized-file> -
 
 /*
 for query mode
-gor run run_build_DB_from_model_file.go --mode=query --project_id=<project-id> --start_time= --end_time= --file_path=
+go run run_build_DB_from_model_file.go --mode=query --project_id=<project-id> --start_time= --end_time= --file_path=
 */
 
 func main() {
 
-	currentTime := time.Now()
 	env := flag.String("env", "development", "")
 
 	dbHost := flag.String("db_host", "localhost", "")
@@ -54,8 +53,8 @@ func main() {
 	redisHost := flag.String("redis_host", "localhost", "")
 	redisPort := flag.Int("redis_port", 6379, "")
 	mode := flag.String("mode", "ingest", "")
-	customStartTime := flag.Int64("start_time", currentTime.AddDate(0, 0, -7).Unix(), "")
-	customEndTime := flag.Int64("end_time", currentTime.Unix(), "")
+	customStartTime := flag.Int64("start_time", 0, "")
+	customEndTime := flag.Int64("end_time", 0, "")
 	projectIdFlag := flag.Uint64("project_id", 0, "Project Id.")
 
 	flag.Parse()
@@ -85,18 +84,6 @@ func main() {
 
 	C.InitRedis(config.RedisHost, config.RedisPort)
 
-	if *mode == "query" {
-		if *customEndTime != 0 && *customStartTime != 0 && *projectIdFlag != 0 {
-			err := testData(*customStartTime, *customEndTime, *projectIdFlag, *filePath)
-			if err != nil {
-				log.Error("Failed to testData ", err)
-			}
-		} else {
-			log.Error("Not valid parameter for queryMode")
-		}
-		return
-	}
-
 	if filePath == nil || *filePath == "" {
 		log.Error("No file path provided")
 		os.Exit(1)
@@ -108,11 +95,23 @@ func main() {
 		os.Exit(1)
 	}
 
+	if *mode == "query" {
+		if *projectIdFlag != 0 {
+			err := testData(*customStartTime, *customEndTime, *projectIdFlag, file)
+			if err != nil {
+				log.Error("Failed to testData ", err)
+			}
+		} else {
+			log.Error("Not valid parameter for queryMode")
+		}
+		return
+	}
+
 	defer file.Close()
 
 	var project *M.Project
 
-	events, err := getDenormalizedEventsFromFile(*filePath)
+	events, _, _, err := getDenormalizedEventsFromFile(file)
 	if err != nil {
 		log.WithError(err).Error("Failed to parse file")
 		os.Exit(1)
@@ -142,14 +141,12 @@ func normalizeEventsToDB(events []denEvent, project *M.Project) {
 	}
 }
 
-func getDenormalizedEventsFromFile(filePath string) ([]denEvent, error) {
-	if filePath == "" {
-		return nil, errors.New("No file path")
-	}
-
-	file, err := os.Open(filePath)
+func getDenormalizedEventsFromFile(file *os.File) ([]denEvent, int64, int64, error) {
+	startTime := int64(0)
+	endTime := int64(0)
+	_, err := file.Seek(0, 0)
 	if err != nil {
-		return nil, err
+		return nil, 0, 0, err
 	}
 
 	scanner := bufio.NewScanner(file)
@@ -160,17 +157,30 @@ func getDenormalizedEventsFromFile(filePath string) ([]denEvent, error) {
 		err := json.Unmarshal([]byte(enEvent), &decEvent)
 		if err != nil {
 			log.WithError(err).Error("failed to unmarshal")
-			return nil, errors.New("failed to unmarshal")
+			return nil, 0, 0, errors.New("failed to unmarshal")
+		}
+
+		if startTime == int64(0) && endTime == int64(0) {
+			startTime = decEvent.EventTime
+			endTime = decEvent.EventTime
+		} else {
+			if startTime > decEvent.EventTime {
+				startTime = decEvent.EventTime
+			}
+			if endTime < decEvent.EventTime {
+				endTime = decEvent.EventTime
+			}
 		}
 		events = append(events, decEvent)
 	}
 
+	fmt.Println("length of events : ", len(events))
 	if err := scanner.Err(); err != nil {
 		log.Fatal("Error while reading from file:", err)
-		return nil, err
+		return nil, 0, 0, err
 	}
 
-	return events, nil
+	return events, startTime, endTime, nil
 }
 
 func dbCreateAndGetProjectWithAgentUUID(projectName string, agentUUID string) (*M.Project, error) {
@@ -223,11 +233,17 @@ func eventToDb(event denEvent, project *M.Project) int {
 	return http.StatusOK
 }
 
-func testData(startTime int64, endTime int64, projectId uint64, filePath string) error {
+func testData(startTime int64, endTime int64, projectId uint64, file *os.File) error {
 
-	patterns, err := getPatterns(filePath)
+	patterns, err := getPatterns(file)
 	if err != nil {
 		return err
+	}
+	if startTime == 0 || endTime == 0 {
+		_, startTime, endTime, err = getDenormalizedEventsFromFile(file)
+		if err != nil {
+			return err
+		}
 	}
 
 	query := M.Query{
@@ -335,10 +351,7 @@ func testData(startTime int64, endTime int64, projectId uint64, filePath string)
 	return nil
 }
 
-func getPatterns(filePath string) ([]*P.Pattern, error) {
-	if filePath == "" {
-		return nil, errors.New("No file path")
-	}
+func getPatterns(file *os.File) ([]*P.Pattern, error) {
 
 	// A -> $session , B -> Fund Project , C -> View Project
 	pB, _ := P.NewPattern([]string{"Fund Project"}, nil)
@@ -346,10 +359,9 @@ func getPatterns(filePath string) ([]*P.Pattern, error) {
 	pABC, _ := P.NewPattern([]string{"$session", "Fund Project", "View Project"}, nil)
 	patterns := []*P.Pattern{pB, pAB, pABC}
 
-	file, err := os.Open(filePath)
+	_, err := file.Seek(0, 0)
 	if err != nil {
-		log.Fatal(err)
-		os.Exit(1)
+		return nil, err
 	}
 	scanner := bufio.NewScanner(file)
 	err = P.CountPatterns(scanner, patterns)
