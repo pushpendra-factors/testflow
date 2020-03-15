@@ -8,7 +8,6 @@ import (
 	M "factors/model"
 	P "factors/pattern"
 	"flag"
-	"fmt"
 	"net/http"
 	"os"
 
@@ -142,8 +141,8 @@ func normalizeEventsToDB(events []denEvent, project *M.Project) {
 }
 
 func getDenormalizedEventsFromFile(file *os.File) ([]denEvent, int64, int64, error) {
-	startTime := int64(0)
-	endTime := int64(0)
+	var startTime int64
+	var endTime int64
 	_, err := file.Seek(0, 0)
 	if err != nil {
 		return nil, 0, 0, err
@@ -160,7 +159,7 @@ func getDenormalizedEventsFromFile(file *os.File) ([]denEvent, int64, int64, err
 			return nil, 0, 0, errors.New("failed to unmarshal")
 		}
 
-		if startTime == int64(0) && endTime == int64(0) {
+		if startTime == 0 && endTime == 0 {
 			startTime = decEvent.EventTime
 			endTime = decEvent.EventTime
 		} else {
@@ -174,7 +173,6 @@ func getDenormalizedEventsFromFile(file *os.File) ([]denEvent, int64, int64, err
 		events = append(events, decEvent)
 	}
 
-	fmt.Println("length of events : ", len(events))
 	if err := scanner.Err(); err != nil {
 		log.Fatal("Error while reading from file:", err)
 		return nil, 0, 0, err
