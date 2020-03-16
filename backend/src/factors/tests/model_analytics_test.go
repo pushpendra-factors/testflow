@@ -131,11 +131,13 @@ func TestAnalyticsFunnelQuery(t *testing.T) {
 
 		assert.Equal(t, M.StepPrefix+"0", result.Headers[0])
 		assert.Equal(t, M.StepPrefix+"1", result.Headers[1])
-		assert.Equal(t, M.StepPrefix+"2", result.Headers[2])
+		assert.Equal(t, M.FunnelConversionPrefix+M.StepPrefix+"0"+"_"+M.StepPrefix+"1", result.Headers[2])
+		assert.Equal(t, M.StepPrefix+"2", result.Headers[3])
 
 		assert.Equal(t, int64(1), result.Rows[0][0], "step0")
 		assert.Equal(t, int64(1), result.Rows[0][1], "step1")
-		assert.Equal(t, int64(1), result.Rows[0][2], "step2")
+		assert.Equal(t, "100.0", result.Rows[0][2], "conversion_step_0_step_1")
+		assert.Equal(t, int64(1), result.Rows[0][3], "step3")
 	})
 
 	t.Run("NoOfUsersDidNotCompleteFunnelOnFirstTimeOfStart:2", func(t *testing.T) {
@@ -191,11 +193,13 @@ func TestAnalyticsFunnelQuery(t *testing.T) {
 
 		assert.Equal(t, M.StepPrefix+"0", result.Headers[0])
 		assert.Equal(t, M.StepPrefix+"1", result.Headers[1])
-		assert.Equal(t, M.StepPrefix+"2", result.Headers[2])
+		assert.Equal(t, M.FunnelConversionPrefix+M.StepPrefix+"0"+"_"+M.StepPrefix+"1", result.Headers[2])
+		assert.Equal(t, M.StepPrefix+"2", result.Headers[3])
 
 		assert.Equal(t, int64(1), result.Rows[0][0], "step0")
 		assert.Equal(t, int64(1), result.Rows[0][1], "step1")
-		assert.Equal(t, int64(1), result.Rows[0][2], "step2")
+		assert.Equal(t, "100.0", result.Rows[0][2], "conversion_step_0_step_1")
+		assert.Equal(t, int64(1), result.Rows[0][3], "step2")
 	})
 
 	t.Run("NoOfUsersDidNotCompleteFunnelOnFirstTimeOfStart:3", func(t *testing.T) {
@@ -251,11 +255,13 @@ func TestAnalyticsFunnelQuery(t *testing.T) {
 
 		assert.Equal(t, M.StepPrefix+"0", result.Headers[0])
 		assert.Equal(t, M.StepPrefix+"1", result.Headers[1])
-		assert.Equal(t, M.StepPrefix+"2", result.Headers[2])
+		assert.Equal(t, M.FunnelConversionPrefix+M.StepPrefix+"0"+"_"+M.StepPrefix+"1", result.Headers[2])
+		assert.Equal(t, M.StepPrefix+"2", result.Headers[3])
 
 		assert.Equal(t, int64(1), result.Rows[0][0], "step0")
 		assert.Equal(t, int64(1), result.Rows[0][1], "step1")
-		assert.Equal(t, int64(1), result.Rows[0][2], "step2")
+		assert.Equal(t, "100.0", result.Rows[0][2], "conversion_step_0_step_1")
+		assert.Equal(t, int64(1), result.Rows[0][3], "step2")
 	})
 }
 
@@ -386,6 +392,7 @@ func TestAnalyticsFunnelQueryWithFilterCondition(t *testing.T) {
 	// than 11, 5 users has performed s1.
 	assert.Equal(t, int64(10), result1.Rows[0][0], "step0")
 	assert.Equal(t, int64(5), result1.Rows[0][1], "step1")
+	assert.Equal(t, "50.0", result1.Rows[0][2], "conversion_step_0_step_1")
 
 	query2 := M.Query{
 		From: startTimestamp,

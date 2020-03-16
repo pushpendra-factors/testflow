@@ -647,6 +647,7 @@ div.setting-card:hover{
 
 .fapp-dunit {
     border-radius: 0 !important;
+    overflow: scroll;
 }
 
 .fapp-dunit .card-header {

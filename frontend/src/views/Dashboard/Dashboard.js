@@ -21,7 +21,8 @@ import Loading from '../../loading';
 import { PRESENTATION_CARD, DEFAULT_DATE_RANGE, 
   DEFINED_DATE_RANGES, 
   PRESENTATION_TABLE,
-  QUERY_CLASS_CHANNEL} from '../Query/common';
+  QUERY_CLASS_CHANNEL,
+  QUERY_CLASS_FUNNEL} from '../Query/common';
 
 const TYPE_OPTS = [
   { label: "Only me", value: "pr" },
@@ -291,9 +292,17 @@ class Dashboard extends Component {
   }
 
   isBigChartUnit(unit) {
-    // only channel queries with presentation table added as big chart unit.
-    return unit.presentation && unit.presentation == PRESENTATION_TABLE &&
-      unit.query && unit.query.cl && unit.query.cl == QUERY_CLASS_CHANNEL;
+    return (
+      unit.presentation && 
+      unit.query &&
+      unit.query.cl &&
+      ( 
+        // channel queries with presentation table.
+        (unit.presentation == PRESENTATION_TABLE && unit.query.cl == QUERY_CLASS_CHANNEL) ||
+        // funnel queries with events more than 1 or with breakdown more than 1.
+        unit.query.cl == QUERY_CLASS_FUNNEL && (unit.query.ewp.length > 1 || unit.query.gbp.length > 1)
+      )
+    )
   }
   
   renderDashboard() {
