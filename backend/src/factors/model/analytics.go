@@ -1501,13 +1501,21 @@ func addStepConversionPercentageToFunnel(result *QueryResult) error {
 	}
 
 	stepIndexes := make([]int, 0, 0)
+	nonStepIndexes := make([]int, 0, 0)
 	for i, header := range result.Headers {
 		if strings.HasPrefix(header, StepPrefix) {
 			stepIndexes = append(stepIndexes, i)
+		} else {
+			nonStepIndexes = append(nonStepIndexes, i)
 		}
 	}
 
 	headers := make([]string, 0, 0)
+
+	for _, nsi := range nonStepIndexes {
+		headers = append(headers, result.Headers[nsi])
+	}
+
 	for _, si := range stepIndexes {
 		headers = append(headers, result.Headers[si])
 		if si == stepIndexes[0] {
@@ -1523,6 +1531,10 @@ func addStepConversionPercentageToFunnel(result *QueryResult) error {
 
 	for ri := range result.Rows {
 		row := make([]interface{}, 0, 0)
+
+		for _, ci := range nonStepIndexes {
+			row = append(row, result.Rows[ri][ci])
+		}
 
 		for _, ci := range stepIndexes {
 			row = append(row, result.Rows[ri][ci])
