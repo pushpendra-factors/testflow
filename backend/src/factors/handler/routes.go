@@ -119,6 +119,10 @@ func InitIntRoutes(r *gin.Engine) {
 		mid.SetScopeProjectIdByStoreAndSecret(),
 		IntShopifyHandler)
 
+	intRouteGroup.POST("/shopify_sdk",
+		mid.SetScopeProjectIdByToken(),
+		IntShopifySDKHandler)
+
 	intRouteGroup.POST("/adwords/enable",
 		mid.SetLoggedInAgent(),
 		mid.SetAuthorizedProjectsByLoggedInAgent(),

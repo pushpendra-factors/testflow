@@ -39,6 +39,7 @@ const EVENT_NAME_SHOPIFY_ORDER_CREATED = "$shopify_order_created"
 const EVENT_NAME_SHOPIFY_ORDER_UPDATED = "$shopify_order_updated"
 const EVENT_NAME_SHOPIFY_ORDER_PAID = "$shopify_order_paid"
 const EVENT_NAME_SHOPIFY_ORDER_CANCELLED = "$shopify_order_cancelled"
+const EVENT_NAME_SHOPIFY_CART_UPDATED = "$shopify_cart_updated"
 
 var ALLOWED_INTERNAL_EVENT_NAMES = [...]string{
 	EVENT_NAME_SESSION,
@@ -52,6 +53,7 @@ var ALLOWED_INTERNAL_EVENT_NAMES = [...]string{
 	EVENT_NAME_SHOPIFY_ORDER_UPDATED,
 	EVENT_NAME_SHOPIFY_ORDER_PAID,
 	EVENT_NAME_SHOPIFY_ORDER_CANCELLED,
+	EVENT_NAME_SHOPIFY_CART_UPDATED,
 }
 
 /* Properties Constants */

@@ -390,6 +390,46 @@ func IntShopifyHandler(c *gin.Context) {
 	shouldHashEmail := U.GetScopeByKeyAsBool(c, mid.SCOPE_SHOPIFY_HASH_EMAIL)
 
 	switch shopifyTopic {
+	case "carts/update":
+		var cartUpdated IntShopify.CartObject
+		if err := decoder.Decode(&cartUpdated); err != nil {
+			logCtx.WithFields(log.Fields{"project_id": projectId, log.ErrorKey: err}).Error(
+				"Shopify Cart Update JSON decode failed")
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+				"error": "invalid json payload. cart update failed."})
+			return
+		}
+		if len(cartUpdated.LineItems) == 0 {
+			logCtx.WithFields(log.Fields{"project_id": projectId}).Info(
+				"Ignoring Shopify Cart Update with zero items")
+			return
+		}
+		eventName, userId, isNewUser, eventProperties, userProperties, timestamp, err := IntShopify.GetTrackDetailsFromCartObject(
+			projectId, IntShopify.ACTION_SHOPIFY_CART_UPDATED, &cartUpdated)
+		if err != nil {
+			logCtx.WithFields(log.Fields{"project_id": projectId, log.ErrorKey: err}).Error(
+				"Shopify Cart Update JSON track details failed")
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "cart update failed."})
+			return
+		}
+		request := &SDKTrackPayload{
+			Name:            eventName,
+			IsNewUser:       isNewUser,
+			UserId:          userId,
+			Auto:            false,
+			EventProperties: eventProperties,
+			UserProperties:  userProperties,
+			Timestamp:       timestamp,
+		}
+		status, response := SDKTrack(projectId, request, false)
+		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
+			logCtx.WithFields(log.Fields{"track_payload": request,
+				"error_code": status, "error": response.Error}).Error(
+				"Shopify cart update failure. sdk_track call failed.")
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "cart update failed."})
+		}
+		logCtx.WithFields(log.Fields{"shopify cart updated": cartUpdated}).Debug("Shopify webhook request")
+		c.JSON(http.StatusOK, response)
 	case "checkouts/create":
 		var checkoutCreated IntShopify.CheckoutObject
 		if err := decoder.Decode(&checkoutCreated); err != nil {
@@ -599,4 +639,51 @@ func IntShopifyHandler(c *gin.Context) {
 		logCtx.WithFields(log.Fields{"shopify order cancelled": orderCancelled}).Debug("Shopify webhook request")
 		c.JSON(http.StatusOK, response)
 	}
+}
+
+func IntShopifySDKHandler(c *gin.Context) {
+	r := c.Request
+
+	logCtx := log.WithFields(log.Fields{
+		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
+	})
+
+	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
+		c.AbortWithStatusJSON(
+			http.StatusUnauthorized,
+			gin.H{"error": "Shopify webhook failed. Invalid project."})
+		return
+	}
+
+	if !M.IsPSettingsIntShopifyEnabled(projectId) {
+		logCtx.WithField("project_id", projectId).Error("Shopify sdk failure. Integration not enabled.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Request failed. Invalid token or project."})
+		return
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	var cartTokenPayload IntShopify.CartTokenPayload
+	if err := decoder.Decode(&cartTokenPayload); err != nil {
+		logCtx.WithFields(log.Fields{log.ErrorKey: err}).Error(
+			"Shopify Cart Token Payload decode failed")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid json payload."})
+		return
+	}
+
+	log.WithFields(log.Fields{"cart payload": cartTokenPayload}).Info("Received Cart Token")
+	if cartTokenPayload.CartToken == "" || cartTokenPayload.UserId == "" {
+		logCtx.WithFields(log.Fields{
+			"cart token": cartTokenPayload.CartToken, "user id": cartTokenPayload.UserId}).Error(
+			"Shopify Cart Token Payload decode failed")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "empty token or userId."})
+	}
+	errCode := M.SetCacheShopifyCartTokenToUserId(
+		projectId, cartTokenPayload.CartToken, cartTokenPayload.UserId)
+	if errCode != http.StatusOK && errCode != http.StatusCreated {
+		c.AbortWithStatus(errCode)
+		return
+	}
+	c.JSON(http.StatusOK, nil)
 }
