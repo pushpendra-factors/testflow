@@ -8,6 +8,7 @@ import (
 	M "factors/model"
 	P "factors/pattern"
 	"flag"
+	"fmt"
 	"net/http"
 	"os"
 
@@ -34,6 +35,11 @@ go run run_build_DB_from_model_file.go --file_path=<path-to-denormalized-file> -
 /*
 for query mode
 go run run_build_DB_from_model_file.go --mode=query --project_id=<project-id> --start_time= --end_time= --file_path=
+*/
+
+/*
+for query with filters mode
+go run run_build_DB_from_model_file.go --mode=query_filter --project_id=<project-id> --start_time= --end_time= --file_path=
 */
 
 func main() {
@@ -99,6 +105,18 @@ func main() {
 			err := testData(*customStartTime, *customEndTime, *projectIdFlag, file)
 			if err != nil {
 				log.Error("Failed to testData ", err)
+			}
+		} else {
+			log.Error("Not valid parameter for queryMode")
+		}
+		return
+	}
+
+	if *mode == "query_filter" {
+		if *projectIdFlag != 0 {
+			err := testWithEventConstraints(*customStartTime, *customEndTime, *projectIdFlag, file)
+			if err != nil {
+				log.Error("Failed to testWithEventConstraints ", err)
 			}
 		} else {
 			log.Error("Not valid parameter for queryMode")
@@ -346,25 +364,127 @@ func testData(startTime int64, endTime int64, projectId uint64, file *os.File) e
 	} else {
 		log.Errorf("Failed to compare PerUserCount database-result: %d pattern-result: %d ", result.Rows[0][2], patterns[2].PerUserCount)
 	}
+
 	return nil
 }
 
 func getPatterns(file *os.File) ([]*P.Pattern, error) {
 
 	// A -> $session , B -> Fund Project , C -> View Project
-	pB, _ := P.NewPattern([]string{"Fund Project"}, nil)
-	pAB, _ := P.NewPattern([]string{"$session", "Fund Project"}, nil)
-	pABC, _ := P.NewPattern([]string{"$session", "Fund Project", "View Project"}, nil)
-	patterns := []*P.Pattern{pB, pAB, pABC}
+
+	actualEventInfoMap := make(map[string]*P.PropertiesInfo)
+	// Initialize.
+	for _, eventName := range []string{"Fund Project", "$session", "View Project"} {
+		// Initialize info.
+		actualEventInfoMap[eventName] = &P.PropertiesInfo{
+			NumericPropertyKeys:          make(map[string]bool),
+			CategoricalPropertyKeyValues: make(map[string]map[string]bool),
+		}
+	}
+
+	userAndEventsInfo := P.UserAndEventsInfo{
+		UserPropertiesInfo: &P.PropertiesInfo{
+			NumericPropertyKeys:          make(map[string]bool),
+			CategoricalPropertyKeyValues: make(map[string]map[string]bool),
+		},
+		EventPropertiesInfoMap: &actualEventInfoMap,
+	}
 
 	_, err := file.Seek(0, 0)
 	if err != nil {
 		return nil, err
 	}
 	scanner := bufio.NewScanner(file)
+	err = P.CollectPropertiesInfo(scanner, &userAndEventsInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	pB, _ := P.NewPattern([]string{"Fund Project"}, &userAndEventsInfo)
+	pAB, _ := P.NewPattern([]string{"$session", "Fund Project"}, &userAndEventsInfo)
+	pABC, _ := P.NewPattern([]string{"$session", "Fund Project", "View Project"}, &userAndEventsInfo)
+	patterns := []*P.Pattern{pB, pAB, pABC}
+
+	_, err = file.Seek(0, 0)
+	if err != nil {
+		return nil, err
+	}
+	scanner = bufio.NewScanner(file)
 	err = P.CountPatterns(scanner, patterns)
 	if err != nil {
 		return nil, err
 	}
 	return patterns, nil
+}
+
+func testWithEventConstraints(startTime int64, endTime int64, projectId uint64, file *os.File) error {
+	//Test with event constraints
+	patterns, err := getPatterns(file)
+	if err != nil {
+		return err
+	}
+	if startTime == 0 || endTime == 0 {
+		_, startTime, endTime, err = getDenormalizedEventsFromFile(file)
+		if err != nil {
+			return err
+		}
+	}
+
+	//For Fund Project with $day_of_week equals Friday
+	log.Info("For Fund Project event")
+	genericPropertiesConstraints := []P.EventConstraints{
+		P.EventConstraints{
+			EPCategoricalConstraints: []P.CategoricalConstraint{
+				P.CategoricalConstraint{
+					PropertyName:  "$day_of_week",
+					PropertyValue: "Friday",
+				},
+			},
+		},
+	}
+	perUserCount, err := patterns[0].GetPerUserCount(genericPropertiesConstraints)
+	if err != nil {
+		return err
+	}
+	query := M.Query{
+		From: startTime,
+		To:   endTime,
+	}
+
+	enQueries := []byte(`{"cl":"funnel","ty":"unique_users","ec":"any_given_event","ewp":[{"na":"Fund Project","pr":[{"en":"event","ty":"categorical","pr":"$day_of_week","op":"equals","va":"Friday","lop":"AND"}]}],"gbp":[],"gbt":"","tz":"UTC","fr":1393632000,"to":1394236799,"ovp":false}`)
+	err = json.Unmarshal(enQueries, &query)
+	if err != nil {
+		return errors.New("Failed to unmarshal")
+	}
+	result, _, _ := M.Analyze(projectId, query)
+	log.Info(fmt.Sprintf("PATTERN RESULT \nperUserCount:%d\n", perUserCount))
+	log.Info(fmt.Sprintf("\nQuery Result\nperUserCount:%d\n", result.Rows[0][0]))
+
+	//FOR TRIPLE EVENTS($SESSION -> FUND PROJECT -> VIEW PROJECT)
+	// with $SESSION event property $day_of_week equals Friday
+	log.Info("EVENTS($SESSION -> FUND PROJECT -> VIEW PROJECT")
+	genericPropertiesConstraints = []P.EventConstraints{
+		P.EventConstraints{
+			EPCategoricalConstraints: []P.CategoricalConstraint{
+				P.CategoricalConstraint{
+					PropertyName:  "$day_of_week",
+					PropertyValue: "Friday",
+				},
+			},
+		},
+		P.EventConstraints{},
+		P.EventConstraints{},
+	}
+
+	perUserCount, _ = patterns[2].GetPerUserCount(genericPropertiesConstraints)
+
+	enQueries = []byte(`{"cl":"funnel","ty":"unique_users","ec":"any_given_event","ewp":[{"na":"$session","pr":[{"en":"event","ty":"categorical","pr":"$day_of_week","op":"equals","va":"Friday","lop":"AND"}]},{"na":"Fund Project","pr":[]},{"na":"View Project","pr":[]}],"gbp":[],"gbt":"","tz":"UTC","ovp":false}`)
+	err = json.Unmarshal(enQueries, &query)
+	if err != nil {
+		return errors.New("Failed to unmarshal")
+	}
+	result, _, _ = M.Analyze(projectId, query)
+	log.Info(fmt.Sprintf("PATTERN RESULT \nperUserCount:%d\n", perUserCount))
+	log.Info(fmt.Sprintf("\nQuery Result\nnperUserCount:%d\n", result.Rows[0][2]))
+	return nil
 }
