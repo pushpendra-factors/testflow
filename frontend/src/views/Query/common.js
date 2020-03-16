@@ -184,7 +184,7 @@ export const convertFunnelResultForTable = function(result) {
 
     if (headers[i].indexOf('conversion_') == 0) {
       if (headers[i] == 'conversion_overall') {
-        newHeader = 'Overall conversion rate'
+        newHeader = 'Total Conversion Rate'
       } else {
         let conversionSplit = headers[i].split('_');
         if (conversionSplit.length < 5) continue;
