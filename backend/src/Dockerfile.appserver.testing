@@ -1,0 +1,20 @@
+FROM golang:1.11-alpine AS builder
+
+WORKDIR /go/src/factors
+ADD ./backend/src/factors .
+RUN go build -o $GOPATH/bin/app $GOPATH/src/factors/app/app.go
+
+# Create stripped down version without go and source code
+FROM alpine:3.7
+ENV DB_HOST DB_HOST
+ENV REDIS_HOST REDIS_HOST
+ENV ETCD ETCD
+RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
+# Fixes: time.LoadLocation(ZONE_NAME) error, zoneinfo.zip no such file or directory.
+ADD https://github.com/golang/go/raw/master/lib/time/zoneinfo.zip /usr/local/go/lib/time/zoneinfo.zip
+COPY --from=builder /go/bin/app /go/bin/app
+RUN mkdir -p /usr/local/var/factors/config
+RUN mkdir -p /usr/local/var/factors/geolocation_data
+ADD ./geolocation_data/GeoLite2-City.mmdb /usr/local/var/factors/geolocation_data
+ENTRYPOINT [ "sh","-c","/go/bin/app --db_host=${DB_HOST} --redis_host=${REDIS_HOST} --etcd=${ETCD}"]
+EXPOSE 8080

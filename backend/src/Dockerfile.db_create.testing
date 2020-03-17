@@ -9,4 +9,4 @@ RUN go build -o /go/src/factors/backend/bin/builddb scripts/run_db_create.go
 FROM alpine:3.7
 RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
 COPY --from=builder /go/src/factors/backend/bin/builddb /go/src/factors/backend/bin/builddb
-ENTRYPOINT ["/go/src/factors/backend/bin/builddb", "--db_host", "postgres"]
+ENTRYPOINT ["sh","-c", "/go/src/factors/backend/bin/builddb --db_host=${DB_HOST}"]
