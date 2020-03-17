@@ -1,22 +1,22 @@
 version: '3'
     
-services: 
+services:
         postgres:
-            build: 
+            build:
                 context: .
                 dockerfile: Dockerfile.postgres.testing
                 args:
                     -  POSTGRES_VERSION=12.2-alpine
-            environment: 
+            environment:
                  - POSTGRES_USER=autometa
                  - POSTGRES_PASSWORD=@ut0me7a
                  - POSTGRES_DB=autometa
             image: testing/postgres:1.0
             restart: always
-            ports: 
+            ports:
                 - '5432:5432'
         builddb:
-            depends_on: 
+            depends_on:
                 - postgres
             build:
                 context: .
@@ -24,7 +24,7 @@ services:
             environment:
                 - DB_HOST=postgres
             image: testing/builddb:1.0
-            links: 
+            links:
                 - postgres
         redis:
             build:
@@ -32,13 +32,13 @@ services:
                 dockerfile: Dockerfile.redis.testing
             image: testing/redis:1.0
             restart: always
-            ports: 
+            ports:
                 - "6379:6379"
         etcd:
-            build: 
+            build:
                 context: .
                 dockerfile: Dockerfile.etcd.testing
-                args: 
+                args:
                     - ETCD_VERSION=3
             image: testing/etcd:1.0
             restart: always
@@ -49,10 +49,10 @@ services:
                 - "2379:2379"
                 - "2380:2380"
         api:
-            build: 
+            build:
                 context: ../../
                 dockerfile: backend/src/Dockerfile.appserver.testing
-            environment: 
+            environment:
                 -  GOPATH=/go/src/factors
                 -  DB_HOST=postgres
                 -  REDIS_HOST=redis
@@ -60,30 +60,30 @@ services:
                 -  PATH_TO_FACTORS=${PATH_TO_FACTORS}
             image: testing/api:1.0
             restart: always
-            ports: 
+            ports:
                 - "8080:8080"
         patternserver:
-            build: 
+            build:
                 context: .
                 dockerfile: Dockerfile.patternserver.testing
-            environment: 
+            environment:
                 -   GOPATH=/go/src/factors
                 -   ETCD=etcd:2379
             image: testing/pattern-server:1.0
-            ports: 
+            ports:
                 - "8100:8100"
         dataserver:
-            depends_on: 
+            depends_on:
                 - postgres
-            build: 
+            build:
                 context: .
                 dockerfile: Dockerfile.dataserver.testing
-            environment: 
+            environment:
                 -   GOPATH=/go/src/factors
                 -   DB_HOST=postgres
             image: testing/dataserver:1.0
             restart: always
-            ports: 
+            ports:
                 -  "8089:8089"
 
 
