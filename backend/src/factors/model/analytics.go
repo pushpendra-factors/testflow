@@ -1287,7 +1287,7 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q Query) (string, []interface
 		limitedGroupBySelect := "SELECT" + " " + joinWithComma(groupKeys, rawCountSelect) + " " +
 			"FROM" + " " + funnelStepName + " " + "GROUP BY" + " " + groupKeys + " " +
 			// order and limit by last step of funnel.
-			fmt.Sprintf("ORDER BY %s DESC LIMIT %d", funnelSteps[len(funnelSteps)-1], ResultsLimit)
+			fmt.Sprintf("ORDER BY %s DESC LIMIT %d", funnelSteps[0], ResultsLimit)
 
 		// wrapped with select to apply limits only to grouped select rows.
 		groupBySelect := fmt.Sprintf("SELECT * FROM ( %s ) AS group_funnel", limitedGroupBySelect)
