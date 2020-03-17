@@ -300,7 +300,7 @@ class Dashboard extends Component {
         // channel queries with presentation table.
         (unit.presentation == PRESENTATION_TABLE && unit.query.cl == QUERY_CLASS_CHANNEL) ||
         // funnel queries with events more than 1 or with breakdown more than 1.
-        unit.query.cl == QUERY_CLASS_FUNNEL && (unit.query.ewp.length > 1 || unit.query.gbp.length > 1)
+        unit.query.cl == QUERY_CLASS_FUNNEL && unit.query.gbp.length > 1
       )
     )
   }
