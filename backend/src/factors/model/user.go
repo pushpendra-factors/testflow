@@ -454,15 +454,15 @@ func UpdateUserJoinTimePropertyForCustomerUser(projectId uint64, customerUserId 
 	}
 
 	// sorted result from DB by joinTimestamp by ASC.
-	minJoinTimestamp := users[0].JoinTimestamp
+	//minJoinTimestamp := users[0].JoinTimestamp
 
-	for _, user := range users {
+	/*for _, user := range users {
 		errCode := UpdatePropertyOnAllUserPropertyRecords(projectId, user.ID, U.UP_JOIN_TIME, minJoinTimestamp)
 		if errCode == http.StatusInternalServerError {
 			// log failure and continue with next user.
 			log.WithFields(log.Fields{"project_id": projectId, "user_id": user.ID}).Error("Failed to update user join time by customer user id.")
 		}
-	}
+	}*/
 
 	return http.StatusAccepted
 }
