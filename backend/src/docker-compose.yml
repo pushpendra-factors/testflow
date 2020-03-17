@@ -1,0 +1,28 @@
+version: '3'
+    
+services: 
+        postgres:
+            build: 
+                context: .
+                dockerfile: Dockerfile.postgres
+                args:
+                    -  POSTGRES_VERSION=12.2
+            environment: 
+                 - POSTGRES_USER=autometa
+                 - POSTGRES_PASSWORD=@ut0me7a
+                 - POSTGRES_DB=autometa
+            image: testing/postgres:1.0
+            restart: always
+            ports: 
+                - '5432:5432'
+        builddb:
+            depends_on: 
+                - postgres
+            build:
+                context: .
+                dockerfile: Dockerfile.build_db
+            environment:
+                - db_host=postgres
+            image: testing/builddb:1.0
+            links: 
+                - postgres
