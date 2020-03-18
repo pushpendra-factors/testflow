@@ -69,6 +69,8 @@ services:
                 -   GOPATH=/go/src/factors
                 -   ETCD=etcd:2379
             image: testing/pattern-server:1.0
+            volumes: 
+                - /usr/local/var/factors:/usr/local/var/factors
             ports:
                 - "8100:8100"
         dataserver:
