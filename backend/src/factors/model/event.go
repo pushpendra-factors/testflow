@@ -235,7 +235,8 @@ func GetLatestAnyEventOfUserForSessionFromCache(projectId uint64,
 			return nil, http.StatusNotFound
 		}
 
-		logCtx.Error("Failed to get latest event of user in duration from cache.")
+		logCtx.WithError(err).Error(
+			"Failed to get latest event of user in duration from cache.")
 		return nil, http.StatusInternalServerError
 	}
 

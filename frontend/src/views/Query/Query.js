@@ -755,8 +755,16 @@ class Query extends Component {
   }
 
   disableAddToDashboard() {
-    return (this.state.selectedPresentation === PRESENTATION_BAR && 
-        this.state.groupBys.length > 1); // tablular bar chart.
+    return (
+      // funnel presentation for class funnel with breakdown.
+      this.state.class.value == QUERY_CLASS_FUNNEL && 
+      this.state.selectedPresentation == PRESENTATION_FUNNEL && 
+      this.state.groupBys.length > 0
+    ) || (
+      // tablular bar chart.
+      this.state.selectedPresentation === PRESENTATION_BAR && 
+      this.state.groupBys.length > 1
+    ); 
   }
 
   scrollToBottom = () => {
