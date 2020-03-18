@@ -162,8 +162,10 @@ export const overwriteTimezone=(date, timezone)=>{
 
 export const convertFunnelResultForTable = function(result) {
   let headers = result.headers;
+  let rows = result.rows;
   let query = result.meta.query;
 
+  // convert headers to readable.
   for(let i=0; i<headers.length; i++) {
     let newHeader = '';
 
@@ -196,6 +198,15 @@ export const convertFunnelResultForTable = function(result) {
     }
 
     if (newHeader != '') headers[i] = newHeader;
+  }
+
+  // replace $no_group with $overall.
+  for (let i=0; i<rows.length; i++) {
+    for (let j=0; j<rows[i].length; j++) {
+      if (rows[i][j] == '$no_group') {
+        rows[i][j] = '$overall';
+      }
+    }
   }
 
   return result
