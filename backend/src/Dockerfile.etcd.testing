@@ -6,3 +6,4 @@ USER root
 RUN mkdir -p /usr/local/var/factors/local_disk
 RUN mkdir -p /usr/local/var/factors/cloud_storage/metadata
 RUN touch /usr/local/var/factors/cloud_storage/metadata/version1.txt
+RUN etcd & etcdctl put /factors/metadata/project_version_key version1

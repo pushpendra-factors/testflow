@@ -57,7 +57,6 @@ services:
                 -  DB_HOST=postgres
                 -  REDIS_HOST=redis
                 -  ETCD=etcd:2379
-                -  PATH_TO_FACTORS=${PATH_TO_FACTORS}
             image: testing/api:1.0
             restart: always
             ports:
