@@ -305,6 +305,15 @@ func SDKTrack(projectId uint64, request *SDKTrackPayload,
 	initialUserProperties := U.GetInitialUserProperties(eventProperties)
 	isNewUser := request.IsNewUser
 
+	// if create_user not true and user is not found,
+	// allow to create_user.
+	if !request.CreateUser && request.UserId != "" {
+		_, errCode := M.GetUser(projectId, request.UserId)
+		if errCode == http.StatusNotFound {
+			request.CreateUser = true
+		}
+	}
+
 	if request.CreateUser || request.UserId == "" {
 		newUser := &M.User{ProjectId: projectId}
 
@@ -507,6 +516,15 @@ func SDKIdentify(projectId uint64, request *SDKIdentifyPayload) (int, *SDKIdenti
 		logCtx.WithError(err).Error("Failed to get and add identified user properties on identify.")
 	}
 
+	// if create_user not true and user is not found,
+	// allow to create_user.
+	if !request.CreateUser && request.UserId != "" {
+		_, errCode := M.GetUser(projectId, request.UserId)
+		if errCode == http.StatusNotFound {
+			request.CreateUser = true
+		}
+	}
+
 	// Precondition: customer_user_id present, user_id not.
 	// if customer_user has user already : respond with same user.
 	// else : creating a new_user with the given customer_user_id and respond with new_user_id.
@@ -633,6 +651,15 @@ func SDKAddUserProperties(projectId uint64,
 	if err != nil {
 		return http.StatusBadRequest,
 			&SDKAddUserPropertiesResponse{Error: "Add user properties failed. Invalid properties."}
+	}
+
+	// if create_user not true and user is not found,
+	// allow to create_user.
+	if !request.CreateUser && request.UserId != "" {
+		_, errCode := M.GetUser(projectId, request.UserId)
+		if errCode == http.StatusNotFound {
+			request.CreateUser = true
+		}
 	}
 
 	// Precondition: user_id not given.
