@@ -216,13 +216,13 @@ func dbCreateAndGetProjectWithAgentUUID(projectName string, agentUUID string) (*
 }
 
 func eventToDb(event denEvent, project *M.Project) int {
-	user, err := M.GetSegmentUser(project.ID, "", event.UserId)
+	user, err := M.CreateOrGetUser(project.ID, event.UserId)
 	if err != http.StatusCreated && err != http.StatusOK {
 		log.Errorf("Failed to GetSegmentUser status: %d", err)
 		return err
 	}
 
-	userPropertiesId, errCode := M.UpdateUserProperties(project.ID, user.ID, event.UserProperties)
+	userPropertiesId, errCode := M.UpdateUserProperties(project.ID, user.ID, event.UserProperties, event.UserJoinTimestamp)
 	if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
 		return errCode
 	}
