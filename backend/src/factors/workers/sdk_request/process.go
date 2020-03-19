@@ -4,7 +4,7 @@ import (
 	"flag"
 
 	C "factors/config"
-	H "factors/handler"
+	SDK "factors/sdk"
 	U "factors/util"
 
 	log "github.com/sirupsen/logrus"
@@ -73,8 +73,8 @@ func main() {
 
 	// Register tasks on queueClient.
 	queueClient := C.GetServices().SDKQueueClient
-	if err := queueClient.RegisterTask(H.SDKProcessRequestTask,
-		H.SDKProcessQueueRequest); err != nil {
+	if err := queueClient.RegisterTask(SDK.ProcessRequestTask,
+		SDK.ProcessQueueRequest); err != nil {
 
 		log.WithError(err).Fatal(
 			"Failed to register tasks on SDK queue client.")
@@ -82,6 +82,6 @@ func main() {
 
 	// Todo(Dinesh): Add pod_id to worker name.
 	worker := queueClient.NewCustomQueueWorker(
-		workerName, *workerConcurrency, H.SDKRequestQueue)
+		workerName, *workerConcurrency, SDK.RequestQueue)
 	worker.Launch()
 }

@@ -7,11 +7,12 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 
-	H "factors/handler"
 	M "factors/model"
+	SDK "factors/sdk"
 	U "factors/util"
 )
 
@@ -169,7 +170,7 @@ func syncContact(projectId uint64, document *M.HubspotDocument) int {
 		return http.StatusInternalServerError
 	}
 
-	trackPayload := &H.SDKTrackPayload{
+	trackPayload := &SDK.TrackPayload{
 		ProjectId:       projectId,
 		EventProperties: properties,
 		UserProperties:  properties,
@@ -183,7 +184,7 @@ func syncContact(projectId uint64, document *M.HubspotDocument) int {
 	if document.Action == M.HubspotDocumentActionCreated {
 		trackPayload.Name = U.EVENT_NAME_HUBSPOT_CONTACT_CREATED
 
-		status, response := H.SDKTrack(projectId, trackPayload, true)
+		status, response := SDK.Track(projectId, trackPayload, true)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 			logCtx.WithField("status", status).Error("Failed to track hubspot contact created event.")
 			return http.StatusInternalServerError
@@ -206,7 +207,7 @@ func syncContact(projectId uint64, document *M.HubspotDocument) int {
 		// contact created event.
 		userId = userPropertiesRecords[0].UserId
 		trackPayload.UserId = userId
-		status, response := H.SDKTrack(projectId, trackPayload, true)
+		status, response := SDK.Track(projectId, trackPayload, true)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 			logCtx.WithField("status", status).Error("Failed to track hubspot contact updated event.")
 			return http.StatusInternalServerError
@@ -219,7 +220,7 @@ func syncContact(projectId uint64, document *M.HubspotDocument) int {
 
 	customerUserId := getCustomerUserIdFromProperties(properties)
 	if customerUserId != "" {
-		status, _ := H.SDKIdentify(projectId, &H.SDKIdentifyPayload{
+		status, _ := SDK.Identify(projectId, &SDK.IdentifyPayload{
 			UserId: userId, CustomerUserId: customerUserId})
 		if status != http.StatusOK {
 			logCtx.WithField("customer_user_id", customerUserId).Error(
@@ -384,7 +385,7 @@ func syncCompany(projectId uint64, document *M.HubspotDocument) int {
 				contactDocument.SyncId)
 			if errCode == http.StatusFound {
 				_, errCode := M.UpdateUserProperties(projectId,
-					contactSyncEvent.UserId, userPropertiesJsonb)
+					contactSyncEvent.UserId, userPropertiesJsonb, time.Now().Unix())
 				if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
 					logCtx.WithField("user_id", contactSyncEvent.UserId).Error(
 						"Failed to update user properites with company properties.")
@@ -443,7 +444,7 @@ func syncDeal(projectId uint64, document *M.HubspotDocument) int {
 		return http.StatusOK
 	}
 
-	trackPayload := &H.SDKTrackPayload{
+	trackPayload := &SDK.TrackPayload{
 		Name:            U.EVENT_NAME_HUBSPOT_DEAL_STATE_CHANGED,
 		ProjectId:       projectId,
 		UserId:          userId,
@@ -472,7 +473,7 @@ func syncDeal(projectId uint64, document *M.HubspotDocument) int {
 		return http.StatusOK
 	}
 
-	status, response := H.SDKTrack(projectId, trackPayload, true)
+	status, response := SDK.Track(projectId, trackPayload, true)
 	if status != http.StatusOK && status != http.StatusFound &&
 		status != http.StatusNotModified {
 
