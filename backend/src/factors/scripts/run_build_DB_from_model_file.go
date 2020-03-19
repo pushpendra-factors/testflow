@@ -280,7 +280,7 @@ func testData(startTime int64, endTime int64, projectId uint64, file *os.File) e
 		errors.New("Failed to analyze query")
 	}
 	if result.Rows[0][0].(int64) == int64(patterns[0].PerOccurrenceCount) {
-		log.Info("Success on compare PerOccurrenceCount for single event pattern")
+		log.Info("Success on compare PerOccurrenceCount for single event pattern PerOccurrenceCount: ", result.Rows[0][0].(int64))
 	} else {
 		log.Errorf("Failed to compare PerOccurrenceCount database-result: %d pattern-result: %d ", result.Rows[0][0], patterns[0].PerOccurrenceCount)
 	}
@@ -296,7 +296,7 @@ func testData(startTime int64, endTime int64, projectId uint64, file *os.File) e
 		errors.New("Failed to analyze query")
 	}
 	if result.Rows[0][0].(int64) == int64(patterns[0].TotalUserCount) {
-		log.Info("Success on compare TotalUserCount for single event pattern")
+		log.Info("Success on compare TotalUserCount for single event pattern TotalUserCount: ", result.Rows[0][0].(int64))
 	} else {
 		log.Errorf("Failed to compare TotalUserCount database-result: %d pattern-result: %d ", result.Rows[0][0], patterns[0].TotalUserCount)
 	}
@@ -312,7 +312,7 @@ func testData(startTime int64, endTime int64, projectId uint64, file *os.File) e
 		errors.New("Failed to analyze query")
 	}
 	if result.Rows[0][0].(int64) == int64(patterns[0].PerUserCount) {
-		log.Info("Success on compare PerUserCount for single event pattern\n")
+		log.Info("Success on compare PerUserCount for single event pattern PerUserCount: ", result.Rows[0][0].(int64))
 	} else {
 		log.Errorf("Failed to compare PerUserCount database-result: %d pattern-result: %d ", result.Rows[0][0], patterns[0].PerUserCount)
 	}
@@ -331,12 +331,12 @@ func testData(startTime int64, endTime int64, projectId uint64, file *os.File) e
 		errors.New("Failed to analyze query")
 	}
 	if result.Rows[0][0].(int64) == int64(patterns[1].TotalUserCount) {
-		log.Info("Success on compare TotalUserCount for double event pattern")
+		log.Info("Success on compare TotalUserCount for double event pattern TotalUserCount: ", result.Rows[0][0].(int64))
 	} else {
 		log.Errorf("Failed to compare TotalUserCount database-result: %d pattern-result: %d ", result.Rows[0][0], patterns[1].TotalUserCount)
 	}
 	if result.Rows[0][1].(int64) == int64(patterns[1].PerUserCount) {
-		log.Info("Success on compare PerUserCount for double event pattern\n")
+		log.Info("Success on compare PerUserCount for double event pattern PerUserCount: ", result.Rows[0][1].(int64))
 	} else {
 		log.Errorf("Failed to compare PerUserCount database-result: %d pattern-result: %d ", result.Rows[0][1], patterns[1].PerUserCount)
 	}
@@ -355,14 +355,14 @@ func testData(startTime int64, endTime int64, projectId uint64, file *os.File) e
 		return errors.New("Failed to analyze query")
 	}
 	if result.Rows[0][0].(int64) == int64(patterns[2].TotalUserCount) {
-		log.Info("Success on compare TotalUserCount for triple event pattern")
+		log.Info("Success on compare TotalUserCount for triple event pattern TotalUserCount: ", result.Rows[0][0].(int64))
 	} else {
 		log.Errorf("Failed to compare TotalUserCount database-result: %d pattern-result: %d ", result.Rows[0][0], patterns[2].TotalUserCount)
 	}
-	if result.Rows[0][2].(int64) == int64(patterns[2].PerUserCount) {
-		log.Info("Success on compare PerUserCount for triple event pattern")
+	if result.Rows[0][3] == int64(patterns[2].PerUserCount) {
+		log.Info("Success on compare PerUserCount for triple event pattern PerUserCount: ", result.Rows[0][3])
 	} else {
-		log.Errorf("Failed to compare PerUserCount database-result: %d pattern-result: %d ", result.Rows[0][2], patterns[2].PerUserCount)
+		log.Errorf("Failed to compare PerUserCount database-result: %d pattern-result: %d ", result.Rows[0][3], patterns[2].PerUserCount)
 	}
 
 	return nil
@@ -485,6 +485,6 @@ func testWithEventConstraints(startTime int64, endTime int64, projectId uint64, 
 	}
 	result, _, _ = M.Analyze(projectId, query)
 	log.Info(fmt.Sprintf("PATTERN RESULT \nperUserCount:%d\n", perUserCount))
-	log.Info(fmt.Sprintf("\nQuery Result\nnperUserCount:%d\n", result.Rows[0][2]))
+	log.Info(fmt.Sprintf("\nQuery Result\nnperUserCount:%d\n", result.Rows[0][3]))
 	return nil
 }
