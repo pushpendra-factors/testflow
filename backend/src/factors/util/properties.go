@@ -39,6 +39,7 @@ const EVENT_NAME_SHOPIFY_ORDER_CREATED = "$shopify_order_created"
 const EVENT_NAME_SHOPIFY_ORDER_UPDATED = "$shopify_order_updated"
 const EVENT_NAME_SHOPIFY_ORDER_PAID = "$shopify_order_paid"
 const EVENT_NAME_SHOPIFY_ORDER_CANCELLED = "$shopify_order_cancelled"
+const EVENT_NAME_SHOPIFY_CART_UPDATED = "$shopify_cart_updated"
 
 var ALLOWED_INTERNAL_EVENT_NAMES = [...]string{
 	EVENT_NAME_SESSION,
@@ -52,6 +53,7 @@ var ALLOWED_INTERNAL_EVENT_NAMES = [...]string{
 	EVENT_NAME_SHOPIFY_ORDER_UPDATED,
 	EVENT_NAME_SHOPIFY_ORDER_PAID,
 	EVENT_NAME_SHOPIFY_ORDER_CANCELLED,
+	EVENT_NAME_SHOPIFY_CART_UPDATED,
 }
 
 /* Properties Constants */
@@ -225,6 +227,8 @@ var SP_INITIAL_REFERRER_URL = "$initial_referrer_url"
 var SP_INITIAL_REFERRER_DOMAIN = "$initial_referrer_domain"
 var SP_SPENT_TIME string = "$session_spent_time"
 var SP_PAGE_COUNT string = "$page_count"
+var SP_LATEST_PAGE_URL = "$latest_page_url"
+var SP_LATEST_PAGE_RAW_URL = "$latest_page_raw_url"
 
 var SDK_ALLOWED_EVENT_PROPERTIES = [...]string{
 	EP_INTERNAL_IP,

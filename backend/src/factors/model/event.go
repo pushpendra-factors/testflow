@@ -33,7 +33,8 @@ type Event struct {
 	EventNameId      uint64  `json:"event_name_id"`
 	Count            uint64  `json:"count"`
 	// JsonB of postgres with gorm. https://github.com/jinzhu/gorm/issues/1183
-	Properties postgres.Jsonb `json:"properties,omitempty"`
+	Properties                 postgres.Jsonb `json:"properties,omitempty"`
+	PropertiesUpdatedTimestamp int64          `gorm:"not null;default:0" json:"properties_updated_timestamp,omitempty"`
 	// unix epoch timestamp in seconds.
 	Timestamp int64     `json:"timestamp"`
 	CreatedAt time.Time `json:"created_at"`
@@ -105,22 +106,21 @@ func SetCacheUserLastEvent(projectId uint64, userId string, cacheEvent *CacheEve
 }
 
 func CreateEvent(event *Event) (*Event, int) {
-	log.WithFields(log.Fields{"event": &event}).Info("Creating event")
+	logCtx := log.WithField("project_id", event.ProjectId)
 
-	// Input Validation. (ID is to be auto generated)
-	if event.ID != "" {
-		log.Error("CreateEvent Failed. Id provided.")
-		return nil, http.StatusBadRequest
-	}
-
-	if event.ProjectId == 0 || event.UserId == "" {
-		log.Error("CreateEvent Failed. Invalid projectId or userId.")
+	if event.ProjectId == 0 || event.UserId == "" || event.EventNameId == 0 {
+		logCtx.Error("CreateEvent Failed. Invalid projectId or userId or eventNameId.")
 		return nil, http.StatusBadRequest
 	}
 
 	if event.Timestamp == 0 {
-		log.WithField("timestamp", event.Timestamp).Error("CreateEvent Failed. Invalid timestamp.")
+		logCtx.WithField("timestamp", event.Timestamp).Error("CreateEvent Failed. Invalid timestamp.")
 		return nil, http.StatusBadRequest
+	}
+
+	// Add id with our uuid generator, if not given.
+	if event.ID == "" {
+		event.ID = U.GetUUID()
 	}
 
 	// Increamenting count based on EventNameId, not by EventName.
@@ -136,22 +136,24 @@ func CreateEvent(event *Event) (*Event, int) {
 
 	eventPropsJSONb, err := U.FillHourAndDayEventProperty(&event.Properties, event.Timestamp)
 	if err != nil {
-		log.WithFields(log.Fields{"projectId": event.ProjectId,
-			"eventTimestamp": event.Timestamp}).WithError(err).Error(
+		logCtx.WithField("eventTimestamp", event.Timestamp).WithError(err).Error(
 			"Adding day of week and hour of day properties failed")
 	}
 	event.Properties = *eventPropsJSONb
 
+	// Init properties updated timestamp with event timestamp.
+	event.PropertiesUpdatedTimestamp = event.Timestamp
+
 	transTime := gorm.NowFunc()
-	rows, err := db.Raw("INSERT INTO events (customer_event_id,project_id,user_id,user_properties_id,session_id,event_name_id,count,properties,timestamp,created_at,updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING events.id",
-		event.CustomerEventId, event.ProjectId, event.UserId, event.UserPropertiesId, event.SessionId, event.EventNameId, event.Count, event.Properties, event.Timestamp, transTime, transTime).Rows()
+	rows, err := db.Raw("INSERT INTO events (id, customer_event_id,project_id,user_id,user_properties_id,session_id,event_name_id,count,properties,properties_updated_timestamp,timestamp,created_at,updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING events.id",
+		event.ID, event.CustomerEventId, event.ProjectId, event.UserId, event.UserPropertiesId, event.SessionId, event.EventNameId, event.Count, event.Properties, event.PropertiesUpdatedTimestamp, event.Timestamp, transTime, transTime).Rows()
 	if err != nil {
-		if isDuplicateCustomerEventIdError(err) {
-			log.WithError(err).Info("CreateEvent Failed, duplicate customerEventId")
-			return nil, http.StatusFound
+		if U.IsPostgresIntegrityViolationError(err) {
+			logCtx.WithError(err).Info("CreateEvent Failed. Constraint violation.")
+			return nil, http.StatusNotAcceptable
 		}
 
-		log.WithFields(log.Fields{"event": &event}).WithError(err).Error("CreateEvent Failed")
+		logCtx.WithFields(log.Fields{"event": &event}).WithError(err).Error("CreateEvent Failed")
 		return nil, http.StatusInternalServerError
 	}
 	defer rows.Close()
@@ -192,11 +194,13 @@ func GetEventById(projectId uint64, id string) (*Event, int) {
 
 	var event Event
 	if err := db.Where("project_id = ?", projectId).Where("id = ?", id).First(&event).Error; err != nil {
-		log.WithFields(log.Fields{"project_id": projectId, "user_id": id}).WithError(err).Error(
-			"Getttng event failed on GetEventbyId")
 		if gorm.IsRecordNotFoundError(err) {
+			// Do not log error. Log on caller, if needed.
 			return nil, http.StatusNotFound
 		}
+
+		log.WithFields(log.Fields{"project_id": projectId, "user_id": id}).WithError(err).Error(
+			"Getttng event failed on GetEventbyId")
 		return nil, http.StatusInternalServerError
 	}
 	return &event, http.StatusFound
@@ -233,7 +237,8 @@ func GetLatestAnyEventOfUserForSessionFromCache(projectId uint64,
 			return nil, http.StatusNotFound
 		}
 
-		logCtx.Error("Failed to get latest event of user in duration from cache.")
+		logCtx.WithError(err).Error(
+			"Failed to get latest event of user in duration from cache.")
 		return nil, http.StatusInternalServerError
 	}
 
@@ -438,7 +443,9 @@ func GetRecentEventPropertyValues(projectId uint64, eventName string, property s
 	return GetRecentEventPropertyValuesWithLimits(projectId, eventName, property, eventsLimitForProperites, 2000)
 }
 
-func UpdateEventProperties(projectId uint64, id string, properties *U.PropertiesMap) int {
+func UpdateEventPropertiesByTimestamp(projectId uint64, id string,
+	properties *U.PropertiesMap, updateTimestamp int64) int {
+
 	if projectId == 0 || id == "" {
 		return http.StatusBadRequest
 	}
@@ -448,13 +455,27 @@ func UpdateEventProperties(projectId uint64, id string, properties *U.Properties
 		return errCode
 	}
 
-	updatedPostgresJsonb, err := U.AddToPostgresJsonb(&event.Properties, *properties)
+	overwriteExistingProperties := false
+	propertiesLastUpdatedAt := event.PropertiesUpdatedTimestamp
+
+	if updateTimestamp >= event.PropertiesUpdatedTimestamp {
+		// Overwrite existing properties only, if the
+		// state of update is future compared to existing.
+		overwriteExistingProperties = true
+		propertiesLastUpdatedAt = updateTimestamp
+	}
+
+	updatedPostgresJsonb, err := U.AddToPostgresJsonb(&event.Properties,
+		*properties, overwriteExistingProperties)
 	if err != nil {
 		return http.StatusInternalServerError
 	}
 
 	db := C.GetServices().Db
-	updatedFields := map[string]interface{}{"properties": updatedPostgresJsonb}
+	updatedFields := map[string]interface{}{
+		"properties":                   updatedPostgresJsonb,
+		"properties_updated_timestamp": propertiesLastUpdatedAt,
+	}
 	err = db.Model(&Event{}).Where("project_id = ? AND id = ?", projectId, id).Update(updatedFields).Error
 	if err != nil {
 		log.WithFields(log.Fields{"project_id": projectId, "id": id,
@@ -510,6 +531,21 @@ func enrichPreviousSessionEventProperties(projectId uint64, userId string,
 	} else {
 		timeSpent = float64(timestamp - previousSessionEvent.Timestamp)
 	}
+	latestEvent, errCode := GetLatestAnyEventOfUserForSession(projectId, userId, previousSessionEvent.Timestamp)
+	if errCode != http.StatusFound {
+		log.WithField("projectId", projectId).WithField("sessionId", previousSessionEvent.ID).Error(
+			"Failed to get latest event of session")
+		return 0, 0, http.StatusInternalServerError
+	}
+	latestEventProperties, err := U.DecodePostgresJsonb(&latestEvent.Properties)
+	if err != nil {
+		log.WithField("projectId", projectId).WithError(err).Error(
+			"Failed to decode latest event's properties for session.")
+		return 0, 0, http.StatusInternalServerError
+	}
+
+	(*previousEventProperties)[U.SP_LATEST_PAGE_RAW_URL] = (*latestEventProperties)[U.EP_PAGE_RAW_URL]
+	(*previousEventProperties)[U.SP_LATEST_PAGE_URL] = (*latestEventProperties)[U.EP_PAGE_URL]
 	(*previousEventProperties)[U.SP_PAGE_COUNT] = count
 	(*previousEventProperties)[U.SP_SPENT_TIME] = timeSpent
 	previousEventPropertiesJSONb, err := U.EncodeToPostgresJsonb(previousEventProperties)
@@ -519,7 +555,7 @@ func enrichPreviousSessionEventProperties(projectId uint64, userId string,
 		return 0, 0, http.StatusInternalServerError
 	}
 
-	errCode := OverwriteEventProperties(projectId, userId, previousSessionEvent.ID, previousEventPropertiesJSONb)
+	errCode = OverwriteEventProperties(projectId, userId, previousSessionEvent.ID, previousEventPropertiesJSONb)
 	if errCode != http.StatusAccepted {
 		log.WithField("projectId", projectId).Error(
 			"Failed to overWrite previous session event properties on createSessionEvent.")

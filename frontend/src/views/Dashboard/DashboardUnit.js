@@ -16,8 +16,8 @@ import {
   PRESENTATION_TABLE, PRESENTATION_CARD, 
   PRESENTATION_FUNNEL, PROPERTY_VALUE_TYPE_DATE_TIME, 
   PROPERTY_KEY_JOIN_TIME, getGroupByTimestampType,
-  QUERY_CLASS_CHANNEL,
-  getQueryPeriod
+  QUERY_CLASS_CHANNEL, QUERY_CLASS_FUNNEL,
+  getQueryPeriod, convertFunnelResultForTable
 } from '../Query/common';
 import { slideUnixTimeWindowToCurrentTime, getTimezoneString, 
   getReadableKeyFromSnakeKey } from '../../util';
@@ -77,6 +77,12 @@ class DashboardUnit extends Component {
     }
 
     if (this.props.data.presentation === PRESENTATION_TABLE) {
+      // convert funnel result for table view.
+      if (result.meta && result.meta.query && 
+        result.meta.query.cl == QUERY_CLASS_FUNNEL) {        
+        result = convertFunnelResultForTable(result)
+      }
+
       props = { queryResult: result }
     }
 
@@ -218,7 +224,7 @@ class DashboardUnit extends Component {
     let style = { padding: '1.5rem 1.5rem', paddingTop: '0.6rem', height: '320px' };
 
     if (this.props.data.presentation === PRESENTATION_TABLE) {
-      let changes = { padding: '0', 'overflowX': 'scroll' };
+      let changes = { padding: '0' };
       style = { ...style, ...changes };
     }
 

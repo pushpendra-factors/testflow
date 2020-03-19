@@ -33,7 +33,8 @@ func main() {
 
 	// init DB, etcd
 	config := &C.Configuration{
-		Env: *env,
+		AppName: "hubspot_enrich_job",
+		Env:     *env,
 		DBInfo: C.DBConf{
 			Host:     *dbHost,
 			Port:     *dbPort,

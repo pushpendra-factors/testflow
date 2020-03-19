@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config-persistent-redis
+  labels:
+    env: staging
+    project: factors-staging
+data:
+  PERSISTENT_REDIS_HOST: "localhost"
+  PERSISTENT_REDIS_PORT: "8379"

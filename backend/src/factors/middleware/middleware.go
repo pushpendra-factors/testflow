@@ -31,11 +31,13 @@ const SCOPE_PROJECT_ID = "projectId"
 const SCOPE_AUTHORIZED_PROJECTS = "authorizedProjects"
 const SCOPE_LOGGEDIN_AGENT_UUID = "loggedInAgentUUID"
 const SCOPE_REQ_ID = "requestId"
+const SCOPE_SDK_PROJECT_TOKEN = "sdkProjectToken"
 const SCOPE_SHOPIFY_HASH_EMAIL = "shopifyHashEmail"
 
 // cors prefix constants.
 const PREFIX_PATH_SDK = "/sdk/"
 const PREFIX_PATH_INTEGRATIONS = "/integrations"
+const SUB_ROUTE_SHOPIFY_INTEGRATION_SDK = "/shopify_sdk"
 
 const ADMIN_LOGIN_TOKEN_SEP = ":"
 
@@ -60,6 +62,23 @@ func SetScopeProjectIdByToken() gin.HandlerFunc {
 		}
 		U.SetScope(c, SCOPE_PROJECT_ID, project.ID)
 
+		c.Next()
+	}
+}
+
+func SetScopeSDKProjectToken() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		token := c.Request.Header.Get("Authorization")
+		token = strings.TrimSpace(token)
+		if token == "" {
+			errorMessage := "Missing authorization header"
+			log.WithFields(log.Fields{"error": errorMessage}).Error(
+				"Failed to get project token on set scope sdk project token.")
+			c.AbortWithStatusJSON(http.StatusUnauthorized, map[string]string{"error": errorMessage})
+			return
+		}
+
+		U.SetScope(c, SCOPE_SDK_PROJECT_TOKEN, token)
 		c.Next()
 	}
 }
@@ -184,7 +203,7 @@ func SetScopeProjectIdByStoreAndSecret() gin.HandlerFunc {
 }
 
 func isSDKRequest(path string) bool {
-	return strings.HasPrefix(path, PREFIX_PATH_SDK)
+	return strings.HasPrefix(path, PREFIX_PATH_SDK) || strings.Contains(path, SUB_ROUTE_SHOPIFY_INTEGRATION_SDK)
 }
 
 func isIntergrationsRequest(path string) bool {
@@ -458,7 +477,6 @@ func ValidateAgentActivationRequest() gin.HandlerFunc {
 }
 
 func ValidateAgentSetPasswordRequest() gin.HandlerFunc {
-
 	return func(c *gin.Context) {
 		token := c.Query("token")
 

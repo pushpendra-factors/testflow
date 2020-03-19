@@ -1,0 +1,7 @@
+# Persistent Redis with custom configuration.
+
+FROM redis:5.0.7-alpine
+WORKDIR /data/config
+COPY persistent_redis.conf redis.conf
+RUN mkdir -p /usr/local/var/db/redis
+CMD /bin/cp /data/config/redis.conf /usr/local/var/db/redis/redis.conf; redis-server /usr/local/var/db/redis/redis.conf

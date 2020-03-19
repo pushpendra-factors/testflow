@@ -1286,7 +1286,7 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q Query) (string, []interface
 		_, _, groupKeys := buildGroupKeys(q.GroupByProperties)
 		limitedGroupBySelect := "SELECT" + " " + joinWithComma(groupKeys, rawCountSelect) + " " +
 			"FROM" + " " + funnelStepName + " " + "GROUP BY" + " " + groupKeys + " " +
-			// limits result by count of step_1 to ResultsLimit.
+			// order and limit by last step of funnel.
 			fmt.Sprintf("ORDER BY %s DESC LIMIT %d", funnelSteps[0], ResultsLimit)
 
 		// wrapped with select to apply limits only to grouped select rows.
@@ -1482,12 +1482,17 @@ func translateNullToZeroOnFunnelResult(result *QueryResult) {
 	}
 }
 
-func getConversionPercentage(prevCount float64, curCount float64) float64 {
+func getConversionPercentageAsString(prevCount float64, curCount float64) string {
+	var conversion float64
+
 	if prevCount == 0 {
-		return float64(0)
+		conversion = float64(0)
+	} else {
+		conversion = (curCount / prevCount) * 100
 	}
 
-	return (curCount / prevCount) * 100
+	// Percentage with one decimal point.
+	return fmt.Sprintf("%0.1f", conversion)
 }
 
 func addStepConversionPercentageToFunnel(result *QueryResult) error {
@@ -1496,16 +1501,44 @@ func addStepConversionPercentageToFunnel(result *QueryResult) error {
 	}
 
 	stepIndexes := make([]int, 0, 0)
+	nonStepIndexes := make([]int, 0, 0)
 	for i, header := range result.Headers {
 		if strings.HasPrefix(header, StepPrefix) {
 			stepIndexes = append(stepIndexes, i)
+		} else {
+			nonStepIndexes = append(nonStepIndexes, i)
 		}
 	}
 
+	headers := make([]string, 0, 0)
+
+	for _, nsi := range nonStepIndexes {
+		headers = append(headers, result.Headers[nsi])
+	}
+
+	for _, si := range stepIndexes {
+		headers = append(headers, result.Headers[si])
+		if si == stepIndexes[0] {
+			continue
+		}
+
+		headers = append(headers, fmt.Sprintf("%s%s_%s",
+			FunnelConversionPrefix, result.Headers[si-1], result.Headers[si]))
+	}
+
+	headers = append(headers, fmt.Sprintf("%s%s", FunnelConversionPrefix, "overall"))
+	result.Headers = headers // headers with conversion.
+
 	for ri := range result.Rows {
-		// add step conversions.
-		conversions := make([]interface{}, 0, 0)
+		row := make([]interface{}, 0, 0)
+
+		for _, ci := range nonStepIndexes {
+			row = append(row, result.Rows[ri][ci])
+		}
+
 		for _, ci := range stepIndexes {
+			row = append(row, result.Rows[ri][ci])
+
 			if ci == stepIndexes[0] {
 				continue
 			}
@@ -1520,8 +1553,7 @@ func addStepConversionPercentageToFunnel(result *QueryResult) error {
 				return err
 			}
 
-			conversion := getConversionPercentage(prevCount, curCount)
-			conversions = append(conversions, fmt.Sprintf("%0.0f", conversion))
+			row = append(row, getConversionPercentageAsString(prevCount, curCount))
 		}
 
 		// add overall conversion.
@@ -1535,22 +1567,10 @@ func addStepConversionPercentageToFunnel(result *QueryResult) error {
 		if err != nil {
 			return err
 		}
+		row = append(row, getConversionPercentageAsString(firstStepCount, lastStepCount))
 
-		conversion := getConversionPercentage(firstStepCount, lastStepCount)
-		conversions = append(conversions, fmt.Sprintf("%0.0f", conversion))
-		result.Rows[ri] = append(result.Rows[ri], conversions...)
+		result.Rows[ri] = row // row with conversion.
 	}
-
-	// add conversion headers.
-	conversionStrs := make([]string, 0, 0)
-	for _, si := range stepIndexes {
-		if si > stepIndexes[0] {
-			conversionStrs = append(conversionStrs, fmt.Sprintf("%s%s_%s",
-				FunnelConversionPrefix, result.Headers[si-1], result.Headers[si]))
-		}
-	}
-	conversionStrs = append(conversionStrs, fmt.Sprintf("%s%s", FunnelConversionPrefix, "overall"))
-	result.Headers = append(result.Headers, conversionStrs...)
 
 	return nil
 }

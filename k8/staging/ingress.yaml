@@ -23,6 +23,10 @@ spec:
         backend:
           serviceName: adwordsserver-service
           servicePort: 80
+      - path: /sdk
+        backend:
+          serviceName: sdkserver-service
+          servicePort: 80
       - path: /*
         backend:
           serviceName: appserver-service

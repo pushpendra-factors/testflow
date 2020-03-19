@@ -628,6 +628,7 @@ div.setting-card:hover{
 .fapp-table thead th {
     border-bottom: none !important;
     background: #EBEDFD;
+    min-width: 100px;
 }
 
 .fapp-table td {
@@ -647,6 +648,7 @@ div.setting-card:hover{
 
 .fapp-dunit {
     border-radius: 0 !important;
+    overflow: scroll;
 }
 
 .fapp-dunit .card-header {

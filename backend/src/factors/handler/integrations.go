@@ -7,6 +7,7 @@ import (
 	IntShopify "factors/integration/shopify"
 	mid "factors/middleware"
 	M "factors/model"
+	SDK "factors/sdk"
 	U "factors/util"
 	"fmt"
 	"net/http"
@@ -59,14 +60,7 @@ func IntSegmentHandler(c *gin.Context) {
 		"user_id":      event.UserId,
 	})
 
-	user, errCode := M.GetSegmentUser(projectId, event.AnonymousID, event.UserId)
-	if errCode != http.StatusOK && errCode != http.StatusCreated {
-		c.AbortWithStatus(errCode)
-		return
-	}
-	isNewUser := errCode == http.StatusCreated
-
-	response := &SDKTrackResponse{}
+	response := &SDK.TrackResponse{}
 
 	parsedTimestamp, err := time.Parse(time.RFC3339, event.Timestamp)
 	if err != nil {
@@ -74,10 +68,17 @@ func IntSegmentHandler(c *gin.Context) {
 			log.ErrorKey: err}).Error("Failed parsing segment event timestamp.")
 		response.Error = "invalid event timestamp"
 		response.Type = event.Type
-		c.AbortWithStatusJSON(http.StatusOK, response) // For avoiding, segment retries.
+		c.AbortWithStatusJSON(http.StatusBadRequest, response)
 		return
 	}
-	unixTimestamp := parsedTimestamp.Unix()
+	requestTimestamp := parsedTimestamp.Unix()
+
+	user, errCode := M.GetSegmentUser(projectId, event.AnonymousID, event.UserId, requestTimestamp)
+	if errCode != http.StatusOK && errCode != http.StatusCreated {
+		c.AbortWithStatus(errCode)
+		return
+	}
+	isNewUser := errCode == http.StatusCreated
 
 	var status int
 	switch event.Type {
@@ -97,7 +98,7 @@ func IntSegmentHandler(c *gin.Context) {
 		IntSegment.FillSegmentGenericEventProperties(&eventProperties, &event)
 		IntSegment.FillSegmentWebEventProperties(&eventProperties, &event)
 
-		request := &SDKTrackPayload{
+		request := &SDK.TrackPayload{
 			Name:            event.TrackName,
 			CustomerEventId: event.MessageID,
 			IsNewUser:       isNewUser,
@@ -105,9 +106,11 @@ func IntSegmentHandler(c *gin.Context) {
 			Auto:            false,
 			EventProperties: eventProperties,
 			UserProperties:  userProperties,
-			Timestamp:       unixTimestamp,
+			Timestamp:       requestTimestamp,
+			ClientIP:        event.Context.IP,
+			UserAgent:       event.Context.UserAgent,
 		}
-		status, response = SDKTrack(projectId, request, event.Context.IP, event.Context.UserAgent, false)
+		status, response = SDK.Track(projectId, request, false)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 			logCtx.WithFields(log.Fields{"track_payload": request,
 				"error_code": status}).Error("Segment event failure. sdk_track call failed.")
@@ -132,7 +135,7 @@ func IntSegmentHandler(c *gin.Context) {
 		IntSegment.FillSegmentWebEventProperties(&eventProperties, &event)
 
 		name := U.GetURLHostAndPath(parsedPageURL)
-		request := &SDKTrackPayload{
+		request := &SDK.TrackPayload{
 			Name:            name,
 			UserId:          user.ID,
 			IsNewUser:       isNewUser,
@@ -140,9 +143,11 @@ func IntSegmentHandler(c *gin.Context) {
 			CustomerEventId: event.MessageID,
 			EventProperties: eventProperties,
 			UserProperties:  userProperties,
-			Timestamp:       unixTimestamp,
+			Timestamp:       requestTimestamp,
+			ClientIP:        event.Context.IP,
+			UserAgent:       event.Context.UserAgent,
 		}
-		status, response = SDKTrack(projectId, request, event.Context.IP, event.Context.UserAgent, false)
+		status, response = SDK.Track(projectId, request, false)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 			logCtx.WithFields(log.Fields{"track_payload": request,
 				"error_code": status}).Error("Segment event failure. sdk_track call failed.")
@@ -162,7 +167,7 @@ func IntSegmentHandler(c *gin.Context) {
 		}
 		IntSegment.FillSegmentGenericEventProperties(&eventProperties, &event)
 
-		request := &SDKTrackPayload{
+		request := &SDK.TrackPayload{
 			Name:            event.ScreenName,
 			UserId:          user.ID,
 			IsNewUser:       isNewUser,
@@ -170,9 +175,11 @@ func IntSegmentHandler(c *gin.Context) {
 			CustomerEventId: event.MessageID,
 			EventProperties: eventProperties,
 			UserProperties:  userProperties,
-			Timestamp:       unixTimestamp,
+			Timestamp:       requestTimestamp,
+			ClientIP:        event.Context.IP,
+			UserAgent:       event.Context.UserAgent,
 		}
-		status, response = SDKTrack(projectId, request, event.Context.IP, event.Context.UserAgent, false)
+		status, response = SDK.Track(projectId, request, false)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 			logCtx.WithFields(log.Fields{"track_payload": request,
 				"error_code": status}).Error("Segment event failure. sdk_track call failed.")
@@ -183,7 +190,7 @@ func IntSegmentHandler(c *gin.Context) {
 		// Updates the user properties with the traits, here.
 		response.UserId = user.ID
 
-		_, status := M.UpdateUserProperties(projectId, user.ID, &event.Traits)
+		_, status := M.UpdateUserProperties(projectId, user.ID, &event.Traits, requestTimestamp)
 		if status != http.StatusAccepted && status != http.StatusNotModified {
 			//logCtx.WithFields(log.Fields{"user_properties": event.Traits, "error_code": status}).Error("Segment event failure. Updating user_properties failed.")
 			response.Error = "Segment identification failed."
@@ -384,6 +391,46 @@ func IntShopifyHandler(c *gin.Context) {
 	shouldHashEmail := U.GetScopeByKeyAsBool(c, mid.SCOPE_SHOPIFY_HASH_EMAIL)
 
 	switch shopifyTopic {
+	case "carts/update":
+		var cartUpdated IntShopify.CartObject
+		if err := decoder.Decode(&cartUpdated); err != nil {
+			logCtx.WithFields(log.Fields{"project_id": projectId, log.ErrorKey: err}).Error(
+				"Shopify Cart Update JSON decode failed")
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+				"error": "invalid json payload. cart update failed."})
+			return
+		}
+		if len(cartUpdated.LineItems) == 0 {
+			logCtx.WithFields(log.Fields{"project_id": projectId}).Info(
+				"Ignoring Shopify Cart Update with zero items")
+			return
+		}
+		eventName, userId, isNewUser, eventProperties, userProperties, timestamp, err := IntShopify.GetTrackDetailsFromCartObject(
+			projectId, IntShopify.ACTION_SHOPIFY_CART_UPDATED, &cartUpdated)
+		if err != nil {
+			logCtx.WithFields(log.Fields{"project_id": projectId, log.ErrorKey: err}).Error(
+				"Shopify Cart Update JSON track details failed")
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "cart update failed."})
+			return
+		}
+		request := &SDK.TrackPayload{
+			Name:            eventName,
+			IsNewUser:       isNewUser,
+			UserId:          userId,
+			Auto:            false,
+			EventProperties: eventProperties,
+			UserProperties:  userProperties,
+			Timestamp:       timestamp,
+		}
+		status, response := SDK.Track(projectId, request, false)
+		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
+			logCtx.WithFields(log.Fields{"track_payload": request,
+				"error_code": status, "error": response.Error}).Error(
+				"Shopify cart update failure. sdk_track call failed.")
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "cart update failed."})
+		}
+		logCtx.WithFields(log.Fields{"shopify cart updated": cartUpdated}).Debug("Shopify webhook request")
+		c.JSON(http.StatusOK, response)
 	case "checkouts/create":
 		var checkoutCreated IntShopify.CheckoutObject
 		if err := decoder.Decode(&checkoutCreated); err != nil {
@@ -401,7 +448,7 @@ func IntShopifyHandler(c *gin.Context) {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "checkout create failed."})
 			return
 		}
-		request := &SDKTrackPayload{
+		request := &SDK.TrackPayload{
 			Name:            eventName,
 			IsNewUser:       isNewUser,
 			UserId:          userId,
@@ -410,7 +457,7 @@ func IntShopifyHandler(c *gin.Context) {
 			UserProperties:  userProperties,
 			Timestamp:       timestamp,
 		}
-		status, response := SDKTrack(projectId, request, "", "", false)
+		status, response := SDK.Track(projectId, request, false)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 			logCtx.WithFields(log.Fields{"track_payload": request,
 				"error_code": status, "error": response.Error}).Error(
@@ -436,7 +483,7 @@ func IntShopifyHandler(c *gin.Context) {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "checkout update failed."})
 			return
 		}
-		request := &SDKTrackPayload{
+		request := &SDK.TrackPayload{
 			Name:            eventName,
 			IsNewUser:       isNewUser,
 			UserId:          userId,
@@ -445,7 +492,7 @@ func IntShopifyHandler(c *gin.Context) {
 			UserProperties:  userProperties,
 			Timestamp:       timestamp,
 		}
-		status, response := SDKTrack(projectId, request, "", "", false)
+		status, response := SDK.Track(projectId, request, false)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 			logCtx.WithFields(log.Fields{"track_payload": request,
 				"error_code": status, "error": response.Error}).Error(
@@ -470,7 +517,7 @@ func IntShopifyHandler(c *gin.Context) {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "order create failed."})
 			return
 		}
-		request := &SDKTrackPayload{
+		request := &SDK.TrackPayload{
 			Name:            eventName,
 			IsNewUser:       isNewUser,
 			UserId:          userId,
@@ -479,7 +526,7 @@ func IntShopifyHandler(c *gin.Context) {
 			UserProperties:  userProperties,
 			Timestamp:       timestamp,
 		}
-		status, response := SDKTrack(projectId, request, "", "", false)
+		status, response := SDK.Track(projectId, request, false)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 			logCtx.WithFields(log.Fields{"track_payload": request,
 				"error_code": status, "error": response.Error}).Error(
@@ -504,7 +551,7 @@ func IntShopifyHandler(c *gin.Context) {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "order update failed."})
 			return
 		}
-		request := &SDKTrackPayload{
+		request := &SDK.TrackPayload{
 			Name:            eventName,
 			IsNewUser:       isNewUser,
 			UserId:          userId,
@@ -513,7 +560,7 @@ func IntShopifyHandler(c *gin.Context) {
 			UserProperties:  userProperties,
 			Timestamp:       timestamp,
 		}
-		status, response := SDKTrack(projectId, request, "", "", false)
+		status, response := SDK.Track(projectId, request, false)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 			logCtx.WithFields(log.Fields{"track_payload": request,
 				"error_code": status, "error": response.Error}).Error(
@@ -539,7 +586,7 @@ func IntShopifyHandler(c *gin.Context) {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "order update failed."})
 			return
 		}
-		request := &SDKTrackPayload{
+		request := &SDK.TrackPayload{
 			Name:            eventName,
 			IsNewUser:       isNewUser,
 			UserId:          userId,
@@ -548,7 +595,7 @@ func IntShopifyHandler(c *gin.Context) {
 			UserProperties:  userProperties,
 			Timestamp:       timestamp,
 		}
-		status, response := SDKTrack(projectId, request, "", "", false)
+		status, response := SDK.Track(projectId, request, false)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 			logCtx.WithFields(log.Fields{"track_payload": request,
 				"error_code": status, "error": response.Error}).Error(
@@ -574,7 +621,7 @@ func IntShopifyHandler(c *gin.Context) {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "order cancelled failed."})
 			return
 		}
-		request := &SDKTrackPayload{
+		request := &SDK.TrackPayload{
 			Name:            eventName,
 			IsNewUser:       isNewUser,
 			UserId:          userId,
@@ -583,7 +630,7 @@ func IntShopifyHandler(c *gin.Context) {
 			UserProperties:  userProperties,
 			Timestamp:       timestamp,
 		}
-		status, response := SDKTrack(projectId, request, "", "", false)
+		status, response := SDK.Track(projectId, request, false)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 			logCtx.WithFields(log.Fields{"track_payload": request,
 				"error_code": status, "error": response.Error}).Error(
@@ -593,4 +640,51 @@ func IntShopifyHandler(c *gin.Context) {
 		logCtx.WithFields(log.Fields{"shopify order cancelled": orderCancelled}).Debug("Shopify webhook request")
 		c.JSON(http.StatusOK, response)
 	}
+}
+
+func IntShopifySDKHandler(c *gin.Context) {
+	r := c.Request
+
+	logCtx := log.WithFields(log.Fields{
+		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
+	})
+
+	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
+		c.AbortWithStatusJSON(
+			http.StatusUnauthorized,
+			gin.H{"error": "Shopify webhook failed. Invalid project."})
+		return
+	}
+
+	if !M.IsPSettingsIntShopifyEnabled(projectId) {
+		logCtx.WithField("project_id", projectId).Error("Shopify sdk failure. Integration not enabled.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Request failed. Invalid token or project."})
+		return
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	var cartTokenPayload IntShopify.CartTokenPayload
+	if err := decoder.Decode(&cartTokenPayload); err != nil {
+		logCtx.WithFields(log.Fields{log.ErrorKey: err}).Error(
+			"Shopify Cart Token Payload decode failed")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid json payload."})
+		return
+	}
+
+	log.WithFields(log.Fields{"cart payload": cartTokenPayload}).Info("Received Cart Token")
+	if cartTokenPayload.CartToken == "" || cartTokenPayload.UserId == "" {
+		logCtx.WithFields(log.Fields{
+			"cart token": cartTokenPayload.CartToken, "user id": cartTokenPayload.UserId}).Error(
+			"Shopify Cart Token Payload decode failed")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "empty token or userId."})
+	}
+	errCode := M.SetCacheShopifyCartTokenToUserId(
+		projectId, cartTokenPayload.CartToken, cartTokenPayload.UserId)
+	if errCode != http.StatusOK && errCode != http.StatusCreated {
+		c.AbortWithStatus(errCode)
+		return
+	}
+	c.JSON(http.StatusOK, nil)
 }

@@ -10,15 +10,19 @@ import (
 )
 
 type Key struct {
-	ProjectID uint64
-	Prefix    string
-	Suffix    string
+	// any one must be set.
+	ProjectID  uint64
+	ProjectUID string
+	// Prefix - Helps better grouping and searching
+	// i.e table_name + index_name
+	Prefix string
+	// Suffix - optional
+	Suffix string
 }
 
 var (
-	ErrorInvalidProject = errors.New("invalid key project_id")
+	ErrorInvalidProject = errors.New("invalid key project")
 	ErrorInvalidPrefix  = errors.New("invalid key prefix")
-	ErrorInvalidSuffix  = errors.New("invalid key suffix")
 	ErrorInvalidKey     = errors.New("invalid redis cache key")
 )
 
@@ -31,15 +35,24 @@ func NewKey(projectId uint64, prefix string, suffix string) (*Key, error) {
 		return nil, ErrorInvalidPrefix
 	}
 
-	if suffix == "" {
-		return nil, ErrorInvalidSuffix
-	}
-
 	return &Key{ProjectID: projectId, Prefix: prefix, Suffix: suffix}, nil
 }
 
+// NewKeyWithProjectUID - Uses projectUID as project scope on the key.
+func NewKeyWithProjectUID(projectUID, prefix, suffix string) (*Key, error) {
+	if projectUID == "" {
+		return nil, ErrorInvalidProject
+	}
+
+	if prefix == "" {
+		return nil, ErrorInvalidPrefix
+	}
+
+	return &Key{ProjectUID: projectUID, Prefix: prefix, Suffix: suffix}, nil
+}
+
 func (key *Key) Key() (string, error) {
-	if key.ProjectID == 0 {
+	if key.ProjectID == 0 && key.ProjectUID == "" {
 		return "", ErrorInvalidProject
 	}
 
@@ -47,12 +60,15 @@ func (key *Key) Key() (string, error) {
 		return "", ErrorInvalidPrefix
 	}
 
-	if key.Suffix == "" {
-		return "", ErrorInvalidSuffix
+	var projectScope string
+	if key.ProjectID != 0 {
+		projectScope = fmt.Sprintf("pid:%d", key.ProjectID)
+	} else {
+		projectScope = fmt.Sprintf("puid:%s", key.ProjectUID)
 	}
 
-	// key: i.e, pid:1:uid:1:user_last_event
-	return fmt.Sprintf("%s:pid:%d:%s", key.Prefix, key.ProjectID, key.Suffix), nil
+	// key: i.e, event_names:user_last_event:pid:1:uid:1
+	return fmt.Sprintf("%s:%s:%s", key.Prefix, projectScope, key.Suffix), nil
 }
 
 func Set(key *Key, value string, expiryInSecs float64) error {
@@ -69,7 +85,7 @@ func Set(key *Key, value string, expiryInSecs float64) error {
 		return err
 	}
 
-	redisConn := C.GetRedisConn()
+	redisConn := C.GetCacheRedisConnection()
 	defer redisConn.Close()
 
 	if expiryInSecs == 0 {
@@ -91,8 +107,25 @@ func Get(key *Key) (string, error) {
 		return "", err
 	}
 
-	redisConn := C.GetRedisConn()
+	redisConn := C.GetCacheRedisConnection()
 	defer redisConn.Close()
 
 	return redis.String(redisConn.Do("GET", cKey))
+}
+
+func Del(key *Key) error {
+	if key == nil {
+		return ErrorInvalidKey
+	}
+
+	cKey, err := key.Key()
+	if err != nil {
+		return err
+	}
+
+	redisConn := C.GetCacheRedisConnection()
+	defer redisConn.Close()
+
+	_, err = redisConn.Do("DEL", cKey)
+	return err
 }

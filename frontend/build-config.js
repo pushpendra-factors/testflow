@@ -1,6 +1,7 @@
 const CONFIG = {
   development: {
     backend_host: 'http://factors-dev.com:8080',
+    sdk_service_host: 'http://localhost:8085',
     adwords_service_host: 'http://factors-dev.com:8091',
     sdk_asset_url: 'http://localhost:8090/dist/factors.prod.js',
     android_sdk_asset_url: 'https://storage.googleapis.com/factors-staging-v2/sdk/android/sdk-staging-v0.1.aar',

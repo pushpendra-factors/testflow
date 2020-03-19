@@ -75,7 +75,7 @@ func TestIntSegmentHandler(t *testing.T) {
 	// Invalid type.
 	w = ServePostRequestWithHeaders(r, uri, []byte(`{"anonymousId": "ranon_1", "type": "random_type"}`),
 		map[string]string{"Authorization": project.PrivateToken})
-	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
 	jsonResponse1, _ := ioutil.ReadAll(w.Body)
 	var jsonResponseMap1 map[string]interface{}
 	json.Unmarshal(jsonResponse1, &jsonResponseMap1)
@@ -236,7 +236,7 @@ func TestIntSegmentHandler(t *testing.T) {
 
 	w = ServePostRequestWithHeaders(r, uri, []byte(samplePayloadWithInvalidTimestamp),
 		map[string]string{"Authorization": project.PrivateToken})
-	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 
 func TestIntSegmentHandlerWithPageEvent(t *testing.T) {
@@ -504,6 +504,260 @@ func TestIntSegmentHandlerWithPageEvent(t *testing.T) {
 	})
 }
 
+func TestIntSegmentHandlePageEventWithFilterExpression(t *testing.T) {
+	// Initialize routes and dependent data.
+	r := gin.Default()
+	H.InitIntRoutes(r)
+	uri := "/integrations/segment"
+
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+	enable := true
+	// disable := false
+	_, errCode := M.UpdateProjectSettings(project.ID,
+		&M.ProjectSetting{IntSegment: &enable, AutoTrack: &enable})
+	assert.Equal(t, http.StatusAccepted, errCode)
+
+	// Filter.
+	filterEventName, errCode := M.CreateOrGetFilterEventName(&M.EventName{ProjectId: project.ID,
+		Name: "MyAccountDiscover", FilterExpr: "www.livspace.com/my-account/discover/:id"})
+	assert.NotNil(t, filterEventName)
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	// Page.
+	samplePagePayload := `
+	{
+		"_metadata": {
+		  "bundled": [
+			"Segment.io"
+		  ],
+		  "unbundled": [
+			
+		  ]
+		},
+		"anonymousId": "80444c7e-1580-4d3c-a77a-2f3427ed7d97",
+		"channel": "client",
+		"context": {
+			"active": true,
+			"app": {
+			  "name": "InitechGlobal",
+			  "version": "545",
+			  "build": "3.0.1.545",
+			  "namespace": "com.production.segment"
+			},
+			"campaign": {
+			  "name": "TPS Innovation Newsletter",
+			  "source": "Newsletter",
+			  "medium": "email",
+			  "term": "tps reports",
+			  "content": "image link"
+			},
+			"device": {
+			  "id": "B5372DB0-C21E-11E4-8DFC-AA07A5B093DB",
+			  "advertisingId": "7A3CBEA0-BDF5-11E4-8DFC-AA07A5B093DB",
+			  "adTrackingEnabled": true,
+			  "manufacturer": "Apple",
+			  "model": "iPhone7,2",
+			  "name": "maguro",
+			  "type": "ios",
+			  "token": "ff15bc0c20c4aa6cd50854ff165fd265c838e5405bfeb9571066395b8c9da449"
+			},
+			"ip": "8.8.8.8",
+			"library": {
+			  "name": "analytics.js",
+			  "version": "2.11.1"
+			},
+			"locale": "nl-NL",
+			"location": {
+			  "city": "San Francisco",
+			  "country": "United States",
+			  "latitude": 40.2964197,
+			  "longitude": -76.9411617,
+			  "speed": 0
+			},
+			"network": {
+			  "bluetooth": false,
+			  "carrier": "T-Mobile NL",
+			  "cellular": true,
+			  "wifi": false
+			},
+			"os": {
+			  "name": "iPhone OS",
+			  "version": "8.1.3"
+			},
+			"page": {
+			  "path": "/academy/",
+			  "referrer": "https://google.com",
+			  "search": "",
+			  "title": "Analytics Academy",
+			  "url": "https://www.livspace.com/my-account/discover/1"
+			},
+			"referrer": {
+			  "id": "ABCD582CDEFFFF01919",
+			  "type": "dataxu"
+			},
+			"screen": {
+			  "width": 320,
+			  "height": 568,
+			  "density": 2
+			},
+			"groupId": "12345",
+			"timezone": "Europe/Amsterdam",
+			"userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 9_1 like Mac OS X) AppleWebKit/601.1.46 (KHTML, like Gecko) Version/9.0 Mobile/13B143 Safari/601.1"
+		},
+		"integrations": {},
+		"messageId": "ajs-19c084e2f80e70cf62bb62509e79b37e",
+		"originalTimestamp": "2019-01-08T16:22:06.053Z",
+		"projectId": "Zzft38QJhB",
+		"properties": {
+		  "path": "/my-account/discover/1",
+		  "referrer": "",
+		  "search": "?a=10",
+		  "title": "Segment Test",
+		  "url": "https://www.livspace.com/my-account/discover/1"
+		},
+		"receivedAt": "2019-01-08T16:21:54.106Z",
+		"sentAt": "2019-01-08T16:22:06.058Z",
+		"timestamp": "2019-01-08T16:21:54.101Z",
+		"type": "page",
+		"userId": "",
+		"version": "1.1"
+	  }
+	`
+	w := ServePostRequestWithHeaders(r, uri, []byte(samplePagePayload),
+		map[string]string{"Authorization": project.PrivateToken})
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse2, _ := ioutil.ReadAll(w.Body)
+	var jsonResponseMap2 map[string]interface{}
+	json.Unmarshal(jsonResponse2, &jsonResponseMap2)
+	assert.Nil(t, jsonResponseMap2["error"])
+	assert.NotNil(t, jsonResponseMap2["event_id"])
+	event, errCode := M.GetEventById(project.ID, jsonResponseMap2["event_id"].(string))
+	assert.Equal(t, http.StatusFound, errCode)
+	// event should use filter expr event name.
+	assert.Equal(t, filterEventName.ID, event.EventNameId)
+
+	// Filter1.
+	filterEventName1, errCode := M.CreateOrGetFilterEventName(&M.EventName{ProjectId: project.ID,
+		Name: "MyAccountDiscover", FilterExpr: "www.livspace.com/:loc_id/magazine/*"})
+	assert.NotNil(t, filterEventName1)
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	// Page.
+	samplePagePayload1 := `
+	{
+		"_metadata": {
+		  "bundled": [
+			"Segment.io"
+		  ],
+		  "unbundled": [
+			
+		  ]
+		},
+		"anonymousId": "80444c7e-1580-4d3c-a77a-2f3427ed7d97",
+		"channel": "client",
+		"context": {
+			"active": true,
+			"app": {
+			  "name": "InitechGlobal",
+			  "version": "545",
+			  "build": "3.0.1.545",
+			  "namespace": "com.production.segment"
+			},
+			"campaign": {
+			  "name": "TPS Innovation Newsletter",
+			  "source": "Newsletter",
+			  "medium": "email",
+			  "term": "tps reports",
+			  "content": "image link"
+			},
+			"device": {
+			  "id": "B5372DB0-C21E-11E4-8DFC-AA07A5B093DB",
+			  "advertisingId": "7A3CBEA0-BDF5-11E4-8DFC-AA07A5B093DB",
+			  "adTrackingEnabled": true,
+			  "manufacturer": "Apple",
+			  "model": "iPhone7,2",
+			  "name": "maguro",
+			  "type": "ios",
+			  "token": "ff15bc0c20c4aa6cd50854ff165fd265c838e5405bfeb9571066395b8c9da449"
+			},
+			"ip": "8.8.8.8",
+			"library": {
+			  "name": "analytics.js",
+			  "version": "2.11.1"
+			},
+			"locale": "nl-NL",
+			"location": {
+			  "city": "San Francisco",
+			  "country": "United States",
+			  "latitude": 40.2964197,
+			  "longitude": -76.9411617,
+			  "speed": 0
+			},
+			"network": {
+			  "bluetooth": false,
+			  "carrier": "T-Mobile NL",
+			  "cellular": true,
+			  "wifi": false
+			},
+			"os": {
+			  "name": "iPhone OS",
+			  "version": "8.1.3"
+			},
+			"page": {
+			  "path": "/academy/",
+			  "referrer": "https://google.com",
+			  "search": "",
+			  "title": "Analytics Academy",
+			  "url": "https://www.livspace.com/in/magazine/best-livspace-blog-posts-2017"
+			},
+			"referrer": {
+			  "id": "ABCD582CDEFFFF01919",
+			  "type": "dataxu"
+			},
+			"screen": {
+			  "width": 320,
+			  "height": 568,
+			  "density": 2
+			},
+			"groupId": "12345",
+			"timezone": "Europe/Amsterdam",
+			"userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 9_1 like Mac OS X) AppleWebKit/601.1.46 (KHTML, like Gecko) Version/9.0 Mobile/13B143 Safari/601.1"
+		},
+		"integrations": {},
+		"messageId": "ajs-19c084e2f80e70cf62bb62509e79b37el",
+		"originalTimestamp": "2019-01-08T16:22:06.053Z",
+		"projectId": "Zzft38QJhB",
+		"properties": {
+		  "path": "/in/magazine/best-livspace-blog-posts-2017",
+		  "referrer": "",
+		  "search": "?a=10",
+		  "title": "Segment Test",
+		  "url": "https://www.livspace.com/in/magazine/best-livspace-blog-posts-2017"
+		},
+		"receivedAt": "2019-01-08T16:21:54.106Z",
+		"sentAt": "2019-01-08T16:22:06.058Z",
+		"timestamp": "2019-01-08T16:21:54.101Z",
+		"type": "page",
+		"userId": "",
+		"version": "1.1"
+	  }
+	`
+	w = ServePostRequestWithHeaders(r, uri, []byte(samplePagePayload1),
+		map[string]string{"Authorization": project.PrivateToken})
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse2, _ = ioutil.ReadAll(w.Body)
+	var jsonResponseMap map[string]interface{}
+	json.Unmarshal(jsonResponse2, &jsonResponseMap)
+	assert.Nil(t, jsonResponseMap["error"])
+	assert.NotNil(t, jsonResponseMap["event_id"])
+	event1, errCode := M.GetEventById(project.ID, jsonResponseMap["event_id"].(string))
+	assert.Equal(t, http.StatusFound, errCode)
+	// event should use filter expr event name.
+	assert.NotEqual(t, filterEventName1.ID, event1.EventNameId)
+}
+
 func TestIntSegmentHandlerWithSession(t *testing.T) {
 	r := gin.Default()
 	H.InitIntRoutes(r)
@@ -630,7 +884,8 @@ func TestIntSegmentHandlerWithSession(t *testing.T) {
 		sessionEventName, errCode := M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, sessionEventName)
-		segmentUser, errCode := M.GetSegmentUser(project.ID, "80444c7e-1580-4d3c-a77a-2f3427ed7d990", "xxx123")
+		segmentUser, errCode := M.GetSegmentUser(project.ID, "80444c7e-1580-4d3c-a77a-2f3427ed7d990",
+			"xxx123", time.Now().Unix())
 		assert.NotNil(t, segmentUser)
 		assert.Equal(t, http.StatusOK, errCode)
 		userSessionEvents, errCode := M.GetUserEventsByEventNameId(project.ID, segmentUser.ID, sessionEventName.ID)
@@ -796,8 +1051,7 @@ func TestIntSegmentHandlerWithTrackEvent(t *testing.T) {
 	jsonResponse4, _ := ioutil.ReadAll(w.Body)
 	var jsonResponseMap4 map[string]interface{}
 	json.Unmarshal(jsonResponse4, &jsonResponseMap4)
-
-	assert.Equal(t, "Tracking failed. Event creation failed. Duplicate CustomerEventID", jsonResponseMap4["error"])
+	assert.NotEmpty(t, jsonResponseMap4["error"])
 
 	sampleTrackPayloadWithoutProperties := `
 	{

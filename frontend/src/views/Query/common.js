@@ -22,6 +22,7 @@ export const PROPERTY_LOGICAL_OP_OPTS = {
 }; 
 
 export const QUERY_CLASS_CHANNEL = "channel";
+export const QUERY_CLASS_FUNNEL = "funnel";
 
 export const PROPERTY_VALUE_TYPE_DATE_TIME = 'datetime';
 
@@ -157,4 +158,56 @@ export const getQueryPeriod = function(selectedRange, timezone)  {
 export const overwriteTimezone=(date, timezone)=>{
   let dateStr=moment(date).format("YYYY-MM-DD HH:mm:ss")
   return mt.tz(dateStr, timezone)
+}
+
+export const convertFunnelResultForTable = function(result) {
+  let headers = result.headers;
+  let rows = result.rows;
+  let query = result.meta.query;
+
+  // convert headers to readable.
+  for(let i=0; i<headers.length; i++) {
+    let newHeader = '';
+
+    if (headers[i].indexOf('step_') == 0) {
+      let headerSplit = headers[i].split('_');
+      if (headerSplit.length < 2) continue;
+      let index = parseInt(headerSplit[1]);
+
+      newHeader = query.ewp[index].na;
+      if (index > 0) {
+        let prevIndex = index-1;
+        if (query.ewp[prevIndex])
+          newHeader = query.ewp[prevIndex].na + " to " + query.ewp[index].na;
+        else
+          console.error("No event name available for index ", prevIndex);
+      }
+    }
+
+    if (headers[i].indexOf('conversion_') == 0) {
+      if (headers[i] == 'conversion_overall') {
+        newHeader = 'Total Conversion Rate'
+      } else {
+        let conversionSplit = headers[i].split('_');
+        if (conversionSplit.length < 5) continue;
+
+        let stepXIndex = parseInt(conversionSplit[2]),
+        stepYIndex = parseInt(conversionSplit[4]);
+        newHeader = query.ewp[stepXIndex].na + " to " + query.ewp[stepYIndex].na + " conversion rate";
+      }
+    }
+
+    if (newHeader != '') headers[i] = newHeader;
+  }
+
+  // replace $no_group with $overall.
+  for (let i=0; i<rows.length; i++) {
+    for (let j=0; j<rows[i].length; j++) {
+      if (rows[i][j] == '$no_group') {
+        rows[i][j] = '$overall';
+      }
+    }
+  }
+
+  return result
 }

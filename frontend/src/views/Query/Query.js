@@ -25,7 +25,8 @@ import ChannelQuery from '../ChannelQuery/ChannelQuery';
 import { PRESENTATION_BAR, PRESENTATION_LINE, PRESENTATION_TABLE, 
   PRESENTATION_CARD, PRESENTATION_FUNNEL, PROPERTY_TYPE_EVENT,
   getDateRangeFromStoredDateRange, PROPERTY_LOGICAL_OP_OPTS,
-  DEFAULT_DATE_RANGE, DEFINED_DATE_RANGES, getGroupByTimestampType, getQueryPeriod
+  DEFAULT_DATE_RANGE, DEFINED_DATE_RANGES, getGroupByTimestampType, 
+  getQueryPeriod, convertFunnelResultForTable
 } from './common';
 import ClosableDateRangePicker from '../../common/ClosableDatePicker';
 import { fetchProjectEvents, runQuery } from '../../actions/projectsActions';
@@ -44,6 +45,7 @@ import { PROPERTY_TYPE_OPTS, USER_PREF_PROPERTY_TYPE_OPTS,
 import insightsSVG from '../../assets/img/analytics/insights.svg';
 import funnelSVG from '../../assets/img/analytics/funnel.svg';
 import channelSVG from '../../assets/img/analytics/channel.svg';
+import { del } from '../../actions/request';
 
 const COND_ALL_GIVEN_EVENT = 'all_given_event';
 const COND_ANY_GIVEN_EVENT = 'any_given_event'; 
@@ -82,7 +84,8 @@ const AGGR_OPTS = [
 const ERROR_NO_EVENT = 'No events given. Please add atleast one event by clicking +Event button.';
 const ERROR_FUNNEL_EXCEEDED_EVENTS = 'Funnel queries supports upto 4 events. Please ensure that you have the same.';
 
-const DEFAULT_PRESENTATION = PRESENTATION_TABLE;
+const DEFAULT_INSIGHTS_QUERY_PRESENTATION = PRESENTATION_TABLE;
+const DEFAULT_FUNNEL_QUERY_PRESENTATION = PRESENTATION_FUNNEL;
 
 const HEADER_COUNT = "count";
 const HEADER_DATE = "date";
@@ -130,7 +133,7 @@ class Query extends Component {
       result: null,
       resultError: null,
       isResultLoading: false,
-      selectedPresentation: DEFAULT_PRESENTATION,
+      selectedPresentation: DEFAULT_INSIGHTS_QUERY_PRESENTATION,
 
       showPresentation: false,
       showDatePicker: false,
@@ -149,13 +152,18 @@ class Query extends Component {
   getQueryTypeOptsByClass = () => {
     return this.state.class.value == QUERY_CLASS_FUNNEL ? FUNNEL_QUERY_TYPE_OPTS : INSIGHTS_QUERY_TYPE_OPTS;
   }
+
+  getDefaultPresentationByClass() {
+    return this.state.class.value == QUERY_CLASS_FUNNEL ? 
+      DEFAULT_FUNNEL_QUERY_PRESENTATION : DEFAULT_INSIGHTS_QUERY_PRESENTATION;
+  }
   
   resetQueryInterfaceOnClassChange() {
     if (this.isViewQuery()) {
       // reset presentation alone.
       this.setState({
         result: null,
-        selectedPresentation: DEFAULT_PRESENTATION,
+        selectedPresentation: this.getDefaultPresentationByClass(),
         showPresentation: false
       });
 
@@ -171,7 +179,7 @@ class Query extends Component {
       resultDateRange: [DEFAULT_DATE_RANGE],
       // reset presentation.
       result: null,
-      selectedPresentation: DEFAULT_PRESENTATION,
+      selectedPresentation: this.getDefaultPresentationByClass(),
       showPresentation: false,
     });
 
@@ -704,9 +712,6 @@ class Query extends Component {
     }
     let presentation = this.state.selectedPresentation;
 
-    if (this.state.class.value == QUERY_CLASS_FUNNEL)
-      presentation = PRESENTATION_FUNNEL;
-
     if (presentation === PRESENTATION_TABLE 
       && isSingleCountResult(this.state.result)) {
       presentation = PRESENTATION_CARD;
@@ -750,8 +755,16 @@ class Query extends Component {
   }
 
   disableAddToDashboard() {
-    return (this.state.class.value == QUERY_CLASS_FUNNEL && this.state.groupBys.length > 0) ||  // tablular funnel chart.
-      (this.state.selectedPresentation === PRESENTATION_BAR && this.state.groupBys.length > 1); // tablular bar chart.
+    return (
+      // funnel presentation for class funnel with breakdown.
+      this.state.class.value == QUERY_CLASS_FUNNEL && 
+      this.state.selectedPresentation == PRESENTATION_FUNNEL && 
+      this.state.groupBys.length > 0
+    ) || (
+      // tablular bar chart.
+      this.state.selectedPresentation === PRESENTATION_BAR && 
+      this.state.groupBys.length > 1
+    ); 
   }
 
   scrollToBottom = () => {
@@ -1106,9 +1119,15 @@ class Query extends Component {
     );
   }
 
-  getResultAsFunnel() {
+  getFunnelResultAsFunnel() {
     return <div style={{height: '450px'}} className='animated fadeIn'> 
       <FunnelChart queryResult={this.state.result} /> 
+    </div>;
+  }
+
+  getFunnelResultAsTable() {
+    return <div style={{height: '450px'}} className='animated fadeIn'> 
+      <TableChart queryResult={ convertFunnelResultForTable(this.state.result) } /> 
     </div>;
   }
 
@@ -1116,14 +1135,32 @@ class Query extends Component {
     if (this.state.isResultLoading) return <Loading paddingTop='14%' />;
     if (this.state.result == null) return null;
 
-    return this.getResultAsFunnel();
+    let selected = this.state.selectedPresentation;
+    
+    if (selected == PRESENTATION_TABLE) {
+      return this.getFunnelResultAsTable();
+    }
+
+    return this.getFunnelResultAsFunnel();
+  }
+
+  renderFunnelPresentationOptions = () => {
+    return (
+      <ButtonGroup style={{ marginRight: '10px' }}>
+        <button className={this.getPresentationSelectorClass(PRESENTATION_TABLE)} style={{fontWeight: 500}} 
+          onClick={() => this.run(PRESENTATION_TABLE)}>Table</button>
+        <button className={this.getPresentationSelectorClass(PRESENTATION_FUNNEL)}  style={{fontWeight: 500}} 
+          onClick={() => this.run(PRESENTATION_FUNNEL)}>Funnel</button>
+      </ButtonGroup>
+    );
   }
 
   renderFunnelQueryInterface = () => {
     return [
       this.renderFunnelQueryBuilder(),
       this.renderPresentationPane(
-        null, this.renderFunnelPresentation,
+        this.renderFunnelPresentationOptions, 
+        this.renderFunnelPresentation,
       )
     ];
   }

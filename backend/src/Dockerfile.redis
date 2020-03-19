@@ -2,5 +2,5 @@
 
 FROM redis:5.0.7-alpine
 WORKDIR /usr/local/var/db/redis
-COPY redis.conf redis.conf
+COPY persistent_redis.conf redis.conf
 CMD [ "redis-server", "/usr/local/var/db/redis/redis.conf" ]

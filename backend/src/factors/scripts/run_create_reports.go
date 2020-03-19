@@ -88,7 +88,8 @@ func main() {
 	}
 
 	config := &C.Configuration{
-		Env: *env,
+		AppName: "create_reports_job",
+		Env:     *env,
 		DBInfo: C.DBConf{
 			Host:     *dbHost,
 			Port:     *dbPort,

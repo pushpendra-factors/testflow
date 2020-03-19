@@ -112,7 +112,7 @@ class FunnelChart extends Component {
         if (ci == rowLength-1) style = { padding: '30px' }; // conversion col.
         else style = { paddingTop: '30px' }; // group cols.
 
-        let defaultStyle = { maxWidth: '40px', overflowWrap: 'break-word' };
+        let defaultStyle = { overflowWrap: 'break-word' };
         style = {...style, ...defaultStyle};
 
         tableCols.push(<td style={style}>{groupRows[ri][ci]}</td>);

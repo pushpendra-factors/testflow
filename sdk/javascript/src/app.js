@@ -348,4 +348,8 @@ App.prototype.isSameToken = function(token) {
     return this.client && this.client.token && this.client.token === token;
 }
 
+App.prototype.getUserId = function() {
+    return Cookie.getDecoded(constant.cookie.USER_ID);
+}
+
 module.exports = exports = App;

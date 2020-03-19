@@ -33,8 +33,9 @@ func main() {
 	flag.Parse()
 
 	config := &C.Configuration{
-		Env:  *env,
-		Port: *port,
+		AppName: "data_server",
+		Env:     *env,
+		Port:    *port,
 		DBInfo: C.DBConf{
 			Host:     *dbHost,
 			Port:     *dbPort,

@@ -1,14 +1,18 @@
 package model
 
 import (
-	C "factors/config"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/gomodule/redigo/redis"
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
+
+	cacheRedis "factors/cache/redis"
+	C "factors/config"
 )
 
 type ProjectSetting struct {
@@ -55,6 +59,148 @@ func GetProjectSetting(projectId uint64) (*ProjectSetting, int) {
 	return &projectSetting, http.StatusFound
 }
 
+func getProjectSettingByProjectToken(token string) (*ProjectSetting, int) {
+	logCtx := log.WithField("token", token)
+
+	var setting ProjectSetting
+
+	db := C.GetServices().Db
+	err := db.Table("projects").Select("project_settings.*").Limit(1).Where("projects.token = ?", token).Joins(
+		"LEFT JOIN project_settings ON projects.id=project_settings.project_id").Find(&setting).Error
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+
+		logCtx.WithError(err).Error("Failed to get project settings by token.")
+		return nil, http.StatusInternalServerError
+	}
+
+	return &setting, http.StatusFound
+}
+
+func getProjectSettingByTokenCacheKey(token string) (*cacheRedis.Key, error) {
+	// table_name:column_name
+	prefix := fmt.Sprintf("%s:%s", "project_settings", "token")
+	return cacheRedis.NewKeyWithProjectUID(token, prefix, "")
+}
+
+func getCacheProjectSettingByToken(token string) (*ProjectSetting, int) {
+	logCtx := log.WithField("token", token)
+
+	if token == "" {
+		return nil, http.StatusBadRequest
+	}
+
+	key, err := getProjectSettingByTokenCacheKey(token)
+	if err != nil {
+		logCtx.WithError(err).Error(
+			"Failed to get project settings by token cache key on GetCacheProjectSettingWithByToken")
+		return nil, http.StatusInternalServerError
+	}
+
+	settingsJson, err := cacheRedis.Get(key)
+	if err != nil {
+		if err == redis.ErrNil {
+			return nil, http.StatusNotFound
+		}
+
+		logCtx.WithError(err).Error(
+			"Failed to get key from cache on GetCacheProjectSettingWithByToken.")
+		return nil, http.StatusInternalServerError
+	}
+
+	var settings ProjectSetting
+	err = json.Unmarshal([]byte(settingsJson), &settings)
+	if err != nil {
+		log.WithError(err).Error(
+			"Failed to unmarshal cached project settings on GetCacheProjectSettingWithByToken")
+		return nil, http.StatusInternalServerError
+	}
+
+	return &settings, http.StatusFound
+}
+
+func setCacheProjectSettingByToken(token string, settings *ProjectSetting) int {
+	logCtx := log.WithField("token", token)
+
+	if token == "" || settings == nil {
+		return http.StatusBadRequest
+	}
+
+	settingsJson, err := json.Marshal(settings)
+	if err != nil {
+		logCtx.WithError(err).Error(
+			"Failed to marshal project settings on setCacheProjectSettingByToken.")
+		return http.StatusInternalServerError
+	}
+
+	key, err := getProjectSettingByTokenCacheKey(token)
+	if err != nil {
+		logCtx.WithError(err).Error(
+			"Failed to get project settings by token cache key on setCacheProjectSettingByToken")
+		return http.StatusInternalServerError
+	}
+
+	var expiryInSecs float64 = 60 * 60
+	err = cacheRedis.Set(key, string(settingsJson), expiryInSecs)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to set cache on setCacheProjectSettingByToken")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusCreated
+}
+
+func delCacheProjectSettingByToken(token string) int {
+	logCtx := log.WithField("token", token)
+
+	if token == "" {
+		return http.StatusBadRequest
+	}
+
+	key, err := getProjectSettingByTokenCacheKey(token)
+	if err != nil {
+		logCtx.WithError(err).Error(
+			"Failed to get project settings by token cache key on delCacheProjectSettingByToken")
+		return http.StatusInternalServerError
+	}
+
+	err = cacheRedis.Del(key)
+	if err != nil && err != redis.ErrNil {
+		logCtx.WithError(err).Error("Failed to del cache on delCacheProjectSettingByToken")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusAccepted
+}
+
+// GetProjectSettingByTokenForSDK - Get from cache or db, if not use default.
+func GetProjectSettingByTokenForSDK(token string) (*ProjectSetting, int) {
+	settings, errCode := getCacheProjectSettingByToken(token)
+	if errCode == http.StatusFound {
+		return settings, http.StatusFound
+	}
+
+	settings, errCode = getProjectSettingByProjectToken(token)
+	if errCode != http.StatusFound {
+		// Use default settings, if db failure.
+		// Do not cache default.
+		enabled := true
+		defaultProjectSettingsForSDK := &ProjectSetting{
+			AutoTrack:       &enabled,
+			AutoFormCapture: &enabled,
+			ExcludeBot:      &enabled,
+		}
+		return defaultProjectSettingsForSDK, http.StatusFound
+	}
+
+	// add to cache.
+	setCacheProjectSettingByToken(token, settings)
+
+	return settings, http.StatusFound
+}
+
 func createProjectSetting(ps *ProjectSetting) (*ProjectSetting, int) {
 	db := C.GetServices().Db
 
@@ -63,11 +209,22 @@ func createProjectSetting(ps *ProjectSetting) (*ProjectSetting, int) {
 	}
 
 	if err := db.Create(ps).Error; err != nil {
-		log.WithFields(log.Fields{"ProjectSetting": ps}).WithError(err).Error("Failed creating ProjectSetting.")
+		log.WithFields(log.Fields{"ProjectSetting": ps}).WithError(
+			err).Error("Failed creating ProjectSetting.")
 		return nil, http.StatusInternalServerError
 	}
 
 	return ps, http.StatusCreated
+}
+
+func delAllProjectSettingsCacheForProject(projectId uint64) int {
+	project, errCode := GetProject(projectId)
+	if errCode != http.StatusFound {
+		log.Error("Failed to get project on delAllProjectSettingsCacheKeys.")
+		return http.StatusInternalServerError
+	}
+
+	return delCacheProjectSettingByToken(project.Token)
 }
 
 func UpdateProjectSettings(projectId uint64, settings *ProjectSetting) (*ProjectSetting, int) {
@@ -92,9 +249,12 @@ func UpdateProjectSettings(projectId uint64, settings *ProjectSetting) (*Project
 			return nil, http.StatusNotFound
 		}
 
-		log.WithFields(log.Fields{"ProjectSetting": settings}).WithError(err).Error("Failed updating ProjectSettings.")
+		log.WithFields(log.Fields{"ProjectSetting": settings}).WithError(
+			err).Error("Failed updating ProjectSettings.")
 		return nil, http.StatusInternalServerError
 	}
+
+	delAllProjectSettingsCacheForProject(projectId)
 
 	return &updatedProjectSetting, http.StatusAccepted
 }
@@ -102,7 +262,8 @@ func UpdateProjectSettings(projectId uint64, settings *ProjectSetting) (*Project
 func IsPSettingsIntSegmentEnabled(projectId uint64) bool {
 	settings, errCode := GetProjectSetting(projectId)
 	if errCode != http.StatusFound {
-		log.WithFields(log.Fields{"project_id": projectId, "err_code": errCode}).Error("Failed fetching project settings.")
+		log.WithFields(log.Fields{"project_id": projectId,
+			"err_code": errCode}).Error("Failed fetching project settings.")
 		return false
 	}
 

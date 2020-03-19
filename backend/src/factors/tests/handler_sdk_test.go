@@ -98,7 +98,7 @@ func TestSDKTrackHandler(t *testing.T) {
 	w = ServePostRequestWithHeaders(r, uri,
 		[]byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "event_2", "c_event_id":"%s"}`, user.ID, CustEventId)),
 		map[string]string{"Authorization": project.Token})
-	assert.Equal(t, http.StatusFound, w.Code)
+	assert.Equal(t, http.StatusNotAcceptable, w.Code)
 
 	// Test auto tracked event.
 	rEventName := U.RandomLowerAphaNumString(10)
@@ -567,6 +567,248 @@ func TestSDKTrackHandler(t *testing.T) {
 	})
 }
 
+func TestSDKTrackWithExternalEventIdUserIdAndTimestamp(t *testing.T) {
+	project, user, err := SetupProjectUserReturnDAO()
+	assert.Nil(t, err)
+
+	t.Run("WithUserIdAndCreateUserAsTrue", func(t *testing.T) {
+		eventId := U.GetUUID()
+		userId := U.GetUUID()
+		timestamp := U.UnixTimeBeforeDuration(1 * time.Hour)
+		randomeEventName := U.RandomLowerAphaNumString(10)
+		trackPayload := H.SDKTrackPayload{
+			EventId:    eventId,
+			UserId:     userId,
+			CreateUser: true,
+			Name:       randomeEventName,
+			Timestamp:  timestamp,
+		}
+		status, response := H.SDKTrack(project.ID, &trackPayload, false)
+		assert.Equal(t, http.StatusOK, status)
+		// Event should be created with the given event_id.
+		assert.Equal(t, eventId, response.EventId)
+		// User should be created with the given user id, as create_user is set.
+		assert.Equal(t, userId, response.UserId)
+		event, _ := M.GetEventById(project.ID, response.EventId)
+		assert.NotNil(t, event)
+		// Event timestamp should be externaly given timestamp.
+		assert.Equal(t, timestamp, event.Timestamp)
+		user, _ := M.GetUser(project.ID, response.UserId)
+		assert.NotNil(t, user)
+		// Event should be associated with created user.
+		assert.Equal(t, user.ID, event.UserId)
+		// User join timestamp should be event timestamp, as create_user is set.
+		assert.Equal(t, timestamp, user.JoinTimestamp)
+	})
+
+	t.Run("WithUserIdAndCreateUserAsFalse", func(t *testing.T) {
+		eventId := U.GetUUID()
+		timestamp := U.UnixTimeBeforeDuration(1 * time.Hour)
+		randomeEventName := U.RandomLowerAphaNumString(10)
+		trackPayload := H.SDKTrackPayload{
+			EventId:    eventId,
+			UserId:     user.ID,
+			CreateUser: false,
+			Name:       randomeEventName,
+			Timestamp:  timestamp,
+		}
+		status, response := H.SDKTrack(project.ID, &trackPayload, false)
+		assert.Equal(t, http.StatusOK, status)
+		// Event should be created with the given event_id.
+		assert.Equal(t, eventId, response.EventId)
+		// User should not be created with the given user id, as create_user is false.
+		assert.Empty(t, response.UserId)
+		event, _ := M.GetEventById(project.ID, response.EventId)
+		assert.NotNil(t, event)
+		// Event should be associated with the given existing user.
+		assert.Equal(t, user.ID, event.UserId)
+	})
+
+}
+
+func TestSDKWithQueue(t *testing.T) {
+	project, user, err := SetupProjectUserReturnDAO()
+	assert.Nil(t, err)
+
+	t.Run("TrackWithoutUserId", func(t *testing.T) {
+		randomeEventName := U.RandomLowerAphaNumString(10)
+		payload := H.SDKTrackPayload{
+			Name: randomeEventName,
+		}
+		status, response := H.SDKTrackWithQueue(project.Token,
+			&payload, []string{project.Token})
+		assert.Equal(t, http.StatusOK, status)
+		// Should respond event id.
+		assert.NotEmpty(t, response.EventId)
+		// Should respond user id as user id is not given on request.
+		assert.NotEmpty(t, response.UserId)
+	})
+
+	t.Run("TrackWithUserId", func(t *testing.T) {
+		randomeEventName := U.RandomLowerAphaNumString(10)
+		payload := H.SDKTrackPayload{
+			Name:   randomeEventName,
+			UserId: user.ID,
+		}
+		status, response := H.SDKTrackWithQueue(project.Token,
+			&payload, []string{project.Token})
+		assert.Equal(t, http.StatusOK, status)
+		// Should respond event id.
+		assert.NotEmpty(t, response.EventId)
+		// Should respond user_id as it is given.
+		assert.Empty(t, response.UserId)
+	})
+
+	t.Run("IdentifyWithoutUserId", func(t *testing.T) {
+		randomeUserId := U.RandomLowerAphaNumString(10)
+		payload := H.SDKIdentifyPayload{
+			CustomerUserId: randomeUserId,
+		}
+		status, response := H.SDKIdentifyWithQueue(project.Token,
+			&payload, []string{project.Token})
+		assert.Equal(t, http.StatusOK, status)
+		// Should respond user id as user id is not given on request.
+		assert.NotEmpty(t, response.UserId)
+	})
+
+	t.Run("IdentifyWithUserId", func(t *testing.T) {
+		randomeUserId := U.RandomLowerAphaNumString(10)
+		payload := H.SDKIdentifyPayload{
+			UserId:         U.GetUUID(),
+			CustomerUserId: randomeUserId,
+		}
+		status, response := H.SDKIdentifyWithQueue(project.Token,
+			&payload, []string{project.Token})
+		assert.Equal(t, http.StatusOK, status)
+		// Should not respond user id as user id given on request.
+		assert.Empty(t, response.UserId)
+	})
+
+	t.Run("AddUserPropertiesWithoutUserId", func(t *testing.T) {
+		payload := H.SDKAddUserPropertiesPayload{
+			Properties: U.PropertiesMap{},
+		}
+		status, response := H.SDKAddUserPropertiesWithQueue(project.Token,
+			&payload, []string{project.Token})
+		assert.Equal(t, http.StatusOK, status)
+		// Should respond user id as user id is not given on request.
+		assert.NotEmpty(t, response.UserId)
+	})
+
+	t.Run("AddUserPropertiesWithUserId", func(t *testing.T) {
+		payload := H.SDKAddUserPropertiesPayload{
+			UserId:     U.GetUUID(),
+			Properties: U.PropertiesMap{},
+		}
+		status, response := H.SDKAddUserPropertiesWithQueue(project.Token,
+			&payload, []string{project.Token})
+		assert.Equal(t, http.StatusOK, status)
+		// Should not respond user id as user id given on request.
+		assert.Empty(t, response.UserId)
+	})
+
+	// Update event
+	t.Run("UpdateEventProperties", func(t *testing.T) {
+		payload := H.SDKUpdateEventPropertiesPayload{
+			Properties: U.PropertiesMap{},
+		}
+		status, _ := H.SDKUpdateEventPropertiesWithQueue(
+			project.Token, &payload, []string{project.Token})
+		assert.Equal(t, http.StatusOK, status)
+	})
+}
+
+func TestSDKIdentifyWithExternalUserAndTimestamp(t *testing.T) {
+	project, user, err := SetupProjectUserReturnDAO()
+	assert.Nil(t, err)
+
+	t.Run("WithUserIdAndCreateUserAsTrue", func(t *testing.T) {
+		userId := U.GetUUID()
+		customerUserId := U.RandomLowerAphaNumString(10)
+		timestamp := U.UnixTimeBeforeDuration(1 * time.Hour)
+		payload := &H.SDKIdentifyPayload{
+			UserId:         userId,
+			CreateUser:     true,
+			CustomerUserId: customerUserId,
+			JoinTimestamp:  timestamp,
+		}
+		status, response := H.SDKIdentify(project.ID, payload)
+		assert.Equal(t, http.StatusOK, status)
+		assert.Equal(t, userId, response.UserId)
+		user, _ := M.GetUser(project.ID, response.UserId)
+		assert.NotNil(t, user)
+		assert.Equal(t, customerUserId, user.CustomerUserId)
+		assert.Equal(t, timestamp, user.JoinTimestamp)
+	})
+
+	t.Run("WithUserIdAndCreateUserAsFalse", func(t *testing.T) {
+		customerUserId := U.RandomLowerAphaNumString(10)
+		payload := &H.SDKIdentifyPayload{
+			UserId:         user.ID,
+			CreateUser:     false,
+			CustomerUserId: customerUserId,
+		}
+		status, response := H.SDKIdentify(project.ID, payload)
+		assert.Equal(t, http.StatusOK, status)
+		// Should use the existing user.
+		assert.Empty(t, response.UserId)
+		user, _ := M.GetUser(project.ID, user.ID)
+		assert.NotNil(t, user)
+		assert.Equal(t, customerUserId, user.CustomerUserId)
+		assert.NotEmpty(t, user.JoinTimestamp)
+	})
+}
+
+func TestSDKAddUserPropertiesWithExternalUserIdAndTimestamp(t *testing.T) {
+	project, user, err := SetupProjectUserReturnDAO()
+	assert.Nil(t, err)
+
+	t.Run("WithUserIdAndCreateUserAsTrue", func(t *testing.T) {
+		userId := U.GetUUID()
+		timestamp := U.UnixTimeBeforeDuration(1 * time.Hour)
+		payload := &H.SDKAddUserPropertiesPayload{
+			UserId:     userId,
+			Timestamp:  timestamp,
+			CreateUser: true,
+			Properties: U.PropertiesMap{
+				"key": "value1",
+			},
+		}
+		status, response := H.SDKAddUserProperties(project.ID, payload)
+		assert.Equal(t, http.StatusOK, status)
+		assert.Equal(t, userId, response.UserId)
+		user, _ := M.GetUser(project.ID, response.UserId)
+		assert.NotNil(t, user)
+		assert.Equal(t, timestamp, user.JoinTimestamp)
+		properties, err := U.DecodePostgresJsonb(&user.Properties)
+		assert.NotNil(t, properties)
+		assert.Nil(t, err)
+		assert.Equal(t, "value1", (*properties)["key"])
+	})
+
+	t.Run("WithUserIdAndCreateUserAsFalse", func(t *testing.T) {
+		payload := &H.SDKAddUserPropertiesPayload{
+			UserId:     user.ID,
+			CreateUser: false,
+			Properties: U.PropertiesMap{
+				"key": "value1",
+			},
+			Timestamp: time.Now().Unix(),
+		}
+		status, response := H.SDKAddUserProperties(project.ID, payload)
+		assert.Equal(t, http.StatusOK, status)
+		// Should use the existing user given.
+		assert.Empty(t, response.UserId)
+		user, _ := M.GetUser(project.ID, user.ID)
+		assert.NotNil(t, user)
+		assert.NotEmpty(t, user.JoinTimestamp)
+		properties, err := U.DecodePostgresJsonb(&user.Properties)
+		assert.NotNil(t, properties)
+		assert.Nil(t, err)
+		assert.Equal(t, "value1", (*properties)["key"])
+	})
+}
+
 func TestTrackHandlerWithUserSession(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
@@ -791,7 +1033,7 @@ func TestPreviousSessionEventPropertyEnrichment(t *testing.T) {
 	timestampBeforeOneDay := U.UnixTimeBeforeDuration(time.Hour * 24)
 	// for new users
 	// New session has to created.
-	payload := fmt.Sprintf(`{"timestamp": %d, "event_name": "event_1", "event_properties": {}, "user_properties": {"$os": "Mac OS"}}`,
+	payload := fmt.Sprintf(`{"timestamp": %d, "event_name": "event_1", "event_properties": {"$page_raw_url":"www.google.co.in", "$page_url": "google.com"}, "user_properties": {"$os": "Mac OS"}}`,
 		timestampBeforeOneDay)
 	w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -808,7 +1050,7 @@ func TestPreviousSessionEventPropertyEnrichment(t *testing.T) {
 	assert.NotEmpty(t, event1.SessionId)
 
 	lastEventTimestamp := timestampBeforeOneDay + 10
-	payload = fmt.Sprintf(`{"user_id": "%s", "timestamp": %d, "event_name": "event_1", "event_properties": {}, "user_properties": {"$os": "Mac OS"}}`,
+	payload = fmt.Sprintf(`{"user_id": "%s", "timestamp": %d, "event_name": "event_1", "event_properties": {"$page_raw_url":"www.yahoo.co.in", "$page_url": "yahoo.com"}, "user_properties": {"$os": "Mac OS"}}`,
 		user.ID, lastEventTimestamp)
 	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -831,7 +1073,7 @@ func TestPreviousSessionEventPropertyEnrichment(t *testing.T) {
 	// New session has to be created by even timestamp
 	// as user was inactive.
 	lastEventTimestamp = lastEventTimestamp + 1800
-	payload = fmt.Sprintf(`{"user_id": "%s", "timestamp": %d, "event_name": "event_1", "event_properties": {}, "user_properties": {"$os": "Mac OS"}}`,
+	payload = fmt.Sprintf(`{"user_id": "%s", "timestamp": %d, "event_name": "event_1", "event_properties": {"$page_raw_url":"google.co.in", "$page_url": "www.google.com"}, "user_properties": {"$os": "Mac OS"}}`,
 		user.ID, lastEventTimestamp)
 	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -859,6 +1101,8 @@ func TestPreviousSessionEventPropertyEnrichment(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, (*firstSessionEventProps)[U.SP_PAGE_COUNT], float64(2))
 	assert.Equal(t, (*firstSessionEventProps)[U.SP_SPENT_TIME], float64(event2.Timestamp-firstSession.Timestamp))
+	assert.Equal(t, (*firstSessionEventProps)[U.SP_LATEST_PAGE_RAW_URL], "www.yahoo.co.in")
+	assert.Equal(t, (*firstSessionEventProps)[U.SP_LATEST_PAGE_URL], "yahoo.com")
 
 	userPropertiesMap, errCode := M.GetUserPropertiesAsMap(project.ID, user.ID)
 	assert.Equal(t, errCode, http.StatusFound)
@@ -868,7 +1112,7 @@ func TestPreviousSessionEventPropertyEnrichment(t *testing.T) {
 
 	// creating third session
 	lastEventTimestamp = lastEventTimestamp + 1800
-	payload = fmt.Sprintf(`{"user_id": "%s", "timestamp": %d, "event_name": "event_1", "event_properties": {}, "user_properties": {"$os": "Mac OS"}}`,
+	payload = fmt.Sprintf(`{"user_id": "%s", "timestamp": %d, "event_name": "event_1", "event_properties": {"$page_raw_url":"google.co.in", "$page_url": "www.google.com"}, "user_properties": {"$os": "Mac OS"}}`,
 		user.ID, lastEventTimestamp)
 	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -894,6 +1138,8 @@ func TestPreviousSessionEventPropertyEnrichment(t *testing.T) {
 
 	secondSessionEventProps, err := U.DecodePostgresJsonb(&secondSession.Properties)
 	assert.Nil(t, err)
+	assert.Equal(t, (*secondSessionEventProps)[U.SP_LATEST_PAGE_RAW_URL], "google.co.in")
+	assert.Equal(t, (*secondSessionEventProps)[U.SP_LATEST_PAGE_URL], "www.google.com")
 	assert.Equal(t, (*secondSessionEventProps)[U.SP_PAGE_COUNT], float64(1))
 	assert.Equal(t, (*secondSessionEventProps)[U.SP_SPENT_TIME], float64(event3.Timestamp-secondSession.Timestamp))
 
@@ -924,7 +1170,7 @@ func TestTrackHandlerWithFormSubmit(t *testing.T) {
 	assert.NotNil(t, responseMap["user_id"])
 	userId := responseMap["user_id"].(string)
 	userProperties := postgres.Jsonb{json.RawMessage(`{"plan": "enterprise"}`)}
-	_, errCode := M.UpdateUserProperties(project.ID, userId, &userProperties)
+	_, errCode := M.UpdateUserProperties(project.ID, userId, &userProperties, time.Now().Unix())
 	assert.Equal(t, http.StatusAccepted, errCode)
 	// form submit event name created.
 	formSubmitEventName, errCode := M.GetEventName(U.EVENT_NAME_FORM_SUBMITTED, project.ID)
@@ -1278,13 +1524,11 @@ func TestSDKGetProjectSettingsHandler(t *testing.T) {
 	assert.NotEqual(t, 0, jsonResponseMap["id"])
 	assert.NotNil(t, jsonResponseMap["auto_track"])
 
-	// Test Get project settings with invalid token.
+	// Test Get project settings with random token.
+	// Returns default settings.
 	randomToken := U.RandomLowerAphaNumString(32)
 	w = ServeGetRequestWithHeaders(r, uri, map[string]string{"Authorization": randomToken})
-	assert.Equal(t, http.StatusUnauthorized, w.Code)
-	jsonResponse, _ = ioutil.ReadAll(w.Body)
-	json.Unmarshal(jsonResponse, &jsonResponseMap)
-	assert.NotNil(t, jsonResponseMap["error"])
+	assert.Equal(t, http.StatusOK, w.Code)
 }
 
 func TestSDKBulk(t *testing.T) {
@@ -1306,7 +1550,10 @@ func TestSDKBulk(t *testing.T) {
 	})
 
 	t.Run("DuplicateCustomerEventId", func(t *testing.T) {
-		payload := fmt.Sprintf("[%s,%s,%s]", `{"event_name": "signup", "event_properties": {"mobile" : "true"}}`, `{"event_name":"test","c_event_id":"1", "event_properties": {"mobile" : "true"}}`, `{"event_name":"test2","c_event_id":"1", "event_properties": {"mobile" : "true"}}`)
+		payload := fmt.Sprintf("[%s,%s,%s]",
+			`{"event_name": "signup", "event_properties": {"mobile" : "true"}}`,
+			`{"event_name":"test","c_event_id":"1", "event_properties": {"mobile" : "true"}}`,
+			`{"event_name":"test2","c_event_id":"1", "event_properties": {"mobile" : "true"}}`)
 		w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		resp := make([]handler.SDKTrackResponse, 0, 0)
@@ -1318,7 +1565,7 @@ func TestSDKBulk(t *testing.T) {
 		assert.NotEmpty(t, resp[1].UserId)
 
 		assert.Equal(t, "1", *resp[2].CustomerEventId)
-		assert.Equal(t, "Tracking failed. Event creation failed. Duplicate CustomerEventID", resp[2].Error)
+		assert.Equal(t, "Tracking failed. Event creation failed. Invalid payload.", resp[2].Error)
 	})
 
 }

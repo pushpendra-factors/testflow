@@ -84,17 +84,24 @@ func InitAppRoutes(r *gin.Engine) {
 }
 
 func InitSDKRoutes(r *gin.Engine) {
-	sdkRouteGroup := r.Group(ROUTE_SDK_ROOT)
-	sdkRouteGroup.Use(mid.SetScopeProjectIdByToken())
+	r.GET(ROUTE_SDK_ROOT+"/service/status", SDKStatusHandler)
 
+	// Todo: Check integrity of token using encrytion/decryption
+	// with secret, on middleware, to avoid spamming queue.
+
+	// Getting project_id is moved to sdk request handler to
+	// support queue workers also.
+	// sdkRouteGroup.Use(mid.SetScopeProjectIdByToken())
+
+	// Todo: Add middleware to add context sdk_src, sdk_uid.
+	sdkRouteGroup := r.Group(ROUTE_SDK_ROOT)
+	sdkRouteGroup.Use(mid.SetScopeSDKProjectToken())
+	sdkRouteGroup.GET("/project/get_settings", SDKGetProjectSettingsHandler)
 	sdkRouteGroup.POST("/event/track", SDKTrackHandler)
 	sdkRouteGroup.POST("/event/track/bulk", SDKBulkEventHandler)
-	sdkRouteGroup.POST("/event/update_properties", SDKUpdateEventProperties)
-
+	sdkRouteGroup.POST("/event/update_properties", SDKUpdateEventPropertiesHandler)
 	sdkRouteGroup.POST("/user/identify", SDKIdentifyHandler)
 	sdkRouteGroup.POST("/user/add_properties", SDKAddUserPropertiesHandler)
-
-	sdkRouteGroup.GET("/project/get_settings", SDKGetProjectSettingsHandler)
 }
 
 func InitIntRoutes(r *gin.Engine) {
@@ -111,6 +118,10 @@ func InitIntRoutes(r *gin.Engine) {
 	intRouteGroup.POST("/shopify",
 		mid.SetScopeProjectIdByStoreAndSecret(),
 		IntShopifyHandler)
+
+	intRouteGroup.POST("/shopify_sdk",
+		mid.SetScopeProjectIdByToken(),
+		IntShopifySDKHandler)
 
 	intRouteGroup.POST("/adwords/enable",
 		mid.SetLoggedInAgent(),

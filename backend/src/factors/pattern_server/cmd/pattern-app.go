@@ -182,7 +182,8 @@ func main() {
 	}
 
 	dur := time.Second * time.Duration(*errorReportingInterval)
-	ErrorCollector := error_collector.New(mailClient, dur, *env, "team@factors.ai", *factorsEmailSender)
+	ErrorCollector := error_collector.New(mailClient, dur, *env,
+		"pattern_server", "team@factors.ai", *factorsEmailSender)
 
 	if ErrorCollector != nil {
 		hook := &U.Hook{C: ErrorCollector}

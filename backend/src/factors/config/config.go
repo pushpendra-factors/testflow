@@ -1,12 +1,6 @@
 package config
 
 import (
-	"factors/interfaces/maileriface"
-	"factors/services/error_collector"
-	serviceEtcd "factors/services/etcd"
-	"factors/services/mailer"
-	serviceSes "factors/services/ses"
-	U "factors/util"
 	"fmt"
 	"strconv"
 	"strings"
@@ -17,12 +11,23 @@ import (
 
 	"github.com/coreos/etcd/mvcc/mvccpb"
 
+	"factors/vendor_custom/machinery/v1"
+	machineryConfig "factors/vendor_custom/machinery/v1/config"
+
 	"github.com/gomodule/redigo/redis"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	geoip2 "github.com/oschwald/geoip2-golang"
 	log "github.com/sirupsen/logrus"
 	"go.etcd.io/etcd/clientv3"
+
+	U "factors/util"
+
+	"factors/interfaces/maileriface"
+	"factors/services/error_collector"
+	serviceEtcd "factors/services/etcd"
+	"factors/services/mailer"
+	serviceSes "factors/services/ses"
 )
 
 var initiated bool = false
@@ -44,25 +49,29 @@ type DBConf struct {
 }
 
 type Configuration struct {
-	Env                    string
-	Port                   int
-	DBInfo                 DBConf
-	RedisHost              string
-	RedisPort              int
-	EtcdEndpoints          []string
-	GeolocationFile        string
-	APIDomain              string
-	APPDomain              string
-	AWSRegion              string
-	AWSKey                 string
-	AWSSecret              string
-	Cookiename             string
-	EmailSender            string
-	ErrorReportingInterval int
-	AdminLoginEmail        string
-	AdminLoginToken        string
-	LoginTokenMap          map[string]string
-	SkipTrackProjectIds    []uint64
+	AppName                      string
+	Env                          string
+	Port                         int
+	DBInfo                       DBConf
+	RedisHost                    string
+	RedisPort                    int
+	QueueRedisHost               string
+	QueueRedisPort               int
+	EtcdEndpoints                []string
+	GeolocationFile              string
+	APIDomain                    string
+	APPDomain                    string
+	AWSRegion                    string
+	AWSKey                       string
+	AWSSecret                    string
+	Cookiename                   string
+	EmailSender                  string
+	ErrorReportingInterval       int
+	AdminLoginEmail              string
+	AdminLoginToken              string
+	LoginTokenMap                map[string]string
+	SkipTrackProjectIds          []uint64
+	SDKRequestQueueProjectTokens []string
 }
 
 type Services struct {
@@ -70,6 +79,7 @@ type Services struct {
 	GeoLocation        *geoip2.Reader
 	Etcd               *serviceEtcd.EtcdClient
 	Redis              *redis.Pool
+	SDKQueueClient     *machinery.Server
 	patternServersLock sync.RWMutex
 	patternServers     map[string]string
 	Mailer             maileriface.Mailer
@@ -122,6 +132,27 @@ func initLogging(collector *error_collector.Collector) {
 	}
 }
 
+func initGeoLocationService(geoLocationFile string) {
+	if geoLocationFile == "" {
+		log.WithField("geo_location_file",
+			geoLocationFile).Fatal("Invalid geolocation file.")
+	}
+
+	if services == nil {
+		services = &Services{}
+	}
+
+	// Ref: https://geolite.maxmind.com/download/geoip/database/GeoLite2-City.tar.gz
+	geolocation, err := geoip2.Open(geoLocationFile)
+	if err != nil {
+		log.WithError(err).WithField("GeolocationFilePath",
+			geoLocationFile).Fatal("Failed to initialize geolocation service.")
+	}
+
+	log.Info("Geolocation service intialized.")
+	services.GeoLocation = geolocation
+}
+
 func initServices(config *Configuration) error {
 	services = &Services{patternServers: make(map[string]string)}
 
@@ -139,16 +170,9 @@ func initServices(config *Configuration) error {
 
 	InitMailClient(config.AWSKey, config.AWSSecret, config.AWSRegion)
 
-	initCollectorClient(config.Env, "team@factors.ai", config.EmailSender)
+	initCollectorClient(config.Env, config.AppName, "team@factors.ai", config.EmailSender)
 
-	// Ref: https://geolite.maxmind.com/download/geoip/database/GeoLite2-City.tar.gz
-	geolocation, err := geoip2.Open(config.GeolocationFile)
-	if err != nil {
-		log.WithError(err).WithField("GeolocationFilePath",
-			config.GeolocationFile).Fatal("Failed to initialize geolocation service")
-	}
-	log.Info("Geolocation service intialized")
-	services.GeoLocation = geolocation
+	initGeoLocationService(config.GeolocationFile)
 
 	regPatternServers, err := GetServices().Etcd.DiscoverPatternServers()
 	if err != nil && err != serviceEtcd.NotFound {
@@ -186,7 +210,6 @@ func initCookieInfo(env string) {
 }
 
 func InitConf(env string) {
-
 	configuration = &Configuration{
 		Env: env,
 	}
@@ -282,6 +305,47 @@ func InitRedis(host string, port int) {
 	services.Redis = redisPool
 }
 
+func InitQueueClient(redisHost string, redisPort int) error {
+	if services == nil {
+		services = &Services{}
+	}
+
+	if redisHost == "" || redisPort == 0 {
+		return fmt.Errorf("invalid redis host %s port %d", redisHost, redisPort)
+	}
+
+	// format: redis://[password@]host[port][/db_num]
+	// Todo: Add password support for other environments.
+	redisConnectionString := fmt.Sprintf("redis://%s:%d", redisHost, redisPort)
+
+	config := &machineryConfig.Config{
+		Broker: redisConnectionString,
+		// No default queue configured. Queue name is decided conditionaly
+		// and given on sendTask (enqueue) as routing_key and
+		// on customer worker (dequeue) as queue_name.
+		// DefaultQueue: "default_queue"
+		Redis: &machineryConfig.RedisConfig{
+			MaxActive: 300,
+			MaxIdle:   100,
+		},
+		// Result Backend creates individual keys for each task
+		// with the state after processing. Expiring the keys in 2 mins.
+		// Retry is not using or affected by this, It is using a
+		// seperate internal queue.
+		ResultBackend:   redisConnectionString,
+		ResultsExpireIn: 2 * 60,
+	}
+
+	client, err := machinery.NewServer(config)
+	if err != nil {
+		return err
+	}
+
+	services.SDKQueueClient = client
+
+	return nil
+}
+
 func InitMailClient(key, secret, region string) {
 	if services == nil {
 		services = &Services{}
@@ -300,12 +364,12 @@ func InitSenderEmail(senderEmail string) {
 	configuration.EmailSender = senderEmail
 }
 
-func initCollectorClient(env, toMail, fromMail string) {
+func initCollectorClient(env, appName, toMail, fromMail string) {
 	if services == nil {
 		services = &Services{}
 	}
 	dur := time.Second * time.Duration(configuration.ErrorReportingInterval)
-	services.ErrorCollector = error_collector.New(services.Mailer, dur, env, toMail, fromMail)
+	services.ErrorCollector = error_collector.New(services.Mailer, dur, env, appName, toMail, fromMail)
 }
 
 func watchPatternServers(psUpdateChannel clientv3.WatchChan) {
@@ -325,7 +389,8 @@ func watchPatternServers(psUpdateChannel clientv3.WatchChan) {
 				GetServices().removePatternServer(string(event.Kv.Key))
 			}
 		}
-		log.WithField("PatternServers", GetServices().GetPatternServerAddresses()).Info("Updated List of pattern servers")
+		log.WithField("PatternServers", GetServices().GetPatternServerAddresses()).Info(
+			"Updated List of pattern servers")
 	}
 }
 
@@ -353,6 +418,7 @@ func InitDataService(config *Configuration) error {
 	}
 
 	configuration = config
+
 	err := InitDB(config.DBInfo)
 	if err != nil {
 		return err
@@ -360,7 +426,68 @@ func InitDataService(config *Configuration) error {
 
 	// init error collector, error mailer, and log hook.
 	InitMailClient(config.AWSKey, config.AWSSecret, config.AWSRegion)
-	initCollectorClient(config.Env, "team@factors.ai", config.EmailSender) // inits error_collector.
+	initCollectorClient(config.Env, config.AppName, "team@factors.ai", config.EmailSender) // inits error_collector.
+	initLogging(services.ErrorCollector)
+
+	initiated = true
+	return nil
+}
+
+func InitSDKService(config *Configuration) error {
+	if initiated {
+		return fmt.Errorf("Config already initialized")
+	}
+
+	configuration = config
+
+	// DB dependency for SDK project_settings.
+	if err := InitDB(config.DBInfo); err != nil {
+		log.WithError(err).Error("Failed to initialize db on sdk_service.")
+	}
+
+	// Cache dependency for requests not using queue.
+	InitRedis(config.RedisHost, config.RedisPort)
+
+	initGeoLocationService(config.GeolocationFile)
+
+	err := InitQueueClient(config.QueueRedisHost, config.QueueRedisPort)
+	if err != nil {
+		log.WithError(err).Fatal("Failed to initialize queue client on init sdk service.")
+	}
+
+	// init error collector, error mailer, and log hook.
+	InitMailClient(config.AWSKey, config.AWSSecret, config.AWSRegion)
+	initCollectorClient(config.Env, config.AppName, "team@factors.ai", config.EmailSender) // inits error_collector.
+	initLogging(services.ErrorCollector)
+
+	initiated = true
+	return nil
+}
+
+func InitQueueWorker(config *Configuration) error {
+	if initiated {
+		return fmt.Errorf("Config already initialized")
+	}
+
+	configuration = config
+
+	err := InitDB(config.DBInfo)
+	if err != nil {
+		return err
+	}
+	InitRedis(config.RedisHost, config.RedisPort)
+
+	initGeoLocationService(config.GeolocationFile)
+
+	// Todo: Use different redis instance for queue for production env.
+	err = InitQueueClient(config.QueueRedisHost, config.QueueRedisPort)
+	if err != nil {
+		log.WithError(err).Fatal("Failed to initalize queue client on init queue worker.")
+	}
+
+	// init error collector, error mailer, and log hook.
+	InitMailClient(config.AWSKey, config.AWSSecret, config.AWSRegion)
+	initCollectorClient(config.Env, config.AppName, "team@factors.ai", config.EmailSender) // inits error_collector.
 	initLogging(services.ErrorCollector)
 
 	initiated = true
@@ -375,7 +502,7 @@ func GetServices() *Services {
 	return services
 }
 
-func GetRedisConn() redis.Conn {
+func GetCacheRedisConnection() redis.Conn {
 	return services.Redis.Get()
 }
 
@@ -459,21 +586,40 @@ func ParseConfigStringToMap(configStr string) map[string]string {
 	return configMap
 }
 
-func GetProjectIdsFromStringList(projectsList string) []uint64 {
-	projectIds := make([]uint64, 0, 0)
+func GetTokensFromStringListAsUint64(stringList string) []uint64 {
+	uint64Tokens := make([]uint64, 0, 0)
 
-	if projectsList == "" {
-		return projectIds
+	if stringList == "" {
+		return uint64Tokens
 	}
 
-	tokens := strings.Split(projectsList, ",")
+	tokens := strings.Split(stringList, ",")
 	for _, token := range tokens {
-		projectId, err := strconv.ParseUint(strings.TrimSpace(token), 10, 64)
+		uint64Token, err := strconv.ParseUint(strings.TrimSpace(token), 10, 64)
 		if err != nil {
-			return projectIds
+			return uint64Tokens
 		}
 
-		projectIds = append(projectIds, projectId)
+		uint64Tokens = append(uint64Tokens, uint64Token)
 	}
-	return projectIds
+	return uint64Tokens
+}
+
+func GetTokensFromStringListAsString(stringList string) []string {
+	stringTokens := make([]string, 0, 0)
+
+	if stringList == "" {
+		return stringTokens
+	}
+
+	tokens := strings.Split(stringList, ",")
+	for _, token := range tokens {
+		stringTokens = append(stringTokens, strings.TrimSpace(token))
+	}
+
+	return stringTokens
+}
+
+func GetSDKRequestQueueAllowedTokens() []string {
+	return configuration.SDKRequestQueueProjectTokens
 }

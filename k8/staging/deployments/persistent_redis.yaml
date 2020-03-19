@@ -1,0 +1,58 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    layer: persistent-redis
+    env: staging
+    project: factors-staging
+  name: persistent-redis
+  namespace: default
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      layer: persistent-redis
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:      
+      labels:
+        layer: persistent-redis
+    spec:
+      nodeSelector:
+        cloud.google.com/gke-nodepool: default-persistent-pool
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - name: persistent-redis-storage
+          persistentVolumeClaim:
+            claimName: persistent-redis-pvc
+      containers:
+      - name: persistent-redis
+        image: us.gcr.io/factors-staging/persistent-redis:v0.01-1633c9d
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 6379
+        volumeMounts:
+        - name: persistent-redis-storage
+          mountPath: "/usr/local/var/db/redis"
+        resources:
+          requests:
+            memory: "5G"
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        securityContext: {}
+        readinessProbe:
+          tcpSocket:
+            port: 6379
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        livenessProbe:
+          tcpSocket:
+            port: 6379
+          initialDelaySeconds: 10
+          periodSeconds: 10

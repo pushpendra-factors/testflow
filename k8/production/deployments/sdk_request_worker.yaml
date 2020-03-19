@@ -1,0 +1,103 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    layer: sdk-request-worker
+    env: production
+    project: factors-production
+  name: sdk-request-worker
+  namespace: default
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 0
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      layer: sdk-request-worker
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:      
+      labels:
+        layer: sdk-request-worker
+    spec:
+      nodeSelector:
+        cloud.google.com/gke-nodepool: default-persistent-pool
+      containers:
+      - name: sdk-request-worker
+        image: us.gcr.io/factors-production/sdk-request-worker:v0.01-19b627a
+        volumeMounts:
+        - name: workdir
+          mountPath: /usr/local/var/factors/config
+        imagePullPolicy: IfNotPresent
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        resources:
+          requests:
+            memory: "100M"
+        securityContext: {}
+        args:
+          - --env
+          - $(ENV)
+          - --db_host
+          - $(DB_HOST)
+          - --db_port
+          - $(DB_PORT)
+          - --db_name
+          - $(POSTGRES_DB)
+          - --db_user
+          - $(POSTGRES_USER)
+          - --db_pass
+          - $(POSTGRES_PASSWORD)
+          - --redis_host
+          - $(REDIS_HOST)
+          - --redis_port
+          - $(REDIS_PORT)
+          - --queue_redis_host
+          - $(PERSISTENT_REDIS_HOST)
+          - --queue_redis_port
+          - $(PERSISTENT_REDIS_PORT)
+          - --geo_loc_path
+          - $(GEO_LOC_FILE_PATH)
+          - --aws_region
+          - $(AWS_REGION)
+          - --aws_key
+          - $(AWS_KEY)
+          - --aws_secret
+          - $(AWS_SECRET)
+          - --email_sender
+          - $(EMAIL_SENDER)
+          - --worker_concurrency
+          - "10"       
+        envFrom:
+        - configMapRef:
+            name: config-appserver
+        - configMapRef:
+            name: config-env
+        - configMapRef:
+            name: config-postgres
+        - configMapRef:
+            name: config-redis
+        - configMapRef:
+            name: config-persistent-redis
+        - secretRef:
+            name: secret-postgres
+        - secretRef:
+            name: secret-aws
+      initContainers:
+      - name: fetch-geolocation-file
+        image: google/cloud-sdk:229.0.0-alpine
+        command:
+        - gsutil
+        - cp
+        - gs://factors-production/GeoLite2-City.mmdb
+        - /workdir/GeoLite2-City.mmdb
+        volumeMounts:
+        - name: workdir
+          mountPath: "/workdir"    
+      volumes:
+      - name: workdir
+        emptyDir: {}

@@ -26,19 +26,18 @@ type UserProperties struct {
 	UserId    string `gorm:"primary_key:true;" json:"user_id"`
 
 	// JsonB of postgres with gorm. https://github.com/jinzhu/gorm/issues/1183
-	Properties postgres.Jsonb `json:"properties"`
-	CreatedAt  time.Time      `json:"created_at"`
-	UpdatedAt  time.Time      `json:"updated_at"`
+	Properties       postgres.Jsonb `json:"properties"`
+	UpdatedTimestamp int64          `gorm:"not null;default:0" json:"updated_timestamp"`
+	CreatedAt        time.Time      `json:"created_at"`
+	UpdatedAt        time.Time      `json:"updated_at"`
 }
 
 func createUserPropertiesIfChanged(projectId uint64, userId string,
-	currentPropertiesId string, newProperties *postgres.Jsonb) (string, int) {
+	currentPropertiesId string, newProperties *postgres.Jsonb, timestamp int64) (string, int) {
 
 	if U.IsEmptyPostgresJsonb(newProperties) {
 		return currentPropertiesId, http.StatusNotModified
 	}
-
-	db := C.GetServices().Db
 
 	currentProperties := &postgres.Jsonb{}
 	var statusCode int
@@ -49,7 +48,8 @@ func createUserPropertiesIfChanged(projectId uint64, userId string,
 
 	json.Unmarshal((*newProperties).RawMessage, &newPropertiesMap)
 	if currentPropertiesId != "" {
-		currentProperties, statusCode = GetUserProperties(
+		var currentPropertiesRecord *UserProperties
+		currentPropertiesRecord, statusCode = GetUserPropertiesRecord(
 			projectId, userId, currentPropertiesId)
 
 		if statusCode == http.StatusInternalServerError {
@@ -58,13 +58,22 @@ func createUserPropertiesIfChanged(projectId uint64, userId string,
 			return "", http.StatusInternalServerError
 		}
 
+		currentProperties = &currentPropertiesRecord.Properties
+
 		json.Unmarshal((*currentProperties).RawMessage, &currentPropertiesMap)
 		// init mergedProperties with currentProperties.
 		json.Unmarshal((*currentProperties).RawMessage, &mergedPropertiesMap)
 		if statusCode == http.StatusFound {
+			// Overwrite the keys only, if the update is future,
+			// else only add new keys.
+			if timestamp >= currentPropertiesRecord.UpdatedTimestamp {
+				mergo.Merge(&mergedPropertiesMap, newPropertiesMap, mergo.WithOverride)
+			} else {
+				mergo.Merge(&mergedPropertiesMap, newPropertiesMap)
+			}
+
 			// Using merged properties for equality check to achieve
 			// currentPropertiesMap {x: 1, y: 2} newPropertiesMap {x: 1} -> true
-			mergo.Merge(&mergedPropertiesMap, newPropertiesMap, mergo.WithOverride)
 			if reflect.DeepEqual(currentPropertiesMap, mergedPropertiesMap) {
 				return currentPropertiesId, http.StatusNotModified
 			}
@@ -79,12 +88,14 @@ func createUserPropertiesIfChanged(projectId uint64, userId string,
 		return "", http.StatusInternalServerError
 	}
 	userProperties := UserProperties{
-		UserId:     userId,
-		ProjectId:  projectId,
-		Properties: postgres.Jsonb{RawMessage: json.RawMessage(updatedPropertiesBytes)},
+		UserId:           userId,
+		ProjectId:        projectId,
+		Properties:       postgres.Jsonb{RawMessage: json.RawMessage(updatedPropertiesBytes)},
+		UpdatedTimestamp: timestamp,
 	}
 	log.WithFields(log.Fields{"UserProperties": &userProperties}).Info("Creating user properties")
 
+	db := C.GetServices().Db
 	if err := db.Create(&userProperties).Error; err != nil {
 		log.WithFields(log.Fields{"userProperties": &userProperties}).WithError(err).Error("createUserProperties Failed")
 		return "", http.StatusInternalServerError
@@ -93,19 +104,30 @@ func createUserPropertiesIfChanged(projectId uint64, userId string,
 }
 
 func GetUserProperties(projectId uint64, userId string, id string) (*postgres.Jsonb, int) {
-	db := C.GetServices().Db
+	userPropertiesRecord, errCode := GetUserPropertiesRecord(projectId, userId, id)
+	if userPropertiesRecord == nil {
+		return nil, errCode
+	}
+
+	return &userPropertiesRecord.Properties, http.StatusFound
+}
+
+func GetUserPropertiesRecord(projectId uint64, userId string, id string) (*UserProperties, int) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectId, "user_id": userId, "user_properties_id": id})
 
 	var userProperties UserProperties
+
+	db := C.GetServices().Db
 	if err := db.Where("project_id = ?", projectId).Where("user_id = ?", userId).Where(
 		"id = ?", id).First(&userProperties).Error; err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound
 		}
-		logCtx.WithError(err).Error("Getting user properties using projectId, userId, userPropertiesId failed")
+		logCtx.WithError(err).Error("Getting user properties record using projectId, userId, userPropertiesId failed")
 		return nil, http.StatusInternalServerError
 	}
-	return &userProperties.Properties, http.StatusFound
+
+	return &userProperties, http.StatusFound
 }
 
 func FillLocationUserProperties(properties *U.PropertiesMap, clientIP string) error {
