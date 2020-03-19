@@ -194,11 +194,13 @@ func GetEventById(projectId uint64, id string) (*Event, int) {
 
 	var event Event
 	if err := db.Where("project_id = ?", projectId).Where("id = ?", id).First(&event).Error; err != nil {
-		log.WithFields(log.Fields{"project_id": projectId, "user_id": id}).WithError(err).Error(
-			"Getttng event failed on GetEventbyId")
 		if gorm.IsRecordNotFoundError(err) {
+			// Do not log error. Log on caller, if needed.
 			return nil, http.StatusNotFound
 		}
+
+		log.WithFields(log.Fields{"project_id": projectId, "user_id": id}).WithError(err).Error(
+			"Getttng event failed on GetEventbyId")
 		return nil, http.StatusInternalServerError
 	}
 	return &event, http.StatusFound
