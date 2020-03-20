@@ -1,9 +1,14 @@
-FROM node:latest
+FROM jmfirth/webpack:latest
 
 WORKDIR /frontend
-COPY dist/development dist
-COPY serve-dist.js .
+COPY . .
+RUN export NODE_ENV=development
+RUN rm -rf ./dist/staging
+RUN mkdir -p ./dist/staging
+RUN npm install
+RUN npm rebuild node-sass
+RUN mv ./dist/development/ ./dist
+RUN ./node_modules/.bin/webpack -p --config webpack.config.js
 RUN npm install express
-
 EXPOSE 3000
 CMD ["node", "serve-dist.js"]
