@@ -1,10 +1,9 @@
-FROM node:8.15.0-alpine
+FROM node:latest
 
 WORKDIR /frontend
-RUN npm install
-RUN cp /etc/hosts ~/hosts.new
-RUN sed -i "s/127.0.0.1/${BACKEND_HOST}/g"  ~/hosts.new
-RUN cp -f ~/hosts.new /etc/hosts
+COPY dist/development dist
+COPY serve-dist.js .
+RUN npm install express
 
-ENTRYPOINT ["npm", "run dev"]
 EXPOSE 3000
+CMD ["node", "serve-dist.js"]
