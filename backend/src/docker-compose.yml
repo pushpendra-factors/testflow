@@ -86,6 +86,19 @@ services:
             restart: always
             ports:
                 -  "8089:8089"
+        frontend:
+            build: 
+                context: ../../frontend
+                dockerfile: Dockerfile.frontend.testing
+            environment:
+                - BACKEND_HOST=api
+            image: testing/frontend:1.0
+            ports: 
+                - "3000:3000"
+            volumes: 
+                - ~/repos/factors/frontend:/frontend
+                - node_modules:/frontend/node_modules
+            
 
 
         

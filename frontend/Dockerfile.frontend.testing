@@ -1,0 +1,10 @@
+FROM node:8.15.0-alpine
+
+WORKDIR /frontend
+RUN npm install
+RUN cp /etc/hosts ~/hosts.new
+RUN sed -i "s/127.0.0.1/${BACKEND_HOST}/g"  ~/hosts.new
+RUN cp -f ~/hosts.new /etc/hosts
+
+ENTRYPOINT ["npm", "run dev"]
+EXPOSE 3000
