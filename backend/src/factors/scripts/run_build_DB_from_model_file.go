@@ -129,12 +129,6 @@ func main() {
 
 	var project *M.Project
 
-	events, _, _, err := getDenormalizedEventsFromFile(file)
-	if err != nil {
-		log.WithError(err).Error("Failed to parse file")
-		os.Exit(1)
-	}
-
 	if projectName == nil || *projectName == "" {
 		log.Error("No project name or uuid provided ")
 		os.Exit(1)
@@ -154,8 +148,12 @@ func main() {
 		log.WithError(err).Error("Failed to create project for agent")
 		os.Exit(1)
 	}
+	_, _, err = denormalizedEventsFileToDB(file, project)
+	if err != nil {
+		log.WithError(err).Error("Failed to parse file")
+		os.Exit(1)
+	}
 
-	normalizeEventsToDB(events, project)
 }
 
 func createRandomAgentUUID() (string, error) {
@@ -172,33 +170,29 @@ func createRandomAgentUUID() (string, error) {
 
 }
 
-func normalizeEventsToDB(events []denEvent, project *M.Project) {
-
-	for _, event := range events {
-		err := eventToDb(event, project)
-		if err != http.StatusOK {
-			log.Errorf("Failed to create event %+v\n ,  %d", event, err)
-		}
-	}
-}
-
-func getDenormalizedEventsFromFile(file *os.File) ([]denEvent, int64, int64, error) {
+func denormalizedEventsFileToDB(file *os.File, project *M.Project) (int64, int64, error) {
 	var startTime int64
 	var endTime int64
 	_, err := file.Seek(0, 0)
 	if err != nil {
-		return nil, 0, 0, err
+		return 0, 0, err
 	}
 
 	scanner := bufio.NewScanner(file)
-	var events []denEvent
 	for scanner.Scan() {
 		enEvent := scanner.Text()
 		var decEvent denEvent
 		err := json.Unmarshal([]byte(enEvent), &decEvent)
 		if err != nil {
 			log.WithError(err).Error("failed to unmarshal")
-			return nil, 0, 0, errors.New("failed to unmarshal")
+			return 0, 0, errors.New("failed to unmarshal")
+		}
+		//if project is provided then it writes to DB without creating array
+		if project != nil {
+			err := eventToDb(decEvent, project)
+			if err != http.StatusOK {
+				return 0, 0, errors.New(fmt.Sprintf("Failed to create event %+v\n ,  %d", decEvent, err))
+			}
 		}
 
 		if startTime == 0 && endTime == 0 {
@@ -212,15 +206,14 @@ func getDenormalizedEventsFromFile(file *os.File) ([]denEvent, int64, int64, err
 				endTime = decEvent.EventTime
 			}
 		}
-		events = append(events, decEvent)
 	}
 
 	if err := scanner.Err(); err != nil {
 		log.Fatal("Error while reading from file:", err)
-		return nil, 0, 0, err
+		return 0, 0, err
 	}
 
-	return events, startTime, endTime, nil
+	return startTime, endTime, nil
 }
 
 func dbCreateAndGetProjectWithAgentUUID(projectName string, agentUUID string) (*M.Project, error) {
@@ -280,7 +273,7 @@ func testData(startTime int64, endTime int64, projectId uint64, file *os.File) e
 		return err
 	}
 	if startTime == 0 || endTime == 0 {
-		_, startTime, endTime, err = getDenormalizedEventsFromFile(file)
+		startTime, endTime, err = denormalizedEventsFileToDB(file, nil)
 		if err != nil {
 			return err
 		}
