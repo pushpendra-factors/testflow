@@ -7,6 +7,7 @@ import (
 	C "factors/config"
 	M "factors/model"
 	P "factors/pattern"
+	U "factors/util"
 	"flag"
 	"fmt"
 	"net/http"
@@ -134,9 +135,18 @@ func main() {
 		os.Exit(1)
 	}
 
-	if projectName == nil || *projectName == "" && agentUUID == nil || *agentUUID == "" {
+	if projectName == nil || *projectName == "" {
 		log.Error("No project name or uuid provided ")
 		os.Exit(1)
+	}
+
+	if agentUUID == nil || *agentUUID == "" {
+		*agentUUID, err = createRandomAgentUUID()
+		if err != nil {
+			log.Error(err)
+			os.Exit(1)
+		}
+
 	}
 
 	project, err = dbCreateAndGetProjectWithAgentUUID(*projectName, *agentUUID)
@@ -146,6 +156,20 @@ func main() {
 	}
 
 	normalizeEventsToDB(events, project)
+}
+
+func createRandomAgentUUID() (string, error) {
+	email := U.RandomLowerAphaNumString(6) + "@asdfds.local"
+	createAgentParams := M.CreateAgentParams{
+		Agent:    &M.Agent{Email: email, Phone: "987654321"},
+		PlanCode: M.FreePlanCode,
+	}
+	if agent, err := M.CreateAgentWithDependencies(&createAgentParams); err != http.StatusCreated {
+		return "", errors.New("Failed to create agent")
+	} else {
+		return agent.Agent.UUID, nil
+	}
+
 }
 
 func normalizeEventsToDB(events []denEvent, project *M.Project) {
