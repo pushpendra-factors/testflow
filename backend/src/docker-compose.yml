@@ -57,6 +57,7 @@ services:
                 -  DB_HOST=postgres
                 -  REDIS_HOST=redis
                 -  ETCD=etcd:2379
+                -  PS_RPC_PORT=patternserver
             image: testing/api:1.0
             restart: always
             ports:
@@ -70,7 +71,7 @@ services:
                 -   ETCD=etcd:2379
             image: testing/pattern-server:1.0
             volumes: 
-                - /usr/local/var/factors:/usr/local/var/factors
+                - ${BUCKET_DIR}:/usr/local/var/factors
             ports:
                 - "8100:8100"
         dataserver:
