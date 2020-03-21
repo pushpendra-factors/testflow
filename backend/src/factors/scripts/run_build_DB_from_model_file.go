@@ -148,7 +148,7 @@ func main() {
 		log.WithError(err).Error("Failed to create project for agent")
 		os.Exit(1)
 	}
-	_, _, err = denormalizedEventsFileToDB(file, project)
+	_, _, err = denormalizedEventsFileToProject(file, project)
 	if err != nil {
 		log.WithError(err).Error("Failed to parse file")
 		os.Exit(1)
@@ -170,7 +170,7 @@ func createRandomAgentUUID() (string, error) {
 
 }
 
-func denormalizedEventsFileToDB(file *os.File, project *M.Project) (int64, int64, error) {
+func denormalizedEventsFileToProject(file *os.File, project *M.Project) (int64, int64, error) {
 	var startTime int64
 	var endTime int64
 	_, err := file.Seek(0, 0)
@@ -273,7 +273,7 @@ func testData(startTime int64, endTime int64, projectId uint64, file *os.File) e
 		return err
 	}
 	if startTime == 0 || endTime == 0 {
-		startTime, endTime, err = denormalizedEventsFileToDB(file, nil)
+		startTime, endTime, err = denormalizedEventsFileToProject(file, nil)
 		if err != nil {
 			return err
 		}
@@ -441,7 +441,7 @@ func testWithEventConstraints(startTime int64, endTime int64, projectId uint64, 
 		return err
 	}
 	if startTime == 0 || endTime == 0 {
-		_, startTime, endTime, err = getDenormalizedEventsFromFile(file)
+		startTime, endTime, err = denormalizedEventsFileToProject(file, nil)
 		if err != nil {
 			return err
 		}
