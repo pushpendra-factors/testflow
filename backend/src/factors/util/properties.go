@@ -227,8 +227,8 @@ var SP_INITIAL_REFERRER_URL = "$initial_referrer_url"
 var SP_INITIAL_REFERRER_DOMAIN = "$initial_referrer_domain"
 var SP_SPENT_TIME string = "$session_spent_time"
 var SP_PAGE_COUNT string = "$page_count"
-var SP_LATEST_PAGE_URL = "$latest_page_url"
-var SP_LATEST_PAGE_RAW_URL = "$latest_page_raw_url"
+var SP_LATEST_PAGE_URL = "$session_latest_page_url"
+var SP_LATEST_PAGE_RAW_URL = "$session_latest_page_raw_url"
 
 var SDK_ALLOWED_EVENT_PROPERTIES = [...]string{
 	EP_INTERNAL_IP,
