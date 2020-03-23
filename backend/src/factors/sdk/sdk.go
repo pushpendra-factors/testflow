@@ -990,7 +990,7 @@ func UpdateEventProperties(projectId uint64,
 
 	if updatedEvent.SessionId == nil || *updatedEvent.SessionId == "" {
 		logCtx.Error("Session id does not exist to update session properties on update event properties.")
-		return http.StatusInternalServerError,
+		return http.StatusBadRequest,
 			&UpdateEventPropertiesResponse{Error: "Update event properties failed. No session associated."}
 	}
 
@@ -1011,7 +1011,7 @@ func UpdateEventProperties(projectId uint64,
 	sessionPropertiesMap, err := U.DecodePostgresJsonb(&sessionEvent.Properties)
 	if err != nil {
 		logCtx.Error("Failed to unmarshal existing session properties on update event properties.")
-		return http.StatusInternalServerError,
+		return http.StatusBadRequest,
 			&UpdateEventPropertiesResponse{Error: "Update event properties failed."}
 	}
 
@@ -1020,7 +1020,7 @@ func UpdateEventProperties(projectId uint64,
 	sessionInitialPageURL, sessionInitialPageURLExists := (*sessionPropertiesMap)[U.UP_INITIAL_PAGE_RAW_URL]
 	if !eventPageURLExists || !sessionInitialPageURLExists {
 		logCtx.Error("No page URL property to compare for session properties update.")
-		return http.StatusInternalServerError,
+		return http.StatusBadRequest,
 			&UpdateEventPropertiesResponse{Error: "Update event properties failed."}
 	}
 
