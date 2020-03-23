@@ -2,10 +2,7 @@ package tests
 
 import (
 	"encoding/json"
-	"factors/handler"
-	H "factors/handler"
-	M "factors/model"
-	U "factors/util"
+
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -15,6 +12,11 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/stretchr/testify/assert"
+
+	H "factors/handler"
+	M "factors/model"
+	SDK "factors/sdk"
+	U "factors/util"
 )
 
 func TestSDKTrackHandler(t *testing.T) {
@@ -576,14 +578,14 @@ func TestSDKTrackWithExternalEventIdUserIdAndTimestamp(t *testing.T) {
 		userId := U.GetUUID()
 		timestamp := U.UnixTimeBeforeDuration(1 * time.Hour)
 		randomeEventName := U.RandomLowerAphaNumString(10)
-		trackPayload := H.SDKTrackPayload{
+		trackPayload := SDK.TrackPayload{
 			EventId:    eventId,
 			UserId:     userId,
 			CreateUser: true,
 			Name:       randomeEventName,
 			Timestamp:  timestamp,
 		}
-		status, response := H.SDKTrack(project.ID, &trackPayload, false)
+		status, response := SDK.Track(project.ID, &trackPayload, false)
 		assert.Equal(t, http.StatusOK, status)
 		// Event should be created with the given event_id.
 		assert.Equal(t, eventId, response.EventId)
@@ -605,14 +607,14 @@ func TestSDKTrackWithExternalEventIdUserIdAndTimestamp(t *testing.T) {
 		eventId := U.GetUUID()
 		timestamp := U.UnixTimeBeforeDuration(1 * time.Hour)
 		randomeEventName := U.RandomLowerAphaNumString(10)
-		trackPayload := H.SDKTrackPayload{
+		trackPayload := SDK.TrackPayload{
 			EventId:    eventId,
 			UserId:     user.ID,
 			CreateUser: false,
 			Name:       randomeEventName,
 			Timestamp:  timestamp,
 		}
-		status, response := H.SDKTrack(project.ID, &trackPayload, false)
+		status, response := SDK.Track(project.ID, &trackPayload, false)
 		assert.Equal(t, http.StatusOK, status)
 		// Event should be created with the given event_id.
 		assert.Equal(t, eventId, response.EventId)
@@ -632,10 +634,10 @@ func TestSDKWithQueue(t *testing.T) {
 
 	t.Run("TrackWithoutUserId", func(t *testing.T) {
 		randomeEventName := U.RandomLowerAphaNumString(10)
-		payload := H.SDKTrackPayload{
+		payload := SDK.TrackPayload{
 			Name: randomeEventName,
 		}
-		status, response := H.SDKTrackWithQueue(project.Token,
+		status, response := SDK.TrackWithQueue(project.Token,
 			&payload, []string{project.Token})
 		assert.Equal(t, http.StatusOK, status)
 		// Should respond event id.
@@ -646,11 +648,11 @@ func TestSDKWithQueue(t *testing.T) {
 
 	t.Run("TrackWithUserId", func(t *testing.T) {
 		randomeEventName := U.RandomLowerAphaNumString(10)
-		payload := H.SDKTrackPayload{
+		payload := SDK.TrackPayload{
 			Name:   randomeEventName,
 			UserId: user.ID,
 		}
-		status, response := H.SDKTrackWithQueue(project.Token,
+		status, response := SDK.TrackWithQueue(project.Token,
 			&payload, []string{project.Token})
 		assert.Equal(t, http.StatusOK, status)
 		// Should respond event id.
@@ -661,10 +663,10 @@ func TestSDKWithQueue(t *testing.T) {
 
 	t.Run("IdentifyWithoutUserId", func(t *testing.T) {
 		randomeUserId := U.RandomLowerAphaNumString(10)
-		payload := H.SDKIdentifyPayload{
+		payload := SDK.IdentifyPayload{
 			CustomerUserId: randomeUserId,
 		}
-		status, response := H.SDKIdentifyWithQueue(project.Token,
+		status, response := SDK.IdentifyWithQueue(project.Token,
 			&payload, []string{project.Token})
 		assert.Equal(t, http.StatusOK, status)
 		// Should respond user id as user id is not given on request.
@@ -673,11 +675,11 @@ func TestSDKWithQueue(t *testing.T) {
 
 	t.Run("IdentifyWithUserId", func(t *testing.T) {
 		randomeUserId := U.RandomLowerAphaNumString(10)
-		payload := H.SDKIdentifyPayload{
+		payload := SDK.IdentifyPayload{
 			UserId:         U.GetUUID(),
 			CustomerUserId: randomeUserId,
 		}
-		status, response := H.SDKIdentifyWithQueue(project.Token,
+		status, response := SDK.IdentifyWithQueue(project.Token,
 			&payload, []string{project.Token})
 		assert.Equal(t, http.StatusOK, status)
 		// Should not respond user id as user id given on request.
@@ -685,10 +687,10 @@ func TestSDKWithQueue(t *testing.T) {
 	})
 
 	t.Run("AddUserPropertiesWithoutUserId", func(t *testing.T) {
-		payload := H.SDKAddUserPropertiesPayload{
+		payload := SDK.AddUserPropertiesPayload{
 			Properties: U.PropertiesMap{},
 		}
-		status, response := H.SDKAddUserPropertiesWithQueue(project.Token,
+		status, response := SDK.AddUserPropertiesWithQueue(project.Token,
 			&payload, []string{project.Token})
 		assert.Equal(t, http.StatusOK, status)
 		// Should respond user id as user id is not given on request.
@@ -696,11 +698,11 @@ func TestSDKWithQueue(t *testing.T) {
 	})
 
 	t.Run("AddUserPropertiesWithUserId", func(t *testing.T) {
-		payload := H.SDKAddUserPropertiesPayload{
+		payload := SDK.AddUserPropertiesPayload{
 			UserId:     U.GetUUID(),
 			Properties: U.PropertiesMap{},
 		}
-		status, response := H.SDKAddUserPropertiesWithQueue(project.Token,
+		status, response := SDK.AddUserPropertiesWithQueue(project.Token,
 			&payload, []string{project.Token})
 		assert.Equal(t, http.StatusOK, status)
 		// Should not respond user id as user id given on request.
@@ -709,10 +711,10 @@ func TestSDKWithQueue(t *testing.T) {
 
 	// Update event
 	t.Run("UpdateEventProperties", func(t *testing.T) {
-		payload := H.SDKUpdateEventPropertiesPayload{
+		payload := SDK.UpdateEventPropertiesPayload{
 			Properties: U.PropertiesMap{},
 		}
-		status, _ := H.SDKUpdateEventPropertiesWithQueue(
+		status, _ := SDK.UpdateEventPropertiesWithQueue(
 			project.Token, &payload, []string{project.Token})
 		assert.Equal(t, http.StatusOK, status)
 	})
@@ -726,13 +728,13 @@ func TestSDKIdentifyWithExternalUserAndTimestamp(t *testing.T) {
 		userId := U.GetUUID()
 		customerUserId := U.RandomLowerAphaNumString(10)
 		timestamp := U.UnixTimeBeforeDuration(1 * time.Hour)
-		payload := &H.SDKIdentifyPayload{
+		payload := &SDK.IdentifyPayload{
 			UserId:         userId,
 			CreateUser:     true,
 			CustomerUserId: customerUserId,
 			JoinTimestamp:  timestamp,
 		}
-		status, response := H.SDKIdentify(project.ID, payload)
+		status, response := SDK.Identify(project.ID, payload)
 		assert.Equal(t, http.StatusOK, status)
 		assert.Equal(t, userId, response.UserId)
 		user, _ := M.GetUser(project.ID, response.UserId)
@@ -743,12 +745,12 @@ func TestSDKIdentifyWithExternalUserAndTimestamp(t *testing.T) {
 
 	t.Run("WithUserIdAndCreateUserAsFalse", func(t *testing.T) {
 		customerUserId := U.RandomLowerAphaNumString(10)
-		payload := &H.SDKIdentifyPayload{
+		payload := &SDK.IdentifyPayload{
 			UserId:         user.ID,
 			CreateUser:     false,
 			CustomerUserId: customerUserId,
 		}
-		status, response := H.SDKIdentify(project.ID, payload)
+		status, response := SDK.Identify(project.ID, payload)
 		assert.Equal(t, http.StatusOK, status)
 		// Should use the existing user.
 		assert.Empty(t, response.UserId)
@@ -766,7 +768,7 @@ func TestSDKAddUserPropertiesWithExternalUserIdAndTimestamp(t *testing.T) {
 	t.Run("WithUserIdAndCreateUserAsTrue", func(t *testing.T) {
 		userId := U.GetUUID()
 		timestamp := U.UnixTimeBeforeDuration(1 * time.Hour)
-		payload := &H.SDKAddUserPropertiesPayload{
+		payload := &SDK.AddUserPropertiesPayload{
 			UserId:     userId,
 			Timestamp:  timestamp,
 			CreateUser: true,
@@ -774,7 +776,7 @@ func TestSDKAddUserPropertiesWithExternalUserIdAndTimestamp(t *testing.T) {
 				"key": "value1",
 			},
 		}
-		status, response := H.SDKAddUserProperties(project.ID, payload)
+		status, response := SDK.AddUserProperties(project.ID, payload)
 		assert.Equal(t, http.StatusOK, status)
 		assert.Equal(t, userId, response.UserId)
 		user, _ := M.GetUser(project.ID, response.UserId)
@@ -787,7 +789,7 @@ func TestSDKAddUserPropertiesWithExternalUserIdAndTimestamp(t *testing.T) {
 	})
 
 	t.Run("WithUserIdAndCreateUserAsFalse", func(t *testing.T) {
-		payload := &H.SDKAddUserPropertiesPayload{
+		payload := &SDK.AddUserPropertiesPayload{
 			UserId:     user.ID,
 			CreateUser: false,
 			Properties: U.PropertiesMap{
@@ -795,7 +797,7 @@ func TestSDKAddUserPropertiesWithExternalUserIdAndTimestamp(t *testing.T) {
 			},
 			Timestamp: time.Now().Unix(),
 		}
-		status, response := H.SDKAddUserProperties(project.ID, payload)
+		status, response := SDK.AddUserProperties(project.ID, payload)
 		assert.Equal(t, http.StatusOK, status)
 		// Should use the existing user given.
 		assert.Empty(t, response.UserId)
@@ -1429,12 +1431,12 @@ func TestSDKAddUserPropertiesHandler(t *testing.T) {
 		map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 
-	// Test bad input with non exiting user id.
+	// Non exiting user id.
 	uniqueName = U.RandomLowerAphaNumString(16)
 	fakeUserId := U.RandomLowerAphaNumString(16)
 	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"user_id": "%s" , "properties": {"name": "%s"}}`, fakeUserId, uniqueName)),
 		map[string]string{"Authorization": project.Token})
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Equal(t, http.StatusOK, w.Code) // Should create if not exist, to support queue.
 
 	// Test default user properties.
 	uniqueName = U.RandomLowerAphaNumString(16)
@@ -1543,7 +1545,7 @@ func TestSDKBulk(t *testing.T) {
 		payload := fmt.Sprintf("[%s,%s]", `{"event_name": "signup", "event_properties": {"mobile" : "true"}}`, `{"event_name":"test", "event_properties": {"mobile" : "true"}}`)
 		w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 		assert.Equal(t, http.StatusOK, w.Code)
-		resp := make([]handler.SDKTrackResponse, 0, 0)
+		resp := make([]SDK.TrackResponse, 0, 0)
 		jsonResponse, _ := ioutil.ReadAll(w.Body)
 		json.Unmarshal(jsonResponse, &resp)
 		assert.Equal(t, 2, len(resp))
@@ -1556,7 +1558,7 @@ func TestSDKBulk(t *testing.T) {
 			`{"event_name":"test2","c_event_id":"1", "event_properties": {"mobile" : "true"}}`)
 		w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 		assert.Equal(t, http.StatusInternalServerError, w.Code)
-		resp := make([]handler.SDKTrackResponse, 0, 0)
+		resp := make([]SDK.TrackResponse, 0, 0)
 		jsonResponse, _ := ioutil.ReadAll(w.Body)
 		json.Unmarshal(jsonResponse, &resp)
 
