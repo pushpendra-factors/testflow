@@ -4,11 +4,12 @@ WORKDIR /frontend
 COPY . .
 RUN export NODE_ENV=development
 RUN rm -rf ./dist/staging
-RUN mkdir -p ./dist/staging
 RUN npm install
 RUN npm rebuild node-sass
-RUN mv ./dist/development/ ./dist
+RUN mv ./src/views/Pages/Activate/activate.js ./src/views/Pages/Activate/Activate.js
+RUN cp -r  ./src/views/Settings ./src/views/settings
 RUN ./node_modules/.bin/webpack -p --config webpack.config.js
+RUN mv ./dist/development/* ./dist
 RUN npm install express
 EXPOSE 3000
 CMD ["node", "serve-dist.js"]

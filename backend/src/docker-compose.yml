@@ -29,7 +29,7 @@ services:
         redis:
             build:
                 context: .
-                dockerfile: Dockerfile.redis.testing
+                dockerfile: Dockerfile.redis
             image: testing/redis:1.0
             restart: always
             ports:
@@ -50,26 +50,30 @@ services:
                 - "2380:2380"
         api:
             build:
-                context: ../../
-                dockerfile: backend/src/Dockerfile.appserver.testing
+                context: .
+                dockerfile: Dockerfile.appserver
             environment:
                 -  GOPATH=/go/src/factors
                 -  DB_HOST=postgres
                 -  REDIS_HOST=redis
                 -  ETCD=etcd:2379
-                -  PS_RPC_PORT=patternserver
+                -  PS=patternserver
+            entrypoint: [ "sh","-c","/go/bin/app --db_host=postgres --redis_host=redis --etcd=etcd:2379"]
             image: testing/api:1.0
             restart: always
             ports:
                 - "8080:8080"
+            volumes: 
+                - ../../geolocation_data:/usr/local/var/factors/geolocation_data
         patternserver:
             build:
                 context: .
-                dockerfile: Dockerfile.patternserver.testing
+                dockerfile: Dockerfile.patternserver
             environment:
                 -   GOPATH=/go/src/factors
                 -   ETCD=etcd:2379
             image: testing/pattern-server:1.0
+            entrypoint: ["sh", "-c", "/go/bin/pattern-app --etcd=etcd:2379"]
             volumes: 
                 - ${BUCKET_DIR}:/usr/local/var/factors
             ports:
@@ -79,10 +83,11 @@ services:
                 - postgres
             build:
                 context: .
-                dockerfile: Dockerfile.dataserver.testing
+                dockerfile: Dockerfile.dataserver
             environment:
                 -   GOPATH=/go/src/factors
                 -   DB_HOST=postgres
+            entrypoint: ["sh","-c", "/go/bin/dataserver --db_host=postgres"]
             image: testing/dataserver:1.0
             restart: always
             ports:
