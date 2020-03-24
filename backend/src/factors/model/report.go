@@ -292,6 +292,8 @@ func GetValidReportsListAgentHasAccessTo(projectID uint64,
 func GenerateReport(projectID, dashboardID uint64, dashboardName string, reportType string,
 	intervalBeforeThat, interval Interval) (*Report, int) {
 
+	logCtx := log.WithField("project_id", projectID).WithField("dashboard_id", dashboardID)
+
 	dashboardUnits, errCode := GetDashboardUnitsByProjectIDAndDashboardIDAndTypes(
 		projectID, dashboardID, dashBoardUnitTypesToIncludeInReport)
 	if errCode != http.StatusFound {
@@ -302,8 +304,11 @@ func GenerateReport(projectID, dashboardID uint64, dashboardName string, reportT
 	for _, dashboardUnit := range dashboardUnits {
 		dashboardUnitReport, errCode := getDashboardUnitReport(projectID,
 			dashboardUnit, intervalBeforeThat, interval)
+
 		if errCode != http.StatusOK {
-			return nil, errCode
+			// Do not break the loop after one failure for a dashboard.
+			logCtx.Error("Failed to generate report unit for dashboard.")
+			continue
 		}
 
 		reportUnits = append(reportUnits, *dashboardUnitReport)
