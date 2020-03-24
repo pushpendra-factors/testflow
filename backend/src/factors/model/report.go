@@ -393,7 +393,7 @@ func getChannelReportUnit(projectID uint64, channelQueryUnit ChannelQueryUnit,
 	if channelQueryResult.Metrics != nil && presentation == PresentationCard {
 		metricName, exists := (*channelQueryUnit.Meta)["metric"]
 		if !exists {
-			logCtx.Error("metric name doesn't exist on dashboard unit for creating report unit.")
+			logCtx.Error("Metric name doesn't exist on dashboard unit for creating report unit.")
 			return nil, http.StatusInternalServerError
 		}
 
@@ -408,8 +408,8 @@ func getChannelReportUnit(projectID uint64, channelQueryUnit ChannelQueryUnit,
 		row = append(row, value)
 		queryResult.Rows = [][]interface{}{row}
 	} else if channelQueryResult.MetricsBreakdown != nil {
-		queryResult.Headers = channelQueryResult.MetricsBreakdown.Headers
-		queryResult.Rows = channelQueryResult.MetricsBreakdown.Rows
+		logCtx.Error("Metric breakdown not supported on getChannelReportUnit.")
+		return nil, http.StatusInternalServerError
 	}
 
 	reportUnit := ReportUnit{
