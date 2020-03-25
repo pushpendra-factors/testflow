@@ -7,6 +7,7 @@ import (
 	serviceEtcd "factors/services/etcd"
 	serviceGCS "factors/services/gcstorage"
 	T "factors/task"
+	"factors/util"
 	"flag"
 	"fmt"
 	"strconv"
@@ -34,6 +35,8 @@ func main() {
 	dbPass := flag.String("db_pass", "@ut0me7a", "")
 
 	flag.Parse()
+
+	defer util.NotifyOnPanic("Task#BuildSeq", *envFlag)
 
 	if *envFlag != "development" &&
 		*envFlag != "staging" &&

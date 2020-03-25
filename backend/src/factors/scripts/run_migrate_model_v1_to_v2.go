@@ -9,6 +9,7 @@ import (
 	"factors/pattern_server/store"
 	serviceDisk "factors/services/disk"
 	serviceGCS "factors/services/gcstorage"
+	"factors/util"
 	"flag"
 	"fmt"
 	"time"
@@ -30,6 +31,8 @@ func main() {
 		err := fmt.Errorf("env [ %s ] not recognised", *envFlag)
 		panic(err)
 	}
+
+	defer util.NotifyOnPanic("Task#MigrateModel", *envFlag)
 
 	if *metadataVersion == "" {
 		panic(errors.New("metadata version not given"))

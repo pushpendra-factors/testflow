@@ -7,6 +7,7 @@ package main
 import (
 	C "factors/config"
 	M "factors/model"
+	"factors/util"
 	"flag"
 	"os"
 
@@ -24,6 +25,8 @@ func main() {
 	dbPass := flag.String("db_pass", "@ut0me7a", "")
 
 	flag.Parse()
+
+	defer util.NotifyOnPanic("Task#DbCreate", *env)
 
 	config := &C.Configuration{
 		Env: *env,

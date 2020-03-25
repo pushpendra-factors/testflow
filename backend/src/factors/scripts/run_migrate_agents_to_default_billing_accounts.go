@@ -3,6 +3,7 @@ package main
 import (
 	C "factors/config"
 	M "factors/model"
+	"factors/util"
 	"flag"
 	"fmt"
 
@@ -28,6 +29,8 @@ func main() {
 		err := fmt.Errorf("env [ %s ] not recognised", *env)
 		panic(err)
 	}
+
+	defer util.NotifyOnPanic("Task#MigrateAgents", *env)
 
 	config := &C.Configuration{
 		Env: *env,

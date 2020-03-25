@@ -6,6 +6,7 @@ package main
 
 import (
 	C "factors/config"
+	"factors/util"
 	"flag"
 	"fmt"
 
@@ -69,6 +70,8 @@ func main() {
 		err := fmt.Errorf("env [ %s ] not recognised", *env)
 		panic(err)
 	}
+
+	defer util.NotifyOnPanic("Task#FixUserJoinTime", *env)
 
 	config := &C.Configuration{
 		Env: *env,

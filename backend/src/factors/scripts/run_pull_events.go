@@ -11,6 +11,7 @@ import (
 	serviceDisk "factors/services/disk"
 	serviceGCS "factors/services/gcstorage"
 	T "factors/task"
+	"factors/util"
 	"flag"
 	"fmt"
 	"time"
@@ -48,6 +49,8 @@ func main() {
 		err := fmt.Errorf("env [ %s ] not recognised", *env)
 		panic(err)
 	}
+
+	defer util.NotifyOnPanic("Task#PullEvents", *env)
 
 	config := &C.Configuration{
 		AppName: "pull_events_job",

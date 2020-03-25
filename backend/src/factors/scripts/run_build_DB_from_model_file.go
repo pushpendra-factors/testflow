@@ -7,6 +7,7 @@ import (
 	C "factors/config"
 	M "factors/model"
 	P "factors/pattern"
+	"factors/util"
 	U "factors/util"
 	"flag"
 	"fmt"
@@ -64,6 +65,8 @@ func main() {
 	projectIdFlag := flag.Uint64("project_id", 0, "Project Id.")
 
 	flag.Parse()
+
+	defer util.NotifyOnPanic("Task#BuildDbFromModelFile", *env)
 
 	config := &C.Configuration{
 		Env: *env,

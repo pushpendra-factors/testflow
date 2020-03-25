@@ -14,6 +14,7 @@ import (
 	serviceEtcd "factors/services/etcd"
 	serviceGCS "factors/services/gcstorage"
 	T "factors/task"
+	"factors/util"
 	"flag"
 	"fmt"
 	"strings"
@@ -48,6 +49,8 @@ func main() {
 		err := fmt.Errorf("env [ %s ] not recognised", *envFlag)
 		panic(err)
 	}
+
+	defer util.NotifyOnPanic("Task#PatternMine", *envFlag)
 
 	// init DB, etcd
 	config := &C.Configuration{

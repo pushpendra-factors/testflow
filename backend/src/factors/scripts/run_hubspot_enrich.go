@@ -31,6 +31,8 @@ func main() {
 		panic(fmt.Errorf("env [ %s ] not recognised", *env))
 	}
 
+	defer util.NotifyOnPanic("Task#HubspotEnrich", *env)
+
 	// init DB, etcd
 	config := &C.Configuration{
 		AppName: "hubspot_enrich_job",
