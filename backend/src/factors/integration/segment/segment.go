@@ -379,7 +379,10 @@ func ReceiveEvent(token string, event *Event) (int, *EventResponse) {
 		}
 
 		status, trackResponse := SDK.Track(project.ID, request, false)
-		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
+		if status != http.StatusOK &&
+			status != http.StatusFound &&
+			status != http.StatusNotModified &&
+			status != http.StatusNotAcceptable {
 			logCtx.WithFields(log.Fields{"track_payload": request,
 				"error_code": status}).Error("Segment event failure. sdk_track call failed.")
 
@@ -423,7 +426,11 @@ func ReceiveEvent(token string, event *Event) (int, *EventResponse) {
 		}
 
 		status, trackResponse := SDK.Track(project.ID, request, false)
-		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
+		if status != http.StatusOK &&
+			status != http.StatusFound &&
+			status != http.StatusNotModified &&
+			status != http.StatusNotAcceptable {
+
 			logCtx.WithFields(log.Fields{"track_payload": request,
 				"error_code": status}).Error("Segment event failure. sdk_track call failed.")
 
@@ -460,7 +467,11 @@ func ReceiveEvent(token string, event *Event) (int, *EventResponse) {
 		}
 
 		status, trackResponse := SDK.Track(project.ID, request, false)
-		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
+		if status != http.StatusOK &&
+			status != http.StatusFound &&
+			status != http.StatusNotModified &&
+			status != http.StatusNotAcceptable {
+
 			logCtx.WithFields(log.Fields{"track_payload": request,
 				"error_code": status}).Error("Segment event failure. sdk_track call failed.")
 
