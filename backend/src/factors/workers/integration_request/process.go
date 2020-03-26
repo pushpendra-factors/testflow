@@ -2,15 +2,30 @@ package main
 
 import (
 	"flag"
-
-	C "factors/config"
-	SDK "factors/sdk"
-	U "factors/util"
+	"net/http"
 
 	log "github.com/sirupsen/logrus"
+
+	C "factors/config"
+	Int "factors/integration"
+	IntSegment "factors/integration/segment"
+	U "factors/util"
 )
 
-const workerName = "sdk_request_worker"
+const workerName = "integration_request_worker"
+
+func ProcessRequest(token, reqType, reqPayload string) (float64, string, error) {
+	switch reqType {
+	case Int.TypeSegment:
+		return IntSegment.ProcessQueueEvent(token, reqPayload)
+	case Int.TypeShopify:
+		// Todo: Add shopify request process method.
+	}
+
+	log.WithField("req_type", reqType).Error(
+		"Unknown request type on process integration request.")
+	return http.StatusBadRequest, "", nil
+}
 
 func main() {
 	env := flag.String("env", "development", "")
@@ -73,15 +88,14 @@ func main() {
 
 	// Register tasks on queueClient.
 	queueClient := C.GetServices().QueueClient
-	if err := queueClient.RegisterTask(SDK.ProcessRequestTask,
-		SDK.ProcessQueueRequest); err != nil {
-
+	err = queueClient.RegisterTask(Int.ProcessRequestTask, ProcessRequest)
+	if err != nil {
 		log.WithError(err).Fatal(
-			"Failed to register tasks on queue client in sdk_request_worker.")
+			"Failed to register tasks on queue client in integration request worker.")
 	}
 
 	// Todo(Dinesh): Add pod_id to worker name.
-	worker := queueClient.NewCustomQueueWorker(
-		workerName, *workerConcurrency, SDK.RequestQueue)
+	worker := queueClient.NewCustomQueueWorker(workerName,
+		*workerConcurrency, Int.RequestQueue)
 	worker.Launch()
 }

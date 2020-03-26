@@ -18,7 +18,7 @@ import (
 func TestAnalyticsFunnelQuery(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
-	H.InitSDKRoutes(r)
+	H.InitSDKServiceRoutes(r)
 	uri := "/sdk/event/track"
 
 	t.Run("NoOfUsersCompletedTheFunnelFirstTimeOfStart", func(t *testing.T) {
@@ -268,7 +268,7 @@ func TestAnalyticsFunnelQuery(t *testing.T) {
 func TestAnalyticsFunnelQueryWithFilterCondition(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
-	H.InitSDKRoutes(r)
+	H.InitSDKServiceRoutes(r)
 	uri := "/sdk/event/track"
 
 	project, err := SetupProjectReturnDAO()
@@ -433,7 +433,7 @@ func TestAnalyticsFunnelQueryWithFilterCondition(t *testing.T) {
 func TestAnalyticsInsightsQuery(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
-	H.InitSDKRoutes(r)
+	H.InitSDKServiceRoutes(r)
 	uri := "/sdk/event/track"
 
 	t.Run("OperatorsWithNumericalPropertiesOnWhere", func(t *testing.T) {

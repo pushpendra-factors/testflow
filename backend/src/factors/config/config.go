@@ -49,29 +49,30 @@ type DBConf struct {
 }
 
 type Configuration struct {
-	AppName                      string
-	Env                          string
-	Port                         int
-	DBInfo                       DBConf
-	RedisHost                    string
-	RedisPort                    int
-	QueueRedisHost               string
-	QueueRedisPort               int
-	EtcdEndpoints                []string
-	GeolocationFile              string
-	APIDomain                    string
-	APPDomain                    string
-	AWSRegion                    string
-	AWSKey                       string
-	AWSSecret                    string
-	Cookiename                   string
-	EmailSender                  string
-	ErrorReportingInterval       int
-	AdminLoginEmail              string
-	AdminLoginToken              string
-	LoginTokenMap                map[string]string
-	SkipTrackProjectIds          []uint64
-	SDKRequestQueueProjectTokens []string
+	AppName                          string
+	Env                              string
+	Port                             int
+	DBInfo                           DBConf
+	RedisHost                        string
+	RedisPort                        int
+	QueueRedisHost                   string
+	QueueRedisPort                   int
+	EtcdEndpoints                    []string
+	GeolocationFile                  string
+	APIDomain                        string
+	APPDomain                        string
+	AWSRegion                        string
+	AWSKey                           string
+	AWSSecret                        string
+	Cookiename                       string
+	EmailSender                      string
+	ErrorReportingInterval           int
+	AdminLoginEmail                  string
+	AdminLoginToken                  string
+	LoginTokenMap                    map[string]string
+	SkipTrackProjectIds              []uint64
+	SDKRequestQueueProjectTokens     []string
+	SegmentRequestQueueProjectTokens []string
 }
 
 type Services struct {
@@ -79,7 +80,7 @@ type Services struct {
 	GeoLocation        *geoip2.Reader
 	Etcd               *serviceEtcd.EtcdClient
 	Redis              *redis.Pool
-	SDKQueueClient     *machinery.Server
+	QueueClient        *machinery.Server
 	patternServersLock sync.RWMutex
 	patternServers     map[string]string
 	Mailer             maileriface.Mailer
@@ -341,7 +342,7 @@ func InitQueueClient(redisHost string, redisPort int) error {
 		return err
 	}
 
-	services.SDKQueueClient = client
+	services.QueueClient = client
 
 	return nil
 }
@@ -622,4 +623,8 @@ func GetTokensFromStringListAsString(stringList string) []string {
 
 func GetSDKRequestQueueAllowedTokens() []string {
 	return configuration.SDKRequestQueueProjectTokens
+}
+
+func GetSegmentRequestQueueAllowedTokens() []string {
+	return configuration.SegmentRequestQueueProjectTokens
 }

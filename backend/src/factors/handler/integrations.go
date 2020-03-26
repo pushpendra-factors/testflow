@@ -2,6 +2,14 @@ package handler
 
 import (
 	"encoding/json"
+	"net/http"
+	"strconv"
+	"strings"
+
+	log "github.com/sirupsen/logrus"
+
+	"github.com/gin-gonic/gin"
+
 	C "factors/config"
 	IntSegment "factors/integration/segment"
 	IntShopify "factors/integration/shopify"
@@ -9,15 +17,6 @@ import (
 	M "factors/model"
 	SDK "factors/sdk"
 	U "factors/util"
-	"fmt"
-	"net/http"
-	"strconv"
-	"strings"
-	"time"
-
-	log "github.com/sirupsen/logrus"
-
-	"github.com/gin-gonic/gin"
 )
 
 func IntSegmentHandler(c *gin.Context) {
@@ -27,182 +26,24 @@ func IntSegmentHandler(c *gin.Context) {
 		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
 	})
 
-	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
-	if projectId == 0 {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Creating event_name failed. Invalid project."})
-		return
-	}
-
-	// Skipping configured projects.
-	for _, skipProjectId := range C.GetSkipTrackProjectIds() {
-		if skipProjectId == projectId {
-			c.AbortWithStatusJSON(http.StatusOK, gin.H{"error": "Track skipped."})
-			return
-		}
-	}
-
-	if !M.IsPSettingsIntSegmentEnabled(projectId) {
-		logCtx.WithField("project_id", projectId).Error("Segment webhook failure. Integration not enabled.")
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Creating event_name failed. Invalid project."})
-		return
-	}
-
-	var event IntSegment.SegmentEvent
+	var event IntSegment.Event
 	if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
-		logCtx.WithFields(log.Fields{"project_id": projectId, log.ErrorKey: err}).Error("Segment JSON decode failed")
+		logCtx.WithError(err).Error("Segment JSON decode failed")
 	}
 	logCtx.WithFields(log.Fields{"event": event}).Debug("Segment webhook request")
 
-	logCtx = logCtx.WithFields(log.Fields{
-		"project_id":   projectId,
-		"type":         event.Type,
-		"anonymous_id": event.AnonymousID,
-		"user_id":      event.UserId,
-	})
+	token := U.GetScopeByKeyAsString(c, mid.SCOPE_PROJECT_PRIVATE_TOKEN)
 
-	response := &SDK.TrackResponse{}
+	status, response := IntSegment.ReceiveEventWithQueue(token, &event,
+		C.GetSegmentRequestQueueAllowedTokens())
 
-	parsedTimestamp, err := time.Parse(time.RFC3339, event.Timestamp)
-	if err != nil {
-		logCtx.WithFields(log.Fields{"timestamp": event.Timestamp,
-			log.ErrorKey: err}).Error("Failed parsing segment event timestamp.")
-		response.Error = "invalid event timestamp"
-		response.Type = event.Type
-		c.AbortWithStatusJSON(http.StatusBadRequest, response)
-		return
-	}
-	requestTimestamp := parsedTimestamp.Unix()
-
-	user, errCode := M.GetSegmentUser(projectId, event.AnonymousID, event.UserId, requestTimestamp)
-	if errCode != http.StatusOK && errCode != http.StatusCreated {
-		c.AbortWithStatus(errCode)
-		return
-	}
-	isNewUser := errCode == http.StatusCreated
-
-	var status int
-	switch event.Type {
-	case "track":
-		userProperties := U.PropertiesMap{}
-		IntSegment.FillSegmentGenericUserProperties(&userProperties, &event)
-		IntSegment.FillSegmentWebUserProperties(&userProperties, &event)
-		IntSegment.FillSegmentMobileUserProperties(&userProperties, &event)
-
-		var eventProperties U.PropertiesMap
-		if event.Properties != nil {
-			// Initialized with already existing event props.
-			eventProperties = event.Properties
-		} else {
-			eventProperties = make(U.PropertiesMap, 0)
-		}
-		IntSegment.FillSegmentGenericEventProperties(&eventProperties, &event)
-		IntSegment.FillSegmentWebEventProperties(&eventProperties, &event)
-
-		request := &SDK.TrackPayload{
-			Name:            event.TrackName,
-			CustomerEventId: event.MessageID,
-			IsNewUser:       isNewUser,
-			UserId:          user.ID,
-			Auto:            false,
-			EventProperties: eventProperties,
-			UserProperties:  userProperties,
-			Timestamp:       requestTimestamp,
-			ClientIP:        event.Context.IP,
-			UserAgent:       event.Context.UserAgent,
-		}
-		status, response = SDK.Track(projectId, request, false)
-		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
-			logCtx.WithFields(log.Fields{"track_payload": request,
-				"error_code": status}).Error("Segment event failure. sdk_track call failed.")
-		}
-	case "page":
-		pageURL := IntSegment.GetURLFromPageEvent(&event)
-		parsedPageURL, err := U.ParseURLStable(pageURL)
-		if err != nil {
-			logCtx.WithFields(log.Fields{log.ErrorKey: err, "page_url": pageURL}).Error(
-				"Failed parsing URL from segment.")
-			c.AbortWithStatus(http.StatusBadRequest)
-			return
-		}
-
-		userProperties := U.PropertiesMap{}
-		IntSegment.FillSegmentGenericUserProperties(&userProperties, &event)
-		IntSegment.FillSegmentWebUserProperties(&userProperties, &event)
-
-		eventProperties := U.PropertiesMap{}
-		U.FillPropertiesFromURL(&eventProperties, parsedPageURL)
-		IntSegment.FillSegmentGenericEventProperties(&eventProperties, &event)
-		IntSegment.FillSegmentWebEventProperties(&eventProperties, &event)
-
-		name := U.GetURLHostAndPath(parsedPageURL)
-		request := &SDK.TrackPayload{
-			Name:            name,
-			UserId:          user.ID,
-			IsNewUser:       isNewUser,
-			Auto:            true,
-			CustomerEventId: event.MessageID,
-			EventProperties: eventProperties,
-			UserProperties:  userProperties,
-			Timestamp:       requestTimestamp,
-			ClientIP:        event.Context.IP,
-			UserAgent:       event.Context.UserAgent,
-		}
-		status, response = SDK.Track(projectId, request, false)
-		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
-			logCtx.WithFields(log.Fields{"track_payload": request,
-				"error_code": status}).Error("Segment event failure. sdk_track call failed.")
-		}
-
-	case "screen":
-		userProperties := U.PropertiesMap{}
-		IntSegment.FillSegmentGenericUserProperties(&userProperties, &event)
-		IntSegment.FillSegmentMobileUserProperties(&userProperties, &event)
-
-		var eventProperties U.PropertiesMap
-		if event.Properties != nil {
-			// Initialized with already existing event props.
-			eventProperties = event.Properties
-		} else {
-			eventProperties = make(U.PropertiesMap, 0)
-		}
-		IntSegment.FillSegmentGenericEventProperties(&eventProperties, &event)
-
-		request := &SDK.TrackPayload{
-			Name:            event.ScreenName,
-			UserId:          user.ID,
-			IsNewUser:       isNewUser,
-			Auto:            false,
-			CustomerEventId: event.MessageID,
-			EventProperties: eventProperties,
-			UserProperties:  userProperties,
-			Timestamp:       requestTimestamp,
-			ClientIP:        event.Context.IP,
-			UserAgent:       event.Context.UserAgent,
-		}
-		status, response = SDK.Track(projectId, request, false)
-		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
-			logCtx.WithFields(log.Fields{"track_payload": request,
-				"error_code": status}).Error("Segment event failure. sdk_track call failed.")
-		}
-
-	case "identify":
-		// Identification happens on every call before type switch.
-		// Updates the user properties with the traits, here.
-		response.UserId = user.ID
-
-		_, status := M.UpdateUserProperties(projectId, user.ID, &event.Traits, requestTimestamp)
-		if status != http.StatusAccepted && status != http.StatusNotModified {
-			//logCtx.WithFields(log.Fields{"user_properties": event.Traits, "error_code": status}).Error("Segment event failure. Updating user_properties failed.")
-			response.Error = "Segment identification failed."
-		}
-
-	default:
-		response.Error = fmt.Sprintf("Segment event failure. Unknown event type: %s.", event.Type)
-		response.Type = event.Type
-		logCtx.Error("Unknown segment event type.")
+	// send error on StatusInternalServerError (db unavailability and redis error),
+	// for segment to retry.
+	if status == http.StatusInternalServerError {
+		c.AbortWithStatus(status)
 	}
 
-	// Always return HTTP STATUS_OK with original response.
+	// Always send StatusOK for failure on direct processing.
 	c.JSON(http.StatusOK, response)
 }
 

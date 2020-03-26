@@ -56,7 +56,7 @@ func SDKTrackHandler(c *gin.Context) {
 	request.ClientIP = c.ClientIP()
 	request.UserAgent = c.Request.UserAgent()
 
-	projectToken := U.GetScopeByKeyAsString(c, mid.SCOPE_SDK_PROJECT_TOKEN)
+	projectToken := U.GetScopeByKeyAsString(c, mid.SCOPE_PROJECT_TOKEN)
 	c.JSON(SDK.TrackWithQueue(projectToken, &request, C.GetSDKRequestQueueAllowedTokens()))
 }
 
@@ -92,7 +92,7 @@ func SDKBulkEventHandler(c *gin.Context) {
 		return
 	}
 
-	projectToken := U.GetScopeByKeyAsString(c, mid.SCOPE_SDK_PROJECT_TOKEN)
+	projectToken := U.GetScopeByKeyAsString(c, mid.SCOPE_PROJECT_TOKEN)
 
 	clientIP := c.ClientIP()
 	userAgent := c.Request.UserAgent()
@@ -146,7 +146,7 @@ func SDKIdentifyHandler(c *gin.Context) {
 		return
 	}
 
-	projectToken := U.GetScopeByKeyAsString(c, mid.SCOPE_SDK_PROJECT_TOKEN)
+	projectToken := U.GetScopeByKeyAsString(c, mid.SCOPE_PROJECT_TOKEN)
 	c.JSON(SDK.IdentifyWithQueue(projectToken, &request, C.GetSDKRequestQueueAllowedTokens()))
 }
 
@@ -178,7 +178,7 @@ func SDKAddUserPropertiesHandler(c *gin.Context) {
 
 	request.ClientIP = c.ClientIP()
 
-	projectToken := U.GetScopeByKeyAsString(c, mid.SCOPE_SDK_PROJECT_TOKEN)
+	projectToken := U.GetScopeByKeyAsString(c, mid.SCOPE_PROJECT_TOKEN)
 	c.JSON(SDK.AddUserPropertiesWithQueue(projectToken, &request, C.GetSDKRequestQueueAllowedTokens()))
 }
 
@@ -191,8 +191,8 @@ type sdkSettingsResponse struct {
 // Test command.
 // curl -i -H "Content-Type: application/json" -H "Authorization: YOUR_TOKEN" -X GET http://localhost:8080/sdk/project/get_settings
 func SDKGetProjectSettingsHandler(c *gin.Context) {
-	projectToken := U.GetScopeByKeyAsString(c, mid.SCOPE_SDK_PROJECT_TOKEN)
-	projectSetting, errCode := M.GetProjectSettingByTokenForSDK(projectToken)
+	projectToken := U.GetScopeByKeyAsString(c, mid.SCOPE_PROJECT_TOKEN)
+	projectSetting, errCode := M.GetProjectSettingByTokenWithCacheAndDefault(projectToken)
 	if errCode != http.StatusFound {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": "Get project settings failed."})
 		return
@@ -231,6 +231,6 @@ func SDKUpdateEventPropertiesHandler(c *gin.Context) {
 		return
 	}
 
-	projectToken := U.GetScopeByKeyAsString(c, mid.SCOPE_SDK_PROJECT_TOKEN)
+	projectToken := U.GetScopeByKeyAsString(c, mid.SCOPE_PROJECT_TOKEN)
 	c.JSON(SDK.UpdateEventPropertiesWithQueue(projectToken, &request, C.GetSDKRequestQueueAllowedTokens()))
 }

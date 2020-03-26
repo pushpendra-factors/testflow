@@ -232,6 +232,31 @@ or
 $GOPATH/bin/./data-service --env=development --port=8089 --db_host=localhost --db_port=5432 --db_user=autometa --db_name=autometa --db_pass=@ut0me7a --aws_region=us-east-1 --aws_key=dummy --aws_secret=dummy --email_sender=support@factors.ai --error_reporting_interval=300
 ```
 
+### SDK Server
+* Build
+```
+cd $PATH_TO_FACTORS/factors/backend/src
+make build-sdk
+```
+
+* Run
+```
+make serve-sdk
+```
+
+### Workers
+* Run SDK Request Worker
+```
+cd $PATH_TO_FACTORS/factors/backend/src/workers/sdk_request
+go run process.go
+```
+
+* Run Integration Request Worker
+```
+cd $PATH_TO_FACTORS/factors/backend/src/workers/integration_request
+go run process.go
+```
+
 ### Adwords Server
 * Install python3
 ```

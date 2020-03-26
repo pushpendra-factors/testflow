@@ -83,37 +83,33 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.PUT("/:project_id/settings", UpdateProjectSettingsHandler)
 }
 
-func InitSDKRoutes(r *gin.Engine) {
+func InitSDKServiceRoutes(r *gin.Engine) {
 	r.GET(ROUTE_SDK_ROOT+"/service/status", SDKStatusHandler)
 
-	// Todo: Check integrity of token using encrytion/decryption
+	// Todo(Dinesh): Check integrity of token using encrytion/decryption
 	// with secret, on middleware, to avoid spamming queue.
 
 	// Getting project_id is moved to sdk request handler to
 	// support queue workers also.
 	// sdkRouteGroup.Use(mid.SetScopeProjectIdByToken())
 
-	// Todo: Add middleware to add context sdk_src, sdk_uid.
 	sdkRouteGroup := r.Group(ROUTE_SDK_ROOT)
-	sdkRouteGroup.Use(mid.SetScopeSDKProjectToken())
+	sdkRouteGroup.Use(mid.SetScopeProjectToken())
 	sdkRouteGroup.GET("/project/get_settings", SDKGetProjectSettingsHandler)
 	sdkRouteGroup.POST("/event/track", SDKTrackHandler)
 	sdkRouteGroup.POST("/event/track/bulk", SDKBulkEventHandler)
 	sdkRouteGroup.POST("/event/update_properties", SDKUpdateEventPropertiesHandler)
 	sdkRouteGroup.POST("/user/identify", SDKIdentifyHandler)
 	sdkRouteGroup.POST("/user/add_properties", SDKAddUserPropertiesHandler)
+
+	intRouteGroup := r.Group(ROUTE_INTEGRATIONS_ROOT)
+	intRouteGroup.POST("/segment", mid.SetScopeProjectPrivateToken(), IntSegmentHandler)
+	intRouteGroup.POST("/segment_platform",
+		mid.SetScopeProjectPrivateTokenUsingBasicAuth(), IntSegmentHandler)
 }
 
 func InitIntRoutes(r *gin.Engine) {
 	intRouteGroup := r.Group(ROUTE_INTEGRATIONS_ROOT)
-
-	intRouteGroup.POST("/segment",
-		mid.SetScopeProjectIdByPrivateToken(),
-		IntSegmentHandler)
-
-	intRouteGroup.POST("/segment_platform",
-		mid.SetScopeProjectIdByPrivateTokenUsingBasicAuth(),
-		IntSegmentHandler)
 
 	intRouteGroup.POST("/shopify",
 		mid.SetScopeProjectIdByStoreAndSecret(),
@@ -140,7 +136,6 @@ func InitIntRoutes(r *gin.Engine) {
 		mid.SetLoggedInAgent(),
 		mid.SetAuthorizedProjectsByLoggedInAgent(),
 		IntAdwordsGetRefreshTokenHandler)
-
 }
 
 func InitDataServiceRoutes(r *gin.Engine) {

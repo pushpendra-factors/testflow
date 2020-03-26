@@ -22,7 +22,7 @@ import (
 func TestSDKTrackHandler(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
-	H.InitSDKRoutes(r)
+	H.InitSDKServiceRoutes(r)
 	uri := "/sdk/event/track"
 
 	project, user, err := SetupProjectUserReturnDAO()
@@ -814,7 +814,7 @@ func TestSDKAddUserPropertiesWithExternalUserIdAndTimestamp(t *testing.T) {
 func TestTrackHandlerWithUserSession(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
-	H.InitSDKRoutes(r)
+	H.InitSDKServiceRoutes(r)
 	uri := "/sdk/event/track"
 
 	project, _, err := SetupProjectUserReturnDAO()
@@ -924,7 +924,7 @@ func TestTrackHandlerWithUserSession(t *testing.T) {
 
 func TestTrackHandlerUserSessionWithTimestamp(t *testing.T) {
 	r := gin.Default()
-	H.InitSDKRoutes(r)
+	H.InitSDKServiceRoutes(r)
 	uri := "/sdk/event/track"
 
 	project, err := SetupProjectReturnDAO()
@@ -995,7 +995,7 @@ func TestTrackHandlerUserSessionWithTimestamp(t *testing.T) {
 }
 func TestOldUserSessionProperties(t *testing.T) {
 	r := gin.Default()
-	H.InitSDKRoutes(r)
+	H.InitSDKServiceRoutes(r)
 	uri := "/sdk/event/track"
 
 	project, err := SetupProjectReturnDAO()
@@ -1026,7 +1026,7 @@ func TestOldUserSessionProperties(t *testing.T) {
 
 func TestPreviousSessionEventPropertyEnrichment(t *testing.T) {
 	r := gin.Default()
-	H.InitSDKRoutes(r)
+	H.InitSDKServiceRoutes(r)
 	uri := "/sdk/event/track"
 
 	project, err := SetupProjectReturnDAO()
@@ -1155,7 +1155,7 @@ func TestPreviousSessionEventPropertyEnrichment(t *testing.T) {
 func TestTrackHandlerWithFormSubmit(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
-	H.InitSDKRoutes(r)
+	H.InitSDKServiceRoutes(r)
 	uri := "/sdk/event/track"
 
 	project, err := SetupProjectReturnDAO()
@@ -1194,7 +1194,7 @@ func TestTrackHandlerWithFormSubmit(t *testing.T) {
 func TestSDKIdentifyHandler(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
-	H.InitSDKRoutes(r)
+	H.InitSDKServiceRoutes(r)
 	uri := "/sdk/user/identify"
 
 	project, user, err := SetupProjectUserReturnDAO()
@@ -1311,7 +1311,7 @@ func assertEqualJoinTimePropertyOnAllRecords(t *testing.T, records []M.UserPrope
 func TestUpdateJoinTimeOnSDKIdentify(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
-	H.InitSDKRoutes(r)
+	H.InitSDKServiceRoutes(r)
 	uri := "/sdk/user/identify"
 
 	project, user1, err := SetupProjectUserReturnDAO()
@@ -1362,7 +1362,7 @@ func TestUpdateJoinTimeOnSDKIdentify(t *testing.T) {
 func TestSDKAddUserPropertiesHandler(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
-	H.InitSDKRoutes(r)
+	H.InitSDKServiceRoutes(r)
 	uri := "/sdk/user/add_properties"
 
 	project, user, err := SetupProjectUserReturnDAO()
@@ -1510,7 +1510,7 @@ func TestSDKAddUserPropertiesHandler(t *testing.T) {
 func TestSDKGetProjectSettingsHandler(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
-	H.InitSDKRoutes(r)
+	H.InitSDKServiceRoutes(r)
 	uri := "/sdk/project/get_settings"
 
 	project, err := SetupProjectReturnDAO()
@@ -1535,7 +1535,7 @@ func TestSDKGetProjectSettingsHandler(t *testing.T) {
 
 func TestSDKBulk(t *testing.T) {
 	r := gin.Default()
-	H.InitSDKRoutes(r)
+	H.InitSDKServiceRoutes(r)
 
 	project, _, err := SetupProjectUserReturnDAO()
 	assert.Nil(t, err)
@@ -1574,7 +1574,7 @@ func TestSDKBulk(t *testing.T) {
 
 func getAutoTrackedEventIdWithPageRawURL(t *testing.T, projectAuthToken, pageRawURL string) (string, string) {
 	r := gin.Default()
-	H.InitSDKRoutes(r)
+	H.InitSDKServiceRoutes(r)
 	uri := "/sdk/event/track"
 
 	w := ServePostRequestWithHeaders(r, uri,
@@ -1590,7 +1590,7 @@ func getAutoTrackedEventIdWithPageRawURL(t *testing.T, projectAuthToken, pageRaw
 
 func getAutoTrackedEventIdWithUserIdAndPageRawURL(t *testing.T, projectAuthToken, userId, pageRawURL string) string {
 	r := gin.Default()
-	H.InitSDKRoutes(r)
+	H.InitSDKServiceRoutes(r)
 	uri := "/sdk/event/track"
 
 	w := ServePostRequestWithHeaders(r, uri,
@@ -1607,7 +1607,7 @@ func getAutoTrackedEventIdWithUserIdAndPageRawURL(t *testing.T, projectAuthToken
 func TestSDKUpdateEventPropertiesHandler(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
-	H.InitSDKRoutes(r)
+	H.InitSDKServiceRoutes(r)
 	uri := "/sdk/event/update_properties"
 
 	project, err := SetupProjectReturnDAO()
@@ -1660,7 +1660,7 @@ func TestSDKUpdateEventPropertiesHandler(t *testing.T) {
 func TestSessionAndUserInitialPropertiesUpdateOnSDKUpdateEventPropertiesHandler(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
-	H.InitSDKRoutes(r)
+	H.InitSDKServiceRoutes(r)
 	uri := "/sdk/event/update_properties"
 
 	project, _, err := SetupProjectUserReturnDAO()

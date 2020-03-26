@@ -3,9 +3,6 @@ package tests
 import (
 	"encoding/base64"
 	"encoding/json"
-	H "factors/handler"
-	M "factors/model"
-	U "factors/util"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -15,6 +12,11 @@ import (
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+
+	H "factors/handler"
+	IntSegment "factors/integration/segment"
+	M "factors/model"
+	U "factors/util"
 )
 
 func assertKeysExistAndNotEmpty(t *testing.T, obj map[string]interface{}, keys []string) {
@@ -46,7 +48,7 @@ var mobileUserProps = []string{U.UP_APP_NAME, U.UP_APP_BUILD, U.UP_APP_NAMESPACE
 func TestIntSegmentHandler(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
-	H.InitIntRoutes(r)
+	H.InitSDKServiceRoutes(r)
 	uri := "/integrations/segment"
 
 	project, err := SetupProjectReturnDAO()
@@ -56,7 +58,7 @@ func TestIntSegmentHandler(t *testing.T) {
 	// Not enabled.
 	w := ServePostRequestWithHeaders(r, uri, []byte(`{"anonymousId": "ranon_2", "type": "random_type"}`),
 		map[string]string{"Authorization": project.PrivateToken})
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Equal(t, http.StatusOK, w.Code)
 
 	enable := true
 	_, errCode := M.UpdateProjectSettings(project.ID, &M.ProjectSetting{IntSegment: &enable})
@@ -65,17 +67,18 @@ func TestIntSegmentHandler(t *testing.T) {
 	// Empty body.
 	w = ServePostRequestWithHeaders(r, uri, []byte(`{}`),
 		map[string]string{"Authorization": project.PrivateToken})
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Equal(t, http.StatusOK, w.Code) // status ok with error
 	jsonResponse, _ := ioutil.ReadAll(w.Body)
 	var jsonResponseMap map[string]interface{}
 	json.Unmarshal(jsonResponse, &jsonResponseMap)
 	assert.Nil(t, jsonResponseMap["event_id"])
 	assert.Nil(t, jsonResponseMap["user_id"])
+	assert.NotNil(t, jsonResponseMap["error"])
 
 	// Invalid type.
-	w = ServePostRequestWithHeaders(r, uri, []byte(`{"anonymousId": "ranon_1", "type": "random_type"}`),
+	w = ServePostRequestWithHeaders(r, uri, []byte(`{"anonymousId": "ranon_1", "type": "random_type", "timestamp": "2015-02-23T22:28:55.111Z"}`),
 		map[string]string{"Authorization": project.PrivateToken})
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Equal(t, http.StatusOK, w.Code) // status ok with error
 	jsonResponse1, _ := ioutil.ReadAll(w.Body)
 	var jsonResponseMap1 map[string]interface{}
 	json.Unmarshal(jsonResponse1, &jsonResponseMap1)
@@ -88,7 +91,7 @@ func TestIntSegmentHandler(t *testing.T) {
 	// Without both anonymousId and userId
 	w = ServePostRequestWithHeaders(r, uri, []byte(`{"type": "track"}`),
 		map[string]string{"Authorization": project.PrivateToken})
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Equal(t, http.StatusOK, w.Code)
 
 	// With only anonymousId
 	identifyPayloadWithoutUserId := `
@@ -236,13 +239,16 @@ func TestIntSegmentHandler(t *testing.T) {
 
 	w = ServePostRequestWithHeaders(r, uri, []byte(samplePayloadWithInvalidTimestamp),
 		map[string]string{"Authorization": project.PrivateToken})
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse2, _ = ioutil.ReadAll(w.Body)
+	json.Unmarshal(jsonResponse2, &jsonResponseMap2)
+	assert.NotNil(t, jsonResponseMap2["error"])
 }
 
 func TestIntSegmentHandlerWithPageEvent(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
-	H.InitIntRoutes(r)
+	H.InitSDKServiceRoutes(r)
 	uri := "/integrations/segment"
 
 	project, err := SetupProjectReturnDAO()
@@ -255,7 +261,11 @@ func TestIntSegmentHandlerWithPageEvent(t *testing.T) {
 	// invalid private token.
 	w := ServePostRequestWithHeaders(r, uri, []byte(`{}`),
 		map[string]string{"Authorization": "invalid_token"})
-	assert.Equal(t, http.StatusUnauthorized, w.Code)
+	assert.Equal(t, http.StatusOK, w.Code) // status ok with error
+	jsonResponse9, _ := ioutil.ReadAll(w.Body)
+	var jsonResponseMap9 map[string]interface{}
+	json.Unmarshal(jsonResponse9, &jsonResponseMap9)
+	assert.NotNil(t, jsonResponseMap9["error"])
 
 	// Page.
 	samplePagePayload := `
@@ -507,7 +517,7 @@ func TestIntSegmentHandlerWithPageEvent(t *testing.T) {
 func TestIntSegmentHandlePageEventWithFilterExpression(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
-	H.InitIntRoutes(r)
+	H.InitSDKServiceRoutes(r)
 	uri := "/integrations/segment"
 
 	project, err := SetupProjectReturnDAO()
@@ -760,7 +770,7 @@ func TestIntSegmentHandlePageEventWithFilterExpression(t *testing.T) {
 
 func TestIntSegmentHandlerWithSession(t *testing.T) {
 	r := gin.Default()
-	H.InitIntRoutes(r)
+	H.InitSDKServiceRoutes(r)
 	uri := "/integrations/segment"
 
 	project, err := SetupProjectReturnDAO()
@@ -905,7 +915,7 @@ func TestIntSegmentHandlerWithSession(t *testing.T) {
 func TestIntSegmentHandlerWithTrackEvent(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
-	H.InitIntRoutes(r)
+	H.InitSDKServiceRoutes(r)
 	uri := "/integrations/segment"
 
 	project, err := SetupProjectReturnDAO()
@@ -1177,7 +1187,7 @@ func TestIntSegmentHandlerWithTrackEvent(t *testing.T) {
 func TestIntSegmentHandlerWithScreenEvent(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
-	H.InitIntRoutes(r)
+	H.InitSDKServiceRoutes(r)
 	uri := "/integrations/segment"
 
 	project, err := SetupProjectReturnDAO()
@@ -1316,7 +1326,7 @@ func TestIntSegmentHandlerWithScreenEvent(t *testing.T) {
 func TestIntSegmentHandlerWithIdentifyEvent(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
-	H.InitIntRoutes(r)
+	H.InitSDKServiceRoutes(r)
 	uri := "/integrations/segment"
 
 	project, err := SetupProjectReturnDAO()
@@ -1382,7 +1392,7 @@ func TestIntSegmentHandlerWithIdentifyEvent(t *testing.T) {
 func TestIntSegmentHandlerWithPayloadFromSegmentPlatform(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
-	H.InitIntRoutes(r)
+	H.InitSDKServiceRoutes(r)
 	uri := "/integrations/segment_platform"
 
 	project, err := SetupProjectReturnDAO()
@@ -1538,7 +1548,7 @@ func TestIntSegmentHandlerWithPayloadFromSegmentPlatform(t *testing.T) {
 
 func TestIntSegmentHandlerWithTimestamp(t *testing.T) {
 	r := gin.Default()
-	H.InitIntRoutes(r)
+	H.InitSDKServiceRoutes(r)
 	uri := "/integrations/segment"
 
 	project, err := SetupProjectReturnDAO()
@@ -1664,4 +1674,122 @@ func TestIntSegmentHandlerWithTimestamp(t *testing.T) {
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, retEvent)
 	assert.Equal(t, eventTimestampInUnix, retEvent.Timestamp)
+}
+
+func TestSegmentEventWithQueue(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+	enable := true
+	_, errCode := M.UpdateProjectSettings(project.ID, &M.ProjectSetting{IntSegment: &enable})
+	assert.Equal(t, http.StatusAccepted, errCode)
+
+	// Page.
+	samplePagePayload := `
+	{
+		"_metadata": {
+		  "bundled": [
+			"Segment.io"
+		  ],
+		  "unbundled": [
+			
+		  ]
+		},
+		"anonymousId": "80444c7e-1580-4d3c-a77a-2f3427ed7d97",
+		"channel": "client",
+		"context": {
+			"active": true,
+			"app": {
+			  "name": "InitechGlobal",
+			  "version": "545",
+			  "build": "3.0.1.545",
+			  "namespace": "com.production.segment"
+			},
+			"campaign": {
+			  "name": "TPS Innovation Newsletter",
+			  "source": "Newsletter",
+			  "medium": "email",
+			  "term": "tps reports",
+			  "content": "image link"
+			},
+			"device": {
+			  "id": "B5372DB0-C21E-11E4-8DFC-AA07A5B093DB",
+			  "advertisingId": "7A3CBEA0-BDF5-11E4-8DFC-AA07A5B093DB",
+			  "adTrackingEnabled": true,
+			  "manufacturer": "Apple",
+			  "model": "iPhone7,2",
+			  "name": "maguro",
+			  "type": "ios",
+			  "token": "ff15bc0c20c4aa6cd50854ff165fd265c838e5405bfeb9571066395b8c9da449"
+			},
+			"ip": "8.8.8.8",
+			"library": {
+			  "name": "analytics.js",
+			  "version": "2.11.1"
+			},
+			"locale": "nl-NL",
+			"location": {
+			  "city": "San Francisco",
+			  "country": "United States",
+			  "latitude": 40.2964197,
+			  "longitude": -76.9411617,
+			  "speed": 0
+			},
+			"network": {
+			  "bluetooth": false,
+			  "carrier": "T-Mobile NL",
+			  "cellular": true,
+			  "wifi": false
+			},
+			"os": {
+			  "name": "iPhone OS",
+			  "version": "8.1.3"
+			},
+			"page": {
+			  "path": "/academy/",
+			  "referrer": "https://google.com",
+			  "search": "",
+			  "title": "Analytics Academy",
+			  "url": "https://segment.com/academy/"
+			},
+			"referrer": {
+			  "id": "ABCD582CDEFFFF01919",
+			  "type": "dataxu"
+			},
+			"screen": {
+			  "width": 320,
+			  "height": 568,
+			  "density": 2
+			},
+			"groupId": "12345",
+			"timezone": "Europe/Amsterdam",
+			"userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 9_1 like Mac OS X) AppleWebKit/601.1.46 (KHTML, like Gecko) Version/9.0 Mobile/13B143 Safari/601.1"
+		},
+		"integrations": {},
+		"messageId": "ajs-19c084e2f80e70cf62bb62509e79b37e",
+		"originalTimestamp": "2019-01-08T16:22:06.053Z",
+		"projectId": "Zzft38QJhB",
+		"properties": {
+		  "path": "/segment.test.html",
+		  "referrer": "",
+		  "search": "?a=10",
+		  "title": "Segment Test",
+		  "url": "http://localhost:8090/segment.test.html?a=10"
+		},
+		"receivedAt": "2019-01-08T16:21:54.106Z",
+		"sentAt": "2019-01-08T16:22:06.058Z",
+		"timestamp": "2019-01-08T16:21:54.101Z",
+		"type": "page",
+		"userId": "",
+		"version": "1.1"
+	  }
+	`
+
+	var event IntSegment.Event
+	err = json.Unmarshal([]byte(samplePagePayload), &event)
+	assert.Nil(t, err)
+	status, response := IntSegment.ReceiveEventWithQueue(project.PrivateToken,
+		&event, []string{project.PrivateToken})
+	assert.Equal(t, http.StatusOK, status)
+	assert.Empty(t, response.Error)
 }

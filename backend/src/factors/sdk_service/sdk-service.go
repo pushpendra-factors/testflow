@@ -39,7 +39,9 @@ func main() {
 	factorsEmailSender := flag.String("email_sender", "support-dev@factors.ai", "")
 	errorReportingInterval := flag.Int("error_reporting_interval", 300, "")
 	sdkRequestQueueProjectTokens := flag.String("sdk_request_queue_project_tokens", "",
-		"List of project tokens allowed to use queue")
+		"List of project tokens allowed to use sdk request queue")
+	segmentRequestQueueProjectTokens := flag.String("segment_request_queue_project_tokens", "",
+		"List of project tokens allowed to use segment request queue")
 
 	flag.Parse()
 
@@ -54,18 +56,18 @@ func main() {
 			Name:     *dbName,
 			Password: *dbPass,
 		},
-		GeolocationFile:              *geoLocFilePath,
-		RedisHost:                    *redisHost,
-		RedisPort:                    *redisPort,
-		QueueRedisHost:               *queueRedisHost,
-		QueueRedisPort:               *queueRedisPort,
-		AWSKey:                       *awsAccessKeyId,
-		AWSSecret:                    *awsSecretAccessKey,
-		AWSRegion:                    *awsRegion,
-		EmailSender:                  *factorsEmailSender,
-		ErrorReportingInterval:       *errorReportingInterval,
-		SDKRequestQueueProjectTokens: C.GetTokensFromStringListAsString(*sdkRequestQueueProjectTokens), // comma seperated project tokens.
-
+		GeolocationFile:                  *geoLocFilePath,
+		RedisHost:                        *redisHost,
+		RedisPort:                        *redisPort,
+		QueueRedisHost:                   *queueRedisHost,
+		QueueRedisPort:                   *queueRedisPort,
+		AWSKey:                           *awsAccessKeyId,
+		AWSSecret:                        *awsSecretAccessKey,
+		AWSRegion:                        *awsRegion,
+		EmailSender:                      *factorsEmailSender,
+		ErrorReportingInterval:           *errorReportingInterval,
+		SDKRequestQueueProjectTokens:     C.GetTokensFromStringListAsString(*sdkRequestQueueProjectTokens), // comma seperated project tokens.
+		SegmentRequestQueueProjectTokens: C.GetTokensFromStringListAsString(*segmentRequestQueueProjectTokens),
 	}
 
 	err := C.InitSDKService(config)
@@ -84,6 +86,6 @@ func main() {
 	r.Use(mid.Logger())
 	r.Use(mid.Recovery())
 
-	H.InitSDKRoutes(r)
+	H.InitSDKServiceRoutes(r)
 	r.Run(":" + strconv.Itoa(C.GetConfig().Port))
 }

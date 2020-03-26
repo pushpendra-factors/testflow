@@ -5,6 +5,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
+	"errors"
 	C "factors/config"
 	"factors/handler/helpers"
 	M "factors/model"
@@ -28,10 +29,11 @@ import (
 
 // scope constants.
 const SCOPE_PROJECT_ID = "projectId"
+const SCOPE_PROJECT_TOKEN = "projectToken"
+const SCOPE_PROJECT_PRIVATE_TOKEN = "projectPrivateToken"
 const SCOPE_AUTHORIZED_PROJECTS = "authorizedProjects"
 const SCOPE_LOGGEDIN_AGENT_UUID = "loggedInAgentUUID"
 const SCOPE_REQ_ID = "requestId"
-const SCOPE_SDK_PROJECT_TOKEN = "sdkProjectToken"
 const SCOPE_SHOPIFY_HASH_EMAIL = "shopifyHashEmail"
 
 // cors prefix constants.
@@ -66,7 +68,7 @@ func SetScopeProjectIdByToken() gin.HandlerFunc {
 	}
 }
 
-func SetScopeSDKProjectToken() gin.HandlerFunc {
+func SetScopeProjectToken() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		token := c.Request.Header.Get("Authorization")
 		token = strings.TrimSpace(token)
@@ -78,7 +80,22 @@ func SetScopeSDKProjectToken() gin.HandlerFunc {
 			return
 		}
 
-		U.SetScope(c, SCOPE_SDK_PROJECT_TOKEN, token)
+		U.SetScope(c, SCOPE_PROJECT_TOKEN, token)
+		c.Next()
+	}
+}
+
+func SetScopeProjectPrivateToken() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		token := c.Request.Header.Get("Authorization")
+		token = strings.TrimSpace(token)
+		if token == "" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized,
+				gin.H{"error": "Invalid authorization token"})
+			return
+		}
+
+		U.SetScope(c, SCOPE_PROJECT_PRIVATE_TOKEN, token)
 		c.Next()
 	}
 }
@@ -109,35 +126,55 @@ func SetScopeProjectIdByPrivateToken() gin.HandlerFunc {
 	}
 }
 
+func decodeBasicAuthToken(basicAuthToken string) (string, error) {
+	basicAuthToken = strings.TrimSpace(basicAuthToken)
+	if basicAuthToken == "" {
+		return "", errors.New("invalid authorization header")
+	}
+
+	base64TokenWithColon := strings.TrimPrefix(basicAuthToken, "Basic ")
+	tokenWithColon, err := base64.StdEncoding.DecodeString(base64TokenWithColon)
+	if err != nil {
+		return "", errors.New("invalid basic auth token")
+	}
+
+	token := strings.TrimSuffix(string(tokenWithColon), ":")
+	return token, nil
+}
+
+func SetScopeProjectPrivateTokenUsingBasicAuth() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		token, err := decodeBasicAuthToken(c.Request.Header.Get("Authorization"))
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized,
+				gin.H{"error": "Invalid authorization token"})
+			return
+		}
+
+		U.SetScope(c, SCOPE_PROJECT_PRIVATE_TOKEN, token)
+		c.Next()
+	}
+}
+
 // SetScopeProjectIdByPrivateTokenUsingBasicAuth - Set project id scope by private
 // token on header 'Authorization': 'Basic <TOKEN>:'
 func SetScopeProjectIdByPrivateTokenUsingBasicAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		basicAuthToken := c.Request.Header.Get("Authorization")
-		basicAuthToken = strings.TrimSpace(basicAuthToken)
-		if basicAuthToken == "" {
-			errorMessage := "Missing authorization header"
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": errorMessage})
-			return
-		}
-
-		base64TokenWithColon := strings.TrimPrefix(basicAuthToken, "Basic ")
-		tokenWithColon, err := base64.StdEncoding.DecodeString(base64TokenWithColon)
+		token, err := decodeBasicAuthToken(c.Request.Header.Get("Authorization"))
 		if err != nil {
-			errorMessage := "Invalid basic auth token"
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": errorMessage})
+			c.AbortWithStatusJSON(http.StatusUnauthorized,
+				gin.H{"error": "Invalid authorization token"})
 			return
 		}
-		token := strings.TrimSuffix(string(tokenWithColon), ":")
 
 		project, errCode := M.GetProjectByPrivateToken(token)
 		if errCode != http.StatusFound {
-			errorMessage := "Invalid token"
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": errorMessage})
+			c.AbortWithStatusJSON(http.StatusUnauthorized,
+				gin.H{"error": "Invalid authorization token"})
 			return
 		}
-		U.SetScope(c, SCOPE_PROJECT_ID, project.ID)
 
+		U.SetScope(c, SCOPE_PROJECT_ID, project.ID)
 		c.Next()
 	}
 }

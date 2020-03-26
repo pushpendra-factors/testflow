@@ -707,30 +707,15 @@ func AddUserProperties(projectId uint64,
 		&AddUserPropertiesResponse{Message: "Added user properties successfully."}
 }
 
-func useQueue(token string, queueAllowedTokens []string) bool {
-	// allow all for wildcard(asterisk).
-	if len(queueAllowedTokens) == 1 && queueAllowedTokens[0] == "*" {
-		return true
-	}
-
-	for _, allowedToken := range queueAllowedTokens {
-		if token == allowedToken {
-			return true
-		}
-	}
-
-	return false
-}
-
-func EnqueueRequest(token, reqType, reqPayload interface{}) error {
+func enqueueRequest(token, reqType, reqPayload interface{}) error {
 	reqPayloadJson, err := json.Marshal(reqPayload)
 	if err != nil {
 		log.WithError(err).WithField("token", token).Error(
-			"Failed to marshal queue payload")
+			"Failed to marshal sdk request queue payload")
 		return err
 	}
 
-	queueClient := C.GetServices().SDKQueueClient
+	queueClient := C.GetServices().QueueClient
 	_, err = queueClient.SendTask(&tasks.Signature{
 		Name:                 ProcessRequestTask,
 		RoutingKey:           RequestQueue, // queue to send.
@@ -773,7 +758,7 @@ func TrackByToken(token string, reqPayload *TrackPayload) (int, *TrackResponse) 
 func TrackWithQueue(token string, reqPayload *TrackPayload,
 	queueAllowedTokens []string) (int, *TrackResponse) {
 
-	if useQueue(token, queueAllowedTokens) {
+	if U.UseQueue(token, queueAllowedTokens) {
 		reqPayload.EventId = U.GetUUID()
 
 		response := &TrackResponse{EventId: reqPayload.EventId}
@@ -793,7 +778,7 @@ func TrackWithQueue(token string, reqPayload *TrackPayload,
 			reqPayload.Timestamp = time.Now().Unix()
 		}
 
-		err := EnqueueRequest(token, sdkRequestTypeEventTrack, reqPayload)
+		err := enqueueRequest(token, sdkRequestTypeEventTrack, reqPayload)
 		if err != nil {
 			log.WithError(err).Error("Failed to queue track request.")
 			return http.StatusInternalServerError, &TrackResponse{Message: "Tracking failed."}
@@ -826,7 +811,7 @@ func IdentifyByToken(token string, reqPayload *IdentifyPayload) (int, *IdentifyR
 func IdentifyWithQueue(token string, reqPayload *IdentifyPayload,
 	queueAllowedTokens []string) (int, *IdentifyResponse) {
 
-	if useQueue(token, queueAllowedTokens) {
+	if U.UseQueue(token, queueAllowedTokens) {
 		response := &IdentifyResponse{}
 
 		if reqPayload.UserId == "" {
@@ -844,7 +829,7 @@ func IdentifyWithQueue(token string, reqPayload *IdentifyPayload,
 			reqPayload.JoinTimestamp = reqPayload.Timestamp
 		}
 
-		err := EnqueueRequest(token, sdkRequestTypeUserIdentify, reqPayload)
+		err := enqueueRequest(token, sdkRequestTypeUserIdentify, reqPayload)
 		if err != nil {
 			log.WithError(err).Error("Failed to queue identify request.")
 			return http.StatusInternalServerError,
@@ -880,7 +865,7 @@ func AddUserPropertiesByToken(token string,
 func AddUserPropertiesWithQueue(token string, reqPayload *AddUserPropertiesPayload,
 	queueAllowedTokens []string) (int, *AddUserPropertiesResponse) {
 
-	if useQueue(token, queueAllowedTokens) {
+	if U.UseQueue(token, queueAllowedTokens) {
 		response := &AddUserPropertiesResponse{}
 
 		if reqPayload.UserId == "" {
@@ -894,7 +879,7 @@ func AddUserPropertiesWithQueue(token string, reqPayload *AddUserPropertiesPaylo
 			reqPayload.Timestamp = time.Now().Unix()
 		}
 
-		err := EnqueueRequest(token, sdkRequestTypeUserAddProperties, reqPayload)
+		err := enqueueRequest(token, sdkRequestTypeUserAddProperties, reqPayload)
 		if err != nil {
 			log.WithError(err).Error("Failed to queue add user properties request.")
 			return http.StatusInternalServerError,
@@ -930,13 +915,13 @@ func UpdateEventPropertiesByToken(token string,
 func UpdateEventPropertiesWithQueue(token string, reqPayload *UpdateEventPropertiesPayload,
 	queueAllowedTokens []string) (int, *UpdateEventPropertiesResponse) {
 
-	if useQueue(token, queueAllowedTokens) {
+	if U.UseQueue(token, queueAllowedTokens) {
 		// add queued timestamp, if timestmap is not given.
 		if reqPayload.Timestamp == 0 {
 			reqPayload.Timestamp = time.Now().Unix()
 		}
 
-		err := EnqueueRequest(token, sdkRequestTypeEventUpdateProperties, reqPayload)
+		err := enqueueRequest(token, sdkRequestTypeEventUpdateProperties, reqPayload)
 		if err != nil {
 			log.WithError(err).Error("Failed to queue updated event properties request.")
 			return http.StatusInternalServerError,

@@ -2,18 +2,18 @@ apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   labels:
-    layer: sdkserver
+    layer: integration-request-worker
     env: staging
     project: factors-staging
-  name: sdkserver
+  name: integration-request-worker
   namespace: default
 spec:
   progressDeadlineSeconds: 600
-  replicas: 1
+  replicas: 0
   revisionHistoryLimit: 10
   selector:
     matchLabels:
-      layer: sdkserver
+      layer: integration-request-worker
   strategy:
     rollingUpdate:
       maxSurge: 1
@@ -22,15 +22,13 @@ spec:
   template:
     metadata:      
       labels:
-        layer: sdkserver
+        layer: integration-request-worker
     spec:
       nodeSelector:
         cloud.google.com/gke-nodepool: default-persistent-pool
       containers:
-      - name: sdkserver
-        image: us.gcr.io/factors-staging/sdk-server:v0.01-1633c9d
-        ports:
-        - containerPort: 8085
+      - name: integration-request-worker
+        image: us.gcr.io/factors-staging/integration-request-worker:v0.01-38efe45
         volumeMounts:
         - name: workdir
           mountPath: /usr/local/var/factors/config
@@ -39,23 +37,11 @@ spec:
         terminationMessagePolicy: File
         resources:
           requests:
-            memory: "500M"
+            memory: "100M"
         securityContext: {}
-        readinessProbe:
-          tcpSocket:
-            port: 8085
-          initialDelaySeconds: 10
-          periodSeconds: 10
-        livenessProbe:
-          tcpSocket:
-            port: 8085
-          initialDelaySeconds: 10
-          periodSeconds: 10
         args:
           - --env
           - $(ENV)
-          - --port
-          - $(SDK_SERVER_PORT)
           - --db_host
           - $(DB_HOST)
           - --db_port
@@ -86,19 +72,9 @@ spec:
           - $(EMAIL_SENDER)
           - --error_reporting_interval
           - $(ERROR_REPORTING_INTERVAL)
-          - --sdk_request_queue_project_tokens
-          - $(SDK_REQUEST_QUEUE_PROJECT_TOKENS)
-          - --segment_request_queue_project_tokens
-          - $(SEGMENT_REQUEST_QUEUE_PROJECT_TOKENS)
-        env:
-          - name: MY_POD_IP
-            valueFrom:
-              fieldRef:
-                apiVersion: v1
-                fieldPath: status.podIP              
+          - --worker_concurrency
+          - "10"       
         envFrom:
-        - configMapRef:
-            name: config-sdkserver
         - configMapRef:
             name: config-appserver
         - configMapRef:

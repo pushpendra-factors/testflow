@@ -1,16 +1,27 @@
 package segment
 
 import (
-	U "factors/util"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
+
+	log "github.com/sirupsen/logrus"
+
+	Int "factors/integration"
+	M "factors/model"
+	SDK "factors/sdk"
+	U "factors/util"
+	"factors/vendor_custom/machinery/v1/tasks"
 )
 
 // Note:
-// Segment(userId) = Factors(customerUserId), Segment(AnonymousId) = Factors(userId).
-// Property mappings are defined on corresponding Fill*Properities method.
+// (userId) = Factors(customerUserId), (AnonymousId) = Factors(userId).
+// Property mappings are defined on corresponding fill*Properities method.
 
-type SegmentDevice struct {
+type Device struct {
 	ID                string `json:"id"`
 	Manufacturer      string `json:"manufacturer"`
 	Model             string `json:"model"`
@@ -21,7 +32,7 @@ type SegmentDevice struct {
 	Token             string `json:"token"`
 }
 
-type SegmentPage struct {
+type Page struct {
 	Referrer string `json:"referrer"`
 	RawURL   string `json:"url"`
 	Title    string `json:"title"`
@@ -29,14 +40,14 @@ type SegmentPage struct {
 	// Search   string `json:"search"` // redundant. part of rawURL already.
 }
 
-type SegmentApp struct {
+type App struct {
 	Name      string       `json:"name"`
 	Version   *interface{} `json:"version"`
 	Build     *interface{} `json:"build"`
 	Namespace string       `json:"namespace"`
 }
 
-type SegmentLocation struct {
+type Location struct {
 	City    string  `json:"city"`
 	Country string  `json:"country"`
 	Region  string  `json:"region"`
@@ -44,25 +55,25 @@ type SegmentLocation struct {
 	Long    float64 `json:"longitude"`
 }
 
-type SegmentOS struct {
+type OS struct {
 	Name    string       `json:"name"`
 	Version *interface{} `json:"version"`
 }
 
-type SegmentScreen struct {
+type Screen struct {
 	Width   float64 `json:"width"`
 	Height  float64 `json:"height"`
 	Density float64 `json:"density"`
 }
 
-type SegmentNetwork struct {
+type Network struct {
 	Bluetooth bool   `json:"bluetooth"`
 	Carrier   string `json:"carrier"`
 	Cellular  bool   `json:"cellular"`
 	Wifi      bool   `json:"wifi"`
 }
 
-type SegmentCampaign struct {
+type Campaign struct {
 	Name    string `json:"name"`
 	Source  string `json:"source"`
 	Medium  string `json:"medium"`
@@ -70,29 +81,29 @@ type SegmentCampaign struct {
 	Content string `json:"content"`
 }
 
-type SegmentContext struct {
-	Campaign  SegmentCampaign `json:"campaign"`
-	IP        string          `json:"ip"`
-	Location  SegmentLocation `json:"location"`
-	Page      SegmentPage     `json:"page"`
-	UserAgent string          `json:"userAgent"`
-	OS        SegmentOS       `json:"os"`
-	Screen    SegmentScreen   `json:"screen"`
-	Locale    string          `json:"locale"`
-	Device    SegmentDevice   `json:"device"`
-	Network   SegmentNetwork  `json:"network"`
-	App       SegmentApp      `json:"app"`
-	Timezone  string          `json:"timezone"`
+type Context struct {
+	Campaign  Campaign `json:"campaign"`
+	IP        string   `json:"ip"`
+	Location  Location `json:"location"`
+	Page      Page     `json:"page"`
+	UserAgent string   `json:"userAgent"`
+	OS        OS       `json:"os"`
+	Screen    Screen   `json:"screen"`
+	Locale    string   `json:"locale"`
+	Device    Device   `json:"device"`
+	Network   Network  `json:"network"`
+	App       App      `json:"app"`
+	Timezone  string   `json:"timezone"`
 }
 
-type SegmentEvent struct {
+type Event struct {
 	TrackName   string          `json:"event"`
 	ScreenName  string          `json:"name"`
 	UserId      string          `json:"userId"`
 	AnonymousID string          `json:"anonymousId"`
 	MessageID   *string         `json:"messageId"`
 	Channel     string          `json:"channel"`
-	Context     SegmentContext  `json:"context"`
+	Context     Context         `json:"context"`
 	Timestamp   string          `json:"timestamp"`
 	Type        string          `json:"type"`
 	Properties  U.PropertiesMap `json:"properties"`
@@ -100,14 +111,22 @@ type SegmentEvent struct {
 	Version     *interface{}    `json:"version"`
 }
 
-const SegmentPagePropertyURL = "url"
+type EventResponse struct {
+	EventId string `json:"event_id,omitempty"`
+	UserId  string `json:"user_id,omitempty"`
+	Type    string `json:"type,omitempty"`
+	Error   string `json:"error,omitempty"`
+	Message string `json:"message,omitempty"`
+}
 
-func GetURLFromPageEvent(event *SegmentEvent) string {
+const PagePropertyURL = "url"
+
+func GetURLFromPageEvent(event *Event) string {
 	if event.Context.Page.RawURL != "" {
 		return event.Context.Page.RawURL
 	}
 
-	url, exists := event.Properties[SegmentPagePropertyURL]
+	url, exists := event.Properties[PagePropertyURL]
 	if exists && url != nil {
 		return url.(string)
 	}
@@ -115,7 +134,7 @@ func GetURLFromPageEvent(event *SegmentEvent) string {
 	return ""
 }
 
-func FillSegmentGenericEventProperties(properties *U.PropertiesMap, event *SegmentEvent) {
+func fillGenericEventProperties(properties *U.PropertiesMap, event *Event) {
 	if event.Version != nil {
 		(*properties)[U.EP_SEGMENT_EVENT_VERSION] = *event.Version
 	}
@@ -127,7 +146,7 @@ func FillSegmentGenericEventProperties(properties *U.PropertiesMap, event *Segme
 	}
 }
 
-func FillSegmentGenericUserProperties(properties *U.PropertiesMap, event *SegmentEvent) {
+func fillGenericUserProperties(properties *U.PropertiesMap, event *Event) {
 	(*properties)[U.UP_PLATFORM] = U.PLATFORM_WEB
 	if event.Channel != "" {
 		(*properties)[U.UP_SEGMENT_CHANNEL] = event.Channel
@@ -160,7 +179,7 @@ func FillSegmentGenericUserProperties(properties *U.PropertiesMap, event *Segmen
 	}
 }
 
-func FillSegmentMobileUserProperties(properties *U.PropertiesMap, event *SegmentEvent) {
+func fillMobileUserProperties(properties *U.PropertiesMap, event *Event) {
 	if event.Context.App.Name != "" {
 		(*properties)[U.UP_APP_NAME] = event.Context.App.Name
 	}
@@ -211,7 +230,7 @@ func FillSegmentMobileUserProperties(properties *U.PropertiesMap, event *Segment
 	(*properties)[U.UP_NETWORK_WIFI] = event.Context.Network.Wifi
 }
 
-func FillSegmentWebEventProperties(properties *U.PropertiesMap, event *SegmentEvent) {
+func fillWebEventProperties(properties *U.PropertiesMap, event *Event) {
 	if url := GetURLFromPageEvent(event); url != "" {
 		(*properties)[U.EP_PAGE_RAW_URL] = url
 		pageURL, _ := U.ParseURLStable(url)
@@ -247,4 +266,270 @@ func FillSegmentWebEventProperties(properties *U.PropertiesMap, event *SegmentEv
 	}
 }
 
-func FillSegmentWebUserProperties(properties *U.PropertiesMap, event *SegmentEvent) {}
+func fillWebUserProperties(properties *U.PropertiesMap, event *Event) {}
+
+func ReceiveEventWithQueue(token string, event *Event,
+	queueAllowedTokens []string) (int, *EventResponse) {
+
+	if token == "" || event == nil {
+		return http.StatusBadRequest, &EventResponse{Error: "Invalid payload"}
+	}
+
+	logCtx := log.WithField("token", token)
+
+	projectSetting, errCode := M.GetProjectSettingByPrivateTokenWithCacheAndDefault(token)
+	if errCode != http.StatusFound || projectSetting == nil {
+		logCtx.Error("Failed to get project settings on segment ReceiveEventWithQueue.")
+		return http.StatusBadRequest, &EventResponse{}
+	}
+
+	if !*projectSetting.IntSegment {
+		return http.StatusBadRequest, &EventResponse{Error: "Integration not enabled."}
+	}
+
+	if U.UseQueue(token, queueAllowedTokens) {
+		err := Int.EnqueueRequest(token, Int.TypeSegment, event)
+		if err != nil {
+			log.WithError(err).Error("Failed to queue segment event request.")
+
+			// StatusInternalServerError will be forwarded to segment, to retry.
+			return http.StatusInternalServerError,
+				&EventResponse{Message: "Receive event failed"}
+		}
+
+		return http.StatusOK, &EventResponse{
+			Message: "Successfully fully received segment event."}
+	}
+
+	return ReceiveEvent(token, event)
+}
+
+func ReceiveEvent(token string, event *Event) (int, *EventResponse) {
+	if token == "" || event == nil {
+		return http.StatusBadRequest, &EventResponse{Error: "Invalid payload"}
+	}
+
+	project, errCode := M.GetProjectByPrivateToken(token)
+	if errCode == http.StatusNotFound {
+		return http.StatusUnauthorized, &EventResponse{Error: "Invalid token."}
+	}
+
+	if errCode != http.StatusFound {
+		return errCode, &EventResponse{Error: "Failed to get project by token"}
+	}
+
+	logCtx := log.WithFields(log.Fields{
+		"project_id":   project.ID,
+		"type":         event.Type,
+		"anonymous_id": event.AnonymousID,
+		"user_id":      event.UserId,
+	})
+
+	response := &EventResponse{
+		Type:   event.Type,
+		UserId: event.UserId,
+	}
+
+	parsedTimestamp, err := time.Parse(time.RFC3339, event.Timestamp)
+	if err != nil {
+		logCtx.WithFields(log.Fields{"timestamp": event.Timestamp,
+			log.ErrorKey: err}).Error("Failed parsing segment event timestamp.")
+
+		response.Error = "Invalid event timestamp"
+		return http.StatusBadRequest, response
+	}
+	requestTimestamp := parsedTimestamp.Unix()
+
+	user, errCode := M.GetSegmentUser(project.ID, event.AnonymousID,
+		event.UserId, requestTimestamp)
+	if errCode != http.StatusOK && errCode != http.StatusCreated {
+		response.Error = "Invalid user"
+		return errCode, response
+	}
+	isNewUser := errCode == http.StatusCreated
+
+	switch event.Type {
+	case "track":
+		userProperties := U.PropertiesMap{}
+		fillGenericUserProperties(&userProperties, event)
+		fillWebUserProperties(&userProperties, event)
+		fillMobileUserProperties(&userProperties, event)
+
+		var eventProperties U.PropertiesMap
+		if event.Properties != nil {
+			// Initialized with already existing event props.
+			eventProperties = event.Properties
+		} else {
+			eventProperties = make(U.PropertiesMap, 0)
+		}
+		fillGenericEventProperties(&eventProperties, event)
+		fillWebEventProperties(&eventProperties, event)
+
+		request := &SDK.TrackPayload{
+			Name:            event.TrackName,
+			CustomerEventId: event.MessageID,
+			IsNewUser:       isNewUser,
+			UserId:          user.ID,
+			Auto:            false,
+			EventProperties: eventProperties,
+			UserProperties:  userProperties,
+			Timestamp:       requestTimestamp,
+			ClientIP:        event.Context.IP,
+			UserAgent:       event.Context.UserAgent,
+		}
+
+		status, trackResponse := SDK.Track(project.ID, request, false)
+		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
+			logCtx.WithFields(log.Fields{"track_payload": request,
+				"error_code": status}).Error("Segment event failure. sdk_track call failed.")
+
+			response.Error = "Reception of track event failed"
+			return status, response
+		}
+		response.EventId = trackResponse.EventId
+
+	case "page":
+		pageURL := GetURLFromPageEvent(event)
+		parsedPageURL, err := U.ParseURLStable(pageURL)
+		if err != nil {
+			logCtx.WithFields(log.Fields{log.ErrorKey: err, "page_url": pageURL}).Error(
+				"Failed parsing URL from segment.")
+
+			response.Error = "Invalid page url"
+			return http.StatusBadRequest, response
+		}
+
+		userProperties := U.PropertiesMap{}
+		fillGenericUserProperties(&userProperties, event)
+		fillWebUserProperties(&userProperties, event)
+
+		eventProperties := U.PropertiesMap{}
+		U.FillPropertiesFromURL(&eventProperties, parsedPageURL)
+		fillGenericEventProperties(&eventProperties, event)
+		fillWebEventProperties(&eventProperties, event)
+
+		name := U.GetURLHostAndPath(parsedPageURL)
+		request := &SDK.TrackPayload{
+			Name:            name,
+			UserId:          user.ID,
+			IsNewUser:       isNewUser,
+			Auto:            true,
+			CustomerEventId: event.MessageID,
+			EventProperties: eventProperties,
+			UserProperties:  userProperties,
+			Timestamp:       requestTimestamp,
+			ClientIP:        event.Context.IP,
+			UserAgent:       event.Context.UserAgent,
+		}
+
+		status, trackResponse := SDK.Track(project.ID, request, false)
+		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
+			logCtx.WithFields(log.Fields{"track_payload": request,
+				"error_code": status}).Error("Segment event failure. sdk_track call failed.")
+
+			response.Error = "Reception of page event failed"
+			return status, response
+		}
+		response.EventId = trackResponse.EventId
+
+	case "screen":
+		userProperties := U.PropertiesMap{}
+		fillGenericUserProperties(&userProperties, event)
+		fillMobileUserProperties(&userProperties, event)
+
+		var eventProperties U.PropertiesMap
+		if event.Properties != nil {
+			// Initialized with already existing event props.
+			eventProperties = event.Properties
+		} else {
+			eventProperties = make(U.PropertiesMap, 0)
+		}
+		fillGenericEventProperties(&eventProperties, event)
+
+		request := &SDK.TrackPayload{
+			Name:            event.ScreenName,
+			UserId:          user.ID,
+			IsNewUser:       isNewUser,
+			Auto:            false,
+			CustomerEventId: event.MessageID,
+			EventProperties: eventProperties,
+			UserProperties:  userProperties,
+			Timestamp:       requestTimestamp,
+			ClientIP:        event.Context.IP,
+			UserAgent:       event.Context.UserAgent,
+		}
+
+		status, trackResponse := SDK.Track(project.ID, request, false)
+		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
+			logCtx.WithFields(log.Fields{"track_payload": request,
+				"error_code": status}).Error("Segment event failure. sdk_track call failed.")
+
+			response.Error = "Reception of screen event failed"
+			return status, response
+		}
+		response.EventId = trackResponse.EventId
+
+	case "identify":
+		// Identification happens on every call before type switch.
+		// Updates the user properties with the traits, here.
+		response.UserId = user.ID
+
+		_, status := M.UpdateUserProperties(project.ID, user.ID, &event.Traits, requestTimestamp)
+		if status != http.StatusAccepted && status != http.StatusNotModified {
+			logCtx.WithFields(log.Fields{"user_properties": event.Traits,
+				"error_code": status}).Error("Segment event failure. Updating user_properties failed.")
+
+			response.Error = "Reception of identify event failed."
+			return status, response
+		}
+
+	default:
+		response.Error = fmt.Sprintf("Unknown event type %s", event.Type)
+		logCtx.Error("Unknown segment event type.")
+		return http.StatusBadRequest, response
+	}
+
+	response.Message = "Successfully received event"
+	return http.StatusOK, response
+}
+
+func ProcessQueueEvent(token, eventJson string) (float64, string, error) {
+	logCtx := log.WithField("token", token).WithField("event", eventJson)
+
+	if token == "" || eventJson == "" {
+		logCtx.Error("Invalid queue args on segment event queue.")
+		return http.StatusInternalServerError, "", nil
+	}
+
+	var event Event
+	err := json.Unmarshal([]byte(eventJson), &event)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to unmarshal segment event from queue.")
+		// Do not return error to avoid retry.
+		return http.StatusInternalServerError, "", nil
+	}
+
+	status, response := ReceiveEvent(token, &event)
+	responseJsonBytes, _ := json.Marshal(response)
+	logCtx = log.WithField("status", status).WithField("response", string(responseJsonBytes))
+
+	logCtx.WithField("processed", "true").Info("Processed segment event.")
+
+	// Do not retry on below conditions.
+	if status == http.StatusBadRequest ||
+		status == http.StatusNotAcceptable ||
+		status == http.StatusUnauthorized {
+
+		logCtx.Info("Failed to process segment event permanantly.")
+		return float64(status), "", nil
+	}
+
+	// Return error only for retry. Retry after a period till it is successfull.
+	if status == http.StatusInternalServerError {
+		logCtx.WithField("retry", "true").Info("Failed to process event on segment event queue. Retry.")
+		return http.StatusInternalServerError, "",
+			tasks.NewErrRetryTaskLater("RETRY_SEGMENT_EVENT_PROCESSING_FAILURE", 5*time.Minute)
+	}
+
+	return http.StatusOK, string(responseJsonBytes), nil
+}
