@@ -41,6 +41,14 @@ spec:
         backend:
           serviceName: sdkserver-service
           servicePort: 80
+      - path: /integrations/segment
+        backend:
+          serviceName: sdkserver-service
+          servicePort: 80
+      - path: /integrations/segment_platform
+        backend:
+          serviceName: sdkserver-service
+          servicePort: 80
       - path: /*
         backend:
           serviceName: appserver-service
