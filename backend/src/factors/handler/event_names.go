@@ -30,7 +30,13 @@ func GetEventNamesHandler(c *gin.Context) {
 		return
 	}
 
-	eventNames, errCode := M.GetEventNamesOrderedByOccurrence(projectId)
+	requestType := c.Query("type")
+	if requestType != M.EVENT_NAME_REQUEST_TYPE_APPROX && requestType != M.EVENT_NAME_REQUEST_TYPE_EXACT {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	eventNames, isExact, errCode := M.GetEventNamesOrderedByOccurrence(projectId, requestType)
 	if errCode != http.StatusFound {
 		c.AbortWithStatus(errCode)
 		return
@@ -46,7 +52,7 @@ func GetEventNamesHandler(c *gin.Context) {
 		names = append(names, fNames...)
 	}
 
-	c.JSON(http.StatusOK, names)
+	c.JSON(http.StatusOK, gin.H{"event_names": names, "exact": isExact})
 }
 
 // Test command.

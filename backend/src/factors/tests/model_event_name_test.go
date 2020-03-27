@@ -509,13 +509,13 @@ func TestDBGetEventNamesOrderedByOccurrenceWithLimit(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, errCode)
 
 	// with limit.
-	getEventNames1, errCode := M.GetEventNamesOrderedByOccurrenceWithLimit(project.ID, 1)
+	getEventNames1, _, errCode := M.GetEventNamesOrderedByOccurrenceWithLimit(project.ID, M.EVENT_NAME_REQUEST_TYPE_EXACT, 1)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Len(t, getEventNames1, 1)
 	assert.Equal(t, getEventNames1[0].Name, eventName1)
 
 	// no limit.
-	getEventNames2, errCode := M.GetEventNamesOrderedByOccurrenceWithLimit(project.ID, 0)
+	getEventNames2, _, errCode := M.GetEventNamesOrderedByOccurrenceWithLimit(project.ID, M.EVENT_NAME_REQUEST_TYPE_EXACT, 0)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Len(t, getEventNames2, 2)
 	// ordered by created at since not occurred.

@@ -46,18 +46,36 @@ export function fetchProjects() {
 export function fetchProjectEvents(projectId) {
   return function(dispatch) {
     return new Promise((resolve, reject) => {
-      get(dispatch, host + "projects/" + projectId + "/event_names")
+      get(dispatch, host + "projects/" + projectId + "/event_names?type=approx")
         .then((r) => {
           dispatch({
             type: "FETCH_PROJECT_EVENTS_FULFILLED",
             payload: { 
               currentProjectId: projectId, 
-              eventNames: r.ok ? r.data : [], 
+              eventNames: r.ok ? r.data.event_names : [], 
               eventPropertiesMap: {}
             }
           });
-          
+
           resolve(r);
+          if (!r.data.exact){
+            get(dispatch, host + "projects/" + projectId + "/event_names?type=exact")
+            .then((r)=>{
+              dispatch({
+                type: "FETCH_PROJECT_EVENTS_FULFILLED",
+                payload: { 
+                  currentProjectId: projectId, 
+                  eventNames: r.ok ? r.data.event_names : [], 
+                  eventPropertiesMap: {}
+                }
+              });
+            }).catch((err)=>{
+              dispatch({
+                type: "UPDATE_PROJECT_EVENTS_REJECTED",
+                payload: {err: err }
+              });
+            })
+          }
         })
         .catch((err) => {
           dispatch({

@@ -93,3 +93,12 @@ func GetCurrentDayTimestamp() int64 {
 	currentTime := time.Now()
 	return time.Date(currentTime.Year(), currentTime.Month(), currentTime.Day(), 0, 0, 0, 0, currentTime.Location()).Unix()
 }
+
+func IsTimestampToday(timestamp int64) bool {
+	return GetBeginningOfDayTimestamp(timestamp) == GetCurrentDayTimestamp()
+}
+
+func GetBeginningOfDayTimestamp(timestamp int64) int64 {
+	t := time.Unix(timestamp, 0)
+	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location()).Unix()
+}

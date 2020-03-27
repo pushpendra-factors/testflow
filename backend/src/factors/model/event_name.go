@@ -32,6 +32,10 @@ type EventName struct {
 	UpdatedAt  time.Time `json:"updated_at"`
 }
 
+type CacheEventNames struct {
+	EventNames []EventName
+	Timestamp  int64
+}
 type FilterInfo struct {
 	// filter_expr split by URI_SLASH
 	tokenizedFilter []string
@@ -42,6 +46,8 @@ const TYPE_USER_CREATED_EVENT_NAME = "UC"
 const TYPE_AUTO_TRACKED_EVENT_NAME = "AT"
 const TYPE_FILTER_EVENT_NAME = "FE"
 const TYPE_INTERNAL_EVENT_NAME = "IE"
+const EVENT_NAME_REQUEST_TYPE_APPROX = "approx"
+const EVENT_NAME_REQUEST_TYPE_EXACT = "exact"
 
 var ALLOWED_TYPES = [...]string{
 	TYPE_USER_CREATED_EVENT_NAME,
@@ -189,10 +195,10 @@ func GetEventNames(projectId uint64) ([]EventName, int) {
 	return eventNames, http.StatusFound
 }
 
-func getOccurredEventNamesOrderedByOccurrenceWithLimit(projectId uint64, limit int) ([]EventName, error) {
-	eventNames, err := GetCacheEventNamesOrderedByOccurrence(projectId)
-	if err == nil {
-		return eventNames, nil
+func getOccurredEventNamesOrderedByOccurrenceWithLimit(projectId uint64, requestType string, limit int) ([]EventName, int64, error) {
+	eventNames, timestamp, err := GetCacheEventNamesOrderedByOccurrence(projectId)
+	if err == nil || requestType == EVENT_NAME_REQUEST_TYPE_APPROX {
+		return eventNames, timestamp, nil
 	}
 
 	eventsAfterTimestamp := U.UnixTimeBeforeAWeek()
@@ -228,37 +234,37 @@ func getOccurredEventNamesOrderedByOccurrenceWithLimit(projectId uint64, limit i
 	rows, err := db.Raw(queryStr, params...).Rows()
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to execute query of get event names ordered by occurrence.")
-		return eventNames, err
+		return eventNames, 0, err
 	}
 
 	for rows.Next() {
 		var eventName EventName
 		if err := db.ScanRows(rows, &eventName); err != nil {
 			logCtx.WithError(err).Error("Failed scanning rows on get event names ordered by occurrence.")
-			return eventNames, err
+			return eventNames, 0, err
 		}
 		eventNames = append(eventNames, eventName)
 	}
 
-	err = setCacheEventNamesOrderedByOccurrence(projectId, eventNames)
+	timestamp, err = setCacheEventNamesOrderedByOccurrence(projectId, eventNames)
 	if err != nil {
 		logCtx.WithError(err).Error(
 			"Failed to setCacheEventNamesOrderedByOccurrence on getEventNamesOrderedByOccurredWithLimit.")
 	}
 
-	return eventNames, nil
+	return eventNames, timestamp, nil
 }
 
 // GetEventNamesOrderedByOccurrenceWithLimit - Returns event names ordered by occurrence
 // and back fills event names which haven't occurred ordered by created_at.
 // limit = 0, for no limit.
-func GetEventNamesOrderedByOccurrenceWithLimit(projectId uint64, limit int) ([]EventName, int) {
+func GetEventNamesOrderedByOccurrenceWithLimit(projectId uint64, requestType string, limit int) ([]EventName, bool, int) {
 	eventNames := make([]EventName, 0)
 	hasLimit := limit > 0
 	// Get event names only occurred on the sample window ordered by occurrence.
-	occurredEventNames, err := getOccurredEventNamesOrderedByOccurrenceWithLimit(projectId, limit)
+	occurredEventNames, timestamp, err := getOccurredEventNamesOrderedByOccurrenceWithLimit(projectId, requestType, limit)
 	if err != nil {
-		return occurredEventNames, http.StatusInternalServerError
+		log.WithError(err).Error("Failed to get occured events")
 	}
 
 	// Add all event names not occurred in the sample window with the limit.
@@ -272,15 +278,19 @@ func GetEventNamesOrderedByOccurrenceWithLimit(projectId uint64, limit int) ([]E
 		eventNames = append(eventNames, eventName)
 		addedNamesLookup[eventName.ID] = true
 	}
-
+	isToday := U.IsTimestampToday(timestamp)
 	// return, if limit reached already.
 	if hasLimit && len(eventNames) == limit {
-		return eventNames, http.StatusFound
+		return eventNames, isToday, http.StatusFound
 	}
 
 	allEventNames, errCode := GetEventNames(projectId)
-	if errCode == http.StatusInternalServerError || errCode == http.StatusNotFound {
-		return eventNames, errCode
+	if errCode == http.StatusInternalServerError {
+		return eventNames, false, errCode
+	}
+
+	if errCode == http.StatusNotFound {
+		return eventNames, isToday, errCode
 	}
 
 	// fill event names not on occurred list.
@@ -295,74 +305,81 @@ func GetEventNamesOrderedByOccurrenceWithLimit(projectId uint64, limit int) ([]E
 	}
 
 	if len(eventNames) == 0 {
-		return eventNames, http.StatusNotFound
+		return eventNames, isToday, http.StatusNotFound
 	}
 
-	return eventNames, http.StatusFound
+	return eventNames, isToday, http.StatusFound
 }
 
 func getEventNamesOrderByOccurrenceCacheKey(projectId uint64) (*cacheRedis.Key, error) {
 	prefix := "event_names:ordered_by_occurrence"
-	suffix := fmt.Sprintf("timestamp:%d", U.GetCurrentDayTimestamp())
-	return cacheRedis.NewKey(projectId, prefix, suffix)
+	return cacheRedis.NewKey(projectId, prefix, "")
 }
 
-func setCacheEventNamesOrderedByOccurrence(projectId uint64, eventNames []EventName) error {
+func setCacheEventNamesOrderedByOccurrence(projectId uint64, eventNames []EventName) (int64, error) {
+	var cacheEventNames CacheEventNames
 	logCtx := log.WithField("project_id", projectId)
 	if projectId == 0 {
 		logCtx.Error("Invalid project id on setCacheEventNamesOrderedByOccurrence")
-		return errors.New("invalid project id")
+		return 0, errors.New("invalid project id")
 	}
 
 	if eventNames == nil || len(eventNames) == 0 {
 		logCtx.Error("Nil or 0 eventNames on setCacheEventNamesOrderedByOccurrence")
-		return errors.New("no event names")
+		return 0, errors.New("no event names")
 	}
 
+	currentTimeStamp := time.Now().Unix()
 	eventNamesKey, err := getEventNamesOrderByOccurrenceCacheKey(projectId)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get EventNamesOrderByOccurrenceCacheKey.")
-		return err
+		return 0, err
 	}
-	enEventNames, err := json.Marshal(eventNames)
+
+	cacheEventNames.EventNames = eventNames
+	cacheEventNames.Timestamp = currentTimeStamp
+	enEventCache, err := json.Marshal(cacheEventNames)
 	if err != nil {
 		logCtx.Error("Failed event names json marshal.")
-		return err
+		return 0, err
 	}
 
-	err = cacheRedis.Set(eventNamesKey, string(enEventNames), 24*60*60)
+	err = cacheRedis.Set(eventNamesKey, string(enEventCache), 10*24*60*60)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to setCacheEventNamesOrderedByOccurrence.")
+		return 0, err
 	}
-	return err
+	return currentTimeStamp, nil
 }
 
-func GetCacheEventNamesOrderedByOccurrence(projectId uint64) ([]EventName, error) {
-	var decEventNames []EventName
+func GetCacheEventNamesOrderedByOccurrence(projectId uint64) ([]EventName, int64, error) {
+	var cacheEventNames CacheEventNames
 	if projectId == 0 {
-		return decEventNames, errors.New("invalid project on GetCacheEventNamesOrderedByOccurrence")
+		return []EventName{}, 0, errors.New("invalid project on GetCacheEventNamesOrderedByOccurrence")
 	}
 
 	eventNamesKey, err := getEventNamesOrderByOccurrenceCacheKey(projectId)
 	if err != nil {
-		return decEventNames, err
+		return []EventName{}, 0, err
 	}
-
 	enEventNames, err := cacheRedis.Get(eventNamesKey)
 	if err != nil {
-		return decEventNames, err
+		return []EventName{}, 0, err
 	}
 
-	err = json.Unmarshal([]byte(enEventNames), &decEventNames)
+	err = json.Unmarshal([]byte(enEventNames), &cacheEventNames)
 	if err != nil {
-		return decEventNames, err
+		return []EventName{}, 0, err
 	}
 
-	return decEventNames, nil
+	if len(cacheEventNames.EventNames) == 0 {
+		return []EventName{}, 0, errors.New("Empty cache event names")
+	}
+	return cacheEventNames.EventNames, cacheEventNames.Timestamp, nil
 }
 
-func GetEventNamesOrderedByOccurrence(projectId uint64) ([]EventName, int) {
-	return GetEventNamesOrderedByOccurrenceWithLimit(projectId, EVENT_NAMES_LIMIT)
+func GetEventNamesOrderedByOccurrence(projectId uint64, requestType string) ([]EventName, bool, int) {
+	return GetEventNamesOrderedByOccurrenceWithLimit(projectId, requestType, EVENT_NAMES_LIMIT)
 }
 
 func GetFilterEventNames(projectId uint64) ([]EventName, int) {

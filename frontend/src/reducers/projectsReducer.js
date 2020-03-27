@@ -106,6 +106,12 @@ export default function reducer(state=DEFAULT_PROJECT_STATE, action) {
           projectEventsError: action.payload.err,
         }
       }
+      case "UPDATE_PROJECT_EVENTS_REJECTED":{
+        return{
+          ...state,
+          projectEventsError:action.payload.err
+        }
+      }
       case "FETCH_PROJECT_EVENT_PROPERTIES_FULFILLED": {
         // Only the latest fetch is maintained.
         let eventPropertiesMap = {};

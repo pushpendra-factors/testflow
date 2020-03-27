@@ -2,14 +2,17 @@ package tests
 
 import (
 	"encoding/json"
+	H "factors/handler"
 	M "factors/model"
 	U "factors/util"
 	"fmt"
+	"io/ioutil"
 	"math"
 	"net/http"
 	"testing"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/stretchr/testify/assert"
@@ -493,13 +496,90 @@ func TestGetEventNamesOrderedByOccuranceFromCache(t *testing.T) {
 	_, errCode = M.CreateEvent(&M.Event{EventNameId: eventName2.ID,
 		ProjectId: project.ID, UserId: user.ID, Timestamp: time.Now().Unix()})
 
-	getEventNames1, errCode := M.GetEventNamesOrderedByOccurrence(project.ID)
+	getEventNames1, _, errCode := M.GetEventNamesOrderedByOccurrence(project.ID, "exact")
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Len(t, getEventNames1, 2)
 	assert.Equal(t, eventName1.Name, getEventNames1[0].Name)
 
-	getEventNames2, err := M.GetCacheEventNamesOrderedByOccurrence(project.ID)
+	getEventNames2, _, err := M.GetCacheEventNamesOrderedByOccurrence(project.ID)
 	assert.Equal(t, nil, err)
 	assert.Len(t, getEventNames2, 2)
 	assert.Equal(t, eventName2.Name, getEventNames2[1].Name)
+}
+
+func TestGetEventNamesByApproxAndExact(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+	var eventNames = struct {
+		EventNames []string `json:"event_names"`
+		Exact      bool     `json:"exact"`
+	}{}
+
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+
+	timestamp := U.UnixTimeBeforeAWeek()
+	timeWithinWeek := timestamp + 3600
+	timeBeforeWeek := timestamp - 3600
+	user, errCode := M.CreateUser(&M.User{ProjectId: project.ID})
+	assert.NotNil(t, user)
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	//events before a week
+	createEventWithTimestampByName(t, project, user, "event3", timeBeforeWeek)
+	createEventWithTimestampByName(t, project, user, "event4", timeBeforeWeek)
+	//events within a week
+	createEventWithTimestampByName(t, project, user, "event1", timeWithinWeek)
+	createEventWithTimestampByName(t, project, user, "event1", timeWithinWeek)
+	createEventWithTimestampByName(t, project, user, "event2", timeWithinWeek)
+
+	//FOR APPROX EVENT NAME
+	w := sendGetEventNamesApproxRequest(project.ID, agent, r)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	jsonResponse, _ := ioutil.ReadAll(w.Body)
+	json.Unmarshal(jsonResponse, &eventNames)
+	// should contain all event names.
+	assert.Len(t, eventNames.EventNames, 4)
+
+	//no cache set, in approx type should return order by created at
+	assert.Equal(t, "event3", eventNames.EventNames[0])
+	assert.Equal(t, "event4", eventNames.EventNames[1])
+	assert.Equal(t, "event1", eventNames.EventNames[2])
+	assert.Equal(t, "event2", eventNames.EventNames[3])
+	assert.Equal(t, false, eventNames.Exact)
+
+	//FOR EXACT EVENT NAMES
+	w = sendGetEventNamesExactRequest(project.ID, agent, r)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	json.Unmarshal(jsonResponse, &eventNames)
+	// should contain all event names.
+	assert.Len(t, eventNames.EventNames, 4)
+
+	//cache set, in Exact type should return order by occurance and backfilled by created at
+	assert.Equal(t, "event1", eventNames.EventNames[0])
+	assert.Equal(t, "event2", eventNames.EventNames[1])
+	assert.Equal(t, "event3", eventNames.EventNames[2])
+	assert.Equal(t, "event4", eventNames.EventNames[3])
+	assert.Equal(t, true, eventNames.Exact)
+
+	//RECALL APPROX EVENT NAMES
+	//Should return from cache, orderd by occurance
+	w = sendGetEventNamesApproxRequest(project.ID, agent, r)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	jsonResponse, _ = ioutil.ReadAll(w.Body)
+	json.Unmarshal(jsonResponse, &eventNames)
+	// should contain all event names.
+	assert.Len(t, eventNames.EventNames, 4)
+
+	// should return order by occurance and backfilled by created at
+	assert.Equal(t, "event1", eventNames.EventNames[0])
+	assert.Equal(t, "event2", eventNames.EventNames[1])
+	assert.Equal(t, "event3", eventNames.EventNames[2])
+	assert.Equal(t, "event4", eventNames.EventNames[3])
+	assert.Equal(t, true, eventNames.Exact)
 }
