@@ -117,8 +117,8 @@ func TestGetEventNamesHandler(t *testing.T) {
 	json.Unmarshal(jsonResponse, &eventNames)
 	assert.Len(t, eventNames.EventNames, 4)
 	// should contain events ordered by occurrence count.
-	assert.Equal(t, "event1", eventNames.EventNames[0])
-	assert.Equal(t, "event2", eventNames.EventNames[1])
+	assert.Equal(t, "event2", eventNames.EventNames[0])
+	assert.Equal(t, "event1", eventNames.EventNames[1])
 	// should contain all event names even though not
 	// occurred on the window.
 	assert.Equal(t, "event3", eventNames.EventNames[2])

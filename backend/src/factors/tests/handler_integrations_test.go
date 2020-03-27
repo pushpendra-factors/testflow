@@ -1061,7 +1061,7 @@ func TestIntSegmentHandlerWithTrackEvent(t *testing.T) {
 	jsonResponse4, _ := ioutil.ReadAll(w.Body)
 	var jsonResponseMap4 map[string]interface{}
 	json.Unmarshal(jsonResponse4, &jsonResponseMap4)
-	assert.NotEmpty(t, jsonResponseMap4["error"])
+	assert.Nil(t, jsonResponseMap4["error"])
 
 	sampleTrackPayloadWithoutProperties := `
 	{
