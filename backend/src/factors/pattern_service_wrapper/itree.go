@@ -89,7 +89,7 @@ type KLDistanceUnitInfo struct {
 
 const MAX_SEQUENCE_CHILD_NODES = 5
 const MAX_PROPERTY_CHILD_NODES = 5
-const MAX_NODES_TO_EVALUATE = 100
+const MAX_NODES_TO_EVALUATE = 150
 
 const NODE_TYPE_ROOT = 0
 const NODE_TYPE_SEQUENCE = 1               // A child node that differs from its parent by an event.
@@ -704,6 +704,8 @@ var USER_PROPERTIES_TO_IGNORE = map[string]bool{
 	"_$osVersion":        true,
 	U.UP_JOIN_TIME:       true,
 	"_$joinTime":         true,
+	// Old incorrect property.
+	"$session": true,
 
 	U.UP_INITIAL_PAGE_DOMAIN:  true,
 	U.UP_INITIAL_PAGE_URL:     true,
@@ -714,13 +716,27 @@ var USER_PROPERTIES_TO_IGNORE = map[string]bool{
 	U.EP_PAGE_TITLE:           true,
 
 	// Temporary fix.
-	U.EP_REFERRER:                true,
-	U.EP_REFERRER_URL:            true,
-	U.EP_REFERRER_DOMAIN:         true,
-	U.SP_INITIAL_REFERRER_DOMAIN: true,
-	U.SP_INITIAL_REFERRER:        true,
-	U.EP_PAGE_LOAD_TIME:          true,
-	U.UP_INITIAL_PAGE_SPENT_TIME: true,
+	U.EP_REFERRER:                    true,
+	U.EP_REFERRER_URL:                true,
+	U.EP_REFERRER_DOMAIN:             true,
+	U.SP_INITIAL_REFERRER_DOMAIN:     true,
+	U.SP_INITIAL_REFERRER:            true,
+	U.EP_PAGE_LOAD_TIME:              true,
+	U.UP_INITIAL_PAGE_SPENT_TIME:     true,
+	U.UP_INITIAL_PAGE_SCROLL_PERCENT: true,
+
+	// Session Latest
+	U.SP_LATEST_PAGE_RAW_URL: true,
+	U.SP_LATEST_PAGE_URL:     true,
+
+	// Counts being seen as categorical.
+	U.UP_PAGE_COUNT:         true,
+	U.SP_PAGE_COUNT:         true,
+	U.UP_SESSION_COUNT:      true,
+	U.EP_SESSION_COUNT:      true,
+	U.SP_SESSION_TIME:       true,
+	U.SP_SPENT_TIME:         true,
+	U.UP_SESSION_SPENT_TIME: true,
 }
 
 func shouldIgnoreUserProperty(propertyName string) bool {
@@ -746,6 +762,8 @@ var EVENT_PROPERTIES_TO_IGNORE = map[string]bool{
 	"_$osVersion":        true,
 	U.UP_JOIN_TIME:       true,
 	"_$joinTime":         true,
+	// Old incorrect property.
+	"$session": true,
 
 	U.UP_INITIAL_PAGE_DOMAIN:  true,
 	U.UP_INITIAL_PAGE_URL:     true,
@@ -756,13 +774,27 @@ var EVENT_PROPERTIES_TO_IGNORE = map[string]bool{
 	U.EP_PAGE_TITLE:           true,
 
 	// Temporary fix.
-	U.EP_REFERRER:                true,
-	U.EP_REFERRER_URL:            true,
-	U.EP_REFERRER_DOMAIN:         true,
-	U.SP_INITIAL_REFERRER_DOMAIN: true,
-	U.SP_INITIAL_REFERRER:        true,
-	U.EP_PAGE_LOAD_TIME:          true,
-	U.UP_INITIAL_PAGE_SPENT_TIME: true,
+	U.EP_REFERRER:                    true,
+	U.EP_REFERRER_URL:                true,
+	U.EP_REFERRER_DOMAIN:             true,
+	U.SP_INITIAL_REFERRER_DOMAIN:     true,
+	U.SP_INITIAL_REFERRER:            true,
+	U.EP_PAGE_LOAD_TIME:              true,
+	U.UP_INITIAL_PAGE_SPENT_TIME:     true,
+	U.UP_INITIAL_PAGE_SCROLL_PERCENT: true,
+
+	// Session Latest.
+	U.SP_LATEST_PAGE_RAW_URL: true,
+	U.SP_LATEST_PAGE_URL:     true,
+
+	// Counts being seen as categorical.
+	U.UP_PAGE_COUNT:         true,
+	U.SP_PAGE_COUNT:         true,
+	U.UP_SESSION_COUNT:      true,
+	U.EP_SESSION_COUNT:      true,
+	U.SP_SESSION_TIME:       true,
+	U.SP_SPENT_TIME:         true,
+	U.UP_SESSION_SPENT_TIME: true,
 }
 
 func shouldIgnoreEventProperty(propertyName string) bool {

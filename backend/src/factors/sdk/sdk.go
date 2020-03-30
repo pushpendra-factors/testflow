@@ -441,7 +441,7 @@ func Track(projectId uint64, request *TrackPayload,
 			return errCode, &TrackResponse{Error: "Tracking failed. Unable to associate with a session."}
 		}
 
-		(*eventProperties)[U.EP_SESSION] = session.Count
+		(*eventProperties)[U.EP_SESSION_COUNT] = session.Count
 		event.SessionId = &session.ID
 	}
 	eventPropsJSON, err := json.Marshal(eventProperties)

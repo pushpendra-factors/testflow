@@ -933,7 +933,7 @@ func Factor(reqId string, projectId uint64, startEvent string,
 
 	results := buildFactorResultsFromPatterns(reqId, iPatternNodes, countType, pw)
 
-	maxPatterns := 75
+	maxPatterns := 150
 	if len(results.Charts) > maxPatterns {
 		results.Charts = results.Charts[:maxPatterns]
 	}

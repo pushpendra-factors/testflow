@@ -117,7 +117,7 @@ var EP_COST string = "$cost"
 var EP_REVENUE string = "$revenue"
 var EP_HOUR_OF_DAY string = "$hour_of_day"
 var EP_DAY_OF_WEEK string = "$day_of_week"
-var EP_SESSION string = "$session"
+var EP_SESSION_COUNT string = "$session_count"
 
 // User Properties
 var UP_PLATFORM string = "$platform"
@@ -562,6 +562,20 @@ var PREDEFINED_BIN_RANGES_FOR_PROPERTY = map[string][][2]float64{
 		[2]float64{300, 600},
 		[2]float64{600, 1800},
 		[2]float64{1800, math.MaxFloat64},
+	},
+	EP_PAGE_SCROLL_PERCENT: [][2]float64{
+		[2]float64{0, 10},
+		[2]float64{10, 30},
+		[2]float64{30, 50},
+		[2]float64{50, 80},
+		[2]float64{80, 100},
+	},
+	UP_INITIAL_PAGE_SCROLL_PERCENT: [][2]float64{
+		[2]float64{0, 10},
+		[2]float64{10, 30},
+		[2]float64{30, 50},
+		[2]float64{50, 80},
+		[2]float64{80, 100},
 	},
 }
 
