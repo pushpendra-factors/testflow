@@ -414,7 +414,7 @@ func getUserByAMPUserId(projectId uint64, ampUserId string) (*User, int) {
 	return &users[0], http.StatusFound
 }
 
-func CreateOrGetAMPUser(projectId uint64, ampUserId string) (*User, int) {
+func CreateOrGetAMPUser(projectId uint64, ampUserId string, timestamp int64) (*User, int) {
 	if projectId == 0 || ampUserId == "" {
 		return nil, http.StatusBadRequest
 	}
@@ -431,7 +431,8 @@ func CreateOrGetAMPUser(projectId uint64, ampUserId string) (*User, int) {
 		return user, errCode
 	}
 
-	user, err := createUserWithError(&User{ProjectId: projectId, AMPUserId: ampUserId})
+	user, err := createUserWithError(&User{ProjectId: projectId,
+		AMPUserId: ampUserId, JoinTimestamp: timestamp})
 	if err != nil {
 		// Get and return error is duplicate error.
 		if isDuplicateAMPUserError(err) {
