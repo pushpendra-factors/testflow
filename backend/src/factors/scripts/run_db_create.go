@@ -106,6 +106,12 @@ func main() {
 	} else {
 		log.Info("users table is associated with projects table.")
 	}
+	// Add unique index users_project_id_amp_user_idx.
+	if err := db.Exec("CREATE UNIQUE INDEX users_project_id_amp_user_idx ON users(project_id, amp_user_id);").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("users table add unique index users_project_id_amp_user_idx failed")
+	} else {
+		log.Info("users table unique index users_project_id_amp_user_idx crated")
+	}
 
 	// Create user_properties table.
 	if err := db.CreateTable(&M.UserProperties{}).Error; err != nil {

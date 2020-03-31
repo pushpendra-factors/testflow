@@ -38,6 +38,7 @@ const SCOPE_SHOPIFY_HASH_EMAIL = "shopifyHashEmail"
 
 // cors prefix constants.
 const PREFIX_PATH_SDK = "/sdk/"
+const PREFIX_PATH_AMP_SDK = "/amp/sdk/"
 const PREFIX_PATH_INTEGRATIONS = "/integrations"
 const SUB_ROUTE_SHOPIFY_INTEGRATION_SDK = "/shopify_sdk"
 
@@ -240,7 +241,9 @@ func SetScopeProjectIdByStoreAndSecret() gin.HandlerFunc {
 }
 
 func isSDKRequest(path string) bool {
-	return strings.HasPrefix(path, PREFIX_PATH_SDK) || strings.Contains(path, SUB_ROUTE_SHOPIFY_INTEGRATION_SDK)
+	return strings.HasPrefix(path, PREFIX_PATH_SDK) ||
+		strings.HasPrefix(path, PREFIX_PATH_AMP_SDK) ||
+		strings.Contains(path, SUB_ROUTE_SHOPIFY_INTEGRATION_SDK)
 }
 
 func isIntergrationsRequest(path string) bool {

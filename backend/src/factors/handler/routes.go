@@ -10,6 +10,7 @@ import (
 )
 
 const ROUTE_SDK_ROOT = "/sdk"
+const ROUTE_AMP_SDK_ROOT = "/amp/sdk"
 const ROUTE_PROJECTS_ROOT = "/projects"
 const ROUTE_INTEGRATIONS_ROOT = "/integrations"
 const ROUTE_DATA_SERVICE_ROOT = "/data_service"
@@ -101,6 +102,9 @@ func InitSDKServiceRoutes(r *gin.Engine) {
 	sdkRouteGroup.POST("/event/update_properties", SDKUpdateEventPropertiesHandler)
 	sdkRouteGroup.POST("/user/identify", SDKIdentifyHandler)
 	sdkRouteGroup.POST("/user/add_properties", SDKAddUserPropertiesHandler)
+
+	ampSdkRouteGroup := r.Group(ROUTE_AMP_SDK_ROOT)
+	ampSdkRouteGroup.POST("/event/track", AMPSDKTrackHandler)
 
 	intRouteGroup := r.Group(ROUTE_INTEGRATIONS_ROOT)
 	intRouteGroup.POST("/segment", mid.SetScopeProjectPrivateToken(), IntSegmentHandler)

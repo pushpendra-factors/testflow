@@ -368,27 +368,27 @@ func TestDBFillUserDefaultProperties(t *testing.T) {
 	assert.Empty(t, propertiesMap[U.EP_INTERNAL_IP])
 }
 
-func TestDBGetSegmentUser(t *testing.T) {
+func TestDBCreateOrGetSegmentUser(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 	assert.NotNil(t, project)
 
 	// no seg_aid but c_uid provided. create new user with c_uid.
-	user, errCode := M.GetSegmentUser(project.ID, "", "customer_1", time.Now().Unix())
+	user, errCode := M.CreateOrGetSegmentUser(project.ID, "", "customer_1", time.Now().Unix())
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotNil(t, user)
 	assert.Equal(t, "customer_1", user.CustomerUserId)
 
 	// no customer uid. create new user with seg_aid.
 	segAid := U.RandomLowerAphaNumString(15)
-	user1, errCode := M.GetSegmentUser(project.ID, segAid, "", time.Now().Unix())
+	user1, errCode := M.CreateOrGetSegmentUser(project.ID, segAid, "", time.Now().Unix())
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotNil(t, user1)
 	assert.Equal(t, segAid, user1.SegmentAnonymousId)
 	assert.Empty(t, user1.CustomerUserId)
 
 	// exist return same user. using same segAid.
-	user2, errCode := M.GetSegmentUser(project.ID, segAid, "", time.Now().Unix())
+	user2, errCode := M.CreateOrGetSegmentUser(project.ID, segAid, "", time.Now().Unix())
 	assert.Equal(t, http.StatusOK, errCode)
 	assert.NotNil(t, user2)
 	assert.Equal(t, user1.ID, user2.ID)
@@ -397,7 +397,7 @@ func TestDBGetSegmentUser(t *testing.T) {
 
 	// both provided. c_uid is empty. identify
 	custId := U.RandomLowerAphaNumString(15)
-	user3, errCode := M.GetSegmentUser(project.ID, segAid, custId, time.Now().Unix())
+	user3, errCode := M.CreateOrGetSegmentUser(project.ID, segAid, custId, time.Now().Unix())
 	assert.Equal(t, http.StatusOK, errCode)
 	assert.NotNil(t, user3)
 	assert.Equal(t, user1.ID, user3.ID)
@@ -405,14 +405,14 @@ func TestDBGetSegmentUser(t *testing.T) {
 	assert.Equal(t, custId, user3.CustomerUserId) // Update c_uid on existing user.
 
 	// both seg_aid and c_uid matches.
-	user4, errCode := M.GetSegmentUser(project.ID, segAid, user3.CustomerUserId, time.Now().Unix())
+	user4, errCode := M.CreateOrGetSegmentUser(project.ID, segAid, user3.CustomerUserId, time.Now().Unix())
 	assert.Equal(t, http.StatusOK, errCode)
 	assert.NotNil(t, user4)
 	assert.Equal(t, user3.ID, user4.ID)
 
 	// c_uid mismatch with existing seg_aid. should not update c_uid.
 	custId1 := U.RandomLowerAphaNumString(15)
-	user5, errCode := M.GetSegmentUser(project.ID, segAid, custId1, time.Now().Unix())
+	user5, errCode := M.CreateOrGetSegmentUser(project.ID, segAid, custId1, time.Now().Unix())
 	assert.Equal(t, http.StatusOK, errCode)
 	assert.NotNil(t, user5)
 	assert.Equal(t, user4.ID, user5.ID)                         // Should return existing user.
@@ -420,7 +420,7 @@ func TestDBGetSegmentUser(t *testing.T) {
 
 	// user by seg_aid doesn't exist, but user exist with given c_uid.
 	segAid1 := U.RandomLowerAphaNumString(15)
-	user6, errCode := M.GetSegmentUser(project.ID, segAid1, user4.CustomerUserId, time.Now().Unix()) // new seg_aid.
+	user6, errCode := M.CreateOrGetSegmentUser(project.ID, segAid1, user4.CustomerUserId, time.Now().Unix()) // new seg_aid.
 	assert.Equal(t, http.StatusOK, errCode)
 	assert.NotNil(t, user6)
 	assert.Equal(t, user4.ID, user6.ID) // Should not use existing user with same c_uid.
@@ -428,7 +428,7 @@ func TestDBGetSegmentUser(t *testing.T) {
 	// user by seg_aid and c_uid doesn't exist.
 	custId2 := U.RandomLowerAphaNumString(15)
 	segAid2 := U.RandomLowerAphaNumString(15)
-	user7, errCode := M.GetSegmentUser(project.ID, segAid2, custId2, time.Now().Unix())
+	user7, errCode := M.CreateOrGetSegmentUser(project.ID, segAid2, custId2, time.Now().Unix())
 	assert.Equal(t, http.StatusCreated, errCode)
 	// new user with new seg_aid and c_uid.
 	assert.Equal(t, segAid2, user7.SegmentAnonymousId)

@@ -2,9 +2,13 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/mssola/user_agent"
 	log "github.com/sirupsen/logrus"
 
 	C "factors/config"
@@ -233,4 +237,149 @@ func SDKUpdateEventPropertiesHandler(c *gin.Context) {
 
 	projectToken := U.GetScopeByKeyAsString(c, mid.SCOPE_PROJECT_TOKEN)
 	c.JSON(SDK.UpdateEventPropertiesWithQueue(projectToken, &request, C.GetSDKRequestQueueAllowedTokens()))
+}
+
+/*
+AMPSDKTrackHandler - Tracks event from AMP Pages with query params
+
+Query Params:
+token=${token}&canonical_url=${canonicalUrl}&title=${title}&referrer=${documentReferrer}&
+timestamp=${timestamp}&timezone=${timezone}&screen_height=${screenHeight}&
+screen_width=${screenWidth}&page_load_time_in_ms=${pageLoadTime}&client_id=${clientId(_factorsai_amp_id)}"
+*/
+func AMPSDKTrackHandler(c *gin.Context) {
+	token := c.Query("token")
+	token = strings.TrimSpace(token)
+	if token == "" {
+		c.AbortWithStatusJSON(http.StatusUnauthorized,
+			gin.H{"error": "Invalid token"})
+		return
+	}
+
+	project, errCode := M.GetProjectByToken(token)
+	if errCode != http.StatusFound {
+		c.AbortWithStatusJSON(http.StatusUnauthorized,
+			gin.H{"error": "Invalid token"})
+		return
+	}
+
+	logCtx := log.WithField("project_id", project.ID)
+
+	ampUserId := c.Query("client_id")
+	ampUserId = strings.TrimSpace(ampUserId)
+	if ampUserId == "" {
+		logCtx.Error("Empty amp client_id. Invalid user id.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid user"})
+		return
+	}
+
+	var isNewUser bool
+	user, errCode := M.CreateOrGetAMPUser(project.ID, ampUserId)
+	if errCode != http.StatusFound && errCode != http.StatusCreated {
+		c.AbortWithStatusJSON(errCode, gin.H{"error": "Invalid user"})
+		return
+	}
+
+	if errCode == http.StatusCreated {
+		isNewUser = true
+	}
+
+	canonicalURL := c.Query("canonical_url")
+	canonicalURL = strings.TrimSpace(canonicalURL)
+
+	parsedCanonicalURL, err := U.ParseURLStable(canonicalURL)
+	if err != nil {
+		logCtx.WithField("canonical_url", canonicalURL).WithError(err).Error(
+			"Failed to parsing page url from canonical_url query param on amp sdk track")
+		c.AbortWithStatusJSON(http.StatusBadRequest,
+			gin.H{"error": "Invalid page url"})
+	}
+
+	pageURL := parsedCanonicalURL.Host + parsedCanonicalURL.Path
+
+	var referrerRawURL, referrerURL, referrerDomain string
+	paramReferrerURL := c.Query("referrer")
+	paramReferrerURL = strings.TrimSpace(paramReferrerURL)
+	if referrerURL != "" {
+		parsedParamReferrerURL, err := U.ParseURLStable(paramReferrerURL)
+		if err == nil {
+			referrerRawURL = paramReferrerURL
+			referrerURL = parsedParamReferrerURL.Host + parsedParamReferrerURL.Path
+			referrerDomain = parsedParamReferrerURL.Host
+		} else {
+			logCtx.WithError(err).Error(
+				"Failed parsing referrer_url query param on amp sdk track")
+		}
+	}
+
+	var pageLoadTimeInSecs float64
+	paramPageLoadTime := c.Query("page_load_time_in_ms")
+	paramPageLoadTime = strings.TrimSpace(paramPageLoadTime)
+	pageLoadTimeInMs, err := strconv.ParseFloat(paramPageLoadTime, 64)
+	if err != nil {
+		log.WithError(err).WithField("page_load_time_in_ms", paramPageLoadTime).Error(
+			"Failed to convert page_load_time to number on amp sdk track")
+	}
+	if pageLoadTimeInMs > 0 {
+		pageLoadTimeInSecs = pageLoadTimeInMs / 1000
+	}
+
+	pageTitle := c.Query("title")
+
+	eventProperties := U.PropertiesMap{}
+	eventProperties[U.EP_PAGE_RAW_URL] = canonicalURL
+	eventProperties[U.EP_PAGE_URL] = pageURL
+	eventProperties[U.EP_PAGE_DOMAIN] = parsedCanonicalURL.Host
+	eventProperties[U.EP_PAGE_TITLE] = pageTitle
+	eventProperties[U.EP_REFERRER] = referrerRawURL
+	eventProperties[U.EP_REFERRER_URL] = referrerURL
+	eventProperties[U.EP_REFERRER_DOMAIN] = referrerDomain
+	eventProperties[U.EP_PAGE_LOAD_TIME] = pageLoadTimeInSecs
+
+	var screenHeight, screenWidth float64
+	paramScreenHeight := c.Query("screen_height")
+	screenHeight, err = strconv.ParseFloat(paramScreenHeight, 64)
+	if err != nil {
+		log.WithError(err).WithField("screen_height", paramScreenHeight).Error(
+			"Failed to convert screen_height to number on amp sdk track")
+	}
+
+	paramScreenWidth := c.Query("screen_width")
+	screenWidth, err = strconv.ParseFloat(paramScreenWidth, 64)
+	if err != nil {
+		log.WithError(err).WithField("screen_width", paramScreenWidth).Error(
+			"Failed to convert screen_width to number on amp sdk track")
+	}
+
+	userProperties := U.PropertiesMap{}
+	if screenHeight > 0 {
+		userProperties[U.UP_SCREEN_HEIGHT] = screenHeight
+	}
+	if screenWidth > 0 {
+		userProperties[U.UP_SCREEN_WIDTH] = screenWidth
+	}
+
+	userAgent := user_agent.New(c.Request.UserAgent())
+	userProperties[U.UP_OS] = userAgent.OSInfo().Name
+	userProperties[U.UP_OS_VERSION] = userAgent.OSInfo().Version
+	userProperties[U.UP_OS_WITH_VERSION] = fmt.Sprintf("%s-%s",
+		userProperties[U.UP_OS], userProperties[U.UP_OS_VERSION])
+
+	browserName, browserVersion := userAgent.Browser()
+	userProperties[U.UP_BROWSER] = browserName
+	userProperties[U.UP_BROWSER_VERSION] = browserVersion
+	userProperties[U.UP_BROWSER_WITH_VERSION] = fmt.Sprintf("%s-%s",
+		userProperties[U.UP_BROWSER], userProperties[U.UP_BROWSER_VERSION])
+
+	trackPayload := SDK.TrackPayload{
+		UserId:          user.ID,
+		IsNewUser:       isNewUser,
+		Name:            pageURL,
+		EventProperties: eventProperties,
+		UserProperties:  userProperties,
+		ClientIP:        c.ClientIP(),
+		UserAgent:       c.Request.UserAgent(),
+	}
+
+	c.JSON(SDK.Track(project.ID, &trackPayload, false))
 }

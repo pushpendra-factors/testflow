@@ -1,6 +1,7 @@
 package model
 
 import (
+	"errors"
 	C "factors/config"
 	U "factors/util"
 	"net/http"
@@ -22,6 +23,7 @@ type User struct {
 	// Not part of table, but part of json. Stored in UserProperties table.
 	Properties         postgres.Jsonb `gorm:"-" json:"properties"`
 	SegmentAnonymousId string         `gorm:"type:varchar(200);default:null" json:"seg_aid"`
+	AMPUserId          string         `json:"amp_user_id"`
 	// UserId provided by the customer.
 	// An unique index is creatd on ProjectId+UserId.
 	CustomerUserId string `gorm:"type:varchar(255);default:null" json:"c_uid"`
@@ -32,6 +34,12 @@ type User struct {
 }
 
 const usersLimitForProperties = 1000
+
+const errorDuplicateAMPUser = "pq: duplicate key value violates unique constraint \"users_project_id_amp_user_idx\""
+
+func isDuplicateAMPUserError(err error) bool {
+	return err.Error() == errorDuplicateAMPUser
+}
 
 func (user *User) BeforeCreate(scope *gorm.Scope) error {
 	// Increamenting count based on EventNameId, not by EventName.
@@ -54,12 +62,14 @@ func (user *User) BeforeCreate(scope *gorm.Scope) error {
 	return nil
 }
 
-func CreateUser(user *User) (*User, int) {
+// createUserWithError - Returns error during create to match
+// with constraint errors.
+func createUserWithError(user *User) (*User, error) {
 	logCtx := log.WithField("project_id", user.ProjectId)
 
 	if user.ProjectId == 0 {
-		log.Error("CreateUser Failed. ProjectId not provided.")
-		return nil, http.StatusBadRequest
+		logCtx.Error("Failed to create user. ProjectId not provided.")
+		return nil, errors.New("invalid project_id")
 	}
 
 	// Add id with our uuid generator, if not given.
@@ -69,23 +79,33 @@ func CreateUser(user *User) (*User, int) {
 
 	db := C.GetServices().Db
 	if err := db.Create(user).Error; err != nil {
-		if U.IsPostgresIntegrityViolationError(err) {
-			log.WithError(err).Info("CreateUser Failed. Constraint violation.")
-			return nil, http.StatusNotAcceptable
-		}
-
-		logCtx.WithError(err).Error("CreateUser Failed")
-		return nil, http.StatusInternalServerError
+		return nil, err
 	}
 
 	propertiesId, errCode := UpdateUserPropertiesByCurrentProperties(user.ProjectId, user.ID,
 		user.PropertiesId, &user.Properties, user.JoinTimestamp)
 	if errCode == http.StatusInternalServerError {
-		return nil, errCode
+		return nil, errors.New("failed to update user properties")
 	}
 
 	// assign propertiesId with created propertiesId.
 	user.PropertiesId = propertiesId
+
+	return user, nil
+}
+
+func CreateUser(user *User) (*User, int) {
+	logCtx := log.WithField("project_id", user.ProjectId)
+
+	user, err := createUserWithError(user)
+	if err != nil {
+		if U.IsPostgresIntegrityViolationError(err) {
+			return nil, http.StatusNotAcceptable
+		}
+
+		logCtx.WithError(err).Error("Failed to create user")
+		return nil, http.StatusInternalServerError
+	}
 
 	return user, http.StatusCreated
 }
@@ -284,9 +304,9 @@ func CreateOrGetUser(projectId uint64, custUserId string) (*User, int) {
 	return user, errCode
 }
 
-// GetSegmentUser create or updates(c_uid) and returns user by segement_anonymous_id
+// CreateOrGetSegmentUser create or updates(c_uid) and returns user by segement_anonymous_id
 // and/or customer_user_id.
-func GetSegmentUser(projectId uint64, segAnonId, custUserId string, segReqTimestamp int64) (*User, int) {
+func CreateOrGetSegmentUser(projectId uint64, segAnonId, custUserId string, segReqTimestamp int64) (*User, int) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectId, "seg_aid": segAnonId,
 		"provided_c_uid": custUserId})
 
@@ -371,6 +391,64 @@ func GetSegmentUser(projectId uint64, segAnonId, custUserId string, segReqTimest
 
 	// provided and fetched c_uid are same.
 	return user, http.StatusOK
+}
+
+func getUserByAMPUserId(projectId uint64, ampUserId string) (*User, int) {
+	logCtx := log.WithField("project_id", projectId).WithField(
+		"amp_user_id", ampUserId)
+
+	var users []User
+
+	db := C.GetServices().Db
+	err := db.Limit(1).Where("project_id = ? AND amp_user_id = ?",
+		projectId, ampUserId).Find(&users).Error
+	if err != nil {
+		logCtx.Error("Failed to get user by amp_user_id")
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(users) == 0 {
+		return nil, http.StatusNotFound
+	}
+
+	return &users[0], http.StatusFound
+}
+
+func CreateOrGetAMPUser(projectId uint64, ampUserId string) (*User, int) {
+	if projectId == 0 || ampUserId == "" {
+		return nil, http.StatusBadRequest
+	}
+
+	logCtx := log.WithField("project_id",
+		projectId).WithField("amp_user_id", ampUserId)
+
+	user, errCode := getUserByAMPUserId(projectId, ampUserId)
+	if errCode == http.StatusInternalServerError {
+		return nil, errCode
+	}
+
+	if errCode == http.StatusFound {
+		return user, errCode
+	}
+
+	user, err := createUserWithError(&User{ProjectId: projectId, AMPUserId: ampUserId})
+	if err != nil {
+		// Get and return error is duplicate error.
+		if isDuplicateAMPUserError(err) {
+			user, errCode := getUserByAMPUserId(projectId, ampUserId)
+			if errCode != http.StatusFound {
+				return nil, errCode
+			}
+
+			return user, http.StatusFound
+		}
+
+		logCtx.WithError(err).Error(
+			"Failed to create user by amp user id on CreateOrGetAMPUser")
+		return nil, http.StatusInternalServerError
+	}
+
+	return user, http.StatusCreated
 }
 
 func GetRecentUserPropertyKeysWithLimits(projectId uint64, usersLimit int) (map[string][]string, int) {

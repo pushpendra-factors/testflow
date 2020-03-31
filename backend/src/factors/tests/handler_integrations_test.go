@@ -894,7 +894,7 @@ func TestIntSegmentHandlerWithSession(t *testing.T) {
 		sessionEventName, errCode := M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, sessionEventName)
-		segmentUser, errCode := M.GetSegmentUser(project.ID, "80444c7e-1580-4d3c-a77a-2f3427ed7d990",
+		segmentUser, errCode := M.CreateOrGetSegmentUser(project.ID, "80444c7e-1580-4d3c-a77a-2f3427ed7d990",
 			"xxx123", time.Now().Unix())
 		assert.NotNil(t, segmentUser)
 		assert.Equal(t, http.StatusOK, errCode)
