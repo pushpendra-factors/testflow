@@ -241,12 +241,12 @@ func SDKUpdateEventPropertiesHandler(c *gin.Context) {
 /*
 AMPSDKTrackHandler - Tracks event from AMP Pages with query params
 
-Query Params:
-token=${token}&source_url=${sourceUrl}&title=${title}&referrer=${documentReferrer}
+Sample Track URL
+https://app.factors.ai/sdk/amp/event/track?token=${token}&title=${title}&referrer=${documentReferrer}
 &screen_height=${screenHeight}&screen_width=${screenWidth}&page_load_time_in_ms=${pageLoadTime}
-&client_id=${clientId(_factorsai_amp_id)}
+&client_id=${clientId(_factorsai_amp_id)}&source_url=${sourceUrl}
 */
-func AMPSDKTrackHandler(c *gin.Context) {
+func SDKAMPTrackHandler(c *gin.Context) {
 	token := c.Query("token")
 	token = strings.TrimSpace(token)
 	if token == "" {
