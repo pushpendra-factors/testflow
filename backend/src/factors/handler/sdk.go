@@ -256,6 +256,16 @@ func SDKAMPTrackHandler(c *gin.Context) {
 
 	logCtx := log.WithField("token", token)
 
+	settings, errCode := M.GetProjectSettingByTokenWithCacheAndDefault(token)
+	if errCode != http.StatusFound {
+		c.AbortWithStatusJSON(http.StatusBadRequest, &SDK.Response{Error: "Invalid request"})
+		return
+	}
+	if !*settings.AutoTrack {
+		c.AbortWithStatusJSON(http.StatusBadRequest, &SDK.Response{Message: "Not enabled"})
+		return
+	}
+
 	ampClientId := c.Query("client_id")
 	ampClientId = strings.TrimSpace(ampClientId)
 	if ampClientId == "" {
