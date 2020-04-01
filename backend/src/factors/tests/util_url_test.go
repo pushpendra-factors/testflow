@@ -85,3 +85,17 @@ func TestUtilGetQueryParamsFromURLFragment(t *testing.T) {
 	assert.Nil(t, paramsMap["a"])
 	assert.NotNil(t, paramsMap["b"])
 }
+
+func TestUtilIsBotUserAgent(t *testing.T) {
+	assert.True(t, U.IsBotUserAgent("Mozilla/5.0 (Linux; Android 5.0; SM-G920A) AppleWebKit (KHTML, like Gecko) Chrome Mobile Safari (compatible; AdsBot-Google-Mobile; +http://www.google.com/mobile/adsbot.html)"))
+	assert.True(t, U.IsBotUserAgent("Mozilla/5.0 (iPhone; CPU iPhone OS 9_1 like Mac OS X) AppleWebKit/601.1.46 (KHTML, like Gecko) Version/9.0 Mobile/13B143 Safari/601.1 (compatible; AdsBot-Google-Mobile; +http://www.google.com/mobile/adsbot.html)"))
+	assert.True(t, U.IsBotUserAgent("Googlebot-Image/1.0"))
+	assert.True(t, U.IsBotUserAgent("Googlebot-News"))
+	assert.True(t, U.IsBotUserAgent("Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"))
+	assert.True(t, U.IsBotUserAgent("Mozilla/5.0 (compatible; Bingbot/2.0; +http://www.bing.com/bingbot.htm)"))
+	assert.True(t, U.IsBotUserAgent("Mozilla/5.0 (compatible; Yahoo! Slurp; http://help.yahoo.com/help/us/ysearch/slurp)"))
+	assert.True(t, U.IsBotUserAgent("DuckDuckBot/1.0; (+http://duckduckgo.com/duckduckbot.html)"))
+	assert.True(t, U.IsBotUserAgent("Mozilla/5.0 (compatible; Baiduspider/2.0; +http://www.baidu.com/search/spider.html)"))
+	assert.True(t, U.IsBotUserAgent("facebookexternalhit/1.0 (+http://www.facebook.com/externalhit_uatext.php)"))
+	assert.True(t, U.IsBotUserAgent("ia_archiver (+http://www.alexa.com/site/help/webmasters; crawler@alexa.com)"))
+}
