@@ -340,7 +340,7 @@ func ReceiveEvent(token string, event *Event) (int, *EventResponse) {
 	}
 	requestTimestamp := parsedTimestamp.Unix()
 
-	user, errCode := M.GetSegmentUser(project.ID, event.AnonymousID,
+	user, errCode := M.CreateOrGetSegmentUser(project.ID, event.AnonymousID,
 		event.UserId, requestTimestamp)
 	if errCode != http.StatusOK && errCode != http.StatusCreated {
 		response.Error = "Invalid user"

@@ -240,7 +240,8 @@ func SetScopeProjectIdByStoreAndSecret() gin.HandlerFunc {
 }
 
 func isSDKRequest(path string) bool {
-	return strings.HasPrefix(path, PREFIX_PATH_SDK) || strings.Contains(path, SUB_ROUTE_SHOPIFY_INTEGRATION_SDK)
+	return strings.HasPrefix(path, PREFIX_PATH_SDK) ||
+		strings.Contains(path, SUB_ROUTE_SHOPIFY_INTEGRATION_SDK)
 }
 
 func isIntergrationsRequest(path string) bool {

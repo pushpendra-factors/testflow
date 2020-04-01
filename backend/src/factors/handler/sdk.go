@@ -3,6 +3,9 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
+	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -233,4 +236,92 @@ func SDKUpdateEventPropertiesHandler(c *gin.Context) {
 
 	projectToken := U.GetScopeByKeyAsString(c, mid.SCOPE_PROJECT_TOKEN)
 	c.JSON(SDK.UpdateEventPropertiesWithQueue(projectToken, &request, C.GetSDKRequestQueueAllowedTokens()))
+}
+
+/*
+AMPSDKTrackHandler - Tracks event from AMP Pages with query params
+
+Sample Track URL
+https://app.factors.ai/sdk/amp/event/track?token=${token}&title=${title}&referrer=${documentReferrer}
+&screen_height=${screenHeight}&screen_width=${screenWidth}&page_load_time_in_ms=${pageLoadTime}
+&client_id=${clientId(_factorsai_amp_id)}&source_url=${sourceUrl}
+*/
+func SDKAMPTrackHandler(c *gin.Context) {
+	token := c.Query("token")
+	token = strings.TrimSpace(token)
+	if token == "" {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, &SDK.Response{Error: "Invalid token"})
+		return
+	}
+
+	logCtx := log.WithField("token", token)
+
+	settings, errCode := M.GetProjectSettingByTokenWithCacheAndDefault(token)
+	if errCode != http.StatusFound {
+		c.AbortWithStatusJSON(http.StatusBadRequest, &SDK.Response{Error: "Invalid request"})
+		return
+	}
+	if !*settings.AutoTrack {
+		c.AbortWithStatusJSON(http.StatusBadRequest, &SDK.Response{Message: "Not enabled"})
+		return
+	}
+
+	ampClientId := c.Query("client_id")
+	ampClientId = strings.TrimSpace(ampClientId)
+	if ampClientId == "" {
+		c.AbortWithStatusJSON(http.StatusBadRequest, &SDK.Response{Error: "Invalid client_id"})
+		return
+	}
+
+	logCtx = logCtx.WithField("client_id", ampClientId)
+
+	sourceURL := c.Query("source_url")
+	sourceURL = strings.TrimSpace(sourceURL)
+
+	paramReferrerURL := c.Query("referrer")
+	paramReferrerURL = strings.TrimSpace(paramReferrerURL)
+
+	pageTitle := c.Query("title")
+
+	var pageLoadTimeInSecs float64
+	paramPageLoadTime := c.Query("page_load_time_in_ms")
+	paramPageLoadTime = strings.TrimSpace(paramPageLoadTime)
+	pageLoadTimeInMs, err := strconv.ParseFloat(paramPageLoadTime, 64)
+	if err != nil {
+		logCtx.WithError(err).WithField("page_load_time_in_ms", paramPageLoadTime).Error(
+			"Failed to convert page_load_time to number on amp sdk track")
+	}
+	if pageLoadTimeInMs > 0 {
+		pageLoadTimeInSecs = pageLoadTimeInMs / 1000
+	}
+
+	paramScreenHeight := c.Query("screen_height")
+	screenHeight, err := strconv.ParseFloat(paramScreenHeight, 64)
+	if err != nil {
+		logCtx.WithError(err).WithField("screen_height", paramScreenHeight).Error(
+			"Failed to convert screen_height to number on amp sdk track")
+	}
+
+	paramScreenWidth := c.Query("screen_width")
+	screenWidth, err := strconv.ParseFloat(paramScreenWidth, 64)
+	if err != nil {
+		logCtx.WithError(err).WithField("screen_width", paramScreenWidth).Error(
+			"Failed to convert screen_width to number on amp sdk track")
+	}
+
+	payload := &SDK.AMPTrackPayload{
+		ClientID:           ampClientId,
+		SourceURL:          sourceURL,
+		Title:              pageTitle,
+		Referrer:           paramReferrerURL,
+		ScreenHeight:       screenHeight,
+		ScreenWidth:        screenWidth,
+		PageLoadTimeInSecs: pageLoadTimeInSecs,
+
+		Timestamp: time.Now().Unix(), // request timestamp.
+		UserAgent: c.Request.UserAgent(),
+		ClientIP:  c.ClientIP(),
+	}
+
+	c.JSON(SDK.AMPTrackWithQueue(token, payload, C.GetSDKRequestQueueAllowedTokens()))
 }

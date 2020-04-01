@@ -3,11 +3,13 @@ package sdk
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
+	"github.com/mssola/user_agent"
 	log "github.com/sirupsen/logrus"
 
 	"factors/vendor_custom/machinery/v1/tasks"
@@ -85,6 +87,11 @@ type UpdateEventPropertiesResponse struct {
 	Error   string `json:"error,omitempty"`
 }
 
+type Response struct {
+	Message string `json:"message,omitempty"`
+	Error   string `json:"error,omitempty"`
+}
+
 const RequestQueue = "sdk_request_queue"
 const ProcessRequestTask = "process_sdk_request"
 
@@ -93,6 +100,7 @@ const (
 	sdkRequestTypeUserIdentify          = "sdk_user_identify"
 	sdkRequestTypeUserAddProperties     = "sdk_user_add_properties"
 	sdkRequestTypeEventUpdateProperties = "sdk_event_update_properties"
+	sdkRequestTypedAMPEventTrack        = "sdk_amp_event_track"
 )
 
 func ProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, string, error) {
@@ -154,6 +162,19 @@ func ProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, string,
 		}
 
 		status, response = UpdateEventPropertiesByToken(token, &reqPayload)
+
+	case sdkRequestTypedAMPEventTrack:
+		var reqPayload AMPTrackPayload
+
+		err := json.Unmarshal([]byte(reqPayloadStr), &reqPayload)
+		if err != nil {
+			logCtx.WithError(err).Error(
+				"Failed to unmarshal request payload on sdk process queue.")
+			return http.StatusInternalServerError, "", nil
+		}
+
+		status, response = AMPTrackByToken(token, &reqPayload)
+
 	default:
 		logCtx.Error("Invalid sdk request type on sdk process queue")
 		return http.StatusInternalServerError, "", nil
@@ -1093,4 +1114,130 @@ func UpdateEventProperties(projectId uint64,
 
 	return http.StatusAccepted,
 		&UpdateEventPropertiesResponse{Error: "Updated event properties successfully."}
+}
+
+type AMPTrackPayload struct {
+	ClientID           string  `json:"client_id"` // amp user_id
+	SourceURL          string  `json:"source_url"`
+	Title              string  `json:"title"`
+	Referrer           string  `json:"referrer"`
+	ScreenHeight       float64 `json:"screen_height"`
+	ScreenWidth        float64 `json:"screen_width"`
+	PageLoadTimeInSecs float64 `json:"page_load_time_in_secs"`
+
+	// internal
+	Timestamp int64  `json:"timestamp"`
+	UserAgent string `json:"user_agent"`
+	ClientIP  string `json:"client_ip"`
+}
+
+type AMPTrackResponse struct {
+	Message string `json:"message"`
+	Error   string `json:"error"`
+}
+
+func AMPTrackByToken(token string, reqPayload *AMPTrackPayload) (int, *Response) {
+	project, errCode := M.GetProjectByToken(token)
+	if errCode != http.StatusFound {
+		return http.StatusUnauthorized, &Response{Error: "Invalid token"}
+	}
+
+	logCtx := log.WithField("project_id", project.ID)
+
+	var isNewUser bool
+	user, errCode := M.CreateOrGetAMPUser(project.ID, reqPayload.ClientID, reqPayload.Timestamp)
+	if errCode != http.StatusFound && errCode != http.StatusCreated {
+		return errCode, &Response{Error: "Invalid user"}
+	}
+
+	if errCode == http.StatusCreated {
+		isNewUser = true
+	}
+
+	parsedSourceURL, err := U.ParseURLStable(reqPayload.SourceURL)
+	if err != nil {
+		logCtx.WithField("canonical_url", reqPayload.SourceURL).WithError(err).Error(
+			"Failed to parsing page url from canonical_url query param on amp sdk track")
+		return http.StatusBadRequest, &Response{Error: "Invalid page url"}
+	}
+
+	pageURL := parsedSourceURL.Host + parsedSourceURL.Path
+
+	var referrerRawURL, referrerURL, referrerDomain string
+	if reqPayload.Referrer != "" {
+		parsedParamReferrerURL, err := U.ParseURLStable(reqPayload.Referrer)
+		if err == nil {
+			referrerRawURL = reqPayload.Referrer
+			referrerURL = parsedParamReferrerURL.Host + parsedParamReferrerURL.Path
+			referrerDomain = parsedParamReferrerURL.Host
+		} else {
+			logCtx.WithError(err).Error(
+				"Failed parsing referrer_url query param on amp sdk track")
+		}
+	}
+
+	eventProperties := U.PropertiesMap{}
+	eventProperties[U.EP_PAGE_RAW_URL] = reqPayload.SourceURL
+	eventProperties[U.EP_PAGE_URL] = pageURL
+	eventProperties[U.EP_PAGE_DOMAIN] = parsedSourceURL.Host
+	eventProperties[U.EP_PAGE_TITLE] = reqPayload.Title
+	eventProperties[U.EP_REFERRER] = referrerRawURL
+	eventProperties[U.EP_REFERRER_URL] = referrerURL
+	eventProperties[U.EP_REFERRER_DOMAIN] = referrerDomain
+	U.FillPropertiesFromURL(&eventProperties, parsedSourceURL)
+
+	if reqPayload.PageLoadTimeInSecs > 0 {
+		eventProperties[U.EP_PAGE_LOAD_TIME] = reqPayload.PageLoadTimeInSecs
+	}
+
+	userProperties := U.PropertiesMap{}
+	if reqPayload.ScreenHeight > 0 {
+		userProperties[U.UP_SCREEN_HEIGHT] = reqPayload.ScreenHeight
+	}
+	if reqPayload.ScreenWidth > 0 {
+		userProperties[U.UP_SCREEN_WIDTH] = reqPayload.ScreenWidth
+	}
+
+	userProperties[U.UP_USER_AGENT] = reqPayload.UserAgent
+
+	userAgent := user_agent.New(reqPayload.UserAgent)
+	userProperties[U.UP_OS] = userAgent.OSInfo().Name
+	userProperties[U.UP_OS_VERSION] = userAgent.OSInfo().Version
+	userProperties[U.UP_OS_WITH_VERSION] = fmt.Sprintf("%s-%s",
+		userProperties[U.UP_OS], userProperties[U.UP_OS_VERSION])
+
+	browserName, browserVersion := userAgent.Browser()
+	userProperties[U.UP_BROWSER] = browserName
+	userProperties[U.UP_BROWSER_VERSION] = browserVersion
+	userProperties[U.UP_BROWSER_WITH_VERSION] = fmt.Sprintf("%s-%s",
+		userProperties[U.UP_BROWSER], userProperties[U.UP_BROWSER_VERSION])
+
+	trackPayload := TrackPayload{
+		UserId:          user.ID,
+		IsNewUser:       isNewUser,
+		Name:            pageURL,
+		EventProperties: eventProperties,
+		UserProperties:  userProperties,
+		ClientIP:        reqPayload.ClientIP,
+		UserAgent:       reqPayload.UserAgent,
+	}
+
+	errCode, trackResponse := Track(project.ID, &trackPayload, false)
+	return errCode, &Response{Message: trackResponse.Message, Error: trackResponse.Error}
+}
+
+func AMPTrackWithQueue(token string, reqPayload *AMPTrackPayload,
+	queueAllowedTokens []string) (int, *Response) {
+
+	if U.UseQueue(token, queueAllowedTokens) {
+		err := enqueueRequest(token, sdkRequestTypedAMPEventTrack, reqPayload)
+		if err != nil {
+			log.WithError(err).Error("Failed to queue amp sdk track event request.")
+			return http.StatusInternalServerError, &Response{Error: "Track event failed"}
+		}
+
+		return http.StatusOK, &Response{Message: "Tracked event successfully"}
+	}
+
+	return AMPTrackByToken(token, reqPayload)
 }
