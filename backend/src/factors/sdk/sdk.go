@@ -1164,7 +1164,7 @@ func AMPTrackByToken(token string, reqPayload *AMPTrackPayload) (int, *Response)
 	pageURL := parsedSourceURL.Host + parsedSourceURL.Path
 
 	var referrerRawURL, referrerURL, referrerDomain string
-	if referrerURL != "" {
+	if reqPayload.Referrer != "" {
 		parsedParamReferrerURL, err := U.ParseURLStable(reqPayload.Referrer)
 		if err == nil {
 			referrerRawURL = reqPayload.Referrer
