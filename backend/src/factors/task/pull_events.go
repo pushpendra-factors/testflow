@@ -16,7 +16,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const max_EVENTS = 30000000 // 30 million. (million a day)
+const max_EVENTS = 100000000 // 100 million.
 var peLog = taskLog.WithField("prefix", "Task#PullEvents")
 
 func pullAndWriteEventsToFile(db *gorm.DB, projectId uint64, startTime int64,
