@@ -599,9 +599,7 @@ def sync(env, dry, skip_today, next_info):
             if dry: log.error("Dry run. Skipped add adwords documents to db.")
             else: add_all_adwords_documents(project_id, customer_acc_id, docs, doc_type, timestamp) 
         else:
-            log.error("Empty response for project %s doc_type %s timestamp %s.", 
-                str(project_id), str(doc_type), str(timestamp))
-            raise Exception("empty response from adwords")
+            add_adwords_document(project_id, customer_acc_id, docs, doc_type, timestamp)
 
     except Exception as e:
         str_exception = str(e)
