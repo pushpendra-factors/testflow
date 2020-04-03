@@ -368,7 +368,7 @@ function getUserDefault() {
         dp[PREFIX+"screen_height"] = device.screen.height;
 
     // Device name added, if mobile.
-    if (device.device) dp[prefix+"device"] = device.device;
+    if (device.device) dp[PREFIX+"device"] = device.device;
 
     // Note: IP and location information added by backend.
     return dp;

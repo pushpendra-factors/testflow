@@ -110,6 +110,7 @@ App.prototype.init = function(token, opts={}) {
     return _client.getProjectSettings()
         .then(function(response) {
             if (response.status < 200 || response.status > 308) {
+                logger.errorLine("Get project settings failed with code : ", response.status); 
                 return Promise.reject(new Error("FactorsRequestError: Init failed. App configuration failed."));
             }
             return response;
@@ -125,7 +126,8 @@ App.prototype.init = function(token, opts={}) {
         .then(function() {
             return _this.autoFormCapture(_this.getConfig("auto_form_capture"));
         })
-        .catch(function() {
+        .catch(function(err) {
+            logger.errorLine(err);
             return Promise.reject(new Error("FactorsRequestError: Init failed. App configuration failed."));
         });
 }
