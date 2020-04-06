@@ -322,13 +322,9 @@ func ReceiveEvent(token string, event *Event) (int, *EventResponse) {
 		"project_id":   project.ID,
 		"type":         event.Type,
 		"anonymous_id": event.AnonymousID,
-		"user_id":      event.UserId,
 	})
 
-	response := &EventResponse{
-		Type:   event.Type,
-		UserId: event.UserId,
-	}
+	response := &EventResponse{Type: event.Type}
 
 	parsedTimestamp, err := time.Parse(time.RFC3339, event.Timestamp)
 	if err != nil {
@@ -500,6 +496,7 @@ func ReceiveEvent(token string, event *Event) (int, *EventResponse) {
 		return http.StatusBadRequest, response
 	}
 
+	response.UserId = user.ID
 	response.Message = "Successfully received event"
 	return http.StatusOK, response
 }
