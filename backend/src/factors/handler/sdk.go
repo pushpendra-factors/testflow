@@ -287,7 +287,7 @@ func SDKAMPTrackHandler(c *gin.Context) {
 	paramPageLoadTime := c.Query("page_load_time_in_ms")
 	paramPageLoadTime = strings.TrimSpace(paramPageLoadTime)
 	pageLoadTimeInMs, err := strconv.ParseFloat(paramPageLoadTime, 64)
-	if err != nil {
+	if paramPageLoadTime != "" && err != nil {
 		logCtx.WithError(err).WithField("page_load_time_in_ms", paramPageLoadTime).Error(
 			"Failed to convert page_load_time to number on amp sdk track")
 	}
@@ -297,14 +297,14 @@ func SDKAMPTrackHandler(c *gin.Context) {
 
 	paramScreenHeight := c.Query("screen_height")
 	screenHeight, err := strconv.ParseFloat(paramScreenHeight, 64)
-	if err != nil {
+	if paramScreenHeight != "" && err != nil {
 		logCtx.WithError(err).WithField("screen_height", paramScreenHeight).Error(
 			"Failed to convert screen_height to number on amp sdk track")
 	}
 
 	paramScreenWidth := c.Query("screen_width")
 	screenWidth, err := strconv.ParseFloat(paramScreenWidth, 64)
-	if err != nil {
+	if paramScreenWidth != "" && err != nil {
 		logCtx.WithError(err).WithField("screen_width", paramScreenWidth).Error(
 			"Failed to convert screen_width to number on amp sdk track")
 	}
