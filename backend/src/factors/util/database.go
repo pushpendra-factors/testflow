@@ -121,3 +121,11 @@ func IsPostgresIntegrityViolationError(err error) bool {
 	// i.e pq: duplicate key value violates unique constraint \"col_unique_idx\"
 	return strings.Contains(err.Error(), "violates") && strings.Contains(err.Error(), "constraint")
 }
+
+func IsPostgresUniqueIndexViolationError(indexName string, err error) bool {
+	if indexName == "" || err == nil {
+		return false
+	}
+
+	return err.Error() == fmt.Sprintf("pq: duplicate key value violates unique constraint \"%s\"", indexName)
+}

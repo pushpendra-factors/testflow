@@ -34,12 +34,8 @@ type User struct {
 }
 
 const usersLimitForProperties = 1000
-
-const errorDuplicateAMPUser = "pq: duplicate key value violates unique constraint \"users_project_id_amp_user_idx\""
-
-func isDuplicateAMPUserError(err error) bool {
-	return err.Error() == errorDuplicateAMPUser
-}
+const uniqueIndexProjectIdAmpUserId = "users_project_id_amp_user_idx"
+const uniqueIndexProjectIdSegmentAnonymousId = "users_project_id_segment_anonymous_uidx"
 
 func (user *User) BeforeCreate(scope *gorm.Scope) error {
 	// Increamenting count based on EventNameId, not by EventName.
@@ -259,16 +255,20 @@ func GetUserLatestByCustomerUserId(projectId uint64, customerUserId string) (*Us
 func GetUserBySegmentAnonymousId(projectId uint64, segAnonId string) (*User, int) {
 	db := C.GetServices().Db
 
-	var user User
-	if err := db.Where("project_id = ?", projectId).Where(
-		"segment_anonymous_id = ?", segAnonId).First(&user).Error; err != nil {
-		if gorm.IsRecordNotFoundError(err) {
-			return nil, http.StatusNotFound
-		}
+	var users []User
+	if err := db.Limit(1).Where("project_id = ?", projectId).Where(
+		"segment_anonymous_id = ?", segAnonId).Find(&users).Error; err != nil {
+		log.WithField("project_id", projectId).WithField(
+			"segment_anonymous_id", segAnonId).Error(
+			"Failed to get user by segment_anonymous_id.")
 		return nil, http.StatusInternalServerError
 	}
 
-	return &user, http.StatusFound
+	if len(users) == 0 {
+		return nil, http.StatusNotFound
+	}
+
+	return &users[0], http.StatusFound
 }
 
 // CreateOrGetUser create or updates(c_uid) and returns user customer_user_id.
@@ -345,7 +345,7 @@ func CreateOrGetSegmentUser(projectId uint64, segAnonId, custUserId string, segR
 			}
 		}
 
-		cUser := &User{ProjectId: projectId}
+		cUser := &User{ProjectId: projectId, JoinTimestamp: segReqTimestamp}
 
 		// add seg_aid, if provided and not exist already.
 		if segAnonId != "" {
@@ -357,13 +357,26 @@ func CreateOrGetSegmentUser(projectId uint64, segAnonId, custUserId string, segR
 			cUser.CustomerUserId = custUserId
 		}
 
-		user, errCode = CreateUser(cUser)
-		if errCode != http.StatusCreated {
-			logCtx.WithField("err_code", errCode).Error(
-				"Failed creating user with c_uid. get_segment_user failed.")
-			return nil, errCode
+		user, err := createUserWithError(cUser)
+		if err != nil {
+			// Get and return error is duplicate error.
+			if U.IsPostgresUniqueIndexViolationError(
+				uniqueIndexProjectIdSegmentAnonymousId, err) {
+
+				user, errCode := GetUserBySegmentAnonymousId(projectId, segAnonId)
+				if errCode != http.StatusFound {
+					return nil, errCode
+				}
+
+				return user, http.StatusFound
+			}
+
+			logCtx.WithError(err).Error(
+				"Failed to create user by segment anonymous id on CreateOrGetSegmentUser")
+			return nil, http.StatusInternalServerError
 		}
-		return user, errCode
+
+		return user, http.StatusCreated
 	}
 
 	// No c_uid provided given, to update.
@@ -435,7 +448,7 @@ func CreateOrGetAMPUser(projectId uint64, ampUserId string, timestamp int64) (*U
 		AMPUserId: ampUserId, JoinTimestamp: timestamp})
 	if err != nil {
 		// Get and return error is duplicate error.
-		if isDuplicateAMPUserError(err) {
+		if U.IsPostgresUniqueIndexViolationError(uniqueIndexProjectIdAmpUserId, err) {
 			user, errCode := getUserByAMPUserId(projectId, ampUserId)
 			if errCode != http.StatusFound {
 				return nil, errCode

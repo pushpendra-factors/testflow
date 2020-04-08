@@ -131,9 +131,6 @@ func TestIntSegmentHandler(t *testing.T) {
 	var jsonResponseMap2 map[string]interface{}
 	json.Unmarshal(jsonResponse2, &jsonResponseMap2)
 	assert.NotNil(t, jsonResponseMap2["user_id"])
-	retUser, _ := M.GetUser(project.ID, jsonResponseMap2["user_id"].(string))
-	assert.NotNil(t, retUser)
-	assert.Empty(t, retUser.CustomerUserId) // No customer user id.
 
 	// Test invalid event timestamp
 	samplePayloadWithInvalidTimestamp := `
