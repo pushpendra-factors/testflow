@@ -69,6 +69,8 @@ type Configuration struct {
 	ErrorReportingInterval           int
 	AdminLoginEmail                  string
 	AdminLoginToken                  string
+	FacebookAppID                    string
+	FacebookAppSecret                string
 	LoginTokenMap                    map[string]string
 	SkipTrackProjectIds              []uint64
 	SDKRequestQueueProjectTokens     []string
@@ -540,6 +542,14 @@ func GetProtocol() string {
 		return "http://"
 	}
 	return "https://"
+}
+
+func GetFacebookAppId() string {
+	return configuration.FacebookAppID
+}
+
+func GetFacebookAppSecret() string {
+	return configuration.FacebookAppSecret
 }
 
 func GetFactorsSenderEmail() string {

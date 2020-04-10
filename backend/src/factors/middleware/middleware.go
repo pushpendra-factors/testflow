@@ -379,7 +379,6 @@ func SetLoggedInAgent() gin.HandlerFunc {
 
 		loginAuthToken := c.Request.Header.Get("Authorization")
 		loginAuthToken = strings.TrimSpace(loginAuthToken)
-
 		if loginAuthToken != "" {
 			// Admin token login.
 			if isAdminTokenLogin(loginAuthToken) {

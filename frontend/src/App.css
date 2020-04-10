@@ -736,3 +736,11 @@ span.fapp-button:focus {
     border-radius: 100px;
     margin-right: 2px;
 }
+.facebook-css {
+    width: 100%;
+    height: 2vw;
+    color: #FFF;
+    background-color: #4c69ba;
+    padding: 0 2vw;
+    font-weight: bold;
+}

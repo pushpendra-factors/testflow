@@ -37,7 +37,6 @@ func ChannelQueryHandler(c *gin.Context) {
 			"error": "Channel query failed. Json decode failed."})
 		return
 	}
-
 	queryResult, errCode := M.ExecuteChannelQuery(projectId, &queryPayload)
 	if errCode != http.StatusOK {
 		c.AbortWithStatusJSON(http.StatusInternalServerError,

@@ -140,6 +140,12 @@ func InitIntRoutes(r *gin.Engine) {
 		mid.SetLoggedInAgent(),
 		mid.SetAuthorizedProjectsByLoggedInAgent(),
 		IntAdwordsGetRefreshTokenHandler)
+
+	intRouteGroup.POST("/facebook/add_access_token",
+		mid.SetLoggedInAgent(),
+		mid.SetAuthorizedProjectsByLoggedInAgent(),
+		IntFacebookAddAccessTokenHandler)
+
 }
 
 func InitDataServiceRoutes(r *gin.Engine) {
@@ -159,4 +165,13 @@ func InitDataServiceRoutes(r *gin.Engine) {
 
 	dataServiceRouteGroup.GET("/hubspot/documents/types/form",
 		IH.DataServiceGetHubspotFormDocumentsHandler)
+
+	dataServiceRouteGroup.GET("/facebook/project/settings",
+		IH.DataServiceFacebookGetProjectSettings)
+
+	dataServiceRouteGroup.POST("/facebook/documents/add",
+		IH.DataServiceFacebookAddDocumentHandler)
+
+	dataServiceRouteGroup.GET("/facebook/documents/last_sync_info",
+		IH.DataServiceFacebookGetLastSyncInfoHandler)
 }

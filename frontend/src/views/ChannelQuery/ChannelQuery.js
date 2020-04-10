@@ -24,18 +24,24 @@ const CHANNEL_METRIC_ORDER = [ "clicks", "impressions", "conversions",
 "conversion_rate", "total_cost", "cost_per_click", "cost_per_conversion" ]
 
 const CHANNEL_GOOGLE_ADS = { label: 'Google Ads', value: 'google_ads' }
-const CHANNEL_OPTS = [CHANNEL_GOOGLE_ADS]
+const CHANNEL_FACEBOOK_ADS = { label: "Facebook Ads", value: "facebook_ads"}
+const CHANNEL_OPTS = [CHANNEL_GOOGLE_ADS, CHANNEL_FACEBOOK_ADS]
 
 const FILTER_KEY_CAMPAIGN = { label: 'Campaigns', value: 'campaign' }
 const FILTER_KEY_AD = { label: 'Ads', value: 'ad' }
+const FILTER_KEY_AD_SET = {label: "Adsets", value: "adset"}
+const FILTER_KEY_PLATFORM = {label: "Platforms", value: "platform"}
 const FILTER_KEY_KEYWORD = { label: 'Keywords', value: 'keyword' }
 const FILTER_KEY_OPTS = [ FILTER_KEY_CAMPAIGN, FILTER_KEY_AD, FILTER_KEY_KEYWORD ];
+const FACEBOOK_FILTER_KEY_OPTS = [FILTER_KEY_CAMPAIGN, FILTER_KEY_AD,FILTER_KEY_AD_SET]
 
 // supported breakdown opts for each filter key.
 const BREAKDOWN_KEY_OPT_MAP = {
   [FILTER_KEY_CAMPAIGN.value]: [FILTER_KEY_CAMPAIGN],
   [FILTER_KEY_AD.value]: [FILTER_KEY_AD],
-  [FILTER_KEY_KEYWORD.value]: [FILTER_KEY_KEYWORD],  
+  [FILTER_KEY_KEYWORD.value]: [FILTER_KEY_KEYWORD],
+  [FILTER_KEY_AD_SET.value] : [FILTER_KEY_AD_SET],
+  [FILTER_KEY_PLATFORM.value] : [FILTER_KEY_PLATFORM]
 }
 
 const ALL_OPT = { label: 'All', value: 'all' }
@@ -237,6 +243,10 @@ class ChannelQuery extends Component {
       <Row><Col md={12}><TableChart bigWidthUptoCols={1} queryResult={resultMetricsBreakdown} /></Col></Row>
     </Col>;
   }
+  handleChannelChange = (option) => {
+    console.log(option)
+    this.setState({channel: option, })
+  }
 
   handleFilterKeyChange = (option) => {
     this.setState({ filterKey: option, filterValue: ALL_OPT });
@@ -247,7 +257,14 @@ class ChannelQuery extends Component {
   }
 
   getBreakdownKeysOpts(filterKey) {
-    let opts = [ NONE_OPT ];
+    let opts
+    if(this.state.channel.value == "google_ads")
+    {
+      opts = [NONE_OPT]
+    }
+    else {
+      opts = [ NONE_OPT, FILTER_KEY_PLATFORM ];
+    }
     if (!filterKey || filterKey == "") return opts;
     if (!BREAKDOWN_KEY_OPT_MAP.hasOwnProperty(filterKey)) {
       console.error("No breakdown key opts for selected filter key.");
@@ -395,7 +412,8 @@ class ChannelQuery extends Component {
           </Col>
           <Col xs='10' md='10' style={{ marginLeft: "-7%" }}>
             <div className='fapp-select light' style={{ display: 'inline-block', width: '150px' }}>
-              <Select value={this.state.channel} options={CHANNEL_OPTS} placeholder='Channel'/>
+              <Select value={this.state.channel} options={CHANNEL_OPTS} onChange={this.handleChannelChange}
+              placeholder='Channel'/>
             </div>
           </Col>
         </Row>
@@ -407,7 +425,7 @@ class ChannelQuery extends Component {
           <Col xs='10' md='10' style={{ marginLeft: "-7%" }}>
             <div className='fapp-select light' style={{ display: 'inline-block', width: '200px', marginRight: '15px' }}>
               <Select value={this.state.filterKey} onChange={this.handleFilterKeyChange} 
-                options={FILTER_KEY_OPTS} placeholder='Filter'/>
+                options={this.state.channel.value == "google_ads"? FILTER_KEY_OPTS: FACEBOOK_FILTER_KEY_OPTS} placeholder='Filter'/>
             </div>
             <div className='fapp-select light' style={{ display: 'inline-block', width: '275px' }}>
               <CreatableSelect 

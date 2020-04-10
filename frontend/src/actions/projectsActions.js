@@ -484,6 +484,24 @@ export function enableAdwordsIntegration(projectId) {
     })
   }
 }
+export function addFacebookAccessToken(data) {
+  return function(dispatch){
+    return new Promise((resolve, reject) => {
+      post(dispatch, getHostURL()+"integrations/facebook/add_access_token", data)
+        .then((r) => {
+          if (r.ok) {
+            dispatch({type:"ENABLE_FACEBOOK_USER_ID", payload: data})
+            resolve(r);
+          } else {
+            reject(r); 
+          }
+        })
+        .catch((err) => {
+          reject(err);
+        })
+    })
+  }
+}
 
 export function runChannelQuery(projectId, query) {
   let url = host + "projects/" + projectId + "/channels/query";

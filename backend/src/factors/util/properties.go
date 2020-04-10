@@ -192,7 +192,7 @@ var UP_DAY_OF_FIRST_EVENT string = "$day_of_first_event"
 var UP_HOUR_OF_FIRST_EVENT string = "$hour_of_first_event"
 var UP_SESSION_COUNT string = "$session_count"
 var UP_PAGE_COUNT string = "$page_count"
-var UP_SESSION_SPENT_TIME string = "$session_spent_time"
+var UP_TOTAL_SPENT_TIME string = "$session_spent_time"
 
 var UP_LATEST_PAGE_URL string = "$latest_page_url"
 var UP_LATEST_PAGE_DOMAIN string = "$latest_page_domain"

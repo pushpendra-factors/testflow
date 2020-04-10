@@ -5,13 +5,15 @@ const CONFIG = {
     adwords_service_host: 'http://factors-dev.com:8091',
     sdk_asset_url: 'http://localhost:8090/dist/factors.prod.js',
     android_sdk_asset_url: 'https://storage.googleapis.com/factors-staging-v2/sdk/android/sdk-staging-v0.1.aar',
-    factors_sdk_token: 'dummy'
+    factors_sdk_token: 'dummy',
+    facebook_app_id: "209613036897784"
   },
   staging: {
     backend_host: 'https://staging-api.factors.ai',
     sdk_asset_url: 'https://staging-app.factors.ai/assets/factors.js',
     android_sdk_asset_url: 'https://storage.googleapis.com/factors-staging-v2/sdk/android/sdk-staging-v0.1.aar',
-    factors_sdk_token: 'we0jyjxcs0ix4ggnkptymjh48ur8y7q7'
+    factors_sdk_token: 'we0jyjxcs0ix4ggnkptymjh48ur8y7q7',
+    facebook_app_id: '209613036897784',
   },
   test: {
     backend_host: 'http://localhost:8080',

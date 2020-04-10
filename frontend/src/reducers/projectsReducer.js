@@ -299,6 +299,16 @@ export default function reducer(state=DEFAULT_PROJECT_STATE, action) {
 
         return _state;
       }
+      case "ENABLE_FACEBOOK_USER_ID": {
+        let fbUserID = action.payload.int_facebook_user_id;
+
+        let _state = {...state};
+        _state.currentProjectSettings = {
+          ...state.currentProjectSettings,
+          int_facebook_user_id: fbUserID,
+        }
+        return _state;
+      }
     }
 
     return state

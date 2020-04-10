@@ -612,8 +612,8 @@ func createSessionEvent(projectId uint64, userId string, sessionEventNameId uint
 		// Properties from current session.
 		U.UP_SESSION_COUNT: newSessionEvent.Count,
 		// Properties from previous session.
-		U.UP_PAGE_COUNT:         pageCount,
-		U.UP_SESSION_SPENT_TIME: timeSpent,
+		U.UP_PAGE_COUNT:       pageCount,
+		U.UP_TOTAL_SPENT_TIME: timeSpent,
 	}
 
 	errCode = EnrichUserPropertiesWithSessionProperties(projectId, userId,
@@ -742,7 +742,7 @@ func EnrichUserPropertiesWithSessionProperties(projectId uint64, userId string,
 	// Increment user properties by previous session properties.
 	for key, value := range sessionProperties {
 		// checking for the 2 properties that are to be updated only for new users
-		if key == U.UP_PAGE_COUNT || key == U.UP_SESSION_SPENT_TIME {
+		if key == U.UP_PAGE_COUNT || key == U.UP_TOTAL_SPENT_TIME {
 			// checking for firstSession => new user
 			if isFirstSession {
 				(*userPropertiesMap)[key] = 0

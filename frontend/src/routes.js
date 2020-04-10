@@ -65,6 +65,11 @@ const SettingsIosSdk = Loadable({
   loading: Loading,
 });
 
+const SettingsFacebook = Loadable({
+  loader: () => import('./views/Settings/Facebook'),
+  loading: Loading,
+});
+
 const Profile = Loadable({
   loader: () => import('./views/Profile'),
   loading: Loading,
@@ -101,6 +106,7 @@ const routes = [
   { path: '/settings/androidsdk', exact: true, name: 'AndroidSdk', component: SettingsAndroidSdk },
   { path: '/settings/iossdk', exact: true, name: 'IosSdk', component: SettingsIosSdk },
   { path: '/settings/agents', exact: true, name: 'Agents', component: SettingsAgents },
+  { path: '/settings/facebook', exact: true, name: 'Facebook', component: SettingsFacebook },
   { path: '/settings', name: 'Settings', component: Settings },
   { path: '/account_settings', name: 'AccountSettings', component: AccountSettings },
   { path: '/profile', name: 'Profile', component: Profile },

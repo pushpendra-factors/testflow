@@ -46,6 +46,9 @@ func main() {
 
 	skipTrackProjectIds := flag.String("skip_track_project_ids", "", "List or projects to skip track")
 
+	facebookAppId := flag.String("facebook_app_id", "", "")
+	facebookAppSecret := flag.String("facebook_app_secret", "", "")
+
 	flag.Parse()
 
 	config := &C.Configuration{
@@ -72,6 +75,8 @@ func main() {
 		ErrorReportingInterval: *errorReportingInterval,
 		AdminLoginEmail:        *adminLoginEmail,
 		AdminLoginToken:        *adminLoginToken,
+		FacebookAppID:          *facebookAppId,
+		FacebookAppSecret:      *facebookAppSecret,
 		LoginTokenMap:          C.ParseConfigStringToMap(*loginTokenMap),                // Map of "<token>": "<agent_email>".
 		SkipTrackProjectIds:    C.GetTokensFromStringListAsUint64(*skipTrackProjectIds), // comma seperated project ids.
 	}

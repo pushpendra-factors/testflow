@@ -15,6 +15,7 @@ import androidSvg from '../../assets/img/settings/android.svg';
 import iosSvg from '../../assets/img/settings/iOS.svg';
 import adwordsSvg from '../../assets/img/integrations/adwords.svg';
 import hubspotSvg from '../../assets/img/integrations/hubspot.svg'
+import facebookSvg from '../../assets/img/integrations/facebook.svg'
 
 class SettingsCard extends Component {
   constructor(props) {
@@ -97,6 +98,7 @@ class Settings extends Component {
                   <SettingsCard title='Segment' img={segmentSvg} href='/settings/segment' />
                   <SettingsCard title='Adwords' img={adwordsSvg} href='/settings/adwords' />
                   <SettingsCard title='Hubspot' img={hubspotSvg} href='/settings/hubspot' />
+                  <SettingsCard title='Facebook' img={facebookSvg} href='/settings/facebook' />
                 </Row>
               </CardBody>
             </Card>

@@ -483,6 +483,81 @@ func IntShopifyHandler(c *gin.Context) {
 	}
 }
 
+type FacebookAddAccessTokenPayload struct {
+	ProjectId   string `json:"project_id"`
+	AccessToken string `json:"int_facebook_access_token"`
+	Email       string `json:"int_facebook_email"`
+	UserID      string `json:"int_facebook_user_id"`
+	AdAccount   string `json:"int_facebook_ad_account"`
+}
+
+type FacebookLongLivedTokenResponse struct {
+	AccessToken string `json:"access_token"`
+}
+
+func IntFacebookAddAccessTokenHandler(c *gin.Context) {
+	r := c.Request
+
+	var requestPayload FacebookAddAccessTokenPayload
+
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&requestPayload); err != nil {
+		log.WithError(err).Error("Facebook get access token payload JSON decode failure.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid json payload. enable failed."})
+		return
+	}
+
+	if requestPayload.ProjectId == "" {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid project."})
+		return
+	}
+
+	currentAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+	_, errCode := M.GetAgentByUUID(currentAgentUUID)
+	if errCode != http.StatusFound {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid agent."})
+		return
+	}
+
+	resp, err := http.Get("https://graph.facebook.com/v6.0/oauth/access_token?" +
+		"grant_type=fb_exchange_token&client_id=" + C.GetFacebookAppId() + "&client_secret=" + C.GetFacebookAppSecret() +
+		"&fb_exchange_token=" + requestPayload.AccessToken)
+	if err != nil {
+		log.WithError(err).Error("Failed to get long lived access token")
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "failed to get long lived token"})
+		return
+	}
+	defer resp.Body.Close()
+	body := json.NewDecoder(resp.Body)
+
+	var newBody FacebookLongLivedTokenResponse
+	err = body.Decode(&newBody)
+	if err != nil {
+		log.WithError(err).Error("Facebook get long lived access token payload JSON decode failure.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid json payload. enable failed."})
+		return
+	}
+
+	projectId, err := strconv.ParseUint(requestPayload.ProjectId, 10, 64)
+	if err != nil {
+		log.WithError(err).Error("Failed to convert project_id as uint64.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid project."})
+		return
+	}
+	_, errCode = M.UpdateProjectSettings(projectId, &M.ProjectSetting{
+		IntFacebookEmail: requestPayload.Email, IntFacebookAccessToken: newBody.AccessToken,
+		IntFacebookAgentUUID: &currentAgentUUID, IntFacebookUserID: requestPayload.UserID,
+		IntFacebookAdAccount: requestPayload.AdAccount})
+	if errCode != http.StatusAccepted {
+		log.WithField("project_id", projectId).Error("Failed to update project settings with facebook email and access token")
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "failed updating facebook email and access token in project settings"})
+		return
+	}
+
+	c.JSON(errCode, gin.H{})
+}
+
 func IntShopifySDKHandler(c *gin.Context) {
 	r := c.Request
 

@@ -41,23 +41,31 @@ type ChannelQueryUnit struct {
 }
 
 const CAChannelGoogleAds = "google_ads"
+const CAChannelFacebookAds = "facebook_ads"
 const CAChannelGroupKey = "group_key"
 
 var CAChannels = []string{
 	CAChannelGoogleAds,
+	CAChannelFacebookAds,
 }
 
 const CAColumnValueAll = "all"
 
 const (
-	CAColumnImpressions       = "impressions"
-	CAColumnClicks            = "clicks"
-	CAColumnTotalCost         = "total_cost"
-	CAColumnConversions       = "conversions"
-	CAColumnAllConversions    = "all_conversions"
-	CAColumnCostPerClick      = "cost_per_click"
-	CAColumnConversionRate    = "conversion_rate"
-	CAColumnCostPerConversion = "cost_per_conversion"
+	CAColumnImpressions          = "impressions"
+	CAColumnClicks               = "clicks"
+	CAColumnTotalCost            = "total_cost"
+	CAColumnConversions          = "conversions"
+	CAColumnAllConversions       = "all_conversions"
+	CAColumnCostPerClick         = "cost_per_click"
+	CAColumnConversionRate       = "conversion_rate"
+	CAColumnCostPerConversion    = "cost_per_conversion"
+	CAColumnFrequency            = "frequency"
+	CAColumnReach                = "reach"
+	CAColumnInlinePostEngagement = "inline_post_engagement"
+	CAColumnUniqueClicks         = "unique_clicks"
+	CAColumnName                 = "name"
+	CAColumnPlatform             = "platform"
 )
 
 const (
@@ -66,6 +74,7 @@ const (
 	CAFilterAd       = "ad"
 	CAFilterKeyword  = "keyword"
 	CAFilterQuery    = "query"
+	CAFilterAdset    = "adset"
 )
 
 var CAFilters = []string{
@@ -74,6 +83,7 @@ var CAFilters = []string{
 	CAFilterAd,
 	CAFilterKeyword,
 	CAFilterQuery,
+	CAFilterAdset,
 }
 
 func isValidFilterKey(filter string) bool {
@@ -121,12 +131,21 @@ func ExecuteChannelQuery(projectId uint64, query *ChannelQuery) (*ChannelQueryRe
 		return nil, http.StatusBadRequest
 	}
 
-	// supports only adwords now.
-	result, errCode := ExecuteAdwordsChannelQuery(projectId, query)
-	if errCode != http.StatusOK {
-		log.WithField("project_id", projectId).Error("Failed to execute adwords channel query.")
-		return nil, http.StatusInternalServerError
+	if query.Channel == "google_ads" {
+		result, errCode := ExecuteAdwordsChannelQuery(projectId, query)
+		if errCode != http.StatusOK {
+			log.WithField("project_id", projectId).Error("Failed to execute adwords channel query.")
+			return nil, http.StatusInternalServerError
+		}
+		return result, http.StatusOK
 	}
-
-	return result, http.StatusOK
+	if query.Channel == "facebook_ads" {
+		result, errCode := ExecuteFacebookChannelQuery(projectId, query)
+		if errCode != http.StatusOK {
+			log.WithField("project_id", projectId).Error("Failed to execute facebook channel query.")
+			return nil, http.StatusInternalServerError
+		}
+		return result, http.StatusOK
+	}
+	return nil, http.StatusBadRequest
 }

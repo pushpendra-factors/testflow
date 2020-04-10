@@ -1020,7 +1020,7 @@ func TestOldUserSessionProperties(t *testing.T) {
 	oldUserPropertiesMap, errCode := M.GetUserPropertiesAsMap(project.ID, user.ID)
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.Nil(t, (*oldUserPropertiesMap)[U.UP_PAGE_COUNT])
-	assert.Nil(t, (*oldUserPropertiesMap)[U.UP_SESSION_SPENT_TIME])
+	assert.Nil(t, (*oldUserPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
 	assert.Equal(t, float64(1), (*oldUserPropertiesMap)[U.UP_SESSION_COUNT])
 }
 
@@ -1109,7 +1109,7 @@ func TestPreviousSessionEventPropertyEnrichment(t *testing.T) {
 	userPropertiesMap, errCode := M.GetUserPropertiesAsMap(project.ID, user.ID)
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.Equal(t, (*userPropertiesMap)[U.UP_PAGE_COUNT], float64(2))
-	assert.Equal(t, (*userPropertiesMap)[U.UP_SESSION_SPENT_TIME], float64(event2.Timestamp-firstSession.Timestamp))
+	assert.Equal(t, (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME], float64(event2.Timestamp-firstSession.Timestamp))
 	assert.Equal(t, float64(2), (*userPropertiesMap)[U.UP_SESSION_COUNT])
 
 	// creating third session
@@ -1148,7 +1148,7 @@ func TestPreviousSessionEventPropertyEnrichment(t *testing.T) {
 	userPropertiesMap, errCode = M.GetUserPropertiesAsMap(project.ID, user.ID)
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.Equal(t, (*userPropertiesMap)[U.UP_PAGE_COUNT], float64(3))
-	assert.Equal(t, (*userPropertiesMap)[U.UP_SESSION_SPENT_TIME], float64(event2.Timestamp-firstSession.Timestamp)+float64(event3.Timestamp-secondSession.Timestamp))
+	assert.Equal(t, (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME], float64(event2.Timestamp-firstSession.Timestamp)+float64(event3.Timestamp-secondSession.Timestamp))
 	assert.Equal(t, float64(3), (*userPropertiesMap)[U.UP_SESSION_COUNT])
 }
 

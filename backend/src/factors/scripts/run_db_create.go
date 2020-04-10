@@ -389,4 +389,18 @@ func main() {
 	} else {
 		log.Info("created hubspot documents table.")
 	}
+
+	// Create facebook documents table
+	if err := db.CreateTable(&M.FacebookDocument{}).Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("facebook_documents table creation failed.")
+	} else {
+		log.Info("created facebook documents table.")
+	}
+
+	// Add foreign key constraints agents(uuid).
+	if err := db.Model(&M.ProjectSetting{}).AddForeignKey("int_facebook_agent_uuid", "agents(uuid)", "RESTRICT", "RESTRICT").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("project_settings table association with agents table failed.")
+	} else {
+		log.Info("project_settings table is associated with agents table.")
+	}
 }
