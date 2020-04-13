@@ -1,0 +1,30 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: facebook-sync-job
+spec:
+  schedule: "0 19 * * *" # In UTC
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            layer: jobs
+        spec:
+          nodeSelector:
+            cloud.google.com/gke-nodepool: default-pool
+          containers:
+          - name: facebook-sync
+            image: us.gcr.io/factors-production/facebook-sync-job:v0.01-eaf59a3
+            imagePullPolicy: IfNotPresent
+            args:
+            - --env
+            - $(ENV)
+            - --data_service_host
+            - $(DATA_SERVICE_HOST_URL)
+            envFrom:
+            - configMapRef:
+                name: config-env
+          restartPolicy: OnFailure

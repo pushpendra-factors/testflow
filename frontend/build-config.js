@@ -25,7 +25,8 @@ const CONFIG = {
     backend_host: 'https://api.factors.ai',
     sdk_asset_url: 'https://app.factors.ai/assets/factors.js',
     android_sdk_asset_url: 'https://storage.googleapis.com/factors-production-v2/sdk/android/sdk-production-v0.1.aar',
-    factors_sdk_token: 'we0jyjxcs0ix4ggnkptymjh48ur8y7q7'
+    factors_sdk_token: 'we0jyjxcs0ix4ggnkptymjh48ur8y7q7',
+    facebook_app_id: '182268083060844',
   }
 }
 

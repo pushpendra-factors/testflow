@@ -100,6 +100,10 @@ spec:
           - $(ADMIN_LOGIN_EMAIL)
           - --admin_login_token
           - $(ADMIN_LOGIN_TOKEN)
+          - --facebook_app_id
+          - $(FACEBOOK_APP_ID)
+          - --facebook_app_secret
+          - $(FACEBOOK_APP_SECRET)
         env:
           - name: MY_POD_IP
             valueFrom:
@@ -123,6 +127,8 @@ spec:
             name: secret-aws
         - secretRef:
             name: secret-login-token
+        - secretRef:
+            name: secret-facebook
       initContainers:
       - name: fetch-geolocation-file
         image: google/cloud-sdk:229.0.0-alpine
