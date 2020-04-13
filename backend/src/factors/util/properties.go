@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
+	"github.com/mssola/user_agent"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -1019,17 +1020,31 @@ func GetPropertyValueAsString(value interface{}) string {
 	}
 }
 
-func FillUserAgentUserProperties(userProperties *PropertiesMap, userAgent string) {
-	if userAgent == "" {
-		return
+func FillUserAgentUserProperties(userProperties *PropertiesMap, userAgentStr string) error {
+	if userAgentStr == "" {
+		return errors.New("invalid user agent")
 	}
 
-	if _, exists := (*userProperties)[UP_USER_AGENT]; !exists {
-		(*userProperties)[UP_USER_AGENT] = userAgent
-		if IsBotUserAgent(userAgent) {
-			(*userProperties)[UP_BROWSER] = "Bot"
-		}
+	(*userProperties)[UP_USER_AGENT] = userAgentStr
+
+	userAgent := user_agent.New(userAgentStr)
+	(*userProperties)[UP_OS] = userAgent.OSInfo().Name
+	(*userProperties)[UP_OS_VERSION] = userAgent.OSInfo().Version
+	(*userProperties)[UP_OS_WITH_VERSION] = fmt.Sprintf("%s-%s",
+		(*userProperties)[UP_OS], (*userProperties)[UP_OS_VERSION])
+
+	if IsBotUserAgent(userAgentStr) {
+		(*userProperties)[UP_BROWSER] = "Bot"
+		return nil
 	}
+
+	browserName, browserVersion := userAgent.Browser()
+	(*userProperties)[UP_BROWSER] = browserName
+	(*userProperties)[UP_BROWSER_VERSION] = browserVersion
+	(*userProperties)[UP_BROWSER_WITH_VERSION] = fmt.Sprintf("%s-%s",
+		(*userProperties)[UP_BROWSER], (*userProperties)[UP_BROWSER_VERSION])
+
+	return nil
 }
 
 func GetPredefinedBinRanges(propertyName string) ([][2]float64, bool) {

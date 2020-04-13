@@ -3,13 +3,11 @@ package sdk
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
-	"github.com/mssola/user_agent"
 	log "github.com/sirupsen/logrus"
 
 	"factors/vendor_custom/machinery/v1/tasks"
@@ -320,6 +318,14 @@ func Track(projectId uint64, request *TrackPayload,
 
 	var userProperties *U.PropertiesMap
 
+	if request.UserProperties == nil {
+		request.UserProperties = U.PropertiesMap{}
+	}
+	err := U.FillUserAgentUserProperties(&request.UserProperties, request.UserAgent)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to fill user agent user properties on track.")
+	}
+
 	response := &TrackResponse{}
 	initialUserProperties := U.GetInitialUserProperties(eventProperties)
 	isNewUser := request.IsNewUser
@@ -398,7 +404,6 @@ func Track(projectId uint64, request *TrackPayload,
 	}
 
 	_ = M.FillLocationUserProperties(userProperties, clientIP)
-	U.FillUserAgentUserProperties(userProperties, request.UserAgent)
 	// Add latest touch user properties.
 	if hasDefinedMarketingProperty {
 		U.FillLatestTouchUserProperties(userProperties, eventProperties)
@@ -1198,19 +1203,10 @@ func AMPTrackByToken(token string, reqPayload *AMPTrackPayload) (int, *Response)
 		userProperties[U.UP_SCREEN_WIDTH] = reqPayload.ScreenWidth
 	}
 
-	userProperties[U.UP_USER_AGENT] = reqPayload.UserAgent
-
-	userAgent := user_agent.New(reqPayload.UserAgent)
-	userProperties[U.UP_OS] = userAgent.OSInfo().Name
-	userProperties[U.UP_OS_VERSION] = userAgent.OSInfo().Version
-	userProperties[U.UP_OS_WITH_VERSION] = fmt.Sprintf("%s-%s",
-		userProperties[U.UP_OS], userProperties[U.UP_OS_VERSION])
-
-	browserName, browserVersion := userAgent.Browser()
-	userProperties[U.UP_BROWSER] = browserName
-	userProperties[U.UP_BROWSER_VERSION] = browserVersion
-	userProperties[U.UP_BROWSER_WITH_VERSION] = fmt.Sprintf("%s-%s",
-		userProperties[U.UP_BROWSER], userProperties[U.UP_BROWSER_VERSION])
+	err = U.FillUserAgentUserProperties(&userProperties, reqPayload.UserAgent)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to fill user agent user properties on amp track.")
+	}
 
 	trackPayload := TrackPayload{
 		UserId:          user.ID,

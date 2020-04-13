@@ -105,8 +105,11 @@ func TestSDKTrackHandler(t *testing.T) {
 	// Test auto tracked event.
 	rEventName := U.RandomLowerAphaNumString(10)
 	w = ServePostRequestWithHeaders(r, uri,
-		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"$os": "Mac OS"}}`, user.ID, rEventName)),
-		map[string]string{"Authorization": project.Token})
+		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"name": "Jhon"}}`, user.ID, rEventName)),
+		map[string]string{
+			"Authorization": project.Token,
+			"User-Agent":    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
+		})
 	assert.Equal(t, http.StatusOK, w.Code)
 	responseMap = DecodeJSONResponseToMap(w.Body)
 	assert.NotEmpty(t, responseMap)
@@ -135,7 +138,14 @@ func TestSDKTrackHandler(t *testing.T) {
 	assert.Nil(t, err)
 	var userProperties map[string]interface{}
 	json.Unmarshal(userPropertiesBytes.([]byte), &userProperties)
-	assert.NotNil(t, userProperties["$os"])
+	assert.NotNil(t, userProperties["name"])
+	// OS and Browser Properties should be filled on backend using user agent.
+	assert.Equal(t, "Mac OS X", userProperties[U.UP_OS])
+	assert.Equal(t, "10.13.6", userProperties[U.UP_OS_VERSION])
+	assert.Equal(t, "Mac OS X-10.13.6", userProperties[U.UP_OS_WITH_VERSION])
+	assert.Equal(t, "Chrome", userProperties[U.UP_BROWSER])
+	assert.Equal(t, "79.0.3945.130", userProperties[U.UP_BROWSER_VERSION])
+	assert.Equal(t, "Chrome-79.0.3945.130", userProperties[U.UP_BROWSER_WITH_VERSION])
 
 	// Should not allow $ prefixes apart from default properties.
 	rEventName = U.RandomLowerAphaNumString(10)

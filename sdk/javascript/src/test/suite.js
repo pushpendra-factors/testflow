@@ -163,8 +163,7 @@ SuitePrivateMethod.testGetUserDefaultProperties = function() {
 
     // Check individual keys needed.
     assert.containsAllKeys(props, 
-        ["$platform", "$browser", "$browser_version", "$browser_with_version", 
-        "$os", "$os_version", "$os_with_version", "$screen_width", "$screen_height"]);
+        ["$platform", "$screen_width", "$screen_height"]);
     
     props = Properties.getUserDefault();
     if (props.$device) assert.isTrue(props.$device != "");
