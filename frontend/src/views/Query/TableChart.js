@@ -1,6 +1,8 @@
 import React, { Component } from 'react';
 import { Table } from 'reactstrap';
 import { isSingleCountResult } from '../../util';
+import {BootstrapTable, TableHeaderColumn} from 'react-bootstrap-table';
+import 'react-bootstrap-table/dist/react-bootstrap-table.min.css';
 
 class TableChart extends Component {
   constructor(props) {
@@ -13,6 +15,7 @@ class TableChart extends Component {
 
     let result = this.props.queryResult;
     let cardable = this.props.card && isSingleCountResult(result);
+    let sortable = this.props.sort
     if (this.props.compareWithQueryResult) {
       // For reports. Tables with comparision.
       var headerCols = [];
@@ -32,10 +35,24 @@ class TableChart extends Component {
           {headerCols}
         </thead>
       );
-    } else {
+    } else if(sortable){
+      let thStyle = {overflowWrap: 'break-word', whiteSpace:'normal', paddingBottom:"0px", paddingTop:"0px"}
+      let tdStyle = {overflow:"break-word", whiteSpace:"normal"}
+      let headers = result.headers.map((h, i) => {
+      let width = (this.props.bigWidthUptoCols && i < this.props.bigWidthUptoCols) ? "25%" : null;
+      return  (
+      <TableHeaderColumn dataSort={i!=0} width={width} tdStyle={tdStyle} thStyle={thStyle} dataAlign="center" isKey={i==0} dataField={"header_"+i}  >
+        <div>
+          {h}
+        </div>
+      </TableHeaderColumn>
+      )});
+      return headers;
+    }
+    else {
       let headers = result.headers.map((h, i) => {
         let style = cardable ? { border: 'none', fontSize: '40px', padding: '0' } : null;
-        return <th style={style} key={'header_'+i}>{ h }</th> 
+        return <th style={style} key={'header_'+i}>{ h }</th>
       });
       return (
         <thead>
@@ -43,6 +60,17 @@ class TableChart extends Component {
         </thead>
       );
     }
+  }
+  getData(){
+    let rows=[];
+    let result = this.props.queryResult;
+    for (let i =0; i< result.rows.length; i++){
+      let cols= result.rows[i].reduce((p, c, i)=>{
+        return {...p, ["header_"+i]:c}
+      },{});
+      rows.push(cols);
+    }
+    return rows
   }
 
   getCountStyleByProps() {
@@ -63,6 +91,7 @@ class TableChart extends Component {
     let rowKeys = Object.keys(result.rows);
     let cardable = this.props.card && isSingleCountResult(result);
 
+    let sortable = this.props.sort;
     // card.
     if (cardable) {
       return (
@@ -70,6 +99,13 @@ class TableChart extends Component {
           { this.tableHeader() }
           <tbody> <span style={this.getCountStyleByProps()}> { result.rows[rowKeys[0]][0] } </span> </tbody>
         </Table>
+      )
+    }
+    if (sortable){
+      return (
+      <BootstrapTable bordered={false} trStyle={{overflowWrap: 'break-word'}} containerClass='fapp-table animated fadeIn' data={this.getData()} options={{sortIndicator:true}} version="4">
+        {this.tableHeader()}
+      </BootstrapTable>
       )
     }
 

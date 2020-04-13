@@ -240,7 +240,7 @@ class ChannelQuery extends Component {
           </Col>
         </Row> : null
       }
-      <Row><Col md={12}><TableChart bigWidthUptoCols={1} queryResult={resultMetricsBreakdown} /></Col></Row>
+      <Row><Col md={12}><TableChart sort bigWidthUptoCols={1} queryResult={resultMetricsBreakdown} /></Col></Row>
     </Col>;
   }
   handleChannelChange = (option) => {
