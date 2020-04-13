@@ -6,6 +6,7 @@ import (
 	M "factors/model"
 	U "factors/util"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -40,6 +41,13 @@ func QueryHandler(c *gin.Context) {
 	}
 
 	var requestPayload QueryRequestPayload
+	var dashboardId uint64
+	var unitId uint64
+	var agentUUId string
+	var err error
+	var result *M.QueryResult
+	dashboardIdParam := c.Query("dashboard_id")
+	unitIdParam := c.Query("dashboard_unit_id")
 
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
@@ -49,9 +57,43 @@ func QueryHandler(c *gin.Context) {
 		return
 	}
 
+	if dashboardIdParam != "" || unitIdParam != "" {
+		dashboardId, err = strconv.ParseUint(dashboardIdParam, 10, 64)
+		if err != nil {
+			c.AbortWithStatus(http.StatusBadRequest)
+			return
+		}
+		unitId, err = strconv.ParseUint(unitIdParam, 10, 64)
+		if err != nil {
+			c.AbortWithStatus(http.StatusBadRequest)
+			return
+		}
+
+		agentUUId = U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+		cacheResult, errCode, errMsg := M.GetCacheResultByDashboardIdAndUnitId(agentUUId, projectId, dashboardId, unitId, requestPayload.Query.From, requestPayload.Query.To)
+		if errCode == http.StatusFound {
+			c.JSON(http.StatusOK, gin.H{"result": cacheResult.Result, "cache": true})
+			return
+		}
+		if errCode == http.StatusBadRequest {
+			c.AbortWithStatusJSON(errCode, gin.H{"error": errMsg})
+			return
+		}
+
+		logCtx.WithFields(log.Fields{"project_id": projectId,
+			"dashboard_id": dashboardIdParam, "dashboard_unit_id": unitIdParam,
+		}).WithError(errMsg).Error("Failed to get GetCacheResultByDashboardIdAndUnitId from cache.")
+	}
+
 	result, errCode, errMsg := M.Analyze(projectId, requestPayload.Query)
 	if errCode != http.StatusOK {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": errMsg})
+		return
+	}
+
+	if dashboardId != 0 && unitId != 0 {
+		M.SetCacheResultByDashboardIdAndUnitId(agentUUId, result, projectId, dashboardId, unitId, requestPayload.Query.To, requestPayload.Query.From)
+		c.JSON(http.StatusOK, gin.H{"result": result, "cache": false})
 		return
 	}
 

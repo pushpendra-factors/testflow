@@ -2,11 +2,16 @@ package tests
 
 import (
 	"encoding/json"
+	H "factors/handler"
 	M "factors/model"
 	U "factors/util"
+	"fmt"
 	"net/http"
 	"testing"
 
+	"github.com/gin-gonic/gin"
+	"github.com/gomodule/redigo/redis"
+	"github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -190,4 +195,189 @@ func TestUpdateDashboard(t *testing.T) {
 		errCode = M.UpdateDashboard(project.ID, agent.UUID, dashboard.ID, &M.UpdatableDashboard{UnitsPosition: &validPositions})
 		assert.Equal(t, http.StatusAccepted, errCode)
 	})
+}
+
+func TestGetDashboardResutlFromCache(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	customerAccountId := fmt.Sprintf("%d", U.RandomUint64())
+	_, errCode := M.UpdateProjectSettings(project.ID, &M.ProjectSetting{
+		IntAdwordsCustomerAccountId: &customerAccountId,
+		IntAdwordsEnabledAgentUUID:  &agent.UUID,
+	})
+	assert.Equal(t, http.StatusAccepted, errCode)
+	rName := U.RandomString(5)
+	dashboard, errCode := M.CreateDashboard(project.ID, agent.UUID,
+		&M.Dashboard{Name: rName, Type: M.DashboardTypeProjectVisible})
+	assert.NotNil(t, dashboard)
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.Equal(t, rName, dashboard.Name)
+	var from int64 = 1556602834
+	var to int64 = 1557207634
+	query1 := M.Query{
+		EventsCondition: M.EventCondAnyGivenEvent,
+		From:            from,
+		To:              to,
+		Type:            M.QueryTypeEventsOccurrence,
+		EventsWithProperties: []M.QueryEventWithProperties{
+			M.QueryEventWithProperties{
+				Name: "event1",
+			},
+		},
+		OverridePeriod: true,
+	}
+	query2 := M.Query{
+		EventsCondition: M.EventCondAnyGivenEvent,
+		From:            from + 500,
+		To:              to + 500,
+		Type:            M.QueryTypeEventsOccurrence,
+		EventsWithProperties: []M.QueryEventWithProperties{
+			M.QueryEventWithProperties{
+				Name: "event1",
+			},
+		},
+		OverridePeriod: true,
+	}
+
+	query1Json, err := json.Marshal(query1)
+	assert.Nil(t, err)
+	query2Json, err := json.Marshal(query2)
+	assert.Nil(t, err)
+
+	rTitle := U.RandomString(5)
+	w := sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &H.DashboardUnitRequestPayload{Title: rTitle,
+		Query: &postgres.Jsonb{query1Json}, Presentation: M.PresentationLine})
+	assert.Equal(t, http.StatusCreated, w.Code)
+	rTitle = U.RandomString(5)
+	w = sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &H.DashboardUnitRequestPayload{Title: rTitle,
+		Query: &postgres.Jsonb{query2Json}, Presentation: M.PresentationLine})
+	assert.Equal(t, http.StatusCreated, w.Code)
+
+	//For Channel query
+	value := []byte(`{"id": 2061667885,"clicks":989, "campaign_id": 12,"impressions":10, "end_date": "20371230", "start_date": "20190711", "conversions":111, "cost":42.94}`)
+	document := M.AdwordsDocument{
+		ProjectId:         project.ID,
+		CustomerAccountId: customerAccountId,
+		Type:              5,
+		Timestamp:         20191209,
+		ID:                "2061667885",
+		Value:             &postgres.Jsonb{value},
+		TypeAlias:         "campaign_performance_report",
+	}
+	errCode = M.CreateAdwordsDocument(&document)
+	assert.Equal(t, http.StatusCreated, errCode)
+	query3 := &M.ChannelQuery{
+		Channel:     "google_ads",
+		FilterKey:   "campaign",
+		FilterValue: "all",
+		From:        1575158400,
+		To:          1575936000,
+	}
+
+	rTitle = U.RandomString(5)
+	query3Json, err := json.Marshal(query3)
+	assert.Nil(t, err)
+
+	w = sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &H.DashboardUnitRequestPayload{
+		Presentation: "pc",
+		Query:        &postgres.Jsonb{query3Json},
+		Title:        rTitle,
+	})
+	assert.Equal(t, http.StatusCreated, w.Code)
+
+	dashboards, errCode := M.GetDashboards(project.ID, agent.UUID)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Equal(t, dashboard.Name, dashboards[1].Name)
+
+	// No of units should be 3
+	dashboardUnits, errCode := M.GetDashboardUnits(project.ID, agent.UUID, dashboards[1].ID)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Equal(t, 3, len(dashboardUnits))
+
+	decResult := struct {
+		Cache  bool          `json:"cache"`
+		Result M.QueryResult `json:"result"`
+	}{}
+
+	decChannelResult := struct {
+		Cache  bool                 `json:"cache"`
+		Result M.ChannelQueryResult `json:"result"`
+	}{}
+
+	//Cache should be empty
+	result, errCode, errMsg := M.GetCacheResultByDashboardIdAndUnitId(agent.UUID, project.ID, dashboardUnits[0].DashboardId, dashboardUnits[0].ID, from, to)
+	assert.Equal(t, http.StatusNotFound, errCode)
+	assert.Equal(t, errMsg, redis.ErrNil)
+	assert.Nil(t, result)
+
+	// Should set cache on first query with cache = false
+	w = sendGetDashboardUnitResult(r, project.ID, agent, dashboardUnits[0].DashboardId, dashboardUnits[0].ID, &gin.H{"query": query1})
+	assert.Equal(t, http.StatusOK, w.Code)
+	err = json.Unmarshal(w.Body.Bytes(), &decResult)
+	assert.Nil(t, err)
+	assert.Equal(t, query1.To, decResult.Result.Meta.Query.To)
+	assert.Equal(t, false, decResult.Cache)
+	w = sendGetDashboardUnitResult(r, project.ID, agent, dashboardUnits[1].DashboardId, dashboardUnits[1].ID, &gin.H{"query": query2})
+	assert.Equal(t, http.StatusOK, w.Code)
+	err = json.Unmarshal(w.Body.Bytes(), &decResult)
+	assert.Nil(t, err)
+	assert.Equal(t, query2.To, decResult.Result.Meta.Query.To)
+	assert.Equal(t, false, decResult.Cache)
+	w = sendGetDashboardUnitChannelResult(r, project.ID, agent, dashboardUnits[2].DashboardId, dashboardUnits[2].ID, query3)
+	assert.Equal(t, http.StatusOK, w.Code)
+	err = json.Unmarshal(w.Body.Bytes(), &decChannelResult)
+	assert.Nil(t, err)
+	assert.Equal(t, float64(989), (*decChannelResult.Result.Metrics)["clicks"])
+	assert.Equal(t, false, decChannelResult.Cache)
+
+	// Cache should be set
+	result, errCode, errMsg = M.GetCacheResultByDashboardIdAndUnitId(agent.UUID, project.ID, dashboardUnits[0].DashboardId, dashboardUnits[0].ID, from, to)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Nil(t, errMsg)
+	assert.Equal(t, float64(query1.To), result.Result.(map[string]interface{})["meta"].(map[string]interface{})["query"].(map[string]interface{})["to"])
+	result, errCode, errMsg = M.GetCacheResultByDashboardIdAndUnitId(agent.UUID, project.ID, dashboardUnits[1].DashboardId, dashboardUnits[1].ID, from+500, to+500)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Nil(t, errMsg)
+	assert.Equal(t, float64(query2.To), result.Result.(map[string]interface{})["meta"].(map[string]interface{})["query"].(map[string]interface{})["to"])
+	resultChannel, errCode, errMsg := M.GetCacheResultByDashboardIdAndUnitId(agent.UUID, project.ID, dashboardUnits[2].DashboardId, dashboardUnits[2].ID, query3.From, query3.To)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Nil(t, errMsg)
+	assert.Equal(t, float64(989), resultChannel.Result.(map[string]interface{})["metrics"].(map[string]interface{})["clicks"])
+
+	// Cache should be set to true
+	w = sendGetDashboardUnitResult(r, project.ID, agent, dashboardUnits[0].DashboardId, dashboardUnits[0].ID, &gin.H{"query": query1})
+	assert.Equal(t, http.StatusOK, w.Code)
+	err = json.Unmarshal(w.Body.Bytes(), &decResult)
+	assert.Nil(t, err)
+	assert.Equal(t, true, decResult.Cache)
+
+	// Cache should be true for upto 1hr time shift
+	query1.From = query1.From + 10*60 //10 min
+	query1.To = query1.To + 10*60     //10 min
+	w = sendGetDashboardUnitResult(r, project.ID, agent, dashboardUnits[0].DashboardId, dashboardUnits[0].ID, &gin.H{"query": query1})
+	assert.Equal(t, http.StatusOK, w.Code)
+	err = json.Unmarshal(w.Body.Bytes(), &decResult)
+	assert.Nil(t, err)
+	assert.Equal(t, true, decResult.Cache)
+
+	// For Dashboard channel query
+	query3.From = query3.From + 59*60
+	query3.To = query3.To + 59*60
+	w = sendGetDashboardUnitChannelResult(r, project.ID, agent, dashboardUnits[2].DashboardId, dashboardUnits[2].ID, query3)
+	assert.Equal(t, http.StatusOK, w.Code)
+	err = json.Unmarshal(w.Body.Bytes(), &decChannelResult)
+	assert.Nil(t, err)
+	assert.Equal(t, true, decChannelResult.Cache)
+
+	// Cache should be false beyond 1hr time shift
+	query1.From = query1.From + 61*60 //61 min
+	query1.To = query1.To + 61*60     //61 min
+	w = sendGetDashboardUnitResult(r, project.ID, agent, dashboardUnits[0].DashboardId, dashboardUnits[0].ID, &gin.H{"query": query1})
+	assert.Equal(t, http.StatusOK, w.Code)
+	err = json.Unmarshal(w.Body.Bytes(), &decResult)
+	assert.Nil(t, err)
+	assert.Equal(t, false, decResult.Cache)
 }

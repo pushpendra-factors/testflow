@@ -3,11 +3,13 @@ package model
 import (
 	"encoding/json"
 	"errors"
+	cacheRedis "factors/cache/redis"
 	C "factors/config"
 	"net/http"
 	"sort"
 	"time"
 
+	"github.com/gomodule/redigo/redis"
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
 
@@ -314,4 +316,76 @@ func UpdateDashboard(projectId uint64, agentUUID string, id uint64, dashboard *U
 	}
 
 	return http.StatusAccepted
+}
+
+func GetCacheResultByDashboardIdAndUnitId(agentUUID string, projectId, dashboardId, unitId uint64, from, to int64) (*DashboardCacheResult, int, error) {
+	var cacheResult *DashboardCacheResult
+	if projectId == 0 || agentUUID == "" || dashboardId == 0 || unitId == 0 {
+		return cacheResult, http.StatusBadRequest, errors.New("invalid scope ids.")
+	}
+
+	resultCacheKey, err := getDashboardUnitResultByDashboardIDAndUnitIDCacheKey(agentUUID, projectId, dashboardId, unitId, from, to)
+	if err != nil {
+		return cacheResult, http.StatusBadRequest, err
+	}
+
+	enResult, err := cacheRedis.Get(resultCacheKey)
+	if err != nil {
+		if err == redis.ErrNil {
+			return cacheResult, http.StatusNotFound, err
+		}
+		return cacheResult, http.StatusInternalServerError, err
+	}
+
+	err = json.Unmarshal([]byte(enResult), &cacheResult)
+	if err != nil {
+		return cacheResult, http.StatusInternalServerError, err
+	}
+
+	if !isValidDashboardCache(to, cacheResult.To) {
+		return cacheResult, http.StatusNotFound, errors.New("invalid cache result.")
+	}
+
+	return cacheResult, http.StatusFound, nil
+}
+
+func SetCacheResultByDashboardIdAndUnitId(agentUUId string, result interface{}, projectId uint64, dashboardId uint64, unitId uint64, to int64, from int64) {
+	logctx := log.WithFields(log.Fields{"project_id": projectId,
+		"dashboard_id": dashboardId, "dashboard_unit_id": unitId,
+	})
+
+	if projectId == 0 || agentUUId == "" || dashboardId == 0 || unitId == 0 {
+		logctx.Error("Invalid scope ids.")
+		return
+	}
+
+	resultCacheKey, err := getDashboardUnitResultByDashboardIDAndUnitIDCacheKey(agentUUId, projectId, dashboardId, unitId, from, to)
+	if err != nil {
+		logctx.WithError(err).Error("Failed to getDashboardUnitResultByDashboardIDAndUnitIDCacheKey.")
+		return
+	}
+
+	dashboardCacheResult := DashboardCacheResult{
+		Result: result,
+		From:   from,
+		To:     to,
+	}
+
+	enDashboardCacheResult, err := json.Marshal(dashboardCacheResult)
+	if err != nil {
+		logctx.WithError(err).Error("Failed to encode dashboardCacheResult.")
+		return
+	}
+
+	err = cacheRedis.Set(resultCacheKey, string(enDashboardCacheResult), 24*60*60) //24hrs
+	if err != nil {
+		logctx.WithError(err).Error("Failed to set cache for channel query")
+		return
+
+	}
+}
+
+//IsValidDashboardCache returns true if cacheResult falls within tolerable time range
+func isValidDashboardCache(queryPayloadTo, cacheResultTo int64) bool {
+	return queryPayloadTo-cacheResultTo >= 0 && queryPayloadTo-cacheResultTo < 60*60 //1hr time range
 }

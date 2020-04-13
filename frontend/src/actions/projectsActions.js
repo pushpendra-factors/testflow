@@ -369,6 +369,12 @@ export function runQuery(projectId, query) {
   return post(null, url , {query: query});
 }
 
+export function runDashboardQuery(projectId, dashboard_id, dashboard_unit_id, query) {
+  let params = "?dashboard_id="+dashboard_id+"&dashboard_unit_id="+dashboard_unit_id;
+  let url = host + "projects/" + projectId + "/query"+params;
+  return post(null, url , {query: query});
+}
+
 export function fetchProjectAgents(projectId){
   return function(dispatch){
     return get(dispatch, host + "projects/" + projectId + "/agents")
@@ -505,6 +511,12 @@ export function addFacebookAccessToken(data) {
 
 export function runChannelQuery(projectId, query) {
   let url = host + "projects/" + projectId + "/channels/query";
+  return post(null, url , query);
+}
+
+export function runDashboardChannelQuery(projectId, dashboard_id, dashboard_unit_id, query) {
+  let params = "?dashboard_id="+dashboard_id+"&dashboard_unit_id="+dashboard_unit_id;
+  let url = host + "projects/" + projectId + "/channels/query"+params;
   return post(null, url , query);
 }
 

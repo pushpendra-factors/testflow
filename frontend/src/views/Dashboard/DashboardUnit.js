@@ -5,7 +5,7 @@ import { Card, CardHeader, CardBody, Modal, ModalBody } from 'reactstrap';
 import { Redirect } from 'react-router-dom';
 import moment from 'moment';
 
-import { runQuery, viewQuery, runChannelQuery } from '../../actions/projectsActions';
+import { runQuery, runDashboardQuery , viewQuery, runDashboardChannelQuery } from '../../actions/projectsActions';
 import { deleteDashboardUnit, updateDashboardUnit } from '../../actions/dashboardActions';
 import Loading from '../../loading';
 import BarChart from '../Query/BarChart';
@@ -137,10 +137,12 @@ class DashboardUnit extends Component {
     let timezone = getTimezoneString();
     query.tz = (timezone && timezone != '') ? timezone : '';
 
-    runQuery(this.props.currentProjectId, query)
+    let { dashboard_id, id:dashboard_unit_id } = this.props.data
+
+    runDashboardQuery(this.props.currentProjectId, dashboard_id, dashboard_unit_id, query)
       .then((r) => {
         this.setState({ loading: false });
-        this.setPresentationProps(r.data);
+        this.setPresentationProps(r.data.result);
       })
       .catch(console.error);
   }
@@ -154,14 +156,16 @@ class DashboardUnit extends Component {
     query.from = period.from;
     query.to = period.to;
 
-    runChannelQuery(this.props.currentProjectId, query) 
+    let { dashboard_id, id:dashboard_unit_id } = this.props.data
+
+    runDashboardChannelQuery(this.props.currentProjectId, dashboard_id, dashboard_unit_id, query) 
       .then((r) => {
         if (this.props.data.presentation == PRESENTATION_CARD) {
           // select the value of the metric key to show on card.
           let key = this.props.data.query.meta.metric;
-          let value = r.data.metrics[key];
+          let value = r.data.result.metrics[key];
           if (value == null) value = 0;
-          value = getReadableChannelMetricValue(key, value, r.data.meta);
+          value = getReadableChannelMetricValue(key, value, r.data.result.meta);
           this.setState({ loading: false });
           this.setPresentationProps({ headers: [], rows: [[value]] });
           return
@@ -169,7 +173,7 @@ class DashboardUnit extends Component {
 
         if (this.props.data.presentation == PRESENTATION_TABLE) {
           this.setState({ loading: false });
-          this.setPresentationProps(r.data.metrics_breakdown);
+          this.setPresentationProps(r.data.result.metrics_breakdown);
           return
         }
 

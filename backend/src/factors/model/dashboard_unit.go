@@ -1,7 +1,10 @@
 package model
 
 import (
+	cacheRedis "factors/cache/redis"
 	C "factors/config"
+	"fmt"
+	"math"
 	"net/http"
 	"time"
 
@@ -20,6 +23,12 @@ type DashboardUnit struct {
 	Presentation string         `gorm:"type:varchar(5);not null" json:"presentation"`
 	CreatedAt    time.Time      `json:"created_at"`
 	UpdatedAt    time.Time      `json:"updated_at"`
+}
+
+type DashboardCacheResult struct {
+	Result interface{} `json:"result"`
+	From   int64       `json:"from"`
+	To     int64       `json:"tom"`
 }
 
 const (
@@ -131,6 +140,13 @@ func GetDashboardUnits(projectId uint64, agentUUID string, dashboardId uint64) (
 	}
 
 	return dashboardUnits, http.StatusFound
+}
+
+func getDashboardUnitResultByDashboardIDAndUnitIDCacheKey(agentUUID string, projectId, dashboardID, unitId uint64, from, to int64) (*cacheRedis.Key, error) {
+	prefix := "dashboard:query"
+	window := float64(to-from) / float64(3600)
+	suffix := fmt.Sprintf("aid:%s:did:%d:duid:%d:window:%v", agentUUID, dashboardID, unitId, math.Ceil(window))
+	return cacheRedis.NewKey(projectId, prefix, suffix)
 }
 
 func GetDashboardUnitsByProjectIDAndDashboardIDAndTypes(projectID, dashboardID uint64, types []string) ([]DashboardUnit, int) {
