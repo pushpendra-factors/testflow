@@ -14,10 +14,11 @@ import (
 )
 
 type SessionFields struct {
+	pageLoadType    string
 	initialReferrer string
-	//source       string
-	//medium        string
-	//campaign        string
+	source          string
+	medium          string
+	campaign        string
 }
 
 func getSessionEvents(
@@ -26,10 +27,11 @@ func getSessionEvents(
 	logctx := log.WithFields(log.Fields{"projectId": projectId})
 
 	rows, err := db.Raw("SELECT distinct(CAST (events.id AS TEXT)) as session_id,"+
-		"events.properties->>'$initial_referrer_domain' "+
-		//"events.properties->>'$source',"+
-		//"events.properties->>'$medium',"+
-		//"events.properties->>'$campaign' "+
+		"events.properties->>'$qp_utm_pageloadtype',"+
+		"events.properties->>'$initial_referrer_domain',"+
+		"events.properties->>'$source',"+
+		"events.properties->>'$medium',"+
+		"events.properties->>'$campaign' "+
 		"FROM events "+
 		"WHERE events.project_id = ?  AND events.timestamp >= ? AND events.timestamp <= ? "+
 		"AND events.event_name_id IN (SELECT id FROM event_names WHERE project_id = ? AND name = '$session')",
@@ -42,20 +44,19 @@ func getSessionEvents(
 
 	for rows.Next() {
 		var sessionId string
-		var initialReferrer sql.NullString
-		//var source, medium, campaign sql.NullString
+		var pageLoadType, initialReferrer, source, medium, campaign sql.NullString
 
-		//if err = rows.Scan(&sessionId, &initialReferrer, &source, &medium, &campaign); err != nil {
-		if err = rows.Scan(&sessionId, &initialReferrer); err != nil {
+		if err = rows.Scan(&sessionId, &pageLoadType, &initialReferrer, &source, &medium, &campaign); err != nil {
 			logctx.Error("Error while scanning.", err)
 			return sessionEvents, err
 		}
 
 		sessionEvents[sessionId] = &SessionFields{
+			pageLoadType:    pageLoadType.String,
 			initialReferrer: initialReferrer.String,
-			//source:       source.String,
-			//medium:        medium.String,
-			//campaign:      campaign.String,
+			source:          source.String,
+			medium:          medium.String,
+			campaign:        campaign.String,
 		}
 	}
 	log.Info(fmt.Sprintf("Total session event result %d", len(sessionEvents)))
@@ -111,6 +112,7 @@ func getAllEvents(db *gorm.DB, projectId uint64, startTime int64, endTime int64)
 		var ok bool
 		if sessionInfo, ok = sessionEvents[sessionId]; !ok {
 			log.Error(fmt.Sprintf("Missing sessionId %s", sessionId))
+			continue
 		}
 
 		// Remove trailing /
@@ -118,11 +120,10 @@ func getAllEvents(db *gorm.DB, projectId uint64, startTime int64, endTime int64)
 		if string(eventName[eLen-1]) == "/" {
 			eventName = eventName[:eLen-1]
 		}
-		//key := fmt.Sprintf("%s,%s,%s,%s,%s",
-		//	eventName, sessionInfo.initialReferrer, sessionInfo.source,
-		// sessionInfo.medium, sessionInfo.campaign)
-		key := fmt.Sprintf("%s,%s",
-			eventName, sessionInfo.initialReferrer)
+		key := fmt.Sprintf("%s,%s,%s,%s,%s,%s",
+			eventName, sessionInfo.pageLoadType,
+			sessionInfo.initialReferrer, sessionInfo.source,
+			sessionInfo.medium, sessionInfo.campaign)
 		if ec, ok := eventsReport[key]; !ok {
 			eventsReport[key] = 1
 		} else {
@@ -196,7 +197,7 @@ func main() {
 	defer f.Close()
 
 	for key, count := range eventsReport {
-		log.Println(fmt.Sprintf("%s,%d", key, count))
+		//log.Println(fmt.Sprintf("%s,%d", key, count))
 		if _, err := f.WriteString(fmt.Sprintf("%s,%d\n", key, count)); err != nil {
 			log.WithError(err).Fatal("Failed to write to file.")
 		}
