@@ -14,7 +14,6 @@ import (
 )
 
 type SessionFields struct {
-	pageLoadType    string
 	initialReferrer string
 	source          string
 	medium          string
@@ -26,8 +25,7 @@ func getSessionEvents(
 	var sessionEvents = make(map[string]*SessionFields)
 	logctx := log.WithFields(log.Fields{"projectId": projectId})
 
-	rows, err := db.Raw("SELECT distinct(CAST (events.id AS TEXT)) as session_id,"+
-		"events.properties->>'$qp_utm_pageloadtype',"+
+	rows, err := db.Raw("SELECT distinct(CAST (events.id AS TEXT)),"+
 		"events.properties->>'$initial_referrer_domain',"+
 		"events.properties->>'$source',"+
 		"events.properties->>'$medium',"+
@@ -44,15 +42,14 @@ func getSessionEvents(
 
 	for rows.Next() {
 		var sessionId string
-		var pageLoadType, initialReferrer, source, medium, campaign sql.NullString
+		var initialReferrer, source, medium, campaign sql.NullString
 
-		if err = rows.Scan(&sessionId, &pageLoadType, &initialReferrer, &source, &medium, &campaign); err != nil {
+		if err = rows.Scan(&sessionId, &initialReferrer, &source, &medium, &campaign); err != nil {
 			logctx.Error("Error while scanning.", err)
 			return sessionEvents, err
 		}
 
 		sessionEvents[sessionId] = &SessionFields{
-			pageLoadType:    pageLoadType.String,
 			initialReferrer: initialReferrer.String,
 			source:          source.String,
 			medium:          medium.String,
@@ -74,7 +71,8 @@ func getAllEvents(db *gorm.DB, projectId uint64, startTime int64, endTime int64)
 		return eventsReport, err
 	}
 
-	rows, err := db.Raw("SELECT distinct(events.id) as event_id, events.session_id, event_names.name "+
+	rows, err := db.Raw("SELECT distinct(events.id) as event_id, events.session_id, event_names.name, "+
+		"events.properties->>'$qp_utm_pageloadtype' "+
 		"FROM events "+
 		"LEFT JOIN event_names ON events.event_name_id = event_names.id "+
 		"WHERE events.project_id = ? AND events.timestamp >= ? AND events.timestamp <= ?",
@@ -87,11 +85,11 @@ func getAllEvents(db *gorm.DB, projectId uint64, startTime int64, endTime int64)
 
 	for rows.Next() {
 		var eventId string
-		var eSessionId sql.NullString
+		var eSessionId, pageLoadType sql.NullString
 		var eventName string
 		var sessionId string
 
-		if err = rows.Scan(&eventId, &eSessionId, &eventName); err != nil {
+		if err = rows.Scan(&eventId, &eSessionId, &eventName, &pageLoadType); err != nil {
 			logctx.Error("Error while scanning.", err)
 			return eventsReport, err
 		}
@@ -121,7 +119,7 @@ func getAllEvents(db *gorm.DB, projectId uint64, startTime int64, endTime int64)
 			eventName = eventName[:eLen-1]
 		}
 		key := fmt.Sprintf("%s,%s,%s,%s,%s,%s",
-			eventName, sessionInfo.pageLoadType,
+			eventName, pageLoadType.String,
 			sessionInfo.initialReferrer, sessionInfo.source,
 			sessionInfo.medium, sessionInfo.campaign)
 		if ec, ok := eventsReport[key]; !ok {
