@@ -1,9 +1,6 @@
 "use strict";
 
 var App = require("./app");
-const logger = require("./utils/logger");
-
-
 
 // Global reference.
 var app = new App();
@@ -14,15 +11,24 @@ var app = new App();
  * @param {object} opts Additional opts: {track_on_init: false}
  */
 function init(appToken, opts={}) {
-    return app.init(appToken, opts)
-        .catch(logger.errorLine);
+    try {
+        return app.init(appToken, opts)
+            .catch(app.handleError);
+    } catch(e) {
+        return app.handleError(e);
+    }
 }
 
 /**
  * Clears existing SDK environment, both API token and cookies. 
  */
-function reset() { 
-    app.reset();
+function reset() {
+    try {
+        app.reset();
+    } catch(e) {
+        app.handleError(e);
+    }
+
     return;
 }
 
@@ -32,15 +38,25 @@ function reset() {
  * @param {Object} eventProperties 
  */
 function track(eventName, eventProperties={}) {
-    app.track(eventName, eventProperties, false)
-        .catch(logger.errorLine);
+    try {
+        app.track(eventName, eventProperties, false)
+            .catch(app.handleError);
+    } catch(e) {
+        app.handleError(e);
+    }
+
     return;
 }
 /**
  * Track visit to page as event.
  */
 function page() {
-    app.page().catch(logger.errorLine);
+    try {
+        app.page().catch(app.handleError);
+    } catch(e) {
+        app.handleError(e);
+    }
+
     return;
 }
 
@@ -49,8 +65,13 @@ function page() {
  * @param {string} customerUserId Actual id of the user from the application.
  */
 function identify(customerUserId) {
-    app.identify(customerUserId)
-        .catch(logger.errorLine);
+    try {
+        app.identify(customerUserId)
+            .catch(app.handleError);
+    } catch(e) {
+        app.handleError(e);
+    }
+
     return;
 }
 
@@ -59,8 +80,13 @@ function identify(customerUserId) {
  * @param {Object} properties 
  */
 function addUserProperties(properties={}) {
-    app.addUserProperties(properties)
-        .catch(logger.errorLine);
+    try {
+        app.addUserProperties(properties)
+            .catch(app.handleError);
+    } catch(e) {
+        app.handleError(e);
+    }
+
     return;
 }
 

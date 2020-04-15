@@ -325,3 +325,30 @@ func SDKAMPTrackHandler(c *gin.Context) {
 
 	c.JSON(SDK.AMPTrackWithQueue(token, payload, C.GetSDKRequestQueueAllowedTokens()))
 }
+
+type SDKError struct {
+	UserId string `json:"user_id"`
+	Domain string `json:"domain"`
+	Error  string `json:"error"`
+}
+
+func SDKErrorHandler(c *gin.Context) {
+	var request SDKError
+
+	decoder := json.NewDecoder(c.Request.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&request); err != nil {
+		log.WithError(err).Error("Failed to unmarshal SDK Error.")
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	properties := U.PropertiesMap{}
+	U.FillUserAgentUserProperties(&properties, c.Request.UserAgent())
+
+	// Error logged for adding it to error email.
+	log.WithFields(log.Fields{"domain": request.Domain, "error": request.Error,
+		"properties": properties}).Error("Got JS SDK Error.")
+
+	c.AbortWithStatus(http.StatusOK)
+}

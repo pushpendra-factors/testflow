@@ -86,6 +86,7 @@ func InitAppRoutes(r *gin.Engine) {
 
 func InitSDKServiceRoutes(r *gin.Engine) {
 	r.GET(ROUTE_SDK_ROOT+"/service/status", SDKStatusHandler)
+	r.POST(ROUTE_SDK_ROOT+"/service/error", SDKErrorHandler)
 
 	// Todo(Dinesh): Check integrity of token using encrytion/decryption
 	// with secret, on middleware, to avoid spamming queue.

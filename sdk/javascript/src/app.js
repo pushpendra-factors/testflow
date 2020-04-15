@@ -354,4 +354,22 @@ App.prototype.getUserId = function() {
     return Cookie.getDecoded(constant.cookie.USER_ID);
 }
 
+App.prototype.handleError = function(error) {
+    var errMsg = "";
+    if (typeof(error) == "string") errMsg = error;
+    if (error instanceof Error && error.message) errMsg = error.message;
+
+    let payload = {};
+    payload.domain = window.location.host;
+    payload.error = errMsg;
+    updatePayloadWithUserIdFromCookie(payload);
+
+    var client = new APIClient('', '');
+    client.sendError(payload);
+
+    logger.errorLine(error);
+
+    return Promise ? Promise.reject(error) : error;
+}
+
 module.exports = exports = App;
