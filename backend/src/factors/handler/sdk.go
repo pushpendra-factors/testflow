@@ -351,4 +351,5 @@ func SDKErrorHandler(c *gin.Context) {
 		"properties": properties}).Error("Got JS SDK Error.")
 
 	c.AbortWithStatus(http.StatusOK)
+	return
 }
