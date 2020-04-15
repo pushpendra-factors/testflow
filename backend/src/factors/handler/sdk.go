@@ -328,6 +328,7 @@ func SDKAMPTrackHandler(c *gin.Context) {
 
 type SDKError struct {
 	UserId string `json:"user_id"`
+	URL    string `json:"url"`
 	Domain string `json:"domain"`
 	Error  string `json:"error"`
 }
@@ -347,8 +348,8 @@ func SDKErrorHandler(c *gin.Context) {
 	U.FillUserAgentUserProperties(&properties, c.Request.UserAgent())
 
 	// Error logged for adding it to error email.
-	log.WithFields(log.Fields{"domain": request.Domain, "error": request.Error,
-		"properties": properties}).Error("Got JS SDK Error.")
+	log.WithFields(log.Fields{"domain": request.Domain, "error": request.Error, "url": request.URL,
+		"properties": properties, "tag": "sdk_error"}).Error("Got JS SDK Error.")
 
 	c.AbortWithStatus(http.StatusOK)
 	return

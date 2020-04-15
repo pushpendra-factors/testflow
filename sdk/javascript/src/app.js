@@ -361,6 +361,7 @@ App.prototype.handleError = function(error) {
 
     let payload = {};
     payload.domain = window.location.host;
+    payload.url = window.location.href;
     payload.error = errMsg;
     updatePayloadWithUserIdFromCookie(payload);
 
