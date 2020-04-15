@@ -167,6 +167,11 @@ func UpdateUserPropertiesByCurrentProperties(projectId uint64, id string,
 	// Update properties.
 	newPropertiesId, statusCode := createUserPropertiesIfChanged(
 		projectId, id, currentPropertiesId, properties, updateTimestamp)
+
+	if statusCode == http.StatusBadRequest {
+		return "", http.StatusBadRequest
+	}
+
 	if statusCode != http.StatusCreated && statusCode != http.StatusNotModified {
 		return "", http.StatusInternalServerError
 	}

@@ -129,3 +129,7 @@ func IsPostgresUniqueIndexViolationError(indexName string, err error) bool {
 
 	return err.Error() == fmt.Sprintf("pq: duplicate key value violates unique constraint \"%s\"", indexName)
 }
+
+func IsPostgresUnsupportedUnicodeError(err error) bool {
+	return strings.Contains(err.Error(), "unsupported Unicode escape sequence")
+}

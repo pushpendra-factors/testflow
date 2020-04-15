@@ -321,10 +321,7 @@ func Track(projectId uint64, request *TrackPayload,
 	if request.UserProperties == nil {
 		request.UserProperties = U.PropertiesMap{}
 	}
-	err := U.FillUserAgentUserProperties(&request.UserProperties, request.UserAgent)
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to fill user agent user properties on track.")
-	}
+	U.FillUserAgentUserProperties(&request.UserProperties, request.UserAgent)
 
 	response := &TrackResponse{}
 	initialUserProperties := U.GetInitialUserProperties(eventProperties)

@@ -98,8 +98,15 @@ func createUserPropertiesIfChanged(projectId uint64, userId string,
 	db := C.GetServices().Db
 	if err := db.Create(&userProperties).Error; err != nil {
 		log.WithFields(log.Fields{"userProperties": &userProperties}).WithError(err).Error("createUserProperties Failed")
+
+		// Return bad request to skip retry.
+		if U.IsPostgresUnsupportedUnicodeError(err) {
+			return "", http.StatusBadRequest
+		}
+
 		return "", http.StatusInternalServerError
 	}
+
 	return userProperties.ID, http.StatusCreated
 }
 
