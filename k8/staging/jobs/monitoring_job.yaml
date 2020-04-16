@@ -1,0 +1,48 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: monitoring-job
+spec:
+  schedule: "*/15 * * * *" # every 15 minutes
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            layer: jobs
+        spec:
+          nodeSelector:
+            cloud.google.com/gke-nodepool: default-persistent-pool
+          containers:
+          - name: monitoring-job
+            image: us.gcr.io/factors-staging/monitoring:v0.01-24c2da5
+            imagePullPolicy: IfNotPresent
+            args:
+            - --env
+            - $(ENV)
+            - --db_host
+            - $(DB_HOST)
+            - --db_port
+            - $(DB_PORT)
+            - --db_name
+            - $(POSTGRES_DB)
+            - --db_user
+            - $(POSTGRES_USER)
+            - --db_pass
+            - $(POSTGRES_PASSWORD)
+            - --queue_redis_host
+            - $(PERSISTENT_REDIS_HOST)
+            - --queue_redis_port
+            - $(PERSISTENT_REDIS_PORT)
+            envFrom:
+            - configMapRef:
+                name: config-env
+            - configMapRef:
+                name: config-postgres
+            - configMapRef:
+                name: config-persistent-redis
+            - secretRef:
+                name: secret-postgres
+          restartPolicy: OnFailure
