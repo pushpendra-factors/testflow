@@ -66,3 +66,11 @@ func (eagerBroker *Broker) Publish(ctx context.Context, task *tasks.Signature) e
 func (eagerBroker *Broker) AssignWorker(w iface.TaskProcessor) {
 	eagerBroker.worker = w
 }
+
+func (b *Broker) GetQueueLength(queue string) (int, error) {
+	return 0, errors.New("not implemented")
+}
+
+func (b *Broker) GetDelayedTasksCount() (int, error) {
+	return 0, errors.New("not implemented")
+}

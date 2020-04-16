@@ -4,15 +4,17 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
-	"cloud.google.com/go/pubsub"
 	"factors/vendor_custom/machinery/v1/brokers/iface"
 	"factors/vendor_custom/machinery/v1/common"
 	"factors/vendor_custom/machinery/v1/config"
 	"factors/vendor_custom/machinery/v1/log"
 	"factors/vendor_custom/machinery/v1/tasks"
+
+	"cloud.google.com/go/pubsub"
 )
 
 // Broker represents an Google Cloud Pub/Sub broker
@@ -193,4 +195,11 @@ func (b *Broker) consumeOne(delivery *pubsub.Message, taskProcessor iface.TaskPr
 
 	// Call Ack() after successfully consuming and processing the message
 	delivery.Ack()
+}
+func (b *Broker) GetQueueLength(queue string) (int, error) {
+	return 0, errors.New("not implemented")
+}
+
+func (b *Broker) GetDelayedTasksCount() (int, error) {
+	return 0, errors.New("not implemented")
 }

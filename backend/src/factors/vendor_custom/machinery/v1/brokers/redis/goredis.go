@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -16,6 +17,7 @@ import (
 	"factors/vendor_custom/machinery/v1/config"
 	"factors/vendor_custom/machinery/v1/log"
 	"factors/vendor_custom/machinery/v1/tasks"
+
 	"github.com/RichardKnop/redsync"
 	"github.com/go-redis/redis"
 )
@@ -412,4 +414,12 @@ func getQueueGR(config *config.Config, taskProcessor iface.TaskProcessor) string
 		return config.DefaultQueue
 	}
 	return customQueue
+}
+
+func (b *BrokerGR) GetQueueLength(queue string) (int, error) {
+	return 0, errors.New("not implemented")
+}
+
+func (b *BrokerGR) GetDelayedTasksCount() (int, error) {
+	return 0, errors.New("not implemented")
 }

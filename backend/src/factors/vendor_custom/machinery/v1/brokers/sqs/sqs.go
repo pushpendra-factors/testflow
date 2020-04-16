@@ -15,6 +15,7 @@ import (
 	"factors/vendor_custom/machinery/v1/config"
 	"factors/vendor_custom/machinery/v1/log"
 	"factors/vendor_custom/machinery/v1/tasks"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs/sqsiface"
@@ -365,4 +366,12 @@ func (b *Broker) getQueueURL(taskProcessor iface.TaskProcessor) *string {
 	}
 
 	return aws.String(b.GetConfig().Broker + "/" + queueName)
+}
+
+func (b *Broker) GetQueueLength(queue string) (int, error) {
+	return 0, errors.New("not implemented")
+}
+
+func (b *Broker) GetDelayedTasksCount() (int, error) {
+	return 0, errors.New("not implemented")
 }

@@ -14,6 +14,7 @@ import (
 	"factors/vendor_custom/machinery/v1/config"
 	"factors/vendor_custom/machinery/v1/log"
 	"factors/vendor_custom/machinery/v1/tasks"
+
 	"github.com/pkg/errors"
 	"github.com/streadway/amqp"
 )
@@ -430,4 +431,12 @@ func (b *Broker) AdjustRoutingKey(s *tasks.Signature) {
 	}
 
 	s.RoutingKey = b.GetConfig().DefaultQueue
+}
+
+func (b *Broker) GetQueueLength(queue string) (int, error) {
+	return 0, errors.New("not implemented")
+}
+
+func (b *Broker) GetDelayedTasksCount() (int, error) {
+	return 0, errors.New("not implemented")
 }
