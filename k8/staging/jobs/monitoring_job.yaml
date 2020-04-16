@@ -14,7 +14,7 @@ spec:
             layer: jobs
         spec:
           nodeSelector:
-            cloud.google.com/gke-nodepool: default-persistent-pool
+            cloud.google.com/gke-nodepool: factors-staging-node-pool
           containers:
           - name: monitoring-job
             image: us.gcr.io/factors-staging/monitoring:v0.01-24c2da5

@@ -25,7 +25,7 @@ spec:
         layer: sdk-request-worker
     spec:
       nodeSelector:
-        cloud.google.com/gke-nodepool: default-persistent-pool
+        cloud.google.com/gke-nodepool: factors-staging-node-pool
       containers:
       - name: sdk-request-worker
         image: us.gcr.io/factors-staging/sdk-request-worker:v0.01-1633c9d
@@ -37,7 +37,7 @@ spec:
         terminationMessagePolicy: File
         resources:
           requests:
-            memory: "500M"
+            memory: "100M"
         securityContext: {}
         args:
           - --env

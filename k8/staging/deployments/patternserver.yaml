@@ -37,7 +37,7 @@ spec:
           mountPath: /usr/local/var/factors
         resources:
           requests:
-            memory: 8Gi
+            memory: 1Gi
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         securityContext: {}
