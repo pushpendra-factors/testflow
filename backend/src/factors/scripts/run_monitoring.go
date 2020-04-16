@@ -2,6 +2,8 @@ package main
 
 import (
 	C "factors/config"
+	"factors/integration"
+	"factors/sdk"
 	"factors/util"
 	"flag"
 	"fmt"
@@ -15,36 +17,22 @@ type SlowQueries struct {
 	Pid     int64   `json:"pid"`
 }
 
-const taskID = "Task#SlowQueries"
+const taskID = "Task#Monitoring"
 
 func GetSlowQueries(env string) (map[string]interface{}, error) {
-	slowQueries := make([]SlowQueries, 0, 0)
 	dbHost := flag.String("db_host", "localhost", "")
 	dbPort := flag.Int("db_port", 5432, "")
 	dbUser := flag.String("db_user", "autometa", "")
 	dbName := flag.String("db_name", "autometa", "")
 	dbPass := flag.String("db_pass", "@ut0me7a", "")
 
-	redisHost := flag.String("redis_host", "localhost", "")
-	redisPort := flag.Int("redis_port", 6379, "")
-
 	queueRedisHost := flag.String("queue_redis_host", "localhost", "")
 	queueRedisPort := flag.Int("queue_redis_port", 6379, "")
-
-	geoLocFilePath := flag.String("geo_loc_path",
-		"/usr/local/var/factors/geolocation_data/GeoLite2-City.mmdb", "")
-
-	awsRegion := flag.String("aws_region", "us-east-1", "")
-	awsAccessKeyId := flag.String("aws_key", "dummy", "")
-	awsSecretAccessKey := flag.String("aws_secret", "dummy", "")
-
-	factorsEmailSender := flag.String("email_sender", "support-dev@factors.ai", "")
-	errorReportingInterval := flag.Int("error_reporting_interval", 300, "")
 
 	flag.Parse()
 
 	config := &C.Configuration{
-		AppName: "slow_queries",
+		AppName: "monitoring",
 		Env:     env,
 		DBInfo: C.DBConf{
 			Host:     *dbHost,
@@ -53,34 +41,31 @@ func GetSlowQueries(env string) (map[string]interface{}, error) {
 			Name:     *dbName,
 			Password: *dbPass,
 		},
-		RedisHost:              *redisHost,
-		RedisPort:              *redisPort,
-		QueueRedisHost:         *queueRedisHost,
-		QueueRedisPort:         *queueRedisPort,
-		GeolocationFile:        *geoLocFilePath,
-		AWSKey:                 *awsAccessKeyId,
-		AWSSecret:              *awsSecretAccessKey,
-		AWSRegion:              *awsRegion,
-		EmailSender:            *factorsEmailSender,
-		ErrorReportingInterval: *errorReportingInterval,
-	}
-
-	err := C.InitQueueWorker(config)
-	if err != nil {
-		log.WithError(err).Fatal("Failed to initialize.")
-		return nil, err
+		QueueRedisHost: *queueRedisHost,
+		QueueRedisPort: *queueRedisPort,
 	}
 
 	C.InitConf(config.Env)
 	// Initialize configs and connections and close with defer.
-	err = C.InitDB(config.DBInfo)
+	err := C.InitDB(config.DBInfo)
 	if err != nil {
 		log.Fatal("Failed to run slow queries. Init failed.")
 	}
 
+	err = C.InitDB(config.DBInfo)
+	if err != nil {
+		log.WithError(err).Fatal("Failed to initalize db.")
+	}
+
+	err = C.InitQueueClient(config.QueueRedisHost, config.QueueRedisPort)
+	if err != nil {
+		log.WithError(err).Fatal("Failed to initalize queue client.")
+	}
+
+	slowQueries := make([]SlowQueries, 0, 0)
+
 	db := C.GetServices().Db
 	defer db.Close()
-
 	queryStr := `SELECT (now() - query_start) as runtime,query, pid FROM  pg_stat_activity` +
 		` WHERE (now() - query_start) > '2 minutes'::interval ORDER BY runtime DESC LIMIT 10`
 	rows, err := db.Raw(queryStr).Rows()
@@ -106,13 +91,13 @@ func GetSlowQueries(env string) (map[string]interface{}, error) {
 		return nil, err
 	}
 
-	sdkQueueLength, err := queueClient.GetBroker().GetQueueLength("sdk_request_queue")
+	sdkQueueLength, err := queueClient.GetBroker().GetQueueLength(sdk.RequestQueue)
 	if err != nil {
 		log.WithError(err).Error("Failed to get sdk_request_queue length")
 		return nil, err
 	}
 
-	integrationQueueLength, err := queueClient.GetBroker().GetQueueLength("integration_request_queue")
+	integrationQueueLength, err := queueClient.GetBroker().GetQueueLength(integration.RequestQueue)
 	if err != nil {
 		log.WithError(err).Error("Failed to get integration_request_queue length")
 		return nil, err

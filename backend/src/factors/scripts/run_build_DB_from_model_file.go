@@ -31,17 +31,17 @@ type denEvent struct {
 
 /*
 default to ingest mode
-go run run_build_DB_from_model_file.go --file_path=<path-to-denormalized-file> --project_name=<new-project-name> --agent_uuid=<agent-uuid> --mode=
+go run run_build_db_from_model_file.go --file_path=<path-to-denormalized-file> --project_name=<new-project-name> --agent_uuid=<agent-uuid> --mode=
 */
 
 /*
 for query mode
-go run run_build_DB_from_model_file.go --mode=query --project_id=<project-id> --start_time= --end_time= --file_path=
+go run run_build_db_from_model_file.go --mode=query --project_id=<project-id> --start_time= --end_time= --file_path=
 */
 
 /*
 for query with filters mode
-go run run_build_DB_from_model_file.go --mode=query_filter --project_id=<project-id> --start_time= --end_time= --file_path=
+go run run_build_db_from_model_file.go --mode=query_filter --project_id=<project-id> --start_time= --end_time= --file_path=
 */
 
 func main() {
