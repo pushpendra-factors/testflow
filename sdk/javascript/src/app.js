@@ -128,7 +128,7 @@ App.prototype.init = function(token, opts={}) {
         })
         .catch(function(err) {
             logger.errorLine(err);
-            return Promise.reject(new Error("FactorsRequestError: Init failed. App configuration failed."));
+            return Promise.reject(err);
         });
 }
 
