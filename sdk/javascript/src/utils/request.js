@@ -18,7 +18,7 @@ function request(method, url, headers, data) {
             var _response = response;
             return _response.json()
                 .then(function(responseJSON) {
-                    if (!_response.ok) return Promise.reject("Failed to fetch.");
+                    if (!_response.ok) return Promise.reject("Failed to fetch "+ url +" with status "+ _response.status);
                     return { status: _response.status, body: responseJSON };
                 })
         });
