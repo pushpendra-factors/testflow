@@ -6,7 +6,6 @@ import (
 	"factors/sdk"
 	"factors/util"
 	"flag"
-	"fmt"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -19,7 +18,8 @@ type SlowQueries struct {
 
 const taskID = "Task#Monitoring"
 
-func GetSlowQueries(env string) (map[string]interface{}, error) {
+func main() {
+	env := flag.String("env", "development", "")
 	dbHost := flag.String("db_host", "localhost", "")
 	dbPort := flag.Int("db_port", 5432, "")
 	dbUser := flag.String("db_user", "autometa", "")
@@ -33,7 +33,7 @@ func GetSlowQueries(env string) (map[string]interface{}, error) {
 
 	config := &C.Configuration{
 		AppName: "monitoring",
-		Env:     env,
+		Env:     *env,
 		DBInfo: C.DBConf{
 			Host:     *dbHost,
 			Port:     *dbPort,
@@ -66,19 +66,18 @@ func GetSlowQueries(env string) (map[string]interface{}, error) {
 
 	db := C.GetServices().Db
 	defer db.Close()
+
 	queryStr := `SELECT (now() - query_start) as runtime,query, pid FROM  pg_stat_activity` +
 		` WHERE (now() - query_start) > '2 minutes'::interval ORDER BY runtime DESC LIMIT 10`
 	rows, err := db.Raw(queryStr).Rows()
 	if err != nil {
 		log.WithError(err).Error("Failed to get slow queries from pg_stat_activity")
-		return nil, err
 	}
-	defer rows.Close()
+
 	for rows.Next() {
 		var slowQuery SlowQueries
 		if err := db.ScanRows(rows, &slowQuery); err != nil {
 			log.WithError(err).Error("Failed to scan slow queries from db.")
-			return nil, err
 		}
 
 		slowQueries = append(slowQueries, slowQuery)
@@ -88,19 +87,16 @@ func GetSlowQueries(env string) (map[string]interface{}, error) {
 	delayedTaskCount, err := queueClient.GetBroker().GetDelayedTasksCount()
 	if err != nil {
 		log.WithError(err).Error("Failed to get delayed task count from redis")
-		return nil, err
 	}
 
 	sdkQueueLength, err := queueClient.GetBroker().GetQueueLength(sdk.RequestQueue)
 	if err != nil {
 		log.WithError(err).Error("Failed to get sdk_request_queue length")
-		return nil, err
 	}
 
 	integrationQueueLength, err := queueClient.GetBroker().GetQueueLength(integration.RequestQueue)
 	if err != nil {
 		log.WithError(err).Error("Failed to get integration_request_queue length")
-		return nil, err
 	}
 
 	slowQueriesStatus := map[string]interface{}{
@@ -109,29 +105,11 @@ func GetSlowQueries(env string) (map[string]interface{}, error) {
 		"sdkQueueLength":         sdkQueueLength,
 		"integrationQueueLength": integrationQueueLength,
 	}
-	return slowQueriesStatus, nil
-}
 
-func main() {
-	envFlag := flag.String("env", "development", "")
-
-	flag.Parse()
-	defer util.NotifyOnPanic("Task#SlowQueries", *envFlag)
-
-	if *envFlag != "development" &&
-		*envFlag != "staging" &&
-		*envFlag != "production" {
-		err := fmt.Errorf("env [ %s ] not recognised", *envFlag)
-		panic(err)
-	}
-
-	//err already logged in function, so suppressed it here
-	slowQueriesStatus, _ := GetSlowQueries(*envFlag)
-
-	if *envFlag == "development" {
+	if *env == "development" {
 		log.Info(slowQueriesStatus)
 	} else {
-		if err := util.NotifyThroughSNS(taskID, *envFlag, slowQueriesStatus); err != nil {
+		if err := util.NotifyThroughSNS(taskID, *env, slowQueriesStatus); err != nil {
 			log.WithError(err).Error("Failed to notify slow queries status.")
 		} else {
 			log.Info("Notified slow queries status.")
