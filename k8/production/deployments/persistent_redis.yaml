@@ -25,7 +25,7 @@ spec:
         layer: persistent-redis
     spec:
       nodeSelector:
-        cloud.google.com/gke-nodepool: default-persistent-pool
+        cloud.google.com/gke-nodepool: persistent-pool-highmem
       terminationGracePeriodSeconds: 30
       volumes:
         - name: persistent-redis-storage
@@ -42,7 +42,7 @@ spec:
           mountPath: "/usr/local/var/db/redis"
         resources:
           requests:
-            memory: "20G"
+            memory: "15G"
             cpu: "1"
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File

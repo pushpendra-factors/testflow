@@ -25,7 +25,7 @@ spec:
         layer: sdkserver
     spec:
       nodeSelector:
-        cloud.google.com/gke-nodepool: default-persistent-pool
+        cloud.google.com/gke-nodepool: persistent-pool-standard
       containers:
       - name: sdkserver
         image: us.gcr.io/factors-production/sdk-server:v0.01-19b627a

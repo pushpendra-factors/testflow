@@ -25,7 +25,7 @@ spec:
         layer: redis
     spec:
       nodeSelector:
-        cloud.google.com/gke-nodepool: default-pool
+        cloud.google.com/gke-nodepool: persistent-pool-highmem
       containers:
       - name: redis
         image: us.gcr.io/factors-production/redis:v0.01-8b7c088

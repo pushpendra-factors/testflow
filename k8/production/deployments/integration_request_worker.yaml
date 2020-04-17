@@ -25,7 +25,7 @@ spec:
         layer: integration-request-worker
     spec:
       nodeSelector:
-        cloud.google.com/gke-nodepool: default-persistent-pool
+        cloud.google.com/gke-nodepool: persistent-pool-standard
       containers:
       - name: integration-request-worker
         image: us.gcr.io/factors-production/integration-request-worker:v0.01-30c2dbd
