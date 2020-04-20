@@ -284,7 +284,7 @@ python app.py --env development --port 8091 --host_url http://localhost:8091 --d
 
 
 ## Bootstrapping sample data, Building and serving model.
-* Start server on 8080.
+* Start server on 8085.
 * Using Localytics challenge data. (https://github.com/localytics/data-viz-challenge)  (https://medium.com/@aabraahaam/localytics-data-visualization-challengue-81ed409471e)
 
 ```
@@ -296,7 +296,7 @@ git clone https://github.com/localytics/data-viz-challenge.git  /usr/local/var/f
 
 # Create project from UI. Use projectId and project Token value for that project
 go get github.com/sirupsen/logrus
-go run ingest_localytics_events.go --input_file=/usr/local/var/factors/localytics_data/data.json --server=http://factors-dev.com:8080 --project_id= --project_token=
+go run ingest_localytics_events.go --input_file=/usr/local/var/factors/localytics_data/data.json --server=http://factors-dev.com:8085 --project_id= --project_token=
 
 ```
 
