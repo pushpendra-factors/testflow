@@ -34,6 +34,9 @@ func main() {
 	dbName := flag.String("db_name", "autometa", "")
 	dbPass := flag.String("db_pass", "@ut0me7a", "")
 
+	redisHost := flag.String("redis_host", "localhost", "")
+	redisPort := flag.Int("redis_port", 6379, "")
+
 	flag.Parse()
 
 	defer util.NotifyOnPanic("Task#BuildSeq", *envFlag)
@@ -57,6 +60,8 @@ func main() {
 			Name:     *dbName,
 			Password: *dbPass,
 		},
+		RedisHost: *redisHost,
+		RedisPort: *redisPort,
 	}
 
 	C.InitConf(config.Env)
@@ -77,6 +82,8 @@ func main() {
 	if err != nil {
 		log.WithFields(log.Fields{"err": err}).Fatal("Failed to init etcd client")
 	}
+
+	C.InitRedis(config.RedisHost, config.RedisPort)
 
 	log.WithFields(log.Fields{
 		"Env":             *envFlag,
