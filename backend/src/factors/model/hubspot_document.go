@@ -208,6 +208,26 @@ func readHubspotTimestamp(value interface{}) (int64, error) {
 	return 0, errors.New("unsupported hubspot timestamp type")
 }
 
+func getTimestampFromPropertiesByKey(propertiesMap map[string]interface{}, key string) (int64, error) {
+	propertyValue, exists := propertiesMap[key]
+	if !exists || propertyValue == nil {
+		return 0, errors.New("failed to get timestamp from property key")
+	}
+
+	propertyValueMap := propertyValue.(map[string]interface{})
+	timestampValue, exists := propertyValueMap["timestamp"]
+	if !exists || timestampValue == nil {
+		return 0, errors.New("timestamp key not exist on property map")
+	}
+
+	timestamp, err := readHubspotTimestamp(timestampValue)
+	if err != nil || timestamp == 0 {
+		return 0, errors.New("failed to read hubspot timestamp value")
+	}
+
+	return timestamp, nil
+}
+
 func getHubspotDocumentCreatedTimestamp(document *HubspotDocument) (int64, error) {
 	if document.Type == 0 {
 		return 0, errorInvalidHubspotDocumentType
@@ -225,20 +245,12 @@ func getHubspotDocumentCreatedTimestamp(document *HubspotDocument) (int64, error
 		}
 		propertiesMap := properties.(map[string]interface{})
 
-		name, exists := propertiesMap["name"]
-		if !exists || name == nil {
-			return 0, errorFailedToGetCreatedAtFromHubspotDocument
-		}
-
-		nameMap := name.(map[string]interface{})
-		timestamp, exists := nameMap["timestamp"]
-		if !exists || timestamp == nil {
-			return 0, errorFailedToGetCreatedAtFromHubspotDocument
-		}
-
-		createdAt, err := readHubspotTimestamp(timestamp)
-		if err != nil || createdAt == 0 {
-			return 0, errorFailedToGetCreatedAtFromHubspotDocument
+		createdAt, err := getTimestampFromPropertiesByKey(propertiesMap, "name")
+		if err != nil {
+			createdAt, err = getTimestampFromPropertiesByKey(propertiesMap, "createdate")
+			if err != nil {
+				return 0, err
+			}
 		}
 
 		return createdAt, nil
@@ -265,20 +277,9 @@ func getHubspotDocumentCreatedTimestamp(document *HubspotDocument) (int64, error
 			}
 		}
 
-		dealName, exists := propertiesMap["dealname"]
-		if !exists || dealName == nil {
-			return 0, errorFailedToGetCreatedAtFromHubspotDocument
-		}
-
-		dealNameMap := dealName.(map[string]interface{})
-		timestamp, exists := dealNameMap["timestamp"]
-		if !exists || timestamp == nil {
-			return 0, errorFailedToGetCreatedAtFromHubspotDocument
-		}
-
-		createdAt, err := readHubspotTimestamp(timestamp)
-		if err != nil || createdAt == 0 {
-			return 0, errorFailedToGetCreatedAtFromHubspotDocument
+		createdAt, err := getTimestampFromPropertiesByKey(propertiesMap, "dealname")
+		if err != nil {
+			return 0, err
 		}
 
 		return createdAt, nil
@@ -424,7 +425,7 @@ func CreateHubspotDocument(projectId uint64, document *HubspotDocument) int {
 		timestamp, err = getHubspotDocumentUpdatedTimestamp(document)
 	}
 	if err != nil {
-		logCtx.WithField("action", document.Action).Error(
+		logCtx.WithField("action", document.Action).WithError(err).Error(
 			"Failed to get timestamp from hubspot document on create.")
 		return http.StatusInternalServerError
 	}
