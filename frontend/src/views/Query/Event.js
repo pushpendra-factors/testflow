@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import { Row, Col, Button } from 'reactstrap';
-import Select from 'react-select';
+import CreatableSelect from 'react-select/lib/Creatable';
 import Property from './Property';
 
 import { makeSelectOpts, getSelectedOpt } from '../../util';
@@ -40,11 +40,12 @@ class Event extends Component {
         <Row style={{marginBottom: '15px'}}>
           <Col xs='12' md='12'>
             <div style={{display: 'inline-block', width: '275px'}} className='fapp-select light'>
-              <Select
+              <CreatableSelect
                 onChange={this.props.onNameChange}
                 options={makeSelectOpts(this.props.nameOpts)} 
                 placeholder='Select an event'
                 value={getSelectedOpt(this.props.eventState.name)}
+                formatCreateLabel={(value) => (value)}
               />
             </div>
             <Button outline color='primary' style={{marginLeft: '10px', display: 'inline-block', height: '100%'}} onClick={this.props.onAddProperty} >+ Filter</Button>
