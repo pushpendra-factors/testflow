@@ -40,19 +40,26 @@ function getAutoTrackURL() {
     return window.location.host + window.location.pathname + util.getCleanHash(window.location.hash);
 }
 
+// Todo: Use a prototype for window cache object.
 function factorsWindow() { 
     if (!window._FactorsCache) window._FactorsCache={}; 
     return window._FactorsCache; 
 }
 
-function addCurrentPageAutoTrackEventIdToStore(eventId) {
+function addCurrentPageAutoTrackEventIdToStore(eventId, eventNamePageURL) {
     if (!eventId || eventId == "") return;
+    factorsWindow().currentPageURLEventName = eventNamePageURL;
     factorsWindow().currentPageTrackEventId = eventId;
 }
 
 function getCurrentPageAutoTrackEventIdFromStore() {
     if (!factorsWindow().currentPageTrackEventId) return;
     return factorsWindow().currentPageTrackEventId;    
+}
+
+function getCurrentPageAutoTrackEventPageURLFromStore() {
+    if (!factorsWindow().currentPageTrackEventId) return;
+    return factorsWindow().currentPageURLEventName; 
 }
 
 function setLastActivityTime() {
@@ -160,7 +167,7 @@ App.prototype.track = function(eventName, eventProperties, auto=false) {
         .then(updateCookieIfUserIdInResponse)
         .then(function(response) {
             if (auto && response.body && response.body) 
-                addCurrentPageAutoTrackEventIdToStore(response.body.event_id);
+                addCurrentPageAutoTrackEventIdToStore(response.body.event_id, eventName);
             return response;
         });
 }
@@ -198,10 +205,25 @@ App.prototype.updatePagePropertiesIfChanged = function(startOfPageSpentTimeInMs,
     };
 }
 
+function isPageAutoTracked() {
+    var pageEventId = getCurrentPageAutoTrackEventIdFromStore();
+    if (pageEventId && pageEventId != undefined) {
+        return getAutoTrackURL() == getCurrentPageAutoTrackEventPageURLFromStore();
+    }
+
+    return false
+}
+
 App.prototype.autoTrack = function(enabled=false) {
     if (!enabled) return false; // not enabled.
-    var _this = this;
+
+    if (isPageAutoTracked()) {
+        logger.debug('Page tracked already as per store : '+JSON.stringify(factorsWindow()))
+        return false;
+    }
     
+    var _this = this;
+
     this.track(getAutoTrackURL(), Properties.getFromQueryParams(window.location), true);
 
     var lastPageProperties = {};
