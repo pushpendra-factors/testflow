@@ -118,7 +118,7 @@ func getAllEvents(db *gorm.DB, projectId uint64, startTime int64, endTime int64)
 		if string(eventName[eLen-1]) == "/" {
 			eventName = eventName[:eLen-1]
 		}
-		key := fmt.Sprintf("%s,%s,%s,%s,%s,%s",
+		key := fmt.Sprintf("%s|%s|%s|%s|%s|%s",
 			eventName, pageLoadType.String,
 			sessionInfo.initialReferrer, sessionInfo.source,
 			sessionInfo.medium, sessionInfo.campaign)
@@ -196,7 +196,7 @@ func main() {
 
 	for key, count := range eventsReport {
 		//log.Println(fmt.Sprintf("%s,%d", key, count))
-		if _, err := f.WriteString(fmt.Sprintf("%s,%d\n", key, count)); err != nil {
+		if _, err := f.WriteString(fmt.Sprintf("%s|%d\n", key, count)); err != nil {
 			log.WithError(err).Fatal("Failed to write to file.")
 		}
 	}
