@@ -67,8 +67,9 @@ func main() {
 	db := C.GetServices().Db
 	defer db.Close()
 
-	queryStr := `SELECT (now() - query_start) as runtime,query, pid FROM  pg_stat_activity` +
-		` WHERE (now() - query_start) > '2 minutes'::interval ORDER BY runtime DESC LIMIT 10`
+	queryStr := `SELECT EXTRACT(epoch from (now() - query_start)) as runtime,query, pid FROM  pg_stat_activity` +
+		` WHERE EXTRACT(epoch from (now() - query_start)) > 120 AND query != '<IDLE>' AND query NOT ILIKE '%pg_stat_activity%'` +
+		` ORDER BY runtime DESC LIMIT 10`
 	rows, err := db.Raw(queryStr).Rows()
 	if err != nil {
 		log.WithError(err).Error("Failed to get slow queries from pg_stat_activity")
@@ -109,10 +110,13 @@ func main() {
 	if *env == "development" {
 		log.Info(slowQueriesStatus)
 	} else {
-		if err := util.NotifyThroughSNS(taskID, *env, slowQueriesStatus); err != nil {
-			log.WithError(err).Error("Failed to notify slow queries status.")
-		} else {
-			log.Info("Notified slow queries status.")
+		if len(slowQueries) > 0 || delayedTaskCount > 1000 ||
+			sdkQueueLength > 1000 || integrationQueueLength > 1000 {
+			if err := util.NotifyThroughSNS(taskID, *env, slowQueriesStatus); err != nil {
+				log.WithError(err).Error("Failed to notify slow queries status.")
+			} else {
+				log.Info("Notified slow queries status.")
+			}
 		}
 	}
 }
