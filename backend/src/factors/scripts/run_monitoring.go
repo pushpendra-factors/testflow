@@ -80,8 +80,9 @@ func main() {
 		if err := db.ScanRows(rows, &slowQuery); err != nil {
 			log.WithError(err).Error("Failed to scan slow queries from db.")
 		}
-
-		slowQueries = append(slowQueries, slowQuery)
+		if slowQuery.Query != "" {
+			slowQueries = append(slowQueries, slowQuery)
+		}
 	}
 
 	queueClient := C.GetServices().QueueClient
