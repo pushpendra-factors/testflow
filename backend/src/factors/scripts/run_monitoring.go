@@ -68,7 +68,7 @@ func main() {
 	defer db.Close()
 
 	queryStr := `SELECT EXTRACT(epoch from (now() - query_start)) as runtime,query, pid FROM  pg_stat_activity` +
-		` WHERE EXTRACT(epoch from (now() - query_start)) > 120 AND query != '<IDLE>' AND query NOT ILIKE '%pg_stat_activity%'` +
+		` WHERE EXTRACT(epoch from (now() - query_start)) > 120 AND state = 'active' AND query NOT ILIKE '%pg_stat_activity%'` +
 		` ORDER BY runtime DESC LIMIT 10`
 	rows, err := db.Raw(queryStr).Rows()
 	if err != nil {
