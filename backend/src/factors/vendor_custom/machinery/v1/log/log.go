@@ -52,3 +52,11 @@ func SetError(l logging.LoggerInterface) {
 func SetFatal(l logging.LoggerInterface) {
 	FATAL = l
 }
+
+func Debug(enabled bool, msg string, values ...interface{}) {
+	if !enabled {
+		return
+	}
+
+	DEBUG.Printf(msg, values)
+}

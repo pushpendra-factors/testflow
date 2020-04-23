@@ -14,7 +14,8 @@ import (
 	"factors/vendor_custom/machinery/v1/retry"
 	"factors/vendor_custom/machinery/v1/tasks"
 	"factors/vendor_custom/machinery/v1/tracing"
-	"github.com/opentracing/opentracing-go"
+
+	opentracing "github.com/opentracing/opentracing-go"
 )
 
 // Worker represents a single worker process
@@ -246,7 +247,7 @@ func (worker *Worker) taskSucceeded(signature *tasks.Signature, taskResults []*t
 	} else {
 		debugResults = tasks.HumanReadableResults(results)
 	}
-	log.DEBUG.Printf("Processed task %s. Results = %s", signature.UUID, debugResults)
+	log.Debug(worker.GetServer().GetConfig().Debug, "Processed task %s. Results = %s", signature.UUID, debugResults)
 
 	// Trigger success callbacks
 

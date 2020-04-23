@@ -337,6 +337,7 @@ func InitQueueClient(redisHost string, redisPort int) error {
 		// seperate internal queue.
 		ResultBackend:   redisConnectionString,
 		ResultsExpireIn: 2 * 60,
+		Debug:           !IsProduction(),
 	}
 
 	client, err := machinery.NewServer(config)

@@ -67,6 +67,7 @@ type Config struct {
 	// NoUnixSignals - when set disables signal handling in machinery
 	NoUnixSignals bool            `yaml:"no_unix_signals" envconfig:"NO_UNIX_SIGNALS"`
 	DynamoDB      *DynamoDBConfig `yaml:"dynamodb"`
+	Debug         bool            `yaml:"debug"`
 }
 
 // QueueBindingArgs arguments which are used when binding to the exchange
@@ -143,8 +144,8 @@ type RedisConfig struct {
 
 	// DelayedTasksPollPeriod specifies the period in milliseconds when polling redis for delayed tasks
 	// Default: 20
-	DelayedTasksPollPeriod int `yaml:"delayed_tasks_poll_period" envconfig:"REDIS_DELAYED_TASKS_POLL_PERIOD"`
-	DelayedTasksKey string `yaml:"delayed_tasks_key" envconfig:"REDIS_DELAYED_TASKS_KEY"`
+	DelayedTasksPollPeriod int    `yaml:"delayed_tasks_poll_period" envconfig:"REDIS_DELAYED_TASKS_POLL_PERIOD"`
+	DelayedTasksKey        string `yaml:"delayed_tasks_key" envconfig:"REDIS_DELAYED_TASKS_KEY"`
 }
 
 // GCPPubSubConfig wraps GCP PubSub related configuration
