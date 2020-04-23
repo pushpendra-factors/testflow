@@ -21,7 +21,7 @@ import (
 )
 
 var inputFileFlag = flag.String("input_file", "", "Input json file.")
-var serverFlag = flag.String("server", "http://factors-dev.com:8080", "Server Path.")
+var serverFlag = flag.String("server", "http://factors-dev.com:8085", "Server Path.")
 var projectIdFlag = flag.Int("project_id", 0, "Project Id.")
 var projectTokenFlag = flag.String("project_token", "", "Needs to be passed if projectId is passed.")
 

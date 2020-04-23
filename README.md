@@ -1,6 +1,6 @@
 # Development Setup (Mac)
 
-## Golang
+## Golang (Version 1.11.x)
 https://golang.org/doc/install - go for default installation. Not custom installation.
 
 * Clone the repository using personal access token 
@@ -154,7 +154,7 @@ export PATH_TO_FACTORS=~/repos
 mkdir -p /usr/local/var/factors/config
 mkdir -p /usr/local/var/factors/geolocation_data
 
-cp $PATH_TO_FACTORS/geolocation_data/GeoLite2-City.mmdb /usr/local/var/factors/geolocation_data
+cp $PATH_TO_FACTORS/factors/geolocation_data/GeoLite2-City.mmdb /usr/local/var/factors/geolocation_data
 
 cd $PATH_TO_FACTORS/factors/backend/src
 make serve-api
@@ -247,13 +247,13 @@ make serve-sdk
 ### Workers
 * Run SDK Request Worker
 ```
-cd $PATH_TO_FACTORS/factors/backend/src/workers/sdk_request
+cd $PATH_TO_FACTORS/factors/backend/src/factors/workers/sdk_request
 go run process.go
 ```
 
 * Run Integration Request Worker
 ```
-cd $PATH_TO_FACTORS/factors/backend/src/workers/integration_request
+cd $PATH_TO_FACTORS/factors/backend/src/factors/workers/integration_request
 go run process.go
 ```
 
