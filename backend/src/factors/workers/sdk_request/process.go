@@ -29,6 +29,7 @@ func main() {
 
 	geoLocFilePath := flag.String("geo_loc_path",
 		"/usr/local/var/factors/geolocation_data/GeoLite2-City.mmdb", "")
+	deviceDetectorPath := flag.String("device_detector_path", "/usr/local/var/factors/devicedetector_data/regexes", "")
 
 	awsRegion := flag.String("aws_region", "us-east-1", "")
 	awsAccessKeyId := flag.String("aws_key", "dummy", "")
@@ -58,6 +59,7 @@ func main() {
 		QueueRedisHost:         *queueRedisHost,
 		QueueRedisPort:         *queueRedisPort,
 		GeolocationFile:        *geoLocFilePath,
+		DeviceDetectorPath:     *deviceDetectorPath,
 		AWSKey:                 *awsAccessKeyId,
 		AWSSecret:              *awsSecretAccessKey,
 		AWSRegion:              *awsRegion,

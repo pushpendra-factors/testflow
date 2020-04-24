@@ -3,11 +3,13 @@ package sdk
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
+	"github.com/mssola/user_agent"
 	log "github.com/sirupsen/logrus"
 
 	"factors/vendor_custom/machinery/v1/tasks"
@@ -321,7 +323,7 @@ func Track(projectId uint64, request *TrackPayload,
 	if request.UserProperties == nil {
 		request.UserProperties = U.PropertiesMap{}
 	}
-	U.FillUserAgentUserProperties(&request.UserProperties, request.UserAgent)
+	FillUserAgentUserProperties(&request.UserProperties, request.UserAgent)
 
 	response := &TrackResponse{}
 	initialUserProperties := U.GetInitialUserProperties(eventProperties)
@@ -1200,7 +1202,7 @@ func AMPTrackByToken(token string, reqPayload *AMPTrackPayload) (int, *Response)
 		userProperties[U.UP_SCREEN_WIDTH] = reqPayload.ScreenWidth
 	}
 
-	err = U.FillUserAgentUserProperties(&userProperties, reqPayload.UserAgent)
+	err = FillUserAgentUserProperties(&userProperties, reqPayload.UserAgent)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to fill user agent user properties on amp track.")
 	}
@@ -1233,4 +1235,37 @@ func AMPTrackWithQueue(token string, reqPayload *AMPTrackPayload,
 	}
 
 	return AMPTrackByToken(token, reqPayload)
+}
+
+func FillUserAgentUserProperties(userProperties *U.PropertiesMap, userAgentStr string) error {
+	if userAgentStr == "" {
+		return errors.New("invalid user agent")
+	}
+
+	(*userProperties)[U.UP_USER_AGENT] = userAgentStr
+
+	userAgent := user_agent.New(userAgentStr)
+	(*userProperties)[U.UP_OS] = userAgent.OSInfo().Name
+	(*userProperties)[U.UP_OS_VERSION] = userAgent.OSInfo().Version
+	(*userProperties)[U.UP_OS_WITH_VERSION] = fmt.Sprintf("%s-%s",
+		(*userProperties)[U.UP_OS], (*userProperties)[U.UP_OS_VERSION])
+
+	if U.IsBotUserAgent(userAgentStr) {
+		(*userProperties)[U.UP_BROWSER] = "Bot"
+		return nil
+	}
+
+	browserName, browserVersion := userAgent.Browser()
+	(*userProperties)[U.UP_BROWSER] = browserName
+	(*userProperties)[U.UP_BROWSER_VERSION] = browserVersion
+	(*userProperties)[U.UP_BROWSER_WITH_VERSION] = fmt.Sprintf("%s-%s",
+		(*userProperties)[U.UP_BROWSER], (*userProperties)[U.UP_BROWSER_VERSION])
+
+	dd := C.GetServices().DeviceDetector
+	info := dd.Parse(userAgentStr)
+	(*userProperties)[U.UP_DEVICE_BRAND] = info.Brand
+	(*userProperties)[U.UP_DEVICE_TYPE] = info.Type
+	(*userProperties)[U.UP_DEVICE_MODEL] = info.Model
+
+	return nil
 }

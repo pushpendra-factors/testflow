@@ -14,6 +14,7 @@ import (
 	"factors/vendor_custom/machinery/v1"
 	machineryConfig "factors/vendor_custom/machinery/v1/config"
 
+	D "github.com/gamebtc/devicedetector"
 	"github.com/gomodule/redigo/redis"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
@@ -59,6 +60,7 @@ type Configuration struct {
 	QueueRedisPort                   int
 	EtcdEndpoints                    []string
 	GeolocationFile                  string
+	DeviceDetectorPath               string
 	APIDomain                        string
 	APPDomain                        string
 	AWSRegion                        string
@@ -87,6 +89,7 @@ type Services struct {
 	patternServers     map[string]string
 	Mailer             maileriface.Mailer
 	ErrorCollector     *error_collector.Collector
+	DeviceDetector     *D.DeviceDetector
 }
 
 func (service *Services) GetPatternServerAddresses() []string {
@@ -155,6 +158,23 @@ func initGeoLocationService(geoLocationFile string) {
 	log.Info("Geolocation service intialized.")
 	services.GeoLocation = geolocation
 }
+func initDeviceDetectorPath(deviceDetectorPath string) {
+	if deviceDetectorPath == "" {
+		log.WithField("dev_detect_path",
+			deviceDetectorPath).Fatal("Invalid device detector path.")
+	}
+	if services == nil {
+		services = &Services{}
+	}
+	deviceDetector, err := D.NewDeviceDetector(deviceDetectorPath)
+	if err != nil {
+		log.WithError(err).WithField("DeviceDetectorPath",
+			deviceDetectorPath).Fatal("Failed to initialize device detector service.")
+	}
+
+	log.Info("Device Detector Path service intialized.")
+	services.DeviceDetector = deviceDetector
+}
 
 func initServices(config *Configuration) error {
 	services = &Services{patternServers: make(map[string]string)}
@@ -176,6 +196,7 @@ func initServices(config *Configuration) error {
 	initCollectorClient(config.Env, config.AppName, "team@factors.ai", config.EmailSender)
 
 	initGeoLocationService(config.GeolocationFile)
+	initDeviceDetectorPath(config.DeviceDetectorPath)
 
 	regPatternServers, err := GetServices().Etcd.DiscoverPatternServers()
 	if err != nil && err != serviceEtcd.NotFound {
@@ -453,6 +474,7 @@ func InitSDKService(config *Configuration) error {
 	InitRedis(config.RedisHost, config.RedisPort)
 
 	initGeoLocationService(config.GeolocationFile)
+	initDeviceDetectorPath(config.DeviceDetectorPath)
 
 	err := InitQueueClient(config.QueueRedisHost, config.QueueRedisPort)
 	if err != nil {
@@ -482,6 +504,7 @@ func InitQueueWorker(config *Configuration) error {
 	InitRedis(config.RedisHost, config.RedisPort)
 
 	initGeoLocationService(config.GeolocationFile)
+	initDeviceDetectorPath(config.DeviceDetectorPath)
 
 	// Todo: Use different redis instance for queue for production env.
 	err = InitQueueClient(config.QueueRedisHost, config.QueueRedisPort)

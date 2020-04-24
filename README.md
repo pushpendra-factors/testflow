@@ -153,8 +153,10 @@ make build-api
 export PATH_TO_FACTORS=~/repos
 mkdir -p /usr/local/var/factors/config
 mkdir -p /usr/local/var/factors/geolocation_data
+mkdir -p /usr/local/var/factors/devicedetector_data
 
 cp $PATH_TO_FACTORS/factors/geolocation_data/GeoLite2-City.mmdb /usr/local/var/factors/geolocation_data
+cp -R $PATH_TO_FACTORS/factors/devicedetector_data/regexes /usr/local/var/factors/devicedetector_data
 
 cd $PATH_TO_FACTORS/factors/backend/src
 make serve-api

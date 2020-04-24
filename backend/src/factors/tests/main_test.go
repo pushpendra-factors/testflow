@@ -25,6 +25,7 @@ func TestMain(m *testing.M) {
 	redisPort := flag.Int("redis_port", 6379, "")
 
 	geoLocFilePath := flag.String("geo_loc_path", "/usr/local/var/factors/geolocation_data/GeoLite2-City.mmdb", "")
+	deviceDetectorPath := flag.String("dev_detect_path", "/usr/local/var/factors/devicedetector_data/regexes", "")
 
 	apiDomain := flag.String("api_domain", "factors-dev.com:8080", "")
 	appDomain := flag.String("app_domain", "factors-dev.com:3000", "")
@@ -48,6 +49,7 @@ func TestMain(m *testing.M) {
 		RedisHost:              *redisHost,
 		RedisPort:              *redisPort,
 		GeolocationFile:        *geoLocFilePath,
+		DeviceDetectorPath:     *deviceDetectorPath,
 		APIDomain:              *apiDomain,
 		APPDomain:              *appDomain,
 		EmailSender:            *factorsEmailSender,

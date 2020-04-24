@@ -1,6 +1,7 @@
 package tests
 
 import (
+	SDK "factors/sdk"
 	U "factors/util"
 	"testing"
 	"time"
@@ -67,11 +68,19 @@ func TestGetPropertyValueAsString(t *testing.T) {
 func TestFillUserAgentUserProperties(t *testing.T) {
 	userProperties := make(U.PropertiesMap, 0)
 	userAgent := "Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2272.96 Mobile Safari/537.36 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
-	U.FillUserAgentUserProperties(&userProperties, userAgent)
+	SDK.FillUserAgentUserProperties(&userProperties, userAgent)
 	assert.NotNil(t, userProperties[U.UP_USER_AGENT])
 	assert.Equal(t, userAgent, userProperties[U.UP_USER_AGENT])
 	assert.NotNil(t, userProperties[U.UP_BROWSER])
 	assert.Equal(t, "Bot", userProperties[U.UP_BROWSER])
+
+	newUserProperties := make(U.PropertiesMap, 0)
+	userAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 12_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+	SDK.FillUserAgentUserProperties(&newUserProperties, userAgent)
+	assert.NotNil(t, newUserProperties[U.UP_DEVICE_BRAND])
+	assert.NotNil(t, newUserProperties[U.UP_DEVICE_MODEL])
+	assert.NotNil(t, newUserProperties[U.UP_DEVICE_TYPE])
+	assert.NotEqual(t, "Bot", newUserProperties[U.UP_BROWSER])
 }
 
 func TestFillFirstEventUserProperties(t *testing.T) {

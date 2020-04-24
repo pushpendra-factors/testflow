@@ -345,7 +345,7 @@ func SDKErrorHandler(c *gin.Context) {
 	}
 
 	properties := U.PropertiesMap{}
-	U.FillUserAgentUserProperties(&properties, c.Request.UserAgent())
+	SDK.FillUserAgentUserProperties(&properties, c.Request.UserAgent())
 
 	// Error logged for adding it to error email.
 	log.WithFields(log.Fields{"domain": request.Domain, "error": request.Error, "url": request.URL,

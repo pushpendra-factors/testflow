@@ -26,6 +26,8 @@ func main() {
 	geoLocFilePath := flag.String("geo_loc_path",
 		"/usr/local/var/factors/geolocation_data/GeoLite2-City.mmdb", "")
 
+	deviceDetectorPath := flag.String("device_detector_path", "/usr/local/var/factors/devicedetector_data/regexes", "")
+
 	redisHost := flag.String("redis_host", "localhost", "")
 	redisPort := flag.Int("redis_port", 6379, "")
 
@@ -57,6 +59,7 @@ func main() {
 			Password: *dbPass,
 		},
 		GeolocationFile:                  *geoLocFilePath,
+		DeviceDetectorPath:               *deviceDetectorPath,
 		RedisHost:                        *redisHost,
 		RedisPort:                        *redisPort,
 		QueueRedisHost:                   *queueRedisHost,
