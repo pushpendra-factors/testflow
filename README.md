@@ -1,6 +1,6 @@
 # Development Setup (Mac)
 
-## Golang (Version 1.11.x)
+## Golang (Version 1.14.x)
 https://golang.org/doc/install - go for default installation. Not custom installation.
 
 * Clone the repository using personal access token 
