@@ -141,12 +141,36 @@
   version = "v1.1.1"
 
 [[projects]]
+  digest = "1:26d73f0911e537e89d04011f7a65a5cd2d28113d551d4366480b4706b2833e3a"
+  name = "github.com/dlclark/regexp2"
+  packages = [
+    ".",
+    "syntax",
+  ]
+  pruneopts = "UT"
+  revision = "92c702aa5812963ef9193a9624191932d44073d7"
+  version = "v1.2.0"
+
+[[projects]]
   branch = "master"
   digest = "1:09caacaac48b388502b23d8afbc58003d0e3ec8d4faf78a866d4cde554d946f7"
   name = "github.com/dustin/go-broadcast"
   packages = ["."]
   pruneopts = "UT"
   revision = "f664265f5a662fb4d1df7f3533b1e8d0e0277120"
+
+[[projects]]
+  branch = "master"
+  digest = "1:1f53173456a9c93a93e778a64cc40bdc84339839b2007d2d51c7f81b5141567b"
+  name = "github.com/gamebtc/devicedetector"
+  packages = [
+    ".",
+    "parser",
+    "parser/client",
+    "parser/device",
+  ]
+  pruneopts = "UT"
+  revision = "2b1e13468d7979c6cf5c05e3a9d86aec663a4fba"
 
 [[projects]]
   digest = "1:2b59aca2665ff804f6606c8829eaee133ddd3aefbc841014660d961b0034f888"
@@ -452,6 +476,14 @@
   pruneopts = "UT"
   revision = "6ca4dbf54d38eea1a992b3c722a76a5d1c4cb25c"
   version = "v0.0.4"
+
+[[projects]]
+  branch = "master"
+  digest = "1:0d6403afd40e1e340994153967ec5335a9f8398869d1f15c98b4cfa40f362243"
+  name = "github.com/mcuadros/go-version"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "035f6764e8d2f953ff45797c22f29d20dd99c73b"
 
 [[projects]]
   branch = "master"
@@ -925,6 +957,7 @@
     "github.com/bradfitz/gomemcache/memcache",
     "github.com/coreos/etcd/etcdserver/api/v3rpc/rpctypes",
     "github.com/coreos/etcd/mvcc/mvccpb",
+    "github.com/gamebtc/devicedetector",
     "github.com/gin-contrib/cors",
     "github.com/gin-gonic/gin",
     "github.com/go-redis/redis",
