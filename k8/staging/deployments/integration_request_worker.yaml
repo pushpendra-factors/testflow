@@ -99,7 +99,28 @@ spec:
         - /workdir/GeoLite2-City.mmdb
         volumeMounts:
         - name: workdir
-          mountPath: "/workdir"    
+          mountPath: "/workdir"
+      - name: fetch-devicedetector-folder
+        image: google/cloud-sdk:229.0.0-alpine
+        command:
+        - gsutil
+        - cp -R
+        - gs://factors-staging/regexes
+        - /workdir/regexes
+        volumeMounts:
+        - name: workdir
+          mountPath: "/workdir"
+      - name: fetch-device-detector-data
+        image: google/cloud-sdk:229.0.0-alpine
+        command:
+        - gsutil 
+        - rsync 
+        - -r 
+        - gs://factors-staging/device_detector_regexs
+        - /workdir
+        volumeMounts:
+        - name: workdir
+          mountPath: "/workdir" 
       volumes:
       - name: workdir
         emptyDir: {}

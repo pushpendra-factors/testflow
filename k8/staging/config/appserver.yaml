@@ -8,3 +8,4 @@ metadata:
 data:
   API_HTTP_PORT: "8080"
   GEO_LOC_FILE_PATH: "/usr/local/var/factors/config/GeoLite2-City.mmdb"
+  DEVICE_DETECTOR_REGEX_PATH: "/usr/local/var/factors/config"
