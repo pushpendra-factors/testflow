@@ -5,11 +5,13 @@ import factors from "./factorsReducer";
 import projects from "./projectsReducer";
 import agents from "./agentsReducer";
 import reports from "./reportsReducer";
+import query from "./queryReducer";
 
 export default combineReducers({
   dashboards,
   projects,
   factors,
   agents,
-  reports
+  reports,
+  query
 })

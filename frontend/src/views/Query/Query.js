@@ -22,6 +22,9 @@ import { makeSelectOpts } from '../../util';
 // Channel query is a different kind of component linked to Query.
 import ChannelQuery from '../ChannelQuery/ChannelQuery';
 
+import AttributionQuery from '../AttributionQuery/AttributionQuery'
+
+
 import { PRESENTATION_BAR, PRESENTATION_LINE, PRESENTATION_TABLE, 
   PRESENTATION_CARD, PRESENTATION_FUNNEL, PROPERTY_TYPE_EVENT,
   getDateRangeFromStoredDateRange, PROPERTY_LOGICAL_OP_OPTS,
@@ -58,10 +61,12 @@ const LABEL_STYLE = { marginRight: '10px', fontWeight: '600', color: '#777' };
 const QUERY_CLASS_INSIGHTS = 'insights';
 const QUERY_CLASS_FUNNEL = 'funnel';
 const QUERY_CLASS_CHANNEL = 'channel'
+const QUERY_CLASS_ATTRIBUTION = 'attribution'
 const QUERY_CLASS_OPTS = [
   { value: QUERY_CLASS_INSIGHTS, label: 'Insights' },
   { value: QUERY_CLASS_FUNNEL, label: 'Funnel' },
-  { value: QUERY_CLASS_CHANNEL, label: 'Channel' }
+  { value: QUERY_CLASS_CHANNEL, label: 'Channel' },
+  { value: QUERY_CLASS_ATTRIBUTION, label: 'attribution'}
 ];
 
 const TYPE_EVENT_OCCURRENCE = 'events_occurrence';
@@ -1033,6 +1038,15 @@ class Query extends Component {
     return style; 
   }
 
+  //only enabled for projectId 2
+  shouldShow = () =>{
+    if (this.props.currentProjectId==2){
+      return true;
+    }
+
+    return false;
+  }
+
   renderInterfaceSelector() {
     return (
       <Row style={{ marginBottom: '16px' }}>
@@ -1052,6 +1066,11 @@ class Query extends Component {
               style={this.getInterfaceSelectorStyle(QUERY_CLASS_CHANNEL)}>
               <img src={channelSVG} style={{ height: '26px' }} /> 
               <span style={{ marginLeft: '5px' }} className='fapp-text'> Channels </span> 
+            </div>
+            <div hidden={!this.shouldShow()} onClick={() => this.handleClassChange({ value: QUERY_CLASS_ATTRIBUTION })}
+              style={this.getInterfaceSelectorStyle(QUERY_CLASS_ATTRIBUTION)}>
+              <img style={{ height: '26px' }} /> 
+              <span style={{ marginLeft: '5px' }} className='fapp-text'> Attribution </span> 
             </div>
           </div>
         </Col>
@@ -1169,6 +1188,10 @@ class Query extends Component {
     return <ChannelQuery />;
   }
 
+  renderAttributionInterface = () =>{ 
+    return <AttributionQuery/>
+ }
+
   render() {
     if (!this.isLoaded()) return <Loading />;
     var renderQueryInterface = this.renderInsightsQueryInterface;
@@ -1179,6 +1202,10 @@ class Query extends Component {
 
     if (this.state.class.value == QUERY_CLASS_CHANNEL) {
       renderQueryInterface = this.renderChannelReportsInterface;
+    }
+
+    if (this.state.class.value == QUERY_CLASS_ATTRIBUTION){
+      renderQueryInterface = this.renderAttributionInterface;
     }
 
     console.debug('Query State : ', this.state);

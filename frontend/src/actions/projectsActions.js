@@ -375,6 +375,30 @@ export function runDashboardQuery(projectId, dashboard_id, dashboard_unit_id, qu
   return post(null, url , {query: query});
 }
 
+
+export function runDummyQuery(projectId, dummyQuery, resultgenerator){
+  return function(dispatch){
+    return new Promise((resolve, reject)=>{
+      resultgenerator(projectId, dummyQuery)
+      .then((r)=> {
+          if (!r.ok) {
+              this.setState({ topError: 'Failed to run query.' });
+              dispatch({type: "FETCH_DUMMY_QUERY_REJECTED", payload: {error: "Failed to run query"} });
+              reject("failed to run query");
+            }
+
+            dispatch({type: "FETCH_DUMMY_QUERY_FULFILLED", payload: r.data });
+            resolve(r)
+      })
+      .catch(err =>{
+          console.log("error occured while running query: ", err);
+          dispatch({type: "FETCH_DUMMY_QUERY_REJECTED", payload: { error:error }});
+          reject(err)
+      })
+    })
+  }
+}
+
 export function fetchProjectAgents(projectId){
   return function(dispatch){
     return get(dispatch, host + "projects/" + projectId + "/agents")
