@@ -31,6 +31,7 @@ STATUS_SKIPPED = "skipped"
 # sync for similar requests.
 # customer_acc_id:refresh_token -> user_permission_denied.
 permission_error_cache = {}
+request_stat = {}
 
 class OAuthManager():
     _client_id = None
@@ -129,7 +130,7 @@ def get_customer_account_properties(adwords_client, customer_account_id, timestm
         log.error("Failed to get customer account properties: %s", str(e))
         return [properties]
 
-    return [properties]
+    return [properties], 1
 
 
 def get_campaigns(adwords_client, timestamp):
@@ -154,6 +155,7 @@ def get_campaigns(adwords_client, timestamp):
 
     more_pages = True
     rows = []
+    requests = 0
     while more_pages:
         page = campaign_service.get(selector)
 
@@ -171,8 +173,9 @@ def get_campaigns(adwords_client, timestamp):
         offset += PAGE_SIZE
         selector['paging']['startIndex'] = str(offset)
         more_pages = offset < int(page['totalNumEntries'])
+        requests = requests + 1
 
-    return rows
+    return rows, requests
 
 def get_ads(adwords_client, timestamp):
     if adwords_client == None:
@@ -193,6 +196,7 @@ def get_ads(adwords_client, timestamp):
 
     more_pages = True
     rows = []
+    requests = 0
     while more_pages:
         page = ad_group_ad_service.get(selector)
 
@@ -217,8 +221,9 @@ def get_ads(adwords_client, timestamp):
         offset += PAGE_SIZE
         selector['paging']['startIndex'] = str(offset)
         more_pages = offset < int(page['totalNumEntries'])
+        requests = requests + 1
 
-    return rows
+    return rows, requests
 
 
 def get_ad_groups(adwords_client, timestamp):
@@ -241,6 +246,7 @@ def get_ad_groups(adwords_client, timestamp):
 
     more_pages = True
     rows = []
+    requests = 0
     while more_pages:
         page = ad_group_service.get(selector)
 
@@ -258,8 +264,9 @@ def get_ad_groups(adwords_client, timestamp):
         offset += PAGE_SIZE
         selector['paging']['startIndex'] = str(offset)
         more_pages = offset < int(page['totalNumEntries'])
+        requests = requests + 1
 
-    return rows
+    return rows, requests
 
 
 def get_click_performance_report(adwords_client, timestamp):
@@ -290,7 +297,7 @@ def get_click_performance_report(adwords_client, timestamp):
         skip_column_header=True, skip_report_summary=True)
 
     lines = report.split('\n')
-    return csv_to_dict_list(query_fields, lines)
+    return csv_to_dict_list(query_fields, lines), 1
 
 
 
@@ -324,10 +331,10 @@ def get_campaign_performance_report(adwords_client, timestamp):
         .During(during).Build())
 
     report = downloader.DownloadReportAsStringWithAwql(report_query, 'CSV', 
-        skip_report_header=True, skip_column_header=True, skip_report_summary=True) 
-
+        skip_report_header=True, skip_column_header=True, skip_report_summary=True)
+    
     lines = report.split('\n')
-    return csv_to_dict_list(query_fields, lines)
+    return csv_to_dict_list(query_fields, lines), 1
 
 def get_ad_performance_report(adwords_client, timestamp):
     if adwords_client == None:
@@ -360,10 +367,10 @@ def get_ad_performance_report(adwords_client, timestamp):
         .During(during).Build())
 
     report = downloader.DownloadReportAsStringWithAwql(report_query, 'CSV', 
-        skip_report_header=True, skip_column_header=True, skip_report_summary=True) 
-
+        skip_report_header=True, skip_column_header=True, skip_report_summary=True)
+    
     lines = report.split('\n')
-    return csv_to_dict_list(query_fields, lines)
+    return csv_to_dict_list(query_fields, lines), 1
 
 
 def get_search_performance_report(adwords_client, timestamp):
@@ -400,7 +407,7 @@ def get_search_performance_report(adwords_client, timestamp):
         skip_column_header=True, skip_report_summary=True)
 
     lines = report.split('\n')
-    return csv_to_dict_list(query_fields, lines)
+    return csv_to_dict_list(query_fields, lines), 1
 
 
 def get_keywords_performance_report(adwords_client, timestamp):
@@ -434,7 +441,7 @@ def get_keywords_performance_report(adwords_client, timestamp):
         skip_column_header=True, skip_report_summary=True)
 
     lines = report.split('\n')
-    return csv_to_dict_list(query_fields, lines)
+    return csv_to_dict_list(query_fields, lines), 1
 
 
 def add_adwords_document(project_id, customer_acc_id, doc, doc_type, timestamp):    
@@ -520,6 +527,30 @@ def is_today(timestamp):
     todays_timestamp = int(time.strftime('%Y%m%d'))
     return timestamp == todays_timestamp
 
+def track_request_stats(req_stat_map, project_id, doc_type, count):
+    project_key = 'projects'
+    if req_stat_map.get(project_key) == None:
+        req_stat_map[project_key] = {}
+
+    if req_stat_map[project_key].get(project_id) == None:
+        req_stat_map[project_key][project_id] = {}
+
+    if req_stat_map[project_key][project_id].get(doc_type) == None:
+        req_stat_map[project_key][project_id][doc_type] = 0
+
+    # project level count.
+    req_stat_map[project_key][project_id][doc_type] += count
+
+    total_key = 'total_by_type'
+    if req_stat_map.get(total_key) == None:
+        req_stat_map[total_key] = {}
+
+    if req_stat_map[total_key].get(doc_type) == None:
+        req_stat_map[total_key][doc_type] = 0
+
+    # total count.
+    req_stat_map[total_key][doc_type] += count
+
 def sync(env, dry, skip_today, next_info):    
     project_id = next_info.get("project_id")
     customer_acc_id = next_info.get("customer_acc_id")
@@ -565,35 +596,42 @@ def sync(env, dry, skip_today, next_info):
         str(project_id), customer_acc_id, doc_type, str(timestamp))
 
     docs = []
+    req_count = 0
     try:
         if doc_type == "customer_account_properties":
-            docs = get_customer_account_properties(adwords_client, customer_acc_id, timestamp)
+            docs, req_count = get_customer_account_properties(adwords_client, customer_acc_id, timestamp)
             
         elif doc_type == "campaigns":
-            docs = get_campaigns(adwords_client, timestamp)
+            docs, req_count = get_campaigns(adwords_client, timestamp)
 
         elif doc_type == "ads":
-            docs = get_ads(adwords_client, timestamp)
+            docs, req_count = get_ads(adwords_client, timestamp)
 
         elif doc_type == "ad_groups":
-            docs = get_ad_groups(adwords_client, timestamp)
+            docs, req_count = get_ad_groups(adwords_client, timestamp)
 
         elif doc_type == "click_performance_report":
-            docs = get_click_performance_report(adwords_client, timestamp)
+            docs, req_count = get_click_performance_report(adwords_client, timestamp)
 
         elif doc_type == "campaign_performance_report":
-            docs = get_campaign_performance_report(adwords_client, timestamp)
+            docs, req_count = get_campaign_performance_report(adwords_client, timestamp)
         
         elif doc_type == "ad_performance_report":
-            docs = get_ad_performance_report(adwords_client, timestamp)
+            docs, req_count = get_ad_performance_report(adwords_client, timestamp)
 
         elif doc_type == "search_performance_report":
-            docs = get_search_performance_report(adwords_client, timestamp)
+            docs, req_count = get_search_performance_report(adwords_client, timestamp)
 
         elif doc_type == "keyword_performance_report":
-            docs = get_keywords_performance_report(adwords_client, timestamp)
+            docs, req_count = get_keywords_performance_report(adwords_client, timestamp)
 
-        else: log.error("Invalid document to sync from adwords: %s", str(doc_type))
+        else: 
+            log.error("Invalid document to sync from adwords: %s", str(doc_type))
+            status["status"] = STATUS_FAILED
+            status["message"] = "Invalid document type " + str(doc_type)
+            return 
+
+        track_request_stats(request_stat, project_id, doc_type, req_count)  
         
         if len(docs) > 0:
             if dry: log.error("Dry run. Skipped add adwords documents to db.")
@@ -620,8 +658,8 @@ def sync(env, dry, skip_today, next_info):
         if "RateExceededError.RATE_EXCEEDED" in str_exception:
             # Todo: Do not exit? Stop downloading reports. 
             # Continue downloading other objects.
-            notify(env, APP_NAME, { "status": STATUS_FAILED, "exception": str_exception })
-            sys.exit(1)
+            notify(env, APP_NAME, { "status": STATUS_FAILED, "exception": str_exception, "requests": request_stat })
+            sys.exit(0) # Use zero exit to avoid job retry.
 
         status["status"] = STATUS_FAILED
         status["message"] = "Failed with exception: " + str_exception
@@ -741,7 +779,8 @@ if __name__ == "__main__":
         "status": status_msg,
         "failures": next_sync_failures,
         "skipped": next_sync_skipped,
-        "success": { "projects": next_sync_success }
+        "success": { "projects": next_sync_success },
+        "requests": request_stat,
     }
     notify(options.env, APP_NAME, notify_payload)
     log.warning("Successfully synced. End of adwords sync job.")
