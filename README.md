@@ -466,3 +466,14 @@ factors.test.runPublicMethodsSuite()
 // Running specific test method
 factors.test.SuitePublicMethod.testIdentifyWithoutUserCookie()
 ```
+
+## AMP Page Setup
+
+* Bring up sdk-server. Refer to [SDK Server](#sdk-server).
+* Serve JS SDK webpack dev server.
+```
+cd $FACTORS_REPO/sdk/javascript
+npm run serve-dev
+```
+* On file `FACTORS_REPO/sdk/javascript/factors_amp_test.html`, replace `<PROJECT-TOKEN>` with your local project's token.
+* On browser, visit `http://localhost:8090/factors_amp_test.html` and check the browser console for request sent. 

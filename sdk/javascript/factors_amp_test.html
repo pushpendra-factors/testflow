@@ -1,0 +1,39 @@
+<!doctype html>
+<html ⚡ lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,minimum-scale=1,initial-scale=1">
+
+    <link rel="canonical" href="/factors_amp_test.html">
+    <link rel="shortcut icon" href="amp_favicon.png">
+
+    <title>AMP Sample</title>
+
+    <script async src="https://cdn.ampproject.org/v0.js"></script>
+    <script async custom-element="amp-analytics" src="https://cdn.ampproject.org/v0/amp-analytics-0.1.js"></script>
+
+    <amp-analytics>
+      <script type="application/json">
+        {
+          "requests": {
+            "pageview": "http://localhost:8085/sdk/amp/event/track?token=${token}&title=${title}&referrer=${documentReferrer}&screen_height=${screenHeight}&screen_width=${screenWidth}&page_load_time_in_ms=${pageLoadTime}&client_id=${clientId(_factorsai_amp_id)}&source_url=${sourceUrl}"
+          },
+          "vars": {
+            "token": "<PROJECT-TOKEN>"
+          },
+          "triggers": {
+            "trackPageview": {
+              "on": "visible",
+              "request": "pageview"
+            }
+          }
+        }
+      </script>
+    </amp-analytics>
+
+  </head>
+  <body style="text-align: center">
+    <h1>Factors AMP Page</h1>
+  </body>
+</html>
+
