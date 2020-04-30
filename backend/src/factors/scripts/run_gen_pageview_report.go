@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/jinzhu/gorm"
@@ -60,7 +61,7 @@ func getSessionEvents(
 	return sessionEvents, nil
 }
 
-func getAllEvents(db *gorm.DB, projectId uint64, startTime int64, endTime int64) (
+func getAllEvents(db *gorm.DB, projectId uint64, projectDomain string, startTime int64, endTime int64) (
 	map[string]uint, error) {
 	logctx := log.WithFields(log.Fields{"projectId": projectId})
 	eventsReport := make(map[string]uint)
@@ -95,6 +96,10 @@ func getAllEvents(db *gorm.DB, projectId uint64, startTime int64, endTime int64)
 		}
 
 		if eventName == U.EVENT_NAME_SESSION {
+			continue
+		}
+
+		if projectDomain != "" && !strings.Contains(eventName, projectDomain) {
 			continue
 		}
 
@@ -145,6 +150,7 @@ func main() {
 	dbPass := flag.String("db_pass", "@ut0me7a", "")
 	outputFileFullPathFlag := flag.String("o_file", "pageviews.csv", "")
 	projectIdFlag := flag.Uint64("project_id", 0, "Project Id.")
+	projectDomainFlag := flag.String("project_domain", "", "Domain of the project")
 
 	flag.Parse()
 
@@ -181,7 +187,8 @@ func main() {
 	if *outputFileFullPathFlag == "" {
 		log.Fatal("Invalid output file path.")
 	}
-	eventsReport, err := getAllEvents(db, *projectIdFlag, *startTimeFlag, *endTimeFlag)
+	eventsReport, err := getAllEvents(
+		db, *projectIdFlag, *projectDomainFlag, *startTimeFlag, *endTimeFlag)
 	if err != nil {
 		log.WithError(err).Error("failed to getAllEvents.")
 		return
