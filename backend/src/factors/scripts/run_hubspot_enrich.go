@@ -25,6 +25,12 @@ func main() {
 	redisHost := flag.String("redis_host", "localhost", "")
 	redisPort := flag.Int("redis_port", 6379, "")
 
+	awsRegion := flag.String("aws_region", "us-east-1", "")
+	awsAccessKeyId := flag.String("aws_key", "dummy", "")
+	awsSecretAccessKey := flag.String("aws_secret", "dummy", "")
+	factorsEmailSender := flag.String("email_sender", "support-dev@factors.ai", "")
+	errorReportingInterval := flag.Int("error_reporting_interval", 300, "")
+
 	flag.Parse()
 
 	if *env != "development" && *env != "staging" && *env != "production" {
@@ -44,8 +50,13 @@ func main() {
 			Name:     *dbName,
 			Password: *dbPass,
 		},
-		RedisHost: *redisHost,
-		RedisPort: *redisPort,
+		RedisHost:              *redisHost,
+		RedisPort:              *redisPort,
+		AWSKey:                 *awsAccessKeyId,
+		AWSSecret:              *awsSecretAccessKey,
+		AWSRegion:              *awsRegion,
+		EmailSender:            *factorsEmailSender,
+		ErrorReportingInterval: *errorReportingInterval,
 	}
 
 	C.InitConf(config.Env)
@@ -59,6 +70,8 @@ func main() {
 	defer db.Close()
 
 	C.InitRedis(config.RedisHost, config.RedisPort)
+	C.InitLogClient(config.Env, config.AppName, config.EmailSender, config.AWSKey,
+		config.AWSSecret, config.AWSRegion, config.ErrorReportingInterval)
 
 	hubspotEnabledProjectSettings, errCode := M.GetAllHubspotProjectSettings()
 	if errCode != http.StatusFound {

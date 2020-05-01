@@ -191,9 +191,8 @@ func initServices(config *Configuration) error {
 		return errors.Wrap(err, "Failed to initialize etcd")
 	}
 
-	InitMailClient(config.AWSKey, config.AWSSecret, config.AWSRegion)
-
-	initCollectorClient(config.Env, config.AppName, "team@factors.ai", config.EmailSender)
+	InitLogClient(config.Env, config.AppName, config.EmailSender, config.AWSKey,
+		config.AWSSecret, config.AWSRegion, config.ErrorReportingInterval)
 
 	initGeoLocationService(config.GeolocationFile)
 	initDeviceDetectorPath(config.DeviceDetectorPath)
@@ -371,6 +370,14 @@ func InitQueueClient(redisHost string, redisPort int) error {
 	return nil
 }
 
+func InitLogClient(env, appName, emailSender, awsKey, awsSecret,
+	awsRegion string, reportingInterval int) {
+
+	InitMailClient(awsKey, awsSecret, awsRegion)
+	initCollectorClient(env, appName, "team@factors.ai", emailSender, reportingInterval)
+	initLogging(services.ErrorCollector)
+}
+
 func InitMailClient(key, secret, region string) {
 	if services == nil {
 		services = &Services{}
@@ -389,11 +396,11 @@ func InitSenderEmail(senderEmail string) {
 	configuration.EmailSender = senderEmail
 }
 
-func initCollectorClient(env, appName, toMail, fromMail string) {
+func initCollectorClient(env, appName, toMail, fromMail string, reportingInterval int) {
 	if services == nil {
 		services = &Services{}
 	}
-	dur := time.Second * time.Duration(configuration.ErrorReportingInterval)
+	dur := time.Second * time.Duration(reportingInterval)
 	services.ErrorCollector = error_collector.New(services.Mailer, dur, env, appName, toMail, fromMail)
 }
 
@@ -431,8 +438,6 @@ func Init(config *Configuration) error {
 		return err
 	}
 
-	initLogging(services.ErrorCollector)
-
 	initiated = true
 	return nil
 }
@@ -449,10 +454,8 @@ func InitDataService(config *Configuration) error {
 		return err
 	}
 
-	// init error collector, error mailer, and log hook.
-	InitMailClient(config.AWSKey, config.AWSSecret, config.AWSRegion)
-	initCollectorClient(config.Env, config.AppName, "team@factors.ai", config.EmailSender) // inits error_collector.
-	initLogging(services.ErrorCollector)
+	InitLogClient(config.Env, config.AppName, config.EmailSender, config.AWSKey,
+		config.AWSSecret, config.AWSRegion, config.ErrorReportingInterval)
 
 	initiated = true
 	return nil
@@ -481,10 +484,8 @@ func InitSDKService(config *Configuration) error {
 		log.WithError(err).Fatal("Failed to initialize queue client on init sdk service.")
 	}
 
-	// init error collector, error mailer, and log hook.
-	InitMailClient(config.AWSKey, config.AWSSecret, config.AWSRegion)
-	initCollectorClient(config.Env, config.AppName, "team@factors.ai", config.EmailSender) // inits error_collector.
-	initLogging(services.ErrorCollector)
+	InitLogClient(config.Env, config.AppName, config.EmailSender, config.AWSKey,
+		config.AWSSecret, config.AWSRegion, config.ErrorReportingInterval)
 
 	initiated = true
 	return nil
@@ -512,10 +513,8 @@ func InitQueueWorker(config *Configuration) error {
 		log.WithError(err).Fatal("Failed to initalize queue client on init queue worker.")
 	}
 
-	// init error collector, error mailer, and log hook.
-	InitMailClient(config.AWSKey, config.AWSSecret, config.AWSRegion)
-	initCollectorClient(config.Env, config.AppName, "team@factors.ai", config.EmailSender) // inits error_collector.
-	initLogging(services.ErrorCollector)
+	InitLogClient(config.Env, config.AppName, config.EmailSender, config.AWSKey,
+		config.AWSSecret, config.AWSRegion, config.ErrorReportingInterval)
 
 	initiated = true
 	return nil
