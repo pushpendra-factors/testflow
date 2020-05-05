@@ -119,6 +119,17 @@ func getCustomerUserIdFromProperties(properties map[string]interface{}) string {
 		}
 	}
 
+	// identify using phone if exist on properties.
+	phoneInt, phoneExists := properties[getPropertyKeyByType(
+		M.HubspotDocumentTypeNameContact, "phone")]
+	if phoneExists || phoneInt != nil {
+		phone := U.GetPropertyValueAsString(phoneInt)
+		if phone != "" {
+			return phone
+		}
+	}
+
+	// other possible phone keys.
 	var phoneKey string
 	for key := range properties {
 		hasPhone := strings.Index(key, "phone")
@@ -127,12 +138,13 @@ func getCustomerUserIdFromProperties(properties map[string]interface{}) string {
 		}
 	}
 
-	userPhoneIdentified := false
-	phoneInt := properties[phoneKey]
-	if phoneInt != nil {
-		phone := U.GetPropertyValueAsString(phoneInt)
-		if phone != "" && !userPhoneIdentified {
-			return phone
+	if phoneKey != "" {
+		phoneInt = properties[phoneKey]
+		if phoneInt != nil {
+			phone := U.GetPropertyValueAsString(phoneInt)
+			if phone != "" {
+				return phone
+			}
 		}
 	}
 
