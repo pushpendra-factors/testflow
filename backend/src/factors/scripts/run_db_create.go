@@ -144,6 +144,13 @@ func main() {
 		log.Info("Created users table users_project_id_customer_user_id_idx index.")
 	}
 
+	// Index for user_property $hubspot_contact_lead_guid.
+	if err := db.Exec("CREATE INDEX user_property_hubspot_contact_lead_guid_indx ON user_properties USING gin ((properties->'$hubspot_contact_lead_guid'))").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("user_properties table user_property_hubspot_contact_lead_guid_indx index creation failed.")
+	} else {
+		log.Info("Created user_properties table user_property_hubspot_contact_lead_guid_indx index.")
+	}
+
 	// Create event_names table.
 	if err := db.CreateTable(&M.EventName{}).Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("event_names table creation failed.")

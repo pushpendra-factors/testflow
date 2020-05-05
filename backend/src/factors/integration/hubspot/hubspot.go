@@ -63,8 +63,6 @@ type Company struct {
 	Properties map[string]Property `json:"properties"`
 }
 
-const propertyNameLeadGUID = "lead_guid"
-
 var syncOrderByType = [...]int{
 	M.HubspotDocumentTypeContact,
 	M.HubspotDocumentTypeCompany,
@@ -163,8 +161,7 @@ func syncContact(projectId uint64, document *M.HubspotDocument) int {
 		return http.StatusInternalServerError
 	}
 
-	leadGuid, exists := properties[getPropertyKeyByType(
-		M.HubspotDocumentTypeNameContact, propertyNameLeadGUID)]
+	leadGuid, exists := properties[M.UserPropertyHubspotContactLeadGUID]
 	if !exists {
 		logCtx.Error("Missing lead_guid on hubspot contact properties. Sync failed.")
 		return http.StatusInternalServerError
@@ -178,7 +175,7 @@ func syncContact(projectId uint64, document *M.HubspotDocument) int {
 	}
 
 	logCtx = logCtx.WithField("action", document.Action).WithField(
-		propertyNameLeadGUID, leadGuid)
+		M.UserPropertyHubspotContactLeadGUID, leadGuid)
 
 	var eventId, userId string
 	if document.Action == M.HubspotDocumentActionCreated {
@@ -195,8 +192,8 @@ func syncContact(projectId uint64, document *M.HubspotDocument) int {
 	} else if document.Action == M.HubspotDocumentActionUpdated {
 		trackPayload.Name = U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED
 
-		userPropertiesRecords, errCode := M.GetUserPropertiesRecordsByProperty(projectId,
-			getPropertyKeyByType(M.HubspotDocumentTypeNameContact, propertyNameLeadGUID), leadGuid)
+		userPropertiesRecords, errCode := M.GetUserPropertiesRecordsByProperty(
+			projectId, M.UserPropertyHubspotContactLeadGUID, leadGuid)
 		if errCode != http.StatusFound {
 			logCtx.WithField("err_code", errCode).Error(
 				"Failed to get user with given lead_guid. Failed to track hubspot contact updated event.")
@@ -493,8 +490,13 @@ func syncDeal(projectId uint64, document *M.HubspotDocument) int {
 }
 
 func syncAll(projectId uint64, documents []M.HubspotDocument) int {
+	logCtx := log.WithField("project_id", projectId)
+
 	var seenFailures bool
 	for i := range documents {
+		logCtx = logCtx.WithField("document", documents[i])
+		startTime := time.Now().Unix()
+
 		switch documents[i].Type {
 		case M.HubspotDocumentTypeContact:
 			errCode := syncContact(projectId, &documents[i])
@@ -512,6 +514,9 @@ func syncAll(projectId uint64, documents []M.HubspotDocument) int {
 				seenFailures = true
 			}
 		}
+
+		logCtx.WithField("time_taken_in_secs", time.Now().Unix()-startTime).Debugf(
+			"Sync %s completed.", documents[i].TypeAlias)
 	}
 
 	if seenFailures {

@@ -33,6 +33,9 @@ type UserProperties struct {
 	UpdatedAt        time.Time      `json:"updated_at"`
 }
 
+// indexed hubspot user property.
+const UserPropertyHubspotContactLeadGUID = "$hubspot_contact_lead_guid"
+
 func createUserPropertiesIfChanged(projectId uint64, userId string,
 	currentPropertiesId string, newProperties *postgres.Jsonb, timestamp int64) (string, int) {
 
@@ -333,11 +336,16 @@ func UpdatePropertyOnAllUserPropertyRecords(projectId uint64, userId string,
 func GetUserPropertiesRecordsByProperty(projectId uint64,
 	key string, value interface{}) ([]UserProperties, int) {
 
+	logCtx := log.WithField("project_id", projectId).WithField(
+		"key", key).WithField("value", value)
+
 	db := C.GetServices().Db
 	var userProperties []UserProperties
+	// $$$ is a gorm alias for ? jsonb operator.
 	err := db.Order("created_at").Where("project_id=?", projectId).Where(
-		"properties->>? = ?", key, value).Find(&userProperties).Error
+		"properties->? $$$ ?", key, value).Find(&userProperties).Error
 	if err != nil {
+		logCtx.WithError(err).Error("Failed to get user properties by key.")
 		return nil, http.StatusInternalServerError
 	}
 
