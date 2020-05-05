@@ -553,7 +553,7 @@ func GetHubspotDocumentsByTypeForSync(projectId uint64, typ int) ([]HubspotDocum
 	var documents []HubspotDocument
 
 	db := C.GetServices().Db
-	err := db.Order("timestamp ASC").Where("project_id=? AND type=? AND synced=false",
+	err := db.Order("timestamp, created_at ASC").Where("project_id=? AND type=? AND synced=false",
 		projectId, typ).Find(&documents).Error
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get hubspot documents by type.")
