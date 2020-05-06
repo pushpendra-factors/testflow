@@ -283,6 +283,7 @@ func Track(projectId uint64, request *TrackPayload,
 	// On 'auto' true event_name is the eventURL(e.g: factors.ai/u1/u2/u3) for JS_.
 	if request.Auto {
 		// Pass eventURL through filter and get corresponding event_name mapped by user.
+		request.Name = strings.TrimSuffix(request.Name, "/")
 		eventName, eventNameErrCode = M.FilterEventNameByEventURL(projectId, request.Name)
 		if eventName != nil && eventNameErrCode == http.StatusFound {
 			err := M.FillEventPropertiesByFilterExpr(&request.EventProperties, eventName.FilterExpr, request.Name)
@@ -297,6 +298,7 @@ func Track(projectId uint64, request *TrackPayload,
 				&M.EventName{Name: request.Name, ProjectId: projectId})
 		}
 	} else {
+		request.Name = strings.TrimSuffix(request.Name, "/")
 		eventName, eventNameErrCode = M.CreateOrGetUserCreatedEventName(
 			&M.EventName{Name: request.Name, ProjectId: projectId})
 	}

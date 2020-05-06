@@ -103,7 +103,7 @@ func TestSDKTrackHandler(t *testing.T) {
 	assert.Equal(t, http.StatusNotAcceptable, w.Code)
 
 	// Test auto tracked event.
-	rEventName := U.RandomLowerAphaNumString(10)
+	rEventName := "example.com/"
 	w = ServePostRequestWithHeaders(r, uri,
 		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"name": "Jhon"}}`, user.ID, rEventName)),
 		map[string]string{
@@ -117,6 +117,9 @@ func TestSDKTrackHandler(t *testing.T) {
 	rEvent, errCode := M.GetEvent(project.ID, user.ID, responseMap["event_id"].(string))
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, rEvent)
+	retEventName, err := M.GetEventNameFromEventNameId(rEvent.EventNameId, project.ID)
+	assert.Nil(t, err)
+	assert.Equal(t, retEventName.Name, "example.com")
 	eventPropertiesBytes, err := rEvent.Properties.Value()
 	assert.Nil(t, err)
 	var eventProperties map[string]interface{}
