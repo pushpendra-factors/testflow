@@ -298,7 +298,6 @@ func Track(projectId uint64, request *TrackPayload,
 				&M.EventName{Name: request.Name, ProjectId: projectId})
 		}
 	} else {
-		request.Name = strings.TrimSuffix(request.Name, "/")
 		eventName, eventNameErrCode = M.CreateOrGetUserCreatedEventName(
 			&M.EventName{Name: request.Name, ProjectId: projectId})
 	}

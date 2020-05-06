@@ -75,11 +75,17 @@ func GetPathAppendableURLHash(urlHash string) string {
 
 func GetURLPathWithHash(url *url.URL) string {
 	path := url.Path
+
 	if url.Fragment != "" {
 		path = path + "#" + url.Fragment
 	}
 
-	return CleanURI(path)
+	path = CleanURI(path)
+	if path == "" {
+		path = fmt.Sprintf("%s/", path)
+	}
+
+	return path
 }
 
 func GetQueryParamsFromURLFragment(fragment string) map[string]interface{} {

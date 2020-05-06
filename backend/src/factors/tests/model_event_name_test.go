@@ -185,11 +185,17 @@ func setupProjectAndFilters(t *testing.T, filters map[string]string) *M.Project 
 }
 
 func TestDBFilterEventNameByEventURL(t *testing.T) {
-	filters := map[string]string{"a_u1_u2": "a.com/u1/u2", "u3_v1": "a.com/u3/:v1", "b_u1_u2": "b.com/u1/u2"}
+	filters := map[string]string{"a_u1_u2": "a.com/u1/u2", "u3_v1": "a.com/u3/:v1", "b_u1_u2": "b.com/u1/u2", "only_root": "a.com/"}
 	project := setupProjectAndFilters(t, filters)
 
-	// Match filter - exact.
-	men, errCode := M.FilterEventNameByEventURL(project.ID, "a.com/u1/u2")
+	// domain only event url should match with root "/" expression.
+	onlyDomainEventURL, errCode := M.FilterEventNameByEventURL(project.ID, "a.com")
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotNil(t, onlyDomainEventURL)
+	assert.Equal(t, filters["only_root"], onlyDomainEventURL.FilterExpr)
+
+	// Match filter - exact and additional / at the end.
+	men, errCode := M.FilterEventNameByEventURL(project.ID, "a.com/u1/u2/")
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, men)
 	assert.Equal(t, filters["a_u1_u2"], men.FilterExpr)
