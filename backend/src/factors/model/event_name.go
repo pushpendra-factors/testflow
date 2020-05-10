@@ -195,27 +195,21 @@ func GetEventNames(projectId uint64) ([]EventName, int) {
 	return eventNames, http.StatusFound
 }
 
-func getOccurredEventNamesOrderedByOccurrenceWithLimit(projectId uint64, requestType string, limit int) ([]EventName, int64, error) {
-	eventNames, timestamp, err := GetCacheEventNamesOrderedByOccurrence(projectId)
-	if err == nil || requestType == EVENT_NAME_REQUEST_TYPE_APPROX {
-		return eventNames, timestamp, nil
-	}
-
-	eventsAfterTimestamp := U.UnixTimeBeforeAWeek()
-
-	logCtx := log.WithFields(log.Fields{"projectId": projectId, "eventsAfterTimestamp": eventsAfterTimestamp})
-	if err != redis.ErrNil {
-		logCtx.WithError(err).Error("Failed to get EventNamesOrderedByOccurrence from cache.")
-	}
-
+func GetOrderedEventNamesFromDb(
+	projectId uint64, startTimestamp int64, endTimestamp int64, limit int) ([]EventName, error) {
 	db := C.GetServices().Db
 	hasLimit := limit > 0
+	eventNames := make([]EventName, 0)
+
+	logCtx := log.WithFields(log.Fields{"projectId": projectId,
+		"startTimestamp": startTimestamp, "endTimestamp": endTimestamp})
 
 	// Gets occurrence count of event from events table for a
 	// limited time window and upto 100k and order by count
 	// then join with event names.
 	queryStr := "SELECT * FROM (SELECT event_name_id, COUNT(*) FROM" +
-		" " + "(SELECT event_name_id FROM events WHERE project_id=? AND timestamp > ? ORDER BY timestamp DESC LIMIT ?) AS sample_events" +
+		" " + "(SELECT event_name_id FROM events WHERE project_id=? AND timestamp > ?" +
+		" " + "AND timestamp <= ? ORDER BY timestamp DESC LIMIT ?) AS sample_events" +
 		" " + "GROUP BY event_name_id ORDER BY count DESC) AS event_occurrence" +
 		" " + "LEFT JOIN event_names ON event_occurrence.event_name_id=event_names.id "
 
@@ -226,24 +220,48 @@ func getOccurredEventNamesOrderedByOccurrenceWithLimit(projectId uint64, request
 	const noOfEventsToLoadForOccurrenceSort = 100000
 
 	params := make([]interface{}, 0)
-	params = append(params, projectId, eventsAfterTimestamp, noOfEventsToLoadForOccurrenceSort)
+	params = append(params, projectId, startTimestamp,
+		endTimestamp, noOfEventsToLoadForOccurrenceSort)
 	if hasLimit {
 		params = append(params, limit)
 	}
 
 	rows, err := db.Raw(queryStr, params...).Rows()
 	if err != nil {
-		logCtx.WithError(err).Error("Failed to execute query of get event names ordered by occurrence.")
-		return eventNames, 0, err
+		logCtx.WithError(err).Error(
+			"Failed to execute query of get event names ordered by occurrence.")
+		return eventNames, err
 	}
 
 	for rows.Next() {
 		var eventName EventName
 		if err := db.ScanRows(rows, &eventName); err != nil {
 			logCtx.WithError(err).Error("Failed scanning rows on get event names ordered by occurrence.")
-			return eventNames, 0, err
+			return eventNames, err
 		}
 		eventNames = append(eventNames, eventName)
+	}
+	return eventNames, nil
+}
+
+func getOccurredEventNamesOrderedByOccurrenceWithLimit(projectId uint64, requestType string, limit int) ([]EventName, int64, error) {
+	eventNames, timestamp, err := GetCacheEventNamesOrderedByOccurrence(projectId)
+	if err == nil || requestType == EVENT_NAME_REQUEST_TYPE_APPROX {
+		return eventNames, timestamp, nil
+	}
+
+	startTimestamp := U.UnixTimeBeforeAWeek()
+	logCtx := log.WithFields(log.Fields{"projectId": projectId, "eventsAfterTimestamp": startTimestamp})
+	if err != redis.ErrNil {
+		logCtx.WithError(err).Error("Failed to get EventNamesOrderedByOccurrence from cache.")
+	}
+
+	endTimestamp := time.Now().UTC().Unix()
+
+	eventNames, err = GetOrderedEventNamesFromDb(
+		projectId, startTimestamp, endTimestamp, limit)
+	if err != nil {
+		return eventNames, 0, err
 	}
 
 	timestamp, err = setCacheEventNamesOrderedByOccurrence(projectId, eventNames)

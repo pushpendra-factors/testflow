@@ -32,6 +32,7 @@ import (
 // The amount of data and the time computed to generate this data is bounded
 // by these constants.
 const max_SEGMENTS = 25000
+const max_EVENT_NAMES = 250
 const top_K = 5
 const max_PATTERN_LENGTH = 4
 const max_CHUNK_SIZE_IN_BYTES int64 = 200 * 1000 * 1000 // 200MB
@@ -400,11 +401,13 @@ func mineAndWriteLenTwoPatterns(
 }
 
 func mineAndWritePatterns(projectId uint64, filepath string,
-	userAndEventsInfo *P.UserAndEventsInfo, numRoutines int, chunkDir string,
+	userAndEventsInfo *P.UserAndEventsInfo, startTime int64,
+	endTime int64, numRoutines int, chunkDir string,
 	maxModelSize int64) error {
 	// Length One Patterns.
-	eventNames, _, errCode := M.GetEventNamesOrderedByOccurrence(projectId, M.EVENT_NAME_REQUEST_TYPE_EXACT)
-	if errCode != http.StatusFound {
+	eventNames, err := M.GetOrderedEventNamesFromDb(
+		projectId, startTime, endTime, max_EVENT_NAMES)
+	if err != nil {
 		return fmt.Errorf("DB read of event names failed")
 	}
 	var filteredPatterns []*P.Pattern
@@ -809,7 +812,7 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 	mineLog.WithFields(log.Fields{"projectId": projectId, "tmpEventsFilepath": tmpEventsFilepath,
 		"tmpChunksDir": tmpChunksDir, "routines": numRoutines}).Info("Mining patterns and writing it as chunks.")
 	err = mineAndWritePatterns(projectId, tmpEventsFilepath,
-		userAndEventsInfo, numRoutines, tmpChunksDir, maxModelSize)
+		userAndEventsInfo, startTime, endTime, numRoutines, tmpChunksDir, maxModelSize)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to mine patterns.")
 		return "", 0, err
