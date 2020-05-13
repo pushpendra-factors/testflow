@@ -1111,165 +1111,213 @@ func buildEventsOccurrenceSingleEventQuery(projectId uint64, q Query) (string, [
 	return qStmnt, qParams, nil
 }
 
+// builds group keys for event properties for given step (event_with_properties).
+func buildEventGroupKeyForStep(eventWithProperties *QueryEventWithProperties,
+	groupProps []QueryGroupByProperty) (string, []interface{}, string) {
+
+	eventGroupProps := filterGroupPropsByType(groupProps, PropertyEntityEvent)
+
+	eventGroupPropsByStep := make([]QueryGroupByProperty, 0, 0)
+	for i := range eventGroupProps {
+		if eventGroupProps[i].EventName == eventWithProperties.Name {
+			eventGroupPropsByStep = append(eventGroupPropsByStep, eventGroupProps[i])
+		}
+	}
+
+	return buildGroupKeys(eventGroupPropsByStep)
+}
+
+func buildNoneHandledGroupKeys(groupProps []QueryGroupByProperty) string {
+	groupKeys := ""
+
+	// Empty handling and null case handling on funnel join.
+	for i, v := range groupProps {
+		gKey := groupKeyByIndex(v.Index)
+		groupSelect := fmt.Sprintf("CASE WHEN %s IS NULL THEN '%s' WHEN %s = '' THEN '%s' ELSE %s END AS %s",
+			gKey, PropertyValueNone, gKey, PropertyValueNone, gKey, gKey)
+
+		groupKeys = appendStatement(groupKeys, groupSelect)
+		if i < len(groupProps)-1 {
+			groupKeys = groupKeys + ", "
+		}
+	}
+
+	return groupKeys
+}
+
 /*
 buildUniqueUsersFunnelQuery
 
 WITH
-	step1 AS (
-		SELECT DISTINCT ON(events.user_id) events.user_id as user_id, 1 as step1, events.timestamp as step1_timestamp,
-        events.properties->>'presentation' as group_key_1 from events where events.project_id = 1
-		and event_name_id IN (select id from event_names where project_id=1 and name = 'localhost:3000/#/core')
-		and timestamp between 1393632004 and 1560231260 order by events.user_id, events.timestamp ASC
-	),
-	step2 as (
-		SELECT DISTINCT ON(events.user_id) events.user_id as user_id, 1 as step2, events.timestamp as step2_timestamp,
-        events.properties->>'presentation' as group_key_1 from events
-		LEFT JOIN step1 on events.user_id=step1.user_id where events.project_id = 1
-		and event_name_id IN (select id from event_names where project_id=1 and name = 'run_query')
-		and timestamp between step1.step1_timestamp and 1560231260 order by events.user_id, events.timestamp ASC
-	),
-	step3 as (
-		SELECT DISTINCT ON(events.user_id) events.user_id as user_id, 1 as step3, events.timestamp as step3_timestamp,
-        events.properties->>'presentation' as group_key_1  from events
-		LEFT JOIN step2 on events.user_id=step2.user_id where events.project_id = 1
-		and event_name_id IN (select id from event_names where project_id=1 and name = 'localhost:3000/#/dashboard')
-		and timestamp between step2.step2_timestamp and 1560231260 order by events.user_id, events.timestamp ASC
-	),
-	funnel as (
-		SELECT DISTINCT ON(COALESCE(users.customer_user_id, step1.user_id))
-        COALESCE(users.customer_user_id, step1.user_id) AS real_user_id,
-        CASE WHEN user_properties.properties->>'$city' IS NULL THEN '$none'
-        WHEN user_properties.properties->>'$city' = '' THEN '$none'
-        ELSE user_properties.properties->>'$city' END AS group_key_0,
-        step1, step2, step3, step2.group_key_1 as group_key_1 from step1
-        LEFT JOIN users on step1.user_id=users.id
-        LEFT JOIN user_properties on users.properties_id=user_properties.id
-		LEFT JOIN step2 on step1.user_id=step2.user_id
-		LEFT JOIN step3 on step2.user_id=step3.user_id
-        -- ORDER BY real_user_id, step1, step2, step3 makes sure to count every step he did being anonymous, after COALESCE --
-        ORDER BY real_user_id, step1, step2, step3
-	)
-	SELECT '$no_group' as group_key_0, '$no_group' as group_key_1, SUM(step1) as step1,
-    SUM(step2) as step2, SUM(step3) as step3 from funnel
-	UNION ALL
-	SELECT * FROM (
-		SELECT group_key_0, group_key_1, SUM(step1) as step1, SUM(step2) as step2, SUM(step3) as step3 from funnel group by group_key_0, group_key_1 order by step1 desc limit 10
-	) AS group_funnel
+step_0_names AS (
+	SELECT id, project_id, name FROM event_names WHERE project_id='1' AND name='localhost:3000/#/core'
+),
+step_0 AS (
+	SELECT DISTINCT ON(events.user_id) events.user_id as user_id, events.timestamp,
+	CASE WHEN events.properties->>'$page_url' IS NULL THEN '$none' WHEN events.properties->>'$page_url' = ''
+	THEN '$none' ELSE events.properties->>'$page_url' END AS _group_key_2 FROM events
+	WHERE events.project_id='1' AND timestamp>='1586684533' AND timestamp<='1589276533' AND
+	events.event_name_id IN (SELECT id FROM step_0_names WHERE project_id='1' AND name='localhost:3000/#/core')
+	ORDER BY events.user_id, events.timestamp ASC
+),
+step_0_users AS (
+	SELECT DISTINCT ON(COALESCE(users.customer_user_id, step_0.user_id))
+	COALESCE(users.customer_user_id, step_0.user_id) as coal_user_id, users.id as user_id,
+	step_0.timestamp as step_0_timestamp, 1 as step_0, _group_key_2 FROM step_0
+	JOIN users ON step_0.user_id=users.id ORDER BY coal_user_id, step_0_timestamp ASC
+),
+
+step_1_names AS (
+	SELECT id, project_id, name FROM event_names WHERE project_id='1' AND name='run_query'
+),
+step_1 AS (
+	SELECT DISTINCT ON(events.user_id) events.user_id as user_id, events.timestamp,
+	CASE WHEN events.properties->>'$query_count' IS NULL THEN '$none' WHEN events.properties->>'$query_count' = ''
+	THEN '$none' ELSE events.properties->>'$query_count' END AS _group_key_0 FROM events
+	WHERE events.project_id='1' AND timestamp>='1586684533' AND timestamp<='1589276533' AND
+	events.event_name_id IN (SELECT id FROM step_1_names WHERE project_id='1' AND name='run_query')
+	ORDER BY events.user_id, events.timestamp ASC
+),
+step_1_users AS (
+	SELECT DISTINCT ON(COALESCE(users.customer_user_id, step_1.user_id))
+	COALESCE(users.customer_user_id, step_1.user_id) as coal_user_id, users.id as user_id,
+	step_1.timestamp as step_1_timestamp, 1 as step_1, _group_key_0
+	FROM step_1 JOIN users ON step_1.user_id=users.id ORDER BY coal_user_id, step_1_timestamp ASC
+),
+step_1_step_0_users AS (
+	SELECT step_0_users.coal_user_id, step_1_users.user_id, step_1, _group_key_0 FROM step_0_users
+	LEFT JOIN step_1_users ON step_0_users.coal_user_id = step_1_users.coal_user_id
+	WHERE step_1_timestamp >= step_0_timestamp
+),
+
+funnel AS (
+	SELECT step_0, step_1, CASE WHEN user_properties.properties->>'$session_spent_time' IS NULL
+	THEN '$none' WHEN user_properties.properties->>'$session_spent_time' = '' THEN '$none'
+	ELSE user_properties.properties->>'$session_spent_time' END AS _group_key_1, _group_key_0, _group_key_2
+	FROM step_0_users LEFT JOIN users on step_0_users.user_id=users.id
+	LEFT JOIN user_properties on users.properties_id=user_properties.id
+	LEFT JOIN step_1_step_0_users ON step_0_users.coal_user_id=step_1_step_0_users.coal_user_id
+)
+
+SELECT '$no_group' AS _group_key_0,'$no_group' AS _group_key_1,'$no_group' AS _group_key_2,
+SUM(step_0) AS step_0, SUM(step_1) AS step_1 FROM funnel
+UNION ALL
+SELECT * FROM (
+	SELECT _group_key_0, _group_key_1, _group_key_2, SUM(step_0) AS step_0, SUM(step_1) AS step_1
+	FROM funnel GROUP BY _group_key_0, _group_key_1, _group_key_2 ORDER BY step_0 DESC LIMIT 100
+) AS group_funnel
 */
 func buildUniqueUsersFunnelQuery(projectId uint64, q Query) (string, []interface{}, error) {
 	if len(q.EventsWithProperties) == 0 {
 		return "", nil, errors.New("invalid no.of events for funnel query")
 	}
 
+	funnelSteps := make([]string, 0, 0)
+
 	var qStmnt string
 	var qParams []interface{}
-
-	eventGroupProps := filterGroupPropsByType(q.GroupByProperties, PropertyEntityEvent)
-	egSelect, egParams, _ := buildGroupKeys(eventGroupProps)
-
-	var funnelSteps []string
 	for i := range q.EventsWithProperties {
 		var addParams []interface{}
 		stepName := stepNameByIndex(i)
-		// builds DISTINCT ON(events.user_id) events.user_id as user_id, 1 as step1, events.timestamp as step1_timestamp
-		addSelect := "DISTINCT ON(events.user_id) events.user_id as user_id, 1 as " + stepName + ", events.timestamp as " + fmt.Sprintf("%s_timestamp", stepName)
-		// adds event properties to select
-		addSelect = joinWithComma(addSelect, egSelect)
+
+		// Unique users from events filter.
+		addSelect := "DISTINCT ON(events.user_id) events.user_id as user_id, events.timestamp"
+		egSelect, egParams, egGroupKeys := buildEventGroupKeyForStep(
+			&q.EventsWithProperties[i], q.GroupByProperties)
+		if egSelect != "" {
+			addSelect = joinWithComma(addSelect, egSelect)
+		}
 		addParams = egParams
+		addFilterEventsWithPropsQuery(projectId, &qStmnt, &qParams, q.EventsWithProperties[i], q.From, q.To,
+			"", stepName, addSelect, addParams, "", "", "events.user_id, events.timestamp ASC")
 
-		var from int64
-		var fromStr string
-		// use actual from for first step,
-		// and min timestamp from prev step
-		// for next step's from.
+		// step_x_users - step with users joined for COALESCE user_id.
+		stepJoinUsersSelect := fmt.Sprintf("DISTINCT ON(COALESCE(users.customer_user_id, %s.user_id)) COALESCE(users.customer_user_id, %s.user_id) as coal_user_id, users.id as user_id, %s.timestamp as %s_timestamp, 1 as %s",
+			stepName, stepName, stepName, stepName, stepName)
+		if egGroupKeys != "" {
+			stepJoinUsersSelect = joinWithComma(stepJoinUsersSelect, egGroupKeys)
+		}
+		stepJoinUsersJoinAndOrder := fmt.Sprintf("JOIN users ON %s.user_id=users.id ORDER BY coal_user_id, %s_timestamp ASC", stepName, stepName)
+		stepJoinUsers := "SELECT" + " " + stepJoinUsersSelect + " " + "FROM" + " " + stepName + " " + stepJoinUsersJoinAndOrder
+		stepUsersName := stepName + "_users"
+		qStmnt = joinWithComma(qStmnt, as(stepUsersName, stepJoinUsers))
+
+		if len(q.EventsWithProperties) > 1 && i == 0 {
+			qStmnt = qStmnt + ", "
+		}
+
 		if i == 0 {
-			from = q.From
-		} else {
-			// builds "step_2.step_2_timestamp"
-			prevStepName := stepNameByIndex(i - 1)
-			fromStr = fmt.Sprintf("%s.%s_timestamp", prevStepName, prevStepName)
+			funnelSteps = append(funnelSteps, stepUsersName)
+			continue
 		}
 
-		var usersJoinStmnt string
-		if i > 0 {
-			// builds "LEFT JOIN step_0 on events.user_id=step_0.user_id"
-			prevStepName := stepNameByIndex(i - 1)
-			usersJoinStmnt = fmt.Sprintf("LEFT JOIN %s on events.user_id=%s.user_id", prevStepName, prevStepName)
+		prevStepName := stepNameByIndex(i - 1)
+
+		// step_x_to_y - Join users who did step_x after step_y.
+		stepXToYName := fmt.Sprintf("%s_%s_users", stepName, prevStepName)
+		// step_0_users.coal_user_id, step_0_users.user_id, step_1
+		stepXToYSelect := fmt.Sprintf("%s_users.coal_user_id, %s_users.user_id, %s", prevStepName, stepName, stepName)
+		if egGroupKeys != "" {
+			stepXToYSelect = joinWithComma(stepXToYSelect, egGroupKeys)
 		}
 
-		// ordered to get first occurrence on DISTINCT ON(user_id).
-		// occurrence: e0, e0, e1, e0, e2 funnel: e0 -> e1 -> e2.
-		// Should consider first occurrence of e0 followed by e1 and e2.
-		orderBy := "events.user_id, events.timestamp ASC"
-
-		err := addFilterEventsWithPropsQuery(projectId, &qStmnt, &qParams, q.EventsWithProperties[i], from, q.To,
-			fromStr, stepName, addSelect, addParams, usersJoinStmnt, "", orderBy)
-		if err != nil {
-			return "", nil, err
-		}
+		stepXToYJoin := fmt.Sprintf("LEFT JOIN %s_users ON %s_users.coal_user_id = %s_users.coal_user_id WHERE %s_timestamp >= %s_timestamp",
+			stepName, prevStepName, stepName, stepName, prevStepName)
+		stepXToY := fmt.Sprintf("SELECT %s FROM %s_users %s", stepXToYSelect, prevStepName, stepXToYJoin)
+		qStmnt = joinWithComma(qStmnt, as(stepXToYName, stepXToY))
+		funnelSteps = append(funnelSteps, stepXToYName)
 
 		if i < len(q.EventsWithProperties)-1 {
 			qStmnt = qStmnt + ", "
 		}
-
-		funnelSteps = append(funnelSteps, stepName)
 	}
 
-	var funnelStepsForSelect string
+	funnelCountAliases := make([]string, 0, 0)
+	for i := range q.EventsWithProperties {
+		funnelCountAliases = append(funnelCountAliases, fmt.Sprintf("step_%d", i))
+	}
+
+	var stepsJoinStmnt string
 	for i, fs := range funnelSteps {
-		// builds "step1, step2, step3"
-		funnelStepsForSelect = funnelStepsForSelect + fs
-		if i != len(funnelSteps)-1 {
-			funnelStepsForSelect = funnelStepsForSelect + ","
+		if i > 0 {
+			// builds "LEFT JOIN step2 on step0_users.coal_user_id=step_0_step_1_useres.coal_user_id"
+			stepsJoinStmnt = appendStatement(stepsJoinStmnt,
+				fmt.Sprintf("LEFT JOIN %s ON %s.coal_user_id=%s.coal_user_id", fs, funnelSteps[i-1], fs))
 		}
 	}
 
 	userGroupProps := filterGroupPropsByType(q.GroupByProperties, PropertyEntityUser)
 	ugSelect, ugParams, _ := buildGroupKeys(userGroupProps)
 
-	// Join user properties if group by propertie given.
-	// builds "LEFT JOIN users on step1.user_id=users.id LEFT JOIN user_properties on users.properties_id=user_properties.id"
 	properitesJoinStmnt := fmt.Sprintf("LEFT JOIN users on %s.user_id=users.id", funnelSteps[0])
 	if hasGroupEntity(q.GroupByProperties, PropertyEntityUser) {
 		properitesJoinStmnt = properitesJoinStmnt + " " + "LEFT JOIN user_properties on users.properties_id=user_properties.id"
 	}
 
-	var stepsJoinStmnt string
-	for i, fs := range funnelSteps {
-		if i > 0 {
-			// builds "LEFT JOIN step2 on step1.user_id=step2.user_id"
-			stepsJoinStmnt = appendStatement(stepsJoinStmnt,
-				fmt.Sprintf("LEFT JOIN %s ON %s.user_id=%s.user_id", fs, funnelSteps[i-1], fs))
-		}
-	}
-	// adds group by event property with user selected event (step).
-	eventGroupKeysWithStep := buildEventGroupKeysWithStep(eventGroupProps,
-		q.EventsWithProperties)
-
-	// builds ORDER BY real_user_id, step_1, step_2 ASC
-	funnelOrderBy := "real_user_id"
-	for _, fs := range funnelSteps {
-		funnelOrderBy = joinWithComma(funnelOrderBy, fs)
+	stepFunnelName := "funnel"
+	// select step counts, user properties and event properties group_keys.
+	stepFunnelSelect := joinWithComma(funnelCountAliases...)
+	stepFunnelSelect = joinWithComma(stepFunnelSelect, ugSelect)
+	eventGroupProps := filterGroupPropsByType(q.GroupByProperties, PropertyEntityEvent)
+	egGroupKeys := buildNoneHandledGroupKeys(eventGroupProps)
+	if egGroupKeys != "" {
+		stepFunnelSelect = joinWithComma(stepFunnelSelect, egGroupKeys)
 	}
 
-	funnelStepName := "funnel"
-	coalesceRealUser := fmt.Sprintf("COALESCE(users.customer_user_id, %s.user_id)", funnelSteps[0])
-	coalesceUserSelect := fmt.Sprintf("DISTINCT ON(%s) %s AS real_user_id", coalesceRealUser, coalesceRealUser)
-	funnelStmnt := "SELECT" + " " + joinWithComma(coalesceUserSelect, ugSelect, eventGroupKeysWithStep, funnelStepsForSelect) + " " + "FROM" + " " +
-		funnelSteps[0] + " " + properitesJoinStmnt + " " + stepsJoinStmnt + " " + "ORDER BY" + " " + funnelOrderBy
-	funnelStmnt = as(funnelStepName, funnelStmnt)
-	qStmnt = joinWithComma(qStmnt, funnelStmnt)
+	funnelStmnt := "SELECT" + " " + stepFunnelSelect + " " + "FROM" + " " + funnelSteps[0] +
+		" " + properitesJoinStmnt + " " + stepsJoinStmnt
+	qStmnt = joinWithComma(qStmnt, as(stepFunnelName, funnelStmnt))
 	qParams = append(qParams, ugParams...)
 
-	// builds "SUM(step1) AS step1, SUM(step1) AS step2",
+	// builds "SUM(step1) AS step1, SUM(step1) AS step2".
 	var rawCountSelect string
-	for _, fs := range funnelSteps {
-		rawCountSelect = joinWithComma(rawCountSelect, fmt.Sprintf("SUM(%s) AS %s", fs, fs))
+	for _, fca := range funnelCountAliases {
+		rawCountSelect = joinWithComma(rawCountSelect, fmt.Sprintf("SUM(%s) AS %s", fca, fca))
 	}
 
 	var termStmnt string
 	if len(q.GroupByProperties) == 0 {
-		termStmnt = "SELECT" + " " + rawCountSelect + " " + "FROM" + " " + funnelStepName
+		termStmnt = "SELECT" + " " + rawCountSelect + " " + "FROM" + " " + stepFunnelName
 	} else {
 		// builds UNION ALL with overall conversion and grouped conversion.
 		noGroupAlias := "$no_group"
@@ -1281,13 +1329,13 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q Query) (string, []interface
 			}
 		}
 		noGroupSelect := "SELECT" + " " + joinWithComma(groupKeysPlaceholder, rawCountSelect) +
-			" " + "FROM" + " " + funnelStepName
+			" " + "FROM" + " " + stepFunnelName
 
 		_, _, groupKeys := buildGroupKeys(q.GroupByProperties)
 		limitedGroupBySelect := "SELECT" + " " + joinWithComma(groupKeys, rawCountSelect) + " " +
-			"FROM" + " " + funnelStepName + " " + "GROUP BY" + " " + groupKeys + " " +
+			"FROM" + " " + stepFunnelName + " " + "GROUP BY" + " " + groupKeys + " " +
 			// order and limit by last step of funnel.
-			fmt.Sprintf("ORDER BY %s DESC LIMIT %d", funnelSteps[0], ResultsLimit)
+			fmt.Sprintf("ORDER BY %s DESC LIMIT %d", funnelCountAliases[0], ResultsLimit)
 
 		// wrapped with select to apply limits only to grouped select rows.
 		groupBySelect := fmt.Sprintf("SELECT * FROM ( %s ) AS group_funnel", limitedGroupBySelect)

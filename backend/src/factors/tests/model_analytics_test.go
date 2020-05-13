@@ -265,6 +265,86 @@ func TestAnalyticsFunnelQuery(t *testing.T) {
 	})
 }
 
+func TestAnalyticsFunnelWithUserIdentification(t *testing.T) {
+	// Test Funnel of 2 events done by 2 different factors users,
+	// who has done 1 event each, but identified as 1 customer user.
+
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	eventNames := make([]string, 0, 0)
+	for i := 0; i < 6; i++ {
+		eventNames = append(eventNames, U.RandomLowerAphaNumString(8))
+	}
+	eventTimestamp := U.UnixTimeBeforeDuration(24 * 10 * time.Hour) // 10 days before.
+	trackURI := "/sdk/event/track"
+
+	user3, errCode := M.CreateUser(&M.User{ProjectId: project.ID})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, user3.ID)
+
+	user4, errCode := M.CreateUser(&M.User{ProjectId: project.ID})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, user4.ID)
+
+	payload1 := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "timestamp": %d}`,
+		eventNames[2], user3.ID, eventTimestamp+100)
+	w1 := ServePostRequestWithHeaders(r, trackURI, []byte(payload1), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w1.Code)
+	response1 := DecodeJSONResponseToMap(w1.Body)
+	assert.NotNil(t, response1["event_id"])
+
+	payload2 := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "timestamp": %d}`,
+		eventNames[3], user4.ID, eventTimestamp+200)
+	w2 := ServePostRequestWithHeaders(r, trackURI, []byte(payload2), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w2.Code)
+	response2 := DecodeJSONResponseToMap(w2.Body)
+	assert.NotNil(t, response2["event_id"])
+
+	// identify users with same customer_user_id.
+	identifyURI := "/sdk/user/identify"
+	customerUserId := U.RandomLowerAphaNumString(15)
+	w := ServePostRequestWithHeaders(r, identifyURI, []byte(fmt.Sprintf(`{"c_uid": "%s", "user_id": "%s"}`,
+		customerUserId, user3.ID)), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	w = ServePostRequestWithHeaders(r, identifyURI, []byte(fmt.Sprintf(`{"c_uid": "%s", "user_id": "%s"}`,
+		customerUserId, user4.ID)), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	query := M.Query{
+		From: eventTimestamp,
+		To:   time.Now().UTC().Unix(),
+		EventsWithProperties: []M.QueryEventWithProperties{
+			M.QueryEventWithProperties{
+				Name:       eventNames[2],
+				Properties: []M.QueryProperty{},
+			},
+			M.QueryEventWithProperties{
+				Name:       eventNames[3],
+				Properties: []M.QueryProperty{},
+			},
+		},
+		Class:           M.QueryClassFunnel,
+		Type:            M.QueryTypeUniqueUsers,
+		EventsCondition: M.EventCondAllGivenEvent,
+	}
+
+	result1, errCode, _ := M.Analyze(project.ID, query)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.NotNil(t, result1)
+
+	// steps headers avalilable.
+	assert.Equal(t, M.StepPrefix+"0", result1.Headers[0])
+	assert.Equal(t, M.StepPrefix+"1", result1.Headers[1])
+	// no.of users should be 1 after identification.
+	assert.Equal(t, int64(1), result1.Rows[0][0].(int64))
+	assert.Equal(t, int64(1), result1.Rows[0][1].(int64))
+}
+
 func TestAnalyticsFunnelQueryWithFilterCondition(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()
