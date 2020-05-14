@@ -135,7 +135,7 @@ App.prototype.init = function(token, opts={}) {
         })
         .catch(function(err) {
             logger.errorLine(err);
-            return Promise.reject(err);
+            return Promise.reject(err.stack + " during get_settings on init.");
         });
 }
 
@@ -379,7 +379,7 @@ App.prototype.getUserId = function() {
 App.prototype.handleError = function(error) {
     var errMsg = "";
     if (typeof(error) == "string") errMsg = error;
-    if (error instanceof Error && error.message) errMsg = error.message;
+    if (error instanceof Error && error.message) errMsg = error.stack;
 
     let payload = {};
     payload.domain = window.location.host;
