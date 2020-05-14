@@ -419,6 +419,11 @@ var productionShopifyInfo = map[string]shopifyInfoStruct{
 		apiKey:    "844e9cc7c7e673a9513827a8a89613970be27ef8ec67ab4da2e3c9202f1ec7d8",
 		hashEmail: true,
 	},
+	"azani.myshopify.com": shopifyInfoStruct{
+		projectId: 410,
+		apiKey:    "7fb11f1eacd53c1e8d0d254c5d2b23d2",
+		hashEmail: true,
+	},
 }
 
 func GetProjectDetailsByShopifyDomain(

@@ -15,7 +15,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math"
-	"net/http"
 	"os"
 	"regexp"
 	"sort"
@@ -401,15 +400,9 @@ func mineAndWriteLenTwoPatterns(
 }
 
 func mineAndWritePatterns(projectId uint64, filepath string,
-	userAndEventsInfo *P.UserAndEventsInfo, startTime int64,
-	endTime int64, numRoutines int, chunkDir string,
+	userAndEventsInfo *P.UserAndEventsInfo, eventNames []M.EventName,
+	numRoutines int, chunkDir string,
 	maxModelSize int64) error {
-	// Length One Patterns.
-	eventNames, err := M.GetOrderedEventNamesFromDb(
-		projectId, startTime, endTime, max_EVENT_NAMES)
-	if err != nil {
-		return fmt.Errorf("DB read of event names failed")
-	}
 	var filteredPatterns []*P.Pattern
 	var cumulativePatternsSize int64 = 0
 
@@ -513,12 +506,7 @@ func mineAndWritePatterns(projectId uint64, filepath string,
 	return nil
 }
 
-func buildPropertiesInfoFromInput(projectId uint64, filepath string) (*P.UserAndEventsInfo, error) {
-	// Length One Patterns.
-	eventNames, _, errCode := M.GetEventNamesOrderedByOccurrence(projectId, M.EVENT_NAME_REQUEST_TYPE_EXACT)
-	if errCode != http.StatusFound {
-		return nil, fmt.Errorf("DB read of event names failed")
-	}
+func buildPropertiesInfoFromInput(projectId uint64, eventNames []M.EventName, filepath string) (*P.UserAndEventsInfo, error) {
 	userAndEventsInfo := P.NewUserAndEventsInfo()
 	eMap := *userAndEventsInfo.EventPropertiesInfoMap
 	for _, eventName := range eventNames {
@@ -759,9 +747,16 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 	mineLog.Info("Successfuly downloaded events file from cloud.")
 
 	// builld user and event properites info
+	eventNames, err := M.GetOrderedEventNamesFromDb(
+		projectId, startTime, endTime, max_EVENT_NAMES)
+	if err != nil {
+		mineLog.WithFields(log.Fields{"err": err}).Error(
+			"Failed to fetch event names.")
+		return "", 0, err
+	}
 	mineLog.WithField("tmpEventsFilePath",
 		tmpEventsFilepath).Info("Building user and event properties info and writing it to file.")
-	userAndEventsInfo, err := buildPropertiesInfoFromInput(projectId, tmpEventsFilepath)
+	userAndEventsInfo, err := buildPropertiesInfoFromInput(projectId, eventNames, tmpEventsFilepath)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to build user and event Info.")
 		return "", 0, err
@@ -812,7 +807,7 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 	mineLog.WithFields(log.Fields{"projectId": projectId, "tmpEventsFilepath": tmpEventsFilepath,
 		"tmpChunksDir": tmpChunksDir, "routines": numRoutines}).Info("Mining patterns and writing it as chunks.")
 	err = mineAndWritePatterns(projectId, tmpEventsFilepath,
-		userAndEventsInfo, startTime, endTime, numRoutines, tmpChunksDir, maxModelSize)
+		userAndEventsInfo, eventNames, numRoutines, tmpChunksDir, maxModelSize)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to mine patterns.")
 		return "", 0, err
