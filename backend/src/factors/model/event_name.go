@@ -67,7 +67,7 @@ func isDuplicateFilterExprError(err error) bool {
 	return err.Error() == error_DUPLICATE_FILTER_EXPR
 }
 
-func createOrGetEventName(eventName *EventName) (*EventName, int) {
+func CreateOrGetEventName(eventName *EventName) (*EventName, int) {
 	db := C.GetServices().Db
 
 	// Validation.
@@ -100,12 +100,12 @@ func createOrGetEventName(eventName *EventName) (*EventName, int) {
 
 func CreateOrGetUserCreatedEventName(eventName *EventName) (*EventName, int) {
 	eventName.Type = TYPE_USER_CREATED_EVENT_NAME
-	return createOrGetEventName(eventName)
+	return CreateOrGetEventName(eventName)
 }
 
 func CreateOrGetAutoTrackedEventName(eventName *EventName) (*EventName, int) {
 	eventName.Type = TYPE_AUTO_TRACKED_EVENT_NAME
-	return createOrGetEventName(eventName)
+	return CreateOrGetEventName(eventName)
 }
 
 func CreateOrGetFilterEventName(eventName *EventName) (*EventName, int) {
@@ -117,11 +117,11 @@ func CreateOrGetFilterEventName(eventName *EventName) (*EventName, int) {
 	eventName.Type = TYPE_FILTER_EVENT_NAME
 	eventName.FilterExpr = filterExpr
 
-	return createOrGetEventName(eventName)
+	return CreateOrGetEventName(eventName)
 }
 
 func CreateOrGetSessionEventName(projectId uint64) (*EventName, int) {
-	return createOrGetEventName(&EventName{ProjectId: projectId, Name: U.EVENT_NAME_SESSION,
+	return CreateOrGetEventName(&EventName{ProjectId: projectId, Name: U.EVENT_NAME_SESSION,
 		Type: TYPE_INTERNAL_EVENT_NAME})
 }
 
