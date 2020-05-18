@@ -86,7 +86,7 @@ func main() {
 func renameDuplicateEventNames(projectID uint64, dryRun bool, renameStat *map[uint64]string) {
 	db := C.GetServices().Db
 
-	queryStr := "SELECT COUNT(*), name, type FROM event_names WHERE project_id = ? GROUP BY name, type HAVING COUNT(*)>1"
+	queryStr := "SELECT COUNT(*), name, type FROM event_names WHERE project_id = ? and type != 'FE' GROUP BY name, type HAVING COUNT(*)>1"
 	rows, err := db.Raw(queryStr, projectID).Rows()
 	if err != nil {
 		log.WithError(err).Fatal("Failed to get duplicate event names")

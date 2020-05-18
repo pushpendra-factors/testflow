@@ -169,6 +169,12 @@ func main() {
 	} else {
 		log.Info("Created project type filter_expr unique index created.")
 	}
+	// Adding unique index on project_id, name, type partial index for non FE type.
+	if err := db.Exec("	CREATE UNIQUE INDEX event_names_project_id_name_type_not_fe_uindx ON event_names(project_id, name, type) WHERE type != 'FE';").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("event_names event_names_project_id_name_type_not_fe_uindx unique index creation failed.")
+	} else {
+		log.Info("Created event_names_project_id_name_type_not_fe_uindx index created.")
+	}
 
 	// Create events table.
 	if err := db.CreateTable(&M.Event{}).Error; err != nil {
