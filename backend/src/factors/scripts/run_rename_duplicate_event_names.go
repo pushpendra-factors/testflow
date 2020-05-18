@@ -63,22 +63,30 @@ func main() {
 	}
 	db := C.GetServices().Db
 	defer db.Close()
+
 	var projectIDs []ProjectID
 	err = db.Raw("SELECT DISTINCT(id) FROM projects").Find(&projectIDs).Error
 	if err != nil {
 		log.Fatal("Failed to get project ids from db")
 	}
 
+	renameStat := make(map[uint64]string)
 	for _, projectID := range projectIDs {
-		log.Info("ProjectID: ", projectID)
-		renameDuplicateEventNames(projectID.ID, *dryRun)
+		log.Info("Running on project_id ", projectID.ID)
+		renameDuplicateEventNames(projectID.ID, *dryRun, &renameStat)
+	}
+
+	if *dryRun {
+		for k, v := range renameStat {
+			fmt.Printf("project: %d -> duplicate event_names: %+v \n", k, v)
+		}
 	}
 
 }
-func renameDuplicateEventNames(projectID uint64, dryRun bool) {
+func renameDuplicateEventNames(projectID uint64, dryRun bool, renameStat *map[uint64]string) {
 	db := C.GetServices().Db
 
-	queryStr := "SELECT COUNT(*), name, type FROM event_names WHERE project_id= ? GROUP BY name, type HAVING COUNT(*)>1"
+	queryStr := "SELECT COUNT(*), name, type FROM event_names WHERE project_id = ? GROUP BY name, type HAVING COUNT(*)>1"
 	rows, err := db.Raw(queryStr, projectID).Rows()
 	if err != nil {
 		log.WithError(err).Fatal("Failed to get duplicate event names")
@@ -93,6 +101,7 @@ func renameDuplicateEventNames(projectID uint64, dryRun bool) {
 		}
 		duplicateEventNames = append(duplicateEventNames, duplicateEventName)
 	}
+
 	for _, duplicateEventName := range duplicateEventNames {
 		var eventName M.EventName
 		eventName.Name = duplicateEventName.Name
@@ -102,6 +111,7 @@ func renameDuplicateEventNames(projectID uint64, dryRun bool) {
 		if errCode != http.StatusConflict {
 			log.Fatal("Failed to get event name by name, type and projectId")
 		}
+
 		queryStr = "SELECT * FROM event_names where name = ? AND project_id=? AND id != ?"
 		rows, err := db.Raw(queryStr, retEventName.Name, retEventName.ProjectId, retEventName.ID).Rows()
 		if err != nil {
@@ -117,6 +127,8 @@ func renameDuplicateEventNames(projectID uint64, dryRun bool) {
 			renameEventNames = append(renameEventNames, renameEventName)
 			renameEventNamesID = append(renameEventNamesID, renameEventName.ID)
 		}
+		defer rows.Close()
+
 		if dryRun == true {
 			eventsQueryStr := "SELECT events.event_name_id, count(*) FROM events WHERE project_id=?" +
 				" AND events.event_name_id = ANY(?) GROUP BY events.event_name_id"
@@ -132,22 +144,27 @@ func renameDuplicateEventNames(projectID uint64, dryRun bool) {
 				}
 				eventNamesIdCount = append(eventNamesIdCount, eventNameIdCount)
 			}
-			log.Info("Event Name IDs to be renamed along with count: ", eventNamesIdCount)
-		} else {
-			for i, renameEventName := range renameEventNames {
-				renamePrefix := "$renamed_$" + strconv.Itoa(i+1) + "_"
-				renameEventName.Name = renamePrefix + renameEventName.Name
-				updateQueryStr := "UPDATE event_names SET name = ? WHERE project_id = ? AND id = ? RETURNING event_names.*"
-				var returnEventName M.EventName
-				err := db.Raw(updateQueryStr, renameEventName.Name,
-					renameEventName.ProjectId, renameEventName.ID).Scan(&returnEventName).Error
-				if err != nil {
-					log.Fatal("Failed to rename event name")
-				}
-				renamedEventNames = append(renamedEventNames, renameEventName)
+			defer rows.Close()
+
+			if len(eventNamesIdCount) > 0 {
+				(*renameStat)[projectID] = fmt.Sprintf("%+v", eventNamesIdCount)
 			}
-			log.Info("renamed event names : ", renamedEventNames)
-			log.Info("Count of event names renamed: ", len(renamedEventNames))
+			return
 		}
+
+		for i, renameEventName := range renameEventNames {
+			renamePrefix := "$renamed_$" + strconv.Itoa(i+1) + "_"
+			renameEventName.Name = renamePrefix + renameEventName.Name
+			updateQueryStr := "UPDATE event_names SET name = ? WHERE project_id = ? AND id = ? RETURNING event_names.*"
+			var returnEventName M.EventName
+			err := db.Raw(updateQueryStr, renameEventName.Name,
+				renameEventName.ProjectId, renameEventName.ID).Scan(&returnEventName).Error
+			if err != nil {
+				log.Fatal("Failed to rename event name")
+			}
+			renamedEventNames = append(renamedEventNames, renameEventName)
+		}
+		log.Info("renamed event names : ", renamedEventNames)
+		log.Info("Count of event names renamed: ", len(renamedEventNames))
 	}
 }
