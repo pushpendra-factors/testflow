@@ -147,10 +147,15 @@ func renameDuplicateEventNames(projectID uint64, dryRun bool, renameStat *map[ui
 			defer rows.Close()
 
 			if len(eventNamesIdCount) > 0 {
-				(*renameStat)[projectID] = fmt.Sprintf("%+v", eventNamesIdCount)
+				if _, exists :=  (*renameStat)[projectID]; !exists {
+					(*renameStat)[projectID] = fmt.Sprintf("%+v", eventNamesIdCount)
+				} else {
+					(*renameStat)[projectID] = fmt.Sprintf("%s, %+v", (*renameStat)[projectID], eventNamesIdCount)
+				}
+				
 			}
-			return
-		}
+			continue
+		} 
 
 		for i, renameEventName := range renameEventNames {
 			renamePrefix := "$renamed_$" + strconv.Itoa(i+1) + "_"
