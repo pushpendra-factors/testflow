@@ -77,6 +77,7 @@ func CreateOrGetEventName(eventName *EventName) (*EventName, int) {
 		return nil, http.StatusBadRequest
 	}
 
+	eventName.Deleted = false
 	if err := db.FirstOrInit(&eventName, &eventName).Error; err != nil {
 		log.WithFields(log.Fields{"eventName": &eventName}).WithError(err).Error("CreateEventName Failed")
 		return nil, http.StatusInternalServerError
