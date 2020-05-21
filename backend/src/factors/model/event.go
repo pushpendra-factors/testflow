@@ -9,6 +9,7 @@ import (
 	U "factors/util"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gomodule/redigo/redis"
@@ -764,4 +765,34 @@ func EnrichUserPropertiesWithSessionProperties(projectId uint64, userId string,
 	}
 
 	return OverwriteUserProperties(projectId, userId, userPropertiesId, userPropertiesJsonb)
+}
+
+// GetDatesForNextEventsArchivalBatch Get dates for events since startTime, excluding today's date.
+func GetDatesForNextEventsArchivalBatch(projectID uint64, startTime int64) (map[string]int64, int) {
+	db := C.GetServices().Db
+	countByDates := make(map[string]int64)
+
+	rows, err := db.Model(&Event{}).
+		Where("project_id = ? AND timestamp BETWEEN ? AND (extract(epoch from current_date::timestamp at time zone 'UTC') - 1)", projectID, startTime).
+		Group("date(to_timestamp(timestamp) at time zone 'UTC')").
+		Select("date(to_timestamp(timestamp) at time zone 'UTC'), count(*)").Rows()
+	if err != nil {
+		log.WithError(err).Error("Failed to get dates for next event batches")
+		return countByDates, http.StatusInternalServerError
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var eventDate string
+		var eventCount int64
+		err = rows.Scan(&eventDate, &eventCount)
+		if err != nil {
+			log.WithError(err).Error("Failed to parse records")
+			continue
+		} else {
+			countByDates[strings.Split(eventDate, "T")[0]] = eventCount
+		}
+	}
+
+	return countByDates, http.StatusFound
 }

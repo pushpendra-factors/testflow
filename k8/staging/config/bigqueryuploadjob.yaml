@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config-bigqueryuploadjob
+  labels:
+    env: staging
+    project: factors-staging
+data:
+  UPLOAD_ALL: "true"
+  ARCHIVE_BUCKET_NAME: "factors-staging-archival"

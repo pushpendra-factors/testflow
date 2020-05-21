@@ -337,6 +337,46 @@ go run run_build_seq.go --etcd=localhost:2379 --local_disk_tmp_dir=/usr/local/va
 
 * Verify factors in action on Frontend.
 
+### Enabling BigQuery for a project
+* Make sure to have a project_id with some events. Refer above steps to ingest events data using `ingest_localytics_events.go` script if required.
+* Enable archival and bigquery in project_settings for the project.
+    ```
+    UPDATE project_settings SET archive_enabled=true, bigquery_enabled=true where project_id=<project_id>;
+    ```
+* Creating events files in cloud_storage. Creates a single file from last pull timestamp till current timestamp.
+    - Sample run. Use `--max_lookback_days` for archiving data older than 365 days.
+    
+        ```
+        # Use --all=true to run for all enabled projects.
+        cd ${PATH_TO_FACTORS}/factors/backend/src/factors
+        go run scripts/run_archive_events.go --project_id=<project_id>
+        ```
+    - To regenrate events file on dev, delete entries from the scheduled_tasks table for the project_id`
+        ```plsql
+        DELETE FROM scheduled_tasks WHERE project_id = <project_id> AND task_type='EVENTS_ARCHIVAL';
+        ```
+* Pushing archive files to BigQuery.
+    - Adding BigQuery configuration for a new project. Service account credentials json will be required.
+        ```
+        cd ${PATH_TO_FACTORS}/factors/backend/src/factors
+        go run scripts/run_onboard_to_bigquery.go --project_id=<project_id> --bq_project_id=<bq_project_id> --bq_dataset=<bq_dataset> --bq_credentials_json=<credentials_json_filename>
+        ```
+    - For pushing data to bigquery.
+        ```
+        # Use --all=true to run for all enabled projects.
+        cd ${PATH_TO_FACTORS}/factors/backend/src/factors
+        go run scripts/run_push_to_bigquery.go --project_id=<project_id>
+        ```
+    - Big query configuration parameters:
+        * `bq_project_id`: Project ID from Google Cloud Console. Must be an existing project. For testing, `factors-staging` can be used.
+        * `bq_dataset`: Dataset name inside BigQuery. Script will create with the given name if not exists.
+        * `bq_credentials_json`: Absolute path pointing to the credentials json file for the service account. This is to authenticate bigquery client and must be generated for the for project provided in `bq_project_id` with at least `BigQuery Data Owner` and `BigQuery Job User` roles assigned.
+    - To repush old files to BigQuery (delete table from cloud console clean state is required without duplicate data), update `last_run_at` of `bigquery_documents` table.
+    
+        ```plsql
+        UPDATE bigquery_documents SET last_run_at = 0 WHERE project_id=<project_id>;
+        ```
+
 ## Running Adwords Sync
 
 * Setup

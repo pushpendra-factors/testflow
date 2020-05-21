@@ -5,8 +5,11 @@ import (
 	"factors/filestore"
 	"fmt"
 	"io"
+	"strings"
 
 	"cloud.google.com/go/storage"
+	log "github.com/sirupsen/logrus"
+	"google.golang.org/api/iterator"
 )
 
 const (
@@ -35,6 +38,11 @@ func New(bucketName string) (*GCSDriver, error) {
 
 func (gcsd *GCSDriver) Create(dir, fileName string, reader io.Reader) error {
 	ctx := context.Background()
+	if !strings.HasSuffix(dir, "/") {
+		// Append / to the end if not present.
+		dir = dir + "/"
+	}
+
 	obj := gcsd.client.Bucket(gcsd.BucketName).Object(dir + fileName)
 	w := obj.NewWriter(ctx)
 	if _, err := io.Copy(w, reader); err != nil {
@@ -46,9 +54,17 @@ func (gcsd *GCSDriver) Create(dir, fileName string, reader io.Reader) error {
 
 func (gcsd *GCSDriver) Get(dir, fileName string) (io.ReadCloser, error) {
 	ctx := context.Background()
+	if !strings.HasSuffix(dir, "/") {
+		// Append / to the end if not present.
+		dir = dir + "/"
+	}
 	obj := gcsd.client.Bucket(gcsd.BucketName).Object(dir + fileName)
 	rc, err := obj.NewReader(ctx)
 	return rc, err
+}
+
+func (gcsd *GCSDriver) GetBucketName() string {
+	return gcsd.BucketName
 }
 
 func (gcsd *GCSDriver) GetProjectModelDir(projectId, modelId uint64) string {
@@ -81,4 +97,38 @@ func (gcsd *GCSDriver) GetPatternChunksDir(projectId, modelId uint64) string {
 
 func (gcsd *GCSDriver) GetPatternChunkFilePathAndName(projectId, modelId uint64, chunkId string) (string, string) {
 	return gcsd.GetPatternChunksDir(projectId, modelId), fmt.Sprintf("chunk_%s.txt", chunkId)
+}
+
+func (gcsd *GCSDriver) GetEventArchiveFilePathAndName(projectID uint64, startTime, endTime int64) (string, string) {
+	path := fmt.Sprintf("archive/%d/", projectID)
+	fileName := fmt.Sprintf("%d-%d.txt", startTime, endTime)
+	return path, fileName
+}
+
+// ListFiles List files present in a folder in cloud storage. Prefix has to be without bucket name.
+// Must not have leading '/' and should have trailing '/' in prefix. Ex: archive/3/.
+func (gcsd *GCSDriver) ListFiles(prefix string) []string {
+	var files []string
+	if !strings.HasSuffix(prefix, "/") {
+		prefix = prefix + "/"
+	}
+
+	ctx := context.Background()
+	pathQuery := &storage.Query{Prefix: prefix}
+	filesIterator := gcsd.client.Bucket(gcsd.BucketName).Objects(ctx, pathQuery)
+	for {
+		attributes, err := filesIterator.Next()
+		if err == iterator.Done {
+			break
+		} else if err != nil {
+			log.WithError(err).Errorf("Failed to list file. Attributes: %v\n", attributes)
+			continue
+		} else if attributes.Name == prefix || attributes.Name == (prefix+"/") {
+			// Omit the base prefix if returned as one the objects.
+			continue
+		}
+		files = append(files, attributes.Name)
+	}
+
+	return files
 }

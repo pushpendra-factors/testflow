@@ -2,12 +2,15 @@
 
 
 [[projects]]
-  digest = "1:fb44e55dc909f8e21ca4e8724f831753cc7d3185ba5defcdbf38de9b23091dea"
+  digest = "1:f49d5a4a2b649aff23aa70244be1b83383ca75d971981021a0d632ed099d2821"
   name = "cloud.google.com/go"
   packages = [
+    "bigquery",
+    "civil",
     "compute/metadata",
     "iam",
     "internal",
+    "internal/fields",
     "internal/optional",
     "internal/trace",
     "internal/version",
@@ -821,9 +824,10 @@
   revision = "13ba8ad772dfbf0f451b5dd0679e9c5605afc05d"
 
 [[projects]]
-  digest = "1:09b53f1be31931834fe6c2837693b7bffde7cdae1ea8723ae642b97a326b149f"
+  digest = "1:62b085b84666ddfb9c829c3e84c3d1a54d2399d598f3de4574872b97375cbeb9"
   name = "google.golang.org/api"
   packages = [
+    "bigquery/v2",
     "gensupport",
     "googleapi",
     "googleapi/internal/uritemplates",
@@ -940,6 +944,7 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "cloud.google.com/go/bigquery",
     "cloud.google.com/go/pubsub",
     "cloud.google.com/go/storage",
     "github.com/RichardKnop/logging",

@@ -1,0 +1,58 @@
+# Job should be suspended after running successfully once.
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: onboard-to-bigquery-job
+spec:
+  schedule: "1 2 3 4 5" # In UTC. Random time to avoid running periodically.
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            layer: jobs
+        spec:
+          nodeSelector:
+            cloud.google.com/gke-nodepool: factors-staging-node-pool
+          containers:
+          - name: onboard-to-bigquery-job
+            image: us.gcr.io/factors-staging/onboard-to-bigquery-job:v0.62_749aa89f
+            imagePullPolicy: IfNotPresent
+            args:
+            - --env
+            - $(ENV)
+            - --db_host
+            - $(DB_HOST)
+            - --db_port
+            - $(DB_PORT)
+            - --db_name
+            - $(POSTGRES_DB)
+            - --db_user
+            - $(POSTGRES_USER)
+            - --db_pass
+            - $(POSTGRES_PASSWORD)
+            - --project_id
+            - $(BQ_PROJECT_ID)
+            - --bq_project_id
+            - $(BQ_GCP_PROJECT_NAME)
+            - --bq_dataset
+            - $(BQ_DATASET_NAME)
+            - --bq_credentials_json
+            - $(BQ_CREDENTIALS_JSON)
+            - --bucket_name
+            - $(BQ_CRED_BUCKET)
+            envFrom:
+            - configMapRef:
+                name: config-env
+            - configMapRef:
+                name: config-bucket
+            - configMapRef:
+                name: config-postgres
+            - configMapRef:
+                name: config-onboardtobigquery
+            - secretRef:
+                name: secret-postgres
+          restartPolicy: Never

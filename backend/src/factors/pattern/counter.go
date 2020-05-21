@@ -3,17 +3,19 @@ package pattern
 import (
 	"bufio"
 	"encoding/json"
-	U "factors/util"
 	"fmt"
 	"math"
 	"reflect"
 	"sort"
 	"strings"
 
+	U "factors/util"
+
 	_ "github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 )
 
+// CounterEventFormat Format to write files for build sequence job.
 type CounterEventFormat struct {
 	UserId            string                 `json:"uid"`
 	UserJoinTimestamp int64                  `json:"ujt"`

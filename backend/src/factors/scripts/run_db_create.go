@@ -416,4 +416,18 @@ func main() {
 	} else {
 		log.Info("project_settings table is associated with agents table.")
 	}
+
+	// Create bigquery settings table.
+	if err := db.CreateTable(&M.BigquerySetting{}).Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("bigquery_settings table creation failed.")
+	} else {
+		log.Info("created bigquery_settings table.")
+	}
+
+	// Create scheduled_tasks table.
+	if err := db.CreateTable(&M.ScheduledTask{}).Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("scheduled_tasks table creation failed.")
+	} else {
+		log.Info("created scheduled_tasks table.")
+	}
 }

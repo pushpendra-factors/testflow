@@ -12,6 +12,8 @@ import (
 	"github.com/google/uuid"
 )
 
+const SECONDS_IN_A_DAY int64 = 24 * 60 * 60
+
 func RandomString(n int) string {
 	rand.Seed(time.Now().UnixNano())
 
@@ -89,6 +91,40 @@ func GetUUID() string {
 	return uuid.New().String()
 }
 
+// StringSliceDiff Returns sliceA - sliceB set of elements.
+func StringSliceDiff(sliceA, sliceB []string) []string {
+	sliceBMap := make(map[string]int)
+
+	var diffSlice []string
+	for index, value := range sliceB {
+		sliceBMap[value] = index
+	}
+
+	for _, value := range sliceA {
+		_, found := sliceBMap[value]
+		if !found {
+			diffSlice = append(diffSlice, value)
+		}
+	}
+	return diffSlice
+}
+
+// Datetime related utility functions.
+
+const (
+	DATETIME_FORMAT_YYYYMMDD_HYPHEN string = "2006-01-02"
+)
+
+// TimeNow Return current time in UTC. Should be used everywhere to avoid local timezone.
+func TimeNow() time.Time {
+	return time.Now().UTC()
+}
+
+// TimeNowUnix Returns current epoch time.
+func TimeNowUnix() int64 {
+	return TimeNow().Unix()
+}
+
 func GetCurrentDayTimestamp() int64 {
 	currentTime := time.Now()
 	return time.Date(currentTime.Year(), currentTime.Month(), currentTime.Day(), 0, 0, 0, 0, currentTime.Location()).Unix()
@@ -101,4 +137,22 @@ func IsTimestampToday(timestamp int64) bool {
 func GetBeginningOfDayTimestamp(timestamp int64) int64 {
 	t := time.Unix(timestamp, 0)
 	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location()).Unix()
+}
+
+func GetBeginningOfDayTimestampUTC(timestamp int64) int64 {
+	t := time.Unix(timestamp, 0).UTC()
+	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location()).Unix()
+}
+
+// UnixToHumanTime Converts epoch to readable String timestamp.
+func UnixToHumanTime(timestamp int64) string {
+	return time.Unix(timestamp, 0).UTC().Format(time.RFC3339)
+}
+
+// SecondsToHMSString Converts seconds int value to hrs min secs string.
+func SecondsToHMSString(totalSeconds int64) string {
+	hours := totalSeconds / 3600
+	minutes := (totalSeconds % 3600) / 60
+	seconds := totalSeconds % 60
+	return fmt.Sprintf("%d hrs %d mins %d secs", hours, minutes, seconds)
 }

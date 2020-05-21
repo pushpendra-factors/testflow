@@ -1,0 +1,11 @@
+FROM golang:1.14-alpine AS builder
+
+WORKDIR /go/src/factors
+ADD /factors .
+RUN go build -o $GOPATH/bin/archiveeventsjob $GOPATH/src/factors/scripts/run_archive_events.go
+
+# Create stripped down version without go and source code
+FROM alpine:3.7
+RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
+COPY --from=builder /go/bin/archiveeventsjob /go/bin/archiveeventsjob
+ENTRYPOINT ["/go/bin/archiveeventsjob"]

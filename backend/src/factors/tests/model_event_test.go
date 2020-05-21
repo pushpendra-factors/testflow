@@ -583,3 +583,46 @@ func TestGetEventNamesByApproxAndExact(t *testing.T) {
 	assert.Equal(t, "event4", eventNames.EventNames[3])
 	assert.Equal(t, true, eventNames.Exact)
 }
+
+func TestGetDatesForNextEventsArchivalBatch(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	user, status := M.CreateUser(&M.User{ProjectId: project.ID})
+	assert.NotNil(t, user)
+	assert.Equal(t, http.StatusCreated, status)
+
+	timeNow := U.TimeNow()
+	timeNowUnix := timeNow.Unix()
+
+	createEventWithTimestampByName(t, project, user, "event1", timeNowUnix)
+	// 1 Day older events.
+	createEventWithTimestampByName(t, project, user, "event2", timeNowUnix-U.SECONDS_IN_A_DAY)
+	createEventWithTimestampByName(t, project, user, "event3", timeNowUnix-U.SECONDS_IN_A_DAY-1)
+	// 3 days older events.
+	createEventWithTimestampByName(t, project, user, "event4", timeNowUnix-3*U.SECONDS_IN_A_DAY)
+	createEventWithTimestampByName(t, project, user, "event5", timeNowUnix-3*U.SECONDS_IN_A_DAY)
+	// 4 days older events.
+	createEventWithTimestampByName(t, project, user, "event6", timeNowUnix-4*U.SECONDS_IN_A_DAY)
+
+	// Should be empty for todays startTime.
+	datesEventCountMap, status := M.GetDatesForNextEventsArchivalBatch(project.ID, timeNowUnix)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, 0, len(datesEventCountMap))
+
+	// Must return 3 days.
+	datesEventCountMap, status = M.GetDatesForNextEventsArchivalBatch(project.ID, timeNowUnix-10*U.SECONDS_IN_A_DAY)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, 3, len(datesEventCountMap))
+	expectedDateCount := map[string]int64{
+		timeNow.AddDate(0, 0, -1).Format(U.DATETIME_FORMAT_YYYYMMDD_HYPHEN): 2, // 1 day before.
+		timeNow.AddDate(0, 0, -3).Format(U.DATETIME_FORMAT_YYYYMMDD_HYPHEN): 2, // 3 days before.
+		timeNow.AddDate(0, 0, -4).Format(U.DATETIME_FORMAT_YYYYMMDD_HYPHEN): 1, // 4 days before.
+	}
+
+	for expectedDate, expectedCount := range expectedDateCount {
+		value, found := datesEventCountMap[expectedDate]
+		assert.True(t, found)
+		assert.Equal(t, expectedCount, value)
+	}
+}

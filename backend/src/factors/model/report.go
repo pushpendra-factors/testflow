@@ -1090,7 +1090,7 @@ func (r *Report) GetTextContent() string {
 	output := new(strings.Builder)
 
 	output.WriteString("Report for")
-	output.WriteString(fmt.Sprintf("%s - %s", unixToHumanTime(r.StartTime), unixToHumanTime(r.EndTime)))
+	output.WriteString(fmt.Sprintf("%s - %s", U.UnixToHumanTime(r.StartTime), U.UnixToHumanTime(r.EndTime)))
 	output.WriteString("\n\n")
 
 	output.WriteString("Dashboard name: ")
@@ -1137,7 +1137,7 @@ func (r *Report) GetHTMLContent() string {
 	output := new(strings.Builder)
 
 	output.WriteString("<p>Report for ")
-	output.WriteString(fmt.Sprintf("%s - %s", unixToHumanTime(r.StartTime), unixToHumanTime(r.EndTime)))
+	output.WriteString(fmt.Sprintf("%s - %s", U.UnixToHumanTime(r.StartTime), U.UnixToHumanTime(r.EndTime)))
 	output.WriteString("</p>")
 
 	output.WriteString("<p>Dashboard name: ")
@@ -1155,12 +1155,12 @@ func (r *Report) GetHTMLContent() string {
 		output.WriteString("<table>")
 		output.WriteString("<tr>")
 		output.WriteString("<th style='padding-left:15px;'>")
-		output.WriteString(fmt.Sprintf("%s- %s", unixToHumanTime(dshBU.Results[0].StartTime),
-			unixToHumanTime(dshBU.Results[0].EndTime)))
+		output.WriteString(fmt.Sprintf("%s- %s", U.UnixToHumanTime(dshBU.Results[0].StartTime),
+			U.UnixToHumanTime(dshBU.Results[0].EndTime)))
 		output.WriteString("</th>")
 		output.WriteString("<th style='padding-left:15px;'>")
-		output.WriteString(fmt.Sprintf("%s- %s", unixToHumanTime(dshBU.Results[1].StartTime),
-			unixToHumanTime(dshBU.Results[1].EndTime)))
+		output.WriteString(fmt.Sprintf("%s- %s", U.UnixToHumanTime(dshBU.Results[1].StartTime),
+			U.UnixToHumanTime(dshBU.Results[1].EndTime)))
 		output.WriteString("</th>")
 		output.WriteString("</tr>")
 		output.WriteString("<tr>")
@@ -1175,10 +1175,6 @@ func (r *Report) GetHTMLContent() string {
 	}
 	output.WriteString("</div>")
 	return output.String()
-}
-
-func unixToHumanTime(timestamp int64) string {
-	return time.Unix(timestamp, 0).UTC().Format(time.RFC3339)
 }
 
 func unixToReadableDate(timestamp int64) string {

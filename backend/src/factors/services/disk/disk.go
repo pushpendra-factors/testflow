@@ -4,7 +4,9 @@ import (
 	"factors/filestore"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -38,6 +40,10 @@ func (dd *DiskDriver) Create(path, fileName string, reader io.Reader) error {
 		return err
 	}
 
+	if !strings.HasSuffix(path, "/") {
+		// Append / to the end if not present.
+		path = path + "/"
+	}
 	file, err := os.Create(path + fileName)
 	if err != nil {
 		return err
@@ -54,8 +60,17 @@ func (dd *DiskDriver) Get(path, fileName string) (io.ReadCloser, error) {
 		"Path":     path,
 		"FileName": fileName,
 	}).Debug("DiskDriver Opening file")
+
+	if !strings.HasSuffix(path, "/") {
+		// Append / to the end if not present.
+		path = path + "/"
+	}
 	file, err := os.OpenFile(path+fileName, os.O_RDONLY, 0444)
 	return file, err
+}
+
+func (dd *DiskDriver) GetBucketName() string {
+	return dd.baseDir
 }
 
 func (dd *DiskDriver) GetProjectModelDir(projectId, modelId uint64) string {
@@ -89,4 +104,25 @@ func (dd *DiskDriver) GetPatternChunksDir(projectId, modelId uint64) string {
 
 func (dd *DiskDriver) GetPatternChunkFilePathAndName(projectId, modelId uint64, chunkId string) (string, string) {
 	return dd.GetPatternChunksDir(projectId, modelId), fmt.Sprintf("chunk_%s.txt", chunkId)
+}
+
+func (dd *DiskDriver) GetEventArchiveFilePathAndName(projectID uint64, startTime, endTime int64) (string, string) {
+	path := fmt.Sprintf("%s/archive/%d/", dd.baseDir, projectID)
+	fileName := fmt.Sprintf("%d-%d.txt", startTime, endTime)
+	return path, fileName
+}
+
+// ListFiles List files present in a directory.
+func (dd *DiskDriver) ListFiles(path string) []string {
+	var files []string
+	fileObjects, err := ioutil.ReadDir(path)
+	if err != nil {
+		log.WithError(err).Errorln("Failed to read directory contents")
+		return files
+	}
+
+	for _, file := range fileObjects {
+		files = append(files, path+"/"+file.Name())
+	}
+	return files
 }

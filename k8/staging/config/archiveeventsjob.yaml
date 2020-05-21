@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config-archiveeventsjob
+  labels:
+    env: staging
+    project: factors-staging
+data:
+  MAX_LOOKBACK_DAYS: "365"
+  ARCHIVE_BUCKET_NAME: "factors-staging-archival"
+  ARCHIVE_ALL: "true"

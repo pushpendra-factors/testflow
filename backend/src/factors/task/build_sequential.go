@@ -68,8 +68,8 @@ func BuildSequential(env string, db *gorm.DB, cloudManager *filestore.FileManage
 			"Type": build.ModelType})
 		// Readable time for debug.
 		logCtx = logCtx.WithFields(log.Fields{
-			"ReadableStartTime": unixToHumanTime(build.StartTimestamp),
-			"ReadableEndTime":   unixToHumanTime(build.EndTimestamp),
+			"ReadableStartTime": util.UnixToHumanTime(build.StartTimestamp),
+			"ReadableEndTime":   util.UnixToHumanTime(build.EndTimestamp),
 		})
 
 		// Pull events

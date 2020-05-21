@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config-onboardtobigquery
+  labels:
+    env: staging
+    project: factors-staging
+data:
+  BQ_PROJECT_ID: "0"
+  BQ_GCP_PROJECT_NAME: "factors-staging"
+  BQ_DATASET_NAME: "events_archive"
+  BQ_CREDENTIALS_JSON: "credentials_filename.json"
+  BQ_CRED_BUCKET: "factors-staging-misc"

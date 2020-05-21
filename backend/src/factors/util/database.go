@@ -117,6 +117,15 @@ func EncodeToPostgresJsonb(sourceMap *map[string]interface{}) (*postgres.Jsonb, 
 	return &postgres.Jsonb{sourceJsonBytes}, nil
 }
 
+func EncodeStructTypeToPostgresJsonb(structType interface{}) (*postgres.Jsonb, error) {
+	sourceJsonBytes, err := json.Marshal(structType)
+	if err != nil {
+		return nil, err
+	}
+
+	return &postgres.Jsonb{sourceJsonBytes}, nil
+}
+
 func IsPostgresIntegrityViolationError(err error) bool {
 	// i.e pq: duplicate key value violates unique constraint \"col_unique_idx\"
 	return strings.Contains(err.Error(), "violates") && strings.Contains(err.Error(), "constraint")

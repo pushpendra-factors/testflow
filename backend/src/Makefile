@@ -1,4 +1,4 @@
-.PHONY: build-api serve-api build-ps serve-ps build-ds serve-ds build-sdk serve-sdk serve-redis serve-predis clean pack-api upload-api pack-ps upload-ps pack-ds upload-ds pack-sdk upload-sdk pack-redis upload-redis pack-predis upload-predis pack-debug upload-debug pack-build-seq upload-build-seq pack-build-reports upload-build-reports pack-hubspot-enrich upload-hubspot-enrich pack-sdk-request-worker upload-sdk-request-worker pack-integration-request-worker upload-integration-request-worker pack-monitoring upload-monitoring test 
+.PHONY: build-api serve-api build-ps serve-ps build-ds serve-ds build-sdk serve-sdk serve-redis serve-predis clean pack-api upload-api pack-ps upload-ps pack-ds upload-ds pack-sdk upload-sdk pack-redis upload-redis pack-predis upload-predis pack-debug upload-debug pack-build-seq upload-build-seq pack-build-reports upload-build-reports pack-hubspot-enrich upload-hubspot-enrich pack-sdk-request-worker upload-sdk-request-worker pack-integration-request-worker upload-integration-request-worker pack-monitoring upload-monitoring pack-archive-events upload-archive-events pack-bigquery-upload upload-bigquery-upload pack-onboard-to-bigquery upload-onboard-to-bigquery test
 
 # Update tag with the latest release version
 # Ex format: v0.05-beta_d0e9ed9 
@@ -121,5 +121,23 @@ pack-monitoring:
 upload-monitoring:
 	docker push us.gcr.io/factors-$(ENV)/monitoring:$(TAG)
 
-test: 
+pack-archive-events:
+	docker build -t us.gcr.io/factors-$(ENV)/archive-events-job:$(TAG) -f Dockerfile.archive_events_job .
+
+upload-archive-events:
+	docker push us.gcr.io/factors-$(ENV)/archive-events-job:$(TAG)
+
+pack-bigquery-upload:
+	docker build -t us.gcr.io/factors-$(ENV)/bigquery-upload-job:$(TAG) -f Dockerfile.bigquery_upload_job .
+
+upload-bigquery-upload:
+	docker push us.gcr.io/factors-$(ENV)/bigquery-upload-job:$(TAG)
+
+pack-onboard-to-bigquery:
+	docker build -t us.gcr.io/factors-$(ENV)/onboard-to-bigquery-job:$(TAG) -f Dockerfile.onboard_to_bigquery_job .
+
+upload-onboard-to-bigquery:
+	docker push us.gcr.io/factors-$(ENV)/onboard-to-bigquery-job:$(TAG)
+
+test:
 	go test -v $(GOPATH)/src/factors/tests && go test -v $(GOPATH)/src/factors/pattern_server/store

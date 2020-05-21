@@ -43,6 +43,9 @@ type ProjectSetting struct {
 	IntFacebookAgentUUID   *string `json:"int_facebook_agent_uuid,omitempty"`
 	IntFacebookUserID      string  `json:"int_facebook_user_id,omitempty"`
 	IntFacebookAdAccount   string  `json:"int_facebook_ad_account,omitempty"`
+	// Archival related fields.
+	ArchiveEnabled  *bool `gorm:"default:false" json:"archive_enabled"`
+	BigqueryEnabled *bool `gorm:"default:false" json:"bigquery_enabled"`
 }
 
 const ProjectSettingKeyToken = "token"
@@ -463,4 +466,50 @@ func GetFacebookEnabledProjectSettings() ([]FacebookProjectSettings, int) {
 		return facebookProjectSettings, http.StatusInternalServerError
 	}
 	return facebookProjectSettings, http.StatusOK
+}
+
+// GetArchiveEnabledProjectIDs Returns list of project ids which have archive enabled.
+func GetArchiveEnabledProjectIDs() ([]uint64, int) {
+	var projectIDs []uint64
+	db := C.GetServices().Db
+
+	rows, err := db.Model(&ProjectSetting{}).Where("archive_enabled = true").Select("project_id").Rows()
+	if err != nil {
+		log.WithError(err).Error("Query failed for GetArchiveEnabledProjectIDs")
+		return projectIDs, http.StatusInternalServerError
+	}
+
+	for rows.Next() {
+		var projectID uint64
+		err = rows.Scan(&projectID)
+		if err != nil {
+			log.WithError(err).Error("Error while scanning")
+			continue
+		}
+		projectIDs = append(projectIDs, projectID)
+	}
+	return projectIDs, http.StatusFound
+}
+
+// GetBigqueryEnabledProjectIDs Returns list of project ids which have bigquery enabled.
+func GetBigqueryEnabledProjectIDs() ([]uint64, int) {
+	var projectIDs []uint64
+	db := C.GetServices().Db
+
+	rows, err := db.Model(&ProjectSetting{}).Where("bigquery_enabled = true").Select("project_id").Rows()
+	if err != nil {
+		log.WithError(err).Error("Query failed for GetBigqueryEnabledProjectIDs")
+		return projectIDs, http.StatusInternalServerError
+	}
+
+	for rows.Next() {
+		var projectID uint64
+		err = rows.Scan(&projectID)
+		if err != nil {
+			log.WithError(err).Error("Error while scanning")
+			continue
+		}
+		projectIDs = append(projectIDs, projectID)
+	}
+	return projectIDs, http.StatusFound
 }

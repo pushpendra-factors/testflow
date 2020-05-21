@@ -86,10 +86,6 @@ func ceilTimestampByType(modelType string, timestamp int64) int64 {
 	return 0
 }
 
-func unixToHumanTime(timestamp int64) string {
-	return time.Unix(timestamp, 0).UTC().Format(time.RFC3339)
-}
-
 func addPendingIntervalsForProjectByType(builds *[]Build, projectId uint64, modelType string,
 	initTimestamp int64, limitTimestamp int64, projectName string, creatorEmail string) {
 
