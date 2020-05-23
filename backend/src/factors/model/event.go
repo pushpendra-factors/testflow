@@ -508,6 +508,7 @@ func GetUserEventsByEventNameId(projectId uint64, userId string, eventNameId uin
 	return events, http.StatusFound
 }
 
+/* COMMENTED TEMPORARILY BECAUSE OF SLOW QUERY.
 func enrichPreviousSessionEventProperties(projectId uint64, userId string,
 	previousSessionEvent *Event) (float64, float64, int) {
 	db := C.GetServices().Db
@@ -564,6 +565,7 @@ func enrichPreviousSessionEventProperties(projectId uint64, userId string,
 	}
 	return float64(count), timeSpent, http.StatusAccepted
 }
+*/
 
 func createSessionEvent(projectId uint64, userId string, sessionEventNameId uint64,
 	isFirstSession bool, requestTimestamp int64, eventProperties,
@@ -573,10 +575,11 @@ func createSessionEvent(projectId uint64, userId string, sessionEventNameId uint
 	var pageCount float64
 	var err error
 
+	/* COMMENTED TEMPORARILY
 	previousSessionEvent, errCode := GetLatestEventOfUserByEventNameId(
 		projectId, userId, sessionEventNameId, requestTimestamp-86400, requestTimestamp)
 
-	// get page count and page spent time
+	get page count and page spent time
 	if errCode == http.StatusFound {
 		pageCount, timeSpent, errCode = enrichPreviousSessionEventProperties(projectId,
 			userId, previousSessionEvent)
@@ -585,6 +588,7 @@ func createSessionEvent(projectId uint64, userId string, sessionEventNameId uint
 				"Failed to enrich previous session event properties on createSesseionEvent")
 		}
 	}
+	*/
 
 	logCtx := log.WithField("project_id", projectId).WithField("user_id", userId)
 
