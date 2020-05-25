@@ -150,7 +150,7 @@ class Query extends Component {
       inputDashboardUnitTitle: null,
       selectedDashboardId: null,
 
-      timeZone:null
+      timeZone:null,
     }
   }
 
@@ -363,6 +363,7 @@ class Query extends Component {
 
   onPropertyOpChange = (eventIndex, propertyIndex, value) => {
     this.setPropertyAttr(eventIndex, propertyIndex, 'op', value)
+    this.setPropertyAttr(eventIndex,propertyIndex,'value',"")
   }
 
   onPropertyValueChange = (eventIndex, propertyIndex, value, type) => {

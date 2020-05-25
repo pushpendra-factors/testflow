@@ -21,6 +21,9 @@ const TYPE_NUMERICAL = 'numerical';
 const TYPE_CATEGORICAL = 'categorical';
 const TYPE_DATETIME = 'datetime';
 
+const OP_CONTAINS = 'contains';
+const OP_NOT_CONTAINS = 'notContains';
+
 const LABEL_STYLE = { marginRight: '10px', fontWeight: '600', color: '#777' };
 
 const NUMERICAL_OPERATOR_OPTS = { 
@@ -147,7 +150,12 @@ class Property extends Component {
     }
     
     if (this.state.valueType == TYPE_CATEGORICAL) {
-      this.props.onValueChange(v.value, this.state.valueType);
+      if (v.target == undefined) {
+        this.props.onValueChange(v.value, this.state.valueType);
+      }
+      else {
+        this.props.onValueChange(v.target.value.trim(), this.state.valueType);
+      }
     }
   }
 
@@ -220,19 +228,34 @@ class Property extends Component {
     }
     
     if (this.state.valueType == TYPE_CATEGORICAL) {
-      return  (
-        <div style={{display: "inline-block", width: "240px", marginLeft: "10px"}} className='fapp-select light'>
-          <CreatableSelect
-            onChange={this.onValueChange}
-            onFocus={this.fetchPropertyValues}
-            options={this.state.valueOpts}
-            value={getSelectedOpt(this.props.propertyState.value)}
-            placeholder="Select a value"
-            formatCreateLabel={(value) => (value)}
-            isLoading={this.state.isValueOptsLoading}
-          />
-        </div>
-      );
+      if (!(this.props.propertyState.op == OP_CONTAINS || this.props.propertyState.op == OP_NOT_CONTAINS)) {
+        return  (
+          <div style={{display: "inline-block", width: "240px", marginLeft: "10px"}} className='fapp-select light'>
+            <CreatableSelect
+              onChange={this.onValueChange}
+              onFocus={this.fetchPropertyValues}
+              options={this.state.valueOpts}
+              value={getSelectedOpt(this.props.propertyState.value)}
+              placeholder="Select a value"
+              formatCreateLabel={(value) => (value)}
+              isLoading={this.state.isValueOptsLoading}
+            />
+          </div>
+        );
+      } 
+      else {
+        return  (
+          <div style={{display: "inline-block", width: "240px", marginLeft: "10px"}} className='fapp-select light'>
+            <Input
+              type="text"
+              onChange={this.onValueChange}
+              placeholder="Enter a value"
+              value={this.props.propertyState.value}
+              style={{ border: "1px solid #ddd", color: "#444444" }}
+            />
+          </div>
+        );
+      }
     }
 
     if (this.state.valueType != null) {
