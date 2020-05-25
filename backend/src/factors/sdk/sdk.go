@@ -88,6 +88,7 @@ type UpdateEventPropertiesResponse struct {
 }
 
 type Response struct {
+	EventId string `json:"event_id,omitempty"`
 	Message string `json:"message,omitempty"`
 	Error   string `json:"error,omitempty"`
 }
@@ -1216,10 +1217,12 @@ func AMPTrackByToken(token string, reqPayload *AMPTrackPayload) (int, *Response)
 		UserProperties:  userProperties,
 		ClientIP:        reqPayload.ClientIP,
 		UserAgent:       reqPayload.UserAgent,
+		Timestamp:       reqPayload.Timestamp,
 	}
 
 	errCode, trackResponse := Track(project.ID, &trackPayload, false)
-	return errCode, &Response{Message: trackResponse.Message, Error: trackResponse.Error}
+	return errCode, &Response{EventId: trackResponse.EventId,
+		Message: trackResponse.Message, Error: trackResponse.Error}
 }
 
 func AMPTrackWithQueue(token string, reqPayload *AMPTrackPayload,

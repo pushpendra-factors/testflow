@@ -1732,3 +1732,22 @@ func TestSessionAndUserInitialPropertiesUpdateOnSDKUpdateEventPropertiesHandler(
 	assert.NotEqual(t, float64(200), (*userProperties)[U.UP_INITIAL_PAGE_SPENT_TIME])
 	assert.Equal(t, float64(100), (*userProperties)[U.UP_INITIAL_PAGE_SPENT_TIME])
 }
+
+func TestSDKAMPTrackByToken(t *testing.T) {
+	project, _, err := SetupProjectUserReturnDAO()
+	assert.Nil(t, err)
+
+	timestamp := U.UnixTimeBeforeAWeek()
+	clientId := U.RandomLowerAphaNumString(5)
+	request := &SDK.AMPTrackPayload{
+		ClientID:  clientId,
+		SourceURL: "https://example.com/a/b",
+		Timestamp: timestamp,
+	}
+	errCode, response := SDK.AMPTrackByToken(project.Token, request)
+	assert.Equal(t, http.StatusOK, errCode)
+	event, errCode := M.GetEventById(project.ID, response.EventId)
+	assert.Equal(t, http.StatusFound, errCode)
+	// AMP Tracked event should use the given timestamp.
+	assert.Equal(t, timestamp, event.Timestamp)
+}
