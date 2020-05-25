@@ -16,7 +16,11 @@
       <script type="application/json">
         {
           "requests": {
-            "pageview": "http://localhost:8085/sdk/amp/event/track?token=${token}&title=${title}&referrer=${documentReferrer}&screen_height=${screenHeight}&screen_width=${screenWidth}&page_load_time_in_ms=${pageLoadTime}&client_id=${clientId(_factorsai_amp_id)}&source_url=${sourceUrl}"
+            "baseTrack": "http://localhost:8085/sdk/amp/event/track?token=${token}&title=${title}&referrer=${documentReferrer}&client_id=${clientId(_factorsai_amp_id)}&source_url=${sourceUrl}",
+            "baseUpdate": "http://localhost:8085/sdk/amp/event/update_properties?token=${token}&client_id=${clientId(_factorsai_amp_id)}&source_url=${sourceUrl}",
+            "pageview": "${baseTrack}&screen_height=${screenHeight}&screen_width=${screenWidth}&page_load_time_in_ms=${pageLoadTime}",
+            "pageScrollPercent": "${baseUpdate}&page_scroll_percent=${pageScroll}",
+            "pageSpentTime": "${baseUpdate}&page_spent_time=${spentTime}"
           },
           "vars": {
             "token": "<PROJECT-TOKEN>"
@@ -25,6 +29,36 @@
             "trackPageview": {
               "on": "visible",
               "request": "pageview"
+            },
+            "scrollPings": {
+              "on": "scroll",
+              "scrollSpec": {
+                "verticalBoundaries": [10,20,30,40,50,60,70,80,90,100]
+              },
+              "vars" : {
+                "pageScroll": "${verticalScrollBoundary}"
+              },
+              "request": "pageScrollPercent"
+            },
+            "pageTime": {
+              "on": "visible",
+              "visibilitySpec": {
+                "reportWhen": "documentExit"
+              },
+              "vars": {
+                "spentTime": "${totalEngagedTime}"
+              },
+              "request": "pageSpentTime"
+            },
+            "pageNewTime": {
+              "on": "hidden",
+              "visibilitySpec": {
+                "repeat": true
+              },
+              "vars": {
+                "spentTime": "${totalEngagedTime}"
+              },
+              "request": "pageSpentTime"
             }
           }
         }
@@ -34,6 +68,6 @@
   </head>
   <body style="text-align: center">
     <h1>Factors AMP Page</h1>
+    <div style="width: 100vw;height: 500vh;background-color: cyan;"></div>
   </body>
 </html>
-

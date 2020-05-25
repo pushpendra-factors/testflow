@@ -1037,6 +1037,7 @@ func TestOldUserSessionProperties(t *testing.T) {
 	assert.Equal(t, float64(1), (*oldUserPropertiesMap)[U.UP_SESSION_COUNT])
 }
 
+/*
 func TestPreviousSessionEventPropertyEnrichment(t *testing.T) {
 	r := gin.Default()
 	H.InitSDKServiceRoutes(r)
@@ -1164,6 +1165,7 @@ func TestPreviousSessionEventPropertyEnrichment(t *testing.T) {
 	assert.Equal(t, (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME], float64(event2.Timestamp-firstSession.Timestamp)+float64(event3.Timestamp-secondSession.Timestamp))
 	assert.Equal(t, float64(3), (*userPropertiesMap)[U.UP_SESSION_COUNT])
 }
+*/
 
 func TestTrackHandlerWithFormSubmit(t *testing.T) {
 	// Initialize routes and dependent data.
@@ -1731,6 +1733,91 @@ func TestSessionAndUserInitialPropertiesUpdateOnSDKUpdateEventPropertiesHandler(
 	assert.Equal(t, pageRawURL, (*userProperties)[U.UP_INITIAL_PAGE_RAW_URL])
 	assert.NotEqual(t, float64(200), (*userProperties)[U.UP_INITIAL_PAGE_SPENT_TIME])
 	assert.Equal(t, float64(100), (*userProperties)[U.UP_INITIAL_PAGE_SPENT_TIME])
+}
+
+func TestAMPTrackByTokenHandler(t *testing.T) {
+	userAgentStr := "Mozilla/5.0 (Linux; Android 8.0.0; SM-G960F Build/R16NW) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.84 Mobile Safari/537.36"
+	ampClientId := "amp-1xxAGEAL-irIHu4qMW8j3A"
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	payload := &SDK.AMPTrackPayload{
+		ClientID:  ampClientId,
+		SourceURL: "abcd.com/",
+		Title:     "Test",
+
+		Timestamp: time.Now().Unix(), // request timestamp.
+		UserAgent: userAgentStr,
+		ClientIP:  "10.10.0.1",
+	}
+	errCode, _ := SDK.AMPTrackByToken(project.Token, payload)
+	assert.Equal(t, errCode, http.StatusOK)
+	user, errCode := M.CreateOrGetAMPUser(project.ID, ampClientId, payload.Timestamp)
+	assert.Equal(t, errCode, http.StatusFound)
+	assert.NotEqual(t, user.ID, "")
+
+	retEvent, errCode := M.GetLatestUserEventByPageURLFromDB(project.ID, user.ID, "abcd.com")
+	assert.Equal(t, errCode, http.StatusFound)
+	assert.NotNil(t, retEvent)
+
+	payload1 := &SDK.AMPTrackPayload{
+		ClientID:  ampClientId,
+		SourceURL: "abcd.com/1/",
+		Title:     "Test1",
+
+		Timestamp: time.Now().Unix(), // request timestamp.
+		UserAgent: userAgentStr,
+		ClientIP:  "10.10.0.1",
+	}
+	errCode, _ = SDK.AMPTrackByToken(project.Token, payload1)
+	assert.Equal(t, errCode, http.StatusOK)
+	user1, errCode := M.CreateOrGetAMPUser(project.ID, ampClientId, payload1.Timestamp)
+	assert.Equal(t, errCode, http.StatusFound)
+	assert.NotEqual(t, user1.ID, "")
+
+	retEvent1, errCode := M.GetLatestUserEventByPageURLFromDB(project.ID, user.ID, "abcd.com/1")
+	assert.Equal(t, errCode, http.StatusFound)
+	assert.NotNil(t, retEvent1)
+
+	payload2 := &SDK.AMPTrackPayload{
+		ClientID:  ampClientId,
+		SourceURL: "abcd.com/xy_z",
+		Title:     "Test2",
+
+		Timestamp: time.Now().Unix(), // request timestamp.
+		UserAgent: userAgentStr,
+		ClientIP:  "10.10.0.1",
+	}
+	errCode, _ = SDK.AMPTrackByToken(project.Token, payload2)
+	assert.Equal(t, errCode, http.StatusOK)
+	user2, errCode := M.CreateOrGetAMPUser(project.ID, ampClientId, payload2.Timestamp)
+	assert.Equal(t, errCode, http.StatusFound)
+	assert.NotEqual(t, user2.ID, "")
+
+	retEvent2, errCode := M.GetLatestUserEventByPageURLFromDB(project.ID, user2.ID, "abcd.com/xy_z")
+	assert.Equal(t, errCode, http.StatusFound)
+	assert.NotNil(t, retEvent2)
+
+	// with query param.
+	url3 := fmt.Sprintf("abcd.com/%s", U.RandomLowerAphaNumString(5))
+	payload3 := &SDK.AMPTrackPayload{
+		ClientID:  ampClientId,
+		SourceURL: url3 + "/?a=3", // with query param.
+		Title:     "Test2",
+
+		Timestamp: time.Now().Unix(), // request timestamp.
+		UserAgent: userAgentStr,
+		ClientIP:  "10.10.0.1",
+	}
+	errCode, _ = SDK.AMPTrackByToken(project.Token, payload3)
+	assert.Equal(t, errCode, http.StatusOK)
+	user3, errCode := M.CreateOrGetAMPUser(project.ID, ampClientId, payload3.Timestamp)
+	assert.Equal(t, errCode, http.StatusFound)
+	assert.NotEqual(t, user3.ID, "")
+
+	retEvent3, errCode := M.GetLatestUserEventByPageURLFromDB(project.ID, user3.ID, url3)
+	assert.Equal(t, errCode, http.StatusFound)
+	assert.NotNil(t, retEvent3)
 }
 
 func TestSDKAMPTrackByToken(t *testing.T) {

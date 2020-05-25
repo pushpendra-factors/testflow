@@ -326,6 +326,50 @@ func SDKAMPTrackHandler(c *gin.Context) {
 	c.JSON(SDK.AMPTrackWithQueue(token, payload, C.GetSDKRequestQueueAllowedTokens()))
 }
 
+func SDKAMPUpdateEventPropertiesHandler(c *gin.Context) {
+	token := c.Query("token")
+	token = strings.TrimSpace(token)
+	if token == "" {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, &SDK.Response{Error: "Invalid token"})
+		return
+	}
+
+	logCtx := log.WithField("token", token)
+
+	ampClientId := c.Query("client_id")
+	ampClientId = strings.TrimSpace(ampClientId)
+	if ampClientId == "" {
+		c.AbortWithStatusJSON(http.StatusBadRequest, &SDK.Response{Error: "Invalid client_id"})
+		return
+	}
+
+	spentTime := c.Query("page_spent_time")
+	spentTime = strings.TrimSpace(spentTime)
+	pageSpentTime, err := strconv.ParseFloat(spentTime, 64)
+
+	scrollPercent := c.Query("page_scroll_percent")
+	scrollPercent = strings.TrimSpace(scrollPercent)
+	pageScrollPercent, err := strconv.ParseFloat(scrollPercent, 64)
+	if scrollPercent != "" && err != nil {
+		logCtx.WithError(err).WithField("page_scroll_percent", pageScrollPercent).Error(
+			"Failed to convert scroll percent to number on amp sdk track")
+	}
+
+	sourceURL := c.Query("source_url")
+	sourceURL = strings.TrimSpace(sourceURL)
+
+	payload := &SDK.AMPUpdateEventPropertiesPayload{
+		ClientID:          ampClientId,
+		SourceURL:         sourceURL,
+		PageScrollPercent: pageScrollPercent,
+		PageSpentTime:     pageSpentTime,
+
+		Timestamp: time.Now().Unix(), // request timestamp.
+	}
+
+	c.JSON(SDK.AMPUpdateEventPropertiesWithQueue(token, payload, C.GetSDKRequestQueueAllowedTokens()))
+}
+
 type SDKError struct {
 	UserId string `json:"user_id"`
 	URL    string `json:"url"`

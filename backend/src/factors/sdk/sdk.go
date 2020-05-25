@@ -8,6 +8,9 @@ import (
 	"strings"
 	"time"
 
+	cacheRedis "factors/cache/redis"
+
+	"github.com/gomodule/redigo/redis"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/mssola/user_agent"
 	log "github.com/sirupsen/logrus"
@@ -97,11 +100,12 @@ const RequestQueue = "sdk_request_queue"
 const ProcessRequestTask = "process_sdk_request"
 
 const (
-	sdkRequestTypeEventTrack            = "sdk_event_track"
-	sdkRequestTypeUserIdentify          = "sdk_user_identify"
-	sdkRequestTypeUserAddProperties     = "sdk_user_add_properties"
-	sdkRequestTypeEventUpdateProperties = "sdk_event_update_properties"
-	sdkRequestTypedAMPEventTrack        = "sdk_amp_event_track"
+	sdkRequestTypeEventTrack                = "sdk_event_track"
+	sdkRequestTypeUserIdentify              = "sdk_user_identify"
+	sdkRequestTypeUserAddProperties         = "sdk_user_add_properties"
+	sdkRequestTypeEventUpdateProperties     = "sdk_event_update_properties"
+	sdkRequestTypeAMPEventTrack             = "sdk_amp_event_track"
+	sdkRequestTypedAMPEventUpdateProperties = "sdk_amp_event_update_properties"
 )
 
 func ProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, string, error) {
@@ -164,7 +168,7 @@ func ProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, string,
 
 		status, response = UpdateEventPropertiesByToken(token, &reqPayload)
 
-	case sdkRequestTypedAMPEventTrack:
+	case sdkRequestTypeAMPEventTrack:
 		var reqPayload AMPTrackPayload
 
 		err := json.Unmarshal([]byte(reqPayloadStr), &reqPayload)
@@ -1136,10 +1140,74 @@ type AMPTrackPayload struct {
 	UserAgent string `json:"user_agent"`
 	ClientIP  string `json:"client_ip"`
 }
+type AMPUpdateEventPropertiesPayload struct {
+	ClientID          string  `json:"client_id"` // amp user_id
+	SourceURL         string  `json:"source_url"`
+	PageScrollPercent float64 `json:"page_scroll_percent"`
+	PageSpentTime     float64 `json:"page_spent_time"`
 
+	// internal
+	Timestamp int64 `json:"timestamp"`
+}
 type AMPTrackResponse struct {
 	Message string `json:"message"`
 	Error   string `json:"error"`
+}
+
+func AMPUpdateEventPropertiesByToken(token string, reqPayload *AMPUpdateEventPropertiesPayload) (int, *Response) {
+	project, errCode := M.GetProjectByToken(token)
+	if errCode != http.StatusFound {
+		return http.StatusUnauthorized, &Response{Error: "Invalid token"}
+	}
+
+	logCtx := log.WithField("project_id", project.ID)
+
+	parsedSourceURL, err := U.ParseURLStable(reqPayload.SourceURL)
+
+	if err != nil {
+		logCtx.WithField("canonical_url", reqPayload.SourceURL).WithError(err).Error(
+			"Failed to parsing page url from canonical_url query param on amp sdk update event properties")
+		return http.StatusBadRequest, &Response{Error: "Invalid page url"}
+	}
+
+	pageURL := U.CleanURI(parsedSourceURL.Host + parsedSourceURL.Path)
+
+	user, errCode := M.CreateOrGetAMPUser(project.ID, reqPayload.ClientID, reqPayload.Timestamp)
+	if errCode != http.StatusFound {
+		return errCode, &Response{Error: "Invalid user"}
+	}
+
+	eventID, errCode, err := GetCacheAMPSDKEventIDByPageURL(project.ID, user.ID, pageURL)
+	if errCode != http.StatusFound || err != nil {
+		logCtx.WithFields(log.Fields{"err_code": errCode, "err": err}).
+			Error("Failed to get event_id from cache to update on amp.")
+
+		retEvent, errCode := M.GetLatestUserEventByPageURLFromDB(project.ID, user.ID, pageURL)
+		if errCode != http.StatusFound {
+			logCtx.WithFields(log.Fields{"errCode": errCode, "err": err}).Error("Failed to get eventID from DB")
+			return errCode, &Response{Error: "No events found"}
+		}
+		eventID = retEvent.ID
+	}
+
+	updateEventProperties := U.PropertiesMap{}
+
+	if reqPayload.PageSpentTime != 0 {
+		updateEventProperties[U.EP_PAGE_SPENT_TIME] = reqPayload.PageSpentTime
+	}
+
+	if reqPayload.PageScrollPercent != 0 {
+		updateEventProperties[U.EP_PAGE_SCROLL_PERCENT] = reqPayload.PageScrollPercent
+	}
+
+	errCode = M.UpdateEventPropertiesByTimestamp(project.ID, eventID, &updateEventProperties, time.Now().Unix())
+
+	if errCode != http.StatusAccepted {
+		logCtx.WithFields(log.Fields{"project_id": project.ID, "event_id": eventID}).Error("Failed to update event properties")
+		return errCode, &Response{Error: "Updating event properties failed"}
+	}
+
+	return http.StatusAccepted, &Response{Message: "Updated Successfully"}
 }
 
 func AMPTrackByToken(token string, reqPayload *AMPTrackPayload) (int, *Response) {
@@ -1167,7 +1235,7 @@ func AMPTrackByToken(token string, reqPayload *AMPTrackPayload) (int, *Response)
 		return http.StatusBadRequest, &Response{Error: "Invalid page url"}
 	}
 
-	pageURL := parsedSourceURL.Host + parsedSourceURL.Path
+	pageURL := U.CleanURI(parsedSourceURL.Host + parsedSourceURL.Path)
 
 	var referrerRawURL, referrerURL, referrerDomain string
 	if reqPayload.Referrer != "" {
@@ -1195,7 +1263,6 @@ func AMPTrackByToken(token string, reqPayload *AMPTrackPayload) (int, *Response)
 	if reqPayload.PageLoadTimeInSecs > 0 {
 		eventProperties[U.EP_PAGE_LOAD_TIME] = reqPayload.PageLoadTimeInSecs
 	}
-
 	userProperties := U.PropertiesMap{}
 	if reqPayload.ScreenHeight > 0 {
 		userProperties[U.UP_SCREEN_HEIGHT] = reqPayload.ScreenHeight
@@ -1210,6 +1277,7 @@ func AMPTrackByToken(token string, reqPayload *AMPTrackPayload) (int, *Response)
 	}
 
 	trackPayload := TrackPayload{
+		Auto:            true,
 		UserId:          user.ID,
 		IsNewUser:       isNewUser,
 		Name:            pageURL,
@@ -1221,15 +1289,80 @@ func AMPTrackByToken(token string, reqPayload *AMPTrackPayload) (int, *Response)
 	}
 
 	errCode, trackResponse := Track(project.ID, &trackPayload, false)
+	if trackResponse.EventId != "" {
+		cacheErrCode := SetCacheAMPSDKEventIDByPageURL(project.ID, user.ID,
+			trackResponse.EventId, pageURL)
+		if cacheErrCode != http.StatusAccepted {
+			logCtx.Error("Failed to set cache event_id by page_url on AMP.")
+		}
+	} else {
+		logCtx.WithFields(log.Fields{"user_id": user.ID, "event_id": trackResponse.EventId}).
+			Error("Missing event_id from response of track on AMP track.")
+	}
+
 	return errCode, &Response{EventId: trackResponse.EventId,
 		Message: trackResponse.Message, Error: trackResponse.Error}
+}
+
+func getAMPSDKByEventIDCacheKey(projectId uint64, userId string, pageURL string) (*cacheRedis.Key, error) {
+	prefix := "amp_sdk_user_event"
+	suffix := "uid:" + userId + ":url:" + pageURL
+	return cacheRedis.NewKey(projectId, prefix, suffix)
+}
+
+func SetCacheAMPSDKEventIDByPageURL(projectId uint64, userId string, eventId string, pageURL string) int {
+	logctx := log.WithFields(log.Fields{"project_id": projectId, "user_id": userId})
+
+	if projectId == 0 || userId == "" || eventId == "" || pageURL == "" {
+		logctx.Error("Invalid scope ids.")
+		return http.StatusBadRequest
+	}
+
+	resultCacheKey, err := getAMPSDKByEventIDCacheKey(projectId, userId, pageURL)
+	if err != nil {
+		logctx.WithError(err).Error("Failed to getAMPSDKByEventIdCacheKey.")
+		return http.StatusNotFound
+	}
+
+	err = cacheRedis.Set(resultCacheKey, string(eventId), 30*60) //30mins
+	if err != nil {
+		logctx.WithError(err).Error("Failed to set cache for channel query")
+		return http.StatusInternalServerError
+	}
+	return http.StatusAccepted
+}
+
+func GetCacheAMPSDKEventIDByPageURL(projectId uint64, userId string, pageURL string) (string, int, error) {
+	var cacheResult string
+	if projectId == 0 || userId == "" || pageURL == "" {
+		return cacheResult, http.StatusBadRequest, errors.New("invalid scope ids.")
+	}
+
+	resultCacheKey, err := getAMPSDKByEventIDCacheKey(projectId, userId, pageURL)
+	if err != nil {
+		return cacheResult, http.StatusBadRequest, err
+	}
+
+	cacheResult, err = cacheRedis.Get(resultCacheKey)
+	if err != nil {
+		if err == redis.ErrNil {
+			return cacheResult, http.StatusNotFound, err
+		}
+		return cacheResult, http.StatusInternalServerError, err
+	}
+
+	if cacheResult == "" {
+		return cacheResult, http.StatusNotFound, errors.New("invalid cache result.")
+	}
+
+	return cacheResult, http.StatusFound, nil
 }
 
 func AMPTrackWithQueue(token string, reqPayload *AMPTrackPayload,
 	queueAllowedTokens []string) (int, *Response) {
 
 	if U.UseQueue(token, queueAllowedTokens) {
-		err := enqueueRequest(token, sdkRequestTypedAMPEventTrack, reqPayload)
+		err := enqueueRequest(token, sdkRequestTypeAMPEventTrack, reqPayload)
 		if err != nil {
 			log.WithError(err).Error("Failed to queue amp sdk track event request.")
 			return http.StatusInternalServerError, &Response{Error: "Track event failed"}
@@ -1239,6 +1372,22 @@ func AMPTrackWithQueue(token string, reqPayload *AMPTrackPayload,
 	}
 
 	return AMPTrackByToken(token, reqPayload)
+}
+
+func AMPUpdateEventPropertiesWithQueue(token string, reqPayload *AMPUpdateEventPropertiesPayload,
+	queueAllowedTokens []string) (int, *Response) {
+
+	if U.UseQueue(token, queueAllowedTokens) {
+		err := enqueueRequest(token, sdkRequestTypedAMPEventUpdateProperties, reqPayload)
+		if err != nil {
+			log.WithError(err).Error("Failed to queue amp sdk update event request.")
+			return http.StatusInternalServerError, &Response{Error: "Update event failed"}
+		}
+
+		return http.StatusOK, &Response{Message: "Updated event successfully"}
+	}
+
+	return AMPUpdateEventPropertiesByToken(token, reqPayload)
 }
 
 func FillUserAgentUserProperties(userProperties *U.PropertiesMap, userAgentStr string) error {
