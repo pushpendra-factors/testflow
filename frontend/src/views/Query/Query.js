@@ -1182,7 +1182,7 @@ class Query extends Component {
   }
 
   renderAttributionInterface = () =>{ 
-    return <AttributionQuery/>
+    return <AttributionQuery showError={(err)=>{this.showTopError(err)}} resetError={()=>this.resetTopError()}/>
  }
 
   render() {

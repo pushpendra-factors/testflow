@@ -113,13 +113,25 @@ class AttributionQuery extends Component {
 
   validateQuery() {
     if (this.state.converisonEventName == null || this.state.converisonEventName == ""){
+      this.props.showError("No conversion event provided.")
       return false;
     }
 
     for(let i=0; i<this.state.linkedEventNames.length; i++) {
       if (this.state.linkedEventNames[i] == "" || this.state.linkedEventNames[i] == null) {
+        this.props.showError("Invalid linked funnel event provided.")
         return false
       }
+    }
+
+    if (this.state.attributionKey.value != SOURCE && this.state.attributionKey.value!= CAMPAIGN){
+      this.props.showError("No attribution key provided.")
+      return false
+    }
+
+    if (this.state.attributionMethodology.value != FIRST_TOUCH && this.state.attributionMethodology.value!= LAST_TOUCH){
+      this.props.showError("No attribution methodology provided.")
+      return false
     }
 
     return true;
@@ -146,6 +158,7 @@ class AttributionQuery extends Component {
     let valid = this.validateQuery();
     if (!valid) return
 
+    this.props.resetError()
     this.setState({ isPresentationLoading: true });
     let query = this.getQuery();
     runAttributionQuery(this.props.currentProjectId, query)
