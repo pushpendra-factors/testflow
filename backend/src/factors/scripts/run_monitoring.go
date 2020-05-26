@@ -46,13 +46,7 @@ func main() {
 	}
 
 	C.InitConf(config.Env)
-	// Initialize configs and connections and close with defer.
 	err := C.InitDB(config.DBInfo)
-	if err != nil {
-		log.Fatal("Failed to run slow queries. Init failed.")
-	}
-
-	err = C.InitDB(config.DBInfo)
 	if err != nil {
 		log.WithError(err).Fatal("Failed to initalize db.")
 	}

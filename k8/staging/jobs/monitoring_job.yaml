@@ -6,6 +6,7 @@ spec:
   schedule: "*/15 * * * *" # every 15 minutes
   successfulJobsHistoryLimit: 5
   failedJobsHistoryLimit: 5
+  startingDeadlineSeconds: 30
   jobTemplate:
     spec:
       template:
