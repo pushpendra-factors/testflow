@@ -254,7 +254,7 @@ class AttributionQuery extends Component {
       events = events.map((v, i)=>{
           return (
           <div style={{marginBottom:"8px"}} key ={"event_"+i}>
-            <div style={{display: 'inline-block', width: '150px'}} className='fapp-select light'>
+            <div style={{display: 'inline-block', width: '250px'}} className='fapp-select light'>
             <Select
             index = {i}
             onChange={(value)=> this.onEventNameChange(i, value)}
@@ -298,7 +298,7 @@ class AttributionQuery extends Component {
         <span style={LABEL_STYLE}> Select Conversion Event</span>
       </Col>
       <Col xs='8' md='8'>
-      <div className='fapp-select light' style={{ display: 'inline-block', width: '150px' }}>
+      <div className='fapp-select light' style={{ display: 'inline-block', width: '250px' }}>
           <Select options={makeSelectOpts(this.props.eventNames)} onChange={this.handleConversionEventNameChange}
           placeholder='Select'/>
         </div>
@@ -318,7 +318,7 @@ class AttributionQuery extends Component {
         <span style={LABEL_STYLE}> Attribution Key</span>
       </Col>
       <Col xs='8' md='8' >
-        <div className='fapp-select light' style={{ display: 'inline-block', width: '150px' }}>
+        <div className='fapp-select light' style={{ display: 'inline-block', width: '250px' }}>
           <Select options={ATTRIBUTION_KEYS} onChange={this.handleAttributionKeyChange}
           placeholder='Select'/>
         </div>
@@ -330,7 +330,7 @@ class AttributionQuery extends Component {
         <span style={LABEL_STYLE}> Attribution Methodology</span>
       </Col>
       <Col xs='8' md='8' >
-        <div className='fapp-select light' style={{ display: 'inline-block', width: '150px' }}>
+        <div className='fapp-select light' style={{ display: 'inline-block', width: '250px' }}>
           <Select
           options={ATTRIBUTION_METHODOLOGY} onChange={this.handleMethodologyChange}
           placeholder='Select Event'/>
@@ -338,11 +338,13 @@ class AttributionQuery extends Component {
       </Col>
     </Row>
     <Row style={{ marginBottom: "15px" }}>
-    <Col xs='2' md='2' style={{ paddingTop: "5px" }}>
+      <Col xs='2' md='2' style={{ paddingTop: "5px" }}>
         <span style={LABEL_STYLE}>Lookback Window</span>
       </Col>
-      <Col xs='8' md='8' >
-      <input type="number" className="form-control" style={{height:"38px", width:"150px", borderRadius:"5px", border:"1px solid #bbb"}} type="text" value={this.state.loopbackDays} onChange={this.handleLookbackWindowChange} placeholder="# of days"/>
+      <Col xs='8' md='8'>
+        <input type="number" className="form-control" style={{height:"38px", width:"250px", borderRadius:"5px", 
+        border:"1px solid #bbb"}} type="text" value={this.state.loopbackDays} onChange={this.handleLookbackWindowChange} 
+        placeholder="# of days"/>
       </Col>
     </Row>
     
