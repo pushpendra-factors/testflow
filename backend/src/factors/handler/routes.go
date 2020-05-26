@@ -74,6 +74,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/channels/filter_values", GetChannelFilterValuesHandler)
 	authRouteGroup.GET("/:project_id/reports", GetReportsHandler)
 	authRouteGroup.GET("/:project_id/reports/:report_id", GetReportHandler)
+	authRouteGroup.POST("/:project_id/attribution/query", AttributionHandler)
 
 	// TODO
 	// Scope this with Project Admin

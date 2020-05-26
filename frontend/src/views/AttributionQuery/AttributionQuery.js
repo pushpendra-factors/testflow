@@ -6,7 +6,7 @@ import { bindActionCreators } from 'redux';
 import 'react-date-range/dist/styles.css';
 import 'react-date-range/dist/theme/default.css'; 
 
-import { fetchProjectEvents, runDummyQuery } from '../../actions/projectsActions';
+import { fetchProjectEvents, runAttributionQuery } from '../../actions/projectsActions';
 import { DEFAULT_DATE_RANGE, DEFINED_DATE_RANGES, 
   readableDateRange,QUERY_CLASS_ATTRIBUTION, getQueryPeriod } from '../Query/common';
 import ClosableDateRangePicker from '../../common/ClosableDatePicker';
@@ -23,9 +23,12 @@ const ATTRIBUTION_KEYS = [
     { label: CAMPAIGN, value: CAMPAIGN }
 ];
 
-const FIRST_TOUCH = "First Touch";
-const LAST_TOUCH = "Last Touch";
-const ATTRIBUTION_METHODOLOGY = [FIRST_TOUCH, LAST_TOUCH];
+const FIRST_TOUCH = "First_Touch";
+const LAST_TOUCH = "Last_Touch";
+const ATTRIBUTION_METHODOLOGY = [
+  {value:FIRST_TOUCH, label:"First Touch"}, 
+  {value:LAST_TOUCH, label:"Last Touch"}
+];
 
 const IMPRESSIONS = "Impressions";
 const CLICKS = "Clicks";
@@ -48,7 +51,6 @@ const mapStateToProps = store => {
 const mapDispatchToProps = dispatch => {
   return bindActionCreators({
     fetchProjectEvents,
-    runDummyQuery,
   }, dispatch);
 }
 
@@ -61,11 +63,11 @@ class AttributionQuery extends Component {
       linkedEventNames:[],
       isPresentationLoading: false,
       present: false,
-      topError: null,
       resultMetricsBreakdown: null,
-      
+      resultMeta:null,
+
       converisonEventName:null,
-      loopbackDays:"",
+      loopbackDays:0,
       attributionMethodology:NONE_OPT,
       attributionKey:NONE_OPT,
 
@@ -109,6 +111,20 @@ class AttributionQuery extends Component {
     return this.state.eventNamesLoaded;
   }
 
+  validateQuery() {
+    if (this.state.converisonEventName == null || this.state.converisonEventName == ""){
+      return false;
+    }
+
+    for(let i=0; i<this.state.linkedEventNames.length; i++) {
+      if (this.state.linkedEventNames[i] == "" || this.state.linkedEventNames[i] == null) {
+        return false
+      }
+    }
+
+    return true;
+  }
+
   getQuery = () => {
       let query = {};
       query.cl = QUERY_CLASS_ATTRIBUTION;
@@ -125,48 +141,17 @@ class AttributionQuery extends Component {
       return query;
   }
 
-  resultGenerator(projectId, query) {
-
-    let th = [];
-    let rows = [];
-    
-    th.push(query.attribution_key, ...query.cm ,"User Reach","Website Visitors");
-    th.push("Conversion Event - Users");
-
-    let lfe = [...query.lfe];
-    th.push(...lfe.reduce((pv, cv)=> {
-      pv.push("Linked Funnel Event - Users");
-      return pv
-    },[]));
-
-    for (let i = 0; i< data.length; i++){
-        if (!data[i].hasOwnProperty(query.attribution_key)) continue
-        let row = th.reduce((acc,v)=>{
-            acc.push(data[i][v.split(/ -? ?/).join("_")]);
-            return acc;
-        },[]);
-        rows.push(row);
-    }
-
-    let ce = query.ce;
-    th[th.indexOf("Conversion Event - Users")]= ce+" - Users";
-
-    let pos=0;
-    while(pos < lfe.length){
-      th[th.indexOf("Linked Funnel Event - Users")]= lfe[pos]+" - Users";
-      pos++;
-    }
-
-    return Promise.resolve({ok:200,data:{metrics_breakdown:{headers: th, rows: rows},meta:{query:query}}});
-}
-
 
   runQuery = () => {
+    let valid = this.validateQuery();
+    if (!valid) return
+
     this.setState({ isPresentationLoading: true });
     let query = this.getQuery();
-    this.props.runDummyQuery(this.props.currentProjectId, query, this.resultGenerator)
+    runAttributionQuery(this.props.currentProjectId, query)
     .then(r =>{
         this.setState({result : r.data,
+          resultMeta: r.data.Meta,
             isResultLoading: false, isPresentationLoading: false,
             resultMetricsBreakdown: this.getDisplayMetricsBreakdown(r.data.metrics_breakdown)});
     })
@@ -181,9 +166,10 @@ class AttributionQuery extends Component {
   
     let rValue = value;
     let isFloat = (value % 1) > 0;
-    // no decimal points for value >= 1 and 2 decimal points < 1.
     if (isFloat) rValue = value >= 1 ? value.toFixed(0) : value.toFixed(2);
-
+    // no decimal points for value >= 1 and 2 decimal points < 1.
+    if (meta && meta.currency && key.toLowerCase().indexOf('spend') > -1)
+    rValue = rValue + ' ' + meta.currency;
     return rValue;
   }
 
@@ -285,8 +271,9 @@ class AttributionQuery extends Component {
 
   handleLookbackWindowChange=(event)=>{
     let days = event.target.value;
+    if (days== "") days=0;
     this.setState({
-      loopbackDays: days
+      loopbackDays: parseInt(days)
     });
   }
 
@@ -332,7 +319,7 @@ class AttributionQuery extends Component {
       <Col xs='8' md='8' >
         <div className='fapp-select light' style={{ display: 'inline-block', width: '150px' }}>
           <Select
-          options={makeSelectOpts(ATTRIBUTION_METHODOLOGY)} onChange={this.handleMethodologyChange}
+          options={ATTRIBUTION_METHODOLOGY} onChange={this.handleMethodologyChange}
           placeholder='Select Event'/>
         </div>
       </Col>
@@ -342,7 +329,7 @@ class AttributionQuery extends Component {
         <span style={LABEL_STYLE}>Lookback Window</span>
       </Col>
       <Col xs='8' md='8' >
-      <input className="form-control" style={{height:"38px", width:"150px", borderRadius:"5px", border:"1px solid #bbb"}} type="text" value={this.state.loopbackDays} onChange={this.handleLookbackWindowChange} placeholder="# of days"/>
+      <input type="number" className="form-control" style={{height:"38px", width:"150px", borderRadius:"5px", border:"1px solid #bbb"}} type="text" value={this.state.loopbackDays} onChange={this.handleLookbackWindowChange} placeholder="# of days"/>
       </Col>
     </Row>
     

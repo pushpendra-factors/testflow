@@ -79,9 +79,10 @@ const (
 	EventCondAnyGivenEvent = "any_given_event"
 	EventCondAllGivenEvent = "all_given_event"
 
-	QueryClassInsights = "insights"
-	QueryClassFunnel   = "funnel"
-	QueryClassChannel  = "channel"
+	QueryClassInsights    = "insights"
+	QueryClassFunnel      = "funnel"
+	QueryClassChannel     = "channel"
+	QueryClassAttribution = "attribution"
 
 	QueryTypeEventsOccurrence = "events_occurrence"
 	QueryTypeUniqueUsers      = "unique_users"

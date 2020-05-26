@@ -48,6 +48,7 @@ import { PROPERTY_TYPE_OPTS, USER_PREF_PROPERTY_TYPE_OPTS,
 import insightsSVG from '../../assets/img/analytics/insights.svg';
 import funnelSVG from '../../assets/img/analytics/funnel.svg';
 import channelSVG from '../../assets/img/analytics/channel.svg';
+import attributionSVG from '../../assets/img/analytics/attribution.svg'
 import { del } from '../../actions/request';
 
 const COND_ALL_GIVEN_EVENT = 'all_given_event';
@@ -1039,15 +1040,6 @@ class Query extends Component {
     return style; 
   }
 
-  //only enabled for projectId 2
-  shouldShow = () =>{
-    if (this.props.currentProjectId==2){
-      return true;
-    }
-
-    return false;
-  }
-
   renderInterfaceSelector() {
     return (
       <Row style={{ marginBottom: '16px' }}>
@@ -1068,9 +1060,9 @@ class Query extends Component {
               <img src={channelSVG} style={{ height: '26px' }} /> 
               <span style={{ marginLeft: '5px' }} className='fapp-text'> Channels </span> 
             </div>
-            <div hidden={!this.shouldShow()} onClick={() => this.handleClassChange({ value: QUERY_CLASS_ATTRIBUTION })}
+            <div onClick={() => this.handleClassChange({ value: QUERY_CLASS_ATTRIBUTION })}
               style={this.getInterfaceSelectorStyle(QUERY_CLASS_ATTRIBUTION)}>
-              <img style={{ height: '26px' }} /> 
+              <img src={attributionSVG} style={{ height: '26px' }} /> 
               <span style={{ marginLeft: '5px' }} className='fapp-text'> Attribution </span> 
             </div>
           </div>

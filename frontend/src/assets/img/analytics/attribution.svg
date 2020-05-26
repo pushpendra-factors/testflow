@@ -1,0 +1,5 @@
+<svg id="flag" viewBox="0 0 512 512" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <rect fill="#818e98" fill-rule="nonzero" width="32" height="480" x="16" y="16" >
+  </rect>
+  <path fill="#818e98" stroke-width="1" fill-rule="nonzero" d="M320,40a24.027,24.027,0,0,0-24-24H80V288H192v56a24.027,24.027,0,0,0,24,24H496V330.139L412.959,232,496,133.861V96H320ZM112,256V48H288V256ZM459.041,128l-88,104,88,104H224V288h72a24.027,24.027,0,0,0,24-24V128Z"></path>
+</svg>
