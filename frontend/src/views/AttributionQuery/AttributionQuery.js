@@ -380,7 +380,7 @@ class AttributionQuery extends Component {
         </Button>
     </div>
     { this.state.isPresentationLoading ? <Loading paddingTop='12%' /> : null }
-    <div className='animated fadeIn' hidden={this.state.isPresentationLoading} style={{paddingTop:'15px'}}>
+    <div className='animated fadeIn' hidden={this.state.isPresentationLoading} style={{ marginTop: "50px" }}>
           <Row> { this.renderAttributionResultAsTable() } </Row>
         </div>
     </div>

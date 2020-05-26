@@ -36,7 +36,7 @@ class TableChart extends Component {
         </thead>
       );
     } else if(sortable){
-      let thStyle = {overflowWrap: 'break-word', whiteSpace:'normal', paddingBottom:"0px", paddingTop:"0px"}
+      let thStyle = {overflowWrap: 'break-word', whiteSpace:'normal', paddingBottom:"0px", paddingTop:"0px", border: "none"}
       let tdStyle = {overflow:"break-word", whiteSpace:"normal"}
       let headers = result.headers.map((h, i) => {
       let width = (this.props.bigWidthUptoCols && i < this.props.bigWidthUptoCols) ? "280px" : "120px";
