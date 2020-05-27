@@ -20,7 +20,7 @@
                 s.async = true;
                 d = !!document.body ? document.body : document.head;
                 d.appendChild(s);
-            })(function() { factors.init("dummy", { host: "http://localhost:8085" }); });
+            })(function() { factors.init("dummy", { host: "http://localhost:8080" }); });
         </script>
     </head>
     <body> 
@@ -40,11 +40,5 @@
         <input type="email" name="E-mail" placeholder="Your email"/></br></br>
         <input type="name" name="name" placeholder="Your name"/></br></br>
         <button> Create </button>
-
-        <h2>Form with input as submit</h2>
-        <form factors-form-onclick="true" novalidate="novalidate" onsubmit="return false;">
-            <input type="text" name="First Name" placeholder="Your first name" /></br></br>
-            <input type="submit" value="signup" /></br></br>
-        </form>
     </body>
 </html>

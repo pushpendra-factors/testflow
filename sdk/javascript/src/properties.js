@@ -264,7 +264,7 @@ function getPropertiesFromAllNonFormInputs() {
     
     var nonFormInputs = [];
     for (var i=0; i<inputs.length; i++) {
-        if (!FormCapture.isPartOfFormSubmit(inputs[i])) {
+        if (!FormCapture.isPartOfForm(inputs[i])) {
             nonFormInputs.push(inputs[i]);
         }
     }

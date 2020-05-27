@@ -51,28 +51,15 @@ function bindAllFormsOnSubmit(appInstance, processCallback) {
     }
 }
 
-function isPartOfFormSubmit(e) {      
-    if (!e) return false;
-    
-    var isPartOfForm = !!e.form;
-    if (!isPartOfForm) return false;
-
-    if (isPartOfForm) {
-        // Attribute factors-form-onclick="true" excludes form capture on-submit.
-        // Allows capture on-click like non-form fields.
-        var formOnClickAttr = e.form.getAttribute('factors-form-onclick');
-        if (formOnClickAttr && formOnClickAttr == 'true') return false;
-    }
-
-    return true;
+function isPartOfForm(e) {
+    return e ? !!e.form : false;
 }
 
 function bindAllNonFormButtonOnClick(appInstance, processCallback) {
-    var buttons = document.querySelectorAll('button,input[type="submit"]');
-
+    var buttons = document.querySelectorAll('button');
     for (var i=0; i<buttons.length; i++) {
         // do not bind button part of a form.
-        if (isPartOfFormSubmit(buttons[i])) continue;
+        if (isPartOfForm(buttons[i])) continue;
 
         buttons[i].addEventListener('click', function() {
             var _appInstance = appInstance;
@@ -81,5 +68,5 @@ function bindAllNonFormButtonOnClick(appInstance, processCallback) {
     }
 }
 
-module.exports = exports =  { isEmail, isPhone, isFieldByMatch, isPartOfFormSubmit,
+module.exports = exports =  { isEmail, isPhone, isFieldByMatch, isPartOfForm,
     bindAllFormsOnSubmit, bindAllNonFormButtonOnClick };
