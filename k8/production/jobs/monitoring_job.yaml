@@ -18,7 +18,7 @@ spec:
             cloud.google.com/gke-nodepool: persistent-pool-standard
           containers:
           - name: monitoring-job
-            image: us.gcr.io/factors-production/monitoring:v0.01-24c2da5
+            image: us.gcr.io/factors-production/monitoring:v0.15_eeb2024b
             imagePullPolicy: IfNotPresent
             args:
             - --env
