@@ -269,7 +269,9 @@ App.prototype.captureAndTrackFormSubmit = function(appInstance, e) {
     if (!e || !e.target)
         logger.debug("Form event or event.target is undefined on capture.");
 
-    var properties = Properties.getPropertiesFromForm(e.target);
+    var properties = Properties.getPropertiesFromForm(e.target ? e.target : e);
+    if (!properties || Object.keys(properties).length)
+        logger.debug("No properties captured from form.");
 
     // do not track if email and phone is not there on captured properties.
     if (!properties[Properties.EMAIL] && !properties[Properties.PHONE]) return; 

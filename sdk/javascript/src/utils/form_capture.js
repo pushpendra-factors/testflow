@@ -42,11 +42,38 @@ function bindAllFormsOnSubmit(appInstance, processCallback) {
     // bind processForm to onSubmit event for all forms.
     var forms = document.querySelectorAll('form');
     for (var i=0; i<forms.length; i++) {
-        // addEventListener does not prevent other 
-        // callbacks bound already.
+        var maxCallCount = 0; // Max callback calls expected.
+        var callCount = 0; // Current callback calls.
+
+        maxCallCount = maxCallCount + 1;
         forms[i].addEventListener('submit', function(e) {
+            if (callCount > 0) {
+                // Reset the call count after one iteration of possible 
+                // duplicate callbacks, for capturing re-submit.
+                if (callCount == (maxCallCount-1)) callCount = 0;
+                return;
+            }
+            
             var _appInstance = appInstance;
             processCallback(_appInstance, e);
+            callCount = callCount + 1;
+        });
+
+        // Bind processCallback to on-click of form's submit element,
+        // But call only if not processed on submit.
+        var submitElement = forms[i].querySelector('*[type="submit"]');
+        if (!submitElement) continue;
+
+        maxCallCount = maxCallCount + 1;
+        submitElement.addEventListener('click', function(e) {
+            if (callCount > 0) {
+                if (callCount == (maxCallCount-1)) callCount = 0;
+                return;
+            }
+
+            var _appInstance = appInstance;
+            processCallback(_appInstance, e.target.form);
+            callCount = callCount + 1;
         });
     }
 }
