@@ -18,7 +18,7 @@ spec:
             cloud.google.com/gke-nodepool: factors-staging-node-pool
           containers:
           - name: archive-events-job
-            image: us.gcr.io/factors-staging/archive-events-job:v0.65_276f2b4c
+            image: us.gcr.io/factors-staging/archive-events-job:v0.7_267c42eb
             imagePullPolicy: IfNotPresent
             args:
             - --env
