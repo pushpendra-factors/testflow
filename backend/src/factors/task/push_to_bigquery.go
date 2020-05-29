@@ -96,7 +96,6 @@ func ArchiveEventsForProject(db *gorm.DB, cloudManager *filestore.FileManager,
 		taskDetails := M.EventArchivalTaskDetails{
 			FromTimestamp: batch.StartTime,
 			ToTimestamp:   batch.EndTime,
-			EventCount:    batch.EventsCount,
 			BucketName:    (*cloudManager).GetBucketName(),
 		}
 		taskDetailsJsonb, _ := util.EncodeStructTypeToPostgresJsonb(taskDetails)
@@ -111,22 +110,8 @@ func ArchiveEventsForProject(db *gorm.DB, cloudManager *filestore.FileManager,
 			"TimeRange": fmt.Sprintf("%d-%d", batch.StartTime, batch.EndTime),
 			"TaskID":    scheduledTask.ID,
 		})
+
 		pbLog.Info("Starting to process new batch.")
-
-		if batch.EventsCount == 0 {
-			logInfoAndCaptureJobDetails(
-				pbLog, &jobDetails, "No events to be processed. Making empty entry in tasks table for %d-%d",
-				batch.StartTime, batch.EndTime)
-			taskDetails.FileCreated = false
-			taskDetailsJsonb, _ = util.EncodeStructTypeToPostgresJsonb(taskDetails)
-			rowsUpdated, status := M.UpdateScheduledTask(
-				scheduledTask.ID, taskDetailsJsonb, util.TimeNowUnix(), M.TASK_STATUS_SUCCESS)
-			if status != http.StatusAccepted || rowsUpdated == 0 {
-				return jobDetails, fmt.Errorf("Failed to update scheduled task in database")
-			}
-			continue
-		}
-
 		tmpEventsFilePath, tmpEventsFileName := (*diskManger).GetEventArchiveFilePathAndName(projectID, batch.StartTime, batch.EndTime)
 		tmpEventsFile := tmpEventsFilePath + tmpEventsFileName
 		serviceDisk.MkdirAll(tmpEventsFilePath)
@@ -134,12 +119,15 @@ func ArchiveEventsForProject(db *gorm.DB, cloudManager *filestore.FileManager,
 		pbLog.Infof("Stating to pull events to file %s", tmpEventsFile)
 
 		rowCount, filePath, err := PullEventsForArchive(db, projectID, tmpEventsFile, batch.StartTime, batch.EndTime)
+		taskDetails.EventCount = int64(rowCount)
 		if err != nil {
 			pbLog.WithError(err).Error("Failed to pull events for archival")
 			M.FailScheduleTask(scheduledTask.ID)
 			return jobDetails, err
 		} else if rowCount == 0 {
-			pbLog.Warn("0 events found to be pushed. This shouldn't have happened after initial check")
+			logInfoAndCaptureJobDetails(
+				pbLog, &jobDetails, "0 events found to be processed. Making empty entry in tasks table for %d-%d",
+				batch.StartTime, batch.EndTime)
 			taskDetails.FileCreated = false
 			taskDetailsJsonb, _ := util.EncodeStructTypeToPostgresJsonb(taskDetails)
 			rowsUpdated, status := M.UpdateScheduledTask(

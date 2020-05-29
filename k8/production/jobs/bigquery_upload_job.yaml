@@ -15,7 +15,7 @@ spec:
             layer: jobs
         spec:
           nodeSelector:
-            cloud.google.com/gke-nodepool: default-pool
+            cloud.google.com/gke-nodepool: persistent-pool-standard
           containers:
           - name: bigquery-upload-job
             image: us.gcr.io/factors-production/bigquery-upload-job:v0.65_276f2b4c

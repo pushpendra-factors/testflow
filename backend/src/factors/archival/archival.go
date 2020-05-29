@@ -1,10 +1,8 @@
 package archival
 
 import (
-	"net/http"
 	"time"
 
-	M "factors/model"
 	U "factors/util"
 
 	log "github.com/sirupsen/logrus"
@@ -33,9 +31,8 @@ var ARCHIVE_BLACKLISTED_UP []string = []string{
 // EventsArchivalBatch Object to store the Events Archival batch data.
 // Each batch will be scheduled as a separate task.
 type EventsArchivalBatch struct {
-	StartTime   int64
-	EndTime     int64
-	EventsCount int64
+	StartTime int64
+	EndTime   int64
 }
 
 // EventFileFormat Generic interface for allowing multiple FileFormats to be written to file.
@@ -95,11 +92,6 @@ func GetNextArchivalBatches(projectID uint64, startTime int64, maxLookbackDays i
 		startTime = maxLookBackTime
 	}
 
-	countByDates, status := M.GetDatesForNextEventsArchivalBatch(projectID, startTime)
-	if status != http.StatusFound {
-		logCtx.Error("Failed to fetch dates for next events batch")
-		return eventsArchivalBatches
-	}
 	endTime := U.TimeNow()
 	endDate := endTime.Format(U.DATETIME_FORMAT_YYYYMMDD_HYPHEN)
 
@@ -108,29 +100,14 @@ func GetNextArchivalBatches(projectID uint64, startTime int64, maxLookbackDays i
 		return eventsArchivalBatches
 	}
 
-	var batchTime time.Time
-	if startTime == 0 {
-		// Probably running for the first time. Keep start date as min of event dates.
-		minEventsTime := U.TimeNow()
-		for dateString := range countByDates {
-			date1, _ := time.Parse(U.DATETIME_FORMAT_YYYYMMDD_HYPHEN, dateString)
-			if date1.Before(minEventsTime) {
-				minEventsTime = date1
-			}
-		}
-		batchTime = minEventsTime.UTC()
-	} else {
-		batchTime = time.Unix(startTime, 0).UTC()
-	}
+	batchTime := time.Unix(startTime, 0).UTC()
 	batchDate := batchTime.Format(U.DATETIME_FORMAT_YYYYMMDD_HYPHEN)
 
 	for batchDate != endDate {
-		eventsCount, _ := countByDates[batchDate] // If not found, default would be zero.
 		nextBatchTime := batchTime.AddDate(0, 0, 1)
 		eventsArchivalBatches = append(eventsArchivalBatches, EventsArchivalBatch{
-			StartTime:   U.GetBeginningOfDayTimestampUTC(batchTime.Unix()),
-			EndTime:     U.GetBeginningOfDayTimestampUTC(nextBatchTime.Unix()) - 1,
-			EventsCount: eventsCount,
+			StartTime: U.GetBeginningOfDayTimestampUTC(batchTime.Unix()),
+			EndTime:   U.GetBeginningOfDayTimestampUTC(nextBatchTime.Unix()) - 1,
 		})
 
 		batchTime = nextBatchTime
