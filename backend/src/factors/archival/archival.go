@@ -1,11 +1,12 @@
 package archival
 
 import (
+	"fmt"
+	"net/http"
 	"time"
 
+	M "factors/model"
 	U "factors/util"
-
-	log "github.com/sirupsen/logrus"
 )
 
 // ARCHIVE_BLACKLISTED_EP Standard properties to be removed from event properties for archival.
@@ -79,12 +80,9 @@ func SanitizeUserProperties(userProperties map[string]interface{}) map[string]in
 }
 
 // GetNextArchivalBatches Returns a list of EventsArchivalBatch from the give startTime to 1 day before.
-func GetNextArchivalBatches(projectID uint64, startTime int64, maxLookbackDays int) []EventsArchivalBatch {
+func GetNextArchivalBatches(projectID uint64, startTime int64, maxLookbackDays int) ([]EventsArchivalBatch, error) {
 	var eventsArchivalBatches []EventsArchivalBatch
-	logCtx := log.WithFields(log.Fields{
-		"Prefix":    "Archival#GetNextArchivalBatches",
-		"ProjectID": projectID,
-	})
+	var endTime time.Time
 
 	maxLookBackTime := U.GetBeginningOfDayTimestampUTC(U.TimeNow().AddDate(0, 0, -maxLookbackDays).Unix())
 	if maxLookBackTime > startTime {
@@ -92,12 +90,20 @@ func GetNextArchivalBatches(projectID uint64, startTime int64, maxLookbackDays i
 		startTime = maxLookBackTime
 	}
 
-	endTime := U.TimeNow()
+	minStartTime, status := M.GetMinStartTimeForTaskType(projectID, M.TASK_TYPE_EVENTS_ARCHIVAL)
+	if status == http.StatusInternalServerError {
+		return eventsArchivalBatches, fmt.Errorf("Failed to get min start time from database")
+	} else if status == http.StatusFound && maxLookBackTime < minStartTime {
+		// Backfilling from an old date. Set start and end times to run for only older unprocessed batches.
+		startTime = maxLookBackTime
+		endTime = time.Unix(minStartTime, 0).UTC()
+	} else {
+		endTime = U.TimeNow()
+	}
 	endDate := endTime.Format(U.DATETIME_FORMAT_YYYYMMDD_HYPHEN)
 
 	if startTime > endTime.Unix() {
-		logCtx.Errorf("Invalid startTime value %v", startTime)
-		return eventsArchivalBatches
+		return eventsArchivalBatches, fmt.Errorf("Invalid startTime value %v", startTime)
 	}
 
 	batchTime := time.Unix(startTime, 0).UTC()
@@ -114,5 +120,5 @@ func GetNextArchivalBatches(projectID uint64, startTime int64, maxLookbackDays i
 		batchDate = batchTime.Format(U.DATETIME_FORMAT_YYYYMMDD_HYPHEN)
 	}
 
-	return eventsArchivalBatches
+	return eventsArchivalBatches, nil
 }

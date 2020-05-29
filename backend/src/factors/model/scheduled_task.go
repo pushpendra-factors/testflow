@@ -212,6 +212,26 @@ func FailScheduleTask(taskID string) {
 	}
 }
 
+// GetMinStartTimeForTaskType Returns the oldest run timestamp for the task type.
+func GetMinStartTimeForTaskType(projectID uint64, taskType ScheduledTaskType) (int64, int) {
+	db := C.GetServices().Db
+	var minStartTime sql.NullInt64
+
+	row := db.Model(&ScheduledTask{}).
+		Where("project_id = ? AND task_type = ?", projectID, taskType).
+		Select("MIN((task_details->>'from_timestamp')::bigint)").Row()
+	err := row.Scan(&minStartTime)
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) || minStartTime.Valid {
+			return 0, http.StatusNotFound
+		}
+		log.WithError(err).Errorf("Failed to get min start time for project id %d", projectID)
+		return minStartTime.Int64, http.StatusInternalServerError
+	}
+
+	return minStartTime.Int64, http.StatusFound
+}
+
 func validateScheduledTask(task *ScheduledTask) error {
 	var validationError error
 	if task.ProjectID == 0 {

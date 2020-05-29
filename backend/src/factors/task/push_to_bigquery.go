@@ -83,8 +83,10 @@ func ArchiveEventsForProject(db *gorm.DB, cloudManager *filestore.FileManager,
 		pbLog.Info("No previous entry found. Running full archival.")
 	}
 
-	batches := A.GetNextArchivalBatches(projectID, lastRunTime+1, maxLookbackDays)
-	if len(batches) == 0 {
+	batches, err := A.GetNextArchivalBatches(projectID, lastRunTime+1, maxLookbackDays)
+	if err != nil {
+		return jobDetails, err
+	} else if len(batches) == 0 {
 		logInfoAndCaptureJobDetails(pbLog, &jobDetails, "No batches found to be processed. Last run time was %v", lastRunTime)
 		return jobDetails, nil
 	}
