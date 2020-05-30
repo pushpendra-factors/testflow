@@ -18,7 +18,7 @@ spec:
             cloud.google.com/gke-nodepool: persistent-pool-standard
           containers:
           - name: archive-events-job
-            image: us.gcr.io/factors-production/archive-events-job:v0.7_267c42eb
+            image: us.gcr.io/factors-production/archive-events-job:v0.71_4a75f686
             imagePullPolicy: IfNotPresent
             args:
             - --env

@@ -18,7 +18,7 @@ spec:
             cloud.google.com/gke-nodepool: factors-staging-node-pool
           containers:
           - name: bigquery-upload-job
-            image: us.gcr.io/factors-staging/bigquery-upload-job:v0.65_276f2b4c
+            image: us.gcr.io/factors-staging/bigquery-upload-job:v0.71_4a75f686
             imagePullPolicy: IfNotPresent
             args:
             - --env
