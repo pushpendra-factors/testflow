@@ -174,14 +174,24 @@ func GetScheduledTaskLastRunTimestamp(projectID uint64, taskType ScheduledTaskTy
 
 // GetNewArchivalFileNamesAndEndTimeForProject Lists names of files created during archival process.
 func GetNewArchivalFileNamesAndEndTimeForProject(projectID uint64,
-	lastRunAt int64) (map[int64]map[string]string, int) {
+	lastRunAt int64, hardStartTime, hardEndTime time.Time) (map[int64]map[string]string, int) {
 
 	db := C.GetServices().Db
+	var startTime, endTime int64
 	fileNameEndTimeMap := make(map[int64]map[string]string)
+
+	// Use hard start and end time if provided else lastRunAt.
+	if !hardStartTime.IsZero() {
+		startTime = hardStartTime.Unix()
+		endTime = hardEndTime.Unix()
+	} else {
+		startTime = lastRunAt + 1 // Query is inclusive so increment by 1.
+		endTime = U.TimeNowUnix()
+	}
 
 	rows, err := db.Model(&ScheduledTask{}).
 		Where("project_id = ? AND task_type = ? AND (task_details->>'file_created')::bool=true"+
-			" AND (task_details->>'from_timestamp')::bigint > ?", projectID, TASK_TYPE_EVENTS_ARCHIVAL, lastRunAt).
+			" AND (task_details->>'from_timestamp')::bigint between ? AND ?", projectID, TASK_TYPE_EVENTS_ARCHIVAL, startTime, endTime).
 		Select("id, task_details->>'filepath', task_details->>'to_timestamp'").Rows()
 	if err != nil {
 		log.WithError(err).Error("Query failed to get filenames")
@@ -201,6 +211,15 @@ func GetNewArchivalFileNamesAndEndTimeForProject(projectID uint64,
 		fileNameEndTimeMap[endTime]["task_id"] = taskID
 	}
 
+	if !hardStartTime.IsZero() {
+		// Custom range is provided. Filter out completed tasks from the list to avoid reruning and duplication.
+		fileNameEndTimeMap, err = filterCompletedBigqueryTasks(fileNameEndTimeMap, projectID)
+		if err != nil {
+			log.WithError(err).Error("Failed to filter completed tasks")
+			return fileNameEndTimeMap, http.StatusInternalServerError
+		}
+	}
+
 	return fileNameEndTimeMap, http.StatusFound
 }
 
@@ -212,24 +231,66 @@ func FailScheduleTask(taskID string) {
 	}
 }
 
-// GetMinStartTimeForTaskType Returns the oldest run timestamp for the task type.
-func GetMinStartTimeForTaskType(projectID uint64, taskType ScheduledTaskType) (int64, int) {
+// GetCompletedArchivalBatches Returns completed archival batches for a given range.
+func GetCompletedArchivalBatches(projectID uint64, startTime, endTime time.Time) (map[int64]int64, int) {
 	db := C.GetServices().Db
-	var minStartTime sql.NullInt64
+	completedBatches := make(map[int64]int64)
 
-	row := db.Model(&ScheduledTask{}).
-		Where("project_id = ? AND task_type = ?", projectID, taskType).
-		Select("MIN((task_details->>'from_timestamp')::bigint)").Row()
-	err := row.Scan(&minStartTime)
+	rows, err := db.Model(&ScheduledTask{}).
+		Where("project_id = ? AND task_status = ? AND task_type = ? AND (task_details->>'from_timestamp')::bigint BETWEEN ? AND ?",
+			projectID, TASK_STATUS_SUCCESS, TASK_TYPE_EVENTS_ARCHIVAL, startTime.Unix(), endTime.Unix()).
+		Select("task_details->>'from_timestamp', task_details->>'to_timestamp'").Rows()
 	if err != nil {
-		if gorm.IsRecordNotFoundError(err) || minStartTime.Valid {
-			return 0, http.StatusNotFound
-		}
-		log.WithError(err).Errorf("Failed to get min start time for project id %d", projectID)
-		return minStartTime.Int64, http.StatusInternalServerError
+		log.WithError(err).Error("Failed to get completed archival tasks")
+		return completedBatches, http.StatusInternalServerError
 	}
 
-	return minStartTime.Int64, http.StatusFound
+	for rows.Next() {
+		var fromTimestamp, toTimestamp int64
+		if err := rows.Scan(&fromTimestamp, &toTimestamp); err != nil {
+			log.WithError(err).Error("Error while scanning completed archival timestamps")
+			return completedBatches, http.StatusInternalServerError
+		}
+		completedBatches[fromTimestamp] = toTimestamp
+	}
+	return completedBatches, http.StatusFound
+}
+
+// Filters all completed bigquery tasks from the list of allTasksMap.
+func filterCompletedBigqueryTasks(allTasksMap map[int64]map[string]string, projectID uint64) (map[int64]map[string]string, error) {
+	var archivalTaskIDs, completedTaskIDs, pendingTaskIDs []string
+	pendingTasksMap := make(map[int64]map[string]string)
+	db := C.GetServices().Db
+
+	for _, value := range allTasksMap {
+		archivalTaskIDs = append(archivalTaskIDs, value["task_id"])
+	}
+
+	rows, err := db.Model(&ScheduledTask{}).
+		Where("project_id = ? AND task_status = ? AND task_type = ? AND task_details->>'archival_task_id' in (?)",
+			projectID, TASK_STATUS_SUCCESS, TASK_TYPE_BIGQUERY_UPLOAD, archivalTaskIDs).
+		Select("task_details->>'archival_task_id'").Rows()
+	if err != nil {
+		log.WithError(err).Errorf("Failed to get completed bigquery tasks list")
+		return pendingTasksMap, err
+	}
+
+	for rows.Next() {
+		var completedTaskID string
+		if err := rows.Scan(&completedTaskID); err != nil {
+			log.WithError(err).Errorf("Error while scanning bigquery completed task id")
+			return pendingTasksMap, err
+		}
+		completedTaskIDs = append(completedTaskIDs, completedTaskID)
+	}
+	pendingTaskIDs = U.StringSliceDiff(archivalTaskIDs, completedTaskIDs)
+
+	for key, value := range allTasksMap {
+		if U.StringValueIn(value["task_id"], pendingTaskIDs) {
+			pendingTasksMap[key] = value
+		}
+	}
+	return pendingTasksMap, nil
 }
 
 func validateScheduledTask(task *ScheduledTask) error {

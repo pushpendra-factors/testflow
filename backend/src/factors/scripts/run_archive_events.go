@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"time"
 
 	C "factors/config"
 	"factors/filestore"
@@ -23,6 +24,8 @@ func main() {
 	localDiskTmpDirFlag := flag.String("tmp_dir", "/usr/local/var/factors/local_disk/tmp", "Local directory path for putting tmp files.")
 	projectIDFlag := flag.Uint64("project_id", 0, "Project id to be run for.")
 	maxLookbackDaysFlag := flag.Int("max_lookback_days", 365, "Maximum number of lookback days for events.")
+	startDateFlag := flag.String("start_date", "", "Start date in YYYY-MM-DD format to run for specific period. Inclusive.")
+	endDateFlag := flag.String("end_date", "", "End date in YYYY-MM-DD format to run for specific period. Inclusive.")
 	runForAllFlag := flag.Bool("all", false, "Whether to run for all archive enabled projects.")
 
 	dbHost := flag.String("db_host", "localhost", "")
@@ -35,11 +38,11 @@ func main() {
 	defer util.NotifyOnPanic(taskID, *envFlag)
 
 	if *envFlag != "development" && *envFlag != "staging" && *envFlag != "production" {
-		err := fmt.Errorf("env [ %s ] not recognised", *envFlag)
-		panic(err)
+		panic(fmt.Errorf("env [ %s ] not recognised", *envFlag))
 	} else if *projectIDFlag == 0 && !*runForAllFlag {
-		err := fmt.Errorf("Invalid project id %d", *projectIDFlag)
-		panic(err)
+		panic(fmt.Errorf("Invalid project id %d", *projectIDFlag))
+	} else if *startDateFlag != "" && *endDateFlag == "" {
+		panic(fmt.Errorf("Must provide both start_date and end_date"))
 	}
 
 	pbLog.Info("Starting to initialize database.")
@@ -74,14 +77,26 @@ func main() {
 		}
 	}
 
+	var startTime, endTime time.Time
+	if *startDateFlag != "" {
+		startTime, err = time.Parse(util.DATETIME_FORMAT_YYYYMMDD_HYPHEN, *startDateFlag)
+		if err != nil {
+			pbLog.WithError(err).Fatal("Invalid start_time. Format must be YYYY-MM-DD")
+		}
+		endTime, err = time.Parse(util.DATETIME_FORMAT_YYYYMMDD_HYPHEN, *endDateFlag)
+		if err != nil {
+			pbLog.WithError(err).Fatal("Invalid end_time. Format must be YYYY-MM-DD")
+		}
+	}
+
 	diskManager := serviceDisk.New(*localDiskTmpDirFlag)
 
 	allJobDetails := make(map[uint64][]string)
 	var projectErrors []error
 	if *runForAllFlag {
-		allJobDetails, projectErrors = T.ArchiveEvents(db, &cloudManager, diskManager, *maxLookbackDaysFlag)
+		allJobDetails, projectErrors = T.ArchiveEvents(db, &cloudManager, diskManager, *maxLookbackDaysFlag, startTime, endTime)
 	} else {
-		jobDetails, err := T.ArchiveEventsForProject(db, &cloudManager, diskManager, *projectIDFlag, *maxLookbackDaysFlag)
+		jobDetails, err := T.ArchiveEventsForProject(db, &cloudManager, diskManager, *projectIDFlag, *maxLookbackDaysFlag, startTime, endTime)
 		if err != nil {
 			projectErrors = append(projectErrors, err)
 		}

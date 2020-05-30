@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"sort"
+	"time"
 
 	A "factors/archival"
 	"factors/filestore"
@@ -22,7 +23,7 @@ var pbTaskID = "Task#PushToBigQuery"
 
 // ArchiveEvents Archives events for all the projects with archival enabled in project settings.
 func ArchiveEvents(db *gorm.DB, cloudManager *filestore.FileManager,
-	diskManger *serviceDisk.DiskDriver, maxLookbackDays int) (map[uint64][]string, []error) {
+	diskManger *serviceDisk.DiskDriver, maxLookbackDays int, startTime, endTime time.Time) (map[uint64][]string, []error) {
 	pbLog := taskLog.WithFields(log.Fields{
 		"Prefix": pbTaskID + "ArchiveEvents",
 	})
@@ -36,7 +37,7 @@ func ArchiveEvents(db *gorm.DB, cloudManager *filestore.FileManager,
 	var projectErrors []error
 	for _, projectID := range enabledProjectIDs {
 		pbLog.Infof("Running archival for project id %d", projectID)
-		jobDetails, err := ArchiveEventsForProject(db, cloudManager, diskManger, projectID, maxLookbackDays)
+		jobDetails, err := ArchiveEventsForProject(db, cloudManager, diskManger, projectID, maxLookbackDays, startTime, endTime)
 		if err != nil {
 			pbLog.WithError(err).Errorf("Archival failed for project id %d", projectID)
 			projectErrors = append(projectErrors, err)
@@ -48,7 +49,7 @@ func ArchiveEvents(db *gorm.DB, cloudManager *filestore.FileManager,
 
 // ArchiveEventsForProject Archives events for a particular project to cloud storage.
 func ArchiveEventsForProject(db *gorm.DB, cloudManager *filestore.FileManager,
-	diskManger *serviceDisk.DiskDriver, projectID uint64, maxLookbackDays int) ([]string, error) {
+	diskManger *serviceDisk.DiskDriver, projectID uint64, maxLookbackDays int, startTime, endTime time.Time) ([]string, error) {
 
 	var jobDetails []string
 	pbLog := taskLog.WithFields(log.Fields{
@@ -83,7 +84,7 @@ func ArchiveEventsForProject(db *gorm.DB, cloudManager *filestore.FileManager,
 		pbLog.Info("No previous entry found. Running full archival.")
 	}
 
-	batches, err := A.GetNextArchivalBatches(projectID, lastRunTime+1, maxLookbackDays)
+	batches, err := A.GetNextArchivalBatches(projectID, lastRunTime+1, maxLookbackDays, startTime, endTime)
 	if err != nil {
 		return jobDetails, err
 	} else if len(batches) == 0 {
@@ -173,7 +174,7 @@ func ArchiveEventsForProject(db *gorm.DB, cloudManager *filestore.FileManager,
 }
 
 // PushToBigquery For all the projects with bigquery enabled in project_settings.
-func PushToBigquery(cloudManager *filestore.FileManager) (map[uint64][]string, []error) {
+func PushToBigquery(cloudManager *filestore.FileManager, startTime, endTime time.Time) (map[uint64][]string, []error) {
 	pbLog := taskLog.WithFields(log.Fields{
 		"Prefix": pbTaskID + "#PushToBigquery",
 	})
@@ -187,7 +188,7 @@ func PushToBigquery(cloudManager *filestore.FileManager) (map[uint64][]string, [
 	var projectErrors []error
 	for _, projectID := range enabledProjectIDs {
 		pbLog.Infof("Running bigquery push for project id %d", projectID)
-		jobDetails, err := PushToBigqueryForProject(cloudManager, projectID)
+		jobDetails, err := PushToBigqueryForProject(cloudManager, projectID, startTime, endTime)
 		if err != nil {
 			pbLog.WithError(err).Errorf("Push to bigquery failed for project id %d", projectID)
 			projectErrors = append(projectErrors, err)
@@ -198,7 +199,7 @@ func PushToBigquery(cloudManager *filestore.FileManager) (map[uint64][]string, [
 }
 
 // PushToBigqueryForProject Pushes events to Bigquery for bigquerySetting.
-func PushToBigqueryForProject(cloudManager *filestore.FileManager, projectID uint64) ([]string, error) {
+func PushToBigqueryForProject(cloudManager *filestore.FileManager, projectID uint64, startTime, endTime time.Time) ([]string, error) {
 	pbLog := taskLog.WithFields(log.Fields{
 		"Prefix":    pbTaskID + "#PushToBigqueryForProject",
 		"ProjectID": projectID,
@@ -231,7 +232,7 @@ func PushToBigqueryForProject(cloudManager *filestore.FileManager, projectID uin
 	})
 
 	newArchiveFilesMap, status := M.GetNewArchivalFileNamesAndEndTimeForProject(
-		bigquerySetting.ProjectID, bigquerySetting.LastRunAt)
+		bigquerySetting.ProjectID, bigquerySetting.LastRunAt, startTime, endTime)
 	if status == http.StatusInternalServerError {
 		return jobDetails, fmt.Errorf("Failed to get new archive files from database")
 	} else if len(newArchiveFilesMap) == 0 {

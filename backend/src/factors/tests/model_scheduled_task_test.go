@@ -5,6 +5,7 @@ import (
 	U "factors/util"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -130,13 +131,13 @@ func TestGetNewArchivalFileNamesAndEndTimeForProject(t *testing.T) {
 
 	// Non inclusive check. Should include task1 and task3.
 	bigQueryLastRunAt := taskDetails1.FromTimestamp - 1
-	newFilesMap, status := M.GetNewArchivalFileNamesAndEndTimeForProject(project.ID, bigQueryLastRunAt)
+	newFilesMap, status := M.GetNewArchivalFileNamesAndEndTimeForProject(project.ID, bigQueryLastRunAt, time.Time{}, time.Time{})
 	assert.Equal(t, http.StatusFound, status)
 	assert.Equal(t, 2, len(newFilesMap))
 
 	// Inclusive check. Should include only task3.
 	bigQueryLastRunAt = taskDetails1.FromTimestamp
-	newFilesMap, status = M.GetNewArchivalFileNamesAndEndTimeForProject(project.ID, bigQueryLastRunAt)
+	newFilesMap, status = M.GetNewArchivalFileNamesAndEndTimeForProject(project.ID, bigQueryLastRunAt, time.Time{}, time.Time{})
 	assert.Equal(t, http.StatusFound, status)
 	assert.Equal(t, 1, len(newFilesMap))
 }

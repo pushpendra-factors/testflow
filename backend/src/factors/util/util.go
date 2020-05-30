@@ -109,6 +109,16 @@ func StringSliceDiff(sliceA, sliceB []string) []string {
 	return diffSlice
 }
 
+// StringValueIn Returns true if `value` is in `list` else false.
+func StringValueIn(value string, list []string) bool {
+	for _, val := range list {
+		if val == value {
+			return true
+		}
+	}
+	return false
+}
+
 // Datetime related utility functions.
 
 const (

@@ -80,44 +80,48 @@ func SanitizeUserProperties(userProperties map[string]interface{}) map[string]in
 }
 
 // GetNextArchivalBatches Returns a list of EventsArchivalBatch from the give startTime to 1 day before.
-func GetNextArchivalBatches(projectID uint64, startTime int64, maxLookbackDays int) ([]EventsArchivalBatch, error) {
+func GetNextArchivalBatches(projectID uint64, startTime int64, maxLookbackDays int, hardStartTime, hardEndTime time.Time) ([]EventsArchivalBatch, error) {
 	var eventsArchivalBatches []EventsArchivalBatch
-	var endTime time.Time
+	var completedBatches map[int64]int64
+	endTime := time.Unix(U.GetBeginningOfDayTimestampUTC(U.TimeNowUnix())-1, 0)
 
 	maxLookBackTime := U.GetBeginningOfDayTimestampUTC(U.TimeNow().AddDate(0, 0, -maxLookbackDays).Unix())
-	if maxLookBackTime > startTime {
+	if !hardStartTime.IsZero() {
+		startTime = U.GetBeginningOfDayTimestampUTC(hardStartTime.Unix())
+		endTime = hardEndTime.Add(time.Second * time.Duration(1))
+		var status int
+		completedBatches, status = M.GetCompletedArchivalBatches(projectID, hardStartTime, hardEndTime)
+		if status == http.StatusInternalServerError {
+			return eventsArchivalBatches, fmt.Errorf("Failed to get completed batches")
+		}
+	} else if maxLookBackTime > startTime {
 		// If startTime older than maxLookback allowed, set it to oldest allowed date.
 		startTime = maxLookBackTime
 	}
 
-	minStartTime, status := M.GetMinStartTimeForTaskType(projectID, M.TASK_TYPE_EVENTS_ARCHIVAL)
-	if status == http.StatusInternalServerError {
-		return eventsArchivalBatches, fmt.Errorf("Failed to get min start time from database")
-	} else if status == http.StatusFound && maxLookBackTime < minStartTime {
-		// Backfilling from an old date. Set start and end times to run for only older unprocessed batches.
-		startTime = maxLookBackTime
-		endTime = time.Unix(minStartTime, 0).UTC()
-	} else {
-		endTime = U.TimeNow()
-	}
-	endDate := endTime.Format(U.DATETIME_FORMAT_YYYYMMDD_HYPHEN)
-
 	if startTime > endTime.Unix() {
-		return eventsArchivalBatches, fmt.Errorf("Invalid startTime value %v", startTime)
+		return eventsArchivalBatches, fmt.Errorf("Invalid startTime value %v for endTime %v", startTime, endTime)
 	}
 
 	batchTime := time.Unix(startTime, 0).UTC()
-	batchDate := batchTime.Format(U.DATETIME_FORMAT_YYYYMMDD_HYPHEN)
-
-	for batchDate != endDate {
+	for batchTime.Before(endTime) {
 		nextBatchTime := batchTime.AddDate(0, 0, 1)
+		batchStartTime := U.GetBeginningOfDayTimestampUTC(batchTime.Unix())
+		batchEndTime := U.GetBeginningOfDayTimestampUTC(nextBatchTime.Unix()) - 1
+		if !hardStartTime.IsZero() {
+			_, found := completedBatches[batchStartTime]
+			if found {
+				// Start date part of completed batches. Skip adding to the new batches.
+				batchTime = nextBatchTime
+				continue
+			}
+		}
 		eventsArchivalBatches = append(eventsArchivalBatches, EventsArchivalBatch{
-			StartTime: U.GetBeginningOfDayTimestampUTC(batchTime.Unix()),
-			EndTime:   U.GetBeginningOfDayTimestampUTC(nextBatchTime.Unix()) - 1,
+			StartTime: batchStartTime,
+			EndTime:   batchEndTime,
 		})
 
 		batchTime = nextBatchTime
-		batchDate = batchTime.Format(U.DATETIME_FORMAT_YYYYMMDD_HYPHEN)
 	}
 
 	return eventsArchivalBatches, nil
