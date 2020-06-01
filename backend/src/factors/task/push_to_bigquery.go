@@ -231,15 +231,23 @@ func PushToBigqueryForProject(cloudManager *filestore.FileManager, projectID uin
 			bigquerySetting.BigqueryDatasetName),
 	})
 
+	lastRunAt, status := M.GetScheduledTaskLastRunTimestamp(projectID, M.TASK_TYPE_BIGQUERY_UPLOAD)
+	if status == http.StatusInternalServerError {
+		return jobDetails, fmt.Errorf("Failed to get last run timestamp")
+	} else if status == http.StatusNotFound {
+		pbLog.Info("No previous entry found. Will process all the files.")
+	}
+
 	newArchiveFilesMap, status := M.GetNewArchivalFileNamesAndEndTimeForProject(
-		bigquerySetting.ProjectID, bigquerySetting.LastRunAt, startTime, endTime)
+		projectID, lastRunAt, startTime, endTime)
 	if status == http.StatusInternalServerError {
 		return jobDetails, fmt.Errorf("Failed to get new archive files from database")
 	} else if len(newArchiveFilesMap) == 0 {
 		logInfoAndCaptureJobDetails(pbLog, &jobDetails, "No new archive files found to be processed.")
 		return jobDetails, nil
 	}
-	logInfoAndCaptureJobDetails(pbLog, &jobDetails, "%d new files found to be pushed to BigQuery", len(newArchiveFilesMap))
+	logInfoAndCaptureJobDetails(pbLog, &jobDetails, "%d new files found to be pushed to BigQuery starting from %d",
+		len(newArchiveFilesMap), lastRunAt)
 
 	var fileEndTimes []int64
 	for endTime := range newArchiveFilesMap {
@@ -266,12 +274,15 @@ func PushToBigqueryForProject(cloudManager *filestore.FileManager, projectID uin
 	}
 
 	for _, fileEndTime := range fileEndTimes {
-		archiveFile := newArchiveFilesMap[fileEndTime]["filepath"]
-		taskID := newArchiveFilesMap[fileEndTime]["task_id"]
+		archiveFile := newArchiveFilesMap[fileEndTime]["filepath"].(string)
+		taskID := newArchiveFilesMap[fileEndTime]["task_id"].(string)
+		fileStartTime := newArchiveFilesMap[fileEndTime]["start_time"].(int64)
 
 		scheduledTask := parentScheduledTask
 		scheduledTask.TaskStartTime = util.TimeNowUnix()
 		taskDetails := M.BigqueryUploadTaskDetails{
+			FromTimestamp:     fileStartTime,
+			ToTimestamp:       fileEndTime,
 			BigqueryProjectID: bigquerySetting.BigqueryProjectID,
 			BigqueryDataset:   bigquerySetting.BigqueryDatasetName,
 			BigqueryTable:     BQ.BIGQUERY_TABLE_EVENTS,
@@ -291,13 +302,6 @@ func PushToBigqueryForProject(cloudManager *filestore.FileManager, projectID uin
 		uploadStats, err := BQ.UploadFileToBigQuery(ctx, client, archiveFile, bigquerySetting, BQ.BIGQUERY_TABLE_EVENTS, pbLog, cloudManager)
 		if err != nil {
 			pbLog.WithError(err).Errorf("Failed to upload file %s. Aborting further processing.", archiveFile)
-			M.FailScheduleTask(scheduledTask.ID)
-			return jobDetails, err
-		}
-		pbLog.Info("Updating LastRunAt for the bigquery setting.")
-		rowsAffected, status := M.UpdateBigquerySettingLastRunAt(bigquerySetting.ID, fileEndTime)
-		if status != http.StatusAccepted || rowsAffected == 0 {
-			pbLog.Errorf("Failed to updated LastRunAt in bigquery setting for file %s. Aborting further processing.", archiveFile)
 			M.FailScheduleTask(scheduledTask.ID)
 			return jobDetails, err
 		}

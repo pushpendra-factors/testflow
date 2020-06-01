@@ -112,16 +112,16 @@ func TestGetNewArchivalFileNamesAndEndTimeForProject(t *testing.T) {
 	scheduledTask2, taskDetails2 := getDummyValidArchivalScheduledTask(project.ID)
 	taskDetails2.FileCreated = false
 	taskDetails2.FilePath = "filepath2"
-	taskDetails2.FromTimestamp = taskDetails1.FromTimestamp + 86400 // Next day.
-	taskDetails2.ToTimestamp = taskDetails1.ToTimestamp + 86400
+	taskDetails2.FromTimestamp = taskDetails1.FromTimestamp - 86400 // One day before task1.
+	taskDetails2.ToTimestamp = taskDetails1.ToTimestamp - 86400
 	taskDetails2Jsonb, _ := U.EncodeStructTypeToPostgresJsonb(taskDetails2)
 	scheduledTask2.TaskDetails = taskDetails2Jsonb
 
 	scheduledTask3, taskDetails3 := getDummyValidArchivalScheduledTask(project.ID)
 	taskDetails3.FileCreated = true
 	taskDetails3.FilePath = "filepath3"
-	taskDetails3.FromTimestamp = taskDetails2.FromTimestamp + 86400 // 2 days after task1.
-	taskDetails3.ToTimestamp = taskDetails2.ToTimestamp + 86400
+	taskDetails3.FromTimestamp = taskDetails2.FromTimestamp - 86400 // 2 days before task1.
+	taskDetails3.ToTimestamp = taskDetails2.ToTimestamp - 86400
 	taskDetails3Jsonb, _ := U.EncodeStructTypeToPostgresJsonb(taskDetails3)
 	scheduledTask3.TaskDetails = taskDetails3Jsonb
 
@@ -130,13 +130,13 @@ func TestGetNewArchivalFileNamesAndEndTimeForProject(t *testing.T) {
 	_ = M.CreateScheduledTask(&scheduledTask3)
 
 	// Non inclusive check. Should include task1 and task3.
-	bigQueryLastRunAt := taskDetails1.FromTimestamp - 1
+	bigQueryLastRunAt := taskDetails3.FromTimestamp - 1
 	newFilesMap, status := M.GetNewArchivalFileNamesAndEndTimeForProject(project.ID, bigQueryLastRunAt, time.Time{}, time.Time{})
 	assert.Equal(t, http.StatusFound, status)
 	assert.Equal(t, 2, len(newFilesMap))
 
 	// Inclusive check. Should include only task3.
-	bigQueryLastRunAt = taskDetails1.FromTimestamp
+	bigQueryLastRunAt = taskDetails3.FromTimestamp
 	newFilesMap, status = M.GetNewArchivalFileNamesAndEndTimeForProject(project.ID, bigQueryLastRunAt, time.Time{}, time.Time{})
 	assert.Equal(t, http.StatusFound, status)
 	assert.Equal(t, 1, len(newFilesMap))

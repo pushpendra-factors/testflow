@@ -55,6 +55,8 @@ type EventArchivalTaskDetails struct {
 
 // BigqueryUploadTaskDetails To store metadata for bigquery upload tasks.
 type BigqueryUploadTaskDetails struct {
+	FromTimestamp     int64           `json:"from_timestamp"`
+	ToTimestamp       int64           `json:"to_timestamp"`
 	BigqueryProjectID string          `json:"bq_project_id"`
 	BigqueryDataset   string          `json:"bq_dataset"`
 	BigqueryTable     string          `json:"bq_table"`
@@ -174,11 +176,11 @@ func GetScheduledTaskLastRunTimestamp(projectID uint64, taskType ScheduledTaskTy
 
 // GetNewArchivalFileNamesAndEndTimeForProject Lists names of files created during archival process.
 func GetNewArchivalFileNamesAndEndTimeForProject(projectID uint64,
-	lastRunAt int64, hardStartTime, hardEndTime time.Time) (map[int64]map[string]string, int) {
+	lastRunAt int64, hardStartTime, hardEndTime time.Time) (map[int64]map[string]interface{}, int) {
 
 	db := C.GetServices().Db
 	var startTime, endTime int64
-	fileNameEndTimeMap := make(map[int64]map[string]string)
+	fileNameEndTimeMap := make(map[int64]map[string]interface{})
 
 	// Use hard start and end time if provided else lastRunAt.
 	if !hardStartTime.IsZero() {
@@ -192,7 +194,7 @@ func GetNewArchivalFileNamesAndEndTimeForProject(projectID uint64,
 	rows, err := db.Model(&ScheduledTask{}).
 		Where("project_id = ? AND task_type = ? AND (task_details->>'file_created')::bool=true"+
 			" AND (task_details->>'from_timestamp')::bigint between ? AND ?", projectID, TASK_TYPE_EVENTS_ARCHIVAL, startTime, endTime).
-		Select("id, task_details->>'filepath', task_details->>'to_timestamp'").Rows()
+		Select("id, task_details->>'filepath', task_details->>'from_timestamp', task_details->>'to_timestamp'").Rows()
 	if err != nil {
 		log.WithError(err).Error("Query failed to get filenames")
 		return fileNameEndTimeMap, http.StatusInternalServerError
@@ -200,19 +202,21 @@ func GetNewArchivalFileNamesAndEndTimeForProject(projectID uint64,
 
 	for rows.Next() {
 		var fileName, taskID string
-		var endTime int64
-		err = rows.Scan(&taskID, &fileName, &endTime)
+		var startTime, endTime int64
+		err = rows.Scan(&taskID, &fileName, &startTime, &endTime)
 		if err != nil {
 			log.WithError(err).Error("Error while scanning row")
 			continue
 		}
-		fileNameEndTimeMap[endTime] = make(map[string]string)
+		fileNameEndTimeMap[endTime] = make(map[string]interface{})
 		fileNameEndTimeMap[endTime]["filepath"] = fileName
 		fileNameEndTimeMap[endTime]["task_id"] = taskID
+		fileNameEndTimeMap[endTime]["start_time"] = startTime
 	}
 
 	if !hardStartTime.IsZero() {
 		// Custom range is provided. Filter out completed tasks from the list to avoid reruning and duplication.
+		log.Infof("Filtering out completed bigquery task in range %d-%d", startTime, endTime)
 		fileNameEndTimeMap, err = filterCompletedBigqueryTasks(fileNameEndTimeMap, projectID)
 		if err != nil {
 			log.WithError(err).Error("Failed to filter completed tasks")
@@ -257,13 +261,13 @@ func GetCompletedArchivalBatches(projectID uint64, startTime, endTime time.Time)
 }
 
 // Filters all completed bigquery tasks from the list of allTasksMap.
-func filterCompletedBigqueryTasks(allTasksMap map[int64]map[string]string, projectID uint64) (map[int64]map[string]string, error) {
+func filterCompletedBigqueryTasks(allTasksMap map[int64]map[string]interface{}, projectID uint64) (map[int64]map[string]interface{}, error) {
 	var archivalTaskIDs, completedTaskIDs, pendingTaskIDs []string
-	pendingTasksMap := make(map[int64]map[string]string)
+	pendingTasksMap := make(map[int64]map[string]interface{})
 	db := C.GetServices().Db
 
 	for _, value := range allTasksMap {
-		archivalTaskIDs = append(archivalTaskIDs, value["task_id"])
+		archivalTaskIDs = append(archivalTaskIDs, value["task_id"].(string))
 	}
 
 	rows, err := db.Model(&ScheduledTask{}).
@@ -286,7 +290,7 @@ func filterCompletedBigqueryTasks(allTasksMap map[int64]map[string]string, proje
 	pendingTaskIDs = U.StringSliceDiff(archivalTaskIDs, completedTaskIDs)
 
 	for key, value := range allTasksMap {
-		if U.StringValueIn(value["task_id"], pendingTaskIDs) {
+		if U.StringValueIn(value["task_id"].(string), pendingTaskIDs) {
 			pendingTasksMap[key] = value
 		}
 	}
