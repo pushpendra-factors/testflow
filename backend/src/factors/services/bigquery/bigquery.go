@@ -12,6 +12,7 @@ import (
 
 	"cloud.google.com/go/bigquery"
 	log "github.com/sirupsen/logrus"
+	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 )
 
@@ -37,6 +38,57 @@ func CreateBigqueryClient(ctx *context.Context, bigquerySetting *M.BigquerySetti
 		return nil, err
 	}
 	return client, nil
+}
+
+// CreateBigqueryClientForProject Creates and returns a bigquery client for the given projectID.
+func CreateBigqueryClientForProject(ctx *context.Context, projectID uint64) (*bigquery.Client, error) {
+	bigquerySetting, status := M.GetBigquerySettingByProjectID(projectID)
+	if status == http.StatusInternalServerError {
+		return nil, fmt.Errorf("Failed to get bigquery setting for project_id %d", projectID)
+	} else if status == http.StatusNotFound {
+		return nil, fmt.Errorf("No BigQuery configuration found for project id %d in database", projectID)
+	}
+
+	client, err := CreateBigqueryClient(ctx, bigquerySetting)
+	if err != nil {
+		bqLog.WithError(err).Error("Failed to create bigquery client")
+		return nil, err
+	}
+	return client, nil
+}
+
+// ExecuteQuery Executes a given query on Biquery for given client. Writes output to writer.
+func ExecuteQuery(ctx *context.Context, client *bigquery.Client, query string, resultSet *[][]string) error {
+	bqLog.Infof("Executing '%s' on Bigquery", query)
+	q := client.Query(query)
+	job, err := q.Run(*ctx)
+	if err != nil {
+		return err
+	}
+	status, err := job.Wait(*ctx)
+	if err != nil {
+		return err
+	}
+	if err := status.Err(); err != nil {
+		return err
+	}
+	it, err := job.Read(*ctx)
+	for {
+		var row []bigquery.Value
+		err := it.Next(&row)
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			return err
+		}
+		var rowString []string
+		for _, column := range row {
+			rowString = append(rowString, column.(string))
+		}
+		*resultSet = append(*resultSet, rowString)
+	}
+	return nil
 }
 
 // CreateBigqueryArchivalTables Creates tables required in Bigquery.
