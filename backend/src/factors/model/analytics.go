@@ -1262,7 +1262,7 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q Query) (string, []interface
 			stepXToYSelect = joinWithComma(stepXToYSelect, egGroupKeys)
 		}
 
-		stepXToYJoin := fmt.Sprintf("LEFT JOIN %s_users ON %s_users.coal_user_id = %s_users.coal_user_id WHERE %s_timestamp >= %s_timestamp",
+		stepXToYJoin := fmt.Sprintf("LEFT JOIN %s_users ON %s_users.coal_user_id = %s_users.coal_user_id WHERE %s_timestamp > %s_timestamp",
 			stepName, prevStepName, stepName, stepName, prevStepName)
 		stepXToY := fmt.Sprintf("SELECT %s FROM %s_users %s", stepXToYSelect, prevStepName, stepXToYJoin)
 		qStmnt = joinWithComma(qStmnt, as(stepXToYName, stepXToY))
