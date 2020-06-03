@@ -994,6 +994,76 @@ class Query extends Component {
     );
   } 
 
+  jsonToCSV = () => {
+    const csvRows = [];
+    let newJSON = {...this.state.result}
+    if (newJSON.headers[0] == "_group_key_0" || newJSON.headers[0] == "datetime") {
+      newJSON = this.convertLineJSON(newJSON)
+    }
+    csvRows.push((newJSON.headers).join(','));
+    let jsonRows = (newJSON.rows).map((row)=> {
+      let values = row.map((val)=>{
+        const escaped = (''+val).replace(/"/g,'\\"');
+        return `"${escaped}"`
+      })
+      return values.join(',');
+    });
+    jsonRows = jsonRows.join('\n')
+    const csv = csvRows+ "\n"+ jsonRows
+    this.downloadCSV(csv);
+  }
+  convertLineJSON = (data) => {
+    let datetimeKey = 0;
+    for(var i = 0; i<data.meta.query.gbp.length; i++) {
+      data.headers[i] = data.meta.query.gbp[i].pr
+    }
+    for (var i=0; i<data.headers.length; i++) {
+      if(data.headers[i] == "datetime") {
+        datetimeKey = i;
+        if(data.meta.query.gbt == "date"){
+          data.headers[i] = "date(UTC)"
+        } else {
+          data.headers.splice(i,1,"date", "time")
+        }
+
+      }
+    }
+    data.rows = data.rows.map((row)=> {
+      let dateTime= row[dateTime].split("T")
+      if(data.meta.query.gbt == "date"){
+        row[datetimeKey] = dateTime[0]
+      }
+      else {
+        let time = (dateTime[1].split("+"))[0] +" GMT"
+        row.splice(datetimeKey, 1, dateTime[0],time)
+      }
+      return row
+    })
+    return data
+  }
+  downloadCSV = (data) => {
+    const blob = new Blob([data], {type: 'text/csv'})
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.setAttribute('hidden','')
+    a.setAttribute('href', url)
+    a.setAttribute('download', 'factors_insights.csv')
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+  }
+  renderDownloadButton = () => {
+    if(this.state.selectedPresentation != PRESENTATION_BAR) {
+      return (
+        <button className="btn btn-primary ml-1" style={{fontWeight: 500}} 
+                  onClick={()=> this.jsonToCSV()}>Download</button>
+      )
+    }
+      return (
+        <button className="btn btn-primary ml-1" style={{display: "none"}} 
+                  onClick={()=> this.jsonToCSV()}>Download</button>
+      )
+  }
   renderPresentationPane(presentationOptionsByClass=null, presentationByClass=null) {
     return (
       <div>
@@ -1012,6 +1082,7 @@ class Query extends Component {
                     { this.renderDashboardDropdownOptions() }
                   </DropdownMenu>
                 </ButtonDropdown>
+                {this.renderDownloadButton()}
               </ButtonToolbar>
             </Col>
           </Row>
