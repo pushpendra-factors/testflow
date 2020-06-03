@@ -47,6 +47,7 @@ class GroupBy extends Component {
             state.nameOpts.push({value: v, label: v, type: type});
         }
       }
+      state.nameOpts.sort((a, b)=>a.label > b.label ? 1:-1 );
       return state;
     })    
   }

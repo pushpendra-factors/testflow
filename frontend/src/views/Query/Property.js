@@ -66,6 +66,7 @@ class Property extends Component {
         opts.push({value: v, label: v, type: type}); 
       }
     }
+    opts.sort((a, b)=>a.label > b.label ? 1:-1 );
     this.setState({ nameOpts: opts, isNameOptsLoading: false });
   }
 
