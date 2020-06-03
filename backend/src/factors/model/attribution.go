@@ -208,10 +208,10 @@ func getAttributedSession(projectId uint64, attributionKey string, from int64, t
 		aggrigateColumn = "min(sessions.timestamp) "
 	}
 
-	queryStmnt := "SELECT sessions.user_id, user_properties.properties->>? as campaing_id," + aggrigateColumn +
-		"from events as sessions left join user_properties on user_properties.id = sessions.user_properties_id where " +
+	queryStmnt := "SELECT coalesce(users.customer_user_id,users.id ) AS coal_user_id, user_properties.properties->>? as campaing_id," + aggrigateColumn +
+		"from events as sessions left join user_properties on user_properties.id = sessions.user_properties_id left join users on sessions.user_id = users.id where " +
 		"sessions.project_id = ? and sessions.event_name_id = (select id from event_names where name=? and " +
-		"project_id =? limit 1) and user_properties.properties->>? is not null " + timeRangeStmnt + "group by sessions.user_id,campaing_id "
+		"project_id =? limit 1) and user_properties.properties->>? is not null " + timeRangeStmnt + "group by coal_user_id,campaing_id "
 	rows, err := db.Raw(queryStmnt, queryParams...).Rows()
 
 	defer rows.Close()
@@ -299,7 +299,7 @@ func getUserCampaignIdByAttributionKey(projectId uint64, query *AttributionQuery
 	inStmnt, inParams := buildEventNamesPlaceholder(query)
 	qparams = append(append(qparams, inParams...), query.From, query.To)
 
-	stmnt := "SELECT user_properties.user_id AS user_id," + groupSelect +
+	stmnt := "SELECT coalesce(users.customer_user_id,users.id ) AS user_id," + groupSelect +
 		", events.timestamp as event_timestamp, event_names.name FROM events LEFT JOIN users ON users.id = events.user_id LEFT JOIN user_properties" +
 		" ON user_properties.id = users.properties_id LEFT JOIN event_names ON event_names.id = events.event_name_id WHERE events.project_id=? AND event_names.name IN (" + inStmnt +
 		") AND timestamp >= ? AND timestamp <=?"

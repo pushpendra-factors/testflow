@@ -318,3 +318,100 @@ func TestAttributionLastTouchWithLookbackWindow(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 0, len(attributionData))
 }
+
+func TestAttributionWithUserIdentification(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+	customerAccountId := U.RandomLowerAphaNumString(5)
+	_, errCode := M.UpdateProjectSettings(project.ID, &M.ProjectSetting{
+		IntAdwordsCustomerAccountId: &customerAccountId,
+	})
+	assert.Equal(t, http.StatusAccepted, errCode)
+
+	user1, errCode := M.CreateUser(&M.User{ProjectId: project.ID})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, user1.ID)
+
+	user2, errCode := M.CreateUser(&M.User{ProjectId: project.ID})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, user2.ID)
+
+	timestamp := int64(1589068800)
+	errCode = createEventWithSession(project.ID, "event1", user1.ID, timestamp, user1.PropertiesId)
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	errCode = createEventWithSession(project.ID, "event1", user2.ID, timestamp, user2.PropertiesId)
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	attributionData := make(map[string]*M.AttributionData)
+	query := &M.AttributionQuery{
+		From:                   timestamp - 86400,
+		To:                     timestamp + 2*86400,
+		AttributionKey:         M.ATTRIBUTION_KEY_CAMPAIGN,
+		AttributionMethodology: M.ATTRIBUTION_METHOD_LAST_TOUCH,
+		ConversionEvent:        "event1",
+		LoopbackDays:           0,
+	}
+
+	userProperty, err := M.GetQueryUserProperty(query)
+	assert.Nil(t, err)
+	assert.NotEqual(t, "", userProperty)
+
+	//both user should be treated different
+	err = M.GetUniqueUserByAttributionKeyAndLookbackWindow(project.ID, attributionData, query, userProperty)
+	assert.Nil(t, err)
+	assert.Equal(t, int64(2), attributionData["$none"].ConversionEventCount)
+
+	customerUserId := U.RandomLowerAphaNumString(15)
+	_, errCode = M.UpdateUser(project.ID, user1.ID, &M.User{CustomerUserId: customerUserId}, timestamp+86400)
+	assert.Equal(t, http.StatusAccepted, errCode)
+	_, errCode = M.UpdateUser(project.ID, user2.ID, &M.User{CustomerUserId: customerUserId}, timestamp+86400)
+	assert.Equal(t, http.StatusAccepted, errCode)
+
+	//both user should be treated same
+	attributionData = make(map[string]*M.AttributionData)
+	err = M.GetUniqueUserByAttributionKeyAndLookbackWindow(project.ID, attributionData, query, userProperty)
+	assert.Nil(t, err)
+	assert.Equal(t, int64(1), attributionData["$none"].ConversionEventCount)
+
+	t.Run("TestAttributionUserIdentificationWithLookbackDays", func(t *testing.T) {
+		//continuation to previous users
+		user1NewPropertiesId, status := M.UpdateUserProperties(project.ID, user1.ID, &postgres.Jsonb{RawMessage: json.RawMessage(`{"$initial_campaign":12345}`)}, timestamp+3*86400)
+		assert.Equal(t, http.StatusAccepted, status)
+		user2NewPropertiesId, status := M.UpdateUserProperties(project.ID, user2.ID, &postgres.Jsonb{RawMessage: json.RawMessage(`{"$initial_campaign":12345}`)}, timestamp+3*86400)
+		assert.Equal(t, http.StatusAccepted, status)
+		/*
+			t+3day -> first time $initial_campaign set with event for user1 and user2
+			t+6day -> sessioned event for user1 and user2
+		*/
+		status = createEventWithSession(project.ID, "event1", user1.ID, timestamp+3*86400, user1NewPropertiesId)
+		assert.Equal(t, http.StatusCreated, status)
+		status = createEventWithSession(project.ID, "event1", user2.ID, timestamp+3*86400, user2NewPropertiesId)
+		assert.Equal(t, http.StatusCreated, status)
+		status = createEventWithSession(project.ID, "event1", user1.ID, timestamp+6*86400, user1NewPropertiesId)
+		assert.Equal(t, http.StatusCreated, status)
+		status = createEventWithSession(project.ID, "event1", user2.ID, timestamp+6*86400, user2NewPropertiesId)
+		assert.Equal(t, http.StatusCreated, status)
+
+		//should return 0 attribution data in 1 lookbackdays
+		attributionData = make(map[string]*M.AttributionData)
+		query := &M.AttributionQuery{
+			From:                   timestamp + 4*86400,
+			To:                     timestamp + 7*86400,
+			AttributionKey:         M.ATTRIBUTION_KEY_CAMPAIGN,
+			AttributionMethodology: M.ATTRIBUTION_METHOD_FIRST_TOUCH,
+			ConversionEvent:        "event1",
+			LoopbackDays:           1,
+		}
+		err = M.GetUniqueUserByAttributionKeyAndLookbackWindow(project.ID, attributionData, query, U.UP_INITIAL_CAMPAIGN)
+		assert.Nil(t, err)
+		assert.Equal(t, 0, len(attributionData))
+
+		//should get 1 unique user on 3 lookbackdays
+		attributionData = make(map[string]*M.AttributionData)
+		query.LoopbackDays = 3
+		err = M.GetUniqueUserByAttributionKeyAndLookbackWindow(project.ID, attributionData, query, U.UP_INITIAL_CAMPAIGN)
+		assert.Nil(t, err)
+		assert.Equal(t, int64(1), attributionData["12345"].ConversionEventCount)
+	})
+}
