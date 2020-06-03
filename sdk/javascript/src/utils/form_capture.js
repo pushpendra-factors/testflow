@@ -1,3 +1,5 @@
+const logger = require("./logger");
+
 function isEmail(email) {
     // ref: https://stackoverflow.com/questions/46155/how-to-validate-an-email-address-in-javascript
     var re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
@@ -54,6 +56,8 @@ function bindAllFormsOnSubmit(appInstance, processCallback) {
                 return;
             }
             
+            logger.debug("Executing callback on submit of form.", false);
+
             var _appInstance = appInstance;
             processCallback(_appInstance, e);
             callCount = callCount + 1;
@@ -70,6 +74,8 @@ function bindAllFormsOnSubmit(appInstance, processCallback) {
                 if (callCount == (maxCallCount-1)) callCount = 0;
                 return;
             }
+
+            logger.debug("Executing callback on click of form submit button.", false);
 
             var _appInstance = appInstance;
             processCallback(_appInstance, e.target.form);
@@ -89,6 +95,8 @@ function bindAllNonFormButtonOnClick(appInstance, processCallback) {
         if (isPartOfForm(buttons[i])) continue;
 
         buttons[i].addEventListener('click', function() {
+            logger.debug("Executing callback on click of button.", false);
+            
             var _appInstance = appInstance;
             processCallback(_appInstance);
         });

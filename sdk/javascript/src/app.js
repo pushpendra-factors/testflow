@@ -271,10 +271,15 @@ App.prototype.captureAndTrackFormSubmit = function(appInstance, e) {
 
     var properties = Properties.getPropertiesFromForm(e.target ? e.target : e);
     if (!properties || Object.keys(properties).length)
-        logger.debug("No properties captured from form.");
+        logger.debug("No properties captured from form.", false);
 
     // do not track if email and phone is not there on captured properties.
-    if (!properties[Properties.EMAIL] && !properties[Properties.PHONE]) return; 
+    if (!properties[Properties.EMAIL] && !properties[Properties.PHONE]) {
+        logger.debug("No email and phone, skipping form submit.", false);
+        return;
+    } 
+
+    logger.debug("Capturing form submit with properties: "+JSON.stringify(properties), false);
 
     appInstance.track("$form_submitted", properties);
 }
@@ -283,7 +288,12 @@ App.prototype.captureAndTrackNonFormInput = function(appInstance) {
     var properties = Properties.getPropertiesFromAllNonFormInputs();
 
     // do not track if email and phone is not there on captured properties.
-    if (!properties[Properties.EMAIL] && !properties[Properties.PHONE]) return; 
+    if (!properties[Properties.EMAIL] && !properties[Properties.PHONE]){
+        logger.debug("No email and phone, skipping form submit.", false);
+        return; 
+    }
+
+    logger.debug("Capturing non-form submit with properties: "+JSON.stringify(properties), false);
 
     appInstance.track("$form_submitted", properties);
 }
