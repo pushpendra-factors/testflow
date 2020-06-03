@@ -42,13 +42,19 @@ func TestAttributionModel(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 	customerAccountId := U.RandomLowerAphaNumString(5)
+
+	//Should return error for non adwords customer account id
+	result, currency, err := M.ExecuteAttributionQuery(project.ID, &M.AttributionQuery{})
+	assert.Nil(t, result)
+	assert.Equal(t, "", currency)
+	assert.NotNil(t, err)
+
 	_, errCode := M.UpdateProjectSettings(project.ID, &M.ProjectSetting{
 		IntAdwordsCustomerAccountId: &customerAccountId,
 	})
 
 	assert.Equal(t, http.StatusAccepted, errCode)
 	value := []byte(`{"cost": "0","clicks": "0","campaign_id":"123456","impressions": "0", "campaign_name": "test"}`)
-	assert.Nil(t, err)
 	document := &M.AdwordsDocument{
 		ProjectId:         project.ID,
 		CustomerAccountId: customerAccountId,
@@ -149,7 +155,7 @@ func TestAttributionModel(t *testing.T) {
 		assert.Equal(t, int64(1), attributionData["123456"].WebsiteVisitors)
 
 		//Only campaign id 123456 has matching adword document
-		_, err = M.AddPerformanceReportByCampaign(project.ID, attributionData, query.From, query.To)
+		_, err = M.AddPerformanceReportByCampaign(project.ID, attributionData, query.From, query.To, &customerAccountId)
 		assert.Nil(t, err)
 		assert.Equal(t, "test", attributionData["123456"].Name)
 		assert.Equal(t, "", attributionData["54321"].Name)
@@ -185,7 +191,7 @@ func TestAttributionModel(t *testing.T) {
 		assert.Equal(t, int64(1), attributionData["1234567"].WebsiteVisitors)
 
 		//Only campaign id 123456 has matching adword document
-		_, err = M.AddPerformanceReportByCampaign(project.ID, attributionData, query.From, query.To)
+		_, err = M.AddPerformanceReportByCampaign(project.ID, attributionData, query.From, query.To, &customerAccountId)
 		assert.Nil(t, err)
 		assert.Equal(t, "test", attributionData["123456"].Name)
 		assert.Equal(t, "", attributionData["1234567"].Name)

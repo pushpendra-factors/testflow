@@ -99,6 +99,16 @@ func addHeadersByAttributionKey(result *QueryResult, query *AttributionQuery) {
 func ExecuteAttributionQuery(projectId uint64, query *AttributionQuery) (*QueryResult, string, error) {
 	result := &QueryResult{}
 	attributionData := make(map[string]*AttributionData)
+
+	projectSetting, errCode := GetProjectSetting(projectId)
+	if errCode != http.StatusFound {
+		return nil, "", errors.New("failed to get project Settings")
+	}
+
+	if projectSetting.IntAdwordsCustomerAccountId == nil || *projectSetting.IntAdwordsCustomerAccountId == "" {
+		return nil, "", errors.New("execute attribution query failed. No customer account id.")
+	}
+
 	addHeadersByAttributionKey(result, query)
 	userProperty, err := GetQueryUserProperty(query)
 	if err != nil {
@@ -115,7 +125,7 @@ func ExecuteAttributionQuery(projectId uint64, query *AttributionQuery) (*QueryR
 		return nil, "", err
 	}
 
-	currency, err := AddPerformanceReportByCampaign(projectId, attributionData, query.From, query.To)
+	currency, err := AddPerformanceReportByCampaign(projectId, attributionData, query.From, query.To, projectSetting.IntAdwordsCustomerAccountId)
 	if err != nil {
 		return nil, "", err
 	}
@@ -403,19 +413,15 @@ func AddWebsiteVisitorsByEventName(projectId uint64, attributionData map[string]
 }
 
 //AddPerformanceReportByCampaign adds channel data to attributionData based on campaign id. Campaign id with no matching channel data and left with empty name parameter
-func AddPerformanceReportByCampaign(projectId uint64, attributionData map[string]*AttributionData, from, to int64) (string, error) {
+func AddPerformanceReportByCampaign(projectId uint64, attributionData map[string]*AttributionData, from, to int64, customerAccountId *string) (string, error) {
 	db := C.GetServices().Db
-	settings, errCode := GetProjectSetting(projectId)
-	if errCode != http.StatusFound {
-		return "", errors.New("failed to get adwords customer account id")
-	}
 
 	logCtx := log.WithFields(log.Fields{"projectId": projectId, "range": fmt.Sprintf("%d - %d", from, to)})
 	rows, err := db.Raw("select value->>'campaign_id' as campaign_id,  value->>'campaign_name' as campaign_name, "+
 		"SUM((value->>'impressions')::float) as impressions, SUM((value->>'clicks')::float) as clicks, "+
 		"SUM((value->>'cost')::float)/1000000 as total_cost from adwords_documents "+
 		"where project_id = ? and customer_account_id = ? and type = ? and timestamp between ? and ? "+
-		"group by value->>'campaign_id', campaign_name", projectId, settings.IntAdwordsCustomerAccountId, 5, getDateOnlyFromTimestamp(from), getDateOnlyFromTimestamp(to)).Rows()
+		"group by value->>'campaign_id', campaign_name", projectId, customerAccountId, 5, getDateOnlyFromTimestamp(from), getDateOnlyFromTimestamp(to)).Rows()
 
 	defer rows.Close()
 	if err != nil {
@@ -442,7 +448,7 @@ func AddPerformanceReportByCampaign(projectId uint64, attributionData map[string
 		}
 	}
 
-	currency, err := getAdwordsCurrency(projectId, *settings.IntAdwordsCustomerAccountId, from, to)
+	currency, err := getAdwordsCurrency(projectId, customerAccountId, from, to)
 	if err != nil {
 		return "", err
 	}
@@ -455,7 +461,7 @@ func getDateOnlyFromTimestamp(timestamp int64) string {
 }
 
 //getAdwordsCurrency returns currency used for customer_account_id
-func getAdwordsCurrency(projectId uint64, customerAccountId string, from, to int64) (string, error) {
+func getAdwordsCurrency(projectId uint64, customerAccountId *string, from, to int64) (string, error) {
 	stmnt := "SELECT value->>'currency_code' as currency FROM adwords_documents" +
 		" " + "WHERE project_id=? AND customer_account_id=? AND type=? AND timestamp BETWEEN ? AND ?" +
 		" " + "ORDER BY timestamp DESC LIMIT 1"

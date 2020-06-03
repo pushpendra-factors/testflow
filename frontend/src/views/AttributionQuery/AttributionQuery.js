@@ -67,7 +67,7 @@ class AttributionQuery extends Component {
       resultMeta:null,
 
       converisonEventName:null,
-      loopbackDays:0,
+      loopbackDays:"",
       attributionMethodology:NONE_OPT,
       attributionKey:NONE_OPT,
 
@@ -145,7 +145,7 @@ class AttributionQuery extends Component {
       query.lfe = this.state.linkedEventNames;
       query.attribution_key= this.state.attributionKey.value;
       query.attribution_methodology = this.state.attributionMethodology.value;
-      query.lbw = this.state.loopbackDays;
+      query.lbw = Number(this.state.loopbackDays) || 0;
       let period = getQueryPeriod(this.state.duringDateRange[0]);
       query.from = period.from;
       query.to = period.to;
@@ -284,10 +284,18 @@ class AttributionQuery extends Component {
 
   handleLookbackWindowChange=(event)=>{
     let days = event.target.value;
-    if (days== "") days=0;
-    this.setState({
-      loopbackDays: parseInt(days)
-    });
+    if (Number(days) && days > 0){
+      this.setState({
+        loopbackDays:days
+      })
+      return
+    }
+
+    if (days==0 ){
+      this.setState({
+        loopbackDays:""
+      })
+    }
   }
 
   render() {
@@ -342,9 +350,9 @@ class AttributionQuery extends Component {
         <span style={LABEL_STYLE}>Lookback Window</span>
       </Col>
       <Col xs='8' md='8'>
-        <input type="number" className="form-control" style={{height:"38px", width:"250px", borderRadius:"5px", 
+        <input className="form-control" style={{height:"38px", width:"250px", borderRadius:"5px", 
         border:"1px solid #bbb"}} type="text" value={this.state.loopbackDays} onChange={this.handleLookbackWindowChange} 
-        placeholder="# of days"/>
+        placeholder="in days"/>
       </Col>
     </Row>
     
