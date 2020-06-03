@@ -120,7 +120,11 @@ class Property extends Component {
       
       throw new Error('Unknown property value type.');
     }
-    this.setState({ valueType: option.type });
+    this.setState( {
+        valueType: option.type,
+        valueOpts:[]
+    }
+    );
     this.props.onNameChange(option.value);
   }
 
@@ -297,6 +301,13 @@ class Property extends Component {
     return this.props.index > 0
   }
 
+  handleEntityChange=(name)=>{
+    this.setState({
+      nameOpts:[],
+      valueType:null,
+    });
+    this.props.onEntityChange(name);
+  }
   render() {
     return <Row style={{ marginBottom: "15px" }}>
       <Col xs='12' md='12'>
@@ -314,7 +325,7 @@ class Property extends Component {
         }
         <div style={{display: "inline-block", width: "150px", marginLeft: this.isCondRequired() ? '10px' : null }} className='fapp-select light'>
           <Select
-            onChange={this.props.onEntityChange}
+            onChange={this.handleEntityChange}
             options={createSelectOpts(PROPERTY_TYPE_OPTS)} 
             placeholder="Select Type"
             value={getSelectedOpt(this.props.propertyState.entity, PROPERTY_TYPE_OPTS)}

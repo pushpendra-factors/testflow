@@ -320,7 +320,7 @@ class Query extends Component {
     this.setState((prevState) => {
       let state = { ...prevState };
       state.events = [ ...prevState.events ];
-      state.events[index].name = option.value;
+      state.events[index]={name:option.value, properties:[]};
       return state;
     })
   }
@@ -352,6 +352,9 @@ class Query extends Component {
 
   onPropertyEntityChange = (eventIndex, propertyIndex, value) => {
     this.setPropertyAttr(eventIndex, propertyIndex, 'entity', value)
+    this.setPropertyAttr(eventIndex,propertyIndex,'name',"")
+    this.setPropertyAttr(eventIndex,propertyIndex,'value',"")
+    this.setPropertyAttr(eventIndex, propertyIndex, 'valueType', "");
   }
 
   onPropertyLogicalOpChange = (eventIndex, propertyIndex, value) => {
@@ -360,6 +363,7 @@ class Query extends Component {
 
   onPropertyNameChange = (eventIndex, propertyIndex, value) => {
     this.setPropertyAttr(eventIndex, propertyIndex, 'name', value)
+    this.setPropertyAttr(eventIndex,propertyIndex,'value',"")
   }
 
   onPropertyOpChange = (eventIndex, propertyIndex, value) => {
@@ -402,6 +406,7 @@ class Query extends Component {
 
   onGroupByTypeChange = (groupByIndex, option) => {
     this.setGroupByAttr(groupByIndex, 'type', option.value);
+    this.setGroupByAttr(groupByIndex, 'name', "");
   }
 
   onGroupByNameChange = (groupByIndex, option) => {
@@ -410,6 +415,7 @@ class Query extends Component {
 
   onGroupByEventNameChange = (groupByIndex, option) => {
     this.setGroupByAttr(groupByIndex, 'eventName', option.value);
+
   }
 
   handleResultDateRangeSelect = (range) => {
