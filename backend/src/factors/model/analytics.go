@@ -954,14 +954,14 @@ Group by: user_properties, event_properties.
 
 WITH
     e1 AS (
-        SELECT distinct(events.id) as event_id, events.user_id as event_user_id, events.properties->>'category' as group_prop1 FROM events
+        SELECT events.id as event_id, events.user_id as event_user_id, events.properties->>'category' as group_prop1 FROM events
         LEFT JOIN user_properties ON events.user_properties_id=user_properties.id
 		WHERE events.project_id=2 AND events.timestamp >= 1393632004 AND events.timestamp <= 1396310325
 		AND events.event_name_id IN (SELECT id FROM event_names WHERE project_id='2' AND name='View Project')
         AND user_properties.properties->>'gender'='M'
     ),
     e2 AS (
-        SELECT distinct(events.id) as event_id, events.user_id as event_user_id, events.properties->>'category' as group_prop1 FROM events
+        SELECT events.id as event_id, events.user_id as event_user_id, events.properties->>'category' as group_prop1 FROM events
         LEFT JOIN user_properties ON events.user_properties_id=user_properties.id
 		WHERE events.project_id=2 AND events.timestamp >= 1393632004 AND events.timestamp <= 1396310325
 		AND events.event_name_id IN (SELECT id FROM event_names WHERE project_id='2' AND name='Fund Project')
