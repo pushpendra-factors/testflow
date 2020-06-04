@@ -1029,7 +1029,7 @@ class Query extends Component {
       }
     }
     data.rows = data.rows.map((row)=> {
-      let dateTime= row[dateTime].split("T")
+      let dateTime= row[datetimeKey].split("T")
       if(data.meta.query.gbt == "date"){
         row[datetimeKey] = dateTime[0]
       }
