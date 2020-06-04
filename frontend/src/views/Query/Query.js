@@ -1023,7 +1023,11 @@ class Query extends Component {
         if(data.meta.query.gbt == "date"){
           data.headers[i] = "date(UTC)"
         } else {
+<<<<<<< HEAD
+          data.headers.splice(i,1,"date", "hour")
+=======
           data.headers.splice(i,1,"date", "time")
+>>>>>>> master
         }
 
       }
