@@ -266,7 +266,7 @@ App.prototype.autoTrack = function(enabled=false) {
 }
 
 App.prototype.captureAndTrackFormSubmit = function(appInstance, e) {
-    if (!e || !e.target)
+    if (!e && !e.target)
         logger.debug("Form event or event.target is undefined on capture.");
 
     var properties = Properties.getPropertiesFromForm(e.target ? e.target : e);
@@ -303,12 +303,14 @@ App.prototype.autoFormCapture = function(enabled=false) {
 
     // Captures properties from ideal forms which has a submit button. 
     // The fields sumbmitted are processed on callback onSubmit of form.
-    FormCapture.bindAllFormsOnSubmit(this, this.captureAndTrackFormSubmit);
+    FormCapture.startBackgroundFormBinder(this, this.captureAndTrackFormSubmit)
 
     // Captures properties from input fields, which are not part of any form
     // on click of any button on the page, which is not a submit button of any form.
     // Note: submit button which is not inside a form is also bound.
     FormCapture.bindAllNonFormButtonOnClick(this, this.captureAndTrackNonFormInput)
+
+
     return true;
 }
 
