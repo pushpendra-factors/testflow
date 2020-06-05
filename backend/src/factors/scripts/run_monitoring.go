@@ -11,9 +11,9 @@ import (
 )
 
 type SlowQueries struct {
-	Runtime int64  `json:"runtime"`
-	Query   string `json:"query"`
-	Pid     int64  `json:"pid"`
+	Runtime float64 `json:"runtime"`
+	Query   string  `json:"query"`
+	Pid     int64   `json:"pid"`
 }
 
 const taskID = "Task#Monitoring"
