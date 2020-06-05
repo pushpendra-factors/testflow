@@ -265,12 +265,12 @@ App.prototype.autoTrack = function(enabled=false) {
     }
 }
 
-App.prototype.captureAndTrackFormSubmit = function(appInstance, e) {
-    if (!e && !e.target)
-        logger.debug("Form event or event.target is undefined on capture.");
+App.prototype.captureAndTrackFormSubmit = function(appInstance, formElement) {
+    if (!formElement)
+        logger.debug("Form element is undefined on capture form submit.");
 
-    var properties = Properties.getPropertiesFromForm(e.target ? e.target : e);
-    if (!properties || Object.keys(properties).length)
+    var properties = Properties.getPropertiesFromForm(formElement);
+    if (!properties || Object.keys(properties).length == 0)
         logger.debug("No properties captured from form.", false);
 
     // do not track if email and phone is not there on captured properties.

@@ -66,7 +66,7 @@ function bindAllFormsOnSubmit(appInstance, processCallback) {
                 logger.debug("Executing callback on submit of form.", false);
 
                 var _appInstance = appInstance;
-                processCallback(_appInstance, e);
+                processCallback(_appInstance, e.target);
                 callCount = callCount + 1;
             });
             
