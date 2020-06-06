@@ -214,8 +214,7 @@ func GetNewArchivalFileNamesAndEndTimeForProject(projectID uint64,
 		fileNameEndTimeMap[endTime]["start_time"] = startTime
 	}
 
-	if !hardStartTime.IsZero() {
-		// Custom range is provided. Filter out completed tasks from the list to avoid reruning and duplication.
+	if len(fileNameEndTimeMap) > 0 {
 		log.Infof("Filtering out completed bigquery task in range %d-%d", startTime, endTime)
 		fileNameEndTimeMap, err = filterCompletedBigqueryTasks(fileNameEndTimeMap, projectID)
 		if err != nil {
@@ -292,6 +291,8 @@ func filterCompletedBigqueryTasks(allTasksMap map[int64]map[string]interface{}, 
 	for key, value := range allTasksMap {
 		if U.StringValueIn(value["task_id"].(string), pendingTaskIDs) {
 			pendingTasksMap[key] = value
+		} else {
+			log.Infof("Filtering task %v", value)
 		}
 	}
 	return pendingTasksMap, nil

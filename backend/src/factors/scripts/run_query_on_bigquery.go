@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	C "factors/config"
 	BQ "factors/services/bigquery"
@@ -79,6 +80,8 @@ func main() {
 
 		csvWriter.WriteAll(queryResult)
 	} else {
-		fmt.Println(queryResult)
+		for _, line := range queryResult {
+			fmt.Println(strings.Join(line, " | "))
+		}
 	}
 }
