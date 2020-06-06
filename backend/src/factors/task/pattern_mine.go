@@ -13,6 +13,7 @@ import (
 	serviceEtcd "factors/services/etcd"
 	U "factors/util"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"math"
 	"os"
@@ -719,6 +720,39 @@ func uploadChunksToCloud(tmpChunksDir, cloudChunksDir string, cloudManager *file
 	return uploadedChunkIds, nil
 }
 
+func filterDisabledFactorsProperties(reader io.Reader) (io.Reader, error) {
+	scanner := bufio.NewScanner(reader)
+	var allLines [][]byte
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		var eventDetails P.CounterEventFormat
+		if err := json.Unmarshal([]byte(line), &eventDetails); err != nil {
+			log.WithFields(log.Fields{"line": line, "err": err}).Error("Read failed")
+			return nil, err
+		}
+
+		// Remove disabled user properties from model building.
+		for _, key := range U.DISABLED_FACTORS_USER_PROPERTIES {
+			delete(eventDetails.UserProperties, key)
+		}
+		// Remove disabled event properties from model building.
+		for _, key := range U.DISABLED_FACTORS_EVENT_PROPERTIES {
+			delete(eventDetails.EventProperties, key)
+		}
+
+		eventDetailsBytes, err := json.Marshal(eventDetails)
+		if err != nil {
+			log.WithFields(log.Fields{"line": line, "err": err}).Error("Failed to marshal eventDetails")
+			return nil, err
+		}
+
+		allLines = append(allLines, eventDetailsBytes)
+	}
+
+	return bytes.NewReader(bytes.Join(allLines, []byte("\n"))), nil
+}
+
 // PatternMine Mine TOP_K Frequent patterns for every event combination (segment) at every iteration.
 func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *filestore.FileManager,
 	diskManager *serviceDisk.DiskDriver, bucketName string, numRoutines int, projectId uint64,
@@ -737,7 +771,14 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 			"eventFileName": efCloudName}).Error("Failed downloading events file from cloud.")
 		return "", 0, err
 	}
-	err = diskManager.Create(efTmpPath, efTmpName, eReader)
+	filteredReader, err := filterDisabledFactorsProperties(eReader)
+	if err != nil {
+		mineLog.WithFields(log.Fields{"err": err, "eventFilePath": efCloudPath,
+			"eventFileName": efCloudName}).Error("Failed to filter disabled properties")
+		return "", 0, err
+	}
+
+	err = diskManager.Create(efTmpPath, efTmpName, filteredReader)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err, "eventFilePath": efTmpPath,
 			"eventFileName": efTmpName}).Error("Failed to create event file on disk.")

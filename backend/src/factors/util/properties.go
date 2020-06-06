@@ -579,6 +579,111 @@ var PREDEFINED_BIN_RANGES_FOR_PROPERTY = map[string][][2]float64{
 	},
 }
 
+// DISABLED_CORE_QUERY_USER_PROPERTIES Less important user properties in core query context.
+var DISABLED_CORE_QUERY_USER_PROPERTIES = [...]string{
+	UP_DEVICE_ADTRACKING_ENABLED,
+	UP_NETWORK_BLUETOOTH,
+	UP_NETWORK_CARRIER,
+	UP_NETWORK_CELLULAR,
+	UP_NETWORK_WIFI,
+	UP_SEGMENT_CHANNEL,
+	UP_DEVICE_ADVERTISING_ID,
+	UP_DEVICE_ID,
+}
+
+// DISABLED_CORE_QUERY_EVENT_PROPERTIES Less important event properties in core query context.
+var DISABLED_CORE_QUERY_EVENT_PROPERTIES = [...]string{
+	EP_INTERNAL_IP,
+	EP_LOCATION_LATITUDE,
+	EP_LOCATION_LONGITUDE,
+	EP_SEGMENT_EVENT_VERSION,
+}
+
+// DISABLED_FACTORS_USER_PROPERTIES User properties disabled for the factors analysis.
+var DISABLED_FACTORS_USER_PROPERTIES = [...]string{
+	UP_BROWSER_VERSION,
+	UP_OS_VERSION,
+	UP_DEVICE_ID,
+	UP_DEVICE_ADVERTISING_ID,
+	UP_DEVICE_ADTRACKING_ENABLED,
+	UP_NETWORK_BLUETOOTH,
+	UP_NETWORK_CARRIER,
+	UP_NETWORK_CELLULAR,
+	UP_NETWORK_WIFI,
+	UP_APP_BUILD,
+	UP_SEGMENT_CHANNEL,
+	UP_USER_ID,
+	UP_INITIAL_GCLID,
+	UP_INITIAL_FBCLID,
+	UP_LATEST_GCLID,
+	UP_LATEST_FBCLID,
+	UP_LATEST_REFERRER,
+	UP_INITIAL_REFERRER,
+}
+
+// DISABLED_FACTORS_EVENT_PROPERTIES Event properties disabled for the factors analysis.
+var DISABLED_FACTORS_EVENT_PROPERTIES = [...]string{
+	EP_INTERNAL_IP,
+	EP_LOCATION_LATITUDE,
+	EP_LOCATION_LONGITUDE,
+	EP_SEGMENT_EVENT_VERSION,
+	EP_PAGE_RAW_URL,
+	EP_REFERRER,
+	EP_GCLID,
+	EP_FBCLIID,
+}
+
+// ITREE_PROPERTIES_TO_IGNORE Predefined properties that do not add much insights.
+var ITREE_PROPERTIES_TO_IGNORE = map[string]bool{
+	UP_BROWSER_VERSION: true,
+	"$browserVersion":  true, // Deprecated standard properties.
+	"_$browserVersion": true,
+	UP_SCREEN_HEIGHT:   true,
+	"$screenHeight":    true,
+	"_$screenHeight":   true,
+	UP_SCREEN_WIDTH:    true,
+	"$screenWidth":     true,
+	"_$screenWidth":    true,
+	UP_OS_VERSION:      true,
+	"$osVersion":       true,
+	"_$osVersion":      true,
+	UP_JOIN_TIME:       true,
+	"_$joinTime":       true,
+	// Old incorrect property.
+	"$session": true,
+
+	UP_INITIAL_PAGE_DOMAIN:  true,
+	UP_INITIAL_PAGE_URL:     true,
+	UP_INITIAL_PAGE_RAW_URL: true,
+	EP_PAGE_DOMAIN:          true,
+	EP_PAGE_URL:             true,
+	EP_PAGE_RAW_URL:         true,
+	EP_PAGE_TITLE:           true,
+
+	// Temporary fix.
+	EP_REFERRER:                    true,
+	EP_REFERRER_URL:                true,
+	EP_REFERRER_DOMAIN:             true,
+	SP_INITIAL_REFERRER_DOMAIN:     true,
+	SP_INITIAL_REFERRER:            true,
+	EP_PAGE_LOAD_TIME:              true,
+	UP_INITIAL_PAGE_SPENT_TIME:     true,
+	UP_INITIAL_PAGE_SCROLL_PERCENT: true,
+
+	// Session Latest.
+	SP_LATEST_PAGE_RAW_URL: true,
+	SP_LATEST_PAGE_URL:     true,
+
+	// Counts being seen as categorical.
+	UP_PAGE_COUNT:       true,
+	SP_PAGE_COUNT:       true,
+	UP_SESSION_COUNT:    true,
+	EP_SESSION_COUNT:    true,
+	SP_SESSION_TIME:     true,
+	SP_SPENT_TIME:       true,
+	UP_TOTAL_SPENT_TIME: true,
+}
+
 const SamplePropertyValuesLimit = 100
 
 // Properties should be present always, mainly for queries.
@@ -1032,4 +1137,26 @@ func FillFirstEventUserProperties(initialUserProperties *map[string]interface{},
 	} else {
 		return errors.New("Filling properties (hour and day) failed. Invalid join time.")
 	}
+}
+
+// FilterDisabledCoreUserProperties Filters out less important properties from the list.
+func FilterDisabledCoreUserProperties(propertiesByType *map[string][]string) {
+	for propertyType, properties := range *propertiesByType {
+		(*propertiesByType)[propertyType] = StringSliceDiff(properties, DISABLED_CORE_QUERY_USER_PROPERTIES[:])
+	}
+}
+
+// FilterDisabledCoreEventProperties Filters out less important properties from the list.
+func FilterDisabledCoreEventProperties(propertiesByType *map[string][]string) {
+	for propertyType, properties := range *propertiesByType {
+		(*propertiesByType)[propertyType] = StringSliceDiff(properties, DISABLED_CORE_QUERY_EVENT_PROPERTIES[:])
+	}
+}
+
+// ShouldIgnoreItreeProperty Checks if property is to be ignored for building ITree.
+func ShouldIgnoreItreeProperty(propertyName string) bool {
+	if _, found := ITREE_PROPERTIES_TO_IGNORE[propertyName]; found {
+		return true
+	}
+	return IsInternalEventProperty(&propertyName) || IsInternalUserProperty(&propertyName)
 }

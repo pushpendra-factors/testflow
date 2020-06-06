@@ -116,6 +116,7 @@ func GetEventPropertiesHandler(c *gin.Context) {
 			return
 		}
 	}
+	U.FilterDisabledCoreEventProperties(&properties)
 
 	c.JSON(http.StatusOK, properties)
 }

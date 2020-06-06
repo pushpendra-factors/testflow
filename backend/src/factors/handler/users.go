@@ -131,6 +131,7 @@ func GetUserPropertiesHandler(c *gin.Context) {
 
 	properties = U.ClassifyDateTimePropertyKeys(&properties)
 	U.FillMandatoryDefaultUserProperties(&properties)
+	U.FilterDisabledCoreUserProperties(&properties)
 
 	c.JSON(http.StatusOK, properties)
 }

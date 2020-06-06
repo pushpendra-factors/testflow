@@ -93,6 +93,9 @@ func GetUUID() string {
 
 // StringSliceDiff Returns sliceA - sliceB set of elements.
 func StringSliceDiff(sliceA, sliceB []string) []string {
+	if len(sliceA) == 0 || len(sliceB) == 0 {
+		return sliceA
+	}
 	sliceBMap := make(map[string]int)
 
 	var diffSlice []string

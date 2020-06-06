@@ -18,13 +18,13 @@ func TestSanitizeEventProperties(t *testing.T) {
 	eventProperties = A.SanitizeEventProperties(eventProperties)
 
 	// Blacklisted properties must have been removed.
-	for _, property := range A.ARCHIVE_BLACKLISTED_EP {
+	for _, property := range U.DISABLED_CORE_QUERY_EVENT_PROPERTIES {
 		_, okay := eventProperties[property]
 		assert.False(t, okay)
 	}
 
 	// Rest all properties must still be present.
-	for _, property := range U.StringSliceDiff(U.SDK_ALLOWED_EVENT_PROPERTIES[:], A.ARCHIVE_BLACKLISTED_EP) {
+	for _, property := range U.StringSliceDiff(U.SDK_ALLOWED_EVENT_PROPERTIES[:], U.DISABLED_CORE_QUERY_EVENT_PROPERTIES[:]) {
 		_, okay := eventProperties[property]
 		assert.True(t, okay)
 	}
@@ -38,13 +38,13 @@ func TestSanitizeUserProperties(t *testing.T) {
 	userProperties = A.SanitizeUserProperties(userProperties)
 
 	// Blacklisted properties must have been removed.
-	for _, property := range A.ARCHIVE_BLACKLISTED_UP {
+	for _, property := range U.DISABLED_CORE_QUERY_USER_PROPERTIES {
 		_, okay := userProperties[property]
 		assert.False(t, okay)
 	}
 
 	// Rest all properties must still be present.
-	for _, property := range U.StringSliceDiff(U.SDK_ALLOWED_USER_PROPERTIES[:], A.ARCHIVE_BLACKLISTED_UP) {
+	for _, property := range U.StringSliceDiff(U.SDK_ALLOWED_USER_PROPERTIES[:], U.DISABLED_CORE_QUERY_USER_PROPERTIES[:]) {
 		_, okay := userProperties[property]
 		assert.True(t, okay)
 	}

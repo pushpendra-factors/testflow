@@ -688,122 +688,6 @@ func getPropertyNamesMapFromConstraints(
 	return &seenPropertyConstraints
 }
 
-// Predefined properties that do not add much insights.
-var USER_PROPERTIES_TO_IGNORE = map[string]bool{
-	U.UP_BROWSER_VERSION: true,
-	"$browserVersion":    true, // Deprecated standard properties.
-	"_$browserVersion":   true,
-	U.UP_SCREEN_HEIGHT:   true,
-	"$screenHeight":      true,
-	"_$screenHeight":     true,
-	U.UP_SCREEN_WIDTH:    true,
-	"$screenWidth":       true,
-	"_$screenWidth":      true,
-	U.UP_OS_VERSION:      true,
-	"$osVersion":         true,
-	"_$osVersion":        true,
-	U.UP_JOIN_TIME:       true,
-	"_$joinTime":         true,
-	// Old incorrect property.
-	"$session": true,
-
-	U.UP_INITIAL_PAGE_DOMAIN:  true,
-	U.UP_INITIAL_PAGE_URL:     true,
-	U.UP_INITIAL_PAGE_RAW_URL: true,
-	U.EP_PAGE_DOMAIN:          true,
-	U.EP_PAGE_URL:             true,
-	U.EP_PAGE_RAW_URL:         true,
-	U.EP_PAGE_TITLE:           true,
-
-	// Temporary fix.
-	U.EP_REFERRER:                    true,
-	U.EP_REFERRER_URL:                true,
-	U.EP_REFERRER_DOMAIN:             true,
-	U.SP_INITIAL_REFERRER_DOMAIN:     true,
-	U.SP_INITIAL_REFERRER:            true,
-	U.EP_PAGE_LOAD_TIME:              true,
-	U.UP_INITIAL_PAGE_SPENT_TIME:     true,
-	U.UP_INITIAL_PAGE_SCROLL_PERCENT: true,
-
-	// Session Latest
-	U.SP_LATEST_PAGE_RAW_URL: true,
-	U.SP_LATEST_PAGE_URL:     true,
-
-	// Counts being seen as categorical.
-	U.UP_PAGE_COUNT:       true,
-	U.SP_PAGE_COUNT:       true,
-	U.UP_SESSION_COUNT:    true,
-	U.EP_SESSION_COUNT:    true,
-	U.SP_SESSION_TIME:     true,
-	U.SP_SPENT_TIME:       true,
-	U.UP_TOTAL_SPENT_TIME: true,
-}
-
-func shouldIgnoreUserProperty(propertyName string) bool {
-	if _, found := USER_PROPERTIES_TO_IGNORE[propertyName]; found {
-		return true
-	}
-	return U.IsInternalUserProperty(&propertyName)
-}
-
-// Predefined properties that do not add much insights.
-var EVENT_PROPERTIES_TO_IGNORE = map[string]bool{
-	U.UP_BROWSER_VERSION: true,
-	"$browserVersion":    true, // Deprecated standard properties.
-	"_$browserVersion":   true,
-	U.UP_SCREEN_HEIGHT:   true,
-	"$screenHeight":      true,
-	"_$screenHeight":     true,
-	U.UP_SCREEN_WIDTH:    true,
-	"$screenWidth":       true,
-	"_$screenWidth":      true,
-	U.UP_OS_VERSION:      true,
-	"$osVersion":         true,
-	"_$osVersion":        true,
-	U.UP_JOIN_TIME:       true,
-	"_$joinTime":         true,
-	// Old incorrect property.
-	"$session": true,
-
-	U.UP_INITIAL_PAGE_DOMAIN:  true,
-	U.UP_INITIAL_PAGE_URL:     true,
-	U.UP_INITIAL_PAGE_RAW_URL: true,
-	U.EP_PAGE_DOMAIN:          true,
-	U.EP_PAGE_URL:             true,
-	U.EP_PAGE_RAW_URL:         true,
-	U.EP_PAGE_TITLE:           true,
-
-	// Temporary fix.
-	U.EP_REFERRER:                    true,
-	U.EP_REFERRER_URL:                true,
-	U.EP_REFERRER_DOMAIN:             true,
-	U.SP_INITIAL_REFERRER_DOMAIN:     true,
-	U.SP_INITIAL_REFERRER:            true,
-	U.EP_PAGE_LOAD_TIME:              true,
-	U.UP_INITIAL_PAGE_SPENT_TIME:     true,
-	U.UP_INITIAL_PAGE_SCROLL_PERCENT: true,
-
-	// Session Latest.
-	U.SP_LATEST_PAGE_RAW_URL: true,
-	U.SP_LATEST_PAGE_URL:     true,
-
-	// Counts being seen as categorical.
-	U.UP_PAGE_COUNT:       true,
-	U.SP_PAGE_COUNT:       true,
-	U.UP_SESSION_COUNT:    true,
-	U.EP_SESSION_COUNT:    true,
-	U.SP_SESSION_TIME:     true,
-	U.SP_SPENT_TIME:       true,
-	U.UP_TOTAL_SPENT_TIME: true,
-}
-
-func shouldIgnoreEventProperty(propertyName string) bool {
-	if _, found := EVENT_PROPERTIES_TO_IGNORE[propertyName]; found {
-		return true
-	}
-	return U.IsInternalEventProperty(&propertyName)
-}
-
 func (it *Itree) buildCategoricalPropertyChildNodes(reqId string,
 	categoricalPropertyKeyValues map[string]map[string]bool,
 	nodeType int, maxNumProperties int, maxNumValues int,
@@ -820,10 +704,10 @@ func (it *Itree) buildCategoricalPropertyChildNodes(reqId string,
 		if _, found := (*seenProperties)[propertyName]; found {
 			continue
 		}
-		if nodeType == NODE_TYPE_EVENT_PROPERTY && shouldIgnoreEventProperty(propertyName) {
+		if nodeType == NODE_TYPE_EVENT_PROPERTY && U.ShouldIgnoreItreeProperty(propertyName) {
 			continue
 		}
-		if nodeType == NODE_TYPE_USER_PROPERTY && shouldIgnoreUserProperty(propertyName) {
+		if nodeType == NODE_TYPE_USER_PROPERTY && U.ShouldIgnoreItreeProperty(propertyName) {
 			continue
 		}
 		numP++
@@ -940,10 +824,10 @@ func (it *Itree) buildNumericalPropertyChildNodes(reqId string,
 		if _, found := (*seenProperties)[propertyName]; found {
 			continue
 		}
-		if nodeType == NODE_TYPE_EVENT_PROPERTY && shouldIgnoreEventProperty(propertyName) {
+		if nodeType == NODE_TYPE_EVENT_PROPERTY && U.ShouldIgnoreItreeProperty(propertyName) {
 			continue
 		}
-		if nodeType == NODE_TYPE_USER_PROPERTY && shouldIgnoreUserProperty(propertyName) {
+		if nodeType == NODE_TYPE_USER_PROPERTY && U.ShouldIgnoreItreeProperty(propertyName) {
 			continue
 		}
 		numP++

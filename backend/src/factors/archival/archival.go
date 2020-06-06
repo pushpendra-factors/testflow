@@ -9,26 +9,6 @@ import (
 	U "factors/util"
 )
 
-// ARCHIVE_BLACKLISTED_EP Standard properties to be removed from event properties for archival.
-var ARCHIVE_BLACKLISTED_EP []string = []string{
-	U.EP_INTERNAL_IP,
-	U.EP_LOCATION_LATITUDE,
-	U.EP_LOCATION_LONGITUDE,
-	U.EP_SEGMENT_EVENT_VERSION,
-}
-
-// ARCHIVE_BLACKLISTED_UP Standard properties to be removed from user properties for archival.
-var ARCHIVE_BLACKLISTED_UP []string = []string{
-	U.UP_DEVICE_ADTRACKING_ENABLED,
-	U.UP_NETWORK_BLUETOOTH,
-	U.UP_NETWORK_CARRIER,
-	U.UP_NETWORK_CELLULAR,
-	U.UP_NETWORK_WIFI,
-	U.UP_SEGMENT_CHANNEL,
-	U.UP_DEVICE_ADVERTISING_ID,
-	U.UP_DEVICE_ID,
-}
-
 // EventsArchivalBatch Object to store the Events Archival batch data.
 // Each batch will be scheduled as a separate task.
 type EventsArchivalBatch struct {
@@ -65,7 +45,7 @@ func (eventFormat ArchiveEventTableFormat) GetEventTimestampColumnName() string 
 
 // SanitizeEventProperties Sanitizes event properites making ready for archival / bigquery file.
 func SanitizeEventProperties(eventProperties map[string]interface{}) map[string]interface{} {
-	for _, blackListedEP := range ARCHIVE_BLACKLISTED_EP {
+	for _, blackListedEP := range U.DISABLED_CORE_QUERY_EVENT_PROPERTIES {
 		delete(eventProperties, blackListedEP)
 	}
 	return eventProperties
@@ -73,7 +53,7 @@ func SanitizeEventProperties(eventProperties map[string]interface{}) map[string]
 
 // SanitizeUserProperties Sanitizes user properties making ready for archival / bigquery file.
 func SanitizeUserProperties(userProperties map[string]interface{}) map[string]interface{} {
-	for _, blackListedUP := range ARCHIVE_BLACKLISTED_UP {
+	for _, blackListedUP := range U.DISABLED_CORE_QUERY_USER_PROPERTIES {
 		delete(userProperties, blackListedUP)
 	}
 	return userProperties
