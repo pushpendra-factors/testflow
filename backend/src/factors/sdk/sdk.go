@@ -1123,7 +1123,7 @@ func UpdateEventProperties(projectId uint64,
 	}
 
 	return http.StatusAccepted,
-		&UpdateEventPropertiesResponse{Error: "Updated event properties successfully."}
+		&UpdateEventPropertiesResponse{Message: "Updated event properties successfully."}
 }
 
 type AMPTrackPayload struct {

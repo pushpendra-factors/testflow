@@ -9,10 +9,11 @@ var app = new App();
  * Initializes sdk environment on user application. Overwrites if initialized already.
  * @param {string} appToken Unique application token.
  * @param {object} opts Additional opts: {track_on_init: false}
+ * @param {function(eventId)} afterPageTrackCallback Callback called after tracking the page, with eventId.
  */
-function init(appToken, opts={}) {
+function init(appToken, opts={}, afterPageTrackCallback) {
     try {
-        return app.init(appToken, opts)
+        return app.init(appToken, opts, afterPageTrackCallback)
             .catch(app.handleError);
     } catch(e) {
         return app.handleError(e);
@@ -36,10 +37,11 @@ function reset() {
  * Track events on user application.
  * @param {string} eventName
  * @param {Object} eventProperties 
+ * @param {function(eventId)} afterCallback
  */
-function track(eventName, eventProperties={}) {
+function track(eventName, eventProperties={}, afterCallback) {
     try {
-        app.track(eventName, eventProperties, false)
+        app.track(eventName, eventProperties, false, afterCallback)
             .catch(app.handleError);
     } catch(e) {
         app.handleError(e);
@@ -47,12 +49,30 @@ function track(eventName, eventProperties={}) {
 
     return;
 }
+
 /**
  * Track visit to page as event.
+ * @param {function(eventId)} afterCallback 
  */
-function page() {
+function page(afterCallback) {
     try {
-        app.page().catch(app.handleError);
+        app.page(afterCallback).catch(app.handleError);
+    } catch(e) {
+        app.handleError(e);
+    }
+
+    return;
+}
+
+/**
+ * Update properties of given event.
+ * @param {string} eventId 
+ * @param {Object} properties
+ */
+function updateEventProperties(eventId, properties={}) {
+    try {
+        app.updateEventProperties(eventId, properties)
+            .catch(app.handleError);
     } catch(e) {
         app.handleError(e);
     }
@@ -94,7 +114,9 @@ function getUserId() {
     return app.getUserId();
 }
 
-let exposed = { init, reset, track, page, identify, addUserProperties, getUserId };
+let exposed = { init, reset, track, page, updateEventProperties, 
+    identify, addUserProperties, getUserId };
+
 if (process.env.NODE_ENV === "development") {
     exposed["test"] = require("./test/suite.js");
     exposed["app"] = app;

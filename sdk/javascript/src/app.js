@@ -88,7 +88,7 @@ function App() {
     this.config = {};
 }
 
-App.prototype.init = function(token, opts={}) {
+App.prototype.init = function(token, opts={}, afterPageTrackCallback) {
     token = util.validatedStringArg("token", token);
 
     // Doesn't allow initialize with different token as it needs _fuid reset.
@@ -98,6 +98,8 @@ App.prototype.init = function(token, opts={}) {
     if (!token) return Promise.reject(new Error("FactorsArgumentError: Invalid token."));
 
     let _this = this; // Remove arrows;
+
+    if (!opts) opts = {};
     
     let _client = null;
     if (opts.host && opts.host !== "")
@@ -128,7 +130,7 @@ App.prototype.init = function(token, opts={}) {
             return response;
         })
         .then(function() {
-            return trackOnInit ? _this.autoTrack(_this.getConfig("auto_track")) : null;
+            return trackOnInit ? _this.autoTrack(_this.getConfig("auto_track"), afterPageTrackCallback) : null;
         })
         .then(function() {
             return _this.autoFormCapture(_this.getConfig("auto_form_capture"));
@@ -139,7 +141,7 @@ App.prototype.init = function(token, opts={}) {
         });
 }
 
-App.prototype.track = function(eventName, eventProperties, auto=false) {
+App.prototype.track = function(eventName, eventProperties, auto=false, afterCallback) {
     if (!this.isInitialized()) return Promise.reject(SDK_NOT_INIT_ERROR);
 
     eventName = util.validatedStringArg("event_name", eventName) // Clean event name.
@@ -166,10 +168,29 @@ App.prototype.track = function(eventName, eventProperties, auto=false) {
     return this.client.track(payload)
         .then(updateCookieIfUserIdInResponse)
         .then(function(response) {
-            if (auto && response.body && response.body) 
-                addCurrentPageAutoTrackEventIdToStore(response.body.event_id, eventName);
+            if (response && response.body) {
+                if (!response.body.event_id) {
+                    return Promise.reject("No event_id after track.");
+                }
+
+                if (auto) addCurrentPageAutoTrackEventIdToStore(response.body.event_id, eventName);
+                if (afterCallback) afterCallback(response.body.event_id);
+            }            
+
             return response;
         });
+}
+
+App.prototype.updateEventProperties = function(eventId, properties={}) {
+    if (!this.isInitialized()) return Promise.reject(SDK_NOT_INIT_ERROR);
+    
+    if (!eventId || eventId == '') 
+        return Promise.reject("No eventId provided for update.");
+    
+    if (Object.keys(properties).length == 0)
+        logger.debug("No properties given to update event.");
+
+    return this.client.updateEventProperties({ event_id: eventId, properties: properties });
 }
 
 App.prototype.updatePagePropertiesIfChanged = function(startOfPageSpentTimeInMs, lastPageProperties) {
@@ -214,7 +235,7 @@ function isPageAutoTracked() {
     return false
 }
 
-App.prototype.autoTrack = function(enabled=false) {
+App.prototype.autoTrack = function(enabled=false, afterCallback) {
     if (!enabled) return false; // not enabled.
 
     if (isPageAutoTracked()) {
@@ -224,7 +245,7 @@ App.prototype.autoTrack = function(enabled=false) {
     
     var _this = this;
 
-    this.track(getAutoTrackURL(), Properties.getFromQueryParams(window.location), true);
+    this.track(getAutoTrackURL(), Properties.getFromQueryParams(window.location), true, afterCallback);
 
     var lastPageProperties = {};
     var startOfPageSpentTime = util.getCurrentUnixTimestampInMs();
@@ -257,7 +278,7 @@ App.prototype.autoTrack = function(enabled=false) {
                 lastPageProperties = _this.updatePagePropertiesIfChanged(
                     startOfPageSpentTime, lastPageProperties);
                 
-                _this.track(getAutoTrackURL(), Properties.getFromQueryParams(window.location), true);
+                _this.track(getAutoTrackURL(), Properties.getFromQueryParams(window.location), true, afterCallback);
                 startOfPageSpentTime = util.getCurrentUnixTimestampInMs();
                 prevLocation = window.location.href; 
             }
@@ -314,10 +335,10 @@ App.prototype.autoFormCapture = function(enabled=false) {
     return true;
 }
 
-App.prototype.page = function() {
+App.prototype.page = function(afterCallback) {
     if (!this.isInitialized()) return Promise.reject(SDK_NOT_INIT_ERROR);
     
-    return Promise.resolve(this.autoTrack(this.getConfig("auto_track")));
+    return Promise.resolve(this.autoTrack(this.getConfig("auto_track"), afterCallback));
 }
 
 App.prototype.identify = function(customerUserId) {

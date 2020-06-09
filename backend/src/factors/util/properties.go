@@ -912,9 +912,16 @@ func GetPropertyTypeByKeyValue(propertyKey string, propertyValue interface{}) st
 
 func GetUpdateAllowedEventProperties(properties *PropertiesMap) *PropertiesMap {
 	allowedProperties := make(PropertiesMap)
-	for _, k := range UPDATE_ALLOWED_EVENT_PROPERTIES {
-		if v, allowed := (*properties)[k]; allowed {
-			allowedProperties[k] = v
+	for key, value := range *properties {
+		if strings.HasPrefix(key, NAME_PREFIX) {
+			for _, allowedKey := range UPDATE_ALLOWED_EVENT_PROPERTIES {
+				if key == allowedKey {
+					allowedProperties[key] = value
+					continue
+				}
+			}
+		} else {
+			allowedProperties[key] = value
 		}
 	}
 
