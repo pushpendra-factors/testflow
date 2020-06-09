@@ -80,9 +80,11 @@ func QueryHandler(c *gin.Context) {
 			return
 		}
 
-		logCtx.WithFields(log.Fields{"project_id": projectId,
-			"dashboard_id": dashboardIdParam, "dashboard_unit_id": unitIdParam,
-		}).WithError(errMsg).Error("Failed to get GetCacheResultByDashboardIdAndUnitId from cache.")
+		if errCode != http.StatusNotFound {
+			logCtx.WithFields(log.Fields{"project_id": projectId,
+				"dashboard_id": dashboardIdParam, "dashboard_unit_id": unitIdParam,
+			}).WithError(errMsg).Error("Failed to get GetCacheResultByDashboardIdAndUnitId from cache.")
+		}
 	}
 
 	result, errCode, errMsg := M.Analyze(projectId, requestPayload.Query)

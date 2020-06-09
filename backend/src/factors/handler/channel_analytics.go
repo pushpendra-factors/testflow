@@ -69,9 +69,11 @@ func ChannelQueryHandler(c *gin.Context) {
 			return
 		}
 
-		logCtx.WithFields(log.Fields{"project_id": projectId,
-			"dashboard_id": dashboardIdParam, "dashboard_unit_id": unitIdParam,
-		}).WithError(errMsg).Error("Failed to get GetCacheChannelResultByDashboardIdAndUnitId from cache.")
+		if errCode != http.StatusNotFound {
+			logCtx.WithFields(log.Fields{"project_id": projectId,
+				"dashboard_id": dashboardIdParam, "dashboard_unit_id": unitIdParam,
+			}).WithError(errMsg).Error("Failed to get GetCacheChannelResultByDashboardIdAndUnitId from cache.")
+		}
 	}
 
 	queryResult, errCode := M.ExecuteChannelQuery(projectId, &queryPayload)

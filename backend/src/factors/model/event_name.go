@@ -344,8 +344,7 @@ func setCacheEventNamesOrderedByOccurrence(projectId uint64, eventNames []EventN
 	}
 
 	if eventNames == nil || len(eventNames) == 0 {
-		logCtx.Error("Nil or 0 eventNames on setCacheEventNamesOrderedByOccurrence")
-		return 0, errors.New("no event names")
+		return 0, nil
 	}
 
 	currentTimeStamp := time.Now().Unix()
