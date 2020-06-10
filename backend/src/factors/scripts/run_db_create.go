@@ -9,6 +9,7 @@ import (
 	M "factors/model"
 	"factors/util"
 	"flag"
+	"fmt"
 	"os"
 
 	_ "github.com/jinzhu/gorm"
@@ -429,5 +430,15 @@ func main() {
 		log.WithFields(log.Fields{"err": err}).Error("scheduled_tasks table creation failed.")
 	} else {
 		log.Info("created scheduled_tasks table.")
+	}
+
+	// Update auto vacuum and analyze settings for heavy tables.
+	for _, tableName := range [...]string{"events", "users", "user_properties", "hubspot_documents", "adwords_documents", "event_names"} {
+		query := fmt.Sprintf("ALTER TABLE %s SET (autovacuum_vacuum_scale_factor = 0.02, autovacuum_analyze_scale_factor = 0.01);", tableName)
+		if err := db.Exec(query).Error; err != nil {
+			log.WithError(err).Errorf("Failed to update vacuum config for %s", tableName)
+		} else {
+			log.Infof("Updated config for %s table", tableName)
+		}
 	}
 }
