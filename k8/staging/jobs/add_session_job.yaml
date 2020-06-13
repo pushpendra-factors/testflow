@@ -1,0 +1,67 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: add-session-job
+spec:
+  schedule: "*/30 * * * *" # every 30 minutes
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            layer: jobs
+        spec:
+          nodeSelector:
+            cloud.google.com/gke-nodepool: factors-staging-node-pool
+          containers:
+          - name: add-session-job
+            image: us.gcr.io/factors-staging/add-session-job:v0.010-18d3217
+            imagePullPolicy: IfNotPresent
+            args:
+            - --env
+            - $(ENV)
+            - --db_host
+            - $(DB_HOST)
+            - --db_port
+            - $(DB_PORT)
+            - --db_name
+            - $(POSTGRES_DB)
+            - --db_user
+            - $(POSTGRES_USER)
+            - --redis_host
+            - $(REDIS_HOST)
+            - --redis_port
+            - $(REDIS_PORT)
+            - --db_pass
+            - $(POSTGRES_PASSWORD)
+            - --project_ids
+            - $(OFFLINE_SESSION_PROJECT_IDS)
+            - --num_routines
+            - $(ADD_SESSION_NUM_ROUTINES)
+            - --max_lookback_days
+            - $(ADD_SESSION_MAX_LOOKBACK_DAYS)
+            - --aws_region
+            - $(AWS_REGION)
+            - --aws_key
+            - $(AWS_KEY)
+            - --aws_secret
+            - $(AWS_SECRET)
+            - --email_sender
+            - $(EMAIL_SENDER)
+            envFrom:
+            - configMapRef:
+                name: config-env
+            - configMapRef:
+                name: config-postgres
+            - configMapRef:
+                name: config-redis
+            - configMapRef:
+                name: config-add-session-job
+            - secretRef:
+                name: secret-postgres
+            - secretRef:
+                name: secret-aws
+          restartPolicy: OnFailure

@@ -73,7 +73,9 @@ spec:
           - --error_reporting_interval
           - $(ERROR_REPORTING_INTERVAL)
           - --worker_concurrency
-          - "10"       
+          - "10"
+          - --skip_session_project_ids
+          - $(OFFLINE_SESSION_PROJECT_IDS)
         envFrom:
         - configMapRef:
             name: config-appserver
@@ -85,6 +87,8 @@ spec:
             name: config-redis
         - configMapRef:
             name: config-persistent-redis
+        - configMapRef:
+            name: config-add-session-job
         - secretRef:
             name: secret-postgres
         - secretRef:

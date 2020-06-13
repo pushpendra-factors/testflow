@@ -38,6 +38,9 @@ func main() {
 	factorsEmailSender := flag.String("email_sender", "support-dev@factors.ai", "")
 	errorReportingInterval := flag.Int("error_reporting_interval", 300, "")
 
+	skipSessionProjectIds := flag.String("skip_session_project_ids",
+		"", "List or projects to create session offline.")
+
 	workerConcurrency := flag.Int("worker_concurrency", 10, "")
 
 	flag.Parse()
@@ -65,6 +68,7 @@ func main() {
 		AWSRegion:              *awsRegion,
 		EmailSender:            *factorsEmailSender,
 		ErrorReportingInterval: *errorReportingInterval,
+		SkipSessionProjectIds:  *skipSessionProjectIds, // comma seperated project ids, supports "*".
 	}
 
 	err := C.InitQueueWorker(config)

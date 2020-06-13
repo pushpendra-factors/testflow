@@ -228,9 +228,11 @@ func GetProjects() ([]Project, int) {
 		log.WithError(err).Error("Getting all projects failed")
 		return nil, http.StatusInternalServerError
 	}
+
 	if len(projects) == 0 {
 		return projects, http.StatusNotFound
 	}
+
 	return projects, http.StatusFound
 }
 
@@ -240,7 +242,6 @@ func isValidProjectScope(id uint64) bool {
 }
 
 func GetProjectsByIDs(ids []uint64) ([]Project, int) {
-
 	if len(ids) == 0 {
 		return nil, http.StatusBadRequest
 	}
@@ -258,4 +259,32 @@ func GetProjectsByIDs(ids []uint64) ([]Project, int) {
 	}
 
 	return projects, http.StatusFound
+}
+
+func GetAllProjectIDs() ([]uint64, int) {
+	projectIds := make([]uint64, 0, 0)
+
+	db := C.GetServices().Db
+	rows, err := db.Raw("SELECT id FROM projects").Rows()
+	if err != nil {
+		log.WithError(err).Error("Failed to get all project ids.")
+		return projectIds, http.StatusInternalServerError
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var projectId uint64
+		if err = rows.Scan(&projectId); err != nil {
+			log.WithError(err).Error("Failed to get all project ids. Scanning failed.")
+			return projectIds, http.StatusInternalServerError
+		}
+
+		projectIds = append(projectIds, projectId)
+	}
+
+	if len(projectIds) == 0 {
+		return projectIds, http.StatusNotFound
+	}
+
+	return projectIds, http.StatusFound
 }

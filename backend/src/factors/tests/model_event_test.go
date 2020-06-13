@@ -584,6 +584,26 @@ func TestGetEventNamesByApproxAndExact(t *testing.T) {
 	assert.Equal(t, true, eventNames.Exact)
 }
 
+func TestGetEventCountOfUserByEventName(t *testing.T) {
+	project, user, eventName, err := SetupProjectUserEventNameReturnDAO()
+	assert.Nil(t, err)
+
+	// No events, should return found and zero count.
+	count, errCode := M.GetEventCountOfUserByEventName(project.ID, user.ID, eventName.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Equal(t, uint64(0), count)
+
+	newEvent := &M.Event{EventNameId: eventName.ID, ProjectId: project.ID,
+		UserId: user.ID, Timestamp: time.Now().Unix()}
+	event, errCode := M.CreateEvent(newEvent)
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotNil(t, event)
+
+	count, errCode = M.GetEventCountOfUserByEventName(project.ID, user.ID, eventName.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Equal(t, uint64(1), count)
+}
+
 func TestGetDatesForNextEventsArchivalBatch(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
@@ -625,4 +645,43 @@ func TestGetDatesForNextEventsArchivalBatch(t *testing.T) {
 		assert.True(t, found)
 		assert.Equal(t, expectedCount, value)
 	}
+}
+
+func TestGetLatestUserEventForUsersInBatch(t *testing.T) {
+	project, user1, eventName1, err := SetupProjectUserEventNameReturnDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+
+	timestamp := U.UnixTimeBeforeDuration(time.Hour * 1)
+	_, errCode := M.CreateEvent(&M.Event{EventNameId: eventName1.ID,
+		ProjectId: project.ID, UserId: user1.ID, Timestamp: timestamp})
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	eventName2, _ := M.CreateOrGetUserCreatedEventName(&M.EventName{ProjectId: project.ID, Name: "event2"})
+	assert.NotNil(t, eventName2)
+	event2, errCode := M.CreateEvent(&M.Event{EventNameId: eventName2.ID,
+		ProjectId: project.ID, UserId: user1.ID, Timestamp: timestamp + 1})
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	user2, errCode := M.CreateUser(&M.User{ProjectId: project.ID})
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	timestamp = U.UnixTimeBeforeDuration(time.Hour * 2)
+	_, errCode = M.CreateEvent(&M.Event{EventNameId: eventName1.ID,
+		ProjectId: project.ID, UserId: user2.ID, Timestamp: timestamp})
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	eventName3, _ := M.CreateOrGetUserCreatedEventName(&M.EventName{ProjectId: project.ID, Name: "event3"})
+	assert.NotNil(t, eventName2)
+	event3, errCode := M.CreateEvent(&M.Event{EventNameId: eventName3.ID,
+		ProjectId: project.ID, UserId: user2.ID, Timestamp: timestamp + 1})
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	userEventMap, errCode := M.GetLatestUserEventForUsersInBatch(project.ID, []string{user1.ID, user2.ID},
+		U.UnixTimeBeforeDuration(time.Hour*24), U.TimeNowUnix(), 1)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotNil(t, userEventMap[user1.ID])
+	assert.Equal(t, event2.ID, userEventMap[user1.ID].ID)
+	assert.NotNil(t, userEventMap[user2.ID])
+	assert.Equal(t, event3.ID, userEventMap[user2.ID].ID)
 }

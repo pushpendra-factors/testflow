@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config-add-session-job
+  labels:
+    env: staging
+    project: factors-staging
+data:
+  OFFLINE_SESSION_PROJECT_IDS: ""
+  ADD_SESSION_NUM_ROUTINES: "10"
+  ADD_SESSION_MAX_LOOKBACK_DAYS: "3"

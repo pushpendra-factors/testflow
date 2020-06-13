@@ -15,6 +15,8 @@ import (
 	"github.com/gomodule/redigo/redis"
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
+	"github.com/lib/pq"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -58,7 +60,9 @@ type CacheEvent struct {
 
 const error_Duplicate_event_customerEventID = "pq: duplicate key value violates unique constraint \"project_id_customer_event_id_unique_idx\""
 const eventsLimitForProperites = 50000
-const NewUserSessionInactivityInSeconds int64 = 30 * 60 // 30 mins
+const OneDayInSeconds int64 = 24 * 60 * 60
+const ThirtyMinutesInSeconds int64 = 30 * 60
+const NewUserSessionInactivityInSeconds int64 = ThirtyMinutesInSeconds
 
 const tableName = "events"
 const cacheIndexUserLastEvent = "user_last_event"
@@ -106,6 +110,20 @@ func SetCacheUserLastEvent(projectId uint64, userId string, cacheEvent *CacheEve
 	return err
 }
 
+func GetEventCountOfUserByEventName(projectId uint64, userId string, eventNameId uint64) (uint64, int) {
+	var count uint64
+
+	db := C.GetServices().Db
+	if err := db.Model(&Event{}).Where("project_id = ? AND user_id = ? AND event_name_id = ?",
+		projectId, userId, eventNameId).Count(&count).Error; err != nil {
+		log.WithFields(log.Fields{"projectId": projectId, "userId": userId}).WithError(err).Error(
+			"Failed to get count of event of user by event_name_id")
+		return 0, http.StatusInternalServerError
+	}
+
+	return count, http.StatusFound
+}
+
 func CreateEvent(event *Event) (*Event, int) {
 	logCtx := log.WithField("project_id", event.ProjectId)
 
@@ -125,13 +143,9 @@ func CreateEvent(event *Event) (*Event, int) {
 	}
 
 	// Increamenting count based on EventNameId, not by EventName.
-	var count uint64
-	db := C.GetServices().Db
-	if err := db.Model(&Event{}).Where("project_id = ? AND user_id = ? AND event_name_id = ?",
-		event.ProjectId, event.UserId, event.EventNameId).Count(&count).Error; err != nil {
-		log.WithFields(log.Fields{"projectId": event.ProjectId, "userId": event.UserId}).WithError(err).Error(
-			"Getting event count on eventNameId failed on CreateEvent")
-		return nil, http.StatusInternalServerError
+	count, errCode := GetEventCountOfUserByEventName(event.ProjectId, event.UserId, event.EventNameId)
+	if errCode == http.StatusInternalServerError {
+		return nil, errCode
 	}
 	event.Count = count + 1
 
@@ -145,6 +159,7 @@ func CreateEvent(event *Event) (*Event, int) {
 	// Init properties updated timestamp with event timestamp.
 	event.PropertiesUpdatedTimestamp = event.Timestamp
 
+	db := C.GetServices().Db
 	transTime := gorm.NowFunc()
 	rows, err := db.Raw("INSERT INTO events (id, customer_event_id,project_id,user_id,user_properties_id,session_id,event_name_id,count,properties,properties_updated_timestamp,timestamp,created_at,updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING events.id",
 		event.ID, event.CustomerEventId, event.ProjectId, event.UserId, event.UserPropertiesId, event.SessionId, event.EventNameId, event.Count, event.Properties, event.PropertiesUpdatedTimestamp, event.Timestamp, transTime, transTime).Rows()
@@ -508,19 +523,48 @@ func GetUserEventsByEventNameId(projectId uint64, userId string, eventNameId uin
 	return events, http.StatusFound
 }
 
+func getPageCountAndTimeSpentFromEventsList(events []Event, sessionEvent *Event) (int64, float64) {
+	if len(events) == 0 {
+		return 0, 0
+	}
+
+	timeSpent := float64(events[len(events)-1].Timestamp - sessionEvent.Timestamp)
+	pageCount := int64(len(events))
+
+	return pageCount, timeSpent
+}
+
+func getPageCountAndTimeSpentFromSessionEvent(projectId uint64, userId string,
+	sessionEvent *Event) (int64, float64, int) {
+
+	logCtx := log.WithFields(log.Fields{"project_id": projectId, "user_id": userId})
+
+	var count, timestamp int64
+	db := C.GetServices().Db
+	queryStr := "SELECT COUNT(*), MAX(timestamp) FROM events WHERE project_id = ? AND user_id = ? AND session_id = ?"
+	execQuery := db.Raw(queryStr, projectId, userId, sessionEvent.ID)
+	if err := execQuery.Error; err != nil {
+		logCtx.WithError(err).Error("Failed to get session page count and spent time.")
+		return 0, 0, http.StatusInternalServerError
+	}
+
+	row := execQuery.Row()
+	if err := row.Scan(&count, &timestamp); err != nil {
+		logCtx.WithError(err).Error("Failed to scan rows while reading session page count and spent time.")
+		return 0, 0, http.StatusInternalServerError
+	}
+
+	var timeSpent float64
+	if timestamp > 0 {
+		timeSpent = float64(timestamp - sessionEvent.Timestamp)
+	}
+
+	return count, timeSpent, http.StatusFound
+}
+
 /* COMMENTED TEMPORARILY BECAUSE OF SLOW QUERY.
 func enrichPreviousSessionEventProperties(projectId uint64, userId string,
 	previousSessionEvent *Event) (float64, float64, int) {
-	db := C.GetServices().Db
-
-	var count int64
-	var timestamp int64
-	var timeSpent float64
-
-	var queryStr string
-	queryStr = "SELECT COUNT(*), MAX(timestamp) FROM events WHERE project_id = ? AND user_id = ? AND session_id = ?"
-	row := db.Raw(queryStr, projectId, userId, previousSessionEvent.ID).Row()
-	row.Scan(&count, &timestamp)
 
 	previousEventProperties, err := U.DecodePostgresJsonb(&previousSessionEvent.Properties)
 	if err != nil {
@@ -528,17 +572,15 @@ func enrichPreviousSessionEventProperties(projectId uint64, userId string,
 			"Failed to decode previous session event properties on createSessionEvent.")
 		return 0, 0, http.StatusInternalServerError
 	}
-	if timestamp == 0 {
-		timeSpent = 0
-	} else {
-		timeSpent = float64(timestamp - previousSessionEvent.Timestamp)
-	}
-	latestEvent, errCode := GetLatestAnyEventOfUserForSession(projectId, userId, previousSessionEvent.Timestamp)
+
+	latestEvent, errCode := GetLatestAnyEventOfUserForSession(projectId,
+		userId, previousSessionEvent.Timestamp)
 	if errCode != http.StatusFound {
-		log.WithField("projectId", projectId).WithField("sessionId", previousSessionEvent.ID).Error(
-			"Failed to get latest event of session")
+		log.WithField("projectId", projectId).WithField("sessionId",
+			previousSessionEvent.ID).Error("Failed to get latest event of session")
 		return 0, 0, http.StatusInternalServerError
 	}
+
 	latestEventProperties, err := U.DecodePostgresJsonb(&latestEvent.Properties)
 	if err != nil {
 		log.WithField("projectId", projectId).WithError(err).Error(
@@ -548,8 +590,15 @@ func enrichPreviousSessionEventProperties(projectId uint64, userId string,
 
 	(*previousEventProperties)[U.SP_LATEST_PAGE_RAW_URL] = (*latestEventProperties)[U.EP_PAGE_RAW_URL]
 	(*previousEventProperties)[U.SP_LATEST_PAGE_URL] = (*latestEventProperties)[U.EP_PAGE_URL]
-	(*previousEventProperties)[U.SP_PAGE_COUNT] = count
+
+	pageCount, timeSpent, errCode := getPageCountAndTimeSpentFromSessionEvent(
+		projectId, userId, previousSessionEvent)
+	if errCode == http.StatusInternalServerError {
+		return 0, 0, errCode
+	}
+	(*previousEventProperties)[U.SP_PAGE_COUNT] = pageCount
 	(*previousEventProperties)[U.SP_SPENT_TIME] = timeSpent
+
 	previousEventPropertiesJSONb, err := U.EncodeToPostgresJsonb(previousEventProperties)
 	if err != nil {
 		log.WithField("projectId", projectId).WithError(err).Error(
@@ -563,7 +612,8 @@ func enrichPreviousSessionEventProperties(projectId uint64, userId string,
 			"Failed to overWrite previous session event properties on createSessionEvent.")
 		return 0, 0, errCode
 	}
-	return float64(count), timeSpent, http.StatusAccepted
+
+	return float64(pageCount), timeSpent, http.StatusAccepted
 }
 */
 
@@ -577,7 +627,7 @@ func createSessionEvent(projectId uint64, userId string, sessionEventNameId uint
 
 	/* COMMENTED TEMPORARILY
 	previousSessionEvent, errCode := GetLatestEventOfUserByEventNameId(
-		projectId, userId, sessionEventNameId, requestTimestamp-86400, requestTimestamp)
+		projectId, userId, sessionEventNameId, requestTimestamp-OneDayInSeconds, requestTimestamp)
 
 	get page count and page spent time
 	if errCode == http.StatusFound {
@@ -769,6 +819,302 @@ func EnrichUserPropertiesWithSessionProperties(projectId uint64, userId string,
 	}
 
 	return OverwriteUserProperties(projectId, userId, userPropertiesId, userPropertiesJsonb)
+}
+
+// getLatestUserEventForUsers - Creates a Map of user's latest event in given window.
+func getLatestUserEventForUsers(projectId uint64, userIds []string, startTimestamp,
+	endTimestamp int64, resultUserEventMap *map[string]*Event) int {
+
+	if startTimestamp == 0 || endTimestamp == 0 {
+		return http.StatusBadRequest
+	}
+
+	var events []Event
+	db := C.GetServices().Db
+	if err := db.Order("user_id, timestamp DESC").
+		Where("project_id = ? AND user_id = ANY(?) AND timestamp BETWEEN ? AND ?",
+			projectId, pq.Array(userIds), startTimestamp, endTimestamp).
+		Select("DISTINCT ON(user_id) user_id as uuid, events.* ").
+		Find(&events).Error; err != nil {
+
+		log.WithField("project_id", projectId).WithError(err).Error("Failed to get latest events for users.")
+		return http.StatusInternalServerError
+	}
+
+	if len(events) == 0 {
+		return http.StatusNotFound
+	}
+
+	for i := range events {
+		(*resultUserEventMap)[events[i].UserId] = &events[i]
+	}
+
+	return http.StatusFound
+}
+
+func GetLatestUserEventForUsersInBatch(projectId uint64, userIds []string,
+	startTimestamp, endTimestamp int64, usersPerBatch int) (map[string]*Event, int) {
+
+	batchUserIds := make([][]string, 0, 0)
+	for i := 0; i < len(userIds); {
+		next := i + usersPerBatch
+		if next > len(userIds) {
+			next = len(userIds)
+		}
+
+		batchUserIds = append(batchUserIds, userIds[i:next])
+		i = next
+	}
+
+	hasFailure := false
+	userEventMap := make(map[string]*Event, 0)
+	for bi := range batchUserIds {
+		errCode := getLatestUserEventForUsers(projectId, batchUserIds[bi], startTimestamp, endTimestamp, &userEventMap)
+		if errCode == http.StatusInternalServerError {
+			hasFailure = true
+		}
+	}
+
+	if hasFailure {
+		return userEventMap, http.StatusInternalServerError
+	}
+
+	return userEventMap, http.StatusFound
+}
+
+func GetAllEventsOfUser(projectId uint64, userId string, startTimestamp,
+	endTimestamp int64) ([]Event, int) {
+
+	var events []Event
+	if startTimestamp == 0 || endTimestamp == 0 {
+		return events, http.StatusBadRequest
+	}
+
+	db := C.GetServices().Db
+	if err := db.Order("timestamp ASC").Where("project_id = ? AND user_id = ? AND timestamp BETWEEN ? AND ?",
+		projectId, userId, startTimestamp, endTimestamp).Find(&events).Error; err != nil {
+
+		log.WithFields(log.Fields{"project_id": projectId, "user_id": userId, "start_timestamp": startTimestamp,
+			"end_timestamp": endTimestamp}).WithError(err).Error("Failed to get all events of user.")
+		return events, http.StatusInternalServerError
+	}
+
+	return events, http.StatusFound
+}
+
+func associateSessionToEvents(projectId uint64, userId string, startTimestamp,
+	endTimestamp int64, sessionId string) int {
+
+	logCtx := log.WithFields(log.Fields{"project_id": projectId, "userId": userId,
+		"start_timestamp": startTimestamp, "end_timestamp": endTimestamp,
+		"session_id": sessionId})
+
+	if startTimestamp == 0 || endTimestamp == 0 || sessionId == "" {
+		logCtx.Error("Invalid session update window or session id")
+		return http.StatusBadRequest
+	}
+
+	// Updates session_id to all events between given timestamp.
+	updateFields := map[string]interface{}{"session_id": sessionId}
+	db := C.GetServices().Db
+	err := db.Model(&Event{}).Where("project_id = ? AND user_id = ? AND timestamp BETWEEN ? AND ?",
+		projectId, userId, startTimestamp, endTimestamp).Update(updateFields).Error
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to associate session to events")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusAccepted
+}
+
+func AddSessionForUser(projectId uint64, userId string, latestUserEvent *Event,
+	startTimestamp int64, sessionEventNameId uint64) int {
+	logCtx := log.WithFields(log.Fields{"project_id": projectId, "user_id": userId})
+
+	currentTimestamp := time.Now().Unix()
+
+	var endTimestamp int64
+	if latestUserEvent != nil {
+		endTimestamp = latestUserEvent.Timestamp - ThirtyMinutesInSeconds
+		// latest user event timestamp within buffer window.
+		if endTimestamp <= startTimestamp {
+			endTimestamp = currentTimestamp - ThirtyMinutesInSeconds
+		}
+	} else {
+		// lastest user event is not found in last one day, use
+		// current timestamp - buffer window (considering new events coming-in).
+		endTimestamp = currentTimestamp - ThirtyMinutesInSeconds
+	}
+
+	if endTimestamp <= startTimestamp {
+		return http.StatusNotModified
+	}
+
+	events, errCode := GetAllEventsOfUser(projectId, userId, startTimestamp, endTimestamp)
+	if errCode == http.StatusInternalServerError {
+		logCtx.Error("Failed to get all event of user on add session for user.")
+		return errCode
+	}
+
+	// Use 2 moving cursor current, next. if diff(current, next) > in-activity
+	// period, use current event as session_end_timestamp and update.
+	// Update next event as session start and do the same till the end.
+	sessionStartIndex := 0
+	for i := 0; i < len(events); {
+		eventPropertiesDecoded, err := U.DecodePostgresJsonb(&events[i].Properties)
+		if err != nil {
+			logCtx.Error("Failed to decode event properties of first event on session.")
+			return http.StatusInternalServerError
+		}
+		eventPropertiesMap := U.PropertiesMap(*eventPropertiesDecoded)
+
+		var isNewSessionRequired bool
+		if i < len(events)-1 {
+			isNewSessionRequired = ((events[i+1].Timestamp - events[i].Timestamp) > NewUserSessionInactivityInSeconds)
+		}
+		_, hasMarketingProperty := U.MapEventPropertiesToDefinedProperties(&eventPropertiesMap)
+		isLastSetOfEvents := i == len(events)-1
+
+		if hasMarketingProperty || isNewSessionRequired || isLastSetOfEvents {
+			var sessionEvent *Event
+			var isSessionContinued bool
+
+			// Continue with the last session_id, if available. This will be true as
+			// first event will have max_timestamp (used as start_timestamp) where
+			// session_id is not null.
+			if events[sessionStartIndex].SessionId != nil {
+				existingSessionEvent, errCode := GetEventById(projectId,
+					*events[sessionStartIndex].SessionId)
+				if errCode != http.StatusFound {
+					logCtx.WithField("err_code", errCode).Error(
+						"Failed to get existing session using session id on add session.")
+					return http.StatusInternalServerError
+				}
+				sessionEvent = existingSessionEvent
+				isSessionContinued = true
+			} else {
+				firstEvent := events[sessionStartIndex]
+
+				userProperties, errCode := GetUserProperties(projectId, userId, firstEvent.UserPropertiesId)
+				if errCode != http.StatusFound {
+					logCtx.WithField("err_code", errCode).
+						Error("Failed to get user properties of first event on session.")
+					return http.StatusInternalServerError
+				}
+
+				userPropertiesDecoded, err := U.DecodePostgresJsonb(userProperties)
+				if err != nil {
+					logCtx.WithField("user_properties_id", firstEvent.UserPropertiesId).
+						Error("Failed to decode user properties of first event on session.")
+					return http.StatusInternalServerError
+				}
+				userPropertiesMap := U.PropertiesMap(*userPropertiesDecoded)
+
+				// Todo: Reuse event properties decoded for all events.
+				firstEventPropertiesDecoded, err := U.DecodePostgresJsonb(&firstEvent.Properties)
+				if err != nil {
+					logCtx.Error("Failed to decode event properties of first event on session.")
+					return http.StatusInternalServerError
+				}
+				firstEventPropertiesMap := U.PropertiesMap(*firstEventPropertiesDecoded)
+
+				sessionEventCount, errCode := GetEventCountOfUserByEventName(projectId, userId, sessionEventNameId)
+				if errCode == http.StatusInternalServerError {
+					logCtx.Error("Failed to get session event count for user.")
+					return errCode
+				}
+				isFirstSession := sessionEventCount == 0
+				sessionPropertiesMap := U.GetSessionProperties(isFirstSession,
+					&firstEventPropertiesMap, &userPropertiesMap)
+				sessionPropertiesEncoded := map[string]interface{}(*sessionPropertiesMap)
+
+				sessionPropertiesJsonb, err := U.EncodeToPostgresJsonb(&sessionPropertiesEncoded)
+				if err != nil {
+					logCtx.WithError(err).Error("Failed to encode session properties as postgres jsonb.")
+					return http.StatusInternalServerError
+				}
+
+				// session event properties, to be updated
+				newSessionEvent, errCode := CreateEvent(&Event{
+					EventNameId: sessionEventNameId,
+					// Timestamp - 1sec before the first event of session.
+					Timestamp: firstEvent.Timestamp - 1,
+					ProjectId: projectId,
+					UserId:    userId,
+					// UserPropertiesId - properties state at the time of first event of session.
+					UserPropertiesId: firstEvent.UserPropertiesId,
+					Properties:       *sessionPropertiesJsonb,
+				})
+
+				if errCode != http.StatusCreated {
+					logCtx.Error("Failed to create session event.")
+					return errCode
+				}
+
+				sessionEvent = newSessionEvent
+			}
+
+			// Update the session_id to all events between start and end of the session window.
+			errCode := associateSessionToEvents(projectId, userId, events[sessionStartIndex].Timestamp,
+				events[i].Timestamp, sessionEvent.ID)
+			if errCode == http.StatusInternalServerError {
+				logCtx.Error("Failed to associate session to events.")
+				return errCode
+			}
+
+			lastEventProperties, err := U.DecodePostgresJsonb(&events[i].Properties)
+			if err != nil {
+				logCtx.Error("Failed to decode properties of last event of session.")
+				return http.StatusInternalServerError
+			}
+
+			sessionPropertiesMap := U.PropertiesMap{}
+			if _, exists := (*lastEventProperties)[U.EP_PAGE_RAW_URL]; exists {
+				sessionPropertiesMap[U.SP_LATEST_PAGE_RAW_URL] = (*lastEventProperties)[U.EP_PAGE_RAW_URL]
+			}
+			if _, exists := (*lastEventProperties)[U.EP_PAGE_URL]; exists {
+				sessionPropertiesMap[U.SP_LATEST_PAGE_URL] = (*lastEventProperties)[U.EP_PAGE_URL]
+			}
+
+			// Using existing method to get count and page spent time.
+			var sessionPageCount int64
+			var sessionPageSpentTime float64
+
+			if isSessionContinued {
+				// Using db query, since previous session continued, we don't have all the events of the session.
+				sessionPageCount, sessionPageSpentTime, errCode = getPageCountAndTimeSpentFromSessionEvent(
+					projectId, userId, sessionEvent)
+				if errCode == http.StatusInternalServerError {
+					logCtx.Error("Failed to get page count and spent time of session on add session.")
+				}
+			} else {
+				// events from sessionStartIndex till i.
+				sessionPageCount, sessionPageSpentTime =
+					getPageCountAndTimeSpentFromEventsList(events[sessionStartIndex:i+1], sessionEvent)
+			}
+
+			if sessionPageCount > 0 {
+				sessionPropertiesMap[U.SP_PAGE_COUNT] = sessionPageCount
+			}
+			if sessionPageSpentTime > 0 {
+				sessionPropertiesMap[U.SP_SPENT_TIME] = sessionPageSpentTime
+			}
+
+			// Update session event properties.
+			errCode = UpdateEventPropertiesByTimestamp(projectId, sessionEvent.ID,
+				&sessionPropertiesMap, sessionEvent.Timestamp+1)
+			if errCode == http.StatusInternalServerError {
+				logCtx.Error("Failed updating session event properties on add session.")
+				return errCode
+			}
+
+			sessionStartIndex = i + 1
+		}
+
+		i++
+	}
+
+	return http.StatusOK
 }
 
 func GetLatestUserEventByPageURLFromDB(projectID uint64, userID string, pageURL string) (*Event, int) {

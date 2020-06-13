@@ -77,6 +77,7 @@ type Configuration struct {
 	SkipTrackProjectIds              []uint64
 	SDKRequestQueueProjectTokens     []string
 	SegmentRequestQueueProjectTokens []string
+	SkipSessionProjectIds            string // comma seperated project ids, supports "*" for all projects.
 }
 
 type Services struct {
@@ -631,11 +632,14 @@ func GetTokensFromStringListAsUint64(stringList string) []uint64 {
 	for _, token := range tokens {
 		uint64Token, err := strconv.ParseUint(strings.TrimSpace(token), 10, 64)
 		if err != nil {
+			log.WithError(err).
+				Error("Failed to parse project_id on string list config.")
 			return uint64Tokens
 		}
 
 		uint64Tokens = append(uint64Tokens, uint64Token)
 	}
+
 	return uint64Tokens
 }
 
@@ -660,4 +664,21 @@ func GetSDKRequestQueueAllowedTokens() []string {
 
 func GetSegmentRequestQueueAllowedTokens() []string {
 	return configuration.SegmentRequestQueueProjectTokens
+}
+
+func GetProjectsFromListWithAllProjectSupport(
+	projectIdsList string) (allProjects bool, projectIds []uint64) {
+
+	projectIdsList = strings.TrimSpace(projectIdsList)
+	if projectIdsList == "*" {
+		return true, []uint64{}
+	}
+
+	return false, GetTokensFromStringListAsUint64(projectIdsList)
+}
+
+func GetSkipSessionProjects() (allProjects bool, projectIds []uint64) {
+
+	return GetProjectsFromListWithAllProjectSupport(
+		configuration.SkipSessionProjectIds)
 }

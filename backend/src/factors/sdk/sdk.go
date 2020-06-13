@@ -243,8 +243,21 @@ func enrichAfterTrack(projectId uint64, event *M.Event,
 	return http.StatusOK
 }
 
-func Track(projectId uint64, request *TrackPayload,
-	skipSession bool) (int, *TrackResponse) {
+func isSessionRequired(skipSession bool, projectId uint64, skipProjectIds []uint64) bool {
+	if skipSession {
+		return false
+	}
+
+	for _, skipProjectId := range skipProjectIds {
+		if skipProjectId == projectId {
+			return false
+		}
+	}
+
+	return true
+}
+
+func Track(projectId uint64, request *TrackPayload, skipSession bool) (int, *TrackResponse) {
 	logCtx := log.WithField("project_id", projectId)
 
 	if projectId == 0 || request == nil {
@@ -459,7 +472,10 @@ func Track(projectId uint64, request *TrackPayload,
 		UserPropertiesId: userPropertiesId,
 	}
 
-	if !skipSession {
+	skipSessionForAllProjects, skipSessionProjectIds := C.GetSkipSessionProjects()
+	skipSession = skipSession || skipSessionForAllProjects
+
+	if isSessionRequired(skipSession, projectId, skipSessionProjectIds) {
 		session, errCode := M.CreateOrGetSessionEvent(projectId, request.UserId,
 			isNewUser, hasDefinedMarketingProperty, request.Timestamp,
 			eventProperties, userProperties, userPropertiesId)

@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"runtime/debug"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // sends email notification to the team.
@@ -23,10 +24,18 @@ func NotifyThroughSNS(source, env, message interface{}) error {
 		"env":     env,
 		"message": message,
 	}
+
+	if env == "staging" {
+		log.WithFields(log.Fields{"message": message, "source": source}).
+			Info("Notification.")
+		return nil
+	}
+
 	jsonBody, err := json.MarshalIndent(body, "", "  ")
 	if err != nil {
 		return err
 	}
+
 	if env == "development" {
 		fmt.Println("-- Notification Template -- \n")
 		fmt.Println(string(jsonBody))

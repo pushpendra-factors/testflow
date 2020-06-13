@@ -88,6 +88,8 @@ spec:
           - $(SDK_REQUEST_QUEUE_PROJECT_TOKENS)
           - --segment_request_queue_project_tokens
           - $(SEGMENT_REQUEST_QUEUE_PROJECT_TOKENS)
+          - --skip_session_project_ids
+          - $(OFFLINE_SESSION_PROJECT_IDS)
         env:
           - name: MY_POD_IP
             valueFrom:
@@ -107,6 +109,8 @@ spec:
             name: config-redis
         - configMapRef:
             name: config-persistent-redis
+        - configMapRef:
+            name: config-add-session-job
         - secretRef:
             name: secret-postgres
         - secretRef:

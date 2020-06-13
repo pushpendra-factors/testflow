@@ -45,6 +45,9 @@ func main() {
 	segmentRequestQueueProjectTokens := flag.String("segment_request_queue_project_tokens", "",
 		"List of project tokens allowed to use segment request queue")
 
+	skipSessionProjectIds := flag.String("skip_session_project_ids",
+		"", "List or projects to create session offline.")
+
 	flag.Parse()
 
 	config := &C.Configuration{
@@ -71,6 +74,7 @@ func main() {
 		ErrorReportingInterval:           *errorReportingInterval,
 		SDKRequestQueueProjectTokens:     C.GetTokensFromStringListAsString(*sdkRequestQueueProjectTokens), // comma seperated project tokens.
 		SegmentRequestQueueProjectTokens: C.GetTokensFromStringListAsString(*segmentRequestQueueProjectTokens),
+		SkipSessionProjectIds:            *skipSessionProjectIds, // comma seperated project ids, supports "*".
 	}
 
 	err := C.InitSDKService(config)
