@@ -118,6 +118,7 @@ var EP_REVENUE string = "$revenue"
 var EP_HOUR_OF_DAY string = "$hour_of_day"
 var EP_DAY_OF_WEEK string = "$day_of_week"
 var EP_SESSION_COUNT string = "$session_count"
+var EP_TERM string = "$term"
 
 // User Properties
 var UP_PLATFORM string = "$platform"
@@ -259,6 +260,7 @@ var SDK_ALLOWED_EVENT_PROPERTIES = [...]string{
 	EP_FBCLIID,
 	EP_COST,
 	EP_REVENUE,
+	EP_TERM,
 
 	// user_properties captured on event. i.e form_submit.
 	UP_EMAIL,
@@ -848,8 +850,11 @@ func MapEventPropertiesToDefinedProperties(properties *PropertiesMap) (*Properti
 		case QUERY_PARAM_UTM_PREFIX + "medium":
 			property = EP_MEDIUM
 			hasDefinedMarketingProperty = true
-		case QUERY_PARAM_UTM_PREFIX + "keyword", QUERY_PARAM_UTM_PREFIX + "term", QUERY_PARAM_UTM_PREFIX + "key_word":
+		case QUERY_PARAM_UTM_PREFIX + "keyword", QUERY_PARAM_UTM_PREFIX + "key_word":
 			property = EP_KEYWORD
+			hasDefinedMarketingProperty = true
+		case QUERY_PARAM_UTM_PREFIX + "term":
+			property = EP_TERM
 			hasDefinedMarketingProperty = true
 		case QUERY_PARAM_UTM_PREFIX + "matchtype", QUERY_PARAM_UTM_PREFIX + "match_type":
 			property = EP_KEYWORD_MATCH_TYPE

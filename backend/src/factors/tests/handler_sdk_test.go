@@ -324,7 +324,7 @@ func TestSDKTrackHandler(t *testing.T) {
 	t.Run("MapEventPropertiesToDefaultProperties", func(t *testing.T) {
 		rEventName := "https://example.com/" + U.RandomLowerAphaNumString(10)
 		w = ServePostRequestWithHeaders(r, uri,
-			[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "event_properties": {"mobile": "true", "$qp_utm_campaign": "google", "$qp_utm_campaignid": "12345", "$qp_utm_source": "google", "$qp_utm_medium": "email", "$qp_utm_keyword": "analytics", "$qp_utm_matchtype": "exact", "$qp_utm_content": "analytics", "$qp_utm_adgroup": "ad-xxx", "$qp_utm_adgroup_id": "xyz123", "$qp_utm_creativeid": "creative-xxx", "$qp_gclid": "xxx123", "$qp_fbclid": "zzz123"}, "user_properties": {"$os": "Mac OS"}}`, user.ID, rEventName)),
+			[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "event_properties": {"mobile": "true", "$qp_utm_campaign": "google", "$qp_utm_campaignid": "12345", "$qp_utm_source": "google","$qp_utm_term":"analytics", "$qp_utm_medium": "email", "$qp_utm_keyword": "analytics", "$qp_utm_matchtype": "exact", "$qp_utm_content": "analytics", "$qp_utm_adgroup": "ad-xxx", "$qp_utm_adgroup_id": "xyz123", "$qp_utm_creativeid": "creative-xxx", "$qp_gclid": "xxx123", "$qp_fbclid": "zzz123"}, "user_properties": {"$os": "Mac OS"}}`, user.ID, rEventName)),
 			map[string]string{"Authorization": project.Token})
 		assert.Equal(t, http.StatusOK, w.Code)
 		responseMap = DecodeJSONResponseToMap(w.Body)
@@ -351,6 +351,8 @@ func TestSDKTrackHandler(t *testing.T) {
 		assert.NotNil(t, eventProperties[U.EP_MEDIUM])
 		assert.Nil(t, eventProperties["$qp_utm_keyword"])
 		assert.NotNil(t, eventProperties[U.EP_KEYWORD])
+		assert.Nil(t, eventProperties["$qp_utm_term"])
+		assert.NotNil(t, eventProperties[U.EP_TERM])
 		assert.Nil(t, eventProperties["$qp_utm_matchtype"])
 		assert.NotNil(t, eventProperties[U.EP_KEYWORD_MATCH_TYPE])
 		assert.Nil(t, eventProperties["$qp_utm_content"])
