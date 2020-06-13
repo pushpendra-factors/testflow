@@ -18,7 +18,7 @@ spec:
             cloud.google.com/gke-nodepool: persistent-pool-standard
           containers:
           - name: add-session-job
-            image: us.gcr.io/factors-production/add-session-job:v0.01-xxxx
+            image: us.gcr.io/factors-production/add-session-job:v0.060-372820c
             imagePullPolicy: IfNotPresent
             args:
             - --env
