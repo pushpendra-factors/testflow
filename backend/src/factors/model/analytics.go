@@ -93,7 +93,7 @@ const (
 
 	SelectDefaultEventFilter              = "events.id as event_id, events.user_id as event_user_id"
 	SelectDefaultEventFilterWithDistinct  = "DISTINCT(events.id) as event_id, events.user_id as event_user_id"
-	SelectDefaultEventFilterByAlias       = "event_id, event_user_id, event_name"
+	SelectDefaultEventFilterByAlias       = "event_id, event_user_id"
 	SelectCoalesceCustomerUserIDAndUserID = "COALESCE(users.customer_user_id, event_user_id)"
 
 	GroupKeyPrefix  = "_group_key_"
@@ -506,7 +506,6 @@ func addJoinLatestUserPropsQuery(groupProps []QueryGroupByProperty, refStepName 
 
 func filterGroupPropsByType(gp []QueryGroupByProperty, entity string) []QueryGroupByProperty {
 	groupProps := make([]QueryGroupByProperty, 0)
-
 	for _, v := range gp {
 		if v.Entity == entity {
 			groupProps = append(groupProps, v)
@@ -517,9 +516,6 @@ func filterGroupPropsByType(gp []QueryGroupByProperty, entity string) []QueryGro
 
 func appendOrderByAggr(qStmnt string) string {
 	return fmt.Sprintf("%s ORDER BY %s DESC", qStmnt, AliasAggr)
-}
-func appendOrderByEventNameAndAggr(qStmnt string) string {
-	return fmt.Sprintf("%s ORDER BY event_name, %s DESC", qStmnt, AliasAggr)
 }
 
 func appendSelectTimestampColIfRequired(stmnt string, isRequired bool) string {
@@ -997,8 +993,6 @@ func buildEventsOccurrenceWithGivenEventQuery(projectId uint64, q Query) (string
 	refStepName := ""
 	filters := make([]string, 0)
 	for i, ewp := range q.EventsWithProperties {
-		eventNameSelect := "'" + ewp.Name + "' AS event_name "
-		filterSelect := joinWithComma(filterSelect, eventNameSelect)
 		refStepName = fmt.Sprintf("step%d", i)
 		filters = append(filters, refStepName)
 		addFilterEventsWithPropsQuery(projectId, &qStmnt, &qParams, ewp, q.From, q.To, "",
@@ -1033,11 +1027,8 @@ func buildEventsOccurrenceWithGivenEventQuery(projectId uint64, q Query) (string
 	ugSelect, ugSelectParams, _ := buildGroupKeys(userGroupProps)
 	_, _, groupKeys := buildGroupKeys(q.GroupByProperties)
 
-	eventNameSelect := "event_name"
-	groupKeys = joinWithComma(eventNameSelect, groupKeys)
-
 	// select
-	tSelect := joinWithComma(eventNameSelect, ugSelect, egKeys)
+	tSelect := joinWithComma(ugSelect, egKeys)
 	tSelect = appendSelectTimestampColIfRequired(tSelect, isGroupByTimestamp)
 	tSelect = joinWithComma(tSelect, fmt.Sprintf("COUNT(*) AS %s", AliasAggr)) // aggregator.
 
@@ -1048,11 +1039,7 @@ func buildEventsOccurrenceWithGivenEventQuery(projectId uint64, q Query) (string
 			" " + "LEFT JOIN user_properties ON users.id=user_properties.user_id AND user_properties.id=users.properties_id"
 	}
 	termStmnt = appendGroupByTimestampIfRequired(termStmnt, isGroupByTimestamp, groupKeys)
-	if len(q.EventsWithProperties) > 1 {
-		termStmnt = appendOrderByEventNameAndAggr(termStmnt)
-	} else {
-		termStmnt = appendOrderByAggr(termStmnt)
-	}
+	termStmnt = appendOrderByAggr(termStmnt)
 	termStmnt = appendLimitByCondition(termStmnt, q.GroupByProperties, isGroupByTimestamp)
 
 	qParams = append(qParams, ugSelectParams...)
@@ -1408,7 +1395,7 @@ func getGroupKeyIndexesForSlicing(cols []string) (int, int, error) {
 
 	index := 0
 	for _, col := range cols {
-		if strings.HasPrefix(col, GroupKeyPrefix) || col == "event_name" {
+		if strings.HasPrefix(col, GroupKeyPrefix) {
 			if start == -1 {
 				start = index
 			} else {

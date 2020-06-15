@@ -997,18 +997,12 @@ class Query extends Component {
   jsonToCSV = () => {
     const csvRows = [];
     let newJSON = {...this.state.result}
-
-    if (this.state.selectedPresentation == PRESENTATION_LINE) {
+    if (newJSON.headers[0] == "_group_key_0" || newJSON.headers[0] == "datetime") {
       newJSON = this.convertLineJSON(newJSON)
     }
-    let headers = [...newJSON.headers]
-    
-    csvRows.push(headers.join(','));
-    
-    let rows = [...newJSON.rows]
-    let jsonRows = rows.map((row)=> {
-      let newRow = [...row]
-      let values = newRow.map((val)=>{
+    csvRows.push((newJSON.headers).join(','));
+    let jsonRows = (newJSON.rows).map((row)=> {
+      let values = row.map((val)=>{
         const escaped = (''+val).replace(/"/g,'\\"');
         return `"${escaped}"`
       })
@@ -1019,40 +1013,33 @@ class Query extends Component {
     this.downloadCSV(csv);
   }
   convertLineJSON = (data) => {
-
-    let convertedData = {}
     let datetimeKey = 0;
-    let headers = [...data.headers]
-    headers[0]= "event_name"
-    for(var i = 1; i<=data.meta.query.gbp.length; i++) {
-      headers[i] = data.meta.query.gbp[i-1].pr
+    for(var i = 0; i<data.meta.query.gbp.length; i++) {
+      data.headers[i] = data.meta.query.gbp[i].pr
     }
-    for (var i=0; i<headers.length; i++) {
-      if(headers[i] == "datetime") {
+    for (var i=0; i<data.headers.length; i++) {
+      if(data.headers[i] == "datetime") {
         datetimeKey = i;
         if(data.meta.query.gbt == "date"){
-          headers[i] = "date(UTC)"
+          data.headers[i] = "date(UTC)"
         } else {
-          headers.splice(i,1,"date(UTC)", "hour")
+          data.headers.splice(i,1,"date", "hour")
         }
 
       }
     }
-    convertedData.headers = headers
-    let rows = [...data.rows]
-    convertedData.rows = rows.map((row)=> {
+    data.rows = data.rows.map((row)=> {
       let dateTime= row[datetimeKey].split("T")
       if(data.meta.query.gbt == "date"){
         row[datetimeKey] = dateTime[0]
       }
       else {
-        let time = (dateTime[1].split("+"))[0]
+        let time = (dateTime[1].split("+"))[0] +" GMT"
         row.splice(datetimeKey, 1, dateTime[0],time)
       }
       return row
     })
-
-    return convertedData
+    return data
   }
   downloadCSV = (data) => {
     const blob = new Blob([data], {type: 'text/csv'})
