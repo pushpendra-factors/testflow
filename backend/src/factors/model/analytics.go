@@ -997,7 +997,7 @@ func buildEventsOccurrenceWithGivenEventQuery(projectId uint64, q Query) (string
 	refStepName := ""
 	filters := make([]string, 0)
 	for i, ewp := range q.EventsWithProperties {
-		eventNameSelect := "'" + ewp.Name + "' AS event_name "
+		eventNameSelect := "'" + ewp.Name + "'" + "::text" + " AS event_name "
 		filterSelect := joinWithComma(filterSelect, eventNameSelect)
 		refStepName = fmt.Sprintf("step%d", i)
 		filters = append(filters, refStepName)
