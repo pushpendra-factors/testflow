@@ -93,7 +93,7 @@ func getNextSessionInfo(projectId, sessionEventNameId uint64,
 		}
 	}
 
-	logCtx = logCtx.WithField("next_session_info_list_size", len(newUsersNextSessionInfo))
+	logCtx = logCtx.WithField("next_session_info_list_size", len(nextSessionInfoList))
 
 	endTimestamp := U.TimeNowUnix()
 	timeTakenInMins := (endTimestamp - startTimestamp) / 60
@@ -134,8 +134,8 @@ func addSessionByProjectId(projectId uint64, maxLookbackTimestamp int64) int {
 
 	logCtx = logCtx.WithField("no_of_users", len(nextSessionUserIds))
 	logCtx.Info("Getting latest user event in batch.")
-	currentTimestamp := U.TimeNowUnix()
 
+	currentTimestamp := U.TimeNowUnix()
 	usersPerBatchCount := 100
 	latestUserEventMap, errCode := M.GetLatestUserEventForUsersInBatch(projectId, nextSessionUserIds,
 		currentTimestamp-M.OneDayInSeconds, currentTimestamp, usersPerBatchCount)
