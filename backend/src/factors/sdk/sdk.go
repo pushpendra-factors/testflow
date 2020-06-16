@@ -1021,7 +1021,6 @@ func UpdateEventProperties(projectId uint64,
 	logCtx = logCtx.WithField("event_id", request.EventId)
 
 	if updatedEvent.SessionId == nil || *updatedEvent.SessionId == "" {
-		logCtx.Error("Session id does not exist to update session properties on update event properties.")
 		return http.StatusBadRequest,
 			&UpdateEventPropertiesResponse{Error: "Update event properties failed. No session associated."}
 	}
