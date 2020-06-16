@@ -103,7 +103,7 @@ class TableBarChart extends Component {
     
     let groups = {};
     for(let i=0; i<Object.keys(data.rows).length; i++) {
-      let cols = data.rows[i.toString()];
+      let cols = [...data.rows[i.toString()]];
       if (cols != undefined) {
         let encKey = cols.slice(0, cols.length - 2).join('');
         let popped = cols.splice(labelIndex, 2);
