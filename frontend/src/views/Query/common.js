@@ -61,8 +61,8 @@ export const DEFINED_DATE_RANGES = createStaticRanges([
   {
     label: DEFAULT_DATE_RANGE_LABEL,
     range: () => ({
-      startDate: DEFAULT_DATE_RANGE.startDate,
-      endDate: DEFAULT_DATE_RANGE.endDate
+      startDate: moment(new Date()).subtract(7, 'days').toDate(),
+      endDate: new Date(),
     }),
   },
   {
