@@ -97,6 +97,7 @@ func getNextSessionInfo(projectId, sessionEventNameId uint64,
 
 	endTimestamp := U.TimeNowUnix()
 	timeTakenInMins := (endTimestamp - startTimestamp) / 60
+	logCtx = logCtx.WithField("time_taken_in_mins", timeTakenInMins)
 	if timeTakenInMins > 3 {
 		logCtx.Error("Too much time taken for getting next session info.")
 	} else {
@@ -144,8 +145,8 @@ func addSessionByProjectId(projectId uint64, maxLookbackTimestamp int64) int {
 	}
 
 	timeTakenInMinutes := (U.TimeNowUnix() - currentTimestamp) / 60
-	if timeTakenInMinutes >= 2 {
-		logCtx.WithField("time_taken", timeTakenInMinutes).
+	if timeTakenInMinutes >= 3 {
+		logCtx.WithField("time_taken_in_mins", timeTakenInMinutes).
 			WithField("users_per_batch", usersPerBatchCount).
 			Error("Too much time taken to get latest event for list of users.")
 	}
