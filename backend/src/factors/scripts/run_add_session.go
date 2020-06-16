@@ -74,6 +74,7 @@ func main() {
 	if err != nil {
 		log.WithError(err).Fatal("Failed to initialize db in add session.")
 	}
+	C.GetServices().Db.LogMode(true) // for debugging.
 
 	// Cache dependency for requests not using queue.
 	C.InitRedis(config.RedisHost, config.RedisPort)

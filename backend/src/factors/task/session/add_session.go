@@ -61,6 +61,11 @@ func getNextSessionInfoFromDB(projectId uint64, withSession bool, sessionEventNa
 func getNextSessionInfo(projectId, sessionEventNameId uint64,
 	maxLookbackTimestamp int64) ([]NextSessionInfo, int) {
 
+	logCtx := log.WithFields(log.Fields{"project_id": projectId,
+		"max_lookback_timestamp": maxLookbackTimestamp})
+	startTimestamp := U.TimeNowUnix()
+	logCtx.Info("Started getting next session info.")
+
 	// old users.
 	nextSessionInfoList, status := getNextSessionInfoFromDB(projectId, true,
 		sessionEventNameId, maxLookbackTimestamp)
@@ -88,6 +93,16 @@ func getNextSessionInfo(projectId, sessionEventNameId uint64,
 		}
 	}
 
+	logCtx = logCtx.WithField("next_session_info_list_size", len(newUsersNextSessionInfo))
+
+	endTimestamp := U.TimeNowUnix()
+	timeTakenInMins := (endTimestamp - startTimestamp) / 60
+	if timeTakenInMins > 3 {
+		logCtx.Error("Too much time taken for getting next session info.")
+	} else {
+		logCtx.Info("Got next session info.")
+	}
+
 	return nextSessionInfoList, http.StatusFound
 }
 
@@ -112,12 +127,15 @@ func addSessionByProjectId(projectId uint64, maxLookbackTimestamp int64) int {
 		return errCode
 	}
 
-	nextSessionUserIds := make([]string, len(nextSessionInfoList))
+	nextSessionUserIds := make([]string, 0, 0)
 	for i := range nextSessionInfoList {
 		nextSessionUserIds = append(nextSessionUserIds, nextSessionInfoList[i].UserId)
 	}
 
+	logCtx = logCtx.WithField("no_of_users", len(nextSessionUserIds))
+	logCtx.Info("Getting latest user event in batch.")
 	currentTimestamp := U.TimeNowUnix()
+
 	usersPerBatchCount := 100
 	latestUserEventMap, errCode := M.GetLatestUserEventForUsersInBatch(projectId, nextSessionUserIds,
 		currentTimestamp-M.OneDayInSeconds, currentTimestamp, usersPerBatchCount)
@@ -128,9 +146,8 @@ func addSessionByProjectId(projectId uint64, maxLookbackTimestamp int64) int {
 	timeTakenInMinutes := (U.TimeNowUnix() - currentTimestamp) / 60
 	if timeTakenInMinutes >= 2 {
 		logCtx.WithField("time_taken", timeTakenInMinutes).
-			WithField("no_of_users", len(nextSessionUserIds)).
 			WithField("users_per_batch", usersPerBatchCount).
-			Error("Time taken to get latest event for list of users is high.")
+			Error("Too much time taken to get latest event for list of users.")
 	}
 
 	for _, nsi := range nextSessionInfoList {
