@@ -205,6 +205,11 @@ func GetAllAdwordsLastSyncInfoByProjectAndType() ([]AdwordsLastSyncInfo, int) {
 			logCtx.Error("Adwords project settings not found for project adwords synced earlier.")
 		}
 
+		if settings == nil {
+			logCtx.Info("Adwords disabled for project.")
+			continue
+		}
+
 		// customer_account_id mismatch, as user would have changed customer_account mapped to project.
 		if adwordsLastSyncInfos[i].CustomerAccountId != settings.CustomerAccountId {
 			logCtx.Warn("customer_account_id mapped to project has been changed.")
