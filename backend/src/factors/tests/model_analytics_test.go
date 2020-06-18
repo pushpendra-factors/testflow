@@ -865,8 +865,12 @@ func TestAnalyticsInsightsQueryWithFilterAndBreakdown(t *testing.T) {
 		*/
 		result, errCode, _ := M.Analyze(project.ID, query)
 		assert.Equal(t, http.StatusOK, errCode)
-		assert.Equal(t, "count", result.Headers[0])
-		assert.Equal(t, int64(5), result.Rows[0][0])
+		assert.Equal(t, "event_name", result.Headers[0])
+		assert.Equal(t, "count", result.Headers[1])
+		assert.Equal(t, "s0", result.Rows[0][0])
+		assert.Equal(t, int64(2), result.Rows[0][1])
+		assert.Equal(t, "s1", result.Rows[1][0])
+		assert.Equal(t, int64(3), result.Rows[1][1])
 
 		query.GroupByProperties = []M.QueryGroupByProperty{
 			M.QueryGroupByProperty{
@@ -877,11 +881,19 @@ func TestAnalyticsInsightsQueryWithFilterAndBreakdown(t *testing.T) {
 		// property2 -> 4, property1 ->1
 		result, errCode, _ = M.Analyze(project.ID, query)
 		assert.Equal(t, http.StatusOK, errCode)
-		assert.Equal(t, "$initial_source", result.Headers[0])
-		assert.Equal(t, "B", result.Rows[0][0])
-		assert.Equal(t, int64(4), result.Rows[0][1])
-		assert.Equal(t, "A", result.Rows[1][0])
-		assert.Equal(t, int64(1), result.Rows[1][1])
+		assert.Equal(t, "event_name", result.Headers[0])
+		assert.Equal(t, "$initial_source", result.Headers[1])
+		assert.Equal(t, "s0", result.Rows[0][0])
+		assert.Equal(t, "B", result.Rows[0][1])
+		assert.Equal(t, int64(2), result.Rows[0][2])
+
+		assert.Equal(t, "s1", result.Rows[1][0])
+		assert.Equal(t, "B", result.Rows[1][1])
+		assert.Equal(t, int64(2), result.Rows[1][2])
+
+		assert.Equal(t, "s1", result.Rows[2][0])
+		assert.Equal(t, "A", result.Rows[2][1])
+		assert.Equal(t, int64(1), result.Rows[2][2])
 
 		//Count should be same as when done with user property = 5
 		query.EventsWithProperties[0].Properties[0].Entity = M.PropertyEntityEvent
@@ -890,7 +902,11 @@ func TestAnalyticsInsightsQueryWithFilterAndBreakdown(t *testing.T) {
 		query.GroupByProperties = []M.QueryGroupByProperty{}
 		result, errCode, _ = M.Analyze(project.ID, query)
 		assert.Equal(t, http.StatusOK, errCode)
-		assert.Equal(t, "count", result.Headers[0])
-		assert.Equal(t, int64(5), result.Rows[0][0])
+		assert.Equal(t, "event_name", result.Headers[0])
+		assert.Equal(t, "count", result.Headers[1])
+		assert.Equal(t, "s0", result.Rows[0][0])
+		assert.Equal(t, int64(2), result.Rows[0][1])
+		assert.Equal(t, "s1", result.Rows[1][0])
+		assert.Equal(t, int64(3), result.Rows[1][1])
 	})
 }
