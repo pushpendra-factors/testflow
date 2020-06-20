@@ -122,6 +122,26 @@ func StringValueIn(value string, list []string) bool {
 	return false
 }
 
+// Uint64ValueIn Returns true if `value` is in `list` else false.
+func Uint64ValueIn(value uint64, list []uint64) bool {
+	for _, val := range list {
+		if val == value {
+			return true
+		}
+	}
+	return false
+}
+
+// FloatRoundOffWithPrecision Rounds of a float64 value to given precision. Ex: 2.667 with precision 2 -> 2.67.
+func FloatRoundOffWithPrecision(value float64, precision int) (float64, error) {
+	valueString := fmt.Sprintf("%0.*f", precision, value)
+	roundOffValue, err := strconv.ParseFloat(valueString, 64)
+	if err != nil {
+		return roundOffValue, err
+	}
+	return roundOffValue, nil
+}
+
 // Datetime related utility functions.
 
 const (

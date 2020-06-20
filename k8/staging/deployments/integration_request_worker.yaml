@@ -28,7 +28,7 @@ spec:
         cloud.google.com/gke-nodepool: factors-staging-node-pool
       containers:
       - name: integration-request-worker
-        image: us.gcr.io/factors-staging/integration-request-worker:v0.01-38efe45
+        image: us.gcr.io/factors-staging/integration-request-worker:v0.061-c72d4d94
         volumeMounts:
         - name: workdir
           mountPath: /usr/local/var/factors/config
@@ -76,9 +76,13 @@ spec:
           - "10"
           - --skip_session_project_ids
           - $(OFFLINE_SESSION_PROJECT_IDS)
+          - --merge_usp_project_ids
+          - $(MERGE_USP_PROJECT_IDS)
         envFrom:
         - configMapRef:
             name: config-appserver
+        - configMapRef:
+            name: config-sdkglobalconfig
         - configMapRef:
             name: config-env
         - configMapRef:

@@ -40,6 +40,8 @@ func main() {
 
 	skipSessionProjectIds := flag.String("skip_session_project_ids",
 		"", "List or projects to create session offline.")
+	mergeUserPropertiesProjectIDS := flag.String("merge_usp_project_ids", "",
+		"Comma separated list of project IDs for which user properties merge is enabled. '*' for all.")
 
 	workerConcurrency := flag.Int("worker_concurrency", 10, "")
 
@@ -69,6 +71,7 @@ func main() {
 		EmailSender:            *factorsEmailSender,
 		ErrorReportingInterval: *errorReportingInterval,
 		SkipSessionProjectIds:  *skipSessionProjectIds, // comma seperated project ids, supports "*".
+		MergeUspProjectIds:     *mergeUserPropertiesProjectIDS,
 	}
 
 	err := C.InitQueueWorker(config)

@@ -243,6 +243,26 @@ func GetUsers(projectId uint64, offset uint64, limit uint64) ([]User, int) {
 	return users, http.StatusFound
 }
 
+// GetUsersByCustomerUserID Gets all the users indentified by given customer_user_id in increasing order of updated_at.
+func GetUsersByCustomerUserID(projectID uint64, customerUserID string) ([]User, int) {
+	db := C.GetServices().Db
+	logCtx := log.WithFields(log.Fields{
+		"ProjectID":      projectID,
+		"CustomerUserID": customerUserID,
+	})
+
+	var users []User
+	if err := db.Order("created_at ASC").Where("project_id = ? AND customer_user_id = ?", projectID, customerUserID).Find(&users).Error; err != nil {
+		logCtx.WithError(err).Error("Failed to get users for customer_user_id")
+		return nil, http.StatusInternalServerError
+	}
+	if len(users) == 0 {
+		return nil, http.StatusNotFound
+	}
+
+	return users, http.StatusFound
+}
+
 func GetUserLatestByCustomerUserId(projectId uint64, customerUserId string) (*User, int) {
 	db := C.GetServices().Db
 
@@ -615,4 +635,28 @@ func GetUserPropertiesAsMap(projectId uint64, id string) (*map[string]interface{
 	}
 
 	return existingUserProperties, http.StatusFound
+}
+
+// GetDistinctCustomerUserIDSForProject Returns all distinct customer_user_id for Project.
+func GetDistinctCustomerUserIDSForProject(projectID uint64) ([]string, int) {
+	logCtx := log.WithFields(log.Fields{"ProjectID": projectID})
+	db := C.GetServices().Db
+
+	var customerUserIDS []string
+	rows, err := db.Model(&User{}).Where("project_id = ? AND customer_user_id IS NOT NULL", projectID).Select("distinct customer_user_id").Rows()
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get customer user ids")
+		return customerUserIDS, http.StatusInternalServerError
+	}
+
+	for rows.Next() {
+		var customerUserID string
+		err = rows.Scan(&customerUserID)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to scan customer user id")
+			return customerUserIDS, http.StatusInternalServerError
+		}
+		customerUserIDS = append(customerUserIDS, customerUserID)
+	}
+	return customerUserIDS, http.StatusFound
 }

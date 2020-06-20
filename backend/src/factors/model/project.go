@@ -261,6 +261,7 @@ func GetProjectsByIDs(ids []uint64) ([]Project, int) {
 	return projects, http.StatusFound
 }
 
+// GetAllProjectIDs Gets the ids of all the existing projects.
 func GetAllProjectIDs() ([]uint64, int) {
 	projectIds := make([]uint64, 0, 0)
 

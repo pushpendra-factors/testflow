@@ -1,0 +1,48 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: merge-user-properties-job
+spec:
+  schedule: "1 2 3 4 5" # Random one time schedule to avoid running periodically.
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            layer: jobs
+        spec:
+          nodeSelector:
+            cloud.google.com/gke-nodepool: persistent-pool-standard
+          containers:
+          - name: merge-user-properties-job
+            image: us.gcr.io/factors-production/merge-user-properties-job:v0.55-ed2b9fdd
+            imagePullPolicy: IfNotPresent
+            args:
+            - --env
+            - $(ENV)
+            - --db_host
+            - $(DB_HOST)
+            - --db_port
+            - $(DB_PORT)
+            - --db_name
+            - $(POSTGRES_DB)
+            - --db_user
+            - $(POSTGRES_USER)
+            - --db_pass
+            - $(POSTGRES_PASSWORD)
+            - --project_id
+            - ""
+            - --user_id
+            - ""
+            - --dryrun=true
+            envFrom:
+            - configMapRef:
+                name: config-env
+            - configMapRef:
+                name: config-postgres
+            - secretRef:
+                name: secret-postgres
+          restartPolicy: OnFailure

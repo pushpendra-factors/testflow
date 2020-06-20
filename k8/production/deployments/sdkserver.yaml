@@ -90,6 +90,8 @@ spec:
           - $(SEGMENT_REQUEST_QUEUE_PROJECT_TOKENS)
           - --skip_session_project_ids
           - $(OFFLINE_SESSION_PROJECT_IDS)
+          - --merge_usp_project_ids
+          - $(MERGE_USP_PROJECT_IDS)
         env:
           - name: MY_POD_IP
             valueFrom:
@@ -101,6 +103,8 @@ spec:
             name: config-sdkserver
         - configMapRef:
             name: config-appserver
+        - configMapRef:
+            name: config-sdkglobalconfig
         - configMapRef:
             name: config-env
         - configMapRef:

@@ -28,7 +28,7 @@ spec:
         cloud.google.com/gke-nodepool: factors-staging-node-pool
       containers:
       - name: sdkserver
-        image: us.gcr.io/factors-staging/sdk-server:v0.01-1633c9d
+        image: us.gcr.io/factors-staging/sdk-server:v0.061-c72d4d94
         ports:
         - containerPort: 8085
         volumeMounts:
@@ -92,6 +92,8 @@ spec:
           - $(SEGMENT_REQUEST_QUEUE_PROJECT_TOKENS)
           - --skip_session_project_ids
           - $(OFFLINE_SESSION_PROJECT_IDS)
+          - --merge_usp_project_ids
+          - $(MERGE_USP_PROJECT_IDS)
         env:
           - name: MY_POD_IP
             valueFrom:
@@ -103,6 +105,8 @@ spec:
             name: config-sdkserver
         - configMapRef:
             name: config-appserver
+        - configMapRef:
+            name: config-sdkglobalconfig
         - configMapRef:
             name: config-env
         - configMapRef:

@@ -686,6 +686,42 @@ var ITREE_PROPERTIES_TO_IGNORE = map[string]bool{
 	UP_TOTAL_SPENT_TIME: true,
 }
 
+// USER_PROPERTIES_MERGE_TYPE_INITIAL Properties for which preference will be given to first occurrence while merging.
+// For rest all properties, latest user values will prevail on conflict.
+var USER_PROPERTIES_MERGE_TYPE_INITIAL = [...]string{
+	UP_DAY_OF_FIRST_EVENT,
+	UP_HOUR_OF_FIRST_EVENT,
+	UP_INITIAL_ADGROUP,
+	UP_INITIAL_ADGROUP_ID,
+	UP_INITIAL_CAMPAIGN,
+	UP_INITIAL_CAMPAIGN_ID,
+	UP_INITIAL_CONTENT,
+	UP_INITIAL_COST,
+	UP_INITIAL_CREATIVE,
+	UP_INITIAL_FBCLID,
+	UP_INITIAL_GCLID,
+	UP_INITIAL_KEYWORD,
+	UP_INITIAL_KEYWORD_MATCH_TYPE,
+	UP_INITIAL_MEDIUM,
+	UP_INITIAL_PAGE_DOMAIN,
+	UP_INITIAL_PAGE_LOAD_TIME,
+	UP_INITIAL_PAGE_RAW_URL,
+	UP_INITIAL_PAGE_SCROLL_PERCENT,
+	UP_INITIAL_PAGE_SPENT_TIME,
+	UP_INITIAL_PAGE_URL,
+	UP_INITIAL_REFERRER,
+	UP_INITIAL_REFERRER_DOMAIN,
+	UP_INITIAL_REFERRER_URL,
+	UP_INITIAL_REVENUE,
+	UP_INITIAL_SOURCE,
+}
+
+var USER_PROPERTIES_MERGE_TYPE_ADD = [...]string{
+	UP_PAGE_COUNT,
+	UP_SESSION_COUNT,
+	UP_TOTAL_SPENT_TIME,
+}
+
 const SamplePropertyValuesLimit = 100
 
 // Properties should be present always, mainly for queries.
@@ -698,6 +734,10 @@ var MandatoryDefaultUserPropertiesByType = map[string][]string{
 // isValidProperty - Validate property type.
 func isPropertyTypeValid(value interface{}) error {
 	switch valueType := value.(type) {
+	case int:
+	case int32:
+	case int64:
+	case float32:
 	case float64:
 	case string:
 	case bool:
@@ -796,6 +836,8 @@ func GetValidatedUserProperties(properties *PropertiesMap) *PropertiesMap {
 			} else {
 				validatedProperties[k] = v
 			}
+		} else {
+			log.WithError(err).Errorf("Invalid type for property %s with value %v", k, v)
 		}
 	}
 	return &validatedProperties

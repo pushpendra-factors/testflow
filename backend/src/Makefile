@@ -145,5 +145,11 @@ pack-onboard-to-bigquery:
 upload-onboard-to-bigquery:
 	docker push us.gcr.io/factors-$(ENV)/onboard-to-bigquery-job:$(TAG)
 
+pack-merge-user-properties:
+	docker build -t us.gcr.io/factors-$(ENV)/merge-user-properties-job:$(TAG) -f Dockerfile.merge_user_properties_job .
+
+upload-merge-user-properties:
+	docker push us.gcr.io/factors-$(ENV)/merge-user-properties-job:$(TAG)
+
 test:
 	go test -v $(GOPATH)/src/factors/tests && go test -v $(GOPATH)/src/factors/pattern_server/store

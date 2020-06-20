@@ -13,6 +13,7 @@ import (
 	"github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/stretchr/testify/assert"
 
+	C "factors/config"
 	H "factors/handler"
 	M "factors/model"
 	SDK "factors/sdk"
@@ -1839,4 +1840,136 @@ func TestSDKAMPTrackByToken(t *testing.T) {
 	assert.Equal(t, http.StatusFound, errCode)
 	// AMP Tracked event should use the given timestamp.
 	assert.Equal(t, timestamp, event.Timestamp)
+}
+
+func TestAddUserPropertiesMerge(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+	(*C.GetConfig()).MergeUspProjectIds = fmt.Sprint(project.ID)
+
+	customerUserID := getRandomEmail()
+	user1, _ := M.CreateUser(&M.User{
+		ID:             U.GetUUID(),
+		ProjectId:      project.ID,
+		CustomerUserId: customerUserID,
+		Properties: postgres.Jsonb{RawMessage: json.RawMessage([]byte(`{
+			"country": "india",
+			"age": 30,
+			"paid": true,
+			"gender": "m",
+			"$initial_campaign": "campaign1",
+			"$page_count": 10,
+			"$session_spent_time": 2.2}`,
+		))},
+	})
+
+	user2, _ := M.CreateUser(&M.User{
+		ID:             U.GetUUID(),
+		ProjectId:      project.ID,
+		CustomerUserId: customerUserID,
+		Properties: postgres.Jsonb{RawMessage: json.RawMessage([]byte(`{
+			"country": "canada",
+			"age": 30,
+			"paid": false,
+			"$initial_campaign": "campaign2",
+			"$page_count": 15,
+			"$session_spent_time": 4.4}`,
+		))},
+	})
+
+	// Test AddUserProperties handler call.
+	errCode, _ := SDK.AddUserPropertiesByToken(
+		project.Token,
+		&SDK.AddUserPropertiesPayload{
+			UserId: user1.ID,
+			Properties: U.PropertiesMap{
+				"revenue": 42,
+			},
+		},
+	)
+	assert.Equal(t, http.StatusOK, errCode)
+	user1DBAfterAdd, _ := M.GetUser(project.ID, user1.ID)
+	user2DBAfterAdd, _ := M.GetUser(project.ID, user2.ID)
+	user1DBAfterAddProperties, _ := U.DecodePostgresJsonb(&user1DBAfterAdd.Properties)
+	user2DBAfterAddProperties, _ := U.DecodePostgresJsonb(&user2DBAfterAdd.Properties)
+	// Merge must have got called and updated user2 as well.
+	assert.Equal(t, user1DBAfterAddProperties, user2DBAfterAddProperties)
+	// PropertyId must have got updated after new property add.
+	assert.NotEqual(t, user1.PropertiesId, user1DBAfterAdd.PropertiesId)
+	assert.NotEqual(t, user2.PropertiesId, user2DBAfterAdd.PropertiesId)
+	// New property revenue must be present in user properties.
+	assert.Equal(t, float64(42), (*user1DBAfterAddProperties)["revenue"])
+	assert.Equal(t, float64(42), (*user2DBAfterAddProperties)["revenue"])
+}
+
+func TestIdentifyUserPropertiesMerge(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+	(*C.GetConfig()).MergeUspProjectIds = fmt.Sprint(project.ID)
+
+	customerUserID := getRandomEmail()
+	user1, _ := M.CreateUser(&M.User{
+		ID:             U.GetUUID(),
+		ProjectId:      project.ID,
+		CustomerUserId: customerUserID,
+		Properties: postgres.Jsonb{RawMessage: json.RawMessage([]byte(`{
+			"country": "india",
+			"age": 30,
+			"paid": true,
+			"gender": "m",
+			"$initial_campaign": "campaign1",
+			"$page_count": 10,
+			"$session_spent_time": 2.2}`,
+		))},
+	})
+
+	// Without CustomerUserID
+	user2, _ := M.CreateUser(&M.User{
+		ID:        U.GetUUID(),
+		ProjectId: project.ID,
+		Properties: postgres.Jsonb{RawMessage: json.RawMessage([]byte(`{
+			"country": "canada",
+			"age": 30,
+			"paid": false,
+			"$initial_campaign": "campaign2",
+			"$page_count": 15,
+			"$session_spent_time": 4.4}`,
+		))},
+	})
+	// Before identify, properties are different for the users.
+	user1DB, _ := M.GetUser(project.ID, user1.ID)
+	user2DB, _ := M.GetUser(project.ID, user2.ID)
+	user1DBProperties, _ := U.DecodePostgresJsonb(&user1DB.Properties)
+	user2DBProperties, _ := U.DecodePostgresJsonb(&user2DB.Properties)
+	assert.NotEqual(t, user1DBProperties, user2DBProperties)
+
+	identifyPayload := &SDK.IdentifyPayload{
+		UserId:         user2.ID,
+		CustomerUserId: customerUserID,
+	}
+
+	errCode, _ := SDK.IdentifyByToken(project.Token, identifyPayload)
+	assert.Equal(t, http.StatusOK, errCode)
+	user1DB, _ = M.GetUser(project.ID, user1.ID)
+	user2DB, _ = M.GetUser(project.ID, user2.ID)
+	user1DBProperties, _ = U.DecodePostgresJsonb(&user1DB.Properties)
+	user2DBProperties, _ = U.DecodePostgresJsonb(&user2DB.Properties)
+	// Merge must have got called and updated user2 as well.
+	assert.Equal(t, user1DBProperties, user2DBProperties)
+	// PropertyId must have got updated after new property add.
+	assert.NotEqual(t, user1.PropertiesId, user1DB.PropertiesId)
+	assert.NotEqual(t, user2.PropertiesId, user2DB.PropertiesId)
+
+	// Should not change on retry.
+	errCode, _ = SDK.IdentifyByToken(project.Token, identifyPayload)
+	assert.Equal(t, http.StatusOK, errCode)
+	user1DBRetry, _ := M.GetUser(project.ID, user1.ID)
+	user2DBRetry, _ := M.GetUser(project.ID, user2.ID)
+	user1DBRetryProperties, _ := U.DecodePostgresJsonb(&user1DBRetry.Properties)
+	user2DBRetryProperties, _ := U.DecodePostgresJsonb(&user2DBRetry.Properties)
+	// Merge must have got called and updated user2 as well.
+	assert.Equal(t, user1DBRetryProperties, user2DBRetryProperties)
+	// PropertyId must have got updated after new property add.
+	assert.Equal(t, user1DB.PropertiesId, user1DBRetry.PropertiesId)
+	assert.Equal(t, user2DB.PropertiesId, user2DBRetry.PropertiesId)
 }
