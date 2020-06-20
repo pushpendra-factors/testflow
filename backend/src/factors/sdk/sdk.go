@@ -999,7 +999,7 @@ func UpdateEventProperties(projectId uint64,
 			&UpdateEventPropertiesResponse{Error: "No valid properties given to update."}
 	}
 
-	errCode := M.UpdateEventPropertiesByTimestamp(projectId, request.EventId,
+	errCode := M.UpdateEventProperties(projectId, request.EventId,
 		validatedProperties, request.Timestamp)
 	if errCode != http.StatusAccepted {
 		return errCode,
@@ -1073,7 +1073,7 @@ func UpdateEventProperties(projectId uint64,
 	// updates only when new properties added.
 	if isSessionPropertiesUpdateRequired {
 		updateSesssionProperties := U.PropertiesMap(*sessionPropertiesMap)
-		errCode := M.UpdateEventPropertiesByTimestamp(projectId, sessionEvent.ID,
+		errCode := M.UpdateEventProperties(projectId, sessionEvent.ID,
 			&updateSesssionProperties, request.Timestamp)
 		if errCode != http.StatusAccepted {
 			return errCode,
@@ -1215,7 +1215,7 @@ func AMPUpdateEventPropertiesByToken(token string, reqPayload *AMPUpdateEventPro
 		updateEventProperties[U.EP_PAGE_SCROLL_PERCENT] = reqPayload.PageScrollPercent
 	}
 
-	errCode = M.UpdateEventPropertiesByTimestamp(project.ID, eventID, &updateEventProperties, time.Now().Unix())
+	errCode = M.UpdateEventProperties(project.ID, eventID, &updateEventProperties, time.Now().Unix())
 
 	if errCode != http.StatusAccepted {
 		logCtx.WithFields(log.Fields{"project_id": project.ID, "event_id": eventID}).Error("Failed to update event properties")

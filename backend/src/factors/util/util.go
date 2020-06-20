@@ -189,3 +189,20 @@ func SecondsToHMSString(totalSeconds int64) string {
 	seconds := totalSeconds % 60
 	return fmt.Sprintf("%d hrs %d mins %d secs", hours, minutes, seconds)
 }
+
+// GetStringListAsBatch - Splits string list into multiple lists.
+func GetStringListAsBatch(list []string, batchSize int) [][]string {
+	batchList := make([][]string, 0, 0)
+	listLen := len(list)
+	for i := 0; i < listLen; {
+		next := i + batchSize
+		if next > listLen {
+			next = listLen
+		}
+
+		batchList = append(batchList, list[i:next])
+		i = next
+	}
+
+	return batchList
+}

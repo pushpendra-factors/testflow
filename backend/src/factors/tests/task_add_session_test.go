@@ -45,7 +45,7 @@ func TestAddSession(t *testing.T) {
 	_, errCode := M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
 	assert.Equal(t, http.StatusNotFound, errCode)
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, 60, 1)
+	_, err = TaskSession.AddSession([]uint64{project.ID}, 60, 0, 1)
 	assert.Nil(t, err)
 
 	// session event_name should have been created.
@@ -151,7 +151,7 @@ func TestAddSession(t *testing.T) {
 	assert.Equal(t, http.StatusOK, status)
 	eventId4 := response.EventId
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, 60, 1)
+	_, err = TaskSession.AddSession([]uint64{project.ID}, 60, 0, 1)
 	assert.Nil(t, err)
 
 	// event1 should have been associated with latest session_id.
@@ -223,7 +223,7 @@ func TestAddSession(t *testing.T) {
 	eventId5 := response.EventId
 
 	// Should not create session for last event timestmap  - 30 mins.
-	_, err = TaskSession.AddSession([]uint64{project.ID}, 60, 1)
+	_, err = TaskSession.AddSession([]uint64{project.ID}, 60, 0, 1)
 	assert.Nil(t, err)
 
 	event5, errCode := M.GetEventById(project.ID, eventId5)
@@ -231,6 +231,11 @@ func TestAddSession(t *testing.T) {
 	assert.NotNil(t, event5.SessionId)
 	// New session should have been created.
 	assert.NotEqual(t, latestSessionEvent2.SessionId, event5.SessionId)
+
+	// Test: Project with no events and all events with session already.
+	statusMap, err := TaskSession.AddSession([]uint64{project.ID}, 60, 0, 1)
+	assert.Nil(t, err)
+	assert.Equal(t, statusMap[project.ID], "not_modified")
 }
 
 func TestAddSessionCreationBufferTime(t *testing.T) {
@@ -271,7 +276,7 @@ func TestAddSessionCreationBufferTime(t *testing.T) {
 	eventId2 := response.EventId
 
 	// Should not create session for last event timestmap  - 30 mins.
-	_, err = TaskSession.AddSession([]uint64{project.ID}, 60, 1)
+	_, err = TaskSession.AddSession([]uint64{project.ID}, 60, 30, 1)
 	assert.Nil(t, err)
 
 	event, errCode := M.GetEventById(project.ID, eventId)

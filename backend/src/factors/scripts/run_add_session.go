@@ -30,6 +30,7 @@ func main() {
 	projectIds := flag.String("project_ids", "", "Allowed projects to create sessions offline.")
 	numRoutines := flag.Int("num_routines", 1, "Number of routines to use.")
 	maxLookbackDays := flag.Int64("max_lookback_days", 0, "Max lookback days to look for session existence.")
+	bufferTimeBeforeCreateSessionInMins := flag.Int64("buffer_time_in_mins", 30, "Buffer time to wait before processing an event for session.")
 
 	awsRegion := flag.String("aws_region", "us-east-1", "")
 	awsAccessKeyId := flag.String("aws_key", "dummy", "")
@@ -70,7 +71,10 @@ func main() {
 
 	C.InitConf(config.Env)
 
-	err := C.InitDB(config.DBInfo)
+	// Will allow all 50/50 connection to be idle on the pool.
+	// As we allow num_routines (per project) as per no.of db connections
+	// and will be used continiously.
+	err := C.InitDBWithMaxIdleAndMaxOpenConn(config.DBInfo, 50, 50)
 	if err != nil {
 		log.WithError(err).Fatal("Failed to initialize db in add session.")
 	}
@@ -92,7 +96,8 @@ func main() {
 		maxLookbackTimestamp = util.UnixTimeBeforeDuration(time.Hour * 24 * time.Duration(*maxLookbackDays))
 	}
 
-	status, _ := session.AddSession(allowedProjectIds, maxLookbackTimestamp, *numRoutines)
+	status, _ := session.AddSession(allowedProjectIds, maxLookbackTimestamp,
+		*bufferTimeBeforeCreateSessionInMins, *numRoutines)
 	if err := util.NotifyThroughSNS(taskID, *env, status); err != nil {
 		log.Fatalf("Failed to notify status %+v", status)
 	}

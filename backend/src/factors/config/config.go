@@ -252,20 +252,24 @@ func InitEtcd(EtcdEndpoints []string) error {
 	return nil
 }
 
-func InitDB(DBInfo DBConf) error {
+func InitDBWithMaxIdleAndMaxOpenConn(dbConf DBConf,
+	maxOpenConns, maxIdleConns int) error {
+
 	if services == nil {
 		services = &Services{}
 	}
 
-	db, err := gorm.Open("postgres", fmt.Sprintf("host=%s port=%d user=%s dbname=%s password=%s sslmode=disable",
-		DBInfo.Host,
-		DBInfo.Port,
-		DBInfo.User,
-		DBInfo.Name,
-		DBInfo.Password))
+	db, err := gorm.Open("postgres",
+		fmt.Sprintf("host=%s port=%d user=%s dbname=%s password=%s sslmode=disable",
+			dbConf.Host,
+			dbConf.Port,
+			dbConf.User,
+			dbConf.Name,
+			dbConf.Password,
+		))
 	// Connection Pooling and Logging.
-	db.DB().SetMaxIdleConns(10)
-	db.DB().SetMaxOpenConns(50)
+	db.DB().SetMaxOpenConns(maxOpenConns)
+	db.DB().SetMaxIdleConns(maxIdleConns)
 	if IsDevelopment() {
 		db.LogMode(true)
 	} else {
@@ -278,8 +282,13 @@ func InitDB(DBInfo DBConf) error {
 	}
 	log.Info("Db Service initialized")
 	services.Db = db
-	configuration.DBInfo = DBInfo
+	configuration.DBInfo = dbConf
 	return nil
+}
+
+func InitDB(dbConf DBConf) error {
+	// default configuration.
+	return InitDBWithMaxIdleAndMaxOpenConn(dbConf, 50, 10)
 }
 
 func InitRedis(host string, port int) {

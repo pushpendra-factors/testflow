@@ -459,7 +459,7 @@ func GetRecentEventPropertyValues(projectId uint64, eventName string, property s
 	return GetRecentEventPropertyValuesWithLimits(projectId, eventName, property, eventsLimitForProperites, 2000)
 }
 
-func UpdateEventPropertiesByTimestamp(projectId uint64, id string,
+func UpdateEventProperties(projectId uint64, id string,
 	properties *U.PropertiesMap, updateTimestamp int64) int {
 
 	if projectId == 0 || id == "" {
@@ -821,139 +821,93 @@ func EnrichUserPropertiesWithSessionProperties(projectId uint64, userId string,
 	return OverwriteUserProperties(projectId, userId, userPropertiesId, userPropertiesJsonb)
 }
 
-// getLatestUserEventForUsers - Creates a Map of user's latest event in given window.
-func getLatestUserEventForUsers(projectId uint64, userIds []string, startTimestamp,
-	endTimestamp int64, resultUserEventMap *map[string]*Event) int {
+func filterEventsBetweenTimestamp(events []Event, startTimestamp,
+	endTimestamp int64) []Event {
 
-	if startTimestamp == 0 || endTimestamp == 0 {
-		return http.StatusBadRequest
-	}
-
-	var events []Event
-	db := C.GetServices().Db
-	if err := db.Order("user_id, timestamp DESC").
-		Where("project_id = ? AND user_id = ANY(?) AND timestamp BETWEEN ? AND ?",
-			projectId, pq.Array(userIds), startTimestamp, endTimestamp).
-		Select("DISTINCT ON(user_id) user_id as uuid, events.* ").
-		Find(&events).Error; err != nil {
-
-		log.WithField("project_id", projectId).WithError(err).Error("Failed to get latest events for users.")
-		return http.StatusInternalServerError
-	}
-
-	if len(events) == 0 {
-		return http.StatusNotFound
-	}
-
+	filteredEvents := make([]Event, 0, 0)
 	for i := range events {
-		(*resultUserEventMap)[events[i].UserId] = &events[i]
-	}
-
-	return http.StatusFound
-}
-
-func GetLatestUserEventForUsersInBatch(projectId uint64, userIds []string,
-	startTimestamp, endTimestamp int64, usersPerBatch int) (map[string]*Event, int) {
-
-	batchUserIds := make([][]string, 0, 0)
-	for i := 0; i < len(userIds); {
-		next := i + usersPerBatch
-		if next > len(userIds) {
-			next = len(userIds)
-		}
-
-		batchUserIds = append(batchUserIds, userIds[i:next])
-		i = next
-	}
-
-	hasFailure := false
-	userEventMap := make(map[string]*Event, 0)
-	for bi := range batchUserIds {
-		errCode := getLatestUserEventForUsers(projectId, batchUserIds[bi], startTimestamp, endTimestamp, &userEventMap)
-		if errCode == http.StatusInternalServerError {
-			hasFailure = true
+		if events[i].Timestamp >= startTimestamp && events[i].Timestamp <= endTimestamp {
+			filteredEvents = append(filteredEvents, events[i])
 		}
 	}
 
-	if hasFailure {
-		return userEventMap, http.StatusInternalServerError
-	}
-
-	return userEventMap, http.StatusFound
+	return filteredEvents
 }
 
-func GetAllEventsOfUser(projectId uint64, userId string, startTimestamp,
-	endTimestamp int64) ([]Event, int) {
+func associateSessionByEventIds(projectId uint64, eventIds []string, sessionId string) int {
+	logCtx := log.WithFields(log.Fields{"project_id": projectId,
+		"event_ids": eventIds, "session_id": sessionId})
 
-	var events []Event
-	if startTimestamp == 0 || endTimestamp == 0 {
-		return events, http.StatusBadRequest
-	}
-
-	db := C.GetServices().Db
-	if err := db.Order("timestamp ASC").Where("project_id = ? AND user_id = ? AND timestamp BETWEEN ? AND ?",
-		projectId, userId, startTimestamp, endTimestamp).Find(&events).Error; err != nil {
-
-		log.WithFields(log.Fields{"project_id": projectId, "user_id": userId, "start_timestamp": startTimestamp,
-			"end_timestamp": endTimestamp}).WithError(err).Error("Failed to get all events of user.")
-		return events, http.StatusInternalServerError
-	}
-
-	return events, http.StatusFound
-}
-
-func associateSessionToEvents(projectId uint64, userId string, startTimestamp,
-	endTimestamp int64, sessionId string) int {
-
-	logCtx := log.WithFields(log.Fields{"project_id": projectId, "userId": userId,
-		"start_timestamp": startTimestamp, "end_timestamp": endTimestamp,
-		"session_id": sessionId})
-
-	if startTimestamp == 0 || endTimestamp == 0 || sessionId == "" {
-		logCtx.Error("Invalid session update window or session id")
+	if projectId == 0 || len(eventIds) == 0 {
+		logCtx.Error("Invalid args on associateSessionToEvents.")
 		return http.StatusBadRequest
 	}
 
 	// Updates session_id to all events between given timestamp.
 	updateFields := map[string]interface{}{"session_id": sessionId}
 	db := C.GetServices().Db
-	err := db.Model(&Event{}).Where("project_id = ? AND user_id = ? AND timestamp BETWEEN ? AND ?",
-		projectId, userId, startTimestamp, endTimestamp).Update(updateFields).Error
+	err := db.Model(&Event{}).Where("project_id = ? AND id = ANY(?)",
+		projectId, pq.Array(eventIds)).Update(updateFields).Error
 	if err != nil {
-		logCtx.WithError(err).Error("Failed to associate session to events")
+		logCtx.WithError(err).Error("Failed to associate session to events.")
 		return http.StatusInternalServerError
 	}
 
 	return http.StatusAccepted
 }
 
-func AddSessionForUser(projectId uint64, userId string, latestUserEvent *Event,
-	startTimestamp int64, sessionEventNameId uint64) int {
-	logCtx := log.WithFields(log.Fields{"project_id": projectId, "user_id": userId})
+func associateSessionToEventsInBatch(projectId uint64, events []Event,
+	sessionId string, batchSize int) int {
 
-	currentTimestamp := time.Now().Unix()
-
-	var endTimestamp int64
-	if latestUserEvent != nil {
-		endTimestamp = latestUserEvent.Timestamp - ThirtyMinutesInSeconds
-		// latest user event timestamp within buffer window.
-		if endTimestamp <= startTimestamp {
-			endTimestamp = currentTimestamp - ThirtyMinutesInSeconds
-		}
-	} else {
-		// lastest user event is not found in last one day, use
-		// current timestamp - buffer window (considering new events coming-in).
-		endTimestamp = currentTimestamp - ThirtyMinutesInSeconds
+	eventIds := make([]string, 0, len(events))
+	for i := range events {
+		eventIds = append(eventIds, events[i].ID)
 	}
 
-	if endTimestamp <= startTimestamp {
+	batchEventIds := U.GetStringListAsBatch(eventIds, batchSize)
+	for i := range batchEventIds {
+		errCode := associateSessionByEventIds(projectId, batchEventIds[i], sessionId)
+		if errCode != http.StatusAccepted {
+			return errCode
+		}
+	}
+
+	return http.StatusAccepted
+}
+
+/*
+AddSessionForUser - Will add session event based on conditions and associate session to each event.
+The list of events being processed, would be like any of the given 2 cases.
+* For users with session already (within max_lookback, if given). The first event would be the last event with session.
+event_id - timestamp - session_id
+e1 - t1 - s1
+e2 - t2
+e3 - t3
+* For users without session already (within max_lookback, if given).
+event_id - timestamp - session_id
+e1 - t1
+e2 - t2
+e3 - t3
+*/
+func AddSessionForUser(projectId uint64, userId string, userEvents []Event,
+	bufferTimeBeforeSessionCreateInSecs, startTimestamp int64,
+	sessionEventNameId uint64) int {
+
+	logCtx := log.WithFields(log.Fields{"project_id": projectId, "user_id": userId})
+
+	if len(userEvents) == 0 {
 		return http.StatusNotModified
 	}
 
-	events, errCode := GetAllEventsOfUser(projectId, userId, startTimestamp, endTimestamp)
-	if errCode == http.StatusInternalServerError {
-		logCtx.Error("Failed to get all event of user on add session for user.")
-		return errCode
+	latestUserEvent := &userEvents[len(userEvents)-1]
+	endTimestamp := latestUserEvent.Timestamp - bufferTimeBeforeSessionCreateInSecs
+	if endTimestamp <= startTimestamp {
+		endTimestamp = latestUserEvent.Timestamp
+	}
+
+	events := filterEventsBetweenTimestamp(userEvents, startTimestamp, endTimestamp)
+	if len(events) == 0 {
+		return http.StatusNotModified
 	}
 
 	// Use 2 moving cursor current, next. if diff(current, next) > in-activity
@@ -1054,9 +1008,9 @@ func AddSessionForUser(projectId uint64, userId string, latestUserEvent *Event,
 				sessionEvent = newSessionEvent
 			}
 
-			// Update the session_id to all events between start and end of the session window.
-			errCode := associateSessionToEvents(projectId, userId, events[sessionStartIndex].Timestamp,
-				events[i].Timestamp, sessionEvent.ID)
+			// Update the session_id to all events between start index and i.
+			errCode := associateSessionToEventsInBatch(projectId,
+				events[sessionStartIndex:i+1], sessionEvent.ID, 100)
 			if errCode == http.StatusInternalServerError {
 				logCtx.Error("Failed to associate session to events.")
 				return errCode
@@ -1101,7 +1055,7 @@ func AddSessionForUser(projectId uint64, userId string, latestUserEvent *Event,
 			}
 
 			// Update session event properties.
-			errCode = UpdateEventPropertiesByTimestamp(projectId, sessionEvent.ID,
+			errCode = UpdateEventProperties(projectId, sessionEvent.ID,
 				&sessionPropertiesMap, sessionEvent.Timestamp+1)
 			if errCode == http.StatusInternalServerError {
 				logCtx.Error("Failed updating session event properties on add session.")
