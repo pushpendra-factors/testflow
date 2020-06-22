@@ -18,7 +18,7 @@ import { createSelectOpts, makeSelectOpt } from '../../util';
 import NoContent from '../../common/NoContent';
 import ClosableDateRangePicker from '../../common/ClosableDatePicker';
 import Loading from '../../loading';
-import { PRESENTATION_CARD, DEFAULT_DATE_RANGE, 
+import { PRESENTATION_CARD, DEFAULT_DATE_RANGE, sameDay, 
   DEFINED_DATE_RANGES, 
   PRESENTATION_TABLE,
   QUERY_CLASS_CHANNEL,
@@ -424,6 +424,9 @@ class Dashboard extends Component {
 
   handleDateRangeSelect = (range) => {
     range.selected.label = null; // set null on custom range.
+    if (sameDay(range.selected.endDate, new Date()) && !sameDay(range.selected.startDate, new Date())){
+      return
+    }
     this.setState({ dateRange: [range.selected] });
     this.setLastSeenDateRangeForDashboard(JSON.stringify(range.selected));
   }
@@ -482,7 +485,7 @@ class Dashboard extends Component {
               staticRanges={ DEFINED_DATE_RANGES }
               inputRanges={[]}
               minDate={new Date('01 Jan 2000 00:00:00 GMT')} // range starts from given date.
-              maxDate={new Date()}
+              maxDate={moment(new Date()).subtract(1, 'days').endOf('day').toDate()}
               closeDatePicker={this.closeDatePicker}
             />
           </div>

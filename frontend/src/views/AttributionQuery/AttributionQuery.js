@@ -8,12 +8,13 @@ import 'react-date-range/dist/theme/default.css';
 
 import { fetchProjectEvents, runAttributionQuery } from '../../actions/projectsActions';
 import { DEFAULT_DATE_RANGE, DEFINED_DATE_RANGES, 
-  readableDateRange,QUERY_CLASS_ATTRIBUTION, getQueryPeriod } from '../Query/common';
+  readableDateRange,QUERY_CLASS_ATTRIBUTION, getQueryPeriod,sameDay } from '../Query/common';
 import ClosableDateRangePicker from '../../common/ClosableDatePicker';
 import { getReadableKeyFromSnakeKey, makeSelectOpts,makeSelectOpt, removeElementByIndex} from '../../util';
 import TableChart from '../Query/TableChart';
 import Loading from '../../loading';
 import mt from "moment-timezone";
+import moment from 'moment';
 import data from "./testData/testData.json";
 
 const SOURCE = "Source";
@@ -203,6 +204,9 @@ class AttributionQuery extends Component {
 
   handleDuringDateRangeSelect = (range) => {
     range.selected.label = null; // set null on custom range.
+    if (sameDay(range.selected.endDate, new Date()) && !sameDay(range.selected.startDate, new Date())){
+      return
+    }
     this.setState({ duringDateRange: [range.selected] });
   }
 
@@ -374,7 +378,7 @@ class AttributionQuery extends Component {
           staticRanges={ DEFINED_DATE_RANGES }
           inputRanges={[]}
           minDate={new Date('01 Jan 2000 00:00:00 GMT')} // range starts from given date.
-          maxDate={new Date()}
+          maxDate={moment(new Date()).subtract(1, 'days').endOf('day').toDate()}
           closeDatePicker={this.closeDatePicker}
         />
         <button className='fapp-close-round-button' style={{float: 'right', marginLeft: '0px', borderLeft: 'none'}} 

@@ -29,7 +29,7 @@ import { PRESENTATION_BAR, PRESENTATION_LINE, PRESENTATION_TABLE,
   PRESENTATION_CARD, PRESENTATION_FUNNEL, PROPERTY_TYPE_EVENT,
   getDateRangeFromStoredDateRange, PROPERTY_LOGICAL_OP_OPTS,
   DEFAULT_DATE_RANGE, DEFINED_DATE_RANGES, getGroupByTimestampType, 
-  getQueryPeriod, convertFunnelResultForTable
+  getQueryPeriod, convertFunnelResultForTable, sameDay
 } from './common';
 import ClosableDateRangePicker from '../../common/ClosableDatePicker';
 import { fetchProjectEvents, runQuery } from '../../actions/projectsActions';
@@ -44,7 +44,7 @@ import {
 import Loading from '../../loading';
 import factorsai from '../../common/factorsaiObj';
 import { PROPERTY_TYPE_OPTS, USER_PREF_PROPERTY_TYPE_OPTS, 
-  PROPERTY_VALUE_TYPE_DATE_TIME } from './common';
+  PROPERTY_VALUE_TYPE_DATE_TIME, } from './common';
 import insightsSVG from '../../assets/img/analytics/insights.svg';
 import funnelSVG from '../../assets/img/analytics/funnel.svg';
 import channelSVG from '../../assets/img/analytics/channel.svg';
@@ -420,6 +420,9 @@ class Query extends Component {
 
   handleResultDateRangeSelect = (range) => {
     range.selected.label = null; // set null on custom range.
+    if (sameDay(range.selected.endDate, new Date()) && !sameDay(range.selected.startDate, new Date())){
+      return
+    }
     this.setState({ resultDateRange: [range.selected] });
   }
 
@@ -862,7 +865,7 @@ class Query extends Component {
               staticRanges={ DEFINED_DATE_RANGES }
               inputRanges={[]}
               minDate={new Date('01 Jan 2000 00:00:00 GMT')} // range starts from given date.
-              maxDate={new Date()}
+              maxDate={moment(new Date()).subtract(1, 'days').endOf('day').toDate()}
               closeDatePicker={this.closeDatePicker}
             />
             <button className='fapp-close-round-button' style={{float: 'right', marginLeft: '0px', borderLeft: 'none'}} 

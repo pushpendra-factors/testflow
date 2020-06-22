@@ -127,10 +127,8 @@ export function isSingleCountResult(result) {
 }
 
 export function slideUnixTimeWindowToCurrentTime(from, to) {
-    let diff = to - from;
     let resultTo =  moment(new Date()).unix();
-    let resultFrom = resultTo - diff;
-    return { from: resultFrom, to: resultTo };
+    return { from: from, to: resultTo };
 }
 
 export function readableTimstamp(unixTime) {

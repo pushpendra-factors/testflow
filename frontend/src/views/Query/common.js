@@ -45,31 +45,38 @@ export const PRESENTATION_FUNNEL = 'pf';
 
 export const DEFAULT_DATE_RANGE_LABEL = 'Last 7 days';
 export const DEFAULT_DATE_RANGE = {
-  startDate: moment(new Date()).subtract(7, 'days').toDate(),
-  endDate: new Date(),
+  startDate: moment(new Date()).subtract(7, 'days').startOf('day').toDate(),
+  endDate: moment(new Date()).subtract(1, 'days').endOf('day').toDate(),
   label: DEFAULT_DATE_RANGE_LABEL,
   key: 'selected'
 }
 export const DEFINED_DATE_RANGES = createStaticRanges([
   {
-    label: 'Last 24 hours',
+    label: 'Today',
     range: () => ({
-      startDate: moment(new Date()).subtract(24, 'hours').toDate(),
+      startDate: moment(new Date()).startOf('day').toDate(),
       endDate: new Date(),
+    }),
+  },
+  {
+    label: 'Yesterday',
+    range: () => ({
+      startDate: moment(new Date()).subtract(1, 'days').startOf('day').toDate(),
+      endDate: moment(new Date()).subtract(1, 'days').endOf('day').toDate(),
     }),
   },
   {
     label: DEFAULT_DATE_RANGE_LABEL,
     range: () => ({
-      startDate: moment(new Date()).subtract(7, 'days').toDate(),
-      endDate: new Date(),
+      startDate: moment(new Date()).subtract(7, 'days').startOf('day').toDate(),
+      endDate: moment(new Date()).subtract(1, 'days').endOf('day').toDate(),
     }),
   },
   {
     label: 'Last 30 days',
     range: () => ({
-      startDate: moment(new Date()).subtract(30, 'days').toDate(),
-      endDate: new Date(),
+      startDate: moment(new Date()).subtract(30, 'days').startOf('day').toDate(),
+      endDate: moment(new Date()).subtract(1, 'days').endOf('day').toDate(),
     })
   },
 ]);
@@ -118,6 +125,10 @@ export const readableDateRange = function(range) {
 
   return moment(range.startDate).format('MMM DD, YYYY') + " - " +
     moment(range.endDate).format('MMM DD, YYYY');
+}
+
+export const sameDay = function(d1, d2) {
+  return d1.getFullYear() == d2.getFullYear() && d1.getMonth() == d2.getMonth() && d1.getDate() == d2.getDate();
 }
 
 export const getQueryPeriod = function(selectedRange, timezone)  {
