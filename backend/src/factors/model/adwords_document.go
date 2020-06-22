@@ -36,11 +36,13 @@ var adwordsDocumentTypeAlias = map[string]int{
 	"customer_account_properties": 9,
 }
 
-const error_DuplicateAdwordsDocument = "pq: duplicate key value violates unique constraint \"adwords_documents_pkey\""
+const errorDuplicateAdwordsDocument = "pq: duplicate key value violates unique constraint \"adwords_documents_pkey\""
 const filterValueAll = "all"
 
+var errorEmptyAdwordsDocument = errors.New("empty adwords document")
+
 func isDuplicateAdwordsDocumentError(err error) bool {
-	return err.Error() == error_DuplicateAdwordsDocument
+	return err.Error() == errorDuplicateAdwordsDocument
 }
 
 func getAdwordsIdFieldNameByType(docType int) string {
@@ -72,6 +74,10 @@ func getAdwordsIdByType(docType int, valueJson *postgres.Jsonb) (string, error) 
 	valueMap, err := U.DecodePostgresJsonb(valueJson)
 	if err != nil {
 		return "", err
+	}
+
+	if len(*valueMap) == 0 {
+		return "", errorEmptyAdwordsDocument
 	}
 
 	idFieldName := getAdwordsIdFieldNameByType(docType)
@@ -112,9 +118,16 @@ func CreateAdwordsDocument(adwordsDoc *AdwordsDocument) int {
 
 	adwordsDocId, err := getAdwordsIdByType(adwordsDoc.Type, adwordsDoc.Value)
 	if err != nil {
-		logCtx.WithError(err).Error("Failed to get id by adowords doc type.")
-		return http.StatusInternalServerError
+		if err == errorEmptyAdwordsDocument {
+			// Using UUID to allow storing empty response.
+			// To avoid downloading reports again for the same timerange.
+			adwordsDocId = U.GetUUID()
+		} else {
+			logCtx.WithError(err).Error("Failed to get id by adowords doc type.")
+			return http.StatusInternalServerError
+		}
 	}
+
 	adwordsDoc.ID = adwordsDocId
 
 	db := C.GetServices().Db
