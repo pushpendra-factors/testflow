@@ -952,24 +952,30 @@ func AddSessionForUser(projectId uint64, userId string, userEvents []Event,
 			} else {
 				firstEvent := events[sessionStartIndex]
 
-				userProperties, errCode := GetUserProperties(projectId, userId, firstEvent.UserPropertiesId)
-				if errCode != http.StatusFound {
-					logCtx.WithField("err_code", errCode).
-						WithField("event_id", firstEvent.ID).
-						WithField("user_properties_id", firstEvent.UserPropertiesId).
-						Error("Failed to get user properties of first event on session.")
-					return noOfSessionsCreated, sessionContinuedFlag, http.StatusInternalServerError
+				logCtx = logCtx.WithField("event_id", firstEvent.ID)
+
+				var userPropertiesMap U.PropertiesMap
+				if firstEvent.UserPropertiesId != "" {
+					userProperties, errCode := GetUserProperties(projectId, userId, firstEvent.UserPropertiesId)
+					if errCode != http.StatusFound {
+						logCtx.WithField("err_code", errCode).
+							WithField("user_properties_id", firstEvent.UserPropertiesId).
+							Error("Failed to get user properties of first event on session.")
+						return noOfSessionsCreated, sessionContinuedFlag, http.StatusInternalServerError
+					}
+
+					userPropertiesDecoded, err := U.DecodePostgresJsonb(userProperties)
+					if err != nil {
+						logCtx.WithField("user_properties_id", firstEvent.UserPropertiesId).
+							Error("Failed to decode user properties of first event on session.")
+						return noOfSessionsCreated, sessionContinuedFlag, http.StatusInternalServerError
+					}
+
+					userPropertiesMap = U.PropertiesMap(*userPropertiesDecoded)
+				} else {
+					logCtx.Error("Empty first event user_properties_id.")
 				}
 
-				userPropertiesDecoded, err := U.DecodePostgresJsonb(userProperties)
-				if err != nil {
-					logCtx.WithField("user_properties_id", firstEvent.UserPropertiesId).
-						Error("Failed to decode user properties of first event on session.")
-					return noOfSessionsCreated, sessionContinuedFlag, http.StatusInternalServerError
-				}
-				userPropertiesMap := U.PropertiesMap(*userPropertiesDecoded)
-
-				// Todo: Reuse event properties decoded for all events.
 				firstEventPropertiesDecoded, err := U.DecodePostgresJsonb(&firstEvent.Properties)
 				if err != nil {
 					logCtx.Error("Failed to decode event properties of first event on session.")
