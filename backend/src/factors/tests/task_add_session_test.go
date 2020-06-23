@@ -235,7 +235,7 @@ func TestAddSession(t *testing.T) {
 	// Test: Project with no events and all events with session already.
 	statusMap, err := TaskSession.AddSession([]uint64{project.ID}, 60, 0, 1)
 	assert.Nil(t, err)
-	assert.Equal(t, statusMap[project.ID], "not_modified")
+	assert.Equal(t, statusMap[project.ID].Status, "not_modified")
 }
 
 func TestAddSessionCreationBufferTime(t *testing.T) {

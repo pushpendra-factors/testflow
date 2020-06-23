@@ -127,13 +127,13 @@ func getNextSessionInfo(projectId, sessionEventNameId uint64,
 // getAllEventsAsUserEventsMap - Returns a map of user:[events...] withing given period,
 // excluding session event and event with session_id.
 func getAllEventsAsUserEventsMap(projectId, sessionEventNameId uint64,
-	startTimestamp, endTimestamp int64) (*map[string][]M.Event, int) {
+	startTimestamp, endTimestamp int64) (*map[string][]M.Event, int, int) {
 
 	var userEventsMap map[string][]M.Event
 
 	var events []M.Event
 	if startTimestamp == 0 || endTimestamp == 0 {
-		return &userEventsMap, http.StatusBadRequest
+		return &userEventsMap, 0, http.StatusBadRequest
 	}
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectId,
@@ -147,7 +147,7 @@ func getAllEventsAsUserEventsMap(projectId, sessionEventNameId uint64,
 		Find(&events).Error; err != nil {
 
 		logCtx.WithError(err).Error("Failed to get all events of project.")
-		return &userEventsMap, http.StatusInternalServerError
+		return &userEventsMap, 0, http.StatusInternalServerError
 	}
 
 	queryTimeInSecs := U.TimeNowUnix() - queryStartTime
@@ -170,12 +170,14 @@ func getAllEventsAsUserEventsMap(projectId, sessionEventNameId uint64,
 	logCtx.WithField("no_of_users", len(userEventsMap)).
 		Info("Got all events on get_all_events_as_user_map.")
 
-	return &userEventsMap, http.StatusFound
+	return &userEventsMap, len(events), http.StatusFound
 }
 
 // addSessionByProjectId - Adds session to all users of project.
 func addSessionByProjectId(projectId uint64, maxLookbackTimestamp,
-	bufferTimeBeforeSessionCreateInSecs int64) int {
+	bufferTimeBeforeSessionCreateInSecs int64) (*Status, int) {
+
+	status := &Status{}
 
 	logCtx := log.WithField("project_id", projectId).
 		WithField("max_lookback", maxLookbackTimestamp).
@@ -186,21 +188,23 @@ func addSessionByProjectId(projectId uint64, maxLookbackTimestamp,
 	sessionEventName, errCode := M.CreateOrGetSessionEventName(projectId)
 	if errCode != http.StatusCreated && errCode != http.StatusConflict {
 		logCtx.Error("Failed to create session event name.")
-		return http.StatusInternalServerError
+		return status, http.StatusInternalServerError
 	}
 
 	nextSessionInfoList, errCode := getNextSessionInfo(projectId,
 		sessionEventName.ID, maxLookbackTimestamp)
 	if errCode == http.StatusNotFound {
 		logCtx.Error("No new events without session to process. Empty next session info.")
-		return http.StatusNotModified
+		return status, http.StatusNotModified
 	}
 
 	if errCode == http.StatusInternalServerError {
 		// log and continue if get next session info failed for a project.
 		logCtx.Error("Failed to get next session info.")
-		return http.StatusInternalServerError
+		return status, http.StatusInternalServerError
 	}
+
+	noOfUsers := len(nextSessionInfoList)
 
 	var minNextSessionTimestamp int64
 	for i := range nextSessionInfoList {
@@ -218,22 +222,35 @@ func addSessionByProjectId(projectId uint64, maxLookbackTimestamp,
 	// Events will be downloaded from min of last session associated event timestamp
 	// till current timestamp. So we wil download only 1/2 hour events,
 	// as we run add session every 1/2 hour.
-	userEventsMap, errCode := getAllEventsAsUserEventsMap(
+	userEventsMap, noOfEvents, errCode := getAllEventsAsUserEventsMap(
 		projectId, sessionEventName.ID, minNextSessionTimestamp, U.TimeNowUnix())
 	if errCode != http.StatusFound {
 		logCtx.Error("Failed to get user events map on add session for project.")
-		return http.StatusInternalServerError
+		return status, http.StatusInternalServerError
 	}
 
+	status.NoOfEvents = noOfEvents
+	status.NoOfUsers = noOfUsers
+
+	var noOfSessionsCreated, noOfSessionsContinued int
 	for _, nsi := range nextSessionInfoList {
-		errCode := M.AddSessionForUser(projectId, nsi.UserId, (*userEventsMap)[nsi.UserId],
+		noOfCreated, isContinuedFirst, errCode := M.AddSessionForUser(projectId, nsi.UserId, (*userEventsMap)[nsi.UserId],
 			bufferTimeBeforeSessionCreateInSecs, nsi.StartTimestamp, sessionEventName.ID)
 		if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
-			return http.StatusInternalServerError
+			return status, http.StatusInternalServerError
 		}
+
+		if isContinuedFirst {
+			noOfSessionsContinued++
+		}
+
+		noOfSessionsCreated = noOfSessionsCreated + noOfCreated
 	}
 
-	return http.StatusOK
+	status.NoOfSessionsContinued = noOfSessionsCreated
+	status.NoOfSessionsContinued = noOfSessionsContinued
+
+	return status, http.StatusOK
 }
 
 func GetAddSessionAllowedProjects(allowedProjectsList string) ([]uint64, int) {
@@ -256,18 +273,26 @@ func GetAddSessionAllowedProjects(allowedProjectsList string) ([]uint64, int) {
 	return projectIds, http.StatusFound
 }
 
-func setStatus(projectId uint64, statusMap *map[uint64]string, status string,
+func setStatus(projectId uint64, statusMap *map[uint64]Status, status *Status,
 	hasFailures *bool, isFailed bool, statusLock *sync.Mutex) {
 
 	defer (*statusLock).Unlock()
 
 	(*statusLock).Lock()
-	(*statusMap)[projectId] = status
+	(*statusMap)[projectId] = *status
 	*hasFailures = isFailed
 }
 
+type Status struct {
+	Status                string `json:"status"`
+	NoOfUsers             int    `json:"no_of_users"`
+	NoOfEvents            int    `json:"no_of_events"`
+	NoOfSessionsContinued int    `json:"no_of_sessions_continued"`
+	NoOfSessionsCreated   int    `json:"no_of_sessions_created"`
+}
+
 func addSessionWorker(projectId uint64, maxLookbackTimestamp,
-	bufferTimeBeforeSessionCreateInSecs int64, statusMap *map[uint64]string,
+	bufferTimeBeforeSessionCreateInSecs int64, statusMap *map[uint64]Status,
 	hasFailures *bool, wg *sync.WaitGroup, statusLock *sync.Mutex) {
 
 	defer (*wg).Done()
@@ -275,22 +300,21 @@ func addSessionWorker(projectId uint64, maxLookbackTimestamp,
 	logCtx := log.WithField("project_id", projectId)
 
 	startTimestamp := U.TimeNowUnix()
-	errCode := addSessionByProjectId(projectId, maxLookbackTimestamp,
+	status, errCode := addSessionByProjectId(projectId, maxLookbackTimestamp,
 		bufferTimeBeforeSessionCreateInSecs)
 	logCtx = logCtx.WithField("time_taken_in_secs", U.TimeNowUnix()-startTimestamp)
 
 	if errCode != http.StatusOK {
-		var status string
 		var isFailed bool
 
 		if errCode == http.StatusNotModified {
 			isFailed = false
-			status = "not_modified"
+			status.Status = "not_modified"
 
 			logCtx.Info("No events to add session.")
 		} else {
 			isFailed = true
-			status = "failed"
+			status.Status = "failed"
 
 			logCtx.Error("Failed to add session.")
 		}
@@ -301,15 +325,16 @@ func addSessionWorker(projectId uint64, maxLookbackTimestamp,
 
 	logCtx.Info("Added session for project.")
 
-	setStatus(projectId, statusMap, "success", hasFailures, false, statusLock)
+	status.Status = "success"
+	setStatus(projectId, statusMap, status, hasFailures, false, statusLock)
 }
 
 func AddSession(projectIds []uint64, maxLookbackTimestamp,
 	bufferTimeBeforeSessionCreateInMins int64,
-	numRoutines int) (map[uint64]string, error) {
+	numRoutines int) (map[uint64]Status, error) {
 
 	hasFailures := false
-	statusMap := make(map[uint64]string, 0)
+	statusMap := make(map[uint64]Status, 0)
 	var statusLock sync.Mutex
 
 	if numRoutines == 0 {
