@@ -36,6 +36,7 @@ type UserProperties struct {
 
 // indexed hubspot user property.
 const UserPropertyHubspotContactLeadGUID = "$hubspot_contact_lead_guid"
+const MaxUsersForPropertiesMerge = 100
 
 func createUserPropertiesIfChanged(projectId uint64, userId string,
 	currentPropertiesId string, newProperties *postgres.Jsonb, timestamp int64) (string, int) {
@@ -96,8 +97,13 @@ func createUserPropertiesIfChanged(projectId uint64, userId string,
 		return "", http.StatusInternalServerError
 	}
 	if shouldMergeUserProperties && isMergeEnabledForProjectID(projectId) {
-		return MergeUserPropertiesForUserID(projectId, userId,
+		newPropertiesID, errCode := MergeUserPropertiesForUserID(projectId, userId,
 			postgres.Jsonb{RawMessage: json.RawMessage(updatedPropertiesBytes)}, currentPropertiesId, timestamp, false, false)
+
+		// Return only if merge is successfull. Else do usual update.
+		if errCode == http.StatusCreated || errCode == http.StatusNotModified {
+			return newPropertiesID, errCode
+		}
 	}
 	return updateUserPropertiesForUser(projectId, userId,
 		postgres.Jsonb{RawMessage: json.RawMessage(updatedPropertiesBytes)}, timestamp, false)
@@ -168,16 +174,20 @@ func MergeUserPropertiesForUserID(projectID uint64, userID string, updatedProper
 	// Users are returned in increasing order of created_at. For user_properties created at same unix time,
 	// older user order will help in ensuring the order while merging properties.
 	users, errCode := GetUsersByCustomerUserID(projectID, customerUserID)
+	usersLength := len(users)
 	if errCode == http.StatusInternalServerError {
 		logCtx.Error("Error while getting users for customer_user_id")
 		return currentPropertiesID, http.StatusInternalServerError
 	} else if errCode == http.StatusNotFound {
 		logCtx.Error("No users found for customer_user_id")
 		return currentPropertiesID, http.StatusNotModified
-	} else if len(users) == 1 {
+	} else if usersLength == 1 {
 		return currentPropertiesID, http.StatusNotModified
-	} else if len(users) > 10 {
-		logCtx.Errorf("User properties merge triggered for more than 10 users. ProjectID: %d, C_UID: %s", projectID, customerUserID)
+	} else if usersLength > 10 {
+		logCtx.Errorf("User properties merge triggered for more than 10 users. ProjectID: %d, C_UID: %s, Count: %d", projectID, customerUserID, usersLength)
+	} else if usersLength > MaxUsersForPropertiesMerge {
+		// If number of users to merge are more than max allowed, merge for oldest max/2 and latest max/2.
+		users = append(users[0:MaxUsersForPropertiesMerge/2], users[usersLength-MaxUsersForPropertiesMerge/2:usersLength]...)
 	}
 	logCtx.Infof("%d users found to be merged for customer user id %s", len(users), customerUserID)
 
@@ -267,7 +277,7 @@ func MergeUserPropertiesForUserID(projectID uint64, userID string, updatedProper
 
 	mergedUserPropertiesJSON, err := U.EncodeToPostgresJsonb(&mergedUserProperties)
 	if err != nil {
-		logCtx.WithError(err).Error("Failed to encode merged user properties")
+		logCtx.WithError(err).Errorf("Failed to encode merged user properties. %v", mergedUserProperties)
 		return currentPropertiesID, http.StatusInternalServerError
 	}
 	if dryRun {

@@ -169,11 +169,11 @@ func UpdateUserPropertiesByCurrentProperties(projectId uint64, id string,
 		projectId, id, currentPropertiesId, properties, updateTimestamp)
 
 	if statusCode == http.StatusBadRequest {
-		return "", http.StatusBadRequest
+		return currentPropertiesId, http.StatusBadRequest
 	}
 
 	if statusCode != http.StatusCreated && statusCode != http.StatusNotModified {
-		return "", http.StatusInternalServerError
+		return currentPropertiesId, http.StatusInternalServerError
 	}
 
 	if newPropertiesId == currentPropertiesId {
