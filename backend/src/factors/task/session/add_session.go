@@ -247,7 +247,7 @@ func addSessionByProjectId(projectId uint64, maxLookbackTimestamp,
 		noOfSessionsCreated = noOfSessionsCreated + noOfCreated
 	}
 
-	status.NoOfSessionsContinued = noOfSessionsCreated
+	status.NoOfSessionsCreated = noOfSessionsCreated
 	status.NoOfSessionsContinued = noOfSessionsContinued
 
 	return status, http.StatusOK
