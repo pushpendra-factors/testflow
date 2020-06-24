@@ -319,3 +319,85 @@ func TestGetAddSessionAllowedProjects(t *testing.T) {
 	assert.Contains(t, allowedProjectIds, project1.ID)
 	assert.NotContains(t, allowedProjectIds, project2.ID)
 }
+
+func assertAssociatedSession(t *testing.T, projectId uint64, eventIds []string) {
+	var firstEvent *M.Event
+	var sessionId string
+	for i, eventId := range eventIds {
+		event, errCode := M.GetEventById(projectId, eventId)
+		assert.Equal(t, http.StatusFound, errCode)
+		assert.NotNil(t, event.SessionId)
+
+		if i == 0 {
+			firstEvent = event
+			sessionId = *event.SessionId
+		}
+	}
+
+	// check session event
+	sessionEvent, errCode := M.GetEventById(projectId, sessionId)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Equal(t, firstEvent.Timestamp-1, sessionEvent.Timestamp)
+}
+
+func TestAddSessionAndSessionIdAssociation(t *testing.T) {
+	project, _, err := SetupProjectUserReturnDAO()
+	assert.Nil(t, err)
+
+	// Test: New user with one event.
+	timestamp := int64(1592897775)
+	randomEventName := U.RandomLowerAphaNumString(10)
+	trackPayload := SDK.TrackPayload{
+		Name:      randomEventName,
+		Timestamp: timestamp,
+	}
+	status, response := SDK.Track(project.ID, &trackPayload, true) // true: skips session.
+	assert.Equal(t, http.StatusOK, status)
+	eventId := response.EventId
+	userId := response.UserId
+
+	timestamp = int64(1592898605)
+	trackPayload = SDK.TrackPayload{
+		Name:      randomEventName,
+		Timestamp: timestamp,
+		UserId:    userId,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, true) // true: skips session.
+	assert.Equal(t, http.StatusOK, status)
+	eventId1 := response.EventId
+
+	timestamp = int64(1592898629)
+	trackPayload = SDK.TrackPayload{
+		Name:      randomEventName,
+		Timestamp: timestamp,
+		UserId:    userId,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, true) // true: skips session.
+	assert.Equal(t, http.StatusOK, status)
+	eventId2 := response.EventId
+
+	timestamp = int64(1592898709)
+	trackPayload = SDK.TrackPayload{
+		Name:      randomEventName,
+		Timestamp: timestamp,
+		UserId:    userId,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, true) // true: skips session.
+	assert.Equal(t, http.StatusOK, status)
+	eventId3 := response.EventId
+
+	timestamp = int64(1592899778)
+	trackPayload = SDK.TrackPayload{
+		Name:      randomEventName,
+		Timestamp: timestamp,
+		UserId:    userId,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, true) // true: skips session.
+	assert.Equal(t, http.StatusOK, status)
+	eventId4 := response.EventId
+
+	_, err = TaskSession.AddSession([]uint64{project.ID}, 60, 30, 1)
+	assert.Nil(t, err)
+	assertAssociatedSession(t, project.ID, []string{eventId, eventId1,
+		eventId2, eventId3, eventId4})
+}

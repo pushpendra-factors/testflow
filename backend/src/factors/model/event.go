@@ -901,7 +901,10 @@ func AddSessionForUser(projectId uint64, userId string, userEvents []Event,
 
 	latestUserEvent := &userEvents[len(userEvents)-1]
 	endTimestamp := latestUserEvent.Timestamp - bufferTimeBeforeSessionCreateInSecs
-	if endTimestamp <= startTimestamp {
+	// session should have been created till current_time - buffer timestamp.
+	expectedEndTimestamp := U.TimeNowUnix() - bufferTimeBeforeSessionCreateInSecs
+
+	if endTimestamp < expectedEndTimestamp || endTimestamp <= startTimestamp {
 		endTimestamp = latestUserEvent.Timestamp
 	}
 
