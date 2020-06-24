@@ -206,16 +206,19 @@ func addSessionByProjectId(projectId uint64, maxLookbackTimestamp,
 
 	noOfUsers := len(nextSessionInfoList)
 
-	var minNextSessionTimestamp int64
+	var minNextSessionStartTimestamp int64
+	var minNextSessionUserId string
 	for i := range nextSessionInfoList {
-		if i == 0 || nextSessionInfoList[i].StartTimestamp < minNextSessionTimestamp {
-			minNextSessionTimestamp = nextSessionInfoList[i].StartTimestamp
+		if i == 0 || nextSessionInfoList[i].StartTimestamp < minNextSessionStartTimestamp {
+			minNextSessionStartTimestamp = nextSessionInfoList[i].StartTimestamp
+			minNextSessionUserId = nextSessionInfoList[i].UserId
 		}
 	}
 
-	logCtx = logCtx.WithField("start_timestamp", minNextSessionTimestamp)
-	if minNextSessionTimestamp < U.UnixTimeBeforeDuration(5*time.Hour) {
-		logCtx.WithField("interval_in_mins", (U.TimeNowUnix()-minNextSessionTimestamp)/60).
+	logCtx = logCtx.WithField("start_timestamp", minNextSessionStartTimestamp).
+		WithField("user_id", minNextSessionUserId)
+	if minNextSessionStartTimestamp < U.UnixTimeBeforeDuration(5*time.Hour) {
+		logCtx.WithField("interval_in_mins", (U.TimeNowUnix()-minNextSessionStartTimestamp)/60).
 			Info("Notification - Interval to download events is greater than 5 hours.")
 	}
 
@@ -223,7 +226,7 @@ func addSessionByProjectId(projectId uint64, maxLookbackTimestamp,
 	// till current timestamp. So we wil download only 1/2 hour events,
 	// as we run add session every 1/2 hour.
 	userEventsMap, noOfEvents, errCode := getAllEventsAsUserEventsMap(
-		projectId, sessionEventName.ID, minNextSessionTimestamp, U.TimeNowUnix())
+		projectId, sessionEventName.ID, minNextSessionStartTimestamp, U.TimeNowUnix())
 	if errCode != http.StatusFound {
 		logCtx.Error("Failed to get user events map on add session for project.")
 		return status, http.StatusInternalServerError
