@@ -185,7 +185,9 @@ func MergeUserPropertiesForUserID(projectID uint64, userID string, updatedProper
 		return currentPropertiesID, http.StatusNotModified
 	} else if usersLength > 10 {
 		logCtx.Errorf("User properties merge triggered for more than 10 users. ProjectID: %d, C_UID: %s, Count: %d", projectID, customerUserID, usersLength)
-	} else if usersLength > MaxUsersForPropertiesMerge {
+	}
+
+	if usersLength > MaxUsersForPropertiesMerge {
 		// If number of users to merge are more than max allowed, merge for oldest max/2 and latest max/2.
 		users = append(users[0:MaxUsersForPropertiesMerge/2], users[usersLength-MaxUsersForPropertiesMerge/2:usersLength]...)
 	}
