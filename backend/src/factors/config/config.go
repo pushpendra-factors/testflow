@@ -676,19 +676,47 @@ func GetSegmentRequestQueueAllowedTokens() []string {
 	return configuration.SegmentRequestQueueProjectTokens
 }
 
-func GetProjectsFromListWithAllProjectSupport(
-	projectIdsList string) (allProjects bool, projectIds []uint64) {
+/*
+GetProjectsFromListWithAllProjectSupport -
+If project list string is '*':
+  Returns all_projects as true and empty allowed projects and disallowed projects.
+else:
+  Returns all_projects as false, given projects ids after skipping disallowed
+	projects and disallowed projects.
+*/
+func GetProjectsFromListWithAllProjectSupport(projectIdsList,
+	disallowedProjectIdsList string) (allProjects bool, allowedProjectIds, skipProjectIds []uint64) {
+
+	disallowedProjectIdsList = strings.TrimSpace(disallowedProjectIdsList)
+	skipProjectIds = GetTokensFromStringListAsUint64(disallowedProjectIdsList)
 
 	projectIdsList = strings.TrimSpace(projectIdsList)
 	if projectIdsList == "*" {
-		return true, []uint64{}
+		return true, []uint64{}, skipProjectIds
 	}
 
-	return false, GetTokensFromStringListAsUint64(projectIdsList)
+	projectIds := GetTokensFromStringListAsUint64(projectIdsList)
+	if len(skipProjectIds) == 0 {
+		return false, projectIds, skipProjectIds
+	}
+
+	disallowedMap := make(map[uint64]bool)
+	for i := range skipProjectIds {
+		disallowedMap[skipProjectIds[i]] = true
+	}
+
+	allowedProjectIds = make([]uint64, 0, len(projectIds))
+	for i, cpid := range projectIds {
+		if _, exists := disallowedMap[cpid]; !exists {
+			allowedProjectIds = append(allowedProjectIds, projectIds[i])
+		}
+	}
+
+	return false, allowedProjectIds, skipProjectIds
 }
 
 func GetSkipSessionProjects() (allProjects bool, projectIds []uint64) {
-
-	return GetProjectsFromListWithAllProjectSupport(
-		configuration.SkipSessionProjectIds)
+	allProjects, projectIds, _ = GetProjectsFromListWithAllProjectSupport(
+		configuration.SkipSessionProjectIds, "")
+	return allProjects, projectIds
 }

@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -291,4 +292,30 @@ func TestAddSessionCreationBufferTime(t *testing.T) {
 	event2, errCode := M.GetEventById(project.ID, eventId2)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Nil(t, event2.SessionId)
+}
+
+func TestGetAddSessionAllowedProjects(t *testing.T) {
+	project1, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	project2, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	allowedProjectIds, errCode := TaskSession.GetAddSessionAllowedProjects(
+		fmt.Sprintf("%d,%d", project1.ID, project2.ID), "")
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Contains(t, allowedProjectIds, project1.ID)
+	assert.Contains(t, allowedProjectIds, project2.ID)
+
+	allowedProjectIds, errCode = TaskSession.GetAddSessionAllowedProjects(
+		fmt.Sprintf("%d", project1.ID), fmt.Sprintf("%d", project2.ID))
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Contains(t, allowedProjectIds, project1.ID)
+	assert.NotContains(t, allowedProjectIds, project2.ID)
+
+	allowedProjectIds, errCode = TaskSession.GetAddSessionAllowedProjects(
+		"*", fmt.Sprintf("%d", project2.ID))
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Contains(t, allowedProjectIds, project1.ID)
+	assert.NotContains(t, allowedProjectIds, project2.ID)
 }

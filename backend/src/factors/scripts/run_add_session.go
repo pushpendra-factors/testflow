@@ -28,6 +28,7 @@ func main() {
 
 	// projectIds: supports * (asterisk) for all projects.
 	projectIds := flag.String("project_ids", "", "Allowed projects to create sessions offline.")
+	disabledProjectIds := flag.String("disabled_project_ids", "", "Disallowed projects to create sessions offline.")
 	numRoutines := flag.Int("num_routines", 1, "Number of routines to use.")
 	maxLookbackDays := flag.Int64("max_lookback_days", 0, "Max lookback days to look for session existence.")
 	bufferTimeBeforeCreateSessionInMins := flag.Int64("buffer_time_in_mins", 30, "Buffer time to wait before processing an event for session.")
@@ -85,7 +86,7 @@ func main() {
 	C.InitLogClient(config.Env, config.AppName, config.EmailSender, config.AWSKey,
 		config.AWSSecret, config.AWSRegion, config.ErrorReportingInterval)
 
-	allowedProjectIds, errCode := session.GetAddSessionAllowedProjects(*projectIds)
+	allowedProjectIds, errCode := session.GetAddSessionAllowedProjects(*projectIds, *disabledProjectIds)
 	if errCode != http.StatusFound {
 		log.WithField("err_code", errCode).Error("Failed to get add session allowed project ids.")
 		os.Exit(0)
