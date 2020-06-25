@@ -217,8 +217,12 @@ func addSessionByProjectId(projectId uint64, maxLookbackTimestamp,
 
 	logCtx = logCtx.WithField("start_timestamp", minNextSessionStartTimestamp).
 		WithField("user_id", minNextSessionUserId)
+
+	eventsDownloadIntervalInMins := (U.TimeNowUnix() - minNextSessionStartTimestamp) / 60
+	status.EventsDownloadIntervalInMins = eventsDownloadIntervalInMins
+
 	if minNextSessionStartTimestamp < U.UnixTimeBeforeDuration(5*time.Hour) {
-		logCtx.WithField("interval_in_mins", (U.TimeNowUnix()-minNextSessionStartTimestamp)/60).
+		logCtx.WithField("interval_in_mins", eventsDownloadIntervalInMins).
 			Info("Notification - Interval to download events is greater than 5 hours.")
 	}
 
@@ -304,11 +308,12 @@ func setStatus(projectId uint64, statusMap *map[uint64]Status, status *Status,
 }
 
 type Status struct {
-	Status                string `json:"status"`
-	NoOfUsers             int    `json:"no_of_users"`
-	NoOfEvents            int    `json:"no_of_events"`
-	NoOfSessionsContinued int    `json:"no_of_sessions_continued"`
-	NoOfSessionsCreated   int    `json:"no_of_sessions_created"`
+	Status                       string `json:"status"`
+	EventsDownloadIntervalInMins int64  `json:"events_download_interval_in_mins"`
+	NoOfEvents                   int    `json:"no_of_events"`
+	NoOfUsers                    int    `json:"no_of_users"`
+	NoOfSessionsContinued        int    `json:"no_of_sessions_continued"`
+	NoOfSessionsCreated          int    `json:"no_of_sessions_created"`
 }
 
 func addSessionWorker(projectId uint64, maxLookbackTimestamp,
