@@ -363,7 +363,7 @@ func TestAnalyticsFunnelQueryWithFilterCondition(t *testing.T) {
 
 	// s0 event property value with 5.
 	for i := 0; i < 5; i++ {
-		payload1 := fmt.Sprintf(`{"event_name": "%s", "timestamp": %d, "event_properties": {"value": 5}}`,
+		payload1 := fmt.Sprintf(`{"event_name": "%s", "timestamp": %d, "event_properties": {"value": 5}, "user_properties": {"gender": "M"}}`,
 			"s0", stepTimestamp)
 		w := ServePostRequestWithHeaders(r, uri, []byte(payload1),
 			map[string]string{"Authorization": project.Token})
@@ -377,7 +377,7 @@ func TestAnalyticsFunnelQueryWithFilterCondition(t *testing.T) {
 	// s0 event property value greater than 5.
 	userIds := make([]interface{}, 0, 0)
 	for i := 0; i < 5; i++ {
-		payload1 := fmt.Sprintf(`{"event_name": "%s", "timestamp": %d, "event_properties": {"value": 10}}`,
+		payload1 := fmt.Sprintf(`{"event_name": "%s", "timestamp": %d, "event_properties": {"value": 10}, "user_properties": {"gender": "F"}}`,
 			"s0", stepTimestamp)
 		w := ServePostRequestWithHeaders(r, uri, []byte(payload1),
 			map[string]string{"Authorization": project.Token})
@@ -392,7 +392,7 @@ func TestAnalyticsFunnelQueryWithFilterCondition(t *testing.T) {
 
 	// users with value 10 perform s1.
 	for i := range userIds {
-		payload1 := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "timestamp": %d}`,
+		payload1 := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "timestamp": %d, "event_properties": {"value": 10}, "user_properties": {"gender": "F"}}`,
 			"s1", userIds[i], stepTimestamp)
 		w := ServePostRequestWithHeaders(r, uri, []byte(payload1), map[string]string{"Authorization": project.Token})
 		assert.Equal(t, http.StatusOK, w.Code)
@@ -416,6 +416,12 @@ func TestAnalyticsFunnelQueryWithFilterCondition(t *testing.T) {
 						Type:      U.PropertyTypeNumerical,
 						LogicalOp: "AND",
 					},
+					M.QueryProperty{
+						Entity:   M.PropertyEntityUser,
+						Property: "gender",
+						Operator: "equals",
+						Value:    "F",
+					},
 				},
 			},
 			M.QueryEventWithProperties{
@@ -432,10 +438,12 @@ func TestAnalyticsFunnelQueryWithFilterCondition(t *testing.T) {
 	assert.Equal(t, http.StatusOK, errCode)
 	assert.Equal(t, M.StepPrefix+"0", result.Headers[0])
 	assert.Equal(t, M.StepPrefix+"1", result.Headers[1])
+	assert.Equal(t, M.FunnelConversionPrefix+M.StepPrefix+"0"+"_"+M.StepPrefix+"1", result.Headers[2])
 	// all 5 users who performed s0 with value greater
 	// 5 has performed s1.
 	assert.Equal(t, int64(5), result.Rows[0][0], "step0")
 	assert.Equal(t, int64(5), result.Rows[0][1], "step1")
+	assert.Equal(t, "100.0", result.Rows[0][2], "conversion_step_0_step_1")
 
 	query1 := M.Query{
 		From: startTimestamp,
@@ -508,6 +516,555 @@ func TestAnalyticsFunnelQueryWithFilterCondition(t *testing.T) {
 	// all users performed s0 with value=10 has performed s1.
 	assert.Equal(t, int64(5), result2.Rows[0][0], "step0")
 	assert.Equal(t, int64(5), result2.Rows[0][1], "step1")
+
+	query3 := M.Query{
+		From: startTimestamp,
+		To:   time.Now().UTC().Unix(),
+		EventsWithProperties: []M.QueryEventWithProperties{
+			M.QueryEventWithProperties{
+				Name: "s0",
+				Properties: []M.QueryProperty{
+					M.QueryProperty{
+						Entity:    M.PropertyEntityEvent,
+						Property:  "value",
+						Operator:  "equals",
+						Value:     "10",
+						Type:      U.PropertyTypeNumerical,
+						LogicalOp: "AND",
+					},
+				},
+			},
+			M.QueryEventWithProperties{
+				Name: "s1",
+				Properties: []M.QueryProperty{
+					M.QueryProperty{
+						Entity:   M.PropertyEntityUser,
+						Property: "gender",
+						Operator: "equals",
+						Value:    "F",
+					},
+				},
+			},
+		},
+		Class:           M.QueryClassFunnel,
+		Type:            M.QueryTypeUniqueUsers,
+		EventsCondition: M.EventCondAllGivenEvent,
+	}
+
+	result3, errCode, _ := M.Analyze(project.ID, query3)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, M.StepPrefix+"0", result3.Headers[0])
+	assert.Equal(t, M.StepPrefix+"1", result3.Headers[1])
+	assert.Equal(t, M.FunnelConversionPrefix+M.StepPrefix+"0"+"_"+M.StepPrefix+"1", result3.Headers[2])
+	assert.Equal(t, int64(5), result3.Rows[0][0], "step0")
+	assert.Equal(t, int64(5), result3.Rows[0][1], "step1")
+	assert.Equal(t, "100.0", result3.Rows[0][2], "conversion_step_0_step_1")
+}
+
+func TestAnalyticsFunnelQueryWithFilterAndBreakDown(t *testing.T) {
+	// Initialize routes and dependent data.
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+	uri := "/sdk/event/track"
+
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	user, errCode := M.CreateUser(&M.User{ProjectId: project.ID})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, user.ID)
+
+	startTimestamp := U.UnixTimeBeforeDuration(time.Hour * 1)
+	stepTimestamp := startTimestamp
+
+	// s0 event property value with 5.
+	for i := 0; i < 5; i++ {
+		payload1 := fmt.Sprintf(`{"event_name": "%s", "timestamp": %d, "event_properties": {"value": 5,"id": 1}, "user_properties": {"gender": "M", "age": 18}}`,
+			"s0", stepTimestamp)
+		w := ServePostRequestWithHeaders(r, uri, []byte(payload1),
+			map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusOK, w.Code)
+		response := DecodeJSONResponseToMap(w.Body)
+		assert.NotNil(t, response["event_id"])
+		assert.NotNil(t, response["user_id"])
+		stepTimestamp = stepTimestamp + 10
+	}
+
+	// s0 event property value greater than 5.
+	userIds := make([]interface{}, 0, 0)
+	for i := 0; i < 5; i++ {
+		payload1 := fmt.Sprintf(`{"event_name": "%s", "timestamp": %d, "event_properties": {"value": 10,"id": 2}, "user_properties": {"gender": "F", "age": 20}}`,
+			"s0", stepTimestamp)
+		w := ServePostRequestWithHeaders(r, uri, []byte(payload1),
+			map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusOK, w.Code)
+		response := DecodeJSONResponseToMap(w.Body)
+		assert.NotNil(t, response["event_id"])
+		assert.NotNil(t, response["user_id"])
+
+		userIds = append(userIds, response["user_id"])
+		stepTimestamp = stepTimestamp + 10
+	}
+
+	// users with value 10 perform s1.
+	for i := range userIds {
+		payload1 := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "timestamp": %d, "event_properties": {"value": 10, "id": 3}, "user_properties": {"gender": "F", "age":21}}`,
+			"s1", userIds[i], stepTimestamp)
+		w := ServePostRequestWithHeaders(r, uri, []byte(payload1), map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusOK, w.Code)
+		response := DecodeJSONResponseToMap(w.Body)
+		assert.NotNil(t, response["event_id"])
+		stepTimestamp = stepTimestamp + 10
+	}
+	//x1 -> x2
+	// (breakdown by user_property u1)
+	query := M.Query{
+		From: startTimestamp,
+		To:   time.Now().UTC().Unix(),
+		EventsWithProperties: []M.QueryEventWithProperties{
+			M.QueryEventWithProperties{
+				Name:       "s0",
+				Properties: []M.QueryProperty{},
+			},
+			M.QueryEventWithProperties{
+				Name:       "s1",
+				Properties: []M.QueryProperty{},
+			},
+		},
+		GroupByProperties: []M.QueryGroupByProperty{
+			M.QueryGroupByProperty{
+				Entity:   M.PropertyEntityUser,
+				Property: "gender",
+			},
+		},
+		Class:           M.QueryClassFunnel,
+		Type:            M.QueryTypeUniqueUsers,
+		EventsCondition: M.EventCondAllGivenEvent,
+	}
+
+	result, errCode, _ := M.Analyze(project.ID, query)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, "gender", result.Headers[0])
+	assert.Equal(t, M.StepPrefix+"0", result.Headers[1])
+	assert.Equal(t, M.StepPrefix+"1", result.Headers[2])
+	assert.Equal(t, M.FunnelConversionPrefix+M.StepPrefix+"0"+"_"+M.StepPrefix+"1", result.Headers[3])
+
+	assert.Equal(t, "$no_group", result.Rows[0][0])
+	assert.Equal(t, int64(10), result.Rows[0][1])
+	assert.Equal(t, int64(5), result.Rows[0][2])
+	assert.Equal(t, "50.0", result.Rows[0][3])
+
+	assert.Equal(t, "M", result.Rows[1][0])
+	assert.Equal(t, int64(5), result.Rows[1][1])
+	assert.Equal(t, 0, result.Rows[1][2])
+	assert.Equal(t, "0.0", result.Rows[1][3])
+
+	assert.Equal(t, "F", result.Rows[2][0])
+	assert.Equal(t, int64(5), result.Rows[2][1])
+	assert.Equal(t, int64(5), result.Rows[2][2])
+	assert.Equal(t, "100.0", result.Rows[2][3])
+
+	// 	x1 -> x2
+	// (breakdown by event x1 event_property ep1)
+	query1 := M.Query{
+		From: startTimestamp,
+		To:   time.Now().UTC().Unix(),
+		EventsWithProperties: []M.QueryEventWithProperties{
+			M.QueryEventWithProperties{
+				Name:       "s0",
+				Properties: []M.QueryProperty{},
+			},
+			M.QueryEventWithProperties{
+				Name:       "s1",
+				Properties: []M.QueryProperty{},
+			},
+		},
+		GroupByProperties: []M.QueryGroupByProperty{
+			M.QueryGroupByProperty{
+				Entity:    M.PropertyEntityEvent,
+				Property:  "value",
+				EventName: "s0",
+			},
+		},
+		Class:           M.QueryClassFunnel,
+		Type:            M.QueryTypeUniqueUsers,
+		EventsCondition: M.EventCondAllGivenEvent,
+	}
+
+	result1, errCode, _ := M.Analyze(project.ID, query1)
+
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, "value", result1.Headers[0])
+	assert.Equal(t, M.StepPrefix+"0", result1.Headers[1])
+	assert.Equal(t, M.StepPrefix+"1", result1.Headers[2])
+	assert.Equal(t, M.FunnelConversionPrefix+M.StepPrefix+"0"+"_"+M.StepPrefix+"1", result1.Headers[3])
+
+	assert.Equal(t, "$no_group", result1.Rows[0][0])
+	assert.Equal(t, int64(10), result1.Rows[0][1])
+	assert.Equal(t, int64(5), result1.Rows[0][2])
+	assert.Equal(t, "50.0", result1.Rows[0][3])
+
+	assert.Equal(t, "5", result1.Rows[1][0])
+	assert.Equal(t, int64(5), result1.Rows[1][1])
+	assert.Equal(t, 0, result1.Rows[1][2])
+	assert.Equal(t, "0.0", result1.Rows[1][3])
+
+	assert.Equal(t, "10", result1.Rows[2][0])
+	assert.Equal(t, int64(5), result1.Rows[2][1])
+	assert.Equal(t, int64(5), result1.Rows[2][2])
+	assert.Equal(t, "100.0", result1.Rows[2][3])
+
+	// 	x1 -> x2
+	// (breakdown by event x1 event_property ep1) and (breakdown by event x2 event_property ep2)
+	query2 := M.Query{
+		From: startTimestamp,
+		To:   time.Now().UTC().Unix(),
+		EventsWithProperties: []M.QueryEventWithProperties{
+			M.QueryEventWithProperties{
+				Name:       "s0",
+				Properties: []M.QueryProperty{},
+			},
+			M.QueryEventWithProperties{
+				Name:       "s1",
+				Properties: []M.QueryProperty{},
+			},
+		},
+		GroupByProperties: []M.QueryGroupByProperty{
+			M.QueryGroupByProperty{
+				Entity:    M.PropertyEntityEvent,
+				Property:  "value",
+				EventName: "s0",
+			},
+			M.QueryGroupByProperty{
+				Entity:    M.PropertyEntityEvent,
+				Property:  "id",
+				EventName: "s1",
+			},
+		},
+		Class:           M.QueryClassFunnel,
+		Type:            M.QueryTypeUniqueUsers,
+		EventsCondition: M.EventCondAllGivenEvent,
+	}
+	result2, errCode, _ := M.Analyze(project.ID, query2)
+
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, "value", result2.Headers[0])
+	assert.Equal(t, "id", result2.Headers[1])
+	assert.Equal(t, M.StepPrefix+"0", result2.Headers[2])
+	assert.Equal(t, M.StepPrefix+"1", result2.Headers[3])
+	assert.Equal(t, M.FunnelConversionPrefix+M.StepPrefix+"0"+"_"+M.StepPrefix+"1", result2.Headers[4])
+
+	assert.Equal(t, "$no_group", result2.Rows[0][0])
+	assert.Equal(t, "$no_group", result2.Rows[0][1])
+	assert.Equal(t, int64(10), result2.Rows[0][2])
+	assert.Equal(t, int64(5), result2.Rows[0][3])
+	assert.Equal(t, "50.0", result2.Rows[0][4])
+	assert.Equal(t, 3, len(result2.Rows))
+
+	assert.Equal(t, "5", result2.Rows[1][0])
+	assert.Equal(t, "$none", result2.Rows[1][1])
+	assert.Equal(t, int64(5), result2.Rows[1][2])
+	assert.Equal(t, 0, result2.Rows[1][3])
+	assert.Equal(t, "0.0", result2.Rows[1][4])
+
+	assert.Equal(t, "10", result2.Rows[2][0])
+	assert.Equal(t, "3", result2.Rows[2][1])
+	assert.Equal(t, int64(5), result2.Rows[2][2])
+	assert.Equal(t, int64(5), result2.Rows[2][3])
+	assert.Equal(t, "100.0", result2.Rows[2][4])
+
+	// x1 -> x2
+	// (breakdown by user_property up1) and (breakdown by event x1 event_property ep1)
+	query3 := M.Query{
+		From: startTimestamp,
+		To:   time.Now().UTC().Unix(),
+		EventsWithProperties: []M.QueryEventWithProperties{
+			M.QueryEventWithProperties{
+				Name:       "s0",
+				Properties: []M.QueryProperty{},
+			},
+			M.QueryEventWithProperties{
+				Name:       "s1",
+				Properties: []M.QueryProperty{},
+			},
+		},
+		GroupByProperties: []M.QueryGroupByProperty{
+			M.QueryGroupByProperty{
+				Entity:   M.PropertyEntityUser,
+				Property: "gender",
+			},
+			M.QueryGroupByProperty{
+				Entity:    M.PropertyEntityEvent,
+				Property:  "value",
+				EventName: "s0",
+			},
+		},
+		Class:           M.QueryClassFunnel,
+		Type:            M.QueryTypeUniqueUsers,
+		EventsCondition: M.EventCondAllGivenEvent,
+	}
+	result3, errCode, _ := M.Analyze(project.ID, query3)
+
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, "gender", result3.Headers[0])
+	assert.Equal(t, "value", result3.Headers[1])
+	assert.Equal(t, M.StepPrefix+"0", result3.Headers[2])
+	assert.Equal(t, M.StepPrefix+"1", result3.Headers[3])
+	assert.Equal(t, M.FunnelConversionPrefix+M.StepPrefix+"0"+"_"+M.StepPrefix+"1", result3.Headers[4])
+
+	assert.Equal(t, 3, len(result3.Rows))
+	assert.Equal(t, "$no_group", result3.Rows[0][0])
+	assert.Equal(t, "$no_group", result3.Rows[0][1])
+	assert.Equal(t, int64(10), result3.Rows[0][2])
+	assert.Equal(t, int64(5), result3.Rows[0][3])
+	assert.Equal(t, "50.0", result3.Rows[0][4])
+
+	assert.Equal(t, "M", result3.Rows[1][0])
+	assert.Equal(t, "5", result3.Rows[1][1])
+	assert.Equal(t, int64(5), result3.Rows[1][2])
+	assert.Equal(t, 0, result3.Rows[1][3])
+	assert.Equal(t, "0.0", result3.Rows[1][4])
+
+	assert.Equal(t, "F", result3.Rows[2][0])
+	assert.Equal(t, "10", result3.Rows[2][1])
+	assert.Equal(t, int64(5), result3.Rows[2][2])
+	assert.Equal(t, int64(5), result3.Rows[2][3])
+	assert.Equal(t, "100.0", result3.Rows[2][4])
+
+	// 	x1 (with event_property ep1 = ev1) -> x2
+	// (breakdown by event x1 event_property ep1) and (breakdown by event x2 event_property ep2)
+	query4 := M.Query{
+		From: startTimestamp,
+		To:   time.Now().UTC().Unix(),
+		EventsWithProperties: []M.QueryEventWithProperties{
+			M.QueryEventWithProperties{
+				Name: "s0",
+				Properties: []M.QueryProperty{
+					M.QueryProperty{
+						Entity:   M.PropertyEntityEvent,
+						Property: "value",
+						Operator: "equals",
+						Value:    "10",
+					},
+				},
+			},
+			M.QueryEventWithProperties{
+				Name:       "s1",
+				Properties: []M.QueryProperty{},
+			},
+		},
+		GroupByProperties: []M.QueryGroupByProperty{
+			M.QueryGroupByProperty{
+				Entity:    M.PropertyEntityEvent,
+				Property:  "value",
+				EventName: "s0",
+			},
+			M.QueryGroupByProperty{
+				Entity:    M.PropertyEntityEvent,
+				Property:  "id",
+				EventName: "s1",
+			},
+		},
+		Class:           M.QueryClassFunnel,
+		Type:            M.QueryTypeUniqueUsers,
+		EventsCondition: M.EventCondAllGivenEvent,
+	}
+	result4, errCode, _ := M.Analyze(project.ID, query4)
+
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, "value", result4.Headers[0])
+	assert.Equal(t, "id", result4.Headers[1])
+	assert.Equal(t, M.StepPrefix+"0", result4.Headers[2])
+	assert.Equal(t, M.StepPrefix+"1", result4.Headers[3])
+	assert.Equal(t, M.FunnelConversionPrefix+M.StepPrefix+"0"+"_"+M.StepPrefix+"1", result4.Headers[4])
+
+	assert.Equal(t, 2, len(result4.Rows))
+	assert.Equal(t, "$no_group", result4.Rows[0][0])
+	assert.Equal(t, "$no_group", result4.Rows[0][1])
+	assert.Equal(t, int64(5), result4.Rows[0][2])
+	assert.Equal(t, int64(5), result4.Rows[0][3])
+	assert.Equal(t, "100.0", result4.Rows[0][4])
+
+	assert.Equal(t, "10", result4.Rows[1][0])
+	assert.Equal(t, "3", result4.Rows[1][1])
+	assert.Equal(t, int64(5), result4.Rows[1][2])
+	assert.Equal(t, int64(5), result4.Rows[1][3])
+	assert.Equal(t, "100.0", result4.Rows[1][4])
+
+	// x1 (with event_property ep1 = ev1) -> x2
+	// (breakdown by user_property up1) and (breakdown by user_property up2)
+	query5 := M.Query{
+		From: startTimestamp,
+		To:   time.Now().UTC().Unix(),
+		EventsWithProperties: []M.QueryEventWithProperties{
+			M.QueryEventWithProperties{
+				Name: "s0",
+				Properties: []M.QueryProperty{
+					M.QueryProperty{
+						Entity:   M.PropertyEntityEvent,
+						Property: "value",
+						Operator: "equals",
+						Value:    "10",
+					},
+				},
+			},
+			M.QueryEventWithProperties{
+				Name:       "s1",
+				Properties: []M.QueryProperty{},
+			},
+		},
+		GroupByProperties: []M.QueryGroupByProperty{
+			M.QueryGroupByProperty{
+				Entity:   M.PropertyEntityUser,
+				Property: "gender",
+			},
+			M.QueryGroupByProperty{
+				Entity:   M.PropertyEntityUser,
+				Property: "age",
+			},
+		},
+		Class:           M.QueryClassFunnel,
+		Type:            M.QueryTypeUniqueUsers,
+		EventsCondition: M.EventCondAllGivenEvent,
+	}
+	result5, errCode, _ := M.Analyze(project.ID, query5)
+
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, "gender", result5.Headers[0])
+	assert.Equal(t, "age", result5.Headers[1])
+	assert.Equal(t, M.StepPrefix+"0", result5.Headers[2])
+	assert.Equal(t, M.StepPrefix+"1", result5.Headers[3])
+	assert.Equal(t, M.FunnelConversionPrefix+M.StepPrefix+"0"+"_"+M.StepPrefix+"1", result5.Headers[4])
+
+	assert.Equal(t, 2, len(result5.Rows))
+	assert.Equal(t, "$no_group", result5.Rows[0][0])
+	assert.Equal(t, "$no_group", result5.Rows[0][1])
+	assert.Equal(t, int64(5), result5.Rows[0][2])
+	assert.Equal(t, int64(5), result5.Rows[0][3])
+	assert.Equal(t, "100.0", result5.Rows[0][4])
+
+	assert.Equal(t, "F", result5.Rows[1][0])
+	assert.Equal(t, "21", result5.Rows[1][1])
+	assert.Equal(t, int64(5), result5.Rows[1][2])
+	assert.Equal(t, int64(5), result5.Rows[1][3])
+	assert.Equal(t, "100.0", result5.Rows[1][4])
+
+	// 	x1 (user_property up1 = uv1) -> x2
+	// (breakdown by user_property up1) and (breakdown by user_property up2)
+	query6 := M.Query{
+		From: startTimestamp,
+		To:   time.Now().UTC().Unix(),
+		EventsWithProperties: []M.QueryEventWithProperties{
+			M.QueryEventWithProperties{
+				Name: "s0",
+				Properties: []M.QueryProperty{
+					M.QueryProperty{
+						Entity:   M.PropertyEntityUser,
+						Property: "gender",
+						Operator: "equals",
+						Value:    "F",
+					},
+				},
+			},
+			M.QueryEventWithProperties{
+				Name:       "s1",
+				Properties: []M.QueryProperty{},
+			},
+		},
+		GroupByProperties: []M.QueryGroupByProperty{
+			M.QueryGroupByProperty{
+				Entity:   M.PropertyEntityUser,
+				Property: "gender",
+			},
+			M.QueryGroupByProperty{
+				Entity:   M.PropertyEntityUser,
+				Property: "age",
+			},
+		},
+		Class:           M.QueryClassFunnel,
+		Type:            M.QueryTypeUniqueUsers,
+		EventsCondition: M.EventCondAllGivenEvent,
+	}
+	result6, errCode, _ := M.Analyze(project.ID, query6)
+
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, "gender", result6.Headers[0])
+	assert.Equal(t, "age", result6.Headers[1])
+	assert.Equal(t, M.StepPrefix+"0", result6.Headers[2])
+	assert.Equal(t, M.StepPrefix+"1", result6.Headers[3])
+	assert.Equal(t, M.FunnelConversionPrefix+M.StepPrefix+"0"+"_"+M.StepPrefix+"1", result6.Headers[4])
+
+	assert.Equal(t, 2, len(result6.Rows))
+	assert.Equal(t, "$no_group", result6.Rows[0][0])
+	assert.Equal(t, "$no_group", result6.Rows[0][1])
+	assert.Equal(t, int64(5), result6.Rows[0][2])
+	assert.Equal(t, int64(5), result6.Rows[0][3])
+	assert.Equal(t, "100.0", result6.Rows[0][4])
+
+	assert.Equal(t, "F", result6.Rows[1][0])
+	assert.Equal(t, "21", result6.Rows[1][1])
+	assert.Equal(t, int64(5), result6.Rows[1][2])
+	assert.Equal(t, int64(5), result6.Rows[1][3])
+	assert.Equal(t, "100.0", result6.Rows[1][4])
+
+	// 	x1 (user_property up1 = uv1) -> x2
+	// (breakdown by user_property up1) and (breakdown by event x1 event_property ep1)
+	query7 := M.Query{
+		From: startTimestamp,
+		To:   time.Now().UTC().Unix(),
+		EventsWithProperties: []M.QueryEventWithProperties{
+			M.QueryEventWithProperties{
+				Name: "s0",
+				Properties: []M.QueryProperty{
+					M.QueryProperty{
+						Entity:   M.PropertyEntityEvent,
+						Property: "value",
+						Operator: "equals",
+						Value:    "10",
+					},
+				},
+			},
+			M.QueryEventWithProperties{
+				Name:       "s1",
+				Properties: []M.QueryProperty{},
+			},
+		},
+		GroupByProperties: []M.QueryGroupByProperty{
+			M.QueryGroupByProperty{
+				Entity:   M.PropertyEntityUser,
+				Property: "gender",
+			},
+			M.QueryGroupByProperty{
+				Entity:    M.PropertyEntityEvent,
+				Property:  "value",
+				EventName: "s0",
+			},
+		},
+		Class:           M.QueryClassFunnel,
+		Type:            M.QueryTypeUniqueUsers,
+		EventsCondition: M.EventCondAllGivenEvent,
+	}
+	result7, errCode, _ := M.Analyze(project.ID, query7)
+
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, "gender", result7.Headers[0])
+	assert.Equal(t, "value", result7.Headers[1])
+	assert.Equal(t, M.StepPrefix+"0", result7.Headers[2])
+	assert.Equal(t, M.StepPrefix+"1", result7.Headers[3])
+	assert.Equal(t, M.FunnelConversionPrefix+M.StepPrefix+"0"+"_"+M.StepPrefix+"1", result7.Headers[4])
+
+	assert.Equal(t, 2, len(result7.Rows))
+	assert.Equal(t, "$no_group", result7.Rows[0][0])
+	assert.Equal(t, "$no_group", result7.Rows[0][1])
+	assert.Equal(t, int64(5), result7.Rows[0][2])
+	assert.Equal(t, int64(5), result7.Rows[0][3])
+	assert.Equal(t, "100.0", result7.Rows[0][4])
+
+	assert.Equal(t, "F", result7.Rows[1][0])
+	assert.Equal(t, "10", result7.Rows[1][1])
+	assert.Equal(t, int64(5), result7.Rows[1][2])
+	assert.Equal(t, int64(5), result7.Rows[1][3])
+	assert.Equal(t, "100.0", result7.Rows[1][4])
 }
 
 func TestAnalyticsInsightsQuery(t *testing.T) {
@@ -607,6 +1164,7 @@ func TestAnalyticsInsightsQuery(t *testing.T) {
 		assert.NotNil(t, result2)
 		assert.Equal(t, "count", result2.Headers[0])
 		assert.Equal(t, int64(15), result2.Rows[0][0])
+
 	})
 }
 
