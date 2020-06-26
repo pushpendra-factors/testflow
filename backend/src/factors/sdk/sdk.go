@@ -672,11 +672,6 @@ func Identify(projectId uint64, request *IdentifyPayload) (int, *IdentifyRespons
 		return errCode, &IdentifyResponse{Error: "Identification failed. Failed mapping customer_user to user"}
 	}
 
-	errCode = M.UpdateUserJoinTimePropertyForCustomerUser(projectId, request.CustomerUserId)
-	if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
-		return errCode, &IdentifyResponse{Error: "Identification failed."}
-	}
-
 	return http.StatusOK, &IdentifyResponse{Message: "User has been identified successfully."}
 }
 
