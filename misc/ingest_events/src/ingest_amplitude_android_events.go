@@ -23,8 +23,8 @@ import (
 	"sync"
 	"time"
 
-	U "./util"
 	log "github.com/sirupsen/logrus"
+	U "util"
 )
 
 var inputDirFlag = flag.String("input_dir", "", "Input Directory with json files.")

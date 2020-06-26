@@ -19,8 +19,8 @@ import (
 	"strconv"
 	"sync"
 
-	U "./util"
 	log "github.com/sirupsen/logrus"
+	U "util"
 )
 
 var inputFileFlag = flag.String("input_file", "", "Input json file.")
