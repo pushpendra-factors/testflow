@@ -694,9 +694,11 @@ def get_next_sync_info(last_sync_info):
         return next_sync_info
     
     start_timestamp = 0
-    if last_timestmap == 0:
-        # new projects, starts with last 30 days.
-        start_timestamp = get_adwords_timestamp_before_days(30)
+    # if first time or last downloaded is older than max lookback:
+    # download only for max lookback period.
+    max_lookback_timestamp = get_adwords_timestamp_before_days(30)
+    if last_timestmap == 0 or last_timestmap < max_lookback_timestamp:
+        start_timestamp = max_lookback_timestamp
     else:
         start_timestamp = inc_day_adwords_timestamp(last_timestmap)
 
