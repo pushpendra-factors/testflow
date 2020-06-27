@@ -10,7 +10,6 @@ import (
 	"factors/util"
 	"flag"
 	"fmt"
-	"strconv"
 	"strings"
 
 	_ "github.com/jinzhu/gorm"
@@ -18,15 +17,16 @@ import (
 )
 
 func main() {
+
 	envFlag := flag.String("env", "development", "")
-	etcd := flag.String("etcd", "localhost:2379",
-		"Comma separated list of etcd endpoints localhost:2379,localhost:2378")
+	etcd := flag.String("etcd", "localhost:2379", "Comma separated list of etcd endpoints localhost:2379,localhost:2378")
 	localDiskTmpDirFlag := flag.String("local_disk_tmp_dir", "/usr/local/var/factors/local_disk/tmp", "--local_disk_tmp_dir=/usr/local/var/factors/local_disk/tmp pass directory")
 	bucketName := flag.String("bucket_name", "/usr/local/var/factors/cloud_storage", "")
 	numRoutinesFlag := flag.Int("num_routines", 3, "No of routines")
-	projectIdFlag := flag.Uint64("project_id", 0, "Optional: Project Id.")
+	projectIdFlag := flag.String("project_ids", "", "Optional: Project Id. A comma separated list of project Ids. ex: 1,2,6,9")
 	projectIdsToSkipFlag := flag.String("project_ids_to_skip", "", "Optional: Comma separated values of projects to skip")
 	maxModelSizeFlag := flag.Int64("max_size", 20000000000, "Max size of the model")
+	modelType := flag.String("model_type", "all", "Optional: Model Type can take 3 values : {all, weekly, monthly}")
 
 	dbHost := flag.String("db_host", "localhost", "")
 	dbPort := flag.Int("db_port", 5432, "")
@@ -45,6 +45,13 @@ func main() {
 		*envFlag != "staging" &&
 		*envFlag != "production" {
 		err := fmt.Errorf("env [ %s ] not recognised", *envFlag)
+		panic(err)
+	}
+
+	if *modelType != T.ModelTypeAll &&
+		*modelType != T.ModelTypeWeekly &&
+		*modelType != T.ModelTypeMonthly {
+		err := fmt.Errorf("modelType [ %s ] not recognised", *modelType)
 		panic(err)
 	}
 
@@ -107,22 +114,12 @@ func main() {
 			panic(err)
 		}
 	}
-	projectIdToSkipStrings := strings.Split(*projectIdsToSkipFlag, ",")
-	projectIdsToSkip := make(map[uint64]bool)
-	for _, pid := range projectIdToSkipStrings {
-		if pid == "" {
-			continue
-		}
-		if pidUint, err := strconv.ParseUint(pid, 10, 64); err == nil {
-			projectIdsToSkip[pidUint] = true
-		} else {
-			log.WithError(err).Errorln("Failed to parse projects to skip")
-			panic(err)
-		}
-	}
+
+	projectIdsToRun := util.GetIntBoolMapFromStringList(projectIdFlag)
+	projectIdsToSkip := util.GetIntBoolMapFromStringList(projectIdsToSkipFlag)
 
 	diskManager := serviceDisk.New(*localDiskTmpDirFlag)
 
-	T.BuildSequential(*envFlag, db, &cloudManager, etcdClient, diskManager,
-		*bucketName, *numRoutinesFlag, *projectIdFlag, projectIdsToSkip, *maxModelSizeFlag)
+	_ = T.BuildSequential(*envFlag, db, &cloudManager, etcdClient, diskManager,
+		*bucketName, *numRoutinesFlag, projectIdsToRun, projectIdsToSkip, *maxModelSizeFlag, *modelType)
 }
