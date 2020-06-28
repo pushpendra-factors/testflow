@@ -8,15 +8,48 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	C "factors/config"
 	M "factors/model"
 	SDK "factors/sdk"
 	TaskSession "factors/task/session"
 	U "factors/util"
 )
 
+func assertAssociatedSession(t *testing.T, projectId uint64, eventIds []string,
+	message string) (sessionEvent *M.Event) {
+
+	var firstEvent *M.Event
+	for i, eventId := range eventIds {
+		event, errCode := M.GetEventById(projectId, eventId)
+		assert.Equal(t, http.StatusFound, errCode, message)
+		assert.NotNil(t, event.SessionId, message)
+
+		if i == 0 {
+			firstEvent = event
+		}
+
+		if i > 0 {
+			// all event should have same session id.
+			assert.Equal(t, *firstEvent.SessionId, *event.SessionId, message)
+		}
+	}
+
+	// check session event
+	sessionEvent, errCode := M.GetEventById(projectId, *firstEvent.SessionId)
+	assert.Equal(t, http.StatusFound, errCode, message)
+	assert.Equal(t, firstEvent.Timestamp-1, sessionEvent.Timestamp, message)
+
+	return sessionEvent
+}
+
 func TestAddSession(t *testing.T) {
 	project, _, err := SetupProjectUserReturnDAO()
 	assert.Nil(t, err)
+
+	// skip realtime session creation for project.
+	C.GetConfig().SkipSessionProjectIds = fmt.Sprintf("%d", project.ID)
+
+	maxLookbackTimestamp := U.UnixTimeBeforeDuration(31 * 24 * time.Hour)
 
 	// Test: New user with one event.
 	timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
@@ -36,7 +69,7 @@ func TestAddSession(t *testing.T) {
 		EventProperties: trackEventProperties,
 		UserProperties:  trackUserProperties,
 	}
-	status, response := SDK.Track(project.ID, &trackPayload, true) // true: skips session.
+	status, response := SDK.Track(project.ID, &trackPayload, false)
 	assert.Equal(t, http.StatusOK, status)
 	assert.NotEmpty(t, response.UserId)
 	eventId := response.EventId
@@ -46,25 +79,12 @@ func TestAddSession(t *testing.T) {
 	_, errCode := M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
 	assert.Equal(t, http.StatusNotFound, errCode)
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, 60, 30, 1)
+	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 30, 1)
 	assert.Nil(t, err)
 
-	// session event_name should have been created.
-	sessionEventName, errCode := M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
-	assert.Equal(t, http.StatusFound, errCode)
-
-	latestSessionEvent1, errCode := M.GetLatestEventOfUserByEventNameId(project.ID,
-		response.UserId, sessionEventName.ID, timestamp-3, timestamp+3)
-	assert.Equal(t, http.StatusFound, errCode)
-	// session event timestamp should be less than first event
-	// timestamp of session.
-	assert.True(t, latestSessionEvent1.Timestamp < timestamp)
-	assert.Equal(t, timestamp-1, latestSessionEvent1.Timestamp)
-	// session_id should not be set to session event.
-	assert.Nil(t, latestSessionEvent1.SessionId)
-
+	sessionEvent1 := assertAssociatedSession(t, project.ID, []string{eventId}, "Session 1")
 	// session event properties added from event properties.
-	lsEventProperties1, err := U.DecodePostgresJsonb(&latestSessionEvent1.Properties)
+	lsEventProperties1, err := U.DecodePostgresJsonb(&sessionEvent1.Properties)
 	assert.Nil(t, err)
 	assert.Equal(t, trackEventProperties[U.EP_REFERRER], (*lsEventProperties1)[U.SP_INITIAL_REFERRER])
 	assert.Equal(t, trackEventProperties[U.EP_PAGE_URL], (*lsEventProperties1)[U.SP_LATEST_PAGE_URL])
@@ -74,11 +94,6 @@ func TestAddSession(t *testing.T) {
 	// session event properties added from user properties.
 	assert.Equal(t, trackUserProperties[U.UP_OS], (*lsEventProperties1)[U.UP_OS])
 	assert.Equal(t, trackUserProperties[U.UP_OS_VERSION], (*lsEventProperties1)[U.UP_OS_VERSION])
-
-	// event should have been associated with session_id.
-	event, errCode := M.GetEventById(project.ID, eventId)
-	assert.Equal(t, http.StatusFound, errCode)
-	assert.Equal(t, latestSessionEvent1.ID, *event.SessionId)
 
 	// Test: New events without session for existing user with session.
 	// Since there is continious activity, last session should be continued.
@@ -95,7 +110,7 @@ func TestAddSession(t *testing.T) {
 		UserId:          userId,
 		EventProperties: trackEventProperties1,
 	}
-	status, response = SDK.Track(project.ID, &trackPayload, true) // true: skips session.
+	status, response = SDK.Track(project.ID, &trackPayload, false)
 	assert.Equal(t, http.StatusOK, status)
 	eventId1 := response.EventId
 
@@ -112,13 +127,12 @@ func TestAddSession(t *testing.T) {
 		UserId:          userId,
 		EventProperties: trackEventProperties2,
 	}
-	status, response = SDK.Track(project.ID, &trackPayload, true) // true: skips session.
+	status, response = SDK.Track(project.ID, &trackPayload, false)
 	assert.Equal(t, http.StatusOK, status)
 	eventId2 := response.EventId
 
 	// inactivity.
 	timestamp = timestamp + (35 * 60) // + 35 mins
-	event3Timestamp := timestamp
 	randomEventName = U.RandomLowerAphaNumString(10)
 	trackEventProperties3 := U.PropertiesMap{
 		U.EP_REFERRER:     "www.bing.com",
@@ -131,7 +145,7 @@ func TestAddSession(t *testing.T) {
 		UserId:          userId,
 		EventProperties: trackEventProperties3,
 	}
-	status, response = SDK.Track(project.ID, &trackPayload, true) // true: skips session.
+	status, response = SDK.Track(project.ID, &trackPayload, false)
 	assert.Equal(t, http.StatusOK, status)
 	eventId3 := response.EventId
 
@@ -148,28 +162,20 @@ func TestAddSession(t *testing.T) {
 		UserId:          userId,
 		EventProperties: trackEventProperties4,
 	}
-	status, response = SDK.Track(project.ID, &trackPayload, true) // true: skips session.
+	status, response = SDK.Track(project.ID, &trackPayload, false)
 	assert.Equal(t, http.StatusOK, status)
 	eventId4 := response.EventId
 
-	_, err = TaskSession.AddSession([]uint64{project.ID}, 60, 30, 1)
+	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 30, 1)
 	assert.Nil(t, err)
 
-	// event1 should have been associated with latest session_id.
-	event1, errCode := M.GetEventById(project.ID, eventId1)
-	assert.Equal(t, http.StatusFound, errCode)
-	assert.Equal(t, latestSessionEvent1.ID, *event1.SessionId)
+	// should have continue session for event 1 and 2. should have created new session for
+	// event 3 and 4 because of inactivity.
 
-	// event2 should have been associated with latest session_id.
-	event2, errCode := M.GetEventById(project.ID, eventId2)
-	assert.Equal(t, http.StatusFound, errCode)
-	assert.Equal(t, latestSessionEvent1.ID, *event2.SessionId)
-
+	// event 1 and 2 should have continued session.
+	sessionEvent1 = assertAssociatedSession(t, project.ID, []string{eventId, eventId1, eventId2}, "Session 1 continued.")
 	// last session's properties should be updated after continuing the same session.
-	latestSessionEvent1, errCode = M.GetEventById(project.ID, latestSessionEvent1.ID)
-	assert.Equal(t, http.StatusFound, errCode)
-	assert.NotNil(t, latestSessionEvent1)
-	lsEventProperties1, err = U.DecodePostgresJsonb(&latestSessionEvent1.Properties)
+	lsEventProperties1, err = U.DecodePostgresJsonb(&sessionEvent1.Properties)
 	assert.Nil(t, err)
 	// should have intial event's referrer, before continuing session.
 	assert.Equal(t, trackEventProperties[U.EP_REFERRER], (*lsEventProperties1)[U.SP_INITIAL_REFERRER])
@@ -179,62 +185,95 @@ func TestAddSession(t *testing.T) {
 	assert.Equal(t, float64(3), (*lsEventProperties1)[U.SP_PAGE_COUNT])
 	assert.Equal(t, float64(3), (*lsEventProperties1)[U.SP_SPENT_TIME])
 
-	// session created after in-activity.
-	latestSessionEvent2, errCode := M.GetLatestEventOfUserByEventNameId(project.ID,
-		userId, sessionEventName.ID, event3Timestamp-10, event3Timestamp+10)
-	assert.Equal(t, http.StatusFound, errCode)
-	assert.True(t, latestSessionEvent2.Timestamp < event3Timestamp)
-	assert.Equal(t, event3Timestamp-1, latestSessionEvent2.Timestamp)
-	assert.Nil(t, latestSessionEvent2.SessionId)
-
-	// event 3 and 4 should get new session_id as this last set of
-	// events on right side of inactivity.
-	event3, errCode := M.GetEventById(project.ID, eventId3)
-	assert.Equal(t, http.StatusFound, errCode)
-	assert.Equal(t, latestSessionEvent2.ID, *event3.SessionId)
-	event4, errCode := M.GetEventById(project.ID, eventId4)
-	assert.Equal(t, http.StatusFound, errCode)
-	assert.Equal(t, latestSessionEvent2.ID, *event4.SessionId)
-
+	// event 3 and 4 should create new session.
+	sessionEvent2 := assertAssociatedSession(t, project.ID, []string{eventId3, eventId4}, "Session 2")
+	assert.NotEqual(t, sessionEvent1.ID, sessionEvent2.ID)
 	// event properties of new session created after inactivity.
-	lsEventProperties2, err := U.DecodePostgresJsonb(&latestSessionEvent2.Properties)
+	lsEventProperties2, err := U.DecodePostgresJsonb(&sessionEvent2.Properties)
 	assert.Nil(t, err)
 	// should have intial event's referrer, before continuing session.
 	assert.Equal(t, trackEventProperties3[U.EP_REFERRER], (*lsEventProperties2)[U.SP_INITIAL_REFERRER])
 	// should have lastest event's page_url after continuing session.
 	assert.Equal(t, trackEventProperties4[U.EP_PAGE_URL], (*lsEventProperties2)[U.SP_LATEST_PAGE_URL])
 	assert.Equal(t, trackEventProperties4[U.EP_PAGE_RAW_URL], (*lsEventProperties2)[U.SP_LATEST_PAGE_RAW_URL])
-	assert.Equal(t, float64(3), (*lsEventProperties1)[U.SP_PAGE_COUNT])
-	assert.Equal(t, float64(3), (*lsEventProperties1)[U.SP_SPENT_TIME])
+	assert.Equal(t, float64(2), (*lsEventProperties2)[U.SP_PAGE_COUNT])
+	assert.Equal(t, float64(2), (*lsEventProperties2)[U.SP_SPENT_TIME])
 
-	// Test: Create new session for event with marketing property
-	// even though there was activity.
-	timestamp = timestamp + 1
+	// Test: Create new session for event with marketing property,
+	// followed by other events, even though there was continuos
+	// activity from previous session.
+	timestamp = timestamp + 2
 	trackPayload = SDK.TrackPayload{
 		Name:      randomEventName,
 		Timestamp: timestamp,
 		UserId:    userId,
 		EventProperties: U.PropertiesMap{
-			U.EP_CAMPAIGN: "summer_sale",
+			U.QUERY_PARAM_UTM_PREFIX + "campaign": "summer_sale",
 		},
 	}
 
-	status, response = SDK.Track(project.ID, &trackPayload, true) // true: skips session.
+	status, response = SDK.Track(project.ID, &trackPayload, false)
 	assert.Equal(t, http.StatusOK, status)
 	eventId5 := response.EventId
 
-	// Should not create session for last event timestmap  - 30 mins.
-	_, err = TaskSession.AddSession([]uint64{project.ID}, 60, 30, 1)
+	timestamp = timestamp + 2
+	randomEventName = U.RandomLowerAphaNumString(10)
+	trackPayload = SDK.TrackPayload{
+		Name:      randomEventName,
+		Timestamp: timestamp,
+		UserId:    userId,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false)
+	assert.Equal(t, http.StatusOK, status)
+	eventId6 := response.EventId
+
+	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 30, 1)
 	assert.Nil(t, err)
 
-	event5, errCode := M.GetEventById(project.ID, eventId5)
-	assert.Equal(t, http.StatusFound, errCode)
-	assert.NotNil(t, event5.SessionId)
-	// New session should have been created.
-	assert.NotEqual(t, latestSessionEvent2.SessionId, event5.SessionId)
+	// should have created session as campaign property exist.
+	sessionEvent3 := assertAssociatedSession(t, project.ID, []string{eventId5, eventId6}, "Session 3")
+	assert.NotEqual(t, sessionEvent2.ID, sessionEvent3.ID)
+
+	// Test: Last event with marketing property.
+	timestamp = timestamp + 2
+	trackPayload = SDK.TrackPayload{
+		Name:      randomEventName,
+		Timestamp: timestamp,
+		UserId:    userId,
+		EventProperties: U.PropertiesMap{
+			U.QUERY_PARAM_UTM_PREFIX + "campaign": "winter_sale",
+		},
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false)
+	assert.Equal(t, http.StatusOK, status)
+	eventId7 := response.EventId
+
+	// Skip creating session for only event with campaign. edge case.
+	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 30, 1)
+	assert.Nil(t, err)
+	event7, errCode := M.GetEventById(project.ID, eventId7)
+	assert.Equal(t, errCode, http.StatusFound)
+	assert.Nil(t, event7.SessionId)
+
+	timestamp = timestamp + 2
+	randomEventName = U.RandomLowerAphaNumString(10)
+	trackPayload = SDK.TrackPayload{
+		Name:      randomEventName,
+		Timestamp: timestamp,
+		UserId:    userId,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false)
+	assert.Equal(t, http.StatusOK, status)
+	eventId8 := response.EventId
+
+	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 30, 1)
+	assert.Nil(t, err)
+	// New session should be created after a new event.
+	sessionEvent4 := assertAssociatedSession(t, project.ID, []string{eventId7, eventId8}, "Session 4")
+	assert.NotEqual(t, sessionEvent3.ID, sessionEvent4.ID)
 
 	// Test: Project with no events and all events with session already.
-	statusMap, err := TaskSession.AddSession([]uint64{project.ID}, 60, 30, 1)
+	statusMap, err := TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 30, 1)
 	assert.Nil(t, err)
 	assert.Equal(t, statusMap[project.ID].Status, "not_modified")
 }
@@ -318,86 +357,4 @@ func TestGetAddSessionAllowedProjects(t *testing.T) {
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Contains(t, allowedProjectIds, project1.ID)
 	assert.NotContains(t, allowedProjectIds, project2.ID)
-}
-
-func assertAssociatedSession(t *testing.T, projectId uint64, eventIds []string) {
-	var firstEvent *M.Event
-	var sessionId string
-	for i, eventId := range eventIds {
-		event, errCode := M.GetEventById(projectId, eventId)
-		assert.Equal(t, http.StatusFound, errCode)
-		assert.NotNil(t, event.SessionId)
-
-		if i == 0 {
-			firstEvent = event
-			sessionId = *event.SessionId
-		}
-	}
-
-	// check session event
-	sessionEvent, errCode := M.GetEventById(projectId, sessionId)
-	assert.Equal(t, http.StatusFound, errCode)
-	assert.Equal(t, firstEvent.Timestamp-1, sessionEvent.Timestamp)
-}
-
-func TestAddSessionAndSessionIdAssociation(t *testing.T) {
-	project, _, err := SetupProjectUserReturnDAO()
-	assert.Nil(t, err)
-
-	// Test: New user with one event.
-	timestamp := int64(1592897775)
-	randomEventName := U.RandomLowerAphaNumString(10)
-	trackPayload := SDK.TrackPayload{
-		Name:      randomEventName,
-		Timestamp: timestamp,
-	}
-	status, response := SDK.Track(project.ID, &trackPayload, true) // true: skips session.
-	assert.Equal(t, http.StatusOK, status)
-	eventId := response.EventId
-	userId := response.UserId
-
-	timestamp = int64(1592898605)
-	trackPayload = SDK.TrackPayload{
-		Name:      randomEventName,
-		Timestamp: timestamp,
-		UserId:    userId,
-	}
-	status, response = SDK.Track(project.ID, &trackPayload, true) // true: skips session.
-	assert.Equal(t, http.StatusOK, status)
-	eventId1 := response.EventId
-
-	timestamp = int64(1592898629)
-	trackPayload = SDK.TrackPayload{
-		Name:      randomEventName,
-		Timestamp: timestamp,
-		UserId:    userId,
-	}
-	status, response = SDK.Track(project.ID, &trackPayload, true) // true: skips session.
-	assert.Equal(t, http.StatusOK, status)
-	eventId2 := response.EventId
-
-	timestamp = int64(1592898709)
-	trackPayload = SDK.TrackPayload{
-		Name:      randomEventName,
-		Timestamp: timestamp,
-		UserId:    userId,
-	}
-	status, response = SDK.Track(project.ID, &trackPayload, true) // true: skips session.
-	assert.Equal(t, http.StatusOK, status)
-	eventId3 := response.EventId
-
-	timestamp = int64(1592899778)
-	trackPayload = SDK.TrackPayload{
-		Name:      randomEventName,
-		Timestamp: timestamp,
-		UserId:    userId,
-	}
-	status, response = SDK.Track(project.ID, &trackPayload, true) // true: skips session.
-	assert.Equal(t, http.StatusOK, status)
-	eventId4 := response.EventId
-
-	_, err = TaskSession.AddSession([]uint64{project.ID}, 60, 30, 1)
-	assert.Nil(t, err)
-	assertAssociatedSession(t, project.ID, []string{eventId, eventId1,
-		eventId2, eventId3, eventId4})
 }

@@ -917,6 +917,7 @@ func AddSessionForUser(projectId uint64, userId string, userEvents []Event,
 	// period, use current event as session_end_timestamp and update.
 	// Update next event as session start and do the same till the end.
 	sessionStartIndex := 0
+	sessionEndIndex := 0
 	noOfSessionsCreated := 0
 	sessionContinuedFlag := false
 	for i := 0; i < len(events); {
@@ -927,21 +928,34 @@ func AddSessionForUser(projectId uint64, userId string, userEvents []Event,
 		}
 		eventPropertiesMap := U.PropertiesMap(*eventPropertiesDecoded)
 
-		var isNewSessionRequired bool
-		if i < len(events)-1 {
-			isNewSessionRequired = ((events[i+1].Timestamp - events[i].Timestamp) > NewUserSessionInactivityInSeconds)
-		}
-		_, hasMarketingProperty := U.MapEventPropertiesToDefinedProperties(&eventPropertiesMap)
+		isNewSessionRequired := (i == 0 && len(events) == 1) || (i > 0 && ((events[i].Timestamp - events[i-1].Timestamp) > NewUserSessionInactivityInSeconds))
+		hasMarketingProperty := U.HasDefinedMarketingProperty(&eventPropertiesMap)
+		// Balance events on the list after creating session for previous set on iteration.
 		isLastSetOfEvents := i == len(events)-1
 
 		if hasMarketingProperty || isNewSessionRequired || isLastSetOfEvents {
 			var sessionEvent *Event
 			var isSessionContinued bool
 
+			if i > 0 {
+				sessionEndIndex = i - 1
+			}
+
+			if isLastSetOfEvents {
+				sessionEndIndex = i
+			}
+
 			// Continue with the last session_id, if available. This will be true as
 			// first event will have max_timestamp (used as start_timestamp) where
 			// session_id is not null.
 			if events[sessionStartIndex].SessionId != nil {
+				// Fix for session being continued if last set of events have only
+				// an event with session_id and an event with marketing property.
+				if hasMarketingProperty && (sessionStartIndex == sessionEndIndex-1) {
+					i++
+					continue
+				}
+
 				existingSessionEvent, errCode := GetEventById(projectId,
 					*events[sessionStartIndex].SessionId)
 				if errCode != http.StatusFound {
@@ -1023,15 +1037,15 @@ func AddSessionForUser(projectId uint64, userId string, userEvents []Event,
 				noOfSessionsCreated++
 			}
 
-			// Update the session_id to all events between start index and i.
+			// Update the session_id to all events between start index and end index + 1.
 			errCode := associateSessionToEventsInBatch(projectId,
-				events[sessionStartIndex:i+1], sessionEvent.ID, 100)
+				events[sessionStartIndex:sessionEndIndex+1], sessionEvent.ID, 100)
 			if errCode == http.StatusInternalServerError {
 				logCtx.Error("Failed to associate session to events.")
 				return noOfSessionsCreated, sessionContinuedFlag, errCode
 			}
 
-			lastEventProperties, err := U.DecodePostgresJsonb(&events[i].Properties)
+			lastEventProperties, err := U.DecodePostgresJsonb(&events[sessionEndIndex].Properties)
 			if err != nil {
 				logCtx.Error("Failed to decode properties of last event of session.")
 				return noOfSessionsCreated, sessionContinuedFlag, http.StatusInternalServerError
@@ -1059,7 +1073,7 @@ func AddSessionForUser(projectId uint64, userId string, userEvents []Event,
 			} else {
 				// events from sessionStartIndex till i.
 				sessionPageCount, sessionPageSpentTime =
-					getPageCountAndTimeSpentFromEventsList(events[sessionStartIndex:i+1], sessionEvent)
+					getPageCountAndTimeSpentFromEventsList(events[sessionStartIndex:sessionEndIndex+1], sessionEvent)
 			}
 
 			if sessionPageCount > 0 {
@@ -1077,7 +1091,7 @@ func AddSessionForUser(projectId uint64, userId string, userEvents []Event,
 				return noOfSessionsCreated, sessionContinuedFlag, errCode
 			}
 
-			sessionStartIndex = i + 1
+			sessionStartIndex = i
 		}
 
 		i++
