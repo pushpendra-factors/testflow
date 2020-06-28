@@ -2,12 +2,20 @@ package tests
 
 import (
 	"encoding/json"
+	C "factors/config"
+	H "factors/handler"
+	"factors/handler/helpers"
 	M "factors/model"
 	U "factors/util"
+	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"testing"
+	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm/dialects/postgres"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -291,7 +299,7 @@ func TestUpdateDashboardUnit(t *testing.T) {
 	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
 
-	agent2, errCode := SetupAgentReturnDAO("","")
+	agent2, errCode := SetupAgentReturnDAO("", "")
 	assert.Equal(t, http.StatusCreated, errCode)
 	_, errCode = M.CreateProjectAgentMappingWithDependencies(&M.ProjectAgentMapping{
 		ProjectID: project.ID, AgentUUID: agent2.UUID})
@@ -354,4 +362,94 @@ func TestUpdateDashboardUnit(t *testing.T) {
 		_, errCode = M.UpdateDashboardUnit(project.ID, agent2.UUID, dashboard.ID, dashboardUnit.ID, &M.DashboardUnit{Title: rTitle2})
 		assert.Equal(t, http.StatusForbidden, errCode)
 	})
+}
+
+func TestCacheDashboardUnitsForProjectID(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	dashboardName := U.RandomString(5)
+	dashboard, errCode := M.CreateDashboard(project.ID, agent.UUID, &M.Dashboard{Name: dashboardName, Type: M.DashboardTypeProjectVisible})
+	assert.NotNil(t, dashboard)
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.Equal(t, dashboardName, dashboard.Name)
+
+	var query M.Query
+	queryJSON := postgres.Jsonb{json.RawMessage(`{"cl": "insights", "ec": "any_given_event", "fr": 1393612200, "to": 1396290599, "ty": "events_occurrence", "tz": "", "ewp": [{"na": "$session", "pr": []}], "gbp": [], "gbt": ""}`)}
+	U.DecodePostgresJsonbToStructType(&queryJSON, &query)
+	dashboardUnit, errCode, _ := M.CreateDashboardUnit(project.ID, agent.UUID, &M.DashboardUnit{
+		DashboardId:  dashboard.ID,
+		Title:        U.RandomString(5),
+		Query:        queryJSON,
+		Presentation: M.PresentationCard,
+	})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotNil(t, dashboardUnit)
+
+	updatedUnitsCount := M.CacheDashboardUnitsForProjectID(project.ID, 1)
+	assert.Equal(t, 1, updatedUnitsCount)
+
+	for _, rangeFunction := range U.QueryDateRangePresets {
+		query.From, query.To = rangeFunction()
+		// Refresh is sent as false. Must return all presets range from cache.
+		w := sendAnalyticsQueryReq(r, project.ID, agent, dashboard.ID, dashboardUnit.ID, query, false)
+		assert.NotNil(t, w)
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		var result map[string]interface{}
+		json.Unmarshal([]byte(w.Body.String()), &result)
+		// Cache must be true in response.
+		assert.True(t, result["cache"].(bool))
+
+		// Refresh is sent as true. Still must return from cache for all presets except for todays.
+		w = sendAnalyticsQueryReq(r, project.ID, agent, dashboard.ID, dashboardUnit.ID, query, true)
+		assert.NotNil(t, w)
+		assert.Equal(t, http.StatusOK, w.Code)
+		result = nil
+		json.Unmarshal([]byte(w.Body.String()), &result)
+		if query.From == U.GetBeginningOfDayTimestampZ(U.TimeNowUnix(), U.TimeZoneStringIST) {
+			// Today's preset. Must not be from cache.
+			assert.False(t, result["cache"].(bool))
+
+			// If queried again with refresh as false, should return from cache.
+			w := sendAnalyticsQueryReq(r, project.ID, agent, dashboard.ID, dashboardUnit.ID, query, false)
+			result = nil
+			json.Unmarshal([]byte(w.Body.String()), &result)
+			assert.True(t, result["cache"].(bool))
+		} else {
+			// Cache must be true in response.
+			assert.True(t, result["cache"].(bool))
+		}
+	}
+}
+
+func sendAnalyticsQueryReq(r *gin.Engine, projectID uint64, agent *M.Agent, dashboardID, unitID uint64, query M.Query, refresh bool) *httptest.ResponseRecorder {
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	if err != nil {
+		log.WithError(err).Error("Error creating cookie data.")
+	}
+	queryPayload := H.QueryRequestPayload{
+		Query: query,
+	}
+
+	rb := U.NewRequestBuilder(http.MethodPost, fmt.Sprintf(
+		"/projects/%d/query?dashboard_id=%d&dashboard_unit_id=%d&refresh=%v", projectID, dashboardID, unitID, refresh)).
+		WithPostParams(queryPayload).
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		})
+
+	req, err := rb.Build()
+	if err != nil {
+		log.WithError(err).Error("Error creating create dashboard_unit req.")
+	}
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	return w
 }

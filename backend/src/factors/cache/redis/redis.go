@@ -113,6 +113,34 @@ func Get(key *Key) (string, error) {
 	return redis.String(redisConn.Do("GET", cKey))
 }
 
+// MGet Function to get multiple keys from redis. Returns slice of result strings.
+func MGet(keys ...*Key) ([]string, error) {
+	var cKeys []interface{}
+	var cValues []string
+	for _, key := range keys {
+		if key == nil {
+			return cValues, ErrorInvalidKey
+		}
+		cKey, err := key.Key()
+		if err != nil {
+			return cValues, err
+		}
+		cKeys = append(cKeys, cKey)
+	}
+	redisConn := C.GetCacheRedisConnection()
+	defer redisConn.Close()
+
+	values, err := redis.Values(redisConn.Do("MGET", cKeys...))
+	if err != nil {
+		return cValues, err
+	}
+
+	if err := redis.ScanSlice(values, &cValues); err != nil {
+		return cValues, err
+	}
+	return cValues, nil
+}
+
 func Del(key *Key) error {
 	if key == nil {
 		return ErrorInvalidKey
@@ -128,4 +156,25 @@ func Del(key *Key) error {
 
 	_, err = redisConn.Do("DEL", cKey)
 	return err
+}
+
+// Exists Checks if a key exists in Redis.
+func Exists(key *Key) (bool, error) {
+	if key == nil {
+		return false, ErrorInvalidKey
+	}
+
+	cKey, err := key.Key()
+	if err != nil {
+		return false, err
+	}
+
+	redisConn := C.GetCacheRedisConnection()
+	defer redisConn.Close()
+
+	count, err := redisConn.Do("EXISTS", cKey)
+	if err != nil {
+		return false, err
+	}
+	return count.(int64) == 1, nil
 }

@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gomodule/redigo/redis"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/stretchr/testify/assert"
 )
@@ -310,7 +309,6 @@ func TestGetDashboardResutlFromCache(t *testing.T) {
 	//Cache should be empty
 	result, errCode, errMsg := M.GetCacheResultByDashboardIdAndUnitId(agent.UUID, project.ID, dashboardUnits[0].DashboardId, dashboardUnits[0].ID, from, to)
 	assert.Equal(t, http.StatusNotFound, errCode)
-	assert.Equal(t, errMsg, redis.ErrNil)
 	assert.Nil(t, result)
 
 	// Should set cache on first query with cache = false

@@ -5,11 +5,11 @@ import (
 	"errors"
 	cacheRedis "factors/cache/redis"
 	C "factors/config"
+	"fmt"
 	"net/http"
 	"sort"
 	"time"
 
-	"github.com/gomodule/redigo/redis"
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
 
@@ -320,30 +320,46 @@ func UpdateDashboard(projectId uint64, agentUUID string, id uint64, dashboard *U
 
 func GetCacheResultByDashboardIdAndUnitId(agentUUID string, projectId, dashboardId, unitId uint64, from, to int64) (*DashboardCacheResult, int, error) {
 	var cacheResult *DashboardCacheResult
+	logCtx := log.WithFields(log.Fields{
+		"Method":   "GetCacheResultByDashboardIdAndUnitId",
+		"CacheKey": fmt.Sprintf("PID:%d:DID:%d:DUID:%d", projectId, dashboardId, unitId),
+	})
 	if projectId == 0 || agentUUID == "" || dashboardId == 0 || unitId == 0 {
 		return cacheResult, http.StatusBadRequest, errors.New("invalid scope ids.")
 	}
 
-	resultCacheKey, err := getDashboardUnitResultByDashboardIDAndUnitIDCacheKey(agentUUID, projectId, dashboardId, unitId, from, to)
+	// TODO(prateek): Remove old cache once new cache changes are stable.
+	oldCacheKey, err := getDashboardUnitResultByDashboardIDAndUnitIDCacheKey(agentUUID, projectId, dashboardId, unitId, from, to)
+	if err != nil {
+		return cacheResult, http.StatusBadRequest, err
+	}
+	newCacheKey, err := getDashboardUnitQueryResultCacheKey(projectId, dashboardId, unitId, from, to)
 	if err != nil {
 		return cacheResult, http.StatusBadRequest, err
 	}
 
-	enResult, err := cacheRedis.Get(resultCacheKey)
+	results, err := cacheRedis.MGet(oldCacheKey, newCacheKey)
 	if err != nil {
-		if err == redis.ErrNil {
-			return cacheResult, http.StatusNotFound, err
-		}
+		logCtx.WithError(err).Error("Error doing MGet from redis")
 		return cacheResult, http.StatusInternalServerError, err
 	}
 
-	err = json.Unmarshal([]byte(enResult), &cacheResult)
+	if results[0] == "" && results[1] == "" {
+		return cacheResult, http.StatusNotFound, nil
+	} else if results[1] != "" {
+		// Check for the new cache key first.
+		err = json.Unmarshal([]byte(results[1]), &cacheResult)
+	} else {
+		err = json.Unmarshal([]byte(results[0]), &cacheResult)
+	}
+
 	if err != nil {
+		logCtx.WithError(err).Errorf("Error decoding redis result %v", results)
 		return cacheResult, http.StatusInternalServerError, err
 	}
 
 	if !isValidDashboardCache(to, cacheResult.To) {
-		return cacheResult, http.StatusNotFound, errors.New("invalid cache result.")
+		return cacheResult, http.StatusNotFound, errors.New("invalid cache result")
 	}
 
 	return cacheResult, http.StatusFound, nil
@@ -359,10 +375,15 @@ func SetCacheResultByDashboardIdAndUnitId(agentUUId string, result interface{}, 
 		return
 	}
 
-	resultCacheKey, err := getDashboardUnitResultByDashboardIDAndUnitIDCacheKey(agentUUId, projectId, dashboardId, unitId, from, to)
+	// TODO(prateek): Remove old cache once new caching changes are stable.
+	oldCacheKey, err := getDashboardUnitResultByDashboardIDAndUnitIDCacheKey(agentUUId, projectId, dashboardId, unitId, from, to)
 	if err != nil {
 		logctx.WithError(err).Error("Failed to getDashboardUnitResultByDashboardIDAndUnitIDCacheKey.")
 		return
+	}
+	newCacheKey, err := getDashboardUnitQueryResultCacheKey(projectId, dashboardId, unitId, from, to)
+	if err != nil {
+		logctx.WithError(err).Error("Failed to get cache key")
 	}
 
 	dashboardCacheResult := DashboardCacheResult{
@@ -377,11 +398,15 @@ func SetCacheResultByDashboardIdAndUnitId(agentUUId string, result interface{}, 
 		return
 	}
 
-	err = cacheRedis.Set(resultCacheKey, string(enDashboardCacheResult), 24*60*60) //24hrs
+	err = cacheRedis.Set(oldCacheKey, string(enDashboardCacheResult), 24*60*60) //24hrs
 	if err != nil {
 		logctx.WithError(err).Error("Failed to set cache for channel query")
 		return
-
+	}
+	err = cacheRedis.Set(newCacheKey, string(enDashboardCacheResult), 24*60*60) //24hrs
+	if err != nil {
+		logctx.WithError(err).Error("Failed to set cache for channel query")
+		return
 	}
 }
 
