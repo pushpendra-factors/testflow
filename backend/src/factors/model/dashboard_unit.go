@@ -1,11 +1,14 @@
 package model
 
 import (
+	"encoding/json"
 	cacheRedis "factors/cache/redis"
 	C "factors/config"
+	U "factors/util"
 	"fmt"
 	"math"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -119,6 +122,21 @@ func CreateDashboardUnit(projectId uint64, agentUUID string, dashboardUnit *Dash
 	return dashboardUnit, http.StatusCreated, ""
 }
 
+// GetDashboardUnitsForProjectID Returns all dashboard units for the given projectID.
+func GetDashboardUnitsForProjectID(projectID uint64) ([]DashboardUnit, int) {
+	db := C.GetServices().Db
+
+	var dashboardUnits []DashboardUnit
+	if projectID == 0 {
+		log.Errorf("Invalid project id %d", projectID)
+		return dashboardUnits, http.StatusBadRequest
+	} else if err := db.Where("project_id = ?", projectID).Find(&dashboardUnits).Error; err != nil {
+		log.WithError(err).Errorf("Failed to get dashboard units for projectID %d", projectID)
+		return dashboardUnits, http.StatusInternalServerError
+	}
+	return dashboardUnits, http.StatusFound
+}
+
 func GetDashboardUnits(projectId uint64, agentUUID string, dashboardId uint64) ([]DashboardUnit, int) {
 	db := C.GetServices().Db
 
@@ -140,6 +158,18 @@ func GetDashboardUnits(projectId uint64, agentUUID string, dashboardId uint64) (
 	}
 
 	return dashboardUnits, http.StatusFound
+}
+
+func getDashboardUnitQueryResultCacheKey(projectID, dashboardID, unitID uint64, from, to int64) (*cacheRedis.Key, error) {
+	prefix := "dashboard:query"
+	var suffix string
+	if from == U.GetBeginningOfDayTimestampZ(U.TimeNowUnix(), U.TimeZoneStringIST) {
+		// Query for today's dashboard. Use to as 'now'.
+		suffix = fmt.Sprintf("did:%d:duid:%d:from:%d:to:now", dashboardID, unitID, from)
+	} else {
+		suffix = fmt.Sprintf("did:%d:duid:%d:from:%d:to:%d", dashboardID, unitID, from, to)
+	}
+	return cacheRedis.NewKey(projectID, prefix, suffix)
 }
 
 func getDashboardUnitResultByDashboardIDAndUnitIDCacheKey(agentUUID string, projectId, dashboardID, unitId uint64, from, to int64) (*cacheRedis.Key, error) {
@@ -245,4 +275,159 @@ func UpdateDashboardUnit(projectId uint64, agentUUID string,
 
 	// returns only updated fields, avoid using it on DashboardUnit API.
 	return &updatedDashboardUnitFields, http.StatusAccepted
+}
+
+// CacheDashboardUnitsForProjects Runs for all the projectIDs passed as comma separated.
+func CacheDashboardUnitsForProjects(stringProjectsIDs string, numRoutines int) {
+	logCtx := log.WithFields(log.Fields{
+		"Method": "CacheDashboardUnitsForProjects",
+	})
+
+	allProjects, projectIDs, _ := C.GetProjectsFromListWithAllProjectSupport(stringProjectsIDs, "")
+	if allProjects {
+		var errCode int
+		projectIDs, errCode = GetAllProjectIDs()
+		if errCode != http.StatusFound {
+			return
+		}
+	}
+
+	for _, projectID := range projectIDs {
+		logCtx = logCtx.WithFields(log.Fields{"ProjectID": projectID})
+		startTime := U.TimeNowUnix()
+		unitsCount := CacheDashboardUnitsForProjectID(projectID, numRoutines)
+
+		timeTaken := U.TimeNowUnix() - startTime
+		timeTakenString := U.SecondsToHMSString(timeTaken)
+		logCtx.Infof("Time taken for caching %d dashboard units %s", unitsCount, timeTakenString)
+	}
+	return
+}
+
+// CacheDashboardUnitsForProjectID Caches all the dashboard units for the given `projectID`.
+func CacheDashboardUnitsForProjectID(projectID uint64, numRoutines int) int {
+	logCtx := log.WithFields(log.Fields{
+		"Method":    "CacheDashboardUnitsForProjectID",
+		"ProjectID": projectID,
+	})
+	if numRoutines == 0 {
+		numRoutines = 1
+	}
+
+	dashboardUnits, errCode := GetDashboardUnitsForProjectID(projectID)
+	if errCode != http.StatusFound || len(dashboardUnits) == 0 {
+		return 0
+	}
+
+	var waitGroup sync.WaitGroup
+	count := 0
+	for _, dashboardUnit := range dashboardUnits {
+		logCtx = logCtx.WithFields(log.Fields{
+			"UnitID":      dashboardUnit.ID,
+			"DashboardID": dashboardUnit.DashboardId,
+		})
+
+		waitGroup.Add(1)
+		count++
+		go CacheDashboardUnit(projectID, dashboardUnit, &waitGroup)
+		if count%numRoutines == 0 {
+			waitGroup.Wait()
+		}
+	}
+	waitGroup.Wait()
+	return len(dashboardUnits)
+}
+
+// CacheDashboardUnit Caches query for given dashboard unit for default date range presets.
+func CacheDashboardUnit(projectID uint64, dashboardUnit DashboardUnit, waitGroup *sync.WaitGroup) {
+	logCtx := log.WithFields(log.Fields{
+		"Method":      "CacheDashboardUnit",
+		"ProjectID":   projectID,
+		"DashboardID": dashboardUnit.DashboardId,
+		"UnitID":      dashboardUnit.ID,
+	})
+	defer waitGroup.Done()
+
+	var query Query
+	if err := U.DecodePostgresJsonbToStructType(&dashboardUnit.Query, &query); err != nil {
+		logCtx.WithError(err).Errorf("Failed to decode jsonb query")
+		return
+	}
+
+	for preset, rangeFunction := range U.QueryDateRangePresets {
+		query.From, query.To = rangeFunction()
+		logCtx = logCtx.WithFields(log.Fields{"Preset": preset, "From": query.From, "To": query.To})
+
+		if isDashboardUnitAlreadyCachedForRange(projectID, dashboardUnit.DashboardId, dashboardUnit.ID, query.From, query.To) {
+			continue
+		}
+
+		result, errCode, errMsg := Analyze(projectID, query)
+		if errCode != http.StatusOK {
+			logCtx.Errorf("Error while running query %s", errMsg)
+			return
+		}
+		errCode = SetCacheResultForDashboardIDAndUnitID(result, projectID, dashboardUnit.DashboardId, dashboardUnit.ID, query.From, query.To)
+		if errCode != http.StatusCreated {
+			logCtx.Errorf("Failed to set cache for query")
+			return
+		}
+	}
+	return
+}
+
+// SetCacheResultForDashboardIDAndUnitID Set's 24 hour cache for given dashboard unit id.
+func SetCacheResultForDashboardIDAndUnitID(result interface{}, projectID uint64, dashboardID uint64, unitID uint64, from, to int64) int {
+	logCtx := log.WithFields(log.Fields{
+		"Method":          "SetCacheResultForDashboardIDAndUnitID",
+		"DashboardID":     dashboardID,
+		"DashboardUnitID": unitID,
+	})
+
+	if projectID == 0 || dashboardID == 0 || unitID == 0 {
+		logCtx.Errorf("Invalid scope ids")
+	}
+
+	cacheKey, err := getDashboardUnitQueryResultCacheKey(projectID, dashboardID, unitID, from, to)
+	if err != nil {
+		logCtx.WithError(err).Errorf("Failed to get cache key")
+		return http.StatusInternalServerError
+	}
+
+	dashboardCacheResult := DashboardCacheResult{
+		Result: result,
+		From:   from,
+		To:     to,
+	}
+
+	dashboardCacheResultJSON, err := json.Marshal(dashboardCacheResult)
+	if err != nil {
+		logCtx.WithError(err).Errorf("Failed to encode result")
+		return http.StatusInternalServerError
+	}
+
+	err = cacheRedis.Set(cacheKey, string(dashboardCacheResultJSON), float64(U.SECONDS_IN_A_DAY))
+	if err != nil {
+		logCtx.WithError(err).Errorf("Failed to set cache key")
+		return http.StatusInternalServerError
+	}
+	return http.StatusCreated
+}
+
+func isDashboardUnitAlreadyCachedForRange(projectID, dashboardID, unitID uint64, from, to int64) bool {
+	if from == U.GetBeginningOfDayTimestampZ(U.TimeNowUnix(), U.TimeZoneStringIST) {
+		// If from time is of today's beginning, refresh today's everytime a request is received.
+		return false
+	}
+	cacheKey, err := getDashboardUnitQueryResultCacheKey(projectID, dashboardID, unitID, from, to)
+	if err != nil {
+		log.WithError(err).Errorf("Failed to get cache key")
+		return false
+	}
+	exists, err := cacheRedis.Exists(cacheKey)
+	if err != nil {
+		log.WithError(err).Errorf("Redis error on exists")
+		return false
+	}
+	return exists
 }

@@ -46,17 +46,18 @@ func QueryHandler(c *gin.Context) {
 	var agentUUId string
 	var err error
 	var result *M.QueryResult
+	hardRefresh := false
 	dashboardIdParam := c.Query("dashboard_id")
 	unitIdParam := c.Query("dashboard_unit_id")
+	refreshParam := c.Query("refresh")
 
-	decoder := json.NewDecoder(r.Body)
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&requestPayload); err != nil {
-		logCtx.WithError(err).Error("Query failed. Json decode failed.")
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Query failed. Json decode failed."})
-		return
+	if refreshParam != "" {
+		hardRefresh, err = strconv.ParseBool(refreshParam)
+		if err != nil {
+			c.AbortWithStatus(http.StatusBadRequest)
+			return
+		}
 	}
-
 	if dashboardIdParam != "" || unitIdParam != "" {
 		dashboardId, err = strconv.ParseUint(dashboardIdParam, 10, 64)
 		if err != nil {
@@ -68,7 +69,18 @@ func QueryHandler(c *gin.Context) {
 			c.AbortWithStatus(http.StatusBadRequest)
 			return
 		}
+	}
 
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&requestPayload); err != nil {
+		logCtx.WithError(err).Error("Query failed. Json decode failed.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Query failed. Json decode failed."})
+		return
+	}
+
+	// If refresh is passed, refresh only is Query.From is of todays beginning.
+	if (dashboardIdParam != "" || unitIdParam != "") && !isHardRefreshForToday(requestPayload.Query.From, hardRefresh) {
 		agentUUId = U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 		cacheResult, errCode, errMsg := M.GetCacheResultByDashboardIdAndUnitId(agentUUId, projectId, dashboardId, unitId, requestPayload.Query.From, requestPayload.Query.To)
 		if errCode == http.StatusFound {
@@ -100,4 +112,8 @@ func QueryHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, result)
+}
+
+func isHardRefreshForToday(from int64, hardRefresh bool) bool {
+	return from == U.GetBeginningOfDayTimestampZ(U.TimeNowUnix(), U.TimeZoneStringIST) && hardRefresh
 }

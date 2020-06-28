@@ -14,6 +14,22 @@ import (
 
 const SECONDS_IN_A_DAY int64 = 24 * 60 * 60
 
+type TimeZoneString string
+
+const (
+	TimeZoneStringIST TimeZoneString = "Asia/Kolkata"
+	TimeZoneStringUTC TimeZoneString = "UTC"
+)
+
+// QueryDateRangePresets Presets available for querying in dashboard / core query etc.
+// TODO(prateek): Currently returns in IST. Change once timezone is added in project_settings.
+var QueryDateRangePresets = map[string]func() (int64, int64){
+	"30_DAYS":   GetQueryRangePresetLast30Days,
+	"7_DAYS":    GetQueryRangePresetLast7Days,
+	"YESTERDAY": GetQueryRangePresetYesterday,
+	"TODAY":     GetQueryRangePresetToday,
+}
+
 func RandomString(n int) string {
 	rand.Seed(time.Now().UnixNano())
 
@@ -175,6 +191,48 @@ func GetBeginningOfDayTimestamp(timestamp int64) int64 {
 func GetBeginningOfDayTimestampUTC(timestamp int64) int64 {
 	t := time.Unix(timestamp, 0).UTC()
 	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location()).Unix()
+}
+
+// GetBeginningOfDayTimestampZ Get's beginning of the day timestamp in given timezone.
+func GetBeginningOfDayTimestampZ(timestamp int64, timezoneString TimeZoneString) int64 {
+	location, _ := time.LoadLocation(string(timezoneString))
+	t := time.Unix(timestamp, 0).In(location)
+	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location()).Unix()
+}
+
+// GetQueryRangePresetLast30Days Returns start and end unix timestamp for last 30 days range.
+func GetQueryRangePresetLast30Days() (int64, int64) {
+	locationIST, _ := time.LoadLocation(string(TimeZoneStringIST))
+	timeNow := time.Now().In(locationIST)
+	rangeEndTime := GetBeginningOfDayTimestampZ(timeNow.Unix(), TimeZoneStringIST) - 1
+	rangeStartTime := GetBeginningOfDayTimestampZ(timeNow.AddDate(0, 0, -30).Unix(), TimeZoneStringIST)
+	return rangeStartTime, rangeEndTime
+}
+
+// GetQueryRangePresetLast7Days Returns start and end unix timestamp for last 7 days range.
+func GetQueryRangePresetLast7Days() (int64, int64) {
+	locationIST, _ := time.LoadLocation(string(TimeZoneStringIST))
+	timeNow := time.Now().In(locationIST)
+	rangeEndTime := GetBeginningOfDayTimestampZ(timeNow.Unix(), TimeZoneStringIST) - 1
+	rangeStartTime := GetBeginningOfDayTimestampZ(timeNow.AddDate(0, 0, -7).Unix(), TimeZoneStringIST)
+	return rangeStartTime, rangeEndTime
+}
+
+// GetQueryRangePresetYesterday Returns start and end unix timestamp for yesterday's range.
+func GetQueryRangePresetYesterday() (int64, int64) {
+	locationIST, _ := time.LoadLocation(string(TimeZoneStringIST))
+	timeNow := time.Now().In(locationIST)
+	rangeEndTime := GetBeginningOfDayTimestampZ(timeNow.Unix(), TimeZoneStringIST) - 1
+	rangeStartTime := GetBeginningOfDayTimestampZ(timeNow.AddDate(0, 0, -1).Unix(), TimeZoneStringIST)
+	return rangeStartTime, rangeEndTime
+}
+
+// GetQueryRangePresetToday Returns start and end unix timestamp for today's range.
+func GetQueryRangePresetToday() (int64, int64) {
+	locationIST, _ := time.LoadLocation(string(TimeZoneStringIST))
+	timeNow := time.Now().In(locationIST)
+	rangeStartTime := GetBeginningOfDayTimestampZ(timeNow.Unix(), TimeZoneStringIST)
+	return rangeStartTime, timeNow.Unix()
 }
 
 // UnixToHumanTime Converts epoch to readable String timestamp.
