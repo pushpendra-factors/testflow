@@ -27,6 +27,7 @@ func main() {
 	projectIdsToSkipFlag := flag.String("project_ids_to_skip", "", "Optional: Comma separated values of projects to skip")
 	maxModelSizeFlag := flag.Int64("max_size", 20000000000, "Max size of the model")
 	modelType := flag.String("model_type", "all", "Optional: Model Type can take 3 values : {all, weekly, monthly}")
+	lookBackPeriodInDays := flag.Int64("look_back_days", 365, "Optional: Build projects which were build in last N days. Provide N here.")
 
 	dbHost := flag.String("db_host", "localhost", "")
 	dbPort := flag.Int("db_port", 5432, "")
@@ -121,5 +122,5 @@ func main() {
 	diskManager := serviceDisk.New(*localDiskTmpDirFlag)
 
 	_ = T.BuildSequential(*envFlag, db, &cloudManager, etcdClient, diskManager,
-		*bucketName, *numRoutinesFlag, projectIdsToRun, projectIdsToSkip, *maxModelSizeFlag, *modelType)
+		*bucketName, *numRoutinesFlag, projectIdsToRun, projectIdsToSkip, *maxModelSizeFlag, *modelType, *lookBackPeriodInDays)
 }

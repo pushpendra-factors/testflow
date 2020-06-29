@@ -332,7 +332,7 @@ go run run_build_seq.go --etcd=localhost:2379 --local_disk_tmp_dir=/usr/local/va
 
 ```bash
 # build for a specific project
-go run run_build_seq.go --etcd=localhost:2379 --local_disk_tmp_dir=/usr/local/var/factors/local_disk/tmp --bucket_name=/usr/local/var/factors/cloud_storage --project_ids=1,2 --model_type=all
+go run run_build_seq.go --etcd=localhost:2379 --local_disk_tmp_dir=/usr/local/var/factors/local_disk/tmp --bucket_name=/usr/local/var/factors/cloud_storage --project_ids=1,2 --model_type=all --look_back_days=30
 ```
 
 * Verify factors in action on Frontend.

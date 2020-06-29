@@ -41,19 +41,26 @@ type Build struct {
 var gnbLog = taskLog.WithField("prefix", "Task#GetNextBuilds")
 
 // Returns last build timestamp lookup map for each project by type.
-func makeLastBuildTimestampMap(projectData []PMM.ProjectData) *map[uint64]map[string]int64 {
+func makeLastBuildTimestampMap(projectData []PMM.ProjectData, lookBackPeriodInDays int64) *map[uint64]map[string]int64 {
+
+	//converted look back days to back dated unix time
+	lookBackPeriodInUnixSec := time.Now().Unix() - lookBackPeriodInDays*24*60*60
 	projectLatestModel := make(map[uint64]map[string]int64, 0)
 
 	for _, p := range projectData {
-		if _, exist := projectLatestModel[p.ID]; !exist {
-			projectLatestModel[p.ID] = make(map[string]int64, 0)
-		}
-		if _, exist := projectLatestModel[p.ID][p.ModelType]; !exist {
-			projectLatestModel[p.ID][p.ModelType] = 0
-		}
 
-		if p.EndTimestamp > projectLatestModel[p.ID][p.ModelType] {
-			projectLatestModel[p.ID][p.ModelType] = p.EndTimestamp
+		if p.EndTimestamp > lookBackPeriodInUnixSec {
+
+			if _, exist := projectLatestModel[p.ID]; !exist {
+				projectLatestModel[p.ID] = make(map[string]int64, 0)
+			}
+			if _, exist := projectLatestModel[p.ID][p.ModelType]; !exist {
+				projectLatestModel[p.ID][p.ModelType] = 0
+			}
+
+			if p.EndTimestamp > projectLatestModel[p.ID][p.ModelType] {
+				projectLatestModel[p.ID][p.ModelType] = p.EndTimestamp
+			}
 		}
 	}
 
@@ -146,7 +153,7 @@ func addNextIntervalsForProjectByType(builds *[]Build, projectId uint64, modelTy
 
 // GetNextBuilds - Gets next batch of intervals by project, for building models.
 func GetNextBuilds(db *gorm.DB, cloudManager *filestore.FileManager,
-	etcdClient *serviceEtcd.EtcdClient, modelType string) ([]Build, []M.ProjectEventsInfo, error) {
+	etcdClient *serviceEtcd.EtcdClient, modelType string, lookBackPeriodInDays int64) ([]Build, []M.ProjectEventsInfo, error) {
 
 	if db == nil {
 		return nil, nil, fmt.Errorf("db cannot be nil, get build info failed")
@@ -167,7 +174,7 @@ func GetNextBuilds(db *gorm.DB, cloudManager *filestore.FileManager,
 	}
 
 	// Intervals for existing projects on meta.
-	lastBuildOfProjects := makeLastBuildTimestampMap(projectsMeta)
+	lastBuildOfProjects := makeLastBuildTimestampMap(projectsMeta, lookBackPeriodInDays)
 	for pid, buildTimeByType := range *lastBuildOfProjects {
 		gnbLog.Infof("Last build info - ProjectId: %d LastBuildEndTimeByType: %+v", pid, buildTimeByType)
 		if (*projectsEventInfo)[pid] != nil {

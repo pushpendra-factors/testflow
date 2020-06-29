@@ -36,13 +36,13 @@ type BuildSuccess struct {
 func BuildSequential(env string, db *gorm.DB, cloudManager *filestore.FileManager,
 	etcdClient *serviceEtcd.EtcdClient, diskManger *serviceDisk.DiskDriver,
 	bucketName string, noOfPatternWorkers int, projectIdToRun map[uint64]bool,
-	projectIdsToSkip map[uint64]bool, maxModelSize int64, modelType string) error {
+	projectIdsToSkip map[uint64]bool, maxModelSize int64, modelType string, lookBackPeriodInDays int64) error {
 
 	defer util.NotifyOnPanic(taskID, env)
 
 	// Todo(Dinesh): Add success and failure notification.
 	// Idea: []Builds from this can be queued and workers can process.
-	builds, activeProjects, err := GetNextBuilds(db, cloudManager, etcdClient, modelType)
+	builds, activeProjects, err := GetNextBuilds(db, cloudManager, etcdClient, modelType, lookBackPeriodInDays)
 	if err != nil {
 		bsLog.WithField("error", err).Error("Failed to get next build info.")
 	}
