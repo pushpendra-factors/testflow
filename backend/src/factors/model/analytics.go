@@ -1890,7 +1890,7 @@ func sanitizeGroupByTimestampResult(result *QueryResult, query *Query) error {
 	}
 
 	// Todo: Supports only date as timestamp, add support for hour and month.
-	if len(query.GroupByProperties) == 0 {
+	if len(query.GroupByProperties) == 0 && len(query.EventsWithProperties) < 2 {
 		err = addMissingTimestampsOnResultWithoutGroupByProps(result, query, aggrIndex, timeIndex)
 	} else {
 		err = addMissingTimestampsOnResultWithGroupByProps(result, query, aggrIndex, timeIndex)
