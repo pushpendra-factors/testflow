@@ -19,8 +19,8 @@ import (
 	"strconv"
 	"strings"
 
-	U "./util"
 	log "github.com/sirupsen/logrus"
+	U "util"
 )
 
 var inputFileFlag = flag.String("input_file", "", "Input csv file.")
