@@ -299,7 +299,7 @@ func CacheDashboardUnitsForProjects(stringProjectsIDs string, numRoutines int) {
 
 		timeTaken := U.TimeNowUnix() - startTime
 		timeTakenString := U.SecondsToHMSString(timeTaken)
-		logCtx.Infof("Time taken for caching %d dashboard units %s", unitsCount, timeTakenString)
+		logCtx.WithFields(log.Fields{"TimeTaken": timeTaken}).Infof("Time taken for caching %d dashboard units %s", unitsCount, timeTakenString)
 	}
 	return
 }

@@ -69,7 +69,7 @@ func main() {
 	startTime := util.TimeNowUnix()
 	M.CacheDashboardUnitsForProjects(*projectIDFlag, *numRoutinesFlag)
 	timeTakenString := util.SecondsToHMSString(util.TimeNowUnix() - startTime)
-	notifyMessage = fmt.Sprintf("Caching successful for all projects. Time taken: %s.", timeTakenString)
+	notifyMessage = fmt.Sprintf("Caching successful for %s projects. Time taken: %s.", *projectIDFlag, timeTakenString)
 
 	util.NotifyThroughSNS("dashboard_caching", *envFlag, notifyMessage)
 }

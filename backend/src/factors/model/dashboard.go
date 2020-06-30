@@ -358,10 +358,6 @@ func GetCacheResultByDashboardIdAndUnitId(agentUUID string, projectId, dashboard
 		return cacheResult, http.StatusInternalServerError, err
 	}
 
-	if !isValidDashboardCache(to, cacheResult.To) {
-		return cacheResult, http.StatusNotFound, errors.New("invalid cache result")
-	}
-
 	return cacheResult, http.StatusFound, nil
 }
 
@@ -408,9 +404,4 @@ func SetCacheResultByDashboardIdAndUnitId(agentUUId string, result interface{}, 
 		logctx.WithError(err).Error("Failed to set cache for channel query")
 		return
 	}
-}
-
-//IsValidDashboardCache returns true if cacheResult falls within tolerable time range
-func isValidDashboardCache(queryPayloadTo, cacheResultTo int64) bool {
-	return queryPayloadTo-cacheResultTo >= 0 && queryPayloadTo-cacheResultTo < 60*60 //1hr time range
 }

@@ -369,13 +369,4 @@ func TestGetDashboardResutlFromCache(t *testing.T) {
 	err = json.Unmarshal(w.Body.Bytes(), &decChannelResult)
 	assert.Nil(t, err)
 	assert.Equal(t, true, decChannelResult.Cache)
-
-	// Cache should be false beyond 1hr time shift
-	query1.From = query1.From + 61*60 //61 min
-	query1.To = query1.To + 61*60     //61 min
-	w = sendGetDashboardUnitResult(r, project.ID, agent, dashboardUnits[0].DashboardId, dashboardUnits[0].ID, &gin.H{"query": query1})
-	assert.Equal(t, http.StatusOK, w.Code)
-	err = json.Unmarshal(w.Body.Bytes(), &decResult)
-	assert.Nil(t, err)
-	assert.Equal(t, false, decResult.Cache)
 }
