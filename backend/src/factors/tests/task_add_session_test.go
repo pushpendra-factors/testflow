@@ -15,20 +15,32 @@ import (
 	U "factors/util"
 )
 
-func assertAssociatedSession(t *testing.T, projectId uint64, eventIds []string,
-	message string) (sessionEvent *M.Event) {
+func assertAssociatedSession(t *testing.T, projectId uint64, eventIdsInOrder []string,
+	skipSessionEventIds []string, message string) (sessionEvent *M.Event) {
 
 	var firstEvent *M.Event
-	for i, eventId := range eventIds {
+	for i, eventId := range eventIdsInOrder {
 		event, errCode := M.GetEventById(projectId, eventId)
 		assert.Equal(t, http.StatusFound, errCode, message)
-		assert.NotNil(t, event.SessionId, message)
 
 		if i == 0 {
+			assert.NotNil(t, event.SessionId, message)
 			firstEvent = event
 		}
 
 		if i > 0 {
+			var skipped bool
+			for _, seid := range skipSessionEventIds {
+				if seid == eventId {
+					assert.Nil(t, event.SessionId, message)
+					skipped = true
+				}
+			}
+
+			if skipped {
+				continue
+			}
+
 			// all event should have same session id.
 			assert.Equal(t, *firstEvent.SessionId, *event.SessionId, message)
 		}
@@ -51,7 +63,7 @@ func TestAddSession(t *testing.T) {
 
 	maxLookbackTimestamp := U.UnixTimeBeforeDuration(31 * 24 * time.Hour)
 
-	// Test: New user with one event.
+	// Test: New user with one event and one skip_session event.
 	timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
 	randomEventName := U.RandomLowerAphaNumString(10)
 	trackEventProperties := U.PropertiesMap{
@@ -79,10 +91,22 @@ func TestAddSession(t *testing.T) {
 	_, errCode := M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
 	assert.Equal(t, http.StatusNotFound, errCode)
 
+	timestamp = timestamp + 2
+	trackPayload = SDK.TrackPayload{
+		Name:      "non_web_event",
+		Timestamp: timestamp,
+		UserId:    userId,
+	}
+	// skip session event.
+	status, response = SDK.Track(project.ID, &trackPayload, true)
+	assert.Equal(t, http.StatusOK, status)
+	skipSessionEventId := response.EventId
+
 	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 30, 1)
 	assert.Nil(t, err)
 
-	sessionEvent1 := assertAssociatedSession(t, project.ID, []string{eventId}, "Session 1")
+	sessionEvent1 := assertAssociatedSession(t, project.ID, []string{eventId, skipSessionEventId},
+		[]string{skipSessionEventId}, "Session 1")
 	// session event properties added from event properties.
 	lsEventProperties1, err := U.DecodePostgresJsonb(&sessionEvent1.Properties)
 	assert.Nil(t, err)
@@ -149,6 +173,16 @@ func TestAddSession(t *testing.T) {
 	assert.Equal(t, http.StatusOK, status)
 	eventId3 := response.EventId
 
+	timestamp = timestamp + 2
+	trackPayload = SDK.TrackPayload{
+		Name:      "non_web_event",
+		Timestamp: timestamp,
+		UserId:    userId,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, true) // skip session.
+	assert.Equal(t, http.StatusOK, status)
+	skipSessionEventId1 := response.EventId
+
 	timestamp = timestamp + 1
 	randomEventName = U.RandomLowerAphaNumString(10)
 	trackEventProperties4 := U.PropertiesMap{
@@ -173,7 +207,8 @@ func TestAddSession(t *testing.T) {
 	// event 3 and 4 because of inactivity.
 
 	// event 1 and 2 should have continued session.
-	sessionEvent1 = assertAssociatedSession(t, project.ID, []string{eventId, eventId1, eventId2}, "Session 1 continued.")
+	sessionEvent1 = assertAssociatedSession(t, project.ID, []string{eventId, eventId1, eventId2},
+		[]string{}, "Session 1 continued.")
 	// last session's properties should be updated after continuing the same session.
 	lsEventProperties1, err = U.DecodePostgresJsonb(&sessionEvent1.Properties)
 	assert.Nil(t, err)
@@ -183,10 +218,12 @@ func TestAddSession(t *testing.T) {
 	assert.Equal(t, trackEventProperties2[U.EP_PAGE_URL], (*lsEventProperties1)[U.SP_LATEST_PAGE_URL])
 	assert.Equal(t, trackEventProperties2[U.EP_PAGE_RAW_URL], (*lsEventProperties1)[U.SP_LATEST_PAGE_RAW_URL])
 	assert.Equal(t, float64(3), (*lsEventProperties1)[U.SP_PAGE_COUNT])
-	assert.Equal(t, float64(3), (*lsEventProperties1)[U.SP_SPENT_TIME])
+	assert.Equal(t, float64(5), (*lsEventProperties1)[U.SP_SPENT_TIME])
 
-	// event 3 and 4 should create new session.
-	sessionEvent2 := assertAssociatedSession(t, project.ID, []string{eventId3, eventId4}, "Session 2")
+	// event 3 and skip session event 1 and event 4 should create new session,
+	// without considering skip session event 1.
+	sessionEvent2 := assertAssociatedSession(t, project.ID, []string{eventId3, skipSessionEventId1, eventId4},
+		[]string{skipSessionEventId1}, "Session 2")
 	assert.NotEqual(t, sessionEvent1.ID, sessionEvent2.ID)
 	// event properties of new session created after inactivity.
 	lsEventProperties2, err := U.DecodePostgresJsonb(&sessionEvent2.Properties)
@@ -197,7 +234,7 @@ func TestAddSession(t *testing.T) {
 	assert.Equal(t, trackEventProperties4[U.EP_PAGE_URL], (*lsEventProperties2)[U.SP_LATEST_PAGE_URL])
 	assert.Equal(t, trackEventProperties4[U.EP_PAGE_RAW_URL], (*lsEventProperties2)[U.SP_LATEST_PAGE_RAW_URL])
 	assert.Equal(t, float64(2), (*lsEventProperties2)[U.SP_PAGE_COUNT])
-	assert.Equal(t, float64(2), (*lsEventProperties2)[U.SP_SPENT_TIME])
+	assert.Equal(t, float64(4), (*lsEventProperties2)[U.SP_SPENT_TIME])
 
 	// Test: Create new session for event with marketing property,
 	// followed by other events, even though there was continuos
@@ -231,7 +268,8 @@ func TestAddSession(t *testing.T) {
 	assert.Nil(t, err)
 
 	// should have created session as campaign property exist.
-	sessionEvent3 := assertAssociatedSession(t, project.ID, []string{eventId5, eventId6}, "Session 3")
+	sessionEvent3 := assertAssociatedSession(t, project.ID, []string{eventId5, eventId6},
+		[]string{}, "Session 3")
 	assert.NotEqual(t, sessionEvent2.ID, sessionEvent3.ID)
 
 	// Test: Last event with marketing property.
@@ -269,7 +307,7 @@ func TestAddSession(t *testing.T) {
 	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 30, 1)
 	assert.Nil(t, err)
 	// New session should be created after a new event.
-	sessionEvent4 := assertAssociatedSession(t, project.ID, []string{eventId7, eventId8}, "Session 4")
+	sessionEvent4 := assertAssociatedSession(t, project.ID, []string{eventId7, eventId8}, []string{}, "Session 4")
 	assert.NotEqual(t, sessionEvent3.ID, sessionEvent4.ID)
 
 	// Test: Project with no events and all events with session already.
@@ -282,6 +320,8 @@ func TestAddSessionCreationBufferTime(t *testing.T) {
 	project, _, err := SetupProjectUserReturnDAO()
 	assert.Nil(t, err)
 
+	C.GetConfig().SkipSessionProjectIds = fmt.Sprintf("%d", project.ID)
+
 	// Event before session buffer time.
 	timestamp := U.UnixTimeBeforeDuration(time.Minute * 35)
 	randomEventName := U.RandomLowerAphaNumString(10)
@@ -289,7 +329,7 @@ func TestAddSessionCreationBufferTime(t *testing.T) {
 		Name:      randomEventName,
 		Timestamp: timestamp,
 	}
-	status, response := SDK.Track(project.ID, &trackPayload, true) // true: skips session.
+	status, response := SDK.Track(project.ID, &trackPayload, false) // true: skips session.
 	assert.Equal(t, http.StatusOK, status)
 	assert.NotEmpty(t, response.UserId)
 	eventId := response.EventId
@@ -301,7 +341,7 @@ func TestAddSessionCreationBufferTime(t *testing.T) {
 		Timestamp: timestamp,
 		UserId:    userId,
 	}
-	status, response = SDK.Track(project.ID, &trackPayload, true) // true: skips session.
+	status, response = SDK.Track(project.ID, &trackPayload, false) // true: skips session.
 	assert.Equal(t, http.StatusOK, status)
 	eventId1 := response.EventId
 
@@ -311,7 +351,7 @@ func TestAddSessionCreationBufferTime(t *testing.T) {
 		Timestamp: timestamp,
 		UserId:    userId,
 	}
-	status, response = SDK.Track(project.ID, &trackPayload, true) // true: skips session.
+	status, response = SDK.Track(project.ID, &trackPayload, false) // true: skips session.
 	assert.Equal(t, http.StatusOK, status)
 	eventId2 := response.EventId
 

@@ -90,6 +90,7 @@ var PROPERTIES_TYPE_DATE_TIME = [...]string{
 var EP_INTERNAL_IP string = "$ip"
 var EP_LOCATION_LATITUDE string = "$location_lat"
 var EP_LOCATION_LONGITUDE string = "$location_lng"
+var EP_SKIP_SESSION string = "$skip_session"
 var EP_PAGE_TITLE string = "$page_title"
 var EP_PAGE_DOMAIN string = "$page_domain"
 var EP_PAGE_RAW_URL string = "$page_raw_url"
@@ -235,6 +236,7 @@ var SDK_ALLOWED_EVENT_PROPERTIES = [...]string{
 	EP_INTERNAL_IP,
 	EP_LOCATION_LATITUDE,
 	EP_LOCATION_LONGITUDE,
+	EP_SKIP_SESSION,
 	EP_SEGMENT_EVENT_VERSION,
 	EP_PAGE_TITLE,
 	EP_PAGE_DOMAIN,
@@ -285,6 +287,7 @@ var INTERNAL_EVENT_PROPERTIES = [...]string{
 	EP_INTERNAL_IP,
 	EP_LOCATION_LATITUDE,
 	EP_LOCATION_LONGITUDE,
+	EP_SKIP_SESSION,
 }
 
 var SDK_ALLOWED_USER_PROPERTIES = [...]string{
@@ -740,6 +743,11 @@ var USER_PROPERTIES_MERGE_TYPE_ADD = [...]string{
 }
 
 const SamplePropertyValuesLimit = 100
+
+// defined property values.
+// single letter bool value alias to save space.
+const PROPERTY_VALUE_TRUE = "t"
+const PROPERTY_VALUE_FALSE = "f"
 
 // Properties should be present always, mainly for queries.
 var MandatoryDefaultUserPropertiesByType = map[string][]string{

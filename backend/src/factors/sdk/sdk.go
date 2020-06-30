@@ -243,7 +243,7 @@ func enrichAfterTrack(projectId uint64, event *M.Event,
 	return http.StatusOK
 }
 
-func isSessionRequired(skipSession bool, projectId uint64, skipProjectIds []uint64) bool {
+func isRealtimeSessionRequired(skipSession bool, projectId uint64, skipProjectIds []uint64) bool {
 	if skipSession {
 		return false
 	}
@@ -472,10 +472,15 @@ func Track(projectId uint64, request *TrackPayload, skipSession bool) (int, *Tra
 		UserPropertiesId: userPropertiesId,
 	}
 
-	skipSessionForAllProjects, skipSessionProjectIds := C.GetSkipSessionProjects()
-	skipSession = skipSession || skipSessionForAllProjects
+	// Property used as flag for skipping session on offline session worker.
+	if skipSession {
+		(*eventProperties)[U.EP_SKIP_SESSION] = U.PROPERTY_VALUE_TRUE
+	}
 
-	if isSessionRequired(skipSession, projectId, skipSessionProjectIds) {
+	skipSessionForAllProjects, skipSessionProjectIds := C.GetSkipSessionProjects()
+	skipSessionRealtime := skipSession || skipSessionForAllProjects
+
+	if isRealtimeSessionRequired(skipSessionRealtime, projectId, skipSessionProjectIds) {
 		session, errCode := M.CreateOrGetSessionEvent(projectId, request.UserId,
 			isNewUser, hasDefinedMarketingProperty, request.Timestamp,
 			eventProperties, userProperties, userPropertiesId)

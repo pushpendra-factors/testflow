@@ -523,7 +523,7 @@ func GetUserEventsByEventNameId(projectId uint64, userId string, eventNameId uin
 	return events, http.StatusFound
 }
 
-func getPageCountAndTimeSpentFromEventsList(events []Event, sessionEvent *Event) (int64, float64) {
+func getPageCountAndTimeSpentFromEventsList(events []*Event, sessionEvent *Event) (int64, float64) {
 	if len(events) == 0 {
 		return 0, 0
 	}
@@ -821,13 +821,30 @@ func EnrichUserPropertiesWithSessionProperties(projectId uint64, userId string,
 	return OverwriteUserProperties(projectId, userId, userPropertiesId, userPropertiesJsonb)
 }
 
-func filterEventsBetweenTimestamp(events []Event, startTimestamp,
-	endTimestamp int64) []Event {
+func filterEventsForSession(events []Event,
+	startTimestamp, endTimestamp int64) []*Event {
 
-	filteredEvents := make([]Event, 0, 0)
+	filteredEvents := make([]*Event, 0, 0)
 	for i := range events {
 		if events[i].Timestamp >= startTimestamp && events[i].Timestamp <= endTimestamp {
-			filteredEvents = append(filteredEvents, events[i])
+			// Todo(Dinesh): Avoid decoding event properties multiple times.
+			// Decode once and use it on add_session also.
+			properties, err := U.DecodePostgresJsonb(&events[i].Properties)
+			if err != nil {
+				// log and consider event for session addition, if properties decode fails.
+				log.WithField("project_id", events[i].ProjectId).
+					WithField("event_id", events[i].ID).
+					Error("Failed to decode event properties on filter events.")
+			}
+
+			// skip event for session addition, if skip_session is set to true.
+			value, exists := (*properties)[U.EP_SKIP_SESSION]
+			if exists && value == U.PROPERTY_VALUE_TRUE {
+				continue
+			}
+
+			// Using address as append doesn't use ref by default.
+			filteredEvents = append(filteredEvents, &events[i])
 		}
 	}
 
@@ -856,12 +873,13 @@ func associateSessionByEventIds(projectId uint64, eventIds []string, sessionId s
 	return http.StatusAccepted
 }
 
-func associateSessionToEventsInBatch(projectId uint64, events []Event,
+func associateSessionToEventsInBatch(projectId uint64, events []*Event,
 	sessionId string, batchSize int) int {
 
 	eventIds := make([]string, 0, len(events))
 	for i := range events {
-		eventIds = append(eventIds, events[i].ID)
+		event := *events[i]
+		eventIds = append(eventIds, event.ID)
 	}
 
 	batchEventIds := U.GetStringListAsBatch(eventIds, batchSize)
@@ -908,7 +926,7 @@ func AddSessionForUser(projectId uint64, userId string, userEvents []Event,
 		endTimestamp = latestUserEvent.Timestamp
 	}
 
-	events := filterEventsBetweenTimestamp(userEvents, startTimestamp, endTimestamp)
+	events := filterEventsForSession(userEvents, startTimestamp, endTimestamp)
 	if len(events) == 0 {
 		return 0, false, http.StatusNotModified
 	}

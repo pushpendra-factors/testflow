@@ -41,8 +41,9 @@ func getNextSessionInfoFromDB(projectId uint64, withSession bool, sessionEventNa
 
 	db := C.GetServices().Db
 	query := db.Table("events").Group("user_id").
-		Where(fmt.Sprintf("project_id = ? AND event_name_id != ? AND session_id IS %s",
-			sessionExistStr), projectId, sessionEventNameId).
+		Where("project_id = ? AND event_name_id != ?", projectId, sessionEventNameId).
+		Where(fmt.Sprintf("session_id IS %s AND properties->>'%s' IS NULL",
+			sessionExistStr, U.EP_SKIP_SESSION)).
 		Select(selectStmnt)
 
 	if maxLookbackTimestamp > 0 {
@@ -158,6 +159,7 @@ func getAllEventsAsUserEventsMap(projectId, sessionEventNameId uint64,
 		logCtx.Error("Too much time taken to download events on get_all_events_as_user_map.")
 	}
 
+	// Todo(Dinesh): Build user events map on scan row, to save memory.
 	userEventsMap = make(map[string][]M.Event)
 	for i := range events {
 		if _, exists := userEventsMap[events[i].UserId]; !exists {
