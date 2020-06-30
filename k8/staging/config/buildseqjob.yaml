@@ -7,3 +7,5 @@ metadata:
     project: factors-staging
 data:
   NUM_ROUTINES: "3"
+  LOOK_BACK_DAYS: "30"
+  MODEL_TYPE: "weekly"

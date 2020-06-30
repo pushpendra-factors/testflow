@@ -40,6 +40,10 @@ spec:
             - $(POSTGRES_PASSWORD)
             - --num_routines
             - $(NUM_ROUTINES)
+            - --model_type
+            - $(MODEL_TYPE)
+            - --look_back_days
+            - $(LOOK_BACK_DAYS)
             - --project_ids_to_skip
             - "11"
             envFrom:
