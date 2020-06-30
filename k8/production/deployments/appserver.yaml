@@ -104,6 +104,8 @@ spec:
           - $(FACEBOOK_APP_ID)
           - --facebook_app_secret
           - $(FACEBOOK_APP_SECRET)
+          - --skip_session_project_ids
+          - $(OFFLINE_SESSION_PROJECT_IDS)
         env:
           - name: MY_POD_IP
             valueFrom:
@@ -121,6 +123,8 @@ spec:
             name: config-postgres
         - configMapRef:
             name: config-redis
+        - configMapRef:
+            name: config-add-session-job
         - secretRef:
             name: secret-postgres
         - secretRef:
