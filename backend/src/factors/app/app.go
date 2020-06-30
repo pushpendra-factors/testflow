@@ -50,6 +50,9 @@ func main() {
 	facebookAppId := flag.String("facebook_app_id", "", "")
 	facebookAppSecret := flag.String("facebook_app_secret", "", "")
 
+	skipSessionProjectIds := flag.String("skip_session_project_ids",
+		"", "List or projects to skip session creation.")
+
 	flag.Parse()
 
 	config := &C.Configuration{
@@ -81,6 +84,7 @@ func main() {
 		FacebookAppSecret:      *facebookAppSecret,
 		LoginTokenMap:          C.ParseConfigStringToMap(*loginTokenMap),                // Map of "<token>": "<agent_email>".
 		SkipTrackProjectIds:    C.GetTokensFromStringListAsUint64(*skipTrackProjectIds), // comma seperated project ids.
+		SkipSessionProjectIds:  *skipSessionProjectIds,                                  // comma seperated project ids, supports "*".
 	}
 
 	// Initialize configs and connections.
