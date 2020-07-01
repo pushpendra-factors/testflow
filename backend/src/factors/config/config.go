@@ -1,5 +1,6 @@
 package config
 
+import "C"
 import (
 	"fmt"
 	"strconv"
@@ -686,10 +687,10 @@ else:
 Returns: allProject flag, list of allowed & disallowed and map of allowed & disallowed projects
 */
 func GetProjectsFromListWithAllProjectSupport(projectIdsList,
-	disallowedProjectIdsList string) (allProjects bool, allowedProjectIds, skipProjectIds []uint64, allowedMap, disallowedMap map[uint64]bool) {
-
+	disallowedProjectIdsList string) (allProjects bool, allowedMap, disallowedMap map[uint64]bool) {
+	//allowedProjectIds, skipProjectIds []uint64,
 	disallowedProjectIdsList = strings.TrimSpace(disallowedProjectIdsList)
-	skipProjectIds = GetTokensFromStringListAsUint64(disallowedProjectIdsList)
+	skipProjectIds := GetTokensFromStringListAsUint64(disallowedProjectIdsList)
 
 	disallowedMap = make(map[uint64]bool)
 	for i := range skipProjectIds {
@@ -698,12 +699,12 @@ func GetProjectsFromListWithAllProjectSupport(projectIdsList,
 
 	projectIdsList = strings.TrimSpace(projectIdsList)
 	if projectIdsList == "*" {
-		return true, []uint64{}, skipProjectIds, map[uint64]bool{}, disallowedMap
+		return true, map[uint64]bool{}, disallowedMap
 	}
 
 	projectIds := GetTokensFromStringListAsUint64(projectIdsList)
 
-	allowedProjectIds = make([]uint64, 0, len(projectIds))
+	allowedProjectIds := make([]uint64, 0, len(projectIds))
 	for i, cpid := range projectIds {
 		//Prioritizing the skip list over project list!
 		if _, exists := disallowedMap[cpid]; !exists {
@@ -716,11 +717,21 @@ func GetProjectsFromListWithAllProjectSupport(projectIdsList,
 		allowedMap[allowedProjectIds[i]] = true
 	}
 
-	return false, allowedProjectIds, skipProjectIds, allowedMap, disallowedMap
+	return false, allowedMap, disallowedMap
+}
+
+func ProjectIdsFromProjectIdBoolMap(mp map[uint64]bool) []uint64 {
+
+	keys := make([]uint64, 0, len(mp))
+	for k := range mp {
+		keys = append(keys, k)
+	}
+	return keys
 }
 
 func GetSkipSessionProjects() (allProjects bool, projectIds []uint64) {
-	allProjects, projectIds, _, _, _ = GetProjectsFromListWithAllProjectSupport(
+	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(
 		configuration.SkipSessionProjectIds, "")
+	projectIds = ProjectIdsFromProjectIdBoolMap(projectIDsMap)
 	return allProjects, projectIds
 }

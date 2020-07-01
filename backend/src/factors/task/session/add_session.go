@@ -263,15 +263,17 @@ func addSessionByProjectId(projectId uint64, maxLookbackTimestamp,
 }
 
 func GetAddSessionAllowedProjects(allowedProjectsList, disallowedProjectsList string) ([]uint64, int) {
-	isAllProjects, projectsList, skipProjectIds, _, _ := C.GetProjectsFromListWithAllProjectSupport(
+	isAllProjects, projectIDsMap, skipProjectIdMap := C.GetProjectsFromListWithAllProjectSupport(
 		allowedProjectsList, disallowedProjectsList)
 
+	projectIDs := C.ProjectIdsFromProjectIdBoolMap(projectIDsMap)
+
 	if !isAllProjects {
-		if len(projectsList) == 0 {
-			return projectsList, http.StatusNotFound
+		if len(projectIDs) == 0 {
+			return projectIDs, http.StatusNotFound
 		}
 
-		return projectsList, http.StatusFound
+		return projectIDs, http.StatusFound
 	}
 
 	projectIds, errCode := M.GetAllProjectIDs()
@@ -283,15 +285,9 @@ func GetAddSessionAllowedProjects(allowedProjectsList, disallowedProjectsList st
 		return projectIds, http.StatusFound
 	}
 
-	// Remove the disallowed list of projects from all projects.
-	disallowedMap := make(map[uint64]bool)
-	for i := range skipProjectIds {
-		disallowedMap[skipProjectIds[i]] = true
-	}
-
 	allowedProjectIds := make([]uint64, 0, len(projectIds))
 	for i, cpid := range projectIds {
-		if _, exists := disallowedMap[cpid]; !exists {
+		if _, exists := skipProjectIdMap[cpid]; !exists {
 			allowedProjectIds = append(allowedProjectIds, projectIds[i])
 		}
 	}
