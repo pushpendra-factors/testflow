@@ -39,7 +39,6 @@ type QueryEventWithProperties struct {
 	Name       string          `json:"na"`
 	Properties []QueryProperty `json:"pr"`
 }
-
 type Query struct {
 	Class                string                     `json:"cl"`
 	Type                 string                     `json:"ty"`
@@ -51,7 +50,9 @@ type Query struct {
 	From                 int64                      `json:"fr"`
 	To                   int64                      `json:"to"`
 	// Deprecated: Keeping it for old dashboard units.
-	OverridePeriod bool `json:"ovp"`
+	OverridePeriod    bool  `json:"ovp"`
+	SessionStartEvent int64 `json:"sse"`
+	SessionEndEvent   int64 `json:"see"`
 }
 
 type QueryResutlMeta struct {
@@ -1221,6 +1222,58 @@ SELECT * FROM (
 	FROM funnel GROUP BY _group_key_0, _group_key_1, _group_key_2 ORDER BY step_0 DESC LIMIT 100
 ) AS group_funnel
 */
+/*
+buildFunnelQuery with session analysis
+
+WITH
+step_0_names AS (
+	SELECT id, project_id, name FROM event_names WHERE project_id='8584' AND name='View Project'
+),
+step_0 AS (
+	SELECT DISTINCT ON(events.user_id) events.user_id as user_id, events.timestamp,
+	events.session_id as session_id FROM events WHERE events.project_id='8584' AND
+	timestamp>='1393612200' AND timestamp<='1396290599' AND events.event_name_id IN
+	(SELECT id FROM step_0_names WHERE project_id='8584' AND name='View Project')
+	ORDER BY events.user_id, events.timestamp ASC
+),
+step_0_users AS (
+	SELECT DISTINCT ON(COALESCE(users.customer_user_id, step_0.user_id))
+	COALESCE(users.customer_user_id, step_0.user_id) as coal_user_id,
+	users.id as user_id, step_0.timestamp as step_0_timestamp, step_0.session_id as step_0_session_id,
+	1 as step_0 FROM step_0 JOIN users ON step_0.user_id=users.id ORDER BY coal_user_id, step_0_timestamp ASC
+),
+step_1_names AS (
+	SELECT id, project_id, name FROM event_names WHERE project_id='8584' AND name='Fund Project'
+),
+step_1 AS (
+	SELECT DISTINCT ON(events.user_id) events.user_id as user_id, events.timestamp,
+	events.session_id as session_id FROM events WHERE events.project_id='8584' AND timestamp>='1393612200'
+	AND timestamp<='1396290599' AND events.event_name_id IN (SELECT id FROM step_1_names WHERE project_id='8584'
+	AND name='Fund Project') ORDER BY events.user_id, events.timestamp ASC
+),
+step_1_users AS (
+	SELECT DISTINCT ON(COALESCE(users.customer_user_id, step_1.user_id))
+	COALESCE(users.customer_user_id, step_1.user_id) as coal_user_id, users.id as user_id,
+	step_1.timestamp as step_1_timestamp, step_1.session_id as step_1_session_id, 1 as step_1
+	FROM step_1 JOIN users ON step_1.user_id=users.id ORDER BY coal_user_id, step_1_timestamp ASC
+),
+step_1_step_0_users AS (
+	SELECT step_0_users.coal_user_id, step_1_users.user_id, step_1 FROM step_0_users LEFT JOIN
+	step_1_users ON step_0_users.coal_user_id = step_1_users.coal_user_id WHERE
+	step_1_timestamp > step_0_timestamp and step_0_session_id = step_1_session_id
+),
+funnel AS (
+	SELECT step_0, step_1 FROM step_0_users LEFT JOIN users on step_0_users.user_id=users.id
+	LEFT JOIN step_1_step_0_users ON step_0_users.coal_user_id=step_1_step_0_users.coal_user_id
+)
+SELECT SUM(step_0) AS step_0, SUM(step_1) AS step_1 FROM funnel;
+*/
+func isSessionAnalysisReq(start int64, end int64) bool {
+	if start != 0 && end != 0 && start < end {
+		return true
+	}
+	return false
+}
 func buildUniqueUsersFunnelQuery(projectId uint64, q Query) (string, []interface{}, error) {
 	if len(q.EventsWithProperties) == 0 {
 		return "", nil, errors.New("invalid no.of events for funnel query")
@@ -1234,8 +1287,12 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q Query) (string, []interface
 		var addParams []interface{}
 		stepName := stepNameByIndex(i)
 
+		isSessionAnalysisReqBool := isSessionAnalysisReq(q.SessionStartEvent, q.SessionEndEvent)
 		// Unique users from events filter.
 		addSelect := "DISTINCT ON(events.user_id) events.user_id as user_id, events.timestamp"
+		if isSessionAnalysisReqBool && i >= int(q.SessionStartEvent)-1 && i < int(q.SessionEndEvent) {
+			addSelect = addSelect + ", events.session_id as session_id"
+		}
 		egSelect, egParams, egGroupKeys := buildEventGroupKeyForStep(
 			&q.EventsWithProperties[i], q.GroupByProperties)
 		if egSelect != "" {
@@ -1248,6 +1305,11 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q Query) (string, []interface
 		// step_x_users - step with users joined for COALESCE user_id.
 		stepJoinUsersSelect := fmt.Sprintf("DISTINCT ON(COALESCE(users.customer_user_id, %s.user_id)) COALESCE(users.customer_user_id, %s.user_id) as coal_user_id, users.id as user_id, %s.timestamp as %s_timestamp, 1 as %s",
 			stepName, stepName, stepName, stepName, stepName)
+
+		if isSessionAnalysisReqBool && i >= int(q.SessionStartEvent)-1 && i < int(q.SessionEndEvent) {
+			stepJoinUsersSelect = fmt.Sprintf("%s , %s.session_id as %s_session_id",
+				stepJoinUsersSelect, stepName, stepName)
+		}
 		if egGroupKeys != "" {
 			stepJoinUsersSelect = joinWithComma(stepJoinUsersSelect, egGroupKeys)
 		}
@@ -1277,6 +1339,11 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q Query) (string, []interface
 
 		stepXToYJoin := fmt.Sprintf("LEFT JOIN %s_users ON %s_users.coal_user_id = %s_users.coal_user_id WHERE %s_timestamp > %s_timestamp",
 			stepName, prevStepName, stepName, stepName, prevStepName)
+		if isSessionAnalysisReqBool && i >= int(q.SessionStartEvent) && i < int(q.SessionEndEvent) {
+			stepXToYJoin = fmt.Sprintf("%s and %s_session_id = %s_session_id",
+				stepXToYJoin, stepName, prevStepName)
+		}
+
 		stepXToY := fmt.Sprintf("SELECT %s FROM %s_users %s", stepXToYSelect, prevStepName, stepXToYJoin)
 		qStmnt = joinWithComma(qStmnt, as(stepXToYName, stepXToY))
 		funnelSteps = append(funnelSteps, stepXToYName)

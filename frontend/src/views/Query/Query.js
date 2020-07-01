@@ -135,6 +135,8 @@ class Query extends Component {
       events: [],
       groupBys: [],
       resultDateRange: [DEFAULT_DATE_RANGE],
+      sessionStartEvent: 0,
+      sessionEndEvent: 0,
 
       result: null,
       resultError: null,
@@ -525,6 +527,8 @@ class Query extends Component {
 
     let timezone = this.state.timeZone;
     query.tz = (!toSave && timezone && timezone != '') ? timezone : '';
+    query.sse = this.state.sessionStartEvent.value
+    query.see = this.state.sessionEndEvent.value
   
     return query
   }
@@ -820,6 +824,59 @@ class Query extends Component {
     </Row>
 
     return [events, addEventButton];
+  }
+
+  getSessionOpts = () => {
+    let sessionOpts = []
+    for ( let i = 0; i<this.state.events.length; i++) {
+      let opt = {}
+      opt.value = i+1;
+      opt.label = i+1;
+      sessionOpts.push(opt)
+    }
+    return sessionOpts
+  }
+  handleSessionStartChange=(e) => {
+    let sessionStartEvent = {...this.state.sessionStartEvent}
+    sessionStartEvent = e
+    this.setState({
+      sessionStartEvent: sessionStartEvent
+    })
+  }
+
+  handleSessionEndChange=(e) => {
+    let sessionEndEvent = {...this.state.sessionEndEvent}
+    sessionEndEvent = e
+    this.setState({
+      sessionEndEvent: sessionEndEvent
+    })
+  }
+  renderInSessionDropdown =()=> {
+    return (
+        <Row style={{marginBottom: '15px'}}>
+          <Col xs='12' md='12'>        
+            <span style={LABEL_STYLE}> Ensuring event </span>
+            <div style={{display: 'inline-block', width: '168px', marginRight: '10px'}} className='fapp-select light'>
+              <Select
+                value={this.state.sessionStartEvent}
+                onChange={this.handleSessionStartChange}
+                options={this.getSessionOpts()}
+                placeholder='Event number'
+              />
+            </div>
+            <span style={LABEL_STYLE} > to </span>
+            <div style={{display: 'inline-block', width: '168px', marginRight: '10px'}} className='fapp-select light'>
+              <Select
+                value={this.state.sessionEndEvent}
+                onChange={this.handleSessionEndChange}
+                options={this.getSessionOpts()}
+                placeholder='Event number'
+              />
+            </div>
+            <span style={LABEL_STYLE} > happened in the same session </span>
+          </Col>
+        </Row>
+    );
   }
 
   closeDatePicker = () => {
@@ -1217,6 +1274,7 @@ class Query extends Component {
         </Row>
 
         { this.renderEventsWithProperties() }
+        { this.renderInSessionDropdown() }
         { this.renderDateRangeSelector() }
         { this.renderGroupBys() }
         { this.renderRunQuery() }
