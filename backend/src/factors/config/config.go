@@ -1,5 +1,6 @@
 package config
 
+import "C"
 import (
 	"fmt"
 	"strconv"
@@ -683,40 +684,54 @@ If project list string is '*':
 else:
   Returns all_projects as false, given projects ids after skipping disallowed
 	projects and disallowed projects.
+Returns: allProject flag, map of allowed & disallowed projects
 */
 func GetProjectsFromListWithAllProjectSupport(projectIdsList,
-	disallowedProjectIdsList string) (allProjects bool, allowedProjectIds, skipProjectIds []uint64) {
-
+	disallowedProjectIdsList string) (allProjects bool, allowedMap, disallowedMap map[uint64]bool) {
+	//allowedProjectIds, skipProjectIds []uint64,
 	disallowedProjectIdsList = strings.TrimSpace(disallowedProjectIdsList)
-	skipProjectIds = GetTokensFromStringListAsUint64(disallowedProjectIdsList)
+	skipProjectIds := GetTokensFromStringListAsUint64(disallowedProjectIdsList)
 
-	projectIdsList = strings.TrimSpace(projectIdsList)
-	if projectIdsList == "*" {
-		return true, []uint64{}, skipProjectIds
-	}
-
-	projectIds := GetTokensFromStringListAsUint64(projectIdsList)
-	if len(skipProjectIds) == 0 {
-		return false, projectIds, skipProjectIds
-	}
-
-	disallowedMap := make(map[uint64]bool)
+	disallowedMap = make(map[uint64]bool)
 	for i := range skipProjectIds {
 		disallowedMap[skipProjectIds[i]] = true
 	}
 
-	allowedProjectIds = make([]uint64, 0, len(projectIds))
+	projectIdsList = strings.TrimSpace(projectIdsList)
+	if projectIdsList == "*" {
+		return true, map[uint64]bool{}, disallowedMap
+	}
+
+	projectIds := GetTokensFromStringListAsUint64(projectIdsList)
+
+	allowedProjectIds := make([]uint64, 0, len(projectIds))
 	for i, cpid := range projectIds {
+		//Prioritizing the skip list over project list!
 		if _, exists := disallowedMap[cpid]; !exists {
 			allowedProjectIds = append(allowedProjectIds, projectIds[i])
 		}
 	}
 
-	return false, allowedProjectIds, skipProjectIds
+	allowedMap = make(map[uint64]bool)
+	for i := range allowedProjectIds {
+		allowedMap[allowedProjectIds[i]] = true
+	}
+
+	return false, allowedMap, disallowedMap
+}
+
+func ProjectIdsFromProjectIdBoolMap(mp map[uint64]bool) []uint64 {
+
+	keys := make([]uint64, 0, len(mp))
+	for k := range mp {
+		keys = append(keys, k)
+	}
+	return keys
 }
 
 func GetSkipSessionProjects() (allProjects bool, projectIds []uint64) {
-	allProjects, projectIds, _ = GetProjectsFromListWithAllProjectSupport(
+	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(
 		configuration.SkipSessionProjectIds, "")
+	projectIds = ProjectIdsFromProjectIdBoolMap(projectIDsMap)
 	return allProjects, projectIds
 }
