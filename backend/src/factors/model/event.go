@@ -967,12 +967,6 @@ func AddSessionForUser(projectId uint64, userId string, userEvents []Event,
 			// first event will have max_timestamp (used as start_timestamp) where
 			// session_id is not null.
 			if events[sessionStartIndex].SessionId != nil {
-				// Log for session being continued if last set of events have only
-				// an event with session_id and an event with marketing property.
-				if hasMarketingProperty && (sessionStartIndex == sessionEndIndex-1) {
-					logCtx.Info("New session may not be created. Last single event with campaign with session_id continued.")
-				}
-
 				existingSessionEvent, errCode := GetEventById(projectId,
 					*events[sessionStartIndex].SessionId)
 				if errCode != http.StatusFound {
