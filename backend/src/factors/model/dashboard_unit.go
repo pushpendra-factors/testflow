@@ -283,7 +283,7 @@ func CacheDashboardUnitsForProjects(stringProjectsIDs string, numRoutines int) {
 		"Method": "CacheDashboardUnitsForProjects",
 	})
 
-	allProjects, projectIDs, _ := C.GetProjectsFromListWithAllProjectSupport(stringProjectsIDs, "")
+	allProjects, projectIDs, _, _, _ := C.GetProjectsFromListWithAllProjectSupport(stringProjectsIDs, "")
 	if allProjects {
 		var errCode int
 		projectIDs, errCode = GetAllProjectIDs()

@@ -263,7 +263,7 @@ func addSessionByProjectId(projectId uint64, maxLookbackTimestamp,
 }
 
 func GetAddSessionAllowedProjects(allowedProjectsList, disallowedProjectsList string) ([]uint64, int) {
-	isAllProjects, projectsList, skipProjectIds := C.GetProjectsFromListWithAllProjectSupport(
+	isAllProjects, projectsList, skipProjectIds, _, _ := C.GetProjectsFromListWithAllProjectSupport(
 		allowedProjectsList, disallowedProjectsList)
 
 	if !isAllProjects {

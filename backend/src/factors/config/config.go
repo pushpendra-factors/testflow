@@ -683,40 +683,44 @@ If project list string is '*':
 else:
   Returns all_projects as false, given projects ids after skipping disallowed
 	projects and disallowed projects.
+Returns: allProject flag, list of allowed & disallowed and map of allowed & disallowed projects
 */
 func GetProjectsFromListWithAllProjectSupport(projectIdsList,
-	disallowedProjectIdsList string) (allProjects bool, allowedProjectIds, skipProjectIds []uint64) {
+	disallowedProjectIdsList string) (allProjects bool, allowedProjectIds, skipProjectIds []uint64, allowedMap, disallowedMap map[uint64]bool) {
 
 	disallowedProjectIdsList = strings.TrimSpace(disallowedProjectIdsList)
 	skipProjectIds = GetTokensFromStringListAsUint64(disallowedProjectIdsList)
 
-	projectIdsList = strings.TrimSpace(projectIdsList)
-	if projectIdsList == "*" {
-		return true, []uint64{}, skipProjectIds
-	}
-
-	projectIds := GetTokensFromStringListAsUint64(projectIdsList)
-	if len(skipProjectIds) == 0 {
-		return false, projectIds, skipProjectIds
-	}
-
-	disallowedMap := make(map[uint64]bool)
+	disallowedMap = make(map[uint64]bool)
 	for i := range skipProjectIds {
 		disallowedMap[skipProjectIds[i]] = true
 	}
 
+	projectIdsList = strings.TrimSpace(projectIdsList)
+	if projectIdsList == "*" {
+		return true, []uint64{}, skipProjectIds, map[uint64]bool{}, disallowedMap
+	}
+
+	projectIds := GetTokensFromStringListAsUint64(projectIdsList)
+
 	allowedProjectIds = make([]uint64, 0, len(projectIds))
 	for i, cpid := range projectIds {
+		//Prioritizing the skip list over project list!
 		if _, exists := disallowedMap[cpid]; !exists {
 			allowedProjectIds = append(allowedProjectIds, projectIds[i])
 		}
 	}
 
-	return false, allowedProjectIds, skipProjectIds
+	allowedMap = make(map[uint64]bool)
+	for i := range allowedProjectIds {
+		allowedMap[allowedProjectIds[i]] = true
+	}
+
+	return false, allowedProjectIds, skipProjectIds, allowedMap, disallowedMap
 }
 
 func GetSkipSessionProjects() (allProjects bool, projectIds []uint64) {
-	allProjects, projectIds, _ = GetProjectsFromListWithAllProjectSupport(
+	allProjects, projectIds, _, _, _ = GetProjectsFromListWithAllProjectSupport(
 		configuration.SkipSessionProjectIds, "")
 	return allProjects, projectIds
 }

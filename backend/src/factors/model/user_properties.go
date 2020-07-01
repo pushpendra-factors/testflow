@@ -366,7 +366,7 @@ func anyPropertyChanged(propertyValuesMap map[string][]interface{}, numUsers int
 
 // Checks if merge is enabled for the project based on global config.
 func isMergeEnabledForProjectID(projectID uint64) bool {
-	allProjects, mergeEnabledProjectIDS, _ := C.GetProjectsFromListWithAllProjectSupport(
+	allProjects, mergeEnabledProjectIDS, _, _, _ := C.GetProjectsFromListWithAllProjectSupport(
 		C.GetConfig().MergeUspProjectIds, "")
 	if allProjects || U.Uint64ValueIn(projectID, mergeEnabledProjectIDS) {
 		return true
