@@ -17,7 +17,7 @@ spec:
             cloud.google.com/gke-nodepool: factors-staging-node-pool
           containers:
           - name: hubspot-enrich-job
-            image: us.gcr.io/factors-staging/hubspot-enrich-job:v0.041-d6b4c6e
+            image: us.gcr.io/factors-staging/hubspot-enrich-job:v0.62-d2e17c4
             imagePullPolicy: IfNotPresent
             args:
             - --env
