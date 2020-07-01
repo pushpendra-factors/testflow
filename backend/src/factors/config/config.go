@@ -684,7 +684,7 @@ If project list string is '*':
 else:
   Returns all_projects as false, given projects ids after skipping disallowed
 	projects and disallowed projects.
-Returns: allProject flag, list of allowed & disallowed and map of allowed & disallowed projects
+Returns: allProject flag, map of allowed & disallowed projects
 */
 func GetProjectsFromListWithAllProjectSupport(projectIdsList,
 	disallowedProjectIdsList string) (allProjects bool, allowedMap, disallowedMap map[uint64]bool) {
