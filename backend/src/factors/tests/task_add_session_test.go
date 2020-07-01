@@ -286,29 +286,17 @@ func TestAddSession(t *testing.T) {
 	assert.Equal(t, http.StatusOK, status)
 	eventId7 := response.EventId
 
-	// Skip creating session for only event with campaign. edge case.
 	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 30, 1)
 	assert.Nil(t, err)
 	event7, errCode := M.GetEventById(project.ID, eventId7)
 	assert.Equal(t, errCode, http.StatusFound)
-	assert.Nil(t, event7.SessionId)
-
-	timestamp = timestamp + 2
-	randomEventName = U.RandomLowerAphaNumString(10)
-	trackPayload = SDK.TrackPayload{
-		Name:      randomEventName,
-		Timestamp: timestamp,
-		UserId:    userId,
-	}
-	status, response = SDK.Track(project.ID, &trackPayload, false)
-	assert.Equal(t, http.StatusOK, status)
-	eventId8 := response.EventId
+	assert.NotNil(t, event7.SessionId)
 
 	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 30, 1)
 	assert.Nil(t, err)
 	// New session should be created after a new event.
-	sessionEvent4 := assertAssociatedSession(t, project.ID, []string{eventId7, eventId8}, []string{}, "Session 4")
-	assert.NotEqual(t, sessionEvent3.ID, sessionEvent4.ID)
+	sessionEvent4 := assertAssociatedSession(t, project.ID, []string{eventId5, eventId6, eventId7}, []string{}, "Session 4")
+	assert.Equal(t, sessionEvent3.ID, sessionEvent4.ID)
 
 	// Test: Project with no events and all events with session already.
 	statusMap, err := TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 30, 1)
