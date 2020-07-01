@@ -44,12 +44,12 @@ var gnbLog = taskLog.WithField("prefix", "Task#GetNextBuilds")
 func makeLastBuildTimestampMap(projectData []PMM.ProjectData, lookBackPeriodInDays int64) *map[uint64]map[string]int64 {
 
 	//converted look back days to back dated unix time
-	lookBackPeriodInUnixSec := time.Now().Unix() - lookBackPeriodInDays*24*60*60
+	minEndTimestamp := time.Now().Unix() - lookBackPeriodInDays*24*60*60
 	projectLatestModel := make(map[uint64]map[string]int64, 0)
 
 	for _, p := range projectData {
 
-		if p.EndTimestamp > lookBackPeriodInUnixSec {
+		if p.EndTimestamp > minEndTimestamp {
 
 			if _, exist := projectLatestModel[p.ID]; !exist {
 				projectLatestModel[p.ID] = make(map[string]int64, 0)
