@@ -35,14 +35,14 @@ type BuildSuccess struct {
 // BuildSequential - runs model building sequenitally for all project intervals.
 func BuildSequential(env string, db *gorm.DB, cloudManager *filestore.FileManager,
 	etcdClient *serviceEtcd.EtcdClient, diskManger *serviceDisk.DiskDriver,
-	bucketName string, noOfPatternWorkers int, projectId uint64,
-	projectIdsToSkip map[uint64]bool, maxModelSize int64) error {
+	bucketName string, noOfPatternWorkers int, projectIdToRun map[uint64]bool,
+	projectIdsToSkip map[uint64]bool, maxModelSize int64, modelType string, lookBackPeriodInDays int64) error {
 
 	defer util.NotifyOnPanic(taskID, env)
 
 	// Todo(Dinesh): Add success and failure notification.
 	// Idea: []Builds from this can be queued and workers can process.
-	builds, activeProjects, err := GetNextBuilds(db, cloudManager, etcdClient)
+	builds, activeProjects, err := GetNextBuilds(db, cloudManager, etcdClient, modelType, lookBackPeriodInDays)
 	if err != nil {
 		bsLog.WithField("error", err).Error("Failed to get next build info.")
 	}
@@ -53,8 +53,9 @@ func BuildSequential(env string, db *gorm.DB, cloudManager *filestore.FileManage
 	failures := make([]BuildFailure, 0, 0)
 
 	for _, build := range builds {
-		// Build model, for projectId if given, else for all.
-		if projectId > 0 && build.ProjectId != projectId {
+
+		// Skip builds for projects not in projectToRun.
+		if _, ok := projectIdToRun[build.ProjectId]; !ok {
 			bsLog.WithField("ProjectId", build.ProjectId).Info("Skipping build for the non-given project.")
 			continue
 		}

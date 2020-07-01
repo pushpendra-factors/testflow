@@ -7,3 +7,5 @@ metadata:
     project: factors-production
 data:
   NUM_ROUTINES: "60"
+  LOOK_BACK_DAYS: "30"
+  MODEL_TYPE: "weekly"
