@@ -178,7 +178,7 @@ func GetNextBuilds(db *gorm.DB, cloudManager *filestore.FileManager,
 	for pid, buildTimeByType := range *lastBuildOfProjects {
 		gnbLog.Infof("Last build info - ProjectId: %d LastBuildEndTimeByType: %+v", pid, buildTimeByType)
 		if (*projectsEventInfo)[pid] != nil {
-			addNextIntervalsForProjectByTypeHelp(builds, pid, buildTimeByType, projectsEventInfo, modelType)
+			addNextIntervalsForProjectByModelType(&builds, pid, buildTimeByType, projectsEventInfo, modelType)
 		} else {
 			gnbLog.WithField("ProjectId", pid).Error("No events for a project found on meta.")
 		}
@@ -193,7 +193,7 @@ func GetNextBuilds(db *gorm.DB, cloudManager *filestore.FileManager,
 	}
 
 	for _, pid := range noMetaProjects {
-		addPendingIntervalsForProjectByTypeHelp(builds, pid, projectsEventInfo, modelType)
+		addPendingIntervalsForProjectByModelType(&builds, pid, projectsEventInfo, modelType)
 	}
 
 	// list of projects with events
@@ -209,24 +209,24 @@ func GetNextBuilds(db *gorm.DB, cloudManager *filestore.FileManager,
 }
 
 /** A wrapper over addNextIntervalsForProjectByType() to allow model type parameter **/
-func addNextIntervalsForProjectByTypeHelp(builds []Build, pid uint64, buildTimeByType map[string]int64, projectsEventInfo *map[uint64]*M.ProjectEventsInfo, modelType string) {
+func addNextIntervalsForProjectByModelType(builds *[]Build, pid uint64, buildTimeByType map[string]int64, projectsEventInfo *map[uint64]*M.ProjectEventsInfo, modelType string) {
 
 	switch modelType {
 	case ModelTypeAll:
-		addNextIntervalsForProjectByType(&builds, pid, ModelTypeWeek, buildTimeByType[ModelTypeWeek],
+		addNextIntervalsForProjectByType(builds, pid, ModelTypeWeek, buildTimeByType[ModelTypeWeek],
 			(*projectsEventInfo)[pid].FirstEventTimestamp, (*projectsEventInfo)[pid].LastEventTimestamp, (*projectsEventInfo)[pid].ProjectName,
 			(*projectsEventInfo)[pid].CreatorEmail)
-		addNextIntervalsForProjectByType(&builds, pid, ModelTypeMonth, buildTimeByType[ModelTypeMonth],
+		addNextIntervalsForProjectByType(builds, pid, ModelTypeMonth, buildTimeByType[ModelTypeMonth],
 			(*projectsEventInfo)[pid].FirstEventTimestamp, (*projectsEventInfo)[pid].LastEventTimestamp, (*projectsEventInfo)[pid].ProjectName,
 			(*projectsEventInfo)[pid].CreatorEmail)
 		break
 	case ModelTypeWeekly:
-		addNextIntervalsForProjectByType(&builds, pid, ModelTypeWeek, buildTimeByType[ModelTypeWeek],
+		addNextIntervalsForProjectByType(builds, pid, ModelTypeWeek, buildTimeByType[ModelTypeWeek],
 			(*projectsEventInfo)[pid].FirstEventTimestamp, (*projectsEventInfo)[pid].LastEventTimestamp, (*projectsEventInfo)[pid].ProjectName,
 			(*projectsEventInfo)[pid].CreatorEmail)
 		break
 	case ModelTypeMonthly:
-		addNextIntervalsForProjectByType(&builds, pid, ModelTypeMonth, buildTimeByType[ModelTypeMonth],
+		addNextIntervalsForProjectByType(builds, pid, ModelTypeMonth, buildTimeByType[ModelTypeMonth],
 			(*projectsEventInfo)[pid].FirstEventTimestamp, (*projectsEventInfo)[pid].LastEventTimestamp, (*projectsEventInfo)[pid].ProjectName,
 			(*projectsEventInfo)[pid].CreatorEmail)
 		break
@@ -236,24 +236,24 @@ func addNextIntervalsForProjectByTypeHelp(builds []Build, pid uint64, buildTimeB
 }
 
 /** A wrapper over addPendingIntervalsForProjectByType() to allow model type parameter **/
-func addPendingIntervalsForProjectByTypeHelp(builds []Build, pid uint64, projectsEventInfo *map[uint64]*M.ProjectEventsInfo, modelType string) {
+func addPendingIntervalsForProjectByModelType(builds *[]Build, pid uint64, projectsEventInfo *map[uint64]*M.ProjectEventsInfo, modelType string) {
 
 	switch modelType {
 	case ModelTypeAll:
-		addPendingIntervalsForProjectByType(&builds, pid, ModelTypeWeek,
+		addPendingIntervalsForProjectByType(builds, pid, ModelTypeWeek,
 			(*projectsEventInfo)[pid].FirstEventTimestamp, (*projectsEventInfo)[pid].LastEventTimestamp,
 			(*projectsEventInfo)[pid].ProjectName, (*projectsEventInfo)[pid].CreatorEmail)
-		addPendingIntervalsForProjectByType(&builds, pid, ModelTypeMonth,
+		addPendingIntervalsForProjectByType(builds, pid, ModelTypeMonth,
 			(*projectsEventInfo)[pid].FirstEventTimestamp, (*projectsEventInfo)[pid].LastEventTimestamp,
 			(*projectsEventInfo)[pid].ProjectName, (*projectsEventInfo)[pid].CreatorEmail)
 		break
 	case ModelTypeWeekly:
-		addPendingIntervalsForProjectByType(&builds, pid, ModelTypeWeek,
+		addPendingIntervalsForProjectByType(builds, pid, ModelTypeWeek,
 			(*projectsEventInfo)[pid].FirstEventTimestamp, (*projectsEventInfo)[pid].LastEventTimestamp,
 			(*projectsEventInfo)[pid].ProjectName, (*projectsEventInfo)[pid].CreatorEmail)
 		break
 	case ModelTypeMonthly:
-		addPendingIntervalsForProjectByType(&builds, pid, ModelTypeMonth,
+		addPendingIntervalsForProjectByType(builds, pid, ModelTypeMonth,
 			(*projectsEventInfo)[pid].FirstEventTimestamp, (*projectsEventInfo)[pid].LastEventTimestamp,
 			(*projectsEventInfo)[pid].ProjectName, (*projectsEventInfo)[pid].CreatorEmail)
 		break
