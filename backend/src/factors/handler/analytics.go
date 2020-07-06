@@ -70,6 +70,7 @@ func QueryHandler(c *gin.Context) {
 			return
 		}
 	}
+	agentUUId = U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
@@ -81,10 +82,9 @@ func QueryHandler(c *gin.Context) {
 
 	// If refresh is passed, refresh only is Query.From is of todays beginning.
 	if (dashboardIdParam != "" || unitIdParam != "") && !isHardRefreshForToday(requestPayload.Query.From, hardRefresh) {
-		agentUUId = U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 		cacheResult, errCode, errMsg := M.GetCacheResultByDashboardIdAndUnitId(agentUUId, projectId, dashboardId, unitId, requestPayload.Query.From, requestPayload.Query.To)
 		if errCode == http.StatusFound {
-			c.JSON(http.StatusOK, gin.H{"result": cacheResult.Result, "cache": true})
+			c.JSON(http.StatusOK, gin.H{"result": cacheResult.Result, "cache": true, "refreshedAt": cacheResult.RefreshedAt})
 			return
 		}
 		if errCode == http.StatusBadRequest {
@@ -107,7 +107,7 @@ func QueryHandler(c *gin.Context) {
 
 	if dashboardId != 0 && unitId != 0 {
 		M.SetCacheResultByDashboardIdAndUnitId(agentUUId, result, projectId, dashboardId, unitId, requestPayload.Query.To, requestPayload.Query.From)
-		c.JSON(http.StatusOK, gin.H{"result": result, "cache": false})
+		c.JSON(http.StatusOK, gin.H{"result": result, "cache": false, "refreshedAt": U.TimeNowIn(U.TimeZoneStringIST).Unix()})
 		return
 	}
 
