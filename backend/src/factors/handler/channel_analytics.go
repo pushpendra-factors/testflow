@@ -31,7 +31,6 @@ func ChannelQueryHandler(c *gin.Context) {
 	var queryPayload M.ChannelQuery
 	var dashboardId uint64
 	var unitId uint64
-	var agentUUID string
 
 	dashboardIdParam := c.Query("dashboard_id")
 	unitIdParam := c.Query("dashboard_unit_id")
@@ -58,8 +57,7 @@ func ChannelQueryHandler(c *gin.Context) {
 			return
 		}
 
-		agentUUID = U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
-		cacheResult, errCode, errMsg := M.GetCacheResultByDashboardIdAndUnitId(agentUUID, projectId, dashboardId, unitId, queryPayload.From, queryPayload.To)
+		cacheResult, errCode, errMsg := M.GetCacheResultByDashboardIdAndUnitId(projectId, dashboardId, unitId, queryPayload.From, queryPayload.To)
 		if errCode == http.StatusFound {
 			c.JSON(http.StatusOK, gin.H{"result": cacheResult.Result, "cache": true})
 			return
@@ -84,7 +82,7 @@ func ChannelQueryHandler(c *gin.Context) {
 	}
 
 	if dashboardId != 0 && unitId != 0 {
-		M.SetCacheResultByDashboardIdAndUnitId(agentUUID, queryResult, projectId, dashboardId, unitId, queryPayload.To, queryPayload.From)
+		M.SetCacheResultByDashboardIdAndUnitId(queryResult, projectId, dashboardId, unitId, queryPayload.To, queryPayload.From)
 		c.JSON(http.StatusOK, gin.H{"result": queryResult, "cache": false})
 		return
 	}

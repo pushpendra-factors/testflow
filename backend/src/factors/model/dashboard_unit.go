@@ -1,12 +1,10 @@
 package model
 
 import (
-	"encoding/json"
 	cacheRedis "factors/cache/redis"
 	C "factors/config"
 	U "factors/util"
 	"fmt"
-	"math"
 	"net/http"
 	"sync"
 	"time"
@@ -171,13 +169,6 @@ func getDashboardUnitQueryResultCacheKey(projectID, dashboardID, unitID uint64, 
 		suffix = fmt.Sprintf("did:%d:duid:%d:from:%d:to:%d", dashboardID, unitID, from, to)
 	}
 	return cacheRedis.NewKey(projectID, prefix, suffix)
-}
-
-func getDashboardUnitResultByDashboardIDAndUnitIDCacheKey(agentUUID string, projectId, dashboardID, unitId uint64, from, to int64) (*cacheRedis.Key, error) {
-	prefix := "dashboard:query"
-	window := float64(to-from) / float64(3600)
-	suffix := fmt.Sprintf("aid:%s:did:%d:duid:%d:window:%v", agentUUID, dashboardID, unitId, math.Ceil(window))
-	return cacheRedis.NewKey(projectId, prefix, suffix)
 }
 
 func GetDashboardUnitsByProjectIDAndDashboardIDAndTypes(projectID, dashboardID uint64, types []string) ([]DashboardUnit, int) {
@@ -369,52 +360,9 @@ func CacheDashboardUnit(projectID uint64, dashboardUnit DashboardUnit, waitGroup
 			logCtx.Errorf("Error while running query %s", errMsg)
 			return
 		}
-		errCode = SetCacheResultForDashboardIDAndUnitID(result, projectID, dashboardUnit.DashboardId, dashboardUnit.ID, query.From, query.To)
-		if errCode != http.StatusCreated {
-			logCtx.Errorf("Failed to set cache for query")
-			return
-		}
+		SetCacheResultByDashboardIdAndUnitId(result, projectID, dashboardUnit.DashboardId, dashboardUnit.ID, query.To, query.From)
 	}
 	return
-}
-
-// SetCacheResultForDashboardIDAndUnitID Set's 24 hour cache for given dashboard unit id.
-func SetCacheResultForDashboardIDAndUnitID(result interface{}, projectID uint64, dashboardID uint64, unitID uint64, from, to int64) int {
-	logCtx := log.WithFields(log.Fields{
-		"Method":          "SetCacheResultForDashboardIDAndUnitID",
-		"DashboardID":     dashboardID,
-		"DashboardUnitID": unitID,
-	})
-
-	if projectID == 0 || dashboardID == 0 || unitID == 0 {
-		logCtx.Errorf("Invalid scope ids")
-	}
-
-	cacheKey, err := getDashboardUnitQueryResultCacheKey(projectID, dashboardID, unitID, from, to)
-	if err != nil {
-		logCtx.WithError(err).Errorf("Failed to get cache key")
-		return http.StatusInternalServerError
-	}
-
-	dashboardCacheResult := DashboardCacheResult{
-		Result:      result,
-		From:        from,
-		To:          to,
-		RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(),
-	}
-
-	dashboardCacheResultJSON, err := json.Marshal(dashboardCacheResult)
-	if err != nil {
-		logCtx.WithError(err).Errorf("Failed to encode result")
-		return http.StatusInternalServerError
-	}
-
-	err = cacheRedis.Set(cacheKey, string(dashboardCacheResultJSON), float64(U.SECONDS_IN_A_DAY))
-	if err != nil {
-		logCtx.WithError(err).Errorf("Failed to set cache key")
-		return http.StatusInternalServerError
-	}
-	return http.StatusCreated
 }
 
 func isDashboardUnitAlreadyCachedForRange(projectID, dashboardID, unitID uint64, from, to int64) bool {

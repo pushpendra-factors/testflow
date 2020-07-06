@@ -307,7 +307,7 @@ func TestGetDashboardResutlFromCache(t *testing.T) {
 	}{}
 
 	//Cache should be empty
-	result, errCode, errMsg := M.GetCacheResultByDashboardIdAndUnitId(agent.UUID, project.ID, dashboardUnits[0].DashboardId, dashboardUnits[0].ID, from, to)
+	result, errCode, errMsg := M.GetCacheResultByDashboardIdAndUnitId(project.ID, dashboardUnits[0].DashboardId, dashboardUnits[0].ID, from, to)
 	assert.Equal(t, http.StatusNotFound, errCode)
 	assert.Nil(t, result)
 
@@ -332,15 +332,15 @@ func TestGetDashboardResutlFromCache(t *testing.T) {
 	assert.Equal(t, false, decChannelResult.Cache)
 
 	// Cache should be set
-	result, errCode, errMsg = M.GetCacheResultByDashboardIdAndUnitId(agent.UUID, project.ID, dashboardUnits[0].DashboardId, dashboardUnits[0].ID, from, to)
+	result, errCode, errMsg = M.GetCacheResultByDashboardIdAndUnitId(project.ID, dashboardUnits[0].DashboardId, dashboardUnits[0].ID, from, to)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Nil(t, errMsg)
 	assert.Equal(t, float64(query1.To), result.Result.(map[string]interface{})["meta"].(map[string]interface{})["query"].(map[string]interface{})["to"])
-	result, errCode, errMsg = M.GetCacheResultByDashboardIdAndUnitId(agent.UUID, project.ID, dashboardUnits[1].DashboardId, dashboardUnits[1].ID, from+500, to+500)
+	result, errCode, errMsg = M.GetCacheResultByDashboardIdAndUnitId(project.ID, dashboardUnits[1].DashboardId, dashboardUnits[1].ID, from+500, to+500)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Nil(t, errMsg)
 	assert.Equal(t, float64(query2.To), result.Result.(map[string]interface{})["meta"].(map[string]interface{})["query"].(map[string]interface{})["to"])
-	resultChannel, errCode, errMsg := M.GetCacheResultByDashboardIdAndUnitId(agent.UUID, project.ID, dashboardUnits[2].DashboardId, dashboardUnits[2].ID, query3.From, query3.To)
+	resultChannel, errCode, errMsg := M.GetCacheResultByDashboardIdAndUnitId(project.ID, dashboardUnits[2].DashboardId, dashboardUnits[2].ID, query3.From, query3.To)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Nil(t, errMsg)
 	assert.Equal(t, float64(989), resultChannel.Result.(map[string]interface{})["metrics"].(map[string]interface{})["clicks"])
@@ -351,22 +351,4 @@ func TestGetDashboardResutlFromCache(t *testing.T) {
 	err = json.Unmarshal(w.Body.Bytes(), &decResult)
 	assert.Nil(t, err)
 	assert.Equal(t, true, decResult.Cache)
-
-	// Cache should be true for upto 1hr time shift
-	query1.From = query1.From + 10*60 //10 min
-	query1.To = query1.To + 10*60     //10 min
-	w = sendGetDashboardUnitResult(r, project.ID, agent, dashboardUnits[0].DashboardId, dashboardUnits[0].ID, &gin.H{"query": query1})
-	assert.Equal(t, http.StatusOK, w.Code)
-	err = json.Unmarshal(w.Body.Bytes(), &decResult)
-	assert.Nil(t, err)
-	assert.Equal(t, true, decResult.Cache)
-
-	// For Dashboard channel query
-	query3.From = query3.From + 59*60
-	query3.To = query3.To + 59*60
-	w = sendGetDashboardUnitChannelResult(r, project.ID, agent, dashboardUnits[2].DashboardId, dashboardUnits[2].ID, query3)
-	assert.Equal(t, http.StatusOK, w.Code)
-	err = json.Unmarshal(w.Body.Bytes(), &decChannelResult)
-	assert.Nil(t, err)
-	assert.Equal(t, true, decChannelResult.Cache)
 }

@@ -158,4 +158,4 @@ upload-dashboard-caching:
 	docker push us.gcr.io/factors-$(ENV)/dashboard-caching-job:$(TAG)
 
 test:
-	go test -v $(GOPATH)/src/factors/tests && go test -v $(GOPATH)/src/factors/pattern_server/store
+	go test -failfast -v $(GOPATH)/src/factors/tests && go test -failfast -v $(GOPATH)/src/factors/pattern_server/store
