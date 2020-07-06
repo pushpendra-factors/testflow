@@ -29,9 +29,10 @@ type DashboardUnit struct {
 }
 
 type DashboardCacheResult struct {
-	Result interface{} `json:"result"`
-	From   int64       `json:"from"`
-	To     int64       `json:"tom"`
+	Result      interface{} `json:"result"`
+	From        int64       `json:"from"`
+	To          int64       `json:"tom"`
+	RefreshedAt int64       `json:"refreshed_at"`
 }
 
 const (
@@ -396,9 +397,10 @@ func SetCacheResultForDashboardIDAndUnitID(result interface{}, projectID uint64,
 	}
 
 	dashboardCacheResult := DashboardCacheResult{
-		Result: result,
-		From:   from,
-		To:     to,
+		Result:      result,
+		From:        from,
+		To:          to,
+		RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(),
 	}
 
 	dashboardCacheResultJSON, err := json.Marshal(dashboardCacheResult)

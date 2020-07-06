@@ -369,8 +369,8 @@ export function runQuery(projectId, query) {
   return post(null, url , {query: query});
 }
 
-export function runDashboardQuery(projectId, dashboard_id, dashboard_unit_id, query) {
-  let params = "?dashboard_id="+dashboard_id+"&dashboard_unit_id="+dashboard_unit_id;
+export function runDashboardQuery(projectId, dashboard_id, dashboard_unit_id, query, refresh) {
+  let params = "?dashboard_id="+dashboard_id+"&dashboard_unit_id="+dashboard_unit_id+"&refresh="+refresh;
   let url = host + "projects/" + projectId + "/query"+params;
   return post(null, url , {query: query});
 }

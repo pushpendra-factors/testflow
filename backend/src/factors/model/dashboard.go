@@ -5,6 +5,7 @@ import (
 	"errors"
 	cacheRedis "factors/cache/redis"
 	C "factors/config"
+	U "factors/util"
 	"fmt"
 	"net/http"
 	"sort"
@@ -358,6 +359,12 @@ func GetCacheResultByDashboardIdAndUnitId(agentUUID string, projectId, dashboard
 		return cacheResult, http.StatusInternalServerError, err
 	}
 
+	if cacheResult.RefreshedAt == 0 {
+		// Might not be set for some of the older keys. Set as current time for now.
+		// TOOD(prateek): Remove this once older cache key is removed.
+		cacheResult.RefreshedAt = U.TimeNowIn(U.TimeZoneStringIST).Unix()
+	}
+
 	return cacheResult, http.StatusFound, nil
 }
 
@@ -380,12 +387,14 @@ func SetCacheResultByDashboardIdAndUnitId(agentUUId string, result interface{}, 
 	newCacheKey, err := getDashboardUnitQueryResultCacheKey(projectId, dashboardId, unitId, from, to)
 	if err != nil {
 		logctx.WithError(err).Error("Failed to get cache key")
+		return
 	}
 
 	dashboardCacheResult := DashboardCacheResult{
-		Result: result,
-		From:   from,
-		To:     to,
+		Result:      result,
+		From:        from,
+		To:          to,
+		RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(),
 	}
 
 	enDashboardCacheResult, err := json.Marshal(dashboardCacheResult)

@@ -44,6 +44,10 @@ export const PRESENTATION_FUNNEL = 'pf';
 
 
 export const DEFAULT_DATE_RANGE_LABEL = 'Last 7 days';
+export const DATE_RANGE_TODAY_LABEL = 'Today';
+export const DATE_RANGE_YESTERDAY_LABEL = 'Yesterday';
+export const DATE_RANGE_LAST_30_DAYS_LABEL = 'Last 30 days';
+
 export const DEFAULT_DATE_RANGE = {
   startDate: moment(new Date()).subtract(7, 'days').startOf('day').toDate(),
   endDate: moment(new Date()).subtract(1, 'days').endOf('day').toDate(),
@@ -52,14 +56,14 @@ export const DEFAULT_DATE_RANGE = {
 }
 export const DEFINED_DATE_RANGES = createStaticRanges([
   {
-    label: 'Today',
+    label: DATE_RANGE_TODAY_LABEL,
     range: () => ({
       startDate: moment(new Date()).startOf('day').toDate(),
       endDate: new Date(),
     }),
   },
   {
-    label: 'Yesterday',
+    label: DATE_RANGE_YESTERDAY_LABEL,
     range: () => ({
       startDate: moment(new Date()).subtract(1, 'days').startOf('day').toDate(),
       endDate: moment(new Date()).subtract(1, 'days').endOf('day').toDate(),
@@ -73,7 +77,7 @@ export const DEFINED_DATE_RANGES = createStaticRanges([
     }),
   },
   {
-    label: 'Last 30 days',
+    label: DATE_RANGE_LAST_30_DAYS_LABEL,
     range: () => ({
       startDate: moment(new Date()).subtract(30, 'days').startOf('day').toDate(),
       endDate: moment(new Date()).subtract(1, 'days').endOf('day').toDate(),
@@ -221,4 +225,51 @@ export const convertFunnelResultForTable = function(result) {
   }
 
   return result
+}
+
+export const convertSecondsToHMSAgo = function(timeInSeconds) {
+  let hours = Math.floor(timeInSeconds / 3600);
+  let minutes = Math.floor((timeInSeconds % 3600) / 60);
+
+  if (timeInSeconds < 60) {
+    return "Just Now";
+  } else if (hours == 0) {
+    return minutes + "m ago";
+  }
+  return hours + "h ago";
+}
+
+export const getPresetLabelForDateRange = function(range) {
+  for (let i = 0; i < DEFINED_DATE_RANGES.length; i++) {
+    let preset = DEFINED_DATE_RANGES[i]
+    let presetRange = preset.range()
+    if (areSameDateRanges(range, presetRange)) {
+      return preset.label
+    }
+  }
+  return null
+}
+
+// Set's start and end date for the passed dateRange object if label matches any preset.
+// Else dateRange object remains unchanged.
+export const setDateRangeForPresetLabel = function(dateRangeWithLabel) {
+  for (let i = 0; i < DEFINED_DATE_RANGES.length; i++) {
+    let preset = DEFINED_DATE_RANGES[i]
+    let presetRange = preset.range()
+    
+    if (preset.label == dateRangeWithLabel.label) {
+      if ((dateRangeWithLabel.label == DATE_RANGE_TODAY_LABEL && moment(dateRangeWithLabel.startDate).unix() != moment(presetRange.startDate).unix()) ||
+        dateRangeWithLabel.label != DATE_RANGE_TODAY_LABEL && !areSameDateRanges(dateRangeWithLabel, presetRange)) {
+        dateRangeWithLabel.startDate = presetRange.startDate
+        dateRangeWithLabel.endDate = presetRange.endDate
+        return true
+      }
+    }
+  }
+  return false
+}
+
+export const areSameDateRanges = function(dateRange1, dateRange2) {
+  return moment(dateRange1.startDate).unix() == moment(dateRange2.startDate).unix() &&
+    moment(dateRange1.endDate).unix() == moment(dateRange2.endDate).unix()
 }

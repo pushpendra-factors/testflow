@@ -18,7 +18,7 @@ import { createSelectOpts, makeSelectOpt } from '../../util';
 import NoContent from '../../common/NoContent';
 import ClosableDateRangePicker from '../../common/ClosableDatePicker';
 import Loading from '../../loading';
-import { PRESENTATION_CARD, DEFAULT_DATE_RANGE, sameDay, 
+import { PRESENTATION_CARD, DEFAULT_DATE_RANGE, sameDay, convertSecondsToHMSAgo, getPresetLabelForDateRange, setDateRangeForPresetLabel,
   DEFINED_DATE_RANGES, 
   PRESENTATION_TABLE,
   QUERY_CLASS_CHANNEL,
@@ -72,6 +72,10 @@ class Dashboard extends Component {
 
         editDashboard: false,
         showCreateModal: false,
+
+        hardRefresh: false,
+        lastRefreshedAt: new Map(),
+        refreshButtonHover: false,
 
         createModalMessage: null,
         createSelectedType: null,
@@ -147,9 +151,12 @@ class Dashboard extends Component {
   }
 
   setLastSeenDateRangeForDashboard(range) {
+    let rangeToSave = { ...range };
+    rangeToSave.startDate = moment(rangeToSave.startDate).unix();
+    rangeToSave.endDate = moment(rangeToSave.endDate).unix();
     let dateRangeKey = this.getLastSeenDateRangeForDashboardKey();
     if (dateRangeKey == '') return null;
-    return localStorage.setItem(dateRangeKey, range);
+    return localStorage.setItem(dateRangeKey, JSON.stringify(rangeToSave));
   }
 
   getLastSeenDateRangeForDashboard() {
@@ -180,7 +187,7 @@ class Dashboard extends Component {
     return null;
   }
 
-  isEditable() {
+  hasDashboardUnits() {
     return this.props.dashboardUnits && this.props.dashboardUnits.length > 0;
   }
 
@@ -325,7 +332,8 @@ class Dashboard extends Component {
       if (pUnit.presentation && pUnit.presentation === PRESENTATION_CARD) {
         cardUnits[cardPositions[pUnit.id]] = {
           unit: <DashboardUnit dateRange={this.getCurrentDateRange()} editDashboard={this.state.editDashboard} 
-            cardIndex={cardIndex} data={pUnit} position={cardPositions[pUnit.id]} />,
+            cardIndex={cardIndex} data={pUnit} position={cardPositions[pUnit.id]} hardRefresh={this.state.hardRefresh}
+            updateLastRefreshedAt={this.updateLastRefreshedAt.bind(this)} />,
           position: cardPositions[pUnit.id],
         };
         cardIndex++;
@@ -333,14 +341,16 @@ class Dashboard extends Component {
       else if (this.isBigChartUnit(pUnit)) {
         bigChartUnits[bigChartPositions[pUnit.id]] = {
           unit: <DashboardUnit dateRange={this.getCurrentDateRange()} editDashboard={this.state.editDashboard} 
-            data={pUnit} position={bigChartPositions[pUnit.id]} />,
+            data={pUnit} position={bigChartPositions[pUnit.id]} hardRefresh={this.state.hardRefresh}
+            updateLastRefreshedAt={this.updateLastRefreshedAt.bind(this)} />,
           position: bigChartPositions[pUnit.id],
         };
       }
       else {
         chartUnits[chartPositions[pUnit.id]] = {
           unit: <DashboardUnit dateRange={this.getCurrentDateRange()} editDashboard={this.state.editDashboard} 
-            data={pUnit} position={chartPositions[pUnit.id]} />,
+            data={pUnit} position={chartPositions[pUnit.id]} hardRefresh={this.state.hardRefresh}
+            updateLastRefreshedAt={this.updateLastRefreshedAt.bind(this)} />,
           position: chartPositions[pUnit.id],
         };
       }
@@ -368,12 +378,16 @@ class Dashboard extends Component {
     this.setState({ editDashboard: !this.state.editDashboard });
   }
 
+  toggleHardRefresh = () => {
+    this.setState({ hardRefresh: !this.state.hardRefresh });
+  }
+
   isLoading() {
     return !this.state.loaded;
   }
 
   renderEditButton() {
-    if (!this.isEditable()) return null;
+    if (!this.hasDashboardUnits()) return null;
     let text = this.state.editDashboard ? 'Done Editing' : 'Edit';
     let color = this.state.editDashboard ? 'success' : 'danger' 
     return <Button style={{ marginLeft: '10px', height: 'auto', marginBottom: '4px' }} 
@@ -423,12 +437,12 @@ class Dashboard extends Component {
   }
 
   handleDateRangeSelect = (range) => {
-    range.selected.label = null; // set null on custom range.
+    range.selected.label = getPresetLabelForDateRange(range.selected);
     if (sameDay(range.selected.endDate, new Date()) && !sameDay(range.selected.startDate, new Date())){
       return
     }
     this.setState({ dateRange: [range.selected] });
-    this.setLastSeenDateRangeForDashboard(JSON.stringify(range.selected));
+    this.setLastSeenDateRangeForDashboard(range.selected);
   }
 
   closeDatePicker = () => {
@@ -441,9 +455,12 @@ class Dashboard extends Component {
 
   readableDateRange(range) {
     // Use label for default date range.
-    if(range.startDate ==  DEFAULT_DATE_RANGE.startDate 
-      && range.endDate == DEFAULT_DATE_RANGE.endDate)
+    if (range.label) {
+      return range.label
+    } else if(range.startDate ==  DEFAULT_DATE_RANGE.startDate 
+      && range.endDate == DEFAULT_DATE_RANGE.endDate) {
       return DEFAULT_DATE_RANGE.label;
+    }
 
     return moment(range.startDate).format('MMM DD, YYYY') + " - " +
       moment(range.endDate).format('MMM DD, YYYY');
@@ -452,8 +469,55 @@ class Dashboard extends Component {
   getCurrentDateRange() {
     if (this.state.dateRange) return this.state.dateRange;
 
-    let lsDateRangeStr = this.getLastSeenDateRangeForDashboard()
-    return lsDateRangeStr ? [JSON.parse(lsDateRangeStr)] : [DEFAULT_DATE_RANGE]
+    let lsDateRangeStr = this.getLastSeenDateRangeForDashboard();
+    if (!lsDateRangeStr) {
+      return [DEFAULT_DATE_RANGE];
+    }
+
+    let lsDateRange = JSON.parse(lsDateRangeStr);
+    // Unix timestamp to Date object.
+    lsDateRange.startDate = moment.unix(lsDateRange.startDate).toDate();
+    lsDateRange.endDate = moment.unix(lsDateRange.endDate).toDate();
+    if (isNaN(lsDateRange.startDate) || isNaN(lsDateRange.endDate)) {
+      this.setLastSeenDateRangeForDashboard(DEFAULT_DATE_RANGE)
+      return [DEFAULT_DATE_RANGE]
+    }
+    let updated = setDateRangeForPresetLabel(lsDateRange)
+    if (updated) {
+      this.setLastSeenDateRangeForDashboard(lsDateRange)
+    }
+    return [lsDateRange];
+  }
+
+  isTodaysDateRangeSelected() {
+    // Show if not an empty dashboard and selected date range is for Today.
+    let currentDateRange = this.getCurrentDateRange()[0];
+    let beginningOfToday = moment(new Date()).startOf('day').unix();
+    return this.hasDashboardUnits() && moment(currentDateRange.startDate).unix() == beginningOfToday;
+  }
+
+  // Callback method to update lastRefreshedAt from DashboardUnit.
+  updateLastRefreshedAt(dashboardID, lastRefreshedAt) {
+    this.setState((prevState) => {
+      let state = { ...prevState };
+      if (this.isTodaysDateRangeSelected() && (!prevState.lastRefreshedAt.has(dashboardID) || lastRefreshedAt > prevState.lastRefreshedAt.get(dashboardID))) {
+        let updatedLastRefreshedAt = prevState.lastRefreshedAt
+        updatedLastRefreshedAt.set(dashboardID, lastRefreshedAt)
+        state.lastRefreshedAt = updatedLastRefreshedAt
+      }
+      return state;
+    })
+  }
+
+  getRefreshButtonText(dashboardID) {
+    if (!this.state.lastRefreshedAt.has(dashboardID)) {
+      return "Reload";
+    }
+    return convertSecondsToHMSAgo(moment(new Date()).unix() - this.state.lastRefreshedAt.get(dashboardID));
+  }
+
+  toggleRefreshButtonHover(hover) {
+    this.setState({ refreshButtonHover: hover });
   }
 
   render() {
@@ -473,11 +537,17 @@ class Dashboard extends Component {
           <Button onClick={this.toggleCreateModal} style={{ marginLeft: '10px', height: 'auto', marginBottom: '4px' }} outline color='primary'> Create </Button>
           { this.renderEditButton() }
 
-          <button style={{ border: '1px solid #bbb', color: '#444', right: '45px', position: 'absolute', marginTop: '5px', padding: '7px 15px', borderRadius: '5px', outline: 'none' }} 
+          <button style={{ border: '1px solid #bbb', color: '#444', right: '45px', float: 'right', marginTop: '5px', padding: '7px 15px', borderRadius: '5px', outline: 'none' }} 
             onClick={this.toggleDatePickerDisplay}>
             <i className="fa fa-calendar" style={{marginRight: '10px'}}></i>
             { this.readableDateRange(this.getCurrentDateRange()[0]) }
           </button>
+          <Button onClick={this.toggleHardRefresh} style={{ marginRight: '10px', height: 'auto', marginTop: '5px', float: 'right', position: 'relative' }} outline color='primary'
+            hidden={!this.isTodaysDateRangeSelected()} onMouseEnter={() => this.toggleRefreshButtonHover(true)} onMouseLeave={() => this.toggleRefreshButtonHover(false)}>
+            <i className='icon-refresh'/>
+          </Button>
+          <div style={{ marginRight: '10px', height: 'auto', marginTop: '5px', float: 'right', verticalAlign: 'sub', fontSize: 'x-small', color: 'grey' }}
+              hidden={!this.state.refreshButtonHover}>{ this.getRefreshButtonText(this.getCurrentDashboard().id) } </div>
           <div className='fapp-date-picker' style={{ display: 'block', marginTop: '10px', right: '45px' }} hidden={!this.state.showDatePicker}>
             <ClosableDateRangePicker
               ranges={this.getCurrentDateRange()}

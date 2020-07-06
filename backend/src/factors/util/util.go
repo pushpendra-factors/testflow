@@ -169,6 +169,12 @@ func TimeNow() time.Time {
 	return time.Now().UTC()
 }
 
+// TimeNowIn Return's current time in given Timezone.
+func TimeNowIn(timezone TimeZoneString) time.Time {
+	timezoneLocation, _ := time.LoadLocation(string(timezone))
+	return time.Now().In(timezoneLocation)
+}
+
 // TimeNowUnix Returns current epoch time.
 func TimeNowUnix() int64 {
 	return TimeNow().Unix()

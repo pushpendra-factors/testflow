@@ -97,7 +97,7 @@ class DashboardUnit extends Component {
     this.setState({ presentationProps: props });
   }
 
-  execAnalyticsQuery() {
+  execAnalyticsQuery(hardRefresh) {
     this.setState({ loading: true });
     let query = this.props.data.query;
 
@@ -139,10 +139,14 @@ class DashboardUnit extends Component {
 
     let { dashboard_id, id:dashboard_unit_id } = this.props.data
 
-    runDashboardQuery(this.props.currentProjectId, dashboard_id, dashboard_unit_id, query)
+    runDashboardQuery(this.props.currentProjectId, dashboard_id, dashboard_unit_id, query, hardRefresh)
       .then((r) => {
         this.setState({ loading: false });
+        if (!r.data.hasOwnProperty("result")) {
+          return
+        }
         this.setPresentationProps(r.data.result);
+        this.props.updateLastRefreshedAt(dashboard_id, r.data.refreshedAt);
       })
       .catch(console.error);
   }
@@ -160,6 +164,9 @@ class DashboardUnit extends Component {
 
     runDashboardChannelQuery(this.props.currentProjectId, dashboard_id, dashboard_unit_id, query) 
       .then((r) => {
+        if (!r.data.hasOwnProperty("result")) {
+          return
+        }
         if (this.props.data.presentation == PRESENTATION_CARD) {
           // select the value of the metric key to show on card.
           let key = this.props.data.query.meta.metric;
@@ -182,15 +189,15 @@ class DashboardUnit extends Component {
       .catch(console.error);
   }
 
-  execQuery() {
+  execQuery(hardRefresh) {
     if (this.props.data.query.cl == QUERY_CLASS_CHANNEL) 
       this.execChannelAnalyticsQuery();
     else 
-      this.execAnalyticsQuery();
+      this.execAnalyticsQuery(hardRefresh);
   }
 
   componentWillMount() { 
-    this.execQuery();
+    this.execQuery(false);
   }
 
   present(props, showLegend=false) {
@@ -371,7 +378,9 @@ class DashboardUnit extends Component {
   componentDidUpdate(prevProps) {
     if (prevProps.data.id != this.props.data.id || 
       JSON.stringify(prevProps.dateRange) != JSON.stringify(this.props.dateRange)) {
-      this.execQuery();
+      this.execQuery(false);
+    } else if (prevProps.hardRefresh != this.props.hardRefresh) {
+      this.execQuery(true)
     }
   }
 
