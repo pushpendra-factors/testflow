@@ -374,6 +374,13 @@ Query Explanations:
 */
 func ExecuteWebAnalyticsQueries(projectId uint64, queries *WebAnalyticsQueries) (
 	queryResultByName *map[string]WebAnalyticsQueryResult, errCode int) {
+	webAggrState := WebAnalyticsAggregate{}
+
+	defer func() {
+		if errCode != http.StatusOK {
+			queryResultByName = getResultByNameAsWebAnalyticsResult(&webAggrState)
+		}
+	}()
 
 	if projectId == 0 || queries == nil {
 		return queryResultByName, http.StatusBadRequest
@@ -382,7 +389,7 @@ func ExecuteWebAnalyticsQueries(projectId uint64, queries *WebAnalyticsQueries) 
 	logCtx := log.WithField("project_id", projectId).WithField("query", queries)
 
 	sessionEventName, errCode := GetSessionEventName(projectId)
-	if errCode == http.StatusInternalServerError {
+	if errCode != http.StatusFound {
 		logCtx.Error("Failed to get session event name on execute_web_analytics_query.")
 		return queryResultByName, http.StatusInternalServerError
 	}
@@ -406,7 +413,6 @@ func ExecuteWebAnalyticsQueries(projectId uint64, queries *WebAnalyticsQueries) 
 	}
 	defer rows.Close()
 
-	webAggrState := WebAnalyticsAggregate{}
 	for rows.Next() {
 		var id string
 		var projectID uint64
