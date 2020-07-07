@@ -80,7 +80,7 @@ function App() {
                 <a id="footer-linkedin" className="linkedin" href="https://www.linkedin.com/company/factors-ai" target="_blank"><img src={linkedinSVG} alt="linkedin" /></a>
                 <a id="footer-facebook" className="facebook" href="https://www.facebook.com/factorsai" target="_blank"><img src={facebookSVG} alt="facebook" /></a>
                 <a id="footer-twitter" className="twitter" href="https://twitter.com/factorsai" target="_blank"><img src={twitterSVG} alt="twitter" /></a>
-                <p className="copyright">© Slashbit Technologies Pvt Ltd</p>
+                <p className="copyright">© Slashbit Inc</p>
                 <a id="footer-terms" className="terms" href="/terms-of-use">Terms Of Use</a>
                 <a id="footer-privacy" className="privacy" href="/privacy-policy">Privacy</a>
               </div>
