@@ -194,7 +194,7 @@ func buildWebAnalyticsAggregate(webEvent *WebAnalyticsEvent, aggrState *WebAnaly
 
 		aggrState.PageAggregates[pageURL].NoOfPageViews++
 
-		pageSpentTime, err := U.GetPropertyValueAsFloat64((*webEvent.Properties)[U.SP_SPENT_TIME])
+		pageSpentTime, err := U.GetPropertyValueAsFloat64((*webEvent.Properties)[U.EP_PAGE_SPENT_TIME])
 		if err != nil {
 			logCtx.WithError(err).
 				Error("Failed converting page_spent_time property value to float64.")
@@ -342,7 +342,7 @@ func getResultByNameAsWebAnalyticsResult(webAggrState *WebAnalyticsAggregate) (
 
 	// Todo: duration should be in x mins y secs.
 	fillValueAsWebAnalyticsResult(queryResultByName,
-		QueryNameAvgSessionDuration, fmt.Sprintf("%0.2f", avgSessionDuration)) 
+		QueryNameAvgSessionDuration, fmt.Sprintf("%0.2f", avgSessionDuration))
 
 	fillValueAsWebAnalyticsResult(queryResultByName,
 		QueryNameAvgPagesPerSession, fmt.Sprintf("%0.2f", avgPagesPerSession))
