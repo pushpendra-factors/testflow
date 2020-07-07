@@ -232,6 +232,16 @@ var SP_PAGE_COUNT string = "$page_count"
 var SP_LATEST_PAGE_URL = "$session_latest_page_url"
 var SP_LATEST_PAGE_RAW_URL = "$session_latest_page_raw_url"
 
+// session properties same as user properties.
+var SP_INITIAL_PAGE_URL string = UP_INITIAL_PAGE_URL
+var SP_INITIAL_PAGE_RAW_URL string = UP_INITIAL_PAGE_RAW_URL
+var SP_INITIAL_PAGE_DOMAIN string = UP_INITIAL_PAGE_DOMAIN
+var SP_INITIAL_PAGE_LOAD_TIME string = UP_INITIAL_PAGE_LOAD_TIME
+var SP_INITIAL_PAGE_SPENT_TIME string = UP_INITIAL_PAGE_SPENT_TIME
+var SP_INITIAL_PAGE_SCROLL_PERCENT string = UP_INITIAL_PAGE_SCROLL_PERCENT
+var SP_INITIAL_COST string = UP_INITIAL_COST
+var SP_INITIAL_REVENUE string = UP_INITIAL_REVENUE
+
 var SDK_ALLOWED_EVENT_PROPERTIES = [...]string{
 	EP_INTERNAL_IP,
 	EP_LOCATION_LATITUDE,
@@ -505,15 +515,14 @@ var USER_TO_SESSION_PROPERTIES = [...]string{
 }
 
 var EVENT_TO_SESSION_PROPERTIES = map[string]string{
-	// Uses user property names.
-	EP_PAGE_URL:            UP_INITIAL_PAGE_URL,
-	EP_PAGE_RAW_URL:        UP_INITIAL_PAGE_RAW_URL,
-	EP_PAGE_DOMAIN:         UP_INITIAL_PAGE_DOMAIN,
-	EP_PAGE_LOAD_TIME:      UP_INITIAL_PAGE_LOAD_TIME,
-	EP_PAGE_SPENT_TIME:     UP_INITIAL_PAGE_SPENT_TIME,
-	EP_PAGE_SCROLL_PERCENT: UP_INITIAL_PAGE_SCROLL_PERCENT,
-	EP_COST:                UP_INITIAL_COST,
-	EP_REVENUE:             UP_INITIAL_REVENUE,
+	EP_PAGE_URL:            SP_INITIAL_PAGE_URL,
+	EP_PAGE_RAW_URL:        SP_INITIAL_PAGE_RAW_URL,
+	EP_PAGE_DOMAIN:         SP_INITIAL_PAGE_DOMAIN,
+	EP_PAGE_LOAD_TIME:      SP_INITIAL_PAGE_LOAD_TIME,
+	EP_PAGE_SPENT_TIME:     SP_INITIAL_PAGE_SPENT_TIME,
+	EP_PAGE_SCROLL_PERCENT: SP_INITIAL_PAGE_SCROLL_PERCENT,
+	EP_COST:                SP_INITIAL_COST,
+	EP_REVENUE:             SP_INITIAL_REVENUE,
 
 	// Uses same name as event properties.
 	EP_CAMPAIGN:           EP_CAMPAIGN,
@@ -1184,6 +1193,10 @@ func FillPropertiesFromURL(properties *PropertiesMap, url *url.URL) error {
 }
 
 func GetPropertyValueAsString(value interface{}) string {
+	if value == nil {
+		return ""
+	}
+
 	switch valueType := value.(type) {
 	case float32, float64:
 		return fmt.Sprintf("%0.0f", value)
@@ -1196,6 +1209,27 @@ func GetPropertyValueAsString(value interface{}) string {
 	default:
 		log.Error("Invalid value type on GetPropertyValueAsString : ", valueType)
 		return ""
+	}
+}
+
+func GetPropertyValueAsFloat64(value interface{}) (float64, error) {
+	if value == nil {
+		return 0, nil
+	}
+
+	switch valueType := value.(type) {
+	case float64:
+		return value.(float64), nil
+	case float32:
+		return float64(value.(float32)), nil
+	case int:
+		return float64(value.(int)), nil
+	case int32:
+		return float64(value.(int32)), nil
+	case int64:
+		return float64(value.(int64)), nil
+	default:
+		return 0, fmt.Errorf("invalid property value type %v", valueType)
 	}
 }
 

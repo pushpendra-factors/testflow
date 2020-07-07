@@ -87,7 +87,7 @@ const (
 	ReportTypeMonthly = "m"
 )
 
-var dashBoardUnitTypesToIncludeInReport = []string{
+var dashBoardUnitPresentationsToIncludeInReport = []string{
 	PresentationLine,
 	PresentationBar,
 	PresentationTable,
@@ -295,7 +295,7 @@ func GenerateReport(projectID, dashboardID uint64, dashboardName string, reportT
 	logCtx := log.WithField("project_id", projectID).WithField("dashboard_id", dashboardID)
 
 	dashboardUnits, errCode := GetDashboardUnitsByProjectIDAndDashboardIDAndTypes(
-		projectID, dashboardID, dashBoardUnitTypesToIncludeInReport)
+		projectID, dashboardID, dashBoardUnitPresentationsToIncludeInReport)
 	if errCode != http.StatusFound {
 		return nil, errCode
 	}

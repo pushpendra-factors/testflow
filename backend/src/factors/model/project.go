@@ -25,6 +25,7 @@ type Project struct {
 
 const TOKEN_GEN_RETRY_LIMIT = 5
 const DefaultProjectName = "My Project"
+const ENABLE_DEFAULT_WEB_ANALYTICS = false
 
 // Checks for the existence of token already.
 func isTokenExist(token string) (exists int, err error) {
@@ -94,28 +95,40 @@ func createProject(project *Project) (*Project, int) {
 	return project, http.StatusCreated
 }
 
-func createProjectDependencies(projectID uint64) int {
+func createProjectDependencies(projectID uint64, agentUUID string) int {
+	logCtx := log.WithField("project_id", projectID)
+
 	// Associated project setting creation with default state.
 	defaultAutoTrackState := true
 	defaultExcludebotState := true
-
 	_, errCode := createProjectSetting(&ProjectSetting{ProjectId: projectID,
 		AutoTrack: &defaultAutoTrackState, ExcludeBot: &defaultExcludebotState})
 	if errCode != http.StatusCreated {
-		log.WithFields(log.Fields{"projectID": projectID}).Error("Creating project_settings failed")
+		logCtx.Error("Create project settings failed on create project dependencies.")
 		return errCode
+	}
+
+	if ENABLE_DEFAULT_WEB_ANALYTICS {
+		errCode = createDefaultDashboardsForProject(projectID, agentUUID)
+		if errCode != http.StatusCreated {
+			logCtx.Error("Create default dashboards failed on create project dependencies.")
+			return errCode
+		}
 	}
 
 	return http.StatusCreated
 }
 
 // CreateProjectWithDependencies seperate create method with dependencies to avoid breaking tests.
-func CreateProjectWithDependencies(project *Project, agentUUID string, agentRole uint64, billingAccountID uint64) (*Project, int) {
+func CreateProjectWithDependencies(project *Project, agentUUID string,
+	agentRole uint64, billingAccountID uint64) (*Project, int) {
+
 	cProject, errCode := createProject(project)
 	if errCode != http.StatusCreated {
 		return nil, errCode
 	}
-	errCode = createProjectDependencies(cProject.ID)
+
+	errCode = createProjectDependencies(cProject.ID, agentUUID)
 	if errCode != http.StatusCreated {
 		return nil, errCode
 	}
@@ -149,11 +162,14 @@ func CreateDefaultProjectForAgent(agentUUID string) (*Project, int) {
 
 	billingAcc, errCode := GetBillingAccountByAgentUUID(agentUUID)
 	if errCode != http.StatusFound {
-		log.WithField("err_code", errCode).Error("CreateDefaultProjectForAgent Failed, billing account error")
+		log.WithField("err_code", errCode).
+			Error("CreateDefaultProjectForAgent Failed, billing account error")
 		return nil, errCode
 	}
 
-	cProject, errCode := CreateProjectWithDependencies(&Project{Name: DefaultProjectName}, agentUUID, ADMIN, billingAcc.ID)
+	cProject, errCode := CreateProjectWithDependencies(
+		&Project{Name: DefaultProjectName},
+		agentUUID, ADMIN, billingAcc.ID)
 	if errCode != http.StatusCreated {
 		return nil, errCode
 	}

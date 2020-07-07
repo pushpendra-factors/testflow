@@ -13,16 +13,25 @@ import moment from 'moment';
 
 import DashboardUnit from './DashboardUnit';
 import { fetchDashboards, createDashboard, updateDashboard,
-  fetchDashboardUnits } from '../../actions/dashboardActions';
+  fetchDashboardUnits,fetchWebAnalyticsResult } from '../../actions/dashboardActions';
 import { createSelectOpts, makeSelectOpt } from '../../util';
 import NoContent from '../../common/NoContent';
 import ClosableDateRangePicker from '../../common/ClosableDatePicker';
 import Loading from '../../loading';
-import { PRESENTATION_CARD, DEFAULT_DATE_RANGE, sameDay, convertSecondsToHMSAgo, getPresetLabelForDateRange, setDateRangeForPresetLabel,
+import { 
+  sameDay,
+  PRESENTATION_CARD, 
+  DEFAULT_DATE_RANGE,  
+  convertSecondsToHMSAgo,
+  getPresetLabelForDateRange,
+  setDateRangeForPresetLabel,
   DEFINED_DATE_RANGES, 
   PRESENTATION_TABLE,
   QUERY_CLASS_CHANNEL,
-  QUERY_CLASS_FUNNEL} from '../Query/common';
+  QUERY_CLASS_FUNNEL, 
+  QUERY_CLASS_WEB,
+  getQueryPeriod
+} from '../Query/common';
 
 const TYPE_OPTS = [
   { label: "Only me", value: "pr" },
@@ -83,6 +92,8 @@ class Dashboard extends Component {
 
         showDatePicker: false,
         dateRange: null,
+        webAnalyticsBulkQueryParams: [],
+        webAnalyticsBulkQueryHandlers: [],
       }
   }
 
@@ -90,7 +101,7 @@ class Dashboard extends Component {
     this.props.fetchDashboards(this.props.currentProjectId)
       .then(() => {
         if (this.props.dashboards.length == 0) {
-          this.setState({ loaded: true })
+          this.setState({ loaded: true });
         }
         
         let selectedDashboard = this.getSelectedDashboard();
@@ -112,7 +123,11 @@ class Dashboard extends Component {
   }
 
   onSelectDashboard = (option) => {
-    this.setState({ selectedDashboard: option, loadingUnits: true });
+    this.setState({ selectedDashboard: option,
+      loadingUnits: true,
+      webAnalyticsBulkQueryParams:[],
+      webAnalyticsBulkQueryHandlers:[]
+     });
     this.setLastSeenDashboard(option.value);
 
     this.props.fetchDashboardUnits(this.props.currentProjectId, option.value)
@@ -198,6 +213,53 @@ class Dashboard extends Component {
       positions[order[i]] = i;
     
     return positions;
+  }
+
+  getQuery = () => {
+    let dateRange = this.getCurrentDateRange();
+    let period = getQueryPeriod(dateRange[0]);
+    let query = {
+        "units":this.state.webAnalyticsBulkQueryParams,
+        "from":period.from,
+        "to":period.to,
+      };
+    return query
+  }
+
+  execWebAnalyticsBulkRequest = () => {
+    let query = this.getQuery();
+    let currentDashboard = this.getSelectedDashboard();
+
+      fetchWebAnalyticsResult(this.props.currentProjectId, currentDashboard.value,query)
+        .then((res)=>{
+          if (res.status == 200){
+            let data = res.data;
+            for (let handler of this.state.webAnalyticsBulkQueryHandlers){
+              if (handler.id in data){
+                handler.handle(data[handler.id]);
+              }
+            }
+          }
+        }
+      ).catch(err=>console.error("Error: ", err));
+  }
+
+  webAnalyticsBulkRequestBuilder = (id, qname, handler) => {
+    let unitQuery = {
+      "unit_id":id,
+      "query_name":qname
+    };
+    let unitHandler = {
+      "id":id,
+      "handle":handler
+    };
+    
+    this.state.webAnalyticsBulkQueryParams.push(unitQuery);
+    this.state.webAnalyticsBulkQueryHandlers.push(unitHandler);
+
+    if (this.state.webAnalyticsBulkQueryParams.length == this.props.dashboardUnits.length){
+      this.execWebAnalyticsBulkRequest();
+    }
   }
 
   handleUnitPositionChange(unitType, oldIndex, newIndex) {
@@ -304,10 +366,11 @@ class Dashboard extends Component {
       unit.query &&
       unit.query.cl &&
       ( 
-        // channel queries with presentation table.
-        (unit.presentation == PRESENTATION_TABLE && unit.query.cl == QUERY_CLASS_CHANNEL) ||
+        // channel queries and web analytics queries with presentation table.
+        (unit.presentation == PRESENTATION_TABLE && 
+          (unit.query.cl == QUERY_CLASS_CHANNEL || unit.query.cl == QUERY_CLASS_WEB)) ||
         // funnel queries with events more than 1 or with breakdown more than 1.
-        unit.query.cl == QUERY_CLASS_FUNNEL && unit.query.gbp.length > 1
+        (unit.query.cl == QUERY_CLASS_FUNNEL && unit.query.gbp.length > 1)
       )
     )
   }
@@ -332,7 +395,7 @@ class Dashboard extends Component {
       if (pUnit.presentation && pUnit.presentation === PRESENTATION_CARD) {
         cardUnits[cardPositions[pUnit.id]] = {
           unit: <DashboardUnit dateRange={this.getCurrentDateRange()} editDashboard={this.state.editDashboard} 
-            cardIndex={cardIndex} data={pUnit} position={cardPositions[pUnit.id]} hardRefresh={this.state.hardRefresh}
+            cardIndex={cardIndex} data={pUnit} webAnalyticsBulkRequestBuilder={this.webAnalyticsBulkRequestBuilder} position={cardPositions[pUnit.id]} hardRefresh={this.state.hardRefresh}
             updateLastRefreshedAt={this.updateLastRefreshedAt.bind(this)} />,
           position: cardPositions[pUnit.id],
         };
@@ -340,8 +403,8 @@ class Dashboard extends Component {
       } 
       else if (this.isBigChartUnit(pUnit)) {
         bigChartUnits[bigChartPositions[pUnit.id]] = {
-          unit: <DashboardUnit dateRange={this.getCurrentDateRange()} editDashboard={this.state.editDashboard} 
-            data={pUnit} position={bigChartPositions[pUnit.id]} hardRefresh={this.state.hardRefresh}
+          unit: <DashboardUnit dateRange={this.getCurrentDateRange()} editDashboard={this.state.editDashboard}
+            data={pUnit} webAnalyticsBulkRequestBuilder={this.webAnalyticsBulkRequestBuilder} position={bigChartPositions[pUnit.id]} hardRefresh={this.state.hardRefresh}
             updateLastRefreshedAt={this.updateLastRefreshedAt.bind(this)} />,
           position: bigChartPositions[pUnit.id],
         };
@@ -349,7 +412,7 @@ class Dashboard extends Component {
       else {
         chartUnits[chartPositions[pUnit.id]] = {
           unit: <DashboardUnit dateRange={this.getCurrentDateRange()} editDashboard={this.state.editDashboard} 
-            data={pUnit} position={chartPositions[pUnit.id]} hardRefresh={this.state.hardRefresh}
+            data={pUnit} webAnalyticsBulkRequestBuilder={this.webAnalyticsBulkRequestBuilder} position={chartPositions[pUnit.id]} hardRefresh={this.state.hardRefresh}
             updateLastRefreshedAt={this.updateLastRefreshedAt.bind(this)} />,
           position: chartPositions[pUnit.id],
         };
@@ -441,7 +504,10 @@ class Dashboard extends Component {
     if (sameDay(range.selected.endDate, new Date()) && !sameDay(range.selected.startDate, new Date())){
       return
     }
-    this.setState({ dateRange: [range.selected] });
+
+    this.setState({ dateRange: [range.selected],
+      webAnalyticsBulkQueryParams:[], 
+      webAnalyticsBulkQueryHandlers:[] });
     this.setLastSeenDateRangeForDashboard(range.selected);
   }
 

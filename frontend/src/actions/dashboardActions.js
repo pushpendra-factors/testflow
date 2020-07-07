@@ -158,6 +158,11 @@ export function updateDashboardUnit(projectId, dashboardId, unitId, payload) {
   }
 } 
 
+export function fetchWebAnalyticsResult(projectId,dashboardId,query){
+  let url = host+"projects/"+projectId+"/dashboard/"+dashboardId+"/units/query/web_analytics";
+  return post(null, url, {...query})
+}
+
 export function deleteDashboardUnit(projectId, dashboardId, unitId) {
   return function(dispatch){
     return new Promise((resolve, reject) => {

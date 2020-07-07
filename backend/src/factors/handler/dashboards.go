@@ -257,3 +257,67 @@ func DeleteDashboardUnitHandler(c *gin.Context) {
 
 	c.JSON(http.StatusAccepted, gin.H{"message": "Successfully deleted."})
 }
+
+type DashboardUnitWebAnalyticsQueryName struct {
+	UnitID    uint64 `json:"unit_id"`
+	QueryName string `json:"query_name"`
+}
+
+type DashboardUnitsWebAnalyticsQuery struct {
+	// Supports redundant metric keys with different unit_ids.
+	Units []DashboardUnitWebAnalyticsQueryName `json:"units"`
+	From  int64                                `json:"from"`
+	To    int64                                `json:"to"`
+}
+
+func DashboardUnitsWebAnalyticsQueryHandler(c *gin.Context) {
+	logCtx := log.WithFields(log.Fields{"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID)})
+
+	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Web analytics query failed. Invalid project."})
+		return
+	}
+
+	var requestPayload DashboardUnitsWebAnalyticsQuery
+
+	r := c.Request
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&requestPayload); err != nil {
+		logCtx.WithError(err).Error("Web analytics query failed. Json decode failed.")
+		c.AbortWithStatusJSON(http.StatusBadRequest,
+			gin.H{"error": "Web analytics query failed. Json decode failed."})
+		return
+	}
+
+	// build WebAnalyticsQuery based on query names from DashboardUnitsWebAnalyticsQuery
+	// response map[query_name]result = Pass it to ExecuteWebAnalyticsQueries.
+	// build map[unit_id]result and respond.
+
+	queryNames := make([]string, 0, len(requestPayload.Units))
+	for _, unit := range requestPayload.Units {
+		queryNames = append(queryNames, unit.QueryName)
+	}
+
+	queryResultsByName, errCode := M.ExecuteWebAnalyticsQueries(projectId,
+		&M.WebAnalyticsQueries{
+			QueryNames: queryNames,
+			From:       requestPayload.From,
+			To:         requestPayload.To,
+		})
+	if errCode != http.StatusOK {
+		c.AbortWithStatusJSON(http.StatusInternalServerError,
+			gin.H{"message": "Failed to execute web analytics queries"})
+		return
+	}
+
+	queryResultsByUnitMap := make(map[uint64]M.WebAnalyticsQueryResult)
+	for _, unit := range requestPayload.Units {
+		if _, exists := (*queryResultsByName)[unit.QueryName]; exists {
+			queryResultsByUnitMap[unit.UnitID] = (*queryResultsByName)[unit.QueryName]
+		}
+	}
+
+	c.JSON(http.StatusOK, queryResultsByUnitMap)
+}

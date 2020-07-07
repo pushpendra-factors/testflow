@@ -13,7 +13,7 @@ import { runChannelQuery, fetchChannelFilterValues } from '../../actions/project
 import { createDashboardUnit } from '../../actions/dashboardActions'
 import { DEFAULT_DATE_RANGE, DEFINED_DATE_RANGES, 
   readableDateRange, PRESENTATION_CARD, PRESENTATION_TABLE,
-  QUERY_CLASS_CHANNEL, getQueryPeriod} from '../Query/common';
+  QUERY_CLASS_CHANNEL, getQueryPeriod, DASHBOARD_TYPE_WEB_ANALYTICS} from '../Query/common';
 import ClosableDateRangePicker from '../../common/ClosableDatePicker';
 import { makeSelectOpts, getReadableKeyFromSnakeKey } from '../../util';
 import TableChart from '../Query/TableChart';
@@ -318,7 +318,7 @@ class ChannelQuery extends Component {
     let dashboardsDropdown = [];
     for(let i=0; i<this.props.dashboards.length; i++){
       let dashboard = this.props.dashboards[i];
-      if (dashboard) {
+      if (dashboard && dashboard.name != DASHBOARD_TYPE_WEB_ANALYTICS ) {
         dashboardsDropdown.push(
           <DropdownItem onClick={this.selectDashboardToAdd} 
             value={dashboard.id}>{dashboard.name}</DropdownItem>

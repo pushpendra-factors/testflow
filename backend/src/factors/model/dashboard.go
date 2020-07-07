@@ -240,7 +240,7 @@ func isValidUnitsPosition(positions *map[string]map[uint64]int) (bool, error) {
 		return false, errors.New("nil position map")
 	}
 
-	for _, typ := range UnitTypes {
+	for _, typ := range UnitPresentationTypes {
 		if posMap, exists := (*positions)[typ]; exists && len(posMap) > 0 {
 			actualPos := make([]int, 0, 0)
 
@@ -390,4 +390,8 @@ func SetCacheResultByDashboardIdAndUnitId(result interface{}, projectId uint64, 
 		logctx.WithError(err).Error("Failed to set cache for channel query")
 		return
 	}
+}
+
+func createDefaultDashboardsForProject(projectId uint64, agentUUID string) int {
+	return CreateWebAnalyticsDefaultDashboardWithUnits(projectId, agentUUID)
 }

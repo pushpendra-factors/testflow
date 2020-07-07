@@ -99,3 +99,9 @@ func TestUtilIsBotUserAgent(t *testing.T) {
 	assert.True(t, U.IsBotUserAgent("facebookexternalhit/1.0 (+http://www.facebook.com/externalhit_uatext.php)"))
 	assert.True(t, U.IsBotUserAgent("ia_archiver (+http://www.alexa.com/site/help/webmasters; crawler@alexa.com)"))
 }
+
+func TestUtilIsURLStable(t *testing.T) { 
+	assert.True(t, U.IsURLStable("localhost:3000/#/dashboard"))
+	assert.True(t, U.IsURLStable("localhost.com/#/dashboard"))
+	assert.False(t, U.IsURLStable("run_query"))
+}

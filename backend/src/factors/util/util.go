@@ -270,3 +270,21 @@ func GetStringListAsBatch(list []string, batchSize int) [][]string {
 
 	return batchList
 }
+
+func GetSnakeCaseToTitleString(str string) (title string) {
+	if str == "" {
+		return
+	}
+
+	tokens := strings.Split(str, "_")
+	for i, token := range tokens {
+		if i == 0 {
+			title = strings.Title(token)
+			continue
+		}
+
+		title = fmt.Sprintf("%s %s", title, strings.Title(token))
+	}
+
+	return title
+}

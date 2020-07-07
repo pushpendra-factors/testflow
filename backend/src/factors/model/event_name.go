@@ -126,6 +126,31 @@ func CreateOrGetSessionEventName(projectId uint64) (*EventName, int) {
 		Type: TYPE_INTERNAL_EVENT_NAME})
 }
 
+func GetSessionEventName(projectId uint64) (*EventName, int) {
+	if projectId == 0 {
+		return nil, http.StatusBadRequest
+	}
+
+	logCtx := log.WithField("project_id", projectId)
+
+	var eventNames []EventName
+
+	db := C.GetServices().Db
+	err := db.Limit(1).Where("project_id = ?", projectId).
+		Where("name = ?", U.EVENT_NAME_SESSION).
+		Find(&eventNames).Error
+	if err != nil {
+		logCtx.WithError(err).Error("Falied to get session event name.")
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(eventNames) == 0 {
+		return nil, http.StatusNotFound
+	}
+
+	return &eventNames[0], http.StatusFound
+}
+
 func isValidType(nameType string) bool {
 	if nameType == "" {
 		return false

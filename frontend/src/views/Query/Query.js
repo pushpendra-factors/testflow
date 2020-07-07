@@ -44,7 +44,7 @@ import {
 import Loading from '../../loading';
 import factorsai from '../../common/factorsaiObj';
 import { PROPERTY_TYPE_OPTS, USER_PREF_PROPERTY_TYPE_OPTS, 
-  PROPERTY_VALUE_TYPE_DATE_TIME, } from './common';
+  PROPERTY_VALUE_TYPE_DATE_TIME,DASHBOARD_TYPE_WEB_ANALYTICS } from './common';
 import insightsSVG from '../../assets/img/analytics/insights.svg';
 import funnelSVG from '../../assets/img/analytics/funnel.svg';
 import channelSVG from '../../assets/img/analytics/channel.svg';
@@ -973,7 +973,7 @@ class Query extends Component {
     let dashboardsDropdown = [];
     for(let i=0; i<this.props.dashboards.length; i++){
       let dashboard = this.props.dashboards[i];
-      if (dashboard) {
+      if (dashboard && dashboard.name != DASHBOARD_TYPE_WEB_ANALYTICS ) {
         dashboardsDropdown.push(<DropdownItem onClick={this.selectDashboardToAdd} 
           value={dashboard.id}>{dashboard.name}</DropdownItem>)
       }

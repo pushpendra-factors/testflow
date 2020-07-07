@@ -49,7 +49,7 @@ const (
 	UnitChart = "chart"
 )
 
-var UnitTypes = [...]string{UnitCard, UnitChart}
+var UnitPresentationTypes = [...]string{UnitCard, UnitChart}
 
 func isValidDashboardUnit(dashboardUnit *DashboardUnit) (bool, string) {
 	if dashboardUnit.DashboardId == 0 {

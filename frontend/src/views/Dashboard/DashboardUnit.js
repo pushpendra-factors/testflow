@@ -16,7 +16,7 @@ import {
   PRESENTATION_TABLE, PRESENTATION_CARD, 
   PRESENTATION_FUNNEL, PROPERTY_VALUE_TYPE_DATE_TIME, 
   PROPERTY_KEY_JOIN_TIME, getGroupByTimestampType,
-  QUERY_CLASS_CHANNEL, QUERY_CLASS_FUNNEL,
+  QUERY_CLASS_CHANNEL, QUERY_CLASS_FUNNEL,QUERY_CLASS_WEB,
   getQueryPeriod, convertFunnelResultForTable
 } from '../Query/common';
 import { slideUnixTimeWindowToCurrentTime, getTimezoneString, 
@@ -95,6 +95,17 @@ class DashboardUnit extends Component {
     }
 
     this.setState({ presentationProps: props });
+  }
+
+  handleWebAnalyticsResult = (result) => {
+    this.setState({ loading: false });
+    this.setPresentationProps(result);
+  }
+
+  execWebAnalyticsQuery = () => {
+    this.setState({ loading: true });
+    let data = this.props.data;
+    this.props.webAnalyticsBulkRequestBuilder(data.id, data.query.qname, this.handleWebAnalyticsResult)
   }
 
   execAnalyticsQuery(hardRefresh) {
@@ -190,10 +201,13 @@ class DashboardUnit extends Component {
   }
 
   execQuery(hardRefresh) {
-    if (this.props.data.query.cl == QUERY_CLASS_CHANNEL) 
+    if (this.props.data.query.cl == QUERY_CLASS_CHANNEL){
       this.execChannelAnalyticsQuery();
-    else 
+    } else if(this.props.data.query.cl == QUERY_CLASS_WEB) {
+      this.execWebAnalyticsQuery();
+    } else {
       this.execAnalyticsQuery(hardRefresh);
+    }
   }
 
   componentWillMount() { 

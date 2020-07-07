@@ -62,7 +62,9 @@ type QueryResutlMeta struct {
 type QueryResult struct {
 	Headers []string        `json:"headers"`
 	Rows    [][]interface{} `json:"rows"`
-	Meta    QueryResutlMeta `json:"meta"`
+	// Todo(Dinesh): Change it to interface and use
+	// the query result struct across different queries.
+	Meta QueryResutlMeta `json:"meta"`
 }
 
 type DateTimePropertyValue struct {
@@ -84,6 +86,7 @@ const (
 	QueryClassFunnel      = "funnel"
 	QueryClassChannel     = "channel"
 	QueryClassAttribution = "attribution"
+	QueryClassWeb         = "web"
 
 	QueryTypeEventsOccurrence = "events_occurrence"
 	QueryTypeUniqueUsers      = "unique_users"
