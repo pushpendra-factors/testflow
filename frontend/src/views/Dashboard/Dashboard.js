@@ -379,7 +379,7 @@ class Dashboard extends Component {
   }
 
   toggleHardRefresh = () => {
-    this.setState({ hardRefresh: !this.state.hardRefresh });
+    this.setState((prevState) => ({ hardRefresh: !prevState.hardRefresh }));
   }
 
   isLoading() {
@@ -510,10 +510,14 @@ class Dashboard extends Component {
   }
 
   getRefreshButtonText(dashboardID) {
-    if (!this.state.lastRefreshedAt.has(dashboardID)) {
-      return "Reload";
+    if (this.state.refreshButtonHover) {
+      if (!this.state.lastRefreshedAt.has(dashboardID)) {
+        return "Reload";
+      }
+      return convertSecondsToHMSAgo(moment(new Date()).unix() - this.state.lastRefreshedAt.get(dashboardID));
+    } else {
+      return ""
     }
-    return convertSecondsToHMSAgo(moment(new Date()).unix() - this.state.lastRefreshedAt.get(dashboardID));
   }
 
   toggleRefreshButtonHover(hover) {
@@ -546,8 +550,9 @@ class Dashboard extends Component {
             hidden={!this.isTodaysDateRangeSelected()} onMouseEnter={() => this.toggleRefreshButtonHover(true)} onMouseLeave={() => this.toggleRefreshButtonHover(false)}>
             <i className='icon-refresh'/>
           </Button>
-          <div style={{ marginRight: '10px', height: 'auto', marginTop: '5px', float: 'right', verticalAlign: 'sub', fontSize: 'x-small', color: 'grey' }}
-              hidden={!this.state.refreshButtonHover}>{ this.getRefreshButtonText(this.getCurrentDashboard().id) } </div>
+          <div style={{ marginRight: '5px', height: 'auto', marginTop: '5px', float: 'right', verticalAlign: 'sub', fontSize: 'x-small', color: 'grey', width: '50px', textAlign: 'right'}}>
+            { this.getRefreshButtonText(this.getCurrentDashboard().id) }
+          </div>
           <div className='fapp-date-picker' style={{ display: 'block', marginTop: '10px', right: '45px' }} hidden={!this.state.showDatePicker}>
             <ClosableDateRangePicker
               ranges={this.getCurrentDateRange()}

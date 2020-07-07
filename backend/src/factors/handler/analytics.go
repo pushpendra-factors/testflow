@@ -81,7 +81,7 @@ func QueryHandler(c *gin.Context) {
 	if (dashboardIdParam != "" || unitIdParam != "") && !isHardRefreshForToday(requestPayload.Query.From, hardRefresh) {
 		cacheResult, errCode, errMsg := M.GetCacheResultByDashboardIdAndUnitId(projectId, dashboardId, unitId, requestPayload.Query.From, requestPayload.Query.To)
 		if errCode == http.StatusFound {
-			c.JSON(http.StatusOK, gin.H{"result": cacheResult.Result, "cache": true, "refreshedAt": cacheResult.RefreshedAt})
+			c.JSON(http.StatusOK, gin.H{"result": cacheResult.Result, "cache": true, "refreshed_at": cacheResult.RefreshedAt})
 			return
 		}
 		if errCode == http.StatusBadRequest {
@@ -104,7 +104,7 @@ func QueryHandler(c *gin.Context) {
 
 	if dashboardId != 0 && unitId != 0 {
 		M.SetCacheResultByDashboardIdAndUnitId(result, projectId, dashboardId, unitId, requestPayload.Query.To, requestPayload.Query.From)
-		c.JSON(http.StatusOK, gin.H{"result": result, "cache": false, "refreshedAt": U.TimeNowIn(U.TimeZoneStringIST).Unix()})
+		c.JSON(http.StatusOK, gin.H{"result": result, "cache": false, "refreshed_at": U.TimeNowIn(U.TimeZoneStringIST).Unix()})
 		return
 	}
 

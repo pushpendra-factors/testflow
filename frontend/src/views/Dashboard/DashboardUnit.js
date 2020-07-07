@@ -146,7 +146,7 @@ class DashboardUnit extends Component {
           return
         }
         this.setPresentationProps(r.data.result);
-        this.props.updateLastRefreshedAt(dashboard_id, r.data.refreshedAt);
+        this.props.updateLastRefreshedAt(dashboard_id, r.data.refreshed_at);
       })
       .catch(console.error);
   }
