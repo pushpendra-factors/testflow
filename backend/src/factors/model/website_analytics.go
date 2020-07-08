@@ -276,9 +276,9 @@ func getTopPagesReportAsWebAnalyticsResult(
 
 	rows := make([][]interface{}, 0, len(webAggr.PageAggregates))
 	for url, aggr := range webAggr.PageAggregates {
-		var avgPageSpentTimeOfPage float64
+		var avgPageSpentTimeOfPage string
 		if aggr.NoOfPageViews > 0 {
-			avgPageSpentTimeOfPage = aggr.TotalSpentTime / float64(aggr.NoOfPageViews)
+			avgPageSpentTimeOfPage = fmt.Sprintf("%0.1f", aggr.TotalSpentTime/float64(aggr.NoOfPageViews))
 		}
 
 		row := []interface{}{
@@ -342,10 +342,10 @@ func getResultByNameAsWebAnalyticsResult(webAggrState *WebAnalyticsAggregate) (
 
 	// Todo: duration should be in x mins y secs.
 	fillValueAsWebAnalyticsResult(queryResultByName,
-		QueryNameAvgSessionDuration, fmt.Sprintf("%0.2f", avgSessionDuration))
+		QueryNameAvgSessionDuration, fmt.Sprintf("%0.1f", avgSessionDuration))
 
 	fillValueAsWebAnalyticsResult(queryResultByName,
-		QueryNameAvgPagesPerSession, fmt.Sprintf("%0.2f", avgPagesPerSession))
+		QueryNameAvgPagesPerSession, fmt.Sprintf("%0.1f", avgPagesPerSession))
 
 	(*queryResultByName)[QueryNameTopPagesReport] = getTopPagesReportAsWebAnalyticsResult(webAggrState)
 
@@ -374,6 +374,8 @@ Query Explanations:
 */
 func ExecuteWebAnalyticsQueries(projectId uint64, queries *WebAnalyticsQueries) (
 	queryResultByName *map[string]WebAnalyticsQueryResult, errCode int) {
+	webAggrState := WebAnalyticsAggregate{}
+	queryResultByName = getResultByNameAsWebAnalyticsResult(&webAggrState)
 
 	if projectId == 0 || queries == nil {
 		return queryResultByName, http.StatusBadRequest
@@ -382,7 +384,7 @@ func ExecuteWebAnalyticsQueries(projectId uint64, queries *WebAnalyticsQueries) 
 	logCtx := log.WithField("project_id", projectId).WithField("query", queries)
 
 	sessionEventName, errCode := GetSessionEventName(projectId)
-	if errCode == http.StatusInternalServerError {
+	if errCode != http.StatusFound {
 		logCtx.Error("Failed to get session event name on execute_web_analytics_query.")
 		return queryResultByName, http.StatusInternalServerError
 	}
@@ -406,7 +408,6 @@ func ExecuteWebAnalyticsQueries(projectId uint64, queries *WebAnalyticsQueries) 
 	}
 	defer rows.Close()
 
-	webAggrState := WebAnalyticsAggregate{}
 	for rows.Next() {
 		var id string
 		var projectID uint64

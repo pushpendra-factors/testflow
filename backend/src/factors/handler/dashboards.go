@@ -300,17 +300,12 @@ func DashboardUnitsWebAnalyticsQueryHandler(c *gin.Context) {
 		queryNames = append(queryNames, unit.QueryName)
 	}
 
-	queryResultsByName, errCode := M.ExecuteWebAnalyticsQueries(projectId,
+	queryResultsByName, _ := M.ExecuteWebAnalyticsQueries(projectId,
 		&M.WebAnalyticsQueries{
 			QueryNames: queryNames,
 			From:       requestPayload.From,
 			To:         requestPayload.To,
 		})
-	if errCode != http.StatusOK {
-		c.AbortWithStatusJSON(http.StatusInternalServerError,
-			gin.H{"message": "Failed to execute web analytics queries"})
-		return
-	}
 
 	queryResultsByUnitMap := make(map[uint64]M.WebAnalyticsQueryResult)
 	for _, unit := range requestPayload.Units {
