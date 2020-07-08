@@ -342,10 +342,10 @@ func getResultByNameAsWebAnalyticsResult(webAggrState *WebAnalyticsAggregate) (
 
 	// Todo: duration should be in x mins y secs.
 	fillValueAsWebAnalyticsResult(queryResultByName,
-		QueryNameAvgSessionDuration, fmt.Sprintf("%0.2f", avgSessionDuration))
+		QueryNameAvgSessionDuration, fmt.Sprintf("%0.1f", avgSessionDuration))
 
 	fillValueAsWebAnalyticsResult(queryResultByName,
-		QueryNameAvgPagesPerSession, fmt.Sprintf("%0.2f", avgPagesPerSession))
+		QueryNameAvgPagesPerSession, fmt.Sprintf("%0.1f", avgPagesPerSession))
 
 	(*queryResultByName)[QueryNameTopPagesReport] = getTopPagesReportAsWebAnalyticsResult(webAggrState)
 
@@ -378,6 +378,7 @@ func ExecuteWebAnalyticsQueries(projectId uint64, queries *WebAnalyticsQueries) 
 
 	defer func() {
 		if errCode != http.StatusOK {
+			//default to 0 value if error occurs
 			queryResultByName = getResultByNameAsWebAnalyticsResult(&webAggrState)
 		}
 	}()
