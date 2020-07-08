@@ -375,13 +375,7 @@ Query Explanations:
 func ExecuteWebAnalyticsQueries(projectId uint64, queries *WebAnalyticsQueries) (
 	queryResultByName *map[string]WebAnalyticsQueryResult, errCode int) {
 	webAggrState := WebAnalyticsAggregate{}
-
-	defer func() {
-		if errCode != http.StatusOK {
-			//default to 0 value if error occurs
-			queryResultByName = getResultByNameAsWebAnalyticsResult(&webAggrState)
-		}
-	}()
+	queryResultByName = getResultByNameAsWebAnalyticsResult(&webAggrState)
 
 	if projectId == 0 || queries == nil {
 		return queryResultByName, http.StatusBadRequest
