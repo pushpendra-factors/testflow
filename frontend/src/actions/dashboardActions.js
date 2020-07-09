@@ -158,8 +158,8 @@ export function updateDashboardUnit(projectId, dashboardId, unitId, payload) {
   }
 } 
 
-export function fetchWebAnalyticsResult(projectId,dashboardId,query){
-  let url = host+"projects/"+projectId+"/dashboard/"+dashboardId+"/units/query/web_analytics";
+export function fetchWebAnalyticsResult(projectId, dashboardId, query, refresh){
+  let url = host+"projects/"+projectId+"/dashboard/"+dashboardId+"/units/query/web_analytics?refresh="+refresh;
   return post(null, url, {...query})
 }
 

@@ -69,7 +69,12 @@ func main() {
 	startTime := util.TimeNowUnix()
 	M.CacheDashboardUnitsForProjects(*projectIDFlag, *numRoutinesFlag)
 	timeTakenString := util.SecondsToHMSString(util.TimeNowUnix() - startTime)
-	notifyMessage = fmt.Sprintf("Caching successful for %s projects. Time taken: %s.", *projectIDFlag, timeTakenString)
 
+	logCtx.Info("Starting website analytics")
+	startTime = util.TimeNowUnix()
+	M.CacheWebsiteAnalyticsForProjects(*projectIDFlag, *numRoutinesFlag)
+	timeTakenStringWeb := util.SecondsToHMSString(util.TimeNowUnix() - startTime)
+	notifyMessage = fmt.Sprintf("Caching successful for %s projects. Time taken: %s. Time taken for web analytics: %s",
+		*projectIDFlag, timeTakenString, timeTakenStringWeb)
 	util.NotifyThroughSNS("dashboard_caching", *envFlag, notifyMessage)
 }

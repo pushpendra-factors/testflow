@@ -83,6 +83,7 @@ class Dashboard extends Component {
         showCreateModal: false,
 
         hardRefresh: false,
+        webAnalyticsHardRefresh: false,
         lastRefreshedAt: new Map(),
         refreshButtonHover: false,
 
@@ -230,10 +231,11 @@ class Dashboard extends Component {
     let query = this.getQuery();
     let currentDashboard = this.getSelectedDashboard();
 
-      fetchWebAnalyticsResult(this.props.currentProjectId, currentDashboard.value,query)
+      fetchWebAnalyticsResult(this.props.currentProjectId, currentDashboard.value, query, this.state.webAnalyticsHardRefresh)
         .then((res)=>{
           if (res.status == 200){
-            let data = res.data;
+            this.updateLastRefreshedAt(Number(currentDashboard.value), res.data.refreshed_at)
+            let data = res.data.result;
             for (let handler of this.state.webAnalyticsBulkQueryHandlers){
               if (handler.id in data){
                 handler.handle(data[handler.id]);
@@ -442,7 +444,12 @@ class Dashboard extends Component {
   }
 
   toggleHardRefresh = () => {
-    this.setState((prevState) => ({ hardRefresh: !prevState.hardRefresh }));
+    this.setState((prevState) => ({
+      hardRefresh: !prevState.hardRefresh,
+      webAnalyticsHardRefresh: true,
+      webAnalyticsBulkQueryParams:[],
+      webAnalyticsBulkQueryHandlers:[]
+    }));
   }
 
   isLoading() {
@@ -570,6 +577,7 @@ class Dashboard extends Component {
         let updatedLastRefreshedAt = prevState.lastRefreshedAt
         updatedLastRefreshedAt.set(dashboardID, lastRefreshedAt)
         state.lastRefreshedAt = updatedLastRefreshedAt
+        state.webAnalyticsHardRefresh = false
       }
       return state;
     })

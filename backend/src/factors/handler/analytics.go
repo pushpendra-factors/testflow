@@ -51,10 +51,7 @@ func QueryHandler(c *gin.Context) {
 	refreshParam := c.Query("refresh")
 
 	if refreshParam != "" {
-		hardRefresh, err = strconv.ParseBool(refreshParam)
-		if err != nil {
-			logCtx.Errorf("Invalid value for refresh param %v", refreshParam)
-		}
+		hardRefresh, _ = strconv.ParseBool(refreshParam)
 	}
 	if dashboardIdParam != "" || unitIdParam != "" {
 		dashboardId, err = strconv.ParseUint(dashboardIdParam, 10, 64)

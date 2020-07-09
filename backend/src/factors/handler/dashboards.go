@@ -280,6 +280,9 @@ func DashboardUnitsWebAnalyticsQueryHandler(c *gin.Context) {
 	}
 
 	var requestPayload DashboardUnitsWebAnalyticsQuery
+	var queryResultsByName *map[string]M.WebAnalyticsQueryResult
+	var fromCache, hardRefresh bool
+	var lastRefreshedAt int64
 
 	r := c.Request
 	decoder := json.NewDecoder(r.Body)
@@ -291,21 +294,41 @@ func DashboardUnitsWebAnalyticsQueryHandler(c *gin.Context) {
 		return
 	}
 
-	// build WebAnalyticsQuery based on query names from DashboardUnitsWebAnalyticsQuery
-	// response map[query_name]result = Pass it to ExecuteWebAnalyticsQueries.
-	// build map[unit_id]result and respond.
-
-	queryNames := make([]string, 0, len(requestPayload.Units))
-	for _, unit := range requestPayload.Units {
-		queryNames = append(queryNames, unit.QueryName)
+	dashboardId, err := strconv.ParseUint(c.Params.ByName("dashboard_id"), 10, 64)
+	if err != nil || dashboardId == 0 {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid dashboard id."})
+		return
 	}
 
-	queryResultsByName, _ := M.ExecuteWebAnalyticsQueries(projectId,
-		&M.WebAnalyticsQueries{
-			QueryNames: queryNames,
-			From:       requestPayload.From,
-			To:         requestPayload.To,
-		})
+	refreshParam := c.Query("refresh")
+	if refreshParam != "" {
+		hardRefresh, _ = strconv.ParseBool(refreshParam)
+	}
+
+	cacheResult, errCode := M.GetCacheResultForWebAnalyticsDashboard(projectId, dashboardId, requestPayload.From, requestPayload.To)
+	if errCode == http.StatusFound && !isHardRefreshForToday(requestPayload.From, hardRefresh) {
+		queryResultsByName = &cacheResult.Result
+		fromCache = true
+		lastRefreshedAt = cacheResult.RefreshedAt
+	} else {
+		// build WebAnalyticsQuery based on query names from DashboardUnitsWebAnalyticsQuery
+		// response map[query_name]result = Pass it to ExecuteWebAnalyticsQueries.
+		// build map[unit_id]result and respond.
+
+		queryNames := make([]string, 0, len(requestPayload.Units))
+		for _, unit := range requestPayload.Units {
+			queryNames = append(queryNames, unit.QueryName)
+		}
+
+		queryResultsByName, _ = M.ExecuteWebAnalyticsQueries(projectId,
+			&M.WebAnalyticsQueries{
+				QueryNames: queryNames,
+				From:       requestPayload.From,
+				To:         requestPayload.To,
+			})
+		M.SetCacheResultForWebAnalyticsDashboard(*queryResultsByName, projectId, dashboardId, requestPayload.From, requestPayload.To)
+		lastRefreshedAt = U.TimeNowIn(U.TimeZoneStringIST).Unix()
+	}
 
 	queryResultsByUnitMap := make(map[uint64]M.WebAnalyticsQueryResult)
 	for _, unit := range requestPayload.Units {
@@ -314,5 +337,5 @@ func DashboardUnitsWebAnalyticsQueryHandler(c *gin.Context) {
 		}
 	}
 
-	c.JSON(http.StatusOK, queryResultsByUnitMap)
+	c.JSON(http.StatusOK, gin.H{"result": queryResultsByUnitMap, "cache": fromCache, "refreshed_at": lastRefreshedAt})
 }

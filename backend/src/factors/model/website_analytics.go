@@ -1,13 +1,18 @@
 package model
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"sort"
+	"sync"
 
+	"github.com/gomodule/redigo/redis"
+	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 
+	cacheRedis "factors/cache/redis"
 	C "factors/config"
 	U "factors/util"
 )
@@ -99,6 +104,87 @@ type WebAnalyticsPageAggregate struct {
 type WebAnalyticsAggregate struct {
 	WebAnalyticsGeneralAggregate
 	PageAggregates map[string]*WebAnalyticsPageAggregate
+}
+
+type WebAnalyticsCacheResult struct {
+	Result      map[string]WebAnalyticsQueryResult `json:"result"`
+	From        int64                              `json:"from"`
+	To          int64                              `json:"tom"`
+	RefreshedAt int64                              `json:"refreshed_at"`
+}
+
+func getWebAnalyticsEnabledProjectIDs() ([]uint64, int) {
+	db := C.GetServices().Db
+
+	var projectIDs []uint64
+	rows, err := db.Raw("SELECT distinct(project_id) FROM dashboards WHERE name = ?", DefaultDashboardWebsiteAnalytics).Rows()
+	if err != nil {
+		log.WithError(err).Error("Error getting web analytics enabled project ids")
+		return projectIDs, http.StatusInternalServerError
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var projectID uint64
+		if err := rows.Scan(&projectID); err != nil {
+			log.WithError(err).Error("Error scanning web analytics enabled project ids")
+			return projectIDs, http.StatusInternalServerError
+		}
+		projectIDs = append(projectIDs, projectID)
+	}
+
+	if len(projectIDs) == 0 {
+		return projectIDs, http.StatusNotFound
+	}
+	return projectIDs, http.StatusFound
+}
+
+func getWebAnalyticsDashboardIDForProject(projectID uint64) (uint64, int) {
+	logCtx := log.WithFields(log.Fields{
+		"Method":    "GetWebAnalyticsDashboardIDForProject",
+		"ProjectID": projectID,
+	})
+	db := C.GetServices().Db
+
+	var dashboardUnit DashboardUnit
+	if err := db.Where("project_id = ? AND query->>'cl' = ?", projectID, QueryClassWeb).First(&dashboardUnit).Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return 0, http.StatusNotFound
+		}
+		logCtx.WithError(err).Error("Failed to get dashboard_id for web analytics dashboard")
+		return 0, http.StatusInternalServerError
+	}
+	return dashboardUnit.DashboardId, http.StatusFound
+}
+
+func getWebAnalyticsQueryResultCacheKey(projectID, dashboardID uint64, from, to int64) (*cacheRedis.Key, error) {
+	prefix := "dashboard:query:web"
+	var suffix string
+	if from == U.GetBeginningOfDayTimestampZ(U.TimeNowUnix(), U.TimeZoneStringIST) {
+		// Query for today's dashboard. Use to as 'now'.
+		suffix = fmt.Sprintf("did:%d:from:%d:to:now", dashboardID, from)
+	} else {
+		suffix = fmt.Sprintf("did:%d:from:%d:to:%d", dashboardID, from, to)
+	}
+	return cacheRedis.NewKey(projectID, prefix, suffix)
+}
+
+func isWebAnalyticsDashboardAlreadyCached(projectID, dashboardID uint64, from, to int64) bool {
+	if from == U.GetBeginningOfDayTimestampZ(U.TimeNowUnix(), U.TimeZoneStringIST) {
+		// If from time is of today's beginning, refresh today's everytime a request is received.
+		return false
+	}
+	cacheKey, err := getWebAnalyticsQueryResultCacheKey(projectID, dashboardID, from, to)
+	if err != nil {
+		log.WithError(err).Errorf("Failed to get cache key")
+		return false
+	}
+	exists, err := cacheRedis.Exists(cacheKey)
+	if err != nil {
+		log.WithError(err).Errorf("Redis error on exists")
+		return false
+	}
+	return exists
 }
 
 func getQueryForNamedQueryUnit(class, queryName string) (*postgres.Jsonb, error) {
@@ -457,4 +543,139 @@ func ExecuteWebAnalyticsQueries(projectId uint64, queries *WebAnalyticsQueries) 
 
 	// Todo: build query result by name using aggregates and return.
 	return queryResultByName, http.StatusOK
+}
+
+func cacheWebsiteAnalyticsForProjectID(projectID uint64, queryNames []string, waitGroup *sync.WaitGroup) {
+	logCtx := log.WithFields(log.Fields{
+		"Method":    "cacheWebsiteAnalyticsForProjectID",
+		"ProjectID": projectID,
+	})
+	defer waitGroup.Done()
+
+	dashboardID, errCode := getWebAnalyticsDashboardIDForProject(projectID)
+	if errCode != http.StatusFound {
+		return
+	}
+
+	for preset, rangeFunction := range U.QueryDateRangePresets {
+		from, to := rangeFunction()
+		logCtx = logCtx.WithFields(log.Fields{"Preset": preset, "From": from, "To": to})
+		if isWebAnalyticsDashboardAlreadyCached(projectID, dashboardID, from, to) {
+			continue
+		}
+
+		queryResultsByName, errCode := ExecuteWebAnalyticsQueries(projectID,
+			&WebAnalyticsQueries{
+				QueryNames: queryNames,
+				From:       from,
+				To:         to,
+			})
+		if errCode != http.StatusOK {
+			continue
+		}
+		SetCacheResultForWebAnalyticsDashboard(*queryResultsByName, projectID, dashboardID, from, to)
+	}
+}
+
+func GetCacheResultForWebAnalyticsDashboard(projectID, dashboardID uint64, from, to int64) (WebAnalyticsCacheResult, int) {
+	logCtx := log.WithFields(log.Fields{
+		"Method":      "GetCacheResultForWebAnalyticsDashboard",
+		"ProjectID":   projectID,
+		"DashboardID": dashboardID,
+	})
+
+	var cacheResult WebAnalyticsCacheResult
+	if projectID == 0 || dashboardID == 0 {
+		return cacheResult, http.StatusBadRequest
+	}
+
+	cacheKey, err := getWebAnalyticsQueryResultCacheKey(projectID, dashboardID, from, to)
+	if err != nil {
+		logCtx.WithError(err).Error("Error getting cache key")
+		return cacheResult, http.StatusInternalServerError
+	}
+
+	result, err := cacheRedis.Get(cacheKey)
+	if err == redis.ErrNil {
+		return cacheResult, http.StatusNotFound
+	} else if err != nil {
+		logCtx.WithError(err).Error("Error getting key from redis")
+		return cacheResult, http.StatusInternalServerError
+	}
+
+	err = json.Unmarshal([]byte(result), &cacheResult)
+	if err != nil {
+		logCtx.WithError(err).Errorf("Error decoding redis result %v", result)
+		return cacheResult, http.StatusInternalServerError
+	}
+
+	if cacheResult.RefreshedAt == 0 {
+		cacheResult.RefreshedAt = U.TimeNowIn(U.TimeZoneStringIST).Unix()
+	}
+	return cacheResult, http.StatusFound
+}
+
+func SetCacheResultForWebAnalyticsDashboard(result map[string]WebAnalyticsQueryResult, projectID, dashboardID uint64, from, to int64) {
+	logCtx := log.WithFields(log.Fields{
+		"Method":      "SetCacheResultForWebAnalyticsDashboard",
+		"ProjectID":   projectID,
+		"DashboardID": dashboardID,
+	})
+
+	if projectID == 0 || dashboardID == 0 {
+		return
+	}
+
+	cacheKey, err := getWebAnalyticsQueryResultCacheKey(projectID, dashboardID, from, to)
+	if err != nil {
+		logCtx.WithError(err).Error("Error getting cache key for web analytics dashboard")
+	}
+	dashboardCacheResult := WebAnalyticsCacheResult{
+		Result:      result,
+		From:        from,
+		To:          to,
+		RefreshedAt: U.TimeNowIn(U.TimeZoneStringIST).Unix(),
+	}
+
+	dashboardCacheResultJSON, err := json.Marshal(&dashboardCacheResult)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to encode dashboardCacheResult")
+		return
+	}
+	err = cacheRedis.Set(cacheKey, string(dashboardCacheResultJSON), DashboardCachingDurationInSeconds)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to set cache for channel query")
+		return
+	}
+}
+
+// CacheWebsiteAnalyticsForProjects Runs for all the projectIDs passed as comma separated.
+func CacheWebsiteAnalyticsForProjects(stringProjectsIDs string, numRoutines int) {
+	allProjects, projectIDsMap, _ := C.GetProjectsFromListWithAllProjectSupport(stringProjectsIDs, "")
+	projectIDs := C.ProjectIdsFromProjectIdBoolMap(projectIDsMap)
+	if allProjects {
+		var errCode int
+		projectIDs, errCode = getWebAnalyticsEnabledProjectIDs()
+		if errCode != http.StatusFound {
+			return
+		}
+	}
+
+	var queryNames []string
+	for queyrName := range DefaultWebAnalyticsQueries {
+		queryNames = append(queryNames, queyrName)
+	}
+
+	var waitGroup sync.WaitGroup
+	count := 0
+	for _, projectID := range projectIDs {
+		waitGroup.Add(1)
+		count++
+		go cacheWebsiteAnalyticsForProjectID(projectID, queryNames, &waitGroup)
+
+		if count%numRoutines == 0 {
+			waitGroup.Wait()
+		}
+	}
+	waitGroup.Wait()
 }
