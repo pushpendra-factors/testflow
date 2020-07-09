@@ -1294,7 +1294,11 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q Query) (string, []interface
 		// Unique users from events filter.
 		addSelect := "DISTINCT ON(events.user_id) events.user_id as user_id, events.timestamp"
 		if isSessionAnalysisReqBool && i >= int(q.SessionStartEvent)-1 && i < int(q.SessionEndEvent) {
-			addSelect = addSelect + ", events.session_id as session_id"
+			if q.EventsWithProperties[i].Name != "$session" {
+				addSelect = addSelect + ", events.session_id as session_id"
+			} else {
+				addSelect = addSelect + ", events.id::text as session_id"
+			}
 		}
 		egSelect, egParams, egGroupKeys := buildEventGroupKeyForStep(
 			&q.EventsWithProperties[i], q.GroupByProperties)

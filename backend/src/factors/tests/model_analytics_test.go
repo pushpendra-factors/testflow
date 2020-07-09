@@ -1065,6 +1065,31 @@ func TestAnalyticsFunnelQueryWithFilterAndBreakDown(t *testing.T) {
 	assert.Equal(t, int64(5), result7.Rows[1][2])
 	assert.Equal(t, int64(5), result7.Rows[1][3])
 	assert.Equal(t, "100.0", result7.Rows[1][4])
+
+	query8 := M.Query{
+		From: startTimestamp,
+		To:   time.Now().UTC().Unix(),
+		EventsWithProperties: []M.QueryEventWithProperties{
+			M.QueryEventWithProperties{
+				Name:       "$session",
+				Properties: []M.QueryProperty{},
+			},
+			M.QueryEventWithProperties{
+				Name:       "s1",
+				Properties: []M.QueryProperty{},
+			},
+		},
+		Class:             M.QueryClassFunnel,
+		Type:              M.QueryTypeUniqueUsers,
+		EventsCondition:   M.EventCondAllGivenEvent,
+		SessionStartEvent: 1,
+		SessionEndEvent:   2,
+	}
+
+	result8, errCode, _ := M.Analyze(project.ID, query8)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, int64(10), result8.Rows[0][0])
+	assert.Equal(t, int64(5), result8.Rows[0][1])
 }
 
 func TestAnalyticsInsightsQuery(t *testing.T) {
