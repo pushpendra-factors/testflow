@@ -813,124 +813,127 @@ func (it *Itree) buildNumericalPropertyChildNodes(reqId string,
 	parentNode *ItreeNode, patternWrapper PatternServiceWrapperInterface,
 	allActiveUsersPattern *P.Pattern, pLen int, fpr float64, fpp float64,
 	countType string) []*ItreeNode {
-	parentPattern := parentNode.Pattern
-	propertyChildNodes := []*ItreeNode{}
-	numP := 0
-	seenProperties := getPropertyNamesMapFromConstraints(parentNode.PatternConstraints)
-	for propertyName, _ := range numericPropertyKeys {
-		if numP > maxNumProperties {
-			break
-		}
-		if _, found := (*seenProperties)[propertyName]; found {
-			continue
-		}
-		if nodeType == NODE_TYPE_EVENT_PROPERTY && U.ShouldIgnoreItreeProperty(propertyName) {
-			continue
-		}
-		if nodeType == NODE_TYPE_USER_PROPERTY && U.ShouldIgnoreItreeProperty(propertyName) {
-			continue
-		}
-		numP++
-		binRanges := [][2]float64{}
-		isPredefined := false
-		if nodeType == NODE_TYPE_EVENT_PROPERTY {
-			if countType == P.COUNT_TYPE_PER_USER {
-				binRanges, isPredefined = parentPattern.GetPerUserEventPropertyRanges(pLen-2, propertyName)
-			} else if countType == P.COUNT_TYPE_PER_OCCURRENCE {
-				binRanges, isPredefined = parentPattern.GetPerOccurrenceEventPropertyRanges(pLen-2, propertyName)
+	return []*ItreeNode{}
+	/*
+		parentPattern := parentNode.Pattern
+		propertyChildNodes := []*ItreeNode{}
+		numP := 0
+		seenProperties := getPropertyNamesMapFromConstraints(parentNode.PatternConstraints)
+		for propertyName, _ := range numericPropertyKeys {
+			if numP > maxNumProperties {
+				break
 			}
-		} else if nodeType == NODE_TYPE_USER_PROPERTY {
-			if countType == P.COUNT_TYPE_PER_USER {
-				binRanges, isPredefined = parentPattern.GetPerUserUserPropertyRanges(pLen-2, propertyName)
-			} else if countType == P.COUNT_TYPE_PER_OCCURRENCE {
-				binRanges, isPredefined = parentPattern.GetPerOccurrenceUserPropertyRanges(pLen-2, propertyName)
+			if _, found := (*seenProperties)[propertyName]; found {
+				continue
 			}
-		}
-
-		for _, pRange := range binRanges {
-			minValue := pRange[0]
-			maxValue := pRange[1]
-			// Try three combinations of constraints. v < min, min < v < max, v > max
-			constraint1ToAdd := P.EventConstraints{
-				EPNumericConstraints:     []P.NumericConstraint{},
-				EPCategoricalConstraints: []P.CategoricalConstraint{},
-				UPNumericConstraints:     []P.NumericConstraint{},
-				UPCategoricalConstraints: []P.CategoricalConstraint{},
+			if nodeType == NODE_TYPE_EVENT_PROPERTY && U.ShouldIgnoreItreeProperty(propertyName) {
+				continue
 			}
-			if !isPredefined {
-				// Show only interval constraint for predefined bin ranges.
-				lesserThanConstraint := []P.NumericConstraint{
-					P.NumericConstraint{
-						PropertyName: propertyName,
-						LowerBound:   -math.MaxFloat64,
-						UpperBound:   minValue,
-					},
-				}
-				if nodeType == NODE_TYPE_EVENT_PROPERTY {
-					constraint1ToAdd.EPNumericConstraints = lesserThanConstraint
-				} else if nodeType == NODE_TYPE_USER_PROPERTY {
-					constraint1ToAdd.UPNumericConstraints = lesserThanConstraint
-				}
+			if nodeType == NODE_TYPE_USER_PROPERTY && U.ShouldIgnoreItreeProperty(propertyName) {
+				continue
 			}
-
-			constraint2ToAdd := P.EventConstraints{
-				EPNumericConstraints:     []P.NumericConstraint{},
-				EPCategoricalConstraints: []P.CategoricalConstraint{},
-				UPNumericConstraints:     []P.NumericConstraint{},
-				UPCategoricalConstraints: []P.CategoricalConstraint{},
-			}
-			intervalConstraint := []P.NumericConstraint{
-				P.NumericConstraint{
-					PropertyName: propertyName,
-					LowerBound:   minValue,
-					UpperBound:   maxValue,
-				},
-			}
+			numP++
+			binRanges := [][2]float64{}
+			isPredefined := false
 			if nodeType == NODE_TYPE_EVENT_PROPERTY {
-				constraint2ToAdd.EPNumericConstraints = intervalConstraint
+				if countType == P.COUNT_TYPE_PER_USER {
+					binRanges, isPredefined = parentPattern.GetPerUserEventPropertyRanges(pLen-2, propertyName)
+				} else if countType == P.COUNT_TYPE_PER_OCCURRENCE {
+					binRanges, isPredefined = parentPattern.GetPerOccurrenceEventPropertyRanges(pLen-2, propertyName)
+				}
 			} else if nodeType == NODE_TYPE_USER_PROPERTY {
-				constraint2ToAdd.UPNumericConstraints = intervalConstraint
+				if countType == P.COUNT_TYPE_PER_USER {
+					binRanges, isPredefined = parentPattern.GetPerUserUserPropertyRanges(pLen-2, propertyName)
+				} else if countType == P.COUNT_TYPE_PER_OCCURRENCE {
+					binRanges, isPredefined = parentPattern.GetPerOccurrenceUserPropertyRanges(pLen-2, propertyName)
+				}
 			}
 
-			constraint3ToAdd := P.EventConstraints{
-				EPNumericConstraints:     []P.NumericConstraint{},
-				EPCategoricalConstraints: []P.CategoricalConstraint{},
-				UPNumericConstraints:     []P.NumericConstraint{},
-				UPCategoricalConstraints: []P.CategoricalConstraint{},
-			}
-			if !isPredefined {
-				greaterThanConstraint := []P.NumericConstraint{
+			for _, pRange := range binRanges {
+				minValue := pRange[0]
+				maxValue := pRange[1]
+				// Try three combinations of constraints. v < min, min < v < max, v > max
+				constraint1ToAdd := P.EventConstraints{
+					EPNumericConstraints:     []P.NumericConstraint{},
+					EPCategoricalConstraints: []P.CategoricalConstraint{},
+					UPNumericConstraints:     []P.NumericConstraint{},
+					UPCategoricalConstraints: []P.CategoricalConstraint{},
+				}
+				if !isPredefined {
+					// Show only interval constraint for predefined bin ranges.
+					lesserThanConstraint := []P.NumericConstraint{
+						P.NumericConstraint{
+							PropertyName: propertyName,
+							LowerBound:   -math.MaxFloat64,
+							UpperBound:   minValue,
+						},
+					}
+					if nodeType == NODE_TYPE_EVENT_PROPERTY {
+						constraint1ToAdd.EPNumericConstraints = lesserThanConstraint
+					} else if nodeType == NODE_TYPE_USER_PROPERTY {
+						constraint1ToAdd.UPNumericConstraints = lesserThanConstraint
+					}
+				}
+
+				constraint2ToAdd := P.EventConstraints{
+					EPNumericConstraints:     []P.NumericConstraint{},
+					EPCategoricalConstraints: []P.CategoricalConstraint{},
+					UPNumericConstraints:     []P.NumericConstraint{},
+					UPCategoricalConstraints: []P.CategoricalConstraint{},
+				}
+				intervalConstraint := []P.NumericConstraint{
 					P.NumericConstraint{
 						PropertyName: propertyName,
-						LowerBound:   maxValue,
-						UpperBound:   math.MaxFloat64,
+						LowerBound:   minValue,
+						UpperBound:   maxValue,
 					},
 				}
 				if nodeType == NODE_TYPE_EVENT_PROPERTY {
-					constraint3ToAdd.EPNumericConstraints = greaterThanConstraint
+					constraint2ToAdd.EPNumericConstraints = intervalConstraint
 				} else if nodeType == NODE_TYPE_USER_PROPERTY {
-					constraint3ToAdd.UPNumericConstraints = greaterThanConstraint
+					constraint2ToAdd.UPNumericConstraints = intervalConstraint
 				}
-			}
 
-			for _, constraintToAdd := range []P.EventConstraints{
-				constraint1ToAdd, constraint2ToAdd, constraint3ToAdd} {
-				if cNode, err := it.buildChildNode(reqId,
-					parentPattern, &constraintToAdd, nodeType,
-					parentNode.Index, patternWrapper, allActiveUsersPattern,
-					fpr, fpp, countType); err != nil {
-					log.WithFields(log.Fields{"err": err}).Errorf("Couldn't build child node")
-					continue
-				} else {
-					if cNode == nil {
-						continue
+				constraint3ToAdd := P.EventConstraints{
+					EPNumericConstraints:     []P.NumericConstraint{},
+					EPCategoricalConstraints: []P.CategoricalConstraint{},
+					UPNumericConstraints:     []P.NumericConstraint{},
+					UPCategoricalConstraints: []P.CategoricalConstraint{},
+				}
+				if !isPredefined {
+					greaterThanConstraint := []P.NumericConstraint{
+						P.NumericConstraint{
+							PropertyName: propertyName,
+							LowerBound:   maxValue,
+							UpperBound:   math.MaxFloat64,
+						},
 					}
-					propertyChildNodes = append(propertyChildNodes, cNode)
+					if nodeType == NODE_TYPE_EVENT_PROPERTY {
+						constraint3ToAdd.EPNumericConstraints = greaterThanConstraint
+					} else if nodeType == NODE_TYPE_USER_PROPERTY {
+						constraint3ToAdd.UPNumericConstraints = greaterThanConstraint
+					}
+				}
+
+				for _, constraintToAdd := range []P.EventConstraints{
+					constraint1ToAdd, constraint2ToAdd, constraint3ToAdd} {
+					if cNode, err := it.buildChildNode(reqId,
+						parentPattern, &constraintToAdd, nodeType,
+						parentNode.Index, patternWrapper, allActiveUsersPattern,
+						fpr, fpp, countType); err != nil {
+						log.WithFields(log.Fields{"err": err}).Errorf("Couldn't build child node")
+						continue
+					} else {
+						if cNode == nil {
+							continue
+						}
+						propertyChildNodes = append(propertyChildNodes, cNode)
+					}
 				}
 			}
 		}
-	}
-	return propertyChildNodes
+		return propertyChildNodes
+	*/
 }
 
 func (it *Itree) buildAndAddPropertyChildNodes(reqId string,
