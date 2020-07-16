@@ -381,6 +381,13 @@ export function runAttributionQuery(projectId, query){
       return post(null, url, {query:query})
 }
 
+export function runDashboardAttributionQuery(projectId, dashboard_id, dashboard_unit_id, query, hardRefresh) {
+  let params = "?dashboard_id="+dashboard_id+"&dashboard_unit_id="+dashboard_unit_id+"&refresh="+hardRefresh;
+  let url = host + "projects/" + projectId + "/attribution/query"+params;
+  return post(null, url , {query:query});
+}
+
+
 export function fetchProjectAgents(projectId){
   return function(dispatch){
     return get(dispatch, host + "projects/" + projectId + "/agents")
@@ -520,8 +527,8 @@ export function runChannelQuery(projectId, query) {
   return post(null, url , query);
 }
 
-export function runDashboardChannelQuery(projectId, dashboard_id, dashboard_unit_id, query) {
-  let params = "?dashboard_id="+dashboard_id+"&dashboard_unit_id="+dashboard_unit_id;
+export function runDashboardChannelQuery(projectId, dashboard_id, dashboard_unit_id, query, hardRefresh) {
+  let params = "?dashboard_id="+dashboard_id+"&dashboard_unit_id="+dashboard_unit_id+"&refresh="+hardRefresh;
   let url = host + "projects/" + projectId + "/channels/query"+params;
   return post(null, url , query);
 }

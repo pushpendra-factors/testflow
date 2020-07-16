@@ -115,9 +115,9 @@ class ChannelQuery extends Component {
     query.from = period.from;
     query.to = period.to;
 
-    if (this.state.breakdownKey.value != "none") 
+    if (this.state.breakdownKey.value != "none")
       query.breakdown = this.state.breakdownKey.value;
-    
+
     return query
   }
 

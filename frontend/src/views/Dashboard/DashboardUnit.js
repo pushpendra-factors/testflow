@@ -5,7 +5,7 @@ import { Card, CardHeader, CardBody, Modal, ModalBody } from 'reactstrap';
 import { Redirect } from 'react-router-dom';
 import moment from 'moment';
 
-import { runQuery, runDashboardQuery , viewQuery, runDashboardChannelQuery } from '../../actions/projectsActions';
+import { runQuery, runDashboardQuery , viewQuery, runDashboardChannelQuery, runDashboardAttributionQuery } from '../../actions/projectsActions';
 import { deleteDashboardUnit, updateDashboardUnit } from '../../actions/dashboardActions';
 import Loading from '../../loading';
 import BarChart from '../Query/BarChart';
@@ -16,7 +16,7 @@ import {
   PRESENTATION_TABLE, PRESENTATION_CARD, 
   PRESENTATION_FUNNEL, PROPERTY_VALUE_TYPE_DATE_TIME, 
   PROPERTY_KEY_JOIN_TIME, getGroupByTimestampType,
-  QUERY_CLASS_CHANNEL, QUERY_CLASS_FUNNEL,QUERY_CLASS_WEB,
+  QUERY_CLASS_CHANNEL, QUERY_CLASS_FUNNEL, QUERY_CLASS_WEB, QUERY_CLASS_ATTRIBUTION,
   getQueryPeriod, convertFunnelResultForTable
 } from '../Query/common';
 import { slideUnixTimeWindowToCurrentTime, getTimezoneString, 
@@ -24,7 +24,6 @@ import { slideUnixTimeWindowToCurrentTime, getTimezoneString,
 import FunnelChart from '../Query/FunnelChart';
 import { getReadableChannelMetricValue } from '../ChannelQuery/common';
 
-const LINE_LEGEND_DISPLAY_LIMIT = 10;
 const CARD_FONT_COLOR = '#FFF';
 const CARD_BACKGROUNDS = ['#63c2de', '#eb9532', '#20a8d8', '#4dbd74', '#f86c6b' ]
 
@@ -162,7 +161,7 @@ class DashboardUnit extends Component {
       .catch(console.error);
   }
 
-  execChannelAnalyticsQuery() {
+  execChannelAnalyticsQuery(hardRefresh) {
     this.setState({ loading: true });
 
     let query = this.props.data.query.query;
@@ -173,39 +172,60 @@ class DashboardUnit extends Component {
 
     let { dashboard_id, id:dashboard_unit_id } = this.props.data
 
-    runDashboardChannelQuery(this.props.currentProjectId, dashboard_id, dashboard_unit_id, query) 
-      .then((r) => {
-        if (!r.data.hasOwnProperty("result")) {
-          return
-        }
-        if (this.props.data.presentation == PRESENTATION_CARD) {
-          // select the value of the metric key to show on card.
-          let key = this.props.data.query.meta.metric;
-          let value = r.data.result.metrics[key];
-          if (value == null) value = 0;
-          value = getReadableChannelMetricValue(key, value, r.data.result.meta);
-          this.setState({ loading: false });
-          this.setPresentationProps({ headers: [], rows: [[value]] });
-          return
-        }
+    runDashboardChannelQuery(this.props.currentProjectId, dashboard_id, dashboard_unit_id, query, hardRefresh)
+        .then((r) => {
+          if (!r.data.hasOwnProperty("result")) {
+            return
+          }
+          if (this.props.data.presentation == PRESENTATION_CARD) {
+            // select the value of the metric key to show on card.
+            let key = this.props.data.query.meta.metric;
+            let value = r.data.result.metrics[key];
+            if (value == null) value = 0;
+            value = getReadableChannelMetricValue(key, value, r.data.result.meta);
+            this.setState({ loading: false });
+            this.setPresentationProps({ headers: [], rows: [[value]] });
+            return
+          }
 
-        if (this.props.data.presentation == PRESENTATION_TABLE) {
-          this.setState({ loading: false });
-          this.setPresentationProps(r.data.result.metrics_breakdown);
-          return
-        }
+          if (this.props.data.presentation == PRESENTATION_TABLE) {
+            this.setState({ loading: false });
+            this.setPresentationProps(r.data.result.metrics_breakdown);
+            return
+          }
 
-        console.error("Invalid presentation for channel query.")
-      })
-      .catch(console.error);
+          console.error("Invalid presentation for channel query.")
+        })
+        .catch(console.error);
+  }
+
+  execAttributionAnalyticsQuery(hardRefresh) {
+    this.setState({ loading: true });
+
+    let query = this.props.data.query.query;
+    // set query period.
+    let period = getQueryPeriod(this.props.dateRange[0]);
+    query.from = period.from;
+    query.to = period.to;
+    let { dashboard_id, id:dashboard_unit_id } = this.props.data
+
+    runDashboardAttributionQuery(this.props.currentProjectId, dashboard_id, dashboard_unit_id, query, hardRefresh)
+        .then((r) => {
+          //this.props.data.presentation = PRESENTATION_TABLE
+          this.setState({ loading: false });
+          this.setPresentationProps(r.data.metrics_breakdown);
+        })
+        .catch(console.error);
   }
 
   execQuery(hardRefresh) {
     if (this.props.data.query.cl == QUERY_CLASS_CHANNEL){
-      this.execChannelAnalyticsQuery();
+      this.execChannelAnalyticsQuery(hardRefresh);
     } else if(this.props.data.query.cl == QUERY_CLASS_WEB) {
       this.execWebAnalyticsQuery();
-    } else {
+    } else if(this.props.data.query.cl === QUERY_CLASS_ATTRIBUTION) {
+      this.execAttributionAnalyticsQuery(hardRefresh);
+    }else{
       this.execAnalyticsQuery(hardRefresh);
     }
   }

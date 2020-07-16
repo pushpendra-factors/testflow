@@ -30,6 +30,7 @@ import {
   QUERY_CLASS_CHANNEL,
   QUERY_CLASS_FUNNEL, 
   QUERY_CLASS_WEB,
+  QUERY_CLASS_ATTRIBUTION,
   getQueryPeriod
 } from '../Query/common';
 
@@ -370,7 +371,7 @@ class Dashboard extends Component {
       ( 
         // channel queries and web analytics queries with presentation table.
         (unit.presentation == PRESENTATION_TABLE && 
-          (unit.query.cl == QUERY_CLASS_CHANNEL || unit.query.cl == QUERY_CLASS_WEB)) ||
+          (unit.query.cl == QUERY_CLASS_CHANNEL || unit.query.cl == QUERY_CLASS_WEB || unit.query.cl === QUERY_CLASS_ATTRIBUTION)) ||
         // funnel queries with events more than 1 or with breakdown more than 1.
         (unit.query.cl == QUERY_CLASS_FUNNEL && unit.query.gbp.length > 1)
       )

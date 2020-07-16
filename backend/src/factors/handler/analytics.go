@@ -77,7 +77,7 @@ func QueryHandler(c *gin.Context) {
 	// If refresh is passed, refresh only is Query.From is of todays beginning.
 	if (dashboardIdParam != "" || unitIdParam != "") && !isHardRefreshForToday(requestPayload.Query.From, hardRefresh) {
 		cacheResult, errCode, errMsg := M.GetCacheResultByDashboardIdAndUnitId(projectId, dashboardId, unitId, requestPayload.Query.From, requestPayload.Query.To)
-		if errCode == http.StatusFound {
+		if errCode == http.StatusFound && cacheResult != nil {
 			c.JSON(http.StatusOK, gin.H{"result": cacheResult.Result, "cache": true, "refreshed_at": cacheResult.RefreshedAt})
 			return
 		}
@@ -85,7 +85,6 @@ func QueryHandler(c *gin.Context) {
 			c.AbortWithStatusJSON(errCode, gin.H{"error": errMsg})
 			return
 		}
-
 		if errCode != http.StatusNotFound {
 			logCtx.WithFields(log.Fields{"project_id": projectId,
 				"dashboard_id": dashboardIdParam, "dashboard_unit_id": unitIdParam,

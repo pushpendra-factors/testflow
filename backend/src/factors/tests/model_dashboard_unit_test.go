@@ -426,6 +426,85 @@ func TestCacheDashboardUnitsForProjectID(t *testing.T) {
 	}
 }
 
+func TestCacheDashboardUnitsForProjectIDForAttributionQuery(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	customerAccountId := U.RandomLowerAphaNumString(5)
+	_, errCode := M.UpdateProjectSettings(project.ID, &M.ProjectSetting{
+		IntAdwordsCustomerAccountId: &customerAccountId,
+	})
+
+	dashboardName := U.RandomString(5)
+	dashboard, errCode := M.CreateDashboard(project.ID, agent.UUID, &M.Dashboard{Name: dashboardName, Type: M.DashboardTypeProjectVisible})
+	assert.NotNil(t, dashboard)
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.Equal(t, dashboardName, dashboard.Name)
+
+	var query M.AttributionQuery
+	queryJSON := postgres.Jsonb{json.RawMessage(`{"cl": "attribution", "meta": {"metrics_breakdown": true}, "ce": "$session", "cl": "attribution", "cm": ["Impressions", "Clicks", "Spend"], "to": 1585679399, "lbw": 0, "lfe": [], "from": 1583001000, "attribution_key": "Campaign", "attribution_methodology": "First_Touch"}`)}
+	U.DecodePostgresJsonbToStructType(&queryJSON, &query)
+	dashboardUnit, errCode, _ := M.CreateDashboardUnit(project.ID, agent.UUID, &M.DashboardUnit{
+		DashboardId:  dashboard.ID,
+		Title:        U.RandomString(5),
+		Query:        queryJSON,
+		Presentation: M.PresentationTable,
+	})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotNil(t, dashboardUnit)
+
+	updatedUnitsCount := M.CacheDashboardUnitsForProjectID(project.ID, 1)
+	assert.Equal(t, 1, updatedUnitsCount)
+
+	for _, rangeFunction := range U.QueryDateRangePresets {
+		query.From, query.To = rangeFunction()
+		// Refresh is sent as false. Must return all presets range from cache.
+		w := sendAttributionQueryReq(r, project.ID, agent, dashboard.ID, dashboardUnit.ID, query, false)
+		assert.NotNil(t, w)
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		// Refresh is sent as true. Still must return from cache for all presets except for todays.
+		w = sendAttributionQueryReq(r, project.ID, agent, dashboard.ID, dashboardUnit.ID, query, true)
+		assert.NotNil(t, w)
+		var result map[string]interface{}
+		json.Unmarshal([]byte(w.Body.String()), &result)
+		// Cache must be true in response.
+		assert.True(t, result["cache"].(bool))
+		break
+	}
+}
+
+func sendAttributionQueryReq(r *gin.Engine, projectID uint64, agent *M.Agent, dashboardID, unitID uint64, query M.AttributionQuery, refresh bool) *httptest.ResponseRecorder {
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	if err != nil {
+		log.WithError(err).Error("Error creating cookie data.")
+	}
+	queryPayload := H.AttributionRequestPayload{
+		Query: &query,
+	}
+
+	rb := U.NewRequestBuilder(http.MethodPost, fmt.Sprintf(
+		"/projects/%d/attribution/query?dashboard_id=%d&dashboard_unit_id=%d&refresh=%v", projectID, dashboardID, unitID, refresh)).
+		WithPostParams(queryPayload).
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		})
+
+	req, err := rb.Build()
+	if err != nil {
+		log.WithError(err).Error("Error creating create dashboard_unit req.")
+	}
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	return w
+}
+
 func sendAnalyticsQueryReq(r *gin.Engine, projectID uint64, agent *M.Agent, dashboardID, unitID uint64, query M.Query, refresh bool) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
@@ -434,7 +513,6 @@ func sendAnalyticsQueryReq(r *gin.Engine, projectID uint64, agent *M.Agent, dash
 	queryPayload := H.QueryRequestPayload{
 		Query: query,
 	}
-
 	rb := U.NewRequestBuilder(http.MethodPost, fmt.Sprintf(
 		"/projects/%d/query?dashboard_id=%d&dashboard_unit_id=%d&refresh=%v", projectID, dashboardID, unitID, refresh)).
 		WithPostParams(queryPayload).

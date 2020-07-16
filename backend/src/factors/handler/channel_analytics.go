@@ -28,23 +28,17 @@ func ChannelQueryHandler(c *gin.Context) {
 
 	logCtx = log.WithField("project_id", projectId)
 
+	var err error
 	var queryPayload M.ChannelQuery
 	var dashboardId uint64
 	var unitId uint64
-
+	hardRefresh := false
 	dashboardIdParam := c.Query("dashboard_id")
 	unitIdParam := c.Query("dashboard_unit_id")
-
-	decoder := json.NewDecoder(r.Body)
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&queryPayload); err != nil {
-		logCtx.WithError(err).Error("Channel query failed. Json decode failed.")
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
-			"error": "Channel query failed. Json decode failed."})
-		return
+	refreshParam := c.Query("refresh")
+	if refreshParam != "" {
+		hardRefresh, _ = strconv.ParseBool(refreshParam)
 	}
-
-	var err error
 	if dashboardIdParam != "" || unitIdParam != "" {
 		dashboardId, err = strconv.ParseUint(dashboardIdParam, 10, 64)
 		if err != nil {
@@ -56,9 +50,22 @@ func ChannelQueryHandler(c *gin.Context) {
 			c.AbortWithStatus(http.StatusBadRequest)
 			return
 		}
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&queryPayload); err != nil {
+		logCtx.WithError(err).Error("Channel query failed. Json decode failed.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+			"error": "Channel query failed. Json decode failed."})
+		return
+	}
+
+	// If refresh is passed, refresh only is Query.From is of todays beginning.
+	if (dashboardIdParam != "" || unitIdParam != "") && !isHardRefreshForToday(queryPayload.From, hardRefresh) {
 
 		cacheResult, errCode, errMsg := M.GetCacheResultByDashboardIdAndUnitId(projectId, dashboardId, unitId, queryPayload.From, queryPayload.To)
-		if errCode == http.StatusFound {
+		if errCode == http.StatusFound && cacheResult != nil {
 			c.JSON(http.StatusOK, gin.H{"result": cacheResult.Result, "cache": true})
 			return
 		}
@@ -66,7 +73,6 @@ func ChannelQueryHandler(c *gin.Context) {
 			c.AbortWithStatusJSON(errCode, gin.H{"error": errMsg})
 			return
 		}
-
 		if errCode != http.StatusNotFound {
 			logCtx.WithFields(log.Fields{"project_id": projectId,
 				"dashboard_id": dashboardIdParam, "dashboard_unit_id": unitIdParam,
