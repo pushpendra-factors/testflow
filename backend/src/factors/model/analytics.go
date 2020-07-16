@@ -55,8 +55,9 @@ type Query struct {
 	SessionEndEvent   int64 `json:"see"`
 }
 
-type QueryResutlMeta struct {
-	Query Query `json:"query"`
+type QueryResultMeta struct {
+	Query    Query  `json:"query"`
+	Currency string `json:"currency"` //Currency field is used for Attribution query response.
 }
 
 type QueryResult struct {
@@ -64,7 +65,7 @@ type QueryResult struct {
 	Rows    [][]interface{} `json:"rows"`
 	// Todo(Dinesh): Change it to interface and use
 	// the query result struct across different queries.
-	Meta QueryResutlMeta `json:"meta"`
+	Meta QueryResultMeta `json:"meta"`
 }
 
 type DateTimePropertyValue struct {

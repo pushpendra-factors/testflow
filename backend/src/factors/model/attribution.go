@@ -96,42 +96,43 @@ func addHeadersByAttributionKey(result *QueryResult, query *AttributionQuery) {
 }
 
 //ExecuteAttributionQuery - starting point for building attribution data
-func ExecuteAttributionQuery(projectId uint64, query *AttributionQuery) (*QueryResult, string, error) {
+func ExecuteAttributionQuery(projectId uint64, query *AttributionQuery) (*QueryResult, error) {
 	result := &QueryResult{}
 	attributionData := make(map[string]*AttributionData)
 
 	projectSetting, errCode := GetProjectSetting(projectId)
 	if errCode != http.StatusFound {
-		return nil, "", errors.New("failed to get project Settings")
+		return nil, errors.New("Failed to get project Settings")
 	}
 
 	if projectSetting.IntAdwordsCustomerAccountId == nil || *projectSetting.IntAdwordsCustomerAccountId == "" {
-		return nil, "", errors.New("execute attribution query failed. No customer account id.")
+		return nil, errors.New("Execute attribution query failed. No customer account id.")
 	}
 
 	addHeadersByAttributionKey(result, query)
 	userProperty, err := GetQueryUserProperty(query)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 
 	err = GetUniqueUserByAttributionKeyAndLookbackWindow(projectId, attributionData, query, userProperty)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 
 	err = AddWebsiteVisitorsByEventName(projectId, attributionData, query.From, query.To, userProperty)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 
 	currency, err := AddPerformanceReportByCampaign(projectId, attributionData, query.From, query.To, projectSetting.IntAdwordsCustomerAccountId)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 
 	result.Rows = getRowsByMaps(attributionData, query)
-	return result, currency, nil
+	result.Meta.Currency = currency
+	return result, nil
 }
 
 //getRowsByMaps converts maps to rows. For campaign id having no matching campaign name, it is appended to "non" row.

@@ -66,7 +66,7 @@ func ChannelQueryHandler(c *gin.Context) {
 
 		cacheResult, errCode, errMsg := M.GetCacheResultByDashboardIdAndUnitId(projectId, dashboardId, unitId, queryPayload.From, queryPayload.To)
 		if errCode == http.StatusFound && cacheResult != nil {
-			c.JSON(http.StatusOK, gin.H{"result": cacheResult.Result, "cache": true})
+			c.JSON(http.StatusOK, gin.H{"result": cacheResult.Result, "cache": true, "refreshed_at": cacheResult.RefreshedAt})
 			return
 		}
 		if errCode == http.StatusBadRequest {
@@ -89,7 +89,7 @@ func ChannelQueryHandler(c *gin.Context) {
 
 	if dashboardId != 0 && unitId != 0 {
 		M.SetCacheResultByDashboardIdAndUnitId(queryResult, projectId, dashboardId, unitId, queryPayload.To, queryPayload.From)
-		c.JSON(http.StatusOK, gin.H{"result": queryResult, "cache": false})
+		c.JSON(http.StatusOK, gin.H{"result": queryResult, "cache": false, "refreshed_at": U.TimeNowIn(U.TimeZoneStringIST).Unix()})
 		return
 	}
 

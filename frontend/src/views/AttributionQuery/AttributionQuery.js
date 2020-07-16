@@ -185,9 +185,9 @@ class AttributionQuery extends Component {
         this.setState({
           present: true,
           result: r.data,
-          resultMeta: r.data.Meta,
+          resultMeta: r.data.result.meta,
           isResultLoading: false, isPresentationLoading: false,
-          resultMetricsBreakdown: this.getDisplayMetricsBreakdown(r.data.metrics_breakdown)
+          resultMetricsBreakdown: this.getDisplayMetricsBreakdown(r.data.result)
         });
       })
       .catch(err => {

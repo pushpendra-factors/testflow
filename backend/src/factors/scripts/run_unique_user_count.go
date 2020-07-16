@@ -89,14 +89,17 @@ func main() {
 		AttributionMethodology: *attributionMethod,
 	}
 
-	result, _, err := M.ExecuteAttributionQuery(*projectIdFlag, query)
+	result, err := M.ExecuteAttributionQuery(*projectIdFlag, query)
 	if err != nil {
 		log.Error("Failed to execute query")
 	}
 
-	log.Info(result.Headers)
-	for _, row := range result.Rows {
-		log.Info(row)
+	if result != nil {
+		log.Info(result.Headers)
+		for _, row := range result.Rows {
+			log.Info(row)
+		}
+	} else {
+		log.Error("Result is Nil")
 	}
-
 }

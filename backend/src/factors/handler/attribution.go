@@ -66,7 +66,7 @@ func AttributionHandler(c *gin.Context) {
 
 		cacheResult, errCode, errMsg := M.GetCacheResultByDashboardIdAndUnitId(projectId, dashboardId, unitId, requestPayload.Query.From, requestPayload.Query.To)
 		if errCode == http.StatusFound && cacheResult != nil {
-			c.JSON(http.StatusOK, gin.H{"metrics_breakdown": cacheResult.Result, "cache": true, "refreshed_at": cacheResult.RefreshedAt})
+			c.JSON(http.StatusOK, gin.H{"result": cacheResult.Result, "cache": true, "refreshed_at": cacheResult.RefreshedAt})
 			return
 		}
 		if errCode == http.StatusBadRequest {
@@ -80,7 +80,7 @@ func AttributionHandler(c *gin.Context) {
 		}
 	}
 
-	result, meta, err := M.ExecuteAttributionQuery(projectId, requestPayload.Query)
+	result, err := M.ExecuteAttributionQuery(projectId, requestPayload.Query)
 	if err != nil {
 		logCtx.WithError(err).Error("Query failed. Query execution failed")
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Query failed. Query execution failed"})
@@ -90,6 +90,5 @@ func AttributionHandler(c *gin.Context) {
 	if dashboardId != 0 && unitId != 0 {
 		M.SetCacheResultByDashboardIdAndUnitId(result, projectId, dashboardId, unitId, requestPayload.Query.To, requestPayload.Query.From)
 	}
-
-	c.JSON(http.StatusOK, gin.H{"metrics_breakdown": result, "Meta": gin.H{"currency": meta}})
+	c.JSON(http.StatusOK, gin.H{"result": result, "cache": false, "refreshed_at": U.TimeNowIn(U.TimeZoneStringIST).Unix()})
 }

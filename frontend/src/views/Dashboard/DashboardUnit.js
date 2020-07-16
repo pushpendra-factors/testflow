@@ -211,9 +211,12 @@ class DashboardUnit extends Component {
 
     runDashboardAttributionQuery(this.props.currentProjectId, dashboard_id, dashboard_unit_id, query, hardRefresh)
         .then((r) => {
-          //this.props.data.presentation = PRESENTATION_TABLE
           this.setState({ loading: false });
-          this.setPresentationProps(r.data.metrics_breakdown);
+          if (!r.data.hasOwnProperty("result")) {
+            return
+          }
+          this.setPresentationProps(r.data.result);
+          this.props.updateLastRefreshedAt(dashboard_id, r.data.refreshed_at);
         })
         .catch(console.error);
   }
