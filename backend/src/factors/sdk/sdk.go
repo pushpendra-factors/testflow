@@ -956,7 +956,7 @@ func UpdateEventPropertiesByToken(token string,
 			Error: "Update event properties failed. Invalid token."}
 	}
 
-	return errCode, &UpdateEventPropertiesResponse{Error: "Update event properties failed."}
+	return errCode, &UpdateEventPropertiesResponse{Error: "Failed to update event properties using token."}
 }
 
 func UpdateEventPropertiesWithQueue(token string, reqPayload *UpdateEventPropertiesPayload,
@@ -972,7 +972,8 @@ func UpdateEventPropertiesWithQueue(token string, reqPayload *UpdateEventPropert
 		if err != nil {
 			log.WithError(err).Error("Failed to queue updated event properties request.")
 			return http.StatusInternalServerError,
-				&UpdateEventPropertiesResponse{Error: "Update event properties failed."}
+				&UpdateEventPropertiesResponse{
+					Error: "Update event properties failed. Request reception failure."}
 		}
 
 		return http.StatusOK,
@@ -1003,7 +1004,8 @@ func UpdateEventProperties(projectId uint64,
 		validatedProperties, request.Timestamp)
 	if errCode != http.StatusAccepted {
 		return errCode,
-			&UpdateEventPropertiesResponse{Error: "Update event properties failed."}
+			&UpdateEventPropertiesResponse{
+				Error: "Update event properties failed. Failed to update given properties."}
 	}
 
 	updatedEvent, errCode := M.GetEventById(projectId, request.EventId)
@@ -1015,7 +1017,7 @@ func UpdateEventProperties(projectId uint64,
 	}
 	if errCode != http.StatusFound {
 		return errCode,
-			&UpdateEventPropertiesResponse{Error: "Update event properties failed."}
+			&UpdateEventPropertiesResponse{Error: "Update event properties failed. Invalid event."}
 	}
 
 	logCtx = logCtx.WithField("event_id", request.EventId)
@@ -1029,21 +1031,21 @@ func UpdateEventProperties(projectId uint64,
 	sessionEvent, errCode := M.GetEventById(projectId, *updatedEvent.SessionId)
 	if errCode != http.StatusFound {
 		return errCode,
-			&UpdateEventPropertiesResponse{Error: "Update event properties failed."}
+			&UpdateEventPropertiesResponse{Error: "Update event properties failed. Failed to processing session."}
 	}
 
 	updatedEventPropertiesMap, err := U.DecodePostgresJsonb(&updatedEvent.Properties)
 	if err != nil {
 		logCtx.Error("Failed to unmarshal updated event properties on update event properties.")
 		return http.StatusInternalServerError,
-			&UpdateEventPropertiesResponse{Error: "Update event properties failed."}
+			&UpdateEventPropertiesResponse{Error: "Update event properties failed. Invalid event properties."}
 	}
 
 	sessionPropertiesMap, err := U.DecodePostgresJsonb(&sessionEvent.Properties)
 	if err != nil {
 		logCtx.Error("Failed to unmarshal existing session properties on update event properties.")
 		return http.StatusBadRequest,
-			&UpdateEventPropertiesResponse{Error: "Update event properties failed."}
+			&UpdateEventPropertiesResponse{Error: "Update event properties failed. Invalid session properties."}
 	}
 
 	eventPageURL, eventPageURLExists := (*updatedEventPropertiesMap)[U.EP_PAGE_RAW_URL]
@@ -1052,7 +1054,8 @@ func UpdateEventProperties(projectId uint64,
 	if !eventPageURLExists || !sessionInitialPageURLExists {
 		logCtx.Error("No page URL property to compare for session properties update.")
 		return http.StatusBadRequest,
-			&UpdateEventPropertiesResponse{Error: "Update event properties failed."}
+			&UpdateEventPropertiesResponse{
+				Error: "Update event properties failed. Initial page of session comparison failed."}
 	}
 
 	// session properties updated only if page raw url and initial
@@ -1077,7 +1080,8 @@ func UpdateEventProperties(projectId uint64,
 			&updateSesssionProperties, request.Timestamp)
 		if errCode != http.StatusAccepted {
 			return errCode,
-				&UpdateEventPropertiesResponse{Error: "Update event properties failed."}
+				&UpdateEventPropertiesResponse{
+					Error: "Update event properties failed. Failed to update session properties"}
 		}
 	}
 
@@ -1086,13 +1090,14 @@ func UpdateEventProperties(projectId uint64,
 	if errCode != http.StatusFound {
 		logCtx.Error("Failed to get user properties of user on update event properties.")
 		return errCode,
-			&UpdateEventPropertiesResponse{Error: "Update event properties failed."}
+			&UpdateEventPropertiesResponse{
+				Error: "Update event properties failed. Falied to get initial user properties."}
 	}
 
 	userPropertiesMap, err := U.DecodePostgresJsonb(&user.Properties)
 	if err != nil {
 		logCtx.Error("Failed to unmarshal existing user properties on update event properties.")
-		return errCode, &UpdateEventPropertiesResponse{Error: "Update event properties failed."}
+		return errCode, &UpdateEventPropertiesResponse{Error: "Update event properties failed. Invalid user properties."}
 	}
 
 	userInitialPageURL, userInitialPageURLExists := (*userPropertiesMap)[U.UP_INITIAL_PAGE_RAW_URL]
@@ -1105,7 +1110,7 @@ func UpdateEventProperties(projectId uint64,
 		}
 
 		logCtx.Error("No initial page raw url on user properties to compare on update event properties.")
-		return errCode, &UpdateEventPropertiesResponse{Error: "Update event properties failed."}
+		return errCode, &UpdateEventPropertiesResponse{Error: "Failed to associate initial page url."}
 	}
 
 	// user properties updated only if initial_raw_page url of user_properties
@@ -1127,13 +1132,15 @@ func UpdateEventProperties(projectId uint64,
 		userPropertiesJsonb, err := U.EncodeToPostgresJsonb(userPropertiesMap)
 		if err != nil {
 			logCtx.Error("Failed to marshal user properties with initial user properties on updated event properties.")
-			return errCode, &UpdateEventPropertiesResponse{Error: "Update event properties failed."}
+			return errCode, &UpdateEventPropertiesResponse{
+				Error: "Update event properties failed. Falied to encode user properties."}
 		}
 
 		_, errCode := M.UpdateUserProperties(projectId, updatedEvent.UserId,
 			userPropertiesJsonb, request.Timestamp)
 		if errCode != http.StatusAccepted {
-			return errCode, &UpdateEventPropertiesResponse{Error: "Update event properties failed."}
+			return errCode, &UpdateEventPropertiesResponse{
+				Error: "Update event properties failed. Failed to update user properites."}
 		}
 	}
 
