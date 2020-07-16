@@ -19,6 +19,11 @@ type NextSessionInfo struct {
 	StartTimestamp int64  `json:"start_timestamp"`
 }
 
+const (
+	StatusNotModified = "not_modified"
+	StatusFailed      = "failed"
+)
+
 /*
 Get users,
 without session - where session_id null, select user_id, min(timestamp) - for session to start from first event.
@@ -196,7 +201,7 @@ func addSessionByProjectId(projectId uint64, maxLookbackTimestamp,
 	nextSessionInfoList, errCode := getNextSessionInfo(projectId,
 		sessionEventName.ID, maxLookbackTimestamp)
 	if errCode == http.StatusNotFound {
-		logCtx.Error("No new events without session to process. Empty next session info.")
+		logCtx.Info("No new events without session to process. Empty next session info.")
 		return status, http.StatusNotModified
 	}
 
@@ -332,12 +337,12 @@ func addSessionWorker(projectId uint64, maxLookbackTimestamp,
 
 		if errCode == http.StatusNotModified {
 			isFailed = false
-			status.Status = "not_modified"
+			status.Status = StatusNotModified
 
 			logCtx.Info("No events to add session.")
 		} else {
 			isFailed = true
-			status.Status = "failed"
+			status.Status = StatusFailed
 
 			logCtx.Error("Failed to add session.")
 		}

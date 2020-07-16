@@ -97,8 +97,25 @@ func main() {
 		maxLookbackTimestamp = util.UnixTimeBeforeDuration(time.Hour * 24 * time.Duration(*maxLookbackDays))
 	}
 
-	status, _ := session.AddSession(allowedProjectIds, maxLookbackTimestamp,
+	statusMap, _ := session.AddSession(allowedProjectIds, maxLookbackTimestamp,
 		*bufferTimeBeforeCreateSessionInMins, *numRoutines)
+
+	modifiedStatusMap := make(map[uint64]session.Status, 0)
+	notModifiedProjects := make([]uint64, 0, 0)
+
+	for pid, status := range statusMap {
+		if status.Status == session.StatusNotModified {
+			notModifiedProjects = append(notModifiedProjects, pid)
+			continue
+		}
+		modifiedStatusMap[pid] = status
+	}
+
+	status := map[string]interface{}{
+		"no_session_projects": notModifiedProjects,
+		"new_session_status":  modifiedStatusMap,
+	}
+
 	if err := util.NotifyThroughSNS(taskID, *env, status); err != nil {
 		log.Fatalf("Failed to notify status %+v", status)
 	}
