@@ -169,8 +169,6 @@ class AttributionQuery extends Component {
     let period = getQueryPeriod(this.state.duringDateRange[0]);
     query.from = period.from;
     query.to = period.to;
-    //Todo anil check this
-    query.breakdown = this.state.breakdownKey.metrics_breakdown;
 
     return query;
   }
