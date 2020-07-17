@@ -968,6 +968,14 @@ func UpdateEventPropertiesWithQueue(token string, reqPayload *UpdateEventPropert
 			reqPayload.Timestamp = time.Now().Unix()
 		}
 
+		// Todo: Remove this. Temporary check for 404 on update event_properties.
+		project, _ := M.GetProjectByToken(token)
+		_, status := M.GetEventById(project.ID, reqPayload.EventId)
+		if status == http.StatusNotFound {
+			return http.StatusNotFound, &UpdateEventPropertiesResponse{
+				Error: "Update event properties failed. Event not found."}
+		}
+
 		err := enqueueRequest(token, sdkRequestTypeEventUpdateProperties, reqPayload)
 		if err != nil {
 			log.WithError(err).Error("Failed to queue updated event properties request.")
