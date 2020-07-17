@@ -102,11 +102,11 @@ func ExecuteAttributionQuery(projectId uint64, query *AttributionQuery) (*QueryR
 
 	projectSetting, errCode := GetProjectSetting(projectId)
 	if errCode != http.StatusFound {
-		return nil, errors.New("Failed to get project Settings")
+		return nil, errors.New("failed to get project Settings")
 	}
 
 	if projectSetting.IntAdwordsCustomerAccountId == nil || *projectSetting.IntAdwordsCustomerAccountId == "" {
-		return nil, errors.New("Execute attribution query failed. No customer account id.")
+		return nil, errors.New("execute attribution query failed as no ad-words customer account id found")
 	}
 
 	addHeadersByAttributionKey(result, query)
@@ -146,7 +146,7 @@ func getRowsByMaps(attributionData map[string]*AttributionData, query *Attributi
 
 	for _, campaignData := range attributionData {
 
-		if campaignData.Name != "" { //matching campaing name section
+		if campaignData.Name != "" { //matching campaign name section
 			row := make([]interface{}, 6+len(query.LinkedEvents)) // 6 - fixed column header
 			row[0] = campaignData.Name
 			row[1] = campaignData.Impressions
@@ -191,7 +191,7 @@ func getUniqueUserCount(attributionData map[string]*AttributionData, users inter
 	return nil
 }
 
-//getAttributedSession finds the timestamp when attributionKey was initialy set for the user
+//getAttributedSession finds the timestamp when attributionKey was initially set for the user
 func getAttributedSession(projectId uint64, attributionKey string, from int64, to int64) (map[string]map[string]int64, error) {
 	var aggrigateColumn string
 	var timeRangeStmnt string

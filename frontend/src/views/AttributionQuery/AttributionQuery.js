@@ -176,6 +176,8 @@ class AttributionQuery extends Component {
   runQuery = () => {
     let valid = this.validateQuery();
     if (!valid) return
+    // Enable add to dashboard here.
+    this.setState({present: true})
 
     this.props.resetError()
     this.setState({isPresentationLoading: true});
@@ -183,7 +185,6 @@ class AttributionQuery extends Component {
     runAttributionQuery(this.props.currentProjectId, query)
       .then(r => {
         this.setState({
-          present: true,
           result: r.data,
           resultMeta: r.data.result.meta,
           isResultLoading: false, isPresentationLoading: false,
@@ -191,7 +192,7 @@ class AttributionQuery extends Component {
         });
       })
       .catch(err => {
-        console.log("error occured while running query: ", err);
+        console.log("error occurred while running query: ", err);
       });
   }
 
