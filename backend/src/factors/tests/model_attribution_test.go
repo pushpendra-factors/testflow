@@ -46,7 +46,6 @@ func TestAttributionModel(t *testing.T) {
 	//Should return error for non adwords customer account id
 	result, err := M.ExecuteAttributionQuery(project.ID, &M.AttributionQuery{})
 	assert.Nil(t, result)
-	assert.Equal(t, "", result.Meta.Currency)
 	assert.NotNil(t, err)
 
 	_, errCode := M.UpdateProjectSettings(project.ID, &M.ProjectSetting{
