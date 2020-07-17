@@ -420,10 +420,13 @@ App.prototype.handleError = function(error) {
     payload.domain = window.location.host;
     payload.url = window.location.href;
     payload.error = errMsg;
+    payload.auto_track_url = getAutoTrackURL();
     updatePayloadWithUserIdFromCookie(payload);
 
+    // Using new client without token, 
+    // as this is generic call not specific to a project.
     var client = new APIClient('', '');
-    client.sendError(payload);
+    client.sendError(payload); 
 
     logger.errorLine(error);
 

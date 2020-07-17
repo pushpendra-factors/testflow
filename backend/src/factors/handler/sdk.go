@@ -371,10 +371,11 @@ func SDKAMPUpdateEventPropertiesHandler(c *gin.Context) {
 }
 
 type SDKError struct {
-	UserId string `json:"user_id"`
-	URL    string `json:"url"`
-	Domain string `json:"domain"`
-	Error  string `json:"error"`
+	UserId       string `json:"user_id"`
+	URL          string `json:"url"`
+	AutoTrackURL string `json:"auto_track_url"`
+	Domain       string `json:"domain"`
+	Error        string `json:"error"`
 }
 
 func SDKErrorHandler(c *gin.Context) {
@@ -392,8 +393,14 @@ func SDKErrorHandler(c *gin.Context) {
 	SDK.FillUserAgentUserProperties(&properties, c.Request.UserAgent())
 
 	// Error logged for adding it to error email.
-	log.WithFields(log.Fields{"domain": request.Domain, "error": request.Error, "url": request.URL,
-		"properties": properties, "tag": "sdk_error"}).Error("Got JS SDK Error.")
+	log.WithFields(log.Fields{
+		"domain":         request.Domain,
+		"error":          request.Error,
+		"url":            request.URL,
+		"auto_track_url": request.AutoTrackURL,
+		"properties":     properties,
+		"tag":            "sdk_error",
+	}).Error("Got JS SDK Error.")
 
 	c.AbortWithStatus(http.StatusOK)
 	return
