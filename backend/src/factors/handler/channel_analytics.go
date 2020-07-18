@@ -88,7 +88,7 @@ func ChannelQueryHandler(c *gin.Context) {
 	}
 
 	if dashboardId != 0 && unitId != 0 {
-		M.SetCacheResultByDashboardIdAndUnitId(queryResult, projectId, dashboardId, unitId, queryPayload.To, queryPayload.From)
+		M.SetCacheResultByDashboardIdAndUnitId(queryResult, projectId, dashboardId, unitId, queryPayload.From, queryPayload.To)
 		c.JSON(http.StatusOK, gin.H{"result": queryResult, "cache": false, "refreshed_at": U.TimeNowIn(U.TimeZoneStringIST).Unix()})
 		return
 	}

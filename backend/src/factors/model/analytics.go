@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jinzhu/gorm/dialects/postgres"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -39,6 +41,14 @@ type QueryEventWithProperties struct {
 	Name       string          `json:"na"`
 	Properties []QueryProperty `json:"pr"`
 }
+
+// BaseQuery Base query interface for all query classes.
+type BaseQuery interface {
+	GetClass() string
+	GetQueryDateRange() (int64, int64)
+	SetQueryDateRange(from, to int64)
+}
+
 type Query struct {
 	Class                string                     `json:"cl"`
 	Type                 string                     `json:"ty"`
@@ -58,6 +68,18 @@ type Query struct {
 type QueryResultMeta struct {
 	Query    Query  `json:"query"`
 	Currency string `json:"currency"` //Currency field is used for Attribution query response.
+}
+
+func (q *Query) GetClass() string {
+	return q.Class
+}
+
+func (q *Query) GetQueryDateRange() (from, to int64) {
+	return q.From, q.To
+}
+
+func (q *Query) SetQueryDateRange(from, to int64) {
+	q.From, q.To = from, to
 }
 
 type QueryResult struct {
@@ -2096,6 +2118,29 @@ func RunFunnelQuery(projectId uint64, query Query) (*QueryResult, int, string) {
 	addMetaToQueryResult(result, query)
 
 	return result, http.StatusOK, "Successfully executed query"
+}
+
+func DecodeQueryForClass(queryJSON postgres.Jsonb, queryClass string) (BaseQuery, error) {
+	var baseQuery BaseQuery
+	var err error
+	switch queryClass {
+	case QueryClassFunnel, QueryClassInsights:
+		var query Query
+		err = U.DecodePostgresJsonbToStructType(&queryJSON, &query)
+		baseQuery = &query
+	case QueryClassAttribution:
+		var query AttributionQuery
+		err = U.DecodePostgresJsonbToStructType(&queryJSON, &query)
+		baseQuery = &query
+	case QueryClassChannel:
+		var query ChannelQueryUnit
+		err = U.DecodePostgresJsonbToStructType(&queryJSON, &query)
+		baseQuery = &query
+	default:
+		return baseQuery, fmt.Errorf("query class %s not supported", queryClass)
+	}
+
+	return baseQuery, err
 }
 
 func Analyze(projectId uint64, query Query) (*QueryResult, int, string) {

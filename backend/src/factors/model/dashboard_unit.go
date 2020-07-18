@@ -347,20 +347,44 @@ func CacheDashboardUnit(projectID uint64, dashboardUnit DashboardUnit, waitGroup
 		return
 	}
 
-	for preset, rangeFunction := range U.QueryDateRangePresets {
-		query.From, query.To = rangeFunction()
-		logCtx = logCtx.WithFields(log.Fields{"Preset": preset, "From": query.From, "To": query.To})
+	baseQuery, err := DecodeQueryForClass(dashboardUnit.Query, query.Class)
+	if err != nil {
+		logCtx.WithError(err).Errorf("Error decoding query")
+		return
+	}
 
-		if isDashboardUnitAlreadyCachedForRange(projectID, dashboardUnit.DashboardId, dashboardUnit.ID, query.From, query.To) {
+	for preset, rangeFunction := range U.QueryDateRangePresets {
+		from, to := rangeFunction()
+		baseQuery.SetQueryDateRange(from, to)
+		logCtx = logCtx.WithFields(log.Fields{"Preset": preset, "From": from, "To": to})
+
+		if isDashboardUnitAlreadyCachedForRange(projectID, dashboardUnit.DashboardId, dashboardUnit.ID, from, to) {
 			continue
 		}
 
-		result, errCode, errMsg := Analyze(projectID, query)
+		var result interface{}
+		var errCode int
+		var errMsg string
+		if baseQuery.GetClass() == QueryClassFunnel || baseQuery.GetClass() == QueryClassInsights {
+			analyticsQuery := baseQuery.(*Query)
+			result, errCode, errMsg = Analyze(projectID, *analyticsQuery)
+		} else if baseQuery.GetClass() == QueryClassAttribution {
+			attributionQuery := baseQuery.(*AttributionQuery)
+			result, err = ExecuteAttributionQuery(projectID, attributionQuery)
+			if err != nil {
+				errCode = http.StatusInternalServerError
+			} else {
+				errCode = http.StatusOK
+			}
+		} else if baseQuery.GetClass() == QueryClassChannel {
+			channelQuery := baseQuery.(*ChannelQueryUnit)
+			result, errCode = ExecuteChannelQuery(projectID, channelQuery.Query)
+		}
 		if errCode != http.StatusOK {
 			logCtx.Errorf("Error while running query %s", errMsg)
-			return
+			continue
 		}
-		SetCacheResultByDashboardIdAndUnitId(result, projectID, dashboardUnit.DashboardId, dashboardUnit.ID, query.To, query.From)
+		SetCacheResultByDashboardIdAndUnitId(result, projectID, dashboardUnit.DashboardId, dashboardUnit.ID, from, to)
 	}
 	return
 }

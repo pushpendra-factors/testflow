@@ -24,6 +24,18 @@ type AttributionQuery struct {
 	To                     int64    `json:"to"`
 }
 
+func (q *AttributionQuery) GetClass() string {
+	return q.Class
+}
+
+func (q *AttributionQuery) GetQueryDateRange() (from, to int64) {
+	return q.From, q.To
+}
+
+func (q *AttributionQuery) SetQueryDateRange(from, to int64) {
+	q.From, q.To = from, to
+}
+
 const (
 	ATTRIBUTION_METHOD_FIRST_TOUCH = "First_Touch"
 	ATTRIBUTION_METHOD_LAST_TOUCH  = "Last_Touch"

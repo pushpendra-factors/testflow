@@ -356,7 +356,7 @@ func GetCacheResultByDashboardIdAndUnitId(projectId, dashboardId, unitId uint64,
 	return cacheResult, http.StatusFound, nil
 }
 
-func SetCacheResultByDashboardIdAndUnitId(result interface{}, projectId uint64, dashboardId uint64, unitId uint64, to int64, from int64) {
+func SetCacheResultByDashboardIdAndUnitId(result interface{}, projectId uint64, dashboardId uint64, unitId uint64, from, to int64) {
 	logctx := log.WithFields(log.Fields{"project_id": projectId,
 		"dashboard_id": dashboardId, "dashboard_unit_id": unitId,
 	})

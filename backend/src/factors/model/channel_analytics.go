@@ -40,6 +40,18 @@ type ChannelQueryUnit struct {
 	Meta  *map[string]interface{} `json:"meta"`
 }
 
+func (q *ChannelQueryUnit) GetClass() string {
+	return q.Class
+}
+
+func (q *ChannelQueryUnit) GetQueryDateRange() (from, to int64) {
+	return q.Query.From, q.Query.To
+}
+
+func (q *ChannelQueryUnit) SetQueryDateRange(from, to int64) {
+	q.Query.From, q.Query.To = from, to
+}
+
 const CAChannelGoogleAds = "google_ads"
 const CAChannelFacebookAds = "facebook_ads"
 const CAChannelGroupKey = "group_key"
