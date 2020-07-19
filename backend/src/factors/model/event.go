@@ -534,7 +534,7 @@ func getPageCountAndTimeSpentFromEventsList(events []*Event, sessionEvent *Event
 	return pageCount, timeSpent
 }
 
-func getPageCountAndTimeSpentFromSessionEvent(projectId uint64, userId string,
+func getPageCountAndTimeSpentForContinuedSession(projectId uint64, userId string,
 	continuedSessionEvent *Event, events []*Event) (float64, float64, int) {
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectId, "user_id": userId})
@@ -1073,7 +1073,7 @@ func AddSessionForUser(projectId uint64, userId string, userEvents []Event,
 
 			if isSessionContinued {
 				// Using db query, since previous session continued, we don't have all the events of the session.
-				sessionPageCount, sessionPageSpentTime, errCode = getPageCountAndTimeSpentFromSessionEvent(
+				sessionPageCount, sessionPageSpentTime, errCode = getPageCountAndTimeSpentForContinuedSession(
 					projectId, userId, sessionEvent, events[sessionStartIndex:sessionEndIndex+1])
 				if errCode == http.StatusInternalServerError {
 					logCtx.Error("Failed to get page count and spent time of session on add session.")
