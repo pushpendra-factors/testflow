@@ -523,43 +523,41 @@ func GetUserEventsByEventNameId(projectId uint64, userId string, eventNameId uin
 	return events, http.StatusFound
 }
 
-func getPageCountAndTimeSpentFromEventsList(events []*Event, sessionEvent *Event) (int64, float64) {
+func getPageCountAndTimeSpentFromEventsList(events []*Event, sessionEvent *Event) (float64, float64) {
 	if len(events) == 0 {
 		return 0, 0
 	}
 
 	timeSpent := float64(events[len(events)-1].Timestamp - sessionEvent.Timestamp)
-	pageCount := int64(len(events))
+	pageCount := float64(len(events))
 
 	return pageCount, timeSpent
 }
 
 func getPageCountAndTimeSpentFromSessionEvent(projectId uint64, userId string,
-	sessionEvent *Event) (int64, float64, int) {
+	continuedSessionEvent *Event, events []*Event) (float64, float64, int) {
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectId, "user_id": userId})
 
-	var count, timestamp int64
-	db := C.GetServices().Db
-	queryStr := "SELECT COUNT(*), MAX(timestamp) FROM events WHERE project_id = ? AND user_id = ? AND session_id = ?"
-	execQuery := db.Raw(queryStr, projectId, userId, sessionEvent.ID)
-	if err := execQuery.Error; err != nil {
-		logCtx.WithError(err).Error("Failed to get session page count and spent time.")
+	existingPropertiesMap, err := U.DecodePostgresJsonb(&continuedSessionEvent.Properties)
+	if err != nil {
 		return 0, 0, http.StatusInternalServerError
 	}
 
-	row := execQuery.Row()
-	if err := row.Scan(&count, &timestamp); err != nil {
-		logCtx.WithError(err).Error("Failed to scan rows while reading session page count and spent time.")
-		return 0, 0, http.StatusInternalServerError
+	var existingPageCount float64
+	if existingPageCountValue, exists := (*existingPropertiesMap)[U.SP_PAGE_COUNT]; exists {
+		existingPageCount, err = U.GetPropertyValueAsFloat64(existingPageCountValue)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to get page count property value as float64.")
+		}
 	}
 
-	var timeSpent float64
-	if timestamp > 0 {
-		timeSpent = float64(timestamp - sessionEvent.Timestamp)
-	}
+	currentPageCount, spentTime := getPageCountAndTimeSpentFromEventsList(events, continuedSessionEvent)
+	// Decrement by 1 to remove the last event of session pulled for
+	// existing session which is duplicate on count.
+	pageCount := existingPageCount + currentPageCount - 1
 
-	return count, timeSpent, http.StatusFound
+	return pageCount, spentTime, http.StatusFound
 }
 
 /* COMMENTED TEMPORARILY BECAUSE OF SLOW QUERY.
@@ -1071,13 +1069,12 @@ func AddSessionForUser(projectId uint64, userId string, userEvents []Event,
 			}
 
 			// Using existing method to get count and page spent time.
-			var sessionPageCount int64
-			var sessionPageSpentTime float64
+			var sessionPageCount, sessionPageSpentTime float64
 
 			if isSessionContinued {
 				// Using db query, since previous session continued, we don't have all the events of the session.
 				sessionPageCount, sessionPageSpentTime, errCode = getPageCountAndTimeSpentFromSessionEvent(
-					projectId, userId, sessionEvent)
+					projectId, userId, sessionEvent, events[sessionStartIndex:sessionEndIndex+1])
 				if errCode == http.StatusInternalServerError {
 					logCtx.Error("Failed to get page count and spent time of session on add session.")
 				}
