@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { DropdownItem, DropdownMenu, DropdownToggle, Input, Button, Form, Nav,
+import { Dropdown, DropdownItem, DropdownMenu, DropdownToggle, Input, Button, Form, Nav,
   Modal, ModalHeader, ModalBody, ModalFooter, Badge, TabContent, TabPane, NavItem, 
   NavLink, Card, CardTitle, CardText, Row, Col } from 'reactstrap';
 import PropTypes from 'prop-types';
@@ -87,6 +87,9 @@ class DefaultHeader extends Component {
         projectName : '',
       },
       
+      toggleNotificationDropDown: false,
+      toggleProfileDropDown: false,
+
       showAddProjectModal: false,
       addProjectMessage: null,
       eventNamePollStarted: false,
@@ -239,11 +242,23 @@ class DefaultHeader extends Component {
     });
   }
 
+  toggleProfileDropDown = () => {
+    this.setState({
+      toggleProfileDropDown: !this.state.toggleProfileDropDown
+    })
+  }
+
   renderNotifications = () => {
     if (!this.props.billingAccount) return;
-
     let noOfNotifications = 0;
     let dropDownItems = [];
+
+    let toggle = () => {
+      this.setState({
+        toggleNotificationDropDown: !this.state.toggleNotificationDropDown
+      })
+    }
+
     if (this.props.accountPlan.code != "free" && !this.props.billingAccount.organization_name){
       dropDownItems.push(
         <DropdownItem key={1} onClick={this.changeViewToAccountSettings}>
@@ -260,7 +275,7 @@ class DefaultHeader extends Component {
     }
 
     return (
-      <AppHeaderDropdown direction="down">
+      <Dropdown className="notification-drop-down" isOpen={this.state.toggleNotificationDropDown} toggle={toggle}>
         <DropdownToggle nav>	
           <i className="icon-bell fapp-bell"></i>	
           { noOfNotifications > 0 && <Badge pill color="danger">{noOfNotifications}</Badge> }	
@@ -272,7 +287,7 @@ class DefaultHeader extends Component {
             })
           }
         </DropdownMenu>
-      </AppHeaderDropdown>
+      </Dropdown>
     )
   }
 
@@ -387,15 +402,15 @@ class DefaultHeader extends Component {
           
     return (
       <React.Fragment>
-        <AppSidebarToggler className="d-lg-none" display="md" mobile />
+        {/* <AppSidebarToggler className="d-lg-none" display="md" mobile /> */}
         {/* <AppSidebarToggler className="d-md-down-none fapp-navbar-toggler" display="lg" /> */}
-        <AppSidebarForm className="fapp-select light fapp-header-dropdown" style={{width: '40%'}}>
+        <Dropdown className="fapp-select light fapp-header-dropdown" style={{width: '40%'}}>
           <div style={{display: 'inline-block', width: '60%', marginRight: '5px'}}> { selectProjectDropDown } </div>
           <Button outline color="primary" onClick={this.toggleAddProjectModal} style={{fontSize: '20px', padding: '0 10px', height: '38px'}}>+</Button>
-        </AppSidebarForm>
+        </Dropdown>
         <Nav className="ml-auto fapp-header-right" navbar>
             { this.renderNotifications() }
-          <AppHeaderDropdown direction="down">  
+          <Dropdown isOpen={this.state.toggleProfileDropDown} toggle={this.toggleProfileDropDown}>  
             <DropdownToggle nav>
               <Avatar name={this.props.getProfileName()}  maxInitials={1} round={true} color='#3a539b' textSizeRatio={2} size='35' style={{fontWeight: '700', marginTop: '5px'}} />
             </DropdownToggle>
@@ -404,7 +419,7 @@ class DefaultHeader extends Component {
               <DropdownItem onClick={()=>{this.changeViewToAccountSettings();}} ><i className="fa fa-wrench"></i>Account Settings</DropdownItem>
               <DropdownItem onClick={this.handleLogout}><i className="fa fa-lock"></i> Logout</DropdownItem>
             </DropdownMenu>
-          </AppHeaderDropdown>
+          </Dropdown>
         </Nav>
         { this.renderSetupProjectModal() }
       </React.Fragment>
