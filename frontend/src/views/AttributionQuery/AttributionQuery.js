@@ -6,8 +6,8 @@ import {
   Col,
   DropdownItem,
   DropdownMenu,
-  DropdownToggle,
-  Modal,
+  DropdownToggle, Form, Input,
+  Modal, ModalBody,
   ModalFooter,
   ModalHeader,
   Row
@@ -95,6 +95,7 @@ class AttributionQuery extends Component {
       showDashboardsList: false,
       showAddToDashboardModal: false,
       addToDashboardMessage: null,
+      inputDashboardUnitTitle: null,
       selectedDashboardId: null,
       eventNamesLoaded: false,
       eventNamesLoadError: null,
@@ -354,12 +355,32 @@ class AttributionQuery extends Component {
     return dashboardsDropdown;
   }
 
+  setDashboardUnitTitle = (e) => {
+    this.setState({ addToDashboardMessage: null });
+
+    let title = e.target.value.trim();
+    if (title === "") console.error("chart title cannot be empty");
+    this.setState({ inputDashboardUnitTitle: title });
+  }
+
   renderAddToDashboardModal() {
     return (
       <Modal isOpen={this.state.showAddToDashboardModal} toggle={this.toggleAddToDashboardModal}
              style={{marginTop: '10rem'}}>
 
         <ModalHeader toggle={this.toggleAddToDashboardModal}>Confirm add to Dashboard</ModalHeader>
+
+        <ModalBody style={{padding: '25px 35px'}}>
+          <div style={{textAlign: 'center', marginBottom: '15px'}}>
+            <span style={{display: 'inline-block'}} className='fapp-error' hidden={this.state.addToDashboardMessage == null}>
+              { this.state.addToDashboardMessage }
+            </span>
+          </div>
+          <Form>
+            <span className='fapp-label'>Title</span>
+            <Input className='fapp-input' type="text" placeholder="Your Title" onChange={this.setDashboardUnitTitle} />
+          </Form>
+        </ModalBody>
 
         <ModalFooter style={{borderTop: 'none', paddingBottom: '30px', paddingRight: '35px'}}>
           <Button outline color="success" onClick={this.addToDashboard}>Add</Button>
@@ -370,6 +391,10 @@ class AttributionQuery extends Component {
   }
 
   addToDashboard = () => {
+
+    if (this.state.inputDashboardUnitTitle === null || this.state.inputDashboardUnitTitle === ""){
+      return
+    }
     let queryUnit = {};
     queryUnit.cl = QUERY_CLASS_ATTRIBUTION;
     queryUnit.query = this.getQuery();
@@ -377,17 +402,17 @@ class AttributionQuery extends Component {
     let metricBreakdownQueryUnit = {...queryUnit};
     metricBreakdownQueryUnit.meta = {metrics_breakdown: true};
 
-    let title = "Attribution - Metrics by " + queryUnit.query.attribution_key;
     let payload = {
       presentation: PRESENTATION_TABLE,
       query: metricBreakdownQueryUnit,
-      title: title,
+      title: this.state.inputDashboardUnitTitle,
     };
 
     this.props.createDashboardUnit(this.props.currentProjectId,
       this.state.selectedDashboardId, payload)
       .catch(() => console.error("Failed adding to attribution metrics breakdown to dashboard."))
 
+    this.setState({ inputDashboardUnitTitle: null });
     // close modal.
     this.toggleAddToDashboardModal();
   }
