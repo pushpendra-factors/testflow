@@ -197,6 +197,10 @@ func MergeUserPropertiesForUserID(projectID uint64, userID string, updatedProper
 	for _, property := range U.USER_PROPERTIES_MERGE_TYPE_INITIAL {
 		initialPropertiesVisitedMap[property] = false
 	}
+	mergedValueAddedOnce := make(map[string]bool)
+	for _, property := range U.USER_PROPERTIES_MERGE_TYPE_ADD {
+		mergedValueAddedOnce[property] = false
+	}
 
 	var userPropertiesRecords []*UserProperties
 	for _, user := range users {
@@ -221,6 +225,12 @@ func MergeUserPropertiesForUserID(projectID uint64, userID string, updatedProper
 		return userPropertiesRecords[i].UpdatedTimestamp < userPropertiesRecords[j].UpdatedTimestamp
 	})
 
+	updatedPropertiesMap, err := U.DecodePostgresJsonb(&updatedProperties)
+	if err != nil {
+		logCtx.Error("failed to decode updated properties")
+		return currentPropertiesID, http.StatusInternalServerError
+	}
+
 	mergedUserProperties := make(map[string]interface{})
 	mergedUserPropertiesValues := make(map[string][]interface{})
 	var mergedUpdatedTimestamp int64
@@ -234,6 +244,8 @@ func MergeUserPropertiesForUserID(projectID uint64, userID string, updatedProper
 			mergedUpdatedTimestamp = userPropertiesRecord.UpdatedTimestamp
 		}
 
+		_, isMergedBefore := (*userProperties)[U.UP_MERGE_TIMESTAMP]
+		propertiesUserID := userPropertiesRecord.UserId
 		for property := range *userProperties {
 			mergedUserPropertiesValues[property] = append(mergedUserPropertiesValues[property], (*userProperties)[property])
 			isAlreadySet, isInitialProperty := initialPropertiesVisitedMap[property]
@@ -244,24 +256,31 @@ func MergeUserPropertiesForUserID(projectID uint64, userID string, updatedProper
 					initialPropertiesVisitedMap[property] = true
 				}
 			} else if U.StringValueIn(property, U.USER_PROPERTIES_MERGE_TYPE_ADD[:]) {
-				// Adding 0.1 + 0.2 will result in 0.30000000000000004 as explained https://floating-point-gui.de/
-				// Round off values with precision to avoid this.
-				oldValue, found := mergedUserProperties[property]
-				if found {
-					roundOffValue, err := U.FloatRoundOffWithPrecision(oldValue.(float64)+(*userProperties)[property].(float64), 2)
-					if err != nil {
-						// If error in round off, use as is.
-						mergedUserProperties[property] = oldValue.(float64) + (*userProperties)[property].(float64)
-					} else {
-						mergedUserProperties[property] = roundOffValue
+				oldValue, foundInMerged := mergedUserProperties[property]
+				var valueToAdd float64
+				if isMergedBefore {
+					// If propertiesUserID is same as user for which merge was called, add only difference of values.
+					// If for a different user and isMergedBefore, ignore adding.
+					if propertiesUserID == userID {
+						updatedValue, presentInUpdated := (*updatedPropertiesMap)[property]
+						if presentInUpdated && !foundInMerged {
+							// Not already set in mergedProperties. Use the actual value to add.
+							valueToAdd = updatedValue.(float64)
+							mergedValueAddedOnce[property] = true
+						} else if presentInUpdated {
+							// Already set in mergedProperties through some other user. Add only difference.
+							valueToAdd = updatedValue.(float64) - (*userProperties)[property].(float64)
+						}
+					} else if added := mergedValueAddedOnce[property]; !added {
+						valueToAdd = (*userProperties)[property].(float64)
+						mergedValueAddedOnce[property] = true
 					}
 				} else {
-					roundOffValue, err := U.FloatRoundOffWithPrecision((*userProperties)[property].(float64), 2)
-					if err != nil {
-						mergedUserProperties[property] = (*userProperties)[property].(float64)
-					} else {
-						mergedUserProperties[property] = roundOffValue
-					}
+					valueToAdd = (*userProperties)[property].(float64)
+				}
+				if !foundInMerged || valueToAdd > 0 {
+					// !foundInMerged check to ensure that value is added only once to mergeProperties.
+					mergedUserProperties[property] = addValuesForProperty(oldValue, valueToAdd, foundInMerged)
 				}
 			} else {
 				// For all other properties, overwrite with the latest user property.
@@ -276,6 +295,7 @@ func MergeUserPropertiesForUserID(projectID uint64, userID string, updatedProper
 		logCtx.Infof("Skipping merge as none of the properties changed %s", mergedUserPropertiesValues)
 		return currentPropertiesID, http.StatusNotModified
 	}
+	mergedUserProperties[U.UP_MERGE_TIMESTAMP] = U.TimeNowUnix()
 
 	mergedUserPropertiesJSON, err := U.EncodeToPostgresJsonb(&mergedUserProperties)
 	if err != nil {
@@ -308,6 +328,27 @@ func MergeUserPropertiesForUserID(projectID uint64, userID string, updatedProper
 		}
 	}
 	return calledUserNewPropertyID, http.StatusCreated
+}
+
+// addValuesForProperty To add old and new value for the user property type add.
+// Adding 0.1 + 0.2 will result in 0.30000000000000004 as explained https://floating-point-gui.de/
+// Round off values with precision to avoid this.
+func addValuesForProperty(oldValue interface{}, newValue float64, addOld bool) float64 {
+	var addedValue float64
+	var err error
+	if addOld {
+		addedValue, err = U.FloatRoundOffWithPrecision(oldValue.(float64)+newValue, 2)
+		if err != nil {
+			// If error in round off, use as is.
+			addedValue = oldValue.(float64) + newValue
+		}
+	} else {
+		addedValue, err = U.FloatRoundOffWithPrecision(newValue, 2)
+		if err != nil {
+			addedValue = newValue
+		}
+	}
+	return addedValue
 }
 
 // updateUserPropertiesForUser Creates new UserProperties entry and updates properties_id in user table. Returns new properties_id.
