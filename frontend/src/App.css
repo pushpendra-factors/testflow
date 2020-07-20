@@ -744,3 +744,7 @@ span.fapp-button:focus {
     padding: 0 2vw;
     font-weight: bold;
 }
+
+.notification-drop-down {
+    min-width: 50px;
+}
