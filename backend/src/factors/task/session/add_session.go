@@ -246,10 +246,11 @@ func addSessionByProjectId(projectId uint64, maxLookbackTimestamp,
 	status.NoOfEvents = noOfEvents
 	status.NoOfUsers = noOfUsers
 
-	var noOfSessionsCreated, noOfSessionsContinued int
+	var noOfEventsProcessedForSession, noOfSessionsCreated, noOfSessionsContinued, noOfUserPropertiesUpdates int
 	for _, nsi := range nextSessionInfoList {
-		noOfCreated, isContinuedFirst, errCode := M.AddSessionForUser(projectId, nsi.UserId, (*userEventsMap)[nsi.UserId],
-			bufferTimeBeforeSessionCreateInSecs, nsi.StartTimestamp, sessionEventName.ID)
+		noOfProcessedEvents, noOfCreated, isContinuedFirst, noOfUserPropUpdates, errCode := M.AddSessionForUser(projectId,
+			nsi.UserId, (*userEventsMap)[nsi.UserId], bufferTimeBeforeSessionCreateInSecs,
+			nsi.StartTimestamp, sessionEventName.ID)
 		if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
 			return status, http.StatusInternalServerError
 		}
@@ -259,10 +260,14 @@ func addSessionByProjectId(projectId uint64, maxLookbackTimestamp,
 		}
 
 		noOfSessionsCreated = noOfSessionsCreated + noOfCreated
+		noOfEventsProcessedForSession = noOfEventsProcessedForSession + noOfProcessedEvents
+		noOfUserPropertiesUpdates = noOfUserPropertiesUpdates + noOfUserPropUpdates
 	}
 
 	status.NoOfSessionsCreated = noOfSessionsCreated
 	status.NoOfSessionsContinued = noOfSessionsContinued
+	status.NoOfEventsProcessed = noOfEventsProcessedForSession
+	status.NoOfUserPropertiesUpdates = noOfUserPropertiesUpdates
 
 	return status, http.StatusOK
 }
@@ -313,10 +318,13 @@ func setStatus(projectId uint64, statusMap *map[uint64]Status, status *Status,
 type Status struct {
 	Status                       string `json:"status"`
 	EventsDownloadIntervalInMins int64  `json:"events_download_interval_in_mins"`
-	NoOfEvents                   int    `json:"no_of_events"`
-	NoOfUsers                    int    `json:"no_of_users"`
-	NoOfSessionsContinued        int    `json:"no_of_sessions_continued"`
-	NoOfSessionsCreated          int    `json:"no_of_sessions_created"`
+	NoOfEvents                   int    `json:"no_of_events_downloaded"`
+	// count of after filter events. actual no.of events processed for session.
+	NoOfEventsProcessed       int `json:"no_of_events_processed"`
+	NoOfUsers                 int `json:"no_of_users"`
+	NoOfSessionsContinued     int `json:"no_of_sessions_continued"`
+	NoOfSessionsCreated       int `json:"no_of_sessions_created"`
+	NoOfUserPropertiesUpdates int `json:"no_of_user_properties_updates"`
 }
 
 func addSessionWorker(projectId uint64, maxLookbackTimestamp,
@@ -330,7 +338,8 @@ func addSessionWorker(projectId uint64, maxLookbackTimestamp,
 	startTimestamp := U.TimeNowUnix()
 	status, errCode := addSessionByProjectId(projectId, maxLookbackTimestamp,
 		bufferTimeBeforeSessionCreateInSecs)
-	logCtx = logCtx.WithField("time_taken_in_secs", U.TimeNowUnix()-startTimestamp)
+	logCtx = logCtx.WithField("time_taken_in_secs", U.TimeNowUnix()-startTimestamp).
+		WithField("status", status)
 
 	if errCode != http.StatusOK {
 		var isFailed bool

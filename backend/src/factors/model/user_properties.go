@@ -533,9 +533,12 @@ func OverwriteUserProperties(projectId uint64, userId string,
 	}
 
 	db := C.GetServices().Db
-	if err := db.Model(&UserProperties{}).Where("project_id = ? AND user_id = ? AND id = ?",
-		projectId, userId, id).Update("properties", propertiesJsonb).Error; err != nil {
-		log.WithFields(log.Fields{"project_id": projectId, "id": id}).WithError(err).Error("Failed to replace properties.")
+	if err := db.Model(&UserProperties{}).
+		Where("project_id = ? AND user_id = ? AND id = ?", projectId, userId, id).
+		Update("properties", propertiesJsonb).Error; err != nil {
+
+		log.WithFields(log.Fields{"project_id": projectId, "id": id}).
+			WithError(err).Error("Failed to replace properties.")
 		return http.StatusInternalServerError
 	}
 
@@ -618,4 +621,72 @@ func GetUserPropertiesRecordsByProperty(projectId uint64,
 	}
 
 	return userProperties, http.StatusFound
+}
+
+func UpdateUserPropertiesForSession(projectID uint64,
+	sessionUserPropertiesRecordMap *map[string]SessionUserProperties) int {
+
+	logCtx := log.WithField("project_id", projectID)
+
+	hasFailure := false
+	for userPropertiesID, sessionUserProperties := range *sessionUserPropertiesRecordMap {
+		logCtx.WithField("user_properties_id", userPropertiesID)
+
+		userProperties, errCode := GetUserPropertiesRecord(projectID,
+			sessionUserProperties.UserID, userPropertiesID)
+		if errCode != http.StatusFound {
+			hasFailure = true
+			continue
+		}
+
+		userPropertiesMap, err := U.DecodePostgresJsonb(&userProperties.Properties)
+		if err != nil {
+			logCtx.WithError(err).
+				Error("Failed to decode user properties on UpdateUserPropertiesForSession.")
+			hasFailure = true
+			continue
+		}
+
+		var existingPageCount, existingTotalSpentTime float64
+		if existingPageCountValue, exists := (*userPropertiesMap)[U.UP_PAGE_COUNT]; exists {
+			existingPageCount, err = U.GetPropertyValueAsFloat64(existingPageCountValue)
+			if err != nil {
+				logCtx.WithError(err).
+					Error("Failed to convert page_count property value as float64.")
+			}
+		}
+
+		if existingTotalSpentTimeValue, exists := (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME]; exists {
+			existingTotalSpentTime, err = U.GetPropertyValueAsFloat64(existingTotalSpentTimeValue)
+			if err != nil {
+				logCtx.WithError(err).
+					Error("Failed to convert total_page_spent time property value as float64.")
+			}
+		}
+
+		(*userPropertiesMap)[U.UP_PAGE_COUNT] = existingPageCount + sessionUserProperties.SessionPageCount
+		(*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME] = existingTotalSpentTime + sessionUserProperties.SessionPageSpentTime
+		(*userPropertiesMap)[U.UP_SESSION_COUNT] = sessionUserProperties.SessionCount
+
+		userPropertiesJsonb, err := U.EncodeToPostgresJsonb(userPropertiesMap)
+		if err != nil {
+			logCtx.WithError(err).
+				Error("Failed to encode user properties json after adding new session count.")
+			hasFailure = true
+			continue
+		}
+
+		errCode = OverwriteUserProperties(projectID, sessionUserProperties.UserID,
+			userPropertiesID, userPropertiesJsonb)
+		if errCode != http.StatusAccepted {
+			hasFailure = true
+			continue
+		}
+	}
+
+	if hasFailure {
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusAccepted
 }
