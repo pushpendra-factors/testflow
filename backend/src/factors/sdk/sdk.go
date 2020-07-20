@@ -180,6 +180,18 @@ func ProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, string,
 
 		status, response = AMPTrackByToken(token, &reqPayload)
 
+	case sdkRequestTypedAMPEventUpdateProperties:
+		var reqPayload AMPUpdateEventPropertiesPayload
+
+		err := json.Unmarshal([]byte(reqPayloadStr), &reqPayload)
+		if err != nil {
+			logCtx.WithError(err).Error(
+				"Failed to unmarshal request payload on sdk process queue.")
+			return http.StatusInternalServerError, "", nil
+		}
+
+		status, response = AMPUpdateEventPropertiesByToken(token, &reqPayload)
+
 	default:
 		logCtx.Error("Invalid sdk request type on sdk process queue")
 		return http.StatusInternalServerError, "", nil
@@ -1176,7 +1188,9 @@ type AMPTrackResponse struct {
 	Error   string `json:"error"`
 }
 
-func AMPUpdateEventPropertiesByToken(token string, reqPayload *AMPUpdateEventPropertiesPayload) (int, *Response) {
+func AMPUpdateEventPropertiesByToken(token string,
+	reqPayload *AMPUpdateEventPropertiesPayload) (int, *Response) {
+
 	project, errCode := M.GetProjectByToken(token)
 	if errCode != http.StatusFound {
 		return http.StatusUnauthorized, &Response{Error: "Invalid token"}
