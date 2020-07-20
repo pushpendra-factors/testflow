@@ -4,8 +4,6 @@ import { Dropdown, DropdownItem, DropdownMenu, DropdownToggle, Input, Button, Fo
   NavLink, Card, CardTitle, CardText, Row, Col } from 'reactstrap';
 import PropTypes from 'prop-types';
 import classnames from 'classnames';
-import { AppHeaderDropdown, AppSidebarToggler } from '@coreui/react';
-import { AppSidebarForm } from '@coreui/react';
 import Select from 'react-select';
 import { bindActionCreators } from 'redux';
 import { connect } from 'react-redux';
