@@ -57,7 +57,7 @@ func main() {
 	if err != nil {
 		logCtx.WithError(err).Fatal("Failed to initialize DB")
 	}
-	C.InitRedis(config.RedisHost, config.RedisPort)
+	C.InitRedisPersistent(config.RedisHost, config.RedisPort)
 
 	logCtx = logCtx.WithFields(log.Fields{
 		"Env":         *envFlag,

@@ -23,6 +23,8 @@ func TestMain(m *testing.M) {
 
 	redisHost := flag.String("redis_host", "localhost", "")
 	redisPort := flag.Int("redis_port", 6379, "")
+	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
+	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
 
 	geoLocFilePath := flag.String("geo_loc_path", "/usr/local/var/factors/geolocation_data/GeoLite2-City.mmdb", "")
 	deviceDetectorPath := flag.String("dev_detect_path", "/usr/local/var/factors/devicedetector_data/regexes", "")
@@ -48,6 +50,8 @@ func TestMain(m *testing.M) {
 		},
 		RedisHost:              *redisHost,
 		RedisPort:              *redisPort,
+		RedisHostPersistent:    *redisHostPersistent,
+		RedisPortPersistent:    *redisPortPersistent,
 		GeolocationFile:        *geoLocFilePath,
 		DeviceDetectorPath:     *deviceDetectorPath,
 		APIDomain:              *apiDomain,
@@ -62,6 +66,7 @@ func TestMain(m *testing.M) {
 		log.Fatal("Failed to initialize config and services.")
 		os.Exit(1)
 	}
+	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
 
 	C.InitQueueClient(config.RedisHost, config.RedisPort)
 

@@ -184,7 +184,7 @@ func isWebAnalyticsDashboardAlreadyCached(projectID, dashboardID uint64, from, t
 		log.WithError(err).Errorf("Failed to get cache key")
 		return false
 	}
-	exists, err := cacheRedis.Exists(cacheKey)
+	exists, err := cacheRedis.ExistsPersistent(cacheKey)
 	if err != nil {
 		log.WithError(err).Errorf("Redis error on exists")
 		return false
@@ -604,7 +604,7 @@ func GetCacheResultForWebAnalyticsDashboard(projectID, dashboardID uint64, from,
 		return cacheResult, http.StatusInternalServerError
 	}
 
-	result, err := cacheRedis.Get(cacheKey)
+	result, err := cacheRedis.GetPersistent(cacheKey)
 	if err == redis.ErrNil {
 		return cacheResult, http.StatusNotFound
 	} else if err != nil {
@@ -665,7 +665,7 @@ func SetCacheResultForWebAnalyticsDashboard(result map[string]WebAnalyticsQueryR
 		logCtx.WithError(err).Error("Failed to encode dashboardCacheResult")
 		return
 	}
-	err = cacheRedis.Set(cacheKey, string(dashboardCacheResultJSON), DashboardCachingDurationInSeconds)
+	err = cacheRedis.SetPersistent(cacheKey, string(dashboardCacheResultJSON), DashboardCachingDurationInSeconds)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to set cache for channel query")
 		return
