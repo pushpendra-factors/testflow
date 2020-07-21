@@ -55,6 +55,11 @@ const (
 	QueryNameTrafficChannelReport = "traffic_channel_report"
 )
 
+var SkippableWindows = map[string]int64{
+	"2MIN":  120,
+	"30MIN": 1800,
+}
+
 // Default Website Analytics named queries and corresponding presentation.
 var DefaultWebAnalyticsQueries = map[string]string{
 	QueryNameSessions:           PresentationCard,
@@ -578,13 +583,17 @@ func cacheWebsiteAnalyticsForProjectID(projectID uint64, queryNames []string, wa
 }
 
 func GetCacheResultForWebAnalyticsDashboard(projectID, dashboardID uint64, from, to int64) (WebAnalyticsCacheResult, int) {
+	var cacheResult WebAnalyticsCacheResult
+	if shouldSkipWindow(from, to) {
+		return cacheResult, http.StatusNotFound
+	}
+
 	logCtx := log.WithFields(log.Fields{
 		"Method":      "GetCacheResultForWebAnalyticsDashboard",
 		"ProjectID":   projectID,
 		"DashboardID": dashboardID,
 	})
 
-	var cacheResult WebAnalyticsCacheResult
 	if projectID == 0 || dashboardID == 0 {
 		return cacheResult, http.StatusBadRequest
 	}
@@ -615,7 +624,21 @@ func GetCacheResultForWebAnalyticsDashboard(projectID, dashboardID uint64, from,
 	return cacheResult, http.StatusFound
 }
 
+func shouldSkipWindow(from, to int64) bool {
+	window := to - from
+	for _, definedWindow := range SkippableWindows {
+		if window == definedWindow {
+			return true
+		}
+	}
+	return false
+}
+
 func SetCacheResultForWebAnalyticsDashboard(result map[string]WebAnalyticsQueryResult, projectID, dashboardID uint64, from, to int64) {
+	if shouldSkipWindow(from, to) {
+		return
+	}
+
 	logCtx := log.WithFields(log.Fields{
 		"Method":      "SetCacheResultForWebAnalyticsDashboard",
 		"ProjectID":   projectID,

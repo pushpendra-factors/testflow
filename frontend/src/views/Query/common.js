@@ -49,6 +49,9 @@ export const DEFAULT_DATE_RANGE_LABEL = 'Last 7 days';
 export const DATE_RANGE_TODAY_LABEL = 'Today';
 export const DATE_RANGE_YESTERDAY_LABEL = 'Yesterday';
 export const DATE_RANGE_LAST_30_DAYS_LABEL = 'Last 30 days';
+export const DATE_RANGE_LAST_2_MIN_LABEL = 'Last 2 mins'
+export const DATE_RANGE_LAST_30_MIN_LABEL = 'Last 30 mins'
+
 
 export const DEFAULT_DATE_RANGE = {
   startDate: moment(new Date()).subtract(7, 'days').startOf('day').toDate(),
@@ -56,13 +59,20 @@ export const DEFAULT_DATE_RANGE = {
   label: DEFAULT_DATE_RANGE_LABEL,
   key: 'selected'
 }
-export const DEFINED_DATE_RANGES = createStaticRanges([
+const DEFAULT_DATE_RANGES = [
   {
     label: DATE_RANGE_TODAY_LABEL,
     range: () => ({
       startDate: moment(new Date()).startOf('day').toDate(),
       endDate: new Date(),
     }),
+    isSelected(range) {
+      const definedRange = this.range();
+      return (
+        moment(range.startDate).isSame(definedRange.startDate,"seconds") && 
+        moment(range.endDate).isSame(definedRange.endDate,"seconds")
+      );
+    }
   },
   {
     label: DATE_RANGE_YESTERDAY_LABEL,
@@ -85,7 +95,40 @@ export const DEFINED_DATE_RANGES = createStaticRanges([
       endDate: moment(new Date()).subtract(1, 'days').endOf('day').toDate(),
     })
   },
-]);
+];
+
+export const DEFAULT_TODAY_DATE_RANGES = [
+  {
+    label: DATE_RANGE_LAST_2_MIN_LABEL,
+    range: () => ({
+      startDate: moment(new Date()).subtract(60*2,'seconds').toDate(),
+      endDate: new Date(),
+    }),
+    isSelected(range) {
+      const definedRange = this.range();
+      return (
+        moment(range.startDate).isSame(definedRange.startDate,"seconds") && 
+        moment(range.endDate).isSame(definedRange.endDate,"seconds")
+      );
+    }  
+  },
+  {
+    label:DATE_RANGE_LAST_30_MIN_LABEL,
+    range: () => ({
+      startDate: moment(new Date()).subtract(60*30, 'seconds').toDate(),
+      endDate: new Date(),
+    }),
+    isSelected(range) {
+      const definedRange = this.range();
+      return (
+        moment(range.startDate).isSame(definedRange.startDate,"seconds") && 
+        moment(range.endDate).isSame(definedRange.endDate,"seconds")
+      );
+    } 
+  }
+]
+export const DEFINED_DATE_RANGES = createStaticRanges(DEFAULT_DATE_RANGES);
+export const WEB_ANALYTICS_DEFINED_DATE_RANGES = createStaticRanges([...DEFAULT_TODAY_DATE_RANGES,...DEFAULT_DATE_RANGES])
 
 
 // returns datepicker daterange for stored daterange.
@@ -156,6 +199,16 @@ export const getQueryPeriod = function(selectedRange, timezone)  {
   let isTzEndDateToday = mt(selectedRange.endDate).tz(timezone).isSame(mt().tz(timezone), 'day');
   let from =  overwriteTimezone(selectedRange.startDate, timezone).unix();
   let to = overwriteTimezone(selectedRange.endDate, timezone).unix();
+
+  if (selectedRange.label){
+    let slideToCurrentTime = DEFAULT_TODAY_DATE_RANGES.find(range => range.label === selectedRange.label);
+    if (slideToCurrentTime){
+      let timediff = to-from;
+      to = moment(new Date()).unix();
+      from = to-timediff;
+      return { from: from, to: to };
+    }
+  }
 
   // Adjust the duration window respective to current time.
   if (isTzEndDateToday) {
@@ -242,8 +295,8 @@ export const convertSecondsToHMSAgo = function(timeInSeconds) {
 }
 
 export const getPresetLabelForDateRange = function(range) {
-  for (let i = 0; i < DEFINED_DATE_RANGES.length; i++) {
-    let preset = DEFINED_DATE_RANGES[i]
+  for (let i = 0; i < WEB_ANALYTICS_DEFINED_DATE_RANGES.length; i++) {
+    let preset = WEB_ANALYTICS_DEFINED_DATE_RANGES[i]
     let presetRange = preset.range()
     if (areSameDateRanges(range, presetRange)) {
       return preset.label

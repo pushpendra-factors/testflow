@@ -25,7 +25,10 @@ import {
   convertSecondsToHMSAgo,
   getPresetLabelForDateRange,
   setDateRangeForPresetLabel,
-  DEFINED_DATE_RANGES, 
+  DEFINED_DATE_RANGES,
+  WEB_ANALYTICS_DEFINED_DATE_RANGES,
+  DEFAULT_TODAY_DATE_RANGES,
+  DASHBOARD_TYPE_WEB_ANALYTICS,
   PRESENTATION_TABLE,
   QUERY_CLASS_CHANNEL,
   QUERY_CLASS_FUNNEL, 
@@ -220,12 +223,13 @@ class Dashboard extends Component {
   getQuery = () => {
     let dateRange = this.getCurrentDateRange();
     let period = getQueryPeriod(dateRange[0]);
+
     let query = {
         "units":this.state.webAnalyticsBulkQueryParams,
         "from":period.from,
         "to":period.to,
       };
-    return query
+    return query;
   }
 
   execWebAnalyticsBulkRequest = () => {
@@ -531,17 +535,33 @@ class Dashboard extends Component {
     // Use label for default date range.
     if (range.label) {
       return range.label
-    } else if(range.startDate ==  DEFAULT_DATE_RANGE.startDate 
-      && range.endDate == DEFAULT_DATE_RANGE.endDate) {
-      return DEFAULT_DATE_RANGE.label;
     }
+
+    let inDefaultRanges = WEB_ANALYTICS_DEFINED_DATE_RANGES.find(definedDateRange => {
+      return definedDateRange.isSelected(range);
+    });
+    if(inDefaultRanges) {
+      return WEB_ANALYTICS_DEFINED_DATE_RANGES[inDefaultRanges].label;
+    };
 
     return moment(range.startDate).format('MMM DD, YYYY') + " - " +
       moment(range.endDate).format('MMM DD, YYYY');
   }
 
   getCurrentDateRange() {
-    if (this.state.dateRange) return this.state.dateRange;
+    let dateRange = this.state.dateRange;
+    if (dateRange){
+      if (this.state.selectedDashboard &&
+        this.state.selectedDashboard.label == DASHBOARD_TYPE_WEB_ANALYTICS) 
+      return dateRange;
+
+      //skip today date ranges if dashboard is not of type web analytics
+      let inDefineDateRange = DEFAULT_TODAY_DATE_RANGES.find(definedDateRange => definedDateRange.label == dateRange[0].label);
+      if (!inDefineDateRange){
+        return dateRange;
+      }
+    }
+    
 
     let lsDateRangeStr = this.getLastSeenDateRangeForDashboard();
     if (!lsDateRangeStr) {
@@ -566,8 +586,7 @@ class Dashboard extends Component {
   isTodaysDateRangeSelected() {
     // Show if not an empty dashboard and selected date range is for Today.
     let currentDateRange = this.getCurrentDateRange()[0];
-    let beginningOfToday = moment(new Date()).startOf('day').unix();
-    return this.hasDashboardUnits() && moment(currentDateRange.startDate).unix() == beginningOfToday;
+    return this.hasDashboardUnits() && moment(currentDateRange.startDate).isSame(new Date(), "day");
   }
 
   // Callback method to update lastRefreshedAt from DashboardUnit.
@@ -632,7 +651,7 @@ class Dashboard extends Component {
             <ClosableDateRangePicker
               ranges={this.getCurrentDateRange()}
               onChange={this.handleDateRangeSelect}
-              staticRanges={ DEFINED_DATE_RANGES }
+              staticRanges={ this.getSelectedDashboard().label === DASHBOARD_TYPE_WEB_ANALYTICS ? WEB_ANALYTICS_DEFINED_DATE_RANGES : DEFINED_DATE_RANGES }
               inputRanges={[]}
               minDate={new Date('01 Jan 2000 00:00:00 GMT')} // range starts from given date.
               maxDate={moment(new Date()).subtract(1, 'days').endOf('day').toDate()}
