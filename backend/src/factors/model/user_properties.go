@@ -105,6 +105,7 @@ func createUserPropertiesIfChanged(projectId uint64, userId string,
 			return newPropertiesID, errCode
 		}
 	}
+
 	return updateUserPropertiesForUser(projectId, userId,
 		postgres.Jsonb{RawMessage: json.RawMessage(updatedPropertiesBytes)}, timestamp, false)
 }
@@ -161,14 +162,14 @@ func MergeUserPropertiesForUserID(projectID uint64, userID string, updatedProper
 		logCtx.Errorf("User not found with id %s", userID)
 		return currentPropertiesID, http.StatusInternalServerError
 	} else if user.CustomerUserId == "" {
-		return currentPropertiesID, http.StatusNotModified
+		return currentPropertiesID, http.StatusNotAcceptable
 	}
 	customerUserID := user.CustomerUserId
 
 	logCtx = logCtx.WithFields(log.Fields{"CustomerUserID": user.CustomerUserId})
 	if !isMergeEnabledForProjectID(projectID) {
 		logCtx.Infof("User merge properties not enabled for the project")
-		return currentPropertiesID, http.StatusNotModified
+		return currentPropertiesID, http.StatusNotAcceptable
 	}
 
 	// Users are returned in increasing order of created_at. For user_properties created at same unix time,
@@ -180,9 +181,9 @@ func MergeUserPropertiesForUserID(projectID uint64, userID string, updatedProper
 		return currentPropertiesID, http.StatusInternalServerError
 	} else if errCode == http.StatusNotFound {
 		logCtx.Error("No users found for customer_user_id")
-		return currentPropertiesID, http.StatusNotModified
+		return currentPropertiesID, http.StatusNotAcceptable
 	} else if usersLength == 1 {
-		return currentPropertiesID, http.StatusNotModified
+		return currentPropertiesID, http.StatusNotAcceptable
 	} else if usersLength > 10 {
 		logCtx.Infof("User properties merge triggered for more than 10 users. Count: %d", usersLength)
 	}
@@ -301,7 +302,8 @@ func MergeUserPropertiesForUserID(projectID uint64, userID string, updatedProper
 				// Merge failed some user but for called user, it was successfully merged.
 				return calledUserNewPropertyID, http.StatusCreated
 			}
-			return calledUserNewPropertyID, http.StatusNotModified
+
+			return calledUserNewPropertyID, http.StatusNotAcceptable
 		}
 		if user.ID == userID {
 			calledUserNewPropertyID = propertyID
