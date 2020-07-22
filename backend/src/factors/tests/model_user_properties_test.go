@@ -248,3 +248,46 @@ func TestMergeUserPropertiesForProjectID(t *testing.T) {
 	assert.NotEqual(t, user1.PropertiesId, user1DB.PropertiesId)
 	assert.NotEqual(t, user2.PropertiesId, user2DB.PropertiesId)
 }
+
+func TestSanitizeAddTypeProperties(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	// customerUserID := getRandomEmail()
+	user1, _ := M.CreateUser(&M.User{
+		ID:        U.GetUUID(),
+		ProjectId: project.ID,
+	})
+
+	user2, _ := M.CreateUser(&M.User{
+		ID:        U.GetUUID(),
+		ProjectId: project.ID,
+	})
+
+	mergedProperty1 := map[string]interface{}{
+		U.UP_SESSION_COUNT:    1000000000,
+		U.UP_PAGE_COUNT:       1235342430000,
+		U.UP_TOTAL_SPENT_TIME: 8462088321000000,
+	}
+	createEventWithTimestampByName(t, project, user1, "$session", U.TimeNowUnix())
+	createEventWithTimestampByName(t, project, user1, "$session", U.TimeNowUnix())
+	createEventWithTimestampByName(t, project, user2, "$session", U.TimeNowUnix())
+
+	M.SanitizeAddTypeProperties(project.ID, []M.User{*user1, *user2}, &mergedProperty1)
+	assert.Equal(t, float64(3), mergedProperty1[U.UP_SESSION_COUNT])
+	assert.True(t, mergedProperty1[U.UP_PAGE_COUNT].(float64) >= float64(3*1))
+	assert.True(t, mergedProperty1[U.UP_PAGE_COUNT].(float64) <= float64(3*5))
+	assert.True(t, mergedProperty1[U.UP_TOTAL_SPENT_TIME].(float64) >= float64(3*60))
+	assert.True(t, mergedProperty1[U.UP_TOTAL_SPENT_TIME].(float64) <= float64(3*300))
+
+	// If session count and page count are in acceptable range, do nothing even when spent time is high.
+	mergedProperty2 := map[string]interface{}{
+		U.UP_SESSION_COUNT:    9999,
+		U.UP_PAGE_COUNT:       9999,
+		U.UP_TOTAL_SPENT_TIME: 8462088321000000,
+	}
+	M.SanitizeAddTypeProperties(project.ID, []M.User{*user1, *user2}, &mergedProperty2)
+	assert.Equal(t, 9999, mergedProperty2[U.UP_SESSION_COUNT])
+	assert.Equal(t, 9999, mergedProperty2[U.UP_PAGE_COUNT])
+	assert.Equal(t, 8462088321000000, mergedProperty2[U.UP_TOTAL_SPENT_TIME])
+}

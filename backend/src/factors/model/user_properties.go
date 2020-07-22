@@ -453,9 +453,9 @@ func SanitizeAddTypeProperties(projectID uint64, users []User, propertiesMap *ma
 	if errCode != http.StatusFound {
 		return
 	}
-	(*propertiesMap)[U.UP_SESSION_COUNT] = sessionCount
-	(*propertiesMap)[U.UP_PAGE_COUNT] = sessionCount * uint64(U.RandomIntInRange(1, 5))          // 1 to 5 pages.
-	(*propertiesMap)[U.UP_TOTAL_SPENT_TIME] = sessionCount * uint64(U.RandomIntInRange(60, 300)) // 1 to 5mins.
+	(*propertiesMap)[U.UP_SESSION_COUNT] = float64(sessionCount)
+	(*propertiesMap)[U.UP_PAGE_COUNT] = float64(sessionCount * uint64(U.RandomIntInRange(1, 5)))          // 1 to 5 pages.
+	(*propertiesMap)[U.UP_TOTAL_SPENT_TIME] = float64(sessionCount * uint64(U.RandomIntInRange(60, 300))) // 1 to 5 mins.
 }
 
 func GetUserProperties(projectId uint64, userId string, id string) (*postgres.Jsonb, int) {
