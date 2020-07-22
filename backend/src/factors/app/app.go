@@ -28,6 +28,9 @@ func main() {
 	redisHost := flag.String("redis_host", "localhost", "")
 	redisPort := flag.Int("redis_port", 6379, "")
 
+	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
+	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
+
 	geoLocFilePath := flag.String("geo_loc_path", "/usr/local/var/factors/geolocation_data/GeoLite2-City.mmdb", "")
 	deviceDetectorPath := flag.String("device_detector_path", "/usr/local/var/factors/devicedetector_data/regexes", "")
 
@@ -69,6 +72,8 @@ func main() {
 		},
 		RedisHost:              *redisHost,
 		RedisPort:              *redisPort,
+		RedisHostPersistent:    *redisHostPersistent,
+		RedisPortPersistent:    *redisPortPersistent,
 		GeolocationFile:        *geoLocFilePath,
 		DeviceDetectorPath:     *deviceDetectorPath,
 		APIDomain:              *apiDomain,
@@ -93,6 +98,7 @@ func main() {
 		log.WithError(err).Fatal("Failed to initialize.")
 		return
 	}
+	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
 
 	if !C.IsDevelopment() {
 		gin.SetMode(gin.ReleaseMode)

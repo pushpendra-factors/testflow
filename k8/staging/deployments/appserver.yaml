@@ -80,6 +80,10 @@ spec:
           - $(REDIS_HOST)
           - --redis_port
           - $(REDIS_PORT)
+          - --redis_host_ps
+          - $(PERSISTENT_REDIS_HOST)
+          - --redis_port_ps
+          - $(PERSISTENT_REDIS_PORT)
           - --geo_loc_path
           - $(GEO_LOC_FILE_PATH)
           - --api_domain
@@ -125,6 +129,8 @@ spec:
             name: config-postgres
         - configMapRef:
             name: config-redis
+        - configMapRef:
+            name: config-persistent-redis
         - configMapRef:
             name: config-add-session-job
         - secretRef:

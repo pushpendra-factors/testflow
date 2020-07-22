@@ -55,6 +55,11 @@ const (
 	QueryNameTrafficChannelReport = "traffic_channel_report"
 )
 
+var SkippableWindows = map[string]int64{
+	"2MIN":  120,
+	"30MIN": 1800,
+}
+
 // Default Website Analytics named queries and corresponding presentation.
 var DefaultWebAnalyticsQueries = map[string]string{
 	QueryNameSessions:           PresentationCard,
@@ -179,7 +184,7 @@ func isWebAnalyticsDashboardAlreadyCached(projectID, dashboardID uint64, from, t
 		log.WithError(err).Errorf("Failed to get cache key")
 		return false
 	}
-	exists, err := cacheRedis.Exists(cacheKey)
+	exists, err := cacheRedis.ExistsPersistent(cacheKey)
 	if err != nil {
 		log.WithError(err).Errorf("Redis error on exists")
 		return false
@@ -578,13 +583,17 @@ func cacheWebsiteAnalyticsForProjectID(projectID uint64, queryNames []string, wa
 }
 
 func GetCacheResultForWebAnalyticsDashboard(projectID, dashboardID uint64, from, to int64) (WebAnalyticsCacheResult, int) {
+	var cacheResult WebAnalyticsCacheResult
+	if shouldSkipWindow(from, to) {
+		return cacheResult, http.StatusNotFound
+	}
+
 	logCtx := log.WithFields(log.Fields{
 		"Method":      "GetCacheResultForWebAnalyticsDashboard",
 		"ProjectID":   projectID,
 		"DashboardID": dashboardID,
 	})
 
-	var cacheResult WebAnalyticsCacheResult
 	if projectID == 0 || dashboardID == 0 {
 		return cacheResult, http.StatusBadRequest
 	}
@@ -595,7 +604,7 @@ func GetCacheResultForWebAnalyticsDashboard(projectID, dashboardID uint64, from,
 		return cacheResult, http.StatusInternalServerError
 	}
 
-	result, err := cacheRedis.Get(cacheKey)
+	result, err := cacheRedis.GetPersistent(cacheKey)
 	if err == redis.ErrNil {
 		return cacheResult, http.StatusNotFound
 	} else if err != nil {
@@ -615,7 +624,21 @@ func GetCacheResultForWebAnalyticsDashboard(projectID, dashboardID uint64, from,
 	return cacheResult, http.StatusFound
 }
 
+func shouldSkipWindow(from, to int64) bool {
+	window := to - from
+	for _, definedWindow := range SkippableWindows {
+		if window == definedWindow {
+			return true
+		}
+	}
+	return false
+}
+
 func SetCacheResultForWebAnalyticsDashboard(result map[string]WebAnalyticsQueryResult, projectID, dashboardID uint64, from, to int64) {
+	if shouldSkipWindow(from, to) {
+		return
+	}
+
 	logCtx := log.WithFields(log.Fields{
 		"Method":      "SetCacheResultForWebAnalyticsDashboard",
 		"ProjectID":   projectID,
@@ -642,7 +665,7 @@ func SetCacheResultForWebAnalyticsDashboard(result map[string]WebAnalyticsQueryR
 		logCtx.WithError(err).Error("Failed to encode dashboardCacheResult")
 		return
 	}
-	err = cacheRedis.Set(cacheKey, string(dashboardCacheResultJSON), DashboardCachingDurationInSeconds)
+	err = cacheRedis.SetPersistent(cacheKey, string(dashboardCacheResultJSON), DashboardCachingDurationInSeconds)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to set cache for channel query")
 		return

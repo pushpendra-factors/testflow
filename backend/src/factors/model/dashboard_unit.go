@@ -399,7 +399,7 @@ func isDashboardUnitAlreadyCachedForRange(projectID, dashboardID, unitID uint64,
 		log.WithError(err).Errorf("Failed to get cache key")
 		return false
 	}
-	exists, err := cacheRedis.Exists(cacheKey)
+	exists, err := cacheRedis.ExistsPersistent(cacheKey)
 	if err != nil {
 		log.WithError(err).Errorf("Redis error on exists")
 		return false

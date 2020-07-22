@@ -119,6 +119,16 @@ func TestAddSession(t *testing.T) {
 	assert.Equal(t, trackUserProperties[U.UP_OS], (*lsEventProperties1)[U.UP_OS])
 	assert.Equal(t, trackUserProperties[U.UP_OS_VERSION], (*lsEventProperties1)[U.UP_OS_VERSION])
 
+	// check session count so far.
+	event, errCode := M.GetEventById(project.ID, eventId)
+	assert.Equal(t, http.StatusFound, errCode)
+	userPropertiesRecord, errCode := M.GetUserPropertiesRecord(project.ID, event.UserId, event.UserPropertiesId)
+	userPropertiesMap, err := U.DecodePostgresJsonb(&userPropertiesRecord.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, float64(1), (*userPropertiesMap)[U.UP_SESSION_COUNT])
+	assert.Equal(t, float64(1), (*userPropertiesMap)[U.UP_PAGE_COUNT])
+	assert.Equal(t, float64(1), (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
+
 	// Test: New events without session for existing user with session.
 	// Since there is continious activity, last session should be continued.
 	timestamp = timestamp + 1
@@ -236,6 +246,16 @@ func TestAddSession(t *testing.T) {
 	assert.Equal(t, float64(2), (*lsEventProperties2)[U.SP_PAGE_COUNT])
 	assert.Equal(t, float64(4), (*lsEventProperties2)[U.SP_SPENT_TIME])
 
+	// check session count so far.
+	event4, errCode := M.GetEventById(project.ID, eventId4)
+	assert.Equal(t, http.StatusFound, errCode)
+	userPropertiesRecord, errCode = M.GetUserPropertiesRecord(project.ID, event4.UserId, event4.UserPropertiesId)
+	userPropertiesMap, err = U.DecodePostgresJsonb(&userPropertiesRecord.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, float64(2), (*userPropertiesMap)[U.UP_SESSION_COUNT])
+	assert.Equal(t, float64(2), (*userPropertiesMap)[U.UP_PAGE_COUNT])
+	assert.Equal(t, float64(4), (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
+
 	// Test: Create new session for event with marketing property,
 	// followed by other events, even though there was continuos
 	// activity from previous session.
@@ -271,6 +291,16 @@ func TestAddSession(t *testing.T) {
 	sessionEvent3 := assertAssociatedSession(t, project.ID, []string{eventId5, eventId6},
 		[]string{}, "Session 3")
 	assert.NotEqual(t, sessionEvent2.ID, sessionEvent3.ID)
+
+	// check session count so far.
+	event6, errCode := M.GetEventById(project.ID, eventId6)
+	assert.Equal(t, http.StatusFound, errCode)
+	userPropertiesRecord, errCode = M.GetUserPropertiesRecord(project.ID, event6.UserId, event6.UserPropertiesId)
+	userPropertiesMap, err = U.DecodePostgresJsonb(&userPropertiesRecord.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, float64(3), (*userPropertiesMap)[U.UP_SESSION_COUNT])
+	assert.Equal(t, float64(4), (*userPropertiesMap)[U.UP_PAGE_COUNT])
+	assert.Equal(t, float64(7), (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
 
 	// Test: Last event with marketing property.
 	timestamp = timestamp + 2

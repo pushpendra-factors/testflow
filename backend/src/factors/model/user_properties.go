@@ -105,6 +105,7 @@ func createUserPropertiesIfChanged(projectId uint64, userId string,
 			return newPropertiesID, errCode
 		}
 	}
+
 	return updateUserPropertiesForUser(projectId, userId,
 		postgres.Jsonb{RawMessage: json.RawMessage(updatedPropertiesBytes)}, timestamp, false)
 }
@@ -161,14 +162,14 @@ func MergeUserPropertiesForUserID(projectID uint64, userID string, updatedProper
 		logCtx.Errorf("User not found with id %s", userID)
 		return currentPropertiesID, http.StatusInternalServerError
 	} else if user.CustomerUserId == "" {
-		return currentPropertiesID, http.StatusNotModified
+		return currentPropertiesID, http.StatusNotAcceptable
 	}
 	customerUserID := user.CustomerUserId
 
 	logCtx = logCtx.WithFields(log.Fields{"CustomerUserID": user.CustomerUserId})
 	if !isMergeEnabledForProjectID(projectID) {
 		logCtx.Infof("User merge properties not enabled for the project")
-		return currentPropertiesID, http.StatusNotModified
+		return currentPropertiesID, http.StatusNotAcceptable
 	}
 
 	// Users are returned in increasing order of created_at. For user_properties created at same unix time,
@@ -180,9 +181,9 @@ func MergeUserPropertiesForUserID(projectID uint64, userID string, updatedProper
 		return currentPropertiesID, http.StatusInternalServerError
 	} else if errCode == http.StatusNotFound {
 		logCtx.Error("No users found for customer_user_id")
-		return currentPropertiesID, http.StatusNotModified
+		return currentPropertiesID, http.StatusNotAcceptable
 	} else if usersLength == 1 {
-		return currentPropertiesID, http.StatusNotModified
+		return currentPropertiesID, http.StatusNotAcceptable
 	} else if usersLength > 10 {
 		logCtx.Infof("User properties merge triggered for more than 10 users. Count: %d", usersLength)
 	}
@@ -322,7 +323,8 @@ func MergeUserPropertiesForUserID(projectID uint64, userID string, updatedProper
 				// Merge failed some user but for called user, it was successfully merged.
 				return calledUserNewPropertyID, http.StatusCreated
 			}
-			return calledUserNewPropertyID, http.StatusNotModified
+
+			return calledUserNewPropertyID, http.StatusNotAcceptable
 		}
 		if user.ID == userID {
 			calledUserNewPropertyID = propertyID
@@ -613,9 +615,12 @@ func OverwriteUserProperties(projectId uint64, userId string,
 	}
 
 	db := C.GetServices().Db
-	if err := db.Model(&UserProperties{}).Where("project_id = ? AND user_id = ? AND id = ?",
-		projectId, userId, id).Update("properties", propertiesJsonb).Error; err != nil {
-		log.WithFields(log.Fields{"project_id": projectId, "id": id}).WithError(err).Error("Failed to replace properties.")
+	if err := db.Model(&UserProperties{}).
+		Where("project_id = ? AND user_id = ? AND id = ?", projectId, userId, id).
+		Update("properties", propertiesJsonb).Error; err != nil {
+
+		log.WithFields(log.Fields{"project_id": projectId, "id": id}).
+			WithError(err).Error("Failed to replace properties.")
 		return http.StatusInternalServerError
 	}
 
@@ -698,4 +703,72 @@ func GetUserPropertiesRecordsByProperty(projectId uint64,
 	}
 
 	return userProperties, http.StatusFound
+}
+
+func UpdateUserPropertiesForSession(projectID uint64,
+	sessionUserPropertiesRecordMap *map[string]SessionUserProperties) int {
+
+	logCtx := log.WithField("project_id", projectID)
+
+	hasFailure := false
+	for userPropertiesID, sessionUserProperties := range *sessionUserPropertiesRecordMap {
+		logCtx.WithField("user_properties_id", userPropertiesID)
+
+		userProperties, errCode := GetUserPropertiesRecord(projectID,
+			sessionUserProperties.UserID, userPropertiesID)
+		if errCode != http.StatusFound {
+			hasFailure = true
+			continue
+		}
+
+		userPropertiesMap, err := U.DecodePostgresJsonb(&userProperties.Properties)
+		if err != nil {
+			logCtx.WithError(err).
+				Error("Failed to decode user properties on UpdateUserPropertiesForSession.")
+			hasFailure = true
+			continue
+		}
+
+		var existingPageCount, existingTotalSpentTime float64
+		if existingPageCountValue, exists := (*userPropertiesMap)[U.UP_PAGE_COUNT]; exists {
+			existingPageCount, err = U.GetPropertyValueAsFloat64(existingPageCountValue)
+			if err != nil {
+				logCtx.WithError(err).
+					Error("Failed to convert page_count property value as float64.")
+			}
+		}
+
+		if existingTotalSpentTimeValue, exists := (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME]; exists {
+			existingTotalSpentTime, err = U.GetPropertyValueAsFloat64(existingTotalSpentTimeValue)
+			if err != nil {
+				logCtx.WithError(err).
+					Error("Failed to convert total_page_spent time property value as float64.")
+			}
+		}
+
+		(*userPropertiesMap)[U.UP_PAGE_COUNT] = existingPageCount + sessionUserProperties.SessionPageCount
+		(*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME] = existingTotalSpentTime + sessionUserProperties.SessionPageSpentTime
+		(*userPropertiesMap)[U.UP_SESSION_COUNT] = sessionUserProperties.SessionCount
+
+		userPropertiesJsonb, err := U.EncodeToPostgresJsonb(userPropertiesMap)
+		if err != nil {
+			logCtx.WithError(err).
+				Error("Failed to encode user properties json after adding new session count.")
+			hasFailure = true
+			continue
+		}
+
+		errCode = OverwriteUserProperties(projectID, sessionUserProperties.UserID,
+			userPropertiesID, userPropertiesJsonb)
+		if errCode != http.StatusAccepted {
+			hasFailure = true
+			continue
+		}
+	}
+
+	if hasFailure {
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusAccepted
 }
