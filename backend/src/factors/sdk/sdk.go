@@ -1215,15 +1215,22 @@ func AMPUpdateEventPropertiesByToken(token string,
 
 	eventID, errCode, err := GetCacheAMPSDKEventIDByPageURL(project.ID, user.ID, pageURL)
 	if errCode != http.StatusFound || err != nil {
+		// Logging as info. temporary.
 		logCtx.WithFields(log.Fields{"err_code": errCode, "err": err}).
-			Error("Failed to get event_id from cache to update on amp.")
+			Info("Failed to get event_id from cache to update on amp.")
 
+		/* TEMPORARILY COMMENTED. SLOW QUERY.
 		retEvent, errCode := M.GetLatestUserEventByPageURLFromDB(project.ID, user.ID, pageURL)
 		if errCode != http.StatusFound {
 			logCtx.WithFields(log.Fields{"errCode": errCode, "err": err}).Error("Failed to get eventID from DB")
 			return errCode, &Response{Error: "No events found"}
 		}
+
 		eventID = retEvent.ID
+		*/
+
+		// add as part of temporary fix.
+		return errCode, &Response{Error: "Failed to update. No event found."}
 	}
 
 	updateEventProperties := U.PropertiesMap{}
@@ -1354,7 +1361,7 @@ func SetCacheAMPSDKEventIDByPageURL(projectId uint64, userId string, eventId str
 		return http.StatusBadRequest
 	}
 
-	resultCacheKey, err := getAMPSDKByEventIDCacheKey(projectId, userId, pageURL)
+	resultCacheKey, err := getAMPSDKByEventIDCacheKey(projectId, userId, U.CleanURI(pageURL))
 	if err != nil {
 		logctx.WithError(err).Error("Failed to getAMPSDKByEventIdCacheKey.")
 		return http.StatusNotFound
