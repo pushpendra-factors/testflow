@@ -1759,10 +1759,6 @@ func TestAMPTrackByTokenHandler(t *testing.T) {
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEqual(t, user.ID, "")
 
-	retEvent, errCode := M.GetLatestUserEventByPageURLFromDB(project.ID, user.ID, "abcd.com")
-	assert.Equal(t, errCode, http.StatusFound)
-	assert.NotNil(t, retEvent)
-
 	payload1 := &SDK.AMPTrackPayload{
 		ClientID:  ampClientId,
 		SourceURL: "abcd.com/1/",
@@ -1778,10 +1774,6 @@ func TestAMPTrackByTokenHandler(t *testing.T) {
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEqual(t, user1.ID, "")
 
-	retEvent1, errCode := M.GetLatestUserEventByPageURLFromDB(project.ID, user.ID, "abcd.com/1")
-	assert.Equal(t, errCode, http.StatusFound)
-	assert.NotNil(t, retEvent1)
-
 	payload2 := &SDK.AMPTrackPayload{
 		ClientID:  ampClientId,
 		SourceURL: "abcd.com/xy_z",
@@ -1796,10 +1788,6 @@ func TestAMPTrackByTokenHandler(t *testing.T) {
 	user2, errCode := M.CreateOrGetAMPUser(project.ID, ampClientId, payload2.Timestamp)
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEqual(t, user2.ID, "")
-
-	retEvent2, errCode := M.GetLatestUserEventByPageURLFromDB(project.ID, user2.ID, "abcd.com/xy_z")
-	assert.Equal(t, errCode, http.StatusFound)
-	assert.NotNil(t, retEvent2)
 
 	// with query param.
 	url3 := fmt.Sprintf("abcd.com/%s", U.RandomLowerAphaNumString(5))
@@ -1817,10 +1805,6 @@ func TestAMPTrackByTokenHandler(t *testing.T) {
 	user3, errCode := M.CreateOrGetAMPUser(project.ID, ampClientId, payload3.Timestamp)
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEqual(t, user3.ID, "")
-
-	retEvent3, errCode := M.GetLatestUserEventByPageURLFromDB(project.ID, user3.ID, url3)
-	assert.Equal(t, errCode, http.StatusFound)
-	assert.NotNil(t, retEvent3)
 }
 
 func TestSDKAMPTrackByToken(t *testing.T) {

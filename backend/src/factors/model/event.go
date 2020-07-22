@@ -1156,22 +1156,6 @@ func AddSessionForUser(projectId uint64, userId string, userEvents []Event,
 		sessionContinuedFlag, noOfUserPropertiesUpdated, http.StatusOK
 }
 
-func GetLatestUserEventByPageURLFromDB(projectID uint64, userID string, pageURL string) (*Event, int) {
-	logCtx := log.WithField("project_id", projectID).
-		WithField("user_id", userID).WithField("page_url", pageURL)
-
-	db := C.GetServices().Db
-	queryStr := "SELECT * FROM events WHERE project_id =? AND user_id = ? AND properties->>'$page_url' = ? ORDER BY timestamp DESC LIMIT 1"
-	var event Event
-	err := db.Raw(queryStr, projectID, userID, pageURL).Scan(&event).Error
-	if err != nil {
-		// Logging as info. temporary.
-		logCtx.WithError(err).Info("Failed to get event_id from project_id, user_id and page_url.")
-		return nil, http.StatusNotFound
-	}
-	return &event, http.StatusFound
-}
-
 // GetDatesForNextEventsArchivalBatch Get dates for events since startTime, excluding today's date.
 func GetDatesForNextEventsArchivalBatch(projectID uint64, startTime int64) (map[string]int64, int) {
 	db := C.GetServices().Db

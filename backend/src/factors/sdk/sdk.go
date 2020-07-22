@@ -1210,27 +1210,20 @@ func AMPUpdateEventPropertiesByToken(token string,
 
 	user, errCode := M.CreateOrGetAMPUser(project.ID, reqPayload.ClientID, reqPayload.Timestamp)
 	if errCode != http.StatusFound {
-		return errCode, &Response{Error: "Invalid user"}
+		return errCode, &Response{Error: "Invalid amp user."}
 	}
 
-	eventID, errCode, err := GetCacheAMPSDKEventIDByPageURL(project.ID, user.ID, pageURL)
-	if errCode != http.StatusFound || err != nil {
-		// Logging as info. temporary.
-		logCtx.WithFields(log.Fields{"err_code": errCode, "err": err}).
-			Info("Failed to get event_id from cache to update on amp.")
+	logCtx = logCtx.WithField("user_id", user.ID).WithField("page_url", pageURL)
 
-		/* TEMPORARILY COMMENTED. SLOW QUERY.
-		retEvent, errCode := M.GetLatestUserEventByPageURLFromDB(project.ID, user.ID, pageURL)
-		if errCode != http.StatusFound {
-			logCtx.WithFields(log.Fields{"errCode": errCode, "err": err}).Error("Failed to get eventID from DB")
-			return errCode, &Response{Error: "No events found"}
+	eventID, errCode := GetCacheAMPSDKEventIDByPageURL(project.ID, user.ID, pageURL)
+	if errCode != http.StatusFound {
+		if errCode == http.StatusInternalServerError {
+			logCtx.Error("Failed to get eventId by page_url from cache.")
 		}
 
-		eventID = retEvent.ID
-		*/
-
-		// add as part of temporary fix.
-		return errCode, &Response{Error: "Failed to update. No event found."}
+		// Do not retry on failure or cache miss.
+		return http.StatusNotModified,
+			&Response{Error: "Failed to update event properties. Invalid request."}
 	}
 
 	updateEventProperties := U.PropertiesMap{}
@@ -1246,11 +1239,12 @@ func AMPUpdateEventPropertiesByToken(token string,
 	errCode = M.UpdateEventProperties(project.ID, eventID, &updateEventProperties, time.Now().Unix())
 
 	if errCode != http.StatusAccepted {
-		logCtx.WithFields(log.Fields{"project_id": project.ID, "event_id": eventID}).Error("Failed to update event properties")
-		return errCode, &Response{Error: "Updating event properties failed"}
+		logCtx.WithFields(log.Fields{"project_id": project.ID, "event_id": eventID}).
+			Error("Failed to update event properties")
+		return errCode, &Response{Error: "Failed to update event properties."}
 	}
 
-	return http.StatusAccepted, &Response{Message: "Updated Successfully"}
+	return http.StatusAccepted, &Response{Message: "Updated event properties successfully."}
 }
 
 func AMPTrackByToken(token string, reqPayload *AMPTrackPayload) (int, *Response) {
@@ -1367,38 +1361,42 @@ func SetCacheAMPSDKEventIDByPageURL(projectId uint64, userId string, eventId str
 		return http.StatusNotFound
 	}
 
-	err = cacheRedis.Set(resultCacheKey, string(eventId), 30*60) //30mins
+	err = cacheRedis.Set(resultCacheKey, string(eventId), 60*60) // 60 mins
 	if err != nil {
-		logctx.WithError(err).Error("Failed to set cache for channel query")
+		logctx.WithError(err).Error("Failed to set cache amp sdk event_id by page_url.")
 		return http.StatusInternalServerError
 	}
 	return http.StatusAccepted
 }
 
-func GetCacheAMPSDKEventIDByPageURL(projectId uint64, userId string, pageURL string) (string, int, error) {
+func GetCacheAMPSDKEventIDByPageURL(projectId uint64, userId string, pageURL string) (string, int) {
+	logCtx := log.WithField("project_id", projectId).WithField("user_id", userId).
+		WithField("page_url", pageURL)
+
 	var cacheResult string
 	if projectId == 0 || userId == "" || pageURL == "" {
-		return cacheResult, http.StatusBadRequest, errors.New("invalid scope ids.")
+		return cacheResult, http.StatusBadRequest
 	}
 
 	resultCacheKey, err := getAMPSDKByEventIDCacheKey(projectId, userId, pageURL)
 	if err != nil {
-		return cacheResult, http.StatusBadRequest, err
+		logCtx.WithError(err).Error("Failed to get cache key on GetCacheAMPSDKEventIDByPageURL.")
+		return cacheResult, http.StatusBadRequest
 	}
 
 	cacheResult, err = cacheRedis.Get(resultCacheKey)
 	if err != nil {
 		if err == redis.ErrNil {
-			return cacheResult, http.StatusNotFound, err
+			return cacheResult, http.StatusNotFound
 		}
-		return cacheResult, http.StatusInternalServerError, err
+		return cacheResult, http.StatusInternalServerError
 	}
 
 	if cacheResult == "" {
-		return cacheResult, http.StatusNotFound, errors.New("invalid cache result.")
+		return cacheResult, http.StatusNotFound
 	}
 
-	return cacheResult, http.StatusFound, nil
+	return cacheResult, http.StatusFound
 }
 
 func AMPTrackWithQueue(token string, reqPayload *AMPTrackPayload,
