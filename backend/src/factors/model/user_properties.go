@@ -296,6 +296,7 @@ func MergeUserPropertiesForUserID(projectID uint64, userID string, updatedProper
 		return currentPropertiesID, http.StatusNotModified
 	}
 	mergedUserProperties[U.UP_MERGE_TIMESTAMP] = U.TimeNowUnix()
+	SanitizeAddTypeProperties(projectID, users, &mergedUserProperties)
 
 	mergedUserPropertiesJSON, err := U.EncodeToPostgresJsonb(&mergedUserProperties)
 	if err != nil {
@@ -328,27 +329,6 @@ func MergeUserPropertiesForUserID(projectID uint64, userID string, updatedProper
 		}
 	}
 	return calledUserNewPropertyID, http.StatusCreated
-}
-
-// addValuesForProperty To add old and new value for the user property type add.
-// Adding 0.1 + 0.2 will result in 0.30000000000000004 as explained https://floating-point-gui.de/
-// Round off values with precision to avoid this.
-func addValuesForProperty(oldValue interface{}, newValue float64, addOld bool) float64 {
-	var addedValue float64
-	var err error
-	if addOld {
-		addedValue, err = U.FloatRoundOffWithPrecision(oldValue.(float64)+newValue, 2)
-		if err != nil {
-			// If error in round off, use as is.
-			addedValue = oldValue.(float64) + newValue
-		}
-	} else {
-		addedValue, err = U.FloatRoundOffWithPrecision(newValue, 2)
-		if err != nil {
-			addedValue = newValue
-		}
-	}
-	return addedValue
 }
 
 // updateUserPropertiesForUser Creates new UserProperties entry and updates properties_id in user table. Returns new properties_id.
@@ -417,6 +397,65 @@ func isMergeEnabledForProjectID(projectID uint64) bool {
 		return true
 	}
 	return false
+}
+
+// addValuesForProperty To add old and new value for the user property type add.
+// Adding 0.1 + 0.2 will result in 0.30000000000000004 as explained https://floating-point-gui.de/
+// Round off values with precision to avoid this.
+func addValuesForProperty(oldValue interface{}, newValue float64, addOld bool) float64 {
+	var addedValue float64
+	var err error
+	if addOld {
+		addedValue, err = U.FloatRoundOffWithPrecision(oldValue.(float64)+newValue, 2)
+		if err != nil {
+			// If error in round off, use as is.
+			addedValue = oldValue.(float64) + newValue
+		}
+	} else {
+		addedValue, err = U.FloatRoundOffWithPrecision(newValue, 2)
+		if err != nil {
+			addedValue = newValue
+		}
+	}
+	return addedValue
+}
+
+// SanitizeAddTypeProperties To fix bad values for add type properties like $page_count, $session_count.
+//   1. Counts all sessions for users of customer_user_id and set it as session_count.
+//   2. Generate random value from 1 to 5 * session_count and set as page_count.
+//   3. Generate random value from 1 to 5 min * session_count and set as session_spent_time.
+// TODO(prateek): Remove once older values are fixed using script.
+func SanitizeAddTypeProperties(projectID uint64, users []User, propertiesMap *map[string]interface{}) {
+	var userIDs []string
+	for _, user := range users {
+		userIDs = append(userIDs, user.ID)
+	}
+
+	var propertyValue interface{}
+	var found bool
+	propertyValue, found = (*propertiesMap)[U.UP_SESSION_COUNT]
+	if !found {
+		propertyValue, found = (*propertiesMap)[U.UP_PAGE_COUNT]
+		if !found {
+			return
+		}
+	}
+
+	acceptablePropertyLength := 4 // Up to 9999.
+	if len(fmt.Sprint(propertyValue)) <= acceptablePropertyLength {
+		return
+	}
+	sessionEvent, errCode := GetSessionEventName(projectID)
+	if errCode != http.StatusFound {
+		return
+	}
+	sessionCount, errCode := GetEventCountOfUsersByEventName(projectID, userIDs, sessionEvent.ID)
+	if errCode != http.StatusFound {
+		return
+	}
+	(*propertiesMap)[U.UP_SESSION_COUNT] = sessionCount
+	(*propertiesMap)[U.UP_PAGE_COUNT] = sessionCount * uint64(U.RandomIntInRange(1, 5))          // 1 to 5 pages.
+	(*propertiesMap)[U.UP_TOTAL_SPENT_TIME] = sessionCount * uint64(U.RandomIntInRange(60, 300)) // 1 to 5mins.
 }
 
 func GetUserProperties(projectId uint64, userId string, id string) (*postgres.Jsonb, int) {

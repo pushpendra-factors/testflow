@@ -124,6 +124,21 @@ func GetEventCountOfUserByEventName(projectId uint64, userId string, eventNameId
 	return count, http.StatusFound
 }
 
+// GetEventCountOfUsersByEventName Get count of events for event_name_id for multiple users.
+func GetEventCountOfUsersByEventName(projectID uint64, userIDs []string, eventNameID uint64) (uint64, int) {
+	var count uint64
+
+	db := C.GetServices().Db
+	if err := db.Model(&Event{}).Where("project_id = ? AND user_id IN (?) AND event_name_id = ?",
+		projectID, userIDs, eventNameID).Count(&count).Error; err != nil {
+		log.WithFields(log.Fields{"projectId": projectID, "userId": userIDs}).WithError(err).Error(
+			"Failed to get count of event for users by event_name_id")
+		return 0, http.StatusInternalServerError
+	}
+
+	return count, http.StatusFound
+}
+
 func CreateEvent(event *Event) (*Event, int) {
 	logCtx := log.WithField("project_id", event.ProjectId)
 
