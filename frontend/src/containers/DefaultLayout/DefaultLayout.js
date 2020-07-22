@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import { connect } from "react-redux";
 import { bindActionCreators } from 'redux';
 import { Redirect, Route, Switch } from 'react-router-dom';
-import { Container, Button } from 'reactstrap';
+import { Collapse, Nav, NavItem, NavLink, Container, Button, Navbar } from 'reactstrap';
 import {
   AppHeader,
   AppSidebar,
@@ -266,6 +266,40 @@ class DefaultLayout extends Component {
     </div>;
   }
 
+  renderSideBar(sideBarItemsToDisplay) {
+    if(false) {
+      return (
+        <AppSidebar minimized className="fapp-sidebar" fixed display="lg">
+            <img style={{marginTop: '12px', marginBottom: '20px'}} src={factorsicon} />
+            <AppSidebarNav navConfig={sideBarItemsToDisplay} {...this.props} />
+        </AppSidebar>
+      )
+    }
+
+    const sideBarItems = [];
+    sideBarItemsToDisplay.items.forEach(item => {
+      sideBarItems.push(
+        <li key={item.name} className="nav-item">
+          <a className="nav-link" href={item.url}>
+            <i className={item.icon}></i>
+            {item.name}
+          </a>
+        </li>
+      );
+    })
+    
+    return (
+    <div className="fapp-sidebar sidebar sidebar-minimized">
+      <img style={{marginTop: '12px', marginBottom: '20px'}} src={factorsicon} />
+      <div className="scrollbar-container sidebar-nav ps">
+        <ul className="nav">
+          {sideBarItems}
+        </ul>
+      </div>
+    </div>
+    )
+  }
+
   render() {
     if (!this.isAgentLoggedIn()) return <Redirect to='/login' />;
     if (!this.isLoaded()) return <Loading />;
@@ -285,10 +319,7 @@ class DefaultLayout extends Component {
     return (
       <div className="app">
         <div className="app-body fapp-body">
-          <AppSidebar minimized className="fapp-sidebar" fixed display="lg">
-            <img style={{marginTop: '12px', marginBottom: '20px'}} src={factorsicon} />
-            <AppSidebarNav navConfig={sideBarItemsToDisplay} {...this.props} />
-          </AppSidebar>
+            { this.renderSideBar(sideBarItemsToDisplay) }
           <main className="main fapp-main">
             <AppHeader className="fapp-header" fixed>
               { this.renderProjectsDropdown() }
