@@ -517,9 +517,26 @@ class Dashboard extends Component {
       return
     }
 
-    this.setState({ dateRange: [range.selected],
-      webAnalyticsBulkQueryParams:[], 
-      webAnalyticsBulkQueryHandlers:[] });
+    this.setState((prevState)=>{
+      let prevWebAnalytics = true;
+      let curWebAnalytics=false;
+      if (prevState.dateRange && prevState.dateRange[0].label){
+        DEFAULT_TODAY_DATE_RANGES.forEach(definedRange =>{
+          if (prevState.dateRange[0].label == definedRange.label) prevWebAnalytics=true;
+          if (range.selected.label == definedRange.label) curWebAnalytics=true;
+        });
+      }
+
+      // Clear lastRefreshedAt for the dashboard to allows Today date range update.
+      if (prevWebAnalytics != curWebAnalytics){
+        prevState.lastRefreshedAt.delete(this.getCurrentDashboard().id);
+      }
+
+      return { ...prevState,
+        dateRange: [range.selected],
+        webAnalyticsBulkQueryParams:[],
+        webAnalyticsBulkQueryHandlers:[]
+      }});
     this.setLastSeenDateRangeForDashboard(range.selected);
   }
 
@@ -537,11 +554,11 @@ class Dashboard extends Component {
       return range.label
     }
 
-    let inDefaultRanges = WEB_ANALYTICS_DEFINED_DATE_RANGES.find(definedDateRange => {
+    let inWADefaultRanges = WEB_ANALYTICS_DEFINED_DATE_RANGES.find(definedDateRange => {
       return definedDateRange.isSelected(range);
     });
-    if(inDefaultRanges) {
-      return WEB_ANALYTICS_DEFINED_DATE_RANGES[inDefaultRanges].label;
+    if(inWADefaultRanges) {
+      return inWADefaultRanges.label;
     };
 
     return moment(range.startDate).format('MMM DD, YYYY') + " - " +
