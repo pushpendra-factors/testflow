@@ -3,12 +3,6 @@ import { connect } from "react-redux";
 import { bindActionCreators } from 'redux';
 import { Redirect, Route, Switch } from 'react-router-dom';
 import { Collapse, Nav, NavItem, NavLink, Container, Button, Navbar } from 'reactstrap';
-import {
-  AppHeader,
-  AppSidebar,
-  AppSidebarNav,
-} from '@coreui/react';
-
 import InternalRoute from '../../routes.internal';
 
 // sidebar nav config
@@ -336,9 +330,9 @@ class DefaultLayout extends Component {
         <div className="app-body fapp-body">
             { this.renderSideBar(sideBarItemsToDisplay) }
           <main className="main fapp-main">
-            <AppHeader className="fapp-header" fixed>
+            <header className="fapp-header app-header navbar">
               { this.renderProjectsDropdown() }
-            </AppHeader>
+            </header>
             <Container className='fapp-right-pane' fluid>
               { this.renderSetupProjectNotification() }
               <Switch>
