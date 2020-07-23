@@ -267,21 +267,12 @@ class DefaultLayout extends Component {
   }
 
   renderSideBar(sideBarItemsToDisplay) {
-    if(false) {
-      return (
-        <AppSidebar minimized className="fapp-sidebar" fixed display="lg">
-            <img style={{marginTop: '12px', marginBottom: '20px'}} src={factorsicon} />
-            <AppSidebarNav navConfig={sideBarItemsToDisplay} {...this.props} />
-        </AppSidebar>
-      )
-    }
-
     const sideBarItems = [];
     sideBarItemsToDisplay.items.forEach(item => {
       sideBarItems.push(
         <li key={item.name} className="nav-item">
           <a className="nav-link" href={item.url}>
-            <i className={item.icon}></i>
+            <i className={"nav-icon " + item.icon}></i>
             {item.name}
           </a>
         </li>
@@ -289,7 +280,7 @@ class DefaultLayout extends Component {
     })
     
     return (
-    <div className="fapp-sidebar sidebar sidebar-minimized">
+    <div className="fapp-sidebar sidebar">
       <img style={{marginTop: '12px', marginBottom: '20px'}} src={factorsicon} />
       <div className="scrollbar-container sidebar-nav ps">
         <ul className="nav">
