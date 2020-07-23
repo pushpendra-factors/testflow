@@ -51,7 +51,7 @@ func TestMergeUserPropertiesForUserID(t *testing.T) {
 
 	// Merge is not enabled for project. Should not merge.
 	_, errCode := M.MergeUserPropertiesForUserID(project.ID, user1.ID, postgres.Jsonb{}, "", U.TimeNowUnix(), false, true)
-	assert.Equal(t, http.StatusNotModified, errCode)
+	assert.Equal(t, http.StatusNotAcceptable, errCode)
 	user1DB, _ := M.GetUser(project.ID, user1.ID)
 	user1PropertiesDB, _ := U.DecodePostgresJsonb(&user1DB.Properties)
 	user2DB, _ := M.GetUser(project.ID, user2.ID)

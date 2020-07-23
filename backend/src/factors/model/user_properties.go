@@ -198,10 +198,6 @@ func MergeUserPropertiesForUserID(projectID uint64, userID string, updatedProper
 	for _, property := range U.USER_PROPERTIES_MERGE_TYPE_INITIAL {
 		initialPropertiesVisitedMap[property] = false
 	}
-	mergedValueAddedOnce := make(map[string]bool)
-	for _, property := range U.USER_PROPERTIES_MERGE_TYPE_ADD {
-		mergedValueAddedOnce[property] = false
-	}
 
 	var userPropertiesRecords []*UserProperties
 	for _, user := range users {
@@ -213,24 +209,18 @@ func MergeUserPropertiesForUserID(projectID uint64, userID string, updatedProper
 		userPropertiesRecords = append(userPropertiesRecords, userPropertiesRecord)
 	}
 
-	// Append called user's updatedPropertiesMap.
+	// Sort user properties records by UpdatedTimestamp in ascending order.
+	sort.Slice(userPropertiesRecords, func(i, j int) bool {
+		return userPropertiesRecords[i].UpdatedTimestamp < userPropertiesRecords[j].UpdatedTimestamp
+	})
+
+	// Append called user's updatedPropertiesMap after sorting to ensure it's always the last.
 	userPropertiesRecords = append(userPropertiesRecords, &UserProperties{
 		UserId:           userID,
 		ProjectId:        projectID,
 		Properties:       updatedProperties,
 		UpdatedTimestamp: timestamp,
 	})
-
-	// Sort user properties records by UpdatedTimestamp in ascending order.
-	sort.Slice(userPropertiesRecords, func(i, j int) bool {
-		return userPropertiesRecords[i].UpdatedTimestamp < userPropertiesRecords[j].UpdatedTimestamp
-	})
-
-	updatedPropertiesMap, err := U.DecodePostgresJsonb(&updatedProperties)
-	if err != nil {
-		logCtx.Error("failed to decode updated properties")
-		return currentPropertiesID, http.StatusInternalServerError
-	}
 
 	mergedUserProperties := make(map[string]interface{})
 	mergedUserPropertiesValues := make(map[string][]interface{})
@@ -245,8 +235,6 @@ func MergeUserPropertiesForUserID(projectID uint64, userID string, updatedProper
 			mergedUpdatedTimestamp = userPropertiesRecord.UpdatedTimestamp
 		}
 
-		_, isMergedBefore := (*userProperties)[U.UP_MERGE_TIMESTAMP]
-		propertiesUserID := userPropertiesRecord.UserId
 		for property := range *userProperties {
 			mergedUserPropertiesValues[property] = append(mergedUserPropertiesValues[property], (*userProperties)[property])
 			isAlreadySet, isInitialProperty := initialPropertiesVisitedMap[property]
@@ -256,39 +244,14 @@ func MergeUserPropertiesForUserID(projectID uint64, userID string, updatedProper
 					mergedUserProperties[property] = (*userProperties)[property]
 					initialPropertiesVisitedMap[property] = true
 				}
-			} else if U.StringValueIn(property, U.USER_PROPERTIES_MERGE_TYPE_ADD[:]) {
-				oldValue, foundInMerged := mergedUserProperties[property]
-				var valueToAdd float64
-				if isMergedBefore {
-					// If propertiesUserID is same as user for which merge was called, add only difference of values.
-					// If for a different user and isMergedBefore, ignore adding.
-					if propertiesUserID == userID {
-						updatedValue, presentInUpdated := (*updatedPropertiesMap)[property]
-						if presentInUpdated && !foundInMerged {
-							// Not already set in mergedProperties. Use the actual value to add.
-							valueToAdd = updatedValue.(float64)
-							mergedValueAddedOnce[property] = true
-						} else if presentInUpdated {
-							// Already set in mergedProperties through some other user. Add only difference.
-							valueToAdd = updatedValue.(float64) - (*userProperties)[property].(float64)
-						}
-					} else if added := mergedValueAddedOnce[property]; !added {
-						valueToAdd = (*userProperties)[property].(float64)
-						mergedValueAddedOnce[property] = true
-					}
-				} else {
-					valueToAdd = (*userProperties)[property].(float64)
-				}
-				if !foundInMerged || valueToAdd > 0 {
-					// !foundInMerged check to ensure that value is added only once to mergeProperties.
-					mergedUserProperties[property] = addValuesForProperty(oldValue, valueToAdd, foundInMerged)
-				}
-			} else {
+			} else if !U.StringValueIn(property, U.USER_PROPERTIES_MERGE_TYPE_ADD[:]) {
 				// For all other properties, overwrite with the latest user property.
 				mergedUserProperties[property] = (*userProperties)[property]
 			}
 		}
 	}
+	// Handle merge type properties separately.
+	mergeAddTypeUserProperties(&mergedUserProperties, userPropertiesRecords)
 
 	// Additional check for properties that can be added. If merge is triggered for users with same set of properties,
 	// value of properties that can be added will change after addition. Below check is to avoid update in such case.
@@ -420,6 +383,77 @@ func addValuesForProperty(oldValue interface{}, newValue float64, addOld bool) f
 		}
 	}
 	return addedValue
+}
+
+// Initializes merged properties with the one being updated which will be the last of `userPropertiesRecords`.
+// Now for every user, add value if:
+//     1. Not set already from the one being updated.
+//     2. User property is not merged before i.e. $merge_timestamp is not set.
+//     3. Value is greater than the value already set. Add the difference then. (This should ideally not happen)
+func mergeAddTypeUserProperties(mergedProperties *map[string]interface{}, userPropertiesRecords []*UserProperties) {
+	// Last record in the array would be the latest one.
+	latestPropertiesRecord := userPropertiesRecords[len(userPropertiesRecords)-1]
+	latestPropertiesMap, err := U.DecodePostgresJsonb(&latestPropertiesRecord.Properties)
+	if err != nil {
+		log.WithError(err).Error("Failed to decode user property")
+		return
+	}
+
+	// Boolean map to indicate whether merged value is used at least once.
+	mergedValueAddedOnce := make(map[string]bool)
+	for _, property := range U.USER_PROPERTIES_MERGE_TYPE_ADD {
+		mergedValueAddedOnce[property] = false
+	}
+
+	// Cases to consider:
+	//    1. What if latestPropertiesMap has one of add type property missing? Add full on first encounter. And add diff after that.
+	//    2. Already merged property with value more than latestProperty value? Add difference.
+	//    3. Already merged property with value less than latestProperty value? Do nothing.
+	//    4. Is not a merged property. Probably for a new user? Add full as is.
+	//    5. Does ordering matter while parsing non latest properties? No.
+	for _, property := range U.USER_PROPERTIES_MERGE_TYPE_ADD {
+		if _, found := (*latestPropertiesMap)[property]; !found {
+			continue
+		}
+		(*mergedProperties)[property] = (*latestPropertiesMap)[property]
+		if _, isLatestMerged := (*latestPropertiesMap)[U.UP_MERGE_TIMESTAMP]; isLatestMerged {
+			// Since latest properties is also a merged property, set mergedValueAddedOnce true
+			// to avoid another merged property getting added which would double the value otherwise.
+			mergedValueAddedOnce[property] = true
+		}
+	}
+
+	// Loop over all records except last record.
+	for _, userPropertiesRecord := range userPropertiesRecords[:len(userPropertiesRecords)-1] {
+		userProperties, err := U.DecodePostgresJsonb(&userPropertiesRecord.Properties)
+		if err != nil {
+			log.WithError(err).Error("Failed to decode user property")
+			return
+		}
+
+		_, isMergedBefore := (*userProperties)[U.UP_MERGE_TIMESTAMP]
+		for _, property := range U.USER_PROPERTIES_MERGE_TYPE_ADD {
+			mergedValue, mergedExists := (*mergedProperties)[property]
+			userValue, userValueExists := (*userProperties)[property]
+			if isMergedBefore {
+				if !mergedValueAddedOnce[property] && userValueExists {
+					// Merged values must be added full at least once. Since not added already, add full here.
+					(*mergedProperties)[property] = addValuesForProperty(mergedValue, userValue.(float64), mergedExists)
+					mergedValueAddedOnce[property] = true
+				} else if mergedExists && userValueExists && userValue.(float64)-mergedValue.(float64) > 0 {
+					// Add the difference of values to mergedValues.
+					(*mergedProperties)[property] = addValuesForProperty(mergedValue, userValue.(float64)-mergedValue.(float64), true)
+				} else if userValueExists && !mergedExists && !mergedValueAddedOnce[property] {
+					// mergedValue does not exists. Which means this property was not present in the latest or has
+					// not been added so far. Add the values as is to initialize.
+					(*mergedProperties)[property] = addValuesForProperty(0, userValue.(float64), false)
+					mergedValueAddedOnce[property] = true
+				}
+			} else if userValueExists {
+				(*mergedProperties)[property] = addValuesForProperty(mergedValue, (*userProperties)[property].(float64), mergedExists)
+			}
+		}
+	}
 }
 
 // SanitizeAddTypeProperties To fix bad values for add type properties like $page_count, $session_count.
