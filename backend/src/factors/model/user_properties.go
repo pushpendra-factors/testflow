@@ -250,7 +250,7 @@ func MergeUserPropertiesForUserID(projectID uint64, userID string, updatedProper
 			}
 		}
 	}
-	// Handle merge type properties separately.
+	// Handle merge for add type properties separately.
 	mergeAddTypeUserProperties(&mergedUserProperties, userPropertiesRecords)
 
 	// Additional check for properties that can be added. If merge is triggered for users with same set of properties,
