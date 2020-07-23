@@ -34,7 +34,8 @@ type QueryGroupByProperty struct {
 	Property string `json:"pr"`
 	Index    int    `json:"in"`
 	// group by specific event name.
-	EventName string `json:"ena"`
+	EventName      string `json:"ena"`
+	EventNameIndex int    `json:"eni"`
 }
 
 type QueryEventWithProperties struct {
@@ -1154,13 +1155,18 @@ func buildEventsOccurrenceSingleEventQuery(projectId uint64, q Query) (string, [
 
 // builds group keys for event properties for given step (event_with_properties).
 func buildEventGroupKeyForStep(eventWithProperties *QueryEventWithProperties,
-	groupProps []QueryGroupByProperty) (string, []interface{}, string) {
+	groupProps []QueryGroupByProperty, ewpIndex int) (string, []interface{}, string) {
 
 	eventGroupProps := filterGroupPropsByType(groupProps, PropertyEntityEvent)
 
 	eventGroupPropsByStep := make([]QueryGroupByProperty, 0, 0)
 	for i := range eventGroupProps {
-		if eventGroupProps[i].EventName == eventWithProperties.Name {
+		if eventGroupProps[i].EventNameIndex != 0 {
+			if eventGroupProps[i].EventNameIndex == ewpIndex {
+				eventGroupPropsByStep = append(eventGroupPropsByStep, eventGroupProps[i])
+			}
+		} else if eventGroupProps[i].EventName == eventWithProperties.Name {
+			// If event name index not present like in Insights query.
 			eventGroupPropsByStep = append(eventGroupPropsByStep, eventGroupProps[i])
 		}
 	}
@@ -1358,7 +1364,7 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q Query) (string, []interface
 			}
 		}
 		egSelect, egParams, egGroupKeys := buildEventGroupKeyForStep(
-			&q.EventsWithProperties[i], q.GroupByProperties)
+			&q.EventsWithProperties[i], q.GroupByProperties, i+1)
 		if egSelect != "" {
 			addSelect = joinWithComma(addSelect, egSelect)
 		}

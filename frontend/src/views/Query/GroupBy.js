@@ -7,7 +7,7 @@ import {
   fetchProjectEventProperties,
   fetchProjectUserProperties,
 } from '../../actions/projectsActions';
-import { getSelectedOpt, QUERY_TYPE_ANALYTICS, makeSelectOpt, makeSelectOpts } from '../../util';
+import { getSelectedOpt, QUERY_TYPE_ANALYTICS, makeSelectOpt, makeSelectOpts, removeIndexIfExistsFromOptName } from '../../util';
 import { PROPERTY_TYPE_OPTS, PROPERTY_TYPE_EVENT, PROPERTY_TYPE_USER } from './common';
 
 export const USER_PROPERTY_JOIN_TIME = '$joinTime'
@@ -60,8 +60,11 @@ class GroupBy extends Component {
       let fetches = [];
       if (this.showEventNameSelector() && this.props.groupByState.eventName != '') {
         // fetch properties of selected group by event name.
-        fetches.push(fetchProjectEventProperties(this.props.projectId, 
-          this.props.groupByState.eventName, "", false));
+        var eventName = this.props.groupByState.eventName
+        if (this.props.shouldAddIndexPrefix()) {
+          eventName = removeIndexIfExistsFromOptName(eventName)
+        }
+        fetches.push(fetchProjectEventProperties(this.props.projectId, eventName, "", false));
       } else {
         // fetch event properties of all selected event names.
         let eventNames = this.props.getSelectedEventNames();
@@ -110,7 +113,7 @@ class GroupBy extends Component {
           hidden={!this.showEventNameSelector()}>
           <Select
             onChange={this.props.onEventNameChange}
-            options={makeSelectOpts(this.props.getSelectedEventNames())}
+            options={makeSelectOpts(this.props.getSelectedEventNames(), this.props.shouldAddIndexPrefix())}
             placeholder='Select Event'
             value={getSelectedOpt(this.props.groupByState.eventName)}
           />

@@ -50,10 +50,52 @@ export function trimQuotes(v) {
     return v;
 }
 
-export function makeSelectOpts(values) {
+export function prefixIndexToOptName(index, optName) {
+    // Zero valued index.
+    return +index + 1 + ". " + optName
+}
+
+export function getIndexIfExistsFromOptName(optName) {
+    var split = optName.split(" ")
+    var index = split.shift()
+    var eventName = split.join(" ")
+    if (index == optName || !eventName) {
+        return null
+    }
+    var indexSplit = index.split(".")
+    if (isNaN(indexSplit[0]) || indexSplit[1]) {
+        return null
+    }
+    return +indexSplit[0]
+}
+
+export function removeIndexIfExistsFromOptName(optName) {
+    var split = optName.split(" ")
+    var index = split.shift()
+    var eventName = split.join(" ")
+    if (index == optName || !eventName) {
+        // No space in optName.
+        return optName
+    } else {
+        // Verify if index is of format '<number>.'
+        var indexSplit = index.split(".")
+        if (isNaN(indexSplit[0]) || indexSplit[1]) {
+            // First value is not a number or not empty value after '.'
+            return optName
+        }
+    }
+    return eventName
+}
+
+export function makeSelectOpts(values, prefixIndex = false) {
     var opts = [];
     for(let i in values) {
-        opts.push({label: values[i], value: values[i]});
+        if (prefixIndex) {
+            var valueWithIndex = prefixIndexToOptName(i, values[i])
+            opts.push({label: valueWithIndex, value: valueWithIndex});
+        } else {
+            opts.push({label: values[i], value: values[i]});
+        }
     }
     return opts
 }

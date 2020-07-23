@@ -17,7 +17,8 @@ import LineChart from './LineChart';
 import BarChart from './BarChart';
 import TableBarChart from './TableBarChart';
 import FunnelChart from './FunnelChart';
-import { makeSelectOpts } from '../../util';
+import { makeSelectOpts, removeIndexIfExistsFromOptName,
+  prefixIndexToOptName, getIndexIfExistsFromOptName } from '../../util';
 
 // Channel query is a different kind of component linked to Query.
 import ChannelQuery from '../ChannelQuery/ChannelQuery';
@@ -402,6 +403,9 @@ class Query extends Component {
       let state = { ...prevState };
       state.groupBys = [ ...prevState.groupBys ];
       state.groupBys[groupByIndex][attr] = value;
+      if (attr == "type" && value == PROPERTY_TYPE_EVENT && this.shouldAddIndexPrefix()) {
+        state.groupBys[groupByIndex]["eventName"] = prefixIndexToOptName(0, state.groupBys[groupByIndex]["eventName"]);
+      }
       return state;
     })
   }
@@ -516,8 +520,17 @@ class Query extends Component {
 
         // add group by event name.
         if (groupBy.type == PROPERTY_TYPE_EVENT && this.isEventNameRequiredForGroupBy() &&  
-          groupBy.eventName != '') cGroupBy.ena = groupBy.eventName;
-          
+          groupBy.eventName != '') {
+          if (this.shouldAddIndexPrefix()) {
+            cGroupBy.ena = removeIndexIfExistsFromOptName(groupBy.eventName);
+            let eni = getIndexIfExistsFromOptName(groupBy.eventName)
+            if (!isNaN(eni)) {
+              cGroupBy.eni = eni  // 1 valued index to distinguish in backend from default 0.
+            }
+          } else {
+            cGroupBy.ena = groupBy.eventName;
+          }
+        }
         query.gbp.push(cGroupBy)
       }
     }
@@ -719,6 +732,10 @@ class Query extends Component {
     return (this.state.type.value == TYPE_UNIQUE_USERS && 
       this.state.condition.value == COND_ALL_GIVEN_EVENT) || 
       this.state.class.value == QUERY_CLASS_FUNNEL;
+  }
+
+  shouldAddIndexPrefix = () => {
+    return this.isEventNameRequiredForGroupBy();
   }
 
   showAddToDashboardFailure() {
@@ -947,6 +964,7 @@ class Query extends Component {
           onNameChange={(option) => this.onGroupByNameChange(i, option)}
           onEventNameChange={(option) => this.onGroupByEventNameChange(i, option)}
           getOpts={this.getGroupByOpts}
+          shouldAddIndexPrefix={this.shouldAddIndexPrefix}
           isEventNameRequired={this.isEventNameRequiredForGroupBy}
         />
       );
