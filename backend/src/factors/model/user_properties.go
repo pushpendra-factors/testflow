@@ -477,7 +477,7 @@ func SanitizeAddTypeProperties(projectID uint64, users []User, propertiesMap *ma
 		}
 	}
 
-	acceptablePropertyLength := 4 // Up to 9999.
+	acceptablePropertyLength := 3 // Up to 999.
 	if len(fmt.Sprint(propertyValue)) <= acceptablePropertyLength {
 		return
 	}

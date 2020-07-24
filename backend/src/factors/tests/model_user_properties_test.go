@@ -282,12 +282,12 @@ func TestSanitizeAddTypeProperties(t *testing.T) {
 
 	// If session count and page count are in acceptable range, do nothing even when spent time is high.
 	mergedProperty2 := map[string]interface{}{
-		U.UP_SESSION_COUNT:    9999,
-		U.UP_PAGE_COUNT:       9999,
+		U.UP_SESSION_COUNT:    999,
+		U.UP_PAGE_COUNT:       999,
 		U.UP_TOTAL_SPENT_TIME: 8462088321000000,
 	}
 	M.SanitizeAddTypeProperties(project.ID, []M.User{*user1, *user2}, &mergedProperty2)
-	assert.Equal(t, 9999, mergedProperty2[U.UP_SESSION_COUNT])
-	assert.Equal(t, 9999, mergedProperty2[U.UP_PAGE_COUNT])
+	assert.Equal(t, 999, mergedProperty2[U.UP_SESSION_COUNT])
+	assert.Equal(t, 999, mergedProperty2[U.UP_PAGE_COUNT])
 	assert.Equal(t, 8462088321000000, mergedProperty2[U.UP_TOTAL_SPENT_TIME])
 }

@@ -130,7 +130,7 @@ func GetEventCountOfUsersByEventName(projectID uint64, userIDs []string, eventNa
 
 	db := C.GetServices().Db
 	if err := db.Model(&Event{}).Where("project_id = ? AND user_id = ANY(?) AND event_name_id = ?",
-		projectID, userIDs, eventNameID).Count(&count).Error; err != nil {
+		projectID, pq.Array(userIDs), eventNameID).Count(&count).Error; err != nil {
 		log.WithFields(log.Fields{"projectId": projectID, "userId": userIDs}).WithError(err).Error(
 			"Failed to get count of event for users by event_name_id")
 		return 0, http.StatusInternalServerError
