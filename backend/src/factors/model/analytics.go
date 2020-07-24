@@ -2157,7 +2157,7 @@ func DecodeQueryForClass(queryJSON postgres.Jsonb, queryClass string) (BaseQuery
 		err = U.DecodePostgresJsonbToStructType(&queryJSON, &query)
 		baseQuery = &query
 	case QueryClassAttribution:
-		var query AttributionQuery
+		var query AttributionQueryUnit
 		err = U.DecodePostgresJsonbToStructType(&queryJSON, &query)
 		baseQuery = &query
 	case QueryClassChannel:

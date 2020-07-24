@@ -12,8 +12,13 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+type AttributionQueryUnit struct {
+	Class string                  `json:"cl"`
+	Query *AttributionQuery       `json:"query"`
+	Meta  *map[string]interface{} `json:"meta"`
+}
+
 type AttributionQuery struct {
-	Class                  string   `json:"cl"`
 	CampaignMetrics        []string `json:"cm"`
 	ConversionEvent        string   `json:"ce"`
 	LinkedEvents           []string `json:"lfe"`
@@ -24,16 +29,16 @@ type AttributionQuery struct {
 	To                     int64    `json:"to"`
 }
 
-func (q *AttributionQuery) GetClass() string {
+func (q *AttributionQueryUnit) GetClass() string {
 	return q.Class
 }
 
-func (q *AttributionQuery) GetQueryDateRange() (from, to int64) {
-	return q.From, q.To
+func (q *AttributionQueryUnit) GetQueryDateRange() (from, to int64) {
+	return q.Query.From, q.Query.To
 }
 
-func (q *AttributionQuery) SetQueryDateRange(from, to int64) {
-	q.From, q.To = from, to
+func (q *AttributionQueryUnit) SetQueryDateRange(from, to int64) {
+	q.Query.From, q.Query.To = from, to
 }
 
 const (

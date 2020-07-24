@@ -369,8 +369,8 @@ func CacheDashboardUnit(projectID uint64, dashboardUnit DashboardUnit, waitGroup
 			analyticsQuery := baseQuery.(*Query)
 			result, errCode, errMsg = Analyze(projectID, *analyticsQuery)
 		} else if baseQuery.GetClass() == QueryClassAttribution {
-			attributionQuery := baseQuery.(*AttributionQuery)
-			result, err = ExecuteAttributionQuery(projectID, attributionQuery)
+			attributionQuery := baseQuery.(*AttributionQueryUnit)
+			result, err = ExecuteAttributionQuery(projectID, attributionQuery.Query)
 			if err != nil {
 				errCode = http.StatusInternalServerError
 			} else {

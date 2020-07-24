@@ -160,7 +160,6 @@ class AttributionQuery extends Component {
 
   getQuery = () => {
     let query = {};
-    query.cl = QUERY_CLASS_ATTRIBUTION;
     query.cm = CAMPAIGN_METRICS;
     query.ce = this.state.converisonEventName.value;
     query.lfe = this.state.linkedEventNames;

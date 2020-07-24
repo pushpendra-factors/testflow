@@ -371,7 +371,7 @@ func TestBaseQuery(t *testing.T) {
 		if queryClass == M.QueryClassFunnel || queryClass == M.QueryClassInsights {
 			baseQuery = &M.Query{Class: queryClass, From: from, To: to}
 		} else if queryClass == M.QueryClassAttribution {
-			baseQuery = &M.AttributionQuery{Class: queryClass, From: from, To: to}
+			baseQuery = &M.AttributionQueryUnit{Class: queryClass, Query: &M.AttributionQuery{From: from, To: to}}
 		} else {
 			baseQuery = &M.ChannelQueryUnit{Class: queryClass, Query: &M.ChannelQuery{From: from, To: to}}
 		}
@@ -405,7 +405,7 @@ func TestCacheDashboardUnitsForProjectID(t *testing.T) {
 	var dashboardQueriesStr = map[string]string{
 		M.QueryClassInsights:    `{"cl": "insights", "ec": "any_given_event", "fr": 1393612200, "to": 1396290599, "ty": "events_occurrence", "tz": "", "ewp": [{"na": "$session", "pr": []}], "gbp": [], "gbt": ""}`,
 		M.QueryClassFunnel:      `{"cl": "funnel", "ec": "any_given_event", "fr": 1594492200, "to": 1594578599, "ty": "unique_users", "tz": "Asia/Calcutta", "ewp": [{"na": "$session", "pr": []}, {"na": "www.chargebee.com/schedule-a-demo", "pr": []}], "gbp": [], "gbt": ""}`,
-		M.QueryClassAttribution: `{"cl": "attribution", "meta": {"metrics_breakdown": true}, "ce": "$session", "cl": "attribution", "cm": ["Impressions", "Clicks", "Spend"], "to": 1585679399, "lbw": 0, "lfe": [], "from": 1583001000, "attribution_key": "Campaign", "attribution_methodology": "First_Touch"}`,
+		M.QueryClassAttribution: `{"cl": "attribution", "meta": {"metrics_breakdown": true}, "query": {"ce": "$session", "cl": "attribution", "cm": ["Impressions", "Clicks", "Spend"], "to": 1585679399, "lbw": 0, "lfe": [], "from": 1583001000, "attribution_key": "Campaign", "attribution_methodology": "First_Touch"}}`,
 		M.QueryClassChannel:     `{"cl": "channel", "meta": {"metric": "total_cost"}, "query": {"to": 1576060774, "from": 1573468774, "channel": "google_ads", "filter_key": "campaign", "filter_value": "all"}}`,
 	}
 	for queryClass, queryString := range dashboardQueriesStr {
@@ -438,9 +438,6 @@ func TestCacheDashboardUnitsForProjectID(t *testing.T) {
 
 			query.SetQueryDateRange(from, to)
 			// Refresh is sent as false. Must return all presets range from cache.
-			if queryClass == M.QueryClassAttribution {
-				fmt.Println("Ab aayega maza")
-			}
 			w := sendAnalyticsQueryReq(r, queryClass, project.ID, agent, dashboard.ID, unitID, query, false)
 			assert.NotNil(t, w)
 			assert.Equal(t, http.StatusOK, w.Code)
@@ -492,9 +489,9 @@ func TestCacheDashboardUnitsForProjectIDForAttributionQuery(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.Equal(t, dashboardName, dashboard.Name)
 
-	var query M.AttributionQuery
-	queryJSON := postgres.Jsonb{json.RawMessage(`{"cl": "attribution", "meta": {"metrics_breakdown": true}, "ce": "$session", "cl": "attribution", "cm": ["Impressions", "Clicks", "Spend"], "to": 1585679399, "lbw": 0, "lfe": [], "from": 1583001000, "attribution_key": "Campaign", "attribution_methodology": "First_Touch"}`)}
-	U.DecodePostgresJsonbToStructType(&queryJSON, &query)
+	var queryUnit M.AttributionQueryUnit
+	queryJSON := postgres.Jsonb{json.RawMessage(`{"cl": "attribution", "meta": {"metrics_breakdown": true}, "query": {"ce": "$session", "cl": "attribution", "cm": ["Impressions", "Clicks", "Spend"], "to": 1585679399, "lbw": 0, "lfe": [], "from": 1583001000, "attribution_key": "Campaign", "attribution_methodology": "First_Touch"}}`)}
+	U.DecodePostgresJsonbToStructType(&queryJSON, &queryUnit)
 	dashboardUnit, errCode, _ := M.CreateDashboardUnit(project.ID, agent.UUID, &M.DashboardUnit{
 		DashboardId:  dashboard.ID,
 		Title:        U.RandomString(5),
@@ -507,6 +504,7 @@ func TestCacheDashboardUnitsForProjectIDForAttributionQuery(t *testing.T) {
 	updatedUnitsCount := M.CacheDashboardUnitsForProjectID(project.ID, 1)
 	assert.Equal(t, 1, updatedUnitsCount)
 
+	query := *queryUnit.Query
 	for _, rangeFunction := range U.QueryDateRangePresets {
 		query.From, query.To = rangeFunction()
 		// Refresh is sent as false. Must return all presets range from cache.
@@ -574,9 +572,9 @@ func sendAnalyticsQueryReq(r *gin.Engine, queryClass string, projectID uint64, a
 		queryPayload = query.Query
 	} else {
 		queryURL = "attribution/query"
-		query := baseQuery.(*M.AttributionQuery)
+		query := baseQuery.(*M.AttributionQueryUnit)
 		queryPayload = H.AttributionRequestPayload{
-			Query: query,
+			Query: query.Query,
 		}
 	}
 
