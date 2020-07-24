@@ -62,11 +62,13 @@ $tooltip-background-color: $sidebar-background-color;
             }
 
             &:hover {
-                background-color: $hover-sidebar-link-color;
-
                 .tooltip {
                     visibility: visible;
                     opacity: 1;
+                }
+
+                i {
+                    color: $active-link-color;
                 }
             }
 
