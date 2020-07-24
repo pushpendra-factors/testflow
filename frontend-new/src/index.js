@@ -1,8 +1,9 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import './index.scss';
+import './assets/index.scss';
+import 'font-awesome/css/font-awesome.min.css';
 import App from './App';
-import 'antd/dist/antd.css';
+import './assets/tailwind.output.css'
 
 ReactDOM.render(
   <React.StrictMode>

@@ -1,5 +1,82 @@
+//Color Variables
+$sidebar-background-color: #001529;
+$active-sidebar-link-color: #1890ff;
+$hover-sidebar-link-color: $active-sidebar-link-color;
+$active-link-color: #ffffff;
+$tooltip-background-color: $sidebar-background-color;
+
 .logo {
     height: 32px;
     background: rgba(255, 255, 255, 0.2);
     margin: 16px;
+}
+
+.sidebarNavigation {
+    min-height: 100vh;
+    width: 80px;
+    background-color: $sidebar-background-color;
+    float: left;
+
+    ul {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        font-family: 'Lato', sans-serif;
+        line-height: 1;
+        text-align: center;
+        color: white;
+
+        li {
+            padding: 1.5rem 0;
+            cursor: pointer;
+
+            i {
+                display: block;
+                font-size: 24px;
+            }
+
+            .tooltip {
+                display: inline-block;
+                position: absolute;
+                background-color: $tooltip-background-color;
+                padding: 8px 15px;
+                border-radius: 3px;
+                margin-top: -26px;
+                left: 90px;
+                opacity: 0;
+                visibility: hidden;
+                font-size: 13px;
+                letter-spacing: .5px;
+
+                &:before {
+                    content: '';
+                    display: block;
+                    position: absolute;
+                    left: -4px;
+                    top: 10px;
+                    transform: rotate(45deg);
+                    width: 10px;
+                    height: 10px;
+                    background-color: inherit;
+                }
+            }
+
+            &:hover {
+                background-color: $hover-sidebar-link-color;
+
+                .tooltip {
+                    visibility: visible;
+                    opacity: 1;
+                }
+            }
+
+            &.active {
+                background-color: $active-sidebar-link-color;
+
+                i {
+                    color: $active-link-color;
+                }
+            }
+        }
+    }
 }
