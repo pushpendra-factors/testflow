@@ -83,6 +83,7 @@ type UpdateEventPropertiesPayload struct {
 	EventId    string          `json:"event_id"`
 	Properties U.PropertiesMap `json:"properties"`
 	Timestamp  int64           `json:"timestamp"`
+	UserAgent  string          `json:"user_agent"`
 }
 
 type UpdateEventPropertiesResponse struct {
@@ -303,7 +304,7 @@ func Track(projectId uint64, request *TrackPayload, skipSession bool) (int, *Tra
 
 	// Terminate track calls from bot user_agent.
 	if *projectSettings.ExcludeBot && U.IsBotUserAgent(request.UserAgent) {
-		return http.StatusNotModified, &TrackResponse{}
+		return http.StatusNotModified, &TrackResponse{Message: "Tracking skipped. Bot request."}
 	}
 
 	var eventName *M.EventName
@@ -798,6 +799,17 @@ func enqueueRequest(token, reqType, reqPayload interface{}) error {
 	return err
 }
 
+func excludeBotRequestBySetting(token, userAgent string) bool {
+	settings, errCode := M.GetProjectSettingByTokenWithCacheAndDefault(token)
+	if errCode != http.StatusFound {
+		log.WithField("err_code", errCode).
+			Error("Failed to get project settings on excludeBotRequestBeforeQueue.")
+		return false
+	}
+
+	return settings != nil && *settings.ExcludeBot && U.IsBotUserAgent(userAgent)
+}
+
 func TrackByToken(token string, reqPayload *TrackPayload) (int, *TrackResponse) {
 	project, errCode := M.GetProjectByToken(token)
 	if errCode == http.StatusFound {
@@ -816,6 +828,11 @@ func TrackByToken(token string, reqPayload *TrackPayload) (int, *TrackResponse) 
 
 func TrackWithQueue(token string, reqPayload *TrackPayload,
 	queueAllowedTokens []string) (int, *TrackResponse) {
+
+	if excludeBotRequestBySetting(token, reqPayload.UserAgent) {
+		return http.StatusNotModified,
+			&TrackResponse{Message: "Tracking skipped. Bot request."}
+	}
 
 	if U.UseQueue(token, queueAllowedTokens) {
 		reqPayload.EventId = U.GetUUID()
@@ -973,6 +990,11 @@ func UpdateEventPropertiesByToken(token string,
 
 func UpdateEventPropertiesWithQueue(token string, reqPayload *UpdateEventPropertiesPayload,
 	queueAllowedTokens []string) (int, *UpdateEventPropertiesResponse) {
+
+	if excludeBotRequestBySetting(token, reqPayload.UserAgent) {
+		return http.StatusNotModified, &UpdateEventPropertiesResponse{
+			Message: "Update event properties skipped. Bot request."}
+	}
 
 	if U.UseQueue(token, queueAllowedTokens) {
 		// add queued timestamp, if timestmap is not given.
@@ -1181,7 +1203,8 @@ type AMPUpdateEventPropertiesPayload struct {
 	PageSpentTime     float64 `json:"page_spent_time"`
 
 	// internal
-	Timestamp int64 `json:"timestamp"`
+	Timestamp int64  `json:"timestamp"`
+	UserAgent string `json:"user_agent"`
 }
 type AMPTrackResponse struct {
 	Message string `json:"message"`
@@ -1402,6 +1425,11 @@ func GetCacheAMPSDKEventIDByPageURL(projectId uint64, userId string, pageURL str
 func AMPTrackWithQueue(token string, reqPayload *AMPTrackPayload,
 	queueAllowedTokens []string) (int, *Response) {
 
+	if excludeBotRequestBySetting(token, reqPayload.UserAgent) {
+		return http.StatusNotModified,
+			&Response{Message: "Track skipped. Bot request."}
+	}
+
 	if U.UseQueue(token, queueAllowedTokens) {
 		err := enqueueRequest(token, sdkRequestTypeAMPEventTrack, reqPayload)
 		if err != nil {
@@ -1418,11 +1446,16 @@ func AMPTrackWithQueue(token string, reqPayload *AMPTrackPayload,
 func AMPUpdateEventPropertiesWithQueue(token string, reqPayload *AMPUpdateEventPropertiesPayload,
 	queueAllowedTokens []string) (int, *Response) {
 
+	if excludeBotRequestBySetting(token, reqPayload.UserAgent) {
+		return http.StatusNotModified,
+			&Response{Message: "Update event properties skipped. Bot request."}
+	}
+
 	if U.UseQueue(token, queueAllowedTokens) {
 		err := enqueueRequest(token, sdkRequestTypedAMPEventUpdateProperties, reqPayload)
 		if err != nil {
 			log.WithError(err).Error("Failed to queue amp sdk update event request.")
-			return http.StatusInternalServerError, &Response{Error: "Update event failed"}
+			return http.StatusInternalServerError, &Response{Error: "Update event properties failed"}
 		}
 
 		return http.StatusOK, &Response{Message: "Updated event successfully"}

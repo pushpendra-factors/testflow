@@ -234,6 +234,8 @@ func SDKUpdateEventPropertiesHandler(c *gin.Context) {
 		return
 	}
 
+	request.UserAgent = c.Request.UserAgent()
+
 	projectToken := U.GetScopeByKeyAsString(c, mid.SCOPE_PROJECT_TOKEN)
 	c.JSON(SDK.UpdateEventPropertiesWithQueue(projectToken, &request, C.GetSDKRequestQueueAllowedTokens()))
 }
@@ -365,6 +367,7 @@ func SDKAMPUpdateEventPropertiesHandler(c *gin.Context) {
 		PageSpentTime:     pageSpentTime,
 
 		Timestamp: time.Now().Unix(), // request timestamp.
+		UserAgent: c.Request.UserAgent(),
 	}
 
 	c.JSON(SDK.AMPUpdateEventPropertiesWithQueue(token, payload, C.GetSDKRequestQueueAllowedTokens()))
