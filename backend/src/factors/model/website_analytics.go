@@ -551,35 +551,39 @@ func ExecuteWebAnalyticsQueries(projectId uint64, queries *WebAnalyticsQueries) 
 }
 
 func cacheWebsiteAnalyticsForProjectID(projectID uint64, queryNames []string, waitGroup *sync.WaitGroup) {
-	logCtx := log.WithFields(log.Fields{
-		"Method":    "cacheWebsiteAnalyticsForProjectID",
-		"ProjectID": projectID,
-	})
 	defer waitGroup.Done()
 
 	dashboardID, errCode := getWebAnalyticsDashboardIDForProject(projectID)
 	if errCode != http.StatusFound {
 		return
 	}
+	log.WithFields(log.Fields{"ProjectID": projectID}).Info("Starting web analytics dashboard caching")
 
-	for preset, rangeFunction := range U.QueryDateRangePresets {
+	var dashboardWaitGroup sync.WaitGroup
+	for _, rangeFunction := range U.QueryDateRangePresets {
 		from, to := rangeFunction()
-		logCtx = logCtx.WithFields(log.Fields{"Preset": preset, "From": from, "To": to})
-		if isWebAnalyticsDashboardAlreadyCached(projectID, dashboardID, from, to) {
-			continue
-		}
-
-		queryResultsByName, errCode := ExecuteWebAnalyticsQueries(projectID,
-			&WebAnalyticsQueries{
-				QueryNames: queryNames,
-				From:       from,
-				To:         to,
-			})
-		if errCode != http.StatusOK {
-			continue
-		}
-		SetCacheResultForWebAnalyticsDashboard(*queryResultsByName, projectID, dashboardID, from, to)
+		dashboardWaitGroup.Add(1)
+		go cacheWebsiteAnalyticsForDateRange(projectID, dashboardID, from, to, queryNames, &dashboardWaitGroup)
 	}
+	dashboardWaitGroup.Wait()
+}
+
+func cacheWebsiteAnalyticsForDateRange(projectID, dashboardID uint64, from, to int64, queryNames []string, waitGroup *sync.WaitGroup) {
+	defer waitGroup.Done()
+	if isWebAnalyticsDashboardAlreadyCached(projectID, dashboardID, from, to) {
+		return
+	}
+
+	queryResultsByName, errCode := ExecuteWebAnalyticsQueries(projectID,
+		&WebAnalyticsQueries{
+			QueryNames: queryNames,
+			From:       from,
+			To:         to,
+		})
+	if errCode != http.StatusOK {
+		return
+	}
+	SetCacheResultForWebAnalyticsDashboard(*queryResultsByName, projectID, dashboardID, from, to)
 }
 
 func GetCacheResultForWebAnalyticsDashboard(projectID, dashboardID uint64, from, to int64) (WebAnalyticsCacheResult, int) {

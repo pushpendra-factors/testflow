@@ -353,40 +353,54 @@ func CacheDashboardUnit(projectID uint64, dashboardUnit DashboardUnit, waitGroup
 		return
 	}
 
-	for preset, rangeFunction := range U.QueryDateRangePresets {
+	var unitWaitGroup sync.WaitGroup
+	for _, rangeFunction := range U.QueryDateRangePresets {
 		from, to := rangeFunction()
 		baseQuery.SetQueryDateRange(from, to)
-		logCtx = logCtx.WithFields(log.Fields{"Preset": preset, "From": from, "To": to})
-
-		if isDashboardUnitAlreadyCachedForRange(projectID, dashboardUnit.DashboardId, dashboardUnit.ID, from, to) {
-			continue
-		}
-
-		var result interface{}
-		var errCode int
-		var errMsg string
-		if baseQuery.GetClass() == QueryClassFunnel || baseQuery.GetClass() == QueryClassInsights {
-			analyticsQuery := baseQuery.(*Query)
-			result, errCode, errMsg = Analyze(projectID, *analyticsQuery)
-		} else if baseQuery.GetClass() == QueryClassAttribution {
-			attributionQuery := baseQuery.(*AttributionQueryUnit)
-			result, err = ExecuteAttributionQuery(projectID, attributionQuery.Query)
-			if err != nil {
-				errCode = http.StatusInternalServerError
-			} else {
-				errCode = http.StatusOK
-			}
-		} else if baseQuery.GetClass() == QueryClassChannel {
-			channelQuery := baseQuery.(*ChannelQueryUnit)
-			result, errCode = ExecuteChannelQuery(projectID, channelQuery.Query)
-		}
-		if errCode != http.StatusOK {
-			logCtx.Errorf("Error while running query %s", errMsg)
-			continue
-		}
-		SetCacheResultByDashboardIdAndUnitId(result, projectID, dashboardUnit.DashboardId, dashboardUnit.ID, from, to)
+		unitWaitGroup.Add(1)
+		go cacheDashboardUnitForDateRange(projectID, dashboardUnit.DashboardId, dashboardUnit.ID, baseQuery, &unitWaitGroup)
 	}
-	return
+	unitWaitGroup.Wait()
+}
+
+func cacheDashboardUnitForDateRange(projectID, dashboardID, dashboardUnitID uint64, baseQuery BaseQuery, waitGroup *sync.WaitGroup) {
+	defer waitGroup.Done()
+	from, to := baseQuery.GetQueryDateRange()
+	logCtx := log.WithFields(log.Fields{
+		"Method":          "cacheDashboardUnitForDateRange",
+		"ProjectID":       projectID,
+		"DashboardID":     dashboardID,
+		"DashboardUnitID": dashboardUnitID,
+		"FromTo":          fmt.Sprintf("%d-%d", from, to),
+	})
+	if isDashboardUnitAlreadyCachedForRange(projectID, dashboardID, dashboardUnitID, from, to) {
+		return
+	}
+
+	var result interface{}
+	var err error
+	var errCode int
+	var errMsg string
+	if baseQuery.GetClass() == QueryClassFunnel || baseQuery.GetClass() == QueryClassInsights {
+		analyticsQuery := baseQuery.(*Query)
+		result, errCode, errMsg = Analyze(projectID, *analyticsQuery)
+	} else if baseQuery.GetClass() == QueryClassAttribution {
+		attributionQuery := baseQuery.(*AttributionQueryUnit)
+		result, err = ExecuteAttributionQuery(projectID, attributionQuery.Query)
+		if err != nil {
+			errCode = http.StatusInternalServerError
+		} else {
+			errCode = http.StatusOK
+		}
+	} else if baseQuery.GetClass() == QueryClassChannel {
+		channelQuery := baseQuery.(*ChannelQueryUnit)
+		result, errCode = ExecuteChannelQuery(projectID, channelQuery.Query)
+	}
+	if errCode != http.StatusOK {
+		logCtx.Errorf("Error while running query %s", errMsg)
+		return
+	}
+	SetCacheResultByDashboardIdAndUnitId(result, projectID, dashboardID, dashboardUnitID, from, to)
 }
 
 func isDashboardUnitAlreadyCachedForRange(projectID, dashboardID, unitID uint64, from, to int64) bool {
