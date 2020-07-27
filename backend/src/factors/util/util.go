@@ -62,6 +62,12 @@ func RandomUint64WithUnixNano() uint64 {
 	return uint64(time.Now().UnixNano())
 }
 
+// RandomIntInRange Generates a random number in range [min, max).
+func RandomIntInRange(min, max int) int {
+	rand.Seed(time.Now().UTC().UnixNano())
+	return min + rand.Intn(max-min)
+}
+
 func UnixTimeBeforeAWeek() int64 {
 	return UnixTimeBeforeDuration(168 * time.Hour) // 7 days.
 }

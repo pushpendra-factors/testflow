@@ -209,17 +209,17 @@ func MergeUserPropertiesForUserID(projectID uint64, userID string, updatedProper
 		userPropertiesRecords = append(userPropertiesRecords, userPropertiesRecord)
 	}
 
-	// Append called user's updatedPropertiesMap.
+	// Sort user properties records by UpdatedTimestamp in ascending order.
+	sort.Slice(userPropertiesRecords, func(i, j int) bool {
+		return userPropertiesRecords[i].UpdatedTimestamp < userPropertiesRecords[j].UpdatedTimestamp
+	})
+
+	// Append called user's updatedPropertiesMap after sorting to ensure it's always the last.
 	userPropertiesRecords = append(userPropertiesRecords, &UserProperties{
 		UserId:           userID,
 		ProjectId:        projectID,
 		Properties:       updatedProperties,
 		UpdatedTimestamp: timestamp,
-	})
-
-	// Sort user properties records by UpdatedTimestamp in ascending order.
-	sort.Slice(userPropertiesRecords, func(i, j int) bool {
-		return userPropertiesRecords[i].UpdatedTimestamp < userPropertiesRecords[j].UpdatedTimestamp
 	})
 
 	mergedUserProperties := make(map[string]interface{})
@@ -244,32 +244,14 @@ func MergeUserPropertiesForUserID(projectID uint64, userID string, updatedProper
 					mergedUserProperties[property] = (*userProperties)[property]
 					initialPropertiesVisitedMap[property] = true
 				}
-			} else if U.StringValueIn(property, U.USER_PROPERTIES_MERGE_TYPE_ADD[:]) {
-				// Adding 0.1 + 0.2 will result in 0.30000000000000004 as explained https://floating-point-gui.de/
-				// Round off values with precision to avoid this.
-				oldValue, found := mergedUserProperties[property]
-				if found {
-					roundOffValue, err := U.FloatRoundOffWithPrecision(oldValue.(float64)+(*userProperties)[property].(float64), 2)
-					if err != nil {
-						// If error in round off, use as is.
-						mergedUserProperties[property] = oldValue.(float64) + (*userProperties)[property].(float64)
-					} else {
-						mergedUserProperties[property] = roundOffValue
-					}
-				} else {
-					roundOffValue, err := U.FloatRoundOffWithPrecision((*userProperties)[property].(float64), 2)
-					if err != nil {
-						mergedUserProperties[property] = (*userProperties)[property].(float64)
-					} else {
-						mergedUserProperties[property] = roundOffValue
-					}
-				}
-			} else {
+			} else if !U.StringValueIn(property, U.USER_PROPERTIES_MERGE_TYPE_ADD[:]) {
 				// For all other properties, overwrite with the latest user property.
 				mergedUserProperties[property] = (*userProperties)[property]
 			}
 		}
 	}
+	// Handle merge for add type properties separately.
+	mergeAddTypeUserProperties(&mergedUserProperties, userPropertiesRecords)
 
 	// Additional check for properties that can be added. If merge is triggered for users with same set of properties,
 	// value of properties that can be added will change after addition. Below check is to avoid update in such case.
@@ -277,6 +259,8 @@ func MergeUserPropertiesForUserID(projectID uint64, userID string, updatedProper
 		logCtx.Infof("Skipping merge as none of the properties changed %s", mergedUserPropertiesValues)
 		return currentPropertiesID, http.StatusNotModified
 	}
+	mergedUserProperties[U.UP_MERGE_TIMESTAMP] = U.TimeNowUnix()
+	SanitizeAddTypeProperties(projectID, users, &mergedUserProperties)
 
 	mergedUserPropertiesJSON, err := U.EncodeToPostgresJsonb(&mergedUserProperties)
 	if err != nil {
@@ -378,6 +362,153 @@ func isMergeEnabledForProjectID(projectID uint64) bool {
 		return true
 	}
 	return false
+}
+
+// addValuesForProperty To add old and new value for the user property type add.
+// Adding 0.1 + 0.2 will result in 0.30000000000000004 as explained https://floating-point-gui.de/
+// Round off values with precision to avoid this.
+func addValuesForProperty(oldValue interface{}, newValue float64, addOld bool) float64 {
+	var addedValue float64
+	var err error
+	if addOld {
+		addedValue, err = U.FloatRoundOffWithPrecision(oldValue.(float64)+newValue, 2)
+		if err != nil {
+			// If error in round off, use as is.
+			addedValue = oldValue.(float64) + newValue
+		}
+	} else {
+		addedValue, err = U.FloatRoundOffWithPrecision(newValue, 2)
+		if err != nil {
+			addedValue = newValue
+		}
+	}
+	return addedValue
+}
+
+// Initializes merged properties with the one being updated which will be the last of `userPropertiesRecords`.
+// Now for every user, add value if:
+//     1. Not set already from the one being updated.
+//     2. User property is not merged before i.e. $merge_timestamp is not set.
+//     3. Value is greater than the value already set. Add the difference then. (This should ideally not happen)
+func mergeAddTypeUserProperties(mergedProperties *map[string]interface{}, userPropertiesRecords []*UserProperties) {
+	// Last record in the array would be the latest one.
+	latestPropertiesRecord := userPropertiesRecords[len(userPropertiesRecords)-1]
+	latestPropertiesMap, err := U.DecodePostgresJsonb(&latestPropertiesRecord.Properties)
+	if err != nil {
+		log.WithError(err).Error("Failed to decode user property")
+		return
+	}
+
+	// Boolean map to indicate whether merged value is used at least once.
+	mergedValueAddedOnce := make(map[string]bool)
+	for _, property := range U.USER_PROPERTIES_MERGE_TYPE_ADD {
+		mergedValueAddedOnce[property] = false
+	}
+
+	// Cases to consider:
+	//    1. What if latestPropertiesMap has one of add type property missing? Add full on first encounter. And add diff after that.
+	//    2. Already merged property with value more than latestProperty value? Add difference.
+	//    3. Already merged property with value less than latestProperty value? Do nothing.
+	//    4. Is not a merged property. Probably for a new user? Add full as is.
+	//    5. Does ordering matter while parsing non latest properties? No.
+	for _, property := range U.USER_PROPERTIES_MERGE_TYPE_ADD {
+		if _, found := (*latestPropertiesMap)[property]; !found {
+			continue
+		}
+		(*mergedProperties)[property] = (*latestPropertiesMap)[property]
+		if _, isLatestMerged := (*latestPropertiesMap)[U.UP_MERGE_TIMESTAMP]; isLatestMerged {
+			// Since latest properties is also a merged property, set mergedValueAddedOnce true
+			// to avoid another merged property getting added which would double the value otherwise.
+			mergedValueAddedOnce[property] = true
+		}
+	}
+
+	// Loop over all records except last record.
+	for _, userPropertiesRecord := range userPropertiesRecords[:len(userPropertiesRecords)-1] {
+		userProperties, err := U.DecodePostgresJsonb(&userPropertiesRecord.Properties)
+		if err != nil {
+			log.WithError(err).Error("Failed to decode user property")
+			return
+		}
+
+		_, isMergedBefore := (*userProperties)[U.UP_MERGE_TIMESTAMP]
+		for _, property := range U.USER_PROPERTIES_MERGE_TYPE_ADD {
+			mergedValue, mergedExists := (*mergedProperties)[property]
+			userValue, userValueExists := (*userProperties)[property]
+			if isMergedBefore {
+				if !mergedValueAddedOnce[property] && userValueExists {
+					// Merged values must be added full at least once. Since not added already, add full here.
+					(*mergedProperties)[property] = addValuesForProperty(mergedValue, userValue.(float64), mergedExists)
+					mergedValueAddedOnce[property] = true
+				} else if mergedExists && userValueExists && userValue.(float64)-mergedValue.(float64) > 0 {
+					// Add the difference of values to mergedValues.
+					(*mergedProperties)[property] = addValuesForProperty(mergedValue, userValue.(float64)-mergedValue.(float64), true)
+				} else if userValueExists && !mergedExists && !mergedValueAddedOnce[property] {
+					// mergedValue does not exists. Which means this property was not present in the latest or has
+					// not been added so far. Add the values as is to initialize.
+					(*mergedProperties)[property] = addValuesForProperty(0, userValue.(float64), false)
+					mergedValueAddedOnce[property] = true
+				}
+			} else if userValueExists {
+				(*mergedProperties)[property] = addValuesForProperty(mergedValue, (*userProperties)[property].(float64), mergedExists)
+			}
+		}
+	}
+}
+
+// SanitizeAddTypeProperties To fix bad values for add type properties like $page_count, $session_count.
+//   1. Counts all sessions for users of customer_user_id and set it as session_count.
+//   2. Generate random value from 1 to 5 * session_count and set as page_count.
+//   3. Generate random value from 1 to 5 min * session_count and set as session_spent_time.
+// TODO(prateek): Remove once older values are fixed using script.
+func SanitizeAddTypeProperties(projectID uint64, users []User, propertiesMap *map[string]interface{}) {
+	logCtx := log.WithFields(log.Fields{
+		"Method":    "SanitizeAddTypeProperties",
+		"ProjectID": projectID,
+	})
+	var userIDs []string
+	for _, user := range users {
+		userIDs = append(userIDs, user.ID)
+	}
+
+	var propertyValue interface{}
+	var found bool
+	propertyValue, found = (*propertiesMap)[U.UP_SESSION_COUNT]
+	if !found {
+		propertyValue, found = (*propertiesMap)[U.UP_PAGE_COUNT]
+		if !found {
+			return
+		}
+	}
+
+	acceptablePropertyLength := 3 // Up to 999.
+	if len(fmt.Sprint(propertyValue)) <= acceptablePropertyLength {
+		return
+	}
+	sessionEvent, errCode := GetSessionEventName(projectID)
+	if errCode != http.StatusFound {
+		return
+	}
+	sessionCount, errCode := GetEventCountOfUsersByEventName(projectID, userIDs, sessionEvent.ID)
+	if errCode != http.StatusFound {
+		return
+	}
+
+	if _, found := (*propertiesMap)[U.UP_SESSION_COUNT]; found {
+		sanitizedValue := float64(sessionCount)
+		logCtx.Infof("Updating value for $session_count from %v to %v", (*propertiesMap)[U.UP_SESSION_COUNT], sanitizedValue)
+		// (*propertiesMap)[U.UP_SESSION_COUNT] = sanitizedValue
+	}
+	if _, found := (*propertiesMap)[U.UP_PAGE_COUNT]; found {
+		sanitizedValue := float64(sessionCount * uint64(U.RandomIntInRange(1, 5))) // 1 to 5 pages.
+		logCtx.Infof("Updating value for $page_count from %v to %v", (*propertiesMap)[U.UP_PAGE_COUNT], sanitizedValue)
+		// (*propertiesMap)[U.UP_PAGE_COUNT] = sanitizedValue
+	}
+	if _, found := (*propertiesMap)[U.UP_TOTAL_SPENT_TIME]; found {
+		sanitizedValue := float64(sessionCount * uint64(U.RandomIntInRange(60, 300))) // 1 to 5 mins.
+		logCtx.Infof("Updating value for $session_spent_time from %v to %v", (*propertiesMap)[U.UP_TOTAL_SPENT_TIME], sanitizedValue)
+		// (*propertiesMap)[U.UP_TOTAL_SPENT_TIME] = sanitizedValue
+	}
 }
 
 func GetUserProperties(projectId uint64, userId string, id string) (*postgres.Jsonb, int) {

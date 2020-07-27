@@ -195,6 +195,7 @@ var UP_HOUR_OF_FIRST_EVENT string = "$hour_of_first_event"
 var UP_SESSION_COUNT string = "$session_count"
 var UP_PAGE_COUNT string = "$page_count"
 var UP_TOTAL_SPENT_TIME string = "$session_spent_time" // in seconds.
+var UP_MERGE_TIMESTAMP string = "$merge_timestamp"     // Internal property used in user properties merge.
 
 var UP_LATEST_PAGE_URL string = "$latest_page_url"
 var UP_LATEST_PAGE_DOMAIN string = "$latest_page_domain"
@@ -619,6 +620,7 @@ var DISABLED_CORE_QUERY_USER_PROPERTIES = [...]string{
 	UP_SEGMENT_CHANNEL,
 	UP_DEVICE_ADVERTISING_ID,
 	UP_DEVICE_ID,
+	UP_MERGE_TIMESTAMP,
 }
 
 // DISABLED_CORE_QUERY_EVENT_PROPERTIES Less important event properties in core query context.
@@ -649,6 +651,7 @@ var DISABLED_FACTORS_USER_PROPERTIES = [...]string{
 	UP_LATEST_FBCLID,
 	UP_LATEST_REFERRER,
 	UP_INITIAL_REFERRER,
+	UP_MERGE_TIMESTAMP,
 }
 
 // DISABLED_FACTORS_EVENT_PROPERTIES Event properties disabled for the factors analysis.
