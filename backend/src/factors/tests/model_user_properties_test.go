@@ -249,6 +249,8 @@ func TestMergeUserPropertiesForProjectID(t *testing.T) {
 	assert.NotEqual(t, user2.PropertiesId, user2DB.PropertiesId)
 }
 
+/*
+TODO(prateek): Uncomment this after removing dry run from sanitize function.
 func TestSanitizeAddTypeProperties(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
@@ -291,3 +293,4 @@ func TestSanitizeAddTypeProperties(t *testing.T) {
 	assert.Equal(t, 999, mergedProperty2[U.UP_PAGE_COUNT])
 	assert.Equal(t, 8462088321000000, mergedProperty2[U.UP_TOTAL_SPENT_TIME])
 }
+*/
