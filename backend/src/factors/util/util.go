@@ -260,6 +260,42 @@ func SecondsToHMSString(totalSeconds int64) string {
 	return fmt.Sprintf("%d hrs %d mins %d secs", hours, minutes, seconds)
 }
 
+func Min(a int64, b int64) int64 {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func Max(a int64, b int64) int64 {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+// returns a string of ('?'), ... values of given batchSize
+func GetValuePlaceHolder(batchSize int) string {
+
+	concatenatedIds := ""
+	for i := 0; i < batchSize; i++ {
+		concatenatedIds = concatenatedIds + " (?),"
+	}
+	// removing that extra ',' at end
+	concatenatedIds = concatenatedIds[0 : len(concatenatedIds)-1]
+	return concatenatedIds
+}
+
+// returns a interface list from given string list
+func GetInterfaceList(list []string) []interface{} {
+
+	listInterface := make([]interface{}, len(list))
+	for i, v := range list {
+		listInterface[i] = v
+	}
+	return listInterface
+}
+
 // GetStringListAsBatch - Splits string list into multiple lists.
 func GetStringListAsBatch(list []string, batchSize int) [][]string {
 	batchList := make([][]string, 0, 0)
