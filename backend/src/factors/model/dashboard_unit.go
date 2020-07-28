@@ -347,17 +347,17 @@ func CacheDashboardUnit(projectID uint64, dashboardUnit DashboardUnit, waitGroup
 		return
 	}
 
-	baseQuery, err := DecodeQueryForClass(dashboardUnit.Query, query.Class)
-	if err != nil {
-		logCtx.WithError(err).Errorf("Error decoding query")
-		return
-	}
-
 	var unitWaitGroup sync.WaitGroup
+	unitWaitGroup.Add(len(U.QueryDateRangePresets))
 	for _, rangeFunction := range U.QueryDateRangePresets {
 		from, to := rangeFunction()
+		// Create a new baseQuery instance every time to avoid overwriting from, to values in routines.
+		baseQuery, err := DecodeQueryForClass(dashboardUnit.Query, query.Class)
+		if err != nil {
+			logCtx.WithError(err).Errorf("Error decoding query")
+			return
+		}
 		baseQuery.SetQueryDateRange(from, to)
-		unitWaitGroup.Add(1)
 		go cacheDashboardUnitForDateRange(projectID, dashboardUnit.DashboardId, dashboardUnit.ID, baseQuery, &unitWaitGroup)
 	}
 	unitWaitGroup.Wait()
