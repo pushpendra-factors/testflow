@@ -1275,20 +1275,28 @@ func ShouldIgnoreItreeProperty(propertyName string) bool {
 
 func SanitizeProperties(properties *PropertiesMap) {
 	for k, v := range *properties {
-		//checking if key ends with 'url'
+		// checking if key ends with 'url'
 		if strings.HasSuffix(k, "url") {
 			(*properties)[k] = strings.TrimSuffix(v.(string), "/")
 		}
 	}
 }
-func SanitizePropertiesJsonb(properties *postgres.Jsonb) *postgres.Jsonb {
-	propertiesMap, _ := DecodePostgresJsonb(properties)
-	for k, v := range *propertiesMap {
-		//checking if key ends with 'url'
-		if strings.HasSuffix(k, "url") {
-			(*propertiesMap)[k] = strings.TrimSuffix(v.(string), "/")
-		}
+
+func SanitizePropertiesJsonb(propertiesJsonb *postgres.Jsonb) *postgres.Jsonb {
+	propertiesMap, err := DecodePostgresJsonbAsPropertiesMap(propertiesJsonb)
+	if err != nil {
+		log.WithError(err).Error("Failed to decode JSON to sanitize properties.")
+		return propertiesJsonb
 	}
-	propertiesJsonb, _ := EncodeToPostgresJsonb(propertiesMap)
+
+	SanitizeProperties(propertiesMap)
+
+	propertiesJsonMap := map[string]interface{}(*propertiesMap)
+	propertiesJsonb, err = EncodeToPostgresJsonb(&propertiesJsonMap)
+	if err != nil {
+		log.WithError(err).Error("Failed to encode sanitized JSON.")
+		return propertiesJsonb
+	}
+
 	return propertiesJsonb
 }
