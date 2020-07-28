@@ -665,6 +665,7 @@ func OverwriteUserProperties(projectId uint64, userId string,
 		return http.StatusBadRequest
 	}
 
+	propertiesJsonb = U.SanitizePropertiesJsonb(propertiesJsonb)
 	db := C.GetServices().Db
 	if err := db.Model(&UserProperties{}).
 		Where("project_id = ? AND user_id = ? AND id = ?", projectId, userId, id).

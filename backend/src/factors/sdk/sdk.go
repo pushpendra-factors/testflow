@@ -349,6 +349,7 @@ func Track(projectId uint64, request *TrackPayload, skipSession bool) (int, *Tra
 	}
 	// Added IP to event properties for internal usage.
 	(*eventProperties)[U.EP_INTERNAL_IP] = clientIP
+	U.SanitizeProperties(eventProperties)
 
 	var userProperties *U.PropertiesMap
 

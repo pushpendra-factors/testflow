@@ -77,6 +77,7 @@ func createUserWithError(user *User) (*User, error) {
 	if err := db.Create(user).Error; err != nil {
 		return nil, err
 	}
+	user.Properties = *U.SanitizePropertiesJsonb(&user.Properties)
 
 	propertiesId, errCode := UpdateUserPropertiesByCurrentProperties(user.ProjectId, user.ID,
 		user.PropertiesId, &user.Properties, user.JoinTimestamp)
@@ -135,6 +136,7 @@ func UpdateUser(projectId uint64, id string, user *User, updateTimestamp int64) 
 		return nil, http.StatusInternalServerError
 	}
 
+	user.Properties = *U.SanitizePropertiesJsonb(&user.Properties)
 	_, errCode := UpdateUserProperties(projectId, id, &user.Properties, updateTimestamp)
 	if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
 		return nil, http.StatusInternalServerError

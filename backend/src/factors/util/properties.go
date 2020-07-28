@@ -1272,3 +1272,23 @@ func ShouldIgnoreItreeProperty(propertyName string) bool {
 	}
 	return IsInternalEventProperty(&propertyName) || IsInternalUserProperty(&propertyName)
 }
+
+func SanitizeProperties(properties *PropertiesMap) {
+	for k, v := range *properties {
+		//checking if key ends with 'url'
+		if strings.HasSuffix(k, "url") {
+			(*properties)[k] = strings.TrimSuffix(v.(string), "/")
+		}
+	}
+}
+func SanitizePropertiesJsonb(properties *postgres.Jsonb) *postgres.Jsonb {
+	propertiesMap, _ := DecodePostgresJsonb(properties)
+	for k, v := range *propertiesMap {
+		//checking if key ends with 'url'
+		if strings.HasSuffix(k, "url") {
+			(*propertiesMap)[k] = strings.TrimSuffix(v.(string), "/")
+		}
+	}
+	propertiesJsonb, _ := EncodeToPostgresJsonb(propertiesMap)
+	return propertiesJsonb
+}

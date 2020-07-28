@@ -105,6 +105,7 @@ func TestAddSession(t *testing.T) {
 	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 30, 1)
 	assert.Nil(t, err)
 
+	U.SanitizeProperties(&trackEventProperties)
 	sessionEvent1 := assertAssociatedSession(t, project.ID, []string{eventId, skipSessionEventId},
 		[]string{skipSessionEventId}, "Session 1")
 	// session event properties added from event properties.
@@ -212,6 +213,7 @@ func TestAddSession(t *testing.T) {
 
 	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 30, 1)
 	assert.Nil(t, err)
+	U.SanitizeProperties(&trackEventProperties2)
 
 	// should have continue session for event 1 and 2. should have created new session for
 	// event 3 and 4 because of inactivity.
@@ -238,6 +240,8 @@ func TestAddSession(t *testing.T) {
 	// event properties of new session created after inactivity.
 	lsEventProperties2, err := U.DecodePostgresJsonb(&sessionEvent2.Properties)
 	assert.Nil(t, err)
+
+	U.SanitizeProperties(&trackEventProperties4)
 	// should have intial event's referrer, before continuing session.
 	assert.Equal(t, trackEventProperties3[U.EP_REFERRER], (*lsEventProperties2)[U.SP_INITIAL_REFERRER])
 	// should have lastest event's page_url after continuing session.

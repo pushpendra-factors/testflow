@@ -169,8 +169,8 @@ func CreateEvent(event *Event) (*Event, int) {
 		logCtx.WithField("eventTimestamp", event.Timestamp).WithError(err).Error(
 			"Adding day of week and hour of day properties failed")
 	}
+	eventPropsJSONb = U.SanitizePropertiesJsonb(eventPropsJSONb)
 	event.Properties = *eventPropsJSONb
-
 	// Init properties updated timestamp with event timestamp.
 	event.PropertiesUpdatedTimestamp = event.Timestamp
 
@@ -485,6 +485,7 @@ func UpdateEventProperties(projectId uint64, id string,
 	if errCode != http.StatusFound {
 		return errCode
 	}
+	U.SanitizeProperties(properties)
 
 	overwriteExistingProperties := false
 	propertiesLastUpdatedAt := event.PropertiesUpdatedTimestamp
@@ -654,7 +655,6 @@ func createSessionEvent(projectId uint64, userId string, sessionEventNameId uint
 	*/
 
 	logCtx := log.WithField("project_id", projectId).WithField("user_id", userId)
-
 	sessionEventProps := U.GetSessionProperties(isFirstSession, eventProperties, userProperties)
 	sessionPropsJson, err := json.Marshal(sessionEventProps)
 	if err != nil {
@@ -778,6 +778,7 @@ func OverwriteEventProperties(projectId uint64, userId string, eventId string,
 	if newEventProperties == nil {
 		return http.StatusBadRequest
 	}
+	newEventProperties = U.SanitizePropertiesJsonb(newEventProperties)
 
 	db := C.GetServices().Db
 	if err := db.Model(&Event{}).Where("project_id = ? AND user_id = ? AND id = ?",
