@@ -122,7 +122,8 @@ func getWebAnalyticsEnabledProjectIDs() ([]uint64, int) {
 	db := C.GetServices().Db
 
 	var projectIDs []uint64
-	rows, err := db.Raw("SELECT distinct(project_id) FROM dashboards WHERE name = ?", DefaultDashboardWebsiteAnalytics).Rows()
+	rows, err := db.Raw("SELECT distinct(project_id) FROM dashboards WHERE name = ?",
+		DefaultDashboardWebsiteAnalytics).Rows()
 	if err != nil {
 		log.WithError(err).Error("Error getting web analytics enabled project ids")
 		return projectIDs, http.StatusInternalServerError
@@ -152,7 +153,9 @@ func getWebAnalyticsDashboardIDForProject(projectID uint64) (uint64, int) {
 	db := C.GetServices().Db
 
 	var dashboardUnit DashboardUnit
-	if err := db.Where("project_id = ? AND query->>'cl' = ?", projectID, QueryClassWeb).First(&dashboardUnit).Error; err != nil {
+	if err := db.Where("project_id = ? AND query->>'cl' = ?", projectID, QueryClassWeb).
+		First(&dashboardUnit).Error; err != nil {
+
 		if gorm.IsRecordNotFoundError(err) {
 			return 0, http.StatusNotFound
 		}
@@ -465,6 +468,9 @@ Query Explanations:
 */
 func ExecuteWebAnalyticsQueries(projectId uint64, queries *WebAnalyticsQueries) (
 	queryResultByName *map[string]WebAnalyticsQueryResult, errCode int) {
+
+	funcStartTimestamp := U.TimeNowUnix()
+
 	webAggrState := WebAnalyticsAggregate{}
 	queryResultByName = getResultByNameAsWebAnalyticsResult(&webAggrState)
 
@@ -480,6 +486,7 @@ func ExecuteWebAnalyticsQueries(projectId uint64, queries *WebAnalyticsQueries) 
 		return queryResultByName, http.StatusInternalServerError
 	}
 
+	queryStartTimestamp := U.TimeNowUnix()
 	// Todo: Select required properties directly and avoid JSON decode for each event?
 	selectStmnt := "events.id, events.project_id, COALESCE(users.customer_user_id, users.id) as user_id," + " " +
 		"events.properties, events.event_name_id, event_names.name as event_name, event_names.type as event_name_type"
@@ -498,6 +505,8 @@ func ExecuteWebAnalyticsQueries(projectId uint64, queries *WebAnalyticsQueries) 
 		return queryResultByName, http.StatusInternalServerError
 	}
 	defer rows.Close()
+
+	logCtx = logCtx.WithField("query_exec_time", U.TimeNowUnix()-queryStartTimestamp)
 
 	for rows.Next() {
 		var id string
@@ -546,6 +555,9 @@ func ExecuteWebAnalyticsQueries(projectId uint64, queries *WebAnalyticsQueries) 
 
 	queryResultByName = getResultByNameAsWebAnalyticsResult(&webAggrState)
 
+	logCtx.WithField("total_time_taken_in_secs", U.TimeNowUnix()-funcStartTimestamp).
+		Info("Executed web analytics query.")
+
 	// Todo: build query result by name using aggregates and return.
 	return queryResultByName, http.StatusOK
 }
@@ -568,7 +580,9 @@ func cacheWebsiteAnalyticsForProjectID(projectID uint64, queryNames []string, wa
 	dashboardWaitGroup.Wait()
 }
 
-func cacheWebsiteAnalyticsForDateRange(projectID, dashboardID uint64, from, to int64, queryNames []string, waitGroup *sync.WaitGroup) {
+func cacheWebsiteAnalyticsForDateRange(projectID, dashboardID uint64, from, to int64,
+	queryNames []string, waitGroup *sync.WaitGroup) {
+
 	defer waitGroup.Done()
 	if isWebAnalyticsDashboardAlreadyCached(projectID, dashboardID, from, to) {
 		return
@@ -586,7 +600,9 @@ func cacheWebsiteAnalyticsForDateRange(projectID, dashboardID uint64, from, to i
 	SetCacheResultForWebAnalyticsDashboard(*queryResultsByName, projectID, dashboardID, from, to)
 }
 
-func GetCacheResultForWebAnalyticsDashboard(projectID, dashboardID uint64, from, to int64) (WebAnalyticsCacheResult, int) {
+func GetCacheResultForWebAnalyticsDashboard(projectID, dashboardID uint64,
+	from, to int64) (WebAnalyticsCacheResult, int) {
+
 	var cacheResult WebAnalyticsCacheResult
 	if shouldSkipWindow(from, to) {
 		return cacheResult, http.StatusNotFound
@@ -638,7 +654,9 @@ func shouldSkipWindow(from, to int64) bool {
 	return false
 }
 
-func SetCacheResultForWebAnalyticsDashboard(result map[string]WebAnalyticsQueryResult, projectID, dashboardID uint64, from, to int64) {
+func SetCacheResultForWebAnalyticsDashboard(result map[string]WebAnalyticsQueryResult,
+	projectID, dashboardID uint64, from, to int64) {
+
 	if shouldSkipWindow(from, to) {
 		return
 	}
