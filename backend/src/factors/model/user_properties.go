@@ -497,17 +497,17 @@ func SanitizeAddTypeProperties(projectID uint64, users []User, propertiesMap *ma
 	if _, found := (*propertiesMap)[U.UP_SESSION_COUNT]; found {
 		sanitizedValue := float64(sessionCount)
 		logCtx.Infof("Updating value for $session_count from %v to %v", (*propertiesMap)[U.UP_SESSION_COUNT], sanitizedValue)
-		// (*propertiesMap)[U.UP_SESSION_COUNT] = sanitizedValue
+		(*propertiesMap)[U.UP_SESSION_COUNT] = sanitizedValue
 	}
 	if _, found := (*propertiesMap)[U.UP_PAGE_COUNT]; found {
 		sanitizedValue := float64(sessionCount * uint64(U.RandomIntInRange(1, 5))) // 1 to 5 pages.
 		logCtx.Infof("Updating value for $page_count from %v to %v", (*propertiesMap)[U.UP_PAGE_COUNT], sanitizedValue)
-		// (*propertiesMap)[U.UP_PAGE_COUNT] = sanitizedValue
+		(*propertiesMap)[U.UP_PAGE_COUNT] = sanitizedValue
 	}
 	if _, found := (*propertiesMap)[U.UP_TOTAL_SPENT_TIME]; found {
 		sanitizedValue := float64(sessionCount * uint64(U.RandomIntInRange(60, 300))) // 1 to 5 mins.
 		logCtx.Infof("Updating value for $session_spent_time from %v to %v", (*propertiesMap)[U.UP_TOTAL_SPENT_TIME], sanitizedValue)
-		// (*propertiesMap)[U.UP_TOTAL_SPENT_TIME] = sanitizedValue
+		(*propertiesMap)[U.UP_TOTAL_SPENT_TIME] = sanitizedValue
 	}
 }
 
