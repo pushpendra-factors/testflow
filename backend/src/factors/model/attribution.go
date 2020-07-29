@@ -146,6 +146,7 @@ func ExecuteAttributionQuery(projectId uint64, query *AttributionQuery) (*QueryR
 
 	result := &QueryResult{}
 	attributionData := make(map[string]*AttributionData)
+	logCtx := log.WithFields(log.Fields{"projectId": projectId})
 
 	projectSetting, errCode := GetProjectSetting(projectId)
 	if errCode != http.StatusFound {
@@ -179,6 +180,7 @@ func ExecuteAttributionQuery(projectId uint64, query *AttributionQuery) (*QueryR
 
 	// 2. Add website visitor information against the attribution key
 	addWebsiteVisitorsByEventName(attributionData, allSessionsByCoalesceId)
+	logCtx.Info("Done adding website visitor")
 
 	// 3. Using session data, do attribution based on given attribution methodology
 	userConversionAttributionKeyData, userLinkedFunnelEventData, err := mapUserConversionEventByAttributionKey(projectId, query,
@@ -186,16 +188,19 @@ func ExecuteAttributionQuery(projectId uint64, query *AttributionQuery) (*QueryR
 	if err != nil {
 		return nil, err
 	}
+	logCtx.Info("Done mapping user conversion by attribution key and linked event")
 
 	// Aggregate the user count based on UserId-AttributionKey-EventName mapping
 	addUpConversionEventCount(attributionData, userConversionAttributionKeyData)
 	addUpLinkedFunnelEventCount(query.LinkedEvents, attributionData, userConversionAttributionKeyData, userLinkedFunnelEventData)
+	logCtx.Info("Done adding user count for conversion event and linked event")
 
 	// 4. Add the performance information against the attribution key
 	currency, err := AddPerformanceReportByCampaign(projectId, attributionData, query.From, query.To, projectSetting.IntAdwordsCustomerAccountId)
 	if err != nil {
 		return nil, err
 	}
+	logCtx.Info("Done updating campaign performance data")
 
 	result.Rows = getRowsByMaps(attributionData, query)
 	result.Meta.Currency = currency
@@ -619,17 +624,21 @@ func AddPerformanceReportByCampaign(projectId uint64, attributionData map[string
 	logCtx := log.WithFields(log.Fields{"projectId": projectId, "range": fmt.Sprintf("%d - %d", from, to)})
 
 	// TODO (Anil) break this query after discussion
-	rows, err := db.Raw("select value->>'campaign_id' AS campaign_id,  value->>'campaign_name' AS campaign_name, "+
-		"SUM((value->>'impressions')::float) AS impressions, SUM((value->>'clicks')::float) AS clicks, "+
-		"SUM((value->>'cost')::float)/1000000 AS total_cost FROM adwords_documents "+
-		"where project_id = ? AND customer_account_id = ? AND type = ? AND timestamp between ? AND ? "+
-		"group by value->>'campaign_id', campaign_name", projectId, customerAccountId, 5, getDateOnlyFromTimestamp(from), getDateOnlyFromTimestamp(to)).Rows()
+	performanceQuery := "SELECT value->>'campaign_id' AS campaign_id,  value->>'campaign_name' AS campaign_name, " +
+		"SUM((value->>'impressions')::float) AS impressions, SUM((value->>'clicks')::float) AS clicks, " +
+		"SUM((value->>'cost')::float)/1000000 AS total_cost FROM adwords_documents " +
+		"where project_id = ? AND customer_account_id = ? AND type = ? AND timestamp between ? AND ? " +
+		"group by value->>'campaign_id', campaign_name"
+	rows, err := db.Raw(performanceQuery, projectId, customerAccountId, 5, getDateOnlyFromTimestamp(from), getDateOnlyFromTimestamp(to)).Rows()
+	logCtx.Info("Running adwords query: ", performanceQuery, projectId, customerAccountId, 5, getDateOnlyFromTimestamp(from), getDateOnlyFromTimestamp(to))
 
 	defer rows.Close()
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed.")
 		return "", err
 	}
+	values := 0
+	updated := 0
 	for rows.Next() {
 		var campaignName string
 		var campaignId string
@@ -640,13 +649,17 @@ func AddPerformanceReportByCampaign(projectId uint64, attributionData map[string
 			logCtx.WithError(err).Error("SQL Parse failed.")
 			continue
 		}
+		values++
 		if _, exists := attributionData[campaignId]; exists { // only matching campaign id is filled
+			updated++
 			attributionData[campaignId].Name = campaignName
 			attributionData[campaignId].Impressions = impressions
 			attributionData[campaignId].Clicks = clicks
 			attributionData[campaignId].Spend = spend
 		}
 	}
+	logCtx.Info("Found total rows = ", values)
+	logCtx.Info("Updated values   = ", updated)
 	currency, err := getAdwordsCurrency(projectId, customerAccountId, from, to)
 	if err != nil {
 		return "", err
@@ -661,18 +674,20 @@ func getDateOnlyFromTimestamp(timestamp int64) string {
 
 // Returns currency used for adwords customer_account_id
 func getAdwordsCurrency(projectId uint64, customerAccountId *string, from, to int64) (string, error) {
-	stmnt := "SELECT value->>'currency_code' AS currency FROM adwords_documents " +
+
+	queryCurrency := "SELECT value->>'currency_code' AS currency FROM adwords_documents " +
 		" WHERE project_id=? AND customer_account_id=? AND type=? AND timestamp BETWEEN ? AND ? " +
 		" ORDER BY timestamp DESC LIMIT 1"
 
 	logCtx := log.WithField("project_id", projectId)
 
 	db := C.GetServices().Db
-	rows, err := db.Raw(stmnt,
-		projectId, customerAccountId, 9, getDateOnlyFromTimestamp(from), getDateOnlyFromTimestamp(to)).Rows()
+	rows, err := db.Raw(queryCurrency, projectId, customerAccountId, 9, getDateOnlyFromTimestamp(from),
+		getDateOnlyFromTimestamp(to)).Rows()
+	logCtx.Info("Running Query for Currency as: ", queryCurrency, projectId, customerAccountId, getDateOnlyFromTimestamp(from))
 
 	if err != nil {
-		logCtx.WithError(err).Error("Failed to build meta for channel query result.")
+		logCtx.WithError(err).Error("Failed to build meta for attribution query result.")
 		return "", err
 	}
 	defer rows.Close()
@@ -684,6 +699,6 @@ func getAdwordsCurrency(projectId uint64, customerAccountId *string, from, to in
 			return "", err
 		}
 	}
-
+	logCtx.Info("Returning Currency as: ", currency)
 	return currency, nil
 }
