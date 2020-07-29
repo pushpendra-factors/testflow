@@ -669,12 +669,18 @@ func AddPerformanceReportByCampaign(projectId uint64, attributionData map[string
 			continue
 		}
 		values++
-		if _, exists := attributionData[campaignId]; exists { // only matching campaign id is filled
-			matchIds = append(matchIds, campaignId)
-			attributionData[campaignId].Name = campaignName
-			attributionData[campaignId].Impressions = impressions
-			attributionData[campaignId].Clicks = clicks
-			attributionData[campaignId].Spend = spend
+		matchingId := ""
+		if _, campaignIdFound := attributionData[campaignId]; campaignIdFound {
+			matchingId = campaignId
+		} else if _, campaignNameFound := attributionData[campaignName]; campaignNameFound {
+			matchingId = campaignName
+		}
+		if matchingId != "" {
+			matchIds = append(matchIds, matchingId)
+			attributionData[matchingId].Name = campaignName
+			attributionData[matchingId].Impressions = impressions
+			attributionData[matchingId].Clicks = clicks
+			attributionData[matchingId].Spend = spend
 		} else {
 			unMatchIds = append(unMatchIds, campaignId)
 		}
