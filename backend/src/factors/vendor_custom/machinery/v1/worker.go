@@ -244,11 +244,12 @@ func (worker *Worker) retryTaskExp(signature *tasks.Signature) error {
 		return fmt.Errorf("Set state to 'retry' for task %s returned error: %s", signature.UUID, err)
 	}
 
-	expRetryIn := time.Duration(math.Pow(2, float64(signature.RetryCount))) * time.Second
+	expRetryMin := math.Pow(2, float64(signature.RetryCount))
 	// maximum delay upto 10 days
-	if expRetryIn > 86400*10 {
-		expRetryIn = 86400 * 10
+	if expRetryMin > 1440*10 {
+		expRetryMin = 1440 * 10
 	}
+	expRetryIn := time.Duration(expRetryMin) * time.Minute
 
 	// Delay task by expRetryIn duration
 	eta := time.Now().UTC().Add(expRetryIn)
