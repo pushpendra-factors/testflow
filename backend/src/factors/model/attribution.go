@@ -212,7 +212,7 @@ func ExecuteAttributionQuery(projectId uint64, query *AttributionQuery) (*QueryR
 
 	start = time.Now()
 	// 4. Add the performance information against the attribution key
-	currency, err := AddPerformanceReportByCampaign(projectId, attributionData, query.From, query.To, projectSetting.IntAdwordsCustomerAccountId)
+	currency, err := AddPerformanceReportByCampaign(projectId, attributionData, query.From, query.To, (*projectSetting.IntAdwordsCustomerAccountId))
 	if err != nil {
 		return nil, err
 	}
@@ -636,7 +636,7 @@ func getKey(id1 string, id2 string) string {
 
 // Adds channel data to attributionData based on campaign id. Campaign id with no matching channel data is left with empty name parameter
 func AddPerformanceReportByCampaign(projectId uint64, attributionData map[string]*AttributionData, from, to int64,
-	customerAccountId *string) (string, error) {
+	customerAccountId string) (string, error) {
 	db := C.GetServices().Db
 
 	logCtx := log.WithFields(log.Fields{"projectId": projectId, "range": fmt.Sprintf("%d - %d", from, to)})
@@ -695,7 +695,7 @@ func getDateOnlyFromTimestamp(timestamp int64) string {
 }
 
 // Returns currency used for adwords customer_account_id
-func getAdwordsCurrency(projectId uint64, customerAccountId *string, from, to int64) (string, error) {
+func getAdwordsCurrency(projectId uint64, customerAccountId string, from, to int64) (string, error) {
 
 	queryCurrency := "SELECT value->>'currency_code' AS currency FROM adwords_documents " +
 		" WHERE project_id=? AND customer_account_id=? AND type=? AND timestamp BETWEEN ? AND ? " +
