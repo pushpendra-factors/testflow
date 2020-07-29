@@ -3,6 +3,7 @@ package machinery
 import (
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"os/signal"
 	"syscall"
@@ -177,6 +178,11 @@ func (worker *Worker) Process(signature *tasks.Signature) error {
 			return worker.retryTaskIn(signature, retriableErr.RetryIn())
 		}
 
+		_, ok = interface{}(err).(tasks.ErrRetryTaskExp)
+		if ok {
+			return worker.retryTaskExp(signature)
+		}
+
 		// Otherwise, execute default retry logic based on signature.RetryCount
 		// and signature.RetryTimeout values
 		if signature.RetryCount > 0 {
@@ -225,6 +231,31 @@ func (worker *Worker) retryTaskIn(signature *tasks.Signature, retryIn time.Durat
 	signature.ETA = &eta
 
 	log.WARNING.Printf("Task %s failed. Going to retry in %.0f seconds.", signature.UUID, retryIn.Seconds())
+
+	// Send the task back to the queue
+	_, err := worker.server.SendTask(signature)
+	return err
+}
+
+// taskRetryExp republishes the task to the queue with ETA of now + exponential increment upto 10 days
+func (worker *Worker) retryTaskExp(signature *tasks.Signature) error {
+	// Update task state to RETRY
+	if err := worker.server.GetBackend().SetStateRetry(signature); err != nil {
+		return fmt.Errorf("Set state to 'retry' for task %s returned error: %s", signature.UUID, err)
+	}
+
+	expRetryIn := time.Duration(math.Pow(2, float64(signature.RetryCount))) * time.Second
+	// maximum delay upto 10 days
+	if expRetryIn > 86400*10 {
+		expRetryIn = 86400 * 10
+	}
+
+	// Delay task by expRetryIn duration
+	eta := time.Now().UTC().Add(expRetryIn)
+	signature.ETA = &eta
+	signature.RetryCount++
+
+	log.WARNING.Printf("Task %s failed. Going for exponential retry in %.0f seconds.", signature.UUID, expRetryIn.Seconds())
 
 	// Send the task back to the queue
 	_, err := worker.server.SendTask(signature)

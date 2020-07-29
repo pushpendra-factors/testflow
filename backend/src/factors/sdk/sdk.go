@@ -215,7 +215,7 @@ func ProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, string,
 	if status == http.StatusNotFound || status == http.StatusInternalServerError {
 		logCtx.WithField("retry", "true").Info("Failed to process sdk request on sdk process queue. Retry.")
 		return http.StatusInternalServerError, "",
-			tasks.NewErrRetryTaskLater("RETRY__REQUEST_PROCESSING_FAILURE", 5*time.Minute)
+			tasks.NewErrRetryTaskExp("EXP_RETRY__REQUEST_PROCESSING_FAILURE")
 	}
 
 	return http.StatusOK, string(responseBytes), nil
