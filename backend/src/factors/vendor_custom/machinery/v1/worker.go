@@ -237,7 +237,7 @@ func (worker *Worker) retryTaskIn(signature *tasks.Signature, retryIn time.Durat
 	return err
 }
 
-// taskRetryExp republishes the task to the queue with ETA of now + exponential increment upto 10 days
+// retryTaskExp republishes the task to the queue with ETA of now + exponential increment upto 10 days
 func (worker *Worker) retryTaskExp(signature *tasks.Signature) error {
 	// Update task state to RETRY
 	if err := worker.server.GetBackend().SetStateRetry(signature); err != nil {
