@@ -144,6 +144,7 @@ func addHeadersByAttributionKey(result *QueryResult, query *AttributionQuery) {
  */
 func ExecuteAttributionQuery(projectId uint64, query *AttributionQuery) (*QueryResult, error) {
 
+	start := time.Now()
 	result := &QueryResult{}
 	attributionData := make(map[string]*AttributionData)
 	logCtx := log.WithFields(log.Fields{"projectId": projectId})
@@ -165,44 +166,58 @@ func ExecuteAttributionQuery(projectId uint64, query *AttributionQuery) (*QueryR
 		return nil, err
 	}
 
+	start = time.Now()
 	// 1. Get all the sessions (userId, attributionId, timestamp) for given period by attribution key
 	allSessions, userIdsWithSession, err := getAllTheSessions(projectId, sessionEventNameId,
 		query.LoopbackDays, query.From, query.To, query.AttributionKey)
+	logCtx.Info("Done getAllTheSessions, took time: ", time.Now().Sub(start))
 
+	start = time.Now()
 	// Map userId to COALESCE(users.customer_user_id,users.id)
 	userIdCoalUserIdMap, err := getCoalesceUsersFromList(userIdsWithSession, projectId)
 	if err != nil {
 		return nil, err
 	}
+	logCtx.Info("Done getCoalesceUsersFromList, took time: ", time.Now().Sub(start))
 
+	start = time.Now()
 	// update all sessions with coalesce userId
 	allSessionsByCoalesceId := mapAttributionFromUserIdToCoalUserId(allSessions, userIdCoalUserIdMap)
+	logCtx.Info("Done mapAttributionFromUserIdToCoalUserId, took time: ", time.Now().Sub(start))
 
+	start = time.Now()
 	// 2. Add website visitor information against the attribution key
 	addWebsiteVisitorsByEventName(attributionData, allSessionsByCoalesceId)
-	logCtx.Info("Done adding website visitor")
+	logCtx.Info("Done addWebsiteVisitorsByEventName, took time: ", time.Now().Sub(start))
 
+	start = time.Now()
 	// 3. Using session data, do attribution based on given attribution methodology
 	userConversionAttributionKeyData, userLinkedFunnelEventData, err := mapUserConversionEventByAttributionKey(projectId, query,
 		allSessionsByCoalesceId, conversionEventNameId, conversionAndFunnelEventNameIdList, eventNameIdToEventNameMap, userIdCoalUserIdMap)
 	if err != nil {
 		return nil, err
 	}
-	logCtx.Info("Done mapping user conversion by attribution key and linked event")
+	logCtx.Info("Done mapUserConversionEventByAttributionKey, took time: ", time.Now().Sub(start))
 
+	start = time.Now()
 	// Aggregate the user count based on UserId-AttributionKey-EventName mapping
 	addUpConversionEventCount(attributionData, userConversionAttributionKeyData)
+	logCtx.Info("Done addUpConversionEventCount, took time: ", time.Now().Sub(start))
+	start = time.Now()
 	addUpLinkedFunnelEventCount(query.LinkedEvents, attributionData, userConversionAttributionKeyData, userLinkedFunnelEventData)
-	logCtx.Info("Done adding user count for conversion event and linked event")
+	logCtx.Info("Done addUpLinkedFunnelEventCount, took time: ", time.Now().Sub(start))
 
+	start = time.Now()
 	// 4. Add the performance information against the attribution key
 	currency, err := AddPerformanceReportByCampaign(projectId, attributionData, query.From, query.To, projectSetting.IntAdwordsCustomerAccountId)
 	if err != nil {
 		return nil, err
 	}
-	logCtx.Info("Done updating campaign performance data")
+	logCtx.Info("Done AddPerformanceReportByCampaign, took time: ", time.Now().Sub(start))
 
+	start = time.Now()
 	result.Rows = getRowsByMaps(attributionData, query)
+	logCtx.Info("Done getRowsByMaps, took time: ", time.Now().Sub(start))
 	result.Meta.Currency = currency
 	return result, nil
 }
@@ -638,7 +653,8 @@ func AddPerformanceReportByCampaign(projectId uint64, attributionData map[string
 		return "", err
 	}
 	values := 0
-	updated := 0
+	matchIds := []string{}
+	unMatchIds := []string{}
 	for rows.Next() {
 		var campaignName string
 		var campaignId string
@@ -651,15 +667,18 @@ func AddPerformanceReportByCampaign(projectId uint64, attributionData map[string
 		}
 		values++
 		if _, exists := attributionData[campaignId]; exists { // only matching campaign id is filled
-			updated++
+			matchIds = append(matchIds, campaignId)
 			attributionData[campaignId].Name = campaignName
 			attributionData[campaignId].Impressions = impressions
 			attributionData[campaignId].Clicks = clicks
 			attributionData[campaignId].Spend = spend
+		} else {
+			unMatchIds = append(unMatchIds, campaignId)
 		}
 	}
 	logCtx.Info("Found total rows = ", values)
-	logCtx.Info("Updated values   = ", updated)
+	logCtx.Info("Updated campaignIds, matched = ", len(matchIds), matchIds)
+	logCtx.Info("UnMatched campaignIds = ", len(unMatchIds), unMatchIds)
 	currency, err := getAdwordsCurrency(projectId, customerAccountId, from, to)
 	if err != nil {
 		return "", err
