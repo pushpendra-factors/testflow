@@ -165,12 +165,15 @@ func ExecuteAttributionQuery(projectId uint64, query *AttributionQuery) (*QueryR
 	if err != nil {
 		return nil, err
 	}
+	if conversionAndFunnelEventNameIdList == nil {
+		return result, nil
+	}
 
 	start = time.Now()
 	// 1. Get all the sessions (userId, attributionId, timestamp) for given period by attribution key
 	allSessions, userIdsWithSession, err := getAllTheSessions(projectId, sessionEventNameId,
 		query.LoopbackDays, query.From, query.To, query.AttributionKey)
-	logCtx.Info("Done getAllTheSessions, took time: ", time.Now().Sub(start))
+	logCtx.WithFields(log.Fields{"Purpose": "Attribution"}).Info("Done getAllTheSessions, took time: ", time.Now().Sub(start))
 
 	start = time.Now()
 	// Map userId to COALESCE(users.customer_user_id,users.id)
@@ -178,17 +181,17 @@ func ExecuteAttributionQuery(projectId uint64, query *AttributionQuery) (*QueryR
 	if err != nil {
 		return nil, err
 	}
-	logCtx.Info("Done getCoalesceUsersFromList, took time: ", time.Now().Sub(start))
+	logCtx.WithFields(log.Fields{"Purpose": "Attribution"}).Info("Done getCoalesceUsersFromList, took time: ", time.Now().Sub(start))
 
 	start = time.Now()
 	// update all sessions with coalesce userId
 	allSessionsByCoalesceId := mapAttributionFromUserIdToCoalUserId(allSessions, userIdCoalUserIdMap)
-	logCtx.Info("Done mapAttributionFromUserIdToCoalUserId, took time: ", time.Now().Sub(start))
+	logCtx.WithFields(log.Fields{"Purpose": "Attribution"}).Info("Done mapAttributionFromUserIdToCoalUserId, took time: ", time.Now().Sub(start))
 
 	start = time.Now()
 	// 2. Add website visitor information against the attribution key
 	addWebsiteVisitorsByEventName(attributionData, allSessionsByCoalesceId)
-	logCtx.Info("Done addWebsiteVisitorsByEventName, took time: ", time.Now().Sub(start))
+	logCtx.WithFields(log.Fields{"Purpose": "Attribution"}).Info("Done addWebsiteVisitorsByEventName, took time: ", time.Now().Sub(start))
 
 	start = time.Now()
 	// 3. Using session data, do attribution based on given attribution methodology
@@ -197,15 +200,15 @@ func ExecuteAttributionQuery(projectId uint64, query *AttributionQuery) (*QueryR
 	if err != nil {
 		return nil, err
 	}
-	logCtx.Info("Done mapUserConversionEventByAttributionKey, took time: ", time.Now().Sub(start))
+	logCtx.WithFields(log.Fields{"Purpose": "Attribution"}).Info("Done mapUserConversionEventByAttributionKey, took time: ", time.Now().Sub(start))
 
 	start = time.Now()
 	// Aggregate the user count based on UserId-AttributionKey-EventName mapping
 	addUpConversionEventCount(attributionData, userConversionAttributionKeyData)
-	logCtx.Info("Done addUpConversionEventCount, took time: ", time.Now().Sub(start))
+	logCtx.WithFields(log.Fields{"Purpose": "Attribution"}).Info("Done addUpConversionEventCount, took time: ", time.Now().Sub(start))
 	start = time.Now()
 	addUpLinkedFunnelEventCount(query.LinkedEvents, attributionData, userConversionAttributionKeyData, userLinkedFunnelEventData)
-	logCtx.Info("Done addUpLinkedFunnelEventCount, took time: ", time.Now().Sub(start))
+	logCtx.WithFields(log.Fields{"Purpose": "Attribution"}).Info("Done addUpLinkedFunnelEventCount, took time: ", time.Now().Sub(start))
 
 	start = time.Now()
 	// 4. Add the performance information against the attribution key
@@ -213,11 +216,11 @@ func ExecuteAttributionQuery(projectId uint64, query *AttributionQuery) (*QueryR
 	if err != nil {
 		return nil, err
 	}
-	logCtx.Info("Done AddPerformanceReportByCampaign, took time: ", time.Now().Sub(start))
+	logCtx.WithFields(log.Fields{"Purpose": "Attribution"}).Info("Done AddPerformanceReportByCampaign, took time: ", time.Now().Sub(start))
 
 	start = time.Now()
 	result.Rows = getRowsByMaps(attributionData, query)
-	logCtx.Info("Done getRowsByMaps, took time: ", time.Now().Sub(start))
+	logCtx.WithFields(log.Fields{"Purpose": "Attribution"}).Info("Done getRowsByMaps, took time: ", time.Now().Sub(start))
 	result.Meta.Currency = currency
 	return result, nil
 }
@@ -645,7 +648,7 @@ func AddPerformanceReportByCampaign(projectId uint64, attributionData map[string
 		"where project_id = ? AND customer_account_id = ? AND type = ? AND timestamp between ? AND ? " +
 		"group by value->>'campaign_id', campaign_name"
 	rows, err := db.Raw(performanceQuery, projectId, customerAccountId, 5, getDateOnlyFromTimestamp(from), getDateOnlyFromTimestamp(to)).Rows()
-	logCtx.Info("Running adwords query: ", performanceQuery, projectId, customerAccountId, 5, getDateOnlyFromTimestamp(from), getDateOnlyFromTimestamp(to))
+	logCtx.WithFields(log.Fields{"Purpose": "Attribution"}).Info("Running adwords query: ", performanceQuery, projectId, customerAccountId, 5, getDateOnlyFromTimestamp(from), getDateOnlyFromTimestamp(to))
 
 	defer rows.Close()
 	if err != nil {
@@ -676,9 +679,9 @@ func AddPerformanceReportByCampaign(projectId uint64, attributionData map[string
 			unMatchIds = append(unMatchIds, campaignId)
 		}
 	}
-	logCtx.Info("Found total rows = ", values)
-	logCtx.Info("Updated campaignIds, matched = ", len(matchIds), matchIds)
-	logCtx.Info("UnMatched campaignIds = ", len(unMatchIds), unMatchIds)
+	logCtx.WithFields(log.Fields{"Purpose": "Attribution"}).Info("Found total rows = ", values)
+	logCtx.WithFields(log.Fields{"Purpose": "Attribution"}).Info("Updated campaignIds, matched = ", len(matchIds), matchIds)
+	logCtx.WithFields(log.Fields{"Purpose": "Attribution"}).Info("UnMatched campaignIds = ", len(unMatchIds), unMatchIds)
 	currency, err := getAdwordsCurrency(projectId, customerAccountId, from, to)
 	if err != nil {
 		return "", err
@@ -703,7 +706,7 @@ func getAdwordsCurrency(projectId uint64, customerAccountId *string, from, to in
 	db := C.GetServices().Db
 	rows, err := db.Raw(queryCurrency, projectId, customerAccountId, 9, getDateOnlyFromTimestamp(from),
 		getDateOnlyFromTimestamp(to)).Rows()
-	logCtx.Info("Running Query for Currency as: ", queryCurrency, projectId, customerAccountId, getDateOnlyFromTimestamp(from))
+	logCtx.WithFields(log.Fields{"Purpose": "Attribution"}).Info("Running Query for Currency as: ", queryCurrency, projectId, customerAccountId, getDateOnlyFromTimestamp(from))
 
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to build meta for attribution query result.")
@@ -718,6 +721,6 @@ func getAdwordsCurrency(projectId uint64, customerAccountId *string, from, to in
 			return "", err
 		}
 	}
-	logCtx.Info("Returning Currency as: ", currency)
+	logCtx.WithFields(log.Fields{"Purpose": "Attribution"}).Info("Returning Currency as: ", currency)
 	return currency, nil
 }
