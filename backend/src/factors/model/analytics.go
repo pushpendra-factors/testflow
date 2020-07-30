@@ -163,6 +163,9 @@ var groupByTimestampTypes = []string{
 	GroupByTimestampHour,
 }
 
+// UserPropertyGroupByPresent Sent from frontend for breakdown on latest user property.
+const UserPropertyGroupByPresent string = "$Present"
+
 func (query *Query) GetGroupByTimestamp() string {
 	switch query.GroupByTimestamp.(type) {
 	case bool:
@@ -541,6 +544,30 @@ func filterGroupPropsByType(gp []QueryGroupByProperty, entity string) []QueryGro
 		}
 	}
 	return groupProps
+}
+
+func removeEventSpecificUserGroupBys(groupBys []QueryGroupByProperty) []QueryGroupByProperty {
+	filteredProps := make([]QueryGroupByProperty, 0)
+	for _, prop := range groupBys {
+		if prop.EventNameIndex != 0 {
+			// For $Present, event name index is not set and is default 0.
+			continue
+		}
+		filteredProps = append(filteredProps, prop)
+	}
+	return filteredProps
+}
+
+func removePresentPropertiesGroupBys(groupBys []QueryGroupByProperty) []QueryGroupByProperty {
+	filteredProps := make([]QueryGroupByProperty, 0)
+	for _, prop := range groupBys {
+		if prop.EventNameIndex == 0 && prop.EventName == UserPropertyGroupByPresent {
+			// For $Present, event name index is not set and is default 0.
+			continue
+		}
+		filteredProps = append(filteredProps, prop)
+	}
+	return filteredProps
 }
 
 func appendOrderByAggr(qStmnt string) string {
@@ -1154,24 +1181,23 @@ func buildEventsOccurrenceSingleEventQuery(projectId uint64, q Query) (string, [
 }
 
 // builds group keys for event properties for given step (event_with_properties).
-func buildEventGroupKeyForStep(eventWithProperties *QueryEventWithProperties,
-	groupProps []QueryGroupByProperty, ewpIndex int) (string, []interface{}, string) {
+func buildGroupKeyForStep(eventWithProperties *QueryEventWithProperties,
+	groupProps []QueryGroupByProperty, ewpIndex int) (string, []interface{}, string, bool) {
 
-	eventGroupProps := filterGroupPropsByType(groupProps, PropertyEntityEvent)
-
-	eventGroupPropsByStep := make([]QueryGroupByProperty, 0, 0)
-	for i := range eventGroupProps {
-		if eventGroupProps[i].EventNameIndex != 0 {
-			if eventGroupProps[i].EventNameIndex == ewpIndex {
-				eventGroupPropsByStep = append(eventGroupPropsByStep, eventGroupProps[i])
+	groupPropsByStep := make([]QueryGroupByProperty, 0, 0)
+	groupByUserProperties := false
+	for i := range groupProps {
+		if groupProps[i].EventNameIndex == ewpIndex &&
+			groupProps[i].EventName == eventWithProperties.Name {
+			groupPropsByStep = append(groupPropsByStep, groupProps[i])
+			if groupProps[i].Entity == PropertyEntityUser {
+				groupByUserProperties = true
 			}
-		} else if eventGroupProps[i].EventName == eventWithProperties.Name {
-			// If event name index not present like in Insights query.
-			eventGroupPropsByStep = append(eventGroupPropsByStep, eventGroupProps[i])
 		}
 	}
 
-	return buildGroupKeys(eventGroupPropsByStep)
+	groupSelect, groupSelectParams, groupKeys := buildGroupKeys(groupPropsByStep)
+	return groupSelect, groupSelectParams, groupKeys, groupByUserProperties
 }
 
 func buildNoneHandledGroupKeys(groupProps []QueryGroupByProperty) string {
@@ -1363,13 +1389,16 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q Query) (string, []interface
 				addSelect = addSelect + ", events.id::text as session_id"
 			}
 		}
-		egSelect, egParams, egGroupKeys := buildEventGroupKeyForStep(
+		egSelect, egParams, egGroupKeys, groupByUserProperties := buildGroupKeyForStep(
 			&q.EventsWithProperties[i], q.GroupByProperties, i+1)
 		if egSelect != "" {
 			addSelect = joinWithComma(addSelect, egSelect)
 		}
 		addParams = egParams
 		addJoinStatement := "JOIN users ON events.user_id=users.id"
+		if groupByUserProperties {
+			addJoinStatement += " JOIN user_properties on events.user_properties_id=user_properties.id"
+		}
 		addFilterEventsWithPropsQuery(projectId, &qStmnt, &qParams, q.EventsWithProperties[i], q.From, q.To,
 			"", stepName, addSelect, addParams, addJoinStatement, "", "coal_user_id, events.timestamp ASC")
 
@@ -1425,6 +1454,7 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q Query) (string, []interface
 	}
 
 	userGroupProps := filterGroupPropsByType(q.GroupByProperties, PropertyEntityUser)
+	userGroupProps = removeEventSpecificUserGroupBys(userGroupProps)
 	ugSelect, ugParams, _ := buildGroupKeys(userGroupProps)
 
 	properitesJoinStmnt := ""
@@ -1437,7 +1467,7 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q Query) (string, []interface
 	// select step counts, user properties and event properties group_keys.
 	stepFunnelSelect := joinWithComma(funnelCountAliases...)
 	stepFunnelSelect = joinWithComma(stepFunnelSelect, ugSelect)
-	eventGroupProps := filterGroupPropsByType(q.GroupByProperties, PropertyEntityEvent)
+	eventGroupProps := removePresentPropertiesGroupBys(q.GroupByProperties)
 	egGroupKeys := buildNoneHandledGroupKeys(eventGroupProps)
 	if egGroupKeys != "" {
 		stepFunnelSelect = joinWithComma(stepFunnelSelect, egGroupKeys)

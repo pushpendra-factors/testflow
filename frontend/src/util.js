@@ -55,39 +55,24 @@ export function prefixIndexToOptName(index, optName) {
     return +index + 1 + ". " + optName
 }
 
-export function getIndexIfExistsFromOptName(optName) {
-    var split = optName.split(" ")
-    var index = split.shift()
-    var eventName = split.join(" ")
-    if (index == optName || !eventName) {
-        return null
-    }
-    var indexSplit = index.split(".")
-    if (isNaN(indexSplit[0]) || indexSplit[1]) {
-        return null
-    }
-    return +indexSplit[0]
-}
-
 export function removeIndexIfExistsFromOptName(optName) {
     var split = optName.split(" ")
     var index = split.shift()
     var eventName = split.join(" ")
     if (index == optName || !eventName) {
         // No space in optName.
-        return optName
-    } else {
-        // Verify if index is of format '<number>.'
-        var indexSplit = index.split(".")
-        if (isNaN(indexSplit[0]) || indexSplit[1]) {
-            // First value is not a number or not empty value after '.'
-            return optName
-        }
+        return {index: NaN, name: optName}
     }
-    return eventName
+    // Verify if index is of format '<number>.'
+    var indexSplit = index.split(".")
+    if (isNaN(indexSplit[0]) || indexSplit[1]) {
+        // First value is not a number or not empty value after '.'
+        return {index: NaN, name: optName}
+    }
+    return {index: +indexSplit[0], name: eventName}
 }
 
-export function makeSelectOpts(values, prefixIndex = false) {
+export function makeSelectOpts(values, prefixIndex = false, addNow = false) {
     var opts = [];
     for(let i in values) {
         if (prefixIndex) {
@@ -96,6 +81,9 @@ export function makeSelectOpts(values, prefixIndex = false) {
         } else {
             opts.push({label: values[i], value: values[i]});
         }
+    }
+    if (addNow) {
+        opts.unshift({label: '$Present', value: '$Present'})
     }
     return opts
 }
