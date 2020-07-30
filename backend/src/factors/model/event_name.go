@@ -68,7 +68,7 @@ func isDuplicateFilterExprError(err error) bool {
 }
 
 func CreateOrGetEventName(eventName *EventName) (*EventName, int) {
-	db := C.GetServices().Db
+	logCtx := log.WithFields(log.Fields{"event_name": &eventName})
 
 	// Validation.
 	if eventName.ProjectId == 0 || !isValidType(eventName.Type) ||
@@ -78,21 +78,23 @@ func CreateOrGetEventName(eventName *EventName) (*EventName, int) {
 	}
 
 	eventName.Deleted = false
+
+	db := C.GetServices().Db
 	if err := db.FirstOrInit(&eventName, &eventName).Error; err != nil {
-		log.WithFields(log.Fields{"eventName": &eventName}).WithError(err).Error("CreateEventName Failed")
+		logCtx.WithError(err).Error("Failed to create event_name.")
 		return nil, http.StatusInternalServerError
 	}
 
 	// Checks new record or not.
 	if !eventName.CreatedAt.IsZero() {
-		log.WithFields(log.Fields{"eventName": &eventName}).Info("Event Name already exists.")
 		return eventName, http.StatusConflict
 	} else if err := db.Create(eventName).Error; err != nil {
-		log.WithFields(log.Fields{"eventName": &eventName}).WithError(err).Error("CreateEventName Failed")
-		// Todo(Dinesh): should return validation errors along with status.
+		logCtx.WithError(err).Error("Failed to create event_name.")
+
 		if isDuplicateFilterExprError(err) {
 			return nil, http.StatusBadRequest
 		}
+
 		return nil, http.StatusInternalServerError
 	}
 

@@ -207,12 +207,9 @@ func ProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, string,
 	responseBytes, _ := json.Marshal(response)
 	logCtx = logCtx.WithField("status", status).WithField("response", string(responseBytes))
 
-	// Log for analysing queue process status.
-	logCtx.WithField("processed", "true").Info("Processed sdk request.")
-
 	// Do not retry on below conditions.
 	if status == http.StatusBadRequest || status == http.StatusNotAcceptable || status == http.StatusUnauthorized {
-		logCtx.Info("Failed to process sdk request permanantly.")
+		logCtx.WithField("processed", "true").Info("Failed to process sdk request permanantly.")
 		return float64(status), "", nil
 	}
 
@@ -221,8 +218,11 @@ func ProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, string,
 	if status == http.StatusNotFound || status == http.StatusInternalServerError {
 		logCtx.WithField("retry", "true").Info("Failed to process sdk request on sdk process queue. Retry.")
 		return http.StatusInternalServerError, "",
-			tasks.NewErrRetryTaskLater("RETRY__REQUEST_PROCESSING_FAILURE", 5*time.Minute)
+			tasks.NewErrRetryTaskLater("RETRY_REQUEST_PROCESSING_FAILURE", 5*time.Minute)
 	}
+
+	// Log for analysing queue process status.
+	logCtx.WithField("processed", "true").Info("Processed sdk request.")
 
 	return http.StatusOK, string(responseBytes), nil
 }
