@@ -1231,6 +1231,17 @@ func GetPropertyValueAsFloat64(value interface{}) (float64, error) {
 		return float64(value.(int32)), nil
 	case int64:
 		return float64(value.(int64)), nil
+	case string:
+		valueString := value.(string)
+		if valueString == "" {
+			return 0, nil
+		}
+
+		floatValue, err := strconv.ParseFloat(valueString, 64)
+		if err != nil {
+			return 0, err
+		}
+		return floatValue, err
 	default:
 		return 0, fmt.Errorf("invalid property value type %v", valueType)
 	}
