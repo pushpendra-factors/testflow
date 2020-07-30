@@ -164,7 +164,7 @@ var groupByTimestampTypes = []string{
 }
 
 // UserPropertyGroupByPresent Sent from frontend for breakdown on latest user property.
-const UserPropertyGroupByPresent string = "$Present"
+const UserPropertyGroupByPresent string = "$present"
 
 func (query *Query) GetGroupByTimestamp() string {
 	switch query.GroupByTimestamp.(type) {
@@ -550,7 +550,7 @@ func removeEventSpecificUserGroupBys(groupBys []QueryGroupByProperty) []QueryGro
 	filteredProps := make([]QueryGroupByProperty, 0)
 	for _, prop := range groupBys {
 		if prop.EventNameIndex != 0 {
-			// For $Present, event name index is not set and is default 0.
+			// For $present, event name index is not set and is default 0.
 			continue
 		}
 		filteredProps = append(filteredProps, prop)
@@ -562,7 +562,7 @@ func removePresentPropertiesGroupBys(groupBys []QueryGroupByProperty) []QueryGro
 	filteredProps := make([]QueryGroupByProperty, 0)
 	for _, prop := range groupBys {
 		if prop.EventNameIndex == 0 && prop.EventName == UserPropertyGroupByPresent {
-			// For $Present, event name index is not set and is default 0.
+			// For $present, event name index is not set and is default 0.
 			continue
 		}
 		filteredProps = append(filteredProps, prop)

@@ -17,6 +17,7 @@ const COLORS = [
 
 export const QUERY_TYPE_FACTOR = "factor";
 export const QUERY_TYPE_ANALYTICS = "analytics";
+export const USER_PROPERTY_GROUP_BY_PRESENT = "$present";
 
 export function isStaging() {
     return ENV === "staging";
@@ -83,7 +84,7 @@ export function makeSelectOpts(values, prefixIndex = false, addNow = false) {
         }
     }
     if (addNow) {
-        opts.unshift({label: '$Present', value: '$Present'})
+        opts.unshift({label: USER_PROPERTY_GROUP_BY_PRESENT, value: USER_PROPERTY_GROUP_BY_PRESENT})
     }
     return opts
 }

@@ -18,7 +18,7 @@ import BarChart from './BarChart';
 import TableBarChart from './TableBarChart';
 import FunnelChart from './FunnelChart';
 import { makeSelectOpts, removeIndexIfExistsFromOptName,
-  prefixIndexToOptName } from '../../util';
+  prefixIndexToOptName, USER_PROPERTY_GROUP_BY_PRESENT } from '../../util';
 
 // Channel query is a different kind of component linked to Query.
 import ChannelQuery from '../ChannelQuery/ChannelQuery';
@@ -385,7 +385,7 @@ class Query extends Component {
     }
 
     if (groupByType == PROPERTY_TYPE_USER) {
-      return {type: PROPERTY_TYPE_USER, name: '', eventName: '$Present'}
+      return {type: PROPERTY_TYPE_USER, name: '', eventName: USER_PROPERTY_GROUP_BY_PRESENT}
     }
 
     let defaultEventName = '';
