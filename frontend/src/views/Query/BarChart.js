@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import { Bar } from 'react-chartjs-2';
-import { CustomTooltips } from '@coreui/coreui-plugin-chartjs-custom-tooltips';
+import { CustomTooltips } from '../../common/custom-tooltips';
 
 import { getChartScaleWithSpace, isSingleCountResult } from '../../util';
 import { HEADER_COUNT, getYAxesStr } from './common';
