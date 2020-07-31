@@ -251,7 +251,7 @@ func (worker *Worker) retryTaskExp(signature *tasks.Signature) error {
 	}
 	retryInDuration := time.Duration(retryInMins) * time.Minute
 
-	// Delay task by expRetryIn duration
+	// Delay task by retryInDuration duration
 	eta := time.Now().UTC().Add(retryInDuration)
 	signature.ETA = &eta
 	signature.RetryCount++
