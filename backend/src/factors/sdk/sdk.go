@@ -116,7 +116,7 @@ func ProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, string,
 	// Todo(Dinesh): Add request_id for better tracing.
 
 	logCtx := log.WithFields(log.Fields{"queue": RequestQueue, "token": token,
-		"req_type": reqType, "req_payload": reqPayloadStr})
+		"req_type": reqType, "req_payload_str": reqPayloadStr})
 
 	var response interface{}
 	var status int
@@ -131,6 +131,7 @@ func ProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, string,
 				"Failed to unmarshal request payload on sdk process queue.")
 			return http.StatusInternalServerError, "", nil
 		}
+		logCtx = logCtx.WithField("req_payload", reqPayload)
 
 		status, response = TrackByToken(token, &reqPayload)
 
@@ -143,6 +144,7 @@ func ProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, string,
 				"Failed to unmarshal request payload on sdk process queue.")
 			return http.StatusInternalServerError, "", nil
 		}
+		logCtx = logCtx.WithField("req_payload", reqPayload)
 
 		status, response = IdentifyByToken(token, &reqPayload)
 
@@ -155,6 +157,7 @@ func ProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, string,
 				"Failed to unmarshal request payload on sdk process queue.")
 			return http.StatusInternalServerError, "", nil
 		}
+		logCtx = logCtx.WithField("req_payload", reqPayload)
 
 		status, response = AddUserPropertiesByToken(token, &reqPayload)
 
@@ -166,6 +169,7 @@ func ProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, string,
 				"Failed to unmarshal request payload on sdk process queue.")
 			return http.StatusInternalServerError, "", nil
 		}
+		logCtx = logCtx.WithField("req_payload", reqPayload)
 
 		status, response = UpdateEventPropertiesByToken(token, &reqPayload)
 
@@ -178,6 +182,7 @@ func ProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, string,
 				"Failed to unmarshal request payload on sdk process queue.")
 			return http.StatusInternalServerError, "", nil
 		}
+		logCtx = logCtx.WithField("req_payload", reqPayload)
 
 		status, response = AMPTrackByToken(token, &reqPayload)
 
@@ -190,6 +195,7 @@ func ProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, string,
 				"Failed to unmarshal request payload on sdk process queue.")
 			return http.StatusInternalServerError, "", nil
 		}
+		logCtx = logCtx.WithField("req_payload", reqPayload)
 
 		status, response = AMPUpdateEventPropertiesByToken(token, &reqPayload)
 
@@ -201,12 +207,9 @@ func ProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, string,
 	responseBytes, _ := json.Marshal(response)
 	logCtx = logCtx.WithField("status", status).WithField("response", string(responseBytes))
 
-	// Log for analysing queue process status.
-	logCtx.WithField("processed", "true").Info("Processed sdk request.")
-
 	// Do not retry on below conditions.
 	if status == http.StatusBadRequest || status == http.StatusNotAcceptable || status == http.StatusUnauthorized {
-		logCtx.Info("Failed to process sdk request permanantly.")
+		logCtx.WithField("processed", "true").Info("Failed to process sdk request permanantly.")
 		return float64(status), "", nil
 	}
 
@@ -217,6 +220,9 @@ func ProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, string,
 		return http.StatusInternalServerError, "",
 			tasks.NewErrRetryTaskExp("EXP_RETRY__REQUEST_PROCESSING_FAILURE")
 	}
+
+	// Log for analysing queue process status.
+	logCtx.WithField("processed", "true").Info("Processed sdk request.")
 
 	return http.StatusOK, string(responseBytes), nil
 }

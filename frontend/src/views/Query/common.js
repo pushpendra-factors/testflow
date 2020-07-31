@@ -52,6 +52,7 @@ export const DATE_RANGE_LAST_30_DAYS_LABEL = 'Last 30 days';
 export const DATE_RANGE_LAST_2_MIN_LABEL = 'Last 2 mins'
 export const DATE_RANGE_LAST_30_MIN_LABEL = 'Last 30 mins'
 
+export const LABEL_STYLE = { marginRight: '10px', fontWeight: '600', color: '#777' };
 
 export const DEFAULT_DATE_RANGE = {
   startDate: moment(new Date()).subtract(7, 'days').startOf('day').toDate(),

@@ -106,6 +106,11 @@ func TestDBCreateAndGetUser(t *testing.T) {
 	assert.NotNil(t, user)
 	// User should be create with given id.
 	assert.Equal(t, uuid, user.ID)
+
+	// Use an existing user_id to create. should get and return the user.
+	user, errCode = M.CreateUser(&M.User{ID: uuid, ProjectId: projectId})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotNil(t, user)
 }
 
 func TestDBGetUsers(t *testing.T) {

@@ -6,7 +6,7 @@ import {
   CardTitle,
 } from 'reactstrap';
 import { Bar } from 'react-chartjs-2';
-import { CustomTooltips } from '@coreui/coreui-plugin-chartjs-custom-tooltips';	
+import { CustomTooltips } from '../../common/custom-tooltips';	
 
 const barBackgroundColors = ['rgba(75,192,192,0.4)', 'rgba(255,99,132,0.2)'];
 const barBorderColors = ['rgba(75,192,192,1)', 'rgba(255,99,132,1)'];	

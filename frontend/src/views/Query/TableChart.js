@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import { Table } from 'reactstrap';
-import { isSingleCountResult } from '../../util';
+import { isSingleCountResult, getReadableValue } from '../../util';
 import {BootstrapTable, TableHeaderColumn} from 'react-bootstrap-table';
 import 'react-bootstrap-table/dist/react-bootstrap-table.min.css';
 
@@ -97,10 +97,11 @@ class TableChart extends Component {
       return (
         <Table className='animated fadeIn' style={{fontSize: '40px', textAlign: 'center', border: 'none', marginTop: '10px' }} >
           { this.tableHeader() }
-          <tbody> <span style={this.getCountStyleByProps()}> { result.rows[rowKeys[0]][0] } </span> </tbody>
+          <tbody> <span style={this.getCountStyleByProps()}> { getReadableValue(result.rows[rowKeys[0]][0]) } </span> </tbody>
         </Table>
       )
     }
+
     if (sortable){
       return (
       <BootstrapTable bodyStyle={{paddingBottom:"4px"}} containerStyle={{paddingBottom:"-2px"}} bordered={false} trStyle={{overflowWrap: 'break-word'}} containerClass='fapp-table animated fadeIn' data={this.getData()} options={{sortIndicator:true}} version="4">
@@ -115,7 +116,7 @@ class TableChart extends Component {
         let tds = cols.map((c, i) => {
           // Remove max width to allow larger col size for upto given initial no.of cols.
           let maxWidth = (this.props.bigWidthUptoCols && i < this.props.bigWidthUptoCols) ? null : '40px';
-          return <td style={{ maxWidth: maxWidth, overflowWrap: 'break-word' }}> { c } </td> 
+          return <td style={{ maxWidth: maxWidth, overflowWrap: 'break-word' }}> { getReadableValue(c) } </td>
         });
 
         if (this.props.compareWithQueryResult) {

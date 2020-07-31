@@ -18,7 +18,7 @@ import BarChart from './BarChart';
 import TableBarChart from './TableBarChart';
 import FunnelChart from './FunnelChart';
 import { makeSelectOpts, removeIndexIfExistsFromOptName,
-  prefixIndexToOptName, getIndexIfExistsFromOptName } from '../../util';
+  prefixIndexToOptName, USER_PROPERTY_GROUP_BY_PRESENT } from '../../util';
 
 // Channel query is a different kind of component linked to Query.
 import ChannelQuery from '../ChannelQuery/ChannelQuery';
@@ -30,7 +30,7 @@ import { PRESENTATION_BAR, PRESENTATION_LINE, PRESENTATION_TABLE,
   PRESENTATION_CARD, PRESENTATION_FUNNEL, PROPERTY_TYPE_EVENT,
   getDateRangeFromStoredDateRange, PROPERTY_LOGICAL_OP_OPTS,
   DEFAULT_DATE_RANGE, DEFINED_DATE_RANGES, getGroupByTimestampType, 
-  getQueryPeriod, convertFunnelResultForTable, sameDay
+  getQueryPeriod, convertFunnelResultForTable, sameDay, PROPERTY_TYPE_USER
 } from './common';
 import ClosableDateRangePicker from '../../common/ClosableDatePicker';
 import { fetchProjectEvents, runQuery } from '../../actions/projectsActions';
@@ -45,7 +45,7 @@ import {
 import Loading from '../../loading';
 import factorsai from '../../common/factorsaiObj';
 import { PROPERTY_TYPE_OPTS, USER_PREF_PROPERTY_TYPE_OPTS, 
-  PROPERTY_VALUE_TYPE_DATE_TIME,DASHBOARD_TYPE_WEB_ANALYTICS } from './common';
+  PROPERTY_VALUE_TYPE_DATE_TIME,DASHBOARD_TYPE_WEB_ANALYTICS, LABEL_STYLE } from './common';
 import insightsSVG from '../../assets/img/analytics/insights.svg';
 import funnelSVG from '../../assets/img/analytics/funnel.svg';
 import channelSVG from '../../assets/img/analytics/channel.svg';
@@ -58,7 +58,6 @@ const EVENTS_COND_OPTS = [
   { value: COND_ANY_GIVEN_EVENT, label: 'any' },
   { value: COND_ALL_GIVEN_EVENT, label: 'all' }
 ];
-const LABEL_STYLE = { marginRight: '10px', fontWeight: '600', color: '#777' };
 
 const QUERY_CLASS_INSIGHTS = 'insights';
 const QUERY_CLASS_FUNNEL = 'funnel';
@@ -379,14 +378,21 @@ class Query extends Component {
     this.setPropertyAttr(eventIndex, propertyIndex, 'valueType', type);
   }
 
-  getDefaultGroupByState() {
+  getDefaultGroupByState(groupByType = null) {
     let groupByOpts = this.getGroupByOpts();
+    if (!groupByType) {
+      groupByType = groupByOpts[0].value
+    }
+
+    if (groupByType == PROPERTY_TYPE_USER) {
+      return {type: PROPERTY_TYPE_USER, name: '', eventName: USER_PROPERTY_GROUP_BY_PRESENT}
+    }
 
     let defaultEventName = '';
     if (this.state.events.length > 0) 
       defaultEventName = this.state.events[0].name;
 
-    return { type: groupByOpts[0].value, name: '', eventName: defaultEventName };
+    return { type: groupByType, name: '', eventName: prefixIndexToOptName(0, defaultEventName) };
   }
 
   addGroupBy = () => {
@@ -403,9 +409,15 @@ class Query extends Component {
       let state = { ...prevState };
       state.groupBys = [ ...prevState.groupBys ];
       state.groupBys[groupByIndex][attr] = value;
-      if (attr == "type" && value == PROPERTY_TYPE_EVENT && this.shouldAddIndexPrefix()) {
-        state.groupBys[groupByIndex]["eventName"] = prefixIndexToOptName(0, state.groupBys[groupByIndex]["eventName"]);
-      }
+      return state;
+    })
+  }
+
+  setDefaultGroupByState(groupByIndex, groupByType) {
+    this.setState((prevState) => {
+      let state = { ...prevState };
+      state.groupBys = [ ...prevState.groupBys ];
+      state.groupBys[groupByIndex] = this.getDefaultGroupByState(groupByType);
       return state;
     })
   }
@@ -413,6 +425,7 @@ class Query extends Component {
   onGroupByTypeChange = (groupByIndex, option) => {
     this.setGroupByAttr(groupByIndex, 'type', option.value);
     this.setGroupByAttr(groupByIndex, 'name', "");
+    this.setDefaultGroupByState(groupByIndex, option.value)
   }
 
   onGroupByNameChange = (groupByIndex, option) => {
@@ -519,16 +532,12 @@ class Query extends Component {
         cGroupBy.en = groupBy.type;
 
         // add group by event name.
-        if (groupBy.type == PROPERTY_TYPE_EVENT && this.isEventNameRequiredForGroupBy() &&  
-          groupBy.eventName != '') {
-          if (this.shouldAddIndexPrefix()) {
-            cGroupBy.ena = removeIndexIfExistsFromOptName(groupBy.eventName);
-            let eni = getIndexIfExistsFromOptName(groupBy.eventName)
-            if (!isNaN(eni)) {
-              cGroupBy.eni = eni  // 1 valued index to distinguish in backend from default 0.
-            }
-          } else {
-            cGroupBy.ena = groupBy.eventName;
+        if (this.isEventNameRequiredForGroupBy() && groupBy.eventName != '') {
+          let nameWithIndex = removeIndexIfExistsFromOptName(groupBy.eventName);
+          cGroupBy.ena = nameWithIndex.name
+          // let eni = getIndexIfExistsFromOptName(groupBy.eventName)
+          if (!isNaN(nameWithIndex.index)) {
+            cGroupBy.eni = nameWithIndex.index  // 1 valued index to distinguish in backend from default 0.
           }
         }
         query.gbp.push(cGroupBy)

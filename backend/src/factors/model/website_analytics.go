@@ -1,6 +1,7 @@
 package model
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -41,6 +42,7 @@ type NamedQueryUnit struct {
 const QueryTypeNamed = "named_query"
 const DefaultDashboardWebsiteAnalytics = "Website Analytics"
 const topPageReportLimit = 50
+const defaultPrecision = 1
 
 // Named queries for website analytics.
 const (
@@ -60,7 +62,7 @@ var SkippableWindows = map[string]int64{
 	"30MIN": 1800,
 }
 
-// Default Website Analytics named queries and corresponding presentation.
+// DefaultWebAnalyticsQueries -  Named queries and corresponding presentation.
 var DefaultWebAnalyticsQueries = map[string]string{
 	QueryNameSessions:           PresentationCard,
 	QueryNameTotalPageViews:     PresentationCard,
@@ -79,7 +81,19 @@ type WebAnalyticsEvent struct {
 	ProjectID  uint64
 	UserID     string // coalsced user_id
 	IsSession  bool
-	Properties *map[string]interface{}
+	Properties *WebAnalyticsEventProperties
+}
+
+// WebAnalyticsEventProperties - Event Properties for web analytics.
+type WebAnalyticsEventProperties struct {
+	PageURL       string
+	PageSpentTime string
+
+	// session properties.
+	SessionSpentTime      string
+	SessionPageCount      string
+	SessionInitialPageURL string
+	SessionLatestPageURL  string
 }
 
 // WebAnalyticsResultAggregate - Supporting aggregates for
@@ -269,7 +283,7 @@ func buildWebAnalyticsAggregate(webEvent *WebAnalyticsEvent, aggrState *WebAnaly
 
 	// non-session page event aggregates.
 	if !webEvent.IsSession {
-		pageURL := U.GetPropertyValueAsString((*webEvent.Properties)[U.EP_PAGE_URL])
+		pageURL := U.GetPropertyValueAsString(webEvent.Properties.PageURL)
 		if pageURL == "" {
 			logCtx.Error("Missing page_url property on event.")
 			return http.StatusInternalServerError
@@ -288,7 +302,7 @@ func buildWebAnalyticsAggregate(webEvent *WebAnalyticsEvent, aggrState *WebAnaly
 
 		aggrState.PageAggregates[pageURL].NoOfPageViews++
 
-		pageSpentTime, err := U.GetPropertyValueAsFloat64((*webEvent.Properties)[U.EP_PAGE_SPENT_TIME])
+		pageSpentTime, err := U.GetPropertyValueAsFloat64(webEvent.Properties.PageSpentTime)
 		if err != nil {
 			logCtx.WithError(err).
 				Error("Failed converting page_spent_time property value to float64.")
@@ -310,14 +324,14 @@ func buildWebAnalyticsAggregate(webEvent *WebAnalyticsEvent, aggrState *WebAnaly
 
 	aggrState.NoOfSessions++
 
-	sessionSpentTime, err := U.GetPropertyValueAsFloat64((*webEvent.Properties)[U.SP_SPENT_TIME])
+	sessionSpentTime, err := U.GetPropertyValueAsFloat64(webEvent.Properties.SessionSpentTime)
 	if err != nil {
 		logCtx.WithError(err).
 			Error("Failed converting session_spent_time property value to float64.")
 	}
 	aggrState.SessionDuration += sessionSpentTime
 
-	sessionPageCount, err := U.GetPropertyValueAsFloat64((*webEvent.Properties)[U.SP_PAGE_COUNT])
+	sessionPageCount, err := U.GetPropertyValueAsFloat64(webEvent.Properties.SessionPageCount)
 	if err != nil {
 		logCtx.WithError(err).
 			Error("Failed converting session_page_count property value to float64.")
@@ -328,7 +342,7 @@ func buildWebAnalyticsAggregate(webEvent *WebAnalyticsEvent, aggrState *WebAnaly
 		aggrState.NoOfBouncedSessions++
 	}
 
-	sessionInitialPageURL := U.GetPropertyValueAsString((*webEvent.Properties)[U.SP_INITIAL_PAGE_URL])
+	sessionInitialPageURL := U.GetPropertyValueAsString(webEvent.Properties.SessionInitialPageURL)
 	if sessionInitialPageURL == "" {
 		logCtx.Error("Missing $initial_page_url on session on build_web_analytic_aggregate.")
 		return http.StatusInternalServerError
@@ -344,7 +358,7 @@ func buildWebAnalyticsAggregate(webEvent *WebAnalyticsEvent, aggrState *WebAnaly
 		aggrState.PageAggregates[sessionInitialPageURL].NoOfBouncedEntrances++
 	}
 
-	sessionLatestPageURL := U.GetPropertyValueAsString((*webEvent.Properties)[U.SP_LATEST_PAGE_URL])
+	sessionLatestPageURL := U.GetPropertyValueAsString(webEvent.Properties.SessionLatestPageURL)
 	if sessionLatestPageURL != "" &&
 		sessionInitialPageURL != "" &&
 		sessionInitialPageURL == sessionLatestPageURL {
@@ -370,9 +384,9 @@ func getTopPagesReportAsWebAnalyticsResult(
 
 	rows := make([][]interface{}, 0, len(webAggr.PageAggregates))
 	for url, aggr := range webAggr.PageAggregates {
-		var avgPageSpentTimeOfPage string
+		var avgPageSpentTimeOfPage float64
 		if aggr.NoOfPageViews > 0 {
-			avgPageSpentTimeOfPage = fmt.Sprintf("%0.1f", aggr.TotalSpentTime/float64(aggr.NoOfPageViews))
+			avgPageSpentTimeOfPage, _ = U.FloatRoundOffWithPrecision(aggr.TotalSpentTime/float64(aggr.NoOfPageViews), defaultPrecision)
 		}
 
 		row := []interface{}{
@@ -414,6 +428,23 @@ func fillValueAsWebAnalyticsResult(queryResultByName *map[string]WebAnalyticsQue
 	(*queryResultByName)[queryName] = webAResult
 }
 
+// Converts seconds into hh mm ss format
+func getFormattedTime(totalSeconds int64) string {
+	fmtTime := ""
+	if totalSeconds > 3600 {
+		fmtTime = fmt.Sprintf("%dh ", totalSeconds/3600)
+	}
+	if totalSeconds > 60 {
+		fmtTime = fmtTime + fmt.Sprintf("%dm ", (totalSeconds%3600)/60)
+	}
+	if totalSeconds > 0 {
+		fmtTime = fmtTime + fmt.Sprintf("%ds", totalSeconds%60)
+	} else {
+		return "0s"
+	}
+	return fmtTime
+}
+
 func getResultByNameAsWebAnalyticsResult(webAggrState *WebAnalyticsAggregate) (
 	queryResultByName *map[string]WebAnalyticsQueryResult) {
 
@@ -423,8 +454,29 @@ func getResultByNameAsWebAnalyticsResult(webAggrState *WebAnalyticsAggregate) (
 		QueryNameSessions, webAggrState.NoOfSessions)
 	fillValueAsWebAnalyticsResult(queryResultByName,
 		QueryNameTotalPageViews, webAggrState.NoOfPageViews)
+
+	// Bounce Rate as in percent
+	var percentageBouncedSessions float64
+	var precisionedBounceRate string
+	if webAggrState.NoOfSessions > 0 {
+		percentageBouncedSessions = float64(webAggrState.NoOfBouncedSessions) /
+			float64(webAggrState.NoOfSessions) * 100
+
+		if percentageBouncedSessions == 0 {
+			precisionedBounceRate = "0%"
+		} else if percentageBouncedSessions <= 5 {
+			precisionedBounceRate = fmt.Sprintf("%0.2f%%", percentageBouncedSessions)
+		} else {
+			precisionedBounceRate = fmt.Sprintf("%0.*f%%",
+				defaultPrecision, percentageBouncedSessions)
+		}
+	} else {
+		precisionedBounceRate = "0%"
+	}
+
 	fillValueAsWebAnalyticsResult(queryResultByName,
-		QueryNameBounceRate, webAggrState.NoOfBouncedSessions)
+		QueryNameBounceRate, precisionedBounceRate)
+
 	fillValueAsWebAnalyticsResult(queryResultByName,
 		QueryNameUniqueUsers, webAggrState.NoOfUniqueUsers)
 
@@ -434,12 +486,12 @@ func getResultByNameAsWebAnalyticsResult(webAggrState *WebAnalyticsAggregate) (
 		avgPagesPerSession = webAggrState.SessionPages / float64(webAggrState.NoOfSessions)
 	}
 
-	// Todo: duration should be in x mins y secs.
 	fillValueAsWebAnalyticsResult(queryResultByName,
-		QueryNameAvgSessionDuration, fmt.Sprintf("%0.1f", avgSessionDuration))
+		QueryNameAvgSessionDuration, getFormattedTime(int64(avgSessionDuration)))
 
+	precisionedAvgPagesPerSession, _ := U.FloatRoundOffWithPrecision(avgPagesPerSession, defaultPrecision)
 	fillValueAsWebAnalyticsResult(queryResultByName,
-		QueryNameAvgPagesPerSession, fmt.Sprintf("%0.1f", avgPagesPerSession))
+		QueryNameAvgPagesPerSession, precisionedAvgPagesPerSession)
 
 	(*queryResultByName)[QueryNameTopPagesReport] = getTopPagesReportAsWebAnalyticsResult(webAggrState)
 
@@ -487,9 +539,30 @@ func ExecuteWebAnalyticsQueries(projectId uint64, queries *WebAnalyticsQueries) 
 	}
 
 	queryStartTimestamp := U.TimeNowUnix()
-	// Todo: Select required properties directly and avoid JSON decode for each event?
+
+	// selectProperties - Columns will be scanned
+	// on the same order. Update scanner if order changed.
+	selectProperties := []string{
+		U.EP_PAGE_URL,
+		U.EP_PAGE_SPENT_TIME,
+		U.SP_SPENT_TIME,
+		U.SP_PAGE_COUNT,
+		U.SP_INITIAL_PAGE_URL,
+		U.SP_LATEST_PAGE_URL,
+	}
+	var selectPropertiesStmnt string
+	for _, property := range selectProperties {
+		if selectPropertiesStmnt != "" {
+			selectPropertiesStmnt = selectPropertiesStmnt + ","
+		}
+
+		selectPropertiesStmnt = fmt.Sprintf("%s events.Properties->>'%s'",
+			selectPropertiesStmnt, property)
+	}
+
 	selectStmnt := "events.id, events.project_id, COALESCE(users.customer_user_id, users.id) as user_id," + " " +
-		"events.properties, events.event_name_id, event_names.name as event_name, event_names.type as event_name_type"
+		"events.event_name_id, event_names.name as event_name, event_names.type as event_name_type," + " " +
+		selectPropertiesStmnt
 
 	queryStmnt := "SELECT" + " " + selectStmnt + " " +
 		"FROM events LEFT JOIN event_names ON events.event_name_id=event_names.id" + " " +
@@ -506,19 +579,27 @@ func ExecuteWebAnalyticsQueries(projectId uint64, queries *WebAnalyticsQueries) 
 	}
 	defer rows.Close()
 
-	logCtx = logCtx.WithField("query_exec_time", U.TimeNowUnix()-queryStartTimestamp)
+	logCtx = logCtx.WithField("query_exec_time_in_secs", U.TimeNowUnix()-queryStartTimestamp)
 
+	var rowCount int
 	for rows.Next() {
 		var id string
 		var projectID uint64
 		var userID string
-		var eventProperties *postgres.Jsonb
 		var eventName string
 		var eventNameID uint64
 		var eventNameType string
+		// properties
+		var eventPropertyPageURL sql.NullString
+		var eventPropertyPageSpentTime sql.NullString
+		var sessionPropertySpentTime sql.NullString
+		var sessionPropertyPageCount sql.NullString
+		var sessionPropertyInitialPageURL sql.NullString
+		var sessionPropertyLatestPageURL sql.NullString
 
-		err = rows.Scan(&id, &projectID, &userID, &eventProperties,
-			&eventNameID, &eventName, &eventNameType)
+		err = rows.Scan(&id, &projectID, &userID, &eventNameID, &eventName, &eventNameType,
+			&eventPropertyPageURL, &eventPropertyPageSpentTime, &sessionPropertySpentTime,
+			&sessionPropertyPageCount, &sessionPropertyInitialPageURL, &sessionPropertyLatestPageURL)
 		if err != nil {
 			logCtx.WithError(err).
 				Error("Failed to scan row to download events on execute_web_analytics_query.")
@@ -535,27 +616,32 @@ func ExecuteWebAnalyticsQueries(projectId uint64, queries *WebAnalyticsQueries) 
 			continue
 		}
 
-		eventPropertiesMap, err := U.DecodePostgresJsonb(eventProperties)
-		if err != nil {
-			logCtx.WithError(err).
-				Error("Failed to decode event_properties JSON on execute_web_analytics_query.")
-			continue
+		webEventProperties := &WebAnalyticsEventProperties{
+			PageURL:               eventPropertyPageURL.String,
+			PageSpentTime:         eventPropertyPageSpentTime.String,
+			SessionInitialPageURL: sessionPropertyInitialPageURL.String,
+			SessionLatestPageURL:  sessionPropertyLatestPageURL.String,
+			SessionSpentTime:      sessionPropertySpentTime.String,
+			SessionPageCount:      sessionPropertyPageCount.String,
 		}
 
 		webEvent := WebAnalyticsEvent{
 			ID:         id,
 			ProjectID:  projectID,
 			UserID:     userID,
-			Properties: eventPropertiesMap,
+			Properties: webEventProperties,
 			IsSession:  isSessionEvent,
 		}
+
 		// build all needed aggregates in one scan of events.
 		buildWebAnalyticsAggregate(&webEvent, &webAggrState)
+		rowCount++
 	}
 
 	queryResultByName = getResultByNameAsWebAnalyticsResult(&webAggrState)
 
-	logCtx.WithField("total_time_taken_in_secs", U.TimeNowUnix()-funcStartTimestamp).
+	logCtx.WithField("no_of_events", rowCount).
+		WithField("total_time_taken_in_secs", U.TimeNowUnix()-funcStartTimestamp).
 		Info("Executed web analytics query.")
 
 	// Todo: build query result by name using aggregates and return.

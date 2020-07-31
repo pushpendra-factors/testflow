@@ -91,19 +91,35 @@ func createUserWithError(user *User) (*User, error) {
 }
 
 func CreateUser(user *User) (*User, int) {
-	logCtx := log.WithField("project_id", user.ProjectId)
+	logCtx := log.WithField("project_id", user.ProjectId).
+		WithField("user_id", user.ID)
 
-	user, err := createUserWithError(user)
-	if err != nil {
-		if U.IsPostgresIntegrityViolationError(err) {
-			return nil, http.StatusNotAcceptable
-		}
-
-		logCtx.WithError(err).Error("Failed to create user")
-		return nil, http.StatusInternalServerError
+	newUser, err := createUserWithError(user)
+	if err == nil {
+		return newUser, http.StatusCreated
 	}
 
-	return user, http.StatusCreated
+	if U.IsPostgresIntegrityViolationError(err) {
+		if user.ID != "" {
+			// Multiple requests trying to create user at the
+			// same time should not lead failure permanently,
+			// so get the user and return.
+			existingUser, errCode := GetUser(user.ProjectId, user.ID)
+			if errCode == http.StatusFound {
+				// Using StatusCreated for consistency.
+				return existingUser, http.StatusCreated
+			}
+
+			// Returned err_codes will be retried on queue.
+			return nil, errCode
+		}
+
+		logCtx.WithError(err).Error("Failed to create user. Integrity violation.")
+		return nil, http.StatusNotAcceptable
+	}
+
+	logCtx.WithError(err).Error("Failed to create user.")
+	return nil, http.StatusInternalServerError
 }
 
 // UpdateUser updates user fields by Id.

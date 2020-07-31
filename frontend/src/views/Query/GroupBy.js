@@ -8,7 +8,7 @@ import {
   fetchProjectUserProperties,
 } from '../../actions/projectsActions';
 import { getSelectedOpt, QUERY_TYPE_ANALYTICS, makeSelectOpt, makeSelectOpts, removeIndexIfExistsFromOptName } from '../../util';
-import { PROPERTY_TYPE_OPTS, PROPERTY_TYPE_EVENT, PROPERTY_TYPE_USER } from './common';
+import { PROPERTY_TYPE_OPTS, PROPERTY_TYPE_EVENT, PROPERTY_TYPE_USER, LABEL_STYLE } from './common';
 
 export const USER_PROPERTY_JOIN_TIME = '$joinTime'
 
@@ -60,9 +60,9 @@ class GroupBy extends Component {
       let fetches = [];
       if (this.showEventNameSelector() && this.props.groupByState.eventName != '') {
         // fetch properties of selected group by event name.
-        var eventName = this.props.groupByState.eventName
+        let eventName = this.props.groupByState.eventName
         if (this.props.shouldAddIndexPrefix()) {
-          eventName = removeIndexIfExistsFromOptName(eventName)
+          eventName = removeIndexIfExistsFromOptName(eventName).name
         }
         fetches.push(fetchProjectEventProperties(this.props.projectId, eventName, "", false));
       } else {
@@ -100,8 +100,8 @@ class GroupBy extends Component {
 
   render() {
     return (
-      <div style={{ width: '700px', marginBottom: '15px' }}>
-        <div style={{display: 'inline-block', width: '150px'}} className='fapp-select light'>
+      <div style={{ width: '800px', marginBottom: '15px' }}>
+        <div style={{display: 'inline-block', width: '150px', marginRight: '10px'}} className='fapp-select light'>
           <Select
             onChange={this.props.onTypeChange}
             options={this.props.getOpts()}
@@ -109,11 +109,11 @@ class GroupBy extends Component {
             value={getSelectedOpt(this.props.groupByState.type, PROPERTY_TYPE_OPTS)}
           />
         </div>
-        <div style={{display: 'inline-block', width: '275px', marginLeft: '10px'}} className='fapp-select light' 
-          hidden={!this.showEventNameSelector()}>
+        <span style={LABEL_STYLE} hidden={!this.props.shouldAddIndexPrefix()}> at </span>
+        <div style={{display: 'inline-block', width: '275px'}} className='fapp-select light' hidden={!this.props.shouldAddIndexPrefix()}>
           <Select
             onChange={this.props.onEventNameChange}
-            options={makeSelectOpts(this.props.getSelectedEventNames(), this.props.shouldAddIndexPrefix())}
+            options={makeSelectOpts(this.props.getSelectedEventNames(), this.props.shouldAddIndexPrefix(), this.props.groupByState.type == PROPERTY_TYPE_USER)}
             placeholder='Select Event'
             value={getSelectedOpt(this.props.groupByState.eventName)}
           />
@@ -123,7 +123,7 @@ class GroupBy extends Component {
             onChange={this.props.onNameChange}
             onFocus={this.fetchPropertyKeys}
             options={this.state.nameOpts}
-            placeholder='Enter Property'
+            placeholder={this.props.groupByState.type == PROPERTY_TYPE_EVENT ? 'Event Property': 'User Property'}
             value={getSelectedOpt(this.props.groupByState.name)}
             formatCreateLabel={(value) => (value)}
             isLoading={this.state.isNameOptsLoading}

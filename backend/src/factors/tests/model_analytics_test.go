@@ -736,8 +736,9 @@ func TestAnalyticsFunnelQueryWithFilterAndBreakDown(t *testing.T) {
 		},
 		GroupByProperties: []M.QueryGroupByProperty{
 			M.QueryGroupByProperty{
-				Entity:   M.PropertyEntityUser,
-				Property: "gender",
+				Entity:    M.PropertyEntityUser,
+				Property:  "gender",
+				EventName: M.UserPropertyGroupByPresent,
 			},
 		},
 		Class:           M.QueryClassFunnel,
@@ -784,9 +785,10 @@ func TestAnalyticsFunnelQueryWithFilterAndBreakDown(t *testing.T) {
 		},
 		GroupByProperties: []M.QueryGroupByProperty{
 			M.QueryGroupByProperty{
-				Entity:    M.PropertyEntityEvent,
-				Property:  "value",
-				EventName: "s0",
+				Entity:         M.PropertyEntityEvent,
+				Property:       "value",
+				EventName:      "s0",
+				EventNameIndex: 1,
 			},
 		},
 		Class:           M.QueryClassFunnel,
@@ -834,14 +836,16 @@ func TestAnalyticsFunnelQueryWithFilterAndBreakDown(t *testing.T) {
 		},
 		GroupByProperties: []M.QueryGroupByProperty{
 			M.QueryGroupByProperty{
-				Entity:    M.PropertyEntityEvent,
-				Property:  "value",
-				EventName: "s0",
+				Entity:         M.PropertyEntityEvent,
+				Property:       "value",
+				EventName:      "s0",
+				EventNameIndex: 1,
 			},
 			M.QueryGroupByProperty{
-				Entity:    M.PropertyEntityEvent,
-				Property:  "id",
-				EventName: "s1",
+				Entity:         M.PropertyEntityEvent,
+				Property:       "id",
+				EventName:      "s1",
+				EventNameIndex: 2,
 			},
 		},
 		Class:           M.QueryClassFunnel,
@@ -893,13 +897,15 @@ func TestAnalyticsFunnelQueryWithFilterAndBreakDown(t *testing.T) {
 		},
 		GroupByProperties: []M.QueryGroupByProperty{
 			M.QueryGroupByProperty{
-				Entity:   M.PropertyEntityUser,
-				Property: "gender",
+				Entity:    M.PropertyEntityUser,
+				Property:  "gender",
+				EventName: M.UserPropertyGroupByPresent,
 			},
 			M.QueryGroupByProperty{
-				Entity:    M.PropertyEntityEvent,
-				Property:  "value",
-				EventName: "s0",
+				Entity:         M.PropertyEntityEvent,
+				Property:       "value",
+				EventName:      "s0",
+				EventNameIndex: 1,
 			},
 		},
 		Class:           M.QueryClassFunnel,
@@ -958,14 +964,16 @@ func TestAnalyticsFunnelQueryWithFilterAndBreakDown(t *testing.T) {
 		},
 		GroupByProperties: []M.QueryGroupByProperty{
 			M.QueryGroupByProperty{
-				Entity:    M.PropertyEntityEvent,
-				Property:  "value",
-				EventName: "s0",
+				Entity:         M.PropertyEntityEvent,
+				Property:       "value",
+				EventName:      "s0",
+				EventNameIndex: 1,
 			},
 			M.QueryGroupByProperty{
-				Entity:    M.PropertyEntityEvent,
-				Property:  "id",
-				EventName: "s1",
+				Entity:         M.PropertyEntityEvent,
+				Property:       "id",
+				EventName:      "s1",
+				EventNameIndex: 2,
 			},
 		},
 		Class:           M.QueryClassFunnel,
@@ -1018,12 +1026,14 @@ func TestAnalyticsFunnelQueryWithFilterAndBreakDown(t *testing.T) {
 		},
 		GroupByProperties: []M.QueryGroupByProperty{
 			M.QueryGroupByProperty{
-				Entity:   M.PropertyEntityUser,
-				Property: "gender",
+				Entity:    M.PropertyEntityUser,
+				Property:  "gender",
+				EventName: M.UserPropertyGroupByPresent,
 			},
 			M.QueryGroupByProperty{
-				Entity:   M.PropertyEntityUser,
-				Property: "age",
+				Entity:    M.PropertyEntityUser,
+				Property:  "age",
+				EventName: M.UserPropertyGroupByPresent,
 			},
 		},
 		Class:           M.QueryClassFunnel,
@@ -1076,12 +1086,14 @@ func TestAnalyticsFunnelQueryWithFilterAndBreakDown(t *testing.T) {
 		},
 		GroupByProperties: []M.QueryGroupByProperty{
 			M.QueryGroupByProperty{
-				Entity:   M.PropertyEntityUser,
-				Property: "gender",
+				Entity:    M.PropertyEntityUser,
+				Property:  "gender",
+				EventName: M.UserPropertyGroupByPresent,
 			},
 			M.QueryGroupByProperty{
-				Entity:   M.PropertyEntityUser,
-				Property: "age",
+				Entity:    M.PropertyEntityUser,
+				Property:  "age",
+				EventName: M.UserPropertyGroupByPresent,
 			},
 		},
 		Class:           M.QueryClassFunnel,
@@ -1134,13 +1146,15 @@ func TestAnalyticsFunnelQueryWithFilterAndBreakDown(t *testing.T) {
 		},
 		GroupByProperties: []M.QueryGroupByProperty{
 			M.QueryGroupByProperty{
-				Entity:   M.PropertyEntityUser,
-				Property: "gender",
+				Entity:    M.PropertyEntityUser,
+				Property:  "gender",
+				EventName: M.UserPropertyGroupByPresent,
 			},
 			M.QueryGroupByProperty{
-				Entity:    M.PropertyEntityEvent,
-				Property:  "value",
-				EventName: "s0",
+				Entity:         M.PropertyEntityEvent,
+				Property:       "value",
+				EventName:      "s0",
+				EventNameIndex: 1,
 			},
 		},
 		Class:           M.QueryClassFunnel,
