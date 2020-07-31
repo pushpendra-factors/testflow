@@ -456,17 +456,26 @@ func getResultByNameAsWebAnalyticsResult(webAggrState *WebAnalyticsAggregate) (
 		QueryNameTotalPageViews, webAggrState.NoOfPageViews)
 
 	// Bounce Rate as in percent
-	var percentageBouncedSessions, precisionedBouncedSessions float64
-	if webAggrState.SessionPages > 0 {
-		percentageBouncedSessions = float64(webAggrState.NoOfBouncedSessions) / float64(webAggrState.SessionPages) * 100
-		if percentageBouncedSessions <= 5 {
-			precisionedBouncedSessions, _ = U.FloatRoundOffWithPrecision(percentageBouncedSessions, 2)
+	var percentageBouncedSessions float64
+	var precisionedBounceRate string
+	if webAggrState.NoOfSessions > 0 {
+		percentageBouncedSessions = float64(webAggrState.NoOfBouncedSessions) /
+			float64(webAggrState.NoOfSessions) * 100
+
+		if percentageBouncedSessions == 0 {
+			precisionedBounceRate = "0%"
+		} else if percentageBouncedSessions <= 5 {
+			precisionedBounceRate = fmt.Sprintf("%0.2f%%", percentageBouncedSessions)
 		} else {
-			precisionedBouncedSessions, _ = U.FloatRoundOffWithPrecision(percentageBouncedSessions, defaultPrecision)
+			precisionedBounceRate = fmt.Sprintf("%0.*f%%",
+				defaultPrecision, percentageBouncedSessions)
 		}
+	} else {
+		precisionedBounceRate = "0%"
 	}
+
 	fillValueAsWebAnalyticsResult(queryResultByName,
-		QueryNameBounceRate, precisionedBouncedSessions)
+		QueryNameBounceRate, precisionedBounceRate)
 
 	fillValueAsWebAnalyticsResult(queryResultByName,
 		QueryNameUniqueUsers, webAggrState.NoOfUniqueUsers)
