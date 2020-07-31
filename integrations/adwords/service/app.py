@@ -138,7 +138,7 @@ class APIClientWithSession():
             log.error("Invalid session cookie on add_refresh_token request.")
             return
 
-        url = App.get_api_host() + "/integrations/adwords/add_refresh_token"
+        url = App.get_api_host() + "/data_service/adwords/add_refresh_token"
         
         cookies = {}
         cookies[App.get_session_cookie_name()] = session
@@ -152,7 +152,7 @@ class APIClientWithSession():
 
     @staticmethod
     def get_adwords_refresh_token(session, project_id):
-        url = App.get_api_host() + "/integrations/adwords/get_refresh_token"
+        url = App.get_api_host() + "/data_service/adwords/get_refresh_token"
         cookies = {}
         cookies[App.get_session_cookie_name()] = session
         # project_id as str for consistency on json.
