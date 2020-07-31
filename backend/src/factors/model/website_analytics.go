@@ -42,6 +42,7 @@ type NamedQueryUnit struct {
 const QueryTypeNamed = "named_query"
 const DefaultDashboardWebsiteAnalytics = "Website Analytics"
 const topPageReportLimit = 50
+const defaultPrecision = 1
 
 // Named queries for website analytics.
 const (
@@ -383,9 +384,9 @@ func getTopPagesReportAsWebAnalyticsResult(
 
 	rows := make([][]interface{}, 0, len(webAggr.PageAggregates))
 	for url, aggr := range webAggr.PageAggregates {
-		var avgPageSpentTimeOfPage string
+		var avgPageSpentTimeOfPage float64
 		if aggr.NoOfPageViews > 0 {
-			avgPageSpentTimeOfPage = fmt.Sprintf("%0.1f", aggr.TotalSpentTime/float64(aggr.NoOfPageViews))
+			avgPageSpentTimeOfPage, _ = U.FloatRoundOffWithPrecision(aggr.TotalSpentTime/float64(aggr.NoOfPageViews), defaultPrecision)
 		}
 
 		row := []interface{}{
@@ -427,6 +428,23 @@ func fillValueAsWebAnalyticsResult(queryResultByName *map[string]WebAnalyticsQue
 	(*queryResultByName)[queryName] = webAResult
 }
 
+// Converts seconds into hh mm ss format
+func getFormattedTime(totalSeconds int64) string {
+	fmtTime := ""
+	if totalSeconds > 3600 {
+		fmtTime = fmt.Sprintf("%dh ", totalSeconds/3600)
+	}
+	if totalSeconds > 60 {
+		fmtTime = fmtTime + fmt.Sprintf("%dm ", (totalSeconds%3600)/60)
+	}
+	if totalSeconds > 0 {
+		fmtTime = fmtTime + fmt.Sprintf("%ds", totalSeconds%60)
+	} else {
+		return "0s"
+	}
+	return fmtTime
+}
+
 func getResultByNameAsWebAnalyticsResult(webAggrState *WebAnalyticsAggregate) (
 	queryResultByName *map[string]WebAnalyticsQueryResult) {
 
@@ -436,8 +454,20 @@ func getResultByNameAsWebAnalyticsResult(webAggrState *WebAnalyticsAggregate) (
 		QueryNameSessions, webAggrState.NoOfSessions)
 	fillValueAsWebAnalyticsResult(queryResultByName,
 		QueryNameTotalPageViews, webAggrState.NoOfPageViews)
+
+	// Bounce Rate as in percent
+	var percentageBouncedSessions, precisionedBouncedSessions float64
+	if webAggrState.SessionPages > 0 {
+		percentageBouncedSessions = float64(webAggrState.NoOfBouncedSessions) / float64(webAggrState.SessionPages) * 100
+		if percentageBouncedSessions <= 5 {
+			precisionedBouncedSessions, _ = U.FloatRoundOffWithPrecision(percentageBouncedSessions, 2)
+		} else {
+			precisionedBouncedSessions, _ = U.FloatRoundOffWithPrecision(percentageBouncedSessions, defaultPrecision)
+		}
+	}
 	fillValueAsWebAnalyticsResult(queryResultByName,
-		QueryNameBounceRate, webAggrState.NoOfBouncedSessions)
+		QueryNameBounceRate, precisionedBouncedSessions)
+
 	fillValueAsWebAnalyticsResult(queryResultByName,
 		QueryNameUniqueUsers, webAggrState.NoOfUniqueUsers)
 
@@ -447,12 +477,12 @@ func getResultByNameAsWebAnalyticsResult(webAggrState *WebAnalyticsAggregate) (
 		avgPagesPerSession = webAggrState.SessionPages / float64(webAggrState.NoOfSessions)
 	}
 
-	// Todo: duration should be in x mins y secs.
 	fillValueAsWebAnalyticsResult(queryResultByName,
-		QueryNameAvgSessionDuration, fmt.Sprintf("%0.1f", avgSessionDuration))
+		QueryNameAvgSessionDuration, getFormattedTime(int64(avgSessionDuration)))
 
+	precisionedAvgPagesPerSession, _ := U.FloatRoundOffWithPrecision(avgPagesPerSession, defaultPrecision)
 	fillValueAsWebAnalyticsResult(queryResultByName,
-		QueryNameAvgPagesPerSession, fmt.Sprintf("%0.1f", avgPagesPerSession))
+		QueryNameAvgPagesPerSession, precisionedAvgPagesPerSession)
 
 	(*queryResultByName)[QueryNameTopPagesReport] = getTopPagesReportAsWebAnalyticsResult(webAggrState)
 
