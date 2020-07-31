@@ -536,7 +536,7 @@ func ProcessQueueEvent(token, eventJson string) (float64, string, error) {
 	if status == http.StatusInternalServerError {
 		logCtx.WithField("retry", "true").Info("Failed to process event on segment event queue. Retry.")
 		return http.StatusInternalServerError, "",
-			tasks.NewErrRetryTaskLater("RETRY_SEGMENT_EVENT_PROCESSING_FAILURE", 5*time.Minute)
+			tasks.NewErrRetryTaskExp("EXP_RETRY_SEGMENT_EVENT_PROCESSING_FAILURE")
 	}
 
 	return http.StatusOK, string(responseJsonBytes), nil

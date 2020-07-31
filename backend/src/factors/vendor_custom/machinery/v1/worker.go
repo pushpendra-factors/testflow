@@ -244,19 +244,19 @@ func (worker *Worker) retryTaskExp(signature *tasks.Signature) error {
 		return fmt.Errorf("Set state to 'retry' for task %s returned error: %s", signature.UUID, err)
 	}
 
-	expRetryMin := math.Pow(2, float64(signature.RetryCount))
-	// maximum delay upto 10 days
-	if expRetryMin > 1440*10 {
-		expRetryMin = 1440 * 10
+	retryInMins := math.Pow(2, float64(signature.RetryCount))
+	// remove task if delay goes beyond 10 days
+	if retryInMins > 1440*10 {
+		return worker.taskFailed(signature, errors.New(fmt.Sprintf("Retry exhausted after %.0f seconds", retryInMins*60)))
 	}
-	expRetryIn := time.Duration(expRetryMin) * time.Minute
+	retryInDuration := time.Duration(retryInMins) * time.Minute
 
 	// Delay task by expRetryIn duration
-	eta := time.Now().UTC().Add(expRetryIn)
+	eta := time.Now().UTC().Add(retryInDuration)
 	signature.ETA = &eta
 	signature.RetryCount++
 
-	log.WARNING.Printf("Task %s failed. Going for exponential retry in %.0f seconds.", signature.UUID, expRetryIn.Seconds())
+	log.WARNING.Printf("Task %s failed. Going for exponential retry in %.0f seconds.", signature.UUID, retryInDuration.Seconds())
 
 	// Send the task back to the queue
 	_, err := worker.server.SendTask(signature)
