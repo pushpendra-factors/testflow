@@ -1063,67 +1063,11 @@ func UpdateEventProperties(projectId uint64,
 
 	logCtx = logCtx.WithField("event_id", request.EventId)
 
-	if updatedEvent.SessionId == nil || *updatedEvent.SessionId == "" {
-		return http.StatusBadRequest,
-			&UpdateEventPropertiesResponse{Error: "Update event properties failed. No session associated."}
-	}
-
-	newSessionProperties := U.GetSessionProperties(false, validatedProperties, &U.PropertiesMap{})
-	sessionEvent, errCode := M.GetEventById(projectId, *updatedEvent.SessionId)
-	if errCode != http.StatusFound {
-		return errCode,
-			&UpdateEventPropertiesResponse{Error: "Update event properties failed. Failed to processing session."}
-	}
-
 	updatedEventPropertiesMap, err := U.DecodePostgresJsonb(&updatedEvent.Properties)
 	if err != nil {
 		logCtx.Error("Failed to unmarshal updated event properties on update event properties.")
 		return http.StatusInternalServerError,
 			&UpdateEventPropertiesResponse{Error: "Update event properties failed. Invalid event properties."}
-	}
-
-	sessionPropertiesMap, err := U.DecodePostgresJsonb(&sessionEvent.Properties)
-	if err != nil {
-		logCtx.Error("Failed to unmarshal existing session properties on update event properties.")
-		return http.StatusBadRequest,
-			&UpdateEventPropertiesResponse{Error: "Update event properties failed. Invalid session properties."}
-	}
-
-	eventPageURL, eventPageURLExists := (*updatedEventPropertiesMap)[U.EP_PAGE_RAW_URL]
-
-	sessionInitialPageURL, sessionInitialPageURLExists := (*sessionPropertiesMap)[U.UP_INITIAL_PAGE_RAW_URL]
-	if !eventPageURLExists || !sessionInitialPageURLExists {
-		logCtx.Error("No page URL property to compare for session properties update.")
-		return http.StatusBadRequest,
-			&UpdateEventPropertiesResponse{
-				Error: "Update event properties failed. Initial page of session comparison failed."}
-	}
-
-	// session properties updated only if page raw url and initial
-	// page raw url matches.
-	if eventPageURL != sessionInitialPageURL {
-		return http.StatusAccepted,
-			&UpdateEventPropertiesResponse{Message: "Updated event properties successfully."}
-	}
-
-	isSessionPropertiesUpdateRequired := false
-	for property, value := range *newSessionProperties {
-		if _, exists := (*sessionPropertiesMap)[property]; !exists {
-			(*sessionPropertiesMap)[property] = value
-			isSessionPropertiesUpdateRequired = true
-		}
-	}
-
-	// updates only when new properties added.
-	if isSessionPropertiesUpdateRequired {
-		updateSesssionProperties := U.PropertiesMap(*sessionPropertiesMap)
-		errCode := M.UpdateEventProperties(projectId, sessionEvent.ID,
-			&updateSesssionProperties, request.Timestamp)
-		if errCode != http.StatusAccepted {
-			return errCode,
-				&UpdateEventPropertiesResponse{
-					Error: "Update event properties failed. Failed to update session properties"}
-		}
 	}
 
 	newUserProperties := U.GetInitialUserProperties(validatedProperties)
@@ -1153,6 +1097,8 @@ func UpdateEventProperties(projectId uint64,
 		logCtx.Error("No initial page raw url on user properties to compare on update event properties.")
 		return errCode, &UpdateEventPropertiesResponse{Error: "Failed to associate initial page url."}
 	}
+
+	eventPageURL := (*updatedEventPropertiesMap)[U.EP_PAGE_RAW_URL]
 
 	// user properties updated only if initial_raw_page url of user_properties
 	// and raw_page_url of event properties matches.

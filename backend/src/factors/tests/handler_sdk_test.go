@@ -1692,15 +1692,6 @@ func TestSessionAndUserInitialPropertiesUpdateOnSDKUpdateEventPropertiesHandler(
 	updatedEvent, errCode := M.GetEventById(project.ID, eventId)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotEmpty(t, *updatedEvent.SessionId)
-	// Should update initial session properties on initial call.
-	sessionEvent, errCode := M.GetEventById(project.ID, *updatedEvent.SessionId)
-	assert.Equal(t, http.StatusFound, errCode)
-	assert.Equal(t, *updatedEvent.SessionId, sessionEvent.ID)
-	sessionProperites, err := U.DecodePostgresJsonb(&sessionEvent.Properties)
-	assert.Nil(t, err)
-	assert.Equal(t, pageRawURL, (*sessionProperites)[U.UP_INITIAL_PAGE_RAW_URL])
-	assert.Equal(t, float64(100), (*sessionProperites)[U.UP_INITIAL_PAGE_SPENT_TIME])
-	assert.Equal(t, float64(10), (*sessionProperites)[U.UP_INITIAL_PAGE_SCROLL_PERCENT])
 	// Should update initial user properties on initial call.
 	user, errCode := M.GetUser(project.ID, userId)
 	assert.Equal(t, http.StatusFound, errCode)
@@ -1720,14 +1711,6 @@ func TestSessionAndUserInitialPropertiesUpdateOnSDKUpdateEventPropertiesHandler(
 	assert.NotEmpty(t, *updatedEvent.SessionId)
 	// Should use the same session.
 	assert.Equal(t, *updatedEvent.SessionId, *updatedEvent2.SessionId)
-	// Should not update session properties on consequtive calls.
-	sessionEvent, errCode = M.GetEventById(project.ID, *updatedEvent2.SessionId)
-	assert.Equal(t, http.StatusFound, errCode)
-	sessionProperites, err = U.DecodePostgresJsonb(&sessionEvent.Properties)
-	assert.Nil(t, err)
-	assert.Equal(t, pageRawURL, (*sessionProperites)[U.UP_INITIAL_PAGE_RAW_URL])
-	assert.NotEqual(t, float64(200), (*sessionProperites)[U.UP_INITIAL_PAGE_SPENT_TIME])
-	assert.Equal(t, float64(100), (*sessionProperites)[U.UP_INITIAL_PAGE_SPENT_TIME])
 	// Should not update user properties on consequtive calls.
 	user, errCode = M.GetUser(project.ID, userId)
 	assert.Equal(t, http.StatusFound, errCode)
