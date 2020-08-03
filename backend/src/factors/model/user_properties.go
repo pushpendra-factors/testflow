@@ -244,7 +244,8 @@ func MergeUserPropertiesForUserID(projectID uint64, userID string, updatedProper
 					mergedUserProperties[property] = (*userProperties)[property]
 					initialPropertiesVisitedMap[property] = true
 				}
-			} else if !U.StringValueIn(property, U.USER_PROPERTIES_MERGE_TYPE_ADD[:]) {
+			} else if !U.StringValueIn(property, U.USER_PROPERTIES_MERGE_TYPE_ADD[:]) &&
+				!isEmptyPropertyValue((*userProperties)[property]) {
 				// For all other properties, overwrite with the latest user property.
 				mergedUserProperties[property] = (*userProperties)[property]
 			}
@@ -330,6 +331,21 @@ func updateUserPropertiesForUser(projectID uint64, userID string, userProperties
 		}
 	}
 	return userPropertiesRecord.ID, http.StatusCreated
+}
+
+func isEmptyPropertyValue(propertyValue interface{}) bool {
+	if propertyValue == nil {
+		return true
+	}
+
+	// Check only for string empty case.
+	// For floats / integers hard to decide whether it was intentionally set as 0.
+	switch propertyValue.(type) {
+	case string:
+		return propertyValue.(string) == ""
+	default:
+		return false
+	}
 }
 
 func anyPropertyChanged(propertyValuesMap map[string][]interface{}, numUsers int) bool {

@@ -30,7 +30,8 @@ func TestMergeUserPropertiesForUserID(t *testing.T) {
 			"gender": "m",
 			"$initial_campaign": "campaign1",
 			"$page_count": 10,
-			"$session_spent_time": 2.2}`,
+			"$session_spent_time": 2.2,
+			"$latest_medium": "google"}`,
 		))},
 	})
 
@@ -45,7 +46,8 @@ func TestMergeUserPropertiesForUserID(t *testing.T) {
 			"$initial_campaign": "campaign2",
 			"$page_count": 15,
 			"$session_spent_time": 4.4,
-			"$user_agent": "browser user agent"}`,
+			"$user_agent": "browser user agent",
+			"$latest_medium": ""}`, // Empty. Should not overwrite.
 		))},
 	})
 
@@ -97,7 +99,8 @@ func TestMergeUserPropertiesForUserID(t *testing.T) {
 	assert.Equal(t, float64(30), (*user1PropertiesDB)["age"])
 	assert.Equal(t, "browser user agent", (*user1PropertiesDB)["$user_agent"])
 	// All properties must be present.
-	for _, prop := range [...]string{"country", "age", "paid", "gender", "$initial_campaign", "$page_count", "$session_spent_time", "$user_agent"} {
+	for _, prop := range [...]string{"country", "age", "paid", "gender", "$initial_campaign", "$page_count",
+		"$session_spent_time", "$user_agent", "$latest_medium"} {
 		_, found1 := (*user1PropertiesDB)[prop]
 		assert.True(t, found1)
 		_, found2 := (*user2PropertiesDB)[prop]
@@ -115,6 +118,10 @@ func TestMergeUserPropertiesForUserID(t *testing.T) {
 	// By default, 2.2 + 4.4 results in 6.6000000000000005.
 	assert.Equal(t, float64(6.6), (*user1PropertiesDB)["$session_spent_time"])
 	assert.Equal(t, float64(6.6), (*user2PropertiesDB)["$session_spent_time"])
+
+	// Empty property value should not overwrite old values.
+	assert.Equal(t, "google", (*user1PropertiesDB)["$latest_medium"])
+	assert.Equal(t, "google", (*user2PropertiesDB)["$latest_medium"])
 
 	// Running merge again for the same customerID should not update user_properties.
 	_, errCode = M.MergeUserPropertiesForUserID(project.ID, user1.ID, postgres.Jsonb{}, "", U.TimeNowUnix(), false, true)
