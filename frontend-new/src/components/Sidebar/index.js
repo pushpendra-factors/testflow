@@ -1,34 +1,30 @@
 import React from 'react';
+import { Layout, Menu } from 'antd';
+import {
+  UserOutlined,
+  VideoCameraOutlined,
+  UploadOutlined,
+} from '@ant-design/icons';
 import styles from './index.module.scss';
 
-function Sidebar() {
-  
+function Sidebar({ collapsed }) {
+  const { Sider } = Layout;
+
   return (
-    <nav className={styles.sidebarNavigation}>
-      <div className={styles.logo}></div>
-      <ul>
-        <li className={styles.active}>
-          <i className="text-gray-600	fa fa-share-alt"></i>
-          <span className={styles.tooltip}>Connections</span>
-        </li>
-        <li>
-          <i className="text-gray-600	fa fa-hdd-o"></i>
-          <span className={styles.tooltip}>Devices</span>
-        </li>
-        <li>
-          <i className="text-gray-600	fa fa-newspaper-o"></i>
-          <span className={styles.tooltip}>Contacts</span>
-        </li>
-        <li>
-          <i className="text-gray-600	fa fa-print"></i>
-          <span className={styles.tooltip}>Fax</span>
-        </li>
-        <li>
-          <i className="text-gray-600	fa fa-sliders"></i>
-          <span className={styles.tooltip}>Settings</span>
-        </li>
-      </ul>
-    </nav>
+    <Sider trigger={null} collapsible collapsed={collapsed}>
+      <div className={styles.logo} />
+      <Menu theme="dark" mode="inline" defaultSelectedKeys={['1']}>
+        <Menu.Item key="1" icon={<UserOutlined />}>
+          nav 1
+        </Menu.Item>
+        <Menu.Item key="2" icon={<VideoCameraOutlined />}>
+          nav 2
+        </Menu.Item>
+        <Menu.Item key="3" icon={<UploadOutlined />}>
+          nav 3
+        </Menu.Item>
+      </Menu>
+    </Sider>
   )
 }
 

@@ -1,15 +1,24 @@
 import React from 'react';
 import Sidebar from './components/Sidebar';
 
+import { Layout } from 'antd';
+
 function App() {
+  const { Content } = Layout;
 
   return (
-    <section className="min-h-screen">
-      <Sidebar />
-      <section className="overflow-x-hidden p-4 min-h-screen">
-        Content
-        </section>
-    </section>
+    <div className="App">
+      <Layout>
+        <Sidebar collapsed={true} />
+        <Layout className="site-layout">
+          <Content>
+            <div className="p-8 b-white">
+              Content
+            </div>
+          </Content>
+        </Layout>
+      </Layout>
+    </div>
   );
 }
 
