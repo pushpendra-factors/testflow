@@ -329,3 +329,73 @@ export const areSameDateRanges = function(dateRange1, dateRange2) {
   return moment(dateRange1.startDate).unix() == moment(dateRange2.startDate).unix() &&
     moment(dateRange1.endDate).unix() == moment(dateRange2.endDate).unix()
 }
+export const jsonToCSV = (result, selectedPresentation, queryName) => {
+  const csvRows = [];
+  let newJSON = {...result}
+  if (selectedPresentation === PRESENTATION_LINE) {
+    newJSON = convertLineJSON(newJSON)
+  }
+  let headers = [...newJSON.headers]
+  csvRows.push(headers.join(','));
+  let rows = [...newJSON.rows]
+  let jsonRows = rows.map((row)=> {
+    let newRow = [...row]
+    let values = newRow.map((val)=>{
+      const escaped = (''+val).replace(/"/g,'\\"');
+      return `"${escaped}"`
+    })
+    return values.join(',');
+  });
+  jsonRows = jsonRows.join('\n')
+  const csv = csvRows+ "\n"+ jsonRows
+  return downloadCSV(csv, queryName);
+}
+
+export const downloadCSV = function(data, queryName) {
+  const blob = new Blob([data], {type: 'text/csv'})
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.setAttribute('hidden','')
+  a.setAttribute('href', url)
+  a.setAttribute('download', queryName+new Date()+'.csv')
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+}
+
+export const convertLineJSON = function(data) {
+
+  let convertedData = {}
+  let datetimeKey = 0;
+  let headers = [...data.headers]
+  headers[0]= "event_name"
+  for(var i = 1; i<=data.meta.query.gbp.length; i++) {
+    headers[i] = data.meta.query.gbp[i-1].pr
+  }
+  for (var i=0; i<headers.length; i++) {
+    if(headers[i] == "datetime") {
+      datetimeKey = i;
+      if(data.meta.query.gbt == "date"){
+        headers[i] = "date(UTC)"
+      } else {
+        headers.splice(i,1,"date(UTC)", "hour")
+      }
+
+    }
+  }
+  convertedData.headers = headers
+  let rows = [...data.rows]
+  convertedData.rows = rows.map((row)=> {
+    let dateTime= row[datetimeKey].split("T")
+    if(data.meta.query.gbt == "date"){
+      row[datetimeKey] = dateTime[0]
+    }
+    else {
+      let time = (dateTime[1].split("+"))[0]
+      row.splice(datetimeKey, 1, dateTime[0],time)
+    }
+    return row
+  })
+
+  return convertedData
+}

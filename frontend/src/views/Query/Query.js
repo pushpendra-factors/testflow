@@ -26,11 +26,12 @@ import ChannelQuery from '../ChannelQuery/ChannelQuery';
 import AttributionQuery from '../AttributionQuery/AttributionQuery'
 
 
-import { PRESENTATION_BAR, PRESENTATION_LINE, PRESENTATION_TABLE, 
+import {
+  PRESENTATION_BAR, PRESENTATION_LINE, PRESENTATION_TABLE,
   PRESENTATION_CARD, PRESENTATION_FUNNEL, PROPERTY_TYPE_EVENT,
   getDateRangeFromStoredDateRange, PROPERTY_LOGICAL_OP_OPTS,
-  DEFAULT_DATE_RANGE, DEFINED_DATE_RANGES, getGroupByTimestampType, 
-  getQueryPeriod, convertFunnelResultForTable, sameDay, PROPERTY_TYPE_USER
+  DEFAULT_DATE_RANGE, DEFINED_DATE_RANGES, getGroupByTimestampType,
+  getQueryPeriod, convertFunnelResultForTable, sameDay, jsonToCSV, PROPERTY_TYPE_USER
 } from './common';
 import ClosableDateRangePicker from '../../common/ClosableDatePicker';
 import { fetchProjectEvents, runQuery } from '../../actions/projectsActions';
@@ -1081,87 +1082,16 @@ class Query extends Component {
     );
   } 
 
-  jsonToCSV = () => {
-    const csvRows = [];
-    let newJSON = {...this.state.result}
-
-    if (this.state.selectedPresentation == PRESENTATION_LINE) {
-      newJSON = this.convertLineJSON(newJSON)
-    }
-    let headers = [...newJSON.headers]
-    
-    csvRows.push(headers.join(','));
-    
-    let rows = [...newJSON.rows]
-    let jsonRows = rows.map((row)=> {
-      let newRow = [...row]
-      let values = newRow.map((val)=>{
-        const escaped = (''+val).replace(/"/g,'\\"');
-        return `"${escaped}"`
-      })
-      return values.join(',');
-    });
-    jsonRows = jsonRows.join('\n')
-    const csv = csvRows+ "\n"+ jsonRows
-    this.downloadCSV(csv);
-  }
-  convertLineJSON = (data) => {
-
-    let convertedData = {}
-    let datetimeKey = 0;
-    let headers = [...data.headers]
-    headers[0]= "event_name"
-    for(var i = 1; i<=data.meta.query.gbp.length; i++) {
-      headers[i] = data.meta.query.gbp[i-1].pr
-    }
-    for (var i=0; i<headers.length; i++) {
-      if(headers[i] == "datetime") {
-        datetimeKey = i;
-        if(data.meta.query.gbt == "date"){
-          headers[i] = "date(UTC)"
-        } else {
-          headers.splice(i,1,"date(UTC)", "hour")
-        }
-
-      }
-    }
-    convertedData.headers = headers
-    let rows = [...data.rows]
-    convertedData.rows = rows.map((row)=> {
-      let dateTime= row[datetimeKey].split("T")
-      if(data.meta.query.gbt == "date"){
-        row[datetimeKey] = dateTime[0]
-      }
-      else {
-        let time = (dateTime[1].split("+"))[0]
-        row.splice(datetimeKey, 1, dateTime[0],time)
-      }
-      return row
-    })
-
-    return convertedData
-  }
-  downloadCSV = (data) => {
-    const blob = new Blob([data], {type: 'text/csv'})
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.setAttribute('hidden','')
-    a.setAttribute('href', url)
-    a.setAttribute('download', 'factors_insights.csv')
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-  }
   renderDownloadButton = () => {
     if(this.state.selectedPresentation != PRESENTATION_BAR) {
       return (
         <button className="btn btn-primary ml-1" style={{fontWeight: 500}} 
-                  onClick={()=> this.jsonToCSV()}>Download</button>
+                  onClick={()=> jsonToCSV(this.state.result, this.state.selectedPresentation, "factors_insights")}>Download</button>
       )
     }
       return (
         <button className="btn btn-primary ml-1" style={{display: "none"}} 
-                  onClick={()=> this.jsonToCSV()}>Download</button>
+                  onClick={()=> jsonToCSV(this.state.result, this.state.selectedPresentation, "factors_insights")}>Download</button>
       )
   }
   renderPresentationPane(presentationOptionsByClass=null, presentationByClass=null) {

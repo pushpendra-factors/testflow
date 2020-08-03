@@ -2,7 +2,7 @@ import React, {Component} from 'react';
 import Select from 'react-select';
 import {
   Button,
-  ButtonDropdown,
+  ButtonDropdown, ButtonToolbar,
   Col,
   DropdownItem,
   DropdownMenu,
@@ -22,7 +22,7 @@ import {
   DASHBOARD_TYPE_WEB_ANALYTICS,
   DEFAULT_DATE_RANGE,
   DEFINED_DATE_RANGES,
-  getQueryPeriod,
+  getQueryPeriod, jsonToCSV,
   PRESENTATION_TABLE,
   QUERY_CLASS_ATTRIBUTION,
   readableDateRange,
@@ -84,6 +84,8 @@ class AttributionQuery extends Component {
       linkedEventNames: [],
       isPresentationLoading: false,
       present: false,
+      result: null,
+      resultError: null,
       resultMetricsBreakdown: null,
       resultMeta: null,
 
@@ -185,7 +187,7 @@ class AttributionQuery extends Component {
     runAttributionQuery(this.props.currentProjectId, query)
       .then(r => {
         this.setState({
-          result: r.data,
+          result: r.data.result,
           resultMeta: r.data.result.meta,
           isResultLoading: false, isPresentationLoading: false,
           resultMetricsBreakdown: this.getDisplayMetricsBreakdown(r.data.result)
@@ -416,6 +418,13 @@ class AttributionQuery extends Component {
     this.toggleAddToDashboardModal();
   }
 
+  renderDownloadButton = () => {
+    return (
+      <button className="btn btn-primary ml-1" style={{fontWeight: 500, marginLeft: '150px'}}
+              onClick={()=> jsonToCSV(this.state.result, "", "factors_attribution")}>Download</button>
+    )
+  }
+
   render() {
     if (!this.isLoaded()) return <Loading/>;
     return <div>
@@ -523,15 +532,17 @@ class AttributionQuery extends Component {
       <div style={{paddingLeft: '30px', paddingRight: '30px', paddingTop: '10px', minHeight: '500px'}}>
         <Row style={{marginTop: '15px', marginRight: '10px'}} hidden={!this.state.present}>
           <Col xs='12' md='12'>
-            <ButtonDropdown style={{float: 'right', marginRight: '-20px'}}
-                            isOpen={this.state.showDashboardsList} toggle={this.toggleDashboardsList}>
-              <DropdownToggle caret outline color="primary">
-                Add to dashboard
-              </DropdownToggle>
-              <DropdownMenu style={{height: 'auto', maxHeight: '210px', overflowX: 'scroll'}} right>
-                {this.renderDashboardDropdownOptions()}
-              </DropdownMenu>
-            </ButtonDropdown>
+            <ButtonToolbar className='pull-right'>
+              <ButtonDropdown isOpen={this.state.showDashboardsList} toggle={this.toggleDashboardsList}>
+                <DropdownToggle caret outline color="primary">
+                  Add to dashboard
+                </DropdownToggle>
+                <DropdownMenu style={{height: 'auto', maxHeight: '210px', overflowX: 'scroll'}} right>
+                  {this.renderDashboardDropdownOptions()}
+                </DropdownMenu>
+              </ButtonDropdown>
+              {this.renderDownloadButton()}
+            </ButtonToolbar>
           </Col>
         </Row>
 
