@@ -384,16 +384,17 @@ func getTopPagesReportAsWebAnalyticsResult(
 
 	rows := make([][]interface{}, 0, len(webAggr.PageAggregates))
 	for url, aggr := range webAggr.PageAggregates {
-		var avgPageSpentTimeOfPage float64
+		var fmtAvgPageSpentTimeOfPage string
 		if aggr.NoOfPageViews > 0 {
-			avgPageSpentTimeOfPage, _ = U.FloatRoundOffWithPrecision(aggr.TotalSpentTime/float64(aggr.NoOfPageViews), defaultPrecision)
+			avgPageSpentTimeOfPage, _ := U.FloatRoundOffWithPrecision(aggr.TotalSpentTime/float64(aggr.NoOfPageViews), defaultPrecision)
+			fmtAvgPageSpentTimeOfPage = getFormattedTime(int64(avgPageSpentTimeOfPage))
 		}
 
 		row := []interface{}{
 			url,
 			aggr.NoOfPageViews,
 			aggr.NoOfUniqueUsers,
-			avgPageSpentTimeOfPage,
+			fmtAvgPageSpentTimeOfPage,
 			aggr.NoOfEntrances,
 			aggr.NoOfExits,
 			aggr.NoOfBouncedEntrances,
