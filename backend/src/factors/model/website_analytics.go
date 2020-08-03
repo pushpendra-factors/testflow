@@ -120,9 +120,20 @@ type WebAnalyticsPageAggregate struct {
 	UniqueUsersMap  map[string]bool
 }
 
+type WebAnalyticsChannelAggregate struct {
+	NoOfPageViews         int
+	NoOfBouncedSessions   int     // no.of sessions with $page_count = 1.
+	NoOfSessions          int     // no.of sessions
+	TotalSessionSpentTime float64 // sum of $session_spent_time
+
+	NoOfUniqueUsers int
+	UniqueUsersMap  map[string]bool
+}
+
 type WebAnalyticsAggregate struct {
 	WebAnalyticsGeneralAggregate
-	PageAggregates map[string]*WebAnalyticsPageAggregate
+	PageAggregates    map[string]*WebAnalyticsPageAggregate
+	ChannelAggregates map[string]*WebAnalyticsChannelAggregate
 }
 
 type WebAnalyticsCacheResult struct {
@@ -386,7 +397,8 @@ func getTopPagesReportAsWebAnalyticsResult(
 	for url, aggr := range webAggr.PageAggregates {
 		var fmtAvgPageSpentTimeOfPage string
 		if aggr.NoOfPageViews > 0 {
-			avgPageSpentTimeOfPage, _ := U.FloatRoundOffWithPrecision(aggr.TotalSpentTime/float64(aggr.NoOfPageViews), defaultPrecision)
+			avgPageSpentTimeOfPage, _ := U.FloatRoundOffWithPrecision(
+				aggr.TotalSpentTime/float64(aggr.NoOfPageViews), defaultPrecision)
 			fmtAvgPageSpentTimeOfPage = getFormattedTime(int64(avgPageSpentTimeOfPage))
 		}
 
@@ -415,6 +427,50 @@ func getTopPagesReportAsWebAnalyticsResult(
 	}
 
 	return WebAnalyticsQueryResult{Headers: headers, Rows: rows[:rowsLimit]}
+}
+
+func getTrafficChannelReport(webAggr *WebAnalyticsAggregate) WebAnalyticsQueryResult {
+	headers := []string{
+		"Channel",
+		"Page Views",
+		"Unique Users",
+		"Sessions",
+		"Bounce Rate",
+		"Avg Session Duration",
+	}
+
+	rows := make([][]interface{}, 0, len(webAggr.ChannelAggregates))
+	for channel, aggr := range webAggr.ChannelAggregates {
+		var avgSessionDuration, bounceRate string
+		if aggr.NoOfSessions > 0 {
+			avgSessionDurationInSecs, _ := U.FloatRoundOffWithPrecision(
+				aggr.TotalSessionSpentTime/float64(aggr.NoOfSessions), defaultPrecision)
+			avgSessionDuration = getFormattedTime(int64(avgSessionDurationInSecs))
+
+			bounceRateAsInt := (aggr.NoOfBouncedSessions / aggr.NoOfSessions) * 100
+			bounceRate = fmt.Sprintf("%d%%", bounceRateAsInt)
+		} else {
+			avgSessionDuration = "0s"
+			bounceRate = "0%"
+		}
+
+		row := []interface{}{
+			channel,
+			aggr.NoOfPageViews,
+			aggr.NoOfUniqueUsers,
+			aggr.NoOfSessions,
+			bounceRate,
+			avgSessionDuration,
+		}
+		rows = append(rows, row)
+	}
+
+	// sort by NoOfPageViews.
+	sort.SliceStable(rows, func(i, j int) bool {
+		return rows[i][1].(int) > rows[j][1].(int)
+	})
+
+	return WebAnalyticsQueryResult{Headers: headers, Rows: rows}
 }
 
 // Converts single value aggregate to rows and headers format for compatibility.
@@ -495,30 +551,12 @@ func getResultByNameAsWebAnalyticsResult(webAggrState *WebAnalyticsAggregate) (
 		QueryNameAvgPagesPerSession, precisionedAvgPagesPerSession)
 
 	(*queryResultByName)[QueryNameTopPagesReport] = getTopPagesReportAsWebAnalyticsResult(webAggrState)
+	(*queryResultByName)[QueryNameTrafficChannelReport] = getTrafficChannelReport(webAggrState)
 
 	return queryResultByName
 }
 
-/*
-
-Query Explanations:
-
-1. Total Page Views: No.of events with $page_raw_url not null.
-2. Bounce Rate: (No.of session events with $page_count as 1/ total sessions) * 100
-3. Unique Users: Unique no.of coalsced users.
-4. Average Session Duration: Sum of $session_spent_time in session events / total sessions - in x mins y secs
-5. Average Session: Sum of $page_count on sessoin events / total sessions.
-
-6. Top Pages Report: For each $page_url,
-* Page URL: $page_url
-* Page Views: No.of events with this as $page_url.
-* Unique users: No.of coalsced users with this as $page_url.
-* Avg Time on Page: Sum of $page_spent_time on this as $page_url / total pages views of this page.
-* Entrances: No.of sessions with this as $initial_page_url
-* Exits: No.of sessions with this as $lastest_page_url
-* Bounced Entrances: No.of sessions with this as $initial_page_url and $page_count as 1
-
-*/
+// ExecuteWebAnalyticsQueries - executes the web analytics query and returns result by query_name.
 func ExecuteWebAnalyticsQueries(projectId uint64, queries *WebAnalyticsQueries) (
 	queryResultByName *map[string]WebAnalyticsQueryResult, errCode int) {
 
