@@ -26,8 +26,9 @@ func main() {
 	redisPort := flag.Int("redis_port", 6379, "")
 
 	flag.Parse()
-	defer util.NotifyOnPanic("Script#CacheDashboardQueries", *envFlag)
-	logCtx := log.WithFields(log.Fields{"Prefix": "Script#CacheDashboardQueries"})
+	taskID := "Script#CacheDashboardQueries"
+	defer util.NotifyOnPanic(taskID, *envFlag)
+	logCtx := log.WithFields(log.Fields{"Prefix": taskID})
 
 	if *envFlag != C.DEVELOPMENT && *envFlag != C.STAGING && *envFlag != C.PRODUCTION {
 		panic(fmt.Errorf("env [ %s ] not recognised", *envFlag))
@@ -39,7 +40,7 @@ func main() {
 
 	logCtx.Info("Starting to initialize database.")
 	config := &C.Configuration{
-		AppName: "script_push_to_bigquery",
+		AppName: taskID,
 		Env:     *envFlag,
 		DBInfo: C.DBConf{
 			Host:     *dbHost,
