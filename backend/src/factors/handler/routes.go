@@ -151,13 +151,9 @@ func InitDataServiceRoutes(r *gin.Engine) {
 		IH.DataServiceAdwordsAddDocumentHandler)
 
 	dataServiceRouteGroup.POST("/adwords/add_refresh_token",
-		mid.SetLoggedInAgent(),
-		mid.SetAuthorizedProjectsByLoggedInAgent(),
 		IntAdwordsAddRefreshTokenHandler)
 
 	dataServiceRouteGroup.POST("/adwords/get_refresh_token",
-		mid.SetLoggedInAgent(),
-		mid.SetAuthorizedProjectsByLoggedInAgent(),
 		IntAdwordsGetRefreshTokenHandler)
 
 	dataServiceRouteGroup.GET("/adwords/documents/last_sync_info",

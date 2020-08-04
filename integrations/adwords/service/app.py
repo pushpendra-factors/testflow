@@ -140,9 +140,7 @@ class APIClientWithSession():
 
         url = App.get_api_host() + "/data_service/adwords/add_refresh_token"
         
-        cookies = {}
-        cookies[App.get_session_cookie_name()] = session
-        response = requests.post(url, json=payload, cookies=cookies)
+        response = requests.post(url, json=payload)
         if not response.ok:
             log.error("Failed updating adwords integration with response : %d, %s", 
                 response.status_code, response.json())
@@ -153,11 +151,10 @@ class APIClientWithSession():
     @staticmethod
     def get_adwords_refresh_token(session, project_id):
         url = App.get_api_host() + "/data_service/adwords/get_refresh_token"
-        cookies = {}
-        cookies[App.get_session_cookie_name()] = session
+
         # project_id as str for consistency on json.
         payload = { "project_id": str(project_id) }
-        response = requests.post(url, json=payload, cookies=cookies)
+        response = requests.post(url, json=payload)
         if not response.ok:
             log.error("Failed getting adwords integration with response : %d, %s", 
                 response.status_code, response.json())
