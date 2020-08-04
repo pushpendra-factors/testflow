@@ -57,7 +57,7 @@ var ALLOWED_TYPES = [...]string{
 }
 
 const URI_PROPERTY_PREFIX = ":"
-const EVENT_NAMES_LIMIT = 2500
+const EVENT_NAMES_LIMIT = 5000
 
 // TODO: Make index name a constant and read it
 // error constants
