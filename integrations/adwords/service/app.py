@@ -21,7 +21,7 @@ parser.add_option("--host_url", default="http://localhost:8091",
     help="Self host url with protocol to refer on callbacks.")
 parser.add_option("--env", default="development", help="Environment.")
 parser.add_option("--developer_token", default="", help="Adwords developer token.")
-parser.add_option("--api_host_url", default="http://localhost:8080", help="API host url")
+parser.add_option("--api_host_url", default="http://localhost:8089", help="Data service host url")
 parser.add_option("--app_host_url", default="http://localhost:3000", help="App host url")
 parser.add_option("--oauth_secret", default="", help="OAuth2 client secret JSON string")
 
