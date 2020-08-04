@@ -102,6 +102,7 @@ func GetUserPropertiesHandler(c *gin.Context) {
 	reqId := U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID)
 
 	var err error
+	var properties map[string][]string
 	modelId := uint64(0)
 	modelIdParam := c.Query("model_id")
 	if modelIdParam != "" {
@@ -110,14 +111,13 @@ func GetUserPropertiesHandler(c *gin.Context) {
 			c.AbortWithStatus(http.StatusBadRequest)
 			return
 		}
-	}
-
-	properties, err := PC.GetSeenUserProperties(reqId, projectId, modelId)
-	if err != nil {
-		log.WithFields(log.Fields{
-			log.ErrorKey: err, "projectId": projectId}).Error(
-			"Get User Properties from pattern servers failed.")
-		properties = make(map[string][]string)
+		properties, err = PC.GetSeenUserProperties(reqId, projectId, modelId)
+		if err != nil {
+			log.WithFields(log.Fields{
+				log.ErrorKey: err, "projectId": projectId}).Error(
+				"Get User Properties from pattern servers failed.")
+			properties = make(map[string][]string)
+		}
 	}
 
 	var errCode int
@@ -146,7 +146,14 @@ func GetUserPropertyValuesHandler(c *gin.Context) {
 
 	reqId := U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID)
 
+	propertyName := c.Params.ByName("property_name")
+	if propertyName == "" {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
 	var err error
+	var propertyValues []string
 	modelId := uint64(0)
 	modelIdParam := c.Query("model_id")
 	if modelIdParam != "" {
@@ -155,22 +162,16 @@ func GetUserPropertyValuesHandler(c *gin.Context) {
 			c.AbortWithStatus(http.StatusBadRequest)
 			return
 		}
-	}
 
-	propertyName := c.Params.ByName("property_name")
-	if propertyName == "" {
-		c.AbortWithStatus(http.StatusBadRequest)
-		return
-	}
-
-	propertyValues, err := PC.GetSeenUserPropertyValues(reqId, projectId, modelId, propertyName)
-	if err != nil {
-		log.WithError(err).WithFields(log.Fields{
-			"projectId":    projectId,
-			"propertyName": propertyName}).Error(
-			"Get User Properties failed.")
-		c.AbortWithStatus(http.StatusBadRequest)
-		return
+		propertyValues, err = PC.GetSeenUserPropertyValues(reqId, projectId, modelId, propertyName)
+		if err != nil {
+			log.WithError(err).WithFields(log.Fields{
+				"projectId":    projectId,
+				"propertyName": propertyName}).Error(
+				"Get User Properties failed.")
+			c.AbortWithStatus(http.StatusBadRequest)
+			return
+		}
 	}
 
 	var errCode int

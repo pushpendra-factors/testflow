@@ -71,25 +71,15 @@ func GetEventPropertiesHandler(c *gin.Context) {
 		return
 	}
 
-	var err error
-	modelId := uint64(0)
-
-	modelIdParam := c.Query("model_id")
-	if modelIdParam != "" {
-		modelId, err = strconv.ParseUint(modelIdParam, 10, 64)
-		if err != nil {
-			c.AbortWithStatus(http.StatusBadRequest)
-			return
-		}
-	}
-
 	encodedEName := c.Params.ByName("event_name")
 	if encodedEName == "" {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
 
-	decENameInBytes, err := base64.StdEncoding.DecodeString(encodedEName)
+	var err error
+	var decENameInBytes []byte
+	decENameInBytes, err = base64.StdEncoding.DecodeString(encodedEName)
 	if err != nil {
 		logCtx.WithField("encodedName", encodedEName).Error("Failed decoding event_name.")
 		c.AbortWithStatus(http.StatusBadRequest)
@@ -99,13 +89,24 @@ func GetEventPropertiesHandler(c *gin.Context) {
 
 	logCtx.WithField("decodedEventName", eventName).Debug("Decoded event name on properties request.")
 
-	properties, err := PC.GetSeenEventProperties(reqId, projectId, modelId, eventName)
-	if err != nil {
-		logCtx.WithFields(log.Fields{
-			log.ErrorKey: err, "projectId": projectId, "eventName": eventName}).Error(
-			"Get Event Properties failed.")
-		c.AbortWithStatus(http.StatusBadRequest)
-		return
+	var properties map[string][]string
+	modelId := uint64(0)
+
+	modelIdParam := c.Query("model_id")
+	if modelIdParam != "" {
+		modelId, err = strconv.ParseUint(modelIdParam, 10, 64)
+		if err != nil {
+			c.AbortWithStatus(http.StatusBadRequest)
+			return
+		}
+		properties, err = PC.GetSeenEventProperties(reqId, projectId, modelId, eventName)
+		if err != nil {
+			logCtx.WithFields(log.Fields{
+				log.ErrorKey: err, "projectId": projectId, "eventName": eventName}).Error(
+				"Get Event Properties failed.")
+			c.AbortWithStatus(http.StatusBadRequest)
+			return
+		}
 	}
 
 	var errCode int
@@ -134,27 +135,21 @@ func GetEventPropertyValuesHandler(c *gin.Context) {
 		return
 	}
 
-	reqId := U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID)
-
-	var err error
-	modelId := uint64(0)
-
-	modelIdParam := c.Query("model_id")
-	if modelIdParam != "" {
-		modelId, err = strconv.ParseUint(modelIdParam, 10, 64)
-		if err != nil {
-			c.AbortWithStatus(http.StatusBadRequest)
-			return
-		}
-	}
-
 	encodedEName := c.Params.ByName("event_name")
 	if encodedEName == "" {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
 
-	decNameInBytes, err := base64.StdEncoding.DecodeString(encodedEName)
+	propertyName := c.Params.ByName("property_name")
+	if propertyName == "" {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	var err error
+	var decNameInBytes []byte
+	decNameInBytes, err = base64.StdEncoding.DecodeString(encodedEName)
 	if err != nil {
 		logCtx.WithFields(log.Fields{
 			"encodedName": encodedEName,
@@ -167,23 +162,31 @@ func GetEventPropertyValuesHandler(c *gin.Context) {
 
 	log.WithField("decodedEventName", eventName).Debug("Decoded event name on properties value request.")
 
-	propertyName := c.Params.ByName("property_name")
-	if propertyName == "" {
-		c.AbortWithStatus(http.StatusBadRequest)
-		return
-	}
+	reqId := U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID)
 
-	propertyValues, err := PC.GetSeenEventPropertyValues(reqId, projectId, modelId, eventName, propertyName)
-	if err != nil {
-		logCtx.WithFields(log.Fields{
-			log.ErrorKey:   err,
-			"projectId":    projectId,
-			"modelId":      modelId,
-			"eventName":    eventName,
-			"propertyName": propertyName}).Error(
-			"Get Event Properties failed.")
-		c.AbortWithStatus(http.StatusBadRequest)
-		return
+	var propertyValues []string
+	modelId := uint64(0)
+
+	modelIdParam := c.Query("model_id")
+	if modelIdParam != "" {
+		modelId, err = strconv.ParseUint(modelIdParam, 10, 64)
+		if err != nil {
+			c.AbortWithStatus(http.StatusBadRequest)
+			return
+		}
+
+		propertyValues, err = PC.GetSeenEventPropertyValues(reqId, projectId, modelId, eventName, propertyName)
+		if err != nil {
+			logCtx.WithFields(log.Fields{
+				log.ErrorKey:   err,
+				"projectId":    projectId,
+				"modelId":      modelId,
+				"eventName":    eventName,
+				"propertyName": propertyName}).Error(
+				"Get Event Properties failed.")
+			c.AbortWithStatus(http.StatusBadRequest)
+			return
+		}
 	}
 
 	var errCode int
