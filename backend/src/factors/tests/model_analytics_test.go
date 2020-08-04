@@ -1512,8 +1512,10 @@ func TestAnalyticsInsightsQueryWithFilterAndBreakdown(t *testing.T) {
 			},
 			GroupByProperties: []M.QueryGroupByProperty{
 				M.QueryGroupByProperty{
-					Entity:   M.PropertyEntityEvent,
-					Property: "$campaign_id",
+					Entity:         M.PropertyEntityEvent,
+					Property:       "$campaign_id",
+					EventName:      "s0",
+					EventNameIndex: 1,
 				},
 			},
 			Class: M.QueryClassInsights,
