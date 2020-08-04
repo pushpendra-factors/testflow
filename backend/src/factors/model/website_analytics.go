@@ -77,11 +77,12 @@ var DefaultWebAnalyticsQueries = map[string]string{
 }
 
 type WebAnalyticsEvent struct {
-	ID         string
-	ProjectID  uint64
-	UserID     string // coalsced user_id
-	IsSession  bool
-	Properties *WebAnalyticsEventProperties
+	ID          string
+	ProjectID   uint64
+	UserID      string // coalsced user_id
+	IsSession   bool
+	HasCampaign bool
+	Properties  *WebAnalyticsEventProperties
 }
 
 // WebAnalyticsEventProperties - Event Properties for web analytics.
@@ -280,6 +281,10 @@ func CreateWebAnalyticsDefaultDashboardWithUnits(projectId uint64, agentUUID str
 	return http.StatusCreated
 }
 
+func getChannel(webEvent *WebAnalyticsEvent) string {
+	return ""
+}
+
 // Builds aggregate by each event sent.
 func buildWebAnalyticsAggregate(webEvent *WebAnalyticsEvent, aggrState *WebAnalyticsAggregate) int {
 	logCtx := log.WithField("project_id", webEvent.ProjectID).WithField("event_id", webEvent.ID)
@@ -290,6 +295,10 @@ func buildWebAnalyticsAggregate(webEvent *WebAnalyticsEvent, aggrState *WebAnaly
 
 	if aggrState.PageAggregates == nil {
 		aggrState.PageAggregates = make(map[string]*WebAnalyticsPageAggregate)
+	}
+
+	if aggrState.ChannelAggregates == nil {
+		aggrState.ChannelAggregates = make(map[string]*WebAnalyticsChannelAggregate)
 	}
 
 	// non-session page event aggregates.
@@ -588,6 +597,10 @@ func ExecuteWebAnalyticsQueries(projectId uint64, queries *WebAnalyticsQueries) 
 		U.SP_PAGE_COUNT,
 		U.SP_INITIAL_PAGE_URL,
 		U.SP_LATEST_PAGE_URL,
+
+		// campaign properties.
+		U.EP_CAMPAIGN,
+		U.EP_CAMPAIGN_ID,
 	}
 	var selectPropertiesStmnt string
 	for _, property := range selectProperties {
@@ -631,14 +644,19 @@ func ExecuteWebAnalyticsQueries(projectId uint64, queries *WebAnalyticsQueries) 
 		// properties
 		var eventPropertyPageURL sql.NullString
 		var eventPropertyPageSpentTime sql.NullString
+		// session properties
 		var sessionPropertySpentTime sql.NullString
 		var sessionPropertyPageCount sql.NullString
 		var sessionPropertyInitialPageURL sql.NullString
 		var sessionPropertyLatestPageURL sql.NullString
+		// campaign properties
+		var eventPropertyCampaign sql.NullString
+		var eventPropertyCampaignID sql.NullString
 
 		err = rows.Scan(&id, &projectID, &userID, &eventNameID, &eventName, &eventNameType,
 			&eventPropertyPageURL, &eventPropertyPageSpentTime, &sessionPropertySpentTime,
-			&sessionPropertyPageCount, &sessionPropertyInitialPageURL, &sessionPropertyLatestPageURL)
+			&sessionPropertyPageCount, &sessionPropertyInitialPageURL, &sessionPropertyLatestPageURL,
+			&eventPropertyCampaign, &eventPropertyCampaignID)
 		if err != nil {
 			logCtx.WithError(err).
 				Error("Failed to scan row to download events on execute_web_analytics_query.")
@@ -655,6 +673,8 @@ func ExecuteWebAnalyticsQueries(projectId uint64, queries *WebAnalyticsQueries) 
 			continue
 		}
 
+		hasCampaign := eventPropertyCampaign.String != "" || eventPropertyCampaignID.String != ""
+
 		webEventProperties := &WebAnalyticsEventProperties{
 			PageURL:               eventPropertyPageURL.String,
 			PageSpentTime:         eventPropertyPageSpentTime.String,
@@ -665,11 +685,12 @@ func ExecuteWebAnalyticsQueries(projectId uint64, queries *WebAnalyticsQueries) 
 		}
 
 		webEvent := WebAnalyticsEvent{
-			ID:         id,
-			ProjectID:  projectID,
-			UserID:     userID,
-			Properties: webEventProperties,
-			IsSession:  isSessionEvent,
+			ID:          id,
+			ProjectID:   projectID,
+			UserID:      userID,
+			Properties:  webEventProperties,
+			IsSession:   isSessionEvent,
+			HasCampaign: hasCampaign,
 		}
 
 		// build all needed aggregates in one scan of events.
