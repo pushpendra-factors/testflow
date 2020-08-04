@@ -7,11 +7,11 @@ import {
 } from '@ant-design/icons';
 import styles from './index.module.scss';
 
-function Sidebar({ collapsed }) {
+function Sidebar() {
   const { Sider } = Layout;
 
   return (
-    <Sider trigger={null} collapsible collapsed={collapsed}>
+    <Sider trigger={null} collapsible collapsed={true}>
       <div className={styles.logo} />
       <Menu theme="dark" mode="inline" defaultSelectedKeys={['1']}>
         <Menu.Item key="1" icon={<UserOutlined />}>
