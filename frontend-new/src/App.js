@@ -2,6 +2,7 @@ import React from 'react';
 import Sidebar from './components/Sidebar';
 
 import { Layout } from 'antd';
+import CoreQuery from './Views/CoreQuery';
 
 function App() {
   const { Content } = Layout;
@@ -12,8 +13,8 @@ function App() {
         <Sidebar />
         <Layout className="site-layout">
           <Content>
-            <div className="p-8 b-white">
-              Content
+            <div className="p-8 bg-white min-h-screen">
+              <CoreQuery />
             </div>
           </Content>
         </Layout>
