@@ -1,0 +1,23 @@
+import React from 'react';
+import {Layout} from 'antd';
+import Sidebar from '../../components/Sidebar';
+import CoreQuery from '../CoreQuery';
+
+function AppLayout() {
+    const { Content } = Layout;
+
+    return (
+        <Layout>
+            <Sidebar />
+            <Layout className="site-layout">
+            <Content>
+                <div className="p-8 bg-white min-h-screen">
+                <CoreQuery />
+                </div>
+            </Content>
+            </Layout>
+        </Layout>
+    )
+}
+
+export default AppLayout;

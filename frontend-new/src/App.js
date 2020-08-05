@@ -1,24 +1,15 @@
 import React from 'react';
-import Sidebar from './components/Sidebar';
-
-import { Layout } from 'antd';
-import CoreQuery from './Views/CoreQuery';
+import AppLayout from './Views/AppLayout';
+import { HashRouter, Route, Switch } from 'react-router-dom';
 
 function App() {
-  const { Content } = Layout;
-
   return (
     <div className="App">
-      <Layout>
-        <Sidebar />
-        <Layout className="site-layout">
-          <Content>
-            <div className="p-8 bg-white min-h-screen">
-              <CoreQuery />
-            </div>
-          </Content>
-        </Layout>
-      </Layout>
+      <HashRouter>
+        <Switch>
+          <Route path="/" name="Home" component={AppLayout} />
+        </Switch>
+      </HashRouter>
     </div>
   );
 }

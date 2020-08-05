@@ -1,0 +1,21 @@
+{
+  "projects": {
+    "default": "factors-staging"
+  },
+  "targets": {
+    "factors-staging": {
+      "hosting": {
+        "staging": [
+          "factors-staging"
+        ]
+      }
+    },
+    "factors-production": {
+      "hosting": {
+        "production": [
+          "factors-production"
+        ]
+      }
+    }
+  }
+}
