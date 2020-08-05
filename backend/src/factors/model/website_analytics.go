@@ -356,7 +356,8 @@ func getChannel(wep *WebAnalyticsEventProperties, isSessionEvent bool) string {
 	return "Other"
 }
 
-// Builds aggregate by each event sent.
+// buildWebAnalyticsAggregate - Builds aggregate by each event sent.
+// Todo: Method is too big. Break it into multiple methods.
 func buildWebAnalyticsAggregate(webEvent *WebAnalyticsEvent, aggrState *WebAnalyticsAggregate) int {
 	logCtx := log.WithField("project_id", webEvent.ProjectID).WithField("event_id", webEvent.ID)
 
