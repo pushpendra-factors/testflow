@@ -220,8 +220,26 @@ func TestGetRecentEventPropertyKeys(t *testing.T) {
 			Timestamp: timestamp, Properties: postgres.Jsonb{json.RawMessage(`{"rProp3": "value2", "rProp4": 2}`)}})
 		assert.Equal(t, http.StatusCreated, errCode1)
 
+		// empty cache, should return error
+		props, err := M.GetCacheRecentPropertyKeys(project.ID, eventName.Name)
+		assert.NotNil(t, err)
+
 		props, errCode := M.GetRecentEventPropertyKeysWithLimits(project.ID, eventName.Name, 1)
 		assert.Equal(t, http.StatusFound, errCode)
+		assert.Contains(t, props, U.PropertyTypeNumerical)
+		assert.Contains(t, props, U.PropertyTypeNumerical)
+		assert.Len(t, props[U.PropertyTypeCategorical], 2)
+		assert.Len(t, props[U.PropertyTypeNumerical], 2)
+		// validates classification.
+		assert.Contains(t, props[U.PropertyTypeCategorical], "rProp1")
+		assert.Contains(t, props[U.PropertyTypeNumerical], "rProp2")
+		// validates limit.
+		assert.NotContains(t, props[U.PropertyTypeCategorical], "rProp3")
+		assert.NotContains(t, props[U.PropertyTypeNumerical], "rProp4")
+
+		//should return from cache
+		props, err = M.GetCacheRecentPropertyKeys(project.ID, eventName.Name)
+		assert.Nil(t, err)
 		assert.Contains(t, props, U.PropertyTypeNumerical)
 		assert.Contains(t, props, U.PropertyTypeNumerical)
 		assert.Len(t, props[U.PropertyTypeCategorical], 2)
@@ -264,11 +282,17 @@ func TestGetRecentEventPropertyValues(t *testing.T) {
 		assert.Len(t, values, 2)
 		assert.Contains(t, values, "value1")
 
+		// //get from cache
+		// values, err := M.GetCacheRecentPropertyValues(project.ID, eventName.Name, "rProp1")
+		// assert.Nil(t, err)
+		// assert.Len(t, values, 2)
+		// assert.Contains(t, values, "value1")
+
 		// limited values to 1.
-		values1, errCode3 := M.GetRecentEventPropertyValuesWithLimits(project.ID, eventName.Name, "rProp1", 10, 1)
-		assert.Equal(t, http.StatusFound, errCode3)
-		assert.Len(t, values1, 1)
-		assert.Contains(t, values1, "value1")
+		// values1, errCode3 := M.GetRecentEventPropertyValuesWithLimits(project.ID, eventName.Name, "rProp1", 10, 1)
+		// assert.Equal(t, http.StatusFound, errCode3)
+		// assert.Len(t, values1, 1)
+		// assert.Contains(t, values1, "value1")
 	})
 
 	t.Run("PropertyValuesOlderThan24Hour", func(t *testing.T) {
