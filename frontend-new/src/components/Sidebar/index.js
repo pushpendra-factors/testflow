@@ -1,7 +1,6 @@
 import React from 'react';
 import { Layout, Menu } from 'antd';
 import {
-  UserOutlined,
   VideoCameraOutlined,
   UploadOutlined,
 } from '@ant-design/icons';
@@ -12,10 +11,11 @@ function Sidebar() {
 
   return (
     <Sider trigger={null} collapsible collapsed={true}>
-      <div className={styles.logo} />
-      <Menu theme="dark" mode="inline" defaultSelectedKeys={['1']}>
-        <Menu.Item key="1" icon={<UserOutlined />}>
-          nav 1
+      <div className={styles.logo} >
+        <img src="./assets/icons/factors.png" alt="Factors.ai" />
+      </div>
+      <Menu className="menu-items" theme="dark" mode="inline" defaultSelectedKeys={['1']}>
+        <Menu.Item key="1" icon={<img className="anticon" src="./assets/icons/home.svg" alt="Home" />}>
         </Menu.Item>
         <Menu.Item key="2" icon={<VideoCameraOutlined />}>
           nav 2
