@@ -289,16 +289,13 @@ func hasCampaign(campaign, campaignID string) bool {
 	return campaign != "" || campaignID != ""
 }
 
-func isSearchReferrer(referrer string) bool {
-	return strings.Contains(referrer, "google") || strings.Contains(referrer, "bing")
+func isSearchReferrer(referrerDomain string) bool {
+	return U.IsStringContainsAny(referrerDomain, []string{"google", "bing"}...)
 }
 
-func isSocialReferrer(referrer string) bool {
-	return strings.Contains(referrer, "facebook") ||
-		strings.Contains(referrer, "linkedin") ||
-		strings.Contains(referrer, "twitter") ||
-		strings.Contains(referrer, "instagram") ||
-		strings.Contains(referrer, "tiktok")
+func isSocialReferrer(referrerDomain string) bool {
+	return U.IsStringContainsAny(referrerDomain,
+		[]string{"facebook", "twitter", "linkedin", "instagram", "tiktok"}...)
 }
 
 func getChannel(wep *WebAnalyticsEventProperties, isSessionEvent bool) string {
@@ -543,18 +540,18 @@ func getTrafficChannelReport(webAggr *WebAnalyticsAggregate) WebAnalyticsQueryRe
 
 	rows := make([][]interface{}, 0, len(webAggr.ChannelAggregates))
 	for channel, aggr := range webAggr.ChannelAggregates {
-		var avgSessionDuration, bounceRate string
-		if aggr.NoOfSessions > 0 {
-			avgSessionDurationInSecs, _ := U.FloatRoundOffWithPrecision(
-				aggr.SessionDuration/float64(aggr.NoOfSessions), defaultPrecision)
-			avgSessionDuration = getFormattedTime(int64(avgSessionDurationInSecs))
+		var avgSessionDurationInSecs float64
+		var bounceRateAsInt int
 
-			bounceRateAsInt := (aggr.NoOfBouncedSessions / aggr.NoOfSessions) * 100
-			bounceRate = fmt.Sprintf("%d%%", bounceRateAsInt)
-		} else {
-			avgSessionDuration = "0s"
-			bounceRate = "0%"
+		if aggr.NoOfSessions > 0 {
+			avgSessionDurationInSecs, _ = U.FloatRoundOffWithPrecision(
+				aggr.SessionDuration/float64(aggr.NoOfSessions), defaultPrecision)
+
+			bounceRateAsInt = (aggr.NoOfBouncedSessions / aggr.NoOfSessions) * 100
 		}
+		// Formatted value string.
+		avgSessionDuration := getFormattedTime(int64(avgSessionDurationInSecs))
+		bounceRate := fmt.Sprintf("%d%%", bounceRateAsInt)
 
 		row := []interface{}{
 			channel,
