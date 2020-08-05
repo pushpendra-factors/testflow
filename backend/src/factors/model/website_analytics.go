@@ -433,7 +433,7 @@ func buildWebAnalyticsAggregate(webEvent *WebAnalyticsEvent, aggrState *WebAnaly
 	}
 
 	aggrState.NoOfSessions++
-	aggrState.ChannelAggregates[channel].NoOfBouncedSessions++
+	aggrState.ChannelAggregates[channel].NoOfSessions++
 
 	sessionSpentTime, err := U.GetPropertyValueAsFloat64(webEvent.Properties.SessionSpentTime)
 	if err != nil {
