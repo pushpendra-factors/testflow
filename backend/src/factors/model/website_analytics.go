@@ -127,14 +127,12 @@ type WebAnalyticsPageAggregate struct {
 
 type WebAnalyticsChannelAggregate struct {
 	NoOfPageViews       int
+	NoOfSessions        int     // no.of sessions
 	NoOfBouncedSessions int     // no.of sessions with $page_count = 1.
 	SessionDuration     float64 // sum of $session_spent_time of session event with
 
 	NoOfUniqueUsers int
 	UniqueUsersMap  map[string]bool
-
-	NoOfSessions      int // no.of sessions
-	UniqueSessionsMap map[string]bool
 }
 
 type WebAnalyticsAggregate struct {
