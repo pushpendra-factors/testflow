@@ -562,7 +562,7 @@ func GetRecentUserPropertyKeys(projectId uint64) (map[string][]string, int) {
 }
 
 func GetRecentUserPropertyValuesWithLimits(projectId uint64, propertyKey string, usersLimit, valuesLimit int) ([]string, int) {
-	if values, err := GetCacheRecentPropertyValues(projectId, ""); err == nil {
+	if values, err := GetCacheRecentPropertyValues(projectId, "", propertyKey); err == nil {
 		return values, http.StatusFound
 	}
 
@@ -599,7 +599,7 @@ func GetRecentUserPropertyValuesWithLimits(projectId uint64, propertyKey string,
 		logCtx.WithError(err).Error("Failed scanning rows on get property values.")
 		return values, http.StatusInternalServerError
 	}
-	SetCacheRecentPropertyValues(projectId, "", values)
+	SetCacheRecentPropertyValues(projectId, "", propertyKey, values)
 	return values, http.StatusFound
 }
 

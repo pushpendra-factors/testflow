@@ -382,23 +382,25 @@ func GetProjectEventsInfo() (*(map[uint64]*ProjectEventsInfo), int) {
 }
 
 func getRecentPropertyKeysCacheKey(projectId uint64, eventName string) (*cacheRedis.Key, error) {
-	var prefix string
+	var suffix string
+	prefix := "recent_properties"
 	if eventName == "" { //must be user_properties
-		prefix = "user_properites:recent_properties:keys"
+		suffix = "user_properites:keys"
 	} else {
-		prefix = fmt.Sprintf("%s:recent_properties:keys", eventName)
+		suffix = fmt.Sprintf("event_name:%s:keys", eventName)
 	}
-	return cacheRedis.NewKey(projectId, prefix, "")
+	return cacheRedis.NewKey(projectId, prefix, suffix)
 }
 
-func getRecentPropertyValuesCacheKey(projectId uint64, property string) (*cacheRedis.Key, error) {
-	var prefix string
-	if property == "" { //must be user_properties
-		prefix = "user_properites:recent_properties:values"
+func getRecentPropertyValuesCacheKey(projectId uint64, eventName string, property string) (*cacheRedis.Key, error) {
+	var suffix string
+	prefix := "recent_properties"
+	if eventName == "" { //must be user_properties
+		suffix = fmt.Sprintf("user_properties:property:%s:values", property)
 	} else {
-		prefix = fmt.Sprintf("%s:recent_properties:values", property)
+		suffix = fmt.Sprintf("event_name:%s:property:%s:values", eventName, property)
 	}
-	return cacheRedis.NewKey(projectId, prefix, "")
+	return cacheRedis.NewKey(projectId, prefix, suffix)
 }
 
 func getCacheRecentProperty(cacheKey *cacheRedis.Key, property interface{}) error {
@@ -417,9 +419,9 @@ func getCacheRecentProperty(cacheKey *cacheRedis.Key, property interface{}) erro
 	return nil
 }
 
-func GetCacheRecentPropertyValues(projectId uint64, eventName string) ([]string, error) {
+func GetCacheRecentPropertyValues(projectId uint64, eventName string, property string) ([]string, error) {
 	var propertyValues []string
-	recentPropertyValuesCacheKey, err := getRecentPropertyValuesCacheKey(projectId, eventName)
+	recentPropertyValuesCacheKey, err := getRecentPropertyValuesCacheKey(projectId, eventName, property)
 	if err != nil {
 		return propertyValues, err
 	}
@@ -444,8 +446,8 @@ func setCacheRecentProperty(cacheKey *cacheRedis.Key, property interface{}) erro
 	return nil
 }
 
-func SetCacheRecentPropertyValues(projectId uint64, eventName string, values []string) error {
-	recentPropertyValuesCacheKey, err := getRecentPropertyValuesCacheKey(projectId, eventName)
+func SetCacheRecentPropertyValues(projectId uint64, eventName string, property string, values []string) error {
+	recentPropertyValuesCacheKey, err := getRecentPropertyValuesCacheKey(projectId, eventName, property)
 	if err != nil {
 		return err
 	}
@@ -533,7 +535,7 @@ func GetRecentEventPropertyKeys(projectId uint64, eventName string) (map[string]
 // values of given property from last 24 hours.
 func GetRecentEventPropertyValuesWithLimits(projectId uint64, eventName string,
 	property string, eventsLimit, valuesLimit int) ([]string, int) {
-	if values, err := GetCacheRecentPropertyValues(projectId, eventName); err == nil {
+	if values, err := GetCacheRecentPropertyValues(projectId, eventName, property); err == nil {
 		return values, http.StatusFound
 	}
 
@@ -568,7 +570,7 @@ func GetRecentEventPropertyValuesWithLimits(projectId uint64, eventName string,
 		logCtx.WithError(err).Error("Failed scanning property value on type classifcation.")
 		return values, http.StatusInternalServerError
 	}
-	SetCacheRecentPropertyValues(projectId, eventName, values)
+	SetCacheRecentPropertyValues(projectId, eventName, property, values)
 	return values, http.StatusFound
 }
 
