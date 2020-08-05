@@ -9,6 +9,7 @@ import (
 	U "factors/util"
 	"fmt"
 	"net/http"
+	"reflect"
 	"strings"
 	"time"
 
@@ -380,10 +381,106 @@ func GetProjectEventsInfo() (*(map[uint64]*ProjectEventsInfo), int) {
 	return &projectEventsTime, http.StatusFound
 }
 
+func getRecentPropertyKeysCacheKey(projectId uint64, eventName string) (*cacheRedis.Key, error) {
+	var prefix string
+	if eventName == "" { //must be user_properties
+		prefix = "user_properites:recent_properties:keys"
+	} else {
+		prefix = fmt.Sprintf("%s:recent_properties:keys", eventName)
+	}
+	return cacheRedis.NewKey(projectId, prefix, "")
+}
+
+func getRecentPropertyValuesCacheKey(projectId uint64, property string) (*cacheRedis.Key, error) {
+	var prefix string
+	if property == "" { //must be user_properties
+		prefix = "user_properites:recent_properties:values"
+	} else {
+		prefix = fmt.Sprintf("%s:recent_properties:values", property)
+	}
+	return cacheRedis.NewKey(projectId, prefix, "")
+}
+
+func getCacheRecentProperty(cacheKey *cacheRedis.Key, property interface{}) error {
+	if reflect.ValueOf(property).Kind() != reflect.Ptr {
+		return errors.New("Must be pointer type ")
+	}
+	enRecentProperties, err := cacheRedis.Get(cacheKey)
+	if err != nil {
+		return err
+	}
+
+	err = json.Unmarshal([]byte(enRecentProperties), property)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func GetCacheRecentPropertyValues(projectId uint64, eventName string) ([]string, error) {
+	var propertyValues []string
+	recentPropertyValuesCacheKey, err := getRecentPropertyValuesCacheKey(projectId, eventName)
+	if err != nil {
+		return propertyValues, err
+	}
+	err = getCacheRecentProperty(recentPropertyValuesCacheKey, &propertyValues)
+	if err != nil {
+		return propertyValues, err
+	}
+	return propertyValues, nil
+}
+
+func setCacheRecentProperty(cacheKey *cacheRedis.Key, property interface{}) error {
+	enProperties, err := json.Marshal(property)
+	if err != nil {
+		return err
+	}
+
+	err = cacheRedis.Set(cacheKey, string(enProperties), 60*60)
+	if err != nil {
+		log.WithError(err).Error("Failed to setCacheRecentProperty.")
+		return err
+	}
+	return nil
+}
+
+func SetCacheRecentPropertyValues(projectId uint64, eventName string, values []string) error {
+	recentPropertyValuesCacheKey, err := getRecentPropertyValuesCacheKey(projectId, eventName)
+	if err != nil {
+		return err
+	}
+	return setCacheRecentProperty(recentPropertyValuesCacheKey, values)
+}
+
+func SetCacheRecentPropertyKeys(projectId uint64, eventName string, keys map[string][]string) error {
+	recentPropertyKeysCacheKey, err := getRecentPropertyKeysCacheKey(projectId, eventName)
+	if err != nil {
+		return err
+	}
+	return setCacheRecentProperty(recentPropertyKeysCacheKey, keys)
+}
+
+func GetCacheRecentPropertyKeys(projectId uint64, eventName string) (map[string][]string, error) {
+	var propertyKeys map[string][]string
+	recentPropertyValuesCacheKey, err := getRecentPropertyKeysCacheKey(projectId, eventName)
+	if err != nil {
+		return propertyKeys, err
+	}
+	err = getCacheRecentProperty(recentPropertyValuesCacheKey, &propertyKeys)
+	if err != nil {
+		return propertyKeys, err
+	}
+	return propertyKeys, nil
+}
+
 // GetRecentEventPropertyKeys - Returns unique event property
 // keys from last 24 hours.
 func GetRecentEventPropertyKeysWithLimits(projectId uint64, eventName string, eventsLimit int) (map[string][]string, int) {
 	db := C.GetServices().Db
+	properties, err := GetCacheRecentPropertyKeys(projectId, eventName)
+	if err == nil {
+		return properties, http.StatusFound
+	}
 
 	eventsAfterTimestamp := U.UnixTimeBeforeDuration(24 * time.Hour)
 	logCtx := log.WithFields(log.Fields{"project_id": projectId, "events_after_timestamp": eventsAfterTimestamp})
@@ -424,6 +521,7 @@ func GetRecentEventPropertyKeysWithLimits(projectId uint64, eventName string, ev
 		return nil, http.StatusInternalServerError
 	}
 
+	SetCacheRecentPropertyKeys(projectId, eventName, propsByType)
 	return propsByType, http.StatusFound
 }
 
@@ -435,6 +533,9 @@ func GetRecentEventPropertyKeys(projectId uint64, eventName string) (map[string]
 // values of given property from last 24 hours.
 func GetRecentEventPropertyValuesWithLimits(projectId uint64, eventName string,
 	property string, eventsLimit, valuesLimit int) ([]string, int) {
+	if values, err := GetCacheRecentPropertyValues(projectId, eventName); err == nil {
+		return values, http.StatusFound
+	}
 
 	db := C.GetServices().Db
 
@@ -467,6 +568,7 @@ func GetRecentEventPropertyValuesWithLimits(projectId uint64, eventName string,
 		logCtx.WithError(err).Error("Failed scanning property value on type classifcation.")
 		return values, http.StatusInternalServerError
 	}
+	SetCacheRecentPropertyValues(projectId, eventName, values)
 	return values, http.StatusFound
 }
 

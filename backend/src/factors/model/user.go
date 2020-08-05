@@ -509,6 +509,10 @@ func CreateOrGetAMPUser(projectId uint64, ampUserId string, timestamp int64) (*U
 }
 
 func GetRecentUserPropertyKeysWithLimits(projectId uint64, usersLimit int) (map[string][]string, int) {
+	if properties, err := GetCacheRecentPropertyKeys(projectId, ""); err == nil {
+		return properties, http.StatusFound
+	}
+
 	db := C.GetServices().Db
 
 	logCtx := log.WithField("project_id", projectId)
@@ -549,6 +553,7 @@ func GetRecentUserPropertyKeysWithLimits(projectId uint64, usersLimit int) (map[
 		return nil, http.StatusInternalServerError
 	}
 
+	SetCacheRecentPropertyKeys(projectId, "", propsByType)
 	return propsByType, http.StatusFound
 }
 
@@ -557,6 +562,10 @@ func GetRecentUserPropertyKeys(projectId uint64) (map[string][]string, int) {
 }
 
 func GetRecentUserPropertyValuesWithLimits(projectId uint64, propertyKey string, usersLimit, valuesLimit int) ([]string, int) {
+	if values, err := GetCacheRecentPropertyValues(projectId, ""); err == nil {
+		return values, http.StatusFound
+	}
+
 	db := C.GetServices().Db
 
 	// limit on values returned.
@@ -590,7 +599,7 @@ func GetRecentUserPropertyValuesWithLimits(projectId uint64, propertyKey string,
 		logCtx.WithError(err).Error("Failed scanning rows on get property values.")
 		return values, http.StatusInternalServerError
 	}
-
+	SetCacheRecentPropertyValues(projectId, "", values)
 	return values, http.StatusFound
 }
 
