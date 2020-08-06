@@ -1,0 +1,4 @@
+ARG POSTGRES_VERSION
+
+FROM postgres:$POSTGRES_VERSION
+ADD init-user-db.sh /docker-entrypoint-initdb.d/init-user-db.sh
