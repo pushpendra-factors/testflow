@@ -17,11 +17,8 @@ function Sidebar() {
       <Menu className="menu-items" theme="dark" mode="inline" defaultSelectedKeys={['1']}>
         <Menu.Item key="1" icon={<img className="anticon" src="./assets/icons/home.svg" alt="Home" />}>
         </Menu.Item>
-        <Menu.Item key="2" icon={<VideoCameraOutlined />}>
+        <Menu.Item key="2" icon={<img className="anticon" src="./assets/icons/core-query-white.png" alt="Core Query" />}>
           nav 2
-        </Menu.Item>
-        <Menu.Item key="3" icon={<UploadOutlined />}>
-          nav 3
         </Menu.Item>
       </Menu>
     </Sider>
