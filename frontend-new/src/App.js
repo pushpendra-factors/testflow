@@ -13,7 +13,7 @@ function App() {
         <Sidebar />
         <Layout className="site-layout">
           <Content>
-            <div className="p-8 bg-white min-h-screen">
+            <div className="p-4 bg-white min-h-screen">
               <CoreQuery />
             </div>
           </Content>

@@ -1,0 +1,29 @@
+$primaryColor: #5949BC;
+
+.btn {
+	padding: 8px;
+	background-color: $primaryColor;
+	border: 1px solid $primaryColor;
+	border-radius: 8px;
+	display: flex;
+	align-items: center;
+	font-weight: bold;
+	&:hover {
+		background-color: $primaryColor;
+		color: #fff;
+		border-color: $primaryColor;
+	}
+	&:focus {
+		background-color: $primaryColor;
+		color: #fff;
+		border-color: $primaryColor;
+	}
+}
+
+.popoverHeading {
+	background-color: $primaryColor;
+	color: white;
+	font-weight: bold;
+	border-top-left-radius: 12px;
+	border-top-right-radius: 12px;
+}
