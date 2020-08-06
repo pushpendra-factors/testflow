@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"sort"
+	"strings"
 	"sync"
 
 	"github.com/gomodule/redigo/redis"
@@ -64,16 +65,14 @@ var SkippableWindows = map[string]int64{
 
 // DefaultWebAnalyticsQueries -  Named queries and corresponding presentation.
 var DefaultWebAnalyticsQueries = map[string]string{
-	QueryNameSessions:           PresentationCard,
-	QueryNameTotalPageViews:     PresentationCard,
-	QueryNameBounceRate:         PresentationCard,
-	QueryNameUniqueUsers:        PresentationCard,
-	QueryNameAvgSessionDuration: PresentationCard,
-	QueryNameAvgPagesPerSession: PresentationCard,
-	QueryNameTopPagesReport:     PresentationTable,
-
-	// Todo: Add support for traffic channel report.
-	// QueryNameTrafficChannelReport: PresentationTable,
+	QueryNameSessions:             PresentationCard,
+	QueryNameTotalPageViews:       PresentationCard,
+	QueryNameBounceRate:           PresentationCard,
+	QueryNameUniqueUsers:          PresentationCard,
+	QueryNameAvgSessionDuration:   PresentationCard,
+	QueryNameAvgPagesPerSession:   PresentationCard,
+	QueryNameTopPagesReport:       PresentationTable,
+	QueryNameTrafficChannelReport: PresentationTable,
 }
 
 type WebAnalyticsEvent struct {
@@ -86,14 +85,20 @@ type WebAnalyticsEvent struct {
 
 // WebAnalyticsEventProperties - Event Properties for web analytics.
 type WebAnalyticsEventProperties struct {
-	PageURL       string
-	PageSpentTime string
+	PageURL        string
+	PageSpentTime  string
+	Source         string
+	Medium         string
+	ReferrerDomain string
+	Campaign       string
+	CampaignID     string
 
 	// session properties.
-	SessionSpentTime      string
-	SessionPageCount      string
-	SessionInitialPageURL string
-	SessionLatestPageURL  string
+	SessionSpentTime             string
+	SessionPageCount             string
+	SessionInitialPageURL        string
+	SessionInitialReferrerDomain string
+	SessionLatestPageURL         string
 }
 
 // WebAnalyticsResultAggregate - Supporting aggregates for
@@ -120,9 +125,20 @@ type WebAnalyticsPageAggregate struct {
 	UniqueUsersMap  map[string]bool
 }
 
+type WebAnalyticsChannelAggregate struct {
+	NoOfPageViews       int
+	NoOfSessions        int     // no.of sessions
+	NoOfBouncedSessions int     // no.of sessions with $page_count = 1.
+	SessionDuration     float64 // sum of $session_spent_time of session event with
+
+	NoOfUniqueUsers int
+	UniqueUsersMap  map[string]bool
+}
+
 type WebAnalyticsAggregate struct {
 	WebAnalyticsGeneralAggregate
-	PageAggregates map[string]*WebAnalyticsPageAggregate
+	PageAggregates    map[string]*WebAnalyticsPageAggregate
+	ChannelAggregates map[string]*WebAnalyticsChannelAggregate
 }
 
 type WebAnalyticsCacheResult struct {
@@ -269,7 +285,83 @@ func CreateWebAnalyticsDefaultDashboardWithUnits(projectId uint64, agentUUID str
 	return http.StatusCreated
 }
 
-// Builds aggregate by each event sent.
+func hasCampaign(campaign, campaignID string) bool {
+	return campaign != "" || campaignID != ""
+}
+
+func isSearchReferrer(referrerDomain string) bool {
+	referrerDomain = strings.ToLower(referrerDomain)
+
+	return U.IsContainsAnySubString(referrerDomain, []string{"google", "bing"}...)
+}
+
+func isSocialReferrer(referrerDomain string) bool {
+	referrerDomain = strings.ToLower(referrerDomain)
+
+	return U.IsContainsAnySubString(referrerDomain,
+		[]string{"facebook", "twitter", "linkedin", "instagram", "tiktok"}...)
+}
+
+func getChannel(wep *WebAnalyticsEventProperties, isSessionEvent bool) string {
+	var referrerDomain string
+	if isSessionEvent {
+		referrerDomain = wep.SessionInitialReferrerDomain
+	} else {
+		// Properties like source, referrer and medium
+		// are using the same name as event property on session event.
+		referrerDomain = wep.ReferrerDomain
+	}
+
+	// Property values cleanup.
+	wep.Medium = strings.ToLower(wep.Medium)
+	referrerDomain = strings.ToLower(referrerDomain)
+
+	// NOTE: Order of conditions is CRITICAL.
+	// Ensure any change on the order is
+	// planned and reviewed before.
+
+	if !hasCampaign(wep.Campaign, wep.CampaignID) &&
+		wep.Source == "" && referrerDomain == "" && wep.Medium == "" {
+		return "Direct"
+	}
+
+	if !hasCampaign(wep.Campaign, wep.CampaignID) &&
+		isSearchReferrer(referrerDomain) {
+		return "Organic Search"
+	}
+
+	if hasCampaign(wep.Campaign, wep.CampaignID) &&
+		isSearchReferrer(referrerDomain) {
+		return "Paid Search"
+	}
+
+	if !hasCampaign(wep.Campaign, wep.CampaignID) &&
+		isSocialReferrer(referrerDomain) {
+		return "Organic Social"
+	}
+
+	if hasCampaign(wep.Campaign, wep.CampaignID) &&
+		isSocialReferrer(referrerDomain) {
+		return "Paid Social"
+	}
+
+	if wep.Medium == "referral" {
+		return "Referral"
+	}
+
+	if wep.Medium == "email" {
+		return "Email"
+	}
+
+	if wep.Medium == "affiliate" {
+		return "Affiliates"
+	}
+
+	return "Other"
+}
+
+// buildWebAnalyticsAggregate - Builds aggregate by each event sent.
+// Todo: Method is too big. Break it into multiple methods.
 func buildWebAnalyticsAggregate(webEvent *WebAnalyticsEvent, aggrState *WebAnalyticsAggregate) int {
 	logCtx := log.WithField("project_id", webEvent.ProjectID).WithField("event_id", webEvent.ID)
 
@@ -281,9 +373,18 @@ func buildWebAnalyticsAggregate(webEvent *WebAnalyticsEvent, aggrState *WebAnaly
 		aggrState.PageAggregates = make(map[string]*WebAnalyticsPageAggregate)
 	}
 
+	if aggrState.ChannelAggregates == nil {
+		aggrState.ChannelAggregates = make(map[string]*WebAnalyticsChannelAggregate)
+	}
+
+	channel := getChannel(webEvent.Properties, webEvent.IsSession)
+	if _, exists := aggrState.ChannelAggregates[channel]; !exists {
+		aggrState.ChannelAggregates[channel] = &WebAnalyticsChannelAggregate{}
+	}
+
 	// non-session page event aggregates.
 	if !webEvent.IsSession {
-		pageURL := U.GetPropertyValueAsString(webEvent.Properties.PageURL)
+		pageURL := webEvent.Properties.PageURL
 		if pageURL == "" {
 			logCtx.Error("Missing page_url property on event.")
 			return http.StatusInternalServerError
@@ -319,10 +420,22 @@ func buildWebAnalyticsAggregate(webEvent *WebAnalyticsEvent, aggrState *WebAnaly
 			aggrState.PageAggregates[pageURL].NoOfUniqueUsers++
 		}
 
+		aggrState.ChannelAggregates[channel].NoOfPageViews++
+
+		if aggrState.ChannelAggregates[channel].UniqueUsersMap == nil {
+			aggrState.ChannelAggregates[channel].UniqueUsersMap = make(map[string]bool)
+		}
+
+		if _, exists := aggrState.ChannelAggregates[channel].UniqueUsersMap[webEvent.UserID]; !exists {
+			aggrState.ChannelAggregates[channel].UniqueUsersMap[webEvent.UserID] = true
+			aggrState.ChannelAggregates[channel].NoOfUniqueUsers++
+		}
+
 		return http.StatusOK
 	}
 
 	aggrState.NoOfSessions++
+	aggrState.ChannelAggregates[channel].NoOfSessions++
 
 	sessionSpentTime, err := U.GetPropertyValueAsFloat64(webEvent.Properties.SessionSpentTime)
 	if err != nil {
@@ -330,6 +443,7 @@ func buildWebAnalyticsAggregate(webEvent *WebAnalyticsEvent, aggrState *WebAnaly
 			Error("Failed converting session_spent_time property value to float64.")
 	}
 	aggrState.SessionDuration += sessionSpentTime
+	aggrState.ChannelAggregates[channel].SessionDuration += sessionSpentTime
 
 	sessionPageCount, err := U.GetPropertyValueAsFloat64(webEvent.Properties.SessionPageCount)
 	if err != nil {
@@ -340,9 +454,10 @@ func buildWebAnalyticsAggregate(webEvent *WebAnalyticsEvent, aggrState *WebAnaly
 
 	if sessionPageCount == 1 {
 		aggrState.NoOfBouncedSessions++
+		aggrState.ChannelAggregates[channel].NoOfBouncedSessions++
 	}
 
-	sessionInitialPageURL := U.GetPropertyValueAsString(webEvent.Properties.SessionInitialPageURL)
+	sessionInitialPageURL := webEvent.Properties.SessionInitialPageURL
 	if sessionInitialPageURL == "" {
 		logCtx.Error("Missing $initial_page_url on session on build_web_analytic_aggregate.")
 		return http.StatusInternalServerError
@@ -358,7 +473,7 @@ func buildWebAnalyticsAggregate(webEvent *WebAnalyticsEvent, aggrState *WebAnaly
 		aggrState.PageAggregates[sessionInitialPageURL].NoOfBouncedEntrances++
 	}
 
-	sessionLatestPageURL := U.GetPropertyValueAsString(webEvent.Properties.SessionLatestPageURL)
+	sessionLatestPageURL := webEvent.Properties.SessionLatestPageURL
 	if sessionLatestPageURL != "" &&
 		sessionInitialPageURL != "" &&
 		sessionInitialPageURL == sessionLatestPageURL {
@@ -386,7 +501,8 @@ func getTopPagesReportAsWebAnalyticsResult(
 	for url, aggr := range webAggr.PageAggregates {
 		var fmtAvgPageSpentTimeOfPage string
 		if aggr.NoOfPageViews > 0 {
-			avgPageSpentTimeOfPage, _ := U.FloatRoundOffWithPrecision(aggr.TotalSpentTime/float64(aggr.NoOfPageViews), defaultPrecision)
+			avgPageSpentTimeOfPage, _ := U.FloatRoundOffWithPrecision(
+				aggr.TotalSpentTime/float64(aggr.NoOfPageViews), defaultPrecision)
 			fmtAvgPageSpentTimeOfPage = getFormattedTime(int64(avgPageSpentTimeOfPage))
 		}
 
@@ -415,6 +531,50 @@ func getTopPagesReportAsWebAnalyticsResult(
 	}
 
 	return WebAnalyticsQueryResult{Headers: headers, Rows: rows[:rowsLimit]}
+}
+
+func getTrafficChannelReport(webAggr *WebAnalyticsAggregate) WebAnalyticsQueryResult {
+	headers := []string{
+		"Channel",
+		"Page Views",
+		"Unique Users",
+		"Sessions",
+		"Bounce Rate",
+		"Avg Session Duration",
+	}
+
+	rows := make([][]interface{}, 0, len(webAggr.ChannelAggregates))
+	for channel, aggr := range webAggr.ChannelAggregates {
+		var avgSessionDurationInSecs float64
+		var bounceRateAsInt int
+
+		if aggr.NoOfSessions > 0 {
+			avgSessionDurationInSecs, _ = U.FloatRoundOffWithPrecision(
+				aggr.SessionDuration/float64(aggr.NoOfSessions), defaultPrecision)
+
+			bounceRateAsInt = (aggr.NoOfBouncedSessions / aggr.NoOfSessions) * 100
+		}
+		// Formatted value string.
+		avgSessionDuration := getFormattedTime(int64(avgSessionDurationInSecs))
+		bounceRate := fmt.Sprintf("%d%%", bounceRateAsInt)
+
+		row := []interface{}{
+			channel,
+			aggr.NoOfPageViews,
+			aggr.NoOfUniqueUsers,
+			aggr.NoOfSessions,
+			bounceRate,
+			avgSessionDuration,
+		}
+		rows = append(rows, row)
+	}
+
+	// sort by NoOfPageViews.
+	sort.SliceStable(rows, func(i, j int) bool {
+		return rows[i][1].(int) > rows[j][1].(int)
+	})
+
+	return WebAnalyticsQueryResult{Headers: headers, Rows: rows}
 }
 
 // Converts single value aggregate to rows and headers format for compatibility.
@@ -495,30 +655,12 @@ func getResultByNameAsWebAnalyticsResult(webAggrState *WebAnalyticsAggregate) (
 		QueryNameAvgPagesPerSession, precisionedAvgPagesPerSession)
 
 	(*queryResultByName)[QueryNameTopPagesReport] = getTopPagesReportAsWebAnalyticsResult(webAggrState)
+	(*queryResultByName)[QueryNameTrafficChannelReport] = getTrafficChannelReport(webAggrState)
 
 	return queryResultByName
 }
 
-/*
-
-Query Explanations:
-
-1. Total Page Views: No.of events with $page_raw_url not null.
-2. Bounce Rate: (No.of session events with $page_count as 1/ total sessions) * 100
-3. Unique Users: Unique no.of coalsced users.
-4. Average Session Duration: Sum of $session_spent_time in session events / total sessions - in x mins y secs
-5. Average Session: Sum of $page_count on sessoin events / total sessions.
-
-6. Top Pages Report: For each $page_url,
-* Page URL: $page_url
-* Page Views: No.of events with this as $page_url.
-* Unique users: No.of coalsced users with this as $page_url.
-* Avg Time on Page: Sum of $page_spent_time on this as $page_url / total pages views of this page.
-* Entrances: No.of sessions with this as $initial_page_url
-* Exits: No.of sessions with this as $lastest_page_url
-* Bounced Entrances: No.of sessions with this as $initial_page_url and $page_count as 1
-
-*/
+// ExecuteWebAnalyticsQueries - executes the web analytics query and returns result by query_name.
 func ExecuteWebAnalyticsQueries(projectId uint64, queries *WebAnalyticsQueries) (
 	queryResultByName *map[string]WebAnalyticsQueryResult, errCode int) {
 
@@ -546,9 +688,16 @@ func ExecuteWebAnalyticsQueries(projectId uint64, queries *WebAnalyticsQueries) 
 	selectProperties := []string{
 		U.EP_PAGE_URL,
 		U.EP_PAGE_SPENT_TIME,
+		U.EP_SOURCE,
+		U.EP_REFERRER_DOMAIN,
+		U.EP_MEDIUM,
+		U.EP_CAMPAIGN,
+		U.EP_CAMPAIGN_ID,
+
 		U.SP_SPENT_TIME,
 		U.SP_PAGE_COUNT,
 		U.SP_INITIAL_PAGE_URL,
+		U.SP_INITIAL_REFERRER_DOMAIN,
 		U.SP_LATEST_PAGE_URL,
 	}
 	var selectPropertiesStmnt string
@@ -593,14 +742,24 @@ func ExecuteWebAnalyticsQueries(projectId uint64, queries *WebAnalyticsQueries) 
 		// properties
 		var eventPropertyPageURL sql.NullString
 		var eventPropertyPageSpentTime sql.NullString
+		var eventPropertySource sql.NullString
+		var eventPropertyReferrerDomain sql.NullString
+		var eventPropertyMedium sql.NullString
+		var eventPropertyCampaign sql.NullString
+		var eventPropertyCampaignID sql.NullString
+
+		// session properties
 		var sessionPropertySpentTime sql.NullString
 		var sessionPropertyPageCount sql.NullString
 		var sessionPropertyInitialPageURL sql.NullString
+		var sessionPropertyInitialReferrerDomain sql.NullString
 		var sessionPropertyLatestPageURL sql.NullString
 
 		err = rows.Scan(&id, &projectID, &userID, &eventNameID, &eventName, &eventNameType,
-			&eventPropertyPageURL, &eventPropertyPageSpentTime, &sessionPropertySpentTime,
-			&sessionPropertyPageCount, &sessionPropertyInitialPageURL, &sessionPropertyLatestPageURL)
+			&eventPropertyPageURL, &eventPropertyPageSpentTime, &eventPropertySource, &eventPropertyReferrerDomain,
+			&eventPropertyMedium, &eventPropertyCampaign, &eventPropertyCampaignID,
+			&sessionPropertySpentTime, &sessionPropertyPageCount, &sessionPropertyInitialPageURL,
+			&sessionPropertyInitialReferrerDomain, &sessionPropertyLatestPageURL)
 		if err != nil {
 			logCtx.WithError(err).
 				Error("Failed to scan row to download events on execute_web_analytics_query.")
@@ -618,12 +777,19 @@ func ExecuteWebAnalyticsQueries(projectId uint64, queries *WebAnalyticsQueries) 
 		}
 
 		webEventProperties := &WebAnalyticsEventProperties{
-			PageURL:               eventPropertyPageURL.String,
-			PageSpentTime:         eventPropertyPageSpentTime.String,
-			SessionInitialPageURL: sessionPropertyInitialPageURL.String,
-			SessionLatestPageURL:  sessionPropertyLatestPageURL.String,
-			SessionSpentTime:      sessionPropertySpentTime.String,
-			SessionPageCount:      sessionPropertyPageCount.String,
+			PageURL:        eventPropertyPageURL.String,
+			PageSpentTime:  eventPropertyPageSpentTime.String,
+			Source:         eventPropertySource.String,
+			ReferrerDomain: eventPropertyReferrerDomain.String,
+			Medium:         eventPropertyMedium.String,
+			Campaign:       eventPropertyCampaign.String,
+			CampaignID:     eventPropertyCampaignID.String,
+
+			SessionSpentTime:             sessionPropertySpentTime.String,
+			SessionPageCount:             sessionPropertyPageCount.String,
+			SessionInitialPageURL:        sessionPropertyInitialPageURL.String,
+			SessionInitialReferrerDomain: sessionPropertyInitialReferrerDomain.String,
+			SessionLatestPageURL:         sessionPropertyLatestPageURL.String,
 		}
 
 		webEvent := WebAnalyticsEvent{

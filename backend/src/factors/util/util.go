@@ -330,3 +330,13 @@ func GetSnakeCaseToTitleString(str string) (title string) {
 
 	return title
 }
+
+func IsContainsAnySubString(src string, sub ...string) bool {
+	for _, s := range sub {
+		if strings.Contains(src, s) {
+			return true
+		}
+	}
+
+	return false
+}
