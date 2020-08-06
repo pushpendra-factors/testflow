@@ -290,11 +290,15 @@ func hasCampaign(campaign, campaignID string) bool {
 }
 
 func isSearchReferrer(referrerDomain string) bool {
-	return U.IsStringContainsAny(referrerDomain, []string{"google", "bing"}...)
+	referrerDomain = strings.ToLower(referrerDomain)
+
+	return U.IsContainsAnySubString(referrerDomain, []string{"google", "bing"}...)
 }
 
 func isSocialReferrer(referrerDomain string) bool {
-	return U.IsStringContainsAny(referrerDomain,
+	referrerDomain = strings.ToLower(referrerDomain)
+
+	return U.IsContainsAnySubString(referrerDomain,
 		[]string{"facebook", "twitter", "linkedin", "instagram", "tiktok"}...)
 }
 
