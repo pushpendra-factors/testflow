@@ -282,17 +282,12 @@ func TestGetRecentEventPropertyValues(t *testing.T) {
 		assert.Len(t, values, 2)
 		assert.Contains(t, values, "value1")
 
-		// //get from cache
-		// values, err := M.GetCacheRecentPropertyValues(project.ID, eventName.Name, "rProp1")
-		// assert.Nil(t, err)
-		// assert.Len(t, values, 2)
-		// assert.Contains(t, values, "value1")
+		//get from cache
+		values, err := M.GetCacheRecentPropertyValues(project.ID, eventName.Name, "rProp1")
+		assert.Nil(t, err)
+		assert.Len(t, values, 2)
+		assert.Contains(t, values, "value1")
 
-		// limited values to 1.
-		// values1, errCode3 := M.GetRecentEventPropertyValuesWithLimits(project.ID, eventName.Name, "rProp1", 10, 1)
-		// assert.Equal(t, http.StatusFound, errCode3)
-		// assert.Len(t, values1, 1)
-		// assert.Contains(t, values1, "value1")
 	})
 
 	t.Run("PropertyValuesOlderThan24Hour", func(t *testing.T) {
