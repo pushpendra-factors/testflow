@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gomodule/redigo/redis"
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
@@ -509,13 +510,15 @@ func CreateOrGetAMPUser(projectId uint64, ampUserId string, timestamp int64) (*U
 }
 
 func GetRecentUserPropertyKeysWithLimits(projectId uint64, usersLimit int) (map[string][]string, int) {
+	logCtx := log.WithField("project_id", projectId)
+
 	if properties, err := GetCacheRecentPropertyKeys(projectId, ""); err == nil {
 		return properties, http.StatusFound
+	} else if err != redis.ErrNil {
+		logCtx.WithError(err).Error("Failed to get GetCacheRecentPropertyKeys.")
 	}
 
 	db := C.GetServices().Db
-
-	logCtx := log.WithField("project_id", projectId)
 
 	queryStr := "WITH recent_users AS (SELECT properties_id FROM users WHERE project_id = ? ORDER BY created_at DESC LIMIT ?)" +
 		" " + "SELECT user_properties.properties FROM recent_users LEFT JOIN user_properties ON recent_users.properties_id = user_properties.id" +
@@ -562,8 +565,12 @@ func GetRecentUserPropertyKeys(projectId uint64) (map[string][]string, int) {
 }
 
 func GetRecentUserPropertyValuesWithLimits(projectId uint64, propertyKey string, usersLimit, valuesLimit int) ([]string, int) {
+	logCtx := log.WithFields(log.Fields{"project_id": projectId, "property_key": propertyKey, "values_limit": valuesLimit})
+
 	if values, err := GetCacheRecentPropertyValues(projectId, "", propertyKey); err == nil {
 		return values, http.StatusFound
+	} else if err != redis.ErrNil {
+		logCtx.WithError(err).Error("Failed to get GetCacheRecentPropertyValues.")
 	}
 
 	db := C.GetServices().Db
@@ -577,8 +584,6 @@ func GetRecentUserPropertyValuesWithLimits(projectId uint64, propertyKey string,
 
 	queryParams := make([]interface{}, 0, 0)
 	queryParams = append(queryParams, projectId, usersLimit, propertyKey, projectId, propertyKey, valuesLimit)
-
-	logCtx := log.WithFields(log.Fields{"project_id": projectId, "property_key": propertyKey, "values_limit": valuesLimit})
 
 	rows, err := db.Raw(queryStmnt, queryParams...).Rows()
 	if err != nil {

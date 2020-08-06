@@ -429,6 +429,9 @@ func GetCacheRecentPropertyValues(projectId uint64, eventName string, property s
 	if err != nil {
 		return propertyValues, err
 	}
+	if len(propertyValues) == 0 {
+		return propertyValues, errors.New("Empty cache property values")
+	}
 	return propertyValues, nil
 }
 
@@ -472,6 +475,10 @@ func GetCacheRecentPropertyKeys(projectId uint64, eventName string) (map[string]
 	if err != nil {
 		return propertyKeys, err
 	}
+	if len(propertyKeys) == 0 {
+		return propertyKeys, errors.New("Empty cache property keys")
+	}
+
 	return propertyKeys, nil
 }
 
@@ -486,6 +493,9 @@ func GetRecentEventPropertyKeysWithLimits(projectId uint64, eventName string, ev
 
 	eventsAfterTimestamp := U.UnixTimeBeforeDuration(24 * time.Hour)
 	logCtx := log.WithFields(log.Fields{"project_id": projectId, "events_after_timestamp": eventsAfterTimestamp})
+	if err != redis.ErrNil {
+		logCtx.WithError(err).Error("Failed to GetCacheRecentPropertyKeys.")
+	}
 
 	queryStr := "SELECT distinct(properties) AS keys FROM events WHERE project_id = ?" +
 		" " + "AND event_name_id IN (SELECT id FROM event_names WHERE project_id = ? AND name = ?)" +
@@ -535,13 +545,15 @@ func GetRecentEventPropertyKeys(projectId uint64, eventName string) (map[string]
 // values of given property from last 24 hours.
 func GetRecentEventPropertyValuesWithLimits(projectId uint64, eventName string,
 	property string, eventsLimit, valuesLimit int) ([]string, int) {
+	logCtx := log.WithFields(log.Fields{"projectId": projectId, "eventName": eventName, "property": property})
+
 	if values, err := GetCacheRecentPropertyValues(projectId, eventName, property); err == nil {
 		return values, http.StatusFound
+	} else if err != redis.ErrNil {
+		logCtx.WithError(err).Error("Failed to GetCacheRecentPropertyValues.")
 	}
 
 	db := C.GetServices().Db
-
-	logCtx := log.WithFields(log.Fields{"projectId": projectId, "eventName": eventName, "property": property})
 
 	eventsAfterTimestamp := U.UnixTimeBeforeDuration(24 * time.Hour)
 	values := make([]string, 0, 0)
