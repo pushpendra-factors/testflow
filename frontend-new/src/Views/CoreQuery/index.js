@@ -1,8 +1,12 @@
 import React from 'react';
-import SearchBar from '../../components/SearchBar';
+import Header from './header';
 
 function CoreQuery() {
-    return <SearchBar />
+    return (
+        <>
+            <Header />
+        </>
+    )
 }
 
 export default CoreQuery;

@@ -1,5 +1,5 @@
 import React from 'react';
-import {Layout} from 'antd';
+import { Layout } from 'antd';
 import Sidebar from '../../components/Sidebar';
 import CoreQuery from '../CoreQuery';
 
@@ -10,11 +10,11 @@ function AppLayout() {
         <Layout>
             <Sidebar />
             <Layout className="site-layout">
-            <Content>
-                <div className="p-8 bg-white min-h-screen">
-                <CoreQuery />
-                </div>
-            </Content>
+                <Content>
+                    <div className="p-4 bg-white min-h-screen">
+                        <CoreQuery />
+                    </div>
+                </Content>
             </Layout>
         </Layout>
     )
