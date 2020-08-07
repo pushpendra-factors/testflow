@@ -72,11 +72,37 @@ function getLastActivityTime() {
     return lastActivityTime
 }
 
-function getCurrentPageSpentTimeInSecs(startTimeInMs) {
-    var lastActivityTime = getLastActivityTime();
-    if (lastActivityTime == 0) return lastActivityTime;
+function setPrevActivityTime(t) {
+    factorsWindow().prevActivityTime = t ? t : 0;
+}
 
-    return (lastActivityTime - startTimeInMs) / 1000;
+
+function getPrevActivityTime() {
+    var prevActivityTime = factorsWindow().prevActivityTime;
+    if (!prevActivityTime) prevActivityTime = 0;
+    return prevActivityTime
+}
+
+function getCurrentPageSpentTimeInMs(pageLandingTimeInMs, lastSpentTimeInMs) {
+    var prevActivityTime = getPrevActivityTime();
+    if (prevActivityTime == 0) prevActivityTime = pageLandingTimeInMs;
+
+    var lastActivityTime = getLastActivityTime();
+    if (lastActivityTime == 0) return 0;
+
+    // init with last spent time.
+    var totalSpentTimeInMs = lastSpentTimeInMs;
+    
+    // Add to total spent time only if diff is lesser than
+    // inactivity threshold (10 mins).
+    var diffTimeInMs = lastActivityTime - prevActivityTime;
+    if (diffTimeInMs < 600000) {
+        totalSpentTimeInMs = totalSpentTimeInMs + diffTimeInMs;
+    }
+
+    setPrevActivityTime(lastActivityTime);
+
+    return totalSpentTimeInMs;
 }
 
 /**
@@ -193,21 +219,26 @@ App.prototype.updateEventProperties = function(eventId, properties={}) {
     return this.client.updateEventProperties({ event_id: eventId, properties: properties });
 }
 
-App.prototype.updatePagePropertiesIfChanged = function(startOfPageSpentTimeInMs, lastPageProperties) {
-    let lastPageSpentTimeInSecs = lastPageProperties && lastPageProperties[Properties.PAGE_SPENT_TIME] ? 
+App.prototype.updatePagePropertiesIfChanged = function(pageLandingTimeInMs, lastPageProperties) {
+    let lastPageSpentTimeInMs = lastPageProperties && lastPageProperties[Properties.PAGE_SPENT_TIME] ? 
         lastPageProperties[Properties.PAGE_SPENT_TIME] : 0;
     
     let lastPageScrollPercentage = lastPageProperties && lastPageProperties[Properties.PAGE_SCROLL_PERCENT] ?
         lastPageProperties[Properties.PAGE_SCROLL_PERCENT] : 0;
 
-    var pageSpentTimeInSecs = getCurrentPageSpentTimeInSecs(startOfPageSpentTimeInMs);
+    var pageSpentTimeInMs = getCurrentPageSpentTimeInMs(pageLandingTimeInMs, lastPageSpentTimeInMs);
     var pageScrollPercentage = Properties.getPageScrollPercent();
 
     // add properties if changed.
     let properties = {};
-    if (pageSpentTimeInSecs > 0 && pageSpentTimeInSecs > lastPageSpentTimeInSecs) 
+    
+    if (pageSpentTimeInMs > 0 && pageSpentTimeInMs > lastPageSpentTimeInMs) {
+        // page spent time added to payload in secs.
+        let pageSpentTimeInSecs = pageSpentTimeInMs / 1000;
+        pageSpentTimeInSecs = Number(pageSpentTimeInSecs.toFixed(2));
         properties[Properties.PAGE_SPENT_TIME] = pageSpentTimeInSecs;
-
+    }
+    
     if (pageScrollPercentage > 0 && pageScrollPercentage > lastPageScrollPercentage )
         properties[Properties.PAGE_SCROLL_PERCENT] = pageScrollPercentage;
 
@@ -222,7 +253,7 @@ App.prototype.updatePagePropertiesIfChanged = function(startOfPageSpentTimeInMs,
 
     return {
         [Properties.PAGE_SCROLL_PERCENT]: pageScrollPercentage, 
-        [Properties.PAGE_SPENT_TIME]: pageSpentTimeInSecs
+        [Properties.PAGE_SPENT_TIME]: pageSpentTimeInMs
     };
 }
 
@@ -264,7 +295,8 @@ App.prototype.autoTrack = function(enabled=false, afterCallback) {
 
     window.addEventListener("scroll", setLastActivityTime);
     window.addEventListener("mouseover", setLastActivityTime);
-    
+    window.addEventListener("mousemove", setLastActivityTime);
+
     // Todo(Dinesh): Find ways to automate tests for SPA support.
     
     // AutoTrack SPA
