@@ -235,7 +235,7 @@ App.prototype.updatePagePropertiesIfChanged = function(pageLandingTimeInMs, last
     if (pageSpentTimeInMs > 0 && pageSpentTimeInMs > lastPageSpentTimeInMs) {
         // page spent time added to payload in secs.
         let pageSpentTimeInSecs = pageSpentTimeInMs / 1000;
-        pageSpentTimeInSecs = pageSpentTimeInSecs.toFixed(2);
+        pageSpentTimeInSecs = Number(pageSpentTimeInSecs.toFixed(2));
         properties[Properties.PAGE_SPENT_TIME] = pageSpentTimeInSecs;
     }
     
