@@ -2,8 +2,10 @@ package model
 
 import (
 	"errors"
+	cacheRedis "factors/cache/redis"
 	C "factors/config"
 	U "factors/util"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -509,10 +511,30 @@ func CreateOrGetAMPUser(projectId uint64, ampUserId string, timestamp int64) (*U
 	return user, http.StatusCreated
 }
 
+func GetCacheRecentUserPropertyKeys(projectId uint64) (map[string][]string, error) {
+	return GetCacheRecentPropertyKeys(projectId, "", PropertyEntityUser)
+}
+
+func SetCacheRecentUserPropertyKeys(projectId uint64, propsByType map[string][]string) error {
+	return SetCacheRecentPropertyKeys(projectId, "", propsByType, PropertyEntityUser)
+}
+
+func GetCacheRecentUserPropertyValues(projectId uint64, property string) ([]string, error) {
+	return GetCacheRecentPropertyValues(projectId, "", property, PropertyEntityUser)
+}
+
+func SetCacheRecentUserPropertyValues(projectId uint64, property string, values []string) error {
+	return SetCacheRecentPropertyValues(projectId, "", property, values, PropertyEntityUser)
+}
+
+func GetRecentUserPropertyKeys(projectId uint64) (map[string][]string, int) {
+	return GetRecentUserPropertyKeysWithLimits(projectId, usersLimitForProperties)
+}
+
 func GetRecentUserPropertyKeysWithLimits(projectId uint64, usersLimit int) (map[string][]string, int) {
 	logCtx := log.WithField("project_id", projectId)
 
-	if properties, err := GetCacheRecentPropertyKeys(projectId, ""); err == nil {
+	if properties, err := GetCacheRecentUserPropertyKeys(projectId); err == nil {
 		return properties, http.StatusFound
 	} else if err != redis.ErrNil {
 		logCtx.WithError(err).Error("Failed to get GetCacheRecentPropertyKeys.")
@@ -556,18 +578,17 @@ func GetRecentUserPropertyKeysWithLimits(projectId uint64, usersLimit int) (map[
 		return nil, http.StatusInternalServerError
 	}
 
-	SetCacheRecentPropertyKeys(projectId, "", propsByType)
-	return propsByType, http.StatusFound
-}
+	if err = SetCacheRecentUserPropertyKeys(projectId, propsByType); err != nil {
+		logCtx.WithError(err).Error("Failed to SetCacheRecentUserPropertyKeys.")
+	}
 
-func GetRecentUserPropertyKeys(projectId uint64) (map[string][]string, int) {
-	return GetRecentUserPropertyKeysWithLimits(projectId, usersLimitForProperties)
+	return propsByType, http.StatusFound
 }
 
 func GetRecentUserPropertyValuesWithLimits(projectId uint64, propertyKey string, usersLimit, valuesLimit int) ([]string, int) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectId, "property_key": propertyKey, "values_limit": valuesLimit})
 
-	if values, err := GetCacheRecentPropertyValues(projectId, "", propertyKey); err == nil {
+	if values, err := GetCacheRecentUserPropertyValues(projectId, propertyKey); err == nil {
 		return values, http.StatusFound
 	} else if err != redis.ErrNil {
 		logCtx.WithError(err).Error("Failed to get GetCacheRecentPropertyValues.")
@@ -604,7 +625,11 @@ func GetRecentUserPropertyValuesWithLimits(projectId uint64, propertyKey string,
 		logCtx.WithError(err).Error("Failed scanning rows on get property values.")
 		return values, http.StatusInternalServerError
 	}
-	SetCacheRecentPropertyValues(projectId, "", propertyKey, values)
+
+	if err = SetCacheRecentUserPropertyValues(projectId, propertyKey, values); err != nil {
+		logCtx.WithError(err).Error("Failed to SetCacheRecentUserPropertyValues.")
+	}
+
 	return values, http.StatusFound
 }
 
@@ -654,4 +679,16 @@ func GetDistinctCustomerUserIDSForProject(projectID uint64) ([]string, int) {
 		customerUserIDS = append(customerUserIDS, customerUserID)
 	}
 	return customerUserIDS, http.StatusFound
+}
+
+func getRecentUserPropertyKeysCacheKey(projectId uint64) (*cacheRedis.Key, error) {
+	prefix := "recent_properties"
+	suffix := "user_properites:keys"
+	return cacheRedis.NewKey(projectId, prefix, suffix)
+}
+
+func getRecentUserPropertyValuesCacheKey(projectId uint64, property string) (*cacheRedis.Key, error) {
+	prefix := "recent_properties"
+	suffix := fmt.Sprintf("user_properties:property:%s:values", property)
+	return cacheRedis.NewKey(projectId, prefix, suffix)
 }
