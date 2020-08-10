@@ -435,9 +435,9 @@ func getLinkedFunnelEventUsers(projectId uint64, query *AttributionQuery, eventN
 	for _, linkedEvent := range query.LinkedEvents {
 		// Part I - Fetch Users base on Event Hit satisfying events.properties
 		linkedEventNameIds := eventNameToId[linkedEvent.Name]
-		placeHolder := "?"
+		eventsPlaceHolder := "?"
 		for i := 0; i < len(linkedEventNameIds)-1; i++ {
-			placeHolder += ",?"
+			eventsPlaceHolder += ",?"
 		}
 		var userIdList []string
 		userIdHitEvent := make(map[string]bool)
@@ -445,11 +445,11 @@ func getLinkedFunnelEventUsers(projectId uint64, query *AttributionQuery, eventN
 		for _, users := range userPropertiesIdsInBatches {
 
 			// add user batching
-			placeHolder := U.GetValuePlaceHolder(len(users))
+			usersPlaceHolder := U.GetValuePlaceHolder(len(users))
 			value := U.GetInterfaceList(users)
 			queryEventHits := "SELECT user_id FROM events WHERE events.project_id=? AND " +
-				" timestamp >= ? AND timestamp <=? AND events.event_name_id IN (" + placeHolder + ") " +
-				" AND user_id = ANY (VALUES " + placeHolder + " ) "
+				" timestamp >= ? AND timestamp <=? AND events.event_name_id IN (" + eventsPlaceHolder + ") " +
+				" AND user_id = ANY (VALUES " + usersPlaceHolder + " ) "
 			qParams := []interface{}{projectId, query.From, query.To}
 			qParams = append(qParams, linkedEventNameIds...)
 			qParams = append(qParams, value...)
