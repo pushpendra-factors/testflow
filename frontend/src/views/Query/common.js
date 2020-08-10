@@ -2,7 +2,7 @@ import { createStaticRanges } from 'react-date-range';
 import moment from 'moment';
 import mt from "moment-timezone";
 
-import { slideUnixTimeWindowToCurrentTime, firstToUpperCase, getTimezoneString } from '../../util';
+import {slideUnixTimeWindowToCurrentTime, firstToUpperCase, isNumber} from '../../util';
 
 export const QUERY_TYPE_UNIQUE_USERS = "unique_users";
 export const QUERY_TYPE_EVENTS_OCCURRENCE = "events_occurrence";
@@ -398,4 +398,59 @@ export const convertLineJSON = function(data) {
   })
 
   return convertedData
+}
+
+export const getEventsWithProperties = function(events) {
+
+  let ewps = [];
+  for (let ei = 0; ei < events.length; ei++) {
+    let event = events[ei];
+    if (event.name === "")
+      continue;
+    let ewp = getEventWithProperties(event);
+    ewps.push(ewp)
+  }
+  return ewps;
+}
+
+export const getEventWithProperties = function(event) {
+
+  let ewp = {};
+  if (event.name === "")
+    return ewp;
+  ewp.na = event.name;
+  ewp.pr = [];
+
+  for (let pi = 0; pi < event.properties.length; pi++) {
+    let property = event.properties[pi];
+    let cProperty = {}
+
+    if (property.entity !== '' && property.name !== '' &&
+      property.operator !== '' && property.value !== '' &&
+      property.valueType !== '') {
+
+      if (property.valueType === 'numerical' && !isNumber(property.value))
+        continue;
+
+      cProperty.en = property.entity;
+      cProperty.pr = property.name;
+      cProperty.op = property.op;
+      cProperty.va = property.value;
+      cProperty.ty = property.valueType;
+      cProperty.lop = property.logicalOp;
+
+      // update datetime with current time window if ovp is true.
+      if (property.valueType === PROPERTY_VALUE_TYPE_DATE_TIME) {
+        let dateRange = JSON.parse(cProperty.va);
+        if (dateRange.ovp) {
+          let newRange = slideUnixTimeWindowToCurrentTime(dateRange.fr, dateRange.to);
+          dateRange.fr = newRange.from;
+          dateRange.to = newRange.to;
+          cProperty.va = JSON.stringify(dateRange);
+        }
+      }
+      ewp.pr.push(cProperty);
+    }
+  }
+  return ewp
 }

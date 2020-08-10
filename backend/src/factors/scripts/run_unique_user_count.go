@@ -84,7 +84,7 @@ func main() {
 		From:                   *customStartTime,
 		To:                     *customEndTime,
 		ConversionEvent:        *eventName,
-		LoopbackDays:           *lookbackDays,
+		LookbackDays:           *lookbackDays,
 		AttributionKey:         *attributionKey,
 		AttributionMethodology: *attributionMethod,
 	}

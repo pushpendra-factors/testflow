@@ -390,8 +390,11 @@ func TestCacheDashboardUnitsForProjectID(t *testing.T) {
 	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
 
+	_, errCode := M.CreateOrGetUserCreatedEventName(&M.EventName{ProjectId: project.ID, Name: "$session"})
+	assert.Equal(t, http.StatusCreated, errCode)
+
 	customerAccountID := U.RandomLowerAphaNumString(5)
-	_, errCode := M.UpdateProjectSettings(project.ID, &M.ProjectSetting{
+	_, errCode = M.UpdateProjectSettings(project.ID, &M.ProjectSetting{
 		IntAdwordsCustomerAccountId: &customerAccountID,
 	})
 
@@ -405,7 +408,7 @@ func TestCacheDashboardUnitsForProjectID(t *testing.T) {
 	var dashboardQueriesStr = map[string]string{
 		M.QueryClassInsights:    `{"cl": "insights", "ec": "any_given_event", "fr": 1393612200, "to": 1396290599, "ty": "events_occurrence", "tz": "", "ewp": [{"na": "$session", "pr": []}], "gbp": [], "gbt": ""}`,
 		M.QueryClassFunnel:      `{"cl": "funnel", "ec": "any_given_event", "fr": 1594492200, "to": 1594578599, "ty": "unique_users", "tz": "Asia/Calcutta", "ewp": [{"na": "$session", "pr": []}, {"na": "www.chargebee.com/schedule-a-demo", "pr": []}], "gbp": [], "gbt": ""}`,
-		M.QueryClassAttribution: `{"cl": "attribution", "meta": {"metrics_breakdown": true}, "query": {"ce": "$session", "cm": ["Impressions", "Clicks", "Spend"], "to": 1585679399, "lbw": 0, "lfe": [], "from": 1583001000, "attribution_key": "Campaign", "attribution_methodology": "First_Touch"}}`,
+		M.QueryClassAttribution: `{"cl": "attribution", "meta": {"metrics_breakdown": true}, "query": {"ce": {"na": "$session", "pr": []}, "cm": ["Impressions", "Clicks", "Spend"], "to": 1596479399, "lbw": 1, "lfe": [], "from": 1595874600, "attribution_key": "Campaign", "attribution_methodology": "Last_Touch"}}`,
 		M.QueryClassChannel:     `{"cl": "channel", "meta": {"metric": "total_cost"}, "query": {"to": 1576060774, "from": 1573468774, "channel": "google_ads", "filter_key": "campaign", "filter_value": "all"}}`,
 	}
 	for queryClass, queryString := range dashboardQueriesStr {
@@ -478,8 +481,11 @@ func TestCacheDashboardUnitsForProjectIDForAttributionQuery(t *testing.T) {
 	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
 
+	_, errCode := M.CreateOrGetUserCreatedEventName(&M.EventName{ProjectId: project.ID, Name: "$session"})
+	assert.Equal(t, http.StatusCreated, errCode)
+
 	customerAccountId := U.RandomLowerAphaNumString(5)
-	_, errCode := M.UpdateProjectSettings(project.ID, &M.ProjectSetting{
+	_, errCode = M.UpdateProjectSettings(project.ID, &M.ProjectSetting{
 		IntAdwordsCustomerAccountId: &customerAccountId,
 	})
 
@@ -490,7 +496,7 @@ func TestCacheDashboardUnitsForProjectIDForAttributionQuery(t *testing.T) {
 	assert.Equal(t, dashboardName, dashboard.Name)
 
 	var queryUnit M.AttributionQueryUnit
-	queryJSON := postgres.Jsonb{json.RawMessage(`{"cl": "attribution", "meta": {"metrics_breakdown": true}, "query": {"ce": "$session", "cm": ["Impressions", "Clicks", "Spend"], "to": 1585679399, "lbw": 0, "lfe": [], "from": 1583001000, "attribution_key": "Campaign", "attribution_methodology": "First_Touch"}}`)}
+	queryJSON := postgres.Jsonb{json.RawMessage(`{"cl": "attribution", "meta": {"metrics_breakdown": true}, "query": {"ce": {"na": "$session", "pr": []}, "cm": ["Impressions", "Clicks", "Spend"], "to": 1596479399, "lbw": 1, "lfe": [], "from": 1595874600, "attribution_key": "Campaign", "attribution_methodology": "Last_Touch"}}`)}
 	U.DecodePostgresJsonbToStructType(&queryJSON, &queryUnit)
 	dashboardUnit, errCode, _ := M.CreateDashboardUnit(project.ID, agent.UUID, &M.DashboardUnit{
 		DashboardId:  dashboard.ID,

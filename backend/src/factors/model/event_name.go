@@ -445,6 +445,24 @@ func GetFilterEventNames(projectId uint64) ([]EventName, int) {
 	return eventNames, http.StatusFound
 }
 
+// returns list of EventNames objects for given names
+func GetEventNamesByNames(projectId uint64, names []string) ([]EventName, int) {
+
+	db := C.GetServices().Db
+	var eventNames []EventName
+	if err := db.Where("project_id = ? AND name IN (?)",
+		projectId, names).Find(&eventNames).Error; err != nil {
+
+		log.WithFields(log.Fields{"ProjectId": projectId}).WithError(err).Error(
+			"failed to get event names")
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+		return nil, http.StatusInternalServerError
+	}
+	return eventNames, http.StatusFound
+}
+
 func GetFilterEventNamesByExprPrefix(projectId uint64, prefix string) ([]EventName, int) {
 	db := C.GetServices().Db
 
@@ -452,7 +470,7 @@ func GetFilterEventNamesByExprPrefix(projectId uint64, prefix string) ([]EventNa
 	if err := db.Where("project_id = ? AND type = ? AND filter_expr LIKE ? AND deleted = 'false'",
 		projectId, TYPE_FILTER_EVENT_NAME, fmt.Sprintf("%s%%", prefix)).Find(&eventNames).Error; err != nil {
 		log.WithFields(log.Fields{"projectId": projectId, "prefix": prefix}).WithError(err).Error(
-			"Filtering eventName failed on GetFilterEventNamesByExprPrefix")
+			"filtering eventName failed on GetFilterEventNamesByExprPrefix")
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound
 		}

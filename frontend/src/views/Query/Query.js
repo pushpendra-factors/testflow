@@ -31,7 +31,7 @@ import {
   PRESENTATION_CARD, PRESENTATION_FUNNEL, PROPERTY_TYPE_EVENT,
   getDateRangeFromStoredDateRange, PROPERTY_LOGICAL_OP_OPTS,
   DEFAULT_DATE_RANGE, DEFINED_DATE_RANGES, getGroupByTimestampType,
-  getQueryPeriod, convertFunnelResultForTable, sameDay, jsonToCSV, PROPERTY_TYPE_USER
+  getQueryPeriod, convertFunnelResultForTable, sameDay, jsonToCSV, PROPERTY_TYPE_USER, getEventsWithProperties
 } from './common';
 import ClosableDateRangePicker from '../../common/ClosableDatePicker';
 import { fetchProjectEvents, runQuery } from '../../actions/projectsActions';
@@ -477,51 +477,7 @@ class Query extends Component {
     let period = getQueryPeriod(this.state.resultDateRange[0], this.state.timeZone)
     query.fr=period.from
     query.to=period.to
-    query.ewp = []
-    for(let ei=0; ei < this.state.events.length; ei++) {
-      let event = this.state.events[ei];
-      if (event.name == "") continue;
-      
-      let ewp = {};
-      ewp.na = event.name;
-      ewp.pr = [];
-
-      for(let pi=0; pi < event.properties.length; pi++) {
-        let property = event.properties[pi];
-        let cProperty = {}
-        
-        if (property.entity != '' && property.name != '' &&
-            property.operator != '' && property.value != '' &&
-            property.valueType != '') {
-
-            // Todo: show validation error.
-            if (property.valueType == 'numerical' && 
-              !isNumber(property.value))
-              continue;
-
-            cProperty.en = property.entity;
-            cProperty.pr = property.name;
-            cProperty.op = property.op;
-            cProperty.va = property.value;
-            cProperty.ty = property.valueType;
-            cProperty.lop = property.logicalOp;
-
-            // update datetime with current time window if ovp is true.
-            if (property.valueType == PROPERTY_VALUE_TYPE_DATE_TIME) {
-              let dateRange = JSON.parse(cProperty.va);
-              if (dateRange.ovp) {
-                let newRange = slideUnixTimeWindowToCurrentTime(dateRange.fr, dateRange.to);
-                dateRange.fr = newRange.from;
-                dateRange.to = newRange.to;
-                cProperty.va = JSON.stringify(dateRange); 
-              }
-            }
-
-            ewp.pr.push(cProperty);
-        }
-      }
-      query.ewp.push(ewp)
-    }
+    query.ewp = getEventsWithProperties(this.state.events);
 
     query.gbp = [];
     for(let i=0; i < this.state.groupBys.length; i++) {

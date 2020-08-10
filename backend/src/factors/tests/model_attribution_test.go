@@ -100,7 +100,7 @@ func TestAttributionModel(t *testing.T) {
 			To:                     timestamp + 3*day,
 			AttributionKey:         M.ATTRIBUTION_KEY_CAMPAIGN,
 			AttributionMethodology: M.ATTRIBUTION_METHOD_FIRST_TOUCH,
-			ConversionEvent:        "event1",
+			ConversionEvent:        M.QueryEventWithProperties{"event1", nil},
 		}
 
 		result, err = M.ExecuteAttributionQuery(project.ID, query)
@@ -115,7 +115,7 @@ func TestAttributionModel(t *testing.T) {
 			To:                     timestamp + 3*day,
 			AttributionKey:         M.ATTRIBUTION_KEY_CAMPAIGN,
 			AttributionMethodology: M.ATTRIBUTION_METHOD_FIRST_TOUCH,
-			ConversionEvent:        "event1",
+			ConversionEvent:        M.QueryEventWithProperties{"event1", nil},
 		}
 
 		result, err = M.ExecuteAttributionQuery(project.ID, query)
@@ -137,7 +137,7 @@ func TestAttributionModel(t *testing.T) {
 			To:                     timestamp + 4*day,
 			AttributionKey:         M.ATTRIBUTION_KEY_CAMPAIGN,
 			AttributionMethodology: M.ATTRIBUTION_METHOD_LAST_TOUCH,
-			ConversionEvent:        "event1",
+			ConversionEvent:        M.QueryEventWithProperties{Name: "event1"},
 		}
 
 		userProperty, err := M.GetQueryUserProperty(query)
@@ -162,8 +162,8 @@ func TestAttributionModel(t *testing.T) {
 			To:                     timestamp + 10*day,
 			AttributionKey:         M.ATTRIBUTION_KEY_CAMPAIGN,
 			AttributionMethodology: M.ATTRIBUTION_METHOD_LAST_TOUCH,
-			LinkedEvents:           []string{"event2"},
-			ConversionEvent:        "event1",
+			ConversionEvent:        M.QueryEventWithProperties{Name: "event1"},
+			LinkedEvents:           []M.QueryEventWithProperties{{"event2", nil}},
 		}
 
 		userProperty, err := M.GetQueryUserProperty(query)
@@ -178,9 +178,8 @@ func TestAttributionModel(t *testing.T) {
 			To:                     timestamp + 10*day,
 			AttributionKey:         M.ATTRIBUTION_KEY_CAMPAIGN,
 			AttributionMethodology: M.ATTRIBUTION_METHOD_FIRST_TOUCH,
-			ConversionEvent:        "event1",
-			LinkedEvents:           []string{"event2"},
-			LoopbackDays:           2,
+			ConversionEvent:        M.QueryEventWithProperties{Name: "event1"},
+			LookbackDays:           2,
 		}
 
 		userProperty, err := M.GetQueryUserProperty(query)
@@ -193,7 +192,8 @@ func TestAttributionModel(t *testing.T) {
 		assert.Equal(t, int64(-1), getConversionEventCount(result, "111111"))
 		assert.Equal(t, int64(1), getConversionEventCount(result, "222222"))
 		assert.Equal(t, int64(1), getConversionEventCount(result, "333333"))
-		assert.Equal(t, int64(0), getConversionEventCount(result, "1234567")) // this hit eventName=event2
+		// no hit for campaigns 1234567 or none
+		assert.Equal(t, int64(0), getConversionEventCount(result, "1234567"))
 		assert.Equal(t, int64(0), getConversionEventCount(result, "none"))
 	})
 }
@@ -247,6 +247,8 @@ func TestAttributionLastTouchWithLookbackWindow(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, errCode)
 	userEventName, errCode := M.CreateOrGetUserCreatedEventName(&M.EventName{ProjectId: project.ID, Name: "event1"})
 	assert.Equal(t, http.StatusCreated, errCode)
+	_, errCode = M.CreateOrGetUserCreatedEventName(&M.EventName{ProjectId: project.ID, Name: "event2"})
+	assert.Equal(t, http.StatusCreated, errCode)
 
 	_, errCode = M.CreateEvent(&M.Event{ProjectId: project.ID, EventNameId: userEventName.ID, UserId: user1.ID, Timestamp: timestamp + 3*day})
 	assert.Equal(t, http.StatusCreated, errCode)
@@ -256,8 +258,8 @@ func TestAttributionLastTouchWithLookbackWindow(t *testing.T) {
 		To:                     timestamp + 10*day,
 		AttributionKey:         M.ATTRIBUTION_KEY_CAMPAIGN,
 		AttributionMethodology: M.ATTRIBUTION_METHOD_LAST_TOUCH,
-		ConversionEvent:        "event1",
-		LoopbackDays:           2,
+		ConversionEvent:        M.QueryEventWithProperties{Name: "event1"},
+		LookbackDays:           2,
 	}
 
 	userProperty, err := M.GetQueryUserProperty(query)
@@ -310,8 +312,8 @@ func TestAttributionWithUserIdentification(t *testing.T) {
 		To:                     timestamp + 2*86400,
 		AttributionKey:         M.ATTRIBUTION_KEY_CAMPAIGN,
 		AttributionMethodology: M.ATTRIBUTION_METHOD_LAST_TOUCH,
-		ConversionEvent:        "event1",
-		LoopbackDays:           0,
+		ConversionEvent:        M.QueryEventWithProperties{Name: "event1"},
+		LookbackDays:           0,
 	}
 
 	userProperty, err := M.GetQueryUserProperty(query)
@@ -359,11 +361,11 @@ func TestAttributionWithUserIdentification(t *testing.T) {
 			To:                     timestamp + 7*86400,
 			AttributionKey:         M.ATTRIBUTION_KEY_CAMPAIGN,
 			AttributionMethodology: M.ATTRIBUTION_METHOD_FIRST_TOUCH,
-			ConversionEvent:        "event1",
-			LoopbackDays:           1,
+			ConversionEvent:        M.QueryEventWithProperties{Name: "event1"},
+			LookbackDays:           1,
 		}
 		//should get 1 unique user on 3 lookbackdays
-		query.LoopbackDays = 3
+		query.LookbackDays = 3
 		result, err = M.ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, int64(1), getConversionEventCount(result, "12345"))

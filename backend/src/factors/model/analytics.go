@@ -315,6 +315,42 @@ func buildWhereFromProperties(properties []QueryProperty) (rStmnt string, rParam
 	return rStmnt, rParams, nil
 }
 
+// returns SQL query condition to address conditions only on events.properties
+func getFilterSQLStmtForEventProperties(properties []QueryProperty) (rStmnt string, rParams []interface{}, err error) {
+
+	var filteredProperty []QueryProperty
+	for _, p := range properties {
+
+		propertyEntity := getPropertyEntityField(p.Entity)
+		if propertyEntity == "events.properties" {
+			filteredProperty = append(filteredProperty, p)
+		}
+	}
+	wStmt, wParams, err := buildWhereFromProperties(filteredProperty)
+	if err != nil {
+		return "", nil, err
+	}
+	return wStmt, wParams, nil
+}
+
+// returns SQL query condition to address conditions only on user_properties.properties
+func getFilterSQLStmtForUserProperties(properties []QueryProperty) (rStmnt string, rParams []interface{}, err error) {
+
+	var filteredProperty []QueryProperty
+	for _, p := range properties {
+
+		propertyEntity := getPropertyEntityField(p.Entity)
+		if propertyEntity == "user_properties.properties" {
+			filteredProperty = append(filteredProperty, p)
+		}
+	}
+	wStmt, wParams, err := buildWhereFromProperties(filteredProperty)
+	if err != nil {
+		return "", nil, err
+	}
+	return wStmt, wParams, nil
+}
+
 // Alias for group by properties gk_1, gk_2.
 func groupKeyByIndex(i int) string {
 	return fmt.Sprintf("%s%d", GroupKeyPrefix, i)
