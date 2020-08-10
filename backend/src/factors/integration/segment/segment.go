@@ -374,7 +374,7 @@ func ReceiveEvent(token string, event *Event) (int, *EventResponse) {
 			UserAgent:       event.Context.UserAgent,
 		}
 
-		status, trackResponse := SDK.Track(project.ID, request, false)
+		status, trackResponse := SDK.Track(project.ID, request, false, SDK.SourceSegment)
 		if status != http.StatusOK &&
 			status != http.StatusFound &&
 			status != http.StatusNotModified &&
@@ -421,7 +421,7 @@ func ReceiveEvent(token string, event *Event) (int, *EventResponse) {
 			UserAgent:       event.Context.UserAgent,
 		}
 
-		status, trackResponse := SDK.Track(project.ID, request, false)
+		status, trackResponse := SDK.Track(project.ID, request, false, SDK.SourceSegment)
 		if status != http.StatusOK &&
 			status != http.StatusFound &&
 			status != http.StatusNotModified &&
@@ -462,7 +462,7 @@ func ReceiveEvent(token string, event *Event) (int, *EventResponse) {
 			UserAgent:       event.Context.UserAgent,
 		}
 
-		status, trackResponse := SDK.Track(project.ID, request, false)
+		status, trackResponse := SDK.Track(project.ID, request, false, SDK.SourceSegment)
 		if status != http.StatusOK &&
 			status != http.StatusFound &&
 			status != http.StatusNotModified &&

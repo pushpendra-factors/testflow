@@ -1281,7 +1281,34 @@ func ShouldIgnoreItreeProperty(propertyName string) bool {
 	if _, found := ITREE_PROPERTIES_TO_IGNORE[propertyName]; found {
 		return true
 	}
+
 	return IsInternalEventProperty(&propertyName) || IsInternalUserProperty(&propertyName)
+}
+
+func SetDefaultValuesToEventProperties(eventProperties *PropertiesMap) {
+	defaultAllowedTimebasedEventProperties := [...]string{
+		EP_PAGE_SPENT_TIME,
+		EP_PAGE_LOAD_TIME,
+	}
+
+	for _, property := range defaultAllowedTimebasedEventProperties {
+		var setDefault bool
+		if value, exists := (*eventProperties)[property]; exists {
+			v, _ := GetPropertyValueAsFloat64(value)
+			setDefault = v == 0
+		} else {
+			setDefault = true
+		}
+
+		if setDefault {
+			(*eventProperties)[property] = 1 // 1 second.
+		}
+	}
+
+	// Default value for page_scroll_percent set to 0 to avoid $none.
+	if _, exists := (*eventProperties)[EP_PAGE_SCROLL_PERCENT]; !exists {
+		(*eventProperties)[EP_PAGE_SCROLL_PERCENT] = 0
+	}
 }
 
 func SanitizeProperties(properties *PropertiesMap) {

@@ -263,7 +263,7 @@ func IntShopifyHandler(c *gin.Context) {
 			UserProperties:  userProperties,
 			Timestamp:       timestamp,
 		}
-		status, response := SDK.Track(projectId, request, false)
+		status, response := SDK.Track(projectId, request, false, SDK.SourceShopify)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 			logCtx.WithFields(log.Fields{"track_payload": request,
 				"error_code": status, "error": response.Error}).Error(
@@ -298,7 +298,7 @@ func IntShopifyHandler(c *gin.Context) {
 			UserProperties:  userProperties,
 			Timestamp:       timestamp,
 		}
-		status, response := SDK.Track(projectId, request, false)
+		status, response := SDK.Track(projectId, request, false, SDK.SourceShopify)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 			logCtx.WithFields(log.Fields{"track_payload": request,
 				"error_code": status, "error": response.Error}).Error(
@@ -333,7 +333,7 @@ func IntShopifyHandler(c *gin.Context) {
 			UserProperties:  userProperties,
 			Timestamp:       timestamp,
 		}
-		status, response := SDK.Track(projectId, request, false)
+		status, response := SDK.Track(projectId, request, false, SDK.SourceShopify)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 			logCtx.WithFields(log.Fields{"track_payload": request,
 				"error_code": status, "error": response.Error}).Error(
@@ -367,7 +367,7 @@ func IntShopifyHandler(c *gin.Context) {
 			UserProperties:  userProperties,
 			Timestamp:       timestamp,
 		}
-		status, response := SDK.Track(projectId, request, false)
+		status, response := SDK.Track(projectId, request, false, SDK.SourceShopify)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 			logCtx.WithFields(log.Fields{"track_payload": request,
 				"error_code": status, "error": response.Error}).Error(
@@ -401,7 +401,7 @@ func IntShopifyHandler(c *gin.Context) {
 			UserProperties:  userProperties,
 			Timestamp:       timestamp,
 		}
-		status, response := SDK.Track(projectId, request, false)
+		status, response := SDK.Track(projectId, request, false, SDK.SourceShopify)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 			logCtx.WithFields(log.Fields{"track_payload": request,
 				"error_code": status, "error": response.Error}).Error(
@@ -436,7 +436,7 @@ func IntShopifyHandler(c *gin.Context) {
 			UserProperties:  userProperties,
 			Timestamp:       timestamp,
 		}
-		status, response := SDK.Track(projectId, request, false)
+		status, response := SDK.Track(projectId, request, false, SDK.SourceShopify)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 			logCtx.WithFields(log.Fields{"track_payload": request,
 				"error_code": status, "error": response.Error}).Error(
@@ -471,7 +471,7 @@ func IntShopifyHandler(c *gin.Context) {
 			UserProperties:  userProperties,
 			Timestamp:       timestamp,
 		}
-		status, response := SDK.Track(projectId, request, false)
+		status, response := SDK.Track(projectId, request, false, SDK.SourceShopify)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 			logCtx.WithFields(log.Fields{"track_payload": request,
 				"error_code": status, "error": response.Error}).Error(

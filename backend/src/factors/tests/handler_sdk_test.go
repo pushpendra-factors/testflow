@@ -106,7 +106,7 @@ func TestSDKTrackHandler(t *testing.T) {
 	// Test auto tracked event.
 	rEventName := "example.com/"
 	w = ServePostRequestWithHeaders(r, uri,
-		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"name": "Jhon"}}`, user.ID, rEventName)),
+		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$page_load_time": 0, "$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"name": "Jhon"}}`, user.ID, rEventName)),
 		map[string]string{
 			"Authorization": project.Token,
 			"User-Agent":    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
@@ -134,6 +134,9 @@ func TestSDKTrackHandler(t *testing.T) {
 	assert.Equal(t, "google search", eventProperties["$qp_encoded"])                                // decoded property value should have been stored.
 	assert.Nil(t, eventProperties["$qp_utm_keyword"])                                               // $qp_utm_keyword mapped to $keyword should also be decoded.
 	assert.Equal(t, "google search", eventProperties[U.EP_KEYWORD])
+	assert.Equal(t, float64(1), eventProperties[U.EP_PAGE_SPENT_TIME])     // Should be default value.
+	assert.Equal(t, float64(1), eventProperties[U.EP_PAGE_LOAD_TIME])      // Should be default value.
+	assert.Equal(t, float64(0), eventProperties[U.EP_PAGE_SCROLL_PERCENT]) // Should be default value.
 	assert.True(t, len(rEvent.UserPropertiesId) > 0)
 	rUser, errCode := M.GetUser(rEvent.ProjectId, rEvent.UserId)
 	assert.Equal(t, http.StatusFound, errCode)
@@ -153,7 +156,7 @@ func TestSDKTrackHandler(t *testing.T) {
 
 	// Should not allow $ prefixes apart from default properties.
 	rEventName = U.RandomLowerAphaNumString(10)
-	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "%s", "event_properties": {"mobile": "true", "$referrer": "http://google.com", "$page_raw_url": "https://factors.ai/login/", "$page_title": "Login"}, "user_properties": {"$dollar_key": "unknow_value", "$os": "mac osx", "$os_version": "1_2_3", "$screen_width": 10, "$screen_height": 11, "$browser": "mozilla", "$platform": "web", "$browser_version": "10_2_3"}}`,
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "%s", "event_properties": {"mobile": "true", "$referrer": "http://google.com", "$page_raw_url": "https://factors.ai/login/", "$page_title": "Login", "$page_load_time": 10}, "user_properties": {"$dollar_key": "unknow_value", "$os": "mac osx", "$os_version": "1_2_3", "$screen_width": 10, "$screen_height": 11, "$browser": "mozilla", "$platform": "web", "$browser_version": "10_2_3"}}`,
 		user.ID, rEventName)), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 	propsResponseMap1 := DecodeJSONResponseToMap(w.Body)
@@ -174,6 +177,8 @@ func TestSDKTrackHandler(t *testing.T) {
 	assert.Nil(t, eventProperties1[U.NAME_PREFIX_ESCAPE_CHAR+U.EP_REFERRER])
 	assert.Nil(t, eventProperties1[U.NAME_PREFIX_ESCAPE_CHAR+U.EP_PAGE_RAW_URL])
 	assert.Nil(t, eventProperties1[U.NAME_PREFIX_ESCAPE_CHAR+U.EP_PAGE_TITLE])
+	// Should not overwrite non-zero value to default.
+	assert.NotEqual(t, float64(10), eventProperties[U.EP_PAGE_LOAD_TIME])
 	// check user default properties.
 	retUser, errCode := M.GetUser(project.ID, user.ID)
 	assert.Equal(t, http.StatusFound, errCode)
@@ -601,7 +606,7 @@ func TestSDKTrackWithExternalEventIdUserIdAndTimestamp(t *testing.T) {
 			Name:       randomeEventName,
 			Timestamp:  timestamp,
 		}
-		status, response := SDK.Track(project.ID, &trackPayload, false)
+		status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
 		assert.Equal(t, http.StatusOK, status)
 		// Event should be created with the given event_id.
 		assert.Equal(t, eventId, response.EventId)
@@ -630,7 +635,7 @@ func TestSDKTrackWithExternalEventIdUserIdAndTimestamp(t *testing.T) {
 			Name:       randomeEventName,
 			Timestamp:  timestamp,
 		}
-		status, response := SDK.Track(project.ID, &trackPayload, false)
+		status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
 		assert.Equal(t, http.StatusOK, status)
 		// Event should be created with the given event_id.
 		assert.Equal(t, eventId, response.EventId)

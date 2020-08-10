@@ -97,6 +97,15 @@ type Response struct {
 	Error   string `json:"error,omitempty"`
 }
 
+const (
+	SourceJSSDK  = "js_sdk"
+	SourceAMPSDK = "amp_sdk"
+
+	SourceSegment = "segment"
+	SourceShopify = "shopify"
+	SourceHubspot = "hubspot"
+)
+
 const RequestQueue = "sdk_request_queue"
 const ProcessRequestTask = "process_sdk_request"
 
@@ -276,11 +285,22 @@ func isRealtimeSessionRequired(skipSession bool, projectId uint64, skipProjectId
 	return true
 }
 
-func Track(projectId uint64, request *TrackPayload, skipSession bool) (int, *TrackResponse) {
+func setDefaultValuesToEventPropertiesBySource(eventProperties *U.PropertiesMap,
+	source string, isAutoTracked bool) {
+
+	if isAutoTracked && (source == SourceJSSDK || source == SourceAMPSDK) {
+		U.SetDefaultValuesToEventProperties(eventProperties)
+	}
+}
+
+func Track(projectId uint64, request *TrackPayload,
+	skipSession bool, source string) (int, *TrackResponse) {
+
 	logCtx := log.WithField("project_id", projectId)
 
 	if projectId == 0 || request == nil {
-		logCtx.WithField("request_payload", request).Error("Invalid track request.")
+		logCtx.WithField("request_payload", request).
+			Error("Invalid track request.")
 		return http.StatusBadRequest, &TrackResponse{}
 	}
 
@@ -355,10 +375,10 @@ func Track(projectId uint64, request *TrackPayload, skipSession bool) (int, *Tra
 	}
 	// Added IP to event properties for internal usage.
 	(*eventProperties)[U.EP_INTERNAL_IP] = clientIP
+
 	U.SanitizeProperties(eventProperties)
 
 	var userProperties *U.PropertiesMap
-
 	if request.UserProperties == nil {
 		request.UserProperties = U.PropertiesMap{}
 	}
@@ -516,6 +536,8 @@ func Track(projectId uint64, request *TrackPayload, skipSession bool) (int, *Tra
 		(*eventProperties)[U.EP_SESSION_COUNT] = session.Count
 		event.SessionId = &session.ID
 	}
+
+	setDefaultValuesToEventPropertiesBySource(eventProperties, source, request.Auto)
 	eventPropsJSON, err := json.Marshal(eventProperties)
 	if err != nil {
 		return http.StatusBadRequest, &TrackResponse{Error: "Tracking failed. Invalid properties."}
@@ -820,7 +842,7 @@ func excludeBotRequestBySetting(token, userAgent string) bool {
 func TrackByToken(token string, reqPayload *TrackPayload) (int, *TrackResponse) {
 	project, errCode := M.GetProjectByToken(token)
 	if errCode == http.StatusFound {
-		return Track(project.ID, reqPayload, false)
+		return Track(project.ID, reqPayload, false, SourceJSSDK)
 	}
 
 	if errCode == http.StatusNotFound {
@@ -1301,7 +1323,7 @@ func AMPTrackByToken(token string, reqPayload *AMPTrackPayload) (int, *Response)
 		Timestamp:       reqPayload.Timestamp,
 	}
 
-	errCode, trackResponse := Track(project.ID, &trackPayload, false)
+	errCode, trackResponse := Track(project.ID, &trackPayload, false, SourceAMPSDK)
 	if trackResponse.EventId != "" {
 		cacheErrCode := SetCacheAMPSDKEventIDByPageURL(project.ID, user.ID,
 			trackResponse.EventId, pageURL)

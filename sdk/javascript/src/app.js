@@ -94,9 +94,9 @@ function getCurrentPageSpentTimeInMs(pageLandingTimeInMs, lastSpentTimeInMs) {
     var totalSpentTimeInMs = lastSpentTimeInMs;
     
     // Add to total spent time only if diff is lesser than
-    // inactivity threshold (10 mins).
+    // inactivity threshold (5 mins).
     var diffTimeInMs = lastActivityTime - prevActivityTime;
-    if (diffTimeInMs < 600000) {
+    if (diffTimeInMs < 300000) {
         totalSpentTimeInMs = totalSpentTimeInMs + diffTimeInMs;
     }
 
@@ -239,8 +239,11 @@ App.prototype.updatePagePropertiesIfChanged = function(pageLandingTimeInMs, last
         properties[Properties.PAGE_SPENT_TIME] = pageSpentTimeInSecs;
     }
     
-    if (pageScrollPercentage > 0 && pageScrollPercentage > lastPageScrollPercentage )
+    if (pageScrollPercentage > 0 && pageScrollPercentage > lastPageScrollPercentage ) {
+        pageScrollPercentage = Number(pageScrollPercentage.toFixed(2));
         properties[Properties.PAGE_SCROLL_PERCENT] = pageScrollPercentage;
+    }
+        
 
     // update if any properties given.
     if (Object.keys(properties).length > 0) {
@@ -280,6 +283,16 @@ App.prototype.autoTrack = function(enabled=false, afterCallback) {
 
     var lastPageProperties = {};
     var startOfPageSpentTime = util.getCurrentUnixTimestampInMs();
+
+    // update page properties after 5s and 10s.
+    for (var count=1; count <= 2; count++) {
+        setTimeout(function() {
+            logger.debug("Triggered properties update after 5s.", false);
+            lastPageProperties = _this.updatePagePropertiesIfChanged(
+                startOfPageSpentTime, lastPageProperties);
+        }, 5000 * count);
+    }
+
     // update page properties every 20s.
     setInterval(function() {
         lastPageProperties = _this.updatePagePropertiesIfChanged(
