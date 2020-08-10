@@ -227,8 +227,6 @@ class OAuthCallbackHandler(tornado.web.RequestHandler):
             flow.fetch_token(code=code)
         except Exception as e:
             log.error("Failed to fetch token on callback. %s", str(e))
-            self.redirect(App.get_app_settings_redirect_url("ACCESS_TOKEN_FAILURE"), True)
-            return
 
         if flow.credentials.refresh_token == None or flow.credentials.refresh_token == "":
             log.error("No refresh token on callback.")
