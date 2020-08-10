@@ -466,7 +466,8 @@ func TestGetRecentUserPropertyKeys(t *testing.T) {
 	assert.NotContains(t, props[U.PropertyTypeNumerical], "prop2")
 
 	//cached property
-	props, err = M.GetCacheRecentPropertyKeys(project.ID, "")
+	M.GetCacheRecentUserPropertyKeys(project.ID)
+	props, err = M.GetCacheRecentUserPropertyKeys(project.ID)
 	assert.Nil(t, err)
 	assert.Contains(t, props, U.PropertyTypeCategorical)
 	assert.Contains(t, props, U.PropertyTypeNumerical)
@@ -503,7 +504,7 @@ func TestGetRecentUserPropertyValues(t *testing.T) {
 		assert.NotContains(t, values, "value1")
 
 		//should return from cache
-		values, err := M.GetCacheRecentPropertyValues(project.ID, "", "prop3")
+		values, err := M.GetCacheRecentUserPropertyValues(project.ID, "prop3")
 		assert.Nil(t, err)
 		assert.Len(t, values, 2)
 		assert.NotContains(t, values, "value1")
@@ -517,7 +518,7 @@ func TestGetRecentUserPropertyValues(t *testing.T) {
 		assert.NotContains(t, values, "3")
 
 		//should return from cache
-		values, err := M.GetCacheRecentPropertyValues(project.ID, "", "prop4")
+		values, err := M.GetCacheRecentUserPropertyValues(project.ID, "prop4")
 		assert.Nil(t, err)
 		assert.Len(t, values, 2)
 		assert.NotContains(t, values, "3")

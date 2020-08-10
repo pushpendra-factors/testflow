@@ -221,7 +221,7 @@ func TestGetRecentEventPropertyKeys(t *testing.T) {
 		assert.Equal(t, http.StatusCreated, errCode1)
 
 		// empty cache, should return error
-		props, err := M.GetCacheRecentPropertyKeys(project.ID, eventName.Name)
+		props, err := M.GetCacheRecentPropertyKeys(project.ID, eventName.Name, M.PropertyEntityEvent)
 		assert.NotNil(t, err)
 
 		props, errCode := M.GetRecentEventPropertyKeysWithLimits(project.ID, eventName.Name, 1)
@@ -238,7 +238,7 @@ func TestGetRecentEventPropertyKeys(t *testing.T) {
 		assert.NotContains(t, props[U.PropertyTypeNumerical], "rProp4")
 
 		//should return from cache
-		props, err = M.GetCacheRecentPropertyKeys(project.ID, eventName.Name)
+		props, err = M.GetCacheRecentPropertyKeys(project.ID, eventName.Name, M.PropertyEntityEvent)
 		assert.Nil(t, err)
 		assert.Contains(t, props, U.PropertyTypeNumerical)
 		assert.Contains(t, props, U.PropertyTypeNumerical)
@@ -283,7 +283,7 @@ func TestGetRecentEventPropertyValues(t *testing.T) {
 		assert.Contains(t, values, "value1")
 
 		//get from cache
-		values, err := M.GetCacheRecentPropertyValues(project.ID, eventName.Name, "rProp1")
+		values, err := M.GetCacheRecentPropertyValues(project.ID, eventName.Name, "rProp1", M.PropertyEntityEvent)
 		assert.Nil(t, err)
 		assert.Len(t, values, 2)
 		assert.Contains(t, values, "value1")
