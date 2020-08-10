@@ -62,6 +62,7 @@ func IsAgentAuthorizedToAccessProject(projectId uint64, c *gin.Context) bool {
 type AdwordsAddRefreshTokenPayload struct {
 	// project_id conv from string to uint64 explicitly.
 	ProjectId    string `json:"project_id"`
+	AgentUUID    string `json:"agent_uuid"`
 	RefreshToken string `json:"refresh_token"`
 }
 
@@ -84,36 +85,40 @@ func IntAdwordsAddRefreshTokenHandler(c *gin.Context) {
 		return
 	}
 
-	if requestPayload.ProjectId == "" || requestPayload.RefreshToken == "" {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid json payload. empty mandatory fields."})
+	if requestPayload.ProjectId == "" ||
+		requestPayload.AgentUUID == "" ||
+		requestPayload.RefreshToken == "" {
+		c.AbortWithStatusJSON(http.StatusBadRequest,
+			gin.H{"error": "invalid json payload. empty mandatory fields."})
 		return
 	}
 
 	projectId, err := strconv.ParseUint(requestPayload.ProjectId, 10, 64)
 	if err != nil {
 		log.WithError(err).Error("Failed to convert project_id as uint64.")
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid json payload. empty mandatory fields."})
+		c.AbortWithStatusJSON(http.StatusBadRequest,
+			gin.H{"error": "invalid json payload. empty mandatory fields."})
 		return
 	}
 
-	if !IsAgentAuthorizedToAccessProject(projectId, c) {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "not authorized to access project"})
-		return
-	}
+	// Todo: Check agent has access to project or not, before adding refresh token?
 
-	currentAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
-
-	errCode := M.UpdateAgentIntAdwordsRefreshToken(currentAgentUUID, requestPayload.RefreshToken)
+	errCode := M.UpdateAgentIntAdwordsRefreshToken(requestPayload.AgentUUID, requestPayload.RefreshToken)
 	if errCode != http.StatusAccepted {
-		log.WithField("agent_uuid", currentAgentUUID).Error("Failed to update adwords refresh token for agent.")
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "failed updating adwords refresh token for agent"})
+		log.WithField("agent_uuid", requestPayload.AgentUUID).
+			Error("Failed to update adwords refresh token for agent.")
+		c.AbortWithStatusJSON(http.StatusInternalServerError,
+			gin.H{"error": "failed updating adwords refresh token for agent"})
 		return
 	}
 
-	_, errCode = M.UpdateProjectSettings(projectId, &M.ProjectSetting{IntAdwordsEnabledAgentUUID: &currentAgentUUID})
+	_, errCode = M.UpdateProjectSettings(projectId,
+		&M.ProjectSetting{IntAdwordsEnabledAgentUUID: &requestPayload.AgentUUID})
 	if errCode != http.StatusAccepted {
-		log.WithField("project_id", projectId).Error("Failed to update project settings adwords enable agent uuid.")
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "failed updating adwords enabled agent uuid project settings"})
+		log.WithField("project_id", projectId).
+			Error("Failed to update project settings adwords enable agent uuid.")
+		c.AbortWithStatusJSON(http.StatusInternalServerError,
+			gin.H{"error": "failed updating adwords enabled agent uuid project settings"})
 		return
 	}
 

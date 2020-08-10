@@ -29,6 +29,7 @@ const mapStateToProps = store => {
     currentProjectId: store.projects.currentProjectId,
     currentProjectSettings: store.projects.currentProjectSettings,
     adwordsCustomerAccounts: store.projects.adwordsCustomerAccounts,
+    currentAgent: store.agents.agent,
   }
 }
 
@@ -73,7 +74,7 @@ class Adwords extends Component {
 
   getRedirectURL() {
     let host = getAdwordsHostURL();
-    return host + ADWORDS_REDIRECT_URI+"?pid="+this.props.currentProjectId;
+    return host + ADWORDS_REDIRECT_URI+"?pid="+this.props.currentProjectId+"&aid="+this.props.currentAgent.uuid;
   }
 
   isLoaded() {

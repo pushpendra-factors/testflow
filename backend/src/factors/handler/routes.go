@@ -133,10 +133,6 @@ func InitIntRoutes(r *gin.Engine) {
 		mid.SetAuthorizedProjectsByLoggedInAgent(),
 		IntEnableAdwordsHandler)
 
-	// Todo: Move add_refresh_token and get_refresh_token
-	// under /data_service, as these are internal routes
-	// used by python adwords service.
-
 	intRouteGroup.POST("/facebook/add_access_token",
 		mid.SetLoggedInAgent(),
 		mid.SetAuthorizedProjectsByLoggedInAgent(),
@@ -151,13 +147,9 @@ func InitDataServiceRoutes(r *gin.Engine) {
 		IH.DataServiceAdwordsAddDocumentHandler)
 
 	dataServiceRouteGroup.POST("/adwords/add_refresh_token",
-		mid.SetLoggedInAgent(),
-		mid.SetAuthorizedProjectsByLoggedInAgent(),
 		IntAdwordsAddRefreshTokenHandler)
 
 	dataServiceRouteGroup.POST("/adwords/get_refresh_token",
-		mid.SetLoggedInAgent(),
-		mid.SetAuthorizedProjectsByLoggedInAgent(),
 		IntAdwordsGetRefreshTokenHandler)
 
 	dataServiceRouteGroup.GET("/adwords/documents/last_sync_info",
