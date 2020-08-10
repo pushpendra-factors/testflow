@@ -516,17 +516,15 @@ func GetCacheRecentPropertyKeys(projectId uint64, eventName string, entity strin
 // GetRecentEventPropertyKeys - Returns unique event property
 // keys from last 24 hours.
 func GetRecentEventPropertyKeysWithLimits(projectId uint64, eventName string, eventsLimit int) (map[string][]string, int) {
-	logCtx := log.WithFields(log.Fields{"project_id": projectId})
-
 	properties, err := GetCacheRecentPropertyKeys(projectId, eventName, PropertyEntityEvent)
 	if err == nil {
 		return properties, http.StatusFound
 	} else if err != redis.ErrNil {
-		logCtx.WithError(err).Error("Failed to GetCacheRecentPropertyKeys.")
+		log.WithFields(log.Fields{"project_id": projectId}).WithError(err).Error("Failed to GetCacheRecentPropertyKeys.")
 	}
 
 	eventsAfterTimestamp := U.UnixTimeBeforeDuration(24 * time.Hour)
-	logCtx = log.WithFields(log.Fields{"project_id": projectId, "events_after_timestamp": eventsAfterTimestamp})
+	logCtx := log.WithFields(log.Fields{"project_id": projectId, "events_after_timestamp": eventsAfterTimestamp})
 
 	db := C.GetServices().Db
 	queryStr := "SELECT distinct(properties) AS keys FROM events WHERE project_id = ?" +
