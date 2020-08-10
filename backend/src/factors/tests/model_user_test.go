@@ -464,6 +464,21 @@ func TestGetRecentUserPropertyKeys(t *testing.T) {
 	// old user properties shoult not exist.
 	assert.NotContains(t, props[U.PropertyTypeCategorical], "prop1")
 	assert.NotContains(t, props[U.PropertyTypeNumerical], "prop2")
+
+	//cached property
+	M.GetCacheRecentUserPropertyKeys(project.ID)
+	props, err = M.GetCacheRecentUserPropertyKeys(project.ID)
+	assert.Nil(t, err)
+	assert.Contains(t, props, U.PropertyTypeCategorical)
+	assert.Contains(t, props, U.PropertyTypeNumerical)
+	assert.Len(t, props[U.PropertyTypeCategorical], 1)
+	assert.Len(t, props[U.PropertyTypeNumerical], 2) // including joinTime.
+	// validates classification.
+	assert.Contains(t, props[U.PropertyTypeCategorical], "prop3")
+	assert.Contains(t, props[U.PropertyTypeNumerical], "prop4")
+	// old user properties shoult not exist.
+	assert.NotContains(t, props[U.PropertyTypeCategorical], "prop1")
+	assert.NotContains(t, props[U.PropertyTypeNumerical], "prop2")
 }
 
 func TestGetRecentUserPropertyValues(t *testing.T) {
@@ -487,12 +502,24 @@ func TestGetRecentUserPropertyValues(t *testing.T) {
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.Len(t, values, 2)
 		assert.NotContains(t, values, "value1")
+
+		//should return from cache
+		values, err := M.GetCacheRecentUserPropertyValues(project.ID, "prop3")
+		assert.Nil(t, err)
+		assert.Len(t, values, 2)
+		assert.NotContains(t, values, "value1")
 	})
 
 	t.Run("RecentPropertyValuesLimitedByValues", func(t *testing.T) {
 		// recent users limited to 3 but values limited to 2.
 		values, errCode := M.GetRecentUserPropertyValuesWithLimits(project.ID, "prop4", 3, 2)
 		assert.Equal(t, http.StatusFound, errCode)
+		assert.Len(t, values, 2)
+		assert.NotContains(t, values, "3")
+
+		//should return from cache
+		values, err := M.GetCacheRecentUserPropertyValues(project.ID, "prop4")
+		assert.Nil(t, err)
 		assert.Len(t, values, 2)
 		assert.NotContains(t, values, "3")
 	})
