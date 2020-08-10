@@ -671,3 +671,18 @@ func TestUserPropertiesEnrichmentWithPreviousSessionData(t *testing.T) {
 	assert.NotNil(t, (*userPropertiesMap)["Hello"])
 	assert.Equal(t, (*userPropertiesMap)["Hello"], "World")
 }
+
+func TestUserNumericalProperties(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+
+	_, errCode := M.CreateUser(&M.User{ProjectId: project.ID, Properties: postgres.Jsonb{[]byte(`{"$page_count":10}`)}})
+	assert.Equal(t, http.StatusCreated, errCode)
+	props, errCode := M.GetRecentUserPropertyKeysWithLimits(project.ID, 1)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Contains(t, props, U.PropertyTypeNumerical)
+	assert.Contains(t, props, U.PropertyTypeCategorical)
+	// validates classification.
+	assert.Contains(t, props[U.PropertyTypeNumerical], "$page_count")
+}

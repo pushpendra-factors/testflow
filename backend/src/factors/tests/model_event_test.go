@@ -665,3 +665,22 @@ func TestGetDatesForNextEventsArchivalBatch(t *testing.T) {
 		assert.Equal(t, expectedCount, value)
 	}
 }
+
+func TestEventNumericalProperties(t *testing.T) {
+	project, user, eventName, err := SetupProjectUserEventNameReturnDAO()
+	assert.Nil(t, err)
+	_, errCode := M.CreateEvent(&M.Event{
+		EventNameId: eventName.ID,
+		ProjectId:   project.ID,
+		UserId:      user.ID,
+		Properties:  postgres.Jsonb{[]byte(`{"$session_count":10}`)},
+		Timestamp:   U.TimeNow().Unix(),
+	})
+	assert.Equal(t, http.StatusCreated, errCode)
+	props, errCode := M.GetRecentEventPropertyKeysWithLimits(project.ID, eventName.Name, 1)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Contains(t, props, U.PropertyTypeNumerical)
+	assert.Contains(t, props, U.PropertyTypeCategorical)
+	// validates classification.
+	assert.Contains(t, props[U.PropertyTypeNumerical], "$session_count")
+}
