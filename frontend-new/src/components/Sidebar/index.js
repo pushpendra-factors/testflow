@@ -1,9 +1,5 @@
 import React from 'react';
 import { Layout, Menu } from 'antd';
-import {
-  VideoCameraOutlined,
-  UploadOutlined,
-} from '@ant-design/icons';
 import styles from './index.module.scss';
 
 function Sidebar() {

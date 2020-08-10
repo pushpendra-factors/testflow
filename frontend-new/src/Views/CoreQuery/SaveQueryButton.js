@@ -1,7 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { Button, Popover } from 'antd';
 import styles from './index.module.scss';
-import { Tabs } from 'antd';
 
 function SaveQueryButton() {
 

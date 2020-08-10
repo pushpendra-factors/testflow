@@ -1,10 +1,10 @@
 import React from 'react';
-import SearchBar from '../../components/SearchBar';
+// import SearchBar from '../../components/SearchBar';
 import SaveQueryButton from './SaveQueryButton';
 
 function Header() {
     return (
-        <div className="flex items-center my-2">
+        <div className="flex items-center mt-2">
             <div className="w-1/3"></div>
             <div className="w-1/3 flex justify-center items-center">
                 {/* <SearchBar /> */}
