@@ -1291,12 +1291,13 @@ func ShouldIgnoreItreeProperty(propertyName string) bool {
 }
 
 func SetDefaultValuesToEventProperties(eventProperties *PropertiesMap) {
-	defaultAllowedTimebasedEventProperties := [...]string{
-		EP_PAGE_SPENT_TIME,
-		EP_PAGE_LOAD_TIME,
+	defaultAllowedProperties := map[string]int{
+		EP_PAGE_SPENT_TIME:     0, // 0 second
+		EP_PAGE_LOAD_TIME:      1, // 1 second
+		EP_PAGE_SCROLL_PERCENT: 0,
 	}
 
-	for _, property := range defaultAllowedTimebasedEventProperties {
+	for property, defaultValue := range defaultAllowedProperties {
 		var setDefault bool
 		if value, exists := (*eventProperties)[property]; exists {
 			v, _ := GetPropertyValueAsFloat64(value)
@@ -1306,13 +1307,8 @@ func SetDefaultValuesToEventProperties(eventProperties *PropertiesMap) {
 		}
 
 		if setDefault {
-			(*eventProperties)[property] = 1 // 1 second.
+			(*eventProperties)[property] = defaultValue
 		}
-	}
-
-	// Default value for page_scroll_percent set to 0 to avoid $none.
-	if _, exists := (*eventProperties)[EP_PAGE_SCROLL_PERCENT]; !exists {
-		(*eventProperties)[EP_PAGE_SCROLL_PERCENT] = 0
 	}
 }
 
