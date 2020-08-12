@@ -22,7 +22,7 @@ parser.add_option("--host_url", default="http://localhost:8091",
 parser.add_option("--env", default="development", help="Environment.")
 parser.add_option("--developer_token", default="", help="Adwords developer token.")
 parser.add_option("--api_host_url", default="http://localhost:8089", help="Data service host url")
-parser.add_option("--app_host_url", default="http://localhost:3000", help="App host url")
+parser.add_option("--app_host_url", default="http://factors-dev.com:3000", help="App host url")
 parser.add_option("--oauth_secret", default="", help="OAuth2 client secret JSON string")
 
 SESSION_COOKIE_NAME = "factors-sid"
