@@ -1,27 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Tabs } from 'antd';
-import styles from './tabs.module.scss';
-import { tabItems } from './utils';
+import React, { useEffect, useRef } from 'react';
 import c3 from 'c3';
-import * as d3 from 'd3';
+import styles from './index.module.scss';
 
+function TotalConversions() {
 
-function Content() {
-    
     const chartRef = useRef(null);
-    const [activeKey, setActiveKey] = useState('1');
+
     const categories = ['Google', 'Facebook', 'G2', 'Capterra', 'Email'];
-
-    const handleTabChange = (key) => {
-        setActiveKey(key);
-    }
-
-    const getTabTitle = (tab) => {
-        return (
-            <div className="flex">{tab.titleIcon}<span>&nbsp;{tab.title}</span></div>
-        )
-    }
-
 
     useEffect(() => {
         c3.generate({
@@ -66,26 +51,11 @@ function Content() {
                 },
             },
         });
-    }, [activeKey, categories]);
-
-    const { TabPane } = Tabs;
+    }, [categories]);
 
     return (
-        <div className="mt-4">
-            <Tabs className={styles.coreQueryTabs} activeKey={activeKey} onChange={handleTabChange}>
-                {
-                    tabItems.map(tab => {
-                        return (
-                            <TabPane className="coreQueryTabPane" tab={getTabTitle(tab)} key={tab.key}>
-                                <div className={styles.coreQueryResultsChart} style={{ margin: '0.25rem' }} ref={chartRef} />
-                            </TabPane>
-                        )
-                    })
-                }
-            </Tabs>
-        </div>
-
+        <div className={styles.totalConversionsChart} style={{ margin: '0.25rem' }} ref={chartRef} />
     )
 }
 
-export default Content;
+export default TotalConversions;

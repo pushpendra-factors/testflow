@@ -1,0 +1,41 @@
+$primaryColor: #34A7BA;
+$secondaryColor: #3E516C;
+
+.contentTabs {
+    :global(.ant-tabs-nav-list) {
+        width: 100%;
+    }
+    :global(.ant-tabs-tab) {
+        width: 25%;
+        justify-content: center;
+        font-size: 1rem;
+        border-right: 1px solid #f0f0f0;
+        margin-right: 0;
+        color: $secondaryColor;
+    }
+    :global(.ant-tabs-tab .anticon) {
+        margin-right: 0;
+    }
+    :global(.ant-tabs-tab:hover) {
+        color: $primaryColor;
+    }
+    :global(.ant-tabs-tab:hover path) {
+        fill: $primaryColor;
+    }
+    :global(.ant-tabs-tab.ant-tabs-tab-active) {
+        background-color: #F7FBFC;
+    }
+    :global(.ant-tabs-tab.ant-tabs-tab-active path) {
+        fill: $primaryColor;
+    }
+    :global(.ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn) {
+        color: $primaryColor;
+        font-weight: bold;
+    }
+    :global(.ant-tabs-nav-wrap) {
+        border-top: 1px solid #f0f0f0;
+    }
+    :global(.ant-tabs-ink-bar) {
+        background: $primaryColor;
+    }
+}

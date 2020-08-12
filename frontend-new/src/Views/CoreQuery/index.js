@@ -1,6 +1,6 @@
 import React from 'react';
 import Header from './header';
-import Content from './Content';
+import PageContent from './PageContent';
 import QueryComposer from '../../components/QueryComposer';
 
 function CoreQuery() {
@@ -10,7 +10,7 @@ function CoreQuery() {
             <div>
                 <QueryComposer visible={true}></QueryComposer>
             </div>
-            <Content />
+            <PageContent />
         </>
     )
 }
