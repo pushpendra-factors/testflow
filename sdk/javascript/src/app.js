@@ -219,7 +219,9 @@ App.prototype.updateEventProperties = function(eventId, properties={}) {
     return this.client.updateEventProperties({ event_id: eventId, properties: properties });
 }
 
-App.prototype.updatePagePropertiesIfChanged = function(pageLandingTimeInMs, lastPageProperties) {
+App.prototype.updatePagePropertiesIfChanged = function(pageLandingTimeInMs, 
+    lastPageProperties, defaultPageSpentTimeInMs=0) {
+
     let lastPageSpentTimeInMs = lastPageProperties && lastPageProperties[Properties.PAGE_SPENT_TIME] ? 
         lastPageProperties[Properties.PAGE_SPENT_TIME] : 0;
     
@@ -230,21 +232,24 @@ App.prototype.updatePagePropertiesIfChanged = function(pageLandingTimeInMs, last
     var pageScrollPercentage = Properties.getPageScrollPercent();
 
     // add properties if changed.
-    let properties = {};
+    var properties = {};
+
+    if (pageSpentTimeInMs == 0 && defaultPageSpentTimeInMs > 0) {
+        pageSpentTimeInMs = defaultPageSpentTimeInMs;
+    }
     
     if (pageSpentTimeInMs > 0 && pageSpentTimeInMs > lastPageSpentTimeInMs) {
         // page spent time added to payload in secs.
-        let pageSpentTimeInSecs = pageSpentTimeInMs / 1000;
+        var pageSpentTimeInSecs = pageSpentTimeInMs / 1000;
         pageSpentTimeInSecs = Number(pageSpentTimeInSecs.toFixed(2));
         properties[Properties.PAGE_SPENT_TIME] = pageSpentTimeInSecs;
-    }
+    } 
     
     if (pageScrollPercentage > 0 && pageScrollPercentage > lastPageScrollPercentage ) {
         pageScrollPercentage = Number(pageScrollPercentage.toFixed(2));
         properties[Properties.PAGE_SCROLL_PERCENT] = pageScrollPercentage;
     }
         
-
     // update if any properties given.
     if (Object.keys(properties).length > 0) {
         logger.debug("Updating page properties : " + JSON.stringify(properties), false);
@@ -284,14 +289,18 @@ App.prototype.autoTrack = function(enabled=false, afterCallback) {
     var lastPageProperties = {};
     var startOfPageSpentTime = util.getCurrentUnixTimestampInMs();
 
-    // update page properties after 5s and 10s.
-    for (var count=1; count <= 2; count++) {
-        setTimeout(function() {
-            logger.debug("Triggered properties update after 5s.", false);
-            lastPageProperties = _this.updatePagePropertiesIfChanged(
-                startOfPageSpentTime, lastPageProperties);
-        }, 5000 * count);
-    }
+    // Todo: Use curried function to remove multiple set timeouts.
+    // update page properties after 5s and 10s with default value.
+    setTimeout(function() {
+        logger.debug("Triggered properties update after 5s.", false);
+        lastPageProperties = _this.updatePagePropertiesIfChanged(
+            startOfPageSpentTime, lastPageProperties, 5000);
+    }, 5000);
+    setTimeout(function() {
+        logger.debug("Triggered properties update after 10s.", false);
+        lastPageProperties = _this.updatePagePropertiesIfChanged(
+            startOfPageSpentTime, lastPageProperties, 10000);
+    }, 10000);
 
     // update page properties every 20s.
     setInterval(function() {

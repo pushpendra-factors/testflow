@@ -134,7 +134,7 @@ func TestSDKTrackHandler(t *testing.T) {
 	assert.Equal(t, "google search", eventProperties["$qp_encoded"])                                // decoded property value should have been stored.
 	assert.Nil(t, eventProperties["$qp_utm_keyword"])                                               // $qp_utm_keyword mapped to $keyword should also be decoded.
 	assert.Equal(t, "google search", eventProperties[U.EP_KEYWORD])
-	assert.Equal(t, float64(1), eventProperties[U.EP_PAGE_SPENT_TIME])     // Should be default value.
+	assert.Equal(t, float64(0), eventProperties[U.EP_PAGE_SPENT_TIME])     // Should be default value.
 	assert.Equal(t, float64(1), eventProperties[U.EP_PAGE_LOAD_TIME])      // Should be default value.
 	assert.Equal(t, float64(0), eventProperties[U.EP_PAGE_SCROLL_PERCENT]) // Should be default value.
 	assert.True(t, len(rEvent.UserPropertiesId) > 0)
