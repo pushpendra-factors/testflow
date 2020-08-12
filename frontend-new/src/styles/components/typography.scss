@@ -1,0 +1,71 @@
+.fai-text{
+
+    font-family: 'Work Sans', sans-serif;
+    color: $fa-color--mono-base;
+
+    //Color
+    &.fai-text__color--red{
+        color: $fa-color--red;
+    } 
+    &.fai-text__color--orange{
+        color: $fa-color--orange;
+    } 
+    &.fai-text__color--green{
+        color: $fa-color--green;
+    }
+
+    //Case
+    &.fai-text__transform--uppercase{
+        text-transform: uppercase;
+    }
+    &.fai-text__transform--lowercase{
+        text-transform: lowercase;
+    } 
+ 
+    //Size
+    &.fai-text__size--h1{
+        font-size: 40px;
+    } 
+    &.fai-text__size--h2{
+        font-size: 32px
+    } 
+    &.fai-text__size--h3{
+        font-size: 24px
+    } 
+    &.fai-text__size--h4{
+        font-size: 20px
+    } 
+    &.fai-text__size--h5{
+        font-size: 18px;
+    } 
+    &.fai-text__size--h6{
+        font-size: 16px;
+    } 
+
+    .fai-text__size--p{} 
+
+    //Weight 
+    &.fai-text__size--thin{}
+    &.fai-text__size--normal,.fai-text__size--regular{}
+    &.fai-text__size--bold{}
+
+
+
+    //Line Height
+    &.fai-text__line-height--normal{}
+    
+    &.fai-text__line-height--small {}
+    
+    &.fai-text__line-height--medium {}
+    
+    &.fai-text__line-height--large {}
+
+    //Alignment
+    &.fai-text__weight--left{}
+    &.fai-text__weight--right{}
+    &.fai-text__weight--center{}
+
+
+}
+ 
+

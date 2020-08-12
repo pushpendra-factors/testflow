@@ -22,7 +22,7 @@ var isStaging = process.env.NODE_ENV === "staging";
 
 function getBuildPath() {
   return __dirname + "/dist/" + process.env.NODE_ENV;
-}
+} 
 
 module.exports = {
   entry: './src/index.js',
@@ -56,14 +56,17 @@ module.exports = {
       }
     ]
   },
+  resolve: {
+    extensions: ['*', '.js', '.jsx'],  
+    // alias: {
+    //   factorsComponents: path.resolve(__dirname, './components/factorsComponents'), 
+    // },
+  },
   plugins: [
     buildConfigPlugin,
     HtmlPlugin,
     new CopyWebpackPlugin([{ from: './src/assets', to: 'assets' }]),
   ],
-  resolve: {
-    extensions: ['*', '.js', '.jsx']
-  },
   output: {
     path: getBuildPath(),
     publicPath: '/',
