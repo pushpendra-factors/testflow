@@ -134,7 +134,7 @@ func TestSDKTrackHandler(t *testing.T) {
 	assert.Equal(t, "google search", eventProperties["$qp_encoded"])                                // decoded property value should have been stored.
 	assert.Nil(t, eventProperties["$qp_utm_keyword"])                                               // $qp_utm_keyword mapped to $keyword should also be decoded.
 	assert.Equal(t, "google search", eventProperties[U.EP_KEYWORD])
-	assert.Equal(t, float64(0), eventProperties[U.EP_PAGE_SPENT_TIME])     // Should be default value.
+	assert.Equal(t, float64(1), eventProperties[U.EP_PAGE_SPENT_TIME])     // Should be default value.
 	assert.Equal(t, float64(1), eventProperties[U.EP_PAGE_LOAD_TIME])      // Should be default value.
 	assert.Equal(t, float64(0), eventProperties[U.EP_PAGE_SCROLL_PERCENT]) // Should be default value.
 	assert.True(t, len(rEvent.UserPropertiesId) > 0)
@@ -177,8 +177,10 @@ func TestSDKTrackHandler(t *testing.T) {
 	assert.Nil(t, eventProperties1[U.NAME_PREFIX_ESCAPE_CHAR+U.EP_REFERRER])
 	assert.Nil(t, eventProperties1[U.NAME_PREFIX_ESCAPE_CHAR+U.EP_PAGE_RAW_URL])
 	assert.Nil(t, eventProperties1[U.NAME_PREFIX_ESCAPE_CHAR+U.EP_PAGE_TITLE])
-	// Should not overwrite non-zero value to default.
+	// Should not overwrite non-zero value of page_load_time to default.
 	assert.NotEqual(t, float64(10), eventProperties[U.EP_PAGE_LOAD_TIME])
+	// Should assign page_load_time to page_spent_time when page_spent_time is not available.
+	assert.NotEqual(t, float64(10), eventProperties[U.EP_PAGE_SPENT_TIME])
 	// check user default properties.
 	retUser, errCode := M.GetUser(project.ID, user.ID)
 	assert.Equal(t, http.StatusFound, errCode)

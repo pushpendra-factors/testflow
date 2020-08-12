@@ -224,27 +224,30 @@ App.prototype.updatePagePropertiesIfChanged = function(pageLandingTimeInMs,
 
     let lastPageSpentTimeInMs = lastPageProperties && lastPageProperties[Properties.PAGE_SPENT_TIME] ? 
         lastPageProperties[Properties.PAGE_SPENT_TIME] : 0;
-    
+
     let lastPageScrollPercentage = lastPageProperties && lastPageProperties[Properties.PAGE_SCROLL_PERCENT] ?
         lastPageProperties[Properties.PAGE_SCROLL_PERCENT] : 0;
 
     var pageSpentTimeInMs = getCurrentPageSpentTimeInMs(pageLandingTimeInMs, lastPageSpentTimeInMs);
     var pageScrollPercentage = Properties.getPageScrollPercent();
 
-    // add properties if changed.
-    var properties = {};
-
     if (pageSpentTimeInMs == 0 && defaultPageSpentTimeInMs > 0) {
         pageSpentTimeInMs = defaultPageSpentTimeInMs;
     }
+
+    // add page_load_time to page_spent_time initially and when defaulted.
+    if (lastPageSpentTimeInMs == 0 || defaultPageSpentTimeInMs > 0) {
+        pageSpentTimeInMs = pageSpentTimeInMs + Properties.getPageLoadTimeInMs();
+    }
     
+    // add properties if changed.
+    var properties = {};
     if (pageSpentTimeInMs > 0 && pageSpentTimeInMs > lastPageSpentTimeInMs) {
         // page spent time added to payload in secs.
         var pageSpentTimeInSecs = pageSpentTimeInMs / 1000;
         pageSpentTimeInSecs = Number(pageSpentTimeInSecs.toFixed(2));
         properties[Properties.PAGE_SPENT_TIME] = pageSpentTimeInSecs;
     } 
-    
     if (pageScrollPercentage > 0 && pageScrollPercentage > lastPageScrollPercentage ) {
         pageScrollPercentage = Number(pageScrollPercentage.toFixed(2));
         properties[Properties.PAGE_SCROLL_PERCENT] = pageScrollPercentage;
