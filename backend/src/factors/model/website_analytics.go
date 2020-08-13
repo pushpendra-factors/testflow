@@ -1034,7 +1034,7 @@ func getResultForCustomGroupQuery(
 
 		indexOfFirstMetric := len(query.GroupByProperties)
 		sort.SliceStable(rows, func(i, j int) bool {
-			if len(rows[i]) == indexOfFirstMetric || len(rows[j]) == indexOfFirstMetric {
+			if len(rows[i]) <= indexOfFirstMetric || len(rows[j]) <= indexOfFirstMetric {
 				log.WithField("group_by_properties", query.GroupByProperties).
 					WithField("index", indexOfFirstMetric).
 					WithField("row_i", rows[i]).WithField("row_j", rows[j]).
