@@ -31,10 +31,12 @@ class Text extends React.Component {
         [extraClass]: extraClass,
       };
 
+      //Else AntD throws error for level>4
+      const FinalLevel = (level||size) > 4 ? 4 : level||size
 
     return (
       <>
-          <Title level={level||size} {...otherProps} className={classnames({ ...classList })} >{children}</Title>
+          <Title level={FinalLevel} {...otherProps} className={classnames({ ...classList })} >{children}</Title>
       </>
     );
   }
