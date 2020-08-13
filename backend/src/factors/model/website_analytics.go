@@ -459,9 +459,9 @@ func getUniqueGroupKeyAndPropertyValues(queryPropertyKeys []string,
 
 	var groupKey string
 	groupPropertyValues := make([]interface{}, 0, 0)
-	for _, key := range queryPropertyKeys {
+	for i := range queryPropertyKeys {
 		var propertyValue string
-		value, exists := (*propertyKeyValues)[key]
+		value, exists := (*propertyKeyValues)[queryPropertyKeys[i]]
 		if exists && value != "" && value != "NULL" {
 			propertyValue = value
 		} else {
@@ -473,7 +473,7 @@ func getUniqueGroupKeyAndPropertyValues(queryPropertyKeys []string,
 			groupKey = groupKey + "||"
 		}
 
-		groupKey = groupKey + fmt.Sprintf("%s:%s", key, propertyValue)
+		groupKey = groupKey + fmt.Sprintf("%s:%s", queryPropertyKeys[i], propertyValue)
 		groupPropertyValues = append(groupPropertyValues, propertyValue)
 	}
 
@@ -555,7 +555,9 @@ func buildWebAnalyticsAggregateForPageEvent(
 		aggrState.ChannelAggregates[webEvent.Properties.Channel].NoOfUniqueUsers++
 	}
 
-	for _, query := range customGroupQueries {
+	for i := range customGroupQueries {
+		query := customGroupQueries[i]
+
 		groupKey, groupPropertyValues := getUniqueGroupKeyAndPropertyValues(
 			query.GroupByProperties, customGroupPropertiesMap)
 
@@ -932,7 +934,9 @@ func getResultForCustomGroupQuery(
 
 	queryResult = map[string]*GenericQueryResult{}
 
-	for _, query := range groupQueries {
+	for i := range groupQueries {
+		query := groupQueries[i]
+
 		headers := make([]string, 0, 0)
 		headers = append(headers, query.GroupByProperties...)
 		// Add readable metric names.
@@ -954,7 +958,9 @@ func getResultForCustomGroupQuery(
 			pageViews := (*customGroupAggrState)[query.UniqueID][groupKey].
 				MetricValue[WAGroupMetricPageViews].Value
 
-			for _, metric := range query.Metrics {
+			for i := range query.Metrics {
+				metric := query.Metrics[i]
+
 				// Add 0 values to metric, if group key doesn't exist.
 				if _, exists := (*customGroupAggrState)[query.UniqueID][groupKey]; !exists {
 					row = append(row, 0)
@@ -993,10 +999,13 @@ func getResultForCustomGroupQuery(
 
 				if metric == WAGroupMetricAvgTimeSpent {
 					var avgTimeSpent float64
-					if pageViews > 0 {
+					if pageViews > 0 && (*customGroupAggrState)[query.UniqueID][groupKey].
+						MetricValue[WAGroupMetricTotalTimeSpent] != nil {
+
 						avgTimeSpent = (*customGroupAggrState)[query.UniqueID][groupKey].
 							MetricValue[WAGroupMetricTotalTimeSpent].Value / pageViews
 					}
+
 					value = getFormattedTime(int64(avgTimeSpent))
 				}
 
@@ -1008,10 +1017,12 @@ func getResultForCustomGroupQuery(
 
 				if metric == WAGroupMetricAvgScrollDepth {
 					var avgScrollDepth float64
-					if pageViews > 0 {
+					if pageViews > 0 && (*customGroupAggrState)[query.UniqueID][groupKey].
+						MetricValue[WAGroupMetricTotalScrollDepth] != nil {
 						avgScrollDepth = (*customGroupAggrState)[query.UniqueID][groupKey].
 							MetricValue[WAGroupMetricTotalScrollDepth].Value / pageViews
 					}
+
 					value = getFormattedPercentage(avgScrollDepth)
 				}
 
@@ -1023,6 +1034,14 @@ func getResultForCustomGroupQuery(
 
 		indexOfFirstMetric := len(query.GroupByProperties)
 		sort.SliceStable(rows, func(i, j int) bool {
+			if len(rows[i]) == indexOfFirstMetric || len(rows[j]) == indexOfFirstMetric {
+				log.WithField("group_by_properties", query.GroupByProperties).
+					WithField("index", indexOfFirstMetric).
+					WithField("row_i", rows[i]).WithField("row_j", rows[j]).
+					Errorf("Error sorting values. Related to mismatch in columns length, if channel is present.")
+				return false
+			}
+
 			return U.GetSortWeightFromAnyType(rows[i][indexOfFirstMetric]) >
 				U.GetSortWeightFromAnyType(rows[j][indexOfFirstMetric])
 		})
