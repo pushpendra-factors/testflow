@@ -955,8 +955,21 @@ func getResultForCustomGroupQuery(
 				MetricValue[WAGroupMetricPageViews].Value
 
 			for _, metric := range query.Metrics {
-				var value interface{}
+				// Add 0 values to metric, if group key doesn't exist.
+				if _, exists := (*customGroupAggrState)[query.UniqueID][groupKey]; !exists {
+					row = append(row, 0)
+					continue
+				}
 
+				// Avoid nil pointer exception if metric value is not available,
+				// For metrics like WAGroupMetricAvgTimeSpent, we will have only the
+				// dependent metric WAGroupMetricTotalTimeSpent instead of the original.
+				if (*customGroupAggrState)[query.UniqueID][groupKey].MetricValue[metric] == nil {
+					(*customGroupAggrState)[query.UniqueID][groupKey].
+						MetricValue[metric] = &WebAnalyticsCustomGroupMetricValue{}
+				}
+
+				var value interface{}
 				// Metrics/Aggregates which can be added directly to result.
 				if metric == WAGroupMetricPageViews || metric == WAGroupMetricUniqueUsers ||
 					metric == WAGroupMetricUniqueSessions {
