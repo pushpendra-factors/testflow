@@ -28,7 +28,7 @@ func TestExecuteWebAnalyticsQueries(t *testing.T) {
 		map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	resultByQueryName, _, errCode := M.ExecuteWebAnalyticsQueries(
+	queryResult, errCode := M.ExecuteWebAnalyticsQueries(
 		project.ID,
 		&M.WebAnalyticsQueries{
 			QueryNames: []string{
@@ -38,10 +38,11 @@ func TestExecuteWebAnalyticsQueries(t *testing.T) {
 			To:   U.TimeNowUnix(),
 		},
 	)
-	assert.NotNil(t, resultByQueryName)
+	assert.NotNil(t, queryResult)
+	assert.NotNil(t, queryResult.QueryResult)
 	assert.Equal(t, http.StatusOK, errCode)
 
-	resultByQueryName, customGroupResult, errCode := M.ExecuteWebAnalyticsQueries(
+	queryResult, errCode = M.ExecuteWebAnalyticsQueries(
 		project.ID,
 		&M.WebAnalyticsQueries{
 			QueryNames: []string{
@@ -53,7 +54,7 @@ func TestExecuteWebAnalyticsQueries(t *testing.T) {
 						"authorName",
 					},
 					Metrics: []string{
-						M.WACustomMetricPageViews,
+						M.WAGroupMetricPageViews,
 					},
 				},
 			},
@@ -61,13 +62,13 @@ func TestExecuteWebAnalyticsQueries(t *testing.T) {
 			To:   U.TimeNowUnix(),
 		},
 	)
-	assert.NotNil(t, resultByQueryName)
 	assert.Equal(t, http.StatusOK, errCode)
-	assert.True(t, len(customGroupResult) > 0)
+	assert.NotNil(t, queryResult)
+	assert.True(t, len(queryResult.CustomGroupQueryResult) > 0)
 
 	// Group result should have equal length of
 	// headers and individual row.
-	for _, groupResult := range customGroupResult {
+	for _, groupResult := range queryResult.CustomGroupQueryResult {
 		assert.Len(t, groupResult.Headers, 2)
 		for _, row := range groupResult.Rows {
 			assert.Len(t, row, 2)
