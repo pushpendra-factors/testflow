@@ -1,23 +1,30 @@
 import React from 'react';
-import { Layout, Menu } from 'antd';
+import { Layout, Menu, Row, Col } from 'antd';
 import styles from './index.module.scss';
+import { Link } from 'react-router-dom'; 
+
 
 function Sidebar() {
   const { Sider } = Layout;
 
   return (
-    <Sider trigger={null} collapsible collapsed={true}>
+    <>
+    <Sider className="fa-aside" width={`64`} >
       <div className={styles.logo} >
         <img src="./assets/icons/factors.png" alt="Factors.ai" />
-      </div>
-      <Menu className="menu-items" theme="dark" mode="inline" defaultSelectedKeys={['1']}>
-        <Menu.Item key="1" icon={<img className="anticon" src="./assets/icons/home.svg" alt="Home" />}>
-        </Menu.Item>
-        <Menu.Item key="2" icon={<img className="anticon" src="./assets/icons/core-query-white.png" alt="Core Query" />}>
-          nav 2
-        </Menu.Item>
-      </Menu>
-    </Sider>
+      </div> 
+
+      <Row justify="center" align="middle" className="py-4"> 
+            <Link to="/"><img className="anticon" src="./assets/icons/home.svg" alt="Home" /></Link>  
+      </Row>
+      <Row justify="center" align="middle" className="py-4"> 
+            <Link to="/components/"><img className="anticon" src="./assets/icons/core-query-white.png" /></Link> 
+      </Row>
+
+        
+  
+    </Sider> 
+    </>
   )
 }
 

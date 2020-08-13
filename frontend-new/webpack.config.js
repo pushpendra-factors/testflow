@@ -114,9 +114,9 @@ module.exports = {
   },
   resolve: {
     extensions: ['*', '.js', '.jsx'],  
-    // alias: {
-    //   factorsComponents: path.resolve(__dirname, './components/factorsComponents'), 
-    // },
+    alias: {
+      factorsComponents: path.resolve(__dirname, './src/components/factorsComponents'), 
+    },
   },
   plugins: [
     buildConfigPlugin,
