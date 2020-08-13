@@ -86,9 +86,17 @@ func (q *Query) SetQueryDateRange(from, to int64) {
 type QueryResult struct {
 	Headers []string        `json:"headers"`
 	Rows    [][]interface{} `json:"rows"`
-	// Todo(Dinesh): Change it to interface and use
-	// the query result struct across different queries.
+	// Todo(Dinesh): Use Generic query result
+	// for meta as interface{}.
 	Meta QueryResultMeta `json:"meta"`
+}
+
+// GenericQueryResult - Common query result
+// structure with meta.
+type GenericQueryResult struct {
+	Headers []string        `json:"headers"`
+	Rows    [][]interface{} `json:"rows"`
+	Meta    interface{}     `json:"meta"`
 }
 
 type DateTimePropertyValue struct {

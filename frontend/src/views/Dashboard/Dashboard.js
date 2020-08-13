@@ -220,20 +220,42 @@ class Dashboard extends Component {
     return positions;
   }
 
-  getQuery = () => {
+  getWebAnalyticsQuery = () => {
     let dateRange = this.getCurrentDateRange();
     let period = getQueryPeriod(dateRange[0]);
 
+    let unitQueries = [];
+    let customGroupUnitQueries = [];
+    for (let i=0; i < this.state.webAnalyticsBulkQueryParams.length; i++) {
+      let query = this.state.webAnalyticsBulkQueryParams[i];
+
+      let unitQuery = { unit_id: query.unit_id };
+      if (query.type == "named_query") {
+        unitQuery.query_name = query.qname;
+        unitQueries.push(unitQuery);
+
+      } else if (query.type == "wa_custom_group_query") {
+        unitQuery.gbp = query.gbp;
+        unitQuery.metrics = query.metrics;
+        customGroupUnitQueries.push(unitQuery);
+
+      } else {
+        console.error("Unknown type on web analytics class unit.")
+      }
+    }
+    
     let query = {
-        "units":this.state.webAnalyticsBulkQueryParams,
-        "from":period.from,
-        "to":period.to,
-      };
+      "units": unitQueries,
+      "custom_group_units": customGroupUnitQueries,
+      "from": period.from,
+      "to": period.to,
+    };
+    
     return query;
   }
 
   execWebAnalyticsBulkRequest = () => {
-    let query = this.getQuery();
+    let query = this.getWebAnalyticsQuery();
     let currentDashboard = this.getSelectedDashboard();
 
       fetchWebAnalyticsResult(this.props.currentProjectId, currentDashboard.value, query, this.state.webAnalyticsHardRefresh)
@@ -251,18 +273,11 @@ class Dashboard extends Component {
       ).catch(err=>console.error("Error: ", err));
   }
 
-  webAnalyticsBulkRequestBuilder = (id, qname, handler) => {
-    let unitQuery = {
-      "unit_id":id,
-      "query_name":qname
-    };
-    let unitHandler = {
-      "id":id,
-      "handle":handler
-    };
-    
-    this.state.webAnalyticsBulkQueryParams.push(unitQuery);
-    this.state.webAnalyticsBulkQueryHandlers.push(unitHandler);
+  webAnalyticsBulkRequestBuilder = (id, query, handler) => {
+    query.unit_id = id;
+
+    this.state.webAnalyticsBulkQueryHandlers.push({ "id": id, "handle": handler });
+    this.state.webAnalyticsBulkQueryParams.push(query);
 
     if (this.state.webAnalyticsBulkQueryParams.length == this.props.dashboardUnits.length){
       this.execWebAnalyticsBulkRequest();

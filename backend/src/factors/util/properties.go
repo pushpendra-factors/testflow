@@ -120,6 +120,7 @@ var EP_HOUR_OF_DAY string = "$hour_of_day"
 var EP_DAY_OF_WEEK string = "$day_of_week"
 var EP_SESSION_COUNT string = "$session_count"
 var EP_TERM string = "$term"
+var EP_CHANNEL string = "$channel" // added at runtime.
 
 // User Properties
 var UP_PLATFORM string = "$platform"

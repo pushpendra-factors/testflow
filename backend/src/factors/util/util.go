@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	log "github.com/sirupsen/logrus"
 )
 
 const SECONDS_IN_A_DAY int64 = 24 * 60 * 60
@@ -88,6 +89,45 @@ func IsNumber(num string) bool {
 func IsEmail(str string) bool {
 	regexpEmail := regexp.MustCompile(`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,4}$`)
 	return regexpEmail.MatchString(str)
+}
+
+func GetNumberFromAnyString(str string) float64 {
+	strAsBytes := []byte(str)
+	re := regexp.MustCompile(`[+-]?([0-9]*[.])?[0-9]+`)
+	numStr := string(re.Find(strAsBytes))
+
+	num, err := strconv.ParseFloat(numStr, 64)
+	if err != nil {
+		return 0
+	}
+
+	return num
+}
+
+func GetSortWeightFromAnyType(value interface{}) float64 {
+	if value == nil {
+		return 0
+	}
+
+	switch valueType := value.(type) {
+	case float64:
+		return value.(float64)
+	case float32:
+		return float64(value.(float32))
+	case int:
+		return float64(value.(int))
+	case int32:
+		return float64(value.(int32))
+	case int64:
+		return float64(value.(int64))
+	case string:
+		return GetNumberFromAnyString(value.(string))
+	default:
+		log.Info("Unsupported type used on GetSortWeightFromAnyType %+v", valueType)
+		return 0
+	}
+
+	return 0
 }
 
 func TrimQuotes(str string) string {

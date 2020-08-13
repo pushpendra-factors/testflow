@@ -22,12 +22,12 @@ func TestGetStringListAsBatch(t *testing.T) {
 }
 
 func TestIsStringContainsAny(t *testing.T) {
-	contains := U.IsContainsAnySubString("https://facebook.com", []string{"facebook", "twitter"}...)
+	contains := U.IsContainsAnySubString("https://facebook.com", "facebook", "twitter")
 	assert.True(t, contains)
 
-	contains = U.IsContainsAnySubString("https://twitter.com", []string{"facebook", "twitter"}...)
+	contains = U.IsContainsAnySubString("https://twitter.com", "facebook", "twitter")
 	assert.True(t, contains)
 
-	contains = U.IsContainsAnySubString("https://tiktok.com", []string{"facebook", "twitter"}...)
+	contains = U.IsContainsAnySubString("https://tiktok.com", "facebook", "twitter")
 	assert.False(t, contains)
 }
