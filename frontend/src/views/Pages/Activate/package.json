@@ -2,5 +2,5 @@
     "name": "Activate",
     "version": "0.0.0",
     "private": true,
-    "main": "./Activate.js"
+    "main": "./activate.js"
 }

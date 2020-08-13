@@ -18,9 +18,9 @@ import {
 import { signout } from '../../actions/agentActions';
 import factorsai from '../../common/factorsaiObj';
 
-import JsSdk from '../../views/settings/JsSdk';
-import AndroidSdk from '../../views/settings/AndroidSdk';
-import Segment from '../../views/settings/Segment';
+import JsSdk from '../../views/Settings/JsSdk';
+import AndroidSdk from '../../views/Settings/AndroidSdk';
+import Segment from '../../views/Settings/Segment';
 import NoContent from '../../common/NoContent';
 
 const propTypes = {
