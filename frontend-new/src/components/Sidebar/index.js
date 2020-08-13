@@ -2,7 +2,7 @@ import React from 'react';
 import { Layout, Menu, Row, Col } from 'antd';
 import styles from './index.module.scss';
 import { Link } from 'react-router-dom'; 
-
+import { SVG} from 'factorsComponents';
 
 function Sidebar() {
   const { Sider } = Layout;
@@ -10,16 +10,17 @@ function Sidebar() {
   return (
     <>
     <Sider className="fa-aside" width={`64`} >
-      <div className={styles.logo} >
-        <img src="./assets/icons/factors.png" alt="Factors.ai" />
-      </div> 
+
+      <Row justify="center" align="middle" className="py-8"> 
+            <Link to="/"><SVG name={'brand'} size={32} color="white"/></Link>  
+      </Row>
 
       <Row justify="center" align="middle" className="py-4"> 
-            <Link to="/"><img className="anticon" src="./assets/icons/home.svg" alt="Home" /></Link>  
+            <Link to="/"><SVG name={'home'} size={24} color="white"/></Link>  
       </Row>
       <Row justify="center" align="middle" className="py-4"> 
-            <Link to="/components/"><img className="anticon" src="./assets/icons/core-query-white.png" /></Link> 
-      </Row>
+            <Link to="/components/"><SVG name={'corequery'} size={24} color="white"/></Link> 
+      </Row> 
 
         
   

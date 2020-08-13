@@ -1,4 +1,8 @@
 import Text from './Text';
+import SVG from './SVG';
 
 
-export {Text}
+export {
+    Text,
+    SVG,
+}

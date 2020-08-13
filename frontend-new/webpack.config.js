@@ -116,6 +116,7 @@ module.exports = {
     extensions: ['*', '.js', '.jsx'],  
     alias: {
       factorsComponents: path.resolve(__dirname, './src/components/factorsComponents'), 
+      svgIcons: path.resolve(__dirname, './src/components/svgIcons'),
     },
   },
   plugins: [

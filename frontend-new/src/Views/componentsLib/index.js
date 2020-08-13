@@ -2,7 +2,7 @@ import React from 'react';
 import { Layout, Breadcrumb, Row, Col, Divider,Skeleton  } from 'antd';
 import Sidebar from '../../components/Sidebar';
 import CoreQuery from '../CoreQuery'; 
-import {Text} from 'factorsComponents';
+import {Text, SVG} from 'factorsComponents';
 import { Link } from 'react-router-dom';
 
 function componentsLib() {
@@ -27,6 +27,10 @@ function componentsLib() {
 
                     <Row>
                         <Col span={12}>
+                             
+                            <SVG name={'delete'} size={14} color="black"/>
+                            <SVG name={'home'} size={14} color="black"/> 
+
                             <Text type={'title'} level={1} >Heading Style - Title1/40</Text> 
                             <Text type={'title'} level={2} weight={'bold'}>Heading Style - Title2/32</Text> 
                             <Text type={'title'} level={3} >Heading Style - Title3/24</Text>
@@ -63,14 +67,7 @@ function componentsLib() {
                             <Text type={'paragraph'} size={'7'} mini >Leverage agile frameworks to provide a robust synopsis for high level overviews. Iterative approaches to corporate strategy foster collaborative thinking to further the overall value proposition. Organically grow the holistic world view of disruptive innovation via workplace diversity and empowerment.</Text>
                             
                         </Col> 
-                    </Row>
-                
-
-                    
-                    <div className="my-6">
-                       
-                    </div>
-
+                    </Row> 
 
                     </div> 
                 </Content>
