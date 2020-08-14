@@ -25,18 +25,18 @@
     
     //Default Button 
     &:focus, &:hover, &:active{ 
-        border-color: $fa-color--purple-darken; 
+        border-color: $fa-color--brand-7; 
         color: $fa-color--mono-5;  
     }
     
     //Primary Button
     &.ant-btn-primary {
         color: $fa-color--white;
-        background: $fa-color--purple;
-        border-color: $fa-color--purple;
+        background: $fa-color--brand-color;
+        border-color: $fa-color--brand-color;
         &:focus, &:hover, &:active{
-            background: $fa-color--purple-darken;
-            border-color: $fa-color--purple-darken; 
+            background: $fa-color--brand-7;
+            border-color: $fa-color--brand-7; 
         }
     }
 
