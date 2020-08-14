@@ -1,0 +1,80 @@
+
+.ant-btn {
+    font-family: 'Work Sans', sans-serif;   
+
+    height: auto;
+    border-radius: 8px;
+    padding: 8px 16px; 
+
+    // border: 1px solid transparent; 
+    border-color: #d9d9d9;
+
+    background: $fa-color--white; 
+    color: $fa-color--mono-5; 
+
+    font-weight: $font-weight--bold;
+    font-size: 14px;
+    line-height: 1.6;
+
+    
+
+}
+
+
+.ant-btn{
+    
+    //Default Button 
+    &:focus, &:hover, &:active{ 
+        border-color: $fa-color--purple-darken; 
+        color: $fa-color--mono-5;  
+    }
+    
+    //Primary Button
+    &.ant-btn-primary {
+        color: $fa-color--white;
+        background: $fa-color--purple;
+        border-color: $fa-color--purple;
+        &:focus, &:hover, &:active{
+            background: $fa-color--purple-darken;
+            border-color: $fa-color--purple-darken; 
+        }
+    }
+
+    //Dashed Button
+    &.ant-btn-dashed{
+        border-style: dashed;
+    }
+
+    //Text Button
+    &.ant-btn-text{
+        border-color: transparent;
+        background: $fa-color--white;
+        &:focus, &:hover, &:active{ 
+            background-color: $fa-color--mono-1; 
+        }
+    }
+
+    //Link Button == Secondary Button
+    &.ant-btn.ant-btn-link{
+        border-style: solid;
+        border-color: transparent;
+        color: $fa-color--brand-6;
+        background-color: $fa-color--mono-1;
+        &:focus, &:hover, &:active{
+            background: $fa-color--white;
+            border-color: $fa-color--brand-6; 
+        }
+    }
+
+
+    //Icon Alignment correction
+    .anticon{
+        vertical-align: 0;
+    }
+    &.ant-btn-icon-only{
+        height: auto;
+        width: auto;
+        padding: 8px 10px;
+    }
+
+}

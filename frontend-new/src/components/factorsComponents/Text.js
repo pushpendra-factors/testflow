@@ -34,7 +34,7 @@ class Text extends React.Component {
         //Case
         'fai-text__transform--uppercase': isUppercase,
   
-        [extraClass]: extraClass,
+        [extraClass]: extraClass, 
       };
 
       // (Number.isInteger(isSizeDefined)

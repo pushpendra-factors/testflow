@@ -50,13 +50,13 @@
 
     //Weight 
     &.fai-text__weight--thin{
-        font-weight: 300;
+        font-weight: $font-weight--thin; 
     }
     &.fai-text__weight--normal,&.fai-text__weight--regular{
-        font-weight: 500;
+        font-weight: $font-weight--regular;
     }
     &.fai-text__weight--bold{
-        font-weight: 600;
+        font-weight: $font-weight--bold;;
     }
 
 
@@ -64,7 +64,7 @@
     //Line Height
     &.fai-text__line-height--normal{}
     
-    &.fai-text__line-height--small {}
+    &.fai-text__line-height--small {} 
     
     &.fai-text__line-height--medium {}
     
