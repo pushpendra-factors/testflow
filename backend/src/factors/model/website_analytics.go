@@ -264,6 +264,8 @@ func getWebAnalyticsQueriesFromDashboardUnits(projectID uint64) (uint64, *WebAna
 					Error("Failed to decode custom group query from dashboard unit.")
 				continue
 			}
+			// Use dashboard unit id as unique id for query.
+			query.UniqueID = fmt.Sprintf("%d", dunit.ID)
 			customGroupQueries = append(customGroupQueries, query)
 
 		} else {
@@ -725,7 +727,8 @@ func buildWebAnalyticsAggregate(
 			&WebAnalyticsChannelAggregate{}
 	}
 
-	for _, groupQuery := range customGroupQueries {
+	for i := range customGroupQueries {
+		groupQuery := customGroupQueries[i]
 		if _, exists := (*customGroupAggrState)[groupQuery.UniqueID]; !exists {
 			(*customGroupAggrState)[groupQuery.UniqueID] =
 				make(map[string]*WebAnalyticsCustomGroupMetric, 0)
@@ -1034,14 +1037,6 @@ func getResultForCustomGroupQuery(
 
 		indexOfFirstMetric := len(query.GroupByProperties)
 		sort.SliceStable(rows, func(i, j int) bool {
-			if len(rows[i]) <= indexOfFirstMetric || len(rows[j]) <= indexOfFirstMetric {
-				log.WithField("group_by_properties", query.GroupByProperties).
-					WithField("index", indexOfFirstMetric).
-					WithField("row_i", rows[i]).WithField("row_j", rows[j]).
-					Errorf("Error sorting values. Related to mismatch in columns length, if channel is present.")
-				return false
-			}
-
 			return U.GetSortWeightFromAnyType(rows[i][indexOfFirstMetric]) >
 				U.GetSortWeightFromAnyType(rows[j][indexOfFirstMetric])
 		})
@@ -1113,8 +1108,21 @@ func ExecuteWebAnalyticsQueries(projectId uint64, queries *WebAnalyticsQueries) 
 
 	var customGroupPropertySelectStmnt string
 	var customGroupPropertySelectParams []interface{}
+	addedCustomGroupPropertiesMap := make(map[string]bool, 0)
+
 	for _, customQuery := range queries.CustomGroupQueries {
+		// Validation
+		if customQuery.UniqueID == "" {
+			logCtx.Error("Unique id is not assigned to custom group query. Invalid query.")
+			return queryResult, http.StatusInternalServerError
+		}
+
 		for _, groupByProperty := range customQuery.GroupByProperties {
+			// Avoid adding to select if exists already.
+			if _, exists := addedCustomGroupPropertiesMap[groupByProperty]; exists {
+				continue
+			}
+
 			if customGroupPropertySelectStmnt != "" {
 				customGroupPropertySelectStmnt = customGroupPropertySelectStmnt + ","
 			}
@@ -1128,6 +1136,8 @@ func ExecuteWebAnalyticsQueries(projectId uint64, queries *WebAnalyticsQueries) 
 				customGroupPropertySelectParams,
 				groupByProperty,
 			)
+
+			addedCustomGroupPropertiesMap[groupByProperty] = true
 		}
 	}
 
@@ -1243,9 +1253,11 @@ func ExecuteWebAnalyticsQueries(projectId uint64, queries *WebAnalyticsQueries) 
 
 		// Creates a map of all custom group properties with values.
 		customGroupPropertiesMap := make(map[string]string, 0)
-		for i, groupPropertyKey := range customGroupPropertySelectParams {
+		for i := range customGroupPropertySelectParams {
+			groupPropertyKey := customGroupPropertySelectParams[i]
+
 			var propertyValue string
-			if groupPropertyKey == U.EP_CHANNEL {
+			if groupPropertyKey.(string) == U.EP_CHANNEL {
 				propertyValue = webEventProperties.Channel
 			} else {
 				propertyValue = customGroupProperties[i].String
