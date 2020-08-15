@@ -73,7 +73,7 @@ func main() {
 
 	logCtx.Info("Starting website analytics")
 	startTime = util.TimeNowUnix()
-	M.CacheWebsiteAnalyticsForProjects(*projectIDFlag, 2)
+	M.CacheWebsiteAnalyticsForProjects(*projectIDFlag, 1)
 	timeTakenStringWeb := util.SecondsToHMSString(util.TimeNowUnix() - startTime)
 	notifyMessage = fmt.Sprintf("Caching successful for %s projects. Time taken: %s. Time taken for web analytics: %s",
 		*projectIDFlag, timeTakenString, timeTakenStringWeb)
