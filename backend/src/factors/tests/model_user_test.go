@@ -686,3 +686,18 @@ func TestUserNumericalProperties(t *testing.T) {
 	// validates classification.
 	assert.Contains(t, props[U.PropertyTypeNumerical], "$page_count")
 }
+
+func TestGetLast24hrsUserProperties(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	currentTime := U.TimeNowUnix()
+	assert.Nil(t, err)
+	_, errCode := M.CreateUser(&M.User{
+		ProjectId:     project.ID,
+		Properties:    postgres.Jsonb{[]byte(`{"prop1":"val1"}`)},
+		JoinTimestamp: currentTime - 60*60*24,
+	})
+	assert.Equal(t, http.StatusCreated, errCode)
+	props, errCode := M.GetRecentUserPropertyKeys(project.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Contains(t, props[U.PropertyTypeCategorical], "prop1")
+}
