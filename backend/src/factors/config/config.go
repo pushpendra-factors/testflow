@@ -481,7 +481,7 @@ func InitDataService(config *Configuration) error {
 	if err != nil {
 		return err
 	}
-
+	InitRedis(config.RedisHost, config.RedisPort)
 	InitLogClient(config.Env, config.AppName, config.EmailSender, config.AWSKey,
 		config.AWSSecret, config.AWSRegion, config.ErrorReportingInterval)
 
