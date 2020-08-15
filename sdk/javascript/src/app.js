@@ -314,12 +314,16 @@ App.prototype.autoTrack = function(enabled=false, afterCallback) {
     }, 10000);
 
     // clear the previous poller, if exist.
-    clearInterval(getLastPollerId());
+    var lastPollerId = getLastPollerId();
+    clearInterval(lastPollerId);
+    if (lastPollerId) logger.debug("Cleared previous page poller: "+lastPollerId, false);
+
     // update page properties every 20s.
     var pollerId = setInterval(function() {
         lastPageProperties = _this.updatePagePropertiesIfChanged(
             startOfPageSpentTime, lastPageProperties);
     }, 20000);
+    
     setLastPollerId(pollerId);
 
     // update page properties before leaving the page.
