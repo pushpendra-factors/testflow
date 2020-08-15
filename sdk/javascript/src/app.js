@@ -76,6 +76,14 @@ function setPrevActivityTime(t) {
     factorsWindow().prevActivityTime = t ? t : 0;
 }
 
+function setLastPollerId(id) {
+    factorsWindow().lastPollerId = id;
+}
+
+function getLastPollerId() {
+    return factorsWindow().lastPollerId;
+}
+
 
 function getPrevActivityTime() {
     var prevActivityTime = factorsWindow().prevActivityTime;
@@ -305,11 +313,18 @@ App.prototype.autoTrack = function(enabled=false, afterCallback) {
             startOfPageSpentTime, lastPageProperties, 10000);
     }, 10000);
 
+    // clear the previous poller, if exist.
+    var lastPollerId = getLastPollerId();
+    clearInterval(lastPollerId);
+    if (lastPollerId) logger.debug("Cleared previous page poller: "+lastPollerId, false);
+
     // update page properties every 20s.
-    setInterval(function() {
+    var pollerId = setInterval(function() {
         lastPageProperties = _this.updatePagePropertiesIfChanged(
             startOfPageSpentTime, lastPageProperties);
     }, 20000);
+    
+    setLastPollerId(pollerId);
 
     // update page properties before leaving the page.
     window.addEventListener("beforeunload", function() {
