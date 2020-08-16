@@ -806,24 +806,24 @@ func getTrafficChannelReport(webAggr *WebAnalyticsAggregate) GenericQueryResult 
 	rows := make([][]interface{}, 0, len(webAggr.ChannelAggregates))
 	for channel, aggr := range webAggr.ChannelAggregates {
 		var avgSessionDurationInSecs float64
-		var bounceRateAsInt int
+		var bounceRateAsFloat float64
 
 		if aggr.NoOfSessions > 0 {
 			avgSessionDurationInSecs, _ = U.FloatRoundOffWithPrecision(
 				aggr.SessionDuration/float64(aggr.NoOfSessions), defaultPrecision)
 
-			bounceRateAsInt = (aggr.NoOfBouncedSessions / aggr.NoOfSessions) * 100
+			bounceRateAsFloat = (float64(aggr.NoOfBouncedSessions) / float64(aggr.NoOfSessions)) * 100
 		}
 		// Formatted value string.
 		avgSessionDuration := getFormattedTime(int64(avgSessionDurationInSecs))
-		bounceRate := fmt.Sprintf("%d%%", bounceRateAsInt)
+		bounceRateAsPercentage := getFormattedPercentage(bounceRateAsFloat)
 
 		row := []interface{}{
 			channel,
 			aggr.NoOfPageViews,
 			aggr.NoOfUniqueUsers,
 			aggr.NoOfSessions,
-			bounceRate,
+			bounceRateAsPercentage,
 			avgSessionDuration,
 		}
 		rows = append(rows, row)
