@@ -84,6 +84,30 @@ function getLastPollerId() {
     return factorsWindow().lastPollerId;
 }
 
+const FACTORS_WINDOW_TIMEOUT_KEY_PREFIX = 'lastTimeoutId_';
+
+function setLastTimeoutIdByPeriod(timeoutIn=0, id=0) {
+    if (timeoutIn == 0 || id == 0) return;
+
+    var key = FACTORS_WINDOW_TIMEOUT_KEY_PREFIX + timeoutIn;
+    factorsWindow()[key] = id;
+}
+
+function getLastTimeoutIdByPeriod(timeoutIn=0) {
+    if (timeoutIn == 0) return;
+
+    var key = FACTORS_WINDOW_TIMEOUT_KEY_PREFIX + timeoutIn;
+    return factorsWindow()[key];
+}
+
+function clearTimeoutByPeriod(timeoutInPeriod) {
+    var lastTimeoutId = getLastTimeoutIdByPeriod(timeoutInPeriod);
+    if (!lastTimeoutId) return;
+
+    clearTimeout(lastTimeoutId);
+    logger.debug("Cleared timeout of "+timeoutInPeriod+"ms :"+lastTimeoutId, false);
+}
+
 
 function getPrevActivityTime() {
     var prevActivityTime = factorsWindow().prevActivityTime;
@@ -302,16 +326,23 @@ App.prototype.autoTrack = function(enabled=false, afterCallback) {
 
     // Todo: Use curried function to remove multiple set timeouts.
     // update page properties after 5s and 10s with default value.
-    setTimeout(function() {
+    var fiveSecondsInMs = 5000;
+    clearTimeoutByPeriod(fiveSecondsInMs);
+    var timoutId5thSecond = setTimeout(function() {
         logger.debug("Triggered properties update after 5s.", false);
         lastPageProperties = _this.updatePagePropertiesIfChanged(
-            startOfPageSpentTime, lastPageProperties, 5000);
-    }, 5000);
-    setTimeout(function() {
+            startOfPageSpentTime, lastPageProperties, fiveSecondsInMs);
+    }, fiveSecondsInMs);
+    setLastTimeoutIdByPeriod(fiveSecondsInMs, timoutId5thSecond);
+
+    var tenSecondsInMs = 10000;
+    clearTimeoutByPeriod(tenSecondsInMs);
+    var timoutId10thSecond = setTimeout(function() {
         logger.debug("Triggered properties update after 10s.", false);
         lastPageProperties = _this.updatePagePropertiesIfChanged(
-            startOfPageSpentTime, lastPageProperties, 10000);
-    }, 10000);
+            startOfPageSpentTime, lastPageProperties, tenSecondsInMs);
+    }, tenSecondsInMs);
+    setLastTimeoutIdByPeriod(tenSecondsInMs, timoutId10thSecond);
 
     // clear the previous poller, if exist.
     var lastPollerId = getLastPollerId();

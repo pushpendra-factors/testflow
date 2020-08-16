@@ -56,6 +56,7 @@ func TestExecuteWebAnalyticsQueries(t *testing.T) {
 					Metrics: []string{
 						M.WAGroupMetricPageViews,
 					},
+					UniqueID: U.GetUUID(),
 				},
 			},
 			From: U.UnixTimeBeforeDuration(time.Hour * 1),
