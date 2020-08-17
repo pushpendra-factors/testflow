@@ -55,10 +55,12 @@ if [[ "${highlights}" == "" ]]; then
     fi
 fi
 
+deployer_email=`gcloud config list account --format "value(core.account)" 2> /dev/null`
+
 # TODO(prateek): Make alert more rich in terms of tagging and blocks.
 echo "Sending alert on slack"
 payload="-------------------------------------------------------------
-*Deploying ${IMAGE_NAME}*.
+*Deployment initiated for ${IMAGE_NAME}. By ${deployer_email}*.
 ${highlights}"
 
 # Escape double quotes from payload.
