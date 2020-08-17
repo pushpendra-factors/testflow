@@ -7,6 +7,7 @@ import TextLib from './TextLib';
 import ButtonLib from './ButtonLib';
 import ColorLib from './ColorLib';
 import SwitchLib from './SwitchLib';
+import RadioLib from './RadioLib';
 
 function componentsLib() {
     const { Content } = Layout;
@@ -22,6 +23,7 @@ function componentsLib() {
                     <TextLib />
                     <ButtonLib />
                     <SwitchLib />
+                    <RadioLib />
                 
 
 

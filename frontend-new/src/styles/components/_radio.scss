@@ -1,0 +1,25 @@
+.ant-radio-wrapper
+{
+    // background-color: $fa-color--mono-3;
+    .ant-radio{
+        &:hover,&:active,&:focus{
+            .ant-radio-inner{
+                border-color: $fa-color--brand-6;  
+            } 
+
+        }
+        &.ant-radio-checked
+        {
+            &::after{
+                border-color: $fa-color--brand-6;   
+            }
+           .ant-radio-inner{
+                border-color: $fa-color--brand-6; 
+                &::after{
+                    background-color: $fa-color--brand-6;  
+                }
+    
+            }
+        }
+    }
+} 
