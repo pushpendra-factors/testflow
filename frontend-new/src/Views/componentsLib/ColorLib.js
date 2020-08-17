@@ -1,6 +1,5 @@
 import React from 'react';
-import { Layout, Breadcrumb, Row, Col, Divider } from 'antd';
-import Sidebar from '../../components/Sidebar'; 
+import { Layout, Breadcrumb, Row, Col, Divider } from 'antd'; 
 import {Text} from 'factorsComponents'; 
 
 function ColorLib() {

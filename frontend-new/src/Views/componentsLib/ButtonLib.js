@@ -1,6 +1,5 @@
 import React from 'react';
-import { Layout, Breadcrumb, Row, Col, Divider, Button  } from 'antd';
-import Sidebar from '../../components/Sidebar'; 
+import { Layout, Breadcrumb, Row, Col, Divider, Button  } from 'antd'; 
 import { PoweroffOutlined } from '@ant-design/icons'; 
 
 function ButtonLib() {

@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 import TextLib from './TextLib';
 import ButtonLib from './ButtonLib';
 import ColorLib from './ColorLib';
+import SwitchLib from './SwitchLib';
 
 function componentsLib() {
     const { Content } = Layout;
@@ -17,9 +18,10 @@ function componentsLib() {
                     <div className="px-16 pt-8 pb-20 bg-white min-h-screen"> 
 
 
-                   <TextLib />
-                    <ButtonLib />
                     <ColorLib />
+                    <TextLib />
+                    <ButtonLib />
+                    <SwitchLib />
                 
 
 

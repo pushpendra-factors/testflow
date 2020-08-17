@@ -1,19 +1,19 @@
 import React from 'react';
-import { Layout, Breadcrumb, Row, Col, Divider } from 'antd';
-import Sidebar from '../../components/Sidebar'; 
+import { Layout, Breadcrumb, Row, Col, Divider } from 'antd'; 
 import {Text} from 'factorsComponents'; 
 
 function TextLib() {
     const { Content } = Layout;
   return ( 
 <>
-
-                    <Divider orientation="left">
-                        <Breadcrumb>  
-                            <Breadcrumb.Item> Components </Breadcrumb.Item> 
-                            <Breadcrumb.Item> Text </Breadcrumb.Item> 
-                        </Breadcrumb> 
-                    </Divider>
+                    <div className="mt-20 mb-8">
+                        <Divider orientation="left">
+                            <Breadcrumb>  
+                                <Breadcrumb.Item> Components </Breadcrumb.Item> 
+                                <Breadcrumb.Item> Text </Breadcrumb.Item> 
+                            </Breadcrumb> 
+                        </Divider>
+                    </div>
                     
 
                     <Row>
