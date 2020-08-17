@@ -29,7 +29,7 @@ function TotalConversions() {
             transition: {
                 duration: 1000
             },
-            // onrendered: showAnnotation,
+            // onrendered: showEndLines,
             bar: {
                 width: {
                     ratio: 0.3,
@@ -52,6 +52,8 @@ function TotalConversions() {
             },
         });
     }, [categories]);
+
+    
 
     return (
         <div className={styles.totalConversionsChart} style={{ margin: '0.25rem' }} ref={chartRef} />
