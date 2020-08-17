@@ -1,22 +1,18 @@
 body {
-  margin: 0;
-  font-family: 'Work Sans', sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+	margin: 0;
+	font-family: 'Work Sans', sans-serif;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
 }
-
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+	font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
 }
-
 .ant-layout.ant-layout-has-sider {
-  min-height: 100vh;
+	min-height: 100vh;
 }
-
 .ant-popover-title {
-  padding: 0;
+	padding: 0;
 }
-
 .ant-popover-arrow {
-  display: none;
+	display: none;
 }
