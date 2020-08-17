@@ -869,26 +869,36 @@ func GetFormattedTime(totalSeconds float64) string {
 	var fmtTime string
 
 	totalSecondsInInt := int64(totalSeconds)
-	if totalSecondsInInt > 3600 {
-		fmtTime = fmt.Sprintf("%dh ", totalSecondsInInt/3600)
+	paramHours := totalSecondsInInt / 3600
+	if paramHours >= 1 {
+		fmtTime = fmt.Sprintf("%dh", paramHours)
 	}
 
-	if totalSecondsInInt > 60 {
-		fmtTime = fmtTime + fmt.Sprintf("%dm ", (totalSecondsInInt%3600)/60)
+	paramMinutes := (totalSecondsInInt % 3600) / 60
+	if paramMinutes > 0 {
+		if fmtTime != "" {
+			fmtTime = fmtTime + " "
+		}
+
+		fmtTime = fmtTime + fmt.Sprintf("%dm", paramMinutes)
 	}
 
-	if totalSecondsInInt > 0 {
-		fmtTime = fmtTime + fmt.Sprintf("%ds", totalSecondsInInt%60)
+	paramSeconds := totalSecondsInInt % 60
+	if paramSeconds > 0 {
+		if fmtTime != "" {
+			fmtTime = fmtTime + " "
+		}
+
+		fmtTime = fmtTime + fmt.Sprintf("%ds", paramSeconds)
 	}
 
-	// Add milliseconds,  only if  total seconds has
-	// upto 3 decimal points, which is millseconds.
-	millSeconds := int64(totalSeconds*1000) % 1000
-	if totalSecondsInInt == 0 && millSeconds > 0 {
-		fmtTime = fmtTime + fmt.Sprintf("%dms", millSeconds)
+	// Use only milliseconds, if no other params available.
+	paramMilliSeconds := int64(totalSeconds*1000) % 1000
+	if totalSecondsInInt < 1 && paramMilliSeconds > 0 {
+		fmtTime = fmt.Sprintf("%dms", paramMilliSeconds)
 	}
 
-	if totalSecondsInInt == 0 && millSeconds == 0 {
+	if totalSecondsInInt == 0 && paramMilliSeconds == 0 {
 		fmtTime = "0s" // In seconds, intentional.
 	}
 
