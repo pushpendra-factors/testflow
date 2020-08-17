@@ -238,8 +238,12 @@ class AttributionQuery extends Component {
     for (let ri = 0; ri < resultMetricsBreakdown.rows.length; ri++) {
       for (let ci = 0; ci < resultMetricsBreakdown.rows[ri].length; ci++) {
         let key = resultMetricsBreakdown.headers[ci];
-        resultMetricsBreakdown.rows[ri][ci] = this.getReadableAttributionMetricValue(key,
-          resultMetricsBreakdown.rows[ri][ci], this.state.resultMeta);
+        let value = resultMetricsBreakdown.rows[ri][ci];
+        if (typeof (resultMetricsBreakdown.rows[ri][ci]) == "object"){
+          // For each funnel event, rMB.rows[][] is array object of size 1
+          value = resultMetricsBreakdown.rows[ri][ci][0];
+        }
+        resultMetricsBreakdown.rows[ri][ci] = this.getReadableAttributionMetricValue(key, value, this.state.resultMeta);
       }
     }
     return <Col md={12} style={{marginTop: '50px'}}>
