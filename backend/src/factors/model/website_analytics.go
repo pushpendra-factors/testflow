@@ -761,9 +761,17 @@ func getTopPagesReportAsWebAnalyticsResult(
 	for url, aggr := range webAggr.PageAggregates {
 		var fmtAvgPageSpentTimeOfPage string
 		if aggr.NoOfPageViews > 0 {
-			avgPageSpentTimeOfPage, _ := U.FloatRoundOffWithPrecision(
+			avgPageSpentTimeOfPage, err := U.FloatRoundOffWithPrecision(
 				aggr.TotalSpentTime/float64(aggr.NoOfPageViews), defaultPrecision)
-			fmtAvgPageSpentTimeOfPage = getFormattedTime(int64(avgPageSpentTimeOfPage))
+			if err != nil {
+				log.WithError(err).
+					WithFields(log.Fields{"total_page_spent_time": aggr.TotalSpentTime,
+						"no_of_page_views": aggr.NoOfPageViews}).
+					Error("Failed to format average spent time on getTopPagesReportAsWebAnalyticsResult.")
+
+			}
+
+			fmtAvgPageSpentTimeOfPage = GetFormattedTime(avgPageSpentTimeOfPage)
 		}
 
 		row := []interface{}{
@@ -806,24 +814,31 @@ func getTrafficChannelReport(webAggr *WebAnalyticsAggregate) GenericQueryResult 
 	rows := make([][]interface{}, 0, len(webAggr.ChannelAggregates))
 	for channel, aggr := range webAggr.ChannelAggregates {
 		var avgSessionDurationInSecs float64
-		var bounceRateAsInt int
+		var bounceRateAsFloat float64
+		var err error
 
 		if aggr.NoOfSessions > 0 {
-			avgSessionDurationInSecs, _ = U.FloatRoundOffWithPrecision(
+			avgSessionDurationInSecs, err = U.FloatRoundOffWithPrecision(
 				aggr.SessionDuration/float64(aggr.NoOfSessions), defaultPrecision)
+			if err != nil {
+				log.WithError(err).
+					WithFields(log.Fields{"total_session_duration": aggr.SessionDuration,
+						"no_of_sessions": aggr.NoOfSessions}).
+					Error("Failed to format avg session duration on getTrafficChannelReport.")
+			}
 
-			bounceRateAsInt = (aggr.NoOfBouncedSessions / aggr.NoOfSessions) * 100
+			bounceRateAsFloat = (float64(aggr.NoOfBouncedSessions) / float64(aggr.NoOfSessions)) * 100
 		}
 		// Formatted value string.
-		avgSessionDuration := getFormattedTime(int64(avgSessionDurationInSecs))
-		bounceRate := fmt.Sprintf("%d%%", bounceRateAsInt)
+		avgSessionDuration := GetFormattedTime(avgSessionDurationInSecs)
+		bounceRateAsPercentage := getFormattedPercentage(bounceRateAsFloat)
 
 		row := []interface{}{
 			channel,
 			aggr.NoOfPageViews,
 			aggr.NoOfUniqueUsers,
 			aggr.NoOfSessions,
-			bounceRate,
+			bounceRateAsPercentage,
 			avgSessionDuration,
 		}
 		rows = append(rows, row)
@@ -849,22 +864,42 @@ func fillValueAsWebAnalyticsResult(queryResultByName *map[string]GenericQueryRes
 	(*queryResultByName)[queryName] = webAResult
 }
 
-// getFormattedTime - Converts seconds into hh mm ss format.
-func getFormattedTime(totalSeconds int64) string {
-	fmtTime := ""
+// GetFormattedTime - Converts seconds into hh mm ss format.
+func GetFormattedTime(totalSeconds float64) string {
+	var fmtTime string
 
-	if totalSeconds > 3600 {
-		fmtTime = fmt.Sprintf("%dh ", totalSeconds/3600)
+	totalSecondsInInt := int64(totalSeconds)
+	paramHours := totalSecondsInInt / 3600
+	if paramHours >= 1 {
+		fmtTime = fmt.Sprintf("%dh", paramHours)
 	}
 
-	if totalSeconds > 60 {
-		fmtTime = fmtTime + fmt.Sprintf("%dm ", (totalSeconds%3600)/60)
+	paramMinutes := (totalSecondsInInt % 3600) / 60
+	if paramMinutes > 0 {
+		if fmtTime != "" {
+			fmtTime = fmtTime + " "
+		}
+
+		fmtTime = fmtTime + fmt.Sprintf("%dm", paramMinutes)
 	}
 
-	if totalSeconds > 0 {
-		fmtTime = fmtTime + fmt.Sprintf("%ds", totalSeconds%60)
-	} else {
-		return "0s"
+	paramSeconds := totalSecondsInInt % 60
+	if paramSeconds > 0 {
+		if fmtTime != "" {
+			fmtTime = fmtTime + " "
+		}
+
+		fmtTime = fmtTime + fmt.Sprintf("%ds", paramSeconds)
+	}
+
+	// Use only milliseconds, if no other params available.
+	paramMilliSeconds := int64(totalSeconds*1000) % 1000
+	if totalSecondsInInt < 1 && paramMilliSeconds > 0 {
+		fmtTime = fmt.Sprintf("%dms", paramMilliSeconds)
+	}
+
+	if totalSecondsInInt == 0 && paramMilliSeconds == 0 {
+		fmtTime = "0s" // In seconds, intentional.
 	}
 
 	return fmtTime
@@ -912,7 +947,7 @@ func getWebAnalyticsQueryResultByName(webAggrState *WebAnalyticsAggregate) (
 	}
 
 	fillValueAsWebAnalyticsResult(queryResultByName,
-		QueryNameAvgSessionDuration, getFormattedTime(int64(avgSessionDuration)))
+		QueryNameAvgSessionDuration, GetFormattedTime(avgSessionDuration))
 
 	precisionedAvgPagesPerSession, _ :=
 		U.FloatRoundOffWithPrecision(avgPagesPerSession, defaultPrecision)
@@ -997,7 +1032,7 @@ func getResultForCustomGroupQuery(
 				if metric == WAGroupMetricTotalTimeSpent {
 					totalTimeSpent := (*customGroupAggrState)[query.UniqueID][groupKey].
 						MetricValue[WAGroupMetricTotalTimeSpent].Value
-					value = getFormattedTime(int64(totalTimeSpent))
+					value = GetFormattedTime(totalTimeSpent)
 				}
 
 				if metric == WAGroupMetricAvgTimeSpent {
@@ -1009,7 +1044,7 @@ func getResultForCustomGroupQuery(
 							MetricValue[WAGroupMetricTotalTimeSpent].Value / pageViews
 					}
 
-					value = getFormattedTime(int64(avgTimeSpent))
+					value = GetFormattedTime(avgTimeSpent)
 				}
 
 				if metric == WAGroupMetricTotalScrollDepth {
