@@ -702,8 +702,8 @@ func AddPerformanceReportInfo(projectId uint64, attributionData map[string]*Attr
 	for rows.Next() {
 		var campaignName string
 		var campaignId string
-		var impressions int
-		var clicks int
+		var impressions float64
+		var clicks float64
 		var spend float64
 		if err = rows.Scan(&campaignId, &campaignName, &impressions, &clicks, &spend); err != nil {
 			logCtx.WithError(err).Error("SQL Parse failed")
@@ -717,8 +717,8 @@ func AddPerformanceReportInfo(projectId uint64, attributionData map[string]*Attr
 		}
 		if matchingId != "" {
 			attributionData[matchingId].Name = campaignName
-			attributionData[matchingId].Impressions = impressions
-			attributionData[matchingId].Clicks = clicks
+			attributionData[matchingId].Impressions = int(impressions)
+			attributionData[matchingId].Clicks = int(clicks)
 			attributionData[matchingId].Spend = spend
 		}
 	}
