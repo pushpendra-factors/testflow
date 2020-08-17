@@ -1,0 +1,22 @@
+.ant-checkbox-wrapper
+{ 
+    &:hover,&:active,&:focus{
+        .ant-checkbox-inner{
+            border-color: $fa-color--brand-6 !important;  
+        } 
+
+    }
+    .ant-checkbox{
+        &.ant-checkbox-checked
+        {
+            &::after{
+                border-color: $fa-color--brand-6;   
+            }
+            .ant-checkbox-inner{
+                border-color: $fa-color--brand-6;  
+                background-color: $fa-color--brand-6;  
+    
+            }
+        }
+    }
+} 

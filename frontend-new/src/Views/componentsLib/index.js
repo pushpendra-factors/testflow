@@ -8,6 +8,7 @@ import ButtonLib from './ButtonLib';
 import ColorLib from './ColorLib';
 import SwitchLib from './SwitchLib';
 import RadioLib from './RadioLib';
+import CheckBoxLib from './CheckBoxLib';
 
 function componentsLib() {
     const { Content } = Layout;
@@ -24,6 +25,7 @@ function componentsLib() {
                     <ButtonLib />
                     <SwitchLib />
                     <RadioLib />
+                    <CheckBoxLib />
                 
 
 
