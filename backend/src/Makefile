@@ -10,6 +10,9 @@ export TAG
 ENV?=staging
 export ENV
 
+# Should be set in ~/.bashrc or ~/.profile or passed every time.
+export CHANNEL_TOKEN
+
 build-api:
 	rm $(GOPATH)/bin/app; go build -o $(GOPATH)/bin/app $(GOPATH)/src/factors/app/app.go
 
@@ -43,25 +46,29 @@ serve-predis:
 clean:
 	rm $(GOPATH)/bin/pattern-app $(GOPATH)/bin/app $(GOPATH)/bin/data-service
 
-pack-api:
+pack-api: export IMAGE_NAME=app-server
+pack-api: notify-deployment
 	docker build -t us.gcr.io/factors-$(ENV)/app-server:$(TAG) -f Dockerfile.appserver .
 
 upload-api:
 	docker push us.gcr.io/factors-$(ENV)/app-server:$(TAG)
 
-pack-ps:
+pack-ps: export IMAGE_NAME=pattern-server
+pack-ps: notify-deployment
 	docker build -t us.gcr.io/factors-$(ENV)/pattern-server:$(TAG) -f Dockerfile.patternserver .
 
 upload-ps:
 	docker push us.gcr.io/factors-$(ENV)/pattern-server:$(TAG)
 
-pack-ds:
+pack-ds: export IMAGE_NAME=data-server
+pack-ds: notify-deployment
 	docker build -t us.gcr.io/factors-$(ENV)/data-server:$(TAG) -f Dockerfile.dataserver .
 
 upload-ds:
 	docker push us.gcr.io/factors-$(ENV)/data-server:$(TAG)
 
-pack-sdk:
+pack-sdk: export IMAGE_NAME=sdk-server
+pack-sdk: notify-deployment
 	docker build -t us.gcr.io/factors-$(ENV)/sdk-server:$(TAG) -f Dockerfile.sdkserver .
 
 upload-sdk:
@@ -79,89 +86,106 @@ pack-predis:
 upload-predis:
 	docker push us.gcr.io/factors-$(ENV)/persistent-redis:$(TAG)
 
-pack-debug:
+pack-debug: export IMAGE_NAME=debug
+pack-debug: notify-deployment
 	docker build --no-cache -t us.gcr.io/factors-$(ENV)/debug:$(TAG) -f Dockerfile.debug .
 
 upload-debug:
 	docker push us.gcr.io/factors-$(ENV)/debug:$(TAG)
 
-pack-build-seq:
+pack-build-seq: export IMAGE_NAME=build-seq-job
+pack-build-seq: notify-deployment
 	docker build -t us.gcr.io/factors-$(ENV)/build-seq-job:$(TAG) -f Dockerfile.build_seq_job .
 
 upload-build-seq:
 	docker push us.gcr.io/factors-$(ENV)/build-seq-job:$(TAG)
 
-pack-build-reports:
+pack-build-reports: export IMAGE_NAME=build-reports-job
+pack-build-reports: notify-deployment
 	docker build -t us.gcr.io/factors-$(ENV)/build-reports-job:$(TAG) -f Dockerfile.build_reports .
 
 upload-build-reports:
 	docker push us.gcr.io/factors-$(ENV)/build-reports-job:$(TAG)
 
-pack-add-session:
+pack-add-session: export IMAGE_NAME=add-session-job
+pack-add-session: notify-deployment
 	docker build -t us.gcr.io/factors-$(ENV)/add-session-job:$(TAG) -f Dockerfile.add_session_job .
 
 upload-add-session:
 	docker push us.gcr.io/factors-$(ENV)/add-session-job:$(TAG)
 
-pack-hubspot-enrich:
+pack-hubspot-enrich: export IMAGE_NAME=hubspot-enrich-job
+pack-hubspot-enrich: notify-deployment
 	docker build -t us.gcr.io/factors-$(ENV)/hubspot-enrich-job:$(TAG) -f Dockerfile.hubspot_enrich_job .
 
 upload-hubspot-enrich:
 	docker push us.gcr.io/factors-$(ENV)/hubspot-enrich-job:$(TAG)
 
-pack-sdk-request-worker:
+pack-sdk-request-worker: export IMAGE_NAME=sdk-request-worker
+pack-sdk-request-worker: notify-deployment
 	docker build -t us.gcr.io/factors-$(ENV)/sdk-request-worker:$(TAG) -f Dockerfile.sdk_request_worker .
 
 upload-sdk-request-worker:
 	docker push us.gcr.io/factors-$(ENV)/sdk-request-worker:$(TAG)
 
-pack-integration-request-worker:
+pack-integration-request-worker: export IMAGE_NAME=integration-request-worker
+pack-integration-request-worker: notify-deployment
 	docker build -t us.gcr.io/factors-$(ENV)/integration-request-worker:$(TAG) -f Dockerfile.integration_request_worker .
 
 upload-integration-request-worker:
 	docker push us.gcr.io/factors-$(ENV)/integration-request-worker:$(TAG)
 
-pack-monitoring:
+pack-monitoring: export IMAGE_NAME=monitoring
+pack-monitoring: notify-deployment
 	docker build -t us.gcr.io/factors-$(ENV)/monitoring:$(TAG) -f Dockerfile.monitoring .
 
 upload-monitoring:
 	docker push us.gcr.io/factors-$(ENV)/monitoring:$(TAG)
 
-pack-archive-events:
+pack-archive-events: export IMAGE_NAME=archive-events-job
+pack-archive-events: notify-deployment
 	docker build -t us.gcr.io/factors-$(ENV)/archive-events-job:$(TAG) -f Dockerfile.archive_events_job .
 
 upload-archive-events:
 	docker push us.gcr.io/factors-$(ENV)/archive-events-job:$(TAG)
 
-pack-bigquery-upload:
+pack-bigquery-upload: export IMAGE_NAME=bigquery-upload-job
+pack-bigquery-upload: notify-deployment
 	docker build -t us.gcr.io/factors-$(ENV)/bigquery-upload-job:$(TAG) -f Dockerfile.bigquery_upload_job .
 
 upload-bigquery-upload:
 	docker push us.gcr.io/factors-$(ENV)/bigquery-upload-job:$(TAG)
 
-pack-onboard-to-bigquery:
+pack-onboard-to-bigquery: export IMAGE_NAME=onboard-to-bigquery-job
+pack-onboard-to-bigquery: notify-deployment
 	docker build -t us.gcr.io/factors-$(ENV)/onboard-to-bigquery-job:$(TAG) -f Dockerfile.onboard_to_bigquery_job .
 
 upload-onboard-to-bigquery:
 	docker push us.gcr.io/factors-$(ENV)/onboard-to-bigquery-job:$(TAG)
 
-pack-merge-user-properties:
+pack-merge-user-properties: export IMAGE_NAME=merge-user-properties-job
+pack-merge-user-properties: notify-deployment
 	docker build -t us.gcr.io/factors-$(ENV)/merge-user-properties-job:$(TAG) -f Dockerfile.merge_user_properties_job .
 
 upload-merge-user-properties:
 	docker push us.gcr.io/factors-$(ENV)/merge-user-properties-job:$(TAG)
 
-pack-dashboard-caching:
+pack-dashboard-caching: export IMAGE_NAME=dashboard-caching-job
+pack-dashboard-caching: notify-deployment
 	docker build -t us.gcr.io/factors-$(ENV)/dashboard-caching-job:$(TAG) -f Dockerfile.dashboard_caching_job .
 
 upload-dashboard-caching:
 	docker push us.gcr.io/factors-$(ENV)/dashboard-caching-job:$(TAG)
 
-pack-web-analytics-dashboard:
+pack-web-analytics-dashboard: export IMAGE_NAME=web-analytics-dashboard-job
+pack-web-analytics-dashboard: notify-deployment
 	docker build -t us.gcr.io/factors-$(ENV)/web-analytics-dashboard-job:$(TAG) -f Dockerfile.web_analytics_dashboard_job .
 
 upload-web-analytics-dashboard:
 	docker push us.gcr.io/factors-$(ENV)/web-analytics-dashboard-job:$(TAG)
+
+notify-deployment:
+	$(GOPATH)/src/factors/scripts/notify_deployment.sh
 
 test:
 	go test -failfast -v $(GOPATH)/src/factors/tests && go test -failfast -v $(GOPATH)/src/factors/pattern_server/store
