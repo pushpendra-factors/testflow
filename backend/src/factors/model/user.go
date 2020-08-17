@@ -36,7 +36,7 @@ type User struct {
 	UpdatedAt     time.Time `json:"updated_at"`
 }
 
-const usersLimitForProperties = 1000
+const usersLimitForProperties = 50000
 const uniqueIndexProjectIdAmpUserId = "users_project_id_amp_user_idx"
 const uniqueIndexProjectIdSegmentAnonymousId = "users_project_id_segment_anonymous_uidx"
 
@@ -540,13 +540,16 @@ func GetRecentUserPropertyKeysWithLimits(projectId uint64, usersLimit int) (map[
 		logCtx.WithError(err).Error("Failed to get GetCacheRecentPropertyKeys.")
 	}
 
+	usersAfterTimestamp := U.UnixTimeBeforeDuration(24 * time.Hour)
+	logCtx = log.WithFields(log.Fields{"project_id": projectId, "users_after_timestamp": usersAfterTimestamp})
+
 	db := C.GetServices().Db
 
-	queryStr := "WITH recent_users AS (SELECT properties_id FROM users WHERE project_id = ? ORDER BY created_at DESC LIMIT ?)" +
+	queryStr := "WITH recent_users AS (SELECT properties_id FROM users WHERE project_id = ? AND join_timestamp >= ? ORDER BY created_at DESC LIMIT ?)" +
 		" " + "SELECT user_properties.properties FROM recent_users LEFT JOIN user_properties ON recent_users.properties_id = user_properties.id" +
 		" " + "WHERE user_properties.project_id = ? AND user_properties.properties != 'null';"
 
-	rows, err := db.Raw(queryStr, projectId, usersLimit, projectId).Rows()
+	rows, err := db.Raw(queryStr, projectId, usersAfterTimestamp, usersLimit, projectId).Rows()
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get recent user property keys.")
 		return nil, http.StatusInternalServerError
