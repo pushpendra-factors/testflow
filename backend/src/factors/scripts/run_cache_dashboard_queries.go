@@ -21,6 +21,7 @@ func main() {
 	dbUser := flag.String("db_user", "autometa", "")
 	dbName := flag.String("db_name", "autometa", "")
 	dbPass := flag.String("db_pass", "@ut0me7a", "")
+	onlyWebAnalytics := flag.Bool("only_web_analytics", false, "Cache only web analytics dashboards.")
 
 	redisHost := flag.String("redis_host", "localhost", "")
 	redisPort := flag.Int("redis_port", 6379, "")
@@ -67,13 +68,17 @@ func main() {
 	})
 
 	var notifyMessage string
-	startTime := util.TimeNowUnix()
-	M.CacheDashboardUnitsForProjects(*projectIDFlag, *numRoutinesFlag)
-	timeTakenString := util.SecondsToHMSString(util.TimeNowUnix() - startTime)
+	var timeTakenString string
+
+	if !*onlyWebAnalytics {
+		startTime := util.TimeNowUnix()
+		M.CacheDashboardUnitsForProjects(*projectIDFlag, *numRoutinesFlag)
+		timeTakenString = util.SecondsToHMSString(util.TimeNowUnix() - startTime)
+	}
 
 	logCtx.Info("Starting website analytics")
-	startTime = util.TimeNowUnix()
-	M.CacheWebsiteAnalyticsForProjects(*projectIDFlag, 1)
+	startTime := util.TimeNowUnix()
+	M.CacheWebsiteAnalyticsForProjects(*projectIDFlag, 2)
 	timeTakenStringWeb := util.SecondsToHMSString(util.TimeNowUnix() - startTime)
 	notifyMessage = fmt.Sprintf("Caching successful for %s projects. Time taken: %s. Time taken for web analytics: %s",
 		*projectIDFlag, timeTakenString, timeTakenStringWeb)
