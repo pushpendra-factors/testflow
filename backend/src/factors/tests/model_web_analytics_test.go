@@ -76,3 +76,14 @@ func TestExecuteWebAnalyticsQueries(t *testing.T) {
 		}
 	}
 }
+
+func TestWebAnalyticsGetFormattedTime(t *testing.T) {
+	// should not add ms if anything greater than a sec is avaialble.
+	assert.Equal(t, "1h 2m 1s", M.GetFormattedTime(3721))
+	assert.Equal(t, "1h 2m 1s", M.GetFormattedTime(3721.01))
+	// should return only ms, if no seconds available and millseconds available.
+	assert.Equal(t, "10ms", M.GetFormattedTime(0.01))
+	assert.Equal(t, "950ms", M.GetFormattedTime(0.950))
+	// should return 0s if not milliseconds available.
+	assert.Equal(t, "0s", M.GetFormattedTime(0.0001))
+}
