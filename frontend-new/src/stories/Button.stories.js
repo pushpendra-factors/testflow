@@ -1,10 +1,25 @@
 import React from 'react';
-
-import { Button  } from 'antd'; 
+import { Button  } from 'antd';  
+import 'antd/dist/antd.css';
+import '../assets/tailwind.output.css';
+import '../assets/index.scss';
 import '../styles/factors-ai.main.scss';
+
 export default {
-  title: 'Example/Button',
+  title: 'Components/Button',
   component: Button, 
+  parameters: {
+    docs: { 
+        description: { 
+            component: 'Primary UI Component for User Interaction.' 
+        } 
+    },
+  },
+  argTypes: { 
+    label: {  
+      control: false }, 
+    type: {control: false}
+  }, 
 };
 
 const Template = (args) => <Button {...args} >{args.label}</Button> ; 
@@ -12,8 +27,8 @@ const Template = (args) => <Button {...args} >{args.label}</Button> ;
 export const Primary = Template.bind({});
 Primary.args = { 
   type: 'primary',
-  label: 'Button 123',
-};
+  label: 'Primary Button', 
+}; 
 
 export const Secondary = Template.bind({});
 Secondary.args = { 
