@@ -5,6 +5,7 @@ import (
 	mid "factors/middleware"
 	M "factors/model"
 	U "factors/util"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -263,11 +264,19 @@ type DashboardUnitWebAnalyticsQueryName struct {
 	QueryName string `json:"query_name"`
 }
 
+type DashboardUnitWebAnalyticsCustomGroupQuery struct {
+	UnitID            uint64   `json:"unit_id"`
+	Metrics           []string `json:"metrics"`
+	GroupByProperties []string `json:"gbp"`
+}
+
 type DashboardUnitsWebAnalyticsQuery struct {
-	// Supports redundant metric keys with different unit_ids.
+	// Units - Supports redundant metric keys with different unit_ids.
 	Units []DashboardUnitWebAnalyticsQueryName `json:"units"`
-	From  int64                                `json:"from"`
-	To    int64                                `json:"to"`
+	// CustomGroupUnits - Customize query with group by properties and metrics.
+	CustomGroupUnits []DashboardUnitWebAnalyticsCustomGroupQuery `json:"custom_group_units"`
+	From             int64                                       `json:"from"`
+	To               int64                                       `json:"to"`
 }
 
 func DashboardUnitsWebAnalyticsQueryHandler(c *gin.Context) {
@@ -275,12 +284,14 @@ func DashboardUnitsWebAnalyticsQueryHandler(c *gin.Context) {
 
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Web analytics query failed. Invalid project."})
+		c.AbortWithStatusJSON(http.StatusUnauthorized,
+			gin.H{"error": "Web analytics query failed. Invalid project."})
 		return
 	}
+	logCtx = logCtx.WithField("project_id", projectId)
 
 	var requestPayload DashboardUnitsWebAnalyticsQuery
-	var queryResultsByName *map[string]M.WebAnalyticsQueryResult
+	var queryResult *M.WebAnalyticsQueryResult
 	var fromCache, hardRefresh bool
 	var lastRefreshedAt int64
 
@@ -296,7 +307,8 @@ func DashboardUnitsWebAnalyticsQueryHandler(c *gin.Context) {
 
 	dashboardId, err := strconv.ParseUint(c.Params.ByName("dashboard_id"), 10, 64)
 	if err != nil || dashboardId == 0 {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid dashboard id."})
+		c.AbortWithStatusJSON(http.StatusBadRequest,
+			gin.H{"error": "Web analytics query failed. Invalid dashboard id."})
 		return
 	}
 
@@ -305,9 +317,10 @@ func DashboardUnitsWebAnalyticsQueryHandler(c *gin.Context) {
 		hardRefresh, _ = strconv.ParseBool(refreshParam)
 	}
 
-	cacheResult, errCode := M.GetCacheResultForWebAnalyticsDashboard(projectId, dashboardId, requestPayload.From, requestPayload.To)
+	cacheResult, errCode := M.GetCacheResultForWebAnalyticsDashboard(projectId, dashboardId,
+		requestPayload.From, requestPayload.To)
 	if errCode == http.StatusFound && !isHardRefreshForToday(requestPayload.From, hardRefresh) {
-		queryResultsByName = &cacheResult.Result
+		queryResult = cacheResult.Result
 		fromCache = true
 		lastRefreshedAt = cacheResult.RefreshedAt
 	} else {
@@ -320,22 +333,55 @@ func DashboardUnitsWebAnalyticsQueryHandler(c *gin.Context) {
 			queryNames = append(queryNames, unit.QueryName)
 		}
 
-		queryResultsByName, _ = M.ExecuteWebAnalyticsQueries(projectId,
-			&M.WebAnalyticsQueries{
-				QueryNames: queryNames,
-				From:       requestPayload.From,
-				To:         requestPayload.To,
+		customGroupQueries := make([]M.WebAnalyticsCustomGroupQuery, 0, 0)
+		for _, unit := range requestPayload.CustomGroupUnits {
+			customGroupQueries = append(customGroupQueries, M.WebAnalyticsCustomGroupQuery{
+				UniqueID:          fmt.Sprintf("%d", unit.UnitID),
+				Metrics:           unit.Metrics,
+				GroupByProperties: unit.GroupByProperties,
 			})
-		M.SetCacheResultForWebAnalyticsDashboard(*queryResultsByName, projectId, dashboardId, requestPayload.From, requestPayload.To)
+		}
+
+		queryResult, errCode = M.ExecuteWebAnalyticsQueries(
+			projectId,
+			&M.WebAnalyticsQueries{
+				QueryNames:         queryNames,
+				CustomGroupQueries: customGroupQueries,
+				From:               requestPayload.From,
+				To:                 requestPayload.To,
+			},
+		)
+
+		if queryResult == nil || errCode != http.StatusOK {
+			logCtx.WithField("err_code", errCode).
+				Error("Failed to execute web analytics query.")
+
+			c.AbortWithStatusJSON(http.StatusInternalServerError,
+				gin.H{"error": "Web analytics query failed. Execution failed."})
+			return
+		}
+
+		M.SetCacheResultForWebAnalyticsDashboard(queryResult, projectId,
+			dashboardId, requestPayload.From, requestPayload.To)
 		lastRefreshedAt = U.TimeNowIn(U.TimeZoneStringIST).Unix()
 	}
 
-	queryResultsByUnitMap := make(map[uint64]M.WebAnalyticsQueryResult)
+	queryResultsByUnitMap := make(map[uint64]M.GenericQueryResult)
+
+	queryResultsByName := queryResult.QueryResult
 	for _, unit := range requestPayload.Units {
 		if _, exists := (*queryResultsByName)[unit.QueryName]; exists {
 			queryResultsByUnitMap[unit.UnitID] = (*queryResultsByName)[unit.QueryName]
 		}
 	}
 
-	c.JSON(http.StatusOK, gin.H{"result": queryResultsByUnitMap, "cache": fromCache, "refreshed_at": lastRefreshedAt})
+	for _, unit := range requestPayload.CustomGroupUnits {
+		uniqueID := fmt.Sprintf("%d", unit.UnitID)
+		if _, exists := queryResult.CustomGroupQueryResult[uniqueID]; exists {
+			queryResultsByUnitMap[unit.UnitID] = *queryResult.CustomGroupQueryResult[uniqueID]
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"result": queryResultsByUnitMap,
+		"cache": fromCache, "refreshed_at": lastRefreshedAt})
 }

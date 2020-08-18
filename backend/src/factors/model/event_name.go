@@ -57,7 +57,7 @@ var ALLOWED_TYPES = [...]string{
 }
 
 const URI_PROPERTY_PREFIX = ":"
-const EVENT_NAMES_LIMIT = 2500
+const EVENT_NAMES_LIMIT = 5000
 
 // TODO: Make index name a constant and read it
 // error constants
@@ -68,7 +68,7 @@ func isDuplicateFilterExprError(err error) bool {
 }
 
 func CreateOrGetEventName(eventName *EventName) (*EventName, int) {
-	db := C.GetServices().Db
+	logCtx := log.WithFields(log.Fields{"event_name": &eventName})
 
 	// Validation.
 	if eventName.ProjectId == 0 || !isValidType(eventName.Type) ||
@@ -78,21 +78,23 @@ func CreateOrGetEventName(eventName *EventName) (*EventName, int) {
 	}
 
 	eventName.Deleted = false
+
+	db := C.GetServices().Db
 	if err := db.FirstOrInit(&eventName, &eventName).Error; err != nil {
-		log.WithFields(log.Fields{"eventName": &eventName}).WithError(err).Error("CreateEventName Failed")
+		logCtx.WithError(err).Error("Failed to create event_name.")
 		return nil, http.StatusInternalServerError
 	}
 
 	// Checks new record or not.
 	if !eventName.CreatedAt.IsZero() {
-		log.WithFields(log.Fields{"eventName": &eventName}).Info("Event Name already exists.")
 		return eventName, http.StatusConflict
 	} else if err := db.Create(eventName).Error; err != nil {
-		log.WithFields(log.Fields{"eventName": &eventName}).WithError(err).Error("CreateEventName Failed")
-		// Todo(Dinesh): should return validation errors along with status.
+		logCtx.WithError(err).Error("Failed to create event_name.")
+
 		if isDuplicateFilterExprError(err) {
 			return nil, http.StatusBadRequest
 		}
+
 		return nil, http.StatusInternalServerError
 	}
 
@@ -443,6 +445,24 @@ func GetFilterEventNames(projectId uint64) ([]EventName, int) {
 	return eventNames, http.StatusFound
 }
 
+// returns list of EventNames objects for given names
+func GetEventNamesByNames(projectId uint64, names []string) ([]EventName, int) {
+
+	db := C.GetServices().Db
+	var eventNames []EventName
+	if err := db.Where("project_id = ? AND name IN (?)",
+		projectId, names).Find(&eventNames).Error; err != nil {
+
+		log.WithFields(log.Fields{"ProjectId": projectId}).WithError(err).Error(
+			"failed to get event names")
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+		return nil, http.StatusInternalServerError
+	}
+	return eventNames, http.StatusFound
+}
+
 func GetFilterEventNamesByExprPrefix(projectId uint64, prefix string) ([]EventName, int) {
 	db := C.GetServices().Db
 
@@ -450,7 +470,7 @@ func GetFilterEventNamesByExprPrefix(projectId uint64, prefix string) ([]EventNa
 	if err := db.Where("project_id = ? AND type = ? AND filter_expr LIKE ? AND deleted = 'false'",
 		projectId, TYPE_FILTER_EVENT_NAME, fmt.Sprintf("%s%%", prefix)).Find(&eventNames).Error; err != nil {
 		log.WithFields(log.Fields{"projectId": projectId, "prefix": prefix}).WithError(err).Error(
-			"Filtering eventName failed on GetFilterEventNamesByExprPrefix")
+			"filtering eventName failed on GetFilterEventNamesByExprPrefix")
 		if gorm.IsRecordNotFoundError(err) {
 			return nil, http.StatusNotFound
 		}

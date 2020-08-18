@@ -108,6 +108,16 @@ func DecodePostgresJsonb(sourceJsonb *postgres.Jsonb) (*map[string]interface{}, 
 	return &sourceMap, nil
 }
 
+func DecodePostgresJsonbAsPropertiesMap(sourceJsonb *postgres.Jsonb) (*PropertiesMap, error) {
+	properties, err := DecodePostgresJsonb(sourceJsonb)
+	if err != nil {
+		return nil, err
+	}
+
+	propertiesMap := PropertiesMap(*properties)
+	return &propertiesMap, err
+}
+
 func EncodeToPostgresJsonb(sourceMap *map[string]interface{}) (*postgres.Jsonb, error) {
 	sourceJsonBytes, err := json.Marshal(sourceMap)
 	if err != nil {

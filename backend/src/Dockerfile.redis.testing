@@ -1,0 +1,6 @@
+# Redis with custom configuration.
+
+FROM redis:5.0.7-alpine
+WORKDIR /usr/local/var/db/redis
+COPY persistent_redis.conf redis.conf
+ENTRYPOINT [ "redis-server", "/usr/local/var/db/redis/redis.conf" ]

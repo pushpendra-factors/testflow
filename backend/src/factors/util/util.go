@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	log "github.com/sirupsen/logrus"
 )
 
 const SECONDS_IN_A_DAY int64 = 24 * 60 * 60
@@ -62,6 +63,12 @@ func RandomUint64WithUnixNano() uint64 {
 	return uint64(time.Now().UnixNano())
 }
 
+// RandomIntInRange Generates a random number in range [min, max).
+func RandomIntInRange(min, max int) int {
+	rand.Seed(time.Now().UTC().UnixNano())
+	return min + rand.Intn(max-min)
+}
+
 func UnixTimeBeforeAWeek() int64 {
 	return UnixTimeBeforeDuration(168 * time.Hour) // 7 days.
 }
@@ -82,6 +89,45 @@ func IsNumber(num string) bool {
 func IsEmail(str string) bool {
 	regexpEmail := regexp.MustCompile(`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,4}$`)
 	return regexpEmail.MatchString(str)
+}
+
+func GetNumberFromAnyString(str string) float64 {
+	strAsBytes := []byte(str)
+	re := regexp.MustCompile(`[+-]?([0-9]*[.])?[0-9]+`)
+	numStr := string(re.Find(strAsBytes))
+
+	num, err := strconv.ParseFloat(numStr, 64)
+	if err != nil {
+		return 0
+	}
+
+	return num
+}
+
+func GetSortWeightFromAnyType(value interface{}) float64 {
+	if value == nil {
+		return 0
+	}
+
+	switch valueType := value.(type) {
+	case float64:
+		return value.(float64)
+	case float32:
+		return float64(value.(float32))
+	case int:
+		return float64(value.(int))
+	case int32:
+		return float64(value.(int32))
+	case int64:
+		return float64(value.(int64))
+	case string:
+		return GetNumberFromAnyString(value.(string))
+	default:
+		log.Info("Unsupported type used on GetSortWeightFromAnyType %+v", valueType)
+		return 0
+	}
+
+	return 0
 }
 
 func TrimQuotes(str string) string {
@@ -254,6 +300,42 @@ func SecondsToHMSString(totalSeconds int64) string {
 	return fmt.Sprintf("%d hrs %d mins %d secs", hours, minutes, seconds)
 }
 
+func Min(a int64, b int64) int64 {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func Max(a int64, b int64) int64 {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+// returns a string of ('?'), ... values of given batchSize
+func GetValuePlaceHolder(batchSize int) string {
+
+	concatenatedIds := ""
+	for i := 0; i < batchSize; i++ {
+		concatenatedIds = concatenatedIds + " (?),"
+	}
+	// removing that extra ',' at end
+	concatenatedIds = concatenatedIds[0 : len(concatenatedIds)-1]
+	return concatenatedIds
+}
+
+// returns a interface list from given string list
+func GetInterfaceList(list []string) []interface{} {
+
+	listInterface := make([]interface{}, len(list))
+	for i, v := range list {
+		listInterface[i] = v
+	}
+	return listInterface
+}
+
 // GetStringListAsBatch - Splits string list into multiple lists.
 func GetStringListAsBatch(list []string, batchSize int) [][]string {
 	batchList := make([][]string, 0, 0)
@@ -287,4 +369,14 @@ func GetSnakeCaseToTitleString(str string) (title string) {
 	}
 
 	return title
+}
+
+func IsContainsAnySubString(src string, sub ...string) bool {
+	for _, s := range sub {
+		if strings.Contains(src, s) {
+			return true
+		}
+	}
+
+	return false
 }

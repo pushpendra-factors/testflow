@@ -15,7 +15,7 @@ spec:
             layer: jobs
         spec:
           nodeSelector:
-            cloud.google.com/gke-nodepool: persistent-pool-standard
+            cloud.google.com/gke-nodepool: persistent-pool-highmem-jobs2
           containers:
           - name: dashboard-caching-job
             image: us.gcr.io/factors-production/dashboard-caching-job:v0.50-4fae9970
@@ -34,9 +34,9 @@ spec:
             - --db_pass
             - $(POSTGRES_PASSWORD)
             - --redis_host
-            - $(REDIS_HOST)
+            - $(PERSISTENT_REDIS_HOST)
             - --redis_port
-            - $(REDIS_PORT)
+            - $(PERSISTENT_REDIS_PORT)
             - --project_id
             - "2"
             - --num_routines
@@ -45,7 +45,7 @@ spec:
             - configMapRef:
                 name: config-env
             - configMapRef:
-                name: config-redis
+                name: config-persistent-redis
             - configMapRef:
                 name: config-postgres
             - secretRef:

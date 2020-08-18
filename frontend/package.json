@@ -5,10 +5,7 @@
   "author": "team@factors.ai",
   "main": "webpack.config.js",
   "dependencies": {
-    "@coreui/coreui": "^2.0.4",
-    "@coreui/coreui-plugin-chartjs-custom-tooltips": "^1.2.0",
     "@coreui/icons": "0.2.0",
-    "@coreui/react": "2.0.5",
     "array-move": "^2.1.0",
     "axios": "^0.12.0",
     "bootstrap": "^4.1.3",

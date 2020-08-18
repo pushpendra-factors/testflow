@@ -56,17 +56,20 @@ func AttributionHandler(c *gin.Context) {
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&requestPayload); err != nil {
-		logCtx.WithError(err).Error("Query failed. Json decode failed.")
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Query failed. Json decode failed."})
+		logCtx.WithError(err).Error("query failed as JSON decode failed")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"Error": "Query failed. Json decode failed."})
 		return
 	}
 
 	// If refresh is passed, refresh only is Query.From is of todays beginning.
-	if (dashboardIdParam != "" || unitIdParam != "") && !isHardRefreshForToday(requestPayload.Query.From, hardRefresh) {
+	if (dashboardIdParam != "" || unitIdParam != "") &&
+		!isHardRefreshForToday(requestPayload.Query.From, hardRefresh) {
 
-		cacheResult, errCode, errMsg := M.GetCacheResultByDashboardIdAndUnitId(projectId, dashboardId, unitId, requestPayload.Query.From, requestPayload.Query.To)
+		cacheResult, errCode, errMsg := M.GetCacheResultByDashboardIdAndUnitId(projectId, dashboardId,
+			unitId, requestPayload.Query.From, requestPayload.Query.To)
 		if errCode == http.StatusFound && cacheResult != nil {
-			c.JSON(http.StatusOK, gin.H{"result": cacheResult.Result, "cache": true, "refreshed_at": cacheResult.RefreshedAt})
+			c.JSON(http.StatusOK, gin.H{"result": cacheResult.Result, "cache": true,
+				"refreshed_at": cacheResult.RefreshedAt})
 			return
 		}
 		if errCode == http.StatusBadRequest {
@@ -76,19 +79,20 @@ func AttributionHandler(c *gin.Context) {
 		if errCode != http.StatusNotFound {
 			logCtx.WithFields(log.Fields{"project_id": projectId,
 				"dashboard_id": dashboardIdParam, "dashboard_unit_id": unitIdParam,
-			}).WithError(errMsg).Error("Failed to get Dashboard Cached Result for Attribution query.")
+			}).WithError(errMsg).Error("failed to get Dashboard Cached Result for Attribution query")
 		}
 	}
 
 	result, err := M.ExecuteAttributionQuery(projectId, requestPayload.Query)
 	if err != nil {
-		logCtx.WithError(err).Error("Query failed. Query execution failed")
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Query failed. Query execution failed"})
+		logCtx.WithError(err).Error("query execution failed")
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Query execution failed"})
 		return
 	}
 
 	if dashboardId != 0 && unitId != 0 {
-		M.SetCacheResultByDashboardIdAndUnitId(result, projectId, dashboardId, unitId, requestPayload.Query.From, requestPayload.Query.To)
+		M.SetCacheResultByDashboardIdAndUnitId(result, projectId, dashboardId, unitId,
+			requestPayload.Query.From, requestPayload.Query.To)
 	}
 	c.JSON(http.StatusOK, gin.H{"result": result, "cache": false, "refreshed_at": U.TimeNowIn(U.TimeZoneStringIST).Unix()})
 }

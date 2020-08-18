@@ -55,7 +55,8 @@ var buildConfigPlugin = new webpack.DefinePlugin({
 });
 
 const HtmlPlugin = new HtmlWebPackPlugin({
-  filename: "./src/index.html" 
+  template: "./src/index.template.html",
+  filename: "./index.html"
 });
 
 var isDev = process.env.NODE_ENV === "development";

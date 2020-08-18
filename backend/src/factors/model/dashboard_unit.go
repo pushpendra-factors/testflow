@@ -347,46 +347,60 @@ func CacheDashboardUnit(projectID uint64, dashboardUnit DashboardUnit, waitGroup
 		return
 	}
 
-	baseQuery, err := DecodeQueryForClass(dashboardUnit.Query, query.Class)
-	if err != nil {
-		logCtx.WithError(err).Errorf("Error decoding query")
+	var unitWaitGroup sync.WaitGroup
+	unitWaitGroup.Add(len(U.QueryDateRangePresets))
+	for _, rangeFunction := range U.QueryDateRangePresets {
+		from, to := rangeFunction()
+		// Create a new baseQuery instance every time to avoid overwriting from, to values in routines.
+		baseQuery, err := DecodeQueryForClass(dashboardUnit.Query, query.Class)
+		if err != nil {
+			logCtx.WithError(err).Errorf("Error decoding query")
+			return
+		}
+		baseQuery.SetQueryDateRange(from, to)
+		go cacheDashboardUnitForDateRange(projectID, dashboardUnit.DashboardId, dashboardUnit.ID, baseQuery, &unitWaitGroup)
+	}
+	unitWaitGroup.Wait()
+}
+
+func cacheDashboardUnitForDateRange(projectID, dashboardID, dashboardUnitID uint64, baseQuery BaseQuery, waitGroup *sync.WaitGroup) {
+	defer waitGroup.Done()
+	from, to := baseQuery.GetQueryDateRange()
+	logCtx := log.WithFields(log.Fields{
+		"Method":          "cacheDashboardUnitForDateRange",
+		"ProjectID":       projectID,
+		"DashboardID":     dashboardID,
+		"DashboardUnitID": dashboardUnitID,
+		"FromTo":          fmt.Sprintf("%d-%d", from, to),
+	})
+	if isDashboardUnitAlreadyCachedForRange(projectID, dashboardID, dashboardUnitID, from, to) {
 		return
 	}
 
-	for preset, rangeFunction := range U.QueryDateRangePresets {
-		from, to := rangeFunction()
-		baseQuery.SetQueryDateRange(from, to)
-		logCtx = logCtx.WithFields(log.Fields{"Preset": preset, "From": from, "To": to})
-
-		if isDashboardUnitAlreadyCachedForRange(projectID, dashboardUnit.DashboardId, dashboardUnit.ID, from, to) {
-			continue
+	var result interface{}
+	var err error
+	var errCode int
+	var errMsg string
+	if baseQuery.GetClass() == QueryClassFunnel || baseQuery.GetClass() == QueryClassInsights {
+		analyticsQuery := baseQuery.(*Query)
+		result, errCode, errMsg = Analyze(projectID, *analyticsQuery)
+	} else if baseQuery.GetClass() == QueryClassAttribution {
+		attributionQuery := baseQuery.(*AttributionQueryUnit)
+		result, err = ExecuteAttributionQuery(projectID, attributionQuery.Query)
+		if err != nil {
+			errCode = http.StatusInternalServerError
+		} else {
+			errCode = http.StatusOK
 		}
-
-		var result interface{}
-		var errCode int
-		var errMsg string
-		if baseQuery.GetClass() == QueryClassFunnel || baseQuery.GetClass() == QueryClassInsights {
-			analyticsQuery := baseQuery.(*Query)
-			result, errCode, errMsg = Analyze(projectID, *analyticsQuery)
-		} else if baseQuery.GetClass() == QueryClassAttribution {
-			attributionQuery := baseQuery.(*AttributionQuery)
-			result, err = ExecuteAttributionQuery(projectID, attributionQuery)
-			if err != nil {
-				errCode = http.StatusInternalServerError
-			} else {
-				errCode = http.StatusOK
-			}
-		} else if baseQuery.GetClass() == QueryClassChannel {
-			channelQuery := baseQuery.(*ChannelQueryUnit)
-			result, errCode = ExecuteChannelQuery(projectID, channelQuery.Query)
-		}
-		if errCode != http.StatusOK {
-			logCtx.Errorf("Error while running query %s", errMsg)
-			continue
-		}
-		SetCacheResultByDashboardIdAndUnitId(result, projectID, dashboardUnit.DashboardId, dashboardUnit.ID, from, to)
+	} else if baseQuery.GetClass() == QueryClassChannel {
+		channelQuery := baseQuery.(*ChannelQueryUnit)
+		result, errCode = ExecuteChannelQuery(projectID, channelQuery.Query)
 	}
-	return
+	if errCode != http.StatusOK {
+		logCtx.Errorf("Error while running query %s", errMsg)
+		return
+	}
+	SetCacheResultByDashboardIdAndUnitId(result, projectID, dashboardID, dashboardUnitID, from, to)
 }
 
 func isDashboardUnitAlreadyCachedForRange(projectID, dashboardID, unitID uint64, from, to int64) bool {
@@ -399,7 +413,7 @@ func isDashboardUnitAlreadyCachedForRange(projectID, dashboardID, unitID uint64,
 		log.WithError(err).Errorf("Failed to get cache key")
 		return false
 	}
-	exists, err := cacheRedis.Exists(cacheKey)
+	exists, err := cacheRedis.ExistsPersistent(cacheKey)
 	if err != nil {
 		log.WithError(err).Errorf("Redis error on exists")
 		return false

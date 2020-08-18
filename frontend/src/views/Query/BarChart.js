@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import { Bar } from 'react-chartjs-2';
-import { CustomTooltips } from '@coreui/coreui-plugin-chartjs-custom-tooltips';
+import { CustomTooltips } from '../../common/custom-tooltips';
 
 import { getChartScaleWithSpace, isSingleCountResult } from '../../util';
 import { HEADER_COUNT, getYAxesStr } from './common';
@@ -65,14 +65,12 @@ class BarChart extends Component {
       return null;
     }
 
+    bars.datasets = [{ data: data  }];
     if (isSingleCountResult(result)) {
-      bars.datasets = [{ data: data  }];
       // use event name as xAxisLabel when no groups available.
       bars.labels = [result.meta.query.ewp[0].na];
     } else {
-      let labelsCounts = this.sortByLabel(labels, data);
-      bars.datasets = [{ data: labelsCounts.counts  }];
-      bars.labels = labelsCounts.labels;
+      bars.labels = labels;
     }
     
     bars.y_label = "";

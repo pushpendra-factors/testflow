@@ -106,7 +106,7 @@ func TestSDKTrackHandler(t *testing.T) {
 	// Test auto tracked event.
 	rEventName := "example.com/"
 	w = ServePostRequestWithHeaders(r, uri,
-		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"name": "Jhon"}}`, user.ID, rEventName)),
+		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$page_load_time": 0, "$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"name": "Jhon"}}`, user.ID, rEventName)),
 		map[string]string{
 			"Authorization": project.Token,
 			"User-Agent":    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
@@ -134,6 +134,9 @@ func TestSDKTrackHandler(t *testing.T) {
 	assert.Equal(t, "google search", eventProperties["$qp_encoded"])                                // decoded property value should have been stored.
 	assert.Nil(t, eventProperties["$qp_utm_keyword"])                                               // $qp_utm_keyword mapped to $keyword should also be decoded.
 	assert.Equal(t, "google search", eventProperties[U.EP_KEYWORD])
+	assert.Equal(t, float64(1), eventProperties[U.EP_PAGE_SPENT_TIME])     // Should be default value.
+	assert.Equal(t, float64(1), eventProperties[U.EP_PAGE_LOAD_TIME])      // Should be default value.
+	assert.Equal(t, float64(0), eventProperties[U.EP_PAGE_SCROLL_PERCENT]) // Should be default value.
 	assert.True(t, len(rEvent.UserPropertiesId) > 0)
 	rUser, errCode := M.GetUser(rEvent.ProjectId, rEvent.UserId)
 	assert.Equal(t, http.StatusFound, errCode)
@@ -153,7 +156,7 @@ func TestSDKTrackHandler(t *testing.T) {
 
 	// Should not allow $ prefixes apart from default properties.
 	rEventName = U.RandomLowerAphaNumString(10)
-	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "%s", "event_properties": {"mobile": "true", "$referrer": "http://google.com", "$page_raw_url": "https://factors.ai/login", "$page_title": "Login"}, "user_properties": {"$dollar_key": "unknow_value", "$os": "mac osx", "$os_version": "1_2_3", "$screen_width": 10, "$screen_height": 11, "$browser": "mozilla", "$platform": "web", "$browser_version": "10_2_3"}}`,
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"user_id": "%s", "event_name": "%s", "event_properties": {"mobile": "true", "$referrer": "http://google.com", "$page_raw_url": "https://factors.ai/login/", "$page_title": "Login", "$page_load_time": 10}, "user_properties": {"$dollar_key": "unknow_value", "$os": "mac osx", "$os_version": "1_2_3", "$screen_width": 10, "$screen_height": 11, "$browser": "mozilla", "$platform": "web", "$browser_version": "10_2_3"}}`,
 		user.ID, rEventName)), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusOK, w.Code)
 	propsResponseMap1 := DecodeJSONResponseToMap(w.Body)
@@ -174,6 +177,10 @@ func TestSDKTrackHandler(t *testing.T) {
 	assert.Nil(t, eventProperties1[U.NAME_PREFIX_ESCAPE_CHAR+U.EP_REFERRER])
 	assert.Nil(t, eventProperties1[U.NAME_PREFIX_ESCAPE_CHAR+U.EP_PAGE_RAW_URL])
 	assert.Nil(t, eventProperties1[U.NAME_PREFIX_ESCAPE_CHAR+U.EP_PAGE_TITLE])
+	// Should not overwrite non-zero value of page_load_time to default.
+	assert.NotEqual(t, float64(10), eventProperties[U.EP_PAGE_LOAD_TIME])
+	// Should assign page_load_time to page_spent_time when page_spent_time is not available.
+	assert.NotEqual(t, float64(10), eventProperties[U.EP_PAGE_SPENT_TIME])
 	// check user default properties.
 	retUser, errCode := M.GetUser(project.ID, user.ID)
 	assert.Equal(t, http.StatusFound, errCode)
@@ -374,7 +381,7 @@ func TestSDKTrackHandler(t *testing.T) {
 	t.Run("AddInitialUserPropertiesFromEventProperties", func(t *testing.T) {
 		rEventName := "https://example.com/" + U.RandomLowerAphaNumString(10)
 		w := ServePostRequestWithHeaders(r, uri,
-			[]byte(fmt.Sprintf(`{"event_name": "%s", "event_properties": {"mobile": "true", "$page_url": "https://example.com/xyz", "$page_raw_url": "https://example.com/xyz?utm_campaign=google", "$page_domain": "example.com", "$referrer_domain": "gartner.com", "$referrer_url": "https://gartner.com/product_of_the_month?ref=google", "$referrer": "https://gartner.com/product_of_the_month", "$page_load_time": 100, "$page_spent_time": 120, "$qp_utm_campaign": "google", "$qp_utm_campaignid": "12345", "$qp_utm_source": "google", "$qp_utm_medium": "email", "$qp_utm_keyword": "analytics", "$qp_utm_matchtype": "exact", "$qp_utm_content": "analytics", "$qp_utm_adgroup": "ad-xxx", "$qp_utm_adgroupid": "xyz123", "$qp_utm_creative": "creative-xxx", "$qp_gclid": "xxx123", "$qp_fbclid": "zzz123"}, "user_properties": {"$os": "Mac OS"}}`, rEventName)),
+			[]byte(fmt.Sprintf(`{"event_name": "%s", "event_properties": {"mobile": "true", "$page_url": "https://example.com/xyz/", "$page_raw_url": "https://example.com/xyz?utm_campaign=google", "$page_domain": "example.com", "$referrer_domain": "gartner.com", "$referrer_url": "https://gartner.com/product_of_the_month?ref=google", "$referrer": "https://gartner.com/product_of_the_month", "$page_load_time": 100, "$page_spent_time": 120, "$qp_utm_campaign": "google", "$qp_utm_campaignid": "12345", "$qp_utm_source": "google", "$qp_utm_medium": "email", "$qp_utm_keyword": "analytics", "$qp_utm_matchtype": "exact", "$qp_utm_content": "analytics", "$qp_utm_adgroup": "ad-xxx", "$qp_utm_adgroupid": "xyz123", "$qp_utm_creative": "creative-xxx", "$qp_gclid": "xxx123", "$qp_fbclid": "zzz123"}, "user_properties": {"$os": "Mac OS"}}`, rEventName)),
 			map[string]string{"Authorization": project.Token})
 		assert.Equal(t, http.StatusOK, w.Code)
 		responseMap = DecodeJSONResponseToMap(w.Body)
@@ -601,7 +608,7 @@ func TestSDKTrackWithExternalEventIdUserIdAndTimestamp(t *testing.T) {
 			Name:       randomeEventName,
 			Timestamp:  timestamp,
 		}
-		status, response := SDK.Track(project.ID, &trackPayload, false)
+		status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
 		assert.Equal(t, http.StatusOK, status)
 		// Event should be created with the given event_id.
 		assert.Equal(t, eventId, response.EventId)
@@ -630,7 +637,7 @@ func TestSDKTrackWithExternalEventIdUserIdAndTimestamp(t *testing.T) {
 			Name:       randomeEventName,
 			Timestamp:  timestamp,
 		}
-		status, response := SDK.Track(project.ID, &trackPayload, false)
+		status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
 		assert.Equal(t, http.StatusOK, status)
 		// Event should be created with the given event_id.
 		assert.Equal(t, eventId, response.EventId)
@@ -1692,15 +1699,6 @@ func TestSessionAndUserInitialPropertiesUpdateOnSDKUpdateEventPropertiesHandler(
 	updatedEvent, errCode := M.GetEventById(project.ID, eventId)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotEmpty(t, *updatedEvent.SessionId)
-	// Should update initial session properties on initial call.
-	sessionEvent, errCode := M.GetEventById(project.ID, *updatedEvent.SessionId)
-	assert.Equal(t, http.StatusFound, errCode)
-	assert.Equal(t, *updatedEvent.SessionId, sessionEvent.ID)
-	sessionProperites, err := U.DecodePostgresJsonb(&sessionEvent.Properties)
-	assert.Nil(t, err)
-	assert.Equal(t, pageRawURL, (*sessionProperites)[U.UP_INITIAL_PAGE_RAW_URL])
-	assert.Equal(t, float64(100), (*sessionProperites)[U.UP_INITIAL_PAGE_SPENT_TIME])
-	assert.Equal(t, float64(10), (*sessionProperites)[U.UP_INITIAL_PAGE_SCROLL_PERCENT])
 	// Should update initial user properties on initial call.
 	user, errCode := M.GetUser(project.ID, userId)
 	assert.Equal(t, http.StatusFound, errCode)
@@ -1720,14 +1718,6 @@ func TestSessionAndUserInitialPropertiesUpdateOnSDKUpdateEventPropertiesHandler(
 	assert.NotEmpty(t, *updatedEvent.SessionId)
 	// Should use the same session.
 	assert.Equal(t, *updatedEvent.SessionId, *updatedEvent2.SessionId)
-	// Should not update session properties on consequtive calls.
-	sessionEvent, errCode = M.GetEventById(project.ID, *updatedEvent2.SessionId)
-	assert.Equal(t, http.StatusFound, errCode)
-	sessionProperites, err = U.DecodePostgresJsonb(&sessionEvent.Properties)
-	assert.Nil(t, err)
-	assert.Equal(t, pageRawURL, (*sessionProperites)[U.UP_INITIAL_PAGE_RAW_URL])
-	assert.NotEqual(t, float64(200), (*sessionProperites)[U.UP_INITIAL_PAGE_SPENT_TIME])
-	assert.Equal(t, float64(100), (*sessionProperites)[U.UP_INITIAL_PAGE_SPENT_TIME])
 	// Should not update user properties on consequtive calls.
 	user, errCode = M.GetUser(project.ID, userId)
 	assert.Equal(t, http.StatusFound, errCode)
@@ -1759,10 +1749,6 @@ func TestAMPTrackByTokenHandler(t *testing.T) {
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEqual(t, user.ID, "")
 
-	retEvent, errCode := M.GetLatestUserEventByPageURLFromDB(project.ID, user.ID, "abcd.com")
-	assert.Equal(t, errCode, http.StatusFound)
-	assert.NotNil(t, retEvent)
-
 	payload1 := &SDK.AMPTrackPayload{
 		ClientID:  ampClientId,
 		SourceURL: "abcd.com/1/",
@@ -1778,10 +1764,6 @@ func TestAMPTrackByTokenHandler(t *testing.T) {
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEqual(t, user1.ID, "")
 
-	retEvent1, errCode := M.GetLatestUserEventByPageURLFromDB(project.ID, user.ID, "abcd.com/1")
-	assert.Equal(t, errCode, http.StatusFound)
-	assert.NotNil(t, retEvent1)
-
 	payload2 := &SDK.AMPTrackPayload{
 		ClientID:  ampClientId,
 		SourceURL: "abcd.com/xy_z",
@@ -1796,10 +1778,6 @@ func TestAMPTrackByTokenHandler(t *testing.T) {
 	user2, errCode := M.CreateOrGetAMPUser(project.ID, ampClientId, payload2.Timestamp)
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEqual(t, user2.ID, "")
-
-	retEvent2, errCode := M.GetLatestUserEventByPageURLFromDB(project.ID, user2.ID, "abcd.com/xy_z")
-	assert.Equal(t, errCode, http.StatusFound)
-	assert.NotNil(t, retEvent2)
 
 	// with query param.
 	url3 := fmt.Sprintf("abcd.com/%s", U.RandomLowerAphaNumString(5))
@@ -1817,10 +1795,6 @@ func TestAMPTrackByTokenHandler(t *testing.T) {
 	user3, errCode := M.CreateOrGetAMPUser(project.ID, ampClientId, payload3.Timestamp)
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.NotEqual(t, user3.ID, "")
-
-	retEvent3, errCode := M.GetLatestUserEventByPageURLFromDB(project.ID, user3.ID, url3)
-	assert.Equal(t, errCode, http.StatusFound)
-	assert.NotNil(t, retEvent3)
 }
 
 func TestSDKAMPTrackByToken(t *testing.T) {

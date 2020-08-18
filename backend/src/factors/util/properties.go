@@ -120,6 +120,7 @@ var EP_HOUR_OF_DAY string = "$hour_of_day"
 var EP_DAY_OF_WEEK string = "$day_of_week"
 var EP_SESSION_COUNT string = "$session_count"
 var EP_TERM string = "$term"
+var EP_CHANNEL string = "$channel" // added at runtime.
 
 // User Properties
 var UP_PLATFORM string = "$platform"
@@ -195,6 +196,7 @@ var UP_HOUR_OF_FIRST_EVENT string = "$hour_of_first_event"
 var UP_SESSION_COUNT string = "$session_count"
 var UP_PAGE_COUNT string = "$page_count"
 var UP_TOTAL_SPENT_TIME string = "$session_spent_time" // in seconds.
+var UP_MERGE_TIMESTAMP string = "$merge_timestamp"     // Internal property used in user properties merge.
 
 var UP_LATEST_PAGE_URL string = "$latest_page_url"
 var UP_LATEST_PAGE_DOMAIN string = "$latest_page_domain"
@@ -442,6 +444,11 @@ var NUMERICAL_PROPERTY_BY_NAME = [...]string{
 	UP_SCREEN_HEIGHT,
 	UP_SCREEN_DENSITY,
 	UP_JOIN_TIME, // Todo: move this to property type datetime.
+	EP_SESSION_COUNT,
+	UP_PAGE_COUNT,
+	UP_TOTAL_SPENT_TIME,
+	UP_LATEST_PAGE_LOAD_TIME,
+	UP_LATEST_PAGE_SPENT_TIME,
 }
 
 var EVENT_TO_USER_INITIAL_PROPERTIES = map[string]string{
@@ -619,6 +626,7 @@ var DISABLED_CORE_QUERY_USER_PROPERTIES = [...]string{
 	UP_SEGMENT_CHANNEL,
 	UP_DEVICE_ADVERTISING_ID,
 	UP_DEVICE_ID,
+	UP_MERGE_TIMESTAMP,
 }
 
 // DISABLED_CORE_QUERY_EVENT_PROPERTIES Less important event properties in core query context.
@@ -649,6 +657,7 @@ var DISABLED_FACTORS_USER_PROPERTIES = [...]string{
 	UP_LATEST_FBCLID,
 	UP_LATEST_REFERRER,
 	UP_INITIAL_REFERRER,
+	UP_MERGE_TIMESTAMP,
 }
 
 // DISABLED_FACTORS_EVENT_PROPERTIES Event properties disabled for the factors analysis.
@@ -1228,6 +1237,17 @@ func GetPropertyValueAsFloat64(value interface{}) (float64, error) {
 		return float64(value.(int32)), nil
 	case int64:
 		return float64(value.(int64)), nil
+	case string:
+		valueString := value.(string)
+		if valueString == "" {
+			return 0, nil
+		}
+
+		floatValue, err := strconv.ParseFloat(valueString, 64)
+		if err != nil {
+			return 0, err
+		}
+		return floatValue, err
 	default:
 		return 0, fmt.Errorf("invalid property value type %v", valueType)
 	}
@@ -1267,5 +1287,66 @@ func ShouldIgnoreItreeProperty(propertyName string) bool {
 	if _, found := ITREE_PROPERTIES_TO_IGNORE[propertyName]; found {
 		return true
 	}
+
 	return IsInternalEventProperty(&propertyName) || IsInternalUserProperty(&propertyName)
+}
+
+func SetDefaultValuesToEventProperties(eventProperties *PropertiesMap) {
+	defaultAllowedProperties := map[string]int{
+		EP_PAGE_SPENT_TIME:     1, // 1 second
+		EP_PAGE_LOAD_TIME:      1, // 1 second
+		EP_PAGE_SCROLL_PERCENT: 0,
+	}
+
+	for property, defaultValue := range defaultAllowedProperties {
+		var setDefault bool
+		if value, exists := (*eventProperties)[property]; exists {
+			v, err := GetPropertyValueAsFloat64(value)
+			setDefault = err == nil && v == 0
+		} else {
+			setDefault = true
+		}
+
+		var value interface{} = defaultValue
+		// Treated default value for page_spent_time,
+		// based on page_load_time.
+		if setDefault && property == EP_PAGE_SPENT_TIME {
+			pageLoadTime, err := GetPropertyValueAsFloat64((*eventProperties)[EP_PAGE_LOAD_TIME])
+			if err == nil && pageLoadTime > 0 {
+				value = (*eventProperties)[EP_PAGE_LOAD_TIME]
+			}
+		}
+
+		if setDefault {
+			(*eventProperties)[property] = value
+		}
+	}
+}
+
+func SanitizeProperties(properties *PropertiesMap) {
+	for k, v := range *properties {
+		// checking if key ends with 'url'
+		if strings.HasSuffix(k, "url") {
+			(*properties)[k] = strings.TrimSuffix(v.(string), "/")
+		}
+	}
+}
+
+func SanitizePropertiesJsonb(propertiesJsonb *postgres.Jsonb) *postgres.Jsonb {
+	propertiesMap, err := DecodePostgresJsonbAsPropertiesMap(propertiesJsonb)
+	if err != nil {
+		log.WithError(err).Error("Failed to decode JSON to sanitize properties.")
+		return propertiesJsonb
+	}
+
+	SanitizeProperties(propertiesMap)
+
+	propertiesJsonMap := map[string]interface{}(*propertiesMap)
+	propertiesJsonb, err = EncodeToPostgresJsonb(&propertiesJsonMap)
+	if err != nil {
+		log.WithError(err).Error("Failed to encode sanitized JSON.")
+		return propertiesJsonb
+	}
+
+	return propertiesJsonb
 }

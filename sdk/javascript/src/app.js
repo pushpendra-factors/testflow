@@ -72,11 +72,69 @@ function getLastActivityTime() {
     return lastActivityTime
 }
 
-function getCurrentPageSpentTimeInSecs(startTimeInMs) {
-    var lastActivityTime = getLastActivityTime();
-    if (lastActivityTime == 0) return lastActivityTime;
+function setPrevActivityTime(t) {
+    factorsWindow().prevActivityTime = t ? t : 0;
+}
 
-    return (lastActivityTime - startTimeInMs) / 1000;
+function setLastPollerId(id) {
+    factorsWindow().lastPollerId = id;
+}
+
+function getLastPollerId() {
+    return factorsWindow().lastPollerId;
+}
+
+const FACTORS_WINDOW_TIMEOUT_KEY_PREFIX = 'lastTimeoutId_';
+
+function setLastTimeoutIdByPeriod(timeoutIn=0, id=0) {
+    if (timeoutIn == 0 || id == 0) return;
+
+    var key = FACTORS_WINDOW_TIMEOUT_KEY_PREFIX + timeoutIn;
+    factorsWindow()[key] = id;
+}
+
+function getLastTimeoutIdByPeriod(timeoutIn=0) {
+    if (timeoutIn == 0) return;
+
+    var key = FACTORS_WINDOW_TIMEOUT_KEY_PREFIX + timeoutIn;
+    return factorsWindow()[key];
+}
+
+function clearTimeoutByPeriod(timeoutInPeriod) {
+    var lastTimeoutId = getLastTimeoutIdByPeriod(timeoutInPeriod);
+    if (!lastTimeoutId) return;
+
+    clearTimeout(lastTimeoutId);
+    logger.debug("Cleared timeout of "+timeoutInPeriod+"ms :"+lastTimeoutId, false);
+}
+
+
+function getPrevActivityTime() {
+    var prevActivityTime = factorsWindow().prevActivityTime;
+    if (!prevActivityTime) prevActivityTime = 0;
+    return prevActivityTime
+}
+
+function getCurrentPageSpentTimeInMs(pageLandingTimeInMs, lastSpentTimeInMs) {
+    var prevActivityTime = getPrevActivityTime();
+    if (prevActivityTime == 0) prevActivityTime = pageLandingTimeInMs;
+
+    var lastActivityTime = getLastActivityTime();
+    if (lastActivityTime == 0) return 0;
+
+    // init with last spent time.
+    var totalSpentTimeInMs = lastSpentTimeInMs;
+    
+    // Add to total spent time only if diff is lesser than
+    // inactivity threshold (5 mins).
+    var diffTimeInMs = lastActivityTime - prevActivityTime;
+    if (diffTimeInMs < 300000) {
+        totalSpentTimeInMs = totalSpentTimeInMs + diffTimeInMs;
+    }
+
+    setPrevActivityTime(lastActivityTime);
+
+    return totalSpentTimeInMs;
 }
 
 /**
@@ -193,24 +251,40 @@ App.prototype.updateEventProperties = function(eventId, properties={}) {
     return this.client.updateEventProperties({ event_id: eventId, properties: properties });
 }
 
-App.prototype.updatePagePropertiesIfChanged = function(startOfPageSpentTimeInMs, lastPageProperties) {
-    let lastPageSpentTimeInSecs = lastPageProperties && lastPageProperties[Properties.PAGE_SPENT_TIME] ? 
+App.prototype.updatePagePropertiesIfChanged = function(pageLandingTimeInMs, 
+    lastPageProperties, defaultPageSpentTimeInMs=0) {
+
+    let lastPageSpentTimeInMs = lastPageProperties && lastPageProperties[Properties.PAGE_SPENT_TIME] ? 
         lastPageProperties[Properties.PAGE_SPENT_TIME] : 0;
-    
+
     let lastPageScrollPercentage = lastPageProperties && lastPageProperties[Properties.PAGE_SCROLL_PERCENT] ?
         lastPageProperties[Properties.PAGE_SCROLL_PERCENT] : 0;
 
-    var pageSpentTimeInSecs = getCurrentPageSpentTimeInSecs(startOfPageSpentTimeInMs);
+    var pageSpentTimeInMs = getCurrentPageSpentTimeInMs(pageLandingTimeInMs, lastPageSpentTimeInMs);
     var pageScrollPercentage = Properties.getPageScrollPercent();
 
+    if (pageSpentTimeInMs == 0 && defaultPageSpentTimeInMs > 0) {
+        pageSpentTimeInMs = defaultPageSpentTimeInMs;
+    }
+
+    // add page_load_time to page_spent_time initially and when defaulted.
+    if (lastPageSpentTimeInMs == 0 || defaultPageSpentTimeInMs > 0) {
+        pageSpentTimeInMs = pageSpentTimeInMs + Properties.getPageLoadTimeInMs();
+    }
+    
     // add properties if changed.
-    let properties = {};
-    if (pageSpentTimeInSecs > 0 && pageSpentTimeInSecs > lastPageSpentTimeInSecs) 
+    var properties = {};
+    if (pageSpentTimeInMs > 0 && pageSpentTimeInMs > lastPageSpentTimeInMs) {
+        // page spent time added to payload in secs.
+        var pageSpentTimeInSecs = pageSpentTimeInMs / 1000;
+        pageSpentTimeInSecs = Number(pageSpentTimeInSecs.toFixed(2));
         properties[Properties.PAGE_SPENT_TIME] = pageSpentTimeInSecs;
-
-    if (pageScrollPercentage > 0 && pageScrollPercentage > lastPageScrollPercentage )
+    } 
+    if (pageScrollPercentage > 0 && pageScrollPercentage > lastPageScrollPercentage ) {
+        pageScrollPercentage = Number(pageScrollPercentage.toFixed(2));
         properties[Properties.PAGE_SCROLL_PERCENT] = pageScrollPercentage;
-
+    }
+        
     // update if any properties given.
     if (Object.keys(properties).length > 0) {
         logger.debug("Updating page properties : " + JSON.stringify(properties), false);
@@ -222,7 +296,7 @@ App.prototype.updatePagePropertiesIfChanged = function(startOfPageSpentTimeInMs,
 
     return {
         [Properties.PAGE_SCROLL_PERCENT]: pageScrollPercentage, 
-        [Properties.PAGE_SPENT_TIME]: pageSpentTimeInSecs
+        [Properties.PAGE_SPENT_TIME]: pageSpentTimeInMs
     };
 }
 
@@ -249,11 +323,39 @@ App.prototype.autoTrack = function(enabled=false, afterCallback) {
 
     var lastPageProperties = {};
     var startOfPageSpentTime = util.getCurrentUnixTimestampInMs();
+
+    // Todo: Use curried function to remove multiple set timeouts.
+    // update page properties after 5s and 10s with default value.
+    var fiveSecondsInMs = 5000;
+    clearTimeoutByPeriod(fiveSecondsInMs);
+    var timoutId5thSecond = setTimeout(function() {
+        logger.debug("Triggered properties update after 5s.", false);
+        lastPageProperties = _this.updatePagePropertiesIfChanged(
+            startOfPageSpentTime, lastPageProperties, fiveSecondsInMs);
+    }, fiveSecondsInMs);
+    setLastTimeoutIdByPeriod(fiveSecondsInMs, timoutId5thSecond);
+
+    var tenSecondsInMs = 10000;
+    clearTimeoutByPeriod(tenSecondsInMs);
+    var timoutId10thSecond = setTimeout(function() {
+        logger.debug("Triggered properties update after 10s.", false);
+        lastPageProperties = _this.updatePagePropertiesIfChanged(
+            startOfPageSpentTime, lastPageProperties, tenSecondsInMs);
+    }, tenSecondsInMs);
+    setLastTimeoutIdByPeriod(tenSecondsInMs, timoutId10thSecond);
+
+    // clear the previous poller, if exist.
+    var lastPollerId = getLastPollerId();
+    clearInterval(lastPollerId);
+    if (lastPollerId) logger.debug("Cleared previous page poller: "+lastPollerId, false);
+
     // update page properties every 20s.
-    setInterval(function() {
+    var pollerId = setInterval(function() {
         lastPageProperties = _this.updatePagePropertiesIfChanged(
             startOfPageSpentTime, lastPageProperties);
     }, 20000);
+    
+    setLastPollerId(pollerId);
 
     // update page properties before leaving the page.
     window.addEventListener("beforeunload", function() {
@@ -264,7 +366,8 @@ App.prototype.autoTrack = function(enabled=false, afterCallback) {
 
     window.addEventListener("scroll", setLastActivityTime);
     window.addEventListener("mouseover", setLastActivityTime);
-    
+    window.addEventListener("mousemove", setLastActivityTime);
+
     // Todo(Dinesh): Find ways to automate tests for SPA support.
     
     // AutoTrack SPA

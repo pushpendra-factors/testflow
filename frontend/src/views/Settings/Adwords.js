@@ -8,6 +8,10 @@ import {
   Button,
   Table,
   Input,
+  Modal,
+  ModalBody,
+  ModalHeader,
+  Form,
   
 } from 'reactstrap';
 
@@ -29,6 +33,7 @@ const mapStateToProps = store => {
     currentProjectId: store.projects.currentProjectId,
     currentProjectSettings: store.projects.currentProjectSettings,
     adwordsCustomerAccounts: store.projects.adwordsCustomerAccounts,
+    currentAgent: store.agents.agent,
   }
 }
 
@@ -52,6 +57,9 @@ class Adwords extends Component {
 
       customerAccountsLoaded: false,
       selectedAdwordsAccount: null,
+      modalOpen: false,
+      accountId: '',
+      manualAccounts: [],
     }
   }
 
@@ -73,7 +81,7 @@ class Adwords extends Component {
 
   getRedirectURL() {
     let host = getAdwordsHostURL();
-    return host + ADWORDS_REDIRECT_URI+"?pid="+this.props.currentProjectId;
+    return host + ADWORDS_REDIRECT_URI+"?pid="+this.props.currentProjectId+"&aid="+this.props.currentAgent.uuid;
   }
 
   isLoaded() {
@@ -107,6 +115,19 @@ class Adwords extends Component {
         </tr>
       )
     }
+    for (let i=0;i<this.state.manualAccounts.length; i++) {
+      let account = this.state.manualAccounts[i];
+
+      accountRows.push(
+        <tr>
+          <td style={{ border: 'none', padding: '5px'  }}>
+            <Input type="radio" checked={this.state.selectedAdwordsAccount == account.customer_id} value={account.customer_id} onChange={this.onAccountSelect} />
+          </td>
+          <td style={{ border: 'none', padding: '5px'  }}>{ account.customer_id }</td>
+          <td style={{ border: 'none', padding: '5px' }}>{ account.name }</td>
+        </tr>
+      )
+    }
     
     return (
       <CardBody style={{paddingLeft: '50px', maxWidth: '50%'}}> 
@@ -122,10 +143,36 @@ class Adwords extends Component {
           </thead>
           <tbody>{ accountRows }</tbody>
         </Table>
-
+        <div><Button color='primary' outline style={{ marginTop: '30px' }} onClick={()=> this.setState({modalOpen: true})}> Add Manually </Button>
+        </div>
         <Button color='success' outline style={{ marginTop: '30px' }} onClick={this.onClickFinishSetup}> Finish Setup </Button>
+        
+        <Modal isOpen={this.state.modalOpen}>
+          <ModalHeader>Enter adwords account ID:</ModalHeader>
+          <ModalBody>
+            <Input type="text" onChange={(e)=> this.setState({accountId: e.target.value})}/>
+            <div className="d-flex justify-content-around">
+              <Button color='success' outline style={{ marginTop: '30px' }} onClick={this.addManualAccount}> Submit </Button>
+              <Button color='danger' outline style={{ marginTop: '30px' }} onClick={()=>this.setState({modalOpen: false})}> Cancel </Button>
+            </div>
+          </ModalBody>
+        </Modal>
       </CardBody>
     );
+  }
+  addManualAccount = () => {
+    let accounts =[...this.state.manualAccounts]
+    if(this.state.accountId != "") {
+      accounts.push(
+        {
+          customer_id: this.state.accountId
+        }
+      )
+    }
+    this.setState({
+      modalOpen: false,
+      manualAccounts: accounts
+    })
   }
 
   isCustomerAccountSelected() {

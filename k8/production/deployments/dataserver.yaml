@@ -66,6 +66,10 @@ spec:
           - $(POSTGRES_USER)
           - --db_pass
           - $(POSTGRES_PASSWORD)
+          - --redis_host
+          - $(REDIS_HOST)
+          - --redis_port
+          - $(REDIS_PORT)
           - --aws_region
           - $(AWS_REGION)
           - --aws_key
@@ -79,6 +83,8 @@ spec:
             name: config-env
         - configMapRef:
             name: config-postgres
+        - configMapRef:
+          name: config-redis
         - secretRef:
             name: secret-postgres
         - secretRef:

@@ -2,13 +2,7 @@ import React, { Component } from 'react';
 import { connect } from "react-redux";
 import { bindActionCreators } from 'redux';
 import { Redirect, Route, Switch } from 'react-router-dom';
-import { Container, Button } from 'reactstrap';
-import {
-  AppHeader,
-  AppSidebar,
-  AppSidebarNav,
-} from '@coreui/react';
-
+import { Collapse, Nav, NavItem, NavLink, Container, Button, Navbar } from 'reactstrap';
 import InternalRoute from '../../routes.internal';
 
 // sidebar nav config
@@ -85,6 +79,7 @@ class DefaultLayout extends Component {
   componentWillMount() {
     let loginToken = this.getLoginTokenFromQueryParams();
     if (loginToken != "") this.props.setLoginToken(loginToken);
+    this.setActiveIndexFromUrl();
 
     if (window.fcWidget) {
       window.fcWidget.init({
@@ -143,10 +138,14 @@ class DefaultLayout extends Component {
     this.props.fetchAgentBillingAccount();    
   }
 
-  componentDidUpdate(prevProps, prevState) {
+  componentDidUpdate(prevProps, prevState, snapshot) {
     if (prevProps.agent && this.props.agent && prevProps.agent.email != this.props.agent.email) {
       if (isProduction() && !isHotJarExcludedEmail(this.props.agent.email))
         hotjar.initialize(1259925, 6);
+    }
+
+    if (this.props.location !== prevProps.location) {
+      this.setActiveIndexFromUrl();
     }
 
     if (window.fcWidget && this.props.currentProjectId && this.props.projects) {
@@ -232,6 +231,23 @@ class DefaultLayout extends Component {
     return false;
   }
 
+  setActiveIndexFromUrl = () => {
+    const url = window.location.hash.split("#")[1];
+    
+    const actNavIndex = sideBarItems.findIndex(el => el.url === url);
+
+    this.setState({
+      activeNavIndex: actNavIndex
+    })
+  }
+
+  activateNav = (index) => {
+    const actIndex = Number(index.currentTarget.attributes.getNamedItem("index").nodeValue);
+    this.setState({
+      activeNavIndex: actIndex
+    });
+  }
+
   renderSetupProjectNotification() {
     if (!this.state.showSetupProjectNotification) return null;
   
@@ -266,6 +282,33 @@ class DefaultLayout extends Component {
     </div>;
   }
 
+  renderSideBar(sideBarItemsToDisplay) {
+    const sideBarItems = [];
+    sideBarItemsToDisplay.items.map((item, index) => {
+      const className = this.state.activeNavIndex === index? "nav-link active" :  "nav-link";
+
+      sideBarItems.push(
+        <li key={item.name} className="nav-item">
+          <a index={index} className={className} href={"#" + item.url} onClick={this.activateNav}>
+            <i className={"nav-icon " + item.icon}></i>
+            {item.name}
+          </a>
+        </li>
+      );
+    })
+    
+    return (
+    <div className="fapp-sidebar sidebar">
+      <img style={{marginTop: '12px', marginBottom: '20px'}} src={factorsicon} />
+      <div className="scrollbar-container sidebar-nav ps">
+        <ul className="nav">
+          {sideBarItems}
+        </ul>
+      </div>
+    </div>
+    )
+  }
+
   render() {
     if (!this.isAgentLoggedIn()) return <Redirect to='/login' />;
     if (!this.isLoaded()) return <Loading />;
@@ -285,14 +328,11 @@ class DefaultLayout extends Component {
     return (
       <div className="app">
         <div className="app-body fapp-body">
-          <AppSidebar minimized className="fapp-sidebar" fixed display="lg">
-            <img style={{marginTop: '12px', marginBottom: '20px'}} src={factorsicon} />
-            <AppSidebarNav navConfig={sideBarItemsToDisplay} {...this.props} />
-          </AppSidebar>
+            { this.renderSideBar(sideBarItemsToDisplay) }
           <main className="main fapp-main">
-            <AppHeader className="fapp-header" fixed>
+            <header className="fapp-header app-header navbar">
               { this.renderProjectsDropdown() }
-            </AppHeader>
+            </header>
             <Container className='fapp-right-pane' fluid>
               { this.renderSetupProjectNotification() }
               <Switch>

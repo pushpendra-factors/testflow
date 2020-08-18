@@ -5,7 +5,7 @@ import {
   CardBody,
   CardHeader
 } from 'reactstrap';
-import { CustomTooltips } from '@coreui/coreui-plugin-chartjs-custom-tooltips';
+import { CustomTooltips } from '../../common/custom-tooltips';
 
 const chartOptions = {
   tooltips: {

@@ -17,7 +17,8 @@ import LineChart from './LineChart';
 import BarChart from './BarChart';
 import TableBarChart from './TableBarChart';
 import FunnelChart from './FunnelChart';
-import { makeSelectOpts } from '../../util';
+import { makeSelectOpts, removeIndexIfExistsFromOptName,
+  prefixIndexToOptName, USER_PROPERTY_GROUP_BY_PRESENT } from '../../util';
 
 // Channel query is a different kind of component linked to Query.
 import ChannelQuery from '../ChannelQuery/ChannelQuery';
@@ -25,11 +26,12 @@ import ChannelQuery from '../ChannelQuery/ChannelQuery';
 import AttributionQuery from '../AttributionQuery/AttributionQuery'
 
 
-import { PRESENTATION_BAR, PRESENTATION_LINE, PRESENTATION_TABLE, 
+import {
+  PRESENTATION_BAR, PRESENTATION_LINE, PRESENTATION_TABLE,
   PRESENTATION_CARD, PRESENTATION_FUNNEL, PROPERTY_TYPE_EVENT,
   getDateRangeFromStoredDateRange, PROPERTY_LOGICAL_OP_OPTS,
-  DEFAULT_DATE_RANGE, DEFINED_DATE_RANGES, getGroupByTimestampType, 
-  getQueryPeriod, convertFunnelResultForTable, sameDay
+  DEFAULT_DATE_RANGE, DEFINED_DATE_RANGES, getGroupByTimestampType,
+  getQueryPeriod, convertFunnelResultForTable, sameDay, jsonToCSV, PROPERTY_TYPE_USER, getEventsWithProperties
 } from './common';
 import ClosableDateRangePicker from '../../common/ClosableDatePicker';
 import { fetchProjectEvents, runQuery } from '../../actions/projectsActions';
@@ -44,7 +46,7 @@ import {
 import Loading from '../../loading';
 import factorsai from '../../common/factorsaiObj';
 import { PROPERTY_TYPE_OPTS, USER_PREF_PROPERTY_TYPE_OPTS, 
-  PROPERTY_VALUE_TYPE_DATE_TIME,DASHBOARD_TYPE_WEB_ANALYTICS } from './common';
+  PROPERTY_VALUE_TYPE_DATE_TIME,DASHBOARD_TYPE_WEB_ANALYTICS, LABEL_STYLE } from './common';
 import insightsSVG from '../../assets/img/analytics/insights.svg';
 import funnelSVG from '../../assets/img/analytics/funnel.svg';
 import channelSVG from '../../assets/img/analytics/channel.svg';
@@ -57,7 +59,6 @@ const EVENTS_COND_OPTS = [
   { value: COND_ANY_GIVEN_EVENT, label: 'any' },
   { value: COND_ALL_GIVEN_EVENT, label: 'all' }
 ];
-const LABEL_STYLE = { marginRight: '10px', fontWeight: '600', color: '#777' };
 
 const QUERY_CLASS_INSIGHTS = 'insights';
 const QUERY_CLASS_FUNNEL = 'funnel';
@@ -378,14 +379,21 @@ class Query extends Component {
     this.setPropertyAttr(eventIndex, propertyIndex, 'valueType', type);
   }
 
-  getDefaultGroupByState() {
+  getDefaultGroupByState(groupByType = null) {
     let groupByOpts = this.getGroupByOpts();
+    if (!groupByType) {
+      groupByType = groupByOpts[0].value
+    }
+
+    if (groupByType == PROPERTY_TYPE_USER) {
+      return {type: PROPERTY_TYPE_USER, name: '', eventName: USER_PROPERTY_GROUP_BY_PRESENT}
+    }
 
     let defaultEventName = '';
     if (this.state.events.length > 0) 
       defaultEventName = this.state.events[0].name;
 
-    return { type: groupByOpts[0].value, name: '', eventName: defaultEventName };
+    return { type: groupByType, name: '', eventName: prefixIndexToOptName(0, defaultEventName) };
   }
 
   addGroupBy = () => {
@@ -406,9 +414,19 @@ class Query extends Component {
     })
   }
 
+  setDefaultGroupByState(groupByIndex, groupByType) {
+    this.setState((prevState) => {
+      let state = { ...prevState };
+      state.groupBys = [ ...prevState.groupBys ];
+      state.groupBys[groupByIndex] = this.getDefaultGroupByState(groupByType);
+      return state;
+    })
+  }
+
   onGroupByTypeChange = (groupByIndex, option) => {
     this.setGroupByAttr(groupByIndex, 'type', option.value);
     this.setGroupByAttr(groupByIndex, 'name', "");
+    this.setDefaultGroupByState(groupByIndex, option.value)
   }
 
   onGroupByNameChange = (groupByIndex, option) => {
@@ -459,51 +477,7 @@ class Query extends Component {
     let period = getQueryPeriod(this.state.resultDateRange[0], this.state.timeZone)
     query.fr=period.from
     query.to=period.to
-    query.ewp = []
-    for(let ei=0; ei < this.state.events.length; ei++) {
-      let event = this.state.events[ei];
-      if (event.name == "") continue;
-      
-      let ewp = {};
-      ewp.na = event.name;
-      ewp.pr = [];
-
-      for(let pi=0; pi < event.properties.length; pi++) {
-        let property = event.properties[pi];
-        let cProperty = {}
-        
-        if (property.entity != '' && property.name != '' &&
-            property.operator != '' && property.value != '' &&
-            property.valueType != '') {
-
-            // Todo: show validation error.
-            if (property.valueType == 'numerical' && 
-              !isNumber(property.value))
-              continue;
-
-            cProperty.en = property.entity;
-            cProperty.pr = property.name;
-            cProperty.op = property.op;
-            cProperty.va = property.value;
-            cProperty.ty = property.valueType;
-            cProperty.lop = property.logicalOp;
-
-            // update datetime with current time window if ovp is true.
-            if (property.valueType == PROPERTY_VALUE_TYPE_DATE_TIME) {
-              let dateRange = JSON.parse(cProperty.va);
-              if (dateRange.ovp) {
-                let newRange = slideUnixTimeWindowToCurrentTime(dateRange.fr, dateRange.to);
-                dateRange.fr = newRange.from;
-                dateRange.to = newRange.to;
-                cProperty.va = JSON.stringify(dateRange); 
-              }
-            }
-
-            ewp.pr.push(cProperty);
-        }
-      }
-      query.ewp.push(ewp)
-    }
+    query.ewp = getEventsWithProperties(this.state.events);
 
     query.gbp = [];
     for(let i=0; i < this.state.groupBys.length; i++) {
@@ -515,9 +489,14 @@ class Query extends Component {
         cGroupBy.en = groupBy.type;
 
         // add group by event name.
-        if (groupBy.type == PROPERTY_TYPE_EVENT && this.isEventNameRequiredForGroupBy() &&  
-          groupBy.eventName != '') cGroupBy.ena = groupBy.eventName;
-          
+        if (this.isEventNameRequiredForGroupBy() && groupBy.eventName != '') {
+          let nameWithIndex = removeIndexIfExistsFromOptName(groupBy.eventName);
+          cGroupBy.ena = nameWithIndex.name
+          // let eni = getIndexIfExistsFromOptName(groupBy.eventName)
+          if (!isNaN(nameWithIndex.index)) {
+            cGroupBy.eni = nameWithIndex.index  // 1 valued index to distinguish in backend from default 0.
+          }
+        }
         query.gbp.push(cGroupBy)
       }
     }
@@ -719,6 +698,10 @@ class Query extends Component {
     return (this.state.type.value == TYPE_UNIQUE_USERS && 
       this.state.condition.value == COND_ALL_GIVEN_EVENT) || 
       this.state.class.value == QUERY_CLASS_FUNNEL;
+  }
+
+  shouldAddIndexPrefix = () => {
+    return this.isEventNameRequiredForGroupBy();
   }
 
   showAddToDashboardFailure() {
@@ -947,6 +930,7 @@ class Query extends Component {
           onNameChange={(option) => this.onGroupByNameChange(i, option)}
           onEventNameChange={(option) => this.onGroupByEventNameChange(i, option)}
           getOpts={this.getGroupByOpts}
+          shouldAddIndexPrefix={this.shouldAddIndexPrefix}
           isEventNameRequired={this.isEventNameRequiredForGroupBy}
         />
       );
@@ -1054,87 +1038,16 @@ class Query extends Component {
     );
   } 
 
-  jsonToCSV = () => {
-    const csvRows = [];
-    let newJSON = {...this.state.result}
-
-    if (this.state.selectedPresentation == PRESENTATION_LINE) {
-      newJSON = this.convertLineJSON(newJSON)
-    }
-    let headers = [...newJSON.headers]
-    
-    csvRows.push(headers.join(','));
-    
-    let rows = [...newJSON.rows]
-    let jsonRows = rows.map((row)=> {
-      let newRow = [...row]
-      let values = newRow.map((val)=>{
-        const escaped = (''+val).replace(/"/g,'\\"');
-        return `"${escaped}"`
-      })
-      return values.join(',');
-    });
-    jsonRows = jsonRows.join('\n')
-    const csv = csvRows+ "\n"+ jsonRows
-    this.downloadCSV(csv);
-  }
-  convertLineJSON = (data) => {
-
-    let convertedData = {}
-    let datetimeKey = 0;
-    let headers = [...data.headers]
-    headers[0]= "event_name"
-    for(var i = 1; i<=data.meta.query.gbp.length; i++) {
-      headers[i] = data.meta.query.gbp[i-1].pr
-    }
-    for (var i=0; i<headers.length; i++) {
-      if(headers[i] == "datetime") {
-        datetimeKey = i;
-        if(data.meta.query.gbt == "date"){
-          headers[i] = "date(UTC)"
-        } else {
-          headers.splice(i,1,"date(UTC)", "hour")
-        }
-
-      }
-    }
-    convertedData.headers = headers
-    let rows = [...data.rows]
-    convertedData.rows = rows.map((row)=> {
-      let dateTime= row[datetimeKey].split("T")
-      if(data.meta.query.gbt == "date"){
-        row[datetimeKey] = dateTime[0]
-      }
-      else {
-        let time = (dateTime[1].split("+"))[0]
-        row.splice(datetimeKey, 1, dateTime[0],time)
-      }
-      return row
-    })
-
-    return convertedData
-  }
-  downloadCSV = (data) => {
-    const blob = new Blob([data], {type: 'text/csv'})
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.setAttribute('hidden','')
-    a.setAttribute('href', url)
-    a.setAttribute('download', 'factors_insights.csv')
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-  }
   renderDownloadButton = () => {
     if(this.state.selectedPresentation != PRESENTATION_BAR) {
       return (
         <button className="btn btn-primary ml-1" style={{fontWeight: 500}} 
-                  onClick={()=> this.jsonToCSV()}>Download</button>
+                  onClick={()=> jsonToCSV(this.state.result, this.state.selectedPresentation, "factors_insights")}>Download</button>
       )
     }
       return (
         <button className="btn btn-primary ml-1" style={{display: "none"}} 
-                  onClick={()=> this.jsonToCSV()}>Download</button>
+                  onClick={()=> jsonToCSV(this.state.result, this.state.selectedPresentation, "factors_insights")}>Download</button>
       )
   }
   renderPresentationPane(presentationOptionsByClass=null, presentationByClass=null) {

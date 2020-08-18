@@ -336,7 +336,7 @@ func GetCacheResultByDashboardIdAndUnitId(projectId, dashboardId, unitId uint64,
 		return cacheResult, http.StatusBadRequest, err
 	}
 
-	result, err := cacheRedis.Get(cacheKey)
+	result, err := cacheRedis.GetPersistent(cacheKey)
 	if err == redis.ErrNil {
 		return cacheResult, http.StatusNotFound, nil
 	} else if err != nil {
@@ -385,7 +385,7 @@ func SetCacheResultByDashboardIdAndUnitId(result interface{}, projectId uint64, 
 		return
 	}
 
-	err = cacheRedis.Set(cacheKey, string(enDashboardCacheResult), DashboardCachingDurationInSeconds)
+	err = cacheRedis.SetPersistent(cacheKey, string(enDashboardCacheResult), DashboardCachingDurationInSeconds)
 	if err != nil {
 		logctx.WithError(err).Error("Failed to set cache for channel query")
 		return

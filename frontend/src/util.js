@@ -17,6 +17,7 @@ const COLORS = [
 
 export const QUERY_TYPE_FACTOR = "factor";
 export const QUERY_TYPE_ANALYTICS = "analytics";
+export const USER_PROPERTY_GROUP_BY_PRESENT = "$present";
 
 export function isStaging() {
     return ENV === "staging";
@@ -50,10 +51,40 @@ export function trimQuotes(v) {
     return v;
 }
 
-export function makeSelectOpts(values) {
+export function prefixIndexToOptName(index, optName) {
+    // Zero valued index.
+    return +index + 1 + ". " + optName
+}
+
+export function removeIndexIfExistsFromOptName(optName) {
+    var split = optName.split(" ")
+    var index = split.shift()
+    var eventName = split.join(" ")
+    if (index == optName || !eventName) {
+        // No space in optName.
+        return {index: NaN, name: optName}
+    }
+    // Verify if index is of format '<number>.'
+    var indexSplit = index.split(".")
+    if (isNaN(indexSplit[0]) || indexSplit[1]) {
+        // First value is not a number or not empty value after '.'
+        return {index: NaN, name: optName}
+    }
+    return {index: +indexSplit[0], name: eventName}
+}
+
+export function makeSelectOpts(values, prefixIndex = false, addNow = false) {
     var opts = [];
     for(let i in values) {
-        opts.push({label: values[i], value: values[i]});
+        if (prefixIndex) {
+            var valueWithIndex = prefixIndexToOptName(i, values[i])
+            opts.push({label: valueWithIndex, value: valueWithIndex});
+        } else {
+            opts.push({label: values[i], value: values[i]});
+        }
+    }
+    if (addNow) {
+        opts.unshift({label: USER_PROPERTY_GROUP_BY_PRESENT, value: USER_PROPERTY_GROUP_BY_PRESENT})
     }
     return opts
 }
@@ -161,4 +192,12 @@ export function getReadableKeyFromSnakeKey(k) {
       key = key + ' ' + kSplits[i].charAt(0).toUpperCase() + kSplits[i].slice(1);
     
     return key
-  }
+}
+
+// Returns comma separated number if value type is number
+export function getReadableValue(value){
+    if (value == null || value == undefined) return 0;
+    if (typeof(value) != "number") return value;
+
+    return value.toLocaleString('en');
+}

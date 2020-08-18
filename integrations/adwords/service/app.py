@@ -21,8 +21,8 @@ parser.add_option("--host_url", default="http://localhost:8091",
     help="Self host url with protocol to refer on callbacks.")
 parser.add_option("--env", default="development", help="Environment.")
 parser.add_option("--developer_token", default="", help="Adwords developer token.")
-parser.add_option("--api_host_url", default="http://localhost:8080", help="API host url")
-parser.add_option("--app_host_url", default="http://localhost:3000", help="App host url")
+parser.add_option("--api_host_url", default="http://localhost:8089", help="Data service host url")
+parser.add_option("--app_host_url", default="http://factors-dev.com:3000", help="App host url")
 parser.add_option("--oauth_secret", default="", help="OAuth2 client secret JSON string")
 
 SESSION_COOKIE_NAME = "factors-sid"
@@ -138,11 +138,9 @@ class APIClientWithSession():
             log.error("Invalid session cookie on add_refresh_token request.")
             return
 
-        url = App.get_api_host() + "/integrations/adwords/add_refresh_token"
+        url = App.get_api_host() + "/data_service/adwords/add_refresh_token"
         
-        cookies = {}
-        cookies[App.get_session_cookie_name()] = session
-        response = requests.post(url, json=payload, cookies=cookies)
+        response = requests.post(url, json=payload)
         if not response.ok:
             log.error("Failed updating adwords integration with response : %d, %s", 
                 response.status_code, response.json())
@@ -152,12 +150,11 @@ class APIClientWithSession():
 
     @staticmethod
     def get_adwords_refresh_token(session, project_id):
-        url = App.get_api_host() + "/integrations/adwords/get_refresh_token"
-        cookies = {}
-        cookies[App.get_session_cookie_name()] = session
+        url = App.get_api_host() + "/data_service/adwords/get_refresh_token"
+        
         # project_id as str for consistency on json.
         payload = { "project_id": str(project_id) }
-        response = requests.post(url, json=payload, cookies=cookies)
+        response = requests.post(url, json=payload)
         if not response.ok:
             log.error("Failed getting adwords integration with response : %d, %s", 
                 response.status_code, response.json())
@@ -175,6 +172,15 @@ class OAuthRedirectHandler(tornado.web.RequestHandler):
             log.error("No project_id given on query param: %s", e)
             self.redirect(App.get_app_login_redirect_url(), True)
             return
+
+        agent_uuid = ""
+        try:
+            agent_uuid = self.get_query_argument("aid")            
+        except Exception as e:
+            log.error("No agent_id given on query param: %s", e)
+            self.redirect(App.get_app_login_redirect_url(), True)
+            return
+
         
         session_cookie_name = App.get_session_cookie_name()
         session_cookie_str = self.get_cookie(session_cookie_name)
@@ -185,7 +191,7 @@ class OAuthRedirectHandler(tornado.web.RequestHandler):
 
         # add project_id and session to state of auth url.
         session_cookie = urllib.parse.unquote(session_cookie_str)
-        state = { "project_id": project_id, "session": session_cookie }
+        state = { "project_id": project_id, "agent_uuid": agent_uuid, "session": session_cookie }
         state = b64encode(json.dumps(state).encode())
 
         self.redirect(OAuthManager.get_authorization_url(state), True)
@@ -215,9 +221,12 @@ class OAuthCallbackHandler(tornado.web.RequestHandler):
             log.error("Query param state is not available on callback. %s", str(e))
             self.redirect(App.get_app_settings_redirect_url(STATUS_FAILURE), True)
             return
-            
-        flow = OAuthManager.get_flow()
-        flow.fetch_token(code=code)
+
+        try:  
+            flow = OAuthManager.get_flow()
+            flow.fetch_token(code=code)
+        except Exception as e:
+            log.error("Failed to fetch token on callback. %s", str(e))
 
         if flow.credentials.refresh_token == None or flow.credentials.refresh_token == "":
             log.error("No refresh token on callback.")
@@ -231,12 +240,19 @@ class OAuthCallbackHandler(tornado.web.RequestHandler):
             log.error("Empty project_id from state of callback.")
             self.redirect(App.get_app_settings_redirect_url(STATUS_FAILURE), True)
             return
+
+        agent_uuid = state_payload.get("agent_uuid")
+        if agent_uuid == None or agent_uuid == "":
+            log.error("Empty agent_uuid from state of callback.")
+            self.redirect(App.get_app_settings_redirect_url(STATUS_FAILURE), True)
+            return
         
         # Create adwords integration request with session cookie.
         APIClientWithSession.add_refresh_token(
             state_payload.get("session"), 
             {
                 "project_id": project_id, 
+                "agent_uuid": agent_uuid,
                 "refresh_token": flow.credentials.refresh_token
             }
         )                

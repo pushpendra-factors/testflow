@@ -104,7 +104,7 @@ class DashboardUnit extends Component {
   execWebAnalyticsQuery = () => {
     this.setState({ loading: true });
     let data = this.props.data;
-    this.props.webAnalyticsBulkRequestBuilder(data.id, data.query.qname, this.handleWebAnalyticsResult)
+    this.props.webAnalyticsBulkRequestBuilder(data.id, data.query, this.handleWebAnalyticsResult)
   }
 
   execAnalyticsQuery(hardRefresh) {

@@ -271,6 +271,7 @@ brew install python3
 ```
 cd $PATH_TO_FACTORS/factors/integrations/adwords/service
 pip install -r requirements.txt
+# Use pip3 in case pip is not found
 ```
 
 * Run

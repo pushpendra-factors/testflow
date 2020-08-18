@@ -130,13 +130,18 @@ const BrowserInfo = {
     }
 }
 
+function getPageLoadTimeInMs() {
+    if (!window.performance) return 0;
+    // ref:https://www.html5rocks.com/en/tutorials/webperformance/basics
+    return (window.performance.timing.domContentLoadedEventEnd - window.performance.timing.navigationStart);
+}
+
 /**
  * @returns Page load time in seconds.
  */
 function getPageLoadTime() {
-    if (!window.performance) return 0;
-    // ref:https://www.html5rocks.com/en/tutorials/webperformance/basics
-    return (window.performance.timing.domContentLoadedEventEnd - window.performance.timing.navigationStart)/1000;
+    var pageLoadTimeInMs = getPageLoadTimeInMs();
+    return pageLoadTimeInMs > 0 ? pageLoadTimeInMs/1000 : 0;
 }
 
 /**
@@ -338,6 +343,7 @@ module.exports = {
     getFromQueryParams: getFromQueryParams,
     parseFromQueryString: parseFromQueryString,
     getTypeValidated: getTypeValidated,
+    getPageLoadTimeInMs: getPageLoadTimeInMs,
     getPageLoadTime: getPageLoadTime,
     getPropertiesFromForm: getPropertiesFromForm,
     getPageScrollPercent: getPageScrollPercent,

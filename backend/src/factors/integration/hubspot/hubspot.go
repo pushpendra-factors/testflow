@@ -193,7 +193,7 @@ func syncContact(projectId uint64, document *M.HubspotDocument) int {
 	if document.Action == M.HubspotDocumentActionCreated {
 		trackPayload.Name = U.EVENT_NAME_HUBSPOT_CONTACT_CREATED
 
-		status, response := SDK.Track(projectId, trackPayload, true)
+		status, response := SDK.Track(projectId, trackPayload, true, SDK.SourceHubspot)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 			logCtx.WithField("status", status).Error("Failed to track hubspot contact created event.")
 			return http.StatusInternalServerError
@@ -216,7 +216,7 @@ func syncContact(projectId uint64, document *M.HubspotDocument) int {
 		// contact created event.
 		userId = userPropertiesRecords[0].UserId
 		trackPayload.UserId = userId
-		status, response := SDK.Track(projectId, trackPayload, true)
+		status, response := SDK.Track(projectId, trackPayload, true, SDK.SourceHubspot)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 			logCtx.WithField("status", status).Error("Failed to track hubspot contact updated event.")
 			return http.StatusInternalServerError
@@ -482,7 +482,7 @@ func syncDeal(projectId uint64, document *M.HubspotDocument) int {
 		return http.StatusOK
 	}
 
-	status, response := SDK.Track(projectId, trackPayload, true)
+	status, response := SDK.Track(projectId, trackPayload, true, SDK.SourceHubspot)
 	if status != http.StatusOK && status != http.StatusFound &&
 		status != http.StatusNotModified {
 

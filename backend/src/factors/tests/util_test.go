@@ -20,3 +20,14 @@ func TestGetStringListAsBatch(t *testing.T) {
 	assert.Equal(t, "2", batch2[0][1])
 	assert.Equal(t, "3", batch2[1][0])
 }
+
+func TestIsStringContainsAny(t *testing.T) {
+	contains := U.IsContainsAnySubString("https://facebook.com", "facebook", "twitter")
+	assert.True(t, contains)
+
+	contains = U.IsContainsAnySubString("https://twitter.com", "facebook", "twitter")
+	assert.True(t, contains)
+
+	contains = U.IsContainsAnySubString("https://tiktok.com", "facebook", "twitter")
+	assert.False(t, contains)
+}

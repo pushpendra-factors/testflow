@@ -23,6 +23,9 @@ func main() {
 	dbName := flag.String("db_name", "autometa", "")
 	dbPass := flag.String("db_pass", "@ut0me7a", "")
 
+	redisHost := flag.String("redis_host", "localhost", "")
+	redisPort := flag.Int("redis_port", 6379, "")
+
 	awsRegion := flag.String("aws_region", "us-east-1", "")
 	awsAccessKeyId := flag.String("aws_key", "dummy", "")
 	awsSecretAccessKey := flag.String("aws_secret", "dummy", "")
@@ -44,6 +47,8 @@ func main() {
 			Password: *dbPass,
 		},
 		AWSKey:                 *awsAccessKeyId,
+		RedisHost:              *redisHost,
+		RedisPort:              *redisPort,
 		AWSSecret:              *awsSecretAccessKey,
 		AWSRegion:              *awsRegion,
 		EmailSender:            *factorsEmailSender,

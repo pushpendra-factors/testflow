@@ -83,6 +83,7 @@ type UpdateEventPropertiesPayload struct {
 	EventId    string          `json:"event_id"`
 	Properties U.PropertiesMap `json:"properties"`
 	Timestamp  int64           `json:"timestamp"`
+	UserAgent  string          `json:"user_agent"`
 }
 
 type UpdateEventPropertiesResponse struct {
@@ -95,6 +96,15 @@ type Response struct {
 	Message string `json:"message,omitempty"`
 	Error   string `json:"error,omitempty"`
 }
+
+const (
+	SourceJSSDK  = "js_sdk"
+	SourceAMPSDK = "amp_sdk"
+
+	SourceSegment = "segment"
+	SourceShopify = "shopify"
+	SourceHubspot = "hubspot"
+)
 
 const RequestQueue = "sdk_request_queue"
 const ProcessRequestTask = "process_sdk_request"
@@ -115,7 +125,7 @@ func ProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, string,
 	// Todo(Dinesh): Add request_id for better tracing.
 
 	logCtx := log.WithFields(log.Fields{"queue": RequestQueue, "token": token,
-		"req_type": reqType, "req_payload": reqPayloadStr})
+		"req_type": reqType, "req_payload_str": reqPayloadStr})
 
 	var response interface{}
 	var status int
@@ -130,6 +140,7 @@ func ProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, string,
 				"Failed to unmarshal request payload on sdk process queue.")
 			return http.StatusInternalServerError, "", nil
 		}
+		logCtx = logCtx.WithField("req_payload", reqPayload)
 
 		status, response = TrackByToken(token, &reqPayload)
 
@@ -142,6 +153,7 @@ func ProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, string,
 				"Failed to unmarshal request payload on sdk process queue.")
 			return http.StatusInternalServerError, "", nil
 		}
+		logCtx = logCtx.WithField("req_payload", reqPayload)
 
 		status, response = IdentifyByToken(token, &reqPayload)
 
@@ -154,6 +166,7 @@ func ProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, string,
 				"Failed to unmarshal request payload on sdk process queue.")
 			return http.StatusInternalServerError, "", nil
 		}
+		logCtx = logCtx.WithField("req_payload", reqPayload)
 
 		status, response = AddUserPropertiesByToken(token, &reqPayload)
 
@@ -165,6 +178,7 @@ func ProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, string,
 				"Failed to unmarshal request payload on sdk process queue.")
 			return http.StatusInternalServerError, "", nil
 		}
+		logCtx = logCtx.WithField("req_payload", reqPayload)
 
 		status, response = UpdateEventPropertiesByToken(token, &reqPayload)
 
@@ -177,6 +191,7 @@ func ProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, string,
 				"Failed to unmarshal request payload on sdk process queue.")
 			return http.StatusInternalServerError, "", nil
 		}
+		logCtx = logCtx.WithField("req_payload", reqPayload)
 
 		status, response = AMPTrackByToken(token, &reqPayload)
 
@@ -189,6 +204,7 @@ func ProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, string,
 				"Failed to unmarshal request payload on sdk process queue.")
 			return http.StatusInternalServerError, "", nil
 		}
+		logCtx = logCtx.WithField("req_payload", reqPayload)
 
 		status, response = AMPUpdateEventPropertiesByToken(token, &reqPayload)
 
@@ -200,12 +216,9 @@ func ProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, string,
 	responseBytes, _ := json.Marshal(response)
 	logCtx = logCtx.WithField("status", status).WithField("response", string(responseBytes))
 
-	// Log for analysing queue process status.
-	logCtx.WithField("processed", "true").Info("Processed sdk request.")
-
 	// Do not retry on below conditions.
 	if status == http.StatusBadRequest || status == http.StatusNotAcceptable || status == http.StatusUnauthorized {
-		logCtx.Info("Failed to process sdk request permanantly.")
+		logCtx.WithField("processed", "true").Info("Failed to process sdk request permanantly.")
 		return float64(status), "", nil
 	}
 
@@ -214,8 +227,11 @@ func ProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, string,
 	if status == http.StatusNotFound || status == http.StatusInternalServerError {
 		logCtx.WithField("retry", "true").Info("Failed to process sdk request on sdk process queue. Retry.")
 		return http.StatusInternalServerError, "",
-			tasks.NewErrRetryTaskLater("RETRY__REQUEST_PROCESSING_FAILURE", 5*time.Minute)
+			tasks.NewErrRetryTaskExp("EXP_RETRY__REQUEST_PROCESSING_FAILURE")
 	}
+
+	// Log for analysing queue process status.
+	logCtx.WithField("processed", "true").Info("Processed sdk request.")
 
 	return http.StatusOK, string(responseBytes), nil
 }
@@ -269,11 +285,22 @@ func isRealtimeSessionRequired(skipSession bool, projectId uint64, skipProjectId
 	return true
 }
 
-func Track(projectId uint64, request *TrackPayload, skipSession bool) (int, *TrackResponse) {
+func setDefaultValuesToEventPropertiesBySource(eventProperties *U.PropertiesMap,
+	source string, isAutoTracked bool) {
+
+	if isAutoTracked && (source == SourceJSSDK || source == SourceAMPSDK) {
+		U.SetDefaultValuesToEventProperties(eventProperties)
+	}
+}
+
+func Track(projectId uint64, request *TrackPayload,
+	skipSession bool, source string) (int, *TrackResponse) {
+
 	logCtx := log.WithField("project_id", projectId)
 
 	if projectId == 0 || request == nil {
-		logCtx.WithField("request_payload", request).Error("Invalid track request.")
+		logCtx.WithField("request_payload", request).
+			Error("Invalid track request.")
 		return http.StatusBadRequest, &TrackResponse{}
 	}
 
@@ -303,7 +330,7 @@ func Track(projectId uint64, request *TrackPayload, skipSession bool) (int, *Tra
 
 	// Terminate track calls from bot user_agent.
 	if *projectSettings.ExcludeBot && U.IsBotUserAgent(request.UserAgent) {
-		return http.StatusNotModified, &TrackResponse{}
+		return http.StatusNotModified, &TrackResponse{Message: "Tracking skipped. Bot request."}
 	}
 
 	var eventName *M.EventName
@@ -349,8 +376,9 @@ func Track(projectId uint64, request *TrackPayload, skipSession bool) (int, *Tra
 	// Added IP to event properties for internal usage.
 	(*eventProperties)[U.EP_INTERNAL_IP] = clientIP
 
-	var userProperties *U.PropertiesMap
+	U.SanitizeProperties(eventProperties)
 
+	var userProperties *U.PropertiesMap
 	if request.UserProperties == nil {
 		request.UserProperties = U.PropertiesMap{}
 	}
@@ -508,6 +536,8 @@ func Track(projectId uint64, request *TrackPayload, skipSession bool) (int, *Tra
 		(*eventProperties)[U.EP_SESSION_COUNT] = session.Count
 		event.SessionId = &session.ID
 	}
+
+	setDefaultValuesToEventPropertiesBySource(eventProperties, source, request.Auto)
 	eventPropsJSON, err := json.Marshal(eventProperties)
 	if err != nil {
 		return http.StatusBadRequest, &TrackResponse{Error: "Tracking failed. Invalid properties."}
@@ -798,10 +828,21 @@ func enqueueRequest(token, reqType, reqPayload interface{}) error {
 	return err
 }
 
+func excludeBotRequestBySetting(token, userAgent string) bool {
+	settings, errCode := M.GetProjectSettingByTokenWithCacheAndDefault(token)
+	if errCode != http.StatusFound {
+		log.WithField("err_code", errCode).
+			Error("Failed to get project settings on excludeBotRequestBeforeQueue.")
+		return false
+	}
+
+	return settings != nil && *settings.ExcludeBot && U.IsBotUserAgent(userAgent)
+}
+
 func TrackByToken(token string, reqPayload *TrackPayload) (int, *TrackResponse) {
 	project, errCode := M.GetProjectByToken(token)
 	if errCode == http.StatusFound {
-		return Track(project.ID, reqPayload, false)
+		return Track(project.ID, reqPayload, false, SourceJSSDK)
 	}
 
 	if errCode == http.StatusNotFound {
@@ -816,6 +857,11 @@ func TrackByToken(token string, reqPayload *TrackPayload) (int, *TrackResponse) 
 
 func TrackWithQueue(token string, reqPayload *TrackPayload,
 	queueAllowedTokens []string) (int, *TrackResponse) {
+
+	if excludeBotRequestBySetting(token, reqPayload.UserAgent) {
+		return http.StatusNotModified,
+			&TrackResponse{Message: "Tracking skipped. Bot request."}
+	}
 
 	if U.UseQueue(token, queueAllowedTokens) {
 		reqPayload.EventId = U.GetUUID()
@@ -974,6 +1020,11 @@ func UpdateEventPropertiesByToken(token string,
 func UpdateEventPropertiesWithQueue(token string, reqPayload *UpdateEventPropertiesPayload,
 	queueAllowedTokens []string) (int, *UpdateEventPropertiesResponse) {
 
+	if excludeBotRequestBySetting(token, reqPayload.UserAgent) {
+		return http.StatusNotModified, &UpdateEventPropertiesResponse{
+			Message: "Update event properties skipped. Bot request."}
+	}
+
 	if U.UseQueue(token, queueAllowedTokens) {
 		// add queued timestamp, if timestmap is not given.
 		if reqPayload.Timestamp == 0 {
@@ -1034,67 +1085,11 @@ func UpdateEventProperties(projectId uint64,
 
 	logCtx = logCtx.WithField("event_id", request.EventId)
 
-	if updatedEvent.SessionId == nil || *updatedEvent.SessionId == "" {
-		return http.StatusBadRequest,
-			&UpdateEventPropertiesResponse{Error: "Update event properties failed. No session associated."}
-	}
-
-	newSessionProperties := U.GetSessionProperties(false, validatedProperties, &U.PropertiesMap{})
-	sessionEvent, errCode := M.GetEventById(projectId, *updatedEvent.SessionId)
-	if errCode != http.StatusFound {
-		return errCode,
-			&UpdateEventPropertiesResponse{Error: "Update event properties failed. Failed to processing session."}
-	}
-
 	updatedEventPropertiesMap, err := U.DecodePostgresJsonb(&updatedEvent.Properties)
 	if err != nil {
 		logCtx.Error("Failed to unmarshal updated event properties on update event properties.")
 		return http.StatusInternalServerError,
 			&UpdateEventPropertiesResponse{Error: "Update event properties failed. Invalid event properties."}
-	}
-
-	sessionPropertiesMap, err := U.DecodePostgresJsonb(&sessionEvent.Properties)
-	if err != nil {
-		logCtx.Error("Failed to unmarshal existing session properties on update event properties.")
-		return http.StatusBadRequest,
-			&UpdateEventPropertiesResponse{Error: "Update event properties failed. Invalid session properties."}
-	}
-
-	eventPageURL, eventPageURLExists := (*updatedEventPropertiesMap)[U.EP_PAGE_RAW_URL]
-
-	sessionInitialPageURL, sessionInitialPageURLExists := (*sessionPropertiesMap)[U.UP_INITIAL_PAGE_RAW_URL]
-	if !eventPageURLExists || !sessionInitialPageURLExists {
-		logCtx.Error("No page URL property to compare for session properties update.")
-		return http.StatusBadRequest,
-			&UpdateEventPropertiesResponse{
-				Error: "Update event properties failed. Initial page of session comparison failed."}
-	}
-
-	// session properties updated only if page raw url and initial
-	// page raw url matches.
-	if eventPageURL != sessionInitialPageURL {
-		return http.StatusAccepted,
-			&UpdateEventPropertiesResponse{Message: "Updated event properties successfully."}
-	}
-
-	isSessionPropertiesUpdateRequired := false
-	for property, value := range *newSessionProperties {
-		if _, exists := (*sessionPropertiesMap)[property]; !exists {
-			(*sessionPropertiesMap)[property] = value
-			isSessionPropertiesUpdateRequired = true
-		}
-	}
-
-	// updates only when new properties added.
-	if isSessionPropertiesUpdateRequired {
-		updateSesssionProperties := U.PropertiesMap(*sessionPropertiesMap)
-		errCode := M.UpdateEventProperties(projectId, sessionEvent.ID,
-			&updateSesssionProperties, request.Timestamp)
-		if errCode != http.StatusAccepted {
-			return errCode,
-				&UpdateEventPropertiesResponse{
-					Error: "Update event properties failed. Failed to update session properties"}
-		}
 	}
 
 	newUserProperties := U.GetInitialUserProperties(validatedProperties)
@@ -1124,6 +1119,8 @@ func UpdateEventProperties(projectId uint64,
 		logCtx.Error("No initial page raw url on user properties to compare on update event properties.")
 		return errCode, &UpdateEventPropertiesResponse{Error: "Failed to associate initial page url."}
 	}
+
+	eventPageURL := (*updatedEventPropertiesMap)[U.EP_PAGE_RAW_URL]
 
 	// user properties updated only if initial_raw_page url of user_properties
 	// and raw_page_url of event properties matches.
@@ -1181,7 +1178,8 @@ type AMPUpdateEventPropertiesPayload struct {
 	PageSpentTime     float64 `json:"page_spent_time"`
 
 	// internal
-	Timestamp int64 `json:"timestamp"`
+	Timestamp int64  `json:"timestamp"`
+	UserAgent string `json:"user_agent"`
 }
 type AMPTrackResponse struct {
 	Message string `json:"message"`
@@ -1210,20 +1208,20 @@ func AMPUpdateEventPropertiesByToken(token string,
 
 	user, errCode := M.CreateOrGetAMPUser(project.ID, reqPayload.ClientID, reqPayload.Timestamp)
 	if errCode != http.StatusFound {
-		return errCode, &Response{Error: "Invalid user"}
+		return errCode, &Response{Error: "Invalid amp user."}
 	}
 
-	eventID, errCode, err := GetCacheAMPSDKEventIDByPageURL(project.ID, user.ID, pageURL)
-	if errCode != http.StatusFound || err != nil {
-		logCtx.WithFields(log.Fields{"err_code": errCode, "err": err}).
-			Error("Failed to get event_id from cache to update on amp.")
+	logCtx = logCtx.WithField("user_id", user.ID).WithField("page_url", pageURL)
 
-		retEvent, errCode := M.GetLatestUserEventByPageURLFromDB(project.ID, user.ID, pageURL)
-		if errCode != http.StatusFound {
-			logCtx.WithFields(log.Fields{"errCode": errCode, "err": err}).Error("Failed to get eventID from DB")
-			return errCode, &Response{Error: "No events found"}
+	eventID, errCode := GetCacheAMPSDKEventIDByPageURL(project.ID, user.ID, pageURL)
+	if errCode != http.StatusFound {
+		if errCode == http.StatusInternalServerError {
+			logCtx.Error("Failed to get eventId by page_url from cache.")
 		}
-		eventID = retEvent.ID
+
+		// Do not retry on failure or cache miss.
+		return http.StatusNotModified,
+			&Response{Error: "Failed to update event properties. Invalid request."}
 	}
 
 	updateEventProperties := U.PropertiesMap{}
@@ -1239,11 +1237,12 @@ func AMPUpdateEventPropertiesByToken(token string,
 	errCode = M.UpdateEventProperties(project.ID, eventID, &updateEventProperties, time.Now().Unix())
 
 	if errCode != http.StatusAccepted {
-		logCtx.WithFields(log.Fields{"project_id": project.ID, "event_id": eventID}).Error("Failed to update event properties")
-		return errCode, &Response{Error: "Updating event properties failed"}
+		logCtx.WithFields(log.Fields{"project_id": project.ID, "event_id": eventID}).
+			Error("Failed to update event properties")
+		return errCode, &Response{Error: "Failed to update event properties."}
 	}
 
-	return http.StatusAccepted, &Response{Message: "Updated Successfully"}
+	return http.StatusAccepted, &Response{Message: "Updated event properties successfully."}
 }
 
 func AMPTrackByToken(token string, reqPayload *AMPTrackPayload) (int, *Response) {
@@ -1324,7 +1323,7 @@ func AMPTrackByToken(token string, reqPayload *AMPTrackPayload) (int, *Response)
 		Timestamp:       reqPayload.Timestamp,
 	}
 
-	errCode, trackResponse := Track(project.ID, &trackPayload, false)
+	errCode, trackResponse := Track(project.ID, &trackPayload, false, SourceAMPSDK)
 	if trackResponse.EventId != "" {
 		cacheErrCode := SetCacheAMPSDKEventIDByPageURL(project.ID, user.ID,
 			trackResponse.EventId, pageURL)
@@ -1354,48 +1353,57 @@ func SetCacheAMPSDKEventIDByPageURL(projectId uint64, userId string, eventId str
 		return http.StatusBadRequest
 	}
 
-	resultCacheKey, err := getAMPSDKByEventIDCacheKey(projectId, userId, pageURL)
+	resultCacheKey, err := getAMPSDKByEventIDCacheKey(projectId, userId, U.CleanURI(pageURL))
 	if err != nil {
 		logctx.WithError(err).Error("Failed to getAMPSDKByEventIdCacheKey.")
 		return http.StatusNotFound
 	}
 
-	err = cacheRedis.Set(resultCacheKey, string(eventId), 30*60) //30mins
+	err = cacheRedis.Set(resultCacheKey, string(eventId), 60*60) // 60 mins
 	if err != nil {
-		logctx.WithError(err).Error("Failed to set cache for channel query")
+		logctx.WithError(err).Error("Failed to set cache amp sdk event_id by page_url.")
 		return http.StatusInternalServerError
 	}
 	return http.StatusAccepted
 }
 
-func GetCacheAMPSDKEventIDByPageURL(projectId uint64, userId string, pageURL string) (string, int, error) {
+func GetCacheAMPSDKEventIDByPageURL(projectId uint64, userId string, pageURL string) (string, int) {
+	logCtx := log.WithField("project_id", projectId).WithField("user_id", userId).
+		WithField("page_url", pageURL)
+
 	var cacheResult string
 	if projectId == 0 || userId == "" || pageURL == "" {
-		return cacheResult, http.StatusBadRequest, errors.New("invalid scope ids.")
+		return cacheResult, http.StatusBadRequest
 	}
 
 	resultCacheKey, err := getAMPSDKByEventIDCacheKey(projectId, userId, pageURL)
 	if err != nil {
-		return cacheResult, http.StatusBadRequest, err
+		logCtx.WithError(err).Error("Failed to get cache key on GetCacheAMPSDKEventIDByPageURL.")
+		return cacheResult, http.StatusBadRequest
 	}
 
 	cacheResult, err = cacheRedis.Get(resultCacheKey)
 	if err != nil {
 		if err == redis.ErrNil {
-			return cacheResult, http.StatusNotFound, err
+			return cacheResult, http.StatusNotFound
 		}
-		return cacheResult, http.StatusInternalServerError, err
+		return cacheResult, http.StatusInternalServerError
 	}
 
 	if cacheResult == "" {
-		return cacheResult, http.StatusNotFound, errors.New("invalid cache result.")
+		return cacheResult, http.StatusNotFound
 	}
 
-	return cacheResult, http.StatusFound, nil
+	return cacheResult, http.StatusFound
 }
 
 func AMPTrackWithQueue(token string, reqPayload *AMPTrackPayload,
 	queueAllowedTokens []string) (int, *Response) {
+
+	if excludeBotRequestBySetting(token, reqPayload.UserAgent) {
+		return http.StatusNotModified,
+			&Response{Message: "Track skipped. Bot request."}
+	}
 
 	if U.UseQueue(token, queueAllowedTokens) {
 		err := enqueueRequest(token, sdkRequestTypeAMPEventTrack, reqPayload)
@@ -1413,11 +1421,16 @@ func AMPTrackWithQueue(token string, reqPayload *AMPTrackPayload,
 func AMPUpdateEventPropertiesWithQueue(token string, reqPayload *AMPUpdateEventPropertiesPayload,
 	queueAllowedTokens []string) (int, *Response) {
 
+	if excludeBotRequestBySetting(token, reqPayload.UserAgent) {
+		return http.StatusNotModified,
+			&Response{Message: "Update event properties skipped. Bot request."}
+	}
+
 	if U.UseQueue(token, queueAllowedTokens) {
 		err := enqueueRequest(token, sdkRequestTypedAMPEventUpdateProperties, reqPayload)
 		if err != nil {
 			log.WithError(err).Error("Failed to queue amp sdk update event request.")
-			return http.StatusInternalServerError, &Response{Error: "Update event failed"}
+			return http.StatusInternalServerError, &Response{Error: "Update event properties failed"}
 		}
 
 		return http.StatusOK, &Response{Message: "Updated event successfully"}

@@ -2,7 +2,7 @@ import { createStaticRanges } from 'react-date-range';
 import moment from 'moment';
 import mt from "moment-timezone";
 
-import { slideUnixTimeWindowToCurrentTime, firstToUpperCase, getTimezoneString } from '../../util';
+import {slideUnixTimeWindowToCurrentTime, firstToUpperCase, isNumber} from '../../util';
 
 export const QUERY_TYPE_UNIQUE_USERS = "unique_users";
 export const QUERY_TYPE_EVENTS_OCCURRENCE = "events_occurrence";
@@ -49,6 +49,10 @@ export const DEFAULT_DATE_RANGE_LABEL = 'Last 7 days';
 export const DATE_RANGE_TODAY_LABEL = 'Today';
 export const DATE_RANGE_YESTERDAY_LABEL = 'Yesterday';
 export const DATE_RANGE_LAST_30_DAYS_LABEL = 'Last 30 days';
+export const DATE_RANGE_LAST_2_MIN_LABEL = 'Last 2 mins'
+export const DATE_RANGE_LAST_30_MIN_LABEL = 'Last 30 mins'
+
+export const LABEL_STYLE = { marginRight: '10px', fontWeight: '600', color: '#777' };
 
 export const DEFAULT_DATE_RANGE = {
   startDate: moment(new Date()).subtract(7, 'days').startOf('day').toDate(),
@@ -56,13 +60,20 @@ export const DEFAULT_DATE_RANGE = {
   label: DEFAULT_DATE_RANGE_LABEL,
   key: 'selected'
 }
-export const DEFINED_DATE_RANGES = createStaticRanges([
+const DEFAULT_DATE_RANGES = [
   {
     label: DATE_RANGE_TODAY_LABEL,
     range: () => ({
       startDate: moment(new Date()).startOf('day').toDate(),
       endDate: new Date(),
     }),
+    isSelected(range) {
+      const definedRange = this.range();
+      return (
+        moment(range.startDate).isSame(definedRange.startDate,"seconds") && 
+        moment(range.endDate).isSame(definedRange.endDate,"seconds")
+      );
+    }
   },
   {
     label: DATE_RANGE_YESTERDAY_LABEL,
@@ -85,7 +96,40 @@ export const DEFINED_DATE_RANGES = createStaticRanges([
       endDate: moment(new Date()).subtract(1, 'days').endOf('day').toDate(),
     })
   },
-]);
+];
+
+export const DEFAULT_TODAY_DATE_RANGES = [
+  {
+    label: DATE_RANGE_LAST_2_MIN_LABEL,
+    range: () => ({
+      startDate: moment(new Date()).subtract(60*2,'seconds').toDate(),
+      endDate: new Date(),
+    }),
+    isSelected(range) {
+      const definedRange = this.range();
+      return (
+        moment(range.startDate).isSame(definedRange.startDate,"seconds") && 
+        moment(range.endDate).isSame(definedRange.endDate,"seconds")
+      );
+    }  
+  },
+  {
+    label:DATE_RANGE_LAST_30_MIN_LABEL,
+    range: () => ({
+      startDate: moment(new Date()).subtract(60*30, 'seconds').toDate(),
+      endDate: new Date(),
+    }),
+    isSelected(range) {
+      const definedRange = this.range();
+      return (
+        moment(range.startDate).isSame(definedRange.startDate,"seconds") && 
+        moment(range.endDate).isSame(definedRange.endDate,"seconds")
+      );
+    } 
+  }
+]
+export const DEFINED_DATE_RANGES = createStaticRanges(DEFAULT_DATE_RANGES);
+export const WEB_ANALYTICS_DEFINED_DATE_RANGES = createStaticRanges([...DEFAULT_TODAY_DATE_RANGES,...DEFAULT_DATE_RANGES])
 
 
 // returns datepicker daterange for stored daterange.
@@ -156,6 +200,16 @@ export const getQueryPeriod = function(selectedRange, timezone)  {
   let isTzEndDateToday = mt(selectedRange.endDate).tz(timezone).isSame(mt().tz(timezone), 'day');
   let from =  overwriteTimezone(selectedRange.startDate, timezone).unix();
   let to = overwriteTimezone(selectedRange.endDate, timezone).unix();
+
+  if (selectedRange.label){
+    let slideToCurrentTime = DEFAULT_TODAY_DATE_RANGES.find(range => range.label === selectedRange.label);
+    if (slideToCurrentTime){
+      let timediff = to-from;
+      to = moment(new Date()).unix();
+      from = to-timediff;
+      return { from: from, to: to };
+    }
+  }
 
   // Adjust the duration window respective to current time.
   if (isTzEndDateToday) {
@@ -242,8 +296,8 @@ export const convertSecondsToHMSAgo = function(timeInSeconds) {
 }
 
 export const getPresetLabelForDateRange = function(range) {
-  for (let i = 0; i < DEFINED_DATE_RANGES.length; i++) {
-    let preset = DEFINED_DATE_RANGES[i]
+  for (let i = 0; i < WEB_ANALYTICS_DEFINED_DATE_RANGES.length; i++) {
+    let preset = WEB_ANALYTICS_DEFINED_DATE_RANGES[i]
     let presetRange = preset.range()
     if (areSameDateRanges(range, presetRange)) {
       return preset.label
@@ -274,4 +328,129 @@ export const setDateRangeForPresetLabel = function(dateRangeWithLabel) {
 export const areSameDateRanges = function(dateRange1, dateRange2) {
   return moment(dateRange1.startDate).unix() == moment(dateRange2.startDate).unix() &&
     moment(dateRange1.endDate).unix() == moment(dateRange2.endDate).unix()
+}
+export const jsonToCSV = (result, selectedPresentation, queryName) => {
+  const csvRows = [];
+  let newJSON = {...result}
+  if (selectedPresentation === PRESENTATION_LINE) {
+    newJSON = convertLineJSON(newJSON)
+  }
+  let headers = [...newJSON.headers]
+  csvRows.push(headers.join(','));
+  let rows = [...newJSON.rows]
+  let jsonRows = rows.map((row)=> {
+    let newRow = [...row]
+    let values = newRow.map((val)=>{
+      const escaped = (''+val).replace(/"/g,'\\"');
+      return `"${escaped}"`
+    })
+    return values.join(',');
+  });
+  jsonRows = jsonRows.join('\n')
+  const csv = csvRows+ "\n"+ jsonRows
+  return downloadCSV(csv, queryName);
+}
+
+export const downloadCSV = function(data, queryName) {
+  const blob = new Blob([data], {type: 'text/csv'})
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.setAttribute('hidden','')
+  a.setAttribute('href', url)
+  a.setAttribute('download', queryName+new Date()+'.csv')
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+}
+
+export const convertLineJSON = function(data) {
+
+  let convertedData = {}
+  let datetimeKey = 0;
+  let headers = [...data.headers]
+  headers[0]= "event_name"
+  for(var i = 1; i<=data.meta.query.gbp.length; i++) {
+    headers[i] = data.meta.query.gbp[i-1].pr
+  }
+  for (var i=0; i<headers.length; i++) {
+    if(headers[i] == "datetime") {
+      datetimeKey = i;
+      if(data.meta.query.gbt == "date"){
+        headers[i] = "date(UTC)"
+      } else {
+        headers.splice(i,1,"date(UTC)", "hour")
+      }
+
+    }
+  }
+  convertedData.headers = headers
+  let rows = [...data.rows]
+  convertedData.rows = rows.map((row)=> {
+    let dateTime= row[datetimeKey].split("T")
+    if(data.meta.query.gbt == "date"){
+      row[datetimeKey] = dateTime[0]
+    }
+    else {
+      let time = (dateTime[1].split("+"))[0]
+      row.splice(datetimeKey, 1, dateTime[0],time)
+    }
+    return row
+  })
+
+  return convertedData
+}
+
+export const getEventsWithProperties = function(events) {
+
+  let ewps = [];
+  for (let ei = 0; ei < events.length; ei++) {
+    let event = events[ei];
+    if (event.name === "")
+      continue;
+    let ewp = getEventWithProperties(event);
+    ewps.push(ewp)
+  }
+  return ewps;
+}
+
+export const getEventWithProperties = function(event) {
+
+  let ewp = {};
+  if (event.name === "")
+    return ewp;
+  ewp.na = event.name;
+  ewp.pr = [];
+
+  for (let pi = 0; pi < event.properties.length; pi++) {
+    let property = event.properties[pi];
+    let cProperty = {}
+
+    if (property.entity !== '' && property.name !== '' &&
+      property.operator !== '' && property.value !== '' &&
+      property.valueType !== '') {
+
+      if (property.valueType === 'numerical' && !isNumber(property.value))
+        continue;
+
+      cProperty.en = property.entity;
+      cProperty.pr = property.name;
+      cProperty.op = property.op;
+      cProperty.va = property.value;
+      cProperty.ty = property.valueType;
+      cProperty.lop = property.logicalOp;
+
+      // update datetime with current time window if ovp is true.
+      if (property.valueType === PROPERTY_VALUE_TYPE_DATE_TIME) {
+        let dateRange = JSON.parse(cProperty.va);
+        if (dateRange.ovp) {
+          let newRange = slideUnixTimeWindowToCurrentTime(dateRange.fr, dateRange.to);
+          dateRange.fr = newRange.from;
+          dateRange.to = newRange.to;
+          cProperty.va = JSON.stringify(dateRange);
+        }
+      }
+      ewp.pr.push(cProperty);
+    }
+  }
+  return ewp
 }

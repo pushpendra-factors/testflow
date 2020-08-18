@@ -59,7 +59,7 @@ spec:
           - --host_url
           - $(API_HOST_URL)
           - --api_host_url
-          - $(API_HOST_URL)
+          - $(DATA_SERVICE_HOST_URL)
           - --app_host_url
           - $(APP_HOST_URL)
           - --oauth_secret

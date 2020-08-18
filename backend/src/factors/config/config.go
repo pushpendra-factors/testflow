@@ -56,6 +56,8 @@ type Configuration struct {
 	DBInfo                           DBConf
 	RedisHost                        string
 	RedisPort                        int
+	RedisHostPersistent              string
+	RedisPortPersistent              int
 	QueueRedisHost                   string
 	QueueRedisPort                   int
 	EtcdEndpoints                    []string
@@ -86,6 +88,7 @@ type Services struct {
 	GeoLocation        *geoip2.Reader
 	Etcd               *serviceEtcd.EtcdClient
 	Redis              *redis.Pool
+	RedisPeristent     *redis.Pool
 	QueueClient        *machinery.Server
 	patternServersLock sync.RWMutex
 	patternServers     map[string]string
@@ -291,7 +294,15 @@ func InitDB(dbConf DBConf) error {
 	return InitDBWithMaxIdleAndMaxOpenConn(dbConf, 50, 10)
 }
 
+func InitRedisPersistent(host string, port int) {
+	initRedisConnection(host, port, true)
+}
+
 func InitRedis(host string, port int) {
+	initRedisConnection(host, port, false)
+}
+
+func initRedisConnection(host string, port int, persistent bool) {
 	if host == "" || port == 0 {
 		log.WithField("host", host).WithField("port", port).Fatal(
 			"Invalid redis host or port.")
@@ -334,9 +345,15 @@ func InitRedis(host string, port int) {
 	}
 
 	log.Info("Redis Service initialized.")
-	configuration.RedisHost = host
-	configuration.RedisPort = port
-	services.Redis = redisPool
+	if persistent {
+		configuration.RedisHostPersistent = host
+		configuration.RedisPortPersistent = port
+		services.RedisPeristent = redisPool
+	} else {
+		configuration.RedisHost = host
+		configuration.RedisPort = port
+		services.Redis = redisPool
+	}
 }
 
 func InitQueueClient(redisHost string, redisPort int) error {
@@ -464,7 +481,7 @@ func InitDataService(config *Configuration) error {
 	if err != nil {
 		return err
 	}
-
+	InitRedis(config.RedisHost, config.RedisPort)
 	InitLogClient(config.Env, config.AppName, config.EmailSender, config.AWSKey,
 		config.AWSSecret, config.AWSRegion, config.ErrorReportingInterval)
 
@@ -541,6 +558,10 @@ func GetServices() *Services {
 
 func GetCacheRedisConnection() redis.Conn {
 	return services.Redis.Get()
+}
+
+func GetCacheRedisPersistentConnection() redis.Conn {
+	return services.RedisPeristent.Get()
 }
 
 func IsDevelopment() bool {

@@ -71,7 +71,15 @@ func (key *Key) Key() (string, error) {
 	return fmt.Sprintf("%s:%s:%s", key.Prefix, projectScope, key.Suffix), nil
 }
 
+func SetPersistent(key *Key, value string, expiryInSecs float64) error {
+	return set(key, value, expiryInSecs, true)
+}
+
 func Set(key *Key, value string, expiryInSecs float64) error {
+	return set(key, value, expiryInSecs, false)
+}
+
+func set(key *Key, value string, expiryInSecs float64, persistent bool) error {
 	if key == nil {
 		return ErrorInvalidKey
 	}
@@ -85,7 +93,12 @@ func Set(key *Key, value string, expiryInSecs float64) error {
 		return err
 	}
 
-	redisConn := C.GetCacheRedisConnection()
+	var redisConn redis.Conn
+	if persistent {
+		redisConn = C.GetCacheRedisPersistentConnection()
+	} else {
+		redisConn = C.GetCacheRedisConnection()
+	}
 	defer redisConn.Close()
 
 	if expiryInSecs == 0 {
@@ -97,7 +110,15 @@ func Set(key *Key, value string, expiryInSecs float64) error {
 	return err
 }
 
+func GetPersistent(key *Key) (string, error) {
+	return get(key, true)
+}
+
 func Get(key *Key) (string, error) {
+	return get(key, false)
+}
+
+func get(key *Key, persistent bool) (string, error) {
 	if key == nil {
 		return "", ErrorInvalidKey
 	}
@@ -107,14 +128,27 @@ func Get(key *Key) (string, error) {
 		return "", err
 	}
 
-	redisConn := C.GetCacheRedisConnection()
+	var redisConn redis.Conn
+	if persistent {
+		redisConn = C.GetCacheRedisPersistentConnection()
+	} else {
+		redisConn = C.GetCacheRedisConnection()
+	}
 	defer redisConn.Close()
 
 	return redis.String(redisConn.Do("GET", cKey))
 }
 
-// MGet Function to get multiple keys from redis. Returns slice of result strings.
+func MGetPersistent(keys ...*Key) ([]string, error) {
+	return mGet(true, keys...)
+}
+
 func MGet(keys ...*Key) ([]string, error) {
+	return mGet(false, keys...)
+}
+
+// MGet Function to get multiple keys from redis. Returns slice of result strings.
+func mGet(persistent bool, keys ...*Key) ([]string, error) {
 	var cKeys []interface{}
 	var cValues []string
 	for _, key := range keys {
@@ -127,7 +161,13 @@ func MGet(keys ...*Key) ([]string, error) {
 		}
 		cKeys = append(cKeys, cKey)
 	}
-	redisConn := C.GetCacheRedisConnection()
+
+	var redisConn redis.Conn
+	if persistent {
+		redisConn = C.GetCacheRedisPersistentConnection()
+	} else {
+		redisConn = C.GetCacheRedisConnection()
+	}
 	defer redisConn.Close()
 
 	values, err := redis.Values(redisConn.Do("MGET", cKeys...))
@@ -141,7 +181,15 @@ func MGet(keys ...*Key) ([]string, error) {
 	return cValues, nil
 }
 
+func DelPersistent(key *Key) error {
+	return del(key, true)
+}
+
 func Del(key *Key) error {
+	return del(key, false)
+}
+
+func del(key *Key, persistent bool) error {
 	if key == nil {
 		return ErrorInvalidKey
 	}
@@ -151,15 +199,28 @@ func Del(key *Key) error {
 		return err
 	}
 
-	redisConn := C.GetCacheRedisConnection()
+	var redisConn redis.Conn
+	if persistent {
+		redisConn = C.GetCacheRedisPersistentConnection()
+	} else {
+		redisConn = C.GetCacheRedisConnection()
+	}
 	defer redisConn.Close()
 
 	_, err = redisConn.Do("DEL", cKey)
 	return err
 }
 
-// Exists Checks if a key exists in Redis.
+func ExistsPersistent(key *Key) (bool, error) {
+	return exists(key, true)
+}
+
 func Exists(key *Key) (bool, error) {
+	return exists(key, false)
+}
+
+// Exists Checks if a key exists in Redis.
+func exists(key *Key, persistent bool) (bool, error) {
 	if key == nil {
 		return false, ErrorInvalidKey
 	}
@@ -169,7 +230,12 @@ func Exists(key *Key) (bool, error) {
 		return false, err
 	}
 
-	redisConn := C.GetCacheRedisConnection()
+	var redisConn redis.Conn
+	if persistent {
+		redisConn = C.GetCacheRedisPersistentConnection()
+	} else {
+		redisConn = C.GetCacheRedisConnection()
+	}
 	defer redisConn.Close()
 
 	count, err := redisConn.Do("EXISTS", cKey)
