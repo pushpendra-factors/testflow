@@ -58,12 +58,14 @@ const FIRST_TOUCH = "First_Touch";
 const LAST_TOUCH = "Last_Touch";
 const FIRST_TOUCH_NON_DIRECT = "First_Touch_ND"
 const LAST_TOUCH_NON_DIRECT = "Last_Touch_ND"
+const LINEAR_TOUCH = "Linear"
 
 const ATTRIBUTION_METHODOLOGY = [
   {value: FIRST_TOUCH, label: "First Touch"},
   {value: LAST_TOUCH, label: "Last Touch"},
   {value: FIRST_TOUCH_NON_DIRECT, label: "First Touch Non-Direct"},
-  {value: LAST_TOUCH_NON_DIRECT, label: "Last Touch Non-Direct"}
+  {value: LAST_TOUCH_NON_DIRECT, label: "Last Touch Non-Direct"},
+  {value: LINEAR_TOUCH, label: "Linear Touch"}
 ];
 
 const IMPRESSIONS = "Impressions";
@@ -73,7 +75,7 @@ const SPEND = "Spend";
 const CAMPAIGN_METRICS = [IMPRESSIONS, CLICKS, SPEND];
 
 const NONE_OPT = {label: 'None', value: 'none'};
-
+const MAX_LOOKBACK_DAYS = 30;
 const LABEL_STYLE = {marginRight: '10px', fontWeight: '600', color: '#777'};
 
 const mapStateToProps = store => {
@@ -171,7 +173,8 @@ class AttributionQuery extends Component {
     if (this.state.attributionMethodology.value !== FIRST_TOUCH &&
       this.state.attributionMethodology.value !== LAST_TOUCH &&
       this.state.attributionMethodology.value !== FIRST_TOUCH_NON_DIRECT &&
-      this.state.attributionMethodology.value !== LAST_TOUCH_NON_DIRECT) {
+      this.state.attributionMethodology.value !== LAST_TOUCH_NON_DIRECT &&
+      this.state.attributionMethodology.value !== LINEAR_TOUCH) {
       this.props.showError("No attribution methodology provided.")
       return false
     }
@@ -223,10 +226,15 @@ class AttributionQuery extends Component {
 
     let rValue = value;
     let isFloat = (value % 1) > 0;
-    if (isFloat) rValue = value >= 1 ? value.toFixed(0) : value.toFixed(2);
+    if (isFloat) rValue = value >= 1 ? value.toFixed(1) : value.toFixed(2);
     // no decimal points for value >= 1 and 2 decimal points < 1.
-    if (meta && meta.currency && key.toLowerCase().indexOf('spend') > -1)
+    if (meta && meta.currency && key.toLowerCase().indexOf('spend') > -1){
       rValue = rValue + ' ' + meta.currency;
+      return rValue;
+    }
+    if (isFloat){
+      return Number(rValue);
+    }
     return rValue;
   }
 
@@ -576,7 +584,6 @@ class AttributionQuery extends Component {
   }
 
   renderConversionEventWithProperties() {
-    console.log(this.state);
     return <ConversionEvent
       index={0}
       key={'events_0'}
@@ -598,7 +605,7 @@ class AttributionQuery extends Component {
 
   getAllowedLookbackDays() {
     let allowedDays = []
-    for (let i = 1; i < 31; i++) {
+    for (let i = 0; i < MAX_LOOKBACK_DAYS + 1; i++) {
       allowedDays.push({value: i, label: i})
     }
     return allowedDays
@@ -640,12 +647,6 @@ class AttributionQuery extends Component {
           <span style={LABEL_STYLE}>Lookback Window (in days)</span>
         </Col>
         <Col xs='8' md='8'>
-          {/*<input className="form-control" style={{
-            height: "38px", width: "250px", borderRadius: "5px",
-            border: "1px solid #bbb"
-          }} type="text" value={this.state.lookbackDays} onChange={this.handleLookbackWindowChange}
-                 placeholder="in days max 30">
-          </input>*/}
           <div style={{display: 'inline-block', width: '168px', marginRight: '10px'}} className='fapp-select light'>
             <Select
               onChange={this.handleLookbackWindowChange}

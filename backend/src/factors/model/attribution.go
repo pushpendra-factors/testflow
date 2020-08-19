@@ -50,9 +50,10 @@ const (
 	ATTRIBUTION_METHOD_FIRST_TOUCH_NON_DIRECT = "First_Touch_ND"
 	ATTRIBUTION_METHOD_LAST_TOUCH             = "Last_Touch"
 	ATTRIBUTION_METHOD_LAST_TOUCH_NON_DIRECT  = "Last_Touch_ND"
-
-	ATTRIBUTION_KEY_CAMPAIGN = "Campaign"
-	ATTRIBUTION_KEY_SOURCE   = "Source"
+	ATTRIBUTION_METHOD_LINEAR                 = "Linear"
+	ATTRIBUTION_KEY_CAMPAIGN                  = "Campaign"
+	ATTRIBUTION_KEY_SOURCE                    = "Source"
+	ATTRIBUTION_KEY_ADGROUP                   = "AdGroup"
 
 	SECS_IN_A_DAY        = int64(86400)
 	LOOKBACK_CAP_IN_DAYS = 180
@@ -67,8 +68,8 @@ type AttributionData struct {
 	Clicks               int
 	Spend                float64
 	WebsiteVisitors      int64
-	ConversionEventCount int64
-	LinkedEventsCount    []int64
+	ConversionEventCount float64
+	LinkedEventsCount    []float64
 }
 
 type UserInfo struct {
@@ -87,7 +88,9 @@ func getQuerySessionProperty(attributionKey string) (string, error) {
 		return U.EP_CAMPAIGN, nil
 	} else if attributionKey == ATTRIBUTION_KEY_SOURCE {
 		return U.EP_SOURCE, nil
-	} // Todo (Anil) add here for adgroup, medium etc
+	} else if attributionKey == ATTRIBUTION_KEY_ADGROUP {
+		return U.EP_ADGROUP, nil
+	}
 	return "", errors.New("invalid query properties")
 }
 
@@ -107,33 +110,6 @@ func GetQueryUserProperty(query *AttributionQuery) (string, error) {
 		}
 	}
 	return "", errors.New("invalid query properties")
-}
-
-// Attribute each user to the conversion event and linked event by attribution Id.
-func addUpLinkedFunnelEventCount(linkedEvents []QueryEventWithProperties,
-	attributionData map[string]*AttributionData, linkedUserAttributionData map[string]map[string]string) {
-
-	linkedEventToPositionMap := make(map[string]int)
-	for position, linkedEvent := range linkedEvents {
-		linkedEventToPositionMap[linkedEvent.Name] = position
-	}
-	// fill up all the linked events count with 0 value
-	for _, attributionRow := range attributionData {
-		if attributionRow != nil {
-			for len(attributionRow.LinkedEventsCount) < len(linkedEvents) {
-				attributionRow.LinkedEventsCount = append(attributionRow.LinkedEventsCount, 0)
-			}
-		}
-	}
-	// update linked up events with event hit count
-	for linkedEventName, userIdAttributionIdMap := range linkedUserAttributionData {
-		for _, attributionId := range userIdAttributionIdMap {
-			attributionRow := attributionData[attributionId]
-			if attributionRow != nil {
-				attributionRow.LinkedEventsCount[linkedEventToPositionMap[linkedEventName]] += 1
-			}
-		}
-	}
 }
 
 // Adds common column names and linked events as header to the result rows.
@@ -222,8 +198,8 @@ func ExecuteAttributionQuery(projectId uint64, query *AttributionQuery) (*QueryR
 	return result, nil
 }
 
-// Converts a slice of int64 to a slice of interface.
-func getInterfaceList(data []int64) []interface{} {
+// Converts a slice of float64 to a slice of interface.
+func getInterfaceListFromFloat64(data []float64) []interface{} {
 	var list []interface{}
 	for _, val := range data {
 		list = append(list, []interface{}{val})
@@ -234,9 +210,9 @@ func getInterfaceList(data []int64) []interface{} {
 // Returns result in from of metrics. For empty attribution id, the values are accumulated into "$none".
 func getRowsByMaps(attributionData map[string]*AttributionData, query *AttributionQuery) [][]interface{} {
 	rows := make([][]interface{}, 0)
-	nonMatchingRow := []interface{}{"none", 0, 0, float64(0), int64(0), int64(0), float64(0)}
+	nonMatchingRow := []interface{}{"none", 0, 0, float64(0), int64(0), float64(0), float64(0)}
 	for i := 0; i < len(query.LinkedEvents); i++ {
-		nonMatchingRow = append(nonMatchingRow, int64(0))
+		nonMatchingRow = append(nonMatchingRow, float64(0))
 	}
 	for key, data := range attributionData {
 		attributionIdName := data.Name
@@ -246,12 +222,12 @@ func getRowsByMaps(attributionData map[string]*AttributionData, query *Attributi
 		if attributionIdName != "" {
 			var row []interface{}
 			cpc := 0.0
-			if data.ConversionEventCount != 0 {
-				cpc = data.Spend / float64(data.ConversionEventCount)
+			if data.ConversionEventCount != 0.0 {
+				cpc = data.Spend / data.ConversionEventCount
 			}
 			row = append(row, attributionIdName, data.Impressions, data.Clicks, data.Spend, data.WebsiteVisitors,
 				data.ConversionEventCount, cpc)
-			row = append(row, getInterfaceList(data.LinkedEventsCount)...)
+			row = append(row, getInterfaceListFromFloat64(data.LinkedEventsCount)...)
 			rows = append(rows, row)
 		} else {
 			updateNonMatchingRow(&nonMatchingRow, data, query)
@@ -260,7 +236,7 @@ func getRowsByMaps(attributionData map[string]*AttributionData, query *Attributi
 	rows = append(rows, nonMatchingRow)
 	// sort the rows by conversionEvent
 	sort.Slice(rows, func(i, j int) bool {
-		return rows[i][5].(int64) > rows[j][5].(int64)
+		return rows[i][5].(float64) > rows[j][5].(float64)
 	})
 	return rows
 }
@@ -270,21 +246,54 @@ func updateNonMatchingRow(nonMatchingRow *[]interface{}, data *AttributionData, 
 	(*nonMatchingRow)[2] = (*nonMatchingRow)[2].(int) + data.Clicks
 	(*nonMatchingRow)[3] = (*nonMatchingRow)[3].(float64) + data.Spend
 	(*nonMatchingRow)[4] = (*nonMatchingRow)[4].(int64) + data.WebsiteVisitors
-	(*nonMatchingRow)[5] = (*nonMatchingRow)[5].(int64) + data.ConversionEventCount
+	(*nonMatchingRow)[5] = (*nonMatchingRow)[5].(float64) + data.ConversionEventCount
 	for index := 0; index < len(query.LinkedEvents); index++ {
 		if index < len(data.LinkedEventsCount) {
-			(*nonMatchingRow)[5+index+1] = (*nonMatchingRow)[5+index+1].(int64) + data.LinkedEventsCount[index]
+			(*nonMatchingRow)[5+index+1] = (*nonMatchingRow)[5+index+1].(float64) + data.LinkedEventsCount[index]
 		}
 	}
 }
 
 // Groups all unique users by attributionId and adds it to attributionData
-func addUpConversionEventCount(attributionData map[string]*AttributionData, usersIdAttributionIdMap map[string]string) {
-	for _, attributionId := range usersIdAttributionIdMap {
-		if _, exists := attributionData[attributionId]; !exists {
-			attributionData[attributionId] = &AttributionData{}
+func addUpConversionEventCount(attributionData map[string]*AttributionData, usersIdAttributionIdMap map[string][]string) {
+	for _, attributionKeys := range usersIdAttributionIdMap {
+		weight := 1 / float64(len(attributionKeys))
+		for _, key := range attributionKeys {
+			if _, exists := attributionData[key]; !exists {
+				attributionData[key] = &AttributionData{}
+			}
+			attributionData[key].ConversionEventCount += weight
 		}
-		attributionData[attributionId].ConversionEventCount += 1
+	}
+}
+
+// Attribute each user to the conversion event and linked event by attribution Id.
+func addUpLinkedFunnelEventCount(linkedEvents []QueryEventWithProperties,
+	attributionData map[string]*AttributionData, linkedUserAttributionData map[string]map[string][]string) {
+
+	linkedEventToPositionMap := make(map[string]int)
+	for position, linkedEvent := range linkedEvents {
+		linkedEventToPositionMap[linkedEvent.Name] = position
+	}
+	// fill up all the linked events count with 0 value
+	for _, attributionRow := range attributionData {
+		if attributionRow != nil {
+			for len(attributionRow.LinkedEventsCount) < len(linkedEvents) {
+				attributionRow.LinkedEventsCount = append(attributionRow.LinkedEventsCount, 0.0)
+			}
+		}
+	}
+	// update linked up events with event hit count
+	for linkedEventName, userIdAttributionIdMap := range linkedUserAttributionData {
+		for _, attributionKeys := range userIdAttributionIdMap {
+			weight := 1 / float64(len(attributionKeys))
+			for _, key := range attributionKeys {
+				attributionRow := attributionData[key]
+				if attributionRow != nil {
+					attributionRow.LinkedEventsCount[linkedEventToPositionMap[linkedEventName]] += weight
+				}
+			}
+		}
 	}
 }
 
