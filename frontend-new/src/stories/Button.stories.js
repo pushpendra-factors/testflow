@@ -16,9 +16,30 @@ export default {
     },
   },
   argTypes: { 
-    label: {  
-      control: false }, 
-    type: {control: false}
+    type: {
+      name: 'type',
+      type: { name: 'string', required: false }, 
+      description: 'Can be set to',
+      table: {
+        type: { summary: 'primary | secondary | text | link' },
+        defaultValue: { summary: 'secondary' },
+      },
+      control: {
+        type: false
+      }
+    },   
+    loading: {
+      name: 'loading',
+      type: { name: 'boolean', required: false }, 
+      description: 'Set the loading status of button',
+      table: {
+        type: { summary: 'boolean | { delay: number }' },
+        defaultValue: { summary: 'false' },
+      },
+      control: {
+        type: false
+      }
+    },   
   }, 
 };
 
