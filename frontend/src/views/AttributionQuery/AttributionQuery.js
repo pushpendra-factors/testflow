@@ -228,8 +228,13 @@ class AttributionQuery extends Component {
     let isFloat = (value % 1) > 0;
     if (isFloat) rValue = value >= 1 ? value.toFixed(1) : value.toFixed(2);
     // no decimal points for value >= 1 and 2 decimal points < 1.
-    if (meta && meta.currency && key.toLowerCase().indexOf('spend') > -1)
+    if (meta && meta.currency && key.toLowerCase().indexOf('spend') > -1){
       rValue = rValue + ' ' + meta.currency;
+      return rValue;
+    }
+    if (isFloat){
+      return Number(rValue);
+    }
     return rValue;
   }
 
@@ -579,7 +584,6 @@ class AttributionQuery extends Component {
   }
 
   renderConversionEventWithProperties() {
-    console.log(this.state);
     return <ConversionEvent
       index={0}
       key={'events_0'}
