@@ -941,6 +941,28 @@ func OverwriteEventProperties(projectId uint64, userId string, eventId string,
 			"Updating event properties failed in OverwriteEventProperties")
 		return http.StatusInternalServerError
 	}
+
+	return http.StatusAccepted
+}
+
+func OverwriteEventPropertiesByID(projectId uint64, id string,
+	newEventProperties *postgres.Jsonb) int {
+	logCtx := log.WithFields(log.Fields{"projectId": projectId, "id": id})
+
+	if newEventProperties == nil {
+		return http.StatusBadRequest
+	}
+	newEventProperties = U.SanitizePropertiesJsonb(newEventProperties)
+
+	db := C.GetServices().Db
+	err := db.Model(&Event{}).
+		Where("project_id = ? AND id = ?", projectId, id).
+		Update("properties", newEventProperties).Error
+	if err != nil {
+		logCtx.WithError(err).Error("Updating event properties failed in OverwriteEventPropertiesByID.")
+		return http.StatusInternalServerError
+	}
+
 	return http.StatusAccepted
 }
 
