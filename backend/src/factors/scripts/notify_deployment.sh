@@ -9,8 +9,10 @@
 # 
 # CHANNEL_TOKEN for the app is available at https://api.slack.com/apps/A018CF323HS/incoming-webhooks?
 #     To enable post to a new channel use 'Add New Webhook to Workspace' on above link.
+#     CHANNEL_TOKEN has to be set in ~/.profile or ~/.bashrc or passed explicitly to the 'make' command.
 # 
 # Sample Makefile target to set IMAGE_NAME and call this script before deployment:
+#     export CHANNEL_TOKEN
 #     pack-dashboard-caching: export IMAGE_NAME=dashboard-caching-job
 #     pack-dashboard-caching: notify-deployment
 #         docker build -t us.gcr.io/factors-$(ENV)/dashboard-caching-job:$(TAG) -f Dockerfile.dashboard_caching_job .
@@ -18,7 +20,7 @@
 #     notify-deployment:
 #         $(GOPATH)/src/factors/scripts/notify_deployment.sh
 
-if [[ "${ENV}" == "staging" ]]; then
+if [[ "${ENV}" != "production" ]]; then
     exit
 elif [[ "${IMAGE_NAME}" == "" || ${CHANNEL_TOKEN} == "" ]]; then
     echo "ERROR: Value for IMAGE_NAME or CHANNEL_TOKEN can not be empty."
