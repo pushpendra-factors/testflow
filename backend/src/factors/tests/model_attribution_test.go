@@ -105,8 +105,8 @@ func TestAttributionModel(t *testing.T) {
 
 		result, err = M.ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
-		assert.Equal(t, int64(1), getConversionEventCount(result, "111111"))
-		assert.Equal(t, int64(0), getConversionEventCount(result, "none"))
+		assert.Equal(t, float64(1), getConversionEventCount(result, "111111"))
+		assert.Equal(t, float64(0), getConversionEventCount(result, "none"))
 	})
 
 	t.Run("AttributionQueryFirstTouchOutOfTimestampRangeNoLookBack", func(t *testing.T) {
@@ -121,7 +121,7 @@ func TestAttributionModel(t *testing.T) {
 		result, err = M.ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionEventCount(result, "111111"))
-		assert.Equal(t, int64(0), getConversionEventCount(result, "none"))
+		assert.Equal(t, float64(0), getConversionEventCount(result, "none"))
 	})
 
 	// Events with +5 Days
@@ -146,10 +146,10 @@ func TestAttributionModel(t *testing.T) {
 
 		result, err = M.ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
-		assert.Equal(t, int64(1), getConversionEventCount(result, "111111"))
+		assert.Equal(t, float64(1), getConversionEventCount(result, "111111"))
 		assert.Equal(t, int64(-1), getConversionEventCount(result, "222222"))
 		assert.Equal(t, int64(-1), getConversionEventCount(result, "333333"))
-		assert.Equal(t, int64(0), getConversionEventCount(result, "none"))
+		assert.Equal(t, float64(0), getConversionEventCount(result, "none"))
 	})
 
 	// linked event for user1
@@ -190,11 +190,11 @@ func TestAttributionModel(t *testing.T) {
 		result, err = M.ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
 		assert.Equal(t, int64(-1), getConversionEventCount(result, "111111"))
-		assert.Equal(t, int64(1), getConversionEventCount(result, "222222"))
-		assert.Equal(t, int64(1), getConversionEventCount(result, "333333"))
+		assert.Equal(t, float64(1), getConversionEventCount(result, "222222"))
+		assert.Equal(t, float64(1), getConversionEventCount(result, "333333"))
 		// no hit for campaigns 1234567 or none
-		assert.Equal(t, int64(0), getConversionEventCount(result, "1234567"))
-		assert.Equal(t, int64(0), getConversionEventCount(result, "none"))
+		assert.Equal(t, float64(0), getConversionEventCount(result, "1234567"))
+		assert.Equal(t, float64(0), getConversionEventCount(result, "none"))
 	})
 }
 
@@ -323,7 +323,7 @@ func TestAttributionWithUserIdentification(t *testing.T) {
 	//both user should be treated different
 	result, err := M.ExecuteAttributionQuery(project.ID, query)
 	assert.Nil(t, err)
-	assert.Equal(t, int64(2), getConversionEventCount(result, "$none"))
+	assert.Equal(t, float64(2), getConversionEventCount(result, "$none"))
 
 	customerUserId := U.RandomLowerAphaNumString(15)
 	_, errCode = M.UpdateUser(project.ID, user1.ID, &M.User{CustomerUserId: customerUserId}, timestamp+86400)
@@ -334,7 +334,7 @@ func TestAttributionWithUserIdentification(t *testing.T) {
 	//both user should be treated same
 	result, err = M.ExecuteAttributionQuery(project.ID, query)
 	assert.Nil(t, err)
-	assert.Equal(t, int64(1), getConversionEventCount(result, "$none"))
+	assert.Equal(t, float64(1), getConversionEventCount(result, "$none"))
 
 	t.Run("TestAttributionUserIdentificationWithLookbackDays", func(t *testing.T) {
 		//continuation to previous users
@@ -368,6 +368,6 @@ func TestAttributionWithUserIdentification(t *testing.T) {
 		query.LookbackDays = 3
 		result, err = M.ExecuteAttributionQuery(project.ID, query)
 		assert.Nil(t, err)
-		assert.Equal(t, int64(1), getConversionEventCount(result, "12345"))
+		assert.Equal(t, float64(1), getConversionEventCount(result, "12345"))
 	})
 }

@@ -9,31 +9,35 @@ type pair struct {
 
 // This method maps the user to the attribution key based on given attribution methodology.
 func applyAttribution(method string, conversionEvent string, usersToBeAttributed []UserEventInfo,
-	userInitialSession map[string]map[string]RangeTimestamp) (map[string]string, map[string]map[string]string, error) {
+	userInitialSession map[string]map[string]RangeTimestamp) (map[string][]string, map[string]map[string][]string, error) {
 
-	usersAttribution := make(map[string]string)
-	linkedEventUserCampaign := make(map[string]map[string]string)
+	usersAttribution := make(map[string][]string)
+	linkedEventUserCampaign := make(map[string]map[string][]string)
 
 	for _, val := range usersToBeAttributed {
 		userId := val.coalUserId
 		eventName := val.eventName
 
-		attributionKey := PropertyValueNone
+		attributionKeys := []string{PropertyValueNone}
 		switch method {
 		case ATTRIBUTION_METHOD_FIRST_TOUCH:
-			attributionKey = getFirstTouchId(userInitialSession[userId])
+			attributionKeys = getFirstTouchId(userInitialSession[userId])
 			break
 
 		case ATTRIBUTION_METHOD_LAST_TOUCH:
-			attributionKey = getLastTouchId(userInitialSession[userId])
+			attributionKeys = getLastTouchId(userInitialSession[userId])
 			break
 
 		case ATTRIBUTION_METHOD_FIRST_TOUCH_NON_DIRECT:
-			attributionKey = getFirstTouchNDId(userInitialSession[userId])
+			attributionKeys = getFirstTouchNDId(userInitialSession[userId])
 			break
 
 		case ATTRIBUTION_METHOD_LAST_TOUCH_NON_DIRECT:
-			attributionKey = getLastTouchNDId(userInitialSession[userId])
+			attributionKeys = getLastTouchNDId(userInitialSession[userId])
+			break
+
+		case ATTRIBUTION_METHOD_LINEAR:
+			attributionKeys = getLinearTouch(userInitialSession[userId])
 			break
 
 		default:
@@ -41,20 +45,19 @@ func applyAttribution(method string, conversionEvent string, usersToBeAttributed
 		}
 
 		if eventName == conversionEvent {
-			usersAttribution[userId] = attributionKey
+			usersAttribution[userId] = attributionKeys
 		} else {
 			if _, exist := linkedEventUserCampaign[eventName]; !exist {
-				linkedEventUserCampaign[eventName] = make(map[string]string)
+				linkedEventUserCampaign[eventName] = make(map[string][]string)
 			}
-			linkedEventUserCampaign[eventName][userId] = attributionKey
+			linkedEventUserCampaign[eventName][userId] = attributionKeys
 		}
 	}
 	return usersAttribution, linkedEventUserCampaign, nil
-
 }
 
 // returns the last non $none attributionId
-func getLastTouchNDId(attributionTimerange map[string]RangeTimestamp) string {
+func getLastTouchNDId(attributionTimerange map[string]RangeTimestamp) []string {
 
 	var attributionIds []pair
 	for aId, rangeT := range attributionTimerange {
@@ -75,11 +78,21 @@ func getLastTouchNDId(attributionTimerange map[string]RangeTimestamp) string {
 			}
 		}
 	}
-	return key
+	return []string{key}
+}
+
+// returns list of attribution keys from given attributionKeyTime map
+func getLinearTouch(attributionTimerange map[string]RangeTimestamp) []string {
+
+	var keys []string
+	for aId, _ := range attributionTimerange {
+		keys = append(keys, aId)
+	}
+	return keys
 }
 
 // returns the last attributionId
-func getLastTouchId(attributionTimerange map[string]RangeTimestamp) string {
+func getLastTouchId(attributionTimerange map[string]RangeTimestamp) []string {
 
 	var attributionIds []pair
 	for aId, rangeT := range attributionTimerange {
@@ -91,13 +104,13 @@ func getLastTouchId(attributionTimerange map[string]RangeTimestamp) string {
 		sort.Slice(attributionIds, func(i, j int) bool {
 			return attributionIds[i].value > attributionIds[j].value
 		})
-		return attributionIds[0].key
+		return []string{attributionIds[0].key}
 	}
-	return key
+	return []string{key}
 }
 
 // returns the first attributionId
-func getFirstTouchId(attributionTimerange map[string]RangeTimestamp) string {
+func getFirstTouchId(attributionTimerange map[string]RangeTimestamp) []string {
 	var attributionIds []pair
 	for aId, rangeT := range attributionTimerange {
 		// MinTimestamp for FirstTouch
@@ -108,13 +121,13 @@ func getFirstTouchId(attributionTimerange map[string]RangeTimestamp) string {
 		sort.Slice(attributionIds, func(i, j int) bool {
 			return attributionIds[i].value < attributionIds[j].value
 		})
-		return attributionIds[0].key
+		return []string{attributionIds[0].key}
 	}
-	return key
+	return []string{key}
 }
 
 // returns the first non $none attributionId
-func getFirstTouchNDId(attributionTimerange map[string]RangeTimestamp) string {
+func getFirstTouchNDId(attributionTimerange map[string]RangeTimestamp) []string {
 
 	var attributionIds []pair
 	for aId, rangeT := range attributionTimerange {
@@ -135,5 +148,5 @@ func getFirstTouchNDId(attributionTimerange map[string]RangeTimestamp) string {
 			}
 		}
 	}
-	return key
+	return []string{key}
 }
