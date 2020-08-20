@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 
 	C "factors/config"
@@ -224,6 +225,7 @@ func main() {
 	dbUser := flag.String("db_user", "autometa", "")
 	dbName := flag.String("db_name", "autometa", "")
 	dbPass := flag.String("db_pass", "@ut0me7a", "")
+	dryRun := flag.Bool("dry_run", false, "")
 
 	projectID := flag.Uint64("project_id", 398, "Yourstory project_id.")
 	customEndTimestamp := flag.Int64("custom_end_timestamp", 0, "Custom end timestamp.")
@@ -281,10 +283,21 @@ func main() {
 	var failureMsg string
 	timerangeString := fmt.Sprintf("Timerange from %d to %d.", from, to)
 
+	log.WithField("from", from).WithField("to", to).
+		WithField("look_back_days", *maxLookbackDays).
+		Info("Starting the script.")
+
 	events, eventNamePropertiesLookup, errCode := getEventsWithoutPropertiesAndWithPropertiesByName(*projectID, from, to)
 	if errCode != http.StatusFound {
 		failureMsg = "Failed to get events without properties and properties lookup map." + " " + timerangeString
 		log.WithField("err_code", errCode).Error(failureMsg)
+	}
+
+	if *dryRun {
+		log.WithField("lookup_size", len(*eventNamePropertiesLookup)).
+			WithField("no_of_event_to_update", len(events)).
+			Info("Successfull dry run.")
+		os.Exit(0)
 	}
 
 	errCode = addEventPropertiesByName(*projectID, eventNamePropertiesLookup, events)
