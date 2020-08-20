@@ -47,7 +47,8 @@ commit_id=`echo "${latest_tag}" | cut -d'-' -f2`
 commit_history=`git log | grep -B10000 "commit ${commit_id}" | sed '$d' | grep -v '^[[:space:]]*$' | grep -e "^Author" -e "^Date" -e "^  " | sed 's/^  /      /g'`
 
 # Highlights captures only pull requests information instead of entire commit history.
-highlights=`echo "${commit_history}" | grep -B2 -e "(#[0-9]\+)$"`
+# With grep -m5, takes only recent 5 pull requests, otherwise for old image, it will be flooded with PRs.
+highlights=`echo "${commit_history}" | grep -m5 -B2 -e "(#[0-9]\+)$"`
 if [[ "${highlights}" == "" ]]; then
     # If no pull request information available, use entire commit history.
     highlights="${commit_history}"

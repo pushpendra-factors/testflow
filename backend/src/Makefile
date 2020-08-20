@@ -46,32 +46,32 @@ serve-predis:
 clean:
 	rm $(GOPATH)/bin/pattern-app $(GOPATH)/bin/app $(GOPATH)/bin/data-service
 
-pack-api: export IMAGE_NAME=app-server
-pack-api: notify-deployment
+pack-api:
 	docker build -t us.gcr.io/factors-$(ENV)/app-server:$(TAG) -f Dockerfile.appserver .
 
-upload-api:
+upload-api: export IMAGE_NAME=app-server
+upload-api: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/app-server:$(TAG)
 
-pack-ps: export IMAGE_NAME=pattern-server
-pack-ps: notify-deployment
+pack-ps:
 	docker build -t us.gcr.io/factors-$(ENV)/pattern-server:$(TAG) -f Dockerfile.patternserver .
 
-upload-ps:
+upload-ps: export IMAGE_NAME=pattern-server
+upload-ps: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/pattern-server:$(TAG)
 
-pack-ds: export IMAGE_NAME=data-server
-pack-ds: notify-deployment
+pack-ds:
 	docker build -t us.gcr.io/factors-$(ENV)/data-server:$(TAG) -f Dockerfile.dataserver .
 
-upload-ds:
+upload-ds: export IMAGE_NAME=data-server
+upload-ds: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/data-server:$(TAG)
 
-pack-sdk: export IMAGE_NAME=sdk-server
-pack-sdk: notify-deployment
+pack-sdk:
 	docker build -t us.gcr.io/factors-$(ENV)/sdk-server:$(TAG) -f Dockerfile.sdkserver .
 
-upload-sdk:
+upload-sdk: export IMAGE_NAME=sdk-server
+upload-sdk: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/sdk-server:$(TAG)
 
 pack-redis:
@@ -86,108 +86,108 @@ pack-predis:
 upload-predis:
 	docker push us.gcr.io/factors-$(ENV)/persistent-redis:$(TAG)
 
-pack-debug: export IMAGE_NAME=debug
-pack-debug: notify-deployment
+pack-debug:
 	docker build --no-cache -t us.gcr.io/factors-$(ENV)/debug:$(TAG) -f Dockerfile.debug .
 
-upload-debug:
+upload-debug: export IMAGE_NAME=debug
+upload-debug: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/debug:$(TAG)
 
-pack-build-seq: export IMAGE_NAME=build-seq-job
-pack-build-seq: notify-deployment
+pack-build-seq:
 	docker build -t us.gcr.io/factors-$(ENV)/build-seq-job:$(TAG) -f Dockerfile.build_seq_job .
 
-upload-build-seq:
+upload-build-seq: export IMAGE_NAME=build-seq-job
+upload-build-seq: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/build-seq-job:$(TAG)
 
-pack-build-reports: export IMAGE_NAME=build-reports-job
-pack-build-reports: notify-deployment
+pack-build-reports:
 	docker build -t us.gcr.io/factors-$(ENV)/build-reports-job:$(TAG) -f Dockerfile.build_reports .
 
-upload-build-reports:
+upload-build-reports: export IMAGE_NAME=build-reports-job
+upload-build-reports: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/build-reports-job:$(TAG)
 
-pack-add-session: export IMAGE_NAME=add-session-job
-pack-add-session: notify-deployment
+pack-add-session:
 	docker build -t us.gcr.io/factors-$(ENV)/add-session-job:$(TAG) -f Dockerfile.add_session_job .
 
-upload-add-session:
+upload-add-session: export IMAGE_NAME=add-session-job
+upload-add-session: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/add-session-job:$(TAG)
 
-pack-hubspot-enrich: export IMAGE_NAME=hubspot-enrich-job
-pack-hubspot-enrich: notify-deployment
+pack-hubspot-enrich:
 	docker build -t us.gcr.io/factors-$(ENV)/hubspot-enrich-job:$(TAG) -f Dockerfile.hubspot_enrich_job .
 
-upload-hubspot-enrich:
+upload-hubspot-enrich: export IMAGE_NAME=hubspot-enrich-job
+upload-hubspot-enrich: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/hubspot-enrich-job:$(TAG)
 
-pack-sdk-request-worker: export IMAGE_NAME=sdk-request-worker
-pack-sdk-request-worker: notify-deployment
+pack-sdk-request-worker:
 	docker build -t us.gcr.io/factors-$(ENV)/sdk-request-worker:$(TAG) -f Dockerfile.sdk_request_worker .
 
-upload-sdk-request-worker:
+upload-sdk-request-worker: export IMAGE_NAME=sdk-request-worker
+upload-sdk-request-worker: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/sdk-request-worker:$(TAG)
 
-pack-integration-request-worker: export IMAGE_NAME=integration-request-worker
-pack-integration-request-worker: notify-deployment
+pack-integration-request-worker:
 	docker build -t us.gcr.io/factors-$(ENV)/integration-request-worker:$(TAG) -f Dockerfile.integration_request_worker .
 
-upload-integration-request-worker:
+upload-integration-request-worker: export IMAGE_NAME=integration-request-worker
+upload-integration-request-worker: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/integration-request-worker:$(TAG)
 
-pack-monitoring: export IMAGE_NAME=monitoring
-pack-monitoring: notify-deployment
+pack-monitoring:
 	docker build -t us.gcr.io/factors-$(ENV)/monitoring:$(TAG) -f Dockerfile.monitoring .
 
-upload-monitoring:
+upload-monitoring: export IMAGE_NAME=monitoring
+upload-monitoring: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/monitoring:$(TAG)
 
-pack-archive-events: export IMAGE_NAME=archive-events-job
-pack-archive-events: notify-deployment
+pack-archive-events:
 	docker build -t us.gcr.io/factors-$(ENV)/archive-events-job:$(TAG) -f Dockerfile.archive_events_job .
 
-upload-archive-events:
+upload-archive-events: export IMAGE_NAME=archive-events-job
+upload-archive-events: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/archive-events-job:$(TAG)
 
-pack-bigquery-upload: export IMAGE_NAME=bigquery-upload-job
-pack-bigquery-upload: notify-deployment
+pack-bigquery-upload:
 	docker build -t us.gcr.io/factors-$(ENV)/bigquery-upload-job:$(TAG) -f Dockerfile.bigquery_upload_job .
 
-upload-bigquery-upload:
+upload-bigquery-upload: export IMAGE_NAME=bigquery-upload-job
+upload-bigquery-upload: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/bigquery-upload-job:$(TAG)
 
-pack-onboard-to-bigquery: export IMAGE_NAME=onboard-to-bigquery-job
-pack-onboard-to-bigquery: notify-deployment
+pack-onboard-to-bigquery:
 	docker build -t us.gcr.io/factors-$(ENV)/onboard-to-bigquery-job:$(TAG) -f Dockerfile.onboard_to_bigquery_job .
 
-upload-onboard-to-bigquery:
+upload-onboard-to-bigquery: export IMAGE_NAME=onboard-to-bigquery-job
+upload-onboard-to-bigquery: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/onboard-to-bigquery-job:$(TAG)
 
-pack-merge-user-properties: export IMAGE_NAME=merge-user-properties-job
-pack-merge-user-properties: notify-deployment
+pack-merge-user-properties:
 	docker build -t us.gcr.io/factors-$(ENV)/merge-user-properties-job:$(TAG) -f Dockerfile.merge_user_properties_job .
 
-upload-merge-user-properties:
+upload-merge-user-properties: export IMAGE_NAME=merge-user-properties-job
+upload-merge-user-properties: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/merge-user-properties-job:$(TAG)
 
-pack-dashboard-caching: export IMAGE_NAME=dashboard-caching-job
-pack-dashboard-caching: notify-deployment
+pack-dashboard-caching:
 	docker build -t us.gcr.io/factors-$(ENV)/dashboard-caching-job:$(TAG) -f Dockerfile.dashboard_caching_job .
 
-upload-dashboard-caching:
+upload-dashboard-caching: export IMAGE_NAME=dashboard-caching-job
+upload-dashboard-caching: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/dashboard-caching-job:$(TAG)
 
-pack-web-analytics-dashboard: export IMAGE_NAME=web-analytics-dashboard-job
-pack-web-analytics-dashboard: notify-deployment
+pack-web-analytics-dashboard:
 	docker build -t us.gcr.io/factors-$(ENV)/web-analytics-dashboard-job:$(TAG) -f Dockerfile.web_analytics_dashboard_job .
 
-upload-web-analytics-dashboard:
+upload-web-analytics-dashboard: export IMAGE_NAME=web-analytics-dashboard-job
+upload-web-analytics-dashboard: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/web-analytics-dashboard-job:$(TAG)
 
-pack-build-yourstory-add-properties: export IMAGE_NAME=yourstory-add-properties-job
 pack-build-yourstory-add-properties: 
 	docker build -t us.gcr.io/factors-$(ENV)/yourstory-add-properties-job:$(TAG) -f Dockerfile.yourstory_add_properties_job .
 
+upload-build-yourstory-add-properties: export IMAGE_NAME=yourstory-add-properties-job
 upload-build-yourstory-add-properties: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/yourstory-add-properties-job:$(TAG)
 
