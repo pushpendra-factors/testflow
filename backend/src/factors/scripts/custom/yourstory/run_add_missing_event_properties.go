@@ -148,21 +148,23 @@ func addEventPropertiesByName(
 	projectID uint64,
 	propertiesByName *map[string]U.PropertiesMap,
 	eventsWithoutProperties []EventWithProperties,
-) int {
+) (int, int) {
 	logCtx := log.WithField("project_id", projectID)
 
+	noOfUpdates := 0
+
 	if projectID == 0 {
-		return http.StatusBadRequest
+		return http.StatusBadRequest, noOfUpdates
 	}
 
 	if len(eventsWithoutProperties) == 0 {
 		logCtx.Error("No events without properties.")
-		return http.StatusBadRequest
+		return http.StatusBadRequest, noOfUpdates
 	}
 
 	if propertiesByName == nil || len(*propertiesByName) == 0 {
 		logCtx.Error("Empty properties by name lookup map.")
-		return http.StatusInternalServerError
+		return http.StatusInternalServerError, noOfUpdates
 	}
 
 	for i := range eventsWithoutProperties {
@@ -213,9 +215,10 @@ func addEventPropertiesByName(
 			logCtx.Error("Failed to update event properties after adding missing properties.")
 			continue
 		}
+		noOfUpdates++
 	}
 
-	return http.StatusAccepted
+	return http.StatusAccepted, noOfUpdates
 }
 
 func main() {
@@ -281,7 +284,7 @@ func main() {
 	from := to - maxLookbackDaysInSeconds
 
 	var failureMsg string
-	timerangeString := fmt.Sprintf("Timerange from %d to %d.", from, to)
+	timerangeString := fmt.Sprintf("from=%d to=%d.", from, to)
 
 	log.WithField("from", from).WithField("to", to).
 		WithField("look_back_days", *maxLookbackDays).
@@ -300,7 +303,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	errCode = addEventPropertiesByName(*projectID, eventNamePropertiesLookup, events)
+	errCode, noOfUpdates := addEventPropertiesByName(*projectID, eventNamePropertiesLookup, events)
 	if errCode != http.StatusAccepted {
 		failureMsg = "Failed to add missing event properties." + " " + timerangeString
 		log.WithField("err_code", errCode).Error(failureMsg)
@@ -313,5 +316,9 @@ func main() {
 		}
 	}
 
-	log.Info("Successfully updated missing event properties." + " " + timerangeString)
+	log.WithFields(log.Fields{
+		"no_of_events_without_properties": len(events),
+		"size_of_lookup":                  len(*eventNamePropertiesLookup),
+		"no_of_events_updated":            noOfUpdates,
+	}).Info("Successfully updated missing event properties.")
 }
