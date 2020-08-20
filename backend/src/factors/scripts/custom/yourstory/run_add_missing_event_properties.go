@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
 	C "factors/config"
 	M "factors/model"
@@ -227,6 +226,7 @@ func main() {
 	dbPass := flag.String("db_pass", "@ut0me7a", "")
 
 	projectID := flag.Uint64("project_id", 398, "Yourstory project_id.")
+	customEndTimestamp := flag.Int64("custom_end_timestamp", 0, "Custom end timestamp.")
 	maxLookbackDays := flag.Int64("max_lookback_days", 1, "Fix properties for last given days. Default 1.")
 
 	flag.Parse()
@@ -264,9 +264,19 @@ func main() {
 		log.SetFormatter(&log.JSONFormatter{})
 	}
 
-	var fiveMinutesInSeconds int64 = 300
-	from := U.UnixTimeBeforeDuration(time.Hour*24*time.Duration(*maxLookbackDays)) - fiveMinutesInSeconds
-	to := U.TimeNowUnix() - fiveMinutesInSeconds // Do not process events of last 5 minutes. Updates could be ongoing.
+	if *customEndTimestamp > 0 && *customEndTimestamp < 1577836800 {
+		log.WithField("end_timestamp", *customEndTimestamp).Fatal("Invalid custom end timestamp.")
+	}
+
+	var to int64
+	if *customEndTimestamp > 0 {
+		to = *customEndTimestamp
+	} else {
+		to = U.TimeNowUnix()
+	}
+
+	maxLookbackDaysInSeconds := 86400 * *maxLookbackDays
+	from := to - maxLookbackDaysInSeconds
 
 	var failureMsg string
 	timerangeString := fmt.Sprintf("Timerange from %d to %d.", from, to)
