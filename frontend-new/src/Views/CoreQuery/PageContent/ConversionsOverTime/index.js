@@ -145,7 +145,6 @@ function ConversionsOverTime() {
     useEffect(() => {
 
         setTimeout(() => {
-
             c3.generate({
                 size: {
                     height: 350,

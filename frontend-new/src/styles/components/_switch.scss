@@ -1,0 +1,15 @@
+.ant-switch{
+    background-color: $fa-color--mono-3;
+    border-color: $fa-color--brand-6; 
+    &.ant-switch-checked{
+        background-color: $fa-color--brand-6; 
+    }
+    .ant-switch-inner
+    {
+        font-family: $font-family;
+        font-size: 9px;
+        font-weight: $font-weight--bold;
+        text-transform: uppercase;
+    }
+
+} 

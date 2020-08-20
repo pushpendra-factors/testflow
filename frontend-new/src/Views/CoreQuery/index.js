@@ -1,7 +1,7 @@
 import React from 'react';
 import Header from './header';
 import PageContent from './PageContent';
-import QueryComposer from '../../components/QueryComposer';
+import QueryComposer from '../../components/QueryComposer'; 
 
 function CoreQuery() {
     return (
