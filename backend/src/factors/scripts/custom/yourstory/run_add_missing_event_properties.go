@@ -260,6 +260,10 @@ func main() {
 		log.WithError(err).Fatal("Failed to initialize db.")
 	}
 
+	if C.IsProduction() {
+		log.SetFormatter(&log.JSONFormatter{})
+	}
+
 	var fiveMinutesInSeconds int64 = 300
 	from := U.UnixTimeBeforeDuration(time.Hour*24*time.Duration(*maxLookbackDays)) - fiveMinutesInSeconds
 	to := U.TimeNowUnix() - fiveMinutesInSeconds // Do not process events of last 5 minutes. Updates could be ongoing.
