@@ -697,29 +697,31 @@ func addEventFilterStepsForUniqueUsersQuery(projectID uint64, q *Query,
 	qStmnt *string, qParams *[]interface{}) []string {
 
 	var commonSelect string
-	var stepOrderBy string
+	var commonOrderBy string
+
+	eventGroupProps := filterGroupPropsByType(q.GroupByProperties, PropertyEntityEvent)
+	egAnySelect, egAnyParams, egAnyGroupKeys := buildGroupKeys(eventGroupProps)
 
 	if q.GetGroupByTimestamp() != "" {
 		selectTimestamp := getSelectTimestampByType(q.GetGroupByTimestamp(), q.Timezone)
 		// select and order by with datetime.
-		commonSelect = fmt.Sprintf("DISTINCT ON(COALESCE(users.customer_user_id,events.user_id), %s)", selectTimestamp) +
-			fmt.Sprintf(" COALESCE(users.customer_user_id,events.user_id) as coal_user_id, %s as %s,", selectTimestamp, AliasDateTime) +
+		commonSelect = fmt.Sprintf("DISTINCT ON(coal_user_id%%, %s)", selectTimestamp) +
+			fmt.Sprintf(" COALESCE(users.customer_user_id,events.user_id) as coal_user_id%%, %s as %s,", selectTimestamp, AliasDateTime) +
 			" events.user_id as event_user_id"
+		commonSelect = strings.ReplaceAll(commonSelect, "%", "%s")
 
-		stepOrderBy = fmt.Sprintf("coal_user_id, %s, events.timestamp ASC", AliasDateTime)
+		commonOrderBy = fmt.Sprintf("coal_user_id%%, %s, events.timestamp ASC", AliasDateTime)
+		commonOrderBy = strings.ReplaceAll(commonOrderBy, "%", "%s")
 	} else {
 		// default select.
-		commonSelect = "DISTINCT ON(COALESCE(users.customer_user_id,events.user_id)) COALESCE(users.customer_user_id,events.user_id)" +
-			" as coal_user_id, events.user_id as event_user_id"
+		commonSelect = "DISTINCT ON(coal_user_id%s) COALESCE(users.customer_user_id,events.user_id)" +
+			" as coal_user_id%s, events.user_id as event_user_id"
 	}
 
-	eventGroupProps := filterGroupPropsByType(q.GroupByProperties, PropertyEntityEvent)
-	egAnySelect, egAnyParams, _ := buildGroupKeys(eventGroupProps)
-
 	if hasGroupEntity(q.GroupByProperties, PropertyEntityEvent) {
-		if stepOrderBy == "" {
+		if commonOrderBy == "" {
 			// Using first occurred event_properites after distinct on user_id.
-			stepOrderBy = "coal_user_id, events.timestamp ASC"
+			commonOrderBy = "coal_user_id%s, events.timestamp ASC"
 		}
 	}
 
@@ -728,16 +730,35 @@ func addEventFilterStepsForUniqueUsersQuery(projectID uint64, q *Query,
 		refStepName := stepNameByIndex(i)
 		steps = append(steps, refStepName)
 
-		var stepSelect string
+		var stepSelect, stepOrderBy string
 		var stepParams []interface{}
 		var groupByUserProperties bool
 		if q.EventsCondition == EventCondAllGivenEvent {
-			stepSelect, stepParams, _, groupByUserProperties = buildGroupKeyForStep(
+			var stepGroupSelect, stepGroupKeys string
+			var stepGroupParams []interface{}
+			stepGroupSelect, stepGroupParams, stepGroupKeys, groupByUserProperties = buildGroupKeyForStep(
 				&q.EventsWithProperties[i], q.GroupByProperties, i+1)
-			stepSelect = joinWithComma(commonSelect, stepSelect)
+			if stepGroupSelect != "" {
+				stepSelect = fmt.Sprintf(commonSelect, ", "+stepGroupKeys, ", "+stepGroupSelect)
+				stepOrderBy = fmt.Sprintf(commonOrderBy, ", "+stepGroupKeys)
+				stepParams = stepGroupParams
+			} else {
+				stepSelect = fmt.Sprintf(commonSelect, "", "")
+				if commonOrderBy != "" {
+					stepOrderBy = fmt.Sprintf(commonOrderBy, "")
+				}
+			}
 		} else {
-			stepSelect = joinWithComma(commonSelect, egAnySelect)
-			stepParams = egAnyParams
+			if hasGroupEntity(q.GroupByProperties, PropertyEntityEvent) {
+				stepSelect = fmt.Sprintf(commonSelect, ", "+egAnyGroupKeys, ", "+egAnySelect)
+				stepParams = egAnyParams
+				stepOrderBy = fmt.Sprintf(commonOrderBy, ", "+egAnyGroupKeys)
+			} else {
+				stepSelect = fmt.Sprintf(commonSelect, "", "")
+				if commonOrderBy != "" {
+					stepOrderBy = fmt.Sprintf(commonOrderBy, "")
+				}
+			}
 		}
 
 		addJoinStmnt := "JOIN users ON events.user_id=users.id"
@@ -840,32 +861,33 @@ gbp:
 
 WITH
 step_0_names AS (SELECT id, project_id, name FROM event_names WHERE project_id='3' AND name='View Project'),
+step_0 AS (SELECT DISTINCT ON(coal_user_id, _group_key_3) COALESCE(users.customer_user_id,events.user_id) as coal_user_id,
+CASE WHEN user_properties.properties->>'' IS NULL THEN '$none' WHEN user_properties.properties->>'' = '' THEN '$none'
+ELSE user_properties.properties->>'' END AS _group_key_3, events.user_id as event_user_id FROM events
+JOIN users ON events.user_id=users.id JOIN user_properties on events.user_properties_id=user_properties.id
+WHERE events.project_id='3' AND timestamp>='1597170600' AND timestamp<='1597775399' AND events.event_name_id IN
+(SELECT id FROM step_0_names WHERE project_id='3' AND name='View Project') ORDER BY coal_user_id, _group_key_3,
+events.timestamp ASC),
 
-step_0 AS (SELECT DISTINCT ON(COALESCE(users.customer_user_id,events.user_id)) COALESCE(users.customer_user_id,events.user_id) as coal_user_id,
-events.user_id as event_user_id, CASE WHEN user_properties.properties->>'$user_agent' IS NULL THEN '$none'
-WHEN user_properties.properties->>'$user_agent' = '' THEN '$none' ELSE user_properties.properties->>'$user_agent' END AS _group_key_3
-FROM events JOIN users ON events.user_id=users.id JOIN user_properties on events.user_properties_id=user_properties.id
-WHERE events.project_id='3' AND timestamp>='1595788200' AND timestamp<='1596392999' AND events.event_name_id IN
-(SELECT id FROM step_0_names WHERE project_id='3' AND name='View Project') ORDER BY coal_user_id, events.timestamp ASC),
+step_1_names AS (SELECT id, project_id, name FROM event_names WHERE project_id='3' AND name=''),
 
-step_1_names AS (SELECT id, project_id, name FROM event_names WHERE project_id='3' AND name='$session'),
+step_1 AS (SELECT DISTINCT ON(coal_user_id, _group_key_1, _group_key_2) COALESCE(users.customer_user_id,events.user_id) as coal_user_id,
+CASE WHEN events.properties->>'' IS NULL THEN '$none' WHEN events.properties->>'' = '' THEN '$none' ELSE events.properties->>'' END
+AS _group_key_1, CASE WHEN user_properties.properties->>'' IS NULL THEN '$none' WHEN user_properties.properties->>'' = ''
+THEN '$none' ELSE user_properties.properties->>'' END AS _group_key_2, events.user_id as event_user_id FROM events JOIN users
+ON events.user_id=users.id JOIN user_properties on events.user_properties_id=user_properties.id WHERE events.project_id='3'
+AND timestamp>='1597170600' AND timestamp<='1597775399' AND events.event_name_id IN (SELECT id FROM step_1_names
+WHERE project_id='3' AND name='') ORDER BY coal_user_id, _group_key_1, _group_key_2, events.timestamp ASC),
 
-step_1 AS (SELECT DISTINCT ON(COALESCE(users.customer_user_id,events.user_id)) COALESCE(users.customer_user_id,events.user_id) as coal_user_id,
-events.user_id as event_user_id, CASE WHEN events.properties->>'$browser' IS NULL THEN '$none' WHEN events.properties->>'$browser' = '' THEN '$none'
-ELSE events.properties->>'$browser' END AS _group_key_1, CASE WHEN user_properties.properties->>'$platform' IS NULL THEN '$none'
-WHEN user_properties.properties->>'$platform' = '' THEN '$none' ELSE user_properties.properties->>'$platform' END AS _group_key_2 FROM events
-JOIN users ON events.user_id=users.id JOIN user_properties on events.user_properties_id=user_properties.id WHERE events.project_id='3'
-AND timestamp>='1595788200' AND timestamp<='1596392999' AND events.event_name_id IN (SELECT id FROM step_1_names WHERE project_id='3' AND name='$session')
-ORDER BY coal_user_id, events.timestamp ASC),
+users_intersect AS (SELECT step_0.event_user_id as event_user_id, step_1._group_key_1, step_1._group_key_2,
+step_0._group_key_3 FROM step_0  JOIN step_1 ON step_1.coal_user_id = step_0.coal_user_id)
 
-users_intersect AS (SELECT step_0.event_user_id as event_user_id, step_1._group_key_1, step_1._group_key_2, step_0._group_key_3 FROM step_0
-JOIN step_1 ON step_1.coal_user_id = step_0.coal_user_id)
-
-SELECT CASE WHEN user_properties.properties->>'$city' IS NULL THEN '$none'
-WHEN user_properties.properties->>'$city' = '' THEN '$none' ELSE user_properties.properties->>'$city' END AS _group_key_0,
-_group_key_1, _group_key_2, _group_key_3, COUNT(DISTINCT(users_intersect.event_user_id)) AS count FROM users_intersect
-LEFT JOIN users ON users_intersect.event_user_id=users.id LEFT JOIN user_properties ON users.id=user_properties.user_id
-AND user_properties.id=users.properties_id GROUP BY _group_key_0, _group_key_1, _group_key_2, _group_key_3 ORDER BY count DESC LIMIT 100000
+SELECT CASE WHEN user_properties.properties->>'' IS NULL THEN '$none' WHEN user_properties.properties->>'' = '' THEN '$none'
+ELSE user_properties.properties->>'' END AS _group_key_0, _group_key_1, _group_key_2, _group_key_3,
+COUNT(DISTINCT(users_intersect.event_user_id)) AS count FROM users_intersect LEFT JOIN users ON
+users_intersect.event_user_id=users.id LEFT JOIN user_properties ON users.id=user_properties.user_id
+AND user_properties.id=users.properties_id GROUP BY _group_key_0, _group_key_1, _group_key_2, _group_key_3
+ORDER BY count DESC LIMIT 100000
 
 Example: Query with date
 
@@ -956,26 +978,25 @@ gbp:
 
 WITH
 step_0_names AS (SELECT id, project_id, name FROM event_names WHERE project_id='3' AND name='View Project'),
-
-step_0 AS (SELECT DISTINCT ON(COALESCE(users.customer_user_id,events.user_id)) COALESCE(users.customer_user_id,events.user_id) as coal_user_id,
-events.user_id as event_user_id, CASE WHEN events.properties->>'$browser' IS NULL THEN '$none' WHEN events.properties->>'$browser' = '' THEN '$none'
-ELSE events.properties->>'$browser' END AS _group_key_0 FROM events JOIN users ON events.user_id=users.id WHERE events.project_id='3'
-AND timestamp>='1595788200' AND timestamp<='1596392999' AND events.event_name_id IN (SELECT id FROM step_0_names WHERE project_id='3'
-AND name='View Project') ORDER BY coal_user_id, events.timestamp ASC),
+step_0 AS (SELECT DISTINCT ON(coal_user_id, _group_key_0) COALESCE(users.customer_user_id,events.user_id) as coal_user_id,
+CASE WHEN events.properties->>'' IS NULL THEN '$none' WHEN events.properties->>'' = '' THEN '$none' ELSE events.properties->>'' END
+AS _group_key_0, events.user_id as event_user_id FROM events JOIN users ON events.user_id=users.id WHERE events.project_id='3'
+AND timestamp>='1597170600' AND timestamp<='1597775399' AND events.event_name_id IN (SELECT id FROM step_0_names
+WHERE project_id='3' AND name='View Project') ORDER BY coal_user_id, _group_key_0, events.timestamp ASC),
 
 step_1_names AS (SELECT id, project_id, name FROM event_names WHERE project_id='3' AND name=''),
 
-step_1 AS (SELECT DISTINCT ON(COALESCE(users.customer_user_id,events.user_id)) COALESCE(users.customer_user_id,events.user_id) as coal_user_id,
-events.user_id as event_user_id, CASE WHEN events.properties->>'$browser' IS NULL THEN '$none' WHEN events.properties->>'$browser' = '' THEN '$none'
-ELSE events.properties->>'$browser' END AS _group_key_0 FROM events JOIN users ON events.user_id=users.id WHERE events.project_id='3'
-AND timestamp>='1595788200' AND timestamp<='1596392999' AND events.event_name_id IN (SELECT id FROM step_1_names WHERE project_id='3'
-AND name='') ORDER BY coal_user_id, events.timestamp ASC),
+step_1 AS (SELECT DISTINCT ON(coal_user_id, _group_key_0) COALESCE(users.customer_user_id,events.user_id) as coal_user_id,
+CASE WHEN events.properties->>'' IS NULL THEN '$none' WHEN events.properties->>'' = '' THEN '$none' ELSE events.properties->>''
+END AS _group_key_0, events.user_id as event_user_id FROM events JOIN users ON events.user_id=users.id WHERE events.project_id='3'
+AND timestamp>='1597170600' AND timestamp<='1597775399' AND events.event_name_id IN (SELECT id FROM step_1_names
+WHERE project_id='3' AND name='') ORDER BY coal_user_id, _group_key_0, events.timestamp ASC),
 
 users_union AS (SELECT step_0.event_user_id as event_user_id, _group_key_0 FROM step_0 UNION ALL
 SELECT step_1.event_user_id as event_user_id, _group_key_0 FROM step_1)
 
-SELECT CASE WHEN user_properties.properties->>'$city' IS NULL THEN '$none' WHEN user_properties.properties->>'$city' = '' THEN '$none'
-ELSE user_properties.properties->>'$city' END AS _group_key_1, _group_key_0, COUNT(DISTINCT(users_union.event_user_id)) AS count
+SELECT CASE WHEN user_properties.properties->>'' IS NULL THEN '$none' WHEN user_properties.properties->>'' = '' THEN '$none'
+ELSE user_properties.properties->>'' END AS _group_key_1, _group_key_0, COUNT(DISTINCT(users_union.event_user_id)) AS count
 FROM users_union LEFT JOIN users ON users_union.event_user_id=users.id LEFT JOIN user_properties ON users.id=user_properties.user_id
 AND user_properties.id=users.properties_id GROUP BY _group_key_0, _group_key_1 ORDER BY count DESC LIMIT 100000
 

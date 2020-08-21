@@ -1528,7 +1528,8 @@ func TestAnalyticsInsightsQueryWithFilterAndBreakdown(t *testing.T) {
 		assert.Equal(t, "1234", result.Rows[0][0])
 		assert.Equal(t, int64(2), result.Rows[0][1])
 		assert.Equal(t, "4321", result.Rows[1][0])
-		assert.Equal(t, int64(1), result.Rows[1][1])
+		// Counting all occurrences instead of first. So for user1, both 4321 and 1234 will be counted.
+		assert.Equal(t, int64(2), result.Rows[1][1])
 	})
 
 	t.Run("AnalyticsInsightsQueryEventOccurrenceWithCountEventOccurrences", func(t *testing.T) {
