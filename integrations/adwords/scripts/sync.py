@@ -280,11 +280,12 @@ def get_click_performance_report(adwords_client, timestamp):
     during = str_timestamp + "," + str_timestamp
     downloader = adwords_client.GetReportDownloader(version='v201809')
 
-    query_fields = ['ad_format', 'ad_group_id', 'ad_network_type_1', 'ad_network_type_2', 
-    'aoi_most_specific_target_id', 'campaign_id', 'click_type', 'creative_id', 'criteria_parameters', 
-    'date', 'device', 'gcl_id', 'page', 'slot', 'user_list_id'] 
+    query_fields = ['ad_format', 'ad_group_id', 'ad_group_name', 'ad_group_status', 'ad_network_type_1', 'ad_network_type_2',
+    'aoi_most_specific_target_id', 'campaign_id', 'campaign_location_target_id', 'campaign_name', 'campaign_status', 'clicks',
+    'click_type', 'creative_id', 'criteria_id', 'criteria_parameters', 'date', 'device', 'external_customer_id', 'gcl_id',
+    'page', 'slot', 'user_list_id']
     fields = snake_to_pascal_case(query_fields)
-    
+
     # Create report query.
     report_query = (adwords.ReportQueryBuilder()
         .Select(*fields)
