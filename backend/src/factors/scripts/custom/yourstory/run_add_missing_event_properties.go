@@ -64,7 +64,7 @@ func getEventsWithoutPropertiesAndWithPropertiesByName(projectID uint64, from, t
 	queryStartTimestamp := U.TimeNowUnix()
 	queryStmnt := "SELECT events.id, name, properties FROM events" + " " +
 		"LEFT JOIN event_names ON events.event_name_id = event_names.id" + " " +
-		"WHERE events.project_id = ? AND event_names.name != '$session' AND timestamp BETWEEN ? AND ?"
+		"WHERE events.project_id = ? AND event_names.name != '$session' AND event_names.name LIKE '%.%' AND timestamp BETWEEN ? AND ?"
 
 	db := C.GetServices().Db
 	rows, err := db.Raw(queryStmnt, projectID, from, to).Rows()
