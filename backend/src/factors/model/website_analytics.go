@@ -691,11 +691,12 @@ func buildWebAnalyticsAggregateForSessionEvent(
 	}
 
 	sessionLatestPageURL := webEvent.Properties.SessionLatestPageURL
-	if sessionLatestPageURL != "" &&
-		sessionInitialPageURL != "" &&
-		sessionInitialPageURL == sessionLatestPageURL {
+	if sessionLatestPageURL != "" {
+		if _, exists := aggrState.PageAggregates[sessionLatestPageURL]; !exists {
+			aggrState.PageAggregates[sessionLatestPageURL] = &WebAnalyticsPageAggregate{}
+		}
 
-		aggrState.PageAggregates[sessionInitialPageURL].NoOfExits++
+		aggrState.PageAggregates[sessionLatestPageURL].NoOfExits++
 	}
 
 	return http.StatusOK
