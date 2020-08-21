@@ -4,8 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
-	"time"
 
 	C "factors/config"
 	M "factors/model"
@@ -148,21 +148,23 @@ func addEventPropertiesByName(
 	projectID uint64,
 	propertiesByName *map[string]U.PropertiesMap,
 	eventsWithoutProperties []EventWithProperties,
-) int {
+) (int, int) {
 	logCtx := log.WithField("project_id", projectID)
 
+	noOfUpdates := 0
+
 	if projectID == 0 {
-		return http.StatusBadRequest
+		return http.StatusBadRequest, noOfUpdates
 	}
 
 	if len(eventsWithoutProperties) == 0 {
 		logCtx.Error("No events without properties.")
-		return http.StatusBadRequest
+		return http.StatusBadRequest, noOfUpdates
 	}
 
 	if propertiesByName == nil || len(*propertiesByName) == 0 {
 		logCtx.Error("Empty properties by name lookup map.")
-		return http.StatusInternalServerError
+		return http.StatusInternalServerError, noOfUpdates
 	}
 
 	for i := range eventsWithoutProperties {
@@ -213,9 +215,10 @@ func addEventPropertiesByName(
 			logCtx.Error("Failed to update event properties after adding missing properties.")
 			continue
 		}
+		noOfUpdates++
 	}
 
-	return http.StatusAccepted
+	return http.StatusAccepted, noOfUpdates
 }
 
 func main() {
@@ -225,8 +228,10 @@ func main() {
 	dbUser := flag.String("db_user", "autometa", "")
 	dbName := flag.String("db_name", "autometa", "")
 	dbPass := flag.String("db_pass", "@ut0me7a", "")
+	dryRun := flag.Bool("dry_run", false, "")
 
 	projectID := flag.Uint64("project_id", 398, "Yourstory project_id.")
+	customEndTimestamp := flag.Int64("custom_end_timestamp", 0, "Custom end timestamp.")
 	maxLookbackDays := flag.Int64("max_lookback_days", 1, "Fix properties for last given days. Default 1.")
 
 	flag.Parse()
@@ -260,12 +265,30 @@ func main() {
 		log.WithError(err).Fatal("Failed to initialize db.")
 	}
 
-	var fiveMinutesInSeconds int64 = 300
-	from := U.UnixTimeBeforeDuration(time.Hour*24*time.Duration(*maxLookbackDays)) - fiveMinutesInSeconds
-	to := U.TimeNowUnix() - fiveMinutesInSeconds // Do not process events of last 5 minutes. Updates could be ongoing.
+	if C.IsProduction() {
+		log.SetFormatter(&log.JSONFormatter{})
+	}
+
+	if *customEndTimestamp > 0 && *customEndTimestamp < 1577836800 {
+		log.WithField("end_timestamp", *customEndTimestamp).Fatal("Invalid custom end timestamp.")
+	}
+
+	var to int64
+	if *customEndTimestamp > 0 {
+		to = *customEndTimestamp
+	} else {
+		to = U.TimeNowUnix()
+	}
+
+	maxLookbackDaysInSeconds := 86400 * *maxLookbackDays
+	from := to - maxLookbackDaysInSeconds
 
 	var failureMsg string
-	timerangeString := fmt.Sprintf("Timerange from %d to %d.", from, to)
+	timerangeString := fmt.Sprintf("from=%d to=%d.", from, to)
+
+	log.WithField("from", from).WithField("to", to).
+		WithField("look_back_days", *maxLookbackDays).
+		Info("Starting the script.")
 
 	events, eventNamePropertiesLookup, errCode := getEventsWithoutPropertiesAndWithPropertiesByName(*projectID, from, to)
 	if errCode != http.StatusFound {
@@ -273,7 +296,14 @@ func main() {
 		log.WithField("err_code", errCode).Error(failureMsg)
 	}
 
-	errCode = addEventPropertiesByName(*projectID, eventNamePropertiesLookup, events)
+	if *dryRun {
+		log.WithField("lookup_size", len(*eventNamePropertiesLookup)).
+			WithField("no_of_event_to_update", len(events)).
+			Info("Successfull dry run.")
+		os.Exit(0)
+	}
+
+	errCode, noOfUpdates := addEventPropertiesByName(*projectID, eventNamePropertiesLookup, events)
 	if errCode != http.StatusAccepted {
 		failureMsg = "Failed to add missing event properties." + " " + timerangeString
 		log.WithField("err_code", errCode).Error(failureMsg)
@@ -286,5 +316,9 @@ func main() {
 		}
 	}
 
-	log.Info("Successfully updated missing event properties." + " " + timerangeString)
+	log.WithFields(log.Fields{
+		"no_of_events_without_properties": len(events),
+		"size_of_lookup":                  len(*eventNamePropertiesLookup),
+		"no_of_events_updated":            noOfUpdates,
+	}).Info("Successfully updated missing event properties.")
 }

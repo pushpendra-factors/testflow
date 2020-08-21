@@ -184,11 +184,11 @@ upload-web-analytics-dashboard: export IMAGE_NAME=web-analytics-dashboard-job
 upload-web-analytics-dashboard: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/web-analytics-dashboard-job:$(TAG)
 
-pack-build-yourstory-add-properties: 
+pack-yourstory-add-properties: 
 	docker build -t us.gcr.io/factors-$(ENV)/yourstory-add-properties-job:$(TAG) -f Dockerfile.yourstory_add_properties_job .
 
-upload-build-yourstory-add-properties: export IMAGE_NAME=yourstory-add-properties-job
-upload-build-yourstory-add-properties: notify-deployment
+upload-yourstory-add-properties: export IMAGE_NAME=yourstory-add-properties-job
+upload-yourstory-add-properties: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/yourstory-add-properties-job:$(TAG)
 
 notify-deployment:
