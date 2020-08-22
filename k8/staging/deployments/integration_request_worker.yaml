@@ -78,6 +78,8 @@ spec:
           - $(OFFLINE_SESSION_PROJECT_IDS)
           - --merge_usp_project_ids
           - $(MERGE_USP_PROJECT_IDS)
+          - --sentry_dsn
+          - $(SENTRY_DSN)
         envFrom:
         - configMapRef:
             name: config-appserver
@@ -97,6 +99,8 @@ spec:
             name: secret-postgres
         - secretRef:
             name: secret-aws
+        - secretRef:
+            name: secret-sentry
       initContainers:
       - name: fetch-geolocation-file
         image: google/cloud-sdk:229.0.0-alpine
