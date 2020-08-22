@@ -1,7 +1,5 @@
 module github.com/gin-gonic/gin
 
-go 1.14
-
 require (
 	github.com/campoy/embedmd v0.0.0-20171205015432-c59ce00e0296
 	github.com/client9/misspell v0.3.4

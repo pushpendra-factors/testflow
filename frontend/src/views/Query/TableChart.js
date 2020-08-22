@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { Table } from 'reactstrap';
+import { Table, Button, Input } from 'reactstrap';
 import { isSingleCountResult, getReadableValue } from '../../util';
 import {BootstrapTable, TableHeaderColumn} from 'react-bootstrap-table';
 import 'react-bootstrap-table/dist/react-bootstrap-table.min.css';
@@ -7,7 +7,11 @@ import 'react-bootstrap-table/dist/react-bootstrap-table.min.css';
 class TableChart extends Component {
   constructor(props) {
     super(props);
-    this.state = {};
+    this.state = {
+      searchValue: "",
+      search: false,
+      dataRows: []
+    };
   }
 
   tableHeader() {
@@ -63,7 +67,10 @@ class TableChart extends Component {
   }
   getData(){
     let rows=[];
-    let result = this.props.queryResult;
+    let result = {...this.props.queryResult};
+    if (this.state.search) {
+      result.rows = [...this.state.dataRows]
+    }
     for (let i =0; i< result.rows.length; i++){
       let cols= result.rows[i].reduce((p, c, i)=>{
         return {...p, ["header_"+i]:c}
@@ -83,9 +90,63 @@ class TableChart extends Component {
 
     return style;
   }
+  onChange = (e) => {
+    this.setState({
+      searchValue: e.target.value
+    })
+  }
+  search = () => {
+    if(this.state.searchValue !== "") {
+      let searchValue = this.state.searchValue.toLowerCase()
+      let result = {...this.props.queryResult}
+      let rows = result.rows.filter(row=> {
+        let newRow = [...row]
+        let found= false
+        for(let i=0;i<newRow.length;i++) {
+          if(row[i].toString().toLowerCase().includes(searchValue, 0)) {
+            found =true
+            break;
+          }
+        }
+        if( found) return newRow
+      })
+      this.setState({
+        dataRows: rows,
+        search: true
+      })
+    }
+  }
+  renderSearchButtons = () => {
+    return (
+    <div className="d-flex align-items-center mb-1">
+      <Input
+          type="text"
+          onChange={this.onChange}
+          placeholder="Enter search value"
+          value={this.state.searchValue}
+          className="mx-1"
+          style={{ border: "1px solid #ddd", color: "#444444", width: "30%" }}
+        />
+        <Button 
+          outline color="primary"
+          onClick = {this.search}
+        >Search
+        </Button>
+        <Button 
+          className="ml-1"
+          outline color="success"
+          onClick = {()=> this.setState({search: false})}
+        >Show Original
+        </Button>
+    </div>
+    )
+  }
 
   render() {
-    let result = this.props.queryResult;
+    let result = {...this.props.queryResult};
+    if(this.state.search) {
+      result.rows = this.state.dataRows
+    }
     let rows = [];
 
     let rowKeys = Object.keys(result.rows);
@@ -104,9 +165,12 @@ class TableChart extends Component {
 
     if (sortable){
       return (
-      <BootstrapTable bodyStyle={{paddingBottom:"4px"}} containerStyle={{paddingBottom:"-2px"}} bordered={false} trStyle={{overflowWrap: 'break-word'}} containerClass='fapp-table animated fadeIn' data={this.getData()} options={{sortIndicator:true}} version="4">
-        {this.tableHeader()}
-      </BootstrapTable>
+        <div>
+          {this.renderSearchButtons()}
+        <BootstrapTable bodyStyle={{paddingBottom:"4px"}} containerStyle={{paddingBottom:"-2px"}} bordered={false} trStyle={{overflowWrap: 'break-word'}} containerClass='fapp-table animated fadeIn' data={this.getData()} options={{sortIndicator:true}} version="4">
+          {this.tableHeader()}
+        </BootstrapTable>
+      </div>
       )
     }
 
@@ -138,12 +202,15 @@ class TableChart extends Component {
     }
 
     return (
-      <Table className='fapp-table animated fadeIn' >
-        { this.tableHeader() }
-        <tbody>
-          { rows }
-        </tbody>
-      </Table>
+      <div>
+        {this.renderSearchButtons()}
+        <Table className='fapp-table animated fadeIn' >
+          { this.tableHeader() }
+          <tbody>
+            { rows }
+          </tbody>
+        </Table>
+      </div>
     );
   } 
 }

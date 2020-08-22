@@ -31,13 +31,16 @@ func main() {
 	factorsEmailSender := flag.String("email_sender", "support-dev@factors.ai", "")
 	errorReportingInterval := flag.Int("error_reporting_interval", 300, "")
 
+	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
+
 	flag.Parse()
 
 	if *env != "development" && *env != "staging" && *env != "production" {
 		panic(fmt.Errorf("env [ %s ] not recognised", *env))
 	}
 
-	defer util.NotifyOnPanic("Task#HubspotEnrich", *env)
+	taskID := "Task#HubspotEnrich"
+	defer util.NotifyOnPanic(taskID, *env)
 
 	// init DB, etcd
 	config := &C.Configuration{
@@ -57,6 +60,7 @@ func main() {
 		AWSRegion:              *awsRegion,
 		EmailSender:            *factorsEmailSender,
 		ErrorReportingInterval: *errorReportingInterval,
+		SentryDSN:              *sentryDSN,
 	}
 
 	C.InitConf(config.Env)
@@ -71,7 +75,11 @@ func main() {
 
 	C.InitRedis(config.RedisHost, config.RedisPort)
 	C.InitLogClient(config.Env, config.AppName, config.EmailSender, config.AWSKey,
-		config.AWSSecret, config.AWSRegion, config.ErrorReportingInterval)
+		config.AWSSecret, config.AWSRegion, config.ErrorReportingInterval, config.SentryDSN)
+	C.GetServices().SentryHook.SetTagsContext(map[string]string{
+		"JobName": taskID,
+	})
+	defer C.GetServices().SentryHook.Flush()
 
 	hubspotEnabledProjectSettings, errCode := M.GetAllHubspotProjectSettings()
 	if errCode != http.StatusFound {

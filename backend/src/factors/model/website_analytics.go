@@ -675,27 +675,29 @@ func buildWebAnalyticsAggregateForSessionEvent(
 	}
 
 	sessionInitialPageURL := webEvent.Properties.SessionInitialPageURL
-	if sessionInitialPageURL == "" {
+	if sessionInitialPageURL != "" {
+		if _, exists := aggrState.PageAggregates[sessionInitialPageURL]; !exists {
+			aggrState.PageAggregates[sessionInitialPageURL] = &WebAnalyticsPageAggregate{}
+		}
+
+		aggrState.PageAggregates[sessionInitialPageURL].NoOfEntrances++
+
+		if sessionPageCount == 1 {
+			aggrState.PageAggregates[sessionInitialPageURL].NoOfBouncedEntrances++
+		}
+	} else {
 		logCtx.Error("Missing $initial_page_url on session on build_web_analytic_aggregate.")
-		return http.StatusInternalServerError
-	}
-
-	if _, exists := aggrState.PageAggregates[sessionInitialPageURL]; !exists {
-		aggrState.PageAggregates[sessionInitialPageURL] = &WebAnalyticsPageAggregate{}
-	}
-
-	aggrState.PageAggregates[sessionInitialPageURL].NoOfEntrances++
-
-	if sessionPageCount == 1 {
-		aggrState.PageAggregates[sessionInitialPageURL].NoOfBouncedEntrances++
 	}
 
 	sessionLatestPageURL := webEvent.Properties.SessionLatestPageURL
-	if sessionLatestPageURL != "" &&
-		sessionInitialPageURL != "" &&
-		sessionInitialPageURL == sessionLatestPageURL {
+	if sessionLatestPageURL != "" {
+		if _, exists := aggrState.PageAggregates[sessionLatestPageURL]; !exists {
+			aggrState.PageAggregates[sessionLatestPageURL] = &WebAnalyticsPageAggregate{}
+		}
 
-		aggrState.PageAggregates[sessionInitialPageURL].NoOfExits++
+		aggrState.PageAggregates[sessionLatestPageURL].NoOfExits++
+	} else {
+		logCtx.Error("Missing $latest_page_url on session on build_web_analytic_aggregate.")
 	}
 
 	return http.StatusOK

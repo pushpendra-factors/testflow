@@ -112,6 +112,8 @@ spec:
           - $(FACEBOOK_APP_SECRET)
           - --skip_session_project_ids
           - $(OFFLINE_SESSION_PROJECT_IDS)
+          - --sentry_dsn
+          - $(SENTRY_DSN)
         env:
           - name: MY_POD_IP
             valueFrom:
@@ -141,6 +143,8 @@ spec:
             name: secret-login-token
         - secretRef:
             name: secret-facebook
+        - secretRef:
+            name: secret-sentry
       initContainers:
       - name: fetch-geolocation-file
         image: google/cloud-sdk:229.0.0-alpine
