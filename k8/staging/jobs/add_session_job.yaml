@@ -66,6 +66,6 @@ spec:
                 name: secret-postgres
             - secretRef:
                 name: secret-aws
-            - configMapRef:
+            - secretRef:
                 name: secret-sentry
           restartPolicy: OnFailure

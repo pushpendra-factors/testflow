@@ -57,6 +57,6 @@ spec:
                 name: secret-aws
             - configMapRef:
                 name: config-redis
-            - configMapRef:
+            - secretRef:
                 name: secret-sentry
           restartPolicy: OnFailure

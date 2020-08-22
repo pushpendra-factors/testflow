@@ -141,7 +141,7 @@ spec:
             name: secret-login-token
         - secretRef:
             name: secret-facebook
-        - configMapRef:
+        - secretRef:
             name: secret-sentry
       initContainers:
       - name: fetch-geolocation-file
