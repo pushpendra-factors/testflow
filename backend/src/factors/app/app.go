@@ -48,6 +48,8 @@ func main() {
 	adminLoginToken := flag.String("admin_login_token", "", "Admin token for login")
 	loginTokenMap := flag.String("login_token_map", "", "Map of token and agent email to authenticate")
 
+	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
+
 	skipTrackProjectIds := flag.String("skip_track_project_ids", "", "List or projects to skip track")
 
 	facebookAppId := flag.String("facebook_app_id", "", "")
@@ -87,6 +89,7 @@ func main() {
 		AdminLoginToken:        *adminLoginToken,
 		FacebookAppID:          *facebookAppId,
 		FacebookAppSecret:      *facebookAppSecret,
+		SentryDSN:              *sentryDSN,
 		LoginTokenMap:          C.ParseConfigStringToMap(*loginTokenMap),                // Map of "<token>": "<agent_email>".
 		SkipTrackProjectIds:    C.GetTokensFromStringListAsUint64(*skipTrackProjectIds), // comma seperated project ids.
 		SkipSessionProjectIds:  *skipSessionProjectIds,                                  // comma seperated project ids, supports "*".
@@ -117,6 +120,8 @@ func main() {
 	H.InitAppRoutes(r)
 	H.InitIntRoutes(r)
 	r.Run(":" + strconv.Itoa(C.GetConfig().Port))
+
+	defer C.GetServices().SentryHook.Flush()
 
 	// TODO(Ankit):
 	// Add graceful shutdown.

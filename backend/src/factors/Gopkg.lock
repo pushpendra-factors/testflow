@@ -111,6 +111,14 @@
   version = "v2.0.0"
 
 [[projects]]
+  digest = "1:875c90e39ff3e917c933c3f611bc61657bda8834e7fc59498f1a4ff0e23edefb"
+  name = "github.com/certifi/gocertifi"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "c7c1fbc02894e7114f06f6a4d9ab31eee2225bdb"
+  version = "2020.02.11"
+
+[[projects]]
   digest = "1:848ef40f818e59905140552cc49ff3dc1a15f955e4b56d1c5c2cc4b54dbadf0c"
   name = "github.com/client9/misspell"
   packages = [
@@ -163,6 +171,14 @@
   revision = "f664265f5a662fb4d1df7f3533b1e8d0e0277120"
 
 [[projects]]
+  digest = "1:2faeefda33c255e905c48ce82c2c64bd02eda980ab639d5aa0d6fc21e061c78e"
+  name = "github.com/evalphobia/logrus_sentry"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "ab0fa2ee9517a8e8c1de1c07e492e8164f852529"
+  version = "v0.8.2"
+
+[[projects]]
   branch = "master"
   digest = "1:1f53173456a9c93a93e778a64cc40bdc84339839b2007d2d51c7f81b5141567b"
   name = "github.com/gamebtc/devicedetector"
@@ -174,6 +190,14 @@
   ]
   pruneopts = "UT"
   revision = "2b1e13468d7979c6cf5c05e3a9d86aec663a4fba"
+
+[[projects]]
+  digest = "1:d18f6f088d7d8365df47f49dfa24b6ff6701a941118ffda30c589d1bd954074b"
+  name = "github.com/getsentry/raven-go"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "f04e7487e9a6b9d9837d52743fb5f40576c56411"
+  version = "v0.2.0"
 
 [[projects]]
   digest = "1:2b59aca2665ff804f6606c8829eaee133ddd3aefbc841014660d961b0034f888"
@@ -962,6 +986,7 @@
     "github.com/bradfitz/gomemcache/memcache",
     "github.com/coreos/etcd/etcdserver/api/v3rpc/rpctypes",
     "github.com/coreos/etcd/mvcc/mvccpb",
+    "github.com/evalphobia/logrus_sentry",
     "github.com/gamebtc/devicedetector",
     "github.com/gin-contrib/cors",
     "github.com/gin-gonic/gin",
@@ -979,6 +1004,7 @@
     "github.com/jinzhu/gorm/dialects/postgres",
     "github.com/jinzhu/now",
     "github.com/kelseyhightower/envconfig",
+    "github.com/lib/pq",
     "github.com/mssola/user_agent",
     "github.com/opentracing/opentracing-go",
     "github.com/opentracing/opentracing-go/ext",
@@ -995,6 +1021,8 @@
     "go.mongodb.org/mongo-driver/mongo",
     "go.mongodb.org/mongo-driver/mongo/options",
     "golang.org/x/crypto/bcrypt",
+    "google.golang.org/api/iterator",
+    "google.golang.org/api/option",
     "google.golang.org/grpc/codes",
     "gopkg.in/yaml.v2",
   ]

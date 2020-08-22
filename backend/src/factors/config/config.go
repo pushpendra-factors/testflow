@@ -14,6 +14,7 @@ import (
 	"factors/vendor_custom/machinery/v1"
 	machineryConfig "factors/vendor_custom/machinery/v1/config"
 
+	"github.com/evalphobia/logrus_sentry"
 	D "github.com/gamebtc/devicedetector"
 	"github.com/gomodule/redigo/redis"
 	"github.com/jinzhu/gorm"
@@ -75,6 +76,7 @@ type Configuration struct {
 	AdminLoginToken                  string
 	FacebookAppID                    string
 	FacebookAppSecret                string
+	SentryDSN                        string
 	LoginTokenMap                    map[string]string
 	SkipTrackProjectIds              []uint64
 	SDKRequestQueueProjectTokens     []string
@@ -95,6 +97,7 @@ type Services struct {
 	Mailer             maileriface.Mailer
 	ErrorCollector     *error_collector.Collector
 	DeviceDetector     *D.DeviceDetector
+	SentryHook         *logrus_sentry.SentryHook
 }
 
 func (service *Services) GetPatternServerAddresses() []string {
@@ -197,7 +200,7 @@ func initServices(config *Configuration) error {
 	}
 
 	InitLogClient(config.Env, config.AppName, config.EmailSender, config.AWSKey,
-		config.AWSSecret, config.AWSRegion, config.ErrorReportingInterval)
+		config.AWSSecret, config.AWSRegion, config.ErrorReportingInterval, config.SentryDSN)
 
 	initGeoLocationService(config.GeolocationFile)
 	initDeviceDetectorPath(config.DeviceDetectorPath)
@@ -399,11 +402,41 @@ func InitQueueClient(redisHost string, redisPort int) error {
 }
 
 func InitLogClient(env, appName, emailSender, awsKey, awsSecret,
-	awsRegion string, reportingInterval int) {
+	awsRegion string, reportingInterval int, sentryDSN string) {
 
 	InitMailClient(awsKey, awsSecret, awsRegion)
 	initCollectorClient(env, appName, "team@factors.ai", emailSender, reportingInterval)
 	initLogging(services.ErrorCollector)
+	InitSentryLogging(sentryDSN, appName)
+}
+
+// InitSentryLogging Adds sentry hook to capture error logs.
+func InitSentryLogging(sentryDSN, appName string) {
+	if IsDevelopment() || sentryDSN == "" {
+		return
+	}
+
+	sentryHook, err := logrus_sentry.NewAsyncSentryHook(sentryDSN, []log.Level{
+		log.PanicLevel,
+		log.FatalLevel,
+		log.ErrorLevel,
+	})
+	if err != nil {
+		log.WithError(err).Error("Failed to init sentry webhook")
+	} else {
+		sentryHook.SetEnvironment(configuration.Env)
+		sentryHook.StacktraceConfiguration.Enable = true
+		sentryHook.StacktraceConfiguration.SwitchExceptionTypeAndMessage = true
+		sentryHook.StacktraceConfiguration.IncludeErrorBreadcrumb = true
+
+		sentryHook.SetTagsContext(map[string]string{
+			"AppName": appName,
+		})
+
+		services.SentryHook = sentryHook
+		log.AddHook(sentryHook)
+		log.Info("Sentry error campturing initialized.")
+	}
 }
 
 func InitMailClient(key, secret, region string) {
@@ -483,7 +516,7 @@ func InitDataService(config *Configuration) error {
 	}
 	InitRedis(config.RedisHost, config.RedisPort)
 	InitLogClient(config.Env, config.AppName, config.EmailSender, config.AWSKey,
-		config.AWSSecret, config.AWSRegion, config.ErrorReportingInterval)
+		config.AWSSecret, config.AWSRegion, config.ErrorReportingInterval, config.SentryDSN)
 
 	initiated = true
 	return nil
@@ -513,7 +546,7 @@ func InitSDKService(config *Configuration) error {
 	}
 
 	InitLogClient(config.Env, config.AppName, config.EmailSender, config.AWSKey,
-		config.AWSSecret, config.AWSRegion, config.ErrorReportingInterval)
+		config.AWSSecret, config.AWSRegion, config.ErrorReportingInterval, config.SentryDSN)
 
 	initiated = true
 	return nil
@@ -542,7 +575,7 @@ func InitQueueWorker(config *Configuration) error {
 	}
 
 	InitLogClient(config.Env, config.AppName, config.EmailSender, config.AWSKey,
-		config.AWSSecret, config.AWSRegion, config.ErrorReportingInterval)
+		config.AWSSecret, config.AWSRegion, config.ErrorReportingInterval, config.SentryDSN)
 
 	initiated = true
 	return nil

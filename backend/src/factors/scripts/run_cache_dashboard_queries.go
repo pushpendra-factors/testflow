@@ -21,6 +21,7 @@ func main() {
 	dbUser := flag.String("db_user", "autometa", "")
 	dbName := flag.String("db_name", "autometa", "")
 	dbPass := flag.String("db_pass", "@ut0me7a", "")
+	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 	onlyWebAnalytics := flag.Bool("only_web_analytics", false, "Cache only web analytics dashboards.")
 
 	redisHost := flag.String("redis_host", "localhost", "")
@@ -52,6 +53,7 @@ func main() {
 		},
 		RedisHost: *redisHost,
 		RedisPort: *redisPort,
+		SentryDSN: *sentryDSN,
 	}
 	C.InitConf(config.Env)
 
@@ -60,6 +62,12 @@ func main() {
 		logCtx.WithError(err).Fatal("Failed to initialize DB")
 	}
 	C.InitRedisPersistent(config.RedisHost, config.RedisPort)
+
+	C.InitSentryLogging(config.SentryDSN, config.AppName)
+	C.GetServices().SentryHook.SetTagsContext(map[string]string{
+		"JobName": taskID,
+	})
+	defer C.GetServices().SentryHook.Flush()
 
 	logCtx = logCtx.WithFields(log.Fields{
 		"Env":         *envFlag,

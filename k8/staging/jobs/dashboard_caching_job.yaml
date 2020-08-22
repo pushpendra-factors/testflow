@@ -37,6 +37,8 @@ spec:
             - $(PERSISTENT_REDIS_HOST)
             - --redis_port
             - $(PERSISTENT_REDIS_PORT)
+            - --sentry_dsn
+            - $(SENTRY_DSN)
             - --project_id
             - "2"
             - --num_routines
@@ -50,4 +52,6 @@ spec:
                 name: config-postgres
             - secretRef:
                 name: secret-postgres
+            - configMapRef:
+                name: secret-sentry
           restartPolicy: OnFailure
