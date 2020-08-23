@@ -116,7 +116,11 @@ class TableChart extends Component {
       })
     }
   }
-  renderSearchButtons = () => {
+  renderSearchBar = () => {
+    if (!this.props.search) {
+      return null
+    }
+
     return (
     <div className="d-flex align-items-center mb-1">
       <Input
@@ -166,7 +170,6 @@ class TableChart extends Component {
     if (sortable){
       return (
         <div>
-          {this.renderSearchButtons()}
         <BootstrapTable bodyStyle={{paddingBottom:"4px"}} containerStyle={{paddingBottom:"-2px"}} bordered={false} trStyle={{overflowWrap: 'break-word'}} containerClass='fapp-table animated fadeIn' data={this.getData()} options={{sortIndicator:true}} version="4">
           {this.tableHeader()}
         </BootstrapTable>
@@ -203,7 +206,8 @@ class TableChart extends Component {
 
     return (
       <div>
-        {this.renderSearchButtons()}
+        {this.renderSearchBar()}
+
         <Table className='fapp-table animated fadeIn' >
           { this.tableHeader() }
           <tbody>
