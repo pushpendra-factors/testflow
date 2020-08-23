@@ -35,6 +35,8 @@ func main() {
 	awsAccessKeyId := flag.String("aws_key", "dummy", "")
 	awsSecretAccessKey := flag.String("aws_secret", "dummy", "")
 
+	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
+
 	factorsEmailSender := flag.String("email_sender", "support-dev@factors.ai", "")
 	errorReportingInterval := flag.Int("error_reporting_interval", 300, "")
 
@@ -68,6 +70,7 @@ func main() {
 		AWSKey:                 *awsAccessKeyId,
 		AWSSecret:              *awsSecretAccessKey,
 		AWSRegion:              *awsRegion,
+		SentryDSN:              *sentryDSN,
 		EmailSender:            *factorsEmailSender,
 		ErrorReportingInterval: *errorReportingInterval,
 		SkipSessionProjectIds:  *skipSessionProjectIds, // comma seperated project ids, supports "*".
