@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import 'antd/dist/antd.css';
+// import 'antd/dist/antd.css';
 import './assets/tailwind.output.css';
 import './assets/index.scss';
 import './styles/factors-ai.main.scss';

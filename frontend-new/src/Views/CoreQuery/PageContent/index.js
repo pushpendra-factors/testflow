@@ -1,53 +1,46 @@
-import React, { useState } from 'react';
-import ContentTabs from '../../../components/ContentTabs';
-import TotalConversionsIcon from '../../../components/Icons/TotalConversions';
-import TotalConversions from './TotalConversions';
-import ConversionsOvertimeIcon from '../../../components/Icons/ConversionsOvertime';
-import TimeToConvertIcon from '../../../components/Icons/TimeToConvert';
-import ConversionFrequencyIcon from '../../../components/Icons/ConversionFrequency';
-import ConversionsOverTime from './ConversionsOverTime';
-import TimeToConvert from './TimeToConvert';
-import ConversionsFrequency from './ConversionsFrequency';
+import React, { useState, useEffect } from 'react';
+import GroupedChart from './GroupedChart';
+import DataTable from './DataTable';
+import { generateGroupedChartsData, generateDummyData, generateGroups, generateColors } from './utils';
+import EventsInfo from './EventsInfo';
+import FiltersInfo from './FiltersInfo';
 
 
-function PageContent() {
+function PageContent({ queries, setDrawerVisible }) {
     
-    const [activeKey, setActiveKey] = useState('1');
-    
-    const handleTabChange = (key) => {
-        setActiveKey(key);
+    const [eventsData, setEventsData] = useState([]);
+    const [groups, setGroups] = useState([]);
+
+    useEffect(() => {
+        const dummyData = generateDummyData(queries);
+        setEventsData(dummyData);
+        setGroups(generateGroups(dummyData));
+    }, [queries]);
+
+    const chartData = generateGroupedChartsData(eventsData, groups);
+    const chartColors = generateColors(eventsData);
+
+    if (!eventsData.length) {
+        return null;
     }
 
-    const tabItems = [
-        {
-            key: '1',
-            title: 'Conversions Over Time',
-            titleIcon: (<ConversionsOvertimeIcon style={{ fontSize: '24px', color: '#3E516C' }} />),
-            content: <ConversionsOverTime activeKey={activeKey} />
-        },
-        {
-            key: '2',
-            title: 'Total Conversions',
-            titleIcon: (<TotalConversionsIcon style={{ fontSize: '24px', color: '#3E516C' }} />),
-            content: <TotalConversions activeKey={activeKey} />
-        },
-        {
-            key: '3',
-            title: 'Time to Convert',
-            titleIcon: (<TimeToConvertIcon style={{ fontSize: '24px', color: '#3E516C' }} />),
-            content: <TimeToConvert activeKey={activeKey} />
-        },
-        {
-            key: '4',
-            title: 'Conversion Frequency',
-            titleIcon: (<ConversionFrequencyIcon style={{ fontSize: '24px', color: '#3E516C' }} />),
-            content: <ConversionsFrequency activeKey={activeKey} />
-        }
-    ]
-
     return (
-        <div className="mt-4">
-            <ContentTabs tabItems={tabItems} onChange={handleTabChange} activeKey={activeKey} />
+        <div>
+            <EventsInfo queries={queries} />
+            <FiltersInfo setDrawerVisible={setDrawerVisible} />
+            <GroupedChart
+                chartData={chartData}
+                chartColors={chartColors}
+                groups={groups.filter(elem => elem.is_visible)}
+                eventsData={eventsData}
+            />
+            <div className="mt-8 pl-4">
+                <DataTable
+                    eventsData={eventsData}
+                    groups={groups}
+                    setGroups={setGroups}
+                />
+            </div>
         </div>
 
     )

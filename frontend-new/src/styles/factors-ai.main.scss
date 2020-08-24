@@ -48,7 +48,9 @@
 // `– main.scss              # Main Sass file
 
 
+@import '/vendors/index';
 @import 'abstracts/index';
 @import 'base/index';
 @import 'layout/index';
+@import 'components/index'; 
 @import 'components/index'; 

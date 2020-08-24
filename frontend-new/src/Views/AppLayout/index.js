@@ -1,19 +1,24 @@
-import React from 'react';
-import { Layout } from 'antd';
+import React from 'react'; 
+import { Row, Col, Layout } from 'antd';
 import Sidebar from '../../components/Sidebar';
 import CoreQuery from '../CoreQuery'; 
+import HeaderComp from './Header'; 
+import { HashRouter, Route, Switch } from 'react-router-dom';
 
 function AppLayout() {
-    const { Content } = Layout;
+    const { Header, Content } = Layout;
 
     return (
         <Layout>
             <Sidebar />
             <Layout className="fa-content-container">
-                <Content> 
-                    <div className="p-4 bg-white min-h-screen"> 
-                        <CoreQuery />
-                    </div> 
+                <HeaderComp /> 
+                <Content className="px-8 bg-white min-h-screen" style={{ marginTop: 64 }}>    
+                    <HashRouter>
+                            <Switch>
+                                <Route path="/" name="Home" component={CoreQuery} />  
+                            </Switch> 
+                    </HashRouter>  
                 </Content>
             </Layout>
         </Layout>
