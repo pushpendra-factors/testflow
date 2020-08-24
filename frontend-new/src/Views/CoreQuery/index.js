@@ -1,16 +1,50 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Header from './header';
 import PageContent from './PageContent';
-import QueryComposer from '../../components/QueryComposer'; 
+import QueryComposer from '../../components/QueryComposer';
+import CoreQueryHome from '../CoreQueryHome';
 
 function CoreQuery() {
+    const [drawerVisible, setDrawerVisible] = useState(false);
+    const [showResult, setShowResult] = useState(false);
+    const [queries, setQueries] = useState([]);
+
+    const addToQueries = (newEvent, index) => {
+        const queryupdated = [...queries];
+        if(queryupdated[index]) {
+            queryupdated[index] = newEvent;
+        } else {
+            queryupdated.push(newEvent);
+        }
+        setQueries(queryupdated);
+    }
+
+    const runQuery = () => {
+        setShowResult(true);
+        closeDrawer();
+    }
+
+    const closeDrawer = () => {
+        setDrawerVisible(false);
+    }
+
     return (
         <>
-            <Header />
-            <div>
-                <QueryComposer visible={true}></QueryComposer>
-            </div>
-            <PageContent />
+
+            <QueryComposer
+                drawerVisible={drawerVisible}
+                queries={queries}
+                onClose={closeDrawer}
+                runQuery={runQuery}
+                addEvent={addToQueries}
+            >
+
+            </QueryComposer>
+
+            {
+                showResult ? (<PageContent setDrawerVisible={setDrawerVisible} queries={queries.map(elem => elem.label)} />) : (<CoreQueryHome setDrawerVisible={setDrawerVisible} />)
+            }
+
         </>
     )
 }

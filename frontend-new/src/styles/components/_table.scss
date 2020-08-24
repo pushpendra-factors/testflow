@@ -1,0 +1,27 @@
+.ant-table--custom
+{
+    // table head
+    .ant-table-thead
+    { 
+        .ant-table-cell
+        {
+            background-color: transparent;
+            border-right: thin solid $fa-color--mono-2;
+            border-bottom: thin solid $fa-color--mono-3;
+            font-weight: $font-weight--bold;
+            &:last-of-type{ 
+                    border-right: thin solid transparent; 
+    
+            }
+        } 
+    }
+    // table body
+    .ant-table-tbody
+    {
+        .ant-table-cell
+        { 
+            border-bottom: thin solid $fa-color--mono-2;
+        }
+
+    }
+}

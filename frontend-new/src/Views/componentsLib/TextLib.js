@@ -24,7 +24,7 @@ function TextLib() {
                             <Text type={'title'} level={3} weight={'bold'}>Heading Style - Title3/24</Text>
                             <Text type={'title'} level={4} >Heading Style - Title4/20</Text>
                             <Text type={'title'} level={5} >Heading Style - Title5/18</Text>
-                            <Text type={'title'} level={6} >Heading Style - Title6/16</Text>
+                            <Text type={'title'} level={6} >Heading Style - Title6/16</Text> 
 
                             <Text type={'title'} level={6} weight={'bold'} extraClass={`mt-8`} >Use for Headings - subtitle1/16</Text>
                             <Text type={'title'} level={7} weight={'bold'} extraClass={`my-2`}>Use for Headings - subtitle2/14</Text> 

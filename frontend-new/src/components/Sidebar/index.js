@@ -19,7 +19,7 @@ function Sidebar() {
             <NavLink activeClassName="active" exact to="/"><SVG name={'home'} size={24} color="white"/></NavLink>  
       </Row>
       <Row justify="center" align="middle" className="py-4"> 
-            <NavLink activeClassName="active" exact to="/components/"><SVG name={'corequery'} size={24} color="white"/></NavLink> 
+            <NavLink activeClassName="active" disabled exact to="/core-query"><SVG name={'corequery'} size={24} color="white"/></NavLink> 
       </Row> 
       <Row justify="center" align="middle" className="py-4"> 
             <NavLink activeClassName="active" disabled exact to="/key"><SVG name={'key'} size={24} color="white"/></NavLink> 
@@ -34,7 +34,7 @@ function Sidebar() {
             <NavLink activeClassName="active" disabled exact to="/notify"><SVG name={'notify'} size={24} color="white"/></NavLink> 
       </Row> 
       <Row justify="center" align="middle" className="py-4"> 
-            <NavLink activeClassName="active" disabled exact to="/settings"><SVG name={'hexagon'} size={24} color="white"/></NavLink> 
+            <NavLink activeClassName="active"   exact to="/components"><SVG name={'hexagon'} size={24} color="white"/></NavLink> 
       </Row> 
 
         
