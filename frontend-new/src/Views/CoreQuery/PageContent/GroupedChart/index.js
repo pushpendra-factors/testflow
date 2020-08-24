@@ -166,7 +166,7 @@ function GroupedChart({ eventsData, groups, chartData, chartColors }) {
     }, [drawChart, showVerticalGridLines, showConverionRates]);
 
     return (
-        <>
+        <div className="grouped-chart">
             {
                 groups
                     .map(elem => {
@@ -189,7 +189,7 @@ function GroupedChart({ eventsData, groups, chartData, chartColors }) {
                     })
             }
             <div className={styles.conversionsOverTimeChart} ref={chartRef} />
-        </>
+        </div>
     )
 }
 
