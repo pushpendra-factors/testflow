@@ -254,7 +254,7 @@ class DashboardUnit extends Component {
     }
 
     if (this.props.data.presentation === PRESENTATION_TABLE) {
-      return <TableChart {...props} />;
+      return <TableChart search {...props} />;
     }
 
     if (this.props.data.presentation == PRESENTATION_CARD) {

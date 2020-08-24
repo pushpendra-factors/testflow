@@ -90,14 +90,17 @@ class TableChart extends Component {
 
     return style;
   }
-  onChange = (e) => {
+
+  onSearchChange = (e) => {
     this.setState({
       searchValue: e.target.value
-    })
+    });
+    this.search(e.target.value)
   }
-  search = () => {
-    if(this.state.searchValue !== "") {
-      let searchValue = this.state.searchValue.toLowerCase()
+
+  search = ( value) => {
+    if(value !== "") {
+      let searchValue = value.toLowerCase()
       let result = {...this.props.queryResult}
       let rows = result.rows.filter(row=> {
         let newRow = [...row]
@@ -115,29 +118,29 @@ class TableChart extends Component {
         search: true
       })
     }
+    else {
+      let result= {...this.props.queryResult}
+      this.setState({
+        dataRows: result.rows
+      })
+    }
   }
-  renderSearchButtons = () => {
+
+  renderSearchBar = () => {
+    if (!this.props.search) {
+      return null
+    }
+
     return (
-    <div className="d-flex align-items-center mb-1">
+    <div className="ml-auto mb-2 mr-1 w-25">
       <Input
           type="text"
-          onChange={this.onChange}
-          placeholder="Enter search value"
+          onChange={this.onSearchChange}
+          placeholder="Search"
           value={this.state.searchValue}
           className="mx-1"
-          style={{ border: "1px solid #ddd", color: "#444444", width: "30%" }}
+          style={{ border: "1px solid #ddd", color: "#444444" }}
         />
-        <Button 
-          outline color="primary"
-          onClick = {this.search}
-        >Search
-        </Button>
-        <Button 
-          className="ml-1"
-          outline color="success"
-          onClick = {()=> this.setState({search: false})}
-        >Show Original
-        </Button>
     </div>
     )
   }
@@ -165,8 +168,7 @@ class TableChart extends Component {
 
     if (sortable){
       return (
-        <div>
-          {this.renderSearchButtons()}
+        <div style={{position: "relative", top: "-30px"}}>
         <BootstrapTable bodyStyle={{paddingBottom:"4px"}} containerStyle={{paddingBottom:"-2px"}} bordered={false} trStyle={{overflowWrap: 'break-word'}} containerClass='fapp-table animated fadeIn' data={this.getData()} options={{sortIndicator:true}} version="4">
           {this.tableHeader()}
         </BootstrapTable>
@@ -202,8 +204,8 @@ class TableChart extends Component {
     }
 
     return (
-      <div>
-        {this.renderSearchButtons()}
+      <div style={{position: "relative", top: "-30px"}}>
+        {this.renderSearchBar()}
         <Table className='fapp-table animated fadeIn' >
           { this.tableHeader() }
           <tbody>
