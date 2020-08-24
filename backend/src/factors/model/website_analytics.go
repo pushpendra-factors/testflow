@@ -43,6 +43,12 @@ type WebAnalyticsCustomGroupMetric struct {
 	MetricValue map[string]*WebAnalyticsCustomGroupMetricValue // Map[metric]value
 }
 
+type WebAnalyticsCustomGroupPrevGroup struct {
+	GroupKey  string
+	Timestamp int64
+	Value     *float64
+}
+
 type WebAnalyticsQueryResult struct {
 	QueryResult            *map[string]GenericQueryResult
 	CustomGroupQueryResult map[string]*GenericQueryResult
@@ -82,10 +88,12 @@ const (
 	WAGroupMetricPageViewsContributionPercentage = "page_views_contribution_percentage"
 	WAGroupMetricUniqueUsers                     = "unique_users"
 	WAGroupMetricUniqueSessions                  = "unique_sessions"
+	WAGroupMetricUniquePages                     = "unique_pages"
 	WAGroupMetricTotalTimeSpent                  = "total_time_spent"
 	WAGroupMetricAvgTimeSpent                    = "avg_time_spent"
 	WAGroupMetricTotalScrollDepth                = "total_scroll_depth"
 	WAGroupMetricAvgScrollDepth                  = "avg_scroll_depth"
+	WAGroupMetricTotalExits                      = "total_exits"
 	WAGroupMetricExitPercentage                  = "exit_percentage"
 )
 
@@ -112,6 +120,7 @@ type WebAnalyticsEvent struct {
 	UserID     string // coalsced user_id
 	IsSession  bool
 	SessionID  string
+	Timestamp  int64
 	Properties *WebAnalyticsEventProperties
 }
 
@@ -498,6 +507,7 @@ func buildWebAnalyticsAggregateForPageEvent(
 	customGroupQueries []WebAnalyticsCustomGroupQuery,
 	customGroupPropertiesMap *map[string]string,
 	customGroupAggrState *map[string]map[string]*WebAnalyticsCustomGroupMetric,
+	customGroupPrevGroupBySession *map[string]map[string]*WebAnalyticsCustomGroupPrevGroup,
 ) int {
 
 	logCtx := log.WithField("project_id", webEvent.ProjectID).
@@ -615,6 +625,24 @@ func buildWebAnalyticsAggregateForPageEvent(
 				}
 			}
 
+			if metric == WAGroupMetricUniquePages {
+				initWACustomGroupMetricValue(
+					&(*customGroupAggrState)[query.UniqueID][groupKey].MetricValue,
+					metric,
+				)
+
+				_, exists := (*customGroupAggrState)[query.UniqueID][groupKey].
+					MetricValue[metric].UniqueMap[webEvent.Properties.PageURL]
+				if !exists {
+					// Count and add unique pages to unique map for deduplication.
+					(*customGroupAggrState)[query.UniqueID][groupKey].
+						MetricValue[metric].Value++
+
+					(*customGroupAggrState)[query.UniqueID][groupKey].
+						MetricValue[metric].UniqueMap[webEvent.Properties.PageURL] = true
+				}
+			}
+
 			if metric == WAGroupMetricTotalTimeSpent || metric == WAGroupMetricAvgTimeSpent {
 				initWACustomGroupMetricValue(
 					&(*customGroupAggrState)[query.UniqueID][groupKey].MetricValue,
@@ -633,6 +661,53 @@ func buildWebAnalyticsAggregateForPageEvent(
 
 				(*customGroupAggrState)[query.UniqueID][groupKey].
 					MetricValue[WAGroupMetricTotalScrollDepth].Value += pageScrollPercent
+			}
+
+			// As we don't have initial or latest properties state for all custom properties, on session.
+			// We have used session_id on page_view, to get initial or latest properties state per group.
+			// For example, Total Exits on group (author+brand) = no.of sessions with latest group
+			// as current group (author+brand).
+			if metric == WAGroupMetricTotalExits || metric == WAGroupMetricExitPercentage {
+				initWACustomGroupMetricValue(
+					&(*customGroupAggrState)[query.UniqueID][groupKey].MetricValue,
+					WAGroupMetricTotalExits,
+				)
+
+				if _, exists := (*customGroupPrevGroupBySession)[webEvent.SessionID]; !exists {
+					metricPrevGroup := make(map[string]*WebAnalyticsCustomGroupPrevGroup, 0)
+					(*customGroupPrevGroupBySession)[webEvent.SessionID] = metricPrevGroup
+				}
+
+				if _, exists := (*customGroupPrevGroupBySession)[webEvent.SessionID][WAGroupMetricTotalExits]; !exists {
+					previousGroupBySession := &WebAnalyticsCustomGroupPrevGroup{}
+					(*customGroupPrevGroupBySession)[webEvent.SessionID][WAGroupMetricTotalExits] = previousGroupBySession
+				}
+
+				// Proceed only if it is a different group_key for session, and the timestamp is greater than
+				// previous for achieving latest of group_key.
+				if (*customGroupPrevGroupBySession)[webEvent.SessionID][WAGroupMetricTotalExits].GroupKey != groupKey &&
+					webEvent.Timestamp > (*customGroupPrevGroupBySession)[webEvent.SessionID][WAGroupMetricTotalExits].Timestamp {
+
+					newValue := (*customGroupAggrState)[query.UniqueID][groupKey].
+						MetricValue[WAGroupMetricTotalExits].Value + 1
+					(*customGroupAggrState)[query.UniqueID][groupKey].
+						MetricValue[WAGroupMetricTotalExits].Value = newValue
+
+					// As one session should be attributed to one group_key, we remove the attribution 
+					// on previous group, by holding pointer of value.
+					prevGroupKeyValue := (*customGroupPrevGroupBySession)[webEvent.SessionID][WAGroupMetricTotalExits].Value
+					if prevGroupKeyValue != nil && *prevGroupKeyValue > 0 {
+						// TODO(Dinesh): Use exact previous value to subtract.
+						// This only support metrics with +1 increament.
+						(*prevGroupKeyValue)--
+					}
+
+					// Update previous group_key for session, after increamenting, for next group_key.
+					(*customGroupPrevGroupBySession)[webEvent.SessionID][WAGroupMetricTotalExits].Timestamp = webEvent.Timestamp
+					(*customGroupPrevGroupBySession)[webEvent.SessionID][WAGroupMetricTotalExits].GroupKey = groupKey
+					(*customGroupPrevGroupBySession)[webEvent.SessionID][WAGroupMetricTotalExits].Value = &newValue
+				}
+
 			}
 		}
 	}
@@ -710,6 +785,7 @@ func buildWebAnalyticsAggregate(
 	customGroupQueries []WebAnalyticsCustomGroupQuery,
 	customGroupPropertiesMap *map[string]string,
 	customGroupAggrState *map[string]map[string]*WebAnalyticsCustomGroupMetric,
+	customGroupPrevGroupBySession *map[string]map[string]*WebAnalyticsCustomGroupPrevGroup,
 ) int {
 
 	if aggrState.UniqueUsersMap == nil {
@@ -739,7 +815,8 @@ func buildWebAnalyticsAggregate(
 
 	if !webEvent.IsSession {
 		return buildWebAnalyticsAggregateForPageEvent(webEvent, aggrState,
-			customGroupQueries, customGroupPropertiesMap, customGroupAggrState)
+			customGroupQueries, customGroupPropertiesMap, customGroupAggrState,
+			customGroupPrevGroupBySession)
 	}
 
 	return buildWebAnalyticsAggregateForSessionEvent(webEvent, aggrState,
@@ -1018,7 +1095,8 @@ func getResultForCustomGroupQuery(
 				var value interface{}
 				// Metrics/Aggregates which can be added directly to result.
 				if metric == WAGroupMetricPageViews || metric == WAGroupMetricUniqueUsers ||
-					metric == WAGroupMetricUniqueSessions {
+					metric == WAGroupMetricUniqueSessions || metric == WAGroupMetricUniquePages ||
+					metric == WAGroupMetricTotalExits {
 					value = (*customGroupAggrState)[query.UniqueID][groupKey].
 						MetricValue[metric].Value
 				}
@@ -1066,6 +1144,15 @@ func getResultForCustomGroupQuery(
 					value = getFormattedPercentage(avgScrollDepth)
 				}
 
+				if metric == WAGroupMetricExitPercentage {
+					var exitPercentage float64
+					if webAggrState.NoOfSessions > 0 {
+						exitPercentage = ((*customGroupAggrState)[query.UniqueID][groupKey].
+							MetricValue[WAGroupMetricTotalExits].Value / float64(webAggrState.NoOfSessions)) * 100
+					}
+					value = getFormattedPercentage(exitPercentage)
+				}
+
 				row = append(row, value)
 			}
 
@@ -1103,6 +1190,8 @@ func ExecuteWebAnalyticsQueries(projectId uint64, queries *WebAnalyticsQueries) 
 
 	// map[unique_id]map[group_key]*WebAnalyticsCustomGroupMetric
 	customGroupAggrState := make(map[string]map[string]*WebAnalyticsCustomGroupMetric, 0)
+	// map[session_id]map[metric]*WebAnalyticsCustomGroupPrevGroup
+	customGroupPrevGroupBySession := make(map[string]map[string]*WebAnalyticsCustomGroupPrevGroup)
 
 	if projectId == 0 || queries == nil {
 		return queryResult, http.StatusBadRequest
@@ -1179,7 +1268,7 @@ func ExecuteWebAnalyticsQueries(projectId uint64, queries *WebAnalyticsQueries) 
 	}
 
 	queryParams := make([]interface{}, 0, 0)
-	selectStmnt := "events.id, events.project_id," + " " +
+	selectStmnt := "events.id, events.project_id, events.timestamp," + " " +
 		"COALESCE(users.customer_user_id, users.id) as user_id," + " " +
 		"events.session_id, events.event_name_id, event_names.name as event_name," + " " +
 		"event_names.type as event_name_type," + " " +
@@ -1215,6 +1304,7 @@ func ExecuteWebAnalyticsQueries(projectId uint64, queries *WebAnalyticsQueries) 
 	for rows.Next() {
 		var id string
 		var projectID uint64
+		var timestamp int64
 		var userID string
 		var sessionID sql.NullString
 		var eventName string
@@ -1239,7 +1329,7 @@ func ExecuteWebAnalyticsQueries(projectId uint64, queries *WebAnalyticsQueries) 
 		var customGroupProperties []sql.NullString
 
 		destinations := []interface{}{
-			&id, &projectID, &userID, &sessionID, &eventNameID, &eventName, &eventNameType,
+			&id, &projectID, &timestamp, &userID, &sessionID, &eventNameID, &eventName, &eventNameType,
 			&eventPropertyPageURL, &eventPropertyPageSpentTime, &eventPropertyPageScrollPercent,
 			&eventPropertySource, &eventPropertyReferrerDomain, &eventPropertyMedium, &eventPropertyCampaign,
 			&eventPropertyCampaignID, &sessionPropertySpentTime, &sessionPropertyPageCount,
@@ -1306,6 +1396,7 @@ func ExecuteWebAnalyticsQueries(projectId uint64, queries *WebAnalyticsQueries) 
 		webEvent := WebAnalyticsEvent{
 			ID:         id,
 			ProjectID:  projectID,
+			Timestamp:  timestamp,
 			UserID:     userID,
 			SessionID:  sessionID.String,
 			IsSession:  isSessionEvent,
@@ -1315,7 +1406,7 @@ func ExecuteWebAnalyticsQueries(projectId uint64, queries *WebAnalyticsQueries) 
 		// build all needed aggregates in one scan of events.
 		buildWebAnalyticsAggregate(&webEvent, &webAggrState,
 			queries.CustomGroupQueries, &customGroupPropertiesMap,
-			&customGroupAggrState)
+			&customGroupAggrState, &customGroupPrevGroupBySession)
 
 		rowCount++
 	}
