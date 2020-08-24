@@ -131,17 +131,28 @@ class TableChart extends Component {
       return null
     }
 
+    let divStyle = null;
+    if (this.props.dunit) {
+      divStyle = { 
+        float: "right",
+        marginRight: "80px !important",
+        marginTop: "-70px",
+        paddingRight: "85px",
+        width: "30%",
+      }
+    }
+
     return (
-    <div className="ml-auto mb-2 mr-1 w-25">
-      <Input
-          type="text"
-          onChange={this.onSearchChange}
-          placeholder="Search"
-          value={this.state.searchValue}
-          className="mx-1"
-          style={{ border: "1px solid #ddd", color: "#444444" }}
-        />
-    </div>
+      <div style={divStyle} className="mb-2 mr-1 w-25">
+        <Input
+            type="text"
+            onChange={this.onSearchChange}
+            placeholder="Search"
+            value={this.state.searchValue}
+            className="mx-1"
+            style={{ border: "1px solid #ddd", color: "#444444" }}
+          />
+      </div>
     )
   }
 
@@ -168,7 +179,7 @@ class TableChart extends Component {
 
     if (sortable){
       return (
-        <div style={{position: "relative", top: "-30px"}}>
+        <div>
         <BootstrapTable bodyStyle={{paddingBottom:"4px"}} containerStyle={{paddingBottom:"-2px"}} bordered={false} trStyle={{overflowWrap: 'break-word'}} containerClass='fapp-table animated fadeIn' data={this.getData()} options={{sortIndicator:true}} version="4">
           {this.tableHeader()}
         </BootstrapTable>
@@ -204,7 +215,7 @@ class TableChart extends Component {
     }
 
     return (
-      <div style={{position: "relative", top: "-30px"}}>
+      <div>
         {this.renderSearchBar()}
         <Table className='fapp-table animated fadeIn' >
           { this.tableHeader() }
