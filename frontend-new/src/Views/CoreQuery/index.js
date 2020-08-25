@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Header from './header';
-import PageContent from './PageContent';
+import ResultsPage from './ResultsPage';
 import QueryComposer from '../../components/QueryComposer';
 import CoreQueryHome from '../CoreQueryHome';
 
@@ -42,7 +42,7 @@ function CoreQuery() {
             </QueryComposer>
 
             {
-                showResult ? (<PageContent setDrawerVisible={setDrawerVisible} queries={queries.map(elem => elem.label)} />) : (<CoreQueryHome setDrawerVisible={setDrawerVisible} />)
+                showResult ? (<ResultsPage setDrawerVisible={setDrawerVisible} queries={queries.map(elem => elem.label)} />) : (<CoreQueryHome setDrawerVisible={setDrawerVisible} />)
             }
 
         </>
