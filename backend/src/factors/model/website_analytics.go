@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/gomodule/redigo/redis"
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -97,6 +98,12 @@ const (
 	WAGroupMetricExitPercentage                  = "exit_percentage"
 )
 
+const (
+	// Yourstory - Constants for Articles Publised metric.
+	WAYourstoryGroupMetricArticlesPublished    = "articles_published"
+	CustomPropertyNameYourStoryPublicationDate = "publicationDate"
+)
+
 var SkippableWindows = map[string]int64{
 	"2MIN":  120,
 	"30MIN": 1800,
@@ -142,6 +149,8 @@ type WebAnalyticsEventProperties struct {
 	SessionInitialPageURL        string
 	SessionInitialReferrerDomain string
 	SessionLatestPageURL         string
+
+	CustomPropertyYourStoryPublicationDate string
 }
 
 // WebAnalyticsResultAggregate - Supporting aggregates for
@@ -508,6 +517,7 @@ func buildWebAnalyticsAggregateForPageEvent(
 	customGroupPropertiesMap *map[string]string,
 	customGroupAggrState *map[string]map[string]*WebAnalyticsCustomGroupMetric,
 	customGroupPrevGroupBySession *map[string]map[string]*WebAnalyticsCustomGroupPrevGroup,
+	from, to int64,
 ) int {
 
 	logCtx := log.WithField("project_id", webEvent.ProjectID).
@@ -643,6 +653,39 @@ func buildWebAnalyticsAggregateForPageEvent(
 				}
 			}
 
+			if metric == WAYourstoryGroupMetricArticlesPublished {
+				initWACustomGroupMetricValue(
+					&(*customGroupAggrState)[query.UniqueID][groupKey].MetricValue,
+					metric,
+				)
+
+				_, exists := (*customGroupAggrState)[query.UniqueID][groupKey].
+					MetricValue[metric].UniqueMap[webEvent.Properties.PageURL]
+				if !exists {
+					publishedDate := webEvent.Properties.
+						CustomPropertyYourStoryPublicationDate
+					if publishedDate == "" {
+						continue
+					}
+
+					publishedDateParsed, err := time.Parse(time.RFC3339, publishedDate)
+					if err != nil {
+						log.WithField("publication_date", publishedDate).
+							Error("Failed to parse yourstory publication date.")
+						continue
+					}
+					publishedTimestamp := publishedDateParsed.UTC().Unix()
+
+					if publishedTimestamp >= from && publishedTimestamp <= to {
+						(*customGroupAggrState)[query.UniqueID][groupKey].
+							MetricValue[metric].Value++
+
+						(*customGroupAggrState)[query.UniqueID][groupKey].
+							MetricValue[metric].UniqueMap[webEvent.Properties.PageURL] = true
+					}
+				}
+			}
+
 			if metric == WAGroupMetricTotalTimeSpent || metric == WAGroupMetricAvgTimeSpent {
 				initWACustomGroupMetricValue(
 					&(*customGroupAggrState)[query.UniqueID][groupKey].MetricValue,
@@ -693,7 +736,7 @@ func buildWebAnalyticsAggregateForPageEvent(
 					(*customGroupAggrState)[query.UniqueID][groupKey].
 						MetricValue[WAGroupMetricTotalExits].Value = newValue
 
-					// As one session should be attributed to one group_key, we remove the attribution 
+					// As one session should be attributed to one group_key, we remove the attribution
 					// on previous group, by holding pointer of value.
 					prevGroupKeyValue := (*customGroupPrevGroupBySession)[webEvent.SessionID][WAGroupMetricTotalExits].Value
 					if prevGroupKeyValue != nil && *prevGroupKeyValue > 0 {
@@ -786,6 +829,7 @@ func buildWebAnalyticsAggregate(
 	customGroupPropertiesMap *map[string]string,
 	customGroupAggrState *map[string]map[string]*WebAnalyticsCustomGroupMetric,
 	customGroupPrevGroupBySession *map[string]map[string]*WebAnalyticsCustomGroupPrevGroup,
+	from, to int64,
 ) int {
 
 	if aggrState.UniqueUsersMap == nil {
@@ -816,7 +860,7 @@ func buildWebAnalyticsAggregate(
 	if !webEvent.IsSession {
 		return buildWebAnalyticsAggregateForPageEvent(webEvent, aggrState,
 			customGroupQueries, customGroupPropertiesMap, customGroupAggrState,
-			customGroupPrevGroupBySession)
+			customGroupPrevGroupBySession, from, to)
 	}
 
 	return buildWebAnalyticsAggregateForSessionEvent(webEvent, aggrState,
@@ -1094,9 +1138,12 @@ func getResultForCustomGroupQuery(
 
 				var value interface{}
 				// Metrics/Aggregates which can be added directly to result.
+				// TODO: Use in_list method.
 				if metric == WAGroupMetricPageViews || metric == WAGroupMetricUniqueUsers ||
 					metric == WAGroupMetricUniqueSessions || metric == WAGroupMetricUniquePages ||
-					metric == WAGroupMetricTotalExits {
+					metric == WAGroupMetricTotalExits ||
+					metric == WAYourstoryGroupMetricArticlesPublished {
+
 					value = (*customGroupAggrState)[query.UniqueID][groupKey].
 						MetricValue[metric].Value
 				}
@@ -1221,7 +1268,10 @@ func ExecuteWebAnalyticsQueries(projectId uint64, queries *WebAnalyticsQueries) 
 		U.SP_INITIAL_PAGE_URL,
 		U.SP_INITIAL_REFERRER_DOMAIN,
 		U.SP_LATEST_PAGE_URL,
+
+		CustomPropertyNameYourStoryPublicationDate,
 	}
+
 	var selectPropertiesStmnt string
 	for _, property := range selectProperties {
 		if selectPropertiesStmnt != "" {
@@ -1325,6 +1375,8 @@ func ExecuteWebAnalyticsQueries(projectId uint64, queries *WebAnalyticsQueries) 
 		var sessionPropertyInitialPageURL sql.NullString
 		var sessionPropertyInitialReferrerDomain sql.NullString
 		var sessionPropertyLatestPageURL sql.NullString
+		// customer specific property.
+		var customPropertyYourStoryPublicationDate sql.NullString
 
 		var customGroupProperties []sql.NullString
 
@@ -1334,7 +1386,7 @@ func ExecuteWebAnalyticsQueries(projectId uint64, queries *WebAnalyticsQueries) 
 			&eventPropertySource, &eventPropertyReferrerDomain, &eventPropertyMedium, &eventPropertyCampaign,
 			&eventPropertyCampaignID, &sessionPropertySpentTime, &sessionPropertyPageCount,
 			&sessionPropertyInitialPageURL, &sessionPropertyInitialReferrerDomain,
-			&sessionPropertyLatestPageURL,
+			&sessionPropertyLatestPageURL, &customPropertyYourStoryPublicationDate,
 		}
 		if customGroupPropertySelectStmnt != "" {
 			destinations = append(destinations, pq.Array(&customGroupProperties))
@@ -1373,6 +1425,8 @@ func ExecuteWebAnalyticsQueries(projectId uint64, queries *WebAnalyticsQueries) 
 			SessionInitialPageURL:        sessionPropertyInitialPageURL.String,
 			SessionInitialReferrerDomain: sessionPropertyInitialReferrerDomain.String,
 			SessionLatestPageURL:         sessionPropertyLatestPageURL.String,
+
+			CustomPropertyYourStoryPublicationDate: customPropertyYourStoryPublicationDate.String,
 		}
 
 		// Add channel property at run time.
@@ -1406,7 +1460,8 @@ func ExecuteWebAnalyticsQueries(projectId uint64, queries *WebAnalyticsQueries) 
 		// build all needed aggregates in one scan of events.
 		buildWebAnalyticsAggregate(&webEvent, &webAggrState,
 			queries.CustomGroupQueries, &customGroupPropertiesMap,
-			&customGroupAggrState, &customGroupPrevGroupBySession)
+			&customGroupAggrState, &customGroupPrevGroupBySession,
+			queries.From, queries.To)
 
 		rowCount++
 	}

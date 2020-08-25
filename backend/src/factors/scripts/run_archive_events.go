@@ -96,7 +96,7 @@ func main() {
 	if *runForAllFlag {
 		allJobDetails, projectErrors = T.ArchiveEvents(db, &cloudManager, diskManager, *maxLookbackDaysFlag, startTime, endTime)
 	} else {
-		jobDetails, err := T.ArchiveEventsForProject(db, &cloudManager, diskManager, *projectIDFlag, *maxLookbackDaysFlag, startTime, endTime)
+		jobDetails, err := T.ArchiveEventsForProject(db, &cloudManager, diskManager, *projectIDFlag, *maxLookbackDaysFlag, startTime, endTime, false)
 		if err != nil {
 			projectErrors = append(projectErrors, err)
 		}
