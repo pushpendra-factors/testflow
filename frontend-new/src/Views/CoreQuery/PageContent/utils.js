@@ -50,10 +50,11 @@ export const generateTableColumns = (data) => {
             },
         }
     ]
-    let eventColumns = data.map(elem => {
+    let eventColumns = data.map((elem, index) => {
         return {
             title: elem.name,
             dataIndex: elem.name,
+            className: index === data.length - 1 ? tableStyles.lastColumn : '',
             sorter: (a, b) => {
                 return a[elem.name] - b[elem.name]
             },

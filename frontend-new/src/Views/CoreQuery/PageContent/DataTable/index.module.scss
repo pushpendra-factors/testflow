@@ -1,15 +1,42 @@
 $factorsDarkColor: #0E2647;
 
 .table {
+
+    :global(.ant-table.ant-table-bordered > .ant-table-container > .ant-table-content > table > thead > tr > th),
+    :global(.ant-table.ant-table-bordered > .ant-table-container > .ant-table-content > table > tbody > tr > td) {
+        border: none;
+    }
+
+    th.conversionColumn {
+        box-shadow: inset 0px -1px 0px #B7BEC8, inset -1px 0px 0px #B7BEC8;
+    }
+
+    th.lastColumn {
+        box-shadow: inset 0px -1px 0px #B7BEC8;   
+    }
+
+    th {
+        box-shadow: inset 0px -1px 0px #B7BEC8, inset -1px 0px 0px #E7E9ED;
+    }
+
+    td {
+        box-shadow: inset 0px -1px 0px #E7E9ED, inset -1px 0px 0px #E7E9ED;
+    }
+
+    .conversionColumn {
+        box-shadow: inset 0px -1px 0px #E7E9ED, inset -1px 0px 0px #B7BEC8;
+    }
+
+    .lastColumn {
+        box-shadow: inset 0px -1px 0px #E7E9ED;
+    }
+
     :global(th.ant-table-cell) {
         font-style: normal;
         font-weight: 500;
         font-size: 12px;
         line-height: 16px;
         color: $factorsDarkColor;
-        border-top: 1px solid $factorsDarkColor;
-        border-bottom: 1px solid $factorsDarkColor;
-        height: 40px;
     }
 
     :global(td.ant-table-cell) {
@@ -54,8 +81,4 @@ $factorsDarkColor: #0E2647;
     :global(tr.ant-table-row-selected > .ant-table-selection-column) {
         background: #F5F6F8;
     }
-}
-
-.conversionColumn {
-    border-right: 1px solid $factorsDarkColor !important;
 }
