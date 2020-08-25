@@ -1,10 +1,10 @@
 version: '3'
-    
+
 services:
         postgres:
             build:
-                context: .
-                dockerfile: Dockerfile.postgres.testing
+                context: ../
+                dockerfile: docker-development-setup/Dockerfile.postgres.testing
                 args:
                     -  POSTGRES_VERSION=12.2-alpine
             environment:
@@ -19,8 +19,8 @@ services:
             depends_on:
                 - postgres
             build:
-                context: .
-                dockerfile: Dockerfile.db_create.testing
+                context: ../
+                dockerfile: docker-development-setup/Dockerfile.db_create.testing
             environment:
                 - DB_HOST=postgres
             image: testing/builddb:1.0
@@ -28,7 +28,7 @@ services:
                 - postgres
         redis:
             build:
-                context: .
+                context: ../
                 dockerfile: Dockerfile.redis
             image: testing/redis:1.0
             restart: always
@@ -36,8 +36,8 @@ services:
                 - "6379:6379"
         etcd:
             build:
-                context: .
-                dockerfile: Dockerfile.etcd.testing
+                context: ../
+                dockerfile: docker-development-setup/Dockerfile.etcd.testing
                 args:
                     - ETCD_VERSION=3
             image: testing/etcd:1.0
@@ -50,7 +50,7 @@ services:
                 - "2380:2380"
         api:
             build:
-                context: .
+                context: ../
                 dockerfile: Dockerfile.appserver
             environment:
                 -  GOPATH=/go/src/factors
@@ -64,10 +64,11 @@ services:
             ports:
                 - "8080:8080"
             volumes: 
-                - ../../geolocation_data:/usr/local/var/factors/geolocation_data
+                - ../../../geolocation_data:/usr/local/var/factors/geolocation_data
+                - ../../../devicedetector_data:/usr/local/var/factors/devicedetector_data
         patternserver:
             build:
-                context: .
+                context: ../
                 dockerfile: Dockerfile.patternserver
             environment:
                 -   GOPATH=/go/src/factors
@@ -82,7 +83,7 @@ services:
             depends_on:
                 - postgres
             build:
-                context: .
+                context: ../
                 dockerfile: Dockerfile.dataserver
             environment:
                 -   GOPATH=/go/src/factors
@@ -94,8 +95,8 @@ services:
                 -  "8089:8089"
         frontend:
             build: 
-                context: ../../frontend
-                dockerfile: Dockerfile.frontend.testing
+                context: ../../../frontend
+                dockerfile: docker-development-setup/Dockerfile.frontend.testing
             image: testing/frontend:1.0
             ports: 
                 - "127.0.0.1:3000:3000"
