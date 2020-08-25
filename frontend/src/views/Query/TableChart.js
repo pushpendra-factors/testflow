@@ -133,11 +133,9 @@ class TableChart extends Component {
     let divStyle = null;
     if (this.props.dunit) {
       divStyle = { 
-        float: "right",
-        marginRight: "80px !important",
         marginTop: "-70px",
-        paddingRight: "85px",
-        width: "30%",
+        position: "absolute",
+        right: "80px",
       }
     }
 
