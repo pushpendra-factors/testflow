@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -107,8 +108,9 @@ func (dd *DiskDriver) GetPatternChunkFilePathAndName(projectId, modelId uint64, 
 }
 
 func (dd *DiskDriver) GetEventArchiveFilePathAndName(projectID uint64, startTime, endTime int64) (string, string) {
-	path := fmt.Sprintf("%s/archive/%d/", dd.baseDir, projectID)
-	fileName := fmt.Sprintf("%d-%d.txt", startTime, endTime)
+	year, month, date := time.Unix(startTime, 0).UTC().Date()
+	path := fmt.Sprintf("%s/archive/%d/%d/%d/", dd.baseDir, projectID, year, int(month))
+	fileName := fmt.Sprintf("%d_%d-%d.txt", date, startTime, endTime)
 	return path, fileName
 }
 

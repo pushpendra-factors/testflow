@@ -37,7 +37,7 @@ func ArchiveEvents(db *gorm.DB, cloudManager *filestore.FileManager,
 	var projectErrors []error
 	for _, projectID := range enabledProjectIDs {
 		pbLog.Infof("Running archival for project id %d", projectID)
-		jobDetails, err := ArchiveEventsForProject(db, cloudManager, diskManger, projectID, maxLookbackDays, startTime, endTime)
+		jobDetails, err := ArchiveEventsForProject(db, cloudManager, diskManger, projectID, maxLookbackDays, startTime, endTime, false)
 		if err != nil {
 			pbLog.WithError(err).Errorf("Archival failed for project id %d", projectID)
 			projectErrors = append(projectErrors, err)
@@ -48,8 +48,8 @@ func ArchiveEvents(db *gorm.DB, cloudManager *filestore.FileManager,
 }
 
 // ArchiveEventsForProject Archives events for a particular project to cloud storage.
-func ArchiveEventsForProject(db *gorm.DB, cloudManager *filestore.FileManager,
-	diskManger *serviceDisk.DiskDriver, projectID uint64, maxLookbackDays int, startTime, endTime time.Time) ([]string, error) {
+func ArchiveEventsForProject(db *gorm.DB, cloudManager *filestore.FileManager, diskManger *serviceDisk.DiskDriver,
+	projectID uint64, maxLookbackDays int, startTime, endTime time.Time, bypassSettings bool) ([]string, error) {
 
 	var jobDetails []string
 	pbLog := taskLog.WithFields(log.Fields{
@@ -57,11 +57,13 @@ func ArchiveEventsForProject(db *gorm.DB, cloudManager *filestore.FileManager,
 		"ProjectID": projectID,
 	})
 
-	projectSettings, _ := M.GetProjectSetting(projectID)
-	if projectSettings == nil {
-		return jobDetails, fmt.Errorf("Failed to fetch project settings")
-	} else if projectSettings.ArchiveEnabled == nil || !*projectSettings.ArchiveEnabled {
-		return jobDetails, fmt.Errorf("Archival not enabled for project id %d", projectID)
+	if !bypassSettings {
+		projectSettings, _ := M.GetProjectSetting(projectID)
+		if projectSettings == nil {
+			return jobDetails, fmt.Errorf("Failed to fetch project settings")
+		} else if projectSettings.ArchiveEnabled == nil || !*projectSettings.ArchiveEnabled {
+			return jobDetails, fmt.Errorf("Archival not enabled for project id %d", projectID)
+		}
 	}
 
 	inProgressCount, status := M.GetScheduledTaskInProgressCount(projectID, M.TASK_TYPE_EVENTS_ARCHIVAL)
