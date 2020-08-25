@@ -21,7 +21,7 @@ import (
 
 /*
 Insert into project by Id
-go run run_add_DesginCafe_salesforce_data.go --file_path=<path-to-denormalized-file> --project_id=<projectId>
+go run run_salesforce_lead_create_enrichment.go --file_path=<path-to-denormalized-file> --project_id=<projectId>
 */
 func main() {
 
@@ -82,7 +82,7 @@ func main() {
 		log.Error("projectId not provided")
 		os.Exit(1)
 	}
-	
+
 	project, errCode := M.GetProject(*projectIdFlag)
 	if errCode != http.StatusFound {
 		log.Error("Failed to get project")
