@@ -671,7 +671,7 @@ func buildWebAnalyticsAggregateForPageEvent(
 					publishedDateParsed, err := time.Parse(time.RFC3339, publishedDate)
 					if err != nil {
 						log.WithField("publication_date", publishedDate).
-							Error("Failed to parse yourstory publication date.")
+							Warn("Failed to parse yourstory publication date.")
 						continue
 					}
 					publishedTimestamp := publishedDateParsed.UTC().Unix()
