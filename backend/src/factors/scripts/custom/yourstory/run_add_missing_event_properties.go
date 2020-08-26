@@ -22,6 +22,7 @@ var MandatoryProperties = []string{
 	"articleCategory",
 	"tags",
 	"brandName",
+	"publicationDate",
 }
 
 type EventWithProperties struct {
@@ -184,7 +185,6 @@ func addEventPropertiesByName(
 
 			value, exists := (*propertiesFromEvent)[key]
 			if !exists {
-				logCtx.WithField("property", key).Error("Property not found.")
 				continue
 			}
 
@@ -197,7 +197,7 @@ func addEventPropertiesByName(
 		}
 
 		if !isPropertiesAdded {
-			logCtx.Error("Mandatory properties not for the event. Skipping update.")
+			logCtx.Warn("Mandatory properties not added for the event. Skipping update.")
 			continue
 		}
 		logCtx = logCtx.WithField("new_properties", event.PropertiesMap)
