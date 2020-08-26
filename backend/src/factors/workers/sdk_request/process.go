@@ -79,7 +79,6 @@ func main() {
 		MergeUspProjectIds:     *mergeUserPropertiesProjectIDS,
 	}
 
-	C.InitRedisPersistent(*redisHostPersistent, *redisPortPersistent)
 	err := C.InitQueueWorker(config)
 	if err != nil {
 		log.WithError(err).Fatal("Failed to initialize.")

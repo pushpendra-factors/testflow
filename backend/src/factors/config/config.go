@@ -575,6 +575,8 @@ func InitQueueWorker(config *Configuration) error {
 		log.WithError(err).Fatal("Failed to initalize queue client on init queue worker.")
 	}
 
+	InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
+
 	InitLogClient(config.Env, config.AppName, config.EmailSender, config.AWSKey,
 		config.AWSSecret, config.AWSRegion, config.ErrorReportingInterval, config.SentryDSN)
 
