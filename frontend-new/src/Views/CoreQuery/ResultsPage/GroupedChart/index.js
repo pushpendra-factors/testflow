@@ -188,7 +188,7 @@ function GroupedChart({ eventsData, groups, chartData, chartColors }) {
                         );
                     })
             }
-            <div className={styles.conversionsOverTimeChart} ref={chartRef} />
+            <div className={styles.groupedChart} ref={chartRef} />
         </div>
     )
 }

@@ -4,10 +4,11 @@ import DataTable from './DataTable';
 import { generateGroupedChartsData, generateDummyData, generateGroups, generateColors } from './utils';
 import EventsInfo from './EventsInfo';
 import FiltersInfo from './FiltersInfo';
+import UngroupedChart from './UngroupedChart';
 
 
 function PageContent({ queries, setDrawerVisible }) {
-    
+
     const [eventsData, setEventsData] = useState([]);
     const [groups, setGroups] = useState([]);
 
@@ -28,7 +29,13 @@ function PageContent({ queries, setDrawerVisible }) {
         <div>
             <EventsInfo queries={queries} />
             <FiltersInfo setDrawerVisible={setDrawerVisible} />
-            <GroupedChart
+            {/* <GroupedChart
+                chartData={chartData}
+                chartColors={chartColors}
+                groups={groups.filter(elem => elem.is_visible)}
+                eventsData={eventsData}
+            /> */}
+            <UngroupedChart
                 chartData={chartData}
                 chartColors={chartColors}
                 groups={groups.filter(elem => elem.is_visible)}
