@@ -100,7 +100,9 @@ def sync_contacts(project_id, api_key, sync_all=False):
         parameters = urllib.parse.urlencode(parameter_dict)
         get_url = url + parameters
 
-        get_url = get_url + '&' + build_properties_param_str(properties)
+        # contacts api uses property instead of properties in query parameter
+        properties_str = "&".join([ "property="+property_name for property_name in properties ])
+        get_url = get_url + '&' + properties_str
 
         log.warning("Downloading contacts for project_id %d from url %s.", project_id, get_url)
         r = requests.get(url= get_url, headers = {})
