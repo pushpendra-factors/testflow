@@ -5,7 +5,7 @@ import {SVG} from 'factorsComponents';
 import styles from './index.module.scss';
 import QueryBlock from './QueryBlock';
 
-function QueryComposer({ drawerVisible, queries, onClose, runQuery, addEvent}) {
+function QueryComposer({ drawerVisible, queries, onClose, runQuery, eventChange}) {
 
     if(!drawerVisible) {return null};
 
@@ -29,7 +29,7 @@ function QueryComposer({ drawerVisible, queries, onClose, runQuery, addEvent}) {
         queries.forEach((event, index) => {
             blockList.push(
                 <div className={styles.composer_body__query_block}>
-                    <QueryBlock index={index+1} event={event} eventChange={addEvent}></QueryBlock>
+                    <QueryBlock index={index+1} event={event} eventChange={eventChange}></QueryBlock>
                 </div>
             )
         });
@@ -37,7 +37,7 @@ function QueryComposer({ drawerVisible, queries, onClose, runQuery, addEvent}) {
         if(queries.length < 6) {
             blockList.push(
             <div className={styles.composer_body__query_block}>
-                <QueryBlock index={queries.length+1} eventChange={addEvent}></QueryBlock>
+                <QueryBlock index={queries.length+1} eventChange={eventChange}></QueryBlock>
             </div>
             )
         }

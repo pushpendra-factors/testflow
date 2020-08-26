@@ -9,10 +9,15 @@ function CoreQuery() {
     const [showResult, setShowResult] = useState(false);
     const [queries, setQueries] = useState([]);
 
-    const addToQueries = (newEvent, index) => {
+    const queryChange = (newEvent, index, changeType = 'add') => {
         const queryupdated = [...queries];
         if(queryupdated[index]) {
-            queryupdated[index] = newEvent;
+            if(changeType === 'add') {
+                queryupdated[index] = newEvent;
+            } else {
+                queryupdated.splice(index, 1);
+            }
+            
         } else {
             queryupdated.push(newEvent);
         }
@@ -36,7 +41,7 @@ function CoreQuery() {
                 queries={queries}
                 onClose={closeDrawer}
                 runQuery={runQuery}
-                addEvent={addToQueries}
+                eventChange={queryChange}
             >
 
             </QueryComposer>

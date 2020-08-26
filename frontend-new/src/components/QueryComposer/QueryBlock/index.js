@@ -1,13 +1,14 @@
 import React, {useState} from 'react';
 import {SVG} from 'factorsComponents';
 import styles from './index.module.scss';
-import { Select} from 'antd';
+import { Select, Button} from 'antd';
 
 const { OptGroup, Option } = Select;
 
 function QueryBlock({index, event, eventChange}) {
 
     const [isDDVisible, setDDVisible] = useState(index == 1 && !event ? true : false); 
+    const [isFilterDDVisible, setFilterDDVisible] = useState(false);
 
     const eventOptions = [
         {
@@ -42,6 +43,10 @@ function QueryBlock({index, event, eventChange}) {
         setDDVisible(true);
     }
 
+    const deleteItem = () => {
+        eventChange(event, index-1, 'delete');
+    }
+
     const selectEvents = () => {
         const selectDisplay = isDDVisible? 'block': 'none';
 
@@ -73,13 +78,54 @@ function QueryBlock({index, event, eventChange}) {
         )
     }
 
+    const addFilter = () => {
+        setFilterDDVisible(true);
+    }
+
+    const selectFilters = () => {
+        // return(
+        //     <div>
+        //         <Select>
+
+        //         </Select>
+        //     </div>
+        // )
+    }
+
+    // const additionalActions = () => {
+    //     if(!event) {return null};
+
+    //     return(
+    //         <div className={styles.query_block__actions}>
+    //            <Button type="text" onClick={addFilter}>filter</Button>
+    //            <Button type="text" onClick={deleteItem}>delete</Button> 
+    //         </div>
+    //     )
+    // }
+
+    const eventFilters = () => {
+        const filters = [];
+        if(event.filters.length) {
+            event.filters.forEach(filter => {
+                filters.push(<div className={styles.query_block__filters}>
+
+                </div>)
+            });
+        }
+        return filters;
+    }
+
     if(!event) {
         return (
             <div className={styles.query_block}>
-                <div className={styles.query_block__add_event}><SVG name={'plus'}></SVG> </div>
+                <div className={styles.query_block__event}>
+                    
+                        <div className={styles.query_block__add_event}><SVG name={'plus'}></SVG> </div>
 
-                <div className={styles.query_block__placehoder} onClick={triggerDropDown}> Add Event</div>
-                {selectEvents()}
+                        <div className={styles.query_block__placehoder} onClick={triggerDropDown}> Add Event</div>
+                        {selectEvents()}
+                    
+                </div>
                 
             </div>
         )
@@ -87,9 +133,13 @@ function QueryBlock({index, event, eventChange}) {
 
     return(
         <div className={styles.query_block}>
-            <span className={styles.query_block__index}>{index}</span>
-            <span className={styles.query_block__event_tag} onClick={triggerDropDown}> <SVG name="mouseevent"></SVG> {event.label} </span>
-            {selectEvents()}
+            <div className={styles.query_block__event}>
+                <span className={styles.query_block__index}>{index}</span>
+                <span className={styles.query_block__event_tag} onClick={triggerDropDown}> <SVG name="mouseevent"></SVG> {event.label} </span>
+                {/* {additionalActions()} */}
+                {selectEvents()}
+            </div>
+            {eventFilters()}
         </div>
     )
 }
