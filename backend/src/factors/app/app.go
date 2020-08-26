@@ -51,7 +51,7 @@ func main() {
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 
 	skipTrackProjectIds := flag.String("skip_track_project_ids", "", "List or projects to skip track")
-
+	whitelistedProjectIdsEventUserCache := flag.String("whitelisted_projects_ids_event_user_cache", "1", "List of project ids for which caching for events/user is enabled")
 	facebookAppId := flag.String("facebook_app_id", "", "")
 	facebookAppSecret := flag.String("facebook_app_secret", "", "")
 
@@ -72,27 +72,28 @@ func main() {
 			Name:     *dbName,
 			Password: *dbPass,
 		},
-		RedisHost:              *redisHost,
-		RedisPort:              *redisPort,
-		RedisHostPersistent:    *redisHostPersistent,
-		RedisPortPersistent:    *redisPortPersistent,
-		GeolocationFile:        *geoLocFilePath,
-		DeviceDetectorPath:     *deviceDetectorPath,
-		APIDomain:              *apiDomain,
-		APPDomain:              *appDomain,
-		AWSKey:                 *awsAccessKeyId,
-		AWSSecret:              *awsSecretAccessKey,
-		AWSRegion:              *awsRegion,
-		EmailSender:            *factorsEmailSender,
-		ErrorReportingInterval: *errorReportingInterval,
-		AdminLoginEmail:        *adminLoginEmail,
-		AdminLoginToken:        *adminLoginToken,
-		FacebookAppID:          *facebookAppId,
-		FacebookAppSecret:      *facebookAppSecret,
-		SentryDSN:              *sentryDSN,
-		LoginTokenMap:          C.ParseConfigStringToMap(*loginTokenMap),                // Map of "<token>": "<agent_email>".
-		SkipTrackProjectIds:    C.GetTokensFromStringListAsUint64(*skipTrackProjectIds), // comma seperated project ids.
-		SkipSessionProjectIds:  *skipSessionProjectIds,                                  // comma seperated project ids, supports "*".
+		RedisHost:                           *redisHost,
+		RedisPort:                           *redisPort,
+		RedisHostPersistent:                 *redisHostPersistent,
+		RedisPortPersistent:                 *redisPortPersistent,
+		GeolocationFile:                     *geoLocFilePath,
+		DeviceDetectorPath:                  *deviceDetectorPath,
+		APIDomain:                           *apiDomain,
+		APPDomain:                           *appDomain,
+		AWSKey:                              *awsAccessKeyId,
+		AWSSecret:                           *awsSecretAccessKey,
+		AWSRegion:                           *awsRegion,
+		EmailSender:                         *factorsEmailSender,
+		ErrorReportingInterval:              *errorReportingInterval,
+		AdminLoginEmail:                     *adminLoginEmail,
+		AdminLoginToken:                     *adminLoginToken,
+		FacebookAppID:                       *facebookAppId,
+		FacebookAppSecret:                   *facebookAppSecret,
+		SentryDSN:                           *sentryDSN,
+		LoginTokenMap:                       C.ParseConfigStringToMap(*loginTokenMap),                // Map of "<token>": "<agent_email>".
+		SkipTrackProjectIds:                 C.GetTokensFromStringListAsUint64(*skipTrackProjectIds), // comma seperated project ids.
+		SkipSessionProjectIds:               *skipSessionProjectIds,                                  // comma seperated project ids, supports "*".
+		WhitelistedProjectIdsEventUserCache: *whitelistedProjectIdsEventUserCache,
 	}
 
 	// Initialize configs and connections.

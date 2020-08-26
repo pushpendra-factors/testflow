@@ -63,7 +63,8 @@ func main() {
 		"Comma separated list of project IDs for which user properties merge is enabled. '*' for all.")
 
 	workerConcurrency := flag.Int("worker_concurrency", 10, "")
-
+	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
+	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
 	flag.Parse()
 
 	defer U.NotifyOnPanic(workerName, *env)
@@ -94,6 +95,7 @@ func main() {
 		MergeUspProjectIds:     *mergeUserPropertiesProjectIDS,
 	}
 
+	C.InitRedisPersistent(*redisHostPersistent, *redisPortPersistent)
 	err := C.InitQueueWorker(config)
 	if err != nil {
 		log.WithError(err).Fatal("Failed to initialize.")

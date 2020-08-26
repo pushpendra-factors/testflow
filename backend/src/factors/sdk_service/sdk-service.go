@@ -51,6 +51,8 @@ func main() {
 		"Comma separated list of project IDs for which user properties merge is enabled. '*' for all.")
 	skipSessionProjectIds := flag.String("skip_session_project_ids",
 		"", "List or projects to create session offline.")
+	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
+	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
 
 	flag.Parse()
 
@@ -81,6 +83,8 @@ func main() {
 		SegmentRequestQueueProjectTokens: C.GetTokensFromStringListAsString(*segmentRequestQueueProjectTokens),
 		MergeUspProjectIds:               *mergeUserPropertiesProjectIDS,
 		SkipSessionProjectIds:            *skipSessionProjectIds, // comma seperated project ids, supports "*".
+		RedisHostPersistent:              *redisHostPersistent,
+		RedisPortPersistent:              *redisPortPersistent,
 	}
 
 	err := C.InitSDKService(config)

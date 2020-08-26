@@ -507,7 +507,7 @@ func mineAndWritePatterns(projectId uint64, filepath string,
 	return nil
 }
 
-func buildPropertiesInfoFromInput(projectId uint64, eventNames []M.EventName, filepath string) (*P.UserAndEventsInfo, error) {
+func buildPropertiesInfoFromInput(projectId uint64, eventNames []M.EventNamesWithAggregation, filepath string) (*P.UserAndEventsInfo, error) {
 	userAndEventsInfo := P.NewUserAndEventsInfo()
 	eMap := *userAndEventsInfo.EventPropertiesInfoMap
 	for _, eventName := range eventNames {

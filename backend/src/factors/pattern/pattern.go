@@ -395,8 +395,8 @@ func AddNumericAndCategoricalProperties(
 	for key, value := range properties {
 		propertyType := U.GetPropertyTypeByKeyValue(key, value)
 		if propertyType == U.PropertyTypeNumerical {
-			numericValue, _ := value.(float64)
-			nMap[PatternPropertyKey(eventIndex, key)] = numericValue
+			numValue, _ := U.GetPropertyValueAsFloat64(value)
+			nMap[PatternPropertyKey(eventIndex, key)] = float64(numValue)
 		} else if propertyType == U.PropertyTypeCategorical {
 			categoricalValue := U.GetPropertyValueAsString(value)
 			categoricalValue = clipCategoricalValue(categoricalValue)

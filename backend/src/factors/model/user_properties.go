@@ -2,6 +2,7 @@ package model
 
 import (
 	"encoding/json"
+	cacheRedis "factors/cache/redis"
 	C "factors/config"
 	U "factors/util"
 	"sort"
@@ -32,6 +33,10 @@ type UserProperties struct {
 	UpdatedTimestamp int64          `gorm:"not null;default:0" json:"updated_timestamp"`
 	CreatedAt        time.Time      `json:"created_at"`
 	UpdatedAt        time.Time      `json:"updated_at"`
+}
+
+type CachedVisitedUsersList struct {
+	Users map[string]bool
 }
 
 // indexed hubspot user property.
@@ -82,6 +87,7 @@ func createUserPropertiesIfChanged(projectId uint64, userId string,
 			// Using merged properties for equality check to achieve
 			// currentPropertiesMap {x: 1, y: 2} newPropertiesMap {x: 1} -> true
 			if reflect.DeepEqual(currentPropertiesMap, mergedPropertiesMap) {
+				UpdateCacheForUserProperties(userId, projectId, currentPropertiesMap, true)
 				return currentPropertiesId, http.StatusNotModified
 			}
 			// If not equal, trigger user properties merge.
@@ -91,6 +97,7 @@ func createUserPropertiesIfChanged(projectId uint64, userId string,
 		mergedPropertiesMap = newPropertiesMap
 	}
 
+	UpdateCacheForUserProperties(userId, projectId, mergedPropertiesMap, false)
 	// Overwrite only given values.
 	updatedPropertiesBytes, err := json.Marshal(mergedPropertiesMap)
 	if err != nil {
@@ -108,6 +115,215 @@ func createUserPropertiesIfChanged(projectId uint64, userId string,
 
 	return updateUserPropertiesForUser(projectId, userId,
 		postgres.Jsonb{RawMessage: json.RawMessage(updatedPropertiesBytes)}, timestamp, false)
+}
+
+func RefreshCacheForUserProperties(projectid uint64, currentDate time.Time, usersProcessedLimit int, propertiesLimit int, valuesLimit int) {
+
+	logCtx := log.WithFields(log.Fields{
+		"project_id": projectid,
+	})
+	currentDateFormat := currentDate.AddDate(0, 0, -1).Format("2006-01-02")
+	var userPropertiesTillDate U.CachePropertyWithTimestamp
+	userPropertiesTillDate.Property = make(map[string]U.PropertyWithTimestamp)
+
+	propertyCacheKey, err := GetUserPropertiesByProjectCacheKey(projectid, currentDateFormat)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get property cache key - getuserpropertiesbyproject")
+	}
+
+	properties, err := GetRecentUserPropertyKeysWithLimits(projectid, usersProcessedLimit, propertiesLimit)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get property keys - getrecentuserpropertykeyswithlimits")
+	}
+	fmt.Println(currentDateFormat, len(properties))
+	for _, propertyValue := range properties {
+		values, category, err := GetRecentUserPropertyValuesWithLimits(projectid, propertyValue.Key, usersProcessedLimit, valuesLimit)
+		fmt.Println(currentDateFormat, len(values))
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to get property values - getrecentuserpropertyvalueswithlimits")
+		}
+		categoryMap := make(map[string]int64)
+		categoryMap[category] = propertyValue.Count
+		userPropertiesTillDate.Property[propertyValue.Key] = U.PropertyWithTimestamp{
+			category,
+			categoryMap,
+			U.CountTimestampTuple{
+				int64(propertyValue.LastSeen),
+				propertyValue.Count}}
+
+		var PropertyValues U.CachePropertyValueWithTimestamp
+		PropertyValues.PropertyValue = make(map[string]U.CountTimestampTuple)
+
+		if category == U.PropertyTypeCategorical {
+			for _, value := range values {
+
+				PropertyValuesKey, err := GetValuesByUserPropertyCacheKey(projectid, propertyValue.Key, currentDateFormat)
+				if err != nil {
+					logCtx.WithError(err).Error("Failed to get property cache key - getvaluesbyuserproperty")
+				}
+				if value.Value != "" {
+					PropertyValues.PropertyValue[value.Value] = U.CountTimestampTuple{
+						int64(value.LastSeen),
+						value.Count}
+				}
+				PropertyValues.CacheUpdatedTimestamp = currentDate.Unix()
+				enPropertyValuesCache, err := json.Marshal(PropertyValues)
+				if err != nil {
+					logCtx.WithError(err).Error("Failed to marshal property value - getvaluesbyuserproperty")
+				}
+				err = cacheRedis.SetPersistent(PropertyValuesKey, string(enPropertyValuesCache), U.EVENT_USER_CACHE_EXPIRY_SECS)
+				if err != nil {
+					logCtx.WithError(err).Error("Failed to set cache property value - getvaluesbyuserproperty")
+				}
+			}
+		}
+	}
+	userPropertiesTillDate.CacheUpdatedTimestamp = currentDate.Unix()
+	enPropertiesCache, err := json.Marshal(userPropertiesTillDate)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to marshal property key - getuserpropertiesbyproject")
+	}
+	err = cacheRedis.SetPersistent(propertyCacheKey, string(enPropertiesCache), U.EVENT_USER_CACHE_EXPIRY_SECS)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to set property key - getuserpropertiesbyproject")
+	}
+}
+
+func UpdateCacheForUserProperties(userId string, projectid uint64, updatedProperties map[string]interface{}, redundantProperty bool) {
+	// If the cache is empty / cache is updated from more than 1 day - repopulate cache
+	logCtx := log.WithFields(log.Fields{
+		"project_id": projectid,
+	})
+	currentTime := U.TimeNow()
+	currentTimeUnix := U.TimeNowUnix()
+	currentTimeDatePart := currentTime.Format("2006-01-02")
+	// Store Last updated from DB in cache as a key. and check and refresh cache accordingly
+	var userProperties U.CachePropertyWithTimestamp
+
+	propertyCacheKey, err := GetUserPropertiesByProjectCacheKey(projectid, currentTimeDatePart)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get property cache key - getuserpropertiesbyproject")
+	}
+
+	properties, _, err := cacheRedis.GetIfExistsPersistent(propertyCacheKey)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get property keys - getuserpropertiesbyproject")
+	}
+
+	if properties != "" {
+		err = json.Unmarshal([]byte(properties), &userProperties)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to unmarshal property keys - getuserpropertiesbyproject")
+		}
+	}
+
+	usersCacheKey, err := GetUsersCachedCacheKey(projectid, currentTimeDatePart)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get property cache key - getuserscachedcachekey")
+	}
+
+	users, _, err := cacheRedis.GetIfExistsPersistent(usersCacheKey)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get users list - users cache key")
+	}
+
+	var usersVisited CachedVisitedUsersList
+	if users != "" {
+		err = json.Unmarshal([]byte(users), &usersVisited)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to unmarshal users list - getuserscachedcachekey")
+		}
+	}
+
+	userAlreadyVistedForTheDay := false
+	if usersVisited.Users != nil && usersVisited.Users[userId] == true {
+		userAlreadyVistedForTheDay = true
+	}
+
+	if redundantProperty == true && userAlreadyVistedForTheDay == true {
+		return
+	}
+
+	if userAlreadyVistedForTheDay == false {
+		if usersVisited.Users == nil {
+			usersVisited.Users = make(map[string]bool)
+		}
+		usersVisited.Users[userId] = true
+		enUsersVisited, err := json.Marshal(usersVisited)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to marshal - getuserscachedcachekey")
+		}
+		err = cacheRedis.SetPersistent(usersCacheKey, string(enUsersVisited), 24*60*60)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to set cache - getuserscachedcachekey")
+		}
+	}
+
+	logCtx = logCtx.WithFields(log.Fields{"ProjectID": projectid, "UpdatedProperties": updatedProperties})
+	if userProperties.Property == nil {
+		userProperties.Property = make(map[string]U.PropertyWithTimestamp)
+	}
+
+	for item, element := range updatedProperties {
+
+		countTimeProperties := userProperties.Property[item]
+		if countTimeProperties.CategorywiseCount == nil {
+			countTimeProperties.CategorywiseCount = make(map[string]int64)
+		}
+		countTimeProperties.CountTime.Count = countTimeProperties.CountTime.Count + 1
+		countTimeProperties.CountTime.LastSeenTimestamp = currentTimeUnix
+
+		category := U.GetPropertyTypeByKeyValue(item, element)
+		countTimeProperties.CategorywiseCount[category]++
+		countTimeProperties.Category = U.DeriveCategory(countTimeProperties.CategorywiseCount, countTimeProperties.CountTime.Count)
+		userProperties.Property[item] = countTimeProperties
+
+		if countTimeProperties.Category == U.PropertyTypeCategorical {
+
+			userPropertyValuesKey, err := GetValuesByUserPropertyCacheKey(projectid, item, currentTimeDatePart)
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to get property value cache key - getvaluesbyuserproperty")
+			}
+			var propertyValues U.CachePropertyValueWithTimestamp
+			values, _, err := cacheRedis.GetIfExistsPersistent(userPropertyValuesKey)
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to get property value - getvaluesbyuserproperty")
+			}
+			if values != "" {
+				err = json.Unmarshal([]byte(values), &propertyValues)
+				if err != nil {
+					logCtx.WithError(err).Error("Failed to unmarshal property value - getvaluesbyuserproperty")
+				}
+			}
+			if propertyValues.PropertyValue == nil {
+				propertyValues.PropertyValue = make(map[string]U.CountTimestampTuple)
+			}
+			if reflect.TypeOf(element).Kind() == reflect.String && element.(string) != "" {
+				countTimeValues := propertyValues.PropertyValue[element.(string)]
+				countTimeValues.Count = countTimeValues.Count + 1
+				countTimeValues.LastSeenTimestamp = currentTimeUnix
+				propertyValues.PropertyValue[element.(string)] = countTimeValues
+				propertyValues.CacheUpdatedTimestamp = currentTimeUnix
+				enEventPropertyValueCache, err := json.Marshal(propertyValues)
+				if err != nil {
+					logCtx.WithError(err).Error("Failed to marshal property value - getvaluesbyuserproperty")
+				}
+				err = cacheRedis.SetPersistent(userPropertyValuesKey, string(enEventPropertyValueCache), U.EVENT_USER_CACHE_EXPIRY_SECS)
+				if err != nil {
+					logCtx.WithError(err).Error("Failed to set cache property value - getvaluesbyuserproperty")
+				}
+			}
+		}
+	}
+	userProperties.CacheUpdatedTimestamp = currentTimeUnix
+	enPropertiesCache, err := json.Marshal(userProperties)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to marshal property keys - getuserpropertiesbyproject")
+	}
+	err = cacheRedis.SetPersistent(propertyCacheKey, string(enPropertiesCache), U.EVENT_USER_CACHE_EXPIRY_SECS)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to set cache property keys - getuserpropertiesbyproject")
+	}
 }
 
 // MergeUserPropertiesForProjectID Used in one time script to back run merge for all existing users.

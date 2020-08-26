@@ -51,38 +51,39 @@ type DBConf struct {
 }
 
 type Configuration struct {
-	AppName                          string
-	Env                              string
-	Port                             int
-	DBInfo                           DBConf
-	RedisHost                        string
-	RedisPort                        int
-	RedisHostPersistent              string
-	RedisPortPersistent              int
-	QueueRedisHost                   string
-	QueueRedisPort                   int
-	EtcdEndpoints                    []string
-	GeolocationFile                  string
-	DeviceDetectorPath               string
-	APIDomain                        string
-	APPDomain                        string
-	AWSRegion                        string
-	AWSKey                           string
-	AWSSecret                        string
-	Cookiename                       string
-	EmailSender                      string
-	ErrorReportingInterval           int
-	AdminLoginEmail                  string
-	AdminLoginToken                  string
-	FacebookAppID                    string
-	FacebookAppSecret                string
-	SentryDSN                        string
-	LoginTokenMap                    map[string]string
-	SkipTrackProjectIds              []uint64
-	SDKRequestQueueProjectTokens     []string
-	SegmentRequestQueueProjectTokens []string
-	MergeUspProjectIds               string
-	SkipSessionProjectIds            string // comma seperated project ids, supports "*" for all projects.
+	AppName                             string
+	Env                                 string
+	Port                                int
+	DBInfo                              DBConf
+	RedisHost                           string
+	RedisPort                           int
+	RedisHostPersistent                 string
+	RedisPortPersistent                 int
+	QueueRedisHost                      string
+	QueueRedisPort                      int
+	EtcdEndpoints                       []string
+	GeolocationFile                     string
+	DeviceDetectorPath                  string
+	APIDomain                           string
+	APPDomain                           string
+	AWSRegion                           string
+	AWSKey                              string
+	AWSSecret                           string
+	Cookiename                          string
+	EmailSender                         string
+	ErrorReportingInterval              int
+	AdminLoginEmail                     string
+	AdminLoginToken                     string
+	FacebookAppID                       string
+	FacebookAppSecret                   string
+	SentryDSN                           string
+	LoginTokenMap                       map[string]string
+	SkipTrackProjectIds                 []uint64
+	SDKRequestQueueProjectTokens        []string
+	SegmentRequestQueueProjectTokens    []string
+	MergeUspProjectIds                  string
+	SkipSessionProjectIds               string // comma seperated project ids, supports "*" for all projects.
+	WhitelistedProjectIdsEventUserCache string
 }
 
 type Services struct {
@@ -536,7 +537,7 @@ func InitSDKService(config *Configuration) error {
 
 	// Cache dependency for requests not using queue.
 	InitRedis(config.RedisHost, config.RedisPort)
-
+	InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
 	initGeoLocationService(config.GeolocationFile)
 	initDeviceDetectorPath(config.DeviceDetectorPath)
 
@@ -659,6 +660,10 @@ func GetFactorsCookieName() string {
 
 func GetSkipTrackProjectIds() []uint64 {
 	return configuration.SkipTrackProjectIds
+}
+
+func GetWhitelistedProjectIdsEventUserCache() string {
+	return configuration.WhitelistedProjectIdsEventUserCache
 }
 
 // ParseConfigStringToMap - Parses config string

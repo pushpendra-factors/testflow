@@ -6,6 +6,7 @@ import (
 	M "factors/model"
 	PC "factors/pattern_client"
 	U "factors/util"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -87,48 +88,61 @@ func GetUsersHandler(c *gin.Context) {
 // Test command.
 // curl -i -X GET http://localhost:8080/projects/1/user_properties
 func GetUserPropertiesHandler(c *gin.Context) {
+	var err error
+	var properties map[string][]string
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
 
-	queryType := c.Query("query_type")
-	if !helpers.IsValidQueryType(queryType) {
-		c.AbortWithStatus(http.StatusBadRequest)
-		return
-	}
+	logCtx := log.WithFields(log.Fields{
+		"projectId": projectId,
+	})
 
-	reqId := U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID)
-
-	var err error
-	var properties map[string][]string
-	modelId := uint64(0)
-	modelIdParam := c.Query("model_id")
-	if modelIdParam != "" {
-		modelId, err = strconv.ParseUint(modelIdParam, 10, 64)
+	if helpers.IsProjectWhitelistedForEventUserCache(projectId) {
+		properties, err = M.GetUserPropertiesByProject(projectId, 2500, 30)
 		if err != nil {
+			logCtx.WithError(err).Error("get user properties by project")
+			c.AbortWithStatus(http.StatusInternalServerError)
+			return
+		}
+
+		if len(properties) == 0 {
+			logCtx.WithError(err).Error(fmt.Sprintf("No user properties Returned - ProjectID - %s", projectId))
+		}
+	} else {
+		queryType := c.Query("query_type")
+		if !helpers.IsValidQueryType(queryType) {
 			c.AbortWithStatus(http.StatusBadRequest)
 			return
 		}
-		properties, err = PC.GetSeenUserProperties(reqId, projectId, modelId)
-		if err != nil {
-			log.WithFields(log.Fields{
-				log.ErrorKey: err, "projectId": projectId}).Error(
-				"Get User Properties from pattern servers failed.")
-			properties = make(map[string][]string)
+		reqId := U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID)
+		modelId := uint64(0)
+		modelIdParam := c.Query("model_id")
+		if modelIdParam != "" {
+			modelId, err = strconv.ParseUint(modelIdParam, 10, 64)
+			if err != nil {
+				c.AbortWithStatus(http.StatusBadRequest)
+				return
+			}
+			properties, err = PC.GetSeenUserProperties(reqId, projectId, modelId)
+			if err != nil {
+				log.WithFields(log.Fields{
+					log.ErrorKey: err, "projectId": projectId}).Error(
+					"Get User Properties from pattern servers failed.")
+				properties = make(map[string][]string)
+			}
+		}
+		var errCode int
+		if len(properties) == 0 {
+			properties, errCode = M.GetRecentUserPropertyKeys(projectId)
+			if errCode == http.StatusInternalServerError {
+				c.AbortWithStatus(errCode)
+				return
+			}
 		}
 	}
-
-	var errCode int
-	if len(properties) == 0 {
-		properties, errCode = M.GetRecentUserPropertyKeys(projectId)
-		if errCode == http.StatusInternalServerError {
-			c.AbortWithStatus(errCode)
-			return
-		}
-	}
-
 	properties = U.ClassifyDateTimePropertyKeys(&properties)
 	U.FillMandatoryDefaultUserProperties(&properties)
 	U.FilterDisabledCoreUserProperties(&properties)
@@ -138,49 +152,62 @@ func GetUserPropertiesHandler(c *gin.Context) {
 
 // curl -i -X GET http://localhost:8080/projects/1/user_properties/$country
 func GetUserPropertyValuesHandler(c *gin.Context) {
+	var err error
+	var propertyValues []string
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
 
-	reqId := U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID)
+	logCtx := log.WithFields(log.Fields{
+		"projectId": projectId,
+	})
 
 	propertyName := c.Params.ByName("property_name")
 	if propertyName == "" {
+		logCtx.WithField("property_name", propertyName).Error("null propertyname")
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-
-	var err error
-	var propertyValues []string
-	modelId := uint64(0)
-	modelIdParam := c.Query("model_id")
-	if modelIdParam != "" {
-		modelId, err = strconv.ParseUint(modelIdParam, 10, 64)
+	if helpers.IsProjectWhitelistedForEventUserCache(projectId) {
+		propertyValues, err = M.GetPropertyValuesByUserProperty(projectId, propertyName, 2500, 30)
 		if err != nil {
-			c.AbortWithStatus(http.StatusBadRequest)
+			logCtx.WithError(err).Error("get property values by user property")
+			c.AbortWithStatus(http.StatusInternalServerError)
 			return
 		}
+		if len(propertyValues) == 0 {
+			logCtx.WithError(err).Error(fmt.Sprintf("No user properties Returned - ProjectID - %s, propertyName - %s", projectId, propertyName))
+		}
+	} else {
+		reqId := U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID)
+		modelId := uint64(0)
+		modelIdParam := c.Query("model_id")
+		if modelIdParam != "" {
+			modelId, err = strconv.ParseUint(modelIdParam, 10, 64)
+			if err != nil {
+				c.AbortWithStatus(http.StatusBadRequest)
+				return
+			}
 
-		propertyValues, err = PC.GetSeenUserPropertyValues(reqId, projectId, modelId, propertyName)
-		if err != nil {
-			log.WithError(err).WithFields(log.Fields{
-				"projectId":    projectId,
-				"propertyName": propertyName}).Error(
-				"Get User Properties failed.")
-			c.AbortWithStatus(http.StatusBadRequest)
-			return
+			propertyValues, err = PC.GetSeenUserPropertyValues(reqId, projectId, modelId, propertyName)
+			if err != nil {
+				log.WithError(err).WithFields(log.Fields{
+					"projectId":    projectId,
+					"propertyName": propertyName}).Error(
+					"Get User Properties failed.")
+				c.AbortWithStatus(http.StatusBadRequest)
+				return
+			}
+		}
+		var errCode int
+		if len(propertyValues) == 0 {
+			propertyValues, errCode = M.GetRecentUserPropertyValues(projectId, propertyName)
+			if errCode == http.StatusInternalServerError {
+				c.AbortWithStatus(errCode)
+			}
 		}
 	}
-
-	var errCode int
-	if len(propertyValues) == 0 {
-		propertyValues, errCode = M.GetRecentUserPropertyValues(projectId, propertyName)
-		if errCode == http.StatusInternalServerError {
-			c.AbortWithStatus(errCode)
-		}
-	}
-
 	c.JSON(http.StatusOK, propertyValues)
 }

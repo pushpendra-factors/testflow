@@ -78,49 +78,58 @@ func TestGetEventNamesHandler(t *testing.T) {
 		Exact      bool     `json:"exact"`
 	}{}
 
+	H.InitSDKServiceRoutes(r)
+	uri := "/sdk/event/track"
+
 	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
 	assert.NotNil(t, project)
 
+	ReinitialiseConfigForCachedEnabledProjects(fmt.Sprintf("%v", project.ID))
 	w := sendGetEventNamesExactRequest(project.ID, agent, r)
-	assert.Equal(t, http.StatusNotFound, w.Code) // Should be 404 for no event_names.
+	assert.Equal(t, http.StatusOK, w.Code) // Should be still 200 for no event_names with empty result set
+	jsonResponse, _ := ioutil.ReadAll(w.Body)
+	json.Unmarshal(jsonResponse, &eventNames)
+	// should contain all event names.
+	assert.Len(t, eventNames.EventNames, 0)
 
 	user, errCode := M.CreateUser(&M.User{ProjectId: project.ID})
 	assert.NotNil(t, user)
 	assert.Equal(t, http.StatusCreated, errCode)
 
-	timestamp := U.UnixTimeBeforeAWeek()
-	timeWithinWeek := timestamp + 3600
-	timeBeforeWeek := timestamp - 3600
-	createEventWithTimestampByName(t, project, user, "event3", timeBeforeWeek)
-	createEventWithTimestampByName(t, project, user, "event4", timeBeforeWeek)
+	rEventName := "event1"
+	w = ServePostRequestWithHeaders(r, uri,
+		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"name": "Jhon"}}`, user.ID, rEventName)),
+		map[string]string{
+			"Authorization": project.Token,
+			"User-Agent":    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
+		})
 
-	// Test zero events occurred on the occurrence count window.
-	w = sendGetEventNamesExactRequest(project.ID, agent, r)
 	assert.Equal(t, http.StatusOK, w.Code)
-	jsonResponse, _ := ioutil.ReadAll(w.Body)
-	json.Unmarshal(jsonResponse, &eventNames)
-	// should contain all event names.
-	assert.Len(t, eventNames.EventNames, 2)
-	assert.Equal(t, "event3", eventNames.EventNames[0])
-	assert.Equal(t, "event4", eventNames.EventNames[1])
+	rEventName = "event2"
+	w = ServePostRequestWithHeaders(r, uri,
+		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"name": "Jhon"}}`, user.ID, rEventName)),
+		map[string]string{
+			"Authorization": project.Token,
+			"User-Agent":    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
+		})
+	assert.Equal(t, http.StatusOK, w.Code)
 
-	createEventWithTimestampByName(t, project, user, "event1", timeWithinWeek)
-	createEventWithTimestampByName(t, project, user, "event1", timeWithinWeek)
-	createEventWithTimestampByName(t, project, user, "event2", timeWithinWeek)
-	createEventWithTimestampByName(t, project, user, "event2", timeWithinWeek)
-	createEventWithTimestampByName(t, project, user, "event2", timeWithinWeek)
+	rEventName = "event1"
+	w = ServePostRequestWithHeaders(r, uri,
+		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"name": "Jhon"}}`, user.ID, rEventName)),
+		map[string]string{
+			"Authorization": project.Token,
+			"User-Agent":    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
+		})
 
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	// Test events ingested via sdk/track call
 	w = sendGetEventNamesExactRequest(project.ID, agent, r)
 	assert.Equal(t, http.StatusOK, w.Code)
 	jsonResponse, _ = ioutil.ReadAll(w.Body)
 	json.Unmarshal(jsonResponse, &eventNames)
-	assert.Len(t, eventNames.EventNames, 4)
-	// should contain events ordered by occurrence count.
-	assert.Equal(t, "event2", eventNames.EventNames[0])
-	assert.Equal(t, "event1", eventNames.EventNames[1])
-	// should contain all event names even though not
-	// occurred on the window.
-	assert.Equal(t, "event3", eventNames.EventNames[2])
-	assert.Equal(t, "event4", eventNames.EventNames[3])
+	// should contain all event names.
+	assert.Len(t, eventNames.EventNames, 2)
 }

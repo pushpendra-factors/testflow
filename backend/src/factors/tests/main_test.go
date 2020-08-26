@@ -3,12 +3,15 @@ package tests
 import (
 	C "factors/config"
 	"flag"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
 
 	log "github.com/sirupsen/logrus"
 )
+
+var config *C.Configuration
 
 func TestMain(m *testing.M) {
 	env := flag.String("env", "development", "")
@@ -37,7 +40,7 @@ func TestMain(m *testing.M) {
 
 	flag.Parse()
 
-	config := &C.Configuration{
+	config = &C.Configuration{
 		Env:           *env,
 		Port:          *port,
 		EtcdEndpoints: strings.Split(*etcd, ","),
@@ -77,4 +80,9 @@ func TestMain(m *testing.M) {
 
 	retCode := m.Run()
 	os.Exit(retCode)
+}
+
+func ReinitialiseConfigForCachedEnabledProjects(projectId string) {
+	config.WhitelistedProjectIdsEventUserCache = projectId
+	fmt.Println(config)
 }

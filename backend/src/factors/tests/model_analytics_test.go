@@ -345,6 +345,83 @@ func TestAnalyticsFunnelWithUserIdentification(t *testing.T) {
 	assert.Equal(t, int64(1), result1.Rows[0][1].(int64))
 }
 
+func TestAnalyticsFunnelQueryWithFilterConditionNumericalProperty(t *testing.T) {
+	// Initialize routes and dependent data.
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+	uri := "/sdk/event/track"
+
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	user, errCode := M.CreateUser(&M.User{ProjectId: project.ID})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, user.ID)
+
+	startTimestamp := U.UnixTimeBeforeDuration(time.Hour * 1)
+
+	payload1 := fmt.Sprintf(`{"event_name": "%s", "timestamp": %d, "event_properties": {"value": 5}, "user_properties": {"value": 5}}`,
+		"s0", startTimestamp)
+	w := ServePostRequestWithHeaders(r, uri, []byte(payload1),
+		map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	payload1 = fmt.Sprintf(`{"event_name": "%s", "timestamp": %d, "event_properties": {"value": 100}, "user_properties": {"value": "string"}}`,
+		"s0", startTimestamp+10)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload1),
+		map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	payload1 = fmt.Sprintf(`{"event_name": "%s", "timestamp": %d, "event_properties": {"value": "string"}, "user_properties": {"value": 200}}`,
+		"s0", startTimestamp+10)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload1),
+		map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	payload1 = fmt.Sprintf(`{"event_name": "%s", "timestamp": %d, "event_properties": {"value": 1000}, "user_properties": {"value": 2000}}`,
+		"s0", startTimestamp+10)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload1),
+		map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	payload1 = fmt.Sprintf(`{"event_name": "%s", "timestamp": %d, "event_properties": {"value": 1}, "user_properties": {"value": 2000}}`,
+		"s0", startTimestamp+10)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload1),
+		map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	query := M.Query{
+		From: startTimestamp,
+		To:   time.Now().UTC().Unix(),
+		EventsWithProperties: []M.QueryEventWithProperties{
+			M.QueryEventWithProperties{
+				Name: "s0",
+				Properties: []M.QueryProperty{
+					M.QueryProperty{
+						Entity:   M.PropertyEntityEvent,
+						Property: "value",
+						Operator: "greaterThan",
+						Value:    "50",
+						Type:     U.PropertyTypeNumerical,
+					},
+					M.QueryProperty{
+						Entity:    M.PropertyEntityUser,
+						Property:  "value",
+						Operator:  "greaterThan",
+						Value:     "50",
+						Type:      U.PropertyTypeNumerical,
+						LogicalOp: "OR",
+					},
+				},
+			},
+		},
+		Class:           M.QueryClassInsights,
+		Type:            M.QueryTypeEventsOccurrence,
+		EventsCondition: M.EventCondAllGivenEvent,
+	}
+
+	result, errCode, _ := M.Analyze(project.ID, query)
+	assert.Equal(t, http.StatusOK, errCode)
+
+	assert.Equal(t, "count", result.Headers[0])
+	assert.Equal(t, int64(4), result.Rows[0][0])
+
+}
 func TestAnalyticsFunnelQueryWithFilterCondition(t *testing.T) {
 	// Initialize routes and dependent data.
 	r := gin.Default()

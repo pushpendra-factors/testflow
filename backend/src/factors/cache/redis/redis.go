@@ -104,10 +104,27 @@ func set(key *Key, value string, expiryInSecs float64, persistent bool) error {
 	if expiryInSecs == 0 {
 		_, err = redisConn.Do("SET", cKey, value)
 	} else {
-		_, err = redisConn.Do("SET", cKey, value, "EX", expiryInSecs)
+		_, err = redisConn.Do("SET", cKey, value, "EX", int64(expiryInSecs))
 	}
 
 	return err
+}
+
+// GetIfExistsPersistent - Check if the cache key exists, if not return null
+// Get value if the cache key exists
+func GetIfExistsPersistent(key *Key) (string, bool, error) {
+	ifExists, err := ExistsPersistent(key)
+	if err != nil {
+		return "", false, err
+	}
+	if !ifExists {
+		return "", false, err
+	}
+	value, err := GetPersistent(key)
+	if err != nil {
+		return "", true, err
+	}
+	return value, true, nil
 }
 
 func GetPersistent(key *Key) (string, error) {

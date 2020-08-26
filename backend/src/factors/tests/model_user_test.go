@@ -451,77 +451,70 @@ func TestGetRecentUserPropertyKeys(t *testing.T) {
 	_, errCode2 := M.CreateUser(&M.User{ProjectId: project.ID, Properties: postgres.Jsonb{props2}})
 	assert.Equal(t, http.StatusCreated, errCode2)
 
-	// recent users limited to 1.
-	props, errCode := M.GetRecentUserPropertyKeysWithLimits(project.ID, 1)
-	assert.Equal(t, http.StatusFound, errCode)
-	assert.Contains(t, props, U.PropertyTypeCategorical)
-	assert.Contains(t, props, U.PropertyTypeNumerical)
-	assert.Len(t, props[U.PropertyTypeCategorical], 1)
-	assert.Len(t, props[U.PropertyTypeNumerical], 2) // including joinTime.
-	// validates classification.
-	assert.Contains(t, props[U.PropertyTypeCategorical], "prop3")
-	assert.Contains(t, props[U.PropertyTypeNumerical], "prop4")
-	// old user properties shoult not exist.
-	assert.NotContains(t, props[U.PropertyTypeCategorical], "prop1")
-	assert.NotContains(t, props[U.PropertyTypeNumerical], "prop2")
+	props, err := M.GetRecentUserPropertyKeysWithLimits(project.ID, 10, 10)
+	assert.Equal(t, nil, err)
+	propertyMap := make(map[string]bool)
+	for _, property := range props {
+		propertyMap[property.Key] = true
+	}
+	assert.Equal(t, propertyMap["prop1"], true)
+	assert.Equal(t, propertyMap["prop2"], true)
+	assert.Equal(t, propertyMap["prop3"], true)
+	assert.Equal(t, propertyMap["prop4"], true)
 
-	//cached property
-	M.GetCacheRecentUserPropertyKeys(project.ID)
-	props, err = M.GetCacheRecentUserPropertyKeys(project.ID)
-	assert.Nil(t, err)
-	assert.Contains(t, props, U.PropertyTypeCategorical)
-	assert.Contains(t, props, U.PropertyTypeNumerical)
-	assert.Len(t, props[U.PropertyTypeCategorical], 1)
-	assert.Len(t, props[U.PropertyTypeNumerical], 2) // including joinTime.
-	// validates classification.
-	assert.Contains(t, props[U.PropertyTypeCategorical], "prop3")
-	assert.Contains(t, props[U.PropertyTypeNumerical], "prop4")
-	// old user properties shoult not exist.
-	assert.NotContains(t, props[U.PropertyTypeCategorical], "prop1")
-	assert.NotContains(t, props[U.PropertyTypeNumerical], "prop2")
+	// recent users limited to 1.
+	props, err = M.GetRecentUserPropertyKeysWithLimits(project.ID, 1, 10)
+	assert.Equal(t, nil, err)
+	propertyMap = make(map[string]bool)
+	for _, property := range props {
+		propertyMap[property.Key] = true
+	}
+	assert.Equal(t, propertyMap["prop1"], false)
+	assert.Equal(t, propertyMap["prop2"], false)
+	assert.Equal(t, propertyMap["prop3"], true)
+	assert.Equal(t, propertyMap["prop4"], true)
+
 }
 
 func TestGetRecentUserPropertyValues(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 
-	props1 := json.RawMessage(`{"prop3": "value1", "prop4": "1"}`)
+	props1 := json.RawMessage(`{"prop3": "value1", "prop4": 1}`)
 	_, errCode1 := M.CreateUser(&M.User{ProjectId: project.ID, Properties: postgres.Jsonb{props1}})
 	assert.Equal(t, http.StatusCreated, errCode1)
-	props2 := json.RawMessage(`{"prop3": "value2", "prop4": "2"}`)
+	props2 := json.RawMessage(`{"prop3": "value2", "prop4": 2}`)
 	_, errCode2 := M.CreateUser(&M.User{ProjectId: project.ID, Properties: postgres.Jsonb{props2}})
 	assert.Equal(t, http.StatusCreated, errCode2)
 	// different user with same properties as previous and different values.
-	props3 := json.RawMessage(`{"prop3": "value3", "prop4": "3"}`)
+	props3 := json.RawMessage(`{"prop3": "value3", "prop4": 3}`)
 	_, errCode3 := M.CreateUser(&M.User{ProjectId: project.ID, Properties: postgres.Jsonb{props3}})
 	assert.Equal(t, http.StatusCreated, errCode3)
 
 	t.Run("RecentPropertyValuesLimitedByUsers", func(t *testing.T) {
 		// recent users limited to 2.
-		values, errCode := M.GetRecentUserPropertyValuesWithLimits(project.ID, "prop3", 2, 100)
-		assert.Equal(t, http.StatusFound, errCode)
+		values, category, err := M.GetRecentUserPropertyValuesWithLimits(project.ID, "prop3", 2, 100)
+		assert.Equal(t, nil, err)
 		assert.Len(t, values, 2)
-		assert.NotContains(t, values, "value1")
-
-		//should return from cache
-		values, err := M.GetCacheRecentUserPropertyValues(project.ID, "prop3")
-		assert.Nil(t, err)
-		assert.Len(t, values, 2)
-		assert.NotContains(t, values, "value1")
-	})
-
-	t.Run("RecentPropertyValuesLimitedByValues", func(t *testing.T) {
-		// recent users limited to 3 but values limited to 2.
-		values, errCode := M.GetRecentUserPropertyValuesWithLimits(project.ID, "prop4", 3, 2)
-		assert.Equal(t, http.StatusFound, errCode)
-		assert.Len(t, values, 2)
-		assert.NotContains(t, values, "3")
-
-		//should return from cache
-		values, err := M.GetCacheRecentUserPropertyValues(project.ID, "prop4")
-		assert.Nil(t, err)
-		assert.Len(t, values, 2)
-		assert.NotContains(t, values, "3")
+		valuesMap := make(map[string]bool)
+		for _, value := range values {
+			valuesMap[value.Value] = true
+		}
+		assert.Equal(t, valuesMap["value1"], false)
+		assert.Equal(t, valuesMap["value2"], true)
+		assert.Equal(t, valuesMap["value3"], true)
+		assert.Equal(t, category, U.PropertyTypeCategorical)
+		values, category, err = M.GetRecentUserPropertyValuesWithLimits(project.ID, "prop4", 10, 100)
+		assert.Equal(t, nil, err)
+		assert.Len(t, values, 3)
+		valuesMap = make(map[string]bool)
+		for _, value := range values {
+			valuesMap[value.Value] = true
+		}
+		assert.Equal(t, valuesMap["1"], true)
+		assert.Equal(t, valuesMap["2"], true)
+		assert.Equal(t, valuesMap["3"], true)
+		assert.Equal(t, category, U.PropertyTypeNumerical)
 	})
 }
 
@@ -670,34 +663,4 @@ func TestUserPropertiesEnrichmentWithPreviousSessionData(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, (*userPropertiesMap)["Hello"])
 	assert.Equal(t, (*userPropertiesMap)["Hello"], "World")
-}
-
-func TestUserNumericalProperties(t *testing.T) {
-	project, err := SetupProjectReturnDAO()
-	assert.Nil(t, err)
-	assert.NotNil(t, project)
-
-	_, errCode := M.CreateUser(&M.User{ProjectId: project.ID, Properties: postgres.Jsonb{[]byte(`{"$page_count":10}`)}})
-	assert.Equal(t, http.StatusCreated, errCode)
-	props, errCode := M.GetRecentUserPropertyKeysWithLimits(project.ID, 1)
-	assert.Equal(t, http.StatusFound, errCode)
-	assert.Contains(t, props, U.PropertyTypeNumerical)
-	assert.Contains(t, props, U.PropertyTypeCategorical)
-	// validates classification.
-	assert.Contains(t, props[U.PropertyTypeNumerical], "$page_count")
-}
-
-func TestGetLast24hrsUserProperties(t *testing.T) {
-	project, err := SetupProjectReturnDAO()
-	currentTime := U.TimeNowUnix()
-	assert.Nil(t, err)
-	_, errCode := M.CreateUser(&M.User{
-		ProjectId:     project.ID,
-		Properties:    postgres.Jsonb{[]byte(`{"prop1":"val1"}`)},
-		JoinTimestamp: currentTime - 60*60*24,
-	})
-	assert.Equal(t, http.StatusCreated, errCode)
-	props, errCode := M.GetRecentUserPropertyKeys(project.ID)
-	assert.Equal(t, http.StatusFound, errCode)
-	assert.Contains(t, props[U.PropertyTypeCategorical], "prop1")
 }

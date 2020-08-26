@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -444,11 +445,19 @@ var NUMERICAL_PROPERTY_BY_NAME = [...]string{
 	UP_SCREEN_HEIGHT,
 	UP_SCREEN_DENSITY,
 	UP_JOIN_TIME, // Todo: move this to property type datetime.
+	UP_SESSION_COUNT,
 	EP_SESSION_COUNT,
 	UP_PAGE_COUNT,
 	UP_TOTAL_SPENT_TIME,
 	UP_LATEST_PAGE_LOAD_TIME,
 	UP_LATEST_PAGE_SPENT_TIME,
+}
+var CATEGORICAL_PROPERTY_BY_NAME = [...]string{
+	EP_CAMPAIGN_ID,
+	EP_ADGROUP_ID,
+	UP_INITIAL_ADGROUP_ID,
+	UP_INITIAL_CAMPAIGN_ID,
+	SP_IS_FIRST_SESSION,
 }
 
 var EVENT_TO_USER_INITIAL_PROPERTIES = map[string]string{
@@ -978,12 +987,27 @@ func isNumericalPropertyByName(propertyKey string) bool {
 	return false
 }
 
-func GetPropertyTypeByKeyValue(propertyKey string, propertyValue interface{}) string {
-	if strings.HasPrefix(propertyKey, NAME_PREFIX) {
-		if isNumericalPropertyByName(propertyKey) {
-			return PropertyTypeNumerical
+func isCategoricalPropertyByName(propertyKey string) bool {
+	for _, key := range CATEGORICAL_PROPERTY_BY_NAME {
+		if key == propertyKey {
+			return true
 		}
-		return PropertyTypeCategorical
+	}
+
+	return false
+}
+
+func GetPropertyTypeByKeyValue(propertyKey string, propertyValue interface{}) string {
+	// PropertyKey will be set to null if the pre-mentioned classfication behaviour need to be supressed
+	if propertyKey != "" {
+		if strings.HasPrefix(propertyKey, NAME_PREFIX) {
+			if isNumericalPropertyByName(propertyKey) {
+				return PropertyTypeNumerical
+			}
+			if isCategoricalPropertyByName(propertyKey) {
+				return PropertyTypeCategorical
+			}
+		}
 	}
 
 	switch propertyValue.(type) {
@@ -1080,7 +1104,7 @@ func ClassifyPropertiesType(properties *map[string]map[interface{}]bool) (map[st
 			case PropertyTypeCategorical:
 				isNumericalProperty = false
 			default:
-				return nil, fmt.Errorf("unsupported type %s on property type classification", propertyType)
+				return nil, fmt.Errorf("unsupported type %s on property type classification %s - %s", propertyType, propertyKey, propertyValue)
 			}
 		}
 
@@ -1096,36 +1120,6 @@ func ClassifyPropertiesType(properties *map[string]map[interface{}]bool) (map[st
 	propsByType[PropertyTypeCategorical] = catProperties
 
 	return propsByType, nil
-}
-
-// FillPropertyKvsFromPropertiesJson - Fills properties key with limited
-// no.of of values propertiesKvs -> map[propertyKey]map[propertyValue]true
-func FillPropertyKvsFromPropertiesJson(propertiesJson []byte,
-	propertiesKvs *map[string]map[interface{}]bool, valuesLimit int) error {
-	var rowProperties map[string]interface{}
-	err := json.Unmarshal(propertiesJson, &rowProperties)
-	if err != nil {
-		return err
-	}
-
-	for k, v := range rowProperties {
-		// allow only string, float and bool valued
-		// properties.
-		_, strOk := v.(string)
-		_, fltOk := v.(float64)
-		_, boolOk := v.(bool)
-		if !strOk && !fltOk && !boolOk {
-			continue
-		}
-
-		if _, ok := (*propertiesKvs)[k]; !ok {
-			(*propertiesKvs)[k] = make(map[interface{}]bool, 0)
-		}
-		if len((*propertiesKvs)[k]) < valuesLimit {
-			(*propertiesKvs)[k][v] = true
-		}
-	}
-	return nil
 }
 
 // Moves datetime properties from numerical properties to type datetime.
@@ -1349,4 +1343,177 @@ func SanitizePropertiesJsonb(propertiesJsonb *postgres.Jsonb) *postgres.Jsonb {
 	}
 
 	return propertiesJsonb
+}
+
+type CountTimestampTuple struct {
+	LastSeenTimestamp int64
+	Count             int64
+}
+
+type CachePropertyWithTimestamp struct {
+	Property              map[string]PropertyWithTimestamp
+	CacheUpdatedTimestamp int64
+}
+
+type PropertyWithTimestamp struct {
+	Category          string
+	CategorywiseCount map[string]int64 // Not to be used by handlers. Only cache set will use it before computing category
+	CountTime         CountTimestampTuple
+}
+
+type CachePropertyValueWithTimestamp struct {
+	PropertyValue         map[string]CountTimestampTuple
+	CacheUpdatedTimestamp int64
+}
+
+type NameCountTimestampCategory struct {
+	Name      string
+	Count     int64
+	Timestamp int64
+	Category  string
+}
+
+// SortByTimestampAndCount Sorts the given array by timestamp/count
+// Pick all past 24 hours event and sort the remaining by count and return
+// No filtering is done in this method
+func SortByTimestampAndCount(data []NameCountTimestampCategory) []NameCountTimestampCategory {
+
+	sorted := make([]NameCountTimestampCategory, 0)
+	trimmed := make([]NameCountTimestampCategory, 0)
+	currentDate := time.Now().UTC()
+
+	sort.Slice(data, func(i, j int) bool {
+		return data[i].Count > data[j].Count
+	})
+
+	for _, details := range data {
+		hoursBeforeLastSeen := currentDate.Sub(time.Unix(details.Timestamp, 0)).Hours()
+		if hoursBeforeLastSeen <= float64(24) {
+			sorted = append(sorted, details)
+		} else {
+			trimmed = append(trimmed, details)
+		}
+	}
+
+	for _, data := range trimmed {
+		sorted = append(sorted, data)
+	}
+	return sorted
+}
+
+//AggregatePropertyValuesAcrossDate values are stored by date and this method aggregates the count and last seen value and returns
+// no filtering is done
+func AggregatePropertyValuesAcrossDate(values []CachePropertyValueWithTimestamp) []NameCountTimestampCategory {
+	valuesAggregated := make(map[string]CountTimestampTuple)
+	// Sort Event Properties by timestamp, count and return top n
+	for _, valueList := range values {
+		for valueName, valueDetails := range valueList.PropertyValue {
+			valuesAggregatedInt := valuesAggregated[valueName]
+			valuesAggregatedInt.Count += valueDetails.Count
+			if valuesAggregatedInt.LastSeenTimestamp < valueDetails.LastSeenTimestamp {
+				valuesAggregatedInt.LastSeenTimestamp = valueDetails.LastSeenTimestamp
+			}
+			valuesAggregated[valueName] = valuesAggregatedInt
+		}
+	}
+	propertyValueAggregatedSlice := make([]NameCountTimestampCategory, 0)
+	for k, v := range valuesAggregated {
+		propertyValueAggregatedSlice = append(propertyValueAggregatedSlice, NameCountTimestampCategory{
+			k, v.Count, v.LastSeenTimestamp, ""})
+	}
+	return propertyValueAggregatedSlice
+}
+
+//AggregatePropertyAcrossDate values are stored by date and this method aggregates the count and last seen value and returns
+// no filtering is done
+func AggregatePropertyAcrossDate(properties []CachePropertyWithTimestamp) []NameCountTimestampCategory {
+	propertiesAggregated := make(map[string]PropertyWithTimestamp)
+	// Sort Event Properties by timestamp, count and return top n
+	for _, PropertyList := range properties {
+		for propertyName, propertyDetails := range PropertyList.Property {
+			propertiesAggregatedInt := propertiesAggregated[propertyName]
+			propertiesAggregatedInt.Category = propertyDetails.Category
+			propertiesAggregatedInt.CountTime.Count += propertyDetails.CountTime.Count
+			if propertiesAggregatedInt.CountTime.LastSeenTimestamp < propertyDetails.CountTime.LastSeenTimestamp {
+				propertiesAggregatedInt.CountTime.LastSeenTimestamp = propertyDetails.CountTime.LastSeenTimestamp
+			}
+			propertiesAggregated[propertyName] = propertiesAggregatedInt
+		}
+	}
+	propertiesAggregatedSlice := make([]NameCountTimestampCategory, 0)
+	for k, v := range propertiesAggregated {
+		propertiesAggregatedSlice = append(propertiesAggregatedSlice, NameCountTimestampCategory{
+			k, v.CountTime.Count, v.CountTime.LastSeenTimestamp, v.Category})
+	}
+	return propertiesAggregatedSlice
+}
+
+type Property struct {
+	Key      string `json:"key"`
+	Count    int64  `json:"count"`
+	LastSeen uint64 `json:"last_seen"`
+}
+
+type PropertyValue struct {
+	Value     string `json:"value"`
+	Count     int64  `json:"count"`
+	LastSeen  uint64 `json:"last_seen"`
+	ValueType string `json:"value_type"`
+}
+
+func GetCategoryType(values []PropertyValue) string {
+	if len(values) == 0 {
+		return ""
+	}
+	valueType := make(map[string]int64)
+	for _, value := range values {
+		if value.ValueType == "string" {
+			valueType[PropertyTypeCategorical]++
+		}
+		if value.ValueType == "number" {
+			valueType[PropertyTypeNumerical]++
+		}
+	}
+	return DeriveCategory(valueType, int64(len(values)))
+}
+
+func DeriveCategory(categorySplit map[string]int64, totalCount int64) string {
+	acceptablePercentage := int64(99)
+
+	for category, count := range categorySplit {
+		if count/totalCount*100 >= acceptablePercentage {
+			return category
+		}
+	}
+	return PropertyTypeCategorical
+}
+
+// FillPropertyKvsFromPropertiesJson - Fills properties key with limited
+// no.of of values propertiesKvs -> map[propertyKey]map[propertyValue]true
+func FillPropertyKvsFromPropertiesJson(propertiesJson []byte,
+	propertiesKvs *map[string]map[interface{}]bool, valuesLimit int) error {
+	var rowProperties map[string]interface{}
+	err := json.Unmarshal(propertiesJson, &rowProperties)
+	if err != nil {
+		return err
+	}
+
+	for k, v := range rowProperties {
+		// allow only string, float and bool valued
+		// properties.
+		_, strOk := v.(string)
+		_, fltOk := v.(float64)
+		_, boolOk := v.(bool)
+		if !strOk && !fltOk && !boolOk {
+			continue
+		}
+
+		if _, ok := (*propertiesKvs)[k]; !ok {
+			(*propertiesKvs)[k] = make(map[interface{}]bool, 0)
+		}
+		if len((*propertiesKvs)[k]) < valuesLimit {
+			(*propertiesKvs)[k][v] = true
+		}
+	}
+	return nil
 }
