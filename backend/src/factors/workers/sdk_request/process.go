@@ -77,6 +77,8 @@ func main() {
 		ErrorReportingInterval: *errorReportingInterval,
 		SkipSessionProjectIds:  *skipSessionProjectIds, // comma seperated project ids, supports "*".
 		MergeUspProjectIds:     *mergeUserPropertiesProjectIDS,
+		RedisHostPersistent:    *redisHostPersistent,
+		RedisPortPersistent:    *redisPortPersistent,
 	}
 
 	err := C.InitQueueWorker(config)
