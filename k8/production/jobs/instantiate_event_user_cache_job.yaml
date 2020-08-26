@@ -3,7 +3,7 @@ kind: CronJob
 metadata:
   name: instantiate-event-user-cache-job
 spec:
-  schedule: "1 2 3 4 5" #On Trigger
+  schedule: "1 2 3 4 5" # On Trigger
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 5
   failedJobsHistoryLimit: 5
@@ -15,10 +15,10 @@ spec:
             layer: jobs
         spec:
           nodeSelector:
-            cloud.google.com/gke-nodepool: factors-staging-node-pool
+            cloud.google.com/gke-nodepool: persistent-pool-standard
           containers:
           - name: instantiate-event-user-cache-job
-            image: us.gcr.io/factors-staging/instantiate-event-user-cache-job:v0.010-18d3217
+            image: us.gcr.io/factors-production/instantiate-event-user-cache-job:v0.01-e8c91a1
             imagePullPolicy: IfNotPresent
             args:
             - --env

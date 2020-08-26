@@ -1,4 +1,4 @@
-.PHONY: build-api serve-api build-ps serve-ps build-ds serve-ds build-sdk serve-sdk serve-redis serve-predis clean pack-api upload-api pack-ps upload-ps pack-ds upload-ds pack-sdk upload-sdk pack-redis upload-redis pack-predis upload-predis pack-debug upload-debug pack-build-seq upload-build-seq pack-build-reports upload-build-reports pack-hubspot-enrich upload-hubspot-enrich pack-sdk-request-worker upload-sdk-request-worker pack-integration-request-worker upload-integration-request-worker pack-monitoring upload-monitoring pack-archive-events upload-archive-events pack-adhoc-archive-events upload-adhoc-archive-events pack-bigquery-upload upload-bigquery-upload pack-onboard-to-bigquery upload-onboard-to-bigquery pack-add-session upload-add-session pack-dashboard-caching upload-dashboard-caching pack-web-analytics-dashboard upload-web-analytics-dashboard test
+.PHONY: build-api serve-api build-ps serve-ps build-ds serve-ds build-sdk serve-sdk serve-redis serve-predis clean pack-api upload-api pack-ps upload-ps pack-ds upload-ds pack-sdk upload-sdk pack-redis upload-redis pack-predis upload-predis pack-debug upload-debug pack-build-seq upload-build-seq pack-build-reports upload-build-reports pack-hubspot-enrich upload-hubspot-enrich pack-sdk-request-worker upload-sdk-request-worker pack-integration-request-worker upload-integration-request-worker pack-monitoring upload-monitoring pack-archive-events upload-archive-events pack-adhoc-archive-events upload-adhoc-archive-events pack-bigquery-upload upload-bigquery-upload pack-onboard-to-bigquery upload-onboard-to-bigquery pack-add-session upload-add-session pack-dashboard-caching upload-dashboard-caching pack-web-analytics-dashboard upload-web-analytics-dashboard pack-instantiate-event-user-cache upload-instantiate-event-user-cache test
 
 # Update tag with the latest release version
 # Ex format: v0.05-beta_d0e9ed9 
@@ -197,6 +197,13 @@ pack-yourstory-add-properties:
 upload-yourstory-add-properties: export IMAGE_NAME=yourstory-add-properties-job
 upload-yourstory-add-properties: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/yourstory-add-properties-job:$(TAG)
+
+pack-instantiate-event-user-cache: 
+	docker build -t us.gcr.io/factors-$(ENV)/instantiate-event-user-cache-job:$(TAG) -f Dockerfile.instantiate_event_user_cache_job .
+
+upload-instantiate-event-user-cache: export IMAGE_NAME=instantiate-event-user-cache-job
+upload-instantiate-event-user-cache: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/instantiate-event-user-cache-job:$(TAG)
 
 notify-deployment:
 	$(GOPATH)/src/factors/scripts/notify_deployment.sh
