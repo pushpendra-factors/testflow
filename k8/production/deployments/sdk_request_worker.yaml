@@ -78,6 +78,10 @@ spec:
           - $(MERGE_USP_PROJECT_IDS)
           - --sentry_dsn
           - $(SENTRY_DSN)
+          - --redis_host_ps
+          - $(PERSISTENT_REDIS_HOST)
+          - --redis_port_ps
+          - $(PERSISTENT_REDIS_PORT)
         envFrom:
         - configMapRef:
             name: config-appserver
