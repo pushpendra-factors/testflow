@@ -38,22 +38,28 @@ function UngroupedChart({ chartData }) {
     }, []);
 
     const showOverAllConversionPercentage = useCallback(() => {
+
+        //place percentage text in the chart
         const barNodes = d3.select(chartRef.current).selectAll('.bar').nodes();
         const lastBarNode = barNodes[barNodes.length - 1];
         const lastBarPosition = lastBarNode.getBoundingClientRect();
         const yGridLines = d3.select(chartRef.current).select('.y.axis-grid').selectAll('g.tick').nodes();
-        let top, bottom, height;
-        let topGridLine = yGridLines[yGridLines.length - 1];
-        top = topGridLine.getBoundingClientRect().y;
-        let bottomGridLine = yGridLines[0];
-        bottom = bottomGridLine.getBoundingClientRect().y;
-        height = bottom - top;
+        const topGridLine = yGridLines[yGridLines.length - 1];
+        const top = topGridLine.getBoundingClientRect().y;
         const scrollTop = (window.pageYOffset !== undefined) ? window.pageYOffset : (document.documentElement || document.body.parentNode || document.body).scrollTop;
         const conversionText = document.getElementById('conversionText');
         conversionText.style.left = `${lastBarPosition.x}px`;
-        conversionText.style.height = `${height}px`;
         conversionText.style.width = `${lastBarPosition.width}px`;
         conversionText.style.top = `${top + scrollTop}px`;
+
+        // show vertical grid line
+        const verticalLine = document.getElementById("overAllConversionLine");
+        verticalLine.style.left = `${lastBarPosition.x + lastBarPosition.width - 1}px`;
+        const bottomGridLine = yGridLines[0];
+        const bottom = bottomGridLine.getBoundingClientRect().y;
+        const height = bottom - top;
+        verticalLine.style.height = `${height}px`;
+        verticalLine.style.top = `${top + scrollTop}px`;
     }, []);
 
     const drawChart = useCallback(() => {
@@ -113,7 +119,7 @@ function UngroupedChart({ chartData }) {
                     .style("left", d3.event.pageX - 50 + "px")
                     .style("top", d3.event.pageY - 80 + "px")
                     .style("display", "inline-block")
-                    .html((d.event) + ' ' + (d.value) + '%');
+                    .html(`<div>bannat bannat bannat bannat bannat bannat</div>`);
             })
             .on('mouseover', (d, i, nodes) => {
                 nodes.forEach((node, index) => {
@@ -158,11 +164,15 @@ function UngroupedChart({ chartData }) {
             });
     }, [colors, chartData]);
 
-    useEffect(() => {
+    const displayChart = useCallback(() => {
         drawChart();
         showChangePercentage();
         showOverAllConversionPercentage();
-    }, [drawChart, showChangePercentage, showOverAllConversionPercentage]);
+    }, [drawChart, showChangePercentage, showOverAllConversionPercentage])
+
+    useEffect(() => {
+        displayChart();
+    }, [displayChart]);
 
 
 
@@ -173,7 +183,9 @@ function UngroupedChart({ chartData }) {
     return (
         <div className="ungrouped-chart">
 
-            <div style={{ transition: '2s' }} id="conversionText" className="absolute flex justify-end pr-1 border-r border-solid">
+            <div id="overAllConversionLine" className={`absolute border-l border-solid ${styles.overAllConversionLine}`}></div>
+
+            <div style={{ transition: '2s' }} id="conversionText" className="absolute flex justify-end pr-1">
                 <div className={styles.conversionText}>
                     <div className="font-semibold flex justify-end">{chartData[chartData.length - 1].value}%</div>
                     <div>Conversion</div>

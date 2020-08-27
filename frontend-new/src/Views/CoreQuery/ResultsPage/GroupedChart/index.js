@@ -139,7 +139,7 @@ function GroupedChart({ eventsData, groups, chartData, chartColors }) {
                     }
                     return (
                         `
-                            <div class="bg-white px-4 rounded-md shadow-md border-2 text-xs">
+                            <div class="toolTip">
                                 <div class="my-2">
                                     <div class="font-black">${group}</div>
                                     <div>${groups[d[0].index].conversion_rate} Overall Conversion</div>
@@ -181,7 +181,7 @@ function GroupedChart({ eventsData, groups, chartData, chartColors }) {
                         return (
                             <div style={{ transition: '2s' }} key={elem.name} id={`conversion-text-${elem.name}`} className="absolute leading-5 text-base flex justify-end pr-1">
                                 <div style={{ fontSize: eventsData.length > 2 ? '18px' : '14px' }} className={styles.conversionText}>
-                                    <div className="font-bold flex justify-end">{elem.conversion_rate}</div>
+                                    <div className="font-semibold flex justify-end">{elem.conversion_rate}</div>
                                     <div>Conversion</div>
                                 </div>
                             </div>

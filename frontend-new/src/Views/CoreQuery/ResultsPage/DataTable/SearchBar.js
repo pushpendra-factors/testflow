@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import styles from './index.module.scss';
 import { Input } from 'antd';
-import { tree } from 'd3';
 
 function SearchBar() {
 

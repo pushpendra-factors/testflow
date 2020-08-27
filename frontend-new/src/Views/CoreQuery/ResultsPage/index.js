@@ -30,12 +30,12 @@ function PageContent({ queries, setDrawerVisible }) {
         <div>
             <EventsInfo queries={queries} />
             <FiltersInfo setDrawerVisible={setDrawerVisible} />
-            {/* <GroupedChart
+            <GroupedChart
                 chartData={groupedChartData}
                 chartColors={chartColors}
                 groups={groups.filter(elem => elem.is_visible)}
                 eventsData={eventsData}
-            /> */}
+            />
             <UngroupedChart
                 chartData={ungroupedChartsData}
             />
