@@ -48,7 +48,7 @@ func main() {
 	workerConcurrency := flag.Int("worker_concurrency", 10, "")
 	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
 	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
-	isRealTimeEventUserCachingEnabled := flag.Bool("is_real_time__event_user_caching_enabled", false, "If the real time caching is enabled")
+	isRealTimeEventUserCachingEnabled := flag.Bool("enable_real_time_event_user_caching", false, "If the real time caching is enabled")
 
 	flag.Parse()
 

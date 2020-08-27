@@ -84,7 +84,7 @@ type Configuration struct {
 	MergeUspProjectIds                  string
 	SkipSessionProjectIds               string // comma seperated project ids, supports "*" for all projects.
 	WhitelistedProjectIdsEventUserCache string
-	IsRealTimeEventUserCachingEnabled            bool
+	IsRealTimeEventUserCachingEnabled   bool
 }
 
 type Services struct {
@@ -538,10 +538,13 @@ func InitSDKService(config *Configuration) error {
 
 	// Cache dependency for requests not using queue.
 	InitRedis(config.RedisHost, config.RedisPort)
-	if config.IsRealTimeEventUserCachingEnabled == true {
+
+	// TODO: Remove this check after enabling caching realtime.
+	if config.IsRealTimeEventUserCachingEnabled {
 		log.Info("Initializing persistent redis service in sdk service.")
 		InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
 	}
+
 	initGeoLocationService(config.GeolocationFile)
 	initDeviceDetectorPath(config.DeviceDetectorPath)
 
@@ -579,6 +582,7 @@ func InitQueueWorker(config *Configuration) error {
 		log.WithError(err).Fatal("Failed to initalize queue client on init queue worker.")
 	}
 
+	// TODO: Remove this check after enabling caching realtime.
 	if config.IsRealTimeEventUserCachingEnabled {
 		log.Info("Initializing persistent redis service in worker.")
 		InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)

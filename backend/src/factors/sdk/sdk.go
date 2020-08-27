@@ -421,145 +421,148 @@ func RefreshCacheFromDb(project_id uint64, currentTime time.Time, no_of_days int
 }
 
 func addEventDetailsToCache(project_id uint64, event_name string, event_properties U.PropertiesMap) {
-	if C.GetIfRealTimeEventUserCachingIsEnabled() {
-		logCtx := log.WithField("project_id", project_id)
+	// TODO: Remove this check after enabling caching realtime.
+	if !C.GetIfRealTimeEventUserCachingIsEnabled() {
+		return
+	}
 
-		currentTime := U.TimeNow()
-		currentTimeUnix := U.TimeNowUnix()
-		currentTimeDatePart := currentTime.Format("2006-01-02")
+	logCtx := log.WithField("project_id", project_id)
 
-		eventNamesKey, err := M.GetEventNamesOrderByOccurrenceAndRecencyCacheKey(project_id, currentTimeDatePart)
+	currentTime := U.TimeNow()
+	currentTimeUnix := U.TimeNowUnix()
+	currentTimeDatePart := currentTime.Format("2006-01-02")
+
+	eventNamesKey, err := M.GetEventNamesOrderByOccurrenceAndRecencyCacheKey(project_id, currentTimeDatePart)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get cache key - events")
+		return
+	}
+	eventPropertiesKey, err := M.GetPropertiesByEventCacheKey(project_id, event_name, currentTimeDatePart)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get cache key - properties")
+		return
+	}
+
+	var eventNames M.CacheEventNamesWithTimestamp
+	var eventProperties U.CachePropertyWithTimestamp
+
+	events, _, err := cacheRedis.GetIfExistsPersistent(eventNamesKey)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get cache value - events")
+		return
+	}
+	properties, _, err := cacheRedis.GetIfExistsPersistent(eventPropertiesKey)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get cache value - properties")
+		return
+	}
+
+	if events != "" {
+		err = json.Unmarshal([]byte(events), &eventNames)
 		if err != nil {
-			logCtx.WithError(err).Error("Failed to get cache key - events")
+			logCtx.WithError(err).Error("Failed to unmarshal - events")
 			return
 		}
-		eventPropertiesKey, err := M.GetPropertiesByEventCacheKey(project_id, event_name, currentTimeDatePart)
+	}
+	if properties != "" {
+		err = json.Unmarshal([]byte(properties), &eventProperties)
 		if err != nil {
-			logCtx.WithError(err).Error("Failed to get cache key - properties")
+			logCtx.WithError(err).Error("Failed to unmarshal - properties")
 			return
 		}
+	}
 
-		var eventNames M.CacheEventNamesWithTimestamp
-		var eventProperties U.CachePropertyWithTimestamp
+	if eventNames.EventNames == nil {
+		eventNames.EventNames = make(map[string]U.CountTimestampTuple)
+	}
+	if eventProperties.Property == nil {
+		eventProperties.Property = make(map[string]U.PropertyWithTimestamp)
+	}
 
-		events, _, err := cacheRedis.GetIfExistsPersistent(eventNamesKey)
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to get cache value - events")
-			return
+	countTimeEvents := eventNames.EventNames[event_name]
+	countTimeEvents.Count = countTimeEvents.Count + 1
+	countTimeEvents.LastSeenTimestamp = currentTimeUnix
+	eventNames.EventNames[event_name] = countTimeEvents
+
+	eventNames.CacheUpdatedTimestamp = currentTimeUnix
+	eventProperties.CacheUpdatedTimestamp = currentTimeUnix
+
+	for item, element := range event_properties {
+		countTimeProperties := eventProperties.Property[item]
+		if countTimeProperties.CategorywiseCount == nil {
+			countTimeProperties.CategorywiseCount = make(map[string]int64)
 		}
-		properties, _, err := cacheRedis.GetIfExistsPersistent(eventPropertiesKey)
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to get cache value - properties")
-			return
-		}
+		// check for the properties category and decide if its decide if it needs to be overridden
 
-		if events != "" {
-			err = json.Unmarshal([]byte(events), &eventNames)
+		countTimeProperties.CountTime.Count = countTimeProperties.CountTime.Count + 1
+		countTimeProperties.CountTime.LastSeenTimestamp = currentTimeUnix
+
+		category := U.GetPropertyTypeByKeyValue(item, element)
+		var propertyValue string
+		if category == U.PropertyTypeUnknown && reflect.TypeOf(element).Kind() == reflect.Bool {
+			category = U.PropertyTypeCategorical
+			propertyValue = fmt.Sprintf("%v", element)
+		}
+		if reflect.TypeOf(element).Kind() == reflect.String {
+			propertyValue = element.(string)
+		}
+		countTimeProperties.CategorywiseCount[category]++
+		countTimeProperties.Category = U.DeriveCategory(countTimeProperties.CategorywiseCount, countTimeProperties.CountTime.Count)
+		eventProperties.Property[item] = countTimeProperties
+		if countTimeProperties.Category == U.PropertyTypeCategorical {
+
+			eventPropertyValuesKey, _ := M.GetValuesByEventPropertyCacheKey(project_id, event_name, item, currentTimeDatePart)
+			var eventPropertyValues U.CachePropertyValueWithTimestamp
+			values, _, err := cacheRedis.GetIfExistsPersistent(eventPropertyValuesKey)
 			if err != nil {
-				logCtx.WithError(err).Error("Failed to unmarshal - events")
+				logCtx.WithError(err).Error("Failed to get values - properties values")
 				return
 			}
-		}
-		if properties != "" {
-			err = json.Unmarshal([]byte(properties), &eventProperties)
-			if err != nil {
-				logCtx.WithError(err).Error("Failed to unmarshal - properties")
-				return
-			}
-		}
-
-		if eventNames.EventNames == nil {
-			eventNames.EventNames = make(map[string]U.CountTimestampTuple)
-		}
-		if eventProperties.Property == nil {
-			eventProperties.Property = make(map[string]U.PropertyWithTimestamp)
-		}
-
-		countTimeEvents := eventNames.EventNames[event_name]
-		countTimeEvents.Count = countTimeEvents.Count + 1
-		countTimeEvents.LastSeenTimestamp = currentTimeUnix
-		eventNames.EventNames[event_name] = countTimeEvents
-
-		eventNames.CacheUpdatedTimestamp = currentTimeUnix
-		eventProperties.CacheUpdatedTimestamp = currentTimeUnix
-
-		for item, element := range event_properties {
-			countTimeProperties := eventProperties.Property[item]
-			if countTimeProperties.CategorywiseCount == nil {
-				countTimeProperties.CategorywiseCount = make(map[string]int64)
-			}
-			// check for the properties category and decide if its decide if it needs to be overridden
-
-			countTimeProperties.CountTime.Count = countTimeProperties.CountTime.Count + 1
-			countTimeProperties.CountTime.LastSeenTimestamp = currentTimeUnix
-
-			category := U.GetPropertyTypeByKeyValue(item, element)
-			var propertyValue string
-			if category == U.PropertyTypeUnknown && reflect.TypeOf(element).Kind() == reflect.Bool {
-				category = U.PropertyTypeCategorical
-				propertyValue = fmt.Sprintf("%v", element)
-			}
-			if reflect.TypeOf(element).Kind() == reflect.String {
-				propertyValue = element.(string)
-			}
-			countTimeProperties.CategorywiseCount[category]++
-			countTimeProperties.Category = U.DeriveCategory(countTimeProperties.CategorywiseCount, countTimeProperties.CountTime.Count)
-			eventProperties.Property[item] = countTimeProperties
-			if countTimeProperties.Category == U.PropertyTypeCategorical {
-
-				eventPropertyValuesKey, _ := M.GetValuesByEventPropertyCacheKey(project_id, event_name, item, currentTimeDatePart)
-				var eventPropertyValues U.CachePropertyValueWithTimestamp
-				values, _, err := cacheRedis.GetIfExistsPersistent(eventPropertyValuesKey)
+			if values != "" {
+				err = json.Unmarshal([]byte(values), &eventPropertyValues)
 				if err != nil {
-					logCtx.WithError(err).Error("Failed to get values - properties values")
+					logCtx.WithError(err).Error("Failed to unmarshal - property values")
 					return
 				}
-				if values != "" {
-					err = json.Unmarshal([]byte(values), &eventPropertyValues)
-					if err != nil {
-						logCtx.WithError(err).Error("Failed to unmarshal - property values")
-						return
-					}
-				}
-				if eventPropertyValues.PropertyValue == nil {
-					eventPropertyValues.PropertyValue = make(map[string]U.CountTimestampTuple)
-				}
-				if propertyValue != "" {
-					countTimeValues := eventPropertyValues.PropertyValue[propertyValue]
-					countTimeValues.Count = countTimeValues.Count + 1
-					countTimeValues.LastSeenTimestamp = currentTimeUnix
-					eventPropertyValues.PropertyValue[propertyValue] = countTimeValues
-					eventPropertyValues.CacheUpdatedTimestamp = currentTimeUnix
-					enEventPropertyValueCache, _ := json.Marshal(eventPropertyValues)
-					err = cacheRedis.SetPersistent(eventPropertyValuesKey, string(enEventPropertyValueCache), U.EVENT_USER_CACHE_EXPIRY_SECS)
-					if err != nil {
-						logCtx.WithError(err).Error("Failed to set property values in cache")
-						return
-					}
+			}
+			if eventPropertyValues.PropertyValue == nil {
+				eventPropertyValues.PropertyValue = make(map[string]U.CountTimestampTuple)
+			}
+			if propertyValue != "" {
+				countTimeValues := eventPropertyValues.PropertyValue[propertyValue]
+				countTimeValues.Count = countTimeValues.Count + 1
+				countTimeValues.LastSeenTimestamp = currentTimeUnix
+				eventPropertyValues.PropertyValue[propertyValue] = countTimeValues
+				eventPropertyValues.CacheUpdatedTimestamp = currentTimeUnix
+				enEventPropertyValueCache, _ := json.Marshal(eventPropertyValues)
+				err = cacheRedis.SetPersistent(eventPropertyValuesKey, string(enEventPropertyValueCache), U.EVENT_USER_CACHE_EXPIRY_SECS)
+				if err != nil {
+					logCtx.WithError(err).Error("Failed to set property values in cache")
+					return
 				}
 			}
 		}
+	}
 
-		enEventCache, err := json.Marshal(eventNames)
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to marshal - event names")
-			return
-		}
-		err = cacheRedis.SetPersistent(eventNamesKey, string(enEventCache), U.EVENT_USER_CACHE_EXPIRY_SECS)
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to set cache - event names")
-			return
-		}
-		enEventPropertyCache, err := json.Marshal(eventProperties)
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to marshal - event names")
-			return
-		}
-		err = cacheRedis.SetPersistent(eventPropertiesKey, string(enEventPropertyCache), U.EVENT_USER_CACHE_EXPIRY_SECS)
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to set cache - event properties")
-			return
-		}
+	enEventCache, err := json.Marshal(eventNames)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to marshal - event names")
+		return
+	}
+	err = cacheRedis.SetPersistent(eventNamesKey, string(enEventCache), U.EVENT_USER_CACHE_EXPIRY_SECS)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to set cache - event names")
+		return
+	}
+	enEventPropertyCache, err := json.Marshal(eventProperties)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to marshal - event names")
+		return
+	}
+	err = cacheRedis.SetPersistent(eventPropertiesKey, string(enEventPropertyCache), U.EVENT_USER_CACHE_EXPIRY_SECS)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to set cache - event properties")
+		return
 	}
 }
 
