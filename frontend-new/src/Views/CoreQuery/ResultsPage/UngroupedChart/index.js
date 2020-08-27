@@ -4,15 +4,12 @@ import styles from './index.module.scss';
 
 function UngroupedChart({ chartData }) {
 
-    console.log(chartData)
-
     const chartRef = useRef(null);
 
     const colors = ['#014694', '#008BAE', '#52C07C', '#F1C859', '#EEAC4C', '#DE7542'];
 
     const showChangePercentage = useCallback(() => {
         const barNodes = d3.select(chartRef.current).selectAll('.bar').nodes();
-        console.log(barNodes)
         const xAxis = d3.select(chartRef.current).select('.axis.axis--x').node();
         const scrollTop = (window.pageYOffset !== undefined) ? window.pageYOffset : (document.documentElement || document.body.parentNode || document.body).scrollTop;
         barNodes.forEach((node, index) => {
@@ -23,7 +20,7 @@ function UngroupedChart({ chartData }) {
             document.getElementById(`value${index}`).style.left = positionCurrentBar.left + 'px';
             document.getElementById(`value${index}`).style.width = positionCurrentBar.width + 'px';
 
-            if(positionCurrentBar.height < 30) {
+            if (positionCurrentBar.height < 30) {
                 document.getElementById(`value${index}`).style.top = (positionCurrentBar.top - 30 + scrollTop) + 'px';
             } else {
                 document.getElementById(`value${index}`).style.top = (positionCurrentBar.top + scrollTop + 5) + 'px';
@@ -33,14 +30,30 @@ function UngroupedChart({ chartData }) {
             //show change percentages in grey polygon areas
             if (index < (barNodes.length - 1)) {
                 const positionNextBar = barNodes[index + 1].getBoundingClientRect();
-                console.log(positionCurrentBar)
-                console.log(positionNextBar)
-                console.log(index);
                 document.getElementById(`change${index}`).style.left = positionCurrentBar.right + 'px';
                 document.getElementById(`change${index}`).style.width = (positionNextBar.left - positionCurrentBar.right) + 'px';
                 document.getElementById(`change${index}`).style.top = (xAxis.getBoundingClientRect().top - xAxis.getBoundingClientRect().height - 30 + scrollTop) + 'px';
             }
         });
+    }, []);
+
+    const showOverAllConversionPercentage = useCallback(() => {
+        const barNodes = d3.select(chartRef.current).selectAll('.bar').nodes();
+        const lastBarNode = barNodes[barNodes.length - 1];
+        const lastBarPosition = lastBarNode.getBoundingClientRect();
+        const yGridLines = d3.select(chartRef.current).select('.y.axis-grid').selectAll('g.tick').nodes();
+        let top, bottom, height;
+        let topGridLine = yGridLines[yGridLines.length - 1];
+        top = topGridLine.getBoundingClientRect().y;
+        let bottomGridLine = yGridLines[0];
+        bottom = bottomGridLine.getBoundingClientRect().y;
+        height = bottom - top;
+        const scrollTop = (window.pageYOffset !== undefined) ? window.pageYOffset : (document.documentElement || document.body.parentNode || document.body).scrollTop;
+        const conversionText = document.getElementById('conversionText');
+        conversionText.style.left = `${lastBarPosition.x}px`;
+        conversionText.style.height = `${height}px`;
+        conversionText.style.width = `${lastBarPosition.width}px`;
+        conversionText.style.top = `${top + scrollTop}px`;
     }, []);
 
     const drawChart = useCallback(() => {
@@ -148,6 +161,7 @@ function UngroupedChart({ chartData }) {
     useEffect(() => {
         drawChart();
         showChangePercentage();
+        showOverAllConversionPercentage();
     }, [drawChart, showChangePercentage]);
 
 
@@ -158,6 +172,14 @@ function UngroupedChart({ chartData }) {
 
     return (
         <div className="ungrouped-chart">
+
+            <div style={{ transition: '2s' }} id="conversionText" className="absolute flex justify-end pr-1 border-r border-solid">
+                <div className={styles.conversionText}>
+                    <div className="font-semibold flex justify-end">{chartData[chartData.length - 1].value}%</div>
+                    <div>Conversion</div>
+                </div>
+            </div>
+
             {chartData.map((d, index) => {
                 return (
                     <div className={`${styles.valueText} absolute font-bold flex justify-center`} id={`value${index}`} key={d.event + index}>{d.value}</div>

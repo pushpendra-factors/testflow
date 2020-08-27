@@ -160,10 +160,10 @@ const ungroupedDummyData = [
         value: 30
     },
     {
-        value: 18
+        value: 10
     },
     {
-        value: 12
+        value: 5
     },
     {
         value: 3

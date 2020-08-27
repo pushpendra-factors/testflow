@@ -180,7 +180,7 @@ function GroupedChart({ eventsData, groups, chartData, chartColors }) {
                     .map(elem => {
                         return (
                             <div style={{ transition: '2s' }} key={elem.name} id={`conversion-text-${elem.name}`} className="absolute leading-5 text-base flex justify-end pr-1">
-                                <div style={{fontSize: eventsData.length > 2 ? '18px' : '14px'}} className={styles.conversionText}>
+                                <div style={{ fontSize: eventsData.length > 2 ? '18px' : '14px' }} className={styles.conversionText}>
                                     <div className="font-bold flex justify-end">{elem.conversion_rate}</div>
                                     <div>Conversion</div>
                                 </div>

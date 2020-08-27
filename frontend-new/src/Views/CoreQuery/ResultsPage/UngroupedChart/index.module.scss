@@ -84,3 +84,14 @@ $textColor: #3E516C;
     color: #3E516C;
     font-family: 'Work Sans', sans-serif;
 }
+
+.overAllConversionLine {
+    border-right-color: #B7BEC8;
+}
+
+.conversionText {
+    color: $textColor;
+    font-style: normal;
+    line-height: 24px;
+    font-size: 20px;
+}
