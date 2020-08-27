@@ -162,7 +162,7 @@ function UngroupedChart({ chartData }) {
         drawChart();
         showChangePercentage();
         showOverAllConversionPercentage();
-    }, [drawChart, showChangePercentage]);
+    }, [drawChart, showChangePercentage, showOverAllConversionPercentage]);
 
 
 
