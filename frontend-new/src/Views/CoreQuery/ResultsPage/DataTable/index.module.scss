@@ -1,4 +1,6 @@
 $factorsDarkColor: #0E2647;
+$boxShadowPrimaryColor: #B7BEC8;
+$boxShadowSecondaryColor: #E7E9ED;
 
 .table {
 
@@ -8,27 +10,27 @@ $factorsDarkColor: #0E2647;
     }
 
     th.conversionColumn {
-        box-shadow: inset 0px -1px 0px #B7BEC8, inset -1px 0px 0px #B7BEC8;
+        box-shadow: inset 0px -1px 0px $boxShadowPrimaryColor, inset -1px 0px 0px $boxShadowPrimaryColor;
     }
 
     th.lastColumn {
-        box-shadow: inset 0px -1px 0px #B7BEC8;   
+        box-shadow: inset 0px -1px 0px $boxShadowPrimaryColor;
     }
 
     th {
-        box-shadow: inset 0px -1px 0px #B7BEC8, inset -1px 0px 0px #E7E9ED;
+        box-shadow: inset 0px -1px 0px $boxShadowPrimaryColor, inset -1px 0px 0px $boxShadowSecondaryColor;
     }
 
     td {
-        box-shadow: inset 0px -1px 0px #E7E9ED, inset -1px 0px 0px #E7E9ED;
+        box-shadow: inset 0px -1px 0px $boxShadowSecondaryColor, inset -1px 0px 0px $boxShadowSecondaryColor;
     }
 
     .conversionColumn {
-        box-shadow: inset 0px -1px 0px #E7E9ED, inset -1px 0px 0px #B7BEC8;
+        box-shadow: inset 0px -1px 0px $boxShadowSecondaryColor, inset -1px 0px 0px $boxShadowPrimaryColor;
     }
 
     .lastColumn {
-        box-shadow: inset 0px -1px 0px #E7E9ED;
+        box-shadow: inset 0px -1px 0px $boxShadowSecondaryColor;
     }
 
     :global(th.ant-table-cell) {
@@ -80,5 +82,50 @@ $factorsDarkColor: #0E2647;
     :global(tr.ant-table-row-selected)>.groupColumn,
     :global(tr.ant-table-row-selected > .ant-table-selection-column) {
         background: #F5F6F8;
+    }
+}
+
+.searchBar {
+    box-shadow: inset 0px -1px 0px $boxShadowPrimaryColor;
+
+    .breakupHeading {
+        font-family: 'Work Sans', sans-serif;
+        font-style: normal;
+        font-weight: 600;
+        font-size: 18px;
+        line-height: 24px;
+        letter-spacing: -0.01em;
+        color: $factorsDarkColor;
+    }
+
+    .downloadCSVHeading {
+        font-family: 'Work Sans', sans-serif;
+        font-style: normal;
+        font-weight: 600;
+        font-size: 14px;
+        line-height: 20px;
+        letter-spacing: -0.01em;
+        color: $factorsDarkColor;
+        opacity: 0.56;
+    }
+
+    .inputSearchBar {
+        border: none;
+        box-shadow: inset 0px -1px 0px $boxShadowPrimaryColor, inset 0px 1px 0px $boxShadowPrimaryColor;
+        padding: 1rem;
+
+        :global(input) {
+            font-family: 'Work Sans', sans-serif;
+            font-style: normal;
+            font-weight: 600;
+            font-size: 18px;
+            line-height: 24px;
+            letter-spacing: -0.01em;
+            color: $boxShadowPrimaryColor;
+        }
+
+        :global(.ant-input-prefix) {
+            margin-right: 0.5rem;
+        }
     }
 }

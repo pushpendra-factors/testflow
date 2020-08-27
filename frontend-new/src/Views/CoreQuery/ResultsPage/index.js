@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import GroupedChart from './GroupedChart';
 import DataTable from './DataTable';
-import { generateGroupedChartsData, generateDummyData, generateGroups, generateColors } from './utils';
+import { generateGroupedChartsData, generateDummyData, generateGroups, generateColors, generateUngroupedChartsData } from './utils';
 import EventsInfo from './EventsInfo';
 import FiltersInfo from './FiltersInfo';
 import UngroupedChart from './UngroupedChart';
@@ -18,7 +18,8 @@ function PageContent({ queries, setDrawerVisible }) {
         setGroups(generateGroups(dummyData));
     }, [queries]);
 
-    const chartData = generateGroupedChartsData(eventsData, groups);
+    const groupedChartData = generateGroupedChartsData(eventsData, groups);
+    const ungroupedChartsData = generateUngroupedChartsData(eventsData);
     const chartColors = generateColors(eventsData);
 
     if (!eventsData.length) {
@@ -30,16 +31,13 @@ function PageContent({ queries, setDrawerVisible }) {
             <EventsInfo queries={queries} />
             <FiltersInfo setDrawerVisible={setDrawerVisible} />
             {/* <GroupedChart
-                chartData={chartData}
+                chartData={groupedChartData}
                 chartColors={chartColors}
                 groups={groups.filter(elem => elem.is_visible)}
                 eventsData={eventsData}
             /> */}
             <UngroupedChart
-                chartData={chartData}
-                chartColors={chartColors}
-                groups={groups.filter(elem => elem.is_visible)}
-                eventsData={eventsData}
+                chartData={ungroupedChartsData}
             />
             <div className="mt-8 pl-4">
                 <DataTable

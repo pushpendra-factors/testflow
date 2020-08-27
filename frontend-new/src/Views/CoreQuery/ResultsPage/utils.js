@@ -80,7 +80,7 @@ export const generateTableData = (data, groups) => {
     return result;
 }
 
-const dummyData = [
+const groupedDummyData = [
     {
         index: 1,
         color: '#014694',
@@ -149,9 +149,40 @@ const dummyData = [
     }
 ];
 
+const ungroupedDummyData = [
+    {
+        value: 100
+    },
+    {
+        value: 60
+    },
+    {
+        value: 30
+    },
+    {
+        value: 18
+    },
+    {
+        value: 12
+    },
+    {
+        value: 3
+    }
+]
+
 export const generateDummyData = (labels) => {
     let result = labels.map((elem, index) => {
-        return { ...dummyData[index], name: elem };
+        return { ...groupedDummyData[index], name: elem };
     });
+    return result;
+}
+
+export const generateUngroupedChartsData = (data) => {
+    let result = data.map((elem, index) => {
+        return {
+            event: elem.name,
+            value: ungroupedDummyData[index].value
+        }
+    })
     return result;
 }

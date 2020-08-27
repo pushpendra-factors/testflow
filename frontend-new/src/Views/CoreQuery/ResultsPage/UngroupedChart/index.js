@@ -1,24 +1,50 @@
 import React, { useRef, useCallback, useEffect } from 'react';
-import c3 from 'c3';
 import * as d3 from 'd3';
-import { xScale } from 'd3';
 import styles from './index.module.scss';
 
-function UngroupedChart({ eventsData, groups, chartData, chartColors }) {
+function UngroupedChart({ chartData }) {
+
+    console.log(chartData)
 
     const chartRef = useRef(null);
 
     const colors = ['#014694', '#008BAE', '#52C07C', '#F1C859', '#EEAC4C', '#DE7542'];
 
+    const showChangePercentage = useCallback(() => {
+        const barNodes = d3.select(chartRef.current).selectAll('.bar').nodes();
+        console.log(barNodes)
+        const xAxis = d3.select(chartRef.current).select('.axis.axis--x').node();
+        const scrollTop = (window.pageYOffset !== undefined) ? window.pageYOffset : (document.documentElement || document.body.parentNode || document.body).scrollTop;
+        barNodes.forEach((node, index) => {
+            const positionCurrentBar = node.getBoundingClientRect();
+
+            // show values inside bar
+
+            document.getElementById(`value${index}`).style.left = positionCurrentBar.left + 'px';
+            document.getElementById(`value${index}`).style.width = positionCurrentBar.width + 'px';
+
+            if(positionCurrentBar.height < 30) {
+                document.getElementById(`value${index}`).style.top = (positionCurrentBar.top - 30 + scrollTop) + 'px';
+            } else {
+                document.getElementById(`value${index}`).style.top = (positionCurrentBar.top + scrollTop + 5) + 'px';
+                document.getElementById(`value${index}`).style.color = 'white';
+            }
+
+            //show change percentages in grey polygon areas
+            if (index < (barNodes.length - 1)) {
+                const positionNextBar = barNodes[index + 1].getBoundingClientRect();
+                console.log(positionCurrentBar)
+                console.log(positionNextBar)
+                console.log(index);
+                document.getElementById(`change${index}`).style.left = positionCurrentBar.right + 'px';
+                document.getElementById(`change${index}`).style.width = (positionNextBar.left - positionCurrentBar.right) + 'px';
+                document.getElementById(`change${index}`).style.top = (xAxis.getBoundingClientRect().top - xAxis.getBoundingClientRect().height - 30 + scrollTop) + 'px';
+            }
+        });
+    }, []);
+
     const drawChart = useCallback(() => {
-        const data = [
-            { event: "Cart Updated", value: 100 },
-            { event: "Checkout", value: 60 },
-            { event: "Applied Coupon", value: 30 },
-            { event: "Removed Coupon", value: 20 },
-            { event: "Applied Second Time", value: 15 },
-            { event: "Paid", value: 10 }
-        ];
+        d3.select(chartRef.current).html('').append('svg').attr('width', '1552').attr('height', 400).attr('id', 'chart')
         const svg = d3.select("#chart");
         const margin = { top: 20, right: 30, bottom: 30, left: 50 };
         const width = +svg.attr("width") - margin.left - margin.right;
@@ -28,7 +54,7 @@ function UngroupedChart({ eventsData, groups, chartData, chartColors }) {
 
         const xScale = d3.scaleBand()
             .rangeRound([0, width]).padding(0.5)
-            .domain(data.map(d => d.event));
+            .domain(chartData.map(d => d.event));
 
         const yScale = d3.scaleLinear()
             .rangeRound([height, 0])
@@ -57,7 +83,7 @@ function UngroupedChart({ eventsData, groups, chartData, chartColors }) {
             }).ticks(5));
 
         g.selectAll(".bar")
-            .data(data)
+            .data(chartData)
             .enter().append("rect")
             .attr("class", d => {
                 return `bar`
@@ -95,7 +121,7 @@ function UngroupedChart({ eventsData, groups, chartData, chartColors }) {
 
         // Add polygons
         g.selectAll(".area")
-            .data(data)
+            .data(chartData)
             .enter().append("polygon")
             .attr("class", "area")
             .attr("points", (d, i, nodes) => {
@@ -114,20 +140,43 @@ function UngroupedChart({ eventsData, groups, chartData, chartColors }) {
                     const x4 = x3;
                     const y4 = height;
 
-                    console.log(x1, x3)
-
                     return `${x1},${y1} ${x2},${y2} ${x3},${y3} ${x4},${y4} ${x1},${y1}`;
                 }
             });
-    }, []);
+    }, [colors, chartData]);
 
     useEffect(() => {
         drawChart();
-    }, [drawChart]);
+        showChangePercentage();
+    }, [drawChart, showChangePercentage]);
+
+
+
+    const percentChanges = chartData.slice(1).map((elem, index) => {
+        return chartData[index].value - elem.value;
+    });
 
     return (
-        <div ref={chartRef} className={styles.ungroupedChart}>
-            <svg width='1552' height="400" id="chart"></svg>
+        <div className="ungrouped-chart">
+            {chartData.map((d, index) => {
+                return (
+                    <div className={`${styles.valueText} absolute font-bold flex justify-center`} id={`value${index}`} key={d.event + index}>{d.value}</div>
+                )
+            })}
+            {percentChanges.map((change, index) => {
+                return (
+                    <div className={`absolute flex flex-col items-center ${styles.changePercents}`} id={`change${index}`} key={index}>
+                        <div className="flex justify-center">
+                            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path fillRule="evenodd" clipRule="evenodd" d="M2.64045 1.27306C2.37516 0.788663 1.76742 0.61104 1.28302 0.876329C0.798626 1.14162 0.621004 1.74936 0.886293 2.23376L5.29748 10.2882C5.55527 10.7589 6.13864 10.9422 6.6193 10.7036L9.91856 9.06529L13.0943 14.1005L11.318 15.1145C10.9341 15.3337 11.0026 15.9067 11.4273 16.0292L15.4142 17.1791C15.6796 17.2556 15.9567 17.1025 16.0332 16.8372L17.2161 12.736C17.3405 12.3047 16.8776 11.9407 16.4878 12.1632L14.8329 13.108L11.1285 7.23455C10.8548 6.80069 10.2973 6.64423 9.83789 6.87235L6.59021 8.48501L2.64045 1.27306Z" fill="#8692A3" />
+                            </svg>
+                        </div>
+                        <div className="flex justify-center">{change}%</div>
+                    </div>
+                )
+            })}
+            <div ref={chartRef} className={styles.ungroupedChart}>
+            </div>
         </div>
     )
 }
