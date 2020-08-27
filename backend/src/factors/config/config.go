@@ -539,6 +539,7 @@ func InitSDKService(config *Configuration) error {
 	// Cache dependency for requests not using queue.
 	InitRedis(config.RedisHost, config.RedisPort)
 	if config.IsRealTimeCachingEnabled == true {
+		log.Info("Initializing persistent redis service in sdk service.")
 		InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
 	}
 	initGeoLocationService(config.GeolocationFile)
@@ -579,6 +580,7 @@ func InitQueueWorker(config *Configuration) error {
 	}
 
 	if config.IsRealTimeCachingEnabled {
+		log.Info("Initializing persistent redis service in worker.")
 		InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
 	}
 
