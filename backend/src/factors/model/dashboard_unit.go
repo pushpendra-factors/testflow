@@ -129,7 +129,7 @@ func GetDashboardUnitsForProjectID(projectID uint64) ([]DashboardUnit, int) {
 	if projectID == 0 {
 		log.Errorf("Invalid project id %d", projectID)
 		return dashboardUnits, http.StatusBadRequest
-	} else if err := db.Where("project_id = ?", projectID).Find(&dashboardUnits).Error; err != nil {
+	} else if err := db.Where("project_id = ? and query->>'cl' != ?", projectID, QueryClassWeb).Find(&dashboardUnits).Error; err != nil {
 		log.WithError(err).Errorf("Failed to get dashboard units for projectID %d", projectID)
 		return dashboardUnits, http.StatusInternalServerError
 	}

@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"sync"
 
 	C "factors/config"
 	M "factors/model"
@@ -76,19 +77,37 @@ func main() {
 	})
 
 	var notifyMessage string
-	var timeTakenString string
+	var waitGroup sync.WaitGroup
+	var timeTaken sync.Map
 
 	if !*onlyWebAnalytics {
-		startTime := util.TimeNowUnix()
-		M.CacheDashboardUnitsForProjects(*projectIDFlag, *numRoutinesFlag)
-		timeTakenString = util.SecondsToHMSString(util.TimeNowUnix() - startTime)
+		waitGroup.Add(1)
+		go cacheDashboardUnitsForProjects(*projectIDFlag, *numRoutinesFlag, &timeTaken, &waitGroup)
 	}
 
-	logCtx.Info("Starting website analytics")
-	startTime := util.TimeNowUnix()
-	M.CacheWebsiteAnalyticsForProjects(*projectIDFlag, 2)
-	timeTakenStringWeb := util.SecondsToHMSString(util.TimeNowUnix() - startTime)
+	waitGroup.Add(1)
+	go cacheWebsiteAnalyticsForProjects(*projectIDFlag, 2, &timeTaken, &waitGroup)
+
+	waitGroup.Wait()
+	timeTakenString, _ := timeTaken.Load("all")
+	timeTakenStringWeb, _ := timeTaken.Load("web")
 	notifyMessage = fmt.Sprintf("Caching successful for %s projects. Time taken: %s. Time taken for web analytics: %s",
-		*projectIDFlag, timeTakenString, timeTakenStringWeb)
+		*projectIDFlag, timeTakenString.(string), timeTakenStringWeb.(string))
 	util.NotifyThroughSNS("dashboard_caching", *envFlag, notifyMessage)
+}
+
+func cacheDashboardUnitsForProjects(projectIDs string, numRoutines int, timeTaken *sync.Map, waitGroup *sync.WaitGroup) {
+	defer waitGroup.Done()
+	startTime := util.TimeNowUnix()
+	M.CacheDashboardUnitsForProjects(projectIDs, numRoutines)
+	timeTakenString := util.SecondsToHMSString(util.TimeNowUnix() - startTime)
+	timeTaken.Store("all", timeTakenString)
+}
+
+func cacheWebsiteAnalyticsForProjects(projectIDs string, numRoutines int, timeTaken *sync.Map, waitGroup *sync.WaitGroup) {
+	defer waitGroup.Done()
+	startTime := util.TimeNowUnix()
+	M.CacheWebsiteAnalyticsForProjects(projectIDs, numRoutines)
+	timeTakenStringWeb := util.SecondsToHMSString(util.TimeNowUnix() - startTime)
+	timeTaken.Store("web", timeTakenStringWeb)
 }
