@@ -100,6 +100,8 @@ spec:
           - $(PERSISTENT_REDIS_HOST)
           - --redis_port_ps
           - $(PERSISTENT_REDIS_PORT)
+          - --is_real_time_caching_enabled
+          - "false"
         env:
           - name: MY_POD_IP
             valueFrom:

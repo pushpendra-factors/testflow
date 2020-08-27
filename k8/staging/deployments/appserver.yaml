@@ -116,6 +116,8 @@ spec:
           - $(SENTRY_DSN)
           - --whitelisted_projects_ids_event_user_cache
           - "2,37"
+          - --is_real_time_caching_enabled
+          - "false"   
         env:
           - name: MY_POD_IP
             valueFrom:
