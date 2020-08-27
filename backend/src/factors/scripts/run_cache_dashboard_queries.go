@@ -91,8 +91,8 @@ func main() {
 	waitGroup.Wait()
 	timeTakenString, _ := timeTaken.Load("all")
 	timeTakenStringWeb, _ := timeTaken.Load("web")
-	notifyMessage = fmt.Sprintf("Caching successful for %s projects. Time taken: %s. Time taken for web analytics: %s",
-		*projectIDFlag, timeTakenString.(string), timeTakenStringWeb.(string))
+	notifyMessage = fmt.Sprintf("Caching successful for %s projects. Time taken: %+v. Time taken for web analytics: %+v",
+		*projectIDFlag, timeTakenString, timeTakenStringWeb)
 	util.NotifyThroughSNS("dashboard_caching", *envFlag, notifyMessage)
 }
 
