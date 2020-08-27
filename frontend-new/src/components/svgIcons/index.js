@@ -259,6 +259,16 @@ const Attributions_cqSVG = ({ size = 16, color, extraClass }) => {
   );
 }  
 
+const FilterSVG = ({size = 20, color, extraClass}) => {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M12.8001 3.60001H2.90455C2.15545 3.60001 1.73216 4.45964 2.1889 5.05339L6.71394 10.9359V16.0615C6.71394 16.5642 7.32177 16.816 7.67727 16.4605L8.97115 15.1666V10.9359L13.5146 5.05488C13.9731 4.46139 13.5501 3.60001 12.8001 3.60001Z" fill="#3E516C"/>
+    <path d="M11.2284 12.6289C11.2284 12.3172 11.481 12.0646 11.7927 12.0646H17.4357C17.7474 12.0646 18 12.3172 18 12.6289C18 12.9405 17.7474 13.1932 17.4357 13.1932H11.7927C11.481 13.1932 11.2284 12.9405 11.2284 12.6289Z" fill="#3E516C"/>
+    <path d="M14.6142 9.24304C14.9258 9.24304 15.1785 9.49568 15.1785 9.80734V15.4504C15.1785 15.762 14.9258 16.0147 14.6142 16.0147C14.3025 16.0147 14.0499 15.762 14.0499 15.4504V9.80734C14.0499 9.49568 14.3025 9.24304 14.6142 9.24304Z" fill="#3E516C"/>
+    </svg>
+  )
+}
+
 const Templates_cqSVG = ({ size = 16, color, extraClass }) => {
   return (    
     <svg width={size} height={size} className={extraClass} viewBox="0 0 52 52"  fill="none" xmlns="http://www.w3.org/2000/svg"> 
@@ -321,7 +331,18 @@ const HelpSVG = ({ size = 16, color, extraClass }) => {
 
 
   );
-}  
+}
+
+const TrashSVG = ({size = 24, color, extraClass}) => {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M9.53163 4.50572C9.53163 3.37618 10.4473 3 11.5768 3C12.7064 3 13.6221 3.37618 13.6221 4.50572H9.53163Z" fill="#8692A3"/>
+    <path d="M4.12945 7.60979C3.7563 6.83599 4.22629 5.91997 5.07249 5.7718L10.2863 4.85885C11.1352 4.7102 12.0035 4.7102 12.8524 4.85885L18.0662 5.7718C18.9124 5.91997 19.3824 6.83599 19.0093 7.60979H4.12945Z" fill="#8692A3"/>
+    <path d="M5.63496 9.09759H17.5038L16.2008 19.6938C16.1091 20.4396 15.4756 21 14.7241 21H8.42782C7.67705 21 7.04391 20.4406 6.95137 19.6956L5.63496 9.09759Z" fill="#8692A3"/>
+    </svg>
+
+  )
+}
 
 
 
@@ -346,5 +367,7 @@ const HelpSVG = ({ size = 16, color, extraClass }) => {
     Campaigns_cqSVG,
     Attributions_cqSVG,
     Templates_cqSVG,
-    HelpSVG
+    HelpSVG,
+    FilterSVG,
+    TrashSVG
   }
