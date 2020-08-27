@@ -65,6 +65,7 @@ func main() {
 	workerConcurrency := flag.Int("worker_concurrency", 10, "")
 	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
 	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
+	isRealTimeEventUserCachingEnabled := flag.Bool("enable_real_time_event_user_caching", false, "If the real time caching is enabled")
 	flag.Parse()
 
 	defer U.NotifyOnPanic(workerName, *env)
@@ -79,22 +80,23 @@ func main() {
 			Name:     *dbName,
 			Password: *dbPass,
 		},
-		RedisHost:              *redisHost,
-		RedisPort:              *redisPort,
-		QueueRedisHost:         *queueRedisHost,
-		QueueRedisPort:         *queueRedisPort,
-		GeolocationFile:        *geoLocFilePath,
-		DeviceDetectorPath:     *deviceDetectorPath,
-		AWSKey:                 *awsAccessKeyId,
-		AWSSecret:              *awsSecretAccessKey,
-		AWSRegion:              *awsRegion,
-		SentryDSN:              *sentryDSN,
-		EmailSender:            *factorsEmailSender,
-		ErrorReportingInterval: *errorReportingInterval,
-		SkipSessionProjectIds:  *skipSessionProjectIds, // comma seperated project ids, supports "*".
-		MergeUspProjectIds:     *mergeUserPropertiesProjectIDS,
-		RedisHostPersistent:    *redisHostPersistent,
-		RedisPortPersistent:    *redisPortPersistent,
+		RedisHost:                         *redisHost,
+		RedisPort:                         *redisPort,
+		QueueRedisHost:                    *queueRedisHost,
+		QueueRedisPort:                    *queueRedisPort,
+		GeolocationFile:                   *geoLocFilePath,
+		DeviceDetectorPath:                *deviceDetectorPath,
+		AWSKey:                            *awsAccessKeyId,
+		AWSSecret:                         *awsSecretAccessKey,
+		AWSRegion:                         *awsRegion,
+		SentryDSN:                         *sentryDSN,
+		EmailSender:                       *factorsEmailSender,
+		ErrorReportingInterval:            *errorReportingInterval,
+		SkipSessionProjectIds:             *skipSessionProjectIds, // comma seperated project ids, supports "*".
+		MergeUspProjectIds:                *mergeUserPropertiesProjectIDS,
+		RedisHostPersistent:               *redisHostPersistent,
+		RedisPortPersistent:               *redisPortPersistent,
+		IsRealTimeEventUserCachingEnabled: *isRealTimeEventUserCachingEnabled,
 	}
 
 	err := C.InitQueueWorker(config)

@@ -84,6 +84,7 @@ type Configuration struct {
 	MergeUspProjectIds                  string
 	SkipSessionProjectIds               string // comma seperated project ids, supports "*" for all projects.
 	WhitelistedProjectIdsEventUserCache string
+	IsRealTimeEventUserCachingEnabled   bool
 }
 
 type Services struct {
@@ -537,7 +538,13 @@ func InitSDKService(config *Configuration) error {
 
 	// Cache dependency for requests not using queue.
 	InitRedis(config.RedisHost, config.RedisPort)
-	InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
+
+	// TODO: Remove this check after enabling caching realtime.
+	if config.IsRealTimeEventUserCachingEnabled {
+		log.Info("Initializing persistent redis service in sdk service.")
+		InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
+	}
+
 	initGeoLocationService(config.GeolocationFile)
 	initDeviceDetectorPath(config.DeviceDetectorPath)
 
@@ -575,7 +582,11 @@ func InitQueueWorker(config *Configuration) error {
 		log.WithError(err).Fatal("Failed to initalize queue client on init queue worker.")
 	}
 
-	InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
+	// TODO: Remove this check after enabling caching realtime.
+	if config.IsRealTimeEventUserCachingEnabled {
+		log.Info("Initializing persistent redis service in worker.")
+		InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
+	}
 
 	InitLogClient(config.Env, config.AppName, config.EmailSender, config.AWSKey,
 		config.AWSSecret, config.AWSRegion, config.ErrorReportingInterval, config.SentryDSN)
@@ -666,6 +677,10 @@ func GetSkipTrackProjectIds() []uint64 {
 
 func GetWhitelistedProjectIdsEventUserCache() string {
 	return configuration.WhitelistedProjectIdsEventUserCache
+}
+
+func GetIfRealTimeEventUserCachingIsEnabled() bool {
+	return configuration.IsRealTimeEventUserCachingEnabled
 }
 
 // ParseConfigStringToMap - Parses config string
