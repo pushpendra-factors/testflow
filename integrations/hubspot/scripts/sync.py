@@ -145,14 +145,14 @@ def sync_deals(project_id, api_key, sync_all=False):
         parameter_dict = {'hapikey': api_key, 'limit': PAGE_SIZE}
 
         # mandatory property needed on response, returns no properties if not given.
-        if sync_all: parameter_dict['properties'] = 'dealname'
-        
-        has_more = True
-        properties, ok = get_all_properties_by_doc_type("deals", api_key)
-        if not ok:
-            log.error("Failure loading properties for project_id %d on sync_contacts", project_id)
-            break
+        properties = []
+        if sync_all:
+            properties, ok = get_all_properties_by_doc_type("deals", api_key)
+            if not ok:
+                log.error("Failure loading properties for project_id %d on sync_deals", project_id)
+                break
 
+        has_more = True
         while has_more:
             parameters = urllib.parse.urlencode(parameter_dict)
             get_url = url + parameters
@@ -241,8 +241,12 @@ def sync_companies(project_id, api_key, sync_all=False):
         count = 0
         parameter_dict = {'hapikey': api_key, 'limit': PAGE_SIZE}
 
+        properties = []
         if sync_all:
-            parameter_dict['properties'] = 'name'
+            properties, ok = get_all_properties_by_doc_type("companies", api_key)
+            if not ok:
+                log.error("Failure loading properties for project_id %d on sync_companies", project_id)
+                return
 
         has_more = True
         while has_more:
@@ -250,10 +254,6 @@ def sync_companies(project_id, api_key, sync_all=False):
             get_url = url + parameters
             
             if sync_all:
-                properties = ["name","is_public","industry","country","city","state","phone",
-                "timezone","description","total_money_raised","numberofemployees",
-                "linkedin_company_page","annualrevenue","founded_year",
-                "hs_analytics_num_page_views","zip","website","twitterhandle"]
                 get_url = get_url + '&' + build_properties_param_str(properties)
 
             log.warning("Downloading companies for project_id %d from url %s.", project_id, get_url)
