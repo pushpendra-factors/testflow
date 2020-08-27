@@ -190,7 +190,7 @@ func RefreshCacheForUserProperties(projectid uint64, currentDate time.Time, user
 }
 
 func UpdateCacheForUserProperties(userId string, projectid uint64, updatedProperties map[string]interface{}, redundantProperty bool) {
-	if C.GetIfRealTimeCachingIsEnabled() {
+	if C.GetIfRealTimeEventUserCachingIsEnabled() {
 		// If the cache is empty / cache is updated from more than 1 day - repopulate cache
 		logCtx := log.WithFields(log.Fields{
 			"project_id": projectid,

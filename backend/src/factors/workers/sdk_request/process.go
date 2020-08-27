@@ -48,7 +48,7 @@ func main() {
 	workerConcurrency := flag.Int("worker_concurrency", 10, "")
 	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
 	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
-	isRealTimeCachingEnabled := flag.Bool("is_real_time_caching_enabled", false, "If the real time caching is enabled")
+	isRealTimeEventUserCachingEnabled := flag.Bool("is_real_time__event_user_caching_enabled", false, "If the real time caching is enabled")
 
 	flag.Parse()
 
@@ -64,23 +64,23 @@ func main() {
 			Name:     *dbName,
 			Password: *dbPass,
 		},
-		RedisHost:                *redisHost,
-		RedisPort:                *redisPort,
-		QueueRedisHost:           *queueRedisHost,
-		QueueRedisPort:           *queueRedisPort,
-		GeolocationFile:          *geoLocFilePath,
-		DeviceDetectorPath:       *deviceDetectorPath,
-		AWSKey:                   *awsAccessKeyId,
-		AWSSecret:                *awsSecretAccessKey,
-		AWSRegion:                *awsRegion,
-		SentryDSN:                *sentryDSN,
-		EmailSender:              *factorsEmailSender,
-		ErrorReportingInterval:   *errorReportingInterval,
-		SkipSessionProjectIds:    *skipSessionProjectIds, // comma seperated project ids, supports "*".
-		MergeUspProjectIds:       *mergeUserPropertiesProjectIDS,
-		RedisHostPersistent:      *redisHostPersistent,
-		RedisPortPersistent:      *redisPortPersistent,
-		IsRealTimeCachingEnabled: *isRealTimeCachingEnabled,
+		RedisHost:                         *redisHost,
+		RedisPort:                         *redisPort,
+		QueueRedisHost:                    *queueRedisHost,
+		QueueRedisPort:                    *queueRedisPort,
+		GeolocationFile:                   *geoLocFilePath,
+		DeviceDetectorPath:                *deviceDetectorPath,
+		AWSKey:                            *awsAccessKeyId,
+		AWSSecret:                         *awsSecretAccessKey,
+		AWSRegion:                         *awsRegion,
+		SentryDSN:                         *sentryDSN,
+		EmailSender:                       *factorsEmailSender,
+		ErrorReportingInterval:            *errorReportingInterval,
+		SkipSessionProjectIds:             *skipSessionProjectIds, // comma seperated project ids, supports "*".
+		MergeUspProjectIds:                *mergeUserPropertiesProjectIDS,
+		RedisHostPersistent:               *redisHostPersistent,
+		RedisPortPersistent:               *redisPortPersistent,
+		IsRealTimeEventUserCachingEnabled: *isRealTimeEventUserCachingEnabled,
 	}
 
 	err := C.InitQueueWorker(config)

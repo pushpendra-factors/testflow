@@ -421,7 +421,7 @@ func RefreshCacheFromDb(project_id uint64, currentTime time.Time, no_of_days int
 }
 
 func addEventDetailsToCache(project_id uint64, event_name string, event_properties U.PropertiesMap) {
-	if C.GetIfRealTimeCachingIsEnabled() {
+	if C.GetIfRealTimeEventUserCachingIsEnabled() {
 		logCtx := log.WithField("project_id", project_id)
 
 		currentTime := U.TimeNow()

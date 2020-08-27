@@ -58,7 +58,7 @@ func main() {
 	skipSessionProjectIds := flag.String("skip_session_project_ids",
 		"", "List or projects to skip session creation.")
 
-	isRealTimeCachingEnabled := flag.Bool("is_real_time_caching_enabled", false, "If the real time caching is enabled")
+	isRealTimeEventUserCachingEnabled := flag.Bool("is_real_time__event_user_caching_enabled", false, "If the real time caching is enabled")
 
 	flag.Parse()
 
@@ -96,7 +96,7 @@ func main() {
 		SkipTrackProjectIds:                 C.GetTokensFromStringListAsUint64(*skipTrackProjectIds), // comma seperated project ids.
 		SkipSessionProjectIds:               *skipSessionProjectIds,                                  // comma seperated project ids, supports "*".
 		WhitelistedProjectIdsEventUserCache: *whitelistedProjectIdsEventUserCache,
-		IsRealTimeCachingEnabled:            *isRealTimeCachingEnabled,
+		IsRealTimeEventUserCachingEnabled:            *isRealTimeEventUserCachingEnabled,
 	}
 
 	// Initialize configs and connections.

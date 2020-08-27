@@ -84,7 +84,7 @@ type Configuration struct {
 	MergeUspProjectIds                  string
 	SkipSessionProjectIds               string // comma seperated project ids, supports "*" for all projects.
 	WhitelistedProjectIdsEventUserCache string
-	IsRealTimeCachingEnabled            bool
+	IsRealTimeEventUserCachingEnabled            bool
 }
 
 type Services struct {
@@ -538,7 +538,7 @@ func InitSDKService(config *Configuration) error {
 
 	// Cache dependency for requests not using queue.
 	InitRedis(config.RedisHost, config.RedisPort)
-	if config.IsRealTimeCachingEnabled == true {
+	if config.IsRealTimeEventUserCachingEnabled == true {
 		log.Info("Initializing persistent redis service in sdk service.")
 		InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
 	}
@@ -579,7 +579,7 @@ func InitQueueWorker(config *Configuration) error {
 		log.WithError(err).Fatal("Failed to initalize queue client on init queue worker.")
 	}
 
-	if config.IsRealTimeCachingEnabled {
+	if config.IsRealTimeEventUserCachingEnabled {
 		log.Info("Initializing persistent redis service in worker.")
 		InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
 	}
@@ -675,8 +675,8 @@ func GetWhitelistedProjectIdsEventUserCache() string {
 	return configuration.WhitelistedProjectIdsEventUserCache
 }
 
-func GetIfRealTimeCachingIsEnabled() bool {
-	return configuration.IsRealTimeCachingEnabled
+func GetIfRealTimeEventUserCachingIsEnabled() bool {
+	return configuration.IsRealTimeEventUserCachingEnabled
 }
 
 // ParseConfigStringToMap - Parses config string

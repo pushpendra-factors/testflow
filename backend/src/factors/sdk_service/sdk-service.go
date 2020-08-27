@@ -53,7 +53,7 @@ func main() {
 		"", "List or projects to create session offline.")
 	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
 	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
-	isRealTimeCachingEnabled := flag.Bool("is_real_time_caching_enabled", false, "If the real time caching is enabled")
+	isRealTimeEventUserCachingEnabled := flag.Bool("is_real_time__event_user_caching_enabled", false, "If the real time caching is enabled")
 	flag.Parse()
 
 	config := &C.Configuration{
@@ -85,7 +85,7 @@ func main() {
 		SkipSessionProjectIds:            *skipSessionProjectIds, // comma seperated project ids, supports "*".
 		RedisHostPersistent:              *redisHostPersistent,
 		RedisPortPersistent:              *redisPortPersistent,
-		IsRealTimeCachingEnabled:         *isRealTimeCachingEnabled,
+		IsRealTimeEventUserCachingEnabled:         *isRealTimeEventUserCachingEnabled,
 	}
 
 	err := C.InitSDKService(config)
