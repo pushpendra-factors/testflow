@@ -1,6 +1,7 @@
 import React, { useRef, useCallback, useEffect } from 'react';
 import * as d3 from 'd3';
 import styles from './index.module.scss';
+import { checkForWindowSizeChange } from '../utils';
 
 function UngroupedChart({ chartData }) {
 
@@ -63,7 +64,8 @@ function UngroupedChart({ chartData }) {
     }, []);
 
     const drawChart = useCallback(() => {
-        d3.select(chartRef.current).html('').append('svg').attr('width', '1552').attr('height', 400).attr('id', 'chart')
+        const availableWidth = d3.select(chartRef.current).node().getBoundingClientRect().width;
+        d3.select(chartRef.current).html('').append('svg').attr('width', availableWidth).attr('height', 400).attr('id', 'chart')
         const svg = d3.select("#chart");
         const margin = { top: 20, right: 30, bottom: 30, left: 50 };
         const width = +svg.attr("width") - margin.left - margin.right;
@@ -169,6 +171,13 @@ function UngroupedChart({ chartData }) {
         showChangePercentage();
         showOverAllConversionPercentage();
     }, [drawChart, showChangePercentage, showOverAllConversionPercentage])
+
+    useEffect(() => {
+        window.addEventListener("resize", () => checkForWindowSizeChange(displayChart));
+        return () => {
+            window.removeEventListener("resize", () => checkForWindowSizeChange(displayChart));
+        }
+    }, [displayChart]);
 
     useEffect(() => {
         displayChart();

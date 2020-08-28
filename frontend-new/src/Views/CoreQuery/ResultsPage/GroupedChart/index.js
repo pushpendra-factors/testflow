@@ -2,6 +2,7 @@ import React, { useRef, useCallback, useEffect } from 'react';
 import c3 from 'c3';
 import * as d3 from 'd3';
 import styles from './index.module.scss';
+import { checkForWindowSizeChange } from '../utils';
 
 function GroupedChart({ eventsData, groups, chartData, chartColors }) {
     const chartRef = useRef(null);
@@ -159,11 +160,23 @@ function GroupedChart({ eventsData, groups, chartData, chartColors }) {
         });
     }, [chartColors, chartData, eventsData, groups]);
 
-    useEffect(() => {
+
+    const displayChart = useCallback(() => {
         drawChart();
         showVerticalGridLines();
         showConverionRates();
-    }, [drawChart, showVerticalGridLines, showConverionRates]);
+    }, [drawChart, showVerticalGridLines, showConverionRates])
+
+    useEffect(() => {
+        window.addEventListener("resize", () => checkForWindowSizeChange(displayChart), false);
+        return () => {
+            window.removeEventListener("resize", () => checkForWindowSizeChange(displayChart), false);
+        }
+    }, [displayChart]);
+
+    useEffect(() => {
+        displayChart();
+    }, [displayChart]);
 
     return (
         <div className="grouped-chart">

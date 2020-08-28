@@ -1,5 +1,12 @@
 import tableStyles from './DataTable/index.module.scss'
 
+const windowSize = {
+    w: window.outerWidth,
+    h: window.outerHeight,
+    iw: window.innerWidth,
+    ih: window.innerHeight
+};
+
 export const generateGroupedChartsData = (data, groups) => {
     let result = data.map(elem => {
         let values = [];
@@ -185,4 +192,25 @@ export const generateUngroupedChartsData = (data) => {
         }
     })
     return result;
+}
+
+export const checkForWindowSizeChange = (callback) => {
+    if (window.outerWidth !== windowSize.w || window.outerHeight !== windowSize.h) {
+        setTimeout(() => {
+            windowSize.w = window.outerWidth; // update object with current window properties
+            windowSize.h = window.outerHeight;
+            windowSize.iw = window.innerWidth;
+            windowSize.ih = window.innerHeight;
+        }, 0)
+        callback();
+    }
+
+    //if the window doesn't resize but the content inside does by + or - 5%
+    else if (window.innerWidth + window.innerWidth * .05 < windowSize.iw ||
+        window.innerWidth - window.innerWidth * .05 > windowSize.iw) {
+        setTimeout(() => {
+            windowSize.iw = window.innerWidth;
+        }, 0);
+        callback();
+    }
 }
