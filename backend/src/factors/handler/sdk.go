@@ -403,7 +403,7 @@ func SDKErrorHandler(c *gin.Context) {
 		"auto_track_url": request.AutoTrackURL,
 		"properties":     properties,
 		"tag":            "sdk_error",
-	}).Error("Got JS SDK Error.")
+	}).Info("Got JS SDK Error.")
 
 	c.AbortWithStatus(http.StatusOK)
 	return

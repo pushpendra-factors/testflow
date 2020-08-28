@@ -843,7 +843,8 @@ func FillUserPropertiesAndGetCustomerUserIdFromFormSubmit(projectId uint64, user
 
 	if formPropertyEmailExists && userPropertyEmailExists {
 		if userPropertyEmail != formPropertyEmail {
-			logCtx.Error("Different email seen on form event. User property not updated.")
+			logCtx.WithField("tag", "different_email_seen_for_customer_user_id").
+				Warn("Different email seen on form event. User property not updated.")
 			return "", http.StatusBadRequest
 		}
 
@@ -854,7 +855,8 @@ func FillUserPropertiesAndGetCustomerUserIdFromFormSubmit(projectId uint64, user
 
 	if formPropertyPhoneExists && userPropertyPhoneExists {
 		if userPropertyPhone != formPropertyPhone {
-			logCtx.Error("Different phone seen on form event. User property not updated.")
+			logCtx.WithField("tag", "different_phone_seen_for_customer_user_id").
+				Warn("Different phone seen on form event. User property not updated.")
 			return "", http.StatusBadRequest
 		}
 
