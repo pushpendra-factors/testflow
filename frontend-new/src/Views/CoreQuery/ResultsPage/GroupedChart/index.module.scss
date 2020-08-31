@@ -1,6 +1,6 @@
 $textColor: #3E516C;
 
-.conversionsOverTimeChart {
+.groupedChart {
     :global(.c3-legend-item-tile) {
         shape-rendering: auto;
         stroke-linecap: round;
@@ -49,6 +49,5 @@ $textColor: #3E516C;
 .conversionText {
     color: $textColor;
     font-style: normal;
-    // font-size: 1rem;
     line-height: 24px;
 }
