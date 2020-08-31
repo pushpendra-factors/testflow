@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config-queue-redis
+  labels:
+    env: staging
+    project: factors-staging
+data:
+  QUEUE_REDIS_HOST: "<REDIS_HOST_IP>"
+  QUEUE_REDIS_PORT: "7379"
