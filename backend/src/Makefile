@@ -43,6 +43,9 @@ serve-redis:
 serve-predis:
 	redis-server $(GOPATH)/src/persistent_redis.conf
 
+serve-qredis:
+	redis-server $(GOPATH)/src/queue_redis.conf
+
 clean:
 	rm $(GOPATH)/bin/pattern-app $(GOPATH)/bin/app $(GOPATH)/bin/data-service
 
@@ -85,6 +88,12 @@ pack-predis:
 
 upload-predis:
 	docker push us.gcr.io/factors-$(ENV)/persistent-redis:$(TAG)
+
+pack-qredis:
+	docker build -t us.gcr.io/factors-$(ENV)/queue-redis:$(TAG) -f Dockerfile.queue_redis .
+
+upload-qredis:
+	docker push us.gcr.io/factors-$(ENV)/queue-redis:$(TAG)
 
 pack-debug:
 	docker build --no-cache -t us.gcr.io/factors-$(ENV)/debug:$(TAG) -f Dockerfile.debug .

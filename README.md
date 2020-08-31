@@ -1,10 +1,8 @@
 # Development Setup (Mac)
 
 ## Golang (Version 1.14.x)
-https://golang.org/doc/install - go for default installation. Not custom installation.
-
-* Clone the repository using personal access token 
-* After cloning export $GOPATH as repository's root/backend/
+https://golang.org/dl/ - go for default installation using installer. Not the custom installation using source.
+https://golang.org/dl/go1.14.7.darwin-amd64.pkg - use this default installer for mac.
 
 ## Postgresql Setup (Homebrew):
 ```
@@ -60,8 +58,6 @@ postgres=> SELECT pg_catalog.set_config('search_path', '', false);
  
 (1 row)
 
-
-postgres=> CREATE ROLE autometa PASSWORD 'md5aa44dccdc9ac7b7a4a2a25e129e95784' NOSUPERUSER CREATEDB CREATEROLE INHERIT LOGIN;
 
 postgres=> CREATE DATABASE autometa;
 CREATE DATABASE
@@ -135,10 +131,10 @@ go run run_db_create.go
 
 * Install godep (mac) `brew install dep`.
 
-* Install all dependencies of the project (Optional, as we have checked in vendor libs already).
+* Install all dependencies of the project (**Optional, as we have checked in vendor libs already**).
 ```
 cd $GOPATH/src/factors
-dep ensure
+dep ensure. Use dep ensure -v to look at logs. Logs might seem like its stuck.
 ```
 
 * Build
@@ -169,7 +165,7 @@ cd $GOPATH/bin
 
 * Backend available at factors-dev.com:8080
 
-## Managing dependencies with godep
+## Managing dependencies with godep (Optional)
 
 * Adding new dependency
 ```
@@ -182,6 +178,7 @@ dep ensure -add github.com/<path_to_repo>
 ```
 export PATH_TO_FACTORS=~/repos
 cd $PATH_TO_FACTORS/factors/frontend
+brew install node
 npm install
 npm run dev
 ```
@@ -259,7 +256,7 @@ cd $PATH_TO_FACTORS/factors/backend/src/factors/workers/integration_request
 go run process.go
 ```
 
-### Adwords Server
+### Adwords Server (Optional)
 * Install python3
 ```
 brew install python3
@@ -287,7 +284,9 @@ python app.py --env development --port 8091 --host_url http://localhost:8091 --d
 
 
 ## Bootstrapping sample data, Building and serving model.
-* Start server on 8085.
+
+### Ingesting Data into sdk.
+* Start the sdk server on 8085.
 * Using Localytics challenge data. (https://github.com/localytics/data-viz-challenge)  (https://medium.com/@aabraahaam/localytics-data-visualization-challengue-81ed409471e)
 
 ```
@@ -295,15 +294,16 @@ export PATH_TO_FACTORS=~/repos
 cd $PATH_TO_FACTORS/factors/misc/ingest_events/src
 export GOPATH=$PATH_TO_FACTORS/factors/misc/ingest_events
 mkdir -p /usr/local/var/factors/localytics_data
-git clone https://github.com/localytics/data-viz-challenge.git  /usr/local/var/factors/localytics_data
+git clone https://github.com/localytics/data-viz-challenge.git  /usr/local/var/factors/localytics_data --depth 1
 
-# Create project from UI. Use projectId and project Token value for that project
+# Create an account by signing into http://factors-dev.com:3000 and activate it by hitting url visibile in backend logs.
+# After signing in, get the requestId and token from network request call to /projects.
 go get github.com/sirupsen/logrus
-go run ingest_localytics_events.go --input_file=/usr/local/var/factors/localytics_data/data.json --server=http://factors-dev.com:8085 --project_id= --project_token=
+go run ingest_localytics_events.go --input_file=/usr/local/var/factors/localytics_data/data.json --server=http://factors-dev.com:8085 --project_id=<project_id> --project_token=<project_token>
 
 ```
 
-  
+### Pull the events that needs to be processed into file, and build the models (Optional)
 ```
 export PATH_TO_FACTORS=~/repos (path to github code)
 cd ../../../backend/src/factors/scripts/
@@ -324,8 +324,7 @@ or
 go run run_pattern_mine.go --project_id=<projectId> --model_id=<modelId>
 ```
 
-* Run sequential model build for all intervals.
-
+### Run sequential model build for all intervals.
 ```bash
 # build for all projects
 go run run_build_seq.go --etcd=localhost:2379 --local_disk_tmp_dir=/usr/local/var/factors/local_disk/tmp --bucket_name=/usr/local/var/factors/cloud_storage
@@ -335,10 +334,11 @@ go run run_build_seq.go --etcd=localhost:2379 --local_disk_tmp_dir=/usr/local/va
 # build for a specific project
 go run run_build_seq.go --project_ids=1,2 --model_type=all --look_back_days=30 --etcd=localhost:2379 --local_disk_tmp_dir=/usr/local/var/factors/local_disk/tmp --bucket_name=/usr/local/var/factors/cloud_storage
 ```
+* The above look_back_days should be kept to longer value for development setup. For instance - 30000.
 
 * Verify factors in action on Frontend.
 
-### Enabling BigQuery for a project
+### Enabling BigQuery for a project (Optional)
 * Make sure to have a project_id with some events. Refer above steps to ingest events data using `ingest_localytics_events.go` script if required.
 * Enable archival and bigquery in project_settings for the project.
     ```
@@ -378,7 +378,7 @@ go run run_build_seq.go --project_ids=1,2 --model_type=all --look_back_days=30 -
         UPDATE bigquery_documents SET last_run_at = 0 WHERE project_id=<project_id>;
         ```
 
-## Running Adwords Sync
+## Running Adwords Sync (Optional)
 
 * Setup
 ```
@@ -395,7 +395,7 @@ python sync.py --developer_token=<ADS_DEVELOPER_TOKEN> --oauth_secret=$(cat <GOO
 python sync.py --developer_token=<ADS_DEVELOPER_TOKEN> --oauth_secret=$(cat <GOOGLE_OAUTH_CLIENT_JSON_FILEPATH>) --project_id=1
 ```
 
-## Setting up debugging in VSCode
+## Setting up debugging in VSCode (Optional)
 
 * Open VSCode, Click `Debug` on top meu bar and choose `Add Configuration`.
 * Choose `Go` on the environments list and it will open a file called `launch.json`.
@@ -428,7 +428,7 @@ python sync.py --developer_token=<ADS_DEVELOPER_TOKEN> --oauth_secret=$(cat <GOO
 * Click `Debug` and choose `Start Debugging`.
 * Check the `DEBUG CONSOLE` on the bottom terminal pane.
 
-## Debugging using LiteIDE and Delve
+## Debugging using LiteIDE and Delve (Optional)
 * cd ~/go
 * GOPATH=~/go
 * go get -u github.com/derekparker/delve/cmd/dlv

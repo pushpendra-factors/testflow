@@ -2,10 +2,10 @@ apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   labels:
-    layer: persistent-redis
-    env: production
-    project: factors-production
-  name: persistent-redis
+    layer: queue-redis
+    env: staging
+    project: factors-staging
+  name: queue-redis
   namespace: default
 spec:
   progressDeadlineSeconds: 600
@@ -13,7 +13,7 @@ spec:
   revisionHistoryLimit: 10
   selector:
     matchLabels:
-      layer: persistent-redis
+      layer: queue-redis
   strategy:
     rollingUpdate:
       maxSurge: 1
@@ -22,28 +22,27 @@ spec:
   template:
     metadata:      
       labels:
-        layer: persistent-redis
+        layer: queue-redis
     spec:
       nodeSelector:
-        cloud.google.com/gke-nodepool: persistent-pool-highmem
+        cloud.google.com/gke-nodepool: factors-staging-node-pool
       terminationGracePeriodSeconds: 30
       volumes:
-        - name: persistent-redis-storage
+        - name: queue-redis-storage
           persistentVolumeClaim:
-            claimName: persistent-redis-pvc
+            claimName: queue-redis-pvc
       containers:
-      - name: persistent-redis
-        image: us.gcr.io/factors-production/persistent-redis:v0.01-19b627a
+      - name: queue-redis
+        image: us.gcr.io/factors-staging/queue-redis:v0.01-e3fc852-562
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 6379
         volumeMounts:
-        - name: persistent-redis-storage
+        - name: queue-redis-storage
           mountPath: "/usr/local/var/db/redis"
         resources:
           requests:
-            memory: "5G"
-            cpu: "1"
+            memory: "100M"
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         securityContext: {}
