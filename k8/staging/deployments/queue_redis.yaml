@@ -33,7 +33,7 @@ spec:
             claimName: queue-redis-pvc
       containers:
       - name: queue-redis
-        image: us.gcr.io/factors-staging/queue-redis:v0.01-xxxx
+        image: us.gcr.io/factors-staging/queue-redis:v0.01-e3fc852-562
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 6379
