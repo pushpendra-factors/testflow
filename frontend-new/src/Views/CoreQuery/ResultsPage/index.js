@@ -26,20 +26,55 @@ function PageContent({ queries, setDrawerVisible }) {
         return null;
     }
 
+    const handleEventsVisibilityChange = (value, index) => {
+        setEventsData(currEventData => {
+            return currEventData.map(event => {
+                if (event.index !== index) {
+                    return event;
+                }
+                event.display = value;
+                return event;
+            })
+        })
+    }
+
+    const handleGroupDataChange = (value, index, group) => {
+        setEventsData(currEventData => {
+            return currEventData.map(event => {
+                if (event.index !== index) {
+                    return event;
+                }
+                event.data[group] = parseInt(value);
+                return event;
+            })
+        })
+    }
+
     return (
         <div>
             <EventsInfo queries={queries} />
-            <FiltersInfo setDrawerVisible={setDrawerVisible} />
-            <GroupedChart
-                chartData={groupedChartData}
-                chartColors={chartColors}
-                groups={groups.filter(elem => elem.is_visible)}
-                eventsData={eventsData}
+            <FiltersInfo
+                handleGroupDataChange={handleGroupDataChange}
+                handleEventsVisibilityChange={handleEventsVisibilityChange}
+                eventsData={eventsData} groups={groups}
+                setDrawerVisible={setDrawerVisible}
             />
+
             <UngroupedChart
                 chartData={ungroupedChartsData}
             />
-            <div className="mt-8 pl-4">
+            
+                <div className="mt-16">
+                <GroupedChart
+                    chartData={groupedChartData}
+                    chartColors={chartColors}
+                    groups={groups.filter(elem => elem.is_visible)}
+                    eventsData={eventsData}
+                />
+            </div>
+
+
+            <div className="mt-4 pl-4">
                 <DataTable
                     eventsData={eventsData}
                     groups={groups}

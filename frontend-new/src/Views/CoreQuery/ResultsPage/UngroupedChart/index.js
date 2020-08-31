@@ -7,8 +7,6 @@ function UngroupedChart({ chartData }) {
 
     const chartRef = useRef(null);
 
-    const colors = ['#014694', '#008BAE', '#52C07C', '#F1C859', '#EEAC4C', '#DE7542'];
-
     const showChangePercentage = useCallback(() => {
         const barNodes = d3.select(chartRef.current).selectAll('.bar').nodes();
         const xAxis = d3.select(chartRef.current).select('.axis.axis--x').node();
@@ -109,8 +107,8 @@ function UngroupedChart({ chartData }) {
             .attr("class", d => {
                 return `bar`
             })
-            .attr('fill', (d, index) => {
-                return colors[index];
+            .attr('fill', (d) => {
+                return d.color;
             })
             .attr("x", d => xScale(d.event))
             .attr("y", d => yScale(d.value))
@@ -164,7 +162,7 @@ function UngroupedChart({ chartData }) {
                     return `${x1},${y1} ${x2},${y2} ${x3},${y3} ${x4},${y4} ${x1},${y1}`;
                 }
             });
-    }, [colors, chartData]);
+    }, [chartData]);
 
     const displayChart = useCallback(() => {
         drawChart();
@@ -186,7 +184,7 @@ function UngroupedChart({ chartData }) {
 
 
     const percentChanges = chartData.slice(1).map((elem, index) => {
-        return chartData[index].value - elem.value;
+        return (chartData[index].value - elem.value).toFixed(2);
     });
 
     return (
@@ -203,7 +201,7 @@ function UngroupedChart({ chartData }) {
 
             {chartData.map((d, index) => {
                 return (
-                    <div className={`${styles.valueText} absolute font-bold flex justify-center`} id={`value${index}`} key={d.event + index}>{d.value}</div>
+                    <div className={`${styles.valueText} absolute font-bold flex justify-center`} id={`value${index}`} key={d.event + index}>{d.netCount}</div>
                 )
             })}
             {percentChanges.map((change, index) => {

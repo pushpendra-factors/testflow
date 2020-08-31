@@ -8,12 +8,13 @@ const windowSize = {
 };
 
 export const generateGroupedChartsData = (data, groups) => {
-    let result = data.map(elem => {
+    const displayedData = data.filter(elem => elem.display);
+    let result = displayedData.map(elem => {
         let values = [];
         for (let key in elem.data) {
             let group = groups.find(g => g.name === key);
             if (group.is_visible) {
-                values.push(elem.data[key]);
+                values.push(((elem.data[key] / (data[0].data[key])) * 100).toFixed(2));
             }
         }
         return [elem.name, ...values];
@@ -34,7 +35,7 @@ export const generateGroups = (data) => {
     let result = cat_names.map(elem => {
         return {
             name: elem,
-            conversion_rate: data[data.length - 1].data[elem] + "%",
+            conversion_rate: ((((data[data.length - 1].data[elem]) / (data[0].data[elem])) * 100).toFixed(2)) + "%",
             is_visible: true,
         }
     });
@@ -91,91 +92,82 @@ const groupedDummyData = [
     {
         index: 1,
         color: '#014694',
+        display: true,
         data: {
-            'Chennai': 100,
-            'Mumbai': 100,
-            'New Delhi': 100,
-            'Amritsar': 100,
-            'Jalandhar': 100,
+            'Chennai': 20000,
+            'Mumbai': 20000,
+            'New Delhi': 20000,
+            'Amritsar': 20000,
+            'Jalandhar': 20000,
+            'Kolkatta': 20000
         }
     },
     {
         index: 2,
         color: '#008BAE',
+        display: true,
         data: {
-            'Chennai': 40,
-            'Mumbai': 40,
-            'New Delhi': 60,
-            'Amritsar': 50,
-            'Jalandhar': 60,
+            'Chennai': 8000,
+            'Mumbai': 8000,
+            'New Delhi': 12000,
+            'Amritsar': 10000,
+            'Jalandhar': 12000,
+            'Kolkatta': 6000
         }
     },
     {
         index: 3,
         color: '#52C07C',
+        display: true,
         data: {
-            'Chennai': 30,
-            'Mumbai': 30,
-            'New Delhi': 30,
-            'Amritsar': 40,
-            'Jalandhar': 40,
+            'Chennai': 6000,
+            'Mumbai': 6000,
+            'New Delhi': 6000,
+            'Amritsar': 8000,
+            'Jalandhar': 8000,
+            'Kolkatta': 5000
         }
     },
     {
         index: 4,
         color: '#F1C859',
+        display: true,
         data: {
-            'Chennai': 10,
-            'Mumbai': 15,
-            'New Delhi': 15,
-            'Amritsar': 30,
-            'Jalandhar': 20,
+            'Chennai': 2000,
+            'Mumbai': 3000,
+            'New Delhi': 3000,
+            'Amritsar': 6000,
+            'Jalandhar': 4000,
+            'Kolkatta': 4000
         }
     },
     {
         index: 5,
         color: '#EEAC4C',
+        display: true,
         data: {
-            'Chennai': 5,
-            'Mumbai': 10,
-            'New Delhi': 8,
-            'Amritsar': 20,
-            'Jalandhar': 5.25,
+            'Chennai': 1000,
+            'Mumbai': 2000,
+            'New Delhi': 1600,
+            'Amritsar': 4000,
+            'Jalandhar': 1050,
+            'Kolkatta': 3000
         }
     },
     {
         index: 6,
         color: '#DE7542',
+        display: true,
         data: {
-            'Chennai': 3,
-            'Mumbai': 8,
-            'New Delhi': 6,
-            'Amritsar': 18,
-            'Jalandhar': 1.5,
+            'Chennai': 600,
+            'Mumbai': 1600,
+            'New Delhi': 1200,
+            'Amritsar': 3600,
+            'Jalandhar': 300,
+            'Kolkatta': 2000
         }
     }
 ];
-
-const ungroupedDummyData = [
-    {
-        value: 100
-    },
-    {
-        value: 60
-    },
-    {
-        value: 30
-    },
-    {
-        value: 10
-    },
-    {
-        value: 5
-    },
-    {
-        value: 3
-    }
-]
 
 export const generateDummyData = (labels) => {
     let result = labels.map((elem, index) => {
@@ -185,10 +177,31 @@ export const generateDummyData = (labels) => {
 }
 
 export const generateUngroupedChartsData = (data) => {
-    let result = data.map((elem, index) => {
+
+    const displayedData = data.filter(elem => elem.display);
+    let totalData = 0;
+
+    if (displayedData.length) {
+        Object.keys(displayedData[0].data).forEach(elem => {
+            totalData += displayedData[0].data[elem];
+        });
+    }
+
+    let result = displayedData.map((elem, index) => {
+
+        let obj = data.find(d => d.name === elem.name);
+
+        let netCount = 0;
+
+        Object.keys(obj.data).forEach(d => {
+            netCount += obj.data[d]
+        });
+
         return {
             event: elem.name,
-            value: ungroupedDummyData[index].value
+            color: elem.color,
+            netCount,
+            value: ((netCount / totalData) * 100).toFixed(2),
         }
     })
     return result;
