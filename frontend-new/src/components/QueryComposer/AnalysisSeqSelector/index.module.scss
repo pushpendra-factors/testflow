@@ -1,0 +1,39 @@
+.seq_selector {
+    display: flex;
+    flex-direction: column;
+    background: white;
+    height: 280px;
+    width: 280px;
+
+    &__container {
+        display: flex;
+        flex-direction: column;
+
+        &__seq {
+            
+        }
+
+        &__seqKey {
+            height: 32px;
+            width: 32px;
+            border-radius: 50%;
+            justify-content: end;
+            vertical-align: text-bottom;
+            line-height: 30px;
+            padding: 2px 12px;
+            align-self: center;
+        }
+        
+        &__enabled:hover {
+            background: #5949BC;
+            color: white;
+            cursor: pointer;
+        }
+        
+        &__disabled {
+            border: 1px solid #B7BEC8;
+            color: #8692A3;
+        }
+    }
+}
+
