@@ -36,11 +36,7 @@ function QueryBlock({index, event, eventChange}) {
     ]
 
     const onChange = (value) => {
-        const newEvent = event? event: {label:'', filters: [{
-            "prop": "City",
-            "operator": "is",
-            "values": ["Bangalore", "Chennai"]
-        }]};
+        const newEvent = event? event: {label:'', filters: []};
         newEvent.label = value;
         setDDVisible(false);
         eventChange(newEvent, index-1);
