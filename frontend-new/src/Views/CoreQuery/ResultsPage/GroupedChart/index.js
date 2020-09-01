@@ -2,7 +2,7 @@ import React, { useRef, useCallback, useEffect } from 'react';
 import c3 from 'c3';
 import * as d3 from 'd3';
 import styles from './index.module.scss';
-import { checkForWindowSizeChange } from '../utils';
+import { checkForWindowSizeChange, calculatePercentage } from '../utils';
 
 function GroupedChart({ eventsData, groups, chartData, chartColors }) {
     const chartRef = useRef(null);
@@ -149,31 +149,34 @@ function GroupedChart({ eventsData, groups, chartData, chartColors }) {
                 //     return { top, left }
                 // },
                 contents: d => {
-                    let group = groups[d[0].index].name;
-                    let eventIndex = eventsData.findIndex(elem => elem.name === d[0].id);
-                    let event = eventsData.find(elem => elem.name === d[0].id);
+                    const group = groups[d[0].index].name;
+                    const eventIndex = eventsData.findIndex(elem => elem.name === d[0].id);
+                    const event = eventsData.find(elem => elem.name === d[0].id);
+                    const eventWeightage = calculatePercentage(event.data[group], eventsData[0].data[group])
                     let eventsOutput;
                     if (!eventIndex) {
                         eventsOutput = (
                             `
                                 <div class="flex justify-between my-2">
                                     <div class="font-bold" style="color:${event.color}">Event ${event.index}</div>
-                                    <div>${3}</div>
+                                    <div>${event.data[group]} (${eventWeightage}%)</div>
                                 </div>
                             `
                         );
                     } else {
-                        let prevEvent = eventsData[eventIndex - 1];
+                        const prevEvent = eventsData[eventIndex - 1];
+                        const prevEventWeightage = calculatePercentage(prevEvent.data[group], eventsData[0].data[group])
+                        const difference = calculatePercentage(prevEvent.data[group] - event.data[group], prevEvent.data[group]);
                         eventsOutput = (
                             `
                                 <div class="my-2">
                                     <div class="flex justify-between">
                                         <div class="font-bold" style="color:${prevEvent.color}">Event ${prevEvent.index}</div>
-                                        <div>${3}</div>
+                                        <div><span class="font-semibold">${prevEvent.data[group]}</span> (${prevEventWeightage}%)</div>
                                     </div>
                                     <div class="flex justify-between">
                                         <div class="font-bold" style="color:${event.color}">Event ${event.index}</div>
-                                        <div>${3}</div>
+                                        <div><span class="font-semibold">${event.data[group]}</span> (${eventWeightage}%)</div>
                                     </div>
                                 </div>
                                 <hr />
@@ -183,7 +186,7 @@ function GroupedChart({ eventsData, groups, chartData, chartColors }) {
                                             <path fillRule="evenodd" clipRule="evenodd" d="M1.87727 0.574039C1.61198 0.0896421 1.00424 -0.08798 0.51984 0.177309C0.0354429 0.442598 -0.142179 1.05034 0.12311 1.53473L4.5343 9.58922C4.79208 10.0599 5.37545 10.2432 5.85612 10.0045L9.15537 8.36627L12.3311 13.4015L10.5548 14.4155C10.1709 14.6347 10.2394 15.2077 10.6641 15.3302L14.6511 16.4801C14.9164 16.5566 15.1935 16.4035 15.27 16.1382L16.4529 12.037C16.5773 11.6057 16.1144 11.2417 15.7246 11.4642L14.0697 12.409L10.3653 6.53552C10.0916 6.10167 9.53412 5.94521 9.07471 6.17333L5.82702 7.78599L1.87727 0.574039Z" fill="#8692A3"/>
                                         </svg>
                                     </div>
-                                    <div>33% drop from ${prevEvent.index}-${event.index}</div>
+                                    <div>${difference}% drop from ${prevEvent.index}-${event.index}</div>
                                 </div>
                             `
                         );
@@ -228,8 +231,8 @@ function GroupedChart({ eventsData, groups, chartData, chartColors }) {
         displayChart();
     }, [displayChart]);
 
-    const visibleEvents = eventsData.filter(elem=>elem.display);
-    
+    const visibleEvents = eventsData.filter(elem => elem.display);
+
     return (
         <div className="grouped-chart">
             {

@@ -1,7 +1,7 @@
 import React, { useRef, useCallback, useEffect } from 'react';
 import * as d3 from 'd3';
 import styles from './index.module.scss';
-import { checkForWindowSizeChange } from '../utils';
+import { checkForWindowSizeChange, calculatePercentage } from '../utils';
 
 function UngroupedChart({ chartData }) {
 
@@ -93,7 +93,9 @@ function UngroupedChart({ chartData }) {
         tooltip.current = d3.select(chartRef.current).append("div").attr("class", "toolTip").style("opacity", 0);
 
         const xScale = d3.scaleBand()
-            .rangeRound([0, width]).paddingOuter(0.1).paddingInner(0.3)
+            .rangeRound([0, width])
+            .paddingOuter(0.2)
+            .paddingInner(0.3)
             .domain(chartData.map(d => d.event));
 
         const yScale = d3.scaleLinear()
@@ -124,7 +126,8 @@ function UngroupedChart({ chartData }) {
 
         g.selectAll(".bar")
             .data(chartData)
-            .enter().append("rect")
+            .enter()
+            .append("rect")
             .attr("class", d => {
                 return `bar`
             })
@@ -178,7 +181,7 @@ function UngroupedChart({ chartData }) {
                     return `${x1},${y1} ${x2},${y2} ${x3},${y3} ${x4},${y4} ${x1},${y1}`;
                 }
             });
-    }, [chartData, showTooltip]);
+    }, [chartData, showTooltip, hideTooltip]);
 
     const displayChart = useCallback(() => {
         drawChart();
@@ -200,7 +203,7 @@ function UngroupedChart({ chartData }) {
 
 
     const percentChanges = chartData.slice(1).map((elem, index) => {
-        return (chartData[index].value - elem.value).toFixed(2);
+        return calculatePercentage(chartData[index].netCount - elem.netCount, chartData[index].netCount);
     });
 
     return (

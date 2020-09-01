@@ -14,7 +14,7 @@ export const generateGroupedChartsData = (data, groups) => {
         for (let key in elem.data) {
             let group = groups.find(g => g.name === key);
             if (group.is_visible) {
-                values.push(((elem.data[key] / (data[0].data[key])) * 100).toFixed(2));
+                values.push(calculatePercentage(elem.data[key], data[0].data[key]));
             }
         }
         return [elem.name, ...values];
@@ -35,7 +35,7 @@ export const generateGroups = (data) => {
     let result = cat_names.map(elem => {
         return {
             name: elem,
-            conversion_rate: ((((data[data.length - 1].data[elem]) / (data[0].data[elem])) * 100).toFixed(2)) + "%",
+            conversion_rate: calculatePercentage(data[data.length - 1].data[elem], data[0].data[elem])+'%',
             is_visible: true,
         }
     });
@@ -76,12 +76,12 @@ export const generateTableData = (data, groups) => {
     const result = appliedGroups.map((group, index) => {
         let eventsData = {};
         data.forEach(d => {
-            eventsData[d.name] = d.data[group];
+            eventsData[d.name] = d.data[group] + ' (' + calculatePercentage(d.data[group], data[0].data[group]) + '%)';
         });
         return {
             index: index,
             name: group,
-            conversion: data[data.length - 1].data[group] + "%",
+            conversion: calculatePercentage(data[data.length - 1].data[group], data[0].data[group]) + "%",
             ...eventsData
         }
     })
@@ -201,7 +201,7 @@ export const generateUngroupedChartsData = (data) => {
             event: elem.name,
             color: elem.color,
             netCount,
-            value: ((netCount / totalData) * 100).toFixed(2),
+            value: calculatePercentage(netCount, totalData)
         }
     })
     return result;
@@ -226,4 +226,9 @@ export const checkForWindowSizeChange = (callback) => {
         }, 0);
         callback();
     }
+}
+
+export const calculatePercentage = (numerator, denominator, precision = 2) => {
+    const result = ((numerator / denominator) * 100);
+    return result % 1 != 0 ? result.toFixed(precision) : result;
 }
