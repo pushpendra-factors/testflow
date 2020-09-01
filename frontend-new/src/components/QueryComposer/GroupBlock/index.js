@@ -38,15 +38,17 @@ export default function GroupBlock({events, groupBy}){
     const onChange = (value) => {
         const newGroupByState = Object.assign({}, groupByState);
         newGroupByState.property = value;
-        setGroupByState(newGroupByState);
         setDDVisible(false);
+        setGroupByState(newGroupByState);
+        
     }
 
     const onEventValueChange = (value) => {
         const newGroupByState = Object.assign({}, groupByState);
         newGroupByState.eventValue = value;
-        setGroupByState(newGroupByState);
         setValueDDVisible(false);
+        setGroupByState(newGroupByState);
+        
     }
 
     const triggerDropDown = () => {
@@ -89,8 +91,8 @@ export default function GroupBlock({events, groupBy}){
                     }
                     {isDDVisible ?
                     (<><Select 
-                        onClick={triggerDropDown}
-                        onChange={onChange} open={isDDVisible} 
+                        placeholder="Select Property"
+                        onChange={onChange}
                         dropdownRender={menu => (
                             <div className={styles.group_block__selector_body}>
                               {menu}
@@ -109,13 +111,13 @@ export default function GroupBlock({events, groupBy}){
                         : <span className={styles.group_block__event_tag} 
                         onClick={triggerValueDropDown}> {events[0].label} </span>
                     }
+                    {isValueDDVisible?
                     <Select style={{width: 200}} showArrow={false} 
-                    onClick={triggerValueDropDown}
-                        onChange={onEventValueChange} open={isValueDDVisible} >
+                        onChange={onEventValueChange} >
                         {events.map(event => (
                             <Option value={event.label}></Option>
                         ))}
-                    </Select> </>)
+                    </Select>: null } </>)
 
                     : null
                 } 

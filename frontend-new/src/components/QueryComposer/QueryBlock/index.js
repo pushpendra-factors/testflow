@@ -119,6 +119,7 @@ function QueryBlock({index, event, eventChange}) {
         }
 
         filters.push(<div className={styles.query_block__filters}>
+            {additionalActions()}
             {selectEventFilter()}
         </div>)
 
