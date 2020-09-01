@@ -38,6 +38,7 @@ spec:
         resources:
           requests:
             memory: "100M"
+            cpu: "0.5"
         securityContext: {}
         args:
           - --env
