@@ -35,12 +35,27 @@ type ArchiveEventTableFormat struct {
 	UserProperties    string    `json:"user_properties" bigquery:"user_properties"`
 }
 
+// ArchiveUsersTableFormat Users table schema in bigquery.
+type ArchiveUsersTableFormat struct {
+	UserID         string    `json:"user_id" bigquery:"user_id"`
+	CustomerUserID string    `json:"identified_user_id" bigquery:"identified_user_id"`
+	IngestionDate  time.Time `json:"ingestion_date" bigquery:"ingestion_date"`
+}
+
 func (eventFormat ArchiveEventTableFormat) GetEventTimestamp() int64 {
 	return eventFormat.EventTimestamp.Unix()
 }
 
 func (eventFormat ArchiveEventTableFormat) GetEventTimestampColumnName() string {
 	return "event_timestamp"
+}
+
+func (usersFormat ArchiveUsersTableFormat) GetEventTimestamp() int64 {
+	return usersFormat.IngestionDate.Unix()
+}
+
+func (usersFormat ArchiveUsersTableFormat) GetEventTimestampColumnName() string {
+	return "ingestion_date"
 }
 
 // SanitizeEventProperties Sanitizes event properites making ready for archival / bigquery file.

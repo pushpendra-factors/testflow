@@ -110,7 +110,14 @@ func (dd *DiskDriver) GetPatternChunkFilePathAndName(projectId, modelId uint64, 
 func (dd *DiskDriver) GetEventArchiveFilePathAndName(projectID uint64, startTime, endTime int64) (string, string) {
 	year, month, date := time.Unix(startTime, 0).UTC().Date()
 	path := fmt.Sprintf("%s/archive/%d/%d/%d/", dd.baseDir, projectID, year, int(month))
-	fileName := fmt.Sprintf("%d_%d-%d.txt", date, startTime, endTime)
+	fileName := fmt.Sprintf("%d_events_%d-%d.txt", date, startTime, endTime)
+	return path, fileName
+}
+
+func (dd *DiskDriver) GetUsersArchiveFilePathAndName(projectID uint64, startTime, endTime int64) (string, string) {
+	year, month, date := time.Unix(startTime, 0).UTC().Date()
+	path := fmt.Sprintf("%s/archive/%d/%d/%d/", dd.baseDir, projectID, year, int(month))
+	fileName := fmt.Sprintf("%d_users_%d-%d.txt", date, startTime, endTime)
 	return path, fileName
 }
 

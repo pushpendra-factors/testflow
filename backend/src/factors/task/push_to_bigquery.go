@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"sort"
+	"strings"
 	"time"
 
 	A "factors/archival"
@@ -15,11 +16,26 @@ import (
 	serviceDisk "factors/services/disk"
 	"factors/util"
 
+	"cloud.google.com/go/bigquery"
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 )
 
 var pbTaskID = "Task#PushToBigQuery"
+
+func writeCloudArchiveFile(cloudManager *filestore.FileManager, tmpFileName, cloudFilePath, cloudFileName string) error {
+	// Writing to the cloud storage from local.
+	tmpOutputStream, err := os.Open(tmpFileName)
+	if err != nil {
+		return err
+	}
+
+	err = (*cloudManager).Create(cloudFilePath, cloudFileName, tmpOutputStream)
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
 // ArchiveEvents Archives events for all the projects with archival enabled in project settings.
 func ArchiveEvents(db *gorm.DB, cloudManager *filestore.FileManager,
@@ -121,9 +137,14 @@ func ArchiveEventsForProject(db *gorm.DB, cloudManager *filestore.FileManager, d
 		tmpEventsFile := tmpEventsFilePath + tmpEventsFileName
 		serviceDisk.MkdirAll(tmpEventsFilePath)
 
+		tmpUsersFilePath, tmpUsersFileName := (*diskManger).GetUsersArchiveFilePathAndName(projectID, batch.StartTime, batch.EndTime)
+		tmpUsersFile := tmpUsersFilePath + tmpUsersFileName
+		serviceDisk.MkdirAll(tmpUsersFilePath)
+
 		pbLog.Infof("Stating to pull events to file %s", tmpEventsFile)
 
-		rowCount, filePath, err := PullEventsForArchive(db, projectID, tmpEventsFile, batch.StartTime, batch.EndTime)
+		rowCount, eventsFilePath, usersFilePath, err := PullEventsForArchive(
+			db, projectID, tmpEventsFile, tmpUsersFile, batch.StartTime, batch.EndTime)
 		taskDetails.EventCount = int64(rowCount)
 		if err != nil {
 			pbLog.WithError(err).Error("Failed to pull events for archival")
@@ -144,24 +165,23 @@ func ArchiveEventsForProject(db *gorm.DB, cloudManager *filestore.FileManager, d
 		}
 
 		// Writing to the cloud storage from local.
-		tmpOutputStream, err := os.Open(filePath)
-		if err != nil {
-			pbLog.WithError(err).Errorf("Failed to open events file %s", filePath)
-			M.FailScheduleTask(scheduledTask.ID)
-			return jobDetails, err
-		}
-
 		cloudEventsFilePath, cloudEventsFileName := (*cloudManager).GetEventArchiveFilePathAndName(projectID, batch.StartTime, batch.EndTime)
-		cloudEventsFile := cloudEventsFilePath + cloudEventsFileName
-		err = (*cloudManager).Create(cloudEventsFilePath, cloudEventsFileName, tmpOutputStream)
-		if err != nil {
-			pbLog.WithError(err).Error("Failed to write to cloudStorage", cloudEventsFile)
+		cloudUsersFilePath, cloudUsersFileName := (*cloudManager).GetUsersArchiveFilePathAndName(projectID, batch.StartTime, batch.EndTime)
+		if err := writeCloudArchiveFile(cloudManager, eventsFilePath, cloudEventsFilePath, cloudEventsFileName); err != nil {
+			pbLog.WithError(err).Errorf("Failed to create events file %s", eventsFilePath)
+			M.FailScheduleTask(scheduledTask.ID)
+			return jobDetails, err
+		} else if err := writeCloudArchiveFile(cloudManager, usersFilePath, cloudUsersFilePath, cloudUsersFileName); err != nil {
+			pbLog.WithError(err).Errorf("Failed to create users file %s", eventsFilePath)
 			M.FailScheduleTask(scheduledTask.ID)
 			return jobDetails, err
 		}
+		cloudEventsFile := cloudEventsFilePath + cloudEventsFileName
+		cloudUserFile := cloudUsersFilePath + cloudUsersFileName
 
 		taskDetails.FileCreated = true
 		taskDetails.FilePath = cloudEventsFile
+		taskDetails.UsersFilePath = cloudUserFile
 		taskDetailsJsonb, _ = util.EncodeStructTypeToPostgresJsonb(taskDetails)
 		taskEndTime := util.TimeNowUnix()
 		rowsUpdated, status := M.UpdateScheduledTask(
@@ -248,7 +268,7 @@ func PushToBigqueryForProject(cloudManager *filestore.FileManager, projectID uin
 		logInfoAndCaptureJobDetails(pbLog, &jobDetails, "No new archive files found to be processed.")
 		return jobDetails, nil
 	}
-	logInfoAndCaptureJobDetails(pbLog, &jobDetails, "%d new files found to be pushed to BigQuery starting from %d",
+	logInfoAndCaptureJobDetails(pbLog, &jobDetails, "%d new tasks found to be pushed to BigQuery starting from %d",
 		len(newArchiveFilesMap), lastRunAt)
 
 	var fileEndTimes []int64
@@ -277,6 +297,7 @@ func PushToBigqueryForProject(cloudManager *filestore.FileManager, projectID uin
 
 	for _, fileEndTime := range fileEndTimes {
 		archiveFile := newArchiveFilesMap[fileEndTime]["filepath"].(string)
+		userArchiveFile := newArchiveFilesMap[fileEndTime]["users_filepath"].(string)
 		taskID := newArchiveFilesMap[fileEndTime]["task_id"].(string)
 		fileStartTime := newArchiveFilesMap[fileEndTime]["start_time"].(int64)
 
@@ -308,8 +329,24 @@ func PushToBigqueryForProject(cloudManager *filestore.FileManager, projectID uin
 			return jobDetails, err
 		}
 
+		// TODO(prateek): Add a mechanism to handle case when one of event file is uploaded but failed for user file.
+		// While reprocessing, it should not upload events file again and only process user file.
+		var usersUploadStats *bigquery.JobStatus
+		if userArchiveFile != "" {
+			// Not empty check to ensure backward compatibility.
+			usersUploadStats, err = BQ.UploadFileToBigQuery(ctx, client, userArchiveFile,
+				bigquerySetting, BQ.BIGQUERY_TABLE_USERS, pbLog, cloudManager)
+			if err != nil {
+				pbLog.WithError(err).Errorf("Failed to upload file %s. Aborting further processing.", userArchiveFile)
+				M.FailScheduleTask(scheduledTask.ID)
+				return jobDetails, err
+			}
+		}
+
 		uploadStatsJsonb, _ := util.EncodeStructTypeToPostgresJsonb(uploadStats)
+		usersUploadStatsJsonb, _ := util.EncodeStructTypeToPostgresJsonb(usersUploadStats)
 		taskDetails.UploadStats = uploadStatsJsonb
+		taskDetails.UsersUploadStats = usersUploadStatsJsonb
 		taskDetailsJsonb, _ = util.EncodeStructTypeToPostgresJsonb(taskDetails)
 		taskEndTime := util.TimeNowUnix()
 		rowsUpdated, status := M.UpdateScheduledTask(scheduledTask.ID, taskDetailsJsonb, taskEndTime, M.TASK_STATUS_SUCCESS)
@@ -317,9 +354,33 @@ func PushToBigqueryForProject(cloudManager *filestore.FileManager, projectID uin
 			return jobDetails, fmt.Errorf("Failed to update scheduled task. Aborting further processing")
 		}
 		logInfoAndCaptureJobDetails(pbLog, &jobDetails, "File %s uploaded in %s",
-			archiveFile, util.SecondsToHMSString(taskEndTime-scheduledTask.TaskStartTime))
+			strings.TrimSuffix(strings.Join([]string{archiveFile, userArchiveFile}, ","), ","),
+			util.SecondsToHMSString(taskEndTime-scheduledTask.TaskStartTime))
+	}
+
+	// Dedup users table.
+	pbLog.Infof("Deduping users on bigquery")
+	resultSet, err := dedupUsersTable(ctx, client, bigquerySetting)
+	if err != nil {
+		pbLog.WithError(err).Errorf("Failed to dedup users on bigquery. Result: %v", resultSet)
 	}
 	return jobDetails, nil
+}
+
+func dedupUsersTable(ctx context.Context, client *bigquery.Client, bigquerySetting *M.BigquerySetting) ([][]string, error) {
+	bigqueryTableName := fmt.Sprintf("%s.%s.%s", bigquerySetting.BigqueryProjectID,
+		bigquerySetting.BigqueryDatasetName, BQ.BIGQUERY_TABLE_USERS)
+
+	// Caution: If same file is processed twice, it might lead to duplicates.
+	query := fmt.Sprintf("DELETE FROM %s WHERE (user_id, ingestion_date) NOT IN (SELECT (user_id, MAX(ingestion_date)) FROM "+
+		"%s GROUP BY user_id);", bigqueryTableName, bigqueryTableName)
+
+	resultSet := make([][]string, 0, 0)
+	err := BQ.ExecuteQuery(&ctx, client, query, &resultSet)
+	if err != nil {
+		return nil, err
+	}
+	return resultSet, nil
 }
 
 func logInfoAndCaptureJobDetails(pbLog *log.Entry, jobDetails *[]string, message string, args ...interface{}) {

@@ -17,5 +17,6 @@ type FileManager interface {
 	GetPatternChunksDir(projectId, modelId uint64) string
 	GetPatternChunkFilePathAndName(projectId, modelId uint64, chunkId string) (string, string)
 	GetEventArchiveFilePathAndName(projectID uint64, startTime, endTime int64) (string, string)
+	GetUsersArchiveFilePathAndName(projectID uint64, startTime, endTime int64) (string, string)
 	ListFiles(path string) []string
 }

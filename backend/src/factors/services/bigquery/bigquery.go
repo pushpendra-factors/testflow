@@ -18,10 +18,12 @@ import (
 
 const (
 	BIGQUERY_TABLE_EVENTS string = "f_events"
+	BIGQUERY_TABLE_USERS  string = "f_users"
 )
 
 var bigqueryArchivalTables = map[string]A.EventFileFormat{
 	BIGQUERY_TABLE_EVENTS: A.ArchiveEventTableFormat{},
+	BIGQUERY_TABLE_USERS:  A.ArchiveUsersTableFormat{},
 }
 
 var bqTaskID = "Service#Bigquery"
@@ -129,7 +131,7 @@ func CreateBigqueryArchivalTables(projectID uint64) error {
 		t := client.Dataset(bigquerySetting.BigqueryDatasetName).Table(tableName)
 		if err = t.Create(ctx, tableMetadata); err != nil {
 			log.WithError(err).Errorf("Failed to create table %s. Table might be present already", tableName)
-			return err
+			continue
 		}
 	}
 	return nil

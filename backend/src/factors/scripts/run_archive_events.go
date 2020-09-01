@@ -33,6 +33,7 @@ func main() {
 	dbUser := flag.String("db_user", "autometa", "")
 	dbName := flag.String("db_name", "autometa", "")
 	dbPass := flag.String("db_pass", "@ut0me7a", "")
+	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 
 	flag.Parse()
 	defer util.NotifyOnPanic(taskID, *envFlag)
@@ -56,6 +57,7 @@ func main() {
 			Name:     *dbName,
 			Password: *dbPass,
 		},
+		SentryDSN: *sentryDSN,
 	}
 	C.InitConf(config.Env)
 
@@ -65,6 +67,9 @@ func main() {
 	}
 	db := C.GetServices().Db
 	defer db.Close()
+
+	C.InitSentryLogging(config.SentryDSN, config.AppName)
+	defer C.SafeFlushSentryHook()
 
 	var cloudManager filestore.FileManager
 	if *envFlag == "development" {

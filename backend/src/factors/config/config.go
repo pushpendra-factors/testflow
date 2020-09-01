@@ -441,6 +441,15 @@ func InitSentryLogging(sentryDSN, appName string) {
 	}
 }
 
+// SafeFlushSentryHook Safe flush error messages in sentry hook. Used with `defer` statement.
+// Useful while running scripts in development mode where sentry is not initialized.
+func SafeFlushSentryHook() {
+	if services.SentryHook != nil {
+		log.Error("Flushing sentry")
+		services.SentryHook.Flush()
+	}
+}
+
 func InitMailClient(key, secret, region string) {
 	if services == nil {
 		services = &Services{}

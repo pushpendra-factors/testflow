@@ -103,7 +103,14 @@ func (gcsd *GCSDriver) GetPatternChunkFilePathAndName(projectId, modelId uint64,
 func (gcsd *GCSDriver) GetEventArchiveFilePathAndName(projectID uint64, startTime, endTime int64) (string, string) {
 	year, month, date := time.Unix(startTime, 0).UTC().Date()
 	path := fmt.Sprintf("archive/%d/%d/%d/", projectID, year, int(month))
-	fileName := fmt.Sprintf("%d_%d-%d.txt", date, startTime, endTime)
+	fileName := fmt.Sprintf("%d_events_%d-%d.txt", date, startTime, endTime)
+	return path, fileName
+}
+
+func (gcsd *GCSDriver) GetUsersArchiveFilePathAndName(projectID uint64, startTime, endTime int64) (string, string) {
+	year, month, date := time.Unix(startTime, 0).UTC().Date()
+	path := fmt.Sprintf("archive/%d/%d/%d/", projectID, year, int(month))
+	fileName := fmt.Sprintf("%d_users_%d-%d.txt", date, startTime, endTime)
 	return path, fileName
 }
 
