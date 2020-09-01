@@ -62,6 +62,58 @@ function GroupedChart({ eventsData, groups, chartData, chartColors }) {
                 columns: chartData,
                 type: 'bar',
                 colors: chartColors,
+                onmouseover: (elemData) => {
+
+                    //blur all the bars
+                    d3.select(chartRef.current)
+                        .selectAll(`.c3-shapes`)
+                        .selectAll('path')
+                        .style('opacity', '0.1')
+
+                    let id = elemData.name;
+                    if (id == undefined) id = elemData.id;
+
+                    const searchedClass = `c3-target-${id.split(" ").join("-")}`;
+                    let hoveredIndex;
+
+                    //style previous bar
+
+                    const bars = d3.select(chartRef.current)
+                        .selectAll('.c3-chart-bar.c3-target')
+                        .nodes()
+
+                    bars
+                        .forEach((node, index) => {
+                            if (node.getAttribute('class').split(" ").indexOf(searchedClass) > -1) {
+                                hoveredIndex = index;
+                            }
+                        })
+
+                    if (hoveredIndex !== 0) {
+                        d3.select(bars[hoveredIndex - 1]).select(`.c3-shape-${elemData.index}`).style('opacity', 1)
+                    }
+
+                    // style hovered bar
+                    d3.select(chartRef.current)
+                        .selectAll(`.c3-shapes-${id.split(" ").join('-')}`)
+                        .selectAll('path')
+                        .nodes()
+                        .forEach((node, index) => {
+                            if (index === elemData.index) {
+                                d3.select(node).style('opacity', 1)
+                            } else {
+                                d3.select(node).style('opacity', 0.1)
+                            }
+                        })
+                },
+                onmouseout: (elemData) => {
+                    let id = elemData.name;
+                    if (id == undefined) id = elemData.id;
+                    d3.select(chartRef.current)
+                        .selectAll(`.c3-shapes`)
+                        .selectAll('path')
+                        .style('opacity', '1')
+                },
             },
             transition: {
                 duration: 1000
@@ -93,11 +145,11 @@ function GroupedChart({ eventsData, groups, chartData, chartColors }) {
             },
             tooltip: {
                 grouped: false,
-                position: function (data, width, height, element) {
-                    const top = d3.mouse(element)[1] - 100;
-                    const left = d3.mouse(element)[0] + 80;
-                    return { top, left }
-                },
+                // position: function (data, width, height, element) {
+                //     const top = d3.mouse(element)[1] - 100;
+                //     const left = d3.mouse(element)[0] + 80;
+                //     return { top, left }
+                // },
                 contents: d => {
                     let group = groups[d[0].index].name;
                     let eventIndex = eventsData.findIndex(elem => elem.name === d[0].id);
