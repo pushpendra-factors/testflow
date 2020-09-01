@@ -7,26 +7,28 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/gin-gonic/gin"
-
-	H "factors/handler"
 	M "factors/model"
 	U "factors/util"
+
+	SDK "factors/sdk"
 )
 
 func TestExecuteWebAnalyticsQueries(t *testing.T) {
-	// Initialize routes and dependent data.
-	r := gin.Default()
-	H.InitSDKServiceRoutes(r)
-	uri := "/sdk/event/track"
-
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 
-	w := ServePostRequestWithHeaders(r, uri,
-		[]byte(`{"event_name": "example.com/a", "event_properties": {"$page_url": "example.com/a", "$page_raw_url": "example.com./a", "authorName": "xxx"}, "user_properties": {"$os": "Mac OSX"}}`),
-		map[string]string{"Authorization": project.Token})
-	assert.Equal(t, http.StatusOK, w.Code)
+	pageURL := "example.com/a"
+	trackPayload := SDK.TrackPayload{
+		Name: pageURL,
+		EventProperties: U.PropertiesMap{
+			"$page_url":     pageURL,
+			"$page_raw_url": pageURL,
+			"authorName":    "author1",
+		},
+	}
+	status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
+	assert.Equal(t, http.StatusOK, status)
+	assert.NotNil(t, response)
 
 	queryResult, errCode := M.ExecuteWebAnalyticsQueries(
 		project.ID,
@@ -42,6 +44,7 @@ func TestExecuteWebAnalyticsQueries(t *testing.T) {
 	assert.NotNil(t, queryResult.QueryResult)
 	assert.Equal(t, http.StatusOK, errCode)
 
+	unitID := U.GetUUID()
 	queryResult, errCode = M.ExecuteWebAnalyticsQueries(
 		project.ID,
 		&M.WebAnalyticsQueries{
@@ -55,8 +58,10 @@ func TestExecuteWebAnalyticsQueries(t *testing.T) {
 					},
 					Metrics: []string{
 						M.WAGroupMetricPageViews,
+						M.WAGroupMetricTotalExits,
+						M.WAGroupMetricExitPercentage,
 					},
-					UniqueID: U.GetUUID(),
+					UniqueID: unitID,
 				},
 			},
 			From: U.UnixTimeBeforeDuration(time.Hour * 1),
@@ -70,11 +75,95 @@ func TestExecuteWebAnalyticsQueries(t *testing.T) {
 	// Group result should have equal length of
 	// headers and individual row.
 	for _, groupResult := range queryResult.CustomGroupQueryResult {
-		assert.Len(t, groupResult.Headers, 2)
+		assert.Len(t, groupResult.Headers, 4)
 		for _, row := range groupResult.Rows {
-			assert.Len(t, row, 2)
+			assert.Len(t, row, 4)
 		}
 	}
+
+	// Group authorName.
+	assert.Equal(t, "author1", queryResult.CustomGroupQueryResult[unitID].Rows[0][0])
+	// Page views should be 1.
+	assert.Equal(t, float64(1), queryResult.CustomGroupQueryResult[unitID].Rows[0][1])
+	// Total exits should be 1.
+	assert.Equal(t, float64(1), queryResult.CustomGroupQueryResult[unitID].Rows[0][2])
+	// Exit percentage should be 100%.
+	assert.Equal(t, "100.0%", queryResult.CustomGroupQueryResult[unitID].Rows[0][3])
+}
+
+func TestWebAnalyticsCustomGroupSessionBasedMetrics(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	timestamp := U.UnixTimeBeforeDuration(time.Hour * 1)
+	// Test exit metrics.
+	pageURL := "example.com/a"
+	trackPayload := SDK.TrackPayload{
+		Name: pageURL,
+		EventProperties: U.PropertiesMap{
+			"$page_url":     pageURL,
+			"$page_raw_url": pageURL,
+			"authorName":    "author1",
+		},
+		Timestamp: timestamp + 1,
+	}
+
+	status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
+	assert.Equal(t, http.StatusOK, status)
+	assert.NotNil(t, response)
+
+	// Same user and session. Different page and author.
+	pageURL1 := "example.com/a/2"
+	trackPayload1 := SDK.TrackPayload{
+		Name: pageURL1,
+		EventProperties: U.PropertiesMap{
+			"$page_url":     pageURL1,
+			"$page_raw_url": pageURL1,
+			"authorName":    "author2",
+		},
+		Timestamp: timestamp + 2,
+		UserId:    response.UserId,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload1, false, SDK.SourceJSSDK)
+	assert.Equal(t, http.StatusOK, status)
+	assert.NotNil(t, response)
+
+	unitID := U.GetUUID()
+	queryResult, errCode := M.ExecuteWebAnalyticsQueries(
+		project.ID,
+		&M.WebAnalyticsQueries{
+			QueryNames: []string{
+				M.QueryNameUniqueUsers,
+			},
+			CustomGroupQueries: []M.WebAnalyticsCustomGroupQuery{
+				M.WebAnalyticsCustomGroupQuery{
+					GroupByProperties: []string{
+						"$page_url",
+						"authorName",
+					},
+					Metrics: []string{
+						M.WAGroupMetricExitPercentage,
+					},
+					UniqueID: unitID,
+				},
+			},
+			From: timestamp,
+			To:   U.TimeNowUnix(),
+		},
+	)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.NotNil(t, queryResult)
+	assert.True(t, len(queryResult.CustomGroupQueryResult) > 0)
+
+	assert.Equal(t, 2, len(queryResult.CustomGroupQueryResult[unitID].Rows))
+	// Latest page_url and author of session should only be counted.
+	assert.Equal(t, pageURL1, queryResult.CustomGroupQueryResult[unitID].Rows[0][0])  // Group: $page_url.
+	assert.Equal(t, "author2", queryResult.CustomGroupQueryResult[unitID].Rows[0][1]) // Group: authorName.
+	assert.Equal(t, "100.0%", queryResult.CustomGroupQueryResult[unitID].Rows[0][2])  // Exit percentage.
+
+	assert.Equal(t, pageURL, queryResult.CustomGroupQueryResult[unitID].Rows[1][0])   // Group: $page_url.
+	assert.Equal(t, "author1", queryResult.CustomGroupQueryResult[unitID].Rows[1][1]) // Group: authorName.
+	assert.Equal(t, "0%", queryResult.CustomGroupQueryResult[unitID].Rows[1][2])      // Exit percentage.
 }
 
 func TestWebAnalyticsGetFormattedTime(t *testing.T) {
