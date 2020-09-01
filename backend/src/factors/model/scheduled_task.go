@@ -203,7 +203,8 @@ func GetNewArchivalFileNamesAndEndTimeForProject(projectID uint64,
 	}
 
 	for rows.Next() {
-		var fileName, usersFileName, taskID string
+		var fileName, taskID string
+		var usersFileName sql.NullString
 		var startTime, endTime int64
 		err = rows.Scan(&taskID, &fileName, &usersFileName, &startTime, &endTime)
 		if err != nil {
@@ -212,7 +213,7 @@ func GetNewArchivalFileNamesAndEndTimeForProject(projectID uint64,
 		}
 		fileNameEndTimeMap[endTime] = make(map[string]interface{})
 		fileNameEndTimeMap[endTime]["filepath"] = fileName
-		fileNameEndTimeMap[endTime]["users_filepath"] = usersFileName
+		fileNameEndTimeMap[endTime]["users_filepath"] = usersFileName.String
 		fileNameEndTimeMap[endTime]["task_id"] = taskID
 		fileNameEndTimeMap[endTime]["start_time"] = startTime
 	}
