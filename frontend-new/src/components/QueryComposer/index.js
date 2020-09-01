@@ -23,7 +23,7 @@ function QueryComposer({ drawerVisible, queries, onClose, runQuery, eventChange}
         event_analysis_seq: "",
         session_analytics_seq: {
             start: 1,
-            end: 6
+            end: 2
         }
     });
 
