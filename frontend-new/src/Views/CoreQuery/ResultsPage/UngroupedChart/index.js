@@ -7,26 +7,26 @@ function UngroupedChart({ chartData }) {
 
     const chartRef = useRef(null);
 
-    let tooltip = null;
+    let tooltip = useRef(null);
 
-    const showTooltip = (d, x, y) => {
-        tooltip
+    const showTooltip = useCallback((d, x, y) => {
+        tooltip.current
             .style("opacity", 1)
-        tooltip
+        tooltip.current
             .html(`
                     <div>
                         <div>www.chargebee.com/subscription-management/create-manage-plans</div>
-                        <div style="margin-top:12px"><span class="font-semibold">${d.netCount}</span> (${d.value}%)</div>
+                        <div class="mt-2"><span class="font-semibold">${d.netCount}</span> (${d.value}%)</div>
                     </div>
                 `)
             .style("left", x + 25 + "px")
             .style("top", y - 80 + "px")
-    }
+    }, [])
 
-    const hideTooltip = () => {
-        tooltip
+    const hideTooltip = useCallback(() => {
+        tooltip.current
             .style("opacity", 0);
-    }
+    }, [])
 
     const showChangePercentage = useCallback(() => {
         const barNodes = d3.select(chartRef.current).selectAll('.bar').nodes();
@@ -86,14 +86,14 @@ function UngroupedChart({ chartData }) {
         const availableWidth = d3.select(chartRef.current).node().getBoundingClientRect().width;
         d3.select(chartRef.current).html('').append('svg').attr('width', availableWidth).attr('height', 400).attr('id', 'chart')
         const svg = d3.select("#chart");
-        const margin = { top: 20, right: 50, bottom: 20, left: 50 };
+        const margin = { top: 20, right: 0, bottom: 20, left: 50 };
         const width = +svg.attr("width") - margin.left - margin.right;
         const height = +svg.attr("height") - margin.top - margin.bottom;
 
-        tooltip = d3.select(chartRef.current).append("div").attr("class", "toolTip").style("opacity", 0);
+        tooltip.current = d3.select(chartRef.current).append("div").attr("class", "toolTip").style("opacity", 0);
 
         const xScale = d3.scaleBand()
-            .rangeRound([0, width]).padding(0.5)
+            .rangeRound([0, width]).paddingOuter(0.1).paddingInner(0.3)
             .domain(chartData.map(d => d.event));
 
         const yScale = d3.scaleLinear()
@@ -178,7 +178,7 @@ function UngroupedChart({ chartData }) {
                     return `${x1},${y1} ${x2},${y2} ${x3},${y3} ${x4},${y4} ${x1},${y1}`;
                 }
             });
-    }, [chartData]);
+    }, [chartData, showTooltip]);
 
     const displayChart = useCallback(() => {
         drawChart();
@@ -217,7 +217,7 @@ function UngroupedChart({ chartData }) {
 
             {chartData.map((d, index) => {
                 return (
-                    <div onMouseOut={hideTooltip} onMouseMove={(e)=>showTooltip(d, e.screenX, e.screenY)} className={`${styles.valueText} absolute font-bold flex justify-center`} id={`value${index}`} key={d.event + index}>{d.netCount}</div>
+                    <div onMouseOut={hideTooltip} onMouseMove={(e) => showTooltip(d, e.screenX, e.screenY)} className={`${styles.valueText} absolute font-bold flex justify-center`} id={`value${index}`} key={d.event + index}>{d.netCount}</div>
                 )
             })}
             {percentChanges.map((change, index) => {

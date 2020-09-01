@@ -71,7 +71,7 @@ function GroupedChart({ eventsData, groups, chartData, chartColors }) {
                         .style('opacity', '0.1')
 
                     let id = elemData.name;
-                    if (id == undefined) id = elemData.id;
+                    if (!id) id = elemData.id;
 
                     const searchedClass = `c3-target-${id.split(" ").join("-")}`;
                     let hoveredIndex;
@@ -106,9 +106,7 @@ function GroupedChart({ eventsData, groups, chartData, chartColors }) {
                             }
                         })
                 },
-                onmouseout: (elemData) => {
-                    let id = elemData.name;
-                    if (id == undefined) id = elemData.id;
+                onmouseout: () => {
                     d3.select(chartRef.current)
                         .selectAll(`.c3-shapes`)
                         .selectAll('path')
@@ -230,6 +228,8 @@ function GroupedChart({ eventsData, groups, chartData, chartColors }) {
         displayChart();
     }, [displayChart]);
 
+    const visibleEvents = eventsData.filter(elem=>elem.display);
+    
     return (
         <div className="grouped-chart">
             {
@@ -245,7 +245,7 @@ function GroupedChart({ eventsData, groups, chartData, chartColors }) {
                     .map(elem => {
                         return (
                             <div style={{ transition: '2s' }} key={elem.name} id={`conversion-text-${elem.name}`} className="absolute leading-5 text-base flex justify-end pr-1">
-                                <div style={{ fontSize: eventsData.length > 2 ? '18px' : '14px' }} className={styles.conversionText}>
+                                <div style={{ fontSize: visibleEvents.length > 2 ? '18px' : '14px' }} className={styles.conversionText}>
                                     <div className="font-semibold flex justify-end">{elem.conversion_rate}</div>
                                     <div>Conversion</div>
                                 </div>
