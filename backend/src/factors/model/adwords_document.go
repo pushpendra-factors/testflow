@@ -270,6 +270,47 @@ func GetAllAdwordsLastSyncInfoByProjectAndType() ([]AdwordsLastSyncInfo, int) {
 	return selectedLastSyncInfos, http.StatusOK
 }
 
+// It returns GCLID based campaign info ( Adgroup, Campaign and Ad) for given time range and adwords account
+func GetGCLIDBasedCampaignInfo(projectId uint64, from, to int64, adwordsAccountId string) (map[string]CampaignInfo, error) {
+
+	db := C.GetServices().Db
+	logCtx := log.WithFields(log.Fields{"ProjectId": projectId, "Range": fmt.Sprintf("%d - %d", from, to)})
+	adGroupNameCase := "CASE WHEN value->>'ad_group_name' IS NULL THEN ? " +
+		" WHEN value->>'ad_group_name' = '' THEN ? ELSE value->>'ad_group_name' END AS ad_group_name"
+	campaignNameCase := "CASE WHEN value->>'campaign_name' IS NULL THEN ? " +
+		" WHEN value->>'campaign_name' = '' THEN ? ELSE value->>'campaign_name' END AS campaign_name"
+	adIDCase := "CASE WHEN value->>'creative_id' IS NULL THEN ? " +
+		" WHEN value->>'creative_id' = '' THEN ? ELSE value->>'creative_id' END AS creative_id"
+
+	performanceQuery := "SELECT id, " + adGroupNameCase + ", " + campaignNameCase + ", " + adIDCase +
+		" FROM adwords_documents where project_id = ? AND customer_account_id = ? AND type = ? AND timestamp between ? AND ? "
+	rows, err := db.Raw(performanceQuery, PropertyValueNone, PropertyValueNone, PropertyValueNone, PropertyValueNone,
+		PropertyValueNone, PropertyValueNone, projectId, adwordsAccountId, ADWORDS_CLICK_REPORT_TYPE, U.GetDateOnlyFromTimestamp(from),
+		U.GetDateOnlyFromTimestamp(to)).Rows()
+	if err != nil {
+		logCtx.WithError(err).Error("SQL Query failed")
+		return nil, err
+	}
+	defer rows.Close()
+	gclIDBasedCampaign := make(map[string]CampaignInfo)
+	for rows.Next() {
+		var gclID string
+		var adgroupName string
+		var campaignName string
+		var adID string
+		if err = rows.Scan(&gclID, &adgroupName, &campaignName, &adID); err != nil {
+			logCtx.WithError(err).Error("SQL Parse failed")
+			continue
+		}
+		gclIDBasedCampaign[gclID] = CampaignInfo{
+			AdgroupName:  adgroupName,
+			CampaignName: campaignName,
+			AdID:         adID,
+		}
+	}
+	return gclIDBasedCampaign, nil
+}
+
 func GetAdwordsFilterPropertyKeyByType(docType int) (string, error) {
 	filterKeyByType := map[int]string{
 		5: "campaign_name",

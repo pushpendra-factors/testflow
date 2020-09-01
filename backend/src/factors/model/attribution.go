@@ -5,11 +5,9 @@ import (
 	C "factors/config"
 	U "factors/util"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"net/http"
 	"sort"
-	"time"
-
-	log "github.com/sirupsen/logrus"
 )
 
 type AttributionQueryUnit struct {
@@ -55,6 +53,9 @@ const (
 	ATTRIBUTION_KEY_SOURCE                    = "Source"
 	ATTRIBUTION_KEY_ADGROUP                   = "AdGroup"
 
+	ADWORDS_CLICK_REPORT_TYPE    = 4
+	ADWORDS_CAMPAIGN_REPORT_TYPE = 5
+
 	SECS_IN_A_DAY        = int64(86400)
 	LOOKBACK_CAP_IN_DAYS = 180
 	USER_BATCH_SIZE      = 3000
@@ -73,13 +74,19 @@ type AttributionData struct {
 }
 
 type UserInfo struct {
-	coalUserId   string
-	propertiesId string
+	CoalUserID   string
+	PropertiesID string
 }
 
 type UserEventInfo struct {
-	coalUserId string
-	eventName  string
+	CoalUserID string
+	EventName  string
+}
+
+type CampaignInfo struct {
+	AdgroupName  string
+	CampaignName string
+	AdID         string
 }
 
 // Maps the {attribution key} to the session properties field
@@ -152,7 +159,8 @@ func ExecuteAttributionQuery(projectId uint64, query *AttributionQuery) (*QueryR
 	}
 
 	// 1. Get all the sessions (userId, attributionId, timestamp) for given period by attribution key
-	_sessions, sessionUsers, err := getAllTheSessions(projectId, sessionEventNameId, query)
+	_sessions, sessionUsers, err := getAllTheSessions(projectId, sessionEventNameId, query,
+		*projectSetting.IntAdwordsCustomerAccountId)
 	usersInfo, err := getCoalesceUsersFromList(sessionUsers, projectId)
 	if err != nil {
 		return nil, err
@@ -176,7 +184,7 @@ func ExecuteAttributionQuery(projectId uint64, query *AttributionQuery) (*QueryR
 	}
 
 	// 4. Apply attribution based on given attribution methodology
-	userConversionHit, userLinkedFEHit, err := applyAttribution(query.AttributionMethodology,
+	userConversionHit, userLinkedFEHit, err := ApplyAttribution(query.AttributionMethodology,
 		query.ConversionEvent.Name,
 		usersToBeAttributed, sessions)
 	if err != nil {
@@ -331,63 +339,99 @@ func getCoalesceUsersFromList(userIdsWithSession []string, projectId uint64) (ma
 // Returns the all the sessions (userId,attributionId,minTimestamp,maxTimestamp) for given
 // users from given period including lookback
 func getAllTheSessions(projectId uint64, sessionEventNameId uint64,
-	query *AttributionQuery) (map[string]map[string]RangeTimestamp, []string, error) {
+	query *AttributionQuery, adwordsAccountId string) (map[string]map[string]RangeTimestamp, []string, error) {
 
 	db := C.GetServices().Db
 	logCtx := log.WithFields(log.Fields{"ProjectId": projectId})
+	gclIDBasedCampaign, err := GetGCLIDBasedCampaignInfo(projectId, query.From, query.To, adwordsAccountId)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	sessionAttributionKey, err := getQuerySessionProperty(query.AttributionKey)
 	if err != nil {
 		return nil, nil, err
 	}
+
 	attributedSessionsByUserId := make(map[string]map[string]RangeTimestamp)
 	userIdMap := make(map[string]bool)
 	var userIdsWithSession []string
 	from := getEffectiveFrom(query.From, query.LookbackDays)
 
-	sessionAttributionKeySelect := "CASE WHEN sessions.properties->>? IS NULL THEN ? " +
-		" WHEN sessions.properties->>? = '' THEN ? ELSE sessions.properties->>? END AS attribution_id"
+	caseSelectStmt := "CASE WHEN sessions.properties->>? IS NULL THEN ? " +
+		" WHEN sessions.properties->>? = '' THEN ? ELSE sessions.properties->>? END"
 
-	queryUserSessionTimeRange := "SELECT sessions.user_id, " + sessionAttributionKeySelect + ", " +
+	queryUserSessionTimeRange := "SELECT sessions.user_id, " + caseSelectStmt + " AS attribution_id, " + caseSelectStmt + " AS gcl_id, " +
 		" sessions.timestamp FROM events AS sessions " +
 		" WHERE sessions.project_id=? AND sessions.event_name_id=? AND sessions.timestamp BETWEEN ? AND ?"
 	var qParams []interface{}
 	qParams = append(qParams, sessionAttributionKey, PropertyValueNone, sessionAttributionKey, PropertyValueNone,
-		sessionAttributionKey, projectId, sessionEventNameId, from, query.To)
+		sessionAttributionKey, U.EP_GCLID, PropertyValueNone, U.EP_GCLID, PropertyValueNone, U.EP_GCLID, projectId,
+		sessionEventNameId, from, query.To)
 	rows, err := db.Raw(queryUserSessionTimeRange, qParams...).Rows()
-	defer rows.Close()
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
 		return attributedSessionsByUserId, userIdsWithSession, err
 	}
+	defer rows.Close()
 	for rows.Next() {
-		var userId string
+		var userID string
 		var attributionId string
+		var gclID string
 		var timestamp int64
-		if err = rows.Scan(&userId, &attributionId, &timestamp); err != nil {
+		if err = rows.Scan(&userID, &attributionId, &gclID, &timestamp); err != nil {
 			logCtx.WithError(err).Error("SQL Parse failed")
 			continue
 		}
-		if _, ok := userIdMap[userId]; !ok {
-			userIdsWithSession = append(userIdsWithSession, userId)
-			userIdMap[userId] = true
+		if _, ok := userIdMap[userID]; !ok {
+			userIdsWithSession = append(userIdsWithSession, userID)
+			userIdMap[userID] = true
 		}
-		if _, ok := attributedSessionsByUserId[userId]; ok {
 
-			if timeRange, ok := attributedSessionsByUserId[userId][attributionId]; ok {
+		// Override GCLID based campaign info if presents
+		if gclID != PropertyValueNone {
+			attributionIdBasedOnGclID := getGCLIDAttributionValue(gclIDBasedCampaign, gclID, sessionAttributionKey)
+			// In cases where GCLID is present in events, but not in adwords report (as users tend to bookmark expired URLs),
+			// fallback is attributionId
+			if attributionIdBasedOnGclID != PropertyValueNone {
+				attributionId = attributionIdBasedOnGclID
+			}
+		}
+
+		// add session info uniquely for user-attributionId pair
+		if _, ok := attributedSessionsByUserId[userID]; ok {
+
+			if timeRange, ok := attributedSessionsByUserId[userID][attributionId]; ok {
 				timeRange.MinTimestamp = U.Min(timeRange.MinTimestamp, timestamp)
 				timeRange.MaxTimestamp = U.Max(timeRange.MaxTimestamp, timestamp)
-				attributedSessionsByUserId[userId][attributionId] = timeRange
+				attributedSessionsByUserId[userID][attributionId] = timeRange
 			} else {
 				sessionRange := RangeTimestamp{MinTimestamp: timestamp, MaxTimestamp: timestamp}
-				attributedSessionsByUserId[userId][attributionId] = sessionRange
+				attributedSessionsByUserId[userID][attributionId] = sessionRange
 			}
 		} else {
-			attributedSessionsByUserId[userId] = make(map[string]RangeTimestamp)
+			attributedSessionsByUserId[userID] = make(map[string]RangeTimestamp)
 			sessionRange := RangeTimestamp{MinTimestamp: timestamp, MaxTimestamp: timestamp}
-			attributedSessionsByUserId[userId][attributionId] = sessionRange
+			attributedSessionsByUserId[userID][attributionId] = sessionRange
 		}
 	}
 	return attributedSessionsByUserId, userIdsWithSession, nil
+}
+
+// Returns the matching value for GCLID, if not found returns $none
+func getGCLIDAttributionValue(gclIDBasedCampaign map[string]CampaignInfo, gclID string, attributionKey string) string {
+
+	if value, ok := gclIDBasedCampaign[gclID]; ok {
+		switch attributionKey {
+		case U.EP_ADGROUP:
+			return value.AdgroupName
+		case U.EP_CAMPAIGN:
+			return value.CampaignName
+		default:
+			return PropertyValueNone
+		}
+	}
+	return PropertyValueNone
 }
 
 // Returns the concatenated list of conversion event + funnel events names
@@ -448,8 +492,8 @@ func getLinkedFunnelEventUsers(projectId uint64, query *AttributionQuery, eventN
 		for i := 0; i < len(linkedEventNameIds)-1; i++ {
 			eventsPlaceHolder += ",?"
 		}
-		var userIdList []string
-		userIdHitEvent := make(map[string]bool)
+		var userIDList []string
+		userIDHitEvent := make(map[string]bool)
 		userPropertiesIdsInBatches := U.GetStringListAsBatch(usersHitConversion, USER_BATCH_SIZE)
 		for _, users := range userPropertiesIdsInBatches {
 
@@ -479,20 +523,20 @@ func getLinkedFunnelEventUsers(projectId uint64, query *AttributionQuery, eventN
 				return err
 			}
 			for rows.Next() {
-				var userId string
-				if err = rows.Scan(&userId); err != nil {
+				var userID string
+				if err = rows.Scan(&userID); err != nil {
 					logCtx.WithError(err).Error("SQL Parse failed")
 					continue
 				}
-				if _, ok := userIdHitEvent[userId]; !ok {
-					userIdList = append(userIdList, userId)
-					userIdHitEvent[userId] = true
+				if _, ok := userIDHitEvent[userID]; !ok {
+					userIDList = append(userIDList, userID)
+					userIDHitEvent[userID] = true
 				}
 			}
 		}
 
 		// Part-II - Filter the fetched users from Part-I base on user_properties
-		filteredUserIdList, err := applyUserPropertiesFilter(projectId, userIdList, userIdInfo, query)
+		filteredUserIdList, err := applyUserPropertiesFilter(projectId, userIDList, userIdInfo, query)
 		if err != nil {
 			logCtx.WithError(err).Error("error while applying user properties")
 			return err
@@ -501,7 +545,7 @@ func getLinkedFunnelEventUsers(projectId uint64, query *AttributionQuery, eventN
 		// Part-III add the filtered users with eventId usersToBeAttributed
 		for _, userId := range filteredUserIdList {
 			*usersToBeAttributed = append(*usersToBeAttributed,
-				UserEventInfo{userIdInfo[userId].coalUserId, linkedEvent.Name})
+				UserEventInfo{userIdInfo[userId].CoalUserID, linkedEvent.Name})
 		}
 	}
 	return nil
@@ -526,7 +570,7 @@ func applyUserPropertiesFilter(projectId uint64, userIdList []string, userIdInfo
 	var userPropertiesIds []string
 	// Use properties Ids to speed up the search from user_properties table
 	for _, userId := range userIdList {
-		userPropertiesIds = append(userPropertiesIds, userIdInfo[userId].propertiesId)
+		userPropertiesIds = append(userPropertiesIds, userIdInfo[userId].PropertiesID)
 	}
 
 	var filteredUserIdList []string
@@ -621,7 +665,7 @@ func getConvertedUsers(projectId uint64, query *AttributionQuery, eventNameToIdL
 	// add the filtered users against eventId
 	for _, userId := range filteredUserIdList {
 		*usersToBeAttributed = append(*usersToBeAttributed,
-			UserEventInfo{userIdInfo[userId].coalUserId, query.ConversionEvent.Name})
+			UserEventInfo{userIdInfo[userId].CoalUserID, query.ConversionEvent.Name})
 	}
 	return filteredUserIdList, nil
 }
@@ -644,19 +688,19 @@ func updateSessionsByCoalesceId(attributedSessionsByUserId map[string]map[string
 	for userId, attributionIdMap := range attributedSessionsByUserId {
 		userInfo := usersInfo[userId]
 		for attributionId, newTimeRange := range attributionIdMap {
-			if _, ok := newSessionsMap[userInfo.coalUserId]; ok {
-				if existingTimeRange, ok := newSessionsMap[userInfo.coalUserId][attributionId]; ok {
+			if _, ok := newSessionsMap[userInfo.CoalUserID]; ok {
+				if existingTimeRange, ok := newSessionsMap[userInfo.CoalUserID][attributionId]; ok {
 					// update the existing attribution first and last touch
 					existingTimeRange.MinTimestamp = U.Min(existingTimeRange.MinTimestamp, newTimeRange.MinTimestamp)
 					existingTimeRange.MaxTimestamp = U.Max(existingTimeRange.MaxTimestamp, newTimeRange.MaxTimestamp)
-					newSessionsMap[userInfo.coalUserId][attributionId] = existingTimeRange
+					newSessionsMap[userInfo.CoalUserID][attributionId] = existingTimeRange
 					continue
 				}
-				newSessionsMap[userInfo.coalUserId][attributionId] = newTimeRange
+				newSessionsMap[userInfo.CoalUserID][attributionId] = newTimeRange
 				continue
 			}
-			newSessionsMap[userInfo.coalUserId] = make(map[string]RangeTimestamp)
-			newSessionsMap[userInfo.coalUserId][attributionId] = newTimeRange
+			newSessionsMap[userInfo.CoalUserID] = make(map[string]RangeTimestamp)
+			newSessionsMap[userInfo.CoalUserID][attributionId] = newTimeRange
 		}
 	}
 	return newSessionsMap
@@ -701,13 +745,13 @@ func AddPerformanceReportInfo(projectId uint64, attributionData map[string]*Attr
 		"SUM((value->>'cost')::float)/1000000 AS total_cost FROM adwords_documents " +
 		"where project_id = ? AND customer_account_id = ? AND type = ? AND timestamp between ? AND ? " +
 		"group by value->>'campaign_id', campaign_name"
-	rows, err := db.Raw(performanceQuery, projectId, customerAccountId, 5, getDateOnlyFromTimestamp(from),
-		getDateOnlyFromTimestamp(to)).Rows()
-	defer rows.Close()
+	rows, err := db.Raw(performanceQuery, projectId, customerAccountId, ADWORDS_CAMPAIGN_REPORT_TYPE, U.GetDateOnlyFromTimestamp(from),
+		U.GetDateOnlyFromTimestamp(to)).Rows()
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
 		return "", err
 	}
+	defer rows.Close()
 	for rows.Next() {
 		var campaignName string
 		var campaignId string
@@ -739,11 +783,6 @@ func AddPerformanceReportInfo(projectId uint64, attributionData map[string]*Attr
 	return currency, nil
 }
 
-// Returns date in YYYYMMDD format
-func getDateOnlyFromTimestamp(timestamp int64) string {
-	return time.Unix(timestamp, 0).Format("20060102")
-}
-
 // Returns currency used for adwords customer_account_id
 func getAdwordsCurrency(projectId uint64, customerAccountId string, from, to int64) (string, error) {
 
@@ -752,8 +791,8 @@ func getAdwordsCurrency(projectId uint64, customerAccountId string, from, to int
 		" ORDER BY timestamp DESC LIMIT 1"
 	logCtx := log.WithField("ProjectId", projectId)
 	db := C.GetServices().Db
-	rows, err := db.Raw(queryCurrency, projectId, customerAccountId, 9, getDateOnlyFromTimestamp(from),
-		getDateOnlyFromTimestamp(to)).Rows()
+	rows, err := db.Raw(queryCurrency, projectId, customerAccountId, 9, U.GetDateOnlyFromTimestamp(from),
+		U.GetDateOnlyFromTimestamp(to)).Rows()
 	if err != nil {
 		logCtx.WithError(err).Error("failed to build meta for attribution query result")
 		return "", err
