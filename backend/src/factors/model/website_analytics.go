@@ -731,10 +731,7 @@ func buildWebAnalyticsAggregateForPageEvent(
 				if (*customGroupPrevGroupBySession)[webEvent.SessionID][WAGroupMetricTotalExits].GroupKey != groupKey &&
 					webEvent.Timestamp > (*customGroupPrevGroupBySession)[webEvent.SessionID][WAGroupMetricTotalExits].Timestamp {
 
-					newValue := (*customGroupAggrState)[query.UniqueID][groupKey].
-						MetricValue[WAGroupMetricTotalExits].Value + 1
-					(*customGroupAggrState)[query.UniqueID][groupKey].
-						MetricValue[WAGroupMetricTotalExits].Value = newValue
+					(*customGroupAggrState)[query.UniqueID][groupKey].MetricValue[WAGroupMetricTotalExits].Value++
 
 					// As one session should be attributed to one group_key, we remove the attribution
 					// on previous group, by holding pointer of value.
@@ -748,7 +745,8 @@ func buildWebAnalyticsAggregateForPageEvent(
 					// Update previous group_key for session, after increamenting, for next group_key.
 					(*customGroupPrevGroupBySession)[webEvent.SessionID][WAGroupMetricTotalExits].Timestamp = webEvent.Timestamp
 					(*customGroupPrevGroupBySession)[webEvent.SessionID][WAGroupMetricTotalExits].GroupKey = groupKey
-					(*customGroupPrevGroupBySession)[webEvent.SessionID][WAGroupMetricTotalExits].Value = &newValue
+					currentValueAddress := &(*customGroupAggrState)[query.UniqueID][groupKey].MetricValue[WAGroupMetricTotalExits].Value
+					(*customGroupPrevGroupBySession)[webEvent.SessionID][WAGroupMetricTotalExits].Value = currentValueAddress
 				}
 
 			}
