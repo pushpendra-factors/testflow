@@ -78,7 +78,7 @@ export default function GroupBlock({events, groupBy}){
         <div className={`flex flex-col justify-start`}> 
 
             <div className={`${styles.query_block__event} flex justify-start items-center`}> 
-                    <div className={`fa--query_block--add-event inactive flex justify-center items-center mr-2`}><SVG name={'groupby'} size={36} color={`purple`}></SVG></div> 
+                    <div className={`fa--query_block--add-event inactive flex justify-center items-center mr-2`}><SVG name={'groupby'} size={36} color={`purple`}/></div> 
                     <Text type={'title'} level={6} weight={'thin'} extraClass={`m-0`}>Group By</Text> 
             </div>
 

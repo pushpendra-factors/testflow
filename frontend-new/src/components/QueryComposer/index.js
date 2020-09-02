@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Drawer, Button, Collapse, Select, Popover } from 'antd';
-
-import {SVG, Text} from 'factorsComponents';
+import {SVG, Text} from 'factorsComponents'; 
 import styles from './index.module.scss';
 import QueryBlock from './QueryBlock';
 import SeqSelector from './AnalysisSeqSelector';
@@ -77,8 +76,12 @@ function QueryComposer({ queries, runQuery, eventChange}) {
         if(queries.length >= 2) {
             return (
                 <div className={` fa--query_block `}>
-                <Collapse bordered={false}>
-                    <Panel header="More Options" className={styles.composer_body__more_options}>
+                <Collapse bordered={false} expandIcon={()=>{}} expandIconPosition={`right`}>
+                    <Panel header={<div className={`flex justify-between items-center`}>
+                        <Text type={'title'} level={6} weight={'bold'} extraClass={`m-0 mb-2 inline`}>More options</Text>
+                        <SVG name="plus" />
+                        </div>
+                        }>
                         <div className={styles.composer_body__event_sequence}>
                             <span className={styles.composer_body__event_sequence__logo}>
                                 <SVG name="play"></SVG>

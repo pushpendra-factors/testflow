@@ -66,15 +66,15 @@ function QueryBlock({index, event, eventChange}) {
                             </div>
                           )}
                     >
-                            {eventOptions.map(group => (
-                                <OptGroup label={(
+                            {eventOptions.map((group,index) => (
+                                <OptGroup key={index} label={(
                                         <div className={styles.query_block__selector_group}>
                                             <SVG name={group.icon}></SVG>
                                             <span >{group.label}</span>
                                         </div>
                                     )}>
-                                        {group.values.map((option) => (
-                                            <Option value={option}></Option>
+                                        {group.values.map((option,index) => (
+                                            <Option key={index} value={option}></Option>
                                         ))}
                                 </OptGroup>
                             ))}

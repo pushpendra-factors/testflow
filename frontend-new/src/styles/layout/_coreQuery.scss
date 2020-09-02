@@ -141,5 +141,19 @@ $cq-card-transition: transform .2s ease-in-out;
             border-radius: 6px; 
         }
     }
+
+
+    .ant-collapse
+    {
+        padding: 0;
+        .ant-collapse-header
+        {
+            padding: 0; 
+        }
+        &.ant-collapse-borderless
+        {
+            background-color: transparent;
+        }
+    }
     
 }
