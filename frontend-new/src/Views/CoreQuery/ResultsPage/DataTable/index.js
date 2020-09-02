@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Table } from 'antd';
 import { generateTableColumns, generateTableData } from '../utils';
 import styles from './index.module.scss';
@@ -8,9 +8,15 @@ function DataTable({ eventsData, groups, setGroups }) {
 
     const [tableData, setTableData] = useState([]);
 
+    const [sorter, setSorter] = useState({});
+
+    const handleSorting = useCallback((sorter) => {
+        setSorter(sorter);
+    }, []);
+
     useEffect(() => {
-        setTableData(generateTableData(eventsData, groups));
-    }, [eventsData, groups]);
+        setTableData(generateTableData(eventsData, groups, sorter));
+    }, [eventsData, groups, sorter]);
 
     const onSelectionChange = (selectedRowKeys, selectedRows) => {
         const selectedGroups = selectedRows.map(elem => elem.name);
@@ -33,7 +39,7 @@ function DataTable({ eventsData, groups, setGroups }) {
         onChange: onSelectionChange,
     };
 
-    const columns = generateTableColumns(eventsData);
+    const columns = generateTableColumns(eventsData, sorter, handleSorting);
 
     return (
         <div className="data-table">
