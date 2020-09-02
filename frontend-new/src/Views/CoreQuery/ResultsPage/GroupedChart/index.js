@@ -118,6 +118,9 @@ function GroupedChart({ eventsData, groups, chartData, chartColors }) {
             },
             bar: {
                 space: 0.05,
+                width: {
+                    ratio: 0.7
+                }
             },
             axis: {
                 x: {

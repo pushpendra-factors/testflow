@@ -94,7 +94,7 @@ function UngroupedChart({ chartData }) {
 
         const xScale = d3.scaleBand()
             .rangeRound([0, width])
-            .paddingOuter(0.2)
+            .paddingOuter(0.15)
             .paddingInner(0.3)
             .domain(chartData.map(d => d.event));
 
