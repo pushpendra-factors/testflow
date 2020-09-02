@@ -33,18 +33,19 @@ function CoreQuery() {
     }
 
     const closeDrawer = () => {
+        console.log("clickedd!!")
         setDrawerVisible(false);
     }
 
     const title = () => {
-        return (<div className={styles.composer_title}>
-            <div>
+        return (<div className={`flex justify-between items-center`}>
+            <div className={`flex`}>
                 <SVG name="teamfeed"></SVG>
-                <Text type={'title'} level={4} weight={`bold`} extraClass={`ml-2`}>Find event funnel for</Text> 
+                <Text type={'title'} level={4} weight={`bold`} extraClass={`ml-2 m-0`}>Find event funnel for</Text> 
             </div>
             <span className={styles.composer_title__help}>
-                <SVG name="play"></SVG>
-                    Help
+                <Button type="text"><SVG name="play"></SVG>Help</Button>  
+                <Button type="text" onClick={()=>closeDrawer()}><SVG name="times"></SVG></Button>  
             </span>
             
         </div>)
@@ -54,8 +55,8 @@ function CoreQuery() {
         <>
              <Drawer
         title={title()}
-        placement="left"
-        closable={true}
+        placement="left" 
+        closable={false}
         visible={drawerVisible}
         onClose={closeDrawer} 
         getContainer={false}

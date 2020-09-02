@@ -31,21 +31,7 @@ $primaryColor: #5949BC;
 .composer_title {
     display: flex;
     justify-content: space-between;
-    margin-right: 21px;
-    border-right: 1px solid #E7E9ED;
-    padding-right: 16px;
-
     div {
         display: flex;
-    }
-
-    &__heading {
-        font-weight: 600;
-        font-size: 20px;
-        margin-left: 10px;
-    }
-
-    &__help {
-        display: flex;
-    }
+    }  
 }
