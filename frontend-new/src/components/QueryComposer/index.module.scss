@@ -34,6 +34,26 @@
         box-shadow: inset 0px -1px 0px #E7E9ED;
     }
 
+    &__more_options {
+        background: white;
+    }
+
+    &__event_sequence {
+        display: flex;
+        height: 82px;
+    }
+
+    &__session_analytics {
+        display: flex;
+        height: 82px;
+
+        &__selection {
+            display: flex;
+            flex-direction: column;
+        }
+            
+    }
+
 }
 
 .composer_footer {
