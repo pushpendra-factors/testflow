@@ -107,7 +107,6 @@ func TestWebAnalyticsCustomGroupSessionBasedMetrics(t *testing.T) {
 		},
 		Timestamp: timestamp + 1,
 	}
-
 	status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
 	assert.Equal(t, http.StatusOK, status)
 	assert.NotNil(t, response)
@@ -164,6 +163,56 @@ func TestWebAnalyticsCustomGroupSessionBasedMetrics(t *testing.T) {
 	assert.Equal(t, pageURL, queryResult.CustomGroupQueryResult[unitID].Rows[1][0])   // Group: $page_url.
 	assert.Equal(t, "author1", queryResult.CustomGroupQueryResult[unitID].Rows[1][1]) // Group: authorName.
 	assert.Equal(t, "0%", queryResult.CustomGroupQueryResult[unitID].Rows[1][2])      // Exit percentage.
+
+	// Different user and session. Same page and author as track1.
+	trackPayload2 := SDK.TrackPayload{
+		Name: pageURL,
+		EventProperties: U.PropertiesMap{
+			"$page_url":     pageURL,
+			"$page_raw_url": pageURL,
+			"authorName":    "author1",
+		},
+		Timestamp: timestamp + 3,
+	}
+	status, response = SDK.Track(project.ID, &trackPayload2, false, SDK.SourceJSSDK)
+	assert.Equal(t, http.StatusOK, status)
+	assert.NotNil(t, response)
+
+	queryResult, errCode = M.ExecuteWebAnalyticsQueries(
+		project.ID,
+		&M.WebAnalyticsQueries{
+			QueryNames: []string{
+				M.QueryNameUniqueUsers,
+			},
+			CustomGroupQueries: []M.WebAnalyticsCustomGroupQuery{
+				M.WebAnalyticsCustomGroupQuery{
+					GroupByProperties: []string{
+						"$page_url",
+						"authorName",
+					},
+					Metrics: []string{
+						M.WAGroupMetricPageViews,
+						M.WAGroupMetricExitPercentage,
+					},
+					UniqueID: unitID,
+				},
+			},
+			From: timestamp,
+			To:   U.TimeNowUnix(),
+		},
+	)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.NotNil(t, queryResult)
+	assert.True(t, len(queryResult.CustomGroupQueryResult) > 0)
+
+	assert.Equal(t, 2, len(queryResult.CustomGroupQueryResult[unitID].Rows))
+	assert.Equal(t, pageURL1, queryResult.CustomGroupQueryResult[unitID].Rows[1][0])  // Group: $page_url.
+	assert.Equal(t, "author2", queryResult.CustomGroupQueryResult[unitID].Rows[1][1]) // Group: authorName.
+	assert.Equal(t, "50.0%", queryResult.CustomGroupQueryResult[unitID].Rows[1][3])   // Exit percentage.
+
+	assert.Equal(t, pageURL, queryResult.CustomGroupQueryResult[unitID].Rows[0][0])   // Group: $page_url.
+	assert.Equal(t, "author1", queryResult.CustomGroupQueryResult[unitID].Rows[0][1]) // Group: authorName.
+	assert.Equal(t, "50.0%", queryResult.CustomGroupQueryResult[unitID].Rows[0][3])   // Exit percentage.
 }
 
 func TestWebAnalyticsGetFormattedTime(t *testing.T) {

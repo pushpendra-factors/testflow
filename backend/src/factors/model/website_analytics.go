@@ -1196,6 +1196,14 @@ func getResultForCustomGroupQuery(
 							MetricValue[WAGroupMetricTotalExits].Value / float64(webAggrState.NoOfSessions)) * 100
 					}
 					value = getFormattedPercentage(exitPercentage)
+
+					// TODO(Dinesh): Remove log after fixing zero percentage issue.
+					if value == "0%" {
+						log.WithField("total_exits", (*customGroupAggrState)[query.UniqueID][groupKey].
+							MetricValue[WAGroupMetricTotalExits].Value).
+							WithField("no_of_sessions", float64(webAggrState.NoOfSessions)).
+							Info("Exit percentage is zero.")
+					}
 				}
 
 				row = append(row, value)
