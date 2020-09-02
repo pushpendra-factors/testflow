@@ -95,9 +95,9 @@ function QueryBlock({index, event, eventChange}) {
 
     const additionalActions = () => {
         return(
-            <div className={styles.query_block__actions}>
-               <Button type="text" onClick={addFilter}><SVG name="filter"></SVG></Button>
-               <Button type="text" onClick={deleteItem}><SVG name="trash"></SVG></Button> 
+            <div className={`fa--query_block--actions`}>
+               <Button type="link" onClick={addFilter} extraClass={`mr-1`}><SVG name="filter"></SVG></Button>
+               <Button type="link" onClick={deleteItem}><SVG name="trash"></SVG></Button> 
             </div>
         )
     }
@@ -119,7 +119,7 @@ function QueryBlock({index, event, eventChange}) {
             });
         }
 
-        filters.push(<div className={styles.query_block__filters}>
+        filters.push(<div className={``}>
             {additionalActions()}
             {selectEventFilter()}
         </div>)

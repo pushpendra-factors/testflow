@@ -77,13 +77,32 @@ $cq-card-transition: transform .2s ease-in-out;
     flex-direction: column;
     position: relative;
     padding: 24px; 
+    position: relative;
+
+    
+    .fa--query_block--actions{
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        right: 24px;
+        display: none;
+        transition: all 0.3s;
+        .ant-btn.ant-btn.ant-btn-link{
+            padding: 4px 6px; 
+        }
+    }
+    &:hover{
+        .fa--query_block--actions{
+            display: block;
+        }
+    }
 
     .fa--query_block--add-event{
         height: 32px;
         width: 32px;
         border: 1px solid transparent; 
         border-radius: 100%;
-        transition: all .3s;
+        transition: all 0.3s;
         &.active{
             color: $fa-color--white;
             background-color: $fa-color--brand-color;  
