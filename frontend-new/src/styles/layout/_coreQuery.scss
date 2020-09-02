@@ -66,23 +66,46 @@ $cq-card-transition: transform .2s ease-in-out;
         overflow: hidden;
         display: block;
         // margin: 0 0 1.2em; 
-    }
-    // .fai--custom-card--cta
-    // {
-    //     display: none;
-    //     transition: $cq-card-transition; 
-    //     background-color: #34A7BA;
-    //     padding: 10px 16px;
-    //     color: $fa-color--white;
-    //     font-weight: $font-weight--bold;
-    //     font-size: 12px;
-    //     line-height: 1; 
-    //     text-align: center;
-    //     letter-spacing: 0.02em;
-    //     border-radius: 32px;
-    //     // margin: 1.2em 0 0; 
-    // }
+    } 
    
 }
 
 
+.fa--query_block 
+{
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    padding: 24px; 
+
+    .fa--query_block--add-event{
+        height: 32px;
+        width: 32px;
+        border: 1px solid transparent; 
+        border-radius: 100%;
+        transition: all .3s;
+        
+
+    }
+    &:hover{
+        .fa--query_block--add-event{ 
+            border: 1px solid $fa-color--brand-color;  
+        }
+    }
+    .ant-btn.ant-btn.ant-btn-link:focus, .ant-btn.ant-btn.ant-btn-link:hover, .ant-btn.ant-btn.ant-btn-link:active{
+        border-color: transparent;
+    }
+    .ant-select
+    {
+        height: 40px;
+        .ant-select-selector
+        {
+            border-radius: 6px; 
+        }
+        .ant-select-dropdown
+        {
+            border-radius: 6px; 
+        }
+    }
+    
+}

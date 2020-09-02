@@ -129,14 +129,11 @@ function QueryBlock({index, event, eventChange}) {
 
     if(!event) {
         return (
-            <div className={styles.query_block}>
-                <div className={styles.query_block__event}>
-                    
-                        <div className={styles.query_block__add_event}><SVG name={'plus'}></SVG> </div>
-
-                        <div className={styles.query_block__placehoder} onClick={triggerDropDown}> Add Event</div>
-                        {selectEvents()}
-
+            <div className={`${styles.query_block} fa--query_block `}>
+                <div className={`${styles.query_block__event} flex justify-start items-center`}> 
+                        <div className={`fa--query_block--add-event flex justify-center items-center mr-2`}><SVG name={'plus'} color={`purple`}></SVG></div>
+                        {!isDDVisible && <Button type="link" onClick={triggerDropDown}>Add First Event</Button> }
+                        {selectEvents()} 
                 </div>
                 
             </div>
@@ -144,7 +141,7 @@ function QueryBlock({index, event, eventChange}) {
     }
 
     return(
-        <div className={styles.query_block}>
+        <div className={`${styles.query_block} fa--query_block `}>
             <div className={styles.query_block__event}>
                 <span className={styles.query_block__index}>{index}</span>
                 <span className={styles.query_block__event_tag} onClick={triggerDropDown}> <SVG name="mouseevent"></SVG> {event.label} </span>

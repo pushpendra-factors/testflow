@@ -22,7 +22,8 @@ class SVG extends React.Component {
     const strokeColor = 
     color === 'white' ? '#FFFFFF' 
       : color === 'black' ? '#0E2647' 
-        : color === 'grey' ? '#63686F' : color; 
+        : color === 'purple' ? '#5949BC'
+          : color === 'grey' ? '#63686F' : color; 
 
     return (
       <IconComponent size={size} color={strokeColor} extraClass={extraClass} />
