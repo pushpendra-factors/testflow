@@ -61,9 +61,9 @@ type FilterInfo struct {
 }
 
 type CacheEventNamesWithTimestamp struct {
-	EventNames            map[string]U.CountTimestampTuple
-	CacheUpdatedTimestamp int64
-	CacheUpdatedFromDB    int64
+	EventNames            map[string]U.CountTimestampTuple `json:"en"`
+	CacheUpdatedTimestamp int64                            `json:"cut"`
+	CacheUpdatedFromDB    int64                            `json:"cud"`
 }
 
 const TYPE_USER_CREATED_EVENT_NAME = "UC"

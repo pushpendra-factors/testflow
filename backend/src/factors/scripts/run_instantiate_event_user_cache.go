@@ -96,5 +96,5 @@ func main() {
 		S.RefreshCacheFromDb(projectId, startOfCurrentDay, *lookBackDays, *eventsLimit, *propertiesLimit, *valuesLimit, *eventRecordsLimit)
 		M.RefreshCacheForUserProperties(projectId, startOfCurrentDay, *usersProcessedLimit, *propertiesLimit, *valuesLimit)
 	}
-
+	fmt.Println("Done!!!")
 }

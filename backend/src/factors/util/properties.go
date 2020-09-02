@@ -1346,31 +1346,31 @@ func SanitizePropertiesJsonb(propertiesJsonb *postgres.Jsonb) *postgres.Jsonb {
 }
 
 type CountTimestampTuple struct {
-	LastSeenTimestamp int64
-	Count             int64
+	LastSeenTimestamp int64 `json:"lst"`
+	Count             int64 `json:"cnt"`
 }
 
 type CachePropertyWithTimestamp struct {
-	Property              map[string]PropertyWithTimestamp
-	CacheUpdatedTimestamp int64
+	Property              map[string]PropertyWithTimestamp `json:"pr"`
+	CacheUpdatedTimestamp int64                            `json:"cut"`
 }
 
 type PropertyWithTimestamp struct {
-	Category          string
-	CategorywiseCount map[string]int64 // Not to be used by handlers. Only cache set will use it before computing category
-	CountTime         CountTimestampTuple
+	Category          string              `json:"ca"`
+	CategorywiseCount map[string]int64    `json:"cwc"` // Not to be used by handlers. Only cache set will use it before computing category
+	CountTime         CountTimestampTuple `json:"ct"`
 }
 
 type CachePropertyValueWithTimestamp struct {
-	PropertyValue         map[string]CountTimestampTuple
-	CacheUpdatedTimestamp int64
+	PropertyValue         map[string]CountTimestampTuple `json:"pv"`
+	CacheUpdatedTimestamp int64                          `json:"cut"`
 }
 
 type NameCountTimestampCategory struct {
-	Name      string
-	Count     int64
-	Timestamp int64
-	Category  string
+	Name      string `json:"na"`
+	Count     int64  `json:"cnt"`
+	Timestamp int64  `json:"ts"`
+	Category  string `json:"ca"`
 }
 
 // SortByTimestampAndCount Sorts the given array by timestamp/count

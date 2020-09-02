@@ -85,6 +85,7 @@ type Configuration struct {
 	SkipSessionProjectIds               string // comma seperated project ids, supports "*" for all projects.
 	WhitelistedProjectIdsEventUserCache string
 	IsRealTimeEventUserCachingEnabled   bool
+	RealTimeEventUserCachingProjectIds  string
 }
 
 type Services struct {
@@ -688,8 +689,10 @@ func GetWhitelistedProjectIdsEventUserCache() string {
 	return configuration.WhitelistedProjectIdsEventUserCache
 }
 
-func GetIfRealTimeEventUserCachingIsEnabled() bool {
-	return configuration.IsRealTimeEventUserCachingEnabled
+func GetIfRealTimeEventUserCachingIsEnabled(projectId uint64) bool {
+	projectIds := U.GetIntBoolMapFromStringList(&configuration.RealTimeEventUserCachingProjectIds)
+	isWhitelisted, _ := projectIds[projectId]
+	return configuration.IsRealTimeEventUserCachingEnabled && isWhitelisted == true
 }
 
 // ParseConfigStringToMap - Parses config string
