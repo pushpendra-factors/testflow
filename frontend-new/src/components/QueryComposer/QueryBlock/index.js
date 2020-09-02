@@ -55,10 +55,11 @@ function QueryBlock({index, event, eventChange}) {
 
         return (
             <div className={styles.query_block__event_selector}>
-                    <Select showSearch 
-                        style={{ width: 240, display: selectDisplay}} 
-                        onChange={onChange} open={isDDVisible} 
+                   {isDDVisible ? <Select showSearch 
+                        style={{ width: 240}} 
+                        onChange={onChange} defaultOpen={true}
                         showArrow={false}
+                        onDropdownVisibleChange={() => setDDVisible(false)}
                         dropdownRender={menu => (
                             <div className={styles.query_block__selector_body}>
                               {menu}
@@ -77,7 +78,7 @@ function QueryBlock({index, event, eventChange}) {
                                         ))}
                                 </OptGroup>
                             ))}
-                    </Select>
+                    </Select> : null }
                 </div>
         )
     }

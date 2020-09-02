@@ -80,26 +80,30 @@ export default function GroupBlock({events, groupBy}){
                 <SVG name="play"></SVG>
             </span>
 
-            <div className={styles.group_block__property} onClick={triggerDropDown}>
+            <div className={styles.group_block__property} >
                 <span>Group By</span>
                 <div className={styles.group_block__property__selection} >
                     {
                     groupByState.property? 
                         <span className={styles.group_block__event_tag} 
                         onClick={triggerDropDown}> <SVG name="plus"></SVG> {groupByState.property} </span>
-                        : null
+                        : <span className={styles.group_block__event_tag} 
+                        onClick={triggerDropDown}> Select user property </span>
                     }
                     {isDDVisible ?
-                    (<><Select 
+                    (<Select 
                         placeholder="Select Property"
-                        onChange={onChange}
+                        onChange={onChange} defaultOpen={true}
                         dropdownRender={menu => (
                             <div className={styles.group_block__selector_body}>
                               {menu}
                             </div>
                           )} style={{width: 200}} showArrow={false} showSearch>
                         {renderGroupedEventOptions()}
-                    </Select>
+                    </Select>)
+
+                    : null
+                } 
                       
 
                     <span> with values</span>
@@ -113,14 +117,13 @@ export default function GroupBlock({events, groupBy}){
                     }
                     {isValueDDVisible?
                     <Select style={{width: 200}} showArrow={false} 
+                        defaultOpen={true}
                         onChange={onEventValueChange} >
                         {events.map(event => (
                             <Option value={event.label}></Option>
                         ))}
-                    </Select>: null } </>)
+                    </Select>: null }
 
-                    : null
-                } 
                 </div>
 
             </div>

@@ -66,9 +66,9 @@ function Filter({filter}) {
 
     const onFilterEventChange = (opt) => {
             if(filterType === 'values') {
-                newFilter[filterType].push(opt[0]);
+                newFilter[filterType].push(opt[opt.length-1]);
             } else {
-                newFilter[filterType] = opt[0];
+                newFilter[filterType] = opt[opt.length-1];
             }
             setFilterTypeState(setFilterType(filter));
         }
