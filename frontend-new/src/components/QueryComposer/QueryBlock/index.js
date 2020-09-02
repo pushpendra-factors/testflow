@@ -1,5 +1,5 @@
 import React, {useState} from 'react';
-import {SVG} from 'factorsComponents';
+import {SVG, Text} from 'factorsComponents';
 import styles from './index.module.scss';
 import { Select, Button} from 'antd';
 
@@ -142,9 +142,9 @@ function QueryBlock({index, event, eventChange}) {
 
     return(
         <div className={`${styles.query_block} fa--query_block `}>
-            <div className={styles.query_block__event}>
-                <span className={styles.query_block__index}>{index}</span>
-                <span className={styles.query_block__event_tag} onClick={triggerDropDown}> <SVG name="mouseevent"></SVG> {event.label} </span>
+            <div className={`${styles.query_block__event} flex justify-start items-center`}> 
+    <div className={`fa--query_block--add-event active flex justify-center items-center mr-2`}><Text type={'title'} level={7} weight={'bold'} color={`white`} extraClass={`m-0`}>{index}</Text> </div>
+                {!isDDVisible && <Button type="link" onClick={triggerDropDown}><SVG name="mouseevent"></SVG> {event.label} </Button> } 
                 {selectEvents()}
             </div>
             {eventFilters()}

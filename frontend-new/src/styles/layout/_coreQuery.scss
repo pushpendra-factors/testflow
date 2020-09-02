@@ -84,7 +84,11 @@ $cq-card-transition: transform .2s ease-in-out;
         border: 1px solid transparent; 
         border-radius: 100%;
         transition: all .3s;
-        
+        &.active{
+            color: $fa-color--white;
+            background-color: $fa-color--brand-color;  
+            border: 1px solid $fa-color--brand-color;  
+        }
 
     }
     &:hover{
