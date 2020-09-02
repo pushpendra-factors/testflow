@@ -97,6 +97,14 @@ $cq-card-transition: transform .2s ease-in-out;
         }
     }
 
+    .fa--query_block--filters
+    {
+        padding: 12px 0;
+    }
+    .fa--query_block--filters-values
+    { 
+
+    }
     .fa--query_block--add-event{
         height: 32px;
         width: 32px;
@@ -119,11 +127,11 @@ $cq-card-transition: transform .2s ease-in-out;
         border-color: transparent;
     }
     .ant-select
-    {
-        height: 40px;
+    { 
         .ant-select-selector
         {
             border-radius: 6px; 
+            height: 40px;
         }
         .ant-select-dropdown
         {

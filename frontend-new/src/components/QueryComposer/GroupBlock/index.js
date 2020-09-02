@@ -75,7 +75,7 @@ export default function GroupBlock({events, groupBy}){
     }
 
     return (
-        <div className={styles.group_block}>
+        <div className={`flex`}>
             <span className={styles.group_block__group_icon}>
                 <SVG name="play"></SVG>
             </span>

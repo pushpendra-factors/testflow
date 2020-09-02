@@ -3,6 +3,10 @@
 
     &.fa-drawer { 
         left: 63px;
+        .ant-drawer-body
+        {
+            padding: 0;
+        }
     }
 
     .ant-drawer-header

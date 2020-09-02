@@ -96,7 +96,7 @@ function QueryBlock({index, event, eventChange}) {
     const additionalActions = () => {
         return(
             <div className={`fa--query_block--actions`}>
-               <Button type="link" onClick={addFilter} extraClass={`mr-1`}><SVG name="filter"></SVG></Button>
+               <Button type="link" onClick={addFilter} className={`mr-1`}><SVG name="filter"></SVG></Button>
                <Button type="link" onClick={deleteItem}><SVG name="trash"></SVG></Button> 
             </div>
         )
@@ -107,9 +107,9 @@ function QueryBlock({index, event, eventChange}) {
         if(event && event.filters.length) {
             event.filters.forEach((filter, index) => {
                 filters.push(
-                <div className={styles.query_block__filters}>
-                    <span className={styles.query_block__filters__label}>Where</span>
-                    <div className={styles.query_block__filter_query}>
+                <div className={`fa--query_block--filters`}>
+                    <span ><Text type={'title'} level={7} weight={'thin'} extraClass={`m-0`}>Where</Text> </span>
+                    <div className={`fa--query_block--filters-values`}>
                         <span>{filter.prop}</span>
                         <span>{filter.operator}</span>
                         <span>{filter.values.join(',')}</span>

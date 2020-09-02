@@ -53,8 +53,8 @@ function QueryComposer({ queries, runQuery, eventChange}) {
 
     const groupByBlock = () => {
         if(queries.length >= 2) {
-            return (
-                <div className={styles.composer_body__query_block}>
+            return ( 
+                <div className={`${styles.composer_body__query_block} fa--query_block `}>
                     <GroupBlock groupBy={queryOptions.groupBy} events={queries}></GroupBlock>
                 </div>
             )

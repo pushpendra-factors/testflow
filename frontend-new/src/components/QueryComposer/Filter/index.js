@@ -1,5 +1,6 @@
 import React, {useState} from 'react';
 import styles from '../QueryBlock/index.module.scss';
+import {SVG, Text} from 'factorsComponents';
 
 import { Select} from 'antd';
 const { OptGroup, Option } = Select;
@@ -75,12 +76,14 @@ function Filter({filter}) {
 
     return(
         <>
-            <span>Where</span>
-            <div className={styles.query_block__filter_query}>
+        <div className={`fa--query_block--filters flex justify-start items-center`}>
+            <span  className={`ml-10`}><Text type={'title'} level={7} weight={'thin'} extraClass={`m-0`}>Where</Text> </span>
+             <div className={`fa--query_block--filters-values flex justify-start items-center ml-4`}>
                 <Select mode="tags" showSearch style={{ width: 240}} onChange={onFilterEventChange} open={true} showArrow={false}>
                     {renderFilterOptions()}
                 </Select>
             </div>
+        </div>
         </>
     )
      
