@@ -142,22 +142,20 @@ function QueryComposer({ queries, runQuery, eventChange}) {
 
             return (
                 <div className={styles.composer_footer}>
-                    <Button> Last Week </Button>
+                    <Button><SVG name={`calendar`} extraClass={`mr-1`} />Last Week </Button>
                     <Button type="primary" onClick={runQuery}>Run Query</Button> 
                 </div>
             )
         }
     }
 
-    return( 
-        <>
+    return(  
         <div className={styles.composer_body}>
             {queryList()}
             {groupByBlock()}
             {moreOptionsBlock()}
-        </div>
-        {footer()} 
-      </>
+            {footer()} 
+        </div> 
     )
 }
 

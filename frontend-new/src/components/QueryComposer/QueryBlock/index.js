@@ -144,7 +144,7 @@ function QueryBlock({index, event, eventChange}) {
         <div className={`${styles.query_block} fa--query_block `}>
             <div className={`${styles.query_block__event} flex justify-start items-center`}> 
     <div className={`fa--query_block--add-event active flex justify-center items-center mr-2`}><Text type={'title'} level={7} weight={'bold'} color={`white`} extraClass={`m-0`}>{index}</Text> </div>
-                {!isDDVisible && <Button type="link" onClick={triggerDropDown}><SVG name="mouseevent"></SVG> {event.label} </Button> } 
+                {!isDDVisible && <Button type="link" onClick={triggerDropDown}><SVG name="mouseevent" extraClass={`mr-1`}></SVG> {event.label} </Button> } 
                 {selectEvents()}
             </div>
             {eventFilters()}
