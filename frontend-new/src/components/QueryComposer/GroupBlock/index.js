@@ -1,8 +1,8 @@
 import React, {useState} from 'react';
-import styles from './index.module.scss';
-import {SVG} from 'factorsComponents';
+import styles from './index.module.scss'; 
+import {SVG, Text} from 'factorsComponents';
 
-import {Select} from 'antd';
+import {Select, Button} from 'antd';
 import { group } from 'd3';
 import { queries } from '@testing-library/react';
 
@@ -75,21 +75,15 @@ export default function GroupBlock({events, groupBy}){
     }
 
     return (
-        <div className={`flex`}>
-            <span className={styles.group_block__group_icon}>
-                <SVG name="play"></SVG>
-            </span>
+        <div className={`flex flex-col justify-start`}> 
 
-            <div className={styles.group_block__property} >
-                <span>Group By</span>
-                <div className={styles.group_block__property__selection} >
-                    {
-                    groupByState.property? 
-                        <span className={styles.group_block__event_tag} 
-                        onClick={triggerDropDown}> <SVG name="plus"></SVG> {groupByState.property} </span>
-                        : <span className={styles.group_block__event_tag} 
-                        onClick={triggerDropDown}> Select user property </span>
-                    }
+            <div className={`${styles.query_block__event} flex justify-start items-center`}> 
+                    <div className={`fa--query_block--add-event inactive flex justify-center items-center mr-2`}><SVG name={'groupby'} size={36} color={`purple`}></SVG></div> 
+                    <Text type={'title'} level={6} weight={'thin'} extraClass={`m-0`}>Group By</Text> 
+            </div>
+
+            <div className={`flex justify-start items-center ml-10 mt-2`} >   
+    {!isDDVisible && <Button type="link" onClick={triggerDropDown}>{!groupByState.property && <SVG name="plus" />} {groupByState.property? groupByState.property : `Select user property`}</Button> }
                     {isDDVisible ?
                     (<Select 
                         placeholder="Select Property"
@@ -105,16 +99,11 @@ export default function GroupBlock({events, groupBy}){
                     : null
                 } 
                       
+ 
+                      <Text type={'title'} level={7} weight={'thin'} extraClass={`mx-2 m-0`}>with values</Text> 
 
-                    <span> with values</span>
-
-                    {
-                    groupByState.eventValue? 
-                        <span className={styles.group_block__event_tag} 
-                        onClick={triggerValueDropDown}> {groupByState.eventValue} </span>
-                        : <span className={styles.group_block__event_tag} 
-                        onClick={triggerValueDropDown}> {events[0].label} </span>
-                    }
+                
+                    {!isValueDDVisible && <Button type="link" onClick={triggerValueDropDown}>{groupByState.eventValue? groupByState.eventValue : events[0].label }</Button> }
                     {isValueDDVisible?
                     <Select style={{width: 200}} showArrow={false} 
                         defaultOpen={true}
@@ -122,10 +111,7 @@ export default function GroupBlock({events, groupBy}){
                         {events.map(event => (
                             <Option value={event.label}></Option>
                         ))}
-                    </Select>: null }
-
-                </div>
-
+                    </Select>: null } 
             </div>
 
             

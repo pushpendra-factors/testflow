@@ -116,6 +116,9 @@ $cq-card-transition: transform .2s ease-in-out;
             background-color: $fa-color--brand-color;  
             border: 1px solid $fa-color--brand-color;  
         }
+        &.inactive{
+            border: 1px solid transparent !important;  
+        }
 
     }
     &:hover{

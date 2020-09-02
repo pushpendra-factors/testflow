@@ -54,7 +54,7 @@ function QueryComposer({ queries, runQuery, eventChange}) {
     const groupByBlock = () => {
         if(queries.length >= 2) {
             return ( 
-                <div className={`${styles.composer_body__query_block} fa--query_block `}>
+                <div className={`fa--query_block `}>
                     <GroupBlock groupBy={queryOptions.groupBy} events={queries}></GroupBlock>
                 </div>
             )
@@ -76,6 +76,7 @@ function QueryComposer({ queries, runQuery, eventChange}) {
     const moreOptionsBlock = () => {
         if(queries.length >= 2) {
             return (
+                <div className={` fa--query_block `}>
                 <Collapse bordered={false}>
                     <Panel header="More Options" className={styles.composer_body__more_options}>
                         <div className={styles.composer_body__event_sequence}>
@@ -132,6 +133,7 @@ function QueryComposer({ queries, runQuery, eventChange}) {
                         </div>
                     </Panel>
                 </Collapse>
+            </div>
             );
         }
     }
