@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Table } from 'antd';
 import { generateTableColumns, generateTableData } from '../utils';
 import styles from './index.module.scss';
+import SearchBar from './SearchBar';
 
 function DataTable({ eventsData, groups, setGroups }) {
 
@@ -35,15 +36,18 @@ function DataTable({ eventsData, groups, setGroups }) {
     const columns = generateTableColumns(eventsData);
 
     return (
-        <Table
-            pagination={false}
-            bordered={true}
-            rowKey='index'
-            rowSelection={rowSelection}
-            columns={columns}
-            dataSource={tableData}
-            className={styles.table}
-        />
+        <div className="data-table">
+            <SearchBar />
+            <Table
+                pagination={false}
+                bordered={true}
+                rowKey='index'
+                rowSelection={rowSelection}
+                columns={columns}
+                dataSource={tableData}
+                className={styles.table}
+            />
+        </div>
     )
 }
 

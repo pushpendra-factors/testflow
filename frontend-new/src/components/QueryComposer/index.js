@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Drawer, Button, Collapse, Select, Popover } from 'antd';
 
-import {SVG} from 'factorsComponents';
+import {SVG, Text} from 'factorsComponents';
 import styles from './index.module.scss';
 import QueryBlock from './QueryBlock';
 import SeqSelector from './AnalysisSeqSelector';
@@ -11,7 +11,7 @@ const { Option } = Select;
 
 const { Panel } = Collapse;
 
-function QueryComposer({ drawerVisible, queries, onClose, runQuery, eventChange}) {
+function QueryComposer({ queries, runQuery, eventChange}) {
 
     const [analyticsSeqOpen, setAnalyticsSeqVisible] = useState(false);
 
@@ -25,23 +25,9 @@ function QueryComposer({ drawerVisible, queries, onClose, runQuery, eventChange}
             start: 1,
             end: 2
         }
-    });
+    }); 
 
-    if(!drawerVisible) {return null};
 
-    const title = () => {
-        return (<div className={styles.composer_title}>
-            <div>
-                <SVG name="teamfeed"></SVG>
-                <span className={styles.composer_title__heading}>Find event funnel for</span>
-            </div>
-            <span className={styles.composer_title__help}>
-                <SVG name="play"></SVG>
-                    Help
-            </span>
-            
-        </div>)
-    }
 
     const queryList = () => {
         const blockList = [];
@@ -163,26 +149,15 @@ function QueryComposer({ drawerVisible, queries, onClose, runQuery, eventChange}
         }
     }
 
-    return(
-        <Drawer
-        title={title()}
-        placement="left"
-        closable={true}
-        visible={drawerVisible}
-        onClose={onClose}
-        mask={false}
-        getContainer={false}
-        width={"600px"}
-        className={styles.query_composer}
-      >
+    return( 
+        <>
         <div className={styles.composer_body}>
             {queryList()}
             {groupByBlock()}
             {moreOptionsBlock()}
         </div>
-        {footer()}
-          
-      </Drawer>
+        {footer()} 
+      </>
     )
 }
 
