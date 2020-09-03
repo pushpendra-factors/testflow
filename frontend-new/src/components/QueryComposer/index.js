@@ -34,7 +34,7 @@ function QueryComposer({ queries, runQuery, eventChange}) {
         queries.forEach((event, index) => {
             blockList.push(
                 <div className={styles.composer_body__query_block}>
-                    <QueryBlock index={index+1} event={event} eventChange={eventChange}></QueryBlock>
+                    <QueryBlock index={index+1} event={event} queries={queries} eventChange={eventChange}></QueryBlock>
                 </div>
             )
         });
@@ -42,7 +42,7 @@ function QueryComposer({ queries, runQuery, eventChange}) {
         if(queries.length < 6) {
             blockList.push(
                 <div className={styles.composer_body__query_block}>
-                    <QueryBlock index={queries.length+1} eventChange={eventChange}></QueryBlock>
+                    <QueryBlock index={queries.length+1} queries={queries} eventChange={eventChange}></QueryBlock>
                 </div>
             )
         }
@@ -53,7 +53,7 @@ function QueryComposer({ queries, runQuery, eventChange}) {
     const groupByBlock = () => {
         if(queries.length >= 2) {
             return ( 
-                <div className={`fa--query_block `}>
+                <div className={`fa--query_block bordered `}>
                     <GroupBlock groupBy={queryOptions.groupBy} events={queries}></GroupBlock>
                 </div>
             )
@@ -75,7 +75,7 @@ function QueryComposer({ queries, runQuery, eventChange}) {
     const moreOptionsBlock = () => {
         if(queries.length >= 2) {
             return (
-                <div className={` fa--query_block `}>
+                <div className={` fa--query_block bordered `}>
                 <Collapse bordered={false} expandIcon={()=>{}} expandIconPosition={`right`}>
                     <Panel header={<div className={`flex justify-between items-center`}>
                         <Text type={'title'} level={6} weight={'bold'} extraClass={`m-0 mb-2 inline`}>More options</Text>
