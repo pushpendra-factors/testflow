@@ -1,11 +1,32 @@
-import React from 'react';
+import React, {useState, useEffect} from 'react';
 import { Layout, Menu, Row, Col } from 'antd';
 import styles from './index.module.scss';
 import { NavLink } from 'react-router-dom'; 
 import { SVG} from 'factorsComponents';
+import ModalLib from '../../Views/componentsLib/ModalLib';
 
 function Sidebar() {
   const { Sider } = Layout;
+
+  const [visible, setVisible] = useState(false); 
+
+  const showModal = () => {
+      setVisible(true)
+  };
+ 
+  const handleCancel = e => { 
+      setVisible(false)
+  };
+
+      useEffect(() => {
+            document.onkeydown = keydown;  
+            function keydown (evt) {  
+                  if (!evt) evt = event;
+                  //Shift+G to trigger grid debugger
+                  if (evt.shiftKey && evt.keyCode === 71) { setVisible(true); }  
+            } 
+      });
+
 
   return (
     <>
@@ -38,6 +59,7 @@ function Sidebar() {
       </Row> 
 
         
+      <ModalLib visible={visible} handleCancel={handleCancel} />
   
     </Sider> 
     </>
