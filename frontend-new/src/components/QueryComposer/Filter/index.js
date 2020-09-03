@@ -14,11 +14,30 @@ function Filter({filter}) {
             "values": []
         });
 
+
+    const eventOptions = [
+        {
+                label: "Event Properties",
+                icon: "fav",
+                values: [
+                    "Cart Updated",
+                    "Paid",
+                    "Add to WishList",
+                    "Checkout"
+                    
+                ]
+        }, {
+                label: "User Properties",
+                icon: "virtual",
+                values: [
+                    "Country",
+                    "City",
+                ]
+        }
+    ]
+
     const filterOptions = {
-        "props": [
-            "City",
-            "Country"
-        ],
+        "props": eventOptions,
         "operator": [
             "is",
             "less than",
@@ -53,7 +72,22 @@ function Filter({filter}) {
             filterOptions[filterType][newFilter['props']].forEach(opt => {
                 options.push(<Option value={opt}></Option>)
             });
-        } else {
+        }
+        else if(filterType === 'props') {
+            filterOptions[filterType].forEach((group, index) => {
+                options.push(<OptGroup key={index} label={(
+                    <div className={styles.query_block__selector_group}>
+                        <SVG name={group.icon}></SVG>
+                        <span >{group.label}</span>
+                    </div>
+                        )}>
+                            {group.values.map((option,index) => (
+                                <Option key={index} value={option}></Option>
+                            ))}
+                    </OptGroup>)
+                })
+        }
+        else {
             filterOptions[filterType].forEach(opt => {
                 options.push(<Option value={opt}></Option>)
             });
