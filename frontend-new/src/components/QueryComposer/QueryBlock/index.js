@@ -7,7 +7,7 @@ import Filter from '../Filter';
 
 const { OptGroup, Option } = Select;
 
-function QueryBlock({index, event, eventChange}) {
+function QueryBlock({index, event, eventChange,queries}) {
 
     const [isDDVisible, setDDVisible] = useState(index == 1 && !event ? true : false); 
     const [isFilterDDVisible, setFilterDDVisible] = useState(false);
@@ -125,14 +125,14 @@ function QueryBlock({index, event, eventChange}) {
         </div>)
 
         return filters;
-    }
-
+    } 
+    const ifQueries = queries.length>0;
     if(!event) {
         return (
-            <div className={`${styles.query_block} fa--query_block `}>
+            <div className={`${styles.query_block} fa--query_block ${ifQueries?`bordered`:``}`}>
                 <div className={`${styles.query_block__event} flex justify-start items-center`}> 
                     <div className={`fa--query_block--add-event flex justify-center items-center mr-2`}><SVG name={'plus'} color={`purple`}></SVG></div>
-                    {!isDDVisible && <Button type="link" onClick={triggerDropDown}>Add First Event</Button> }
+                        {!isDDVisible && <Button type="link" onClick={triggerDropDown}>{ifQueries ? `Add another event` : `Add First Event`}</Button> }
                     {selectEvents()} 
                 </div> 
             </div>
@@ -140,7 +140,7 @@ function QueryBlock({index, event, eventChange}) {
     }
 
     return(
-        <div className={`${styles.query_block} fa--query_block `}>
+        <div className={`${styles.query_block} fa--query_block bordered `}>
             <div className={`${styles.query_block__event} flex justify-start items-center`}> 
                 <div className={`fa--query_block--add-event active flex justify-center items-center mr-2`}><Text type={'title'} level={7} weight={'bold'} color={`white`} extraClass={`m-0`}>{index}</Text> </div>
                 {!isDDVisible && <Button type="link" onClick={triggerDropDown}><SVG name="mouseevent" extraClass={`mr-1`}></SVG> {event.label} </Button> } 

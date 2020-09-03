@@ -76,8 +76,16 @@ $cq-card-transition: transform .2s ease-in-out;
     display: flex;
     flex-direction: column;
     position: relative; 
-    padding: 24px 42px;
+    padding: 22px 42px;
     position: relative;
+
+    border-top: 1px solid transparent;
+        border-bottom: 1px solid transparent;
+
+    &.bordered{
+        // border-top: 1px solid $fa-color--mono-2;
+        border-bottom: 1px solid $fa-color--mono-1;
+    }
 
     
     .fa--query_block--actions{
@@ -149,6 +157,9 @@ $cq-card-transition: transform .2s ease-in-out;
         .ant-collapse-header
         {
             padding: 0; 
+        }
+        .ant-collapse-item{
+            border-bottom-color: transparent;
         }
         &.ant-collapse-borderless
         {
