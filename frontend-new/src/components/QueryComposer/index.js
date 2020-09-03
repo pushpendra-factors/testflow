@@ -123,9 +123,11 @@ function QueryComposer({ queries, runQuery, eventChange}) {
                                         onVisibleChange={(visible) => setAnalyticsSeqVisible(visible)}
                                     >
                                         <Button type="secondary">
-                                            Between 
+                                            Between &nbsp;
                                             {queryOptions.session_analytics_seq.start} 
+                                            &nbsp;
                                                 to 
+                                                &nbsp;
                                             {queryOptions.session_analytics_seq.end} 
                                         </Button>
                                     </Popover>
