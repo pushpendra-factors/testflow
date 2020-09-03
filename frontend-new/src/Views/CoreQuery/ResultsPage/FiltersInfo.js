@@ -2,7 +2,7 @@ import React from 'react';
 
 function FiltersInfo({ setDrawerVisible }) {
     return (
-        <div className="mt-4 flex justify-end pl-4">
+        <div className="mt-4 flex justify-end p-4">
             <a className="flex items-center" onClick={setDrawerVisible.bind(this, true)}>
                 <span className="mr-1">
                     <svg width="17" height="18" viewBox="0 0 17 18" fill="none" xmlns="http://www.w3.org/2000/svg">

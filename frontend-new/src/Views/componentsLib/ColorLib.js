@@ -22,16 +22,16 @@ function ColorLib() {
                         </Col>
                     </Row>
                     <Row className={``}> 
-                        <Col span={1} className="px-6 mr-4 fa-component-color--box fa-component-color--brand-1"><Text type={'title'} level={6} weight={'bold'} extraClass={`pt-4`}>1</Text></Col> 
-                        <Col span={1} className="px-6 mr-4 fa-component-color--box fa-component-color--brand-2"><Text type={'title'} level={6} weight={'bold'} extraClass={`pt-4`}>2</Text></Col> 
-                        <Col span={1} className="px-6 mr-4 fa-component-color--box fa-component-color--brand-3"><Text type={'title'} level={6} weight={'bold'} extraClass={`pt-4`}>3</Text></Col> 
-                        <Col span={1} className="px-6 mr-4 fa-component-color--box fa-component-color--brand-4"><Text type={'title'} level={6} weight={'bold'} extraClass={`pt-4`}>4</Text></Col> 
-                        <Col span={1} className="px-6 mr-4 fa-component-color--box fa-component-color--brand-5"><Text type={'title'} level={6} weight={'bold'} extraClass={`pt-4`}>5</Text></Col> 
-                        <Col span={1} className="px-6 mr-4 fa-component-color--box fa-component-color--brand-6"><Text type={'title'} level={6} weight={'bold'} extraClass={`pt-4`}>6</Text></Col> 
-                        <Col span={1} className="px-6 mr-4 fa-component-color--box fa-component-color--brand-7"><Text type={'title'} level={6} weight={'bold'} extraClass={`pt-4`}>7</Text></Col> 
-                        <Col span={1} className="px-6 mr-4 fa-component-color--box fa-component-color--brand-8"><Text type={'title'} level={6} weight={'bold'} extraClass={`pt-4`}>8</Text></Col> 
-                        <Col span={1} className="px-6 mr-4 fa-component-color--box fa-component-color--brand-9"><Text type={'title'} level={6} weight={'bold'} extraClass={`pt-4`}>9</Text></Col> 
-                        <Col span={1} className="px-6 mr-4 fa-component-color--box fa-component-color--brand-10"><Text type={'title'} level={6} weight={'bold'} extraClass={`pt-4`}>10</Text></Col> 
+                        <div className="mr-4 flex justify-center align-ceter fa-component-color--box fa-component-color--brand-1"><Text type={'title'} level={6} weight={'bold'} extraClass={`pt-4`}>1</Text></div> 
+                        <div className="mr-4 flex justify-center align-ceter fa-component-color--box fa-component-color--brand-2"><Text type={'title'} level={6} weight={'bold'} extraClass={`pt-4`}>2</Text></div> 
+                        <div className="mr-4 flex justify-center align-ceter fa-component-color--box fa-component-color--brand-3"><Text type={'title'} level={6} weight={'bold'} extraClass={`pt-4`}>3</Text></div> 
+                        <div className="mr-4 flex justify-center align-ceter fa-component-color--box fa-component-color--brand-4"><Text type={'title'} level={6} weight={'bold'} extraClass={`pt-4`}>4</Text></div> 
+                        <div className="mr-4 flex justify-center align-ceter fa-component-color--box fa-component-color--brand-5"><Text type={'title'} level={6} weight={'bold'} extraClass={`pt-4`}>5</Text></div> 
+                        <div className="mr-4 flex justify-center align-ceter fa-component-color--box fa-component-color--brand-6"><Text type={'title'} level={6} weight={'bold'} extraClass={`pt-4`}>6</Text></div> 
+                        <div className="mr-4 flex justify-center align-ceter fa-component-color--box fa-component-color--brand-7"><Text type={'title'} level={6} weight={'bold'} extraClass={`pt-4`}>7</Text></div> 
+                        <div className="mr-4 flex justify-center align-ceter fa-component-color--box fa-component-color--brand-8"><Text type={'title'} level={6} weight={'bold'} extraClass={`pt-4`}>8</Text></div> 
+                        <div className="mr-4 flex justify-center align-ceter fa-component-color--box fa-component-color--brand-9"><Text type={'title'} level={6} weight={'bold'} extraClass={`pt-4`}>9</Text></div> 
+                        <div className="mr-4 flex justify-center align-ceter fa-component-color--box fa-component-color--brand-10"><Text type={'title'} level={6} weight={'bold'} extraClass={`pt-4`}>10</Text></div> 
                     </Row>
 
                     {/* Brand Color */}
@@ -41,16 +41,16 @@ function ColorLib() {
                         </Col>
                     </Row>
                     <Row className={``}> 
-                        <Col span={1} className="px-6 mr-4 fa-component-color--box fa-component-color--mono-1"><Text type={'title'} level={6} weight={'bold'} extraClass={`pt-4`}>1</Text></Col> 
-                        <Col span={1} className="px-6 mr-4 fa-component-color--box fa-component-color--mono-2"><Text type={'title'} level={6} weight={'bold'} extraClass={`pt-4`}>2</Text></Col> 
-                        <Col span={1} className="px-6 mr-4 fa-component-color--box fa-component-color--mono-3"><Text type={'title'} level={6} weight={'bold'} extraClass={`pt-4`}>3</Text></Col> 
-                        <Col span={1} className="px-6 mr-4 fa-component-color--box fa-component-color--mono-4"><Text type={'title'} level={6} weight={'bold'} extraClass={`pt-4`}>4</Text></Col> 
-                        <Col span={1} className="px-6 mr-4 fa-component-color--box fa-component-color--mono-5"><Text type={'title'} level={6} weight={'bold'} extraClass={`pt-4`}>5</Text></Col> 
-                        <Col span={1} className="px-6 mr-4 fa-component-color--box fa-component-color--mono-6"><Text type={'title'} level={6} weight={'bold'} extraClass={`pt-4`}>6</Text></Col> 
-                        <Col span={1} className="px-6 mr-4 fa-component-color--box fa-component-color--mono-7"><Text type={'title'} level={6} weight={'bold'} extraClass={`pt-4`}>7</Text></Col> 
-                        <Col span={1} className="px-6 mr-4 fa-component-color--box fa-component-color--mono-8"><Text type={'title'} level={6} weight={'bold'} extraClass={`pt-4`}>8</Text></Col> 
-                        <Col span={1} className="px-6 mr-4 fa-component-color--box fa-component-color--mono-9"><Text type={'title'} level={6} weight={'bold'} extraClass={`pt-4`}>9</Text></Col> 
-                        <Col span={1} className="px-6 mr-4 fa-component-color--box fa-component-color--mono-10"><Text type={'title'} level={6} weight={'bold'} extraClass={`pt-4`}>10</Text></Col> 
+                        <div className="mr-4 flex justify-center align-ceter fa-component-color--box fa-component-color--mono-1"><Text type={'title'} level={6} weight={'bold'} extraClass={`pt-4`}>1</Text></div> 
+                        <div className="mr-4 flex justify-center align-ceter fa-component-color--box fa-component-color--mono-2"><Text type={'title'} level={6} weight={'bold'} extraClass={`pt-4`}>2</Text></div> 
+                        <div className="mr-4 flex justify-center align-ceter fa-component-color--box fa-component-color--mono-3"><Text type={'title'} level={6} weight={'bold'} extraClass={`pt-4`}>3</Text></div> 
+                        <div className="mr-4 flex justify-center align-ceter fa-component-color--box fa-component-color--mono-4"><Text type={'title'} level={6} weight={'bold'} extraClass={`pt-4`}>4</Text></div> 
+                        <div className="mr-4 flex justify-center align-ceter fa-component-color--box fa-component-color--mono-5"><Text type={'title'} level={6} weight={'bold'} extraClass={`pt-4`}>5</Text></div> 
+                        <div className="mr-4 flex justify-center align-ceter fa-component-color--box fa-component-color--mono-6"><Text type={'title'} level={6} weight={'bold'} extraClass={`pt-4`}>6</Text></div> 
+                        <div className="mr-4 flex justify-center align-ceter fa-component-color--box fa-component-color--mono-7"><Text type={'title'} level={6} weight={'bold'} extraClass={`pt-4`}>7</Text></div> 
+                        <div className="mr-4 flex justify-center align-ceter fa-component-color--box fa-component-color--mono-8"><Text type={'title'} level={6} weight={'bold'} extraClass={`pt-4`}>8</Text></div> 
+                        <div className="mr-4 flex justify-center align-ceter fa-component-color--box fa-component-color--mono-9"><Text type={'title'} level={6} weight={'bold'} extraClass={`pt-4`}>9</Text></div> 
+                        <div className="mr-4 flex justify-center align-ceter fa-component-color--box fa-component-color--mono-10"><Text type={'title'} level={6} weight={'bold'} extraClass={`pt-4`}>10</Text></div> 
                     </Row>
                   
                     {/* Functional Colors */}
@@ -60,9 +60,9 @@ function ColorLib() {
                         </Col>
                     </Row>
                     <Row className={``}> 
-                        <Col span={1} className="px-6 mr-4 fa-component-color--box fa-component-color--fn-orange" />  
-                        <Col span={1} className="px-6 mr-4 fa-component-color--box fa-component-color--fn-red" />  
-                        <Col span={1} className="px-6 mr-4 fa-component-color--box fa-component-color--fn-green" />  
+                        <div className="mr-4 flex justify-center align-ceter fa-component-color--box fa-component-color--fn-orange" />  
+                        <div className="mr-4 flex justify-center align-ceter fa-component-color--box fa-component-color--fn-red" />  
+                        <div className="mr-4 flex justify-center align-ceter fa-component-color--box fa-component-color--fn-green" />  
                     </Row>
 
 
