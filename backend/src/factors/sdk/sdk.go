@@ -544,37 +544,39 @@ func addEventDetailsToCache(project_id uint64, event_name string, event_properti
 			propertyValues = append(propertyValues, propertyValue)
 		}
 	}
-	log.Info(fmt.Sprintf("Begin: EMget %v", len(propertyValuesCacheKeys)))
-	valuesList, err := cacheRedis.MGetPersistent(propertyValuesCacheKeys...)
-	log.Info("End: EMget")
+	if len(propertyValuesCacheKeys) > 0 {
+		log.Info(fmt.Sprintf("Begin: EMget %v", len(propertyValuesCacheKeys)))
+		valuesList, err := cacheRedis.MGetPersistent(propertyValuesCacheKeys...)
+		log.Info("End: EMget")
 
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to get values - properties values")
-		return
-	}
-	for index, values := range valuesList {
-		var eventPropertyValues U.CachePropertyValueWithTimestamp
-		if values != "" {
-			err = json.Unmarshal([]byte(values), &eventPropertyValues)
-			if err != nil {
-				logCtx.WithError(err).Error("Failed to unmarshal - property values")
-				return
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to get values - properties values")
+			return
+		}
+		for index, values := range valuesList {
+			var eventPropertyValues U.CachePropertyValueWithTimestamp
+			if values != "" {
+				err = json.Unmarshal([]byte(values), &eventPropertyValues)
+				if err != nil {
+					logCtx.WithError(err).Error("Failed to unmarshal - property values")
+					return
+				}
 			}
-		}
-		if eventPropertyValues.PropertyValue == nil {
-			eventPropertyValues.PropertyValue = make(map[string]U.CountTimestampTuple)
-		}
-		if propertyValues[index] != "" {
-			countTimeValues := eventPropertyValues.PropertyValue[propertyValues[index]]
-			countTimeValues.Count = countTimeValues.Count + 1
-			countTimeValues.LastSeenTimestamp = currentTimeUnix
-			eventPropertyValues.PropertyValue[propertyValues[index]] = countTimeValues
-			eventPropertyValues.CacheUpdatedTimestamp = currentTimeUnix
-			enEventPropertyValueCache, _ := json.Marshal(eventPropertyValues)
-			err = SetPersistentWithLogging(propertyValuesCacheKeys[index], string(enEventPropertyValueCache), U.EVENT_USER_CACHE_EXPIRY_SECS, "values")
-			if err != nil {
-				logCtx.WithError(err).Error("Failed to set property values in cache")
-				return
+			if eventPropertyValues.PropertyValue == nil {
+				eventPropertyValues.PropertyValue = make(map[string]U.CountTimestampTuple)
+			}
+			if propertyValues[index] != "" {
+				countTimeValues := eventPropertyValues.PropertyValue[propertyValues[index]]
+				countTimeValues.Count = countTimeValues.Count + 1
+				countTimeValues.LastSeenTimestamp = currentTimeUnix
+				eventPropertyValues.PropertyValue[propertyValues[index]] = countTimeValues
+				eventPropertyValues.CacheUpdatedTimestamp = currentTimeUnix
+				enEventPropertyValueCache, _ := json.Marshal(eventPropertyValues)
+				err = SetPersistentWithLogging(propertyValuesCacheKeys[index], string(enEventPropertyValueCache), U.EVENT_USER_CACHE_EXPIRY_SECS, "values")
+				if err != nil {
+					logCtx.WithError(err).Error("Failed to set property values in cache")
+					return
+				}
 			}
 		}
 	}

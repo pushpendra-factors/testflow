@@ -323,37 +323,39 @@ func UpdateCacheForUserProperties(userId string, projectid uint64, updatedProper
 			propertyValuesCacheKeys = append(propertyValuesCacheKeys, userPropertyValuesKey)
 		}
 	}
-	log.Info(fmt.Sprintf("Begin: UMget %v", len(propertyValuesCacheKeys)))
-	valuesList, err := cacheRedis.MGetPersistent(propertyValuesCacheKeys...)
-	log.Info("End: UMget")
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to get values - properties values")
-		return
-	}
-	for index, values := range valuesList {
-		var propertyValues U.CachePropertyValueWithTimestamp
-		if values != "" {
-			err = json.Unmarshal([]byte(values), &propertyValues)
-			if err != nil {
-				logCtx.WithError(err).Error("Failed to unmarshal property value - getvaluesbyuserproperty")
-			}
+	if len(propertyValuesCacheKeys) > 0 {
+		log.Info(fmt.Sprintf("Begin: UMget %v", len(propertyValuesCacheKeys)))
+		valuesList, err := cacheRedis.MGetPersistent(propertyValuesCacheKeys...)
+		log.Info("End: UMget")
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to get values - properties values")
+			return
 		}
-		if propertyValues.PropertyValue == nil {
-			propertyValues.PropertyValue = make(map[string]U.CountTimestampTuple)
-		}
-		if propertyValuesList[index] != "" {
-			countTimeValues := propertyValues.PropertyValue[propertyValuesList[index]]
-			countTimeValues.Count = countTimeValues.Count + 1
-			countTimeValues.LastSeenTimestamp = currentTimeUnix
-			propertyValues.PropertyValue[propertyValuesList[index]] = countTimeValues
-			propertyValues.CacheUpdatedTimestamp = currentTimeUnix
-			enEventPropertyValueCache, err := json.Marshal(propertyValues)
-			if err != nil {
-				logCtx.WithError(err).Error("Failed to marshal property value - getvaluesbyuserproperty")
+		for index, values := range valuesList {
+			var propertyValues U.CachePropertyValueWithTimestamp
+			if values != "" {
+				err = json.Unmarshal([]byte(values), &propertyValues)
+				if err != nil {
+					logCtx.WithError(err).Error("Failed to unmarshal property value - getvaluesbyuserproperty")
+				}
 			}
-			err = SetPersistentWithLogging(propertyValuesCacheKeys[index], string(enEventPropertyValueCache), U.EVENT_USER_CACHE_EXPIRY_SECS, "values")
-			if err != nil {
-				logCtx.WithError(err).Error("Failed to set cache property value - getvaluesbyuserproperty")
+			if propertyValues.PropertyValue == nil {
+				propertyValues.PropertyValue = make(map[string]U.CountTimestampTuple)
+			}
+			if propertyValuesList[index] != "" {
+				countTimeValues := propertyValues.PropertyValue[propertyValuesList[index]]
+				countTimeValues.Count = countTimeValues.Count + 1
+				countTimeValues.LastSeenTimestamp = currentTimeUnix
+				propertyValues.PropertyValue[propertyValuesList[index]] = countTimeValues
+				propertyValues.CacheUpdatedTimestamp = currentTimeUnix
+				enEventPropertyValueCache, err := json.Marshal(propertyValues)
+				if err != nil {
+					logCtx.WithError(err).Error("Failed to marshal property value - getvaluesbyuserproperty")
+				}
+				err = SetPersistentWithLogging(propertyValuesCacheKeys[index], string(enEventPropertyValueCache), U.EVENT_USER_CACHE_EXPIRY_SECS, "values")
+				if err != nil {
+					logCtx.WithError(err).Error("Failed to set cache property value - getvaluesbyuserproperty")
+				}
 			}
 		}
 	}
