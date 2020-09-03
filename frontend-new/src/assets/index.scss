@@ -36,5 +36,9 @@ code {
     box-shadow: 0px 6px 20px rgba(0, 0, 0, 0.2);
 	border-radius: 12px;
 	padding-left: 1rem;
-	padding-right: 1rem;
+    padding-right: 1rem;
+}
+
+.c3-bar._expanded_ {
+    fill-opacity: 1 !important;
 }
