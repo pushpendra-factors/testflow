@@ -6,12 +6,12 @@ import CoreQueryHome from '../CoreQueryHome';
 
 function CoreQuery() {
     const [drawerVisible, setDrawerVisible] = useState(false);
-    const [showResult, setShowResult] = useState(true);
-    const [queries, setQueries] = useState(["Cart Updated", "Checkout", "Applied Coupon", "Paid", "Download Video", "Download Song"]);
+    const [showResult, setShowResult] = useState(false);
+    const [queries, setQueries] = useState([]);
 
     const addToQueries = (newEvent, index) => {
         const queryupdated = [...queries];
-        if(queryupdated[index]) {
+        if (queryupdated[index]) {
             queryupdated[index] = newEvent;
         } else {
             queryupdated.push(newEvent);
@@ -42,7 +42,7 @@ function CoreQuery() {
             </QueryComposer>
 
             {
-                showResult ? (<ResultsPage setDrawerVisible={setDrawerVisible} queries={queries.map(elem => elem)} />) : (<CoreQueryHome setDrawerVisible={setDrawerVisible} />)
+                showResult ? (<ResultsPage setDrawerVisible={setDrawerVisible} queries={queries.map(elem => elem.label)} />) : (<CoreQueryHome setDrawerVisible={setDrawerVisible} />)
             }
 
         </>
