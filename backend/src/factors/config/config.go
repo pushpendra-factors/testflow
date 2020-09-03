@@ -446,7 +446,6 @@ func InitSentryLogging(sentryDSN, appName string) {
 // Useful while running scripts in development mode where sentry is not initialized.
 func SafeFlushSentryHook() {
 	if services.SentryHook != nil {
-		log.Error("Flushing sentry")
 		services.SentryHook.Flush()
 	}
 }

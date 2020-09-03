@@ -314,6 +314,7 @@ func GetGCLIDBasedCampaignInfo(projectId uint64, from, to int64, adwordsAccountI
 func GetAdwordsFilterPropertyKeyByType(docType int) (string, error) {
 	filterKeyByType := map[int]string{
 		5: "campaign_name",
+		3: "ad_group_type",
 		8: "criteria",
 		6: "id",
 	}
@@ -375,6 +376,8 @@ func GetAdwordsDocumentTypeForFilterKey(filter string) (int, error) {
 		docType = adwordsDocumentTypeAlias["ad_performance_report"]
 	case CAFilterKeyword:
 		docType = adwordsDocumentTypeAlias["keyword_performance_report"]
+	case CAFilterAdGroup:
+		docType = adwordsDocumentTypeAlias["ad_groups"]
 	}
 
 	if docType == 0 {

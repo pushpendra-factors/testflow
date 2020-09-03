@@ -116,6 +116,5 @@ func main() {
 		for _, err = range projectErrors {
 			pbLog.WithError(err).Error("Error while archiving events")
 		}
-		panic(projectErrors)
 	}
 }

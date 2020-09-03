@@ -110,6 +110,5 @@ func main() {
 		for _, err = range projectErrors {
 			pbLog.WithError(err).Error("Error while processing files for Bigquery")
 		}
-		panic(projectErrors)
 	}
 }
