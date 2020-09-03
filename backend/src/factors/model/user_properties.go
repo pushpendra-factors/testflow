@@ -122,7 +122,9 @@ func SetPersistentWithLogging(key *cacheRedis.Key, value string, expiryInSecs fl
 	begin := U.TimeNowUnix()
 	err := cacheRedis.SetPersistent(key, value, expiryInSecs)
 	end := U.TimeNowUnix()
-	log.Info(fmt.Sprintf("End: US %s - %v", tag, begin-end))
+	log.WithFields(log.Fields{
+		"timeTaken": begin - end,
+	}).Info(fmt.Sprintf("End: US %s", tag))
 	return err
 }
 
@@ -131,7 +133,8 @@ func GetIfExistsPersistentWithLogging(key *cacheRedis.Key, tag string) (string, 
 	begin := U.TimeNowUnix()
 	data, status, err := cacheRedis.GetIfExistsPersistent(key)
 	end := U.TimeNowUnix()
-	log.Info(fmt.Sprintf("End: UG %s - %v", tag, begin-end))
+	log.WithFields(log.Fields{
+		"timeTaken": begin - end}).Info(fmt.Sprintf("End: UG %s", tag))
 	return data, status, err
 }
 
@@ -320,7 +323,9 @@ func UpdateCacheForUserProperties(userId string, projectid uint64, updatedProper
 			propertyValuesCacheKeys = append(propertyValuesCacheKeys, userPropertyValuesKey)
 		}
 	}
+	log.Info(fmt.Sprintf("Begin: UMget %v", len(propertyValuesCacheKeys)))
 	valuesList, err := cacheRedis.MGetPersistent(propertyValuesCacheKeys...)
+	log.Info("End: UMget")
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get values - properties values")
 		return
