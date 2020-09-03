@@ -66,23 +66,105 @@ $cq-card-transition: transform .2s ease-in-out;
         overflow: hidden;
         display: block;
         // margin: 0 0 1.2em; 
-    }
-    // .fai--custom-card--cta
-    // {
-    //     display: none;
-    //     transition: $cq-card-transition; 
-    //     background-color: #34A7BA;
-    //     padding: 10px 16px;
-    //     color: $fa-color--white;
-    //     font-weight: $font-weight--bold;
-    //     font-size: 12px;
-    //     line-height: 1; 
-    //     text-align: center;
-    //     letter-spacing: 0.02em;
-    //     border-radius: 32px;
-    //     // margin: 1.2em 0 0; 
-    // }
+    } 
    
 }
 
 
+.fa--query_block 
+{
+    display: flex;
+    flex-direction: column;
+    position: relative; 
+    padding: 22px 42px;
+    position: relative;
+
+    border-top: 1px solid transparent;
+        border-bottom: 1px solid transparent;
+
+    &.bordered{
+        // border-top: 1px solid $fa-color--mono-2;
+        border-bottom: 1px solid $fa-color--mono-1;
+    }
+
+    
+    .fa--query_block--actions{
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        right: 24px;
+        display: none;
+        transition: all 0.3s;
+        .ant-btn.ant-btn.ant-btn-link{
+            padding: 4px 6px; 
+        }
+    }
+    &:hover{
+        .fa--query_block--actions{
+            display: block;
+        }
+    }
+
+    .fa--query_block--filters
+    {
+        padding: 12px 0;
+    }
+    .fa--query_block--filters-values
+    { 
+
+    }
+    .fa--query_block--add-event{
+        height: 32px;
+        width: 32px;
+        border: 1px solid transparent; 
+        border-radius: 100%;
+        transition: all 0.3s;
+        &.active{
+            color: $fa-color--white;
+            background-color: $fa-color--brand-color;  
+            border: 1px solid $fa-color--brand-color;  
+        }
+        &.inactive{
+            border: 1px solid transparent !important;  
+        }
+
+    }
+    &:hover{
+        .fa--query_block--add-event{ 
+            border: 1px solid $fa-color--brand-color;  
+        }
+    }
+    .ant-btn.ant-btn.ant-btn-link:focus, .ant-btn.ant-btn.ant-btn-link:hover, .ant-btn.ant-btn.ant-btn-link:active{
+        border-color: transparent;
+    }
+    .ant-select
+    { 
+        .ant-select-selector
+        {
+            border-radius: 6px; 
+            height: 40px;
+        }
+        .ant-select-dropdown
+        {
+            border-radius: 6px; 
+        }
+    }
+
+
+    .ant-collapse
+    {
+        padding: 0;
+        .ant-collapse-header
+        {
+            padding: 0; 
+        }
+        .ant-collapse-item{
+            border-bottom-color: transparent;
+        }
+        &.ant-collapse-borderless
+        {
+            background-color: transparent;
+        }
+    }
+    
+}

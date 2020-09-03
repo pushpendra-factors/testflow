@@ -1,0 +1,36 @@
+
+.group_block { 
+
+    &__selector_group {
+
+        display: flex;
+
+        svg {
+            align-self: center;
+        }
+
+        span {
+            background: #FFFFFF;
+            margin-left: 8px;
+            font-weight: 600;
+            font-size: 12px;
+            color: #0E2647;
+            text-transform: uppercase;
+        }
+
+        
+    }
+
+    &__group_icon {
+
+    }
+
+    &__property {
+
+    }
+
+    &__event {
+
+        
+    }
+}

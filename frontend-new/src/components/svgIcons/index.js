@@ -112,7 +112,7 @@ const PlusSVG = ({size = 16, color = "#5949BC", extraClass}) => {
 const MouseeventSVG = ({size = 16, color = "#5949BC", extraClass}) => {
   return (
     <svg width={size} height={size} className={extraClass} viewBox="0 0 16 17" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M12.2744 3.43373L4.62705 7.80423C4.44899 7.90599 4.5212 8.17787 4.72629 8.17787H9.09468C9.18546 8.17787 9.26485 8.23901 9.28805 8.32677L10.2991 12.1524C10.3526 12.3551 10.6424 12.3493 10.6877 12.1445L12.5689 3.65062C12.6064 3.48116 12.425 3.34761 12.2744 3.43373Z" fill={color} stroke="#5949BC" stroke-linejoin="round"/>
+      <path d="M12.2744 3.43373L4.62705 7.80423C4.44899 7.90599 4.5212 8.17787 4.72629 8.17787H9.09468C9.18546 8.17787 9.26485 8.23901 9.28805 8.32677L10.2991 12.1524C10.3526 12.3551 10.6424 12.3493 10.6877 12.1445L12.5689 3.65062C12.6064 3.48116 12.425 3.34761 12.2744 3.43373Z" fill={color} stroke="#5949BC" strokeLinejoin="round"/>
       <path d="M5.16496 12.2159C4.91514 12.5463 4.98046 13.0167 5.31087 13.2665C5.64127 13.5163 6.11162 13.451 6.36144 13.1206L5.16496 12.2159ZM9.45747 6.53876L5.16496 12.2159L6.36144 13.1206L10.654 7.44343L9.45747 6.53876Z" fill={color}/>
     </svg>
 
@@ -122,13 +122,13 @@ const MouseeventSVG = ({size = 16, color = "#5949BC", extraClass}) => {
 const TeamfeedSVG = ({size = 24, color, extraClass}) => {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <g clip-path="url(#clip0)">
+      <g clipPath="url(#clip0)">
       <path d="M7.10927 5.52488L8.46875 7.43263C6.17052 7.77059 4.73078 8.38528 4.42921 8.79916C4.86454 9.39671 7.66376 10.4106 11.9927 10.413C16.3216 10.4155 19.1233 9.39671 19.5562 8.79916C19.2546 8.38528 17.8149 7.77059 15.5191 7.43263L16.8786 5.52488C19.4443 6.02937 21.6842 7.01876 21.6842 8.79916C21.6844 9.11929 21.6068 9.43461 21.458 9.71752C21.3102 9.95527 21.1477 10.1835 20.9716 10.4008L14.3177 18.4824C13.8658 19.0273 13.6179 19.7145 13.6173 20.4244V23.2334C13.6173 23.3349 13.5973 23.4354 13.5584 23.529C13.5196 23.6227 13.4626 23.7076 13.3909 23.7789C13.3192 23.8502 13.2341 23.9065 13.1406 23.9444C13.0471 23.9824 12.9471 24.0012 12.8463 23.9999H11.1439C11.044 23.9999 10.945 23.9801 10.8526 23.9416C10.7603 23.9031 10.6764 23.8466 10.6057 23.7754C10.535 23.7042 10.4789 23.6197 10.4407 23.5267C10.4024 23.4337 10.3827 23.3341 10.3827 23.2334V20.4342C10.3821 19.7243 10.1342 19.0371 9.68231 18.4922L3.02839 10.4106C2.85227 10.1933 2.68982 9.96506 2.54199 9.72732C2.39322 9.4444 2.31556 9.12909 2.31581 8.80896C2.30365 7.01631 4.54352 6.02692 7.10927 5.52488ZM8.5101 3.42856C8.4321 3.58319 8.39809 3.75653 8.41183 3.92941C8.42556 4.10229 8.48651 4.26797 8.58792 4.40815L11.2291 8.14039C11.3159 8.26273 11.4305 8.36244 11.5633 8.43122C11.6962 8.50001 11.8434 8.5359 11.9927 8.5359C12.1421 8.5359 12.2893 8.50001 12.4221 8.43122C12.5549 8.36244 12.6695 8.26273 12.7564 8.14039L15.3975 4.40815C15.4982 4.26683 15.5582 4.10028 15.5709 3.92682C15.5836 3.75337 15.5486 3.57974 15.4697 3.42505C15.3907 3.27035 15.2709 3.14059 15.1235 3.05004C14.976 2.95949 14.8066 2.91167 14.6338 2.91183H13.5516V0H10.4362V2.92162H9.34427C9.17236 2.92062 9.00351 2.96742 8.85633 3.05687C8.70914 3.14632 8.58933 3.27494 8.5101 3.42856Z" fill="url(#paint0_linear)"/>
       </g>
       <defs>
       <linearGradient id="paint0_linear" x1="5.47083" y1="20.4694" x2="19.1773" y2="8.1849" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#7A6DC9"/>
-      <stop offset="1" stop-color="#5DB9C8"/>
+      <stop stopColor="#7A6DC9"/>
+      <stop offset="1" stopColor="#5DB9C8"/>
       </linearGradient>
       <clipPath id="clip0">
       <rect width="24" height="24" fill="white"/>
@@ -142,7 +142,7 @@ const PlaySVG = ({size = 24, color, extraClass}) => {
   return(
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
       <g opacity="0.6">
-      <path d="M16.5 11.82L7.5 6.19775V17.8022L16.5 11.82Z" stroke="#0E2647" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M16.5 11.82L7.5 6.19775V17.8022L16.5 11.82Z" stroke="#0E2647" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
       </g>
     </svg>
   )
@@ -151,7 +151,7 @@ const PlaySVG = ({size = 24, color, extraClass}) => {
 const FavSVG = ({size = 18, color, extraClass}) => {
   return (
     <svg width="17" height="18" viewBox="0 0 17 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M9.23999 10.6293C8.95212 10.3616 8.50638 10.3616 8.2185 10.6293L5.47925 13.1767V5.39838C5.47925 4.98416 5.81503 4.64838 6.22925 4.64838H11.2292C11.6435 4.64838 11.9792 4.98416 11.9792 5.39838V13.1767L9.23999 10.6293Z" fill="#34A7BA" stroke="#34A7BA" stroke-width="1.5" stroke-linejoin="round"/>
+      <path d="M9.23999 10.6293C8.95212 10.3616 8.50638 10.3616 8.2185 10.6293L5.47925 13.1767V5.39838C5.47925 4.98416 5.81503 4.64838 6.22925 4.64838H11.2292C11.6435 4.64838 11.9792 4.98416 11.9792 5.39838V13.1767L9.23999 10.6293Z" fill="#34A7BA" stroke="#34A7BA" strokeWidth="1.5" strokeLinejoin="round"/>
     </svg>
 
   )
@@ -160,10 +160,10 @@ const FavSVG = ({size = 18, color, extraClass}) => {
 const VirtualSVG = ({size =18, color, extraClass}) => {
   return (
     <svg width="17" height="18" viewBox="0 0 17 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <g clip-path="url(#clip0)">
-      <path d="M8.72934 14.9684C12.1317 14.9684 14.8898 12.2102 14.8898 8.80786C14.8898 5.40552 12.1317 2.64737 8.72934 2.64737C5.32699 2.64737 2.56885 5.40552 2.56885 8.80786C2.56885 9.03369 2.581 9.25669 2.60468 9.47622" stroke="#34A7BA" stroke-linecap="round"/>
-      <path d="M10.7293 11.4827C11.5426 10.8736 12.069 9.90216 12.069 8.80782C12.069 6.96333 10.5737 5.46808 8.72921 5.46808C7.35546 5.46808 6.17544 6.29751 5.6626 7.4829" stroke="#34A7BA" stroke-linecap="round"/>
-      <path d="M5.29885 12.7769L5.20302 12.5114L4.92626 12.4563L2.95379 12.0633L8.00619 9.47711L6.13796 15.101L5.29885 12.7769Z" fill="#34A7BA" stroke="#34A7BA" stroke-linecap="round"/>
+      <g clipPath="url(#clip0)">
+      <path d="M8.72934 14.9684C12.1317 14.9684 14.8898 12.2102 14.8898 8.80786C14.8898 5.40552 12.1317 2.64737 8.72934 2.64737C5.32699 2.64737 2.56885 5.40552 2.56885 8.80786C2.56885 9.03369 2.581 9.25669 2.60468 9.47622" stroke="#34A7BA" strokeLinecap="round"/>
+      <path d="M10.7293 11.4827C11.5426 10.8736 12.069 9.90216 12.069 8.80782C12.069 6.96333 10.5737 5.46808 8.72921 5.46808C7.35546 5.46808 6.17544 6.29751 5.6626 7.4829" stroke="#34A7BA" strokeLinecap="round"/>
+      <path d="M5.29885 12.7769L5.20302 12.5114L4.92626 12.4563L2.95379 12.0633L8.00619 9.47711L6.13796 15.101L5.29885 12.7769Z" fill="#34A7BA" stroke="#34A7BA" strokeLinecap="round"/>
       </g>
       <defs>
       <clipPath id="clip0">
@@ -183,20 +183,20 @@ const Events_cqSVG = ({ size = 16, color, extraClass }) => {
       <path d="M35.5518 2.64595C35.5518 1.13398 34.4178 0 32.9058 0C31.3939 0 30.2599 1.13398 30.2599 2.64595V12.4738C30.2599 13.9858 31.3939 15.1197 32.9058 15.1197C34.4178 15.1197 35.5518 13.9858 35.5518 12.4738V2.64595Z" fill="url(#paint3_linear)"/>
       <defs>
       <linearGradient id="paint0_linear" x1="11.4019" y1="54.585" x2="47.9665" y2="13.933" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#7A6DC9"/>
-      <stop offset="1" stop-color="#5DB9C8"/>
+      <stop stopColor="#7A6DC9"/>
+      <stop offset="1" stopColor="#5DB9C8"/>
       </linearGradient>
       <linearGradient id="paint1_linear" x1="11.4019" y1="54.585" x2="47.9665" y2="13.933" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#7A6DC9"/>
-      <stop offset="1" stop-color="#5DB9C8"/>
+      <stop stopColor="#7A6DC9"/>
+      <stop offset="1" stopColor="#5DB9C8"/>
       </linearGradient>
       <linearGradient id="paint2_linear" x1="11.4019" y1="54.585" x2="47.9665" y2="13.933" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#7A6DC9"/>
-      <stop offset="1" stop-color="#5DB9C8"/>
+      <stop stopColor="#7A6DC9"/>
+      <stop offset="1" stopColor="#5DB9C8"/>
       </linearGradient>
       <linearGradient id="paint3_linear" x1="11.4019" y1="54.585" x2="47.9665" y2="13.933" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#7A6DC9"/>
-      <stop offset="1" stop-color="#5DB9C8"/>
+      <stop stopColor="#7A6DC9"/>
+      <stop offset="1" stopColor="#5DB9C8"/>
       </linearGradient>
       </defs>
     </svg>
@@ -209,8 +209,8 @@ const Funnels_cqSVG = ({ size = 16, color, extraClass }) => {
       <path d="M12.7733 13.8122L16.172 18.5816C10.4264 19.4265 6.82709 20.9632 6.07317 21.9979C7.16149 23.4918 14.1595 26.0265 24.9819 26.0326C35.8043 26.0387 42.8084 23.4918 43.8906 21.9979C43.1367 20.9632 39.5374 19.4265 33.7979 18.5816L37.1966 13.8122C43.6109 15.0734 49.2106 17.5469 49.2106 21.9979C49.2112 22.7982 49.0171 23.5865 48.6452 24.2938C48.2756 24.8882 47.8695 25.4587 47.4292 26.002L30.7944 46.206C29.6646 47.5683 29.045 49.2863 29.0433 51.0611V58.0835C29.0433 58.3373 28.9933 58.5885 28.8962 58.8226C28.799 59.0567 28.6567 59.269 28.4774 59.4473C28.2981 59.6256 28.0854 59.7662 27.8517 59.8611C27.618 59.9559 27.3679 60.0031 27.116 59.9998H22.86C22.6101 59.9998 22.3626 59.9503 22.1317 59.854C21.9008 59.7577 21.6911 59.6165 21.5143 59.4386C21.3376 59.2606 21.1974 59.0494 21.1018 58.8169C21.0062 58.5844 20.957 58.3352 20.957 58.0835V51.0856C20.9553 49.3108 20.3357 47.5928 19.2059 46.2305L2.57111 26.0265C2.13082 25.4832 1.7247 24.9127 1.35511 24.3183C0.983187 23.611 0.789046 22.8227 0.789674 22.0224C0.759274 17.5408 6.35893 15.0673 12.7733 13.8122ZM16.2754 8.57141C16.0804 8.95798 15.9954 9.39132 16.0297 9.82352C16.064 10.2557 16.2164 10.6699 16.4699 11.0204L23.0728 20.351C23.2899 20.6568 23.5764 20.9061 23.9085 21.0781C24.2405 21.25 24.6085 21.3397 24.9819 21.3397C25.3553 21.3397 25.7233 21.25 26.0553 21.0781C26.3874 20.9061 26.6738 20.6568 26.891 20.351L33.4939 11.0204C33.7456 10.6671 33.8956 10.2507 33.9274 9.81706C33.9592 9.38343 33.8717 8.94936 33.6743 8.56262C33.4769 8.17589 33.1774 7.85148 32.8088 7.62511C32.4401 7.39873 32.0166 7.27917 31.5848 7.27957H28.8792V0H21.0907V7.30406H18.3608C17.931 7.30156 17.5089 7.41856 17.141 7.64217C16.773 7.86579 16.4735 8.18734 16.2754 8.57141Z" fill="url(#paint0_linear)"/>
       <defs>
       <linearGradient id="paint0_linear" x1="8.67721" y1="51.1735" x2="42.9435" y2="20.4623" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#7A6DC9"/>
-      <stop offset="1" stop-color="#5DB9C8"/>
+      <stop stopColor="#7A6DC9"/>
+      <stop offset="1" stopColor="#5DB9C8"/>
       </linearGradient>
       </defs>
     </svg> 
@@ -222,8 +222,8 @@ const Campaigns_cqSVG = ({ size = 16, color, extraClass }) => {
       <path fillRule="evenodd" clipRule="evenodd" d="M27.0428 3.03676C27.5515 2.10091 27.2053 0.929841 26.2694 0.421092C25.3336 -0.0876567 24.1625 0.258572 23.6538 1.19442L21.6834 4.81895C22.9979 5.07042 24.2845 5.40084 25.5378 5.80508L27.0428 3.03676ZM50.795 27.6974L47.3346 29.6896C47.0432 28.3864 46.6737 27.1128 46.2314 25.8738L48.8704 24.3544C49.7936 23.823 50.9728 24.1405 51.5042 25.0636C52.0357 25.9868 51.7181 27.166 50.795 27.6974ZM46.8518 16.0265L42.9867 19.2687C42.2894 18.1808 41.5292 17.137 40.7113 16.1426L44.3728 13.0712C45.1889 12.3866 46.4054 12.4932 47.0899 13.3093C47.7745 14.1254 47.6679 15.3419 46.8518 16.0265ZM38.5149 6.94445L35.3608 10.9673C34.34 10.1833 33.2715 9.4583 32.1603 8.79751L35.4794 4.56437C36.1366 3.72612 37.349 3.57938 38.1872 4.23663C39.0254 4.89387 39.1722 6.1062 38.5149 6.94445ZM21.4553 7.78314C22.3493 7.66313 23.2481 7.96695 23.8859 8.60477L43.1728 27.8917C43.8107 28.5296 44.1145 29.4284 43.9945 30.3224C43.8745 31.2164 43.3443 32.0032 42.5609 32.4502L23.4073 43.3786L27.8224 47.9029C28.9383 49.0465 28.9159 50.8781 27.7724 51.994C26.6288 53.1099 24.7972 53.0875 23.6813 51.944L18.2142 46.3416L15.6133 47.8256C14.4807 48.4718 13.0559 48.2806 12.1339 47.3585L4.41908 39.6438C3.49707 38.7218 3.30579 37.2969 3.95198 36.1644L19.3274 9.21674C19.7744 8.43329 20.5613 7.90316 21.4553 7.78314ZM10.8677 49.7155C8.43605 52.1472 4.4935 52.1472 2.06181 49.7155C-0.369886 47.2838 -0.369886 43.3413 2.06181 40.9096L10.8677 49.7155Z" fill="url(#paint0_linear)"/>
       <defs>
       <linearGradient id="paint0_linear" x1="8.63112" y1="45.0742" x2="38.7634" y2="12.3135" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#7A6DC9"/>
-      <stop offset="1" stop-color="#5DB9C8"/>
+      <stop stopColor="#7A6DC9"/>
+      <stop offset="1" stopColor="#5DB9C8"/>
       </linearGradient>
       </defs>
     </svg> 
@@ -239,25 +239,35 @@ const Attributions_cqSVG = ({ size = 16, color, extraClass }) => {
       <path d="M45.0011 35.9782C42.5973 35.9782 40.3382 35.0418 38.6387 33.3429C35.1288 29.8336 35.13 24.1245 38.6381 20.6164C40.3382 18.9175 42.5985 17.9823 45.0011 17.9811C47.4036 17.9805 49.664 18.9175 51.3641 20.6176C54.8722 24.1269 54.8716 29.8336 51.3629 33.3429C49.6634 35.0424 47.4042 35.9794 45.0011 35.9782Z" fill="url(#paint3_linear)"/>
       <defs>
       <linearGradient id="paint0_linear" x1="8.8001" y1="45.9926" x2="39.542" y2="11.744" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#7A6DC9"/>
-      <stop offset="1" stop-color="#5DB9C8"/>
+      <stop stopColor="#7A6DC9"/>
+      <stop offset="1" stopColor="#5DB9C8"/>
       </linearGradient>
       <linearGradient id="paint1_linear" x1="8.8001" y1="45.9926" x2="39.542" y2="11.744" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#7A6DC9"/>
-      <stop offset="1" stop-color="#5DB9C8"/>
+      <stop stopColor="#7A6DC9"/>
+      <stop offset="1" stopColor="#5DB9C8"/>
       </linearGradient>
       <linearGradient id="paint2_linear" x1="8.8001" y1="45.9926" x2="39.542" y2="11.744" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#7A6DC9"/>
-      <stop offset="1" stop-color="#5DB9C8"/>
+      <stop stopColor="#7A6DC9"/>
+      <stop offset="1" stopColor="#5DB9C8"/>
       </linearGradient>
       <linearGradient id="paint3_linear" x1="8.8001" y1="45.9926" x2="39.542" y2="11.744" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#7A6DC9"/>
-      <stop offset="1" stop-color="#5DB9C8"/>
+      <stop stopColor="#7A6DC9"/>
+      <stop offset="1" stopColor="#5DB9C8"/>
       </linearGradient>
       </defs>
     </svg> 
   );
 }  
+
+const FilterSVG = ({size = 20, color, extraClass}) => {
+  return (
+    <svg width={size} height={size} className={extraClass} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M15.5001 4H3.13068C2.19431 4 1.66521 5.07454 2.23612 5.81673L7.89243 13.1699V19.5769C7.89243 20.2053 8.65222 20.52 9.09658 20.0756L10.7139 18.4583V13.1699L16.3933 5.81859C16.9664 5.07673 16.4376 4 15.5001 4Z" fill="#8692A3"/>
+    <path d="M13.5355 15.2861C13.5355 14.8965 13.8513 14.5807 14.2408 14.5807H21.2946C21.6842 14.5807 22 14.8965 22 15.2861C22 15.6756 21.6842 15.9914 21.2946 15.9914H14.2408C13.8513 15.9914 13.5355 15.6756 13.5355 15.2861Z" fill="#8692A3"/>
+    <path d="M17.7677 11.0538C18.1573 11.0538 18.4731 11.3696 18.4731 11.7592V18.813C18.4731 19.2025 18.1573 19.5183 17.7677 19.5183C17.3782 19.5183 17.0623 19.2025 17.0623 18.813V11.7592C17.0623 11.3696 17.3782 11.0538 17.7677 11.0538Z" fill="#8692A3"/>
+    </svg> 
+  )
+}
 
 const Templates_cqSVG = ({ size = 16, color, extraClass }) => {
   return (    
@@ -272,36 +282,36 @@ const Templates_cqSVG = ({ size = 16, color, extraClass }) => {
       <path fillRule="evenodd" clipRule="evenodd" d="M16.964 21.428L8.92758 21.1908L9.02664 17.8517L17.063 18.0863L16.964 21.428Z" fill="url(#paint7_linear)"/>
       <defs>
       <linearGradient id="paint0_linear" x1="8.50394" y1="44.3186" x2="38.1652" y2="11.3829" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#7A6DC9"/>
-      <stop offset="1" stop-color="#5DB9C8"/>
+      <stop stopColor="#7A6DC9"/>
+      <stop offset="1" stopColor="#5DB9C8"/>
       </linearGradient>
       <linearGradient id="paint1_linear" x1="8.50394" y1="44.3186" x2="38.1652" y2="11.3829" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#7A6DC9"/>
-      <stop offset="1" stop-color="#5DB9C8"/>
+      <stop stopColor="#7A6DC9"/>
+      <stop offset="1" stopColor="#5DB9C8"/>
       </linearGradient>
       <linearGradient id="paint2_linear" x1="8.50394" y1="44.3186" x2="38.1652" y2="11.3829" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#7A6DC9"/>
-      <stop offset="1" stop-color="#5DB9C8"/>
+      <stop stopColor="#7A6DC9"/>
+      <stop offset="1" stopColor="#5DB9C8"/>
       </linearGradient>
       <linearGradient id="paint3_linear" x1="8.50394" y1="44.3186" x2="38.1652" y2="11.3829" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#7A6DC9"/>
-      <stop offset="1" stop-color="#5DB9C8"/>
+      <stop stopColor="#7A6DC9"/>
+      <stop offset="1" stopColor="#5DB9C8"/>
       </linearGradient>
       <linearGradient id="paint4_linear" x1="8.50394" y1="44.3186" x2="38.1652" y2="11.3829" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#7A6DC9"/>
-      <stop offset="1" stop-color="#5DB9C8"/>
+      <stop stopColor="#7A6DC9"/>
+      <stop offset="1" stopColor="#5DB9C8"/>
       </linearGradient>
       <linearGradient id="paint5_linear" x1="8.50394" y1="44.3186" x2="38.1652" y2="11.3829" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#7A6DC9"/>
-      <stop offset="1" stop-color="#5DB9C8"/>
+      <stop stopColor="#7A6DC9"/>
+      <stop offset="1" stopColor="#5DB9C8"/>
       </linearGradient>
       <linearGradient id="paint6_linear" x1="8.50394" y1="44.3186" x2="38.1652" y2="11.3829" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#7A6DC9"/>
-      <stop offset="1" stop-color="#5DB9C8"/>
+      <stop stopColor="#7A6DC9"/>
+      <stop offset="1" stopColor="#5DB9C8"/>
       </linearGradient>
       <linearGradient id="paint7_linear" x1="8.50394" y1="44.3186" x2="38.1652" y2="11.3829" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#7A6DC9"/>
-      <stop offset="1" stop-color="#5DB9C8"/>
+      <stop stopColor="#7A6DC9"/>
+      <stop offset="1" stopColor="#5DB9C8"/>
       </linearGradient>
       </defs>
       </svg>
@@ -311,17 +321,67 @@ const Templates_cqSVG = ({ size = 16, color, extraClass }) => {
 const HelpSVG = ({ size = 16, color, extraClass }) => {
   return (     
       <svg width={size} height={size} className={extraClass}  width="25" height="24" viewBox="0 0 25 24" fill="none" xmlns="http://www.w3.org/2000/svg"> 
-        <path fill-rule="evenodd" clip-rule="evenodd" d="M18.3416 5.55371H8.19543V4.05371H18.3416C19.3081 4.05371 20.0916 4.83721 20.0916 5.80371V16.25C20.0916 17.007 19.4683 17.75 18.7782 17.75H8.19543V16.25H18.3416C18.4797 16.25 18.5916 16.138 18.5916 16V5.80371C18.5916 5.66564 18.4797 5.55371 18.3416 5.55371Z" fill={color}/>
-        <path fill-rule="evenodd" clip-rule="evenodd" d="M18.1959 20.0201L11.3456 20.0201L11.3456 18.8201L18.1959 18.8201C18.5273 18.8201 18.7959 19.0887 18.7959 19.4201C18.7959 19.7514 18.5273 20.0201 18.1959 20.0201Z" fill={color}/>
+        <path fillRule="evenodd" clipRule="evenodd" d="M18.3416 5.55371H8.19543V4.05371H18.3416C19.3081 4.05371 20.0916 4.83721 20.0916 5.80371V16.25C20.0916 17.007 19.4683 17.75 18.7782 17.75H8.19543V16.25H18.3416C18.4797 16.25 18.5916 16.138 18.5916 16V5.80371C18.5916 5.66564 18.4797 5.55371 18.3416 5.55371Z" fill={color}/>
+        <path fillRule="evenodd" clipRule="evenodd" d="M18.1959 20.0201L11.3456 20.0201L11.3456 18.8201L18.1959 18.8201C18.5273 18.8201 18.7959 19.0887 18.7959 19.4201C18.7959 19.7514 18.5273 20.0201 18.1959 20.0201Z" fill={color}/>
         <path d="M6.5 5.92012C6.5 4.55868 7.28802 4.0647 8.19543 4.0647V17.7523C7.47691 17.7523 7.53169 18.82 8.19543 18.82H6.5C6.5 18.82 6.5 7.28156 6.5 5.92012Z" fill={color}/>
-        <path fill-rule="evenodd" clip-rule="evenodd" d="M9.68952 20.02H7.7C7.03726 20.02 6.5 19.4827 6.5 18.82H9.68952V20.02Z" fill={color}/>
-        <path d="M10.2546 4.82422V16.7312" stroke={color} stroke-width="0.8"/>
+        <path fillRule="evenodd" clipRule="evenodd" d="M9.68952 20.02H7.7C7.03726 20.02 6.5 19.4827 6.5 18.82H9.68952V20.02Z" fill={color}/>
+        <path d="M10.2546 4.82422V16.7312" stroke={color} strokeWidth="0.8"/>
         <path d="M10.5 23V17.6299H14.5V23L12.5 21.2926L10.5 23Z" fill={color}/> 
       </svg>
 
 
   );
-}  
+}
+
+const TrashSVG = ({size = 24, color, extraClass}) => {
+  return (
+    <svg width={size} height={size} className={extraClass} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M9.53163 4.50572C9.53163 3.37618 10.4473 3 11.5768 3C12.7064 3 13.6221 3.37618 13.6221 4.50572H9.53163Z" fill="#8692A3"/>
+      <path d="M4.12945 7.60979C3.7563 6.83599 4.22629 5.91997 5.07249 5.7718L10.2863 4.85885C11.1352 4.7102 12.0035 4.7102 12.8524 4.85885L18.0662 5.7718C18.9124 5.91997 19.3824 6.83599 19.0093 7.60979H4.12945Z" fill="#8692A3"/>
+      <path d="M5.63496 9.09759H17.5038L16.2008 19.6938C16.1091 20.4396 15.4756 21 14.7241 21H8.42782C7.67705 21 7.04391 20.4406 6.95137 19.6956L5.63496 9.09759Z" fill="#8692A3"/>
+    </svg> 
+  )
+}
+const TimesSVG = ({size = 24, color, extraClass}) => {
+  return (
+    <svg width={size} height={size} className={extraClass} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <g clipPath="url(#clip0)">
+      <path fillRule="evenodd" clipRule="evenodd" d="M24.4853 8.73369C25.006 8.21299 25.006 7.36877 24.4853 6.84807C23.9646 6.32737 23.1204 6.32737 22.5997 6.84807L16 13.4477L9.40034 6.84807C8.87964 6.32737 8.03542 6.32737 7.51472 6.84807C6.99402 7.36877 6.99402 8.21299 7.51472 8.73369L14.1144 15.3334L7.51472 21.933C6.99402 22.4537 6.99402 23.2979 7.51472 23.8186C8.03542 24.3393 8.87964 24.3393 9.40034 23.8186L16 17.219L22.5997 23.8186C23.1204 24.3393 23.9646 24.3393 24.4853 23.8186C25.006 23.2979 25.006 22.4537 24.4853 21.933L17.8856 15.3334L24.4853 8.73369Z" fill="#8692A3"/>
+      </g>
+      <defs>
+      <clipPath id="clip0">
+      <rect width={size} height={size} className={extraClass} fill="white"/>
+      </clipPath>
+      </defs>
+    </svg>
+    
+
+  )
+}
+const CalendarSVG = ({size = 24, color, extraClass}) => {
+  return (
+    <svg width={size} height={size} className={extraClass} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M10.6667 4.10734C10.6667 3.73915 10.3682 3.44067 10 3.44067C9.63181 3.44067 9.33333 3.73915 9.33333 4.10734V5.54786H8C5.79086 5.54786 4 7.33872 4 9.54786V22.7796C4 24.5219 5.2246 26.0243 6.93115 26.3756C12.9143 27.6073 19.0857 27.6073 25.0688 26.3756C26.7754 26.0243 28 24.5219 28 22.7796V9.54786C28 7.33872 26.2091 5.54786 24 5.54786V8.21453C24.7364 8.21453 25.3333 8.81148 25.3333 9.54786V22.7796C25.3333 23.2564 24.9982 23.6675 24.5312 23.7637C18.9027 24.9224 13.0973 24.9224 7.46883 23.7637C7.0018 23.6676 6.66667 23.2564 6.66667 22.7796V9.54786C6.66667 8.81148 7.26362 8.21453 8 8.21453H10.6667V4.10734Z" fill="#8692A3"/>
+<path d="M16.6667 4.21453C16.6667 3.84634 16.3682 3.54786 16 3.54786C15.6318 3.54786 15.3333 3.84634 15.3333 4.21453V5.54786H12V8.21453H16.6667V4.21453Z" fill="#8692A3"/>
+<path d="M22 3.54786C22.3682 3.54786 22.6667 3.84634 22.6667 4.21453V8.21453H18V5.54786H21.3333V4.21453C21.3333 3.84634 21.6318 3.54786 22 3.54786Z" fill="#8692A3"/>
+<path fillRule="evenodd" clipRule="evenodd" d="M20 13.0479C20 12.6797 19.7015 12.3812 19.3333 12.3812C18.9651 12.3812 18.6667 12.6797 18.6667 13.0479V14.8812H13.3333V13.2145C13.3333 12.8463 13.0349 12.5479 12.6667 12.5479C12.2985 12.5479 12 12.8463 12 13.2145V14.8812H6.66667C6.29848 14.8812 6 15.1797 6 15.5479C6 15.9161 6.29848 16.2145 6.66667 16.2145H12V18.8812H6.66667C6.29848 18.8812 6 19.1797 6 19.5479C6 19.916 6.29848 20.2145 6.66667 20.2145H12V24.2145C12 24.5827 12.2985 24.8812 12.6667 24.8812C13.0349 24.8812 13.3333 24.5827 13.3333 24.2145V20.2145H18.6667V24.2145C18.6667 24.5827 18.9651 24.8812 19.3333 24.8812C19.7015 24.8812 20 24.5827 20 24.2145V20.2145H25.3333C25.7015 20.2145 26 19.916 26 19.5479C26 19.1797 25.7015 18.8812 25.3333 18.8812H20V16.2145H25.3333C25.7015 16.2145 26 15.9161 26 15.5479C26 15.1797 25.7015 14.8812 25.3333 14.8812H20V13.0479ZM18.6667 16.2145H13.3333V18.8812H18.6667V16.2145Z" fill="#8692A3"/>
+</svg>
+
+  )
+}
+const GroupbySVG = ({size = 24, color, extraClass}) => {
+  return ( 
+  <svg width={size} height={size} className={extraClass}  viewBox="0 0 32 33" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M15 11.18H22C22.5523 11.18 23 11.6277 23 12.18C23 12.7323 22.5523 13.18 22 13.18H15V11.18Z" fill={color}/>
+  <path d="M13 15.18L13 22.18C13 22.7323 12.5523 23.18 12 23.18C11.4477 23.18 11 22.7323 11 22.18L11 15.18L13 15.18Z" fill={color}/>
+  <path d="M12.2492 9.26471V12.4618L9.04308 12.4618" stroke="#5949BC" strokeWidth="1.5" strokeLinecap="round"/>
+  <path d="M19.9859 15.757C19.9859 20.1812 19.9859 20.1812 15.4687 20.1812" stroke="#5949BC"/>
+  <path d="M16.0459 21.8572L16.3577 22.1816L17.0066 21.558L16.6948 21.2335L16.0459 21.8572ZM15.0592 20.1812L14.7367 19.8674L14.4333 20.1793L14.7348 20.493L15.0592 20.1812ZM16.6929 19.1473L17.0067 18.8247L16.3616 18.1972L16.0478 18.5197L16.6929 19.1473ZM16.6948 21.2335L15.3837 19.8694L14.7348 20.493L16.0459 21.8572L16.6948 21.2335ZM15.3818 20.495L16.6929 19.1473L16.0478 18.5197L14.7367 19.8674L15.3818 20.495Z" fill={color}/>
+  <path d="M21.3531 16.5626L19.986 15.18L18.6412 16.5626" stroke="#5949BC" strokeWidth="0.9" strokeLinecap="square"/>
+  </svg> 
+
+  )
+}
 
 
 
@@ -346,5 +406,10 @@ const HelpSVG = ({ size = 16, color, extraClass }) => {
     Campaigns_cqSVG,
     Attributions_cqSVG,
     Templates_cqSVG,
-    HelpSVG
+    HelpSVG,
+    FilterSVG,
+    TrashSVG,
+    TimesSVG,
+    CalendarSVG,
+    GroupbySVG
   }

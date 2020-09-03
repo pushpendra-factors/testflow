@@ -27,3 +27,11 @@ $primaryColor: #5949BC;
 	border-top-left-radius: 12px;
 	border-top-right-radius: 12px;
 }
+
+.composer_title {
+    display: flex;
+    justify-content: space-between;
+    div {
+        display: flex;
+    }  
+}

@@ -1,0 +1,131 @@
+$factorsDarkColor: #0E2647;
+$boxShadowPrimaryColor: #B7BEC8;
+$boxShadowSecondaryColor: #E7E9ED;
+
+.table {
+
+    :global(.ant-table.ant-table-bordered > .ant-table-container > .ant-table-content > table > thead > tr > th),
+    :global(.ant-table.ant-table-bordered > .ant-table-container > .ant-table-content > table > tbody > tr > td) {
+        border: none;
+    }
+
+    th.conversionColumn {
+        box-shadow: inset 0px -1px 0px $boxShadowPrimaryColor, inset -1px 0px 0px $boxShadowPrimaryColor;
+    }
+
+    th.lastColumn {
+        box-shadow: inset 0px -1px 0px $boxShadowPrimaryColor;
+    }
+
+    th {
+        box-shadow: inset 0px -1px 0px $boxShadowPrimaryColor, inset -1px 0px 0px $boxShadowSecondaryColor;
+    }
+
+    td {
+        box-shadow: inset 0px -1px 0px $boxShadowSecondaryColor, inset -1px 0px 0px $boxShadowSecondaryColor;
+    }
+
+    .conversionColumn {
+        box-shadow: inset 0px -1px 0px $boxShadowSecondaryColor, inset -1px 0px 0px $boxShadowPrimaryColor;
+    }
+
+    .lastColumn {
+        box-shadow: inset 0px -1px 0px $boxShadowSecondaryColor;
+    }
+
+    :global(th.ant-table-cell) {
+        font-style: normal;
+        font-weight: 500;
+        font-size: 12px;
+        line-height: 16px;
+        color: $factorsDarkColor;
+    }
+
+    :global(td.ant-table-cell) {
+        font-style: normal;
+        font-weight: normal;
+        font-size: 14px;
+        line-height: 20px;
+        color: $factorsDarkColor;
+    }
+
+    :global(.ant-table-thead > tr > th) {
+        background-color: white;
+    }
+
+    :global(.ant-checkbox-inner) {
+        border-radius: 4px;
+    }
+
+    :global(.ant-checkbox-checked .ant-checkbox-inner) {
+        background-color: $factorsDarkColor;
+        border-color: $factorsDarkColor;
+    }
+
+    :global(.ant-checkbox-indeterminate .ant-checkbox-inner::after) {
+        background-color: $factorsDarkColor;
+    }
+
+    :global(.ant-checkbox-input:focus + .ant-checkbox-inner) {
+        border-color: $factorsDarkColor;
+    }
+
+    :global(tr.ant-table-row-selected > td),
+    :global(.ant-table-tbody > tr.ant-table-row:hover > td) {
+        background: unset;
+    }
+
+    :global(.ant-table-tbody > tr.ant-table-row-selected:hover)>.conversionColumn,
+    :global(.ant-table-tbody > tr.ant-table-row-selected:hover)>.groupColumn,
+    :global(.ant-table-tbody > tr.ant-table-row-selected:hover > .ant-table-selection-column),
+    :global(tr.ant-table-row-selected)>.conversionColumn,
+    :global(tr.ant-table-row-selected)>.groupColumn,
+    :global(tr.ant-table-row-selected > .ant-table-selection-column) {
+        background: #F5F6F8;
+    }
+}
+
+.searchBar {
+    box-shadow: inset 0px -1px 0px $boxShadowPrimaryColor;
+
+    .breakupHeading {
+        font-family: 'Work Sans', sans-serif;
+        font-style: normal;
+        font-weight: 600;
+        font-size: 18px;
+        line-height: 24px;
+        letter-spacing: -0.01em;
+        color: $factorsDarkColor;
+    }
+
+    .downloadCSVHeading {
+        font-family: 'Work Sans', sans-serif;
+        font-style: normal;
+        font-weight: 600;
+        font-size: 14px;
+        line-height: 20px;
+        letter-spacing: -0.01em;
+        color: $factorsDarkColor;
+        opacity: 0.56;
+    }
+
+    .inputSearchBar {
+        border: none;
+        box-shadow: inset 0px -1px 0px $boxShadowPrimaryColor, inset 0px 1px 0px $boxShadowPrimaryColor;
+        padding: 1rem;
+
+        :global(input) {
+            font-family: 'Work Sans', sans-serif;
+            font-style: normal;
+            font-weight: 600;
+            font-size: 18px;
+            line-height: 24px;
+            letter-spacing: -0.01em;
+            color: $boxShadowPrimaryColor;
+        }
+
+        :global(.ant-input-prefix) {
+            margin-right: 0.5rem;
+        }
+    }
+}

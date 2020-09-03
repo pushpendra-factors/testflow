@@ -1,18 +1,26 @@
 import React, { useState } from 'react';
 import Header from './header';
-import PageContent from './PageContent';
+import ResultsPage from './ResultsPage';
 import QueryComposer from '../../components/QueryComposer';
 import CoreQueryHome from '../CoreQueryHome';
+import { Drawer, Button, Collapse, Select, Popover } from 'antd';
+import {SVG, Text} from 'factorsComponents';
+import styles from './index.module.scss';
 
 function CoreQuery() {
     const [drawerVisible, setDrawerVisible] = useState(false);
     const [showResult, setShowResult] = useState(false);
     const [queries, setQueries] = useState([]);
 
-    const addToQueries = (newEvent, index) => {
+    const queryChange = (newEvent, index, changeType = 'add') => {
         const queryupdated = [...queries];
         if(queryupdated[index]) {
-            queryupdated[index] = newEvent;
+            if(changeType === 'add') {
+                queryupdated[index] = newEvent;
+            } else {
+                queryupdated.splice(index, 1);
+            }
+            
         } else {
             queryupdated.push(newEvent);
         }
@@ -25,24 +33,46 @@ function CoreQuery() {
     }
 
     const closeDrawer = () => {
+        console.log("clickedd!!")
         setDrawerVisible(false);
+    }
+
+    const title = () => {
+        return (<div className={`flex justify-between items-center`}>
+            <div className={`flex`}>
+                <SVG name="teamfeed"></SVG>
+                <Text type={'title'} level={4} weight={`bold`} extraClass={`ml-2 m-0`}>Find event funnel for</Text> 
+            </div>
+            <span className={styles.composer_title__help}>
+                <Button type="text"><SVG name="play"></SVG>Help</Button>  
+                <Button type="text" onClick={()=>closeDrawer()}><SVG name="times"></SVG></Button>  
+            </span>
+            
+        </div>)
     }
 
     return (
         <>
+             <Drawer
+        title={title()}
+        placement="left" 
+        closable={false}
+        visible={drawerVisible}
+        onClose={closeDrawer} 
+        getContainer={false}
+        width={"600px"}
+        className={`fa-drawer`}
+      >
 
-            <QueryComposer
-                drawerVisible={drawerVisible}
-                queries={queries}
-                onClose={closeDrawer}
+            <QueryComposer  
+                queries={queries} 
                 runQuery={runQuery}
-                addEvent={addToQueries}
-            >
-
-            </QueryComposer>
+                eventChange={queryChange}
+            /> 
+      </Drawer>
 
             {
-                showResult ? (<PageContent setDrawerVisible={setDrawerVisible} queries={queries.map(elem => elem.label)} />) : (<CoreQueryHome setDrawerVisible={setDrawerVisible} />)
+                showResult ? (<ResultsPage setDrawerVisible={setDrawerVisible} queries={queries.map(elem => elem.label)} />) : (<CoreQueryHome setDrawerVisible={setDrawerVisible} />)
             }
 
         </>

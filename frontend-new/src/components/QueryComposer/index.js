@@ -1,27 +1,32 @@
 import React, { useState } from 'react';
-import { Drawer, Button } from 'antd';
-
-import {SVG} from 'factorsComponents';
+import { Drawer, Button, Collapse, Select, Popover } from 'antd';
+import {SVG, Text} from 'factorsComponents'; 
 import styles from './index.module.scss';
 import QueryBlock from './QueryBlock';
+import SeqSelector from './AnalysisSeqSelector';
+import GroupBlock from './GroupBlock';
 
-function QueryComposer({ drawerVisible, queries, onClose, runQuery, addEvent}) {
+const { Option } = Select;
 
-    if(!drawerVisible) {return null};
+const { Panel } = Collapse;
 
-    const title = () => {
-        return (<div className={styles.composer_title}>
-            <div>
-                <SVG name="teamfeed"></SVG>
-                <span className={styles.composer_title__heading}>Find event funnel for</span>
-            </div>
-            <span className={styles.composer_title__help}>
-                <SVG name="play"></SVG>
-                    Help
-            </span>
-            
-        </div>)
-    }
+function QueryComposer({ queries, runQuery, eventChange}) {
+
+    const [analyticsSeqOpen, setAnalyticsSeqVisible] = useState(false);
+
+    const [queryOptions, setQueryOptions] = useState({
+        groupBy: {
+            property: "",
+            eventValue: ""
+        },
+        event_analysis_seq: "",
+        session_analytics_seq: {
+            start: 1,
+            end: 2
+        }
+    }); 
+
+
 
     const queryList = () => {
         const blockList = [];
@@ -29,16 +34,16 @@ function QueryComposer({ drawerVisible, queries, onClose, runQuery, addEvent}) {
         queries.forEach((event, index) => {
             blockList.push(
                 <div className={styles.composer_body__query_block}>
-                    <QueryBlock index={index+1} event={event} eventChange={addEvent}></QueryBlock>
+                    <QueryBlock index={index+1} event={event} queries={queries} eventChange={eventChange}></QueryBlock>
                 </div>
             )
         });
 
         if(queries.length < 6) {
             blockList.push(
-            <div className={styles.composer_body__query_block}>
-                <QueryBlock index={queries.length+1} eventChange={addEvent}></QueryBlock>
-            </div>
+                <div className={styles.composer_body__query_block}>
+                    <QueryBlock index={queries.length+1} queries={queries} eventChange={eventChange}></QueryBlock>
+                </div>
             )
         }
 
@@ -47,11 +52,94 @@ function QueryComposer({ drawerVisible, queries, onClose, runQuery, addEvent}) {
 
     const groupByBlock = () => {
         if(queries.length >= 2) {
-            return (
-                <div className={styles.composer_body__query_block}>
-                    <span>Group By</span>
+            return ( 
+                <div className={`fa--query_block bordered `}>
+                    <GroupBlock groupBy={queryOptions.groupBy} events={queries}></GroupBlock>
                 </div>
             )
+        }
+    }
+
+    const setEventSequence = (value) => {
+        const options = Object.assign({}, queryOptions);
+        options.event_analysis_seq = value;
+        setQueryOptions(options);
+    }
+
+    const setAnalysisSequence = (seq) => {
+        const options = Object.assign({}, queryOptions);
+        options.session_analytics_seq = seq;
+        setQueryOptions(options);
+    }
+
+    const moreOptionsBlock = () => {
+        if(queries.length >= 2) {
+            return (
+                <div className={` fa--query_block bordered `}>
+                <Collapse bordered={false} expandIcon={()=>{}} expandIconPosition={`right`}>
+                    <Panel header={<div className={`flex justify-between items-center`}>
+                        <Text type={'title'} level={6} weight={'bold'} extraClass={`m-0 mb-2 inline`}>More options</Text>
+                        <SVG name="plus" />
+                        </div>
+                        }>
+                        <div className={styles.composer_body__event_sequence}>
+                            <span className={styles.composer_body__event_sequence__logo}>
+                                <SVG name="play"></SVG>
+                            </span>
+                            <span className={styles.composer_body__event_sequence__text}> Analyse events in the</span>
+                            <div className={styles.composer_body__event_sequence__select}>
+                                <Select 
+                                    showArrow={false} 
+                                    style={{ width: 200}} 
+                                    value="same_sequence" onChange={setEventSequence}>
+                                    <Option value="same_sequence"> Same Sequence</Option>
+                                    <Option value="exact_sequence"> Exact Sequence</Option>
+                                </Select>
+                            </div>
+                        </div>
+
+                        <div className={styles.composer_body__session_analytics}>
+                            <span className={styles.composer_body__session_analytics__logo}>
+                                <SVG name="play"></SVG>
+                            </span>
+
+                            <div className={styles.composer_body__session_analytics__selection}>
+                                <span className={styles.composer_body__session_analytics__text}> 
+                                    In Session Analytics
+                                </span>
+
+                                <div className={styles.composer_body__session_analytics__options}>
+                                    <Popover
+                                        content={
+                                            <SeqSelector 
+                                                seq={queryOptions.session_analytics_seq} 
+                                                queryCount={queries.length}
+                                                setAnalysisSequence={setAnalysisSequence}
+                                            >
+                                            </SeqSelector>
+                                        }
+                                        trigger="click"
+                                        visible={analyticsSeqOpen}
+                                        onVisibleChange={(visible) => setAnalyticsSeqVisible(visible)}
+                                    >
+                                        <Button type="secondary">
+                                            Between &nbsp;
+                                            {queryOptions.session_analytics_seq.start} 
+                                            &nbsp;
+                                                to 
+                                                &nbsp;
+                                            {queryOptions.session_analytics_seq.end} 
+                                        </Button>
+                                    </Popover>
+                                    <span>happened in the same session</span>
+
+                                </div>
+                            </div>
+                        </div>
+                    </Panel>
+                </Collapse>
+            </div>
+            );
         }
     }
 
@@ -61,32 +149,20 @@ function QueryComposer({ drawerVisible, queries, onClose, runQuery, addEvent}) {
 
             return (
                 <div className={styles.composer_footer}>
-                    <Button> Last Week </Button>
+                    <Button><SVG name={`calendar`} extraClass={`mr-1`} />Last Week </Button>
                     <Button type="primary" onClick={runQuery}>Run Query</Button> 
                 </div>
             )
         }
     }
 
-    return(
-        <Drawer
-        title={title()}
-        placement="left"
-        closable={true}
-        visible={drawerVisible}
-        onClose={onClose}
-        mask={false}
-        getContainer={false}
-        width={"600px"}
-        className={styles.query_composer}
-      >
+    return(  
         <div className={styles.composer_body}>
             {queryList()}
             {groupByBlock()}
-        </div>
-        {footer()}
-          
-      </Drawer>
+            {moreOptionsBlock()}
+            {footer()} 
+        </div> 
     )
 }
 

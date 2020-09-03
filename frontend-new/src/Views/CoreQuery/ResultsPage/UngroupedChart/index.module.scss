@@ -1,0 +1,97 @@
+$textColor: #3E516C;
+
+.ungroupedChart {
+    :global(.c3-legend-item) {
+        display: none;
+    }
+
+    :global(.area) {
+        fill: #E7E9ED;
+    }
+
+    :global(.axis.axis--y path) {
+        display: none;
+    }
+
+    :global(.axis.axis--y g.tick line) {
+        display: none;
+    }
+
+    :global(.axis.axis--x g.tick line) {
+        display: none;
+    }
+
+    :global(.axis.axis--x path) {
+        stroke: #E7E9ED;
+    }
+
+    :global(.y.axis-grid path) {
+        display: none;
+    }
+
+    :global(.opaque) {
+        opacity: 0.5;
+    }
+
+    :global(.c3-ygrid) {
+        stroke-dasharray: 0 !important;
+    }
+
+    :global(.tick text) {
+        font-size: 12px;
+        line-height: 1rem;
+        fill: $textColor;
+        font-weight: normal;
+        font-style: normal;
+    }
+
+    :global(.c3-axis.c3-axis-y .tick line),
+    :global(.c3-axis.c3-axis-x .tick line),
+    :global(.c3-axis.c3-axis-y .domain),
+    :global(.c3-xgrid-focus),
+    :global(.c3-axis.c3-axis-x .domain) {
+        display: none;
+    }
+
+    :global(.c3-grid line) {
+        stroke: #E7E9ED !important;
+    }
+
+    :global(.c3-axis .tick text) {
+        font-size: 12px;
+        line-height: 1rem;
+        fill: $textColor;
+        font-weight: normal;
+        font-style: normal;
+    }
+
+    :global(.toolTip) {
+        position: absolute;
+        display: none;
+        min-width: 80px;
+        height: auto;
+        background: none repeat scroll 0 0 #ffffff;
+        padding: 14px;
+        text-align: center;
+    }
+}
+
+.changePercents,
+.valueText {
+    font-weight: 600;
+    font-size: 14px;
+    transition: '2s';
+    color: #3E516C;
+    font-family: 'Work Sans', sans-serif;
+}
+
+.overAllConversionLine {
+    border-left-color: #B7BEC8;
+}
+
+.conversionText {
+    color: $textColor;
+    font-style: normal;
+    line-height: 24px;
+    font-size: 20px;
+}

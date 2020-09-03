@@ -1,5 +1,12 @@
 import tableStyles from './DataTable/index.module.scss'
 
+const windowSize = {
+    w: window.outerWidth,
+    h: window.outerHeight,
+    iw: window.innerWidth,
+    ih: window.innerHeight
+};
+
 export const generateGroupedChartsData = (data, groups) => {
     let result = data.map(elem => {
         let values = [];
@@ -50,10 +57,11 @@ export const generateTableColumns = (data) => {
             },
         }
     ]
-    let eventColumns = data.map(elem => {
+    let eventColumns = data.map((elem, index) => {
         return {
             title: elem.name,
             dataIndex: elem.name,
+            className: index === data.length - 1 ? tableStyles.lastColumn : '',
             sorter: (a, b) => {
                 return a[elem.name] - b[elem.name]
             },
@@ -79,7 +87,7 @@ export const generateTableData = (data, groups) => {
     return result;
 }
 
-const dummyData = [
+const groupedDummyData = [
     {
         index: 1,
         color: '#014694',
@@ -148,9 +156,61 @@ const dummyData = [
     }
 ];
 
+const ungroupedDummyData = [
+    {
+        value: 100
+    },
+    {
+        value: 60
+    },
+    {
+        value: 30
+    },
+    {
+        value: 10
+    },
+    {
+        value: 5
+    },
+    {
+        value: 3
+    }
+]
+
 export const generateDummyData = (labels) => {
     let result = labels.map((elem, index) => {
-        return { ...dummyData[index], name: elem };
+        return { ...groupedDummyData[index], name: elem };
     });
     return result;
+}
+
+export const generateUngroupedChartsData = (data) => {
+    let result = data.map((elem, index) => {
+        return {
+            event: elem.name,
+            value: ungroupedDummyData[index].value
+        }
+    })
+    return result;
+}
+
+export const checkForWindowSizeChange = (callback) => {
+    if (window.outerWidth !== windowSize.w || window.outerHeight !== windowSize.h) {
+        setTimeout(() => {
+            windowSize.w = window.outerWidth; // update object with current window properties
+            windowSize.h = window.outerHeight;
+            windowSize.iw = window.innerWidth;
+            windowSize.ih = window.innerHeight;
+        }, 0)
+        callback();
+    }
+
+    //if the window doesn't resize but the content inside does by + or - 5%
+    else if (window.innerWidth + window.innerWidth * .05 < windowSize.iw ||
+        window.innerWidth - window.innerWidth * .05 > windowSize.iw) {
+        setTimeout(() => {
+            windowSize.iw = window.innerWidth;
+        }, 0);
+        callback();
+    }
 }
