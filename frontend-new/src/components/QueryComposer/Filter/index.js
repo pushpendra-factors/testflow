@@ -5,7 +5,7 @@ import {SVG, Text} from 'factorsComponents';
 import { Select} from 'antd';
 const { OptGroup, Option } = Select;
 
-function Filter({filter}) {
+function Filter({filter, insertFilters}) {
     const [filterType, setFilterTypeState] = useState("props");
 
     const [newFilter, setNewFilter] = useState({
@@ -20,17 +20,13 @@ function Filter({filter}) {
                 label: "Event Properties",
                 icon: "fav",
                 values: [
-                    "Cart Updated",
-                    "Paid",
-                    "Add to WishList",
-                    "Checkout"
+                    "Country",
                     
                 ]
         }, {
                 label: "User Properties",
                 icon: "virtual",
                 values: [
-                    "Country",
                     "City",
                 ]
         }
@@ -96,6 +92,13 @@ function Filter({filter}) {
         return options;
     }
 
+    const sendFilters = () => {
+        if(newFilter["props"].length < 1) {return null};
+        if(newFilter["operator"].length < 1) {return null};
+        if(newFilter["values"].length < 1) {return null};
+        insertFilters(newFilter);
+    }
+
     
     if(filter) {return null};
 
@@ -113,7 +116,7 @@ function Filter({filter}) {
         <div className={`fa--query_block--filters flex justify-start items-center`}>
             <span  className={`ml-10`}><Text type={'title'} level={7} weight={'thin'} extraClass={`m-0`}>Where</Text> </span>
              <div className={`fa--query_block--filters-values flex justify-start items-center ml-4`}>
-                <Select mode="tags" showSearch style={{ width: 240}} onChange={onFilterEventChange} open={true} showArrow={false}>
+                <Select mode="tags" maxTagCount={6} onDropdownVisibleChange={(open) => !open? sendFilters(): null} showSearch style={{ width: 240}} onChange={onFilterEventChange} defaultOpen={true} showArrow={false}>
                     {renderFilterOptions()}
                 </Select>
             </div>

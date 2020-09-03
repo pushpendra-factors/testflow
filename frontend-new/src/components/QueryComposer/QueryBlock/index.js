@@ -87,9 +87,15 @@ function QueryBlock({index, event, eventChange}) {
         setFilterDDVisible(true);
     }
 
+    const insertFilters = (filter) => {
+        const newEvent = Object.assign({} ,event);
+        newEvent.filters.push(filter);
+        eventChange(newEvent, index-1);
+    }
+
     const selectEventFilter = () => {
         if(isFilterDDVisible) {
-            return <Filter></Filter>
+            return <Filter insertFilters={insertFilters}></Filter>
         }
     }
 
