@@ -2,7 +2,7 @@ $textColor: #3E516C;
 
 .groupedChart {
 
-    margin: 20px 0px 20px 0px;
+    // margin: 20px 0px 20px 0px;
 
     :global(.c3-legend-item-tile) {
         shape-rendering: auto;
@@ -50,9 +50,10 @@ $textColor: #3E516C;
         box-sizing: border-box;
         box-shadow: 0px 6px 20px rgba(0, 0, 0, 0.2);
         border-radius: 12px;
-        padding-left: 1rem;
-        padding-right: 1rem;
+        padding: 0 1rem;
         color:$textColor;
+        font-family: 'Work Sans', sans-serif;
+        width: 250px;
     }
 }
 

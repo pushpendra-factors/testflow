@@ -67,13 +67,11 @@ $textColor: #3E516C;
 
     :global(div.toolTip) {
         position: absolute;
-        text-align: left;
         width: 200px;
         padding: 12px 16px 12px 16px;
-        background: white;
+        background: #FFFFFF;
         border: 1px solid #B7BEC8;
         border-radius: 12px;
-        pointer-events: none;
         font-family: 'Work Sans', sans-serif;
         word-wrap: break-word;
         box-shadow: 0px 6px 20px rgba(0, 0, 0, 0.2);

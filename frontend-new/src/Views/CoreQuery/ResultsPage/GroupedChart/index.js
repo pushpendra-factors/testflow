@@ -68,7 +68,7 @@ function GroupedChart({ eventsData, groups, chartData, chartColors }) {
                     d3.select(chartRef.current)
                         .selectAll(`.c3-shapes`)
                         .selectAll('path')
-                        .style('opacity', '0.1')
+                        .style('opacity', '0.5')
 
                     let id = elemData.name;
                     if (!id) id = elemData.id;
@@ -102,7 +102,7 @@ function GroupedChart({ eventsData, groups, chartData, chartColors }) {
                             if (index === elemData.index) {
                                 d3.select(node).style('opacity', 1)
                             } else {
-                                d3.select(node).style('opacity', 0.1)
+                                d3.select(node).style('opacity', 0.5)
                             }
                         })
                 },
