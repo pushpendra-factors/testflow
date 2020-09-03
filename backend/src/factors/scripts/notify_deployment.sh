@@ -71,8 +71,10 @@ fi
 
 # Remove any commits of type 'Merge branch ...' to avoid clutterring.
 lines_to_delete=`echo "${highlights}" | grep -n -B2 "Merge branch" | cut -d'-' -f1 | cut -d':' -f1`
-lines_to_delete=`echo ${lines_to_delete} | sed 's/ /d;/g'`
-highlights=`echo "${highlights}" | sed "${lines_to_delete}d"`
+if [[ "${lines_to_delete}" != "" ]]; then
+    lines_to_delete=`echo ${lines_to_delete} | sed 's/ /d;/g'`
+    highlights=`echo "${highlights}" | sed "${lines_to_delete}d"`
+fi
 
 deployer_email=`gcloud config list account --format "value(core.account)" 2> /dev/null`
 
