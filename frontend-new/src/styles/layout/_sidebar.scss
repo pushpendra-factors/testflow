@@ -9,12 +9,68 @@
     left: 0;
     z-index: 1001;
 
-    a{
+    //hiding scrollbar
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+    &::-webkit-scrollbar {
+        display: none;
+    }
+    .ant-row
+    {
+        position: relative;
+    }
+    .fa-aside--divider
+    {
+        width: 40px;
+        margin: 0 auto;
+        height: 1px;
+        background-color: $fa-color--mono-4;
         opacity: 0.5;
+    }
+
+    a{
+        height: 40px;
+        width: 40px;
+        border-radius: 8px;
+        opacity: 0.5;
+        background-color: transparent;
         -webkit-transition: all .3s cubic-bezier(.645,.045,.355,1);
         transition: all .3s cubic-bezier(.645,.045,.355,1); 
+        display: flex;
+        justify-content: center;
+        align-items: center;
         &.active{
+            -webkit-transition: all .3s cubic-bezier(.645,.045,.355,1);
+            transition: all .3s cubic-bezier(.645,.045,.355,1); 
             opacity: 1;
+            &:hover{
+                background-color: transparent;
+            }
+            &:before{
+                content: '';
+                position: absolute;
+                width: 3px;
+                height: 24px;
+                left: 0px;
+                top: 16px;
+                background-color: $fa-color--white;
+                border-top-right-radius: 8px;
+                border-bottom-right-radius: 8px;
+            }
+        }
+        &:hover{
+            background-color: $fa-color--mono-5;
+        }
+
+        &.fa-brand-logo{
+            &:hover{
+                background-color: transparent;
+            }
+            &.active{
+                &:before{
+                    display: none;
+                }
+            }
         }
     }
 }
