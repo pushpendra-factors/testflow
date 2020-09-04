@@ -31,6 +31,7 @@ func main() {
 	dbUser := flag.String("db_user", "autometa", "")
 	dbName := flag.String("db_name", "autometa", "")
 	dbPass := flag.String("db_pass", "@ut0me7a", "")
+	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 
 	flag.Parse()
 	defer util.NotifyOnPanic(taskID, *envFlag)
@@ -54,6 +55,7 @@ func main() {
 			Name:     *dbName,
 			Password: *dbPass,
 		},
+		SentryDSN: *sentryDSN,
 	}
 	C.InitConf(config.Env)
 
@@ -61,6 +63,9 @@ func main() {
 	if err != nil {
 		pbLog.WithError(err).Fatal("Failed to initialize DB")
 	}
+
+	C.InitSentryLogging(config.SentryDSN, config.AppName)
+	defer C.SafeFlushSentryHook()
 
 	var cloudManager filestore.FileManager
 	if *envFlag == "development" {
@@ -105,6 +110,5 @@ func main() {
 		for _, err = range projectErrors {
 			pbLog.WithError(err).Error("Error while processing files for Bigquery")
 		}
-		panic(projectErrors)
 	}
 }

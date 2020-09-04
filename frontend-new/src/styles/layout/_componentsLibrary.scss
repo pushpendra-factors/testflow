@@ -28,3 +28,37 @@
     height: 55px;
     width: 55px;
 }
+
+
+.fa-demo-grid--modal{
+    top: 0; 
+    left: 64px !important;
+    height: 100%;
+    width: calc(100vw - 64px) !important;
+    padding-bottom: 0;
+    margin: 0 !important;
+    transform-origin: 0 !important;
+    overflow: hidden !important;
+
+    .ant-modal-content{
+    background-color: transparent;
+    height: 100%;
+    }
+    .ant-modal-body
+    {
+        padding: 0;
+    }
+}
+.fa-demo-grid--col
+{
+    background-color: #002e6f12;
+    // padding: 24px;
+    // &.even{ 
+    //     background-color: #2b01011f;
+    // }
+    .fa-demo-grid--col-content{
+        width: 100%;
+        background-color: #ea62622e;
+        height: calc(100vh - 55px);
+    }
+}

@@ -61,6 +61,23 @@ def build_properties_param_str(properties=[]):
         param_str = param_str + 'properties=' + prop
     return param_str
 
+def get_all_properties_by_doc_type(doc_type, api_key):
+    url = "https://api.hubapi.com/properties/v1/"+doc_type+"/properties?"
+    parameter_dict = { 'hapikey': api_key }
+    parameters = urllib.parse.urlencode(parameter_dict)
+    get_url = url + parameters
+    r = requests.get(url= get_url, headers = {})
+    if not r.ok:
+        log.error("Failure response %d from hubspot on get_properties_by_doc_type for doc type %s", r.status_code, doc_type)
+        return [], r.ok
+
+    response_dict = json.loads(r.text)
+    properties = []
+    for contact_property in response_dict:
+        properties.append(contact_property["name"])
+    return properties, r.ok
+
+
 def sync_contacts(project_id, api_key, sync_all=False):    
     if sync_all:
         # init sync all contacts.
@@ -74,13 +91,18 @@ def sync_contacts(project_id, api_key, sync_all=False):
     has_more = True
     count = 0
     parameter_dict = { 'hapikey': api_key, 'count': PAGE_SIZE }
+    properties, ok = get_all_properties_by_doc_type("contacts", api_key)
+    if not ok:
+        log.error("Failure loading properties for project_id %d on sync_contacts", project_id)
+        return
+
     while has_more:
         parameters = urllib.parse.urlencode(parameter_dict)
         get_url = url + parameters
 
-        # adds additional properties to fetch. like company.
-        properties = ["firstname", "lastname", "lastmodifieddate", "company"]
-        get_url = get_url + '&' + build_properties_param_str(properties)
+        # contacts api uses property instead of properties in query parameter
+        properties_str = "&".join([ "property="+property_name for property_name in properties ])
+        get_url = get_url + '&' + properties_str
 
         log.warning("Downloading contacts for project_id %d from url %s.", project_id, get_url)
         r = requests.get(url= get_url, headers = {})
@@ -123,8 +145,13 @@ def sync_deals(project_id, api_key, sync_all=False):
         parameter_dict = {'hapikey': api_key, 'limit': PAGE_SIZE}
 
         # mandatory property needed on response, returns no properties if not given.
-        if sync_all: parameter_dict['properties'] = 'dealname'
-        
+        properties = []
+        if sync_all:
+            properties, ok = get_all_properties_by_doc_type("deals", api_key)
+            if not ok:
+                log.error("Failure loading properties for project_id %d on sync_deals", project_id)
+                break
+
         has_more = True
         while has_more:
             parameters = urllib.parse.urlencode(parameter_dict)
@@ -132,10 +159,6 @@ def sync_deals(project_id, api_key, sync_all=False):
 
             # List of all properties to get, returns empty properties if not given.
             if sync_all:
-                properties = [ "dealname", "dealstage", "pipeline", "closedate", "createdate",
-                "dealstage", "days_to_close", "hs_createdate", "hs_closed_amount",
-                "hs_closed_amount_in_home_currency", "hs_lastmodifieddate", 
-                "hs_deal_stage_probability" ]
                 get_url = get_url + '&' + build_properties_param_str(properties)
                 get_url = get_url + '&includeAssociations=true'
 
@@ -218,8 +241,12 @@ def sync_companies(project_id, api_key, sync_all=False):
         count = 0
         parameter_dict = {'hapikey': api_key, 'limit': PAGE_SIZE}
 
+        properties = []
         if sync_all:
-            parameter_dict['properties'] = 'name'
+            properties, ok = get_all_properties_by_doc_type("companies", api_key)
+            if not ok:
+                log.error("Failure loading properties for project_id %d on sync_companies", project_id)
+                return
 
         has_more = True
         while has_more:
@@ -227,10 +254,6 @@ def sync_companies(project_id, api_key, sync_all=False):
             get_url = url + parameters
             
             if sync_all:
-                properties = ["name","is_public","industry","country","city","state","phone",
-                "timezone","description","total_money_raised","numberofemployees",
-                "linkedin_company_page","annualrevenue","founded_year",
-                "hs_analytics_num_page_views","zip","website","twitterhandle"]
                 get_url = get_url + '&' + build_properties_param_str(properties)
 
             log.warning("Downloading companies for project_id %d from url %s.", project_id, get_url)

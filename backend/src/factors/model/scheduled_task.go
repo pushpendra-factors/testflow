@@ -50,6 +50,7 @@ type EventArchivalTaskDetails struct {
 	EventCount    int64  `json:"event_count"`
 	FileCreated   bool   `json:"file_created"`
 	FilePath      string `json:"filepath"`
+	UsersFilePath string `json:"users_filepath"`
 	BucketName    string `json:"bucket_name"`
 }
 
@@ -62,6 +63,7 @@ type BigqueryUploadTaskDetails struct {
 	BigqueryTable     string          `json:"bq_table"`
 	ArchivalTaskID    string          `json:"archival_task_id"`
 	UploadStats       *postgres.Jsonb `json:"upload_stats"`
+	UsersUploadStats  *postgres.Jsonb `json:"users_supload_stats"`
 }
 
 // CreateScheduledTask Creates a new task entry in scheduled_tasks table.
@@ -194,7 +196,7 @@ func GetNewArchivalFileNamesAndEndTimeForProject(projectID uint64,
 	rows, err := db.Model(&ScheduledTask{}).
 		Where("project_id = ? AND task_type = ? AND (task_details->>'file_created')::bool=true"+
 			" AND (task_details->>'from_timestamp')::bigint between ? AND ?", projectID, TASK_TYPE_EVENTS_ARCHIVAL, startTime, endTime).
-		Select("id, task_details->>'filepath', task_details->>'from_timestamp', task_details->>'to_timestamp'").Rows()
+		Select("id, task_details->>'filepath', task_details->>'users_filepath', task_details->>'from_timestamp', task_details->>'to_timestamp'").Rows()
 	if err != nil {
 		log.WithError(err).Error("Query failed to get filenames")
 		return fileNameEndTimeMap, http.StatusInternalServerError
@@ -202,14 +204,16 @@ func GetNewArchivalFileNamesAndEndTimeForProject(projectID uint64,
 
 	for rows.Next() {
 		var fileName, taskID string
+		var usersFileName sql.NullString
 		var startTime, endTime int64
-		err = rows.Scan(&taskID, &fileName, &startTime, &endTime)
+		err = rows.Scan(&taskID, &fileName, &usersFileName, &startTime, &endTime)
 		if err != nil {
 			log.WithError(err).Error("Error while scanning row")
 			continue
 		}
 		fileNameEndTimeMap[endTime] = make(map[string]interface{})
 		fileNameEndTimeMap[endTime]["filepath"] = fileName
+		fileNameEndTimeMap[endTime]["users_filepath"] = usersFileName.String
 		fileNameEndTimeMap[endTime]["task_id"] = taskID
 		fileNameEndTimeMap[endTime]["start_time"] = startTime
 	}

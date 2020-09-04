@@ -1,0 +1,59 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    layer: queue-redis
+    env: production
+    project: factors-production
+  name: queue-redis
+  namespace: default
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      layer: queue-redis
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:      
+      labels:
+        layer: queue-redis
+    spec:
+      nodeSelector:
+        cloud.google.com/gke-nodepool: persistent-pool-highmem
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - name: queue-redis-storage
+          persistentVolumeClaim:
+            claimName: queue-redis-pvc
+      containers:
+      - name: queue-redis
+        image: us.gcr.io/factors-production/queue-redis:v0.01-e3fc852-562
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 6379
+        volumeMounts:
+        - name: queue-redis-storage
+          mountPath: "/usr/local/var/db/redis"
+        resources:
+          requests:
+            memory: "10G"
+            cpu: "1"
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        securityContext: {}
+        readinessProbe:
+          tcpSocket:
+            port: 6379
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        livenessProbe:
+          tcpSocket:
+            port: 6379
+          initialDelaySeconds: 10
+          periodSeconds: 10

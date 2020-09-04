@@ -46,9 +46,20 @@ commit_id=`echo "${latest_tag}" | cut -d'-' -f2`
 # Get the commit history.
 commit_history=`git log | grep -B10000 "commit ${commit_id}" | sed '$d' | grep -v '^[[:space:]]*$' | grep -e "^Author" -e "^Date" -e "^  " | sed 's/^  /      /g'`
 
+# For an old job being deployed after a long time, git log might not have data for last tag commit id.
+# So pick history from the latest commits.
+if [[ "${commit_history}" == "" ]]; then
+    commit_history=`git log | head -100 | sed '$d' | grep -v '^[[:space:]]*$' | grep -e "^Author" -e "^Date" -e "^  " | sed 's/^  /      /g'`
+fi
+
+# Commits after the most recent PR. To capture any hotfixes getting deployed added after PR.
+recent_non_pr_commits=`echo "${commit_history}" | grep -m1 -B1000 -e "(#[0-9]\+)$" | sed '$d' | sed '$d' | sed '$d'`
+
 # Highlights captures only pull requests information instead of entire commit history.
 # With grep -m5, takes only recent 5 pull requests, otherwise for old image, it will be flooded with PRs.
-highlights=`echo "${commit_history}" | grep -m5 -B2 -e "(#[0-9]\+)$"`
+pr_highlights=`echo "${commit_history}" | grep -m5 -B2 -e "(#[0-9]\+)$"`
+highlights="${recent_non_pr_commits}
+${pr_highlights}"
 if [[ "${highlights}" == "" ]]; then
     # If no pull request information available, use entire commit history.
     highlights="${commit_history}"
@@ -56,6 +67,13 @@ if [[ "${highlights}" == "" ]]; then
         echo "Found no new changes since last deployment."
         exit # Non error exit.
     fi
+fi
+
+# Remove any commits of type 'Merge branch ...' to avoid clutterring.
+lines_to_delete=`echo "${highlights}" | grep -n -B2 "Merge branch" | cut -d'-' -f1 | cut -d':' -f1`
+if [[ "${lines_to_delete}" != "" ]]; then
+    lines_to_delete=`echo ${lines_to_delete} | sed 's/ /d;/g'`
+    highlights=`echo "${highlights}" | sed "${lines_to_delete}d"`
 fi
 
 deployer_email=`gcloud config list account --format "value(core.account)" 2> /dev/null`

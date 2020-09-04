@@ -97,11 +97,17 @@ function bindAllFormsOnSubmit(appInstance, processCallback) {
 }
 
 function isPartOfForm(e) {
-    return e ? !!e.form : false;
+    var isForm = e ? !!e.form : false;
+    if (isForm) {
+        // Only forms with submit button should be considered as standard form.
+        return e.form.querySelectorAll("[type='submit']") > 0;
+    }
+
+    return false;
 }
 
 function bindAllNonFormButtonOnClick(appInstance, processCallback) {
-    var buttons = document.querySelectorAll('button');
+    var buttons = document.querySelectorAll('button,input[type="button"]');
     for (var i=0; i<buttons.length; i++) {
         // do not bind button part of a form.
         if (isPartOfForm(buttons[i])) continue;

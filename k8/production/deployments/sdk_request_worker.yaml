@@ -38,6 +38,7 @@ spec:
         resources:
           requests:
             memory: "100M"
+            cpu: "0.5"
         securityContext: {}
         args:
           - --env
@@ -78,6 +79,12 @@ spec:
           - $(MERGE_USP_PROJECT_IDS)
           - --sentry_dsn
           - $(SENTRY_DSN)
+          - --redis_host_ps
+          - $(PERSISTENT_REDIS_HOST)
+          - --redis_port_ps
+          - $(PERSISTENT_REDIS_PORT)
+          - --real_time_event_user_caching_project_ids
+          - "2"
         envFrom:
         - configMapRef:
             name: config-appserver

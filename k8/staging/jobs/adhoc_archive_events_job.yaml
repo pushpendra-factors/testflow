@@ -1,0 +1,61 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: adhoc-archive-events-job
+spec:
+  schedule: "1 2 3 4 5" # In UTC. Random time to avoid running periodically.
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            layer: jobs
+        spec:
+          nodeSelector:
+            cloud.google.com/gke-nodepool: factors-staging-node-pool
+          containers:
+          - name: adhoc-archive-events-job
+            image: us.gcr.io/factors-staging/adhoc-archive-events-job:v0.71_4a75f686
+            imagePullPolicy: IfNotPresent
+            args:
+            - --env
+            - $(ENV)
+            - --bucket_name
+            - $(ARCHIVE_BUCKET_NAME)
+            - --tmp_dir
+            - /tmp
+            - --db_host
+            - $(DB_HOST)
+            - --db_port
+            - $(DB_PORT)
+            - --db_name
+            - $(POSTGRES_DB)
+            - --db_user
+            - $(POSTGRES_USER)
+            - --db_pass
+            - $(POSTGRES_PASSWORD)
+            - --project_id
+            - ""
+            - --num_routines
+            - "2"
+            - --start_date
+            - ""
+            - --end_date
+            - ""
+            - --sentry_dsn
+            - $(SENTRY_DSN)
+            envFrom:
+            - configMapRef:
+                name: config-env
+            - configMapRef:
+                name: config-postgres
+            - configMapRef:
+                name: config-archiveeventsjob
+            - secretRef:
+                name: secret-postgres
+            - secretRef:
+                name: secret-sentry
+          restartPolicy: OnFailure

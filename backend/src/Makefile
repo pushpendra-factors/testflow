@@ -1,4 +1,4 @@
-.PHONY: build-api serve-api build-ps serve-ps build-ds serve-ds build-sdk serve-sdk serve-redis serve-predis clean pack-api upload-api pack-ps upload-ps pack-ds upload-ds pack-sdk upload-sdk pack-redis upload-redis pack-predis upload-predis pack-debug upload-debug pack-build-seq upload-build-seq pack-build-reports upload-build-reports pack-hubspot-enrich upload-hubspot-enrich pack-sdk-request-worker upload-sdk-request-worker pack-integration-request-worker upload-integration-request-worker pack-monitoring upload-monitoring pack-archive-events upload-archive-events pack-bigquery-upload upload-bigquery-upload pack-onboard-to-bigquery upload-onboard-to-bigquery pack-add-session upload-add-session pack-dashboard-caching upload-dashboard-caching pack-web-analytics-dashboard upload-web-analytics-dashboard test
+.PHONY: build-api serve-api build-ps serve-ps build-ds serve-ds build-sdk serve-sdk serve-redis serve-predis clean pack-api upload-api pack-ps upload-ps pack-ds upload-ds pack-sdk upload-sdk pack-redis upload-redis pack-predis upload-predis pack-debug upload-debug pack-build-seq upload-build-seq pack-build-reports upload-build-reports pack-hubspot-enrich upload-hubspot-enrich pack-sdk-request-worker upload-sdk-request-worker pack-integration-request-worker upload-integration-request-worker pack-monitoring upload-monitoring pack-archive-events upload-archive-events pack-adhoc-archive-events upload-adhoc-archive-events pack-bigquery-upload upload-bigquery-upload pack-onboard-to-bigquery upload-onboard-to-bigquery pack-add-session upload-add-session pack-dashboard-caching upload-dashboard-caching pack-web-analytics-dashboard upload-web-analytics-dashboard pack-instantiate-event-user-cache upload-instantiate-event-user-cache test
 
 # Update tag with the latest release version
 # Ex format: v0.05-beta_d0e9ed9 
@@ -43,6 +43,9 @@ serve-redis:
 serve-predis:
 	redis-server $(GOPATH)/src/persistent_redis.conf
 
+serve-qredis:
+	redis-server $(GOPATH)/src/queue_redis.conf
+
 clean:
 	rm $(GOPATH)/bin/pattern-app $(GOPATH)/bin/app $(GOPATH)/bin/data-service
 
@@ -85,6 +88,12 @@ pack-predis:
 
 upload-predis:
 	docker push us.gcr.io/factors-$(ENV)/persistent-redis:$(TAG)
+
+pack-qredis:
+	docker build -t us.gcr.io/factors-$(ENV)/queue-redis:$(TAG) -f Dockerfile.queue_redis .
+
+upload-qredis:
+	docker push us.gcr.io/factors-$(ENV)/queue-redis:$(TAG)
 
 pack-debug:
 	docker build --no-cache -t us.gcr.io/factors-$(ENV)/debug:$(TAG) -f Dockerfile.debug .
@@ -149,6 +158,13 @@ upload-archive-events: export IMAGE_NAME=archive-events-job
 upload-archive-events: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/archive-events-job:$(TAG)
 
+pack-adhoc-archive-events:
+	docker build -t us.gcr.io/factors-$(ENV)/adhoc-archive-events-job:$(TAG) -f Dockerfile.adhoc_archive_events_job .
+
+upload-adhoc-archive-events: export IMAGE_NAME=adhoc-archive-events-job
+upload-adhoc-archive-events: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/adhoc-archive-events-job:$(TAG)
+
 pack-bigquery-upload:
 	docker build -t us.gcr.io/factors-$(ENV)/bigquery-upload-job:$(TAG) -f Dockerfile.bigquery_upload_job .
 
@@ -190,6 +206,13 @@ pack-yourstory-add-properties:
 upload-yourstory-add-properties: export IMAGE_NAME=yourstory-add-properties-job
 upload-yourstory-add-properties: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/yourstory-add-properties-job:$(TAG)
+
+pack-instantiate-event-user-cache: 
+	docker build -t us.gcr.io/factors-$(ENV)/instantiate-event-user-cache-job:$(TAG) -f Dockerfile.instantiate_event_user_cache_job .
+
+upload-instantiate-event-user-cache: export IMAGE_NAME=instantiate-event-user-cache-job
+upload-instantiate-event-user-cache: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/instantiate-event-user-cache-job:$(TAG)
 
 notify-deployment:
 	$(GOPATH)/src/factors/scripts/notify_deployment.sh

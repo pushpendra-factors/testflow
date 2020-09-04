@@ -275,8 +275,8 @@ func buildWhereFromProperties(properties []QueryProperty) (rStmnt string, rParam
 				rParams = append(rParams, p.Property, dateTimeValue.From, p.Property, dateTimeValue.To)
 			} else if p.Type == U.PropertyTypeNumerical {
 				// convert to float for numerical properties.
-				pStmnt = fmt.Sprintf("(%s->>?)::float %s ?", propertyEntity, propertyOp)
-				rParams = append(rParams, p.Property, p.Value)
+				pStmnt = fmt.Sprintf("CASE WHEN json_typeof(%s::json->?) = 'number' THEN  (%s->>?)::float %s ? ELSE false END", propertyEntity, propertyEntity, propertyOp)
+				rParams = append(rParams, p.Property, p.Property, p.Value)
 			} else {
 				// categorical property type.
 				var pValue string

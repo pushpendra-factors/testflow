@@ -37,6 +37,8 @@ spec:
             - $(POSTGRES_PASSWORD)
             - --all
             - $(UPLOAD_ALL)
+            - --sentry_dsn
+            - $(SENTRY_DSN)
             envFrom:
             - configMapRef:
                 name: config-env
@@ -48,4 +50,6 @@ spec:
                 name: config-bigqueryuploadjob
             - secretRef:
                 name: secret-postgres
+            - secretRef:
+                name: secret-sentry
           restartPolicy: OnFailure

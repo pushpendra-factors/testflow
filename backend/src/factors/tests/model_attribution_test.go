@@ -2,6 +2,7 @@ package tests
 
 import (
 	"net/http"
+	"reflect"
 	"testing"
 
 	"encoding/json"
@@ -370,4 +371,302 @@ func TestAttributionWithUserIdentification(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, float64(1), getConversionEventCount(result, "12345"))
 	})
+}
+
+func TestAttributionMethodologies(t *testing.T) {
+
+	conversionEvent := "$Form_Submitted"
+	user1 := "user1"
+	camp1 := "campaign1"
+	camp2 := "campaign2"
+	camp3 := "campaign3"
+
+	userSession := make(map[string]map[string]M.RangeTimestamp)
+	userSession[user1] = make(map[string]M.RangeTimestamp)
+	userSession[user1][camp1] = M.RangeTimestamp{MinTimestamp: 100, MaxTimestamp: 200}
+	userSession[user1][camp2] = M.RangeTimestamp{MinTimestamp: 150, MaxTimestamp: 300}
+	userSession[user1][camp3] = M.RangeTimestamp{MinTimestamp: 50, MaxTimestamp: 100}
+
+	type args struct {
+		method              string
+		conversionEvent     string
+		usersToBeAttributed []M.UserEventInfo
+		userInitialSession  map[string]map[string]M.RangeTimestamp
+	}
+	tests := []struct {
+		name                        string
+		args                        args
+		wantUsersAttribution        map[string][]string
+		wantLinkedEventUserCampaign map[string]map[string][]string
+		wantErr                     bool
+	}{
+
+		// Test for LINEAR_TOUCH
+		{"linear_touch",
+			args{M.ATTRIBUTION_METHOD_LINEAR,
+				conversionEvent,
+				[]M.UserEventInfo{{user1, conversionEvent}},
+				userSession,
+			},
+			map[string][]string{user1: {camp1, camp2, camp3}},
+			map[string]map[string][]string{},
+			false},
+
+		// Test for FIRST_TOUCH
+		{"first_touch",
+			args{M.ATTRIBUTION_METHOD_FIRST_TOUCH,
+				conversionEvent,
+				[]M.UserEventInfo{{user1, conversionEvent}},
+				userSession,
+			},
+			map[string][]string{user1: {camp3}},
+			map[string]map[string][]string{},
+			false},
+
+		// Test for LAST_TOUCH
+		{"last_touch",
+			args{M.ATTRIBUTION_METHOD_LAST_TOUCH,
+				conversionEvent,
+				[]M.UserEventInfo{{user1, conversionEvent}},
+				userSession,
+			},
+			map[string][]string{user1: {camp2}},
+			map[string]map[string][]string{},
+			false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, got1, err := M.ApplyAttribution(tt.args.method, tt.args.conversionEvent, tt.args.usersToBeAttributed, tt.args.userInitialSession)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("applyAttribution() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if tt.args.method == M.ATTRIBUTION_METHOD_LINEAR {
+				for key, _ := range tt.wantUsersAttribution {
+					if len(got[key]) != len(tt.wantUsersAttribution[key]) {
+						t.Errorf("applyAttribution() Failed LINEAR TOUCH got = %v, want %v", len(got[key]), len(tt.wantUsersAttribution[key]))
+					}
+				}
+			} else if !reflect.DeepEqual(got, tt.wantUsersAttribution) {
+				t.Errorf("applyAttribution() got = %v, want %v", got, tt.wantUsersAttribution)
+			}
+			if !reflect.DeepEqual(got1, tt.wantLinkedEventUserCampaign) {
+				t.Errorf("applyAttribution() got1 = %v, want %v", got1, tt.wantLinkedEventUserCampaign)
+			}
+		})
+	}
+}
+
+func TestAttributionMethodologiesFirstTouchNonDirect(t *testing.T) {
+
+	conversionEvent := "$Form_Submitted"
+	user1 := "user1"
+	camp0 := "$none"
+	camp1 := "campaign1"
+	camp2 := "campaign2"
+	camp3 := "campaign3"
+
+	userSession := make(map[string]map[string]M.RangeTimestamp)
+	userSession[user1] = make(map[string]M.RangeTimestamp)
+	userSession[user1][camp0] = M.RangeTimestamp{MinTimestamp: 10, MaxTimestamp: 40}
+	userSession[user1][camp1] = M.RangeTimestamp{MinTimestamp: 100, MaxTimestamp: 200}
+	userSession[user1][camp2] = M.RangeTimestamp{MinTimestamp: 150, MaxTimestamp: 300}
+	userSession[user1][camp3] = M.RangeTimestamp{MinTimestamp: 50, MaxTimestamp: 100}
+
+	type args struct {
+		method              string
+		conversionEvent     string
+		usersToBeAttributed []M.UserEventInfo
+		userInitialSession  map[string]map[string]M.RangeTimestamp
+	}
+	tests := []struct {
+		name                        string
+		args                        args
+		wantUsersAttribution        map[string][]string
+		wantLinkedEventUserCampaign map[string]map[string][]string
+		wantErr                     bool
+	}{
+		// Test for LINEAR_TOUCH
+		{"linear_touch",
+			args{M.ATTRIBUTION_METHOD_LINEAR,
+				conversionEvent,
+				[]M.UserEventInfo{{user1, conversionEvent}},
+				userSession,
+			},
+			map[string][]string{user1: {camp0, camp1, camp2, camp3}},
+			map[string]map[string][]string{},
+			false},
+
+		// Test for FIRST_TOUCH
+		{"first_touch",
+			args{M.ATTRIBUTION_METHOD_FIRST_TOUCH,
+				conversionEvent,
+				[]M.UserEventInfo{{user1, conversionEvent}},
+				userSession,
+			},
+			map[string][]string{user1: {camp0}},
+			map[string]map[string][]string{},
+			false},
+
+		// Test for LAST_TOUCH
+		{"last_touch",
+			args{M.ATTRIBUTION_METHOD_LAST_TOUCH,
+				conversionEvent,
+				[]M.UserEventInfo{{user1, conversionEvent}},
+				userSession,
+			},
+			map[string][]string{user1: {camp2}},
+			map[string]map[string][]string{},
+			false},
+
+		// Test for FIRST_TOUCH_ND
+		{"first_touch_nd",
+			args{M.ATTRIBUTION_METHOD_FIRST_TOUCH_NON_DIRECT,
+				conversionEvent,
+				[]M.UserEventInfo{{user1, conversionEvent}},
+				userSession,
+			},
+			map[string][]string{user1: {camp3}},
+			map[string]map[string][]string{},
+			false},
+
+		// Test for LAST_TOUCH_ND
+		{"last_touch_nd",
+			args{M.ATTRIBUTION_METHOD_LAST_TOUCH_NON_DIRECT,
+				conversionEvent,
+				[]M.UserEventInfo{{user1, conversionEvent}},
+				userSession,
+			},
+			map[string][]string{user1: {camp2}},
+			map[string]map[string][]string{},
+			false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, got1, err := M.ApplyAttribution(tt.args.method, tt.args.conversionEvent, tt.args.usersToBeAttributed, tt.args.userInitialSession)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("applyAttribution() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if tt.args.method == M.ATTRIBUTION_METHOD_LINEAR {
+				for key, _ := range tt.wantUsersAttribution {
+					if len(got[key]) != len(tt.wantUsersAttribution[key]) {
+						t.Errorf("applyAttribution() Failed LINEAR TOUCH got = %v, want %v", len(got[key]), len(tt.wantUsersAttribution[key]))
+					}
+				}
+			} else if !reflect.DeepEqual(got, tt.wantUsersAttribution) {
+				t.Errorf("applyAttribution() got = %v, want %v", got, tt.wantUsersAttribution)
+			}
+			if !reflect.DeepEqual(got1, tt.wantLinkedEventUserCampaign) {
+				t.Errorf("applyAttribution() got1 = %v, want %v", got1, tt.wantLinkedEventUserCampaign)
+			}
+		})
+	}
+}
+
+func TestAttributionMethodologiesLastTouchNonDirect(t *testing.T) {
+
+	conversionEvent := "$Form_Submitted"
+	user1 := "user1"
+	camp1 := "campaign1"
+	camp2 := "campaign2"
+	camp3 := "campaign3"
+	camp4 := "$none"
+
+	userSession := make(map[string]map[string]M.RangeTimestamp)
+	userSession[user1] = make(map[string]M.RangeTimestamp)
+	userSession[user1][camp1] = M.RangeTimestamp{MinTimestamp: 100, MaxTimestamp: 200}
+	userSession[user1][camp2] = M.RangeTimestamp{MinTimestamp: 150, MaxTimestamp: 300}
+	userSession[user1][camp3] = M.RangeTimestamp{MinTimestamp: 50, MaxTimestamp: 100}
+	userSession[user1][camp4] = M.RangeTimestamp{MinTimestamp: 10, MaxTimestamp: 400}
+
+	type args struct {
+		method              string
+		conversionEvent     string
+		usersToBeAttributed []M.UserEventInfo
+		userInitialSession  map[string]map[string]M.RangeTimestamp
+	}
+	tests := []struct {
+		name                        string
+		args                        args
+		wantUsersAttribution        map[string][]string
+		wantLinkedEventUserCampaign map[string]map[string][]string
+		wantErr                     bool
+	}{
+		// Test for LINEAR_TOUCH
+		{"linear_touch",
+			args{M.ATTRIBUTION_METHOD_LINEAR,
+				conversionEvent,
+				[]M.UserEventInfo{{user1, conversionEvent}},
+				userSession,
+			},
+			map[string][]string{user1: {camp1, camp2, camp3, camp4}},
+			map[string]map[string][]string{},
+			false},
+
+		// Test for FIRST_TOUCH
+		{"first_touch",
+			args{M.ATTRIBUTION_METHOD_FIRST_TOUCH,
+				conversionEvent,
+				[]M.UserEventInfo{{user1, conversionEvent}},
+				userSession,
+			},
+			map[string][]string{user1: {camp4}},
+			map[string]map[string][]string{},
+			false},
+
+		// Test for LAST_TOUCH
+		{"last_touch",
+			args{M.ATTRIBUTION_METHOD_LAST_TOUCH,
+				conversionEvent,
+				[]M.UserEventInfo{{user1, conversionEvent}},
+				userSession,
+			},
+			map[string][]string{user1: {camp4}},
+			map[string]map[string][]string{},
+			false},
+
+		// Test for FIRST_TOUCH_ND
+		{"first_touch_nd",
+			args{M.ATTRIBUTION_METHOD_FIRST_TOUCH_NON_DIRECT,
+				conversionEvent,
+				[]M.UserEventInfo{{user1, conversionEvent}},
+				userSession,
+			},
+			map[string][]string{user1: {camp3}},
+			map[string]map[string][]string{},
+			false},
+
+		// Test for LAST_TOUCH_ND
+		{"last_touch_nd",
+			args{M.ATTRIBUTION_METHOD_LAST_TOUCH_NON_DIRECT,
+				conversionEvent,
+				[]M.UserEventInfo{{user1, conversionEvent}},
+				userSession,
+			},
+			map[string][]string{user1: {camp2}},
+			map[string]map[string][]string{},
+			false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, got1, err := M.ApplyAttribution(tt.args.method, tt.args.conversionEvent, tt.args.usersToBeAttributed, tt.args.userInitialSession)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("applyAttribution() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if tt.args.method == M.ATTRIBUTION_METHOD_LINEAR {
+				for key, _ := range tt.wantUsersAttribution {
+					if len(got[key]) != len(tt.wantUsersAttribution[key]) {
+						t.Errorf("applyAttribution() Failed LINEAR TOUCH got = %v, want %v", len(got[key]), len(tt.wantUsersAttribution[key]))
+					}
+				}
+			} else if !reflect.DeepEqual(got, tt.wantUsersAttribution) {
+				t.Errorf("applyAttribution() got = %v, want %v", got, tt.wantUsersAttribution)
+			}
+			if !reflect.DeepEqual(got1, tt.wantLinkedEventUserCampaign) {
+				t.Errorf("applyAttribution() got1 = %v, want %v", got1, tt.wantLinkedEventUserCampaign)
+			}
+		})
+	}
 }

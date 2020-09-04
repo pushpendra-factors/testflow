@@ -8,15 +8,15 @@ type pair struct {
 }
 
 // This method maps the user to the attribution key based on given attribution methodology.
-func applyAttribution(method string, conversionEvent string, usersToBeAttributed []UserEventInfo,
+func ApplyAttribution(method string, conversionEvent string, usersToBeAttributed []UserEventInfo,
 	userInitialSession map[string]map[string]RangeTimestamp) (map[string][]string, map[string]map[string][]string, error) {
 
 	usersAttribution := make(map[string][]string)
 	linkedEventUserCampaign := make(map[string]map[string][]string)
 
 	for _, val := range usersToBeAttributed {
-		userId := val.coalUserId
-		eventName := val.eventName
+		userId := val.CoalUserID
+		eventName := val.EventName
 
 		attributionKeys := []string{PropertyValueNone}
 		switch method {

@@ -788,8 +788,9 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 	mineLog.Info("Successfuly downloaded events file from cloud.")
 
 	// builld user and event properites info
-	eventNames, err := M.GetOrderedEventNamesFromDb(
+	eventNamesWithAggregation, err := M.GetOrderedEventNamesFromDb(
 		projectId, startTime, endTime, max_EVENT_NAMES)
+	eventNames := convert(eventNamesWithAggregation)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error(
 			"Failed to fetch event names.")
@@ -902,4 +903,21 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 	mineLog.WithField("newVersionId", newVersionId).Info("Successfully mined patterns, updated metadata and notified new version id.")
 
 	return newVersionId, len(chunkIds), nil
+}
+
+func convert(eventNamesWithAggregation []M.EventNameWithAggregation) []M.EventName {
+	eventNames := make([]M.EventName, 0)
+	for _, event := range eventNamesWithAggregation {
+		eventNames = append(eventNames, M.EventName{
+			ID:         event.ID,
+			Name:       event.Name,
+			CreatedAt:  event.CreatedAt,
+			Deleted:    event.Deleted,
+			FilterExpr: event.FilterExpr,
+			ProjectId:  event.ProjectId,
+			Type:       event.Type,
+			UpdatedAt:  event.UpdatedAt,
+		})
+	}
+	return eventNames
 }

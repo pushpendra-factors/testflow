@@ -521,15 +521,16 @@ func TestAddNumericAndCategoricalProperties(t *testing.T) {
 	P.AddNumericAndCategoricalProperties(0, properties, nMap, cMap)
 	assert.Contains(t, cMap, "0.catProperty")
 	assert.Contains(t, nMap, "0.numProperty")
-	assert.Contains(t, cMap, "0.$qp_utm_campaign")
+	assert.Contains(t, nMap, "0.$qp_utm_campaign")
 	assert.Contains(t, cMap, "0.$qp_utm_keyword")
 	assert.Contains(t, cMap, "0.$campaign_id")
 	assert.Contains(t, nMap, "0.$cost")
-
-	utm_campaign, _ := cMap["0.$qp_utm_campaign"]
-	assert.Equal(t, "123456", utm_campaign)
+	utm_campaign, _ := nMap["0.$qp_utm_campaign"]
+	assert.Equal(t, float64(123456), utm_campaign)
 	campaign_id, _ := cMap["0.$campaign_id"]
 	assert.Equal(t, "23456", campaign_id)
 	cost, _ := nMap["0.$cost"]
 	assert.Equal(t, 10.0, cost)
+	numProperty, _ := nMap["0.numProperty"]
+	assert.Equal(t, float64(1), numProperty)
 }

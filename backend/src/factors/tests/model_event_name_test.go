@@ -1,14 +1,17 @@
 package tests
 
 import (
+	H "factors/handler"
 	M "factors/model"
 	U "factors/util"
+	"fmt"
 	"math"
 	"net/http"
 	"sort"
 	"testing"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/copier"
 	"github.com/stretchr/testify/assert"
 )
@@ -502,29 +505,61 @@ func TestDBDeleteFilterEventName(t *testing.T) {
 }
 
 func TestDBGetEventNamesOrderedByOccurrenceWithLimit(t *testing.T) {
+	r := gin.Default()
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 	assert.NotNil(t, project)
 
-	eventName1 := U.RandomLowerAphaNumString(5)
-	_, errCode := M.CreateOrGetAutoTrackedEventName(&M.EventName{ProjectId: project.ID, Name: eventName1})
+	H.InitSDKServiceRoutes(r)
+	uri := "/sdk/event/track"
+
+	user, errCode := M.CreateUser(&M.User{ProjectId: project.ID})
+	assert.NotNil(t, user)
 	assert.Equal(t, http.StatusCreated, errCode)
 
-	eventName2 := U.RandomLowerAphaNumString(5)
-	_, errCode = M.CreateOrGetAutoTrackedEventName(&M.EventName{ProjectId: project.ID, Name: eventName2})
-	assert.Equal(t, http.StatusCreated, errCode)
+	rEventName := "event1"
+	w := ServePostRequestWithHeaders(r, uri,
+		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"name": "Jhon"}}`, user.ID, rEventName)),
+		map[string]string{
+			"Authorization": project.Token,
+			"User-Agent":    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
+		})
 
+	assert.Equal(t, http.StatusOK, w.Code)
+	rEventName = "event2"
+	w = ServePostRequestWithHeaders(r, uri,
+		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"name": "Jhon"}}`, user.ID, rEventName)),
+		map[string]string{
+			"Authorization": project.Token,
+			"User-Agent":    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
+		})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	rEventName = "event3"
+	w = ServePostRequestWithHeaders(r, uri,
+		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"name": "Jhon"}}`, user.ID, rEventName)),
+		map[string]string{
+			"Authorization": project.Token,
+			"User-Agent":    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
+		})
+	assert.Equal(t, http.StatusOK, w.Code)
 	// with limit.
-	getEventNames1, _, errCode := M.GetEventNamesOrderedByOccurrenceWithLimit(project.ID, M.EVENT_NAME_REQUEST_TYPE_EXACT, 1)
-	assert.Equal(t, http.StatusFound, errCode)
-	assert.Len(t, getEventNames1, 1)
-	assert.Equal(t, getEventNames1[0].Name, eventName1)
+	getEventNames1, err := M.GetEventNamesOrderedByOccurenceAndRecency(project.ID, 10, 30)
+	assert.Equal(t, nil, err)
+	assert.Len(t, getEventNames1, 3)
 
-	// no limit.
-	getEventNames2, _, errCode := M.GetEventNamesOrderedByOccurrenceWithLimit(project.ID, M.EVENT_NAME_REQUEST_TYPE_EXACT, 0)
-	assert.Equal(t, http.StatusFound, errCode)
+	rEventName = "event2"
+	w = ServePostRequestWithHeaders(r, uri,
+		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"name": "Jhon"}}`, user.ID, rEventName)),
+		map[string]string{
+			"Authorization": project.Token,
+			"User-Agent":    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
+		})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	getEventNames2, err := M.GetEventNamesOrderedByOccurenceAndRecency(project.ID, 2, 30)
+	assert.Equal(t, nil, err)
 	assert.Len(t, getEventNames2, 2)
-	// ordered by created at since not occurred.
-	assert.Equal(t, getEventNames2[0].Name, eventName1)
-	assert.Equal(t, getEventNames2[1].Name, eventName2)
+	assert.Equal(t, "event2", getEventNames2[0])
 }

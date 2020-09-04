@@ -2,17 +2,14 @@ package tests
 
 import (
 	"encoding/json"
-	H "factors/handler"
 	M "factors/model"
 	U "factors/util"
 	"fmt"
-	"io/ioutil"
 	"math"
 	"net/http"
 	"testing"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/stretchr/testify/assert"
@@ -219,49 +216,26 @@ func TestGetRecentEventPropertyKeys(t *testing.T) {
 		_, errCode1 := M.CreateEvent(&M.Event{ProjectId: project.ID, EventNameId: eventName.ID, UserId: user.ID,
 			Timestamp: timestamp, Properties: postgres.Jsonb{json.RawMessage(`{"rProp3": "value2", "rProp4": 2}`)}})
 		assert.Equal(t, http.StatusCreated, errCode1)
-
-		// empty cache, should return error
-		props, err := M.GetCacheRecentPropertyKeys(project.ID, eventName.Name, M.PropertyEntityEvent)
-		assert.NotNil(t, err)
-
-		props, errCode := M.GetRecentEventPropertyKeysWithLimits(project.ID, eventName.Name, 1)
-		assert.Equal(t, http.StatusFound, errCode)
-		assert.Contains(t, props, U.PropertyTypeNumerical)
-		assert.Contains(t, props, U.PropertyTypeNumerical)
-		assert.Len(t, props[U.PropertyTypeCategorical], 2)
-		assert.Len(t, props[U.PropertyTypeNumerical], 2)
-		// validates classification.
-		assert.Contains(t, props[U.PropertyTypeCategorical], "rProp1")
-		assert.Contains(t, props[U.PropertyTypeNumerical], "rProp2")
-		// validates limit.
-		assert.NotContains(t, props[U.PropertyTypeCategorical], "rProp3")
-		assert.NotContains(t, props[U.PropertyTypeNumerical], "rProp4")
-
-		//should return from cache
-		props, err = M.GetCacheRecentPropertyKeys(project.ID, eventName.Name, M.PropertyEntityEvent)
-		assert.Nil(t, err)
-		assert.Contains(t, props, U.PropertyTypeNumerical)
-		assert.Contains(t, props, U.PropertyTypeNumerical)
-		assert.Len(t, props[U.PropertyTypeCategorical], 2)
-		assert.Len(t, props[U.PropertyTypeNumerical], 2)
-		// validates classification.
-		assert.Contains(t, props[U.PropertyTypeCategorical], "rProp1")
-		assert.Contains(t, props[U.PropertyTypeNumerical], "rProp2")
-		// validates limit.
-		assert.NotContains(t, props[U.PropertyTypeCategorical], "rProp3")
-		assert.NotContains(t, props[U.PropertyTypeNumerical], "rProp4")
+		props, err := M.GetRecentEventPropertyKeysWithLimits(project.ID, eventName.Name, time.Now().AddDate(0, 0, -30).Unix(), timestamp, 100)
+		assert.Equal(t, nil, err)
+		assert.Equal(t, len(props) >= 4, true)
+		propertyMap := make(map[string]bool)
+		for _, property := range props {
+			propertyMap[property.Key] = true
+		}
+		assert.Equal(t, propertyMap["rProp1"], true)
+		assert.Equal(t, propertyMap["rProp2"], true)
+		assert.Equal(t, propertyMap["rProp3"], true)
+		assert.Equal(t, propertyMap["rProp4"], true)
 	})
 
 	t.Run("PropertiesOlderThan24Hours", func(t *testing.T) {
 		timestamp := U.UnixTimeBeforeDuration(24 * time.Hour)
 		eventName, _ := createEventWithTimestampAndPrperties(t, project, user, timestamp, json.RawMessage(`{"rProp1": "value1", "rProp2": 1}`))
 
-		props, errCode := M.GetRecentEventPropertyKeysWithLimits(project.ID, eventName.Name, 100)
-		assert.Equal(t, http.StatusFound, errCode)
-		assert.Contains(t, props, U.PropertyTypeNumerical)
-		assert.Contains(t, props, U.PropertyTypeNumerical)
-		assert.Len(t, props[U.PropertyTypeCategorical], 0)
-		assert.Len(t, props[U.PropertyTypeNumerical], 0)
+		props, err := M.GetRecentEventPropertyKeysWithLimits(project.ID, eventName.Name, time.Now().AddDate(0, 0, -1).Unix(), timestamp, 100)
+		assert.Equal(t, nil, err)
+		assert.Len(t, props, 0)
 	})
 }
 
@@ -275,19 +249,29 @@ func TestGetRecentEventPropertyValues(t *testing.T) {
 		_, errCode1 := M.CreateEvent(&M.Event{ProjectId: project.ID, EventNameId: eventName.ID, UserId: user.ID,
 			Timestamp: timestamp, Properties: postgres.Jsonb{json.RawMessage(`{"rProp1": "value2"}`)}})
 		assert.Equal(t, http.StatusCreated, errCode1)
+		_, errCode1 = M.CreateEvent(&M.Event{ProjectId: project.ID, EventNameId: eventName.ID, UserId: user.ID,
+			Timestamp: timestamp, Properties: postgres.Jsonb{json.RawMessage(`{"rProp1": "value1", "rProp2": 1}`)}})
+		assert.Equal(t, http.StatusCreated, errCode1)
 
-		// limited events to 1.
-		values, errCode2 := M.GetRecentEventPropertyValuesWithLimits(project.ID, eventName.Name, "rProp1", 2, 100)
-		assert.Equal(t, http.StatusFound, errCode2)
+		values, category, err := M.GetRecentEventPropertyValuesWithLimits(project.ID, eventName.Name, "rProp1", 10, 100, time.Now().AddDate(0, 0, -1).Unix(), timestamp)
+		assert.Equal(t, nil, err)
 		assert.Len(t, values, 2)
-		assert.Contains(t, values, "value1")
+		assert.Equal(t, values[0].Value, "value1")
+		assert.Equal(t, values[1].Value, "value2")
+		assert.Equal(t, category, U.PropertyTypeCategorical)
 
-		//get from cache
-		values, err := M.GetCacheRecentPropertyValues(project.ID, eventName.Name, "rProp1", M.PropertyEntityEvent)
-		assert.Nil(t, err)
-		assert.Len(t, values, 2)
-		assert.Contains(t, values, "value1")
+		// limited values to 1.
+		values1, category, err := M.GetRecentEventPropertyValuesWithLimits(project.ID, eventName.Name, "rProp1", 1, 100, time.Now().AddDate(0, 0, -30).Unix(), timestamp)
+		assert.Equal(t, nil, err)
+		assert.Len(t, values1, 1)
+		assert.Equal(t, values1[0].Value, "value1")
+		assert.Equal(t, category, U.PropertyTypeCategorical)
 
+		values2, category, err := M.GetRecentEventPropertyValuesWithLimits(project.ID, eventName.Name, "rProp2", 10, 100, time.Now().AddDate(0, 0, -30).Unix(), timestamp)
+		assert.Equal(t, nil, err)
+		assert.Len(t, values2, 1)
+		assert.Equal(t, values2[0].Value, "1")
+		assert.Equal(t, category, U.PropertyTypeNumerical)
 	})
 
 	t.Run("PropertyValuesOlderThan24Hour", func(t *testing.T) {
@@ -297,9 +281,10 @@ func TestGetRecentEventPropertyValues(t *testing.T) {
 			Timestamp: timestamp, Properties: postgres.Jsonb{json.RawMessage(`{"rProp1": "value2"}`)}})
 		assert.Equal(t, http.StatusCreated, errCode1)
 
-		values, errCode2 := M.GetRecentEventPropertyValuesWithLimits(project.ID, eventName.Name, "rProp1", 100, 100)
-		assert.Equal(t, http.StatusFound, errCode2)
+		values, category, err := M.GetRecentEventPropertyValuesWithLimits(project.ID, eventName.Name, "rProp1", 100, 100, time.Now().AddDate(0, 0, -1).Unix(), timestamp)
+		assert.Equal(t, nil, err)
 		assert.Empty(t, values)
+		assert.Equal(t, category, "")
 	})
 }
 
@@ -501,108 +486,6 @@ func TestOverwriteEventProperties(t *testing.T) {
 	assert.Equal(t, (*rEventPropertiesMap)["Hello"], "World")
 }
 
-func TestGetEventNamesOrderedByOccuranceFromCache(t *testing.T) {
-	project, user, eventName1, err := SetupProjectUserEventNameReturnDAO()
-	assert.Nil(t, err)
-	assert.NotNil(t, project)
-
-	_, errCode := M.CreateEvent(&M.Event{EventNameId: eventName1.ID,
-		ProjectId: project.ID, UserId: user.ID, Timestamp: time.Now().Unix()})
-
-	eventName2, _ := M.CreateOrGetUserCreatedEventName(&M.EventName{ProjectId: project.ID, Name: "event2"})
-	assert.NotNil(t, eventName2)
-
-	_, errCode = M.CreateEvent(&M.Event{EventNameId: eventName2.ID,
-		ProjectId: project.ID, UserId: user.ID, Timestamp: time.Now().Unix()})
-
-	getEventNames1, _, errCode := M.GetEventNamesOrderedByOccurrence(project.ID, "exact")
-	assert.Equal(t, http.StatusFound, errCode)
-	assert.Len(t, getEventNames1, 2)
-	assert.Equal(t, eventName1.Name, getEventNames1[0].Name)
-
-	getEventNames2, _, err := M.GetCacheEventNamesOrderedByOccurrence(project.ID)
-	assert.Equal(t, nil, err)
-	assert.Len(t, getEventNames2, 2)
-	assert.Equal(t, eventName2.Name, getEventNames2[1].Name)
-}
-
-func TestGetEventNamesByApproxAndExact(t *testing.T) {
-	r := gin.Default()
-	H.InitAppRoutes(r)
-	var eventNames = struct {
-		EventNames []string `json:"event_names"`
-		Exact      bool     `json:"exact"`
-	}{}
-
-	project, agent, err := SetupProjectWithAgentDAO()
-	assert.Nil(t, err)
-	assert.NotNil(t, project)
-
-	timestamp := U.UnixTimeBeforeAWeek()
-	timeWithinWeek := timestamp + 3600
-	timeBeforeWeek := timestamp - 3600
-	user, errCode := M.CreateUser(&M.User{ProjectId: project.ID})
-	assert.NotNil(t, user)
-	assert.Equal(t, http.StatusCreated, errCode)
-
-	//events before a week
-	createEventWithTimestampByName(t, project, user, "event3", timeBeforeWeek)
-	createEventWithTimestampByName(t, project, user, "event4", timeBeforeWeek)
-	//events within a week
-	createEventWithTimestampByName(t, project, user, "event1", timeWithinWeek)
-	createEventWithTimestampByName(t, project, user, "event1", timeWithinWeek)
-	createEventWithTimestampByName(t, project, user, "event2", timeWithinWeek)
-
-	//FOR APPROX EVENT NAME
-	w := sendGetEventNamesApproxRequest(project.ID, agent, r)
-	assert.Equal(t, http.StatusOK, w.Code)
-
-	jsonResponse, _ := ioutil.ReadAll(w.Body)
-	json.Unmarshal(jsonResponse, &eventNames)
-	// should contain all event names.
-	assert.Len(t, eventNames.EventNames, 4)
-
-	//no cache set, in approx type should return order by created at
-	assert.Equal(t, "event3", eventNames.EventNames[0])
-	assert.Equal(t, "event4", eventNames.EventNames[1])
-	assert.Equal(t, "event1", eventNames.EventNames[2])
-	assert.Equal(t, "event2", eventNames.EventNames[3])
-	assert.Equal(t, false, eventNames.Exact)
-
-	//FOR EXACT EVENT NAMES
-	w = sendGetEventNamesExactRequest(project.ID, agent, r)
-	assert.Equal(t, http.StatusOK, w.Code)
-
-	jsonResponse, _ = ioutil.ReadAll(w.Body)
-	json.Unmarshal(jsonResponse, &eventNames)
-	// should contain all event names.
-	assert.Len(t, eventNames.EventNames, 4)
-
-	//cache set, in Exact type should return order by occurance and backfilled by created at
-	assert.Equal(t, "event1", eventNames.EventNames[0])
-	assert.Equal(t, "event2", eventNames.EventNames[1])
-	assert.Equal(t, "event3", eventNames.EventNames[2])
-	assert.Equal(t, "event4", eventNames.EventNames[3])
-	assert.Equal(t, true, eventNames.Exact)
-
-	//RECALL APPROX EVENT NAMES
-	//Should return from cache, orderd by occurance
-	w = sendGetEventNamesApproxRequest(project.ID, agent, r)
-	assert.Equal(t, http.StatusOK, w.Code)
-
-	jsonResponse, _ = ioutil.ReadAll(w.Body)
-	json.Unmarshal(jsonResponse, &eventNames)
-	// should contain all event names.
-	assert.Len(t, eventNames.EventNames, 4)
-
-	// should return order by occurance and backfilled by created at
-	assert.Equal(t, "event1", eventNames.EventNames[0])
-	assert.Equal(t, "event2", eventNames.EventNames[1])
-	assert.Equal(t, "event3", eventNames.EventNames[2])
-	assert.Equal(t, "event4", eventNames.EventNames[3])
-	assert.Equal(t, true, eventNames.Exact)
-}
-
 func TestGetEventCountOfUserByEventName(t *testing.T) {
 	project, user, eventName, err := SetupProjectUserEventNameReturnDAO()
 	assert.Nil(t, err)
@@ -664,23 +547,4 @@ func TestGetDatesForNextEventsArchivalBatch(t *testing.T) {
 		assert.True(t, found)
 		assert.Equal(t, expectedCount, value)
 	}
-}
-
-func TestEventNumericalProperties(t *testing.T) {
-	project, user, eventName, err := SetupProjectUserEventNameReturnDAO()
-	assert.Nil(t, err)
-	_, errCode := M.CreateEvent(&M.Event{
-		EventNameId: eventName.ID,
-		ProjectId:   project.ID,
-		UserId:      user.ID,
-		Properties:  postgres.Jsonb{[]byte(`{"$session_count":10}`)},
-		Timestamp:   U.TimeNow().Unix(),
-	})
-	assert.Equal(t, http.StatusCreated, errCode)
-	props, errCode := M.GetRecentEventPropertyKeysWithLimits(project.ID, eventName.Name, 1)
-	assert.Equal(t, http.StatusFound, errCode)
-	assert.Contains(t, props, U.PropertyTypeNumerical)
-	assert.Contains(t, props, U.PropertyTypeCategorical)
-	// validates classification.
-	assert.Contains(t, props[U.PropertyTypeNumerical], "$session_count")
 }

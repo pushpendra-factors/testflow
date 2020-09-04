@@ -30,9 +30,10 @@ const CHANNEL_OPTS = [CHANNEL_GOOGLE_ADS, CHANNEL_FACEBOOK_ADS]
 const FILTER_KEY_CAMPAIGN = { label: 'Campaigns', value: 'campaign' }
 const FILTER_KEY_AD = { label: 'Ads', value: 'ad' }
 const FILTER_KEY_AD_SET = {label: "Adsets", value: "adset"}
+const FILTER_KEY_AD_GROUP = {label:"Adgroups", value: "ad_group"}
 const FILTER_KEY_PLATFORM = {label: "Platforms", value: "platform"}
 const FILTER_KEY_KEYWORD = { label: 'Keywords', value: 'keyword' }
-const FILTER_KEY_OPTS = [ FILTER_KEY_CAMPAIGN, FILTER_KEY_AD, FILTER_KEY_KEYWORD ];
+const FILTER_KEY_OPTS = [ FILTER_KEY_CAMPAIGN, FILTER_KEY_AD, FILTER_KEY_AD_GROUP, FILTER_KEY_KEYWORD ];
 const FACEBOOK_FILTER_KEY_OPTS = [FILTER_KEY_CAMPAIGN, FILTER_KEY_AD,FILTER_KEY_AD_SET]
 
 // supported breakdown opts for each filter key.
@@ -41,6 +42,7 @@ const BREAKDOWN_KEY_OPT_MAP = {
   [FILTER_KEY_AD.value]: [FILTER_KEY_AD],
   [FILTER_KEY_KEYWORD.value]: [FILTER_KEY_KEYWORD],
   [FILTER_KEY_AD_SET.value] : [FILTER_KEY_AD_SET],
+  [FILTER_KEY_AD_GROUP.value] : [FILTER_KEY_AD_GROUP],
   [FILTER_KEY_PLATFORM.value] : [FILTER_KEY_PLATFORM]
 }
 

@@ -18,10 +18,11 @@ import (
 // MandatoryProperties - Event properties to be added, if missing.
 var MandatoryProperties = []string{
 	"authorName",
+	"brandName",
 	"authors",
 	"articleCategory",
 	"tags",
-	"brandName",
+	"publicationDate",
 }
 
 type EventWithProperties struct {
@@ -52,6 +53,14 @@ func doesPropertiesMapHaveKeys(propertiesMap U.PropertiesMap,
 	return hasAll, hasSome, filteredPropertiesMap
 }
 
+type PropertiesWithCount struct {
+	// Count will be based only authorName.
+	// As all properties required are present when authorName is present.
+	// And primary property to be fixed is authorName.
+	Count      int
+	Properties U.PropertiesMap
+}
+
 func getEventsWithoutPropertiesAndWithPropertiesByName(projectID uint64, from, to int64) (
 	[]EventWithProperties, *map[string]U.PropertiesMap, int) {
 	logCtx := log.WithField("project_id", projectID).
@@ -59,19 +68,22 @@ func getEventsWithoutPropertiesAndWithPropertiesByName(projectID uint64, from, t
 		WithField("to", to)
 
 	eventsWithoutProperties := make([]EventWithProperties, 0, 0)
-	propertiesByName := make(map[string]U.PropertiesMap, 0)
+	// map[event_name]map[authorName]*PropertiesWithCount
+	propertiesByNameAndOccurence := make(map[string]map[string]*PropertiesWithCount, 0)
 
 	queryStartTimestamp := U.TimeNowUnix()
+	// LIKE '%.%' is for excluding custom event_names which are not urls.
 	queryStmnt := "SELECT events.id, name, properties FROM events" + " " +
 		"LEFT JOIN event_names ON events.event_name_id = event_names.id" + " " +
-		"WHERE events.project_id = ? AND event_names.name != '$session' AND timestamp BETWEEN ? AND ?"
+		"WHERE events.project_id = ? AND event_names.name != '$session'" + " " +
+		"AND event_names.name LIKE '%.%' AND timestamp BETWEEN ? AND ?"
 
 	db := C.GetServices().Db
 	rows, err := db.Raw(queryStmnt, projectID, from, to).Rows()
 	if err != nil {
 		logCtx.WithError(err).
 			Error("Failed to execute raw query on getEventsWithoutPropertiesAndWithPropertiesByName.")
-		return eventsWithoutProperties, &propertiesByName, http.StatusInternalServerError
+		return eventsWithoutProperties, nil, http.StatusInternalServerError
 	}
 	defer rows.Close()
 	logCtx = logCtx.WithField("query_exec_time_in_secs", U.TimeNowUnix()-queryStartTimestamp)
@@ -94,35 +106,101 @@ func getEventsWithoutPropertiesAndWithPropertiesByName(projectID uint64, from, t
 			continue
 		}
 
+		if _, exists := propertiesByNameAndOccurence[name]; !exists {
+			propertiesByNameAndOccurence[name] = make(map[string]*PropertiesWithCount, 0)
+		}
+
 		hasAll, hasSome, filteredPropertiesMap := doesPropertiesMapHaveKeys(*propertiesMap, MandatoryProperties)
 		if hasAll {
-			// add to lookup if key available.
-			propertiesByName[name] = filteredPropertiesMap
-		} else {
-			// add to list, for updating properties using lookup.
-			eventsWithoutProperties = append(
-				eventsWithoutProperties,
-				EventWithProperties{
-					ID:            id,
-					Name:          name,
-					PropertiesMap: *propertiesMap,
-				},
-			)
+			authorName, asserted := filteredPropertiesMap["authorName"].(string)
+			if !asserted {
+				log.WithField("author", authorName).Warn("Failed to assert author name as string.")
+				continue
+			}
+
+			if _, exists := propertiesByNameAndOccurence[name][authorName]; !exists {
+				propertiesByNameAndOccurence[name][authorName] = &PropertiesWithCount{
+					Properties: filteredPropertiesMap,
+					Count:      1,
+				}
+			} else {
+				// Always overwrite, to keep adding hasAll state.
+				(*propertiesByNameAndOccurence[name][authorName]).Properties = filteredPropertiesMap
+				(*propertiesByNameAndOccurence[name][authorName]).Count++
+			}
 		}
 
 		if hasSome {
-			// Do no overwrite, hasAll state with hasSome state.
-			if allKeysExist, _, _ := doesPropertiesMapHaveKeys(propertiesByName[name],
-				MandatoryProperties); !allKeysExist {
-				propertiesByName[name] = filteredPropertiesMap
+			propAuthorName, exists := filteredPropertiesMap["authorName"]
+			if !exists && propAuthorName != nil {
+				continue
+			}
+			authorName := propAuthorName.(string)
+
+			if propertiesWithCount, authorExists := propertiesByNameAndOccurence[name][authorName]; !authorExists {
+				propertiesByNameAndOccurence[name][authorName] = &PropertiesWithCount{
+					Properties: filteredPropertiesMap,
+					Count:      1,
+				}
+			} else {
+				// Do no overwrite, hasAll state with hasSome state.
+				if allKeysExist, _, _ := doesPropertiesMapHaveKeys((*propertiesWithCount).Properties,
+					MandatoryProperties); allKeysExist {
+					continue
+				}
+
+				// Add properties if more properties available this time.
+				if len(filteredPropertiesMap) > len((*propertiesWithCount).Properties) {
+					(*propertiesByNameAndOccurence[name][authorName]).Properties = filteredPropertiesMap
+				}
+				(*propertiesByNameAndOccurence[name][authorName]).Count++
 			}
 		}
+
+		// Adds all events for update, to support update with most occurrence.
+		eventsWithoutProperties = append(
+			eventsWithoutProperties,
+			EventWithProperties{
+				ID:            id,
+				Name:          name,
+				PropertiesMap: *propertiesMap,
+			},
+		)
 
 		rowCount++
 	}
 
+	propertiesByName := getPropertiesByNameAndMaxOccurrence(&propertiesByNameAndOccurence)
+
 	logCtx.WithField("rows", rowCount).Info("Scanned all rows.")
-	return eventsWithoutProperties, &propertiesByName, http.StatusFound
+	return eventsWithoutProperties, propertiesByName, http.StatusFound
+}
+
+func getPropertiesByNameAndMaxOccurrence(
+	propertiesByNameAndOccurence *map[string]map[string]*PropertiesWithCount,
+) *map[string]U.PropertiesMap {
+
+	propertiesWithCount := make(map[string]PropertiesWithCount, 0)
+	for name, propertiesByAuthor := range *propertiesByNameAndOccurence {
+		for _, pwc := range propertiesByAuthor {
+			// Select the poroeprties with max occurrence count.
+			if (*pwc).Count > propertiesWithCount[name].Count &&
+				// Consider only max no.of properties available.
+				len((*pwc).Properties) >= len(propertiesWithCount[name].Properties) {
+
+				propertiesWithCount[name] = *pwc
+			}
+		}
+	}
+
+	propertiesByName := make(map[string]U.PropertiesMap)
+	for name, pwc := range propertiesWithCount {
+		if pwc.Count > 0 && len(pwc.Properties) > 0 {
+			propertiesByName[name] = pwc.Properties
+		}
+	}
+
+	return &propertiesByName
 }
 
 func getPropertiesForName(
@@ -130,15 +208,16 @@ func getPropertiesForName(
 	propertiesByName *map[string]U.PropertiesMap,
 ) *U.PropertiesMap {
 
-	if properties, exists := (*propertiesByName)[name]; exists {
-		return &properties
-	}
-
-	// Get properties from non-amp page.
+	// Give precendence to properties of non-amp page,
+	// for amp page events.
 	if strings.HasSuffix(name, "/amp") {
 		if properties, exists := (*propertiesByName)[strings.TrimSuffix(name, "/amp")]; exists {
 			return &properties
 		}
+	}
+
+	if properties, exists := (*propertiesByName)[name]; exists {
+		return &properties
 	}
 
 	return nil
@@ -178,26 +257,29 @@ func addEventPropertiesByName(
 			continue
 		}
 
-		isPropertiesAdded := false
+		isPropertiesUpdated := false
 		for i := range MandatoryProperties {
 			key := MandatoryProperties[i]
 
-			value, exists := (*propertiesFromEvent)[key]
+			valueByEventName, exists := (*propertiesFromEvent)[key]
 			if !exists {
-				logCtx.WithField("property", key).Error("Property not found.")
 				continue
 			}
 
-			// Add properties doesn't exsits already.
-			// Do not overwrite the exsiting properties.
+			// Add property if key doesn't exsits already.
 			if _, exists := event.PropertiesMap[key]; !exists {
-				event.PropertiesMap[key] = value
-				isPropertiesAdded = true
+				event.PropertiesMap[key] = valueByEventName
+				isPropertiesUpdated = true
+			} else {
+				// Overwrite property, if the current value is not equal to max occurred value.
+				if valueByEventName != nil && event.PropertiesMap[key] != valueByEventName {
+					event.PropertiesMap[key] = valueByEventName
+					isPropertiesUpdated = true
+				}
 			}
 		}
 
-		if !isPropertiesAdded {
-			logCtx.Error("Mandatory properties not for the event. Skipping update.")
+		if !isPropertiesUpdated {
 			continue
 		}
 		logCtx = logCtx.WithField("new_properties", event.PropertiesMap)

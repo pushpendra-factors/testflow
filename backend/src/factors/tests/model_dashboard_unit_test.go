@@ -474,61 +474,6 @@ func TestCacheDashboardUnitsForProjectID(t *testing.T) {
 	}
 }
 
-func TestCacheDashboardUnitsForProjectIDForAttributionQuery(t *testing.T) {
-	r := gin.Default()
-	H.InitAppRoutes(r)
-
-	project, agent, err := SetupProjectWithAgentDAO()
-	assert.Nil(t, err)
-
-	_, errCode := M.CreateOrGetUserCreatedEventName(&M.EventName{ProjectId: project.ID, Name: "$session"})
-	assert.Equal(t, http.StatusCreated, errCode)
-
-	customerAccountId := U.RandomLowerAphaNumString(5)
-	_, errCode = M.UpdateProjectSettings(project.ID, &M.ProjectSetting{
-		IntAdwordsCustomerAccountId: &customerAccountId,
-	})
-
-	dashboardName := U.RandomString(5)
-	dashboard, errCode := M.CreateDashboard(project.ID, agent.UUID, &M.Dashboard{Name: dashboardName, Type: M.DashboardTypeProjectVisible})
-	assert.NotNil(t, dashboard)
-	assert.Equal(t, http.StatusCreated, errCode)
-	assert.Equal(t, dashboardName, dashboard.Name)
-
-	var queryUnit M.AttributionQueryUnit
-	queryJSON := postgres.Jsonb{json.RawMessage(`{"cl": "attribution", "meta": {"metrics_breakdown": true}, "query": {"ce": {"na": "$session", "pr": []}, "cm": ["Impressions", "Clicks", "Spend"], "to": 1596479399, "lbw": 1, "lfe": [], "from": 1595874600, "attribution_key": "Campaign", "attribution_methodology": "Last_Touch"}}`)}
-	U.DecodePostgresJsonbToStructType(&queryJSON, &queryUnit)
-	dashboardUnit, errCode, _ := M.CreateDashboardUnit(project.ID, agent.UUID, &M.DashboardUnit{
-		DashboardId:  dashboard.ID,
-		Title:        U.RandomString(5),
-		Query:        queryJSON,
-		Presentation: M.PresentationTable,
-	})
-	assert.Equal(t, http.StatusCreated, errCode)
-	assert.NotNil(t, dashboardUnit)
-
-	updatedUnitsCount := M.CacheDashboardUnitsForProjectID(project.ID, 1)
-	assert.Equal(t, 1, updatedUnitsCount)
-
-	query := *queryUnit.Query
-	for _, rangeFunction := range U.QueryDateRangePresets {
-		query.From, query.To = rangeFunction()
-		// Refresh is sent as false. Must return all presets range from cache.
-		w := sendAttributionQueryReq(r, project.ID, agent, dashboard.ID, dashboardUnit.ID, query, false)
-		assert.NotNil(t, w)
-		assert.Equal(t, http.StatusOK, w.Code)
-
-		// Refresh is sent as true. Still must return from cache for all presets except for todays.
-		w = sendAttributionQueryReq(r, project.ID, agent, dashboard.ID, dashboardUnit.ID, query, true)
-		assert.NotNil(t, w)
-		var result map[string]interface{}
-		json.Unmarshal([]byte(w.Body.String()), &result)
-		// Cache must be true in response.
-		assert.True(t, result["cache"].(bool))
-		break
-	}
-}
-
 func sendAttributionQueryReq(r *gin.Engine, projectID uint64, agent *M.Agent, dashboardID, unitID uint64, query M.AttributionQuery, refresh bool) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {

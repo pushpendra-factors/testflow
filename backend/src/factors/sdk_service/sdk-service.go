@@ -51,7 +51,10 @@ func main() {
 		"Comma separated list of project IDs for which user properties merge is enabled. '*' for all.")
 	skipSessionProjectIds := flag.String("skip_session_project_ids",
 		"", "List or projects to create session offline.")
-
+	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
+	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
+	isRealTimeEventUserCachingEnabled := flag.Bool("enable_real_time_event_user_caching", false, "If the real time caching is enabled")
+	realTimeEventUserCachingProjectIds := flag.String("real_time_event_user_caching_project_ids", "1", "If the real time caching is enabled and the whitelisted projectids")
 	flag.Parse()
 
 	config := &C.Configuration{
@@ -65,22 +68,26 @@ func main() {
 			Name:     *dbName,
 			Password: *dbPass,
 		},
-		GeolocationFile:                  *geoLocFilePath,
-		DeviceDetectorPath:               *deviceDetectorPath,
-		RedisHost:                        *redisHost,
-		RedisPort:                        *redisPort,
-		QueueRedisHost:                   *queueRedisHost,
-		QueueRedisPort:                   *queueRedisPort,
-		AWSKey:                           *awsAccessKeyId,
-		AWSSecret:                        *awsSecretAccessKey,
-		AWSRegion:                        *awsRegion,
-		SentryDSN:                        *sentryDSN,
-		EmailSender:                      *factorsEmailSender,
-		ErrorReportingInterval:           *errorReportingInterval,
-		SDKRequestQueueProjectTokens:     C.GetTokensFromStringListAsString(*sdkRequestQueueProjectTokens), // comma seperated project tokens.
-		SegmentRequestQueueProjectTokens: C.GetTokensFromStringListAsString(*segmentRequestQueueProjectTokens),
-		MergeUspProjectIds:               *mergeUserPropertiesProjectIDS,
-		SkipSessionProjectIds:            *skipSessionProjectIds, // comma seperated project ids, supports "*".
+		GeolocationFile:                    *geoLocFilePath,
+		DeviceDetectorPath:                 *deviceDetectorPath,
+		RedisHost:                          *redisHost,
+		RedisPort:                          *redisPort,
+		QueueRedisHost:                     *queueRedisHost,
+		QueueRedisPort:                     *queueRedisPort,
+		AWSKey:                             *awsAccessKeyId,
+		AWSSecret:                          *awsSecretAccessKey,
+		AWSRegion:                          *awsRegion,
+		SentryDSN:                          *sentryDSN,
+		EmailSender:                        *factorsEmailSender,
+		ErrorReportingInterval:             *errorReportingInterval,
+		SDKRequestQueueProjectTokens:       C.GetTokensFromStringListAsString(*sdkRequestQueueProjectTokens), // comma seperated project tokens.
+		SegmentRequestQueueProjectTokens:   C.GetTokensFromStringListAsString(*segmentRequestQueueProjectTokens),
+		MergeUspProjectIds:                 *mergeUserPropertiesProjectIDS,
+		SkipSessionProjectIds:              *skipSessionProjectIds, // comma seperated project ids, supports "*".
+		RedisHostPersistent:                *redisHostPersistent,
+		RedisPortPersistent:                *redisPortPersistent,
+		IsRealTimeEventUserCachingEnabled:  *isRealTimeEventUserCachingEnabled,
+		RealTimeEventUserCachingProjectIds: *realTimeEventUserCachingProjectIds,
 	}
 
 	err := C.InitSDKService(config)

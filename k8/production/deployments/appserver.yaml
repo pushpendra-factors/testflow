@@ -112,6 +112,8 @@ spec:
           - $(OFFLINE_SESSION_PROJECT_IDS)
           - --sentry_dsn
           - $(SENTRY_DSN)
+          - --whitelisted_projects_ids_event_user_cache
+          - "2"         
         env:
           - name: MY_POD_IP
             valueFrom:

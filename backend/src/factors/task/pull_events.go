@@ -142,10 +142,10 @@ func pullEventsForBuildSeq(db *gorm.DB, projectID uint64, startTime, endTime int
 
 // PullEventsForArchive Function to pull events for BigQuery sync.
 func PullEventsForArchive(db *gorm.DB, projectID uint64,
-	eventsFilePath string, startTime, endTime int64) (int, string, error) {
+	eventsFilePath, usersFilePath string, startTime, endTime int64) (int, string, string, error) {
 
-	rawQuery := fmt.Sprintf("SELECT events.id, COALESCE(users.customer_user_id, users.id), event_names.name, events.timestamp, "+
-		"events.session_id, events.properties, users.join_timestamp, user_properties.properties FROM events "+
+	rawQuery := fmt.Sprintf("SELECT events.id, users.id, users.customer_user_id, "+
+		"event_names.name, events.timestamp, events.session_id, events.properties, users.join_timestamp, user_properties.properties FROM events "+
 		"LEFT JOIN event_names ON events.event_name_id = event_names.id LEFT JOIN users ON events.user_id = users.id "+
 		"LEFT JOIN user_properties ON events.user_properties_id = user_properties.id "+
 		"WHERE events.project_id = %d AND events.timestamp BETWEEN %d AND %d", projectID, startTime, endTime)
@@ -154,30 +154,39 @@ func PullEventsForArchive(db *gorm.DB, projectID uint64,
 	defer rows.Close()
 	if err != nil {
 		peLog.WithFields(log.Fields{"err": err}).Error("SQL Query failed.")
-		return 0, "", err
+		return 0, "", "", err
 	}
 
-	file, err := os.Create(eventsFilePath)
+	eventsFile, err := os.Create(eventsFilePath)
 	if err != nil {
 		peLog.WithFields(log.Fields{"file": eventsFilePath, "err": err}).Error("Unable to create file.")
-		return 0, "", err
+		return 0, "", "", err
 	}
-	defer file.Close()
+	defer eventsFile.Close()
+
+	usersFile, err := os.Create(usersFilePath)
+	if err != nil {
+		peLog.WithFields(log.Fields{"file": usersFilePath, "err": err}).Error("Unable to create file.")
+		return 0, "", "", err
+	}
+	defer usersFile.Close()
+	userIDMap := make(map[string]string) // userID to identifiedUserID map.
 
 	rowCount := 0
 	for rows.Next() {
 		var eventID string
 		var userID string
+		var customerUserID sql.NullString
 		var eventName string
 		var eventTimestamp int64
 		var userJoinTimestamp int64
 		var sessionID sql.NullString
 		var eventProperties *postgres.Jsonb
 		var userProperties *postgres.Jsonb
-		if err = rows.Scan(&eventID, &userID, &eventName, &eventTimestamp,
+		if err = rows.Scan(&eventID, &userID, &customerUserID, &eventName, &eventTimestamp,
 			&sessionID, &eventProperties, &userJoinTimestamp, &userProperties); err != nil {
 			peLog.WithFields(log.Fields{"err": err}).Error("SQL Parse failed.")
-			return 0, "", err
+			return 0, "", "", err
 		}
 
 		var eventPropertiesMap *map[string]interface{}
@@ -185,7 +194,7 @@ func PullEventsForArchive(db *gorm.DB, projectID uint64,
 			eventPropertiesMap, err = U.DecodePostgresJsonb(eventProperties)
 			if err != nil {
 				peLog.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal event property.")
-				return 0, "", err
+				return 0, "", "", err
 			}
 		} else {
 			peLog.WithFields(log.Fields{"err": err, "project_id": projectID}).Error("Nil event properties.")
@@ -196,7 +205,7 @@ func PullEventsForArchive(db *gorm.DB, projectID uint64,
 			userPropertiesMap, err = U.DecodePostgresJsonb(userProperties)
 			if err != nil {
 				peLog.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal user property.")
-				return 0, "", err
+				return 0, "", "", err
 			}
 		} else {
 			peLog.WithFields(log.Fields{"err": err, "project_id": projectID}).Error("Nil user properties.")
@@ -218,18 +227,40 @@ func PullEventsForArchive(db *gorm.DB, projectID uint64,
 		lineBytes, err := json.Marshal(event)
 		if err != nil {
 			peLog.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal event.")
-			return 0, "", err
+			return 0, "", "", err
 		}
 		line := string(lineBytes)
-		if _, err := file.WriteString(fmt.Sprintf("%s\n", line)); err != nil {
+		if _, err := eventsFile.WriteString(fmt.Sprintf("%s\n", line)); err != nil {
 			peLog.WithFields(log.Fields{"line": line, "err": err}).Error("Unable to write to file.")
-			return 0, "", err
+			return 0, "", "", err
+		}
+
+		if _, found := userIDMap[userID]; !found && customerUserID.String != "" {
+			userIDMap[userID] = customerUserID.String
 		}
 
 		rowCount++
 	}
 
-	return rowCount, eventsFilePath, nil
+	for userID, customerUserID := range userIDMap {
+		user := A.ArchiveUsersTableFormat{
+			UserID:         userID,
+			CustomerUserID: customerUserID,
+			IngestionDate:  time.Unix(startTime, 0).UTC(),
+		}
+		lineBytes, err := json.Marshal(user)
+		if err != nil {
+			peLog.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal user.")
+			return 0, "", "", err
+		}
+		line := string(lineBytes)
+		if _, err := usersFile.WriteString(fmt.Sprintf("%s\n", line)); err != nil {
+			peLog.WithFields(log.Fields{"line": line, "err": err}).Error("Unable to write to file.")
+			return 0, "", "", err
+		}
+	}
+
+	return rowCount, eventsFilePath, usersFilePath, nil
 }
 
 func PullEvents(db *gorm.DB, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver,

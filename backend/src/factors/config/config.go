@@ -51,38 +51,41 @@ type DBConf struct {
 }
 
 type Configuration struct {
-	AppName                          string
-	Env                              string
-	Port                             int
-	DBInfo                           DBConf
-	RedisHost                        string
-	RedisPort                        int
-	RedisHostPersistent              string
-	RedisPortPersistent              int
-	QueueRedisHost                   string
-	QueueRedisPort                   int
-	EtcdEndpoints                    []string
-	GeolocationFile                  string
-	DeviceDetectorPath               string
-	APIDomain                        string
-	APPDomain                        string
-	AWSRegion                        string
-	AWSKey                           string
-	AWSSecret                        string
-	Cookiename                       string
-	EmailSender                      string
-	ErrorReportingInterval           int
-	AdminLoginEmail                  string
-	AdminLoginToken                  string
-	FacebookAppID                    string
-	FacebookAppSecret                string
-	SentryDSN                        string
-	LoginTokenMap                    map[string]string
-	SkipTrackProjectIds              []uint64
-	SDKRequestQueueProjectTokens     []string
-	SegmentRequestQueueProjectTokens []string
-	MergeUspProjectIds               string
-	SkipSessionProjectIds            string // comma seperated project ids, supports "*" for all projects.
+	AppName                             string
+	Env                                 string
+	Port                                int
+	DBInfo                              DBConf
+	RedisHost                           string
+	RedisPort                           int
+	RedisHostPersistent                 string
+	RedisPortPersistent                 int
+	QueueRedisHost                      string
+	QueueRedisPort                      int
+	EtcdEndpoints                       []string
+	GeolocationFile                     string
+	DeviceDetectorPath                  string
+	APIDomain                           string
+	APPDomain                           string
+	AWSRegion                           string
+	AWSKey                              string
+	AWSSecret                           string
+	Cookiename                          string
+	EmailSender                         string
+	ErrorReportingInterval              int
+	AdminLoginEmail                     string
+	AdminLoginToken                     string
+	FacebookAppID                       string
+	FacebookAppSecret                   string
+	SentryDSN                           string
+	LoginTokenMap                       map[string]string
+	SkipTrackProjectIds                 []uint64
+	SDKRequestQueueProjectTokens        []string
+	SegmentRequestQueueProjectTokens    []string
+	MergeUspProjectIds                  string
+	SkipSessionProjectIds               string // comma seperated project ids, supports "*" for all projects.
+	WhitelistedProjectIdsEventUserCache string
+	IsRealTimeEventUserCachingEnabled   bool
+	RealTimeEventUserCachingProjectIds  string
 }
 
 type Services struct {
@@ -439,6 +442,14 @@ func InitSentryLogging(sentryDSN, appName string) {
 	}
 }
 
+// SafeFlushSentryHook Safe flush error messages in sentry hook. Used with `defer` statement.
+// Useful while running scripts in development mode where sentry is not initialized.
+func SafeFlushSentryHook() {
+	if services.SentryHook != nil {
+		services.SentryHook.Flush()
+	}
+}
+
 func InitMailClient(key, secret, region string) {
 	if services == nil {
 		services = &Services{}
@@ -537,6 +548,12 @@ func InitSDKService(config *Configuration) error {
 	// Cache dependency for requests not using queue.
 	InitRedis(config.RedisHost, config.RedisPort)
 
+	// TODO: Remove this check after enabling caching realtime.
+	if config.IsRealTimeEventUserCachingEnabled {
+		log.Info("Initializing persistent redis service in sdk service.")
+		InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
+	}
+
 	initGeoLocationService(config.GeolocationFile)
 	initDeviceDetectorPath(config.DeviceDetectorPath)
 
@@ -572,6 +589,12 @@ func InitQueueWorker(config *Configuration) error {
 	err = InitQueueClient(config.QueueRedisHost, config.QueueRedisPort)
 	if err != nil {
 		log.WithError(err).Fatal("Failed to initalize queue client on init queue worker.")
+	}
+
+	// TODO: Remove this check after enabling caching realtime.
+	if config.IsRealTimeEventUserCachingEnabled {
+		log.Info("Initializing persistent redis service in worker.")
+		InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
 	}
 
 	InitLogClient(config.Env, config.AppName, config.EmailSender, config.AWSKey,
@@ -659,6 +682,16 @@ func GetFactorsCookieName() string {
 
 func GetSkipTrackProjectIds() []uint64 {
 	return configuration.SkipTrackProjectIds
+}
+
+func GetWhitelistedProjectIdsEventUserCache() string {
+	return configuration.WhitelistedProjectIdsEventUserCache
+}
+
+func GetIfRealTimeEventUserCachingIsEnabled(projectId uint64) bool {
+	projectIds := U.GetIntBoolMapFromStringList(&configuration.RealTimeEventUserCachingProjectIds)
+	isWhitelisted, _ := projectIds[projectId]
+	return configuration.IsRealTimeEventUserCachingEnabled && isWhitelisted == true
 }
 
 // ParseConfigStringToMap - Parses config string
