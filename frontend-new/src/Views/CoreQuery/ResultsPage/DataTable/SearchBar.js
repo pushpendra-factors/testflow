@@ -27,7 +27,7 @@ function SearchBar() {
     return (
         <div className={`${styles.searchBar}`}>
             {!searchBar ? (
-                <div className="flex p-4 w-full">
+                <div className="flex py-4 w-full">
                     <div onClick={showSearchBar.bind(this, true)} className={`flex items-center w-3/4 cursor-pointer`}>
                         <div className="mr-2">
                             <svg width="17" height="18" viewBox="0 0 17 18" fill="none" xmlns="http://www.w3.org/2000/svg">

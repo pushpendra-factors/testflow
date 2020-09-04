@@ -15,7 +15,7 @@ $textColor: #3E516C;
     :global(.c3-legend-item text) {
         fill: #08172B;
         line-height: 1rem;
-        font-weight: normal;
+        font-weight: 400;
         font-style: normal;
         font-size: 14px;
     }
@@ -38,9 +38,9 @@ $textColor: #3E516C;
 
     :global(.c3-axis .tick text) {
         font-size: 12px;
-        line-height: 1rem;
+        line-height: 18px;
         fill: $textColor;
-        font-weight: normal;
+        font-weight: 400;
         font-style: normal;
     }
 

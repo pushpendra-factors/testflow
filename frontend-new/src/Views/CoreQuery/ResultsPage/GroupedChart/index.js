@@ -53,9 +53,12 @@ function GroupedChart({ eventsData, groups, chartData, chartColors }) {
 
 
     const drawChart = useCallback(() => {
-        c3.generate({
+        const chart = c3.generate({
             size: {
                 height: 400
+            },
+            padding: {
+                left: 40,
             },
             bindto: chartRef.current,
             data: {
@@ -125,6 +128,10 @@ function GroupedChart({ eventsData, groups, chartData, chartColors }) {
             axis: {
                 x: {
                     type: 'category',
+                    tick: {
+                        multiline: true,
+                        multilineMax: 3,
+                    },
                     categories: groups
                         .filter(elem => elem.is_visible)
                         .map(elem => elem.name),
@@ -146,11 +153,6 @@ function GroupedChart({ eventsData, groups, chartData, chartColors }) {
             },
             tooltip: {
                 grouped: false,
-                // position: function (data, width, height, element) {
-                //     const top = d3.mouse(element)[1] - 100;
-                //     const left = d3.mouse(element)[0] + 80;
-                //     return { top, left }
-                // },
                 contents: d => {
                     const group = groups[d[0].index].name;
                     const eventIndex = eventsData.findIndex(elem => elem.name === d[0].id);
