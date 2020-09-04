@@ -2,7 +2,7 @@
 {  
     height: 100%;
     width: 64px;
-    background-color: #0E2647;
+    background-color: $fa-color--mono-7;
     overflow: auto;
     height: 100vh;
     position: fixed;
@@ -38,7 +38,7 @@
         transition: all .3s cubic-bezier(.645,.045,.355,1); 
         display: flex;
         justify-content: center;
-        align-items: center;
+        align-items: center; 
         &.active{
             -webkit-transition: all .3s cubic-bezier(.645,.045,.355,1);
             transition: all .3s cubic-bezier(.645,.045,.355,1); 

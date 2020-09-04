@@ -33,7 +33,7 @@ function Sidebar() {
     <Sider className="fa-aside" width={`64`} >
 
       <Row justify="center" align="middle" className="py-5"> 
-            <NavLink className="active fa-brand-logo" exact to="/"><SVG name={'brand'} size={32} color="white"/></NavLink>  
+            <NavLink className="active fa-brand-logo" exact to="/"><SVG name={'brand'} size={40} color="white"/></NavLink>  
       </Row>
       <Row justify="center" align="middle" className="pb-2"> 
             <div className={`fa-aside--divider`} />
