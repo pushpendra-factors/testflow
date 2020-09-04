@@ -1,16 +1,26 @@
 import React, { useState, useEffect } from 'react';
+import { useDispatch } from 'react-redux';
 import GroupedChart from './GroupedChart';
 import DataTable from './DataTable';
 import { generateGroupedChartsData, generateDummyData, generateGroups, generateColors, generateUngroupedChartsData } from './utils';
 import EventsInfo from './EventsInfo';
 import FiltersInfo from './FiltersInfo';
 import UngroupedChart from './UngroupedChart';
+import { FUNNEL_RESULTS_AVAILABLE, FUNNEL_RESULTS_UNAVAILABLE } from '../../../reducers/types';
 
 
 function PageContent({ queries, setDrawerVisible }) {
 
     const [eventsData, setEventsData] = useState([]);
     const [groups, setGroups] = useState([]);
+    const dispatch = useDispatch();
+
+    useEffect(() => {
+        dispatch({ type: FUNNEL_RESULTS_AVAILABLE, payload: queries });
+        return () => {
+            dispatch({ type: FUNNEL_RESULTS_UNAVAILABLE });
+        }
+    }, [])
 
     useEffect(() => {
         const dummyData = generateDummyData(queries);
@@ -27,9 +37,8 @@ function PageContent({ queries, setDrawerVisible }) {
     }
 
     return (
-        <div>
-            <EventsInfo queries={queries} />
-            <FiltersInfo setDrawerVisible={setDrawerVisible} />
+        <div className="mt-32">
+            {/* <FiltersInfo setDrawerVisible={setDrawerVisible} /> */}
             <GroupedChart
                 chartData={groupedChartData}
                 chartColors={chartColors}

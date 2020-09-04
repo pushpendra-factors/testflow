@@ -1,7 +1,13 @@
 import React from 'react';
+import { useSelector } from 'react-redux';
 import styles from './index.module.scss';
 
-function EventsInfo({ queries }) {
+function EventsInfo() {
+
+    const globalInfo = useSelector(state => state.global);
+
+    const queries = globalInfo.funnel_events;
+
     return (
         <div className="my-4 flex items-center leading-6">
             <span className="mr-2">

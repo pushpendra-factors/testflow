@@ -13,7 +13,7 @@ function AppLayout() {
             <Sidebar />
             <Layout className="fa-content-container">
                 <HeaderComp /> 
-                <Content className="px-8 bg-white min-h-screen" style={{ marginTop: 64 }}>    
+                <Content className="px-8 bg-white min-h-screen">    
                     <HashRouter>
                             <Switch>
                                 <Route path="/" name="Home" component={CoreQuery} />  
