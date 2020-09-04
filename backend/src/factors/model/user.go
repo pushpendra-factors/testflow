@@ -566,9 +566,9 @@ func GetRecentUserPropertyValuesWithLimits(projectID uint64, propertyKey string,
 	// limit on values returned.
 	values := make([]U.PropertyValue, 0, 0)
 	queryStmnt := "WITH recent_users AS (SELECT id FROM users WHERE project_id = ? ORDER BY created_at DESC limit ?)" +
-		" " + "SELECT user_properties.properties->? AS value, COUNT(*) AS count, MAX(updated_timestamp) AS last_seen, MAX(jsonb_typeof(user_properties.properties->?)) AS value_type FROM recent_users" +
+		" " + "SELECT DISTINCT(user_properties.properties->?) AS value, 1 AS count,updated_timestamp AS last_seen, jsonb_typeof(user_properties.properties->?) AS value_type FROM recent_users" +
 		" " + "LEFT JOIN user_properties ON recent_users.id = user_properties.user_id WHERE user_properties.project_id = ?" +
-		" " + "AND user_properties.properties != 'null' AND user_properties.properties->? IS NOT NULL GROUP BY value ORDER BY count DESC limit ?"
+		" " + "AND user_properties.properties != 'null' AND user_properties.properties->? IS NOT NULL limit ?"
 
 	queryParams := make([]interface{}, 0, 0)
 	queryParams = append(queryParams, projectID, usersLimit, propertyKey, propertyKey, projectID, propertyKey, valuesLimit)
