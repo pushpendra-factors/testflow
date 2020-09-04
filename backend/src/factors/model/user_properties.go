@@ -179,26 +179,25 @@ func RefreshCacheForUserProperties(projectid uint64, currentDate time.Time, user
 		PropertyValues.PropertyValue = make(map[string]U.CountTimestampTuple)
 
 		if category == U.PropertyTypeCategorical {
+			PropertyValuesKey, err := GetValuesByUserPropertyCacheKey(projectid, propertyValue.Key, currentDateFormat)
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to get property cache key - getvaluesbyuserproperty")
+			}
 			for _, value := range values {
-
-				PropertyValuesKey, err := GetValuesByUserPropertyCacheKey(projectid, propertyValue.Key, currentDateFormat)
-				if err != nil {
-					logCtx.WithError(err).Error("Failed to get property cache key - getvaluesbyuserproperty")
-				}
 				if value.Value != "" {
 					PropertyValues.PropertyValue[value.Value] = U.CountTimestampTuple{
 						int64(value.LastSeen),
 						value.Count}
 				}
-				PropertyValues.CacheUpdatedTimestamp = currentDate.Unix()
-				enPropertyValuesCache, err := json.Marshal(PropertyValues)
-				if err != nil {
-					logCtx.WithError(err).Error("Failed to marshal property value - getvaluesbyuserproperty")
-				}
-				err = SetPersistentWithLogging(PropertyValuesKey, string(enPropertyValuesCache), U.EVENT_USER_CACHE_EXPIRY_SECS, fmt.Sprintf("value %s", propertyValue.Key))
-				if err != nil {
-					logCtx.WithError(err).Error("Failed to set cache property value - getvaluesbyuserproperty")
-				}
+			}
+			PropertyValues.CacheUpdatedTimestamp = currentDate.Unix()
+			enPropertyValuesCache, err := json.Marshal(PropertyValues)
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to marshal property value - getvaluesbyuserproperty")
+			}
+			err = SetPersistentWithLogging(PropertyValuesKey, string(enPropertyValuesCache), U.EVENT_USER_CACHE_EXPIRY_SECS, fmt.Sprintf("value %s", propertyValue.Key))
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to set cache property value - getvaluesbyuserproperty")
 			}
 		}
 	}

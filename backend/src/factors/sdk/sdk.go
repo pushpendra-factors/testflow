@@ -407,21 +407,21 @@ func RefreshCacheFromDb(project_id uint64, currentTime time.Time, no_of_days int
 				var eventPropertyValues U.CachePropertyValueWithTimestamp
 				eventPropertyValues.PropertyValue = make(map[string]U.CountTimestampTuple)
 				if category == U.PropertyTypeCategorical {
+					eventPropertyValuesKey, _ := M.GetValuesByEventPropertyCacheKey(project_id, event, property.Key, dateFormat)
 					for _, value := range values {
-						eventPropertyValuesKey, _ := M.GetValuesByEventPropertyCacheKey(project_id, event, property.Key, dateFormat)
 						if value.Value != "" {
 							eventPropertyValues.PropertyValue[value.Value] = U.CountTimestampTuple{
 								int64(value.LastSeen),
 								value.Count}
 						}
-						eventPropertyValues.CacheUpdatedTimestamp = currentTimeUnix
-						enEventPropertyValuesCache, err := json.Marshal(eventPropertyValues)
-						if err != nil {
-							logCtx.WithError(err).Error("Failed to marshall - property values")
-							return
-						}
-						eventPropertyValuesInCache[eventPropertyValuesKey] = string(enEventPropertyValuesCache)
 					}
+					eventPropertyValues.CacheUpdatedTimestamp = currentTimeUnix
+					enEventPropertyValuesCache, err := json.Marshal(eventPropertyValues)
+					if err != nil {
+						logCtx.WithError(err).Error("Failed to marshall - property values")
+						return
+					}
+					eventPropertyValuesInCache[eventPropertyValuesKey] = string(enEventPropertyValuesCache)
 				}
 			}
 			eventProperties.CacheUpdatedTimestamp = currentTimeUnix
