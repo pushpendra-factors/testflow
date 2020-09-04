@@ -19,7 +19,7 @@ export const PROPERTY_TYPE_OPTS = {
 export const PROPERTY_LOGICAL_OP_OPTS = {
   'AND': 'and',
   'OR': 'or',
-}; 
+};
 
 export const DASHBOARD_TYPE_WEB_ANALYTICS = "Website Analytics";
 export const QUERY_CLASS_CHANNEL = "channel";
@@ -30,7 +30,7 @@ export const PROPERTY_VALUE_TYPE_DATE_TIME = 'datetime';
 
 export const USER_PREF_PROPERTY_TYPE_OPTS = {
   // user property preferred on top/default.
-  'user': 'user property', 
+  'user': 'user property',
   'event': 'event property'
 };
 
@@ -44,22 +44,57 @@ export const PRESENTATION_BAR = 'pb';
 export const PRESENTATION_CARD = 'pc';
 export const PRESENTATION_FUNNEL = 'pf';
 
-
-export const DEFAULT_DATE_RANGE_LABEL = 'Last 7 days';
-export const DATE_RANGE_TODAY_LABEL = 'Today';
+export const DATE_RANGE_LABEL_CURRENT_MONTH = 'Current Month';
+export const DEFAULT_DATE_RANGE_LABEL = 'Current Week';
+export const DATE_RANGE_LABEL_LAST_MONTH = 'Last Month';
+export const DATE_RANGE_LABEL_LAST_WEEK = 'Last Week';
 export const DATE_RANGE_YESTERDAY_LABEL = 'Yesterday';
-export const DATE_RANGE_LAST_30_DAYS_LABEL = 'Last 30 days';
+export const DATE_RANGE_TODAY_LABEL = 'Today';
 export const DATE_RANGE_LAST_2_MIN_LABEL = 'Last 2 mins'
 export const DATE_RANGE_LAST_30_MIN_LABEL = 'Last 30 mins'
 
 export const LABEL_STYLE = { marginRight: '10px', fontWeight: '600', color: '#777' };
 
 export const DEFAULT_DATE_RANGE = {
-  startDate: moment(new Date()).subtract(7, 'days').startOf('day').toDate(),
+  startDate: moment(getFirstDayOfCurrentWeek()).startOf('day').toDate(),
   endDate: moment(new Date()).subtract(1, 'days').endOf('day').toDate(),
   label: DEFAULT_DATE_RANGE_LABEL,
   key: 'selected'
 }
+
+function getFirstDayOfCurrentWeek() {
+  let d = new Date();
+  let first = d.getDate() - d.getDay()
+  return new Date(d.setDate(first));
+}
+
+function getFirstDayOfLastWeek() {
+  let d = new Date();
+  let first = d.getDate() - d.getDay() - 7;
+  return new Date(d.setDate(first));
+}
+
+function getLastDayOfLastWeek() {
+  let d = new Date();
+  let last = d.getDate() - d.getDay() - 1;
+  return new Date(d.setDate(last));
+}
+
+function getFirstDayOfLastMonth() {
+  let d = new Date();
+  return new Date(d.getFullYear(), d.getMonth() - 1, 1);
+}
+
+function getLastDayOfLastMonth() {
+  let d = new Date();
+  return new Date(d.getFullYear(), d.getMonth(), 0);
+}
+
+function getFirstDayOfCurrentMonth() {
+  let d = new Date();
+  return new Date(d.getFullYear(), d.getMonth(), 1);
+}
+
 const DEFAULT_DATE_RANGES = [
   {
     label: DATE_RANGE_TODAY_LABEL,
@@ -70,7 +105,7 @@ const DEFAULT_DATE_RANGES = [
     isSelected(range) {
       const definedRange = this.range();
       return (
-        moment(range.startDate).isSame(definedRange.startDate,"seconds") && 
+        moment(range.startDate).isSame(definedRange.startDate,"seconds") &&
         moment(range.endDate).isSame(definedRange.endDate,"seconds")
       );
     }
@@ -85,16 +120,30 @@ const DEFAULT_DATE_RANGES = [
   {
     label: DEFAULT_DATE_RANGE_LABEL,
     range: () => ({
-      startDate: moment(new Date()).subtract(7, 'days').startOf('day').toDate(),
+      startDate: moment(getFirstDayOfCurrentWeek()).startOf('day').toDate(),
       endDate: moment(new Date()).subtract(1, 'days').endOf('day').toDate(),
     }),
   },
   {
-    label: DATE_RANGE_LAST_30_DAYS_LABEL,
+    label: DATE_RANGE_LABEL_CURRENT_MONTH,
     range: () => ({
-      startDate: moment(new Date()).subtract(30, 'days').startOf('day').toDate(),
+      startDate: moment(getFirstDayOfCurrentMonth()).startOf('day').toDate(),
       endDate: moment(new Date()).subtract(1, 'days').endOf('day').toDate(),
-    })
+    }),
+  },
+  {
+    label: DATE_RANGE_LABEL_LAST_WEEK,
+    range: () => ({
+      startDate: moment(getFirstDayOfLastWeek()).startOf('day').toDate(),
+      endDate: moment(getLastDayOfLastWeek()).endOf('day').toDate(),
+    }),
+  },
+  {
+    label: DATE_RANGE_LABEL_LAST_MONTH,
+    range: () => ({
+      startDate: moment(getFirstDayOfLastMonth()).startOf('day').toDate(),
+      endDate: moment(getLastDayOfLastMonth()).endOf('day').toDate(),
+    }),
   },
 ];
 
@@ -108,10 +157,10 @@ export const DEFAULT_TODAY_DATE_RANGES = [
     isSelected(range) {
       const definedRange = this.range();
       return (
-        moment(range.startDate).isSame(definedRange.startDate,"seconds") && 
+        moment(range.startDate).isSame(definedRange.startDate,"seconds") &&
         moment(range.endDate).isSame(definedRange.endDate,"seconds")
       );
-    }  
+    }
   },
   {
     label:DATE_RANGE_LAST_30_MIN_LABEL,
@@ -122,10 +171,10 @@ export const DEFAULT_TODAY_DATE_RANGES = [
     isSelected(range) {
       const definedRange = this.range();
       return (
-        moment(range.startDate).isSame(definedRange.startDate,"seconds") && 
+        moment(range.startDate).isSame(definedRange.startDate,"seconds") &&
         moment(range.endDate).isSame(definedRange.endDate,"seconds")
       );
-    } 
+    }
   }
 ]
 export const DEFINED_DATE_RANGES = createStaticRanges(DEFAULT_DATE_RANGES);
@@ -143,8 +192,8 @@ export const getDateRangeFromStoredDateRange = (storedRange) => {
     storedRange.to = newInterval.to;
   }
 
-  return [{ 
-    startDate: moment.unix(storedRange.fr).toDate(), 
+  return [{
+    startDate: moment.unix(storedRange.fr).toDate(),
     endDate: moment.unix(storedRange.to).toDate(),
     key: "selected",
   }];
@@ -169,7 +218,7 @@ export const getGroupByTimestampType = function(from, to) {
 
 export const readableDateRange = function(range) {
   // Use label for default date range.
-  if(range.startDate ==  DEFAULT_DATE_RANGE.startDate 
+  if(range.startDate ==  DEFAULT_DATE_RANGE.startDate
     && range.endDate == DEFAULT_DATE_RANGE.endDate)
     return DEFAULT_DATE_RANGE.label;
 
@@ -196,7 +245,7 @@ export const getQueryPeriod = function(selectedRange, timezone)  {
   if(!isValidTimezone){
     console.error("Invalid timezone: ", timezone,", default to browser timezone: ", timezone )
   }
-  
+
   let isTzEndDateToday = mt(selectedRange.endDate).tz(timezone).isSame(mt().tz(timezone), 'day');
   let from =  overwriteTimezone(selectedRange.startDate, timezone).unix();
   let to = overwriteTimezone(selectedRange.endDate, timezone).unix();
@@ -263,7 +312,7 @@ export const convertFunnelResultForTable = function(result) {
         if (conversionSplit.length < 5) continue;
 
         let stepXIndex = parseInt(conversionSplit[2]),
-        stepYIndex = parseInt(conversionSplit[4]);
+          stepYIndex = parseInt(conversionSplit[4]);
         newHeader = query.ewp[stepXIndex].na + " to " + query.ewp[stepYIndex].na + " conversion rate";
       }
     }
@@ -312,7 +361,7 @@ export const setDateRangeForPresetLabel = function(dateRangeWithLabel) {
   for (let i = 0; i < DEFINED_DATE_RANGES.length; i++) {
     let preset = DEFINED_DATE_RANGES[i]
     let presetRange = preset.range()
-    
+
     if (preset.label == dateRangeWithLabel.label) {
       if ((dateRangeWithLabel.label == DATE_RANGE_TODAY_LABEL && moment(dateRangeWithLabel.startDate).unix() != moment(presetRange.startDate).unix()) ||
         dateRangeWithLabel.label != DATE_RANGE_TODAY_LABEL && !areSameDateRanges(dateRangeWithLabel, presetRange)) {
