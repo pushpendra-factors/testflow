@@ -177,8 +177,7 @@ function GroupedChart({ eventsData, groups, chartData }) {
                         left = (nodePosition.x + (nodePosition.width / 2)) - 200;
                     }
 
-                    const scrollTop = (window.pageYOffset !== undefined) ? window.pageYOffset : (document.documentElement || document.body.parentNode || document.body).scrollTop;
-                    const top = nodePosition.y + scrollTop;
+                    const top = nodePosition.y;
                     const toolTipHeight = d3.select('.toolTip').node().getBoundingClientRect().height;
 
                     return { top: top - toolTipHeight + 5, left: left };
