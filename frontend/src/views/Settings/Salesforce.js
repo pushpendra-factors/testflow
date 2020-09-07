@@ -13,7 +13,6 @@ import Loading from '../../loading';
 import { 
   fetchProjectSettings,
   udpateProjectSettings,
-  fetchAdwordsCustomerAccounts,
   enableSalesforceIntegration,
 } from '../../actions/projectsActions';
 import salesforceLogo from '../../assets/img/settings/salesforce-logo.svg';
@@ -23,7 +22,6 @@ const mapStateToProps = store => {
     projects: store.projects.projects,
     currentProjectId: store.projects.currentProjectId,
     currentProjectSettings: store.projects.currentProjectSettings,
-    adwordsCustomerAccounts: store.projects.adwordsCustomerAccounts,
     currentAgent: store.agents.agent,
   }
 }
@@ -32,7 +30,6 @@ const mapDispatchToProps = dispatch => {
   return bindActionCreators({ 
     fetchProjectSettings,
     udpateProjectSettings,
-    fetchAdwordsCustomerAccounts,
     enableSalesforceIntegration,
   }, dispatch);
 }
@@ -43,10 +40,7 @@ class Salesforce extends Component {
 
     this.state = {
       loaded: false,
-      redirect: false,
       error: null,
-
-      modalOpen: false,
     }
   }
 
