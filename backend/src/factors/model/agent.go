@@ -41,7 +41,9 @@ type Agent struct {
 	LastLoggedInAt *time.Time `json:"last_logged_in_at"`
 	LoginCount     uint64     `json:"login_count"`
 
-	IntAdwordsRefreshToken string `json:"-"`
+	IntAdwordsRefreshToken    string `json:"-"`
+	IntSalesforceInstanceUrl  string `json:"int_salesforce_instance_url"`
+	IntSalesforceRefreshToken string `json:"int_salesforce_refresh_token"`
 }
 
 // AgentInfo - Exposable Info.
@@ -229,6 +231,16 @@ func UpdateAgentIntAdwordsRefreshToken(uuid, refreshToken string) int {
 	return updateAgent(uuid, IntAdwordsRefreshToken(refreshToken))
 }
 
+func UpdateAgentIntSalesforce(uuid, refreshToken string, instanceUrl string) int {
+	if uuid == "" || refreshToken == "" || instanceUrl == "" {
+		log.WithField("agent_uuid", uuid).Error(
+			"UpdateAgentIntSalesforce failed. Invalid params.")
+		return http.StatusBadRequest
+	}
+
+	return updateAgent(uuid, IntSalesforceRefreshToken(refreshToken), IntSalesforceInstanceUrl(instanceUrl))
+}
+
 func UpdateAgentPassword(uuid, plainTextPassword string, passUpdatedAt time.Time) int {
 
 	if uuid == "" || plainTextPassword == "" {
@@ -320,6 +332,18 @@ func IntAdwordsRefreshToken(refreshToken string) Option {
 	}
 }
 
+func IntSalesforceRefreshToken(refreshToken string) Option {
+	return func(fields fieldsToUpdate) {
+		fields["int_salesforce_refresh_token"] = refreshToken
+	}
+}
+
+func IntSalesforceInstanceUrl(instanceUrl string) Option {
+	return func(fields fieldsToUpdate) {
+		fields["int_salesforce_instance_url"] = instanceUrl
+	}
+}
+
 func IsEmailVerified(verified bool) Option {
 	return func(fields fieldsToUpdate) {
 		fields["is_email_verified"] = verified
@@ -349,10 +373,8 @@ func updateAgent(agentUUID string, options ...Option) int {
 		log.WithError(db.Error).Error("UpdateAgent Failed")
 		return http.StatusInternalServerError
 	}
-
 	if db.RowsAffected == 0 {
 		return http.StatusNoContent
 	}
-
 	return http.StatusAccepted
 }

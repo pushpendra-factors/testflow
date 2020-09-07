@@ -54,6 +54,8 @@ func main() {
 	whitelistedProjectIdsEventUserCache := flag.String("whitelisted_projects_ids_event_user_cache", "1", "List of project ids for which caching for events/user is enabled")
 	facebookAppId := flag.String("facebook_app_id", "", "")
 	facebookAppSecret := flag.String("facebook_app_secret", "", "")
+	salesforceAppId := flag.String("salesforce_app_id", "", "")
+	salesforceAppSecret := flag.String("salesforce_app_secret", "", "")
 
 	skipSessionProjectIds := flag.String("skip_session_project_ids",
 		"", "List or projects to skip session creation.")
@@ -91,6 +93,8 @@ func main() {
 		AdminLoginToken:                     *adminLoginToken,
 		FacebookAppID:                       *facebookAppId,
 		FacebookAppSecret:                   *facebookAppSecret,
+		SalesforceAppID:                     *salesforceAppId,
+		SalesforceAppSecret:                 *salesforceAppSecret,
 		SentryDSN:                           *sentryDSN,
 		LoginTokenMap:                       C.ParseConfigStringToMap(*loginTokenMap),                // Map of "<token>": "<agent_email>".
 		SkipTrackProjectIds:                 C.GetTokensFromStringListAsUint64(*skipTrackProjectIds), // comma seperated project ids.

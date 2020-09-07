@@ -35,6 +35,8 @@ func InitAppRoutes(r *gin.Engine) {
 	r.PUT("/agents/billing", mid.SetLoggedInAgent(), UpdateAgentBillingAccount)
 	r.GET("/agents/info", mid.SetLoggedInAgent(), AgentInfo)
 	r.PUT("/agents/info", mid.SetLoggedInAgent(), UpdateAgentInfo)
+	r.GET(SALESFORCE_CALLBACK_URL, SalesforceCallbackHandler)
+	r.GET("/integrations/salesforce/auth", SalesforceAuthRedirect)
 
 	r.POST(ROUTE_PROJECTS_ROOT, mid.SetLoggedInAgent(), CreateProjectHandler)
 
@@ -48,7 +50,6 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.Use(mid.SetLoggedInAgent())
 	authRouteGroup.Use(mid.SetAuthorizedProjectsByLoggedInAgent())
 	authRouteGroup.Use(mid.ValidateLoggedInAgentHasAccessToRequestProject())
-
 	authRouteGroup.GET("/:project_id/dashboards", GetDashboardsHandler)
 	authRouteGroup.POST("/:project_id/dashboards", CreateDashboardHandler)
 	authRouteGroup.PUT("/:project_id/dashboards/:dashboard_id", UpdateDashboardHandler)
