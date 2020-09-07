@@ -96,7 +96,7 @@ function QueryBlock({index, event, eventChange,queries}) {
 
     const selectEventFilter = () => {
         if(isFilterDDVisible) {
-            return <FilterBlock insertFilter={insertFilters}></FilterBlock>
+            return <FilterBlock insertFilter={insertFilters} closeFilter={() => setFilterDDVisible(false)}></FilterBlock>
         }
     }
 
@@ -125,7 +125,7 @@ function QueryBlock({index, event, eventChange,queries}) {
                 // </div>)
                 filters.push(
                     <div className={`fa--query_block--filters`}>
-                        <FilterBlock filter={filter} insertFilter={insertFilters}></FilterBlock>
+                        <FilterBlock filter={filter} insertFilter={insertFilters} closeFilter={() => setFilterDDVisible(false)}></FilterBlock>
                     </div>
                 );
                 

@@ -117,6 +117,16 @@ func createUserPropertiesIfChanged(projectId uint64, userId string,
 		postgres.Jsonb{RawMessage: json.RawMessage(updatedPropertiesBytes)}, timestamp, false)
 }
 
+func GetIfExistsPersistentWithLogging(key *cacheRedis.Key, tag string) (string, bool, error) {
+	log.Info(fmt.Sprintf("Begin: UG %s", tag))
+	begin := U.TimeNowUnix()
+	data, status, err := cacheRedis.GetIfExistsPersistent(key)
+	end := U.TimeNowUnix()
+	log.WithFields(log.Fields{
+		"timeTaken": begin - end}).Info(fmt.Sprintf("End: UG %s", tag))
+	return data, status, err
+}
+
 func SetPersistentWithLogging(key *cacheRedis.Key, value string, expiryInSecs float64, tag string) error {
 	log.Info(fmt.Sprintf("Begin: US %s", tag))
 	begin := U.TimeNowUnix()
@@ -126,16 +136,6 @@ func SetPersistentWithLogging(key *cacheRedis.Key, value string, expiryInSecs fl
 		"timeTaken": begin - end,
 	}).Info(fmt.Sprintf("End: US %s", tag))
 	return err
-}
-
-func GetIfExistsPersistentWithLogging(key *cacheRedis.Key, tag string) (string, bool, error) {
-	log.Info(fmt.Sprintf("Begin: UG %s", tag))
-	begin := U.TimeNowUnix()
-	data, status, err := cacheRedis.GetIfExistsPersistent(key)
-	end := U.TimeNowUnix()
-	log.WithFields(log.Fields{
-		"timeTaken": begin - end}).Info(fmt.Sprintf("End: UG %s", tag))
-	return data, status, err
 }
 
 func RefreshCacheForUserProperties(projectid uint64, currentDate time.Time, usersProcessedLimit int, propertiesLimit int, valuesLimit int) {
@@ -179,26 +179,25 @@ func RefreshCacheForUserProperties(projectid uint64, currentDate time.Time, user
 		PropertyValues.PropertyValue = make(map[string]U.CountTimestampTuple)
 
 		if category == U.PropertyTypeCategorical {
+			PropertyValuesKey, err := GetValuesByUserPropertyCacheKey(projectid, propertyValue.Key, currentDateFormat)
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to get property cache key - getvaluesbyuserproperty")
+			}
 			for _, value := range values {
-
-				PropertyValuesKey, err := GetValuesByUserPropertyCacheKey(projectid, propertyValue.Key, currentDateFormat)
-				if err != nil {
-					logCtx.WithError(err).Error("Failed to get property cache key - getvaluesbyuserproperty")
-				}
 				if value.Value != "" {
 					PropertyValues.PropertyValue[value.Value] = U.CountTimestampTuple{
 						int64(value.LastSeen),
 						value.Count}
 				}
-				PropertyValues.CacheUpdatedTimestamp = currentDate.Unix()
-				enPropertyValuesCache, err := json.Marshal(PropertyValues)
-				if err != nil {
-					logCtx.WithError(err).Error("Failed to marshal property value - getvaluesbyuserproperty")
-				}
-				err = SetPersistentWithLogging(PropertyValuesKey, string(enPropertyValuesCache), U.EVENT_USER_CACHE_EXPIRY_SECS, fmt.Sprintf("value %s", propertyValue.Key))
-				if err != nil {
-					logCtx.WithError(err).Error("Failed to set cache property value - getvaluesbyuserproperty")
-				}
+			}
+			PropertyValues.CacheUpdatedTimestamp = currentDate.Unix()
+			enPropertyValuesCache, err := json.Marshal(PropertyValues)
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to marshal property value - getvaluesbyuserproperty")
+			}
+			err = SetPersistentWithLogging(PropertyValuesKey, string(enPropertyValuesCache), U.EVENT_USER_CACHE_EXPIRY_SECS, fmt.Sprintf("value %s", propertyValue.Key))
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to set cache property value - getvaluesbyuserproperty")
 			}
 		}
 	}
@@ -220,6 +219,7 @@ func UpdateCacheForUserProperties(userId string, projectid uint64, updatedProper
 		return
 	}
 
+	valuesSetToCache := make(map[*cacheRedis.Key]string)
 	// If the cache is empty / cache is updated from more than 1 day - repopulate cache
 	logCtx := log.WithFields(log.Fields{
 		"project_id": projectid,
@@ -324,9 +324,9 @@ func UpdateCacheForUserProperties(userId string, projectid uint64, updatedProper
 		}
 	}
 	if len(propertyValuesCacheKeys) > 0 {
-		log.Info(fmt.Sprintf("Begin: UMget %v", len(propertyValuesCacheKeys)))
+		logCtx.Info(fmt.Sprintf("Begin: UMget %v", len(propertyValuesCacheKeys)))
 		valuesList, err := cacheRedis.MGetPersistent(propertyValuesCacheKeys...)
-		log.Info("End: UMget")
+		logCtx.Info("End: UMget")
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to get values - properties values")
 			return
@@ -352,10 +352,7 @@ func UpdateCacheForUserProperties(userId string, projectid uint64, updatedProper
 				if err != nil {
 					logCtx.WithError(err).Error("Failed to marshal property value - getvaluesbyuserproperty")
 				}
-				err = SetPersistentWithLogging(propertyValuesCacheKeys[index], string(enEventPropertyValueCache), U.EVENT_USER_CACHE_EXPIRY_SECS, "values")
-				if err != nil {
-					logCtx.WithError(err).Error("Failed to set cache property value - getvaluesbyuserproperty")
-				}
+				valuesSetToCache[propertyValuesCacheKeys[index]] = string(enEventPropertyValueCache)
 			}
 		}
 	}
@@ -364,9 +361,13 @@ func UpdateCacheForUserProperties(userId string, projectid uint64, updatedProper
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to marshal property keys - getuserpropertiesbyproject")
 	}
-	err = SetPersistentWithLogging(propertyCacheKey, string(enPropertiesCache), U.EVENT_USER_CACHE_EXPIRY_SECS, "properties")
+	valuesSetToCache[propertyCacheKey] = string(enPropertiesCache)
+	logCtx.Info(fmt.Sprintf("Begin: UBset %v", len(valuesSetToCache)))
+	err = cacheRedis.SetPersistentBatch(valuesSetToCache, U.EVENT_USER_CACHE_EXPIRY_SECS)
+	logCtx.Info("End: UBset")
 	if err != nil {
-		logCtx.WithError(err).Error("Failed to set cache property keys - getuserpropertiesbyproject")
+		logCtx.WithError(err).Error("Failed to set property values in cache")
+		return
 	}
 }
 

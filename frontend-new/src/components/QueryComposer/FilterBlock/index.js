@@ -4,7 +4,7 @@ import styles from './index.module.scss';
 import {Input} from 'antd';
 import {SVG} from 'factorsComponents'
 
-export default function FilterBlock({filter, insertFilter}) {
+export default function FilterBlock({filter, insertFilter, closeFilter}) {
 
     const [filterTypeState, setFilterTypeState] = useState("props");
     const [searchTerm, setSearchTerm] = useState("");
@@ -61,7 +61,7 @@ export default function FilterBlock({filter, insertFilter}) {
     }
 
     const onSelectSearch = (userInput) => {
-        this.setSearchTerm(userInput);
+        setSearchTerm(userInput.currentTarget.value);
     }
 
     const changeFilterTypeState = (next = true) => {
@@ -88,43 +88,58 @@ export default function FilterBlock({filter, insertFilter}) {
     }
 
     const renderOptions = (options) => {
-        let renderOptions = []
+        const renderOptions = []
         switch (filterTypeState) {
             case "props": 
-                renderOptions = options.map(group => {
-                    return <>
+                options.forEach(group => {
+                    renderOptions.push(<>
                         <div className={styles.filter_block__filter_select__option_group}
                             >
                             <SVG name={group["icon"]} extraClass={`self-center`}></SVG>
-                            <span className={`ml-1`}>{group["label"]}</span>
+                            <span extraClass={`ml-1`}>{group["label"]}</span>
                             <SVG name="plus" extraClass={`ml-20 self-center`}></SVG>
                         </div>
                         {
-                            group["values"].map(opt => 
-                                <span className={styles.filter_block__filter_select__option}
-                                    onClick={() => optionClick(opt)}    >
-                                    {opt}
-                                </span>
-                                )
+                            (() => {
+                                const valuesOptions = [];
+                                group["values"].forEach((val, index) => {
+                                    if(val.toLowerCase().includes(searchTerm.toLowerCase())) {
+                                        valuesOptions.push(
+                                            <span className={styles.filter_block__filter_select__option}
+                                                onClick={() => optionClick(val)}  >
+                                                {val}
+                                            </span>
+                                        )
+                                    }
+                                })
+                                return valuesOptions;
+                            })()
                         }
-                    </>
+                    </>);
                 });
                 break;
             case "operator":
-                renderOptions = options.map(opt => 
-                    <span className={styles.filter_block__filter_select__option}
-                        onClick={() => optionClick(opt)}    >
-                        {opt}
-                    </span>
-                );
+                options.forEach(opt => {
+                    if(opt.toLowerCase().includes(searchTerm.toLowerCase())) {
+                        renderOptions.push(
+                            <span className={styles.filter_block__filter_select__option}
+                                onClick={() => optionClick(opt)} >
+                                {opt}
+                            </span>
+                        )
+                    }
+                });
                 break;
             case "values":
-                renderOptions = options[newFilterState["props"]].map(opt => 
-                    <span className={styles.filter_block__filter_select__option}
-                        onClick={() => optionClick(opt)}    >
-                        {opt}
-                    </span>
-                );
+                options[newFilterState["props"]].forEach(opt => {
+                    if(opt.toLowerCase().includes(searchTerm.toLowerCase())) {
+                        renderOptions.push(<span className={styles.filter_block__filter_select__option}
+                            onClick={() => optionClick(opt)}    >
+                            {opt}
+                        </span>
+                        )
+                    }
+                });
                 break;
         }
 
@@ -184,6 +199,8 @@ export default function FilterBlock({filter, insertFilter}) {
             && newFilterState["values"].length   
         ) {
             insertFilter(newFilterState);
+        } else {
+            closeFilter();
         }
     }
     
