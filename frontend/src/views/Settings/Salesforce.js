@@ -7,13 +7,6 @@ import {
   CardBody,
   CardHeader,
   Button,
-  Table,
-  Input,
-  Modal,
-  ModalBody,
-  ModalHeader,
-  Form,
-  
 } from 'reactstrap';
 
 import Loading from '../../loading';
@@ -102,11 +95,13 @@ class Salesforce extends Component {
 
   renderEnableButton(){
       let settingsText = this.isSalesforceEnabled() ? "Enabled": "Enable with Salesforce";
-      return <Button color='primary' style={{ marginTop: '-3px' }} 
+      return (
+      <Button color='primary' style={{ marginTop: '-3px' }}
       outline onClick={!this.isSalesforceEnabled() ? this.onClickEnableSalesforce:null}  disabled={this.isSalesforceEnabled()}>
       <img src={salesforceLogo} style={{ marginRight: '6px', marginBottom: '3px', width: '15px' }}></img>
       {settingsText}
-    </Button>
+      </Button>
+      );
   }
 
   render() {
