@@ -541,9 +541,9 @@ func InitSDKService(config *Configuration) error {
 	configuration = config
 
 	// DB dependency for SDK project_settings.
-	// if err := InitDB(config.DBInfo); err != nil {
-	// 	log.WithError(err).Error("Failed to initialize db on sdk_service.")
-	// }
+	if err := InitDB(config.DBInfo); err != nil {
+		log.WithError(err).Error("Failed to initialize db on sdk_service.")
+	}
 
 	// Cache dependency for requests not using queue.
 	InitRedis(config.RedisHost, config.RedisPort)
