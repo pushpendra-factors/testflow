@@ -4,6 +4,7 @@ import styles from './index.module.scss';
 import { Select, Button} from 'antd';
 
 import Filter from '../Filter';
+import FilterBlock from '../FilterBlock';
 
 const { OptGroup, Option } = Select;
 
@@ -95,7 +96,7 @@ function QueryBlock({index, event, eventChange,queries}) {
 
     const selectEventFilter = () => {
         if(isFilterDDVisible) {
-            return <Filter insertFilters={insertFilters}></Filter>
+            return <FilterBlock insertFilter={insertFilters} closeFilter={() => setFilterDDVisible(false)}></FilterBlock>
         }
     }
 
@@ -112,20 +113,27 @@ function QueryBlock({index, event, eventChange,queries}) {
         const filters = [];
         if(event && event.filters.length) {
             event.filters.forEach((filter, index) => {
+                // filters.push(
+                // <div className={`fa--query_block--filters`}>
+                //     <span ><Text type={'title'} level={7} weight={'thin'} extraClass={`m-0`}>Where</Text> </span>
+                //     <div className={`fa--query_block--filters-values`}>
+                //         <span>{filter.prop}</span>
+                //         <span>{filter.operator}</span>
+                //         <span>{filter.values.join(',')}</span>
+                //     </div>
+                //     {index === event.filters.length -1? additionalActions() : null}
+                // </div>)
                 filters.push(
-                <div className={`fa--query_block--filters`}>
-                    <span ><Text type={'title'} level={7} weight={'thin'} extraClass={`m-0`}>Where</Text> </span>
-                    <div className={`fa--query_block--filters-values`}>
-                        <span>{filter.prop}</span>
-                        <span>{filter.operator}</span>
-                        <span>{filter.values.join(',')}</span>
+                    <div className={`fa--query_block--filters`}>
+                        <FilterBlock filter={filter} insertFilter={insertFilters} closeFilter={() => setFilterDDVisible(false)}></FilterBlock>
                     </div>
-                    {index === event.filters.length -1? additionalActions() : null}
-                </div>)
+                );
+                
+
             });
         }
 
-        filters.push(<div className={``}>
+        filters.push(<div className={`fa--query_block--filters`}>
             {additionalActions()}
             {selectEventFilter()}
         </div>)
