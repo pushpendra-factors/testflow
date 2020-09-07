@@ -1,10 +1,9 @@
 .seq_selector {
     display: flex;
     flex-direction: column;
-    background: white;
-    height: 280px;
-    width: 280px;
-    padding: 32px;
+    background: white; 
+    width: 240px;
+    padding: 8px 16px;
 
     &__text {
         font-family: Work Sans;
@@ -16,14 +15,11 @@
 
     &__container {
         display: flex;
-        flex-direction: column;
+        flex-direction: column; 
+        margin-bottom: 24px;
 
-        margin-bottom: 20px;
-
-        &__seq {
-
-            display: flex;
-            
+        &__seq { 
+            display: flex; 
         }
 
         &__seqKey {
@@ -36,7 +32,7 @@
             line-height: 30px;
             padding: 2px 12px;
             align-self: center;
-            border: 1px solid #B7BEC8;
+            border: 1px solid #5949BC;
             margin-right: 4px;
         }
 
