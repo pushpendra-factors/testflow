@@ -1,6 +1,6 @@
 
 import React from 'react'; 
-import {Text, SVG} from 'factorsComponents'; 
+import {Text, SVG} from '../../components/factorsComponents'; 
 import { Row, Col, Table, Avatar, Button } from 'antd';
 
 

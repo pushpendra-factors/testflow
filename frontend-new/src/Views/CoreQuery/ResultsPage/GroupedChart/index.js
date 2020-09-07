@@ -2,9 +2,16 @@ import React, { useRef, useCallback, useEffect } from 'react';
 import c3 from 'c3';
 import * as d3 from 'd3';
 import styles from './index.module.scss';
-import { checkForWindowSizeChange, calculatePercentage } from '../utils';
+import { checkForWindowSizeChange, calculatePercentage, generateColors } from '../utils';
 
-function GroupedChart({ eventsData, groups, chartData, chartColors }) {
+function GroupedChart({ eventsData, groups, chartData }) {
+
+    const appliedColors = generateColors(chartData.length);
+    const chartColors = {};
+    chartData.forEach((elem, index) => {
+        chartColors[elem[0]] = appliedColors[index];
+    });
+    
     const chartRef = useRef(null);
 
     const showConverionRates = useCallback(() => {
@@ -53,12 +60,13 @@ function GroupedChart({ eventsData, groups, chartData, chartColors }) {
 
 
     const drawChart = useCallback(() => {
-        const chart = c3.generate({
+        c3.generate({
             size: {
                 height: 400
             },
             padding: {
                 left: 40,
+                bottom: 24
             },
             bindto: chartRef.current,
             data: {
@@ -116,6 +124,9 @@ function GroupedChart({ eventsData, groups, chartData, chartColors }) {
                         .style('opacity', '1')
                 },
             },
+            legend: {
+                padding: 3,
+            },
             transition: {
                 duration: 1000
             },
@@ -124,6 +135,9 @@ function GroupedChart({ eventsData, groups, chartData, chartColors }) {
                 width: {
                     ratio: 0.7
                 }
+            },
+            onrendered: () => {
+                d3.select(chartRef.current).select(".c3-axis.c3-axis-x").selectAll('.tick').select('tspan').attr("dy", "16px");
             },
             axis: {
                 x: {

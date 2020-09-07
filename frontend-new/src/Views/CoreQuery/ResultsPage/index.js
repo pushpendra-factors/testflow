@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import GroupedChart from './GroupedChart';
 import DataTable from './DataTable';
-import { generateGroupedChartsData, generateDummyData, generateGroups, generateColors, generateUngroupedChartsData } from './utils';
+import { generateGroupedChartsData, generateDummyData, generateGroups, generateUngroupedChartsData } from './utils';
 import FiltersInfo from './FiltersInfo';
 import UngroupedChart from './UngroupedChart';
 import { FUNNEL_RESULTS_AVAILABLE, FUNNEL_RESULTS_UNAVAILABLE } from '../../../reducers/types';
@@ -19,7 +19,7 @@ function PageContent({ queries, setDrawerVisible }) {
         return () => {
             dispatch({ type: FUNNEL_RESULTS_UNAVAILABLE });
         }
-    }, [])
+    }, [queries, dispatch])
 
     useEffect(() => {
         const dummyData = generateDummyData(queries);
@@ -29,8 +29,7 @@ function PageContent({ queries, setDrawerVisible }) {
 
     const groupedChartData = generateGroupedChartsData(eventsData, groups);
     const ungroupedChartsData = generateUngroupedChartsData(eventsData);
-    const chartColors = generateColors(eventsData);
-
+    
     if (!eventsData.length) {
         return null;
     }
@@ -40,7 +39,6 @@ function PageContent({ queries, setDrawerVisible }) {
             {/* <FiltersInfo setDrawerVisible={setDrawerVisible} /> */}
             {/* <GroupedChart
                 chartData={groupedChartData}
-                chartColors={chartColors}
                 groups={groups.filter(elem => elem.is_visible)}
                 eventsData={eventsData}
             /> */}

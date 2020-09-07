@@ -11,6 +11,7 @@ export default function (state = defaultState, action) {
             return { ...state, is_funnel_results_visible: true, funnel_events: action.payload }
         case FUNNEL_RESULTS_UNAVAILABLE:
             return { ...state, is_funnel_results_visible: false, funnel_events: [] }
+        default:
+            return state
     }
-    return state;
 }

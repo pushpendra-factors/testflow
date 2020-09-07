@@ -1,11 +1,13 @@
 import React, { useRef, useCallback, useEffect } from 'react';
 import * as d3 from 'd3';
 import styles from './index.module.scss';
-import { checkForWindowSizeChange, calculatePercentage } from '../utils';
+import { checkForWindowSizeChange, calculatePercentage, generateColors } from '../utils';
 
 function UngroupedChart({ chartData }) {
 
     const chartRef = useRef(null);
+
+    const appliedColors = generateColors(chartData.length);
 
     let tooltip = useRef(null);
 
@@ -131,8 +133,8 @@ function UngroupedChart({ chartData }) {
             .attr("class", d => {
                 return `bar`
             })
-            .attr('fill', (d) => {
-                return d.color;
+            .attr('fill', (d, index) => {
+                return appliedColors[index];
             })
             .attr("x", d => xScale(d.event))
             .attr("y", d => yScale(d.value))
@@ -181,7 +183,7 @@ function UngroupedChart({ chartData }) {
                     return `${x1},${y1} ${x2},${y2} ${x3},${y3} ${x4},${y4} ${x1},${y1}`;
                 }
             });
-    }, [chartData, showTooltip, hideTooltip]);
+    }, [chartData, showTooltip, hideTooltip, appliedColors]);
 
     const displayChart = useCallback(() => {
         drawChart();
