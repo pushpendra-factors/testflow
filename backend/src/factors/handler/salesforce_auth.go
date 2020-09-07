@@ -124,7 +124,7 @@ func SalesforceCallbackHandler(c *gin.Context) {
 
 func getRequiredSalesforceCredentials(credentials map[string]interface{}) (string, string) {
 	if refreshToken, rValid := credentials[SALESFORCE_REFRESH_TOKEN].(string); rValid { //could lead to error if refresh token not set on auth scope
-		if instancUrl, iValid := credentials[SALESFORCE_REFRESH_TOKEN].(string); iValid {
+		if instancUrl, iValid := credentials[SALESFORCE_INSTANCE_URL].(string); iValid {
 			if refreshToken != "" && instancUrl != "" {
 				return refreshToken, instancUrl
 			}
@@ -168,9 +168,10 @@ func SalesforceAuthRedirect(c *gin.Context) {
 func getSalesforceAuthorizationUrl(clientId, redirectUrl, responseType, state string) string {
 	baseUrl := "https://" + SALESFORCE_AUTH_URL
 	urlParams := SalesforceAuthParams{
-		ClientId:    clientId,
-		RedirectURL: redirectUrl,
-		State:       state,
+		ClientId:     clientId,
+		RedirectURL:  redirectUrl,
+		ResponseType: responseType,
+		State:        state,
 	}
 
 	urlParamsStr, err := buildQueryParamsByTagName(urlParams, "auth_param")
