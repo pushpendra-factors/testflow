@@ -3,7 +3,6 @@ import { useDispatch } from 'react-redux';
 import GroupedChart from './GroupedChart';
 import DataTable from './DataTable';
 import { generateGroupedChartsData, generateDummyData, generateGroups, generateColors, generateUngroupedChartsData } from './utils';
-import EventsInfo from './EventsInfo';
 import FiltersInfo from './FiltersInfo';
 import UngroupedChart from './UngroupedChart';
 import { FUNNEL_RESULTS_AVAILABLE, FUNNEL_RESULTS_UNAVAILABLE } from '../../../reducers/types';
@@ -37,20 +36,18 @@ function PageContent({ queries, setDrawerVisible }) {
     }
 
     return (
-        <div className="mt-32">
+        <div className="mt-40">
             {/* <FiltersInfo setDrawerVisible={setDrawerVisible} /> */}
-            <GroupedChart
+            {/* <GroupedChart
                 chartData={groupedChartData}
                 chartColors={chartColors}
                 groups={groups.filter(elem => elem.is_visible)}
                 eventsData={eventsData}
+            /> */}
+            <UngroupedChart
+                chartData={ungroupedChartsData}
             />
-            <div className="mt-4">
-                <UngroupedChart
-                    chartData={ungroupedChartsData}
-                />
-            </div>
-
+            
             <div className="mt-8">
                 <DataTable
                     eventsData={eventsData}

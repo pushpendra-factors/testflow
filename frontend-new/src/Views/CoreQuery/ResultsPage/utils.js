@@ -234,7 +234,7 @@ export const checkForWindowSizeChange = (callback) => {
     }
 }
 
-export const calculatePercentage = (numerator, denominator, precision = 2) => {
+export const calculatePercentage = (numerator, denominator, precision = 1) => {
     const result = ((numerator / denominator) * 100);
     return result % 1 !== 0 ? result.toFixed(precision) : result;
 }
