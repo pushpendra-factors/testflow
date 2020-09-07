@@ -225,8 +225,7 @@ func getProjectSettingByKeyWithDefault(tokenKey, tokenValue string) (*ProjectSet
 }
 
 func GetProjectSettingByTokenWithCacheAndDefault(token string) (*ProjectSetting, int) {
-	// return getProjectSettingByKeyWithDefault(ProjectSettingKeyToken, token)
-	return getProjectSettingDefault(), http.StatusFound
+	return getProjectSettingByKeyWithDefault(ProjectSettingKeyToken, token)
 }
 
 func GetProjectSettingByPrivateTokenWithCacheAndDefault(
