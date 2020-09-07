@@ -38,7 +38,7 @@ function UngroupedChart({ chartData }) {
                 `)
             .style('opacity', 1)
             .style("left", left + "px")
-            .style("top", top - toolTipHeight + 10 + "px")
+            .style("top", top - toolTipHeight + 5 + "px")
     }, [])
 
     const hideTooltip = useCallback(() => {

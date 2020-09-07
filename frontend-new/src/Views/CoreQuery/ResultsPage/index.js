@@ -37,14 +37,14 @@ function PageContent({ queries, setDrawerVisible }) {
     return (
         <div className="mt-40 mb-8">
             {/* <FiltersInfo setDrawerVisible={setDrawerVisible} /> */}
-            {/* <GroupedChart
+            <GroupedChart
                 chartData={groupedChartData}
                 groups={groups.filter(elem => elem.is_visible)}
                 eventsData={eventsData}
-            /> */}
-            <UngroupedChart
-                chartData={ungroupedChartsData}
             />
+            {/* <UngroupedChart
+                chartData={ungroupedChartsData}
+            /> */}
             
             <div className="mt-8">
                 <DataTable

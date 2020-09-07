@@ -44,16 +44,25 @@ $textColor: #3E516C;
         font-style: normal;
     }
 
+    :global(.c3-tooltip-container) {
+        position: fixed !important;
+        transition: 0.5s;
+    }
+
     :global(.toolTip) {
+        width: 200px;
+        padding: 12px 16px 12px 16px;
         background: #FFFFFF;
-        border: 1px solid #B7BEC8;
-        box-sizing: border-box;
-        box-shadow: 0px 6px 20px rgba(0, 0, 0, 0.2);
+        border: 1px solid #E7E9ED;
         border-radius: 12px;
-        padding: 0 1rem;
-        color:$textColor;
         font-family: 'Work Sans', sans-serif;
-        width: 250px;
+        box-shadow: 0px 6px 20px rgba(0, 0, 0, 0.2);
+        color:$textColor;
+        font-weight: 400;
+        word-wrap: break-word;
+        font-size: 12px;
+        line-height: 18px;
+        z-index: 1;
     }
 }
 
