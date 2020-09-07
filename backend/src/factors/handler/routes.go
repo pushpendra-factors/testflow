@@ -139,6 +139,11 @@ func InitIntRoutes(r *gin.Engine) {
 		mid.SetAuthorizedProjectsByLoggedInAgent(),
 		IntFacebookAddAccessTokenHandler)
 
+	intRouteGroup.POST("/salesforce/enable",
+		mid.SetLoggedInAgent(),
+		mid.SetAuthorizedProjectsByLoggedInAgent(),
+		IntEnableSalesforceHandler)
+
 }
 
 func InitDataServiceRoutes(r *gin.Engine) {

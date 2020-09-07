@@ -503,6 +503,30 @@ export function enableAdwordsIntegration(projectId) {
     })
   }
 }
+
+export function enableSalesforceIntegration(projectId) {
+  return function(dispatch){
+    return new Promise((resolve, reject) => {
+      let payload = {"project_id":projectId}
+
+      post(dispatch, getHostURL()+"integrations/salesforce/enable", payload)
+        .then((r) => {
+          if (r.ok) {
+            dispatch({ type: "ENABLE_SALESFORCE_FULFILLED", payload: r.data })
+            resolve(r);
+          } else {
+            dispatch({ type:"ENABLE_SALESFORCE_REJECTED" });
+            reject(r);
+          }
+        })
+        .catch((err) => {
+          dispatch({ type:"ENABLE_SALESFORCE_REJECTED", payload: err });
+          reject(err);
+        })
+    })
+  }
+}
+
 export function addFacebookAccessToken(data) {
   return function(dispatch){
     return new Promise((resolve, reject) => {

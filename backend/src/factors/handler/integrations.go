@@ -209,6 +209,60 @@ func IntEnableAdwordsHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, addEnableAgentUUIDSetting)
 }
 
+type SalesforceRequestPayload struct {
+	ProjectId string `json:"project_id"`
+}
+
+// IntEnableSalesforceHandler - Checks for refresh_token for the
+// agent if exists: then add the agent_uuid as int_salesforce_enabled_agent_uuid
+// on project settings. if not exists: return 304.
+func IntEnableSalesforceHandler(c *gin.Context) {
+	r := c.Request
+
+	var requestPayload SalesforceRequestPayload
+
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&requestPayload); err != nil {
+		log.WithError(err).Error("Salesforce get refresh token payload JSON decode failure.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid json payload. enable failed."})
+		return
+	}
+
+	if requestPayload.ProjectId == "" {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid project."})
+		return
+	}
+
+	projectId, err := strconv.ParseUint(requestPayload.ProjectId, 10, 64)
+	if err != nil {
+		log.WithError(err).Error("Failed to convert project_id as uint64.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid project."})
+		return
+	}
+
+	currentAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+	agent, errCode := M.GetAgentByUUID(currentAgentUUID)
+	if errCode != http.StatusFound {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid agent."})
+		return
+	}
+
+	if agent.IntSalesforceRefreshToken == "" && agent.IntSalesforceInstanceUrl == "" {
+		c.JSON(http.StatusNotModified, gin.H{})
+		return
+	}
+
+	addEnableAgentUUIDSetting := M.ProjectSetting{IntSalesforceEnabledAgentUUID: &currentAgentUUID}
+	_, errCode = M.UpdateProjectSettings(projectId, &addEnableAgentUUIDSetting)
+	if errCode != http.StatusAccepted {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "failed to enable salesforce"})
+		return
+	}
+
+	c.JSON(http.StatusOK, addEnableAgentUUIDSetting)
+}
+
 func IntShopifyHandler(c *gin.Context) {
 	r := c.Request
 
