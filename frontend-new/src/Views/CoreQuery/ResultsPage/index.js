@@ -35,7 +35,7 @@ function PageContent({ queries, setDrawerVisible }) {
     }
 
     return (
-        <div className="mt-40">
+        <div className="mt-40 mb-8">
             {/* <FiltersInfo setDrawerVisible={setDrawerVisible} /> */}
             {/* <GroupedChart
                 chartData={groupedChartData}

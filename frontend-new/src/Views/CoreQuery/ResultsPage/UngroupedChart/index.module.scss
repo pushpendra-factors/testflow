@@ -30,7 +30,7 @@ $textColor: #3E516C;
     }
 
     :global(.opaque) {
-        opacity: 0.5;
+        opacity: 0.3;
     }
 
     :global(.c3-ygrid) {
@@ -70,14 +70,16 @@ $textColor: #3E516C;
         width: 200px;
         padding: 12px 16px 12px 16px;
         background: #FFFFFF;
-        border: 1px solid #B7BEC8;
+        border: 1px solid #E7E9ED;
         border-radius: 12px;
         font-family: 'Work Sans', sans-serif;
+        font-weight: 400;
         word-wrap: break-word;
         box-shadow: 0px 6px 20px rgba(0, 0, 0, 0.2);
-        font-size: 14px;
-        line-height: 20px;
+        font-size: 12px;
+        line-height: 18px;
         color: $textColor;
+        z-index: 1;
     }
 }
 

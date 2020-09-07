@@ -11,21 +11,41 @@ function UngroupedChart({ chartData }) {
 
     let tooltip = useRef(null);
 
-    const showTooltip = useCallback((d, x, y) => {
-        tooltip.current
-            .style("opacity", 1)
+    const showTooltip = useCallback((d, i) => {
+        const nodes = d3.select(chartRef.current).selectAll('.bar').nodes();
+        nodes.forEach((node, index) => {
+            if (index !== i) {
+                d3.select(node).attr('class', 'bar opaque')
+            }
+        })
+
+        const nodePosition = d3.select(nodes[i]).node().getBoundingClientRect();
+        let left = (nodePosition.x + (nodePosition.width / 2));
+
+        // if user is hovering over the last bar
+        if (left + 200 >= (document.documentElement.clientWidth)) {
+            left = (nodePosition.x + (nodePosition.width / 2)) - 200;
+        }
+
+        const scrollTop = (window.pageYOffset !== undefined) ? window.pageYOffset : (document.documentElement || document.body.parentNode || document.body).scrollTop;
+        const top = nodePosition.y + scrollTop;
+        const toolTipHeight = d3.select('.toolTip').node().getBoundingClientRect().height;
+
         tooltip.current
             .html(`
-                    <div>
-                        <div>www.chargebee.com/subscription-management/create-manage-plans</div>
-                        <div class="mt-2"><span class="font-semibold">${d.netCount}</span> (${d.value}%)</div>
-                    </div>
+                    <div>www.chargebee.com/subscription-management/create-manage-plans</div>
+                    <div style="color: #0E2647;" class="mt-2 leading-5 text-base"><span class="font-semibold">${d.netCount}</span> (${d.value}%)</div>
                 `)
-            .style("left", x + 25 + "px")
-            .style("top", y - 80 + "px")
+            .style('opacity', 1)
+            .style("left", left + "px")
+            .style("top", top - toolTipHeight + 10 + "px")
     }, [])
 
     const hideTooltip = useCallback(() => {
+        const nodes = d3.select(chartRef.current).selectAll('.bar').nodes();
+        nodes.forEach((node) => {
+            d3.select(node).attr('class', 'bar')
+        })
         tooltip.current
             .style("opacity", 0);
     }, [])
@@ -92,7 +112,7 @@ function UngroupedChart({ chartData }) {
         const width = +svg.attr("width") - margin.left - margin.right;
         const height = +svg.attr("height") - margin.top - margin.bottom;
 
-        tooltip.current = d3.select(chartRef.current).append("div").attr("class", "toolTip").style("opacity", 0);
+        tooltip.current = d3.select(chartRef.current).append("div").attr("class", "toolTip").style("opacity", 0).style('transition', '0.5s');
 
         const xScale = d3.scaleBand()
             .rangeRound([0, width])
@@ -140,23 +160,11 @@ function UngroupedChart({ chartData }) {
             .attr("y", d => yScale(d.value))
             .attr("width", xScale.bandwidth())
             .attr("height", d => height - yScale(d.value))
-            .on('mousemove', d => {
-                showTooltip(d, d3.event.pageX, d3.event.pageY);
+            .on('mousemove', (d, i, nodes, c) => {
+                showTooltip(d, i);
             })
-            .on('mouseover', (d, i, nodes) => {
-                nodes.forEach((node, index) => {
-                    if (index !== i) {
-                        d3.select(node).attr('class', 'bar opaque')
-                    }
-                })
-            })
-            .on('mouseout', (d, i, nodes) => {
+            .on('mouseout', () => {
                 hideTooltip();
-                nodes.forEach((node, index) => {
-                    if (index !== i) {
-                        d3.select(node).attr('class', 'bar')
-                    }
-                })
             })
         d3.select(chartRef.current).select(".axis.axis--x").selectAll('.tick').select('text').attr("dy", "16px");
 
@@ -217,13 +225,20 @@ function UngroupedChart({ chartData }) {
             <div style={{ transition: '2s' }} id="conversionText" className="absolute flex justify-end pr-1">
                 <div className={styles.conversionText}>
                     <div className="font-semibold flex justify-end">{chartData[chartData.length - 1].value}%</div>
-                    <div>Conversion</div>
+                    <div className="font-normal">Conversion</div>
                 </div>
             </div>
 
             {chartData.map((d, index) => {
                 return (
-                    <div onMouseOut={hideTooltip} onMouseMove={(e) => showTooltip(d, e.screenX, e.screenY)} className={`${styles.valueText} absolute font-bold flex justify-center`} id={`value${index}`} key={d.event + index}>{d.netCount}</div>
+                    <div
+                        onMouseOut={hideTooltip}
+                        onMouseMove={(e) => { showTooltip(d, index) }}
+                        className={`${styles.valueText} absolute font-bold flex justify-center`}
+                        id={`value${index}`} key={d.event + index}
+                    >
+                        {d.netCount}
+                    </div>
                 )
             })}
             {percentChanges.map((change, index) => {

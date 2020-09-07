@@ -33,7 +33,7 @@ function EventsInfo() {
                     } else {
                         return (
                             <React.Fragment key={q}>
-                                <span className="text-xl font-bold">{q}</span>
+                                <span style={{ color: '#0E2647' }} className="text-xl font-semibold">{q}</span>
                             </React.Fragment>
                         )
                     }
