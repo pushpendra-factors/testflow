@@ -14,6 +14,7 @@ import {
   fetchProjectSettings,
   udpateProjectSettings,
   enableSalesforceIntegration,
+  fetchSalesforceRedirectURL,
 } from '../../actions/projectsActions';
 import salesforceLogo from '../../assets/img/settings/salesforce-logo.svg';
 
@@ -31,6 +32,7 @@ const mapDispatchToProps = dispatch => {
     fetchProjectSettings,
     udpateProjectSettings,
     enableSalesforceIntegration,
+    fetchSalesforceRedirectURL,
   }, dispatch);
 }
 
@@ -77,12 +79,21 @@ class Salesforce extends Component {
     return <CardBody style={style}> Salesforce sync is disabled </CardBody>
   }
 
+  handleRedirectToURL = () =>{
+    this.props.fetchSalesforceRedirectURL(this.props.currentProjectId.toString(), this.props.currentAgent.uuid)
+    .then((r)=>{
+      console.log("data",r.data);
+      if (r.status == 307) {
+        window.location = r.data.redirectURL;
+      }
+    })
+  }
+
   onClickEnableSalesforce = () => {
     this.props.enableSalesforceIntegration(this.props.currentProjectId.toString())
       .then((r) => {
         if (r.status == 304) {
-          window.location = this.getRedirectURL();
-          return
+          this.handleRedirectToURL();
         }
       });
   }

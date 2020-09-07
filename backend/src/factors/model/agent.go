@@ -42,7 +42,7 @@ type Agent struct {
 	LoginCount     uint64     `json:"login_count"`
 
 	IntAdwordsRefreshToken    string `json:"-"`
-	IntSalesforceInstanceUrl  string `json:"int_salesforce_instance_url"`
+	IntSalesforceInstanceURL  string `json:"int_salesforce_instance_url"`
 	IntSalesforceRefreshToken string `json:"int_salesforce_refresh_token"`
 }
 
@@ -238,7 +238,7 @@ func UpdateAgentIntSalesforce(uuid, refreshToken string, instanceUrl string) int
 		return http.StatusBadRequest
 	}
 
-	return updateAgent(uuid, IntSalesforceRefreshToken(refreshToken), IntSalesforceInstanceUrl(instanceUrl))
+	return updateAgent(uuid, IntSalesforceRefreshToken(refreshToken), IntSalesforceInstanceURL(instanceUrl))
 }
 
 func UpdateAgentPassword(uuid, plainTextPassword string, passUpdatedAt time.Time) int {
@@ -338,7 +338,7 @@ func IntSalesforceRefreshToken(refreshToken string) Option {
 	}
 }
 
-func IntSalesforceInstanceUrl(instanceUrl string) Option {
+func IntSalesforceInstanceURL(instanceUrl string) Option {
 	return func(fields fieldsToUpdate) {
 		fields["int_salesforce_instance_url"] = instanceUrl
 	}

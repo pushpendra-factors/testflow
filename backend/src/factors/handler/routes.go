@@ -35,8 +35,6 @@ func InitAppRoutes(r *gin.Engine) {
 	r.PUT("/agents/billing", mid.SetLoggedInAgent(), UpdateAgentBillingAccount)
 	r.GET("/agents/info", mid.SetLoggedInAgent(), AgentInfo)
 	r.PUT("/agents/info", mid.SetLoggedInAgent(), UpdateAgentInfo)
-	r.GET(SALESFORCE_CALLBACK_URL, SalesforceCallbackHandler)
-	r.GET("/integrations/salesforce/auth", SalesforceAuthRedirect)
 
 	r.POST(ROUTE_PROJECTS_ROOT, mid.SetLoggedInAgent(), CreateProjectHandler)
 
@@ -144,6 +142,12 @@ func InitIntRoutes(r *gin.Engine) {
 		mid.SetAuthorizedProjectsByLoggedInAgent(),
 		IntEnableSalesforceHandler)
 
+	intRouteGroup.POST("/salesforce/auth",
+		mid.SetLoggedInAgent(),
+		mid.SetAuthorizedProjectsByLoggedInAgent(),
+		SalesforceAuthRedirectHandler)
+	intRouteGroup.GET(SALESFORCE_CALLBACK_URL,
+		SalesforceCallbackHandler)
 }
 
 func InitDataServiceRoutes(r *gin.Engine) {
