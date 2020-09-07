@@ -63,35 +63,14 @@ func SalesforceCallbackHandler(c *gin.Context) {
 		RedirectURL:  getSalesforceRedirectURL(),
 	}
 
-	urlParamsStr, err := buildQueryParamsByTagName(salesforceTokenParams, "token_param")
+	userCredentials, err := getSalesforceUserToken(&salesforceTokenParams)
 	if err != nil {
-		logCtx.WithError(err).Error("Failed to build query parameter")
+		logCtx.WithError(err).Error("Failed to getSalesforceUserToken.")
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
 
-	tokenUrl := fmt.Sprintf("https://%s?%s", SALESFORCE_TOKEN_URL, urlParamsStr)
-	resp, err := http.Post(tokenUrl, "application/json", strings.NewReader(""))
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to make request to salesforce tokenUrl")
-		c.AbortWithStatus(http.StatusInternalServerError)
-		return
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		c.AbortWithStatus(http.StatusBadRequest)
-		return
-	}
-
-	var tokenResponse map[string]interface{}
-	err = json.NewDecoder(resp.Body).Decode(&tokenResponse)
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to decode salesforce token respone")
-		c.AbortWithStatus(http.StatusInternalServerError)
-		return
-	}
-
-	refreshToken, instancUrl := getRequiredSalesforceCredentials(tokenResponse)
+	refreshToken, instancUrl := getRequiredSalesforceCredentials(userCredentials)
 	if refreshToken == "" || instancUrl == "" {
 		logCtx.Error("Failed to getRequiredSalesforceCredentials")
 		c.AbortWithStatus(http.StatusBadRequest)
@@ -120,6 +99,30 @@ func SalesforceCallbackHandler(c *gin.Context) {
 
 	redirectURL := C.GetProtocol() + C.GetAPPDomain() + SALESFORCE_APP_SETTINGS_URL
 	c.Redirect(http.StatusPermanentRedirect, redirectURL)
+}
+
+func getSalesforceUserToken(salesforceTokenParams *SalesforceAuthParams) (map[string]interface{}, error) {
+	var credentials map[string]interface{}
+	urlParamsStr, err := buildQueryParamsByTagName(*salesforceTokenParams, "token_param")
+	if err != nil {
+		return credentials, errors.New("failed to build query parameter")
+	}
+
+	tokenUrl := fmt.Sprintf("https://%s?%s", SALESFORCE_TOKEN_URL, urlParamsStr)
+	resp, err := http.Post(tokenUrl, "application/json", strings.NewReader(""))
+	if err != nil {
+		return credentials, errors.New("failed to build request to salesforce tokenUrl")
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return credentials, errors.New("fetching salesforce user credentials failed")
+	}
+
+	err = json.NewDecoder(resp.Body).Decode(&credentials)
+	if err != nil {
+		return credentials, errors.New("failed to decode salesforce token response")
+	}
+	return credentials, nil
 }
 
 func getRequiredSalesforceCredentials(credentials map[string]interface{}) (string, string) {

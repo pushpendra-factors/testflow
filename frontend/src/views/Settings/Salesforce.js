@@ -103,7 +103,7 @@ class Salesforce extends Component {
   renderEnableButton(){
       let settingsText = this.isSalesforceEnabled() ? "Enabled": "Enable with Salesforce";
       return <Button color='primary' style={{ marginTop: '-3px' }} 
-      outline onClick={this.isSalesforceEnabled() ? this.onClickEnableSalesforce:null}  disabled={this.isSalesforceEnabled()}> 
+      outline onClick={!this.isSalesforceEnabled() ? this.onClickEnableSalesforce:null}  disabled={this.isSalesforceEnabled()}>
       <img src={salesforceLogo} style={{ marginRight: '6px', marginBottom: '3px', width: '15px' }}></img>
       {settingsText}
     </Button>
