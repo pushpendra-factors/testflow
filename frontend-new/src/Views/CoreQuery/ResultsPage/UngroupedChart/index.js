@@ -88,7 +88,7 @@ function UngroupedChart({ chartData }) {
         const availableWidth = d3.select(chartRef.current).node().getBoundingClientRect().width;
         d3.select(chartRef.current).html('').append('svg').attr('width', availableWidth).attr('height', 400).attr('id', 'chart')
         const svg = d3.select("#chart");
-        const margin = { top: 20, right: 0, bottom: 20, left: 40 };
+        const margin = { top: 30, right: 0, bottom: 30, left: 40 };
         const width = +svg.attr("width") - margin.left - margin.right;
         const height = +svg.attr("height") - margin.top - margin.bottom;
 
@@ -158,6 +158,7 @@ function UngroupedChart({ chartData }) {
                     }
                 })
             })
+        d3.select(chartRef.current).select(".axis.axis--x").selectAll('.tick').select('text').attr("dy", "16px");
 
         // Add polygons
         g.selectAll(".area")

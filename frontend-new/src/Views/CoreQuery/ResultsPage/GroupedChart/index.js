@@ -124,6 +124,9 @@ function GroupedChart({ eventsData, groups, chartData }) {
                         .style('opacity', '1')
                 },
             },
+            onrendered: () => {
+                d3.select(chartRef.current).select(".c3-axis.c3-axis-x").selectAll('.tick').select('tspan').attr("dy", "16px");
+            },
             legend: {
                 padding: 3,
             },
@@ -135,9 +138,6 @@ function GroupedChart({ eventsData, groups, chartData }) {
                 width: {
                     ratio: 0.7
                 }
-            },
-            onrendered: () => {
-                d3.select(chartRef.current).select(".c3-axis.c3-axis-x").selectAll('.tick').select('tspan').attr("dy", "16px");
             },
             axis: {
                 x: {
