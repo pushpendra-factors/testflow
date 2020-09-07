@@ -29,7 +29,6 @@ export const generateColors = (requiredCumberOfColors) => {
     const adder = Math.floor(visualizationColors.length / requiredCumberOfColors);
     const colors = [];
     for (let i = 0; i < requiredCumberOfColors; i++) {
-        console.log((i * adder) % 10);
         colors.push(visualizationColors[(i * adder) % 10])
     }
     return colors;

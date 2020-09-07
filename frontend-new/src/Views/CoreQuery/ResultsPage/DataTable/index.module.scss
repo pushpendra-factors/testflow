@@ -111,7 +111,7 @@ $boxShadowSecondaryColor: #E7E9ED;
 
     .inputSearchBar {
         border: none;
-        box-shadow: inset 0px -1px 0px $boxShadowPrimaryColor, inset 0px 1px 0px $boxShadowPrimaryColor;
+        box-shadow: inset 0px -1px 0px $boxShadowPrimaryColor;
         padding: 1rem;
 
         :global(input) {

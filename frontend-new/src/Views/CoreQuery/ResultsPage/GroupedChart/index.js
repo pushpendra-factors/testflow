@@ -128,7 +128,7 @@ function GroupedChart({ eventsData, groups, chartData }) {
                 d3.select(chartRef.current).select(".c3-axis.c3-axis-x").selectAll('.tick').select('tspan').attr("dy", "16px");
             },
             legend: {
-                padding: 3,
+                padding: 14,
             },
             transition: {
                 duration: 1000
