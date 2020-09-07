@@ -21,9 +21,11 @@ type Key struct {
 }
 
 var (
-	ErrorInvalidProject = errors.New("invalid key project")
-	ErrorInvalidPrefix  = errors.New("invalid key prefix")
-	ErrorInvalidKey     = errors.New("invalid redis cache key")
+	ErrorInvalidProject  = errors.New("invalid key project")
+	ErrorInvalidPrefix   = errors.New("invalid key prefix")
+	ErrorInvalidKey      = errors.New("invalid redis cache key")
+	ErrorInvalidValues   = errors.New("invalid values to set")
+	ErrorPartialFailures = errors.New("Partial failures in Set")
 )
 
 func NewKey(projectId uint64, prefix string, suffix string) (*Key, error) {
@@ -260,4 +262,52 @@ func exists(key *Key, persistent bool) (bool, error) {
 		return false, err
 	}
 	return count.(int64) == 1, nil
+}
+
+func SetBatch(values map[*Key]string, expiryInSecs float64) error {
+	return setBatch(values, expiryInSecs, false)
+}
+
+func SetPersistentBatch(values map[*Key]string, expiryInSecs float64) error {
+	return setBatch(values, expiryInSecs, true)
+}
+
+func setBatch(values map[*Key]string, expiryInSecs float64, persistent bool) error {
+	if len(values) == 0 {
+		return ErrorInvalidValues
+	}
+	var redisConn redis.Conn
+	if persistent {
+		redisConn = C.GetCacheRedisPersistentConnection()
+	} else {
+		redisConn = C.GetCacheRedisConnection()
+	}
+	defer redisConn.Close()
+
+	err := redisConn.Send("MULTI")
+	if err != nil {
+		return err
+	}
+	for key, value := range values {
+		cKey, err := key.Key()
+		if err != nil {
+			return err
+		}
+		if expiryInSecs == 0 {
+			err = redisConn.Send("SET", cKey, value)
+		} else {
+			err = redisConn.Send("SET", cKey, value, "EX", int64(expiryInSecs))
+		}
+		if err != nil {
+			return err
+		}
+	}
+	res, err := redis.Values(redisConn.Do("EXEC"))
+	if err != nil {
+		return err
+	}
+	if len(res) != len(values) {
+		return ErrorPartialFailures
+	}
+	return nil
 }

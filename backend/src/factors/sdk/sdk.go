@@ -286,17 +286,6 @@ func isRealtimeSessionRequired(skipSession bool, projectId uint64, skipProjectId
 	return true
 }
 
-func SetPersistentWithLogging(key *cacheRedis.Key, value string, expiryInSecs float64, tag string) error {
-	log.Info(fmt.Sprintf("Begin: ES %s", tag))
-	begin := U.TimeNowUnix()
-	err := cacheRedis.SetPersistent(key, value, expiryInSecs)
-	end := U.TimeNowUnix()
-	log.WithFields(log.Fields{
-		"timeTaken": begin - end,
-	}).Info(fmt.Sprintf("End: ES %s", tag))
-	return err
-}
-
 func GetIfExistsPersistentWithLogging(key *cacheRedis.Key, tag string) (string, bool, error) {
 	log.Info(fmt.Sprintf("Begin: EG %s", tag))
 	begin := U.TimeNowUnix()
@@ -310,6 +299,7 @@ func GetIfExistsPersistentWithLogging(key *cacheRedis.Key, tag string) (string, 
 func RefreshCacheFromDb(project_id uint64, currentTime time.Time, no_of_days int, eventsLimit, propertyLimit, valuesLimit int, rowsLimit int) {
 	// Preload EventNames-count-lastseen
 	// TODO: Janani Make this 30 configurable, limit in cache, limit in ui
+	eventsInCache := make(map[*cacheRedis.Key]string)
 	fmt.Println("Refresh Event Properties Cache started")
 	logCtx := log.WithField("project_id", project_id)
 	currentTimeUnix := currentTime.Unix()
@@ -355,7 +345,7 @@ func RefreshCacheFromDb(project_id uint64, currentTime time.Time, no_of_days int
 			logCtx.WithError(err).Error("Failed to marshall event names")
 			return
 		}
-		err = SetPersistentWithLogging(eventNamesKey, string(enEventCache), U.EVENT_USER_CACHE_EXPIRY_SECS, fmt.Sprintf("Event names %v", dateFormat))
+		eventsInCache[eventNamesKey] = string(enEventCache)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to set cache - event names")
 			return
@@ -364,9 +354,17 @@ func RefreshCacheFromDb(project_id uint64, currentTime time.Time, no_of_days int
 			allevents[event] = true
 		}
 	}
+	logCtx.Info(fmt.Sprintf("Refresh Begin: EBset %v", len(eventsInCache)))
+	err := cacheRedis.SetPersistentBatch(eventsInCache, U.EVENT_USER_CACHE_EXPIRY_SECS)
+	logCtx.Info("Refresh End: EBset")
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to set property values in cache")
+		return
+	}
 
 	for event, _ := range allevents {
 		for i := 0; i < no_of_days; i++ {
+			eventPropertyValuesInCache := make(map[*cacheRedis.Key]string)
 			var eventProperties U.CachePropertyWithTimestamp
 			eventProperties.Property = make(map[string]U.PropertyWithTimestamp)
 			dateFormat := currentTime.AddDate(0, 0, -i).Format("2006-01-02")
@@ -409,25 +407,21 @@ func RefreshCacheFromDb(project_id uint64, currentTime time.Time, no_of_days int
 				var eventPropertyValues U.CachePropertyValueWithTimestamp
 				eventPropertyValues.PropertyValue = make(map[string]U.CountTimestampTuple)
 				if category == U.PropertyTypeCategorical {
+					eventPropertyValuesKey, _ := M.GetValuesByEventPropertyCacheKey(project_id, event, property.Key, dateFormat)
 					for _, value := range values {
-						eventPropertyValuesKey, _ := M.GetValuesByEventPropertyCacheKey(project_id, event, property.Key, dateFormat)
 						if value.Value != "" {
 							eventPropertyValues.PropertyValue[value.Value] = U.CountTimestampTuple{
 								int64(value.LastSeen),
 								value.Count}
 						}
-						eventPropertyValues.CacheUpdatedTimestamp = currentTimeUnix
-						enEventPropertyValuesCache, err := json.Marshal(eventPropertyValues)
-						if err != nil {
-							logCtx.WithError(err).Error("Failed to marshall - property values")
-							return
-						}
-						err = SetPersistentWithLogging(eventPropertyValuesKey, string(enEventPropertyValuesCache), U.EVENT_USER_CACHE_EXPIRY_SECS, fmt.Sprintf("values %v - %v - %v", dateFormat, event, property.Key))
-						if err != nil {
-							logCtx.WithError(err).Error("Failed to set cache - event property values")
-							return
-						}
 					}
+					eventPropertyValues.CacheUpdatedTimestamp = currentTimeUnix
+					enEventPropertyValuesCache, err := json.Marshal(eventPropertyValues)
+					if err != nil {
+						logCtx.WithError(err).Error("Failed to marshall - property values")
+						return
+					}
+					eventPropertyValuesInCache[eventPropertyValuesKey] = string(enEventPropertyValuesCache)
 				}
 			}
 			eventProperties.CacheUpdatedTimestamp = currentTimeUnix
@@ -436,9 +430,12 @@ func RefreshCacheFromDb(project_id uint64, currentTime time.Time, no_of_days int
 				logCtx.WithError(err).Error("Failed to marshall - event properties")
 				return
 			}
-			err = SetPersistentWithLogging(eventPropertiesKey, string(enEventPropertiesCache), U.EVENT_USER_CACHE_EXPIRY_SECS, fmt.Sprintf("properties %v - %v", dateFormat, event))
+			eventPropertyValuesInCache[eventPropertiesKey] = string(enEventPropertiesCache)
+			logCtx.Info(fmt.Sprintf("Refresh Begin: EBset %v", len(eventPropertyValuesInCache)))
+			err = cacheRedis.SetPersistentBatch(eventPropertyValuesInCache, U.EVENT_USER_CACHE_EXPIRY_SECS)
+			logCtx.Info("Refresh End: EBset")
 			if err != nil {
-				logCtx.WithError(err).Error("Failed to set cache - event properties")
+				logCtx.WithError(err).Error("Failed to set property values in cache")
 				return
 			}
 		}
@@ -451,6 +448,7 @@ func addEventDetailsToCache(project_id uint64, event_name string, event_properti
 	if !C.GetIfRealTimeEventUserCachingIsEnabled(project_id) {
 		return
 	}
+	valuesSetToCache := make(map[*cacheRedis.Key]string)
 
 	logCtx := log.WithField("project_id", project_id)
 
@@ -545,9 +543,9 @@ func addEventDetailsToCache(project_id uint64, event_name string, event_properti
 		}
 	}
 	if len(propertyValuesCacheKeys) > 0 {
-		log.Info(fmt.Sprintf("Begin: EMget %v", len(propertyValuesCacheKeys)))
+		logCtx.Info(fmt.Sprintf("Begin: EMget %v", len(propertyValuesCacheKeys)))
 		valuesList, err := cacheRedis.MGetPersistent(propertyValuesCacheKeys...)
-		log.Info("End: EMget")
+		logCtx.Info("End: EMget")
 
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to get values - properties values")
@@ -572,11 +570,7 @@ func addEventDetailsToCache(project_id uint64, event_name string, event_properti
 				eventPropertyValues.PropertyValue[propertyValues[index]] = countTimeValues
 				eventPropertyValues.CacheUpdatedTimestamp = currentTimeUnix
 				enEventPropertyValueCache, _ := json.Marshal(eventPropertyValues)
-				err = SetPersistentWithLogging(propertyValuesCacheKeys[index], string(enEventPropertyValueCache), U.EVENT_USER_CACHE_EXPIRY_SECS, "values")
-				if err != nil {
-					logCtx.WithError(err).Error("Failed to set property values in cache")
-					return
-				}
+				valuesSetToCache[propertyValuesCacheKeys[index]] = string(enEventPropertyValueCache)
 			}
 		}
 	}
@@ -586,19 +580,18 @@ func addEventDetailsToCache(project_id uint64, event_name string, event_properti
 		logCtx.WithError(err).Error("Failed to marshal - event names")
 		return
 	}
-	err = SetPersistentWithLogging(eventNamesKey, string(enEventCache), U.EVENT_USER_CACHE_EXPIRY_SECS, "events")
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to set cache - event names")
-		return
-	}
+	valuesSetToCache[eventNamesKey] = string(enEventCache)
 	enEventPropertyCache, err := json.Marshal(eventProperties)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to marshal - event names")
 		return
 	}
-	err = SetPersistentWithLogging(eventPropertiesKey, string(enEventPropertyCache), U.EVENT_USER_CACHE_EXPIRY_SECS, "properties")
+	valuesSetToCache[eventPropertiesKey] = string(enEventPropertyCache)
+	logCtx.Info(fmt.Sprintf("Begin: EBset %v", len(valuesSetToCache)))
+	err = cacheRedis.SetPersistentBatch(valuesSetToCache, U.EVENT_USER_CACHE_EXPIRY_SECS)
+	logCtx.Info("End: EBset")
 	if err != nil {
-		logCtx.WithError(err).Error("Failed to set cache - event properties")
+		logCtx.WithError(err).Error("Failed to set property values in cache")
 		return
 	}
 }
