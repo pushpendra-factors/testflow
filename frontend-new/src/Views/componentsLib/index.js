@@ -10,6 +10,7 @@ import SwitchLib from './SwitchLib';
 import RadioLib from './RadioLib';
 import CheckBoxLib from './CheckBoxLib';
 import ModalLib from './ModalLib';
+import IconsLib from './IconsLib';
 
 
 function componentsLib() {
@@ -28,6 +29,7 @@ function componentsLib() {
                     <SwitchLib />
                     <RadioLib />
                     <CheckBoxLib />
+                    <IconsLib />
                     {/* <ModalLib /> */}
                 
 
