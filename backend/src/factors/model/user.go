@@ -810,13 +810,15 @@ func GetRecentUserPropertyKeys(projectId uint64) (map[string][]string, int) {
 func GetRecentUserPropertyKeysWithLimitsFallback(projectId uint64, usersLimit int) (map[string][]string, int) {
 	logCtx := log.WithField("project_id", projectId)
 
-	if properties, err := GetCacheRecentUserPropertyKeys(projectId); err == nil {
+	properties, err := GetCacheRecentUserPropertyKeys(projectId)
+	if err == nil {
 		return properties, http.StatusFound
 	} else if err != redis.ErrNil {
 		logCtx.WithError(err).Error("Failed to get GetCacheRecentPropertyKeys.")
 	}
 
-	usersAfterTimestamp := U.UnixTimeBeforeDuration(24 * time.Hour)
+	return properties, http.StatusFound
+	/*usersAfterTimestamp := U.UnixTimeBeforeDuration(24 * time.Hour)
 	logCtx = log.WithFields(log.Fields{"project_id": projectId, "users_after_timestamp": usersAfterTimestamp})
 
 	db := C.GetServices().Db
@@ -861,19 +863,21 @@ func GetRecentUserPropertyKeysWithLimitsFallback(projectId uint64, usersLimit in
 		logCtx.WithError(err).Error("Failed to SetCacheRecentUserPropertyKeys.")
 	}
 
-	return propsByType, http.StatusFound
+	return propsByType, http.StatusFound*/
 }
 
 func GetRecentUserPropertyValuesWithLimitsFallback(projectId uint64, propertyKey string, usersLimit, valuesLimit int) ([]string, int) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectId, "property_key": propertyKey, "values_limit": valuesLimit})
 
-	if values, err := GetCacheRecentUserPropertyValues(projectId, propertyKey); err == nil {
+	values, err := GetCacheRecentUserPropertyValues(projectId, propertyKey)
+	if err == nil {
 		return values, http.StatusFound
 	} else if err != redis.ErrNil {
 		logCtx.WithError(err).Error("Failed to get GetCacheRecentPropertyValues.")
 	}
 
-	db := C.GetServices().Db
+	return values, http.StatusFound
+	/*db := C.GetServices().Db
 
 	// limit on values returned.
 	values := make([]string, 0, 0)
@@ -909,7 +913,7 @@ func GetRecentUserPropertyValuesWithLimitsFallback(projectId uint64, propertyKey
 		logCtx.WithError(err).Error("Failed to SetCacheRecentUserPropertyValues.")
 	}
 
-	return values, http.StatusFound
+	return values, http.StatusFound*/
 }
 
 func GetRecentUserPropertyValues(projectId uint64, propertyKey string) ([]string, int) {
