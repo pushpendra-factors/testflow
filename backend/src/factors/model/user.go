@@ -529,11 +529,10 @@ func GetValuesByUserPropertyCacheKey(projectId uint64, property_name string, dat
 
 //GetRecentUserPropertyKeysWithLimits This method gets all the recent 'limit' property keys from DB for a given project
 func GetRecentUserPropertyKeysWithLimits(projectID uint64, usersLimit int, propertyLimit int) ([]U.Property, error) {
-	db := C.GetServices().Db
+	properties := make([]U.Property, 0)
+	/*db := C.GetServices().Db
 
 	logCtx := log.WithField("project_id", projectID)
-	properties := make([]U.Property, 0)
-
 	queryStr := "WITH recent_users AS (SELECT properties_id FROM users WHERE project_id = ? ORDER BY created_at DESC LIMIT ?)" +
 		" " + "SELECT json_object_keys(user_properties.properties::json) AS key, COUNT(*) AS count, MAX(updated_timestamp) as last_seen " +
 		" " + "FROM recent_users LEFT JOIN user_properties ON recent_users.properties_id = user_properties.id" +
@@ -554,17 +553,17 @@ func GetRecentUserPropertyKeysWithLimits(projectID uint64, usersLimit int, prope
 			return nil, err
 		}
 		properties = append(properties, property)
-	}
+	}*/
 
 	return properties, nil
 }
 
 //GetRecentUserPropertyValuesWithLimits This method gets all the recent 'limit' property values from DB for a given project/property
 func GetRecentUserPropertyValuesWithLimits(projectID uint64, propertyKey string, usersLimit, valuesLimit int) ([]U.PropertyValue, string, error) {
-	db := C.GetServices().Db
 
 	// limit on values returned.
 	values := make([]U.PropertyValue, 0, 0)
+	/*db := C.GetServices().Db
 	queryStmnt := "WITH recent_users AS (SELECT id FROM users WHERE project_id = ? ORDER BY created_at DESC limit ?)" +
 		" " + "SELECT DISTINCT(user_properties.properties->?) AS value, 1 AS count,updated_timestamp AS last_seen, jsonb_typeof(user_properties.properties->?) AS value_type FROM recent_users" +
 		" " + "LEFT JOIN user_properties ON recent_users.id = user_properties.user_id WHERE user_properties.project_id = ?" +
@@ -596,7 +595,7 @@ func GetRecentUserPropertyValuesWithLimits(projectID uint64, propertyKey string,
 	if err != nil {
 		logCtx.WithError(err).Error("Failed scanning rows on get property values.")
 		return nil, "", err
-	}
+	}*/
 
 	return values, U.GetCategoryType(values), nil
 }
