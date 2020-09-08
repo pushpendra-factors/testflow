@@ -670,7 +670,6 @@ const SALESFORCE_CALLBACK_URL = "/salesforce/auth/callback"
 
 type SalesforceRedirectRequestPayload struct {
 	ProjectId string `json:"project_id"`
-	AgentUUID string `json:"agent_uuid"`
 }
 
 func getSalesforceRedirectURL() string {
@@ -768,7 +767,8 @@ func SalesforceAuthRedirectHandler(c *gin.Context) {
 		return
 	}
 
-	if requestPayload.AgentUUID == "" {
+	currentAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+	if currentAgentUUID == "" {
 		c.AbortWithStatusJSON(http.StatusBadRequest,
 			gin.H{"error": "Invalid agent id."})
 		return
@@ -776,7 +776,7 @@ func SalesforceAuthRedirectHandler(c *gin.Context) {
 
 	oAuthState := &IntSalesforce.OAuthState{
 		ProjectId: projectId,
-		AgentUUID: &requestPayload.AgentUUID,
+		AgentUUID: &currentAgentUUID,
 	}
 
 	enOAuthState, err := json.Marshal(oAuthState)

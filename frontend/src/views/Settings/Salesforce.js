@@ -80,9 +80,8 @@ class Salesforce extends Component {
   }
 
   handleRedirectToURL = () =>{
-    this.props.fetchSalesforceRedirectURL(this.props.currentProjectId.toString(), this.props.currentAgent.uuid)
+    this.props.fetchSalesforceRedirectURL(this.props.currentProjectId.toString())
     .then((r)=>{
-      console.log("data",r.data);
       if (r.status == 307) {
         window.location = r.data.redirectURL;
       }

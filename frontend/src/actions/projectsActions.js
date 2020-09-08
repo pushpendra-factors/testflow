@@ -507,7 +507,7 @@ export function enableAdwordsIntegration(projectId) {
 export function fetchSalesforceRedirectURL(projectId, agentUUID){
   return function(dispatch){
     return new Promise((resolve, reject) => {
-      let payload = {"project_id":projectId, "agent_uuid":agentUUID}
+      let payload = {"project_id":projectId}
 
       post(dispatch, getHostURL()+"integrations/salesforce/auth", payload)
         .then((r) => {
