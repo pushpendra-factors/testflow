@@ -47,7 +47,7 @@ class CheckBoxLib extends React.Component {
                             </div>
          
                             <Row> 
-                                <Col span={18}>
+                                <Col span={20}>
                                     <div className={`flex justify-start items-center flex-wrap`}>
                                         {iconList.map((icon,index)=>{
                                             return(

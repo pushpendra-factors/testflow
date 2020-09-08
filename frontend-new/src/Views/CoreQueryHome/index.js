@@ -107,7 +107,7 @@ const data = [
 function CoreQuery({setDrawerVisible}) {
     return (
         <> 
-            
+            <div className={`fa-container`}>
             <Row justify="center">
                 <Col span={20}>
                         <Text type={'title'} level={2} weight={'bold'} extraClass={`m-0 mt-4`} >Core Query</Text>
@@ -120,7 +120,7 @@ function CoreQuery({setDrawerVisible}) {
                     return(
                     <Col span={4} key={index}>
                         <div onClick={()=>setDrawerVisible(item.title==`Funnels`)} className="fai--custom-card flex justify-start items-center flex-col">
-                            <div className={`fai--custom-card--icon`}><SVG name={item.icon} size={64} /> </div>
+                            <div className={`fai--custom-card--icon`}><SVG name={item.icon} size={48} /> </div>
                             <div className={`fai--custom-card--content`}>
                                 <Text type={'title'} level={3} weight={'bold'} extraClass={`fai--custom-card--title`} >{item.title}</Text> 
                                 <Text type={'title'} level={7} weight={'bold'} extraClass={`fai--custom-card--desc`} >{item.desc}</Text>  
@@ -153,7 +153,7 @@ function CoreQuery({setDrawerVisible}) {
                     <Table className="ant-table--custom" columns={columns} dataSource={data} pagination={false} />
                 </Col>
             </Row>
-            
+            </div> 
         </>
     )
 }
