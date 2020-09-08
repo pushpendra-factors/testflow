@@ -1,6 +1,7 @@
 import React from 'react';
 import styles from './index.module.scss';
 import { Input } from 'antd';
+import { SVG } from '../../../../components/factorsComponents';
 
 function SearchBar({ searchText, handleSearchTextChange, searchBar }) {
 
@@ -11,9 +12,7 @@ function SearchBar({ searchText, handleSearchTextChange, searchBar }) {
     const downloadBtn = (
         <div onClick={downloadCSV} className="flex flex-1 items-center justify-end cursor-pointer">
             <div className="mr-2">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path fillRule="evenodd" clipRule="evenodd" d="M12 3C12.5523 3 13 3.44772 13 4V11.5858L15.2929 9.29289C15.6834 8.90237 16.3166 8.90237 16.7071 9.29289C17.0976 9.68342 17.0976 10.3166 16.7071 10.7071L12 15.4142L7.29289 10.7071C6.90237 10.3166 6.90237 9.68342 7.29289 9.29289C7.68342 8.90237 8.31658 8.90237 8.70711 9.29289L11 11.5858V4C11 3.44772 11.4477 3 12 3ZM20.0255 15.1049C20.0255 14.5527 19.5778 14.1049 19.0255 14.1049C18.4732 14.1049 18.0255 14.5527 18.0255 15.1049V18H6.03497V15.105C6.03497 14.5527 5.58726 14.105 5.03497 14.105C4.48269 14.105 4.03497 14.5527 4.03497 15.105V20H20.0255V15.1049Z" fill="#0E2647" />
-                </svg>
+                <SVG color="#0E2647" name="download" size="24" />
             </div>
             <div className={styles.downloadCSVHeading}>
                 Download CSV
