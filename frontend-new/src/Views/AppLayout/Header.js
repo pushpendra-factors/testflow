@@ -9,7 +9,7 @@ function Header() {
 	const globalInfo = useSelector(state => state.global);
 
 	return (
-		<Header className="ant-layout-header--custom bg-white" style={{ position: 'fixed', zIndex: 1, width: '100%' }}>
+		<Header className="ant-layout-header--custom bg-white z-20" style={{ position: 'fixed', width: '100%' }}>
 			<div className="fai-global-search--container flex flex-col justify-center items-center">
 				<input className="fai--global-search" placeholder={`Lookup factors.ai`} />
 			</div>
