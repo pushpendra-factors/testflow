@@ -69,8 +69,8 @@ export const generateTableColumns = (data, currentSorter, handleSorting) => {
     return [...result, ...eventColumns];
 }
 
-export const generateTableData = (data, groups, currentSorter) => {
-    let appliedGroups = groups.map(elem => elem.name);
+export const generateTableData = (data, groups, currentSorter, searchText) => {
+    let appliedGroups = groups.map(elem => elem.name).filter(elem => elem.toLowerCase().indexOf(searchText.toLowerCase()) > -1);
     const result = appliedGroups.map((group, index) => {
         let eventsData = {};
         data.forEach(d => {
@@ -83,7 +83,6 @@ export const generateTableData = (data, groups, currentSorter) => {
             ...eventsData
         }
     })
-
 
     result.sort((a, b) => {
         if (currentSorter.order === 'ascend') {
