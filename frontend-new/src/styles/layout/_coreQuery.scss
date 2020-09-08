@@ -147,6 +147,24 @@ $cq-card-transition: transform .2s ease-in-out;
         .ant-select-dropdown
         {
             border-radius: 6px; 
+        } 
+        &.no-ant-border
+        { 
+            .ant-select-selector
+            { 
+                height: auto !important;
+                border: 0px solid transparent !important; 
+                padding:0px !important;
+            }
+            color: $fa-color--brand-color;
+            font-weight: $font-weight--regular;
+        }
+        &:hover,&:active,&:focus{
+            .ant-select-selector
+            { 
+                border-color: transparent !important;
+                border-right-width: 0px !important;
+            }
         }
     }
 
@@ -181,4 +199,7 @@ $cq-card-transition: transform .2s ease-in-out;
     }
 
     
+}
+.fa-event-popover{
+    background-color: pink;
 }

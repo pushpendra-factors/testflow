@@ -15,11 +15,15 @@
     font-weight: $font-weight--bold;
     font-size: 14px;
     line-height: 1.6;
-
+    
     svg{
         display: inline;
     }
-
+    
+    &.ant-btn-sm
+    {  
+        padding: 4px 12px;
+    }
     
 
 }

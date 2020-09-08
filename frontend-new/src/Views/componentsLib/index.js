@@ -10,6 +10,7 @@ import SwitchLib from './SwitchLib';
 import RadioLib from './RadioLib';
 import CheckBoxLib from './CheckBoxLib';
 import ModalLib from './ModalLib';
+import IconsLib from './IconsLib';
 
 
 function componentsLib() {
@@ -19,19 +20,17 @@ function componentsLib() {
         <Sidebar />
                 <Layout className="fa-content-container">
                 <Content> 
-                    <div className="px-16 pt-8 pb-20 bg-white min-h-screen"> 
-
-
-                    <ColorLib />
-                    <TextLib />
-                    <ButtonLib />
-                    <SwitchLib />
-                    <RadioLib />
-                    <CheckBoxLib />
-                    {/* <ModalLib /> */}
-                
-
-
+                    <div className="pt-4 pb-24 bg-white min-h-screen"> 
+                        <div className={`fa-container`}> 
+                        <ColorLib />
+                        <TextLib />
+                        <ButtonLib />
+                        <SwitchLib />
+                        <RadioLib />
+                        <CheckBoxLib />
+                        <IconsLib />
+                        {/* <ModalLib /> */} 
+                        </div>
                     </div> 
                 </Content>
             </Layout>
