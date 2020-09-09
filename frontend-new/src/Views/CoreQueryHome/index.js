@@ -114,7 +114,7 @@ function CoreQuery({ setDrawerVisible }) {
           <SearchBar />
         </div>
       </Header>
-      <div className="mt-24">
+      <div className="mt-24 px-8">
         <Row justify="center">
           <Col span={20}>
             <Text type={'title'} level={2} weight={'bold'} extraClass={`m-0`} >Core Query</Text>

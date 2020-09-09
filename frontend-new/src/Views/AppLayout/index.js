@@ -12,7 +12,7 @@ function AppLayout() {
         <Layout>
             <Sidebar />
             <Layout className="fa-content-container">
-                <Content className="px-8 bg-white min-h-screen">
+                <Content className="bg-white min-h-screen">
                     <HashRouter>
                         <Switch>
                             <Route path="/" name="Home" component={CoreQuery} />
