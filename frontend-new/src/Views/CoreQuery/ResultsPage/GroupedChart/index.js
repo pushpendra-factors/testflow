@@ -2,9 +2,16 @@ import React, { useRef, useCallback, useEffect } from 'react';
 import c3 from 'c3';
 import * as d3 from 'd3';
 import styles from './index.module.scss';
-import { checkForWindowSizeChange, calculatePercentage } from '../utils';
+import { checkForWindowSizeChange, calculatePercentage, generateColors } from '../utils';
 
-function GroupedChart({ eventsData, groups, chartData, chartColors }) {
+function GroupedChart({ eventsData, groups, chartData }) {
+
+    const appliedColors = generateColors(chartData.length);
+    const chartColors = {};
+    chartData.forEach((elem, index) => {
+        chartColors[elem[0]] = appliedColors[index];
+    });
+
     const chartRef = useRef(null);
 
     const showConverionRates = useCallback(() => {
@@ -57,6 +64,10 @@ function GroupedChart({ eventsData, groups, chartData, chartColors }) {
             size: {
                 height: 400
             },
+            padding: {
+                left: 40,
+                bottom: 24
+            },
             bindto: chartRef.current,
             data: {
                 columns: chartData,
@@ -68,7 +79,7 @@ function GroupedChart({ eventsData, groups, chartData, chartColors }) {
                     d3.select(chartRef.current)
                         .selectAll(`.c3-shapes`)
                         .selectAll('path')
-                        .style('opacity', '0.1')
+                        .style('opacity', '0.3')
 
                     let id = elemData.name;
                     if (!id) id = elemData.id;
@@ -102,7 +113,7 @@ function GroupedChart({ eventsData, groups, chartData, chartColors }) {
                             if (index === elemData.index) {
                                 d3.select(node).style('opacity', 1)
                             } else {
-                                d3.select(node).style('opacity', 0.1)
+                                d3.select(node).style('opacity', 0.3)
                             }
                         })
                 },
@@ -112,6 +123,12 @@ function GroupedChart({ eventsData, groups, chartData, chartColors }) {
                         .selectAll('path')
                         .style('opacity', '1')
                 },
+            },
+            onrendered: () => {
+                d3.select(chartRef.current).select(".c3-axis.c3-axis-x").selectAll('.tick').select('tspan').attr("dy", "16px");
+            },
+            legend: {
+                padding: 8,
             },
             transition: {
                 duration: 1000
@@ -125,6 +142,10 @@ function GroupedChart({ eventsData, groups, chartData, chartColors }) {
             axis: {
                 x: {
                     type: 'category',
+                    tick: {
+                        multiline: true,
+                        multilineMax: 3,
+                    },
                     categories: groups
                         .filter(elem => elem.is_visible)
                         .map(elem => elem.name),
@@ -146,11 +167,22 @@ function GroupedChart({ eventsData, groups, chartData, chartColors }) {
             },
             tooltip: {
                 grouped: false,
-                // position: function (data, width, height, element) {
-                //     const top = d3.mouse(element)[1] - 100;
-                //     const left = d3.mouse(element)[0] + 80;
-                //     return { top, left }
-                // },
+
+                position: (d, width, height, element) => {
+                    const bars = d3.select(chartRef.current).select(`.c3-bars.c3-bars-${d[0].id.split(' ').join('-')}`).selectAll('path').nodes();
+                    const nodePosition = d3.select(bars[d[0].index]).node().getBoundingClientRect();
+                    let left = (nodePosition.x + (nodePosition.width / 2));
+                    // if user is hovering over the last bar
+                    if (left + 200 >= (document.documentElement.clientWidth)) {
+                        left = (nodePosition.x + (nodePosition.width / 2)) - 200;
+                    }
+
+                    const top = nodePosition.y;
+                    const toolTipHeight = d3.select('.toolTip').node().getBoundingClientRect().height;
+
+                    return { top: top - toolTipHeight + 5, left: left };
+                },
+
                 contents: d => {
                     const group = groups[d[0].index].name;
                     const eventIndex = eventsData.findIndex(elem => elem.name === d[0].id);
@@ -160,9 +192,9 @@ function GroupedChart({ eventsData, groups, chartData, chartColors }) {
                     if (!eventIndex) {
                         eventsOutput = (
                             `
-                                <div class="flex justify-between my-2">
-                                    <div class="font-bold" style="color:${event.color}">Event ${event.index}</div>
-                                    <div>${event.data[group]} (${eventWeightage}%)</div>
+                                <div class="flex justify-between mt-2">
+                                    <div class="font-semibold leading-4" style="color:${chartColors[event.name]}">Event ${event.index}</div>
+                                    <div class="leading-4"><span class="font-semibold">${event.data[group]}</span> (${eventWeightage}%)</div>
                                 </div>
                             `
                         );
@@ -174,17 +206,17 @@ function GroupedChart({ eventsData, groups, chartData, chartColors }) {
                             `
                                 <div class="my-2">
                                     <div class="flex justify-between">
-                                        <div class="font-bold" style="color:${prevEvent.color}">Event ${prevEvent.index}</div>
-                                        <div><span class="font-semibold">${prevEvent.data[group]}</span> (${prevEventWeightage}%)</div>
+                                        <div class="font-semibold leading-4" style="color:${chartColors[prevEvent.name]}">Event ${prevEvent.index}</div>
+                                        <div class="leading-4"><span class="font-semibold">${prevEvent.data[group]}</span> (${prevEventWeightage}%)</div>
                                     </div>
-                                    <div class="flex justify-between">
-                                        <div class="font-bold" style="color:${event.color}">Event ${event.index}</div>
-                                        <div><span class="font-semibold">${event.data[group]}</span> (${eventWeightage}%)</div>
+                                    <div class="flex justify-between mt-2">
+                                        <div class="font-semibold leading-4" style="color:${chartColors[event.name]}">Event ${event.index}</div>
+                                        <div class="leading-4"><span class="font-semibold">${event.data[group]}</span> (${eventWeightage}%)</div>
                                     </div>
                                 </div>
                                 <hr />
-                                <div class="my-2">
-                                    <div>
+                                <div class="mt-3 flex">
+                                    <div class="mr-2">
                                         <svg width="17" height="17" viewBox="0 0 17 17" fill="none" xmlns="http://www.w3.org/2000/svg">
                                             <path fillRule="evenodd" clipRule="evenodd" d="M1.87727 0.574039C1.61198 0.0896421 1.00424 -0.08798 0.51984 0.177309C0.0354429 0.442598 -0.142179 1.05034 0.12311 1.53473L4.5343 9.58922C4.79208 10.0599 5.37545 10.2432 5.85612 10.0045L9.15537 8.36627L12.3311 13.4015L10.5548 14.4155C10.1709 14.6347 10.2394 15.2077 10.6641 15.3302L14.6511 16.4801C14.9164 16.5566 15.1935 16.4035 15.27 16.1382L16.4529 12.037C16.5773 11.6057 16.1144 11.2417 15.7246 11.4642L14.0697 12.409L10.3653 6.53552C10.0916 6.10167 9.53412 5.94521 9.07471 6.17333L5.82702 7.78599L1.87727 0.574039Z" fill="#8692A3"/>
                                         </svg>
@@ -197,10 +229,8 @@ function GroupedChart({ eventsData, groups, chartData, chartColors }) {
                     return (
                         `
                             <div class="toolTip">
-                                <div class="my-2">
-                                    <div class="font-black">${group}</div>
-                                    <div>${groups[d[0].index].conversion_rate} Overall Conversion</div>
-                                </div>
+                                <div style="font-size:14px;color:#08172B;" class="font-semibold leading-5">${group}</div>
+                                <div class="mb-2">${groups[d[0].index].conversion_rate} Overall Conversion</div>
                                 <hr />
                                 ${eventsOutput}
                             </div>
@@ -250,7 +280,7 @@ function GroupedChart({ eventsData, groups, chartData, chartColors }) {
                 groups
                     .map(elem => {
                         return (
-                            <div style={{ transition: '2s' }} key={elem.name} id={`conversion-text-${elem.name}`} className="absolute leading-5 text-base flex justify-end pr-1">
+                            <div style={{ transition: '2s' }} key={elem.name} id={`conversion-text-${elem.name}`} className="absolute z-10 leading-5 text-base flex justify-end pr-1">
                                 <div style={{ fontSize: visibleEvents.length > 2 ? '18px' : '14px' }} className={styles.conversionText}>
                                     <div className="font-semibold flex justify-end">{elem.conversion_rate}</div>
                                     <div>Conversion</div>

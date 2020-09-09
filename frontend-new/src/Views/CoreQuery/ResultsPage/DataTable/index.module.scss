@@ -35,18 +35,23 @@ $boxShadowSecondaryColor: #E7E9ED;
 
     :global(th.ant-table-cell) {
         font-style: normal;
-        font-weight: 500;
+        font-weight: 600;
         font-size: 12px;
         line-height: 16px;
         color: $factorsDarkColor;
+        height: 40px !important;
+        padding: 12px 8px;
+        font-weight: 600;
     }
 
     :global(td.ant-table-cell) {
         font-style: normal;
-        font-weight: normal;
+        font-weight: 400;
         font-size: 14px;
         line-height: 20px;
         color: $factorsDarkColor;
+        height: 48px !important;
+        padding: 12px 8px;
     }
 
     :global(.ant-table-thead > tr > th) {
@@ -62,10 +67,6 @@ $boxShadowSecondaryColor: #E7E9ED;
         border-color: $factorsDarkColor;
     }
 
-    :global(.ant-checkbox-indeterminate .ant-checkbox-inner::after) {
-        background-color: $factorsDarkColor;
-    }
-
     :global(.ant-checkbox-input:focus + .ant-checkbox-inner) {
         border-color: $factorsDarkColor;
     }
@@ -73,6 +74,10 @@ $boxShadowSecondaryColor: #E7E9ED;
     :global(tr.ant-table-row-selected > td),
     :global(.ant-table-tbody > tr.ant-table-row:hover > td) {
         background: unset;
+    }
+
+    :global(.ant-table-selection) {
+        display: none;
     }
 
     :global(.ant-table-tbody > tr.ant-table-row-selected:hover)>.conversionColumn,
@@ -111,21 +116,35 @@ $boxShadowSecondaryColor: #E7E9ED;
 
     .inputSearchBar {
         border: none;
-        box-shadow: inset 0px -1px 0px $boxShadowPrimaryColor, inset 0px 1px 0px $boxShadowPrimaryColor;
-        padding: 1rem;
+        box-shadow: inset 0px -1px 0px $boxShadowPrimaryColor;
+        padding: 1rem 0rem;
 
         :global(input) {
             font-family: 'Work Sans', sans-serif;
             font-style: normal;
-            font-weight: 600;
-            font-size: 18px;
-            line-height: 24px;
             letter-spacing: -0.01em;
-            color: $boxShadowPrimaryColor;
         }
 
         :global(.ant-input-prefix) {
             margin-right: 0.5rem;
         }
     }
+
+    .inputPlaceHolderFont {
+        :global(input) {
+            font-weight: 600;
+            font-size: 18px;
+            color: $boxShadowPrimaryColor;
+            line-height: 24px;
+        }
+    }
+
+    .inputTextFont {
+        :global(input) {
+            font-weight: 500;
+            font-size: 16px;
+            line-height: 18px;
+        }
+    }
+
 }
