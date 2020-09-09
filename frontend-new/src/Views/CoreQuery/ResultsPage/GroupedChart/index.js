@@ -169,7 +169,7 @@ function GroupedChart({ eventsData, groups, chartData }) {
                 grouped: false,
 
                 position: (d, width, height, element) => {
-                    const bars = d3.select(chartRef.current).select(`.c3-bars.c3-bars-${d[0].id}`).selectAll('path').nodes();
+                    const bars = d3.select(chartRef.current).select(`.c3-bars.c3-bars-${d[0].id.split(' ').join('-')}`).selectAll('path').nodes();
                     const nodePosition = d3.select(bars[d[0].index]).node().getBoundingClientRect();
                     let left = (nodePosition.x + (nodePosition.width / 2));
                     // if user is hovering over the last bar
@@ -209,7 +209,7 @@ function GroupedChart({ eventsData, groups, chartData }) {
                                         <div class="font-semibold leading-4" style="color:${chartColors[prevEvent.name]}">Event ${prevEvent.index}</div>
                                         <div class="leading-4"><span class="font-semibold">${prevEvent.data[group]}</span> (${prevEventWeightage}%)</div>
                                     </div>
-                                    <div class="flex justify-between">
+                                    <div class="flex justify-between mt-2">
                                         <div class="font-semibold leading-4" style="color:${chartColors[event.name]}">Event ${event.index}</div>
                                         <div class="leading-4"><span class="font-semibold">${event.data[group]}</span> (${eventWeightage}%)</div>
                                     </div>
