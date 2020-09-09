@@ -6,6 +6,9 @@ import { generateGroupedChartsData, generateDummyData, generateGroups, generateU
 import FiltersInfo from './FiltersInfo';
 import UngroupedChart from './UngroupedChart';
 import { FUNNEL_RESULTS_AVAILABLE, FUNNEL_RESULTS_UNAVAILABLE } from '../../../reducers/types';
+import Header from '../../AppLayout/Header';
+import SearchBar from '../../../components/SearchBar';
+import EventsInfo from './EventsInfo';
 
 
 function PageContent({ queries, setDrawerVisible }) {
@@ -29,32 +32,39 @@ function PageContent({ queries, setDrawerVisible }) {
 
     const groupedChartData = generateGroupedChartsData(eventsData, groups);
     const ungroupedChartsData = generateUngroupedChartsData(eventsData);
-    
+
     if (!eventsData.length) {
         return null;
     }
 
     return (
-        <div className="mt-40 mb-8">
-            {/* <FiltersInfo setDrawerVisible={setDrawerVisible} /> */}
-            <GroupedChart
-                chartData={groupedChartData}
-                groups={groups.filter(elem => elem.is_visible)}
-                eventsData={eventsData}
-            />
-            {/* <UngroupedChart
+        <>
+            <Header>
+                <div className="w-full h-full py-4 flex justify-center items-center">
+                    <SearchBar />
+                </div>
+                <EventsInfo />
+            </Header>
+            <div className="mt-40 mb-8 px-8">
+                {/* <FiltersInfo setDrawerVisible={setDrawerVisible} /> */}
+                <GroupedChart
+                    chartData={groupedChartData}
+                    groups={groups.filter(elem => elem.is_visible)}
+                    eventsData={eventsData}
+                />
+                {/* <UngroupedChart
                 chartData={ungroupedChartsData}
             /> */}
-            
-            <div className="mt-8">
-                <DataTable
-                    eventsData={eventsData}
-                    groups={groups}
-                    setGroups={setGroups}
-                />
-            </div>
-        </div>
 
+                <div className="mt-8">
+                    <DataTable
+                        eventsData={eventsData}
+                        groups={groups}
+                        setGroups={setGroups}
+                    />
+                </div>
+            </div>
+        </>
     )
 }
 
