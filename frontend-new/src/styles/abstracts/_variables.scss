@@ -1,9 +1,14 @@
 
-// Colors
+// Functional Colors
 $fa-color--white: #fff;
 $fa-color--red: #EA6262;
 $fa-color--orange:#EFAA6D;
 $fa-color--green:#56E693;
+
+$fa-color--danger: $fa-color--red;
+$fa-color--warning: $fa-color--orange;
+$fa-color--success:$fa-color--green;
+
 
 //Brand Color
 $fa-color--brand-1:#F8F8FC;
