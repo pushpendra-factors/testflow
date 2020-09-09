@@ -1,33 +1,27 @@
-.ant-layout-header--custom{
-    background: $fa-color--white; 
+.ant-layout-header--custom {
+    background: $fa-color--white;
 }
 
-.fai--global-search
-{
- 
-background: $fa-color--white; 
-border: 2px solid $fa-color--mono-3; 
-border-radius: 38px;
-width: 313px;
-height: 40px; 
-outline: none;
-padding: 1em;
-text-align: center;
-color: $fa-color--mono-color;
-font-weight: $font-weight--regular;
-font-size: 14px;
-transition: all 0.3s;
-&:focus{
-    border-color: $fa-color--mono-5;
-}
-&::placeholder {
-    color: $fa-color--mono-3;  
-  }
-}
+.fai--global-search {
 
-.fai-global-search--container
-{ 
-    width: 100%;
-    height: 100%;
-    padding: 1rem 0;
+    background: $fa-color--white;
+    border: 2px solid $fa-color--mono-3;
+    border-radius: 38px;
+    width: 313px;
+    height: 40px;
+    outline: none;
+    padding: 1em;
+    text-align: center;
+    color: $fa-color--mono-color;
+    font-weight: $font-weight--regular;
+    font-size: 14px;
+    transition: all 0.3s;
+
+    &:focus {
+        border-color: $fa-color--mono-5;
+    }
+
+    &::placeholder {
+        color: $fa-color--mono-3;
+    }
 }

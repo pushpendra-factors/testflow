@@ -1,8 +1,8 @@
-import React from 'react'; 
+import React from 'react';
 import { Row, Col, Layout } from 'antd';
 import Sidebar from '../../components/Sidebar';
-import CoreQuery from '../CoreQuery'; 
-import HeaderComp from './Header'; 
+import CoreQuery from '../CoreQuery';
+import HeaderComp from './Header';
 import { HashRouter, Route, Switch } from 'react-router-dom';
 
 function AppLayout() {
@@ -12,13 +12,12 @@ function AppLayout() {
         <Layout>
             <Sidebar />
             <Layout className="fa-content-container">
-                <HeaderComp /> 
-                <Content className="px-8 bg-white min-h-screen">    
+                <Content className="px-8 bg-white min-h-screen">
                     <HashRouter>
-                            <Switch>
-                                <Route path="/" name="Home" component={CoreQuery} />  
-                            </Switch> 
-                    </HashRouter>  
+                        <Switch>
+                            <Route path="/" name="Home" component={CoreQuery} />
+                        </Switch>
+                    </HashRouter>
                 </Content>
             </Layout>
         </Layout>

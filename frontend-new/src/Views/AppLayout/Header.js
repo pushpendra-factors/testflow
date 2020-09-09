@@ -3,19 +3,20 @@ import { useSelector } from 'react-redux'
 import { Layout } from 'antd';
 import EventsInfo from '../CoreQuery/ResultsPage/EventsInfo';
 
-function Header() {
+function Header(props) {
 	const { Header, Content } = Layout;
 
 	const globalInfo = useSelector(state => state.global);
 
 	return (
 		<Header className="ant-layout-header--custom bg-white z-20" style={{ position: 'fixed', width: '100%' }}>
-			<div className="fai-global-search--container flex flex-col justify-center items-center">
+			{props.children}
+			{/* <div className="fai-global-search--container flex flex-col justify-center items-center">
 				<input className="fai--global-search" placeholder={`Lookup factors.ai`} />
 			</div>
 			{globalInfo.is_funnel_results_visible ? (
 				<EventsInfo />
-			) : null}
+			) : null} */}
 		</Header>
 	)
 }
