@@ -1,6 +1,6 @@
 import React from 'react';
 import styles from './index.module.scss';
-import { Input } from 'antd';
+import { Input, Button } from 'antd';
 import { SVG } from '../../../../components/factorsComponents';
 
 function SearchBar({ searchText, handleSearchTextChange, searchBar }) {
@@ -11,12 +11,7 @@ function SearchBar({ searchText, handleSearchTextChange, searchBar }) {
 
     const downloadBtn = (
         <div onClick={downloadCSV} className="flex flex-1 items-center justify-end cursor-pointer">
-            <div className="mr-2">
-                <SVG color="#0E2647" name="download" size="24" />
-            </div>
-            <div className={styles.downloadCSVHeading}>
-                Download CSV
-            </div>
+            <Button icon={<SVG name={`download`} size={24} color={'grey'}/>} type="text">Dowload CSV</Button>
         </div>
     );
 
@@ -24,7 +19,7 @@ function SearchBar({ searchText, handleSearchTextChange, searchBar }) {
     return (
         <div className={`${styles.searchBar}`}>
             {!searchBar ? (
-                <div className="flex py-4 w-full">
+                <div className="flex pb-1 w-full">
                     <div className={`flex items-center w-3/4 cursor-pointer`}>
                         <div className="mr-2">
                             <svg width="17" height="18" viewBox="0 0 17 18" fill="none" xmlns="http://www.w3.org/2000/svg">

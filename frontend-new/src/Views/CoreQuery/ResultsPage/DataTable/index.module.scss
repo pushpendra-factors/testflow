@@ -117,7 +117,7 @@ $boxShadowSecondaryColor: #E7E9ED;
     .inputSearchBar {
         border: none;
         box-shadow: inset 0px -1px 0px $boxShadowPrimaryColor;
-        padding: 1rem 0rem;
+        padding: 0rem 0rem 0.25rem 0;
 
         :global(input) {
             font-family: 'Work Sans', sans-serif;
