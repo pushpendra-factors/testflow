@@ -117,7 +117,7 @@ func createUserPropertiesIfChanged(projectId uint64, userId string,
 		postgres.Jsonb{RawMessage: json.RawMessage(updatedPropertiesBytes)}, timestamp, false)
 }
 
-func SetPersistentBatchWithLogging(project_id uint64, values map[*cacheRedis.Key]string, expiryInSecs float64) error {
+func SetPersistentBatchWithLoggingUserInCache(project_id uint64, values map[*cacheRedis.Key]string, expiryInSecs float64) error {
 	logCtx := log.WithField("project_id", project_id)
 	begin := U.TimeNow()
 	logCtx.WithField("length", len(values)).Info("Begin UBset")
@@ -127,7 +127,7 @@ func SetPersistentBatchWithLogging(project_id uint64, values map[*cacheRedis.Key
 	return err
 }
 
-func GetIfExistsPersistentWithLogging(project_id uint64, key *cacheRedis.Key, tag string) (string, bool, error) {
+func GetIfExistsPersistentWithLoggingUserInCache(project_id uint64, key *cacheRedis.Key, tag string) (string, bool, error) {
 	logCtx := log.WithField("project_id", project_id)
 	begin := U.TimeNow()
 	logCtx.WithField("tag", tag).Info("Begin UG")
@@ -137,7 +137,7 @@ func GetIfExistsPersistentWithLogging(project_id uint64, key *cacheRedis.Key, ta
 	return data, status, err
 }
 
-func SetPersistentWithLogging(project_id uint64, key *cacheRedis.Key, value string, expiryInSecs float64, tag string) error {
+func SetPersistentWithLoggingUserInCache(project_id uint64, key *cacheRedis.Key, value string, expiryInSecs float64, tag string) error {
 	logCtx := log.WithField("project_id", project_id)
 	begin := U.TimeNow()
 	logCtx.WithField("tag", tag).Info("Begin US")
@@ -208,7 +208,7 @@ func RefreshCacheForUserProperties(projectid uint64, currentDate time.Time, user
 			if err != nil {
 				logCtx.WithError(err).Error("Failed to marshal property value - getvaluesbyuserproperty")
 			}
-			err = SetPersistentWithLogging(projectid, PropertyValuesKey, string(enPropertyValuesCache), U.EVENT_USER_CACHE_EXPIRY_SECS, fmt.Sprintf("value %s", propertyValue.Key))
+			err = SetPersistentWithLoggingUserInCache(projectid, PropertyValuesKey, string(enPropertyValuesCache), U.EVENT_USER_CACHE_EXPIRY_SECS, fmt.Sprintf("value %s", propertyValue.Key))
 			if err != nil {
 				logCtx.WithError(err).Error("Failed to set cache property value - getvaluesbyuserproperty")
 			}
@@ -219,7 +219,7 @@ func RefreshCacheForUserProperties(projectid uint64, currentDate time.Time, user
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to marshal property key - getuserpropertiesbyproject")
 	}
-	err = SetPersistentWithLogging(projectid, propertyCacheKey, string(enPropertiesCache), U.EVENT_USER_CACHE_EXPIRY_SECS, "property")
+	err = SetPersistentWithLoggingUserInCache(projectid, propertyCacheKey, string(enPropertiesCache), U.EVENT_USER_CACHE_EXPIRY_SECS, "property")
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to set property key - getuserpropertiesbyproject")
 	}
@@ -248,7 +248,7 @@ func UpdateCacheForUserProperties(userId string, projectid uint64, updatedProper
 		logCtx.WithError(err).Error("Failed to get property cache key - getuserscachedcachekey")
 	}
 
-	users, _, err := GetIfExistsPersistentWithLogging(projectid, usersCacheKey, "userslist")
+	users, _, err := GetIfExistsPersistentWithLoggingUserInCache(projectid, usersCacheKey, "userslist")
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get users list - users cache key")
 	}
@@ -279,7 +279,7 @@ func UpdateCacheForUserProperties(userId string, projectid uint64, updatedProper
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to marshal - getuserscachedcachekey")
 		}
-		err = SetPersistentWithLogging(projectid, usersCacheKey, string(enUsersVisited), 24*60*60, "usersList")
+		err = SetPersistentWithLoggingUserInCache(projectid, usersCacheKey, string(enUsersVisited), 24*60*60, "usersList")
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to set cache - getuserscachedcachekey")
 		}
@@ -290,7 +290,7 @@ func UpdateCacheForUserProperties(userId string, projectid uint64, updatedProper
 		logCtx.WithError(err).Error("Failed to get property cache key - getuserpropertiesbyproject")
 	}
 
-	properties, _, err := GetIfExistsPersistentWithLogging(projectid, propertyCacheKey, "properties")
+	properties, _, err := GetIfExistsPersistentWithLoggingUserInCache(projectid, propertyCacheKey, "properties")
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get property keys - getuserpropertiesbyproject")
 	}
@@ -374,7 +374,7 @@ func UpdateCacheForUserProperties(userId string, projectid uint64, updatedProper
 		logCtx.WithError(err).Error("Failed to marshal property keys - getuserpropertiesbyproject")
 	}
 	valuesSetToCache[propertyCacheKey] = string(enPropertiesCache)
-	err = SetPersistentBatchWithLogging(projectid, valuesSetToCache, U.EVENT_USER_CACHE_EXPIRY_SECS)
+	err = SetPersistentBatchWithLoggingUserInCache(projectid, valuesSetToCache, U.EVENT_USER_CACHE_EXPIRY_SECS)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to set property values in cache")
 		return

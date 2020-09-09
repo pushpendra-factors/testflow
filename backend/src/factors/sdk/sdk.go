@@ -286,7 +286,7 @@ func isRealtimeSessionRequired(skipSession bool, projectId uint64, skipProjectId
 	return true
 }
 
-func SetPersistentBatchWithLogging(project_id uint64, values map[*cacheRedis.Key]string, expiryInSecs float64) error {
+func SetPersistentBatchWithLoggingEventInCache(project_id uint64, values map[*cacheRedis.Key]string, expiryInSecs float64) error {
 	logCtx := log.WithField("project_id", project_id)
 	begin := U.TimeNow()
 	logCtx.WithField("length", len(values)).Info("Begin EBset")
@@ -296,7 +296,7 @@ func SetPersistentBatchWithLogging(project_id uint64, values map[*cacheRedis.Key
 	return err
 }
 
-func GetIfExistsPersistentWithLogging(project_id uint64, key *cacheRedis.Key, tag string) (string, bool, error) {
+func GetIfExistsPersistentWithLoggingEventInCache(project_id uint64, key *cacheRedis.Key, tag string) (string, bool, error) {
 	logCtx := log.WithField("project_id", project_id)
 	begin := U.TimeNow()
 	logCtx.WithField("tag", tag).Info("Begin EG")
@@ -366,7 +366,7 @@ func RefreshCacheFromDb(project_id uint64, currentTime time.Time, no_of_days int
 			allevents[event] = true
 		}
 	}
-	err := SetPersistentBatchWithLogging(project_id, eventsInCache, U.EVENT_USER_CACHE_EXPIRY_SECS)
+	err := SetPersistentBatchWithLoggingEventInCache(project_id, eventsInCache, U.EVENT_USER_CACHE_EXPIRY_SECS)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to set property values in cache")
 		return
@@ -445,7 +445,7 @@ func RefreshCacheFromDb(project_id uint64, currentTime time.Time, no_of_days int
 				return
 			}
 			eventPropertyValuesInCache[eventPropertiesKey] = string(enEventPropertiesCache)
-			err = SetPersistentBatchWithLogging(project_id, eventPropertyValuesInCache, U.EVENT_USER_CACHE_EXPIRY_SECS)
+			err = SetPersistentBatchWithLoggingEventInCache(project_id, eventPropertyValuesInCache, U.EVENT_USER_CACHE_EXPIRY_SECS)
 			if err != nil {
 				logCtx.WithError(err).Error("Failed to set property values in cache")
 				return
@@ -482,13 +482,13 @@ func addEventDetailsToCache(project_id uint64, event_name string, event_properti
 	var eventNames M.CacheEventNamesWithTimestamp
 	var eventProperties U.CachePropertyWithTimestamp
 
-	events, _, err := GetIfExistsPersistentWithLogging(project_id, eventNamesKey, "events")
+	events, _, err := GetIfExistsPersistentWithLoggingEventInCache(project_id, eventNamesKey, "events")
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get cache value - events")
 		return
 	}
 
-	properties, _, err := GetIfExistsPersistentWithLogging(project_id, eventPropertiesKey, "properties")
+	properties, _, err := GetIfExistsPersistentWithLoggingEventInCache(project_id, eventPropertiesKey, "properties")
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get cache value - properties")
 		return
@@ -599,7 +599,7 @@ func addEventDetailsToCache(project_id uint64, event_name string, event_properti
 		return
 	}
 	valuesSetToCache[eventPropertiesKey] = string(enEventPropertyCache)
-	err = SetPersistentBatchWithLogging(project_id, valuesSetToCache, U.EVENT_USER_CACHE_EXPIRY_SECS)
+	err = SetPersistentBatchWithLoggingEventInCache(project_id, valuesSetToCache, U.EVENT_USER_CACHE_EXPIRY_SECS)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to set property values in cache")
 		return
