@@ -1238,9 +1238,7 @@ func GetCacheRecentPropertyValues(projectId uint64, eventName string, property s
 	var err error
 	var recentPropertyValuesCacheKey *cacheRedis.Key
 
-	if entity == PropertyEntityUser {
-		recentPropertyValuesCacheKey, err = getRecentUserPropertyValuesCacheKey(projectId, property)
-	} else if entity == PropertyEntityEvent {
+	if entity == PropertyEntityEvent {
 		recentPropertyValuesCacheKey, err = getRecentEventPropertyValuesCacheKey(projectId, eventName, property)
 	}
 
@@ -1277,9 +1275,7 @@ func setCacheRecentProperty(cacheKey *cacheRedis.Key, property interface{}) erro
 func SetCacheRecentPropertyValues(projectId uint64, eventName string, property string, values []string, entity string) error {
 	var err error
 	var recentPropertyValuesCacheKey *cacheRedis.Key
-	if entity == PropertyEntityUser {
-		recentPropertyValuesCacheKey, err = getRecentUserPropertyValuesCacheKey(projectId, property)
-	} else if entity == PropertyEntityEvent {
+	if entity == PropertyEntityEvent {
 		recentPropertyValuesCacheKey, err = getRecentEventPropertyValuesCacheKey(projectId, eventName, property)
 	}
 
