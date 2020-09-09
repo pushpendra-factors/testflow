@@ -2,7 +2,7 @@ $textColor: #3E516C;
 
 .groupedChart {
 
-    margin: 20px 0px 20px 0px;
+    // margin: 20px 0px 20px 0px;
 
     :global(.c3-legend-item-tile) {
         shape-rendering: auto;
@@ -15,7 +15,7 @@ $textColor: #3E516C;
     :global(.c3-legend-item text) {
         fill: #08172B;
         line-height: 1rem;
-        font-weight: normal;
+        font-weight: 400;
         font-style: normal;
         font-size: 14px;
     }
@@ -38,21 +38,31 @@ $textColor: #3E516C;
 
     :global(.c3-axis .tick text) {
         font-size: 12px;
-        line-height: 1rem;
+        line-height: 18px;
         fill: $textColor;
-        font-weight: normal;
+        font-weight: 400;
         font-style: normal;
     }
 
+    :global(.c3-tooltip-container) {
+        position: fixed !important;
+        transition: 0.5s;
+        z-index: 30;
+    }
+
     :global(.toolTip) {
+        width: 200px;
+        padding: 12px 16px 12px 16px;
         background: #FFFFFF;
-        border: 1px solid #B7BEC8;
-        box-sizing: border-box;
-        box-shadow: 0px 6px 20px rgba(0, 0, 0, 0.2);
+        border: 1px solid #E7E9ED;
         border-radius: 12px;
-        padding-left: 1rem;
-        padding-right: 1rem;
+        font-family: 'Work Sans', sans-serif;
+        box-shadow: 0px 6px 20px rgba(0, 0, 0, 0.2);
         color:$textColor;
+        font-weight: 400;
+        word-wrap: break-word;
+        font-size: 12px;
+        line-height: 18px;
     }
 }
 

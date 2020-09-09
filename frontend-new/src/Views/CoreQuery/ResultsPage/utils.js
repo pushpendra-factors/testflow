@@ -8,6 +8,8 @@ const windowSize = {
     ih: window.innerHeight
 };
 
+const visualizationColors = ['#4D7DB4', '#4C9FC8', '#4CBCBD', '#86D3A3', '#CCC36D', '#F9C06E', '#E89E7B', '#D4787D', '#B87B7E', '#9982B5'];
+
 export const generateGroupedChartsData = (data, groups) => {
     const displayedData = data.filter(elem => elem.display);
     let result = displayedData.map(elem => {
@@ -23,12 +25,13 @@ export const generateGroupedChartsData = (data, groups) => {
     return result;
 }
 
-export const generateColors = (data) => {
-    let result = {};
-    data.forEach(elem => {
-        result[elem.name] = elem.color;
-    });
-    return result;
+export const generateColors = (requiredCumberOfColors) => {
+    const adder = Math.floor(visualizationColors.length / requiredCumberOfColors);
+    const colors = [];
+    for (let i = 0; i < requiredCumberOfColors; i++) {
+        colors.push(visualizationColors[(i * adder) % 10])
+    }
+    return colors;
 }
 
 export const generateGroups = (data) => {
@@ -66,8 +69,8 @@ export const generateTableColumns = (data, currentSorter, handleSorting) => {
     return [...result, ...eventColumns];
 }
 
-export const generateTableData = (data, groups, currentSorter) => {
-    let appliedGroups = groups.map(elem => elem.name);
+export const generateTableData = (data, groups, currentSorter, searchText) => {
+    let appliedGroups = groups.map(elem => elem.name).filter(elem => elem.toLowerCase().indexOf(searchText.toLowerCase()) > -1);
     const result = appliedGroups.map((group, index) => {
         let eventsData = {};
         data.forEach(d => {
@@ -81,7 +84,6 @@ export const generateTableData = (data, groups, currentSorter) => {
         }
     })
 
-
     result.sort((a, b) => {
         if (currentSorter.order === 'ascend') {
             return parseInt(a[currentSorter.key].split(" ")[0]) >= parseInt(b[currentSorter.key].split(" ")[0]) ? 1 : -1;
@@ -89,6 +91,7 @@ export const generateTableData = (data, groups, currentSorter) => {
         if (currentSorter.order === 'descend') {
             return parseInt(a[currentSorter.key].split(" ")[0]) <= parseInt(b[currentSorter.key].split(" ")[0]) ? 1 : -1;
         }
+        return 0;
     })
 
     return result;
@@ -97,7 +100,6 @@ export const generateTableData = (data, groups, currentSorter) => {
 const groupedDummyData = [
     {
         index: 1,
-        color: '#014694',
         display: true,
         data: {
             'Chennai': 20000,
@@ -110,7 +112,6 @@ const groupedDummyData = [
     },
     {
         index: 2,
-        color: '#008BAE',
         display: true,
         data: {
             'Chennai': 8000,
@@ -123,7 +124,6 @@ const groupedDummyData = [
     },
     {
         index: 3,
-        color: '#52C07C',
         display: true,
         data: {
             'Chennai': 6000,
@@ -136,7 +136,6 @@ const groupedDummyData = [
     },
     {
         index: 4,
-        color: '#F1C859',
         display: true,
         data: {
             'Chennai': 2000,
@@ -149,7 +148,6 @@ const groupedDummyData = [
     },
     {
         index: 5,
-        color: '#EEAC4C',
         display: true,
         data: {
             'Chennai': 1000,
@@ -162,7 +160,6 @@ const groupedDummyData = [
     },
     {
         index: 6,
-        color: '#DE7542',
         display: true,
         data: {
             'Chennai': 600,
@@ -171,6 +168,18 @@ const groupedDummyData = [
             'Amritsar': 3600,
             'Jalandhar': 300,
             'Kolkatta': 2000
+        }
+    },
+    {
+        index: 7,
+        display: true,
+        data: {
+            'Chennai': 300,
+            'Mumbai': 800,
+            'New Delhi': 600,
+            'Amritsar': 1800,
+            'Jalandhar': 100,
+            'Kolkatta': 1200
         }
     }
 ];
@@ -205,7 +214,6 @@ export const generateUngroupedChartsData = (data) => {
 
         return {
             event: elem.name,
-            color: elem.color,
             netCount,
             value: calculatePercentage(netCount, totalData)
         }
@@ -234,7 +242,7 @@ export const checkForWindowSizeChange = (callback) => {
     }
 }
 
-export const calculatePercentage = (numerator, denominator, precision = 2) => {
+export const calculatePercentage = (numerator, denominator, precision = 1) => {
     const result = ((numerator / denominator) * 100);
     return result % 1 !== 0 ? result.toFixed(precision) : result;
 }

@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gomodule/redigo/redis"
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
@@ -529,17 +528,19 @@ func GetValuesByUserPropertyCacheKey(projectId uint64, property_name string, dat
 
 //GetRecentUserPropertyKeysWithLimits This method gets all the recent 'limit' property keys from DB for a given project
 func GetRecentUserPropertyKeysWithLimits(projectID uint64, usersLimit int, propertyLimit int) ([]U.Property, error) {
+	properties := make([]U.Property, 0)
 	db := C.GetServices().Db
 
+	startTime := U.UnixTimeBeforeAWeek()
+	endTime := U.TimeNowUnix()
 	logCtx := log.WithField("project_id", projectID)
-	properties := make([]U.Property, 0)
+	queryStr := " WITH recent_users AS (SELECT DISTINCT(user_properties_id) AS user_properties_id FROM events " +
+		"WHERE project_id = ? AND timestamp > ? AND timestamp < ? LIMIT ?) " +
+		"SELECT json_object_keys(user_properties.properties::json) AS key, COUNT(*) AS count, MAX(updated_timestamp) as last_seen FROM recent_users " +
+		"LEFT OUTER JOIN user_properties ON recent_users.user_properties_id = user_properties.id  " +
+		"WHERE user_properties.project_id = ? AND user_properties.properties != 'null' GROUP BY key ORDER BY count DESC LIMIT ?;"
 
-	queryStr := "WITH recent_users AS (SELECT properties_id FROM users WHERE project_id = ? ORDER BY created_at DESC LIMIT ?)" +
-		" " + "SELECT json_object_keys(user_properties.properties::json) AS key, COUNT(*) AS count, MAX(updated_timestamp) as last_seen " +
-		" " + "FROM recent_users LEFT JOIN user_properties ON recent_users.properties_id = user_properties.id" +
-		" " + "WHERE user_properties.project_id = ? AND user_properties.properties != 'null' GROUP BY key ORDER BY count DESC LIMIT ?;"
-
-	rows, err := db.Raw(queryStr, projectID, usersLimit, projectID, propertyLimit).Rows()
+	rows, err := db.Raw(queryStr, projectID, startTime, endTime, usersLimit, projectID, propertyLimit).Rows()
 
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get recent user property keys.")
@@ -561,17 +562,20 @@ func GetRecentUserPropertyKeysWithLimits(projectID uint64, usersLimit int, prope
 
 //GetRecentUserPropertyValuesWithLimits This method gets all the recent 'limit' property values from DB for a given project/property
 func GetRecentUserPropertyValuesWithLimits(projectID uint64, propertyKey string, usersLimit, valuesLimit int) ([]U.PropertyValue, string, error) {
-	db := C.GetServices().Db
 
 	// limit on values returned.
 	values := make([]U.PropertyValue, 0, 0)
-	queryStmnt := "WITH recent_users AS (SELECT id FROM users WHERE project_id = ? ORDER BY created_at DESC limit ?)" +
-		" " + "SELECT DISTINCT(user_properties.properties->?) AS value, 1 AS count,updated_timestamp AS last_seen, jsonb_typeof(user_properties.properties->?) AS value_type FROM recent_users" +
-		" " + "LEFT JOIN user_properties ON recent_users.id = user_properties.user_id WHERE user_properties.project_id = ?" +
-		" " + "AND user_properties.properties != 'null' AND user_properties.properties->? IS NOT NULL limit ?"
+	startTime := U.UnixTimeBeforeAWeek()
+	endTime := U.TimeNowUnix()
+	db := C.GetServices().Db
+	queryStmnt := "WITH recent_users AS (SELECT DISTINCT(user_properties_id) AS user_properties_id FROM events " +
+		"WHERE project_id = ? AND timestamp > ? AND timestamp < ? LIMIT ?) " +
+		"SELECT user_properties.properties->? AS value, COUNT(*) AS count, MAX(updated_timestamp) AS last_seen, MAX(jsonb_typeof(user_properties.properties->?)) AS value_type FROM recent_users " +
+		"LEFT JOIN user_properties ON recent_users.user_properties_id = user_properties.id WHERE user_properties.project_id = ? " +
+		"AND user_properties.properties != 'null' AND user_properties.properties->? IS NOT NULL GROUP BY value limit ?;"
 
 	queryParams := make([]interface{}, 0, 0)
-	queryParams = append(queryParams, projectID, usersLimit, propertyKey, propertyKey, projectID, propertyKey, valuesLimit)
+	queryParams = append(queryParams, projectID, startTime, endTime, usersLimit, propertyKey, propertyKey, projectID, propertyKey, valuesLimit)
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "property_key": propertyKey, "values_limit": valuesLimit})
 
@@ -779,139 +783,4 @@ func getRecentUserPropertyKeysCacheKey(projectId uint64) (*cacheRedis.Key, error
 	prefix := "recent_properties"
 	suffix := "user_properites:keys"
 	return cacheRedis.NewKey(projectId, prefix, suffix)
-}
-
-func getRecentUserPropertyValuesCacheKey(projectId uint64, property string) (*cacheRedis.Key, error) {
-	prefix := "recent_properties"
-	suffix := fmt.Sprintf("user_properties:property:%s:values", property)
-	return cacheRedis.NewKey(projectId, prefix, suffix)
-}
-
-func GetCacheRecentUserPropertyKeys(projectId uint64) (map[string][]string, error) {
-	return GetCacheRecentPropertyKeys(projectId, "", PropertyEntityUser)
-}
-
-func SetCacheRecentUserPropertyKeys(projectId uint64, propsByType map[string][]string) error {
-	return SetCacheRecentPropertyKeys(projectId, "", propsByType, PropertyEntityUser)
-}
-
-func GetCacheRecentUserPropertyValues(projectId uint64, property string) ([]string, error) {
-	return GetCacheRecentPropertyValues(projectId, "", property, PropertyEntityUser)
-}
-
-func SetCacheRecentUserPropertyValues(projectId uint64, property string, values []string) error {
-	return SetCacheRecentPropertyValues(projectId, "", property, values, PropertyEntityUser)
-}
-
-func GetRecentUserPropertyKeys(projectId uint64) (map[string][]string, int) {
-	return GetRecentUserPropertyKeysWithLimitsFallback(projectId, usersLimitForProperties)
-}
-
-func GetRecentUserPropertyKeysWithLimitsFallback(projectId uint64, usersLimit int) (map[string][]string, int) {
-	logCtx := log.WithField("project_id", projectId)
-
-	if properties, err := GetCacheRecentUserPropertyKeys(projectId); err == nil {
-		return properties, http.StatusFound
-	} else if err != redis.ErrNil {
-		logCtx.WithError(err).Error("Failed to get GetCacheRecentPropertyKeys.")
-	}
-
-	usersAfterTimestamp := U.UnixTimeBeforeDuration(24 * time.Hour)
-	logCtx = log.WithFields(log.Fields{"project_id": projectId, "users_after_timestamp": usersAfterTimestamp})
-
-	db := C.GetServices().Db
-
-	queryStr := "WITH recent_users AS (SELECT properties_id FROM users WHERE project_id = ? AND join_timestamp >= ? ORDER BY created_at DESC LIMIT ?)" +
-		" " + "SELECT user_properties.properties FROM recent_users LEFT JOIN user_properties ON recent_users.properties_id = user_properties.id" +
-		" " + "WHERE user_properties.project_id = ? AND user_properties.properties != 'null';"
-
-	rows, err := db.Raw(queryStr, projectId, usersAfterTimestamp, usersLimit, projectId).Rows()
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to get recent user property keys.")
-		return nil, http.StatusInternalServerError
-	}
-	defer rows.Close()
-
-	propertiesMap := make(map[string]map[interface{}]bool, 0)
-	for rows.Next() {
-		var propertiesJson []byte
-		rows.Scan(&propertiesJson)
-
-		err := U.FillPropertyKvsFromPropertiesJson(propertiesJson, &propertiesMap, U.SamplePropertyValuesLimit)
-		if err != nil {
-			log.WithError(err).WithField("properties_json",
-				string(propertiesJson)).Error("Failed to unmarshal json properties.")
-			return nil, http.StatusInternalServerError
-		}
-	}
-
-	err = rows.Err()
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to scan recent property keys.")
-		return nil, http.StatusInternalServerError
-	}
-
-	propsByType, err := U.ClassifyPropertiesType(&propertiesMap)
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to classify properties on get recent property keys.")
-		return nil, http.StatusInternalServerError
-	}
-
-	if err = SetCacheRecentUserPropertyKeys(projectId, propsByType); err != nil {
-		logCtx.WithError(err).Error("Failed to SetCacheRecentUserPropertyKeys.")
-	}
-
-	return propsByType, http.StatusFound
-}
-
-func GetRecentUserPropertyValuesWithLimitsFallback(projectId uint64, propertyKey string, usersLimit, valuesLimit int) ([]string, int) {
-	logCtx := log.WithFields(log.Fields{"project_id": projectId, "property_key": propertyKey, "values_limit": valuesLimit})
-
-	if values, err := GetCacheRecentUserPropertyValues(projectId, propertyKey); err == nil {
-		return values, http.StatusFound
-	} else if err != redis.ErrNil {
-		logCtx.WithError(err).Error("Failed to get GetCacheRecentPropertyValues.")
-	}
-
-	db := C.GetServices().Db
-
-	// limit on values returned.
-	values := make([]string, 0, 0)
-	queryStmnt := "WITH recent_users AS (SELECT id FROM users WHERE project_id = ? ORDER BY created_at DESC limit ?)" +
-		" " + "SELECT DISTINCT(user_properties.properties->?) AS values FROM recent_users" +
-		" " + "LEFT JOIN user_properties ON recent_users.id = user_properties.user_id WHERE user_properties.project_id = ?" +
-		" " + "AND user_properties.properties != 'null' AND user_properties.properties->? IS NOT NULL limit ?"
-
-	queryParams := make([]interface{}, 0, 0)
-	queryParams = append(queryParams, projectId, usersLimit, propertyKey, projectId, propertyKey, valuesLimit)
-
-	rows, err := db.Raw(queryStmnt, queryParams...).Rows()
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to get property values.")
-		return values, http.StatusInternalServerError
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var value string
-		rows.Scan(&value)
-		value = U.TrimQuotes(value)
-		values = append(values, value)
-	}
-
-	err = rows.Err()
-	if err != nil {
-		logCtx.WithError(err).Error("Failed scanning rows on get property values.")
-		return values, http.StatusInternalServerError
-	}
-
-	if err = SetCacheRecentUserPropertyValues(projectId, propertyKey, values); err != nil {
-		logCtx.WithError(err).Error("Failed to SetCacheRecentUserPropertyValues.")
-	}
-
-	return values, http.StatusFound
-}
-
-func GetRecentUserPropertyValues(projectId uint64, propertyKey string) ([]string, int) {
-	return GetRecentUserPropertyValuesWithLimitsFallback(projectId, propertyKey, usersLimitForProperties, 2000)
 }

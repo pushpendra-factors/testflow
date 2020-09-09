@@ -286,13 +286,23 @@ func isRealtimeSessionRequired(skipSession bool, projectId uint64, skipProjectId
 	return true
 }
 
-func GetIfExistsPersistentWithLogging(key *cacheRedis.Key, tag string) (string, bool, error) {
-	log.Info(fmt.Sprintf("Begin: EG %s", tag))
-	begin := U.TimeNowUnix()
+func SetPersistentBatchWithLoggingEventInCache(project_id uint64, values map[*cacheRedis.Key]string, expiryInSecs float64) error {
+	logCtx := log.WithField("project_id", project_id)
+	begin := U.TimeNow()
+	logCtx.WithField("length", len(values)).Info("Begin EBset")
+	err := cacheRedis.SetPersistentBatch(values, expiryInSecs)
+	end := U.TimeNow()
+	logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("End EBset")
+	return err
+}
+
+func GetIfExistsPersistentWithLoggingEventInCache(project_id uint64, key *cacheRedis.Key, tag string) (string, bool, error) {
+	logCtx := log.WithField("project_id", project_id)
+	begin := U.TimeNow()
+	logCtx.WithField("tag", tag).Info("Begin EG")
 	data, status, err := cacheRedis.GetIfExistsPersistent(key)
-	end := U.TimeNowUnix()
-	log.WithFields(log.Fields{
-		"timeTaken": begin - end}).Info(fmt.Sprintf("End: EG %s", tag))
+	end := U.TimeNow()
+	logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("End EG")
 	return data, status, err
 }
 
@@ -300,8 +310,8 @@ func RefreshCacheFromDb(project_id uint64, currentTime time.Time, no_of_days int
 	// Preload EventNames-count-lastseen
 	// TODO: Janani Make this 30 configurable, limit in cache, limit in ui
 	eventsInCache := make(map[*cacheRedis.Key]string)
-	fmt.Println("Refresh Event Properties Cache started")
 	logCtx := log.WithField("project_id", project_id)
+	logCtx.Info("Refresh Event Properties Cache started")
 	currentTimeUnix := currentTime.Unix()
 	allevents := make(map[string]bool)
 
@@ -315,13 +325,15 @@ func RefreshCacheFromDb(project_id uint64, currentTime time.Time, no_of_days int
 			return
 		}
 
-		log.Info(fmt.Sprintf("Begin: Event names - DB query by occurence - %v", dateFormat))
+		logCtx.WithField("dateFormat", dateFormat).Info("Begin: Event names - DB query by occurence")
+		begin := U.TimeNow()
 		events, err := M.GetOrderedEventNamesFromDb(
 			project_id,
 			currentTime.AddDate(0, 0, -i).Unix(),
 			currentTime.AddDate(0, 0, -(i-1)).Unix(),
 			-1)
-		log.Info(fmt.Sprintf("End: Event names - DB query by occurence - %v", dateFormat))
+		end := U.TimeNow()
+		logCtx.WithFields(log.Fields{"dateFormat": dateFormat, "timeTaken": end.Sub(begin).Milliseconds()}).Info("End: Event names - DB query by occurence")
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to get values from DB - All event names")
 			return
@@ -354,9 +366,7 @@ func RefreshCacheFromDb(project_id uint64, currentTime time.Time, no_of_days int
 			allevents[event] = true
 		}
 	}
-	logCtx.Info(fmt.Sprintf("Refresh Begin: EBset %v", len(eventsInCache)))
-	err := cacheRedis.SetPersistentBatch(eventsInCache, U.EVENT_USER_CACHE_EXPIRY_SECS)
-	logCtx.Info("Refresh End: EBset")
+	err := SetPersistentBatchWithLoggingEventInCache(project_id, eventsInCache, U.EVENT_USER_CACHE_EXPIRY_SECS)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to set property values in cache")
 		return
@@ -368,13 +378,15 @@ func RefreshCacheFromDb(project_id uint64, currentTime time.Time, no_of_days int
 			var eventProperties U.CachePropertyWithTimestamp
 			eventProperties.Property = make(map[string]U.PropertyWithTimestamp)
 			dateFormat := currentTime.AddDate(0, 0, -i).Format("2006-01-02")
-			log.Info(fmt.Sprintf("Begin: Get event Properties DB call - Date - %v, - %v", dateFormat, event))
+			logCtx.WithFields(log.Fields{"dateFormat": dateFormat, "event": event}).Info("Begin: Get event Properties DB call")
+			begin := U.TimeNow()
 			properties, err := M.GetRecentEventPropertyKeysWithLimits(
 				project_id, event,
 				currentTime.AddDate(0, 0, -i).Unix(),
 				currentTime.AddDate(0, 0, -(i-1)).Unix(),
 				propertyLimit)
-			log.Info(fmt.Sprintf("End: Get event Properties DB call - Date - %v, - %v", dateFormat, event))
+			end := U.TimeNow()
+			logCtx.WithFields(log.Fields{"dateFormat": dateFormat, "event": event, "timeTaken": end.Sub(begin).Milliseconds()}).Info("End: Get event Properties DB call")
 			if err != nil {
 				logCtx.WithError(err).Error("Failed to fetch values from DB - user properties")
 				return
@@ -386,11 +398,13 @@ func RefreshCacheFromDb(project_id uint64, currentTime time.Time, no_of_days int
 				return
 			}
 			for _, property := range properties {
-				log.Info(fmt.Sprintf("Begin: Get event Property values DB call - Date - %v, - %v - %v", dateFormat, event, property.Key))
+				logCtx.WithFields(log.Fields{"dateFormat": dateFormat, "event": event, "property": property.Key}).Info("Begin: Get event Property values DB call")
+				begin := U.TimeNow()
 				values, category, err := M.GetRecentEventPropertyValuesWithLimits(project_id, event, property.Key, valuesLimit, rowsLimit,
 					currentTime.AddDate(0, 0, -i).Unix(),
 					currentTime.AddDate(0, 0, -(i-1)).Unix())
-				log.Info(fmt.Sprintf("End: Get event Property values DB call - Date - %v, - %v - %v", dateFormat, event, property.Key))
+				end := U.TimeNow()
+				logCtx.WithFields(log.Fields{"dateFormat": dateFormat, "event": event, "property": property.Key, "timeTaken": end.Sub(begin).Milliseconds()}).Info("End: Get event Property values DB call")
 				if err != nil {
 					logCtx.WithError(err).Error("Failed to get values from db - property values")
 					return
@@ -431,16 +445,14 @@ func RefreshCacheFromDb(project_id uint64, currentTime time.Time, no_of_days int
 				return
 			}
 			eventPropertyValuesInCache[eventPropertiesKey] = string(enEventPropertiesCache)
-			logCtx.Info(fmt.Sprintf("Refresh Begin: EBset %v", len(eventPropertyValuesInCache)))
-			err = cacheRedis.SetPersistentBatch(eventPropertyValuesInCache, U.EVENT_USER_CACHE_EXPIRY_SECS)
-			logCtx.Info("Refresh End: EBset")
+			err = SetPersistentBatchWithLoggingEventInCache(project_id, eventPropertyValuesInCache, U.EVENT_USER_CACHE_EXPIRY_SECS)
 			if err != nil {
 				logCtx.WithError(err).Error("Failed to set property values in cache")
 				return
 			}
 		}
 	}
-	fmt.Println("Refresh Event Properties Cache Done!!!")
+	logCtx.Info("Refresh Event Properties Cache Done!!!")
 }
 
 func addEventDetailsToCache(project_id uint64, event_name string, event_properties U.PropertiesMap) {
@@ -470,13 +482,13 @@ func addEventDetailsToCache(project_id uint64, event_name string, event_properti
 	var eventNames M.CacheEventNamesWithTimestamp
 	var eventProperties U.CachePropertyWithTimestamp
 
-	events, _, err := GetIfExistsPersistentWithLogging(eventNamesKey, "events")
+	events, _, err := GetIfExistsPersistentWithLoggingEventInCache(project_id, eventNamesKey, "events")
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get cache value - events")
 		return
 	}
 
-	properties, _, err := GetIfExistsPersistentWithLogging(eventPropertiesKey, "properties")
+	properties, _, err := GetIfExistsPersistentWithLoggingEventInCache(project_id, eventPropertiesKey, "properties")
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get cache value - properties")
 		return
@@ -543,7 +555,7 @@ func addEventDetailsToCache(project_id uint64, event_name string, event_properti
 		}
 	}
 	if len(propertyValuesCacheKeys) > 0 {
-		logCtx.Info(fmt.Sprintf("Begin: EMget %v", len(propertyValuesCacheKeys)))
+		logCtx.WithField("length", len(propertyValuesCacheKeys)).Info("Begin: EMget")
 		valuesList, err := cacheRedis.MGetPersistent(propertyValuesCacheKeys...)
 		logCtx.Info("End: EMget")
 
@@ -587,9 +599,7 @@ func addEventDetailsToCache(project_id uint64, event_name string, event_properti
 		return
 	}
 	valuesSetToCache[eventPropertiesKey] = string(enEventPropertyCache)
-	logCtx.Info(fmt.Sprintf("Begin: EBset %v", len(valuesSetToCache)))
-	err = cacheRedis.SetPersistentBatch(valuesSetToCache, U.EVENT_USER_CACHE_EXPIRY_SECS)
-	logCtx.Info("End: EBset")
+	err = SetPersistentBatchWithLoggingEventInCache(project_id, valuesSetToCache, U.EVENT_USER_CACHE_EXPIRY_SECS)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to set property values in cache")
 		return

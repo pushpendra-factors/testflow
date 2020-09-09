@@ -1,5 +1,5 @@
 import React from 'react';
-import * as icons from 'svgIcons';
+import * as icons from '../svgIcons';
 
 class SVG extends React.Component {
 
@@ -11,19 +11,19 @@ class SVG extends React.Component {
   }
   render() {
     const {
-      name, size, color, extraClass 
+      name, size, color, extraClass
     } = this.props;
     const properName = this.handleTitleConversion(name) + 'SVG';
-    const IconComponent =  icons[properName]; 
-    if (!IconComponent){
-      console.error('Invalid SVG ICON Name --->',name);
+    const IconComponent = icons[properName];
+    if (!IconComponent) {
+      console.error('Invalid SVG ICON Name --->', name);
       return null;
-    } 
-    const strokeColor = 
-    color === 'white' ? '#FFFFFF' 
-      : color === 'black' ? '#0E2647' 
-        : color === 'purple' ? '#5949BC'
-          : color === 'grey' ? '#63686F' : color; 
+    }
+    const strokeColor =
+      color === 'white' ? '#FFFFFF'
+        : color === 'black' ? '#0E2647'
+          : color === 'purple' ? '#5949BC'
+            : color === 'grey' ? '#63686F' : color;
 
     return (
       <IconComponent size={size} color={strokeColor} extraClass={extraClass} />

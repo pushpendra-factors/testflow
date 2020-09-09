@@ -1,0 +1,7 @@
+$textColor: #3E516C;
+
+.eventsText {
+    &:hover {
+        border-bottom: 1px solid $textColor;
+    }   
+}

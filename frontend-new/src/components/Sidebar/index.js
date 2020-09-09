@@ -21,7 +21,6 @@ function Sidebar() {
       useEffect(() => {
             document.onkeydown = keydown;  
             function keydown (evt) {  
-                  if (!evt) evt = event;
                   //Shift+G to trigger grid debugger
                   if (evt.shiftKey && evt.keyCode === 71) { setVisible(true); }  
             } 

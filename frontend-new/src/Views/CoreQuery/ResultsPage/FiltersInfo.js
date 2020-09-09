@@ -1,9 +1,12 @@
 import React from 'react';
+import { Switch } from 'antd';
 
-function FiltersInfo({ setDrawerVisible }) {
+function FiltersInfo({ setDrawerVisible, setGrouping, grouping }) {
+    console.log(grouping)
     return (
-        <div className="mt-4 flex justify-end p-4">
-            <a className="flex items-center" onClick={setDrawerVisible.bind(this, true)}>
+        <div className="flex justify-end">
+            <Switch checked={grouping} checkedChildren="grouped" unCheckedChildren="ungrouped" onChange={setGrouping} />
+            {/* <a className="flex items-center" onClick={setDrawerVisible.bind(this, true)}>
                 <span className="mr-1">
                     <svg width="17" height="18" viewBox="0 0 17 18" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M16 5.12653L12 1.12653C12.6069 0.400054 14.7336 -0.139838 16 1.12653C17.3554 2.48196 16.7265 4.51967 16 5.12653Z" fill="black" />
@@ -11,7 +14,7 @@ function FiltersInfo({ setDrawerVisible }) {
                     </svg>
                 </span>
                 <span style={{ color: "#8692A3" }}>Edit Query</span>
-            </a>
+            </a> */}
         </div>
     )
 }

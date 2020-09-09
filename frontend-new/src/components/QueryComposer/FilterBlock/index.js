@@ -68,11 +68,11 @@ export default function FilterBlock({filter, insertFilter, closeFilter}) {
         if(next) {
             filterTypeState === 'props' ? setFilterTypeState("operator") :
             filterTypeState === 'operator' ? setFilterTypeState("values") : 
-            null;
+            (()=>{})();
         } else {
             filterTypeState === 'values' ? setFilterTypeState("operator") :
             filterTypeState === 'operator' ? setFilterTypeState("props") : 
-            null;
+            (()=>{})();
         }
     }
 
@@ -153,11 +153,11 @@ export default function FilterBlock({filter, insertFilter, closeFilter}) {
         newFilterState["props"] ? 
             tags.push(<span className={tagClass}>
                     {newFilterState["props"]}
-                </span>) : null;
+                </span>) : (()=>{})();;
         newFilterState["operator"] ? 
             tags.push(<span className={tagClass}>
                     {newFilterState["operator"]}
-                </span>) : null;
+                </span>) : (()=>{})();;
 
         if(newFilterState["values"].length > 0) {
             newFilterState["values"].slice(0, 2).forEach((val, i) => {
@@ -169,7 +169,7 @@ export default function FilterBlock({filter, insertFilter, closeFilter}) {
                 <span>
                     ...+{newFilterState["values"].length - 2}
                 </span>
-            ) : null;
+            ) : (()=>{})();;
         }
         if(tags.length < 1) {
             tags.push(<SVG name="plus" />);
