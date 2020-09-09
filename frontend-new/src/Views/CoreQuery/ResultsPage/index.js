@@ -15,6 +15,7 @@ function PageContent({ queries, setDrawerVisible }) {
 
     const [eventsData, setEventsData] = useState([]);
     const [groups, setGroups] = useState([]);
+    const [grouping, setGrouping] = useState(true);
     const dispatch = useDispatch();
 
     useEffect(() => {
@@ -44,17 +45,20 @@ function PageContent({ queries, setDrawerVisible }) {
                     <SearchBar />
                 </div>
                 <EventsInfo />
+                <FiltersInfo grouping={grouping} setGrouping={setGrouping} setDrawerVisible={setDrawerVisible} />
             </Header>
             <div className="mt-40 mb-8 px-8">
-                {/* <FiltersInfo setDrawerVisible={setDrawerVisible} /> */}
-                <GroupedChart
-                    chartData={groupedChartData}
-                    groups={groups.filter(elem => elem.is_visible)}
-                    eventsData={eventsData}
-                />
-                {/* <UngroupedChart
-                chartData={ungroupedChartsData}
-            /> */}
+                {grouping ? (
+                    <GroupedChart
+                        chartData={groupedChartData}
+                        groups={groups.filter(elem => elem.is_visible)}
+                        eventsData={eventsData}
+                    />
+                ) : (
+                        <UngroupedChart
+                            chartData={ungroupedChartsData}
+                        />
+                    )}
 
                 <div className="mt-8">
                     <DataTable
