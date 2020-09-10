@@ -3,6 +3,8 @@ package redis
 import (
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/gomodule/redigo/redis"
 
@@ -71,6 +73,24 @@ func (key *Key) Key() (string, error) {
 
 	// key: i.e, event_names:user_last_event:pid:1:uid:1
 	return fmt.Sprintf("%s:%s:%s", key.Prefix, projectScope, key.Suffix), nil
+}
+
+func KeyFromStringWithPid(key string) (*Key, error) {
+	if key == "" {
+		return nil, ErrorInvalidValues
+	}
+	cacheKey := Key{}
+	keyPidSplit := strings.Split(key, ":pid:")
+	if len(keyPidSplit) == 2 {
+		projectIDSuffix := strings.SplitN(keyPidSplit[1], ":", 2)
+		if len(projectIDSuffix) == 2 {
+			cacheKey.Suffix = projectIDSuffix[1]
+		}
+		projectId, _ := strconv.Atoi(projectIDSuffix[0])
+		cacheKey.ProjectID = uint64(projectId)
+		cacheKey.Prefix = keyPidSplit[0]
+	}
+	return &cacheKey, nil
 }
 
 func SetPersistent(key *Key, value string, expiryInSecs float64) error {
@@ -264,6 +284,57 @@ func exists(key *Key, persistent bool) (bool, error) {
 	return count.(int64) == 1, nil
 }
 
+func IncrBatch(expiryInSecs float64, keys ...*Key) error {
+	return incrBatch(expiryInSecs, false, keys)
+}
+func IncrPersistentBatch(expiryInSecs float64, keys ...*Key) error {
+	return incrBatch(expiryInSecs, true, keys)
+}
+func incrBatch(expiryInSecs float64, persistent bool, keys []*Key) error {
+	totalOperationsPerCall := 1
+	if len(keys) == 0 {
+		return ErrorInvalidValues
+	}
+	if expiryInSecs != 0 {
+		totalOperationsPerCall = 2
+	}
+	var redisConn redis.Conn
+	if persistent {
+		redisConn = C.GetCacheRedisPersistentConnection()
+	} else {
+		redisConn = C.GetCacheRedisConnection()
+	}
+	defer redisConn.Close()
+
+	err := redisConn.Send("MULTI")
+	if err != nil {
+		return err
+	}
+	for _, key := range keys {
+		cKey, err := key.Key()
+		if err != nil {
+			return err
+		}
+		err = redisConn.Send("INCR", cKey)
+		if err != nil {
+			return err
+		}
+		if expiryInSecs != 0 {
+			err = redisConn.Send("EXPIRE", cKey, expiryInSecs)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	res, err := redis.Values(redisConn.Do("EXEC"))
+	if err != nil {
+		return err
+	}
+	if len(res) != len(keys)*totalOperationsPerCall {
+		return ErrorPartialFailures
+	}
+	return nil
+}
 func SetBatch(values map[*Key]string, expiryInSecs float64) error {
 	return setBatch(values, expiryInSecs, false)
 }
@@ -310,4 +381,40 @@ func setBatch(values map[*Key]string, expiryInSecs float64, persistent bool) err
 		return ErrorPartialFailures
 	}
 	return nil
+}
+
+func GetKeysPersistent(pattern string) ([]*Key, error) {
+	return getKeys(pattern, true)
+}
+
+func GetKeys(pattern string) ([]*Key, error) {
+	return getKeys(pattern, false)
+}
+
+func getKeys(pattern string, persistent bool) ([]*Key, error) {
+	if pattern == "" {
+		return nil, ErrorInvalidKey
+	}
+
+	var redisConn redis.Conn
+	if persistent {
+		redisConn = C.GetCacheRedisPersistentConnection()
+	} else {
+		redisConn = C.GetCacheRedisConnection()
+	}
+	defer redisConn.Close()
+
+	keys, err := redis.Values(redisConn.Do("KEYS", pattern))
+	if err != nil {
+		return nil, err
+	}
+	cacheKeyStrings := make([]string, 0)
+	_ = redis.ScanSlice(keys, &cacheKeyStrings)
+
+	cacheKeys := make([]*Key, 0)
+	for _, key := range cacheKeyStrings {
+		cacheKey, _ := KeyFromStringWithPid(key)
+		cacheKeys = append(cacheKeys, cacheKey)
+	}
+	return cacheKeys, nil
 }

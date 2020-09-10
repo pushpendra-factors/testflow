@@ -7,6 +7,7 @@ import (
 	U "factors/util"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -296,20 +297,23 @@ func GetOrderedEventNamesFromDb(
 	}
 	return eventNames, nil
 }
-
-func GetEventNamesOrderByOccurrenceAndRecencyCacheKey(projectId uint64, date string) (*cacheRedis.Key, error) {
-	prefix := "event_names:ordered_by_occurrence_and_recency"
-	return cacheRedis.NewKey(projectId, prefix, date)
+func GetPropertiesByEventCategoryCacheKey(projectId uint64, event_name string, property string, category string, date string) (*cacheRedis.Key, error) {
+	prefix := "EN:PC"
+	return cacheRedis.NewKey(projectId, fmt.Sprintf("%s:%s", prefix, event_name), fmt.Sprintf("%s:%s:%s", date, category, property))
+}
+func GetEventNamesOrderByOccurrenceAndRecencyCacheKey(projectId uint64, event_name string, date string) (*cacheRedis.Key, error) {
+	prefix := "EN"
+	return cacheRedis.NewKey(projectId, prefix, fmt.Sprintf("%s:%s", date, event_name))
 }
 
-func GetPropertiesByEventCacheKey(projectId uint64, event_name string, date string) (*cacheRedis.Key, error) {
-	prefix := "event_names:properties"
-	return cacheRedis.NewKey(projectId, prefix, fmt.Sprintf("%s:%s", event_name, date))
+func GetPropertiesByEventCacheKey(projectId uint64, event_name string, property string, date string) (*cacheRedis.Key, error) {
+	prefix := "EN:PR"
+	return cacheRedis.NewKey(projectId, fmt.Sprintf("%s:%s", prefix, event_name), fmt.Sprintf("%s:%s", date, property))
 }
 
-func GetValuesByEventPropertyCacheKey(projectId uint64, event_name string, property_name string, date string) (*cacheRedis.Key, error) {
-	prefix := "event_names:property_values"
-	return cacheRedis.NewKey(projectId, prefix, fmt.Sprintf("%s:%s:%s", event_name, property_name, date))
+func GetValuesByEventPropertyCacheKey(projectId uint64, event_name string, property_name string, value string, date string) (*cacheRedis.Key, error) {
+	prefix := "EN:PV"
+	return cacheRedis.NewKey(projectId, fmt.Sprintf("%s:%s:%s", prefix, event_name, property_name), fmt.Sprintf("%s:%s", date, value))
 }
 
 //GetPropertyValuesByEventProperty This method iterates for last n days to get all the top 'limit' property values for the given property/event
@@ -367,24 +371,35 @@ func getPropertyValuesByEventPropertyFromCache(projectID uint64, eventName strin
 		return U.CachePropertyValueWithTimestamp{}, errors.New("invalid property_name on GetPropertyValuesByEventPropertyFromCache")
 	}
 
-	eventPropertyValuesKey, err := GetValuesByEventPropertyCacheKey(projectID, eventName, propertyName, dateKey)
+	eventPropertyValuesKey, err := GetValuesByEventPropertyCacheKey(projectID, eventName, propertyName, "*", dateKey)
 	if err != nil {
 		return U.CachePropertyValueWithTimestamp{}, err
 	}
-	values, _, err := cacheRedis.GetIfExistsPersistent(eventPropertyValuesKey)
+
+	eventPropertyValuesKeyString, err := eventPropertyValuesKey.Key()
 	if err != nil {
 		return U.CachePropertyValueWithTimestamp{}, err
 	}
-	if values == "" {
-		return U.CachePropertyValueWithTimestamp{}, nil
-	}
-	var cacheValue U.CachePropertyValueWithTimestamp
-	err = json.Unmarshal([]byte(values), &cacheValue)
+	eventPropertyValuesKeys, err := cacheRedis.GetKeysPersistent(eventPropertyValuesKeyString)
 	if err != nil {
 		return U.CachePropertyValueWithTimestamp{}, err
 	}
-	// Not adding nil/0 check for properties list since it can be null/empty
-	return cacheValue, nil
+	if len(eventPropertyValuesKeys) <= 0 {
+		return U.CachePropertyValueWithTimestamp{}, err
+	}
+	// Check if this needs batching
+	values, err := cacheRedis.MGetPersistent(eventPropertyValuesKeys...)
+	if err != nil {
+		return U.CachePropertyValueWithTimestamp{}, err
+	}
+	propertyValues := make(map[string]U.CountTimestampTuple)
+	for index, valuesCount := range values {
+		key, value := extractKeyDateCountFromCacheKey(valuesCount, eventPropertyValuesKeys[index].Suffix)
+		propertyValues[key] = value
+	}
+	cachePropertyValues := U.CachePropertyValueWithTimestamp{
+		PropertyValue: propertyValues}
+	return cachePropertyValues, nil
 }
 
 //GetPropertiesByEvent This method iterates for last n days to get all the top 'limit' properties for the given event
@@ -431,6 +446,7 @@ func GetPropertiesByEvent(projectID uint64, eventName string, limit int, lastNDa
 
 func getPropertiesByEventFromCache(projectID uint64, eventName string, dateKey string) (U.CachePropertyWithTimestamp, error) {
 
+	dateKeyInTime, _ := time.Parse("2006-01-02", dateKey)
 	if projectID == 0 {
 		return U.CachePropertyWithTimestamp{}, errors.New("invalid project on GetPropertiesByEventFromCache")
 	}
@@ -439,24 +455,56 @@ func getPropertiesByEventFromCache(projectID uint64, eventName string, dateKey s
 		return U.CachePropertyWithTimestamp{}, errors.New("invalid event_name on GetPropertiesByEventFromCache")
 	}
 
-	eventPropertiesKey, err := GetPropertiesByEventCacheKey(projectID, eventName, dateKey)
+	eventPropertiesKey, err := GetPropertiesByEventCategoryCacheKey(projectID, eventName, "*", "*", dateKey)
 	if err != nil {
 		return U.CachePropertyWithTimestamp{}, err
 	}
-	eventProperties, _, err := cacheRedis.GetIfExistsPersistent(eventPropertiesKey)
+
+	eventPropertiesKeyString, err := eventPropertiesKey.Key()
 	if err != nil {
 		return U.CachePropertyWithTimestamp{}, err
 	}
-	if eventProperties == "" {
-		return U.CachePropertyWithTimestamp{}, nil
-	}
-	var cacheValue U.CachePropertyWithTimestamp
-	err = json.Unmarshal([]byte(eventProperties), &cacheValue)
+	eventPropertyKeys, err := cacheRedis.GetKeysPersistent(eventPropertiesKeyString)
 	if err != nil {
 		return U.CachePropertyWithTimestamp{}, err
 	}
-	// Not adding nil/0 check for properties list since it can be null/empty
-	return cacheValue, nil
+	if len(eventPropertyKeys) <= 0 {
+		return U.CachePropertyWithTimestamp{}, err
+	}
+	// Check if this needs batching
+	properties, err := cacheRedis.MGetPersistent(eventPropertyKeys...)
+	if err != nil {
+		return U.CachePropertyWithTimestamp{}, err
+	}
+	eventProperties := make(map[string]U.PropertyWithTimestamp)
+	propertyCategory := make(map[string]map[string]int64)
+	for index, propertiesCount := range properties {
+		cat, pr := extractCategoryProperty(eventPropertyKeys[index].Suffix)
+		if propertyCategory[pr] == nil {
+			propertyCategory[pr] = make(map[string]int64)
+		}
+		catCount, _ := strconv.Atoi(propertiesCount)
+		propertyCategory[pr][cat] = int64(catCount)
+	}
+	for pr, catCount := range propertyCategory {
+		cwc := make(map[string]int64)
+		totalCount := int64(0)
+		for cat, catCount := range catCount {
+			cwc[cat] = catCount
+			totalCount += catCount
+		}
+		prWithTs := U.PropertyWithTimestamp{CategorywiseCount: cwc,
+			CountTime: U.CountTimestampTuple{Count: totalCount, LastSeenTimestamp: dateKeyInTime.Unix()}}
+		eventProperties[pr] = prWithTs
+	}
+	cacheProperties := U.CachePropertyWithTimestamp{
+		Property: eventProperties}
+	return cacheProperties, nil
+}
+
+func extractCategoryProperty(categoryProperty string) (string, string) {
+	catPr := strings.SplitN(categoryProperty, ":", 3)
+	return catPr[1], catPr[2]
 }
 
 func aggregateEventsAcrossDate(events []CacheEventNamesWithTimestamp) []U.NameCountTimestampCategory {
@@ -518,23 +566,42 @@ func getEventNamesOrderedByOccurenceAndRecencyFromCache(projectID uint64, dateKe
 	if projectID == 0 {
 		return CacheEventNamesWithTimestamp{}, errors.New("invalid project on get event names ordered by occurence and recency from cache")
 	}
-	eventNamesKey, err := GetEventNamesOrderByOccurrenceAndRecencyCacheKey(projectID, dateKey)
+	eventNamesKey, err := GetEventNamesOrderByOccurrenceAndRecencyCacheKey(projectID, "*", dateKey)
 	if err != nil {
 		return CacheEventNamesWithTimestamp{}, err
 	}
-	eventNames, _, err := cacheRedis.GetIfExistsPersistent(eventNamesKey)
+	eventNamesKeyString, err := eventNamesKey.Key()
 	if err != nil {
 		return CacheEventNamesWithTimestamp{}, err
 	}
-	if eventNames == "" {
-		return CacheEventNamesWithTimestamp{}, nil
-	}
-	var cacheEventNames CacheEventNamesWithTimestamp
-	err = json.Unmarshal([]byte(eventNames), &cacheEventNames)
+	eventNameKeys, err := cacheRedis.GetKeysPersistent(eventNamesKeyString)
 	if err != nil {
 		return CacheEventNamesWithTimestamp{}, err
 	}
+	if len(eventNameKeys) <= 0 {
+		return CacheEventNamesWithTimestamp{}, err
+	}
+	events, err := cacheRedis.MGetPersistent(eventNameKeys...)
+	if err != nil {
+		return CacheEventNamesWithTimestamp{}, err
+	}
+	eventNames := make(map[string]U.CountTimestampTuple)
+	for index, eventCount := range events {
+		key, value := extractKeyDateCountFromCacheKey(eventCount, eventNameKeys[index].Suffix)
+		eventNames[key] = value
+	}
+	cacheEventNames := CacheEventNamesWithTimestamp{
+		EventNames: eventNames}
 	return cacheEventNames, nil
+}
+
+func extractKeyDateCountFromCacheKey(keyCount string, cacheKey string) (string, U.CountTimestampTuple) {
+	dateKey := strings.SplitN(cacheKey, ":", 2)
+	keyDate, _ := time.Parse("2006-01-02", dateKey[0])
+	KeyCountNum, _ := strconv.Atoi(keyCount)
+	return dateKey[1], U.CountTimestampTuple{
+		LastSeenTimestamp: keyDate.Unix(),
+		Count:             int64(KeyCountNum)}
 }
 
 func GetFilterEventNames(projectId uint64) ([]EventName, int) {
