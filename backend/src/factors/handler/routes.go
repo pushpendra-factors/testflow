@@ -48,7 +48,6 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.Use(mid.SetLoggedInAgent())
 	authRouteGroup.Use(mid.SetAuthorizedProjectsByLoggedInAgent())
 	authRouteGroup.Use(mid.ValidateLoggedInAgentHasAccessToRequestProject())
-
 	authRouteGroup.GET("/:project_id/dashboards", GetDashboardsHandler)
 	authRouteGroup.POST("/:project_id/dashboards", CreateDashboardHandler)
 	authRouteGroup.PUT("/:project_id/dashboards/:dashboard_id", UpdateDashboardHandler)
@@ -138,6 +137,17 @@ func InitIntRoutes(r *gin.Engine) {
 		mid.SetAuthorizedProjectsByLoggedInAgent(),
 		IntFacebookAddAccessTokenHandler)
 
+	intRouteGroup.POST("/salesforce/enable",
+		mid.SetLoggedInAgent(),
+		mid.SetAuthorizedProjectsByLoggedInAgent(),
+		IntEnableSalesforceHandler)
+
+	intRouteGroup.POST("/salesforce/auth",
+		mid.SetLoggedInAgent(),
+		mid.SetAuthorizedProjectsByLoggedInAgent(),
+		SalesforceAuthRedirectHandler)
+	intRouteGroup.GET(SALESFORCE_CALLBACK_URL,
+		SalesforceCallbackHandler)
 }
 
 func InitDataServiceRoutes(r *gin.Engine) {

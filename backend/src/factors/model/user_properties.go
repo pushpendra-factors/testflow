@@ -307,7 +307,7 @@ func UpdateCacheForUserProperties(userId string, projectid uint64, updatedProper
 			propertyValuesCacheKeys = append(propertyValuesCacheKeys, userPropertyValuesKey)
 		}
 	}
-	if len(propertyValuesCacheKeys) > 0 {
+	/*if len(propertyValuesCacheKeys) > 0 {
 		logCtx.WithField("length", len(propertyValuesCacheKeys)).Info("Begin: UMget")
 		valuesList, err := cacheRedis.MGetPersistent(propertyValuesCacheKeys...)
 		logCtx.Info("End: UMget")
@@ -339,7 +339,7 @@ func UpdateCacheForUserProperties(userId string, projectid uint64, updatedProper
 				valuesSetToCache[propertyValuesCacheKeys[index]] = string(enEventPropertyValueCache)
 			}
 		}
-	}
+	}*/
 	userProperties.CacheUpdatedTimestamp = currentTimeUnix
 	enPropertiesCache, err := json.Marshal(userProperties)
 	if err != nil {

@@ -10,7 +10,6 @@ import Header from '../../AppLayout/Header';
 import SearchBar from '../../../components/SearchBar';
 import EventsInfo from './EventsInfo';
 
-
 function PageContent({ queries, setDrawerVisible }) {
 
     const [eventsData, setEventsData] = useState([]);
@@ -47,7 +46,7 @@ function PageContent({ queries, setDrawerVisible }) {
                 <EventsInfo />
                 <FiltersInfo grouping={grouping} setGrouping={setGrouping} setDrawerVisible={setDrawerVisible} />
             </Header>
-            <div className="mt-40 mb-8 px-8">
+            <div className="mt-48 mb-8 px-10 fa-container">
                 {grouping ? (
                     <GroupedChart
                         chartData={groupedChartData}

@@ -70,6 +70,11 @@ const SettingsFacebook = Loadable({
   loading: Loading,
 });
 
+const SettingsSalesforce = Loadable({
+  loader: () => import('./views/Settings/Salesforce'),
+  loading: Loading,
+});
+
 const Profile = Loadable({
   loader: () => import('./views/Profile'),
   loading: Loading,
@@ -107,6 +112,7 @@ const routes = [
   { path: '/settings/iossdk', exact: true, name: 'IosSdk', component: SettingsIosSdk },
   { path: '/settings/agents', exact: true, name: 'Agents', component: SettingsAgents },
   { path: '/settings/facebook', exact: true, name: 'Facebook', component: SettingsFacebook },
+  { path: '/settings/Salesforce', exact: true, name: 'Salesforce', component: SettingsSalesforce },
   { path: '/settings', name: 'Settings', component: Settings },
   { path: '/account_settings', name: 'AccountSettings', component: AccountSettings },
   { path: '/profile', name: 'Profile', component: Profile },
