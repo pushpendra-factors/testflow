@@ -76,6 +76,8 @@ type Configuration struct {
 	AdminLoginToken                     string
 	FacebookAppID                       string
 	FacebookAppSecret                   string
+	SalesforceAppID                     string
+	SalesforceAppSecret                 string
 	SentryDSN                           string
 	LoginTokenMap                       map[string]string
 	SkipTrackProjectIds                 []uint64
@@ -661,6 +663,14 @@ func GetFacebookAppId() string {
 
 func GetFacebookAppSecret() string {
 	return configuration.FacebookAppSecret
+}
+
+func GetSalesforceAppId() string {
+	return configuration.SalesforceAppID
+}
+
+func GetSalesforceAppSecret() string {
+	return configuration.SalesforceAppSecret
 }
 
 func GetFactorsSenderEmail() string {
