@@ -248,41 +248,13 @@ func UpdateCacheForUserProperties(userId string, projectid uint64, updatedProper
 		logCtx.WithError(err).Error("Failed to get property cache key - getuserscachedcachekey")
 	}
 
-	users, _, err := GetIfExistsPersistentWithLoggingUserInCache(projectid, usersCacheKey, "userslist")
+	isNewUser, err := cacheRedis.PFAddPersistent(usersCacheKey, userId)
 	if err != nil {
-		logCtx.WithError(err).Error("Failed to get users list - users cache key")
+		logCtx.WithError(err).Error("Failed to get users from cache - getuserscachedcachekey")
 	}
 
-	var usersVisited CachedVisitedUsersList
-	if users != "" {
-		err = json.Unmarshal([]byte(users), &usersVisited)
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to unmarshal users list - getuserscachedcachekey")
-		}
-	}
-
-	userAlreadyVistedForTheDay := false
-	if usersVisited.Users != nil && usersVisited.Users[userId] == true {
-		userAlreadyVistedForTheDay = true
-	}
-
-	if redundantProperty == true && userAlreadyVistedForTheDay == true {
+	if redundantProperty == true && isNewUser == false {
 		return
-	}
-
-	if userAlreadyVistedForTheDay == false {
-		if usersVisited.Users == nil {
-			usersVisited.Users = make(map[string]bool)
-		}
-		usersVisited.Users[userId] = true
-		enUsersVisited, err := json.Marshal(usersVisited)
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to marshal - getuserscachedcachekey")
-		}
-		err = SetPersistentWithLoggingUserInCache(projectid, usersCacheKey, string(enUsersVisited), 24*60*60, "usersList")
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to set cache - getuserscachedcachekey")
-		}
 	}
 
 	propertyCacheKey, err := GetUserPropertiesByProjectCacheKey(projectid, currentTimeDatePart)

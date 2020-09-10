@@ -418,3 +418,37 @@ func getKeys(pattern string, persistent bool) ([]*Key, error) {
 	}
 	return cacheKeys, nil
 }
+
+func PFAddPersistent(cacheKey *Key, value string) (bool, error) {
+	return pfAdd(cacheKey, value, true)
+}
+
+func PFAdd(cacheKey *Key, value string) (bool, error) {
+	return pfAdd(cacheKey, value, false)
+}
+
+func pfAdd(cacheKey *Key, value string, persistent bool) (bool, error) {
+	if cacheKey == nil {
+		return false, ErrorInvalidKey
+	}
+	cKey, err := cacheKey.Key()
+	if err != nil {
+		return false, err
+	}
+	var redisConn redis.Conn
+	if persistent {
+		redisConn = C.GetCacheRedisPersistentConnection()
+	} else {
+		redisConn = C.GetCacheRedisConnection()
+	}
+	defer redisConn.Close()
+
+	res, err := redisConn.Do("PFADD", cKey, value)
+	if err != nil {
+		return false, err
+	}
+	if res.(int64) == 1 {
+		return true, nil
+	}
+	return false, nil
+}
