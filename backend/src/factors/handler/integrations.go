@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	C "factors/config"
+	IntSalesforce "factors/integration/salesforce"
 	IntSegment "factors/integration/segment"
 	IntShopify "factors/integration/shopify"
 	mid "factors/middleware"
@@ -203,6 +205,60 @@ func IntEnableAdwordsHandler(c *gin.Context) {
 	_, errCode = M.UpdateProjectSettings(projectId, &addEnableAgentUUIDSetting)
 	if errCode != http.StatusAccepted {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "failed to enable adwords"})
+		return
+	}
+
+	c.JSON(http.StatusOK, addEnableAgentUUIDSetting)
+}
+
+type SalesforceEnableRequestPayload struct {
+	ProjectId string `json:"project_id"`
+}
+
+// IntEnableSalesforceHandler - Checks for refresh_token for the
+// agent if exists: then add the agent_uuid as int_salesforce_enabled_agent_uuid
+// on project settings. if not exists: return 304.
+func IntEnableSalesforceHandler(c *gin.Context) {
+	r := c.Request
+
+	var requestPayload SalesforceEnableRequestPayload
+
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&requestPayload); err != nil {
+		log.WithError(err).Error("Salesforce get refresh token payload JSON decode failure.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid json payload. enable failed."})
+		return
+	}
+
+	if requestPayload.ProjectId == "" {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid project."})
+		return
+	}
+
+	projectId, err := strconv.ParseUint(requestPayload.ProjectId, 10, 64)
+	if err != nil {
+		log.WithError(err).Error("Failed to convert project_id as uint64.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid project."})
+		return
+	}
+
+	currentAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+	agent, errCode := M.GetAgentByUUID(currentAgentUUID)
+	if errCode != http.StatusFound {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid agent."})
+		return
+	}
+
+	if agent.IntSalesforceRefreshToken == "" && agent.IntSalesforceInstanceURL == "" {
+		c.JSON(http.StatusNotModified, gin.H{"error": "agent not set for salesforce"})
+		return
+	}
+
+	addEnableAgentUUIDSetting := M.ProjectSetting{IntSalesforceEnabledAgentUUID: &currentAgentUUID}
+	_, errCode = M.UpdateProjectSettings(projectId, &addEnableAgentUUIDSetting)
+	if errCode != http.StatusAccepted {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "failed to enable salesforce"})
 		return
 	}
 
@@ -608,4 +664,127 @@ func IntShopifySDKHandler(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, nil)
+}
+
+const SALESFORCE_CALLBACK_URL = "/salesforce/auth/callback"
+
+type SalesforceRedirectRequestPayload struct {
+	ProjectId string `json:"project_id"`
+}
+
+func getSalesforceRedirectURL() string {
+	return C.GetProtocol() + C.GetAPIDomain() + ROUTE_INTEGRATIONS_ROOT + SALESFORCE_CALLBACK_URL
+}
+
+// SalesforceCallbackHandler handles the callback url from salesforce auth redirect url and requests access token
+func SalesforceCallbackHandler(c *gin.Context) {
+	var oauthState IntSalesforce.OAuthState
+	accessCode := c.Query("code")
+	state := c.Query("state")
+	err := json.Unmarshal([]byte(state), &oauthState)
+	if err != nil || oauthState.ProjectId == 0 || *oauthState.AgentUUID == "" {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	logCtx := log.WithFields(log.Fields{"project_id": oauthState.ProjectId, "agent_uuid": oauthState.AgentUUID})
+	salesforceTokenParams := IntSalesforce.SalesforceAuthParams{
+		GrantType:    "authorization_code",
+		AccessCode:   accessCode,
+		ClientId:     C.GetSalesforceAppId(),
+		ClientSecret: C.GetSalesforceAppSecret(),
+		RedirectURL:  getSalesforceRedirectURL(),
+	}
+
+	userCredentials, err := IntSalesforce.GetSalesforceUserToken(&salesforceTokenParams)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to getSalesforceUserToken.")
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+
+	refreshToken, instancUrl := getRequiredSalesforceCredentials(userCredentials)
+	if refreshToken == "" || instancUrl == "" {
+		logCtx.Error("Failed to getRequiredSalesforceCredentials")
+		c.AbortWithStatus(http.StatusBadRequest)
+	}
+
+	errCode := M.UpdateAgentIntSalesforce(*oauthState.AgentUUID,
+		refreshToken,
+		instancUrl,
+	)
+	if errCode != http.StatusAccepted {
+		logCtx.Error("Failed to update salesforce properties for agent.")
+		c.AbortWithStatusJSON(http.StatusInternalServerError,
+			gin.H{"error": "failed updating saleforce properties for agent"})
+		return
+	}
+
+	_, errCode = M.UpdateProjectSettings(oauthState.ProjectId,
+		&M.ProjectSetting{IntSalesforceEnabledAgentUUID: oauthState.AgentUUID},
+	)
+	if errCode != http.StatusAccepted {
+		logCtx.Error("Failed to update project settings salesforce enable agent uuid.")
+		c.AbortWithStatusJSON(http.StatusInternalServerError,
+			gin.H{"error": "failed updating salesforce enabled agent uuid project settings"})
+		return
+	}
+
+	redirectURL := C.GetProtocol() + C.GetAPPDomain() + IntSalesforce.SALESFORCE_APP_SETTINGS_URL
+	c.Redirect(http.StatusPermanentRedirect, redirectURL)
+}
+
+func getRequiredSalesforceCredentials(credentials map[string]interface{}) (string, string) {
+	if refreshToken, rValid := credentials[IntSalesforce.SALESFORCE_REFRESH_TOKEN].(string); rValid { //could lead to error if refresh token not set on auth scope
+		if instancUrl, iValid := credentials[IntSalesforce.SALESFORCE_INSTANCE_URL].(string); iValid {
+			if refreshToken != "" && instancUrl != "" {
+				return refreshToken, instancUrl
+			}
+
+		}
+	}
+	return "", ""
+}
+
+// SalesforceAuthRedirectHandler redirects to Salesforce oauth page
+func SalesforceAuthRedirectHandler(c *gin.Context) {
+	r := c.Request
+
+	var requestPayload SalesforceRedirectRequestPayload
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&requestPayload); err != nil {
+		log.WithError(err).Error("Salesforce get redirect url payload decode failure.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid json payload."})
+		return
+	}
+
+	projectId, err := strconv.ParseUint(requestPayload.ProjectId, 10, 64)
+	if err != nil || projectId == 0 {
+		log.WithError(err).Error("Failed to get project_id on get SalesforceAuthRedirectHandler.")
+		c.AbortWithStatusJSON(http.StatusBadRequest,
+			gin.H{"error": "Invalid project id."})
+		return
+	}
+
+	currentAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+	if currentAgentUUID == "" {
+		c.AbortWithStatusJSON(http.StatusBadRequest,
+			gin.H{"error": "Invalid agent id."})
+		return
+	}
+
+	oAuthState := &IntSalesforce.OAuthState{
+		ProjectId: projectId,
+		AgentUUID: &currentAgentUUID,
+	}
+
+	enOAuthState, err := json.Marshal(oAuthState)
+	if err != nil {
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+
+	redirectURL := IntSalesforce.GetSalesforceAuthorizationUrl(C.GetSalesforceAppId(), getSalesforceRedirectURL(), "code", url.QueryEscape(string(enOAuthState)))
+	c.JSON(http.StatusTemporaryRedirect, gin.H{"redirectURL": redirectURL})
 }

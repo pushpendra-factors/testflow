@@ -95,6 +95,12 @@ func main() {
 		log.Info("project_settings table is associated with agents table.")
 	}
 
+	if err := db.Model(&M.ProjectSetting{}).AddForeignKey("int_salesforce_enabled_agent_uuid", "agents(uuid)", "RESTRICT", "RESTRICT").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("Failed to create project_settings int_salesforce_enabled_agent_uuid to agents(uuid) foriegn key.")
+	} else {
+		log.Info("Created project_settings int_salesforce_enabled_agent_uuid to agents(uuid) foriegn key.")
+	}
+
 	// Create users table.
 	if err := db.CreateTable(&M.User{}).Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("users table creation failed.")

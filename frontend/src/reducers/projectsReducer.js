@@ -290,6 +290,18 @@ export default function reducer(state=DEFAULT_PROJECT_STATE, action) {
         }
         return _state;
       }
+      case "ENABLE_SALESFORCE_FULFILLED": {
+        let enabledAgentUUID = action.payload.int_salesforce_enabled_agent_uuid;
+        if (!enabledAgentUUID || enabledAgentUUID == "")
+          return state;
+
+        let _state = { ...state };
+        _state.currentProjectSettings = {
+          ...state.currentProjectSettings,
+          int_salesforce_enabled_agent_uuid: enabledAgentUUID,
+        }
+        return _state;
+      }
       case "FETCH_CHANNEL_FILTER_VALUES_FULFILLED": {
         let _state = { ...state };
         if (!_state.channelFilterValues[action.payload.channel]) {

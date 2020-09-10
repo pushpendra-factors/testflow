@@ -108,6 +108,10 @@ spec:
           - $(FACEBOOK_APP_ID)
           - --facebook_app_secret
           - $(FACEBOOK_APP_SECRET)
+          - --salesforce_app_id
+          - $(SALESFORCE_APP_ID)
+          - --salesforce_app_secret
+          - $(SALESFORCE_APP_SECRET)
           - --skip_session_project_ids
           - $(OFFLINE_SESSION_PROJECT_IDS)
           - --sentry_dsn
@@ -143,6 +147,8 @@ spec:
             name: secret-login-token
         - secretRef:
             name: secret-facebook
+        - secretRef:
+            name: secret-salesforce
         - secretRef:
             name: secret-sentry
       initContainers:

@@ -46,6 +46,8 @@ type ProjectSetting struct {
 	// Archival related fields.
 	ArchiveEnabled  *bool `gorm:"default:false" json:"archive_enabled"`
 	BigqueryEnabled *bool `gorm:"default:false" json:"bigquery_enabled"`
+	//Salesforce settings
+	IntSalesforceEnabledAgentUUID *string `json:"int_salesforce_enabled_agent_uuid,omitempty"`
 }
 
 const ProjectSettingKeyToken = "token"
