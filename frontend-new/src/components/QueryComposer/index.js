@@ -82,47 +82,47 @@ function QueryComposer({ queries, runQuery, eventChange}) {
                         <SVG name="plus" />
                         </div>
                         }>
-                        <div className={styles.composer_body__event_sequence}>
-                            <span className={styles.composer_body__event_sequence__logo}>
-                                <SVG name="play"></SVG>
-                            </span>
-                            <span className={styles.composer_body__event_sequence__text}> Analyse events in the</span>
-                            <div className={styles.composer_body__event_sequence__select}>
-                                <Select 
-                                    showArrow={false} 
-                                    style={{ width: 200}} 
-                                    value="same_sequence" onChange={setEventSequence}>
+                        <div className={`flex justify-start items-center`}>
+                            <span className={`mr-2`}>
+                                <SVG name="sortdown" size={16} color={'purple'}></SVG>
+                            </span> 
+                            <Text type={'title'} level={7} extraClass={`m-0 mr-2 inline`}>Analyse events in the</Text>
+                            <div>
+                                <Select  
+                                    style={{ width: 170}} 
+                                    value="same_sequence" onChange={setEventSequence}
+                                    className={'no-ant-border'}
+                                    >
                                     <Option value="same_sequence"> Same Sequence</Option>
                                     <Option value="exact_sequence"> Exact Sequence</Option>
                                 </Select>
                             </div>
                         </div>
 
-                        <div className={styles.composer_body__session_analytics}>
-                            <span className={styles.composer_body__session_analytics__logo}>
-                                <SVG name="play"></SVG>
-                            </span>
+                        <div className={`flex flex-col justify-start items-start mt-4`}>
+                            <div className={`flex justify-start items-center`}>
+                                <span className={`mr-2`}>
+                                    <SVG name="sortdown" size={16} color={'purple'}></SVG>
+                                </span>  
+                                <Text type={'title'} level={7} extraClass={`m-0 mr-2 inline`}>In Session Analytics</Text>
+                            </div>
 
-                            <div className={styles.composer_body__session_analytics__selection}>
-                                <span className={styles.composer_body__session_analytics__text}> 
-                                    In Session Analytics
-                                </span>
-
+                            <div className={`flex justify-start items-center mt-2`}>
                                 <div className={styles.composer_body__session_analytics__options}>
                                     <Popover
+                                        className="fa-event-popover"
                                         content={
                                             <SeqSelector 
                                                 seq={queryOptions.session_analytics_seq} 
                                                 queryCount={queries.length}
                                                 setAnalysisSequence={setAnalysisSequence}
-                                            >
-                                            </SeqSelector>
+                                            /> 
                                         }
                                         trigger="click"
                                         visible={analyticsSeqOpen}
                                         onVisibleChange={(visible) => setAnalyticsSeqVisible(visible)}
                                     >
-                                        <Button type="secondary">
+                                        <Button Button type="link" className={`ml-4`} size={`small`}>
                                             Between &nbsp;
                                             {queryOptions.session_analytics_seq.start} 
                                             &nbsp;
@@ -131,10 +131,10 @@ function QueryComposer({ queries, runQuery, eventChange}) {
                                             {queryOptions.session_analytics_seq.end} 
                                         </Button>
                                     </Popover>
-                                    <span>happened in the same session</span>
+                                    <Text type={'paragraph'} mini  weight={'thin'} extraClass={`m-0 ml-2 inline`}>happened in the same session</Text> 
 
-                                </div>
-                            </div>
+                                </div> 
+                            </div> 
                         </div>
                     </Panel>
                 </Collapse>

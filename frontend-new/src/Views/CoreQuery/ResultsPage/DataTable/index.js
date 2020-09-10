@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Table } from 'antd';
 import { generateTableColumns, generateTableData } from '../utils';
 import styles from './index.module.scss';
@@ -7,16 +7,38 @@ import SearchBar from './SearchBar';
 function DataTable({ eventsData, groups, setGroups }) {
 
     const [tableData, setTableData] = useState([]);
-
     const [sorter, setSorter] = useState({});
+    const [searchText, setSearchText] = useState('');
+    const [searchBar, showSearchBar] = useState(false);
+    const componentRef = useRef(null);
+
+    const handleSearchTextChange = useCallback((value) => {
+        setSearchText(value);
+    }, [setSearchText]);
+
+    const handleDocumentClick = useCallback((e) => {
+        if (componentRef && !componentRef.current.contains(e.target)) {
+            showSearchBar(false);
+            handleSearchTextChange('');
+        } else {
+            showSearchBar(true);
+        }
+    }, [handleSearchTextChange])
+
+    useEffect(() => {
+        document.addEventListener('mousedown', handleDocumentClick);
+        return () => {
+            document.removeEventListener('mousedown', handleDocumentClick);
+        }
+    }, [handleDocumentClick])
 
     const handleSorting = useCallback((sorter) => {
         setSorter(sorter);
     }, []);
 
     useEffect(() => {
-        setTableData(generateTableData(eventsData, groups, sorter));
-    }, [eventsData, groups, sorter]);
+        setTableData(generateTableData(eventsData, groups, sorter, searchText));
+    }, [eventsData, groups, sorter, searchText]);
 
     const onSelectionChange = (selectedRowKeys, selectedRows) => {
         const selectedGroups = selectedRows.map(elem => elem.name);
@@ -42,8 +64,12 @@ function DataTable({ eventsData, groups, setGroups }) {
     const columns = generateTableColumns(eventsData, sorter, handleSorting);
 
     return (
-        <div className="data-table">
-            <SearchBar />
+        <div ref={componentRef} className="data-table">
+            <SearchBar
+                searchText={searchText}
+                handleSearchTextChange={handleSearchTextChange}
+                searchBar={searchBar}
+            />
             <Table
                 pagination={false}
                 bordered={true}

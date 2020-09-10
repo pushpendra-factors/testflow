@@ -6,7 +6,7 @@ function ColorLib() {
     const { Content } = Layout;
   return ( 
        <>
-                    <div className="mt-20 mb-8">
+                    <div className="mt-10 mb-8">
                         <Divider orientation="left">
                             <Breadcrumb>  
                                 <Breadcrumb.Item> Components </Breadcrumb.Item> 

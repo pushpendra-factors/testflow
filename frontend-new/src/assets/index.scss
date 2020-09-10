@@ -22,21 +22,7 @@ code {
 }
 
 .c3 svg {
-    font-family: 'Work Sans', sans-serif;
-}
-
-.toolTip {
-    background: #FFFFFF;
-    /* Factors/dark-3 */
-
-    border: 1px solid #B7BEC8;
-    box-sizing: border-box;
-    /* Box Shadows/hard */
-
-    box-shadow: 0px 6px 20px rgba(0, 0, 0, 0.2);
-	border-radius: 12px;
-	padding-left: 1rem;
-    padding-right: 1rem;
+    font-family: 'Work Sans', sans-serif !important;
 }
 
 .c3-bar._expanded_ {

@@ -1,14 +1,52 @@
 $cq-card-transition: transform .2s ease-in-out;
 
 .fai--custom-card{  
-    height: 202px;
-    width: 202px;  
+  
     background: linear-gradient(42.84deg, #EEEDF8 15.47%, #C2E5EA 90.5%);
     border: thin solid transparent; 
     border-radius: 12px;
     padding: 2em 1em; 
     transition: $cq-card-transition; 
-    cursor: pointer;
+    cursor: pointer; 
+
+    height: 180px;
+    width: 180px;  
+
+
+    @media screen and (max-width: 1336px) {
+        height: 160px;
+        width: 160px;
+        .fai--custom-card--icon{
+            margin: 1em 0 !important;
+            svg{
+                height: 40px !important;
+                width: 40px !important;
+            }
+        }
+        .fai--custom-card--content
+        {
+            .fai-text.fai-text__size--h3{
+                font-size: 20px !important;
+            } 
+        }
+    }
+    @media screen and (max-width: 1200px) {
+        height: 140px;
+        width: 140px;  
+        .fai--custom-card--icon{
+            margin: 1em 0 !important;
+            svg{
+                height: 30px !important;
+                width: 30px !important;
+            }
+        }
+        .fai--custom-card--content
+        {
+            .fai-text.fai-text__size--h3{
+                font-size: 18px !important;
+            } 
+        }
+    }
 
     &:hover{
         transition: $cq-card-transition; 
@@ -147,6 +185,24 @@ $cq-card-transition: transform .2s ease-in-out;
         .ant-select-dropdown
         {
             border-radius: 6px; 
+        } 
+        &.no-ant-border
+        { 
+            .ant-select-selector
+            { 
+                height: auto !important;
+                border: 0px solid transparent !important; 
+                padding:0px !important;
+            }
+            color: $fa-color--brand-color;
+            font-weight: $font-weight--regular;
+        }
+        &:hover,&:active,&:focus{
+            .ant-select-selector
+            { 
+                border-color: transparent !important;
+                border-right-width: 0px !important;
+            }
         }
     }
 
@@ -181,4 +237,7 @@ $cq-card-transition: transform .2s ease-in-out;
     }
 
     
+}
+.fa-event-popover{
+    background-color: pink;
 }

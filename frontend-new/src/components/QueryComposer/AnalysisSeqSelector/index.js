@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import styles from './index.module.scss';
+import {SVG, Text} from 'factorsComponents'; 
 
 export default function SeqSelector({ seq, queryCount, setAnalysisSequence }) {
 
@@ -38,9 +39,9 @@ export default function SeqSelector({ seq, queryCount, setAnalysisSequence }) {
     }
 
     return (
-        <div className={styles.seq_selector}>
-            <div className={styles.seq_selector__container}>
-                <span className={styles.seq_selector__text}> Choose from event </span>
+        <div className={`${styles.seq_selector}`}>
+            <div className={styles.seq_selector__container}> 
+                <Text type={'title'} level={6} weight={`bold`} extraClass={`m-0 mb-2`}>Choose from event</Text>
                 <div className={styles.seq_selector__container__seq}>
                     {
                         fromSequenceState.map(item => {
@@ -55,7 +56,7 @@ export default function SeqSelector({ seq, queryCount, setAnalysisSequence }) {
                 </div>
             </div>
             <div className={styles.seq_selector__container}>
-                <span className={styles.seq_selector__text}> To event</span>
+                <Text type={'title'} level={6} weight={`bold`} extraClass={`m-0 mb-2`}>To event</Text> 
                 <div className={styles.seq_selector__container__seq}>
                     {
                         toSequenceState.map(item => {
