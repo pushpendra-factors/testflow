@@ -455,15 +455,15 @@ func pfAdd(cacheKey *Key, value string, persistent bool) (bool, error) {
 	return false, nil
 }
 
-func Scan(pattern string, perScanCount int64) ([]*Key, error) {
-	return scan(pattern, perScanCount, false)
+func Scan(pattern string, perScanCount int64, limit int64) ([]*Key, error) {
+	return scan(pattern, perScanCount, limit, false)
 }
 
-func ScanPersistent(pattern string, perScanCount int64) ([]*Key, error) {
-	return scan(pattern, perScanCount, true)
+func ScanPersistent(pattern string, perScanCount int64, limit int64) ([]*Key, error) {
+	return scan(pattern, perScanCount, limit, true)
 }
 
-func scan(pattern string, perScanCount int64, persistent bool) ([]*Key, error) {
+func scan(pattern string, perScanCount int64, limit int64, persistent bool) ([]*Key, error) {
 	var redisConn redis.Conn
 	if persistent {
 		redisConn = C.GetCacheRedisPersistentConnection()
@@ -488,7 +488,7 @@ func scan(pattern string, perScanCount int64, persistent bool) ([]*Key, error) {
 			cacheKey, _ := KeyFromStringWithPid(key)
 			cacheKeys = append(cacheKeys, cacheKey)
 		}
-		if cursor == 0 {
+		if cursor == 0 || int64(len(cacheKeys)) >= limit {
 			break
 		}
 	}

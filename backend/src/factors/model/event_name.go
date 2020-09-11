@@ -379,7 +379,7 @@ func getPropertyValuesByEventPropertyFromCache(projectID uint64, eventName strin
 		return U.CachePropertyValueWithTimestamp{}, err
 	}
 	begin := U.TimeNow()
-	eventPropertyValuesKeys, err := cacheRedis.ScanPersistent(eventPropertyValuesKeyString, 100)
+	eventPropertyValuesKeys, err := cacheRedis.ScanPersistent(eventPropertyValuesKeyString, 100, 2500)
 	end := U.TimeNow()
 	logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("EPV:Scan")
 	if err != nil {
@@ -472,7 +472,7 @@ func getPropertiesByEventFromCache(projectID uint64, eventName string, dateKey s
 		return U.CachePropertyWithTimestamp{}, err
 	}
 	begin := U.TimeNow()
-	eventPropertyKeys, err := cacheRedis.ScanPersistent(eventPropertiesKeyString, 100)
+	eventPropertyKeys, err := cacheRedis.ScanPersistent(eventPropertiesKeyString, 100, 2500)
 	end := U.TimeNow()
 	logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("EP:Scan")
 	if err != nil {
@@ -591,7 +591,7 @@ func getEventNamesOrderedByOccurenceAndRecencyFromCache(projectID uint64, dateKe
 		return CacheEventNamesWithTimestamp{}, err
 	}
 	begin := U.TimeNow()
-	eventNameKeys, err := cacheRedis.ScanPersistent(eventNamesKeyString, 10)
+	eventNameKeys, err := cacheRedis.ScanPersistent(eventNamesKeyString, 100, 2500)
 	end := U.TimeNow()
 	logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("E:Scan")
 	if err != nil {
