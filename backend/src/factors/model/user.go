@@ -661,7 +661,7 @@ func getUserPropertiesByProjectFromCache(projectID uint64, dateKey string) (U.Ca
 		return U.CachePropertyWithTimestamp{}, err
 	}
 	begin := U.TimeNow()
-	PropertyKeys, err := cacheRedis.ScanPersistent(PropertiesKeyString, 100, 2500)
+	PropertyKeys, err := cacheRedis.ScanPersistent(PropertiesKeyString, 1000, 2500)
 	end := U.TimeNow()
 	logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("UP:Scan")
 
@@ -765,7 +765,7 @@ func getPropertyValuesByUserPropertyFromCache(projectID uint64, propertyName str
 		return U.CachePropertyValueWithTimestamp{}, err
 	}
 	begin := U.TimeNow()
-	propertyValuesKeys, err := cacheRedis.ScanPersistent(propertyValuesKeyString, 100, 2500)
+	propertyValuesKeys, err := cacheRedis.ScanPersistent(propertyValuesKeyString, 1000, 2500)
 	end := U.TimeNow()
 	logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("UPV:Scan")
 	if err != nil {
