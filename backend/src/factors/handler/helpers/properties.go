@@ -17,6 +17,9 @@ func IsValidQueryType(queryType string) bool {
 func IsProjectWhitelistedForEventUserCache(projectID uint64) bool {
 	//TODO: Janani Add code to fetch from config and whitelist
 	whitelistedIds := C.GetWhitelistedProjectIdsEventUserCache()
+	if whitelistedIds == "*" {
+		return true
+	}
 	projectIdMap := U.GetIntBoolMapFromStringList(&whitelistedIds)
 	for id, _ := range projectIdMap {
 		if id == projectID {
