@@ -10,9 +10,12 @@ function Header(props) {
 	return (
 		<Header
 			className="ant-layout-header--custom bg-white z-20 fixed"
-			style={{ width: '1280px', left: '50%', marginLeft: '-608px', paddingLeft: '40px', paddingRight: '40px' }}
+			style={{ width: 'calc(100% - 64px)', filter: 'drop-shadow(0px 2px 0px rgba(200, 200, 200, 0.25))' }}
 		>
-			{props.children}
+			<div className="fa-container">
+				{props.children}
+			</div>
+
 		</Header>
 	)
 }

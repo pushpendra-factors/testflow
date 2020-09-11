@@ -4,7 +4,7 @@ import { Switch } from 'antd';
 function FiltersInfo({ setDrawerVisible, setGrouping, grouping }) {
     console.log(grouping)
     return (
-        <div className="flex justify-end">
+        <div className="flex justify-end pb-2">
             <Switch checked={grouping} checkedChildren="grouped" unCheckedChildren="ungrouped" onChange={setGrouping} />
             {/* <a className="flex items-center" onClick={setDrawerVisible.bind(this, true)}>
                 <span className="mr-1">

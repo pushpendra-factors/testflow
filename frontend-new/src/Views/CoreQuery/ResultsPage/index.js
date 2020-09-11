@@ -7,7 +7,6 @@ import FiltersInfo from './FiltersInfo';
 import UngroupedChart from './UngroupedChart';
 import { FUNNEL_RESULTS_AVAILABLE, FUNNEL_RESULTS_UNAVAILABLE } from '../../../reducers/types';
 import Header from '../../AppLayout/Header';
-import SearchBar from '../../../components/SearchBar';
 import EventsInfo from './EventsInfo';
 
 function PageContent({ queries, setDrawerVisible }) {
@@ -40,13 +39,10 @@ function PageContent({ queries, setDrawerVisible }) {
     return (
         <>
             <Header>
-                <div className="w-full h-full py-4 flex justify-center items-center">
-                    <SearchBar />
-                </div>
                 <EventsInfo />
                 <FiltersInfo grouping={grouping} setGrouping={setGrouping} setDrawerVisible={setDrawerVisible} />
             </Header>
-            <div className="mt-48 mb-8 px-10 fa-container">
+            <div className="mt-32 mb-8 fa-container">
                 {grouping ? (
                     <GroupedChart
                         chartData={groupedChartData}
