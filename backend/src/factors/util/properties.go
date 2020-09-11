@@ -1428,10 +1428,17 @@ func AggregatePropertyValuesAcrossDate(values []CachePropertyValueWithTimestamp)
 // no filtering is done
 func AggregatePropertyAcrossDate(properties []CachePropertyWithTimestamp) []NameCountTimestampCategory {
 	propertiesAggregated := make(map[string]PropertyWithTimestamp)
+	propertyCategoryAggregated := make(map[string]map[string]int64)
 	// Sort Event Properties by timestamp, count and return top n
 	for _, PropertyList := range properties {
 		for propertyName, propertyDetails := range PropertyList.Property {
 			propertiesAggregatedInt := propertiesAggregated[propertyName]
+			for cat, count := range propertyDetails.CategorywiseCount {
+				if propertyCategoryAggregated[propertyName] == nil {
+					propertyCategoryAggregated[propertyName] = make(map[string]int64)
+				}
+				propertyCategoryAggregated[propertyName][cat] += count
+			}
 			propertiesAggregatedInt.Category = propertyDetails.Category
 			propertiesAggregatedInt.CountTime.Count += propertyDetails.CountTime.Count
 			if propertiesAggregatedInt.CountTime.LastSeenTimestamp < propertyDetails.CountTime.LastSeenTimestamp {
@@ -1440,6 +1447,12 @@ func AggregatePropertyAcrossDate(properties []CachePropertyWithTimestamp) []Name
 			propertiesAggregated[propertyName] = propertiesAggregatedInt
 		}
 	}
+	for property, details := range propertiesAggregated {
+		propAgg := details
+		propAgg.Category = DeriveCategory(propertyCategoryAggregated[property], details.CountTime.Count)
+		propertiesAggregated[property] = propAgg
+	}
+
 	propertiesAggregatedSlice := make([]NameCountTimestampCategory, 0)
 	for k, v := range propertiesAggregated {
 		propertiesAggregatedSlice = append(propertiesAggregatedSlice, NameCountTimestampCategory{

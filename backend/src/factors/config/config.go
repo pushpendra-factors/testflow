@@ -699,6 +699,9 @@ func GetWhitelistedProjectIdsEventUserCache() string {
 }
 
 func GetIfRealTimeEventUserCachingIsEnabled(projectId uint64) bool {
+	if configuration.RealTimeEventUserCachingProjectIds == "*" {
+		return configuration.IsRealTimeEventUserCachingEnabled && true
+	}
 	projectIds := U.GetIntBoolMapFromStringList(&configuration.RealTimeEventUserCachingProjectIds)
 	isWhitelisted, _ := projectIds[projectId]
 	return configuration.IsRealTimeEventUserCachingEnabled && isWhitelisted == true
