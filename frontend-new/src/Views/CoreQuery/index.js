@@ -43,10 +43,10 @@ function CoreQuery() {
                 <SVG name="teamfeed"></SVG>
                 <Text type={'title'} level={4} weight={`bold`} extraClass={`ml-2 m-0`}>Find event funnel for</Text> 
             </div>
-            <span className={styles.composer_title__help}>
+            <div className={`flex justify-end items-center`}>
                 <Button type="text"><SVG name="play"></SVG>Help</Button>  
                 <Button type="text" onClick={()=>closeDrawer()}><SVG name="times"></SVG></Button>  
-            </span>
+            </div>
             
         </div>)
     }
