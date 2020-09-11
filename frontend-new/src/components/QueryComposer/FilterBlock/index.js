@@ -7,6 +7,7 @@ import {SVG} from 'factorsComponents'
 export default function FilterBlock({filter, insertFilter, closeFilter}) {
 
     const [filterTypeState, setFilterTypeState] = useState("props");
+    const [groupCollapseState, setGroupCollapse] = useState({});
     const [searchTerm, setSearchTerm] = useState("");
     const [newFilterState, setNewFilterState] = useState({
         "props": "",
@@ -24,7 +25,7 @@ export default function FilterBlock({filter, insertFilter, closeFilter}) {
         "props": [
             {
                 "label": "User Properties",
-                "icon": "play",
+                "icon": "user",
                 "values": [
                     "Cart Updated",
                     "Paid"
@@ -61,7 +62,33 @@ export default function FilterBlock({filter, insertFilter, closeFilter}) {
     }
 
     const onSelectSearch = (userInput) => {
+        if(!userInput.currentTarget.value.length) {
+            if(userInput.keyCode === 8 || userInput.keyCode === 46) {
+                removeFilter();
+            }
+        }
         setSearchTerm(userInput.currentTarget.value);
+    }
+
+    const removeFilter = () => {
+        const filterState = Object.assign({}, newFilterState);
+        filterTypeState === 'operator' ? (() => {
+                filterState['props'] = ""; 
+                changeFilterTypeState(false);
+            })()
+            : null;
+        if(filterTypeState === 'values') {
+            filterState['values'].length? filterState['values'].pop() 
+            : (() => {
+                filterState['operator'] = "";
+                changeFilterTypeState(false);
+            })()
+                
+            
+            
+        }
+        setNewFilterState(filterState);
+        
     }
 
     const changeFilterTypeState = (next = true) => {
@@ -87,19 +114,33 @@ export default function FilterBlock({filter, insertFilter, closeFilter}) {
         setNewFilterState(newFilter);
     }
 
+    const collapseGroup = (index) => {
+        const groupColState = Object.assign({}, groupCollapseState);
+        if(groupColState[index]) {
+            groupColState[index] = !groupColState[index];
+        } else {
+            groupColState[index] = true;
+        }
+        setGroupCollapse(groupColState);
+    }
+
     const renderOptions = (options) => {
         const renderOptions = []
         switch (filterTypeState) {
             case "props": 
-                options.forEach(group => {
+                options.forEach((group, grpIndex) => {
+                    const collState = groupCollapseState[grpIndex];
                     renderOptions.push(<>
                         <div className={styles.filter_block__filter_select__option_group}
+                            onClick={() => collapseGroup(grpIndex)}
                             >
-                            <SVG name={group["icon"]} extraClass={`self-center`}></SVG>
-                            <span extraClass={`ml-1`}>{group["label"]}</span>
-                            <SVG name="plus" extraClass={`ml-20 self-center`}></SVG>
+                            <div>
+                                <SVG name={group["icon"]} extraClass={`self-center`}></SVG>
+                                <span className={`ml-1`}>{group["label"]}</span>
+                            </div>
+                            <SVG name={collState? "minus" : "plus"} extraClass={`self-center`}></SVG>
                         </div>
-                        {
+                        { collState?
                             (() => {
                                 const valuesOptions = [];
                                 group["values"].forEach((val, index) => {
@@ -114,6 +155,8 @@ export default function FilterBlock({filter, insertFilter, closeFilter}) {
                                 })
                                 return valuesOptions;
                             })()
+                            : 
+                            null
                         }
                     </>);
                 });
@@ -172,7 +215,7 @@ export default function FilterBlock({filter, insertFilter, closeFilter}) {
             ) : (()=>{})();;
         }
         if(tags.length < 1) {
-            tags.push(<SVG name="plus" />);
+            tags.push(<SVG name="search" />);
         }
         return tags;
     }
@@ -182,9 +225,10 @@ export default function FilterBlock({filter, insertFilter, closeFilter}) {
             <div className={`${styles.filter_block__filter_select} ml-4 fa-filter-select`}>
                 <Input 
                     className={styles.filter_block__filter_select__input}  
-                    placeholder={placeHolder[filterTypeState]} 
+                    placeholder={newFilterState["values"].length >= 2? null 
+                    : placeHolder[filterTypeState]} 
                     prefix={renderTags()} 
-                    onChange={onSelectSearch}
+                    onKeyUp={onSelectSearch}
                 />
                 <div className={styles.filter_block__filter_select__content}>
                     {renderOptions(filterDropDownOptions[filterTypeState])}
@@ -210,9 +254,12 @@ export default function FilterBlock({filter, insertFilter, closeFilter}) {
             {filter? 
                 renderFilterContent()
                 : 
-                renderFilterSelect()
+                <>
+                    {renderFilterSelect()}
+                    <div className={styles.filter_block__hd_overlay} onClick={onClickOutside}></div>
+                </>
             }
-            <div className={styles.filter_block__hd_overlay} onClick={onClickOutside}></div>
+            
         </div>
     )
 }

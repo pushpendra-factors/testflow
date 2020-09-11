@@ -106,7 +106,37 @@ const PlusSVG = ({ size = 16, color = "#5949BC", extraClass }) => {
   )
 }
 
-const MouseeventSVG = ({ size = 16, color = "#5949BC", extraClass }) => {
+const MinusSVG = ({size = 16, color = "#5949BC", extraClass}) => {
+  return (
+    <svg width="17" height="16" viewBox="0 0 17 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <g opacity="0.5">
+      <path d="M13.2402 7.99995C13.2402 8.4295 12.892 8.77772 12.4625 8.77772L4.01801 8.77772C3.58846 8.77772 3.24023 8.4295 3.24023 7.99995C3.24023 7.57039 3.58846 7.22217 4.01801 7.22217L12.4625 7.22217C12.892 7.22217 13.2402 7.57039 13.2402 7.99995Z" fill="#0E2647"/>
+      </g>
+    </svg>
+
+  )
+}
+
+const UserSVG = ({size = 16, color = "#5949BC", extraClass}) => {
+  return (
+    <svg width="17" height="17" viewBox="0 0 17 17" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M8.15273 10.3268L8.08375 10.3268C7.08552 10.3268 6.15021 10.3598 5.34654 10.5311C2.6768 11.1002 4.8434 14.1102 7.57276 14.1545L8.41353 14.1682C11.2399 14.2142 13.6864 10.9278 10.9001 10.4514C10.0984 10.3143 9.16161 10.3268 8.15273 10.3268Z" fill="#5949BC" stroke="#5949BC" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="8.11823" cy="5.53687" r="1.63849" fill="#5949BC" stroke="#5949BC" stroke-width="2"/>
+    </svg>
+
+  )
+}
+
+const SearchSVG = ({size = 16, color = "#5949BC", extraClass}) => {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M9.85937 7.98257C9.46154 9.16421 8.34447 10.0147 7.02941 10.0147C6.92618 10.0147 6.82426 10.0095 6.72388 9.99926C5.21879 9.84641 4.04412 8.57492 4.04412 7.0294C4.04412 5.38067 5.38068 4.04411 7.02941 4.04411C7.7657 4.04411 8.43917 4.31035 8.95976 4.7521C9.60553 5.30008 10.0147 6.11683 10.0147 7.0294C10.0147 7.36312 9.96004 7.68357 9.85937 7.98257ZM11.5808 8.49208C11.4399 8.93083 11.2374 9.34183 10.9835 9.71491L13.4873 12.2186C13.8376 12.5689 13.8376 13.1369 13.4873 13.4873C13.1369 13.8376 12.569 13.8376 12.2186 13.4873L9.71488 10.9835C8.94944 11.5043 8.02467 11.8088 7.02941 11.8088C4.71947 11.8088 2.79278 10.1703 2.3471 7.99235C2.28341 7.6811 2.25 7.35902 2.25 7.0294C2.25 4.55463 4.13073 2.51944 6.54104 2.27466C6.70169 2.25835 6.86461 2.25 7.02941 2.25C8.14077 2.25 9.16416 2.62963 9.97599 3.26612C11.0914 4.14062 11.8088 5.5013 11.8088 7.0294C11.8088 7.53917 11.7289 8.03077 11.5808 8.49208Z" fill="black"/>
+    </svg>
+
+  )
+}
+
+const MouseeventSVG = ({size = 16, color = "#5949BC", extraClass}) => {
   return (
     <svg width={size} height={size} className={extraClass} viewBox="0 0 16 17" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M12.2744 3.43373L4.62705 7.80423C4.44899 7.90599 4.5212 8.17787 4.72629 8.17787H9.09468C9.18546 8.17787 9.26485 8.23901 9.28805 8.32677L10.2991 12.1524C10.3526 12.3551 10.6424 12.3493 10.6877 12.1445L12.5689 3.65062C12.6064 3.48116 12.425 3.34761 12.2744 3.43373Z" fill={color} stroke="#5949BC" strokeLinejoin="round" />
@@ -410,33 +440,36 @@ const SearchSVG = ({ size = 24, color, extraClass }) => {
 
 
 
-export {
-  BrandSVG,
-  DeleteSVG,
-  HomeSVG,
-  CorequerySVG,
-  KeySVG,
-  BugSVG,
-  ReportSVG,
-  NotifySVG,
-  HexagonSVG,
-  PlusSVG,
-  MouseeventSVG,
-  TeamfeedSVG,
-  PlaySVG,
-  FavSVG,
-  VirtualSVG,
-  Events_cqSVG,
-  Funnels_cqSVG,
-  Campaigns_cqSVG,
-  Attributions_cqSVG,
-  Templates_cqSVG,
-  HelpSVG,
-  FilterSVG,
-  TrashSVG,
-  TimesSVG,
-  CalendarSVG,
-  GroupbySVG,
+  export {
+    BrandSVG,
+    DeleteSVG,
+    HomeSVG, 
+    CorequerySVG,
+    KeySVG,
+    BugSVG,
+    ReportSVG,
+    NotifySVG,
+    HexagonSVG,
+    PlusSVG,
+    MinusSVG,
+    UserSVG,
+    SearchSVG,
+    MouseeventSVG,
+    TeamfeedSVG,
+    PlaySVG,
+    FavSVG,
+    VirtualSVG,
+    Events_cqSVG,
+    Funnels_cqSVG,
+    Campaigns_cqSVG,
+    Attributions_cqSVG,
+    Templates_cqSVG,
+    HelpSVG,
+    FilterSVG,
+    TrashSVG,
+    TimesSVG,
+    CalendarSVG,
+    GroupbySVG,
   SortdownSVG,
   DownloadSVG,
   SearchSVG
