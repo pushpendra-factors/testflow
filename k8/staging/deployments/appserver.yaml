@@ -110,6 +110,10 @@ spec:
           - $(FACEBOOK_APP_ID)
           - --facebook_app_secret
           - $(FACEBOOK_APP_SECRET)
+          - --salesforce_app_secret
+          - $(SALESFORCE_APP_SECRET)
+          - --salesforce_app_id
+          - $(SALESFORCE_APP_ID)
           - --skip_session_project_ids
           - $(OFFLINE_SESSION_PROJECT_IDS)
           - --sentry_dsn
@@ -147,6 +151,8 @@ spec:
             name: secret-facebook
         - secretRef:
             name: secret-sentry
+        - secretRef:
+            name: secret-salesforce
       initContainers:
       - name: fetch-geolocation-file
         image: google/cloud-sdk:229.0.0-alpine

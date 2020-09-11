@@ -554,7 +554,7 @@ func addEventDetailsToCache(project_id uint64, event_name string, event_properti
 			propertyValues = append(propertyValues, propertyValue)
 		}
 	}
-	if len(propertyValuesCacheKeys) > 0 {
+	/*if len(propertyValuesCacheKeys) > 0 {
 		logCtx.WithField("length", len(propertyValuesCacheKeys)).Info("Begin: EMget")
 		valuesList, err := cacheRedis.MGetPersistent(propertyValuesCacheKeys...)
 		logCtx.Info("End: EMget")
@@ -585,7 +585,7 @@ func addEventDetailsToCache(project_id uint64, event_name string, event_properti
 				valuesSetToCache[propertyValuesCacheKeys[index]] = string(enEventPropertyValueCache)
 			}
 		}
-	}
+	}*/
 
 	enEventCache, err := json.Marshal(eventNames)
 	if err != nil {
