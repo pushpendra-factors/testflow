@@ -77,6 +77,9 @@ func TestGetEventNamesHandler(t *testing.T) {
 		EventNames []string `json:"event_names"`
 		Exact      bool     `json:"exact"`
 	}{}
+	C.GetConfig().WhitelistedProjectIdsEventUserCache = "*"
+	C.GetConfig().IsRealTimeEventUserCachingEnabled = true
+	C.GetConfig().RealTimeEventUserCachingProjectIds = "*"
 
 	H.InitSDKServiceRoutes(r)
 	uri := "/sdk/event/track"

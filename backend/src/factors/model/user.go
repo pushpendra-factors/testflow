@@ -1,13 +1,13 @@
 package model
 
 import (
-	"encoding/json"
 	"errors"
 	cacheRedis "factors/cache/redis"
 	C "factors/config"
 	U "factors/util"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -512,18 +512,18 @@ func CreateOrGetAMPUser(projectId uint64, ampUserId string, timestamp int64) (*U
 }
 
 func GetUsersCachedCacheKey(projectId uint64, dateKey string) (*cacheRedis.Key, error) {
-	prefix := "user:list"
+	prefix := "US:LIST"
 	return cacheRedis.NewKey(projectId, prefix, dateKey)
 }
 
-func GetUserPropertiesByProjectCacheKey(projectId uint64, dateKey string) (*cacheRedis.Key, error) {
-	prefix := "user:properties"
-	return cacheRedis.NewKey(projectId, prefix, dateKey)
+func GetUserPropertiesCategoryByProjectCacheKey(projectId uint64, property string, category string, dateKey string) (*cacheRedis.Key, error) {
+	prefix := "US:PC"
+	return cacheRedis.NewKey(projectId, prefix, fmt.Sprintf("%s:%s:%s", dateKey, category, property))
 }
 
-func GetValuesByUserPropertyCacheKey(projectId uint64, property_name string, dateKey string) (*cacheRedis.Key, error) {
-	prefix := "user:property_values"
-	return cacheRedis.NewKey(projectId, prefix, fmt.Sprintf("%s:%s", property_name, dateKey))
+func GetValuesByUserPropertyCacheKey(projectId uint64, property_name string, value string, dateKey string) (*cacheRedis.Key, error) {
+	prefix := "US:PV"
+	return cacheRedis.NewKey(projectId, fmt.Sprintf("%s:%s", prefix, property_name), fmt.Sprintf("%s:%s", dateKey, value))
 }
 
 //GetRecentUserPropertyKeysWithLimits This method gets all the recent 'limit' property keys from DB for a given project
@@ -644,28 +644,55 @@ func GetUserPropertiesByProject(projectID uint64, limit int, lastNDays int) (map
 }
 
 func getUserPropertiesByProjectFromCache(projectID uint64, dateKey string) (U.CachePropertyWithTimestamp, error) {
-
+	dateKeyInTime, _ := time.Parse("2006-01-02", dateKey)
 	if projectID == 0 {
 		return U.CachePropertyWithTimestamp{}, errors.New("invalid project on GetUserPropertiesByProjectFromCache")
 	}
-	PropertiesKey, err := GetUserPropertiesByProjectCacheKey(projectID, dateKey)
+	PropertiesKey, err := GetUserPropertiesCategoryByProjectCacheKey(projectID, "*", "*", dateKey)
 	if err != nil {
 		return U.CachePropertyWithTimestamp{}, err
 	}
-	userProperties, _, err := cacheRedis.GetIfExistsPersistent(PropertiesKey)
+
+	PropertiesKeyString, err := PropertiesKey.Key()
 	if err != nil {
 		return U.CachePropertyWithTimestamp{}, err
 	}
-	if userProperties == "" {
-		return U.CachePropertyWithTimestamp{}, nil
-	}
-	var cacheValue U.CachePropertyWithTimestamp
-	err = json.Unmarshal([]byte(userProperties), &cacheValue)
+	PropertyKeys, err := cacheRedis.GetKeysPersistent(PropertiesKeyString)
 	if err != nil {
 		return U.CachePropertyWithTimestamp{}, err
 	}
-	// Not adding nil/0 check for properties list since it can be null/empty
-	return cacheValue, nil
+	if len(PropertyKeys) <= 0 {
+		return U.CachePropertyWithTimestamp{}, err
+	}
+	// Check if this needs batching
+	properties, err := cacheRedis.MGetPersistent(PropertyKeys...)
+	if err != nil {
+		return U.CachePropertyWithTimestamp{}, err
+	}
+	eventProperties := make(map[string]U.PropertyWithTimestamp)
+	propertyCategory := make(map[string]map[string]int64)
+	for index, propertiesCount := range properties {
+		cat, pr := extractCategoryProperty(PropertyKeys[index].Suffix)
+		if propertyCategory[pr] == nil {
+			propertyCategory[pr] = make(map[string]int64)
+		}
+		catCount, _ := strconv.Atoi(propertiesCount)
+		propertyCategory[pr][cat] = int64(catCount)
+	}
+	for pr, catCount := range propertyCategory {
+		cwc := make(map[string]int64)
+		totalCount := int64(0)
+		for cat, catCount := range catCount {
+			cwc[cat] = catCount
+			totalCount += catCount
+		}
+		prWithTs := U.PropertyWithTimestamp{CategorywiseCount: cwc,
+			CountTime: U.CountTimestampTuple{Count: totalCount, LastSeenTimestamp: dateKeyInTime.Unix()}}
+		eventProperties[pr] = prWithTs
+	}
+	cacheProperties := U.CachePropertyWithTimestamp{
+		Property: eventProperties}
+	return cacheProperties, nil
 }
 
 //GetPropertyValuesByUserProperty This method iterates over n days and gets user property values from cache for a given project/property
@@ -708,31 +735,42 @@ func GetPropertyValuesByUserProperty(projectID uint64, propertyName string, limi
 func getPropertyValuesByUserPropertyFromCache(projectID uint64, propertyName string, dateKey string) (U.CachePropertyValueWithTimestamp, error) {
 
 	if projectID == 0 {
-		return U.CachePropertyValueWithTimestamp{}, errors.New("invalid project on GetPropertyValuesByEventPropertyFromCache")
+		return U.CachePropertyValueWithTimestamp{}, errors.New("invalid project on GetPropertyValuesByUserPropertyFromCache")
 	}
 
 	if propertyName == "" {
-		return U.CachePropertyValueWithTimestamp{}, errors.New("invalid property_name on GetPropertyValuesByEventPropertyFromCache")
+		return U.CachePropertyValueWithTimestamp{}, errors.New("invalid property_name on GetPropertyValuesByUserPropertyFromCache")
 	}
 
-	eventPropertyValuesKey, err := GetValuesByUserPropertyCacheKey(projectID, propertyName, dateKey)
+	propertyValuesKey, err := GetValuesByUserPropertyCacheKey(projectID, propertyName, "*", dateKey)
 	if err != nil {
 		return U.CachePropertyValueWithTimestamp{}, err
 	}
-	values, _, err := cacheRedis.GetIfExistsPersistent(eventPropertyValuesKey)
+
+	propertyValuesKeyString, err := propertyValuesKey.Key()
 	if err != nil {
 		return U.CachePropertyValueWithTimestamp{}, err
 	}
-	if values == "" {
-		return U.CachePropertyValueWithTimestamp{}, nil
-	}
-	var cacheValue U.CachePropertyValueWithTimestamp
-	err = json.Unmarshal([]byte(values), &cacheValue)
+	propertyValuesKeys, err := cacheRedis.GetKeysPersistent(propertyValuesKeyString)
 	if err != nil {
 		return U.CachePropertyValueWithTimestamp{}, err
 	}
-	// Not adding nil/0 check for properties list since it can be null/empty
-	return cacheValue, nil
+	if len(propertyValuesKeys) <= 0 {
+		return U.CachePropertyValueWithTimestamp{}, err
+	}
+	// Check if this needs batching
+	values, err := cacheRedis.MGetPersistent(propertyValuesKeys...)
+	if err != nil {
+		return U.CachePropertyValueWithTimestamp{}, err
+	}
+	propertyValues := make(map[string]U.CountTimestampTuple)
+	for index, valuesCount := range values {
+		key, value := extractKeyDateCountFromCacheKey(valuesCount, propertyValuesKeys[index].Suffix)
+		propertyValues[key] = value
+	}
+	cachePropertyValues := U.CachePropertyValueWithTimestamp{
+		PropertyValue: propertyValues}
+	return cachePropertyValues, nil
 }
 
 func GetUserPropertiesAsMap(projectId uint64, id string) (*map[string]interface{}, int) {

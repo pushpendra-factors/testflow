@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
-	"sort"
 	"strings"
 	"time"
 
@@ -306,7 +305,7 @@ func GetIfExistsPersistentWithLoggingEventInCache(project_id uint64, key *cacheR
 	return data, status, err
 }
 
-func RefreshCacheFromDb(project_id uint64, currentTime time.Time, no_of_days int, eventsLimit, propertyLimit, valuesLimit int, rowsLimit int) {
+/*func RefreshCacheFromDb(project_id uint64, currentTime time.Time, no_of_days int, eventsLimit, propertyLimit, valuesLimit int, rowsLimit int) {
 	// Preload EventNames-count-lastseen
 	// TODO: Janani Make this 30 configurable, limit in cache, limit in ui
 	eventsInCache := make(map[*cacheRedis.Key]string)
@@ -453,7 +452,7 @@ func RefreshCacheFromDb(project_id uint64, currentTime time.Time, no_of_days int
 		}
 	}
 	logCtx.Info("Refresh Event Properties Cache Done!!!")
-}
+}*/
 
 func addEventDetailsToCache(project_id uint64, event_name string, event_properties U.PropertiesMap) {
 	// TODO: Remove this check after enabling caching realtime.
@@ -474,12 +473,6 @@ func addEventDetailsToCache(project_id uint64, event_name string, event_properti
 	}
 	keysToIncr = append(keysToIncr, eventNamesKey)
 	for property, value := range event_properties {
-		propertyKey, err := M.GetPropertiesByEventCacheKey(project_id, event_name, property, currentTimeDatePart)
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to get cache key - properties")
-			return
-		}
-		keysToIncr = append(keysToIncr, propertyKey)
 		category := U.GetPropertyTypeByKeyValue(property, value)
 		var propertyValue string
 		if category == U.PropertyTypeUnknown && reflect.TypeOf(value).Kind() == reflect.Bool {

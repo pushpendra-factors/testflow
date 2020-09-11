@@ -1,6 +1,7 @@
 package tests
 
 import (
+	C "factors/config"
 	H "factors/handler"
 	M "factors/model"
 	U "factors/util"
@@ -516,6 +517,9 @@ func TestDBGetEventNamesOrderedByOccurrenceWithLimit(t *testing.T) {
 	user, errCode := M.CreateUser(&M.User{ProjectId: project.ID})
 	assert.NotNil(t, user)
 	assert.Equal(t, http.StatusCreated, errCode)
+	C.GetConfig().WhitelistedProjectIdsEventUserCache = "*"
+	C.GetConfig().IsRealTimeEventUserCachingEnabled = true
+	C.GetConfig().RealTimeEventUserCachingProjectIds = "*"
 
 	rEventName := "event1"
 	w := ServePostRequestWithHeaders(r, uri,

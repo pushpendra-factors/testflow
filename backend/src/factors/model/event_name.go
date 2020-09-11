@@ -306,11 +306,6 @@ func GetEventNamesOrderByOccurrenceAndRecencyCacheKey(projectId uint64, event_na
 	return cacheRedis.NewKey(projectId, prefix, fmt.Sprintf("%s:%s", date, event_name))
 }
 
-func GetPropertiesByEventCacheKey(projectId uint64, event_name string, property string, date string) (*cacheRedis.Key, error) {
-	prefix := "EN:PR"
-	return cacheRedis.NewKey(projectId, fmt.Sprintf("%s:%s", prefix, event_name), fmt.Sprintf("%s:%s", date, property))
-}
-
 func GetValuesByEventPropertyCacheKey(projectId uint64, event_name string, property_name string, value string, date string) (*cacheRedis.Key, error) {
 	prefix := "EN:PV"
 	return cacheRedis.NewKey(projectId, fmt.Sprintf("%s:%s:%s", prefix, event_name, property_name), fmt.Sprintf("%s:%s", date, value))
