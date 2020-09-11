@@ -14,6 +14,7 @@
         display: flex;
         flex-direction: column;
         
+        width: 400px;
         padding: 1px;
         background: #FFFFFF;
         border: 1px solid #ACA4DE;
@@ -42,12 +43,17 @@
         &__option_group {
             padding: 10px 10px;
             display: flex;
-
+            justify-content: space-between;
             color: #5949BC;
 
-            span {
-                width: 200px;
+            div {
+                display: flex;
             }
+            
+        }
+
+        &__option_group:hover {
+            cursor: pointer;
         }
 
         &__option_group:nth-of-type(2) {
