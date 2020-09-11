@@ -8,6 +8,8 @@ import UngroupedChart from './UngroupedChart';
 import { FUNNEL_RESULTS_AVAILABLE, FUNNEL_RESULTS_UNAVAILABLE } from '../../../reducers/types';
 import Header from '../../AppLayout/Header';
 import EventsInfo from './EventsInfo';
+import { Button } from 'antd';
+import { PoweroffOutlined } from '@ant-design/icons'; 
 
 function PageContent({ queries, setDrawerVisible }) {
 
@@ -39,10 +41,17 @@ function PageContent({ queries, setDrawerVisible }) {
     return (
         <>
             <Header>
-                <EventsInfo />
-                <FiltersInfo grouping={grouping} setGrouping={setGrouping} setDrawerVisible={setDrawerVisible} />
+                <div className="flex py-4 justify-end">
+                    <Button type="primary" icon={<PoweroffOutlined />} >Save query as</Button> 
+                </div>
+                <div className="py-4">
+                    <EventsInfo /> 
+                </div>
+                <div className="pb-2 flex justify-end">
+                    <FiltersInfo grouping={grouping} setGrouping={setGrouping} setDrawerVisible={setDrawerVisible} />
+                </div>
             </Header>
-            <div className="mt-32 mb-8 fa-container">
+            <div className="mt-40 mb-8 fa-container">
                 {grouping ? (
                     <GroupedChart
                         chartData={groupedChartData}
