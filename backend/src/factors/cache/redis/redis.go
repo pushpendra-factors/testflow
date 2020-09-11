@@ -75,6 +75,8 @@ func (key *Key) Key() (string, error) {
 	return fmt.Sprintf("%s:%s:%s", key.Prefix, projectScope, key.Suffix), nil
 }
 
+// KeyFromStringWithPid - Splits the cache key into prefix/suffix/projectid format
+// Only for pid based cache
 func KeyFromStringWithPid(key string) (*Key, error) {
 	if key == "" {
 		return nil, ErrorInvalidValues
@@ -451,4 +453,44 @@ func pfAdd(cacheKey *Key, value string, persistent bool) (bool, error) {
 		return true, nil
 	}
 	return false, nil
+}
+
+func Scan(pattern string, perScanCount int64) ([]*Key, error) {
+	return scan(pattern, perScanCount, false)
+}
+
+func ScanPersistent(pattern string, perScanCount int64) ([]*Key, error) {
+	return scan(pattern, perScanCount, true)
+}
+
+func scan(pattern string, perScanCount int64, persistent bool) ([]*Key, error) {
+	var redisConn redis.Conn
+	if persistent {
+		redisConn = C.GetCacheRedisPersistentConnection()
+	} else {
+		redisConn = C.GetCacheRedisConnection()
+	}
+	defer redisConn.Close()
+
+	cacheKeys := make([]*Key, 0)
+	cursor := 0
+	for {
+		res, err := redis.Values(redisConn.Do("SCAN", cursor, "MATCH", pattern, "COUNT", perScanCount))
+		if err != nil {
+			return nil, err
+		}
+		cacheKeyStrings := make([]string, 0)
+		redis.Scan(res, &cursor, &cacheKeyStrings)
+		if err != nil {
+			return nil, err
+		}
+		for _, key := range cacheKeyStrings {
+			cacheKey, _ := KeyFromStringWithPid(key)
+			cacheKeys = append(cacheKeys, cacheKey)
+		}
+		if cursor == 0 {
+			break
+		}
+	}
+	return cacheKeys, nil
 }

@@ -317,7 +317,7 @@ func GetIfExistsPersistentWithLoggingEventInCache(project_id uint64, key *cacheR
 	for i := 0; i < no_of_days; i++ {
 		var eventNames M.CacheEventNamesWithTimestamp
 		eventNames.EventNames = make(map[string]U.CountTimestampTuple)
-		dateFormat := currentTime.AddDate(0, 0, -i).Format("2006-01-02")
+		dateFormat := currentTime.AddDate(0, 0, -i).Format(U.DATETIME_FORMAT_YYYYMMDD)
 		eventNamesKey, err := M.GetEventNamesOrderByOccurrenceAndRecencyCacheKey(project_id, "", dateFormat)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to get cache key")
@@ -376,7 +376,7 @@ func GetIfExistsPersistentWithLoggingEventInCache(project_id uint64, key *cacheR
 			eventPropertyValuesInCache := make(map[*cacheRedis.Key]string)
 			var eventProperties U.CachePropertyWithTimestamp
 			eventProperties.Property = make(map[string]U.PropertyWithTimestamp)
-			dateFormat := currentTime.AddDate(0, 0, -i).Format("2006-01-02")
+			dateFormat := currentTime.AddDate(0, 0, -i).Format(U.DATETIME_FORMAT_YYYYMMDD)
 			logCtx.WithFields(log.Fields{"dateFormat": dateFormat, "event": event}).Info("Begin: Get event Properties DB call")
 			begin := U.TimeNow()
 			properties, err := M.GetRecentEventPropertyKeysWithLimits(
@@ -464,7 +464,7 @@ func addEventDetailsToCache(project_id uint64, event_name string, event_properti
 	logCtx := log.WithField("project_id", project_id)
 
 	currentTime := U.TimeNow()
-	currentTimeDatePart := currentTime.Format("2006-01-02")
+	currentTimeDatePart := currentTime.Format(U.DATETIME_FORMAT_YYYYMMDD)
 
 	eventNamesKey, err := M.GetEventNamesOrderByOccurrenceAndRecencyCacheKey(project_id, event_name, currentTimeDatePart)
 	if err != nil {
@@ -497,7 +497,10 @@ func addEventDetailsToCache(project_id uint64, event_name string, event_properti
 			keysToIncr = append(keysToIncr, valueKey)
 		}
 	}
+	begin := U.TimeNow()
 	err = cacheRedis.IncrPersistentBatch(U.EVENT_USER_CACHE_EXPIRY_SECS, keysToIncr...)
+	end := U.TimeNow()
+	logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("EV:Incr")
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to increment keys")
 		return

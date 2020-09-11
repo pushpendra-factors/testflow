@@ -153,7 +153,7 @@ func SetPersistentWithLoggingUserInCache(project_id uint64, key *cacheRedis.Key,
 		"project_id": projectid,
 	})
 	logCtx.Info("Refresh User Properties Cache started")
-	currentDateFormat := currentDate.AddDate(0, 0, -1).Format("2006-01-02")
+	currentDateFormat := currentDate.AddDate(0, 0, -1).Format(U.DATETIME_FORMAT_YYYYMMDD)
 	var userPropertiesTillDate U.CachePropertyWithTimestamp
 	userPropertiesTillDate.Property = make(map[string]U.PropertyWithTimestamp)
 
@@ -237,14 +237,17 @@ func UpdateCacheForUserProperties(userId string, projectid uint64, updatedProper
 		"project_id": projectid,
 	})
 	currentTime := U.TimeNow()
-	currentTimeDatePart := currentTime.Format("2006-01-02")
+	currentTimeDatePart := currentTime.Format(U.DATETIME_FORMAT_YYYYMMDD)
 	// Store Last updated from DB in cache as a key. and check and refresh cache accordingly
 	usersCacheKey, err := GetUsersCachedCacheKey(projectid, currentTimeDatePart)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get property cache key - getuserscachedcachekey")
 	}
 
+	begin := U.TimeNow()
 	isNewUser, err := cacheRedis.PFAddPersistent(usersCacheKey, userId)
+	end := U.TimeNow()
+	logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("US:List")
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get users from cache - getuserscachedcachekey")
 	}
@@ -278,7 +281,10 @@ func UpdateCacheForUserProperties(userId string, projectid uint64, updatedProper
 			keysToIncr = append(keysToIncr, valueKey)
 		}
 	}
+	begin = U.TimeNow()
 	err = cacheRedis.IncrPersistentBatch(U.EVENT_USER_CACHE_EXPIRY_SECS, keysToIncr...)
+	end = U.TimeNow()
+	logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("US:Incr")
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to increment keys")
 		return

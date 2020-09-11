@@ -615,7 +615,7 @@ func GetUserPropertiesByProject(projectID uint64, limit int, lastNDays int) (map
 	}
 	userProperties := make([]U.CachePropertyWithTimestamp, 0)
 	for i := 0; i < lastNDays; i++ {
-		currentDateOnlyFormat := currentDate.AddDate(0, 0, -i).Format("2006-01-02")
+		currentDateOnlyFormat := currentDate.AddDate(0, 0, -i).Format(U.DATETIME_FORMAT_YYYYMMDD)
 		userProperty, err := getUserPropertiesByProjectFromCache(projectID, currentDateOnlyFormat)
 		if err != nil {
 			return nil, err
@@ -644,7 +644,10 @@ func GetUserPropertiesByProject(projectID uint64, limit int, lastNDays int) (map
 }
 
 func getUserPropertiesByProjectFromCache(projectID uint64, dateKey string) (U.CachePropertyWithTimestamp, error) {
-	dateKeyInTime, _ := time.Parse("2006-01-02", dateKey)
+	logCtx := log.WithFields(log.Fields{
+		"project_id": projectID,
+	})
+	dateKeyInTime, _ := time.Parse(U.DATETIME_FORMAT_YYYYMMDD, dateKey)
 	if projectID == 0 {
 		return U.CachePropertyWithTimestamp{}, errors.New("invalid project on GetUserPropertiesByProjectFromCache")
 	}
@@ -657,7 +660,11 @@ func getUserPropertiesByProjectFromCache(projectID uint64, dateKey string) (U.Ca
 	if err != nil {
 		return U.CachePropertyWithTimestamp{}, err
 	}
-	PropertyKeys, err := cacheRedis.GetKeysPersistent(PropertiesKeyString)
+	begin := U.TimeNow()
+	PropertyKeys, err := cacheRedis.ScanPersistent(PropertiesKeyString, 100)
+	end := U.TimeNow()
+	logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("UP:Scan")
+
 	if err != nil {
 		return U.CachePropertyWithTimestamp{}, err
 	}
@@ -665,7 +672,10 @@ func getUserPropertiesByProjectFromCache(projectID uint64, dateKey string) (U.Ca
 		return U.CachePropertyWithTimestamp{}, err
 	}
 	// Check if this needs batching
+	begin = U.TimeNow()
 	properties, err := cacheRedis.MGetPersistent(PropertyKeys...)
+	end = U.TimeNow()
+	logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("UP:Mget")
 	if err != nil {
 		return U.CachePropertyWithTimestamp{}, err
 	}
@@ -708,7 +718,7 @@ func GetPropertyValuesByUserProperty(projectID uint64, propertyName string, limi
 	}
 	values := make([]U.CachePropertyValueWithTimestamp, 0)
 	for i := 0; i < lastNDays; i++ {
-		currentDateOnlyFormat := currentDate.AddDate(0, 0, -i).Format("2006-01-02")
+		currentDateOnlyFormat := currentDate.AddDate(0, 0, -i).Format(U.DATETIME_FORMAT_YYYYMMDD)
 		value, err := getPropertyValuesByUserPropertyFromCache(projectID, propertyName, currentDateOnlyFormat)
 		if err != nil {
 			return []string{}, err
@@ -734,6 +744,9 @@ func GetPropertyValuesByUserProperty(projectID uint64, propertyName string, limi
 
 func getPropertyValuesByUserPropertyFromCache(projectID uint64, propertyName string, dateKey string) (U.CachePropertyValueWithTimestamp, error) {
 
+	logCtx := log.WithFields(log.Fields{
+		"project_id": projectID,
+	})
 	if projectID == 0 {
 		return U.CachePropertyValueWithTimestamp{}, errors.New("invalid project on GetPropertyValuesByUserPropertyFromCache")
 	}
@@ -751,7 +764,10 @@ func getPropertyValuesByUserPropertyFromCache(projectID uint64, propertyName str
 	if err != nil {
 		return U.CachePropertyValueWithTimestamp{}, err
 	}
-	propertyValuesKeys, err := cacheRedis.GetKeysPersistent(propertyValuesKeyString)
+	begin := U.TimeNow()
+	propertyValuesKeys, err := cacheRedis.ScanPersistent(propertyValuesKeyString, 100)
+	end := U.TimeNow()
+	logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("UPV:Scan")
 	if err != nil {
 		return U.CachePropertyValueWithTimestamp{}, err
 	}
@@ -759,7 +775,10 @@ func getPropertyValuesByUserPropertyFromCache(projectID uint64, propertyName str
 		return U.CachePropertyValueWithTimestamp{}, err
 	}
 	// Check if this needs batching
+	begin = U.TimeNow()
 	values, err := cacheRedis.MGetPersistent(propertyValuesKeys...)
+	end = U.TimeNow()
+	logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("UPV.Mget")
 	if err != nil {
 		return U.CachePropertyValueWithTimestamp{}, err
 	}

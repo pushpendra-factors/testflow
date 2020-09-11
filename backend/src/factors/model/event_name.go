@@ -328,7 +328,7 @@ func GetPropertyValuesByEventProperty(projectID uint64, eventName string, proper
 	}
 	values := make([]U.CachePropertyValueWithTimestamp, 0)
 	for i := 0; i < lastNDays; i++ {
-		currentDateOnlyFormat := currentDate.AddDate(0, 0, -i).Format("2006-01-02")
+		currentDateOnlyFormat := currentDate.AddDate(0, 0, -i).Format(U.DATETIME_FORMAT_YYYYMMDD)
 		value, err := getPropertyValuesByEventPropertyFromCache(projectID, eventName, propertyName, currentDateOnlyFormat)
 		if err != nil {
 			return []string{}, err
@@ -354,6 +354,9 @@ func GetPropertyValuesByEventProperty(projectID uint64, eventName string, proper
 
 func getPropertyValuesByEventPropertyFromCache(projectID uint64, eventName string, propertyName string, dateKey string) (U.CachePropertyValueWithTimestamp, error) {
 
+	logCtx := log.WithFields(log.Fields{
+		"project_id": projectID,
+	})
 	if projectID == 0 {
 		return U.CachePropertyValueWithTimestamp{}, errors.New("invalid project on GetPropertyValuesByEventPropertyFromCache")
 	}
@@ -375,7 +378,10 @@ func getPropertyValuesByEventPropertyFromCache(projectID uint64, eventName strin
 	if err != nil {
 		return U.CachePropertyValueWithTimestamp{}, err
 	}
-	eventPropertyValuesKeys, err := cacheRedis.GetKeysPersistent(eventPropertyValuesKeyString)
+	begin := U.TimeNow()
+	eventPropertyValuesKeys, err := cacheRedis.ScanPersistent(eventPropertyValuesKeyString, 100)
+	end := U.TimeNow()
+	logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("EPV:Scan")
 	if err != nil {
 		return U.CachePropertyValueWithTimestamp{}, err
 	}
@@ -383,7 +389,10 @@ func getPropertyValuesByEventPropertyFromCache(projectID uint64, eventName strin
 		return U.CachePropertyValueWithTimestamp{}, err
 	}
 	// Check if this needs batching
+	begin = U.TimeNow()
 	values, err := cacheRedis.MGetPersistent(eventPropertyValuesKeys...)
+	end = U.TimeNow()
+	logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("EPV:Mget")
 	if err != nil {
 		return U.CachePropertyValueWithTimestamp{}, err
 	}
@@ -411,7 +420,7 @@ func GetPropertiesByEvent(projectID uint64, eventName string, limit int, lastNDa
 	}
 	eventProperties := make([]U.CachePropertyWithTimestamp, 0)
 	for i := 0; i < lastNDays; i++ {
-		currentDateOnlyFormat := currentDate.AddDate(0, 0, -i).Format("2006-01-02")
+		currentDateOnlyFormat := currentDate.AddDate(0, 0, -i).Format(U.DATETIME_FORMAT_YYYYMMDD)
 		eventProperty, err := getPropertiesByEventFromCache(projectID, eventName, currentDateOnlyFormat)
 		if err != nil {
 			return nil, err
@@ -441,7 +450,10 @@ func GetPropertiesByEvent(projectID uint64, eventName string, limit int, lastNDa
 
 func getPropertiesByEventFromCache(projectID uint64, eventName string, dateKey string) (U.CachePropertyWithTimestamp, error) {
 
-	dateKeyInTime, _ := time.Parse("2006-01-02", dateKey)
+	logCtx := log.WithFields(log.Fields{
+		"project_id": projectID,
+	})
+	dateKeyInTime, _ := time.Parse(U.DATETIME_FORMAT_YYYYMMDD, dateKey)
 	if projectID == 0 {
 		return U.CachePropertyWithTimestamp{}, errors.New("invalid project on GetPropertiesByEventFromCache")
 	}
@@ -459,7 +471,10 @@ func getPropertiesByEventFromCache(projectID uint64, eventName string, dateKey s
 	if err != nil {
 		return U.CachePropertyWithTimestamp{}, err
 	}
-	eventPropertyKeys, err := cacheRedis.GetKeysPersistent(eventPropertiesKeyString)
+	begin := U.TimeNow()
+	eventPropertyKeys, err := cacheRedis.ScanPersistent(eventPropertiesKeyString, 100)
+	end := U.TimeNow()
+	logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("EP:Scan")
 	if err != nil {
 		return U.CachePropertyWithTimestamp{}, err
 	}
@@ -467,7 +482,10 @@ func getPropertiesByEventFromCache(projectID uint64, eventName string, dateKey s
 		return U.CachePropertyWithTimestamp{}, err
 	}
 	// Check if this needs batching
+	begin = U.TimeNow()
 	properties, err := cacheRedis.MGetPersistent(eventPropertyKeys...)
+	end = U.TimeNow()
+	logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("EP:Mget")
 	if err != nil {
 		return U.CachePropertyWithTimestamp{}, err
 	}
@@ -532,7 +550,7 @@ func GetEventNamesOrderedByOccurenceAndRecency(projectID uint64, limit int, last
 	}
 	events := make([]CacheEventNamesWithTimestamp, 0)
 	for i := 0; i < lastNDays; i++ {
-		currentDateOnlyFormat := currentDate.AddDate(0, 0, -i).Format("2006-01-02")
+		currentDateOnlyFormat := currentDate.AddDate(0, 0, -i).Format(U.DATETIME_FORMAT_YYYYMMDD)
 		event, err := getEventNamesOrderedByOccurenceAndRecencyFromCache(projectID, currentDateOnlyFormat)
 		if err != nil {
 			return []string{}, err
@@ -558,6 +576,9 @@ func GetEventNamesOrderedByOccurenceAndRecency(projectID uint64, limit int, last
 }
 
 func getEventNamesOrderedByOccurenceAndRecencyFromCache(projectID uint64, dateKey string) (CacheEventNamesWithTimestamp, error) {
+	logCtx := log.WithFields(log.Fields{
+		"project_id": projectID,
+	})
 	if projectID == 0 {
 		return CacheEventNamesWithTimestamp{}, errors.New("invalid project on get event names ordered by occurence and recency from cache")
 	}
@@ -569,14 +590,20 @@ func getEventNamesOrderedByOccurenceAndRecencyFromCache(projectID uint64, dateKe
 	if err != nil {
 		return CacheEventNamesWithTimestamp{}, err
 	}
-	eventNameKeys, err := cacheRedis.GetKeysPersistent(eventNamesKeyString)
+	begin := U.TimeNow()
+	eventNameKeys, err := cacheRedis.ScanPersistent(eventNamesKeyString, 10)
+	end := U.TimeNow()
+	logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("E:Scan")
 	if err != nil {
 		return CacheEventNamesWithTimestamp{}, err
 	}
 	if len(eventNameKeys) <= 0 {
 		return CacheEventNamesWithTimestamp{}, err
 	}
+	begin = U.TimeNow()
 	events, err := cacheRedis.MGetPersistent(eventNameKeys...)
+	end = U.TimeNow()
+	logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("E:Mget")
 	if err != nil {
 		return CacheEventNamesWithTimestamp{}, err
 	}
@@ -592,7 +619,7 @@ func getEventNamesOrderedByOccurenceAndRecencyFromCache(projectID uint64, dateKe
 
 func extractKeyDateCountFromCacheKey(keyCount string, cacheKey string) (string, U.CountTimestampTuple) {
 	dateKey := strings.SplitN(cacheKey, ":", 2)
-	keyDate, _ := time.Parse("2006-01-02", dateKey[0])
+	keyDate, _ := time.Parse(U.DATETIME_FORMAT_YYYYMMDD, dateKey[0])
 	KeyCountNum, _ := strconv.Atoi(keyCount)
 	return dateKey[1], U.CountTimestampTuple{
 		LastSeenTimestamp: keyDate.Unix(),
