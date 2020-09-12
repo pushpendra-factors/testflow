@@ -51,7 +51,8 @@ func main() {
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 
 	skipTrackProjectIds := flag.String("skip_track_project_ids", "", "List or projects to skip track")
-	whitelistedProjectIdsEventUserCache := flag.String("whitelisted_projects_ids_event_user_cache", "1", "List of project ids for which caching for events/user is enabled")
+	whitelistedProjectIdsEventUserCache := flag.String("whitelisted_projects_ids_event_user_cache",
+		"1", "List of project ids for which caching for events/user is enabled")
 	facebookAppId := flag.String("facebook_app_id", "", "")
 	facebookAppSecret := flag.String("facebook_app_secret", "", "")
 	salesforceAppId := flag.String("salesforce_app_id", "", "")
@@ -60,7 +61,10 @@ func main() {
 	skipSessionProjectIds := flag.String("skip_session_project_ids",
 		"", "List or projects to skip session creation.")
 
-	isRealTimeEventUserCachingEnabled := flag.Bool("enable_real_time_event_user_caching", false, "If the real time caching is enabled")
+	isRealTimeEventUserCachingEnabled := flag.Bool("enable_real_time_event_user_caching",
+		false, "If the real time caching is enabled")
+	blockedSDKRequestProjectTokens := flag.String("blocked_sdk_request_project_tokens",
+		"", "List of project tokens blocked for all sdk requests.")
 
 	flag.Parse()
 
@@ -101,6 +105,7 @@ func main() {
 		SkipSessionProjectIds:               *skipSessionProjectIds,                                  // comma seperated project ids, supports "*".
 		WhitelistedProjectIdsEventUserCache: *whitelistedProjectIdsEventUserCache,
 		IsRealTimeEventUserCachingEnabled:   *isRealTimeEventUserCachingEnabled,
+		BlockedSDKRequestProjectTokens:      C.GetTokensFromStringListAsString(*blockedSDKRequestProjectTokens),
 	}
 
 	// Initialize configs and connections.

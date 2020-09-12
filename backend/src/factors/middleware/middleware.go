@@ -51,7 +51,13 @@ func SetScopeProjectIdByToken() gin.HandlerFunc {
 		if token == "" {
 			errorMessage := "Missing authorization header"
 			log.WithFields(log.Fields{"error": errorMessage}).Error("Request failed with auth failure.")
-			c.AbortWithStatusJSON(http.StatusUnauthorized, map[string]string{"error": errorMessage})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": errorMessage})
+			return
+		}
+
+		if C.IsBlockedSDKRequestProjectToken(token) {
+			c.AbortWithStatusJSON(http.StatusUnauthorized,
+				gin.H{"error": "Request failed. Blocked."})
 			return
 		}
 
@@ -59,7 +65,7 @@ func SetScopeProjectIdByToken() gin.HandlerFunc {
 		if errCode != http.StatusFound {
 			errorMessage := "Invalid token"
 			log.WithFields(log.Fields{"error": errorMessage}).Error("Request failed because of invalid token.")
-			c.AbortWithStatusJSON(http.StatusUnauthorized, map[string]string{"error": errorMessage})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": errorMessage})
 			return
 		}
 		U.SetScope(c, SCOPE_PROJECT_ID, project.ID)
@@ -76,7 +82,13 @@ func SetScopeProjectToken() gin.HandlerFunc {
 			errorMessage := "Missing authorization header"
 			log.WithFields(log.Fields{"error": errorMessage}).Error(
 				"Failed to get project token on set scope sdk project token.")
-			c.AbortWithStatusJSON(http.StatusUnauthorized, map[string]string{"error": errorMessage})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": errorMessage})
+			return
+		}
+
+		if C.IsBlockedSDKRequestProjectToken(token) {
+			c.AbortWithStatusJSON(http.StatusUnauthorized,
+				gin.H{"error": "Request failed. Blocked."})
 			return
 		}
 
@@ -95,6 +107,12 @@ func SetScopeProjectPrivateToken() gin.HandlerFunc {
 			return
 		}
 
+		if C.IsBlockedSDKRequestProjectToken(token) {
+			c.AbortWithStatusJSON(http.StatusUnauthorized,
+				gin.H{"error": "Request failed. Blocked."})
+			return
+		}
+
 		U.SetScope(c, SCOPE_PROJECT_PRIVATE_TOKEN, token)
 		c.Next()
 	}
@@ -110,6 +128,12 @@ func SetScopeProjectIdByPrivateToken() gin.HandlerFunc {
 			errorMessage := "Missing authorization header"
 			log.WithFields(log.Fields{"error": errorMessage}).Error("Request failed with auth failure.")
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": errorMessage})
+			return
+		}
+
+		if C.IsBlockedSDKRequestProjectToken(token) {
+			c.AbortWithStatusJSON(http.StatusUnauthorized,
+				gin.H{"error": "Request failed. Blocked."})
 			return
 		}
 
