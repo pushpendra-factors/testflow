@@ -1031,7 +1031,12 @@ func TestBlockSDKRequestByToken(t *testing.T) {
 	// Should block sdk track request.
 	w := ServePostRequestWithHeaders(r, uri, []byte(`{"event_name": "signup", "event_properties": {"mobile" : "true"}}`),
 		map[string]string{"Authorization": project.Token})
-	assert.Equal(t, http.StatusUnauthorized, w.Code)
+	// StatusOK intentional to avoid changing customer app behaviour.
+	assert.Equal(t, http.StatusOK, w.Code)
+	responseMap := DecodeJSONResponseToMap(w.Body)
+	assert.NotEmpty(t, responseMap)
+	assert.Nil(t, responseMap["event_id"])
+	assert.Equal(t, "Request failed. Blocked.", responseMap["error"])
 }
 
 func TestOldUserSessionProperties(t *testing.T) {

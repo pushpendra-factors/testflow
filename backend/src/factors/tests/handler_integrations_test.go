@@ -1029,7 +1029,11 @@ func TestSegmentTrackEventForBlockedToken(t *testing.T) {
 
 	w := ServePostRequestWithHeaders(r, uri, []byte(sampleTrackPayload),
 		map[string]string{"Authorization": project.PrivateToken})
-	assert.Equal(t, http.StatusUnauthorized, w.Code)
+	assert.Equal(t, http.StatusOK, w.Code)
+	response, _ := ioutil.ReadAll(w.Body)
+	var responseMap map[string]interface{}
+	json.Unmarshal(response, &responseMap)
+	assert.Equal(t, "Request failed. Blocked.", responseMap["error"])
 }
 
 func TestIntSegmentHandlerWithTrackEvent(t *testing.T) {

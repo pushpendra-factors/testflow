@@ -228,7 +228,8 @@ App.prototype.track = function(eventName, eventProperties, auto=false, afterCall
         .then(function(response) {
             if (response && response.body) {
                 if (!response.body.event_id) {
-                    return Promise.reject("No event_id after track.");
+                    logger.debug("No event_id found on track response.", false);
+                    return response;
                 }
 
                 if (auto) addCurrentPageAutoTrackEventIdToStore(response.body.event_id, eventName);

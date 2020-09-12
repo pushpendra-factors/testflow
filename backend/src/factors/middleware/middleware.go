@@ -56,7 +56,7 @@ func SetScopeProjectIdByToken() gin.HandlerFunc {
 		}
 
 		if C.IsBlockedSDKRequestProjectToken(token) {
-			c.AbortWithStatusJSON(http.StatusUnauthorized,
+			c.AbortWithStatusJSON(http.StatusOK,
 				gin.H{"error": "Request failed. Blocked."})
 			return
 		}
@@ -87,7 +87,7 @@ func SetScopeProjectToken() gin.HandlerFunc {
 		}
 
 		if C.IsBlockedSDKRequestProjectToken(token) {
-			c.AbortWithStatusJSON(http.StatusUnauthorized,
+			c.AbortWithStatusJSON(http.StatusOK,
 				gin.H{"error": "Request failed. Blocked."})
 			return
 		}
@@ -108,7 +108,7 @@ func SetScopeProjectPrivateToken() gin.HandlerFunc {
 		}
 
 		if C.IsBlockedSDKRequestProjectToken(token) {
-			c.AbortWithStatusJSON(http.StatusUnauthorized,
+			c.AbortWithStatusJSON(http.StatusOK,
 				gin.H{"error": "Request failed. Blocked."})
 			return
 		}
@@ -132,7 +132,7 @@ func SetScopeProjectIdByPrivateToken() gin.HandlerFunc {
 		}
 
 		if C.IsBlockedSDKRequestProjectToken(token) {
-			c.AbortWithStatusJSON(http.StatusUnauthorized,
+			c.AbortWithStatusJSON(http.StatusOK,
 				gin.H{"error": "Request failed. Blocked."})
 			return
 		}
