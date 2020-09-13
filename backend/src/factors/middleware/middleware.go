@@ -234,6 +234,19 @@ func SetScopeProjectIdByStoreAndSecret() gin.HandlerFunc {
 			return
 		}
 
+		project, errCode := M.GetProject(projectId)
+		if errCode != http.StatusFound {
+			c.AbortWithStatusJSON(http.StatusUnauthorized,
+				gin.H{"error": "Request failed. Invalid project."})
+			return
+		}
+
+		if C.IsBlockedSDKRequestProjectToken(project.Token) {
+			c.AbortWithStatusJSON(http.StatusOK,
+				gin.H{"error": "Request failed. Blocked."})
+			return
+		}
+
 		// Read the body content to verify token and restore it for processing later.
 		// https://stackoverflow.com/questions/47186741/how-to-get-the-json-from-the-body-of-a-request-on-go/47295689#47295689
 		var bodyBytes []byte
