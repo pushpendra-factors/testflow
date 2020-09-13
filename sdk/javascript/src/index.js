@@ -53,10 +53,12 @@ function track(eventName, eventProperties={}, afterCallback) {
 /**
  * Track visit to page as event.
  * @param {function(eventId)} afterCallback 
+ * @param {boolean} force Force track page, even if tracked already.
  */
-function page(afterCallback) {
+function page(afterCallback, force=false) {
     try {
-        app.page(afterCallback).catch(app.handleError);
+        app.page(afterCallback, force)
+            .catch(app.handleError);
     } catch(e) {
         app.handleError(e);
     }

@@ -307,6 +307,7 @@ func incrBatch(expiryInSecs float64, persistent bool, keys []*Key) ([]int64, err
 	err := redisConn.Send("MULTI")
 	if err != nil {
 		return nil, err
+
 	}
 	for _, key := range keys {
 		cKey, err := key.Key()

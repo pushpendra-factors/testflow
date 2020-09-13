@@ -188,7 +188,7 @@ App.prototype.init = function(token, opts={}, afterPageTrackCallback) {
             return response;
         })
         .then(function() {
-            return trackOnInit ? _this.autoTrack(_this.getConfig("auto_track"), afterPageTrackCallback) : null;
+            return trackOnInit ? _this.autoTrack(_this.getConfig("auto_track"), false, afterPageTrackCallback) : null;
         })
         .then(function() {
             return _this.autoFormCapture(_this.getConfig("auto_form_capture"));
@@ -228,7 +228,8 @@ App.prototype.track = function(eventName, eventProperties, auto=false, afterCall
         .then(function(response) {
             if (response && response.body) {
                 if (!response.body.event_id) {
-                    return Promise.reject("No event_id after track.");
+                    logger.debug("No event_id found on track response.", false);
+                    return response;
                 }
 
                 if (auto) addCurrentPageAutoTrackEventIdToStore(response.body.event_id, eventName);
@@ -309,10 +310,10 @@ function isPageAutoTracked() {
     return false
 }
 
-App.prototype.autoTrack = function(enabled=false, afterCallback) {
+App.prototype.autoTrack = function(enabled=false, force=false, afterCallback) {
     if (!enabled) return false; // not enabled.
 
-    if (isPageAutoTracked()) {
+    if (!force && isPageAutoTracked()) {
         logger.debug('Page tracked already as per store : '+JSON.stringify(factorsWindow()))
         return false;
     }
@@ -438,10 +439,10 @@ App.prototype.autoFormCapture = function(enabled=false) {
     return true;
 }
 
-App.prototype.page = function(afterCallback) {
+App.prototype.page = function(afterCallback, force=false) {
     if (!this.isInitialized()) return Promise.reject(SDK_NOT_INIT_ERROR);
     
-    return Promise.resolve(this.autoTrack(this.getConfig("auto_track"), afterCallback));
+    return Promise.resolve(this.autoTrack(this.getConfig("auto_track"), force, afterCallback));
 }
 
 App.prototype.identify = function(customerUserId) {

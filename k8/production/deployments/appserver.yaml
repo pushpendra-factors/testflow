@@ -28,7 +28,7 @@ spec:
         cloud.google.com/gke-nodepool: default-pool
       containers:
       - name: appserver
-        image: us.gcr.io/factors-production/app-server:v1.70-8b7c088
+        image: us.gcr.io/factors-production/app-server:v3.03-4c5b816-630
         ports:
         - containerPort: 8080
         volumeMounts:
@@ -117,7 +117,9 @@ spec:
           - --sentry_dsn
           - $(SENTRY_DSN)
           - --whitelisted_projects_ids_event_user_cache
-          - "2"         
+          - "2"
+          - --blocked_sdk_request_project_tokens
+          - "5w62sncn48ohs9nl9fymkad3ewcked23"
         env:
           - name: MY_POD_IP
             valueFrom:

@@ -247,6 +247,7 @@ func UpdateCacheForUserProperties(userId string, projectid uint64, updatedProper
 	keysToIncr := make([]*cacheRedis.Key, 0)
 	propertiesToIncr := make([]*cacheRedis.Key, 0)
 	valuesToIncr := make([]*cacheRedis.Key, 0)
+
 	for property, value := range updatedProperties {
 		category := U.GetPropertyTypeByKeyValue(property, value)
 		var propertyValue string
@@ -323,6 +324,7 @@ func UpdateCacheForUserProperties(userId string, projectid uint64, updatedProper
 			logCtx.WithError(err).Error("Failed to increment keys")
 			return
 		}
+
 	}
 }
 

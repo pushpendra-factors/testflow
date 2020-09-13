@@ -438,6 +438,7 @@ func addEventDetailsToCache(project_id uint64, event_name string, event_properti
 	keysToIncr := make([]*cacheRedis.Key, 0)
 	propertiesToIncr := make([]*cacheRedis.Key, 0)
 	valuesToIncr := make([]*cacheRedis.Key, 0)
+
 	if !C.GetIfRealTimeEventUserCachingIsEnabled(project_id) {
 		return
 	}

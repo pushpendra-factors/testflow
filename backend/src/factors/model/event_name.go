@@ -321,6 +321,7 @@ func GetEventNamesOrderByOccurrenceAndRecencyCountCacheKey(projectId uint64, dat
 func GetValuesByEventPropertyCountCacheKey(projectId uint64, dateKey string) (*cacheRedis.Key, error) {
 	prefix := "C:EN:PV"
 	return cacheRedis.NewKey(projectId, prefix, dateKey)
+
 }
 
 //GetPropertyValuesByEventProperty This method iterates for last n days to get all the top 'limit' property values for the given property/event
@@ -595,6 +596,7 @@ func getEventNamesOrderedByOccurenceAndRecencyFromCache(projectID uint64, dateKe
 		return CacheEventNamesWithTimestamp{}, errors.New("invalid project on get event names ordered by occurence and recency from cache")
 	}
 	eventNamesKey, err := GetEventNamesOrderByOccurrenceAndRecencyCacheKey(projectID, "*", dateKey)
+
 	if err != nil {
 		return CacheEventNamesWithTimestamp{}, err
 	}
@@ -609,6 +611,7 @@ func getEventNamesOrderedByOccurenceAndRecencyFromCache(projectID uint64, dateKe
 	if err != nil {
 		return CacheEventNamesWithTimestamp{}, err
 	}
+
 	if len(eventNameKeys) <= 0 {
 		return CacheEventNamesWithTimestamp{}, err
 	}

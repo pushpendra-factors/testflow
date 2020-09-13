@@ -519,6 +519,7 @@ func GetUsersCachedCacheKey(projectId uint64, dateKey string) (*cacheRedis.Key, 
 func GetUserPropertiesCategoryByProjectCacheKey(projectId uint64, property string, category string, dateKey string) (*cacheRedis.Key, error) {
 	prefix := "US:PC"
 	return cacheRedis.NewKey(projectId, prefix, fmt.Sprintf("%s:%s:%s", dateKey, category, property))
+
 }
 
 func GetValuesByUserPropertyCacheKey(projectId uint64, property_name string, value string, dateKey string) (*cacheRedis.Key, error) {
