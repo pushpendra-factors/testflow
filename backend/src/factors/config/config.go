@@ -88,6 +88,7 @@ type Configuration struct {
 	WhitelistedProjectIdsEventUserCache string
 	IsRealTimeEventUserCachingEnabled   bool
 	RealTimeEventUserCachingProjectIds  string
+	BlockedSDKRequestProjectTokens      []string
 }
 
 type Services struct {
@@ -833,4 +834,14 @@ func GetSkipSessionProjects() (allProjects bool, projectIds []uint64) {
 		configuration.SkipSessionProjectIds, "")
 	projectIds = ProjectIdsFromProjectIdBoolMap(projectIDsMap)
 	return allProjects, projectIds
+}
+
+// IsBlockedSDKRequestProjectToken - Tells whether to block the sdk request or
+// not, based on given token and list of blocked_sdk_requests_project_tokens.
+func IsBlockedSDKRequestProjectToken(projectToken string) bool {
+	if projectToken == "" {
+		return true
+	}
+
+	return U.StringValueIn(projectToken, configuration.BlockedSDKRequestProjectTokens)
 }
