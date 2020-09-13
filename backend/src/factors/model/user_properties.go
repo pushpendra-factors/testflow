@@ -147,21 +147,14 @@ func SetPersistentWithLoggingUserInCache(project_id uint64, key *cacheRedis.Key,
 	return err
 }
 
-/*func RefreshCacheForUserProperties(projectid uint64, currentDate time.Time, usersProcessedLimit int, propertiesLimit int, valuesLimit int) {
+func RefreshCacheForUserProperties(projectid uint64, currentDate time.Time, usersProcessedLimit int, propertiesLimit int, valuesLimit int) {
 
+	categoryMap := make(map[string]string)
 	logCtx := log.WithFields(log.Fields{
 		"project_id": projectid,
 	})
 	logCtx.Info("Refresh User Properties Cache started")
 	currentDateFormat := currentDate.AddDate(0, 0, -1).Format(U.DATETIME_FORMAT_YYYYMMDD)
-	var userPropertiesTillDate U.CachePropertyWithTimestamp
-	userPropertiesTillDate.Property = make(map[string]U.PropertyWithTimestamp)
-
-	propertyCacheKey, err := GetUserPropertiesByProjectCacheKey(projectid, currentDateFormat)
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to get property cache key - getuserpropertiesbyproject")
-	}
-
 	logCtx.WithField("dateFormat", currentDateFormat).Info("Begin: User Properties - DB query")
 	begin := U.TimeNow()
 	properties, err := GetRecentUserPropertyKeysWithLimits(projectid, usersProcessedLimit, propertiesLimit)
@@ -171,60 +164,56 @@ func SetPersistentWithLoggingUserInCache(project_id uint64, key *cacheRedis.Key,
 		logCtx.WithError(err).Error("Failed to get property keys - getrecentuserpropertykeyswithlimits")
 	}
 	for _, propertyValue := range properties {
+		valuesMap := make(map[string]int64)
+		propertyCategoryWiseSplitMap := make(map[string]int64)
 		logCtx.WithFields(log.Fields{"dateFormat": currentDateFormat, "property": propertyValue.Key}).Info("Begin: Get user Property values DB call")
 		begin := U.TimeNow()
-		values, category, err := GetRecentUserPropertyValuesWithLimits(projectid, propertyValue.Key, usersProcessedLimit, valuesLimit)
+		values, err := GetRecentUserPropertyValuesWithLimits(projectid, propertyValue.Key, usersProcessedLimit, valuesLimit)
 		end := U.TimeNow()
 		logCtx.WithFields(log.Fields{"dateFormat": currentDateFormat, "property": propertyValue.Key, "timeTaken": end.Sub(begin).Milliseconds()}).Info("End: Get user Property values DB call")
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to get property values - getrecentuserpropertyvalueswithlimits")
 		}
-		categoryMap := make(map[string]int64)
-		categoryMap[category] = propertyValue.Count
-		userPropertiesTillDate.Property[propertyValue.Key] = U.PropertyWithTimestamp{
-			category,
-			categoryMap,
-			U.CountTimestampTuple{
-				int64(propertyValue.LastSeen),
-				propertyValue.Count}}
-
-		var PropertyValues U.CachePropertyValueWithTimestamp
-		PropertyValues.PropertyValue = make(map[string]U.CountTimestampTuple)
-
-		if category == U.PropertyTypeCategorical {
-			PropertyValuesKey, err := GetValuesByUserPropertyCacheKey(projectid, propertyValue.Key, currentDateFormat)
+		for _, element := range values {
+			valuesMap[element.Value] += element.Count
+			propertyCategoryWiseSplitMap[element.ValueType] += element.Count
+		}
+		categoryMap[propertyValue.Key] = U.GetCategoryType(propertyCategoryWiseSplitMap)
+		dateFormat := currentDate.AddDate(0, 0, -1).Format(U.DATETIME_FORMAT_YYYYMMDD)
+		valuesInCache := make(map[*cacheRedis.Key]int64)
+		for value, count := range valuesMap {
+			if value != "" {
+			}
+			valueKey, err := GetValuesByUserPropertyCacheKey(projectid, propertyValue.Key, value, dateFormat)
 			if err != nil {
-				logCtx.WithError(err).Error("Failed to get property cache key - getvaluesbyuserproperty")
+				logCtx.WithError(err).Error("Failed to get cache key")
+				return
 			}
-			for _, value := range values {
-				if value.Value != "" {
-					PropertyValues.PropertyValue[value.Value] = U.CountTimestampTuple{
-						int64(value.LastSeen),
-						value.Count}
-				}
-			}
-			PropertyValues.CacheUpdatedTimestamp = currentDate.Unix()
-			enPropertyValuesCache, err := json.Marshal(PropertyValues)
-			if err != nil {
-				logCtx.WithError(err).Error("Failed to marshal property value - getvaluesbyuserproperty")
-			}
-			err = SetPersistentWithLoggingUserInCache(projectid, PropertyValuesKey, string(enPropertyValuesCache), U.EVENT_USER_CACHE_EXPIRY_SECS, fmt.Sprintf("value %s", propertyValue.Key))
-			if err != nil {
-				logCtx.WithError(err).Error("Failed to set cache property value - getvaluesbyuserproperty")
-			}
+			valuesInCache[valueKey] = count
+		}
+		err = cacheRedis.IncrByBatchPersistent(0, valuesInCache)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to set event property values in cache")
+			return
 		}
 	}
-	userPropertiesTillDate.CacheUpdatedTimestamp = currentDate.Unix()
-	enPropertiesCache, err := json.Marshal(userPropertiesTillDate)
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to marshal property key - getuserpropertiesbyproject")
+	dateFormat := currentDate.AddDate(0, 0, -1).Format(U.DATETIME_FORMAT_YYYYMMDD)
+	propertiesInCache := make(map[*cacheRedis.Key]int64)
+	for _, property := range properties {
+		PropertiesKey, err := GetUserPropertiesCategoryByProjectCacheKey(projectid, property.Key, categoryMap[property.Key], dateFormat)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to get cache key")
+			return
+		}
+		propertiesInCache[PropertiesKey] = property.Count
 	}
-	err = SetPersistentWithLoggingUserInCache(projectid, propertyCacheKey, string(enPropertiesCache), U.EVENT_USER_CACHE_EXPIRY_SECS, "property")
+	err = cacheRedis.IncrByBatchPersistent(0, propertiesInCache)
 	if err != nil {
-		logCtx.WithError(err).Error("Failed to set property key - getuserpropertiesbyproject")
+		logCtx.WithError(err).Error("Failed to set event properties in cache")
+		return
 	}
 	logCtx.Info("Refresh Event Properties Cache Done !!!")
-}*/
+}
 
 func UpdateCacheForUserProperties(userId string, projectid uint64, updatedProperties map[string]interface{}, redundantProperty bool) {
 	// TODO: Remove this check after enabling caching realtime.
@@ -256,6 +245,8 @@ func UpdateCacheForUserProperties(userId string, projectid uint64, updatedProper
 		return
 	}
 	keysToIncr := make([]*cacheRedis.Key, 0)
+	propertiesToIncr := make([]*cacheRedis.Key, 0)
+	valuesToIncr := make([]*cacheRedis.Key, 0)
 	for property, value := range updatedProperties {
 		category := U.GetPropertyTypeByKeyValue(property, value)
 		var propertyValue string
@@ -271,23 +262,67 @@ func UpdateCacheForUserProperties(userId string, projectid uint64, updatedProper
 			logCtx.WithError(err).Error("Failed to get cache key - property category")
 			return
 		}
-		keysToIncr = append(keysToIncr, propertyCategoryKey)
+		propertiesToIncr = append(propertiesToIncr, propertyCategoryKey)
 		if category == U.PropertyTypeCategorical {
 			valueKey, err := GetValuesByUserPropertyCacheKey(projectid, property, propertyValue, currentTimeDatePart)
 			if err != nil {
 				logCtx.WithError(err).Error("Failed to get cache key - values")
 				return
 			}
-			keysToIncr = append(keysToIncr, valueKey)
+			valuesToIncr = append(valuesToIncr, valueKey)
 		}
 	}
+	keysToIncr = append(keysToIncr, propertiesToIncr...)
+	keysToIncr = append(keysToIncr, valuesToIncr...)
 	begin = U.TimeNow()
-	err = cacheRedis.IncrPersistentBatch(U.EVENT_USER_CACHE_EXPIRY_SECS, keysToIncr...)
+	counts, err := cacheRedis.IncrPersistentBatch(0, keysToIncr...)
 	end = U.TimeNow()
 	logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("US:Incr")
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to increment keys")
 		return
+	}
+
+	// The following code is to support/facilitate cleanup
+	newPropertiesCount := int64(0)
+	newValuesCount := int64(0)
+	for _, value := range counts[0 : len(propertiesToIncr)-1] {
+		if value == 1 {
+			newPropertiesCount++
+		}
+	}
+	for _, value := range counts[len(propertiesToIncr) : len(propertiesToIncr)+len(valuesToIncr)-1] {
+		if value == 1 {
+			newValuesCount++
+		}
+	}
+
+	countsInCache := make(map[*cacheRedis.Key]int64)
+	if newPropertiesCount > 0 {
+		propertiesCountKey, err := GetUserPropertiesCategoryByProjectCountCacheKey(projectid, currentTimeDatePart)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to get cache key - propertiesCount")
+			return
+		}
+		countsInCache[propertiesCountKey] = newPropertiesCount
+	}
+	if newValuesCount > 0 {
+		valuesCountKey, err := GetValuesByUserPropertyCountCacheKey(projectid, currentTimeDatePart)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to get cache key - valuesCount")
+			return
+		}
+		countsInCache[valuesCountKey] = newValuesCount
+	}
+	if len(countsInCache) > 0 {
+		begin := U.TimeNow()
+		err = cacheRedis.IncrByBatchPersistent(0, countsInCache)
+		end := U.TimeNow()
+		logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("C:US:Incr")
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to increment keys")
+			return
+		}
 	}
 }
 

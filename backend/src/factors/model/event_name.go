@@ -62,9 +62,7 @@ type FilterInfo struct {
 }
 
 type CacheEventNamesWithTimestamp struct {
-	EventNames            map[string]U.CountTimestampTuple `json:"en"`
-	CacheUpdatedTimestamp int64                            `json:"cut"`
-	CacheUpdatedFromDB    int64                            `json:"cud"`
+	EventNames map[string]U.CountTimestampTuple
 }
 
 const TYPE_USER_CREATED_EVENT_NAME = "UC"
@@ -309,6 +307,20 @@ func GetEventNamesOrderByOccurrenceAndRecencyCacheKey(projectId uint64, event_na
 func GetValuesByEventPropertyCacheKey(projectId uint64, event_name string, property_name string, value string, date string) (*cacheRedis.Key, error) {
 	prefix := "EN:PV"
 	return cacheRedis.NewKey(projectId, fmt.Sprintf("%s:%s:%s", prefix, event_name, property_name), fmt.Sprintf("%s:%s", date, value))
+}
+
+func GetPropertiesByEventCategoryCountCacheKey(projectId uint64, dateKey string) (*cacheRedis.Key, error) {
+	prefix := "C:EN:PC"
+	return cacheRedis.NewKey(projectId, prefix, dateKey)
+}
+func GetEventNamesOrderByOccurrenceAndRecencyCountCacheKey(projectId uint64, dateKey string) (*cacheRedis.Key, error) {
+	prefix := "C:EN"
+	return cacheRedis.NewKey(projectId, prefix, dateKey)
+}
+
+func GetValuesByEventPropertyCountCacheKey(projectId uint64, dateKey string) (*cacheRedis.Key, error) {
+	prefix := "C:EN:PV"
+	return cacheRedis.NewKey(projectId, prefix, dateKey)
 }
 
 //GetPropertyValuesByEventProperty This method iterates for last n days to get all the top 'limit' property values for the given property/event

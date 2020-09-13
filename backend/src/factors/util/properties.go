@@ -1474,20 +1474,22 @@ type PropertyValue struct {
 	ValueType string `json:"value_type"`
 }
 
-func GetCategoryType(values []PropertyValue) string {
-	if len(values) == 0 {
+func GetCategoryType(PropertyTypeMap map[string]int64) string {
+	if len(PropertyTypeMap) == 0 {
 		return ""
 	}
-	valueType := make(map[string]int64)
-	for _, value := range values {
-		if value.ValueType == "string" {
-			valueType[PropertyTypeCategorical]++
+	totalValues := int64(0)
+	valueTypeMap := make(map[string]int64)
+	for valueType, count := range PropertyTypeMap {
+		if valueType == "string" {
+			valueTypeMap[PropertyTypeCategorical] += count
 		}
-		if value.ValueType == "number" {
-			valueType[PropertyTypeNumerical]++
+		if valueType == "number" {
+			valueTypeMap[PropertyTypeNumerical] += count
 		}
+		totalValues += count
 	}
-	return DeriveCategory(valueType, int64(len(values)))
+	return DeriveCategory(valueTypeMap, totalValues)
 }
 
 func DeriveCategory(categorySplit map[string]int64, totalCount int64) string {

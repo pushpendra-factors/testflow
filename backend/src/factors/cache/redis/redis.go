@@ -286,19 +286,15 @@ func exists(key *Key, persistent bool) (bool, error) {
 	return count.(int64) == 1, nil
 }
 
-func IncrBatch(expiryInSecs float64, keys ...*Key) error {
+func IncrBatch(expiryInSecs float64, keys ...*Key) ([]int64, error) {
 	return incrBatch(expiryInSecs, false, keys)
 }
-func IncrPersistentBatch(expiryInSecs float64, keys ...*Key) error {
+func IncrPersistentBatch(expiryInSecs float64, keys ...*Key) ([]int64, error) {
 	return incrBatch(expiryInSecs, true, keys)
 }
-func incrBatch(expiryInSecs float64, persistent bool, keys []*Key) error {
-	totalOperationsPerCall := 1
+func incrBatch(expiryInSecs float64, persistent bool, keys []*Key) ([]int64, error) {
 	if len(keys) == 0 {
-		return ErrorInvalidValues
-	}
-	if expiryInSecs != 0 {
-		totalOperationsPerCall = 2
+		return nil, ErrorInvalidValues
 	}
 	var redisConn redis.Conn
 	if persistent {
@@ -310,32 +306,34 @@ func incrBatch(expiryInSecs float64, persistent bool, keys []*Key) error {
 
 	err := redisConn.Send("MULTI")
 	if err != nil {
-		return err
+		return nil, err
 	}
 	for _, key := range keys {
 		cKey, err := key.Key()
 		if err != nil {
-			return err
+			return nil, err
 		}
 		err = redisConn.Send("INCR", cKey)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if expiryInSecs != 0 {
-			err = redisConn.Send("EXPIRE", cKey, expiryInSecs)
+			err = redisConn.Send("EXPIRE", cKey, int64(expiryInSecs))
 			if err != nil {
-				return err
+				return nil, err
 			}
 		}
 	}
 	res, err := redis.Values(redisConn.Do("EXEC"))
 	if err != nil {
-		return err
+		return nil, err
 	}
-	if len(res) != len(keys)*totalOperationsPerCall {
-		return ErrorPartialFailures
+	counts := make([]int64, 0)
+	if err := redis.ScanSlice(res, &counts); err != nil {
+		return nil, err
 	}
-	return nil
+
+	return counts, nil
 }
 func SetBatch(values map[*Key]string, expiryInSecs float64) error {
 	return setBatch(values, expiryInSecs, false)
@@ -493,4 +491,52 @@ func scan(pattern string, perScanCount int64, limit int64, persistent bool) ([]*
 		}
 	}
 	return cacheKeys, nil
+}
+
+func IncrByBatch(expiryInSecs float64, keys map[*Key]int64) error {
+	return incrByBatch(expiryInSecs, keys, false)
+}
+
+func IncrByBatchPersistent(expiryInSecs float64, keys map[*Key]int64) error {
+	return incrByBatch(expiryInSecs, keys, true)
+}
+
+func incrByBatch(expiryInSecs float64, keys map[*Key]int64, persistent bool) error {
+	if len(keys) == 0 {
+		return ErrorInvalidValues
+	}
+	var redisConn redis.Conn
+	if persistent {
+		redisConn = C.GetCacheRedisPersistentConnection()
+	} else {
+		redisConn = C.GetCacheRedisConnection()
+	}
+	defer redisConn.Close()
+
+	err := redisConn.Send("MULTI")
+	if err != nil {
+		return err
+	}
+	for key, value := range keys {
+		cKey, err := key.Key()
+		if err != nil {
+			return err
+		}
+		err = redisConn.Send("INCRBY", cKey, value)
+		if err != nil {
+			return err
+		}
+		if expiryInSecs != 0 {
+			err = redisConn.Send("EXPIRE", cKey, int64(expiryInSecs))
+			if err != nil {
+				return err
+			}
+		}
+	}
+	_, err = redis.Values(redisConn.Do("EXEC"))
+	if err != nil {
+		return err
+	}
+	// TODO: Check for partial failures
+	return nil
 }

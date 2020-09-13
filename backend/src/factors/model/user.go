@@ -526,6 +526,16 @@ func GetValuesByUserPropertyCacheKey(projectId uint64, property_name string, val
 	return cacheRedis.NewKey(projectId, fmt.Sprintf("%s:%s", prefix, property_name), fmt.Sprintf("%s:%s", dateKey, value))
 }
 
+func GetUserPropertiesCategoryByProjectCountCacheKey(projectId uint64, dateKey string) (*cacheRedis.Key, error) {
+	prefix := "C:US:PC"
+	return cacheRedis.NewKey(projectId, prefix, dateKey)
+}
+
+func GetValuesByUserPropertyCountCacheKey(projectId uint64, dateKey string) (*cacheRedis.Key, error) {
+	prefix := "C:US:PV"
+	return cacheRedis.NewKey(projectId, prefix, dateKey)
+}
+
 //GetRecentUserPropertyKeysWithLimits This method gets all the recent 'limit' property keys from DB for a given project
 func GetRecentUserPropertyKeysWithLimits(projectID uint64, usersLimit int, propertyLimit int) ([]U.Property, error) {
 	properties := make([]U.Property, 0)
@@ -561,7 +571,7 @@ func GetRecentUserPropertyKeysWithLimits(projectID uint64, usersLimit int, prope
 }
 
 //GetRecentUserPropertyValuesWithLimits This method gets all the recent 'limit' property values from DB for a given project/property
-func GetRecentUserPropertyValuesWithLimits(projectID uint64, propertyKey string, usersLimit, valuesLimit int) ([]U.PropertyValue, string, error) {
+func GetRecentUserPropertyValuesWithLimits(projectID uint64, propertyKey string, usersLimit, valuesLimit int) ([]U.PropertyValue, error) {
 
 	// limit on values returned.
 	values := make([]U.PropertyValue, 0, 0)
@@ -582,7 +592,7 @@ func GetRecentUserPropertyValuesWithLimits(projectID uint64, propertyKey string,
 	rows, err := db.Raw(queryStmnt, queryParams...).Rows()
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get property values.")
-		return nil, "", err
+		return nil, err
 	}
 	defer rows.Close()
 
@@ -590,7 +600,7 @@ func GetRecentUserPropertyValuesWithLimits(projectID uint64, propertyKey string,
 		var value U.PropertyValue
 		if err := db.ScanRows(rows, &value); err != nil {
 			logCtx.WithError(err).Error("Failed scanning rows on GetRecentUserPropertyValuesWithLimits")
-			return nil, "", err
+			return nil, err
 		}
 		value.Value = U.TrimQuotes(value.Value)
 		values = append(values, value)
@@ -599,10 +609,10 @@ func GetRecentUserPropertyValuesWithLimits(projectID uint64, propertyKey string,
 	err = rows.Err()
 	if err != nil {
 		logCtx.WithError(err).Error("Failed scanning rows on get property values.")
-		return nil, "", err
+		return nil, err
 	}
 
-	return values, U.GetCategoryType(values), nil
+	return values, nil
 }
 
 //GetUserPropertiesByProject This method iterates over n days and gets user properties from cache for a given project
@@ -778,7 +788,7 @@ func getPropertyValuesByUserPropertyFromCache(projectID uint64, propertyName str
 	begin = U.TimeNow()
 	values, err := cacheRedis.MGetPersistent(propertyValuesKeys...)
 	end = U.TimeNow()
-	logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("UPV.Mget")
+	logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("UPV:Mget")
 	if err != nil {
 		return U.CachePropertyValueWithTimestamp{}, err
 	}
