@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useState, useEffect} from 'react';
 import { Row, Col, Modal, Button, Menu, Avatar  } from 'antd';  
 import {Text, SVG} from 'factorsComponents';   
 import { UserOutlined } from '@ant-design/icons';
@@ -6,14 +6,16 @@ import { UserOutlined } from '@ant-design/icons';
 const { SubMenu } = Menu;
 
 
-class ModalLib extends React.Component {  
-  render() {
+function UserSettingsModal (props){  
+
+  const [visibleBorder, setVisibleBorder] = useState(false);   
+    
     return (
       <>
         
         <Modal
           title={null}
-          visible={this.props.visible} 
+          visible={props.visible} 
           footer={null} 
           centered={false}
           zIndex={1015}
@@ -22,16 +24,21 @@ class ModalLib extends React.Component {
           className={`fa-modal--full-width`}
         > 
 
-        <div className={`fa-container`}>
-          <Row justify={'space-between'} className={`pt-8 pb-8 m-0 `}>
-              <Col>
-                <SVG name={'brand'} size={40}/>
-              </Col> 
-              <Col>
-              <Button type="text" onClick={()=>this.props.handleCancel()}><SVG name="times"></SVG></Button>
-              </Col> 
-          </Row>
-          <Row gutter={[24, 24]} justify={'center'}>
+        <div className={`fa-modal--header`}>
+          <div className={`fa-container`}>
+            <Row justify={'space-between'} className={`py-6 m-0 `}>
+                <Col>
+                  <SVG name={'brand'} size={40}/>
+                </Col> 
+                <Col>
+                <Button type="text" onClick={()=>props.handleCancel()}><SVG name="times"></SVG></Button>
+                </Col> 
+            </Row>
+          </div>
+        </div>
+
+        <div className={`fa-container`}> 
+          <Row gutter={[24, 24]} justify={'center'} className={`pt-8 pb-8 m-0 `}>
               <Col span={20}>
                 <Text type={'title'} level={2} weight={'bold'} extraClass={`m-0`}>My Account Details</Text>  
                 <Text type={'title'} level={7} weight={'regular'} extraClass={`m-0`} color={'grey'}>Jeff Richards (jeff@example.com)</Text>  
@@ -54,7 +61,7 @@ class ModalLib extends React.Component {
               </Menu>
 
               </Col> 
-              <Col span={15}>
+              <Col span={15} className={`mb-10`}>
                 <Row>
                   <Col>
                     <Text type={'title'} level={3} weight={'bold'} extraClass={`m-0`}>Profile</Text>   
@@ -105,7 +112,7 @@ class ModalLib extends React.Component {
       </>
       
     );
-  }
+  
 }
 
-export default ModalLib
+export default UserSettingsModal
