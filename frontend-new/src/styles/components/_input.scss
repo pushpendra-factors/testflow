@@ -1,0 +1,8 @@
+.fa-input{
+    border: thin solid $fa-color--mono-1;
+    border-radius: 6px; 
+    &:focus, &:hover, &:active{ 
+        border-color: $fa-color--brand-6;
+        box-shadow: 0 0 0 2px rgba($fa-color--brand-6, 0.2); 
+    }
+}
