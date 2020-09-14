@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Text, SVG } from '../../components/factorsComponents';
 import { Row, Col, Table, Avatar, Button } from 'antd';
 import Header from '../AppLayout/Header';
@@ -107,6 +107,13 @@ const data = [
 ];
 
 function CoreQuery({ setDrawerVisible }) {
+  const [loadingTable, SetLoadingTable] = useState(true);
+
+  useEffect(()=>{
+    setInterval(() => {
+      SetLoadingTable(false)
+    }, 2000);
+  })
   return (
     <>
       <Header>
@@ -144,7 +151,7 @@ function CoreQuery({ setDrawerVisible }) {
 
           <Row justify="center" className={'mt-12'}>
             <Col span={20}>
-              <Row justify="space-between">
+              <Row className={`flex justify-between items-center`}>
                 <Col span={10}>
                   <Text type={'title'} level={4} weight={'bold'} extraClass={`m-0`} >Saved Queries</Text>
                 </Col>
@@ -158,7 +165,7 @@ function CoreQuery({ setDrawerVisible }) {
           </Row>
           <Row justify="center" className={'mt-2 mb-20'}>
             <Col span={20}>
-              <Table className="ant-table--custom" columns={columns} dataSource={data} pagination={false} />
+              <Table loading={loadingTable} className="ant-table--custom" columns={columns} dataSource={data} pagination={false} />
             </Col>
           </Row>
       </div>
