@@ -25,19 +25,19 @@ function EditUserDetails (props){
             <Row className={`mt-6`}>
               <Col span={24}>
                 <Text type={'title'} level={7} extraClass={`m-0`}>Name</Text>    
-                <Input  size="large" className={`fa-input w-full`} placeholder="Name" />
+                <Input disabled={props.confirmLoading} size="large" className={`fa-input w-full`} placeholder="Name" />
               </Col>
             </Row>
             <Row className={`mt-6`}>
                 <Col span={24}>
                   <Text type={'title'} level={7} extraClass={`m-0`}>Email</Text>    
-                  <Input  size="large" className={`fa-input w-full`} placeholder="Email" />
+                  <Input disabled={props.confirmLoading} size="large" className={`fa-input w-full`} placeholder="Email" />
                 </Col>
             </Row>
             <Row className={`mt-6`}>
                 <Col span={24}>
                   <Text type={'title'} level={7} extraClass={`m-0`}>Phone</Text>    
-                  <Input  size="large" className={`fa-input w-full`} placeholder="Phone" />
+                  <Input disabled={props.confirmLoading} size="large" className={`fa-input w-full`} placeholder="Phone" />
                 </Col>
             </Row>
           </div>

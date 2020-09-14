@@ -26,19 +26,19 @@ function EditPassword (props){
             <Row className={`mt-6`}>
               <Col span={24}>
                 <Text type={'title'} level={7} extraClass={`m-0`}>Old Password</Text>    
-                <Input  size="large" className={`fa-input w-full`} placeholder="Old Password" />
+                <Input disabled={props.confirmLoading} size="large" className={`fa-input w-full`} placeholder="Old Password" />
               </Col>
             </Row>
             <Row className={`mt-6`}>
                 <Col span={24}>
                   <Text type={'title'} level={7} extraClass={`m-0`}>New Password</Text>    
-                  <Input  size="large" className={`fa-input w-full`} placeholder="New Password" />
+                  <Input disabled={props.confirmLoading} size="large" className={`fa-input w-full`} placeholder="New Password" />
                 </Col>
             </Row>
             <Row className={`mt-6`}>
                 <Col span={24}>
                   <Text type={'title'} level={7} extraClass={`m-0`}>Confirm Password</Text>    
-                  <Input  size="large" className={`fa-input w-full`} placeholder="Confirm Password" />
+                  <Input disabled={props.confirmLoading} size="large" className={`fa-input w-full`} placeholder="Confirm Password" />
                 </Col>
             </Row>
           </div>
