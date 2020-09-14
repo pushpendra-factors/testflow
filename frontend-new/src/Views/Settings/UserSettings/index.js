@@ -26,7 +26,7 @@ function UserSettingsModal (props){
 
         <div className={`fa-modal--header`}>
           <div className={`fa-container`}>
-            <Row justify={'space-between'} className={`py-6 m-0 `}>
+            <Row justify={'space-between'} className={`py-4 m-0 `}>
                 <Col>
                   <SVG name={'brand'} size={40}/>
                 </Col> 
@@ -38,7 +38,7 @@ function UserSettingsModal (props){
         </div>
 
         <div className={`fa-container`}> 
-          <Row gutter={[24, 24]} justify={'center'} className={`pt-8 pb-8 m-0 `}>
+          <Row gutter={[24, 24]} justify={'center'} className={`pt-4 pb-2 m-0 `}>
               <Col span={20}>
                 <Text type={'title'} level={2} weight={'bold'} extraClass={`m-0`}>My Account Details</Text>  
                 <Text type={'title'} level={7} weight={'regular'} extraClass={`m-0`} color={'grey'}>Jeff Richards (jeff@example.com)</Text>  
