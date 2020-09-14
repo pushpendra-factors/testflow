@@ -28,7 +28,7 @@ spec:
         cloud.google.com/gke-nodepool: persistent-pool-standard
       containers:
       - name: sdkserver
-        image: us.gcr.io/factors-production/sdk-server:v0.01-19b627a
+        image: us.gcr.io/factors-production/sdk-server:v1.07-4c5b816-630
         ports:
         - containerPort: 8085
         volumeMounts:
@@ -100,6 +100,8 @@ spec:
           - $(PERSISTENT_REDIS_PORT)
           - --real_time_event_user_caching_project_ids
           - "2"
+          - --blocked_sdk_request_project_tokens
+          - "5w62sncn48ohs9nl9fymkad3ewcked23"
         env:
           - name: MY_POD_IP
             valueFrom:

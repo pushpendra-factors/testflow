@@ -425,8 +425,7 @@ const NextSVG = ({ size = 24, color, extraClass }) => {
     <path d="M14.1055 5.69025L17.5689 9.8461L14.1055 14.268" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
     </svg> 
   )
-}
-
+} 
 
 
 
@@ -443,7 +442,6 @@ const NextSVG = ({ size = 24, color, extraClass }) => {
     PlusSVG,
     MinusSVG,
     UserSVG,
-    SearchSVG,
     MouseeventSVG,
     TeamfeedSVG,
     PlaySVG,
@@ -460,7 +458,8 @@ const NextSVG = ({ size = 24, color, extraClass }) => {
     TimesSVG,
     CalendarSVG,
     GroupbySVG,
-  SortdownSVG,
-  DownloadSVG, 
-  NextSVG
-}
+    SortdownSVG,
+    DownloadSVG, 
+    NextSVG,
+    SearchSVG
+  }
