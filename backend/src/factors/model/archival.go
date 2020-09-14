@@ -1,11 +1,10 @@
-package archival
+package model
 
 import (
 	"fmt"
 	"net/http"
 	"time"
 
-	M "factors/model"
 	U "factors/util"
 )
 
@@ -85,7 +84,7 @@ func GetNextArchivalBatches(projectID uint64, startTime int64, maxLookbackDays i
 		startTime = U.GetBeginningOfDayTimestampUTC(hardStartTime.Unix())
 		endTime = hardEndTime.Add(time.Second * time.Duration(1))
 		var status int
-		completedBatches, status = M.GetCompletedArchivalBatches(projectID, hardStartTime, hardEndTime)
+		completedBatches, status = GetCompletedArchivalBatches(projectID, hardStartTime, hardEndTime)
 		if status == http.StatusInternalServerError {
 			return eventsArchivalBatches, fmt.Errorf("Failed to get completed batches")
 		}

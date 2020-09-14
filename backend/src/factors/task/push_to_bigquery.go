@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	A "factors/archival"
 	"factors/filestore"
 	M "factors/model"
 	BQ "factors/services/bigquery"
@@ -102,7 +101,7 @@ func ArchiveEventsForProject(db *gorm.DB, cloudManager *filestore.FileManager, d
 		pbLog.Info("No previous entry found. Running full archival.")
 	}
 
-	batches, err := A.GetNextArchivalBatches(projectID, lastRunTime+1, maxLookbackDays, startTime, endTime)
+	batches, err := M.GetNextArchivalBatches(projectID, lastRunTime+1, maxLookbackDays, startTime, endTime)
 	if err != nil {
 		return jobDetails, err
 	} else if len(batches) == 0 {
