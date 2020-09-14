@@ -2,6 +2,7 @@ package histogram
 
 import (
 	"fmt"
+	"math"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -202,4 +203,57 @@ func TestNumericTrimByBinSize(t *testing.T) {
 	assert.Equal(t, uint64(numDataSamples), hist.Count(),
 		"Mismatch in number of samples.")
 	assert.Equal(t, hist.numBins(), 12, "Mismatch in number of bins.")
+}
+
+func TestNumericalCuts(t *testing.T) {
+	data := dataMM3
+	dataT := dataMM3TestTable
+	dims := len(data[0])
+	// numBins := 8
+	var maxError = 0.20
+
+	var err [100]float64
+	var errSample [100]float64
+	fmt.Println("---------------------------------------------------")
+	fmt.Println(fmt.Sprintf("Calculating for %d dims", dims))
+	fmt.Println("---------------------------------------------------")
+
+	for _, numBins := range []int{8, 16, 32, 64, 128} {
+
+		hist := buildNumericHistogramFromData(numBins, dims, data)
+		for idx := 0; idx < len(dataT); idx++ {
+			histCDF := hist.CDF(dataT[idx].point)
+			sampleCDF := computeCDFUsingData(data, dataT[idx].point)
+
+			errAct := math.Abs(dataT[idx].probVal - histCDF)
+			errorsample := math.Abs(sampleCDF - histCDF)
+
+			err[dataT[idx].center] = err[dataT[idx].center] + errAct
+			errSample[dataT[idx].center] = errSample[dataT[idx].center] + errorsample
+
+			fmt.Println(fmt.Sprintf(
+				"ACTUAL_CDF:%.2f, SAMPLE_CDF:%.2f, HIST_CDF:%.2f, ACTUAL_CDF_ERROR:%.2f, SAMPLE_CDF_ERROR:%.2f",
+				dataT[idx].probVal, sampleCDF, histCDF, errAct, errorsample))
+
+		}
+		var totalAct = 0.0
+		var totSample = 0.0
+		for idx := 0; idx < 100; idx++ {
+			//Average out for each region  div by 5 as I've
+			//samples 5 points from each region
+			err[idx] = err[idx] / 5.0
+			errSample[idx] = errSample[idx] / 5.0
+			totalAct += err[idx]
+			totSample += errSample[idx]
+		}
+		totalAct = totalAct / 100.0
+		totSample = totSample / 100.0
+
+		fmt.Println("---------------------------------------------------")
+		fmt.Println(fmt.Sprintf("Total Act-Hist Error:%.2f , Total sample-Hist: %.2f ", totalAct, totSample))
+		fmt.Println("---------------------------------------------------")
+		assert.InDelta(t, totalAct, totSample, maxError, "High Histogram CDF error")
+		// assert.InDelta(t, sampleCDF, histCDF, maxError, "High Sample CDF error")
+	}
+
 }
