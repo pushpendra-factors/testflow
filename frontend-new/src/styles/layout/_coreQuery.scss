@@ -5,7 +5,7 @@ $cq-card-transition: transform .2s ease-in-out;
     background: linear-gradient(42.84deg, #EEEDF8 15.47%, #C2E5EA 90.5%);
     border: thin solid transparent; 
     border-radius: 12px;
-    padding: 2em 1em; 
+    padding: 2em 0.8em; 
     transition: $cq-card-transition; 
     cursor: pointer; 
 
@@ -13,38 +13,75 @@ $cq-card-transition: transform .2s ease-in-out;
     width: 180px;  
 
 
-    @media screen and (max-width: 1336px) {
-        height: 160px;
-        width: 160px;
-        .fai--custom-card--icon{
-            margin: 1em 0 !important;
-            svg{
-                height: 40px !important;
-                width: 40px !important;
-            }
-        }
-        .fai--custom-card--content
-        {
-            .fai-text.fai-text__size--h3{
-                font-size: 20px !important;
-            } 
-        }
+    // @media screen and (max-width: 1336px) {
+    //     height: 160px;
+    //     width: 160px;
+    //     .fai--custom-card--icon{
+    //         margin: 1em 0 !important;
+    //         svg{
+    //             height: 40px !important;
+    //             width: 40px !important;
+    //         }
+    //     }
+    //     .fai--custom-card--content
+    //     {
+    //         .fai-text.fai-text__size--h3{
+    //             font-size: 20px !important;
+    //         } 
+    //     }
+    // }
+    // @media screen and (max-width: 1200px) {
+    //     height: 140px;
+    //     width: 140px;  
+    //     .fai--custom-card--icon{
+    //         margin: 1em 0 !important;
+    //         svg{
+    //             height: 30px !important;
+    //             width: 30px !important;
+    //         }
+    //     }
+    //     .fai--custom-card--content
+    //     {
+    //         .fai-text.fai-text__size--h3{
+    //             font-size: 18px !important;
+    //         } 
+    //     }
+    // }
+    
+    .fai--custom-card--icon{
+        margin: 1.5em 0 1.2em; 
     }
-    @media screen and (max-width: 1200px) {
-        height: 140px;
-        width: 140px;  
-        .fai--custom-card--icon{
-            margin: 1em 0 !important;
-            svg{
-                height: 30px !important;
-                width: 30px !important;
-            }
-        }
-        .fai--custom-card--content
-        {
-            .fai-text.fai-text__size--h3{
-                font-size: 18px !important;
-            } 
+
+    .before-hover{
+        display: block;
+    }
+    .after-hover{
+        display: none;
+       
+    }
+    .fai--custom-card--icon
+    {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    .fai--custom-card--cta
+    {
+        background-color: #34A7BA;
+        color: $fa-color--white;
+        font-weight: $font-weight--bold;
+        border-radius: 38px;
+        padding: 6px 15px;
+        font-size: 12px;
+        line-height: 1;
+        margin: 0.5em auto 0;
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        text-transform: uppercase;
+        svg{
+            display: inline;
+            margin-left: 0.2em
         }
     }
 
@@ -54,13 +91,27 @@ $cq-card-transition: transform .2s ease-in-out;
         border: thin solid  $fa-color--mono-2; 
         box-shadow: 0px 0px 8px $fa-color--mono-2; 
 
-        .fai--custom-card--desc{
-            transform: translateY(-50px); 
+        .before-hover{
+            display: none;
         }
-        .fai--custom-card--title 
-        {   
-                transform: translateY(-50px); 
-        } 
+        .after-hover{
+            display: block;
+        }
+        .fai--custom-card--icon{
+            margin: 0.2em 0 1em;
+            svg{
+                height: 35px !important;
+                width: 35px !important;
+            }
+        }
+
+        // .fai--custom-card--desc{
+        //     transform: translateY(-50px); 
+        // }
+        // .fai--custom-card--title 
+        // {   
+        //         transform: translateY(-50px); 
+        // } 
         // .fai--custom-card--icon{ 
         //     svg{
         //         height: 44px !important;
@@ -68,18 +119,10 @@ $cq-card-transition: transform .2s ease-in-out;
         //     }
         // }
 
-        .fai--custom-card--cta
-        {
-            display: block;
-        }
+       
 
     }
-    .fai--custom-card--icon{
-        margin: 1.5em 0 1.2em;
-        svg{
-            transition: $cq-card-transition;  
-        }
-    }
+   
     .fai--custom-card--desc,.fai--custom-card--title{
         letter-spacing: -0.02em;  
         background: linear-gradient(42deg, #7A6DC9 15.46%, #5DB9C8 75.92%);
@@ -100,9 +143,9 @@ $cq-card-transition: transform .2s ease-in-out;
     }
     .fai--custom-card--content{
         transition: $cq-card-transition; 
-        height: 50px;
-        overflow: hidden;
-        display: block;
+        // height: 50px;
+        // overflow: hidden;
+        // display: block;
         // margin: 0 0 1.2em; 
     } 
    
