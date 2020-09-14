@@ -1086,9 +1086,10 @@ func AddSessionForUser(projectId uint64, userId string, userEvents []Event,
 				noOfSessionsCreated++
 			}
 
+			eventsOfSession := events[sessionStartIndex : sessionEndIndex+1]
+
 			// Update the session_id to all events between start index and end index + 1.
-			errCode := associateSessionToEventsInBatch(projectId,
-				events[sessionStartIndex:sessionEndIndex+1], sessionEvent.ID, 100)
+			errCode := associateSessionToEventsInBatch(projectId, eventsOfSession, sessionEvent.ID, 100)
 			if errCode == http.StatusInternalServerError {
 				logCtx.Error("Failed to associate session to events.")
 				return noOfFilteredEvents, noOfSessionsCreated,
@@ -1149,8 +1150,9 @@ func AddSessionForUser(projectId uint64, userId string, userEvents []Event,
 				SessionPageCount:     sessionPageCount,
 				SessionPageSpentTime: sessionPageSpentTime,
 			}
-			for i := range events[sessionStartIndex : sessionEndIndex+1] {
-				sessionUserPropertiesRecordMap[events[i].UserPropertiesId] = sessionUserProperties
+
+			for i := range eventsOfSession {
+				sessionUserPropertiesRecordMap[eventsOfSession[i].UserPropertiesId] = sessionUserProperties
 			}
 
 			sessionStartIndex = i
