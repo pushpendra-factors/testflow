@@ -2,6 +2,9 @@ import React, {useState, useEffect} from 'react';
 import { Row, Col, Modal, Button, Menu, Avatar, Input  } from 'antd';  
 import {Text, SVG} from 'factorsComponents';   
 import { UserOutlined } from '@ant-design/icons';
+import EditPassword from './EditPassword';
+import EditUserDetails from './EditUserDetails';
+import ViewUserDetails from './ViewUserDetails';
 
 const { SubMenu } = Menu;
 
@@ -73,49 +76,10 @@ function UserSettingsModal (props){
 
               </Col> 
               <Col span={15}>
-              <div className={`mb-10 pl-4`}>
-                <Row>
-                  <Col>
-                    <Text type={'title'} level={3} weight={'bold'} extraClass={`m-0`}>Profile</Text>   
-                  </Col>
-                </Row>
-                <Row className={`mt-2`}>
-                  <Col>
-                    <Avatar shape="square" size={104} icon={<UserOutlined />} />
-                    <Text type={'paragraph'} mini extraClass={`m-0 mt-1`} color={'grey'} >A photo helps personalise your account</Text>    
-                  </Col>
-                </Row>
-                <Row className={`mt-6`}> 
-                  <Col>
-                    <Text type={'title'} level={7} extraClass={`m-0`}>Name</Text>    
-                    <Text type={'title'} level={6} extraClass={`m-0`} weight={'bold'}>Vishnu Baliga</Text>    
-                  </Col>
-                </Row>
-                <Row className={`mt-6`}>
-                  <Col>
-                    <Text type={'title'} level={7} extraClass={`m-0`}>Email</Text>    
-                    <Text type={'title'} level={6} extraClass={`m-0`} weight={'bold'}>baliga@factors.ai</Text>    
-                  </Col>
-                </Row>
-                <Row className={`mt-6`}>
-                  <Col>
-                    <Text type={'title'} level={7} extraClass={`m-0`}>Mobile</Text>    
-                    <Text type={'title'} level={6} extraClass={`m-0`} weight={'bold'}>+91-8123456789</Text>    
-                  </Col>
-                </Row>
-                <Row className={`mt-6`}>
-                  <Col>
-                    <Text type={'title'} level={7} extraClass={`m-0`}>Password</Text>    
-                    <Text type={'title'} level={6} extraClass={`m-0`} weight={'bold'}>&#8226; &#8226; &#8226; &#8226; &#8226; &#8226;</Text>    
-                  </Col>
-                </Row>
-                <Row className={`mt-6`}>
-                  <Col className={`flex justify-start items-center`}>
-                    <Button onClick={()=>setDetailsModal(true)}>Edit Details</Button>
-                    <Button className={'ml-4'} onClick={()=>setPasswordModal(true)} >Change Password</Button> 
-                  </Col>
-                </Row>
-              </div> 
+                <ViewUserDetails 
+                  editDetails={()=>setDetailsModal(true)}
+                  editPassword={()=>setPasswordModal(true)}
+                />
               </Col> 
           </Row>
         </div>
@@ -125,81 +89,20 @@ function UserSettingsModal (props){
 
 
         
-        <Modal 
-          visible={editPasswordModal}
-          zIndex={1020}
-          onCancel={()=>setPasswordModal(false)}
-          className={`fa-modal--regular`}
-          okText={`Update Password`}
+        <EditPassword 
+          visible={editPasswordModal}  
+          onCancel={()=>setPasswordModal(false)} 
           onOk={()=>handleOk()}
-          confirmLoading={confirmLoading}
-          centered={true}
-        >
-          <div className={`p-4`}> 
-            <Row>
-              <Col span={24}>
-                <Text type={'title'} level={3} weight={'bold'} extraClass={`m-0`}>Change Password</Text>   
-              </Col>
-            </Row>
-            <Row className={`mt-6`}>
-              <Col span={24}>
-                <Text type={'title'} level={7} extraClass={`m-0`}>Old Password</Text>    
-                <Input  size="large" className={`fa-input w-full`} placeholder="Old Password" />
-              </Col>
-            </Row>
-            <Row className={`mt-6`}>
-                <Col span={24}>
-                  <Text type={'title'} level={7} extraClass={`m-0`}>New Password</Text>    
-                  <Input  size="large" className={`fa-input w-full`} placeholder="New Password" />
-                </Col>
-            </Row>
-            <Row className={`mt-6`}>
-                <Col span={24}>
-                  <Text type={'title'} level={7} extraClass={`m-0`}>Confirm Password</Text>    
-                  <Input  size="large" className={`fa-input w-full`} placeholder="Confirm Password" />
-                </Col>
-            </Row>
-          </div>
+          confirmLoading={confirmLoading} 
+        /> 
 
-        </Modal>
-
-        <Modal 
+        <EditUserDetails 
           visible={editDetailsModal}
           zIndex={1020}
-          onCancel={()=>setDetailsModal(false)}
-          className={`fa-modal--regular`}
-          okText={`Update Password`}
+          onCancel={()=>setDetailsModal(false)} 
           onOk={()=>handleOk()}
-          confirmLoading={confirmLoading}
-          centered={true}
-        >
-          <div className={`p-4`}> 
-            <Row>
-              <Col span={24}>
-                <Text type={'title'} level={3} weight={'bold'} extraClass={`m-0`}>Edit Details</Text>   
-              </Col>
-            </Row>
-            <Row className={`mt-6`}>
-              <Col span={24}>
-                <Text type={'title'} level={7} extraClass={`m-0`}>Name</Text>    
-                <Input  size="large" className={`fa-input w-full`} placeholder="Name" />
-              </Col>
-            </Row>
-            <Row className={`mt-6`}>
-                <Col span={24}>
-                  <Text type={'title'} level={7} extraClass={`m-0`}>Email</Text>    
-                  <Input  size="large" className={`fa-input w-full`} placeholder="Email" />
-                </Col>
-            </Row>
-            <Row className={`mt-6`}>
-                <Col span={24}>
-                  <Text type={'title'} level={7} extraClass={`m-0`}>Phone</Text>    
-                  <Input  size="large" className={`fa-input w-full`} placeholder="Phone" />
-                </Col>
-            </Row>
-          </div>
-
-        </Modal>
+          confirmLoading={confirmLoading} 
+        /> 
 
       </>
       
