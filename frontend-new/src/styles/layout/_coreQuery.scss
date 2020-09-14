@@ -5,48 +5,20 @@ $cq-card-transition: transform .2s ease-in-out;
     background: linear-gradient(42.84deg, #EEEDF8 15.47%, #C2E5EA 90.5%);
     border: thin solid transparent; 
     border-radius: 12px;
-    padding: 2em 0.8em; 
+    padding: 2em 1.5em; 
     transition: $cq-card-transition; 
     cursor: pointer; 
 
-    height: 180px;
-    width: 180px;  
+    height: 200px;
+    width: 200px;  
 
 
-    // @media screen and (max-width: 1336px) {
-    //     height: 160px;
-    //     width: 160px;
-    //     .fai--custom-card--icon{
-    //         margin: 1em 0 !important;
-    //         svg{
-    //             height: 40px !important;
-    //             width: 40px !important;
-    //         }
-    //     }
-    //     .fai--custom-card--content
-    //     {
-    //         .fai-text.fai-text__size--h3{
-    //             font-size: 20px !important;
-    //         } 
-    //     }
-    // }
-    // @media screen and (max-width: 1200px) {
-    //     height: 140px;
-    //     width: 140px;  
-    //     .fai--custom-card--icon{
-    //         margin: 1em 0 !important;
-    //         svg{
-    //             height: 30px !important;
-    //             width: 30px !important;
-    //         }
-    //     }
-    //     .fai--custom-card--content
-    //     {
-    //         .fai-text.fai-text__size--h3{
-    //             font-size: 18px !important;
-    //         } 
-    //     }
-    // }
+    @media screen and (max-width: 1336px) {
+        padding: 2em 0.8em; 
+        height: 180px;
+        width: 180px;
+     
+    } 
     
     .fai--custom-card--icon{
         margin: 1.5em 0 1.2em; 
@@ -74,7 +46,7 @@ $cq-card-transition: transform .2s ease-in-out;
         padding: 6px 15px;
         font-size: 12px;
         line-height: 1;
-        margin: 0.5em auto 0;
+        margin: 1em auto 0;
         display: inline-flex;
         justify-content: center;
         align-items: center;

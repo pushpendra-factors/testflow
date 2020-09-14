@@ -125,7 +125,7 @@ function CoreQuery({ setDrawerVisible }) {
             {coreQueryoptions.map((item, index) => {
               return (
                 <Col span={4} key={index}>
-                  <div onClick={() => setDrawerVisible(item.title == `Funnels`)} className="fai--custom-card">
+                  <div onClick={() => setDrawerVisible(item.title == `Funnels`)} className="fai--custom-card flex justify-center items-center flex-col ">
                       <div className={`fai--custom-card--icon`}><SVG name={item.icon} size={48} /> </div> 
                     <div className="flex justify-start items-center flex-col before-hover">
                         <Text type={'title'} level={3} weight={'bold'} extraClass={`fai--custom-card--title`} >{item.title}</Text>  
