@@ -316,10 +316,10 @@ func exists(key *Key, persistent bool) (bool, error) {
 }
 
 func IncrBatch(keys ...*Key) ([]int64, error) {
-	return incrBatch(expiryInSecs, false, keys)
+	return incrBatch(false, keys)
 }
 func IncrPersistentBatch(keys ...*Key) ([]int64, error) {
-	return incrBatch(expiryInSecs, true, keys)
+	return incrBatch(true, keys)
 }
 func incrBatch(persistent bool, keys []*Key) ([]int64, error) {
 	if len(keys) == 0 {
