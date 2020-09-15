@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"strings"
 
-	A "factors/archival"
 	"factors/filestore"
 	M "factors/model"
 
@@ -21,9 +20,9 @@ const (
 	BIGQUERY_TABLE_USERS  string = "f_users"
 )
 
-var bigqueryArchivalTables = map[string]A.EventFileFormat{
-	BIGQUERY_TABLE_EVENTS: A.ArchiveEventTableFormat{},
-	BIGQUERY_TABLE_USERS:  A.ArchiveUsersTableFormat{},
+var bigqueryArchivalTables = map[string]M.EventFileFormat{
+	BIGQUERY_TABLE_EVENTS: M.ArchiveEventTableFormat{},
+	BIGQUERY_TABLE_USERS:  M.ArchiveUsersTableFormat{},
 }
 
 var bqTaskID = "Service#Bigquery"

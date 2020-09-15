@@ -202,31 +202,20 @@ const VirtualSVG = ({ size = 18, color, extraClass }) => {
 }
 
 const Events_cqSVG = ({ size = 16, color, extraClass }) => {
-  return (
-    <svg width={size} height={size} className={extraClass} viewBox="0 0 66 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M62.1999 34.7751C63.7118 34.7751 65.0348 33.6411 65.0348 32.1291C65.0348 30.6172 63.7118 29.2942 62.1999 29.2942H52.561C51.049 29.2942 49.7261 30.6172 49.7261 32.1291C49.7261 33.4521 51.049 34.7751 52.561 34.7751H62.1999Z" fill="url(#paint0_linear)" />
-      <path fillRule="evenodd" clipRule="evenodd" d="M37.0635 24.3803L7.95797 33.6411C5.69001 34.3971 5.31201 37.6101 7.20198 38.7441L15.7068 44.036L2.09907 57.8327C0.587094 59.3447 0.587094 61.6127 2.09907 62.9356C3.42205 64.2586 5.69001 64.4476 7.20198 62.9356L20.8097 49.1389L26.1017 57.6437C27.4246 59.7227 30.4486 59.3447 31.2046 57.0767L40.6544 27.9712C41.2214 25.7033 39.1424 23.6243 37.0635 24.3803Z" fill="url(#paint1_linear)" />
-      <path d="M55.5853 13.2295C56.7193 12.0956 56.7193 10.3946 55.5853 9.44961C54.4513 8.31563 52.7504 8.31563 51.8054 9.44961L44.8125 16.2535C43.8675 17.3875 43.8675 19.0884 44.8125 20.0334C45.9465 21.1674 47.6474 21.1674 48.5924 20.0334L55.5853 13.2295Z" fill="url(#paint2_linear)" />
-      <path d="M35.5518 2.64595C35.5518 1.13398 34.4178 0 32.9058 0C31.3939 0 30.2599 1.13398 30.2599 2.64595V12.4738C30.2599 13.9858 31.3939 15.1197 32.9058 15.1197C34.4178 15.1197 35.5518 13.9858 35.5518 12.4738V2.64595Z" fill="url(#paint3_linear)" />
-      <defs>
-        <linearGradient id="paint0_linear" x1="11.4019" y1="54.585" x2="47.9665" y2="13.933" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#7A6DC9" />
-          <stop offset="1" stopColor="#5DB9C8" />
-        </linearGradient>
-        <linearGradient id="paint1_linear" x1="11.4019" y1="54.585" x2="47.9665" y2="13.933" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#7A6DC9" />
-          <stop offset="1" stopColor="#5DB9C8" />
-        </linearGradient>
-        <linearGradient id="paint2_linear" x1="11.4019" y1="54.585" x2="47.9665" y2="13.933" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#7A6DC9" />
-          <stop offset="1" stopColor="#5DB9C8" />
-        </linearGradient>
-        <linearGradient id="paint3_linear" x1="11.4019" y1="54.585" x2="47.9665" y2="13.933" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#7A6DC9" />
-          <stop offset="1" stopColor="#5DB9C8" />
-        </linearGradient>
-      </defs>
-    </svg>
+  return ( 
+  <svg width={size} height={size} className={extraClass} viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M39.5818 22.7661C40.5439 22.7661 41.3858 22.0444 41.3858 21.0823C41.3858 20.1201 40.5439 19.2782 39.5818 19.2782H33.448C32.4858 19.2782 31.6439 20.1201 31.6439 21.0823C31.6439 21.9242 32.4858 22.7661 33.448 22.7661H39.5818Z" fill="url(#paint0_linear)"/>
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M23.5859 16.1512L5.06421 22.0445C3.62096 22.5255 3.38042 24.5701 4.58313 25.2918L9.99531 28.6593L1.33582 37.4391C0.373655 38.4013 0.373655 39.8445 1.33582 40.6864C2.17772 41.5283 3.62096 41.6486 4.58313 40.6864L13.2426 31.9067L16.6102 37.3188C17.4521 38.6418 19.3764 38.4013 19.8575 36.958L25.871 18.4363C26.2318 16.9931 24.9089 15.6701 23.5859 16.1512Z" fill="url(#paint1_linear)"/>
+    <path d="M35.3725 9.05527C36.0941 8.33365 36.0941 7.25122 35.3725 6.64986C34.6509 5.92824 33.5685 5.92824 32.9671 6.64986L28.5171 10.9796C27.9157 11.7012 27.9157 12.7837 28.5171 13.385C29.2387 14.1066 30.3212 14.1066 30.9225 13.385L35.3725 9.05527Z" fill="url(#paint2_linear)"/>
+    <path d="M22.6239 2.32026C22.6239 1.3581 21.9023 0.636475 20.9401 0.636475C19.978 0.636475 19.2563 1.3581 19.2563 2.32026V8.57434C19.2563 9.5365 19.978 10.2581 20.9401 10.2581C21.9023 10.2581 22.6239 9.5365 22.6239 8.57434V2.32026Z" fill="url(#paint3_linear)"/>
+    <defs>
+    <linearGradient id="paint0_linear" x1="7.25579" y1="35.3724" x2="30.5242" y2="9.5029" gradientUnits="userSpaceOnUse">
+    <stop stop-color="#7A6DC9"/>
+    <stop offset="1" stop-color="#5DB9C8"/>
+    </linearGradient>
+    </defs>
+  </svg>
+
 
   );
 }
@@ -429,14 +418,14 @@ const DownloadSVG = ({ size = 24, color, extraClass }) => {
 
   )
 }
-
-const SearchSVG = ({ size = 24, color, extraClass }) => {
-  return (
-    <svg className={extraClass} width={size} height={size} viewBox={`0 0 ${size} ${size}`} fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path fillRule="evenodd" clipRule="evenodd" d="M15.7397 12.5964C15.0736 14.575 13.2032 16 11 16C8.23858 16 6 13.7614 6 11C6 8.23858 8.23858 6 11 6C12.2329 6 13.3615 6.44621 14.2333 7.18593C15.3141 8.10308 16 9.47144 16 11C16 11.5582 15.9085 12.0951 15.7397 12.5964ZM17.6661 13.1424C17.4267 13.8879 17.0656 14.579 16.6064 15.1922L20.7071 19.2929C21.0976 19.6835 21.0976 20.3166 20.7071 20.7072C20.3166 21.0977 19.6834 21.0977 19.2929 20.7072L15.1921 16.6064C14.0236 17.4816 12.5723 18 11 18C7.13401 18 4 14.866 4 11C4 7.13401 7.13401 4 11 4C12.6281 4 14.1264 4.55582 15.3154 5.48807C16.9498 6.76948 18 8.7621 18 11C18 11.7473 17.8829 12.4672 17.6661 13.1424Z" fill={color} />
-    </svg>
+const NextSVG = ({ size = 24, color, extraClass }) => {
+  return ( 
+    <svg className={extraClass} width={size} height={size} viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M2.88547 10C6.15908 10 16.6133 10 16.6133 10" stroke="white" stroke-width="2" stroke-linecap="round"/>
+    <path d="M14.1055 5.69025L17.5689 9.8461L14.1055 14.268" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg> 
   )
-}
+} 
 
 
 
@@ -453,7 +442,6 @@ const SearchSVG = ({ size = 24, color, extraClass }) => {
     PlusSVG,
     MinusSVG,
     UserSVG,
-    SearchSVG,
     MouseeventSVG,
     TeamfeedSVG,
     PlaySVG,
@@ -470,7 +458,8 @@ const SearchSVG = ({ size = 24, color, extraClass }) => {
     TimesSVG,
     CalendarSVG,
     GroupbySVG,
-  SortdownSVG,
-  DownloadSVG,
-  SearchSVG
-}
+    SortdownSVG,
+    DownloadSVG, 
+    NextSVG,
+    SearchSVG
+  }
