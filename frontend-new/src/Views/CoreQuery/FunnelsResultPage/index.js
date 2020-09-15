@@ -10,7 +10,7 @@ import { Button } from 'antd';
 import { PoweroffOutlined } from '@ant-design/icons';
 import FunnelsResultTable from './FunnelsResultTable';
 
-function FunnelsResultPage({ queries, setDrawerVisible }) {
+function FunnelsResultPage({ queries, setDrawerVisible, setShowFunnels, showFunnels  }) {
 
     const [eventsData, setEventsData] = useState([]);
     const [groups, setGroups] = useState([]);
@@ -36,7 +36,7 @@ function FunnelsResultPage({ queries, setDrawerVisible }) {
                     <Button type="primary" icon={<PoweroffOutlined />} >Save query as</Button>
                 </div>
                 <div className="py-4">
-                    <EventsInfo queries={queries} />
+                    <EventsInfo showFunnels={showFunnels} setShowFunnels={setShowFunnels} queries={queries} />
                 </div>
                 <div className="pb-2 flex justify-end">
                     <FiltersInfo grouping={grouping} setGrouping={setGrouping} setDrawerVisible={setDrawerVisible} />

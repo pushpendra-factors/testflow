@@ -1,8 +1,9 @@
 import React, { useEffect, useCallback, useState } from 'react';
 import styles from './index.module.scss';
 import SpikeChart from './SpikeChart';
+import TotalEventsTable from './TotalEventsTable';
 
-function TotalEvents() {
+function TotalEvents({ queries }) {
 
     const [chartData, setChartData] = useState([]);
 
@@ -45,7 +46,7 @@ function TotalEvents() {
                 <div className="w-1/4 flex flex-col items-center justify-center">
                     <div className="flex items-center mb-4">
                         <div className={`mr-1 ${styles.eventCircle}`}></div>
-                        <div className={styles.eventText}>Add to Wishlist</div>
+                        <div className={styles.eventText}>{queries[0]}</div>
                     </div>
                     <div className={styles.totalText}>{total}</div>
                 </div>
@@ -53,13 +54,12 @@ function TotalEvents() {
                     <SpikeChart chartData={chartData} chartColor="#4D7DB4" />
                 </div>
             </div>
-            {/* <div className="mt-8">
-                <DataTable
-                    eventsData={eventsData}
-                    groups={groups}
-                    setGroups={setGroups}
+            <div className="mt-8">
+                <TotalEventsTable
+                    data={chartData}
+                    event={queries[0]}
                 />
-            </div> */}
+            </div>
         </div>
     )
 }

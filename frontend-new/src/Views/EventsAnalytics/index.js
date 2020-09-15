@@ -6,7 +6,7 @@ import EventsInfo from '../CoreQuery/FunnelsResultPage/EventsInfo';
 import ContentTabs from '../../components/ContentTabs';
 import TotalEvents from './TotalEvents';
 
-function EventsAnalytics({ queries }) {
+function EventsAnalytics({ queries, setShowFunnels, showFunnels }) {
 
 
     const tabItems = [
@@ -14,7 +14,7 @@ function EventsAnalytics({ queries }) {
             key: '1',
             title: 'Total Events',
             // titleIcon: (<ConversionsOvertimeIcon style={{ fontSize: '24px', color: '#3E516C' }} />),
-            content: <TotalEvents />
+            content: <TotalEvents queries={queries} />
         },
         {
             key: '2',
@@ -43,7 +43,7 @@ function EventsAnalytics({ queries }) {
                     <Button type="primary" icon={<PoweroffOutlined />} >Save query as</Button>
                 </div>
                 <div className="py-4">
-                    <EventsInfo queries={queries} />
+                    <EventsInfo showFunnels={showFunnels} setShowFunnels={setShowFunnels} queries={queries} />
                 </div>
             </Header>
             <div className="mt-40 mb-8 fa-container">

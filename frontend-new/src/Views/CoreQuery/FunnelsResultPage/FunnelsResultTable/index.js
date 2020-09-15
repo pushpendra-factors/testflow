@@ -36,9 +36,6 @@ function FunnelsResultTable({ eventsData, groups, setGroups }) {
         onChange: onSelectionChange,
     };
 
-    console.log(columns)
-    console.log(tableData)
-
     return (
         <DataTable
             tableData={tableData}

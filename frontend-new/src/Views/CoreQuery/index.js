@@ -15,6 +15,8 @@ function CoreQuery() {
     const [queries, setQueries] = useState([]);
     // const [queries, setQueries] = useState(['Paid', 'Applied Coupon', 'Cart Updated', 'Checkout']);
 
+    const [showFunnels, setShowFunnels] = useState(true);
+
     const queryChange = (newEvent, index, changeType = 'add') => {
         const queryupdated = [...queries];
         if (queryupdated[index]) {
@@ -53,6 +55,12 @@ function CoreQuery() {
         </div>)
     }
 
+    let result = (<EventsAnalytics showFunnels={showFunnels} setShowFunnels={setShowFunnels} queries={queries.map(elem => elem.label)} />);
+
+    if (showFunnels) {
+        result = (<FunnelsResultPage showFunnels={showFunnels} setShowFunnels={setShowFunnels} setDrawerVisible={setDrawerVisible} queries={queries.map(elem => elem.label)} />);
+    }
+
     return (
         <>
             <Drawer
@@ -74,8 +82,10 @@ function CoreQuery() {
             </Drawer>
 
             {showResult ? (
-                <FunnelsResultPage setDrawerVisible={setDrawerVisible} queries={queries.map(elem => elem.label)} />
-                // <EventsAnalytics queries={queries.map(elem => elem)} />
+                <>
+                    {result}
+                </>
+
             ) : (
                     <CoreQueryHome setDrawerVisible={setDrawerVisible} />
                 )}
