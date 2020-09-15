@@ -1,5 +1,4 @@
 import React from 'react';
-import { useSelector } from 'react-redux';
 import styles from './index.module.scss';
 
 function EventsInfo({ queries }) {

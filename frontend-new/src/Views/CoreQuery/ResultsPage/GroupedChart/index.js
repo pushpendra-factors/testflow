@@ -264,7 +264,7 @@ function GroupedChart({ eventsData, groups, chartData }) {
         displayChart();
     }, [displayChart]);
 
-    const visibleEvents = eventsData.filter(elem => elem.display);
+    // const visibleEvents = eventsData.filter(elem => elem.display);
 
     return (
         <div className="grouped-chart">

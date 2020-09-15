@@ -4,8 +4,9 @@ import ResultsPage from './ResultsPage';
 import QueryComposer from '../../components/QueryComposer';
 import CoreQueryHome from '../CoreQueryHome';
 import { Drawer, Button, Collapse, Select, Popover } from 'antd';
-import { SVG, Text } from 'factorsComponents';
+import { SVG, Text } from '../../components/factorsComponents';
 import styles from './index.module.scss';
+import EventsAnalytics from '../EventsAnalytics';
 
 function CoreQuery() {
     const [drawerVisible, setDrawerVisible] = useState(false);
@@ -73,9 +74,12 @@ function CoreQuery() {
                 />
             </Drawer>
 
-            {
-                showResult ? (<ResultsPage setDrawerVisible={setDrawerVisible} queries={queries.map(elem => elem.label)} />) : (<CoreQueryHome setDrawerVisible={setDrawerVisible} />)
-            }
+            {showResult ? (
+                <ResultsPage setDrawerVisible={setDrawerVisible} queries={queries.map(elem => elem)} />
+                // <EventsAnalytics queries={queries.map(elem => elem)} />
+            ) : (
+                    <CoreQueryHome setDrawerVisible={setDrawerVisible} />
+                )}
 
         </>
     )
