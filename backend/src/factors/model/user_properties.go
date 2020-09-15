@@ -117,7 +117,7 @@ func createUserPropertiesIfChanged(projectId uint64, userId string,
 		postgres.Jsonb{RawMessage: json.RawMessage(updatedPropertiesBytes)}, timestamp, false)
 }
 
-func RefreshCacheForUserProperties(projectid uint64, currentDate time.Time, usersProcessedLimit int, propertiesLimit int, valuesLimit int) {
+func BackFillUserDataInCacheFromDb(projectid uint64, currentDate time.Time, usersProcessedLimit int, propertiesLimit int, valuesLimit int) {
 
 	logCtx := log.WithFields(log.Fields{
 		"project_id": projectid,
@@ -268,12 +268,12 @@ func UpdateCacheForUserProperties(userId string, projectid uint64, updatedProper
 	// The following code is to support/facilitate cleanup
 	newPropertiesCount := int64(0)
 	newValuesCount := int64(0)
-	for _, value := range counts[0 : len(propertiesToIncr)-1] {
+	for _, value := range counts[0:len(propertiesToIncr)] {
 		if value == 1 {
 			newPropertiesCount++
 		}
 	}
-	for _, value := range counts[len(propertiesToIncr) : len(propertiesToIncr)+len(valuesToIncr)-1] {
+	for _, value := range counts[len(propertiesToIncr) : len(propertiesToIncr)+len(valuesToIncr)] {
 		if value == 1 {
 			newValuesCount++
 		}

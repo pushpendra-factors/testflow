@@ -46,7 +46,6 @@ func NewKeyWithAllProjectsSupport(projectId uint64, prefix string, suffix string
 	if prefix == "" {
 		return nil, ErrorInvalidPrefix
 	}
-
 	return &Key{ProjectID: projectId, Prefix: prefix, Suffix: suffix}, nil
 }
 

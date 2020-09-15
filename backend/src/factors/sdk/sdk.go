@@ -305,7 +305,7 @@ func GetIfExistsPersistentWithLoggingEventInCache(project_id uint64, key *cacheR
 	return data, status, err
 }
 
-func RefreshCacheFromDb(project_id uint64, currentTime time.Time, no_of_days int, eventsLimit, propertyLimit, valuesLimit int, rowsLimit int) {
+func BackFillEventDataInCacheFromDb(project_id uint64, currentTime time.Time, no_of_days int, eventsLimit, propertyLimit, valuesLimit int, rowsLimit int) {
 
 	// Preload EventNames-count-lastseen
 	// TODO: Janani Make this 30 configurable, limit in cache, limit in ui
@@ -520,12 +520,12 @@ func addEventDetailsToCache(project_id uint64, event_name string, event_properti
 	if counts[0] == 1 {
 		newEventCount++
 	}
-	for _, value := range counts[1:len(propertiesToIncr)] {
+	for _, value := range counts[1 : len(propertiesToIncr)+1] {
 		if value == 1 {
 			newPropertiesCount++
 		}
 	}
-	for _, value := range counts[len(propertiesToIncr)+1 : len(propertiesToIncr)+len(valuesToIncr)] {
+	for _, value := range counts[len(propertiesToIncr)+1 : len(propertiesToIncr)+len(valuesToIncr)+1] {
 		if value == 1 {
 			newValuesCount++
 		}

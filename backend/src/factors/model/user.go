@@ -519,26 +519,26 @@ func GetUsersCachedCacheKey(projectId uint64, dateKey string) (*cacheRedis.Key, 
 
 func GetUserPropertiesCategoryByProjectCacheKey(projectId uint64, property string, category string, dateKey string) (*cacheRedis.Key, error) {
 	prefix := "US:PC"
-	return cacheRedis.NewKeyWithAllProjectsSupport(projectId, prefix, fmt.Sprintf("%s:%s:%s", dateKey, category, property))
+	return cacheRedis.NewKey(projectId, prefix, fmt.Sprintf("%s:%s:%s", dateKey, category, property))
 
 }
 
 func GetValuesByUserPropertyCacheKey(projectId uint64, property_name string, value string, dateKey string) (*cacheRedis.Key, error) {
 	prefix := "US:PV"
-	return cacheRedis.NewKeyWithAllProjectsSupport(projectId, fmt.Sprintf("%s:%s", prefix, property_name), fmt.Sprintf("%s:%s", dateKey, value))
+	return cacheRedis.NewKey(projectId, fmt.Sprintf("%s:%s", prefix, property_name), fmt.Sprintf("%s:%s", dateKey, value))
 }
 
 // Rollup cache keys
 
 func GetUserPropertiesCategoryByProjectRollUpCacheKey(projectId uint64, dateKey string) (*cacheRedis.Key, error) {
 	prefix := "RollUp:US:PC"
-	return cacheRedis.NewKeyWithAllProjectsSupport(projectId, prefix, dateKey)
+	return cacheRedis.NewKey(projectId, prefix, dateKey)
 
 }
 
 func GetValuesByUserPropertyRollUpCacheKey(projectId uint64, property_name string, dateKey string) (*cacheRedis.Key, error) {
 	prefix := "RollUp:US:PV"
-	return cacheRedis.NewKeyWithAllProjectsSupport(projectId, fmt.Sprintf("%s:%s", prefix, property_name), dateKey)
+	return cacheRedis.NewKey(projectId, fmt.Sprintf("%s:%s", prefix, property_name), dateKey)
 }
 
 // Today's cache keys count
@@ -696,6 +696,9 @@ func getUserPropertiesByProjectFromCache(projectID uint64, dateKey string) (U.Ca
 		}
 		var cacheValue U.CachePropertyWithTimestamp
 		err = json.Unmarshal([]byte(userProperties), &cacheValue)
+		if err != nil {
+			return U.CachePropertyValueWithTimestamp{}, err
+		}
 		return cacheValue, nil
 	}
 	PropertiesKey, err := GetUserPropertiesCategoryByProjectCacheKey(projectID, "*", "*", dateKey)
@@ -726,7 +729,7 @@ func getUserPropertiesByProjectFromCache(projectID uint64, dateKey string) (U.Ca
 	if err != nil {
 		return U.CachePropertyWithTimestamp{}, err
 	}
-	return CachePropertyObject(PropertyKeys, properties), nil
+	return GetCachePropertyObject(PropertyKeys, properties), nil
 }
 
 //GetPropertyValuesByUserProperty This method iterates over n days and gets user property values from cache for a given project/property
@@ -798,6 +801,9 @@ func getPropertyValuesByUserPropertyFromCache(projectID uint64, propertyName str
 		}
 		var cacheValue U.CachePropertyValueWithTimestamp
 		err = json.Unmarshal([]byte(values), &cacheValue)
+		if err != nil {
+			return U.CachePropertyValueWithTimestamp{}, err
+		}
 		return cacheValue, nil
 	}
 	propertyValuesKey, err := GetValuesByUserPropertyCacheKey(projectID, propertyName, "*", dateKey)
@@ -827,7 +833,7 @@ func getPropertyValuesByUserPropertyFromCache(projectID uint64, propertyName str
 	if err != nil {
 		return U.CachePropertyValueWithTimestamp{}, err
 	}
-	return CachePropertyValueObject(propertyValuesKeys, values), nil
+	return GetCachePropertyValueObject(propertyValuesKeys, values), nil
 }
 
 func GetUserPropertiesAsMap(projectId uint64, id string) (*map[string]interface{}, int) {

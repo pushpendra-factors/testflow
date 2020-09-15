@@ -32,10 +32,11 @@ func main() {
 	factorsEmailSender := flag.String("email_sender", "support-dev@factors.ai", "")
 	errorReportingInterval := flag.Int("error_reporting_interval", 300, "")
 
-	eventsLimit := flag.Int("events_limit", 1, "")
+	eventsLimit := flag.Int("events_limit", 4, "")
 	propertiesLimit := flag.Int("properties_limit", 10, "")
 	valuesLimit := flag.Int("values_limit", 10, "")
-	rollupLookback := flag.Int("rollup_lookback", 10, "")
+	// This is in days
+	rollupLookback := flag.Int("rollup_lookback", 1, "")
 
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 
@@ -79,12 +80,24 @@ func main() {
 		config.AWSSecret, config.AWSRegion, config.ErrorReportingInterval, config.SentryDSN)
 
 	for i := 1; i <= *rollupLookback; i++ {
-		date := U.TimeNow().AddDate(0, 0, -1).Format(U.DATETIME_FORMAT_YYYYMMDD)
-		eventCountKeys, _, err := getAllProjectEventCountKeys()
+		date := U.TimeNow().AddDate(0, 0, -i).Format(U.DATETIME_FORMAT_YYYYMMDD)
+		eventCountKeys, _, err := getAllProjectEventCountKeys(date)
 		if err != nil {
 			log.WithError(err).Error("Error Getting keys")
 		}
-		userPropertyKeys, _, err := getAllProjectUserPropertyCountKeys()
+		eventPropertyCountKeys, _, err := getAllProjectEventPropertyCountKeys(date)
+		if err != nil {
+			log.WithError(err).Error("Error Getting keys")
+		}
+		eventPropertyValuesCountKeys, _, err := getAllProjectEventPropertyValueCountKeys(date)
+		if err != nil {
+			log.WithError(err).Error("Error Getting keys")
+		}
+		userPropertyCountKeys, _, err := getAllProjectUserPropertyCountKeys(date)
+		if err != nil {
+			log.WithError(err).Error("Error Getting keys")
+		}
+		userPropertyValuesKeys, _, err := getAllProjectUserPropertyValueCountKeys(date)
 		if err != nil {
 			log.WithError(err).Error("Error Getting keys")
 		}
@@ -99,7 +112,7 @@ func main() {
 				log.WithError(err).Error("Error Getting keys")
 			}
 			if len(eventKeys) > 0 {
-				cacheEventObject := M.CacheEventObject(eventKeys, eventCounts)
+				cacheEventObject := M.GetCacheEventObject(eventKeys, eventCounts)
 				eventNamesKey, err := M.GetEventNamesOrderByOccurrenceAndRecencyRollUpCacheKey(eventKey.ProjectID, date)
 				enEventCache, err := json.Marshal(cacheEventObject)
 				if err != nil {
@@ -109,6 +122,11 @@ func main() {
 				err = cacheRedis.SetPersistent(eventNamesKey, string(enEventCache), U.EVENT_USER_CACHE_EXPIRY_SECS)
 				if err != nil {
 					log.WithError(err).Error("Failed to set cache")
+					return
+				}
+				err = cacheRedis.DelPersistent(eventKeys...)
+				if err != nil {
+					log.WithError(err).Error("Failed to del cache keys")
 					return
 				}
 				for eventName, _ := range cacheEventObject.EventNames {
@@ -121,7 +139,7 @@ func main() {
 						log.WithError(err).Error("Error Getting keys")
 					}
 					if len(eventPropertyKeys) > 0 {
-						cacheEventPropertyObject := M.CachePropertyObject(eventPropertyKeys, eventPropertyCount)
+						cacheEventPropertyObject := M.GetCachePropertyObject(eventPropertyKeys, eventPropertyCount)
 						eventPropertiesKey, err := M.GetPropertiesByEventCategoryRollUpCacheKey(eventKey.ProjectID, eventName, date)
 						enEventPropertiesCache, err := json.Marshal(cacheEventPropertyObject)
 						if err != nil {
@@ -131,6 +149,11 @@ func main() {
 						err = cacheRedis.SetPersistent(eventPropertiesKey, string(enEventPropertiesCache), U.EVENT_USER_CACHE_EXPIRY_SECS)
 						if err != nil {
 							log.WithError(err).Error("Failed to set cache")
+							return
+						}
+						err = cacheRedis.DelPersistent(eventPropertyKeys...)
+						if err != nil {
+							log.WithError(err).Error("Failed to del cache keys")
 							return
 						}
 						for propertyName, _ := range cacheEventPropertyObject.Property {
@@ -143,7 +166,7 @@ func main() {
 								log.WithError(err).Error("Error Getting keys")
 							}
 							if len(eventValueKeys) > 0 {
-								cacheEventPropertyValueObject := M.CachePropertyValueObject(eventValueKeys, eventValueCount)
+								cacheEventPropertyValueObject := M.GetCachePropertyValueObject(eventValueKeys, eventValueCount)
 								eventPropertyValuesKey, _ := M.GetValuesByEventPropertyRollUpCacheKey(eventKey.ProjectID, eventName, propertyName, date)
 								enEventPropertyValuesCache, err := json.Marshal(cacheEventPropertyValueObject)
 								if err != nil {
@@ -155,13 +178,39 @@ func main() {
 									log.WithError(err).Error("Failed to set cache")
 									return
 								}
+								err = cacheRedis.DelPersistent(eventValueKeys...)
+								if err != nil {
+									log.WithError(err).Error("Failed to del cache keys")
+									return
+								}
 							}
 						}
 					}
 				}
 			}
 		}
-		for _, property := range userPropertyKeys {
+		if len(eventCountKeys) > 0 {
+			err = cacheRedis.DelPersistent(eventCountKeys...)
+			if err != nil {
+				log.WithError(err).Error("Failed to del cache keys")
+				return
+			}
+		}
+		if len(eventPropertyCountKeys) > 0 {
+			err = cacheRedis.DelPersistent(eventPropertyCountKeys...)
+			if err != nil {
+				log.WithError(err).Error("Failed to del cache keys")
+				return
+			}
+		}
+		if len(eventPropertyValuesCountKeys) > 0 {
+			err = cacheRedis.DelPersistent(eventPropertyValuesCountKeys...)
+			if err != nil {
+				log.WithError(err).Error("Failed to del cache keys")
+				return
+			}
+		}
+		for _, property := range userPropertyCountKeys {
 			userPropertiesInCacheKey, err := M.GetUserPropertiesCategoryByProjectCacheKey(property.ProjectID, "*", "*", date)
 			if err != nil {
 				log.WithError(err).Error("Error Getting cache keys")
@@ -171,7 +220,7 @@ func main() {
 				log.WithError(err).Error("Error Getting keys")
 			}
 			if len(userPropertyKeys) > 0 {
-				cacheUserPropertyObject := M.CachePropertyObject(userPropertyKeys, userPropertyCount)
+				cacheUserPropertyObject := M.GetCachePropertyObject(userPropertyKeys, userPropertyCount)
 				propertyCacheKey, err := M.GetUserPropertiesCategoryByProjectRollUpCacheKey(property.ProjectID, date)
 				enPropertiesCache, err := json.Marshal(cacheUserPropertyObject)
 				if err != nil {
@@ -180,6 +229,11 @@ func main() {
 				err = cacheRedis.SetPersistent(propertyCacheKey, string(enPropertiesCache), U.EVENT_USER_CACHE_EXPIRY_SECS)
 				if err != nil {
 					log.WithError(err).Error("Failed to set cache")
+					return
+				}
+				err = cacheRedis.DelPersistent(userPropertyKeys...)
+				if err != nil {
+					log.WithError(err).Error("Failed to del cache keys")
 					return
 				}
 				for propertyName, _ := range cacheUserPropertyObject.Property {
@@ -192,7 +246,7 @@ func main() {
 						log.WithError(err).Error("Error Getting keys")
 					}
 					if len(userValueKeys) > 0 {
-						cacheUserPropertyValueObject := M.CachePropertyValueObject(userValueKeys, userValueCount)
+						cacheUserPropertyValueObject := M.GetCachePropertyValueObject(userValueKeys, userValueCount)
 						PropertyValuesKey, err := M.GetValuesByUserPropertyRollUpCacheKey(property.ProjectID, propertyName, date)
 						enPropertyValuesCache, err := json.Marshal(cacheUserPropertyValueObject)
 						if err != nil {
@@ -203,15 +257,35 @@ func main() {
 							log.WithError(err).Error("Failed to set cache")
 							return
 						}
+						err = cacheRedis.DelPersistent(userValueKeys...)
+						if err != nil {
+							log.WithError(err).Error("Failed to del cache keys")
+							return
+						}
 					}
 				}
+			}
+		}
+		if len(userPropertyCountKeys) > 0 {
+			err = cacheRedis.DelPersistent(userPropertyCountKeys...)
+			if err != nil {
+				log.WithError(err).Error("Failed to del cache keys")
+				return
+			}
+		}
+		if len(userPropertyValuesKeys) > 0 {
+			err = cacheRedis.DelPersistent(userPropertyValuesKeys...)
+			if err != nil {
+				log.WithError(err).Error("Failed to del cache keys")
+				return
 			}
 		}
 	}
 
 	// Cleaning up events
+	currentdate := U.TimeNow().Format(U.DATETIME_FORMAT_YYYYMMDD)
 	cacheKeysToDecrement := make(map[*cacheRedis.Key]int64)
-	eventCountKeys, eventCountsPerProject, err := getAllProjectEventCountKeys()
+	eventCountKeys, eventCountsPerProject, err := getAllProjectEventCountKeys(currentdate)
 	if err != nil {
 		log.WithError(err).Error("Error Getting keys")
 	}
@@ -226,17 +300,19 @@ func main() {
 			if err != nil {
 				log.WithError(err).Error("Error deleting additional keys")
 			}
-			cacheKeysToDecrement[eventCountKeys[projIndex]] = int64(count) - deletedCount
+			cacheKeysToDecrement[eventCountKeys[projIndex]] = deletedCount
 		}
 	}
-	err = cacheRedis.DecrByBatchPersistent(cacheKeysToDecrement)
-	if err != nil {
-		log.WithError(err).Error("Error Getting keys")
+	if len(cacheKeysToDecrement) > 0 {
+		err = cacheRedis.DecrByBatchPersistent(cacheKeysToDecrement)
+		if err != nil {
+			log.WithError(err).Error("Error Getting keys")
+		}
 	}
 
 	// cleaning up event properties
 	cacheKeysToDecrement = make(map[*cacheRedis.Key]int64)
-	eventPropertyCountKeys, eventPropertyCountsPerProject, err := getAllProjectEventPropertyCountKeys()
+	eventPropertyCountKeys, eventPropertyCountsPerProject, err := getAllProjectEventPropertyCountKeys(currentdate)
 	if err != nil {
 		log.WithError(err).Error("Error Getting keys")
 	}
@@ -251,17 +327,19 @@ func main() {
 			if err != nil {
 				log.WithError(err).Error("Error deleting additional keys")
 			}
-			cacheKeysToDecrement[eventPropertyCountKeys[projIndex]] = int64(count) - deletedCount
+			cacheKeysToDecrement[eventPropertyCountKeys[projIndex]] = deletedCount
 		}
 	}
-	err = cacheRedis.DecrByBatchPersistent(cacheKeysToDecrement)
-	if err != nil {
-		log.WithError(err).Error("Error Getting keys")
+	if len(cacheKeysToDecrement) > 0 {
+		err = cacheRedis.DecrByBatchPersistent(cacheKeysToDecrement)
+		if err != nil {
+			log.WithError(err).Error("Error Getting keys")
+		}
 	}
 
 	// cleaning up event property values
 	cacheKeysToDecrement = make(map[*cacheRedis.Key]int64)
-	eventPropertyValuesCountKeys, eventPropertyValuesCountsPerProject, err := getAllProjectEventPropertyValueCountKeys()
+	eventPropertyValuesCountKeys, eventPropertyValuesCountsPerProject, err := getAllProjectEventPropertyValueCountKeys(currentdate)
 	if err != nil {
 		log.WithError(err).Error("Error Getting keys")
 	}
@@ -277,24 +355,26 @@ func main() {
 			if err != nil {
 				log.WithError(err).Error("Error deleting additional keys")
 			}
-			cacheKeysToDecrement[eventPropertyValuesCountKeys[projIndex]] = int64(count) - deletedCount
+			cacheKeysToDecrement[eventPropertyValuesCountKeys[projIndex]] = deletedCount
 		}
 	}
-	err = cacheRedis.DecrByBatchPersistent(cacheKeysToDecrement)
-	if err != nil {
-		log.WithError(err).Error("Error Getting keys")
+	if len(cacheKeysToDecrement) > 0 {
+		err = cacheRedis.DecrByBatchPersistent(cacheKeysToDecrement)
+		if err != nil {
+			log.WithError(err).Error("Error Getting keys")
+		}
 	}
 
 	// cleaning up user property keys
 	cacheKeysToDecrement = make(map[*cacheRedis.Key]int64)
-	userPropertyKeys, userPropertyKeysCountsPerProject, err := getAllProjectUserPropertyCountKeys()
+	userPropertyCountKeys, userPropertyKeysCountsPerProject, err := getAllProjectUserPropertyCountKeys(currentdate)
 	if err != nil {
 		log.WithError(err).Error("Error Getting keys")
 	}
 	for projIndex, userpropertiesCount := range userPropertyKeysCountsPerProject {
 		count, _ := strconv.Atoi(userpropertiesCount)
 		if count > *propertiesLimit {
-			userpropertiesInCacheTodayCacheKey, err := M.GetUserPropertiesCategoryByProjectCacheKey(userPropertyKeys[projIndex].ProjectID, "*", "*", userPropertyKeys[projIndex].Suffix)
+			userpropertiesInCacheTodayCacheKey, err := M.GetUserPropertiesCategoryByProjectCacheKey(userPropertyCountKeys[projIndex].ProjectID, "*", "*", userPropertyCountKeys[projIndex].Suffix)
 			if err != nil {
 				log.WithError(err).Error("Error Getting cache keys")
 			}
@@ -302,17 +382,19 @@ func main() {
 			if err != nil {
 				log.WithError(err).Error("Error deleting additional keys")
 			}
-			cacheKeysToDecrement[userPropertyKeys[projIndex]] = int64(count) - deletedCount
+			cacheKeysToDecrement[userPropertyCountKeys[projIndex]] = deletedCount
 		}
 	}
-	err = cacheRedis.DecrByBatchPersistent(cacheKeysToDecrement)
-	if err != nil {
-		log.WithError(err).Error("Error Getting keys")
+	if len(cacheKeysToDecrement) > 0 {
+		err = cacheRedis.DecrByBatchPersistent(cacheKeysToDecrement)
+		if err != nil {
+			log.WithError(err).Error("Error Getting keys")
+		}
 	}
 
 	// cleaning up user property values key
 	cacheKeysToDecrement = make(map[*cacheRedis.Key]int64)
-	userPropertyValuesKeys, userPropertyValuesKeysCountsPerProject, err := getAllProjectUserPropertyValueCountKeys()
+	userPropertyValuesKeys, userPropertyValuesKeysCountsPerProject, err := getAllProjectUserPropertyValueCountKeys(currentdate)
 	if err != nil {
 		log.WithError(err).Error("Error Getting keys")
 	}
@@ -327,51 +409,53 @@ func main() {
 			if err != nil {
 				log.WithError(err).Error("Error deleting additional keys")
 			}
-			cacheKeysToDecrement[userPropertyValuesKeys[projIndex]] = int64(count) - deletedCount
+			cacheKeysToDecrement[userPropertyValuesKeys[projIndex]] = deletedCount
 		}
 	}
-	err = cacheRedis.DecrByBatchPersistent(cacheKeysToDecrement)
-	if err != nil {
-		log.WithError(err).Error("Error Getting keys")
+	if len(cacheKeysToDecrement) > 0 {
+		err = cacheRedis.DecrByBatchPersistent(cacheKeysToDecrement)
+		if err != nil {
+			log.WithError(err).Error("Error Getting keys")
+		}
 	}
 
 	fmt.Println("Done!!!")
 }
 
-func getAllProjectEventCountKeys() ([]*cacheRedis.Key, []string, error) {
-	eventsCountCacheKey, err := M.GetEventNamesOrderByOccurrenceAndRecencyCountCacheKey(0, "*")
+func getAllProjectEventCountKeys(dateKey string) ([]*cacheRedis.Key, []string, error) {
+	eventsCountCacheKey, err := M.GetEventNamesOrderByOccurrenceAndRecencyCountCacheKey(0, dateKey)
 	if err != nil {
 		return nil, nil, err
 	}
 	return getAllKeysWithAllProjectSupport(eventsCountCacheKey)
 }
 
-func getAllProjectEventPropertyCountKeys() ([]*cacheRedis.Key, []string, error) {
-	propertiesCountCacheKey, err := M.GetPropertiesByEventCategoryCountCacheKey(0, "*")
+func getAllProjectEventPropertyCountKeys(dateKey string) ([]*cacheRedis.Key, []string, error) {
+	propertiesCountCacheKey, err := M.GetPropertiesByEventCategoryCountCacheKey(0, dateKey)
 	if err != nil {
 		return nil, nil, err
 	}
 	return getAllKeysWithAllProjectSupport(propertiesCountCacheKey)
 }
 
-func getAllProjectEventPropertyValueCountKeys() ([]*cacheRedis.Key, []string, error) {
-	valuesCountCacheKey, err := M.GetValuesByEventPropertyCountCacheKey(0, "*")
+func getAllProjectEventPropertyValueCountKeys(dateKey string) ([]*cacheRedis.Key, []string, error) {
+	valuesCountCacheKey, err := M.GetValuesByEventPropertyCountCacheKey(0, dateKey)
 	if err != nil {
 		return nil, nil, err
 	}
 	return getAllKeysWithAllProjectSupport(valuesCountCacheKey)
 }
 
-func getAllProjectUserPropertyCountKeys() ([]*cacheRedis.Key, []string, error) {
-	userpropertiesCountCacheKey, err := M.GetUserPropertiesCategoryByProjectCountCacheKey(0, "*")
+func getAllProjectUserPropertyCountKeys(dateKey string) ([]*cacheRedis.Key, []string, error) {
+	userpropertiesCountCacheKey, err := M.GetUserPropertiesCategoryByProjectCountCacheKey(0, dateKey)
 	if err != nil {
 		return nil, nil, err
 	}
 	return getAllKeysWithAllProjectSupport(userpropertiesCountCacheKey)
 }
 
-func getAllProjectUserPropertyValueCountKeys() ([]*cacheRedis.Key, []string, error) {
-	uservaluesCountCacheKey, err := M.GetValuesByUserPropertyCountCacheKey(0, "*")
+func getAllProjectUserPropertyValueCountKeys(dateKey string) ([]*cacheRedis.Key, []string, error) {
+	uservaluesCountCacheKey, err := M.GetValuesByUserPropertyCountCacheKey(0, dateKey)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -446,5 +530,6 @@ func delLeastOccuringKeys(key *cacheRedis.Key, limit int) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
+	log.WithField("Count", len(cacheKeysToBeDeleted)).Info("DeletedKeys")
 	return int64(len(cacheKeysToBeDeleted)), nil
 }

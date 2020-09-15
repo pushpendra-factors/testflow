@@ -416,6 +416,9 @@ func getPropertyValuesByEventPropertyFromCache(projectID uint64, eventName strin
 		}
 		var cacheValue U.CachePropertyValueWithTimestamp
 		err = json.Unmarshal([]byte(values), &cacheValue)
+		if err != nil {
+			return U.CachePropertyValueWithTimestamp{}, err
+		}
 		return cacheValue, nil
 	}
 
@@ -447,7 +450,7 @@ func getPropertyValuesByEventPropertyFromCache(projectID uint64, eventName strin
 	if err != nil {
 		return U.CachePropertyValueWithTimestamp{}, err
 	}
-	return CachePropertyValueObject(eventPropertyValuesKeys, values), nil
+	return GetCachePropertyValueObject(eventPropertyValuesKeys, values), nil
 }
 
 //GetPropertiesByEvent This method iterates for last n days to get all the top 'limit' properties for the given event
@@ -521,6 +524,9 @@ func getPropertiesByEventFromCache(projectID uint64, eventName string, dateKey s
 		}
 		var cacheValue U.CachePropertyWithTimestamp
 		err = json.Unmarshal([]byte(eventProperties), &cacheValue)
+		if err != nil {
+			return U.CachePropertyValueWithTimestamp{}, err
+		}
 		return cacheValue, nil
 	}
 
@@ -551,7 +557,7 @@ func getPropertiesByEventFromCache(projectID uint64, eventName string, dateKey s
 	if err != nil {
 		return U.CachePropertyWithTimestamp{}, err
 	}
-	return CachePropertyObject(eventPropertyKeys, properties), nil
+	return GetCachePropertyObject(eventPropertyKeys, properties), nil
 }
 
 func extractCategoryProperty(categoryProperty string) (string, string, string) {
@@ -638,6 +644,9 @@ func getEventNamesOrderedByOccurenceAndRecencyFromCache(projectID uint64, dateKe
 		}
 		var cacheEventNames CacheEventNamesWithTimestamp
 		err = json.Unmarshal([]byte(eventNames), &cacheEventNames)
+		if err != nil {
+			return U.CachePropertyValueWithTimestamp{}, err
+		}
 		return cacheEventNames, nil
 	}
 
@@ -668,10 +677,10 @@ func getEventNamesOrderedByOccurenceAndRecencyFromCache(projectID uint64, dateKe
 	if err != nil {
 		return CacheEventNamesWithTimestamp{}, err
 	}
-	return CacheEventObject(eventNameKeys, events), nil
+	return GetCacheEventObject(eventNameKeys, events), nil
 }
 
-func CacheEventObject(events []*cacheRedis.Key, eventCounts []string) CacheEventNamesWithTimestamp {
+func GetCacheEventObject(events []*cacheRedis.Key, eventCounts []string) CacheEventNamesWithTimestamp {
 	eventNames := make(map[string]U.CountTimestampTuple)
 	for index, eventCount := range eventCounts {
 		key, value := ExtractKeyDateCountFromCacheKey(eventCount, events[index].Suffix)
@@ -682,7 +691,7 @@ func CacheEventObject(events []*cacheRedis.Key, eventCounts []string) CacheEvent
 	return cacheEventNames
 }
 
-func CachePropertyValueObject(values []*cacheRedis.Key, valueCounts []string) U.CachePropertyValueWithTimestamp {
+func GetCachePropertyValueObject(values []*cacheRedis.Key, valueCounts []string) U.CachePropertyValueWithTimestamp {
 	propertyValues := make(map[string]U.CountTimestampTuple)
 	for index, valuesCount := range valueCounts {
 		key, value := ExtractKeyDateCountFromCacheKey(valuesCount, values[index].Suffix)
@@ -693,7 +702,7 @@ func CachePropertyValueObject(values []*cacheRedis.Key, valueCounts []string) U.
 	return cachePropertyValues
 }
 
-func CachePropertyObject(properties []*cacheRedis.Key, propertyCounts []string) U.CachePropertyWithTimestamp {
+func GetCachePropertyObject(properties []*cacheRedis.Key, propertyCounts []string) U.CachePropertyWithTimestamp {
 	var dateKeyInTime time.Time
 	eventProperties := make(map[string]U.PropertyWithTimestamp)
 	propertyCategory := make(map[string]map[string]int64)
