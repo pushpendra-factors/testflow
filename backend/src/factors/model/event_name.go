@@ -62,7 +62,7 @@ type FilterInfo struct {
 }
 
 type CacheEventNamesWithTimestamp struct {
-	EventNames map[string]U.CountTimestampTuple
+	EventNames map[string]U.CountTimestampTuple `json:"en"`
 }
 
 const TYPE_USER_CREATED_EVENT_NAME = "UC"
@@ -295,6 +295,8 @@ func GetOrderedEventNamesFromDb(
 	}
 	return eventNames, nil
 }
+
+// Today's keys
 func GetPropertiesByEventCategoryCacheKey(projectId uint64, event_name string, property string, category string, date string) (*cacheRedis.Key, error) {
 	prefix := "EN:PC"
 	return cacheRedis.NewKey(projectId, fmt.Sprintf("%s:%s", prefix, event_name), fmt.Sprintf("%s:%s:%s", date, category, property))
@@ -309,18 +311,34 @@ func GetValuesByEventPropertyCacheKey(projectId uint64, event_name string, prope
 	return cacheRedis.NewKey(projectId, fmt.Sprintf("%s:%s:%s", prefix, event_name, property_name), fmt.Sprintf("%s:%s", date, value))
 }
 
+// Rollup keys
+func GetPropertiesByEventCategoryRollUpCacheKey(projectId uint64, event_name string, date string) (*cacheRedis.Key, error) {
+	prefix := "RollUp:EN:PC"
+	return cacheRedis.NewKey(projectId, fmt.Sprintf("%s:%s", prefix, event_name), date)
+}
+func GetEventNamesOrderByOccurrenceAndRecencyRollUpCacheKey(projectId uint64, date string) (*cacheRedis.Key, error) {
+	prefix := "RollUp:EN"
+	return cacheRedis.NewKey(projectId, prefix, date)
+}
+
+func GetValuesByEventPropertyRollUpCacheKey(projectId uint64, event_name string, property_name string, date string) (*cacheRedis.Key, error) {
+	prefix := "RollUp:EN:PV"
+	return cacheRedis.NewKey(projectId, fmt.Sprintf("%s:%s:%s", prefix, event_name, property_name), date)
+}
+
+// Today's keys count per project used for clean up
 func GetPropertiesByEventCategoryCountCacheKey(projectId uint64, dateKey string) (*cacheRedis.Key, error) {
 	prefix := "C:EN:PC"
-	return cacheRedis.NewKey(projectId, prefix, dateKey)
+	return cacheRedis.NewKeyWithAllProjectsSupport(projectId, prefix, dateKey)
 }
 func GetEventNamesOrderByOccurrenceAndRecencyCountCacheKey(projectId uint64, dateKey string) (*cacheRedis.Key, error) {
 	prefix := "C:EN"
-	return cacheRedis.NewKey(projectId, prefix, dateKey)
+	return cacheRedis.NewKeyWithAllProjectsSupport(projectId, prefix, dateKey)
 }
 
 func GetValuesByEventPropertyCountCacheKey(projectId uint64, dateKey string) (*cacheRedis.Key, error) {
 	prefix := "C:EN:PV"
-	return cacheRedis.NewKey(projectId, prefix, dateKey)
+	return cacheRedis.NewKeyWithAllProjectsSupport(projectId, prefix, dateKey)
 
 }
 
@@ -367,6 +385,11 @@ func GetPropertyValuesByEventProperty(projectID uint64, eventName string, proper
 
 func getPropertyValuesByEventPropertyFromCache(projectID uint64, eventName string, propertyName string, dateKey string) (U.CachePropertyValueWithTimestamp, error) {
 
+	currentDay := false
+	currentDate := U.GetDateOnlyFromTimestamp(U.TimeNowUnix())
+	if currentDate == dateKey {
+		currentDay = true
+	}
 	logCtx := log.WithFields(log.Fields{
 		"project_id": projectID,
 	})
@@ -382,6 +405,20 @@ func getPropertyValuesByEventPropertyFromCache(projectID uint64, eventName strin
 		return U.CachePropertyValueWithTimestamp{}, errors.New("invalid property_name on GetPropertyValuesByEventPropertyFromCache")
 	}
 
+	if currentDay == false {
+		eventPropertyValuesKey, err := GetValuesByEventPropertyRollUpCacheKey(projectID, eventName, propertyName, dateKey)
+		if err != nil {
+			return U.CachePropertyValueWithTimestamp{}, err
+		}
+		values, _, err := cacheRedis.GetIfExistsPersistent(eventPropertyValuesKey)
+		if values == "" {
+			return U.CachePropertyValueWithTimestamp{}, nil
+		}
+		var cacheValue U.CachePropertyValueWithTimestamp
+		err = json.Unmarshal([]byte(values), &cacheValue)
+		return cacheValue, nil
+	}
+
 	eventPropertyValuesKey, err := GetValuesByEventPropertyCacheKey(projectID, eventName, propertyName, "*", dateKey)
 	if err != nil {
 		return U.CachePropertyValueWithTimestamp{}, err
@@ -391,6 +428,7 @@ func getPropertyValuesByEventPropertyFromCache(projectID uint64, eventName strin
 	if err != nil {
 		return U.CachePropertyValueWithTimestamp{}, err
 	}
+
 	begin := U.TimeNow()
 	eventPropertyValuesKeys, err := cacheRedis.ScanPersistent(eventPropertyValuesKeyString, 1000, 2500)
 	end := U.TimeNow()
@@ -463,6 +501,11 @@ func GetPropertiesByEvent(projectID uint64, eventName string, limit int, lastNDa
 
 func getPropertiesByEventFromCache(projectID uint64, eventName string, dateKey string) (U.CachePropertyWithTimestamp, error) {
 
+	currentDay := false
+	currentDate := U.GetDateOnlyFromTimestamp(U.TimeNowUnix())
+	if currentDate == dateKey {
+		currentDay = true
+	}
 	logCtx := log.WithFields(log.Fields{
 		"project_id": projectID,
 	})
@@ -473,6 +516,20 @@ func getPropertiesByEventFromCache(projectID uint64, eventName string, dateKey s
 
 	if eventName == "" {
 		return U.CachePropertyWithTimestamp{}, errors.New("invalid event_name on GetPropertiesByEventFromCache")
+	}
+
+	if currentDay == false {
+		eventPropertiesKey, err := GetPropertiesByEventCategoryRollUpCacheKey(projectID, eventName, dateKey)
+		if err != nil {
+			return U.CachePropertyWithTimestamp{}, err
+		}
+		eventProperties, _, err := cacheRedis.GetIfExistsPersistent(eventPropertiesKey)
+		if eventProperties == "" {
+			return U.CachePropertyWithTimestamp{}, nil
+		}
+		var cacheValue U.CachePropertyWithTimestamp
+		err = json.Unmarshal([]byte(eventProperties), &cacheValue)
+		return cacheValue, nil
 	}
 
 	eventPropertiesKey, err := GetPropertiesByEventCategoryCacheKey(projectID, eventName, "*", "*", dateKey)
@@ -589,12 +646,32 @@ func GetEventNamesOrderedByOccurenceAndRecency(projectID uint64, limit int, last
 }
 
 func getEventNamesOrderedByOccurenceAndRecencyFromCache(projectID uint64, dateKey string) (CacheEventNamesWithTimestamp, error) {
+	currentDay := false
+	currentDate := U.GetDateOnlyFromTimestamp(U.TimeNowUnix())
+	if currentDate == dateKey {
+		currentDay = true
+	}
 	logCtx := log.WithFields(log.Fields{
 		"project_id": projectID,
 	})
 	if projectID == 0 {
 		return CacheEventNamesWithTimestamp{}, errors.New("invalid project on get event names ordered by occurence and recency from cache")
 	}
+
+	if currentDay == false {
+		eventNamesKey, err := GetEventNamesOrderByOccurrenceAndRecencyRollUpCacheKey(projectID, dateKey)
+		if err != nil {
+			return CacheEventNamesWithTimestamp{}, err
+		}
+		eventNames, _, err := cacheRedis.GetIfExistsPersistent(eventNamesKey)
+		if eventNames == "" {
+			return CacheEventNamesWithTimestamp{}, nil
+		}
+		var cacheEventNames CacheEventNamesWithTimestamp
+		err = json.Unmarshal([]byte(eventNames), &cacheEventNames)
+		return cacheEventNames, nil
+	}
+
 	eventNamesKey, err := GetEventNamesOrderByOccurrenceAndRecencyCacheKey(projectID, "*", dateKey)
 
 	if err != nil {

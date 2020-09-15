@@ -1351,8 +1351,7 @@ type CountTimestampTuple struct {
 }
 
 type CachePropertyWithTimestamp struct {
-	Property              map[string]PropertyWithTimestamp `json:"pr"`
-	CacheUpdatedTimestamp int64                            `json:"cut"`
+	Property map[string]PropertyWithTimestamp `json:"pr"`
 }
 
 type PropertyWithTimestamp struct {
@@ -1362,8 +1361,7 @@ type PropertyWithTimestamp struct {
 }
 
 type CachePropertyValueWithTimestamp struct {
-	PropertyValue         map[string]CountTimestampTuple `json:"pv"`
-	CacheUpdatedTimestamp int64                          `json:"cut"`
+	PropertyValue map[string]CountTimestampTuple `json:"pv"`
 }
 
 type NameCountTimestampCategory struct {
@@ -1474,22 +1472,20 @@ type PropertyValue struct {
 	ValueType string `json:"value_type"`
 }
 
-func GetCategoryType(PropertyTypeMap map[string]int64) string {
-	if len(PropertyTypeMap) == 0 {
+func GetCategoryType(values []PropertyValue) string {
+	if len(values) == 0 {
 		return ""
 	}
-	totalValues := int64(0)
-	valueTypeMap := make(map[string]int64)
-	for valueType, count := range PropertyTypeMap {
-		if valueType == "string" {
-			valueTypeMap[PropertyTypeCategorical] += count
+	valueType := make(map[string]int64)
+	for _, value := range values {
+		if value.ValueType == "string" {
+			valueType[PropertyTypeCategorical]++
 		}
-		if valueType == "number" {
-			valueTypeMap[PropertyTypeNumerical] += count
+		if value.ValueType == "number" {
+			valueType[PropertyTypeNumerical]++
 		}
-		totalValues += count
 	}
-	return DeriveCategory(valueTypeMap, totalValues)
+	return DeriveCategory(valueType, int64(len(values)))
 }
 
 func DeriveCategory(categorySplit map[string]int64, totalCount int64) string {

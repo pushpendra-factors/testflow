@@ -54,11 +54,11 @@ func main() {
 	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
 	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
 	isRealTimeEventUserCachingEnabled := flag.Bool("enable_real_time_event_user_caching",
-		false, "If the real time caching is enabled")
+		true, "If the real time caching is enabled")
 	realTimeEventUserCachingProjectIds := flag.String("real_time_event_user_caching_project_ids", "1",
 		"If the real time caching is enabled and the whitelisted projectids")
 	blockedSDKRequestProjectTokens := flag.String("blocked_sdk_request_project_tokens",
-		"dummy", "List of tokens (public and private) to block SDK requests.")
+		"", "List of tokens (public and private) to block SDK requests.")
 	flag.Parse()
 
 	config := &C.Configuration{

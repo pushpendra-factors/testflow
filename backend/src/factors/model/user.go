@@ -1,6 +1,7 @@
 package model
 
 import (
+	"encoding/json"
 	"errors"
 	cacheRedis "factors/cache/redis"
 	C "factors/config"
@@ -511,6 +512,7 @@ func CreateOrGetAMPUser(projectId uint64, ampUserId string, timestamp int64) (*U
 	return user, http.StatusCreated
 }
 
+// Today's cache keys
 func GetUsersCachedCacheKey(projectId uint64, dateKey string) (*cacheRedis.Key, error) {
 	prefix := "US:LIST"
 	return cacheRedis.NewKey(projectId, prefix, dateKey)
@@ -518,23 +520,37 @@ func GetUsersCachedCacheKey(projectId uint64, dateKey string) (*cacheRedis.Key, 
 
 func GetUserPropertiesCategoryByProjectCacheKey(projectId uint64, property string, category string, dateKey string) (*cacheRedis.Key, error) {
 	prefix := "US:PC"
-	return cacheRedis.NewKey(projectId, prefix, fmt.Sprintf("%s:%s:%s", dateKey, category, property))
+	return cacheRedis.NewKeyWithAllProjectsSupport(projectId, prefix, fmt.Sprintf("%s:%s:%s", dateKey, category, property))
 
 }
 
 func GetValuesByUserPropertyCacheKey(projectId uint64, property_name string, value string, dateKey string) (*cacheRedis.Key, error) {
 	prefix := "US:PV"
-	return cacheRedis.NewKey(projectId, fmt.Sprintf("%s:%s", prefix, property_name), fmt.Sprintf("%s:%s", dateKey, value))
+	return cacheRedis.NewKeyWithAllProjectsSupport(projectId, fmt.Sprintf("%s:%s", prefix, property_name), fmt.Sprintf("%s:%s", dateKey, value))
 }
 
+// Rollup cache keys
+
+func GetUserPropertiesCategoryByProjectRollUpCacheKey(projectId uint64, dateKey string) (*cacheRedis.Key, error) {
+	prefix := "RollUp:US:PC"
+	return cacheRedis.NewKeyWithAllProjectsSupport(projectId, prefix, dateKey)
+
+}
+
+func GetValuesByUserPropertyRollUpCacheKey(projectId uint64, property_name string, dateKey string) (*cacheRedis.Key, error) {
+	prefix := "RollUp:US:PV"
+	return cacheRedis.NewKeyWithAllProjectsSupport(projectId, fmt.Sprintf("%s:%s", prefix, property_name), dateKey)
+}
+
+// Today's cache keys count
 func GetUserPropertiesCategoryByProjectCountCacheKey(projectId uint64, dateKey string) (*cacheRedis.Key, error) {
 	prefix := "C:US:PC"
-	return cacheRedis.NewKey(projectId, prefix, dateKey)
+	return cacheRedis.NewKeyWithAllProjectsSupport(projectId, prefix, dateKey)
 }
 
 func GetValuesByUserPropertyCountCacheKey(projectId uint64, dateKey string) (*cacheRedis.Key, error) {
 	prefix := "C:US:PV"
-	return cacheRedis.NewKey(projectId, prefix, dateKey)
+	return cacheRedis.NewKeyWithAllProjectsSupport(projectId, prefix, dateKey)
 }
 
 //GetRecentUserPropertyKeysWithLimits This method gets all the recent 'limit' property keys from DB for a given project
@@ -572,7 +588,7 @@ func GetRecentUserPropertyKeysWithLimits(projectID uint64, usersLimit int, prope
 }
 
 //GetRecentUserPropertyValuesWithLimits This method gets all the recent 'limit' property values from DB for a given project/property
-func GetRecentUserPropertyValuesWithLimits(projectID uint64, propertyKey string, usersLimit, valuesLimit int) ([]U.PropertyValue, error) {
+func GetRecentUserPropertyValuesWithLimits(projectID uint64, propertyKey string, usersLimit, valuesLimit int) ([]U.PropertyValue, string, error) {
 
 	// limit on values returned.
 	values := make([]U.PropertyValue, 0, 0)
@@ -593,7 +609,7 @@ func GetRecentUserPropertyValuesWithLimits(projectID uint64, propertyKey string,
 	rows, err := db.Raw(queryStmnt, queryParams...).Rows()
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get property values.")
-		return nil, err
+		return nil, "", err
 	}
 	defer rows.Close()
 
@@ -601,7 +617,7 @@ func GetRecentUserPropertyValuesWithLimits(projectID uint64, propertyKey string,
 		var value U.PropertyValue
 		if err := db.ScanRows(rows, &value); err != nil {
 			logCtx.WithError(err).Error("Failed scanning rows on GetRecentUserPropertyValuesWithLimits")
-			return nil, err
+			return nil, "", err
 		}
 		value.Value = U.TrimQuotes(value.Value)
 		values = append(values, value)
@@ -610,10 +626,10 @@ func GetRecentUserPropertyValuesWithLimits(projectID uint64, propertyKey string,
 	err = rows.Err()
 	if err != nil {
 		logCtx.WithError(err).Error("Failed scanning rows on get property values.")
-		return nil, err
+		return nil, "", err
 	}
 
-	return values, nil
+	return values, U.GetCategoryType(values), nil
 }
 
 //GetUserPropertiesByProject This method iterates over n days and gets user properties from cache for a given project
@@ -655,12 +671,34 @@ func GetUserPropertiesByProject(projectID uint64, limit int, lastNDays int) (map
 }
 
 func getUserPropertiesByProjectFromCache(projectID uint64, dateKey string) (U.CachePropertyWithTimestamp, error) {
+	currentDay := false
+	currentDate := U.GetDateOnlyFromTimestamp(U.TimeNowUnix())
+	if currentDate == dateKey {
+		currentDay = true
+	}
 	logCtx := log.WithFields(log.Fields{
 		"project_id": projectID,
 	})
 	dateKeyInTime, _ := time.Parse(U.DATETIME_FORMAT_YYYYMMDD, dateKey)
 	if projectID == 0 {
 		return U.CachePropertyWithTimestamp{}, errors.New("invalid project on GetUserPropertiesByProjectFromCache")
+	}
+
+	if currentDay == false {
+		PropertiesKey, err := GetUserPropertiesCategoryByProjectRollUpCacheKey(projectID, dateKey)
+		if err != nil {
+			return U.CachePropertyWithTimestamp{}, err
+		}
+		userProperties, _, err := cacheRedis.GetIfExistsPersistent(PropertiesKey)
+		if err != nil {
+			return U.CachePropertyWithTimestamp{}, err
+		}
+		if userProperties == "" {
+			return U.CachePropertyWithTimestamp{}, nil
+		}
+		var cacheValue U.CachePropertyWithTimestamp
+		err = json.Unmarshal([]byte(userProperties), &cacheValue)
+		return cacheValue, nil
 	}
 	PropertiesKey, err := GetUserPropertiesCategoryByProjectCacheKey(projectID, "*", "*", dateKey)
 	if err != nil {
@@ -755,6 +793,11 @@ func GetPropertyValuesByUserProperty(projectID uint64, propertyName string, limi
 
 func getPropertyValuesByUserPropertyFromCache(projectID uint64, propertyName string, dateKey string) (U.CachePropertyValueWithTimestamp, error) {
 
+	currentDay := false
+	currentDate := U.GetDateOnlyFromTimestamp(U.TimeNowUnix())
+	if currentDate == dateKey {
+		currentDay = true
+	}
 	logCtx := log.WithFields(log.Fields{
 		"project_id": projectID,
 	})
@@ -766,6 +809,22 @@ func getPropertyValuesByUserPropertyFromCache(projectID uint64, propertyName str
 		return U.CachePropertyValueWithTimestamp{}, errors.New("invalid property_name on GetPropertyValuesByUserPropertyFromCache")
 	}
 
+	if currentDay == false {
+		eventPropertyValuesKey, err := GetValuesByUserPropertyRollUpCacheKey(projectID, propertyName, dateKey)
+		if err != nil {
+			return U.CachePropertyValueWithTimestamp{}, err
+		}
+		values, _, err := cacheRedis.GetIfExistsPersistent(eventPropertyValuesKey)
+		if err != nil {
+			return U.CachePropertyValueWithTimestamp{}, err
+		}
+		if values == "" {
+			return U.CachePropertyValueWithTimestamp{}, nil
+		}
+		var cacheValue U.CachePropertyValueWithTimestamp
+		err = json.Unmarshal([]byte(values), &cacheValue)
+		return cacheValue, nil
+	}
 	propertyValuesKey, err := GetValuesByUserPropertyCacheKey(projectID, propertyName, "*", dateKey)
 	if err != nil {
 		return U.CachePropertyValueWithTimestamp{}, err

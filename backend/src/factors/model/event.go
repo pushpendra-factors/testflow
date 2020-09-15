@@ -418,7 +418,7 @@ func GetRecentEventPropertyKeysWithLimits(projectID uint64, eventName string, st
 
 //GetRecentEventPropertyValuesWithLimits This method gets all the recent 'limit' property values from DB for a given project/event/property
 func GetRecentEventPropertyValuesWithLimits(projectID uint64, eventName string,
-	property string, valuesLimit int, rowsLimit int, starttime int64, endtime int64) ([]U.PropertyValue, error) {
+	property string, valuesLimit int, rowsLimit int, starttime int64, endtime int64) ([]U.PropertyValue, string, error) {
 	db := C.GetServices().Db
 	logCtx := log.WithFields(log.Fields{"projectId": projectID, "eventName": eventName, "property": property,
 		"valuesLimit": valuesLimit, "rowsLimit": rowsLimit, "starttime": starttime, "endtime": endtime})
@@ -433,7 +433,7 @@ func GetRecentEventPropertyValuesWithLimits(projectID uint64, eventName string,
 		starttime, endtime, property, rowsLimit, valuesLimit).Rows()
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get recent property values.")
-		return nil, err
+		return nil, "", err
 	}
 	defer rows.Close()
 
@@ -441,7 +441,7 @@ func GetRecentEventPropertyValuesWithLimits(projectID uint64, eventName string,
 		var value U.PropertyValue
 		if err := db.ScanRows(rows, &value); err != nil {
 			logCtx.WithError(err).Error("Failed scanning rows on GetRecentEventPropertyValuesWithLimits")
-			return nil, err
+			return nil, "", err
 		}
 		value.Value = U.TrimQuotes(value.Value)
 		values = append(values, value)
@@ -450,9 +450,9 @@ func GetRecentEventPropertyValuesWithLimits(projectID uint64, eventName string,
 	err = rows.Err()
 	if err != nil {
 		logCtx.WithError(err).Error("Failed scanning property value on type classifcation.")
-		return nil, err
+		return nil, "", err
 	}
-	return values, nil
+	return values, U.GetCategoryType(values), nil
 }
 
 func UpdateEventProperties(projectId uint64, id string,
