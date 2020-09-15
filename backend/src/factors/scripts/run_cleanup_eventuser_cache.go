@@ -119,6 +119,7 @@ func main() {
 					log.WithError(err).Error("Failed to marshall event names")
 					return
 				}
+				log.Info("RollUp:EN")
 				err = cacheRedis.SetPersistent(eventNamesKey, string(enEventCache), U.EVENT_USER_CACHE_EXPIRY_SECS)
 				if err != nil {
 					log.WithError(err).Error("Failed to set cache")
@@ -146,6 +147,7 @@ func main() {
 							log.WithError(err).Error("Failed to marshall - event properties")
 							return
 						}
+						log.Info("RollUp:EP")
 						err = cacheRedis.SetPersistent(eventPropertiesKey, string(enEventPropertiesCache), U.EVENT_USER_CACHE_EXPIRY_SECS)
 						if err != nil {
 							log.WithError(err).Error("Failed to set cache")
@@ -173,6 +175,7 @@ func main() {
 									log.WithError(err).Error("Failed to marshall - property values")
 									return
 								}
+								log.Info("RollUp:EV")
 								err = cacheRedis.SetPersistent(eventPropertyValuesKey, string(enEventPropertyValuesCache), U.EVENT_USER_CACHE_EXPIRY_SECS)
 								if err != nil {
 									log.WithError(err).Error("Failed to set cache")
@@ -226,6 +229,7 @@ func main() {
 				if err != nil {
 					log.WithError(err).Error("Failed to marshal property key - getuserpropertiesbyproject")
 				}
+				log.Info("RollUp:UP")
 				err = cacheRedis.SetPersistent(propertyCacheKey, string(enPropertiesCache), U.EVENT_USER_CACHE_EXPIRY_SECS)
 				if err != nil {
 					log.WithError(err).Error("Failed to set cache")
@@ -252,6 +256,7 @@ func main() {
 						if err != nil {
 							log.WithError(err).Error("Failed to marshal property value - getvaluesbyuserproperty")
 						}
+						log.Info("RollUp:UV")
 						err = cacheRedis.SetPersistent(PropertyValuesKey, string(enPropertyValuesCache), U.EVENT_USER_CACHE_EXPIRY_SECS)
 						if err != nil {
 							log.WithError(err).Error("Failed to set cache")

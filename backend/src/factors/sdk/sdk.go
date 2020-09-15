@@ -285,26 +285,6 @@ func isRealtimeSessionRequired(skipSession bool, projectId uint64, skipProjectId
 	return true
 }
 
-func SetPersistentBatchWithLoggingEventInCache(project_id uint64, values map[*cacheRedis.Key]string, expiryInSecs float64) error {
-	logCtx := log.WithField("project_id", project_id)
-	begin := U.TimeNow()
-	logCtx.WithField("length", len(values)).Info("Begin EBset")
-	err := cacheRedis.SetPersistentBatch(values, expiryInSecs)
-	end := U.TimeNow()
-	logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("End EBset")
-	return err
-}
-
-func GetIfExistsPersistentWithLoggingEventInCache(project_id uint64, key *cacheRedis.Key, tag string) (string, bool, error) {
-	logCtx := log.WithField("project_id", project_id)
-	begin := U.TimeNow()
-	logCtx.WithField("tag", tag).Info("Begin EG")
-	data, status, err := cacheRedis.GetIfExistsPersistent(key)
-	end := U.TimeNow()
-	logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("End EG")
-	return data, status, err
-}
-
 func BackFillEventDataInCacheFromDb(project_id uint64, currentTime time.Time, no_of_days int, eventsLimit, propertyLimit, valuesLimit int, rowsLimit int) {
 
 	// Preload EventNames-count-lastseen
@@ -505,7 +485,7 @@ func addEventDetailsToCache(project_id uint64, event_name string, event_properti
 	keysToIncr = append(keysToIncr, propertiesToIncr...)
 	keysToIncr = append(keysToIncr, valuesToIncr...)
 	begin := U.TimeNow()
-	counts, err := cacheRedis.IncrPersistentBatch(0, keysToIncr...)
+	counts, err := cacheRedis.IncrPersistentBatch(keysToIncr...)
 	end := U.TimeNow()
 	logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("EV:Incr")
 	if err != nil {

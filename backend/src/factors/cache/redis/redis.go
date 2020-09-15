@@ -315,13 +315,13 @@ func exists(key *Key, persistent bool) (bool, error) {
 	return count.(int64) == 1, nil
 }
 
-func IncrBatch(expiryInSecs float64, keys ...*Key) ([]int64, error) {
+func IncrBatch(keys ...*Key) ([]int64, error) {
 	return incrBatch(expiryInSecs, false, keys)
 }
-func IncrPersistentBatch(expiryInSecs float64, keys ...*Key) ([]int64, error) {
+func IncrPersistentBatch(keys ...*Key) ([]int64, error) {
 	return incrBatch(expiryInSecs, true, keys)
 }
-func incrBatch(expiryInSecs float64, persistent bool, keys []*Key) ([]int64, error) {
+func incrBatch(persistent bool, keys []*Key) ([]int64, error) {
 	if len(keys) == 0 {
 		return nil, ErrorInvalidValues
 	}
@@ -346,12 +346,6 @@ func incrBatch(expiryInSecs float64, persistent bool, keys []*Key) ([]int64, err
 		err = redisConn.Send("INCR", cKey)
 		if err != nil {
 			return nil, err
-		}
-		if expiryInSecs != 0 {
-			err = redisConn.Send("EXPIRE", cKey, int64(expiryInSecs))
-			if err != nil {
-				return nil, err
-			}
 		}
 	}
 	res, err := redis.Values(redisConn.Do("EXEC"))
