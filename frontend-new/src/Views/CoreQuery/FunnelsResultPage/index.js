@@ -1,15 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import GroupedChart from './GroupedChart';
 import DataTable from './DataTable';
-import { generateGroupedChartsData, generateDummyData, generateGroups, generateUngroupedChartsData } from './utils';
+import { generateGroupedChartsData, generateDummyData, generateGroups, generateUngroupedChartsData, generateTableData, generateTableColumns } from './utils';
 import FiltersInfo from './FiltersInfo';
 import UngroupedChart from './UngroupedChart';
 import Header from '../../AppLayout/Header';
 import EventsInfo from './EventsInfo';
 import { Button } from 'antd';
 import { PoweroffOutlined } from '@ant-design/icons';
+import FunnelsResultTable from './FunnelsResultTable';
 
-function PageContent({ queries, setDrawerVisible }) {
+function FunnelsResultPage({ queries, setDrawerVisible }) {
 
     const [eventsData, setEventsData] = useState([]);
     const [groups, setGroups] = useState([]);
@@ -55,7 +56,7 @@ function PageContent({ queries, setDrawerVisible }) {
                     )}
 
                 <div className="mt-8">
-                    <DataTable
+                    <FunnelsResultTable 
                         eventsData={eventsData}
                         groups={groups}
                         setGroups={setGroups}
@@ -66,4 +67,4 @@ function PageContent({ queries, setDrawerVisible }) {
     )
 }
 
-export default PageContent;
+export default FunnelsResultPage;

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Header from './header';
-import ResultsPage from './ResultsPage';
+import FunnelsResultPage from './FunnelsResultPage';
 import QueryComposer from '../../components/QueryComposer';
 import CoreQueryHome from '../CoreQueryHome';
 import { Drawer, Button, Collapse, Select, Popover } from 'antd';
@@ -36,7 +36,6 @@ function CoreQuery() {
     }
 
     const closeDrawer = () => {
-        console.log("clickedd!!")
         setDrawerVisible(false);
     }
 
@@ -75,7 +74,7 @@ function CoreQuery() {
             </Drawer>
 
             {showResult ? (
-                <ResultsPage setDrawerVisible={setDrawerVisible} queries={queries.map(elem => elem)} />
+                <FunnelsResultPage setDrawerVisible={setDrawerVisible} queries={queries.map(elem => elem.label)} />
                 // <EventsAnalytics queries={queries.map(elem => elem)} />
             ) : (
                     <CoreQueryHome setDrawerVisible={setDrawerVisible} />

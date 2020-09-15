@@ -1,5 +1,5 @@
 import React from 'react';
-import tableStyles from './DataTable/index.module.scss'
+import tableStyles from './FunnelsResultTable/index.module.scss';
 
 const windowSize = {
     w: window.outerWidth,

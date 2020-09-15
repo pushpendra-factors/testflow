@@ -2,7 +2,7 @@ import React from 'react';
 import Header from '../AppLayout/Header';
 import { Button } from 'antd';
 import { PoweroffOutlined } from '@ant-design/icons';
-import EventsInfo from '../CoreQuery/ResultsPage/EventsInfo';
+import EventsInfo from '../CoreQuery/FunnelsResultPage/EventsInfo';
 import ContentTabs from '../../components/ContentTabs';
 import TotalEvents from './TotalEvents';
 
