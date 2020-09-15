@@ -525,7 +525,7 @@ func getPropertiesByEventFromCache(projectID uint64, eventName string, dateKey s
 		var cacheValue U.CachePropertyWithTimestamp
 		err = json.Unmarshal([]byte(eventProperties), &cacheValue)
 		if err != nil {
-			return U.CachePropertyValueWithTimestamp{}, err
+			return U.CachePropertyWithTimestamp{}, err
 		}
 		return cacheValue, nil
 	}
@@ -645,7 +645,7 @@ func getEventNamesOrderedByOccurenceAndRecencyFromCache(projectID uint64, dateKe
 		var cacheEventNames CacheEventNamesWithTimestamp
 		err = json.Unmarshal([]byte(eventNames), &cacheEventNames)
 		if err != nil {
-			return U.CachePropertyValueWithTimestamp{}, err
+			return CacheEventNamesWithTimestamp{}, err
 		}
 		return cacheEventNames, nil
 	}

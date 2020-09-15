@@ -697,7 +697,7 @@ func getUserPropertiesByProjectFromCache(projectID uint64, dateKey string) (U.Ca
 		var cacheValue U.CachePropertyWithTimestamp
 		err = json.Unmarshal([]byte(userProperties), &cacheValue)
 		if err != nil {
-			return U.CachePropertyValueWithTimestamp{}, err
+			return U.CachePropertyWithTimestamp{}, err
 		}
 		return cacheValue, nil
 	}

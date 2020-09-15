@@ -257,7 +257,7 @@ func UpdateCacheForUserProperties(userId string, projectid uint64, updatedProper
 	keysToIncr = append(keysToIncr, propertiesToIncr...)
 	keysToIncr = append(keysToIncr, valuesToIncr...)
 	begin = U.TimeNow()
-	counts, err := cacheRedis.IncrPersistentBatch(0, keysToIncr...)
+	counts, err := cacheRedis.IncrPersistentBatch(keysToIncr...)
 	end = U.TimeNow()
 	logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("US:Incr")
 	if err != nil {
