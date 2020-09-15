@@ -23,7 +23,7 @@ function UserSettingsModal (props){
   
   const handleClick = (e) => {
     setSelectedMenu(e.key);
-    console.log('click ', e.key);
+    // console.log('click ', e.key);
   };
 
   const handleOk = () => {
