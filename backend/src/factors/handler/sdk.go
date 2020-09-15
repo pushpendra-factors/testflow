@@ -95,13 +95,13 @@ func SDKBulkEventHandler(c *gin.Context) {
 		return
 	}
 
-	projectToken := U.GetScopeByKeyAsString(c, mid.SCOPE_PROJECT_TOKEN)
-
 	clientIP := c.ClientIP()
 	userAgent := c.Request.UserAgent()
 
 	response := make([]*SDK.TrackResponse, len(sdkTrackPayloads), len(sdkTrackPayloads))
 	hasError := false
+
+	projectToken := U.GetScopeByKeyAsString(c, mid.SCOPE_PROJECT_TOKEN)
 
 	for i, sdkTrackPayload := range sdkTrackPayloads {
 		sdkTrackPayload.ClientIP = clientIP
@@ -195,9 +195,10 @@ type sdkSettingsResponse struct {
 // curl -i -H "Content-Type: application/json" -H "Authorization: YOUR_TOKEN" -X GET http://localhost:8080/sdk/project/get_settings
 func SDKGetProjectSettingsHandler(c *gin.Context) {
 	projectToken := U.GetScopeByKeyAsString(c, mid.SCOPE_PROJECT_TOKEN)
+
 	projectSetting, errCode := M.GetProjectSettingByTokenWithCacheAndDefault(projectToken)
 	if errCode != http.StatusFound {
-		c.AbortWithStatusJSON(errCode, gin.H{"error": "Get project settings failed."})
+		c.AbortWithStatusJSON(errCode, &SDK.Response{Error: "Get project settings failed."})
 		return
 	}
 
@@ -237,7 +238,8 @@ func SDKUpdateEventPropertiesHandler(c *gin.Context) {
 	request.UserAgent = c.Request.UserAgent()
 
 	projectToken := U.GetScopeByKeyAsString(c, mid.SCOPE_PROJECT_TOKEN)
-	c.JSON(SDK.UpdateEventPropertiesWithQueue(projectToken, &request, C.GetSDKRequestQueueAllowedTokens()))
+	c.JSON(SDK.UpdateEventPropertiesWithQueue(projectToken, &request,
+		C.GetSDKRequestQueueAllowedTokens()))
 }
 
 /*
@@ -252,7 +254,8 @@ func SDKAMPTrackHandler(c *gin.Context) {
 	token := c.Query("token")
 	token = strings.TrimSpace(token)
 	if token == "" {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, &SDK.Response{Error: "Invalid token"})
+		c.AbortWithStatusJSON(http.StatusUnauthorized,
+			&SDK.Response{Error: "Track failed. Invalid token"})
 		return
 	}
 
@@ -260,18 +263,21 @@ func SDKAMPTrackHandler(c *gin.Context) {
 
 	settings, errCode := M.GetProjectSettingByTokenWithCacheAndDefault(token)
 	if errCode != http.StatusFound {
-		c.AbortWithStatusJSON(http.StatusBadRequest, &SDK.Response{Error: "Invalid request"})
+		c.AbortWithStatusJSON(http.StatusBadRequest,
+			&SDK.Response{Error: "Track failed. Invalid request."})
 		return
 	}
 	if !*settings.AutoTrack {
-		c.AbortWithStatusJSON(http.StatusBadRequest, &SDK.Response{Message: "Not enabled"})
+		c.AbortWithStatusJSON(http.StatusBadRequest,
+			&SDK.Response{Message: "Track failed. Not enabled."})
 		return
 	}
 
 	ampClientId := c.Query("client_id")
 	ampClientId = strings.TrimSpace(ampClientId)
 	if ampClientId == "" {
-		c.AbortWithStatusJSON(http.StatusBadRequest, &SDK.Response{Error: "Invalid client_id"})
+		c.AbortWithStatusJSON(http.StatusBadRequest,
+			&SDK.Response{Error: "Track failed. Invalid client_id."})
 		return
 	}
 
@@ -332,7 +338,8 @@ func SDKAMPUpdateEventPropertiesHandler(c *gin.Context) {
 	token := c.Query("token")
 	token = strings.TrimSpace(token)
 	if token == "" {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, &SDK.Response{Error: "Invalid token"})
+		c.AbortWithStatusJSON(http.StatusUnauthorized,
+			&SDK.Response{Error: "Update event properties failed. Invalid token"})
 		return
 	}
 
@@ -341,7 +348,8 @@ func SDKAMPUpdateEventPropertiesHandler(c *gin.Context) {
 	ampClientId := c.Query("client_id")
 	ampClientId = strings.TrimSpace(ampClientId)
 	if ampClientId == "" {
-		c.AbortWithStatusJSON(http.StatusBadRequest, &SDK.Response{Error: "Invalid client_id"})
+		c.AbortWithStatusJSON(http.StatusBadRequest,
+			&SDK.Response{Error: "Update event properties failed. Invalid client_id"})
 		return
 	}
 

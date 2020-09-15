@@ -31,6 +31,19 @@ type EventWithProperties struct {
 	PropertiesMap U.PropertiesMap `json:"properties_map"`
 }
 
+var nonMetaPages = []string{
+	"yourstory.com",
+	"yourstory.com/search",
+	"yourstory.com/videos",
+	"yourstory.com/companies/search",
+	"yourstory.com/herstory",
+	"yourstory.com/socialstory",
+	"yourstory.com/hindi",
+	"yourstory.com/tamil",
+	"yourstory.com/category/funding",
+	"yourstory.com/companies",
+}
+
 func doesPropertiesMapHaveKeys(propertiesMap U.PropertiesMap,
 	keys []string) (bool, bool, U.PropertiesMap) {
 
@@ -223,6 +236,10 @@ func getPropertiesForName(
 	return nil
 }
 
+func isNonMetaPageEventName(eventName string) bool {
+	return U.StringValueIn(eventName, nonMetaPages)
+}
+
 func addEventPropertiesByName(
 	projectID uint64,
 	propertiesByName *map[string]U.PropertiesMap,
@@ -260,6 +277,19 @@ func addEventPropertiesByName(
 		isPropertiesUpdated := false
 		for i := range MandatoryProperties {
 			key := MandatoryProperties[i]
+
+			if isNonMetaPageEventName(event.Name) {
+				// Removes the property if it exists already,
+				// for non-meta page.
+				if _, exists := event.PropertiesMap[key]; exists {
+					delete(event.PropertiesMap, key)
+					isPropertiesUpdated = true
+				}
+
+				// Doesn't allow adding property value,
+				// for non-meta page.
+				continue
+			}
 
 			valueByEventName, exists := (*propertiesFromEvent)[key]
 			if !exists {

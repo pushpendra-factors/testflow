@@ -35,6 +35,11 @@ func IntSegmentHandler(c *gin.Context) {
 	logCtx.WithFields(log.Fields{"event": event}).Debug("Segment webhook request")
 
 	token := U.GetScopeByKeyAsString(c, mid.SCOPE_PROJECT_PRIVATE_TOKEN)
+	if C.IsBlockedSDKRequestProjectToken(token) {
+		c.AbortWithStatusJSON(http.StatusOK,
+			IntSegment.EventResponse{Error: "Request failed. Blocked."})
+		return
+	}
 
 	status, response := IntSegment.ReceiveEventWithQueue(token, &event,
 		C.GetSegmentRequestQueueAllowedTokens())

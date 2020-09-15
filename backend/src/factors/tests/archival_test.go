@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	A "factors/archival"
+	M "factors/model"
 	U "factors/util"
 
 	"github.com/stretchr/testify/assert"
@@ -15,7 +15,7 @@ func TestSanitizeEventProperties(t *testing.T) {
 	for _, property := range U.SDK_ALLOWED_EVENT_PROPERTIES {
 		eventProperties[property] = U.RandomString(10)
 	}
-	eventProperties = A.SanitizeEventProperties(eventProperties)
+	eventProperties = M.SanitizeEventProperties(eventProperties)
 
 	// Blacklisted properties must have been removed.
 	for _, property := range U.DISABLED_CORE_QUERY_EVENT_PROPERTIES {
@@ -35,7 +35,7 @@ func TestSanitizeUserProperties(t *testing.T) {
 	for _, property := range U.SDK_ALLOWED_USER_PROPERTIES {
 		userProperties[property] = U.RandomString(10)
 	}
-	userProperties = A.SanitizeUserProperties(userProperties)
+	userProperties = M.SanitizeUserProperties(userProperties)
 
 	// Blacklisted properties must have been removed.
 	for _, property := range U.DISABLED_CORE_QUERY_USER_PROPERTIES {
@@ -58,23 +58,23 @@ func TestGetNextArchivalBatches(t *testing.T) {
 
 	// Should not return any batches for the same day.
 	startTime := U.TimeNowUnix()
-	batches, _ := A.GetNextArchivalBatches(project.ID, startTime, maxLookbackDays, time.Time{}, time.Time{})
+	batches, _ := M.GetNextArchivalBatches(project.ID, startTime, maxLookbackDays, time.Time{}, time.Time{})
 	assert.Empty(t, batches)
 
 	// Corner case of beginning of the day timestamp. Empty batches must be returned.
 	startTime = U.GetBeginningOfDayTimestampUTC(U.TimeNowUnix())
-	batches, _ = A.GetNextArchivalBatches(project.ID, startTime, maxLookbackDays, time.Time{}, time.Time{})
+	batches, _ = M.GetNextArchivalBatches(project.ID, startTime, maxLookbackDays, time.Time{}, time.Time{})
 	assert.Empty(t, batches)
 
 	// For a day before, only one entry.
 	startTime = U.GetBeginningOfDayTimestampUTC(U.TimeNowUnix()) - U.SECONDS_IN_A_DAY
-	batches, _ = A.GetNextArchivalBatches(project.ID, startTime, maxLookbackDays, time.Time{}, time.Time{})
+	batches, _ = M.GetNextArchivalBatches(project.ID, startTime, maxLookbackDays, time.Time{}, time.Time{})
 	assert.Equal(t, 1, len(batches))
 
 	// When startTime is older than maxLookbackDays.
 	startTime = U.GetBeginningOfDayTimestampUTC(U.TimeNowUnix()) - 10*U.SECONDS_IN_A_DAY
 	maxLookbackDays = 5
-	batches, _ = A.GetNextArchivalBatches(project.ID, startTime, maxLookbackDays, time.Time{}, time.Time{})
+	batches, _ = M.GetNextArchivalBatches(project.ID, startTime, maxLookbackDays, time.Time{}, time.Time{})
 	assert.Equal(t, maxLookbackDays, len(batches))
 	effectiveStartTime := U.GetBeginningOfDayTimestampUTC(U.TimeNowUnix()) - 5*U.SECONDS_IN_A_DAY
 

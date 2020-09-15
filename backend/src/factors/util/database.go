@@ -146,6 +146,16 @@ func DecodePostgresJsonbToStructType(sourceJsonb *postgres.Jsonb, destStruct int
 	return nil
 }
 
+// DecodeJSONStringToStructType Decodes a json string to object of given type.
+func DecodeJSONStringToStructType(jsonString string, destStruct interface{}) error {
+	if jsonString == "" {
+		return fmt.Errorf("Empty json string")
+	} else if err := json.Unmarshal([]byte(jsonString), destStruct); err != nil {
+		return err
+	}
+	return nil
+}
+
 func IsPostgresIntegrityViolationError(err error) bool {
 	// i.e pq: duplicate key value violates unique constraint \"col_unique_idx\"
 	return strings.Contains(err.Error(), "violates") && strings.Contains(err.Error(), "constraint")

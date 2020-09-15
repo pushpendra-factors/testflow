@@ -106,7 +106,37 @@ const PlusSVG = ({ size = 16, color = "#5949BC", extraClass }) => {
   )
 }
 
-const MouseeventSVG = ({ size = 16, color = "#5949BC", extraClass }) => {
+const MinusSVG = ({size = 16, color = "#5949BC", extraClass}) => {
+  return (
+    <svg width="17" height="16" viewBox="0 0 17 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <g opacity="0.5">
+      <path d="M13.2402 7.99995C13.2402 8.4295 12.892 8.77772 12.4625 8.77772L4.01801 8.77772C3.58846 8.77772 3.24023 8.4295 3.24023 7.99995C3.24023 7.57039 3.58846 7.22217 4.01801 7.22217L12.4625 7.22217C12.892 7.22217 13.2402 7.57039 13.2402 7.99995Z" fill="#0E2647"/>
+      </g>
+    </svg>
+
+  )
+}
+
+const UserSVG = ({size = 16, color = "#5949BC", extraClass}) => {
+  return (
+    <svg width="17" height="17" viewBox="0 0 17 17" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M8.15273 10.3268L8.08375 10.3268C7.08552 10.3268 6.15021 10.3598 5.34654 10.5311C2.6768 11.1002 4.8434 14.1102 7.57276 14.1545L8.41353 14.1682C11.2399 14.2142 13.6864 10.9278 10.9001 10.4514C10.0984 10.3143 9.16161 10.3268 8.15273 10.3268Z" fill="#5949BC" stroke="#5949BC" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="8.11823" cy="5.53687" r="1.63849" fill="#5949BC" stroke="#5949BC" stroke-width="2"/>
+    </svg>
+
+  )
+}
+
+const SearchSVG = ({size = 16, color = "#5949BC", extraClass}) => {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M9.85937 7.98257C9.46154 9.16421 8.34447 10.0147 7.02941 10.0147C6.92618 10.0147 6.82426 10.0095 6.72388 9.99926C5.21879 9.84641 4.04412 8.57492 4.04412 7.0294C4.04412 5.38067 5.38068 4.04411 7.02941 4.04411C7.7657 4.04411 8.43917 4.31035 8.95976 4.7521C9.60553 5.30008 10.0147 6.11683 10.0147 7.0294C10.0147 7.36312 9.96004 7.68357 9.85937 7.98257ZM11.5808 8.49208C11.4399 8.93083 11.2374 9.34183 10.9835 9.71491L13.4873 12.2186C13.8376 12.5689 13.8376 13.1369 13.4873 13.4873C13.1369 13.8376 12.569 13.8376 12.2186 13.4873L9.71488 10.9835C8.94944 11.5043 8.02467 11.8088 7.02941 11.8088C4.71947 11.8088 2.79278 10.1703 2.3471 7.99235C2.28341 7.6811 2.25 7.35902 2.25 7.0294C2.25 4.55463 4.13073 2.51944 6.54104 2.27466C6.70169 2.25835 6.86461 2.25 7.02941 2.25C8.14077 2.25 9.16416 2.62963 9.97599 3.26612C11.0914 4.14062 11.8088 5.5013 11.8088 7.0294C11.8088 7.53917 11.7289 8.03077 11.5808 8.49208Z" fill="black"/>
+    </svg>
+
+  )
+}
+
+const MouseeventSVG = ({size = 16, color = "#5949BC", extraClass}) => {
   return (
     <svg width={size} height={size} className={extraClass} viewBox="0 0 16 17" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M12.2744 3.43373L4.62705 7.80423C4.44899 7.90599 4.5212 8.17787 4.72629 8.17787H9.09468C9.18546 8.17787 9.26485 8.23901 9.28805 8.32677L10.2991 12.1524C10.3526 12.3551 10.6424 12.3493 10.6877 12.1445L12.5689 3.65062C12.6064 3.48116 12.425 3.34761 12.2744 3.43373Z" fill={color} stroke="#5949BC" strokeLinejoin="round" />
@@ -172,31 +202,20 @@ const VirtualSVG = ({ size = 18, color, extraClass }) => {
 }
 
 const Events_cqSVG = ({ size = 16, color, extraClass }) => {
-  return (
-    <svg width={size} height={size} className={extraClass} viewBox="0 0 66 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M62.1999 34.7751C63.7118 34.7751 65.0348 33.6411 65.0348 32.1291C65.0348 30.6172 63.7118 29.2942 62.1999 29.2942H52.561C51.049 29.2942 49.7261 30.6172 49.7261 32.1291C49.7261 33.4521 51.049 34.7751 52.561 34.7751H62.1999Z" fill="url(#paint0_linear)" />
-      <path fillRule="evenodd" clipRule="evenodd" d="M37.0635 24.3803L7.95797 33.6411C5.69001 34.3971 5.31201 37.6101 7.20198 38.7441L15.7068 44.036L2.09907 57.8327C0.587094 59.3447 0.587094 61.6127 2.09907 62.9356C3.42205 64.2586 5.69001 64.4476 7.20198 62.9356L20.8097 49.1389L26.1017 57.6437C27.4246 59.7227 30.4486 59.3447 31.2046 57.0767L40.6544 27.9712C41.2214 25.7033 39.1424 23.6243 37.0635 24.3803Z" fill="url(#paint1_linear)" />
-      <path d="M55.5853 13.2295C56.7193 12.0956 56.7193 10.3946 55.5853 9.44961C54.4513 8.31563 52.7504 8.31563 51.8054 9.44961L44.8125 16.2535C43.8675 17.3875 43.8675 19.0884 44.8125 20.0334C45.9465 21.1674 47.6474 21.1674 48.5924 20.0334L55.5853 13.2295Z" fill="url(#paint2_linear)" />
-      <path d="M35.5518 2.64595C35.5518 1.13398 34.4178 0 32.9058 0C31.3939 0 30.2599 1.13398 30.2599 2.64595V12.4738C30.2599 13.9858 31.3939 15.1197 32.9058 15.1197C34.4178 15.1197 35.5518 13.9858 35.5518 12.4738V2.64595Z" fill="url(#paint3_linear)" />
-      <defs>
-        <linearGradient id="paint0_linear" x1="11.4019" y1="54.585" x2="47.9665" y2="13.933" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#7A6DC9" />
-          <stop offset="1" stopColor="#5DB9C8" />
-        </linearGradient>
-        <linearGradient id="paint1_linear" x1="11.4019" y1="54.585" x2="47.9665" y2="13.933" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#7A6DC9" />
-          <stop offset="1" stopColor="#5DB9C8" />
-        </linearGradient>
-        <linearGradient id="paint2_linear" x1="11.4019" y1="54.585" x2="47.9665" y2="13.933" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#7A6DC9" />
-          <stop offset="1" stopColor="#5DB9C8" />
-        </linearGradient>
-        <linearGradient id="paint3_linear" x1="11.4019" y1="54.585" x2="47.9665" y2="13.933" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#7A6DC9" />
-          <stop offset="1" stopColor="#5DB9C8" />
-        </linearGradient>
-      </defs>
-    </svg>
+  return ( 
+  <svg width={size} height={size} className={extraClass} viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M39.5818 22.7661C40.5439 22.7661 41.3858 22.0444 41.3858 21.0823C41.3858 20.1201 40.5439 19.2782 39.5818 19.2782H33.448C32.4858 19.2782 31.6439 20.1201 31.6439 21.0823C31.6439 21.9242 32.4858 22.7661 33.448 22.7661H39.5818Z" fill="url(#paint0_linear)"/>
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M23.5859 16.1512L5.06421 22.0445C3.62096 22.5255 3.38042 24.5701 4.58313 25.2918L9.99531 28.6593L1.33582 37.4391C0.373655 38.4013 0.373655 39.8445 1.33582 40.6864C2.17772 41.5283 3.62096 41.6486 4.58313 40.6864L13.2426 31.9067L16.6102 37.3188C17.4521 38.6418 19.3764 38.4013 19.8575 36.958L25.871 18.4363C26.2318 16.9931 24.9089 15.6701 23.5859 16.1512Z" fill="url(#paint1_linear)"/>
+    <path d="M35.3725 9.05527C36.0941 8.33365 36.0941 7.25122 35.3725 6.64986C34.6509 5.92824 33.5685 5.92824 32.9671 6.64986L28.5171 10.9796C27.9157 11.7012 27.9157 12.7837 28.5171 13.385C29.2387 14.1066 30.3212 14.1066 30.9225 13.385L35.3725 9.05527Z" fill="url(#paint2_linear)"/>
+    <path d="M22.6239 2.32026C22.6239 1.3581 21.9023 0.636475 20.9401 0.636475C19.978 0.636475 19.2563 1.3581 19.2563 2.32026V8.57434C19.2563 9.5365 19.978 10.2581 20.9401 10.2581C21.9023 10.2581 22.6239 9.5365 22.6239 8.57434V2.32026Z" fill="url(#paint3_linear)"/>
+    <defs>
+    <linearGradient id="paint0_linear" x1="7.25579" y1="35.3724" x2="30.5242" y2="9.5029" gradientUnits="userSpaceOnUse">
+    <stop stop-color="#7A6DC9"/>
+    <stop offset="1" stop-color="#5DB9C8"/>
+    </linearGradient>
+    </defs>
+  </svg>
+
 
   );
 }
@@ -399,45 +418,48 @@ const DownloadSVG = ({ size = 24, color, extraClass }) => {
 
   )
 }
-
-const SearchSVG = ({ size = 24, color, extraClass }) => {
-  return (
-    <svg className={extraClass} width={size} height={size} viewBox={`0 0 ${size} ${size}`} fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path fillRule="evenodd" clipRule="evenodd" d="M15.7397 12.5964C15.0736 14.575 13.2032 16 11 16C8.23858 16 6 13.7614 6 11C6 8.23858 8.23858 6 11 6C12.2329 6 13.3615 6.44621 14.2333 7.18593C15.3141 8.10308 16 9.47144 16 11C16 11.5582 15.9085 12.0951 15.7397 12.5964ZM17.6661 13.1424C17.4267 13.8879 17.0656 14.579 16.6064 15.1922L20.7071 19.2929C21.0976 19.6835 21.0976 20.3166 20.7071 20.7072C20.3166 21.0977 19.6834 21.0977 19.2929 20.7072L15.1921 16.6064C14.0236 17.4816 12.5723 18 11 18C7.13401 18 4 14.866 4 11C4 7.13401 7.13401 4 11 4C12.6281 4 14.1264 4.55582 15.3154 5.48807C16.9498 6.76948 18 8.7621 18 11C18 11.7473 17.8829 12.4672 17.6661 13.1424Z" fill={color} />
-    </svg>
+const NextSVG = ({ size = 24, color, extraClass }) => {
+  return ( 
+    <svg className={extraClass} width={size} height={size} viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M2.88547 10C6.15908 10 16.6133 10 16.6133 10" stroke="white" stroke-width="2" stroke-linecap="round"/>
+    <path d="M14.1055 5.69025L17.5689 9.8461L14.1055 14.268" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg> 
   )
-}
+} 
 
 
 
-export {
-  BrandSVG,
-  DeleteSVG,
-  HomeSVG,
-  CorequerySVG,
-  KeySVG,
-  BugSVG,
-  ReportSVG,
-  NotifySVG,
-  HexagonSVG,
-  PlusSVG,
-  MouseeventSVG,
-  TeamfeedSVG,
-  PlaySVG,
-  FavSVG,
-  VirtualSVG,
-  Events_cqSVG,
-  Funnels_cqSVG,
-  Campaigns_cqSVG,
-  Attributions_cqSVG,
-  Templates_cqSVG,
-  HelpSVG,
-  FilterSVG,
-  TrashSVG,
-  TimesSVG,
-  CalendarSVG,
-  GroupbySVG,
-  SortdownSVG,
-  DownloadSVG,
-  SearchSVG
-}
+  export {
+    BrandSVG,
+    DeleteSVG,
+    HomeSVG, 
+    CorequerySVG,
+    KeySVG,
+    BugSVG,
+    ReportSVG,
+    NotifySVG,
+    HexagonSVG,
+    PlusSVG,
+    MinusSVG,
+    UserSVG,
+    MouseeventSVG,
+    TeamfeedSVG,
+    PlaySVG,
+    FavSVG,
+    VirtualSVG,
+    Events_cqSVG,
+    Funnels_cqSVG,
+    Campaigns_cqSVG,
+    Attributions_cqSVG,
+    Templates_cqSVG,
+    HelpSVG,
+    FilterSVG,
+    TrashSVG,
+    TimesSVG,
+    CalendarSVG,
+    GroupbySVG,
+    SortdownSVG,
+    DownloadSVG, 
+    NextSVG,
+    SearchSVG
+  }

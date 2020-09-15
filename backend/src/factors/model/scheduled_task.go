@@ -176,6 +176,32 @@ func GetScheduledTaskLastRunTimestamp(projectID uint64, taskType ScheduledTaskTy
 	return maxTaskStartTime.Int64, http.StatusFound
 }
 
+// GetArchivalFileNamesForProject Get archived fileNames for a time range.
+func GetArchivalFileNamesForProject(projectID uint64, startTime, endTime time.Time) ([]string, int) {
+	db := C.GetServices().Db
+
+	fileNames := make([]string, 0, 0)
+	rows, err := db.Model(&ScheduledTask{}).
+		Where("project_id = ? AND task_type = ? AND (task_details->>'file_created')::bool=true"+
+			" AND (task_details->>'from_timestamp')::bigint between ? AND ?", projectID, TASK_TYPE_EVENTS_ARCHIVAL, startTime.Unix(), endTime.Unix()).
+		Select("task_details->>'filepath'").Rows()
+	if err != nil {
+		log.WithError(err).Error("Failed to get archived file paths")
+		return fileNames, http.StatusInternalServerError
+	}
+
+	for rows.Next() {
+		var fileName string
+		err = rows.Scan(&fileName)
+		if err != nil {
+			log.WithError(err).Error("Error while scanning row")
+			return fileNames, http.StatusInternalServerError
+		}
+		fileNames = append(fileNames, fileName)
+	}
+	return fileNames, http.StatusFound
+}
+
 // GetNewArchivalFileNamesAndEndTimeForProject Lists names of files created during archival process.
 func GetNewArchivalFileNamesAndEndTimeForProject(projectID uint64,
 	lastRunAt int64, hardStartTime, hardEndTime time.Time) (map[int64]map[string]interface{}, int) {
