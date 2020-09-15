@@ -56,7 +56,7 @@ function UserSettingsModal (props){
           <Row gutter={[24, 24]} justify={'center'} className={`pt-4 pb-2 m-0 `}>
               <Col span={20}>
                 <Text type={'title'} level={2} weight={'bold'} extraClass={`m-0`}>My Account Details</Text>  
-                <Text type={'title'} level={7} weight={'regular'} extraClass={`m-0`} color={'grey'}>Jeff Richards (jeff@example.com)</Text>  
+                <Text type={'title'} level={7} weight={'regular'} extraClass={`m-0`} color={'grey'}>Vishnu Baliga (baliga@factors.ai)</Text>  
               </Col> 
           </Row>
           <Row gutter={[24, 24]} justify={'center'}>
