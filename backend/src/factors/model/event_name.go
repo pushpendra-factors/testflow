@@ -447,14 +447,7 @@ func getPropertyValuesByEventPropertyFromCache(projectID uint64, eventName strin
 	if err != nil {
 		return U.CachePropertyValueWithTimestamp{}, err
 	}
-	propertyValues := make(map[string]U.CountTimestampTuple)
-	for index, valuesCount := range values {
-		key, value := extractKeyDateCountFromCacheKey(valuesCount, eventPropertyValuesKeys[index].Suffix)
-		propertyValues[key] = value
-	}
-	cachePropertyValues := U.CachePropertyValueWithTimestamp{
-		PropertyValue: propertyValues}
-	return cachePropertyValues, nil
+	return CachePropertyValueObject(eventPropertyValuesKeys, values), nil
 }
 
 //GetPropertiesByEvent This method iterates for last n days to get all the top 'limit' properties for the given event
@@ -509,7 +502,6 @@ func getPropertiesByEventFromCache(projectID uint64, eventName string, dateKey s
 	logCtx := log.WithFields(log.Fields{
 		"project_id": projectID,
 	})
-	dateKeyInTime, _ := time.Parse(U.DATETIME_FORMAT_YYYYMMDD, dateKey)
 	if projectID == 0 {
 		return U.CachePropertyWithTimestamp{}, errors.New("invalid project on GetPropertiesByEventFromCache")
 	}
@@ -559,35 +551,12 @@ func getPropertiesByEventFromCache(projectID uint64, eventName string, dateKey s
 	if err != nil {
 		return U.CachePropertyWithTimestamp{}, err
 	}
-	eventProperties := make(map[string]U.PropertyWithTimestamp)
-	propertyCategory := make(map[string]map[string]int64)
-	for index, propertiesCount := range properties {
-		cat, pr := extractCategoryProperty(eventPropertyKeys[index].Suffix)
-		if propertyCategory[pr] == nil {
-			propertyCategory[pr] = make(map[string]int64)
-		}
-		catCount, _ := strconv.Atoi(propertiesCount)
-		propertyCategory[pr][cat] = int64(catCount)
-	}
-	for pr, catCount := range propertyCategory {
-		cwc := make(map[string]int64)
-		totalCount := int64(0)
-		for cat, catCount := range catCount {
-			cwc[cat] = catCount
-			totalCount += catCount
-		}
-		prWithTs := U.PropertyWithTimestamp{CategorywiseCount: cwc,
-			CountTime: U.CountTimestampTuple{Count: totalCount, LastSeenTimestamp: dateKeyInTime.Unix()}}
-		eventProperties[pr] = prWithTs
-	}
-	cacheProperties := U.CachePropertyWithTimestamp{
-		Property: eventProperties}
-	return cacheProperties, nil
+	return CachePropertyObject(eventPropertyKeys, properties), nil
 }
 
-func extractCategoryProperty(categoryProperty string) (string, string) {
+func extractCategoryProperty(categoryProperty string) (string, string, string) {
 	catPr := strings.SplitN(categoryProperty, ":", 3)
-	return catPr[1], catPr[2]
+	return catPr[0], catPr[1], catPr[2]
 }
 
 func aggregateEventsAcrossDate(events []CacheEventNamesWithTimestamp) []U.NameCountTimestampCategory {
@@ -699,17 +668,60 @@ func getEventNamesOrderedByOccurenceAndRecencyFromCache(projectID uint64, dateKe
 	if err != nil {
 		return CacheEventNamesWithTimestamp{}, err
 	}
+	return CacheEventObject(eventNameKeys, events), nil
+}
+
+func CacheEventObject(events []*cacheRedis.Key, eventCounts []string) CacheEventNamesWithTimestamp {
 	eventNames := make(map[string]U.CountTimestampTuple)
-	for index, eventCount := range events {
-		key, value := extractKeyDateCountFromCacheKey(eventCount, eventNameKeys[index].Suffix)
+	for index, eventCount := range eventCounts {
+		key, value := ExtractKeyDateCountFromCacheKey(eventCount, events[index].Suffix)
 		eventNames[key] = value
 	}
 	cacheEventNames := CacheEventNamesWithTimestamp{
 		EventNames: eventNames}
-	return cacheEventNames, nil
+	return cacheEventNames
 }
 
-func extractKeyDateCountFromCacheKey(keyCount string, cacheKey string) (string, U.CountTimestampTuple) {
+func CachePropertyValueObject(values []*cacheRedis.Key, valueCounts []string) U.CachePropertyValueWithTimestamp {
+	propertyValues := make(map[string]U.CountTimestampTuple)
+	for index, valuesCount := range valueCounts {
+		key, value := ExtractKeyDateCountFromCacheKey(valuesCount, values[index].Suffix)
+		propertyValues[key] = value
+	}
+	cachePropertyValues := U.CachePropertyValueWithTimestamp{
+		PropertyValue: propertyValues}
+	return cachePropertyValues
+}
+
+func CachePropertyObject(properties []*cacheRedis.Key, propertyCounts []string) U.CachePropertyWithTimestamp {
+	var dateKeyInTime time.Time
+	eventProperties := make(map[string]U.PropertyWithTimestamp)
+	propertyCategory := make(map[string]map[string]int64)
+	for index, propertiesCount := range propertyCounts {
+		dateKey, cat, pr := extractCategoryProperty(properties[index].Suffix)
+		dateKeyInTime, _ = time.Parse(U.DATETIME_FORMAT_YYYYMMDD, dateKey)
+		if propertyCategory[pr] == nil {
+			propertyCategory[pr] = make(map[string]int64)
+		}
+		catCount, _ := strconv.Atoi(propertiesCount)
+		propertyCategory[pr][cat] = int64(catCount)
+	}
+	for pr, catCount := range propertyCategory {
+		cwc := make(map[string]int64)
+		totalCount := int64(0)
+		for cat, catCount := range catCount {
+			cwc[cat] = catCount
+			totalCount += catCount
+		}
+		prWithTs := U.PropertyWithTimestamp{CategorywiseCount: cwc,
+			CountTime: U.CountTimestampTuple{Count: totalCount, LastSeenTimestamp: dateKeyInTime.Unix()}}
+		eventProperties[pr] = prWithTs
+	}
+	cacheProperties := U.CachePropertyWithTimestamp{
+		Property: eventProperties}
+	return cacheProperties
+}
+func ExtractKeyDateCountFromCacheKey(keyCount string, cacheKey string) (string, U.CountTimestampTuple) {
 	dateKey := strings.SplitN(cacheKey, ":", 2)
 	keyDate, _ := time.Parse(U.DATETIME_FORMAT_YYYYMMDD, dateKey[0])
 	KeyCountNum, _ := strconv.Atoi(keyCount)

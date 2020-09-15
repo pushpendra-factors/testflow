@@ -8,7 +8,6 @@ import (
 	U "factors/util"
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -679,7 +678,6 @@ func getUserPropertiesByProjectFromCache(projectID uint64, dateKey string) (U.Ca
 	logCtx := log.WithFields(log.Fields{
 		"project_id": projectID,
 	})
-	dateKeyInTime, _ := time.Parse(U.DATETIME_FORMAT_YYYYMMDD, dateKey)
 	if projectID == 0 {
 		return U.CachePropertyWithTimestamp{}, errors.New("invalid project on GetUserPropertiesByProjectFromCache")
 	}
@@ -728,30 +726,7 @@ func getUserPropertiesByProjectFromCache(projectID uint64, dateKey string) (U.Ca
 	if err != nil {
 		return U.CachePropertyWithTimestamp{}, err
 	}
-	eventProperties := make(map[string]U.PropertyWithTimestamp)
-	propertyCategory := make(map[string]map[string]int64)
-	for index, propertiesCount := range properties {
-		cat, pr := extractCategoryProperty(PropertyKeys[index].Suffix)
-		if propertyCategory[pr] == nil {
-			propertyCategory[pr] = make(map[string]int64)
-		}
-		catCount, _ := strconv.Atoi(propertiesCount)
-		propertyCategory[pr][cat] = int64(catCount)
-	}
-	for pr, catCount := range propertyCategory {
-		cwc := make(map[string]int64)
-		totalCount := int64(0)
-		for cat, catCount := range catCount {
-			cwc[cat] = catCount
-			totalCount += catCount
-		}
-		prWithTs := U.PropertyWithTimestamp{CategorywiseCount: cwc,
-			CountTime: U.CountTimestampTuple{Count: totalCount, LastSeenTimestamp: dateKeyInTime.Unix()}}
-		eventProperties[pr] = prWithTs
-	}
-	cacheProperties := U.CachePropertyWithTimestamp{
-		Property: eventProperties}
-	return cacheProperties, nil
+	return CachePropertyObject(PropertyKeys, properties), nil
 }
 
 //GetPropertyValuesByUserProperty This method iterates over n days and gets user property values from cache for a given project/property
@@ -852,14 +827,7 @@ func getPropertyValuesByUserPropertyFromCache(projectID uint64, propertyName str
 	if err != nil {
 		return U.CachePropertyValueWithTimestamp{}, err
 	}
-	propertyValues := make(map[string]U.CountTimestampTuple)
-	for index, valuesCount := range values {
-		key, value := extractKeyDateCountFromCacheKey(valuesCount, propertyValuesKeys[index].Suffix)
-		propertyValues[key] = value
-	}
-	cachePropertyValues := U.CachePropertyValueWithTimestamp{
-		PropertyValue: propertyValues}
-	return cachePropertyValues, nil
+	return CachePropertyValueObject(propertyValuesKeys, values), nil
 }
 
 func GetUserPropertiesAsMap(projectId uint64, id string) (*map[string]interface{}, int) {

@@ -314,7 +314,7 @@ func RefreshCacheFromDb(project_id uint64, currentTime time.Time, no_of_days int
 	logCtx.Info("Refresh Event Properties Cache started")
 
 	allevents := make(map[string]bool)
-	for i := 0; i < no_of_days; i++ {
+	for i := 1; i <= no_of_days; i++ {
 		var eventNames M.CacheEventNamesWithTimestamp
 		eventNames.EventNames = make(map[string]U.CountTimestampTuple)
 
