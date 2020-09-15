@@ -74,15 +74,12 @@ function UserSettingsModal (props){
 
               <Menu  
                 onClick={handleClick}
-                defaultSelectedKeys={['1']} 
+                defaultSelectedKeys={MenuTabs.accounts} 
                 mode="inline"
                 className={`fa-settings--menu`}
               >  
               <Menu.Item key={MenuTabs.accounts}>My Profile</Menu.Item> 
-              <Menu.Item key={MenuTabs.projects}>Projects</Menu.Item> 
-              {/* <Menu.Item key="3">Notifications</Menu.Item> 
-              <Menu.Item key="4">Saved for Later</Menu.Item> 
-              <Menu.Item key="5">Data and Privacy</Menu.Item>  */}
+              <Menu.Item key={MenuTabs.projects}>Projects</Menu.Item>  
               </Menu>
 
               </Col> 
