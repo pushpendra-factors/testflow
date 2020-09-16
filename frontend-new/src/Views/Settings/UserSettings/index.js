@@ -5,16 +5,26 @@ import { UserOutlined } from '@ant-design/icons';
 import EditPassword from './EditPassword';
 import EditUserDetails from './EditUserDetails';
 import ViewUserDetails from './ViewUserDetails';
+import ProjectDetails from './ProjectDetails';
 
 const { SubMenu } = Menu;
 
+const MenuTabs = {
+  projects: 'projects',
+  accounts:'account',
+}
 
 function UserSettingsModal (props){  
    
+  const [selectedMenu, setSelectedMenu] = useState(MenuTabs.accounts);   
   const [editPasswordModal, setPasswordModal] = useState(false);   
   const [editDetailsModal, setDetailsModal] = useState(false);   
   const [confirmLoading, setConfirmLoading] = useState(false);   
-    
+  
+  const handleClick = (e) => {
+    setSelectedMenu(e.key);
+    // console.log('click ', e.key);
+  };
 
   const handleOk = () => {
     setConfirmLoading(true)
@@ -56,30 +66,36 @@ function UserSettingsModal (props){
           <Row gutter={[24, 24]} justify={'center'} className={`pt-4 pb-2 m-0 `}>
               <Col span={20}>
                 <Text type={'title'} level={2} weight={'bold'} extraClass={`m-0`}>My Account Details</Text>  
-                <Text type={'title'} level={7} weight={'regular'} extraClass={`m-0`} color={'grey'}>Jeff Richards (jeff@example.com)</Text>  
+                <Text type={'title'} level={7} weight={'regular'} extraClass={`m-0`} color={'grey'}>Vishnu Baliga (baliga@factors.ai)</Text>  
               </Col> 
           </Row>
           <Row gutter={[24, 24]} justify={'center'}>
               <Col span={5}> 
 
               <Menu  
-                defaultSelectedKeys={['1']} 
+                onClick={handleClick}
+                defaultSelectedKeys={MenuTabs.accounts} 
                 mode="inline"
                 className={`fa-settings--menu`}
               >  
-              <Menu.Item key="1">My Profile</Menu.Item> 
-              <Menu.Item key="2">Projects</Menu.Item> 
-              <Menu.Item key="3">Notifications</Menu.Item> 
-              <Menu.Item key="4">Saved for Later</Menu.Item> 
-              <Menu.Item key="5">Data and Privacy</Menu.Item> 
+              <Menu.Item key={MenuTabs.accounts}>My Profile</Menu.Item> 
+              <Menu.Item key={MenuTabs.projects}>Projects</Menu.Item>  
               </Menu>
 
               </Col> 
               <Col span={15}>
-                <ViewUserDetails 
+
+                {(selectedMenu === MenuTabs.accounts) &&
+                  <ViewUserDetails 
                   editDetails={()=>setDetailsModal(true)}
                   editPassword={()=>setPasswordModal(true)}
-                />
+                  />
+                }
+                {(selectedMenu === MenuTabs.projects) &&
+                  <ProjectDetails />
+                }
+
+
               </Col> 
           </Row>
         </div>

@@ -1351,8 +1351,7 @@ type CountTimestampTuple struct {
 }
 
 type CachePropertyWithTimestamp struct {
-	Property              map[string]PropertyWithTimestamp `json:"pr"`
-	CacheUpdatedTimestamp int64                            `json:"cut"`
+	Property map[string]PropertyWithTimestamp `json:"pr"`
 }
 
 type PropertyWithTimestamp struct {
@@ -1362,8 +1361,7 @@ type PropertyWithTimestamp struct {
 }
 
 type CachePropertyValueWithTimestamp struct {
-	PropertyValue         map[string]CountTimestampTuple `json:"pv"`
-	CacheUpdatedTimestamp int64                          `json:"cut"`
+	PropertyValue map[string]CountTimestampTuple `json:"pv"`
 }
 
 type NameCountTimestampCategory struct {

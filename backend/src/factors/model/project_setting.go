@@ -272,11 +272,16 @@ func UpdateProjectSettings(projectId uint64, settings *ProjectSetting) (*Project
 		return nil, http.StatusBadRequest
 	}
 
-	if settings.IntAdwordsCustomerAccountId != nil {
-		// clean adwords customer_account_id before update.
-		adwordsCustomerAccountId := strings.Replace(
-			*settings.IntAdwordsCustomerAccountId, "-", "", -1)
-		settings.IntAdwordsCustomerAccountId = &adwordsCustomerAccountId
+	if *settings.IntAdwordsCustomerAccountId != "" {
+		var cleanAdwordsAccountIds []string
+		adwordsAccoundIds := strings.Split(*settings.IntAdwordsCustomerAccountId, ",")
+		for _, accountId := range adwordsAccoundIds {
+			adwordsCustomerAccountId := strings.Replace(
+				accountId, "-", "", -1)
+			adwordsCustomerAccountId = strings.TrimSpace(adwordsCustomerAccountId)
+			cleanAdwordsAccountIds = append(cleanAdwordsAccountIds, adwordsCustomerAccountId)
+		}
+		*settings.IntAdwordsCustomerAccountId = strings.Join(cleanAdwordsAccountIds, ",")
 	}
 
 	var updatedProjectSetting ProjectSetting

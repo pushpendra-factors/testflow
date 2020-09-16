@@ -440,7 +440,7 @@ func TestDBCreateOrGetSegmentUser(t *testing.T) {
 	assert.Equal(t, custId2, user7.CustomerUserId)
 }
 
-func TestGetRecentUserPropertyKeys(t *testing.T) {
+/*func TestGetRecentUserPropertyKeys(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 
@@ -474,9 +474,9 @@ func TestGetRecentUserPropertyKeys(t *testing.T) {
 	assert.Equal(t, propertyMap["prop3"], true)
 	assert.Equal(t, propertyMap["prop4"], true)
 
-}
+}*/
 
-func TestGetRecentUserPropertyValues(t *testing.T) {
+/*func TestGetRecentUserPropertyValues(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 
@@ -516,7 +516,7 @@ func TestGetRecentUserPropertyValues(t *testing.T) {
 		assert.Equal(t, valuesMap["3"], true)
 		assert.Equal(t, category, U.PropertyTypeNumerical)
 	})
-}
+}*/
 
 func TestFillFormSubmitEventUserProperties(t *testing.T) {
 	project, err := SetupProjectReturnDAO()

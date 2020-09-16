@@ -3,6 +3,7 @@ import { Row, Col, Layout } from 'antd';
 import Sidebar from '../../components/Sidebar';
 import CoreQuery from '../CoreQuery';
 import HeaderComp from './Header';
+import ProjectSettings from '../Settings/ProjectSettings';
 import { HashRouter, Route, Switch } from 'react-router-dom';
 
 function AppLayout() {
@@ -15,6 +16,7 @@ function AppLayout() {
                 <Content className="bg-white min-h-screen">
                     <HashRouter>
                         <Switch>
+                            <Route path="/settings/" component={ProjectSettings} />
                             <Route path="/" name="Home" component={CoreQuery} />
                         </Switch>
                     </HashRouter>

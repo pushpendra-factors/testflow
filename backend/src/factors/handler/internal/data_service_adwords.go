@@ -38,6 +38,6 @@ func DataServiceAdwordsAddDocumentHandler(c *gin.Context) {
 }
 
 func DataServiceAdwordsGetLastSyncInfoHandler(c *gin.Context) {
-	lastSyncInfo, status := M.GetAllAdwordsLastSyncInfoByProjectAndType()
+	lastSyncInfo, status := M.GetAllAdwordsLastSyncInfoByProjectCustomerAccountAndType()
 	c.JSON(status, lastSyncInfo)
 }

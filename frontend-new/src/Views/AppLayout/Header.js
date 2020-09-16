@@ -24,7 +24,7 @@ function Header(props) {
 		<Header
 			id="app-header"
 			className="ant-layout-header--custom bg-white z-20 fixed"
-			style={{ width: 'calc(100% - 64px)' }}
+			style={{ width: 'calc(100% - 64px)', padding: 0 }}
 		>
 			<div className="fa-container">
 				{props.children}
