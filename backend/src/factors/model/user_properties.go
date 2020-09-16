@@ -985,6 +985,8 @@ func UpdateUserPropertiesForSession(projectID uint64,
 		userProperties, errCode := GetUserPropertiesRecord(projectID,
 			sessionUserProperties.UserID, userPropertiesID)
 		if errCode != http.StatusFound {
+			logCtx.WithField("err_code", errCode).
+				Error("Failed to get user properties record.")
 			hasFailure = true
 			continue
 		}
@@ -1029,6 +1031,8 @@ func UpdateUserPropertiesForSession(projectID uint64,
 		errCode = OverwriteUserProperties(projectID, sessionUserProperties.UserID,
 			userPropertiesID, userPropertiesJsonb)
 		if errCode != http.StatusAccepted {
+			logCtx.WithField("err_code", errCode).
+				Error("Failed to overwrite user properties record.")
 			hasFailure = true
 			continue
 		}

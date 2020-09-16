@@ -230,6 +230,18 @@ func TimeNowIn(timezone TimeZoneString) time.Time {
 	return time.Now().In(timezoneLocation)
 }
 
+// ConvertTimeIn Converts given time.Time object in given timezone.
+func ConvertTimeIn(t time.Time, timezone TimeZoneString) time.Time {
+	timezoneLocation, _ := time.LoadLocation(string(timezone))
+	return t.In(timezoneLocation)
+}
+
+// GetTimeLocationFor Returns time.Location object for given timezone.
+func GetTimeLocationFor(timezone TimeZoneString) *time.Location {
+	timezoneLocation, _ := time.LoadLocation(string(timezone))
+	return timezoneLocation
+}
+
 // TimeNowUnix Returns current epoch time.
 func TimeNowUnix() int64 {
 	return TimeNow().Unix()

@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Text, SVG } from '../../components/factorsComponents';
 import { Row, Col, Table, Avatar, Button } from 'antd';
 import Header from '../AppLayout/Header';
@@ -107,6 +107,13 @@ const data = [
 ];
 
 function CoreQuery({ setDrawerVisible }) {
+  const [loadingTable, SetLoadingTable] = useState(true);
+
+  useEffect(()=>{
+    setInterval(() => {
+      SetLoadingTable(false)
+    }, 2000);
+  })
   return (
     <>
       <Header>
@@ -125,11 +132,16 @@ function CoreQuery({ setDrawerVisible }) {
             {coreQueryoptions.map((item, index) => {
               return (
                 <Col span={4} key={index}>
-                  <div onClick={() => setDrawerVisible(item.title == `Funnels`)} className="fai--custom-card flex justify-start items-center flex-col">
-                    <div className={`fai--custom-card--icon`}><SVG name={item.icon} size={48} /> </div>
-                    <div className={`fai--custom-card--content`}>
-                      <Text type={'title'} level={3} weight={'bold'} extraClass={`fai--custom-card--title`} >{item.title}</Text>
-                      <Text type={'title'} level={7} weight={'bold'} extraClass={`fai--custom-card--desc`} >{item.desc}</Text>
+                  <div onClick={() => setDrawerVisible(item.title == `Funnels`)} className="fai--custom-card flex justify-center items-center flex-col ">
+                      <div className={`fai--custom-card--icon`}><SVG name={item.icon} size={48} /> </div> 
+                    <div className="flex justify-start items-center flex-col before-hover">
+                        <Text type={'title'} level={3} weight={'bold'} extraClass={`fai--custom-card--title`} >{item.title}</Text>  
+                    </div>
+                    <div className="flex justify-start items-center flex-col after-hover"> 
+                      <div className={`fai--custom-card--content flex-col flex justify-start items-center`}> 
+                        <Text type={'title'} level={7} weight={'bold'} extraClass={`fai--custom-card--desc`} >{item.desc}</Text>
+                        <a className={`fai--custom-card--cta`}>New Query <SVG name={`next`} size={20} /> </a>
+                      </div>
                     </div>
                   </div>
                 </Col>
@@ -139,7 +151,7 @@ function CoreQuery({ setDrawerVisible }) {
 
           <Row justify="center" className={'mt-12'}>
             <Col span={20}>
-              <Row justify="space-between">
+              <Row className={`flex justify-between items-center`}>
                 <Col span={10}>
                   <Text type={'title'} level={4} weight={'bold'} extraClass={`m-0`} >Saved Queries</Text>
                 </Col>
@@ -153,7 +165,7 @@ function CoreQuery({ setDrawerVisible }) {
           </Row>
           <Row justify="center" className={'mt-2 mb-20'}>
             <Col span={20}>
-              <Table className="ant-table--custom" columns={columns} dataSource={data} pagination={false} />
+              <Table loading={loadingTable} className="ant-table--custom" columns={columns} dataSource={data} pagination={false} />
             </Col>
           </Row>
       </div>

@@ -420,3 +420,61 @@ func TestGetAddSessionAllowedProjects(t *testing.T) {
 	assert.Contains(t, allowedProjectIds, project1.ID)
 	assert.NotContains(t, allowedProjectIds, project2.ID)
 }
+
+func TestDerivedUserPropertiesFromSession(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	C.GetConfig().SkipSessionProjectIds = fmt.Sprintf("%d", project.ID)
+
+	// Test derived user_properties for user having multiple 
+	// user_properites state before adding session.
+	maxLookbackTimestamp := U.UnixTimeBeforeDuration(31 * 24 * time.Hour)
+	timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
+	randomEventName := U.RandomLowerAphaNumString(10)
+	trackPayload := SDK.TrackPayload{
+		Name:      randomEventName,
+		Timestamp: timestamp,
+		EventProperties: U.PropertiesMap{
+			U.QUERY_PARAM_UTM_PREFIX + "campaign": "winter_sale",
+		},
+	}
+	status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
+	assert.Equal(t, http.StatusOK, status)
+	eventId1 := response.EventId
+
+	event1, errCode := M.GetEventById(project.ID, eventId1)
+	assert.Equal(t, errCode, http.StatusFound)
+
+	timestamp = timestamp + 1
+	trackPayload = SDK.TrackPayload{
+		Name:      randomEventName,
+		Timestamp: timestamp,
+		UserId:    response.UserId,
+		EventProperties: U.PropertiesMap{
+			U.QUERY_PARAM_UTM_PREFIX + "campaign": "winter_sale",
+		},
+		UserProperties: U.PropertiesMap{
+			"property1": "value1",
+		},
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
+	assert.Equal(t, http.StatusOK, status)
+	eventId2 := response.EventId
+
+	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 30, 1)
+	assert.Nil(t, err)
+
+	event2, errCode := M.GetEventById(project.ID, eventId2)
+	assert.Equal(t, errCode, http.StatusFound)
+	assert.NotNil(t, event2.SessionId)
+
+	assert.NotEqual(t, event1.UserPropertiesId, event2.UserPropertiesId)
+
+	userPropertiesRecord, errCode := M.GetUserPropertiesRecord(project.ID, event2.UserId, event2.UserPropertiesId)
+	userPropertiesMap, err := U.DecodePostgresJsonb(&userPropertiesRecord.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, float64(2), (*userPropertiesMap)[U.UP_SESSION_COUNT])
+	assert.Equal(t, float64(2), (*userPropertiesMap)[U.UP_PAGE_COUNT])
+	assert.Equal(t, float64(2), (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
+}
