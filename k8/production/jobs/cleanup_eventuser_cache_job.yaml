@@ -45,6 +45,8 @@ spec:
             - $(AWS_SECRET)
             - --email_sender
             - $(EMAIL_SENDER)
+            - --sentry_dsn
+            - $(SENTRY_DSN)
             envFrom:
             - configMapRef:
                 name: config-env
@@ -58,4 +60,6 @@ spec:
                 name: secret-postgres
             - secretRef:
                 name: secret-aws
+            - secretRef:
+                name: secret-sentry
           restartPolicy: OnFailure
