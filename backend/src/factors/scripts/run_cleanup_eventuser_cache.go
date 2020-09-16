@@ -79,10 +79,10 @@ func main() {
 	C.InitLogClient(config.Env, config.AppName, config.EmailSender, config.AWSKey,
 		config.AWSSecret, config.AWSRegion, config.ErrorReportingInterval, config.SentryDSN)
 
-	// C.GetServices().SentryHook.SetTagsContext(map[string]string{
-	// 	"JobName": taskID,
-	// })
-	// defer C.GetServices().SentryHook.Flush()
+	C.GetServices().SentryHook.SetTagsContext(map[string]string{
+		"JobName": taskID,
+	})
+	defer C.GetServices().SentryHook.Flush()
 
 	eventsRollup := 0
 	eventPropertiesRollup := 0
