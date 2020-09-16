@@ -44,7 +44,7 @@ const (
 var types = []string{DashboardTypePrivate, DashboardTypeProjectVisible}
 
 const AgentProjectPersonalDashboardName = "My Dashboard"
-const DashboardCachingDurationInSeconds = 3 * 24 * 60 * 60 // 3 days.
+const DashboardCachingDurationInSeconds = 32 * 24 * 60 * 60 // 32 days.
 
 func isValidDashboard(dashboard *Dashboard) bool {
 	if dashboard.Name == "" {
