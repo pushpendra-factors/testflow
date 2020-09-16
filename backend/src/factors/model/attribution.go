@@ -8,6 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"sort"
+	"strings"
 )
 
 type AttributionQueryUnit struct {
@@ -740,12 +741,15 @@ func AddPerformanceReportInfo(projectId uint64, attributionData map[string]*Attr
 	from, to int64, customerAccountId string) (string, error) {
 	db := C.GetServices().Db
 	logCtx := log.WithFields(log.Fields{"ProjectId": projectId, "Range": fmt.Sprintf("%d - %d", from, to)})
+
+	customerAccountIds := strings.Split(customerAccountId, ",")
 	performanceQuery := "SELECT value->>'campaign_id' AS campaign_id,  value->>'campaign_name' AS campaign_name, " +
 		"SUM((value->>'impressions')::float) AS impressions, SUM((value->>'clicks')::float) AS clicks, " +
 		"SUM((value->>'cost')::float)/1000000 AS total_cost FROM adwords_documents " +
-		"where project_id = ? AND customer_account_id = ? AND type = ? AND timestamp between ? AND ? " +
+		"where project_id = ? AND customer_account_id IN (?) AND type = ? AND timestamp between ? AND ? " +
 		"group by value->>'campaign_id', campaign_name"
-	rows, err := db.Raw(performanceQuery, projectId, customerAccountId, ADWORDS_CAMPAIGN_REPORT_TYPE, U.GetDateOnlyFromTimestamp(from),
+	rows, err := db.Raw(performanceQuery, projectId, customerAccountIds, ADWORDS_CAMPAIGN_REPORT_TYPE,
+		U.GetDateOnlyFromTimestamp(from),
 		U.GetDateOnlyFromTimestamp(to)).Rows()
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
@@ -786,12 +790,17 @@ func AddPerformanceReportInfo(projectId uint64, attributionData map[string]*Attr
 // Returns currency used for adwords customer_account_id
 func getAdwordsCurrency(projectId uint64, customerAccountId string, from, to int64) (string, error) {
 
+	customerAccountIds := strings.Split(customerAccountId, ",")
+	if len(customerAccountIds) == 0 {
+		return "", errors.New("no ad-words customer account id found")
+	}
 	queryCurrency := "SELECT value->>'currency_code' AS currency FROM adwords_documents " +
 		" WHERE project_id=? AND customer_account_id=? AND type=? AND timestamp BETWEEN ? AND ? " +
 		" ORDER BY timestamp DESC LIMIT 1"
 	logCtx := log.WithField("ProjectId", projectId)
 	db := C.GetServices().Db
-	rows, err := db.Raw(queryCurrency, projectId, customerAccountId, 9, U.GetDateOnlyFromTimestamp(from),
+	// checking just for customerAccountIds[0], we are assuming that all accounts have same currency
+	rows, err := db.Raw(queryCurrency, projectId, customerAccountIds[0], 9, U.GetDateOnlyFromTimestamp(from),
 		U.GetDateOnlyFromTimestamp(to)).Rows()
 	if err != nil {
 		logCtx.WithError(err).Error("failed to build meta for attribution query result")

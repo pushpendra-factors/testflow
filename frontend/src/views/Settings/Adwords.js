@@ -56,10 +56,11 @@ class Adwords extends Component {
       error: null,
 
       customerAccountsLoaded: false,
-      selectedAdwordsAccount: null,
+      selectedAdwordsAccounts: [],
       modalOpen: false,
       accountId: '',
       manualAccounts: [],
+      addNewAccount: false
     }
   }
 
@@ -89,12 +90,23 @@ class Adwords extends Component {
   }
 
   onAccountSelect = (e) => {
-    this.setState({ selectedAdwordsAccount: e.currentTarget.value });
+    let selectedAdwordsAccounts = [...this.state.selectedAdwordsAccounts]
+    if(e.target.checked) {
+      selectedAdwordsAccounts.push(e.target.value)
+    } else {
+      let index = selectedAdwordsAccounts.indexOf(e.target.value)
+      if(index>-1) selectedAdwordsAccounts.splice(index,1)
+    }
+    this.setState({
+      selectedAdwordsAccounts
+    })
   }
 
   onClickFinishSetup = () => {
+    let selectedAdwordsAccounts = this.state.selectedAdwordsAccounts.join(",")
     this.props.udpateProjectSettings(this.props.currentProjectId, 
-      { 'int_adwords_customer_account_id': this.state.selectedAdwordsAccount });
+      { 'int_adwords_customer_account_id':  selectedAdwordsAccounts});
+    this.setState({addNewAccount: false})
   }
 
   renderAccountsList = () => {
@@ -108,7 +120,7 @@ class Adwords extends Component {
       accountRows.push(
         <tr>
           <td style={{ border: 'none', padding: '5px'  }}>
-            <Input type="radio" checked={this.state.selectedAdwordsAccount == account.customer_id} value={account.customer_id} onChange={this.onAccountSelect} />
+            <Input type="checkbox" value={account.customer_id} onChange={this.onAccountSelect} />
           </td>
           <td style={{ border: 'none', padding: '5px'  }}>{ account.customer_id }</td>
           <td style={{ border: 'none', padding: '5px' }}>{ account.name }</td>
@@ -121,7 +133,7 @@ class Adwords extends Component {
       accountRows.push(
         <tr>
           <td style={{ border: 'none', padding: '5px'  }}>
-            <Input type="radio" checked={this.state.selectedAdwordsAccount == account.customer_id} value={account.customer_id} onChange={this.onAccountSelect} />
+            <Input type="checkbox" value={account.customer_id} onChange={this.onAccountSelect} />
           </td>
           <td style={{ border: 'none', padding: '5px'  }}>{ account.customer_id }</td>
           <td style={{ border: 'none', padding: '5px' }}>{ account.name }</td>
@@ -176,7 +188,7 @@ class Adwords extends Component {
   }
 
   isCustomerAccountSelected() {
-    return  this.props.currentProjectSettings && this.props.currentProjectSettings.int_adwords_customer_account_id;
+    return  this.props.currentProjectSettings && this.props.currentProjectSettings.int_adwords_customer_account_id && !this.state.addNewAccount;
   }
 
   renderSettingInfo() {
@@ -184,7 +196,7 @@ class Adwords extends Component {
       paddingTop: '60px', paddingBottom: '60px' }
       
     let isCustomerAccountChosen = this.props.currentProjectSettings.int_adwords_customer_account_id && 
-      this.props.currentProjectSettings.int_adwords_customer_account_id != "";
+      this.props.currentProjectSettings.int_adwords_customer_account_id != "" && !this.state.addNewAccount;
     
     // get all adwords account when no account is chosen and not account list not loaded.
     if (this.isIntAdwordsEnabled() && !isCustomerAccountChosen && !this.state.customerAccountsLoaded) {
@@ -232,6 +244,10 @@ class Adwords extends Component {
                   outline onClick={this.onClickEnableAdwords}> 
                   <img src={googleSvg} style={{ marginRight: '6px', marginBottom: '3px', width: '15px' }}></img>
                   Enable with Google
+                </Button>
+                <Button hidden={!this.isIntAdwordsEnabled()} color='primary' style={{ marginTop: '-3px' }} 
+                  outline onClick={()=> this.setState({addNewAccount: true})}> 
+                  + Add More
                 </Button>
               </div>
             </CardHeader>

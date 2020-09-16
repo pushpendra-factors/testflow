@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGetAllAdwordsLastSyncInfoByProjectAndType(t *testing.T) {
+func TestGetAllAdwordsLastSyncInfoByProjectCustomerAccountAndType(t *testing.T) {
 	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
 	customerAccountId := U.RandomLowerAphaNumString(5)
@@ -22,7 +22,7 @@ func TestGetAllAdwordsLastSyncInfoByProjectAndType(t *testing.T) {
 	errCode = M.UpdateAgentIntAdwordsRefreshToken(agent.UUID, agentAdwordsToken)
 	assert.Equal(t, http.StatusAccepted, errCode)
 
-	adwordsLastSyncInfo, errCode := M.GetAllAdwordsLastSyncInfoByProjectAndType()
+	adwordsLastSyncInfo, errCode := M.GetAllAdwordsLastSyncInfoByProjectCustomerAccountAndType()
 	assert.Equal(t, http.StatusOK, errCode)
 	for _, alsi := range adwordsLastSyncInfo {
 		if alsi.ProjectId == project.ID {
@@ -44,7 +44,7 @@ func TestGetAllAdwordsLastSyncInfoByProjectAndType(t *testing.T) {
 	errCode = M.UpdateAgentIntAdwordsRefreshToken(agent1.UUID, agentAdwordsToken1)
 	assert.Equal(t, http.StatusAccepted, errCode)
 
-	adwordsLastSyncInfo1, errCode := M.GetAllAdwordsLastSyncInfoByProjectAndType()
+	adwordsLastSyncInfo1, errCode := M.GetAllAdwordsLastSyncInfoByProjectCustomerAccountAndType()
 	assert.Equal(t, http.StatusOK, errCode)
 	for _, alsi := range adwordsLastSyncInfo1 {
 		if alsi.ProjectId == project.ID {

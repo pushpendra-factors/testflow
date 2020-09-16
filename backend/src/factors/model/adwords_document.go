@@ -6,6 +6,7 @@ import (
 	U "factors/util"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -168,8 +169,7 @@ func getDocumentTypeAliasByType() map[int]string {
 
 	return documentTypeMap
 }
-
-func GetAllAdwordsLastSyncInfoByProjectAndType() ([]AdwordsLastSyncInfo, int) {
+func GetAllAdwordsLastSyncInfoByProjectCustomerAccountAndType() ([]AdwordsLastSyncInfo, int) {
 	db := C.GetServices().Db
 
 	adwordsLastSyncInfos := make([]AdwordsLastSyncInfo, 0, 0)
@@ -199,33 +199,39 @@ func GetAllAdwordsLastSyncInfoByProjectAndType() ([]AdwordsLastSyncInfo, int) {
 		return []AdwordsLastSyncInfo{}, errCode
 	}
 
-	adwordsSettingsByProject := make(map[uint64]*AdwordsProjectSettings, 0)
-	for i := range adwordsSettings {
-		adwordsSettingsByProject[adwordsSettings[i].ProjectId] = &adwordsSettings[i]
-	}
+	adwordsSettingsByProjectAndCustomerAccount := make(map[uint64]map[string]*AdwordsProjectSettings, 0)
 
+	for i := range adwordsSettings {
+		customerAccountIds := strings.Split(adwordsSettings[i].CustomerAccountId, ",")
+		adwordsSettingsByProjectAndCustomerAccount[adwordsSettings[i].ProjectId] = make(map[string]*AdwordsProjectSettings)
+		for j := range customerAccountIds {
+			var setting AdwordsProjectSettings
+			setting.ProjectId = adwordsSettings[i].ProjectId
+			setting.AgentUUID = adwordsSettings[i].AgentUUID
+			setting.RefreshToken = adwordsSettings[i].RefreshToken
+			setting.CustomerAccountId = customerAccountIds[j]
+			adwordsSettingsByProjectAndCustomerAccount[adwordsSettings[i].ProjectId][customerAccountIds[j]] = &setting
+		}
+	}
 	documentTypeAliasByType := getDocumentTypeAliasByType()
 
 	// add settings for project_id existing on adwords documents.
-	existingProjectsWithTypes := make(map[uint64]map[string]bool, 0)
+	existingProjectAndCustomerAccountWithTypes := make(map[uint64]map[string]map[string]bool, 0)
 	selectedLastSyncInfos := make([]AdwordsLastSyncInfo, 0, 0)
 
 	for i := range adwordsLastSyncInfos {
-		logCtx := log.WithField("project_id", adwordsLastSyncInfos[i].ProjectId)
+		logCtx := log.WithFields(
+			log.Fields{"project_id": adwordsLastSyncInfos[i].ProjectId,
+				"customer_account_id": adwordsLastSyncInfos[i].CustomerAccountId})
 
-		settings, exists := adwordsSettingsByProject[adwordsLastSyncInfos[i].ProjectId]
+		settings, exists := adwordsSettingsByProjectAndCustomerAccount[adwordsLastSyncInfos[i].ProjectId][adwordsLastSyncInfos[i].CustomerAccountId]
 		if !exists {
-			logCtx.Error("Adwords project settings not found for project adwords synced earlier.")
+			logCtx.Error("Adwords project settings not found for customer account adwords synced earlier.")
 		}
 
 		if settings == nil {
 			logCtx.Info("Adwords disabled for project.")
 			continue
-		}
-
-		// customer_account_id mismatch, as user would have changed customer_account mapped to project.
-		if adwordsLastSyncInfos[i].CustomerAccountId != settings.CustomerAccountId {
-			logCtx.Warn("customer_account_id mapped to project has been changed.")
 		}
 
 		typeAlias, typeAliasExists := documentTypeAliasByType[adwordsLastSyncInfos[i].DocumentType]
@@ -240,28 +246,34 @@ func GetAllAdwordsLastSyncInfoByProjectAndType() ([]AdwordsLastSyncInfo, int) {
 
 		selectedLastSyncInfos = append(selectedLastSyncInfos, adwordsLastSyncInfos[i])
 
-		if _, projectExists := existingProjectsWithTypes[adwordsLastSyncInfos[i].ProjectId]; !projectExists {
-			existingProjectsWithTypes[adwordsLastSyncInfos[i].ProjectId] = make(map[string]bool, 0)
+		if _, projectWithCustomerAccountExists := existingProjectAndCustomerAccountWithTypes[adwordsLastSyncInfos[i].ProjectId][adwordsLastSyncInfos[i].CustomerAccountId]; !projectWithCustomerAccountExists {
+			if _, projectExists := existingProjectAndCustomerAccountWithTypes[adwordsLastSyncInfos[i].ProjectId]; !projectExists {
+				existingProjectAndCustomerAccountWithTypes[adwordsLastSyncInfos[i].ProjectId] = make(map[string]map[string]bool, 0)
+			}
+			existingProjectAndCustomerAccountWithTypes[adwordsLastSyncInfos[i].ProjectId][adwordsLastSyncInfos[i].CustomerAccountId] = make(map[string]bool, 0)
 		}
 
-		existingProjectsWithTypes[adwordsLastSyncInfos[i].ProjectId][adwordsLastSyncInfos[i].DocumentTypeAlias] = true
+		existingProjectAndCustomerAccountWithTypes[adwordsLastSyncInfos[i].ProjectId][adwordsLastSyncInfos[i].CustomerAccountId][adwordsLastSyncInfos[i].DocumentTypeAlias] = true
 	}
 
 	// add all types for missing projects and
 	// add missing types for existing projects.
 	for i := range adwordsSettings {
-		existingTypesForProject, projectExists := existingProjectsWithTypes[adwordsSettings[i].ProjectId]
-		for docTypeAlias, _ := range adwordsDocumentTypeAlias {
-			if !projectExists || (projectExists && existingTypesForProject[docTypeAlias] == false) {
-				syncInfo := AdwordsLastSyncInfo{
-					ProjectId:         adwordsSettings[i].ProjectId,
-					RefreshToken:      adwordsSettings[i].RefreshToken,
-					CustomerAccountId: adwordsSettings[i].CustomerAccountId,
-					LastTimestamp:     0, // no sync yet.
-					DocumentTypeAlias: docTypeAlias,
-				}
+		customerAccountIds := strings.Split(adwordsSettings[i].CustomerAccountId, ",")
+		for _, accountId := range customerAccountIds {
+			existingTypesForAccount, accountExists := existingProjectAndCustomerAccountWithTypes[adwordsSettings[i].ProjectId][accountId]
+			for docTypeAlias, _ := range adwordsDocumentTypeAlias {
+				if !accountExists || (accountExists && existingTypesForAccount[docTypeAlias] == false) {
+					syncInfo := AdwordsLastSyncInfo{
+						ProjectId:         adwordsSettings[i].ProjectId,
+						RefreshToken:      adwordsSettings[i].RefreshToken,
+						CustomerAccountId: accountId,
+						LastTimestamp:     0, // no sync yet.
+						DocumentTypeAlias: docTypeAlias,
+					}
 
-				selectedLastSyncInfos = append(selectedLastSyncInfos, syncInfo)
+					selectedLastSyncInfos = append(selectedLastSyncInfos, syncInfo)
+				}
 			}
 		}
 
@@ -399,6 +411,7 @@ GROUP BY value->>'criteria';
 func getAdwordsMetricsQuery(projectId uint64, customerAccountId string, query *ChannelQuery,
 	withBreakdown bool) (string, []interface{}, error) {
 
+	customerAccountIdArray := strings.Split(customerAccountId, ",")
 	// select handling.
 	selectColstWithoutAlias := "SUM((value->>'impressions')::float) as %s, SUM((value->>'clicks')::float) as %s," +
 		" " + "SUM((value->>'cost')::float)/1000000 as %s, SUM((value->>'conversions')::float) as %s," +
@@ -413,7 +426,7 @@ func getAdwordsMetricsQuery(projectId uint64, customerAccountId string, query *C
 	paramsSelect := make([]interface{}, 0, 0)
 
 	// Where handling.
-	stmntWhere := "WHERE project_id=? AND customer_account_id=? AND type=? AND timestamp BETWEEN ? AND ?"
+	stmntWhere := "WHERE project_id=? AND customer_account_id IN (?) AND type=? AND timestamp BETWEEN ? AND ?"
 	paramsWhere := make([]interface{}, 0, 0)
 
 	docType, err := GetAdwordsDocumentTypeForFilterKey(query.FilterKey)
@@ -421,7 +434,7 @@ func getAdwordsMetricsQuery(projectId uint64, customerAccountId string, query *C
 		return "", []interface{}{}, err
 	}
 
-	paramsWhere = append(paramsWhere, projectId, customerAccountId, docType,
+	paramsWhere = append(paramsWhere, projectId, customerAccountIdArray, docType,
 		getAdwordsDateOnlyTimestamp(query.From), getAdwordsDateOnlyTimestamp(query.To))
 
 	isWhereByFilterRequired := query.FilterValue != filterValueAll
@@ -492,10 +505,10 @@ func getAdwordsMetrics(projectId uint64, customerAccountId string,
 	}
 
 	resultHeaders, resultRows, err := U.DBReadRows(rows)
+
 	if err != nil {
 		return nil, err
 	}
-
 	if len(resultRows) == 0 {
 		log.Error("Aggregate query returned zero rows.")
 		return nil, errors.New("no rows returned")
@@ -559,15 +572,15 @@ func getAdwordsMetricsBreakdown(projectId uint64, customerAccountId string,
 func getAdwordsChannelResultMeta(projectId uint64, customerAccountId string,
 	query *ChannelQuery) (*ChannelQueryResultMeta, error) {
 
+	customerAccountIdArray := strings.Split(customerAccountId, ",")
 	stmnt := "SELECT value->>'currency_code' as currency FROM adwords_documents" +
-		" " + "WHERE project_id=? AND customer_account_id=? AND type=? AND timestamp BETWEEN ? AND ?" +
+		" " + "WHERE project_id=? AND customer_account_id IN (?) AND type=? AND timestamp BETWEEN ? AND ?" +
 		" " + "ORDER BY timestamp DESC LIMIT 1"
 
 	logCtx := log.WithField("project_id", projectId)
 
 	db := C.GetServices().Db
-	rows, err := db.Raw(stmnt,
-		projectId, customerAccountId,
+	rows, err := db.Raw(stmnt, projectId, customerAccountIdArray,
 		adwordsDocumentTypeAlias["customer_account_properties"],
 		getAdwordsDateOnlyTimestamp(query.From),
 		getAdwordsDateOnlyTimestamp(query.To)).Rows()
