@@ -50,7 +50,7 @@ func GetEventNamesHandler(c *gin.Context) {
 		}
 
 		if len(eventNames) == 0 {
-			
+
 			logCtx.WithError(err).Error(fmt.Sprintf("No Events Returned - ProjectID - %s", projectId))
 		}
 
