@@ -1,0 +1,48 @@
+$fontFamily: 'Work Sans', sans-serif;
+$factorsDark: '#0E2647';
+
+.totalEventsChart {
+    :global(.overlay) {
+        fill: none;
+        pointer-events: all;
+    }
+
+    :global(.tooltip) {
+        position: absolute;
+        font-family: $fontFamily;
+        width: 146px;
+        padding: 0.75rem 1rem;
+        background: #FFFFFF;
+        border: 1px solid #B7BEC8;
+        box-sizing: border-box;
+        box-shadow: 0px 6px 20px rgba(0, 0, 0, 0.2);
+        border-radius: 12px;
+        text-align: left;
+        letter-spacing: -0.01em;
+    }
+}
+
+.totalText {
+    font-family: $fontFamily;
+    font-weight: 600;
+    font-size: 48px;
+    line-height: 48px;
+    letter-spacing: -0.02em;
+    color: $factorsDark;
+}
+
+.eventCircle {
+    width: 16px;
+    height: 16px;
+    background-color: #4D7DB4;
+    border-radius: 11px;
+}
+
+.eventText {
+    font-family: $fontFamily;
+    font-style: normal;
+    font-weight: 400;
+    font-size: 14px;
+    line-height: 20px;
+    color: #08172B
+}

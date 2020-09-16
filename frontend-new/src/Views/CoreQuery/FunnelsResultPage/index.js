@@ -1,29 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { useDispatch } from 'react-redux';
+import React, { useState, useEffect, useCallback } from 'react';
 import GroupedChart from './GroupedChart';
-import DataTable from './DataTable';
 import { generateGroupedChartsData, generateDummyData, generateGroups, generateUngroupedChartsData } from './utils';
 import FiltersInfo from './FiltersInfo';
 import UngroupedChart from './UngroupedChart';
-import { FUNNEL_RESULTS_AVAILABLE, FUNNEL_RESULTS_UNAVAILABLE } from '../../../reducers/types';
 import Header from '../../AppLayout/Header';
 import EventsInfo from './EventsInfo';
 import { Button } from 'antd';
-import { PoweroffOutlined } from '@ant-design/icons'; 
+import { PoweroffOutlined } from '@ant-design/icons';
+import FunnelsResultTable from './FunnelsResultTable';
 
-function PageContent({ queries, setDrawerVisible }) {
+function FunnelsResultPage({ queries, setDrawerVisible, setShowFunnels, showFunnels  }) {
 
     const [eventsData, setEventsData] = useState([]);
     const [groups, setGroups] = useState([]);
     const [grouping, setGrouping] = useState(true);
-    const dispatch = useDispatch();
-
-    useEffect(() => {
-        dispatch({ type: FUNNEL_RESULTS_AVAILABLE, payload: queries });
-        return () => {
-            dispatch({ type: FUNNEL_RESULTS_UNAVAILABLE });
-        }
-    }, [queries, dispatch])
 
     useEffect(() => {
         const dummyData = generateDummyData(queries);
@@ -42,10 +32,10 @@ function PageContent({ queries, setDrawerVisible }) {
         <>
             <Header>
                 <div className="flex py-4 justify-end">
-                    <Button type="primary" icon={<PoweroffOutlined />} >Save query as</Button> 
+                    <Button type="primary" icon={<PoweroffOutlined />} >Save query as</Button>
                 </div>
                 <div className="py-4">
-                    <EventsInfo /> 
+                    <EventsInfo showFunnels={showFunnels} setShowFunnels={setShowFunnels} queries={queries} />
                 </div>
                 <div className="pb-2 flex justify-end">
                     <FiltersInfo grouping={grouping} setGrouping={setGrouping} setDrawerVisible={setDrawerVisible} />
@@ -65,7 +55,7 @@ function PageContent({ queries, setDrawerVisible }) {
                     )}
 
                 <div className="mt-8">
-                    <DataTable
+                    <FunnelsResultTable 
                         eventsData={eventsData}
                         groups={groups}
                         setGroups={setGroups}
@@ -76,4 +66,4 @@ function PageContent({ queries, setDrawerVisible }) {
     )
 }
 
-export default PageContent;
+export default FunnelsResultPage;

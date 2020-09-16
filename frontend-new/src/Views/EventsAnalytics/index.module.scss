@@ -1,0 +1,26 @@
+$fontFamily: 'Work Sans', sans-serif;
+$factorsDark: '#0E2647';
+
+.totalText {
+    font-family: $fontFamily;
+    font-weight: 600;
+    font-size: 48px;
+    line-height: 48px;
+    letter-spacing: -0.02em;
+    color: $factorsDark;
+}
+
+.eventCircle {
+    width: 16px;
+    height: 16px;
+    border-radius: 11px;
+}
+
+.eventText {
+    font-family: $fontFamily;
+    font-style: normal;
+    font-weight: 400;
+    font-size: 14px;
+    line-height: 20px;
+    color: #08172B
+}

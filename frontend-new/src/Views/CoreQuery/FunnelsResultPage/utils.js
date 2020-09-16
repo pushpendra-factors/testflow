@@ -1,5 +1,5 @@
 import React from 'react';
-import tableStyles from './DataTable/index.module.scss'
+import tableStyles from './FunnelsResultTable/index.module.scss';
 
 const windowSize = {
     w: window.outerWidth,
@@ -247,9 +247,9 @@ export const calculatePercentage = (numerator, denominator, precision = 1) => {
     return result % 1 !== 0 ? result.toFixed(precision) : result;
 }
 
-const getTitleWithSorter = (title, key, currentSorter, handleSorting) => {
+export const getTitleWithSorter = (title, key, currentSorter, handleSorting) => {
     return (
-        <div className="flex items-center">
+        <div className="flex items-center justify-between">
             <div className="mr-2">{title}</div>
             <div className="flex flex-col items-center">
                 {currentSorter.key === key && currentSorter.order === 'ascend' ? (

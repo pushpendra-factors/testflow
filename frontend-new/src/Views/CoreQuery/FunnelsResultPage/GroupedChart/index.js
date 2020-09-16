@@ -5,7 +5,7 @@ import styles from './index.module.scss';
 import { checkForWindowSizeChange, calculatePercentage, generateColors } from '../utils';
 
 function GroupedChart({ eventsData, groups, chartData }) {
-
+    
     const appliedColors = generateColors(chartData.length);
     const chartColors = {};
     chartData.forEach((elem, index) => {
@@ -264,7 +264,7 @@ function GroupedChart({ eventsData, groups, chartData }) {
         displayChart();
     }, [displayChart]);
 
-    const visibleEvents = eventsData.filter(elem => elem.display);
+    // const visibleEvents = eventsData.filter(elem => elem.display);
 
     return (
         <div className="grouped-chart">
@@ -294,4 +294,4 @@ function GroupedChart({ eventsData, groups, chartData }) {
     )
 }
 
-export default GroupedChart;
+export default React.memo(GroupedChart);

@@ -11,7 +11,7 @@ function SearchBar({ searchText, handleSearchTextChange, searchBar }) {
 
     const downloadBtn = (
         <div onClick={downloadCSV} className="flex flex-1 items-center justify-end cursor-pointer">
-            <Button icon={<SVG name={`download`} size={24} color={'grey'}/>} type="text">Dowload CSV</Button>
+            <Button style={{ display: 'flex', alignItems: 'center' }} icon={<SVG name={`download`} size={24} color={'grey'} />} type="text">Dowload CSV</Button>
         </div>
     );
 
