@@ -289,7 +289,6 @@ func BackFillEventDataInCacheFromDb(project_id uint64, currentTime time.Time, no
 
 	// Preload EventNames-count-lastseen
 	// TODO: Janani Make this 30 configurable, limit in cache, limit in ui
-	eventsInCache := make(map[*cacheRedis.Key]string)
 	logCtx := log.WithField("project_id", project_id)
 	logCtx.Info("Refresh Event Properties Cache started")
 
@@ -330,24 +329,22 @@ func BackFillEventDataInCacheFromDb(project_id uint64, currentTime time.Time, no
 			logCtx.WithError(err).Error("Failed to marshall event names")
 			return
 		}
-		eventsInCache[eventNamesKey] = string(enEventCache)
+		logCtx.Info("Begin:EN:SB")
+		begin = U.TimeNow()
+		err = cacheRedis.SetPersistent(eventNamesKey, string(enEventCache), float64((no_of_days+i-1)*24*60*60))
+		end = U.TimeNow()
+		logCtx.WithFields(log.Fields{"timeTaken": end.Sub(begin).Milliseconds()}).Info("End:EN:SB")
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to set events in cache")
+			return
+		}
 		for event, _ := range eventNames.EventNames {
 			allevents[event] = true
 		}
 	}
 
-	logCtx.Info("Begin:EN:SB")
-	begin := U.TimeNow()
-	err := cacheRedis.SetPersistentBatch(eventsInCache, U.EVENT_USER_CACHE_EXPIRY_SECS)
-	end := U.TimeNow()
-	logCtx.WithFields(log.Fields{"timeTaken": end.Sub(begin).Milliseconds()}).Info("End:EN:SB")
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to set events in cache")
-		return
-	}
-
 	for event := range allevents {
-		for i := 0; i < no_of_days; i++ {
+		for i := 1; i <= no_of_days; i++ {
 
 			eventPropertyValuesInCache := make(map[*cacheRedis.Key]string)
 			var eventProperties U.CachePropertyWithTimestamp
@@ -368,69 +365,71 @@ func BackFillEventDataInCacheFromDb(project_id uint64, currentTime time.Time, no
 				return
 			}
 
-			eventPropertiesKey, err := M.GetPropertiesByEventCategoryRollUpCacheKey(project_id, event, dateFormat)
-			if err != nil {
-				logCtx.WithError(err).Error("Failed to get cache key - properties")
-				return
-			}
-
-			for _, property := range properties {
-
-				logCtx.WithFields(log.Fields{"dateFormat": dateFormat, "event": event, "property": property.Key}).Info("Begin: Get event Property values DB call")
-				begin := U.TimeNow()
-				values, category, err := M.GetRecentEventPropertyValuesWithLimits(project_id, event, property.Key, valuesLimit, rowsLimit,
-					currentTime.AddDate(0, 0, -i).Unix(),
-					currentTime.AddDate(0, 0, -(i-1)).Unix())
-				end := U.TimeNow()
-				logCtx.WithFields(log.Fields{"dateFormat": dateFormat, "event": event, "property": property.Key, "timeTaken": end.Sub(begin).Milliseconds()}).Info("End: Get event Property values DB call")
+			if len(properties) > 0 {
+				eventPropertiesKey, err := M.GetPropertiesByEventCategoryRollUpCacheKey(project_id, event, dateFormat)
 				if err != nil {
-					logCtx.WithError(err).Error("Failed to get values from db - property values")
+					logCtx.WithError(err).Error("Failed to get cache key - properties")
 					return
 				}
 
-				categoryMap := make(map[string]int64)
-				categoryMap[category] = property.Count
-				eventProperties.Property[property.Key] = U.PropertyWithTimestamp{
-					category,
-					categoryMap, // Setting precomputed ones to empty
-					U.CountTimestampTuple{
-						int64(property.LastSeen),
-						property.Count}}
+				for _, property := range properties {
 
-				var eventPropertyValues U.CachePropertyValueWithTimestamp
-				eventPropertyValues.PropertyValue = make(map[string]U.CountTimestampTuple)
-
-				if category == U.PropertyTypeCategorical {
-					eventPropertyValuesKey, _ := M.GetValuesByEventPropertyRollUpCacheKey(project_id, event, property.Key, dateFormat)
-					for _, value := range values {
-						if value.Value != "" {
-							eventPropertyValues.PropertyValue[value.Value] = U.CountTimestampTuple{
-								int64(value.LastSeen),
-								value.Count}
-						}
-					}
-					enEventPropertyValuesCache, err := json.Marshal(eventPropertyValues)
+					logCtx.WithFields(log.Fields{"dateFormat": dateFormat, "event": event, "property": property.Key}).Info("Begin: Get event Property values DB call")
+					begin := U.TimeNow()
+					values, category, err := M.GetRecentEventPropertyValuesWithLimits(project_id, event, property.Key, valuesLimit, rowsLimit,
+						currentTime.AddDate(0, 0, -i).Unix(),
+						currentTime.AddDate(0, 0, -(i-1)).Unix())
+					end := U.TimeNow()
+					logCtx.WithFields(log.Fields{"dateFormat": dateFormat, "event": event, "property": property.Key, "timeTaken": end.Sub(begin).Milliseconds()}).Info("End: Get event Property values DB call")
 					if err != nil {
-						logCtx.WithError(err).Error("Failed to marshall - property values")
+						logCtx.WithError(err).Error("Failed to get values from db - property values")
 						return
 					}
-					eventPropertyValuesInCache[eventPropertyValuesKey] = string(enEventPropertyValuesCache)
+
+					categoryMap := make(map[string]int64)
+					categoryMap[category] = property.Count
+					eventProperties.Property[property.Key] = U.PropertyWithTimestamp{
+						category,
+						categoryMap, // Setting precomputed ones to empty
+						U.CountTimestampTuple{
+							int64(property.LastSeen),
+							property.Count}}
+
+					var eventPropertyValues U.CachePropertyValueWithTimestamp
+					eventPropertyValues.PropertyValue = make(map[string]U.CountTimestampTuple)
+
+					if category == U.PropertyTypeCategorical {
+						eventPropertyValuesKey, _ := M.GetValuesByEventPropertyRollUpCacheKey(project_id, event, property.Key, dateFormat)
+						for _, value := range values {
+							if value.Value != "" {
+								eventPropertyValues.PropertyValue[value.Value] = U.CountTimestampTuple{
+									int64(value.LastSeen),
+									value.Count}
+							}
+						}
+						enEventPropertyValuesCache, err := json.Marshal(eventPropertyValues)
+						if err != nil {
+							logCtx.WithError(err).Error("Failed to marshall - property values")
+							return
+						}
+						eventPropertyValuesInCache[eventPropertyValuesKey] = string(enEventPropertyValuesCache)
+					}
 				}
-			}
-			enEventPropertiesCache, err := json.Marshal(eventProperties)
-			if err != nil {
-				logCtx.WithError(err).Error("Failed to marshall - event properties")
-				return
-			}
-			eventPropertyValuesInCache[eventPropertiesKey] = string(enEventPropertiesCache)
-			logCtx.Info("Begin:EPV:SB")
-			begin = U.TimeNow()
-			err = cacheRedis.SetPersistentBatch(eventPropertyValuesInCache, U.EVENT_USER_CACHE_EXPIRY_SECS)
-			end = U.TimeNow()
-			logCtx.WithFields(log.Fields{"timeTaken": end.Sub(begin).Milliseconds()}).Info("End:EN:SB")
-			if err != nil {
-				logCtx.WithError(err).Error("Failed to set property values in cache")
-				return
+				enEventPropertiesCache, err := json.Marshal(eventProperties)
+				if err != nil {
+					logCtx.WithError(err).Error("Failed to marshall - event properties")
+					return
+				}
+				eventPropertyValuesInCache[eventPropertiesKey] = string(enEventPropertiesCache)
+				logCtx.Info("Begin:EPV:SB")
+				begin = U.TimeNow()
+				err = cacheRedis.SetPersistentBatch(eventPropertyValuesInCache, float64((no_of_days+1-i)*24*60*60))
+				end = U.TimeNow()
+				logCtx.WithFields(log.Fields{"timeTaken": end.Sub(begin).Milliseconds()}).Info("End:EN:SB")
+				if err != nil {
+					logCtx.WithError(err).Error("Failed to set property values in cache")
+					return
+				}
 			}
 		}
 	}
@@ -474,12 +473,14 @@ func addEventDetailsToCache(project_id uint64, event_name string, event_properti
 		}
 		propertiesToIncr = append(propertiesToIncr, propertyCategoryKey)
 		if category == U.PropertyTypeCategorical {
-			valueKey, err := M.GetValuesByEventPropertyCacheKey(project_id, event_name, property, propertyValue, currentTimeDatePart)
-			if err != nil {
-				logCtx.WithError(err).Error("Failed to get cache key - values")
-				return
+			if propertyValue != "" {
+				valueKey, err := M.GetValuesByEventPropertyCacheKey(project_id, event_name, property, propertyValue, currentTimeDatePart)
+				if err != nil {
+					logCtx.WithError(err).Error("Failed to get cache key - values")
+					return
+				}
+				valuesToIncr = append(valuesToIncr, valueKey)
 			}
-			valuesToIncr = append(valuesToIncr, valueKey)
 		}
 	}
 	keysToIncr = append(keysToIncr, propertiesToIncr...)

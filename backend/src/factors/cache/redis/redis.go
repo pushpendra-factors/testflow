@@ -91,7 +91,7 @@ func (key *Key) KeyWithAllProjectsSupport() (string, error) {
 	if key.ProjectID == 0 {
 		projectScope = "pid:*"
 	} else {
-		projectScope = fmt.Sprintf("puid:%s", key.ProjectID)
+		projectScope = fmt.Sprintf("pid:%d", key.ProjectID)
 	}
 	// key: i.e, event_names:user_last_event:pid:*:suffix
 	return fmt.Sprintf("%s:%s:%s", key.Prefix, projectScope, key.Suffix), nil

@@ -32,9 +32,9 @@ func main() {
 	factorsEmailSender := flag.String("email_sender", "support-dev@factors.ai", "")
 	errorReportingInterval := flag.Int("error_reporting_interval", 300, "")
 
-	eventsLimit := flag.Int("events_limit", 4, "")
-	propertiesLimit := flag.Int("properties_limit", 10, "")
-	valuesLimit := flag.Int("values_limit", 10, "")
+	eventsLimit := flag.Int("events_limit", 10000, "")
+	propertiesLimit := flag.Int("properties_limit", 10000, "")
+	valuesLimit := flag.Int("values_limit", 10000, "")
 	// This is in days
 	rollupLookback := flag.Int("rollup_lookback", 1, "")
 
@@ -79,6 +79,22 @@ func main() {
 	C.InitLogClient(config.Env, config.AppName, config.EmailSender, config.AWSKey,
 		config.AWSSecret, config.AWSRegion, config.ErrorReportingInterval, config.SentryDSN)
 
+	// C.GetServices().SentryHook.SetTagsContext(map[string]string{
+	// 	"JobName": taskID,
+	// })
+	// defer C.GetServices().SentryHook.Flush()
+
+	eventsRollup := 0
+	eventPropertiesRollup := 0
+	eventPropertiesValuesRollup := 0
+	userPropertiesRollup := 0
+	userPropertiesValuesRollup := 0
+	projectsEventsTimmed := 0
+	projectsEventPropertiesTrimmed := 0
+	projectsEventPropertyValuesTrimmed := 0
+	projectsUserPropertiesTrimmed := 0
+	projectsUserPropertyValuesTrimmed := 0
+
 	for i := 1; i <= *rollupLookback; i++ {
 		date := U.TimeNow().AddDate(0, 0, -i).Format(U.DATETIME_FORMAT_YYYYMMDD)
 		eventCountKeys, _, err := getAllProjectEventCountKeys(date)
@@ -119,7 +135,8 @@ func main() {
 					log.WithError(err).Error("Failed to marshall event names")
 					return
 				}
-				log.Info("RollUp:EN")
+				log.WithField("ProjectId", eventKey.ProjectID).Info("RollUp:EN")
+				eventsRollup++
 				err = cacheRedis.SetPersistent(eventNamesKey, string(enEventCache), U.EVENT_USER_CACHE_EXPIRY_SECS)
 				if err != nil {
 					log.WithError(err).Error("Failed to set cache")
@@ -147,7 +164,8 @@ func main() {
 							log.WithError(err).Error("Failed to marshall - event properties")
 							return
 						}
-						log.Info("RollUp:EP")
+						log.WithField("ProjectId", eventKey.ProjectID).Info("RollUp:EP")
+						eventPropertiesRollup++
 						err = cacheRedis.SetPersistent(eventPropertiesKey, string(enEventPropertiesCache), U.EVENT_USER_CACHE_EXPIRY_SECS)
 						if err != nil {
 							log.WithError(err).Error("Failed to set cache")
@@ -175,7 +193,8 @@ func main() {
 									log.WithError(err).Error("Failed to marshall - property values")
 									return
 								}
-								log.Info("RollUp:EV")
+								log.WithField("ProjectId", eventKey.ProjectID).Info("RollUp:EV")
+								eventPropertiesValuesRollup++
 								err = cacheRedis.SetPersistent(eventPropertyValuesKey, string(enEventPropertyValuesCache), U.EVENT_USER_CACHE_EXPIRY_SECS)
 								if err != nil {
 									log.WithError(err).Error("Failed to set cache")
@@ -229,7 +248,8 @@ func main() {
 				if err != nil {
 					log.WithError(err).Error("Failed to marshal property key - getuserpropertiesbyproject")
 				}
-				log.Info("RollUp:UP")
+				log.WithField("ProjectId", property.ProjectID).Info("RollUp:UP")
+				userPropertiesRollup++
 				err = cacheRedis.SetPersistent(propertyCacheKey, string(enPropertiesCache), U.EVENT_USER_CACHE_EXPIRY_SECS)
 				if err != nil {
 					log.WithError(err).Error("Failed to set cache")
@@ -256,7 +276,8 @@ func main() {
 						if err != nil {
 							log.WithError(err).Error("Failed to marshal property value - getvaluesbyuserproperty")
 						}
-						log.Info("RollUp:UV")
+						userPropertiesValuesRollup++
+						log.WithField("ProjectId", property.ProjectID).Info("RollUp:UV")
 						err = cacheRedis.SetPersistent(PropertyValuesKey, string(enPropertyValuesCache), U.EVENT_USER_CACHE_EXPIRY_SECS)
 						if err != nil {
 							log.WithError(err).Error("Failed to set cache")
@@ -297,6 +318,7 @@ func main() {
 	for projIndex, eventsCount := range eventCountsPerProject {
 		count, _ := strconv.Atoi(eventsCount)
 		if count > *eventsLimit {
+			projectsEventsTimmed++
 			eventsInCacheTodayCacheKey, err := M.GetEventNamesOrderByOccurrenceAndRecencyCacheKey(eventCountKeys[projIndex].ProjectID, "*", eventCountKeys[projIndex].Suffix)
 			if err != nil {
 				log.WithError(err).Error("Error Getting cache keys")
@@ -324,6 +346,7 @@ func main() {
 	for projIndex, propertiesCount := range eventPropertyCountsPerProject {
 		count, _ := strconv.Atoi(propertiesCount)
 		if count > *propertiesLimit {
+			projectsEventPropertiesTrimmed++
 			eventPropertiesInCacheTodayCacheKey, err := M.GetPropertiesByEventCategoryCacheKey(eventPropertyCountKeys[projIndex].ProjectID, "*", "*", "*", eventPropertyCountKeys[projIndex].Suffix)
 			if err != nil {
 				log.WithError(err).Error("Error Getting cache keys")
@@ -352,6 +375,7 @@ func main() {
 	for projIndex, valuesCount := range eventPropertyValuesCountsPerProject {
 		count, _ := strconv.Atoi(valuesCount)
 		if count > *valuesLimit {
+			projectsEventPropertyValuesTrimmed++
 			valuesInCacheTodayCacheKey, _ := M.GetValuesByEventPropertyCacheKey(eventPropertyValuesCountKeys[projIndex].ProjectID, "*", "*", "*", eventPropertyValuesCountKeys[projIndex].Suffix)
 			if err != nil {
 				log.WithError(err).Error("Error Getting cache keys")
@@ -379,6 +403,7 @@ func main() {
 	for projIndex, userpropertiesCount := range userPropertyKeysCountsPerProject {
 		count, _ := strconv.Atoi(userpropertiesCount)
 		if count > *propertiesLimit {
+			projectsUserPropertiesTrimmed++
 			userpropertiesInCacheTodayCacheKey, err := M.GetUserPropertiesCategoryByProjectCacheKey(userPropertyCountKeys[projIndex].ProjectID, "*", "*", userPropertyCountKeys[projIndex].Suffix)
 			if err != nil {
 				log.WithError(err).Error("Error Getting cache keys")
@@ -406,6 +431,7 @@ func main() {
 	for projIndex, uservaluesCount := range userPropertyValuesKeysCountsPerProject {
 		count, _ := strconv.Atoi(uservaluesCount)
 		if count > *valuesLimit {
+			projectsUserPropertyValuesTrimmed++
 			uservaluesInCacheTodayCacheKey, err := M.GetValuesByUserPropertyCacheKey(userPropertyValuesKeys[projIndex].ProjectID, "*", "*", userPropertyValuesKeys[projIndex].Suffix)
 			if err != nil {
 				log.WithError(err).Error("Error Getting cache keys")
@@ -424,7 +450,23 @@ func main() {
 		}
 	}
 
-	fmt.Println("Done!!!")
+	status := map[string]interface{}{
+		"no_of_events_rollup":                 eventsRollup,
+		"no_of_event_properties_rollup":       eventPropertiesRollup,
+		"no_of_event_property_values_rollup":  eventPropertiesValuesRollup,
+		"no_of_user_properties_rollup":        userPropertiesRollup,
+		"no_of_user_property_values_rollup":   userPropertiesValuesRollup,
+		"no_of_events_trimmed":                projectsEventsTimmed,
+		"no_of_event_properties_trimmed":      projectsEventPropertiesTrimmed,
+		"no_of_event_property_values_trimmed": projectsEventPropertyValuesTrimmed,
+		"no_of_user_properties_trimmed":       projectsUserPropertiesTrimmed,
+		"no_of_user_property_values_trimmed":  projectsUserPropertyValuesTrimmed,
+	}
+
+	if err := U.NotifyThroughSNS(taskID, *env, status); err != nil {
+		log.Fatalf("Failed to notify status %+v", status)
+	}
+	log.Info("Done!!!")
 }
 
 func getAllProjectEventCountKeys(dateKey string) ([]*cacheRedis.Key, []string, error) {

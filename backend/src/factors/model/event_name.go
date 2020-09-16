@@ -412,6 +412,7 @@ func getPropertyValuesByEventPropertyFromCache(projectID uint64, eventName strin
 		}
 		values, _, err := cacheRedis.GetIfExistsPersistent(eventPropertyValuesKey)
 		if values == "" {
+			log.WithField("project_id", projectID).WithField("date_key", dateKey).Info("MISSING ROLLUP EPV")
 			return U.CachePropertyValueWithTimestamp{}, nil
 		}
 		var cacheValue U.CachePropertyValueWithTimestamp
@@ -520,6 +521,7 @@ func getPropertiesByEventFromCache(projectID uint64, eventName string, dateKey s
 		}
 		eventProperties, _, err := cacheRedis.GetIfExistsPersistent(eventPropertiesKey)
 		if eventProperties == "" {
+			log.WithField("project_id", projectID).WithField("date_key", dateKey).Info("MISSING ROLLUP EP")
 			return U.CachePropertyWithTimestamp{}, nil
 		}
 		var cacheValue U.CachePropertyWithTimestamp
@@ -640,6 +642,7 @@ func getEventNamesOrderedByOccurenceAndRecencyFromCache(projectID uint64, dateKe
 		}
 		eventNames, _, err := cacheRedis.GetIfExistsPersistent(eventNamesKey)
 		if eventNames == "" {
+			log.WithField("project_id", projectID).WithField("date_key", dateKey).Info("MISSING ROLLUP EN")
 			return CacheEventNamesWithTimestamp{}, nil
 		}
 		var cacheEventNames CacheEventNamesWithTimestamp
