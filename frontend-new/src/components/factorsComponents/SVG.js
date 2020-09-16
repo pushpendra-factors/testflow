@@ -2,13 +2,13 @@ import React from 'react';
 import * as icons from '../svgIcons';
 
 class SVG extends React.Component {
-
   handleTitleConversion(str) {
     return str.replace(/(^|\s)\S/g,
       function (t) {
         return t.toUpperCase();
       });
   }
+
   render() {
     const {
       name, size, color, extraClass

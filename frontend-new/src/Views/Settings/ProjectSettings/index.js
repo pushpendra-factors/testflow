@@ -1,82 +1,81 @@
-import React, {useState, useEffect} from 'react';
-import { Row, Col, Modal, Button, Menu, Avatar, Input  } from 'antd';  
-import {Text, SVG} from 'factorsComponents';    
+import React, { useState, useEffect } from 'react';
+import {
+  Row, Col, Modal, Button, Menu, Avatar, Input
+} from 'antd';
+import { Text, SVG } from 'factorsComponents';
 import ViewProjectSettings from './ViewProjectSettings';
 
 const { SubMenu } = Menu;
 
 const MenuTabs = {
   generalSettings: 'General Settings',
-  SDK:'Javascript SDK',
-  Users:'Users',
-  Integrations:'Integrations',
-  EventAlias:'Event Alias',
-}
+  SDK: 'Javascript SDK',
+  Users: 'Users',
+  Integrations: 'Integrations',
+  EventAlias: 'Event Alias'
+};
 
-function UserSettingsModal (props){  
-   
-  const [selectedMenu, setSelectedMenu] = useState(MenuTabs.accounts);   
-  const [editPasswordModal, setPasswordModal] = useState(false);   
-  const [editDetailsModal, setDetailsModal] = useState(false);   
-  const [confirmLoading, setConfirmLoading] = useState(false);   
-  
+function UserSettingsModal(props) {
+  const [selectedMenu, setSelectedMenu] = useState(MenuTabs.accounts);
+  const [editPasswordModal, setPasswordModal] = useState(false);
+  const [editDetailsModal, setDetailsModal] = useState(false);
+  const [confirmLoading, setConfirmLoading] = useState(false);
+
   const handleClick = (e) => {
     setSelectedMenu(e.key);
     // console.log('click ', e.key);
   };
 
   const handleOk = () => {
-    setConfirmLoading(true)
+    setConfirmLoading(true);
     setTimeout(() => {
-      setConfirmLoading(false); 
+      setConfirmLoading(false);
       setPasswordModal(false);
       setDetailsModal(false);
     }, 2000);
   };
 
-    return (
-      <>
-         
+  return (
+    <>
 
-        <div className={`fa-container`}> 
-          <Row gutter={[24, 24]} justify={'center'} className={`pt-16 pb-2 m-0 `}>
-              <Col span={20}>
-                <Text type={'title'} level={2} weight={'bold'} extraClass={`m-0`}>Project Settings</Text>  
-                <Text type={'title'} level={7} weight={'regular'} extraClass={`m-0`} color={'grey'}>FactorsAI</Text>  
-              </Col> 
-          </Row>
-          <Row gutter={[24, 24]} justify={'center'}>
-              <Col span={5}> 
+      <div className={'fa-container'}>
+        <Row gutter={[24, 24]} justify={'center'} className={'pt-16 pb-2 m-0 '}>
+          <Col span={20}>
+            <Text type={'title'} level={2} weight={'bold'} extraClass={'m-0'}>Project Settings</Text>
+            <Text type={'title'} level={7} weight={'regular'} extraClass={'m-0'} color={'grey'}>FactorsAI</Text>
+          </Col>
+        </Row>
+        <Row gutter={[24, 24]} justify={'center'}>
+          <Col span={5}>
 
-              <Menu  
-                onClick={handleClick}
-                defaultSelectedKeys={MenuTabs.generalSettings} 
-                mode="inline"
-                className={`fa-settings--menu`}
-              >  
-              <Menu.Item key={MenuTabs.generalSettings}>{MenuTabs.generalSettings}</Menu.Item> 
-              <Menu.Item key={MenuTabs.SDK}>{MenuTabs.SDK}</Menu.Item> 
-              <Menu.Item key={MenuTabs.Users}>{MenuTabs.Users}</Menu.Item> 
-              <Menu.Item key={MenuTabs.Integrations}>{MenuTabs.Integrations}</Menu.Item> 
-              <Menu.Item key={MenuTabs.EventAlias}>{MenuTabs.EventAlias}</Menu.Item> 
-              </Menu>
+            <Menu
+              onClick={handleClick}
+              defaultSelectedKeys={MenuTabs.generalSettings}
+              mode="inline"
+              className={'fa-settings--menu'}
+            >
+              <Menu.Item key={MenuTabs.generalSettings}>{MenuTabs.generalSettings}</Menu.Item>
+              <Menu.Item key={MenuTabs.SDK}>{MenuTabs.SDK}</Menu.Item>
+              <Menu.Item key={MenuTabs.Users}>{MenuTabs.Users}</Menu.Item>
+              <Menu.Item key={MenuTabs.Integrations}>{MenuTabs.Integrations}</Menu.Item>
+              <Menu.Item key={MenuTabs.EventAlias}>{MenuTabs.EventAlias}</Menu.Item>
+            </Menu>
 
-              </Col> 
-              <Col span={15}>
+          </Col>
+          <Col span={15}>
 
-              <ViewProjectSettings 
-                  editDetails={()=>setDetailsModal(true)}
-                  editPassword={()=>setPasswordModal(true)}
-                  />
+            <ViewProjectSettings
+              editDetails={() => setDetailsModal(true)}
+              editPassword={() => setPasswordModal(true)}
+            />
 
-              </Col> 
-          </Row>
-        </div> 
+          </Col>
+        </Row>
+      </div>
 
-      </>
-      
-    );
-  
+    </>
+
+  );
 }
 
-export default UserSettingsModal
+export default UserSettingsModal;

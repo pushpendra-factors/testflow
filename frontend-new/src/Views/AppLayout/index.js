@@ -7,23 +7,23 @@ import ProjectSettings from '../Settings/ProjectSettings';
 import { HashRouter, Route, Switch } from 'react-router-dom';
 
 function AppLayout() {
-    const { Header, Content } = Layout;
+  const { Header, Content } = Layout;
 
-    return (
-        <Layout>
-            <Sidebar />
-            <Layout className="fa-content-container">
-                <Content className="bg-white min-h-screen">
-                    <HashRouter>
-                        <Switch>
-                            <Route path="/settings/" component={ProjectSettings} />
-                            <Route path="/" name="Home" component={CoreQuery} />
-                        </Switch>
-                    </HashRouter>
-                </Content>
-            </Layout>
-        </Layout>
-    )
+  return (
+    <Layout>
+      <Sidebar />
+      <Layout className="fa-content-container">
+        <Content className="bg-white min-h-screen">
+          <HashRouter>
+            <Switch>
+              <Route path="/settings/" component={ProjectSettings} />
+              <Route path="/" name="Home" component={CoreQuery} />
+            </Switch>
+          </HashRouter>
+        </Content>
+      </Layout>
+    </Layout>
+  );
 }
 
 export default AppLayout;
