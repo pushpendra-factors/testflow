@@ -93,8 +93,8 @@ func main() {
 	projectIdMap := util.GetIntBoolMapFromStringList(projectIds)
 
 	for projectId, _ := range projectIdMap {
-		S.RefreshCacheFromDb(projectId, startOfCurrentDay, *lookBackDays, *eventsLimit, *propertiesLimit, *valuesLimit, *eventRecordsLimit)
-		M.RefreshCacheForUserProperties(projectId, startOfCurrentDay, *usersProcessedLimit, *propertiesLimit, *valuesLimit)
+		S.BackFillEventDataInCacheFromDb(projectId, startOfCurrentDay, *lookBackDays, *eventsLimit, *propertiesLimit, *valuesLimit, *eventRecordsLimit)
+		M.BackFillUserDataInCacheFromDb(projectId, startOfCurrentDay, *usersProcessedLimit, *propertiesLimit, *valuesLimit)
 	}
 	fmt.Println("Done!!!")
 }

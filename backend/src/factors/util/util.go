@@ -216,7 +216,7 @@ const (
 
 // Returns date in YYYYMMDD format
 func GetDateOnlyFromTimestamp(timestamp int64) string {
-	return time.Unix(timestamp, 0).Format(DATETIME_FORMAT_YYYYMMDD)
+	return time.Unix(timestamp, 0).UTC().Format(DATETIME_FORMAT_YYYYMMDD)
 }
 
 // TimeNow Return current time in UTC. Should be used everywhere to avoid local timezone.
