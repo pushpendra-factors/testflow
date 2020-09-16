@@ -9,6 +9,7 @@ import styles from './index.module.scss';
 
 function CoreQuery() {
     const [drawerVisible, setDrawerVisible] = useState(false);
+    const [queryType, setQueryType] = useState('event');
     const [showResult, setShowResult] = useState(false);
     // const [showResult, setShowResult] = useState(true);
     const [queries, setQueries] = useState([]);
@@ -70,11 +71,12 @@ function CoreQuery() {
                     queries={queries}
                     runQuery={runQuery}
                     eventChange={queryChange}
+                    queryType={queryType}
                 />
             </Drawer>
 
             {
-                showResult ? (<ResultsPage setDrawerVisible={setDrawerVisible} queries={queries.map(elem => elem.label)} />) : (<CoreQueryHome setDrawerVisible={setDrawerVisible} />)
+                showResult ? (<ResultsPage setDrawerVisible={setDrawerVisible} queries={queries.map(elem => elem.label)} />) : (<CoreQueryHome setQueryType={setQueryType} setDrawerVisible={setDrawerVisible} />)
             }
 
         </>

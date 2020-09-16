@@ -8,11 +8,12 @@ import FilterBlock from '../FilterBlock';
 
 const { OptGroup, Option } = Select;
 
-function QueryBlock({index, event, eventChange,queries}) {
+function QueryBlock({index, event, eventChange,queries, queryType = 'event'}) {
 
     const [isDDVisible, setDDVisible] = useState(index == 1 && !event ? true : false); 
     const [isFilterDDVisible, setFilterDDVisible] = useState(false);
 
+    const alphabetIndex = "ABCDEF";
 
     const eventOptions = [
         {
@@ -156,7 +157,7 @@ function QueryBlock({index, event, eventChange,queries}) {
     return(
         <div className={`${styles.query_block} fa--query_block bordered `}>
             <div className={`${styles.query_block__event} flex justify-start items-center`}> 
-                <div className={`fa--query_block--add-event active flex justify-center items-center mr-2`}><Text type={'title'} level={7} weight={'bold'} color={`white`} extraClass={`m-0`}>{index}</Text> </div>
+                <div className={`fa--query_block--add-event active flex justify-center items-center mr-2`}><Text type={'title'} level={7} weight={'bold'} color={`white`} extraClass={`m-0`}>{queryType === 'funnel'? index : alphabetIndex[index-1]}</Text> </div>
                 {!isDDVisible && <Button type="link" onClick={triggerDropDown}><SVG name="mouseevent" extraClass={`mr-1`}></SVG> {event.label} </Button> } 
                 {selectEvents()}
             </div>

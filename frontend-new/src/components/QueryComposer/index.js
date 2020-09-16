@@ -10,7 +10,7 @@ const { Option } = Select;
 
 const { Panel } = Collapse;
 
-function QueryComposer({ queries, runQuery, eventChange}) {
+function QueryComposer({ queries, runQuery, eventChange, queryType}) {
 
     const [analyticsSeqOpen, setAnalyticsSeqVisible] = useState(false);
 
@@ -51,13 +51,14 @@ function QueryComposer({ queries, runQuery, eventChange}) {
     }
 
     const groupByBlock = () => {
-        if(queries.length >= 2) {
-            return ( 
+        if(queryType === 'event' && queries.length < 1) {return null}
+        if(queryType === 'funnel' && queries.length < 2) {return null}
+        
+        return ( 
                 <div className={`fa--query_block bordered `}>
                     <GroupBlock groupBy={queryOptions.groupBy} events={queries}></GroupBlock>
                 </div>
             )
-        }
     }
 
     const setEventSequence = (value) => {
@@ -144,7 +145,8 @@ function QueryComposer({ queries, runQuery, eventChange}) {
     }
 
     const footer = () => {
-        if(queries.length < 2) {return null}
+        if(queryType === 'event' && queries.length < 1) {return null}
+        if(queryType === 'funnel' && queries.length < 2) {return null}
         else {
 
             return (
@@ -160,7 +162,7 @@ function QueryComposer({ queries, runQuery, eventChange}) {
         <div className={styles.composer_body}>
             {queryList()}
             {groupByBlock()}
-            {moreOptionsBlock()}
+            {queryType === 'funnel'? moreOptionsBlock() : null}
             {footer()} 
         </div> 
     )
