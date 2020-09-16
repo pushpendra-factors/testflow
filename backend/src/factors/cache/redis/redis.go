@@ -443,15 +443,15 @@ func getKeys(pattern string, persistent bool) ([]*Key, error) {
 	return cacheKeys, nil
 }
 
-func PFAddPersistent(cacheKey *Key, value string) (bool, error) {
-	return pfAdd(cacheKey, value, true)
+func PFAddPersistent(cacheKey *Key, value string, expiryInSeconds float64) (bool, error) {
+	return pfAdd(cacheKey, value, expiryInSeconds, true)
 }
 
-func PFAdd(cacheKey *Key, value string) (bool, error) {
-	return pfAdd(cacheKey, value, false)
+func PFAdd(cacheKey *Key, value string, expiryInSeconds float64) (bool, error) {
+	return pfAdd(cacheKey, value, expiryInSeconds, false)
 }
 
-func pfAdd(cacheKey *Key, value string, persistent bool) (bool, error) {
+func pfAdd(cacheKey *Key, value string, expiryInSeconds float64, persistent bool) (bool, error) {
 	if cacheKey == nil {
 		return false, ErrorInvalidKey
 	}
@@ -470,6 +470,12 @@ func pfAdd(cacheKey *Key, value string, persistent bool) (bool, error) {
 	res, err := redisConn.Do("PFADD", cKey, value)
 	if err != nil {
 		return false, err
+	}
+	if expiryInSeconds != 0 {
+		_, err := redisConn.Do("EXPIRE", cKey, int64(expiryInSeconds))
+		if err != nil {
+			return false, err
+		}
 	}
 	if res.(int64) == 1 {
 		return true, nil

@@ -216,7 +216,7 @@ func UpdateCacheForUserProperties(userId string, projectid uint64, updatedProper
 	}
 
 	begin := U.TimeNow()
-	isNewUser, err := cacheRedis.PFAddPersistent(usersCacheKey, userId)
+	isNewUser, err := cacheRedis.PFAddPersistent(usersCacheKey, userId, 24*60*60)
 	end := U.TimeNow()
 	logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("US:List")
 	if err != nil {
