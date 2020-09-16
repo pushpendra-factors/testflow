@@ -21,7 +21,6 @@ function TotalEventsTable({ data, event }) {
             searchText={searchText}
             setSearchText={setSearchText}
             columns={columns}
-            rowSelection={null}
         />
     )
 }

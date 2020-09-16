@@ -34,7 +34,11 @@ function TotalEvents({ queries }) {
         setChartData(getData());
     }, [getData]);
 
-    const total = 2340;
+    let total = 0;
+
+    chartData.forEach(elem=>{
+        total+=elem.value
+    });
 
     if (!chartData.length) {
         return null;

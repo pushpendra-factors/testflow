@@ -26,6 +26,11 @@ export const getSingleEventNoGroupingTableData = (data, event, currentSorter) =>
 export const getSingleEventNoGroupingTableColumns = (data, event, currentSorter, handleSorting) => {
     let result = [
         {
+            title: '',
+            dataIndex: '',
+            width:37
+        },
+        {
             title: 'Date',
             dataIndex: 'date',
         },

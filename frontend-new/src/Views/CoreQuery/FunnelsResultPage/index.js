@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import GroupedChart from './GroupedChart';
-import DataTable from './DataTable';
-import { generateGroupedChartsData, generateDummyData, generateGroups, generateUngroupedChartsData, generateTableData, generateTableColumns } from './utils';
+import { generateGroupedChartsData, generateDummyData, generateGroups, generateUngroupedChartsData } from './utils';
 import FiltersInfo from './FiltersInfo';
 import UngroupedChart from './UngroupedChart';
 import Header from '../../AppLayout/Header';
