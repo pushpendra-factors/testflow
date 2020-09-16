@@ -106,7 +106,10 @@ class Adwords extends Component {
     let selectedAdwordsAccounts = this.state.selectedAdwordsAccounts.join(",")
     this.props.udpateProjectSettings(this.props.currentProjectId, 
       { 'int_adwords_customer_account_id':  selectedAdwordsAccounts});
-    this.setState({addNewAccount: false})
+    this.setState({
+        addNewAccount: false,
+        selectedAdwordsAccounts: []
+      })
   }
 
   renderAccountsList = () => {
