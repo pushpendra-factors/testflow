@@ -3,7 +3,7 @@ import * as d3 from 'd3';
 import styles from './index.module.scss';
 
 
-function SpikeChart({ chartData, chartColor }) {
+function SpikeChart({ chartData, chartColor, page, event }) {
 
     const chartRef = useRef(null);
     
@@ -27,7 +27,7 @@ function SpikeChart({ chartData, chartColor }) {
 
         const tooltip = d3.select(chartRef.current).append("div")
             .attr("class", "tooltip")
-            .style("opacity", 0);
+            .style("display", "none");
 
 
         const data = chartData;
@@ -41,7 +41,7 @@ function SpikeChart({ chartData, chartColor }) {
             .range([0, width]);
 
         const y = d3.scaleLinear()
-            .domain(d3.extent(data, function (d) { return +d.value; }))
+            .domain(d3.extent(data, function (d) { return +d[event]; }))
             .range([height, 0]);
 
         // Add the area
@@ -53,9 +53,9 @@ function SpikeChart({ chartData, chartColor }) {
             .attr("d", d3.area()
                 .x(function (d, i) { return x(d.date) })
                 .y0(height)
-                .y1(function (d) { return y(d.value) })
+                .y1(function (d) { return y(d[event]) })
             )
-            .attr('fill', `url(#area-gradient-${chartColor.substr(1)})`)
+            .attr('fill', `url(#area-gradient-${chartColor.substr(1)}-${page})`)
             .attr('stroke-width', 1);
 
         // Add the line
@@ -66,11 +66,11 @@ function SpikeChart({ chartData, chartColor }) {
             .attr("stroke-width", 1)
             .attr("d", d3.line()
                 .x(function (d, i) { return x(d.date) })
-                .y(function (d) { return y(d.value) })
+                .y(function (d) { return y(d[event]) })
             )
 
         svg.append("linearGradient")
-            .attr("id", "area-gradient-"+chartColor.substr(1))
+            .attr("id", `area-gradient-${chartColor.substr(1)}-${page}`)
             .attr("gradientUnits", "userSpaceOnUse")
             .attr("x1", 0).attr("y1", y(0))
             .attr("x2", 0).attr("y2", y(100))
@@ -101,7 +101,7 @@ function SpikeChart({ chartData, chartColor }) {
                 focus.style("display", null);
             })
             .on("mouseout", function () {
-                tooltip.style('opacity', 0)
+                tooltip.style('display', "none")
                 focus.style("display", "none");
             })
             .on("mousemove", mousemove);
@@ -117,17 +117,17 @@ function SpikeChart({ chartData, chartColor }) {
             if (left + 146 > document.documentElement.clientWidth) {
                 left = d3.event.pageX - 166;
             }
-            focus.attr("transform", "translate(" + x(d.date) + "," + y(d.value) + ")");
-            tooltip.style("opacity", 1);
+            focus.attr("transform", "translate(" + x(d.date) + "," + y(d[event]) + ")");
+            tooltip.style("display", 'block');
             tooltip.html(`
                 <div class="font-semibold">${months[new Date(d.date).getMonth()] + ' ' + new Date(d.date).getDate() + ', ' + new Date(d.date).getFullYear()}</div>
-                <div class="font-normal mt-1">${d.value}</div>
+                <div class="font-normal mt-1">${d[event]}</div>
             `)
                 .style("left", left + "px")
                 .style("top", d3.event.pageY - 40 + "px");
         }
 
-    }, [bisectDate, chartData, months, chartColor]);
+    }, [bisectDate, chartData, months, chartColor, event, page]);
 
     useEffect(() => {
         drawChart();

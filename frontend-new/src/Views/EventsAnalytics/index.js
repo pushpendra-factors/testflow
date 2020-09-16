@@ -15,8 +15,7 @@ function EventsAnalytics({ queries, setShowFunnels, showFunnels }) {
     const handleTabChange = (tabKey) => {
         setActiveKey(tabKey);
     }
-
-
+    
     const tabItems = [
         {
             key: '1',

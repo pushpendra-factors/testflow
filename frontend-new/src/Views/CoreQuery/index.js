@@ -13,7 +13,7 @@ function CoreQuery() {
     const [showResult, setShowResult] = useState(false);
     // const [showResult, setShowResult] = useState(true);
     const [queries, setQueries] = useState([]);
-    // const [queries, setQueries] = useState(['Paid', 'Applied Coupon', 'Cart Updated', 'Checkout']);
+    // const [queries, setQueries] = useState(['Applied Coupon', 'Cart Updated', 'Checkout', 'Add to Wishlist', 'Paid']);
 
     const [showFunnels, setShowFunnels] = useState(true);
 
@@ -56,9 +56,11 @@ function CoreQuery() {
     }
 
     let result = (<EventsAnalytics showFunnels={showFunnels} setShowFunnels={setShowFunnels} queries={queries.map(elem => elem.label)} />);
+    // let result = (<EventsAnalytics showFunnels={showFunnels} setShowFunnels={setShowFunnels} queries={queries.map(elem => elem)} />);
 
     if (showFunnels) {
         result = (<FunnelsResultPage showFunnels={showFunnels} setShowFunnels={setShowFunnels} setDrawerVisible={setDrawerVisible} queries={queries.map(elem => elem.label)} />);
+        // result = (<FunnelsResultPage showFunnels={showFunnels} setShowFunnels={setShowFunnels} setDrawerVisible={setDrawerVisible} queries={queries.map(elem => elem)} />);
     }
 
     return (
