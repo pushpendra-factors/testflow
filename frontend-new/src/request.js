@@ -11,11 +11,11 @@ function request(method, url, headers, data) {
     }
   };
 
-  if (data && data != undefined) {
+  if (data && data !== undefined) {
     options.body = JSON.stringify(data);
   }
 
-  if (headers && headers != undefined) {
+  if (headers && headers !== undefined) {
     options.headers = headers;
     options.headers['Content-Type'] = 'application/json';
   }
@@ -31,7 +31,7 @@ function request(method, url, headers, data) {
       return response.text()
         .then((text) => {
           const responsePayload = { status: response.status, ok: isRequestSuccess(response.status) };
-          if (text == '') responsePayload.data = {};
+          if (text === '') responsePayload.data = {};
           else responsePayload.data = JSON.parse(text);
 
           return responsePayload;
