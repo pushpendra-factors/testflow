@@ -1,3 +1,4 @@
+/* eslint-disable */
 import React, { useRef, useCallback, useEffect } from 'react';
 import c3 from 'c3';
 import * as d3 from 'd3';
@@ -5,205 +6,201 @@ import styles from './index.module.scss';
 import { checkForWindowSizeChange, calculatePercentage, generateColors } from '../utils';
 
 function GroupedChart({ eventsData, groups, chartData }) {
-    
-    const appliedColors = generateColors(chartData.length);
-    const chartColors = {};
-    chartData.forEach((elem, index) => {
-        chartColors[elem[0]] = appliedColors[index];
+  const appliedColors = generateColors(chartData.length);
+  const chartColors = {};
+  chartData.forEach((elem, index) => {
+    chartColors[elem[0]] = appliedColors[index];
+  });
+
+  const chartRef = useRef(null);
+
+  const showConverionRates = useCallback(() => {
+    const yGridLines = d3.select(chartRef.current).select('g.c3-ygrids').selectAll('line').nodes();
+    let top, secondTop, height;
+    const topGridLine = yGridLines[yGridLines.length - 1];
+    const secondTopGridLine = yGridLines[yGridLines.length - 2];
+    top = topGridLine.getBoundingClientRect().y;
+    secondTop = secondTopGridLine.getBoundingClientRect().y;
+    height = secondTop - top;
+    const scrollTop = (window.pageYOffset !== undefined) ? window.pageYOffset : (document.documentElement || document.body.parentNode || document.body).scrollTop;
+
+    groups.forEach((elem) => {
+      document.getElementById(`conversion-text-${elem.name}`).style.top = `${top + scrollTop}px`;
+      document.getElementById(`conversion-text-${elem.name}`).style.height = `${height}px`;
     });
 
-    const chartRef = useRef(null);
+    d3.select(chartRef.current).select('g.c3-axis-x').selectAll('g.tick').nodes()
+      .forEach((elem, index) => {
+        const position = elem.getBoundingClientRect();
+        document.getElementById(`conversion-text-${groups[index].name}`).style.left = `${position.x}px`;
+        const width = document.getElementById(groups[index].name).getBoundingClientRect().x - position.x;
+        document.getElementById(`conversion-text-${groups[index].name}`).style.width = `${width}px`;
+      });
+  }, [groups]);
 
-    const showConverionRates = useCallback(() => {
-        let yGridLines = d3.select(chartRef.current).select('g.c3-ygrids').selectAll('line').nodes();
-        let top, secondTop, height;
-        let topGridLine = yGridLines[yGridLines.length - 1];
-        let secondTopGridLine = yGridLines[yGridLines.length - 2];
-        top = topGridLine.getBoundingClientRect().y;
-        secondTop = secondTopGridLine.getBoundingClientRect().y;
-        height = secondTop - top;
-        const scrollTop = (window.pageYOffset !== undefined) ? window.pageYOffset : (document.documentElement || document.body.parentNode || document.body).scrollTop;
+  const showVerticalGridLines = useCallback(() => {
+    const yGridLines = d3.select(chartRef.current).select('g.c3-ygrids').selectAll('line').nodes();
+    let top, bottom, height;
+    const topGridLine = yGridLines[yGridLines.length - 1];
+    top = topGridLine.getBoundingClientRect().y;
+    const bottomGridLine = yGridLines[0];
+    bottom = bottomGridLine.getBoundingClientRect().y;
+    height = bottom - top;
+    const lastBarClassNmae = eventsData[eventsData.length - 1].name.split(' ').join('-'); // this is an issue if someone disables the last legend item. Will figure out something for this.
+    const scrollTop = (window.pageYOffset !== undefined) ? window.pageYOffset : (document.documentElement || document.body.parentNode || document.body).scrollTop;
+    d3.select(chartRef.current).select(`g.c3-shapes-${lastBarClassNmae}`).selectAll('path').nodes()
+      .forEach((elem, index) => {
+        const position = elem.getBoundingClientRect();
+        const verticalLine = document.getElementById(groups[index].name);
+        verticalLine.style.left = `${position.x + position.width - 1}px`;
+        verticalLine.style.height = `${height}px`;
+        verticalLine.style.top = `${top + scrollTop}px`;
+      });
+  }, [groups, eventsData]);
 
-        groups.forEach((elem) => {
-            document.getElementById(`conversion-text-${elem.name}`).style.top = `${top + scrollTop}px`;
-            document.getElementById(`conversion-text-${elem.name}`).style.height = `${height}px`;
-        });
+  const drawChart = useCallback(() => {
+    c3.generate({
+      size: {
+        height: 400
+      },
+      padding: {
+        left: 40,
+        bottom: 24
+      },
+      bindto: chartRef.current,
+      data: {
+        columns: chartData,
+        type: 'bar',
+        colors: chartColors,
+        onmouseover: (elemData) => {
+          // blur all the bars
+          d3.select(chartRef.current)
+            .selectAll('.c3-shapes')
+            .selectAll('path')
+            .style('opacity', '0.3');
 
-        d3.select(chartRef.current).select('g.c3-axis-x').selectAll('g.tick').nodes()
-            .forEach((elem, index) => {
-                let position = elem.getBoundingClientRect();
-                document.getElementById(`conversion-text-${groups[index].name}`).style.left = `${position.x}px`;
-                let width = document.getElementById(groups[index].name).getBoundingClientRect().x - position.x;
-                document.getElementById(`conversion-text-${groups[index].name}`).style.width = `${width}px`;
-            })
-    }, [groups]);
+          let id = elemData.name;
+          if (!id) id = elemData.id;
 
-    const showVerticalGridLines = useCallback(() => {
-        let yGridLines = d3.select(chartRef.current).select('g.c3-ygrids').selectAll('line').nodes();
-        let top, bottom, height;
-        let topGridLine = yGridLines[yGridLines.length - 1];
-        top = topGridLine.getBoundingClientRect().y;
-        let bottomGridLine = yGridLines[0];
-        bottom = bottomGridLine.getBoundingClientRect().y;
-        height = bottom - top;
-        let lastBarClassNmae = eventsData[eventsData.length - 1].name.split(" ").join("-"); //this is an issue if someone disables the last legend item. Will figure out something for this.
-        const scrollTop = (window.pageYOffset !== undefined) ? window.pageYOffset : (document.documentElement || document.body.parentNode || document.body).scrollTop;
-        d3.select(chartRef.current).select(`g.c3-shapes-${lastBarClassNmae}`).selectAll('path').nodes()
-            .forEach((elem, index) => {
-                let position = elem.getBoundingClientRect();
-                let verticalLine = document.getElementById(groups[index].name);
-                verticalLine.style.left = `${position.x + position.width - 1}px`;
-                verticalLine.style.height = `${height}px`;
-                verticalLine.style.top = `${top + scrollTop}px`;
+          const searchedClass = `c3-target-${id.split(' ').join('-')}`;
+          let hoveredIndex;
+
+          // style previous bar
+
+          const bars = d3.select(chartRef.current)
+            .selectAll('.c3-chart-bar.c3-target')
+            .nodes();
+
+          bars
+            .forEach((node, index) => {
+              if (node.getAttribute('class').split(' ').indexOf(searchedClass) > -1) {
+                hoveredIndex = index;
+              }
             });
-    }, [groups, eventsData]);
 
+          if (hoveredIndex !== 0) {
+            d3.select(bars[hoveredIndex - 1]).select(`.c3-shape-${elemData.index}`).style('opacity', 1);
+          }
 
-    const drawChart = useCallback(() => {
-        c3.generate({
-            size: {
-                height: 400
-            },
-            padding: {
-                left: 40,
-                bottom: 24
-            },
-            bindto: chartRef.current,
-            data: {
-                columns: chartData,
-                type: 'bar',
-                colors: chartColors,
-                onmouseover: (elemData) => {
+          // style hovered bar
+          d3.select(chartRef.current)
+            .selectAll(`.c3-shapes-${id.split(' ').join('-')}`)
+            .selectAll('path')
+            .nodes()
+            .forEach((node, index) => {
+              if (index === elemData.index) {
+                d3.select(node).style('opacity', 1);
+              } else {
+                d3.select(node).style('opacity', 0.3);
+              }
+            });
+        },
+        onmouseout: () => {
+          d3.select(chartRef.current)
+            .selectAll('.c3-shapes')
+            .selectAll('path')
+            .style('opacity', '1');
+        }
+      },
+      onrendered: () => {
+        d3.select(chartRef.current).select('.c3-axis.c3-axis-x').selectAll('.tick').select('tspan').attr('dy', '16px');
+      },
+      legend: {
+        padding: 8
+      },
+      transition: {
+        duration: 1000
+      },
+      bar: {
+        space: 0.05,
+        width: {
+          ratio: 0.7
+        }
+      },
+      axis: {
+        x: {
+          type: 'category',
+          tick: {
+            multiline: true,
+            multilineMax: 3
+          },
+          categories: groups
+            .filter(elem => elem.is_visible)
+            .map(elem => elem.name)
+        },
+        y: {
+          max: 100,
+          tick: {
+            values: [0, 20, 40, 60, 80, 100],
+            format: (d) => {
+              if (d) {
+                return d + '%';
+              } else {
+                return d;
+              }
+            }
+          }
+        }
+      },
+      tooltip: {
+        grouped: false,
 
-                    //blur all the bars
-                    d3.select(chartRef.current)
-                        .selectAll(`.c3-shapes`)
-                        .selectAll('path')
-                        .style('opacity', '0.3')
+        position: (d) => {
+          const bars = d3.select(chartRef.current).select(`.c3-bars.c3-bars-${d[0].id.split(' ').join('-')}`).selectAll('path').nodes();
+          const nodePosition = d3.select(bars[d[0].index]).node().getBoundingClientRect();
+          let left = (nodePosition.x + (nodePosition.width / 2));
+          // if user is hovering over the last bar
+          if (left + 200 >= (document.documentElement.clientWidth)) {
+            left = (nodePosition.x + (nodePosition.width / 2)) - 200;
+          }
 
-                    let id = elemData.name;
-                    if (!id) id = elemData.id;
+          const top = nodePosition.y;
+          const toolTipHeight = d3.select('.toolTip').node().getBoundingClientRect().height;
 
-                    const searchedClass = `c3-target-${id.split(" ").join("-")}`;
-                    let hoveredIndex;
+          return { top: top - toolTipHeight + 5, left };
+        },
 
-                    //style previous bar
-
-                    const bars = d3.select(chartRef.current)
-                        .selectAll('.c3-chart-bar.c3-target')
-                        .nodes()
-
-                    bars
-                        .forEach((node, index) => {
-                            if (node.getAttribute('class').split(" ").indexOf(searchedClass) > -1) {
-                                hoveredIndex = index;
-                            }
-                        })
-
-                    if (hoveredIndex !== 0) {
-                        d3.select(bars[hoveredIndex - 1]).select(`.c3-shape-${elemData.index}`).style('opacity', 1)
-                    }
-
-                    // style hovered bar
-                    d3.select(chartRef.current)
-                        .selectAll(`.c3-shapes-${id.split(" ").join('-')}`)
-                        .selectAll('path')
-                        .nodes()
-                        .forEach((node, index) => {
-                            if (index === elemData.index) {
-                                d3.select(node).style('opacity', 1)
-                            } else {
-                                d3.select(node).style('opacity', 0.3)
-                            }
-                        })
-                },
-                onmouseout: () => {
-                    d3.select(chartRef.current)
-                        .selectAll(`.c3-shapes`)
-                        .selectAll('path')
-                        .style('opacity', '1')
-                },
-            },
-            onrendered: () => {
-                d3.select(chartRef.current).select(".c3-axis.c3-axis-x").selectAll('.tick').select('tspan').attr("dy", "16px");
-            },
-            legend: {
-                padding: 8,
-            },
-            transition: {
-                duration: 1000
-            },
-            bar: {
-                space: 0.05,
-                width: {
-                    ratio: 0.7
-                }
-            },
-            axis: {
-                x: {
-                    type: 'category',
-                    tick: {
-                        multiline: true,
-                        multilineMax: 3,
-                    },
-                    categories: groups
-                        .filter(elem => elem.is_visible)
-                        .map(elem => elem.name),
-                },
-                y: {
-                    max: 100,
-                    tick: {
-                        values: [0, 20, 40, 60, 80, 100],
-                        format: (d) => {
-                            if (d) {
-                                return d + '%';
-                            } else {
-                                return d
-                            }
-
-                        },
-                    }
-                }
-            },
-            tooltip: {
-                grouped: false,
-
-                position: (d, width, height, element) => {
-                    const bars = d3.select(chartRef.current).select(`.c3-bars.c3-bars-${d[0].id.split(' ').join('-')}`).selectAll('path').nodes();
-                    const nodePosition = d3.select(bars[d[0].index]).node().getBoundingClientRect();
-                    let left = (nodePosition.x + (nodePosition.width / 2));
-                    // if user is hovering over the last bar
-                    if (left + 200 >= (document.documentElement.clientWidth)) {
-                        left = (nodePosition.x + (nodePosition.width / 2)) - 200;
-                    }
-
-                    const top = nodePosition.y;
-                    const toolTipHeight = d3.select('.toolTip').node().getBoundingClientRect().height;
-
-                    return { top: top - toolTipHeight + 5, left: left };
-                },
-
-                contents: d => {
-                    const group = groups[d[0].index].name;
-                    const eventIndex = eventsData.findIndex(elem => elem.name === d[0].id);
-                    const event = eventsData.find(elem => elem.name === d[0].id);
-                    const eventWeightage = calculatePercentage(event.data[group], eventsData[0].data[group])
-                    let eventsOutput;
-                    if (!eventIndex) {
-                        eventsOutput = (
-                            `
+        contents: d => {
+          const group = groups[d[0].index].name;
+          const eventIndex = eventsData.findIndex(elem => elem.name === d[0].id);
+          const event = eventsData.find(elem => elem.name === d[0].id);
+          const eventWeightage = calculatePercentage(event.data[group], eventsData[0].data[group]);
+          let eventsOutput;
+          if (!eventIndex) {
+            eventsOutput = (
+              `
                                 <div class="flex justify-between mt-2">
                                     <div class="font-semibold leading-4" style="color:${chartColors[event.name]}">Event ${event.index}</div>
                                     <div class="leading-4"><span class="font-semibold">${event.data[group]}</span> (${eventWeightage}%)</div>
                                 </div>
                             `
-                        );
-                    } else {
-                        const prevEvent = eventsData[eventIndex - 1];
-                        const prevEventWeightage = calculatePercentage(prevEvent.data[group], eventsData[0].data[group])
-                        const difference = calculatePercentage(prevEvent.data[group] - event.data[group], prevEvent.data[group]);
-                        eventsOutput = (
-                            `
+            );
+          } else {
+            const prevEvent = eventsData[eventIndex - 1];
+            const prevEventWeightage = calculatePercentage(prevEvent.data[group], eventsData[0].data[group]);
+            const difference = calculatePercentage(prevEvent.data[group] - event.data[group], prevEvent.data[group]);
+            eventsOutput = (
+              `
                                 <div class="my-2">
                                     <div class="flex justify-between">
                                         <div class="font-semibold leading-4" style="color:${chartColors[prevEvent.name]}">Event ${prevEvent.index}</div>
@@ -224,10 +221,10 @@ function GroupedChart({ eventsData, groups, chartData }) {
                                     <div>${difference}% drop from ${prevEvent.index}-${event.index}</div>
                                 </div>
                             `
-                        );
-                    }
-                    return (
-                        `
+            );
+          }
+          return (
+            `
                             <div class="toolTip">
                                 <div style="font-size:14px;color:#08172B;" class="font-semibold leading-5">${group}</div>
                                 <div class="mb-2">${groups[d[0].index].conversion_rate} Overall Conversion</div>
@@ -235,63 +232,62 @@ function GroupedChart({ eventsData, groups, chartData }) {
                                 ${eventsOutput}
                             </div>
                         `
-                    )
-                }
-            },
-            grid: {
-                y: {
-                    show: true,
-                },
-            },
-        });
-    }, [chartColors, chartData, eventsData, groups]);
-
-
-    const displayChart = useCallback(() => {
-        drawChart();
-        showVerticalGridLines();
-        showConverionRates();
-    }, [drawChart, showVerticalGridLines, showConverionRates])
-
-    useEffect(() => {
-        window.addEventListener("resize", () => checkForWindowSizeChange(displayChart), false);
-        return () => {
-            window.removeEventListener("resize", () => checkForWindowSizeChange(displayChart), false);
+          );
         }
-    }, [displayChart]);
+      },
+      grid: {
+        y: {
+          show: true
+        }
+      }
+    });
+  }, [chartColors, chartData, eventsData, groups]);
 
-    useEffect(() => {
-        displayChart();
-    }, [displayChart]);
+  const displayChart = useCallback(() => {
+    drawChart();
+    showVerticalGridLines();
+    showConverionRates();
+  }, [drawChart, showVerticalGridLines, showConverionRates]);
 
-    // const visibleEvents = eventsData.filter(elem => elem.display);
+  useEffect(() => {
+    window.addEventListener('resize', () => checkForWindowSizeChange(displayChart), false);
+    return () => {
+      window.removeEventListener('resize', () => checkForWindowSizeChange(displayChart), false);
+    };
+  }, [displayChart]);
 
-    return (
+  useEffect(() => {
+    displayChart();
+  }, [displayChart]);
+
+  // const visibleEvents = eventsData.filter(elem => elem.display);
+
+  return (
         <div className="grouped-chart">
             {
                 groups
-                    .map(elem => {
-                        return (
+                  .map(elem => {
+                    return (
                             <div className={`absolute border-l border-solid ${styles.verticalGridLines}`} key={elem.name} id={elem.name}></div>
-                        );
-                    })
+                    );
+                  })
             }
             {
                 groups
-                    .map(elem => {
-                        return (
+                  .map(elem => {
+                    return (
                             <div style={{ transition: '2s' }} key={elem.name} id={`conversion-text-${elem.name}`} className="absolute z-10 leading-5 text-base flex justify-end pr-1">
                                 <div style={{ fontSize: '14px' }} className={styles.conversionText}>
                                     <div className="font-semibold flex justify-end">{elem.conversion_rate}</div>
                                     <div>Conversion</div>
                                 </div>
                             </div>
-                        );
-                    })
+                    );
+                  })
             }
             <div className={styles.groupedChart} ref={chartRef} />
         </div>
-    )
+  );
 }
 
 export default React.memo(GroupedChart);

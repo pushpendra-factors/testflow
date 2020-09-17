@@ -1,21 +1,18 @@
+/* eslint-disable */
 import React from 'react';
 import { Layout, Breadcrumb, Row, Col, Divider, Radio  } from 'antd';  
 
 
- 
-class SwitchLib extends React.Component {
-     
 
-    state = {
-        value: 1,
-      };
-    
-      onChange = e => {
-        console.log('radio checked', e.target.value);
-        this.setState({
-          value: e.target.value,
-        });
-      };
+class SwitchLib extends React.Component {
+    state = { visible: false };
+
+    onChange = e => {
+    console.log('radio checked', e.target.value);
+    this.setState({
+        value: e.target.value,
+    });
+    };
 
       render(){
           return ( 
