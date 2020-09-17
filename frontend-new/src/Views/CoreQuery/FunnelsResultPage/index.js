@@ -12,7 +12,7 @@ import { PoweroffOutlined } from '@ant-design/icons';
 import FunnelsResultTable from './FunnelsResultTable';
 
 function FunnelsResultPage({
-  queries, setDrawerVisible, setShowFunnels, showFunnels
+  queries, setDrawerVisible
 }) {
   const [eventsData, setEventsData] = useState([]);
   const [groups, setGroups] = useState([]);
