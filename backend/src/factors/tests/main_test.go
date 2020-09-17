@@ -35,9 +35,6 @@ func TestMain(m *testing.M) {
 	apiDomain := flag.String("api_domain", "factors-dev.com:8080", "")
 	appDomain := flag.String("app_domain", "factors-dev.com:3000", "")
 
-	factorsEmailSender := flag.String("email_sender", "support-dev@factors.ai", "")
-	errorReportingInterval := flag.Int("error_reporting_interval", 300, "")
-
 	flag.Parse()
 
 	config = &C.Configuration{
@@ -51,16 +48,14 @@ func TestMain(m *testing.M) {
 			Name:     *dbName,
 			Password: *dbPass,
 		},
-		RedisHost:              *redisHost,
-		RedisPort:              *redisPort,
-		RedisHostPersistent:    *redisHostPersistent,
-		RedisPortPersistent:    *redisPortPersistent,
-		GeolocationFile:        *geoLocFilePath,
-		DeviceDetectorPath:     *deviceDetectorPath,
-		APIDomain:              *apiDomain,
-		APPDomain:              *appDomain,
-		EmailSender:            *factorsEmailSender,
-		ErrorReportingInterval: *errorReportingInterval,
+		RedisHost:           *redisHost,
+		RedisPort:           *redisPort,
+		RedisHostPersistent: *redisHostPersistent,
+		RedisPortPersistent: *redisPortPersistent,
+		GeolocationFile:     *geoLocFilePath,
+		DeviceDetectorPath:  *deviceDetectorPath,
+		APIDomain:           *apiDomain,
+		APPDomain:           *appDomain,
 	}
 
 	// Setup.

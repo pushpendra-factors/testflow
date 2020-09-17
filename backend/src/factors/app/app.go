@@ -42,7 +42,6 @@ func main() {
 	awsSecretAccessKey := flag.String("aws_secret", "dummy", "")
 
 	factorsEmailSender := flag.String("email_sender", "support-dev@factors.ai", "")
-	errorReportingInterval := flag.Int("error_reporting_interval", 300, "")
 
 	adminLoginEmail := flag.String("admin_login_email", "", "Admin email for login")
 	adminLoginToken := flag.String("admin_login_token", "", "Admin token for login")
@@ -92,7 +91,6 @@ func main() {
 		AWSSecret:                           *awsSecretAccessKey,
 		AWSRegion:                           *awsRegion,
 		EmailSender:                         *factorsEmailSender,
-		ErrorReportingInterval:              *errorReportingInterval,
 		AdminLoginEmail:                     *adminLoginEmail,
 		AdminLoginToken:                     *adminLoginToken,
 		FacebookAppID:                       *facebookAppId,
@@ -119,6 +117,7 @@ func main() {
 	if !C.IsDevelopment() {
 		gin.SetMode(gin.ReleaseMode)
 	}
+	defer C.SafeFlushSentryHook()
 
 	r := gin.New()
 	// Group based middlewares should be registered on corresponding init methods.
@@ -133,8 +132,6 @@ func main() {
 	H.InitAppRoutes(r)
 	H.InitIntRoutes(r)
 	r.Run(":" + strconv.Itoa(C.GetConfig().Port))
-
-	defer C.GetServices().SentryHook.Flush()
 
 	// TODO(Ankit):
 	// Add graceful shutdown.

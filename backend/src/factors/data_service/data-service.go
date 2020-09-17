@@ -26,12 +26,7 @@ func main() {
 	redisHost := flag.String("redis_host", "localhost", "")
 	redisPort := flag.Int("redis_port", 6379, "")
 
-	awsRegion := flag.String("aws_region", "us-east-1", "")
-	awsAccessKeyId := flag.String("aws_key", "dummy", "")
-	awsSecretAccessKey := flag.String("aws_secret", "dummy", "")
-
-	factorsEmailSender := flag.String("email_sender", "support-dev@factors.ai", "")
-	errorReportingInterval := flag.Int("error_reporting_interval", 300, "")
+	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 
 	flag.Parse()
 
@@ -46,13 +41,9 @@ func main() {
 			Name:     *dbName,
 			Password: *dbPass,
 		},
-		AWSKey:                 *awsAccessKeyId,
-		RedisHost:              *redisHost,
-		RedisPort:              *redisPort,
-		AWSSecret:              *awsSecretAccessKey,
-		AWSRegion:              *awsRegion,
-		EmailSender:            *factorsEmailSender,
-		ErrorReportingInterval: *errorReportingInterval,
+		RedisHost: *redisHost,
+		RedisPort: *redisPort,
+		SentryDSN: *sentryDSN,
 	}
 
 	err := C.InitDataService(config)
@@ -60,6 +51,7 @@ func main() {
 		log.WithError(err).Fatal("Failed to initialize.")
 		return
 	}
+	defer C.SafeFlushSentryHook()
 
 	if !C.IsDevelopment() {
 		gin.SetMode(gin.ReleaseMode)
