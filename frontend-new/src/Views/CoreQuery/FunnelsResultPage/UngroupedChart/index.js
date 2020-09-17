@@ -8,6 +8,8 @@ function UngroupedChart({ chartData }) {
 
   const appliedColors = generateColors(chartData.length);
 
+  console.log(appliedColors)
+
   const tooltip = useRef(null);
 
   const showTooltip = useCallback((d, i) => {
@@ -32,9 +34,9 @@ function UngroupedChart({ chartData }) {
 
     tooltip.current
       .html(`
-                    <div>www.chargebee.com/subscription-management/create-manage-plans</div>
-                    <div style="color: #0E2647;" class="mt-2 leading-5 text-base"><span class="font-semibold">${d.netCount}</span> (${d.value}%)</div>
-                `)
+              <div>www.chargebee.com/subscription-management/create-manage-plans</div>
+              <div style="color: #0E2647;" class="mt-2 leading-5 text-base"><span class="font-semibold">${d.netCount}</span> (${d.value}%)</div>
+            `)
       .style('opacity', 1)
       .style('left', left + 'px')
       .style('top', top - toolTipHeight + 5 + 'px');
@@ -153,7 +155,7 @@ function UngroupedChart({ chartData }) {
       .attr('class', () => {
         return 'bar';
       })
-      .attr('fill', (index) => {
+      .attr('fill', (_, index) => {
         return appliedColors[index];
       })
       .attr('x', d => xScale(d.event))

@@ -10,7 +10,7 @@ function TotalEvents({ queries }) {
 
   useEffect(() => {
     setChartData(getSpikeChartData([queries[0]]));
-  }, []);
+  }, [queries]);
 
   let total = 0;
 

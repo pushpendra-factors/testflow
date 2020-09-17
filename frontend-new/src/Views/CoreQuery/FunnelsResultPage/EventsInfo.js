@@ -1,8 +1,7 @@
 import React from 'react';
 import styles from './index.module.scss';
-import { Switch } from 'antd';
 
-function EventsInfo({ queries, showFunnels, setShowFunnels }) {
+function EventsInfo({ queries }) {
   return (
         <div className="flex justify-between items-center">
             <div className="flex items-center leading-6">
@@ -36,8 +35,6 @@ function EventsInfo({ queries, showFunnels, setShowFunnels }) {
                     })}
                 </div>
             </div>
-            <Switch checked={showFunnels} checkedChildren="funnels" unCheckedChildren="analytics" onChange={setShowFunnels} />
-
         </div>
   );
 }

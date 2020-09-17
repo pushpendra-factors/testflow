@@ -38,7 +38,7 @@ function FunnelsResultPage({
                     <Button type="primary" icon={<PoweroffOutlined />} >Save query as</Button>
                 </div>
                 <div className="py-4">
-                    <EventsInfo showFunnels={showFunnels} setShowFunnels={setShowFunnels} queries={queries} />
+                    <EventsInfo queries={queries} />
                 </div>
                 <div className="pb-2 flex justify-end">
                     <FiltersInfo grouping={grouping} setGrouping={setGrouping} setDrawerVisible={setDrawerVisible} />

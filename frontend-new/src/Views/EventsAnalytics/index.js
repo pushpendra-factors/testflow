@@ -8,7 +8,7 @@ import TotalEvents from './TotalEvents';
 import { SVG } from '../../components/factorsComponents';
 import TotalUsers from './TotalUsers';
 
-function EventsAnalytics({ queries, setShowFunnels, showFunnels }) {
+function EventsAnalytics({ queries }) {
   const [activeKey, setActiveKey] = useState('1');
 
   const handleTabChange = (tabKey) => {
@@ -49,7 +49,7 @@ function EventsAnalytics({ queries, setShowFunnels, showFunnels }) {
                     <Button type="primary" icon={<PoweroffOutlined />} >Save query as</Button>
                 </div>
                 <div className="py-4">
-                    <EventsInfo showFunnels={showFunnels} setShowFunnels={setShowFunnels} queries={queries} />
+                    <EventsInfo queries={queries} />
                 </div>
             </Header>
             <div className="mt-40 mb-8 fa-container">

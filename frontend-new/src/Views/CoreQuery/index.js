@@ -15,8 +15,6 @@ function CoreQuery() {
   const [queries, setQueries] = useState([]);
   // const [queries, setQueries] = useState(['Applied Coupon', 'Cart Updated', 'Checkout', 'Add to Wishlist', 'Paid']);
 
-  const [showFunnels, setShowFunnels] = useState(true);
-
   const queryChange = (newEvent, index, changeType = 'add') => {
     const queryupdated = [...queries];
     if (queryupdated[index]) {
@@ -42,55 +40,64 @@ function CoreQuery() {
 
   const title = () => {
     return (<div className={'flex justify-between items-center'}>
-            <div className={'flex'}>
-                <SVG name="teamfeed"></SVG>
-                <Text type={'title'} level={4} weight={'bold'} extraClass={'ml-2 m-0'}>Find event funnel for</Text>
-            </div>
-            <div className={'flex justify-end items-center'}>
-                <Button type="text"><SVG name="play"></SVG>Help</Button>
-                <Button type="text" onClick={() => closeDrawer()}><SVG name="times"></SVG></Button>
-            </div>
+      <div className={'flex'}>
+        <SVG name="teamfeed"></SVG>
+        <Text type={'title'} level={4} weight={'bold'} extraClass={'ml-2 m-0'}>Find event funnel for</Text>
+      </div>
+      <div className={'flex justify-end items-center'}>
+        <Button type="text"><SVG name="play"></SVG>Help</Button>
+        <Button type="text" onClick={() => closeDrawer()}><SVG name="times"></SVG></Button>
+      </div>
 
-        </div>);
+    </div>);
   };
 
-  let result = (<EventsAnalytics showFunnels={showFunnels} setShowFunnels={setShowFunnels} queries={queries.map(elem => elem.label)} />);
-  // let result = (<EventsAnalytics showFunnels={showFunnels} setShowFunnels={setShowFunnels} queries={queries.map(elem => elem)} />);
+  let result = (
+    <EventsAnalytics
+      queryType={queryType}
+      queries={queries.map(elem => elem.label)}
+    />
+  );
 
-  if (showFunnels) {
-    result = (<FunnelsResultPage showFunnels={showFunnels} setShowFunnels={setShowFunnels} setDrawerVisible={setDrawerVisible} queries={queries.map(elem => elem.label)} />);
-    // result = (<FunnelsResultPage showFunnels={showFunnels} setShowFunnels={setShowFunnels} setDrawerVisible={setDrawerVisible} queries={queries.map(elem => elem)} />);
+  if (queryType === 'funnel') {
+    result = (
+      <FunnelsResultPage
+        queryType={queryType}
+        setDrawerVisible={setDrawerVisible}
+        queries={queries.map(elem => elem.label)}
+      />
+    );
   }
 
   return (
     <>
-            <Drawer
-                title={title()}
-                placement="left"
-                closable={false}
-                visible={drawerVisible}
-                onClose={closeDrawer}
-                getContainer={false}
-                width={'600px'}
-                className={'fa-drawer'}
-            >
+      <Drawer
+        title={title()}
+        placement="left"
+        closable={false}
+        visible={drawerVisible}
+        onClose={closeDrawer}
+        getContainer={false}
+        width={'600px'}
+        className={'fa-drawer'}
+      >
 
-                <QueryComposer
-                    queries={queries}
-                    runQuery={runQuery}
-                    eventChange={queryChange}
-                    queryType={queryType}
-                />
-            </Drawer>
+        <QueryComposer
+          queries={queries}
+          runQuery={runQuery}
+          eventChange={queryChange}
+          queryType={queryType}
+        />
+      </Drawer>
 
-            {showResult ? (
-              <>
-                    {result}
-              </>
+      {showResult ? (
+        <>
+          {result}
+        </>
 
-            ) : (
-                    <CoreQueryHome setDrawerVisible={setDrawerVisible} />
-            )}
+      ) : (
+          <CoreQueryHome setQueryType={setQueryType} setDrawerVisible={setDrawerVisible} />
+        )}
 
     </>
   );
