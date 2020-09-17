@@ -98,8 +98,6 @@ spec:
           - $(AWS_SECRET)
           - --email_sender
           - $(EMAIL_SENDER)
-          - --error_reporting_interval
-          - $(ERROR_REPORTING_INTERVAL)
           - --login_token_map
           - $(LOGIN_TOKEN_MAP)
           - --admin_login_email

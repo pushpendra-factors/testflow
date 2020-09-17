@@ -34,14 +34,8 @@ func main() {
 	queueRedisHost := flag.String("queue_redis_host", "localhost", "")
 	queueRedisPort := flag.Int("queue_redis_port", 6379, "")
 
-	awsRegion := flag.String("aws_region", "us-east-1", "")
-	awsAccessKeyId := flag.String("aws_key", "dummy", "")
-	awsSecretAccessKey := flag.String("aws_secret", "dummy", "")
-
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 
-	factorsEmailSender := flag.String("email_sender", "support-dev@factors.ai", "")
-	errorReportingInterval := flag.Int("error_reporting_interval", 300, "")
 	sdkRequestQueueProjectTokens := flag.String("sdk_request_queue_project_tokens", "",
 		"List of project tokens allowed to use sdk request queue")
 	segmentRequestQueueProjectTokens := flag.String("segment_request_queue_project_tokens", "",
@@ -78,12 +72,7 @@ func main() {
 		RedisPort:                          *redisPort,
 		QueueRedisHost:                     *queueRedisHost,
 		QueueRedisPort:                     *queueRedisPort,
-		AWSKey:                             *awsAccessKeyId,
-		AWSSecret:                          *awsSecretAccessKey,
-		AWSRegion:                          *awsRegion,
 		SentryDSN:                          *sentryDSN,
-		EmailSender:                        *factorsEmailSender,
-		ErrorReportingInterval:             *errorReportingInterval,
 		SDKRequestQueueProjectTokens:       C.GetTokensFromStringListAsString(*sdkRequestQueueProjectTokens), // comma seperated project tokens.
 		SegmentRequestQueueProjectTokens:   C.GetTokensFromStringListAsString(*segmentRequestQueueProjectTokens),
 		MergeUspProjectIds:                 *mergeUserPropertiesProjectIDS,
@@ -101,6 +90,7 @@ func main() {
 		log.WithError(err).Fatal("Failed to initialize.")
 		return
 	}
+	defer C.SafeFlushSentryHook()
 
 	if !C.IsDevelopment() {
 		gin.SetMode(gin.ReleaseMode)

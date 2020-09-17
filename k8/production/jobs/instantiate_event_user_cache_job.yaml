@@ -39,14 +39,8 @@ spec:
             - $(POSTGRES_PASSWORD)
             - --project_ids
             - "2"
-            - --aws_region
-            - $(AWS_REGION)
-            - --aws_key
-            - $(AWS_KEY)
-            - --aws_secret
-            - $(AWS_SECRET)
-            - --email_sender
-            - $(EMAIL_SENDER)
+            - --sentry_dsn
+            - $(SENTRY_DSN)
             envFrom:
             - configMapRef:
                 name: config-env
@@ -59,5 +53,5 @@ spec:
             - secretRef:
                 name: secret-postgres
             - secretRef:
-                name: secret-aws
+                name: secret-sentry
           restartPolicy: OnFailure

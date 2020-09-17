@@ -48,14 +48,7 @@ func main() {
 	deviceDetectorPath := flag.String("device_detector_path",
 		"/usr/local/var/factors/devicedetector_data/regexes", "")
 
-	awsRegion := flag.String("aws_region", "us-east-1", "")
-	awsAccessKeyId := flag.String("aws_key", "dummy", "")
-	awsSecretAccessKey := flag.String("aws_secret", "dummy", "")
-
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
-
-	factorsEmailSender := flag.String("email_sender", "support-dev@factors.ai", "")
-	errorReportingInterval := flag.Int("error_reporting_interval", 300, "")
 
 	skipSessionProjectIds := flag.String("skip_session_project_ids",
 		"", "List or projects to create session offline.")
@@ -87,12 +80,7 @@ func main() {
 		QueueRedisPort:                     *queueRedisPort,
 		GeolocationFile:                    *geoLocFilePath,
 		DeviceDetectorPath:                 *deviceDetectorPath,
-		AWSKey:                             *awsAccessKeyId,
-		AWSSecret:                          *awsSecretAccessKey,
-		AWSRegion:                          *awsRegion,
 		SentryDSN:                          *sentryDSN,
-		EmailSender:                        *factorsEmailSender,
-		ErrorReportingInterval:             *errorReportingInterval,
 		SkipSessionProjectIds:              *skipSessionProjectIds, // comma seperated project ids, supports "*".
 		MergeUspProjectIds:                 *mergeUserPropertiesProjectIDS,
 		RedisHostPersistent:                *redisHostPersistent,
@@ -106,6 +94,7 @@ func main() {
 		log.WithError(err).Fatal("Failed to initialize.")
 		return
 	}
+	defer C.SafeFlushSentryHook()
 
 	// Register tasks on queueClient.
 	queueClient := C.GetServices().QueueClient

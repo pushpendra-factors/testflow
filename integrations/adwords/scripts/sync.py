@@ -337,6 +337,43 @@ def get_campaign_performance_report(adwords_client, timestamp):
     lines = report.split('\n')
     return csv_to_dict_list(query_fields, lines), 1
 
+def get_ad_group_performance_report(adwords_client, timestamp):
+    if adwords_client == None:
+        raise Exception('no adwords client')
+
+    if (timestamp == None or timestamp == ""):
+        raise Exception("invalid date string for report download")
+    
+    str_timestamp = str(timestamp)
+    during = str_timestamp + "," + str_timestamp
+    downloader = adwords_client.GetReportDownloader(version='v201809')
+
+    query_fields = ['active_view_impressions', 'active_view_measurability', 'active_view_measurable_cost', 
+    'active_view_measurable_impressions', 'active_view_viewability', 'all_conversion_rate', 'conversion_rate',
+    'cost_per_conversion', 'all_conversion_value', 'all_conversions', 'average_cost', 'average_position',
+    'average_time_on_site', 'ad_group_id', 'ad_group_name', 'ad_group_status','base_ad_group_id','base_campaign_id', 
+    'bounce_rate', 'campaign_id', 'campaign_name', 'campaign_status','click_type','final_url_suffix', 'device',
+    'click_assisted_conversion_value', 'click_assisted_conversions', 'click_assisted_conversions_over_last_click_conversions', 
+    'clicks', 'conversion_value', 'conversions', 'cost', 'engagements', 'gmail_forwards', 'gmail_saves', 
+    'gmail_secondary_clicks', 'impression_assisted_conversions', 'impression_assisted_conversion_value', 'impressions', 
+    'interaction_types', 'interactions', 'value_per_all_conversion', 'video_quartile_100_rate', 'video_quartile_25_rate', 
+    'video_quartile_50_rate', 'video_quartile_75_rate', 'video_view_rate', 'video_views', 'view_through_conversions']
+    fields = snake_to_pascal_case(query_fields)
+
+    # Create report query.
+    report_query = (adwords.ReportQueryBuilder()
+        .Select(*fields)
+        .From('ADGROUP_PERFORMANCE_REPORT')
+        .Where('CampaignStatus').In('ENABLED', 'PAUSED')
+        .During(during).Build())
+
+    report = downloader.DownloadReportAsStringWithAwql(
+        report_query, 'CSV', skip_report_header=True, 
+        skip_column_header=True, skip_report_summary=True)
+
+    lines = report.split('\n')
+    return csv_to_dict_list(query_fields, lines), 1
+
 def get_ad_performance_report(adwords_client, timestamp):
     if adwords_client == None:
             raise Exception('no adwords client')
@@ -625,6 +662,9 @@ def sync(env, dry, skip_today, next_info):
 
         elif doc_type == "keyword_performance_report":
             docs, req_count = get_keywords_performance_report(adwords_client, timestamp)
+        
+        elif doc_type == "ad_group_performance_report":
+            docs, req_count = get_ad_group_performance_report(adwords_client, timestamp)
 
         else: 
             log.error("Invalid document to sync from adwords: %s", str(doc_type))

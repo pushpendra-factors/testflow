@@ -205,8 +205,8 @@ func initServices(config *Configuration) error {
 		return errors.Wrap(err, "Failed to initialize etcd")
 	}
 
-	InitLogClient(config.Env, config.AppName, config.EmailSender, config.AWSKey,
-		config.AWSSecret, config.AWSRegion, config.ErrorReportingInterval, config.SentryDSN)
+	InitMailClient(config.AWSKey, config.AWSSecret, config.AWSRegion)
+	InitSentryLogging(config.SentryDSN, config.AppName)
 
 	initGeoLocationService(config.GeolocationFile)
 	initDeviceDetectorPath(config.DeviceDetectorPath)
@@ -407,19 +407,21 @@ func InitQueueClient(redisHost string, redisPort int) error {
 	return nil
 }
 
-func InitLogClient(env, appName, emailSender, awsKey, awsSecret,
-	awsRegion string, reportingInterval int, sentryDSN string) {
-
-	InitMailClient(awsKey, awsSecret, awsRegion)
-	initCollectorClient(env, appName, "team@factors.ai", emailSender, reportingInterval)
-	initLogging(services.ErrorCollector)
-	InitSentryLogging(sentryDSN, appName)
-}
-
 // InitSentryLogging Adds sentry hook to capture error logs.
 func InitSentryLogging(sentryDSN, appName string) {
+	// Log as JSON instead of the default ASCII formatter.
+	log.SetFormatter(&log.JSONFormatter{})
+	if IsDevelopment() {
+		log.SetLevel(log.DebugLevel)
+	}
+	log.SetReportCaller(true)
+
 	if IsDevelopment() || IsStaging() || sentryDSN == "" {
 		return
+	}
+
+	if services == nil {
+		services = &Services{}
 	}
 
 	sentryHook, err := logrus_sentry.NewAsyncSentryHook(sentryDSN, []log.Level{
@@ -529,8 +531,7 @@ func InitDataService(config *Configuration) error {
 		return err
 	}
 	InitRedis(config.RedisHost, config.RedisPort)
-	InitLogClient(config.Env, config.AppName, config.EmailSender, config.AWSKey,
-		config.AWSSecret, config.AWSRegion, config.ErrorReportingInterval, config.SentryDSN)
+	InitSentryLogging(config.SentryDSN, config.AppName)
 
 	initiated = true
 	return nil
@@ -565,8 +566,7 @@ func InitSDKService(config *Configuration) error {
 		log.WithError(err).Fatal("Failed to initialize queue client on init sdk service.")
 	}
 
-	InitLogClient(config.Env, config.AppName, config.EmailSender, config.AWSKey,
-		config.AWSSecret, config.AWSRegion, config.ErrorReportingInterval, config.SentryDSN)
+	InitSentryLogging(config.SentryDSN, config.AppName)
 
 	initiated = true
 	return nil
@@ -600,8 +600,7 @@ func InitQueueWorker(config *Configuration) error {
 		InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
 	}
 
-	InitLogClient(config.Env, config.AppName, config.EmailSender, config.AWSKey,
-		config.AWSSecret, config.AWSRegion, config.ErrorReportingInterval, config.SentryDSN)
+	InitSentryLogging(config.SentryDSN, config.AppName)
 
 	initiated = true
 	return nil

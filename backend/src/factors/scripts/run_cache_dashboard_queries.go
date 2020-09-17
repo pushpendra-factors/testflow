@@ -65,10 +65,7 @@ func main() {
 	C.InitRedisPersistent(config.RedisHost, config.RedisPort)
 
 	C.InitSentryLogging(config.SentryDSN, config.AppName)
-	C.GetServices().SentryHook.SetTagsContext(map[string]string{
-		"JobName": taskID,
-	})
-	defer C.GetServices().SentryHook.Flush()
+	defer C.SafeFlushSentryHook()
 
 	logCtx = logCtx.WithFields(log.Fields{
 		"Env":         *envFlag,

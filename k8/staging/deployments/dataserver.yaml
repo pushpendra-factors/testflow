@@ -70,16 +70,8 @@ spec:
           - $(REDIS_HOST)
           - --redis_port
           - $(REDIS_PORT)
-          - --aws_region
-          - $(AWS_REGION)
-          - --aws_key
-          - $(AWS_KEY)
-          - --aws_secret
-          - $(AWS_SECRET)
-          - --email_sender
-          - $(EMAIL_SENDER)
-          - --error_reporting_interval
-          - $(ERROR_REPORTING_INTERVAL)
+          - --sentry_dsn
+          - $(SENTRY_DSN)
         envFrom:
         - configMapRef:
             name: config-env
@@ -90,7 +82,7 @@ spec:
         - secretRef:
             name: secret-postgres
         - secretRef:
-            name: secret-aws
+            name: secret-sentry
       volumes:
       - name: workdir
         emptyDir: {}

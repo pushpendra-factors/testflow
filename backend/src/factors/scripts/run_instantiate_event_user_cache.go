@@ -25,12 +25,6 @@ func main() {
 	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
 	RedisPortPersistent := flag.Int("redis_port_ps", 6379, "")
 
-	awsRegion := flag.String("aws_region", "us-east-1", "")
-	awsAccessKeyId := flag.String("aws_key", "dummy", "")
-	awsSecretAccessKey := flag.String("aws_secret", "dummy", "")
-	factorsEmailSender := flag.String("email_sender", "support-dev@factors.ai", "")
-	errorReportingInterval := flag.Int("error_reporting_interval", 300, "")
-
 	projectIds := flag.String("project_ids", "", "Projects for which the cache is to be refreshed")
 	eventRecordsLimit := flag.Int("event_records_limit", 100000, "")
 	usersProcessedLimit := flag.Int("users_processed_limit", 10000, "")
@@ -53,7 +47,7 @@ func main() {
 	defer util.NotifyOnPanic(taskID, *env)
 
 	config := &C.Configuration{
-		AppName: "instantiate_event_user_cacheß",
+		AppName: "instantiate_event_user_cache",
 		Env:     *env,
 		DBInfo: C.DBConf{
 			Host:     *dbHost,
@@ -62,14 +56,9 @@ func main() {
 			Name:     *dbName,
 			Password: *dbPass,
 		},
-		RedisHostPersistent:    *redisHostPersistent,
-		RedisPortPersistent:    *RedisPortPersistent,
-		AWSKey:                 *awsAccessKeyId,
-		AWSSecret:              *awsSecretAccessKey,
-		AWSRegion:              *awsRegion,
-		EmailSender:            *factorsEmailSender,
-		ErrorReportingInterval: *errorReportingInterval,
-		SentryDSN:              *sentryDSN,
+		RedisHostPersistent: *redisHostPersistent,
+		RedisPortPersistent: *RedisPortPersistent,
+		SentryDSN:           *sentryDSN,
 	}
 
 	C.InitConf(config.Env)
@@ -84,9 +73,9 @@ func main() {
 
 	// Cache dependency for requests not using queue.
 	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
+	C.InitSentryLogging(config.SentryDSN, config.AppName)
+	defer C.SafeFlushSentryHook()
 
-	C.InitLogClient(config.Env, config.AppName, config.EmailSender, config.AWSKey,
-		config.AWSSecret, config.AWSRegion, config.ErrorReportingInterval, config.SentryDSN)
 	currentTime := U.TimeNow()
 	startOfCurrentDay := time.Date(currentTime.Year(), currentTime.Month(), currentTime.Day(), 0, 0, 0, 0, time.UTC)
 

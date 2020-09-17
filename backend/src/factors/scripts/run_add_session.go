@@ -33,12 +33,6 @@ func main() {
 	maxLookbackDays := flag.Int64("max_lookback_days", 0, "Max lookback days to look for session existence.")
 	bufferTimeBeforeCreateSessionInMins := flag.Int64("buffer_time_in_mins", 30, "Buffer time to wait before processing an event for session.")
 
-	awsRegion := flag.String("aws_region", "us-east-1", "")
-	awsAccessKeyId := flag.String("aws_key", "dummy", "")
-	awsSecretAccessKey := flag.String("aws_secret", "dummy", "")
-	factorsEmailSender := flag.String("email_sender", "support-dev@factors.ai", "")
-	errorReportingInterval := flag.Int("error_reporting_interval", 300, "")
-
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 
 	flag.Parse()
@@ -63,14 +57,9 @@ func main() {
 			Name:     *dbName,
 			Password: *dbPass,
 		},
-		RedisHost:              *redisHost,
-		RedisPort:              *redisPort,
-		AWSKey:                 *awsAccessKeyId,
-		AWSSecret:              *awsSecretAccessKey,
-		AWSRegion:              *awsRegion,
-		EmailSender:            *factorsEmailSender,
-		ErrorReportingInterval: *errorReportingInterval,
-		SentryDSN:              *sentryDSN,
+		RedisHost: *redisHost,
+		RedisPort: *redisPort,
+		SentryDSN: *sentryDSN,
 	}
 
 	C.InitConf(config.Env)
@@ -86,12 +75,8 @@ func main() {
 	// Cache dependency for requests not using queue.
 	C.InitRedis(config.RedisHost, config.RedisPort)
 
-	C.InitLogClient(config.Env, config.AppName, config.EmailSender, config.AWSKey,
-		config.AWSSecret, config.AWSRegion, config.ErrorReportingInterval, config.SentryDSN)
-	C.GetServices().SentryHook.SetTagsContext(map[string]string{
-		"JobName": taskID,
-	})
-	defer C.GetServices().SentryHook.Flush()
+	C.InitSentryLogging(config.SentryDSN, config.AppName)
+	defer C.SafeFlushSentryHook()
 
 	allowedProjectIds, errCode := session.GetAddSessionAllowedProjects(*projectIds, *disabledProjectIds)
 	if errCode != http.StatusFound {
