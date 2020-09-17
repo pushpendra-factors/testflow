@@ -268,11 +268,11 @@ func delAllProjectSettingsCacheForProject(projectId uint64) {
 func UpdateProjectSettings(projectId uint64, settings *ProjectSetting) (*ProjectSetting, int) {
 	db := C.GetServices().Db
 
-	if projectId == 0 {
+	if projectId == 0 || settings == nil {
 		return nil, http.StatusBadRequest
 	}
 
-	if settings != nil && settings.IntAdwordsCustomerAccountId != nil {
+	if settings.IntAdwordsCustomerAccountId != nil {
 		var cleanAdwordsAccountIds []string
 		adwordsAccoundIds := strings.Split(*settings.IntAdwordsCustomerAccountId, ",")
 		for _, accountId := range adwordsAccoundIds {
