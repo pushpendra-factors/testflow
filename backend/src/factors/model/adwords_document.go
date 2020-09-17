@@ -35,6 +35,7 @@ var adwordsDocumentTypeAlias = map[string]int{
 	"search_performance_report":   7,
 	"keyword_performance_report":  8,
 	"customer_account_properties": 9,
+	"ad_group_performance_report": 10,
 }
 
 const errorDuplicateAdwordsDocument = "pq: duplicate key value violates unique constraint \"adwords_documents_pkey\""
@@ -325,10 +326,10 @@ func GetGCLIDBasedCampaignInfo(projectId uint64, from, to int64, adwordsAccountI
 
 func GetAdwordsFilterPropertyKeyByType(docType int) (string, error) {
 	filterKeyByType := map[int]string{
-		5: "campaign_name",
-		3: "ad_group_type",
-		8: "criteria",
-		6: "id",
+		5:  "campaign_name",
+		10: "ad_group_name",
+		8:  "criteria",
+		6:  "id",
 	}
 
 	filterKey, filterKeyExists := filterKeyByType[docType]
@@ -389,7 +390,7 @@ func GetAdwordsDocumentTypeForFilterKey(filter string) (int, error) {
 	case CAFilterKeyword:
 		docType = adwordsDocumentTypeAlias["keyword_performance_report"]
 	case CAFilterAdGroup:
-		docType = adwordsDocumentTypeAlias["ad_groups"]
+		docType = adwordsDocumentTypeAlias["ad_group_performance_report"]
 	}
 
 	if docType == 0 {
