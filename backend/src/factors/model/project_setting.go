@@ -272,7 +272,7 @@ func UpdateProjectSettings(projectId uint64, settings *ProjectSetting) (*Project
 		return nil, http.StatusBadRequest
 	}
 
-	if settings.IntAdwordsCustomerAccountId != nil {
+	if settings != nil && settings.IntAdwordsCustomerAccountId != nil {
 		var cleanAdwordsAccountIds []string
 		adwordsAccoundIds := strings.Split(*settings.IntAdwordsCustomerAccountId, ",")
 		for _, accountId := range adwordsAccoundIds {
