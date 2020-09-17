@@ -8,8 +8,6 @@ function UngroupedChart({ chartData }) {
 
   const appliedColors = generateColors(chartData.length);
 
-  console.log(appliedColors)
-
   const tooltip = useRef(null);
 
   const showTooltip = useCallback((d, i) => {
