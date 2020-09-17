@@ -91,7 +91,6 @@ func main() {
 		return
 	}
 	defer C.SafeFlushSentryHook()
-	log.Error("Another test error from sdk_server")
 
 	if !C.IsDevelopment() {
 		gin.SetMode(gin.ReleaseMode)
