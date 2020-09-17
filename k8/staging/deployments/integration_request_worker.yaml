@@ -62,16 +62,6 @@ spec:
           - $(PERSISTENT_REDIS_PORT)
           - --geo_loc_path
           - $(GEO_LOC_FILE_PATH)
-          - --aws_region
-          - $(AWS_REGION)
-          - --aws_key
-          - $(AWS_KEY)
-          - --aws_secret
-          - $(AWS_SECRET)
-          - --email_sender
-          - $(EMAIL_SENDER)
-          - --error_reporting_interval
-          - $(ERROR_REPORTING_INTERVAL)
           - --worker_concurrency
           - "10"
           - --skip_session_project_ids
@@ -103,8 +93,6 @@ spec:
             name: config-add-session-job
         - secretRef:
             name: secret-postgres
-        - secretRef:
-            name: secret-aws
         - secretRef:
             name: secret-sentry
       initContainers:

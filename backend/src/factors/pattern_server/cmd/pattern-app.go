@@ -2,18 +2,14 @@ package main
 
 import (
 	"errors"
+	C "factors/config"
 	"factors/filestore"
-	"factors/interfaces/maileriface"
 	PC "factors/pattern_client"
 	PMM "factors/pattern_model_meta"
 	patternserver "factors/pattern_server"
 	serviceDisk "factors/services/disk"
-	"factors/services/error_collector"
 	serviceEtcd "factors/services/etcd"
 	serviceGCS "factors/services/gcstorage"
-	"factors/services/mailer"
-	serviceSes "factors/services/ses"
-	U "factors/util"
 	"flag"
 	"fmt"
 	"math"
@@ -160,12 +156,7 @@ func main() {
 	chunkCacheSize := flag.Int("chunk_cache_size", 5, "")
 	eventInfoCacheSize := flag.Int("event_info_cache_size", 10, "")
 
-	awsRegion := flag.String("aws_region", "us-east-1", "")
-	awsAccessKeyId := flag.String("aws_key", "dummy", "")
-	awsSecretAccessKey := flag.String("aws_secret", "dummy", "")
-
-	factorsEmailSender := flag.String("email_sender", "support-dev@factors.ai", "")
-	errorReportingInterval := flag.Int("error_reporting_interval", 300, "")
+	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 
 	flag.Parse()
 
@@ -174,21 +165,9 @@ func main() {
 		panic(err)
 	}
 
-	var mailClient maileriface.Mailer
-	if *env == Development {
-		mailClient = mailer.New()
-	} else {
-		mailClient = serviceSes.New(*awsAccessKeyId, *awsSecretAccessKey, *awsRegion)
-	}
-
-	dur := time.Second * time.Duration(*errorReportingInterval)
-	ErrorCollector := error_collector.New(mailClient, dur, *env,
-		"pattern_server", "team@factors.ai", *factorsEmailSender)
-
-	if ErrorCollector != nil {
-		hook := &U.Hook{C: ErrorCollector}
-		log.AddHook(hook)
-	}
+	C.InitConf(*env)
+	C.InitSentryLogging(*sentryDSN, "pattern_server")
+	defer C.SafeFlushSentryHook()
 
 	// TODO(Ankit):
 	// This needs to be handled with graceful shutdown

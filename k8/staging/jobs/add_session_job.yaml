@@ -43,14 +43,6 @@ spec:
             - $(ADD_SESSION_NUM_ROUTINES)
             - --max_lookback_days
             - $(ADD_SESSION_MAX_LOOKBACK_DAYS)
-            - --aws_region
-            - $(AWS_REGION)
-            - --aws_key
-            - $(AWS_KEY)
-            - --aws_secret
-            - $(AWS_SECRET)
-            - --email_sender
-            - $(EMAIL_SENDER)
             - --sentry_dsn
             - $(SENTRY_DSN)
             envFrom:
@@ -64,8 +56,6 @@ spec:
                 name: config-add-session-job
             - secretRef:
                 name: secret-postgres
-            - secretRef:
-                name: secret-aws
             - secretRef:
                 name: secret-sentry
           restartPolicy: OnFailure

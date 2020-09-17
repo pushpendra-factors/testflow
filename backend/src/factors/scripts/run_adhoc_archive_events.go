@@ -72,7 +72,7 @@ func main() {
 	defer db.Close()
 
 	C.InitSentryLogging(config.SentryDSN, config.AppName)
-	defer C.GetServices().SentryHook.Flush()
+	defer C.SafeFlushSentryHook()
 
 	var cloudManager filestore.FileManager
 	if *envFlag == "development" {
