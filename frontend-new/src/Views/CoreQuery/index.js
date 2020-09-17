@@ -1,3 +1,4 @@
+/* eslint-disable */
 import React, { useState } from 'react';
 import FunnelsResultPage from './FunnelsResultPage';
 import QueryComposer from '../../components/QueryComposer';
@@ -8,7 +9,7 @@ import EventsAnalytics from '../EventsAnalytics';
 
 function CoreQuery() {
   const [drawerVisible, setDrawerVisible] = useState(false);
-  const queryType = useState('event');
+  const [queryType, setQueryType] = useState('event');
   const [showResult, setShowResult] = useState(false);
   // const [showResult, setShowResult] = useState(true);
   const [queries, setQueries] = useState([]);
