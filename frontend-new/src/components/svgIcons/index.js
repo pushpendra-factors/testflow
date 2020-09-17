@@ -1,3 +1,4 @@
+/* eslint-disable */
 import React from 'react';
 
 const BrandSVG = ({ size = 16, color, extraClass }) => {
@@ -16,14 +17,14 @@ const BrandSVG = ({ size = 16, color, extraClass }) => {
 
 const DeleteSVG = ({ size = 16, color, extraClass }) => {
   return (
-    <svg width={size} height={size} className={extraClass} viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'>
-      <path d='M1.90912 4H3.18185H13.3637' stroke={color} strokeLinecap='round' strokeLinejoin='round' />
-      <path d='M5.09093 4.00004V2.66671C5.09093 2.31309 5.22502 1.97395 5.4637 1.7239C5.70239 1.47385 6.02611 1.33337 6.36366 1.33337H8.90913C9.24669 1.33337 9.57041 1.47385 9.80909 1.7239C10.0478 1.97395 10.1819 2.31309 10.1819 2.66671V4.00004M12.091 4.00004V13.3334C12.091 13.687 11.9569 14.0261 11.7182 14.2762C11.4795 14.5262 11.1558 14.6667 10.8182 14.6667H4.45456C4.11701 14.6667 3.79328 14.5262 3.5546 14.2762C3.31592 14.0261 3.18182 13.687 3.18182 13.3334V4.00004H12.091Z' stroke={color} strokeLinecap='round' strokeLinejoin='round' />
-      <path d='M6.36368 7.33337V11.3334' stroke={color} strokeLinecap='round' strokeLinejoin='round' />
-      <path d='M8.90915 7.33337V11.3334' stroke={color} strokeLinecap='round' strokeLinejoin='round' />
+    <svg width={size} height={size} className={extraClass} viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M1.90912 4H3.18185H13.3637" stroke={color} strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M5.09093 4.00004V2.66671C5.09093 2.31309 5.22502 1.97395 5.4637 1.7239C5.70239 1.47385 6.02611 1.33337 6.36366 1.33337H8.90913C9.24669 1.33337 9.57041 1.47385 9.80909 1.7239C10.0478 1.97395 10.1819 2.31309 10.1819 2.66671V4.00004M12.091 4.00004V13.3334C12.091 13.687 11.9569 14.0261 11.7182 14.2762C11.4795 14.5262 11.1558 14.6667 10.8182 14.6667H4.45456C4.11701 14.6667 3.79328 14.5262 3.5546 14.2762C3.31592 14.0261 3.18182 13.687 3.18182 13.3334V4.00004H12.091Z" stroke={color} strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M6.36368 7.33337V11.3334" stroke={color} strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M8.90915 7.33337V11.3334" stroke={color} strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
-}
+};
 
 const HomeSVG = ({ size = 16, color, extraClass }) => {
   return (
@@ -31,7 +32,7 @@ const HomeSVG = ({ size = 16, color, extraClass }) => {
       <path fillRule="evenodd" clipRule="evenodd" d="M3.64348 22C2.73581 22 2 21.2642 2 20.3565V12.5356C2 11.2293 2.51836 9.97642 3.44128 9.05202L9.51886 2.96461C10.8029 1.67846 12.887 1.67846 14.1711 2.96461L20.2487 9.05202C21.1716 9.97642 21.6899 11.2293 21.6899 12.5356V20.3565C21.6899 21.2642 20.9541 22 20.0465 22H3.64348ZM19.2247 12.5356V19.5348H14.2943V13.7826C14.2943 12.8749 13.5585 12.1391 12.6508 12.1391H11.0073C10.0996 12.1391 9.36382 12.8749 9.36382 13.7826V19.5348H4.46522V12.5356C4.46522 11.8824 4.7244 11.256 5.18586 10.7938L11.2634 4.70637C11.5845 4.38484 12.1055 4.38484 12.4265 4.70638L18.5041 10.7938C18.9655 11.256 19.2247 11.8824 19.2247 12.5356Z" fill={color} />
     </svg>
   );
-}
+};
 
 const CorequerySVG = ({ size = 16, color, extraClass }) => {
   return (
@@ -41,7 +42,7 @@ const CorequerySVG = ({ size = 16, color, extraClass }) => {
     </svg>
 
   );
-}
+};
 
 const KeySVG = ({ size = 16, color, extraClass }) => {
   return (
@@ -50,7 +51,7 @@ const KeySVG = ({ size = 16, color, extraClass }) => {
       <path fillRule="evenodd" clipRule="evenodd" d="M20.0747 16.6964C17.3928 19.3783 15.075 18.0425 12.5404 15.6858L10.2649 17.5076V18.6971C10.2649 19.1531 9.89517 19.5228 9.43914 19.5228H6.975V21.1743C6.975 21.6303 6.60531 22 6.14928 22H2V20.3485H2.00237V17.9241L8.62854 11.7721C6.36137 9.32242 5.22668 7.19467 7.89985 4.5215C11.2618 1.1595 16.7127 1.1595 20.0747 4.5215C23.4367 7.88349 23.4367 13.3344 20.0747 16.6964ZM17.1981 15.6893C17.3555 15.6606 17.728 15.5398 18.3231 14.9447C20.7177 12.5501 20.7177 8.66772 18.3231 6.27313C15.9285 3.87853 12.0461 3.87853 9.65148 6.27313C9.02387 6.90074 8.87778 7.28964 8.84139 7.45152C8.81368 7.57477 8.80304 7.75342 8.9645 8.10905C9.14765 8.51244 9.50356 9.02954 10.1122 9.71982C10.665 10.3469 11.3205 11.0018 12.0902 11.7708L12.3126 11.9931C14.134 13.8145 15.3268 14.9988 16.3894 15.5086C16.8211 15.7158 17.0545 15.7155 17.1981 15.6893ZM10.7926 13.9765C10.978 14.1621 11.1622 14.3466 11.3444 14.5278L8.92307 16.4663C8.72734 16.623 8.61341 16.8602 8.61341 17.1109V17.8714H6.14928C5.69324 17.8714 5.32355 18.2411 5.32355 18.6971V20.3485H3.65382V18.6443L9.77648 12.9598C9.95748 13.1419 10.142 13.3262 10.3292 13.5132L10.7926 13.9765Z" fill={color} />
     </svg>
   );
-}
+};
 const BugSVG = ({ size = 16, color, extraClass }) => {
   return (
     <svg width={size} height={size} className={extraClass} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -61,9 +62,8 @@ const BugSVG = ({ size = 16, color, extraClass }) => {
       <path d="M15.091 17.7271C15.091 18.0514 14.8281 18.3142 14.5039 18.3142C14.1796 18.3142 13.9167 18.0514 13.9167 17.7271C13.9167 17.4028 14.1796 17.14 14.5039 17.14C14.8281 17.14 15.091 17.4028 15.091 17.7271Z" fill={color} />
     </svg>
 
-
   );
-}
+};
 const ReportSVG = ({ size = 16, color, extraClass }) => {
   return (
     <svg width={size} height={size} className={extraClass} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -73,9 +73,8 @@ const ReportSVG = ({ size = 16, color, extraClass }) => {
       <path d="M21.4017 5.40168C21.8096 4.99382 21.8096 4.33255 21.4017 3.92469C20.9938 3.51683 20.3326 3.51683 19.9247 3.92469L13.6317 10.2177L10.8706 7.14124C10.5 6.72827 9.87113 6.67723 9.43876 7.02502L6.57456 9.32895C6.12512 9.69047 6.05385 10.3479 6.41537 10.7973C6.7769 11.2468 7.43432 11.318 7.88376 10.9565L9.97698 9.27276L12.8134 12.4333C13.005 12.6467 13.2759 12.772 13.5625 12.7797C13.8492 12.7874 14.1264 12.677 14.3292 12.4742L21.4017 5.40168Z" fill={color} />
     </svg>
 
-
   );
-}
+};
 const NotifySVG = ({ size = 16, color, extraClass }) => {
   return (
     <svg width={size} height={size} className={extraClass} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -87,7 +86,7 @@ const NotifySVG = ({ size = 16, color, extraClass }) => {
       <path d="M1.76236 21.7038C2.77884 22.7203 4.42688 22.7203 5.44336 21.7038L1.76236 18.0228C0.74588 19.0393 0.74588 20.6874 1.76236 21.7038Z" fill={color} />
     </svg>
   );
-}
+};
 const HexagonSVG = ({ size = 16, color, extraClass }) => {
   return (
     <svg width={size} height={size} className={extraClass} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -95,18 +94,18 @@ const HexagonSVG = ({ size = 16, color, extraClass }) => {
       <path fillRule="evenodd" clipRule="evenodd" d="M2 7.99614C2 6.9271 2.57032 5.93927 3.49613 5.40475L10.431 1.40089C11.3568 0.866371 12.4975 0.866371 13.4233 1.40089L20.3582 5.40475C21.284 5.93927 21.8543 6.9271 21.8543 7.99613V16.0039C21.8543 17.0729 21.284 18.0607 20.3582 18.5952L13.4233 22.5991C12.4975 23.1336 11.3568 23.1336 10.431 22.5991L3.49613 18.5952C2.57032 18.0607 2 17.0729 2 16.0039V7.99614ZM12.1824 3.55018L19.1173 7.55405C19.2752 7.64524 19.3725 7.81376 19.3725 7.99613V16.0039C19.3725 16.1862 19.2752 16.3548 19.1173 16.446L12.1824 20.4498C12.0245 20.541 11.8299 20.541 11.6719 20.4498L4.73703 16.446C4.57909 16.3548 4.48179 16.1862 4.48179 16.0039V7.99614C4.48179 7.81376 4.57909 7.64524 4.73703 7.55405L11.6719 3.55018C11.8299 3.45899 12.0245 3.45899 12.1824 3.55018Z" fill={color} />
     </svg>
   );
-}
+};
 
-const PlusSVG = ({ size = 16, color = "#5949BC", extraClass }) => {
+const PlusSVG = ({ size = 16, color = '#5949BC', extraClass }) => {
   return (
     <svg width={size} height={size} className={extraClass} viewBox="0 0 16 17" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M8.77771 4.66144C8.77771 4.23189 8.42948 3.88367 7.99993 3.88367C7.57037 3.88367 7.22215 4.23189 7.22215 4.66144V8.10588H3.77778C3.34822 8.10588 3 8.4541 3 8.88366C3 9.31321 3.34822 9.66144 3.77778 9.66144H7.22215V13.1059C7.22215 13.5354 7.57037 13.8837 7.99993 13.8837C8.42948 13.8837 8.77771 13.5354 8.77771 13.1059V9.66144H12.2222C12.6518 9.66144 13 9.31321 13 8.88366C13 8.4541 12.6518 8.10588 12.2222 8.10588H8.77771V4.66144Z" fill={color} />
     </svg>
 
-  )
-}
+  );
+};
 
-const MinusSVG = ({ size = 16, color = "#5949BC", extraClass }) => {
+const MinusSVG = ({ size = 16, color = '#5949BC', extraClass }) => {
   return (
     <svg width="17" height="16" viewBox="0 0 17 16" fill="none" xmlns="http://www.w3.org/2000/svg">
       <g opacity="0.5">
@@ -114,37 +113,37 @@ const MinusSVG = ({ size = 16, color = "#5949BC", extraClass }) => {
       </g>
     </svg>
 
-  )
-}
+  );
+};
 
-const UserSVG = ({ size = 16, color = "#5949BC", extraClass }) => {
+const UserSVG = ({ size = 16, color = '#5949BC', extraClass }) => {
   return (
     <svg width="17" height="17" viewBox="0 0 17 17" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M8.15273 10.3268L8.08375 10.3268C7.08552 10.3268 6.15021 10.3598 5.34654 10.5311C2.6768 11.1002 4.8434 14.1102 7.57276 14.1545L8.41353 14.1682C11.2399 14.2142 13.6864 10.9278 10.9001 10.4514C10.0984 10.3143 9.16161 10.3268 8.15273 10.3268Z" fill="#5949BC" stroke="#5949BC" strokeWidth="2" strokeLinecap="round"/>
-    <circle cx="8.11823" cy="5.53687" r="1.63849" fill="#5949BC" stroke="#5949BC" strokeWidth="2"/>
+      <path d="M8.15273 10.3268L8.08375 10.3268C7.08552 10.3268 6.15021 10.3598 5.34654 10.5311C2.6768 11.1002 4.8434 14.1102 7.57276 14.1545L8.41353 14.1682C11.2399 14.2142 13.6864 10.9278 10.9001 10.4514C10.0984 10.3143 9.16161 10.3268 8.15273 10.3268Z" fill="#5949BC" stroke="#5949BC" strokeWidth="2" strokeLinecap="round"/>
+      <circle cx="8.11823" cy="5.53687" r="1.63849" fill="#5949BC" stroke="#5949BC" strokeWidth="2"/>
     </svg>
 
-  )
-}
+  );
+};
 
-const SearchSVG = ({ size = 16, color = "#5949BC", extraClass }) => {
+const SearchSVG = ({ size = 16, color = '#5949BC', extraClass }) => {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path fillRule="evenodd" clipRule="evenodd" d="M9.85937 7.98257C9.46154 9.16421 8.34447 10.0147 7.02941 10.0147C6.92618 10.0147 6.82426 10.0095 6.72388 9.99926C5.21879 9.84641 4.04412 8.57492 4.04412 7.0294C4.04412 5.38067 5.38068 4.04411 7.02941 4.04411C7.7657 4.04411 8.43917 4.31035 8.95976 4.7521C9.60553 5.30008 10.0147 6.11683 10.0147 7.0294C10.0147 7.36312 9.96004 7.68357 9.85937 7.98257ZM11.5808 8.49208C11.4399 8.93083 11.2374 9.34183 10.9835 9.71491L13.4873 12.2186C13.8376 12.5689 13.8376 13.1369 13.4873 13.4873C13.1369 13.8376 12.569 13.8376 12.2186 13.4873L9.71488 10.9835C8.94944 11.5043 8.02467 11.8088 7.02941 11.8088C4.71947 11.8088 2.79278 10.1703 2.3471 7.99235C2.28341 7.6811 2.25 7.35902 2.25 7.0294C2.25 4.55463 4.13073 2.51944 6.54104 2.27466C6.70169 2.25835 6.86461 2.25 7.02941 2.25C8.14077 2.25 9.16416 2.62963 9.97599 3.26612C11.0914 4.14062 11.8088 5.5013 11.8088 7.0294C11.8088 7.53917 11.7289 8.03077 11.5808 8.49208Z" fill="black"/>
+      <path fillRule="evenodd" clipRule="evenodd" d="M9.85937 7.98257C9.46154 9.16421 8.34447 10.0147 7.02941 10.0147C6.92618 10.0147 6.82426 10.0095 6.72388 9.99926C5.21879 9.84641 4.04412 8.57492 4.04412 7.0294C4.04412 5.38067 5.38068 4.04411 7.02941 4.04411C7.7657 4.04411 8.43917 4.31035 8.95976 4.7521C9.60553 5.30008 10.0147 6.11683 10.0147 7.0294C10.0147 7.36312 9.96004 7.68357 9.85937 7.98257ZM11.5808 8.49208C11.4399 8.93083 11.2374 9.34183 10.9835 9.71491L13.4873 12.2186C13.8376 12.5689 13.8376 13.1369 13.4873 13.4873C13.1369 13.8376 12.569 13.8376 12.2186 13.4873L9.71488 10.9835C8.94944 11.5043 8.02467 11.8088 7.02941 11.8088C4.71947 11.8088 2.79278 10.1703 2.3471 7.99235C2.28341 7.6811 2.25 7.35902 2.25 7.0294C2.25 4.55463 4.13073 2.51944 6.54104 2.27466C6.70169 2.25835 6.86461 2.25 7.02941 2.25C8.14077 2.25 9.16416 2.62963 9.97599 3.26612C11.0914 4.14062 11.8088 5.5013 11.8088 7.0294C11.8088 7.53917 11.7289 8.03077 11.5808 8.49208Z" fill="black"/>
     </svg>
 
-  )
-}
+  );
+};
 
-const MouseeventSVG = ({ size = 16, color = "#5949BC", extraClass }) => {
+const MouseeventSVG = ({ size = 16, color = '#5949BC', extraClass }) => {
   return (
     <svg width={size} height={size} className={extraClass} viewBox="0 0 16 17" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M12.2744 3.43373L4.62705 7.80423C4.44899 7.90599 4.5212 8.17787 4.72629 8.17787H9.09468C9.18546 8.17787 9.26485 8.23901 9.28805 8.32677L10.2991 12.1524C10.3526 12.3551 10.6424 12.3493 10.6877 12.1445L12.5689 3.65062C12.6064 3.48116 12.425 3.34761 12.2744 3.43373Z" fill={color} stroke="#5949BC" strokeLinejoin="round" />
       <path d="M5.16496 12.2159C4.91514 12.5463 4.98046 13.0167 5.31087 13.2665C5.64127 13.5163 6.11162 13.451 6.36144 13.1206L5.16496 12.2159ZM9.45747 6.53876L5.16496 12.2159L6.36144 13.1206L10.654 7.44343L9.45747 6.53876Z" fill={color} />
     </svg>
 
-  )
-}
+  );
+};
 
 const TeamfeedSVG = ({ size = 24, color, extraClass }) => {
   return (
@@ -162,8 +161,8 @@ const TeamfeedSVG = ({ size = 24, color, extraClass }) => {
         </clipPath>
       </defs>
     </svg>
-  )
-}
+  );
+};
 
 const PlaySVG = ({ size = 24, color, extraClass }) => {
   return (
@@ -172,8 +171,8 @@ const PlaySVG = ({ size = 24, color, extraClass }) => {
         <path d="M16.5 11.82L7.5 6.19775V17.8022L16.5 11.82Z" stroke="#0E2647" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
       </g>
     </svg>
-  )
-}
+  );
+};
 
 const FavSVG = ({ size = 18, color, extraClass }) => {
   return (
@@ -181,8 +180,8 @@ const FavSVG = ({ size = 18, color, extraClass }) => {
       <path d="M9.23999 10.6293C8.95212 10.3616 8.50638 10.3616 8.2185 10.6293L5.47925 13.1767V5.39838C5.47925 4.98416 5.81503 4.64838 6.22925 4.64838H11.2292C11.6435 4.64838 11.9792 4.98416 11.9792 5.39838V13.1767L9.23999 10.6293Z" fill="#34A7BA" stroke="#34A7BA" strokeWidth="1.5" strokeLinejoin="round" />
     </svg>
 
-  )
-}
+  );
+};
 
 const VirtualSVG = ({ size = 18, color, extraClass }) => {
   return (
@@ -198,27 +197,26 @@ const VirtualSVG = ({ size = 18, color, extraClass }) => {
         </clipPath>
       </defs>
     </svg>
-  )
-}
+  );
+};
 
 const Events_cqSVG = ({ size = 16, color, extraClass }) => {
-  return ( 
-  <svg width={size} height={size} className={extraClass} viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M39.5818 22.7661C40.5439 22.7661 41.3858 22.0444 41.3858 21.0823C41.3858 20.1201 40.5439 19.2782 39.5818 19.2782H33.448C32.4858 19.2782 31.6439 20.1201 31.6439 21.0823C31.6439 21.9242 32.4858 22.7661 33.448 22.7661H39.5818Z" fill="url(#paint0_linear)"/>
-    <path fillRule="evenodd" clipRule="evenodd" d="M23.5859 16.1512L5.06421 22.0445C3.62096 22.5255 3.38042 24.5701 4.58313 25.2918L9.99531 28.6593L1.33582 37.4391C0.373655 38.4013 0.373655 39.8445 1.33582 40.6864C2.17772 41.5283 3.62096 41.6486 4.58313 40.6864L13.2426 31.9067L16.6102 37.3188C17.4521 38.6418 19.3764 38.4013 19.8575 36.958L25.871 18.4363C26.2318 16.9931 24.9089 15.6701 23.5859 16.1512Z" fill="url(#paint1_linear)"/>
-    <path d="M35.3725 9.05527C36.0941 8.33365 36.0941 7.25122 35.3725 6.64986C34.6509 5.92824 33.5685 5.92824 32.9671 6.64986L28.5171 10.9796C27.9157 11.7012 27.9157 12.7837 28.5171 13.385C29.2387 14.1066 30.3212 14.1066 30.9225 13.385L35.3725 9.05527Z" fill="url(#paint2_linear)"/>
-    <path d="M22.6239 2.32026C22.6239 1.3581 21.9023 0.636475 20.9401 0.636475C19.978 0.636475 19.2563 1.3581 19.2563 2.32026V8.57434C19.2563 9.5365 19.978 10.2581 20.9401 10.2581C21.9023 10.2581 22.6239 9.5365 22.6239 8.57434V2.32026Z" fill="url(#paint3_linear)"/>
-    <defs>
-    <linearGradient id="paint0_linear" x1="7.25579" y1="35.3724" x2="30.5242" y2="9.5029" gradientUnits="userSpaceOnUse">
-    <stop stopColor="#7A6DC9"/>
-    <stop offset="1" stopColor="#5DB9C8"/>
-    </linearGradient>
-    </defs>
-  </svg>
-
+  return (
+    <svg width={size} height={size} className={extraClass} viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M39.5818 22.7661C40.5439 22.7661 41.3858 22.0444 41.3858 21.0823C41.3858 20.1201 40.5439 19.2782 39.5818 19.2782H33.448C32.4858 19.2782 31.6439 20.1201 31.6439 21.0823C31.6439 21.9242 32.4858 22.7661 33.448 22.7661H39.5818Z" fill="url(#paint0_linear)"/>
+      <path fillRule="evenodd" clipRule="evenodd" d="M23.5859 16.1512L5.06421 22.0445C3.62096 22.5255 3.38042 24.5701 4.58313 25.2918L9.99531 28.6593L1.33582 37.4391C0.373655 38.4013 0.373655 39.8445 1.33582 40.6864C2.17772 41.5283 3.62096 41.6486 4.58313 40.6864L13.2426 31.9067L16.6102 37.3188C17.4521 38.6418 19.3764 38.4013 19.8575 36.958L25.871 18.4363C26.2318 16.9931 24.9089 15.6701 23.5859 16.1512Z" fill="url(#paint1_linear)"/>
+      <path d="M35.3725 9.05527C36.0941 8.33365 36.0941 7.25122 35.3725 6.64986C34.6509 5.92824 33.5685 5.92824 32.9671 6.64986L28.5171 10.9796C27.9157 11.7012 27.9157 12.7837 28.5171 13.385C29.2387 14.1066 30.3212 14.1066 30.9225 13.385L35.3725 9.05527Z" fill="url(#paint2_linear)"/>
+      <path d="M22.6239 2.32026C22.6239 1.3581 21.9023 0.636475 20.9401 0.636475C19.978 0.636475 19.2563 1.3581 19.2563 2.32026V8.57434C19.2563 9.5365 19.978 10.2581 20.9401 10.2581C21.9023 10.2581 22.6239 9.5365 22.6239 8.57434V2.32026Z" fill="url(#paint3_linear)"/>
+      <defs>
+        <linearGradient id="paint0_linear" x1="7.25579" y1="35.3724" x2="30.5242" y2="9.5029" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#7A6DC9"/>
+          <stop offset="1" stopColor="#5DB9C8"/>
+        </linearGradient>
+      </defs>
+    </svg>
 
   );
-}
+};
 const Funnels_cqSVG = ({ size = 16, color, extraClass }) => {
   return (
     <svg width={size} height={size} className={extraClass} viewBox="0 0 50 60" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -231,7 +229,7 @@ const Funnels_cqSVG = ({ size = 16, color, extraClass }) => {
       </defs>
     </svg>
   );
-}
+};
 const Campaigns_cqSVG = ({ size = 16, color, extraClass }) => {
   return (
     <svg width={size} height={size} className={extraClass} viewBox="0 0 52 53" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -244,7 +242,7 @@ const Campaigns_cqSVG = ({ size = 16, color, extraClass }) => {
       </defs>
     </svg>
   );
-}
+};
 
 const Attributions_cqSVG = ({ size = 16, color, extraClass }) => {
   return (
@@ -273,7 +271,7 @@ const Attributions_cqSVG = ({ size = 16, color, extraClass }) => {
       </defs>
     </svg>
   );
-}
+};
 
 const FilterSVG = ({ size = 20, color, extraClass }) => {
   return (
@@ -282,8 +280,8 @@ const FilterSVG = ({ size = 20, color, extraClass }) => {
       <path d="M13.5355 15.2861C13.5355 14.8965 13.8513 14.5807 14.2408 14.5807H21.2946C21.6842 14.5807 22 14.8965 22 15.2861C22 15.6756 21.6842 15.9914 21.2946 15.9914H14.2408C13.8513 15.9914 13.5355 15.6756 13.5355 15.2861Z" fill="#8692A3" />
       <path d="M17.7677 11.0538C18.1573 11.0538 18.4731 11.3696 18.4731 11.7592V18.813C18.4731 19.2025 18.1573 19.5183 17.7677 19.5183C17.3782 19.5183 17.0623 19.2025 17.0623 18.813V11.7592C17.0623 11.3696 17.3782 11.0538 17.7677 11.0538Z" fill="#8692A3" />
     </svg>
-  )
-}
+  );
+};
 
 const Templates_cqSVG = ({ size = 16, color, extraClass }) => {
   return (
@@ -333,7 +331,7 @@ const Templates_cqSVG = ({ size = 16, color, extraClass }) => {
     </svg>
 
   );
-}
+};
 const HelpSVG = ({ size = 16, color, extraClass }) => {
   return (
     <svg width={size} height={size} className={extraClass} width="25" height="24" viewBox="0 0 25 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -345,9 +343,8 @@ const HelpSVG = ({ size = 16, color, extraClass }) => {
       <path d="M10.5 23V17.6299H14.5V23L12.5 21.2926L10.5 23Z" fill={color} />
     </svg>
 
-
   );
-}
+};
 
 const TrashSVG = ({ size = 24, color, extraClass }) => {
   return (
@@ -356,8 +353,8 @@ const TrashSVG = ({ size = 24, color, extraClass }) => {
       <path d="M4.12945 7.60979C3.7563 6.83599 4.22629 5.91997 5.07249 5.7718L10.2863 4.85885C11.1352 4.7102 12.0035 4.7102 12.8524 4.85885L18.0662 5.7718C18.9124 5.91997 19.3824 6.83599 19.0093 7.60979H4.12945Z" fill="#8692A3" />
       <path d="M5.63496 9.09759H17.5038L16.2008 19.6938C16.1091 20.4396 15.4756 21 14.7241 21H8.42782C7.67705 21 7.04391 20.4406 6.95137 19.6956L5.63496 9.09759Z" fill="#8692A3" />
     </svg>
-  )
-}
+  );
+};
 const TimesSVG = ({ size = 24, color, extraClass }) => {
   return (
     <svg width={size} height={size} className={extraClass} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -371,9 +368,8 @@ const TimesSVG = ({ size = 24, color, extraClass }) => {
       </defs>
     </svg>
 
-
-  )
-}
+  );
+};
 const CalendarSVG = ({ size = 24, color, extraClass }) => {
   return (
     <svg width={size} height={size} className={extraClass} viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -383,8 +379,8 @@ const CalendarSVG = ({ size = 24, color, extraClass }) => {
       <path fillRule="evenodd" clipRule="evenodd" d="M20 13.0479C20 12.6797 19.7015 12.3812 19.3333 12.3812C18.9651 12.3812 18.6667 12.6797 18.6667 13.0479V14.8812H13.3333V13.2145C13.3333 12.8463 13.0349 12.5479 12.6667 12.5479C12.2985 12.5479 12 12.8463 12 13.2145V14.8812H6.66667C6.29848 14.8812 6 15.1797 6 15.5479C6 15.9161 6.29848 16.2145 6.66667 16.2145H12V18.8812H6.66667C6.29848 18.8812 6 19.1797 6 19.5479C6 19.916 6.29848 20.2145 6.66667 20.2145H12V24.2145C12 24.5827 12.2985 24.8812 12.6667 24.8812C13.0349 24.8812 13.3333 24.5827 13.3333 24.2145V20.2145H18.6667V24.2145C18.6667 24.5827 18.9651 24.8812 19.3333 24.8812C19.7015 24.8812 20 24.5827 20 24.2145V20.2145H25.3333C25.7015 20.2145 26 19.916 26 19.5479C26 19.1797 25.7015 18.8812 25.3333 18.8812H20V16.2145H25.3333C25.7015 16.2145 26 15.9161 26 15.5479C26 15.1797 25.7015 14.8812 25.3333 14.8812H20V13.0479ZM18.6667 16.2145H13.3333V18.8812H18.6667V16.2145Z" fill="#8692A3" />
     </svg>
 
-  )
-}
+  );
+};
 const GroupbySVG = ({ size = 24, color, extraClass }) => {
   return (
     <svg width={size} height={size} className={extraClass} viewBox="0 0 32 33" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -396,8 +392,8 @@ const GroupbySVG = ({ size = 24, color, extraClass }) => {
       <path d="M21.3531 16.5626L19.986 15.18L18.6412 16.5626" stroke="#5949BC" strokeWidth="0.9" strokeLinecap="square" />
     </svg>
 
-  )
-}
+  );
+};
 const SortdownSVG = ({ size = 24, color, extraClass }) => {
   return (
     <svg width={size} height={size} className={extraClass} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -407,8 +403,8 @@ const SortdownSVG = ({ size = 24, color, extraClass }) => {
       <path d="M2 17.3205C2 16.5031 2.66264 15.8404 3.48005 15.8404H7.92022C8.73763 15.8404 9.40027 16.5031 9.40027 17.3205C9.40027 18.1379 8.73763 18.8005 7.92022 18.8005H3.48005C2.66264 18.8005 2 18.1379 2 17.3205Z" fill={color} />
       <path fillRule="evenodd" clipRule="evenodd" d="M13.2818 16.1505C13.5371 15.8314 14.0028 15.7796 14.322 16.0349L17.5598 18.6252L20.7977 16.0349C21.1168 15.7796 21.5825 15.8314 21.8378 16.1505C22.0931 16.4697 22.0414 16.9353 21.7222 17.1907L18.0221 20.1508C17.7518 20.367 17.3678 20.367 17.0975 20.1508L13.3974 17.1907C13.0782 16.9353 13.0265 16.4697 13.2818 16.1505Z" fill={color} />
     </svg>
-  )
-}
+  );
+};
 
 const DownloadSVG = ({ size = 24, color, extraClass }) => {
   return (
@@ -416,16 +412,16 @@ const DownloadSVG = ({ size = 24, color, extraClass }) => {
       <path fillRule="evenodd" clipRule="evenodd" d="M11.9999 3.00342C12.5522 3.00342 12.9999 3.45113 12.9999 4.00342V11.5892L15.2928 9.29631C15.6834 8.90579 16.3165 8.90579 16.707 9.29631C17.0976 9.68684 17.0976 10.32 16.707 10.7105L11.9999 15.4176L7.29283 10.7105C6.90231 10.32 6.90231 9.68684 7.29283 9.29631C7.68336 8.90579 8.31652 8.90579 8.70705 9.29631L10.9999 11.5892V4.00342C10.9999 3.45113 11.4477 3.00342 11.9999 3.00342ZM20.0254 15.1084C20.0254 14.5561 19.5777 14.1084 19.0254 14.1084C18.4731 14.1084 18.0254 14.5561 18.0254 15.1084V18.0034H6.03491V15.1084C6.03491 14.5561 5.5872 14.1084 5.03491 14.1084C4.48263 14.1084 4.03491 14.5561 4.03491 15.1084V20.0034H20.0254V15.1084Z" fill={color} />
     </svg>
 
-  )
-}
+  );
+};
 const NextSVG = ({ size = 24, color, extraClass }) => {
   return (
     <svg className={extraClass} width={size} height={size} viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M2.88547 10C6.15908 10 16.6133 10 16.6133 10" stroke="white" strokeWidth="2" strokeLinecap="round" />
-      <path d="M14.1055 5.69025L17.5689 9.8461L14.1055 14.268" stroke="white" strokeWidth="2" strokeLinecap="round" stroke-linejoin="round" />
+      <path d="M14.1055 5.69025L17.5689 9.8461L14.1055 14.268" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
-  )
-}
+  );
+};
 
 const TotaleventsSVG = ({ size = 24, color, extraClass }) => {
   return (
@@ -433,8 +429,8 @@ const TotaleventsSVG = ({ size = 24, color, extraClass }) => {
       <path d="M6.06786 4.29527C5.77959 4.29527 5.51682 4.46049 5.39192 4.7203C5.26701 4.98012 5.30208 5.28852 5.48211 5.51367L10.6695 12.0006L5.48211 18.4876C5.30208 18.7127 5.26701 19.0211 5.39192 19.281C5.51682 19.5408 5.77959 19.706 6.06786 19.706H17.1043C17.5186 19.706 17.8543 19.3702 17.8543 18.956V16.0286C17.8543 15.6144 17.5186 15.2786 17.1043 15.2786C16.6901 15.2786 16.3543 15.6144 16.3543 16.0286V18.206H8.8019L13.2115 12.7419C13.5033 12.3803 13.5076 11.8654 13.2219 11.499L8.77494 5.79527H16.3543V7.9595C16.3543 8.37371 16.6901 8.7095 17.1043 8.7095C17.5186 8.7095 17.8543 8.37371 17.8543 7.9595V5.04527C17.8543 4.63105 17.5186 4.29527 17.1043 4.29527H6.06786Z" fill={color} />
     </svg>
 
-  )
-}
+  );
+};
 
 const ActiveusersSVG = ({ size = 24, color, extraClass }) => {
   return (
@@ -445,8 +441,8 @@ const ActiveusersSVG = ({ size = 24, color, extraClass }) => {
       <circle cx="14.9037" cy="14.6653" r="1.15" stroke={color} strokeWidth="1.2" />
     </svg>
 
-  )
-}
+  );
+};
 
 const FrequencySVG = ({ size = 24, color, extraClass }) => {
   return (
@@ -464,8 +460,8 @@ const FrequencySVG = ({ size = 24, color, extraClass }) => {
         </clipPath>
       </defs>
     </svg>
-  )
-}
+  );
+};
 
 const TotalusersSVG = ({ size = 24, color, extraClass }) => {
   return (
@@ -482,8 +478,8 @@ const TotalusersSVG = ({ size = 24, color, extraClass }) => {
       <path d="M11.7376 15.9683C11.7376 16.2997 12.0063 16.5683 12.3376 16.5683C12.669 16.5683 12.9376 16.2997 12.9376 15.9683H11.7376ZM11.7376 14.019V15.9683H12.9376V14.019H11.7376Z" fill={color} />
     </svg>
 
-  )
-}
+  );
+};
 
 export {
   BrandSVG,
@@ -522,4 +518,4 @@ export {
   ActiveusersSVG,
   FrequencySVG,
   TotalusersSVG
-}
+};

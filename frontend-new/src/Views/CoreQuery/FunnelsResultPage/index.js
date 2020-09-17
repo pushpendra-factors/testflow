@@ -1,6 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import GroupedChart from './GroupedChart';
-import { generateGroupedChartsData, generateDummyData, generateGroups, generateUngroupedChartsData } from './utils';
+import {
+  generateGroupedChartsData, generateDummyData, generateGroups, generateUngroupedChartsData
+} from './utils';
 import FiltersInfo from './FiltersInfo';
 import UngroupedChart from './UngroupedChart';
 import Header from '../../AppLayout/Header';
@@ -9,27 +11,28 @@ import { Button } from 'antd';
 import { PoweroffOutlined } from '@ant-design/icons';
 import FunnelsResultTable from './FunnelsResultTable';
 
-function FunnelsResultPage({ queries, setDrawerVisible, setShowFunnels, showFunnels  }) {
+function FunnelsResultPage({
+  queries, setDrawerVisible, setShowFunnels, showFunnels
+}) {
+  const [eventsData, setEventsData] = useState([]);
+  const [groups, setGroups] = useState([]);
+  const [grouping, setGrouping] = useState(true);
 
-    const [eventsData, setEventsData] = useState([]);
-    const [groups, setGroups] = useState([]);
-    const [grouping, setGrouping] = useState(true);
+  useEffect(() => {
+    const dummyData = generateDummyData(queries);
+    setEventsData(dummyData);
+    setGroups(generateGroups(dummyData));
+  }, [queries]);
 
-    useEffect(() => {
-        const dummyData = generateDummyData(queries);
-        setEventsData(dummyData);
-        setGroups(generateGroups(dummyData));
-    }, [queries]);
+  const groupedChartData = generateGroupedChartsData(eventsData, groups);
+  const ungroupedChartsData = generateUngroupedChartsData(eventsData);
 
-    const groupedChartData = generateGroupedChartsData(eventsData, groups);
-    const ungroupedChartsData = generateUngroupedChartsData(eventsData);
+  if (!eventsData.length) {
+    return null;
+  }
 
-    if (!eventsData.length) {
-        return null;
-    }
-
-    return (
-        <>
+  return (
+    <>
             <Header>
                 <div className="flex py-4 justify-end">
                     <Button type="primary" icon={<PoweroffOutlined />} >Save query as</Button>
@@ -52,18 +55,18 @@ function FunnelsResultPage({ queries, setDrawerVisible, setShowFunnels, showFunn
                         <UngroupedChart
                             chartData={ungroupedChartsData}
                         />
-                    )}
+                )}
 
                 <div className="mt-8">
-                    <FunnelsResultTable 
+                    <FunnelsResultTable
                         eventsData={eventsData}
                         groups={groups}
                         setGroups={setGroups}
                     />
                 </div>
             </div>
-        </>
-    )
+    </>
+  );
 }
 
 export default FunnelsResultPage;

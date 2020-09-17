@@ -1,29 +1,28 @@
-import React, { useEffect, useCallback, useState } from 'react';
-import styles from './index.module.scss';
+import React, { useEffect, useState } from 'react';
+// import styles from './index.module.scss';
 import SpikeChart from './SpikeChart';
 import TotalEventsTable from './TotalEventsTable';
 import { getSpikeChartData } from '../utils';
 import EventHeader from '../EventHeader';
 
 function TotalEvents({ queries }) {
+  const [chartData, setChartData] = useState([]);
 
-    const [chartData, setChartData] = useState([]);
+  useEffect(() => {
+    setChartData(getSpikeChartData([queries[0]]));
+  }, []);
 
-    useEffect(() => {
-        setChartData(getSpikeChartData([queries[0]]));
-    }, []);
+  let total = 0;
 
-    let total = 0;
+  chartData.forEach(elem => {
+    total += elem[queries[0]];
+  });
 
-    chartData.forEach(elem => {
-        total += elem[queries[0]]
-    });
+  if (!chartData.length) {
+    return null;
+  }
 
-    if (!chartData.length) {
-        return null;
-    }
-    
-    return (
+  return (
         <div className="total-events">
             <div className="flex justify-center items-center mt-4">
                 <div className="w-1/4">
@@ -40,7 +39,7 @@ function TotalEvents({ queries }) {
                 />
             </div>
         </div>
-    )
+  );
 }
 
 export default TotalEvents;

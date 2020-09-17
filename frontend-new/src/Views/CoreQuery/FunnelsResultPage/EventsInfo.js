@@ -3,8 +3,7 @@ import styles from './index.module.scss';
 import { Switch } from 'antd';
 
 function EventsInfo({ queries, showFunnels, setShowFunnels }) {
-
-    return (
+  return (
         <div className="flex justify-between items-center">
             <div className="flex items-center leading-6">
                 <span className="mr-2">
@@ -20,28 +19,27 @@ function EventsInfo({ queries, showFunnels, setShowFunnels }) {
                 </span>
                 <div className={styles.eventsText}>
                     {queries.map((q, index) => {
-                        if (index < queries.length - 1) {
-                            return (
+                      if (index < queries.length - 1) {
+                        return (
                                 <React.Fragment key={q}>
                                     <span style={{ color: '#0E2647' }} className="text-xl font-semibold">{q}</span>
                                     <span style={{ color: '#8692A3' }} className="text-xl font-normal">&nbsp;and then&nbsp;</span>
                                 </React.Fragment>
-                            )
-                        } else {
-                            return (
+                        );
+                      } else {
+                        return (
                                 <React.Fragment key={q}>
                                     <span style={{ color: '#0E2647' }} className="text-xl font-semibold">{q}</span>
                                 </React.Fragment>
-                            )
-                        }
-
+                        );
+                      }
                     })}
                 </div>
             </div>
             <Switch checked={showFunnels} checkedChildren="funnels" unCheckedChildren="analytics" onChange={setShowFunnels} />
 
         </div>
-    )
+  );
 }
 
 export default EventsInfo;
