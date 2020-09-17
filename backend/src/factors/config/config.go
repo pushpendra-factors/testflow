@@ -418,7 +418,7 @@ func InitLogClient(env, appName, emailSender, awsKey, awsSecret,
 
 // InitSentryLogging Adds sentry hook to capture error logs.
 func InitSentryLogging(sentryDSN, appName string) {
-	if IsDevelopment() || sentryDSN == "" {
+	if IsDevelopment() || IsStaging() || sentryDSN == "" {
 		return
 	}
 

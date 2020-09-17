@@ -1,86 +1,106 @@
+/* eslint-disable */
 import React, { useState } from 'react';
-import Header from './header';
-import ResultsPage from './ResultsPage';
+import FunnelsResultPage from './FunnelsResultPage';
 import QueryComposer from '../../components/QueryComposer';
 import CoreQueryHome from '../CoreQueryHome';
-import { Drawer, Button, Collapse, Select, Popover } from 'antd';
-import { SVG, Text } from 'factorsComponents';
-import styles from './index.module.scss';
+import { Drawer, Button } from 'antd';
+import { SVG, Text } from '../../components/factorsComponents';
+import EventsAnalytics from '../EventsAnalytics';
 
 function CoreQuery() {
-    const [drawerVisible, setDrawerVisible] = useState(false);
-    const [queryType, setQueryType] = useState('event');
-    const [showResult, setShowResult] = useState(false);
-    // const [showResult, setShowResult] = useState(true);
-    const [queries, setQueries] = useState([]);
-    // const [queries, setQueries] = useState(['Paid', 'Applied Coupon', 'Cart Updated', 'Checkout']);
+  const [drawerVisible, setDrawerVisible] = useState(false);
+  const [queryType, setQueryType] = useState('event');
+  const [showResult, setShowResult] = useState(false);
+  // const [showResult, setShowResult] = useState(true);
+  const [queries, setQueries] = useState([]);
+  // const [queries, setQueries] = useState(['Applied Coupon', 'Cart Updated', 'Checkout', 'Add to Wishlist', 'Paid']);
 
-    const queryChange = (newEvent, index, changeType = 'add') => {
-        const queryupdated = [...queries];
-        if (queryupdated[index]) {
-            if (changeType === 'add') {
-                queryupdated[index] = newEvent;
-            } else {
-                queryupdated.splice(index, 1);
-            }
-
-        } else {
-            queryupdated.push(newEvent);
-        }
-        setQueries(queryupdated);
+  const queryChange = (newEvent, index, changeType = 'add') => {
+    const queryupdated = [...queries];
+    if (queryupdated[index]) {
+      if (changeType === 'add') {
+        queryupdated[index] = newEvent;
+      } else {
+        queryupdated.splice(index, 1);
+      }
+    } else {
+      queryupdated.push(newEvent);
     }
+    setQueries(queryupdated);
+  };
 
-    const runQuery = () => {
-        setShowResult(true);
-        closeDrawer();
-    }
+  const runQuery = () => {
+    setShowResult(true);
+    closeDrawer();
+  };
 
-    const closeDrawer = () => {
-        console.log("clickedd!!")
-        setDrawerVisible(false);
-    }
+  const closeDrawer = () => {
+    setDrawerVisible(false);
+  };
 
-    const title = () => {
-        return (<div className={`flex justify-between items-center`}>
-            <div className={`flex`}>
-                <SVG name="teamfeed"></SVG>
-                <Text type={'title'} level={4} weight={`bold`} extraClass={`ml-2 m-0`}>Find event funnel for</Text>
-            </div>
-            <div className={`flex justify-end items-center`}>
-                <Button type="text"><SVG name="play"></SVG>Help</Button>
-                <Button type="text" onClick={() => closeDrawer()}><SVG name="times"></SVG></Button>
-            </div>
+  const title = () => {
+    return (<div className={'flex justify-between items-center'}>
+      <div className={'flex'}>
+        <SVG name="teamfeed"></SVG>
+        <Text type={'title'} level={4} weight={'bold'} extraClass={'ml-2 m-0'}>Find event funnel for</Text>
+      </div>
+      <div className={'flex justify-end items-center'}>
+        <Button type="text"><SVG name="play"></SVG>Help</Button>
+        <Button type="text" onClick={() => closeDrawer()}><SVG name="times"></SVG></Button>
+      </div>
 
-        </div>)
-    }
+    </div>);
+  };
 
-    return (
+  let result = (
+    <EventsAnalytics
+      queryType={queryType}
+      queries={queries.map(elem => elem.label)}
+    />
+  );
+
+  if (queryType === 'funnel') {
+    result = (
+      <FunnelsResultPage
+        queryType={queryType}
+        setDrawerVisible={setDrawerVisible}
+        queries={queries.map(elem => elem.label)}
+      />
+    );
+  }
+
+  return (
+    <>
+      <Drawer
+        title={title()}
+        placement="left"
+        closable={false}
+        visible={drawerVisible}
+        onClose={closeDrawer}
+        getContainer={false}
+        width={'600px'}
+        className={'fa-drawer'}
+      >
+
+        <QueryComposer
+          queries={queries}
+          runQuery={runQuery}
+          eventChange={queryChange}
+          queryType={queryType}
+        />
+      </Drawer>
+
+      {showResult ? (
         <>
-            <Drawer
-                title={title()}
-                placement="left"
-                closable={false}
-                visible={drawerVisible}
-                onClose={closeDrawer}
-                getContainer={false}
-                width={"600px"}
-                className={`fa-drawer`}
-            >
-
-                <QueryComposer
-                    queries={queries}
-                    runQuery={runQuery}
-                    eventChange={queryChange}
-                    queryType={queryType}
-                />
-            </Drawer>
-
-            {
-                showResult ? (<ResultsPage setDrawerVisible={setDrawerVisible} queries={queries.map(elem => elem.label)} />) : (<CoreQueryHome setQueryType={setQueryType} setDrawerVisible={setDrawerVisible} />)
-            }
-
+          {result}
         </>
-    )
+
+      ) : (
+          <CoreQueryHome setQueryType={setQueryType} setDrawerVisible={setDrawerVisible} />
+        )}
+
+    </>
+  );
 }
 
 export default CoreQuery;

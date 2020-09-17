@@ -1690,3 +1690,96 @@ func TestAnalyticsInsightsQueryWithFilterAndBreakdown(t *testing.T) {
 		assert.Equal(t, int64(3), result.Rows[1][1])
 	})
 }
+
+func TestAnalyticsInsightsQueryWithNumericalBucketing(t *testing.T) {
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+	uri := "/sdk/event/track"
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	startTimestamp := U.UnixTimeBeforeDuration(time.Hour * 1)
+	t.Run("EventOccurrenceSingleBreakdown", func(t *testing.T) {
+		// 20 events with single incremented value.
+		eventName1 := "event1"
+		for i := 0; i < 20; i++ {
+			iUser, _ := M.CreateUser(&M.User{ProjectId: project.ID})
+			payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, `+
+				`"event_properties":{"$page_load_time":%d},"user_properties":{"$hour_of_first_event":%d}}`,
+				eventName1, iUser.ID, startTimestamp+10, i, i)
+			w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+			assert.Equal(t, http.StatusOK, w.Code)
+		}
+
+		query := M.Query{
+			From: startTimestamp,
+			To:   startTimestamp + 40,
+			EventsWithProperties: []M.QueryEventWithProperties{
+				M.QueryEventWithProperties{
+					Name: eventName1,
+				},
+			},
+			GroupByProperties: []M.QueryGroupByProperty{
+				M.QueryGroupByProperty{
+					Entity:   M.PropertyEntityEvent,
+					Property: "$page_load_time",
+					Type:     U.PropertyTypeNumerical,
+				},
+			},
+			Class:           M.QueryClassInsights,
+			Type:            M.QueryTypeEventsOccurrence,
+			EventsCondition: M.EventCondAllGivenEvent,
+		}
+
+		// Expected output should be 10 equal range buckets with 2 elements
+		result, errCode, _ := M.Analyze(project.ID, query)
+		assert.Equal(t, http.StatusOK, errCode)
+		for i := 0; i < 10; i++ {
+			assert.Equal(t, fmt.Sprintf("%d-%d", i*2, i*2+1), result.Rows[i][1])
+			assert.Equal(t, int64(2), result.Rows[i][2])
+		}
+
+		/*
+			New event with $page_load_time = 1
+			total element 21
+			10th percentile = (10/100)*21 = 2 postion = value 1
+			90th percentile = (90/100)*21 = 19 position = value 17
+			8 buckets range (1 - 17)  = 1-2, 3-4, 5-6, 7-8, 9-10 ... 15-16
+			new range min-0, { 8 buckets}, 17-max
+
+			User property $hour_of_first_event set as empty ($none).
+			Will create 11 buckets. including 1 $none.
+		*/
+		iUser, _ := M.CreateUser(&M.User{ProjectId: project.ID})
+		payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, `+
+			`"event_properties":{"$page_load_time":%d},"user_properties":{"$hour_of_first_event":""}}`,
+			eventName1, iUser.ID, startTimestamp+10, 1)
+		w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		result, errCode, _ = M.Analyze(project.ID, query)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.Equal(t, "0-0", result.Rows[0][1])
+		assert.Equal(t, int64(1), result.Rows[0][2])
+		assert.Equal(t, "1-2", result.Rows[1][1])
+		assert.Equal(t, int64(3), result.Rows[1][2])
+		assert.Equal(t, "15-16", result.Rows[8][1])
+		assert.Equal(t, int64(2), result.Rows[8][2])
+		assert.Equal(t, "17-19", result.Rows[9][1])
+		assert.Equal(t, int64(3), result.Rows[9][2])
+
+		// Using group by numerical property.
+		query.GroupByProperties[0].Entity = M.PropertyEntityUser
+		query.GroupByProperties[0].Property = "$hour_of_first_event"
+		result, errCode, _ = M.Analyze(project.ID, query)
+		assert.Equal(t, http.StatusOK, errCode)
+
+		assert.Equal(t, M.PropertyValueNone, result.Rows[0][1]) // First bucket should be $none.
+		assert.Equal(t, int64(1), result.Rows[0][2])            // Count of $none should be 1.
+		for i := 1; i <= 10; i++ {
+			assert.Equal(t, eventName1, result.Rows[i][0])
+			assert.Equal(t, fmt.Sprintf("%d-%d", i*2-2, i*2-1), result.Rows[i][1])
+			assert.Equal(t, int64(2), result.Rows[i][2])
+		}
+	})
+}

@@ -9,12 +9,11 @@ import './assets/index.scss';
 import './styles/factors-ai.main.scss';
 import 'c3/c3.css';
 
-
 import App from './App';
 
 const composeEnhancer = window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ || compose;
 
-const store = createStore(reducers, composeEnhancer())
+const store = createStore(reducers, composeEnhancer());
 
 ReactDOM.render(
   <React.StrictMode>
