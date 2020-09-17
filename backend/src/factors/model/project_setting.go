@@ -268,7 +268,7 @@ func delAllProjectSettingsCacheForProject(projectId uint64) {
 func UpdateProjectSettings(projectId uint64, settings *ProjectSetting) (*ProjectSetting, int) {
 	db := C.GetServices().Db
 
-	if projectId == 0 {
+	if projectId == 0 || settings == nil {
 		return nil, http.StatusBadRequest
 	}
 
