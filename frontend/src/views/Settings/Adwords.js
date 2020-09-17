@@ -158,7 +158,7 @@ class Adwords extends Component {
           </thead>
           <tbody>{ accountRows }</tbody>
         </Table>
-        <div><Button color='primary' outline style={{ marginTop: '30px' }} onClick={()=> this.setState({modalOpen: true})}> Add Manually </Button>
+        <div><Button color='primary' outline style={{ marginTop: '30px' }} onClick={()=> this.setState({modalOpen: true})}> Enter Id Manually </Button>
         </div>
         <Button color='success' outline style={{ marginTop: '30px' }} onClick={this.onClickFinishSetup}> Finish Setup </Button>
         
@@ -250,7 +250,7 @@ class Adwords extends Component {
                 </Button>
                 <Button hidden={!this.isIntAdwordsEnabled()} color='primary' style={{ marginTop: '-3px' }} 
                   outline onClick={()=> this.setState({addNewAccount: true})}> 
-                  + Add More
+                  + Edit
                 </Button>
               </div>
             </CardHeader>
