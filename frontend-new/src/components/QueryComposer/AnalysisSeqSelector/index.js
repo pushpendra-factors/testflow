@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import styles from './index.module.scss';
-import { SVG, Text } from 'factorsComponents';
+import { Text } from 'factorsComponents';
 
 export default function SeqSelector({ seq, queryCount, setAnalysisSequence }) {
   const fromSequenceState = (() => {
@@ -42,13 +42,13 @@ export default function SeqSelector({ seq, queryCount, setAnalysisSequence }) {
         <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 mb-2'}>Choose from event</Text>
         <div className={styles.seq_selector__container__seq}>
           {
-            fromSequenceState.map(item => {
+            fromSequenceState.map((item, index) => {
               const classNames = [styles.seq_selector__container__seqKey];
               item.enabled ? classNames.push(styles.seq_selector__container__enabled) : classNames.push(styles.seq_selector__container__disabled);
               if (item.selected) {
                 classNames.push(styles.seq_selector__container__selected);
               }
-              return (<span className={classNames.join(' ')} onClick={item.enabled ? () => setSeqState('from', item.key) : null}>{item.key}</span>);
+              return (<span key={index} className={classNames.join(' ')} onClick={item.enabled ? () => setSeqState('from', item.key) : null}>{item.key}</span>);
             })
           }
         </div>
@@ -57,13 +57,13 @@ export default function SeqSelector({ seq, queryCount, setAnalysisSequence }) {
         <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 mb-2'}>To event</Text>
         <div className={styles.seq_selector__container__seq}>
           {
-            toSequenceState.map(item => {
+            toSequenceState.map((item, index) => {
               const classNames = [styles.seq_selector__container__seqKey];
               item.enabled ? classNames.push(styles.seq_selector__container__enabled) : classNames.push(styles.seq_selector__container__disabled);
               if (item.selected) {
                 classNames.push(styles.seq_selector__container__selected);
               }
-              return (<span className={classNames.join(' ')} onClick={item.enabled ? () => setSeqState('to', item.key) : null}>{item.key}</span>);
+              return (<span key={index} className={classNames.join(' ')} onClick={item.enabled ? () => setSeqState('to', item.key) : null}>{item.key}</span>);
             })
           }
         </div>

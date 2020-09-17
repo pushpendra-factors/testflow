@@ -1,11 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
-  Row, Col, Modal, Button, Menu, Avatar, Input
+  Row, Col, Menu
 } from 'antd';
-import { Text, SVG } from 'factorsComponents';
+import { Text } from 'factorsComponents';
 import ViewProjectSettings from './ViewProjectSettings';
-
-const { SubMenu } = Menu;
 
 const MenuTabs = {
   generalSettings: 'General Settings',
@@ -15,25 +13,25 @@ const MenuTabs = {
   EventAlias: 'Event Alias'
 };
 
-function UserSettingsModal(props) {
-  const [selectedMenu, setSelectedMenu] = useState(MenuTabs.accounts);
-  const [editPasswordModal, setPasswordModal] = useState(false);
-  const [editDetailsModal, setDetailsModal] = useState(false);
-  const [confirmLoading, setConfirmLoading] = useState(false);
+function UserSettingsModal() {
+  // const [selectedMenu, setSelectedMenu] = useState(MenuTabs.accounts);
+  // const [editPasswordModal, setPasswordModal] = useState(false);
+  // const [editDetailsModal, setDetailsModal] = useState(false);
+  // const [confirmLoading, setConfirmLoading] = useState(false);
 
-  const handleClick = (e) => {
-    setSelectedMenu(e.key);
+  const handleClick = () => {
+    // setSelectedMenu(e.key);
     // console.log('click ', e.key);
   };
 
-  const handleOk = () => {
-    setConfirmLoading(true);
-    setTimeout(() => {
-      setConfirmLoading(false);
-      setPasswordModal(false);
-      setDetailsModal(false);
-    }, 2000);
-  };
+  // const handleOk = () => {
+  //   setConfirmLoading(true);
+  //   setTimeout(() => {
+  //     setConfirmLoading(false);
+  //     setPasswordModal(false);
+  //     setDetailsModal(false);
+  //   }, 2000);
+  // };
 
   return (
     <>
@@ -65,8 +63,8 @@ function UserSettingsModal(props) {
           <Col span={15}>
 
             <ViewProjectSettings
-              editDetails={() => setDetailsModal(true)}
-              editPassword={() => setPasswordModal(true)}
+              // editDetails={() => setDetailsModal(true)}
+              // editPassword={() => setPasswordModal(true)}
             />
 
           </Col>

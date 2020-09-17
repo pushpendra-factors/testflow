@@ -1,15 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
-  Row, Col, Modal, Button, Menu, Avatar, Input
+  Row, Col, Modal, Button, Menu
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
-import { UserOutlined } from '@ant-design/icons';
 import EditPassword from './EditPassword';
 import EditUserDetails from './EditUserDetails';
 import ViewUserDetails from './ViewUserDetails';
 import ProjectDetails from './ProjectDetails';
 
-const { SubMenu } = Menu;
+// const { SubMenu } = Menu;
 
 const MenuTabs = {
   projects: 'projects',

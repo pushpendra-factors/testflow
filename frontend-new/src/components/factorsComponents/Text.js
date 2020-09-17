@@ -13,7 +13,7 @@ class Text extends React.Component {
       type, level, size, children, weight, mini, color, lineHeight, align, textCenter, isUppercase, extraClass, ...otherProps
     } = this.props;
 
-    const defaultFontSize = (type == textType.paragraph) ? (mini ? 7 : 6) : level || size;
+    const defaultFontSize = (type === textType.paragraph) ? (mini ? 7 : 6) : level || size;
 
     const classList = {
       'fai-text': true,
@@ -42,11 +42,11 @@ class Text extends React.Component {
     // (Number.isInteger(isSizeDefined)
     // AntD throws error for level>4
     const isSizeDefined = level || size;
-    if (type == textType.title) {
+    if (type === textType.title) {
       const sizeValue = isSizeDefined > 4 ? 4 : isSizeDefined;
       return <Title level={sizeValue} {...otherProps} className={classnames({ ...classList })} >{children}</Title>;
     }
-    if (type == textType.paragraph) {
+    if (type === textType.paragraph) {
       return <Paragraph {...otherProps} className={classnames({ ...classList })} >{children}</Paragraph>;
     } else {
       console.error('Invalid type for Text (Factor-Components)');

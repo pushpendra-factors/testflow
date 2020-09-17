@@ -221,6 +221,13 @@ upload-instantiate-event-user-cache: export IMAGE_NAME=instantiate-event-user-ca
 upload-instantiate-event-user-cache: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/instantiate-event-user-cache-job:$(TAG)
 
+pack-cleanup-eventuser-cache: 
+	docker build -t us.gcr.io/factors-$(ENV)/cleanup-eventuser-cache-job:$(TAG) -f Dockerfile.cleanup_eventuser_cache_job .
+
+upload-cleanup-eventuser-cache: export IMAGE_NAME=cleanup-eventuser-cache-job
+upload-cleanup-eventuser-cache: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/cleanup-eventuser-cache-job:$(TAG)
+
 notify-deployment:
 	$(GOPATH)/src/factors/scripts/notify_deployment.sh
 

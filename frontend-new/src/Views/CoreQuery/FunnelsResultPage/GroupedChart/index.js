@@ -1,3 +1,4 @@
+/* eslint-disable */
 import React, { useRef, useCallback, useEffect } from 'react';
 import c3 from 'c3';
 import * as d3 from 'd3';
@@ -164,7 +165,7 @@ function GroupedChart({ eventsData, groups, chartData }) {
       tooltip: {
         grouped: false,
 
-        position: (d, width, height, element) => {
+        position: (d) => {
           const bars = d3.select(chartRef.current).select(`.c3-bars.c3-bars-${d[0].id.split(' ').join('-')}`).selectAll('path').nodes();
           const nodePosition = d3.select(bars[d[0].index]).node().getBoundingClientRect();
           let left = (nodePosition.x + (nodePosition.width / 2));
@@ -259,34 +260,34 @@ function GroupedChart({ eventsData, groups, chartData }) {
     displayChart();
   }, [displayChart]);
 
-  const visibleEvents = eventsData.filter(elem => elem.display);
+  // const visibleEvents = eventsData.filter(elem => elem.display);
 
   return (
-    <div className="grouped-chart">
-      {
-        groups
-          .map(elem => {
-            return (
-              <div className={`absolute border-l border-solid ${styles.verticalGridLines}`} key={elem.name} id={elem.name}></div>
-            );
-          })
-      }
-      {
-        groups
-          .map(elem => {
-            return (
-              <div style={{ transition: '2s' }} key={elem.name} id={`conversion-text-${elem.name}`} className="absolute z-10 leading-5 text-base flex justify-end pr-1">
-                <div style={{ fontSize: '14px' }} className={styles.conversionText}>
-                  <div className="font-semibold flex justify-end">{elem.conversion_rate}</div>
-                  <div>Conversion</div>
-                </div>
-              </div>
-            );
-          })
-      }
-      <div className={styles.groupedChart} ref={chartRef} />
-    </div>
+        <div className="grouped-chart">
+            {
+                groups
+                  .map(elem => {
+                    return (
+                            <div className={`absolute border-l border-solid ${styles.verticalGridLines}`} key={elem.name} id={elem.name}></div>
+                    );
+                  })
+            }
+            {
+                groups
+                  .map(elem => {
+                    return (
+                            <div style={{ transition: '2s' }} key={elem.name} id={`conversion-text-${elem.name}`} className="absolute z-10 leading-5 text-base flex justify-end pr-1">
+                                <div style={{ fontSize: '14px' }} className={styles.conversionText}>
+                                    <div className="font-semibold flex justify-end">{elem.conversion_rate}</div>
+                                    <div>Conversion</div>
+                                </div>
+                            </div>
+                    );
+                  })
+            }
+            <div className={styles.groupedChart} ref={chartRef} />
+        </div>
   );
 }
 
-export default GroupedChart;
+export default React.memo(GroupedChart);

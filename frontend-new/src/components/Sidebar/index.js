@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Layout, Menu, Row, Col, Avatar
+  Layout, Row, Avatar
 } from 'antd';
 import { NavLink, Link } from 'react-router-dom';
 import { SVG } from 'factorsComponents';
 import ModalLib from '../../Views/componentsLib/ModalLib';
 import UserSettings from '../../Views/Settings/UserSettings';
-import { UserOutlined } from '@ant-design/icons';
 
 function Sidebar() {
   const { Sider } = Layout;
@@ -21,7 +20,7 @@ function Sidebar() {
     setShowUserSettings(false);
   };
 
-  const handleCancel = e => {
+  const handleCancel = () => {
     setVisible(false);
   };
 

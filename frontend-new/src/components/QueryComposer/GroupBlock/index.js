@@ -3,8 +3,8 @@ import styles from './index.module.scss';
 import { SVG, Text } from 'factorsComponents';
 
 import { Select, Button } from 'antd';
-import { group } from 'd3';
-import { queries } from '@testing-library/react';
+// import { group } from 'd3';
+// import { queries } from '@testing-library/react';
 
 const { OptGroup, Option } = Select;
 
@@ -56,15 +56,15 @@ export default function GroupBlock({ events, groupBy }) {
   };
 
   const renderGroupedEventOptions = () => {
-    return filterOptions.map(group => (
-      <OptGroup label={(
+    return filterOptions.map((group, index) => (
+      <OptGroup key={index} label={(
         <div className={styles.group_block__selector_group}>
           <SVG name={group.icon}></SVG>
           <span >{group.label}</span>
         </div>
       )}>
-        {group.values.map((option) => (
-          <Option value={option}></Option>
+        {group.values.map((option, index) => (
+          <Option key={index} value={option}></Option>
         ))}
       </OptGroup>
     ));
@@ -102,8 +102,8 @@ export default function GroupBlock({ events, groupBy }) {
           ? <Select style={{ width: 200 }} showArrow={false}
             defaultOpen={true}
             onChange={onEventValueChange} >
-            {events.map(event => (
-              <Option value={event.label}></Option>
+            {events.map((event, index) => (
+              <Option key={index} value={event.label}></Option>
             ))}
           </Select> : null }
       </div>

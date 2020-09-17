@@ -1,3 +1,4 @@
+/* eslint-disable */
 import React, { useState } from 'react';
 import styles from './index.module.scss';
 
@@ -138,7 +139,7 @@ export default function FilterBlock({ filter, insertFilter, closeFilter }) {
             { collState
               ? (() => {
                 const valuesOptions = [];
-                group.values.forEach((val, index) => {
+                group.values.forEach((val) => {
                   if (val.toLowerCase().includes(searchTerm.toLowerCase())) {
                     valuesOptions.push(
                       <span className={styles.filter_block__filter_select__option}

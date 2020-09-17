@@ -150,17 +150,17 @@ function UngroupedChart({ chartData }) {
       .data(chartData)
       .enter()
       .append('rect')
-      .attr('class', d => {
-        return `bar`;
+      .attr('class', () => {
+        return 'bar';
       })
-      .attr('fill', (d, index) => {
+      .attr('fill', (index) => {
         return appliedColors[index];
       })
       .attr('x', d => xScale(d.event))
       .attr('y', d => yScale(d.value))
       .attr('width', xScale.bandwidth())
       .attr('height', d => height - yScale(d.value))
-      .on('mousemove', (d, i, nodes, c) => {
+      .on('mousemove', (d, i) => {
         showTooltip(d, i);
       })
       .on('mouseout', () => {
@@ -231,7 +231,7 @@ function UngroupedChart({ chartData }) {
         return (
           <div
             onMouseOut={hideTooltip}
-            onMouseMove={(e) => { showTooltip(d, index); }}
+            onMouseMove={() => { showTooltip(d, index); }}
             className={`${styles.valueText} absolute font-bold flex justify-center`}
             id={`value${index}`} key={d.event + index}
           >

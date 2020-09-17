@@ -33,6 +33,7 @@ type QueryGroupByProperty struct {
 	Entity   string `json:"en"`
 	Property string `json:"pr"`
 	Index    int    `json:"in"`
+	Type     string `json:"pty"` // Property type categorical / numerical.
 	// group by specific event name.
 	EventName      string `json:"ena"`
 	EventNameIndex int    `json:"eni"`
@@ -132,12 +133,13 @@ const (
 	SelectDefaultEventFilterByAlias       = "event_id, event_user_id, event_name"
 	SelectCoalesceCustomerUserIDAndUserID = "COALESCE(users.customer_user_id, event_user_id)"
 
-	GroupKeyPrefix  = "_group_key_"
-	AliasDateTime   = "datetime"
-	AliasAggr       = "count"
-	DefaultTimezone = "UTC"
-	ResultsLimit    = 100
-	MaxResultsLimit = 100000
+	GroupKeyPrefix          = "_group_key_"
+	AliasDateTime           = "datetime"
+	AliasAggr               = "count"
+	DefaultTimezone         = "UTC"
+	ResultsLimit            = 100
+	MaxResultsLimit         = 100000
+	NumericalGroupByBuckets = 10
 
 	StepPrefix             = "step_"
 	FunnelConversionPrefix = "conversion_"
@@ -403,6 +405,73 @@ func buildGroupKeys(groupProps []QueryGroupByProperty) (groupSelect string,
 	}
 
 	return groupSelect, groupSelectParams, groupKeys
+}
+
+func hasNumericalGroupBy(groupProps []QueryGroupByProperty) bool {
+	for _, groupByProp := range groupProps {
+		if groupByProp.Type == U.PropertyTypeNumerical {
+			return true
+		}
+	}
+	return false
+}
+
+func appendNumericalBucketingSteps(qStmnt *string, groupProps []QueryGroupByProperty, refStepName, eventNameSelect string,
+	isGroupByTimestamp bool) (bucketedStepName, aggregateSelectKeys string, aggregateGroupBys, aggregateOrderBys []string) {
+	bucketedStepName = "bucketed"
+	bucketedSelect := "SELECT "
+	if eventNameSelect != "" {
+		bucketedSelect = bucketedSelect + eventNameSelect + ", "
+	}
+	var boundStepNames []string
+	for _, gbp := range groupProps {
+		groupKey := groupKeyByIndex(gbp.Index)
+		if gbp.Type != U.PropertyTypeNumerical {
+			bucketedSelect = bucketedSelect + groupKey + ", "
+			aggregateGroupBys = append(aggregateGroupBys, groupKey)
+			aggregateSelectKeys = aggregateSelectKeys + groupKey + ", "
+			continue
+		}
+
+		// Adding _group_key_x_bounds step.
+		boundsStepName := groupKey + "_bounds"
+		boundsStatement := fmt.Sprintf("SELECT percentile_disc(0.1) WITHIN GROUP(ORDER BY %s::float desc) AS ubound, "+
+			"percentile_disc(0.9) WITHIN GROUP(ORDER BY %s::float desc) AS lbound FROM %s "+
+			"WHERE %s != '%s'", groupKey, groupKey, refStepName, groupKey, PropertyValueNone)
+		boundsStatement = as(boundsStepName, boundsStatement)
+		*qStmnt = joinWithComma(*qStmnt, boundsStatement)
+
+		// Preparing 'bucketed' step with changing $none to NaN for float conversion.
+		noneToNaN := fmt.Sprintf("COALESCE(NULLIF(%s, '%s'), 'NaN') AS %s, ", groupKey, PropertyValueNone, groupKey)
+
+		// Adding width_bucket for each record, keeping -1 for $none.
+		bucketKey := groupKey + "_bucket"
+		stepBucket := fmt.Sprintf("CASE WHEN %s = '%s' THEN -1 ELSE width_bucket(%s::float, %s.lbound::float, "+
+			"COALESCE(NULLIF(%s.ubound, %s.lbound), %s.ubound+1)::float, %d) END AS %s, ",
+			groupKey, PropertyValueNone, groupKey, boundsStepName, boundsStepName,
+			boundsStepName, boundsStepName, NumericalGroupByBuckets-2, bucketKey)
+
+		// Creating bucket string to be used in group by. Also, replacing NaN-Nan to $none.
+		aggregateSelectKeys = aggregateSelectKeys + fmt.Sprintf(
+			"COALESCE(NULLIF(concat(min(%s::float), '-', max(%s::float)), 'NaN-NaN'), '%s') AS %s, ",
+			groupKey, groupKey, PropertyValueNone, groupKey)
+		bucketedSelect = bucketedSelect + noneToNaN + stepBucket
+		boundStepNames = append(boundStepNames, boundsStepName)
+		aggregateGroupBys = append(aggregateGroupBys, bucketKey)
+		aggregateOrderBys = append(aggregateOrderBys, bucketKey)
+	}
+
+	bucketedSelect = bucketedSelect + "event_user_id"
+	if isGroupByTimestamp {
+		bucketedSelect = joinWithComma(bucketedSelect, AliasDateTime)
+	}
+	bucketedSelect = bucketedSelect + " FROM " + refStepName
+	if len(boundStepNames) > 0 {
+		bucketedSelect = bucketedSelect + ", " + strings.Join(boundStepNames, ", ")
+	}
+
+	*qStmnt = joinWithComma(*qStmnt, as(bucketedStepName, bucketedSelect))
+	return
 }
 
 // builds group keys with step of corresponding user given event name.
@@ -718,11 +787,9 @@ func addEventFilterStepsForUniqueUsersQuery(projectID uint64, q *Query,
 			" as coal_user_id%s, events.user_id as event_user_id"
 	}
 
-	if hasGroupEntity(q.GroupByProperties, PropertyEntityEvent) {
-		if commonOrderBy == "" {
-			// Using first occurred event_properites after distinct on user_id.
-			commonOrderBy = "coal_user_id%s, events.timestamp ASC"
-		}
+	if len(q.GroupByProperties) > 0 && commonOrderBy == "" {
+		// Using first occurred event_properites after distinct on user_id.
+		commonOrderBy = "coal_user_id%s, events.timestamp ASC"
 	}
 
 	steps := make([]string, 0, 0)
@@ -792,11 +859,15 @@ GROUP BY gk_0, gk_1 ORDER BY count DESC LIMIT 10000;
 func addUniqueUsersAggregationQuery(query *Query, qStmnt *string, qParams *[]interface{}, refStep string) {
 	eventLevelGroupBys, otherGroupBys := separateEventLevelGroupBys(query.GroupByProperties)
 	var egKeys string
+	var unionStepName string
+
 	if query.EventsCondition == EventCondAllGivenEvent {
 		_, _, egKeys = buildGroupKeys(eventLevelGroupBys)
+		unionStepName = "all_users_intersect"
 	} else {
 		eventGroupProps := filterGroupPropsByType(otherGroupBys, PropertyEntityEvent)
 		_, _, egKeys = buildGroupKeys(eventGroupProps)
+		unionStepName = "any_users_union"
 	}
 
 	// select
@@ -809,21 +880,55 @@ func addUniqueUsersAggregationQuery(query *Query, qStmnt *string, qParams *[]int
 
 	isGroupByTimestamp := query.GetGroupByTimestamp() != ""
 	termSelect = appendSelectTimestampColIfRequired(termSelect, isGroupByTimestamp)
-	termSelect = joinWithComma(termSelect, fmt.Sprintf("COUNT(DISTINCT(%s.event_user_id)) AS %s", refStep, AliasAggr))
 
-	// group by
-	termStmnt := "SELECT " + termSelect + " FROM " + refStep
+	termStmnt := fmt.Sprintf("SELECT %s.event_user_id, ", refStep) + termSelect + " FROM " + refStep
 	// join latest user_properties, only if group by user property present.
 	if ugSelect != "" {
 		termStmnt = termStmnt + " " + "LEFT JOIN users ON " + refStep + ".event_user_id=users.id"
 		termStmnt = termStmnt + " " + "LEFT JOIN user_properties ON users.id=user_properties.user_id AND user_properties.id=users.properties_id"
 	}
-	_, _, groupKeys := buildGroupKeys(query.GroupByProperties)
-	termStmnt = appendGroupByTimestampIfRequired(termStmnt, isGroupByTimestamp, groupKeys)
-	termStmnt = appendOrderByAggr(termStmnt)
-	termStmnt = appendLimitByCondition(termStmnt, query.GroupByProperties, isGroupByTimestamp)
 
-	*qStmnt = appendStatement(*qStmnt, termStmnt)
+	_, _, groupKeys := buildGroupKeys(query.GroupByProperties)
+
+	termStmnt = as(unionStepName, termStmnt)
+	var aggregateFromStepName, aggregateSelectKeys, aggregateGroupBys, aggregateOrderBys string
+	if hasNumericalGroupBy(query.GroupByProperties) {
+		bucketedStepName, bucketedSelectKeys, bucketedGroupBys, bucketedOrderBys := appendNumericalBucketingSteps(
+			&termStmnt, query.GroupByProperties, unionStepName, "", isGroupByTimestamp)
+		aggregateFromStepName = bucketedStepName
+		aggregateSelectKeys = bucketedSelectKeys
+		aggregateGroupBys = strings.Join(bucketedGroupBys, ", ")
+		aggregateOrderBys = strings.Join(bucketedOrderBys, ", ")
+		*qStmnt = appendStatement(*qStmnt, ", "+termStmnt)
+	} else {
+		if groupKeys != "" {
+			// Order by count, which will added later.
+			aggregateFromStepName = unionStepName
+			aggregateSelectKeys = groupKeys + ", "
+			aggregateGroupBys = groupKeys
+			*qStmnt = appendStatement(*qStmnt, ", "+termStmnt)
+		} else {
+			// No group by clause added. Use previous step and rest all leave empty.
+			aggregateFromStepName = refStep
+		}
+	}
+
+	aggregateSelect := "SELECT "
+	if isGroupByTimestamp {
+		aggregateSelect = aggregateSelect + AliasDateTime + ", "
+		aggregateGroupBys = joinWithComma(aggregateGroupBys, AliasDateTime)
+	}
+	aggregateSelect = aggregateSelect + aggregateSelectKeys + fmt.Sprintf("COUNT(DISTINCT(event_user_id)) AS %s FROM %s",
+		AliasAggr, aggregateFromStepName)
+
+	aggregateSelect = appendGroupBy(aggregateSelect, aggregateGroupBys)
+	if aggregateOrderBys != "" {
+		aggregateSelect = aggregateSelect + " ORDER BY " + aggregateOrderBys
+	} else {
+		aggregateSelect = appendOrderByAggr(aggregateSelect)
+	}
+	aggregateSelect = appendLimitByCondition(aggregateSelect, query.GroupByProperties, isGroupByTimestamp)
+	*qStmnt = appendStatement(*qStmnt, aggregateSelect)
 }
 
 func separateEventLevelGroupBys(allGroupBys []QueryGroupByProperty) (
@@ -852,42 +957,58 @@ Example: Query without date and with group by properties.
 
 Sample query with ewp:
 	View Project
-	$session
+	Fund Project
 gbp:
-	user_property -> $present -> $city
-	event_property -> 2. $session -> $browser
+	user_property -> $present -> $session_count (numerical)
+	event_property -> 2. $session -> $hour_of_day (numerical)
 	user_property -> 2. $session -> $platform
 	user_property -> 1. View Project -> $user_agent
 
 WITH
 step_0_names AS (SELECT id, project_id, name FROM event_names WHERE project_id='3' AND name='View Project'),
+
 step_0 AS (SELECT DISTINCT ON(coal_user_id, _group_key_3) COALESCE(users.customer_user_id,events.user_id) as coal_user_id,
 CASE WHEN user_properties.properties->>'' IS NULL THEN '$none' WHEN user_properties.properties->>'' = '' THEN '$none'
-ELSE user_properties.properties->>'' END AS _group_key_3, events.user_id as event_user_id FROM events
-JOIN users ON events.user_id=users.id JOIN user_properties on events.user_properties_id=user_properties.id
-WHERE events.project_id='3' AND timestamp>='1597170600' AND timestamp<='1597775399' AND events.event_name_id IN
-(SELECT id FROM step_0_names WHERE project_id='3' AND name='View Project') ORDER BY coal_user_id, _group_key_3,
-events.timestamp ASC),
+ELSE user_properties.properties->>'' END AS _group_key_3, events.user_id as event_user_id FROM events JOIN users ON
+events.user_id=users.id JOIN user_properties on events.user_properties_id=user_properties.id WHERE events.project_id='3'
+AND timestamp>='1393612200' AND timestamp<='1396290599' AND events.event_name_id IN (SELECT id FROM step_0_names
+WHERE project_id='3' AND name='View Project') ORDER BY coal_user_id, _group_key_3, events.timestamp ASC),
 
-step_1_names AS (SELECT id, project_id, name FROM event_names WHERE project_id='3' AND name=''),
+step_1_names AS (SELECT id, project_id, name FROM event_names WHERE project_id='3' AND name='Fund Project'),
+step_1 AS (SELECT DISTINCT ON(coal_user_id, _group_key_1, _group_key_2) COALESCE(users.customer_user_id,events.user_id)
+as coal_user_id, CASE WHEN events.properties->>'' IS NULL THEN '$none' WHEN events.properties->>'' = '' THEN '$none'
+ELSE events.properties->>'' END AS _group_key_1, CASE WHEN user_properties.properties->>'' IS NULL THEN '$none'
+WHEN user_properties.properties->>'' = '' THEN '$none' ELSE user_properties.properties->>'' END AS _group_key_2,
+events.user_id as event_user_id FROM events JOIN users ON events.user_id=users.id JOIN user_properties on
+events.user_properties_id=user_properties.id WHERE events.project_id='3' AND timestamp>='1393612200' AND timestamp<='1396290599'
+AND events.event_name_id IN (SELECT id FROM step_1_names WHERE project_id='3' AND name='Fund Project')
+ORDER BY coal_user_id, _group_key_1, _group_key_2, events.timestamp ASC),
 
-step_1 AS (SELECT DISTINCT ON(coal_user_id, _group_key_1, _group_key_2) COALESCE(users.customer_user_id,events.user_id) as coal_user_id,
-CASE WHEN events.properties->>'' IS NULL THEN '$none' WHEN events.properties->>'' = '' THEN '$none' ELSE events.properties->>'' END
-AS _group_key_1, CASE WHEN user_properties.properties->>'' IS NULL THEN '$none' WHEN user_properties.properties->>'' = ''
-THEN '$none' ELSE user_properties.properties->>'' END AS _group_key_2, events.user_id as event_user_id FROM events JOIN users
-ON events.user_id=users.id JOIN user_properties on events.user_properties_id=user_properties.id WHERE events.project_id='3'
-AND timestamp>='1597170600' AND timestamp<='1597775399' AND events.event_name_id IN (SELECT id FROM step_1_names
-WHERE project_id='3' AND name='') ORDER BY coal_user_id, _group_key_1, _group_key_2, events.timestamp ASC),
+events_intersect AS (SELECT step_0.event_user_id as event_user_id, step_1._group_key_1, step_1._group_key_2,
+step_0._group_key_3 FROM step_0  JOIN step_1 ON step_1.coal_user_id = step_0.coal_user_id) ,
 
-users_intersect AS (SELECT step_0.event_user_id as event_user_id, step_1._group_key_1, step_1._group_key_2,
-step_0._group_key_3 FROM step_0  JOIN step_1 ON step_1.coal_user_id = step_0.coal_user_id)
+all_users_intersect AS (SELECT events_intersect.event_user_id, CASE WHEN user_properties.properties->>'' IS NULL THEN
+'$none' WHEN user_properties.properties->>'' = '' THEN '$none' ELSE user_properties.properties->>'' END AS _group_key_0,
+_group_key_1, _group_key_2, _group_key_3 FROM events_intersect LEFT JOIN users ON events_intersect.event_user_id=users.id
+LEFT JOIN user_properties ON users.id=user_properties.user_id AND user_properties.id=users.properties_id),
 
-SELECT CASE WHEN user_properties.properties->>'' IS NULL THEN '$none' WHEN user_properties.properties->>'' = '' THEN '$none'
-ELSE user_properties.properties->>'' END AS _group_key_0, _group_key_1, _group_key_2, _group_key_3,
-COUNT(DISTINCT(users_intersect.event_user_id)) AS count FROM users_intersect LEFT JOIN users ON
-users_intersect.event_user_id=users.id LEFT JOIN user_properties ON users.id=user_properties.user_id
-AND user_properties.id=users.properties_id GROUP BY _group_key_0, _group_key_1, _group_key_2, _group_key_3
-ORDER BY count DESC LIMIT 100000
+_group_key_0_bounds AS (SELECT percentile_disc(0.1) WITHIN GROUP(ORDER BY _group_key_0::float desc) AS ubound, percentile_disc(0.9)
+ WITHIN GROUP(ORDER BY _group_key_0::float desc) AS lbound FROM all_users_intersect WHERE _group_key_0 != '$none'),
+
+_group_key_1_bounds AS (SELECT percentile_disc(0.1) WITHIN GROUP(ORDER BY _group_key_1::float desc) AS ubound, percentile_disc(0.9)
+WITHIN GROUP(ORDER BY _group_key_1::float desc) AS lbound FROM all_users_intersect WHERE _group_key_1 != '$none'),
+
+bucketed AS (SELECT COALESCE(NULLIF(_group_key_0, '$none'), 'NaN') AS _group_key_0, CASE WHEN _group_key_0 = '$none' THEN -1
+ELSE width_bucket(_group_key_0::float, _group_key_0_bounds.lbound::float, COALESCE(NULLIF(_group_key_0_bounds.ubound,
+_group_key_0_bounds.lbound), _group_key_0_bounds.ubound+1)::float, 8) END AS _group_key_0_bucket, COALESCE(NULLIF(_group_key_1, '$none'),
+'NaN') AS _group_key_1, CASE WHEN _group_key_1 = '$none' THEN -1 ELSE width_bucket(_group_key_1::float, _group_key_1_bounds.lbound::float,
+COALESCE(NULLIF(_group_key_1_bounds.ubound, _group_key_1_bounds.lbound), _group_key_1_bounds.ubound+1)::float, 8) END
+AS _group_key_1_bucket, _group_key_2, _group_key_3, event_user_id FROM all_users_intersect, _group_key_0_bounds, _group_key_1_bounds)
+
+SELECT COALESCE(NULLIF(concat(min(_group_key_0::float), '-', max(_group_key_0::float)), 'NaN-NaN'), '$none') AS _group_key_0,
+COALESCE(NULLIF(concat(min(_group_key_1::float), '-', max(_group_key_1::float)), 'NaN-NaN'), '$none') AS _group_key_1,
+_group_key_2, _group_key_3,  COUNT(DISTINCT(event_user_id)) AS count FROM bucketed GROUP BY _group_key_0_bucket, _group_key_1_bucket,
+_group_key_2, _group_key_3 ORDER BY _group_key_0_bucket, _group_key_1_bucket LIMIT 100000
 
 Example: Query with date
 
@@ -917,7 +1038,7 @@ SELECT date, COUNT(DISTINCT(COALESCE(users.customer_user_id, event_user_id))) AS
 LEFT JOIN users ON users_intersect.event_user_id=users.id GROUP BY date ORDER BY count DESC LIMIT 100000;
 
 */
-func buildUniqueUsersWithAllGivenEventsQuery(projectId uint64, query Query) (string, []interface{}, error) {
+func buildUniqueUsersWithAllGivenEventsQuery(projectID uint64, query Query) (string, []interface{}, error) {
 	if len(query.EventsWithProperties) == 0 {
 		return "", nil, errors.New("zero events on the query")
 	}
@@ -925,7 +1046,7 @@ func buildUniqueUsersWithAllGivenEventsQuery(projectId uint64, query Query) (str
 	qStmnt := ""
 	qParams := make([]interface{}, 0, 0)
 
-	steps := addEventFilterStepsForUniqueUsersQuery(projectId, &query, &qStmnt, &qParams)
+	steps := addEventFilterStepsForUniqueUsersQuery(projectID, &query, &qStmnt, &qParams)
 
 	// users intersection
 	intersectSelect := fmt.Sprintf("%s.event_user_id as event_user_id", steps[0])
@@ -953,11 +1074,11 @@ func buildUniqueUsersWithAllGivenEventsQuery(projectId uint64, query Query) (str
 			}
 		}
 	}
-	stepUsersIntersect := "users_intersect"
-	qStmnt = joinWithComma(qStmnt, as(stepUsersIntersect,
+	stepEventsIntersect := "events_intersect"
+	qStmnt = joinWithComma(qStmnt, as(stepEventsIntersect,
 		fmt.Sprintf("SELECT %s FROM %s %s", intersectSelect, steps[0], intersectJoin)))
 
-	addUniqueUsersAggregationQuery(&query, &qStmnt, &qParams, stepUsersIntersect)
+	addUniqueUsersAggregationQuery(&query, &qStmnt, &qParams, stepEventsIntersect)
 	qStmnt = with(qStmnt)
 
 	return qStmnt, qParams, nil
@@ -971,34 +1092,56 @@ Example: Query without date and with group by properties.
 
 Sample query with ewp:
 	View Project
-	$session
+	Fund Project
 gbp:
 	event_property -> $browser
-	user_property -> $city
+	event_property -> $hour_of_day (numerical)
+	user_property -> $session_count (numerical)
 
 WITH
 step_0_names AS (SELECT id, project_id, name FROM event_names WHERE project_id='3' AND name='View Project'),
-step_0 AS (SELECT DISTINCT ON(coal_user_id, _group_key_0) COALESCE(users.customer_user_id,events.user_id) as coal_user_id,
+
+step_0 AS (SELECT DISTINCT ON(coal_user_id, _group_key_0, _group_key_1) COALESCE(users.customer_user_id,events.user_id) as coal_user_id,
 CASE WHEN events.properties->>'' IS NULL THEN '$none' WHEN events.properties->>'' = '' THEN '$none' ELSE events.properties->>'' END
-AS _group_key_0, events.user_id as event_user_id FROM events JOIN users ON events.user_id=users.id WHERE events.project_id='3'
-AND timestamp>='1597170600' AND timestamp<='1597775399' AND events.event_name_id IN (SELECT id FROM step_0_names
-WHERE project_id='3' AND name='View Project') ORDER BY coal_user_id, _group_key_0, events.timestamp ASC),
+AS _group_key_0, CASE WHEN events.properties->>'' IS NULL THEN '$none' WHEN events.properties->>'' = '' THEN '$none' ELSE
+events.properties->>'' END AS _group_key_1, events.user_id as event_user_id FROM events JOIN users ON events.user_id=users.id
+WHERE events.project_id='3' AND timestamp>='1393612200' AND timestamp<='1396290599' AND events.event_name_id IN (SELECT id
+FROM step_0_names WHERE project_id='3' AND name='View Project') ORDER BY coal_user_id, _group_key_0, _group_key_1, events.timestamp ASC),
 
-step_1_names AS (SELECT id, project_id, name FROM event_names WHERE project_id='3' AND name=''),
+step_1_names AS (SELECT id, project_id, name FROM event_names WHERE project_id='3' AND name='Fund Project'),
 
-step_1 AS (SELECT DISTINCT ON(coal_user_id, _group_key_0) COALESCE(users.customer_user_id,events.user_id) as coal_user_id,
-CASE WHEN events.properties->>'' IS NULL THEN '$none' WHEN events.properties->>'' = '' THEN '$none' ELSE events.properties->>''
-END AS _group_key_0, events.user_id as event_user_id FROM events JOIN users ON events.user_id=users.id WHERE events.project_id='3'
-AND timestamp>='1597170600' AND timestamp<='1597775399' AND events.event_name_id IN (SELECT id FROM step_1_names
-WHERE project_id='3' AND name='') ORDER BY coal_user_id, _group_key_0, events.timestamp ASC),
+step_1 AS (SELECT DISTINCT ON(coal_user_id, _group_key_0, _group_key_1) COALESCE(users.customer_user_id,events.user_id) as coal_user_id,
+CASE WHEN events.properties->>'' IS NULL THEN '$none' WHEN events.properties->>'' = '' THEN '$none' ELSE events.properties->>'' END
+AS _group_key_0, CASE WHEN events.properties->>'' IS NULL THEN '$none' WHEN events.properties->>'' = '' THEN '$none' ELSE
+events.properties->>'' END AS _group_key_1, events.user_id as event_user_id FROM events JOIN users ON events.user_id=users.id
+WHERE events.project_id='3' AND timestamp>='1393612200' AND timestamp<='1396290599' AND events.event_name_id IN (SELECT id FROM
+step_1_names WHERE project_id='3' AND name='Fund Project') ORDER BY coal_user_id, _group_key_0, _group_key_1, events.timestamp ASC),
 
-users_union AS (SELECT step_0.event_user_id as event_user_id, _group_key_0 FROM step_0 UNION ALL
-SELECT step_1.event_user_id as event_user_id, _group_key_0 FROM step_1)
+events_union AS (SELECT step_0.event_user_id as event_user_id, _group_key_0, _group_key_1 FROM step_0 UNION ALL
+SELECT step_1.event_user_id as event_user_id, _group_key_0, _group_key_1 FROM step_1) ,
 
-SELECT CASE WHEN user_properties.properties->>'' IS NULL THEN '$none' WHEN user_properties.properties->>'' = '' THEN '$none'
-ELSE user_properties.properties->>'' END AS _group_key_1, _group_key_0, COUNT(DISTINCT(users_union.event_user_id)) AS count
-FROM users_union LEFT JOIN users ON users_union.event_user_id=users.id LEFT JOIN user_properties ON users.id=user_properties.user_id
-AND user_properties.id=users.properties_id GROUP BY _group_key_0, _group_key_1 ORDER BY count DESC LIMIT 100000
+any_users_union AS (SELECT events_union.event_user_id, CASE WHEN user_properties.properties->>'' IS NULL THEN '$none'
+WHEN user_properties.properties->>'' = '' THEN '$none' ELSE user_properties.properties->>'' END AS _group_key_2, _group_key_0,
+_group_key_1 FROM events_union LEFT JOIN users ON events_union.event_user_id=users.id LEFT JOIN user_properties
+ON users.id=user_properties.user_id AND user_properties.id=users.properties_id),
+
+_group_key_1_bounds AS (SELECT percentile_disc(0.1) WITHIN GROUP(ORDER BY _group_key_1::float desc) AS ubound, percentile_disc(0.9)
+WITHIN GROUP(ORDER BY _group_key_1::float desc) AS lbound FROM any_users_union WHERE _group_key_1 != '$none'),
+
+_group_key_2_bounds AS (SELECT percentile_disc(0.1) WITHIN GROUP(ORDER BY _group_key_2::float desc) AS ubound, percentile_disc(0.9)
+WITHIN GROUP(ORDER BY _group_key_2::float desc) AS lbound FROM any_users_union WHERE _group_key_2 != '$none'),
+
+bucketed AS (SELECT _group_key_0, COALESCE(NULLIF(_group_key_1, '$none'), 'NaN') AS _group_key_1, CASE WHEN _group_key_1 = '$none'
+THEN -1 ELSE width_bucket(_group_key_1::float, _group_key_1_bounds.lbound::float, COALESCE(NULLIF(_group_key_1_bounds.ubound,
+_group_key_1_bounds.lbound), _group_key_1_bounds.ubound+1)::float, 8) END AS _group_key_1_bucket, COALESCE(NULLIF(_group_key_2, '$none'),
+'NaN') AS _group_key_2, CASE WHEN _group_key_2 = '$none' THEN -1 ELSE width_bucket(_group_key_2::float, _group_key_2_bounds.lbound::float,
+COALESCE(NULLIF(_group_key_2_bounds.ubound, _group_key_2_bounds.lbound), _group_key_2_bounds.ubound+1)::float, 8) END
+AS _group_key_2_bucket, event_user_id FROM any_users_union, _group_key_1_bounds, _group_key_2_bounds)
+
+SELECT _group_key_0, COALESCE(NULLIF(concat(min(_group_key_1::float), '-', max(_group_key_1::float)), 'NaN-NaN'), '$none') AS _group_key_1,
+COALESCE(NULLIF(concat(min(_group_key_2::float), '-', max(_group_key_2::float)), 'NaN-NaN'), '$none') AS _group_key_2,
+COUNT(DISTINCT(event_user_id)) AS count FROM bucketed GROUP BY _group_key_0, _group_key_1_bucket, _group_key_2_bucket
+ORDER BY _group_key_1_bucket, _group_key_2_bucket LIMIT 100000
 
 Example: Query with date.
 
@@ -1026,7 +1169,7 @@ WITH
 	SELECT date, COUNT(DISTINCT(COALESCE(users.customer_user_id, event_user_id))) AS count FROM users_union
 	LEFT JOIN users ON users_union.event_user_id=users.id GROUP BY date ORDER BY count DESC LIMIT 100000;
 */
-func buildUniqueUsersWithAnyGivenEventsQuery(projectId uint64, query Query) (string, []interface{}, error) {
+func buildUniqueUsersWithAnyGivenEventsQuery(projectID uint64, query Query) (string, []interface{}, error) {
 	if len(query.EventsWithProperties) == 0 {
 		return "", nil, errors.New("zero events on the query")
 	}
@@ -1034,7 +1177,7 @@ func buildUniqueUsersWithAnyGivenEventsQuery(projectId uint64, query Query) (str
 	qStmnt := ""
 	qParams := make([]interface{}, 0, 0)
 
-	steps := addEventFilterStepsForUniqueUsersQuery(projectId, &query, &qStmnt, &qParams)
+	steps := addEventFilterStepsForUniqueUsersQuery(projectID, &query, &qStmnt, &qParams)
 
 	eventGroupProps := filterGroupPropsByType(query.GroupByProperties, PropertyEntityEvent)
 	_, _, egKeys := buildGroupKeys(eventGroupProps)
@@ -1054,7 +1197,7 @@ func buildUniqueUsersWithAnyGivenEventsQuery(projectId uint64, query Query) (str
 		}
 	}
 
-	stepUsersUnion := "users_union"
+	stepUsersUnion := "events_union"
 	qStmnt = joinWithComma(qStmnt, as(stepUsersUnion, unionStmnt))
 
 	addUniqueUsersAggregationQuery(&query, &qStmnt, &qParams, stepUsersUnion)
@@ -1065,21 +1208,39 @@ func buildUniqueUsersWithAnyGivenEventsQuery(projectId uint64, query Query) (str
 
 /*
 buildUniqueUsersSingleEventQuery
-Group By: user_properties, event_properties
+Sample query for ewp ALL:
+	View Project
+Group By:
+	event_property -> 1. View Project -> $hour_of_day
+	user_property -> $present -> $campaign
 
 WITH
-    step0 AS (
-		SELECT DISTINCT ON(events.user_id, (to_timestamp(timestamp) AT TIME ZONE 'UTC')::date) events.user_id as event_user_id,
-		(to_timestamp(timestamp) AT TIME ZONE 'UTC')::date as date FROM events
-		WHERE events.project_id='1' AND timestamp>='1393632004' AND timestamp<='1396310325'
-		AND events.event_name_id IN (SELECT id FROM event_names WHERE project_id='1' AND name='View Project')
-		ORDER BY events.user_id, date, events.timestamp ASC
-    )
-	SELECT COUNT(DISTINCT(COALESCE(users.customer_user_id, event_user_id))), date
-	FROM step0 LEFT JOIN users ON step0.event_user_id=users.id
-	GROUP BY date, gk_0 order by gk_0;
+step_0_names AS (SELECT id, project_id, name FROM event_names WHERE project_id='3' AND name='View Project'),
+
+step_0 AS (SELECT DISTINCT ON(coal_user_id, _group_key_0) COALESCE(users.customer_user_id,events.user_id) as coal_user_id,
+CASE WHEN events.properties->>'' IS NULL THEN '$none' WHEN events.properties->>'' = '' THEN '$none' ELSE events.properties->>''
+END AS _group_key_0, events.user_id as event_user_id FROM events JOIN users ON events.user_id=users.id WHERE
+events.project_id='3' AND timestamp>='1393612200' AND timestamp<='1396290599' AND events.event_name_id IN (SELECT id FROM
+step_0_names WHERE project_id='3' AND name='View Project') ORDER BY coal_user_id, _group_key_0, events.timestamp ASC),
+
+all_users_intersect AS (SELECT step_0.event_user_id, CASE WHEN user_properties.properties->>'' IS NULL THEN '$none'
+WHEN user_properties.properties->>'' = '' THEN '$none' ELSE user_properties.properties->>'' END AS _group_key_1,
+_group_key_0 FROM step_0 LEFT JOIN users ON step_0.event_user_id=users.id LEFT JOIN user_properties ON
+users.id=user_properties.user_id AND user_properties.id=users.properties_id),
+
+_group_key_0_bounds AS (SELECT percentile_disc(0.1) WITHIN GROUP(ORDER BY _group_key_0::float desc) AS ubound, percentile_disc(0.9)
+WITHIN GROUP(ORDER BY _group_key_0::float desc) AS lbound FROM all_users_intersect WHERE _group_key_0 != '$none'),
+
+bucketed AS (SELECT COALESCE(NULLIF(_group_key_0, '$none'), 'NaN') AS _group_key_0, CASE WHEN _group_key_0 = '$none' THEN -1
+ELSE width_bucket(_group_key_0::float, _group_key_0_bounds.lbound::float, COALESCE(NULLIF(_group_key_0_bounds.ubound,
+_group_key_0_bounds.lbound), _group_key_0_bounds.ubound+1)::float, 8) END AS _group_key_0_bucket, _group_key_1,
+event_user_id FROM all_users_intersect, _group_key_0_bounds)
+
+SELECT COALESCE(NULLIF(concat(min(_group_key_0::float), '-', max(_group_key_0::float)), 'NaN-NaN'), '$none') AS _group_key_0,
+_group_key_1,  COUNT(DISTINCT(event_user_id)) AS count FROM bucketed GROUP BY _group_key_0_bucket, _group_key_1
+ORDER BY _group_key_0_bucket LIMIT 100000
 */
-func buildUniqueUsersSingleEventQuery(projectId uint64, query Query) (string, []interface{}, error) {
+func buildUniqueUsersSingleEventQuery(projectID uint64, query Query) (string, []interface{}, error) {
 	if len(query.EventsWithProperties) == 0 {
 		return "", nil, errors.New("zero events on the query")
 	}
@@ -1087,7 +1248,7 @@ func buildUniqueUsersSingleEventQuery(projectId uint64, query Query) (string, []
 	qStmnt := ""
 	qParams := make([]interface{}, 0, 0)
 
-	steps := addEventFilterStepsForUniqueUsersQuery(projectId, &query, &qStmnt, &qParams)
+	steps := addEventFilterStepsForUniqueUsersQuery(projectID, &query, &qStmnt, &qParams)
 	addUniqueUsersAggregationQuery(&query, &qStmnt, &qParams, steps[0])
 	qStmnt = with(qStmnt)
 
@@ -1100,35 +1261,57 @@ Group by: user_properties, event_properties.
 
 Sample query for ewp:
 	View Project
-	$session
+	Fund Project
 gbp:
-	event_property -> $browser
-	user_property -> $city
+	event_property -> $hour_of_day (numeric)
+	event_property -> $day_of_week (categoric)
+	user_property -> $session_count (numeric)
 
 WITH
 step0_names AS (SELECT id, project_id, name FROM event_names WHERE project_id='3' AND name='View Project'),
 
-step0 AS (SELECT events.id as event_id, events.user_id as event_user_id, CASE WHEN events.properties->>'$browser' IS NULL THEN
-'$none' WHEN events.properties->>'$browser' = '' THEN '$none' ELSE events.properties->>'$browser' END AS _group_key_0, 'View Project'::text
-AS event_name  FROM events  WHERE events.project_id='3' AND timestamp>='1595788200' AND timestamp<='1596392999' AND
+step0 AS (SELECT events.id as event_id, events.user_id as event_user_id, CASE WHEN events.properties->>'' IS NULL THEN '$none'
+WHEN events.properties->>'' = '' THEN '$none' ELSE events.properties->>'' END AS _group_key_0, CASE WHEN events.properties->>'' IS NULL
+THEN '$none' WHEN events.properties->>'' = '' THEN '$none' ELSE events.properties->>'' END AS _group_key_1, 'View Project'::text
+AS event_name  FROM events  WHERE events.project_id='3' AND timestamp>='1393612200' AND timestamp<='1396290599' AND
 events.event_name_id IN (SELECT id FROM step0_names WHERE project_id='3' AND name='View Project')),
 
-step1_names AS (SELECT id, project_id, name FROM event_names WHERE project_id='3' AND name='$session'),
+step1_names AS (SELECT id, project_id, name FROM event_names WHERE project_id='3' AND name='Fund Project'),
 
-step1 AS (SELECT events.id as event_id, events.user_id as event_user_id, CASE WHEN events.properties->>'$session' IS NULL THEN '$none'
-WHEN events.properties->>'$session' = '' THEN '$none' ELSE events.properties->>'$session' END AS _group_key_0, '$session'::text AS event_name FROM events
-WHERE events.project_id='3' AND timestamp>='1595788200' AND timestamp<='1596392999' AND
-events.event_name_id IN (SELECT id FROM step1_names WHERE project_id='3' AND name='')),
+step1 AS (SELECT events.id as event_id, events.user_id as event_user_id, CASE WHEN events.properties->>'' IS NULL THEN '$none'
+WHEN events.properties->>'' = '' THEN '$none' ELSE events.properties->>'' END AS _group_key_0, CASE WHEN events.properties->>'' IS NULL
+THEN '$none' WHEN events.properties->>'' = '' THEN '$none' ELSE events.properties->>'' END AS _group_key_1, 'Fund Project'::text
+AS event_name  FROM events  WHERE events.project_id='3' AND timestamp>='1393612200' AND timestamp<='1396290599' AND
+events.event_name_id IN (SELECT id FROM step1_names WHERE project_id='3' AND name='Fund Project')),
 
-any_event AS ( SELECT event_id, event_user_id, event_name, _group_key_0 FROM step0
-UNION ALL SELECT event_id, event_user_id, event_name, _group_key_0 FROM step1)
+any_event AS ( SELECT event_id, event_user_id, event_name, _group_key_0, _group_key_1 FROM step0 UNION ALL
+SELECT event_id, event_user_id, event_name, _group_key_0, _group_key_1 FROM step1),
 
-SELECT event_name, CASE WHEN user_properties.properties->>'$city' IS NULL THEN '$none' WHEN user_properties.properties->>'$city' = '' THEN '$none'
-ELSE user_properties.properties->>'$city' END AS _group_key_1, _group_key_0, COUNT(*) AS count FROM any_event LEFT JOIN users
-ON any_event.event_user_id=users.id LEFT JOIN user_properties ON users.id=user_properties.user_id AND user_properties.id=users.properties_id
-GROUP BY event_name, _group_key_0, _group_key_1 ORDER BY event_name, count DESC LIMIT 100000
+users_any_event AS (SELECT event_name, CASE WHEN user_properties.properties->>'' IS NULL THEN '$none' WHEN
+user_properties.properties->>'' = '' THEN '$none' ELSE user_properties.properties->>'' END AS _group_key_2,
+_group_key_0, _group_key_1, event_user_id FROM any_event LEFT JOIN users ON any_event.event_user_id=users.id
+LEFT JOIN user_properties ON users.id=user_properties.user_id AND user_properties.id=users.properties_id),
+
+_group_key_0_bounds AS (SELECT percentile_disc(0.1) WITHIN GROUP(ORDER BY _group_key_0::float desc) AS ubound,
+percentile_disc(0.9) WITHIN GROUP(ORDER BY _group_key_0::float desc) AS lbound FROM users_any_event WHERE _group_key_0 != '$none'),
+
+_group_key_2_bounds AS (SELECT percentile_disc(0.1) WITHIN GROUP(ORDER BY _group_key_2::float desc) AS ubound,
+percentile_disc(0.9) WITHIN GROUP(ORDER BY _group_key_2::float desc) AS lbound FROM users_any_event WHERE _group_key_2 != '$none'),
+
+bucketed AS (SELECT event_name, COALESCE(NULLIF(_group_key_0, '$none'), 'NaN') AS _group_key_0, CASE WHEN _group_key_0 = '$none'
+THEN -1 ELSE width_bucket(_group_key_0::float, _group_key_0_bounds.lbound::float, COALESCE(NULLIF(_group_key_0_bounds.ubound,
+_group_key_0_bounds.lbound), _group_key_0_bounds.ubound+1)::float, 8) END AS _group_key_0_bucket, _group_key_1,
+COALESCE(NULLIF(_group_key_2, '$none'), 'NaN') AS _group_key_2, CASE WHEN _group_key_2 = '$none' THEN -1 ELSE
+width_bucket(_group_key_2::float, _group_key_2_bounds.lbound::float, COALESCE(NULLIF(_group_key_2_bounds.ubound,
+_group_key_2_bounds.lbound), _group_key_2_bounds.ubound+1)::float, 8) END AS _group_key_2_bucket, event_user_id
+FROM users_any_event, _group_key_0_bounds, _group_key_2_bounds)
+
+SELECT event_name, COALESCE(NULLIF(concat(min(_group_key_0::float), '-', max(_group_key_0::float)), 'NaN-NaN'), '$none') AS _group_key_0,
+_group_key_1, COALESCE(NULLIF(concat(min(_group_key_2::float), '-', max(_group_key_2::float)), 'NaN-NaN'), '$none') AS _group_key_2,
+COUNT(*) AS count FROM bucketed GROUP BY _group_key_0_bucket, _group_key_1, _group_key_2_bucket, event_name ORDER BY event_name,
+_group_key_0_bucket, _group_key_2_bucket, count DESC LIMIT 100000
 */
-func buildEventsOccurrenceWithGivenEventQuery(projectId uint64, q Query) (string, []interface{}, error) {
+func buildEventsOccurrenceWithGivenEventQuery(projectID uint64, q Query) (string, []interface{}, error) {
 	if len(q.EventsWithProperties) == 0 {
 		return "", nil, errors.New("zero events on the query")
 	}
@@ -1150,7 +1333,7 @@ func buildEventsOccurrenceWithGivenEventQuery(projectId uint64, q Query) (string
 		filterSelect := joinWithComma(filterSelect, eventNameSelect)
 		refStepName = fmt.Sprintf("step%d", i)
 		filters = append(filters, refStepName)
-		addFilterEventsWithPropsQuery(projectId, &qStmnt, &qParams, ewp, q.From, q.To, "",
+		addFilterEventsWithPropsQuery(projectID, &qStmnt, &qParams, ewp, q.From, q.To, "",
 			refStepName, filterSelect, egParams, "", "", "")
 		if len(q.EventsWithProperties) > 1 {
 			qStmnt = qStmnt + ", "
@@ -1186,9 +1369,8 @@ func buildEventsOccurrenceWithGivenEventQuery(projectId uint64, q Query) (string
 	groupKeys = joinWithComma(eventNameSelect, groupKeys)
 
 	// select
-	tSelect := joinWithComma(eventNameSelect, ugSelect, egKeys)
+	tSelect := joinWithComma(eventNameSelect, ugSelect, egKeys, "event_user_id")
 	tSelect = appendSelectTimestampColIfRequired(tSelect, isGroupByTimestamp)
-	tSelect = joinWithComma(tSelect, fmt.Sprintf("COUNT(*) AS %s", AliasAggr)) // aggregator.
 
 	termStmnt := "SELECT " + tSelect + " FROM " + refStepName
 	// join lateset user_properties, only if group by user property present.
@@ -1196,16 +1378,35 @@ func buildEventsOccurrenceWithGivenEventQuery(projectId uint64, q Query) (string
 		termStmnt = termStmnt + " " + "LEFT JOIN users ON " + refStepName + ".event_user_id=users.id" +
 			" " + "LEFT JOIN user_properties ON users.id=user_properties.user_id AND user_properties.id=users.properties_id"
 	}
-	termStmnt = appendGroupByTimestampIfRequired(termStmnt, isGroupByTimestamp, groupKeys)
-	if len(q.EventsWithProperties) > 1 {
-		termStmnt = appendOrderByEventNameAndAggr(termStmnt)
-	} else {
-		termStmnt = appendOrderByAggr(termStmnt)
+
+	withUsersStepName := "users_any_event"
+	qStmnt = joinWithComma(qStmnt, as(withUsersStepName, termStmnt))
+
+	aggregateSelect := "SELECT "
+	if isGroupByTimestamp {
+		aggregateSelect = aggregateSelect + AliasDateTime + ", "
 	}
-	termStmnt = appendLimitByCondition(termStmnt, q.GroupByProperties, isGroupByTimestamp)
+	if hasNumericalGroupBy(q.GroupByProperties) {
+		bucketedStepName, aggregateSelectKeys, aggregateGroupBys, aggregateOrderBys := appendNumericalBucketingSteps(
+			&qStmnt, q.GroupByProperties, withUsersStepName, eventNameSelect, isGroupByTimestamp)
+		aggregateGroupBys = append(aggregateGroupBys, eventNameSelect)
+		aggregateSelectKeys = eventNameSelect + ", " + aggregateSelectKeys
+		aggregateSelect = aggregateSelect + aggregateSelectKeys
+		aggregateSelect = appendStatement(aggregateSelect, fmt.Sprintf("COUNT(*) AS %s FROM %s", AliasAggr, bucketedStepName))
+		aggregateSelect = appendGroupByTimestampIfRequired(aggregateSelect, isGroupByTimestamp, strings.Join(aggregateGroupBys, ", "))
+		aggregateSelect = aggregateSelect + fmt.Sprintf(" ORDER BY %s, %s", eventNameSelect, strings.Join(aggregateOrderBys, ", "))
+	} else {
+		aggregateSelect = aggregateSelect + groupKeys
+		aggregateSelect = joinWithComma(aggregateSelect, fmt.Sprintf("COUNT(*) AS %s FROM %s", AliasAggr, withUsersStepName))
+		aggregateSelect = appendGroupByTimestampIfRequired(aggregateSelect, isGroupByTimestamp, groupKeys)
+		aggregateSelect = aggregateSelect + fmt.Sprintf(" ORDER BY %s", eventNameSelect)
+	}
+
+	aggregateSelect = aggregateSelect + fmt.Sprintf(", %s DESC", AliasAggr)
+	aggregateSelect = appendLimitByCondition(aggregateSelect, q.GroupByProperties, isGroupByTimestamp)
 
 	qParams = append(qParams, ugSelectParams...)
-	qStmnt = appendStatement(qStmnt, termStmnt)
+	qStmnt = appendStatement(qStmnt, aggregateSelect)
 
 	// enclosed by 'with'.
 	qStmnt = with(qStmnt)
@@ -1248,7 +1449,7 @@ func buildEventsOccurrenceSingleEventQuery(projectId uint64, q Query) (string, [
 		return "", nil, errors.New("invalid no.of events for single event query")
 	}
 
-	if hasGroupEntity(q.GroupByProperties, PropertyEntityUser) {
+	if hasGroupEntity(q.GroupByProperties, PropertyEntityUser) || hasNumericalGroupBy(q.GroupByProperties) {
 		// Using any given event query, which handles groups already.
 		return buildEventsOccurrenceWithGivenEventQuery(projectId, q)
 	}

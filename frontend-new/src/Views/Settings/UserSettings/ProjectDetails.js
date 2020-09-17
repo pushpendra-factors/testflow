@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Row, Col, Modal, Button, Menu, Avatar, Input, Skeleton
+  Row, Col, Button, Avatar, Skeleton
 } from 'antd';
-import { Text, SVG } from 'factorsComponents';
-import { UserOutlined } from '@ant-design/icons';
+import { Text } from 'factorsComponents';
 
-function ProjectDetails(props) {
+function ProjectDetails() {
   const [dataLoading, setDataLoading] = useState(true);
 
   useEffect(() => {
@@ -26,9 +25,9 @@ function ProjectDetails(props) {
           <Col span={24}>
             { dataLoading ? <Skeleton avatar active paragraph={{ rows: 4 }}/>
               : <>
-                {[1, 2].map((item) => {
+                {[1, 2].map((item, index) => {
                   return (
-                    <div className="flex justify-between items-center border-bottom--thin-2 py-5" >
+                    <div key={index} className="flex justify-between items-center border-bottom--thin-2 py-5" >
                       <div className="flex justify-start items-center" >
                         <Avatar size={60} shape={'square'} />
                         <div className="flex justify-start flex-col ml-4" >

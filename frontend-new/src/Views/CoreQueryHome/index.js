@@ -1,3 +1,4 @@
+/* eslint-disable */
 import React, { useState, useEffect } from 'react';
 import { Text, SVG } from '../../components/factorsComponents';
 import {
@@ -50,7 +51,7 @@ const columns = [
     title: 'Created By',
     dataIndex: 'author',
     key: 'author',
-    render: text => <div className="flex items-center">
+    render: (text) => <div className="flex items-center">
       <Avatar src="assets/avatar/avatar.png" className={'mr-2'} />&nbsp; {text} </div>
   },
   {
@@ -105,7 +106,7 @@ const data = [
   }
 ];
 
-function CoreQuery({ setDrawerVisible }) {
+function CoreQuery({ setDrawerVisible, setQueryType }) {
   const [loadingTable, SetLoadingTable] = useState(true);
 
   useEffect(() => {
@@ -122,51 +123,54 @@ function CoreQuery({ setDrawerVisible }) {
       </Header>
       <div className={'fa-container mt-24'}>
         <Row gutter={[24, 24]} justify="center">
-          <Col span={20}>
-            <Text type={'title'} level={2} weight={'bold'} extraClass={'m-0'} >Core Query</Text>
-            <Text type={'title'} level={5} weight={'regular'} color={'grey'} extraClass={'m-0'} >Use these tools to Analyse and get to the bottom of User Behaviors and Marketing Funnels</Text>
-          </Col>
-        </Row>
-        <Row gutter={[24, 24]} justify="center" className={'mt-10'}>
-          {coreQueryoptions.map((item, index) => {
-            return (
-              <Col span={4} key={index}>
-                <div onClick={() => setDrawerVisible(item.title == 'Funnels')} className="fai--custom-card flex justify-center items-center flex-col ">
-                  <div className={'fai--custom-card--icon'}><SVG name={item.icon} size={48} /> </div>
-                  <div className="flex justify-start items-center flex-col before-hover">
-                    <Text type={'title'} level={3} weight={'bold'} extraClass={'fai--custom-card--title'} >{item.title}</Text>
-                  </div>
-                  <div className="flex justify-start items-center flex-col after-hover">
-                    <div className={'fai--custom-card--content flex-col flex justify-start items-center'}>
-                      <Text type={'title'} level={7} weight={'bold'} extraClass={'fai--custom-card--desc'} >{item.desc}</Text>
-                      <a className={'fai--custom-card--cta'}>New Query <SVG name={'next'} size={20} /> </a>
+            <Col span={20}>
+              <Text type={'title'} level={2} weight={'bold'} extraClass={'m-0'} >Core Query</Text>
+              <Text type={'title'} level={5} weight={'regular'} color={'grey'} extraClass={'m-0'} >Use these tools to Analyse and get to the bottom of User Behaviors and Marketing Funnels</Text>
+            </Col>
+          </Row>
+          <Row gutter={[24, 24]} justify="center" className={'mt-10'}>
+            {coreQueryoptions.map((item, index) => {
+              return (
+                <Col span={4} key={index}>
+                  <div onClick={() => {
+                    setDrawerVisible(true);
+                    item.title === 'Funnels' ? setQueryType('funnel') : setQueryType('event');
+                  }} className="fai--custom-card flex justify-center items-center flex-col ">
+                      <div className={'fai--custom-card--icon'}><SVG name={item.icon} size={48} /> </div>
+                    <div className="flex justify-start items-center flex-col before-hover">
+                        <Text type={'title'} level={3} weight={'bold'} extraClass={'fai--custom-card--title'} >{item.title}</Text>
+                    </div>
+                    <div className="flex justify-start items-center flex-col after-hover">
+                      <div className={'fai--custom-card--content flex-col flex justify-start items-center'}>
+                        <Text type={'title'} level={7} weight={'bold'} extraClass={'fai--custom-card--desc'} >{item.desc}</Text>
+                        <a className={'fai--custom-card--cta'}>New Query <SVG name={'next'} size={20} /> </a>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </Col>
-            );
-          })}
-        </Row>
+                </Col>
+              );
+            })}
+          </Row>
 
-        <Row justify="center" className={'mt-12'}>
-          <Col span={20}>
-            <Row className={'flex justify-between items-center'}>
-              <Col span={10}>
-                <Text type={'title'} level={4} weight={'bold'} extraClass={'m-0'} >Saved Queries</Text>
-              </Col>
-              <Col span={5} >
-                <div className={'flex flex-row justify-end items-end '}>
-                  <Button icon={<SVG name={'help'} size={12} color={'grey'} />} type="text">Learn More</Button>
-                </div>
-              </Col>
-            </Row>
-          </Col>
-        </Row>
-        <Row justify="center" className={'mt-2 mb-20'}>
-          <Col span={20}>
-            <Table loading={loadingTable} className="ant-table--custom" columns={columns} dataSource={data} pagination={false} />
-          </Col>
-        </Row>
+          <Row justify="center" className={'mt-12'}>
+            <Col span={20}>
+              <Row className={'flex justify-between items-center'}>
+                <Col span={10}>
+                  <Text type={'title'} level={4} weight={'bold'} extraClass={'m-0'} >Saved Queries</Text>
+                </Col>
+                <Col span={5} >
+                  <div className={'flex flex-row justify-end items-end '}>
+                    <Button icon={<SVG name={'help'} size={12} color={'grey'} />} type="text">Learn More</Button>
+                  </div>
+                </Col>
+              </Row>
+            </Col>
+          </Row>
+          <Row justify="center" className={'mt-2 mb-20'}>
+            <Col span={20}>
+              <Table loading={loadingTable} className="ant-table--custom" columns={columns} dataSource={data} pagination={false} />
+            </Col>
+          </Row>
       </div>
     </>
   );

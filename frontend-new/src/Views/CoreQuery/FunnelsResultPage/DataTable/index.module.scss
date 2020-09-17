@@ -9,28 +9,12 @@ $boxShadowSecondaryColor: #E7E9ED;
         border: none;
     }
 
-    th.conversionColumn {
-        box-shadow: inset 0px -1px 0px $boxShadowPrimaryColor, inset -1px 0px 0px $boxShadowPrimaryColor;
-    }
-
-    th.lastColumn {
-        box-shadow: inset 0px -1px 0px $boxShadowPrimaryColor;
-    }
-
     th {
         box-shadow: inset 0px -1px 0px $boxShadowPrimaryColor, inset -1px 0px 0px $boxShadowSecondaryColor;
     }
 
     td {
         box-shadow: inset 0px -1px 0px $boxShadowSecondaryColor, inset -1px 0px 0px $boxShadowSecondaryColor;
-    }
-
-    .conversionColumn {
-        box-shadow: inset 0px -1px 0px $boxShadowSecondaryColor, inset -1px 0px 0px $boxShadowPrimaryColor;
-    }
-
-    .lastColumn {
-        box-shadow: inset 0px -1px 0px $boxShadowSecondaryColor;
     }
 
     :global(th.ant-table-cell) {
@@ -78,15 +62,6 @@ $boxShadowSecondaryColor: #E7E9ED;
 
     :global(.ant-table-selection) {
         display: none;
-    }
-
-    :global(.ant-table-tbody > tr.ant-table-row-selected:hover)>.conversionColumn,
-    :global(.ant-table-tbody > tr.ant-table-row-selected:hover)>.groupColumn,
-    :global(.ant-table-tbody > tr.ant-table-row-selected:hover > .ant-table-selection-column),
-    :global(tr.ant-table-row-selected)>.conversionColumn,
-    :global(tr.ant-table-row-selected)>.groupColumn,
-    :global(tr.ant-table-row-selected > .ant-table-selection-column) {
-        background: #F5F6F8;
     }
 }
 

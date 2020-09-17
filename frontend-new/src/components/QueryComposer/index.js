@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  Drawer, Button, Collapse, Select, Popover
+  Button, Collapse, Select, Popover
 } from 'antd';
 import { SVG, Text } from 'factorsComponents';
 import styles from './index.module.scss';
@@ -12,7 +12,9 @@ const { Option } = Select;
 
 const { Panel } = Collapse;
 
-function QueryComposer({ queries, runQuery, eventChange }) {
+function QueryComposer({
+  queries, runQuery, eventChange, queryType
+}) {
   const [analyticsSeqOpen, setAnalyticsSeqVisible] = useState(false);
 
   const [queryOptions, setQueryOptions] = useState({
@@ -32,17 +34,17 @@ function QueryComposer({ queries, runQuery, eventChange }) {
 
     queries.forEach((event, index) => {
       blockList.push(
-        <div className={styles.composer_body__query_block}>
-          <QueryBlock index={index + 1} event={event} queries={queries} eventChange={eventChange}></QueryBlock>
-        </div>
+                <div className={styles.composer_body__query_block}>
+                    <QueryBlock index={index + 1} event={event} queries={queries} eventChange={eventChange}></QueryBlock>
+                </div>
       );
     });
 
     if (queries.length < 6) {
       blockList.push(
-        <div className={styles.composer_body__query_block}>
-          <QueryBlock index={queries.length + 1} queries={queries} eventChange={eventChange}></QueryBlock>
-        </div>
+                <div className={styles.composer_body__query_block}>
+                    <QueryBlock index={queries.length + 1} queries={queries} eventChange={eventChange}></QueryBlock>
+                </div>
       );
     }
 
@@ -50,13 +52,14 @@ function QueryComposer({ queries, runQuery, eventChange }) {
   };
 
   const groupByBlock = () => {
-    if (queries.length >= 2) {
-      return (
-        <div className={'fa--query_block bordered '}>
-          <GroupBlock groupBy={queryOptions.groupBy} events={queries}></GroupBlock>
-        </div>
-      );
-    }
+    if (queryType === 'event' && queries.length < 1) { return null; }
+    if (queryType === 'funnel' && queries.length < 2) { return null; }
+
+    return (
+                <div className={'fa--query_block bordered '}>
+                    <GroupBlock groupBy={queryOptions.groupBy} events={queries}></GroupBlock>
+                </div>
+    );
   };
 
   const setEventSequence = (value) => {
@@ -74,92 +77,93 @@ function QueryComposer({ queries, runQuery, eventChange }) {
   const moreOptionsBlock = () => {
     if (queries.length >= 2) {
       return (
-        <div className={' fa--query_block bordered '}>
-          <Collapse bordered={false} expandIcon={() => {}} expandIconPosition={'right'}>
-            <Panel header={<div className={'flex justify-between items-center'}>
-              <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 mb-2 inline'}>More options</Text>
-              <SVG name="plus" />
-            </div>
-            }>
-              <div className={'flex justify-start items-center'}>
-                <span className={'mr-2'}>
-                  <SVG name="sortdown" size={16} color={'purple'}></SVG>
-                </span>
-                <Text type={'title'} level={7} extraClass={'m-0 mr-2 inline'}>Analyse events in the</Text>
-                <div>
-                  <Select
-                    style={{ width: 170 }}
-                    value="same_sequence" onChange={setEventSequence}
-                    className={'no-ant-border'}
-                  >
-                    <Option value="same_sequence"> Same Sequence</Option>
-                    <Option value="exact_sequence"> Exact Sequence</Option>
-                  </Select>
-                </div>
-              </div>
+                <div className={' fa--query_block bordered '}>
+                <Collapse bordered={false} expandIcon={() => {}} expandIconPosition={'right'}>
+                    <Panel header={<div className={'flex justify-between items-center'}>
+                        <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 mb-2 inline'}>More options</Text>
+                        <SVG name="plus" />
+                        </div>
+                        }>
+                        <div className={'flex justify-start items-center'}>
+                            <span className={'mr-2'}>
+                                <SVG name="sortdown" size={16} color={'purple'}></SVG>
+                            </span>
+                            <Text type={'title'} level={7} extraClass={'m-0 mr-2 inline'}>Analyse events in the</Text>
+                            <div>
+                                <Select
+                                    style={{ width: 170 }}
+                                    value="same_sequence" onChange={setEventSequence}
+                                    className={'no-ant-border'}
+                                    >
+                                    <Option value="same_sequence"> Same Sequence</Option>
+                                    <Option value="exact_sequence"> Exact Sequence</Option>
+                                </Select>
+                            </div>
+                        </div>
 
-              <div className={'flex flex-col justify-start items-start mt-4'}>
-                <div className={'flex justify-start items-center'}>
-                  <span className={'mr-2'}>
-                    <SVG name="sortdown" size={16} color={'purple'}></SVG>
-                  </span>
-                  <Text type={'title'} level={7} extraClass={'m-0 mr-2 inline'}>In Session Analytics</Text>
-                </div>
+                        <div className={'flex flex-col justify-start items-start mt-4'}>
+                            <div className={'flex justify-start items-center'}>
+                                <span className={'mr-2'}>
+                                    <SVG name="sortdown" size={16} color={'purple'}></SVG>
+                                </span>
+                                <Text type={'title'} level={7} extraClass={'m-0 mr-2 inline'}>In Session Analytics</Text>
+                            </div>
 
-                <div className={'flex justify-start items-center mt-2'}>
-                  <div className={styles.composer_body__session_analytics__options}>
-                    <Popover
-                      className="fa-event-popover"
-                      content={
-                        <SeqSelector
-                          seq={queryOptions.session_analytics_seq}
-                          queryCount={queries.length}
-                          setAnalysisSequence={setAnalysisSequence}
-                        />
-                      }
-                      trigger="click"
-                      visible={analyticsSeqOpen}
-                      onVisibleChange={(visible) => setAnalyticsSeqVisible(visible)}
-                    >
-                      <Button Button type="link" className={'ml-4'} size={'small'}>
+                            <div className={'flex justify-start items-center mt-2'}>
+                                <div className={styles.composer_body__session_analytics__options}>
+                                    <Popover
+                                        className="fa-event-popover"
+                                        content={
+                                            <SeqSelector
+                                                seq={queryOptions.session_analytics_seq}
+                                                queryCount={queries.length}
+                                                setAnalysisSequence={setAnalysisSequence}
+                                            />
+                                        }
+                                        trigger="click"
+                                        visible={analyticsSeqOpen}
+                                        onVisibleChange={(visible) => setAnalyticsSeqVisible(visible)}
+                                    >
+                                        <Button Button type="link" className={'ml-4'} size={'small'}>
                                             Between &nbsp;
-                        {queryOptions.session_analytics_seq.start}
+                                            {queryOptions.session_analytics_seq.start}
                                             &nbsp;
                                                 to
                                                 &nbsp;
-                        {queryOptions.session_analytics_seq.end}
-                      </Button>
-                    </Popover>
-                    <Text type={'paragraph'} mini weight={'thin'} extraClass={'m-0 ml-2 inline'}>happened in the same session</Text>
+                                            {queryOptions.session_analytics_seq.end}
+                                        </Button>
+                                    </Popover>
+                                    <Text type={'paragraph'} mini weight={'thin'} extraClass={'m-0 ml-2 inline'}>happened in the same session</Text>
 
-                  </div>
-                </div>
-              </div>
-            </Panel>
-          </Collapse>
-        </div>
+                                </div>
+                            </div>
+                        </div>
+                    </Panel>
+                </Collapse>
+            </div>
       );
     }
   };
 
   const footer = () => {
-    if (queries.length < 2) { return null; } else {
+    if (queryType === 'event' && queries.length < 1) { return null; }
+    if (queryType === 'funnel' && queries.length < 2) { return null; } else {
       return (
-        <div className={styles.composer_footer}>
-          <Button><SVG name={'calendar'} extraClass={'mr-1'} />Last Week </Button>
-          <Button type="primary" onClick={runQuery}>Run Query</Button>
-        </div>
+                <div className={styles.composer_footer}>
+                    <Button><SVG name={'calendar'} extraClass={'mr-1'} />Last Week </Button>
+                    <Button type="primary" onClick={runQuery}>Run Query</Button>
+                </div>
       );
     }
   };
 
   return (
-    <div className={styles.composer_body}>
-      {queryList()}
-      {groupByBlock()}
-      {moreOptionsBlock()}
-      {footer()}
-    </div>
+        <div className={styles.composer_body}>
+            {queryList()}
+            {groupByBlock()}
+            {queryType === 'funnel' ? moreOptionsBlock() : null}
+            {footer()}
+        </div>
   );
 }
 

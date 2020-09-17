@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Row, Col, Modal, Button, Menu, Avatar, Input, Skeleton
+  Row, Col, Modal, Button, Avatar, Skeleton
 } from 'antd';
-import { Text, SVG } from 'factorsComponents';
+import { Text } from 'factorsComponents';
 import { UserOutlined } from '@ant-design/icons';
 
-function EditUserDetails(props) {
+function EditUserDetails() {
   const [dataLoading, setDataLoading] = useState(true);
 
   useEffect(() => {

@@ -431,6 +431,7 @@ class Query extends Component {
 
   onGroupByNameChange = (groupByIndex, option) => {
     this.setGroupByAttr(groupByIndex, 'name', option.value);
+    this.setGroupByAttr(groupByIndex, 'ptype', option.type);
   }
 
   onGroupByEventNameChange = (groupByIndex, option) => {
@@ -487,6 +488,7 @@ class Query extends Component {
       if (groupBy.name != '' && groupBy.type != '') {
         cGroupBy.pr = groupBy.name;
         cGroupBy.en = groupBy.type;
+        cGroupBy.pty = groupBy.ptype
 
         // add group by event name.
         if (this.isEventNameRequiredForGroupBy() && groupBy.eventName != '') {

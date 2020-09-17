@@ -1,3 +1,4 @@
+/* eslint-disable */
 import React from 'react';
 import {
   Layout, Breadcrumb, Row, Col, Divider, Button

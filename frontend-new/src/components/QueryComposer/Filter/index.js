@@ -8,7 +8,7 @@ const { OptGroup, Option } = Select;
 function Filter({ filter, insertFilters }) {
   const [filterType, setFilterTypeState] = useState('props');
 
-  const [newFilter, setNewFilter] = useState({
+  const newFilter = useState({
     props: '',
     operator: '',
     values: []

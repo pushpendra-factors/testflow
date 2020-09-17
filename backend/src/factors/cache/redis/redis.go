@@ -42,6 +42,13 @@ func NewKey(projectId uint64, prefix string, suffix string) (*Key, error) {
 	return &Key{ProjectID: projectId, Prefix: prefix, Suffix: suffix}, nil
 }
 
+func NewKeyWithAllProjectsSupport(projectId uint64, prefix string, suffix string) (*Key, error) {
+	if prefix == "" {
+		return nil, ErrorInvalidPrefix
+	}
+	return &Key{ProjectID: projectId, Prefix: prefix, Suffix: suffix}, nil
+}
+
 // NewKeyWithProjectUID - Uses projectUID as project scope on the key.
 func NewKeyWithProjectUID(projectUID, prefix, suffix string) (*Key, error) {
 	if projectUID == "" {
@@ -72,6 +79,21 @@ func (key *Key) Key() (string, error) {
 	}
 
 	// key: i.e, event_names:user_last_event:pid:1:uid:1
+	return fmt.Sprintf("%s:%s:%s", key.Prefix, projectScope, key.Suffix), nil
+}
+
+func (key *Key) KeyWithAllProjectsSupport() (string, error) {
+	if key.Prefix == "" {
+		return "", ErrorInvalidPrefix
+	}
+
+	var projectScope string
+	if key.ProjectID == 0 {
+		projectScope = "pid:*"
+	} else {
+		projectScope = fmt.Sprintf("pid:%d", key.ProjectID)
+	}
+	// key: i.e, event_names:user_last_event:pid:*:suffix
 	return fmt.Sprintf("%s:%s:%s", key.Prefix, projectScope, key.Suffix), nil
 }
 
@@ -222,22 +244,26 @@ func mGet(persistent bool, keys ...*Key) ([]string, error) {
 	return cValues, nil
 }
 
-func DelPersistent(key *Key) error {
-	return del(key, true)
+func DelPersistent(keys ...*Key) error {
+	return del(true, keys...)
 }
 
-func Del(key *Key) error {
-	return del(key, false)
+func Del(keys ...*Key) error {
+	return del(false, keys...)
 }
 
-func del(key *Key, persistent bool) error {
-	if key == nil {
-		return ErrorInvalidKey
-	}
+func del(persistent bool, keys ...*Key) error {
+	var cKeys []interface{}
 
-	cKey, err := key.Key()
-	if err != nil {
-		return err
+	for _, key := range keys {
+		if key == nil {
+			return ErrorInvalidKey
+		}
+		cKey, err := key.Key()
+		if err != nil {
+			return err
+		}
+		cKeys = append(cKeys, cKey)
 	}
 
 	var redisConn redis.Conn
@@ -248,7 +274,10 @@ func del(key *Key, persistent bool) error {
 	}
 	defer redisConn.Close()
 
-	_, err = redisConn.Do("DEL", cKey)
+	_, err := redisConn.Do("DEL", cKeys...)
+	if err != nil {
+		return err
+	}
 	return err
 }
 
@@ -286,19 +315,15 @@ func exists(key *Key, persistent bool) (bool, error) {
 	return count.(int64) == 1, nil
 }
 
-func IncrBatch(expiryInSecs float64, keys ...*Key) error {
-	return incrBatch(expiryInSecs, false, keys)
+func IncrBatch(keys ...*Key) ([]int64, error) {
+	return incrBatch(false, keys)
 }
-func IncrPersistentBatch(expiryInSecs float64, keys ...*Key) error {
-	return incrBatch(expiryInSecs, true, keys)
+func IncrPersistentBatch(keys ...*Key) ([]int64, error) {
+	return incrBatch(true, keys)
 }
-func incrBatch(expiryInSecs float64, persistent bool, keys []*Key) error {
-	totalOperationsPerCall := 1
+func incrBatch(persistent bool, keys []*Key) ([]int64, error) {
 	if len(keys) == 0 {
-		return ErrorInvalidValues
-	}
-	if expiryInSecs != 0 {
-		totalOperationsPerCall = 2
+		return nil, ErrorInvalidValues
 	}
 	var redisConn redis.Conn
 	if persistent {
@@ -310,32 +335,29 @@ func incrBatch(expiryInSecs float64, persistent bool, keys []*Key) error {
 
 	err := redisConn.Send("MULTI")
 	if err != nil {
-		return err
+		return nil, err
+
 	}
 	for _, key := range keys {
 		cKey, err := key.Key()
 		if err != nil {
-			return err
+			return nil, err
 		}
 		err = redisConn.Send("INCR", cKey)
 		if err != nil {
-			return err
-		}
-		if expiryInSecs != 0 {
-			err = redisConn.Send("EXPIRE", cKey, expiryInSecs)
-			if err != nil {
-				return err
-			}
+			return nil, err
 		}
 	}
 	res, err := redis.Values(redisConn.Do("EXEC"))
 	if err != nil {
-		return err
+		return nil, err
 	}
-	if len(res) != len(keys)*totalOperationsPerCall {
-		return ErrorPartialFailures
+	counts := make([]int64, 0)
+	if err := redis.ScanSlice(res, &counts); err != nil {
+		return nil, err
 	}
-	return nil
+
+	return counts, nil
 }
 func SetBatch(values map[*Key]string, expiryInSecs float64) error {
 	return setBatch(values, expiryInSecs, false)
@@ -421,15 +443,15 @@ func getKeys(pattern string, persistent bool) ([]*Key, error) {
 	return cacheKeys, nil
 }
 
-func PFAddPersistent(cacheKey *Key, value string) (bool, error) {
-	return pfAdd(cacheKey, value, true)
+func PFAddPersistent(cacheKey *Key, value string, expiryInSeconds float64) (bool, error) {
+	return pfAdd(cacheKey, value, expiryInSeconds, true)
 }
 
-func PFAdd(cacheKey *Key, value string) (bool, error) {
-	return pfAdd(cacheKey, value, false)
+func PFAdd(cacheKey *Key, value string, expiryInSeconds float64) (bool, error) {
+	return pfAdd(cacheKey, value, expiryInSeconds, false)
 }
 
-func pfAdd(cacheKey *Key, value string, persistent bool) (bool, error) {
+func pfAdd(cacheKey *Key, value string, expiryInSeconds float64, persistent bool) (bool, error) {
 	if cacheKey == nil {
 		return false, ErrorInvalidKey
 	}
@@ -448,6 +470,12 @@ func pfAdd(cacheKey *Key, value string, persistent bool) (bool, error) {
 	res, err := redisConn.Do("PFADD", cKey, value)
 	if err != nil {
 		return false, err
+	}
+	if expiryInSeconds != 0 {
+		_, err := redisConn.Do("EXPIRE", cKey, int64(expiryInSeconds))
+		if err != nil {
+			return false, err
+		}
 	}
 	if res.(int64) == 1 {
 		return true, nil
@@ -488,9 +516,93 @@ func scan(pattern string, perScanCount int64, limit int64, persistent bool) ([]*
 			cacheKey, _ := KeyFromStringWithPid(key)
 			cacheKeys = append(cacheKeys, cacheKey)
 		}
-		if cursor == 0 || int64(len(cacheKeys)) >= limit {
+		if cursor == 0 || (limit != -1 && int64(len(cacheKeys)) >= limit) {
 			break
 		}
 	}
 	return cacheKeys, nil
+}
+
+func IncrByBatch(keys map[*Key]int64) error {
+	return incrByBatch(keys, false)
+}
+
+func IncrByBatchPersistent(keys map[*Key]int64) error {
+	return incrByBatch(keys, true)
+}
+
+func incrByBatch(keys map[*Key]int64, persistent bool) error {
+	if len(keys) == 0 {
+		return ErrorInvalidValues
+	}
+	var redisConn redis.Conn
+	if persistent {
+		redisConn = C.GetCacheRedisPersistentConnection()
+	} else {
+		redisConn = C.GetCacheRedisConnection()
+	}
+	defer redisConn.Close()
+
+	err := redisConn.Send("MULTI")
+	if err != nil {
+		return err
+	}
+	for key, value := range keys {
+		cKey, err := key.Key()
+		if err != nil {
+			return err
+		}
+		err = redisConn.Send("INCRBY", cKey, value)
+		if err != nil {
+			return err
+		}
+	}
+	_, err = redis.Values(redisConn.Do("EXEC"))
+	if err != nil {
+		return err
+	}
+	// TODO: Check for partial failures
+	return nil
+}
+
+func DecrByBatch(keys map[*Key]int64) error {
+	return decrByBatch(keys, false)
+}
+
+func DecrByBatchPersistent(keys map[*Key]int64) error {
+	return decrByBatch(keys, true)
+}
+
+func decrByBatch(keys map[*Key]int64, persistent bool) error {
+	if len(keys) == 0 {
+		return ErrorInvalidValues
+	}
+	var redisConn redis.Conn
+	if persistent {
+		redisConn = C.GetCacheRedisPersistentConnection()
+	} else {
+		redisConn = C.GetCacheRedisConnection()
+	}
+	defer redisConn.Close()
+
+	err := redisConn.Send("MULTI")
+	if err != nil {
+		return err
+	}
+	for key, value := range keys {
+		cKey, err := key.Key()
+		if err != nil {
+			return err
+		}
+		err = redisConn.Send("DECRBY", cKey, value)
+		if err != nil {
+			return err
+		}
+	}
+	_, err = redis.Values(redisConn.Do("EXEC"))
+	if err != nil {
+		return err
+	}
+	// TODO: Check for partial failures
+	return nil
 }

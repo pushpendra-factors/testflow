@@ -3,7 +3,7 @@ var path = require('path');
 var config = require('./build-config');
 
 const getCSSModuleLocalIdent = require('react-dev-utils/getCSSModuleLocalIdent');
-
+const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 const cssRegex = /\.css$/;
 const cssModuleRegex = /\.module\.css$/;
 const sassRegex = /\.(scss|sass)$/;
@@ -123,7 +123,8 @@ module.exports = {
   plugins: [
     buildConfigPlugin,
     HtmlPlugin,
-    new CopyWebpackPlugin([{ from: './src/assets', to: 'assets' }])
+    new CopyWebpackPlugin([{ from: './src/assets', to: 'assets' }]),
+    // new BundleAnalyzerPlugin(),
   ],
   output: {
     path: getBuildPath(),
