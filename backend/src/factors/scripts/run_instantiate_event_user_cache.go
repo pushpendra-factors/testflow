@@ -31,7 +31,7 @@ func main() {
 	eventsLimit := flag.Int("events_limit", 10000, "")
 	propertiesLimit := flag.Int("properties_limit", 5000, "")
 	valuesLimit := flag.Int("values_limit", 2000, "")
-	lookBackDays := flag.Int("look_back_days", 30, "")
+	lookBackDays := flag.Int("look_back_days", 1, "")
 
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 

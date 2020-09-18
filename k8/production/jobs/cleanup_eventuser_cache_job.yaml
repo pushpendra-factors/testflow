@@ -1,7 +1,7 @@
 apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
-  name: cleanup_eventuser_cache_job
+  name: cleanup-eventuser-cache-job
 spec:
   schedule: "0 */1 * * *" #On Trigger
   concurrencyPolicy: Forbid
@@ -15,7 +15,7 @@ spec:
             layer: jobs
         spec:
           nodeSelector:
-            cloud.google.com/gke-nodepool: job-pool
+            cloud.google.com/gke-nodepool: persistent-pool-standard
           containers:
           - name: cleanup-eventuser-cache-job
             image: us.gcr.io/factors-production/cleanup-eventuser-cache-job:v0.010-18d3217

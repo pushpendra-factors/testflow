@@ -296,7 +296,7 @@ func BackFillEventDataInCacheFromDb(project_id uint64, currentTime time.Time, no
 		}
 		logCtx.Info("Begin:EN:SB")
 		begin = U.TimeNow()
-		err = cacheRedis.SetPersistent(eventNamesKey, string(enEventCache), float64((no_of_days+i-1)*24*60*60))
+		err = cacheRedis.SetPersistent(eventNamesKey, string(enEventCache), U.EVENT_USER_CACHE_EXPIRY_SECS)
 		end = U.TimeNow()
 		logCtx.WithFields(log.Fields{"timeTaken": end.Sub(begin).Milliseconds()}).Info("End:EN:SB")
 		if err != nil {
@@ -388,7 +388,7 @@ func BackFillEventDataInCacheFromDb(project_id uint64, currentTime time.Time, no
 				eventPropertyValuesInCache[eventPropertiesKey] = string(enEventPropertiesCache)
 				logCtx.Info("Begin:EPV:SB")
 				begin = U.TimeNow()
-				err = cacheRedis.SetPersistentBatch(eventPropertyValuesInCache, float64((no_of_days+1-i)*24*60*60))
+				err = cacheRedis.SetPersistentBatch(eventPropertyValuesInCache, U.EVENT_USER_CACHE_EXPIRY_SECS)
 				end = U.TimeNow()
 				logCtx.WithFields(log.Fields{"timeTaken": end.Sub(begin).Milliseconds()}).Info("End:EN:SB")
 				if err != nil {

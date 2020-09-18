@@ -24,8 +24,12 @@ func main() {
 
 	redisHost := flag.String("redis_host", "localhost", "")
 	redisPort := flag.Int("redis_port", 6379, "")
+	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
+	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
 
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
+	isRealTimeEventUserCachingEnabled := flag.Bool("enable_real_time_event_user_caching", false, "If the real time caching is enabled")
+	realTimeEventUserCachingProjectIds := flag.String("real_time_event_user_caching_project_ids", "", "If the real time caching is enabled and the whitelisted projectids")
 
 	flag.Parse()
 
@@ -47,9 +51,13 @@ func main() {
 			Name:     *dbName,
 			Password: *dbPass,
 		},
-		RedisHost: *redisHost,
-		RedisPort: *redisPort,
-		SentryDSN: *sentryDSN,
+		RedisHost:                          *redisHost,
+		RedisPort:                          *redisPort,
+		RedisHostPersistent:                *redisHostPersistent,
+		RedisPortPersistent:                *redisPortPersistent,
+		SentryDSN:                          *sentryDSN,
+		IsRealTimeEventUserCachingEnabled:  *isRealTimeEventUserCachingEnabled,
+		RealTimeEventUserCachingProjectIds: *realTimeEventUserCachingProjectIds,
 	}
 
 	C.InitConf(config.Env)
@@ -63,6 +71,7 @@ func main() {
 	defer db.Close()
 
 	C.InitRedis(config.RedisHost, config.RedisPort)
+	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
 	C.InitSentryLogging(config.SentryDSN, config.AppName)
 	defer C.SafeFlushSentryHook()
 

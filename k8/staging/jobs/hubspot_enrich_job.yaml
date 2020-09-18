@@ -36,6 +36,10 @@ spec:
             - $(REDIS_HOST)
             - --redis_port
             - $(REDIS_PORT)
+            - --redis_host_ps
+            - $(PERSISTENT_REDIS_HOST)
+            - --redis_port_ps
+            - $(PERSISTENT_REDIS_PORT)
             - --sentry_dsn
             - $(SENTRY_DSN)
             envFrom:
@@ -49,4 +53,6 @@ spec:
                 name: config-redis
             - secretRef:
                 name: secret-sentry
+            - configMapRef:
+                name: config-persistent-redis
           restartPolicy: OnFailure
