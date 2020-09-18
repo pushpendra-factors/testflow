@@ -32,7 +32,7 @@
     "build-storybook": "build-storybook -s public",
     "lint": "eslint src",
     "lint:fix": "eslint --fix src",
-    "report": "npm run dev --withReport true"
+    "analyze": "npm run dev --analyze"
   },
   "eslintConfig": {
     "extends": "react-app"

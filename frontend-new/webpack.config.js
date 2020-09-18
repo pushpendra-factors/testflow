@@ -9,7 +9,7 @@ const cssModuleRegex = /\.module\.css$/;
 const sassRegex = /\.(scss|sass)$/;
 const sassModuleRegex = /\.module\.(scss|sass)$/; 
 const analyzerArg = JSON.parse(process.env.npm_config_argv); 
-const analyzer = analyzerArg.original.includes('--analyzer'); 
+const analyzer = analyzerArg.original.includes('--analyze'); 
 
 const getStyleLoaders = (cssOptions, preProcessor) => {
   const loaders = [
