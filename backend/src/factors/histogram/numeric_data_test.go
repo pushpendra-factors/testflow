@@ -220,6 +220,7 @@ type testData struct {
 
 func TestNumericalCuts(t *testing.T) {
 	//sample usuage : go test -run ^TestNumericalCuts$
+	// need to add outlier data
 
 	// can add more testcases here
 	testCases := []testData{
@@ -296,6 +297,7 @@ func TestNumericalCuts(t *testing.T) {
 				}
 
 				// cdf of point in max p(x>xmax)
+
 				if hist.CDF(maxPoint) != 0 {
 					t.Logf("PDF of max point in region %d  and bin %d is not 0 in cases:%d", region, numBins, testCaseIdx)
 					t.Fail()
