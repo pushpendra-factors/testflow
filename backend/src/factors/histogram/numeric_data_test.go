@@ -226,7 +226,7 @@ func TestNumericalCuts(t *testing.T) {
 	testCases := []testData{
 		testData{dataMM6TestTable, dataMM6}, //uniform
 		testData{dataMM5TestTable, dataMM5}, //multivariate multimodal
-		testData{dataMM4TestTable, dataMM4}, //multivariate
+		testData{dataMM4TestTable, dataMM4}, //multivariate with mean 0,0,0 and cov diag(10,10,10)
 	}
 
 	var maxErrorThreshold = 0.04
