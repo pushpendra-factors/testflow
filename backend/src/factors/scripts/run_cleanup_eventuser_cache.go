@@ -56,15 +56,23 @@ func main() {
 			Name:     *dbName,
 			Password: *dbPass,
 		},
-		RedisHostPersistent: *redisHostPersistent,
-		RedisPortPersistent: *RedisPortPersistent,
-		SentryDSN:           *sentryDSN,
+		RedisHostPersistent:    *redisHostPersistent,
+		RedisPortPersistent:    *RedisPortPersistent,
+		AWSKey:                 *awsAccessKeyId,
+		AWSSecret:              *awsSecretAccessKey,
+		AWSRegion:              *awsRegion,
+		EmailSender:            *factorsEmailSender,
+		ErrorReportingInterval: *errorReportingInterval,
+		SentryDSN:              *sentryDSN,
 	}
 
 	C.InitConf(config.Env)
 
 	// Cache dependency for requests not using queue.
 	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
+
+	C.InitLogClient(config.Env, config.AppName, config.EmailSender, config.AWSKey,
+		config.AWSSecret, config.AWSRegion, config.ErrorReportingInterval, config.SentryDSN)
 
 	defer C.SafeFlushSentryHook()
 
