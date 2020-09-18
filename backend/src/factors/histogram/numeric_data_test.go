@@ -309,3 +309,17 @@ func TestNumericalCuts(t *testing.T) {
 
 	}
 }
+
+func BenchmarkNumericalHistogram(b *testing.B) {
+	//sample usuage : go test -run=numeric_data_test_.go -bench=. -benchtime=10s
+	//benchmarking for 128 bins and 10000 data points . currently it is taking more
+	// than 5sec for 1 run
+	data := dataMM5
+	dims := len(data[0])
+	bins := 128
+	for n := 0; n < b.N; n++ {
+		buildNumericHistogramFromData(bins, dims, data)
+
+	}
+
+}
