@@ -205,55 +205,105 @@ func TestNumericTrimByBinSize(t *testing.T) {
 	assert.Equal(t, hist.numBins(), 12, "Mismatch in number of bins.")
 }
 
+func sum(array []int) int {
+	result := 0
+	for _, v := range array {
+		result += v
+	}
+	return result
+}
+
+type testData struct {
+	table []TestTable
+	data  [][]float64
+}
+
 func TestNumericalCuts(t *testing.T) {
-	data := dataMM3
-	dataT := dataMM3TestTable
-	dims := len(data[0])
-	// numBins := 8
-	var maxError = 0.20
+	//sample usuage : go test -run ^TestNumericalCuts$
 
-	var err [100]float64
-	var errSample [100]float64
-	fmt.Println("---------------------------------------------------")
-	fmt.Println(fmt.Sprintf("Calculating for %d dims", dims))
-	fmt.Println("---------------------------------------------------")
-
-	for _, numBins := range []int{8, 16, 32, 64, 128} {
-
-		hist := buildNumericHistogramFromData(numBins, dims, data)
-		for idx := 0; idx < len(dataT); idx++ {
-			histCDF := hist.CDF(dataT[idx].point)
-			sampleCDF := computeCDFUsingData(data, dataT[idx].point)
-
-			errAct := math.Abs(dataT[idx].probVal - histCDF)
-			errorsample := math.Abs(sampleCDF - histCDF)
-
-			err[dataT[idx].center] = err[dataT[idx].center] + errAct
-			errSample[dataT[idx].center] = errSample[dataT[idx].center] + errorsample
-
-			fmt.Println(fmt.Sprintf(
-				"ACTUAL_CDF:%.2f, SAMPLE_CDF:%.2f, HIST_CDF:%.2f, ACTUAL_CDF_ERROR:%.2f, SAMPLE_CDF_ERROR:%.2f",
-				dataT[idx].probVal, sampleCDF, histCDF, errAct, errorsample))
-
-		}
-		var totalAct = 0.0
-		var totSample = 0.0
-		for idx := 0; idx < 100; idx++ {
-			//Average out for each region  div by 5 as I've
-			//samples 5 points from each region
-			err[idx] = err[idx] / 5.0
-			errSample[idx] = errSample[idx] / 5.0
-			totalAct += err[idx]
-			totSample += errSample[idx]
-		}
-		totalAct = totalAct / 100.0
-		totSample = totSample / 100.0
-
-		fmt.Println("---------------------------------------------------")
-		fmt.Println(fmt.Sprintf("Total Act-Hist Error:%.2f , Total sample-Hist: %.2f ", totalAct, totSample))
-		fmt.Println("---------------------------------------------------")
-		assert.InDelta(t, totalAct, totSample, maxError, "High Histogram CDF error")
-		// assert.InDelta(t, sampleCDF, histCDF, maxError, "High Sample CDF error")
+	// can add more testcases here
+	testCases := []testData{
+		testData{dataMM6TestTable, dataMM6}, //uniform
+		testData{dataMM5TestTable, dataMM5}, //multivariate multimodal
+		testData{dataMM4TestTable, dataMM4}, //multivariate
 	}
 
+	var maxErrorThreshold = 0.04
+	var regions = []int{0, 1, 2, 3, 4, 5, 6, 7} // total number of regions the data is split into
+	var bins = []int{8, 16, 32, 64, 128}
+
+	for testCaseIdx, testCase := range testCases {
+		data := testCase.data
+		dataTable := testCase.table
+		var dims = len(data[0])
+		var numPoints = []int{0, 0, 0, 0, 0, 0, 0, 0}
+
+		for _, region := range regions {
+
+			for _, numBins := range bins {
+				hist := buildNumericHistogramFromData(numBins, dims, data)
+
+				var evalPoints = [][]float64{}
+
+				// calculate the min and max in each region while reading the points
+				var maxPoint = []float64{math.Inf(-1), math.Inf(-1), math.Inf(-1)}
+				var minPoint = []float64{math.Inf(1), math.Inf(1), math.Inf(1)}
+				for tableIdx := 0; tableIdx < len(dataTable); tableIdx++ {
+					if dataTable[tableIdx].region == region {
+						var tmpPoint = dataTable[tableIdx].point
+						for dim := 0; dim < dims; dim++ {
+							maxPoint[dim] = math.Max(maxPoint[dim], tmpPoint[dim])
+							minPoint[dim] = math.Min(minPoint[dim], tmpPoint[dim])
+
+						}
+
+						evalPoints = append(evalPoints, dataTable[tableIdx].point)
+					}
+				}
+
+				numPoints[region] = len(evalPoints)
+				sampleCDFMin := computeCDFUsingData(data, minPoint)
+				sampleCDFMax := computeCDFUsingData(data, maxPoint)
+
+				histcdf := hist.CDF(maxPoint) - hist.CDF(minPoint)
+				samplecdf := math.Abs(sampleCDFMax - sampleCDFMin)
+				cumPDF := float64(sum(numPoints[0:region+1])) / float64(len(data))
+				percentPoints := float64(len(evalPoints)) / float64(len(data))
+
+				// num : Id of region
+				// Bin : Bin size used for hisogram
+				// Hist CDF : CDF calculated using hist function
+				// sample CDF : CDF calculated from CDF
+				// cumPDF : CDF calculated from adding (total number of points in each region)/ total #of Points
+				// fracPoints : Percentage of points in the region
+				fmt.Println(fmt.Sprintf("num: %d | Bin: %d | HistCDF:%.4f | sampleCDF:%.4f | cumPDF:%.4f | fracPoints:%.4f", region, numBins, histcdf, samplecdf, cumPDF, percentPoints))
+
+				for pointIdx := 0; pointIdx < dims; pointIdx++ {
+					maxPoint[pointIdx] = maxPoint[pointIdx] + 1e+10
+					minPoint[pointIdx] = minPoint[pointIdx] - 1e+10
+				}
+
+				// Testing for diff in histogram CDF and sample CDF
+				if math.Abs(histcdf-samplecdf) > maxErrorThreshold {
+					t.Logf(fmt.Sprintf("High Sample CDF error : num: %d | Bin: %d | HistCDF:%.4f | sampleCDF:%.4f | diff: %.4f | CasesIdx:%d", region, numBins, histcdf, samplecdf, math.Abs(histcdf-samplecdf), testCaseIdx))
+					t.Fail()
+				}
+
+				// cdf of point in min P(x<xmin,y<ymin,z<zmin)
+				if hist.CDF(minPoint) != 0 {
+					t.Logf("PDF of min point in region %d  and bin %d is not 0 case: %d", region, numBins, testCaseIdx)
+					t.Fail()
+				}
+
+				// cdf of point in max p(x>xmax)
+				if hist.CDF(maxPoint) != 0 {
+					t.Logf("PDF of max point in region %d  and bin %d is not 0 in cases:%d", region, numBins, testCaseIdx)
+					t.Fail()
+				}
+
+			}
+
+		}
+
+	}
 }
