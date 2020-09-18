@@ -257,8 +257,8 @@ func TestAddSession(t *testing.T) {
 	userPropertiesMap, err = U.DecodePostgresJsonb(&userPropertiesRecord.Properties)
 	assert.Nil(t, err)
 	assert.Equal(t, float64(2), (*userPropertiesMap)[U.UP_SESSION_COUNT])
-	assert.Equal(t, float64(2), (*userPropertiesMap)[U.UP_PAGE_COUNT])
-	assert.Equal(t, float64(4), (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
+	assert.Equal(t, float64(3), (*userPropertiesMap)[U.UP_PAGE_COUNT])
+	assert.Equal(t, float64(5), (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
 
 	// Test: Create new session for event with marketing property,
 	// followed by other events, even though there was continuos
@@ -303,8 +303,8 @@ func TestAddSession(t *testing.T) {
 	userPropertiesMap, err = U.DecodePostgresJsonb(&userPropertiesRecord.Properties)
 	assert.Nil(t, err)
 	assert.Equal(t, float64(3), (*userPropertiesMap)[U.UP_SESSION_COUNT])
-	assert.Equal(t, float64(4), (*userPropertiesMap)[U.UP_PAGE_COUNT])
-	assert.Equal(t, float64(7), (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
+	assert.Equal(t, float64(5), (*userPropertiesMap)[U.UP_PAGE_COUNT])
+	assert.Equal(t, float64(8), (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
 
 	// Test: Last event with marketing property.
 	timestamp = timestamp + 2
@@ -427,7 +427,7 @@ func TestDerivedUserPropertiesFromSession(t *testing.T) {
 
 	C.GetConfig().SkipSessionProjectIds = fmt.Sprintf("%d", project.ID)
 
-	// Test derived user_properties for user having multiple 
+	// Test derived user_properties for user having multiple
 	// user_properites state before adding session.
 	maxLookbackTimestamp := U.UnixTimeBeforeDuration(31 * 24 * time.Hour)
 	timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)

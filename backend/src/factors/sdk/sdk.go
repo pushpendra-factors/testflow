@@ -236,41 +236,6 @@ func ProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, string,
 	return http.StatusOK, string(responseBytes), nil
 }
 
-func enrichAfterTrack(projectId uint64, event *M.Event,
-	userProperties *map[string]interface{}, reqTimestamp int64) int {
-
-	if projectId == 0 || event == nil || userProperties == nil {
-		return http.StatusBadRequest
-	}
-
-	if isAllPropertiesMissing := (*userProperties)[U.UP_HOUR_OF_FIRST_EVENT] == nil &&
-		(*userProperties)[U.UP_DAY_OF_FIRST_EVENT] == nil; !isAllPropertiesMissing {
-		return http.StatusOK
-	}
-
-	err := U.FillFirstEventUserProperties(userProperties, event.Timestamp)
-	if err != nil {
-		log.WithField("user_id", event.UserId).WithError(err).Error(
-			"Failed to fill day of first event and hour of first event user properties on enrich after track.")
-		return http.StatusInternalServerError
-	}
-	userPropsJSON, err := json.Marshal(userProperties)
-	if err != nil {
-		log.WithField("user_id", event.UserId).WithError(err).Error(
-			"Failed to marshal existing user properties on enrich after track.")
-		return http.StatusInternalServerError
-	}
-
-	_, errCode := M.UpdateUserProperties(projectId, event.UserId, &postgres.Jsonb{userPropsJSON}, reqTimestamp)
-	if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
-		log.WithFields(log.Fields{"userProperties": userProperties,
-			log.ErrorKey: errCode}).Error("Update user properties failed on enrich after track.")
-		return http.StatusInternalServerError
-	}
-
-	return http.StatusOK
-}
-
 func isRealtimeSessionRequired(skipSession bool, projectId uint64, skipProjectIds []uint64) bool {
 	if skipSession {
 		return false
@@ -662,6 +627,7 @@ func Track(projectId uint64, request *TrackPayload,
 		}
 	}
 
+	var existingUserProperties *map[string]interface{}
 	if request.CreateUser || request.UserId == "" {
 		newUser := &M.User{ProjectId: projectId}
 
@@ -694,14 +660,16 @@ func Track(projectId uint64, request *TrackPayload,
 	} else {
 		// Adding initial user properties if user_id exists,
 		// but initial properties are not. i.e user created on identify.
-		existingUserProperties, errCode := M.GetUserPropertiesAsMap(projectId, request.UserId)
+		existingUserProperties, errCode = M.GetUserPropertiesAsMap(projectId, request.UserId)
 		if errCode != http.StatusFound {
 			logCtx.WithField("user_id", errCode).WithField("err_code",
 				errCode).Error("Tracking failed. Get user properties as map failed.")
 			return errCode, &TrackResponse{Error: "Tracking failed while getting user."}
 		}
 
-		// Is any initial user properties exists already.
+		// Checking any initial user properties exists already.
+		// Initial user properties should not be overwritten,
+		// even if one exists already.
 		initialUserPropertyExists := false
 		for k := range *initialUserProperties {
 			if _, exists := (*existingUserProperties)[k]; exists {
@@ -710,6 +678,9 @@ func Track(projectId uint64, request *TrackPayload,
 			}
 		}
 
+		// UpdateUserProperties takes care merging new properites,
+		// with existing user properites. So setting only the
+		// intialProperites.
 		if !initialUserPropertyExists {
 			userProperties = initialUserProperties
 		}
@@ -752,18 +723,32 @@ func Track(projectId uint64, request *TrackPayload,
 		}
 	}
 
+	if existingUserProperties == nil {
+		existingUserProperties, errCode = M.GetUserPropertiesAsMap(projectId, request.UserId)
+		if errCode == http.StatusInternalServerError {
+			logCtx.WithField("user_id", errCode).WithField("err_code",
+				errCode).Error("Tracking failed. Get user properties as map failed.")
+		}
+	}
+
+	err := U.FillFirstEventUserPropertiesIfNotExist(existingUserProperties, userProperties, request.Timestamp)
+	if err != nil {
+		logCtx.WithError(err).
+			Error("Failed to fill day of first event user_properties on track.")
+	}
+
+	logCtx = logCtx.WithField("user_properties", userProperties)
 	userPropsJSON, err := json.Marshal(userProperties)
 	if err != nil {
-		log.WithFields(log.Fields{"userProperties": userProperties,
-			log.ErrorKey: err}).Error("Update user properites on track failed. JSON marshal failed.")
+		logCtx.WithError(err).Error("Update user properites on track failed. JSON marshal failed.")
 		response.Error = "Failed updating user properties."
 	}
 
 	userPropertiesId, errCode := M.UpdateUserProperties(projectId, request.UserId,
 		&postgres.Jsonb{userPropsJSON}, request.Timestamp)
 	if errCode != http.StatusAccepted && errCode != http.StatusNotModified {
-		log.WithFields(log.Fields{"userProperties": userProperties,
-			log.ErrorKey: errCode}).Error("Update user properties on track failed. DB update failed.")
+		logCtx.WithField("err_code", errCode).
+			Error("Update user properties on track failed. DB update failed.")
 		response.Error = "Failed updating user properties."
 	}
 
@@ -815,19 +800,6 @@ func Track(projectId uint64, request *TrackPayload,
 			CustomerEventId: request.CustomerEventId}
 	} else if errCode != http.StatusCreated {
 		return errCode, &TrackResponse{Error: "Tracking failed. Event creation failed."}
-	}
-
-	existingUserProperties, errCode := M.GetUserPropertiesAsMap(projectId, event.UserId)
-	if errCode != http.StatusFound {
-		log.WithField("err_code", errCode).Error(
-			"Failed to get user properties for adding first event properties on track.")
-	}
-
-	// Todo: Try to use latest user properties, if available already.
-	errCode = enrichAfterTrack(projectId, createdEvent, existingUserProperties, request.Timestamp)
-	if errCode != http.StatusOK {
-		// Logged and skipping failure response on after track enrichement failure.
-		log.WithField("err_code", errCode).Error("Failed to enrich after track.")
 	}
 
 	// Success response.
