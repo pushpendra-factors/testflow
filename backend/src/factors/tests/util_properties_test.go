@@ -63,13 +63,16 @@ func TestFillUserAgentUserProperties(t *testing.T) {
 	assert.NotEqual(t, "Bot", newUserProperties[U.UP_BROWSER])
 }
 
-func TestFillFirstEventUserProperties(t *testing.T) {
-	userProperties := make(map[string]interface{}, 0)
+func TestFillFirstEventUserPropertiesIfNotExist(t *testing.T) {
+	existingUserProperties := make(map[string]interface{}, 0)
+	newUserProperties := make(U.PropertiesMap, 0)
 	eventTimestamp := time.Now().Unix()
-	_ = U.FillFirstEventUserProperties(&userProperties, eventTimestamp)
-	assert.NotNil(t, (userProperties)[U.UP_DAY_OF_FIRST_EVENT])
-	assert.Equal(t, (userProperties)[U.UP_DAY_OF_FIRST_EVENT], time.Unix(eventTimestamp, 0).Weekday().String())
+	_ = U.FillFirstEventUserPropertiesIfNotExist(&existingUserProperties,
+		&newUserProperties, eventTimestamp)
+	assert.NotNil(t, (newUserProperties)[U.UP_DAY_OF_FIRST_EVENT])
+	assert.Equal(t, (newUserProperties)[U.UP_DAY_OF_FIRST_EVENT],
+		time.Unix(eventTimestamp, 0).Weekday().String())
 	hourOfFirstEvent, _, _ := time.Unix(eventTimestamp, 0).Clock()
-	assert.NotNil(t, (userProperties)[U.UP_HOUR_OF_FIRST_EVENT])
-	assert.Equal(t, (userProperties)[U.UP_HOUR_OF_FIRST_EVENT], hourOfFirstEvent)
+	assert.NotNil(t, (newUserProperties)[U.UP_HOUR_OF_FIRST_EVENT])
+	assert.Equal(t, (newUserProperties)[U.UP_HOUR_OF_FIRST_EVENT], hourOfFirstEvent)
 }

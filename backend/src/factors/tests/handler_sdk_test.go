@@ -1840,3 +1840,36 @@ func TestIdentifyUserPropertiesMerge(t *testing.T) {
 	assert.Equal(t, user1DB.PropertiesId, user1DBRetry.PropertiesId)
 	assert.Equal(t, user2DB.PropertiesId, user2DBRetry.PropertiesId)
 }
+
+func TestSDKTrackFirstEventUserProperties(t *testing.T) {
+	project, _, err := SetupProjectUserReturnDAO()
+	assert.Nil(t, err)
+
+	timestamp := U.UnixTimeBeforeDuration(1 * time.Hour)
+	randomEventURL := "https://example.com/" + U.RandomLowerAphaNumString(5)
+	trackPayload := SDK.TrackPayload{
+		Name:      randomEventURL,
+		Timestamp: timestamp,
+	}
+	status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
+	assert.Equal(t, http.StatusOK, status)
+
+	event, errCode := M.GetEventById(project.ID, response.EventId)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.NotNil(t, event)
+	assert.NotEmpty(t, event.UserId)
+	assert.NotEmpty(t, event.UserPropertiesId)
+
+	user, errCode := M.GetUser(project.ID, event.UserId)
+	assert.Equal(t, http.StatusFound, errCode)
+
+	// After first event tracking, the event associated user_properites_id
+	// should be same as lastest user_properties_id of the user.
+	assert.Equal(t, user.PropertiesId, event.UserPropertiesId)
+
+	// Should contain first event properties.
+	userPropertiesMap, err := U.DecodePostgresJsonb(&user.Properties)
+	assert.Nil(t, err)
+	assert.NotEmpty(t, (*userPropertiesMap)[U.UP_DAY_OF_FIRST_EVENT])
+	assert.NotEmpty(t, (*userPropertiesMap)[U.UP_HOUR_OF_FIRST_EVENT])
+}

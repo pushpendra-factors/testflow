@@ -1252,14 +1252,23 @@ func GetPredefinedBinRanges(propertyName string) ([][2]float64, bool) {
 	return predfinedBinRanges, found
 }
 
-func FillFirstEventUserProperties(initialUserProperties *map[string]interface{}, eventTimestamp int64) error {
-	if eventTimestamp != 0 {
-		(*initialUserProperties)[UP_DAY_OF_FIRST_EVENT] = time.Unix(eventTimestamp, 0).Weekday().String()
-		(*initialUserProperties)[UP_HOUR_OF_FIRST_EVENT], _, _ = time.Unix(eventTimestamp, 0).Clock()
-		return nil
-	} else {
-		return errors.New("Filling properties (hour and day) failed. Invalid join time.")
+func FillFirstEventUserPropertiesIfNotExist(existingUserProperties *map[string]interface{},
+	newUserProperties *PropertiesMap, eventTimestamp int64) error {
+
+	if eventTimestamp == 0 {
+		return errors.New("invalid event timestamp")
 	}
+
+	// Should not add first event user properties, even if one of them already available.
+	isAnyFirstEventUserPropertiesExist := existingUserProperties != nil &&
+		((*existingUserProperties)[UP_HOUR_OF_FIRST_EVENT] != nil || (*existingUserProperties)[UP_DAY_OF_FIRST_EVENT] != nil)
+
+	if !isAnyFirstEventUserPropertiesExist {
+		(*newUserProperties)[UP_DAY_OF_FIRST_EVENT] = time.Unix(eventTimestamp, 0).Weekday().String()
+		(*newUserProperties)[UP_HOUR_OF_FIRST_EVENT], _, _ = time.Unix(eventTimestamp, 0).Clock()
+	}
+
+	return nil
 }
 
 // FilterDisabledCoreUserProperties Filters out less important properties from the list.

@@ -1705,7 +1705,7 @@ func TestAnalyticsInsightsQueryWithNumericalBucketing(t *testing.T) {
 		for i := 0; i < 20; i++ {
 			iUser, _ := M.CreateUser(&M.User{ProjectId: project.ID})
 			payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, `+
-				`"event_properties":{"$page_load_time":%d},"user_properties":{"$hour_of_first_event":%d}}`,
+				`"event_properties":{"$page_load_time":%d},"user_properties":{"numerical_property":%d}}`,
 				eventName1, iUser.ID, startTimestamp+10, i, i)
 			w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 			assert.Equal(t, http.StatusOK, w.Code)
@@ -1747,12 +1747,12 @@ func TestAnalyticsInsightsQueryWithNumericalBucketing(t *testing.T) {
 			8 buckets range (1 - 17)  = 1-2, 3-4, 5-6, 7-8, 9-10 ... 15-16
 			new range min-0, { 8 buckets}, 17-max
 
-			User property $hour_of_first_event set as empty ($none).
+			User property numerical_property set as empty ($none).
 			Will create 11 buckets. including 1 $none.
 		*/
 		iUser, _ := M.CreateUser(&M.User{ProjectId: project.ID})
 		payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, `+
-			`"event_properties":{"$page_load_time":%d},"user_properties":{"$hour_of_first_event":""}}`,
+			`"event_properties":{"$page_load_time":%d},"user_properties":{"numerical_property":""}}`,
 			eventName1, iUser.ID, startTimestamp+10, 1)
 		w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 		assert.Equal(t, http.StatusOK, w.Code)
@@ -1770,7 +1770,7 @@ func TestAnalyticsInsightsQueryWithNumericalBucketing(t *testing.T) {
 
 		// Using group by numerical property.
 		query.GroupByProperties[0].Entity = M.PropertyEntityUser
-		query.GroupByProperties[0].Property = "$hour_of_first_event"
+		query.GroupByProperties[0].Property = "numerical_property"
 		result, errCode, _ = M.Analyze(project.ID, query)
 		assert.Equal(t, http.StatusOK, errCode)
 
