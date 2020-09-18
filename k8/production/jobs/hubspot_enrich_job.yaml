@@ -17,7 +17,7 @@ spec:
             cloud.google.com/gke-nodepool: default-pool
           containers:
           - name: hubspot-enrich-job
-            image: us.gcr.io/factors-production/hubspot-enrich-job:v0.62-d2e17c4
+            image: us.gcr.io/factors-production/hubspot-enrich-job:v0.65-e459d3b-664
             imagePullPolicy: IfNotPresent
             args:
             - --env
@@ -36,6 +36,10 @@ spec:
             - $(REDIS_HOST)
             - --redis_port
             - $(REDIS_PORT)
+            - --redis_host_ps
+            - $(PERSISTENT_REDIS_HOST)
+            - --redis_port_ps
+            - $(PERSISTENT_REDIS_PORT)
             - --sentry_dsn
             - $(SENTRY_DSN)
             envFrom:
@@ -49,4 +53,6 @@ spec:
                 name: config-redis
             - secretRef:
                 name: secret-sentry
+            - configMapRef:
+                name: config-persistent-redis
           restartPolicy: OnFailure
