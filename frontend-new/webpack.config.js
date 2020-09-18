@@ -7,7 +7,9 @@ const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPl
 const cssRegex = /\.css$/;
 const cssModuleRegex = /\.module\.css$/;
 const sassRegex = /\.(scss|sass)$/;
-const sassModuleRegex = /\.module\.(scss|sass)$/;
+const sassModuleRegex = /\.module\.(scss|sass)$/; 
+const analyzerArg = JSON.parse(process.env.npm_config_argv); 
+const analyzer = analyzerArg.original.includes('--analyze'); 
 
 const getStyleLoaders = (cssOptions, preProcessor) => {
   const loaders = [
@@ -124,7 +126,9 @@ module.exports = {
     buildConfigPlugin,
     HtmlPlugin,
     new CopyWebpackPlugin([{ from: './src/assets', to: 'assets' }]),
-    // new BundleAnalyzerPlugin(),
+    new BundleAnalyzerPlugin({
+      analyzerMode: analyzer ? 'server' : "disabled", 
+    }),
   ],
   output: {
     path: getBuildPath(),
