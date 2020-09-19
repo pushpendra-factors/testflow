@@ -401,7 +401,7 @@ func BackFillEventDataInCacheFromDb(project_id uint64, currentTime time.Time, no
 	logCtx.Info("Refresh Event Properties Cache Done!!!")
 }
 
-func addEventDetailsToCache(project_id uint64, event_name string, event_properties U.PropertiesMap) {
+func addEventDetailsToCache(project_id uint64, event_name string, event_properties map[string]interface{}) {
 	// TODO: Remove this check after enabling caching realtime.
 	keysToIncr := make([]*cacheRedis.Key, 0)
 	propertiesToIncr := make([]*cacheRedis.Key, 0)
@@ -560,8 +560,6 @@ func Track(projectId uint64, request *TrackPayload,
 	if *projectSettings.ExcludeBot && U.IsBotUserAgent(request.UserAgent) {
 		return http.StatusNotModified, &TrackResponse{Message: "Tracking skipped. Bot request."}
 	}
-
-	addEventDetailsToCache(projectId, request.Name, request.EventProperties)
 
 	var eventName *M.EventName
 	var eventNameErrCode int
@@ -801,6 +799,12 @@ func Track(projectId uint64, request *TrackPayload,
 	} else if errCode != http.StatusCreated {
 		return errCode, &TrackResponse{Error: "Tracking failed. Event creation failed."}
 	}
+
+	createdEventPropertyMap, err := U.DecodePostgresJsonb(&createdEvent.Properties)
+	if err != nil {
+		logCtx.WithError(err).Info("Decode Json blob failed")
+	}
+	addEventDetailsToCache(projectId, eventName.Name, *createdEventPropertyMap)
 
 	// Success response.
 	response.EventId = createdEvent.ID
