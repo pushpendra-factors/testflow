@@ -9,6 +9,7 @@ import (
 	C "factors/config"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
+	"github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -16,7 +17,7 @@ type SalesforceDocument struct {
 	ProjectId uint64           `gorm:"primary_key:true;auto_increment:false" json:"project_id"`
 	ID        string           `gorm:"primary_key:true;auto_increment:false" json:"id"`
 	Type      int              `gorm:"primary_key:true;auto_increment:false" json:"-"`
-	Action    SalesforceAction `gorm:"primary_key:true;auto_increment:false" json:"action"`
+	Action    SalesforceAction `gorm:"auto_increment:false;not null" json:"action"`
 	Timestamp int64            `gorm:"primary_key:true;auto_increment:false" json:"timestamp"`
 	TypeAlias string           `gorm:"-" json:"type_alias"`
 	Value     *postgres.Jsonb  `json:"value"`
@@ -48,6 +49,8 @@ var SalesforceDocumentTypeAlias = map[string]int{
 	SalesforceDocumentTypeNameLead:    SalesforceDocumentTypeLead,
 	SalesforceDocumentTypeNameAccount: SalesforceDocumentTypeAccount,
 }
+
+var errorDuplicateRecord = errors.New("duplicate record")
 
 func getSalesforceDocTypeByAlias(alias string) (int, error) {
 	if alias == "" {
@@ -139,33 +142,48 @@ func CreateSalesforceDocument(projectId uint64, document *SalesforceDocument) in
 	if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
 		return errCode
 	}
+
 	isNew := errCode == http.StatusNotFound
-
-	var timestamp int64
 	if isNew {
-		document.Action = SalesforceDocumentCreated // created
-		timestamp, err = getSalesforceDocumentTimestampByAction(document, SalesforceDocumentCreated)
-	} else {
-		document.Action = SalesforceDocumentUpdated // updated
-		timestamp, err = getSalesforceDocumentTimestampByAction(document, SalesforceDocumentUpdated)
+		err = CreateSalesforceDocumentByAction(projectId, document, SalesforceDocumentCreated)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to create salesforce document.")
+			return http.StatusInternalServerError
+		}
 	}
 
+	err = CreateSalesforceDocumentByAction(projectId, document, SalesforceDocumentUpdated)
 	if err != nil {
-		logCtx.WithField("action", document.Action).WithError(err).Error(
-			"Failed to get timestamp from salesforce document on create.")
-		return http.StatusInternalServerError
-	}
-
-	db := C.GetServices().Db
-	err = db.Create(document).Error
-	if err != nil {
-		//check duplicate recode error
+		if err == errorDuplicateRecord {
+			return http.StatusConflict
+		}
 
 		logCtx.WithError(err).Error("Failed to create salesforce document.")
 		return http.StatusInternalServerError
 	}
 
 	return http.StatusCreated
+}
+
+func CreateSalesforceDocumentByAction(projectId uint64, document *SalesforceDocument, action SalesforceAction) error {
+	document.Action = action
+	timestamp, err := getSalesforceDocumentTimestampByAction(document, action)
+	if err != nil {
+		return err
+	}
+	document.Timestamp = timestamp
+
+	db := C.GetServices().Db
+	err = db.Create(document).Error
+	if err != nil {
+		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code.Name() == "unique_violation" {
+			return errorDuplicateRecord
+		}
+
+		return err
+	}
+
+	return nil
 }
 
 func getSalesforceDocumentTimestampByAction(document *SalesforceDocument, action SalesforceAction) (int64, error) {
@@ -199,11 +217,15 @@ func getSalesforceDocumentTimestampByAction(document *SalesforceDocument, action
 }
 
 func readSalesforceDocumentTimestamp(timestamp interface{}) (int64, error) {
-	if timestampStr, ok := timestamp.(string); ok {
-		if t, err := time.Parse(SalesforceDocumentTimeLayout, timestampStr); err != nil {
-			return t.Unix(), nil
-		}
+	timestampStr, ok := timestamp.(string)
+	if !ok || timestampStr == "" {
+		return 0, errors.New("invalid timestamp")
 	}
 
-	return 0, errors.New("invalid timestamp")
+	t, err := time.Parse(SalesforceDocumentTimeLayout, timestampStr)
+	if err != nil {
+		return 0, err
+	}
+
+	return t.Unix(), nil
 }
