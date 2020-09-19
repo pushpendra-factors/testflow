@@ -57,6 +57,8 @@ func getAdwordsIdFieldNameByType(docType int) string {
 		return "query"
 	case 9: // customer_account_properties
 		return "customer_id"
+	case 10: // ad_group_performance_report
+		return "ad_group_id"
 	default: // others
 		return "id"
 	}
