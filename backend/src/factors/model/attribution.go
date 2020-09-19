@@ -318,11 +318,11 @@ func getCoalesceUsersFromList(userIdsWithSession []string, projectId uint64) (ma
 		queryUserIdCoalId := "SELECT id, COALESCE(users.customer_user_id,users.id) AS coal_user_id, " +
 			" properties_id FROM users WHERE id = ANY (VALUES " + placeHolder + " )"
 		rows, err := db.Raw(queryUserIdCoalId, value...).Rows()
-		defer rows.Close()
 		if err != nil {
 			logCtx.WithError(err).Error("SQL Query failed for getUserInitialSession")
 			return nil, err
 		}
+		defer rows.Close()
 		for rows.Next() {
 			var userId string
 			var coalesceId string
@@ -475,7 +475,17 @@ func getEventInformation(projectId uint64, query *AttributionQuery) (uint64, map
 	// there exists only one session event name per project
 	if len(eventNameToId[U.EVENT_NAME_SESSION]) == 0 {
 		logCtx.Error("$Session Name Id not found")
-		return 0, nil, nil
+		return 0, nil, errors.New("$Session Name Id not found")
+	}
+	if len(eventNameToId[query.ConversionEvent.Name]) == 0 {
+		logCtx.Error("conversion event name : " + query.ConversionEvent.Name + " not found")
+		return 0, nil, errors.New("conversion event name : " + query.ConversionEvent.Name + " not found")
+	}
+	for _, linkedEvent := range query.LinkedEvents {
+		if len(eventNameToId[linkedEvent.Name]) == 0 {
+			logCtx.Error("linked event name : " + linkedEvent.Name + " not found")
+			return 0, nil, errors.New("linked event name : " + linkedEvent.Name + " not found")
+		}
 	}
 	sessionEventNameId := eventNameToId[U.EVENT_NAME_SESSION][0].(uint64)
 	return sessionEventNameId, eventNameToId, nil
@@ -518,11 +528,11 @@ func getLinkedFunnelEventUsers(projectId uint64, query *AttributionQuery, eventN
 			}
 			// fetch query results
 			rows, err := db.Raw(queryEventHits, qParams...).Rows()
-			defer rows.Close()
 			if err != nil {
 				logCtx.WithError(err).Error("SQL Query failed for queryEventHits")
 				return err
 			}
+			defer rows.Close()
 			for rows.Next() {
 				var userID string
 				if err = rows.Scan(&userID); err != nil {
@@ -589,11 +599,11 @@ func applyUserPropertiesFilter(projectId uint64, userIdList []string, userIdInfo
 			qParams = append(qParams, wParams...)
 		}
 		rows, err := db.Raw(queryUserIdCoalId, qParams...).Rows()
-		defer rows.Close()
 		if err != nil {
 			logCtx.WithError(err).Error("SQL Query failed for getUserInitialSession")
 			return nil, err
 		}
+		defer rows.Close()
 		for rows.Next() {
 			var userId string
 			if err = rows.Scan(&userId); err != nil {
@@ -637,11 +647,11 @@ func getConvertedUsers(projectId uint64, query *AttributionQuery, eventNameToIdL
 	}
 	// fetch query results
 	rows, err := db.Raw(queryEventHits, qParams...).Rows()
-	defer rows.Close()
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed for queryEventHits")
 		return nil, err
 	}
+	defer rows.Close()
 	var userIdList []string
 	userIdHitEvent := make(map[string]bool)
 	for rows.Next() {
