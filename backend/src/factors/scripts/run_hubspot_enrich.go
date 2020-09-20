@@ -61,6 +61,7 @@ func main() {
 	}
 
 	C.InitConf(config.Env)
+	C.InitEventUserRealTimeCachingConfig(config.IsRealTimeEventUserCachingEnabled, config.RealTimeEventUserCachingProjectIds)
 
 	err := C.InitDB(config.DBInfo)
 	if err != nil {

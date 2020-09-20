@@ -25,6 +25,8 @@ func main() {
 
 	redisHost := flag.String("redis_host", "localhost", "")
 	redisPort := flag.Int("redis_port", 6379, "")
+	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
+	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
 
 	// projectIds: supports * (asterisk) for all projects.
 	projectIds := flag.String("project_ids", "", "Allowed projects to create sessions offline.")
@@ -34,6 +36,8 @@ func main() {
 	bufferTimeBeforeCreateSessionInMins := flag.Int64("buffer_time_in_mins", 30, "Buffer time to wait before processing an event for session.")
 
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
+	isRealTimeEventUserCachingEnabled := flag.Bool("enable_real_time_event_user_caching", false, "If the real time caching is enabled")
+	realTimeEventUserCachingProjectIds := flag.String("real_time_event_user_caching_project_ids", "", "If the real time caching is enabled and the whitelisted projectids")
 
 	flag.Parse()
 
@@ -57,12 +61,17 @@ func main() {
 			Name:     *dbName,
 			Password: *dbPass,
 		},
-		RedisHost: *redisHost,
-		RedisPort: *redisPort,
-		SentryDSN: *sentryDSN,
+		RedisHost:                          *redisHost,
+		RedisPort:                          *redisPort,
+		RedisHostPersistent:                *redisHostPersistent,
+		RedisPortPersistent:                *redisPortPersistent,
+		SentryDSN:                          *sentryDSN,
+		IsRealTimeEventUserCachingEnabled:  *isRealTimeEventUserCachingEnabled,
+		RealTimeEventUserCachingProjectIds: *realTimeEventUserCachingProjectIds,
 	}
 
 	C.InitConf(config.Env)
+	C.InitEventUserRealTimeCachingConfig(config.IsRealTimeEventUserCachingEnabled, config.RealTimeEventUserCachingProjectIds)
 
 	// Will allow all 50/50 connection to be idle on the pool.
 	// As we allow num_routines (per project) as per no.of db connections
@@ -74,7 +83,7 @@ func main() {
 
 	// Cache dependency for requests not using queue.
 	C.InitRedis(config.RedisHost, config.RedisPort)
-
+	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
 	C.InitSentryLogging(config.SentryDSN, config.AppName)
 	defer C.SafeFlushSentryHook()
 

@@ -252,6 +252,11 @@ func InitConf(env string) {
 	}
 }
 
+func InitEventUserRealTimeCachingConfig(isEnabled bool, projectIds string) {
+	configuration.IsRealTimeEventUserCachingEnabled = isEnabled
+	configuration.RealTimeEventUserCachingProjectIds = projectIds
+}
+
 func InitEtcd(EtcdEndpoints []string) error {
 	etcdClient, err := serviceEtcd.New(EtcdEndpoints)
 	if err != nil {
