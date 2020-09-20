@@ -686,12 +686,6 @@ func Track(projectId uint64, request *TrackPayload,
 		return errCode, &TrackResponse{Error: "Tracking failed. Event creation failed."}
 	}
 
-	createdEventPropertyMap, err := U.DecodePostgresJsonb(&createdEvent.Properties)
-	if err != nil {
-		logCtx.WithError(err).Info("Decode Json blob failed")
-	}
-	addEventDetailsToCache(projectId, eventName.Name, *createdEventPropertyMap)
-
 	// Success response.
 	response.EventId = createdEvent.ID
 	response.Message = "User event tracked successfully."
