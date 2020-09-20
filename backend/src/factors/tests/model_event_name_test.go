@@ -550,7 +550,7 @@ func TestDBGetEventNamesOrderedByOccurrenceWithLimit(t *testing.T) {
 	// with limit.
 	getEventNames1, err := M.GetEventNamesOrderedByOccurenceAndRecency(project.ID, 10, 30)
 	assert.Equal(t, nil, err)
-	assert.Len(t, getEventNames1, 3)
+	assert.Len(t, getEventNames1, 4)
 
 	rEventName = "event2"
 	w = ServePostRequestWithHeaders(r, uri,
@@ -565,5 +565,6 @@ func TestDBGetEventNamesOrderedByOccurrenceWithLimit(t *testing.T) {
 	getEventNames2, err := M.GetEventNamesOrderedByOccurenceAndRecency(project.ID, 2, 30)
 	assert.Equal(t, nil, err)
 	assert.Len(t, getEventNames2, 2)
-	assert.Equal(t, "event2", getEventNames2[0])
+	assert.Equal(t, "$session", getEventNames2[0])
+	assert.Equal(t, "event2", getEventNames2[1])
 }

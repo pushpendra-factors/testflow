@@ -134,5 +134,5 @@ func TestGetEventNamesHandler(t *testing.T) {
 	jsonResponse, _ = ioutil.ReadAll(w.Body)
 	json.Unmarshal(jsonResponse, &eventNames)
 	// should contain all event names.
-	assert.Len(t, eventNames.EventNames, 2)
+	assert.Len(t, eventNames.EventNames, 3)
 }
