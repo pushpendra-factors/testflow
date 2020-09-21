@@ -93,3 +93,12 @@
 }
  
 
+a.fa-anchor{
+    color:$fa-color--brand-color; 
+    text-decoration: underline;
+    font-weight: $font-weight--bold;
+    &:hover,&:active,&:focus{
+        text-decoration: underline;
+        color:$fa-color--brand-color;  
+    }
+}

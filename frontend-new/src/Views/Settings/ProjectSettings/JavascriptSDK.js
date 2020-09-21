@@ -33,7 +33,7 @@ const ViewSetup = () => {
             </pre>
           </Col>
           <Col span={24}>
-            <Text type={'paragraph'} extraClass={'m-0 mt-2'}>For detailed instructions on how to install and initialize the JavaScript SDK please refer to our <a href="#!">JavaScript developer documentation.</a></Text>
+            <Text type={'paragraph'} extraClass={'m-0 mt-2'}>For detailed instructions on how to install and initialize the JavaScript SDK please refer to our <a className={`fa-anchor`} href="#!">JavaScript developer documentation.</a></Text>
           </Col>
     </Row>
   );
