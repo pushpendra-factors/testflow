@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Row, Col, Menu
 } from 'antd';
 import { Text } from 'factorsComponents';
 import ViewProjectSettings from './ViewProjectSettings';
+import JavascriptSDK from './JavascriptSDK';
 
 const MenuTabs = {
   generalSettings: 'General Settings',
@@ -14,14 +15,13 @@ const MenuTabs = {
 };
 
 function UserSettingsModal() {
-  // const [selectedMenu, setSelectedMenu] = useState(MenuTabs.accounts);
+  const [selectedMenu, setSelectedMenu] = useState(MenuTabs.generalSettings);
   // const [editPasswordModal, setPasswordModal] = useState(false);
   // const [editDetailsModal, setDetailsModal] = useState(false);
   // const [confirmLoading, setConfirmLoading] = useState(false);
 
-  const handleClick = () => {
-    // setSelectedMenu(e.key);
-    // console.log('click ', e.key);
+  const handleClick = (e) => {
+    setSelectedMenu(e.key);
   };
 
   // const handleOk = () => {
@@ -62,10 +62,15 @@ function UserSettingsModal() {
           </Col>
           <Col span={15}>
 
+          {selectedMenu === MenuTabs.generalSettings &&
             <ViewProjectSettings
               // editDetails={() => setDetailsModal(true)}
               // editPassword={() => setPasswordModal(true)}
             />
+          }
+          {selectedMenu === MenuTabs.SDK &&
+            <JavascriptSDK />
+          }
 
           </Col>
         </Row>

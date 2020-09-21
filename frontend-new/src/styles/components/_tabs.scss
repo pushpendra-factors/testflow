@@ -1,0 +1,20 @@
+.ant-tabs {
+    &.ant-tabs-top{
+        .ant-tabs-tab-btn
+        {
+            font-weight: $font-weight--regular;
+            color: $fa-color--mono-5;
+            font-size: 16px;
+        }
+        .ant-tabs-tab-active{
+            .ant-tabs-tab-btn
+            { 
+                color:$fa-color--brand-color; 
+            } 
+        }
+        .ant-tabs-ink-bar
+        {
+            background: $fa-color--brand-color;
+        }
+    } 
+}
