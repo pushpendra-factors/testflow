@@ -40,36 +40,35 @@ const ViewSetup = () => {
 };
 
 const JSConfig = () => {
-  return(
+  return (
     <Row>
     <Col span={24}>
-      <div span={24} className={`flex flex-start items-center mt-2`}>
-        <Switch checkedChildren="On" unCheckedChildren="OFF" defaultChecked /> <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>Auto-track</Text> 
+      <div span={24} className={'flex flex-start items-center mt-2'}>
+        <Switch checkedChildren="On" unCheckedChildren="OFF" defaultChecked /> <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>Auto-track</Text>
       </div>
     </Col>
-    <Col span={24} className={`flex flex-start items-center`}>
-      <Text type={'paragraph'} extraClass={'m-0 mt-2'} color={`grey`}>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam.</Text> 
+    <Col span={24} className={'flex flex-start items-center'}>
+      <Text type={'paragraph'} extraClass={'m-0 mt-2'} color={'grey'}>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam.</Text>
     </Col>
     <Col span={24}>
-      <div span={24} className={`flex flex-start items-center mt-8`}>
-        <Switch checkedChildren="On" unCheckedChildren="OFF" defaultChecked /> <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>Exclude Bot</Text> 
+      <div span={24} className={'flex flex-start items-center mt-8'}>
+        <Switch checkedChildren="On" unCheckedChildren="OFF" defaultChecked /> <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>Exclude Bot</Text>
       </div>
     </Col>
-    <Col span={24} className={`flex flex-start items-center`}>
-      <Text type={'paragraph'} extraClass={'m-0 mt-2'} color={`grey`}>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam.</Text> 
+    <Col span={24} className={'flex flex-start items-center'}>
+      <Text type={'paragraph'} extraClass={'m-0 mt-2'} color={'grey'}>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam.</Text>
     </Col>
     <Col span={24}>
-      <div span={24} className={`flex flex-start items-center mt-8`}>
-        <Switch checkedChildren="On" unCheckedChildren="OFF"  /> <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>Auto Form Capture</Text> 
+      <div span={24} className={'flex flex-start items-center mt-8'}>
+        <Switch checkedChildren="On" unCheckedChildren="OFF" /> <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>Auto Form Capture</Text>
       </div>
     </Col>
-    <Col span={24} className={`flex flex-start items-center`}>
-      <Text type={'paragraph'} extraClass={'m-0 mt-2'} color={`grey`}>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam.</Text> 
+    <Col span={24} className={'flex flex-start items-center'}>
+      <Text type={'paragraph'} extraClass={'m-0 mt-2'} color={'grey'}>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam.</Text>
     </Col>
     </Row>
-  )
-}
-
+  );
+};
 
 function EditUserDetails() {
   const [dataLoading, setDataLoading] = useState(true);
