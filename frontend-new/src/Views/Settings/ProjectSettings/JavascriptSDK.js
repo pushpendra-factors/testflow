@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Row, Col, Skeleton, Tabs
+  Row, Col, Skeleton, Tabs, Switch
 } from 'antd';
 import { Text } from 'factorsComponents';
 const { TabPane } = Tabs;
@@ -39,6 +39,38 @@ const ViewSetup = () => {
   );
 };
 
+const JSConfig = () => {
+  return(
+    <Row>
+    <Col span={24}>
+      <div span={24} className={`flex flex-start items-center mt-2`}>
+        <Switch checkedChildren="On" unCheckedChildren="OFF" defaultChecked /> <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>Auto-track</Text> 
+      </div>
+    </Col>
+    <Col span={24} className={`flex flex-start items-center`}>
+      <Text type={'paragraph'} extraClass={'m-0 mt-2'} color={`grey`}>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam.</Text> 
+    </Col>
+    <Col span={24}>
+      <div span={24} className={`flex flex-start items-center mt-8`}>
+        <Switch checkedChildren="On" unCheckedChildren="OFF" defaultChecked /> <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>Exclude Bot</Text> 
+      </div>
+    </Col>
+    <Col span={24} className={`flex flex-start items-center`}>
+      <Text type={'paragraph'} extraClass={'m-0 mt-2'} color={`grey`}>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam.</Text> 
+    </Col>
+    <Col span={24}>
+      <div span={24} className={`flex flex-start items-center mt-8`}>
+        <Switch checkedChildren="On" unCheckedChildren="OFF"  /> <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>Auto Form Capture</Text> 
+      </div>
+    </Col>
+    <Col span={24} className={`flex flex-start items-center`}>
+      <Text type={'paragraph'} extraClass={'m-0 mt-2'} color={`grey`}>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam.</Text> 
+    </Col>
+    </Row>
+  )
+}
+
+
 function EditUserDetails() {
   const [dataLoading, setDataLoading] = useState(true);
 
@@ -68,7 +100,7 @@ function EditUserDetails() {
                   <ViewSetup />
                 </TabPane>
                 <TabPane tab="Configuration" key="2">
-                  Configuration content comes here..
+                  <JSConfig />
                 </TabPane>
               </Tabs>
             }
