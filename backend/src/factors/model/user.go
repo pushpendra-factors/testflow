@@ -561,7 +561,7 @@ func GetRecentUserPropertyKeysWithLimits(projectID uint64, usersLimit int, prope
 	endTime := U.TimeNowUnix()
 	logCtx := log.WithField("project_id", projectID)
 	queryStr := " WITH recent_users AS (SELECT DISTINCT ON(user_id) user_id, user_properties_id FROM events " +
-		"WHERE project_id = ? AND timestamp > ? AND timestamp < ? ORDER BY user_id, timestamp DESC LIMIT ?) " +
+		"WHERE project_id = ? AND timestamp > ? AND timestamp <= ? ORDER BY user_id, timestamp DESC LIMIT ?) " +
 		"SELECT json_object_keys(user_properties.properties::json) AS key, COUNT(*) AS count, MAX(updated_timestamp) as last_seen FROM recent_users " +
 		"LEFT OUTER JOIN user_properties ON recent_users.user_properties_id = user_properties.id  " +
 		"WHERE user_properties.project_id = ? AND user_properties.properties != 'null' GROUP BY key ORDER BY count DESC LIMIT ?;"
@@ -595,7 +595,7 @@ func GetRecentUserPropertyValuesWithLimits(projectID uint64, propertyKey string,
 	endTime := U.TimeNowUnix()
 	db := C.GetServices().Db
 	queryStmnt := " WITH recent_users AS (SELECT DISTINCT ON(user_id) user_id, user_properties_id FROM events " +
-		"WHERE project_id = ? AND timestamp > ? AND timestamp < ? ORDER BY user_id, timestamp DESC LIMIT ?) " +
+		"WHERE project_id = ? AND timestamp > ? AND timestamp <= ? ORDER BY user_id, timestamp DESC LIMIT ?) " +
 		"SELECT user_properties.properties->? AS value, COUNT(*) AS count, MAX(updated_timestamp) AS last_seen, MAX(jsonb_typeof(user_properties.properties->?)) AS value_type FROM recent_users " +
 		"LEFT JOIN user_properties ON recent_users.user_properties_id = user_properties.id WHERE user_properties.project_id = ? " +
 		"AND user_properties.properties != 'null' AND user_properties.properties->? IS NOT NULL GROUP BY value limit ?;"

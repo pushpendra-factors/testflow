@@ -42,7 +42,12 @@ func GetEventNamesHandler(c *gin.Context) {
 	if helpers.IsProjectWhitelistedForEventUserCache(projectId) {
 		// RedisGet is the only call. In case of Cache crash, job will be manually triggered to repopulate cache
 		// No fallback for now.
-		eventNames, err := M.GetEventNamesOrderedByOccurenceAndRecency(projectId, 2500, 10)
+		requestType := c.Query("type")
+		if requestType != M.EVENT_NAME_REQUEST_TYPE_APPROX && requestType != M.EVENT_NAME_REQUEST_TYPE_EXACT {
+			c.AbortWithStatus(http.StatusBadRequest)
+			return
+		}
+		eventNames, err := M.GetEventNamesOrderedByOccurenceAndRecency(projectId, 2500, 10, requestType)
 		if err != nil {
 			logCtx.WithError(err).Error("get event names ordered by occurence and recency")
 			c.AbortWithStatus(http.StatusInternalServerError)

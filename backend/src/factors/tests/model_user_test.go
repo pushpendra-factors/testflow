@@ -2,13 +2,16 @@ package tests
 
 import (
 	"encoding/json"
+	H "factors/handler"
 	M "factors/model"
 	U "factors/util"
+	"fmt"
 	"math"
 	"net/http"
 	"testing"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/stretchr/testify/assert"
 )
@@ -440,83 +443,105 @@ func TestDBCreateOrGetSegmentUser(t *testing.T) {
 	assert.Equal(t, custId2, user7.CustomerUserId)
 }
 
-/*func TestGetRecentUserPropertyKeys(t *testing.T) {
+func TestGetRecentUserPropertyKeys(t *testing.T) {
+	r := gin.Default()
 	project, err := SetupProjectReturnDAO()
+	H.InitSDKServiceRoutes(r)
 	assert.Nil(t, err)
 
+	// Test successful CreateEvent.
 	props1 := json.RawMessage(`{"prop1": "value1", "prop2": 1}`)
-	_, errCode1 := M.CreateUser(&M.User{ProjectId: project.ID, Properties: postgres.Jsonb{props1}})
-	assert.Equal(t, http.StatusCreated, errCode1)
 	props2 := json.RawMessage(`{"prop3": "value2", "prop4": 2}`)
-	_, errCode2 := M.CreateUser(&M.User{ProjectId: project.ID, Properties: postgres.Jsonb{props2}})
+	user1, errCode1 := M.CreateUser(&M.User{ProjectId: project.ID, Properties: postgres.Jsonb{props1}})
+	user2, errCode2 := M.CreateUser(&M.User{ProjectId: project.ID, Properties: postgres.Jsonb{props2}})
+	assert.Equal(t, http.StatusCreated, errCode1)
 	assert.Equal(t, http.StatusCreated, errCode2)
 
-	props, err := M.GetRecentUserPropertyKeysWithLimits(project.ID, 10, 10)
+	uri := "/sdk/event/track"
+
+	_ = ServePostRequestWithHeaders(r, uri,
+		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"prop1": "value1", "prop2": 1}}`, user1.ID, "e1")),
+		map[string]string{
+			"Authorization": project.Token,
+			"User-Agent":    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
+		})
+
+	_ = ServePostRequestWithHeaders(r, uri,
+		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"prop3": "value2", "prop4": 2}}`, user2.ID, "e2")),
+		map[string]string{
+			"Authorization": project.Token,
+			"User-Agent":    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
+		})
+
+	props, err := M.GetRecentUserPropertyKeysWithLimits(project.ID, 10, 100)
 	assert.Equal(t, nil, err)
 	propertyMap := make(map[string]bool)
 	for _, property := range props {
 		propertyMap[property.Key] = true
 	}
+	fmt.Println(props)
 	assert.Equal(t, propertyMap["prop1"], true)
 	assert.Equal(t, propertyMap["prop2"], true)
 	assert.Equal(t, propertyMap["prop3"], true)
 	assert.Equal(t, propertyMap["prop4"], true)
 
 	// recent users limited to 1.
-	props, err = M.GetRecentUserPropertyKeysWithLimits(project.ID, 1, 10)
+	props, err = M.GetRecentUserPropertyKeysWithLimits(project.ID, 1, 100)
 	assert.Equal(t, nil, err)
 	propertyMap = make(map[string]bool)
 	for _, property := range props {
 		propertyMap[property.Key] = true
 	}
-	assert.Equal(t, propertyMap["prop1"], false)
-	assert.Equal(t, propertyMap["prop2"], false)
-	assert.Equal(t, propertyMap["prop3"], true)
-	assert.Equal(t, propertyMap["prop4"], true)
+	fmt.Println(props)
+	user1Prop := propertyMap["prop1"] == true && propertyMap["prop2"] == true
+	user2Prop := propertyMap["prop3"] == true && propertyMap["prop4"] == true
+	assert.Equal(t, user1Prop || user2Prop, true)
+	assert.Equal(t, user1Prop && user2Prop, false)
 
-}*/
+}
 
-/*func TestGetRecentUserPropertyValues(t *testing.T) {
+func TestGetRecentUserPropertyValues(t *testing.T) {
+	r := gin.Default()
 	project, err := SetupProjectReturnDAO()
+	H.InitSDKServiceRoutes(r)
 	assert.Nil(t, err)
 
-	props1 := json.RawMessage(`{"prop3": "value1", "prop4": 1}`)
-	_, errCode1 := M.CreateUser(&M.User{ProjectId: project.ID, Properties: postgres.Jsonb{props1}})
-	assert.Equal(t, http.StatusCreated, errCode1)
+	// Test successful CreateEvent.
+	props1 := json.RawMessage(`{"prop1": "value1", "prop2": 1}`)
 	props2 := json.RawMessage(`{"prop3": "value2", "prop4": 2}`)
-	_, errCode2 := M.CreateUser(&M.User{ProjectId: project.ID, Properties: postgres.Jsonb{props2}})
+	user1, errCode1 := M.CreateUser(&M.User{ProjectId: project.ID, Properties: postgres.Jsonb{props1}})
+	user2, errCode2 := M.CreateUser(&M.User{ProjectId: project.ID, Properties: postgres.Jsonb{props2}})
+	assert.Equal(t, http.StatusCreated, errCode1)
 	assert.Equal(t, http.StatusCreated, errCode2)
-	// different user with same properties as previous and different values.
-	props3 := json.RawMessage(`{"prop3": "value3", "prop4": 3}`)
-	_, errCode3 := M.CreateUser(&M.User{ProjectId: project.ID, Properties: postgres.Jsonb{props3}})
-	assert.Equal(t, http.StatusCreated, errCode3)
+
+	uri := "/sdk/event/track"
+
+	_ = ServePostRequestWithHeaders(r, uri,
+		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"prop1": "value1", "prop2": 1}}`, user1.ID, "e1")),
+		map[string]string{
+			"Authorization": project.Token,
+			"User-Agent":    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
+		})
+
+	_ = ServePostRequestWithHeaders(r, uri,
+		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"prop3": "value2", "prop4": 2}}`, user2.ID, "e2")),
+		map[string]string{
+			"Authorization": project.Token,
+			"User-Agent":    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
+		})
 
 	t.Run("RecentPropertyValuesLimitedByUsers", func(t *testing.T) {
-		// recent users limited to 2.
-		values, category, err := M.GetRecentUserPropertyValuesWithLimits(project.ID, "prop3", 2, 100)
+		values, category, err := M.GetRecentUserPropertyValuesWithLimits(project.ID, "prop4", 10, 100)
 		assert.Equal(t, nil, err)
-		assert.Len(t, values, 2)
+		assert.Len(t, values, 1)
 		valuesMap := make(map[string]bool)
 		for _, value := range values {
 			valuesMap[value.Value] = true
 		}
-		assert.Equal(t, valuesMap["value1"], false)
-		assert.Equal(t, valuesMap["value2"], true)
-		assert.Equal(t, valuesMap["value3"], true)
-		assert.Equal(t, category, U.PropertyTypeCategorical)
-		values, category, err = M.GetRecentUserPropertyValuesWithLimits(project.ID, "prop4", 10, 100)
-		assert.Equal(t, nil, err)
-		assert.Len(t, values, 3)
-		valuesMap = make(map[string]bool)
-		for _, value := range values {
-			valuesMap[value.Value] = true
-		}
-		assert.Equal(t, valuesMap["1"], true)
 		assert.Equal(t, valuesMap["2"], true)
-		assert.Equal(t, valuesMap["3"], true)
 		assert.Equal(t, category, U.PropertyTypeNumerical)
 	})
-}*/
+}
 
 func TestFillFormSubmitEventUserProperties(t *testing.T) {
 	project, err := SetupProjectReturnDAO()

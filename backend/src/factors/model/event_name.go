@@ -619,7 +619,7 @@ func aggregateEventsAcrossDate(events []CacheEventNamesWithTimestamp) []U.NameCo
 
 //GetEventNamesOrderedByOccurenceAndRecency This method iterates for last n days to get all the top 'limit' events for the given project
 // Picks all last 24 hours events and sorts the remaining by occurence and returns top 'limit' events
-func GetEventNamesOrderedByOccurenceAndRecency(projectID uint64, limit int, lastNDays int) ([]string, error) {
+func GetEventNamesOrderedByOccurenceAndRecency(projectID uint64, limit int, lastNDays int, requestType string) ([]string, error) {
 	currentDate := time.Now().UTC()
 	if projectID == 0 {
 		return []string{}, errors.New("invalid project on get event names ordered by occurence and recency")
@@ -627,7 +627,7 @@ func GetEventNamesOrderedByOccurenceAndRecency(projectID uint64, limit int, last
 	events := make([]CacheEventNamesWithTimestamp, 0)
 	for i := 0; i < lastNDays; i++ {
 		currentDateOnlyFormat := currentDate.AddDate(0, 0, -i).Format(U.DATETIME_FORMAT_YYYYMMDD)
-		event, err := getEventNamesOrderedByOccurenceAndRecencyFromCache(projectID, currentDateOnlyFormat)
+		event, err := getEventNamesOrderedByOccurenceAndRecencyFromCache(projectID, currentDateOnlyFormat, requestType)
 		if err != nil {
 			return []string{}, err
 		}
@@ -651,7 +651,7 @@ func GetEventNamesOrderedByOccurenceAndRecency(projectID uint64, limit int, last
 	return eventStrings, nil
 }
 
-func getEventNamesOrderedByOccurenceAndRecencyFromCache(projectID uint64, dateKey string) (CacheEventNamesWithTimestamp, error) {
+func getEventNamesOrderedByOccurenceAndRecencyFromCache(projectID uint64, dateKey string, requestType string) (CacheEventNamesWithTimestamp, error) {
 	currentDay := false
 	currentDate := U.GetDateOnlyFromTimestamp(U.TimeNowUnix())
 	if currentDate == dateKey {
@@ -682,34 +682,37 @@ func getEventNamesOrderedByOccurenceAndRecencyFromCache(projectID uint64, dateKe
 		return cacheEventNames, nil
 	}
 
-	eventNamesKey, err := GetEventNamesOrderByOccurrenceAndRecencyCacheKey(projectID, "*", dateKey)
+	if requestType == EVENT_NAME_REQUEST_TYPE_EXACT {
+		eventNamesKey, err := GetEventNamesOrderByOccurrenceAndRecencyCacheKey(projectID, "*", dateKey)
 
-	if err != nil {
-		return CacheEventNamesWithTimestamp{}, err
-	}
-	eventNamesKeyString, err := eventNamesKey.Key()
-	if err != nil {
-		return CacheEventNamesWithTimestamp{}, err
-	}
-	begin := U.TimeNow()
-	eventNameKeys, err := cacheRedis.ScanPersistent(eventNamesKeyString, 1000, 2500)
-	end := U.TimeNow()
-	logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("E:Scan")
-	if err != nil {
-		return CacheEventNamesWithTimestamp{}, err
-	}
+		if err != nil {
+			return CacheEventNamesWithTimestamp{}, err
+		}
+		eventNamesKeyString, err := eventNamesKey.Key()
+		if err != nil {
+			return CacheEventNamesWithTimestamp{}, err
+		}
+		begin := U.TimeNow()
+		eventNameKeys, err := cacheRedis.ScanPersistent(eventNamesKeyString, 1000, 2500)
+		end := U.TimeNow()
+		logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("E:Scan")
+		if err != nil {
+			return CacheEventNamesWithTimestamp{}, err
+		}
 
-	if len(eventNameKeys) <= 0 {
-		return CacheEventNamesWithTimestamp{}, err
+		if len(eventNameKeys) <= 0 {
+			return CacheEventNamesWithTimestamp{}, err
+		}
+		begin = U.TimeNow()
+		events, err := cacheRedis.MGetPersistent(eventNameKeys...)
+		end = U.TimeNow()
+		logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("E:Mget")
+		if err != nil {
+			return CacheEventNamesWithTimestamp{}, err
+		}
+		return GetCacheEventObject(eventNameKeys, events), nil
 	}
-	begin = U.TimeNow()
-	events, err := cacheRedis.MGetPersistent(eventNameKeys...)
-	end = U.TimeNow()
-	logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("E:Mget")
-	if err != nil {
-		return CacheEventNamesWithTimestamp{}, err
-	}
-	return GetCacheEventObject(eventNameKeys, events), nil
+	return CacheEventNamesWithTimestamp{}, nil
 }
 
 func GetCacheEventObject(events []*cacheRedis.Key, eventCounts []string) CacheEventNamesWithTimestamp {
