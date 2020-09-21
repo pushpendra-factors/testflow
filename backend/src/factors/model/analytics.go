@@ -7,6 +7,7 @@ import (
 	U "factors/util"
 	"fmt"
 	"net/http"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -175,6 +176,8 @@ var groupByTimestampTypes = []string{
 
 // UserPropertyGroupByPresent Sent from frontend for breakdown on latest user property.
 const UserPropertyGroupByPresent string = "$present"
+
+var trailingZeroRegex = regexp.MustCompile(`\.0\b`)
 
 func (query *Query) GetGroupByTimestamp() string {
 	switch query.GroupByTimestamp.(type) {
@@ -435,8 +438,8 @@ func appendNumericalBucketingSteps(qStmnt *string, groupProps []QueryGroupByProp
 
 		// Adding _group_key_x_bounds step.
 		boundsStepName := groupKey + "_bounds"
-		boundsStatement := fmt.Sprintf("SELECT percentile_disc(0.1) WITHIN GROUP(ORDER BY %s::float desc) AS ubound, "+
-			"percentile_disc(0.9) WITHIN GROUP(ORDER BY %s::float desc) AS lbound FROM %s "+
+		boundsStatement := fmt.Sprintf("SELECT percentile_disc(0.1) WITHIN GROUP(ORDER BY %s::numeric desc) AS ubound, "+
+			"percentile_disc(0.9) WITHIN GROUP(ORDER BY %s::numeric desc) AS lbound FROM %s "+
 			"WHERE %s != '%s'", groupKey, groupKey, refStepName, groupKey, PropertyValueNone)
 		boundsStatement = as(boundsStepName, boundsStatement)
 		*qStmnt = joinWithComma(*qStmnt, boundsStatement)
@@ -446,14 +449,14 @@ func appendNumericalBucketingSteps(qStmnt *string, groupProps []QueryGroupByProp
 
 		// Adding width_bucket for each record, keeping -1 for $none.
 		bucketKey := groupKey + "_bucket"
-		stepBucket := fmt.Sprintf("CASE WHEN %s = '%s' THEN -1 ELSE width_bucket(%s::float, %s.lbound::float, "+
-			"COALESCE(NULLIF(%s.ubound, %s.lbound), %s.ubound+1)::float, %d) END AS %s, ",
+		stepBucket := fmt.Sprintf("CASE WHEN %s = '%s' THEN -1 ELSE width_bucket(%s::numeric, %s.lbound::numeric, "+
+			"COALESCE(NULLIF(%s.ubound, %s.lbound), %s.ubound+1)::numeric, %d) END AS %s, ",
 			groupKey, PropertyValueNone, groupKey, boundsStepName, boundsStepName,
 			boundsStepName, boundsStepName, NumericalGroupByBuckets-2, bucketKey)
 
 		// Creating bucket string to be used in group by. Also, replacing NaN-Nan to $none.
 		aggregateSelectKeys = aggregateSelectKeys + fmt.Sprintf(
-			"COALESCE(NULLIF(concat(min(%s::float), '-', max(%s::float)), 'NaN-NaN'), '%s') AS %s, ",
+			"COALESCE(NULLIF(concat(round(min(%s::numeric), 1), ' - ', round(max(%s::numeric), 1)), 'NaN - NaN'), '%s') AS %s, ",
 			groupKey, groupKey, PropertyValueNone, groupKey)
 		bucketedSelect = bucketedSelect + noneToNaN + stepBucket
 		boundStepNames = append(boundStepNames, boundsStepName)
@@ -992,21 +995,21 @@ all_users_intersect AS (SELECT events_intersect.event_user_id, CASE WHEN user_pr
 _group_key_1, _group_key_2, _group_key_3 FROM events_intersect LEFT JOIN users ON events_intersect.event_user_id=users.id
 LEFT JOIN user_properties ON users.id=user_properties.user_id AND user_properties.id=users.properties_id),
 
-_group_key_0_bounds AS (SELECT percentile_disc(0.1) WITHIN GROUP(ORDER BY _group_key_0::float desc) AS ubound, percentile_disc(0.9)
- WITHIN GROUP(ORDER BY _group_key_0::float desc) AS lbound FROM all_users_intersect WHERE _group_key_0 != '$none'),
+_group_key_0_bounds AS (SELECT percentile_disc(0.1) WITHIN GROUP(ORDER BY _group_key_0::numeric desc) AS ubound, percentile_disc(0.9)
+ WITHIN GROUP(ORDER BY _group_key_0::numeric desc) AS lbound FROM all_users_intersect WHERE _group_key_0 != '$none'),
 
-_group_key_1_bounds AS (SELECT percentile_disc(0.1) WITHIN GROUP(ORDER BY _group_key_1::float desc) AS ubound, percentile_disc(0.9)
-WITHIN GROUP(ORDER BY _group_key_1::float desc) AS lbound FROM all_users_intersect WHERE _group_key_1 != '$none'),
+_group_key_1_bounds AS (SELECT percentile_disc(0.1) WITHIN GROUP(ORDER BY _group_key_1::numeric desc) AS ubound, percentile_disc(0.9)
+WITHIN GROUP(ORDER BY _group_key_1::numeric desc) AS lbound FROM all_users_intersect WHERE _group_key_1 != '$none'),
 
 bucketed AS (SELECT COALESCE(NULLIF(_group_key_0, '$none'), 'NaN') AS _group_key_0, CASE WHEN _group_key_0 = '$none' THEN -1
-ELSE width_bucket(_group_key_0::float, _group_key_0_bounds.lbound::float, COALESCE(NULLIF(_group_key_0_bounds.ubound,
-_group_key_0_bounds.lbound), _group_key_0_bounds.ubound+1)::float, 8) END AS _group_key_0_bucket, COALESCE(NULLIF(_group_key_1, '$none'),
-'NaN') AS _group_key_1, CASE WHEN _group_key_1 = '$none' THEN -1 ELSE width_bucket(_group_key_1::float, _group_key_1_bounds.lbound::float,
-COALESCE(NULLIF(_group_key_1_bounds.ubound, _group_key_1_bounds.lbound), _group_key_1_bounds.ubound+1)::float, 8) END
+ELSE width_bucket(_group_key_0::numeric, _group_key_0_bounds.lbound::numeric, COALESCE(NULLIF(_group_key_0_bounds.ubound,
+_group_key_0_bounds.lbound), _group_key_0_bounds.ubound+1)::numeric, 8) END AS _group_key_0_bucket, COALESCE(NULLIF(_group_key_1, '$none'),
+'NaN') AS _group_key_1, CASE WHEN _group_key_1 = '$none' THEN -1 ELSE width_bucket(_group_key_1::numeric, _group_key_1_bounds.lbound::numeric,
+COALESCE(NULLIF(_group_key_1_bounds.ubound, _group_key_1_bounds.lbound), _group_key_1_bounds.ubound+1)::numeric, 8) END
 AS _group_key_1_bucket, _group_key_2, _group_key_3, event_user_id FROM all_users_intersect, _group_key_0_bounds, _group_key_1_bounds)
 
-SELECT COALESCE(NULLIF(concat(min(_group_key_0::float), '-', max(_group_key_0::float)), 'NaN-NaN'), '$none') AS _group_key_0,
-COALESCE(NULLIF(concat(min(_group_key_1::float), '-', max(_group_key_1::float)), 'NaN-NaN'), '$none') AS _group_key_1,
+SELECT COALESCE(NULLIF(concat(round(min(_group_key_0::numeric), 1), ' - ', round(max(_group_key_0::numeric), 1)), 'NaN-NaN'), '$none') AS _group_key_0,
+COALESCE(NULLIF(concat(round(min(_group_key_1::numeric), 1), ' - ', round(max(_group_key_1::numeric), 1)), 'NaN-NaN'), '$none') AS _group_key_1,
 _group_key_2, _group_key_3,  COUNT(DISTINCT(event_user_id)) AS count FROM bucketed GROUP BY _group_key_0_bucket, _group_key_1_bucket,
 _group_key_2, _group_key_3 ORDER BY _group_key_0_bucket, _group_key_1_bucket LIMIT 100000
 
@@ -1125,21 +1128,21 @@ WHEN user_properties.properties->>'' = '' THEN '$none' ELSE user_properties.prop
 _group_key_1 FROM events_union LEFT JOIN users ON events_union.event_user_id=users.id LEFT JOIN user_properties
 ON users.id=user_properties.user_id AND user_properties.id=users.properties_id),
 
-_group_key_1_bounds AS (SELECT percentile_disc(0.1) WITHIN GROUP(ORDER BY _group_key_1::float desc) AS ubound, percentile_disc(0.9)
-WITHIN GROUP(ORDER BY _group_key_1::float desc) AS lbound FROM any_users_union WHERE _group_key_1 != '$none'),
+_group_key_1_bounds AS (SELECT percentile_disc(0.1) WITHIN GROUP(ORDER BY _group_key_1::numeric desc) AS ubound, percentile_disc(0.9)
+WITHIN GROUP(ORDER BY _group_key_1::numeric desc) AS lbound FROM any_users_union WHERE _group_key_1 != '$none'),
 
-_group_key_2_bounds AS (SELECT percentile_disc(0.1) WITHIN GROUP(ORDER BY _group_key_2::float desc) AS ubound, percentile_disc(0.9)
-WITHIN GROUP(ORDER BY _group_key_2::float desc) AS lbound FROM any_users_union WHERE _group_key_2 != '$none'),
+_group_key_2_bounds AS (SELECT percentile_disc(0.1) WITHIN GROUP(ORDER BY _group_key_2::numeric desc) AS ubound, percentile_disc(0.9)
+WITHIN GROUP(ORDER BY _group_key_2::numeric desc) AS lbound FROM any_users_union WHERE _group_key_2 != '$none'),
 
 bucketed AS (SELECT _group_key_0, COALESCE(NULLIF(_group_key_1, '$none'), 'NaN') AS _group_key_1, CASE WHEN _group_key_1 = '$none'
-THEN -1 ELSE width_bucket(_group_key_1::float, _group_key_1_bounds.lbound::float, COALESCE(NULLIF(_group_key_1_bounds.ubound,
-_group_key_1_bounds.lbound), _group_key_1_bounds.ubound+1)::float, 8) END AS _group_key_1_bucket, COALESCE(NULLIF(_group_key_2, '$none'),
-'NaN') AS _group_key_2, CASE WHEN _group_key_2 = '$none' THEN -1 ELSE width_bucket(_group_key_2::float, _group_key_2_bounds.lbound::float,
-COALESCE(NULLIF(_group_key_2_bounds.ubound, _group_key_2_bounds.lbound), _group_key_2_bounds.ubound+1)::float, 8) END
+THEN -1 ELSE width_bucket(_group_key_1::numeric, _group_key_1_bounds.lbound::numeric, COALESCE(NULLIF(_group_key_1_bounds.ubound,
+_group_key_1_bounds.lbound), _group_key_1_bounds.ubound+1)::numeric, 8) END AS _group_key_1_bucket, COALESCE(NULLIF(_group_key_2, '$none'),
+'NaN') AS _group_key_2, CASE WHEN _group_key_2 = '$none' THEN -1 ELSE width_bucket(_group_key_2::numeric, _group_key_2_bounds.lbound::numeric,
+COALESCE(NULLIF(_group_key_2_bounds.ubound, _group_key_2_bounds.lbound), _group_key_2_bounds.ubound+1)::numeric, 8) END
 AS _group_key_2_bucket, event_user_id FROM any_users_union, _group_key_1_bounds, _group_key_2_bounds)
 
-SELECT _group_key_0, COALESCE(NULLIF(concat(min(_group_key_1::float), '-', max(_group_key_1::float)), 'NaN-NaN'), '$none') AS _group_key_1,
-COALESCE(NULLIF(concat(min(_group_key_2::float), '-', max(_group_key_2::float)), 'NaN-NaN'), '$none') AS _group_key_2,
+SELECT _group_key_0, COALESCE(NULLIF(concat(round(min(_group_key_1::numeric), 1), ' - ', round(max(_group_key_1::numeric), 1)), 'NaN-NaN'), '$none') AS _group_key_1,
+COALESCE(NULLIF(concat(round(min(_group_key_2::numeric), 1), ' - ', round(max(_group_key_2::numeric), 1)), 'NaN-NaN'), '$none') AS _group_key_2,
 COUNT(DISTINCT(event_user_id)) AS count FROM bucketed GROUP BY _group_key_0, _group_key_1_bucket, _group_key_2_bucket
 ORDER BY _group_key_1_bucket, _group_key_2_bucket LIMIT 100000
 
@@ -1228,15 +1231,15 @@ WHEN user_properties.properties->>'' = '' THEN '$none' ELSE user_properties.prop
 _group_key_0 FROM step_0 LEFT JOIN users ON step_0.event_user_id=users.id LEFT JOIN user_properties ON
 users.id=user_properties.user_id AND user_properties.id=users.properties_id),
 
-_group_key_0_bounds AS (SELECT percentile_disc(0.1) WITHIN GROUP(ORDER BY _group_key_0::float desc) AS ubound, percentile_disc(0.9)
-WITHIN GROUP(ORDER BY _group_key_0::float desc) AS lbound FROM all_users_intersect WHERE _group_key_0 != '$none'),
+_group_key_0_bounds AS (SELECT percentile_disc(0.1) WITHIN GROUP(ORDER BY _group_key_0::numeric desc) AS ubound, percentile_disc(0.9)
+WITHIN GROUP(ORDER BY _group_key_0::numeric desc) AS lbound FROM all_users_intersect WHERE _group_key_0 != '$none'),
 
 bucketed AS (SELECT COALESCE(NULLIF(_group_key_0, '$none'), 'NaN') AS _group_key_0, CASE WHEN _group_key_0 = '$none' THEN -1
-ELSE width_bucket(_group_key_0::float, _group_key_0_bounds.lbound::float, COALESCE(NULLIF(_group_key_0_bounds.ubound,
-_group_key_0_bounds.lbound), _group_key_0_bounds.ubound+1)::float, 8) END AS _group_key_0_bucket, _group_key_1,
+ELSE width_bucket(_group_key_0::numeric, _group_key_0_bounds.lbound::numeric, COALESCE(NULLIF(_group_key_0_bounds.ubound,
+_group_key_0_bounds.lbound), _group_key_0_bounds.ubound+1)::numeric, 8) END AS _group_key_0_bucket, _group_key_1,
 event_user_id FROM all_users_intersect, _group_key_0_bounds)
 
-SELECT COALESCE(NULLIF(concat(min(_group_key_0::float), '-', max(_group_key_0::float)), 'NaN-NaN'), '$none') AS _group_key_0,
+SELECT COALESCE(NULLIF(concat(round(min(_group_key_0::numeric), 1), ' - ', round(max(_group_key_0::numeric), 1)), 'NaN-NaN'), '$none') AS _group_key_0,
 _group_key_1,  COUNT(DISTINCT(event_user_id)) AS count FROM bucketed GROUP BY _group_key_0_bucket, _group_key_1
 ORDER BY _group_key_0_bucket LIMIT 100000
 */
@@ -1292,22 +1295,22 @@ user_properties.properties->>'' = '' THEN '$none' ELSE user_properties.propertie
 _group_key_0, _group_key_1, event_user_id FROM any_event LEFT JOIN users ON any_event.event_user_id=users.id
 LEFT JOIN user_properties ON users.id=user_properties.user_id AND user_properties.id=users.properties_id),
 
-_group_key_0_bounds AS (SELECT percentile_disc(0.1) WITHIN GROUP(ORDER BY _group_key_0::float desc) AS ubound,
-percentile_disc(0.9) WITHIN GROUP(ORDER BY _group_key_0::float desc) AS lbound FROM users_any_event WHERE _group_key_0 != '$none'),
+_group_key_0_bounds AS (SELECT percentile_disc(0.1) WITHIN GROUP(ORDER BY _group_key_0::numeric desc) AS ubound,
+percentile_disc(0.9) WITHIN GROUP(ORDER BY _group_key_0::numeric desc) AS lbound FROM users_any_event WHERE _group_key_0 != '$none'),
 
-_group_key_2_bounds AS (SELECT percentile_disc(0.1) WITHIN GROUP(ORDER BY _group_key_2::float desc) AS ubound,
-percentile_disc(0.9) WITHIN GROUP(ORDER BY _group_key_2::float desc) AS lbound FROM users_any_event WHERE _group_key_2 != '$none'),
+_group_key_2_bounds AS (SELECT percentile_disc(0.1) WITHIN GROUP(ORDER BY _group_key_2::numeric desc) AS ubound,
+percentile_disc(0.9) WITHIN GROUP(ORDER BY _group_key_2::numeric desc) AS lbound FROM users_any_event WHERE _group_key_2 != '$none'),
 
 bucketed AS (SELECT event_name, COALESCE(NULLIF(_group_key_0, '$none'), 'NaN') AS _group_key_0, CASE WHEN _group_key_0 = '$none'
-THEN -1 ELSE width_bucket(_group_key_0::float, _group_key_0_bounds.lbound::float, COALESCE(NULLIF(_group_key_0_bounds.ubound,
-_group_key_0_bounds.lbound), _group_key_0_bounds.ubound+1)::float, 8) END AS _group_key_0_bucket, _group_key_1,
+THEN -1 ELSE width_bucket(_group_key_0::numeric, _group_key_0_bounds.lbound::numeric, COALESCE(NULLIF(_group_key_0_bounds.ubound,
+_group_key_0_bounds.lbound), _group_key_0_bounds.ubound+1)::numeric, 8) END AS _group_key_0_bucket, _group_key_1,
 COALESCE(NULLIF(_group_key_2, '$none'), 'NaN') AS _group_key_2, CASE WHEN _group_key_2 = '$none' THEN -1 ELSE
-width_bucket(_group_key_2::float, _group_key_2_bounds.lbound::float, COALESCE(NULLIF(_group_key_2_bounds.ubound,
-_group_key_2_bounds.lbound), _group_key_2_bounds.ubound+1)::float, 8) END AS _group_key_2_bucket, event_user_id
+width_bucket(_group_key_2::numeric, _group_key_2_bounds.lbound::numeric, COALESCE(NULLIF(_group_key_2_bounds.ubound,
+_group_key_2_bounds.lbound), _group_key_2_bounds.ubound+1)::numeric, 8) END AS _group_key_2_bucket, event_user_id
 FROM users_any_event, _group_key_0_bounds, _group_key_2_bounds)
 
-SELECT event_name, COALESCE(NULLIF(concat(min(_group_key_0::float), '-', max(_group_key_0::float)), 'NaN-NaN'), '$none') AS _group_key_0,
-_group_key_1, COALESCE(NULLIF(concat(min(_group_key_2::float), '-', max(_group_key_2::float)), 'NaN-NaN'), '$none') AS _group_key_2,
+SELECT event_name, COALESCE(NULLIF(concat(round(min(_group_key_0::numeric), 1), ' - ', round(max(_group_key_0::numeric), 1)), 'NaN-NaN'), '$none') AS _group_key_0,
+_group_key_1, COALESCE(NULLIF(concat(round(min(_group_key_2::numeric), 1), ' - ', round(max(_group_key_2::numeric), 1)), 'NaN-NaN'), '$none') AS _group_key_2,
 COUNT(*) AS count FROM bucketed GROUP BY _group_key_0_bucket, _group_key_1, _group_key_2_bucket, event_name ORDER BY event_name,
 _group_key_0_bucket, _group_key_2_bucket, count DESC LIMIT 100000
 */
@@ -2355,6 +2358,23 @@ func sanitizeGroupByTimestampResult(result *QueryResult, query *Query) error {
 	return nil
 }
 
+// sanitizeNumericalBucketRanges Removes any .0 added to bucket ranges wherever possible.
+func sanitizeNumericalBucketRanges(result *QueryResult, query *Query) {
+	headerIndexMap := make(map[string]int)
+	for index, header := range result.Headers {
+		headerIndexMap[header] = index
+	}
+
+	for _, gbp := range query.GroupByProperties {
+		if gbp.Type == U.PropertyTypeNumerical {
+			indexToReplace := headerIndexMap[gbp.Property]
+			for _, row := range result.Rows {
+				row[indexToReplace] = trailingZeroRegex.ReplaceAllString(row[indexToReplace].(string), "")
+			}
+		}
+	}
+}
+
 // Converts DB results into plottable query results.
 func SanitizeQueryResult(result *QueryResult, query *Query) error {
 	if query.GetGroupByTimestamp() != "" {
@@ -2363,7 +2383,14 @@ func SanitizeQueryResult(result *QueryResult, query *Query) error {
 
 	// Replace group keys with real column names. should be last step.
 	// of sanitization.
-	return translateGroupKeysIntoColumnNames(result, query.GroupByProperties)
+	if err := translateGroupKeysIntoColumnNames(result, query.GroupByProperties); err != nil {
+		return err
+	}
+
+	if hasNumericalGroupBy(query.GroupByProperties) {
+		sanitizeNumericalBucketRanges(result, query)
+	}
+	return nil
 }
 
 func ExecQuery(stmnt string, params []interface{}) (*QueryResult, error) {

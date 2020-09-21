@@ -1735,7 +1735,7 @@ func TestAnalyticsInsightsQueryWithNumericalBucketing(t *testing.T) {
 		result, errCode, _ := M.Analyze(project.ID, query)
 		assert.Equal(t, http.StatusOK, errCode)
 		for i := 0; i < 10; i++ {
-			assert.Equal(t, fmt.Sprintf("%d-%d", i*2, i*2+1), result.Rows[i][1])
+			assert.Equal(t, fmt.Sprintf("%d - %d", i*2, i*2+1), result.Rows[i][1])
 			assert.Equal(t, int64(2), result.Rows[i][2])
 		}
 
@@ -1759,13 +1759,13 @@ func TestAnalyticsInsightsQueryWithNumericalBucketing(t *testing.T) {
 
 		result, errCode, _ = M.Analyze(project.ID, query)
 		assert.Equal(t, http.StatusOK, errCode)
-		assert.Equal(t, "0-0", result.Rows[0][1])
+		assert.Equal(t, "0 - 0", result.Rows[0][1])
 		assert.Equal(t, int64(1), result.Rows[0][2])
-		assert.Equal(t, "1-2", result.Rows[1][1])
+		assert.Equal(t, "1 - 2", result.Rows[1][1])
 		assert.Equal(t, int64(3), result.Rows[1][2])
-		assert.Equal(t, "15-16", result.Rows[8][1])
+		assert.Equal(t, "15 - 16", result.Rows[8][1])
 		assert.Equal(t, int64(2), result.Rows[8][2])
-		assert.Equal(t, "17-19", result.Rows[9][1])
+		assert.Equal(t, "17 - 19", result.Rows[9][1])
 		assert.Equal(t, int64(3), result.Rows[9][2])
 
 		// Using group by numerical property.
@@ -1778,7 +1778,7 @@ func TestAnalyticsInsightsQueryWithNumericalBucketing(t *testing.T) {
 		assert.Equal(t, int64(1), result.Rows[0][2])            // Count of $none should be 1.
 		for i := 1; i <= 10; i++ {
 			assert.Equal(t, eventName1, result.Rows[i][0])
-			assert.Equal(t, fmt.Sprintf("%d-%d", i*2-2, i*2-1), result.Rows[i][1])
+			assert.Equal(t, fmt.Sprintf("%d - %d", i*2-2, i*2-1), result.Rows[i][1])
 			assert.Equal(t, int64(2), result.Rows[i][2])
 		}
 	})
