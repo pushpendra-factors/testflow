@@ -56,8 +56,14 @@ export const DATE_RANGE_LAST_30_MIN_LABEL = 'Last 30 mins'
 export const LABEL_STYLE = { marginRight: '10px', fontWeight: '600', color: '#777' };
 
 export const DEFAULT_DATE_RANGE = {
-  startDate: moment(getFirstDayOfCurrentWeek()).startOf('day').toDate(),
-  endDate: moment(new Date()).subtract(1, 'days').endOf('day').toDate(),
+  ...(!isTodayTheFirstDayOfWeek() && {
+    startDate: moment(getFirstDayOfCurrentWeek()).startOf('day').toDate(),
+    endDate: moment(new Date()).subtract(1, 'days').endOf('day').toDate(),
+  }),
+  ...(isTodayTheFirstDayOfWeek() && {
+    startDate: moment(new Date()).startOf('day').toDate(),
+    endDate: new Date(),
+  }),
   label: DEFAULT_DATE_RANGE_LABEL,
   key: 'selected'
 }
@@ -95,6 +101,17 @@ function getFirstDayOfCurrentMonth() {
   return new Date(d.getFullYear(), d.getMonth(), 1);
 }
 
+function isTodayTheFirstDayOfMonth() {
+  let d = new Date();
+  return d.getDate() === 1;
+}
+
+function isTodayTheFirstDayOfWeek() {
+  // week starts with Sunday.
+  let d = new Date();
+  return d.getDay() === 0;
+}
+
 const DEFAULT_DATE_RANGES = [
   {
     label: DATE_RANGE_TODAY_LABEL,
@@ -119,17 +136,29 @@ const DEFAULT_DATE_RANGES = [
   },
   {
     label: DEFAULT_DATE_RANGE_LABEL,
-    range: () => ({
+    ...(!isTodayTheFirstDayOfWeek() && {
+      range: () => ({
       startDate: moment(getFirstDayOfCurrentWeek()).startOf('day').toDate(),
       endDate: moment(new Date()).subtract(1, 'days').endOf('day').toDate(),
-    }),
+    })}),
+    ...(isTodayTheFirstDayOfWeek() && {
+      range: () => ({
+        startDate: moment(new Date()).startOf('day').toDate(),
+        endDate: new Date(),
+      })})
   },
   {
     label: DATE_RANGE_LABEL_CURRENT_MONTH,
-    range: () => ({
-      startDate: moment(getFirstDayOfCurrentMonth()).startOf('day').toDate(),
-      endDate: moment(new Date()).subtract(1, 'days').endOf('day').toDate(),
-    }),
+    ...(!isTodayTheFirstDayOfMonth() && {
+      range: () => ({
+        startDate: moment(getFirstDayOfCurrentMonth()).startOf('day').toDate(),
+        endDate: moment(new Date()).subtract(1, 'days').endOf('day').toDate(),
+      })}),
+    ...(isTodayTheFirstDayOfMonth() && {
+      range: () => ({
+        startDate: moment(new Date()).startOf('day').toDate(),
+        endDate: new Date(),
+      })}),
   },
   {
     label: DATE_RANGE_LABEL_LAST_WEEK,
