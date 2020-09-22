@@ -415,6 +415,20 @@ func Max(a int64, b int64) int64 {
 	return b
 }
 
+func MinInt(a int, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func MaxInt(a int, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
 // returns a string of ('?'), ... values of given batchSize
 func GetValuePlaceHolder(batchSize int) string {
 

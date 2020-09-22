@@ -1490,8 +1490,6 @@ func cacheWebsiteAnalyticsForProjectID(projectID uint64, waitGroup *sync.WaitGro
 	if errCode != http.StatusFound {
 		return
 	}
-	log.WithFields(log.Fields{"ProjectID": projectID}).
-		Info("Starting web analytics dashboard caching")
 
 	var dashboardWaitGroup sync.WaitGroup
 	for _, rangeFunction := range U.QueryDateRangePresets {
@@ -1636,13 +1634,15 @@ func CacheWebsiteAnalyticsForProjects(stringProjectsIDs string, numRoutines int)
 
 	var waitGroup sync.WaitGroup
 	count := 0
+	waitGroup.Add(U.MinInt(len(projectIDs), numRoutines))
 	for _, projectID := range projectIDs {
-		waitGroup.Add(1)
 		count++
+		log.WithFields(log.Fields{"ProjectID": projectID}).Info("Starting web analytics dashboard caching")
 		go cacheWebsiteAnalyticsForProjectID(projectID, &waitGroup)
 
 		if count%numRoutines == 0 {
 			waitGroup.Wait()
+			waitGroup.Add(U.MinInt(len(projectIDs)-count, numRoutines))
 		}
 	}
 	waitGroup.Wait()

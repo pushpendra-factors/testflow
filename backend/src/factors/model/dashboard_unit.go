@@ -314,17 +314,18 @@ func CacheDashboardUnitsForProjectID(projectID uint64, numRoutines int) int {
 
 	var waitGroup sync.WaitGroup
 	count := 0
+	waitGroup.Add(U.MinInt(len(dashboardUnits), numRoutines))
 	for _, dashboardUnit := range dashboardUnits {
 		logCtx = logCtx.WithFields(log.Fields{
 			"UnitID":      dashboardUnit.ID,
 			"DashboardID": dashboardUnit.DashboardId,
 		})
 
-		waitGroup.Add(1)
 		count++
 		go CacheDashboardUnit(projectID, dashboardUnit, &waitGroup)
 		if count%numRoutines == 0 {
 			waitGroup.Wait()
+			waitGroup.Add(U.MinInt(len(dashboardUnits)-count, numRoutines))
 		}
 	}
 	waitGroup.Wait()
