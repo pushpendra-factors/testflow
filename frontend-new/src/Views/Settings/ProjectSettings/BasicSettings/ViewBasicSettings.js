@@ -11,7 +11,7 @@ function ViewBasicSettings(props) {
   useEffect(() => {
     setTimeout(() => {
       setDataLoading(false);
-    }, 1000);
+    }, 500);
   });
 
   return (

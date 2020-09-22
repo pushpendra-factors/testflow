@@ -4,7 +4,9 @@ import {
 } from 'antd';
 import { Text } from 'factorsComponents';
 import BasicSettings from './BasicSettings';
-import JavascriptSDK from './JavascriptSDK';
+import SDKSettings from './SDKSettings';
+import UserSettings from './UserSettings';
+import IntegrationSettings from './IntegrationSettings';
 
 const MenuTabs = {
   generalSettings: 'General Settings',
@@ -14,7 +16,7 @@ const MenuTabs = {
   EventAlias: 'Event Alias'
 };
 
-function UserSettingsModal() {
+function ProjectSettings() {
   const [selectedMenu, setSelectedMenu] = useState(MenuTabs.generalSettings);
   // const [editPasswordModal, setPasswordModal] = useState(false);
   // const [editDetailsModal, setDetailsModal] = useState(false);
@@ -50,28 +52,19 @@ function UserSettingsModal() {
               onClick={handleClick}
               defaultSelectedKeys={MenuTabs.generalSettings}
               mode="inline"
-              className={'fa-settings--menu'}
-            >
+              className={'fa-settings--menu'}>
               <Menu.Item key={MenuTabs.generalSettings}>{MenuTabs.generalSettings}</Menu.Item>
               <Menu.Item key={MenuTabs.SDK}>{MenuTabs.SDK}</Menu.Item>
               <Menu.Item key={MenuTabs.Users}>{MenuTabs.Users}</Menu.Item>
               <Menu.Item key={MenuTabs.Integrations}>{MenuTabs.Integrations}</Menu.Item>
-              <Menu.Item key={MenuTabs.EventAlias}>{MenuTabs.EventAlias}</Menu.Item>
             </Menu>
 
           </Col>
           <Col span={15}>
-
-          {selectedMenu === MenuTabs.generalSettings &&
-            <BasicSettings
-              // editDetails={() => setDetailsModal(true)}
-              // editPassword={() => setPasswordModal(true)}
-            />
-          }
-          {selectedMenu === MenuTabs.SDK &&
-            <JavascriptSDK />
-          }
-
+            {selectedMenu === MenuTabs.generalSettings && <BasicSettings /> }
+            {selectedMenu === MenuTabs.SDK && <SDKSettings /> }
+            {selectedMenu === MenuTabs.Users && <UserSettings /> }
+            {selectedMenu === MenuTabs.Integrations && <IntegrationSettings /> }
           </Col>
         </Row>
       </div>
@@ -81,4 +74,4 @@ function UserSettingsModal() {
   );
 }
 
-export default UserSettingsModal;
+export default ProjectSettings;

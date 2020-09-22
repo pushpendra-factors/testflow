@@ -15,7 +15,7 @@ const MenuTabs = {
   accounts: 'account'
 };
 
-function UserSettingsModal(props) {
+function UserSettings(props) {
   const [selectedMenu, setSelectedMenu] = useState(MenuTabs.accounts);
   const [editPasswordModal, setPasswordModal] = useState(false);
   const [editDetailsModal, setDetailsModal] = useState(false);
@@ -121,4 +121,4 @@ function UserSettingsModal(props) {
   );
 }
 
-export default UserSettingsModal;
+export default UserSettings;

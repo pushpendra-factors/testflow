@@ -48,7 +48,7 @@ const JSConfig = () => {
       </div>
     </Col>
     <Col span={24} className={'flex flex-start items-center'}>
-      <Text type={'paragraph'} extraClass={'m-0 mt-2'} color={'grey'}>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam.</Text>
+      <Text type={'paragraph'} mini extraClass={'m-0 mt-2'} color={'grey'}>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam.</Text>
     </Col>
     <Col span={24}>
       <div span={24} className={'flex flex-start items-center mt-8'}>
@@ -56,7 +56,7 @@ const JSConfig = () => {
       </div>
     </Col>
     <Col span={24} className={'flex flex-start items-center'}>
-      <Text type={'paragraph'} extraClass={'m-0 mt-2'} color={'grey'}>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam.</Text>
+      <Text type={'paragraph'} mini extraClass={'m-0 mt-2'} color={'grey'}>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam.</Text>
     </Col>
     <Col span={24}>
       <div span={24} className={'flex flex-start items-center mt-8'}>
@@ -64,7 +64,7 @@ const JSConfig = () => {
       </div>
     </Col>
     <Col span={24} className={'flex flex-start items-center'}>
-      <Text type={'paragraph'} extraClass={'m-0 mt-2'} color={'grey'}>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam.</Text>
+      <Text type={'paragraph'} mini extraClass={'m-0 mt-2'} color={'grey'}>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam.</Text>
     </Col>
     </Row>
   );

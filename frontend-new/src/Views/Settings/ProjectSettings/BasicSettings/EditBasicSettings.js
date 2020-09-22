@@ -63,7 +63,7 @@ function EditBasicSettings(props) {
         <Row className={'mt-6'}>
           <Col span={24}>
             <Text type={'title'} level={7} extraClass={'m-0'}>Time Format</Text>
-            <Select className={'fa-select w-full'} size={'large'} defaultValue="DD-MM-YYYY">
+            <Select className={'fa-select w-full'} size={'large'} defaultValue="12 Hours">
                 <Option value="12 Hours">12 Hours</Option>
                 <Option value="24 Hours">24 Hours</Option>
             </Select>
@@ -73,7 +73,7 @@ function EditBasicSettings(props) {
         <Row className={'mt-6'}>
           <Col span={24}>
             <Text type={'title'} level={7} extraClass={'m-0'}>Time Zone</Text>
-            <Select className={'fa-select w-full'} size={'large'} defaultValue="DD-MM-YYYY">
+            <Select className={'fa-select w-full'} size={'large'} defaultValue="IST -- UTC +5:30 India and Sri Lanka">
                 <Option value="India and Sri Lanka">IST -- UTC +5:30 India and Sri Lanka</Option>
                 <Option value="India">IST -- UTC +3:30 India</Option>
             </Select>
