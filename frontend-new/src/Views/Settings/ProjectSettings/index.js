@@ -4,7 +4,9 @@ import {
 } from 'antd';
 import { Text } from 'factorsComponents';
 import BasicSettings from './BasicSettings';
-import JavascriptSDK from './JavascriptSDK';
+import SDKSettings from './SDKSettings';
+import UserSettings from './UserSettings';
+import IntegrationSettings from './IntegrationSettings';
 
 const MenuTabs = {
   generalSettings: 'General Settings',
@@ -14,7 +16,7 @@ const MenuTabs = {
   EventAlias: 'Event Alias'
 };
 
-function UserSettingsModal() {
+function ProjectSettings() {
   const [selectedMenu, setSelectedMenu] = useState(MenuTabs.generalSettings);
   // const [editPasswordModal, setPasswordModal] = useState(false);
   // const [editDetailsModal, setDetailsModal] = useState(false);
@@ -68,9 +70,9 @@ function UserSettingsModal() {
               // editPassword={() => setPasswordModal(true)}
             />
           }
-          {selectedMenu === MenuTabs.SDK &&
-            <JavascriptSDK />
-          }
+          {selectedMenu === MenuTabs.SDK && <SDKSettings /> }
+          {selectedMenu === MenuTabs.Users && <UserSettings /> }
+          {selectedMenu === MenuTabs.Integrations && <IntegrationSettings /> }
 
           </Col>
         </Row>
@@ -81,4 +83,4 @@ function UserSettingsModal() {
   );
 }
 
-export default UserSettingsModal;
+export default ProjectSettings;

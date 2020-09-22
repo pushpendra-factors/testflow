@@ -70,13 +70,21 @@
 
 
     //Line Height
-    &.fai-text__line-height--normal{}
+    &.fai-text__line-height--normal{
+        line-height: 1.6;
+    }
     
-    &.fai-text__line-height--small {} 
+    &.fai-text__line-height--small {
+        line-height: 1;    
+    } 
     
-    &.fai-text__line-height--medium {}
+    &.fai-text__line-height--medium {
+        line-height: 1.375;
+    }
     
-    &.fai-text__line-height--large {}
+    &.fai-text__line-height--large {
+        line-height: 2;
+    }
 
     //Alignment
     &.fai-text__align--left{
