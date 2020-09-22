@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  Row, Col, Switch, Avatar
+  Row, Col, Switch, Avatar, Skeleton
 } from 'antd';
 import { Text } from 'factorsComponents';
 import { PictureOutlined } from '@ant-design/icons';
@@ -25,6 +25,14 @@ const IntegrationCard = ({ item, index }) => {
   );
 };
 function IntegrationSettings() {
+  const [dataLoading, setDataLoading] = useState(true);
+
+  useEffect(() => {
+    setTimeout(() => {
+      setDataLoading(false);
+    }, 500);
+  });
+
   return (
     <>
         <div className={'mb-10 pl-4'}>
@@ -35,11 +43,13 @@ function IntegrationSettings() {
         </Row>
         <Row className={'mt-4'}>
             <Col span={24}>
-                {['Segment', 'Slack', 'Mailchimp', 'Hubspot'].map((item, index) => {
-                  return (
+            { dataLoading ? <Skeleton active paragraph={{ rows: 4 }}/>
+              : ['Segment', 'Slack', 'Mailchimp', 'Hubspot'].map((item, index) => {
+                return (
                         <IntegrationCard item={item} index={index} key={index} />
-                  );
-                })}
+                );
+              })
+            }
             </Col>
         </Row>
 

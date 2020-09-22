@@ -121,7 +121,7 @@ function UserSettings() {
         </Row>
         <Row className={'mt-8'}>
           <Col span={24}>
-            <Table className={'fa-table--basic'} dataSource={dataSource} columns={columns} pagination={false} />
+            <Table className={'fa-table--basic'} loading={dataLoading} dataSource={dataSource} columns={columns} pagination={false} />
           </Col>
         </Row>
       </div>
