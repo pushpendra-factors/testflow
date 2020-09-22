@@ -52,28 +52,19 @@ function ProjectSettings() {
               onClick={handleClick}
               defaultSelectedKeys={MenuTabs.generalSettings}
               mode="inline"
-              className={'fa-settings--menu'}
-            >
+              className={'fa-settings--menu'}>
               <Menu.Item key={MenuTabs.generalSettings}>{MenuTabs.generalSettings}</Menu.Item>
               <Menu.Item key={MenuTabs.SDK}>{MenuTabs.SDK}</Menu.Item>
               <Menu.Item key={MenuTabs.Users}>{MenuTabs.Users}</Menu.Item>
               <Menu.Item key={MenuTabs.Integrations}>{MenuTabs.Integrations}</Menu.Item>
-              <Menu.Item key={MenuTabs.EventAlias}>{MenuTabs.EventAlias}</Menu.Item>
             </Menu>
 
           </Col>
           <Col span={15}>
-
-          {selectedMenu === MenuTabs.generalSettings &&
-            <BasicSettings
-              // editDetails={() => setDetailsModal(true)}
-              // editPassword={() => setPasswordModal(true)}
-            />
-          }
-          {selectedMenu === MenuTabs.SDK && <SDKSettings /> }
-          {selectedMenu === MenuTabs.Users && <UserSettings /> }
-          {selectedMenu === MenuTabs.Integrations && <IntegrationSettings /> }
-
+            {selectedMenu === MenuTabs.generalSettings && <BasicSettings /> }
+            {selectedMenu === MenuTabs.SDK && <SDKSettings /> }
+            {selectedMenu === MenuTabs.Users && <UserSettings /> }
+            {selectedMenu === MenuTabs.Integrations && <IntegrationSettings /> }
           </Col>
         </Row>
       </div>

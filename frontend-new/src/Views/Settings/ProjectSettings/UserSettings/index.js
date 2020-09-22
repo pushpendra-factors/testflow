@@ -1,8 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Row, Col, Button, Table
+  Row, Col, Button, Table, Avatar, Menu, Dropdown
 } from 'antd';
 import { Text } from 'factorsComponents';
+import { MoreOutlined } from '@ant-design/icons';
+import InviteUsers from './InviteUsers';
+
+const menu = (
+  <Menu>
+    <Menu.Item key="0">
+      <a href="#!">Remove User</a>
+    </Menu.Item>
+    <Menu.Item key="1">
+      <a href="#!">Make Project Admin</a>
+    </Menu.Item>
+  </Menu>
+);
 
 const dataSource = [
   {
@@ -43,7 +56,9 @@ const columns = [
   {
     title: 'Name',
     dataIndex: 'name',
-    key: 'name'
+    key: 'name',
+    render: (text) => <div className="flex items-center">
+      <Avatar src="assets/avatar/avatar.png" className={'mr-2'} size={32} />&nbsp; {text} </div>
   },
   {
     title: 'Email',
@@ -63,18 +78,33 @@ const columns = [
   {
     title: '',
     dataIndex: 'actions',
-    key: 'actions'
+    key: 'actions',
+    render: () => (
+      <Dropdown overlay={menu} trigger={['click']}>
+        <Button type="text" icon={<MoreOutlined />} />
+      </Dropdown>
+    )
   }
 ];
 
 function UserSettings() {
   const [dataLoading, setDataLoading] = useState(true);
+  const [inviteModal, setInviteModal] = useState(false);
+  const [confirmLoading, setConfirmLoading] = useState(false);
 
   useEffect(() => {
     setTimeout(() => {
       setDataLoading(false);
     }, 500);
   });
+
+  const handleOk = () => {
+    setConfirmLoading(true);
+    setTimeout(() => {
+      setInviteModal(false);
+      setConfirmLoading(false);
+    }, 2000);
+  };
 
   return (
     <>
@@ -85,16 +115,23 @@ function UserSettings() {
           </Col>
           <Col span={12}>
             <div className={'flex justify-end'}>
-              <Button disabled={dataLoading}>Invite Users</Button>
+              <Button disabled={dataLoading} onClick={() => setInviteModal(true)}>Invite Users</Button>
             </div>
           </Col>
         </Row>
         <Row className={'mt-8'}>
           <Col span={24}>
-            <Table dataSource={dataSource} columns={columns} pagination={false} />
+            <Table className={'fa-table--basic'} dataSource={dataSource} columns={columns} pagination={false} />
           </Col>
         </Row>
       </div>
+
+      <InviteUsers
+       visible={inviteModal}
+       onCancel={() => setInviteModal(false)}
+       onOk={() => handleOk()}
+       confirmLoading={confirmLoading}
+      />
 
     </>
 
