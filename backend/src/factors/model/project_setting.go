@@ -536,7 +536,7 @@ func GetAllSalesforceProjectSettings() ([]SalesforceProjectSettings, int) {
 		"project_id, int_salesforce_refresh_token as refresh_token, int_salesforce_instance_url as instance_url").Find(
 		&salesforceProjectSettings).Error
 	if err != nil {
-		log.WithError(err).Error("Failed to get hubspot project_settings.")
+		log.WithError(err).Error("Failed to get salesforce project_settings.")
 		return salesforceProjectSettings, http.StatusInternalServerError
 	}
 

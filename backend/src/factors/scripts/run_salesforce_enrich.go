@@ -40,12 +40,12 @@ func main() {
 		panic(fmt.Errorf("env [ %s ] not recognised", *env))
 	}
 
-	taskID := "Task#HubspotEnrich"
+	taskID := "Task#SalesforceEnrich"
 	defer util.NotifyOnPanic(taskID, *env)
 
 	// init DB, etcd
 	config := &C.Configuration{
-		AppName: "hubspot_enrich_job",
+		AppName: "salesforce_enrich_job",
 		Env:     *env,
 		DBInfo: C.DBConf{
 			Host:     *dbHost,

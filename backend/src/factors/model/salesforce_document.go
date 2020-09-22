@@ -58,34 +58,6 @@ type SalesforceSyncInfo struct {
 	Timestamp int64  `json:"timestamp"`
 }
 
-// func GetAllSalesforceProjectSettings() ([]SalesforceProjectSettings, int) {
-// 	var salesforceProjectSettings []SalesforceProjectSettings
-
-// 	db := C.GetServices().Db
-// 	err := db.Table("project_settings").Where(
-// 		"int_salesforce_enabled_agent_uuid IS NOT NULL AND int_hubspot_api_key IS NOT NULL ").Select(
-// 		"project_id, int_hubspot_api_key as api_key").Find(
-// 		&salesforceProjectSettings).Error
-// 	if err != nil {
-// 		log.WithError(err).Error("Failed to get hubspot project_settings.")
-// 		return salesforceProjectSettings, http.StatusInternalServerError
-// 	}
-
-// 	return salesforceProjectSettings, http.StatusFound
-// }
-
-// func GetSalesforceSynInfo() ([]SalesforceSyncInfo, int) {
-// 	lastSyncInfo := []SalesforceSyncInfo{}
-// 	db := C.GetServices().Db
-// 	err := db.Table("salesforce_documents").Select(
-// 		"project_id, type, MAX(timestamp) as timestamp").Group(
-// 		"project_id, type").Find(&lastSyncInfo).Error
-// 	if err != nil {
-// 		return nil, http.StatusInternalServerError
-// 	}
-
-// }
-
 func getSalesforceDocTypeByAlias(alias string) (int, error) {
 	if alias == "" {
 		return 0, errors.New("empty document type alias")
