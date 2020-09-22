@@ -9,7 +9,7 @@ import FilterBlock from '../FilterBlock';
 const { OptGroup, Option } = Select;
 
 function QueryBlock({
-  index, event, eventChange, queries, queryType = 'event'
+  index, event, eventChange, queries, queryType
 }) {
   const [isDDVisible, setDDVisible] = useState(!!(index === 1 && !event));
   const [isFilterDDVisible, setFilterDDVisible] = useState(false);
