@@ -25,12 +25,16 @@ func main() {
 
 	redisHost := flag.String("redis_host", "localhost", "")
 	redisPort := flag.Int("redis_port", 6379, "")
+	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
+	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
 
 	awsRegion := flag.String("aws_region", "us-east-1", "")
 	awsAccessKeyId := flag.String("aws_key", "dummy", "")
 	awsSecretAccessKey := flag.String("aws_secret", "dummy", "")
 	factorsEmailSender := flag.String("email_sender", "support-dev@factors.ai", "")
 	errorReportingInterval := flag.Int("error_reporting_interval", 300, "")
+	isRealTimeEventUserCachingEnabled := flag.Bool("enable_real_time_event_user_caching", false, "If the real time caching is enabled")
+	realTimeEventUserCachingProjectIds := flag.String("real_time_event_user_caching_project_ids", "", "If the real time caching is enabled and the whitelisted projectids")
 
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 
@@ -54,17 +58,22 @@ func main() {
 			Name:     *dbName,
 			Password: *dbPass,
 		},
-		RedisHost:              *redisHost,
-		RedisPort:              *redisPort,
-		AWSKey:                 *awsAccessKeyId,
-		AWSSecret:              *awsSecretAccessKey,
-		AWSRegion:              *awsRegion,
-		EmailSender:            *factorsEmailSender,
-		ErrorReportingInterval: *errorReportingInterval,
-		SentryDSN:              *sentryDSN,
+		RedisHost:                          *redisHost,
+		RedisPort:                          *redisPort,
+		AWSKey:                             *awsAccessKeyId,
+		AWSSecret:                          *awsSecretAccessKey,
+		AWSRegion:                          *awsRegion,
+		EmailSender:                        *factorsEmailSender,
+		ErrorReportingInterval:             *errorReportingInterval,
+		RedisHostPersistent:                *redisHostPersistent,
+		RedisPortPersistent:                *redisPortPersistent,
+		SentryDSN:                          *sentryDSN,
+		IsRealTimeEventUserCachingEnabled:  *isRealTimeEventUserCachingEnabled,
+		RealTimeEventUserCachingProjectIds: *realTimeEventUserCachingProjectIds,
 	}
 
 	C.InitConf(config.Env)
+	C.InitEventUserRealTimeCachingConfig(config.IsRealTimeEventUserCachingEnabled, config.RealTimeEventUserCachingProjectIds)
 
 	err := C.InitDB(config.DBInfo)
 	if err != nil {
@@ -80,6 +89,9 @@ func main() {
 	}
 
 	C.InitRedis(config.RedisHost, config.RedisPort)
+	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
+	C.InitSentryLogging(config.SentryDSN, config.AppName)
+	defer C.SafeFlushSentryHook()
 
 	statusList := make([]IntSalesforce.Status, 0, 0)
 	for _, settings := range salesforceEnabledProjects {

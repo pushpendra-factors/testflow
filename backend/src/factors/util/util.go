@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
+	"github.com/ttacon/libphonenumber"
 )
 
 const SECONDS_IN_A_DAY int64 = 24 * 60 * 60
@@ -494,4 +495,109 @@ func IsContainsAnySubString(src string, sub ...string) bool {
 	}
 
 	return false
+}
+
+// isPureNumber checks for pure number string
+func isPureNumber(phoneNo string) bool {
+	if _, err := strconv.Atoi(phoneNo); err == nil {
+		return true
+	}
+	return false
+}
+
+func getSeparatorIndex(phoneNo *string) []int {
+	var separatorsIndex []int
+	separators := []string{" ", "-"}
+	for _, seperator := range separators {
+		if spIndex := strings.Index(*phoneNo, seperator); spIndex != -1 {
+			separatorsIndex = append(separatorsIndex, spIndex)
+		}
+	}
+	return separatorsIndex
+}
+
+func isValidCountryCode(cCode string) bool {
+	if code, err := strconv.Atoi(cCode); err == nil {
+		if _, exist := libphonenumber.CountryCodeToRegion[code]; exist {
+			return true
+		}
+	}
+	return false
+}
+
+// maybeAddInternationalPrefix adds if missing '+' at the beginning for the libphonenumber to work
+func maybeAddInternationalPrefix(phoneNo *string) bool {
+	separatorsIndex := getSeparatorIndex(phoneNo)
+
+	for _, indexValue := range separatorsIndex {
+		cCode := string((*phoneNo)[:indexValue])
+		if isValidCountryCode(cCode) {
+			*phoneNo = libphonenumber.PLUS_CHARS + *phoneNo
+			return true
+		}
+	}
+	return false
+}
+
+func getInternationalPhoneNoWithoutCountryCode(intPhone string) string {
+	phoneNo := strings.SplitN(intPhone, " ", 2)
+	return strings.Join(phoneNo[1:], "")
+}
+
+// GetPossiblePhoneNumber is a generator function returning one pattern at a time
+func GetPossiblePhoneNumber(phoneNo string) chan string {
+	phoneNoCh := make(chan string)
+	go func() {
+		defer close(phoneNoCh)
+
+		phoneNoCh <- phoneNo
+
+		// try pure numbers if form submited had pure numbers
+		if isPureNumber(phoneNo) {
+			phoneNoCh <- phoneNo
+			if !strings.Contains(phoneNo, "+") {
+				phoneNoCh <- "+" + phoneNo
+				phoneNoCh <- "+91" + phoneNo
+			}
+
+			if len(phoneNo) == 10 {
+				phoneNoCh <- fmt.Sprintf("%s-%s-%s", phoneNo[:3], phoneNo[3:6], phoneNo[6:])
+				phoneNoCh <- fmt.Sprintf("(%s)-%s-%s", phoneNo[:3], phoneNo[3:6], phoneNo[6:])
+			}
+		}
+
+		num, err := libphonenumber.Parse(phoneNo, "")
+		if err != nil {
+			if err == libphonenumber.ErrInvalidCountryCode && maybeAddInternationalPrefix(&phoneNo) {
+				num, err = libphonenumber.Parse(phoneNo, "")
+				fmt.Println("Error ", err)
+			}
+		}
+
+		if err == nil {
+			intFormat := libphonenumber.Format(num, libphonenumber.INTERNATIONAL)
+			if intFormat != phoneNo {
+				phoneNoCh <- intFormat
+			}
+			phoneNoCh <- getInternationalPhoneNoWithoutCountryCode(intFormat)
+			phoneNoCh <- libphonenumber.Format(num, libphonenumber.NATIONAL)
+
+			nationalNum := libphonenumber.GetNationalSignificantNumber(num)
+			phoneNoCh <- nationalNum
+			phoneNoCh <- "+" + nationalNum
+			phoneNoCh <- "+91" + nationalNum
+
+			phoneNoCh <- fmt.Sprintf("+%d%s", num.GetCountryCode(), libphonenumber.Format(num, libphonenumber.NATIONAL))
+
+			standardPhone := libphonenumber.Format(num, libphonenumber.E164)
+			if standardPhone != "+91"+nationalNum {
+				phoneNoCh <- standardPhone
+			}
+
+			phoneNoCh <- libphonenumber.Format(num, libphonenumber.E164)[1:]
+		}
+
+	}()
+
+	return phoneNoCh
 }

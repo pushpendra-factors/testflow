@@ -6,6 +6,7 @@ import (
 	C "factors/config"
 	M "factors/model"
 	SDK "factors/sdk"
+	U "factors/util"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -110,7 +111,7 @@ func buildQueryParamsByTagName(params interface{}, tag string) (string, error) {
 	return urlParams, nil
 }
 
-func getAccountProperties(document *M.SalesforceDocument) (map[string]interface{}, error) {
+func getSalesforceDocumentProperties(document *M.SalesforceDocument) (map[string]interface{}, error) {
 	if document.Type != M.SalesforceDocumentTypeAccount {
 		return nil, errors.New("invalid document type")
 	}
@@ -150,6 +151,160 @@ func getUserIdFromLastestProperties(properties []M.UserProperties) string {
 	return properties[latestIndex].UserId
 }
 
+func getCustomerUserIdFromProperties(projectId uint64, properties map[string]interface{}) string {
+
+	if phoneNo, ok := properties["MobilePhone"].(string); ok && phoneNo != "" {
+		for pPhoneNo := range U.GetPossiblePhoneNumber(phoneNo) {
+			userLatest, errCode := M.GetUserLatestByCustomerUserId(projectId, pPhoneNo)
+			if errCode == http.StatusFound {
+				return userLatest.ID
+			}
+		}
+	}
+
+	return ""
+}
+
+func syncLeads(projectId uint64, document *M.SalesforceDocument) int {
+	if document.Type != M.SalesforceDocumentTypeLead {
+		return http.StatusInternalServerError
+	}
+
+	logCtx := log.WithField("project_id", projectId).WithField("document_id", document.ID)
+
+	properties, err := getSalesforceDocumentProperties(document)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get properties")
+	}
+
+	trackPayload := &SDK.TrackPayload{
+		ProjectId:       projectId,
+		EventProperties: properties,
+		UserProperties:  properties,
+		Timestamp:       document.Timestamp,
+	}
+
+	var eventId string
+	var userId string
+	if document.Action == M.SalesforceDocumentCreated {
+		trackPayload.Name = "Sf_contact_created"
+		status, response := SDK.Track(projectId, trackPayload, true, "Salesforce")
+		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
+			logCtx.WithField("status", status).Error("Failed to track salesfore contact created event.")
+			return http.StatusInternalServerError
+		}
+
+		eventId = response.EventId
+		userId = response.UserId
+	} else if document.Action == M.SalesforceDocumentUpdated {
+		trackPayload.Name = "Sf_contact_updated"
+		userPropertiesRecords, errCode := M.GetUserPropertiesRecordsByProperty(
+			projectId, "Id", document.ID)
+		if errCode != http.StatusFound {
+			logCtx.WithField("err_code", errCode).Error(
+				"Failed to get user with given id. Failed to track salesforce contact updated event.")
+			return http.StatusInternalServerError
+		}
+
+		userId = getUserIdFromLastestProperties(userPropertiesRecords)
+		trackPayload.UserId = userId
+		status, response := SDK.Track(projectId, trackPayload, true, "Salesforce")
+		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
+			logCtx.WithField("status", status).Error("Failed to track salesforce contact updated event.")
+			return http.StatusInternalServerError
+		}
+
+		eventId = response.EventId
+	} else {
+		logCtx.Error("Invalid action on salesforce contact sync.")
+		return http.StatusInternalServerError
+	}
+
+	customerUserId := getCustomerUserIdFromProperties(projectId, properties)
+	if customerUserId != "" {
+		status, _ := SDK.Identify(projectId, &SDK.IdentifyPayload{
+			UserId: userId, CustomerUserId: customerUserId})
+		if status != http.StatusOK {
+			logCtx.WithField("customer_user_id", customerUserId).Error(
+				"Failed to identify user on salesforce lead sync.")
+			return http.StatusInternalServerError
+		}
+	} else {
+		logCtx.Error("Skipped user identification on salesforce lead sync. No customer_user_id on properties.")
+	}
+
+	errCode := M.UpdateSalesforceDocumentAsSynced(projectId, document.ID, eventId)
+	if errCode != http.StatusAccepted {
+		logCtx.Error("Failed to update salesforce lead document as synced.")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusOK
+}
+
+func syncContact(projectId uint64, document *M.SalesforceDocument) int {
+	if document.Type != M.SalesforceDocumentTypeContact {
+		return http.StatusInternalServerError
+	}
+
+	logCtx := log.WithField("project_id", projectId).WithField("document_id", document.ID)
+	properties, err := getSalesforceDocumentProperties(document)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get properties")
+	}
+
+	trackPayload := &SDK.TrackPayload{
+		ProjectId:       projectId,
+		EventProperties: properties,
+		UserProperties:  properties,
+		Timestamp:       document.Timestamp,
+	}
+
+	var eventId string
+	var userId string
+	if document.Action == M.SalesforceDocumentCreated {
+		trackPayload.Name = "Sf_contact_created"
+		status, response := SDK.Track(projectId, trackPayload, true, "Salesforce")
+		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
+			logCtx.WithField("status", status).Error("Failed to track salesfore contact created event.")
+			return http.StatusInternalServerError
+		}
+
+		eventId = response.EventId
+		userId = response.UserId
+	} else if document.Action == M.SalesforceDocumentUpdated {
+		trackPayload.Name = "Sf_contact_updated"
+		userPropertiesRecords, errCode := M.GetUserPropertiesRecordsByProperty(
+			projectId, "Id", document.ID)
+		if errCode != http.StatusFound {
+			logCtx.WithField("err_code", errCode).Error(
+				"Failed to get user with given id. Failed to track salesforce contact updated event.")
+			return http.StatusInternalServerError
+		}
+
+		userId = getUserIdFromLastestProperties(userPropertiesRecords)
+		trackPayload.UserId = userId
+		status, response := SDK.Track(projectId, trackPayload, true, "Salesforce")
+		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
+			logCtx.WithField("status", status).Error("Failed to track salesforce contact updated event.")
+			return http.StatusInternalServerError
+		}
+
+		eventId = response.EventId
+	} else {
+		logCtx.Error("Invalid action on salesforce contact sync.")
+		return http.StatusInternalServerError
+	}
+
+	errCode := M.UpdateSalesforceDocumentAsSynced(projectId, document.ID, eventId)
+	if errCode != http.StatusAccepted {
+		logCtx.Error("Failed to update salesforce account document as synced.")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusOK
+}
+
 func syncAccount(projectId uint64, document *M.SalesforceDocument) int {
 	if document.Type != M.SalesforceDocumentTypeAccount {
 		return http.StatusInternalServerError
@@ -157,7 +312,7 @@ func syncAccount(projectId uint64, document *M.SalesforceDocument) int {
 
 	logCtx := log.WithField("project_id", projectId).WithField("document_id", document.ID)
 
-	properties, err := getAccountProperties(document)
+	properties, err := getSalesforceDocumentProperties(document)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properties")
 	}
@@ -233,7 +388,17 @@ func syncAccount(projectId uint64, document *M.SalesforceDocument) int {
 func syncAll(projectId uint64, documents []M.SalesforceDocument) int {
 	var status []int
 	for i := range documents {
-		status = append(status, syncAccount(projectId, &documents[i]))
+		switch documents[i].Type {
+		case M.SalesforceDocumentTypeAccount:
+			status = append(status, syncAccount(projectId, &documents[i]))
+		case M.SalesforceDocumentTypeContact:
+			status = append(status, syncContact(projectId, &documents[i]))
+		case M.SalesforceDocumentTypeLead:
+			status = append(status, syncLeads(projectId, &documents[i]))
+		default:
+			log.Errorf("Invalid salesforce document type found %d", documents[i].Type)
+			continue
+		}
 	}
 	return http.StatusOK
 }
