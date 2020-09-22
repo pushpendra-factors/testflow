@@ -94,6 +94,7 @@ func GetSalesforceCreatedEventName(docType int) string {
 	case SalesforceDocumentTypeLead:
 		return U.EVENT_NAME_SALESFORCE_LEAD_CREATED
 	}
+	return ""
 }
 
 func GetSalesforceUpdatedEventName(docType int) string {
@@ -105,6 +106,7 @@ func GetSalesforceUpdatedEventName(docType int) string {
 	case SalesforceDocumentTypeLead:
 		return U.EVENT_NAME_SALESFORCE_LEAD_UPDATED
 	}
+	return ""
 }
 
 func getSalesforceDocumentId(document *SalesforceDocument) (string, error) {
