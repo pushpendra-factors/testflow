@@ -7,6 +7,7 @@ import styles from './index.module.scss';
 import QueryBlock from './QueryBlock';
 import SeqSelector from './AnalysisSeqSelector';
 import GroupBlock from './GroupBlock';
+import {get, post, put} from "../../request";
 
 const { Option } = Select;
 
@@ -35,7 +36,7 @@ function QueryComposer({
     queries.forEach((event, index) => {
       blockList.push(
                 <div className={styles.composer_body__query_block}>
-                    <QueryBlock index={index + 1} event={event} queries={queries} eventChange={eventChange}></QueryBlock>
+                    <QueryBlock index={index + 1} queryType={queryType} event={event} queries={queries} eventChange={eventChange}></QueryBlock>
                 </div>
       );
     });
@@ -43,7 +44,7 @@ function QueryComposer({
     if (queries.length < 6) {
       blockList.push(
                 <div className={styles.composer_body__query_block}>
-                    <QueryBlock index={queries.length + 1} queries={queries} eventChange={eventChange}></QueryBlock>
+                    <QueryBlock queryType={queryType} index={queries.length + 1} queries={queries} eventChange={eventChange}></QueryBlock>
                 </div>
       );
     }
@@ -156,6 +157,19 @@ function QueryComposer({
       );
     }
   };
+
+  const makeCall = () => {
+      return new Promise((resolve,reject) => {
+        get({}, host + "projects")
+          .then((response)=>{        
+            console.log(response);
+          }).catch((err)=>{        
+            console.log(err);
+          });
+      });
+    }
+
+// makeCall();
 
   return (
         <div className={styles.composer_body}>
