@@ -52,6 +52,40 @@ var SalesforceDocumentTypeAlias = map[string]int{
 
 var errorDuplicateRecord = errors.New("duplicate record")
 
+type SalesforceSyncInfo struct {
+	ProjectId uint64 `json:"-"`
+	Type      int    `json:"type"`
+	Timestamp int64  `json:"timestamp"`
+}
+
+// func GetAllSalesforceProjectSettings() ([]SalesforceProjectSettings, int) {
+// 	var salesforceProjectSettings []SalesforceProjectSettings
+
+// 	db := C.GetServices().Db
+// 	err := db.Table("project_settings").Where(
+// 		"int_salesforce_enabled_agent_uuid IS NOT NULL AND int_hubspot_api_key IS NOT NULL ").Select(
+// 		"project_id, int_hubspot_api_key as api_key").Find(
+// 		&salesforceProjectSettings).Error
+// 	if err != nil {
+// 		log.WithError(err).Error("Failed to get hubspot project_settings.")
+// 		return salesforceProjectSettings, http.StatusInternalServerError
+// 	}
+
+// 	return salesforceProjectSettings, http.StatusFound
+// }
+
+// func GetSalesforceSynInfo() ([]SalesforceSyncInfo, int) {
+// 	lastSyncInfo := []SalesforceSyncInfo{}
+// 	db := C.GetServices().Db
+// 	err := db.Table("salesforce_documents").Select(
+// 		"project_id, type, MAX(timestamp) as timestamp").Group(
+// 		"project_id, type").Find(&lastSyncInfo).Error
+// 	if err != nil {
+// 		return nil, http.StatusInternalServerError
+// 	}
+
+// }
+
 func getSalesforceDocTypeByAlias(alias string) (int, error) {
 	if alias == "" {
 		return 0, errors.New("empty document type alias")
@@ -228,4 +262,24 @@ func readSalesforceDocumentTimestamp(timestamp interface{}) (int64, error) {
 	}
 
 	return t.Unix(), nil
+}
+
+func UpdateSalesforceDocumentAsSynced(projectId uint64, id string, syncId string) int {
+	logCtx := log.WithField("project_id", projectId).WithField("id", id)
+
+	updates := make(map[string]interface{}, 0)
+	updates["synced"] = true
+	if syncId != "" {
+		updates["sync_id"] = syncId
+	}
+
+	db := C.GetServices().Db
+	err := db.Model(&SalesforceDocument{}).Where("project_id = ? AND id = ?",
+		projectId, id).Updates(updates).Error
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to update salesforce document as synced.")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusAccepted
 }

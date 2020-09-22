@@ -520,3 +520,25 @@ func GetBigqueryEnabledProjectIDs() ([]uint64, int) {
 	}
 	return projectIDs, http.StatusFound
 }
+
+type SalesforceProjectSettings struct {
+	ProjectId    uint64 `json:"-"`
+	RefreshToken string `json:"refresh_token"`
+	InstanceURL  string `json:"instance_url"`
+}
+
+func GetAllSalesforceProjectSettings() ([]SalesforceProjectSettings, int) {
+	var salesforceProjectSettings []SalesforceProjectSettings
+
+	db := C.GetServices().Db
+	err := db.Table("project_settings").Where(
+		"int_salesforce_enabled_agent_uuid != '' AND int_salesforce_enabled_agent_uuid IS NOT NULL ").Joins(" left join agents on project_settings.int_salesforce_enabled_agent_uuid = agents.uuid").Select(
+		"project_id, int_salesforce_refresh_token as refresh_token, int_salesforce_instance_url as instance_url").Find(
+		&salesforceProjectSettings).Error
+	if err != nil {
+		log.WithError(err).Error("Failed to get hubspot project_settings.")
+		return salesforceProjectSettings, http.StatusInternalServerError
+	}
+
+	return salesforceProjectSettings, http.StatusFound
+}
