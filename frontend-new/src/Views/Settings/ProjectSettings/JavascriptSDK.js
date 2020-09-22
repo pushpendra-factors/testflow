@@ -44,7 +44,7 @@ const JSConfig = () => {
     <Row>
     <Col span={24}>
       <div span={24} className={'flex flex-start items-center mt-2'}>
-        <Switch checkedChildren="On" unCheckedChildren="OFF" defaultChecked /> <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>Auto-track</Text>
+        <span style={{ width: '50px' }}><Switch checkedChildren="On" unCheckedChildren="OFF" defaultChecked /></span> <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>Auto-track</Text>
       </div>
     </Col>
     <Col span={24} className={'flex flex-start items-center'}>
@@ -52,7 +52,7 @@ const JSConfig = () => {
     </Col>
     <Col span={24}>
       <div span={24} className={'flex flex-start items-center mt-8'}>
-        <Switch checkedChildren="On" unCheckedChildren="OFF" defaultChecked /> <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>Exclude Bot</Text>
+        <span style={{ width: '50px' }}><Switch checkedChildren="On" unCheckedChildren="OFF" defaultChecked /></span> <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>Exclude Bot</Text>
       </div>
     </Col>
     <Col span={24} className={'flex flex-start items-center'}>
@@ -60,7 +60,7 @@ const JSConfig = () => {
     </Col>
     <Col span={24}>
       <div span={24} className={'flex flex-start items-center mt-8'}>
-        <Switch checkedChildren="On" unCheckedChildren="OFF" /> <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>Auto Form Capture</Text>
+        <span style={{ width: '50px' }}><Switch checkedChildren="On" unCheckedChildren="OFF" /></span> <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>Auto Form Capture</Text>
       </div>
     </Col>
     <Col span={24} className={'flex flex-start items-center'}>

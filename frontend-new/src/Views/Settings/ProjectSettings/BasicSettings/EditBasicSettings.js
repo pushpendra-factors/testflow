@@ -1,25 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Row, Col, Modal, Button, Avatar, Skeleton
+  Row, Col, Button, Avatar, Skeleton, Input, Select
 } from 'antd';
 import { Text } from 'factorsComponents';
 import { UserOutlined } from '@ant-design/icons';
 
-function EditUserDetails() {
+const { Option } = Select;
+
+function EditBasicSettings(props) {
   const [dataLoading, setDataLoading] = useState(true);
 
   useEffect(() => {
     setTimeout(() => {
       setDataLoading(false);
-    }, 2000);
+    }, 200);
   });
-
-  const screenNotComplete = () => {
-    Modal.error({
-      title: 'Work in progress',
-      content: 'Edit screen not updated in Figma.'
-    });
-  };
 
   return (
     <>
@@ -30,7 +25,8 @@ function EditUserDetails() {
           </Col>
           <Col span={12}>
             <div className={'flex justify-end'}>
-              <Button disabled={dataLoading} onClick={screenNotComplete}>Edit Details</Button>
+              <Button disabled={dataLoading} onClick={() => props.setEditMode(false)}>Cancel</Button>
+              <Button type="primary" disabled={dataLoading} className={'ml-2'} onClick={() => props.setEditMode(false)}>Save</Button>
             </div>
           </Col>
         </Row>
@@ -43,39 +39,44 @@ function EditUserDetails() {
           </Col>
         </Row>
         <Row className={'mt-6'}>
-          <Col span={12}>
+          <Col span={24}>
             <Text type={'title'} level={7} extraClass={'m-0'}>Project Name</Text>
-            { dataLoading ? <Skeleton.Input style={{ width: 200 }} active={true} size={'small'} />
-              : <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>FactorsAI</Text>
-            }
+            <Input className={'fa-input'} size={'large'} placeholder="Project Name" />
           </Col>
-          <Col span={12}>
+        </Row>
+        <Row className={'mt-6'}>
+          <Col span={24}>
             <Text type={'title'} level={7} extraClass={'m-0'}>Project URL</Text>
-            { dataLoading ? <Skeleton.Input style={{ width: 200 }} active={true} size={'small'} />
-              : <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>http://www.factors.ai</Text>
-            }
+            <Input className={'fa-input'} size={'large'} placeholder="Project URL" />
           </Col>
         </Row>
+
         <Row className={'mt-6'}>
-          <Col span={12}>
+          <Col span={24}>
             <Text type={'title'} level={7} extraClass={'m-0'}>Date Format</Text>
-            { dataLoading ? <Skeleton.Input style={{ width: 200 }} active={true} size={'small'} />
-              : <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>MM-DD-YY</Text>
-            }
-          </Col>
-          <Col span={12}>
-            <Text type={'title'} level={7} extraClass={'m-0'}>Time Format</Text>
-            { dataLoading ? <Skeleton.Input style={{ width: 200 }} active={true} size={'small'} />
-              : <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>12 Hour</Text>
-            }
+            <Select className={'fa-select w-full'} size={'large'} defaultValue="DD-MM-YYYY">
+                <Option value="DD-MM">DD-MM-YYYY</Option>
+                <Option value="MM-DD">MM-DD-YYYY</Option>
+            </Select>
           </Col>
         </Row>
         <Row className={'mt-6'}>
-          <Col span={12}>
+          <Col span={24}>
+            <Text type={'title'} level={7} extraClass={'m-0'}>Time Format</Text>
+            <Select className={'fa-select w-full'} size={'large'} defaultValue="DD-MM-YYYY">
+                <Option value="12 Hours">12 Hours</Option>
+                <Option value="24 Hours">24 Hours</Option>
+            </Select>
+          </Col>
+        </Row>
+
+        <Row className={'mt-6'}>
+          <Col span={24}>
             <Text type={'title'} level={7} extraClass={'m-0'}>Time Zone</Text>
-            { dataLoading ? <Skeleton.Input style={{ width: 200 }} active={true} size={'small'} />
-              : <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>IST -- UTC +5:30 India and Sri Lanka</Text>
-            }
+            <Select className={'fa-select w-full'} size={'large'} defaultValue="DD-MM-YYYY">
+                <Option value="India and Sri Lanka">IST -- UTC +5:30 India and Sri Lanka</Option>
+                <Option value="India">IST -- UTC +3:30 India</Option>
+            </Select>
           </Col>
         </Row>
       </div>
@@ -85,4 +86,4 @@ function EditUserDetails() {
   );
 }
 
-export default EditUserDetails;
+export default EditBasicSettings;

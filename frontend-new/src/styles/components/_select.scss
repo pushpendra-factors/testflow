@@ -1,0 +1,21 @@
+.fa-select{
+    .ant-select-selector
+    {
+        border: thin solid $fa-color--mono-2 !important;
+        border-radius: 6px !important;
+        }
+
+    &:hover,&:active,&:focus{
+        .ant-select-selector
+        { 
+            border-color: $fa-color--brand-6 !important;
+            box-shadow: 0 0 0 2px rgba($fa-color--brand-6, 0.2) !important;
+        }
+    }
+    &.ant-input-disabled{
+        &:focus, &:hover, &:active{ 
+            border: thin solid $fa-color--mono-2 !important;
+            box-shadow: none !important
+        } 
+    }
+}
