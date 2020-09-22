@@ -100,9 +100,10 @@ const (
 	SourceJSSDK  = "js_sdk"
 	SourceAMPSDK = "amp_sdk"
 
-	SourceSegment = "segment"
-	SourceShopify = "shopify"
-	SourceHubspot = "hubspot"
+	SourceSegment    = "segment"
+	SourceShopify    = "shopify"
+	SourceHubspot    = "hubspot"
+	SourceSalesforce = "salesforce"
 )
 
 const RequestQueue = "sdk_request_queue"

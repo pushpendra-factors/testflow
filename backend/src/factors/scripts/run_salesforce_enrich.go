@@ -74,6 +74,10 @@ func main() {
 
 	C.InitConf(config.Env)
 	C.InitEventUserRealTimeCachingConfig(config.IsRealTimeEventUserCachingEnabled, config.RealTimeEventUserCachingProjectIds)
+	C.InitRedis(config.RedisHost, config.RedisPort)
+	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
+	C.InitSentryLogging(config.SentryDSN, config.AppName)
+	defer C.SafeFlushSentryHook()
 
 	err := C.InitDB(config.DBInfo)
 	if err != nil {
@@ -87,11 +91,6 @@ func main() {
 	if status != http.StatusFound {
 		log.Fatal("No projects enabled salesforce integration.")
 	}
-
-	C.InitRedis(config.RedisHost, config.RedisPort)
-	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
-	C.InitSentryLogging(config.SentryDSN, config.AppName)
-	defer C.SafeFlushSentryHook()
 
 	statusList := make([]IntSalesforce.Status, 0, 0)
 	for _, settings := range salesforceEnabledProjects {

@@ -33,6 +33,14 @@ const EVENT_NAME_HUBSPOT_CONTACT_CREATED = "$hubspot_contact_created"
 const EVENT_NAME_HUBSPOT_CONTACT_UPDATED = "$hubspot_contact_updated"
 const EVENT_NAME_HUBSPOT_DEAL_STATE_CHANGED = "$hubspot_deal_state_changed"
 
+// Integration: Salesforce event names.
+const EVENT_NAME_SALESFORCE_CONTACT_CREATED = "sf_contact_created"
+const EVENT_NAME_SALESFORCE_CONTACT_UPDATED = "sf_contact_updated"
+const EVENT_NAME_SALESFORCE_LEAD_CREATED = "sf_lead_created"
+const EVENT_NAME_SALESFORCE_LEAD_UPDATED = "sf_lead_updated"
+const EVENT_NAME_SALESFORCE_ACCOUNT_CREATED = "sf_lead_created"
+const EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED = "sf_lead_updated"
+
 // Integration shopify event names.
 const EVENT_NAME_SHOPIFY_CHECKOUT_CREATED = "$shopify_checkout_created"
 const EVENT_NAME_SHOPIFY_CHECKOUT_UPDATED = "$shopify_checkout_updated"

@@ -50,6 +50,11 @@ var SalesforceDocumentTypeAlias = map[string]int{
 	SalesforceDocumentTypeNameAccount: SalesforceDocumentTypeAccount,
 }
 
+var SalesforceSupportedDocumentType = []int{
+	SalesforceDocumentTypeAccount,
+	SalesforceDocumentTypeContact,
+	SalesforceDocumentTypeLead,
+}
 var errorDuplicateRecord = errors.New("duplicate record")
 
 type SalesforceSyncInfo struct {
@@ -58,6 +63,15 @@ type SalesforceSyncInfo struct {
 	Timestamp int64  `json:"timestamp"`
 }
 
+func GetSalesforceDocTypeByType(typ int) string {
+	for a, t := range SalesforceDocumentTypeAlias {
+		if typ == t {
+			return a
+		}
+	}
+
+	return ""
+}
 func getSalesforceDocTypeByAlias(alias string) (int, error) {
 	if alias == "" {
 		return 0, errors.New("empty document type alias")
@@ -69,6 +83,28 @@ func getSalesforceDocTypeByAlias(alias string) (int, error) {
 	}
 
 	return typ, nil
+}
+
+func GetSalesforceCreatedEventName(docType int) string {
+	switch docType {
+	case SalesforceDocumentTypeAccount:
+		return U.EVENT_NAME_SALESFORCE_ACCOUNT_CREATED
+	case SalesforceDocumentTypeContact:
+		return U.EVENT_NAME_SALESFORCE_CONTACT_CREATED
+	case SalesforceDocumentTypeLead:
+		return U.EVENT_NAME_SALESFORCE_LEAD_CREATED
+	}
+}
+
+func GetSalesforceUpdatedEventName(docType int) string {
+	switch docType {
+	case SalesforceDocumentTypeAccount:
+		return U.EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED
+	case SalesforceDocumentTypeContact:
+		return U.EVENT_NAME_SALESFORCE_CONTACT_UPDATED
+	case SalesforceDocumentTypeLead:
+		return U.EVENT_NAME_SALESFORCE_LEAD_UPDATED
+	}
 }
 
 func getSalesforceDocumentId(document *SalesforceDocument) (string, error) {
