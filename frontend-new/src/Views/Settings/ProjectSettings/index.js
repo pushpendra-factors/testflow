@@ -3,7 +3,7 @@ import {
   Row, Col, Menu
 } from 'antd';
 import { Text } from 'factorsComponents';
-import ViewProjectSettings from './ViewProjectSettings';
+import BasicSettings from './BasicSettings';
 import JavascriptSDK from './JavascriptSDK';
 
 const MenuTabs = {
@@ -63,7 +63,7 @@ function UserSettingsModal() {
           <Col span={15}>
 
           {selectedMenu === MenuTabs.generalSettings &&
-            <ViewProjectSettings
+            <BasicSettings
               // editDetails={() => setDetailsModal(true)}
               // editPassword={() => setPasswordModal(true)}
             />

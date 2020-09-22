@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Row, Col, Skeleton, Tabs
+  Row, Col, Skeleton, Tabs, Switch
 } from 'antd';
 import { Text } from 'factorsComponents';
 const { TabPane } = Tabs;
@@ -33,8 +33,39 @@ const ViewSetup = () => {
             </pre>
           </Col>
           <Col span={24}>
-            <Text type={'paragraph'} extraClass={'m-0 mt-2'}>For detailed instructions on how to install and initialize the JavaScript SDK please refer to our <a href="#!">JavaScript developer documentation.</a></Text>
+            <Text type={'paragraph'} extraClass={'m-0 mt-2'}>For detailed instructions on how to install and initialize the JavaScript SDK please refer to our <a className={'fa-anchor'} href="#!">JavaScript developer documentation.</a></Text>
           </Col>
+    </Row>
+  );
+};
+
+const JSConfig = () => {
+  return (
+    <Row>
+    <Col span={24}>
+      <div span={24} className={'flex flex-start items-center mt-2'}>
+        <span style={{ width: '50px' }}><Switch checkedChildren="On" unCheckedChildren="OFF" defaultChecked /></span> <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>Auto-track</Text>
+      </div>
+    </Col>
+    <Col span={24} className={'flex flex-start items-center'}>
+      <Text type={'paragraph'} extraClass={'m-0 mt-2'} color={'grey'}>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam.</Text>
+    </Col>
+    <Col span={24}>
+      <div span={24} className={'flex flex-start items-center mt-8'}>
+        <span style={{ width: '50px' }}><Switch checkedChildren="On" unCheckedChildren="OFF" defaultChecked /></span> <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>Exclude Bot</Text>
+      </div>
+    </Col>
+    <Col span={24} className={'flex flex-start items-center'}>
+      <Text type={'paragraph'} extraClass={'m-0 mt-2'} color={'grey'}>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam.</Text>
+    </Col>
+    <Col span={24}>
+      <div span={24} className={'flex flex-start items-center mt-8'}>
+        <span style={{ width: '50px' }}><Switch checkedChildren="On" unCheckedChildren="OFF" /></span> <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>Auto Form Capture</Text>
+      </div>
+    </Col>
+    <Col span={24} className={'flex flex-start items-center'}>
+      <Text type={'paragraph'} extraClass={'m-0 mt-2'} color={'grey'}>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam.</Text>
+    </Col>
     </Row>
   );
 };
@@ -68,7 +99,7 @@ function EditUserDetails() {
                   <ViewSetup />
                 </TabPane>
                 <TabPane tab="Configuration" key="2">
-                  Configuration content comes here..
+                  <JSConfig />
                 </TabPane>
               </Tabs>
             }

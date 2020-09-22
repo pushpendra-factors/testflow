@@ -1,5 +1,5 @@
 .fa-input{
-    border: thin solid $fa-color--mono-1;
+    border: thin solid $fa-color--mono-2;
     border-radius: 6px; 
     &:focus, &:hover, &:active{ 
         border-color: $fa-color--brand-6;
@@ -7,7 +7,7 @@
     }
     &.ant-input-disabled{
         &:focus, &:hover, &:active{ 
-            border: thin solid $fa-color--mono-1 !important;
+            border: thin solid $fa-color--mono-2 !important;
             box-shadow: none !important
         } 
     }
