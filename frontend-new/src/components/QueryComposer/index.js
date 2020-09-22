@@ -1,3 +1,4 @@
+/* eslint-disable */
 import React, { useState } from 'react';
 import {
   Button, Collapse, Select, Popover
@@ -7,7 +8,7 @@ import styles from './index.module.scss';
 import QueryBlock from './QueryBlock';
 import SeqSelector from './AnalysisSeqSelector';
 import GroupBlock from './GroupBlock';
-import {get, post, put} from "../../request";
+import { get, post, put } from '../../request';
 
 const { Option } = Select;
 
@@ -159,17 +160,17 @@ function QueryComposer({
   };
 
   const makeCall = () => {
-      return new Promise((resolve,reject) => {
-        get({}, host + "projects")
-          .then((response)=>{        
-            console.log(response);
-          }).catch((err)=>{        
-            console.log(err);
-          });
-      });
-    }
+    return new Promise((resolve, reject) => {
+      get({}, host + 'projects')
+        .then((response) => {
+          console.log(response);
+        }).catch((err) => {
+          console.log(err);
+        });
+    });
+  };
 
-// makeCall();
+  // makeCall();
 
   return (
         <div className={styles.composer_body}>
