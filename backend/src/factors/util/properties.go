@@ -167,6 +167,7 @@ var UP_NAME string = "$name"
 var UP_FIRST_NAME string = "$first_name"
 var UP_LAST_NAME string = "$last_name"
 var UP_PHONE string = "$phone"
+var UP_INITIAL_PAGE_EVENT_ID string = "$initial_page_event_id" // internal. id of initial page event.
 var UP_INITIAL_PAGE_URL string = "$initial_page_url"
 var UP_INITIAL_PAGE_DOMAIN string = "$initial_page_domain"
 var UP_INITIAL_PAGE_RAW_URL string = "$initial_page_raw_url"
@@ -347,6 +348,7 @@ var SDK_ALLOWED_USER_PROPERTIES = [...]string{
 	UP_FIRST_NAME,
 	UP_LAST_NAME,
 	UP_PHONE,
+	UP_INITIAL_PAGE_EVENT_ID,
 	UP_INITIAL_PAGE_URL,
 	UP_INITIAL_PAGE_DOMAIN,
 	UP_INITIAL_PAGE_RAW_URL,
@@ -636,6 +638,7 @@ var DISABLED_CORE_QUERY_USER_PROPERTIES = [...]string{
 	UP_DEVICE_ADVERTISING_ID,
 	UP_DEVICE_ID,
 	UP_MERGE_TIMESTAMP,
+	UP_INITIAL_PAGE_EVENT_ID,
 }
 
 // DISABLED_CORE_QUERY_EVENT_PROPERTIES Less important event properties in core query context.
@@ -667,6 +670,7 @@ var DISABLED_FACTORS_USER_PROPERTIES = [...]string{
 	UP_LATEST_REFERRER,
 	UP_INITIAL_REFERRER,
 	UP_MERGE_TIMESTAMP,
+	UP_INITIAL_PAGE_EVENT_ID,
 }
 
 // DISABLED_FACTORS_EVENT_PROPERTIES Event properties disabled for the factors analysis.
@@ -1038,12 +1042,16 @@ func GetUpdateAllowedEventProperties(properties *PropertiesMap) *PropertiesMap {
 	return &allowedProperties
 }
 
-func GetInitialUserProperties(eventProperties *PropertiesMap) *PropertiesMap {
+func GetInitialUserProperties(eventID string, eventProperties *PropertiesMap) *PropertiesMap {
 	initialUserProperties := make(PropertiesMap)
 	for k, v := range *eventProperties {
 		if userPropertyKey, exists := EVENT_TO_USER_INITIAL_PROPERTIES[k]; exists {
 			initialUserProperties[userPropertyKey] = v
 		}
+	}
+
+	if len(initialUserProperties) > 0 {
+		initialUserProperties[UP_INITIAL_PAGE_EVENT_ID] = eventID
 	}
 
 	return &initialUserProperties

@@ -900,61 +900,6 @@ func OverwriteUserProperties(projectId uint64, userId string,
 	return http.StatusAccepted
 }
 
-// Updates given property with value on all user properties for the given user
-// adds property if not exist.
-func UpdatePropertyOnAllUserPropertyRecords(projectId uint64, userId string,
-	property string, value interface{}) int {
-
-	userPropertyRecords, errCode := GetUserPropertyRecordsByUserId(projectId, userId)
-	if errCode == http.StatusInternalServerError {
-		return errCode
-	} else if errCode == http.StatusNotFound {
-		return http.StatusBadRequest
-	}
-
-	logCtx := log.WithFields(log.Fields{"project_id": projectId, "user_id": userId})
-
-	for _, userProperties := range userPropertyRecords {
-		var propertiesMap map[string]interface{}
-
-		if !U.IsEmptyPostgresJsonb(&userProperties.Properties) {
-			err := json.Unmarshal(userProperties.Properties.RawMessage, &propertiesMap)
-			if err != nil {
-				logCtx.Error("Failed to update user property record. JSON unmarshal failed.")
-				continue
-			}
-		} else {
-			propertiesMap = make(map[string]interface{}, 0)
-		}
-
-		// update not required. Not using AddToPostgresJsonb
-		// for this check.
-		if pValue, _ := propertiesMap[property]; pValue == value {
-			continue
-		}
-
-		logCtx = logCtx.WithFields(log.Fields{"properties_id": userProperties.ID, "property": property, "value": value})
-
-		propertiesMap[property] = value
-		properitesBytes, err := json.Marshal(propertiesMap)
-		if err != nil {
-			// log and continue update next user property.
-			logCtx.Error("Failed to update user property record. JSON marshal failed.")
-			continue
-		}
-		updatedProperties := postgres.Jsonb{RawMessage: json.RawMessage(properitesBytes)}
-
-		// Triggers multiple updates.
-		errCode := OverwriteUserProperties(projectId, userId, userProperties.ID, &updatedProperties)
-		if errCode == http.StatusInternalServerError {
-			logCtx.WithError(err).Error("Failed to update user property record. DB query failed.")
-			continue
-		}
-	}
-
-	return http.StatusAccepted
-}
-
 func GetUserPropertiesRecordsByProperty(projectId uint64,
 	key string, value interface{}) ([]UserProperties, int) {
 
