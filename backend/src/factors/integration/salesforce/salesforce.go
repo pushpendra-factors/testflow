@@ -187,14 +187,19 @@ func TrackSalesforceEventByDocumentType(projectId uint64, trackPayload *SDK.Trac
 
 		eventId = response.EventId
 		userId = response.UserId
-	} else if document.Action == M.SalesforceDocumentUpdated {
+	}
+
+	if document.Action == M.SalesforceDocumentCreated || document.Action == M.SalesforceDocumentUpdated {
 		trackPayload.Name = M.GetSalesforceUpdatedEventName(document.Type)
 		userPropertiesRecords, errCode := M.GetUserPropertiesRecordsByProperty(projectId, "Id", document.ID)
 		if errCode != http.StatusFound {
 			return "", "", errors.New("failed to get user with given id")
 		}
 
-		userId = getUserIdFromLastestProperties(userPropertiesRecords)
+		if document.Action == M.SalesforceDocumentUpdated {
+			userId = getUserIdFromLastestProperties(userPropertiesRecords)
+		}
+
 		trackPayload.UserId = userId
 		status, response := SDK.Track(projectId, trackPayload, true, SDK.SourceSalesforce)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
@@ -207,6 +212,14 @@ func TrackSalesforceEventByDocumentType(projectId uint64, trackPayload *SDK.Trac
 	}
 
 	return eventId, userId, nil
+}
+func removeSkipableFieldsFromProperties(properties map[string]interface{}) error {
+	for _, field := range M.SalesforceSkippablefields {
+		if _, exist := properties[field]; exist {
+			delete(properties, field)
+		}
+	}
+	return nil
 }
 
 func syncLeads(projectId uint64, document *M.SalesforceDocument) int {
@@ -222,6 +235,7 @@ func syncLeads(projectId uint64, document *M.SalesforceDocument) int {
 	}
 
 	removeEmptyFieldsFromProperties(properties)
+	removeSkipableFieldsFromProperties(properties)
 	trackPayload := &SDK.TrackPayload{
 		ProjectId:       projectId,
 		EventProperties: properties,
@@ -269,6 +283,7 @@ func syncContact(projectId uint64, document *M.SalesforceDocument) int {
 		logCtx.WithError(err).Error("Failed to get properties")
 	}
 	removeEmptyFieldsFromProperties(properties)
+	removeSkipableFieldsFromProperties(properties)
 
 	trackPayload := &SDK.TrackPayload{
 		ProjectId:       projectId,
@@ -305,6 +320,7 @@ func syncAccount(projectId uint64, document *M.SalesforceDocument) int {
 		logCtx.WithError(err).Error("Failed to get properties")
 	}
 	removeEmptyFieldsFromProperties(properties)
+	removeSkipableFieldsFromProperties(properties)
 
 	trackPayload := &SDK.TrackPayload{
 		ProjectId:       projectId,

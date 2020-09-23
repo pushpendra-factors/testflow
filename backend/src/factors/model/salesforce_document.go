@@ -55,6 +55,16 @@ var SalesforceSupportedDocumentType = []int{
 	SalesforceDocumentTypeContact,
 	SalesforceDocumentTypeLead,
 }
+
+var SalesforceSkippablefields = []string{
+	"LastModifiedDate",
+	"CreatedDate",
+	"CreatedById",
+	"LastModifiedById",
+	"SystemModstamp",
+	"attributes",
+}
+
 var errorDuplicateRecord = errors.New("duplicate record")
 
 type SalesforceSyncInfo struct {

@@ -21,4 +21,4 @@ TABLESPACE pg_default;
 ALTER TABLE public.salesforce_documents OWNER to postgres;
 
 -- DOWN
--- DROP TABLE facebook_documents;
+-- DROP TABLE salesforce_documents;
