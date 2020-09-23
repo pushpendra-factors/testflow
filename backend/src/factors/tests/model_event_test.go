@@ -434,7 +434,7 @@ func TestCreateOrGetSessionEvent(t *testing.T) {
 		json.Unmarshal(eventPropertiesBytes.([]byte), &eventPropertiesMap)
 		assert.NotNil(t, eventPropertiesMap[U.UP_INITIAL_PAGE_LOAD_TIME])
 
-		userPropertiesMap, errCode := M.GetUserPropertiesAsMap(projectId, userId)
+		userPropertiesMap, errCode := M.GetLatestUserPropertiesOfUserAsMap(projectId, userId)
 		assert.Equal(t, errCode, http.StatusFound)
 		assert.Nil(t, (*userPropertiesMap)[U.UP_LATEST_PAGE_LOAD_TIME])
 		assert.Nil(t, (*userPropertiesMap)[U.UP_LATEST_CAMPAIGN])
@@ -453,7 +453,7 @@ func TestCreateOrGetSessionEvent(t *testing.T) {
 		userPropertiesMap, _ := U.DecodePostgresJsonb(userProperties)
 		assert.NotNil(t, (*userPropertiesMap)[U.UP_SESSION_COUNT])
 
-		userPropertiesMap, errCode = M.GetUserPropertiesAsMap(projectId, userId)
+		userPropertiesMap, errCode = M.GetLatestUserPropertiesOfUserAsMap(projectId, userId)
 		assert.Equal(t, errCode, http.StatusFound)
 		assert.Nil(t, (*userPropertiesMap)[U.UP_LATEST_PAGE_LOAD_TIME])
 		assert.Nil(t, (*userPropertiesMap)[U.UP_LATEST_CAMPAIGN])

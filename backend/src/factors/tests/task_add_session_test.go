@@ -1,11 +1,13 @@
 package tests
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"testing"
 	"time"
 
+	"github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/stretchr/testify/assert"
 
 	C "factors/config"
@@ -102,6 +104,15 @@ func TestAddSession(t *testing.T) {
 	assert.Equal(t, http.StatusOK, status)
 	skipSessionEventId := response.EventId
 
+	// create new user_properties state, for testing session user_properties addition
+	// on latest user_properties, which is not associated to any event.
+	userProperties := postgres.Jsonb{json.RawMessage(`{"plan": "enterprise"}`)}
+	newUserPropertiesID, errCode := M.UpdateUserProperties(project.ID, userId, &userProperties, time.Now().Unix())
+	user, _ := M.GetUser(project.ID, userId)
+	assert.NotNil(t, user)
+	// new user_properties state should be the user's latest user_property state.
+	assert.Equal(t, newUserPropertiesID, user.PropertiesId)
+
 	_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 30, 1)
 	assert.Nil(t, err)
 
@@ -120,7 +131,8 @@ func TestAddSession(t *testing.T) {
 	assert.Equal(t, trackUserProperties[U.UP_OS], (*lsEventProperties1)[U.UP_OS])
 	assert.Equal(t, trackUserProperties[U.UP_OS_VERSION], (*lsEventProperties1)[U.UP_OS_VERSION])
 
-	// check session count so far.
+	// check session user_properties so far, on both event associated
+	// user_property and user's latest user_property.
 	event, errCode := M.GetEventById(project.ID, eventId)
 	assert.Equal(t, http.StatusFound, errCode)
 	userPropertiesRecord, errCode := M.GetUserPropertiesRecord(project.ID, event.UserId, event.UserPropertiesId)
@@ -129,6 +141,14 @@ func TestAddSession(t *testing.T) {
 	assert.Equal(t, float64(1), (*userPropertiesMap)[U.UP_SESSION_COUNT])
 	assert.Equal(t, float64(1), (*userPropertiesMap)[U.UP_PAGE_COUNT])
 	assert.Equal(t, float64(1), (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
+	// check latest user_properties state.
+	user, _ = M.GetUser(project.ID, event.UserId)
+	lastestUserPropertiesMap, err := U.DecodePostgresJsonb(&user.Properties)
+	assert.Nil(t, err)
+	assert.NotEqual(t, event.UserPropertiesId, user.PropertiesId)
+	assert.Equal(t, float64(1), (*lastestUserPropertiesMap)[U.UP_SESSION_COUNT])
+	assert.Equal(t, float64(1), (*lastestUserPropertiesMap)[U.UP_PAGE_COUNT])
+	assert.Equal(t, float64(1), (*lastestUserPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
 
 	// Test: New events without session for existing user with session.
 	// Since there is continious activity, last session should be continued.

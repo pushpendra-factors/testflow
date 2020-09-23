@@ -1039,7 +1039,11 @@ func associateSessionToEventsInBatch(projectId uint64, events []*Event,
 }
 
 type SessionUserProperties struct {
-	UserID               string
+	// Meta
+	UserID                string
+	SessionEventTimestamp int64
+
+	// Properties
 	SessionCount         uint64
 	SessionPageCount     float64
 	SessionPageSpentTime float64
@@ -1273,7 +1277,9 @@ func AddSessionForUser(projectId uint64, userId string, userEvents []Event,
 
 			// associate user_properties state using session of the event.
 			sessionUserProperties := SessionUserProperties{
-				UserID:               userId,
+				UserID:                userId,
+				SessionEventTimestamp: sessionEvent.Timestamp,
+
 				SessionCount:         sessionEvent.Count,
 				SessionPageCount:     sessionPageCount,
 				SessionPageSpentTime: sessionPageSpentTime,

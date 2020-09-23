@@ -765,7 +765,7 @@ func getPropertyValuesByUserPropertyFromCache(projectID uint64, propertyName str
 	return cacheValue, nil
 }
 
-func GetUserPropertiesAsMap(projectId uint64, id string) (*map[string]interface{}, int) {
+func GetLatestUserPropertiesOfUserAsMap(projectId uint64, id string) (*map[string]interface{}, int) {
 	logCtx := log.WithField("project_id", projectId).WithField("id", id)
 
 	user, errCode := GetUser(projectId, id)

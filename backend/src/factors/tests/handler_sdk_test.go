@@ -1067,7 +1067,7 @@ func TestOldUserSessionProperties(t *testing.T) {
 	eventOldUser, errCode := M.GetEventById(project.ID, responseMap["event_id"].(string))
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotEmpty(t, eventOldUser.SessionId)
-	oldUserPropertiesMap, errCode := M.GetUserPropertiesAsMap(project.ID, user.ID)
+	oldUserPropertiesMap, errCode := M.GetLatestUserPropertiesOfUserAsMap(project.ID, user.ID)
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.Nil(t, (*oldUserPropertiesMap)[U.UP_PAGE_COUNT])
 	assert.Nil(t, (*oldUserPropertiesMap)[U.UP_TOTAL_SPENT_TIME])

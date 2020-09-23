@@ -554,7 +554,7 @@ func Track(projectId uint64, request *TrackPayload,
 	} else {
 		// Adding initial user properties if user_id exists,
 		// but initial properties are not. i.e user created on identify.
-		existingUserProperties, errCode = M.GetUserPropertiesAsMap(projectId, request.UserId)
+		existingUserProperties, errCode = M.GetLatestUserPropertiesOfUserAsMap(projectId, request.UserId)
 		if errCode != http.StatusFound {
 			logCtx.WithField("user_id", errCode).WithField("err_code",
 				errCode).Error("Tracking failed. Get user properties as map failed.")
@@ -618,7 +618,7 @@ func Track(projectId uint64, request *TrackPayload,
 	}
 
 	if existingUserProperties == nil {
-		existingUserProperties, errCode = M.GetUserPropertiesAsMap(projectId, request.UserId)
+		existingUserProperties, errCode = M.GetLatestUserPropertiesOfUserAsMap(projectId, request.UserId)
 		if errCode == http.StatusInternalServerError {
 			logCtx.WithField("user_id", errCode).WithField("err_code",
 				errCode).Error("Tracking failed. Get user properties as map failed.")

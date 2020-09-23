@@ -658,7 +658,7 @@ func TestGetUserPropertiesAsMap(t *testing.T) {
 	assert.True(t, len(user.PropertiesId) > 0)
 
 	//Call get user function
-	userProperties, errCode := M.GetUserPropertiesAsMap(project.ID, user.ID)
+	userProperties, errCode := M.GetLatestUserPropertiesOfUserAsMap(project.ID, user.ID)
 	assert.Equal(t, errCode, http.StatusFound)
 	decodedUserProperties, err := U.DecodePostgresJsonb(&user.Properties)
 	assert.Nil(t, err)
