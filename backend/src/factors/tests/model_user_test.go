@@ -473,7 +473,7 @@ func TestGetRecentUserPropertyKeys(t *testing.T) {
 			"User-Agent":    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
 		})
 
-	props, err := M.GetRecentUserPropertyKeysWithLimits(project.ID, 10, 100)
+	props, err := M.GetRecentUserPropertyKeysWithLimits(project.ID, 10, 100, time.Now().UTC())
 	assert.Equal(t, nil, err)
 	propertyMap := make(map[string]bool)
 	for _, property := range props {
@@ -486,7 +486,7 @@ func TestGetRecentUserPropertyKeys(t *testing.T) {
 	assert.Equal(t, propertyMap["prop4"], true)
 
 	// recent users limited to 1.
-	props, err = M.GetRecentUserPropertyKeysWithLimits(project.ID, 1, 100)
+	props, err = M.GetRecentUserPropertyKeysWithLimits(project.ID, 1, 100, time.Now().UTC())
 	assert.Equal(t, nil, err)
 	propertyMap = make(map[string]bool)
 	for _, property := range props {
@@ -531,7 +531,7 @@ func TestGetRecentUserPropertyValues(t *testing.T) {
 		})
 
 	t.Run("RecentPropertyValuesLimitedByUsers", func(t *testing.T) {
-		values, category, err := M.GetRecentUserPropertyValuesWithLimits(project.ID, "prop4", 10, 100)
+		values, category, err := M.GetRecentUserPropertyValuesWithLimits(project.ID, "prop4", 10, 100, time.Now().UTC())
 		assert.Equal(t, nil, err)
 		assert.Len(t, values, 1)
 		valuesMap := make(map[string]bool)

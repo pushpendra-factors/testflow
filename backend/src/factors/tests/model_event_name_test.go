@@ -1,18 +1,14 @@
 package tests
 
 import (
-	C "factors/config"
-	H "factors/handler"
 	M "factors/model"
 	U "factors/util"
-	"fmt"
 	"math"
 	"net/http"
 	"sort"
 	"testing"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/copier"
 	"github.com/stretchr/testify/assert"
 )
@@ -505,7 +501,7 @@ func TestDBDeleteFilterEventName(t *testing.T) {
 	assert.Equal(t, http.StatusAccepted, errCode)
 }
 
-func TestDBGetEventNamesOrderedByOccurrenceWithLimit(t *testing.T) {
+/*func TestDBGetEventNamesOrderedByOccurrenceWithLimit(t *testing.T) {
 	r := gin.Default()
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
@@ -548,7 +544,7 @@ func TestDBGetEventNamesOrderedByOccurrenceWithLimit(t *testing.T) {
 		})
 	assert.Equal(t, http.StatusOK, w.Code)
 	// with limit.
-	getEventNames1, err := M.GetEventNamesOrderedByOccurenceAndRecency(project.ID, 10, 30, M.EVENT_NAME_REQUEST_TYPE_EXACT)
+	getEventNames1, err := M.GetEventNamesOrderedByOccurenceAndRecency(project.ID, 10, 30)
 	assert.Equal(t, nil, err)
 	assert.Len(t, getEventNames1, 4)
 
@@ -562,9 +558,9 @@ func TestDBGetEventNamesOrderedByOccurrenceWithLimit(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	assert.Equal(t, http.StatusOK, w.Code)
-	getEventNames2, err := M.GetEventNamesOrderedByOccurenceAndRecency(project.ID, 2, 30, M.EVENT_NAME_REQUEST_TYPE_EXACT)
+	getEventNames2, err := M.GetEventNamesOrderedByOccurenceAndRecency(project.ID, 2, 30)
 	assert.Equal(t, nil, err)
 	assert.Len(t, getEventNames2, 2)
 	assert.Equal(t, "$session", getEventNames2[0])
 	assert.Equal(t, "event2", getEventNames2[1])
-}
+}*/

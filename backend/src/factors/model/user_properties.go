@@ -117,12 +117,17 @@ func createUserPropertiesIfChanged(projectId uint64, userId string,
 		postgres.Jsonb{RawMessage: json.RawMessage(updatedPropertiesBytes)}, timestamp, false)
 }
 
-func BackFillUserDataInCacheFromDb(projectid uint64, currentDate time.Time, usersProcessedLimit int, propertiesLimit int, valuesLimit int) {
+func BackFillUserDataInCacheFromDb(projectid uint64, currentDate time.Time, usersProcessedLimit int, propertiesLimit int, valuesLimit int, skipExpiryForCache bool) {
 
 	logCtx := log.WithFields(log.Fields{
 		"project_id": projectid,
 	})
 	logCtx.Info("Refresh User Properties Cache started")
+	expiry := float64(U.EVENT_USER_CACHE_EXPIRY_SECS)
+	if skipExpiryForCache {
+		logCtx.Info("Setting Cache keys of this run to no-expiry")
+		expiry = 0
+	}
 	currentDateFormat := currentDate.AddDate(0, 0, -1).Format(U.DATETIME_FORMAT_YYYYMMDD)
 	var userPropertiesTillDate U.CachePropertyWithTimestamp
 	userPropertiesTillDate.Property = make(map[string]U.PropertyWithTimestamp)
@@ -132,7 +137,7 @@ func BackFillUserDataInCacheFromDb(projectid uint64, currentDate time.Time, user
 	}
 	logCtx.WithField("dateFormat", currentDateFormat).Info("Begin: User Properties - DB query")
 	begin := U.TimeNow()
-	properties, err := GetRecentUserPropertyKeysWithLimits(projectid, usersProcessedLimit, propertiesLimit)
+	properties, err := GetRecentUserPropertyKeysWithLimits(projectid, usersProcessedLimit, propertiesLimit, currentDate)
 	end := U.TimeNow()
 	logCtx.WithFields(log.Fields{"dateFormat": currentDateFormat, "timeTaken": end.Sub(begin).Milliseconds()}).Info("End: User Properties - DB query")
 	if err != nil {
@@ -141,7 +146,7 @@ func BackFillUserDataInCacheFromDb(projectid uint64, currentDate time.Time, user
 	for _, propertyValue := range properties {
 		logCtx.WithFields(log.Fields{"dateFormat": currentDateFormat, "property": propertyValue.Key}).Info("Begin: Get user Property values DB call")
 		begin := U.TimeNow()
-		values, category, err := GetRecentUserPropertyValuesWithLimits(projectid, propertyValue.Key, usersProcessedLimit, valuesLimit)
+		values, category, err := GetRecentUserPropertyValuesWithLimits(projectid, propertyValue.Key, usersProcessedLimit, valuesLimit, currentDate)
 		end := U.TimeNow()
 		logCtx.WithFields(log.Fields{"dateFormat": currentDateFormat, "property": propertyValue.Key, "timeTaken": end.Sub(begin).Milliseconds()}).Info("End: Get user Property values DB call")
 		if err != nil {
@@ -174,7 +179,7 @@ func BackFillUserDataInCacheFromDb(projectid uint64, currentDate time.Time, user
 				logCtx.WithError(err).Error("Failed to marshal property value - getvaluesbyuserproperty")
 			}
 			begin := U.TimeNow()
-			err = cacheRedis.SetPersistent(PropertyValuesKey, string(enPropertyValuesCache), U.EVENT_USER_CACHE_EXPIRY_SECS)
+			err = cacheRedis.SetPersistent(PropertyValuesKey, string(enPropertyValuesCache), expiry)
 			end := U.TimeNow()
 			logCtx.WithFields(log.Fields{"timeTaken": end.Sub(begin).Milliseconds()}).Info("End:UP:BS")
 			if err != nil {
@@ -188,7 +193,7 @@ func BackFillUserDataInCacheFromDb(projectid uint64, currentDate time.Time, user
 	}
 	logCtx.Info("Begin:UP:BS")
 	begin = U.TimeNow()
-	err = cacheRedis.SetPersistent(propertyCacheKey, string(enPropertiesCache), U.EVENT_USER_CACHE_EXPIRY_SECS)
+	err = cacheRedis.SetPersistent(propertyCacheKey, string(enPropertiesCache), expiry)
 	end = U.TimeNow()
 	logCtx.WithFields(log.Fields{"timeTaken": end.Sub(begin).Milliseconds()}).Info("End:UP:BS")
 	if err != nil {

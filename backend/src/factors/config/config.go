@@ -89,6 +89,8 @@ type Configuration struct {
 	IsRealTimeEventUserCachingEnabled   bool
 	RealTimeEventUserCachingProjectIds  string
 	BlockedSDKRequestProjectTokens      []string
+	// Usage: 	"--cache_look_up_range_projects", "1:20140307"
+	CacheLookUpRangeProjects map[uint64]time.Time // Usually cache look up is for past 30 days. If certain projects need override, then this is used
 }
 
 type Services struct {
@@ -710,6 +712,17 @@ func GetIfRealTimeEventUserCachingIsEnabled(projectId uint64) bool {
 	projectIds := U.GetIntBoolMapFromStringList(&configuration.RealTimeEventUserCachingProjectIds)
 	isWhitelisted, _ := projectIds[projectId]
 	return configuration.IsRealTimeEventUserCachingEnabled && isWhitelisted == true
+}
+
+func ExtractProjectIdDateFromConfig(config string) map[uint64]time.Time {
+	convertedMap := ParseConfigStringToMap(config)
+	projectIdDateMap := make(map[uint64]time.Time)
+	for projectId, dateString := range convertedMap {
+		projId, _ := strconv.Atoi(projectId)
+		date, _ := time.Parse(U.DATETIME_FORMAT_YYYYMMDD, dateString)
+		projectIdDateMap[uint64(projId)] = date
+	}
+	return projectIdDateMap
 }
 
 // ParseConfigStringToMap - Parses config string

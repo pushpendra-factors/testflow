@@ -1,14 +1,11 @@
 package tests
 
 import (
-	"encoding/json"
 	C "factors/config"
-	H "factors/handler"
 	"factors/handler/helpers"
 	M "factors/model"
 	U "factors/util"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -70,7 +67,7 @@ func createEventWithTimestampByName(t *testing.T, project *M.Project, user *M.Us
 	return eventName, event
 }
 
-func TestGetEventNamesHandler(t *testing.T) {
+/*func TestGetEventNamesHandler(t *testing.T) {
 	r := gin.Default()
 	H.InitAppRoutes(r)
 	var eventNames = struct {
@@ -135,4 +132,4 @@ func TestGetEventNamesHandler(t *testing.T) {
 	json.Unmarshal(jsonResponse, &eventNames)
 	// should contain all event names.
 	assert.Len(t, eventNames.EventNames, 3)
-}
+}*/

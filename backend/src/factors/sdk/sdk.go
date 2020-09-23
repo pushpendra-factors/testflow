@@ -249,13 +249,17 @@ func isRealtimeSessionRequired(skipSession bool, projectId uint64, skipProjectId
 	return true
 }
 
-func BackFillEventDataInCacheFromDb(project_id uint64, currentTime time.Time, no_of_days int, eventsLimit, propertyLimit, valuesLimit int, rowsLimit int) {
+func BackFillEventDataInCacheFromDb(project_id uint64, currentTime time.Time, no_of_days int, eventsLimit, propertyLimit, valuesLimit int, rowsLimit int, perQueryPullRange int, skipExpiryForCache bool) {
 
 	// Preload EventNames-count-lastseen
 	// TODO: Janani Make this 30 configurable, limit in cache, limit in ui
 	logCtx := log.WithField("project_id", project_id)
 	logCtx.Info("Refresh Event Properties Cache started")
-
+	expiry := float64(U.EVENT_USER_CACHE_EXPIRY_SECS)
+	if skipExpiryForCache {
+		logCtx.Info("Setting Cache keys of this run to no-expiry")
+		expiry = 0
+	}
 	allevents := make(map[string]bool)
 	for i := 1; i <= no_of_days; i++ {
 		var eventNames M.CacheEventNamesWithTimestamp
@@ -272,7 +276,7 @@ func BackFillEventDataInCacheFromDb(project_id uint64, currentTime time.Time, no
 		begin := U.TimeNow()
 		events, err := M.GetOrderedEventNamesFromDb(
 			project_id,
-			currentTime.AddDate(0, 0, -i).Unix(),
+			currentTime.AddDate(0, 0, -(i+perQueryPullRange)).Unix(),
 			currentTime.AddDate(0, 0, -(i-1)).Unix(),
 			eventsLimit)
 		end := U.TimeNow()
@@ -295,7 +299,7 @@ func BackFillEventDataInCacheFromDb(project_id uint64, currentTime time.Time, no
 		}
 		logCtx.Info("Begin:EN:SB")
 		begin = U.TimeNow()
-		err = cacheRedis.SetPersistent(eventNamesKey, string(enEventCache), U.EVENT_USER_CACHE_EXPIRY_SECS)
+		err = cacheRedis.SetPersistent(eventNamesKey, string(enEventCache), expiry)
 		end = U.TimeNow()
 		logCtx.WithFields(log.Fields{"timeTaken": end.Sub(begin).Milliseconds()}).Info("End:EN:SB")
 		if err != nil {
@@ -319,7 +323,7 @@ func BackFillEventDataInCacheFromDb(project_id uint64, currentTime time.Time, no
 			begin := U.TimeNow()
 			properties, err := M.GetRecentEventPropertyKeysWithLimits(
 				project_id, event,
-				currentTime.AddDate(0, 0, -i).Unix(),
+				currentTime.AddDate(0, 0, -(i+perQueryPullRange)).Unix(),
 				currentTime.AddDate(0, 0, -(i-1)).Unix(),
 				propertyLimit)
 			end := U.TimeNow()
@@ -341,7 +345,7 @@ func BackFillEventDataInCacheFromDb(project_id uint64, currentTime time.Time, no
 					logCtx.WithFields(log.Fields{"dateFormat": dateFormat, "event": event, "property": property.Key}).Info("Begin: Get event Property values DB call")
 					begin := U.TimeNow()
 					values, category, err := M.GetRecentEventPropertyValuesWithLimits(project_id, event, property.Key, valuesLimit, rowsLimit,
-						currentTime.AddDate(0, 0, -i).Unix(),
+						currentTime.AddDate(0, 0, -(i+perQueryPullRange)).Unix(),
 						currentTime.AddDate(0, 0, -(i-1)).Unix())
 					end := U.TimeNow()
 					logCtx.WithFields(log.Fields{"dateFormat": dateFormat, "event": event, "property": property.Key, "timeTaken": end.Sub(begin).Milliseconds()}).Info("End: Get event Property values DB call")
@@ -387,7 +391,7 @@ func BackFillEventDataInCacheFromDb(project_id uint64, currentTime time.Time, no
 				eventPropertyValuesInCache[eventPropertiesKey] = string(enEventPropertiesCache)
 				logCtx.Info("Begin:EPV:SB")
 				begin = U.TimeNow()
-				err = cacheRedis.SetPersistentBatch(eventPropertyValuesInCache, U.EVENT_USER_CACHE_EXPIRY_SECS)
+				err = cacheRedis.SetPersistentBatch(eventPropertyValuesInCache, expiry)
 				end = U.TimeNow()
 				logCtx.WithFields(log.Fields{"timeTaken": end.Sub(begin).Milliseconds()}).Info("End:EN:SB")
 				if err != nil {
