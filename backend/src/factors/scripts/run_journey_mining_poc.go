@@ -21,10 +21,11 @@ import (
 
 func main() {
 	envFlag := flag.String("env", C.DEVELOPMENT, "Environment. Could be development|staging|production")
-	files := flag.String("files", "", "Comma separated list of event files")
+	eventFiles := flag.String("event_files", "", "Comma separated list of event files")
+	userFiles := flag.String("user_files", "", "Comma separated list of user files")
 	projectIDFlag := flag.Uint64("project_id", 399, "ProjectID to run journey mining")
 	startDateFlag := flag.String("start_date", "2020-08-01", "Start date in YYYY-MM-DD format. Inclusive.")
-	endDateFlag := flag.String("end_date", "2020-08-31", "End date in YYYY-MM-DD format. Inclusive.")
+	endDateFlag := flag.String("end_date", "2020-09-20", "End date in YYYY-MM-DD format. Inclusive.")
 	lookBackDaysFlag := flag.Int64("lookback_days", 0, "Number of days to lookback from the start date given")
 	includeSessionFlag := flag.Bool("include_session", true, "Whether to auto include $session event in journey")
 	sessionPropertyFlag := flag.String("session_property", "$campaign", "Propert of $session event shown along path")
@@ -90,17 +91,19 @@ func main() {
 	diskManager := serviceDisk.New(*localDiskTmpDirFlag)
 
 	jobDetails := make([]string, 0, 0)
-	if *files == "" {
-		filePaths, err := downloadAndGetArchivalFilesForRange(db, &cloudManager, diskManager,
+	if *eventFiles == "" {
+		eventFilePaths, userFilePaths, err := downloadAndGetArchivalFilesForRange(db, &cloudManager, diskManager,
 			*projectIDFlag, *startDateFlag, *endDateFlag, &jobDetails)
 		if err != nil {
 			logCtx.WithError(err).Fatal("Failed to download archive files")
 		}
-		*files = strings.Join(filePaths, ",")
-		if *files == "" {
+		*eventFiles = strings.Join(eventFilePaths, ",")
+		*userFiles = strings.Join(userFilePaths, ",")
+		if *eventFiles == "" {
+			// User files can still be empty if there are no customer_user_id for the project.
 			logCtx.Fatal("No files found for the given time range")
 		}
-		jobDetails = append(jobDetails, fmt.Sprintf("%d files to be processed for journey mining", len(filePaths)))
+		jobDetails = append(jobDetails, fmt.Sprintf("%d files to be processed for journey mining", len(eventFilePaths)))
 	}
 
 	var startTime, endTime time.Time
@@ -126,9 +129,9 @@ func main() {
 		"EndDate":          *endDateFlag,
 	}).Infof("Starting journey mining")
 	jobStartTime := U.TimeNowUnix()
-	journeyEvents, goalEvents := getChargebeeHubspotContactUpdatedJourney()
+	journeyEvents, goalEvents := getChargebeeSept22Journey()
 	M.GetWeightedJourneyMatrix(*projectIDFlag, journeyEvents, goalEvents, startTimeUnix,
-		endTimeUnix, *lookBackDaysFlag, *analyzeCompletedFlag, *files, *includeSessionFlag, *sessionPropertyFlag, cloudManager)
+		endTimeUnix, *lookBackDaysFlag, *analyzeCompletedFlag, *eventFiles, *userFiles, *includeSessionFlag, *sessionPropertyFlag, cloudManager)
 
 	timeTaken := U.SecondsToHMSString(U.TimeNowUnix() - jobStartTime)
 	jobDetails = append(jobDetails, fmt.Sprintf("Time taken for journey mining: %s", timeTaken))
@@ -139,7 +142,7 @@ func main() {
 }
 
 func downloadAndGetArchivalFilesForRange(db *gorm.DB, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver,
-	projectID uint64, startDate, endDate string, jobDetails *[]string) ([]string, error) {
+	projectID uint64, startDate, endDate string, jobDetails *[]string) ([]string, []string, error) {
 
 	startTime, err := time.Parse(U.DATETIME_FORMAT_YYYYMMDD_HYPHEN, startDate)
 	if err != nil {
@@ -157,15 +160,15 @@ func downloadAndGetArchivalFilesForRange(db *gorm.DB, cloudManager *filestore.Fi
 	*jobDetails = append(*jobDetails, fmt.Sprintf("Downloading archival files for range %v - %v", startTime, endTime))
 	archiveJobDetails, err := T.ArchiveEventsForProject(db, cloudManager, diskManager, projectID, 0, startTime, endTime, true)
 	if err != nil {
-		return []string{}, err
+		return []string{}, []string{}, err
 	}
 	*jobDetails = append(*jobDetails, archiveJobDetails...)
 
-	filePaths, errCode := M.GetArchivalFileNamesForProject(projectID, startTime, endTime)
+	eventFilePaths, userFilePaths, errCode := M.GetArchivalFileNamesForProject(projectID, startTime, endTime)
 	if errCode != http.StatusFound {
-		return filePaths, fmt.Errorf("Error getting filepaths for project")
+		return eventFilePaths, userFilePaths, fmt.Errorf("Error getting filepaths for project")
 	}
-	return filePaths, nil
+	return eventFilePaths, userFilePaths, nil
 }
 
 func get38EventsScheduleDemoJourney() ([]M.QueryEventWithProperties, []M.QueryEventWithProperties) {
@@ -718,6 +721,64 @@ func getChargebeeHubspotContactUpdatedJourney() ([]M.QueryEventWithProperties, [
 					Property:  "$hubspot_contact_lifecyclestage",
 					Type:      U.PropertyTypeCategorical,
 					Value:     "customer",
+				},
+			}},
+		}
+}
+
+func getChargebeeSept22Journey() ([]M.QueryEventWithProperties, []M.QueryEventWithProperties) {
+	return []M.QueryEventWithProperties{
+			M.QueryEventWithProperties{Name: "$hubspot_contact_updated", Properties: []M.QueryProperty{
+				M.QueryProperty{
+					Entity:    M.PropertyEntityEvent,
+					LogicalOp: "AND",
+					Operator:  M.EqualsOpStr,
+					Property:  "$hubspot_contact_marketing_conversions_mode",
+					Type:      U.PropertyTypeCategorical,
+					Value:     "SignUp",
+				},
+				M.QueryProperty{
+					Entity:    M.PropertyEntityEvent,
+					LogicalOp: "OR",
+					Operator:  "contains",
+					Property:  "$hubspot_contact_marketing_conversions_mode",
+					Type:      U.PropertyTypeCategorical,
+					Value:     "Drift",
+				},
+				M.QueryProperty{
+					Entity:    M.PropertyEntityEvent,
+					LogicalOp: "OR",
+					Operator:  "contains",
+					Property:  "$hubspot_contact_marketing_conversions_mode",
+					Type:      U.PropertyTypeCategorical,
+					Value:     "Calendly",
+				},
+			}},
+			M.QueryEventWithProperties{Name: "www.chargebee.com/pricing"},
+			M.QueryEventWithProperties{Name: "www.chargebee.com/trial-signup"},
+			M.QueryEventWithProperties{Name: "www.chargebee.com/schedule-a-demo"},
+			M.QueryEventWithProperties{Name: "www.chargebee.com/subscription-management"},
+			M.QueryEventWithProperties{Name: "www.chargebee.com/recurring-billing-invoicing"},
+			M.QueryEventWithProperties{Name: "www.chargebee.com/recurring-payments"},
+			M.QueryEventWithProperties{Name: "www.chargebee.com/saas-accounting-and-taxes"},
+			M.QueryEventWithProperties{Name: "www.chargebee.com/saas-reporting"},
+			M.QueryEventWithProperties{Name: "www.chargebee.com/integrations"},
+			M.QueryEventWithProperties{Name: "www.chargebee.com/payment-gateways"},
+			M.QueryEventWithProperties{Name: "www.chargebee.com/for-education"},
+			M.QueryEventWithProperties{Name: "www.chargebee.com/for-self-service-subscription-busines"},
+			M.QueryEventWithProperties{Name: "www.chargebee.com/for-sales-driven-saas"},
+			M.QueryEventWithProperties{Name: "www.chargebee.com/for-subscription-finance-operations"},
+			M.QueryEventWithProperties{Name: "www.chargebee.com/enterprise-subscription-billing"},
+			M.QueryEventWithProperties{Name: "www.chargebee.com/customers"},
+		}, []M.QueryEventWithProperties{
+			M.QueryEventWithProperties{Name: "$hubspot_contact_updated", Properties: []M.QueryProperty{
+				M.QueryProperty{
+					Entity:    M.PropertyEntityEvent,
+					LogicalOp: "AND",
+					Operator:  M.NotEqualOpStr,
+					Property:  "$hubspot_contact_demo_booked_on",
+					Type:      U.PropertyTypeCategorical,
+					Value:     "$none",
 				},
 			}},
 		}

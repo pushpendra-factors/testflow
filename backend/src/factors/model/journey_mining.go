@@ -161,7 +161,7 @@ func getUserEventsFromFileChargebee(fileName string, segmentAGoals, segmentBGoal
 // getUserEventsFromFile Returns events bucketed by userID.
 // TODO(prateek): De-dup based on event id if required.
 func getUserEventsFromFile(fileName string, goalEvents []QueryEventWithProperties,
-	userEventsMap *map[string][]ArchiveEventFormat, goalFulfilledUsersMap *map[string]bool,
+	userEventsMap *map[string][]ArchiveEventFormat, userCustomerUserIDMap map[string]string, goalFulfilledUsersMap *map[string]bool,
 	journeyEvents []QueryEventWithProperties, startTime, endTime int64, cloudManager filestore.FileManager) error {
 	logCtx := log.WithFields(log.Fields{
 		"Method": "getUserEventsFromFile",
@@ -202,7 +202,12 @@ func getUserEventsFromFile(fileName string, goalEvents []QueryEventWithPropertie
 			continue
 		}
 
-		userID := denormalizedEvent.UserID
+		var userID string
+		if customerUserID, found := userCustomerUserIDMap[denormalizedEvent.UserID]; found && customerUserID != "" {
+			userID = customerUserID
+		} else {
+			userID = denormalizedEvent.UserID
+		}
 		(*userEventsMap)[userID] = append((*userEventsMap)[userID], denormalizedEvent)
 
 		if val, found := (*goalFulfilledUsersMap)[userID]; !found || !val {
@@ -221,6 +226,43 @@ func getUserEventsFromFile(fileName string, goalEvents []QueryEventWithPropertie
 		return err
 	}
 	logCtx.Infof("%d events scanned from file", eventCount)
+	return nil
+}
+
+func getUserCustomerUserIDMapFromFile(fileName string, userCustomerUserIDMap *map[string]string, cloudManager filestore.FileManager) error {
+	log.Infof("Scanning events from file %s", fileName)
+	fileNameSplit := strings.Split(fileName, "/")
+	filePath, fileName := strings.Join(fileNameSplit[:len(fileNameSplit)-1], "/"), fileNameSplit[len(fileNameSplit)-1]
+	fileReader, err := cloudManager.Get(filePath, fileName)
+	if err != nil {
+		log.WithError(err).Errorf("Error opening file")
+		return err
+	}
+
+	defer func() {
+		if err := fileReader.Close(); err != nil {
+			log.WithError(err).Errorf("Error while closing file")
+		}
+	}()
+
+	userCount := 0
+	scanner := bufio.NewScanner(fileReader)
+	for scanner.Scan() {
+		userCount++
+		var entry ArchiveUsersTableFormat
+		jsonString := scanner.Text()
+		if err = U.DecodeJSONStringToStructType(jsonString, &entry); err != nil || entry.UserID == "" {
+			log.WithError(err).Errorf("Error decoding %s", jsonString)
+			continue
+		}
+		(*userCustomerUserIDMap)[entry.UserID] = entry.CustomerUserID
+	}
+
+	err = scanner.Err()
+	if err != nil {
+		return err
+	}
+	log.Infof("%d users scanned from file", userCount)
 	return nil
 }
 
@@ -346,18 +388,17 @@ func pruneUserEventsPath(userEventsMap *map[string][]ArchiveEventFormat,
 		duplicateAllowedVisitedMap := make(map[string]bool)
 		prunedEventsList := make([]ArchiveEventFormat, 0, 0)
 		prunedEventsListAliases := []string{}
+		lastGoalEventInJourneyIndex := 0
 		for _, event := range events {
 			if debugInfo {
 				logCtx.Infof("Parsing event %s with timestamp %d", event.EventName, event.EventTimestampUnix)
-			}
-			if event.EventName == U.EVENT_NAME_SESSION {
-				logCtx.Infof("Got $session event")
 			}
 			isPartOfJourneyUniverse, journeyEvent := satisfiesAnyJourneyEvent(event, journeyEvents)
 
 			// $session event if present, allowed to be repeated during the journey.
 			// isSessionEvent := journeyEvent.Name == U.EVENT_NAME_SESSION
-			duplicateAllowed := (journeyEvent.Name == U.EVENT_NAME_SESSION || journeyEvent.Name == "$hubspot_contact_updated")
+			// duplicateAllowed := (journeyEvent.Name == U.EVENT_NAME_SESSION || journeyEvent.Name == "$hubspot_contact_updated")
+			duplicateAllowed := journeyEvent.Name == U.EVENT_NAME_SESSION
 			journeyEventString := getEventAsString(journeyEvent)
 			if _, found := visitedEventsMap[journeyEventString]; (found && !duplicateAllowed) || !isPartOfJourneyUniverse {
 				// Is already visited once or outside of the journey events universe. Ignore.
@@ -398,19 +439,10 @@ func pruneUserEventsPath(userEventsMap *map[string][]ArchiveEventFormat,
 						eventAlias = fmt.Sprintf("%s (%v)", eventAlias, strings.Join(propSuffix, ", "))
 					}
 				}
-				// // If session event, add extra parameter along the path alias containing session property.
-				// value, found := event.EventPropertiesMap[duplicateEventProperty[journeyEvent.Name]]
-				// pathKey := journeyEvent.Name
-				// if found && value != nil {
-				// 	pathKey = pathKey + "." + value.(string)
-				// }
 
 				if _, alreadyVisited := duplicateAllowedVisitedMap[eventAlias]; alreadyVisited {
 					continue
 				}
-				// } else if found && value != nil {
-				// 	eventAlias = fmt.Sprintf("%s (%v)", eventAlias, value)
-				// }
 				duplicateAllowedVisitedMap[eventAlias] = true
 			}
 			visitedEventsMap[journeyEventString] = true
@@ -423,6 +455,7 @@ func pruneUserEventsPath(userEventsMap *map[string][]ArchiveEventFormat,
 				// TODO(prateek): Special case added for $hubspot_contact_updated analysis. Consider removing.
 				eventAlias = eventAliasLegend[getEventAsString(satisfiedGoalEvent)]
 				prunedEventsListAliases = append(prunedEventsListAliases, eventAlias)
+				lastGoalEventInJourneyIndex = len(prunedEventsListAliases)
 
 				// Goal is reached. Break the parsing here.
 				if !allowRepeatedGoals {
@@ -435,7 +468,7 @@ func pruneUserEventsPath(userEventsMap *map[string][]ArchiveEventFormat,
 		if debug {
 			logCtx.Infof("Pruned %d events for user %s to %d", len(events), userID, len(prunedEventsList))
 		}
-		journeyPath := strings.Join(prunedEventsListAliases, " -> ")
+		journeyPath := strings.Join(prunedEventsListAliases[:lastGoalEventInJourneyIndex], " -> ")
 		if _, found := allPatternsMap[journeyPath]; found {
 			allPatternsMap[journeyPath].Count++
 			allPatternsMap[journeyPath].UserIDs = append(allPatternsMap[journeyPath].UserIDs, userID)
@@ -540,7 +573,7 @@ func filterUsersForGoalNotCompleted(userEventsMap map[string][]ArchiveEventForma
 // GetWeightedJourneyMatrix Gets user's journey for the given events in given range.
 func GetWeightedJourneyMatrix(projectID uint64, journeyEvents []QueryEventWithProperties,
 	goalEvents []QueryEventWithProperties, startTime, endTime, lookbackDays int64, analyzeCompleted bool,
-	sourceFileNames string, includeSession bool, sessionProperty string, cloudManager filestore.FileManager) {
+	eventFiles, userFiles string, includeSession bool, sessionProperty string, cloudManager filestore.FileManager) {
 	logCtx := log.WithFields(log.Fields{
 		"Method":       "GetWeightedJourneyMatrix",
 		"ProjectID":    projectID,
@@ -561,10 +594,16 @@ func GetWeightedJourneyMatrix(projectID uint64, journeyEvents []QueryEventWithPr
 	journeyEvents = append(journeyEvents, goalEvents...)
 	eventAliasLegend, reverseEventAliasLegend := createEventAliasLegendForJourneyEvents(journeyEvents)
 
-	fileNames := strings.Split(sourceFileNames, ",")
-	for _, fileName := range fileNames {
+	userCustomerUserIDMap := make(map[string]string)
+	userFileNames := strings.Split(userFiles, ",")
+	for _, fileName := range userFileNames {
+		getUserCustomerUserIDMapFromFile(fileName, &userCustomerUserIDMap, cloudManager)
+	}
+
+	eventFileNames := strings.Split(eventFiles, ",")
+	for _, fileName := range eventFileNames {
 		fileName = strings.TrimSpace(fileName)
-		getUserEventsFromFile(fileName, goalEvents, &userEventsMap,
+		getUserEventsFromFile(fileName, goalEvents, &userEventsMap, userCustomerUserIDMap,
 			&goalFulfilledUsersMap, journeyEvents, startTime, endTime, cloudManager)
 		runtime.GC()
 		osDebug.FreeOSMemory()
