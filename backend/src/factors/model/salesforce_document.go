@@ -67,13 +67,7 @@ var SalesforceSkippablefields = []string{
 
 var errorDuplicateRecord = errors.New("duplicate record")
 
-type SalesforceSyncInfo struct {
-	ProjectId uint64 `json:"-"`
-	Type      int    `json:"type"`
-	Timestamp int64  `json:"timestamp"`
-}
-
-func GetSalesforceDocTypeByType(typ int) string {
+func GetSalesforceAliasByDocType(typ int) string {
 	for a, t := range SalesforceDocumentTypeAlias {
 		if typ == t {
 			return a
@@ -117,6 +111,78 @@ func GetSalesforceUpdatedEventName(docType int) string {
 		return U.EVENT_NAME_SALESFORCE_LEAD_UPDATED
 	}
 	return ""
+}
+
+type SalesforceLastSyncInfo struct {
+	ProjectId uint64 `json:"-"`
+	Type      int    `json:"type"`
+	Timestamp int64  `json:"timestamp"`
+}
+
+type SalesforceSyncInfo struct {
+	ProjectSettings map[uint64]*SalesforceProjectSettings `json:"project_settings"`
+	// project_id: { type: last_sync_info }
+	LastSyncInfo map[uint64]map[string]int64 `json:"last_sync_info"`
+}
+
+func GetSalesforceSyncInfo() (*SalesforceSyncInfo, int) {
+	var lastSyncInfo []SalesforceLastSyncInfo
+
+	db := C.GetServices().Db
+	err := db.Table("salesforce_documents").Select(
+		"project_id, type, MAX(timestamp) as timestamp").Group(
+		"project_id, type").Find(&lastSyncInfo).Error
+	if err != nil {
+		return nil, http.StatusInternalServerError
+	}
+
+	lastSyncInfoByProject := make(map[uint64]map[string]int64, 0)
+	for _, syncInfo := range lastSyncInfo {
+		if _, projectExists := lastSyncInfoByProject[syncInfo.ProjectId]; !projectExists {
+			lastSyncInfoByProject[syncInfo.ProjectId] = make(map[string]int64)
+		}
+
+		lastSyncInfoByProject[syncInfo.ProjectId][GetSalesforceAliasByDocType(syncInfo.Type)] = syncInfo.Timestamp
+	}
+
+	// project sync of hubspot enable projects.
+	enabledProjectLastSync := make(map[uint64]map[string]int64, 0)
+
+	// get project settings of hubspot enaled projects.
+	projectSettings, errCode := GetAllSalesforceProjectSettings()
+	if errCode != http.StatusFound {
+		return nil, http.StatusInternalServerError
+	}
+
+	settingsByProject := make(map[uint64]*SalesforceProjectSettings, 0)
+	for i, ps := range projectSettings {
+		_, pExists := lastSyncInfoByProject[ps.ProjectId]
+
+		if !pExists {
+			// add projects not synced before.
+			enabledProjectLastSync[ps.ProjectId] = make(map[string]int64, 0)
+		} else {
+			// add sync info if avaliable.
+			enabledProjectLastSync[ps.ProjectId] = lastSyncInfoByProject[ps.ProjectId]
+		}
+
+		// add types not synced before.
+		for typ := range SalesforceDocumentTypeAlias {
+			_, typExists := enabledProjectLastSync[ps.ProjectId][typ]
+			if !typExists {
+				// last sync timestamp as zero as type not synced before.
+				enabledProjectLastSync[ps.ProjectId][typ] = 0
+			}
+		}
+
+		settingsByProject[projectSettings[i].ProjectId] = &projectSettings[i]
+	}
+
+	var syncInfo SalesforceSyncInfo
+	syncInfo.LastSyncInfo = enabledProjectLastSync
+	syncInfo.ProjectSettings = settingsByProject
+
+	return &syncInfo, http.StatusOK
 }
 
 func getSalesforceDocumentId(document *SalesforceDocument) (string, error) {
@@ -221,7 +287,7 @@ func CreateSalesforceDocument(projectId uint64, document *SalesforceDocument) in
 
 func CreateSalesforceDocumentByAction(projectId uint64, document *SalesforceDocument, action SalesforceAction) error {
 	document.Action = action
-	timestamp, err := getSalesforceDocumentTimestampByAction(document, action)
+	timestamp, err := GetSalesforceDocumentTimestampByAction(document)
 	if err != nil {
 		return err
 	}
@@ -240,7 +306,7 @@ func CreateSalesforceDocumentByAction(projectId uint64, document *SalesforceDocu
 	return nil
 }
 
-func getSalesforceDocumentTimestampByAction(document *SalesforceDocument, action SalesforceAction) (int64, error) {
+func GetSalesforceDocumentTimestampByAction(document *SalesforceDocument) (int64, error) {
 	if document.Type == 0 {
 		return 0, errors.New("invalid document type")
 	}
@@ -251,10 +317,10 @@ func getSalesforceDocumentTimestampByAction(document *SalesforceDocument, action
 	}
 
 	var dateKey string
-	if action == SalesforceDocumentCreated {
+	if document.Action == SalesforceDocumentCreated {
 		dateKey = "CreatedDate"
 	}
-	if action == SalesforceDocumentUpdated {
+	if document.Action == SalesforceDocumentUpdated {
 		dateKey = "LastModifiedDate"
 	}
 

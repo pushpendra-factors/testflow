@@ -185,4 +185,6 @@ func InitDataServiceRoutes(r *gin.Engine) {
 
 	dataServiceRouteGroup.POST("/salesforce/documents/add",
 		IH.DataServiceSalesforceAddDocumentHandler)
+	dataServiceRouteGroup.GET("/salesforce/documents/last_sync_info",
+		IH.DataServiceSalesforceGetLastSyncInfoHandler)
 }

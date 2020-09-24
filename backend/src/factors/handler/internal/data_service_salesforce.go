@@ -31,3 +31,8 @@ func DataServiceSalesforceAddDocumentHandler(c *gin.Context) {
 
 	c.JSON(errCode, gin.H{"message": "Successfully upserted salesforce document."})
 }
+
+func DataServiceSalesforceGetLastSyncInfoHandler(c *gin.Context) {
+	lastSyncInfo, status := M.GetSalesforceSyncInfo()
+	c.JSON(status, lastSyncInfo)
+}

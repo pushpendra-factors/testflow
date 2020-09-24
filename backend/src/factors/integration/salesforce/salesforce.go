@@ -114,7 +114,8 @@ func buildQueryParamsByTagName(params interface{}, tag string) (string, error) {
 }
 
 func getSalesforceDocumentProperties(document *M.SalesforceDocument) (map[string]interface{}, error) {
-	if document.Type != M.SalesforceDocumentTypeAccount {
+	docType := M.GetSalesforceAliasByDocType(document.Type)
+	if docType == "" {
 		return nil, errors.New("invalid document type")
 	}
 
@@ -178,8 +179,14 @@ func removeEmptyFieldsFromProperties(properties map[string]interface{}) error {
 func TrackSalesforceEventByDocumentType(projectId uint64, trackPayload *SDK.TrackPayload, document *M.SalesforceDocument) (string, string, error) {
 
 	var eventId, userId string
+	var err error
 	if document.Action == M.SalesforceDocumentCreated {
 		trackPayload.Name = M.GetSalesforceCreatedEventName(document.Type)
+		trackPayload.Timestamp, err = M.GetSalesforceDocumentTimestampByAction(document)
+		if err != nil {
+			return "", "", err
+		}
+
 		status, response := SDK.Track(projectId, trackPayload, true, SDK.SourceSalesforce)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 			return "", "", fmt.Errorf("created event track failed to doc type %d", document.Type)
@@ -191,16 +198,21 @@ func TrackSalesforceEventByDocumentType(projectId uint64, trackPayload *SDK.Trac
 
 	if document.Action == M.SalesforceDocumentCreated || document.Action == M.SalesforceDocumentUpdated {
 		trackPayload.Name = M.GetSalesforceUpdatedEventName(document.Type)
-		userPropertiesRecords, errCode := M.GetUserPropertiesRecordsByProperty(projectId, "Id", document.ID)
-		if errCode != http.StatusFound {
-			return "", "", errors.New("failed to get user with given id")
+		trackPayload.Timestamp, err = M.GetSalesforceDocumentTimestampByAction(document)
+		if err != nil {
+			return "", "", err
 		}
 
 		if document.Action == M.SalesforceDocumentUpdated {
+			userPropertiesRecords, errCode := M.GetUserPropertiesRecordsByProperty(projectId, "Id", document.ID)
+			if errCode != http.StatusFound {
+				return "", "", errors.New("failed to get user with given id")
+			}
 			userId = getUserIdFromLastestProperties(userPropertiesRecords)
+		} else {
+			trackPayload.UserId = userId
 		}
 
-		trackPayload.UserId = userId
 		status, response := SDK.Track(projectId, trackPayload, true, SDK.SourceSalesforce)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
 			return "", "", fmt.Errorf("updated event track failed to doc type %d", document.Type)
@@ -240,7 +252,6 @@ func syncLeads(projectId uint64, document *M.SalesforceDocument) int {
 		ProjectId:       projectId,
 		EventProperties: properties,
 		UserProperties:  properties,
-		Timestamp:       document.Timestamp,
 	}
 
 	eventId, userId, err := TrackSalesforceEventByDocumentType(projectId, trackPayload, document)
@@ -284,12 +295,10 @@ func syncContact(projectId uint64, document *M.SalesforceDocument) int {
 	}
 	removeEmptyFieldsFromProperties(properties)
 	removeSkipableFieldsFromProperties(properties)
-
 	trackPayload := &SDK.TrackPayload{
 		ProjectId:       projectId,
 		EventProperties: properties,
 		UserProperties:  properties,
-		Timestamp:       document.Timestamp,
 	}
 
 	eventId, _, err := TrackSalesforceEventByDocumentType(projectId, trackPayload, document)
@@ -321,12 +330,10 @@ func syncAccount(projectId uint64, document *M.SalesforceDocument) int {
 	}
 	removeEmptyFieldsFromProperties(properties)
 	removeSkipableFieldsFromProperties(properties)
-
 	trackPayload := &SDK.TrackPayload{
 		ProjectId:       projectId,
 		EventProperties: properties,
 		UserProperties:  properties,
-		Timestamp:       document.Timestamp,
 	}
 
 	eventId, userId, err := TrackSalesforceEventByDocumentType(projectId, trackPayload, document)
@@ -424,7 +431,7 @@ func Sync(projectId uint64) []Status {
 
 	for _, docType := range M.SalesforceSupportedDocumentType {
 		logCtx = logCtx.WithField("type", docType)
-		documents, errCode := GetSalesforceDocumentsByTypeForSync(projectId, M.SalesforceDocumentTypeAccount)
+		documents, errCode := GetSalesforceDocumentsByTypeForSync(projectId, docType)
 		if errCode != http.StatusFound {
 			logCtx.Error("Failed to get salesforce document by type for sync.")
 			return statusByProjectAndType
@@ -432,7 +439,7 @@ func Sync(projectId uint64) []Status {
 
 		status := Status{
 			ProjectId: projectId,
-			Type:      M.GetSalesforceDocTypeByType(docType),
+			Type:      M.GetSalesforceAliasByDocType(docType),
 		}
 
 		errCode = syncAll(projectId, documents)

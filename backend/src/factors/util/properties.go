@@ -38,8 +38,8 @@ const EVENT_NAME_SALESFORCE_CONTACT_CREATED = "sf_contact_created"
 const EVENT_NAME_SALESFORCE_CONTACT_UPDATED = "sf_contact_updated"
 const EVENT_NAME_SALESFORCE_LEAD_CREATED = "sf_lead_created"
 const EVENT_NAME_SALESFORCE_LEAD_UPDATED = "sf_lead_updated"
-const EVENT_NAME_SALESFORCE_ACCOUNT_CREATED = "sf_lead_created"
-const EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED = "sf_lead_updated"
+const EVENT_NAME_SALESFORCE_ACCOUNT_CREATED = "sf_Account_created"
+const EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED = "sf_Account_updated"
 
 // Integration shopify event names.
 const EVENT_NAME_SHOPIFY_CHECKOUT_CREATED = "$shopify_checkout_created"
