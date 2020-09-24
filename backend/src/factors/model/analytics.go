@@ -134,13 +134,14 @@ const (
 	SelectDefaultEventFilterByAlias       = "event_id, event_user_id, event_name"
 	SelectCoalesceCustomerUserIDAndUserID = "COALESCE(users.customer_user_id, event_user_id)"
 
-	GroupKeyPrefix          = "_group_key_"
-	AliasDateTime           = "datetime"
-	AliasAggr               = "count"
-	DefaultTimezone         = "UTC"
-	ResultsLimit            = 100
-	MaxResultsLimit         = 100000
-	NumericalGroupByBuckets = 10
+	GroupKeyPrefix            = "_group_key_"
+	AliasDateTime             = "datetime"
+	AliasAggr                 = "count"
+	DefaultTimezone           = "UTC"
+	ResultsLimit              = 100
+	MaxResultsLimit           = 100000
+	NumericalGroupByBuckets   = 10
+	NumericalGroupBySeparator = " - "
 
 	StepPrefix             = "step_"
 	FunnelConversionPrefix = "conversion_"
@@ -420,7 +421,7 @@ func hasNumericalGroupBy(groupProps []QueryGroupByProperty) bool {
 }
 
 func appendNumericalBucketingSteps(qStmnt *string, groupProps []QueryGroupByProperty, refStepName, eventNameSelect string,
-	isGroupByTimestamp bool) (bucketedStepName, aggregateSelectKeys string, aggregateGroupBys, aggregateOrderBys []string) {
+	isGroupByTimestamp bool, additionalSelectKeys string) (bucketedStepName, aggregateSelectKeys string, aggregateGroupBys, aggregateOrderBys []string) {
 	bucketedStepName = "bucketed"
 	bucketedSelect := "SELECT "
 	if eventNameSelect != "" {
@@ -456,15 +457,15 @@ func appendNumericalBucketingSteps(qStmnt *string, groupProps []QueryGroupByProp
 
 		// Creating bucket string to be used in group by. Also, replacing NaN-Nan to $none.
 		aggregateSelectKeys = aggregateSelectKeys + fmt.Sprintf(
-			"COALESCE(NULLIF(concat(round(min(%s::numeric), 1), ' - ', round(max(%s::numeric), 1)), 'NaN - NaN'), '%s') AS %s, ",
-			groupKey, groupKey, PropertyValueNone, groupKey)
+			"COALESCE(NULLIF(concat(round(min(%s::numeric), 1), '%s', round(max(%s::numeric), 1)), 'NaN%sNaN'), '%s') AS %s, ",
+			groupKey, NumericalGroupBySeparator, groupKey, NumericalGroupBySeparator, PropertyValueNone, groupKey)
 		bucketedSelect = bucketedSelect + noneToNaN + stepBucket
 		boundStepNames = append(boundStepNames, boundsStepName)
 		aggregateGroupBys = append(aggregateGroupBys, bucketKey)
 		aggregateOrderBys = append(aggregateOrderBys, bucketKey)
 	}
 
-	bucketedSelect = bucketedSelect + "event_user_id"
+	bucketedSelect = bucketedSelect + additionalSelectKeys
 	if isGroupByTimestamp {
 		bucketedSelect = joinWithComma(bucketedSelect, AliasDateTime)
 	}
@@ -897,7 +898,7 @@ func addUniqueUsersAggregationQuery(query *Query, qStmnt *string, qParams *[]int
 	var aggregateFromStepName, aggregateSelectKeys, aggregateGroupBys, aggregateOrderBys string
 	if hasNumericalGroupBy(query.GroupByProperties) {
 		bucketedStepName, bucketedSelectKeys, bucketedGroupBys, bucketedOrderBys := appendNumericalBucketingSteps(
-			&termStmnt, query.GroupByProperties, unionStepName, "", isGroupByTimestamp)
+			&termStmnt, query.GroupByProperties, unionStepName, "", isGroupByTimestamp, "event_user_id")
 		aggregateFromStepName = bucketedStepName
 		aggregateSelectKeys = bucketedSelectKeys
 		aggregateGroupBys = strings.Join(bucketedGroupBys, ", ")
@@ -1391,7 +1392,7 @@ func buildEventsOccurrenceWithGivenEventQuery(projectID uint64, q Query) (string
 	}
 	if hasNumericalGroupBy(q.GroupByProperties) {
 		bucketedStepName, aggregateSelectKeys, aggregateGroupBys, aggregateOrderBys := appendNumericalBucketingSteps(
-			&qStmnt, q.GroupByProperties, withUsersStepName, eventNameSelect, isGroupByTimestamp)
+			&qStmnt, q.GroupByProperties, withUsersStepName, eventNameSelect, isGroupByTimestamp, "event_user_id")
 		aggregateGroupBys = append(aggregateGroupBys, eventNameSelect)
 		aggregateSelectKeys = eventNameSelect + ", " + aggregateSelectKeys
 		aggregateSelect = aggregateSelect + aggregateSelectKeys
@@ -1663,6 +1664,52 @@ func buildAddSelect(stepName string, i int) string {
 	return addSelect
 }
 
+/*
+Funner Query for:
+Events:
+	$session
+	View Project
+Group By:
+	event_property -> 1. $session -> $day_of_week (categorical)
+	user_property -> $present -> $session_count (numerical)
+Query:
+WITH
+step_0_names AS (SELECT id, project_id, name FROM event_names WHERE project_id='3' AND name=''),
+
+step_0 AS (SELECT DISTINCT ON(COALESCE(users.customer_user_id,events.user_id)) COALESCE(users.customer_user_id,events.user_id)
+as coal_user_id, events.user_id, events.timestamp, 1 as step_0, CASE WHEN events.properties->>'' IS NULL THEN '$none'
+WHEN events.properties->>'' = '' THEN '$none' ELSE events.properties->>'' END AS _group_key_0 FROM events JOIN users
+ON events.user_id=users.id WHERE events.project_id='3' AND timestamp>='1393612200' AND timestamp<='1396290599' AND
+events.event_name_id IN (SELECT id FROM step_0_names WHERE project_id='3' AND name='') ORDER BY coal_user_id, events.timestamp ASC),
+
+step_1_names AS (SELECT id, project_id, name FROM event_names WHERE project_id='3' AND name='View Project'),
+
+step_1 AS (SELECT COALESCE(users.customer_user_id,events.user_id) as coal_user_id, events.user_id, events.timestamp, 1 as step_1
+FROM events JOIN users ON events.user_id=users.id WHERE events.project_id='3' AND timestamp>='1393612200' AND timestamp<='1396290599'
+AND events.event_name_id IN (SELECT id FROM step_1_names WHERE project_id='3' AND name='View Project') ORDER BY coal_user_id,
+events.timestamp ASC), step_1_step_0_users AS (SELECT DISTINCT ON(step_1.coal_user_id) step_1.coal_user_id,
+step_1.user_id,step_1.timestamp, step_1 FROM step_0 LEFT JOIN step_1 ON step_0.coal_user_id = step_1.coal_user_id WHERE
+step_1.timestamp > step_0.timestamp ORDER BY step_1.coal_user_id, timestamp ASC),
+
+funnel AS (SELECT step_0, step_1, CASE WHEN user_properties.properties->>'' IS NULL THEN '$none' WHEN
+user_properties.properties->>'' = '' THEN '$none' ELSE user_properties.properties->>'' END AS _group_key_1,
+CASE WHEN _group_key_0 IS NULL THEN '$none' WHEN _group_key_0 = '' THEN '$none' ELSE _group_key_0 END AS
+_group_key_0 FROM step_0 LEFT JOIN users on step_0.user_id=users.id LEFT JOIN user_properties on
+users.properties_id=user_properties.id  LEFT JOIN step_1_step_0_users ON step_0.coal_user_id=step_1_step_0_users.coal_user_id),
+
+_group_key_1_bounds AS (SELECT percentile_disc(0.1) WITHIN GROUP(ORDER BY _group_key_1::numeric desc) AS ubound,
+percentile_disc(0.9) WITHIN GROUP(ORDER BY _group_key_1::numeric desc) AS lbound FROM funnel WHERE _group_key_1 != '$none'),
+
+bucketed AS (SELECT _group_key_0, COALESCE(NULLIF(_group_key_1, '$none'), 'NaN') AS _group_key_1, CASE
+WHEN _group_key_1 = '$none' THEN -1 ELSE width_bucket(_group_key_1::numeric, _group_key_1_bounds.lbound::numeric,
+COALESCE(NULLIF(_group_key_1_bounds.ubound, _group_key_1_bounds.lbound), _group_key_1_bounds.ubound+1)::numeric, 8)
+END AS _group_key_1_bucket, step_0, step_1 FROM funnel, _group_key_1_bounds)
+
+SELECT '$no_group' AS _group_key_0,'$no_group' AS _group_key_1, SUM(step_0) AS step_0, SUM(step_1) AS step_1 FROM
+funnel UNION ALL SELECT * FROM ( SELECT _group_key_0, COALESCE(NULLIF(concat(round(min(_group_key_1::numeric), 1),
+' - ', round(max(_group_key_1::numeric), 1)), 'NaN - NaN'), '$none') AS _group_key_1, SUM(step_0) AS step_0,
+SUM(step_1) AS step_1 FROM bucketed GROUP BY _group_key_0, _group_key_1_bucket ORDER BY _group_key_1_bucket LIMIT 100 ) AS group_funnel
+*/
 func buildUniqueUsersFunnelQuery(projectId uint64, q Query) (string, []interface{}, error) {
 	if len(q.EventsWithProperties) == 0 {
 		return "", nil, errors.New("invalid no.of events for funnel query")
@@ -1776,6 +1823,24 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q Query) (string, []interface
 	qStmnt = joinWithComma(qStmnt, as(stepFunnelName, funnelStmnt))
 	qParams = append(qParams, ugParams...)
 
+	var aggregateSelectKeys, aggregateFromName, aggregateGroupBys, aggregateOrderBys string
+	aggregateFromName = stepFunnelName
+	if hasNumericalGroupBy(q.GroupByProperties) {
+		bucketedFromName, bucketedSelectKeys, bucketedGroupBys, bucketedOrderBys :=
+			appendNumericalBucketingSteps(&qStmnt, q.GroupByProperties, stepFunnelName, "", false,
+				strings.Join(funnelCountAliases, ", "))
+		aggregateSelectKeys = bucketedSelectKeys
+		aggregateFromName = bucketedFromName
+		aggregateGroupBys = strings.Join(bucketedGroupBys, ", ")
+		aggregateOrderBys = strings.Join(bucketedOrderBys, ", ")
+	} else {
+		_, _, groupKeys := buildGroupKeys(q.GroupByProperties)
+		aggregateSelectKeys = groupKeys + ", "
+		aggregateFromName = stepFunnelName
+		aggregateGroupBys = groupKeys
+		aggregateOrderBys = funnelCountAliases[0] + " DESC"
+	}
+
 	// builds "SUM(step1) AS step1, SUM(step1) AS step2".
 	var rawCountSelect string
 	for _, fca := range funnelCountAliases {
@@ -1798,11 +1863,10 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q Query) (string, []interface
 		noGroupSelect := "SELECT" + " " + joinWithComma(groupKeysPlaceholder, rawCountSelect) +
 			" " + "FROM" + " " + stepFunnelName
 
-		_, _, groupKeys := buildGroupKeys(q.GroupByProperties)
-		limitedGroupBySelect := "SELECT" + " " + joinWithComma(groupKeys, rawCountSelect) + " " +
-			"FROM" + " " + stepFunnelName + " " + "GROUP BY" + " " + groupKeys + " " +
+		limitedGroupBySelect := "SELECT" + " " + aggregateSelectKeys + rawCountSelect + " " +
+			"FROM" + " " + aggregateFromName + " " + "GROUP BY" + " " + aggregateGroupBys + " " +
 			// order and limit by last step of funnel.
-			fmt.Sprintf("ORDER BY %s DESC LIMIT %d", funnelCountAliases[0], ResultsLimit)
+			fmt.Sprintf("ORDER BY %s LIMIT %d", aggregateOrderBys, ResultsLimit)
 
 		// wrapped with select to apply limits only to grouped select rows.
 		groupBySelect := fmt.Sprintf("SELECT * FROM ( %s ) AS group_funnel", limitedGroupBySelect)
@@ -2367,9 +2431,23 @@ func sanitizeNumericalBucketRanges(result *QueryResult, query *Query) {
 
 	for _, gbp := range query.GroupByProperties {
 		if gbp.Type == U.PropertyTypeNumerical {
-			indexToReplace := headerIndexMap[gbp.Property]
-			for _, row := range result.Rows {
-				row[indexToReplace] = trailingZeroRegex.ReplaceAllString(row[indexToReplace].(string), "")
+			indexToSanitize := headerIndexMap[gbp.Property]
+			for index, row := range result.Rows {
+				if query.Class == QueryClassFunnel && index == 0 {
+					// For funnel queries, first row is $no_group query. Skip sanitization.
+					continue
+				}
+
+				// Remove trailing .0 in start and end value of range.
+				row[indexToSanitize] = trailingZeroRegex.ReplaceAllString(row[indexToSanitize].(string), "")
+
+				// Change range with same start and end ex: 2 - 2 to just 2.
+				if row[indexToSanitize] != PropertyValueNone {
+					rowSplit := strings.Split(row[indexToSanitize].(string), NumericalGroupBySeparator)
+					if rowSplit[0] == rowSplit[1] {
+						row[indexToSanitize] = rowSplit[0]
+					}
+				}
 			}
 		}
 	}
@@ -2494,6 +2572,8 @@ func RunFunnelQuery(projectId uint64, query Query) (*QueryResult, int, string) {
 		logCtx.WithError(err).Error("Failed translating group keys on result.")
 		return nil, http.StatusInternalServerError, ErrMsgQueryProcessingFailure
 	}
+
+	sanitizeNumericalBucketRanges(result, &query)
 
 	addMetaToQueryResult(result, query)
 
