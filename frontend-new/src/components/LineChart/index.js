@@ -43,6 +43,9 @@ function LineChart({ chartData, appliedColors, queries }) {
                 bottom: 24,
                 right: 10
             },
+            transition: {
+                duration: 500
+            },
             data: {
                 x: 'x',
                 columns: chartData,

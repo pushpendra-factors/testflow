@@ -123,7 +123,7 @@ export const getMultiEventsAnyEventUserData = (queries, eventsMapper) => {
 };
 
 
-export const getDataInLineChartFormat = (data, queries, eventsMapper) => {
+export const getDataInLineChartFormat = (data, queries, eventsMapper, hiddenEvents = []) => {
   data.sort((a, b) => {
     return moment(a["date"]).utc().unix() > moment(b["date"]).utc().unix() ? 1 : -1;
   });
@@ -133,12 +133,60 @@ export const getDataInLineChartFormat = (data, queries, eventsMapper) => {
     return moment(elem["date"]).format("YYYY-MM-DD");
   });
   queries.forEach(q => {
-    hashedData[eventsMapper[q]] = data.map(elem => {
-      return elem[eventsMapper[q]];
-    })
+    if (hiddenEvents.indexOf(q) === -1) {
+      hashedData[eventsMapper[q]] = data.map(elem => {
+        return elem[eventsMapper[q]];
+      })
+    }
   })
   for (let obj in hashedData) {
     result.push([obj, ...hashedData[obj]]);
   }
+  return result;
+}
+
+export const getDateBasedColumns = (data, currentSorter, handleSorting) => {
+  const result = [
+    {
+      title: 'Events',
+      dataIndex: 'event',
+      fixed: 'left',
+      width: 200
+    }];
+
+  const dateColumns = data.map(elem => {
+    return {
+      title: getTitleWithSorter(moment(elem.date).format('MMM D'), moment(elem.date).format('MMM D'), currentSorter, handleSorting),
+      width: 100,
+      dataIndex: moment(elem.date).format('MMM D'),
+    }
+  })
+  return [...result, ...dateColumns];
+}
+
+export const getNoGroupingTablularDatesBasedData = (data, currentSorter, searchText, reverseEventsMapper) => {
+  const events = Object.keys(reverseEventsMapper);
+  const dates = data.map(elem => moment(elem.date).format('MMM D'));
+  const filteredEvents = events.filter(event => reverseEventsMapper[event].includes(searchText));
+  const result = filteredEvents.map((elem, index) => {
+    const eventsData = {};
+    dates.forEach(date => {
+      eventsData[date] = data.find(elem => moment(elem.date).format('MMM D') === date)[elem];
+    });
+    return {
+      index,
+      event: reverseEventsMapper[elem],
+      ...eventsData
+    }
+  });
+  result.sort((a, b) => {
+    if (currentSorter.order === 'ascend') {
+      return parseInt(a[currentSorter.key]) >= parseInt(b[currentSorter.key]) ? 1 : -1;
+    }
+    if (currentSorter.order === 'descend') {
+      return parseInt(a[currentSorter.key]) <= parseInt(b[currentSorter.key]) ? 1 : -1;
+    }
+    return 0;
+  });
   return result;
 }

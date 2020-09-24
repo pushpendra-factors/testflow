@@ -8,6 +8,8 @@ import LineChart from '../../../components/LineChart';
 
 
 function TotalEvents({ queries }) {
+
+  const [hiddenEvents, setHiddenEvents] = useState([]);
   const appliedColors = generateColors(queries.length);
   const [chartType, setChartType] = useState('linechart');
 
@@ -72,7 +74,7 @@ function TotalEvents({ queries }) {
         <div>{sparkLinesJsx}</div>
       ) : (
           <div className="flex mt-8">
-            <LineChart chartData={getDataInLineChartFormat(chartsData, queries, eventsMapper)} appliedColors={appliedColors} queries={queries} />
+            <LineChart chartData={getDataInLineChartFormat(chartsData, queries, eventsMapper, hiddenEvents)} appliedColors={appliedColors} queries={queries} />
           </div>
         )}
       <div className="mt-8">
@@ -80,6 +82,9 @@ function TotalEvents({ queries }) {
           data={chartsData}
           events={queries}
           reverseEventsMapper={reverseEventsMapper}
+          chartType={chartType}
+          setHiddenEvents={setHiddenEvents}
+          hiddenEvents={hiddenEvents}
         />
       </div>
     </div>
