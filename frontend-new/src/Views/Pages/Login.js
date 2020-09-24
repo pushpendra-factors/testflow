@@ -69,6 +69,7 @@ function Login() {
                     </div>
                 </Col>
             </Row>
+            <SVG name={'singlePages'} extraClass={'fa-single-screen--illustration'} />
       </div>
 
     </>
