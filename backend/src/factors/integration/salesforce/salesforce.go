@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -424,7 +425,7 @@ func GetSalesforceDocumentsByTypeForSync(projectId uint64, typ int) ([]M.Salesfo
 	return documents, http.StatusFound
 }
 
-func Sync(projectId uint64) []Status {
+func SyncEnrichment(projectId uint64) []Status {
 	logCtx := log.WithField("project_id", projectId)
 
 	statusByProjectAndType := make([]Status, 0, 0)
@@ -451,4 +452,242 @@ func Sync(projectId uint64) []Status {
 	}
 
 	return statusByProjectAndType
+}
+
+type field map[string]interface{}
+
+type record map[string]interface{}
+
+type Describe struct {
+	Custom bool    `json:"custom"`
+	Fields []field `json:"fields"`
+}
+
+const (
+	SALESFORCE_DATA_SERVICE_ROUTE = "/services/data/"
+	SALESFORCE_API_VERSION        = "v20.0"
+)
+
+func getSalesforceObjectDescription(objectName, accessToken, instanceURL string) (*Describe, error) {
+	url := instanceURL + SALESFORCE_DATA_SERVICE_ROUTE + SALESFORCE_API_VERSION + "/sobjects/" + objectName + "/describe"
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer"+" "+accessToken)
+	req.Header.Add("Accept", "application/json")
+
+	client := &http.Client{
+		Timeout: 10 * time.Minute,
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("error while getting object description with respone code %d ", resp.StatusCode)
+	}
+
+	var jsonRespone Describe
+	err = json.NewDecoder(resp.Body).Decode(&jsonRespone)
+	if err != nil {
+		return nil, errors.New("failed to decode response")
+	}
+	return &jsonRespone, nil
+
+}
+
+func getFieldsListFromDescription(description *Describe) ([]string, error) {
+	var objectFields []string
+	objectFieldDescriptions := description.Fields
+
+	for _, fieldDescription := range objectFieldDescriptions {
+		if fieldName, ok := fieldDescription["name"].(string); ok {
+			objectFields = append(objectFields, fieldName)
+		}
+	}
+
+	return objectFields, nil
+
+}
+
+type QueryRespone struct {
+	TotalSize      int      `json:"totalSize"`
+	Done           bool     `json:"done"`
+	Records        []record `json:"records"`
+	NextRecordsUrl string   `json:"nextRecordsUrl"`
+}
+
+func getSalesforceDataByQuery(query, accessToken, instanceURL string) (*QueryRespone, error) {
+	queryURL := instanceURL + SALESFORCE_DATA_SERVICE_ROUTE + SALESFORCE_API_VERSION + "/query?q=" + query
+	req, err := http.NewRequest("GET", queryURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer"+" "+accessToken)
+	req.Header.Add("Accept", "application/json")
+	client := &http.Client{
+		Timeout: 10 * time.Minute,
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("error while query data with respone code %d ", resp.StatusCode)
+	}
+
+	var jsonRespone QueryRespone
+	err = json.NewDecoder(resp.Body).Decode(&jsonRespone)
+	if err != nil {
+		return nil, errors.New("failed to decode response")
+	}
+	return &jsonRespone, nil
+}
+
+func syncByType(ps *M.SalesforceProjectSettings, accessToken, objectName, dateTime string) (bool, error) {
+	logCtx := log.WithField("project_id", ps.ProjectId)
+	description, err := getSalesforceObjectDescription(objectName, accessToken, ps.InstanceURL)
+	if err != nil {
+		return false, err
+	}
+	fields, err := getFieldsListFromDescription(description)
+	if err != nil {
+		return false, err
+	}
+	selectStmnt := strings.Join(fields, ",")
+	queryStmnt := fmt.Sprintf("SELECT+%s+FROM+%s", selectStmnt, objectName)
+	queryRespone, err := getSalesforceDataByQuery(queryStmnt, accessToken, ps.InstanceURL)
+	if err != nil {
+		return false, err
+	}
+	records := queryRespone.Records
+
+	hasFailures := false
+	for i := range records {
+		var document M.SalesforceDocument
+		document.ProjectId = ps.ProjectId
+		document.TypeAlias = objectName
+		enValue, err := json.Marshal(records[i])
+		if err != nil {
+			hasFailures = true
+			logCtx.WithError(err).Error("Error while encoding record for upserting")
+			continue
+		}
+		document.Value = &postgres.Jsonb{RawMessage: json.RawMessage(enValue)}
+		status := M.CreateSalesforceDocument(ps.ProjectId, &document)
+		if status != http.StatusCreated && status != http.StatusConflict {
+			hasFailures = true
+			logCtx.Errorf("Error while create salesforce record status %d", status)
+			continue
+		}
+	}
+
+	hasMore := !queryRespone.Done
+	for hasMore {
+		nextBatchRoute := queryRespone.NextRecordsUrl
+		queryRespone, _ = getSalesforceNextBatch(nextBatchRoute, ps.InstanceURL, accessToken)
+		records = queryRespone.Records
+		for i := range records {
+			var document M.SalesforceDocument
+			document.ProjectId = ps.ProjectId
+			document.TypeAlias = objectName
+			enValue, err := json.Marshal(records[i])
+			if err != nil {
+				hasFailures = true
+				logCtx.WithError(err).Error("Error while encoding record for upserting")
+				continue
+			}
+			document.Value = &postgres.Jsonb{RawMessage: json.RawMessage(enValue)}
+			status := M.CreateSalesforceDocument(ps.ProjectId, &document)
+			if status != http.StatusCreated && status != http.StatusConflict {
+				hasFailures = true
+				logCtx.Errorf("Error while create salesforce record status %d", status)
+				continue
+			}
+		}
+		hasMore = queryRespone.Done
+	}
+
+	return hasFailures, nil
+}
+func getSalesforceNextBatch(nextBatchRoute, InstanceURL string, accessToken string) (*QueryRespone, error) {
+	url := InstanceURL + nextBatchRoute
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer"+" "+accessToken)
+	req.Header.Add("Accept", "application/json")
+	client := http.Client{
+		Timeout: 10 * time.Minute,
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("error while query next batch with respone code %d ", resp.StatusCode)
+	}
+
+	var jsonRespone QueryRespone
+	err = json.NewDecoder(resp.Body).Decode(&jsonRespone)
+	if err != nil {
+		return nil, errors.New("failed to decode response")
+	}
+
+	return &jsonRespone, nil
+}
+
+const REFRESH_TOKEN_URL = "https://login.salesforce.com/services/oauth2/token"
+
+func GetAccessToken(ps *M.SalesforceProjectSettings, redirectUrl string) (string, error) {
+	queryParams := fmt.Sprintf("grant_type=%s&refresh_token=%s&client_id=%s&client_secret=%s&redirect_uri=%s",
+		"refresh_token", ps.RefreshToken, C.GetSalesforceAppId(), C.GetSalesforceAppSecret(), redirectUrl)
+	url := REFRESH_TOKEN_URL + "?" + queryParams
+	req, err := http.NewRequest("POST", url, nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Add("Accept", "application/json")
+
+	client := &http.Client{
+		Timeout: 10 * time.Minute,
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("error while query data with respone code %d ", resp.StatusCode)
+	}
+
+	var jsonRespone map[string]interface{}
+	err = json.NewDecoder(resp.Body).Decode(&jsonRespone)
+	if err != nil {
+		return "", errors.New("failed to decode response")
+	}
+
+	access_token, exists := jsonRespone["access_token"].(string)
+	if !exists && access_token == "" {
+		return "", errors.New("failed to get access token by refresh token")
+	}
+
+	return access_token, nil
+}
+
+func SyncDocuments(ps *M.SalesforceProjectSettings, lastSyncInfo map[string]int64, accessToken string) {
+	// logCtx := log.WithField("project_id", ps.ProjectId)
+	for docType := range lastSyncInfo {
+		syncByType(ps, accessToken, docType, "")
+	}
 }

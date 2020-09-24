@@ -677,7 +677,7 @@ type SalesforceRedirectRequestPayload struct {
 	ProjectId string `json:"project_id"`
 }
 
-func getSalesforceRedirectURL() string {
+func GetSalesforceRedirectURL() string {
 	return C.GetProtocol() + C.GetAPIDomain() + ROUTE_INTEGRATIONS_ROOT + SALESFORCE_CALLBACK_URL
 }
 
@@ -698,7 +698,7 @@ func SalesforceCallbackHandler(c *gin.Context) {
 		AccessCode:   accessCode,
 		ClientId:     C.GetSalesforceAppId(),
 		ClientSecret: C.GetSalesforceAppSecret(),
-		RedirectURL:  getSalesforceRedirectURL(),
+		RedirectURL:  GetSalesforceRedirectURL(),
 	}
 
 	userCredentials, err := IntSalesforce.GetSalesforceUserToken(&salesforceTokenParams)
@@ -790,6 +790,6 @@ func SalesforceAuthRedirectHandler(c *gin.Context) {
 		return
 	}
 
-	redirectURL := IntSalesforce.GetSalesforceAuthorizationUrl(C.GetSalesforceAppId(), getSalesforceRedirectURL(), "code", url.QueryEscape(string(enOAuthState)))
+	redirectURL := IntSalesforce.GetSalesforceAuthorizationUrl(C.GetSalesforceAppId(), GetSalesforceRedirectURL(), "code", url.QueryEscape(string(enOAuthState)))
 	c.JSON(http.StatusTemporaryRedirect, gin.H{"redirectURL": redirectURL})
 }

@@ -125,15 +125,16 @@ type SalesforceSyncInfo struct {
 	LastSyncInfo map[uint64]map[string]int64 `json:"last_sync_info"`
 }
 
-func GetSalesforceSyncInfo() (*SalesforceSyncInfo, int) {
+func GetSalesforceSyncInfo() (SalesforceSyncInfo, int) {
 	var lastSyncInfo []SalesforceLastSyncInfo
+	var syncInfo SalesforceSyncInfo
 
 	db := C.GetServices().Db
 	err := db.Table("salesforce_documents").Select(
 		"project_id, type, MAX(timestamp) as timestamp").Group(
 		"project_id, type").Find(&lastSyncInfo).Error
 	if err != nil {
-		return nil, http.StatusInternalServerError
+		return syncInfo, http.StatusInternalServerError
 	}
 
 	lastSyncInfoByProject := make(map[uint64]map[string]int64, 0)
@@ -149,7 +150,7 @@ func GetSalesforceSyncInfo() (*SalesforceSyncInfo, int) {
 
 	projectSettings, errCode := GetAllSalesforceProjectSettings()
 	if errCode != http.StatusFound {
-		return nil, http.StatusInternalServerError
+		return syncInfo, http.StatusInternalServerError
 	}
 
 	settingsByProject := make(map[uint64]*SalesforceProjectSettings, 0)
@@ -176,11 +177,10 @@ func GetSalesforceSyncInfo() (*SalesforceSyncInfo, int) {
 		settingsByProject[projectSettings[i].ProjectId] = &projectSettings[i]
 	}
 
-	var syncInfo SalesforceSyncInfo
 	syncInfo.LastSyncInfo = enabledProjectLastSync
 	syncInfo.ProjectSettings = settingsByProject
 
-	return &syncInfo, http.StatusOK
+	return syncInfo, http.StatusFound
 }
 
 func getSalesforceDocumentId(document *SalesforceDocument) (string, error) {
@@ -268,6 +268,7 @@ func CreateSalesforceDocument(projectId uint64, document *SalesforceDocument) in
 			logCtx.WithError(err).Error("Failed to create salesforce document.")
 			return http.StatusInternalServerError
 		}
+		return http.StatusCreated
 	}
 
 	err = CreateSalesforceDocumentByAction(projectId, document, SalesforceDocumentUpdated)

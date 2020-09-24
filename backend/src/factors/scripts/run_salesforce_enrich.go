@@ -94,7 +94,7 @@ func main() {
 
 	statusList := make([]IntSalesforce.Status, 0, 0)
 	for _, settings := range salesforceEnabledProjects {
-		status := IntSalesforce.Sync(settings.ProjectId)
+		status := IntSalesforce.SyncEnrichment(settings.ProjectId)
 		statusList = append(statusList, status...)
 	}
 }

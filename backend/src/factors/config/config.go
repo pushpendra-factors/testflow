@@ -257,6 +257,11 @@ func InitEventUserRealTimeCachingConfig(isEnabled bool, projectIds string) {
 	configuration.RealTimeEventUserCachingProjectIds = projectIds
 }
 
+func InitSalesforceConfig(salesforceAppId, salesforceAppSecret string) {
+	configuration.SalesforceAppID = salesforceAppId
+	configuration.SalesforceAppSecret = salesforceAppSecret
+}
+
 func InitEtcd(EtcdEndpoints []string) error {
 	etcdClient, err := serviceEtcd.New(EtcdEndpoints)
 	if err != nil {
