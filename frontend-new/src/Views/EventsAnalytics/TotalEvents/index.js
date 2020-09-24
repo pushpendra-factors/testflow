@@ -103,7 +103,7 @@ function TotalEvents({ queries }) {
               <div className="flex flex-col">
                 <EventHeader total={total} query={q} bgColor={appliedColors[index]} />
                 <div className="mt-8">
-                  <SparkChart event={eventsMapper[q]} page="totalUsers" chartData={data} chartColor={appliedColors[index]} />
+                  <SparkChart event={eventsMapper[q]} page="totalEvents" chartData={data} chartColor={appliedColors[index]} />
                 </div>
               </div>
             </div>

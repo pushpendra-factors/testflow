@@ -1,7 +1,7 @@
 import moment from 'moment';
 
 import { getTitleWithSorter } from '../CoreQuery/FunnelsResultPage/utils';
-import { singleEventResponse, multiEventResponse } from './SampleResponse';
+import { singleEventResponse, multiEventResponse, singleEventAnyEventUserResponse, multiEventAnyEventUserResponse } from './SampleResponse';
 
 export const getNoGroupingTableData = (data, currentSorter, searchText, reverseEventsMapper) => {
   const clonedData = data.map(elem => {
@@ -88,6 +88,40 @@ export const getMultiEventsAnalyticsData = (queries, eventsMapper) => {
   });
   return result;
 };
+
+export const getSingleEventAnyEventUserData = (event, eventsMapper) => {
+  const response = singleEventAnyEventUserResponse;
+  const result = response.rows.map(row => {
+    return {
+      date: new Date(row[0]),
+      [eventsMapper[event]]: row[1]
+    }
+  });
+  return result;
+}
+
+export const getMultiEventsAnyEventUserData = (queries, eventsMapper) => {
+  const response = multiEventAnyEventUserResponse;
+  const dates = [];
+  const result = [];
+  response.rows.forEach(r => {
+    if (dates.indexOf(r[0]) === -1) {
+      const currentDateData = response.rows.filter(elem => elem[0] === r[0]);
+      const eventsData = {}
+      currentDateData.forEach(d => {
+        const query = queries.find(q => q === d[1]);
+        eventsData[eventsMapper[query]] = d[2];
+      });
+      result.push({
+        date: new Date(r[0]),
+        ...eventsData
+      })
+      dates.push(r[0]);
+    }
+  });
+  return result;
+};
+
 
 export const getDataInLineChartFormat = (data, queries, eventsMapper) => {
   data.sort((a, b) => {

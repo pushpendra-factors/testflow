@@ -1,19 +1,38 @@
 import React, { useState } from 'react';
 import { Menu, Dropdown, Button } from 'antd';
-import { getSingleEventAnalyticsData, getDataInLineChartFormat } from '../utils';
 import SparkChart from '../TotalEvents/SparkChart';
-import { generateColors } from '../../CoreQuery/FunnelsResultPage/utils';
-import EventHeader from '../EventHeader';
 import TotalEventsTable from '../TotalEvents/TotalEventsTable';
-import { SVG } from '../../../components/factorsComponents';
+import { getDataInLineChartFormat, getMultiEventsAnyEventUserData, getSingleEventAnyEventUserData } from '../utils';
+import EventHeader from '../EventHeader';
 import styles from '../index.module.scss';
-import LineChart from './LineChart';
+import { SVG } from '../../../components/factorsComponents';
+import { generateColors } from '../../CoreQuery/FunnelsResultPage/utils';
+import LineChart from '../TotalUsers/LineChart';
 
-function TotalUsers({ queries }) {
+
+function TotalEvents({ queries }) {
   const appliedColors = generateColors(queries.length);
-  const chartsData = getSingleEventAnalyticsData(queries);
-
   const [chartType, setChartType] = useState('sparklines');
+
+  const eventsMapper = {};
+  const reverseEventsMapper = {};
+  queries.forEach((q, index) => {
+    eventsMapper[`${q}`] = `event${index}`;
+    reverseEventsMapper[`event${index}`] = q;
+  })
+
+  let chartsData;
+  if (queries.length === 1) {
+    chartsData = getSingleEventAnyEventUserData(queries[0], eventsMapper);
+  } else {
+    chartsData = getMultiEventsAnyEventUserData(queries, eventsMapper);
+  }
+
+  console.log(chartsData)
+
+  if (!chartsData.length) {
+    return null;
+  }
 
   const menuItems = [
     {
@@ -46,8 +65,58 @@ function TotalUsers({ queries }) {
     </Menu>
   );
 
+  let sparkLinesJsx;
+
+  if (queries.length === 1) {
+
+    let total = 0;
+
+    chartsData.forEach(elem => {
+      total += elem[eventsMapper[queries[0]]];
+    });
+
+    sparkLinesJsx = (
+      <div className="flex justify-center items-center mt-8">
+        <div className="w-1/4">
+          <EventHeader bgColor="#4D7DB4" query={queries[0]} total={total} />
+        </div>
+        <div className="w-3/4">
+          <SparkChart event={eventsMapper[queries[0]]} page="totalUsers" chartData={chartsData} chartColor="#4D7DB4" />
+        </div>
+      </div>
+    )
+  } else {
+    sparkLinesJsx = (
+      <div className="flex flex-wrap mt-8">
+        {queries.map((q, index) => {
+          let total = 0;
+          const data = chartsData.map(elem => {
+            return {
+              date: elem.date,
+              [eventsMapper[q]]: elem[eventsMapper[q]]
+            };
+          });
+          data.forEach(elem => {
+            total += elem[eventsMapper[q]];
+          });
+
+          return (
+            <div key={q + index} className="w-1/3 mt-4 px-1">
+              <div className="flex flex-col">
+                <EventHeader total={total} query={q} bgColor={appliedColors[index]} />
+                <div className="mt-8">
+                  <SparkChart event={eventsMapper[q]} page="totalUsers" chartData={data} chartColor={appliedColors[index]} />
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    )
+  }
+
   return (
-    <div className="totalUsers">
+    <div className="total-events">
       <div className="flex items-center justify-between">
         <div className="filters-info">
 
@@ -62,46 +131,21 @@ function TotalUsers({ queries }) {
         </div>
       </div>
       {chartType === 'sparklines' ? (
-        <div className="flex flex-wrap mt-8">
-          {queries.map((q, index) => {
-            let total = 0;
-            const data = chartsData.map(elem => {
-              return {
-                date: elem.date,
-                [q]: elem[q]
-              };
-            });
-            data.forEach(elem => {
-              total += elem[q];
-            });
-
-            return (
-              <div key={q + index} className="w-1/3 mt-4 px-1">
-                <div className="flex flex-col">
-                  <EventHeader total={total} query={q} bgColor={appliedColors[index]} />
-                  <div className="mt-8">
-                    <SparkChart event={q} page="totalUsers" chartData={data} chartColor={appliedColors[index]} />
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        <div>{sparkLinesJsx}</div>
       ) : (
           <div className="flex mt-8">
-            <LineChart chartData={getDataInLineChartFormat(chartsData, queries)} appliedColors={appliedColors} queries={queries} />
+            <LineChart chartData={getDataInLineChartFormat(chartsData, queries, eventsMapper)} appliedColors={appliedColors} queries={queries} />
           </div>
         )}
-
       <div className="mt-8">
         <TotalEventsTable
           data={chartsData}
           events={queries}
+          reverseEventsMapper={reverseEventsMapper}
         />
       </div>
     </div>
-
   );
 }
 
-export default TotalUsers;
+export default TotalEvents;
