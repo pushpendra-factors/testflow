@@ -550,7 +550,7 @@ func prettyPrintJourneyPatterns(projectID uint64, allPatternsMap map[string]*Jou
 	// TODO(prateek): Make bucket configurable.
 	storageBucketName := "factors-misc"
 	storageFilePath := "JourneyMiningPOC/"
-	storageFileName := fmt.Sprintf("%d_%d_journey.txt", projectID, U.TimeNowUnix())
+	storageFileName := fmt.Sprintf("%d_%d_journey.txt", projectID, time.Now().UnixNano())
 	cloudManager, err := serviceGCS.New(storageBucketName)
 	if err != nil {
 		log.WithError(err).Error("error creating bucket")

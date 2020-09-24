@@ -23,11 +23,11 @@ func main() {
 	envFlag := flag.String("env", C.DEVELOPMENT, "Environment. Could be development|staging|production")
 	eventFiles := flag.String("event_files", "", "Comma separated list of event files")
 	userFiles := flag.String("user_files", "", "Comma separated list of user files")
-	projectIDFlag := flag.Uint64("project_id", 496, "ProjectID to run journey mining")
-	startDateFlag := flag.String("start_date", "2020-08-29", "Start date in YYYY-MM-DD format. Inclusive.")
+	projectIDFlag := flag.Uint64("project_id", 399, "ProjectID to run journey mining")
+	startDateFlag := flag.String("start_date", "2020-09-01", "Start date in YYYY-MM-DD format. Inclusive.")
 	endDateFlag := flag.String("end_date", "2020-09-23", "End date in YYYY-MM-DD format. Inclusive.")
 	lookBackDaysFlag := flag.Int64("lookback_days", 0, "Number of days to lookback from the start date given")
-	includeSessionFlag := flag.Bool("include_session", false, "Whether to auto include $session event in journey")
+	includeSessionFlag := flag.Bool("include_session", true, "Whether to auto include $session event in journey")
 	sessionPropertyFlag := flag.String("session_property", "$campaign", "Propert of $session event shown along path")
 
 	bucketNameFlag := flag.String("bucket_name", "/usr/local/var/factors/cloud_storage", "Bucket name for production")
@@ -40,7 +40,7 @@ func main() {
 	dbPass := flag.String("db_pass", "@ut0me7a", "")
 
 	flag.Parse()
-	taskID := "Script#DashboardMiningPOC"
+	taskID := "Script#JourneyMiningPOC"
 	defer U.NotifyOnPanic(taskID, *envFlag)
 	logCtx := log.WithFields(log.Fields{"Prefix": taskID})
 
