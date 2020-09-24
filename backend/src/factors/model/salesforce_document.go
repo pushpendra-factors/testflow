@@ -145,10 +145,8 @@ func GetSalesforceSyncInfo() (*SalesforceSyncInfo, int) {
 		lastSyncInfoByProject[syncInfo.ProjectId][GetSalesforceAliasByDocType(syncInfo.Type)] = syncInfo.Timestamp
 	}
 
-	// project sync of hubspot enable projects.
 	enabledProjectLastSync := make(map[uint64]map[string]int64, 0)
 
-	// get project settings of hubspot enaled projects.
 	projectSettings, errCode := GetAllSalesforceProjectSettings()
 	if errCode != http.StatusFound {
 		return nil, http.StatusInternalServerError
