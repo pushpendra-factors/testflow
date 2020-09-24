@@ -1,0 +1,42 @@
+
+$textColor: #3E516C;
+
+.lineChart {
+    :global(.c3-legend-item-tile) {
+        shape-rendering: auto;
+        stroke-linecap: round;
+        stroke-dasharray: 0.1 10;
+        stroke-width: 12;
+        transform: translate(6px, 1px);
+    }
+
+    :global(.c3-legend-item text) {
+        fill: #08172B;
+        line-height: 1rem;
+        font-weight: 400;
+        font-style: normal;
+        font-size: 14px;
+    }
+
+    :global(.c3-ygrid) {
+        stroke-dasharray: 0 !important;
+    }
+
+    :global(.c3-axis.c3-axis-y .tick line),
+    :global(.c3-axis.c3-axis-x .tick line),
+    :global(.c3-axis.c3-axis-y .domain),
+    :global(.c3-axis.c3-axis-x .domain) {
+        display: none;
+    }
+
+    :global(.c3-grid line) {
+        stroke: #E7E9ED !important;
+    }
+
+    :global(.c3-axis .tick text) {
+        font-size: 12px;
+        line-height: 18px;
+        fill: $textColor;
+        font-weight: 400;
+    }
+}

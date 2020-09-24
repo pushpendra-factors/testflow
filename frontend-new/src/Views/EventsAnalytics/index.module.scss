@@ -24,3 +24,42 @@ $factorsDark: '#0E2647';
     line-height: 20px;
     color: #08172B
 }
+
+.dropdownBtn {
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    border-radius: 0;
+}
+
+.dropdownMenu {
+    padding-top: 0.75rem !important;
+    padding-bottom: 0.75rem !important;
+    border-radius: 12px;
+    width: 148px;
+}
+
+.dropdownMenuItem {
+    font-family: $fontFamily;
+    font-weight: normal;
+    font-size: 14px;
+    line-height: 20px;
+    letter-spacing: -0.01em;
+    color: #8692A3;
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+
+    &:hover {
+        background-color: #fff !important;
+    }
+}
+
+.dropdownMenuItem.active {
+    background-color: #F5F6F8;
+    color: #3E516C;
+
+    &:hover {
+        background-color: #F5F6F8 !important;
+        color: #3E516C;
+    }
+}

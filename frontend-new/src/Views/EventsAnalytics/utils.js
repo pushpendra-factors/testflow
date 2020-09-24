@@ -1,9 +1,21 @@
 import moment from 'moment';
 
 import { getTitleWithSorter } from '../CoreQuery/FunnelsResultPage/utils';
+import { singleEventResponse, multiEventResponse } from './SampleResponse';
 
-export const getSingleEventNoGroupingTableData = (data, currentSorter) => {
-  const result = data.map((elem, index) => {
+export const getNoGroupingTableData = (data, currentSorter, searchText, reverseEventsMapper) => {
+  const clonedData = data.map(elem => {
+    const element = { ...elem }
+    for (let key in element) {
+      if (key !== 'date') {
+        element[reverseEventsMapper[key]] = element[key];
+        delete element[key];
+      }
+    }
+    return element;
+  });
+
+  const result = clonedData.map((elem, index) => {
     return {
       index,
       ...elem,
@@ -44,29 +56,55 @@ export const getColumns = (events, currentSorter, handleSorting) => {
   return [...result, ...eventColumns];
 };
 
-const randomDate = (start, end) => {
-  return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
-};
-
-export const getSpikeChartData = (events) => {
-  const result = [];
-  const dates = [];
-  for (let i = 0; i < 30; i++) {
-    let date = randomDate(new Date(2020, 0, 1), new Date());
-    let convertedDate = date.getFullYear() + date.getMonth() + date.getDate();
-    while (dates.indexOf(convertedDate) > -1) {
-      date = randomDate(new Date(2020, 0, 1), new Date());
-      convertedDate = date.getFullYear() + date.getMonth() + date.getDate();
+export const getSingleEventAnalyticsData = (event, eventsMapper) => {
+  const response = singleEventResponse;
+  const result = response.rows.map(row => {
+    return {
+      date: new Date(row[0]),
+      [eventsMapper[event]]: row[1]
     }
-    dates.push(convertedDate);
-    const eventsData = {};
-    events.forEach(event => {
-      eventsData[event] = Math.floor(Math.random() * 11);
-    });
-    result.push({
-      date,
-      ...eventsData
-    });
-  }
+  });
   return result;
 };
+
+export const getMultiEventsAnalyticsData = (queries, eventsMapper) => {
+  const response = multiEventResponse;
+  const dates = [];
+  const result = [];
+  response.rows.forEach(r => {
+    if (dates.indexOf(r[0]) === -1) {
+      const currentDateData = response.rows.filter(elem => elem[0] === r[0]);
+      const eventsData = {}
+      currentDateData.forEach(d => {
+        const query = queries.find(q => q === d[1]);
+        eventsData[eventsMapper[query]] = d[2];
+      });
+      result.push({
+        date: new Date(r[0]),
+        ...eventsData
+      })
+      dates.push(r[0]);
+    }
+  });
+  return result;
+};
+
+export const getDataInLineChartFormat = (data, queries, eventsMapper) => {
+  data.sort((a, b) => {
+    return moment(a["date"]).utc().unix() > moment(b["date"]).utc().unix() ? 1 : -1;
+  });
+  const result = [];
+  const hashedData = {};
+  hashedData["x"] = data.map(elem => {
+    return moment(elem["date"]).format("YYYY-MM-DD");
+  });
+  queries.forEach(q => {
+    hashedData[eventsMapper[q]] = data.map(elem => {
+      return elem[eventsMapper[q]];
+    })
+  })
+  for (let obj in hashedData) {
+    result.push([obj, ...hashedData[obj]]);
+  }
+  return result;
+}

@@ -1,8 +1,8 @@
 import React, { useState, useCallback } from 'react';
-import { getSingleEventNoGroupingTableData, getColumns } from '../utils';
+import { getNoGroupingTableData, getColumns } from '../utils';
 import DataTable from '../../CoreQuery/FunnelsResultPage/DataTable';
 
-function TotalEventsTable({ data, events }) {
+function TotalEventsTable({ data, events, reverseEventsMapper }) {
   const [sorter, setSorter] = useState({});
   const [searchText, setSearchText] = useState('');
 
@@ -12,7 +12,7 @@ function TotalEventsTable({ data, events }) {
 
   const columns = getColumns(events, sorter, handleSorting);
 
-  const tableData = getSingleEventNoGroupingTableData(data, sorter, searchText);
+  const tableData = getNoGroupingTableData(data, sorter, searchText, reverseEventsMapper);
 
   return (
         <DataTable
