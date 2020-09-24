@@ -6,7 +6,6 @@ import EventsInfo from '../CoreQuery/FunnelsResultPage/EventsInfo';
 import ContentTabs from '../../components/ContentTabs';
 import TotalEvents from './TotalEvents';
 import { SVG } from '../../components/factorsComponents';
-import TotalUsers from './TotalUsers';
 
 function EventsAnalytics({ queries }) {
   const [activeKey, setActiveKey] = useState('1');
@@ -26,35 +25,35 @@ function EventsAnalytics({ queries }) {
       key: '2',
       title: 'Total Users',
       titleIcon: <SVG name={'totalusers'} size={24} color={activeKey === '2' ? '#3E516C' : '#8692A3'} />,
-      content: <TotalUsers queries={queries} />
+      content: <TotalEvents queries={queries} />
     },
     {
       key: '3',
       title: 'Active Users',
       titleIcon: <SVG name={'activeusers'} size={24} color={activeKey === '3' ? '#3E516C' : '#8692A3'} />,
-      content: <div>Coming Soon</div>
+      content: <TotalEvents queries={queries} />
     },
     {
       key: '4',
       title: 'Frequency',
       titleIcon: <SVG name={'frequency'} size={24} color={activeKey === '4' ? '#3E516C' : '#8692A3'} />,
-      content: <div>Coming Soon</div>
+      content: <TotalEvents queries={queries} />
     }
   ];
 
   return (
     <>
-            <Header>
-                <div className="flex py-4 justify-end">
-                    <Button type="primary" icon={<PoweroffOutlined />} >Save query as</Button>
-                </div>
-                <div className="py-4">
-                    <EventsInfo queries={queries} />
-                </div>
-            </Header>
-            <div className="mt-40 mb-8 fa-container">
-                <ContentTabs onChange={handleTabChange} activeKey={activeKey} tabItems={tabItems} />
-            </div>
+      <Header>
+        <div className="flex py-4 justify-end">
+          <Button type="primary" icon={<PoweroffOutlined />} >Save query as</Button>
+        </div>
+        <div className="py-4">
+          <EventsInfo queries={queries} />
+        </div>
+      </Header>
+      <div className="mt-40 mb-8 fa-container">
+        <ContentTabs onChange={handleTabChange} activeKey={activeKey} tabItems={tabItems} />
+      </div>
     </>
   );
 }
