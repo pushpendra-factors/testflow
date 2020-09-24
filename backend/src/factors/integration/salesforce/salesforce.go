@@ -9,6 +9,7 @@ import (
 	U "factors/util"
 	"fmt"
 	"net/http"
+	"net/url"
 	"reflect"
 	"strings"
 	"time"
@@ -521,8 +522,13 @@ type QueryRespone struct {
 	NextRecordsUrl string   `json:"nextRecordsUrl"`
 }
 
-func getSalesforceDataByQuery(query, accessToken, instanceURL string) (*QueryRespone, error) {
-	queryURL := instanceURL + SALESFORCE_DATA_SERVICE_ROUTE + SALESFORCE_API_VERSION + "/query?q=" + query
+func getSalesforceDataByQuery(query, accessToken, instanceURL, dateTime string) (*QueryRespone, error) {
+	var whereStmnt string
+	if dateTime != "" {
+		whereStmnt = "WHERE" + "+" + "LastModifiedDate" + url.QueryEscape(">"+dateTime)
+	}
+
+	queryURL := instanceURL + SALESFORCE_DATA_SERVICE_ROUTE + SALESFORCE_API_VERSION + "/query?q=" + query + "+" + whereStmnt
 	req, err := http.NewRequest("GET", queryURL, nil)
 	if err != nil {
 		return nil, err
@@ -556,13 +562,15 @@ func syncByType(ps *M.SalesforceProjectSettings, accessToken, objectName, dateTi
 	if err != nil {
 		return false, err
 	}
+
 	fields, err := getFieldsListFromDescription(description)
 	if err != nil {
 		return false, err
 	}
+
 	selectStmnt := strings.Join(fields, ",")
 	queryStmnt := fmt.Sprintf("SELECT+%s+FROM+%s", selectStmnt, objectName)
-	queryRespone, err := getSalesforceDataByQuery(queryStmnt, accessToken, ps.InstanceURL)
+	queryRespone, err := getSalesforceDataByQuery(queryStmnt, accessToken, ps.InstanceURL, dateTime)
 	if err != nil {
 		return false, err
 	}
@@ -687,7 +695,13 @@ func GetAccessToken(ps *M.SalesforceProjectSettings, redirectUrl string) (string
 
 func SyncDocuments(ps *M.SalesforceProjectSettings, lastSyncInfo map[string]int64, accessToken string) {
 	// logCtx := log.WithField("project_id", ps.ProjectId)
-	for docType := range lastSyncInfo {
-		syncByType(ps, accessToken, docType, "")
+	for docType, timeStamp := range lastSyncInfo {
+		var sfFormatedTime string
+		if timeStamp != 0 {
+			t := time.Unix(timeStamp, 0)
+			sfFormatedTime = t.UTC().Format(M.SalesforceDocumentTimeLayout)
+		}
+
+		syncByType(ps, accessToken, docType, sfFormatedTime)
 	}
 }
