@@ -141,11 +141,11 @@ func getUserEventsFromFileChargebee(fileName string, segmentAGoals, segmentBGoal
 		(*userEventsMap)[userID] = append((*userEventsMap)[userID], denormalizedEvent)
 
 		var satisfiesGoalEvent bool
-		if satisfiesGoalEvent, _ = satisfiesAnyJourneyEvent(denormalizedEvent, segmentAGoals); satisfiesGoalEvent {
+		if satisfiesGoalEvent, _ = satisfiesAnyJourneyEvent(denormalizedEvent, segmentAGoals, nil); satisfiesGoalEvent {
 			(*segmentAUsers)[denormalizedEvent.UserID] = true
-		} else if satisfiesGoalEvent, _ = satisfiesAnyJourneyEvent(denormalizedEvent, segmentBGoals); satisfiesGoalEvent {
+		} else if satisfiesGoalEvent, _ = satisfiesAnyJourneyEvent(denormalizedEvent, segmentBGoals, nil); satisfiesGoalEvent {
 			(*segmentBUsers)[denormalizedEvent.UserID] = true
-		} else if satisfiesGoalEvent, _ = satisfiesAnyJourneyEvent(denormalizedEvent, segmentCGoals); satisfiesGoalEvent {
+		} else if satisfiesGoalEvent, _ = satisfiesAnyJourneyEvent(denormalizedEvent, segmentCGoals, nil); satisfiesGoalEvent {
 			(*segmentCUsers)[denormalizedEvent.UserID] = true
 		}
 	}
@@ -196,7 +196,7 @@ func getUserEventsFromFile(fileName string, goalEvents []QueryEventWithPropertie
 			continue
 		} else if denormalizedEvent.EventTimestampUnix < startTime || denormalizedEvent.EventTimestampUnix > endTime {
 			continue
-		} else if satisfies, _ := satisfiesAnyJourneyEvent(denormalizedEvent, journeyEvents); !satisfies {
+		} else if satisfies, _ := satisfiesAnyJourneyEvent(denormalizedEvent, journeyEvents, nil); !satisfies {
 			// TODO(prateek): Remove this if want to analyze for non completed users as well.
 			// Added to save memory on local run.
 			continue
@@ -211,7 +211,7 @@ func getUserEventsFromFile(fileName string, goalEvents []QueryEventWithPropertie
 		(*userEventsMap)[userID] = append((*userEventsMap)[userID], denormalizedEvent)
 
 		if val, found := (*goalFulfilledUsersMap)[userID]; !found || !val {
-			if satisfies, _ := satisfiesAnyJourneyEvent(denormalizedEvent, goalEvents); satisfies &&
+			if satisfies, _ := satisfiesAnyJourneyEvent(denormalizedEvent, goalEvents, nil); satisfies &&
 				(denormalizedEvent.EventTimestampUnix >= startTime && denormalizedEvent.EventTimestampUnix <= endTime) {
 				(*goalFulfilledUsersMap)[userID] = true
 			} else {
@@ -356,10 +356,17 @@ func areEqualEventsWithFilters(denormalizedEvent ArchiveEventFormat, journeyEven
 	return false
 }
 
-func satisfiesAnyJourneyEvent(denormalizedEvent ArchiveEventFormat,
-	journeyEvents []QueryEventWithProperties) (bool, QueryEventWithProperties) {
+func satisfiesAnyJourneyEvent(denormalizedEvent ArchiveEventFormat, journeyEvents []QueryEventWithProperties,
+	visitedEventsMap map[string]bool) (bool, QueryEventWithProperties) {
 	for _, journeyEvent := range journeyEvents {
 		if areEqualEventsWithFilters(denormalizedEvent, journeyEvent) {
+			if visitedEventsMap != nil {
+				journeyEventString := getEventAsString(journeyEvent)
+				if _, alreadyVisited := visitedEventsMap[journeyEventString]; alreadyVisited {
+					// This event is already visited. Try matching with other journey events.
+					continue
+				}
+			}
 			return true, journeyEvent
 		}
 	}
@@ -393,11 +400,10 @@ func pruneUserEventsPath(userEventsMap *map[string][]ArchiveEventFormat,
 			if debugInfo {
 				logCtx.Infof("Parsing event %s with timestamp %d", event.EventName, event.EventTimestampUnix)
 			}
-			isPartOfJourneyUniverse, journeyEvent := satisfiesAnyJourneyEvent(event, journeyEvents)
+			isPartOfJourneyUniverse, journeyEvent := satisfiesAnyJourneyEvent(
+				event, journeyEvents, visitedEventsMap)
 
 			// $session event if present, allowed to be repeated during the journey.
-			// isSessionEvent := journeyEvent.Name == U.EVENT_NAME_SESSION
-			// duplicateAllowed := (journeyEvent.Name == U.EVENT_NAME_SESSION || journeyEvent.Name == "$hubspot_contact_updated")
 			duplicateAllowed := journeyEvent.Name == U.EVENT_NAME_SESSION
 			journeyEventString := getEventAsString(journeyEvent)
 			if _, found := visitedEventsMap[journeyEventString]; (found && !duplicateAllowed) || !isPartOfJourneyUniverse {
@@ -416,7 +422,7 @@ func pruneUserEventsPath(userEventsMap *map[string][]ArchiveEventFormat,
 			// 	visitedSessionEventsMap[event.EventTimestampUnix] = true
 			// }
 
-			eventAlias := eventAliasLegend[getEventAsString(journeyEvent)]
+			eventAlias := eventAliasLegend[journeyEventString]
 			if duplicateAllowed {
 				if journeyEvent.Name == U.EVENT_NAME_SESSION {
 					value, found := event.EventPropertiesMap[sessionProperty]
@@ -449,9 +455,9 @@ func pruneUserEventsPath(userEventsMap *map[string][]ArchiveEventFormat,
 			prunedEventsList = append(prunedEventsList, event)
 			prunedEventsListAliases = append(prunedEventsListAliases, eventAlias)
 
-			// In case of analysing users who have not fulfilled goals, it is still safe to check this.
+			// In case of analyzing users who have not fulfilled goals, it is still safe to check this.
 			// They will not have any goal events so this will not break.
-			if satisfies, satisfiedGoalEvent := satisfiesAnyJourneyEvent(event, goalEvents); satisfies {
+			if satisfies, satisfiedGoalEvent := satisfiesAnyJourneyEvent(event, goalEvents, nil); satisfies {
 				// TODO(prateek): Special case added for $hubspot_contact_updated analysis. Consider removing.
 				eventAlias = eventAliasLegend[getEventAsString(satisfiedGoalEvent)]
 				prunedEventsListAliases = append(prunedEventsListAliases, eventAlias)
@@ -468,7 +474,15 @@ func pruneUserEventsPath(userEventsMap *map[string][]ArchiveEventFormat,
 		if debug {
 			logCtx.Infof("Pruned %d events for user %s to %d", len(events), userID, len(prunedEventsList))
 		}
-		journeyPath := strings.Join(prunedEventsListAliases[:lastGoalEventInJourneyIndex], " -> ")
+
+		var journeyPath string
+		if lastGoalEventInJourneyIndex > 0 {
+			journeyPath = strings.Join(prunedEventsListAliases[:lastGoalEventInJourneyIndex], " -> ")
+		} else {
+			// When analysing for non completed or user as done only goal event from journey,
+			// lastGoalEventInJourneyIndex would be zero. Use entire list of events.
+			journeyPath = strings.Join(prunedEventsListAliases, " -> ")
+		}
 		if _, found := allPatternsMap[journeyPath]; found {
 			allPatternsMap[journeyPath].Count++
 			allPatternsMap[journeyPath].UserIDs = append(allPatternsMap[journeyPath].UserIDs, userID)
@@ -572,8 +586,8 @@ func filterUsersForGoalNotCompleted(userEventsMap map[string][]ArchiveEventForma
 
 // GetWeightedJourneyMatrix Gets user's journey for the given events in given range.
 func GetWeightedJourneyMatrix(projectID uint64, journeyEvents []QueryEventWithProperties,
-	goalEvents []QueryEventWithProperties, startTime, endTime, lookbackDays int64, analyzeCompleted bool,
-	eventFiles, userFiles string, includeSession bool, sessionProperty string, cloudManager filestore.FileManager) {
+	goalEvents []QueryEventWithProperties, startTime, endTime, lookbackDays int64, eventFiles,
+	userFiles string, includeSession bool, sessionProperty string, cloudManager filestore.FileManager) {
 	logCtx := log.WithFields(log.Fields{
 		"Method":       "GetWeightedJourneyMatrix",
 		"ProjectID":    projectID,
@@ -610,13 +624,6 @@ func GetWeightedJourneyMatrix(projectID uint64, journeyEvents []QueryEventWithPr
 	}
 	outputFileContents := fmt.Sprintf("Total number of users: %d", len(userEventsMap))
 
-	// Delete other user keys to avoid memory overhead.
-	if analyzeCompleted {
-		userEventsMap = filterUsersForGoalCompleted(userEventsMap, goalFulfilledUsersMap)
-	} else {
-		userEventsMap = filterUsersForGoalNotCompleted(userEventsMap, goalFulfilledUsersMap)
-	}
-
 	// Sort stable events in increasing order of timestamp.
 	for userID := range userEventsMap {
 		sort.SliceStable(userEventsMap[userID], func(i, j int) bool {
@@ -624,13 +631,17 @@ func GetWeightedJourneyMatrix(projectID uint64, journeyEvents []QueryEventWithPr
 		})
 	}
 
-	if analyzeCompleted {
-		outputFileContents = fmt.Sprintf("%s\nUsers who reached goal: %d", outputFileContents, len(userEventsMap))
-	} else {
-		outputFileContents = fmt.Sprintf("%s\nUsers who did not reach goal: %d", outputFileContents, len(userEventsMap))
-	}
-	allPatternsMap := pruneUserEventsPath(&userEventsMap, goalEvents, journeyEvents, eventAliasLegend, sessionProperty)
-	prettyPrintJourneyPatterns(projectID, allPatternsMap, outputFileContents, journeyEvents,
+	goalCompletedUserEventsMap := filterUsersForGoalCompleted(userEventsMap, goalFulfilledUsersMap)
+	goalNotCompletedUserEventsMap := filterUsersForGoalNotCompleted(userEventsMap, goalFulfilledUsersMap)
+
+	completedFileContents := fmt.Sprintf("%s\nUsers who reached goal: %d", outputFileContents, len(goalCompletedUserEventsMap))
+	allPatternsMap := pruneUserEventsPath(&goalCompletedUserEventsMap, goalEvents, journeyEvents, eventAliasLegend, sessionProperty)
+	prettyPrintJourneyPatterns(projectID, allPatternsMap, completedFileContents, journeyEvents,
+		eventAliasLegend, reverseEventAliasLegend)
+
+	notCompletedFileContents := fmt.Sprintf("%s\nUsers who did not reach goal: %d", outputFileContents, len(goalNotCompletedUserEventsMap))
+	allPatternsMap = pruneUserEventsPath(&goalNotCompletedUserEventsMap, goalEvents, journeyEvents, eventAliasLegend, sessionProperty)
+	prettyPrintJourneyPatterns(projectID, allPatternsMap, notCompletedFileContents, journeyEvents,
 		eventAliasLegend, reverseEventAliasLegend)
 }
 
