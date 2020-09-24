@@ -22,17 +22,10 @@ func main() {
 	dbUser := flag.String("db_user", "autometa", "")
 	dbName := flag.String("db_name", "autometa", "")
 	dbPass := flag.String("db_pass", "@ut0me7a", "")
-
 	redisHost := flag.String("redis_host", "localhost", "")
 	redisPort := flag.Int("redis_port", 6379, "")
 	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
 	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
-
-	awsRegion := flag.String("aws_region", "us-east-1", "")
-	awsAccessKeyId := flag.String("aws_key", "dummy", "")
-	awsSecretAccessKey := flag.String("aws_secret", "dummy", "")
-	factorsEmailSender := flag.String("email_sender", "support-dev@factors.ai", "")
-	errorReportingInterval := flag.Int("error_reporting_interval", 300, "")
 	isRealTimeEventUserCachingEnabled := flag.Bool("enable_real_time_event_user_caching", false, "If the real time caching is enabled")
 	realTimeEventUserCachingProjectIds := flag.String("real_time_event_user_caching_project_ids", "", "If the real time caching is enabled and the whitelisted projectids")
 
@@ -60,11 +53,6 @@ func main() {
 		},
 		RedisHost:                          *redisHost,
 		RedisPort:                          *redisPort,
-		AWSKey:                             *awsAccessKeyId,
-		AWSSecret:                          *awsSecretAccessKey,
-		AWSRegion:                          *awsRegion,
-		EmailSender:                        *factorsEmailSender,
-		ErrorReportingInterval:             *errorReportingInterval,
 		RedisHostPersistent:                *redisHostPersistent,
 		RedisPortPersistent:                *redisPortPersistent,
 		SentryDSN:                          *sentryDSN,
@@ -96,5 +84,9 @@ func main() {
 	for _, settings := range salesforceEnabledProjects {
 		status := IntSalesforce.SyncEnrichment(settings.ProjectId)
 		statusList = append(statusList, status...)
+	}
+	err = util.NotifyThroughSNS("salesforce_enrich", *env, statusList)
+	if err != nil {
+		log.WithError(err).Fatal("Failed to notify through SNS on salesforce enrich.")
 	}
 }

@@ -14,6 +14,11 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+type SyncStatus struct {
+	Success  []IntSalesforce.SalesforceObjectStatus `json:"success"`
+	Failures []IntSalesforce.SalesforceObjectStatus `json:"failures,omitempty"`
+}
+
 func main() {
 	env := flag.String("env", "development", "")
 	dbHost := flag.String("db_host", "localhost", "")
@@ -61,12 +66,25 @@ func main() {
 		log.Errorf("Failed to get salesforce syncinfo: %d", status)
 	}
 
+	var syncStatus SyncStatus
 	for pid, projectSettings := range syncInfo.ProjectSettings {
 		accessToken, err := IntSalesforce.GetAccessToken(projectSettings, H.GetSalesforceRedirectURL())
 		if err != nil {
 			log.WithField("project_id", pid).Errorf("Failed to get salesforce access token: %d", status)
 			continue
 		}
-		IntSalesforce.SyncDocuments(projectSettings, syncInfo.LastSyncInfo[pid], accessToken)
+
+		objectStatus := IntSalesforce.SyncDocuments(projectSettings, syncInfo.LastSyncInfo[pid], accessToken)
+		for i := range objectStatus {
+			if objectStatus[i].Status != "Success" {
+				syncStatus.Failures = append(syncStatus.Failures, objectStatus[i])
+			} else {
+				syncStatus.Success = append(syncStatus.Success, objectStatus[i])
+			}
+		}
+	}
+	err = util.NotifyThroughSNS("salesforce_sync", *env, syncStatus)
+	if err != nil {
+		log.WithError(err).Fatal("Failed to notify through SNS on salesforce sync.")
 	}
 }

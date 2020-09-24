@@ -45,11 +45,6 @@ type SalesforceAuthParams struct {
 	State        string `auth_param:"state"`
 }
 
-type Account struct {
-	AccountId  string                 `json:"Id"`
-	Properties map[string]interface{} `json:"properties"`
-}
-
 type Status struct {
 	ProjectId uint64 `json:"project_id"`
 	Type      string `json:"type"`
@@ -71,6 +66,22 @@ type QueryRespone struct {
 	Done           bool     `json:"done"`
 	Records        []record `json:"records"`
 	NextRecordsUrl string   `json:"nextRecordsUrl"`
+}
+
+type SalesforceObjectStatus struct {
+	ProjetId     uint64   `json:"project_id"`
+	Status       string   `json:"status"`
+	DocType      string   `json:"doc_type"`
+	TotalRecords int      `json:"total_records"`
+	Message      string   `json:"message,omitempty"`
+	SyncAll      bool     `json:"syncall"`
+	Failures     []string `json:"failures,omitempty"`
+}
+
+type SalesforceJobStatus struct {
+	Status   string                   `json:"status"`
+	Success  []SalesforceObjectStatus `json:"success"`
+	Failures []SalesforceObjectStatus `json:"failures"`
 }
 
 func GetSalesforceUserToken(salesforceTokenParams *SalesforceAuthParams) (map[string]interface{}, error) {
@@ -454,11 +465,15 @@ func SyncEnrichment(projectId uint64) []Status {
 	statusByProjectAndType := make([]Status, 0, 0)
 
 	for _, docType := range M.SalesforceSupportedDocumentType {
-		logCtx = logCtx.WithField("type", docType)
+		logCtx = logCtx.WithFields(log.Fields{
+			"doc_type":   docType,
+			"project_id": projectId,
+		})
+
 		documents, errCode := GetSalesforceDocumentsByTypeForSync(projectId, docType)
 		if errCode != http.StatusFound {
 			logCtx.Error("Failed to get salesforce document by type for sync.")
-			return statusByProjectAndType
+			continue
 		}
 
 		status := Status{
@@ -472,6 +487,7 @@ func SyncEnrichment(projectId uint64) []Status {
 		} else {
 			status.Status = "failures_seen"
 		}
+		statusByProjectAndType = append(statusByProjectAndType, status)
 	}
 
 	return statusByProjectAndType
@@ -503,6 +519,10 @@ func SalesforceGetRequest(url, accessToken string) (*http.Response, error) {
 }
 
 func getSalesforceObjectDescription(objectName, accessToken, instanceURL string) (*Describe, error) {
+	if objectName == "" || accessToken == "" || instanceURL == "" {
+		return nil, errors.New("missing required fields")
+	}
+
 	url := instanceURL + SALESFORCE_DATA_SERVICE_ROUTE + SALESFORCE_API_VERSION + "/sobjects/" + objectName + "/describe"
 	resp, err := SalesforceGetRequest(url, accessToken)
 	if err != nil {
@@ -517,15 +537,19 @@ func getSalesforceObjectDescription(objectName, accessToken, instanceURL string)
 	var jsonRespone Describe
 	err = json.NewDecoder(resp.Body).Decode(&jsonRespone)
 	if err != nil {
-		return nil, errors.New("failed to decode response")
+		return nil, err
 	}
-	return &jsonRespone, nil
 
+	return &jsonRespone, nil
 }
 
 func getFieldsListFromDescription(description *Describe) ([]string, error) {
 	var objectFields []string
 	objectFieldDescriptions := description.Fields
+
+	if len(description.Fields) == 0 {
+		return objectFields, errors.New("invalid fileds on description")
+	}
 
 	for _, fieldDescription := range objectFieldDescriptions {
 		if fieldName, ok := fieldDescription["name"].(string); ok {
@@ -533,10 +557,18 @@ func getFieldsListFromDescription(description *Describe) ([]string, error) {
 		}
 	}
 
+	if len(objectFields) == 0 {
+		return objectFields, errors.New("empty field list")
+	}
+
 	return objectFields, nil
 }
 
 func getSalesforceDataByQuery(query, accessToken, instanceURL, dateTime string) (*QueryRespone, error) {
+	if query == "" || accessToken == "" || instanceURL == "" {
+		return nil, errors.New("missing required fields")
+	}
+
 	var whereStmnt string
 	if dateTime != "" {
 		whereStmnt = "WHERE" + "+" + "LastModifiedDate" + url.QueryEscape(">"+dateTime)
@@ -562,6 +594,10 @@ func getSalesforceDataByQuery(query, accessToken, instanceURL, dateTime string) 
 }
 
 func buildAndUpsertDocument(projectId uint64, objectName string, value record) error {
+	if projectId == 0 || objectName == "" || value == nil {
+		return errors.New("missing required fields")
+	}
+
 	var document M.SalesforceDocument
 	document.ProjectId = projectId
 	document.TypeAlias = objectName
@@ -569,54 +605,78 @@ func buildAndUpsertDocument(projectId uint64, objectName string, value record) e
 	if err != nil {
 		return err
 	}
-	document.Value = &postgres.Jsonb{RawMessage: json.RawMessage(enValue)}
 
+	document.Value = &postgres.Jsonb{RawMessage: json.RawMessage(enValue)}
 	status := M.CreateSalesforceDocument(projectId, &document)
 	if status != http.StatusCreated && status != http.StatusConflict {
 		return errors.New("error while creating document")
 	}
+
 	return nil
 }
 
-func syncByType(ps *M.SalesforceProjectSettings, accessToken, objectName, dateTime string) (bool, error) {
-	// logCtx := log.WithField("project_id", ps.ProjectId)
+func syncByType(ps *M.SalesforceProjectSettings, accessToken, objectName, dateTime string) (SalesforceObjectStatus, error) {
+	var salesforceObjectStatus SalesforceObjectStatus
+	salesforceObjectStatus.ProjetId = ps.ProjectId
+	salesforceObjectStatus.DocType = objectName
+
+	logCtx := log.WithFields(log.Fields{"project_id": ps.ProjectId, "doc_type": objectName})
+
 	description, err := getSalesforceObjectDescription(objectName, accessToken, ps.InstanceURL)
 	if err != nil {
-		return false, err
+		logCtx.WithError(err).Error("Failed to getSalesforceObjectDescription.")
+		return salesforceObjectStatus, err
 	}
 
 	fields, err := getFieldsListFromDescription(description)
 	if err != nil {
-		return false, err
+		logCtx.WithError(err).Error("Failed to getFieldsListFromDescription.")
+		return salesforceObjectStatus, err
 	}
 
 	selectStmnt := strings.Join(fields, ",")
 	queryStmnt := fmt.Sprintf("SELECT+%s+FROM+%s", selectStmnt, objectName)
 	queryRespone, err := getSalesforceDataByQuery(queryStmnt, accessToken, ps.InstanceURL, dateTime)
 	if err != nil {
-		return false, err
+		logCtx.WithError(err).Error("Failed to getSalesforceDataByQuery.")
+		return salesforceObjectStatus, err
 	}
+	salesforceObjectStatus.TotalRecords = queryRespone.TotalSize
 	records := queryRespone.Records
 
 	hasMore := true
 	nextBatchRoute := ""
 	for hasMore {
 		if nextBatchRoute != "" {
-			queryRespone, _ = getSalesforceNextBatch(nextBatchRoute, ps.InstanceURL, accessToken)
+			queryRespone, err = getSalesforceNextBatch(nextBatchRoute, ps.InstanceURL, accessToken)
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to getSalesforceNextBatch.")
+				return salesforceObjectStatus, err
+			}
 			records = queryRespone.Records
 		}
 
+		var failures []string
 		for i := range records {
-			buildAndUpsertDocument(ps.ProjectId, objectName, records[i])
+			err = buildAndUpsertDocument(ps.ProjectId, objectName, records[i])
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to buildAndUpsertDocument.")
+				failures = append(failures, err.Error())
+			}
 		}
+
+		salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, failures...)
 		hasMore = !queryRespone.Done
 		nextBatchRoute = queryRespone.NextRecordsUrl
 	}
 
-	return false, nil
+	return salesforceObjectStatus, nil
 }
 
 func getSalesforceNextBatch(nextBatchRoute, InstanceURL string, accessToken string) (*QueryRespone, error) {
+	if nextBatchRoute == "" || InstanceURL == "" || accessToken == "" {
+		return nil, errors.New("missing required fields")
+	}
 	url := InstanceURL + nextBatchRoute
 	resp, err := SalesforceGetRequest(url, accessToken)
 	if err != nil {
@@ -641,6 +701,7 @@ func GetAccessToken(ps *M.SalesforceProjectSettings, redirectUrl string) (string
 	queryParams := fmt.Sprintf("grant_type=%s&refresh_token=%s&client_id=%s&client_secret=%s&redirect_uri=%s",
 		"refresh_token", ps.RefreshToken, C.GetSalesforceAppId(), C.GetSalesforceAppSecret(), redirectUrl)
 	url := REFRESH_TOKEN_URL + "?" + queryParams
+
 	req, err := http.NewRequest("POST", url, nil)
 	if err != nil {
 		return "", err
@@ -662,7 +723,7 @@ func GetAccessToken(ps *M.SalesforceProjectSettings, redirectUrl string) (string
 	var jsonRespone map[string]interface{}
 	err = json.NewDecoder(resp.Body).Decode(&jsonRespone)
 	if err != nil {
-		return "", errors.New("failed to decode response")
+		return "", err
 	}
 
 	access_token, exists := jsonRespone["access_token"].(string)
@@ -673,8 +734,9 @@ func GetAccessToken(ps *M.SalesforceProjectSettings, redirectUrl string) (string
 	return access_token, nil
 }
 
-func SyncDocuments(ps *M.SalesforceProjectSettings, lastSyncInfo map[string]int64, accessToken string) {
-	// logCtx := log.WithField("project_id", ps.ProjectId)
+func SyncDocuments(ps *M.SalesforceProjectSettings, lastSyncInfo map[string]int64, accessToken string) []SalesforceObjectStatus {
+	var allObjectStatus []SalesforceObjectStatus
+
 	for docType, timeStamp := range lastSyncInfo {
 		var sfFormatedTime string
 		if timeStamp != 0 {
@@ -682,6 +744,22 @@ func SyncDocuments(ps *M.SalesforceProjectSettings, lastSyncInfo map[string]int6
 			sfFormatedTime = t.UTC().Format(M.SalesforceDocumentTimeLayout)
 		}
 
-		syncByType(ps, accessToken, docType, sfFormatedTime)
+		objectStatus, err := syncByType(ps, accessToken, docType, sfFormatedTime)
+		if err != nil || len(objectStatus.Failures) != 0 {
+			log.WithFields(log.Fields{
+				"project_id": ps.ProjectId,
+				"doctype":    docType,
+			}).WithError(err).Errorf("Failed to sync document")
+
+			objectStatus.Message = err.Error()
+			objectStatus.Status = "Has failures"
+		} else {
+			objectStatus.Status = "Success"
+		}
+
+		objectStatus.SyncAll = timeStamp == 0
+		allObjectStatus = append(allObjectStatus, objectStatus)
 	}
+
+	return allObjectStatus
 }
