@@ -18,11 +18,14 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const SALESFORCE_TOKEN_URL = "login.salesforce.com/services/oauth2/token"
-const SALESFORCE_AUTH_URL = "login.salesforce.com/services/oauth2/authorize"
-const SALESFORCE_APP_SETTINGS_URL = "/#/settings/salesforce"
-const SALESFORCE_REFRESH_TOKEN = "refresh_token"
-const SALESFORCE_INSTANCE_URL = "instance_url"
+const (
+	SALESFORCE_TOKEN_URL          = "login.salesforce.com/services/oauth2/token"
+	SALESFORCE_AUTH_URL           = "login.salesforce.com/services/oauth2/authorize"
+	REFRESH_TOKEN_URL             = "https://login.salesforce.com/services/oauth2/token"
+	SALESFORCE_APP_SETTINGS_URL   = "/#/settings/salesforce"
+	SALESFORCE_DATA_SERVICE_ROUTE = "/services/data/"
+	SALESFORCE_API_VERSION        = "v20.0"
+)
 
 type OAuthState struct {
 	ProjectId uint64  `json:"pid"`
@@ -49,6 +52,23 @@ type Status struct {
 	ProjectId uint64 `json:"project_id"`
 	Type      string `json:"type"`
 	Status    string `json:"status"`
+}
+
+//Salesforce API structs
+type field map[string]interface{}
+
+type record map[string]interface{}
+
+type Describe struct {
+	Custom bool    `json:"custom"`
+	Fields []field `json:"fields"`
+}
+
+type QueryRespone struct {
+	TotalSize      int      `json:"totalSize"`
+	Done           bool     `json:"done"`
+	Records        []record `json:"records"`
+	NextRecordsUrl string   `json:"nextRecordsUrl"`
 }
 
 func GetSalesforceUserToken(salesforceTokenParams *SalesforceAuthParams) (map[string]interface{}, error) {
@@ -455,39 +475,40 @@ func SyncEnrichment(projectId uint64) []Status {
 	return statusByProjectAndType
 }
 
-type field map[string]interface{}
-
-type record map[string]interface{}
-
-type Describe struct {
-	Custom bool    `json:"custom"`
-	Fields []field `json:"fields"`
-}
-
-const (
-	SALESFORCE_DATA_SERVICE_ROUTE = "/services/data/"
-	SALESFORCE_API_VERSION        = "v20.0"
-)
-
-func getSalesforceObjectDescription(objectName, accessToken, instanceURL string) (*Describe, error) {
-	url := instanceURL + SALESFORCE_DATA_SERVICE_ROUTE + SALESFORCE_API_VERSION + "/sobjects/" + objectName + "/describe"
+func buildSalesforceGETRequest(url, accessToken string) (*http.Request, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Authorization", "Bearer"+" "+accessToken)
 	req.Header.Add("Accept", "application/json")
+	return req, nil
+}
 
-	client := &http.Client{
-		Timeout: 10 * time.Minute,
-	}
-
-	resp, err := client.Do(req)
+func SalesforceGetRequest(url, accessToken string) (*http.Response, error) {
+	req, err := buildSalesforceGETRequest(url, accessToken)
 	if err != nil {
 		return nil, err
 	}
 
+	client := &http.Client{
+		Timeout: 10 * time.Minute,
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
+}
+
+func getSalesforceObjectDescription(objectName, accessToken, instanceURL string) (*Describe, error) {
+	url := instanceURL + SALESFORCE_DATA_SERVICE_ROUTE + SALESFORCE_API_VERSION + "/sobjects/" + objectName + "/describe"
+	resp, err := SalesforceGetRequest(url, accessToken)
+	if err != nil {
+		return nil, err
+	}
 	defer resp.Body.Close()
+
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("error while getting object description with respone code %d ", resp.StatusCode)
 	}
@@ -512,14 +533,6 @@ func getFieldsListFromDescription(description *Describe) ([]string, error) {
 	}
 
 	return objectFields, nil
-
-}
-
-type QueryRespone struct {
-	TotalSize      int      `json:"totalSize"`
-	Done           bool     `json:"done"`
-	Records        []record `json:"records"`
-	NextRecordsUrl string   `json:"nextRecordsUrl"`
 }
 
 func getSalesforceDataByQuery(query, accessToken, instanceURL, dateTime string) (*QueryRespone, error) {
@@ -529,21 +542,12 @@ func getSalesforceDataByQuery(query, accessToken, instanceURL, dateTime string) 
 	}
 
 	queryURL := instanceURL + SALESFORCE_DATA_SERVICE_ROUTE + SALESFORCE_API_VERSION + "/query?q=" + query + "+" + whereStmnt
-	req, err := http.NewRequest("GET", queryURL, nil)
+	resp, err := SalesforceGetRequest(queryURL, accessToken)
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Authorization", "Bearer"+" "+accessToken)
-	req.Header.Add("Accept", "application/json")
-	client := &http.Client{
-		Timeout: 10 * time.Minute,
-	}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-
 	defer resp.Body.Close()
+
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("error while query data with respone code %d ", resp.StatusCode)
 	}
@@ -556,8 +560,25 @@ func getSalesforceDataByQuery(query, accessToken, instanceURL, dateTime string) 
 	return &jsonRespone, nil
 }
 
+func buildAndUpsertDocument(projectId uint64, objectName string, value record) error {
+	var document M.SalesforceDocument
+	document.ProjectId = projectId
+	document.TypeAlias = objectName
+	enValue, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+	document.Value = &postgres.Jsonb{RawMessage: json.RawMessage(enValue)}
+
+	status := M.CreateSalesforceDocument(projectId, &document)
+	if status != http.StatusCreated && status != http.StatusConflict {
+		return errors.New("error while creating document")
+	}
+	return nil
+}
+
 func syncByType(ps *M.SalesforceProjectSettings, accessToken, objectName, dateTime string) (bool, error) {
-	logCtx := log.WithField("project_id", ps.ProjectId)
+	// logCtx := log.WithField("project_id", ps.ProjectId)
 	description, err := getSalesforceObjectDescription(objectName, accessToken, ps.InstanceURL)
 	if err != nil {
 		return false, err
@@ -576,66 +597,27 @@ func syncByType(ps *M.SalesforceProjectSettings, accessToken, objectName, dateTi
 	}
 	records := queryRespone.Records
 
-	hasFailures := false
-	for i := range records {
-		var document M.SalesforceDocument
-		document.ProjectId = ps.ProjectId
-		document.TypeAlias = objectName
-		enValue, err := json.Marshal(records[i])
-		if err != nil {
-			hasFailures = true
-			logCtx.WithError(err).Error("Error while encoding record for upserting")
-			continue
-		}
-		document.Value = &postgres.Jsonb{RawMessage: json.RawMessage(enValue)}
-		status := M.CreateSalesforceDocument(ps.ProjectId, &document)
-		if status != http.StatusCreated && status != http.StatusConflict {
-			hasFailures = true
-			logCtx.Errorf("Error while create salesforce record status %d", status)
-			continue
-		}
-	}
-
-	hasMore := !queryRespone.Done
+	hasMore := true
+	nextBatchRoute := ""
 	for hasMore {
-		nextBatchRoute := queryRespone.NextRecordsUrl
-		queryRespone, _ = getSalesforceNextBatch(nextBatchRoute, ps.InstanceURL, accessToken)
-		records = queryRespone.Records
-		for i := range records {
-			var document M.SalesforceDocument
-			document.ProjectId = ps.ProjectId
-			document.TypeAlias = objectName
-			enValue, err := json.Marshal(records[i])
-			if err != nil {
-				hasFailures = true
-				logCtx.WithError(err).Error("Error while encoding record for upserting")
-				continue
-			}
-			document.Value = &postgres.Jsonb{RawMessage: json.RawMessage(enValue)}
-			status := M.CreateSalesforceDocument(ps.ProjectId, &document)
-			if status != http.StatusCreated && status != http.StatusConflict {
-				hasFailures = true
-				logCtx.Errorf("Error while create salesforce record status %d", status)
-				continue
-			}
+		if nextBatchRoute != "" {
+			queryRespone, _ = getSalesforceNextBatch(nextBatchRoute, ps.InstanceURL, accessToken)
+			records = queryRespone.Records
 		}
-		hasMore = queryRespone.Done
+
+		for i := range records {
+			buildAndUpsertDocument(ps.ProjectId, objectName, records[i])
+		}
+		hasMore = !queryRespone.Done
+		nextBatchRoute = queryRespone.NextRecordsUrl
 	}
 
-	return hasFailures, nil
+	return false, nil
 }
+
 func getSalesforceNextBatch(nextBatchRoute, InstanceURL string, accessToken string) (*QueryRespone, error) {
 	url := InstanceURL + nextBatchRoute
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Authorization", "Bearer"+" "+accessToken)
-	req.Header.Add("Accept", "application/json")
-	client := http.Client{
-		Timeout: 10 * time.Minute,
-	}
-	resp, err := client.Do(req)
+	resp, err := SalesforceGetRequest(url, accessToken)
 	if err != nil {
 		return nil, err
 	}
@@ -653,8 +635,6 @@ func getSalesforceNextBatch(nextBatchRoute, InstanceURL string, accessToken stri
 
 	return &jsonRespone, nil
 }
-
-const REFRESH_TOKEN_URL = "https://login.salesforce.com/services/oauth2/token"
 
 func GetAccessToken(ps *M.SalesforceProjectSettings, redirectUrl string) (string, error) {
 	queryParams := fmt.Sprintf("grant_type=%s&refresh_token=%s&client_id=%s&client_secret=%s&redirect_uri=%s",
