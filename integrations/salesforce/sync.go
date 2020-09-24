@@ -17,7 +17,6 @@ const (
 	SALESFORCE_API_VERSION        = "v20.0"
 	REDIRECT_URL                  = "https://api.factors.com/salesforce/auth"
 	REFRESH_TOKEN_URL             = "https://login.salesforce.com/services/oauth2/token"
-	BATCH_SIZE                    = 50
 )
 
 type NextSyncInfo struct {
@@ -28,17 +27,6 @@ type NextSyncInfo struct {
 	InstanceURL  string
 }
 
-// SalesforceSync client wrapper for salesforce api
-type SalesforceSync struct {
-	Client          *http.Client
-	QueryURL        string
-	AccessToken     string
-	RedirectURL     string
-	RefreshTokenURL string
-	ClientSecret    string
-	ClientId        string
-	SyncInfo        []NextSyncInfo
-}
 type SalesforceProjectSettings struct {
 	RefreshToken string `json:"refresh_token"`
 	InstanceURL  string `json:"instance_url"`
@@ -57,6 +45,21 @@ type SalesforceClient struct {
 	RedirectURL     string
 	DataServiceHost string
 	DryRun          bool
+}
+
+type fields []map[string]interface{}
+
+type record map[string]interface{}
+
+type Describe struct {
+	Custom bool   `json:"custom"`
+	Fields fields `json:"fields"`
+}
+
+type Document struct {
+	ProjectId uint64 `json:"project_id"`
+	TypeAlias string `json:"type_alias"`
+	Value     record `json:"value"`
 }
 
 var sfClient *SalesforceClient
@@ -118,11 +121,6 @@ type QueryRespone struct {
 	Done           bool     `json:"done"`
 	Records        []record `json:"records"`
 	NextRecordsUrl string   `json:"nextRecordsUrl"`
-}
-
-type Describe struct {
-	Custom bool   `json:"custom"`
-	Fields fields `json:"fields"`
 }
 
 func (sf *SalesforceClient) describe(object, accessToken, instanceURL string) (*Describe, error) {
@@ -213,16 +211,6 @@ func (sf *SalesforceClient) getSyncInfo() ([]NextSyncInfo, error) {
 	return syncInfo, nil
 }
 
-func NewSalesforceSync(salesforceAppId, salesforceAppSecret string) *SalesforceSync {
-	return &SalesforceSync{
-		ClientId:     salesforceAppId,
-		ClientSecret: salesforceAppSecret,
-		Client:       &http.Client{},
-	}
-}
-
-type fields []map[string]interface{}
-
 func getFieldsListFromDescription(description *Describe) ([]string, error) {
 	var objectFields []string
 	objectFieldDescriptions := description.Fields
@@ -235,14 +223,6 @@ func getFieldsListFromDescription(description *Describe) ([]string, error) {
 
 	return objectFields, nil
 
-}
-
-type record map[string]interface{}
-
-type Document struct {
-	ProjectId uint64 `json:"project_id"`
-	TypeAlias string `json:"type_alias"`
-	Value     record `json:"value"`
 }
 
 func (sf *SalesforceClient) queryNextBatch(nextBatchRoute, InstanceURL string, accessToken string) (*QueryRespone, error) {
