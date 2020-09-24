@@ -480,6 +480,15 @@ const TotalusersSVG = ({ size = 24, color, extraClass }) => {
 
   );
 };
+const SinglePagesSVG = ({extraClass}) => {
+  return (
+    <svg className={extraClass} width="197" height="224" viewBox="0 0 197 224" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="70" y="157.624" width="77" height="77" transform="rotate(-30.9704 70 157.624)" fill="#EEEDF8"/>
+      <rect x="91" y="39.6238" width="77" height="77" rx="38.5" transform="rotate(-30.9704 91 39.6238)" fill="#EEEDF8"/>
+      <rect y="189.436" width="35.8262" height="35.8262" rx="17.9131" transform="rotate(-30.9704 0 189.436)" fill="#EEEDF8"/>
+    </svg>  
+  );
+};
 
 export {
   BrandSVG,
@@ -517,5 +526,6 @@ export {
   TotaleventsSVG,
   ActiveusersSVG,
   FrequencySVG,
-  TotalusersSVG
+  TotalusersSVG,
+  SinglePagesSVG
 };
