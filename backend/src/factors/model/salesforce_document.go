@@ -315,27 +315,21 @@ func GetSalesforceDocumentTimestampByAction(document *SalesforceDocument) (int64
 		return 0, err
 	}
 
-	var dateKey string
-	if document.Action == SalesforceDocumentCreated {
-		dateKey = "CreatedDate"
-	}
-	if document.Action == SalesforceDocumentUpdated {
-		dateKey = "LastModifiedDate"
-	}
+	dateKey := "LastModifiedDate"
 
 	date, exists := (*value)[dateKey]
 	if !exists || date == nil {
 		return 0, errors.New("failed to get date")
 	}
 
-	timestamp, err := readSalesforceDocumentTimestamp(date)
+	timestamp, err := getSalesforceDocumentTimestamp(date)
 	if err != nil {
 		return 0, err
 	}
 	return timestamp, nil
 }
 
-func readSalesforceDocumentTimestamp(timestamp interface{}) (int64, error) {
+func getSalesforceDocumentTimestamp(timestamp interface{}) (int64, error) {
 	timestampStr, ok := timestamp.(string)
 	if !ok || timestampStr == "" {
 		return 0, errors.New("invalid timestamp")

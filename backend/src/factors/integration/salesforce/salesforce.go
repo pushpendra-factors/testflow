@@ -23,6 +23,8 @@ const (
 	SALESFORCE_AUTH_URL           = "login.salesforce.com/services/oauth2/authorize"
 	REFRESH_TOKEN_URL             = "https://login.salesforce.com/services/oauth2/token"
 	SALESFORCE_APP_SETTINGS_URL   = "/#/settings/salesforce"
+	SALESFORCE_REFRESH_TOKEN      = "refresh_token"
+	SALESFORCE_INSTANCE_URL       = "instance_url"
 	SALESFORCE_DATA_SERVICE_ROUTE = "/services/data/"
 	SALESFORCE_API_VERSION        = "v20.0"
 )
@@ -481,7 +483,6 @@ func buildSalesforceGETRequest(url, accessToken string) (*http.Request, error) {
 		return nil, err
 	}
 	req.Header.Set("Authorization", "Bearer"+" "+accessToken)
-	req.Header.Add("Accept", "application/json")
 	return req, nil
 }
 
@@ -644,7 +645,6 @@ func GetAccessToken(ps *M.SalesforceProjectSettings, redirectUrl string) (string
 	if err != nil {
 		return "", err
 	}
-	req.Header.Add("Accept", "application/json")
 
 	client := &http.Client{
 		Timeout: 10 * time.Minute,
