@@ -141,6 +141,7 @@ func TestAddSession(t *testing.T) {
 	assert.Equal(t, float64(1), (*userPropertiesMap)[U.UP_SESSION_COUNT])
 	assert.Equal(t, float64(1), (*userPropertiesMap)[U.UP_PAGE_COUNT])
 	assert.Equal(t, float64(1), (*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
+	assert.Equal(t, trackUserProperties[U.UP_OS], (*userPropertiesMap)[U.UP_OS])
 	// check latest user_properties state.
 	user, _ = M.GetUser(project.ID, event.UserId)
 	lastestUserPropertiesMap, err := U.DecodePostgresJsonb(&user.Properties)
@@ -149,6 +150,7 @@ func TestAddSession(t *testing.T) {
 	assert.Equal(t, float64(1), (*lastestUserPropertiesMap)[U.UP_SESSION_COUNT])
 	assert.Equal(t, float64(1), (*lastestUserPropertiesMap)[U.UP_PAGE_COUNT])
 	assert.Equal(t, float64(1), (*lastestUserPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
+	assert.Equal(t, trackUserProperties[U.UP_OS], (*lastestUserPropertiesMap)[U.UP_OS])
 
 	// Test: New events without session for existing user with session.
 	// Since there is continious activity, last session should be continued.
