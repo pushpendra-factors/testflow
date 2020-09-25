@@ -156,6 +156,7 @@ var (
 	}
 
 	DESIGNCAFE_OPPORTUNITY_ALLOWED_FIELDS = map[string]bool{
+		"Id":                             true, // require for identification purpose
 		"Name":                           true,
 		"Amount":                         true,
 		"ExpectedRevenue":                true,
@@ -218,7 +219,7 @@ var (
 	}
 
 	SALESFORCE_PROJECT_STORE = map[uint64]map[string]map[string]bool{
-		1234: DESIGNCAFE_ALLOWED_OBJECTS,
+		1234: DESIGNCAFE_ALLOWED_OBJECTS, // pid will be updated
 	}
 )
 
@@ -246,10 +247,12 @@ func GetSalesforceAllowedfiedsByObject(projectId uint64, objectName string) map[
 	}
 
 	if objects, exist := SALESFORCE_PROJECT_STORE[projectId]; exist {
-		return objects[objectName]
-	} else {
-		return nil
+		if _, objExist := objects[objectName]; objExist {
+			return objects[objectName]
+		}
 	}
+
+	return nil
 }
 
 func GetProjectSetting(projectId uint64) (*ProjectSetting, int) {

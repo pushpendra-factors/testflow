@@ -280,7 +280,7 @@ func syncLeads(projectId uint64, document *M.SalesforceDocument) int {
 		logCtx.WithError(err).Error("Failed to get properties")
 	}
 
-	sanatizeFieldsFromProperties(projectId, properties, document.TypeAlias)
+	sanatizeFieldsFromProperties(projectId, properties, document.Type)
 	trackPayload := &SDK.TrackPayload{
 		ProjectId:       projectId,
 		EventProperties: properties,
@@ -316,9 +316,9 @@ func syncLeads(projectId uint64, document *M.SalesforceDocument) int {
 	return http.StatusOK
 }
 
-func sanatizeFieldsFromProperties(projectId uint64, properties map[string]interface{}, objectName string) {
-	allowedfields := M.GetSalesforceAllowedfiedsByObject(projectId, objectName)
+func sanatizeFieldsFromProperties(projectId uint64, properties map[string]interface{}, docType int) {
 
+	allowedfields := M.GetSalesforceAllowedfiedsByObject(projectId, M.GetSalesforceAliasByDocType(docType))
 	for field, value := range properties {
 		if value == nil || value == "" || value == 0 {
 			delete(properties, field)
@@ -343,7 +343,7 @@ func syncOpportunities(projectId uint64, document *M.SalesforceDocument) int {
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properties")
 	}
-	sanatizeFieldsFromProperties(projectId, properties, document.TypeAlias)
+	sanatizeFieldsFromProperties(projectId, properties, document.Type)
 	trackPayload := &SDK.TrackPayload{
 		ProjectId:       projectId,
 		EventProperties: properties,
@@ -376,7 +376,7 @@ func syncContact(projectId uint64, document *M.SalesforceDocument) int {
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properties")
 	}
-	sanatizeFieldsFromProperties(projectId, properties, document.TypeAlias)
+	sanatizeFieldsFromProperties(projectId, properties, document.Type)
 	trackPayload := &SDK.TrackPayload{
 		ProjectId:       projectId,
 		EventProperties: properties,
@@ -410,7 +410,7 @@ func syncAccount(projectId uint64, document *M.SalesforceDocument) int {
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properties")
 	}
-	sanatizeFieldsFromProperties(projectId, properties, document.TypeAlias)
+	sanatizeFieldsFromProperties(projectId, properties, document.Type)
 	trackPayload := &SDK.TrackPayload{
 		ProjectId:       projectId,
 		EventProperties: properties,
