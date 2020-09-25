@@ -197,6 +197,7 @@ func getCustomerUserIdFromProperties(projectId uint64, properties map[string]int
 				return pPhoneNo
 			}
 		}
+		return phoneNo
 	}
 
 	if phoneNo, ok := properties["Phone"].(string); ok && phoneNo != "" {
@@ -206,20 +207,17 @@ func getCustomerUserIdFromProperties(projectId uint64, properties map[string]int
 				return pPhoneNo
 			}
 		}
+		return phoneNo
 	}
 
 	return ""
 }
 
-func removeEmptyFieldsFromProperties(properties map[string]interface{}) error {
-	for field, value := range properties {
-		if value == nil || value == "" {
-			delete(properties, field)
-		}
-	}
-	return nil
-}
-
+/*
+TrackSalesforceEventByDocumentType tracks salesforce events by action
+	for action created -> create both created and updated events with date created timestamp
+	for action updated -> create on updated event with lastmodified timestamp
+*/
 func TrackSalesforceEventByDocumentType(projectId uint64, trackPayload *SDK.TrackPayload, document *M.SalesforceDocument) (string, string, error) {
 
 	var eventId, userId string
@@ -233,7 +231,7 @@ func TrackSalesforceEventByDocumentType(projectId uint64, trackPayload *SDK.Trac
 
 		status, response := SDK.Track(projectId, trackPayload, true, SDK.SourceSalesforce)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
-			return "", "", fmt.Errorf("created event track failed to doc type %d", document.Type)
+			return "", "", fmt.Errorf("created event track failed for doc type %d", document.Type)
 		}
 
 		eventId = response.EventId
@@ -259,7 +257,7 @@ func TrackSalesforceEventByDocumentType(projectId uint64, trackPayload *SDK.Trac
 
 		status, response := SDK.Track(projectId, trackPayload, true, SDK.SourceSalesforce)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
-			return "", "", fmt.Errorf("updated event track failed to doc type %d", document.Type)
+			return "", "", fmt.Errorf("updated event track failed for doc type %d", document.Type)
 		}
 
 		eventId = response.EventId
@@ -268,14 +266,6 @@ func TrackSalesforceEventByDocumentType(projectId uint64, trackPayload *SDK.Trac
 	}
 
 	return eventId, userId, nil
-}
-func removeSkipableFieldsFromProperties(properties map[string]interface{}) error {
-	for _, field := range M.SalesforceSkippablefields {
-		if _, exist := properties[field]; exist {
-			delete(properties, field)
-		}
-	}
-	return nil
 }
 
 func syncLeads(projectId uint64, document *M.SalesforceDocument) int {
@@ -290,8 +280,7 @@ func syncLeads(projectId uint64, document *M.SalesforceDocument) int {
 		logCtx.WithError(err).Error("Failed to get properties")
 	}
 
-	removeEmptyFieldsFromProperties(properties)
-	removeSkipableFieldsFromProperties(properties)
+	sanatizeFieldsFromProperties(projectId, properties, document.TypeAlias)
 	trackPayload := &SDK.TrackPayload{
 		ProjectId:       projectId,
 		EventProperties: properties,
@@ -327,6 +316,56 @@ func syncLeads(projectId uint64, document *M.SalesforceDocument) int {
 	return http.StatusOK
 }
 
+func sanatizeFieldsFromProperties(projectId uint64, properties map[string]interface{}, objectName string) {
+	allowedfields := M.GetSalesforceAllowedfiedsByObject(projectId, objectName)
+
+	for field, value := range properties {
+		if value == nil || value == "" || value == 0 {
+			delete(properties, field)
+			continue
+		}
+
+		if allowedfields != nil {
+			if _, exist := allowedfields[field]; !exist {
+				delete(properties, field)
+			}
+		}
+	}
+}
+
+func syncOpportunities(projectId uint64, document *M.SalesforceDocument) int {
+	if document.Type != M.SalesforceDocumentTypeOpportunity {
+		return http.StatusInternalServerError
+	}
+
+	logCtx := log.WithField("project_id", projectId).WithField("document_id", document.ID)
+	properties, err := getSalesforceDocumentProperties(document)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get properties")
+	}
+	sanatizeFieldsFromProperties(projectId, properties, document.TypeAlias)
+	trackPayload := &SDK.TrackPayload{
+		ProjectId:       projectId,
+		EventProperties: properties,
+		UserProperties:  properties,
+	}
+
+	eventId, _, err := TrackSalesforceEventByDocumentType(projectId, trackPayload, document)
+	if err != nil {
+		logCtx.WithError(err).Error(
+			"Failed to track salesforce opportunity event.")
+		return http.StatusInternalServerError
+	}
+
+	errCode := M.UpdateSalesforceDocumentAsSynced(projectId, document.ID, eventId)
+	if errCode != http.StatusAccepted {
+		logCtx.Error("Failed to update salesforce opportunity document as synced.")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusOK
+}
+
 func syncContact(projectId uint64, document *M.SalesforceDocument) int {
 	if document.Type != M.SalesforceDocumentTypeContact {
 		return http.StatusInternalServerError
@@ -337,8 +376,7 @@ func syncContact(projectId uint64, document *M.SalesforceDocument) int {
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properties")
 	}
-	removeEmptyFieldsFromProperties(properties)
-	removeSkipableFieldsFromProperties(properties)
+	sanatizeFieldsFromProperties(projectId, properties, document.TypeAlias)
 	trackPayload := &SDK.TrackPayload{
 		ProjectId:       projectId,
 		EventProperties: properties,
@@ -372,8 +410,7 @@ func syncAccount(projectId uint64, document *M.SalesforceDocument) int {
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properties")
 	}
-	removeEmptyFieldsFromProperties(properties)
-	removeSkipableFieldsFromProperties(properties)
+	sanatizeFieldsFromProperties(projectId, properties, document.TypeAlias)
 	trackPayload := &SDK.TrackPayload{
 		ProjectId:       projectId,
 		EventProperties: properties,
@@ -427,6 +464,8 @@ func syncAll(projectId uint64, documents []M.SalesforceDocument) int {
 			errCode = syncContact(projectId, &documents[i])
 		case M.SalesforceDocumentTypeLead:
 			errCode = syncLeads(projectId, &documents[i])
+		case M.SalesforceDocumentTypeOpportunity:
+			errCode = syncOpportunities(projectId, &documents[i])
 		default:
 			log.Errorf("invalid salesforce document type found %d", documents[i].Type)
 			continue
@@ -447,6 +486,7 @@ func syncAll(projectId uint64, documents []M.SalesforceDocument) int {
 	return http.StatusOK
 }
 
+// GetSalesforceDocumentsByTypeForSync pulls salesforce documents which are not synced
 func GetSalesforceDocumentsByTypeForSync(projectId uint64, typ int) ([]M.SalesforceDocument, int) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectId, "type": typ})
 
@@ -468,12 +508,13 @@ func GetSalesforceDocumentsByTypeForSync(projectId uint64, typ int) ([]M.Salesfo
 	return documents, http.StatusFound
 }
 
+// SyncEnrichment sync salesforce documents to events
 func SyncEnrichment(projectId uint64) []Status {
 	logCtx := log.WithField("project_id", projectId)
 
 	statusByProjectAndType := make([]Status, 0, 0)
 
-	for _, docType := range M.SalesforceSupportedDocumentType {
+	for _, docType := range M.GetSalesforceAllowedObjects(projectId) {
 		logCtx = logCtx.WithFields(log.Fields{
 			"doc_type":   docType,
 			"project_id": projectId,
@@ -511,6 +552,7 @@ func buildSalesforceGETRequest(url, accessToken string) (*http.Request, error) {
 	return req, nil
 }
 
+// SalesforceGetRequest performs GET request on provided url with access token
 func SalesforceGetRequest(url, accessToken string) (*http.Response, error) {
 	req, err := buildSalesforceGETRequest(url, accessToken)
 	if err != nil {
@@ -709,6 +751,7 @@ func getSalesforceNextBatch(nextBatchRoute, InstanceURL string, accessToken stri
 	return &jsonRespone, nil
 }
 
+// GetAccessToken gets new salesforce access token by refresh token
 func GetAccessToken(ps *M.SalesforceProjectSettings, redirectUrl string) (string, error) {
 	queryParams := fmt.Sprintf("grant_type=%s&refresh_token=%s&client_id=%s&client_secret=%s&redirect_uri=%s",
 		"refresh_token", ps.RefreshToken, C.GetSalesforceAppId(), C.GetSalesforceAppSecret(), redirectUrl)
@@ -746,6 +789,7 @@ func GetAccessToken(ps *M.SalesforceProjectSettings, redirectUrl string) (string
 	return access_token, nil
 }
 
+// SyncDocuments syncs from salesforce to database by doc type
 func SyncDocuments(ps *M.SalesforceProjectSettings, lastSyncInfo map[string]int64, accessToken string) []SalesforceObjectStatus {
 	var allObjectStatus []SalesforceObjectStatus
 
@@ -761,7 +805,7 @@ func SyncDocuments(ps *M.SalesforceProjectSettings, lastSyncInfo map[string]int6
 			log.WithFields(log.Fields{
 				"project_id": ps.ProjectId,
 				"doctype":    docType,
-			}).WithError(err).Errorf("Failed to sync document")
+			}).WithError(err).Errorf("Failed to sync documents")
 
 			if err != nil {
 				objectStatus.Message = err.Error()

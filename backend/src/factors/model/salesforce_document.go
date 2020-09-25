@@ -30,13 +30,15 @@ type SalesforceDocument struct {
 type SalesforceAction int
 
 const (
-	SalesforceDocumentTypeContact = 1
-	SalesforceDocumentTypeLead    = 2
-	SalesforceDocumentTypeAccount = 3
+	SalesforceDocumentTypeContact     = 1
+	SalesforceDocumentTypeLead        = 2
+	SalesforceDocumentTypeAccount     = 3
+	SalesforceDocumentTypeOpportunity = 4
 
-	SalesforceDocumentTypeNameContact = "contact"
-	SalesforceDocumentTypeNameLead    = "lead"
-	SalesforceDocumentTypeNameAccount = "account"
+	SalesforceDocumentTypeNameContact     = "contact"
+	SalesforceDocumentTypeNameLead        = "lead"
+	SalesforceDocumentTypeNameAccount     = "account"
+	SalesforceDocumentTypeNameOpportunity = "opportunity"
 
 	SalesforceDocumentCreated SalesforceAction = 1
 	SalesforceDocumentUpdated SalesforceAction = 2
@@ -45,12 +47,13 @@ const (
 )
 
 var SalesforceDocumentTypeAlias = map[string]int{
-	SalesforceDocumentTypeNameContact: SalesforceDocumentTypeContact,
-	SalesforceDocumentTypeNameLead:    SalesforceDocumentTypeLead,
-	SalesforceDocumentTypeNameAccount: SalesforceDocumentTypeAccount,
+	SalesforceDocumentTypeNameContact:     SalesforceDocumentTypeContact,
+	SalesforceDocumentTypeNameLead:        SalesforceDocumentTypeLead,
+	SalesforceDocumentTypeNameAccount:     SalesforceDocumentTypeAccount,
+	SalesforceDocumentTypeNameOpportunity: SalesforceDocumentTypeOpportunity,
 }
 
-var SalesforceSupportedDocumentType = []int{
+var SalesforceStandardDocumentType = []int{
 	SalesforceDocumentTypeAccount,
 	SalesforceDocumentTypeContact,
 	SalesforceDocumentTypeLead,
@@ -89,6 +92,14 @@ func getSalesforceDocTypeByAlias(alias string) (int, error) {
 	return typ, nil
 }
 
+func getSalesforceDocumentTypeAlias(projectId uint64) map[string]int {
+	docTypes := make(map[string]int)
+	for _, doctype := range GetSalesforceAllowedObjects(projectId) {
+		docTypes[GetSalesforceAliasByDocType(doctype)] = doctype
+	}
+	return docTypes
+}
+
 func GetSalesforceCreatedEventName(docType int) string {
 	switch docType {
 	case SalesforceDocumentTypeAccount:
@@ -97,6 +108,8 @@ func GetSalesforceCreatedEventName(docType int) string {
 		return U.EVENT_NAME_SALESFORCE_CONTACT_CREATED
 	case SalesforceDocumentTypeLead:
 		return U.EVENT_NAME_SALESFORCE_LEAD_CREATED
+	case SalesforceDocumentTypeOpportunity:
+		return U.EVENT_NAME_SALESFORCE_OPPORTUNITY_CREATED
 	}
 	return ""
 }
@@ -109,6 +122,8 @@ func GetSalesforceUpdatedEventName(docType int) string {
 		return U.EVENT_NAME_SALESFORCE_CONTACT_UPDATED
 	case SalesforceDocumentTypeLead:
 		return U.EVENT_NAME_SALESFORCE_LEAD_UPDATED
+	case SalesforceDocumentTypeOpportunity:
+		return U.EVENT_NAME_SALESFORCE_OPPORTUNITY_UPDATED
 	}
 	return ""
 }
@@ -166,7 +181,7 @@ func GetSalesforceSyncInfo() (SalesforceSyncInfo, int) {
 		}
 
 		// add types not synced before.
-		for typ := range SalesforceDocumentTypeAlias {
+		for typ := range getSalesforceDocumentTypeAlias(ps.ProjectId) {
 			_, typExists := enabledProjectLastSync[ps.ProjectId][typ]
 			if !typExists {
 				// last sync timestamp as zero as type not synced before.
