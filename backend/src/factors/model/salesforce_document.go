@@ -285,6 +285,14 @@ func CreateSalesforceDocument(projectId uint64, document *SalesforceDocument) in
 }
 
 func CreateSalesforceDocumentByAction(projectId uint64, document *SalesforceDocument, action SalesforceAction) error {
+	if projectId == 0 {
+		return errors.New("invalid project id")
+	}
+
+	if action == 0 {
+		return errors.New("invald action type")
+	}
+
 	document.Action = action
 	timestamp, err := GetSalesforceDocumentTimestampByAction(document)
 	if err != nil {

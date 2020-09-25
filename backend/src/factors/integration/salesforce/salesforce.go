@@ -594,8 +594,11 @@ func getSalesforceDataByQuery(query, accessToken, instanceURL, dateTime string) 
 }
 
 func buildAndUpsertDocument(projectId uint64, objectName string, value record) error {
-	if projectId == 0 || objectName == "" || value == nil {
-		return errors.New("missing required fields")
+	if projectId == 0 {
+		return errors.New("invalid project id")
+	}
+	if objectName == "" || value == nil {
+		return errors.New("invalid oject name or value")
 	}
 
 	var document M.SalesforceDocument
@@ -609,7 +612,7 @@ func buildAndUpsertDocument(projectId uint64, objectName string, value record) e
 	document.Value = &postgres.Jsonb{RawMessage: json.RawMessage(enValue)}
 	status := M.CreateSalesforceDocument(projectId, &document)
 	if status != http.StatusCreated && status != http.StatusConflict {
-		return errors.New("error while creating document")
+		return fmt.Errorf("error while creating document Status %d", status)
 	}
 
 	return nil
@@ -751,7 +754,10 @@ func SyncDocuments(ps *M.SalesforceProjectSettings, lastSyncInfo map[string]int6
 				"doctype":    docType,
 			}).WithError(err).Errorf("Failed to sync document")
 
-			objectStatus.Message = err.Error()
+			if err != nil {
+				objectStatus.Message = err.Error()
+			}
+
 			objectStatus.Status = "Has failures"
 		} else {
 			objectStatus.Status = "Success"
