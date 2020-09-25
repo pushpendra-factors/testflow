@@ -192,9 +192,18 @@ func getCustomerUserIdFromProperties(projectId uint64, properties map[string]int
 
 	if phoneNo, ok := properties["MobilePhone"].(string); ok && phoneNo != "" {
 		for pPhoneNo := range U.GetPossiblePhoneNumber(phoneNo) {
-			userLatest, errCode := M.GetUserLatestByCustomerUserId(projectId, pPhoneNo)
+			_, errCode := M.GetUserLatestByCustomerUserId(projectId, pPhoneNo)
 			if errCode == http.StatusFound {
-				return userLatest.ID
+				return pPhoneNo
+			}
+		}
+	}
+
+	if phoneNo, ok := properties["Phone"].(string); ok && phoneNo != "" {
+		for pPhoneNo := range U.GetPossiblePhoneNumber(phoneNo) {
+			_, errCode := M.GetUserLatestByCustomerUserId(projectId, pPhoneNo)
+			if errCode == http.StatusFound {
+				return pPhoneNo
 			}
 		}
 	}
