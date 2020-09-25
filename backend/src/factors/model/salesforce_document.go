@@ -59,15 +59,6 @@ var SalesforceStandardDocumentType = []int{
 	SalesforceDocumentTypeLead,
 }
 
-var SalesforceSkippablefields = []string{
-	"LastModifiedDate",
-	"CreatedDate",
-	"CreatedById",
-	"LastModifiedById",
-	"SystemModstamp",
-	"attributes",
-}
-
 var errorDuplicateRecord = errors.New("duplicate record")
 
 func GetSalesforceAliasByDocType(typ int) string {
