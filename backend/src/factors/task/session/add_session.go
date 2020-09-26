@@ -225,7 +225,8 @@ func addSessionByProjectId(projectId uint64, maxLookbackTimestamp,
 	logCtx = logCtx.WithField("start_timestamp", minNextSessionStartTimestamp).
 		WithField("user_id", minNextSessionUserId)
 
-	eventsDownloadIntervalInMins := (U.TimeNowUnix() - minNextSessionStartTimestamp) / 60
+	eventsDownloadEndTimestamp := U.TimeNowUnix() - bufferTimeBeforeSessionCreateInSecs
+	eventsDownloadIntervalInMins := (eventsDownloadEndTimestamp - minNextSessionStartTimestamp) / 60
 	status.EventsDownloadIntervalInMins = eventsDownloadIntervalInMins
 
 	if minNextSessionStartTimestamp < U.UnixTimeBeforeDuration(5*time.Hour) {
@@ -238,7 +239,7 @@ func addSessionByProjectId(projectId uint64, maxLookbackTimestamp,
 	// events on buffer window (last 30 mins) for any user.
 	userEventsMap, noOfEvents, errCode := getAllEventsAsUserEventsMap(
 		projectId, sessionEventName.ID, minNextSessionStartTimestamp,
-		U.TimeNowUnix()-bufferTimeBeforeSessionCreateInSecs)
+		eventsDownloadEndTimestamp)
 	if errCode != http.StatusFound {
 		logCtx.Error("Failed to get user events map on add session for project.")
 		return status, http.StatusInternalServerError
