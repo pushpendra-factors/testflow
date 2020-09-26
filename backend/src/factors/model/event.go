@@ -966,6 +966,19 @@ func EnrichUserPropertiesWithSessionProperties(projectId uint64, userId string,
 	return OverwriteUserProperties(projectId, userId, userPropertiesId, userPropertiesJsonb)
 }
 
+func doesEventHaveMarketingProperty(event *Event) (bool, error) {
+	if event == nil {
+		return false, errors.New("nil event")
+	}
+
+	eventPropertiesDecoded, err := U.DecodePostgresJsonb(&((*event).Properties))
+	if err != nil {
+		return false, err
+	}
+	eventPropertiesMap := U.PropertiesMap(*eventPropertiesDecoded)
+	return U.HasDefinedMarketingProperty(&eventPropertiesMap), nil
+}
+
 func filterEventsForSession(events []Event,
 	startTimestamp, endTimestamp int64) []*Event {
 
@@ -990,6 +1003,21 @@ func filterEventsForSession(events []Event,
 
 			// Using address as append doesn't use ref by default.
 			filteredEvents = append(filteredEvents, &events[i])
+		}
+	}
+
+	// Remove the session continuation event (first event with session_id)
+	// when the first event to add session have marketing property,
+	// to avoid continuing session.
+	if len(filteredEvents) > 1 && filteredEvents[0].SessionId != nil {
+		hasMarketingProperty, err := doesEventHaveMarketingProperty(filteredEvents[1])
+		if err != nil {
+			log.WithError(err).Error("Failed to decode properties Jsonb.")
+			return filteredEvents
+		}
+
+		if hasMarketingProperty {
+			return filteredEvents[1:len(filteredEvents)]
 		}
 	}
 
@@ -1098,21 +1126,27 @@ func AddSessionForUser(projectId uint64, userId string, userEvents []Event,
 	sessionUserPropertiesRecordMap := make(map[string]SessionUserProperties, 0)
 
 	// Use 2 moving cursor current, next. if diff(current, previous) > in-activity
-	// period or has marketing property, use current_event - 1 as session_end_timestamp
+	// period or has marketing property, use current_event - 1 as session end
 	// and update. Update current_event as session start and do the same till the end.
 	for i := 0; i < len(events); {
-		eventPropertiesDecoded, err := U.DecodePostgresJsonb(&events[i].Properties)
+		hasMarketingProperty, err := doesEventHaveMarketingProperty(events[i])
 		if err != nil {
-			logCtx.Error("Failed to decode event properties of first event on session.")
+			logCtx.WithError(err).
+				Error("Failed to check marketing prperty on event properties.")
 			return noOfFilteredEvents, noOfSessionsCreated,
 				sessionContinuedFlag, 0, http.StatusInternalServerError
 		}
-		eventPropertiesMap := U.PropertiesMap(*eventPropertiesDecoded)
 
-		isNewSessionRequired := (i == 0 && len(events) == 1) || (i > 0 && ((events[i].Timestamp - events[i-1].Timestamp) > NewUserSessionInactivityInSeconds))
-		hasMarketingProperty := U.HasDefinedMarketingProperty(&eventPropertiesMap)
-		// Balance events on the list after creating session for previous set on iteration.
+		isNewSessionRequired := (i == 0 && len(events) == 1) ||
+			(i > 0 && ((events[i].Timestamp - events[i-1].Timestamp) > NewUserSessionInactivityInSeconds))
+		// Balance events on the list after creating session for the previous set.
 		isLastSetOfEvents := i == len(events)-1
+
+		isStartingWthMarketingProperty := i == 0 && len(events) > 1 && hasMarketingProperty
+		if isStartingWthMarketingProperty {
+			i++
+			continue
+		}
 
 		if hasMarketingProperty || isNewSessionRequired || isLastSetOfEvents {
 			var sessionEvent *Event
@@ -1122,7 +1156,7 @@ func AddSessionForUser(projectId uint64, userId string, userEvents []Event,
 				sessionEndIndex = i - 1
 			}
 
-			if isLastSetOfEvents {
+			if isLastSetOfEvents && !(hasMarketingProperty || isNewSessionRequired) {
 				sessionEndIndex = i
 			}
 
