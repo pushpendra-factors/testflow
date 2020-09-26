@@ -233,11 +233,12 @@ func addSessionByProjectId(projectId uint64, maxLookbackTimestamp,
 			Info("Notification - Interval to download events is greater than 5 hours.")
 	}
 
-	// Events will be downloaded from min of last session associated event timestamp
-	// till current timestamp. So we wil download only 1/2 hour events,
-	// as we run add session every 1/2 hour.
+	// Events will be downloaded all users between min timestamp of last session
+	// among all users and current timestamp - buffer window, as we don't process
+	// events on buffer window (last 30 mins) for any user.
 	userEventsMap, noOfEvents, errCode := getAllEventsAsUserEventsMap(
-		projectId, sessionEventName.ID, minNextSessionStartTimestamp, U.TimeNowUnix())
+		projectId, sessionEventName.ID, minNextSessionStartTimestamp,
+		U.TimeNowUnix()-bufferTimeBeforeSessionCreateInSecs)
 	if errCode != http.StatusFound {
 		logCtx.Error("Failed to get user events map on add session for project.")
 		return status, http.StatusInternalServerError
