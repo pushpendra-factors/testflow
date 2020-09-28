@@ -1,5 +1,6 @@
-/* eslint-disable */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { connect } from 'react-redux';
+import { bindActionCreators } from 'redux';
 import {
   Button, Collapse, Select, Popover
 } from 'antd';
@@ -8,14 +9,16 @@ import styles from './index.module.scss';
 import QueryBlock from './QueryBlock';
 import SeqSelector from './AnalysisSeqSelector';
 import GroupBlock from './GroupBlock';
-import { get, post, put } from '../../request';
+
+import { fetchEventNames } from '../../reducers/coreQuery/middleware';
 
 const { Option } = Select;
 
 const { Panel } = Collapse;
 
 function QueryComposer({
-  queries, runQuery, eventChange, queryType
+  queries, runQuery, eventChange, queryType,
+  fetchEventNames, activeProject
 }) {
   const [analyticsSeqOpen, setAnalyticsSeqVisible] = useState(false);
 
@@ -30,6 +33,12 @@ function QueryComposer({
       end: 2
     }
   });
+
+  useEffect(() => {
+    if (activeProject && activeProject.id) {
+      fetchEventNames(activeProject.id);
+    }
+  }, [activeProject]);
 
   const queryList = () => {
     const blockList = [];
@@ -159,19 +168,6 @@ function QueryComposer({
     }
   };
 
-  const makeCall = () => {
-    return new Promise((resolve, reject) => {
-      get({}, host + 'projects')
-        .then((response) => {
-          console.log(response);
-        }).catch((err) => {
-          console.log(err);
-        });
-    });
-  };
-
-  // makeCall();
-
   return (
         <div className={styles.composer_body}>
             {queryList()}
@@ -182,4 +178,12 @@ function QueryComposer({
   );
 }
 
-export default QueryComposer;
+const mapStateToProps = (state) => ({
+  activeProject: state.global.active_project
+});
+
+const mapDispatchToProps = dispatch => bindActionCreators({
+  fetchEventNames
+}, dispatch);
+
+export default connect(mapStateToProps, mapDispatchToProps)(QueryComposer);

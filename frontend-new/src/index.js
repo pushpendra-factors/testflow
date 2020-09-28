@@ -1,7 +1,9 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { Provider } from 'react-redux';
-import { createStore, compose } from 'redux';
+import { createStore, compose, applyMiddleware } from 'redux';
+import thunk from 'redux-thunk';
+import { createPromise } from 'redux-promise-middleware';
 import reducers from './reducers';
 // import 'antd/dist/antd.css';
 import './assets/tailwind.output.css';
@@ -13,7 +15,12 @@ import App from './App';
 
 const composeEnhancer = window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ || compose;
 
-const store = createStore(reducers, composeEnhancer());
+const middlewares = [
+  createPromise(),
+  thunk
+];
+
+const store = createStore(reducers, composeEnhancer(applyMiddleware(...middlewares)));
 
 ReactDOM.render(
   <React.StrictMode>
