@@ -306,14 +306,22 @@ func CustomCors() gin.HandlerFunc {
 			corsConfig.AllowAllOrigins = true
 			corsConfig.AddAllowHeaders("Authorization")
 		} else {
-			if C.IsDevelopment() {
-				log.Info("Running in development..")
+			if C.IsDevelopment() || C.IsStaging() {
+				if C.IsDevelopment() {
+					log.Info("Running in development..")
+				} else { 
+					log.Info("Running in staging..")
+				}
+				
 				corsConfig.AllowOrigins = []string{
 					"http://localhost:8080",
 					"http://localhost:3000",
 					"http://localhost:8090",
 					"http://127.0.0.1:3000",
 					"http://factors-dev.com:3000",
+					"http://staging-app.factors.ai",
+					"https://staging-app.factors.ai",
+					"https://tufte-staging.factors.ai",
 				}
 				corsConfig.AllowCredentials = true
 				corsConfig.AddAllowHeaders("Access-Control-Allow-Headers")
@@ -324,8 +332,6 @@ func CustomCors() gin.HandlerFunc {
 				corsConfig.AllowOrigins = []string{
 					"http://app.factors.ai",
 					"https://app.factors.ai",
-					"http://staging-app.factors.ai",
-					"https://staging-app.factors.ai",
 				}
 				corsConfig.AllowCredentials = true
 				corsConfig.AddAllowHeaders("Access-Control-Allow-Headers")
