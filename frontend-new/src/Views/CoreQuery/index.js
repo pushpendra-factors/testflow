@@ -14,6 +14,7 @@ function CoreQuery() {
   const [showResult, setShowResult] = useState(true);
   // const [queries, setQueries] = useState([]);
   const [queries, setQueries] = useState(["www.cars24.com/buy-used-cars", 'www.cars24.com/buy-used-car', 'www.cars24.com/account/appointments']);
+  // const [queries, setQueries] = useState(['Paid', 'Add to Wishlist', 'Checkout'])
 
   const queryChange = (newEvent, index, changeType = 'add') => {
     const queryupdated = [...queries];
@@ -39,32 +40,44 @@ function CoreQuery() {
   };
 
   const title = () => {
-    return (<div className={'flex justify-between items-center'}>
-      <div className={'flex'}>
-        <SVG name="teamfeed"></SVG>
-        <Text type={'title'} level={4} weight={'bold'} extraClass={'ml-2 m-0'}>Find event funnel for</Text>
-      </div>
-      <div className={'flex justify-end items-center'}>
-        <Button type="text"><SVG name="play"></SVG>Help</Button>
-        <Button type="text" onClick={() => closeDrawer()}><SVG name="times"></SVG></Button>
-      </div>
+    return (
+      <div className={'flex justify-between items-center'}>
+        <div className={'flex'}>
+          <SVG name="teamfeed"></SVG>
+          <Text type={'title'} level={4} weight={'bold'} extraClass={'ml-2 m-0'}>Find event funnel for</Text>
+        </div>
+        <div className={'flex justify-end items-center'}>
+          <Button type="text"><SVG name="play"></SVG>Help</Button>
+          <Button type="text" onClick={() => closeDrawer()}><SVG name="times"></SVG></Button>
+        </div>
 
-    </div>);
+      </div>
+    );
   };
+
+  const eventsMapper = {};
+  const reverseEventsMapper = {};
+  queries.forEach((q, index) => {
+    eventsMapper[`${q}`] = `event${index+1}`;
+    reverseEventsMapper[`event${index+1}`] = q;
+  })
 
   let result = (
     <EventsAnalytics
       queryType={queryType}
       queries={queries.map(elem => elem)}
+      eventsMapper={eventsMapper}
+      reverseEventsMapper={reverseEventsMapper}
     />
   );
 
   if (queryType === 'funnel') {
     result = (
       <FunnelsResultPage
-        queryType={queryType}
         setDrawerVisible={setDrawerVisible}
         queries={queries.map(elem => elem)}
+        eventsMapper={eventsMapper}
+        reverseEventsMapper={reverseEventsMapper}
       />
     );
   }

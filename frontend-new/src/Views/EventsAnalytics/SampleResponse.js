@@ -653,3 +653,54 @@ export const multiEventAnyEventUserResponse = {
         "currency": ""
     }
 }
+
+export const funnelsDataWithoutBreakdown = {
+    "headers": [
+        "step_0",
+        "step_1",
+        "conversion_step_0_step_1",
+        "step_2",
+        "conversion_step_1_step_2",
+        "conversion_overall"
+    ],
+    "rows": [
+        [
+            95909,
+            1583,
+            "1.7",
+            530,
+            "33.5",
+            "0.6",
+        ]
+    ],
+    "meta": {
+        "query": {
+            "cl": "funnel",
+            "ty": "unique_users",
+            "ec": "any_given_event",
+            "ewp": [
+                {
+                    "na": "www.cars24.com/buy-used-cars",
+                    "pr": []
+                },
+                {
+                    "na": "www.cars24.com/appointment/index",
+                    "pr": []
+                },
+                {
+                    "na": "www.cars24.com/buy-used-car",
+                    "pr": []
+                }
+            ],
+            "gbp": [],
+            "gbt": "",
+            "tz": "Asia/Calcutta",
+            "fr": 1600540200,
+            "to": 1601144999,
+            "ovp": false,
+            "sse": 0,
+            "see": 0
+        },
+        "currency": ""
+    }
+}

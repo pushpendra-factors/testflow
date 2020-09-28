@@ -3,16 +3,17 @@ import c3 from 'c3';
 import * as d3 from 'd3';
 import moment from 'moment';
 import styles from './index.module.scss';
+import ChartLegends from './ChartLegends';
 
-function LineChart({ chartData, appliedColors, queries }) {
+function LineChart({ chartData, appliedColors, queries, reverseEventsMapper, eventsMapper, setHiddenEvents, hiddenEvents }) {
 
     const chartRef = useRef(null);
 
     const xAxisValues = chartData.find(elem => elem[0] === 'x').slice(1);
 
-    let xAxisCount = Math.ceil(xAxisValues.length/2);
+    let xAxisCount = Math.ceil(xAxisValues.length / 2);
 
-    if(xAxisCount > 10) {
+    if (xAxisCount > 10) {
         xAxisCount = 10;
     }
 
@@ -28,9 +29,45 @@ function LineChart({ chartData, appliedColors, queries }) {
 
     const colors = {};
 
-    queries.forEach((query, index)=>{
-        colors[query] = appliedColors[index];
-    })
+    queries.forEach((query, index) => {
+        colors[eventsMapper[query]] = appliedColors[index];
+    });
+
+    const focusHoveredLines = useCallback((name) => {
+        d3.select(chartRef.current)
+            .selectAll('.c3-chart-line.c3-target')
+            .nodes()
+            .forEach(node => {
+                node.classList.add('c3-defocused')
+            })
+        d3.select(chartRef.current)
+            .select(`.c3-chart-line.c3-target.c3-target-${name.split(" ").join('-')}`)
+            .nodes()
+            .forEach(node => {
+                node.classList.remove('c3-defocused');
+                node.classList.add('c3-focused');
+            })
+    }, []);
+
+    const focusAllLines = useCallback(() => {
+        d3.select(chartRef.current)
+            .selectAll('.c3-chart-line.c3-target')
+            .nodes()
+            .forEach(node => {
+                node.classList.remove('c3-defocused')
+                node.classList.remove('c3-focused')
+            })
+    }, []);
+
+    const modifyCirclesCSS = useCallback(() => {
+        const eventChartNames = Object.values(eventsMapper);
+        eventChartNames.forEach(name => {
+            d3.select(chartRef.current)
+                .selectAll(`g.c3-circles-${name}`)
+                .selectAll('circle.c3-shape.c3-circle')
+                .style('stroke', colors[name]);
+        });
+    }, [colors, eventsMapper]);
 
     const drawChart = useCallback(() => {
         c3.generate({
@@ -51,28 +88,10 @@ function LineChart({ chartData, appliedColors, queries }) {
                 columns: chartData,
                 colors,
                 onmouseover: (d) => {
-                    d3.select(chartRef.current)
-                        .selectAll('.c3-chart-line.c3-target')
-                        .nodes()
-                        .forEach(node => {
-                            node.classList.add('c3-defocused')
-                        })
-                    d3.select(chartRef.current)
-                        .select(`.c3-chart-line.c3-target.c3-target-${d.name.split(" ").join('-')}`)
-                        .nodes()
-                        .forEach(node => {
-                            node.classList.remove('c3-defocused');
-                            node.classList.add('c3-focused');
-                        })
+                    focusHoveredLines(d.name);
                 },
                 onmouseout: () => {
-                    d3.select(chartRef.current)
-                        .selectAll('.c3-chart-line.c3-target')
-                        .nodes()
-                        .forEach(node => {
-                            node.classList.remove('c3-defocused')
-                            node.classList.remove('c3-focused')
-                        })
+                    focusAllLines()
                 },
             },
             axis: {
@@ -98,7 +117,7 @@ function LineChart({ chartData, appliedColors, queries }) {
                 d3.select(chartRef.current).select('.c3-axis.c3-axis-x').selectAll('.tick').select('tspan').attr('dy', '16px');
             },
             legend: {
-                show:false
+                show: false
             },
             grid: {
                 y: {
@@ -106,14 +125,30 @@ function LineChart({ chartData, appliedColors, queries }) {
                 }
             },
             tooltip: {
-                grouped: false
+                grouped: false,
+                contents: (d) => {
+                    const data = d[0];
+                    return (
+                        `   
+                            <div class="toolTip">
+                                <div class="font-semibold">${moment(data.x).format('MMM D, YYYY')}</div>
+                                <div class="my-2">${reverseEventsMapper[data.name]}</div>
+                                <div class="flex items-center justify-start">
+                                    <div class="mr-1" style="background-color:${colors[data.name]};width:16px;height:16px;border-radius:8px"></div>
+                                    <div style="color:#0E2647;font-size:18px;line-height:24px">${data.value}</div>
+                                </div>
+                            </div>
+                        `
+                    )
+                }
             }
         });
-    }, [chartData, finalXaxisValues, colors]);
+    }, [chartData, finalXaxisValues, colors, reverseEventsMapper, focusHoveredLines, focusAllLines]);
 
     const displayChart = useCallback(() => {
         drawChart();
-    }, [drawChart]);
+        modifyCirclesCSS();
+    }, [drawChart, modifyCirclesCSS]);
 
 
     useEffect(() => {
@@ -121,7 +156,19 @@ function LineChart({ chartData, appliedColors, queries }) {
     }, [displayChart]);
 
     return (
-        <div className={styles.lineChart} ref={chartRef} />
+        <div className="flex flex-col w-full">
+            <div className={styles.lineChart} ref={chartRef} />
+            <ChartLegends
+                colors={colors}
+                events={queries}
+                eventsMapper={eventsMapper}
+                focusHoveredLines={focusHoveredLines}
+                focusAllLines={focusAllLines}
+                setHiddenEvents={setHiddenEvents}
+                hiddenEvents={hiddenEvents}
+            />
+        </div>
+
     )
 }
 

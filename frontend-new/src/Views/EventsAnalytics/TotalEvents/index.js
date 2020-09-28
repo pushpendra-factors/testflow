@@ -7,18 +7,12 @@ import SparkLineChart from '../../../components/SparkLineChart';
 import LineChart from '../../../components/LineChart';
 
 
-function TotalEvents({ queries }) {
+function TotalEvents({ queries, eventsMapper, reverseEventsMapper }) {
 
   const [hiddenEvents, setHiddenEvents] = useState([]);
   const appliedColors = generateColors(queries.length);
+  // const [chartType, setChartType] = useState('sparklines');
   const [chartType, setChartType] = useState('linechart');
-
-  const eventsMapper = {};
-  const reverseEventsMapper = {};
-  queries.forEach((q, index) => {
-    eventsMapper[`${q}`] = `event${index}`;
-    reverseEventsMapper[`event${index}`] = q;
-  })
 
   let chartsData;
   if (queries.length === 1) {
@@ -26,7 +20,7 @@ function TotalEvents({ queries }) {
   } else {
     chartsData = getMultiEventsAnalyticsData(queries, eventsMapper);
   }
-
+  
   if (!chartsData.length) {
     return null;
   }
@@ -43,17 +37,7 @@ function TotalEvents({ queries }) {
       name: 'Line Chart',
     }
   ]
-
-  const sparkLinesJsx = (
-    <SparkLineChart
-      queries={queries}
-      chartsData={chartsData}
-      parentClass="flex justify-center items-center flex-wrap mt-8"
-      appliedColors={appliedColors}
-      eventsMapper={eventsMapper}
-    />
-  )
-
+  
   return (
     <div className="total-events">
       <div className="flex items-center justify-between">
@@ -71,10 +55,23 @@ function TotalEvents({ queries }) {
         </div>
       </div>
       {chartType === 'sparklines' ? (
-        <div>{sparkLinesJsx}</div>
+        <SparkLineChart
+          queries={queries}
+          chartsData={chartsData}
+          parentClass="flex justify-center items-center flex-wrap mt-8"
+          appliedColors={appliedColors}
+          eventsMapper={eventsMapper}
+        />
       ) : (
           <div className="flex mt-8">
-            <LineChart chartData={getDataInLineChartFormat(chartsData, queries, eventsMapper, hiddenEvents)} appliedColors={appliedColors} queries={queries} />
+            <LineChart
+              chartData={getDataInLineChartFormat(chartsData, queries, eventsMapper, hiddenEvents)}
+              appliedColors={appliedColors} queries={queries}
+              reverseEventsMapper={reverseEventsMapper}
+              eventsMapper={eventsMapper}
+              setHiddenEvents={setHiddenEvents}
+              hiddenEvents={hiddenEvents}
+            />
           </div>
         )}
       <div className="mt-8">

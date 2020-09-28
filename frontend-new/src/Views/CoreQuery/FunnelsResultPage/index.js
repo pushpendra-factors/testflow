@@ -12,11 +12,11 @@ import { PoweroffOutlined } from '@ant-design/icons';
 import FunnelsResultTable from './FunnelsResultTable';
 
 function FunnelsResultPage({
-  queries, setDrawerVisible, setShowFunnels, showFunnels
+  queries, setDrawerVisible, eventsMapper, reverseEventsMapper
 }) {
   const [eventsData, setEventsData] = useState([]);
   const [groups, setGroups] = useState([]);
-  const [grouping, setGrouping] = useState(true);
+  const [grouping, setGrouping] = useState(false);
 
   useEffect(() => {
     const dummyData = generateDummyData(queries);
@@ -25,7 +25,7 @@ function FunnelsResultPage({
   }, [queries]);
 
   const groupedChartData = generateGroupedChartsData(eventsData, groups);
-  const ungroupedChartsData = generateUngroupedChartsData(eventsData);
+  const ungroupedChartsData = generateUngroupedChartsData(queries);
 
   if (!eventsData.length) {
     return null;
@@ -33,38 +33,38 @@ function FunnelsResultPage({
 
   return (
     <>
-            <Header>
-                <div className="flex py-4 justify-end">
-                    <Button type="primary" icon={<PoweroffOutlined />} >Save query as</Button>
-                </div>
-                <div className="py-4">
-                    <EventsInfo queries={queries} />
-                </div>
-                <div className="pb-2 flex justify-end">
-                    <FiltersInfo grouping={grouping} setGrouping={setGrouping} setDrawerVisible={setDrawerVisible} />
-                </div>
-            </Header>
-            <div className="mt-40 mb-8 fa-container">
-                {grouping ? (
-                    <GroupedChart
-                        chartData={groupedChartData}
-                        groups={groups.filter(elem => elem.is_visible)}
-                        eventsData={eventsData}
-                    />
-                ) : (
-                        <UngroupedChart
-                            chartData={ungroupedChartsData}
-                        />
-                )}
+      <Header>
+        <div className="flex py-4 justify-end">
+          <Button type="primary" icon={<PoweroffOutlined />} >Save query as</Button>
+        </div>
+        <div className="py-4">
+          <EventsInfo queries={queries} />
+        </div>
+        <div className="pb-2 flex justify-end">
+          <FiltersInfo grouping={grouping} setGrouping={setGrouping} setDrawerVisible={setDrawerVisible} />
+        </div>
+      </Header>
+      <div className="mt-40 mb-8 fa-container">
+        {grouping ? (
+          <GroupedChart
+            chartData={groupedChartData}
+            groups={groups.filter(elem => elem.is_visible)}
+            eventsData={eventsData}
+          />
+        ) : (
+            <UngroupedChart
+              chartData={ungroupedChartsData}
+            />
+          )}
 
-                <div className="mt-8">
-                    <FunnelsResultTable
-                        eventsData={eventsData}
-                        groups={groups}
-                        setGroups={setGroups}
-                    />
-                </div>
-            </div>
+        <div className="mt-8">
+          <FunnelsResultTable
+            eventsData={eventsData}
+            groups={groups}
+            setGroups={setGroups}
+          />
+        </div>
+      </div>
     </>
   );
 }

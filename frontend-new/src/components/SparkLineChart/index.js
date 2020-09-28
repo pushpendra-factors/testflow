@@ -38,7 +38,7 @@ function SparkLineChart({ queries, chartsData, parentClass, appliedColors, event
         });
 
         return (
-            <div className="flex justify-center items-center mt-8">
+            <div className={parentClass}>
                 <div className="w-1/4">
                     <ChartHeader bgColor="#4D7DB4" query={queries[0]} total={total} />
                 </div>
