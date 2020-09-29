@@ -7,6 +7,9 @@ package main
 // go run run_pattern_mine.go --env=development --etcd=localhost:2379 --disk_dir=/usr/local/var/factors/local_disk --s3_region=us-east-1 --s3=/usr/local/var/factors/cloud_storage --num_routines=3 --project_id=<projectId> --model_id=<modelId>
 // or
 // go run run_pattern_mine.go --project_id=<projectId> --model_id=<modelId>
+// default of count occurence is False
+// go run run_pattern_mine.go --project_id=<projectId> --model_id=<modelId> --count_occur=true/false
+
 import (
 	C "factors/config"
 	"factors/filestore"

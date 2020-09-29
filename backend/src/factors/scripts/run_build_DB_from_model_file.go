@@ -44,6 +44,10 @@ for query with filters mode
 go run run_build_db_from_model_file.go --mode=query_filter --project_id=<project-id> --start_time= --end_time= --file_path=
 */
 
+/*
+go run run_build_DB_from_model_file.go --mode=ingest --file_path=<eventsFilePath> --project_name=<newProjectName> --agent_uuid=<yourAgentUUID>
+--count_occur=true
+*/
 var shouldCountOccurence bool
 
 func main() {

@@ -484,27 +484,27 @@ func (p *Pattern) CountForEvent(
 		p.waitIndex += 1
 
 		pLen := len(p.EventNames)
-		if p.waitIndex == pLen && shouldCountOccurence == true {
+		if p.waitIndex == pLen {
 			// Record the pattern occurrence.
 			p.PerOccurrenceCount += 1
 			p.currentUserOccurrenceCount += 1
 			// Update properties histograms.
-			if p.PerOccurrenceEventNumericProperties != nil {
+			if p.PerOccurrenceEventNumericProperties != nil && shouldCountOccurence {
 				if err := p.PerOccurrenceEventNumericProperties.AddMap(p.currentEPropertiesNMap); err != nil {
 					return err
 				}
 			}
-			if p.PerOccurrenceEventCategoricalProperties != nil {
+			if p.PerOccurrenceEventCategoricalProperties != nil && shouldCountOccurence {
 				if err := p.PerOccurrenceEventCategoricalProperties.AddMap(p.currentEPropertiesCMap); err != nil {
 					return err
 				}
 			}
-			if p.PerOccurrenceUserNumericProperties != nil {
+			if p.PerOccurrenceUserNumericProperties != nil && shouldCountOccurence {
 				if err := p.PerOccurrenceUserNumericProperties.AddMap(p.currentUPropertiesNMap); err != nil {
 					return err
 				}
 			}
-			if p.PerOccurrenceUserCategoricalProperties != nil {
+			if p.PerOccurrenceUserCategoricalProperties != nil && shouldCountOccurence {
 				if err := p.PerOccurrenceUserCategoricalProperties.AddMap(p.currentUPropertiesCMap); err != nil {
 					return err
 				}
