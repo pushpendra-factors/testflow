@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Layout, Row, Avatar, Popover, Button
+  Layout, Row, Avatar, Popover, Button, Modal, Col
 } from 'antd';
 import { NavLink } from 'react-router-dom';
 import { SVG, Text } from 'factorsComponents';
@@ -15,6 +15,8 @@ function Sidebar(props) {
   const [visible, setVisible] = useState(false);
   const [ShowUserSettings, setShowUserSettings] = useState(false);
   const [ShowPopOver, setShowPopOver] = useState(false);
+  const [changeProjectModal, setchangeProjectModal] = useState(false);
+  const [selectedProject, setselectedProject] = useState(null);
 
   const popOvercontent = () => {
     return (
@@ -22,7 +24,11 @@ function Sidebar(props) {
           <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0'}>Projects</Text>
           <div className={'flex flex-col items-start'}>
             {props.projects.map((project, index) => {
-              return <Button type={'text'} key={index} onClick={() => { setShowPopOver(false); props.setActiveProject(project); }}>{project.name}</Button>;
+              return <Button type={'text'} key={index} onClick={() => { 
+                setShowPopOver(false); 
+                setchangeProjectModal(true);
+                setselectedProject(project);
+              }}>{project.name}</Button>;
             })}
           </div>
           <div className={'fa-popupcard-divider'} />
@@ -106,12 +112,41 @@ function Sidebar(props) {
         {/* Modals triggered from sidebar */}
         <ModalLib visible={visible} handleCancel={handleCancel} />
         <UserSettings visible={ShowUserSettings} handleCancel={closeUserSettingsModal} />
+
+        <Modal
+        visible={changeProjectModal}
+        zIndex={1020}
+        onCancel={()=>{
+          setchangeProjectModal(false);
+          setselectedProject(null);
+        }}
+        className={'fa-modal--regular'}
+        okText={'Switch'}
+        onOk={()=> {
+          props.setActiveProject(selectedProject);
+          setShowPopOver(false);
+          setchangeProjectModal(false);
+          setselectedProject(null);
+        }}
+        // confirmLoading={props.confirmLoading}
+        centered={true}
+        >
+          <div className={'p-4'}>
+            <Row>
+              <Col span={24}>
+                <Text type={'title'} level={4} weight={'bold'} extraClass={'m-0'}>Do you want to switch the project?</Text>
+                <Text type={'title'} level={7}  color={'grey'} extraClass={'m-0 mt-2'}>You can easily switch between projects. You will be redirected a different dataset.</Text>
+              </Col>
+            </Row> 
+          </div>
+
+        </Modal>
+
       </Sider>
     </>
   );
 }
-const mapStateToProps = (state) => {
-  console.log('mapStateToProps-->', state.global.projects);
+const mapStateToProps = (state) => { 
   return {
     projects: state.global.projects
   };
