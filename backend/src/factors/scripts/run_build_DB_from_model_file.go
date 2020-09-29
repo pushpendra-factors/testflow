@@ -44,6 +44,8 @@ for query with filters mode
 go run run_build_db_from_model_file.go --mode=query_filter --project_id=<project-id> --start_time= --end_time= --file_path=
 */
 
+var shouldCountOccurence bool
+
 func main() {
 
 	env := flag.String("env", "development", "")
@@ -63,8 +65,9 @@ func main() {
 	customStartTime := flag.Int64("start_time", 0, "")
 	customEndTime := flag.Int64("end_time", 0, "")
 	projectIdFlag := flag.Uint64("project_id", 0, "Project Id.")
-	shouldCountOccurence := flag.Bool("count_occur", false, "Count occurence of Patterns")
+	CountOccurence := flag.Bool("count_occur", false, "Count occurence of Patterns")
 
+	shouldCountOccurence = *CountOccurence
 	flag.Parse()
 
 	defer util.NotifyOnPanic("Task#BuildDbFromModelFile", *env)
@@ -272,7 +275,7 @@ func eventToDb(event denEvent, project *M.Project) int {
 
 func testData(startTime int64, endTime int64, projectId uint64, file *os.File) error {
 
-	patterns, err := getPatterns(file, *shouldCountOccurence)
+	patterns, err := getPatterns(file, shouldCountOccurence)
 	if err != nil {
 		return err
 	}
@@ -440,7 +443,7 @@ func getPatterns(file *os.File, countOccurence bool) ([]*P.Pattern, error) {
 
 func testWithEventConstraints(startTime int64, endTime int64, projectId uint64, file *os.File) error {
 	//Test with event constraints
-	patterns, err := getPatterns(file, *shouldCountOccurence)
+	patterns, err := getPatterns(file, shouldCountOccurence)
 	if err != nil {
 		return err
 	}
