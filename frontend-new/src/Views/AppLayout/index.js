@@ -8,14 +8,12 @@ import { bindActionCreators } from 'redux';
 import { HashRouter, Route, Switch } from 'react-router-dom';
 import { fetchProjects, setActiveProject } from '../../reducers/global';
 
-function AppLayout({ projects, fetchProjects }) {
+function AppLayout({ fetchProjects }) {
   const { Content } = Layout;
 
   useEffect(() => {
     fetchProjects();
-  }, []);
-
-  console.log(projects);
+  }, [fetchProjects]);
 
   return (
     <Layout>
