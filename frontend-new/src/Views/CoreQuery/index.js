@@ -10,10 +10,10 @@ import EventsAnalytics from '../EventsAnalytics';
 function CoreQuery() {
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [queryType, setQueryType] = useState('event');
-  // const [showResult, setShowResult] = useState(false);
-  const [showResult, setShowResult] = useState(true);
-  // const [queries, setQueries] = useState([]);
-  const [queries, setQueries] = useState(["www.cars24.com/buy-used-cars", 'www.cars24.com/buy-used-car', 'www.cars24.com/account/appointments']);
+  const [showResult, setShowResult] = useState(false);
+  // const [showResult, setShowResult] = useState(true);
+  const [queries, setQueries] = useState([]);
+  // const [queries, setQueries] = useState(["www.cars24.com/buy-used-cars", 'www.cars24.com/buy-used-car', 'www.cars24.com/account/appointments']);
   // const [queries, setQueries] = useState(['Paid', 'Add to Wishlist', 'Checkout'])
 
   const queryChange = (newEvent, index, changeType = 'add') => {
@@ -65,7 +65,7 @@ function CoreQuery() {
   let result = (
     <EventsAnalytics
       queryType={queryType}
-      queries={queries.map(elem => elem)}
+      queries={queries.map(elem => elem.label)}
       eventsMapper={eventsMapper}
       reverseEventsMapper={reverseEventsMapper}
     />
@@ -75,7 +75,7 @@ function CoreQuery() {
     result = (
       <FunnelsResultPage
         setDrawerVisible={setDrawerVisible}
-        queries={queries.map(elem => elem)}
+        queries={queries.map(elem => elem.label)}
         eventsMapper={eventsMapper}
         reverseEventsMapper={reverseEventsMapper}
       />
@@ -84,7 +84,7 @@ function CoreQuery() {
 
   return (
     <>
-      {/* <Drawer
+      <Drawer
         title={title()}
         placement="left"
         closable={false}
@@ -101,7 +101,7 @@ function CoreQuery() {
           eventChange={queryChange}
           queryType={queryType}
         />
-      </Drawer> */}
+      </Drawer>
 
       {showResult ? (
         <>
