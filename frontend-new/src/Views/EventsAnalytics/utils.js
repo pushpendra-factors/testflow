@@ -1,12 +1,14 @@
 import moment from 'moment';
 
 import { getTitleWithSorter } from '../CoreQuery/FunnelsResultPage/utils';
-import { singleEventResponse, multiEventResponse, singleEventAnyEventUserResponse, multiEventAnyEventUserResponse } from './SampleResponse';
+import {
+  singleEventResponse, multiEventResponse, singleEventAnyEventUserResponse, multiEventAnyEventUserResponse
+} from './SampleResponse';
 
 export const getNoGroupingTableData = (data, currentSorter, searchText, reverseEventsMapper) => {
   const clonedData = data.map(elem => {
-    const element = { ...elem }
-    for (let key in element) {
+    const element = { ...elem };
+    for (const key in element) {
       if (key !== 'date') {
         element[reverseEventsMapper[key]] = element[key];
         delete element[key];
@@ -62,7 +64,7 @@ export const getSingleEventAnalyticsData = (event, eventsMapper) => {
     return {
       date: new Date(row[0]),
       [eventsMapper[event]]: row[1]
-    }
+    };
   });
   return result;
 };
@@ -74,7 +76,7 @@ export const getMultiEventsAnalyticsData = (queries, eventsMapper) => {
   response.rows.forEach(r => {
     if (dates.indexOf(r[0]) === -1) {
       const currentDateData = response.rows.filter(elem => elem[0] === r[0]);
-      const eventsData = {}
+      const eventsData = {};
       currentDateData.forEach(d => {
         const query = queries.find(q => q === d[1]);
         eventsData[eventsMapper[query]] = d[2];
@@ -82,7 +84,7 @@ export const getMultiEventsAnalyticsData = (queries, eventsMapper) => {
       result.push({
         date: new Date(r[0]),
         ...eventsData
-      })
+      });
       dates.push(r[0]);
     }
   });
@@ -95,10 +97,10 @@ export const getSingleEventAnyEventUserData = (event, eventsMapper) => {
     return {
       date: new Date(row[0]),
       [eventsMapper[event]]: row[1]
-    }
+    };
   });
   return result;
-}
+};
 
 export const getMultiEventsAnyEventUserData = (queries, eventsMapper) => {
   const response = multiEventAnyEventUserResponse;
@@ -107,7 +109,7 @@ export const getMultiEventsAnyEventUserData = (queries, eventsMapper) => {
   response.rows.forEach(r => {
     if (dates.indexOf(r[0]) === -1) {
       const currentDateData = response.rows.filter(elem => elem[0] === r[0]);
-      const eventsData = {}
+      const eventsData = {};
       currentDateData.forEach(d => {
         const query = queries.find(q => q === d[1]);
         eventsData[eventsMapper[query]] = d[2];
@@ -115,35 +117,34 @@ export const getMultiEventsAnyEventUserData = (queries, eventsMapper) => {
       result.push({
         date: new Date(r[0]),
         ...eventsData
-      })
+      });
       dates.push(r[0]);
     }
   });
   return result;
 };
 
-
 export const getDataInLineChartFormat = (data, queries, eventsMapper, hiddenEvents = []) => {
   data.sort((a, b) => {
-    return moment(a["date"]).utc().unix() > moment(b["date"]).utc().unix() ? 1 : -1;
+    return moment(a.date).utc().unix() > moment(b.date).utc().unix() ? 1 : -1;
   });
   const result = [];
   const hashedData = {};
-  hashedData["x"] = data.map(elem => {
-    return moment(elem["date"]).format("YYYY-MM-DD");
+  hashedData.x = data.map(elem => {
+    return moment(elem.date).format('YYYY-MM-DD');
   });
   queries.forEach(q => {
     if (hiddenEvents.indexOf(q) === -1) {
       hashedData[eventsMapper[q]] = data.map(elem => {
         return elem[eventsMapper[q]];
-      })
+      });
     }
-  })
-  for (let obj in hashedData) {
+  });
+  for (const obj in hashedData) {
     result.push([obj, ...hashedData[obj]]);
   }
   return result;
-}
+};
 
 export const getDateBasedColumns = (data, currentSorter, handleSorting) => {
   const result = [
@@ -158,11 +159,11 @@ export const getDateBasedColumns = (data, currentSorter, handleSorting) => {
     return {
       title: getTitleWithSorter(moment(elem.date).format('MMM D'), moment(elem.date).format('MMM D'), currentSorter, handleSorting),
       width: 100,
-      dataIndex: moment(elem.date).format('MMM D'),
-    }
-  })
+      dataIndex: moment(elem.date).format('MMM D')
+    };
+  });
   return [...result, ...dateColumns];
-}
+};
 
 export const getNoGroupingTablularDatesBasedData = (data, currentSorter, searchText, reverseEventsMapper) => {
   const events = Object.keys(reverseEventsMapper);
@@ -177,7 +178,7 @@ export const getNoGroupingTablularDatesBasedData = (data, currentSorter, searchT
       index,
       event: reverseEventsMapper[elem],
       ...eventsData
-    }
+    };
   });
   result.sort((a, b) => {
     if (currentSorter.order === 'ascend') {
@@ -189,4 +190,4 @@ export const getNoGroupingTablularDatesBasedData = (data, currentSorter, searchT
     return 0;
   });
   return result;
-}
+};

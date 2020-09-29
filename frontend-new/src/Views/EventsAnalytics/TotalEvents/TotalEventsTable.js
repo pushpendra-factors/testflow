@@ -1,8 +1,12 @@
 import React, { useState, useCallback } from 'react';
-import { getNoGroupingTableData, getColumns, getDateBasedColumns, getNoGroupingTablularDatesBasedData } from '../utils';
+import {
+  getNoGroupingTableData, getColumns, getDateBasedColumns, getNoGroupingTablularDatesBasedData
+} from '../utils';
 import DataTable from '../../CoreQuery/FunnelsResultPage/DataTable';
 
-function TotalEventsTable({ data, events, reverseEventsMapper, chartType, setHiddenEvents, hiddenEvents }) {
+function TotalEventsTable({
+  data, events, reverseEventsMapper, chartType, setHiddenEvents, hiddenEvents
+}) {
   const [sorter, setSorter] = useState({});
   const [searchText, setSearchText] = useState('');
 
@@ -10,7 +14,7 @@ function TotalEventsTable({ data, events, reverseEventsMapper, chartType, setHid
     setSorter(sorter);
   }, []);
 
-  let columns, tableData, rowSelection = null, onSelectionChange, selectedRowKeys;
+  let columns; let tableData; let rowSelection = null; let onSelectionChange; let selectedRowKeys;
 
   if (chartType === 'sparklines') {
     columns = getColumns(events, sorter, handleSorting);
@@ -33,15 +37,13 @@ function TotalEventsTable({ data, events, reverseEventsMapper, chartType, setHid
       if (hiddenEvents.indexOf(event) === -1) {
         selectedRowKeys.push(index);
       }
-    })
+    });
 
     rowSelection = {
       selectedRowKeys,
       onChange: onSelectionChange
     };
   }
-
-
 
   return (
     <DataTable

@@ -4,7 +4,6 @@ import styles from './index.module.scss';
 import { checkForWindowSizeChange, calculatePercentage, generateColors } from '../utils';
 
 function UngroupedChart({ chartData }) {
-
   const chartRef = useRef(null);
   const tooltip = useRef(null);
   const appliedColors = generateColors(chartData.length);

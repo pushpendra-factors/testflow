@@ -12,7 +12,7 @@ import { PoweroffOutlined } from '@ant-design/icons';
 import FunnelsResultTable from './FunnelsResultTable';
 
 function FunnelsResultPage({
-  queries, setDrawerVisible, eventsMapper, reverseEventsMapper
+  queries, setDrawerVisible
 }) {
   const [eventsData, setEventsData] = useState([]);
   const [groups, setGroups] = useState([]);
@@ -55,7 +55,7 @@ function FunnelsResultPage({
             <UngroupedChart
               chartData={ungroupedChartsData}
             />
-          )}
+        )}
 
         <div className="mt-8">
           <FunnelsResultTable

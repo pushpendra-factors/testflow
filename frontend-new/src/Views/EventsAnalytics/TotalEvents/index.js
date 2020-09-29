@@ -6,9 +6,7 @@ import ChartTypeDropdown from '../../../components/ChartTypeDropdown';
 import SparkLineChart from '../../../components/SparkLineChart';
 import LineChart from '../../../components/LineChart';
 
-
 function TotalEvents({ queries, eventsMapper, reverseEventsMapper }) {
-
   const [hiddenEvents, setHiddenEvents] = useState([]);
   const appliedColors = generateColors(queries.length);
   // const [chartType, setChartType] = useState('sparklines');
@@ -20,7 +18,7 @@ function TotalEvents({ queries, eventsMapper, reverseEventsMapper }) {
   } else {
     chartsData = getMultiEventsAnalyticsData(queries, eventsMapper);
   }
-  
+
   if (!chartsData.length) {
     return null;
   }
@@ -29,15 +27,15 @@ function TotalEvents({ queries, eventsMapper, reverseEventsMapper }) {
     {
       key: 'sparklines',
       onClick: setChartType,
-      name: 'Sparkline',
+      name: 'Sparkline'
     },
     {
       key: 'linechart',
       onClick: setChartType,
-      name: 'Line Chart',
+      name: 'Line Chart'
     }
-  ]
-  
+  ];
+
   return (
     <div className="total-events">
       <div className="flex items-center justify-between">
@@ -73,7 +71,7 @@ function TotalEvents({ queries, eventsMapper, reverseEventsMapper }) {
               hiddenEvents={hiddenEvents}
             />
           </div>
-        )}
+      )}
       <div className="mt-8">
         <TotalEventsTable
           data={chartsData}

@@ -72,12 +72,12 @@ function SparkChart({
     svg.append('linearGradient')
       .attr('id', `area-gradient-${chartColor.substr(1)}-${page}`)
       .attr('gradientUnits', 'userSpaceOnUse')
-      .attr('x1', "0%").attr('y1', "0%")
-      .attr('x2', '0%').attr('y2', "100%")
+      .attr('x1', '0%').attr('y1', '0%')
+      .attr('x2', '0%').attr('y2', '100%')
       .selectAll('stop')
       .data([
         { offset: '0%', color: chartColor },
-        { offset: '80%', color: "white" }
+        { offset: '80%', color: 'white' }
       ])
       .enter().append('stop')
       .attr('offset', function (d) { return d.offset; })
