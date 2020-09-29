@@ -3,6 +3,7 @@ package main
 import (
 	C "factors/config"
 	"factors/filestore"
+	M "factors/model"
 	serviceDisk "factors/services/disk"
 	serviceEtcd "factors/services/etcd"
 	serviceGCS "factors/services/gcstorage"
@@ -10,6 +11,7 @@ import (
 	"factors/util"
 	"flag"
 	"fmt"
+	"net/http"
 	"strings"
 
 	_ "github.com/jinzhu/gorm"
@@ -20,14 +22,18 @@ func main() {
 
 	envFlag := flag.String("env", "development", "")
 	etcd := flag.String("etcd", "localhost:2379", "Comma separated list of etcd endpoints localhost:2379,localhost:2378")
-	localDiskTmpDirFlag := flag.String("local_disk_tmp_dir", "/usr/local/var/factors/local_disk/tmp", "--local_disk_tmp_dir=/usr/local/var/factors/local_disk/tmp pass directory")
+	localDiskTmpDirFlag := flag.String("local_disk_tmp_dir", "/usr/local/var/factors/local_disk/tmp",
+		"--local_disk_tmp_dir=/usr/local/var/factors/local_disk/tmp pass directory")
 	bucketName := flag.String("bucket_name", "/usr/local/var/factors/cloud_storage", "")
 	numRoutinesFlag := flag.Int("num_routines", 3, "No of routines")
-	projectIdFlag := flag.String("project_ids", "", "Optional: Project Id. A comma separated list of project Ids. ex: 1,2,6,9")
+	projectIdFlag := flag.String("project_ids", "",
+		"Optional: Project Id. A comma separated list of project Ids and supports '*' for all projects. ex: 1,2,6,9")
 	projectIdsToSkipFlag := flag.String("project_ids_to_skip", "", "Optional: Comma separated values of projects to skip")
 	maxModelSizeFlag := flag.Int64("max_size", 20000000000, "Max size of the model")
 	modelType := flag.String("model_type", "weekly", "Optional: Model Type can take 3 values : {all, weekly, monthly}")
-	lookBackPeriodInDays := flag.Int64("look_back_days", 30, "Optional: Build projects which were build in last N days. Provide N here.")
+	lookBackPeriodInDays := flag.Int64("look_back_days", 30,
+		"Optional: Build projects which were build in last N days. Provide N here.")
+	noOfDaysToBuild := flag.Int64("no_of_days", 0, "Optional: No.of days to build for. Defaults to current_timestamp.")
 
 	dbHost := flag.String("db_host", "localhost", "")
 	dbPort := flag.Int("db_port", 5432, "")
@@ -116,11 +122,23 @@ func main() {
 		}
 	}
 
-	projectIdsToRun := util.GetIntBoolMapFromStringList(projectIdFlag)
 	projectIdsToSkip := util.GetIntBoolMapFromStringList(projectIdsToSkipFlag)
+	allProjects, projectIdsToRun, _ := C.GetProjectsFromListWithAllProjectSupport(*projectIdFlag, "")
+	if allProjects {
+		projectIDs, errCode := M.GetAllProjectIDs()
+		if errCode != http.StatusFound {
+			log.Fatal("Failed to get all projects and project_ids set to '*'.")
+		}
+
+		projectIdsToRun = make(map[uint64]bool, 0)
+		for _, projectID := range projectIDs {
+			projectIdsToRun[projectID] = true
+		}
+	}
 
 	diskManager := serviceDisk.New(*localDiskTmpDirFlag)
 
 	_ = T.BuildSequential(*envFlag, db, &cloudManager, etcdClient, diskManager,
-		*bucketName, *numRoutinesFlag, projectIdsToRun, projectIdsToSkip, *maxModelSizeFlag, *modelType, *lookBackPeriodInDays)
+		*bucketName, *numRoutinesFlag, projectIdsToRun, projectIdsToSkip, *maxModelSizeFlag,
+		*modelType, *lookBackPeriodInDays, *noOfDaysToBuild)
 }

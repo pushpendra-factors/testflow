@@ -1,7 +1,6 @@
 package model
 
 import (
-	"database/sql"
 	"encoding/json"
 	"errors"
 	cacheRedis "factors/cache/redis"
@@ -43,15 +42,6 @@ type Event struct {
 	Timestamp int64     `json:"timestamp"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
-}
-
-type ProjectEventsInfo struct {
-	ProjectId           uint64 `json:"project_id"`
-	ProjectName         string `json:"project_name"`
-	EventsCount         int    `json:"events_count"`
-	CreatorEmail        string `json:"creator_email"`
-	FirstEventTimestamp int64  `json:"-"`
-	LastEventTimestamp  int64  `json:"-"`
 }
 
 type CacheEvent struct {
@@ -462,51 +452,6 @@ func GetLatestEventOfUserByEventNameId(projectId uint64, userId string, eventNam
 	}
 
 	return &events[0], http.StatusFound
-}
-
-func GetProjectEventsInfo() (*(map[uint64]*ProjectEventsInfo), int) {
-	db := C.GetServices().Db
-
-	queryStr := "SELECT events_info.*, agents.email FROM" +
-		" " + "(SELECT projects.id, projects.name, min(events.timestamp) as first_timestamp, max(events.timestamp) as last_timestamp, count(*) as events_count FROM events" +
-		" " + "LEFT JOIN projects on events.project_id = projects.id GROUP BY projects.id) as events_info" +
-		" " + "LEFT JOIN project_agent_mappings ON project_agent_mappings.project_id=events_info.id AND project_agent_mappings.role=2" +
-		" " + "LEFT JOIN agents ON project_agent_mappings.agent_uuid=agents.uuid ORDER BY events_info.id"
-
-	rows, err := db.Raw(queryStr).Rows()
-	if err != nil {
-		log.WithError(err).Error("Failed to get events timestamp info.")
-		return nil, http.StatusInternalServerError
-	}
-	defer rows.Close()
-
-	projectEventsTime := make(map[uint64]*ProjectEventsInfo, 0)
-
-	count := 0
-	for rows.Next() {
-		var projectId uint64
-		var firstTimestamp, lastTimestamp int64
-		var projectName string
-		var creatorEmail sql.NullString
-		var eventsCount int
-		if err = rows.Scan(&projectId, &projectName, &firstTimestamp, &lastTimestamp, &eventsCount, &creatorEmail); err != nil {
-			log.Error(err)
-			return nil, http.StatusInternalServerError
-		}
-
-		if firstTimestamp > 0 {
-			projectEventsTime[projectId] = &ProjectEventsInfo{ProjectId: projectId, FirstEventTimestamp: firstTimestamp,
-				LastEventTimestamp: lastTimestamp, ProjectName: projectName, CreatorEmail: creatorEmail.String, EventsCount: eventsCount}
-		}
-
-		count++
-	}
-
-	if count == 0 {
-		return nil, http.StatusNotFound
-	}
-
-	return &projectEventsTime, http.StatusFound
 }
 
 //GetRecentEventPropertyKeysWithLimits This method gets all the recent 'limit' property keys from DB for a given project/event
