@@ -227,6 +227,10 @@ func addSessionByProjectId(projectId uint64, maxLookbackTimestamp,
 
 	eventsDownloadEndTimestamp := U.TimeNowUnix() - bufferTimeBeforeSessionCreateInSecs
 	eventsDownloadIntervalInMins := (eventsDownloadEndTimestamp - minNextSessionStartTimestamp) / 60
+	if eventsDownloadIntervalInMins <= 0 {
+		return status, http.StatusOK
+	}
+
 	status.EventsDownloadIntervalInMins = eventsDownloadIntervalInMins
 
 	if minNextSessionStartTimestamp < U.UnixTimeBeforeDuration(5*time.Hour) {
