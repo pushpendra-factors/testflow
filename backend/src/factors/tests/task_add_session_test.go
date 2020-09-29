@@ -989,34 +989,19 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 30, 1)
 		assert.Nil(t, err)
 
-		// Check no.of sessions created for user so far.
-		sessionEventName, _ := M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
-		sessionCount, _ := M.GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
-		assert.Equal(t, uint64(1), sessionCount)
-
 		event1, _ := M.GetEvent(project.ID, userId, eventId1)
 		assert.NotEmpty(t, event1.SessionId)
 		event2, _ := M.GetEvent(project.ID, userId, eventId2)
 		assert.Equal(t, event1.SessionId, event2.SessionId)
-		// Edge case: To avoid associating previous session to last event, when the last
-		// event qualifies for a new session. Skipping session association, as new session
-		// will be created and associated on next run.
+		// New session should be created for last event and associated.
 		event3, _ := M.GetEvent(project.ID, userId, eventId3)
-		assert.Empty(t, event3.SessionId)
-
-		// Last event with session condition true should be processed on next run.
-		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 30, 1)
-		assert.Nil(t, err)
-
-		// Check no.of sessions created for user so far.
-		sessionEventName, _ = M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
-		sessionCount, _ = M.GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
-		assert.Equal(t, uint64(2), sessionCount)
-
-		// New session should be created and associated.
-		event3, _ = M.GetEvent(project.ID, userId, eventId3)
 		assert.NotEmpty(t, event3.SessionId)
 		assert.NotEqual(t, event2.SessionId, event3.SessionId)
+
+		// Check no.of sessions created for user so far.
+		sessionEventName, _ := M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
+		sessionCount, _ := M.GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
+		assert.Equal(t, uint64(2), sessionCount)
 	})
 }
 
