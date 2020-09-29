@@ -80,3 +80,17 @@
         cursor: pointer;
     }
 }
+
+
+.fa-popupcard
+{
+    button{
+        text-align: left;
+        width: 100%;
+    }
+    .fa-popupcard-divider{
+        width: 100%;
+        margin: 5px 0;
+        border-bottom: thin solid $fa-color--mono-2;
+    }
+}

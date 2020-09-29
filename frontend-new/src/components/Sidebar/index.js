@@ -1,17 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Layout, Row, Avatar
+  Layout, Row, Avatar, Popover, Button
 } from 'antd';
-import { NavLink, Link } from 'react-router-dom';
-import { SVG } from 'factorsComponents';
+import { NavLink } from 'react-router-dom';
+import { SVG, Text } from 'factorsComponents';
 import ModalLib from '../../Views/componentsLib/ModalLib';
 import UserSettings from '../../Views/Settings/UserSettings';
+import { setActiveProject } from '../../reducers/global';
+import { connect } from 'react-redux';
 
-function Sidebar() {
+function Sidebar(props) {
   const { Sider } = Layout;
 
   const [visible, setVisible] = useState(false);
   const [ShowUserSettings, setShowUserSettings] = useState(false);
+  const [ShowPopOver, setShowPopOver] = useState(false);
+
+  const popOvercontent = () => {
+    return (
+        <div className={'fa-popupcard'}>
+          <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0'}>Projects</Text>
+          <div className={'flex flex-col items-start'}>
+            {props.projects.map((project, index) => {
+              return <Button type={'text'} key={index} onClick={() => { setShowPopOver(false); props.setActiveProject(project); }}>{project.name}</Button>;
+            })}
+          </div>
+          <div className={'fa-popupcard-divider'} />
+          <Button type={'text'}>{'Add Projects'}</Button>
+          <div className={'fa-popupcard-divider'} />
+          <Button type={'text'} onClick={() => { setShowPopOver(false); showUserSettingsModal(); }}>{'Account Settings'}</Button>
+        </div>
+    );
+  };
 
   const showUserSettingsModal = () => {
     setShowUserSettings(true);
@@ -69,15 +89,19 @@ function Sidebar() {
           </div>
           <div className={'flex flex-col justify-end items-center w-full pb-8 pt-2'}>
             <Row justify="center" align="middle" className=" w-full py-2">
-              <Link to={'#'} onClick={() => showUserSettingsModal()} >
-                <Avatar
-                  src={'https://zos.alipayobjects.com/rmsportal/ODTLcjxAfvqbxHnVXCYX.png'}
-                  className={'flex justify-center items-center fa-aside--avatar'}
-                />
-              </Link>
+              <Popover placement="leftTop" title={false} content={popOvercontent} visible={ShowPopOver} onClick={() => setShowPopOver(true)} trigger="click">
+                {/* <Link to={'#'} onClick={() => showUserSettingsModal()} > */}
+                  <Avatar
+                    src={'https://zos.alipayobjects.com/rmsportal/ODTLcjxAfvqbxHnVXCYX.png'}
+                    className={'flex justify-center items-center fa-aside--avatar'}
+                  />
+                {/* </Link> */}
+              </Popover>
             </Row>
           </div>
         </div>
+
+        {/* Popover */}
 
         {/* Modals triggered from sidebar */}
         <ModalLib visible={visible} handleCancel={handleCancel} />
@@ -86,5 +110,10 @@ function Sidebar() {
     </>
   );
 }
-
-export default Sidebar;
+const mapStateToProps = (state) => {
+  console.log('mapStateToProps-->', state.global.projects);
+  return {
+    projects: state.global.projects
+  };
+};
+export default connect(mapStateToProps, { setActiveProject })(Sidebar);
