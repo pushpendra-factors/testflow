@@ -24,8 +24,8 @@ function Sidebar(props) {
           <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0'}>Projects</Text>
           <div className={'flex flex-col items-start'}>
             {props.projects.map((project, index) => {
-              return <Button type={'text'} key={index} onClick={() => { 
-                setShowPopOver(false); 
+              return <Button type={props.active_project.id === project.id ? null : 'text'} key={index} onClick={() => {
+                setShowPopOver(false);
                 setchangeProjectModal(true);
                 setselectedProject(project);
               }}>{project.name}</Button>;
@@ -95,7 +95,7 @@ function Sidebar(props) {
           </div>
           <div className={'flex flex-col justify-end items-center w-full pb-8 pt-2'}>
             <Row justify="center" align="middle" className=" w-full py-2">
-              <Popover placement="leftTop" title={false} content={popOvercontent} visible={ShowPopOver} onClick={() => setShowPopOver(true)} trigger="click">
+              <Popover placement="leftTop" title={false} content={popOvercontent} visible={ShowPopOver}  onVisibleChange={(visible)=>setShowPopOver(visible)} onClick={() => setShowPopOver(true)} trigger="click">
                 {/* <Link to={'#'} onClick={() => showUserSettingsModal()} > */}
                   <Avatar
                     src={'https://zos.alipayobjects.com/rmsportal/ODTLcjxAfvqbxHnVXCYX.png'}
@@ -116,13 +116,13 @@ function Sidebar(props) {
         <Modal
         visible={changeProjectModal}
         zIndex={1020}
-        onCancel={()=>{
+        onCancel={() => {
           setchangeProjectModal(false);
           setselectedProject(null);
         }}
         className={'fa-modal--regular'}
         okText={'Switch'}
-        onOk={()=> {
+        onOk={() => {
           props.setActiveProject(selectedProject);
           setShowPopOver(false);
           setchangeProjectModal(false);
@@ -135,9 +135,9 @@ function Sidebar(props) {
             <Row>
               <Col span={24}>
                 <Text type={'title'} level={4} weight={'bold'} extraClass={'m-0'}>Do you want to switch the project?</Text>
-                <Text type={'title'} level={7}  color={'grey'} extraClass={'m-0 mt-2'}>You can easily switch between projects. You will be redirected a different dataset.</Text>
+                <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 mt-2'}>You can easily switch between projects. You will be redirected a different dataset.</Text>
               </Col>
-            </Row> 
+            </Row>
           </div>
 
         </Modal>
@@ -146,9 +146,10 @@ function Sidebar(props) {
     </>
   );
 }
-const mapStateToProps = (state) => { 
+const mapStateToProps = (state) => {
   return {
-    projects: state.global.projects
+    projects: state.global.projects,
+    active_project: state.global.active_project
   };
 };
 export default connect(mapStateToProps, { setActiveProject })(Sidebar);
