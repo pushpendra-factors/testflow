@@ -1,7 +1,7 @@
 import React from 'react';
 import styles from './index.module.scss';
 
-function EventHeader({ total, query, bgColor }) {
+function ChartHeader({ total, query, bgColor }) {
   return (
         <div className="flex flex-col items-center justify-center">
             <div className="flex items-center mb-4">
@@ -13,4 +13,4 @@ function EventHeader({ total, query, bgColor }) {
   );
 }
 
-export default EventHeader;
+export default ChartHeader;

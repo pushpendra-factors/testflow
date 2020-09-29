@@ -1,44 +1,90 @@
-import React, { useEffect, useState } from 'react';
-// import styles from './index.module.scss';
-import SpikeChart from './SpikeChart';
+import React, { useState } from 'react';
 import TotalEventsTable from './TotalEventsTable';
-import { getSpikeChartData } from '../utils';
-import EventHeader from '../EventHeader';
+import { getSingleEventAnalyticsData, getDataInLineChartFormat, getMultiEventsAnalyticsData } from '../utils';
+import { generateColors } from '../../CoreQuery/FunnelsResultPage/utils';
+import ChartTypeDropdown from '../../../components/ChartTypeDropdown';
+import SparkLineChart from '../../../components/SparkLineChart';
+import LineChart from '../../../components/LineChart';
 
-function TotalEvents({ queries }) {
-  const [chartData, setChartData] = useState([]);
 
-  useEffect(() => {
-    setChartData(getSpikeChartData([queries[0]]));
-  }, [queries]);
+function TotalEvents({ queries, eventsMapper, reverseEventsMapper }) {
 
-  let total = 0;
+  const [hiddenEvents, setHiddenEvents] = useState([]);
+  const appliedColors = generateColors(queries.length);
+  // const [chartType, setChartType] = useState('sparklines');
+  const [chartType, setChartType] = useState('linechart');
 
-  chartData.forEach(elem => {
-    total += elem[queries[0]];
-  });
-
-  if (!chartData.length) {
+  let chartsData;
+  if (queries.length === 1) {
+    chartsData = getSingleEventAnalyticsData(queries[0], eventsMapper);
+  } else {
+    chartsData = getMultiEventsAnalyticsData(queries, eventsMapper);
+  }
+  
+  if (!chartsData.length) {
     return null;
   }
 
+  const menuItems = [
+    {
+      key: 'sparklines',
+      onClick: setChartType,
+      name: 'Sparkline',
+    },
+    {
+      key: 'linechart',
+      onClick: setChartType,
+      name: 'Line Chart',
+    }
+  ]
+  
   return (
-        <div className="total-events">
-            <div className="flex justify-center items-center mt-4">
-                <div className="w-1/4">
-                    <EventHeader bgColor="#4D7DB4" query={queries[0]} total={total} />
-                </div>
-                <div className="w-3/4">
-                    <SpikeChart event={queries[0]} page="totalEvents" chartData={chartData} chartColor="#4D7DB4" />
-                </div>
-            </div>
-            <div className="mt-8">
-                <TotalEventsTable
-                    data={chartData}
-                    events={[queries[0]]}
-                />
-            </div>
+    <div className="total-events">
+      <div className="flex items-center justify-between">
+        <div className="filters-info">
+
         </div>
+        <div className="user-actions">
+          <ChartTypeDropdown
+            chartType={chartType}
+            menuItems={menuItems}
+            onClick={(item) => {
+              setChartType(item.key);
+            }}
+          />
+        </div>
+      </div>
+      {chartType === 'sparklines' ? (
+        <SparkLineChart
+          queries={queries}
+          chartsData={chartsData}
+          parentClass="flex justify-center items-center flex-wrap mt-8"
+          appliedColors={appliedColors}
+          eventsMapper={eventsMapper}
+        />
+      ) : (
+          <div className="flex mt-8">
+            <LineChart
+              chartData={getDataInLineChartFormat(chartsData, queries, eventsMapper, hiddenEvents)}
+              appliedColors={appliedColors} queries={queries}
+              reverseEventsMapper={reverseEventsMapper}
+              eventsMapper={eventsMapper}
+              setHiddenEvents={setHiddenEvents}
+              hiddenEvents={hiddenEvents}
+            />
+          </div>
+        )}
+      <div className="mt-8">
+        <TotalEventsTable
+          data={chartsData}
+          events={queries}
+          reverseEventsMapper={reverseEventsMapper}
+          chartType={chartType}
+          setHiddenEvents={setHiddenEvents}
+          hiddenEvents={hiddenEvents}
+        />
+      </div>
+    </div>
   );
 }
 

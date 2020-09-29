@@ -6,7 +6,7 @@ import SearchBar from './SearchBar';
 import styles from './index.module.scss';
 
 function DataTable({
-  tableData, searchText, setSearchText, columns, className, rowSelection
+  tableData, searchText, setSearchText, columns, className, rowSelection, scroll
 }) {
   const componentRef = useRef(null);
 
@@ -47,6 +47,7 @@ function DataTable({
                 columns={columns}
                 dataSource={tableData}
                 className={`${styles.table} ${className}`}
+                scroll={scroll}
             />
         </div>
   );
