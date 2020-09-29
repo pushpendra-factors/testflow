@@ -4,11 +4,12 @@ import (
 	"errors"
 	U "factors/util"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"net/http"
 	"sort"
 	"strings"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func RunInsightsQuery(projectId uint64, query Query) (*QueryResult, int, string) {
@@ -431,7 +432,9 @@ func addEventFilterStepsForUniqueUsersQuery(projectID uint64, q *Query,
 		}
 
 		addJoinStmnt := "JOIN users ON events.user_id=users.id"
-		if groupByUserProperties {
+		if groupByUserProperties && !hasWhereEntity(ewp, PropertyEntityUser) {
+			// If event has filter on user property, JOIN on user_properties is added in next step.
+			// Skip addding here to avoid duplication.
 			addJoinStmnt += " JOIN user_properties on events.user_properties_id=user_properties.id"
 		}
 		addFilterEventsWithPropsQuery(projectID, qStmnt, qParams, ewp, q.From, q.To,

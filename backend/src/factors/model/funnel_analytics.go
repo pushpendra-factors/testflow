@@ -3,9 +3,10 @@ package model
 import (
 	"errors"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"net/http"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func RunFunnelQuery(projectId uint64, query Query) (*QueryResult, int, string) {
@@ -430,7 +431,9 @@ func buildUniqueUsersFunnelQuery(projectId uint64, q Query) (string, []interface
 		}
 		addParams = egParams
 		addJoinStatement := "JOIN users ON events.user_id=users.id"
-		if groupByUserProperties {
+		if groupByUserProperties && !hasWhereEntity(q.EventsWithProperties[i], PropertyEntityUser) {
+			// If event has filter on user property, JOIN on user_properties is added in next step.
+			// Skip addding here to avoid duplication.
 			addJoinStatement += " JOIN user_properties on events.user_properties_id=user_properties.id"
 		}
 		addFilterEventsWithPropsQuery(projectId, &qStmnt, &qParams, q.EventsWithProperties[i], q.From, q.To,

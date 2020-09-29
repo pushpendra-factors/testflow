@@ -6,11 +6,12 @@ import (
 	C "factors/config"
 	U "factors/util"
 	"fmt"
-	"github.com/jinzhu/gorm/dialects/postgres"
 	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/jinzhu/gorm/dialects/postgres"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -893,33 +894,46 @@ func GetTimstampAndAggregateIndexOnQueryResult(cols []string) (int, int, error) 
 	return aggrIndex, timeIndex, err
 }
 
+func sanitizeNumericalBucketRange(query *Query, rows [][]interface{}, indexToSanitize int) {
+	for index, row := range rows {
+		if query.Class == QueryClassFunnel && index == 0 {
+			// For funnel queries, first row is $no_group query. Skip sanitization.
+			continue
+		}
+
+		// Remove trailing .0 in start and end value of range.
+		row[indexToSanitize] = trailingZeroRegex.ReplaceAllString(row[indexToSanitize].(string), "")
+
+		// Change range with same start and end ex: 2 - 2 to just 2.
+		if row[indexToSanitize] != PropertyValueNone {
+			rowSplit := strings.Split(row[indexToSanitize].(string), NumericalGroupBySeparator)
+			if rowSplit[0] == rowSplit[1] {
+				row[indexToSanitize] = rowSplit[0]
+			}
+		}
+	}
+}
+
 // sanitizeNumericalBucketRanges Removes any .0 added to bucket ranges wherever possible.
 func sanitizeNumericalBucketRanges(result *QueryResult, query *Query) {
-	headerIndexMap := make(map[string]int)
+	headerIndexMap := make(map[string][]int)
 	for index, header := range result.Headers {
-		headerIndexMap[header] = index
+		// If same group by is added twice, it will appear twice in headers.
+		// Keep as a list to sanitize both indexes.
+		headerIndexMap[header] = append(headerIndexMap[header], index)
 	}
 
+	sanitizedProperties := make(map[string]bool)
 	for _, gbp := range query.GroupByProperties {
 		if gbp.Type == U.PropertyTypeNumerical {
-			indexToSanitize := headerIndexMap[gbp.Property]
-			for index, row := range result.Rows {
-				if query.Class == QueryClassFunnel && index == 0 {
-					// For funnel queries, first row is $no_group query. Skip sanitization.
-					continue
-				}
-
-				// Remove trailing .0 in start and end value of range.
-				row[indexToSanitize] = trailingZeroRegex.ReplaceAllString(row[indexToSanitize].(string), "")
-
-				// Change range with same start and end ex: 2 - 2 to just 2.
-				if row[indexToSanitize] != PropertyValueNone {
-					rowSplit := strings.Split(row[indexToSanitize].(string), NumericalGroupBySeparator)
-					if rowSplit[0] == rowSplit[1] {
-						row[indexToSanitize] = rowSplit[0]
-					}
-				}
+			if _, sanitizedAlready := sanitizedProperties[gbp.Property]; sanitizedAlready {
+				continue
 			}
+			indexesToSanitize := headerIndexMap[gbp.Property]
+			for _, indexToSanitize := range indexesToSanitize {
+				sanitizeNumericalBucketRange(query, result.Rows, indexToSanitize)
+			}
+			sanitizedProperties[gbp.Property] = true
 		}
 	}
 }
