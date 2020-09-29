@@ -1,11 +1,15 @@
 package tests
 
 import (
+	"encoding/json"
 	C "factors/config"
+	H "factors/handler"
 	"factors/handler/helpers"
 	M "factors/model"
+	"factors/task/event_user_cache"
 	U "factors/util"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -67,7 +71,7 @@ func createEventWithTimestampByName(t *testing.T, project *M.Project, user *M.Us
 	return eventName, event
 }
 
-/*func TestGetEventNamesHandler(t *testing.T) {
+func TestGetEventNamesHandler(t *testing.T) {
 	r := gin.Default()
 	H.InitAppRoutes(r)
 	var eventNames = struct {
@@ -126,10 +130,12 @@ func createEventWithTimestampByName(t *testing.T, project *M.Project, user *M.Us
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	// Test events ingested via sdk/track call
+	eventsLimit, propertyLimit, valueLimit, rollBackWindow := 1000, 10000, 10000, 1
+	event_user_cache.DoRollUpAndCleanUp(&eventsLimit, &propertyLimit, &valueLimit, &rollBackWindow)
 	w = sendGetEventNamesExactRequest(project.ID, agent, r)
 	assert.Equal(t, http.StatusOK, w.Code)
 	jsonResponse, _ = ioutil.ReadAll(w.Body)
 	json.Unmarshal(jsonResponse, &eventNames)
 	// should contain all event names.
 	assert.Len(t, eventNames.EventNames, 3)
-}*/
+}

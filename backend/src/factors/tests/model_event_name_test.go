@@ -1,14 +1,19 @@
 package tests
 
 import (
+	C "factors/config"
+	H "factors/handler"
 	M "factors/model"
+	"factors/task/event_user_cache"
 	U "factors/util"
+	"fmt"
 	"math"
 	"net/http"
 	"sort"
 	"testing"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/copier"
 	"github.com/stretchr/testify/assert"
 )
@@ -501,7 +506,7 @@ func TestDBDeleteFilterEventName(t *testing.T) {
 	assert.Equal(t, http.StatusAccepted, errCode)
 }
 
-/*func TestDBGetEventNamesOrderedByOccurrenceWithLimit(t *testing.T) {
+func TestDBGetEventNamesOrderedByOccurrenceWithLimit(t *testing.T) {
 	r := gin.Default()
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
@@ -543,6 +548,8 @@ func TestDBDeleteFilterEventName(t *testing.T) {
 			"User-Agent":    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36",
 		})
 	assert.Equal(t, http.StatusOK, w.Code)
+	eventsLimit, propertyLimit, valueLimit, rollBackWindow := 1000, 10000, 10000, 1
+	event_user_cache.DoRollUpAndCleanUp(&eventsLimit, &propertyLimit, &valueLimit, &rollBackWindow)
 	// with limit.
 	getEventNames1, err := M.GetEventNamesOrderedByOccurenceAndRecency(project.ID, 10, 30)
 	assert.Equal(t, nil, err)
@@ -558,9 +565,11 @@ func TestDBDeleteFilterEventName(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	assert.Equal(t, http.StatusOK, w.Code)
+
+	event_user_cache.DoRollUpAndCleanUp(&eventsLimit, &propertyLimit, &valueLimit, &rollBackWindow)
 	getEventNames2, err := M.GetEventNamesOrderedByOccurenceAndRecency(project.ID, 2, 30)
 	assert.Equal(t, nil, err)
 	assert.Len(t, getEventNames2, 2)
 	assert.Equal(t, "$session", getEventNames2[0])
 	assert.Equal(t, "event2", getEventNames2[1])
-}*/
+}
