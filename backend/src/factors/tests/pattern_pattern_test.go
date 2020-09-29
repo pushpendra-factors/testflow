@@ -97,7 +97,13 @@ func TestPatternCountEvents(t *testing.T) {
 	cardinalities := []uint{1, 4, 2, 1, 5, 3, 6, 2}
 	for i, event := range events {
 		err = p.CountForEvent(event, nextEventCreatedTime.Unix(), make(map[string]interface{}),
-			make(map[string]interface{}), cardinalities[i], userId, user1CreatedTime.Unix())
+			make(map[string]interface{}), cardinalities[i], userId, user1CreatedTime.Unix(), true)
+		assert.Nil(t, err)
+		nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
+	}
+	for i, event := range events {
+		err = p.CountForEvent(event, nextEventCreatedTime.Unix(), make(map[string]interface{}),
+			make(map[string]interface{}), cardinalities[i], userId, user1CreatedTime.Unix(), false)
 		assert.Nil(t, err)
 		nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
 	}
@@ -111,12 +117,13 @@ func TestPatternCountEvents(t *testing.T) {
 	cardinalities = []uint{1, 1, 2, 1, 2, 1, 2, 3, 3, 3}
 	for i, event := range events {
 		err = p.CountForEvent(event, nextEventCreatedTime.Unix(), make(map[string]interface{}),
-			make(map[string]interface{}), cardinalities[i], userId, user2CreatedTime.Unix())
+			make(map[string]interface{}), cardinalities[i], userId, user2CreatedTime.Unix(),true)
 		assert.Nil(t, err)
 		nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
 	}
 
 	err = p.ResetAfterLastUser()
+
 	assert.Nil(t, err)
 
 	assert.Equal(t, uint(3), p.PerOccurrenceCount)
@@ -205,7 +212,7 @@ func TestPatternGetPerUserCount(t *testing.T) {
 	cardinalities := []uint{1, 4, 2, 1, 5, 3, 6, 2}
 	for i, event := range events {
 		err = p.CountForEvent(event, nextEventCreatedTime.Unix(), make(map[string]interface{}),
-			make(map[string]interface{}), cardinalities[i], userId, user1CreatedTime.Unix())
+			make(map[string]interface{}), cardinalities[i], userId, user1CreatedTime.Unix(),true)
 		assert.Nil(t, err)
 		nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
 	}
@@ -219,7 +226,7 @@ func TestPatternGetPerUserCount(t *testing.T) {
 	cardinalities = []uint{1, 1, 2, 1, 2, 1, 2, 3, 3, 3}
 	for i, event := range events {
 		err = p.CountForEvent(event, nextEventCreatedTime.Unix(), make(map[string]interface{}),
-			make(map[string]interface{}), cardinalities[i], userId, user2CreatedTime.Unix())
+			make(map[string]interface{}), cardinalities[i], userId, user2CreatedTime.Unix(),true)
 		assert.Nil(t, err)
 		nextEventCreatedTime = nextEventCreatedTime.Add(time.Second * 60)
 	}
@@ -450,7 +457,7 @@ func TestPatternEdgeConditions(t *testing.T) {
 	userCreatedTime, _ = time.Parse(time.RFC3339, "2017-06-01T00:00:00Z")
 	eventCreatedTime, _ := time.Parse(time.RFC3339, "2017-06-01T01:00:00Z")
 	err = p.CountForEvent("J", eventCreatedTime.Unix(), make(map[string]interface{}),
-		make(map[string]interface{}), 1, "user1", userCreatedTime.Unix())
+		make(map[string]interface{}), 1, "user1", userCreatedTime.Unix(),true)
 	assert.NotNil(t, err)
 
 	// Test Count Event, with wrong userId or wrong userCreatedTime.
@@ -461,15 +468,15 @@ func TestPatternEdgeConditions(t *testing.T) {
 	err = p.ResetForNewUser("user1", userCreatedTime.Unix())
 	assert.Nil(t, err)
 	err = p.CountForEvent("J", eventCreatedTime.Unix(), make(map[string]interface{}),
-		make(map[string]interface{}), 1, "user1", userCreatedTime.Unix())
+		make(map[string]interface{}), 1, "user1", userCreatedTime.Unix(), true)
 	assert.Nil(t, err)
 	// Wrong userId.
 	err = p.CountForEvent("J", eventCreatedTime.Unix(), make(map[string]interface{}),
-		make(map[string]interface{}), 1, "user2", userCreatedTime.Unix())
+		make(map[string]interface{}), 1, "user2", userCreatedTime.Unix(), true)
 	assert.NotNil(t, err)
 	// Wrong userCreatedTime. Error is ignored.
 	err = p.CountForEvent("J", eventCreatedTime.Unix(), make(map[string]interface{}),
-		make(map[string]interface{}), 1, "user1", eventCreatedTime.Unix())
+		make(map[string]interface{}), 1, "user1", eventCreatedTime.Unix(), true)
 	assert.Nil(t, err)
 
 	// Test Events out of order. Out of order events are noticed only when
@@ -500,10 +507,10 @@ func TestPatternEdgeConditions(t *testing.T) {
 	err = p.ResetForNewUser(userId, userCreatedTime.Unix())
 	assert.Nil(t, err)
 	err = p.CountForEvent("A", event1CreatedTime.Unix(), make(map[string]interface{}),
-		make(map[string]interface{}), 1, userId, userCreatedTime.Unix())
+		make(map[string]interface{}), 1, userId, userCreatedTime.Unix(), true)
 	assert.Nil(t, err)
 	err = p.CountForEvent("B", event2CreatedTime.Unix(), make(map[string]interface{}),
-		make(map[string]interface{}), 1, userId, userCreatedTime.Unix())
+		make(map[string]interface{}), 1, userId, userCreatedTime.Unix(), true)
 	assert.NotNil(t, err)
 }
 
