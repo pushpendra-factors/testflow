@@ -420,7 +420,7 @@ func AddNumericAndCategoricalProperties(
 func (p *Pattern) CountForEvent(
 	eventName string, eventTimestamp int64, eventProperties map[string]interface{},
 	userProperties map[string]interface{}, eventCardinality uint, userId string,
-	userJoinTimestamp int64) error {
+	userJoinTimestamp int64, shouldCountOccurence bool) error {
 
 	if eventName == "" || eventTimestamp <= 0 {
 		return fmt.Errorf("Missing eventId or eventTimestamp.")
@@ -484,7 +484,7 @@ func (p *Pattern) CountForEvent(
 		p.waitIndex += 1
 
 		pLen := len(p.EventNames)
-		if p.waitIndex == pLen {
+		if p.waitIndex == pLen && shouldCountOccurence == true {
 			// Record the pattern occurrence.
 			p.PerOccurrenceCount += 1
 			p.currentUserOccurrenceCount += 1

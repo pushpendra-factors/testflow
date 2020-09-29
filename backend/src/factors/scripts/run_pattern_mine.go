@@ -34,6 +34,7 @@ func main() {
 	bucketName := flag.String("bucket_name", "/usr/local/var/factors/cloud_storage", "")
 	numRoutinesFlag := flag.Int("num_routines", 3, "No of routines")
 	maxModelSizeFlag := flag.Int64("max_size", 10000000000, "Max size of the model")
+	shouldCountOccurence := flag.Bool("count_occur", false, "")
 
 	dbHost := flag.String("db_host", "localhost", "")
 	dbPort := flag.Int("db_port", 5432, "")
@@ -119,7 +120,7 @@ func main() {
 	// modelType, startTime, endTime is part of update meta.
 	// kept null on run script.
 	_, _, err = T.PatternMine(db, etcdClient, &cloudManager, diskManager,
-		*bucketName, *numRoutinesFlag, *projectIdFlag, *modelIdFlag, "", 0, 0, *maxModelSizeFlag)
+		*bucketName, *numRoutinesFlag, *projectIdFlag, *modelIdFlag, "", 0, 0, *maxModelSizeFlag, *shouldCountOccurence)
 	if err != nil {
 		log.WithError(err).Fatal("Pattern mining failed")
 	}

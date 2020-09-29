@@ -275,7 +275,7 @@ func ComputeAllUserPropertiesHistogram(scanner *bufio.Scanner, pattern *Pattern)
 	return nil
 }
 
-func CountPatterns(scanner *bufio.Scanner, patterns []*Pattern) error {
+func CountPatterns(scanner *bufio.Scanner, patterns []*Pattern, countOccurence bool) error {
 	var seenUsers map[string]bool = make(map[string]bool)
 
 	numEventsProcessed := 0
@@ -322,7 +322,7 @@ func CountPatterns(scanner *bufio.Scanner, patterns []*Pattern) error {
 		eventPatterns, _ := eventToPatternsMap[eventName]
 		for _, p := range eventPatterns {
 			if err := p.CountForEvent(eventName, eventTimestamp, eventProperties,
-				userProperties, uint(eventCardinality), userId, userJoinTimestamp); err != nil {
+				userProperties, uint(eventCardinality), userId, userJoinTimestamp, countOccurence); err != nil {
 				log.WithFields(log.Fields{
 					"error":           err,
 					"pattern":         p.EventNames,
