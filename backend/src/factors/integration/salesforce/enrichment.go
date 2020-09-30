@@ -25,22 +25,19 @@ func getUserIDFromLastestProperties(properties []M.UserProperties) string {
 	return properties[latestIndex].UserId
 }
 
-func getSalesforceDocumentProperties(document *M.SalesforceDocument) (map[string]interface{}, error) {
-	docType := M.GetSalesforceAliasByDocType(document.Type)
-	if docType == "" {
-		return nil, errors.New("invalid document type")
-	}
-
+func getSalesforceDocumentProperties(projectID uint64, document *M.SalesforceDocument) (map[string]interface{}, error) {
 	var properties map[string]interface{}
 	err := json.Unmarshal(document.Value.RawMessage, &properties)
 	if err != nil {
 		return nil, err
 	}
 
+	filterPropertyFieldsByProjectID(projectID, properties, document.Type)
+
 	return properties, nil
 }
 
-func sanatizeFieldsFromProperties(projectID uint64, properties map[string]interface{}, docType int) {
+func filterPropertyFieldsByProjectID(projectID uint64, properties map[string]interface{}, docType int) {
 
 	if projectID == 0 {
 		return
@@ -158,11 +155,11 @@ func enrichAccount(projectID uint64, document *M.SalesforceDocument) int {
 
 	logCtx := log.WithField("project_id", projectID).WithField("document_id", document.ID)
 
-	properties, err := getSalesforceDocumentProperties(document)
+	properties, err := getSalesforceDocumentProperties(projectID, document)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properties")
 	}
-	sanatizeFieldsFromProperties(projectID, properties, document.Type)
+
 	trackPayload := &SDK.TrackPayload{
 		ProjectId:       projectID,
 		EventProperties: properties,
@@ -211,11 +208,11 @@ func enrichContact(projectID uint64, document *M.SalesforceDocument) int {
 	}
 
 	logCtx := log.WithField("project_id", projectID).WithField("document_id", document.ID)
-	properties, err := getSalesforceDocumentProperties(document)
+	properties, err := getSalesforceDocumentProperties(projectID, document)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properties")
 	}
-	sanatizeFieldsFromProperties(projectID, properties, document.Type)
+
 	trackPayload := &SDK.TrackPayload{
 		ProjectId:       projectID,
 		EventProperties: properties,
@@ -248,11 +245,11 @@ func enrichOpportunities(projectID uint64, document *M.SalesforceDocument) int {
 	}
 
 	logCtx := log.WithField("project_id", projectID).WithField("document_id", document.ID)
-	properties, err := getSalesforceDocumentProperties(document)
+	properties, err := getSalesforceDocumentProperties(projectID, document)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properties")
 	}
-	sanatizeFieldsFromProperties(projectID, properties, document.Type)
+
 	trackPayload := &SDK.TrackPayload{
 		ProjectId:       projectID,
 		EventProperties: properties,
@@ -286,12 +283,11 @@ func enrichLeads(projectID uint64, document *M.SalesforceDocument) int {
 
 	logCtx := log.WithField("project_id", projectID).WithField("document_id", document.ID)
 
-	properties, err := getSalesforceDocumentProperties(document)
+	properties, err := getSalesforceDocumentProperties(projectID, document)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properties")
 	}
 
-	sanatizeFieldsFromProperties(projectID, properties, document.Type)
 	trackPayload := &SDK.TrackPayload{
 		ProjectId:       projectID,
 		EventProperties: properties,
