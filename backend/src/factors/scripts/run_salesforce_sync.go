@@ -28,6 +28,7 @@ func main() {
 	dbPass := flag.String("db_pass", "@ut0me7a", "")
 	salesforceAppId := flag.String("salesforce_app_id", "", "")
 	salesforceAppSecret := flag.String("salesforce_app_secret", "", "")
+	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 
 	flag.Parse()
 
@@ -45,12 +46,16 @@ func main() {
 			Name:     *dbName,
 			Password: *dbPass,
 		},
+		SentryDSN:           *sentryDSN,
 		SalesforceAppID:     *salesforceAppId,
 		SalesforceAppSecret: *salesforceAppSecret,
 	}
 
 	C.InitConf(config.Env)
 	C.InitSalesforceConfig(config.SalesforceAppID, config.SalesforceAppSecret)
+	C.InitSentryLogging(config.SentryDSN, config.AppName)
+	defer C.SafeFlushSentryHook()
+
 	err := C.InitDB(config.DBInfo)
 	if err != nil {
 		log.WithError(err).WithFields(log.Fields{"env": *env,
