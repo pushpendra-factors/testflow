@@ -55,7 +55,7 @@ func TestCreateSalesforceDocument(t *testing.T) {
 	// salesforce record with created == updated
 	jsonData := fmt.Sprintf(`{"Id":"%s", "name":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, contactId, name, createdDate, createdDate)
 	salesforceDocument := &M.SalesforceDocument{
-		ProjectId: project.ID,
+		ProjectID: project.ID,
 		TypeAlias: M.SalesforceDocumentTypeNameContact,
 		Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonData))},
 	}
@@ -72,8 +72,8 @@ func TestCreateSalesforceDocument(t *testing.T) {
 	assert.Equal(t, http.StatusConflict, status)
 
 	//enrich job, create contact created and contact updated event
-	enrichStatus := IntSalesforce.SyncEnrichment(project.ID)
-	assert.Equal(t, project.ID, enrichStatus[0].ProjectId)
+	enrichStatus := IntSalesforce.Enrich(project.ID)
+	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
 	assert.Equal(t, "success", enrichStatus[0].Status)
 	assert.Equal(t, "success", enrichStatus[1].Status)
 	assert.Equal(t, "success", enrichStatus[2].Status)

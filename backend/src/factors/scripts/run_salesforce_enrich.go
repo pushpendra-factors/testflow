@@ -82,7 +82,7 @@ func main() {
 
 	statusList := make([]IntSalesforce.Status, 0, 0)
 	for _, settings := range salesforceEnabledProjects {
-		status := IntSalesforce.SyncEnrichment(settings.ProjectId)
+		status := IntSalesforce.Enrich(settings.ProjectID)
 		statusList = append(statusList, status...)
 	}
 	err = util.NotifyThroughSNS("salesforce_enrich", *env, statusList)

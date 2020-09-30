@@ -719,7 +719,7 @@ func GetBigqueryEnabledProjectIDs() ([]uint64, int) {
 }
 
 type SalesforceProjectSettings struct {
-	ProjectId    uint64 `json:"-"`
+	ProjectID    uint64 `json:"-"`
 	RefreshToken string `json:"refresh_token"`
 	InstanceURL  string `json:"instance_url"`
 }

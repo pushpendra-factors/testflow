@@ -15,7 +15,7 @@ import (
 )
 
 type SalesforceDocument struct {
-	ProjectId uint64           `gorm:"primary_key:true;auto_increment:false" json:"project_id"`
+	ProjectID uint64           `gorm:"primary_key:true;auto_increment:false" json:"project_id"`
 	ID        string           `gorm:"primary_key:true;auto_increment:false" json:"id"`
 	Type      int              `gorm:"primary_key:true;auto_increment:false" json:"-"`
 	Action    SalesforceAction `gorm:"auto_increment:false;not null" json:"action"`
@@ -23,7 +23,7 @@ type SalesforceDocument struct {
 	TypeAlias string           `gorm:"-" json:"type_alias"`
 	Value     *postgres.Jsonb  `json:"value"`
 	Synced    bool             `gorm:"default:false;not null" json:"synced"`
-	SyncId    string           `gorm:"default:null" json:"sync_id"`
+	SyncID    string           `gorm:"default:null" json:"sync_id"`
 	CreatedAt time.Time        `json:"created_at"`
 	UpdatedAt time.Time        `json:"updated_at"`
 }
@@ -84,9 +84,9 @@ func getSalesforceDocTypeByAlias(alias string) (int, error) {
 	return typ, nil
 }
 
-func getSalesforceDocumentTypeAlias(projectId uint64) map[string]int {
+func getSalesforceDocumentTypeAlias(projectID uint64) map[string]int {
 	docTypes := make(map[string]int)
-	for _, doctype := range GetSalesforceAllowedObjects(projectId) {
+	for _, doctype := range GetSalesforceAllowedObjects(projectID) {
 		docTypes[GetSalesforceAliasByDocType(doctype)] = doctype
 	}
 	return docTypes
@@ -121,7 +121,7 @@ func GetSalesforceUpdatedEventName(docType int) string {
 }
 
 type SalesforceLastSyncInfo struct {
-	ProjectId uint64 `json:"-"`
+	ProjectID uint64 `json:"-"`
 	Type      int    `json:"type"`
 	Timestamp int64  `json:"timestamp"`
 }
@@ -146,11 +146,11 @@ func GetSalesforceSyncInfo() (SalesforceSyncInfo, int) {
 
 	lastSyncInfoByProject := make(map[uint64]map[string]int64, 0)
 	for _, syncInfo := range lastSyncInfo {
-		if _, projectExists := lastSyncInfoByProject[syncInfo.ProjectId]; !projectExists {
-			lastSyncInfoByProject[syncInfo.ProjectId] = make(map[string]int64)
+		if _, projectExists := lastSyncInfoByProject[syncInfo.ProjectID]; !projectExists {
+			lastSyncInfoByProject[syncInfo.ProjectID] = make(map[string]int64)
 		}
 
-		lastSyncInfoByProject[syncInfo.ProjectId][GetSalesforceAliasByDocType(syncInfo.Type)] = syncInfo.Timestamp
+		lastSyncInfoByProject[syncInfo.ProjectID][GetSalesforceAliasByDocType(syncInfo.Type)] = syncInfo.Timestamp
 	}
 
 	enabledProjectLastSync := make(map[uint64]map[string]int64, 0)
@@ -162,26 +162,26 @@ func GetSalesforceSyncInfo() (SalesforceSyncInfo, int) {
 
 	settingsByProject := make(map[uint64]*SalesforceProjectSettings, 0)
 	for i, ps := range projectSettings {
-		_, pExists := lastSyncInfoByProject[ps.ProjectId]
+		_, pExists := lastSyncInfoByProject[ps.ProjectID]
 
 		if !pExists {
 			// add projects not synced before.
-			enabledProjectLastSync[ps.ProjectId] = make(map[string]int64, 0)
+			enabledProjectLastSync[ps.ProjectID] = make(map[string]int64, 0)
 		} else {
 			// add sync info if avaliable.
-			enabledProjectLastSync[ps.ProjectId] = lastSyncInfoByProject[ps.ProjectId]
+			enabledProjectLastSync[ps.ProjectID] = lastSyncInfoByProject[ps.ProjectID]
 		}
 
 		// add types not synced before.
-		for typ := range getSalesforceDocumentTypeAlias(ps.ProjectId) {
-			_, typExists := enabledProjectLastSync[ps.ProjectId][typ]
+		for typ := range getSalesforceDocumentTypeAlias(ps.ProjectID) {
+			_, typExists := enabledProjectLastSync[ps.ProjectID][typ]
 			if !typExists {
 				// last sync timestamp as zero as type not synced before.
-				enabledProjectLastSync[ps.ProjectId][typ] = 0
+				enabledProjectLastSync[ps.ProjectID][typ] = 0
 			}
 		}
 
-		settingsByProject[projectSettings[i].ProjectId] = &projectSettings[i]
+		settingsByProject[projectSettings[i].ProjectID] = &projectSettings[i]
 	}
 
 	syncInfo.LastSyncInfo = enabledProjectLastSync
@@ -190,7 +190,7 @@ func GetSalesforceSyncInfo() (SalesforceSyncInfo, int) {
 	return syncInfo, http.StatusFound
 }
 
-func getSalesforceDocumentId(document *SalesforceDocument) (string, error) {
+func getSalesforceDocumentID(document *SalesforceDocument) (string, error) {
 	documentMap, err := U.DecodePostgresJsonb(document.Value)
 	if err != nil {
 		return "", err
@@ -208,17 +208,17 @@ func getSalesforceDocumentId(document *SalesforceDocument) (string, error) {
 	return idAsString, nil
 }
 
-func getSalesforceDocumentByIdAndType(projectId uint64, id string, docType int) ([]SalesforceDocument, int) {
-	logCtx := log.WithFields(log.Fields{"project_id": projectId, "id": id, "type": docType})
+func getSalesforceDocumentByIDAndType(projectID uint64, id string, docType int) ([]SalesforceDocument, int) {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "id": id, "type": docType})
 
 	var documents []SalesforceDocument
-	if projectId == 0 || id == "" || docType == 0 {
+	if projectID == 0 || id == "" || docType == 0 {
 		logCtx.Error("Failed to get salesforce document by id and type. Invalid project_id or id or type.")
 		return documents, http.StatusBadRequest
 	}
 
 	db := C.GetServices().Db
-	err := db.Where("project_id = ? AND id = ? AND type = ?", projectId, id,
+	err := db.Where("project_id = ? AND id = ? AND type = ?", projectID, id,
 		docType).Find(&documents).Error
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get salesforce documents.")
@@ -232,13 +232,13 @@ func getSalesforceDocumentByIdAndType(projectId uint64, id string, docType int) 
 	return documents, http.StatusFound
 }
 
-func CreateSalesforceDocument(projectId uint64, document *SalesforceDocument) int {
-	logCtx := log.WithField("project_id", document.ProjectId)
-	if projectId == 0 {
+func CreateSalesforceDocument(projectID uint64, document *SalesforceDocument) int {
+	logCtx := log.WithField("project_id", document.ProjectID)
+	if projectID == 0 {
 		logCtx.Error("Invalid project_id on create salesforce document.")
 		return http.StatusBadRequest
 	}
-	document.ProjectId = projectId
+	document.ProjectID = projectID
 
 	documentType, err := getSalesforceDocTypeByAlias(document.TypeAlias)
 	if err != nil {
@@ -252,17 +252,17 @@ func CreateSalesforceDocument(projectId uint64, document *SalesforceDocument) in
 		return http.StatusBadRequest
 	}
 
-	documentId, err := getSalesforceDocumentId(document)
+	documentID, err := getSalesforceDocumentID(document)
 	if err != nil {
 		logCtx.WithError(err).Error(
 			"Failed to get id for salesforce document on create.")
 		return http.StatusInternalServerError
 	}
-	document.ID = documentId
+	document.ID = documentID
 
 	logCtx = logCtx.WithField("type", document.Type).WithField("value", document.Value)
 
-	_, errCode := getSalesforceDocumentByIdAndType(document.ProjectId,
+	_, errCode := getSalesforceDocumentByIDAndType(document.ProjectID,
 		document.ID, document.Type)
 	if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
 		return errCode
@@ -270,7 +270,7 @@ func CreateSalesforceDocument(projectId uint64, document *SalesforceDocument) in
 
 	isNew := errCode == http.StatusNotFound
 	if isNew {
-		err = CreateSalesforceDocumentByAction(projectId, document, SalesforceDocumentCreated)
+		err = CreateSalesforceDocumentByAction(projectID, document, SalesforceDocumentCreated)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to create salesforce document.")
 			return http.StatusInternalServerError
@@ -278,7 +278,7 @@ func CreateSalesforceDocument(projectId uint64, document *SalesforceDocument) in
 		return http.StatusCreated
 	}
 
-	err = CreateSalesforceDocumentByAction(projectId, document, SalesforceDocumentUpdated)
+	err = CreateSalesforceDocumentByAction(projectID, document, SalesforceDocumentUpdated)
 	if err != nil {
 		if err == errorDuplicateRecord {
 			return http.StatusConflict
@@ -291,8 +291,8 @@ func CreateSalesforceDocument(projectId uint64, document *SalesforceDocument) in
 	return http.StatusCreated
 }
 
-func CreateSalesforceDocumentByAction(projectId uint64, document *SalesforceDocument, action SalesforceAction) error {
-	if projectId == 0 {
+func CreateSalesforceDocumentByAction(projectID uint64, document *SalesforceDocument, action SalesforceAction) error {
+	if projectID == 0 {
 		return errors.New("invalid project id")
 	}
 
@@ -358,18 +358,18 @@ func getSalesforceDocumentTimestamp(timestamp interface{}) (int64, error) {
 	return t.Unix(), nil
 }
 
-func UpdateSalesforceDocumentAsSynced(projectId uint64, id string, syncId string) int {
-	logCtx := log.WithField("project_id", projectId).WithField("id", id)
+func UpdateSalesforceDocumentAsSynced(projectID uint64, id string, syncID string) int {
+	logCtx := log.WithField("project_id", projectID).WithField("id", id)
 
 	updates := make(map[string]interface{}, 0)
 	updates["synced"] = true
-	if syncId != "" {
-		updates["sync_id"] = syncId
+	if syncID != "" {
+		updates["sync_id"] = syncID
 	}
 
 	db := C.GetServices().Db
 	err := db.Model(&SalesforceDocument{}).Where("project_id = ? AND id = ?",
-		projectId, id).Updates(updates).Error
+		projectID, id).Updates(updates).Error
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to update salesforce document as synced.")
 		return http.StatusInternalServerError
@@ -380,8 +380,8 @@ func UpdateSalesforceDocumentAsSynced(projectId uint64, id string, syncId string
 
 type SalesforceRecord map[string]interface{}
 
-func BuildAndUpsertDocument(projectId uint64, objectName string, value SalesforceRecord) error {
-	if projectId == 0 {
+func BuildAndUpsertDocument(projectID uint64, objectName string, value SalesforceRecord) error {
+	if projectID == 0 {
 		return errors.New("invalid project id")
 	}
 	if objectName == "" || value == nil {
@@ -389,7 +389,7 @@ func BuildAndUpsertDocument(projectId uint64, objectName string, value Salesforc
 	}
 
 	var document SalesforceDocument
-	document.ProjectId = projectId
+	document.ProjectID = projectID
 	document.TypeAlias = objectName
 	enValue, err := json.Marshal(value)
 	if err != nil {
@@ -397,7 +397,7 @@ func BuildAndUpsertDocument(projectId uint64, objectName string, value Salesforc
 	}
 
 	document.Value = &postgres.Jsonb{RawMessage: json.RawMessage(enValue)}
-	status := CreateSalesforceDocument(projectId, &document)
+	status := CreateSalesforceDocument(projectID, &document)
 	if status != http.StatusCreated && status != http.StatusConflict {
 		return fmt.Errorf("error while creating document Status %d", status)
 	}

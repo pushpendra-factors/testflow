@@ -38,7 +38,7 @@ type QueryRespone struct {
 }
 
 type SalesforceObjectStatus struct {
-	ProjetId     uint64   `json:"project_id"`
+	ProjetID     uint64   `json:"project_id"`
 	Status       string   `json:"status"`
 	DocType      string   `json:"doc_type"`
 	TotalRecords int      `json:"total_records"`
@@ -53,11 +53,11 @@ type SalesforceJobStatus struct {
 	Failures []SalesforceObjectStatus `json:"failures"`
 }
 
-func getCustomerUserIdFromProperties(projectId uint64, properties map[string]interface{}) string {
+func getCustomerUserIDFromProperties(projectID uint64, properties map[string]interface{}) string {
 
 	if phoneNo, ok := properties["MobilePhone"].(string); ok && phoneNo != "" {
 		for pPhoneNo := range U.GetPossiblePhoneNumber(phoneNo) {
-			_, errCode := M.GetUserLatestByCustomerUserId(projectId, pPhoneNo)
+			_, errCode := M.GetUserLatestByCustomerUserId(projectID, pPhoneNo)
 			if errCode == http.StatusFound {
 				return pPhoneNo
 			}
@@ -67,7 +67,7 @@ func getCustomerUserIdFromProperties(projectId uint64, properties map[string]int
 
 	if phoneNo, ok := properties["Phone"].(string); ok && phoneNo != "" {
 		for pPhoneNo := range U.GetPossiblePhoneNumber(phoneNo) {
-			_, errCode := M.GetUserLatestByCustomerUserId(projectId, pPhoneNo)
+			_, errCode := M.GetUserLatestByCustomerUserId(projectID, pPhoneNo)
 			if errCode == http.StatusFound {
 				return pPhoneNo
 			}
@@ -181,10 +181,10 @@ func getSalesforceDataByQuery(query, accessToken, instanceURL, dateTime string) 
 
 func syncByType(ps *M.SalesforceProjectSettings, accessToken, objectName, dateTime string) (SalesforceObjectStatus, error) {
 	var salesforceObjectStatus SalesforceObjectStatus
-	salesforceObjectStatus.ProjetId = ps.ProjectId
+	salesforceObjectStatus.ProjetID = ps.ProjectID
 	salesforceObjectStatus.DocType = objectName
 
-	logCtx := log.WithFields(log.Fields{"project_id": ps.ProjectId, "doc_type": objectName})
+	logCtx := log.WithFields(log.Fields{"project_id": ps.ProjectID, "doc_type": objectName})
 
 	description, err := getSalesforceObjectDescription(objectName, accessToken, ps.InstanceURL)
 	if err != nil {
@@ -222,7 +222,7 @@ func syncByType(ps *M.SalesforceProjectSettings, accessToken, objectName, dateTi
 
 		var failures []string
 		for i := range records {
-			err = M.BuildAndUpsertDocument(ps.ProjectId, objectName, records[i])
+			err = M.BuildAndUpsertDocument(ps.ProjectID, objectName, records[i])
 			if err != nil {
 				logCtx.WithError(err).Error("Failed to BuildAndUpsertDocument.")
 				failures = append(failures, err.Error())
@@ -313,7 +313,7 @@ func SyncDocuments(ps *M.SalesforceProjectSettings, lastSyncInfo map[string]int6
 		objectStatus, err := syncByType(ps, accessToken, docType, sfFormatedTime)
 		if err != nil || len(objectStatus.Failures) != 0 {
 			log.WithFields(log.Fields{
-				"project_id": ps.ProjectId,
+				"project_id": ps.ProjectID,
 				"doctype":    docType,
 			}).WithError(err).Errorf("Failed to sync documents")
 
