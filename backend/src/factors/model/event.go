@@ -1022,6 +1022,30 @@ type SessionUserProperties struct {
 	SessionPageSpentTime float64
 }
 
+// AddSessionForUser - Wrapper for addSessionForUser to handle creating
+// new session for last event when new session conditions met.
+func AddSessionForUser(projectId uint64, userId string, userEvents []Event,
+	bufferTimeBeforeSessionCreateInSecs, startTimestamp int64,
+	sessionEventNameId uint64) (int, int, bool, int, int) {
+
+	noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag,
+		noOfUserPropertiesUpdated, isLastEventToBeProcessed,
+		errCode := addSessionForUser(projectId, userId, userEvents,
+		bufferTimeBeforeSessionCreateInSecs, startTimestamp, sessionEventNameId)
+
+	if isLastEventToBeProcessed {
+		lastUserEventAsList := userEvents[len(userEvents)-1:]
+		addSessionForUser(projectId, userId, lastUserEventAsList,
+			bufferTimeBeforeSessionCreateInSecs, startTimestamp,
+			sessionEventNameId)
+
+		noOfSessionsCreated++
+	}
+
+	return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag,
+		noOfUserPropertiesUpdated, errCode
+}
+
 /*
 AddSessionForUser - Will add session event based on conditions and associate session to each event.
 The list of events being processed, would be like any of the given 2 cases.
@@ -1036,14 +1060,14 @@ e1 - t1
 e2 - t2
 e3 - t3
 */
-func AddSessionForUser(projectId uint64, userId string, userEvents []Event,
+func addSessionForUser(projectId uint64, userId string, userEvents []Event,
 	bufferTimeBeforeSessionCreateInSecs, startTimestamp int64,
-	sessionEventNameId uint64) (int, int, bool, int, int) {
+	sessionEventNameId uint64) (int, int, bool, int, bool, int) {
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectId, "user_id": userId})
 
 	if len(userEvents) == 0 {
-		return 0, 0, false, 0, http.StatusNotModified
+		return 0, 0, false, 0, false, http.StatusNotModified
 	}
 
 	latestUserEvent := &userEvents[len(userEvents)-1]
@@ -1057,7 +1081,7 @@ func AddSessionForUser(projectId uint64, userId string, userEvents []Event,
 
 	events := filterEventsForSession(userEvents, startTimestamp, endTimestamp)
 	if len(events) == 0 {
-		return 0, 0, false, 0, http.StatusNotModified
+		return 0, 0, false, 0, false, http.StatusNotModified
 	}
 
 	noOfFilteredEvents := len(events)
@@ -1067,6 +1091,7 @@ func AddSessionForUser(projectId uint64, userId string, userEvents []Event,
 
 	noOfSessionsCreated := 0
 	sessionContinuedFlag := false
+	isLastEventToBeProcessed := false
 
 	sessionUserPropertiesRecordMap := make(map[string]SessionUserProperties, 0)
 
@@ -1078,8 +1103,8 @@ func AddSessionForUser(projectId uint64, userId string, userEvents []Event,
 		if err != nil {
 			logCtx.WithError(err).
 				Error("Failed to check marketing prperty on event properties.")
-			return noOfFilteredEvents, noOfSessionsCreated,
-				sessionContinuedFlag, 0, http.StatusInternalServerError
+			return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag, 0,
+				isLastEventToBeProcessed, http.StatusInternalServerError
 		}
 
 		isNewSessionRequired := (i == 0 && len(events) == 1) ||
@@ -1101,8 +1126,17 @@ func AddSessionForUser(projectId uint64, userId string, userEvents []Event,
 				sessionEndIndex = i - 1
 			}
 
-			if isLastSetOfEvents && !(hasMarketingProperty || isNewSessionRequired) {
-				sessionEndIndex = i
+			// Skip the associating previous session to last event, If it satisfies
+			// new session condition. Instead of manipulating cursor, setting the
+			// isLastEventToBeProcessed as true, to process it seperately.
+			if isLastSetOfEvents {
+				if !(hasMarketingProperty || isNewSessionRequired) {
+					sessionEndIndex = i
+				} else {
+					if len(events) > 1 {
+						isLastEventToBeProcessed = true
+					}
+				}
 			}
 
 			// Continue with the last session_id, if available. This will be true as
@@ -1114,8 +1148,8 @@ func AddSessionForUser(projectId uint64, userId string, userEvents []Event,
 				if errCode != http.StatusFound {
 					logCtx.WithField("err_code", errCode).Error(
 						"Failed to get existing session using session id on add session.")
-					return noOfFilteredEvents, noOfSessionsCreated,
-						sessionContinuedFlag, 0, http.StatusInternalServerError
+					return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag, 0,
+						isLastEventToBeProcessed, http.StatusInternalServerError
 				}
 				sessionEvent = existingSessionEvent
 				isSessionContinued = true
@@ -1132,16 +1166,16 @@ func AddSessionForUser(projectId uint64, userId string, userEvents []Event,
 						logCtx.WithField("err_code", errCode).
 							WithField("user_properties_id", firstEvent.UserPropertiesId).
 							Error("Failed to get user properties of first event on session.")
-						return noOfFilteredEvents, noOfSessionsCreated,
-							sessionContinuedFlag, 0, http.StatusInternalServerError
+						return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag, 0,
+							isLastEventToBeProcessed, http.StatusInternalServerError
 					}
 
 					userPropertiesDecoded, err := U.DecodePostgresJsonb(userProperties)
 					if err != nil {
 						logCtx.WithField("user_properties_id", firstEvent.UserPropertiesId).
 							Error("Failed to decode user properties of first event on session.")
-						return noOfFilteredEvents, noOfSessionsCreated,
-							sessionContinuedFlag, 0, http.StatusInternalServerError
+						return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag, 0,
+							isLastEventToBeProcessed, http.StatusInternalServerError
 					}
 
 					userPropertiesMap = U.PropertiesMap(*userPropertiesDecoded)
@@ -1152,16 +1186,16 @@ func AddSessionForUser(projectId uint64, userId string, userEvents []Event,
 				firstEventPropertiesDecoded, err := U.DecodePostgresJsonb(&firstEvent.Properties)
 				if err != nil {
 					logCtx.Error("Failed to decode event properties of first event on session.")
-					return noOfFilteredEvents, noOfSessionsCreated,
-						sessionContinuedFlag, 0, http.StatusInternalServerError
+					return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag, 0,
+						isLastEventToBeProcessed, http.StatusInternalServerError
 				}
 				firstEventPropertiesMap := U.PropertiesMap(*firstEventPropertiesDecoded)
 
 				sessionEventCount, errCode := GetEventCountOfUserByEventName(projectId, userId, sessionEventNameId)
 				if errCode == http.StatusInternalServerError {
 					logCtx.Error("Failed to get session event count for user.")
-					return noOfFilteredEvents, noOfSessionsCreated,
-						sessionContinuedFlag, 0, errCode
+					return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag,
+						0, isLastEventToBeProcessed, errCode
 				}
 				isFirstSession := sessionEventCount == 0
 				sessionPropertiesMap := U.GetSessionProperties(isFirstSession,
@@ -1171,8 +1205,8 @@ func AddSessionForUser(projectId uint64, userId string, userEvents []Event,
 				sessionPropertiesJsonb, err := U.EncodeToPostgresJsonb(&sessionPropertiesEncoded)
 				if err != nil {
 					logCtx.WithError(err).Error("Failed to encode session properties as postgres jsonb.")
-					return noOfFilteredEvents, noOfSessionsCreated,
-						sessionContinuedFlag, 0, http.StatusInternalServerError
+					return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag, 0,
+						isLastEventToBeProcessed, http.StatusInternalServerError
 				}
 
 				// session event properties, to be updated
@@ -1189,8 +1223,8 @@ func AddSessionForUser(projectId uint64, userId string, userEvents []Event,
 
 				if errCode != http.StatusCreated {
 					logCtx.Error("Failed to create session event.")
-					return noOfFilteredEvents, noOfSessionsCreated,
-						sessionContinuedFlag, 0, errCode
+					return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag,
+						0, isLastEventToBeProcessed, errCode
 				}
 
 				sessionEvent = newSessionEvent
@@ -1203,15 +1237,15 @@ func AddSessionForUser(projectId uint64, userId string, userEvents []Event,
 			errCode := associateSessionToEventsInBatch(projectId, eventsOfSession, sessionEvent.ID, 100)
 			if errCode == http.StatusInternalServerError {
 				logCtx.Error("Failed to associate session to events.")
-				return noOfFilteredEvents, noOfSessionsCreated,
-					sessionContinuedFlag, 0, errCode
+				return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag,
+					0, isLastEventToBeProcessed, errCode
 			}
 
 			lastEventProperties, err := U.DecodePostgresJsonb(&events[sessionEndIndex].Properties)
 			if err != nil {
 				logCtx.Error("Failed to decode properties of last event of session.")
-				return noOfFilteredEvents, noOfSessionsCreated,
-					sessionContinuedFlag, 0, http.StatusInternalServerError
+				return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag, 0,
+					isLastEventToBeProcessed, http.StatusInternalServerError
 			}
 
 			sessionPropertiesMap := U.PropertiesMap{}
@@ -1250,8 +1284,8 @@ func AddSessionForUser(projectId uint64, userId string, userEvents []Event,
 				&sessionPropertiesMap, sessionEvent.Timestamp+1)
 			if errCode == http.StatusInternalServerError {
 				logCtx.Error("Failed updating session event properties on add session.")
-				return noOfFilteredEvents, noOfSessionsCreated,
-					sessionContinuedFlag, 0, errCode
+				return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag,
+					0, isLastEventToBeProcessed, errCode
 			}
 
 			// associate user_properties state using session of the event.
@@ -1280,14 +1314,14 @@ func AddSessionForUser(projectId uint64, userId string, userEvents []Event,
 	if errCode != http.StatusAccepted {
 		logCtx.WithField("err_code", errCode).
 			Error("Failed to update user properties record for session.")
-		return noOfFilteredEvents, noOfSessionsCreated,
-			sessionContinuedFlag, 0, http.StatusInternalServerError
+		return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag,
+			0, isLastEventToBeProcessed, http.StatusInternalServerError
 	}
 
 	noOfUserPropertiesUpdated := len(sessionUserPropertiesRecordMap)
 
-	return noOfFilteredEvents, noOfSessionsCreated,
-		sessionContinuedFlag, noOfUserPropertiesUpdated, http.StatusOK
+	return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag,
+		noOfUserPropertiesUpdated, isLastEventToBeProcessed, http.StatusOK
 }
 
 // GetDatesForNextEventsArchivalBatch Get dates for events since startTime, excluding today's date.

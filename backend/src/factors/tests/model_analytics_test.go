@@ -1284,6 +1284,43 @@ func TestAnalyticsFunnelQueryWithFilterAndBreakDown(t *testing.T) {
 	assert.Equal(t, http.StatusOK, errCode)
 	assert.Equal(t, int64(10), result8.Rows[0][0])
 	assert.Equal(t, int64(5), result8.Rows[0][1])
+
+	// Test for event filter on user property and group by user property at the same event.
+	query9 := M.Query{
+		From: startTimestamp,
+		To:   time.Now().UTC().Unix(),
+		EventsWithProperties: []M.QueryEventWithProperties{
+			M.QueryEventWithProperties{
+				Name: "s0",
+				Properties: []M.QueryProperty{
+					M.QueryProperty{
+						Entity:   M.PropertyEntityUser,
+						Property: "gender",
+						Operator: "equals",
+						Value:    "F",
+					},
+				},
+			},
+			M.QueryEventWithProperties{
+				Name:       "s1",
+				Properties: []M.QueryProperty{},
+			},
+		},
+		GroupByProperties: []M.QueryGroupByProperty{
+			M.QueryGroupByProperty{
+				Entity:         M.PropertyEntityUser,
+				Property:       "age",
+				EventName:      "s0",
+				EventNameIndex: 1,
+			},
+		},
+		Class:           M.QueryClassFunnel,
+		Type:            M.QueryTypeUniqueUsers,
+		EventsCondition: M.EventCondAllGivenEvent,
+	}
+	result9, errCode, _ := M.Analyze(project.ID, query9)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.NotNil(t, result9)
 }
 
 func TestAnalyticsInsightsQuery(t *testing.T) {
@@ -1688,6 +1725,49 @@ func TestAnalyticsInsightsQueryWithFilterAndBreakdown(t *testing.T) {
 		assert.Equal(t, int64(2), result.Rows[0][1])
 		assert.Equal(t, "s1", result.Rows[1][0])
 		assert.Equal(t, int64(3), result.Rows[1][1])
+	})
+
+	// Test for event filter on user property and group by user property at the same event.
+	t.Run("AnalyticsInsightsQueryUniqueUserWithUserPropertyFilterAndUserBreakdown", func(t *testing.T) {
+		query := M.Query{
+			From: startTimestamp,
+			To:   startTimestamp + 40,
+			EventsWithProperties: []M.QueryEventWithProperties{
+				M.QueryEventWithProperties{
+					Name: "s0",
+					Properties: []M.QueryProperty{
+						M.QueryProperty{
+							Entity:    M.PropertyEntityUser,
+							Property:  "$initial_source",
+							Operator:  "equals",
+							Type:      "categorial",
+							LogicalOp: "AND",
+							Value:     "A",
+						},
+					},
+				},
+				M.QueryEventWithProperties{
+					Name: "s1",
+				},
+			},
+			GroupByProperties: []M.QueryGroupByProperty{
+				M.QueryGroupByProperty{
+					Entity:         M.PropertyEntityUser,
+					Property:       "$initial_source",
+					EventName:      "s0",
+					EventNameIndex: 1,
+				},
+			},
+			Class: M.QueryClassInsights,
+
+			Type:            M.QueryTypeUniqueUsers,
+			EventsCondition: M.EventCondAllGivenEvent,
+		}
+
+		//unique user count should return 2 for s0 to s1 with fliter property1
+		result, errCode, _ := M.Analyze(project.ID, query)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.NotNil(t, result)
 	})
 }
 

@@ -158,45 +158,6 @@ func TestDBCreateAndGetEvent(t *testing.T) {
 	assert.Nil(t, event)
 }
 
-func createEventWithTimestamp(t *testing.T, project *M.Project, user *M.User, timestamp int64) (*M.EventName, *M.Event) {
-	eventName, errCode := M.CreateOrGetUserCreatedEventName(&M.EventName{ProjectId: project.ID, Name: fmt.Sprintf("event_%d", timestamp)})
-	assert.NotNil(t, eventName)
-	event, errCode := M.CreateEvent(&M.Event{ProjectId: project.ID, EventNameId: eventName.ID, UserId: user.ID, Timestamp: timestamp})
-	assert.Equal(t, http.StatusCreated, errCode)
-	return eventName, event
-}
-
-func TestGetFirstLastEventTimestamp(t *testing.T) {
-	project, user, _ := SetupProjectUserReturnDAO()
-	assert.NotNil(t, project)
-
-	var firstTimestamp int64 = 1393632004
-	var secondTimestamp int64 = 1393633007
-	var thirdTimestamp int64 = 1393634005
-
-	createEventWithTimestamp(t, project, user, firstTimestamp)
-	createEventWithTimestamp(t, project, user, secondTimestamp)
-	createEventWithTimestamp(t, project, user, thirdTimestamp)
-
-	// Test with exact limit timestamp
-	ts1, errCode := M.GetProjectEventsInfo()
-	assert.Equal(t, http.StatusFound, errCode)
-	assert.NotNil(t, ts1)
-	assert.NotNil(t, (*ts1)[project.ID])
-	assert.Equal(t, firstTimestamp, (*ts1)[project.ID].FirstEventTimestamp)
-	assert.Equal(t, thirdTimestamp, (*ts1)[project.ID].LastEventTimestamp)
-
-	// Test with increased limit timestamp
-	ts1, errCode = M.GetProjectEventsInfo() // adds 3 secs.
-	assert.Equal(t, http.StatusFound, errCode)
-	assert.NotNil(t, ts1)
-	assert.NotNil(t, (*ts1)[project.ID])
-	assert.Equal(t, firstTimestamp, (*ts1)[project.ID].FirstEventTimestamp)
-	assert.Equal(t, thirdTimestamp, (*ts1)[project.ID].LastEventTimestamp)
-	assert.Nil(t, (*ts1)[999999])
-	assert.Equal(t, 3, (*ts1)[project.ID].EventsCount)
-}
-
 func createEventWithTimestampAndPrperties(t *testing.T, project *M.Project, user *M.User, timestamp int64, properties json.RawMessage) (*M.EventName, *M.Event) {
 	eventName, errCode := M.CreateOrGetUserCreatedEventName(&M.EventName{ProjectId: project.ID, Name: fmt.Sprintf("event_%d", timestamp)})
 	assert.NotNil(t, eventName)

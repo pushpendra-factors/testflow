@@ -989,34 +989,80 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 30, 1)
 		assert.Nil(t, err)
 
-		// Check no.of sessions created for user so far.
-		sessionEventName, _ := M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
-		sessionCount, _ := M.GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
-		assert.Equal(t, uint64(1), sessionCount)
-
 		event1, _ := M.GetEvent(project.ID, userId, eventId1)
 		assert.NotEmpty(t, event1.SessionId)
 		event2, _ := M.GetEvent(project.ID, userId, eventId2)
 		assert.Equal(t, event1.SessionId, event2.SessionId)
-		// Edge case: To avoid associating previous session to last event, when the last
-		// event qualifies for a new session. Skipping session association, as new session
-		// will be created and associated on next run.
+		// New session should be created for last event and associated.
 		event3, _ := M.GetEvent(project.ID, userId, eventId3)
-		assert.Empty(t, event3.SessionId)
+		assert.NotEmpty(t, event3.SessionId)
+		assert.NotEqual(t, event2.SessionId, event3.SessionId)
 
-		// Last event with session condition true should be processed on next run.
+		// Check no.of sessions created for user so far.
+		sessionEventName, _ := M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
+		sessionCount, _ := M.GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
+		assert.Equal(t, uint64(2), sessionCount)
+	})
+
+	t.Run("ContinuingSessionCreatedWithLastEventQualifyForNewSession", func(t *testing.T) {
+		project, _, err := SetupProjectUserReturnDAO()
+		assert.Nil(t, err)
+
+		// skip realtime session creation for project.
+		C.GetConfig().SkipSessionProjectIds = fmt.Sprintf("%d", project.ID)
+
+		maxLookbackTimestamp := U.UnixTimeBeforeDuration(31 * 24 * time.Hour)
+
+		// Test: New user with one event and one skip_session event.
+		timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
+		randomEventName := U.RandomLowerAphaNumString(10)
+
+		timestamp = timestamp + 2
+		trackPayload1 := SDK.TrackPayload{
+			Name:      randomEventName,
+			Timestamp: timestamp,
+			EventProperties: U.PropertiesMap{
+				U.QUERY_PARAM_UTM_PREFIX + "campaign": "winter_sale",
+			},
+		}
+		status, response := SDK.Track(project.ID, &trackPayload1, false, SDK.SourceJSSDK)
+		assert.Equal(t, http.StatusOK, status)
+		userId := response.UserId
+		eventId1 := response.EventId
+
 		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 30, 1)
 		assert.Nil(t, err)
 
-		// Check no.of sessions created for user so far.
-		sessionEventName, _ = M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
+		// No.of sessions for user should be 1.
+		sessionEventName, _ := M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
+		sessionCount, _ := M.GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
+		assert.Equal(t, uint64(1), sessionCount)
+
+		// Check session association.
+		event1, _ := M.GetEvent(project.ID, userId, eventId1)
+		assert.NotEmpty(t, event1.SessionId)
+
+		timestamp = timestamp + (32 * 60) + 2
+		randomEventName = U.RandomLowerAphaNumString(10)
+		trackPayload2 := SDK.TrackPayload{
+			Name:      randomEventName,
+			Timestamp: timestamp,
+			UserId:    userId,
+		}
+		status, response = SDK.Track(project.ID, &trackPayload2, false, SDK.SourceJSSDK)
+		assert.Equal(t, http.StatusOK, status)
+		eventId2 := response.EventId
+
+		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 30, 1)
+		assert.Nil(t, err)
+
+		// No.of sessions created. Session continued.
 		sessionCount, _ = M.GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
 		assert.Equal(t, uint64(2), sessionCount)
 
-		// New session should be created and associated.
-		event3, _ = M.GetEvent(project.ID, userId, eventId3)
-		assert.NotEmpty(t, event3.SessionId)
-		assert.NotEqual(t, event2.SessionId, event3.SessionId)
+		// Check session association.
+		event2, _ := M.GetEvent(project.ID, userId, eventId2)
+		assert.NotEqual(t, *event1.SessionId, *event2.SessionId)
 	})
 }
 

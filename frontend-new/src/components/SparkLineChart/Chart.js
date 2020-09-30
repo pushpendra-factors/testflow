@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useCallback } from 'react';
 import * as d3 from 'd3';
 import styles from './index.module.scss';
 
-function SpikeChart({
+function SparkChart({
   chartData, chartColor, page, event
 }) {
   const chartRef = useRef(null);
@@ -12,10 +12,10 @@ function SpikeChart({
 
   const drawChart = useCallback(() => {
     const margin = {
-      top: 10, right: 10, bottom: 30, left: 50
+      top: 10, right: 10, bottom: 30, left: 10
     };
     const width = d3.select(chartRef.current).node().getBoundingClientRect().width - margin.left - margin.right;
-    const height = 150 - margin.top - margin.bottom;
+    const height = 200;
 
     // append the svg object to the body of the page
     const svg = d3.select(chartRef.current).html('')
@@ -63,7 +63,7 @@ function SpikeChart({
       .datum(data)
       .attr('fill', 'none')
       .attr('stroke', chartColor)
-      .attr('stroke-width', 1)
+      .attr('stroke-width', 2)
       .attr('d', d3.line()
         .x(function (d) { return x(d.date); })
         .y(function (d) { return y(d[event]); })
@@ -72,12 +72,12 @@ function SpikeChart({
     svg.append('linearGradient')
       .attr('id', `area-gradient-${chartColor.substr(1)}-${page}`)
       .attr('gradientUnits', 'userSpaceOnUse')
-      .attr('x1', 0).attr('y1', y(0))
-      .attr('x2', 0).attr('y2', y(100))
+      .attr('x1', '0%').attr('y1', '0%')
+      .attr('x2', '0%').attr('y2', '100%')
       .selectAll('stop')
       .data([
-        { offset: '0%', color: 'white' },
-        { offset: '20%', color: chartColor }
+        { offset: '0%', color: chartColor },
+        { offset: '80%', color: 'white' }
       ])
       .enter().append('stop')
       .attr('offset', function (d) { return d.offset; })
@@ -133,8 +133,8 @@ function SpikeChart({
   }, [drawChart]);
 
   return (
-        <div className={styles.totalEventsChart} ref={chartRef} />
+        <div className={styles.sparkChart} ref={chartRef} />
   );
 }
 
-export default SpikeChart;
+export default SparkChart;

@@ -57,7 +57,7 @@ $boxShadowSecondaryColor: #E7E9ED;
 
     :global(tr.ant-table-row-selected > td),
     :global(.ant-table-tbody > tr.ant-table-row:hover > td) {
-        background: unset;
+        background: #fff;
     }
 
     :global(.ant-table-selection) {

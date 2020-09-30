@@ -4,7 +4,7 @@ import { bindActionCreators } from 'redux';
 import {
   Button, Collapse, Select, Popover
 } from 'antd';
-import { SVG, Text } from 'factorsComponents';
+import { SVG, Text } from '../factorsComponents';
 import styles from './index.module.scss';
 import QueryBlock from './QueryBlock';
 import SeqSelector from './AnalysisSeqSelector';
@@ -38,7 +38,7 @@ function QueryComposer({
     if (activeProject && activeProject.id) {
       fetchEventNames(activeProject.id);
     }
-  }, [activeProject]);
+  }, [activeProject, fetchEventNames]);
 
   const queryList = () => {
     const blockList = [];

@@ -3,7 +3,7 @@
 import {
   FUNNEL_RESULTS_AVAILABLE, FUNNEL_RESULTS_UNAVAILABLE, SET_PROJECTS, SET_ACTIVE_PROJECT
 } from './types';
-import { get } from '../request';
+import { get } from '../utils/request';
 
 const defaultState = {
   is_funnel_results_visible: false,

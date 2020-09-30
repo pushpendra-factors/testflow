@@ -1,17 +1,53 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Layout, Row, Avatar
+  Layout, Row, Avatar, Popover, Button, Modal, Col
 } from 'antd';
-import { NavLink, Link } from 'react-router-dom';
-import { SVG } from 'factorsComponents';
+import { NavLink } from 'react-router-dom';
+import { SVG, Text } from 'factorsComponents';
 import ModalLib from '../../Views/componentsLib/ModalLib';
 import UserSettings from '../../Views/Settings/UserSettings';
-
-function Sidebar() {
+import { setActiveProject } from '../../reducers/global';
+import { connect } from 'react-redux';
+import { PlusOutlined } from '@ant-design/icons';
+function Sidebar(props) {
   const { Sider } = Layout;
 
   const [visible, setVisible] = useState(false);
   const [ShowUserSettings, setShowUserSettings] = useState(false);
+  const [ShowPopOver, setShowPopOver] = useState(false);
+  const [changeProjectModal, setchangeProjectModal] = useState(false);
+  const [selectedProject, setselectedProject] = useState(null);
+
+  const popOvercontent = () => {
+    return (
+        <div className={'fa-popupcard'}>
+          <Text type={'title'} level={7} weight={'bold'} extraClass={'m-0'}>Projects</Text>
+          <div className={'flex flex-col items-start'}>
+            {props.projects.map((project, index) => {
+              return <div key={index}
+              className={`flex justify-start items-center project-item ${props.active_project.id === project.id ? 'active' : null}`}
+              onClick={() => {
+                setShowPopOver(false);
+                setchangeProjectModal(true);
+                setselectedProject(project);
+              }}>
+                <Avatar size={28}/><Text type={'title'} level={7} weight={'bold'} extraClass={'m-0 ml-2'}>{project.name}</Text>
+              </div>;
+            })}
+          </div>
+          <div className={'fa-popupcard-divider'} />
+          <Button type={'text'}><span className={'mr-4'}><PlusOutlined /></span> {'Add Projects'}</Button>
+          <div className={'fa-popupcard-divider'} />
+          <div className={'flex justify-start items-center project-item'}
+              onClick={() => {
+                setShowPopOver(false);
+                showUserSettingsModal();
+              }}>
+                <Avatar size={28}/><Text type={'title'} level={7} extraClass={'m-0 ml-2'}>{'Account Settings'}</Text>
+          </div>
+        </div>
+    );
+  };
 
   const showUserSettingsModal = () => {
     setShowUserSettings(true);
@@ -69,22 +105,61 @@ function Sidebar() {
           </div>
           <div className={'flex flex-col justify-end items-center w-full pb-8 pt-2'}>
             <Row justify="center" align="middle" className=" w-full py-2">
-              <Link to={'#'} onClick={() => showUserSettingsModal()} >
-                <Avatar
-                  src={'https://zos.alipayobjects.com/rmsportal/ODTLcjxAfvqbxHnVXCYX.png'}
-                  className={'flex justify-center items-center fa-aside--avatar'}
-                />
-              </Link>
+              <Popover placement="top" overlayClassName={'fa-popupcard--wrapper'} title={false} content={popOvercontent} visible={ShowPopOver} onVisibleChange={(visible) => setShowPopOver(visible)} onClick={() => setShowPopOver(true)} trigger="click">
+                {/* <Link to={'#'} onClick={() => showUserSettingsModal()} > */}
+                  <Avatar
+                    src={'https://zos.alipayobjects.com/rmsportal/ODTLcjxAfvqbxHnVXCYX.png'}
+                    className={'flex justify-center items-center fa-aside--avatar'}
+                  />
+                {/* </Link> */}
+              </Popover>
             </Row>
           </div>
         </div>
 
+        {/* Popover */}
+
         {/* Modals triggered from sidebar */}
         <ModalLib visible={visible} handleCancel={handleCancel} />
         <UserSettings visible={ShowUserSettings} handleCancel={closeUserSettingsModal} />
+
+        <Modal
+        visible={changeProjectModal}
+        zIndex={1020}
+        onCancel={() => {
+          setchangeProjectModal(false);
+          setselectedProject(null);
+        }}
+        className={'fa-modal--regular'}
+        okText={'Switch'}
+        onOk={() => {
+          props.setActiveProject(selectedProject);
+          setShowPopOver(false);
+          setchangeProjectModal(false);
+          setselectedProject(null);
+        }}
+        // confirmLoading={props.confirmLoading}
+        centered={true}
+        >
+          <div className={'p-4'}>
+            <Row>
+              <Col span={24}>
+                <Text type={'title'} level={4} weight={'bold'} extraClass={'m-0'}>Do you want to switch the project?</Text>
+                <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 mt-2'}>You can easily switch between projects. You will be redirected a different dataset.</Text>
+              </Col>
+            </Row>
+          </div>
+
+        </Modal>
+
       </Sider>
     </>
   );
 }
-
-export default Sidebar;
+const mapStateToProps = (state) => {
+  return {
+    projects: state.global.projects,
+    active_project: state.global.active_project
+  };
+};
+export default connect(mapStateToProps, { setActiveProject })(Sidebar);

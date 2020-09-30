@@ -5,7 +5,7 @@ import { getEventNames } from './services';
 import { convertToEventOptions } from './utils';
 
 export const fetchEventNames = (projectId) => {
-  return function (dispatch) {
+  return (dispatch) => {
     return new Promise((resolve, reject) => {
       getEventNames(projectId)
         .then((response) => {
