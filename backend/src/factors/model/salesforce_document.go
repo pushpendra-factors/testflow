@@ -9,7 +9,6 @@ import (
 	C "factors/config"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
-	"github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -309,7 +308,7 @@ func CreateSalesforceDocumentByAction(projectId uint64, document *SalesforceDocu
 	db := C.GetServices().Db
 	err = db.Create(document).Error
 	if err != nil {
-		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code.Name() == "unique_violation" {
+		if U.IsPostgresUniqueIndexViolationError("salesforce_documents_pkey", err) {
 			return errorDuplicateRecord
 		}
 
