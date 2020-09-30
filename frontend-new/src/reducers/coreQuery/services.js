@@ -1,9 +1,14 @@
 /* eslint-disable */
 
-import { get } from '../../request';
+import { get, getHostUrl, post } from '../../utils/request';
+
+const host = getHostUrl();
 
 export const getEventNames = (projectId) => {
-  let host = BUILD_CONFIG.backend_host;
-  host = (host[host.length - 1] === '/') ? host : host + '/';
   return get(host + 'projects/' + projectId + '/event_names?type=exact', {});
-};
+}
+
+export const runQuery = (projectId, query) => {
+  const url = host + "projects/" + projectId + "/query";
+  return post(url , {query: query});
+}
