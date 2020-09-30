@@ -132,7 +132,7 @@ func TrackSalesforceEventByDocumentType(projectId uint64, trackPayload *SDK.Trac
 	return eventId, userId, nil
 }
 
-func syncAccount(projectId uint64, document *M.SalesforceDocument) int {
+func enrichAccount(projectId uint64, document *M.SalesforceDocument) int {
 	if document.Type != M.SalesforceDocumentTypeAccount {
 		return http.StatusInternalServerError
 	}
@@ -182,7 +182,7 @@ func syncAccount(projectId uint64, document *M.SalesforceDocument) int {
 	return http.StatusOK
 }
 
-func syncContact(projectId uint64, document *M.SalesforceDocument) int {
+func enrichContact(projectId uint64, document *M.SalesforceDocument) int {
 	if document.Type != M.SalesforceDocumentTypeContact {
 		return http.StatusInternalServerError
 	}
@@ -215,7 +215,7 @@ func syncContact(projectId uint64, document *M.SalesforceDocument) int {
 	return http.StatusOK
 }
 
-func syncOpportunities(projectId uint64, document *M.SalesforceDocument) int {
+func enrichOpportunities(projectId uint64, document *M.SalesforceDocument) int {
 	if document.Type != M.SalesforceDocumentTypeOpportunity {
 		return http.StatusInternalServerError
 	}
@@ -248,7 +248,7 @@ func syncOpportunities(projectId uint64, document *M.SalesforceDocument) int {
 	return http.StatusOK
 }
 
-func syncLeads(projectId uint64, document *M.SalesforceDocument) int {
+func enrichLeads(projectId uint64, document *M.SalesforceDocument) int {
 	if document.Type != M.SalesforceDocumentTypeLead {
 		return http.StatusInternalServerError
 	}
@@ -296,7 +296,7 @@ func syncLeads(projectId uint64, document *M.SalesforceDocument) int {
 	return http.StatusOK
 }
 
-func syncAll(projectId uint64, documents []M.SalesforceDocument) int {
+func enrichAll(projectId uint64, documents []M.SalesforceDocument) int {
 	logCtx := log.WithField("project_id", projectId)
 
 	var seenFailures bool
@@ -306,13 +306,13 @@ func syncAll(projectId uint64, documents []M.SalesforceDocument) int {
 
 		switch documents[i].Type {
 		case M.SalesforceDocumentTypeAccount:
-			errCode = syncAccount(projectId, &documents[i])
+			errCode = enrichAccount(projectId, &documents[i])
 		case M.SalesforceDocumentTypeContact:
-			errCode = syncContact(projectId, &documents[i])
+			errCode = enrichContact(projectId, &documents[i])
 		case M.SalesforceDocumentTypeLead:
-			errCode = syncLeads(projectId, &documents[i])
+			errCode = enrichLeads(projectId, &documents[i])
 		case M.SalesforceDocumentTypeOpportunity:
-			errCode = syncOpportunities(projectId, &documents[i])
+			errCode = enrichOpportunities(projectId, &documents[i])
 		default:
 			log.Errorf("invalid salesforce document type found %d", documents[i].Type)
 			continue
@@ -378,7 +378,7 @@ func SyncEnrichment(projectId uint64) []Status {
 			Type:      M.GetSalesforceAliasByDocType(docType),
 		}
 
-		errCode = syncAll(projectId, documents)
+		errCode = enrichAll(projectId, documents)
 		if errCode == http.StatusOK {
 			status.Status = "success"
 		} else {
