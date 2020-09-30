@@ -1,8 +1,10 @@
 package model
 
 import (
+	"encoding/json"
 	"errors"
 	U "factors/util"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -374,4 +376,31 @@ func UpdateSalesforceDocumentAsSynced(projectId uint64, id string, syncId string
 	}
 
 	return http.StatusAccepted
+}
+
+type SalesforceRecord map[string]interface{}
+
+func BuildAndUpsertDocument(projectId uint64, objectName string, value SalesforceRecord) error {
+	if projectId == 0 {
+		return errors.New("invalid project id")
+	}
+	if objectName == "" || value == nil {
+		return errors.New("invalid oject name or value")
+	}
+
+	var document SalesforceDocument
+	document.ProjectId = projectId
+	document.TypeAlias = objectName
+	enValue, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+
+	document.Value = &postgres.Jsonb{RawMessage: json.RawMessage(enValue)}
+	status := CreateSalesforceDocument(projectId, &document)
+	if status != http.StatusCreated && status != http.StatusConflict {
+		return fmt.Errorf("error while creating document Status %d", status)
+	}
+
+	return nil
 }

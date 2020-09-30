@@ -14,7 +14,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -54,18 +53,16 @@ type Status struct {
 //Salesforce API structs
 type field map[string]interface{}
 
-type record map[string]interface{}
-
 type Describe struct {
 	Custom bool    `json:"custom"`
 	Fields []field `json:"fields"`
 }
 
 type QueryRespone struct {
-	TotalSize      int      `json:"totalSize"`
-	Done           bool     `json:"done"`
-	Records        []record `json:"records"`
-	NextRecordsUrl string   `json:"nextRecordsUrl"`
+	TotalSize      int                  `json:"totalSize"`
+	Done           bool                 `json:"done"`
+	Records        []M.SalesforceRecord `json:"records"`
+	NextRecordsUrl string               `json:"nextRecordsUrl"`
 }
 
 type SalesforceObjectStatus struct {
@@ -644,31 +641,6 @@ func getSalesforceDataByQuery(query, accessToken, instanceURL, dateTime string) 
 	return &jsonRespone, nil
 }
 
-func buildAndUpsertDocument(projectId uint64, objectName string, value record) error {
-	if projectId == 0 {
-		return errors.New("invalid project id")
-	}
-	if objectName == "" || value == nil {
-		return errors.New("invalid oject name or value")
-	}
-
-	var document M.SalesforceDocument
-	document.ProjectId = projectId
-	document.TypeAlias = objectName
-	enValue, err := json.Marshal(value)
-	if err != nil {
-		return err
-	}
-
-	document.Value = &postgres.Jsonb{RawMessage: json.RawMessage(enValue)}
-	status := M.CreateSalesforceDocument(projectId, &document)
-	if status != http.StatusCreated && status != http.StatusConflict {
-		return fmt.Errorf("error while creating document Status %d", status)
-	}
-
-	return nil
-}
-
 func syncByType(ps *M.SalesforceProjectSettings, accessToken, objectName, dateTime string) (SalesforceObjectStatus, error) {
 	var salesforceObjectStatus SalesforceObjectStatus
 	salesforceObjectStatus.ProjetId = ps.ProjectId
@@ -712,9 +684,9 @@ func syncByType(ps *M.SalesforceProjectSettings, accessToken, objectName, dateTi
 
 		var failures []string
 		for i := range records {
-			err = buildAndUpsertDocument(ps.ProjectId, objectName, records[i])
+			err = M.BuildAndUpsertDocument(ps.ProjectId, objectName, records[i])
 			if err != nil {
-				logCtx.WithError(err).Error("Failed to buildAndUpsertDocument.")
+				logCtx.WithError(err).Error("Failed to BuildAndUpsertDocument.")
 				failures = append(failures, err.Error())
 			}
 		}
