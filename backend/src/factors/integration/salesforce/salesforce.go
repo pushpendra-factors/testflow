@@ -690,24 +690,24 @@ func syncByType(ps *M.SalesforceProjectSettings, accessToken, objectName, dateTi
 
 	selectStmnt := strings.Join(fields, ",")
 	queryStmnt := fmt.Sprintf("SELECT+%s+FROM+%s", selectStmnt, objectName)
-	queryRespone, err := getSalesforceDataByQuery(queryStmnt, accessToken, ps.InstanceURL, dateTime)
+	queryResponse, err := getSalesforceDataByQuery(queryStmnt, accessToken, ps.InstanceURL, dateTime)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to getSalesforceDataByQuery.")
 		return salesforceObjectStatus, err
 	}
-	salesforceObjectStatus.TotalRecords = queryRespone.TotalSize
-	records := queryRespone.Records
+	salesforceObjectStatus.TotalRecords = queryResponse.TotalSize
+	records := queryResponse.Records
 
 	hasMore := true
 	nextBatchRoute := ""
 	for hasMore {
 		if nextBatchRoute != "" {
-			queryRespone, err = getSalesforceNextBatch(nextBatchRoute, ps.InstanceURL, accessToken)
+			queryResponse, err = getSalesforceNextBatch(nextBatchRoute, ps.InstanceURL, accessToken)
 			if err != nil {
 				logCtx.WithError(err).Error("Failed to getSalesforceNextBatch.")
 				return salesforceObjectStatus, err
 			}
-			records = queryRespone.Records
+			records = queryResponse.Records
 		}
 
 		var failures []string
@@ -720,8 +720,8 @@ func syncByType(ps *M.SalesforceProjectSettings, accessToken, objectName, dateTi
 		}
 
 		salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, failures...)
-		hasMore = !queryRespone.Done
-		nextBatchRoute = queryRespone.NextRecordsUrl
+		hasMore = !queryResponse.Done
+		nextBatchRoute = queryResponse.NextRecordsUrl
 	}
 
 	return salesforceObjectStatus, nil
