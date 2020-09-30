@@ -99,7 +99,7 @@ func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.Trac
 	var eventID, userID string
 	var err error
 	if document.Action == M.SalesforceDocumentCreated {
-		trackPayload.Name = M.GetSalesforceCreatedEventName(document.Type)
+		trackPayload.Name = M.GetSalesforceEventNameByAction(document, M.SalesforceDocumentCreated)
 		trackPayload.Timestamp, err = M.GetSalesforceDocumentTimestampByAction(document)
 		if err != nil {
 			return "", "", err
@@ -107,7 +107,7 @@ func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.Trac
 
 		status, response := SDK.Track(projectID, trackPayload, true, SDK.SourceSalesforce)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
-			return "", "", fmt.Errorf("created event track failed for doc type %d", document.Type)
+			return "", "", fmt.Errorf("created event track failed for doc type %d, message %s", document.Type, response.Error)
 		}
 
 		eventID = response.EventId
@@ -115,7 +115,8 @@ func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.Trac
 	}
 
 	if document.Action == M.SalesforceDocumentCreated || document.Action == M.SalesforceDocumentUpdated {
-		trackPayload.Name = M.GetSalesforceUpdatedEventName(document.Type)
+		trackPayload.EventId = "" //clear EventId from previous track
+		trackPayload.Name = M.GetSalesforceEventNameByAction(document, M.SalesforceDocumentUpdated)
 		trackPayload.Timestamp, err = M.GetSalesforceDocumentTimestampByAction(document)
 		if err != nil {
 			return "", "", err

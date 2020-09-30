@@ -71,17 +71,17 @@ func GetSalesforceAliasByDocType(typ int) string {
 
 	return ""
 }
-func getSalesforceDocTypeByAlias(alias string) (int, error) {
+func GetSalesforceDocTypeByAlias(alias string) int {
 	if alias == "" {
-		return 0, errors.New("empty document type alias")
+		return 0
 	}
 
 	typ, typExists := SalesforceDocumentTypeAlias[alias]
 	if !typExists {
-		return 0, errors.New("invalid document type alias")
+		return 0
 	}
 
-	return typ, nil
+	return typ
 }
 
 func getSalesforceDocumentTypeAlias(projectID uint64) map[string]int {
@@ -92,31 +92,18 @@ func getSalesforceDocumentTypeAlias(projectID uint64) map[string]int {
 	return docTypes
 }
 
-func GetSalesforceCreatedEventName(docType int) string {
-	switch docType {
-	case SalesforceDocumentTypeAccount:
-		return U.EVENT_NAME_SALESFORCE_ACCOUNT_CREATED
-	case SalesforceDocumentTypeContact:
-		return U.EVENT_NAME_SALESFORCE_CONTACT_CREATED
-	case SalesforceDocumentTypeLead:
-		return U.EVENT_NAME_SALESFORCE_LEAD_CREATED
-	case SalesforceDocumentTypeOpportunity:
-		return U.EVENT_NAME_SALESFORCE_OPPORTUNITY_CREATED
-	}
-	return ""
-}
+func GetSalesforceEventNameByAction(doc *SalesforceDocument, action SalesforceAction) string {
+	typAlias := GetSalesforceAliasByDocType(doc.Type)
 
-func GetSalesforceUpdatedEventName(docType int) string {
-	switch docType {
-	case SalesforceDocumentTypeAccount:
-		return U.EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED
-	case SalesforceDocumentTypeContact:
-		return U.EVENT_NAME_SALESFORCE_CONTACT_UPDATED
-	case SalesforceDocumentTypeLead:
-		return U.EVENT_NAME_SALESFORCE_LEAD_UPDATED
-	case SalesforceDocumentTypeOpportunity:
-		return U.EVENT_NAME_SALESFORCE_OPPORTUNITY_UPDATED
+	if typAlias != "" {
+		if action == SalesforceDocumentCreated {
+			return fmt.Sprintf("$sf_%s_created", typAlias)
+		}
+		if action == SalesforceDocumentUpdated {
+			return fmt.Sprintf("$sf_%s_updated", typAlias)
+		}
 	}
+
 	return ""
 }
 
@@ -240,12 +227,7 @@ func CreateSalesforceDocument(projectID uint64, document *SalesforceDocument) in
 	}
 	document.ProjectID = projectID
 
-	documentType, err := getSalesforceDocTypeByAlias(document.TypeAlias)
-	if err != nil {
-		logCtx.WithError(err).Error("Invalid type on create salesforce document.")
-		return http.StatusBadRequest
-	}
-	document.Type = documentType
+	document.Type = GetSalesforceDocTypeByAlias(document.TypeAlias)
 
 	if U.IsEmptyPostgresJsonb(document.Value) {
 		logCtx.Error("Empty document value on create salesforce document.")
@@ -337,11 +319,7 @@ func GetSalesforceDocumentTimestampByAction(document *SalesforceDocument) (int64
 		return 0, errors.New("failed to get date")
 	}
 
-	timestamp, err := getSalesforceDocumentTimestamp(date)
-	if err != nil {
-		return 0, err
-	}
-	return timestamp, nil
+	return getSalesforceDocumentTimestamp(date)
 }
 
 func getSalesforceDocumentTimestamp(timestamp interface{}) (int64, error) {

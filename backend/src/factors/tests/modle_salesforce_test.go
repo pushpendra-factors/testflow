@@ -78,16 +78,18 @@ func TestCreateSalesforceDocument(t *testing.T) {
 	assert.Equal(t, "success", enrichStatus[1].Status)
 	assert.Equal(t, "success", enrichStatus[2].Status)
 
+	eventName1 := fmt.Sprintf("$sf_%s_created", salesforceDocument.TypeAlias)
+	eventName2 := fmt.Sprintf("$sf_%s_updated", salesforceDocument.TypeAlias)
 	query := M.Query{
 		From: tm.Unix() - 500,
 		To:   tm.Unix() + 500,
 		EventsWithProperties: []M.QueryEventWithProperties{
 			M.QueryEventWithProperties{
-				Name:       U.EVENT_NAME_SALESFORCE_CONTACT_CREATED,
+				Name:       eventName1,
 				Properties: []M.QueryProperty{},
 			},
 			M.QueryEventWithProperties{
-				Name:       U.EVENT_NAME_SALESFORCE_CONTACT_UPDATED,
+				Name:       eventName2,
 				Properties: []M.QueryProperty{},
 			},
 		},
@@ -100,8 +102,8 @@ func TestCreateSalesforceDocument(t *testing.T) {
 	// test using query
 	result, errCode, _ := M.Analyze(project.ID, query)
 	assert.Equal(t, http.StatusOK, errCode)
-	assert.Equal(t, U.EVENT_NAME_SALESFORCE_CONTACT_CREATED, result.Rows[0][0])
+	assert.Equal(t, eventName1, result.Rows[0][0])
 	assert.Equal(t, int64(1), result.Rows[0][1])
-	assert.Equal(t, U.EVENT_NAME_SALESFORCE_CONTACT_UPDATED, result.Rows[1][0])
+	assert.Equal(t, eventName2, result.Rows[1][0])
 	assert.Equal(t, int64(1), result.Rows[1][1])
 }

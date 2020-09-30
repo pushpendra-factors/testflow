@@ -231,7 +231,7 @@ func GetSalesforceAllowedObjects(projectId uint64) []int {
 
 	if objects, exist := SALESFORCE_PROJECT_STORE[projectId]; exist {
 		for name := range objects {
-			docType, _ := getSalesforceDocTypeByAlias(name)
+			docType := GetSalesforceDocTypeByAlias(name)
 			docTypes = append(docTypes, docType)
 		}
 		return docTypes
