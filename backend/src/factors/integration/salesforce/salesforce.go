@@ -793,10 +793,10 @@ func GetAccessToken(ps *M.SalesforceProjectSettings, redirectUrl string) (string
 func SyncDocuments(ps *M.SalesforceProjectSettings, lastSyncInfo map[string]int64, accessToken string) []SalesforceObjectStatus {
 	var allObjectStatus []SalesforceObjectStatus
 
-	for docType, timeStamp := range lastSyncInfo {
+	for docType, timestamp := range lastSyncInfo {
 		var sfFormatedTime string
-		if timeStamp != 0 {
-			t := time.Unix(timeStamp, 0)
+		if timestamp != 0 {
+			t := time.Unix(timestamp, 0)
 			sfFormatedTime = t.UTC().Format(M.SalesforceDocumentTimeLayout)
 		}
 
@@ -816,7 +816,7 @@ func SyncDocuments(ps *M.SalesforceProjectSettings, lastSyncInfo map[string]int6
 			objectStatus.Status = "Success"
 		}
 
-		objectStatus.SyncAll = timeStamp == 0
+		objectStatus.SyncAll = timestamp == 0
 		allObjectStatus = append(allObjectStatus, objectStatus)
 	}
 
