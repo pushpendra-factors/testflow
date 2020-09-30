@@ -81,16 +81,51 @@
     }
 }
 
-
-.fa-popupcard
+.fa-popupcard--wrapper
 {
-    button{
-        text-align: left;
-        width: 100%;
+    .ant-popover-inner
+    {
+
+        width: 320px; 
+        margin-left: 2em;
     }
-    .fa-popupcard-divider{
-        width: 100%;
-        margin: 5px 0;
-        border-bottom: thin solid $fa-color--mono-2;
+    .ant-popover-inner-content
+    { 
+        padding: 1em 1.5em;
+    }
+    .ant-popover-arrow
+    {
+        display: none;
+    }
+
+    .fa-popupcard
+    {
+        button{
+            text-align: left;
+            width: 100%;
+        }
+        .fa-popupcard-divider{
+            width: 100%;
+            margin: 10px 0;
+            border-bottom: thin solid $fa-color--mono-2;
+        }
+        .project-item{
+            border: 2px solid transparent;
+            cursor: pointer;
+            border-radius: 8px;
+            width: 100%;
+            padding: 7px 10px;
+            margin: 2px 0;
+            transition: all 0.3s;
+            &:hover{
+                background-color: $fa-color--mono-1;
+            }
+            &.active
+            {
+                border: 2px solid $fa-color--brand-color;
+                background-color: $fa-color--mono-1;
+            }
+            
+        }
     }
 }

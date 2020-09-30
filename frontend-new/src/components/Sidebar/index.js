@@ -8,7 +8,7 @@ import ModalLib from '../../Views/componentsLib/ModalLib';
 import UserSettings from '../../Views/Settings/UserSettings';
 import { setActiveProject } from '../../reducers/global';
 import { connect } from 'react-redux';
-
+import {PlusOutlined} from '@ant-design/icons';
 function Sidebar(props) {
   const { Sider } = Layout;
 
@@ -21,20 +21,30 @@ function Sidebar(props) {
   const popOvercontent = () => {
     return (
         <div className={'fa-popupcard'}>
-          <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0'}>Projects</Text>
+          <Text type={'title'} level={7} weight={'bold'} extraClass={'m-0'}>Projects</Text>
           <div className={'flex flex-col items-start'}>
             {props.projects.map((project, index) => {
-              return <Button type={props.active_project.id === project.id ? null : 'text'} key={index} onClick={() => {
+              return <div key={index} 
+              className={`flex justify-start items-center project-item ${props.active_project.id === project.id ? 'active' : null}`}
+              onClick={() => {
                 setShowPopOver(false);
                 setchangeProjectModal(true);
                 setselectedProject(project);
-              }}>{project.name}</Button>;
+              }}>
+                <Avatar size={28}/><Text type={'title'} level={7} weight={'bold'} extraClass={'m-0 ml-2'}>{project.name}</Text>
+              </div>;
             })}
           </div>
           <div className={'fa-popupcard-divider'} />
-          <Button type={'text'}>{'Add Projects'}</Button>
+          <Button type={'text'}><span className={`mr-4`}><PlusOutlined /></span> {'Add Projects'}</Button>
           <div className={'fa-popupcard-divider'} />
-          <Button type={'text'} onClick={() => { setShowPopOver(false); showUserSettingsModal(); }}>{'Account Settings'}</Button>
+          <div className={`flex justify-start items-center project-item`}
+              onClick={() => {
+                setShowPopOver(false); 
+                showUserSettingsModal();
+              }}>
+                <Avatar size={28}/><Text type={'title'} level={7}  extraClass={'m-0 ml-2'}>{'Account Settings'}</Text>
+          </div>
         </div>
     );
   };
@@ -95,7 +105,7 @@ function Sidebar(props) {
           </div>
           <div className={'flex flex-col justify-end items-center w-full pb-8 pt-2'}>
             <Row justify="center" align="middle" className=" w-full py-2">
-              <Popover placement="leftTop" title={false} content={popOvercontent} visible={ShowPopOver}  onVisibleChange={(visible)=>setShowPopOver(visible)} onClick={() => setShowPopOver(true)} trigger="click">
+              <Popover placement="top" overlayClassName={`fa-popupcard--wrapper`} title={false} content={popOvercontent} visible={ShowPopOver} onVisibleChange={(visible) => setShowPopOver(visible)} onClick={() => setShowPopOver(true)} trigger="click">
                 {/* <Link to={'#'} onClick={() => showUserSettingsModal()} > */}
                   <Avatar
                     src={'https://zos.alipayobjects.com/rmsportal/ODTLcjxAfvqbxHnVXCYX.png'}
