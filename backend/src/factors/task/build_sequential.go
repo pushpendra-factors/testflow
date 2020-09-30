@@ -2,9 +2,9 @@ package task
 
 import (
 	"factors/filestore"
-	M "factors/model"
 	serviceDisk "factors/services/disk"
 	serviceEtcd "factors/services/etcd"
+	U "factors/util"
 
 	"factors/util"
 	"fmt"
@@ -15,6 +15,7 @@ import (
 )
 
 const taskID = "Task#BuildSequential"
+const oneDayInSecs = 24 * 60 * 60
 
 var bsLog = taskLog.WithField("prefix", taskID)
 
@@ -36,15 +37,32 @@ type BuildSuccess struct {
 func BuildSequential(env string, db *gorm.DB, cloudManager *filestore.FileManager,
 	etcdClient *serviceEtcd.EtcdClient, diskManger *serviceDisk.DiskDriver,
 	bucketName string, noOfPatternWorkers int, projectIdToRun map[uint64]bool,
-	projectIdsToSkip map[uint64]bool, maxModelSize int64, modelType string, lookBackPeriodInDays int64) error {
+	projectIdsToSkip map[uint64]bool, maxModelSize int64, modelType string,
+	lookBackPeriodInDays, noOfDays int64) error {
 
 	defer util.NotifyOnPanic(taskID, env)
 
-	// Todo(Dinesh): Add success and failure notification.
+	if lookBackPeriodInDays == 0 {
+		lookBackPeriodInDays = 30
+	}
+	lookBackPeriodInSecs := lookBackPeriodInDays * oneDayInSecs
+
+	currentTimestamp := U.TimeNowUnix()
+	startTimestamp := currentTimestamp - lookBackPeriodInSecs
+	endTimestamp := startTimestamp + (noOfDays * oneDayInSecs)
+
+	// end_timestamp cannot be same as start_timestamp (when no.of days is 0)
+	// or higher than current_timestamp.
+	if startTimestamp == endTimestamp || endTimestamp > currentTimestamp {
+		endTimestamp = currentTimestamp
+	}
+
 	// Idea: []Builds from this can be queued and workers can process.
-	builds, activeProjects, err := GetNextBuilds(db, cloudManager, etcdClient, modelType, lookBackPeriodInDays)
+	builds, existingModelBuilds, err := GetNextBuilds(db, cloudManager, etcdClient, projectIdToRun,
+		modelType, startTimestamp, endTimestamp)
 	if err != nil {
-		bsLog.WithField("error", err).Error("Failed to get next build info.")
+		bsLog.WithError(err).Error("Failed to get next build info.")
+		return err
 	}
 
 	bsLog.Infof("Queueing %d builds required.", len(builds))
@@ -53,7 +71,6 @@ func BuildSequential(env string, db *gorm.DB, cloudManager *filestore.FileManage
 	failures := make([]BuildFailure, 0, 0)
 
 	for _, build := range builds {
-
 		// Skip builds for projects not in projectToRun.
 		if _, ok := projectIdToRun[build.ProjectId]; !ok {
 			bsLog.WithField("ProjectId", build.ProjectId).Info("Skipping build for the non-given project.")
@@ -72,6 +89,13 @@ func BuildSequential(env string, db *gorm.DB, cloudManager *filestore.FileManage
 			"ReadableStartTime": util.UnixToHumanTime(build.StartTimestamp),
 			"ReadableEndTime":   util.UnixToHumanTime(build.EndTimestamp),
 		})
+
+		buildID := getUniqueModelBuildID(build.ProjectId, build.ModelType, build.StartTimestamp, build.EndTimestamp)
+		if _, exists := existingModelBuilds[buildID]; exists {
+			build.Exists = true
+			success = append(success, BuildSuccess{Build: build})
+			continue
+		}
 
 		// Pull events
 		startAt := time.Now().UnixNano()
@@ -111,19 +135,9 @@ func BuildSequential(env string, db *gorm.DB, cloudManager *filestore.FileManage
 			PatternMineTimeInMS: timeTakenToMinePatterns})
 	}
 
-	newActiveProjects := make([]M.ProjectEventsInfo, 0, 0)
-	for _, pei := range activeProjects {
-		// Adds new projects with first event timestamp within last 24 hours.
-		if pei.FirstEventTimestamp >= util.UnixTimeBeforeDuration(time.Hour*24) {
-			newActiveProjects = append(newActiveProjects, pei)
-		}
-	}
-
 	buildStatus := map[string]interface{}{
-		"success":             success,
-		"failures":            failures,
-		"all_active_projects": activeProjects,
-		"new_active_projects": newActiveProjects,
+		"success":  success,
+		"failures": failures,
 	}
 	if err := util.NotifyThroughSNS(taskID, env, buildStatus); err != nil {
 		log.WithError(err).Error("Failed to notify build status.")

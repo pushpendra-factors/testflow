@@ -345,7 +345,6 @@ func GetValuesByEventPropertyCountCacheKey(projectId uint64, dateKey string) (*c
 //GetPropertyValuesByEventProperty This method iterates for last n days to get all the top 'limit' property values for the given property/event
 // Picks all last 24 hours values and sorts the remaining by occurence and returns top 'limit' values
 func GetPropertyValuesByEventProperty(projectID uint64, eventName string, propertyName string, limit int, lastNDays int) ([]string, error) {
-	currentDate := time.Now().UTC()
 	if projectID == 0 {
 		return []string{}, errors.New("invalid project on GetPropertyValuesByEventProperty")
 	}
@@ -357,6 +356,7 @@ func GetPropertyValuesByEventProperty(projectID uint64, eventName string, proper
 	if propertyName == "" {
 		return []string{}, errors.New("invalid property_name on GetPropertyValuesByEventProperty")
 	}
+	currentDate := OverrideCacheDateRangeForProjects(projectID)
 	values := make([]U.CachePropertyValueWithTimestamp, 0)
 	for i := 0; i < lastNDays; i++ {
 		currentDateOnlyFormat := currentDate.AddDate(0, 0, -i).Format(U.DATETIME_FORMAT_YYYYMMDD)
@@ -384,12 +384,6 @@ func GetPropertyValuesByEventProperty(projectID uint64, eventName string, proper
 }
 
 func getPropertyValuesByEventPropertyFromCache(projectID uint64, eventName string, propertyName string, dateKey string) (U.CachePropertyValueWithTimestamp, error) {
-
-	currentDay := false
-	currentDate := U.GetDateOnlyFromTimestamp(U.TimeNowUnix())
-	if currentDate == dateKey {
-		currentDay = true
-	}
 	logCtx := log.WithFields(log.Fields{
 		"project_id": projectID,
 	})
@@ -405,78 +399,45 @@ func getPropertyValuesByEventPropertyFromCache(projectID uint64, eventName strin
 		return U.CachePropertyValueWithTimestamp{}, errors.New("invalid property_name on GetPropertyValuesByEventPropertyFromCache")
 	}
 
-	if currentDay == false {
-		eventPropertyValuesKey, err := GetValuesByEventPropertyRollUpCacheKey(projectID, eventName, propertyName, dateKey)
+	eventPropertyValuesKey, err := GetValuesByEventPropertyRollUpCacheKey(projectID, eventName, propertyName, dateKey)
+	if err != nil {
+		return U.CachePropertyValueWithTimestamp{}, err
+	}
+	values, _, err := cacheRedis.GetIfExistsPersistent(eventPropertyValuesKey)
+	if values == "" {
+		eventNameWithSlash := fmt.Sprintf("%s/", eventName)
+		eventPropertyValuesKeyWithSlash, err := GetValuesByEventPropertyRollUpCacheKey(projectID, eventNameWithSlash, propertyName, dateKey)
 		if err != nil {
 			return U.CachePropertyValueWithTimestamp{}, err
 		}
-		values, _, err := cacheRedis.GetIfExistsPersistent(eventPropertyValuesKey)
-		if values == "" {
-			eventNameWithSlash := fmt.Sprintf("%s/", eventName)
-			eventPropertyValuesKeyWithSlash, err := GetValuesByEventPropertyRollUpCacheKey(projectID, eventNameWithSlash, propertyName, dateKey)
-			if err != nil {
-				return U.CachePropertyValueWithTimestamp{}, err
-			}
-			valuesWithSlash, _, err := cacheRedis.GetIfExistsPersistent(eventPropertyValuesKeyWithSlash)
-			if valuesWithSlash == "" {
-				log.WithField("project_id", projectID).WithField("date_key", dateKey).Info("MISSING ROLLUP EPV")
-				return U.CachePropertyValueWithTimestamp{}, nil
-			}
-			var cacheValueWithSlash U.CachePropertyValueWithTimestamp
-			err = json.Unmarshal([]byte(valuesWithSlash), &cacheValueWithSlash)
-			if err != nil {
-				return U.CachePropertyValueWithTimestamp{}, err
-			}
-			return cacheValueWithSlash, nil
+		valuesWithSlash, _, err := cacheRedis.GetIfExistsPersistent(eventPropertyValuesKeyWithSlash)
+		if valuesWithSlash == "" {
+			logCtx.WithField("date_key", dateKey).Info("MISSING ROLLUP EPV")
+			return U.CachePropertyValueWithTimestamp{}, nil
 		}
-		var cacheValue U.CachePropertyValueWithTimestamp
-		err = json.Unmarshal([]byte(values), &cacheValue)
+		var cacheValueWithSlash U.CachePropertyValueWithTimestamp
+		err = json.Unmarshal([]byte(valuesWithSlash), &cacheValueWithSlash)
 		if err != nil {
 			return U.CachePropertyValueWithTimestamp{}, err
 		}
-		return cacheValue, nil
+		return cacheValueWithSlash, nil
 	}
-
-	eventPropertyValuesKey, err := GetValuesByEventPropertyCacheKey(projectID, eventName, propertyName, "*", dateKey)
+	var cacheValue U.CachePropertyValueWithTimestamp
+	err = json.Unmarshal([]byte(values), &cacheValue)
 	if err != nil {
 		return U.CachePropertyValueWithTimestamp{}, err
 	}
-
-	eventPropertyValuesKeyString, err := eventPropertyValuesKey.Key()
-	if err != nil {
-		return U.CachePropertyValueWithTimestamp{}, err
-	}
-
-	begin := U.TimeNow()
-	eventPropertyValuesKeys, err := cacheRedis.ScanPersistent(eventPropertyValuesKeyString, 1000, 2500)
-	end := U.TimeNow()
-	logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("EPV:Scan")
-	if err != nil {
-		return U.CachePropertyValueWithTimestamp{}, err
-	}
-	if len(eventPropertyValuesKeys) <= 0 {
-		return U.CachePropertyValueWithTimestamp{}, err
-	}
-	// Check if this needs batching
-	begin = U.TimeNow()
-	values, err := cacheRedis.MGetPersistent(eventPropertyValuesKeys...)
-	end = U.TimeNow()
-	logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("EPV:Mget")
-	if err != nil {
-		return U.CachePropertyValueWithTimestamp{}, err
-	}
-	return GetCachePropertyValueObject(eventPropertyValuesKeys, values), nil
+	return cacheValue, nil
 }
 
 //GetPropertiesByEvent This method iterates for last n days to get all the top 'limit' properties for the given event
 // Picks all last 24 hours properties and sorts the remaining by occurence and returns top 'limit' properties
 func GetPropertiesByEvent(projectID uint64, eventName string, limit int, lastNDays int) (map[string][]string, error) {
-	currentDate := time.Now().UTC()
 	properties := make(map[string][]string)
 	if projectID == 0 {
 		return properties, errors.New("invalid project on GetPropertiesByEvent")
 	}
-
+	currentDate := OverrideCacheDateRangeForProjects(projectID)
 	if eventName == "" {
 		return properties, errors.New("invalid event_name on GetPropertiesByEvent")
 	}
@@ -511,12 +472,6 @@ func GetPropertiesByEvent(projectID uint64, eventName string, limit int, lastNDa
 }
 
 func getPropertiesByEventFromCache(projectID uint64, eventName string, dateKey string) (U.CachePropertyWithTimestamp, error) {
-
-	currentDay := false
-	currentDate := U.GetDateOnlyFromTimestamp(U.TimeNowUnix())
-	if currentDate == dateKey {
-		currentDay = true
-	}
 	logCtx := log.WithFields(log.Fields{
 		"project_id": projectID,
 	})
@@ -528,66 +483,35 @@ func getPropertiesByEventFromCache(projectID uint64, eventName string, dateKey s
 		return U.CachePropertyWithTimestamp{}, errors.New("invalid event_name on GetPropertiesByEventFromCache")
 	}
 
-	if currentDay == false {
-		eventPropertiesKey, err := GetPropertiesByEventCategoryRollUpCacheKey(projectID, eventName, dateKey)
+	eventPropertiesKey, err := GetPropertiesByEventCategoryRollUpCacheKey(projectID, eventName, dateKey)
+	if err != nil {
+		return U.CachePropertyWithTimestamp{}, err
+	}
+	eventProperties, _, err := cacheRedis.GetIfExistsPersistent(eventPropertiesKey)
+	if eventProperties == "" {
+		eventNameWithSlash := fmt.Sprintf("%s/", eventName)
+		eventPropertiesKeyWithSlash, err := GetPropertiesByEventCategoryRollUpCacheKey(projectID, eventNameWithSlash, dateKey)
 		if err != nil {
 			return U.CachePropertyWithTimestamp{}, err
 		}
-		eventProperties, _, err := cacheRedis.GetIfExistsPersistent(eventPropertiesKey)
-		if eventProperties == "" {
-			eventNameWithSlash := fmt.Sprintf("%s/", eventName)
-			eventPropertiesKeyWithSlash, err := GetPropertiesByEventCategoryRollUpCacheKey(projectID, eventNameWithSlash, dateKey)
-			if err != nil {
-				return U.CachePropertyWithTimestamp{}, err
-			}
-			eventPropertiesWithSlash, _, err := cacheRedis.GetIfExistsPersistent(eventPropertiesKeyWithSlash)
-			if eventPropertiesWithSlash == "" {
-				log.WithField("project_id", projectID).WithField("date_key", dateKey).Info("MISSING ROLLUP EP")
-				return U.CachePropertyWithTimestamp{}, nil
-			}
-			var cacheValueWithSlash U.CachePropertyWithTimestamp
-			err = json.Unmarshal([]byte(eventPropertiesWithSlash), &cacheValueWithSlash)
-			if err != nil {
-				return U.CachePropertyWithTimestamp{}, err
-			}
-			return cacheValueWithSlash, nil
+		eventPropertiesWithSlash, _, err := cacheRedis.GetIfExistsPersistent(eventPropertiesKeyWithSlash)
+		if eventPropertiesWithSlash == "" {
+			logCtx.WithField("date_key", dateKey).Info("MISSING ROLLUP EP")
+			return U.CachePropertyWithTimestamp{}, nil
 		}
-		var cacheValue U.CachePropertyWithTimestamp
-		err = json.Unmarshal([]byte(eventProperties), &cacheValue)
+		var cacheValueWithSlash U.CachePropertyWithTimestamp
+		err = json.Unmarshal([]byte(eventPropertiesWithSlash), &cacheValueWithSlash)
 		if err != nil {
 			return U.CachePropertyWithTimestamp{}, err
 		}
-		return cacheValue, nil
+		return cacheValueWithSlash, nil
 	}
-
-	eventPropertiesKey, err := GetPropertiesByEventCategoryCacheKey(projectID, eventName, "*", "*", dateKey)
+	var cacheValue U.CachePropertyWithTimestamp
+	err = json.Unmarshal([]byte(eventProperties), &cacheValue)
 	if err != nil {
 		return U.CachePropertyWithTimestamp{}, err
 	}
-
-	eventPropertiesKeyString, err := eventPropertiesKey.Key()
-	if err != nil {
-		return U.CachePropertyWithTimestamp{}, err
-	}
-	begin := U.TimeNow()
-	eventPropertyKeys, err := cacheRedis.ScanPersistent(eventPropertiesKeyString, 1000, 2500)
-	end := U.TimeNow()
-	logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("EP:Scan")
-	if err != nil {
-		return U.CachePropertyWithTimestamp{}, err
-	}
-	if len(eventPropertyKeys) <= 0 {
-		return U.CachePropertyWithTimestamp{}, err
-	}
-	// Check if this needs batching
-	begin = U.TimeNow()
-	properties, err := cacheRedis.MGetPersistent(eventPropertyKeys...)
-	end = U.TimeNow()
-	logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("EP:Mget")
-	if err != nil {
-		return U.CachePropertyWithTimestamp{}, err
-	}
-	return GetCachePropertyObject(eventPropertyKeys, properties), nil
+	return cacheValue, nil
 }
 
 func extractCategoryProperty(categoryProperty string) (string, string, string) {
@@ -619,15 +543,15 @@ func aggregateEventsAcrossDate(events []CacheEventNamesWithTimestamp) []U.NameCo
 
 //GetEventNamesOrderedByOccurenceAndRecency This method iterates for last n days to get all the top 'limit' events for the given project
 // Picks all last 24 hours events and sorts the remaining by occurence and returns top 'limit' events
-func GetEventNamesOrderedByOccurenceAndRecency(projectID uint64, limit int, lastNDays int, requestType string) ([]string, error) {
-	currentDate := time.Now().UTC()
+func GetEventNamesOrderedByOccurenceAndRecency(projectID uint64, limit int, lastNDays int) ([]string, error) {
 	if projectID == 0 {
 		return []string{}, errors.New("invalid project on get event names ordered by occurence and recency")
 	}
+	currentDate := OverrideCacheDateRangeForProjects(projectID)
 	events := make([]CacheEventNamesWithTimestamp, 0)
 	for i := 0; i < lastNDays; i++ {
 		currentDateOnlyFormat := currentDate.AddDate(0, 0, -i).Format(U.DATETIME_FORMAT_YYYYMMDD)
-		event, err := getEventNamesOrderedByOccurenceAndRecencyFromCache(projectID, currentDateOnlyFormat, requestType)
+		event, err := getEventNamesOrderedByOccurenceAndRecencyFromCache(projectID, currentDateOnlyFormat)
 		if err != nil {
 			return []string{}, err
 		}
@@ -651,12 +575,7 @@ func GetEventNamesOrderedByOccurenceAndRecency(projectID uint64, limit int, last
 	return eventStrings, nil
 }
 
-func getEventNamesOrderedByOccurenceAndRecencyFromCache(projectID uint64, dateKey string, requestType string) (CacheEventNamesWithTimestamp, error) {
-	currentDay := false
-	currentDate := U.GetDateOnlyFromTimestamp(U.TimeNowUnix())
-	if currentDate == dateKey {
-		currentDay = true
-	}
+func getEventNamesOrderedByOccurenceAndRecencyFromCache(projectID uint64, dateKey string) (CacheEventNamesWithTimestamp, error) {
 	logCtx := log.WithFields(log.Fields{
 		"project_id": projectID,
 	})
@@ -664,55 +583,21 @@ func getEventNamesOrderedByOccurenceAndRecencyFromCache(projectID uint64, dateKe
 		return CacheEventNamesWithTimestamp{}, errors.New("invalid project on get event names ordered by occurence and recency from cache")
 	}
 
-	if currentDay == false {
-		eventNamesKey, err := GetEventNamesOrderByOccurrenceAndRecencyRollUpCacheKey(projectID, dateKey)
-		if err != nil {
-			return CacheEventNamesWithTimestamp{}, err
-		}
-		eventNames, _, err := cacheRedis.GetIfExistsPersistent(eventNamesKey)
-		if eventNames == "" {
-			log.WithField("project_id", projectID).WithField("date_key", dateKey).Info("MISSING ROLLUP EN")
-			return CacheEventNamesWithTimestamp{}, nil
-		}
-		var cacheEventNames CacheEventNamesWithTimestamp
-		err = json.Unmarshal([]byte(eventNames), &cacheEventNames)
-		if err != nil {
-			return CacheEventNamesWithTimestamp{}, err
-		}
-		return cacheEventNames, nil
+	eventNamesKey, err := GetEventNamesOrderByOccurrenceAndRecencyRollUpCacheKey(projectID, dateKey)
+	if err != nil {
+		return CacheEventNamesWithTimestamp{}, err
 	}
-
-	if requestType == EVENT_NAME_REQUEST_TYPE_EXACT {
-		eventNamesKey, err := GetEventNamesOrderByOccurrenceAndRecencyCacheKey(projectID, "*", dateKey)
-
-		if err != nil {
-			return CacheEventNamesWithTimestamp{}, err
-		}
-		eventNamesKeyString, err := eventNamesKey.Key()
-		if err != nil {
-			return CacheEventNamesWithTimestamp{}, err
-		}
-		begin := U.TimeNow()
-		eventNameKeys, err := cacheRedis.ScanPersistent(eventNamesKeyString, 1000, 2500)
-		end := U.TimeNow()
-		logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("E:Scan")
-		if err != nil {
-			return CacheEventNamesWithTimestamp{}, err
-		}
-
-		if len(eventNameKeys) <= 0 {
-			return CacheEventNamesWithTimestamp{}, err
-		}
-		begin = U.TimeNow()
-		events, err := cacheRedis.MGetPersistent(eventNameKeys...)
-		end = U.TimeNow()
-		logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("E:Mget")
-		if err != nil {
-			return CacheEventNamesWithTimestamp{}, err
-		}
-		return GetCacheEventObject(eventNameKeys, events), nil
+	eventNames, _, err := cacheRedis.GetIfExistsPersistent(eventNamesKey)
+	if eventNames == "" {
+		logCtx.WithField("date_key", dateKey).Info("MISSING ROLLUP EN")
+		return CacheEventNamesWithTimestamp{}, nil
 	}
-	return CacheEventNamesWithTimestamp{}, nil
+	var cacheEventNames CacheEventNamesWithTimestamp
+	err = json.Unmarshal([]byte(eventNames), &cacheEventNames)
+	if err != nil {
+		return CacheEventNamesWithTimestamp{}, err
+	}
+	return cacheEventNames, nil
 }
 
 func GetCacheEventObject(events []*cacheRedis.Key, eventCounts []string) CacheEventNamesWithTimestamp {

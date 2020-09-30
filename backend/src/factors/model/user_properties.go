@@ -117,12 +117,17 @@ func createUserPropertiesIfChanged(projectId uint64, userId string,
 		postgres.Jsonb{RawMessage: json.RawMessage(updatedPropertiesBytes)}, timestamp, false)
 }
 
-func BackFillUserDataInCacheFromDb(projectid uint64, currentDate time.Time, usersProcessedLimit int, propertiesLimit int, valuesLimit int) {
+func BackFillUserDataInCacheFromDb(projectid uint64, currentDate time.Time, usersProcessedLimit int, propertiesLimit int, valuesLimit int, skipExpiryForCache bool) {
 
 	logCtx := log.WithFields(log.Fields{
 		"project_id": projectid,
 	})
 	logCtx.Info("Refresh User Properties Cache started")
+	expiry := float64(U.EVENT_USER_CACHE_EXPIRY_SECS)
+	if skipExpiryForCache {
+		logCtx.Info("Setting Cache keys of this run to no-expiry")
+		expiry = 0
+	}
 	currentDateFormat := currentDate.AddDate(0, 0, -1).Format(U.DATETIME_FORMAT_YYYYMMDD)
 	var userPropertiesTillDate U.CachePropertyWithTimestamp
 	userPropertiesTillDate.Property = make(map[string]U.PropertyWithTimestamp)
@@ -132,7 +137,7 @@ func BackFillUserDataInCacheFromDb(projectid uint64, currentDate time.Time, user
 	}
 	logCtx.WithField("dateFormat", currentDateFormat).Info("Begin: User Properties - DB query")
 	begin := U.TimeNow()
-	properties, err := GetRecentUserPropertyKeysWithLimits(projectid, usersProcessedLimit, propertiesLimit)
+	properties, err := GetRecentUserPropertyKeysWithLimits(projectid, usersProcessedLimit, propertiesLimit, currentDate)
 	end := U.TimeNow()
 	logCtx.WithFields(log.Fields{"dateFormat": currentDateFormat, "timeTaken": end.Sub(begin).Milliseconds()}).Info("End: User Properties - DB query")
 	if err != nil {
@@ -141,7 +146,7 @@ func BackFillUserDataInCacheFromDb(projectid uint64, currentDate time.Time, user
 	for _, propertyValue := range properties {
 		logCtx.WithFields(log.Fields{"dateFormat": currentDateFormat, "property": propertyValue.Key}).Info("Begin: Get user Property values DB call")
 		begin := U.TimeNow()
-		values, category, err := GetRecentUserPropertyValuesWithLimits(projectid, propertyValue.Key, usersProcessedLimit, valuesLimit)
+		values, category, err := GetRecentUserPropertyValuesWithLimits(projectid, propertyValue.Key, usersProcessedLimit, valuesLimit, currentDate)
 		end := U.TimeNow()
 		logCtx.WithFields(log.Fields{"dateFormat": currentDateFormat, "property": propertyValue.Key, "timeTaken": end.Sub(begin).Milliseconds()}).Info("End: Get user Property values DB call")
 		if err != nil {
@@ -174,7 +179,7 @@ func BackFillUserDataInCacheFromDb(projectid uint64, currentDate time.Time, user
 				logCtx.WithError(err).Error("Failed to marshal property value - getvaluesbyuserproperty")
 			}
 			begin := U.TimeNow()
-			err = cacheRedis.SetPersistent(PropertyValuesKey, string(enPropertyValuesCache), U.EVENT_USER_CACHE_EXPIRY_SECS)
+			err = cacheRedis.SetPersistent(PropertyValuesKey, string(enPropertyValuesCache), expiry)
 			end := U.TimeNow()
 			logCtx.WithFields(log.Fields{"timeTaken": end.Sub(begin).Milliseconds()}).Info("End:UP:BS")
 			if err != nil {
@@ -188,7 +193,7 @@ func BackFillUserDataInCacheFromDb(projectid uint64, currentDate time.Time, user
 	}
 	logCtx.Info("Begin:UP:BS")
 	begin = U.TimeNow()
-	err = cacheRedis.SetPersistent(propertyCacheKey, string(enPropertiesCache), U.EVENT_USER_CACHE_EXPIRY_SECS)
+	err = cacheRedis.SetPersistent(propertyCacheKey, string(enPropertiesCache), expiry)
 	end = U.TimeNow()
 	logCtx.WithFields(log.Fields{"timeTaken": end.Sub(begin).Milliseconds()}).Info("End:UP:BS")
 	if err != nil {
@@ -895,61 +900,6 @@ func OverwriteUserProperties(projectId uint64, userId string,
 	return http.StatusAccepted
 }
 
-// Updates given property with value on all user properties for the given user
-// adds property if not exist.
-func UpdatePropertyOnAllUserPropertyRecords(projectId uint64, userId string,
-	property string, value interface{}) int {
-
-	userPropertyRecords, errCode := GetUserPropertyRecordsByUserId(projectId, userId)
-	if errCode == http.StatusInternalServerError {
-		return errCode
-	} else if errCode == http.StatusNotFound {
-		return http.StatusBadRequest
-	}
-
-	logCtx := log.WithFields(log.Fields{"project_id": projectId, "user_id": userId})
-
-	for _, userProperties := range userPropertyRecords {
-		var propertiesMap map[string]interface{}
-
-		if !U.IsEmptyPostgresJsonb(&userProperties.Properties) {
-			err := json.Unmarshal(userProperties.Properties.RawMessage, &propertiesMap)
-			if err != nil {
-				logCtx.Error("Failed to update user property record. JSON unmarshal failed.")
-				continue
-			}
-		} else {
-			propertiesMap = make(map[string]interface{}, 0)
-		}
-
-		// update not required. Not using AddToPostgresJsonb
-		// for this check.
-		if pValue, _ := propertiesMap[property]; pValue == value {
-			continue
-		}
-
-		logCtx = logCtx.WithFields(log.Fields{"properties_id": userProperties.ID, "property": property, "value": value})
-
-		propertiesMap[property] = value
-		properitesBytes, err := json.Marshal(propertiesMap)
-		if err != nil {
-			// log and continue update next user property.
-			logCtx.Error("Failed to update user property record. JSON marshal failed.")
-			continue
-		}
-		updatedProperties := postgres.Jsonb{RawMessage: json.RawMessage(properitesBytes)}
-
-		// Triggers multiple updates.
-		errCode := OverwriteUserProperties(projectId, userId, userProperties.ID, &updatedProperties)
-		if errCode == http.StatusInternalServerError {
-			logCtx.WithError(err).Error("Failed to update user property record. DB query failed.")
-			continue
-		}
-	}
-
-	return http.StatusAccepted
-}
-
 func GetUserPropertiesRecordsByProperty(projectId uint64,
 	key string, value interface{}) ([]UserProperties, int) {
 
@@ -973,10 +923,21 @@ func GetUserPropertiesRecordsByProperty(projectId uint64,
 	return userProperties, http.StatusFound
 }
 
+type LatestUserPropertiesFromSession struct {
+	PageCount      float64
+	TotalSpentTime float64
+	SessionCount   uint64
+	Timestamp      int64
+}
+
 func UpdateUserPropertiesForSession(projectID uint64,
 	sessionUserPropertiesRecordMap *map[string]SessionUserProperties) int {
 
 	logCtx := log.WithField("project_id", projectID)
+
+	latestSessionUserPropertiesByUserID := make(map[string]LatestUserPropertiesFromSession, 0)
+	updatedUserPropertiesRecord := make(map[string]bool, 0)
+	updatedUsersByUserID := make(map[string]*User, 0)
 
 	hasFailure := false
 	for userPropertiesID, sessionUserProperties := range *sessionUserPropertiesRecordMap {
@@ -1016,9 +977,13 @@ func UpdateUserPropertiesForSession(projectID uint64,
 			}
 		}
 
-		(*userPropertiesMap)[U.UP_PAGE_COUNT] = existingPageCount + sessionUserProperties.SessionPageCount
-		(*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME] = existingTotalSpentTime + sessionUserProperties.SessionPageSpentTime
-		(*userPropertiesMap)[U.UP_SESSION_COUNT] = sessionUserProperties.SessionCount
+		newPageCount := existingPageCount + sessionUserProperties.SessionPageCount
+		newTotalSpentTime := existingTotalSpentTime + sessionUserProperties.SessionPageSpentTime
+		newSessionCount := sessionUserProperties.SessionCount
+
+		(*userPropertiesMap)[U.UP_PAGE_COUNT] = newPageCount
+		(*userPropertiesMap)[U.UP_TOTAL_SPENT_TIME] = newTotalSpentTime
+		(*userPropertiesMap)[U.UP_SESSION_COUNT] = newSessionCount
 
 		userPropertiesJsonb, err := U.EncodeToPostgresJsonb(userPropertiesMap)
 		if err != nil {
@@ -1030,6 +995,92 @@ func UpdateUserPropertiesForSession(projectID uint64,
 
 		errCode = OverwriteUserProperties(projectID, sessionUserProperties.UserID,
 			userPropertiesID, userPropertiesJsonb)
+		if errCode != http.StatusAccepted {
+			logCtx.WithField("err_code", errCode).
+				Error("Failed to overwrite user properties record.")
+			hasFailure = true
+			continue
+		}
+
+		updatedUserPropertiesRecord[userPropertiesID] = true
+
+		// Latest session based user properties state to be overwritten on
+		// latest user_properties_record of the user, if not added already
+		latestUserProperties := LatestUserPropertiesFromSession{
+			PageCount:      newPageCount,
+			TotalSpentTime: newTotalSpentTime,
+			SessionCount:   newSessionCount,
+			Timestamp:      sessionUserProperties.SessionEventTimestamp,
+		}
+		if _, exists := latestSessionUserPropertiesByUserID[sessionUserProperties.UserID]; !exists {
+			latestSessionUserPropertiesByUserID[sessionUserProperties.UserID] = latestUserProperties
+		} else {
+			if sessionUserProperties.SessionEventTimestamp >
+				latestSessionUserPropertiesByUserID[sessionUserProperties.UserID].Timestamp {
+				latestSessionUserPropertiesByUserID[sessionUserProperties.UserID] = latestUserProperties
+			}
+		}
+
+		if _, exists := updatedUsersByUserID[sessionUserProperties.UserID]; !exists {
+			user, errCode := GetUser(projectID, sessionUserProperties.UserID)
+			if errCode != http.StatusFound {
+				logCtx.WithField("user_id", sessionUserProperties.UserID).
+					WithField("err_code", errCode).Error("Failed to get user.")
+				continue
+			}
+
+			updatedUsersByUserID[sessionUserProperties.UserID] = user
+		}
+	}
+
+	errCode := updateLatestUserPropertiesForSessionIfNotUpdated(projectID,
+		&updatedUserPropertiesRecord, updatedUsersByUserID,
+		&latestSessionUserPropertiesByUserID)
+	hasFailure = errCode != http.StatusAccepted
+
+	if hasFailure {
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusAccepted
+}
+
+func updateLatestUserPropertiesForSessionIfNotUpdated(projectID uint64,
+	updatedUserPropertiesIDMap *map[string]bool, sessionUsersByUserID map[string]*User,
+	latestSessionUserPropertiesByUserID *map[string]LatestUserPropertiesFromSession) int {
+	logCtx := log.WithField("project_id", projectID)
+
+	var hasFailure bool
+	for _, user := range sessionUsersByUserID {
+		// skip update, as users latest user_properties_id is updated already.
+		if _, exists := (*updatedUserPropertiesIDMap)[user.PropertiesId]; exists {
+			continue
+		}
+
+		logCtx = logCtx.WithField("user_id", user.ID).
+			WithField("user_properties_id", user.PropertiesId)
+
+		sessionUserProperties, exists := (*latestSessionUserPropertiesByUserID)[user.ID]
+		if !exists {
+			logCtx.Error("Latest session user properties not found for user.")
+			hasFailure = true
+			continue
+		}
+
+		newUserProperties := map[string]interface{}{
+			U.UP_TOTAL_SPENT_TIME: sessionUserProperties.TotalSpentTime,
+			U.UP_PAGE_COUNT:       sessionUserProperties.PageCount,
+			U.UP_SESSION_COUNT:    sessionUserProperties.SessionCount,
+		}
+		userPropertiesJsonb, err := U.AddToPostgresJsonb(&user.Properties, newUserProperties, true)
+		if err != nil {
+			logCtx.WithError(err).
+				Error("Failed to add new user properites to existing user properites.")
+			hasFailure = true
+			continue
+		}
+
+		errCode := OverwriteUserProperties(projectID, user.ID, user.PropertiesId, userPropertiesJsonb)
 		if errCode != http.StatusAccepted {
 			logCtx.WithField("err_code", errCode).
 				Error("Failed to overwrite user properties record.")

@@ -400,6 +400,7 @@ func TestSDKTrackHandler(t *testing.T) {
 		assert.NotNil(t, userProperties["$os"])
 		assert.NotNil(t, userProperties[U.UP_JOIN_TIME])
 		// initial user properties.
+		assert.Equal(t, responseMap["event_id"].(string), userProperties[U.UP_INITIAL_PAGE_EVENT_ID])
 		assert.NotNil(t, userProperties[U.UP_INITIAL_PAGE_URL])
 		assert.NotNil(t, userProperties[U.UP_INITIAL_PAGE_RAW_URL])
 		assert.NotNil(t, userProperties[U.UP_INITIAL_PAGE_DOMAIN])
@@ -562,6 +563,8 @@ func TestSDKTrackHandler(t *testing.T) {
 		assert.NotNil(t, userProperties[U.UP_INITIAL_PAGE_RAW_URL])
 		assert.Equal(t, "https://example.com/xyz", userProperties[U.UP_INITIAL_PAGE_URL])
 		assert.Equal(t, "https://example.com/xyz?utm_campaign=google", userProperties[U.UP_INITIAL_PAGE_RAW_URL])
+		assert.Equal(t, responseMap["event_id"].(string), userProperties[U.UP_INITIAL_PAGE_EVENT_ID])
+		initialEventID := responseMap["event_id"].(string)
 
 		// initial properties should not be overwritten
 		// on consecutive track calls.
@@ -589,6 +592,7 @@ func TestSDKTrackHandler(t *testing.T) {
 		// values should not be updated with current event properties.
 		assert.Equal(t, "https://example.com/xyz", userProperties2[U.UP_INITIAL_PAGE_URL])
 		assert.Equal(t, "https://example.com/xyz?utm_campaign=google", userProperties2[U.UP_INITIAL_PAGE_RAW_URL])
+		assert.Equal(t, initialEventID, userProperties2[U.UP_INITIAL_PAGE_EVENT_ID])
 	})
 }
 
@@ -1063,7 +1067,7 @@ func TestOldUserSessionProperties(t *testing.T) {
 	eventOldUser, errCode := M.GetEventById(project.ID, responseMap["event_id"].(string))
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotEmpty(t, eventOldUser.SessionId)
-	oldUserPropertiesMap, errCode := M.GetUserPropertiesAsMap(project.ID, user.ID)
+	oldUserPropertiesMap, errCode := M.GetLatestUserPropertiesOfUserAsMap(project.ID, user.ID)
 	assert.Equal(t, errCode, http.StatusFound)
 	assert.Nil(t, (*oldUserPropertiesMap)[U.UP_PAGE_COUNT])
 	assert.Nil(t, (*oldUserPropertiesMap)[U.UP_TOTAL_SPENT_TIME])
@@ -1557,10 +1561,65 @@ func TestSDKUpdateEventPropertiesHandler(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 	assert.NotNil(t, responseMap["error"])
 
+	// Test update event properties and initial user properites added
+	// from update event properties.
 	eventId, _ = getAutoTrackedEventIdWithPageRawURL(t, project.Token, rawPageUrl)
-	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"event_id": "%s", "properties": {"$page_spent_time": "%d"}}`,
-		eventId, 1)), map[string]string{"Authorization": project.Token})
+	event, errCode := M.GetEventById(project.ID, eventId)
+	assert.NotNil(t, event)
+	user, errCode := M.GetUser(project.ID, event.UserId)
+	assert.NotNil(t, user)
+	latestUserProperitesIDBeforeUpdateEvent := user.PropertiesId
+	// Trigger update event properties
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"event_id": "%s", "properties": {"$page_spent_time": %d}}`,
+		eventId, 100)), map[string]string{"Authorization": project.Token})
 	assert.Equal(t, http.StatusAccepted, w.Code)
+	event, _ = M.GetEventById(project.ID, eventId)
+	assert.NotNil(t, event)
+	user, _ = M.GetUser(project.ID, event.UserId)
+	assert.NotNil(t, user)
+	latestUserProperitesIDAfterUpdateEvent := user.PropertiesId
+	// Latest user_properties_id of user, before and after
+	// update_event_properties should be same.
+	assert.Equal(t, latestUserProperitesIDBeforeUpdateEvent,
+		latestUserProperitesIDAfterUpdateEvent)
+	// Event user_properties_id should be the latest
+	// user_properties_id of user
+	assert.Equal(t, latestUserProperitesIDAfterUpdateEvent,
+		event.UserPropertiesId)
+	// initial_user_properites should be added.
+	userPropertiesRecord, _ := M.GetUserPropertiesRecord(project.ID,
+		event.UserId, event.UserPropertiesId)
+	assert.NotNil(t, userPropertiesRecord)
+	userProperties, _ := U.DecodePostgresJsonb(&userPropertiesRecord.Properties)
+	assert.NotNil(t, userProperties)
+	assert.Equal(t, float64(100), (*userProperties)[U.UP_INITIAL_PAGE_SPENT_TIME])
+	assert.Equal(t, event.ID, (*userProperties)[U.UP_INITIAL_PAGE_EVENT_ID])
+	// Creating new user_properties state for the event user.
+	newUserPropertiesJson := postgres.Jsonb{json.RawMessage(`{"plan": "enterprise"}`)}
+	newUserPropertiesID, _ := M.UpdateUserProperties(project.ID, event.UserId, &newUserPropertiesJson, U.TimeNowUnix())
+	// Trigger update event properties again after user properties update.
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"event_id": "%s", "properties": {"$page_spent_time": %d}}`,
+		eventId, 200)), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusAccepted, w.Code)
+	user, _ = M.GetUser(project.ID, event.UserId)
+	assert.NotNil(t, user)
+	latestUserProperitesIDAfterUpdateEvent2 := user.PropertiesId
+	// Latest user_properties of user should be new.
+	assert.Equal(t, newUserPropertiesID, latestUserProperitesIDAfterUpdateEvent2)
+	// Event user_properties should be updated.
+	userPropertiesRecord, _ = M.GetUserPropertiesRecord(project.ID,
+		event.UserId, event.UserPropertiesId)
+	assert.NotNil(t, userPropertiesRecord)
+	userProperties, _ = U.DecodePostgresJsonb(&userPropertiesRecord.Properties)
+	assert.NotNil(t, userProperties)
+	assert.Equal(t, float64(200), (*userProperties)[U.UP_INITIAL_PAGE_SPENT_TIME])
+	// Latest user_properites should also be updated.
+	userPropertiesRecord, _ = M.GetUserPropertiesRecord(project.ID,
+		event.UserId, latestUserProperitesIDAfterUpdateEvent2)
+	assert.NotNil(t, userPropertiesRecord)
+	userProperties, _ = U.DecodePostgresJsonb(&userPropertiesRecord.Properties)
+	assert.NotNil(t, userProperties)
+	assert.Equal(t, float64(200), (*userProperties)[U.UP_INITIAL_PAGE_SPENT_TIME])
 
 	eventId, _ = getAutoTrackedEventIdWithPageRawURL(t, project.Token, rawPageUrl)
 	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"event_id": "%s", "properties": {"$page_spent_time": %d, "$page_scroll_percent": %d}}`,

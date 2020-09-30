@@ -29,3 +29,29 @@
 
     }
 }
+
+.fa-table--basic
+{
+    // table head
+    .ant-table-thead
+    { 
+        .ant-table-cell
+        { 
+            font-weight: $font-weight--bold;
+            font-size: 12px;
+            padding: 10px 12px; 
+        } 
+    }
+    // table body
+    .ant-table-tbody
+    {
+        .ant-table-cell
+        { 
+            border-bottom: thin solid $fa-color--mono-2;
+            font-weight: $font-weight--regular;
+            font-size: 14px;
+            padding: 4px 12px;
+        }
+
+    }
+}

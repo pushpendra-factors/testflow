@@ -177,29 +177,32 @@ func GetScheduledTaskLastRunTimestamp(projectID uint64, taskType ScheduledTaskTy
 }
 
 // GetArchivalFileNamesForProject Get archived fileNames for a time range.
-func GetArchivalFileNamesForProject(projectID uint64, startTime, endTime time.Time) ([]string, int) {
+func GetArchivalFileNamesForProject(projectID uint64, startTime, endTime time.Time) ([]string, []string, int) {
 	db := C.GetServices().Db
 
 	fileNames := make([]string, 0, 0)
+	userFileNames := make([]string, 0, 0)
 	rows, err := db.Model(&ScheduledTask{}).
 		Where("project_id = ? AND task_type = ? AND (task_details->>'file_created')::bool=true"+
 			" AND (task_details->>'from_timestamp')::bigint between ? AND ?", projectID, TASK_TYPE_EVENTS_ARCHIVAL, startTime.Unix(), endTime.Unix()).
-		Select("task_details->>'filepath'").Rows()
+		Select("task_details->>'filepath', task_details->>'users_filepath'").Rows()
 	if err != nil {
 		log.WithError(err).Error("Failed to get archived file paths")
-		return fileNames, http.StatusInternalServerError
+		return fileNames, userFileNames, http.StatusInternalServerError
 	}
 
 	for rows.Next() {
 		var fileName string
-		err = rows.Scan(&fileName)
+		var userFileName sql.NullString
+		err = rows.Scan(&fileName, &userFileName)
 		if err != nil {
 			log.WithError(err).Error("Error while scanning row")
-			return fileNames, http.StatusInternalServerError
+			return fileNames, userFileNames, http.StatusInternalServerError
 		}
 		fileNames = append(fileNames, fileName)
+		userFileNames = append(userFileNames, userFileName.String)
 	}
-	return fileNames, http.StatusFound
+	return fileNames, userFileNames, http.StatusFound
 }
 
 // GetNewArchivalFileNamesAndEndTimeForProject Lists names of files created during archival process.

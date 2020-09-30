@@ -2,6 +2,7 @@ package histogram
 
 import (
 	"fmt"
+	"math"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -202,4 +203,123 @@ func TestNumericTrimByBinSize(t *testing.T) {
 	assert.Equal(t, uint64(numDataSamples), hist.Count(),
 		"Mismatch in number of samples.")
 	assert.Equal(t, hist.numBins(), 12, "Mismatch in number of bins.")
+}
+
+func sum(array []int) int {
+	result := 0
+	for _, v := range array {
+		result += v
+	}
+	return result
+}
+
+type testData struct {
+	table []TestTable
+	data  [][]float64
+}
+
+func TestNumericalCuts(t *testing.T) {
+	//sample usuage : go test -run ^TestNumericalCuts$
+	// need to add outlier data
+
+	// can add more testcases here
+	testCases := []testData{
+		testData{dataMM6TestTable, dataMM6}, //uniform
+		testData{dataMM5TestTable, dataMM5}, //multivariate multimodal
+		testData{dataMM4TestTable, dataMM4}, //multivariate with mean 0,0,0 and cov diag(10,10,10)
+	}
+
+	var maxErrorThreshold = 0.04
+	var regions = []int{0, 1, 2, 3, 4, 5, 6, 7} // total number of regions the data is split into
+	var bins = []int{8, 16, 32, 64, 128}
+
+	for testCaseIdx, testCase := range testCases {
+		data := testCase.data
+		dataTable := testCase.table
+		var dims = len(data[0])
+		var numPoints = []int{0, 0, 0, 0, 0, 0, 0, 0}
+
+		for _, region := range regions {
+
+			for _, numBins := range bins {
+				hist := buildNumericHistogramFromData(numBins, dims, data)
+
+				var evalPoints = [][]float64{}
+
+				// calculate the min and max in each region while reading the points
+				var maxPoint = []float64{math.Inf(-1), math.Inf(-1), math.Inf(-1)}
+				var minPoint = []float64{math.Inf(1), math.Inf(1), math.Inf(1)}
+				for tableIdx := 0; tableIdx < len(dataTable); tableIdx++ {
+					if dataTable[tableIdx].region == region {
+						var tmpPoint = dataTable[tableIdx].point
+						for dim := 0; dim < dims; dim++ {
+							maxPoint[dim] = math.Max(maxPoint[dim], tmpPoint[dim])
+							minPoint[dim] = math.Min(minPoint[dim], tmpPoint[dim])
+
+						}
+
+						evalPoints = append(evalPoints, dataTable[tableIdx].point)
+					}
+				}
+
+				numPoints[region] = len(evalPoints)
+				sampleCDFMin := computeCDFUsingData(data, minPoint)
+				sampleCDFMax := computeCDFUsingData(data, maxPoint)
+
+				histcdf := hist.CDF(maxPoint) - hist.CDF(minPoint)
+				samplecdf := math.Abs(sampleCDFMax - sampleCDFMin)
+				cumPDF := float64(sum(numPoints[0:region+1])) / float64(len(data))
+				percentPoints := float64(len(evalPoints)) / float64(len(data))
+
+				// num : Id of region
+				// Bin : Bin size used for hisogram
+				// Hist CDF : CDF calculated using hist function
+				// sample CDF : CDF calculated from CDF
+				// cumPDF : CDF calculated from adding (total number of points in each region)/ total #of Points
+				// fracPoints : Percentage of points in the region
+				fmt.Println(fmt.Sprintf("num: %d | Bin: %d | HistCDF:%.4f | sampleCDF:%.4f | cumPDF:%.4f | fracPoints:%.4f", region, numBins, histcdf, samplecdf, cumPDF, percentPoints))
+
+				for pointIdx := 0; pointIdx < dims; pointIdx++ {
+					maxPoint[pointIdx] = maxPoint[pointIdx] + 1e+10
+					minPoint[pointIdx] = minPoint[pointIdx] - 1e+10
+				}
+
+				// Testing for diff in histogram CDF and sample CDF
+				if math.Abs(histcdf-samplecdf) > maxErrorThreshold {
+					t.Logf(fmt.Sprintf("High Sample CDF error : num: %d | Bin: %d | HistCDF:%.4f | sampleCDF:%.4f | diff: %.4f | CasesIdx:%d", region, numBins, histcdf, samplecdf, math.Abs(histcdf-samplecdf), testCaseIdx))
+					t.Fail()
+				}
+
+				// cdf of point in min P(x<xmin,y<ymin,z<zmin)
+				if hist.CDF(minPoint) != 0 {
+					t.Logf("PDF of min point in region %d  and bin %d is not 0 case: %d", region, numBins, testCaseIdx)
+					t.Fail()
+				}
+
+				// cdf of point in max p(x>xmax)
+
+				if hist.CDF(maxPoint) != 0 {
+					t.Logf("PDF of max point in region %d  and bin %d is not 0 in cases:%d", region, numBins, testCaseIdx)
+					t.Fail()
+				}
+
+			}
+
+		}
+
+	}
+}
+
+func BenchmarkNumericalHistogram(b *testing.B) {
+	//sample usuage : go test -run=numeric_data_test_.go -bench=. -benchtime=10s
+	//benchmarking for 128 bins and 10000 data points . currently it is taking more
+	// than 5sec for 1 run
+	data := dataMM5
+	dims := len(data[0])
+	bins := 128
+	for n := 0; n < b.N; n++ {
+		buildNumericHistogramFromData(bins, dims, data)
+
+	}
+
 }

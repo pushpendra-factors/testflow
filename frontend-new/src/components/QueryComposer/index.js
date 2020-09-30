@@ -1,19 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { connect } from 'react-redux';
+import { bindActionCreators } from 'redux';
 import {
   Button, Collapse, Select, Popover
 } from 'antd';
-import { SVG, Text } from 'factorsComponents';
+import { SVG, Text } from '../factorsComponents';
 import styles from './index.module.scss';
 import QueryBlock from './QueryBlock';
 import SeqSelector from './AnalysisSeqSelector';
 import GroupBlock from './GroupBlock';
+
+import { fetchEventNames } from '../../reducers/coreQuery/middleware';
 
 const { Option } = Select;
 
 const { Panel } = Collapse;
 
 function QueryComposer({
-  queries, runQuery, eventChange, queryType
+  queries, runQuery, eventChange, queryType,
+  fetchEventNames, activeProject
 }) {
   const [analyticsSeqOpen, setAnalyticsSeqVisible] = useState(false);
 
@@ -29,13 +34,19 @@ function QueryComposer({
     }
   });
 
+  useEffect(() => {
+    if (activeProject && activeProject.id) {
+      fetchEventNames(activeProject.id);
+    }
+  }, [activeProject, fetchEventNames]);
+
   const queryList = () => {
     const blockList = [];
 
     queries.forEach((event, index) => {
       blockList.push(
                 <div className={styles.composer_body__query_block}>
-                    <QueryBlock index={index + 1} event={event} queries={queries} eventChange={eventChange}></QueryBlock>
+                    <QueryBlock index={index + 1} queryType={queryType} event={event} queries={queries} eventChange={eventChange}></QueryBlock>
                 </div>
       );
     });
@@ -43,7 +54,7 @@ function QueryComposer({
     if (queries.length < 6) {
       blockList.push(
                 <div className={styles.composer_body__query_block}>
-                    <QueryBlock index={queries.length + 1} queries={queries} eventChange={eventChange}></QueryBlock>
+                    <QueryBlock queryType={queryType} index={queries.length + 1} queries={queries} eventChange={eventChange}></QueryBlock>
                 </div>
       );
     }
@@ -167,4 +178,12 @@ function QueryComposer({
   );
 }
 
-export default QueryComposer;
+const mapStateToProps = (state) => ({
+  activeProject: state.global.active_project
+});
+
+const mapDispatchToProps = dispatch => bindActionCreators({
+  fetchEventNames
+}, dispatch);
+
+export default connect(mapStateToProps, mapDispatchToProps)(QueryComposer);

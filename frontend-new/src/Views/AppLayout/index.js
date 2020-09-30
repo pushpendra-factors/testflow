@@ -1,12 +1,19 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Layout } from 'antd';
 import Sidebar from '../../components/Sidebar';
 import CoreQuery from '../CoreQuery';
 import ProjectSettings from '../Settings/ProjectSettings';
+import { connect } from 'react-redux';
+import { bindActionCreators } from 'redux';
 import { HashRouter, Route, Switch } from 'react-router-dom';
+import { fetchProjects, setActiveProject } from '../../reducers/global';
 
-function AppLayout() {
+function AppLayout({ fetchProjects }) {
   const { Content } = Layout;
+
+  useEffect(() => {
+    fetchProjects();
+  }, [fetchProjects]);
 
   return (
     <Layout>
@@ -25,4 +32,14 @@ function AppLayout() {
   );
 }
 
-export default AppLayout;
+const mapStateToProps = (state) => ({
+  projects: state.global.projects,
+  active_project: state.global.active_project
+});
+
+const mapDispatchToProps = dispatch => bindActionCreators({
+  fetchProjects,
+  setActiveProject
+}, dispatch);
+
+export default connect(mapStateToProps, mapDispatchToProps)(AppLayout);

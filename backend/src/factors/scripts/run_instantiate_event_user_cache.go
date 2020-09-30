@@ -33,6 +33,17 @@ func main() {
 	valuesLimit := flag.Int("values_limit", 2000, "")
 	lookBackDays := flag.Int("look_back_days", 1, "")
 
+	/* The following three keys are to be used only when there is a need to backfill a specific project in a particular time range
+	perQueryPullRange - for how many days is the data need to be backfilled
+	overrideDateRangeEnd - backfill range end
+	So the backfll duration will be from (overrideDateRangeEnd-perQueryPullRange) to (overrideDateRangeEnd-1)
+	This will need the SkipExpiry flag to also set to true since we dont want that data to be deleted from cache because any key older than past 30 days is deleted from cache
+	This is primarily used today to backfill demo data where the data is not flowing in continuously instead available for a particular date range and we need that data in cache as well
+	Handler also has overrides to pull data from specific range because usually it pull last 30 days data*/
+	overrideDateRangeEnd := flag.String("overrride_date_range_end", "", "")
+	perQueryPullRange := flag.Int("per_query_pull_range", 0, "")
+	skipExpiry := flag.Bool("skip_expiry_for_cache", false, "")
+
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 
 	flag.Parse()
@@ -76,14 +87,19 @@ func main() {
 	C.InitSentryLogging(config.SentryDSN, config.AppName)
 	defer C.SafeFlushSentryHook()
 
-	currentTime := U.TimeNow()
-	startOfCurrentDay := time.Date(currentTime.Year(), currentTime.Month(), currentTime.Day(), 0, 0, 0, 0, time.UTC)
+	var startOfCurrentDay time.Time
+	if *overrideDateRangeEnd == "" {
+		currentTime := U.TimeNow()
+		startOfCurrentDay = time.Date(currentTime.Year(), currentTime.Month(), currentTime.Day(), 0, 0, 0, 0, time.UTC)
+	} else {
+		startOfCurrentDay, _ = time.Parse(U.DATETIME_FORMAT_YYYYMMDD, *overrideDateRangeEnd)
+	}
 
 	projectIdMap := util.GetIntBoolMapFromStringList(projectIds)
 
 	for projectId, _ := range projectIdMap {
-		S.BackFillEventDataInCacheFromDb(projectId, startOfCurrentDay, *lookBackDays, *eventsLimit, *propertiesLimit, *valuesLimit, *eventRecordsLimit)
-		M.BackFillUserDataInCacheFromDb(projectId, startOfCurrentDay, *usersProcessedLimit, *propertiesLimit, *valuesLimit)
+		S.BackFillEventDataInCacheFromDb(projectId, startOfCurrentDay, *lookBackDays, *eventsLimit, *propertiesLimit, *valuesLimit, *eventRecordsLimit, *perQueryPullRange, *skipExpiry)
+		M.BackFillUserDataInCacheFromDb(projectId, startOfCurrentDay, *usersProcessedLimit, *propertiesLimit, *valuesLimit, *skipExpiry)
 	}
 	fmt.Println("Done!!!")
 }

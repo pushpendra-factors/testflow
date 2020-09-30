@@ -6,6 +6,7 @@ import (
 	H "factors/handler"
 	"factors/handler/helpers"
 	M "factors/model"
+	"factors/task/event_user_cache"
 	U "factors/util"
 	"fmt"
 	"io/ioutil"
@@ -129,6 +130,8 @@ func TestGetEventNamesHandler(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	// Test events ingested via sdk/track call
+	eventsLimit, propertyLimit, valueLimit, rollBackWindow := 1000, 10000, 10000, 1
+	event_user_cache.DoRollUpAndCleanUp(&eventsLimit, &propertyLimit, &valueLimit, &rollBackWindow)
 	w = sendGetEventNamesExactRequest(project.ID, agent, r)
 	assert.Equal(t, http.StatusOK, w.Code)
 	jsonResponse, _ = ioutil.ReadAll(w.Body)

@@ -1284,6 +1284,43 @@ func TestAnalyticsFunnelQueryWithFilterAndBreakDown(t *testing.T) {
 	assert.Equal(t, http.StatusOK, errCode)
 	assert.Equal(t, int64(10), result8.Rows[0][0])
 	assert.Equal(t, int64(5), result8.Rows[0][1])
+
+	// Test for event filter on user property and group by user property at the same event.
+	query9 := M.Query{
+		From: startTimestamp,
+		To:   time.Now().UTC().Unix(),
+		EventsWithProperties: []M.QueryEventWithProperties{
+			M.QueryEventWithProperties{
+				Name: "s0",
+				Properties: []M.QueryProperty{
+					M.QueryProperty{
+						Entity:   M.PropertyEntityUser,
+						Property: "gender",
+						Operator: "equals",
+						Value:    "F",
+					},
+				},
+			},
+			M.QueryEventWithProperties{
+				Name:       "s1",
+				Properties: []M.QueryProperty{},
+			},
+		},
+		GroupByProperties: []M.QueryGroupByProperty{
+			M.QueryGroupByProperty{
+				Entity:         M.PropertyEntityUser,
+				Property:       "age",
+				EventName:      "s0",
+				EventNameIndex: 1,
+			},
+		},
+		Class:           M.QueryClassFunnel,
+		Type:            M.QueryTypeUniqueUsers,
+		EventsCondition: M.EventCondAllGivenEvent,
+	}
+	result9, errCode, _ := M.Analyze(project.ID, query9)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.NotNil(t, result9)
 }
 
 func TestAnalyticsInsightsQuery(t *testing.T) {
@@ -1689,6 +1726,49 @@ func TestAnalyticsInsightsQueryWithFilterAndBreakdown(t *testing.T) {
 		assert.Equal(t, "s1", result.Rows[1][0])
 		assert.Equal(t, int64(3), result.Rows[1][1])
 	})
+
+	// Test for event filter on user property and group by user property at the same event.
+	t.Run("AnalyticsInsightsQueryUniqueUserWithUserPropertyFilterAndUserBreakdown", func(t *testing.T) {
+		query := M.Query{
+			From: startTimestamp,
+			To:   startTimestamp + 40,
+			EventsWithProperties: []M.QueryEventWithProperties{
+				M.QueryEventWithProperties{
+					Name: "s0",
+					Properties: []M.QueryProperty{
+						M.QueryProperty{
+							Entity:    M.PropertyEntityUser,
+							Property:  "$initial_source",
+							Operator:  "equals",
+							Type:      "categorial",
+							LogicalOp: "AND",
+							Value:     "A",
+						},
+					},
+				},
+				M.QueryEventWithProperties{
+					Name: "s1",
+				},
+			},
+			GroupByProperties: []M.QueryGroupByProperty{
+				M.QueryGroupByProperty{
+					Entity:         M.PropertyEntityUser,
+					Property:       "$initial_source",
+					EventName:      "s0",
+					EventNameIndex: 1,
+				},
+			},
+			Class: M.QueryClassInsights,
+
+			Type:            M.QueryTypeUniqueUsers,
+			EventsCondition: M.EventCondAllGivenEvent,
+		}
+
+		//unique user count should return 2 for s0 to s1 with fliter property1
+		result, errCode, _ := M.Analyze(project.ID, query)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.NotNil(t, result)
+	})
 }
 
 func TestAnalyticsInsightsQueryWithNumericalBucketing(t *testing.T) {
@@ -1759,7 +1839,7 @@ func TestAnalyticsInsightsQueryWithNumericalBucketing(t *testing.T) {
 
 		result, errCode, _ = M.Analyze(project.ID, query)
 		assert.Equal(t, http.StatusOK, errCode)
-		assert.Equal(t, "0 - 0", result.Rows[0][1])
+		assert.Equal(t, "0", result.Rows[0][1])
 		assert.Equal(t, int64(1), result.Rows[0][2])
 		assert.Equal(t, "1 - 2", result.Rows[1][1])
 		assert.Equal(t, int64(3), result.Rows[1][2])
@@ -1780,6 +1860,76 @@ func TestAnalyticsInsightsQueryWithNumericalBucketing(t *testing.T) {
 			assert.Equal(t, eventName1, result.Rows[i][0])
 			assert.Equal(t, fmt.Sprintf("%d - %d", i*2-2, i*2-1), result.Rows[i][1])
 			assert.Equal(t, int64(2), result.Rows[i][2])
+		}
+	})
+}
+
+func TestAnalyticsFunnelQueryWithNumericalBucketing(t *testing.T) {
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+	uri := "/sdk/event/track"
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	startTimestamp := U.UnixTimeBeforeDuration(time.Hour * 1)
+	t.Run("FunnelSingleBreakdown", func(t *testing.T) {
+		// 20 events with single incremented value.
+		eventName1 := "event1"
+		eventName2 := "event2"
+		for i := 1; i <= 20; i++ {
+			iUser, _ := M.CreateUser(&M.User{ProjectId: project.ID})
+			payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, `+
+				`"event_properties":{"$page_load_time":%d},"user_properties":{"numerical_property":%d}}`,
+				eventName1, iUser.ID, startTimestamp+10, i, i)
+			w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+			assert.Equal(t, http.StatusOK, w.Code)
+
+			// Event2 by 5 users with timestamp + 20 for funnel.
+			if i%4 == 0 {
+				payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d}`,
+					eventName2, iUser.ID, startTimestamp+20)
+				w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+				assert.Equal(t, http.StatusOK, w.Code)
+			}
+		}
+
+		query := M.Query{
+			From: startTimestamp,
+			To:   startTimestamp + 40,
+			EventsWithProperties: []M.QueryEventWithProperties{
+				M.QueryEventWithProperties{
+					Name: eventName1,
+				},
+				M.QueryEventWithProperties{
+					Name: eventName2,
+				},
+			},
+			GroupByProperties: []M.QueryGroupByProperty{
+				M.QueryGroupByProperty{
+					EventName:      eventName1,
+					EventNameIndex: 1,
+					Entity:         M.PropertyEntityEvent,
+					Property:       "$page_load_time",
+					Type:           U.PropertyTypeNumerical,
+				},
+			},
+			Class:           M.QueryClassFunnel,
+			Type:            M.QueryTypeUniqueUsers,
+			EventsCondition: M.EventCondAllGivenEvent,
+		}
+
+		// Expected output should be 10 equal range buckets with 2 elements
+		result, errCode, _ := M.Analyze(project.ID, query)
+		assert.Equal(t, http.StatusOK, errCode)
+		for i := 1; i <= 10; i++ {
+			assert.Equal(t, fmt.Sprintf("%d - %d", i*2-1, i*2), result.Rows[i][0])
+
+			assert.Equal(t, int64(2), result.Rows[i][1])
+			if i%2 == 0 {
+				assert.Equal(t, int64(1), result.Rows[i][2])
+			} else {
+				assert.Equal(t, int(0), result.Rows[i][2])
+			}
 		}
 	})
 }

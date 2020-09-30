@@ -250,13 +250,17 @@ func isRealtimeSessionRequired(skipSession bool, projectId uint64, skipProjectId
 	return true
 }
 
-func BackFillEventDataInCacheFromDb(project_id uint64, currentTime time.Time, no_of_days int, eventsLimit, propertyLimit, valuesLimit int, rowsLimit int) {
+func BackFillEventDataInCacheFromDb(project_id uint64, currentTime time.Time, no_of_days int, eventsLimit, propertyLimit, valuesLimit int, rowsLimit int, perQueryPullRange int, skipExpiryForCache bool) {
 
 	// Preload EventNames-count-lastseen
 	// TODO: Janani Make this 30 configurable, limit in cache, limit in ui
 	logCtx := log.WithField("project_id", project_id)
 	logCtx.Info("Refresh Event Properties Cache started")
-
+	expiry := float64(U.EVENT_USER_CACHE_EXPIRY_SECS)
+	if skipExpiryForCache {
+		logCtx.Info("Setting Cache keys of this run to no-expiry")
+		expiry = 0
+	}
 	allevents := make(map[string]bool)
 	for i := 1; i <= no_of_days; i++ {
 		var eventNames M.CacheEventNamesWithTimestamp
@@ -273,7 +277,7 @@ func BackFillEventDataInCacheFromDb(project_id uint64, currentTime time.Time, no
 		begin := U.TimeNow()
 		events, err := M.GetOrderedEventNamesFromDb(
 			project_id,
-			currentTime.AddDate(0, 0, -i).Unix(),
+			currentTime.AddDate(0, 0, -(i+perQueryPullRange)).Unix(),
 			currentTime.AddDate(0, 0, -(i-1)).Unix(),
 			eventsLimit)
 		end := U.TimeNow()
@@ -296,7 +300,7 @@ func BackFillEventDataInCacheFromDb(project_id uint64, currentTime time.Time, no
 		}
 		logCtx.Info("Begin:EN:SB")
 		begin = U.TimeNow()
-		err = cacheRedis.SetPersistent(eventNamesKey, string(enEventCache), U.EVENT_USER_CACHE_EXPIRY_SECS)
+		err = cacheRedis.SetPersistent(eventNamesKey, string(enEventCache), expiry)
 		end = U.TimeNow()
 		logCtx.WithFields(log.Fields{"timeTaken": end.Sub(begin).Milliseconds()}).Info("End:EN:SB")
 		if err != nil {
@@ -320,7 +324,7 @@ func BackFillEventDataInCacheFromDb(project_id uint64, currentTime time.Time, no
 			begin := U.TimeNow()
 			properties, err := M.GetRecentEventPropertyKeysWithLimits(
 				project_id, event,
-				currentTime.AddDate(0, 0, -i).Unix(),
+				currentTime.AddDate(0, 0, -(i+perQueryPullRange)).Unix(),
 				currentTime.AddDate(0, 0, -(i-1)).Unix(),
 				propertyLimit)
 			end := U.TimeNow()
@@ -342,7 +346,7 @@ func BackFillEventDataInCacheFromDb(project_id uint64, currentTime time.Time, no
 					logCtx.WithFields(log.Fields{"dateFormat": dateFormat, "event": event, "property": property.Key}).Info("Begin: Get event Property values DB call")
 					begin := U.TimeNow()
 					values, category, err := M.GetRecentEventPropertyValuesWithLimits(project_id, event, property.Key, valuesLimit, rowsLimit,
-						currentTime.AddDate(0, 0, -i).Unix(),
+						currentTime.AddDate(0, 0, -(i+perQueryPullRange)).Unix(),
 						currentTime.AddDate(0, 0, -(i-1)).Unix())
 					end := U.TimeNow()
 					logCtx.WithFields(log.Fields{"dateFormat": dateFormat, "event": event, "property": property.Key, "timeTaken": end.Sub(begin).Milliseconds()}).Info("End: Get event Property values DB call")
@@ -388,7 +392,7 @@ func BackFillEventDataInCacheFromDb(project_id uint64, currentTime time.Time, no
 				eventPropertyValuesInCache[eventPropertiesKey] = string(enEventPropertiesCache)
 				logCtx.Info("Begin:EPV:SB")
 				begin = U.TimeNow()
-				err = cacheRedis.SetPersistentBatch(eventPropertyValuesInCache, U.EVENT_USER_CACHE_EXPIRY_SECS)
+				err = cacheRedis.SetPersistentBatch(eventPropertyValuesInCache, expiry)
 				end = U.TimeNow()
 				logCtx.WithFields(log.Fields{"timeTaken": end.Sub(begin).Milliseconds()}).Info("End:EN:SB")
 				if err != nil {
@@ -417,6 +421,12 @@ func Track(projectId uint64, request *TrackPayload,
 		logCtx.WithField("request_payload", request).
 			Error("Invalid track request.")
 		return http.StatusBadRequest, &TrackResponse{}
+	}
+
+	// Add event_id if not available.
+	// For queue, event_id is added before queueing.
+	if request.EventId == "" {
+		request.EventId = U.GetUUID()
 	}
 
 	if request.Timestamp == 0 {
@@ -500,7 +510,7 @@ func Track(projectId uint64, request *TrackPayload,
 	FillUserAgentUserProperties(&request.UserProperties, request.UserAgent)
 
 	response := &TrackResponse{}
-	initialUserProperties := U.GetInitialUserProperties(eventProperties)
+	initialUserProperties := U.GetInitialUserProperties(request.EventId, eventProperties)
 	isNewUser := request.IsNewUser
 
 	// if create_user not true and user is not found,
@@ -545,7 +555,7 @@ func Track(projectId uint64, request *TrackPayload,
 	} else {
 		// Adding initial user properties if user_id exists,
 		// but initial properties are not. i.e user created on identify.
-		existingUserProperties, errCode = M.GetUserPropertiesAsMap(projectId, request.UserId)
+		existingUserProperties, errCode = M.GetLatestUserPropertiesOfUserAsMap(projectId, request.UserId)
 		if errCode != http.StatusFound {
 			logCtx.WithField("user_id", errCode).WithField("err_code",
 				errCode).Error("Tracking failed. Get user properties as map failed.")
@@ -609,7 +619,7 @@ func Track(projectId uint64, request *TrackPayload,
 	}
 
 	if existingUserProperties == nil {
-		existingUserProperties, errCode = M.GetUserPropertiesAsMap(projectId, request.UserId)
+		existingUserProperties, errCode = M.GetLatestUserPropertiesOfUserAsMap(projectId, request.UserId)
 		if errCode == http.StatusInternalServerError {
 			logCtx.WithField("user_id", errCode).WithField("err_code",
 				errCode).Error("Tracking failed. Get user properties as map failed.")
@@ -1168,10 +1178,71 @@ func UpdateEventPropertiesWithQueue(token string, reqPayload *UpdateEventPropert
 	return UpdateEventPropertiesByToken(token, reqPayload)
 }
 
+func updateInitialUserPropertiesFromUpdateEventProperties(projectID uint64,
+	eventID, userID, userPropertiesID string, newInitialUserProperties *U.PropertiesMap) int {
+
+	logCtx := log.WithField("project_id", projectID).WithField("event_id", eventID)
+
+	userPropertiesJsonb, errCode := M.GetUserProperties(projectID, userID, userPropertiesID)
+	if errCode != http.StatusFound {
+		return errCode
+	}
+
+	userProperties, err := U.DecodePostgresJsonb(userPropertiesJsonb)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to decode user_properties.")
+		return http.StatusBadRequest
+	}
+
+	initialPageEventID, initialPageEventIDExists := (*userProperties)[U.UP_INITIAL_PAGE_EVENT_ID]
+
+	// Skip the update, if initial properties exist and initial_page_event_id
+	// doesn't exists, for backward compatibility.
+	_, initialPageRawURLExists := (*userProperties)[U.UP_INITIAL_PAGE_RAW_URL]
+	if !initialPageEventIDExists && initialPageRawURLExists {
+		return http.StatusAccepted
+	}
+
+	// Do not update if the initial_page_event_id on user_properites is
+	// not the current event id.
+	if initialPageEventIDExists && initialPageEventID != eventID {
+		return http.StatusAccepted
+	}
+
+	isUpdateRequired := false
+	for key, value := range *newInitialUserProperties {
+		if value == (*userProperties)[key] {
+			continue
+		}
+
+		(*userProperties)[key] = value
+		isUpdateRequired = true
+	}
+
+	if !isUpdateRequired {
+		return http.StatusAccepted
+	}
+
+	updateUserPropertiesJson, err := U.EncodeToPostgresJsonb(userProperties)
+	if err != nil {
+		logCtx.WithError(err).
+			Error("Failed to marshal user_properties after adding initial user_properties.")
+		return http.StatusBadRequest
+	}
+
+	errCode = M.OverwriteUserProperties(projectID, userID,
+		userPropertiesID, updateUserPropertiesJson)
+	if errCode != http.StatusAccepted {
+		logCtx.WithField("err_code", errCode).
+			Error("Failed to overwrite user_properties after adding initial user_properties.")
+		return errCode
+	}
+
+	return http.StatusAccepted
+}
+
 func UpdateEventProperties(projectId uint64,
 	request *UpdateEventPropertiesPayload) (int, *UpdateEventPropertiesResponse) {
-
-	logCtx := log.WithField("project_id", projectId)
 
 	// add received timestamp before processing, if not given.
 	if request.Timestamp == 0 {
@@ -1179,100 +1250,62 @@ func UpdateEventProperties(projectId uint64,
 	}
 
 	updateAllowedProperties := U.GetUpdateAllowedEventProperties(&request.Properties)
-	validatedProperties := U.GetValidatedEventProperties(updateAllowedProperties)
-	if len(*validatedProperties) == 0 {
+	properitesToBeUpdated := U.GetValidatedEventProperties(updateAllowedProperties)
+	if len(*properitesToBeUpdated) == 0 {
 		return http.StatusBadRequest,
 			&UpdateEventPropertiesResponse{Error: "No valid properties given to update."}
 	}
 
-	errCode := M.UpdateEventProperties(projectId, request.EventId,
-		validatedProperties, request.Timestamp)
+	event, errCode := M.GetEventById(projectId, request.EventId)
+	if errCode == http.StatusNotFound && request.Timestamp > U.UnixTimeBeforeDuration(time.Hour*5) {
+		log.WithField("event_id", request.EventId).
+			WithField("timestamp", request.Timestamp).
+			Error("Failed old update event properties request with unavailable event_id permanently.")
+		return http.StatusBadRequest, &UpdateEventPropertiesResponse{
+			Error: "Update event properties failed permanantly."}
+	}
+	if errCode != http.StatusFound {
+		return http.StatusBadRequest,
+			&UpdateEventPropertiesResponse{Error: "Update event properties failed. Invalid event."}
+	}
+
+	user, errCode := M.GetUser(projectId, event.UserId)
+	if errCode != http.StatusFound {
+		return errCode, &UpdateEventPropertiesResponse{
+			Error: "Update event properties failed. User not found."}
+	}
+
+	errCode = M.UpdateEventProperties(projectId, request.EventId,
+		properitesToBeUpdated, request.Timestamp)
 	if errCode != http.StatusAccepted {
 		return errCode,
 			&UpdateEventPropertiesResponse{
 				Error: "Update event properties failed. Failed to update given properties."}
 	}
 
-	updatedEvent, errCode := M.GetEventById(projectId, request.EventId)
-	if errCode == http.StatusNotFound && request.Timestamp > U.UnixTimeBeforeDuration(time.Hour*5) {
-		logCtx.WithField("event_id", request.EventId).WithField("timestamp", request.Timestamp).Error(
-			"Failed old update event properties request with unavailable event_id permanently.")
-		return http.StatusBadRequest, &UpdateEventPropertiesResponse{
-			Error: "Update event properties failed permanantly."}
-	}
-	if errCode != http.StatusFound {
-		return errCode,
-			&UpdateEventPropertiesResponse{Error: "Update event properties failed. Invalid event."}
-	}
+	newInitialUserProperties := U.GetInitialUserProperties(event.ID, properitesToBeUpdated)
 
-	logCtx = logCtx.WithField("event_id", request.EventId)
-
-	updatedEventPropertiesMap, err := U.DecodePostgresJsonb(&updatedEvent.Properties)
-	if err != nil {
-		logCtx.Error("Failed to unmarshal updated event properties on update event properties.")
-		return http.StatusInternalServerError,
-			&UpdateEventPropertiesResponse{Error: "Update event properties failed. Invalid event properties."}
-	}
-
-	newUserProperties := U.GetInitialUserProperties(validatedProperties)
-	user, errCode := M.GetUser(projectId, updatedEvent.UserId)
-	if errCode != http.StatusFound {
-		logCtx.Error("Failed to get user properties of user on update event properties.")
+	// Update user_properties state associate to event.
+	errCode = updateInitialUserPropertiesFromUpdateEventProperties(projectId, event.ID,
+		event.UserId, event.UserPropertiesId, newInitialUserProperties)
+	if errCode != http.StatusAccepted {
 		return errCode,
 			&UpdateEventPropertiesResponse{
-				Error: "Update event properties failed. Falied to get initial user properties."}
+				Error: "Update event properties failed. Failed to update event user properties."}
 	}
 
-	userPropertiesMap, err := U.DecodePostgresJsonb(&user.Properties)
-	if err != nil {
-		logCtx.Error("Failed to unmarshal existing user properties on update event properties.")
-		return errCode, &UpdateEventPropertiesResponse{Error: "Update event properties failed. Invalid user properties."}
-	}
-
-	userInitialPageURL, userInitialPageURLExists := (*userPropertiesMap)[U.UP_INITIAL_PAGE_RAW_URL]
-	if !userInitialPageURLExists {
-		// skip error for old users.
-		initialPageRawUrlAvailabilityTimestamp := 1569369600
-		if user.JoinTimestamp < int64(initialPageRawUrlAvailabilityTimestamp) {
-			return http.StatusAccepted,
-				&UpdateEventPropertiesResponse{Message: "Updated event properties successfully."}
-		}
-
-		logCtx.Error("No initial page raw url on user properties to compare on update event properties.")
-		return errCode, &UpdateEventPropertiesResponse{Error: "Failed to associate initial page url."}
-	}
-
-	eventPageURL := (*updatedEventPropertiesMap)[U.EP_PAGE_RAW_URL]
-
-	// user properties updated only if initial_raw_page url of user_properties
-	// and raw_page_url of event properties matches.
-	if userInitialPageURL != eventPageURL {
+	if event.UserPropertiesId == user.PropertiesId {
 		return http.StatusAccepted,
 			&UpdateEventPropertiesResponse{Message: "Updated event properties successfully."}
 	}
 
-	isUserPropertiesUpdateRequired := false
-	for property, value := range *newUserProperties {
-		if _, exists := (*userPropertiesMap)[property]; !exists {
-			(*userPropertiesMap)[property] = value
-			isUserPropertiesUpdateRequired = true
-		}
-	}
-
-	if isUserPropertiesUpdateRequired {
-		userPropertiesJsonb, err := U.EncodeToPostgresJsonb(userPropertiesMap)
-		if err != nil {
-			logCtx.Error("Failed to marshal user properties with initial user properties on updated event properties.")
-			return errCode, &UpdateEventPropertiesResponse{
-				Error: "Update event properties failed. Falied to encode user properties."}
-		}
-
-		_, errCode := M.UpdateUserProperties(projectId, updatedEvent.UserId,
-			userPropertiesJsonb, request.Timestamp)
-		if errCode != http.StatusAccepted {
-			return errCode, &UpdateEventPropertiesResponse{
-				Error: "Update event properties failed. Failed to update user properites."}
-		}
+	// Update lastest user properties state of user.
+	errCode = updateInitialUserPropertiesFromUpdateEventProperties(projectId, event.ID,
+		event.UserId, user.PropertiesId, newInitialUserProperties)
+	if errCode != http.StatusAccepted {
+		return errCode,
+			&UpdateEventPropertiesResponse{
+				Error: "Update event properties failed. Failed to update latest user properties."}
 	}
 
 	return http.StatusAccepted,

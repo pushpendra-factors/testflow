@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { SVG, Text } from 'factorsComponents';
 import styles from './index.module.scss';
 import { Select, Button } from 'antd';
+import { connect } from 'react-redux';
 
 // import Filter from '../Filter';
 import FilterBlock from '../FilterBlock';
@@ -9,34 +10,12 @@ import FilterBlock from '../FilterBlock';
 const { OptGroup, Option } = Select;
 
 function QueryBlock({
-  index, event, eventChange, queries, queryType = 'event'
+  index, event, eventChange, queries, queryType, eventOptions
 }) {
   const [isDDVisible, setDDVisible] = useState(!!(index === 1 && !event));
   const [isFilterDDVisible, setFilterDDVisible] = useState(false);
 
   const alphabetIndex = 'ABCDEF';
-
-  const eventOptions = [
-    {
-      label: 'Frequently Asked',
-      icon: 'fav',
-      values: [
-        'Cart Updated',
-        'Paid',
-        'Add to WishList',
-        'Checkout'
-
-      ]
-    }, {
-      label: 'Virtual Events',
-      icon: 'virtual',
-      values: [
-        'Download Song or Video',
-        'Applied Coupon',
-        'Cart Updated'
-      ]
-    }
-  ];
 
   const onChange = (value) => {
     const newEvent = event || { label: '', filters: [] };
@@ -69,7 +48,7 @@ function QueryBlock({
                             </div>
                         )}
                     >
-                            {eventOptions.map((group, index) => (
+                            {eventOptions && eventOptions.map((group, index) => (
                                 <OptGroup key={index} label={(
                                         <div className={styles.query_block__selector_group}>
                                             <SVG name={group.icon}></SVG>
@@ -115,16 +94,6 @@ function QueryBlock({
     const filters = [];
     if (event && event.filters.length) {
       event.filters.forEach((filter) => {
-        // filters.push(
-        // <div className={`fa--query_block--filters`}>
-        //     <span ><Text type={'title'} level={7} weight={'thin'} extraClass={`m-0`}>Where</Text> </span>
-        //     <div className={`fa--query_block--filters-values`}>
-        //         <span>{filter.prop}</span>
-        //         <span>{filter.operator}</span>
-        //         <span>{filter.values.join(',')}</span>
-        //     </div>
-        //     {index === event.filters.length -1? additionalActions() : null}
-        // </div>)
         filters.push(
                     <div className={'fa--query_block--filters'}>
                         <FilterBlock filter={filter} insertFilter={insertFilters} closeFilter={() => setFilterDDVisible(false)}></FilterBlock>
@@ -165,4 +134,13 @@ function QueryBlock({
   );
 }
 
-export default QueryBlock;
+const mapStateToProps = (state) => ({
+  eventOptions: state.coreQuery.eventOptions,
+  activeProject: state.global.activeProject
+});
+
+// const mapDispatchToProps = dispatch => bindActionCreators({
+//   fetchEvents,
+// }, dispatch)
+
+export default connect(mapStateToProps)(QueryBlock);

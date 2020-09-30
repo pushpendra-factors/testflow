@@ -64,7 +64,8 @@ func main() {
 		false, "If the real time caching is enabled")
 	blockedSDKRequestProjectTokens := flag.String("blocked_sdk_request_project_tokens",
 		"", "List of project tokens blocked for all sdk requests.")
-
+	cacheLookUpRangeProjects := flag.String("cache_look_up_range_projects",
+		"", "List of projects and the overrided date range")
 	flag.Parse()
 
 	config := &C.Configuration{
@@ -104,6 +105,7 @@ func main() {
 		WhitelistedProjectIdsEventUserCache: *whitelistedProjectIdsEventUserCache,
 		IsRealTimeEventUserCachingEnabled:   *isRealTimeEventUserCachingEnabled,
 		BlockedSDKRequestProjectTokens:      C.GetTokensFromStringListAsString(*blockedSDKRequestProjectTokens),
+		CacheLookUpRangeProjects:            C.ExtractProjectIdDateFromConfig(*cacheLookUpRangeProjects),
 	}
 
 	// Initialize configs and connections.
