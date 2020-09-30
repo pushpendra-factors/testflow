@@ -17,13 +17,19 @@ function Sidebar(props) {
   const [ShowPopOver, setShowPopOver] = useState(false);
   const [changeProjectModal, setchangeProjectModal] = useState(false);
   const [selectedProject, setselectedProject] = useState(null);
+  const [searchProjectName, setsearchProjectName] = useState('');
+
+  const searchProject = (e) => {
+    setsearchProjectName(e.target.value);
+  };
 
   const popOvercontent = () => {
     return (
         <div className={'fa-popupcard'}>
           <Text type={'title'} level={7} weight={'bold'} extraClass={'m-0'}>Projects</Text>
-          <div className={'flex flex-col items-start'}>
-            {props.projects.map((project, index) => {
+          {props.projects.length > 6 ? <input onChange={(e) => searchProject(e)} placeholder={'Search Project'} className={'fa-project-list--search'}/> : null}
+          <div className={'flex flex-col items-start fa-project-list--wrapper'} >
+            {props.projects.filter(project => project.name.includes(searchProjectName)).map((project, index) => {
               return <div key={index}
               className={`flex justify-start items-center project-item ${props.active_project.id === project.id ? 'active' : null}`}
               onClick={() => {
@@ -34,6 +40,7 @@ function Sidebar(props) {
                 <Avatar size={28}/><Text type={'title'} level={7} weight={'bold'} extraClass={'m-0 ml-2'}>{project.name}</Text>
               </div>;
             })}
+
           </div>
           <div className={'fa-popupcard-divider'} />
           <Button type={'text'}><span className={'mr-4'}><PlusOutlined /></span> {'Add Projects'}</Button>
