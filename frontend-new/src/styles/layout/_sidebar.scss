@@ -128,4 +128,26 @@
             
         }
     }
+
+    .fa-project-list--wrapper
+    {
+        max-height: 275px;
+        overflow-x:hidden;
+        overflow-y:auto;
+    }
+    input.fa-project-list--search{
+        width: 100%;
+        background-color: $fa-color--mono-1;
+        font-size: 14px;
+        color: $fa-color--mono-5;
+        border-radius: 8px;
+        height: 38px;
+        display: block;
+        margin:10px 0px;
+        padding:0 10px;
+        &:active,&:hover,&:focus{
+            outline: none;
+            box-shadow: none;
+        }
+    }
 }
