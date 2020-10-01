@@ -14,7 +14,7 @@ backend/src/default.etcd/
 
 backend/src/github.com/**
 backend/src/golang.org/**
-backend/src/factors/vendor
+
 # js sdk
 sdk/javascript/dist
 sdk/javascript/node_modules
