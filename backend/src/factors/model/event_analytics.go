@@ -12,6 +12,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const (
+	META_EACH_EVENT_COUNT_METRICS = "EachEventCount"
+)
+
 func RunInsightsQuery(projectId uint64, query Query) (*QueryResult, int, string) {
 	stmnt, params, err := BuildInsightsQuery(projectId, query)
 	if err != nil {
@@ -25,7 +29,6 @@ func RunInsightsQuery(projectId uint64, query Query) (*QueryResult, int, string)
 		logCtx.Error("Failed generating SQL query from analytics query.")
 		return nil, http.StatusInternalServerError, ErrMsgQueryProcessingFailure
 	}
-
 	result, err := ExecQuery(stmnt, params)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed executing SQL query generated.")
@@ -46,9 +49,119 @@ func RunInsightsQuery(projectId uint64, query Query) (*QueryResult, int, string)
 		return nil, http.StatusInternalServerError, ErrMsgQueryProcessingFailure
 	}
 
-	addMetaToQueryResult(result, query)
+	// if and only if breakdown is by datetime
+	if len(query.GroupByProperties) == 0 &&
+		query.EventsCondition == EventCondEachGivenEvent &&
+		query.GroupByTimestamp != nil && query.GroupByTimestamp.(string) != "" {
+
+		result, err = updateResultsForEachEventQuery(result)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to transform query results.")
+			return nil, http.StatusInternalServerError, ErrMsgQueryProcessingFailure
+		}
+	}
+
+	addQueryToResultMeta(result, query)
 
 	return result, http.StatusOK, "Successfully executed query"
+}
+
+// updateResultsForEachEventQuery transforms QueryResult with new header as datetime and events
+func updateResultsForEachEventQuery(oldResult *QueryResult) (*QueryResult, error) {
+
+	eventNameIndex := 0
+	dateIndex := 0
+	countIndex := 0
+	for i, key := range oldResult.Headers {
+		if key == AliasEventName {
+			eventNameIndex = i
+		}
+		if key == AliasDateTime {
+			dateIndex = i
+		}
+		if key == AliasAggr {
+			countIndex = i
+		}
+	}
+
+	eventsHeaderIndexMap := make(map[string]int)
+	for _, row := range oldResult.Rows {
+		en := row[eventNameIndex].(string)
+		// initial header value = 1
+		eventsHeaderIndexMap[en] = 1
+	}
+
+	// headers : datetime, event1, event2, ...
+	newResultHeaders := []string{AliasDateTime}
+	newResultRows := make([][]interface{}, 0, 0)
+
+	// skipping 0 as it is index is for 'datetime' header
+	headerIndex := 1
+	for name, _ := range eventsHeaderIndexMap {
+		newResultHeaders = append(newResultHeaders, name)
+		eventsHeaderIndexMap[name] = headerIndex
+		headerIndex++
+	}
+
+	datetimeToNewResultRowNoMap := make(map[interface{}]int)
+	for _, row := range oldResult.Rows {
+		newRow := make([]interface{}, len(newResultHeaders), len(newResultHeaders))
+		// headers : datetime, event1, event2, ...
+		newRow[0] = row[dateIndex]
+		eventName := row[eventNameIndex].(string)
+		eventNameHeaderIndex := eventsHeaderIndexMap[eventName]
+
+		if _, exists := datetimeToNewResultRowNoMap[row[dateIndex]]; exists {
+			newResultRowNo := datetimeToNewResultRowNoMap[row[dateIndex]]
+			newResultRows[newResultRowNo][eventNameHeaderIndex] = row[countIndex]
+		} else {
+			newRow[eventNameHeaderIndex] = row[countIndex]
+			newResultRows = append(newResultRows, newRow)
+			datetimeToNewResultRowNoMap[row[dateIndex]] = len(newResultRows) - 1
+		}
+	}
+
+	newResult := &QueryResult{Headers: newResultHeaders, Rows: newResultRows}
+	addEventMetricsMetaToQueryResult(newResult)
+
+	return newResult, nil
+}
+
+// addEventMetricsMetaToQueryResult adds meta metrics in query result based on query type, event
+// condition and group by inputs
+func addEventMetricsMetaToQueryResult(result *QueryResult) {
+
+	metaMetricsEventCount := HeaderRows{}
+	metaMetricsEventCount.Title = META_EACH_EVENT_COUNT_METRICS
+	// headers : event1, event2, ...
+	metaMetricsEventCount.Headers = []string{}
+	headerIndexToEventName := make(map[int]string)
+	for i, key := range result.Headers {
+		// skipping datetime and including all event names as header
+		if key != AliasDateTime {
+			metaMetricsEventCount.Headers = append(metaMetricsEventCount.Headers, key)
+			headerIndexToEventName[i] = key
+		}
+	}
+	eventCount := make(map[string]int64)
+	for _, row := range result.Rows {
+		for i := 1; i < len(result.Headers); i++ {
+			count, ok := row[i].(int64)
+			if !ok {
+				count = 0 // 0s are stored as .(int)
+			}
+			eventCount[headerIndexToEventName[i]] = eventCount[headerIndexToEventName[i]] + count
+		}
+	}
+	rows := make([][]interface{}, 0, 0)
+	singleCountRow := make([]interface{}, len(metaMetricsEventCount.Headers), len(metaMetricsEventCount.Headers))
+	for i := 0; i < len(metaMetricsEventCount.Headers); i++ {
+		singleCountRow[i] = eventCount[metaMetricsEventCount.Headers[i]]
+	}
+	rows = append(rows, singleCountRow)
+
+	metaMetricsEventCount.Rows = rows
+	result.Meta.MetaMetrics = append(result.Meta.MetaMetrics, metaMetricsEventCount)
 }
 
 // BuildInsightsQuery - Dispatches corresponding build method for insights.
