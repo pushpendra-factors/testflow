@@ -112,7 +112,7 @@ function BarChart({ chartData }) {
                 hideTooltip();
             });
         d3.select(chartRef.current).select('.axis.axis--x').selectAll('.tick').select('text').attr('dy', '16px');
-    }, [chartData]);
+    }, [chartData, showTooltip, hideTooltip]);
 
     const displayChart = useCallback(() => {
         drawChart();

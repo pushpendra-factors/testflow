@@ -1,29 +1,25 @@
-/* eslint-disable */
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { connect } from 'react-redux';
+import moment from 'moment';
 import FunnelsResultPage from './FunnelsResultPage';
 import QueryComposer from '../../components/QueryComposer';
 import CoreQueryHome from '../CoreQueryHome';
 import { Drawer, Button } from 'antd';
 import { SVG, Text } from '../../components/factorsComponents';
 import EventsAnalytics from '../EventsAnalytics';
-
 import { runQuery as runQueryService } from '../../reducers/coreQuery/services';
-
 
 const COND_ANY_GIVEN_EVENT = 'any_given_event';
 const TYPE_EVENT_OCCURRENCE = 'events_occurrence';
-const TYPE_UNIQUE_USERS = 'unique_users';
+// const TYPE_UNIQUE_USERS = 'unique_users';
 
 function CoreQuery({ activeProject }) {
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [queryType, setQueryType] = useState('event');
   const [showResult, setShowResult] = useState(false);
   const [queries, setQueries] = useState([]);
-  const [breakdown, setBreakdown] = useState([]);
-  const [resultState, setResultState] = useState('none');
-  const [queryResult, setQueryResult] = useState({})
-
+  const [breakdown] = useState([]);
+  const [resultState, setResultState] = useState({ loading: false, error: false, data: {} });
 
   const queryChange = (newEvent, index, changeType = 'add') => {
     const queryupdated = [...queries];
@@ -39,26 +35,24 @@ function CoreQuery({ activeProject }) {
     setQueries(queryupdated);
   };
 
-  const getEventsWithProperties = (events) => {
-
-    let ewps = [];
-    events.forEach(ev => {
+  const getEventsWithProperties = useCallback(() => {
+    const ewps = [];
+    queries.forEach(ev => {
       ewps.push({
         na: ev.label,
         pr: []
-      })
-    })
+      });
+    });
     return ewps;
-  }
+  }, [queries]);
 
-
-  const getQuery = (presentation, toSave = false) => {
-    let query = {};
+  const getQuery = useCallback(() => {
+    const query = {};
     query.cl = queryType === 'event' ? 'insights' : 'funnel';
     query.ty = 'events_occurrence';
     query.ec = 'any_given_event';
     // event_occurrence supports only any_given_event.
-    if (query.ty == TYPE_EVENT_OCCURRENCE) {
+    if (query.ty === TYPE_EVENT_OCCURRENCE) {
       query.ec = COND_ANY_GIVEN_EVENT;
     }
 
@@ -67,13 +61,13 @@ function CoreQuery({ activeProject }) {
     // let period = getQueryPeriod(this.state.resultDateRange[0], this.state.timeZone)
 
     const period = {
-      from: 1601145000,
-      to: 1601404199
-    }
+      from: moment().subtract(5, 'days').startOf('day').utc().unix(),
+      to: moment().utc().unix()
+    };
 
-    query.fr = period.from
-    query.to = period.to
-    query.ewp = getEventsWithProperties(queries);
+    query.fr = period.from;
+    query.to = period.to;
+    query.ewp = getEventsWithProperties();
 
     query.gbp = [];
     // for(let i=0; i < this.state.groupBys.length; i++) {
@@ -98,52 +92,44 @@ function CoreQuery({ activeProject }) {
     //   }
     // }
 
-    // query.gbt = (presentation == PRESENTATION_LINE) ? 
+    // query.gbt = (presentation == PRESENTATION_LINE) ?
     //   getGroupByTimestampType(query.fr, query.to) : '';
-
-    query.tz = "Asia/Kolkata";
+    query.gbt = 'date';
+    query.tz = 'Asia/Kolkata';
 
     // query.sse = sessionStartEvent.value
     // query.see = sessionEndEvent.value
 
-    return query
-  }
-
-  const runQuery = () => {
-    const query = getQuery();
-    setResultState('loading');
-    setShowResult(true);
-    closeDrawer();
-    runQueryService(activeProject.id, query).then(res => {
-      if (res.status === 200) {
-        setQueryResult(res.data);
-        setResultState('success');
-        setShowResult(true);
-        closeDrawer();
-      } else {
-        setResultError()
-      }
-    }, err => {
-      setResultError();
-    })
-
-  };
-
-  const setResultError = () => {
-    console.log(err);
-    setResultState('error');
-  }
+    return query;
+  }, [getEventsWithProperties, queryType]);
 
   const closeDrawer = () => {
     setDrawerVisible(false);
   };
 
+  const runQuery = useCallback(async () => {
+    const query = getQuery();
+    setResultState({ loading: true, error: false, data: {} });
+    closeDrawer();
+    setShowResult(true);
+    try {
+      const res = await runQueryService(activeProject.id, query);
+      if (res.status === 200) {
+        setResultState({ loading: false, error: false, data: res.data });
+      } else {
+        setResultState({ loading: false, error: true, data: {} });
+      }
+    } catch (err) {
+      setResultState({ loading: false, error: true, data: {} });
+    }
+  }, [activeProject, getQuery]);
+
   const title = () => {
     return (
       <div className={'flex justify-between items-center'}>
         <div className={'flex'}>
-          <SVG name={queryType === 'funnel' ? "funnels_cq" : "events_cq"} size="24px"></SVG>
-          <Text type={'title'} level={4} weight={'bold'} extraClass={'ml-2 m-0'}>{queryType === 'funnel' ? "Find event funnel for" : "Analyse Events"}</Text>
+          <SVG name={queryType === 'funnel' ? 'funnels_cq' : 'events_cq'} size="24px"></SVG>
+          <Text type={'title'} level={4} weight={'bold'} extraClass={'ml-2 m-0'}>{queryType === 'funnel' ? 'Find event funnel for' : 'Analyse Events'}</Text>
         </div>
         <div className={'flex justify-end items-center'}>
           <Button type="text"><SVG name="play"></SVG>Help</Button>
@@ -156,19 +142,20 @@ function CoreQuery({ activeProject }) {
   const eventsMapper = {};
   const reverseEventsMapper = {};
   queries.forEach((q, index) => {
-    // eventsMapper[`${q.label}`] = `event${index+1}`;
-    // reverseEventsMapper[`event${index+1}`] = q.label;
-    eventsMapper[`${q}`] = `event${index + 1}`;
-    reverseEventsMapper[`event${index + 1}`] = q;
-  })
+    eventsMapper[`${q.label}`] = `event${index + 1}`;
+    reverseEventsMapper[`event${index + 1}`] = q.label;
+    // eventsMapper[`${q}`] = `event${index + 1}`;
+    // reverseEventsMapper[`event${index + 1}`] = q;
+  });
 
   let result = (
     <EventsAnalytics
-      //queries={queries.map(elem => elem.label)}
-      queries={queries}
+      queries={queries.map(elem => elem.label)}
+      // queries={queries}
       eventsMapper={eventsMapper}
       reverseEventsMapper={reverseEventsMapper}
       breakdown={breakdown}
+      resultState={resultState}
     />
   );
 
@@ -176,8 +163,8 @@ function CoreQuery({ activeProject }) {
     result = (
       <FunnelsResultPage
         setDrawerVisible={setDrawerVisible}
-        // queries={queries.map(elem => elem.label)}
-        queries={queries}
+        queries={queries.map(elem => elem.label)}
+        // queries={queries}
         eventsMapper={eventsMapper}
         reverseEventsMapper={reverseEventsMapper}
       />
