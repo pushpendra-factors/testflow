@@ -859,7 +859,8 @@ func IsValidQuery(query *Query) (bool, string) {
 	}
 
 	if query.EventsCondition != EventCondAllGivenEvent &&
-		query.EventsCondition != EventCondAnyGivenEvent {
+		query.EventsCondition != EventCondAnyGivenEvent &&
+		query.EventsCondition != EventCondEachGivenEvent {
 		return false, "Invalid events condition given"
 	}
 
