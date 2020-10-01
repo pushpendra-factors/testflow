@@ -10,10 +10,13 @@ import EventsAnalytics from '../EventsAnalytics';
 function CoreQuery() {
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [queryType, setQueryType] = useState('event');
-  const [showResult, setShowResult] = useState(false);
-  // const [showResult, setShowResult] = useState(true);
-  const [queries, setQueries] = useState([]);
+  // const [showResult, setShowResult] = useState(false);
+  const [showResult, setShowResult] = useState(true);
+  // const [queries, setQueries] = useState([]);
   // const [queries, setQueries] = useState(["www.cars24.com/buy-used-cars", 'www.cars24.com/buy-used-car', 'www.cars24.com/account/appointments']);
+  const [queries, setQueries] = useState(["$session"]);
+  const [breakdown, setBreakdown] = useState(['$city']);
+  // const [breakdown, setBreakdown] = useState([]);
   // const [queries, setQueries] = useState(['Paid', 'Add to Wishlist', 'Checkout'])
 
   const queryChange = (newEvent, index, changeType = 'add') => {
@@ -40,36 +43,36 @@ function CoreQuery() {
   };
 
   const title = () => {
-    return (<div className={'flex justify-between items-center'}>
-      <div className={'flex'}>
-        <SVG name={queryType === 'funnel'? "funnels_cq": "events_cq"} size="24px"></SVG>
-        <Text type={'title'} level={4} weight={'bold'} extraClass={'ml-2 m-0'}>{queryType === 'funnel'? "Find event funnel for" : "Analyse Events"}</Text>
-      </div>
-      <div className={'flex justify-end items-center'}>
-        <Button type="text"><SVG name="play"></SVG>Help</Button>
-        <Button type="text" onClick={() => closeDrawer()}><SVG name="times"></SVG></Button>
-      </div>
-
+    return (
+      <div className={'flex justify-between items-center'}>
+        <div className={'flex'}>
+          <SVG name={queryType === 'funnel' ? "funnels_cq" : "events_cq"} size="24px"></SVG>
+          <Text type={'title'} level={4} weight={'bold'} extraClass={'ml-2 m-0'}>{queryType === 'funnel' ? "Find event funnel for" : "Analyse Events"}</Text>
+        </div>
+        <div className={'flex justify-end items-center'}>
+          <Button type="text"><SVG name="play"></SVG>Help</Button>
+          <Button type="text" onClick={() => closeDrawer()}><SVG name="times"></SVG></Button>
+        </div>
       </div>
     );
   };
 
   const eventsMapper = {};
   const reverseEventsMapper = {};
-  ["www.cars24.com/buy-used-cars", 'www.cars24.com/buy-used-car', 'www.cars24.com/account/appointments'].forEach((q, index) => {
+  queries.forEach((q, index) => {
     // eventsMapper[`${q.label}`] = `event${index+1}`;
     // reverseEventsMapper[`event${index+1}`] = q.label;
-    eventsMapper[`${q}`] = `event${index+1}`;
-    reverseEventsMapper[`event${index+1}`] = q;
+    eventsMapper[`${q}`] = `event${index + 1}`;
+    reverseEventsMapper[`event${index + 1}`] = q;
   })
 
   let result = (
     <EventsAnalytics
-      queryType={queryType}
       //queries={queries.map(elem => elem.label)}
-      queries={["www.cars24.com/buy-used-cars", 'www.cars24.com/buy-used-car', 'www.cars24.com/account/appointments']}
+      queries={queries}
       eventsMapper={eventsMapper}
       reverseEventsMapper={reverseEventsMapper}
+      breakdown={breakdown}
     />
   );
 
@@ -78,7 +81,7 @@ function CoreQuery() {
       <FunnelsResultPage
         setDrawerVisible={setDrawerVisible}
         // queries={queries.map(elem => elem.label)}
-        queries={["www.cars24.com/buy-used-cars", 'www.cars24.com/buy-used-car', 'www.cars24.com/account/appointments']}
+        queries={queries}
         eventsMapper={eventsMapper}
         reverseEventsMapper={reverseEventsMapper}
       />
@@ -87,7 +90,7 @@ function CoreQuery() {
 
   return (
     <>
-      <Drawer
+      {/* <Drawer
         title={title()}
         placement="left"
         closable={false}
@@ -104,7 +107,7 @@ function CoreQuery() {
           eventChange={queryChange}
           queryType={queryType}
         />
-      </Drawer>
+      </Drawer> */}
 
       {showResult ? (
         <>

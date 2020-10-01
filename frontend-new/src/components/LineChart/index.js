@@ -131,15 +131,15 @@ function LineChart({
           const data = d[0];
           return (
             `   
-                            <div class="toolTip">
-                                <div class="font-semibold">${moment(data.x).format('MMM D, YYYY')}</div>
-                                <div class="my-2">${reverseEventsMapper[data.name]}</div>
-                                <div class="flex items-center justify-start">
-                                    <div class="mr-1" style="background-color:${colors[data.name]};width:16px;height:16px;border-radius:8px"></div>
-                                    <div style="color:#0E2647;font-size:18px;line-height:24px">${data.value}</div>
-                                </div>
-                            </div>
-                        `
+              <div class="toolTip">
+                  <div class="font-semibold">${moment(data.x).format('MMM D, YYYY')}</div>
+                  <div class="my-2">${reverseEventsMapper[data.name]}</div>
+                  <div class="flex items-center justify-start">
+                      <div class="mr-1" style="background-color:${colors[data.name]};width:16px;height:16px;border-radius:8px"></div>
+                      <div style="color:#0E2647;font-size:18px;line-height:24px">${data.value}</div>
+                  </div>
+              </div>
+            `
           );
         }
       }

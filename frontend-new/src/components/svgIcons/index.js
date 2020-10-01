@@ -480,13 +480,13 @@ const TotalusersSVG = ({ size = 24, color, extraClass }) => {
 
   );
 };
-const SinglePagesSVG = ({extraClass}) => {
+const SinglePagesSVG = ({ extraClass }) => {
   return (
     <svg className={extraClass} width="197" height="224" viewBox="0 0 197 224" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="70" y="157.624" width="77" height="77" transform="rotate(-30.9704 70 157.624)" fill="#EEEDF8"/>
-      <rect x="91" y="39.6238" width="77" height="77" rx="38.5" transform="rotate(-30.9704 91 39.6238)" fill="#EEEDF8"/>
-      <rect y="189.436" width="35.8262" height="35.8262" rx="17.9131" transform="rotate(-30.9704 0 189.436)" fill="#EEEDF8"/>
-    </svg>  
+      <rect x="70" y="157.624" width="77" height="77" transform="rotate(-30.9704 70 157.624)" fill="#EEEDF8" />
+      <rect x="91" y="39.6238" width="77" height="77" rx="38.5" transform="rotate(-30.9704 91 39.6238)" fill="#EEEDF8" />
+      <rect y="189.436" width="35.8262" height="35.8262" rx="17.9131" transform="rotate(-30.9704 0 189.436)" fill="#EEEDF8" />
+    </svg>
   );
 };
 
@@ -533,6 +533,20 @@ const CheckmarkSVG = ({ size = 24, color, extraClass }) => {
   )
 }
 
+const BarchartSVG = ({ size = 24, color, extraClass }) => {
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} fill="none" xmlns="http://www.w3.org/2000/svg">
+      <g opacity="0.5">
+        <rect x="21.9998" y="19.3667" width="1.5" height="20" transform="rotate(90 21.9998 19.3667)" fill="#3E516C" fill={color} />
+        <rect x="3.99976" y="4.8667" width="3.99991" height="13" fill={color} />
+        <rect x="9.99976" y="8.8667" width="3.99991" height="9" fill={color} />
+        <rect x="15.9998" y="10.8667" width="3.99991" height="7" fill={color} />
+      </g>
+    </svg>
+
+  )
+}
+
 export {
   BrandSVG,
   DeleteSVG,
@@ -574,5 +588,6 @@ export {
   SparklinesSVG,
   DropdownSVG,
   LinechartSVG,
-  CheckmarkSVG
+  CheckmarkSVG,
+  BarchartSVG
 };

@@ -4,10 +4,10 @@ import { SVG } from '../factorsComponents';
 import styles from './index.module.scss';
 
 function ChartTypeDropdown({ menuItems, onClick, chartType }) {
-  const menu = (
+    const menu = (
         <Menu className={styles.dropdownMenu}>
             {menuItems.map(item => {
-              return (
+                return (
                     <Menu.Item key={item.key} onClick={onClick} className={`${styles.dropdownMenuItem} ${chartType === item.key ? styles.active : ''}`}>
                         <div className={'flex items-center'}>
                             <SVG extraClass="mr-1" name={item.key} size={25} color={chartType === item.key ? '#8692A3' : '#3E516C'} />
@@ -17,19 +17,19 @@ function ChartTypeDropdown({ menuItems, onClick, chartType }) {
                             ) : null}
                         </div>
                     </Menu.Item>
-              );
+                );
             })}
         </Menu>
-  );
+    );
 
-  return (
+    return (
         <Dropdown overlay={menu}>
             <Button className={`ant-dropdown-link flex items-center ${styles.dropdownBtn}`}>
                 <SVG name={chartType} size={25} color="#0E2647" />
                 <SVG name={'dropdown'} size={25} color="#3E516C" />
             </Button>
         </Dropdown>
-  );
+    );
 }
 
 export default ChartTypeDropdown;

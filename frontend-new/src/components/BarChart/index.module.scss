@@ -1,6 +1,6 @@
 $textColor: #3E516C;
 
-.ungroupedChart {
+.barChart {
     
     :global(.area) {
         fill: #E7E9ED;
@@ -54,22 +54,4 @@ $textColor: #3E516C;
         color: $textColor;
         z-index: 30;
     }
-}
-
-.changePercents,
-.valueText {
-    font-weight: 600;
-    font-size: 14px;
-    font-family: 'Work Sans', sans-serif;
-}
-
-.overAllConversionLine {
-    border-left-color: #B7BEC8;
-}
-
-.conversionText {
-    color: $textColor;
-    font-style: normal;
-    line-height: 24px;
-    font-size: 20px;
 }
