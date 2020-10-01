@@ -195,14 +195,14 @@ export const formatSingleEventSinglePropertyData = (data) => {
   const result = [];
   data.rows.forEach(elem => {
     if (elem[1] !== '$none') {
-      if (properties.hasOwnProperty(elem[1])) {
+      if (Object.prototype.hasOwnProperty.call(properties, elem[1])) {
         result[properties[elem[1]]].value += elem[2];
       } else {
         properties[elem[1]] = result.length;
         result.push({
           label: elem[1],
           value: elem[2]
-        })
+        });
       }
     }
   });
@@ -210,4 +210,4 @@ export const formatSingleEventSinglePropertyData = (data) => {
     return parseInt(a.value) <= parseInt(b.value) ? 1 : -1;
   });
   return result;
-}
+};
