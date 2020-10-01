@@ -2,8 +2,9 @@ import React from 'react';
 import NoBreakdownCharts from '../NoBreakdownCharts';
 import BreakdownCharts from '../BreakdownCharts';
 
-function TotalEvents({ queries, eventsMapper, reverseEventsMapper, breakdown }) {
-
+function TotalEvents({
+  queries, eventsMapper, reverseEventsMapper, breakdown
+}) {
   if (!breakdown.length) {
     return (
       <NoBreakdownCharts
@@ -11,7 +12,7 @@ function TotalEvents({ queries, eventsMapper, reverseEventsMapper, breakdown }) 
         eventsMapper={eventsMapper}
         reverseEventsMapper={reverseEventsMapper}
       />
-    )
+    );
   } else {
     return (
       <BreakdownCharts
@@ -20,7 +21,7 @@ function TotalEvents({ queries, eventsMapper, reverseEventsMapper, breakdown }) 
         reverseEventsMapper={reverseEventsMapper}
         breakdown={breakdown}
       />
-    )
+    );
   }
 }
 

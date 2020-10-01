@@ -7,7 +7,9 @@ import ContentTabs from '../../components/ContentTabs';
 import TotalEvents from './TotalEvents';
 import { SVG } from '../../components/factorsComponents';
 
-function EventsAnalytics({ queries, eventsMapper, reverseEventsMapper, breakdown }) {
+function EventsAnalytics({
+  queries, eventsMapper, reverseEventsMapper, breakdown
+}) {
   const [activeKey, setActiveKey] = useState('1');
 
   const handleTabChange = (tabKey) => {

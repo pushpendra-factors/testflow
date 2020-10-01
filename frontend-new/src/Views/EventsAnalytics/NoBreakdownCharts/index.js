@@ -8,38 +8,38 @@ import LineChart from '../../../components/LineChart';
 import { generateColors } from '../../CoreQuery/FunnelsResultPage/utils';
 
 function NoBreakdownCharts({ queries, eventsMapper, reverseEventsMapper }) {
-    const [hiddenEvents, setHiddenEvents] = useState([]);
-    const appliedColors = generateColors(queries.length);
-    const [chartType, setChartType] = useState('sparklines');
+  const [hiddenEvents, setHiddenEvents] = useState([]);
+  const appliedColors = generateColors(queries.length);
+  const [chartType, setChartType] = useState('sparklines');
 
-    let chartsData = [];
-    if (queries.length === 1) {
-        chartsData = formatSingleEventAnalyticsData(singleEventResponse, queries[0], eventsMapper);
-    } else {
-        chartsData = formatMultiEventsAnalyticsData(multiEventResponse, queries, eventsMapper);
+  let chartsData = [];
+  if (queries.length === 1) {
+    chartsData = formatSingleEventAnalyticsData(singleEventResponse, queries[0], eventsMapper);
+  } else {
+    chartsData = formatMultiEventsAnalyticsData(multiEventResponse, queries, eventsMapper);
+  }
+
+  if (!chartsData.length) {
+    return null;
+  }
+
+  const menuItems = [
+    {
+      key: 'sparklines',
+      onClick: setChartType,
+      name: 'Sparkline'
+    },
+    {
+      key: 'linechart',
+      onClick: setChartType,
+      name: 'Line Chart'
     }
+  ];
 
-    if (!chartsData.length) {
-        return null;
-    }
+  let chartContent = null;
 
-    const menuItems = [
-        {
-            key: 'sparklines',
-            onClick: setChartType,
-            name: 'Sparkline'
-        },
-        {
-            key: 'linechart',
-            onClick: setChartType,
-            name: 'Line Chart'
-        }
-    ]
-
-    let chartContent = null;
-
-    if (chartType === 'sparklines') {
-        chartContent = (
+  if (chartType === 'sparklines') {
+    chartContent = (
             <SparkLineChart
                 queries={queries}
                 chartsData={chartsData}
@@ -47,9 +47,9 @@ function NoBreakdownCharts({ queries, eventsMapper, reverseEventsMapper }) {
                 appliedColors={appliedColors}
                 eventsMapper={eventsMapper}
             />
-        )
-    } else if (chartType === 'linechart') {
-        chartContent = (
+    );
+  } else if (chartType === 'linechart') {
+    chartContent = (
             <div className="flex mt-8">
                 <LineChart
                     chartData={getDataInLineChartFormat(chartsData, queries, eventsMapper, hiddenEvents)}
@@ -61,10 +61,10 @@ function NoBreakdownCharts({ queries, eventsMapper, reverseEventsMapper }) {
                     hiddenEvents={hiddenEvents}
                 />
             </div>
-        )
-    }
+    );
+  }
 
-    return (
+  return (
         <div className="total-events">
             <div className="flex items-center justify-between">
                 <div className="filters-info">
@@ -75,7 +75,7 @@ function NoBreakdownCharts({ queries, eventsMapper, reverseEventsMapper }) {
                         chartType={chartType}
                         menuItems={menuItems}
                         onClick={(item) => {
-                            setChartType(item.key);
+                          setChartType(item.key);
                         }}
                     />
                 </div>
@@ -92,8 +92,7 @@ function NoBreakdownCharts({ queries, eventsMapper, reverseEventsMapper }) {
                 />
             </div>
         </div>
-    )
-
+  );
 }
 
 export default NoBreakdownCharts;
