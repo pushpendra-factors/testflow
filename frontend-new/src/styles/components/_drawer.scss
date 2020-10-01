@@ -2,7 +2,8 @@
 .ant-drawer.ant-drawer-left.ant-drawer-open{
 
     &.fa-drawer { 
-        left: 63px;
+        // left: 63px;
+        // z-index: 1005;
         .ant-drawer-body
         {
             padding: 0;
