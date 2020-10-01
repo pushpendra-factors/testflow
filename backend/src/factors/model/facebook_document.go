@@ -6,6 +6,7 @@ import (
 	U "factors/util"
 	"fmt"
 	"net/http"
+	"sort"
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -193,6 +194,19 @@ func ExecuteFacebookChannelQuery(projectId uint64, query *ChannelQuery) (*Channe
 
 	metricBreakDown, err := getFacebookMetricBreakdown(projectId, projectSetting.IntFacebookAdAccount, query)
 	queryResult.MetricsBreakdown = metricBreakDown
+
+	// sort only if the impression is there as column
+	impressionsIndex := 0
+	for _, key := range queryResult.MetricsBreakdown.Headers {
+		if key == "impressions" {
+			// sort the rows by impressions count in descending order
+			sort.Slice(queryResult.MetricsBreakdown.Rows, func(i, j int) bool {
+				return queryResult.MetricsBreakdown.Rows[i][impressionsIndex].(float64) > queryResult.MetricsBreakdown.Rows[j][impressionsIndex].(float64)
+			})
+			break
+		}
+		impressionsIndex++
+	}
 	return queryResult, http.StatusOK
 }
 func getFacebookMetricBreakdown(projectId uint64, customerAccountId string, query *ChannelQuery) (*ChannelBreakdownResult, error) {
