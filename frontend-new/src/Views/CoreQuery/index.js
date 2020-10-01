@@ -8,22 +8,20 @@ import { Drawer, Button } from 'antd';
 import { SVG, Text } from '../../components/factorsComponents';
 import EventsAnalytics from '../EventsAnalytics';
 
-import {runQuery as runQueryService} from '../../reducers/coreQuery/services';
+import { runQuery as runQueryService } from '../../reducers/coreQuery/services';
 
 
-const COND_ANY_GIVEN_EVENT = 'any_given_event'; 
+const COND_ANY_GIVEN_EVENT = 'any_given_event';
 const TYPE_EVENT_OCCURRENCE = 'events_occurrence';
 const TYPE_UNIQUE_USERS = 'unique_users';
 
-function CoreQuery({activeProject}) {
+function CoreQuery({ activeProject }) {
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [queryType, setQueryType] = useState('event');
   const [showResult, setShowResult] = useState(false);
   const [queries, setQueries] = useState([]);
-
-  // result state = none | loading | success | error
+  const [breakdown, setBreakdown] = useState([]);
   const [resultState, setResultState] = useState('none');
-
   const [queryResult, setQueryResult] = useState({})
 
 
@@ -54,18 +52,18 @@ function CoreQuery({activeProject}) {
   }
 
 
-  const getQuery = (presentation, toSave=false) => {
+  const getQuery = (presentation, toSave = false) => {
     let query = {};
-    query.cl = queryType === 'event'? 'insights' : 'funnel';
+    query.cl = queryType === 'event' ? 'insights' : 'funnel';
     query.ty = 'events_occurrence';
     query.ec = 'any_given_event';
     // event_occurrence supports only any_given_event.
     if (query.ty == TYPE_EVENT_OCCURRENCE) {
       query.ec = COND_ANY_GIVEN_EVENT;
     }
-    
+
     // Check date range validity
-    
+
     // let period = getQueryPeriod(this.state.resultDateRange[0], this.state.timeZone)
 
     const period = {
@@ -73,8 +71,8 @@ function CoreQuery({activeProject}) {
       to: 1601404199
     }
 
-    query.fr=period.from
-    query.to=period.to
+    query.fr = period.from
+    query.to = period.to
     query.ewp = getEventsWithProperties(queries);
 
     query.gbp = [];
@@ -104,18 +102,20 @@ function CoreQuery({activeProject}) {
     //   getGroupByTimestampType(query.fr, query.to) : '';
 
     query.tz = "Asia/Kolkata";
-    
+
     // query.sse = sessionStartEvent.value
     // query.see = sessionEndEvent.value
-  
+
     return query
   }
 
   const runQuery = () => {
     const query = getQuery();
     setResultState('loading');
+    setShowResult(true);
+    closeDrawer();
     runQueryService(activeProject.id, query).then(res => {
-      if(res.status === 200) {
+      if (res.status === 200) {
         setQueryResult(res.data);
         setResultState('success');
         setShowResult(true);
@@ -124,9 +124,9 @@ function CoreQuery({activeProject}) {
         setResultError()
       }
     }, err => {
-        setResultError();
+      setResultError();
     })
-    
+
   };
 
   const setResultError = () => {
@@ -139,36 +139,36 @@ function CoreQuery({activeProject}) {
   };
 
   const title = () => {
-    return (<div className={'flex justify-between items-center'}>
-      <div className={'flex'}>
-        <SVG name={queryType === 'funnel'? "funnels_cq": "events_cq"} size="24px"></SVG>
-        <Text type={'title'} level={4} weight={'bold'} extraClass={'ml-2 m-0'}>{queryType === 'funnel'? "Find event funnel for" : "Analyse Events"}</Text>
-      </div>
-      <div className={'flex justify-end items-center'}>
-        <Button type="text"><SVG name="play"></SVG>Help</Button>
-        <Button type="text" onClick={() => closeDrawer()}><SVG name="times"></SVG></Button>
-      </div>
-
+    return (
+      <div className={'flex justify-between items-center'}>
+        <div className={'flex'}>
+          <SVG name={queryType === 'funnel' ? "funnels_cq" : "events_cq"} size="24px"></SVG>
+          <Text type={'title'} level={4} weight={'bold'} extraClass={'ml-2 m-0'}>{queryType === 'funnel' ? "Find event funnel for" : "Analyse Events"}</Text>
+        </div>
+        <div className={'flex justify-end items-center'}>
+          <Button type="text"><SVG name="play"></SVG>Help</Button>
+          <Button type="text" onClick={() => closeDrawer()}><SVG name="times"></SVG></Button>
+        </div>
       </div>
     );
   };
 
   const eventsMapper = {};
   const reverseEventsMapper = {};
-  ["www.cars24.com/buy-used-cars", 'www.cars24.com/buy-used-car', 'www.cars24.com/account/appointments'].forEach((q, index) => {
+  queries.forEach((q, index) => {
     // eventsMapper[`${q.label}`] = `event${index+1}`;
     // reverseEventsMapper[`event${index+1}`] = q.label;
-    eventsMapper[`${q}`] = `event${index+1}`;
-    reverseEventsMapper[`event${index+1}`] = q;
+    eventsMapper[`${q}`] = `event${index + 1}`;
+    reverseEventsMapper[`event${index + 1}`] = q;
   })
 
   let result = (
     <EventsAnalytics
-      queryType={queryType}
       //queries={queries.map(elem => elem.label)}
-      queries={["www.cars24.com/buy-used-cars", 'www.cars24.com/buy-used-car', 'www.cars24.com/account/appointments']}
+      queries={queries}
       eventsMapper={eventsMapper}
       reverseEventsMapper={reverseEventsMapper}
+      breakdown={breakdown}
     />
   );
 
@@ -177,7 +177,7 @@ function CoreQuery({activeProject}) {
       <FunnelsResultPage
         setDrawerVisible={setDrawerVisible}
         // queries={queries.map(elem => elem.label)}
-        queries={["www.cars24.com/buy-used-cars", 'www.cars24.com/buy-used-car', 'www.cars24.com/account/appointments']}
+        queries={queries}
         eventsMapper={eventsMapper}
         reverseEventsMapper={reverseEventsMapper}
       />
