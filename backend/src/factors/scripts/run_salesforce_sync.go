@@ -77,7 +77,7 @@ func main() {
 	for pid, projectSettings := range syncInfo.ProjectSettings {
 		accessToken, err := IntSalesforce.GetAccessToken(projectSettings, H.GetSalesforceRedirectURL())
 		if err != nil {
-			log.WithField("project_id", pid).Errorf("Failed to get salesforce access token: %d", status)
+			log.WithField("project_id", pid).Errorf("Failed to get salesforce access token: %s", err)
 			continue
 		}
 

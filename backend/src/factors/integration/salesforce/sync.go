@@ -78,6 +78,11 @@ func SalesforceGetRequest(url, accessToken string) (*http.Response, error) {
 	return resp, nil
 }
 
+type DataServiceError struct {
+	Message   string `json:"message"`
+	ErrorCode string `json:"errorCode"`
+}
+
 func getSalesforceObjectDescription(objectName, accessToken, instanceURL string) (*Describe, error) {
 	if objectName == "" || accessToken == "" || instanceURL == "" {
 		return nil, errors.New("missing required fields")
@@ -91,7 +96,10 @@ func getSalesforceObjectDescription(objectName, accessToken, instanceURL string)
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("error while getting object description with respone code %d ", resp.StatusCode)
+		var errBody []DataServiceError
+		json.NewDecoder(resp.Body).Decode(&errBody)
+
+		return nil, fmt.Errorf("error while getting object description  %+v", errBody)
 	}
 
 	var jsonRespone Describe
@@ -142,7 +150,10 @@ func getSalesforceDataByQuery(query, accessToken, instanceURL, dateTime string) 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("error while query data with respone code %d ", resp.StatusCode)
+		var errBody []DataServiceError
+		json.NewDecoder(resp.Body).Decode(&errBody)
+
+		return nil, fmt.Errorf("error while query data %+v", errBody)
 	}
 
 	var jsonRespone QueryRespone
@@ -223,7 +234,9 @@ func getSalesforceNextBatch(nextBatchRoute, InstanceURL string, accessToken stri
 
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("error while query next batch with respone code %d ", resp.StatusCode)
+		var errBody []DataServiceError
+		json.NewDecoder(resp.Body).Decode(&errBody)
+		return nil, fmt.Errorf("error while query next batch %+v ", errBody)
 	}
 
 	var jsonRespone QueryRespone
@@ -235,8 +248,17 @@ func getSalesforceNextBatch(nextBatchRoute, InstanceURL string, accessToken stri
 	return &jsonRespone, nil
 }
 
+type TokenError struct {
+	Error            string `json:"error"`
+	ErrorDescription string `json:"error_description"`
+}
+
 // GetAccessToken gets new salesforce access token by refresh token
 func GetAccessToken(ps *M.SalesforceProjectSettings, redirectUrl string) (string, error) {
+	if ps == nil || redirectUrl == "" {
+		return "", errors.New("invalid project setting or redirect url")
+	}
+
 	queryParams := fmt.Sprintf("grant_type=%s&refresh_token=%s&client_id=%s&client_secret=%s&redirect_uri=%s",
 		"refresh_token", ps.RefreshToken, C.GetSalesforceAppId(), C.GetSalesforceAppSecret(), redirectUrl)
 	url := REFRESH_TOKEN_URL + "?" + queryParams
@@ -256,7 +278,9 @@ func GetAccessToken(ps *M.SalesforceProjectSettings, redirectUrl string) (string
 
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("error while query data with respone code %d ", resp.StatusCode)
+		var errBody TokenError
+		json.NewDecoder(resp.Body).Decode(&errBody)
+		return "", fmt.Errorf("error while query data %s : %s", errBody.Error, errBody.ErrorDescription)
 	}
 
 	var jsonRespone map[string]interface{}
