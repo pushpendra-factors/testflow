@@ -311,7 +311,7 @@ func CreateSalesforceDocumentByAction(projectID uint64, document *SalesforceDocu
 	}
 
 	document.Action = action
-	timestamp, err := GetSalesforceDocumentTimestampByAction(document)
+	timestamp, err := GetSalesforceDocumentTimestampByAction(document, action)
 	if err != nil {
 		return err
 	}
@@ -330,9 +330,12 @@ func CreateSalesforceDocumentByAction(projectID uint64, document *SalesforceDocu
 	return nil
 }
 
-func GetSalesforceDocumentTimestampByAction(document *SalesforceDocument) (int64, error) {
+func GetSalesforceDocumentTimestampByAction(document *SalesforceDocument, action SalesforceAction) (int64, error) {
 	if document.Type == 0 {
 		return 0, errors.New("invalid document type")
+	}
+	if action == 0 {
+		return 0, errors.New("invalid action")
 	}
 
 	value, err := U.DecodePostgresJsonb(document.Value)
@@ -340,7 +343,13 @@ func GetSalesforceDocumentTimestampByAction(document *SalesforceDocument) (int64
 		return 0, err
 	}
 
-	dateKey := "LastModifiedDate"
+	var dateKey string
+	if action == SalesforceDocumentCreated {
+		dateKey = "CreatedDate"
+	}
+	if action == SalesforceDocumentUpdated {
+		dateKey = "LastModifiedDate"
+	}
 
 	date, exists := (*value)[dateKey]
 	if !exists || date == nil {

@@ -156,7 +156,7 @@ func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.Trac
 	var err error
 	if document.Action == M.SalesforceDocumentCreated {
 		trackPayload.Name = M.GetSalesforceEventNameByAction(document, M.SalesforceDocumentCreated)
-		trackPayload.Timestamp, err = M.GetSalesforceDocumentTimestampByAction(document)
+		trackPayload.Timestamp, err = M.GetSalesforceDocumentTimestampByAction(document, document.Action)
 		if err != nil {
 			return "", "", err
 		}
@@ -173,7 +173,7 @@ func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.Trac
 	if document.Action == M.SalesforceDocumentCreated || document.Action == M.SalesforceDocumentUpdated {
 		trackPayload.EventId = "" //clear EventId from previous track
 		trackPayload.Name = M.GetSalesforceEventNameByAction(document, M.SalesforceDocumentUpdated)
-		trackPayload.Timestamp, err = M.GetSalesforceDocumentTimestampByAction(document)
+		trackPayload.Timestamp, err = M.GetSalesforceDocumentTimestampByAction(document, document.Action)
 		if err != nil {
 			return "", "", err
 		}
