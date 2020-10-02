@@ -6,10 +6,12 @@ import (
 	M "factors/model"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	C "factors/config"
 	SDK "factors/sdk"
+	U "factors/util"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -32,27 +34,36 @@ func getSalesforceDocumentProperties(projectID uint64, document *M.SalesforceDoc
 		return nil, err
 	}
 
-	filterPropertyFieldsByProjectID(projectID, properties, document.Type)
+	filterPropertyFieldsByProjectID(projectID, &properties, document.Type)
 
-	return properties, nil
+	enrichedProperties := make(map[string]interface{})
+
+	for key, value := range properties {
+		enKey := getPropertyKeyByType(M.GetSalesforceAliasByDocType(document.Type), key)
+		if _, exists := properties[enKey]; !exists {
+			enrichedProperties[enKey] = value
+		}
+	}
+
+	return enrichedProperties, nil
 }
 
-func filterPropertyFieldsByProjectID(projectID uint64, properties map[string]interface{}, docType int) {
+func filterPropertyFieldsByProjectID(projectID uint64, properties *map[string]interface{}, docType int) {
 
 	if projectID == 0 {
 		return
 	}
 
 	allowedfields := M.GetSalesforceAllowedfiedsByObject(projectID, M.GetSalesforceAliasByDocType(docType))
-	for field, value := range properties {
+	for field, value := range *properties {
 		if value == nil || value == "" || value == 0 {
-			delete(properties, field)
+			delete(*properties, field)
 			continue
 		}
 
 		if allowedfields != nil {
 			if _, exist := allowedfields[field]; !exist {
-				delete(properties, field)
+				delete(*properties, field)
 			}
 		}
 	}
@@ -80,6 +91,51 @@ func getSalesforceAccountID(document *M.SalesforceDocument) (string, error) {
 	}
 
 	return accountID, nil
+}
+
+func getCustomerUserIDFromProperties(projectID uint64, properties map[string]interface{}) string {
+
+	possiblePhoneField := []string{
+		"Phone",
+		"Phone__c",
+		"MobilePhone",
+		"MobilePhone__c",
+		"PersonMobilePhone",
+	}
+
+	for _, phoneField := range possiblePhoneField {
+		if phoneNo, ok := properties[phoneField].(string); ok && phoneNo != "" {
+			pPhoneNo := U.GetPossiblePhoneNumber(phoneNo)
+
+			existingPhoneNo, errCode := M.GetExistingCustomerUserID(projectID, pPhoneNo)
+			if errCode == http.StatusFound {
+				for i := range pPhoneNo {
+					if _, exist := existingPhoneNo[pPhoneNo[i]]; exist {
+						return pPhoneNo[i]
+					}
+				}
+			}
+			return phoneNo
+		}
+	}
+
+	possibleEmailField := []string{
+		"Email",
+		"Email__c",
+		"PersonEmail",
+	}
+
+	for _, emailField := range possibleEmailField {
+		if email, ok := properties[emailField].(string); ok && email != "" {
+			return email
+		}
+	}
+
+	return ""
+}
+
+func getPropertyKeyByType(typ, key string) string {
+	return fmt.Sprintf("$%s_%s_%s", SDK.SourceSalesforce, typ, strings.ToLower(key))
 }
 
 /*
@@ -174,20 +230,17 @@ func enrichAccount(projectID uint64, document *M.SalesforceDocument) int {
 		return http.StatusInternalServerError
 	}
 
-	accountID, err := getSalesforceAccountID(document)
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to get salesforce account id")
-	}
-
-	if accountID != "" {
+	customerUserID := getCustomerUserIDFromProperties(projectID, properties)
+	if customerUserID != "" {
 		status, _ := SDK.Identify(projectID, &SDK.IdentifyPayload{
-			UserId: userID, CustomerUserId: accountID,
-		})
+			UserId: userID, CustomerUserId: customerUserID})
 		if status != http.StatusOK {
-			logCtx.WithField("customer_user_id", accountID).Error(
+			logCtx.WithField("customer_user_id", customerUserID).Error(
 				"Failed to identify user on salesforce account sync.")
 			return http.StatusInternalServerError
 		}
+	} else {
+		logCtx.Error("Skipped user identification on salesforce account sync. No customer_user_id on properties.")
 	}
 
 	errCode := M.UpdateSalesforceDocumentAsSynced(projectID, document.ID, eventID)
@@ -220,11 +273,24 @@ func enrichContact(projectID uint64, document *M.SalesforceDocument) int {
 		UserProperties:  properties,
 	}
 
-	eventID, _, err := TrackSalesforceEventByDocumentType(projectID, trackPayload, document)
+	eventID, userID, err := TrackSalesforceEventByDocumentType(projectID, trackPayload, document)
 	if err != nil {
 		logCtx.WithError(err).Error(
 			"Failed to track salesforce contact event.")
 		return http.StatusInternalServerError
+	}
+
+	customerUserID := getCustomerUserIDFromProperties(projectID, properties)
+	if customerUserID != "" {
+		status, _ := SDK.Identify(projectID, &SDK.IdentifyPayload{
+			UserId: userID, CustomerUserId: customerUserID})
+		if status != http.StatusOK {
+			logCtx.WithField("customer_user_id", customerUserID).Error(
+				"Failed to identify user on salesforce contact sync.")
+			return http.StatusInternalServerError
+		}
+	} else {
+		logCtx.Error("Skipped user identification on salesforce contact sync. No customer_user_id on properties.")
 	}
 
 	errCode := M.UpdateSalesforceDocumentAsSynced(projectID, document.ID, eventID)
@@ -257,11 +323,24 @@ func enrichOpportunities(projectID uint64, document *M.SalesforceDocument) int {
 		UserProperties:  properties,
 	}
 
-	eventID, _, err := TrackSalesforceEventByDocumentType(projectID, trackPayload, document)
+	eventID, userID, err := TrackSalesforceEventByDocumentType(projectID, trackPayload, document)
 	if err != nil {
 		logCtx.WithError(err).Error(
 			"Failed to track salesforce opportunity event.")
 		return http.StatusInternalServerError
+	}
+
+	customerUserID := getCustomerUserIDFromProperties(projectID, properties)
+	if customerUserID != "" {
+		status, _ := SDK.Identify(projectID, &SDK.IdentifyPayload{
+			UserId: userID, CustomerUserId: customerUserID})
+		if status != http.StatusOK {
+			logCtx.WithField("customer_user_id", customerUserID).Error(
+				"Failed to identify user on salesforce opportunity sync.")
+			return http.StatusInternalServerError
+		}
+	} else {
+		logCtx.Error("Skipped user identification on salesforce opportunity sync. No customer_user_id on properties.")
 	}
 
 	errCode := M.UpdateSalesforceDocumentAsSynced(projectID, document.ID, eventID)

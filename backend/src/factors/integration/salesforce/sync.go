@@ -11,7 +11,6 @@ import (
 
 	C "factors/config"
 	M "factors/model"
-	U "factors/util"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -51,31 +50,6 @@ type SalesforceJobStatus struct {
 	Status   string                   `json:"status"`
 	Success  []SalesforceObjectStatus `json:"success"`
 	Failures []SalesforceObjectStatus `json:"failures"`
-}
-
-func getCustomerUserIDFromProperties(projectID uint64, properties map[string]interface{}) string {
-
-	if phoneNo, ok := properties["MobilePhone"].(string); ok && phoneNo != "" {
-		for pPhoneNo := range U.GetPossiblePhoneNumber(phoneNo) {
-			_, errCode := M.GetUserLatestByCustomerUserId(projectID, pPhoneNo)
-			if errCode == http.StatusFound {
-				return pPhoneNo
-			}
-		}
-		return phoneNo
-	}
-
-	if phoneNo, ok := properties["Phone"].(string); ok && phoneNo != "" {
-		for pPhoneNo := range U.GetPossiblePhoneNumber(phoneNo) {
-			_, errCode := M.GetUserLatestByCustomerUserId(projectID, pPhoneNo)
-			if errCode == http.StatusFound {
-				return pPhoneNo
-			}
-		}
-		return phoneNo
-	}
-
-	return ""
 }
 
 func buildSalesforceGETRequest(url, accessToken string) (*http.Request, error) {
