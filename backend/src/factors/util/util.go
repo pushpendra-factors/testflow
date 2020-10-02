@@ -505,7 +505,7 @@ func isPurePhoneNumber(phoneNo string) bool {
 	return false
 }
 
-func getSeparatorIndex(phoneNo *string) []int {
+func getPhoneNoSeparatorIndex(phoneNo *string) []int {
 	var separatorsIndex []int
 	separators := []string{" ", "-"}
 	for _, seperator := range separators {
@@ -529,7 +529,7 @@ func isPhoneValidCountryCode(cCode string) bool {
 // maybeAddInternationalPrefix adds if missing '+' at the beginning for the libphonenumber to work
 func maybeAddInternationalPrefix(phoneNo *string) bool {
 	// Ex 91 1234567890
-	separatorsIndex := getSeparatorIndex(phoneNo)
+	separatorsIndex := getPhoneNoSeparatorIndex(phoneNo)
 
 	for _, indexValue := range separatorsIndex {
 		cCode := string((*phoneNo)[:indexValue])
