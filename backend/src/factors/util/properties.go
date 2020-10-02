@@ -89,9 +89,11 @@ var PROPERTIES_TYPE_DATE_TIME = [...]string{
 
 // Event Properites
 var EP_INTERNAL_IP string = "$ip"
+var EP_SKIP_SESSION string = "$skip_session"
+
 var EP_LOCATION_LATITUDE string = "$location_lat"
 var EP_LOCATION_LONGITUDE string = "$location_lng"
-var EP_SKIP_SESSION string = "$skip_session"
+var EP_IS_PAGE_VIEW string = "$is_page_view" // type:bool
 var EP_PAGE_TITLE string = "$page_title"
 var EP_PAGE_DOMAIN string = "$page_domain"
 var EP_PAGE_RAW_URL string = "$page_raw_url"
@@ -99,8 +101,8 @@ var EP_PAGE_URL string = "$page_url"
 var EP_REFERRER string = "$referrer"
 var EP_REFERRER_DOMAIN string = "$referrer_domain"
 var EP_REFERRER_URL string = "$referrer_url"
-var EP_PAGE_LOAD_TIME string = "$page_load_time"   // in seconds.
-var EP_PAGE_SPENT_TIME string = "$page_spent_time" // in seconds.
+var EP_PAGE_LOAD_TIME string = "$page_load_time"   // unit:seconds
+var EP_PAGE_SPENT_TIME string = "$page_spent_time" // unit:seconds
 var EP_PAGE_SCROLL_PERCENT string = "$page_scroll_percent"
 var EP_SEGMENT_EVENT_VERSION string = "$segment_event_version"
 var EP_CAMPAIGN string = "$campaign"
@@ -124,6 +126,9 @@ var EP_TERM string = "$term"
 var EP_CHANNEL string = "$channel" // added at runtime.
 
 // User Properties
+var UP_INITIAL_PAGE_EVENT_ID string = "$initial_page_event_id" // internal. id of initial page event.
+var UP_MERGE_TIMESTAMP string = "$merge_timestamp"             // Internal property used in user properties merge.
+
 var UP_PLATFORM string = "$platform"
 var UP_BROWSER string = "$browser"
 var UP_BROWSER_VERSION string = "$browser_version"
@@ -167,12 +172,11 @@ var UP_NAME string = "$name"
 var UP_FIRST_NAME string = "$first_name"
 var UP_LAST_NAME string = "$last_name"
 var UP_PHONE string = "$phone"
-var UP_INITIAL_PAGE_EVENT_ID string = "$initial_page_event_id" // internal. id of initial page event.
 var UP_INITIAL_PAGE_URL string = "$initial_page_url"
 var UP_INITIAL_PAGE_DOMAIN string = "$initial_page_domain"
 var UP_INITIAL_PAGE_RAW_URL string = "$initial_page_raw_url"
 var UP_INITIAL_PAGE_LOAD_TIME string = "$initial_page_load_time"
-var UP_INITIAL_PAGE_SPENT_TIME string = "$initial_page_spent_time" // in seconds.
+var UP_INITIAL_PAGE_SPENT_TIME string = "$initial_page_spent_time" // unit:seconds
 var UP_INITIAL_PAGE_SCROLL_PERCENT string = "$initial_page_scroll_percent"
 var UP_INITIAL_CAMPAIGN string = "$initial_campaign"
 var UP_INITIAL_CAMPAIGN_ID string = "$initial_campaign_id"
@@ -197,14 +201,13 @@ var UP_DAY_OF_FIRST_EVENT string = "$day_of_first_event"
 var UP_HOUR_OF_FIRST_EVENT string = "$hour_of_first_event"
 var UP_SESSION_COUNT string = "$session_count"
 var UP_PAGE_COUNT string = "$page_count"
-var UP_TOTAL_SPENT_TIME string = "$session_spent_time" // in seconds.
-var UP_MERGE_TIMESTAMP string = "$merge_timestamp"     // Internal property used in user properties merge.
+var UP_TOTAL_SPENT_TIME string = "$session_spent_time" // unit:seconds
 
 var UP_LATEST_PAGE_URL string = "$latest_page_url"
 var UP_LATEST_PAGE_DOMAIN string = "$latest_page_domain"
 var UP_LATEST_PAGE_RAW_URL string = "$latest_page_raw_url"
 var UP_LATEST_PAGE_LOAD_TIME string = "$latest_page_load_time"
-var UP_LATEST_PAGE_SPENT_TIME string = "$latest_page_spent_time" // in seconds.
+var UP_LATEST_PAGE_SPENT_TIME string = "$latest_page_spent_time" // unit:seconds
 var UP_LATEST_PAGE_SCROLL_PERCENT string = "$latest_page_scroll_percent"
 var UP_LATEST_CAMPAIGN string = "$latest_campaign"
 var UP_LATEST_CAMPAIGN_ID string = "$latest_campaign_id"
@@ -225,13 +228,13 @@ var UP_LATEST_REFERRER_URL string = "$latest_referrer_url"
 var UP_LATEST_REFERRER_DOMAIN string = "$latest_referrer_domain"
 
 // session properties
-var SP_IS_FIRST_SESSION = "$is_first_session"
+var SP_IS_FIRST_SESSION = "$is_first_session" // type:bool
 var SP_PAGE_VIEWS = "$page_views"
 var SP_SESSION_TIME = "$session_time"
 var SP_INITIAL_REFERRER = "$initial_referrer"
 var SP_INITIAL_REFERRER_URL = "$initial_referrer_url"
 var SP_INITIAL_REFERRER_DOMAIN = "$initial_referrer_domain"
-var SP_SPENT_TIME string = "$session_spent_time" // in seconds.
+var SP_SPENT_TIME string = "$session_spent_time" // unit:seconds
 var SP_PAGE_COUNT string = "$page_count"
 var SP_LATEST_PAGE_URL = "$session_latest_page_url"
 var SP_LATEST_PAGE_RAW_URL = "$session_latest_page_raw_url"
@@ -241,7 +244,7 @@ var SP_INITIAL_PAGE_URL string = UP_INITIAL_PAGE_URL
 var SP_INITIAL_PAGE_RAW_URL string = UP_INITIAL_PAGE_RAW_URL
 var SP_INITIAL_PAGE_DOMAIN string = UP_INITIAL_PAGE_DOMAIN
 var SP_INITIAL_PAGE_LOAD_TIME string = UP_INITIAL_PAGE_LOAD_TIME
-var SP_INITIAL_PAGE_SPENT_TIME string = UP_INITIAL_PAGE_SPENT_TIME // in seconds.
+var SP_INITIAL_PAGE_SPENT_TIME string = UP_INITIAL_PAGE_SPENT_TIME // unit:seconds
 var SP_INITIAL_PAGE_SCROLL_PERCENT string = UP_INITIAL_PAGE_SCROLL_PERCENT
 var SP_INITIAL_COST string = UP_INITIAL_COST
 var SP_INITIAL_REVENUE string = UP_INITIAL_REVENUE
@@ -252,6 +255,7 @@ var SDK_ALLOWED_EVENT_PROPERTIES = [...]string{
 	EP_LOCATION_LONGITUDE,
 	EP_SKIP_SESSION,
 	EP_SEGMENT_EVENT_VERSION,
+	EP_IS_PAGE_VIEW,
 	EP_PAGE_TITLE,
 	EP_PAGE_DOMAIN,
 	EP_PAGE_RAW_URL,
@@ -457,6 +461,7 @@ var NUMERICAL_PROPERTY_BY_NAME = [...]string{
 var CATEGORICAL_PROPERTY_BY_NAME = [...]string{
 	EP_CAMPAIGN_ID,
 	EP_ADGROUP_ID,
+	EP_IS_PAGE_VIEW,
 	UP_INITIAL_ADGROUP_ID,
 	UP_INITIAL_CAMPAIGN_ID,
 	SP_IS_FIRST_SESSION,
@@ -866,6 +871,20 @@ func IsGenericUserProperty(key *string) bool {
 		}
 	}
 	return false
+}
+
+func IsPageViewEvent(eventPropertiesMap *PropertiesMap) bool {
+	if eventPropertiesMap == nil {
+		return false
+	}
+
+	valueAsInterface, exists := (*eventPropertiesMap)[EP_IS_PAGE_VIEW]
+	if !exists {
+		return false
+	}
+
+	value, ok := valueAsInterface.(bool)
+	return ok && value
 }
 
 func GetUnEscapedPropertyValue(v interface{}) interface{} {

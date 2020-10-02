@@ -137,6 +137,7 @@ func TestSDKTrackHandler(t *testing.T) {
 	assert.Equal(t, float64(1), eventProperties[U.EP_PAGE_SPENT_TIME])     // Should be default value.
 	assert.Equal(t, float64(1), eventProperties[U.EP_PAGE_LOAD_TIME])      // Should be default value.
 	assert.Equal(t, float64(0), eventProperties[U.EP_PAGE_SCROLL_PERCENT]) // Should be default value.
+	assert.True(t, eventProperties[U.EP_IS_PAGE_VIEW].(bool))
 	assert.True(t, len(rEvent.UserPropertiesId) > 0)
 	rUser, errCode := M.GetUser(rEvent.ProjectId, rEvent.UserId)
 	assert.Equal(t, http.StatusFound, errCode)

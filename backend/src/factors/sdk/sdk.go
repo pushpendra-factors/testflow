@@ -432,6 +432,10 @@ func Track(projectId uint64, request *TrackPayload,
 		request.Timestamp = time.Now().Unix()
 	}
 
+	if request.EventProperties == nil {
+		request.EventProperties = make(U.PropertiesMap, 0)
+	}
+
 	// Skipping track for configured projects.
 	for _, skipProjectId := range C.GetSkipTrackProjectIds() {
 		if skipProjectId == projectId {
@@ -463,8 +467,10 @@ func Track(projectId uint64, request *TrackPayload,
 	// if auto_track enabled, auto_name = event_name else auto_name = "UCEN".
 	// On 'auto' true event_name is the eventURL(e.g: factors.ai/u1/u2/u3) for JS_.
 	if request.Auto {
-		// Pass eventURL through filter and get corresponding event_name mapped by user.
 		request.Name = strings.TrimSuffix(request.Name, "/")
+		request.EventProperties[U.EP_IS_PAGE_VIEW] = true
+
+		// Pass eventURL through filter and get corresponding event_name mapped by user.
 		eventName, eventNameErrCode = M.FilterEventNameByEventURL(projectId, request.Name)
 		if eventName != nil && eventNameErrCode == http.StatusFound {
 			err := M.FillEventPropertiesByFilterExpr(&request.EventProperties, eventName.FilterExpr, request.Name)

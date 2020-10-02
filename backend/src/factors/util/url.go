@@ -105,13 +105,3 @@ func GetQueryParamsFromURLFragment(fragment string) map[string]interface{} {
 
 	return paramsMap
 }
-
-func IsURLStable(urlStr string) bool {
-	url, err := ParseURLStable(urlStr)
-	if err != nil || url == nil {
-		return false
-	}
-
-	isValidHost := strings.Contains(url.Host, ".") || strings.Contains(url.Host, ":")
-	return isValidHost
-}
