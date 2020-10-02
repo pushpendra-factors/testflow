@@ -424,6 +424,20 @@ func main() {
 		log.Info("project_settings table is associated with agents table.")
 	}
 
+	// Create salesforce_documents documents table
+	if err := db.CreateTable(&M.SalesforceDocument{}).Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("salesforce_documents table creation failed.")
+	} else {
+		log.Info("created salesforce_documents documents table.")
+	}
+
+	// Add foreign key constraints projects(id).
+	if err := db.Model(&M.SalesforceDocument{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("salesforce_documents table association with projects table failed.")
+	} else {
+		log.Info("salesforce_documents table is associated with projects table.")
+	}
+
 	// Create bigquery settings table.
 	if err := db.CreateTable(&M.BigquerySetting{}).Error; err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("bigquery_settings table creation failed.")
