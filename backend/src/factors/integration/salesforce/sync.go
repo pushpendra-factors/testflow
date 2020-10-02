@@ -129,12 +129,12 @@ func getSalesforceDataByQuery(query, accessToken, instanceURL, dateTime string) 
 		return nil, errors.New("missing required fields")
 	}
 
-	var whereStmnt string
+	queryURL := instanceURL + SALESFORCE_DATA_SERVICE_ROUTE + SALESFORCE_API_VERSION + "/query?q=" + query
+
 	if dateTime != "" {
-		whereStmnt = "WHERE" + "+" + "LastModifiedDate" + url.QueryEscape(">"+dateTime)
+		queryURL = queryURL + "+" + "WHERE" + "+" + "LastModifiedDate" + url.QueryEscape(">"+dateTime)
 	}
 
-	queryURL := instanceURL + SALESFORCE_DATA_SERVICE_ROUTE + SALESFORCE_API_VERSION + "/query?q=" + query + "+" + whereStmnt
 	resp, err := SalesforceGetRequest(queryURL, accessToken)
 	if err != nil {
 		return nil, err

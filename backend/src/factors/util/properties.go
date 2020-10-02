@@ -436,6 +436,7 @@ const NAME_PREFIX_ESCAPE_CHAR = "_"
 const QUERY_PARAM_PROPERTY_PREFIX = "$qp_"
 const QUERY_PARAM_UTM_PREFIX = QUERY_PARAM_PROPERTY_PREFIX + "utm_"
 const HUBSPOT_PROPERTY_PREFIX = "$hubspot_"
+const SALESFORCE_PROPERTY_PREFIX = "$salesforce_"
 
 // Platforms
 const PLATFORM_WEB = "web"
@@ -904,6 +905,7 @@ func GetValidatedUserProperties(properties *PropertiesMap) *PropertiesMap {
 		if err := isPropertyTypeValid(v); err == nil {
 			if strings.HasPrefix(k, NAME_PREFIX) &&
 				!strings.HasPrefix(k, HUBSPOT_PROPERTY_PREFIX) &&
+				!strings.HasPrefix(k, SALESFORCE_PROPERTY_PREFIX) &&
 				!isSDKAllowedUserProperty(&k) {
 
 				validatedProperties[fmt.Sprintf("%s%s", NAME_PREFIX_ESCAPE_CHAR, k)] = v
@@ -927,6 +929,7 @@ func GetValidatedEventProperties(properties *PropertiesMap) *PropertiesMap {
 			if strings.HasPrefix(k, NAME_PREFIX) &&
 				!strings.HasPrefix(k, QUERY_PARAM_PROPERTY_PREFIX) &&
 				!strings.HasPrefix(k, HUBSPOT_PROPERTY_PREFIX) &&
+				!strings.HasPrefix(k, SALESFORCE_PROPERTY_PREFIX) &&
 				!isSDKAllowedEventProperty(&k) {
 				propertyKey = fmt.Sprintf("%s%s", NAME_PREFIX_ESCAPE_CHAR, k)
 			} else {

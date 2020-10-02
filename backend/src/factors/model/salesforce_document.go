@@ -195,6 +195,34 @@ func getSalesforceDocumentID(document *SalesforceDocument) (string, error) {
 	return idAsString, nil
 }
 
+func GetSyncedSalesforceDocumentByType(projectId uint64, ids []string,
+	docType int) ([]SalesforceDocument, int) {
+
+	logCtx := log.WithFields(log.Fields{"project_id": projectId, "ids": ids,
+		"type": docType})
+
+	var documents []SalesforceDocument
+	if projectId == 0 || len(ids) == 0 || docType == 0 {
+		logCtx.Error("Failed to get salesforce document by id and type. Invalid project_id or id or type.")
+		return nil, http.StatusBadRequest
+	}
+
+	db := C.GetServices().Db
+	err := db.Order("timestamp").Where(
+		"project_id = ? AND id IN (?) AND type = ? AND synced = true",
+		projectId, ids, docType).Find(&documents).Error
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get salesforce documents.")
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(documents) == 0 {
+		return nil, http.StatusNotFound
+	}
+
+	return documents, http.StatusFound
+}
+
 func getSalesforceDocumentByIDAndType(projectID uint64, id string, docType int) ([]SalesforceDocument, int) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "id": id, "type": docType})
 

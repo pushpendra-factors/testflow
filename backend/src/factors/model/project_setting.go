@@ -219,7 +219,7 @@ var (
 	}
 
 	SALESFORCE_PROJECT_STORE = map[uint64]map[string]map[string]bool{
-		1234: DESIGNCAFE_ALLOWED_OBJECTS, // pid will be updated
+		1: DESIGNCAFE_ALLOWED_OBJECTS, // pid will be updated
 	}
 )
 

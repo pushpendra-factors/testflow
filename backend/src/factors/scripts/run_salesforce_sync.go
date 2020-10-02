@@ -28,6 +28,7 @@ func main() {
 	dbPass := flag.String("db_pass", "@ut0me7a", "")
 	salesforceAppId := flag.String("salesforce_app_id", "", "")
 	salesforceAppSecret := flag.String("salesforce_app_secret", "", "")
+	apiDomain := flag.String("api_domain", "factors-dev.com:8080", "")
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 
 	flag.Parse()
@@ -46,6 +47,7 @@ func main() {
 			Name:     *dbName,
 			Password: *dbPass,
 		},
+		APIDomain:           *apiDomain,
 		SentryDSN:           *sentryDSN,
 		SalesforceAppID:     *salesforceAppId,
 		SalesforceAppSecret: *salesforceAppSecret,
