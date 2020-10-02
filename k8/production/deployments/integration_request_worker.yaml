@@ -28,7 +28,7 @@ spec:
         cloud.google.com/gke-nodepool: persistent-pool-standard
       containers:
       - name: integration-request-worker
-        image: us.gcr.io/factors-production/integration-request-worker:v0.01-30c2dbd
+        image: us.gcr.io/factors-production/integration-request-worker:v1.13-1d6b430-721
         volumeMounts:
         - name: workdir
           mountPath: /usr/local/var/factors/config

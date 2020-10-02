@@ -28,7 +28,7 @@ spec:
         cloud.google.com/gke-nodepool: persistent-pool-standard
       containers:
       - name: sdkserver
-        image: us.gcr.io/factors-production/sdk-server:v1.07-4c5b816-630
+        image: us.gcr.io/factors-production/sdk-server:v1.13-1d6b430-721
         ports:
         - containerPort: 8085
         volumeMounts:

@@ -18,7 +18,7 @@ spec:
             cloud.google.com/gke-nodepool: factors-staging-node-pool
           containers:
           - name: add-session-job
-            image: us.gcr.io/factors-staging/add-session-job:v0.010-18d3217
+            image: us.gcr.io/factors-staging/add-session-job:v0.91-1d6b430-721
             imagePullPolicy: IfNotPresent
             args:
             - --env

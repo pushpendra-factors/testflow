@@ -28,7 +28,7 @@ spec:
         cloud.google.com/gke-nodepool: factors-staging-node-pool
       containers:
       - name: sdkserver
-        image: us.gcr.io/factors-staging/sdk-server:v0.061-c72d4d94
+        image: us.gcr.io/factors-staging/sdk-server:v1.13-1d6b430-721
         ports:
         - containerPort: 8085
         volumeMounts:
