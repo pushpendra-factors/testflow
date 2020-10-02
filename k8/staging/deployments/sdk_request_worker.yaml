@@ -66,8 +66,6 @@ spec:
           - "10"
           - --skip_session_project_ids
           - $(OFFLINE_SESSION_PROJECT_IDS)
-          - --merge_usp_project_ids
-          - $(MERGE_USP_PROJECT_IDS)
           - --sentry_dsn
           - $(SENTRY_DSN)
           - --redis_host_ps
@@ -79,8 +77,6 @@ spec:
         envFrom:
         - configMapRef:
             name: config-appserver
-        - configMapRef:
-            name: config-sdkglobalconfig
         - configMapRef:
             name: config-env
         - configMapRef:

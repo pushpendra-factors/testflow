@@ -83,7 +83,6 @@ type Configuration struct {
 	SkipTrackProjectIds                 []uint64
 	SDKRequestQueueProjectTokens        []string
 	SegmentRequestQueueProjectTokens    []string
-	MergeUspProjectIds                  string
 	SkipSessionProjectIds               string // comma seperated project ids, supports "*" for all projects.
 	WhitelistedProjectIdsEventUserCache string
 	IsRealTimeEventUserCachingEnabled   bool

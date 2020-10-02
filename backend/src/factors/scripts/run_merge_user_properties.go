@@ -55,15 +55,11 @@ func main() {
 		logCtx.WithError(err).Fatal("Failed to initialize DB")
 	}
 
-	// Whitelist projectID in the config.
-	(*C.GetConfig()).MergeUspProjectIds = fmt.Sprint(*projectIDFlag)
-
 	logCtx.WithFields(log.Fields{
-		"Env":                   *envFlag,
-		"ProjectID":             *projectIDFlag,
-		"UserID":                *userIDFlag,
-		"Dryrun":                *dryRunFlag,
-		"WhitelistedProjectIDs": C.GetConfig().MergeUspProjectIds,
+		"Env":       *envFlag,
+		"ProjectID": *projectIDFlag,
+		"UserID":    *userIDFlag,
+		"Dryrun":    *dryRunFlag,
 	}).Infof("Starting merge job")
 
 	var errCode int

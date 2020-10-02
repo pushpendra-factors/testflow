@@ -1771,7 +1771,6 @@ func TestSDKAMPTrackByToken(t *testing.T) {
 func TestAddUserPropertiesMerge(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
-	(*C.GetConfig()).MergeUspProjectIds = fmt.Sprint(project.ID)
 
 	customerUserID := getRandomEmail()
 	user1, _ := M.CreateUser(&M.User{
@@ -1831,7 +1830,6 @@ func TestAddUserPropertiesMerge(t *testing.T) {
 func TestIdentifyUserPropertiesMerge(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
-	(*C.GetConfig()).MergeUspProjectIds = fmt.Sprint(project.ID)
 
 	customerUserID := getRandomEmail()
 	user1, _ := M.CreateUser(&M.User{
