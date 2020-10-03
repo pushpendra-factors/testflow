@@ -1624,10 +1624,11 @@ func FillUserAgentUserProperties(userProperties *U.PropertiesMap, userAgentStr s
 		(*userProperties)[U.UP_BROWSER], (*userProperties)[U.UP_BROWSER_VERSION])
 
 	dd := C.GetServices().DeviceDetector
-	info := dd.Parse(userAgentStr)
-	(*userProperties)[U.UP_DEVICE_BRAND] = info.Brand
-	(*userProperties)[U.UP_DEVICE_TYPE] = info.Type
-	(*userProperties)[U.UP_DEVICE_MODEL] = info.Model
+	if info := dd.Parse(userAgentStr); info != nil {
+		(*userProperties)[U.UP_DEVICE_BRAND] = info.Brand
+		(*userProperties)[U.UP_DEVICE_TYPE] = info.Type
+		(*userProperties)[U.UP_DEVICE_MODEL] = info.Model
+	}
 
 	return nil
 }

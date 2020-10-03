@@ -400,7 +400,7 @@ func SDKErrorHandler(c *gin.Context) {
 		return
 	}
 
-	properties := U.PropertiesMap{}
+	properties := make(U.PropertiesMap, 0)
 	SDK.FillUserAgentUserProperties(&properties, c.Request.UserAgent())
 
 	// Error logged for adding it to error email.
