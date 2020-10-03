@@ -373,8 +373,8 @@ func getSalesforceDocumentTimestamp(timestamp interface{}) (int64, error) {
 	return t.Unix(), nil
 }
 
-func UpdateSalesforceDocumentAsSynced(projectID uint64, id string, syncID string) int {
-	logCtx := log.WithField("project_id", projectID).WithField("id", id)
+func UpdateSalesforceDocumentAsSynced(projectID uint64, document *SalesforceDocument, syncID string) int {
+	logCtx := log.WithField("project_id", projectID).WithField("id", document.ID)
 
 	updates := make(map[string]interface{}, 0)
 	updates["synced"] = true
@@ -383,8 +383,8 @@ func UpdateSalesforceDocumentAsSynced(projectID uint64, id string, syncID string
 	}
 
 	db := C.GetServices().Db
-	err := db.Model(&SalesforceDocument{}).Where("project_id = ? AND id = ?",
-		projectID, id).Updates(updates).Error
+	err := db.Model(&SalesforceDocument{}).Where("project_id = ? AND id = ? AND timestamp = ? AND type = ? AND action = ?",
+		projectID, document.ID, document.Timestamp, document.Type, document.Action).Updates(updates).Error
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to update salesforce document as synced.")
 		return http.StatusInternalServerError

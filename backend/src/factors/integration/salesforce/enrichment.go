@@ -249,7 +249,7 @@ func enrichAccount(projectID uint64, document *M.SalesforceDocument) int {
 		logCtx.Error("Skipped user identification on salesforce account sync. No customer_user_id on properties.")
 	}
 
-	errCode := M.UpdateSalesforceDocumentAsSynced(projectID, document.ID, eventID)
+	errCode := M.UpdateSalesforceDocumentAsSynced(projectID, document, eventID)
 	if errCode != http.StatusAccepted {
 		logCtx.Error("Failed to update salesforce account document as synced.")
 		return http.StatusInternalServerError
@@ -299,7 +299,7 @@ func enrichContact(projectID uint64, document *M.SalesforceDocument) int {
 		logCtx.Error("Skipped user identification on salesforce contact sync. No customer_user_id on properties.")
 	}
 
-	errCode := M.UpdateSalesforceDocumentAsSynced(projectID, document.ID, eventID)
+	errCode := M.UpdateSalesforceDocumentAsSynced(projectID, document, eventID)
 	if errCode != http.StatusAccepted {
 		logCtx.Error("Failed to update salesforce account document as synced.")
 		return http.StatusInternalServerError
@@ -349,7 +349,7 @@ func enrichOpportunities(projectID uint64, document *M.SalesforceDocument) int {
 		logCtx.Error("Skipped user identification on salesforce opportunity sync. No customer_user_id on properties.")
 	}
 
-	errCode := M.UpdateSalesforceDocumentAsSynced(projectID, document.ID, eventID)
+	errCode := M.UpdateSalesforceDocumentAsSynced(projectID, document, eventID)
 	if errCode != http.StatusAccepted {
 		logCtx.Error("Failed to update salesforce opportunity document as synced.")
 		return http.StatusInternalServerError
@@ -400,7 +400,7 @@ func enrichLeads(projectID uint64, document *M.SalesforceDocument) int {
 		logCtx.Error("Skipped user identification on salesforce lead sync. No customer_user_id on properties.")
 	}
 
-	errCode := M.UpdateSalesforceDocumentAsSynced(projectID, document.ID, eventID)
+	errCode := M.UpdateSalesforceDocumentAsSynced(projectID, document, eventID)
 	if errCode != http.StatusAccepted {
 		logCtx.Error("Failed to update salesforce lead document as synced.")
 		return http.StatusInternalServerError
