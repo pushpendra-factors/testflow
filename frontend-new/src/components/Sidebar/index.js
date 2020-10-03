@@ -29,7 +29,7 @@ function Sidebar(props) {
           <Text type={'title'} level={7} weight={'bold'} extraClass={'m-0'}>Projects</Text>
           {props.projects.length > 6 ? <input onChange={(e) => searchProject(e)} placeholder={'Search Project'} className={'fa-project-list--search'}/> : null}
           <div className={'flex flex-col items-start fa-project-list--wrapper'} >
-            {props.projects.filter(project => project.name.includes(searchProjectName)).map((project, index) => {
+            {props.projects.filter(project => project.name.toLowerCase().includes(searchProjectName.toLowerCase())).map((project, index) => {
               return <div key={index}
               className={`flex justify-start items-center project-item ${props.active_project.id === project.id ? 'active' : null}`}
               onClick={() => {
