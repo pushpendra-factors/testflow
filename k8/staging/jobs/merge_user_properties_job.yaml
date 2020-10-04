@@ -18,7 +18,7 @@ spec:
             cloud.google.com/gke-nodepool: factors-staging-node-pool
           containers:
           - name: merge-user-properties-job
-            image: us.gcr.io/factors-staging/merge-user-properties-job:v0.55-ed2b9fdd
+            image: us.gcr.io/factors-staging/merge-user-properties-job:v0.68-1d6b430-721
             imagePullPolicy: IfNotPresent
             args:
             - --env

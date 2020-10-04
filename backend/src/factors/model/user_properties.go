@@ -103,7 +103,7 @@ func createUserPropertiesIfChanged(projectId uint64, userId string,
 	if err != nil {
 		return "", http.StatusInternalServerError
 	}
-	if shouldMergeUserProperties && isMergeEnabledForProjectID(projectId) {
+	if shouldMergeUserProperties {
 		newPropertiesID, errCode := MergeUserPropertiesForUserID(projectId, userId,
 			postgres.Jsonb{RawMessage: json.RawMessage(updatedPropertiesBytes)}, currentPropertiesId, timestamp, false, false)
 
@@ -320,11 +320,6 @@ func MergeUserPropertiesForProjectID(projectID uint64, dryRun bool) int {
 		"ProjectID": projectID,
 	})
 
-	if !isMergeEnabledForProjectID(projectID) {
-		logCtx.Info("User properties merge is not enabled for the project")
-		return http.StatusNotModified
-	}
-
 	customerUserIDs, errCode := GetDistinctCustomerUserIDSForProject(projectID)
 	if errCode != http.StatusFound {
 		logCtx.Error("Error while getting distinct customer user ids")
@@ -368,12 +363,6 @@ func MergeUserPropertiesForUserID(projectID uint64, userID string, updatedProper
 		return currentPropertiesID, http.StatusNotAcceptable
 	}
 	customerUserID := user.CustomerUserId
-
-	logCtx = logCtx.WithFields(log.Fields{"CustomerUserID": user.CustomerUserId})
-	if !isMergeEnabledForProjectID(projectID) {
-		logCtx.Infof("User merge properties not enabled for the project")
-		return currentPropertiesID, http.StatusNotAcceptable
-	}
 
 	// Users are returned in increasing order of created_at. For user_properties created at same unix time,
 	// older user order will help in ensuring the order while merging properties.
@@ -501,7 +490,8 @@ func MergeUserPropertiesForUserID(projectID uint64, userID string, updatedProper
 }
 
 // updateUserPropertiesForUser Creates new UserProperties entry and updates properties_id in user table. Returns new properties_id.
-func updateUserPropertiesForUser(projectID uint64, userID string, userProperties postgres.Jsonb, timestamp int64, updateUser bool) (string, int) {
+func updateUserPropertiesForUser(projectID uint64, userID string, userProperties postgres.Jsonb, 
+	timestamp int64, updateUser bool) (string, int) {
 	logCtx := log.WithFields(log.Fields{
 		"Method":    "updateUserPropertiesForUser",
 		"ProjectID": projectID,
@@ -524,7 +514,9 @@ func updateUserPropertiesForUser(projectID uint64, userID string, userProperties
 		}
 		return "", http.StatusInternalServerError
 	}
-
+	logCtx.WithField("tag", "db_create_user_properties").
+		Info("Created user_properties record.")
+		
 	if updateUser {
 		if err := db.Model(&User{}).Where("project_id = ? AND id = ?", projectID, userID).
 			Update("properties_id", userPropertiesRecord.ID).Error; err != nil {
@@ -565,20 +557,6 @@ func anyPropertyChanged(propertyValuesMap map[string][]interface{}, numUsers int
 				return true
 			}
 		}
-	}
-	return false
-}
-
-// Checks if merge is enabled for the project based on global config.
-func isMergeEnabledForProjectID(projectID uint64) bool {
-
-	allProjects, mergeEnabledProjectIDsMap, _ := C.GetProjectsFromListWithAllProjectSupport(
-		C.GetConfig().MergeUspProjectIds, "")
-	if allProjects {
-		return true
-	}
-	if _, ok := mergeEnabledProjectIDsMap[projectID]; ok {
-		return true
 	}
 	return false
 }

@@ -911,7 +911,7 @@ func EnrichUserPropertiesWithSessionProperties(projectId uint64, userId string,
 	return OverwriteUserProperties(projectId, userId, userPropertiesId, userPropertiesJsonb)
 }
 
-func doesEventHaveMarketingProperty(event *Event) (bool, error) {
+func doesEventIsPageViewAndHasMarketingProperty(event *Event) (bool, error) {
 	if event == nil {
 		return false, errors.New("nil event")
 	}
@@ -921,7 +921,10 @@ func doesEventHaveMarketingProperty(event *Event) (bool, error) {
 		return false, err
 	}
 	eventPropertiesMap := U.PropertiesMap(*eventPropertiesDecoded)
-	return U.HasDefinedMarketingProperty(&eventPropertiesMap), nil
+
+	isPageAndHasMarketingProperty := U.IsPageViewEvent(&eventPropertiesMap) &&
+		U.HasDefinedMarketingProperty(&eventPropertiesMap)
+	return isPageAndHasMarketingProperty, nil
 }
 
 func filterEventsForSession(events []Event,
@@ -955,7 +958,7 @@ func filterEventsForSession(events []Event,
 	// when the first event to add session have marketing property,
 	// to avoid continuing session.
 	if len(filteredEvents) > 1 && filteredEvents[0].SessionId != nil {
-		hasMarketingProperty, err := doesEventHaveMarketingProperty(filteredEvents[1])
+		hasMarketingProperty, err := doesEventIsPageViewAndHasMarketingProperty(filteredEvents[1])
 		if err != nil {
 			log.WithError(err).Error("Failed to decode properties Jsonb.")
 			return filteredEvents
@@ -1047,7 +1050,7 @@ func AddSessionForUser(projectId uint64, userId string, userEvents []Event,
 }
 
 /*
-AddSessionForUser - Will add session event based on conditions and associate session to each event.
+addSessionForUser - Will add session event based on conditions and associate session to each event.
 The list of events being processed, would be like any of the given 2 cases.
 * For users with session already (within max_lookback, if given). The first event would be the last event with session.
 event_id - timestamp - session_id
@@ -1099,7 +1102,7 @@ func addSessionForUser(projectId uint64, userId string, userEvents []Event,
 	// period or has marketing property, use current_event - 1 as session end
 	// and update. Update current_event as session start and do the same till the end.
 	for i := 0; i < len(events); {
-		hasMarketingProperty, err := doesEventHaveMarketingProperty(events[i])
+		hasMarketingProperty, err := doesEventIsPageViewAndHasMarketingProperty(events[i])
 		if err != nil {
 			logCtx.WithError(err).
 				Error("Failed to check marketing prperty on event properties.")

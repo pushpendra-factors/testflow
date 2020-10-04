@@ -49,7 +49,7 @@ func RunFunnelQuery(projectId uint64, query Query) (*QueryResult, int, string) {
 
 	sanitizeNumericalBucketRanges(result, &query)
 
-	addMetaToQueryResult(result, query)
+	addQueryToResultMeta(result, query)
 
 	return result, http.StatusOK, "Successfully executed query"
 }

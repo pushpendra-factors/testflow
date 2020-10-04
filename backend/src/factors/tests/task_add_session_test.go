@@ -67,7 +67,7 @@ func TestAddSessionOnUserWithContiniousEvents(t *testing.T) {
 
 	// Test: New user with one event and one skip_session event.
 	timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
-	randomEventName := U.RandomLowerAphaNumString(10)
+	randomEventName := RandomURL()
 	trackEventProperties := U.PropertiesMap{
 		U.EP_REFERRER:     "www.google.com",
 		U.EP_PAGE_URL:     "https://example.com/1/2/",
@@ -78,6 +78,7 @@ func TestAddSessionOnUserWithContiniousEvents(t *testing.T) {
 		U.UP_OS_VERSION: "1.23.1",
 	}
 	trackPayload := SDK.TrackPayload{
+		Auto:            true,
 		Name:            randomEventName,
 		Timestamp:       timestamp,
 		EventProperties: trackEventProperties,
@@ -155,13 +156,14 @@ func TestAddSessionOnUserWithContiniousEvents(t *testing.T) {
 	// Test: New events without session for existing user with session.
 	// Since there is continious activity, last session should be continued.
 	timestamp = timestamp + 1
-	randomEventName = U.RandomLowerAphaNumString(10)
+	randomEventName = RandomURL()
 	trackEventProperties1 := U.PropertiesMap{
 		U.EP_REFERRER:     "www.yahoo.com",
 		U.EP_PAGE_URL:     "https://example1.com/1/2/",
 		U.EP_PAGE_RAW_URL: "https://example1.com/1/2?x=1",
 	}
 	trackPayload = SDK.TrackPayload{
+		Auto:            true,
 		Name:            randomEventName,
 		Timestamp:       timestamp,
 		UserId:          userId,
@@ -172,13 +174,14 @@ func TestAddSessionOnUserWithContiniousEvents(t *testing.T) {
 	eventId1 := response.EventId
 
 	timestamp = timestamp + 1
-	randomEventName = U.RandomLowerAphaNumString(10)
+	randomEventName = RandomURL()
 	trackEventProperties2 := U.PropertiesMap{
 		U.EP_REFERRER:     "www.facebook.com",
 		U.EP_PAGE_URL:     "https://example2.com/1/2/",
 		U.EP_PAGE_RAW_URL: "https://example2.com/1/2?x=1",
 	}
 	trackPayload = SDK.TrackPayload{
+		Auto:            true,
 		Name:            randomEventName,
 		Timestamp:       timestamp,
 		UserId:          userId,
@@ -190,13 +193,14 @@ func TestAddSessionOnUserWithContiniousEvents(t *testing.T) {
 
 	// inactivity.
 	timestamp = timestamp + (35 * 60) // + 35 mins
-	randomEventName = U.RandomLowerAphaNumString(10)
+	randomEventName = RandomURL()
 	trackEventProperties3 := U.PropertiesMap{
 		U.EP_REFERRER:     "www.bing.com",
 		U.EP_PAGE_URL:     "https://example3.com/1/2/",
 		U.EP_PAGE_RAW_URL: "https://example3.com/1/2?x=1",
 	}
 	trackPayload = SDK.TrackPayload{
+		Auto:            true,
 		Name:            randomEventName,
 		Timestamp:       timestamp,
 		UserId:          userId,
@@ -217,13 +221,14 @@ func TestAddSessionOnUserWithContiniousEvents(t *testing.T) {
 	skipSessionEventId1 := response.EventId
 
 	timestamp = timestamp + 1
-	randomEventName = U.RandomLowerAphaNumString(10)
+	randomEventName = RandomURL()
 	trackEventProperties4 := U.PropertiesMap{
 		U.EP_REFERRER:     "www.hacker.com",
 		U.EP_PAGE_URL:     "https://example4.com/1/2/",
 		U.EP_PAGE_RAW_URL: "https://example4.com/1/2?x=1",
 	}
 	trackPayload = SDK.TrackPayload{
+		Auto:            true,
 		Name:            randomEventName,
 		Timestamp:       timestamp,
 		UserId:          userId,
@@ -287,6 +292,7 @@ func TestAddSessionOnUserWithContiniousEvents(t *testing.T) {
 	// activity from previous session.
 	timestamp = timestamp + 2
 	trackPayload = SDK.TrackPayload{
+		Auto:      true,
 		Name:      randomEventName,
 		Timestamp: timestamp,
 		UserId:    userId,
@@ -300,8 +306,9 @@ func TestAddSessionOnUserWithContiniousEvents(t *testing.T) {
 	eventId5 := response.EventId
 
 	timestamp = timestamp + 2
-	randomEventName = U.RandomLowerAphaNumString(10)
+	randomEventName = RandomURL()
 	trackPayload = SDK.TrackPayload{
+		Auto:      true,
 		Name:      randomEventName,
 		Timestamp: timestamp,
 		UserId:    userId,
@@ -331,6 +338,7 @@ func TestAddSessionOnUserWithContiniousEvents(t *testing.T) {
 	// Test: Last event with marketing property.
 	timestamp = timestamp + 2
 	trackPayload = SDK.TrackPayload{
+		Auto:      true,
 		Name:      randomEventName,
 		Timestamp: timestamp,
 		UserId:    userId,
@@ -376,15 +384,13 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 
 		// Test: New user with one event and one skip_session event.
 		timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
-		randomEventName := U.RandomLowerAphaNumString(10)
+		randomEventName := RandomURL()
 
 		timestamp = timestamp + 2
 		trackPayload1 := SDK.TrackPayload{
+			Auto:      true,
 			Name:      randomEventName,
 			Timestamp: timestamp,
-			EventProperties: U.PropertiesMap{
-				U.QUERY_PARAM_UTM_PREFIX + "campaign": "winter_sale",
-			},
 		}
 		status, response := SDK.Track(project.ID, &trackPayload1, false, SDK.SourceJSSDK)
 		assert.Equal(t, http.StatusOK, status)
@@ -392,8 +398,9 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		eventId1 := response.EventId
 
 		timestamp = timestamp + 2
-		randomEventName = U.RandomLowerAphaNumString(10)
+		randomEventName = RandomURL()
 		trackPayload2 := SDK.TrackPayload{
+			Auto:      true,
 			Name:      randomEventName,
 			Timestamp: timestamp,
 			UserId:    userId,
@@ -403,8 +410,9 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		eventId2 := response.EventId
 
 		timestamp = timestamp + 2
-		randomEventName = U.RandomLowerAphaNumString(10)
+		randomEventName = RandomURL()
 		trackPayload2 = SDK.TrackPayload{
+			Auto:      true,
 			Name:      randomEventName,
 			Timestamp: timestamp,
 			UserId:    userId,
@@ -441,10 +449,11 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 
 		// Test: New user with one event and one skip_session event.
 		timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
-		randomEventName := U.RandomLowerAphaNumString(10)
+		randomEventName := RandomURL()
 
 		timestamp = timestamp + 2
 		trackPayload1 := SDK.TrackPayload{
+			Auto:      true,
 			Name:      randomEventName,
 			Timestamp: timestamp,
 			EventProperties: U.PropertiesMap{
@@ -469,8 +478,9 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		assert.NotEmpty(t, event1.SessionId)
 
 		timestamp = timestamp + 2
-		randomEventName = U.RandomLowerAphaNumString(10)
+		randomEventName = RandomURL()
 		trackPayload2 := SDK.TrackPayload{
+			Auto:      true,
 			Name:      randomEventName,
 			Timestamp: timestamp,
 			UserId:    userId,
@@ -480,8 +490,9 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		eventId2 := response.EventId
 
 		timestamp = timestamp + 2
-		randomEventName = U.RandomLowerAphaNumString(10)
+		randomEventName = RandomURL()
 		trackPayload2 = SDK.TrackPayload{
+			Auto:      true,
 			Name:      randomEventName,
 			Timestamp: timestamp,
 			UserId:    userId,
@@ -515,10 +526,11 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 
 		// Test: New user with one event and one skip_session event.
 		timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
-		randomEventName := U.RandomLowerAphaNumString(10)
+		randomEventName := RandomURL()
 
 		timestamp = timestamp + 2
 		trackPayload1 := SDK.TrackPayload{
+			Auto:      true,
 			Name:      randomEventName,
 			Timestamp: timestamp,
 		}
@@ -540,8 +552,9 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		assert.NotEmpty(t, event1.SessionId)
 
 		timestamp = timestamp + 2
-		randomEventName = U.RandomLowerAphaNumString(10)
+		randomEventName = RandomURL()
 		trackPayload2 := SDK.TrackPayload{
+			Auto:      true,
 			Name:      randomEventName,
 			Timestamp: timestamp,
 			UserId:    userId,
@@ -573,10 +586,11 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 
 		// Test: New user with one event and one skip_session event.
 		timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
-		randomEventName := U.RandomLowerAphaNumString(10)
+		randomEventName := RandomURL()
 
 		timestamp = timestamp + 2
 		trackPayload1 := SDK.TrackPayload{
+			Auto:      true,
 			Name:      randomEventName,
 			Timestamp: timestamp,
 		}
@@ -598,8 +612,9 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		assert.NotEmpty(t, event1.SessionId)
 
 		timestamp = timestamp + 2
-		randomEventName = U.RandomLowerAphaNumString(10)
+		randomEventName = RandomURL()
 		trackPayload2 := SDK.TrackPayload{
+			Auto:      true,
 			Name:      randomEventName,
 			Timestamp: timestamp,
 			UserId:    userId,
@@ -635,10 +650,11 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 
 		// Test: New user with one event and one skip_session event.
 		timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
-		randomEventName := U.RandomLowerAphaNumString(10)
+		randomEventName := RandomURL()
 
 		timestamp = timestamp + 2
 		trackPayload1 := SDK.TrackPayload{
+			Auto:      true,
 			Name:      randomEventName,
 			Timestamp: timestamp,
 		}
@@ -660,8 +676,9 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		assert.NotEmpty(t, event1.SessionId)
 
 		timestamp = timestamp + (32 * 60) + 2
-		randomEventName = U.RandomLowerAphaNumString(10)
+		randomEventName = RandomURL()
 		trackPayload2 := SDK.TrackPayload{
+			Auto:      true,
 			Name:      randomEventName,
 			Timestamp: timestamp,
 			UserId:    userId,
@@ -694,10 +711,11 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 
 		// Test: New user with one event and one skip_session event.
 		timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
-		randomEventName := U.RandomLowerAphaNumString(10)
+		randomEventName := RandomURL()
 
 		timestamp = timestamp + 2
 		trackPayload1 := SDK.TrackPayload{
+			Auto:      true,
 			Name:      randomEventName,
 			Timestamp: timestamp,
 		}
@@ -707,8 +725,9 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		eventId1 := response.EventId
 
 		timestamp = timestamp + 2
-		randomEventName = U.RandomLowerAphaNumString(10)
+		randomEventName = RandomURL()
 		trackPayload2 := SDK.TrackPayload{
+			Auto:      true,
 			Name:      randomEventName,
 			Timestamp: timestamp,
 			UserId:    userId,
@@ -721,8 +740,9 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		eventId2 := response.EventId
 
 		timestamp = timestamp + 2
-		randomEventName = U.RandomLowerAphaNumString(10)
+		randomEventName = RandomURL()
 		trackPayload2 = SDK.TrackPayload{
+			Auto:      true,
 			Name:      randomEventName,
 			Timestamp: timestamp,
 			UserId:    userId,
@@ -760,10 +780,11 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 
 		// Test: New user with one event and one skip_session event.
 		timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
-		randomEventName := U.RandomLowerAphaNumString(10)
+		randomEventName := RandomURL()
 
 		timestamp = timestamp + 2
 		trackPayload1 := SDK.TrackPayload{
+			Auto:      true,
 			Name:      randomEventName,
 			Timestamp: timestamp,
 		}
@@ -773,8 +794,9 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		eventId1 := response.EventId
 
 		timestamp = timestamp + 2
-		randomEventName = U.RandomLowerAphaNumString(10)
+		randomEventName = RandomURL()
 		trackPayload2 := SDK.TrackPayload{
+			Auto:      true,
 			Name:      randomEventName,
 			Timestamp: timestamp,
 			UserId:    userId,
@@ -788,8 +810,9 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 
 		// inactivity.
 		timestamp = timestamp + (31 * 60) + 2
-		randomEventName = U.RandomLowerAphaNumString(10)
+		randomEventName = RandomURL()
 		trackPayload2 = SDK.TrackPayload{
+			Auto:      true,
 			Name:      randomEventName,
 			Timestamp: timestamp,
 			UserId:    userId,
@@ -799,8 +822,9 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		eventId3 := response.EventId
 
 		timestamp = timestamp + 2
-		randomEventName = U.RandomLowerAphaNumString(10)
+		randomEventName = RandomURL()
 		trackPayload2 = SDK.TrackPayload{
+			Auto:      true,
 			Name:      randomEventName,
 			Timestamp: timestamp,
 			UserId:    userId,
@@ -844,10 +868,11 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 
 		// Test: New user with one event and one skip_session event.
 		timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
-		randomEventName := U.RandomLowerAphaNumString(10)
+		randomEventName := RandomURL()
 
 		timestamp = timestamp + 2
 		trackPayload1 := SDK.TrackPayload{
+			Auto:      true,
 			Name:      randomEventName,
 			Timestamp: timestamp,
 		}
@@ -858,8 +883,9 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 
 		// inactivity.
 		timestamp = timestamp + (31 * 60) + 2
-		randomEventName = U.RandomLowerAphaNumString(10)
+		randomEventName = RandomURL()
 		trackPayload2 := SDK.TrackPayload{
+			Auto:      true,
 			Name:      randomEventName,
 			Timestamp: timestamp,
 			UserId:    userId,
@@ -869,8 +895,9 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		eventId2 := response.EventId
 
 		timestamp = timestamp + 2
-		randomEventName = U.RandomLowerAphaNumString(10)
+		randomEventName = RandomURL()
 		trackPayload2 = SDK.TrackPayload{
+			Auto:      true,
 			Name:      randomEventName,
 			Timestamp: timestamp,
 			UserId:    userId,
@@ -909,11 +936,12 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 
 		// Test: New user with one event and one skip_session event.
 		timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
-		randomEventName := U.RandomLowerAphaNumString(10)
+		randomEventName := RandomURL()
 
 		timestamp = timestamp + 2
-		randomEventName = U.RandomLowerAphaNumString(10)
+		randomEventName = RandomURL()
 		trackPayload2 := SDK.TrackPayload{
+			Auto:      true,
 			Name:      randomEventName,
 			Timestamp: timestamp,
 			EventProperties: U.PropertiesMap{
@@ -949,10 +977,11 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 
 		// Test: New user with one event and one skip_session event.
 		timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
-		randomEventName := U.RandomLowerAphaNumString(10)
+		randomEventName := RandomURL()
 
 		timestamp = timestamp + 2
 		trackPayload1 := SDK.TrackPayload{
+			Auto:      true,
 			Name:      randomEventName,
 			Timestamp: timestamp,
 		}
@@ -962,8 +991,9 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		eventId1 := response.EventId
 
 		timestamp = timestamp + 2
-		randomEventName = U.RandomLowerAphaNumString(10)
+		randomEventName = RandomURL()
 		trackPayload2 := SDK.TrackPayload{
+			Auto:      true,
 			Name:      randomEventName,
 			Timestamp: timestamp,
 			UserId:    userId,
@@ -973,8 +1003,9 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		eventId2 := response.EventId
 
 		timestamp = timestamp + 2
-		randomEventName = U.RandomLowerAphaNumString(10)
+		randomEventName = RandomURL()
 		trackPayload2 = SDK.TrackPayload{
+			Auto:      true,
 			Name:      randomEventName,
 			Timestamp: timestamp,
 			EventProperties: U.PropertiesMap{
@@ -1015,10 +1046,11 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 
 		// Test: New user with one event and one skip_session event.
 		timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
-		randomEventName := U.RandomLowerAphaNumString(10)
+		randomEventName := RandomURL()
 
 		timestamp = timestamp + 2
 		trackPayload1 := SDK.TrackPayload{
+			Auto:      true,
 			Name:      randomEventName,
 			Timestamp: timestamp,
 			EventProperties: U.PropertiesMap{
@@ -1043,8 +1075,9 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		assert.NotEmpty(t, event1.SessionId)
 
 		timestamp = timestamp + (32 * 60) + 2
-		randomEventName = U.RandomLowerAphaNumString(10)
+		randomEventName = RandomURL()
 		trackPayload2 := SDK.TrackPayload{
+			Auto:      true,
 			Name:      randomEventName,
 			Timestamp: timestamp,
 			UserId:    userId,
@@ -1064,6 +1097,154 @@ func TestAddSessionDifferentCreationCases(t *testing.T) {
 		event2, _ := M.GetEvent(project.ID, userId, eventId2)
 		assert.NotEqual(t, *event1.SessionId, *event2.SessionId)
 	})
+
+	t.Run("PageViewEventsWithUserCreatedEvents", func(t *testing.T) {
+		project, _, err := SetupProjectUserReturnDAO()
+		assert.Nil(t, err)
+
+		// skip realtime session creation for project.
+		C.GetConfig().SkipSessionProjectIds = fmt.Sprintf("%d", project.ID)
+
+		maxLookbackTimestamp := U.UnixTimeBeforeDuration(31 * 24 * time.Hour)
+
+		// Test: New user with one event and one skip_session event.
+		timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
+		randomEventName := RandomURL()
+
+		timestamp = timestamp + 2
+		trackPayload1 := SDK.TrackPayload{
+			Auto:      true,
+			Name:      randomEventName,
+			Timestamp: timestamp,
+		}
+		status, response := SDK.Track(project.ID, &trackPayload1, false, SDK.SourceJSSDK)
+		assert.Equal(t, http.StatusOK, status)
+		userId := response.UserId
+		eventId1 := response.EventId
+
+		// User created event with a marketing property.
+		// Should not create a new session.
+		timestamp = timestamp + 2
+		randomEventName = U.RandomLowerAphaNumString(5)
+		trackPayload2 := SDK.TrackPayload{
+			Name:      randomEventName,
+			Timestamp: timestamp,
+			UserId:    userId,
+			EventProperties: U.PropertiesMap{
+				U.QUERY_PARAM_UTM_PREFIX + "campaign": "winter_sale",
+			},
+		}
+		status, response = SDK.Track(project.ID, &trackPayload2, false, SDK.SourceJSSDK)
+		assert.Equal(t, http.StatusOK, status)
+		eventId2 := response.EventId
+
+		// User created event with inactivity.
+		// Should create a new session.
+		timestamp = timestamp + (32 * 60) + 2
+		randomEventName = U.RandomLowerAphaNumString(5)
+		trackPayload2 = SDK.TrackPayload{
+			Name:      randomEventName,
+			Timestamp: timestamp,
+			UserId:    userId,
+		}
+		status, response = SDK.Track(project.ID, &trackPayload2, false, SDK.SourceJSSDK)
+		assert.Equal(t, http.StatusOK, status)
+		eventId3 := response.EventId
+
+		timestamp = timestamp + 2
+		randomEventName = RandomURL()
+		trackPayload2 = SDK.TrackPayload{
+			Auto:      true,
+			Name:      randomEventName,
+			Timestamp: timestamp,
+			UserId:    userId,
+		}
+		status, response = SDK.Track(project.ID, &trackPayload2, false, SDK.SourceJSSDK)
+		assert.Equal(t, http.StatusOK, status)
+		eventId4 := response.EventId
+
+		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 30, 1)
+		assert.Nil(t, err)
+
+		// No.of sessions created.
+		sessionEventName, _ := M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
+		sessionCount, _ := M.GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
+		assert.Equal(t, uint64(2), sessionCount)
+
+		// Check session association.
+		event1, _ := M.GetEvent(project.ID, userId, eventId1)
+		assert.NotEmpty(t, event1.SessionId)
+		event2, _ := M.GetEvent(project.ID, userId, eventId2)
+		assert.Equal(t, event1.SessionId, event2.SessionId)
+		event3, _ := M.GetEvent(project.ID, userId, eventId3)
+		assert.NotEqual(t, event2.SessionId, event3.SessionId)
+		event4, _ := M.GetEvent(project.ID, userId, eventId4)
+		assert.Equal(t, event3.SessionId, event4.SessionId)
+	})
+
+	t.Run("StartingWithUserCreatedEventMarketingProperty", func(t *testing.T) {
+		project, _, err := SetupProjectUserReturnDAO()
+		assert.Nil(t, err)
+
+		// skip realtime session creation for project.
+		C.GetConfig().SkipSessionProjectIds = fmt.Sprintf("%d", project.ID)
+
+		maxLookbackTimestamp := U.UnixTimeBeforeDuration(31 * 24 * time.Hour)
+
+		// Test: New user with one event and one skip_session event.
+		timestamp := U.UnixTimeBeforeDuration(30 * 24 * time.Hour)
+		randomEventName := U.RandomLowerAphaNumString(5)
+
+		timestamp = timestamp + 2
+		trackPayload1 := SDK.TrackPayload{
+			Name:      randomEventName,
+			Timestamp: timestamp,
+		}
+		status, response := SDK.Track(project.ID, &trackPayload1, false, SDK.SourceJSSDK)
+		assert.Equal(t, http.StatusOK, status)
+		userId := response.UserId
+		eventId1 := response.EventId
+
+		timestamp = timestamp + 2
+		randomEventName = RandomURL()
+		trackPayload2 := SDK.TrackPayload{
+			Auto:      true,
+			Name:      randomEventName,
+			Timestamp: timestamp,
+			UserId:    userId,
+		}
+		status, response = SDK.Track(project.ID, &trackPayload2, false, SDK.SourceJSSDK)
+		assert.Equal(t, http.StatusOK, status)
+		eventId2 := response.EventId
+
+		timestamp = timestamp + 2
+		randomEventName = RandomURL()
+		trackPayload2 = SDK.TrackPayload{
+			Auto:      true,
+			Name:      randomEventName,
+			Timestamp: timestamp,
+			UserId:    userId,
+		}
+		status, response = SDK.Track(project.ID, &trackPayload2, false, SDK.SourceJSSDK)
+		assert.Equal(t, http.StatusOK, status)
+		eventId3 := response.EventId
+
+		_, err = TaskSession.AddSession([]uint64{project.ID}, maxLookbackTimestamp, 30, 1)
+		assert.Nil(t, err)
+
+		// No.of sessions created.
+		sessionEventName, _ := M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
+		sessionCount, _ := M.GetEventCountOfUserByEventName(project.ID, userId, sessionEventName.ID)
+		assert.Equal(t, uint64(1), sessionCount)
+
+		// Check session association.
+		event1, _ := M.GetEvent(project.ID, userId, eventId1)
+		assert.NotEmpty(t, event1.SessionId)
+		event2, _ := M.GetEvent(project.ID, userId, eventId2)
+		event3, _ := M.GetEvent(project.ID, userId, eventId3)
+		assert.Equal(t, event1.SessionId, event2.SessionId)
+		assert.Equal(t, event1.SessionId, event3.SessionId)
+	})
 }
 
 func TestAddSessionCreationBufferTime(t *testing.T) {
@@ -1074,8 +1255,9 @@ func TestAddSessionCreationBufferTime(t *testing.T) {
 
 	// Event before session buffer time.
 	timestamp := U.UnixTimeBeforeDuration(time.Minute * 35)
-	randomEventName := U.RandomLowerAphaNumString(10)
+	randomEventName := RandomURL()
 	trackPayload := SDK.TrackPayload{
+		Auto:      true,
 		Name:      randomEventName,
 		Timestamp: timestamp,
 	}
@@ -1087,6 +1269,7 @@ func TestAddSessionCreationBufferTime(t *testing.T) {
 
 	timestamp = U.UnixTimeBeforeDuration(time.Minute * 15)
 	trackPayload = SDK.TrackPayload{
+		Auto:      true,
 		Name:      randomEventName,
 		Timestamp: timestamp,
 		UserId:    userId,
@@ -1097,6 +1280,7 @@ func TestAddSessionCreationBufferTime(t *testing.T) {
 
 	timestamp = time.Now().Unix()
 	trackPayload = SDK.TrackPayload{
+		Auto:      true,
 		Name:      randomEventName,
 		Timestamp: timestamp,
 		UserId:    userId,

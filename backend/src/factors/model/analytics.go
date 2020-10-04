@@ -67,8 +67,15 @@ type Query struct {
 }
 
 type QueryResultMeta struct {
-	Query    Query  `json:"query"`
-	Currency string `json:"currency"` //Currency field is used for Attribution query response.
+	Query       Query        `json:"query"`
+	Currency    string       `json:"currency"` //Currency field is used for Attribution query response.
+	MetaMetrics []HeaderRows `json:"metrics"`
+}
+
+type HeaderRows struct {
+	Title   string          `json:"title"`
+	Headers []string        `json:"headers"`
+	Rows    [][]interface{} `json:"rows"`
 }
 
 func (q *Query) GetClass() string {
@@ -111,8 +118,9 @@ const (
 
 	PropertyValueNone = "$none"
 
-	EventCondAnyGivenEvent = "any_given_event"
-	EventCondAllGivenEvent = "all_given_event"
+	EventCondAnyGivenEvent  = "any_given_event"
+	EventCondAllGivenEvent  = "all_given_event"
+	EventCondEachGivenEvent = "each_given_event"
 
 	QueryClassInsights    = "insights"
 	QueryClassFunnel      = "funnel"
@@ -133,6 +141,7 @@ const (
 	SelectCoalesceCustomerUserIDAndUserID = "COALESCE(users.customer_user_id, event_user_id)"
 
 	GroupKeyPrefix            = "_group_key_"
+	AliasEventName            = "event_name"
 	AliasDateTime             = "datetime"
 	AliasAggr                 = "count"
 	DefaultTimezone           = "UTC"
@@ -850,7 +859,8 @@ func IsValidQuery(query *Query) (bool, string) {
 	}
 
 	if query.EventsCondition != EventCondAllGivenEvent &&
-		query.EventsCondition != EventCondAnyGivenEvent {
+		query.EventsCondition != EventCondAnyGivenEvent &&
+		query.EventsCondition != EventCondEachGivenEvent {
 		return false, "Invalid events condition given"
 	}
 
@@ -955,7 +965,7 @@ func ExecQuery(stmnt string, params []interface{}) (*QueryResult, error) {
 	return result, nil
 }
 
-func addMetaToQueryResult(result *QueryResult, query Query) {
+func addQueryToResultMeta(result *QueryResult, query Query) {
 	result.Meta.Query = query
 }
 

@@ -28,7 +28,7 @@ spec:
         cloud.google.com/gke-nodepool: factors-staging-node-pool
       containers:
       - name: appserver
-        image: us.gcr.io/factors-staging/app-server:v1.66-6022c8c
+        image: us.gcr.io/factors-staging/app-server:v3.16-1d6b430-721
         ports:
         - containerPort: 8080
         volumeMounts:

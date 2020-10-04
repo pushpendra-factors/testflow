@@ -307,12 +307,7 @@ func CustomCors() gin.HandlerFunc {
 			corsConfig.AddAllowHeaders("Authorization")
 		} else {
 			if C.IsDevelopment() || C.IsStaging() {
-				if C.IsDevelopment() {
-					log.Info("Running in development..")
-				} else { 
-					log.Info("Running in staging..")
-				}
-				
+				log.Infof("Running custom cors in %s environment.", C.GetConfig().Env)
 				corsConfig.AllowOrigins = []string{
 					"http://localhost:8080",
 					"http://localhost:3000",
@@ -323,22 +318,18 @@ func CustomCors() gin.HandlerFunc {
 					"https://staging-app.factors.ai",
 					"https://tufte-staging.factors.ai",
 				}
-				corsConfig.AllowCredentials = true
-				corsConfig.AddAllowHeaders("Access-Control-Allow-Headers")
-				corsConfig.AddAllowHeaders("Access-Control-Allow-Origin")
-				corsConfig.AddAllowHeaders("content-type")
-				corsConfig.AddAllowHeaders("Authorization")
 			} else {
 				corsConfig.AllowOrigins = []string{
 					"http://app.factors.ai",
 					"https://app.factors.ai",
 				}
-				corsConfig.AllowCredentials = true
-				corsConfig.AddAllowHeaders("Access-Control-Allow-Headers")
-				corsConfig.AddAllowHeaders("Access-Control-Allow-Origin")
-				corsConfig.AddAllowHeaders("content-type")
-				corsConfig.AddAllowHeaders("Authorization")
 			}
+
+			corsConfig.AllowCredentials = true
+			corsConfig.AddAllowHeaders("Access-Control-Allow-Headers")
+			corsConfig.AddAllowHeaders("Access-Control-Allow-Origin")
+			corsConfig.AddAllowHeaders("content-type")
+			corsConfig.AddAllowHeaders("Authorization")
 		}
 		// Applys custom cors and proceed
 		cors.New(corsConfig)(c)

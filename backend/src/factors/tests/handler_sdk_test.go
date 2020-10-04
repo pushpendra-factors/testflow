@@ -137,6 +137,7 @@ func TestSDKTrackHandler(t *testing.T) {
 	assert.Equal(t, float64(1), eventProperties[U.EP_PAGE_SPENT_TIME])     // Should be default value.
 	assert.Equal(t, float64(1), eventProperties[U.EP_PAGE_LOAD_TIME])      // Should be default value.
 	assert.Equal(t, float64(0), eventProperties[U.EP_PAGE_SCROLL_PERCENT]) // Should be default value.
+	assert.True(t, eventProperties[U.EP_IS_PAGE_VIEW].(bool))
 	assert.True(t, len(rEvent.UserPropertiesId) > 0)
 	rUser, errCode := M.GetUser(rEvent.ProjectId, rEvent.UserId)
 	assert.Equal(t, http.StatusFound, errCode)
@@ -1771,7 +1772,6 @@ func TestSDKAMPTrackByToken(t *testing.T) {
 func TestAddUserPropertiesMerge(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
-	(*C.GetConfig()).MergeUspProjectIds = fmt.Sprint(project.ID)
 
 	customerUserID := getRandomEmail()
 	user1, _ := M.CreateUser(&M.User{
@@ -1831,7 +1831,6 @@ func TestAddUserPropertiesMerge(t *testing.T) {
 func TestIdentifyUserPropertiesMerge(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
-	(*C.GetConfig()).MergeUspProjectIds = fmt.Sprint(project.ID)
 
 	customerUserID := getRandomEmail()
 	user1, _ := M.CreateUser(&M.User{

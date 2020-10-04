@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"testing"
 
-	C "factors/config"
 	M "factors/model"
 	U "factors/util"
 
@@ -51,29 +50,13 @@ func TestMergeUserPropertiesForUserID(t *testing.T) {
 		))},
 	})
 
-	// Merge is not enabled for project. Should not merge.
-	_, errCode := M.MergeUserPropertiesForUserID(project.ID, user1.ID, postgres.Jsonb{}, "", U.TimeNowUnix(), false, true)
-	assert.Equal(t, http.StatusNotAcceptable, errCode)
+	// Dryrun is set to true. Should not merge.
+	_, errCode := M.MergeUserPropertiesForUserID(project.ID, user1.ID, postgres.Jsonb{}, "", U.TimeNowUnix(), true, true)
+	assert.Equal(t, http.StatusNotModified, errCode)
 	user1DB, _ := M.GetUser(project.ID, user1.ID)
 	user1PropertiesDB, _ := U.DecodePostgresJsonb(&user1DB.Properties)
 	user2DB, _ := M.GetUser(project.ID, user2.ID)
 	user2PropertiesDB, _ := U.DecodePostgresJsonb(&user2DB.Properties)
-	// Both user properties must not be same.
-	assert.NotEqual(t, user1PropertiesDB, user2PropertiesDB)
-	// User property id must not change.
-	assert.Equal(t, user1.PropertiesId, user1DB.PropertiesId)
-	assert.Equal(t, user2.PropertiesId, user2DB.PropertiesId)
-
-	// Enable merge in config.
-	(*C.GetConfig()).MergeUspProjectIds = fmt.Sprint(project.ID)
-
-	// Dryrun is set to true. Should not merge.
-	_, errCode = M.MergeUserPropertiesForUserID(project.ID, user1.ID, postgres.Jsonb{}, "", U.TimeNowUnix(), true, true)
-	assert.Equal(t, http.StatusNotModified, errCode)
-	user1DB, _ = M.GetUser(project.ID, user1.ID)
-	user1PropertiesDB, _ = U.DecodePostgresJsonb(&user1DB.Properties)
-	user2DB, _ = M.GetUser(project.ID, user2.ID)
-	user2PropertiesDB, _ = U.DecodePostgresJsonb(&user2DB.Properties)
 	// Both user properties must not be same.
 	assert.NotEqual(t, user1PropertiesDB, user2PropertiesDB)
 	// User property id must not change.
@@ -211,7 +194,6 @@ func TestMergeUserPropertiesForUserID(t *testing.T) {
 func TestMergeUserPropertiesForProjectID(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
-	(*C.GetConfig()).MergeUspProjectIds = fmt.Sprint(project.ID)
 
 	customerUserID := getRandomEmail()
 	user1, _ := M.CreateUser(&M.User{

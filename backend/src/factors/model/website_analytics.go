@@ -1260,6 +1260,7 @@ func ExecuteWebAnalyticsQueries(projectId uint64, queries *WebAnalyticsQueries) 
 	// selectProperties - Columns will be scanned
 	// on the same order. Update scanner if order changed.
 	selectProperties := []string{
+		U.EP_IS_PAGE_VIEW,
 		U.EP_PAGE_URL,
 		U.EP_PAGE_SPENT_TIME,
 		U.EP_PAGE_SCROLL_PERCENT,
@@ -1326,8 +1327,7 @@ func ExecuteWebAnalyticsQueries(projectId uint64, queries *WebAnalyticsQueries) 
 	queryParams := make([]interface{}, 0, 0)
 	selectStmnt := "events.id, events.project_id, events.timestamp," + " " +
 		"COALESCE(users.customer_user_id, users.id) as user_id," + " " +
-		"events.session_id, events.event_name_id, event_names.name as event_name," + " " +
-		"event_names.type as event_name_type," + " " +
+		"events.session_id, events.event_name_id," + " " +
 		selectPropertiesStmnt
 
 	if customGroupPropertySelectStmnt != "" {
@@ -1338,12 +1338,13 @@ func ExecuteWebAnalyticsQueries(projectId uint64, queries *WebAnalyticsQueries) 
 		queryParams = append(queryParams, customGroupPropertySelectParams...)
 	}
 
-	queryStmnt := "SELECT" + " " + selectStmnt + " " +
-		"FROM events LEFT JOIN event_names ON events.event_name_id=event_names.id" + " " +
+	queryStmnt := "SELECT" + " " + selectStmnt + " " + "FROM events" + " " +
 		"LEFT JOIN users ON events.user_id=users.id" + " " +
 		"WHERE events.project_id = ? AND events.timestamp BETWEEN ? AND ?" + " " +
-		"AND (events.properties->>'$page_raw_url' IS NOT NULL OR events.event_name_id = ?)"
-	queryParams = append(queryParams, projectId, queries.From, queries.To, sessionEventName.ID)
+		// Filter session and page view event.
+		"AND (events.properties->>?=? OR events.event_name_id = ?)"
+	queryParams = append(queryParams, projectId, queries.From, queries.To,
+		U.EP_IS_PAGE_VIEW, true, sessionEventName.ID)
 
 	queryStartTimestamp := U.TimeNowUnix()
 	db := C.GetServices().Db
@@ -1363,10 +1364,9 @@ func ExecuteWebAnalyticsQueries(projectId uint64, queries *WebAnalyticsQueries) 
 		var timestamp int64
 		var userID string
 		var sessionID sql.NullString
-		var eventName string
 		var eventNameID uint64
-		var eventNameType string
 		// properties
+		var eventPropertyIsPageView sql.NullBool
 		var eventPropertyPageURL sql.NullString
 		var eventPropertyPageSpentTime sql.NullString
 		var eventPropertyPageScrollPercent sql.NullString
@@ -1387,7 +1387,7 @@ func ExecuteWebAnalyticsQueries(projectId uint64, queries *WebAnalyticsQueries) 
 		var customGroupProperties []sql.NullString
 
 		destinations := []interface{}{
-			&id, &projectID, &timestamp, &userID, &sessionID, &eventNameID, &eventName, &eventNameType,
+			&id, &projectID, &timestamp, &userID, &sessionID, &eventNameID, &eventPropertyIsPageView,
 			&eventPropertyPageURL, &eventPropertyPageSpentTime, &eventPropertyPageScrollPercent,
 			&eventPropertySource, &eventPropertyReferrerDomain, &eventPropertyMedium, &eventPropertyCampaign,
 			&eventPropertyCampaignID, &sessionPropertySpentTime, &sessionPropertyPageCount,
@@ -1405,14 +1405,10 @@ func ExecuteWebAnalyticsQueries(projectId uint64, queries *WebAnalyticsQueries) 
 			return queryResult, http.StatusInternalServerError
 		}
 
-		// Todo: Use a property to check instead of is_url(event_name).
-		// and remove event_name join.
-		isPageEvent := U.IsURLStable(eventName) || eventNameType == TYPE_FILTER_EVENT_NAME
-
-		// Using event_name_id instead of event_name for session check.
-		// To remove event_name join later.
+		isPageViewEvent := eventPropertyIsPageView.Valid && eventPropertyIsPageView.Bool
 		isSessionEvent := eventNameID == sessionEventName.ID
-		if !isPageEvent && !isSessionEvent {
+		// Check is part of sql query filter too.
+		if !isPageViewEvent && !isSessionEvent {
 			continue
 		}
 

@@ -1,9 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: config-sdkglobalconfig
-  labels:
-    env: staging
-    project: factors-staging
-data:
-  MERGE_USP_PROJECT_IDS: ""

@@ -3,12 +3,15 @@ package tests
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/http/httptest"
 
 	"github.com/gin-gonic/gin"
+
+	U "factors/util"
 )
 
 // ServePostRequest Creates a post request and returns a ResponseRecorder object,
@@ -91,4 +94,9 @@ func DecodeJSONResponseToMap(body *bytes.Buffer) map[string]interface{} {
 	}
 	json.Unmarshal(jsonResponse, &responseMap)
 	return responseMap
+}
+
+func RandomURL() string {
+	return fmt.Sprintf("http://%s.com/%s",
+		U.RandomLowerAphaNumString(5), U.RandomLowerAphaNumString(5))
 }

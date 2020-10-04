@@ -1,13 +1,16 @@
 package tests
 
 import (
+	"fmt"
 	"net/http"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 
+	C "factors/config"
 	M "factors/model"
+	TaskSession "factors/task/session"
 	U "factors/util"
 
 	SDK "factors/sdk"
@@ -17,18 +20,46 @@ func TestExecuteWebAnalyticsQueries(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 
+	// skip realtime session creation for project.
+	C.GetConfig().SkipSessionProjectIds = fmt.Sprintf("%d", project.ID)
+
+	timestamp := U.UnixTimeBeforeDuration(time.Minute * 15)
+
+	// Page view event. Should be counted.
 	pageURL := "example.com/a"
 	trackPayload := SDK.TrackPayload{
+		Auto: true,
 		Name: pageURL,
 		EventProperties: U.PropertiesMap{
 			"$page_url":     pageURL,
 			"$page_raw_url": pageURL,
 			"authorName":    "author1",
 		},
+		Timestamp: timestamp,
 	}
 	status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
 	assert.Equal(t, http.StatusOK, status)
 	assert.NotNil(t, response)
+	userId := response.UserId
+
+	// Custom event. Should be counted.
+	timestamp = timestamp + 1
+	trackPayload = SDK.TrackPayload{
+		Name:      U.RandomLowerAphaNumString(5),
+		Timestamp: timestamp,
+		UserId:    userId,
+		EventProperties: U.PropertiesMap{
+			"$page_url":     pageURL,
+			"$page_raw_url": pageURL,
+			"authorName":    "author1",
+		},
+	}
+	status, response = SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK)
+	assert.Equal(t, http.StatusOK, status)
+	assert.NotNil(t, response)
+
+	_, err = TaskSession.AddSession([]uint64{project.ID}, 30, 0, 1)
+	assert.Nil(t, err)
 
 	queryResult, errCode := M.ExecuteWebAnalyticsQueries(
 		project.ID,
@@ -99,6 +130,7 @@ func TestWebAnalyticsCustomGroupSessionBasedMetrics(t *testing.T) {
 	// Test exit metrics.
 	pageURL := "example.com/a"
 	trackPayload := SDK.TrackPayload{
+		Auto: true,
 		Name: pageURL,
 		EventProperties: U.PropertiesMap{
 			"$page_url":     pageURL,
@@ -114,6 +146,7 @@ func TestWebAnalyticsCustomGroupSessionBasedMetrics(t *testing.T) {
 	// Same user and session. Different page and author.
 	pageURL1 := "example.com/a/2"
 	trackPayload1 := SDK.TrackPayload{
+		Auto: true,
 		Name: pageURL1,
 		EventProperties: U.PropertiesMap{
 			"$page_url":     pageURL1,
@@ -166,6 +199,7 @@ func TestWebAnalyticsCustomGroupSessionBasedMetrics(t *testing.T) {
 
 	// Different user and session. Same page and author as track1.
 	trackPayload2 := SDK.TrackPayload{
+		Auto: true,
 		Name: pageURL,
 		EventProperties: U.PropertiesMap{
 			"$page_url":     pageURL,

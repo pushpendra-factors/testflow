@@ -28,7 +28,7 @@ spec:
         cloud.google.com/gke-nodepool: persistent-pool-standard
       containers:
       - name: sdkserver
-        image: us.gcr.io/factors-production/sdk-server:v1.07-4c5b816-630
+        image: us.gcr.io/factors-production/sdk-server:v1.13-1d6b430-721
         ports:
         - containerPort: 8085
         volumeMounts:
@@ -82,8 +82,6 @@ spec:
           - $(SEGMENT_REQUEST_QUEUE_PROJECT_TOKENS)
           - --skip_session_project_ids
           - $(OFFLINE_SESSION_PROJECT_IDS)
-          - --merge_usp_project_ids
-          - $(MERGE_USP_PROJECT_IDS)
           - --sentry_dsn
           - $(SENTRY_DSN)
           - --redis_host_ps
@@ -105,8 +103,6 @@ spec:
             name: config-sdkserver
         - configMapRef:
             name: config-appserver
-        - configMapRef:
-            name: config-sdkglobalconfig
         - configMapRef:
             name: config-env
         - configMapRef:

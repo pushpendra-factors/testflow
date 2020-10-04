@@ -340,9 +340,11 @@ func TestAttributionWithUserIdentification(t *testing.T) {
 	t.Run("TestAttributionUserIdentificationWithLookbackDays", func(t *testing.T) {
 		//continuation to previous users
 		user1NewPropertiesId, status := M.UpdateUserProperties(project.ID, user1.ID, &postgres.Jsonb{RawMessage: json.RawMessage(`{"$initial_campaign":12345}`)}, timestamp+3*86400)
-		assert.Equal(t, http.StatusAccepted, status)
+		assert.Equal(t, http.StatusAccepted, status)		
 		user2NewPropertiesId, status := M.UpdateUserProperties(project.ID, user2.ID, &postgres.Jsonb{RawMessage: json.RawMessage(`{"$initial_campaign":12345}`)}, timestamp+3*86400)
-		assert.Equal(t, http.StatusAccepted, status)
+		// Status should be not_modified as user1 and user2 belong to 
+		// same customer_user and user_properites merged on first UpdateUserProperties.
+		assert.Equal(t, http.StatusNotModified, status)
 		/*
 			t+3day -> first time $initial_campaign set with event for user1 and user2
 			t+6day -> sessioned event for user1 and user2

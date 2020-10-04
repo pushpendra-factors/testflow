@@ -2,7 +2,7 @@ import moment from 'moment';
 
 import { getTitleWithSorter } from '../CoreQuery/FunnelsResultPage/utils';
 import {
-  singleEventResponse, multiEventResponse, singleEventAnyEventUserResponse, multiEventAnyEventUserResponse
+  singleEventAnyEventUserResponse, multiEventAnyEventUserResponse
 } from './SampleResponse';
 
 export const getNoGroupingTableData = (data, currentSorter, searchText, reverseEventsMapper) => {
@@ -58,8 +58,7 @@ export const getColumns = (events, currentSorter, handleSorting) => {
   return [...result, ...eventColumns];
 };
 
-export const getSingleEventAnalyticsData = (event, eventsMapper) => {
-  const response = singleEventResponse;
+export const formatSingleEventAnalyticsData = (response, event, eventsMapper) => {
   const result = response.rows.map(row => {
     return {
       date: new Date(row[0]),
@@ -69,8 +68,7 @@ export const getSingleEventAnalyticsData = (event, eventsMapper) => {
   return result;
 };
 
-export const getMultiEventsAnalyticsData = (queries, eventsMapper) => {
-  const response = multiEventResponse;
+export const formatMultiEventsAnalyticsData = (response, queries, eventsMapper) => {
   const dates = [];
   const result = [];
   response.rows.forEach(r => {
@@ -188,6 +186,28 @@ export const getNoGroupingTablularDatesBasedData = (data, currentSorter, searchT
       return parseInt(a[currentSorter.key]) <= parseInt(b[currentSorter.key]) ? 1 : -1;
     }
     return 0;
+  });
+  return result;
+};
+
+export const formatSingleEventSinglePropertyData = (data) => {
+  const properties = {};
+  const result = [];
+  data.rows.forEach(elem => {
+    if (elem[1] !== '$none') {
+      if (Object.prototype.hasOwnProperty.call(properties, elem[1])) {
+        result[properties[elem[1]]].value += elem[2];
+      } else {
+        properties[elem[1]] = result.length;
+        result.push({
+          label: elem[1],
+          value: elem[2]
+        });
+      }
+    }
+  });
+  result.sort((a, b) => {
+    return parseInt(a.value) <= parseInt(b.value) ? 1 : -1;
   });
   return result;
 };
