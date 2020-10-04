@@ -46,9 +46,8 @@ go run run_build_db_from_model_file.go --mode=query_filter --project_id=<project
 
 /*
 go run run_build_DB_from_model_file.go --mode=ingest --file_path=<eventsFilePath> --project_name=<newProjectName> --agent_uuid=<yourAgentUUID>
---count_occur=true
+--count_occurence=true
 */
-var shouldCountOccurence bool
 
 func main() {
 
@@ -69,7 +68,7 @@ func main() {
 	customStartTime := flag.Int64("start_time", 0, "")
 	customEndTime := flag.Int64("end_time", 0, "")
 	projectIdFlag := flag.Uint64("project_id", 0, "Project Id.")
-	CountOccurence := flag.Bool("count_occur", false, "Count occurence of Patterns")
+	CountOccurence := flag.Bool("count_occurence", false, "Count occurence of Patterns")
 
 	shouldCountOccurence = *CountOccurence
 	flag.Parse()
@@ -114,7 +113,7 @@ func main() {
 
 	if *mode == "query" {
 		if *projectIdFlag != 0 {
-			err := testData(*customStartTime, *customEndTime, *projectIdFlag, file)
+			err := testData(*customStartTime, *customEndTime, *projectIdFlag, shouldCountOccurence, file)
 			if err != nil {
 				log.Error("Failed to testData ", err)
 			}
@@ -126,7 +125,7 @@ func main() {
 
 	if *mode == "query_filter" {
 		if *projectIdFlag != 0 {
-			err := testWithEventConstraints(*customStartTime, *customEndTime, *projectIdFlag, file)
+			err := testWithEventConstraints(*customStartTime, *customEndTime, *projectIdFlag, shouldCountOccurence, file)
 			if err != nil {
 				log.Error("Failed to testWithEventConstraints ", err)
 			}
@@ -277,7 +276,7 @@ func eventToDb(event denEvent, project *M.Project) int {
 	return http.StatusOK
 }
 
-func testData(startTime int64, endTime int64, projectId uint64, file *os.File) error {
+func testData(startTime int64, endTime int64, projectId uint64, shouldCountOccurence bool, file *os.File) error {
 
 	patterns, err := getPatterns(file, shouldCountOccurence)
 	if err != nil {
@@ -445,7 +444,7 @@ func getPatterns(file *os.File, countOccurence bool) ([]*P.Pattern, error) {
 	return patterns, nil
 }
 
-func testWithEventConstraints(startTime int64, endTime int64, projectId uint64, file *os.File) error {
+func testWithEventConstraints(startTime int64, endTime int64, projectId uint64, shouldCountOccurence bool, file *os.File) error {
 	//Test with event constraints
 	patterns, err := getPatterns(file, shouldCountOccurence)
 	if err != nil {
