@@ -54,14 +54,21 @@ func GetEventNamesHandler(c *gin.Context) {
 			logCtx.WithError(err).Error(fmt.Sprintf("No Events Returned - ProjectID - %s", projectId))
 		}
 
+		eventNameStrings := make([]string, 0)
+		if len(eventNames[U.MostRecent]) > 0 {
+			eventNameStrings = append(eventNameStrings, eventNames[U.MostRecent]...)
+		}
+		if len(eventNames[U.FrequentlySeen]) > 0 {
+			eventNameStrings = append(eventNameStrings, eventNames[U.FrequentlySeen]...)
+		}
 		// Force add specific events.
 		if fNames, pExists := FORCED_EVENT_NAMES[projectId]; pExists {
-			eventNames = append(eventNames, fNames...)
+			eventNameStrings = append(eventNameStrings, fNames...)
 		}
 
 		// TODO: Janani Removing the IsExact property from output since its anyway backward compat with UI
 		// Will remove exact/approx logic in UI as well
-		c.JSON(http.StatusOK, gin.H{"event_names": eventNames})
+		c.JSON(http.StatusOK, gin.H{"event_names": eventNameStrings})
 	} else {
 		requestType := c.Query("type")
 		if requestType != M.EVENT_NAME_REQUEST_TYPE_APPROX && requestType != M.EVENT_NAME_REQUEST_TYPE_EXACT {

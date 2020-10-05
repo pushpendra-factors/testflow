@@ -1401,10 +1401,11 @@ type CachePropertyValueWithTimestamp struct {
 }
 
 type NameCountTimestampCategory struct {
-	Name      string `json:"na"`
-	Count     int64  `json:"cnt"`
-	Timestamp int64  `json:"ts"`
-	Category  string `json:"ca"`
+	Name      string
+	Count     int64
+	Timestamp int64
+	Category  string
+	GroupName string
 }
 
 // SortByTimestampAndCount Sorts the given array by timestamp/count
@@ -1423,8 +1424,10 @@ func SortByTimestampAndCount(data []NameCountTimestampCategory) []NameCountTimes
 	for _, details := range data {
 		hoursBeforeLastSeen := currentDate.Sub(time.Unix(details.Timestamp, 0)).Hours()
 		if hoursBeforeLastSeen <= float64(24) {
+			details.GroupName = MostRecent
 			sorted = append(sorted, details)
 		} else {
+			details.GroupName = FrequentlySeen
 			trimmed = append(trimmed, details)
 		}
 	}
@@ -1453,7 +1456,7 @@ func AggregatePropertyValuesAcrossDate(values []CachePropertyValueWithTimestamp)
 	propertyValueAggregatedSlice := make([]NameCountTimestampCategory, 0)
 	for k, v := range valuesAggregated {
 		propertyValueAggregatedSlice = append(propertyValueAggregatedSlice, NameCountTimestampCategory{
-			k, v.Count, v.LastSeenTimestamp, ""})
+			k, v.Count, v.LastSeenTimestamp, "", ""})
 	}
 	return propertyValueAggregatedSlice
 }
@@ -1490,7 +1493,7 @@ func AggregatePropertyAcrossDate(properties []CachePropertyWithTimestamp) []Name
 	propertiesAggregatedSlice := make([]NameCountTimestampCategory, 0)
 	for k, v := range propertiesAggregated {
 		propertiesAggregatedSlice = append(propertiesAggregatedSlice, NameCountTimestampCategory{
-			k, v.CountTime.Count, v.CountTime.LastSeenTimestamp, v.Category})
+			k, v.CountTime.Count, v.CountTime.LastSeenTimestamp, v.Category, ""})
 	}
 	return propertiesAggregatedSlice
 }
@@ -1525,10 +1528,10 @@ func GetCategoryType(values []PropertyValue) string {
 }
 
 func DeriveCategory(categorySplit map[string]int64, totalCount int64) string {
-	acceptablePercentage := int64(99)
+	acceptablePercentage := int64(95)
 
 	for category, count := range categorySplit {
-		if count/totalCount*100 >= acceptablePercentage {
+		if count*100/totalCount >= acceptablePercentage {
 			return category
 		}
 	}

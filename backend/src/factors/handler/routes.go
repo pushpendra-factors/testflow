@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	IH "factors/handler/internal"
+	V1 "factors/handler/v1"
 
 	"github.com/gin-gonic/gin"
 )
@@ -84,6 +85,9 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.PUT("/:project_id/agents/remove", RemoveProjectAgent)
 	authRouteGroup.GET("/:project_id/settings", GetProjectSettingHandler)
 	authRouteGroup.PUT("/:project_id/settings", UpdateProjectSettingsHandler)
+
+	// V1 Routes
+	authRouteGroup.GET("/:project_id/v1/event_names", V1.GetEventNamesHandler)
 }
 
 func InitSDKServiceRoutes(r *gin.Engine) {

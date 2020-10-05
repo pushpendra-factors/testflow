@@ -536,16 +536,16 @@ func aggregateEventsAcrossDate(events []CacheEventNamesWithTimestamp) []U.NameCo
 	eventsAggregatedSlice := make([]U.NameCountTimestampCategory, 0)
 	for k, v := range eventsAggregated {
 		eventsAggregatedSlice = append(eventsAggregatedSlice, U.NameCountTimestampCategory{
-			k, v.Count, v.LastSeenTimestamp, ""})
+			k, v.Count, v.LastSeenTimestamp, "", ""})
 	}
 	return eventsAggregatedSlice
 }
 
 //GetEventNamesOrderedByOccurenceAndRecency This method iterates for last n days to get all the top 'limit' events for the given project
 // Picks all last 24 hours events and sorts the remaining by occurence and returns top 'limit' events
-func GetEventNamesOrderedByOccurenceAndRecency(projectID uint64, limit int, lastNDays int) ([]string, error) {
+func GetEventNamesOrderedByOccurenceAndRecency(projectID uint64, limit int, lastNDays int) (map[string][]string, error) {
 	if projectID == 0 {
-		return []string{}, errors.New("invalid project on get event names ordered by occurence and recency")
+		return nil, errors.New("invalid project on get event names ordered by occurence and recency")
 	}
 	currentDate := OverrideCacheDateRangeForProjects(projectID)
 	events := make([]CacheEventNamesWithTimestamp, 0)
@@ -553,26 +553,28 @@ func GetEventNamesOrderedByOccurenceAndRecency(projectID uint64, limit int, last
 		currentDateOnlyFormat := currentDate.AddDate(0, 0, -i).Format(U.DATETIME_FORMAT_YYYYMMDD)
 		event, err := getEventNamesOrderedByOccurenceAndRecencyFromCache(projectID, currentDateOnlyFormat)
 		if err != nil {
-			return []string{}, err
+			return nil, err
 		}
 		events = append(events, event)
 	}
 
 	eventsAggregated := aggregateEventsAcrossDate(events)
-	eventStrings := make([]string, 0)
 
 	eventsSorted := U.SortByTimestampAndCount(eventsAggregated)
-	for _, events := range eventsSorted {
-		eventStrings = append(eventStrings, events.Name)
-	}
 
 	if limit > 0 {
-		sliceLength := len(eventStrings)
+		sliceLength := len(eventsSorted)
 		if sliceLength > limit {
-			return eventStrings[0:limit], nil
+			eventsSorted = eventsSorted[0:limit]
 		}
 	}
-	return eventStrings, nil
+
+	eventStringWithGroups := make(map[string][]string)
+	for _, event := range eventsSorted {
+		eventStringWithGroups[event.GroupName] = append(eventStringWithGroups[event.GroupName], event.Name)
+	}
+
+	return eventStringWithGroups, nil
 }
 
 func getEventNamesOrderedByOccurenceAndRecencyFromCache(projectID uint64, dateKey string) (CacheEventNamesWithTimestamp, error) {

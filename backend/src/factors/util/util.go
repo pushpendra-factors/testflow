@@ -34,6 +34,10 @@ var QueryDateRangePresets = map[string]func() (int64, int64){
 	"TODAY":         GetQueryRangePresetTodayIST,
 }
 
+// Group Names
+var MostRecent string = "MOST RECENT"
+var FrequentlySeen string = "FREQUENTLY SEEN"
+
 func RandomString(n int) string {
 	rand.Seed(time.Now().UnixNano())
 
