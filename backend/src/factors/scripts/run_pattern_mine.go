@@ -8,7 +8,7 @@ package main
 // or
 // go run run_pattern_mine.go --project_id=<projectId> --model_id=<modelId>
 // default of count occurence is False
-// go run run_pattern_mine.go --project_id=<projectId> --model_id=<modelId> --count_occur=true/false
+// go run run_pattern_mine.go --project_id=<projectId> --model_id=<modelId> --count_occurence=true/false
 
 import (
 	C "factors/config"
@@ -37,7 +37,7 @@ func main() {
 	bucketName := flag.String("bucket_name", "/usr/local/var/factors/cloud_storage", "")
 	numRoutinesFlag := flag.Int("num_routines", 3, "No of routines")
 	maxModelSizeFlag := flag.Int64("max_size", 10000000000, "Max size of the model")
-	shouldCountOccurence := flag.Bool("count_occur", false, "")
+	shouldCountOccurence := flag.Bool("count_occurence", false, "")
 
 	dbHost := flag.String("db_host", "localhost", "")
 	dbPort := flag.Int("db_port", 5432, "")
