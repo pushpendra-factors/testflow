@@ -9,6 +9,8 @@ import UserSettings from '../../Views/Settings/UserSettings';
 import { setActiveProject } from '../../reducers/global';
 import { connect } from 'react-redux';
 import { PlusOutlined } from '@ant-design/icons';
+import CreateNewProject from './CreateNewProject';
+
 function Sidebar(props) {
   const { Sider } = Layout;
 
@@ -18,6 +20,7 @@ function Sidebar(props) {
   const [changeProjectModal, setchangeProjectModal] = useState(false);
   const [selectedProject, setselectedProject] = useState(null);
   const [searchProjectName, setsearchProjectName] = useState('');
+  const [CreateNewProjectModal, setCreateNewProjectModal] = useState(false);
 
   const searchProject = (e) => {
     setsearchProjectName(e.target.value);
@@ -27,7 +30,7 @@ function Sidebar(props) {
     return (
         <div className={'fa-popupcard'}>
           <Text type={'title'} level={7} weight={'bold'} extraClass={'m-0'}>Projects</Text>
-          {props.projects.length > 6 ? <input onChange={(e) => searchProject(e)} placeholder={'Search Project'} className={'fa-project-list--search'}/> : null}
+          {props.projects.length > 6 ? <input onChange={(e) => searchProject(e)} value={searchProjectName} placeholder={'Search Project'} className={'fa-project-list--search'}/> : null}
           <div className={'flex flex-col items-start fa-project-list--wrapper'} >
             {props.projects.filter(project => project.name.toLowerCase().includes(searchProjectName.toLowerCase())).map((project, index) => {
               return <div key={index}
@@ -43,7 +46,12 @@ function Sidebar(props) {
 
           </div>
           <div className={'fa-popupcard-divider'} />
-          <Button type={'text'}><span className={'mr-4'}><PlusOutlined /></span> {'Add Projects'}</Button>
+          <Button type={'text'}
+          onClick={() => {
+            setShowPopOver(false);
+            setCreateNewProjectModal(true);
+          }}>
+            <span className={'mr-4'}><PlusOutlined /></span> {'Add Projects'}</Button>
           <div className={'fa-popupcard-divider'} />
           <div className={'flex justify-start items-center project-item'}
               onClick={() => {
@@ -112,13 +120,20 @@ function Sidebar(props) {
           </div>
           <div className={'flex flex-col justify-end items-center w-full pb-8 pt-2'}>
             <Row justify="center" align="middle" className=" w-full py-2">
-              <Popover placement="top" overlayClassName={'fa-popupcard--wrapper'} title={false} content={popOvercontent} visible={ShowPopOver} onVisibleChange={(visible) => setShowPopOver(visible)} onClick={() => setShowPopOver(true)} trigger="click">
-                {/* <Link to={'#'} onClick={() => showUserSettingsModal()} > */}
+              <Popover placement="top" overlayClassName={'fa-popupcard--wrapper'} title={false} content={popOvercontent}
+              visible={ShowPopOver}
+              onVisibleChange={(visible) => {
+                setShowPopOver(visible);
+              }}
+              onClick={() => {
+                setsearchProjectName('');
+                setShowPopOver(true);
+              }}
+                trigger="click">
                   <Avatar
                     src={'https://zos.alipayobjects.com/rmsportal/ODTLcjxAfvqbxHnVXCYX.png'}
                     className={'flex justify-center items-center fa-aside--avatar'}
                   />
-                {/* </Link> */}
               </Popover>
             </Row>
           </div>
@@ -129,6 +144,11 @@ function Sidebar(props) {
         {/* Modals triggered from sidebar */}
         <ModalLib visible={visible} handleCancel={handleCancel} />
         <UserSettings visible={ShowUserSettings} handleCancel={closeUserSettingsModal} />
+
+        <CreateNewProject
+          visible={CreateNewProjectModal}
+          setCreateNewProjectModal={setCreateNewProjectModal}
+        />
 
         <Modal
         visible={changeProjectModal}
