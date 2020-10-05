@@ -6,17 +6,19 @@ import SparkLineChart from '../../../components/SparkLineChart';
 import LineChart from '../../../components/LineChart';
 import { generateColors } from '../../CoreQuery/FunnelsResultPage/utils';
 
-function NoBreakdownCharts({ queries, eventsMapper, reverseEventsMapper, resultState }) {
-    const [hiddenEvents, setHiddenEvents] = useState([]);
-    const appliedColors = generateColors(queries.length);
-    const [chartType, setChartType] = useState('sparklines');
+function NoBreakdownCharts({
+  queries, eventsMapper, reverseEventsMapper, resultState
+}) {
+  const [hiddenEvents, setHiddenEvents] = useState([]);
+  const appliedColors = generateColors(queries.length);
+  const [chartType, setChartType] = useState('sparklines');
 
-    let chartsData = [];
-    if (queries.length === 1) {
-        chartsData = formatSingleEventAnalyticsData(resultState.data, queries[0], eventsMapper);
-    } else {
-        chartsData = formatMultiEventsAnalyticsData(resultState.data, queries, eventsMapper);
-    }
+  let chartsData = [];
+  if (queries.length === 1) {
+    chartsData = formatSingleEventAnalyticsData(resultState.data, queries[0], eventsMapper);
+  } else {
+    chartsData = formatMultiEventsAnalyticsData(resultState.data, queries, eventsMapper);
+  }
 
   if (!chartsData.length) {
     return null;
