@@ -22,6 +22,14 @@ type Status struct {
 	Status    string `json:"status"`
 }
 
+var possiblePhoneField = []string{
+	"phone",
+	"phone__c",
+	"mobilephone",
+	"mobilephone__c",
+	"personmobilephone",
+}
+
 func getUserIDFromLastestProperties(properties []M.UserProperties) string {
 	latestIndex := len(properties) - 1
 	return properties[latestIndex].UserId
@@ -95,18 +103,14 @@ func getSalesforceAccountID(document *M.SalesforceDocument) (string, error) {
 
 func getCustomerUserIDFromProperties(projectID uint64, properties map[string]interface{}, docTypeAlias string) string {
 
-	possiblePhoneField := []string{
-		"phone",
-		"phone__c",
-		"mobilephone",
-		"mobilephone__c",
-		"personmobilephone",
-	}
-
 	for _, phoneField := range possiblePhoneField {
-		if phoneNo, ok := properties[getPropertyKeyByType(docTypeAlias, phoneField)].(string); ok && phoneNo != "" {
-			pPhoneNo := U.GetPossiblePhoneNumber(phoneNo)
+		if phoneNo, ok := properties[getPropertyKeyByType(docTypeAlias, phoneField)]; ok {
+			phoneStr, err := U.GetValueAsString(phoneNo)
+			if err != nil || phoneStr == "" {
+				continue
+			}
 
+			pPhoneNo := U.GetPossiblePhoneNumber(phoneStr)
 			existingPhoneNo, errCode := M.GetExistingCustomerUserID(projectID, pPhoneNo)
 			if errCode == http.StatusFound {
 				for i := range pPhoneNo {
@@ -115,7 +119,8 @@ func getCustomerUserIDFromProperties(projectID uint64, properties map[string]int
 					}
 				}
 			}
-			return phoneNo
+
+			return phoneStr
 		}
 	}
 

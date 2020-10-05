@@ -282,18 +282,23 @@ func CreateSalesforceDocument(projectID uint64, document *SalesforceDocument) in
 	if isNew {
 		status := CreateSalesforceDocumentByAction(projectID, document, SalesforceDocumentCreated)
 		if status != http.StatusOK {
-			logCtx.WithError(err).Error("Failed to create salesforce document.")
-			return http.StatusInternalServerError
+			if status != http.StatusConflict {
+				logCtx.Error("Failed to create salesforce document.")
+			}
+
+			return status
 		}
+
 		return http.StatusCreated
 	}
 
 	status := CreateSalesforceDocumentByAction(projectID, document, SalesforceDocumentUpdated)
-	if err != nil {
-		if status != http.StatusOK {
-			logCtx.WithError(err).Error("Failed to create salesforce document.")
-			return http.StatusInternalServerError
+	if status != http.StatusOK {
+		if status != http.StatusConflict {
+			logCtx.Error("Failed to create salesforce document.")
 		}
+
+		return status
 	}
 
 	return http.StatusCreated
@@ -309,8 +314,9 @@ func CreateSalesforceDocumentByAction(projectID uint64, document *SalesforceDocu
 	}
 
 	document.Action = action
-	timestamp, err := GetSalesforceDocumentTimestampByAction(document, action)
+	timestamp, err := getSalesforceLastModifiedTimestamp(document)
 	if err != nil {
+		log.WithError(err).Error("Failed to get last modified timestamp")
 		return http.StatusBadRequest
 	}
 	document.Timestamp = timestamp
@@ -319,13 +325,32 @@ func CreateSalesforceDocumentByAction(projectID uint64, document *SalesforceDocu
 	err = db.Create(document).Error
 	if err != nil {
 		if U.IsPostgresUniqueIndexViolationError("salesforce_documents_pkey", err) {
-			return http.StatusOK
+			return http.StatusConflict
 		}
 
 		return http.StatusInternalServerError
 	}
 
 	return http.StatusOK
+}
+
+func getSalesforceLastModifiedTimestamp(document *SalesforceDocument) (int64, error) {
+	if document.Type == 0 {
+		return 0, errors.New("invalid document type")
+	}
+
+	value, err := U.DecodePostgresJsonb(document.Value)
+	if err != nil {
+		return 0, err
+	}
+
+	dateKey := "LastModifiedDate"
+	date, exists := (*value)[dateKey]
+	if !exists || date == nil {
+		return 0, errors.New("failed to get date")
+	}
+
+	return getSalesforceDocumentTimestamp(date)
 }
 
 func GetSalesforceDocumentTimestampByAction(document *SalesforceDocument, action SalesforceAction) (int64, error) {
@@ -341,13 +366,11 @@ func GetSalesforceDocumentTimestampByAction(document *SalesforceDocument, action
 		return 0, err
 	}
 
-	var dateKey string
-	if action == SalesforceDocumentCreated {
-		dateKey = "CreatedDate"
-	}
 	if action == SalesforceDocumentUpdated {
-		dateKey = "LastModifiedDate"
+		return getSalesforceLastModifiedTimestamp(document)
 	}
+
+	dateKey := "CreatedDate"
 
 	date, exists := (*value)[dateKey]
 	if !exists || date == nil {

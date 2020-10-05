@@ -49,11 +49,11 @@ func TestCreateSalesforceDocument(t *testing.T) {
 
 	contactId := U.RandomLowerAphaNumString(5)
 	name := U.RandomLowerAphaNumString(5)
-	tm := time.Now()
-	createdDate := tm.UTC().Format(M.SalesforceDocumentTimeLayout)
+
+	createdDate := time.Now()
 
 	// salesforce record with created == updated
-	jsonData := fmt.Sprintf(`{"Id":"%s", "name":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, contactId, name, createdDate, createdDate)
+	jsonData := fmt.Sprintf(`{"Id":"%s", "name":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, contactId, name, createdDate.UTC().Format(M.SalesforceDocumentTimeLayout), createdDate.UTC().Format(M.SalesforceDocumentTimeLayout))
 	salesforceDocument := &M.SalesforceDocument{
 		ProjectID: project.ID,
 		TypeAlias: M.SalesforceDocumentTypeNameContact,
@@ -65,7 +65,7 @@ func TestCreateSalesforceDocument(t *testing.T) {
 	syncInfo, status = M.GetSalesforceSyncInfo()
 
 	//should return latest timestamp from the databse
-	assert.Equal(t, tm.Unix(), syncInfo.LastSyncInfo[project.ID][M.SalesforceDocumentTypeNameContact])
+	assert.Equal(t, createdDate.Unix(), syncInfo.LastSyncInfo[project.ID][M.SalesforceDocumentTypeNameContact])
 
 	//should return error on duplicate
 	status = M.CreateSalesforceDocument(project.ID, salesforceDocument)
@@ -78,18 +78,18 @@ func TestCreateSalesforceDocument(t *testing.T) {
 	assert.Equal(t, "success", enrichStatus[1].Status)
 	assert.Equal(t, "success", enrichStatus[2].Status)
 
-	eventName1 := fmt.Sprintf("$sf_%s_created", salesforceDocument.TypeAlias)
-	eventName2 := fmt.Sprintf("$sf_%s_updated", salesforceDocument.TypeAlias)
+	eventNameCreated := fmt.Sprintf("$sf_%s_created", salesforceDocument.TypeAlias)
+	eventNameUpdate := fmt.Sprintf("$sf_%s_updated", salesforceDocument.TypeAlias)
 	query := M.Query{
-		From: tm.Unix() - 500,
-		To:   tm.Unix() + 500,
+		From: createdDate.Unix() - 500,
+		To:   createdDate.Unix() + 500,
 		EventsWithProperties: []M.QueryEventWithProperties{
 			M.QueryEventWithProperties{
-				Name:       eventName1,
+				Name:       eventNameCreated,
 				Properties: []M.QueryProperty{},
 			},
 			M.QueryEventWithProperties{
-				Name:       eventName2,
+				Name:       eventNameUpdate,
 				Properties: []M.QueryProperty{},
 			},
 		},
@@ -102,8 +102,142 @@ func TestCreateSalesforceDocument(t *testing.T) {
 	// test using query
 	result, errCode, _ := M.Analyze(project.ID, query)
 	assert.Equal(t, http.StatusOK, errCode)
-	assert.Equal(t, eventName1, result.Rows[0][0])
+	assert.Equal(t, eventNameCreated, result.Rows[0][0])
 	assert.Equal(t, int64(1), result.Rows[0][1])
-	assert.Equal(t, eventName2, result.Rows[1][0])
+	assert.Equal(t, eventNameUpdate, result.Rows[1][0])
 	assert.Equal(t, int64(1), result.Rows[1][1])
+
+	query = M.Query{
+		From: createdDate.Unix() - 500,
+		To:   createdDate.Unix() + 500,
+		EventsWithProperties: []M.QueryEventWithProperties{
+			M.QueryEventWithProperties{
+				Name:       eventNameCreated,
+				Properties: []M.QueryProperty{},
+			},
+			M.QueryEventWithProperties{
+				Name:       eventNameUpdate,
+				Properties: []M.QueryProperty{},
+			},
+		},
+		Class: M.QueryClassInsights,
+
+		Type:            M.QueryTypeUniqueUsers,
+		EventsCondition: M.EventCondAllGivenEvent,
+	}
+
+	// test using query
+	result, errCode, _ = M.Analyze(project.ID, query)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, int64(1), result.Rows[0][0])
+
+	/*
+		salesforce record1 with createdDate != updatedDate
+		salesforce record2 with createdDate != updatedDate
+		both same id
+	*/
+	contactId = U.RandomLowerAphaNumString(5)
+	name = U.RandomLowerAphaNumString(5)
+	createdDate = createdDate.AddDate(0, 0, -10)
+	updatedDate := createdDate.AddDate(0, 0, 1)
+
+	// salesforce record1 with created != updated
+	jsonData = fmt.Sprintf(`{"Id":"%s", "name":"%s","MobilePhone":1234567890,"CreatedDate":"%s", "LastModifiedDate":"%s"}`, contactId, name, createdDate.UTC().Format(M.SalesforceDocumentTimeLayout), updatedDate.UTC().Format(M.SalesforceDocumentTimeLayout))
+	salesforceDocument = &M.SalesforceDocument{
+		ProjectID: project.ID,
+		TypeAlias: M.SalesforceDocumentTypeNameContact,
+		Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonData))},
+	}
+
+	status = M.CreateSalesforceDocument(project.ID, salesforceDocument)
+	assert.Equal(t, http.StatusCreated, status)
+
+	// salesforce record2 with created != updated same user
+	updatedDate = updatedDate.AddDate(0, 0, 1)
+	jsonData = fmt.Sprintf(`{"Id":"%s", "name":"%s","CreatedDate":"%s", "LastModifiedDate":"%s"}`, contactId, name, createdDate.UTC().Format(M.SalesforceDocumentTimeLayout), updatedDate.Format(M.SalesforceDocumentTimeLayout))
+	salesforceDocument = &M.SalesforceDocument{
+		ProjectID: project.ID,
+		TypeAlias: M.SalesforceDocumentTypeNameContact,
+		Value:     &postgres.Jsonb{RawMessage: json.RawMessage([]byte(jsonData))},
+	}
+	status = M.CreateSalesforceDocument(project.ID, salesforceDocument)
+	assert.Equal(t, http.StatusCreated, status)
+
+	//should return conflict on duplicate
+	status = M.CreateSalesforceDocument(project.ID, salesforceDocument)
+	assert.Equal(t, http.StatusConflict, status)
+
+	//enrich job, create contact created and contact updated event
+	enrichStatus = IntSalesforce.Enrich(project.ID)
+	assert.Equal(t, project.ID, enrichStatus[0].ProjectID)
+	assert.Equal(t, "success", enrichStatus[0].Status)
+	assert.Equal(t, "success", enrichStatus[1].Status)
+	assert.Equal(t, "success", enrichStatus[2].Status)
+
+	// query count of unique users
+	query = M.Query{
+		From: createdDate.Unix() - 500,
+		To:   updatedDate.Unix() + 500,
+		EventsWithProperties: []M.QueryEventWithProperties{
+			M.QueryEventWithProperties{
+				Name:       eventNameCreated,
+				Properties: []M.QueryProperty{},
+			},
+			M.QueryEventWithProperties{
+				Name:       eventNameUpdate,
+				Properties: []M.QueryProperty{},
+			},
+		},
+		Class: M.QueryClassInsights,
+
+		Type:            M.QueryTypeUniqueUsers,
+		EventsCondition: M.EventCondAllGivenEvent,
+	}
+	// test using query
+	result, errCode, _ = M.Analyze(project.ID, query)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, int64(1), result.Rows[0][0])
+
+	// query count of events
+	query = M.Query{
+		From: createdDate.Unix() - 500,
+		To:   updatedDate.Unix() + 500,
+		EventsWithProperties: []M.QueryEventWithProperties{
+			M.QueryEventWithProperties{
+				Name:       eventNameCreated,
+				Properties: []M.QueryProperty{},
+			},
+			M.QueryEventWithProperties{
+				Name:       eventNameUpdate,
+				Properties: []M.QueryProperty{},
+			},
+		},
+		Class: M.QueryClassInsights,
+
+		Type:            M.QueryTypeEventsOccurrence,
+		EventsCondition: M.EventCondAllGivenEvent,
+	}
+
+	// test using query
+	result, errCode, _ = M.Analyze(project.ID, query)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, eventNameCreated, result.Rows[0][0])
+	assert.Equal(t, int64(1), result.Rows[0][1])
+	assert.Equal(t, eventNameUpdate, result.Rows[1][0])
+	assert.Equal(t, int64(2), result.Rows[1][1])
+
+	query.GroupByProperties = []M.QueryGroupByProperty{
+		M.QueryGroupByProperty{
+			Entity:    M.PropertyEntityUser,
+			Property:  "$user_id",
+			EventName: M.UserPropertyGroupByPresent,
+		},
+	}
+
+	result, errCode, _ = M.Analyze(project.ID, query)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, eventNameCreated, result.Rows[0][0])
+	assert.Equal(t, "1234567890", result.Rows[0][1])
+	assert.Equal(t, eventNameUpdate, result.Rows[1][0])
+	assert.Equal(t, "1234567890", result.Rows[1][1])
 }
