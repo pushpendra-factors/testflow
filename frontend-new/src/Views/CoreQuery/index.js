@@ -112,10 +112,8 @@ function CoreQuery({ activeProject }) {
   const runQuery = () => {
     const query = getQuery();
     setResultState('loading');
-    setShowResult(true);
-    closeDrawer();
     runQueryService(activeProject.id, query).then(res => {
-      if (res.status === 200) {
+      if(res.status === 200) {
         setQueryResult(res.data);
         setResultState('success');
         setShowResult(true);
@@ -124,9 +122,9 @@ function CoreQuery({ activeProject }) {
         setResultError()
       }
     }, err => {
-      setResultError();
+        setResultError();
     })
-
+    
   };
 
   const setResultError = () => {

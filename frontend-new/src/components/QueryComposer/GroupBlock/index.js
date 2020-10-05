@@ -37,6 +37,7 @@ export default function GroupBlock({ events, groupBy }) {
     const newGroupByState = Object.assign({}, groupByState);
     newGroupByState.property = value;
     setDDVisible(false);
+    setValueDDVisible(true);
     setGroupByState(newGroupByState);
   };
 
@@ -95,17 +96,22 @@ export default function GroupBlock({ events, groupBy }) {
           : null
         }
 
+      {groupByState.property &&
+      <>
         <Text type={'title'} level={7} weight={'thin'} extraClass={'mx-2 m-0'}>with values</Text>
 
         {!isValueDDVisible && <Button type="link" onClick={triggerValueDropDown}>{groupByState.eventValue ? groupByState.eventValue : events[0].label }</Button> }
-        {isValueDDVisible
-          ? <Select style={{ width: 200 }} showArrow={false}
+        {isValueDDVisible &&
+         <Select style={{ width: 200 }} showArrow={false}
             defaultOpen={true}
             onChange={onEventValueChange} >
             {events.map((event, index) => (
               <Option key={index} value={event.label}></Option>
             ))}
-          </Select> : null }
+          </Select>
+        }
+      </>
+        }
       </div>
 
     </div>
