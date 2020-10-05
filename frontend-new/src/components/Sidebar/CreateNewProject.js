@@ -34,7 +34,7 @@ function CreateNewProject(props) {
         className={'fa-modal--regular'}
         footer={null}
         centered={true}
-        afterClose={()=>onReset()}
+        afterClose={() => onReset()}
         >
           <div className={'p-4'}>
             <Row>
