@@ -190,9 +190,8 @@ func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.Trac
 			}
 
 			userID = event.UserId
-		} else {
-			trackPayload.UserId = userID
 		}
+		trackPayload.UserId = userID
 
 		status, response := SDK.Track(projectID, trackPayload, true, SDK.SourceSalesforce)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {

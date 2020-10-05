@@ -280,40 +280,38 @@ func CreateSalesforceDocument(projectID uint64, document *SalesforceDocument) in
 
 	isNew := errCode == http.StatusNotFound
 	if isNew {
-		err = CreateSalesforceDocumentByAction(projectID, document, SalesforceDocumentCreated)
-		if err != nil {
+		status := CreateSalesforceDocumentByAction(projectID, document, SalesforceDocumentCreated)
+		if status != http.StatusOK {
 			logCtx.WithError(err).Error("Failed to create salesforce document.")
 			return http.StatusInternalServerError
 		}
 		return http.StatusCreated
 	}
 
-	err = CreateSalesforceDocumentByAction(projectID, document, SalesforceDocumentUpdated)
+	status := CreateSalesforceDocumentByAction(projectID, document, SalesforceDocumentUpdated)
 	if err != nil {
-		if err == errorDuplicateRecord {
-			return http.StatusConflict
+		if status != http.StatusOK {
+			logCtx.WithError(err).Error("Failed to create salesforce document.")
+			return http.StatusInternalServerError
 		}
-
-		logCtx.WithError(err).Error("Failed to create salesforce document.")
-		return http.StatusInternalServerError
 	}
 
 	return http.StatusCreated
 }
 
-func CreateSalesforceDocumentByAction(projectID uint64, document *SalesforceDocument, action SalesforceAction) error {
+func CreateSalesforceDocumentByAction(projectID uint64, document *SalesforceDocument, action SalesforceAction) int {
 	if projectID == 0 {
-		return errors.New("invalid project id")
+		return http.StatusBadRequest
 	}
 
 	if action == 0 {
-		return errors.New("invald action type")
+		return http.StatusBadRequest
 	}
 
 	document.Action = action
 	timestamp, err := GetSalesforceDocumentTimestampByAction(document, action)
 	if err != nil {
-		return err
+		return http.StatusBadRequest
 	}
 	document.Timestamp = timestamp
 
@@ -321,13 +319,13 @@ func CreateSalesforceDocumentByAction(projectID uint64, document *SalesforceDocu
 	err = db.Create(document).Error
 	if err != nil {
 		if U.IsPostgresUniqueIndexViolationError("salesforce_documents_pkey", err) {
-			return errorDuplicateRecord
+			return http.StatusOK
 		}
 
-		return err
+		return http.StatusInternalServerError
 	}
 
-	return nil
+	return http.StatusOK
 }
 
 func GetSalesforceDocumentTimestampByAction(document *SalesforceDocument, action SalesforceAction) (int64, error) {
