@@ -10,7 +10,6 @@ import { generateColors } from '../../CoreQuery/FunnelsResultPage/utils';
 function BreakdownCharts({
   queries, breakdown
 }) {
-
   const [chartsData, setChartsData] = useState([]);
   const [visibleProperties, setVisibleProperties] = useState([]);
   const [chartType, setChartType] = useState('linechart');
@@ -22,7 +21,7 @@ function BreakdownCharts({
     if (breakdown.length === 1) {
       const formattedData = formatSingleEventSinglePropertyData(singleEventSinglePropertyDateTimeResponse);
       setChartsData(formattedData);
-      setVisibleProperties([...formattedData.slice(0, maxAllowedVisibleProperties)])
+      setVisibleProperties([...formattedData.slice(0, maxAllowedVisibleProperties)]);
     }
   }, [breakdown]);
 
@@ -46,14 +45,14 @@ function BreakdownCharts({
   const mapper = {};
   const reverseMapper = {};
 
-  const visibleLabels = visibleProperties.map(v => v.label)
+  const visibleLabels = visibleProperties.map(v => v.label);
 
   visibleLabels.forEach((q, index) => {
     mapper[`${q}`] = `event${index + 1}`;
     reverseMapper[`event${index + 1}`] = q;
-  })
+  });
 
-  const lineChartData = formatDataInLineChartFormat(singleEventSinglePropertyDateTimeResponse, visibleProperties, mapper, hiddenProperties)
+  const lineChartData = formatDataInLineChartFormat(singleEventSinglePropertyDateTimeResponse, visibleProperties, mapper, hiddenProperties);
   const appliedColors = generateColors(visibleProperties.length);
 
   let chartContent = null;
@@ -79,7 +78,7 @@ function BreakdownCharts({
           hiddenEvents={hiddenProperties}
         />
       </div>
-    )
+    );
   }
 
   return (

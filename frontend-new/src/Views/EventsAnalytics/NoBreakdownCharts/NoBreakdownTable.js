@@ -1,6 +1,8 @@
 import React, { useState, useCallback } from 'react';
 import DataTable from '../../CoreQuery/FunnelsResultPage/DataTable';
-import { getNoGroupingTableData, getColumns, getDateBasedColumns, getNoGroupingTablularDatesBasedData } from './utils';
+import {
+  getNoGroupingTableData, getColumns, getDateBasedColumns, getNoGroupingTablularDatesBasedData
+} from './utils';
 
 function NoBreakdownTable({
   data, events, reverseEventsMapper, chartType, setHiddenEvents, hiddenEvents

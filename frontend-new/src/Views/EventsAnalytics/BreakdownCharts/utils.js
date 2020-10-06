@@ -1,4 +1,4 @@
-import { getTitleWithSorter } from "../../CoreQuery/FunnelsResultPage/utils";
+import { getTitleWithSorter } from '../../CoreQuery/FunnelsResultPage/utils';
 import moment from 'moment';
 
 export const getTableColumns = (events, breakdown, currentSorter, handleSorting) => {
@@ -16,7 +16,7 @@ export const getTableColumns = (events, breakdown, currentSorter, handleSorting)
     };
   });
   return [...breakdownColumns, ...eventColumns];
-}
+};
 
 export const getDataInTableFormat = (data, events, breakdown, searchText, currentSorter) => {
   if (breakdown.length === 1 && events.length === 1) {
@@ -26,7 +26,7 @@ export const getDataInTableFormat = (data, events, breakdown, searchText, curren
         index,
         [breakdown[0]]: d.label,
         [events[0]]: d.value
-      }
+      };
     });
     result.sort((a, b) => {
       if (currentSorter.order === 'ascend') {
@@ -40,7 +40,7 @@ export const getDataInTableFormat = (data, events, breakdown, searchText, curren
     return result;
   }
   return [];
-}
+};
 
 export const formatSingleEventSinglePropertyData = (data) => {
   const properties = {};
@@ -71,7 +71,7 @@ export const formatDataInLineChartFormat = (data, visibleProperties, mapper, hid
   data.rows.forEach(elem => {
     if (visibleLabels.indexOf(elem[1]) > -1) {
       if (resultInObjFormat[elem[0]]) {
-        resultInObjFormat[elem[0]][elem[1]] = elem[2]
+        resultInObjFormat[elem[0]][elem[1]] = elem[2];
       } else {
         resultInObjFormat[elem[0]] = {
           [elem[1]]: elem[2]
@@ -84,15 +84,15 @@ export const formatDataInLineChartFormat = (data, visibleProperties, mapper, hid
   visibleLabels.forEach(v => {
     result.push([mapper[v]]);
     keysMapper[v] = result.length - 1;
-  })
-  for (let key in resultInObjFormat) {
+  });
+  for (const key in resultInObjFormat) {
     result[0].push(moment(key).format('YYYY-MM-DD'));
-    for (let b in resultInObjFormat[key]) {
-      result[keysMapper[b]].push(resultInObjFormat[key][b])
+    for (const b in resultInObjFormat[key]) {
+      result[keysMapper[b]].push(resultInObjFormat[key][b]);
     }
   }
   return result;
-}
+};
 
 export const getDateBasedColumns = (data, breakdown, currentSorter, handleSorting) => {
   const result = [
@@ -120,12 +120,12 @@ export const getDateBasedTableData = (labels, data, breakdown, searchText, curre
     const obj = {
       index,
       [breakdown[0]]: elem
-    }
+    };
     entries.forEach(entry => {
-      obj[moment(entry[0]).format('MMM D')] = entry[2]
-    })
+      obj[moment(entry[0]).format('MMM D')] = entry[2];
+    });
     return obj;
-  })
+  });
   result.sort((a, b) => {
     if (currentSorter.order === 'ascend') {
       return parseInt(a[currentSorter.key]) >= parseInt(b[currentSorter.key]) ? 1 : -1;
@@ -136,4 +136,4 @@ export const getDateBasedTableData = (labels, data, breakdown, searchText, curre
     return 0;
   });
   return result;
-}
+};
