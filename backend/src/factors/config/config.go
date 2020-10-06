@@ -84,6 +84,7 @@ type Configuration struct {
 	SDKRequestQueueProjectTokens        []string
 	SegmentRequestQueueProjectTokens    []string
 	SkipSessionProjectIds               string // comma seperated project ids, supports "*" for all projects.
+	UseDefaultProjectSettingForSDK      bool
 	WhitelistedProjectIdsEventUserCache string
 	IsRealTimeEventUserCachingEnabled   bool
 	RealTimeEventUserCachingProjectIds  string

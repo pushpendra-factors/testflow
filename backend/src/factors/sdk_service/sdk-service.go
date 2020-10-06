@@ -34,6 +34,9 @@ func main() {
 	queueRedisHost := flag.String("queue_redis_host", "localhost", "")
 	queueRedisPort := flag.Int("queue_redis_port", 6379, "")
 
+	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
+	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
+
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 
 	sdkRequestQueueProjectTokens := flag.String("sdk_request_queue_project_tokens", "",
@@ -43,8 +46,10 @@ func main() {
 
 	skipSessionProjectIds := flag.String("skip_session_project_ids",
 		"", "List or projects to create session offline.")
-	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
-	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
+
+	useDefaultProjectSettingForSDK := flag.Bool("use_defaul_project_setting_for_sdk",
+		false, "Once set to true, it will skip db query to get project_settings, if not found on cache.")
+
 	isRealTimeEventUserCachingEnabled := flag.Bool("enable_real_time_event_user_caching",
 		true, "If the real time caching is enabled")
 	realTimeEventUserCachingProjectIds := flag.String("real_time_event_user_caching_project_ids", "1",
@@ -76,6 +81,7 @@ func main() {
 		SkipSessionProjectIds:              *skipSessionProjectIds, // comma seperated project ids, supports "*".
 		RedisHostPersistent:                *redisHostPersistent,
 		RedisPortPersistent:                *redisPortPersistent,
+		UseDefaultProjectSettingForSDK:     *useDefaultProjectSettingForSDK,
 		IsRealTimeEventUserCachingEnabled:  *isRealTimeEventUserCachingEnabled,
 		RealTimeEventUserCachingProjectIds: *realTimeEventUserCachingProjectIds,
 		// List of tokens (public and private) to block SDK requests.
