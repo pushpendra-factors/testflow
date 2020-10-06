@@ -70,7 +70,7 @@ func main() {
 	projectIdFlag := flag.Uint64("project_id", 0, "Project Id.")
 	CountOccurence := flag.Bool("count_occurence", false, "Count occurence of Patterns")
 
-	shouldCountOccurence = *CountOccurence
+	shouldCountOccurence := *CountOccurence
 	flag.Parse()
 
 	defer util.NotifyOnPanic("Task#BuildDbFromModelFile", *env)
