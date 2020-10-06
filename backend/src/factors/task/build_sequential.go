@@ -38,7 +38,7 @@ func BuildSequential(env string, db *gorm.DB, cloudManager *filestore.FileManage
 	etcdClient *serviceEtcd.EtcdClient, diskManger *serviceDisk.DiskDriver,
 	bucketName string, noOfPatternWorkers int, projectIdToRun map[uint64]bool,
 	projectIdsToSkip map[uint64]bool, maxModelSize int64, modelType string,
-	lookBackPeriodInDays, noOfDays int64) error {
+	lookBackPeriodInDays, noOfDays int64, countOccurence bool) error {
 
 	defer util.NotifyOnPanic(taskID, env)
 
@@ -118,7 +118,7 @@ func BuildSequential(env string, db *gorm.DB, cloudManager *filestore.FileManage
 		startAt = time.Now().UnixNano()
 		newProjectMetaVersion, numChunks, err := PatternMine(db, etcdClient, cloudManager, diskManger,
 			bucketName, noOfPatternWorkers, build.ProjectId, modelId, build.ModelType,
-			build.StartTimestamp, build.EndTimestamp, maxModelSize)
+			build.StartTimestamp, build.EndTimestamp, maxModelSize, countOccurence)
 		if err != nil {
 			logCtx.Error("Failed to mine patterns.")
 			failures = append(failures, BuildFailure{Build: build, Error: fmt.Sprintf("%s", err), Message: "Pattern mining failure"})

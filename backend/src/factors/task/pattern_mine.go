@@ -41,7 +41,7 @@ var regex_NUM = regexp.MustCompile("[0-9]+")
 var mineLog = taskLog.WithField("prefix", "Task#PatternMine")
 
 func countPatternsWorker(filepath string,
-	patterns []*P.Pattern, wg *sync.WaitGroup) {
+	patterns []*P.Pattern, wg *sync.WaitGroup, countOccurence bool) {
 	file, err := os.Open(filepath)
 	if err != nil {
 		mineLog.WithField("filePath", filepath).Error("Failure on count pattern workers.")
@@ -50,12 +50,12 @@ func countPatternsWorker(filepath string,
 	scanner := bufio.NewScanner(file)
 	buf := make([]byte, P.MAX_PATTERN_BYTES)
 	scanner.Buffer(buf, P.MAX_PATTERN_BYTES)
-	P.CountPatterns(scanner, patterns)
+	P.CountPatterns(scanner, patterns, countOccurence)
 	file.Close()
 	wg.Done()
 }
 
-func countPatterns(filepath string, patterns []*P.Pattern, numRoutines int) {
+func countPatterns(filepath string, patterns []*P.Pattern, numRoutines int, countOccurence bool) {
 	var wg sync.WaitGroup
 	numPatterns := len(patterns)
 	mineLog.Info(fmt.Sprintf("Num patterns to count Range: %d - %d", 0, numPatterns-1))
@@ -66,7 +66,7 @@ func countPatterns(filepath string, patterns []*P.Pattern, numRoutines int) {
 		high := int(math.Min(float64(batchSize*(i+1)), float64(numPatterns)))
 		mineLog.Info(fmt.Sprintf("Batch %d patterns to count range: %d:%d", i+1, low, high))
 		wg.Add(1)
-		go countPatternsWorker(filepath, patterns[low:high], &wg)
+		go countPatternsWorker(filepath, patterns[low:high], &wg, countOccurence)
 	}
 	wg.Wait()
 }
@@ -355,7 +355,7 @@ func genLenThreeSegmentedCandidates(lenTwoPatterns []*P.Pattern,
 func mineAndWriteLenOnePatterns(
 	eventNames []M.EventName, filepath string,
 	userAndEventsInfo *P.UserAndEventsInfo, numRoutines int,
-	chunkDir string, maxModelSize int64, cumulativePatternsSize int64) (
+	chunkDir string, maxModelSize int64, cumulativePatternsSize int64, countOccurence bool) (
 	[]*P.Pattern, int64, error) {
 	var lenOnePatterns []*P.Pattern
 	for _, eventName := range eventNames {
@@ -365,7 +365,7 @@ func mineAndWriteLenOnePatterns(
 		}
 		lenOnePatterns = append(lenOnePatterns, p)
 	}
-	countPatterns(filepath, lenOnePatterns, numRoutines)
+	countPatterns(filepath, lenOnePatterns, numRoutines, countOccurence)
 	filteredLenOnePatterns, patternsSize, err := filterAndCompressPatterns(
 		lenOnePatterns, maxModelSize, cumulativePatternsSize, 1, max_PATTERN_LENGTH)
 	if err != nil {
@@ -380,7 +380,7 @@ func mineAndWriteLenOnePatterns(
 func mineAndWriteLenTwoPatterns(
 	lenOnePatterns []*P.Pattern, filepath string,
 	userAndEventsInfo *P.UserAndEventsInfo, numRoutines int,
-	chunkDir string, maxModelSize int64, cumulativePatternsSize int64) (
+	chunkDir string, maxModelSize int64, cumulativePatternsSize int64, countOccurence bool) (
 	[]*P.Pattern, int64, error) {
 	// Each event combination is a segment in itself.
 	lenTwoPatterns, _, err := P.GenCandidates(
@@ -388,7 +388,7 @@ func mineAndWriteLenTwoPatterns(
 	if err != nil {
 		return []*P.Pattern{}, 0, err
 	}
-	countPatterns(filepath, lenTwoPatterns, numRoutines)
+	countPatterns(filepath, lenTwoPatterns, numRoutines, countOccurence)
 	filteredLenTwoPatterns, patternsSize, err := filterAndCompressPatterns(
 		lenTwoPatterns, maxModelSize, cumulativePatternsSize, 2, max_PATTERN_LENGTH)
 	if err != nil {
@@ -403,7 +403,7 @@ func mineAndWriteLenTwoPatterns(
 func mineAndWritePatterns(projectId uint64, filepath string,
 	userAndEventsInfo *P.UserAndEventsInfo, eventNames []M.EventName,
 	numRoutines int, chunkDir string,
-	maxModelSize int64) error {
+	maxModelSize int64, countOccurence bool) error {
 	var filteredPatterns []*P.Pattern
 	var cumulativePatternsSize int64 = 0
 
@@ -412,7 +412,7 @@ func mineAndWritePatterns(projectId uint64, filepath string,
 
 	filteredPatterns, patternsSize, err := mineAndWriteLenOnePatterns(
 		eventNames, filepath, userAndEventsInfo, numRoutines, chunkDir,
-		maxModelSize, cumulativePatternsSize)
+		maxModelSize, cumulativePatternsSize, countOccurence)
 	if err != nil {
 		return err
 	}
@@ -428,7 +428,7 @@ func mineAndWritePatterns(projectId uint64, filepath string,
 	}
 	filteredPatterns, patternsSize, err = mineAndWriteLenTwoPatterns(
 		filteredPatterns, filepath, userAndEventsInfo,
-		numRoutines, chunkDir, maxModelSize, cumulativePatternsSize)
+		numRoutines, chunkDir, maxModelSize, cumulativePatternsSize, countOccurence)
 	if err != nil {
 		return err
 	}
@@ -454,7 +454,7 @@ func mineAndWritePatterns(projectId uint64, filepath string,
 		for _, patterns := range lenThreeSegmentedPatterns {
 			lenThreePatterns = append(lenThreePatterns, patterns...)
 		}
-		countPatterns(filepath, lenThreePatterns, numRoutines)
+		countPatterns(filepath, lenThreePatterns, numRoutines, countOccurence)
 		filteredPatterns, patternsSize, err = filterAndCompressPatterns(
 			lenThreePatterns, maxModelSize, cumulativePatternsSize,
 			patternLen, max_PATTERN_LENGTH)
@@ -488,7 +488,7 @@ func mineAndWritePatterns(projectId uint64, filepath string,
 		for _, patterns := range candidatePatternsMap {
 			candidatePatterns = append(candidatePatterns, patterns...)
 		}
-		countPatterns(filepath, candidatePatterns, numRoutines)
+		countPatterns(filepath, candidatePatterns, numRoutines, countOccurence)
 		filteredPatterns, patternsSize, err = filterAndCompressPatterns(
 			candidatePatterns, maxModelSize, cumulativePatternsSize,
 			patternLen, max_PATTERN_LENGTH)
@@ -756,7 +756,7 @@ func filterDisabledFactorsProperties(reader io.Reader) (io.Reader, error) {
 // PatternMine Mine TOP_K Frequent patterns for every event combination (segment) at every iteration.
 func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *filestore.FileManager,
 	diskManager *serviceDisk.DiskDriver, bucketName string, numRoutines int, projectId uint64,
-	modelId uint64, modelType string, startTime int64, endTime int64, maxModelSize int64) (string, int, error) {
+	modelId uint64, modelType string, startTime int64, endTime int64, maxModelSize int64, countOccurence bool) (string, int, error) {
 
 	var err error
 
@@ -849,7 +849,7 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 	mineLog.WithFields(log.Fields{"projectId": projectId, "tmpEventsFilepath": tmpEventsFilepath,
 		"tmpChunksDir": tmpChunksDir, "routines": numRoutines}).Info("Mining patterns and writing it as chunks.")
 	err = mineAndWritePatterns(projectId, tmpEventsFilepath,
-		userAndEventsInfo, eventNames, numRoutines, tmpChunksDir, maxModelSize)
+		userAndEventsInfo, eventNames, numRoutines, tmpChunksDir, maxModelSize, countOccurence)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to mine patterns.")
 		return "", 0, err
