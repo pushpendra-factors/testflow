@@ -3,6 +3,7 @@ import { Layout } from 'antd';
 import Sidebar from '../../components/Sidebar';
 import CoreQuery from '../CoreQuery';
 import ProjectSettings from '../Settings/ProjectSettings';
+import componentsLib from '../../Views/componentsLib';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import {
@@ -49,6 +50,7 @@ function AppLayout({ fetchProjects, setLoginToken, isAgentLoggedIn }) {
         <Content className="bg-white min-h-screen">
           <HashRouter>
             <Switch>
+              <Route path="/components/" name="componentsLib" component={componentsLib} />
               <Route path="/settings/" component={ProjectSettings} />
               <Route path="/" name="Home" component={CoreQuery} />
             </Switch>
