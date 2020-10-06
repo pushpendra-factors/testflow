@@ -84,7 +84,7 @@ func GetSalesforceDocTypeByAlias(alias string) int {
 	return typ
 }
 
-func getSalesforceDocumentTypeAlias(projectID uint64) map[string]int {
+func GetSalesforceDocumentTypeAlias(projectID uint64) map[string]int {
 	docTypes := make(map[string]int)
 	for _, doctype := range GetSalesforceAllowedObjects(projectID) {
 		docTypes[GetSalesforceAliasByDocType(doctype)] = doctype
@@ -160,7 +160,7 @@ func GetSalesforceSyncInfo() (SalesforceSyncInfo, int) {
 		}
 
 		// add types not synced before.
-		for typ := range getSalesforceDocumentTypeAlias(ps.ProjectID) {
+		for typ := range GetSalesforceDocumentTypeAlias(ps.ProjectID) {
 			_, typExists := enabledProjectLastSync[ps.ProjectID][typ]
 			if !typExists {
 				// last sync timestamp as zero as type not synced before.

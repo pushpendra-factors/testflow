@@ -23,11 +23,19 @@ type Status struct {
 }
 
 var possiblePhoneField = []string{
-	"phone",
-	"phone__c",
 	"mobilephone",
 	"mobilephone__c",
+	"phone",
+	"phone__c",
+	"mobile__c",
 	"personmobilephone",
+}
+
+var salesforceSyncOrderByType = [...]int{
+	M.SalesforceDocumentTypeContact,
+	M.SalesforceDocumentTypeAccount,
+	M.SalesforceDocumentTypeLead,
+	M.SalesforceDocumentTypeOpportunity,
 }
 
 func getUserIDFromLastestProperties(properties []M.UserProperties) string {
@@ -101,7 +109,7 @@ func getSalesforceAccountID(document *M.SalesforceDocument) (string, error) {
 	return accountID, nil
 }
 
-func getCustomerUserIDFromProperties(projectID uint64, properties map[string]interface{}, docTypeAlias string) string {
+func getCustomerUserIDFromProperties(projectID uint64, properties map[string]interface{}, docTypeAlias string) (string, string) {
 
 	for _, phoneField := range possiblePhoneField {
 		if phoneNo, ok := properties[getPropertyKeyByType(docTypeAlias, phoneField)]; ok {
@@ -114,13 +122,13 @@ func getCustomerUserIDFromProperties(projectID uint64, properties map[string]int
 			existingPhoneNo, errCode := M.GetExistingCustomerUserID(projectID, pPhoneNo)
 			if errCode == http.StatusFound {
 				for i := range pPhoneNo {
-					if _, exist := existingPhoneNo[pPhoneNo[i]]; exist {
-						return pPhoneNo[i]
+					if userID, exist := existingPhoneNo[pPhoneNo[i]]; exist {
+						return pPhoneNo[i], userID
 					}
 				}
 			}
 
-			return phoneStr
+			return phoneStr, ""
 		}
 	}
 
@@ -132,11 +140,11 @@ func getCustomerUserIDFromProperties(projectID uint64, properties map[string]int
 
 	for _, emailField := range possibleEmailField {
 		if email, ok := properties[getPropertyKeyByType(docTypeAlias, emailField)].(string); ok && email != "" {
-			return email
+			return email, ""
 		}
 	}
 
-	return ""
+	return "", ""
 }
 
 func getPropertyKeyByType(typ, key string) string {
@@ -171,8 +179,13 @@ func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.Trac
 			return "", "", fmt.Errorf("created event track failed for doc type %d, message %s", document.Type, response.Error)
 		}
 
+		if trackPayload.UserId != "" {
+			userID = trackPayload.UserId
+		} else {
+			userID = response.UserId
+		}
+
 		eventID = response.EventId
-		userID = response.UserId
 	}
 
 	if document.Action == M.SalesforceDocumentCreated || document.Action == M.SalesforceDocumentUpdated {
@@ -184,6 +197,7 @@ func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.Trac
 		}
 
 		if document.Action == M.SalesforceDocumentUpdated {
+			// TODO(maisa): Use GetSyncedSalesforceDocumentByType while updating multiple contacts in an account object
 			documents, status := M.GetSyncedSalesforceDocumentByType(projectID, []string{document.ID}, document.Type)
 			if status != http.StatusFound {
 				return "", "", errors.New("failed to get synced document")
@@ -196,6 +210,7 @@ func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.Trac
 
 			userID = event.UserId
 		}
+
 		trackPayload.UserId = userID
 
 		status, response := SDK.Track(projectID, trackPayload, true, SDK.SourceSalesforce)
@@ -240,7 +255,7 @@ func enrichAccount(projectID uint64, document *M.SalesforceDocument) int {
 		return http.StatusInternalServerError
 	}
 
-	customerUserID := getCustomerUserIDFromProperties(projectID, properties, M.GetSalesforceAliasByDocType(document.Type))
+	customerUserID, _ := getCustomerUserIDFromProperties(projectID, properties, M.GetSalesforceAliasByDocType(document.Type))
 	if customerUserID != "" {
 		status, _ := SDK.Identify(projectID, &SDK.IdentifyPayload{
 			UserId: userID, CustomerUserId: customerUserID})
@@ -290,7 +305,7 @@ func enrichContact(projectID uint64, document *M.SalesforceDocument) int {
 		return http.StatusInternalServerError
 	}
 
-	customerUserID := getCustomerUserIDFromProperties(projectID, properties, M.GetSalesforceAliasByDocType(document.Type))
+	customerUserID, _ := getCustomerUserIDFromProperties(projectID, properties, M.GetSalesforceAliasByDocType(document.Type))
 	if customerUserID != "" {
 		status, _ := SDK.Identify(projectID, &SDK.IdentifyPayload{
 			UserId: userID, CustomerUserId: customerUserID})
@@ -333,23 +348,24 @@ func enrichOpportunities(projectID uint64, document *M.SalesforceDocument) int {
 		UserProperties:  properties,
 	}
 
-	eventID, userID, err := TrackSalesforceEventByDocumentType(projectID, trackPayload, document)
-	if err != nil {
-		logCtx.WithError(err).Error(
-			"Failed to track salesforce opportunity event.")
-		return http.StatusInternalServerError
-	}
-
-	customerUserID := getCustomerUserIDFromProperties(projectID, properties, M.GetSalesforceAliasByDocType(document.Type))
+	var eventID string
+	customerUserID, userID := getCustomerUserIDFromProperties(projectID, properties, M.GetSalesforceAliasByDocType(document.Type))
 	if customerUserID != "" {
-		status, _ := SDK.Identify(projectID, &SDK.IdentifyPayload{
-			UserId: userID, CustomerUserId: customerUserID})
-		if status != http.StatusOK {
-			logCtx.WithField("customer_user_id", customerUserID).Error(
-				"Failed to identify user on salesforce opportunity sync.")
+		trackPayload.UserId = userID
+		eventID, _, err = TrackSalesforceEventByDocumentType(projectID, trackPayload, document)
+		if err != nil {
+			logCtx.WithError(err).Error(
+				"Failed to track salesforce opportunity event.")
 			return http.StatusInternalServerError
 		}
 	} else {
+		eventID, _, err = TrackSalesforceEventByDocumentType(projectID, trackPayload, document)
+		if err != nil {
+			logCtx.WithError(err).Error(
+				"Failed to track salesforce opportunity event.")
+			return http.StatusInternalServerError
+		}
+
 		logCtx.Error("Skipped user identification on salesforce opportunity sync. No customer_user_id on properties.")
 	}
 
@@ -391,7 +407,7 @@ func enrichLeads(projectID uint64, document *M.SalesforceDocument) int {
 		return http.StatusInternalServerError
 	}
 
-	customerUserID := getCustomerUserIDFromProperties(projectID, properties, M.GetSalesforceAliasByDocType(document.Type))
+	customerUserID, _ := getCustomerUserIDFromProperties(projectID, properties, M.GetSalesforceAliasByDocType(document.Type))
 	if customerUserID != "" {
 		status, _ := SDK.Identify(projectID, &SDK.IdentifyPayload{
 			UserId: userID, CustomerUserId: customerUserID})
@@ -485,7 +501,12 @@ func Enrich(projectID uint64) []Status {
 		return statusByProjectAndType
 	}
 
-	for _, docType := range M.GetSalesforceAllowedObjects(projectID) {
+	allowedDocTypes := M.GetSalesforceDocumentTypeAlias(projectID)
+	for _, docType := range salesforceSyncOrderByType {
+		if _, exist := allowedDocTypes[M.GetSalesforceAliasByDocType(docType)]; !exist {
+			continue
+		}
+
 		logCtx = logCtx.WithFields(log.Fields{
 			"doc_type":   docType,
 			"project_id": projectID,
