@@ -1,12 +1,17 @@
 import React, { useState } from 'react';
+import { connect } from 'react-redux';
 import {
-  Row, Col, Button, Input
+  Row, Col, Button, Input, Form
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
 import { useHistory } from 'react-router-dom';
+import { login } from '../../reducers/agentActions';
+import { EyeInvisibleOutlined, EyeTwoTone } from '@ant-design/icons';
 
-function Login() {
+function Login(props) {
+  const [form] = Form.useForm();
   const [dataLoading, setDataLoading] = useState(false);
+  const [errorInfo, seterrorInfo] = useState(null);
 
   const history = useHistory();
   const routeChange = (url) => {
@@ -15,10 +20,28 @@ function Login() {
 
   const CheckLogin = () => {
     setDataLoading(true);
-    setTimeout(() => {
+    form.validateFields().then((value) => {
+      setDataLoading(true);
+      setTimeout(() => {
+        props.login(value.form_username, value.form_password)
+          .then(() => {
+            setDataLoading(false);
+            history.push('/');
+          }).catch((err) => {
+            setDataLoading(false);
+            form.resetFields();
+            seterrorInfo(err);
+          });
+      }, 200);
+    }).catch((info) => {
       setDataLoading(false);
-      history.push('/');
-    }, 1500);
+      form.resetFields();
+      seterrorInfo(info);
+    });
+  };
+
+  const onChange = () => {
+    seterrorInfo(null);
   };
 
   return (
@@ -36,25 +59,59 @@ function Login() {
                         </Row>
                         <Row>
                             <Col span={24}>
+                        <Form
+                        form={form}
+                        name="login"
+                        validateTrigger
+                        initialValues={{ remember: false }}
+                        onFinish={CheckLogin}
+                        onChange={onChange}
+                        >
+                        <Row>
+                            <Col span={24}>
                                 <div className={'flex justify-center items-center mt-10'} >
                                     <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>Login to Continue</Text>
                                 </div>
                             </Col>
                             <Col span={24}>
-                                <div className={'flex flex-col justify-center items-center mt-10'} >
-                                    <Input disabled={dataLoading} className={'fa-input'} size={'large'} placeholder="Username" />
-                                </div>
+                                    <div className={'flex flex-col justify-center items-center mt-10 w-full'} >
+                                        <Form.Item label={null}
+                                            name="form_username"
+                                            rules={[{ required: true, type: 'email', message: 'Please enter username' }]}
+                                            >
+                                            <Input className={'fa-input w-full'} disabled={dataLoading} size={'large'} placeholder="Username" />
+                                        </Form.Item>
+                                    </div>
+                            </Col>
+                            <Col span={24}>
+                                    <div className={'flex flex-col justify-center items-center mt-5 w-full'} >
+                                            <Form.Item label={null}
+                                            name="form_password"
+                                            rules={[{ required: true, message: 'Please enter password' }]}
+                                             >
+                                            <Input.Password
+                                                className={'fa-input w-full'}
+                                                size={'large'}
+                                                placeholder="Password"
+                                                disabled={dataLoading}
+                                                iconRender={visible => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)}
+                                            />
+                                            </Form.Item>
+                                    </div>
                             </Col>
                             <Col span={24}>
                                 <div className={'flex flex-col justify-center items-center mt-5'} >
-                                    <Input disabled={dataLoading} className={'fa-input'} size={'large'} placeholder="Password" />
+                                    <Form.Item className={'m-0'} loading={dataLoading}>
+                                        <Button htmlType="submit" loading={dataLoading} type={'primary'} size={'large'} className={'w-full'}>LOG IN</Button>
+                                    </Form.Item>
                                 </div>
                             </Col>
-                            <Col span={24}>
-                                <div className={'flex flex-col justify-center items-center mt-5'} >
-                                    <Button loading={dataLoading} onClick={() => CheckLogin()} type={'primary'} size={'large'}>LOG IN</Button>
+                            {errorInfo && <Col span={24}>
+                                <div className={'flex flex-col justify-center items-center mt-1'} >
+                                    <Text type={'title'} color={'red'} size={'7'} className={'m-0'}>{errorInfo}</Text>
                                 </div>
                             </Col>
+                            }
                             <Col span={24}>
                                 <div className={'flex flex-col justify-center items-center mt-10'} >
                                     <Button disabled={dataLoading} type={'text'} size={'large'} onClick={() => routeChange('/forgotpassword')}>Forgot Password</Button>
@@ -65,6 +122,9 @@ function Login() {
                                     <Button disabled={dataLoading} type={'link'} size={'large'}>Don’t have an account? Sign Up</Button>
                                 </div>
                             </Col>
+                        </Row>
+                        </Form>
+                        </Col>
                         </Row>
                     </div>
                 </Col>
@@ -77,4 +137,4 @@ function Login() {
   );
 }
 
-export default Login;
+export default connect(null, { login })(Login);

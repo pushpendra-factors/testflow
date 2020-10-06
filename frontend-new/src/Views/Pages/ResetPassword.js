@@ -32,12 +32,12 @@ function ResetPassword() {
                             </Col>
                             <Col span={24}>
                                 <div className={'flex flex-col justify-center items-center mt-10'} >
-                                    <Input className={'fa-input'} size={'large'} placeholder="Enter Your New Password" />
+                                    <Input className={'fa-input fa-input-50'} size={'large'} placeholder="Enter Your New Password" />
                                 </div>
                             </Col>
                             <Col span={24}>
                                 <div className={'flex flex-col justify-center items-center mt-5'} >
-                                    <Input className={'fa-input'} size={'large'} placeholder="Confirm New Password" />
+                                    <Input className={'fa-input fa-input-50'} size={'large'} placeholder="Confirm New Password" />
                                 </div>
                             </Col>
                             <Col span={24}>

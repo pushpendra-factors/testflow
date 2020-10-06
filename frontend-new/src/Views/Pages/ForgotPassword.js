@@ -37,7 +37,7 @@ function ForgotPassword() {
                             </Col>
                             <Col span={24}>
                                 <div className={'flex flex-col justify-center items-center mt-10'} >
-                                    <Input className={'fa-input'} size={'large'} placeholder="Enter your email" />
+                                    <Input className={'fa-input fa-input-50'} size={'large'} placeholder="Enter your email" />
                                 </div>
                             </Col>
                             <Col span={24}>

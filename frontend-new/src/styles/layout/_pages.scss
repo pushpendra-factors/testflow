@@ -1,7 +1,13 @@
 .login-container{
     padding: 5em 2em; 
     height: 100vh;
-    input,button,.desc-text {
+    .desc-text,.ant-form-item {
+        width: 50%;
+    }
+    .ant-form-item {
+        margin:0
+    }
+    .fa-input-50{
         width: 50%;
     }
 }
