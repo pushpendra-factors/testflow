@@ -10,9 +10,8 @@ import {
   HashRouter, Route, Switch, useHistory
 } from 'react-router-dom';
 import { fetchProjects, setActiveProject } from '../../reducers/global';
-import { setLoginToken } from '../../reducers/agentActions';
 
-function AppLayout({ fetchProjects, setLoginToken, isAgentLoggedIn }) {
+function AppLayout({ fetchProjects, isAgentLoggedIn }) {
   // const [dataLoading, setDataLoading] = useState(true);
   const { Content } = Layout;
   const history = useHistory();
@@ -22,22 +21,8 @@ function AppLayout({ fetchProjects, setLoginToken, isAgentLoggedIn }) {
     return null;
   }
 
-  const getLoginTokenFromQueryParams = () => {
-    const qParams = window.location.href.split('?');
-    if (qParams.length < 2) return '';
-
-    // no other params allowed when token given.
-    const params = qParams[1].split('=');
-    if (params.length < 2 || params[0] !== 'token') return '';
-
-    return params[1].trim();
-  };
-
   useEffect(() => {
-    const loginToken = getLoginTokenFromQueryParams();
-    if (loginToken !== '') setLoginToken(loginToken);
     fetchProjects();
-
     // setTimeout(() => {
     //   setDataLoading(false);
     // }, 500);
@@ -69,8 +54,7 @@ const mapStateToProps = (state) => ({
 
 const mapDispatchToProps = dispatch => bindActionCreators({
   fetchProjects,
-  setActiveProject,
-  setLoginToken
+  setActiveProject
 }, dispatch);
 
 export default connect(mapStateToProps, mapDispatchToProps)(AppLayout);

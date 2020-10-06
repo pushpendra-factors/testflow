@@ -41,14 +41,6 @@ export default function reducer(state = {
   return state;
 }
 
-export function setLoginToken(token = '') {
-  return function (dispatch) {
-    if (token == '') return;
-    window.FACTORS_AI_LOGIN_TOKEN = token;
-    dispatch({ type: 'AGENT_LOGIN_FULFILLED' });
-  };
-}
-
 export function login(email, password) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
