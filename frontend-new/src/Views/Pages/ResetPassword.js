@@ -42,17 +42,17 @@ function ResetPassword() {
                             </Col>
                             <Col span={24}>
                                 <div className={'flex flex-col justify-center items-center mt-5'} >
-                                    <Button type={'primary'} size={'large'} onClick={() => routeChange('/login')}>Reset Password</Button>
+                                    <Button type={'primary'} className={'fa-button-50'} size={'large'} onClick={() => routeChange('/login')}>Reset Password</Button>
                                 </div>
                             </Col>
                             <Col span={24}>
                                 <div className={'flex flex-col justify-center items-center mt-10'} >
-                                    <Button type={'text'} size={'large'} onClick={() => routeChange('/login')}>Go back to login</Button>
+                                    <a type={'text'} size={'large'} onClick={() => routeChange('/login')}>Go back to login</a>
                                 </div>
                             </Col>
                             <Col span={24}>
                                 <div className={'flex flex-col justify-center items-center mt-5'} >
-                                    <Button type={'link'} size={'large'} onClick={() => routeChange('/signup')} >Don’t have an account? Sign Up</Button>
+                                    <Text type={'paragraph'} mini color={'grey'}>Don’t have an account? <a>Sign Up</a></Text>
                                 </div>
                             </Col>
                         </Row>

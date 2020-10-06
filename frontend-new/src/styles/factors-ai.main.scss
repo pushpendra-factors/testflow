@@ -57,6 +57,15 @@
 
 @import "~antd/lib/style/index";
 
+a,.ant-typography a{
+    transition: all 0.3s;
+    color: $fa-color--brand-color;
+    &:hover,&:active,&:focus{
+        color: $fa-color--mono-8;
+    }
+}
+
+
 @keyframes fadeIn {
     0% {opacity: 0;}
     100% {opacity: 1;}
@@ -85,25 +94,4 @@
     top: 50%;
     left: 50%;
     margin: auto;
-}
-
-
-// .container {
-//     width: 100%;
-//     padding-right: 15px;
-//     padding-left: 15px;
-//     margin-right: auto;
-//     margin-left: auto; 
-// }
-// @media (min-width: 576px) {
-//     .container {
-//     max-width: 540px; } }
-// @media (min-width: 768px) {
-//     .container {
-//     max-width: 720px; } }
-// @media (min-width: 992px) {
-//     .container {
-//     max-width: 960px; } }
-// @media (min-width: 1200px) {
-//     .container {
-//     max-width: 1140px; } }
+} 

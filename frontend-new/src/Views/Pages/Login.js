@@ -114,12 +114,12 @@ function Login(props) {
                             }
                             <Col span={24}>
                                 <div className={'flex flex-col justify-center items-center mt-10'} >
-                                    <Button disabled={dataLoading} type={'text'} size={'large'} onClick={() => routeChange('/forgotpassword')}>Forgot Password</Button>
+                                    <a disabled={dataLoading} type={'text'} size={'large'} onClick={() => routeChange('/forgotpassword')}>Forgot Password</a>
                                 </div>
                             </Col>
                             <Col span={24}>
                                 <div className={'flex flex-col justify-center items-center mt-5'} >
-                                    <Button disabled={dataLoading} type={'link'} size={'large'}>Don’t have an account? Sign Up</Button>
+                                <Text type={'paragraph'} mini color={'grey'}>Don’t have an account? <a disabled={dataLoading}> Sign Up</a></Text>
                                 </div>
                             </Col>
                         </Row>
