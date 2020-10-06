@@ -7,7 +7,9 @@ import ContentTabs from '../../components/ContentTabs';
 import TotalEvents from './TotalEvents';
 import { SVG } from '../../components/factorsComponents';
 
-function EventsAnalytics({ queries, eventsMapper, reverseEventsMapper, breakdown, resultState }) {
+function EventsAnalytics({
+  queries, eventsMapper, reverseEventsMapper, breakdown, resultState, setDrawerVisible
+}) {
   const [activeKey, setActiveKey] = useState('1');
 
   const handleTabChange = (tabKey) => {
@@ -48,7 +50,10 @@ function EventsAnalytics({ queries, eventsMapper, reverseEventsMapper, breakdown
           <Button type="primary" icon={<PoweroffOutlined />} >Save query as</Button>
         </div>
         <div className="py-4">
-          <EventsInfo queries={queries} />
+          <EventsInfo
+            setDrawerVisible={setDrawerVisible}
+            queries={queries}
+          />
         </div>
       </Header>
       <div className="mt-40 mb-8 fa-container">

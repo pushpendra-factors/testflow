@@ -1,21 +1,30 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ChartTypeDropdown from '../../../components/ChartTypeDropdown';
-// import TotalEventsTable from '../TotalEvents/TotalEventsTable';
 import { singleEventSinglePropertyDateTimeResponse } from '../SampleResponse';
-import { formatSingleEventSinglePropertyData } from '../utils';
+import { formatSingleEventSinglePropertyData, formatDataInLineChartFormat } from './utils';
 import BarChart from '../../../components/BarChart';
+import BreakdownTable from './BreakdownTable';
+import LineChart from '../../../components/LineChart';
+import { generateColors } from '../../CoreQuery/FunnelsResultPage/utils';
 
 function BreakdownCharts({
-  queries, eventsMapper, reverseEventsMapper, breakdown
+  queries, breakdown
 }) {
-  console.log(queries, eventsMapper, reverseEventsMapper);
-  // const [hiddenEvents, setHiddenEvents] = useState([]);
-  const [chartType, setChartType] = useState('barchart');
 
-  let chartsData = [];
-  if (breakdown.length === 1) {
-    chartsData = formatSingleEventSinglePropertyData(singleEventSinglePropertyDateTimeResponse);
-  }
+  const [chartsData, setChartsData] = useState([]);
+  const [visibleProperties, setVisibleProperties] = useState([]);
+  const [chartType, setChartType] = useState('linechart');
+  const [hiddenProperties, setHiddenProperties] = useState([]);
+
+  const maxAllowedVisibleProperties = 7;
+
+  useEffect(() => {
+    if (breakdown.length === 1) {
+      const formattedData = formatSingleEventSinglePropertyData(singleEventSinglePropertyDateTimeResponse);
+      setChartsData(formattedData);
+      setVisibleProperties([...formattedData.slice(0, maxAllowedVisibleProperties)])
+    }
+  }, [breakdown]);
 
   if (!chartsData.length) {
     return null;
@@ -34,16 +43,43 @@ function BreakdownCharts({
     }
   ];
 
+  const mapper = {};
+  const reverseMapper = {};
+
+  const visibleLabels = visibleProperties.map(v => v.label)
+
+  visibleLabels.forEach((q, index) => {
+    mapper[`${q}`] = `event${index + 1}`;
+    reverseMapper[`event${index + 1}`] = q;
+  })
+
+  const lineChartData = formatDataInLineChartFormat(singleEventSinglePropertyDateTimeResponse, visibleProperties, mapper, hiddenProperties)
+  const appliedColors = generateColors(visibleProperties.length);
+
   let chartContent = null;
 
   if (chartType === 'barchart') {
     chartContent = (
       <div className="flex mt-8">
         <BarChart
-          chartData={[...chartsData.slice(0, 7)]}
+          chartData={visibleProperties}
         />
       </div>
     );
+  } else {
+    chartContent = (
+      <div className="flex mt-8">
+        <LineChart
+          chartData={lineChartData}
+          appliedColors={appliedColors}
+          queries={visibleLabels}
+          reverseEventsMapper={reverseMapper}
+          eventsMapper={mapper}
+          setHiddenEvents={setHiddenProperties}
+          hiddenEvents={hiddenProperties}
+        />
+      </div>
+    )
   }
 
   return (
@@ -63,16 +99,19 @@ function BreakdownCharts({
         </div>
       </div>
       {chartContent}
-      {/* <div className="mt-8">
-        <TotalEventsTable
+      <div className="mt-8">
+        <BreakdownTable
           data={chartsData}
+          breakdown={breakdown}
           events={queries}
-          reverseEventsMapper={reverseEventsMapper}
           chartType={chartType}
-          setHiddenEvents={setHiddenEvents}
-          hiddenEvents={hiddenEvents}
+          setVisibleProperties={setVisibleProperties}
+          visibleProperties={visibleProperties}
+          maxAllowedVisibleProperties={maxAllowedVisibleProperties}
+          lineChartData={lineChartData}
+          originalData={singleEventSinglePropertyDateTimeResponse}
         />
-      </div> */}
+      </div>
     </div>
   );
 }

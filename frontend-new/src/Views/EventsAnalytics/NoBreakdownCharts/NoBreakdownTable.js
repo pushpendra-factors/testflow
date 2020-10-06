@@ -1,10 +1,8 @@
 import React, { useState, useCallback } from 'react';
-import {
-  getNoGroupingTableData, getColumns, getDateBasedColumns, getNoGroupingTablularDatesBasedData
-} from '../utils';
 import DataTable from '../../CoreQuery/FunnelsResultPage/DataTable';
+import { getNoGroupingTableData, getColumns, getDateBasedColumns, getNoGroupingTablularDatesBasedData } from './utils';
 
-function TotalEventsTable({
+function NoBreakdownTable({
   data, events, reverseEventsMapper, chartType, setHiddenEvents, hiddenEvents
 }) {
   const [sorter, setSorter] = useState({});
@@ -57,4 +55,4 @@ function TotalEventsTable({
   );
 }
 
-export default TotalEventsTable;
+export default NoBreakdownTable;

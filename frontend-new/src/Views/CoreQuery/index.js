@@ -156,6 +156,7 @@ function CoreQuery({ activeProject }) {
       reverseEventsMapper={reverseEventsMapper}
       breakdown={breakdown}
       resultState={resultState}
+      setDrawerVisible={setDrawerVisible}
     />
   );
 
