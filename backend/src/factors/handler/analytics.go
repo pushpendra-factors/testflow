@@ -16,6 +16,14 @@ type QueryRequestPayload struct {
 	Query M.Query `json:"query"`
 }
 
+type QueryGroup struct {
+	Queries []M.Query `json:"query_group"`
+}
+
+type ResultGroup struct {
+	Results []M.QueryResult `json:"result_group"`
+}
+
 /*
 Test Command
 
@@ -25,6 +33,48 @@ curl -i -H 'cookie: factors-sid=<COOKIE>' -H "Content-Type: application/json" -i
 Events Occurence:
 curl -i -H 'cookie: factors-sid=<COOKIE>' -H "Content-Type: application/json" -i -X POST http://factors-dev.com:8080/projects/2/query -d '{"query":{"type":"events_occurrence","eventsCondition":"any","from":1393632004,"to":1396310325,"eventsWithProperties":[{"name":"View Project","properties":[{"entity":"user","property":"gender","operator":"equals","type":"categorical","value":"M"}]},{"name":"Fund Project","properties":[{"entity":"user","property":"gender","operator":"equals","type":"categorical","value":"M"}]}],"groupByProperties":[{"property":"$region","entity":"user","index":0},{"property":"category","entity":"event","index":1}]}}'
 */
+
+func EventsQueryHandler(c *gin.Context) {
+
+	logCtx := log.WithFields(log.Fields{
+		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
+	})
+
+	r := c.Request
+
+	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Query failed. Invalid project."})
+		return
+	}
+
+	var requestPayload QueryGroup
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&requestPayload); err != nil {
+		logCtx.WithError(err).Error("Query failed. Json decode failed.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Query failed. Json decode failed."})
+		return
+	}
+	// TODO (Anil) Add dashboard caching layer by query/query_group?
+	var resultGroup ResultGroup
+	for index, query := range requestPayload.Queries {
+		result, errCode, errMsg := M.RunEventsQuery(projectId, query)
+		if errCode != http.StatusOK {
+			errMsg = "For query no. " + strconv.Itoa(index) + " - " + errMsg
+			headers := []string{"error"}
+			rows := make([][]interface{}, 0, 0)
+			row := make([]interface{}, len(headers), len(headers))
+			row[0] = errMsg
+			rows = append(rows, row)
+			errorResult := &M.QueryResult{Headers: headers, Rows: rows}
+			resultGroup.Results = append(resultGroup.Results, *errorResult)
+		} else {
+			resultGroup.Results = append(resultGroup.Results, *result)
+		}
+	}
+	c.JSON(http.StatusOK, resultGroup)
+}
 
 func QueryHandler(c *gin.Context) {
 

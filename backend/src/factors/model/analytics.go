@@ -122,6 +122,7 @@ const (
 	EventCondAllGivenEvent  = "all_given_event"
 	EventCondEachGivenEvent = "each_given_event"
 
+	QueryClassEvents      = "events"
 	QueryClassInsights    = "insights"
 	QueryClassFunnel      = "funnel"
 	QueryClassChannel     = "channel"
@@ -851,6 +852,30 @@ func isValidGroupByTimestamp(groupByTimestamp string) bool {
 	return false
 }
 
+// IsValidEventsQuery Validates query for Events class and returns corresponding errMsg.
+func IsValidEventsQuery(query *Query) (bool, string) {
+	if query.Class != QueryClassEvents {
+		return false, "Invalid query class given"
+	}
+
+	if query.Type != QueryTypeEventsOccurrence &&
+		query.Type != QueryTypeUniqueUsers {
+		return false, "Invalid query type given"
+	}
+
+	if query.EventsCondition != EventCondAllGivenEvent &&
+		query.EventsCondition != EventCondAnyGivenEvent &&
+		query.EventsCondition != EventCondEachGivenEvent {
+		return false, "Invalid events condition given"
+	}
+
+	errMsg, hasError := validateQueryProps(query)
+	if hasError {
+		return false, errMsg
+	}
+	return true, ""
+}
+
 // IsValidQuery Validates and returns errMsg which is used as response.
 func IsValidQuery(query *Query) (bool, string) {
 	if query.Type != QueryTypeEventsOccurrence &&
@@ -864,19 +889,26 @@ func IsValidQuery(query *Query) (bool, string) {
 		return false, "Invalid events condition given"
 	}
 
+	errMsg, hasError := validateQueryProps(query)
+	if hasError {
+		return false, errMsg
+	}
+	return true, ""
+}
+
+func validateQueryProps(query *Query) (string, bool) {
 	if len(query.EventsWithProperties) == 0 {
-		return false, "No events to process"
+		return "No events to process", true
 	}
 
 	if query.From == 0 || query.To == 0 {
-		return false, "Invalid query time range"
+		return "Invalid query time range", true
 	}
 
 	if !isValidGroupByTimestamp(query.GetGroupByTimestamp()) {
-		return false, "Invalid group by timestamp"
+		return "Invalid group by timestamp", true
 	}
-
-	return true, ""
+	return "", false
 }
 
 func GetTimstampAndAggregateIndexOnQueryResult(cols []string) (int, int, error) {
@@ -1004,6 +1036,5 @@ func Analyze(projectId uint64, query Query) (*QueryResult, int, string) {
 	if query.Class == QueryClassFunnel {
 		return RunFunnelQuery(projectId, query)
 	}
-
 	return RunInsightsQuery(projectId, query)
 }

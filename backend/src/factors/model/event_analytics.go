@@ -16,13 +16,20 @@ const (
 	META_EACH_EVENT_COUNT_METRICS = "EachEventCount"
 )
 
+func RunEventsQuery(projectId uint64, query Query) (*QueryResult, int, string) {
+
+	if valid, errMsg := IsValidEventsQuery(&query); !valid {
+		return nil, http.StatusBadRequest, errMsg
+	}
+	return RunInsightsQuery(projectId, query)
+}
+
 func RunInsightsQuery(projectId uint64, query Query) (*QueryResult, int, string) {
 	stmnt, params, err := BuildInsightsQuery(projectId, query)
 	if err != nil {
 		log.WithError(err).Error(ErrMsgQueryProcessingFailure)
 		return nil, http.StatusInternalServerError, ErrMsgQueryProcessingFailure
 	}
-
 	logCtx := log.WithFields(log.Fields{"analytics_query": query,
 		"statement": stmnt, "params": params})
 	if stmnt == "" || len(params) == 0 {
@@ -49,12 +56,14 @@ func RunInsightsQuery(projectId uint64, query Query) (*QueryResult, int, string)
 		return nil, http.StatusInternalServerError, ErrMsgQueryProcessingFailure
 	}
 
-	// if and only if breakdown is by datetime
+	// if and only if breakdown is by datetime (condition for both events/users count for each event.)
 	if len(query.GroupByProperties) == 0 &&
 		query.EventsCondition == EventCondEachGivenEvent &&
 		query.GroupByTimestamp != nil && query.GroupByTimestamp.(string) != "" {
 
-		result, err = updateResultsForEachEventQuery(result)
+		result, err = transformResultsForEachEventQuery(result, query)
+		addEventMetricsMetaToQueryResult(result)
+
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to transform query results.")
 			return nil, http.StatusInternalServerError, ErrMsgQueryProcessingFailure
@@ -66,9 +75,19 @@ func RunInsightsQuery(projectId uint64, query Query) (*QueryResult, int, string)
 	return result, http.StatusOK, "Successfully executed query"
 }
 
-// updateResultsForEachEventQuery transforms QueryResult with new header as datetime and events
-func updateResultsForEachEventQuery(oldResult *QueryResult) (*QueryResult, error) {
+// transformResultsForEachEventQuery transforms QueryResult with new header as datetime and events
+func transformResultsForEachEventQuery(oldResult *QueryResult, query Query) (*QueryResult, error) {
 
+	// for single event, oldResult has no 'event_name' column but only 2 columns: {datetime, count}
+	// adding  'event_name' with row values for standard transformation
+	if len(oldResult.Headers) == 2 {
+		if len(query.EventsWithProperties) > 0 {
+			oldResult.Headers = append(oldResult.Headers, AliasEventName)
+			for i, _ := range oldResult.Rows {
+				oldResult.Rows[i] = append(oldResult.Rows[i], query.EventsWithProperties[0].Name)
+			}
+		}
+	}
 	eventNameIndex := 0
 	dateIndex := 0
 	countIndex := 0
@@ -122,7 +141,6 @@ func updateResultsForEachEventQuery(oldResult *QueryResult) (*QueryResult, error
 	}
 
 	newResult := &QueryResult{Headers: newResultHeaders, Rows: newResultRows}
-	addEventMetricsMetaToQueryResult(newResult)
 
 	return newResult, nil
 }
@@ -185,7 +203,13 @@ func BuildInsightsQuery(projectId uint64, query Query) (string, []interface{}, e
 			return buildUniqueUsersWithAnyGivenEventsQuery(projectId, query)
 		}
 
-		return buildUniqueUsersWithAllGivenEventsQuery(projectId, query)
+		if query.EventsCondition == EventCondAllGivenEvent {
+			return buildUniqueUsersWithAllGivenEventsQuery(projectId, query)
+		}
+
+		if query.EventsCondition == EventCondEachGivenEvent {
+			return buildUniqueUsersWithEachGivenEventsQuery(projectId, query)
+		}
 	}
 
 	return "", nil, errors.New("invalid query")
@@ -493,6 +517,7 @@ func addEventFilterStepsForUniqueUsersQuery(projectID uint64, q *Query,
 		commonSelect = fmt.Sprintf("DISTINCT ON(coal_user_id%%, %s)", selectTimestamp) +
 			fmt.Sprintf(" COALESCE(users.customer_user_id,events.user_id) as coal_user_id%%, %s as %s,", selectTimestamp, AliasDateTime) +
 			" events.user_id as event_user_id"
+
 		commonSelect = strings.ReplaceAll(commonSelect, "%", "%s")
 
 		commonOrderBy = fmt.Sprintf("coal_user_id%%, %s, events.timestamp ASC", AliasDateTime)
@@ -532,12 +557,17 @@ func addEventFilterStepsForUniqueUsersQuery(projectID uint64, q *Query,
 				}
 			}
 		} else {
+			newCommonSelect := commonSelect
+			if q.EventsCondition == EventCondEachGivenEvent {
+				eventNameSelect := "'" + ewp.Name + "'" + "::text" + " AS event_name "
+				newCommonSelect = joinWithComma(commonSelect, eventNameSelect)
+			}
 			if hasGroupEntity(q.GroupByProperties, PropertyEntityEvent) {
-				stepSelect = fmt.Sprintf(commonSelect, ", "+egAnyGroupKeys, ", "+egAnySelect)
+				stepSelect = fmt.Sprintf(newCommonSelect, ", "+egAnyGroupKeys, ", "+egAnySelect)
 				stepParams = egAnyParams
 				stepOrderBy = fmt.Sprintf(commonOrderBy, ", "+egAnyGroupKeys)
 			} else {
-				stepSelect = fmt.Sprintf(commonSelect, "", "")
+				stepSelect = fmt.Sprintf(newCommonSelect, "", "")
 				if commonOrderBy != "" {
 					stepOrderBy = fmt.Sprintf(commonOrderBy, "")
 				}
@@ -582,6 +612,10 @@ func addUniqueUsersAggregationQuery(query *Query, qStmnt *string, qParams *[]int
 	if query.EventsCondition == EventCondAllGivenEvent {
 		_, _, egKeys = buildGroupKeys(eventLevelGroupBys)
 		unionStepName = "all_users_intersect"
+	} else if query.EventsCondition == EventCondEachGivenEvent {
+		eventGroupProps := filterGroupPropsByType(otherGroupBys, PropertyEntityEvent)
+		_, _, egKeys = buildGroupKeys(eventGroupProps)
+		unionStepName = "each_users_union"
 	} else {
 		eventGroupProps := filterGroupPropsByType(otherGroupBys, PropertyEntityEvent)
 		_, _, egKeys = buildGroupKeys(eventGroupProps)
@@ -611,6 +645,7 @@ func addUniqueUsersAggregationQuery(query *Query, qStmnt *string, qParams *[]int
 	termStmnt = as(unionStepName, termStmnt)
 	var aggregateFromStepName, aggregateSelectKeys, aggregateGroupBys, aggregateOrderBys string
 	if hasNumericalGroupBy(query.GroupByProperties) {
+
 		bucketedStepName, bucketedSelectKeys, bucketedGroupBys, bucketedOrderBys := appendNumericalBucketingSteps(
 			&termStmnt, query.GroupByProperties, unionStepName, "", isGroupByTimestamp, "event_user_id")
 		aggregateFromStepName = bucketedStepName
@@ -619,6 +654,7 @@ func addUniqueUsersAggregationQuery(query *Query, qStmnt *string, qParams *[]int
 		aggregateOrderBys = strings.Join(bucketedOrderBys, ", ")
 		*qStmnt = appendStatement(*qStmnt, ", "+termStmnt)
 	} else {
+
 		if groupKeys != "" {
 			// Order by count, which will added later.
 			aggregateFromStepName = unionStepName
@@ -635,6 +671,11 @@ func addUniqueUsersAggregationQuery(query *Query, qStmnt *string, qParams *[]int
 	if isGroupByTimestamp {
 		aggregateSelect = aggregateSelect + AliasDateTime + ", "
 		aggregateGroupBys = joinWithComma(aggregateGroupBys, AliasDateTime)
+	}
+	// adding select event_name and group by event_name for each event-user count
+	if query.EventsCondition == EventCondEachGivenEvent {
+		aggregateSelect = aggregateSelect + AliasEventName + ", "
+		aggregateGroupBys = joinWithComma(AliasEventName, aggregateGroupBys)
 	}
 	aggregateSelect = aggregateSelect + aggregateSelectKeys + fmt.Sprintf("COUNT(DISTINCT(event_user_id)) AS %s FROM %s",
 		AliasAggr, aggregateFromStepName)
@@ -968,6 +1009,95 @@ func buildUniqueUsersWithAnyGivenEventsQuery(projectID uint64, query Query) (str
 }
 
 /*
+buildUniqueUsersWithEachGivenEventsQuery adds `event_name` to get user count grouped by event.
+Example: Query with date.
+
+Group By: user_properties, event_properties
+
+Example: Query without date and with group by properties.
+
+Sample query with ewp:
+	$session
+		"en": "event", "pr": "$source", "op": "equals", "va": "google", "ty": "categorical","lop": "AND"
+		"en": "user","pr": "$country","op": "equals","va": "India","ty": "categorical","lop": "AND"
+	MagazineViews
+		"en": "event","pr": "$source","op": "equals","va": "google","ty": "categorical","lop": "AND"
+		"en": "user","pr": "$country","op": "equals","va": "India","ty": "categorical","lop": "AND"
+gbp: []
+gbt: "date"
+
+QUERY:
+
+WITH
+step_0_names AS (SELECT id, project_id, name FROM event_names WHERE project_id='204' AND
+name='$session'),
+
+step_0 AS (SELECT DISTINCT ON(coal_user_id, date_trunc('day', to_timestamp(timestamp) AT TIME ZONE
+'Asia/Calcutta')) COALESCE(users.customer_user_id,events.user_id) as coal_user_id, date_trunc('day',
+to_timestamp(timestamp) AT TIME ZONE 'Asia/Calcutta') as datetime, events.user_id as event_user_id,
+'$session'::text AS event_name  FROM events JOIN users ON events.user_id=users.id LEFT JOIN
+user_properties ON events.user_properties_id=user_properties.id WHERE events.project_id='204' AND
+timestamp>='1583001000' AND timestamp<='1585679399' AND events.event_name_id IN (SELECT id FROM
+step_0_names WHERE project_id='204' AND name='$session') AND ( events.properties->>'$source' = 'google'
+AND user_properties.properties->>'$country' = 'India' ) ORDER BY coal_user_id, datetime, events.timestamp ASC),
+
+step_1_names AS (SELECT id, project_id, name FROM event_names WHERE project_id='204' AND name='MagazineViews'),
+
+step_1 AS (SELECT DISTINCT ON(coal_user_id, date_trunc('day', to_timestamp(timestamp) AT TIME ZONE
+'Asia/Calcutta')) COALESCE(users.customer_user_id,events.user_id) as coal_user_id, date_trunc('day',
+to_timestamp(timestamp) AT TIME ZONE 'Asia/Calcutta') as datetime, events.user_id as event_user_id,
+'MagazineViews'::text AS event_name  FROM events JOIN users ON events.user_id=users.id LEFT JOIN
+user_properties ON events.user_properties_id=user_properties.id WHERE events.project_id='204' AND
+timestamp>='1583001000' AND timestamp<='1585679399' AND events.event_name_id IN (SELECT id FROM
+step_1_names WHERE project_id='204' AND name='MagazineViews') AND ( events.properties->>'$source' =
+'google' AND user_properties.properties->>'$country' = 'India' ) ORDER BY coal_user_id, datetime,
+events.timestamp ASC),
+
+events_union AS (SELECT step_0.event_user_id as event_user_id, event_name, datetime FROM step_0 UNION
+ALL SELECT step_1.event_user_id as event_user_id, event_name, datetime FROM step_1)
+
+SELECT datetime, event_name, COUNT(DISTINCT(event_user_id)) AS count FROM events_union GROUP BY
+event_name, datetime ORDER BY count DESC LIMIT 100000
+*/
+func buildUniqueUsersWithEachGivenEventsQuery(projectID uint64, query Query) (string, []interface{}, error) {
+	if len(query.EventsWithProperties) == 0 {
+		return "", nil, errors.New("zero events on the query")
+	}
+
+	qStmnt := ""
+	qParams := make([]interface{}, 0, 0)
+
+	steps := addEventFilterStepsForUniqueUsersQuery(projectID, &query, &qStmnt, &qParams)
+
+	eventGroupProps := filterGroupPropsByType(query.GroupByProperties, PropertyEntityEvent)
+	_, _, egKeys := buildGroupKeys(eventGroupProps)
+
+	isGroupByTimestamp := query.GetGroupByTimestamp() != ""
+	var unionStmnt string
+	for i, step := range steps {
+		selectStr := fmt.Sprintf("%s.event_user_id as event_user_id", step)
+		selectStr = selectStr + ", event_name"
+		selectStr = appendSelectTimestampColIfRequired(selectStr, isGroupByTimestamp)
+		selectStr = joinWithComma(selectStr, egKeys)
+
+		selectStmnt := fmt.Sprintf("SELECT %s FROM %s", selectStr, step)
+		if i == 0 {
+			unionStmnt = selectStmnt
+		} else {
+			unionStmnt = unionStmnt + " UNION ALL " + selectStmnt
+		}
+	}
+
+	stepUsersUnion := "events_union"
+	qStmnt = joinWithComma(qStmnt, as(stepUsersUnion, unionStmnt))
+
+	addUniqueUsersAggregationQuery(&query, &qStmnt, &qParams, stepUsersUnion)
+	qStmnt = with(qStmnt)
+
+	return qStmnt, qParams, nil
+}
+
+/*
 buildUniqueUsersSingleEventQuery
 Sample query for ewp ALL:
 	View Project
@@ -1134,7 +1264,7 @@ func buildEventsOccurrenceWithGivenEventQuery(projectID uint64, q Query) (string
 	tSelect = appendSelectTimestampColIfRequired(tSelect, isGroupByTimestamp)
 
 	termStmnt := "SELECT " + tSelect + " FROM " + refStepName
-	// join lateset user_properties, only if group by user property present.
+	// join latest user_properties, only if group by user property present.
 	if ugSelect != "" {
 		termStmnt = termStmnt + " " + "LEFT JOIN users ON " + refStepName + ".event_user_id=users.id" +
 			" " + "LEFT JOIN user_properties ON users.id=user_properties.user_id AND user_properties.id=users.properties_id"
