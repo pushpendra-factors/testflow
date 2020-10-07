@@ -23,6 +23,7 @@ function CreateNewProject(props) {
     console.log('Failed:', errorInfo);
   };
   const onReset = () => {
+    props.setCreateNewProjectModal(false);
     form.resetFields();
   };
 
@@ -61,7 +62,7 @@ function CreateNewProject(props) {
                             <div className={'mt-2 flex justify-end'}>
                                 <Form.Item className={'m-0'} noStyle={true}>
                                     <Button htmlType="button" onClick={onReset}>
-                                    Reset
+                                    Cancel
                                     </Button>
                                     <Button type="primary" className={'ml-2'} htmlType="submit">
                                     Submit

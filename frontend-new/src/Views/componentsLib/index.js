@@ -17,12 +17,7 @@ import IconsLib from './IconsLib';
 
 function componentsLib() {
   const { Content } = Layout;
-  return (
-    <Layout>
-      <Sidebar />
-      <Layout className="fa-content-container">
-        <Content>
-          <div className="pt-4 pb-24 bg-white min-h-screen">
+  return ( 
             <div className={'fa-container'}>
               <ColorLib />
               <TextLib />
@@ -32,11 +27,7 @@ function componentsLib() {
               <CheckBoxLib />
               <IconsLib />
               {/* <ModalLib /> */}
-            </div>
-          </div>
-        </Content>
-      </Layout>
-    </Layout>
+            </div> 
 
   );
 }

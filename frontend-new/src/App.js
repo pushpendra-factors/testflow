@@ -1,6 +1,5 @@
 import React from 'react';
 import AppLayout from './Views/AppLayout';
-import componentsLib from './Views/componentsLib';
 import Login from './Views/Pages/Login';
 import ForgotPassword from './Views/Pages/ForgotPassword';
 import ResetPassword from './Views/Pages/ResetPassword';
@@ -14,7 +13,6 @@ function App() {
           <Route exact path="/resetpassword" name="login" component={ResetPassword} />
           <Route exact path="/forgotpassword" name="login" component={ForgotPassword} />
           <Route exact path="/login" name="login" component={Login} />
-          <Route exact path="/components" name="componentsLib" component={componentsLib} />
           <Route path="/" name="Home" component={AppLayout} />
         </Switch>
       </HashRouter>
