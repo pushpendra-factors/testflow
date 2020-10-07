@@ -24,6 +24,14 @@
   version = "v0.34.0"
 
 [[projects]]
+  digest = "1:394eef778b25e7883c010749f40a6985e2f031791fae2114f6e9933359f31f68"
+  name = "github.com/360EntSecGroup-Skylar/excelize"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "89465f41b5a29ac2e1debe16b8cb6f59c344f917"
+  version = "v2.3.1"
+
+[[projects]]
   branch = "master"
   digest = "1:8a4baf6cc1d72976aa97f8db20f072ad636cf160090e9074c6f15ae5d259f93a"
   name = "github.com/RichardKnop/logging"
@@ -537,6 +545,14 @@
   version = "1.0.1"
 
 [[projects]]
+  branch = "master"
+  digest = "1:84bd7f8a2e0bcd53ddc33c3b47c34c1fe340c8632cbe928f7f8ae10ec6ecdd62"
+  name = "github.com/mohae/deepcopy"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "c48cc78d482608239f6c4c92a4abd87eb8761c90"
+
+[[projects]]
   digest = "1:6e46292fee85cf977b1a3beb265852c3ea9012cdb245522d82bf7074c2cf24e4"
   name = "github.com/mssola/user_agent"
   packages = ["."]
@@ -589,6 +605,22 @@
   version = "v1.0.0"
 
 [[projects]]
+  digest = "1:9e072bdf97e7f49bfe91bb5046f2c01d678197b51c191d949b497b6ed11fe321"
+  name = "github.com/richardlehane/mscfb"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "722de4357ad303e35bfe995dd23790d9cbaeb2e0"
+  version = "v1.0.3"
+
+[[projects]]
+  digest = "1:152bc937865edce8994e587f38b71c44bd1bf794a70485854887ee9881ed6ce5"
+  name = "github.com/richardlehane/msoleps"
+  packages = ["types"]
+  pruneopts = "UT"
+  revision = "d7f22191be61d5287fec0e32b8eeec3523310e69"
+  version = "v1.0.1"
+
+[[projects]]
   digest = "1:2e76a73cb51f42d63a2a1a85b3dc5731fd4faf6821b434bd0ef2c099186031d6"
   name = "github.com/rs/xid"
   packages = ["."]
@@ -629,6 +661,22 @@
   version = "v0.1.0"
 
 [[projects]]
+  branch = "master"
+  digest = "1:5a73b4e1f20bd3480321a24aace506204e87ef73f7dc2e23d21f24478e94cd34"
+  name = "github.com/ttacon/builder"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "c099f663e1c235176c175644792c5eb282017ad7"
+
+[[projects]]
+  digest = "1:17f69d3b195c3bc129536848e799aca45a8e92216ff20b064348723042423e1b"
+  name = "github.com/ttacon/libphonenumber"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "a54d6839d954633947ca08f00020d7eac2bf27cd"
+  version = "v1.1.0"
+
+[[projects]]
   digest = "1:03aa6e485e528acb119fb32901cf99582c380225fc7d5a02758e08b180cb56c3"
   name = "github.com/ugorji/go"
   packages = ["codec"]
@@ -659,6 +707,14 @@
   packages = ["."]
   pruneopts = "UT"
   revision = "73f8eece6fdcd902c185bf651de50f3828bed5ed"
+
+[[projects]]
+  branch = "master"
+  digest = "1:e3fc6fff7cd02c99f6506c1d2ee77ee43880fc26211d880d0771c484fd931c33"
+  name = "github.com/xuri/efp"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "ba689101faaf67e0ce42ca6604e1e9b66a7fdc02"
 
 [[projects]]
   digest = "1:4f8b8e95cb44091ffd4c8583fc3540927e702398d9db82fae902759213bdf1f4"
@@ -734,14 +790,16 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:d738c444c939723c3a2e80caa3a35541a77b222742f552b71147be0e63515a5a"
+  digest = "1:294c54ad38a38439da3e1d18627e3eec681e97c8bfb507c6a90e6a5158fb34cc"
   name = "golang.org/x/crypto"
   packages = [
     "acme",
     "acme/autocert",
     "bcrypt",
     "blowfish",
+    "md4",
     "pbkdf2",
+    "ripemd160",
     "ssh/terminal",
   ]
   pruneopts = "UT"
@@ -760,11 +818,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:8ecb828bb550a8c6b7d75b8261a42c369461311616ebe5451966d067f5f993bf"
+  digest = "1:d33c06a0b2eea55c34afdd5a582797668e8bdb184496fa8e566316ebb336e3ff"
   name = "golang.org/x/net"
   packages = [
     "context",
     "context/ctxhttp",
+    "html",
+    "html/atom",
+    "html/charset",
     "http/httpguts",
     "http2",
     "http2/hpack",
@@ -812,17 +873,29 @@
   revision = "dcdaa6325bcb8d3c07805583fe12153f08a41e2b"
 
 [[projects]]
-  digest = "1:a2ab62866c75542dd18d2b069fec854577a20211d7c0ea6ae746072a1dccdd18"
+  digest = "1:436b24586f8fee329e0dd65fd67c817681420cda1d7f934345c13fe78c212a73"
   name = "golang.org/x/text"
   packages = [
     "collate",
     "collate/build",
+    "encoding",
+    "encoding/charmap",
+    "encoding/htmlindex",
+    "encoding/internal",
+    "encoding/internal/identifier",
+    "encoding/japanese",
+    "encoding/korean",
+    "encoding/simplifiedchinese",
+    "encoding/traditionalchinese",
+    "encoding/unicode",
     "internal/colltab",
     "internal/gen",
     "internal/tag",
     "internal/triegen",
     "internal/ucd",
+    "internal/utf8internal",
     "language",
+    "runes",
     "secure/bidirule",
     "transform",
     "unicode/bidi",
@@ -971,6 +1044,7 @@
     "cloud.google.com/go/bigquery",
     "cloud.google.com/go/pubsub",
     "cloud.google.com/go/storage",
+    "github.com/360EntSecGroup-Skylar/excelize",
     "github.com/RichardKnop/logging",
     "github.com/RichardKnop/redsync",
     "github.com/aws/aws-sdk-go/aws",
@@ -1015,6 +1089,7 @@
     "github.com/sirupsen/logrus",
     "github.com/streadway/amqp",
     "github.com/stretchr/testify/assert",
+    "github.com/ttacon/libphonenumber",
     "github.com/x-cray/logrus-prefixed-formatter",
     "go.etcd.io/etcd/clientv3",
     "go.mongodb.org/mongo-driver/bson",
