@@ -1,7 +1,8 @@
 import React from 'react';
 import NoBreakdownCharts from '../NoBreakdownCharts';
-import BreakdownCharts from '../BreakdownCharts';
+import SingleEventSingleBreakdown from '../SingleEventSingleBreakdown';
 import { Spin } from 'antd';
+import SingleEventMultipleBreakdown from '../SingleEventMultipleBreakdown';
 
 function TotalEvents({
   queries, eventsMapper, reverseEventsMapper, breakdown, resultState
@@ -31,12 +32,18 @@ function TotalEvents({
         resultState={resultState}
       />
     );
-  } else {
+  } else if (queries.length === 1 && breakdown.length === 1) {
     return (
-      <BreakdownCharts
+      <SingleEventSingleBreakdown
         queries={queries}
         breakdown={breakdown}
-        resultState={resultState}
+      />
+    );
+  } else if (queries.length === 1) {
+    return (
+      <SingleEventMultipleBreakdown
+        queries={queries}
+        breakdown={breakdown}
       />
     );
   }

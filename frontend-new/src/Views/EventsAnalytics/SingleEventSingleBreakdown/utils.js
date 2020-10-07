@@ -46,16 +46,14 @@ export const formatSingleEventSinglePropertyData = (data) => {
   const properties = {};
   const result = [];
   data.rows.forEach(elem => {
-    if (elem[1] !== '$none') {
-      if (Object.prototype.hasOwnProperty.call(properties, elem[1])) {
-        result[properties[elem[1]]].value += elem[2];
-      } else {
-        properties[elem[1]] = result.length;
-        result.push({
-          label: elem[1],
-          value: elem[2]
-        });
-      }
+    if (Object.prototype.hasOwnProperty.call(properties, elem[1])) {
+      result[properties[elem[1]]].value += elem[2];
+    } else {
+      properties[elem[1]] = result.length;
+      result.push({
+        label: elem[1],
+        value: elem[2]
+      });
     }
   });
   result.sort((a, b) => {
