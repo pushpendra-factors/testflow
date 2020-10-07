@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { SingleEventMultipleProperty3, SingleEventMultipleProperty } from '../SampleResponse';
+import { SingleEventMultipleProperty } from '../SampleResponse';
 import { formatData, formatDataInLineChartFormat } from './utils';
 import BarChart from '../../../components/BarChart';
 import LineChart from '../../../components/LineChart';

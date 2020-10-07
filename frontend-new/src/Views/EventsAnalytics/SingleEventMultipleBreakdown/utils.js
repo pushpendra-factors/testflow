@@ -1,7 +1,7 @@
 import { getTitleWithSorter } from '../../CoreQuery/FunnelsResultPage/utils';
 import moment from 'moment';
 
-export const formatData = (data, breakdown) => {
+export const formatData = (data) => {
   const result = [];
   data.rows.forEach(d => {
     const str = d.slice(2, d.length - 1).join(',');
