@@ -47,7 +47,7 @@ export function login(email, password) {
       const invalidMsg = 'Invalid email or password';
       const loginFailMsg = 'Login failed. Please try again.';
 
-      post(host + 'agents/signin', {
+      post(dispatch,host + 'agents/signin', {
         email,
         password
       })
@@ -85,7 +85,7 @@ export function login(email, password) {
 export function signout() {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      get(host + 'agents/signout')
+      get(dispatch, host + 'agents/signout')
         .then(() => {
           resolve(dispatch({
             type: 'AGENT_LOGOUT_FULFILLED'
