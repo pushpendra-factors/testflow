@@ -29,7 +29,7 @@ type Describe struct {
 	Fields []field `json:"fields"`
 }
 
-type QueryRespone struct {
+type QueryResponse struct {
 	TotalSize      int                  `json:"totalSize"`
 	Done           bool                 `json:"done"`
 	Records        []M.SalesforceRecord `json:"records"`
@@ -132,7 +132,7 @@ func getFieldsListFromDescription(description *Describe) ([]string, error) {
 	return objectFields, nil
 }
 
-func getSalesforceDataByQuery(query, accessToken, instanceURL, dateTime string) (*QueryRespone, error) {
+func getSalesforceDataByQuery(query, accessToken, instanceURL, dateTime string) (*QueryResponse, error) {
 	if query == "" || accessToken == "" || instanceURL == "" {
 		return nil, errors.New("missing required fields")
 	}
@@ -156,12 +156,12 @@ func getSalesforceDataByQuery(query, accessToken, instanceURL, dateTime string) 
 		return nil, fmt.Errorf("error while query data %+v", errBody)
 	}
 
-	var jsonRespone QueryRespone
-	err = json.NewDecoder(resp.Body).Decode(&jsonRespone)
+	var jsonResponse QueryResponse
+	err = json.NewDecoder(resp.Body).Decode(&jsonResponse)
 	if err != nil {
 		return nil, errors.New("failed to decode response")
 	}
-	return &jsonRespone, nil
+	return &jsonResponse, nil
 }
 
 func syncByType(ps *M.SalesforceProjectSettings, accessToken, objectName, dateTime string) (SalesforceObjectStatus, error) {
@@ -217,12 +217,13 @@ func syncByType(ps *M.SalesforceProjectSettings, accessToken, objectName, dateTi
 		salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, failures...)
 		hasMore = !queryResponse.Done
 		nextBatchRoute = queryResponse.NextRecordsUrl
+		records = make([]M.SalesforceRecord, 0)
 	}
 
 	return salesforceObjectStatus, nil
 }
 
-func getSalesforceNextBatch(nextBatchRoute, InstanceURL string, accessToken string) (*QueryRespone, error) {
+func getSalesforceNextBatch(nextBatchRoute, InstanceURL string, accessToken string) (*QueryResponse, error) {
 	if nextBatchRoute == "" || InstanceURL == "" || accessToken == "" {
 		return nil, errors.New("missing required fields")
 	}
@@ -239,7 +240,7 @@ func getSalesforceNextBatch(nextBatchRoute, InstanceURL string, accessToken stri
 		return nil, fmt.Errorf("error while query next batch %+v ", errBody)
 	}
 
-	var jsonRespone QueryRespone
+	var jsonRespone QueryResponse
 	err = json.NewDecoder(resp.Body).Decode(&jsonRespone)
 	if err != nil {
 		return nil, errors.New("failed to decode response")
@@ -283,13 +284,13 @@ func GetAccessToken(ps *M.SalesforceProjectSettings, redirectUrl string) (string
 		return "", fmt.Errorf("error while query data %s : %s", errBody.Error, errBody.ErrorDescription)
 	}
 
-	var jsonRespone map[string]interface{}
-	err = json.NewDecoder(resp.Body).Decode(&jsonRespone)
+	var jsonResponse map[string]interface{}
+	err = json.NewDecoder(resp.Body).Decode(&jsonResponse)
 	if err != nil {
 		return "", err
 	}
 
-	access_token, exists := jsonRespone["access_token"].(string)
+	access_token, exists := jsonResponse["access_token"].(string)
 	if !exists && access_token == "" {
 		return "", errors.New("failed to get access token by refresh token")
 	}

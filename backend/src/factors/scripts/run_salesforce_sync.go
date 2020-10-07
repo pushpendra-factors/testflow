@@ -26,15 +26,15 @@ func main() {
 	dbUser := flag.String("db_user", "autometa", "")
 	dbName := flag.String("db_name", "autometa", "")
 	dbPass := flag.String("db_pass", "@ut0me7a", "")
-	salesforceAppId := flag.String("salesforce_app_id", "", "")
+	salesforceAppID := flag.String("salesforce_app_id", "", "")
 	salesforceAppSecret := flag.String("salesforce_app_secret", "", "")
 	apiDomain := flag.String("api_domain", "factors-dev.com:8080", "")
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 
 	flag.Parse()
 
-	if *salesforceAppId == "" || *salesforceAppSecret == "" {
-		panic(fmt.Errorf("salesforce_app_secret or salesforce_app_secret not recognised"))
+	if *salesforceAppID == "" || *salesforceAppSecret == "" {
+		panic(fmt.Errorf("salesforce_app_id or salesforce_app_secret not recognised"))
 	}
 
 	config := &C.Configuration{
@@ -49,7 +49,7 @@ func main() {
 		},
 		APIDomain:           *apiDomain,
 		SentryDSN:           *sentryDSN,
-		SalesforceAppID:     *salesforceAppId,
+		SalesforceAppID:     *salesforceAppID,
 		SalesforceAppSecret: *salesforceAppSecret,
 	}
 

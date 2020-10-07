@@ -140,6 +140,11 @@ func getCustomerUserIDFromProperties(projectID uint64, properties map[string]int
 
 	for _, emailField := range possibleEmailField {
 		if email, ok := properties[getPropertyKeyByType(docTypeAlias, emailField)].(string); ok && email != "" {
+			existingEmail, errCode := M.GetExistingCustomerUserID(projectID, []string{email})
+			if errCode == http.StatusFound {
+				return email, existingEmail[email]
+			}
+
 			return email, ""
 		}
 	}

@@ -424,6 +424,10 @@ func BuildAndUpsertDocument(projectID uint64, objectName string, value Salesforc
 		return errors.New("invalid oject name or value")
 	}
 
+	if len(value) == 0 {
+		return errors.New("empty value")
+	}
+
 	var document SalesforceDocument
 	document.ProjectID = projectID
 	document.TypeAlias = objectName
