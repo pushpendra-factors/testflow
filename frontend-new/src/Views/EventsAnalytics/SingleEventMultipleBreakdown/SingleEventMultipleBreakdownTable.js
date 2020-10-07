@@ -1,40 +1,79 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { getTableColumns, getDataInTableFormat } from './utils';
+import {
+  getTableColumns, getDataInTableFormat, getDateBasedColumns, getDateBasedTableData
+} from './utils';
 import DataTable from '../../CoreQuery/FunnelsResultPage/DataTable';
 
-function SingleEventMultipleBreakdownTable({ chartType, breakdown, data }) {
-    const [sorter, setSorter] = useState({});
-    const [searchText, setSearchText] = useState('');
+function SingleEventMultipleBreakdownTable({
+  originalData, chartType, breakdown, data, visibleProperties, setVisibleProperties, maxAllowedVisibleProperties, lineChartData
+}) {
+  const [sorter, setSorter] = useState({});
+  const [searchText, setSearchText] = useState('');
 
-    useEffect(() => {
-        // reset sorter on change of chart type
-        setSorter({});
-    }, [chartType]);
+  useEffect(() => {
+    // reset sorter on change of chart type
+    setSorter({});
+  }, [chartType]);
 
-    const handleSorting = useCallback((sorter) => {
-        setSorter(sorter);
-    }, []);
+  const handleSorting = useCallback((sorter) => {
+    setSorter(sorter);
+  }, []);
 
-    let columns;
-    let tableData;
+  const nonDatecolumns = getTableColumns(breakdown, sorter, handleSorting);
+  let columns;
+  let tableData = [];
 
-    if (chartType === 'linechart') {
-        // columns = getDateBasedColumns(lineChartData, breakdown, sorter, handleSorting);
-        // tableData = getDateBasedTableData(data.map(elem => elem.label), originalData, breakdown, searchText, sorter);
-    } else {
-        columns = getTableColumns(breakdown, sorter, handleSorting);
-        tableData = getDataInTableFormat(data, columns, breakdown, searchText, sorter);
+  if (chartType === 'linechart') {
+    tableData = getDateBasedTableData(data.map(elem => elem.label), originalData, breakdown, nonDatecolumns, searchText, sorter);
+    columns = getDateBasedColumns(lineChartData, breakdown, sorter, handleSorting);
+  } else {
+    tableData = getDataInTableFormat(data, nonDatecolumns, searchText, sorter);
+    columns = nonDatecolumns;
+  }
+
+  const visibleLabels = visibleProperties.map(elem => elem.label);
+
+  const selectedRowKeys = [];
+
+  tableData.forEach(elem => {
+    const variableColumns = nonDatecolumns.slice(0, nonDatecolumns.length - 1);
+    const val = variableColumns.map(v => {
+      return elem[v.title];
+    });
+    if (visibleLabels.indexOf(val.join(',')) > -1) {
+      selectedRowKeys.push(elem.index);
     }
+  });
 
-    return (
+  const onSelectionChange = (_, selectedRows) => {
+    if (selectedRows.length > maxAllowedVisibleProperties || !selectedRows.length) {
+      return false;
+    }
+    const newVisibleProperties = selectedRows.map(elem => {
+      const variableColumns = nonDatecolumns.slice(0, nonDatecolumns.length - 1);
+      const val = variableColumns.map(v => {
+        return elem[v.title];
+      });
+      const obj = data.find(d => d.label === val.join(','));
+      return obj;
+    });
+    setVisibleProperties(newVisibleProperties);
+  };
+
+  const rowSelection = {
+    selectedRowKeys,
+    onChange: onSelectionChange
+  };
+
+  return (
         <DataTable
             tableData={tableData}
             searchText={searchText}
             setSearchText={setSearchText}
             columns={columns}
-        // rowSelection={rowSelection}
+            rowSelection={rowSelection}
         />
-    );
+  );
 }
 
 export default SingleEventMultipleBreakdownTable;

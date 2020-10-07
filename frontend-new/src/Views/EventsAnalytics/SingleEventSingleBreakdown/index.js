@@ -3,7 +3,7 @@ import ChartTypeDropdown from '../../../components/ChartTypeDropdown';
 import { singleEventSinglePropertyDateTimeResponse } from '../SampleResponse';
 import { formatSingleEventSinglePropertyData, formatDataInLineChartFormat } from './utils';
 import BarChart from '../../../components/BarChart';
-import SingleEventBreakdownTable from './SingleEventBreakdownTable';
+import SingleEventSingleBreakdownTable from './SingleEventSingleBreakdownTable';
 import LineChart from '../../../components/LineChart';
 import { generateColors } from '../../CoreQuery/FunnelsResultPage/utils';
 
@@ -18,9 +18,9 @@ function SingleEventSingleBreakdown({
   const maxAllowedVisibleProperties = 7;
 
   useEffect(() => {
-      const formattedData = formatSingleEventSinglePropertyData(singleEventSinglePropertyDateTimeResponse);
-      setChartsData(formattedData);
-      setVisibleProperties([...formattedData.slice(0, maxAllowedVisibleProperties)]);
+    const formattedData = formatSingleEventSinglePropertyData(singleEventSinglePropertyDateTimeResponse);
+    setChartsData(formattedData);
+    setVisibleProperties([...formattedData.slice(0, maxAllowedVisibleProperties)]);
   }, []);
 
   if (!chartsData.length) {
@@ -97,7 +97,7 @@ function SingleEventSingleBreakdown({
       </div>
       {chartContent}
       <div className="mt-8">
-        <SingleEventBreakdownTable
+        <SingleEventSingleBreakdownTable
           data={chartsData}
           breakdown={breakdown}
           events={queries}

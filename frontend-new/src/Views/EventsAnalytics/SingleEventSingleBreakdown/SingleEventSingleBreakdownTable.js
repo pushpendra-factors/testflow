@@ -4,7 +4,7 @@ import {
   getTableColumns, getDataInTableFormat, getDateBasedColumns, getDateBasedTableData
 } from './utils';
 
-function BreakdownTable({
+function SingleEventSingleBreakdownTable({
   data, events, breakdown, chartType, visibleProperties, setVisibleProperties, maxAllowedVisibleProperties, lineChartData, originalData
 }) {
   const [sorter, setSorter] = useState({});
@@ -67,4 +67,4 @@ function BreakdownTable({
   );
 }
 
-export default BreakdownTable;
+export default SingleEventSingleBreakdownTable;
