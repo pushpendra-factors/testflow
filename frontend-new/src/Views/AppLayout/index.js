@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { Layout } from 'antd';
+import React, { useEffect, useState } from 'react';
+import { Layout, Spin } from 'antd';
 import Sidebar from '../../components/Sidebar';
 import CoreQuery from '../CoreQuery';
 import ProjectSettings from '../Settings/ProjectSettings';
@@ -9,52 +9,53 @@ import { bindActionCreators } from 'redux';
 import {
   HashRouter, Route, Switch, useHistory
 } from 'react-router-dom';
-import { fetchProjects, setActiveProject } from '../../reducers/global';
+import { fetchProjects } from '../../reducers/global';
 
 function AppLayout({ fetchProjects, isAgentLoggedIn }) {
-  // const [dataLoading, setDataLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
   const { Content } = Layout;
   const history = useHistory();
+
+  useEffect(() => {
+    fetchProjects().then(() => {
+      setDataLoading(false);
+    });
+  }, [fetchProjects]);
 
   if (!isAgentLoggedIn) {
     history.push('/login');
     return null;
   }
 
-  useEffect(() => {
-    fetchProjects();
-    // setTimeout(() => {
-    //   setDataLoading(false);
-    // }, 500);
-  }, [fetchProjects]);
-
   return (
-  <Layout>
-      <Sidebar />
-      <Layout className="fa-content-container">
-        <Content className="bg-white min-h-screen">
-          <HashRouter>
-            <Switch>
-              <Route path="/components/" name="componentsLib" component={componentsLib} />
-              <Route path="/settings/" component={ProjectSettings} />
-              <Route path="/" name="Home" component={CoreQuery} />
-            </Switch>
-          </HashRouter>
-        </Content>
+    <>
+    {dataLoading ? <Spin size={'large'} className={'fa-page-loader'} />
+      : <Layout>
+          <Sidebar />
+          <Layout className="fa-content-container">
+            <Content className="bg-white min-h-screen">
+              <HashRouter>
+                <Switch>
+                  <Route path="/components/" name="componentsLib" component={componentsLib} />
+                  <Route path="/settings/" component={ProjectSettings} />
+                  <Route path="/" name="Home" component={CoreQuery} />
+                </Switch>
+              </HashRouter>
+            </Content>
+          </Layout>
       </Layout>
-  </Layout>
+    }
+    </>
   );
 }
 
 const mapStateToProps = (state) => ({
   projects: state.global.projects,
-  active_project: state.global.active_project,
   isAgentLoggedIn: state.agent.isLoggedIn
 });
 
 const mapDispatchToProps = dispatch => bindActionCreators({
-  fetchProjects,
-  setActiveProject
+  fetchProjects
 }, dispatch);
 
 export default connect(mapStateToProps, mapDispatchToProps)(AppLayout);
