@@ -93,16 +93,16 @@ function QueryBlock({
   const eventFilters = () => {
     const filters = [];
     if (event && event.filters.length) {
-      event.filters.forEach((filter) => {
+      event.filters.forEach((filter, index) => {
         filters.push(
-                    <div className={'fa--query_block--filters'}>
+                    <div key={index} className={'fa--query_block--filters'}>
                         <FilterBlock filter={filter} insertFilter={insertFilters} closeFilter={() => setFilterDDVisible(false)}></FilterBlock>
                     </div>
         );
       });
     }
 
-    filters.push(<div className={'fa--query_block--filters'}>
+    filters.push(<div key={'init'} className={'fa--query_block--filters'}>
             {additionalActions()}
             {selectEventFilter()}
         </div>);
