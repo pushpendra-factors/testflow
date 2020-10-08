@@ -12,6 +12,7 @@ import (
 	C "factors/config"
 	M "factors/model"
 
+	"github.com/jinzhu/now"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -306,8 +307,8 @@ func SyncDocuments(ps *M.SalesforceProjectSettings, lastSyncInfo map[string]int6
 		var sfFormatedTime string
 		var syncAll bool
 		if timestamp == 0 {
-			currentTime := time.Now().AddDate(0, 0, -30).UTC()                                                           // get from last 30 days
-			timestamp = currentTime.Unix() - int64(currentTime.Hour()*3600+currentTime.Minute()*60+currentTime.Second()) //start of the day
+			currentTime := time.Now().AddDate(0, 0, -30).UTC()
+			timestamp = now.New(currentTime).BeginningOfDay().Unix() // get from last 30 days
 			syncAll = true
 		}
 
