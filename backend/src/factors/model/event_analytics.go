@@ -105,9 +105,14 @@ func transformResultsForEachEventQuery(oldResult *QueryResult, query Query) (*Qu
 
 	eventsHeaderIndexMap := make(map[string]int)
 	for _, row := range oldResult.Rows {
-		en := row[eventNameIndex].(string)
+		eventName := ""
+		if row[eventNameIndex] == nil && len(query.EventsWithProperties) == 1 {
+			eventName = query.EventsWithProperties[0].Name
+		} else {
+			eventName = row[eventNameIndex].(string)
+		}
 		// initial header value = 1
-		eventsHeaderIndexMap[en] = 1
+		eventsHeaderIndexMap[eventName] = 1
 	}
 
 	// headers : datetime, event1, event2, ...
@@ -128,7 +133,12 @@ func transformResultsForEachEventQuery(oldResult *QueryResult, query Query) (*Qu
 	for _, row := range oldResult.Rows {
 		// headers : datetime, event1, event2, ...
 		dateTime := row[dateIndex].(time.Time).Unix()
-		eventName := row[eventNameIndex].(string)
+		eventName := ""
+		if row[eventNameIndex] == nil && len(query.EventsWithProperties) == 1 {
+			eventName = query.EventsWithProperties[0].Name
+		} else {
+			eventName = row[eventNameIndex].(string)
+		}
 		eventNameHeaderIndex := eventsHeaderIndexMap[eventName]
 
 		if _, exists := datetimeEncountered[dateTime]; exists && datetimeEncountered[dateTime] == true {
@@ -385,7 +395,7 @@ func addMissingTimestampsOnResultWithoutGroupByProps(result *QueryResult, query 
 
 	filledResult := make([][]interface{}, 0, 0)
 	// range over timestamps between given from and to.
-	// uses timstamp string for comparison.
+	// uses timestamp string for comparison.
 	for _, ts := range timestamps {
 		if row, exists := rowsByTimestamp[U.GetTimestampAsStrWithTimezone(ts, query.Timezone)]; exists {
 			// overrides timestamp with user timezone as sql results doesn't
@@ -393,7 +403,7 @@ func addMissingTimestampsOnResultWithoutGroupByProps(result *QueryResult, query 
 			row[timestampIndex] = ts
 			filledResult = append(filledResult, row)
 		} else {
-			newRow := make([]interface{}, 2, 2)
+			newRow := make([]interface{}, 3, 3)
 			newRow[timestampIndex] = ts
 			newRow[aggrIndex] = 0
 			filledResult = append(filledResult, newRow)
