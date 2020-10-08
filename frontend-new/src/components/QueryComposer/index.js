@@ -11,6 +11,7 @@ import SeqSelector from './AnalysisSeqSelector';
 import GroupBlock from './GroupBlock';
 
 import { fetchEventNames } from '../../reducers/coreQuery/middleware';
+import { fetchEventProperties, fetchUserProperties } from '../../reducers/coreQuery/services';
 
 const { Option } = Select;
 
@@ -18,21 +19,37 @@ const { Panel } = Collapse;
 
 function QueryComposer({
   queries, runQuery, eventChange, queryType,
-  fetchEventNames, activeProject
+  fetchEventNames, activeProject,
+  queryOptions,
+  setQueryOptions
 }) {
   const [analyticsSeqOpen, setAnalyticsSeqVisible] = useState(false);
 
-  const [queryOptions, setQueryOptions] = useState({
-    groupBy: {
-      property: '',
-      eventValue: ''
-    },
-    event_analysis_seq: '',
-    session_analytics_seq: {
-      start: 1,
-      end: 2
+  const [filterOptions, setFilterOptions] = useState([
+    {
+      label: 'User Properties',
+      icon: 'fav',
+      values: []
+    }, {
+      label: 'Event Properties',
+      icon: 'virtual',
+      values: []
     }
-  });
+  ]);
+
+  // const [queryOptions, setQueryOptions] = useState({
+  //   groupBy: {
+  //     prop_category: '', // user / event
+  //     property: '', // user/eventproperty
+  //     prop_type: '', // categorical  /numberical
+  //     eventValue: '' // event name (funnel only)
+  //   },
+  //   event_analysis_seq: '',
+  //   session_analytics_seq: {
+  //     start: 1,
+  //     end: 2
+  //   }
+  // });
 
   useEffect(() => {
     if (activeProject && activeProject.id) {
@@ -40,12 +57,62 @@ function QueryComposer({
     }
   }, [activeProject, fetchEventNames]);
 
+  useEffect(() => {
+    const eventPropertyFetches = [];
+
+    fetchUserProperties(activeProject.id, queryType).then(res => {
+      convertUserPropertyData(res);
+    });
+
+    queries.forEach(ev => {
+      eventPropertyFetches.push(fetchEventProperties(activeProject.id, ev.label));
+    });
+
+    Promise.all(eventPropertyFetches).then((val) => {
+      convertEventPropertyData(val);
+    });
+  }, [queries]);
+
+  const convertUserPropertyData = (res) => {
+    const filterOpts = [...filterOptions];
+    filterOpts[0].values = [];
+    if (res.status === 200) {
+      const data = res.data;
+      Object.keys(data).forEach(key => {
+        data[key].forEach(val => {
+          if (!filterOpts[0].values.find(v => v.name === val)) {
+            filterOpts[0].values.push([val, key]);
+          }
+        });
+      });
+    }
+    setFilterOptions(filterOpts);
+  };
+
+  const convertEventPropertyData = (val) => {
+    const filterOpts = [...filterOptions];
+    filterOpts[1].values = [];
+    val.forEach(res => {
+      if (res.status === 200) {
+        const data = res.data;
+        Object.keys(data).forEach(key => {
+          data[key].forEach(val => {
+            if (!filterOpts[1].values.find(v => v.name === val)) {
+              filterOpts[1].values.push([val, key]);
+            }
+          });
+        });
+      }
+    });
+    setFilterOptions(filterOpts);
+  };
+
   const queryList = () => {
     const blockList = [];
 
     queries.forEach((event, index) => {
       blockList.push(
-                <div className={styles.composer_body__query_block}>
+                <div key={index} className={styles.composer_body__query_block}>
                     <QueryBlock index={index + 1} queryType={queryType} event={event} queries={queries} eventChange={eventChange}></QueryBlock>
                 </div>
       );
@@ -53,7 +120,7 @@ function QueryComposer({
 
     if (queries.length < 6) {
       blockList.push(
-                <div className={styles.composer_body__query_block}>
+                <div key={'init'} className={styles.composer_body__query_block}>
                     <QueryBlock queryType={queryType} index={queries.length + 1} queries={queries} eventChange={eventChange}></QueryBlock>
                 </div>
       );
@@ -62,14 +129,38 @@ function QueryComposer({
     return blockList;
   };
 
+  const setGroupByState = (value, index, action = 'add') => {
+    const options = Object.assign({}, queryOptions);
+    if (action === 'add') {
+      options.groupBy[index] = value;
+      if (options.groupBy.length - 1 === index) {
+        options.groupBy.push({
+          prop_category: '', // user / event
+          property: '', // user/eventproperty
+          prop_type: '', // categorical  /numberical
+          eventValue: '' // event name (funnel only)
+        });
+      }
+    }
+
+    setQueryOptions(options);
+  };
+
   const groupByBlock = () => {
     if (queryType === 'event' && queries.length < 1) { return null; }
     if (queryType === 'funnel' && queries.length < 2) { return null; }
 
     return (
-                <div className={'fa--query_block bordered '}>
-                    <GroupBlock groupBy={queryOptions.groupBy} events={queries}></GroupBlock>
-                </div>
+      <div key={0} className={'fa--query_block bordered '}>
+        <GroupBlock
+        filterOptions={filterOptions}
+        setGroupByState={setGroupByState}
+        queryType={queryType}
+        groupByState={queryOptions.groupBy}
+        events={queries}>
+
+        </GroupBlock>
+      </div>
     );
   };
 

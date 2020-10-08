@@ -3,8 +3,10 @@ package tests
 import (
 	M "factors/model"
 	U "factors/util"
+	C "factors/config"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -65,4 +67,32 @@ func TestDBUpdateProjectSettings(t *testing.T) {
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.NotNil(t, projectSetting)
 	assert.Equal(t, "899900900", *projectSetting.IntAdwordsCustomerAccountId)
+}
+
+func TestGetProjectSettingByKeyWithTimeout(t *testing.T) { 
+	project, _ := SetupProjectReturnDAO()
+	assert.NotNil(t, project)
+	
+	// Should not timeout.
+	// If the db queries are slow in local. 
+	// This case will start failing. So setting a high timeout period 5 seconds.
+	projectSetting, errCode := M.GetProjectSettingByKeyWithTimeout("token", 
+		project.Token, time.Second * 5) 
+	assert.Equal(t, errCode, http.StatusFound)
+	assert.NotNil(t, projectSetting)
+
+	// Should timeout.
+	// Assuming that no database environment can execute 
+	// the query in less than 1 micro seconds.
+	projectSetting, errCode = M.GetProjectSettingByKeyWithTimeout("token", 
+		project.Token, time.Microsecond * 1)
+	assert.Equal(t, errCode, http.StatusInternalServerError)
+	assert.Nil(t, projectSetting)
+
+	// Should return from default, as flag is set.
+	C.GetConfig().UseDefaultProjectSettingForSDK = true
+	projectSetting, errCode = M.GetProjectSettingByKeyWithTimeout("token", 
+		project.Token, time.Microsecond * 1)
+	assert.Equal(t, errCode, http.StatusFound)
+	assert.NotNil(t, projectSetting)
 }

@@ -251,12 +251,14 @@ func UpdateCacheForUserProperties(userId string, projectid uint64, updatedProper
 		}
 		propertiesToIncr = append(propertiesToIncr, propertyCategoryKey)
 		if category == U.PropertyTypeCategorical {
-			valueKey, err := GetValuesByUserPropertyCacheKey(projectid, property, propertyValue, currentTimeDatePart)
-			if err != nil {
-				logCtx.WithError(err).Error("Failed to get cache key - values")
-				return
+			if propertyValue != "" {
+				valueKey, err := GetValuesByUserPropertyCacheKey(projectid, property, propertyValue, currentTimeDatePart)
+				if err != nil {
+					logCtx.WithError(err).Error("Failed to get cache key - values")
+					return
+				}
+				valuesToIncr = append(valuesToIncr, valueKey)
 			}
-			valuesToIncr = append(valuesToIncr, valueKey)
 		}
 	}
 	keysToIncr = append(keysToIncr, propertiesToIncr...)
@@ -284,14 +286,14 @@ func UpdateCacheForUserProperties(userId string, projectid uint64, updatedProper
 		}
 	}
 
-	countsInCache := make(map[*cacheRedis.Key]int64)
+	countsInCache := make([]cacheRedis.KeyCountTuple, 0)
 	if newPropertiesCount > 0 {
 		propertiesCountKey, err := GetUserPropertiesCategoryByProjectCountCacheKey(projectid, currentTimeDatePart)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to get cache key - propertiesCount")
 			return
 		}
-		countsInCache[propertiesCountKey] = newPropertiesCount
+		countsInCache = append(countsInCache, cacheRedis.KeyCountTuple{Key: propertiesCountKey, Count: newPropertiesCount})
 	}
 	if newValuesCount > 0 {
 		valuesCountKey, err := GetValuesByUserPropertyCountCacheKey(projectid, currentTimeDatePart)
@@ -299,11 +301,11 @@ func UpdateCacheForUserProperties(userId string, projectid uint64, updatedProper
 			logCtx.WithError(err).Error("Failed to get cache key - valuesCount")
 			return
 		}
-		countsInCache[valuesCountKey] = newValuesCount
+		countsInCache = append(countsInCache, cacheRedis.KeyCountTuple{Key: valuesCountKey, Count: newValuesCount})
 	}
 	if len(countsInCache) > 0 {
 		begin := U.TimeNow()
-		err = cacheRedis.IncrByBatchPersistent(countsInCache)
+		_, err = cacheRedis.IncrByBatchPersistent(countsInCache)
 		end := U.TimeNow()
 		logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("C:US:Incr")
 		if err != nil {
@@ -490,7 +492,7 @@ func MergeUserPropertiesForUserID(projectID uint64, userID string, updatedProper
 }
 
 // updateUserPropertiesForUser Creates new UserProperties entry and updates properties_id in user table. Returns new properties_id.
-func updateUserPropertiesForUser(projectID uint64, userID string, userProperties postgres.Jsonb, 
+func updateUserPropertiesForUser(projectID uint64, userID string, userProperties postgres.Jsonb,
 	timestamp int64, updateUser bool) (string, int) {
 	logCtx := log.WithFields(log.Fields{
 		"Method":    "updateUserPropertiesForUser",
@@ -516,7 +518,7 @@ func updateUserPropertiesForUser(projectID uint64, userID string, userProperties
 	}
 	logCtx.WithField("tag", "db_create_user_properties").
 		Info("Created user_properties record.")
-		
+
 	if updateUser {
 		if err := db.Model(&User{}).Where("project_id = ? AND id = ?", projectID, userID).
 			Update("properties_id", userPropertiesRecord.ID).Error; err != nil {

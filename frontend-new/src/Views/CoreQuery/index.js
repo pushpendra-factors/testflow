@@ -19,6 +19,19 @@ function CoreQuery({ activeProject }) {
   const [showResult, setShowResult] = useState(false);
   const [queries, setQueries] = useState([]);
   const [breakdown] = useState([]);
+  const [queryOptions, setQueryOptions] = useState({
+    groupBy: [{
+      prop_category: '', // user / event
+      property: '', // user/eventproperty
+      prop_type: '', // categorical  /numberical
+      eventValue: '' // event name (funnel only)
+    }],
+    event_analysis_seq: '',
+    session_analytics_seq: {
+      start: 1,
+      end: 2
+    }
+  });
   const [resultState, setResultState] = useState({ loading: false, error: false, data: {} });
 
   const queryChange = (newEvent, index, changeType = 'add') => {
@@ -70,6 +83,15 @@ function CoreQuery({ activeProject }) {
     query.ewp = getEventsWithProperties();
 
     query.gbp = [];
+    queryOptions.groupBy.forEach(opt => {
+      const group = {
+        pr: opt.property,
+        en: opt.prop_category,
+        pty: opt.prop_type
+      };
+      query.gbp.push(group);
+    })
+    
     // for(let i=0; i < this.state.groupBys.length; i++) {
     //   let groupBy = this.state.groupBys[i];
     //   let cGroupBy = {};
@@ -101,10 +123,14 @@ function CoreQuery({ activeProject }) {
     // query.see = sessionEndEvent.value
 
     return query;
-  }, [getEventsWithProperties, queryType]);
+  }, [getEventsWithProperties, queryType, queryOptions]);
 
   const closeDrawer = () => {
     setDrawerVisible(false);
+  };
+
+  const setExtraOptions = (options) => {
+    setQueryOptions(options);
   };
 
   const runQuery = useCallback(async () => {
@@ -122,7 +148,7 @@ function CoreQuery({ activeProject }) {
     } catch (err) {
       setResultState({ loading: false, error: true, data: {} });
     }
-  }, [activeProject, getQuery]);
+  }, [activeProject, getQuery, queryOptions]);
 
   const title = () => {
     return (
@@ -190,6 +216,8 @@ function CoreQuery({ activeProject }) {
           runQuery={runQuery}
           eventChange={queryChange}
           queryType={queryType}
+          queryOptions={queryOptions}
+          setQueryOptions={setExtraOptions}
         />
       </Drawer>
 

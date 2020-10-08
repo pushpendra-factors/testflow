@@ -7,8 +7,9 @@ import { SVG, Text } from 'factorsComponents';
 import ModalLib from '../../Views/componentsLib/ModalLib';
 import UserSettings from '../../Views/Settings/UserSettings';
 import { setActiveProject } from '../../reducers/global';
+import { signout } from '../../reducers/agentActions';
 import { connect } from 'react-redux';
-import { PlusOutlined } from '@ant-design/icons';
+import { PlusOutlined, PoweroffOutlined } from '@ant-design/icons';
 import CreateNewProject from './CreateNewProject';
 
 function Sidebar(props) {
@@ -60,6 +61,13 @@ function Sidebar(props) {
               }}>
                 <Avatar size={28}/><Text type={'title'} level={7} extraClass={'m-0 ml-2'}>{'Account Settings'}</Text>
           </div>
+          <Button type={'text'}
+          onClick={() => {
+            setShowPopOver(false);
+            props.signout();
+          }}>
+            <span className={'mr-4'}><PoweroffOutlined /></span> {'Logout'}</Button>
+
         </div>
     );
   };
@@ -120,7 +128,8 @@ function Sidebar(props) {
           </div>
           <div className={'flex flex-col justify-end items-center w-full pb-8 pt-2'}>
             <Row justify="center" align="middle" className=" w-full py-2">
-              <Popover placement="top" overlayClassName={'fa-popupcard--wrapper'} title={false} content={popOvercontent}
+              <Popover placement="top" overlayClassName={'fa-popupcard--wrapper'} title={false}
+              content={popOvercontent}
               visible={ShowPopOver}
               onVisibleChange={(visible) => {
                 setShowPopOver(visible);
@@ -189,4 +198,4 @@ const mapStateToProps = (state) => {
     active_project: state.global.active_project
   };
 };
-export default connect(mapStateToProps, { setActiveProject })(Sidebar);
+export default connect(mapStateToProps, { setActiveProject, signout })(Sidebar);

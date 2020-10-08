@@ -78,12 +78,54 @@ func GetProjectSetting(projectId uint64) (*ProjectSetting, int) {
 	return &projectSetting, http.StatusFound
 }
 
+type ProjectSettingChannelResponse struct {
+	Setting   *ProjectSetting
+	ErrorCode int
+}
+
+// GetProjectSettingByKeyWithTimeout - Get project_settings from db based on key,
+// gets timedout and returns StatusInternalServerError, if the query takes more than
+// the given duration. Returns default project_settings immediately, if the 
+// config/flag use_default_project_setting_for_sdk is set to true.
+func GetProjectSettingByKeyWithTimeout(key, value string, timeout time.Duration) (*ProjectSetting, int) {
+	if C.GetConfig().UseDefaultProjectSettingForSDK {
+		return getProjectSettingDefault(), http.StatusFound
+	}
+
+	// TODO(Dinesh): Use gorm db.WithContext and context.WithTimeout 
+	// once gorm v2 is production ready and upgraded.
+	// Ref: https://gorm.io/docs/context.html
+	responseChannel := make(chan ProjectSettingChannelResponse, 1)
+	go func() {
+		settings, errCode := getProjectSettingByKey(key, value)
+		responseChannel <- ProjectSettingChannelResponse{
+			Setting:   settings,
+			ErrorCode: errCode,
+		}
+	}()
+
+	select {
+	case response := <-responseChannel:
+		return response.Setting, response.ErrorCode
+	case <-time.After(timeout):
+		// Tracking the info log on a chart.
+		log.WithField("tag", "get_settings_timeout").
+			WithField("project_key", key).
+			WithField("value", value).
+			Info("Get project_settings has timedout.")
+		return nil, http.StatusInternalServerError
+	}
+}
+
 // getProjectSettingByKey - Get project settings by a column on projects.
 func getProjectSettingByKey(key, value string) (*ProjectSetting, int) {
+	if key == "" || value == "" {
+		return nil, http.StatusBadRequest
+	}
+
 	logCtx := log.WithField("key", key).WithField("value", value)
 
 	var setting ProjectSetting
-
 	db := C.GetServices().Db
 	whereKey := fmt.Sprintf("%s = ?", key)
 	err := db.Table("projects").Select("project_settings.*").Limit(1).Where(whereKey, value).Joins(
@@ -213,7 +255,7 @@ func getProjectSettingByKeyWithDefault(tokenKey, tokenValue string) (*ProjectSet
 		return settings, http.StatusFound
 	}
 
-	settings, errCode = getProjectSettingByKey(tokenKey, tokenValue)
+	settings, errCode = GetProjectSettingByKeyWithTimeout(tokenKey, tokenValue, time.Millisecond*30)
 	if errCode != http.StatusFound {
 		// Use default settings, if db failure.
 		// Do not cache default.

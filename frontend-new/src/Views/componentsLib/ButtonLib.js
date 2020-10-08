@@ -25,14 +25,14 @@ function ButtonLib() {
         <Col span={4}>
           <Button>Default Button</Button>
         </Col>
-        <Col span={4}>
+        {/* <Col span={4}>
           <Button type="dashed">Dashed Button</Button>
-        </Col>
+        </Col> */}
         <Col span={4}>
           <Button type="text">Text Button</Button>
         </Col>
         <Col span={4}>
-          <Button type="link">Link Button</Button>
+          <Button type="link">Secondary Button</Button>
         </Col>
       </Row>
 
@@ -43,14 +43,14 @@ function ButtonLib() {
         <Col span={4}>
           <Button icon={<PoweroffOutlined />}>Default Button</Button>
         </Col>
-        <Col span={4}>
+        {/* <Col span={4}>
           <Button type="dashed" icon={<PoweroffOutlined />}>Dashed Button</Button>
-        </Col>
+        </Col> */}
         <Col span={4}>
           <Button type="text" icon={<PoweroffOutlined />}>Text Button</Button>
         </Col>
         <Col span={4}>
-          <Button type="link" icon={<PoweroffOutlined />}>Link Button</Button>
+          <Button type="link" icon={<PoweroffOutlined />}>Secondary Button</Button>
         </Col>
       </Row>
 
@@ -61,9 +61,9 @@ function ButtonLib() {
         <Col span={4}>
           <Button icon={<PoweroffOutlined />} />
         </Col>
-        <Col span={4}>
+        {/* <Col span={4}>
           <Button type="dashed" icon={<PoweroffOutlined />}/>
-        </Col>
+        </Col> */}
         <Col span={4}>
           <Button type="text" icon={<PoweroffOutlined />}/>
         </Col>

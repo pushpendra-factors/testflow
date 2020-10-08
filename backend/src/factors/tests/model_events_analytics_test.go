@@ -1,0 +1,557 @@
+package tests
+
+import (
+	M "factors/model"
+	U "factors/util"
+	"net/http"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+
+	H "factors/handler"
+	"fmt"
+
+	"github.com/gin-gonic/gin"
+)
+
+func TestEventAnalyticsQuery(t *testing.T) {
+	// Initialize routes and dependent data.
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+	uri := "/sdk/event/track"
+
+	t.Run("OperatorsWithNumericalPropertiesOnWhere", func(t *testing.T) {
+		project, user, eventName, err := SetupProjectUserEventNameReturnDAO()
+		assert.Nil(t, err)
+
+		var firstEvent *M.Event
+
+		// 10 times: page_spent_time as 5
+		for i := 0; i < 10; i++ {
+			payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "event_properties": {"$page_spent_time" : %d}}`, eventName.Name, user.ID, 5)
+			w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+			assert.Equal(t, http.StatusOK, w.Code)
+			response := DecodeJSONResponseToMap(w.Body)
+			assert.NotNil(t, response["event_id"])
+			if i == 0 {
+				event, errCode := M.GetEventById(project.ID, response["event_id"].(string))
+				assert.Equal(t, http.StatusFound, errCode)
+				assert.NotNil(t, event)
+				firstEvent = event
+			}
+		}
+
+		// 5 times: page_spent_time as 12.
+		for i := 0; i < 5; i++ {
+			payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "event_properties": {"$page_spent_time" : %d}}`, eventName.Name, user.ID, 12)
+			w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+			assert.Equal(t, http.StatusOK, w.Code)
+			response := DecodeJSONResponseToMap(w.Body)
+			assert.NotNil(t, response["event_id"])
+		}
+
+		// Query count of events: page_spent_time > 11
+		query := M.Query{
+			From: firstEvent.Timestamp - 10,
+			To:   time.Now().UTC().Unix(),
+			EventsWithProperties: []M.QueryEventWithProperties{
+				M.QueryEventWithProperties{
+					Name: eventName.Name,
+					Properties: []M.QueryProperty{
+						M.QueryProperty{
+							Entity:    M.PropertyEntityEvent,
+							Property:  "$page_spent_time",
+							Operator:  "greaterThan",
+							Type:      "numerical",
+							LogicalOp: "AND",
+							Value:     "11",
+						},
+					},
+				},
+			},
+			Class: M.QueryClassEvents,
+
+			Type:            M.QueryTypeEventsOccurrence,
+			EventsCondition: M.EventCondAnyGivenEvent,
+		}
+
+		result, errCode, _ := M.RunEventsQuery(project.ID, query)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.NotNil(t, result)
+		assert.Equal(t, "count", result.Headers[0])
+		assert.Equal(t, int64(5), result.Rows[0][0])
+
+		// Query count of events: page_spent_time > 11
+		query2 := M.Query{
+			From: firstEvent.Timestamp - 10,
+			To:   time.Now().UTC().Unix(),
+			EventsWithProperties: []M.QueryEventWithProperties{
+				M.QueryEventWithProperties{
+					Name: eventName.Name,
+					Properties: []M.QueryProperty{
+						M.QueryProperty{
+							Entity:    M.PropertyEntityEvent,
+							Property:  "$page_spent_time",
+							Operator:  "greaterThan",
+							Type:      "numerical",
+							LogicalOp: "AND",
+							Value:     "4",
+						},
+					},
+				},
+			},
+			Class: M.QueryClassEvents,
+
+			Type:            M.QueryTypeEventsOccurrence,
+			EventsCondition: M.EventCondAnyGivenEvent,
+		}
+
+		result2, errCode, _ := M.RunEventsQuery(project.ID, query2)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.NotNil(t, result2)
+		assert.Equal(t, "count", result2.Headers[0])
+		assert.Equal(t, int64(15), result2.Rows[0][0])
+
+	})
+}
+
+func TestEventAnalyticsQueryWithFilterAndBreakdown(t *testing.T) {
+	// Initialize routes and dependent data.
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+	uri := "/sdk/event/track"
+
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	user1, errCode := M.CreateUser(&M.User{ProjectId: project.ID})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, user1.ID)
+	user2, errCode := M.CreateUser(&M.User{ProjectId: project.ID})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, user2.ID)
+	user3, errCode := M.CreateUser(&M.User{ProjectId: project.ID})
+	assert.Equal(t, http.StatusCreated, errCode)
+	assert.NotEmpty(t, user3.ID)
+
+	startTimestamp := U.UnixTimeBeforeDuration(time.Hour * 1)
+	stepTimestamp := startTimestamp
+
+	/*
+		user1 -> event s0 with property1 -> s0 with property2 -> s1 with propterty2
+		user2 -> event s0 with property1 -> s1 with property1
+		user3 -> event s0 with property2 -> s1 with property2
+	*/
+
+	payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`, "s0", user1.ID, stepTimestamp, "A", 1234)
+	w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response := DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`, "s0", user1.ID, stepTimestamp+10, "B", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`, "s1", user1.ID, stepTimestamp+20, "B", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`, "s0", user2.ID, stepTimestamp, "A", 1234)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`, "s1", user2.ID, stepTimestamp+10, "A", 1234)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`, "s0", user3.ID, stepTimestamp, "B", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, "user_properties": {"$initial_source" : "%s"}, "event_properties":{"$campaign_id":%d}}`, "s1", user3.ID, stepTimestamp+10, "B", 4321)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+	assert.Equal(t, http.StatusOK, w.Code)
+	response = DecodeJSONResponseToMap(w.Body)
+	assert.NotNil(t, response["event_id"])
+
+	t.Run("AnalyticsEventsQueryUniqueUserWithUserPropertyFilterAndBreakdown", func(t *testing.T) {
+
+		query := M.Query{
+			From: startTimestamp,
+			To:   startTimestamp + 40,
+			EventsWithProperties: []M.QueryEventWithProperties{
+				M.QueryEventWithProperties{
+					Name: "s0",
+					Properties: []M.QueryProperty{
+						M.QueryProperty{
+							Entity:    M.PropertyEntityUser,
+							Property:  "$initial_source",
+							Operator:  "equals",
+							Type:      "categorial",
+							LogicalOp: "AND",
+							Value:     "A",
+						},
+					},
+				},
+				M.QueryEventWithProperties{
+					Name: "s1",
+				},
+			},
+			Class: M.QueryClassEvents,
+
+			Type:            M.QueryTypeUniqueUsers,
+			EventsCondition: M.EventCondAllGivenEvent,
+		}
+
+		//unique user count should return 2 for s0 to s1 with fliter property1
+		result, errCode, _ := M.RunEventsQuery(project.ID, query)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.NotNil(t, result)
+		assert.Equal(t, "count", result.Headers[0])
+		assert.Equal(t, int64(2), result.Rows[0][0])
+
+		//unique user count should return 2 for s0 to s1 with fliter property2
+		query.EventsWithProperties[0].Properties[0].Value = "B"
+		result, errCode, _ = M.RunEventsQuery(project.ID, query)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.NotNil(t, result)
+		assert.Equal(t, "count", result.Headers[0])
+		assert.Equal(t, int64(2), result.Rows[0][0])
+
+		query = M.Query{
+			From: startTimestamp,
+			To:   startTimestamp + 40,
+			EventsWithProperties: []M.QueryEventWithProperties{
+				M.QueryEventWithProperties{
+					Name: "s0",
+				},
+				M.QueryEventWithProperties{
+					Name: "s1",
+				},
+			},
+			GroupByProperties: []M.QueryGroupByProperty{
+				M.QueryGroupByProperty{
+					Entity:   M.PropertyEntityUser,
+					Property: "$initial_source",
+				},
+			},
+			Class: M.QueryClassEvents,
+
+			Type:            M.QueryTypeUniqueUsers,
+			EventsCondition: M.EventCondAllGivenEvent,
+		}
+
+		//breakdown by user property should return property A with 1 count and property B with 2 count
+		result, errCode, _ = M.RunEventsQuery(project.ID, query)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.NotNil(t, result)
+		assert.Equal(t, "$initial_source", result.Headers[0])
+		assert.Equal(t, "count", result.Headers[1])
+		assert.Equal(t, "B", result.Rows[0][0])
+		assert.Equal(t, int64(2), result.Rows[0][1])
+		assert.Equal(t, "A", result.Rows[1][0])
+		assert.Equal(t, int64(1), result.Rows[1][1])
+	})
+	t.Run("AnalyticsEventsQueryUniqueUserWithEventPropertyFilterAndBreakdown", func(t *testing.T) {
+		query := M.Query{
+			From: startTimestamp,
+			To:   startTimestamp + 40,
+			EventsWithProperties: []M.QueryEventWithProperties{
+				M.QueryEventWithProperties{
+					Name: "s0",
+					Properties: []M.QueryProperty{
+						M.QueryProperty{
+							Entity:    M.PropertyEntityEvent,
+							Property:  "$campaign_id",
+							Operator:  "equals",
+							Type:      "categorial",
+							LogicalOp: "AND",
+							Value:     "1234",
+						},
+					},
+				},
+				M.QueryEventWithProperties{
+					Name: "s1",
+				},
+			},
+			Class: M.QueryClassEvents,
+
+			Type:            M.QueryTypeUniqueUsers,
+			EventsCondition: M.EventCondAllGivenEvent,
+		}
+
+		result, errCode, _ := M.RunEventsQuery(project.ID, query)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.NotNil(t, result)
+		assert.Equal(t, "count", result.Headers[0])
+		assert.Equal(t, int64(2), result.Rows[0][0])
+
+		query.EventsWithProperties[0].Properties[0].Value = "4321"
+		result, errCode, _ = M.RunEventsQuery(project.ID, query)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.NotNil(t, result)
+		assert.Equal(t, "count", result.Headers[0])
+		assert.Equal(t, int64(2), result.Rows[0][0])
+
+		query = M.Query{
+			From: startTimestamp,
+			To:   startTimestamp + 40,
+			EventsWithProperties: []M.QueryEventWithProperties{
+				M.QueryEventWithProperties{
+					Name: "s0",
+				},
+				M.QueryEventWithProperties{
+					Name: "s1",
+				},
+			},
+			GroupByProperties: []M.QueryGroupByProperty{
+				M.QueryGroupByProperty{
+					Entity:         M.PropertyEntityEvent,
+					Property:       "$campaign_id",
+					EventName:      "s0",
+					EventNameIndex: 1,
+				},
+			},
+			Class: M.QueryClassEvents,
+
+			Type:            M.QueryTypeUniqueUsers,
+			EventsCondition: M.EventCondAllGivenEvent,
+		}
+		result, errCode, _ = M.RunEventsQuery(project.ID, query)
+		assert.Equal(t, "$campaign_id", result.Headers[0])
+		assert.Equal(t, "1234", result.Rows[0][0])
+		assert.Equal(t, int64(2), result.Rows[0][1])
+		assert.Equal(t, "4321", result.Rows[1][0])
+		// Counting all occurrences instead of first. So for user1, both 4321 and 1234 will be counted.
+		assert.Equal(t, int64(2), result.Rows[1][1])
+	})
+
+	t.Run("AnalyticsEventsQueryEventOccurrenceWithCountEventOccurrences", func(t *testing.T) {
+		query := M.Query{
+			From: startTimestamp,
+			To:   startTimestamp + 40,
+			EventsWithProperties: []M.QueryEventWithProperties{
+				M.QueryEventWithProperties{
+					Name: "s0",
+					Properties: []M.QueryProperty{
+						M.QueryProperty{
+							Entity:    M.PropertyEntityUser,
+							Property:  "$initial_source",
+							Operator:  "equals",
+							Type:      "categorial",
+							LogicalOp: "AND",
+							Value:     "B",
+						},
+					},
+				},
+				M.QueryEventWithProperties{
+					Name: "s1",
+				},
+			},
+			Class: M.QueryClassEvents,
+
+			Type:            M.QueryTypeEventsOccurrence,
+			EventsCondition: M.EventCondAllGivenEvent,
+		}
+
+		/*
+			Event occurrence with user property should give 5
+			user1 -> 		 -> s0 with property2 -> s1 with propterty2
+			user2 -> 		 -> s1 with property1
+			user3 -> event s0 with property2 -> s1 with property2
+		*/
+		result, errCode, _ := M.RunEventsQuery(project.ID, query)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.Equal(t, "event_name", result.Headers[0])
+		assert.Equal(t, "count", result.Headers[1])
+		assert.Equal(t, "s0", result.Rows[0][0])
+		assert.Equal(t, int64(2), result.Rows[0][1])
+		assert.Equal(t, "s1", result.Rows[1][0])
+		assert.Equal(t, int64(3), result.Rows[1][1])
+
+		query.GroupByProperties = []M.QueryGroupByProperty{
+			M.QueryGroupByProperty{
+				Entity:   M.PropertyEntityUser,
+				Property: "$initial_source",
+			},
+		}
+		// property2 -> 4, property1 ->1
+		result, errCode, _ = M.RunEventsQuery(project.ID, query)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.Equal(t, "event_name", result.Headers[0])
+		assert.Equal(t, "$initial_source", result.Headers[1])
+		assert.Equal(t, "s0", result.Rows[0][0])
+		assert.Equal(t, "B", result.Rows[0][1])
+		assert.Equal(t, int64(2), result.Rows[0][2])
+
+		assert.Equal(t, "s1", result.Rows[1][0])
+		assert.Equal(t, "B", result.Rows[1][1])
+		assert.Equal(t, int64(2), result.Rows[1][2])
+
+		assert.Equal(t, "s1", result.Rows[2][0])
+		assert.Equal(t, "A", result.Rows[2][1])
+		assert.Equal(t, int64(1), result.Rows[2][2])
+
+		//Count should be same as when done with user property = 5
+		query.EventsWithProperties[0].Properties[0].Entity = M.PropertyEntityEvent
+		query.EventsWithProperties[0].Properties[0].Property = "$campaign_id"
+		query.EventsWithProperties[0].Properties[0].Value = "1234"
+		query.GroupByProperties = []M.QueryGroupByProperty{}
+		result, errCode, _ = M.RunEventsQuery(project.ID, query)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.Equal(t, "event_name", result.Headers[0])
+		assert.Equal(t, "count", result.Headers[1])
+		assert.Equal(t, "s0", result.Rows[0][0])
+		assert.Equal(t, int64(2), result.Rows[0][1])
+		assert.Equal(t, "s1", result.Rows[1][0])
+		assert.Equal(t, int64(3), result.Rows[1][1])
+	})
+
+	// Test for event filter on user property and group by user property at the same event.
+	t.Run("AnalyticsEventsQueryUniqueUserWithUserPropertyFilterAndUserBreakdown", func(t *testing.T) {
+		query := M.Query{
+			From: startTimestamp,
+			To:   startTimestamp + 40,
+			EventsWithProperties: []M.QueryEventWithProperties{
+				M.QueryEventWithProperties{
+					Name: "s0",
+					Properties: []M.QueryProperty{
+						M.QueryProperty{
+							Entity:    M.PropertyEntityUser,
+							Property:  "$initial_source",
+							Operator:  "equals",
+							Type:      "categorial",
+							LogicalOp: "AND",
+							Value:     "A",
+						},
+					},
+				},
+				M.QueryEventWithProperties{
+					Name: "s1",
+				},
+			},
+			GroupByProperties: []M.QueryGroupByProperty{
+				M.QueryGroupByProperty{
+					Entity:         M.PropertyEntityUser,
+					Property:       "$initial_source",
+					EventName:      "s0",
+					EventNameIndex: 1,
+				},
+			},
+			Class: M.QueryClassEvents,
+
+			Type:            M.QueryTypeUniqueUsers,
+			EventsCondition: M.EventCondAllGivenEvent,
+		}
+
+		//unique user count should return 2 for s0 to s1 with fliter property1
+		result, errCode, _ := M.RunEventsQuery(project.ID, query)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.NotNil(t, result)
+	})
+}
+
+func TestEventAnalyticsQueryWithNumericalBucketing(t *testing.T) {
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+	uri := "/sdk/event/track"
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	startTimestamp := U.UnixTimeBeforeDuration(time.Hour * 1)
+	t.Run("EventOccurrenceSingleBreakdown", func(t *testing.T) {
+		// 20 events with single incremented value.
+		eventName1 := "event1"
+		for i := 0; i < 20; i++ {
+			iUser, _ := M.CreateUser(&M.User{ProjectId: project.ID})
+			payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, `+
+				`"event_properties":{"$page_load_time":%d},"user_properties":{"numerical_property":%d}}`,
+				eventName1, iUser.ID, startTimestamp+10, i, i)
+			w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+			assert.Equal(t, http.StatusOK, w.Code)
+		}
+
+		query := M.Query{
+			From: startTimestamp,
+			To:   startTimestamp + 40,
+			EventsWithProperties: []M.QueryEventWithProperties{
+				M.QueryEventWithProperties{
+					Name: eventName1,
+				},
+			},
+			GroupByProperties: []M.QueryGroupByProperty{
+				M.QueryGroupByProperty{
+					Entity:   M.PropertyEntityEvent,
+					Property: "$page_load_time",
+					Type:     U.PropertyTypeNumerical,
+				},
+			},
+			Class:           M.QueryClassEvents,
+			Type:            M.QueryTypeEventsOccurrence,
+			EventsCondition: M.EventCondAllGivenEvent,
+		}
+
+		// Expected output should be 10 equal range buckets with 2 elements
+		result, errCode, _ := M.RunEventsQuery(project.ID, query)
+		assert.Equal(t, http.StatusOK, errCode)
+		for i := 0; i < 10; i++ {
+			assert.Equal(t, fmt.Sprintf("%d - %d", i*2, i*2+1), result.Rows[i][1])
+			assert.Equal(t, int64(2), result.Rows[i][2])
+		}
+
+		/*
+			New event with $page_load_time = 1
+			total element 21
+			10th percentile = (10/100)*21 = 2 postion = value 1
+			90th percentile = (90/100)*21 = 19 position = value 17
+			8 buckets range (1 - 17)  = 1-2, 3-4, 5-6, 7-8, 9-10 ... 15-16
+			new range min-0, { 8 buckets}, 17-max
+
+			User property numerical_property set as empty ($none).
+			Will create 11 buckets. including 1 $none.
+		*/
+		iUser, _ := M.CreateUser(&M.User{ProjectId: project.ID})
+		payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, `+
+			`"event_properties":{"$page_load_time":%d},"user_properties":{"numerical_property":""}}`,
+			eventName1, iUser.ID, startTimestamp+10, 1)
+		w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		result, errCode, _ = M.RunEventsQuery(project.ID, query)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.Equal(t, "0", result.Rows[0][1])
+		assert.Equal(t, int64(1), result.Rows[0][2])
+		assert.Equal(t, "1 - 2", result.Rows[1][1])
+		assert.Equal(t, int64(3), result.Rows[1][2])
+		assert.Equal(t, "15 - 16", result.Rows[8][1])
+		assert.Equal(t, int64(2), result.Rows[8][2])
+		assert.Equal(t, "17 - 19", result.Rows[9][1])
+		assert.Equal(t, int64(3), result.Rows[9][2])
+
+		// Using group by numerical property.
+		query.GroupByProperties[0].Entity = M.PropertyEntityUser
+		query.GroupByProperties[0].Property = "numerical_property"
+		result, errCode, _ = M.RunEventsQuery(project.ID, query)
+		assert.Equal(t, http.StatusOK, errCode)
+
+		assert.Equal(t, M.PropertyValueNone, result.Rows[0][1]) // First bucket should be $none.
+		assert.Equal(t, int64(1), result.Rows[0][2])            // Count of $none should be 1.
+		for i := 1; i <= 10; i++ {
+			assert.Equal(t, eventName1, result.Rows[i][0])
+			assert.Equal(t, fmt.Sprintf("%d - %d", i*2-2, i*2-1), result.Rows[i][1])
+			assert.Equal(t, int64(2), result.Rows[i][2])
+		}
+	})
+}

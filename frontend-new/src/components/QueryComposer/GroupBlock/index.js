@@ -1,59 +1,55 @@
 import React, { useState } from 'react';
+import { connect } from 'react-redux';
 import styles from './index.module.scss';
 import { SVG, Text } from 'factorsComponents';
 
 import { Select, Button } from 'antd';
-// import { group } from 'd3';
-// import { queries } from '@testing-library/react';
 
 const { OptGroup, Option } = Select;
 
-export default function GroupBlock({ events, groupBy }) {
-  const [isDDVisible, setDDVisible] = useState(false);
-  const [isValueDDVisible, setValueDDVisible] = useState(false);
-  const [groupByState, setGroupByState] = useState(groupBy);
+function GroupBlock({
+  queryType, events, groupByState, setGroupByState, filterOptions
+}) {
+  const [isDDVisible, setDDVisible] = useState([false]);
+  const [isValueDDVisible, setValueDDVisible] = useState([false]);
+  // const [groupByState, setGroupByState] = useState(groupBy);
 
-  const filterOptions = [
-    {
-      label: 'User Properties',
-      icon: 'fav',
-      values: [
-        'Country',
-        'City',
-        'Age'
-      ]
-    }, {
-      label: 'Event Properties',
-      icon: 'virtual',
-      values: [
-        'Add to WishList',
-        'Applied Coupon',
-        'Cart Updated'
-      ]
-    }
-  ];
+  const onChange = (value, index) => {
+    const newGroupByState = Object.assign({}, groupByState[index]);
+    value[0] === 'Event Properties'
+      ? newGroupByState.prop_category = 'event'
+      : newGroupByState.prop_category = 'user';
 
-  const onChange = (value) => {
-    const newGroupByState = Object.assign({}, groupByState);
-    newGroupByState.property = value;
-    setDDVisible(false);
-    setValueDDVisible(true);
-    setGroupByState(newGroupByState);
+    newGroupByState.property = value[1][0];
+    newGroupByState.prop_type = value[1][1];
+    setGroupByState(newGroupByState, index);
+    const ddVis = [...isDDVisible];
+    ddVis[index] = false;
+    const valDD = [isValueDDVisible];
+    valDD[index] = true;
+    setDDVisible(ddVis);
+    setValueDDVisible(valDD);
   };
 
-  const onEventValueChange = (value) => {
-    const newGroupByState = Object.assign({}, groupByState);
+  const onEventValueChange = (value, index) => {
+    const newGroupByState = Object.assign({}, groupByState[index]);
     newGroupByState.eventValue = value;
-    setValueDDVisible(false);
-    setGroupByState(newGroupByState);
+    setGroupByState(newGroupByState, index);
+    const ddVis = [...isDDVisible];
+    ddVis[index] = false;
+    setValueDDVisible(ddVis);
   };
 
-  const triggerDropDown = () => {
-    setDDVisible(true);
+  const triggerDropDown = (index) => {
+    const ddVis = [...isDDVisible];
+    ddVis[index] = true;
+    setDDVisible(ddVis);
   };
 
-  const triggerValueDropDown = () => {
-    setValueDDVisible(true);
+  const triggerValueDropDown = (index) => {
+    const ddVis = [...isValueDDVisible];
+    ddVis[index] = true;
+    setValueDDVisible(ddVis);
   };
 
   const renderGroupedEventOptions = () => {
@@ -65,7 +61,7 @@ export default function GroupBlock({ events, groupBy }) {
         </div>
       )}>
         {group.values.map((option, index) => (
-          <Option key={index} value={option}></Option>
+          <Option key={index} value={[group.label, option]}>{option[0]}</Option>
         ))}
       </OptGroup>
     ));
@@ -79,41 +75,51 @@ export default function GroupBlock({ events, groupBy }) {
         <Text type={'title'} level={6} weight={'thin'} extraClass={'m-0'}>Group By</Text>
       </div>
 
-      <div className={'flex justify-start items-center ml-10 mt-2'} >
-        {!isDDVisible && <Button type="link" onClick={triggerDropDown}>{!groupByState.property && <SVG name="plus" />} {groupByState.property ? groupByState.property : 'Select user property'}</Button> }
-        {isDDVisible
-          ? (<Select
-            placeholder="Select Property"
-            onChange={onChange} defaultOpen={true}
-            dropdownRender={menu => (
-              <div className={styles.group_block__selector_body}>
-                {menu}
-              </div>
-            )} style={{ width: 200 }} showArrow={false} showSearch>
-            {renderGroupedEventOptions()}
-          </Select>)
+      {
+        groupByState.map((opt, index) => (
+          <div key={0} className={'flex justify-start items-center ml-10 mt-2'} >
+          {!isDDVisible[index] && <Button type="link" onClick={() => triggerDropDown(index)}>{!opt.property && <SVG name="plus" />} {opt.property ? opt.property : 'Select user property'}</Button> }
+          {isDDVisible[index]
+            ? (<Select
+              placeholder="Select Property"
+              onChange={(val) => onChange(val, index)} defaultOpen={true}
+              dropdownRender={menu => (
+                <div className={styles.group_block__selector_body}>
+                  {menu}
+                </div>
+              )} style={{ width: 200 }} showArrow={false} showSearch>
+              {renderGroupedEventOptions()}
+            </Select>)
 
-          : null
-        }
+            : null
+          }
 
-      {groupByState.property &&
-      <>
-        <Text type={'title'} level={7} weight={'thin'} extraClass={'mx-2 m-0'}>with values</Text>
+        {opt.property && queryType === 'funnel' &&
+        <>
+          <Text type={'title'} level={7} weight={'thin'} extraClass={'mx-2 m-0'}>with values</Text>
 
-        {!isValueDDVisible && <Button type="link" onClick={triggerValueDropDown}>{groupByState.eventValue ? groupByState.eventValue : events[0].label }</Button> }
-        {isValueDDVisible &&
-         <Select style={{ width: 200 }} showArrow={false}
-            defaultOpen={true}
-            onChange={onEventValueChange} >
-            {events.map((event, index) => (
-              <Option key={index} value={event.label}></Option>
-            ))}
-          </Select>
-        }
-      </>
-        }
-      </div>
+          {!isValueDDVisible[index] && <Button type="link" onClick={triggerValueDropDown}>{opt.eventValue ? opt.eventValue : events[0].label }</Button> }
+          {isValueDDVisible[index] &&
+          <Select style={{ width: 200 }} showArrow={false}
+              defaultOpen={true}
+              onChange={(val) => onEventValueChange(val, index)} >
+              {events.map((event, index) => (
+                <Option key={index} value={event.label}></Option>
+              ))}
+            </Select>
+          }
+        </>
+          }
+        </div>
+        ))
 
+      }
     </div>
   );
 }
+
+const mapStateToProps = (state) => ({
+  activeProject: state.global.active_project
+});
+
+export default connect(mapStateToProps)(GroupBlock);

@@ -181,6 +181,10 @@ func (h *NumericHistogramStruct) MeanMap() map[string]float64 {
 	}
 	mean := h.Mean()
 	meanMap := make(map[string]float64)
+	if len(mean) == 0 {
+		mean = make([]float64, len(*h.Template))
+	}
+
 	for i := 0; i < len(*h.Template); i++ {
 		meanMap[(*h.Template)[i].Name] = mean[i]
 	}

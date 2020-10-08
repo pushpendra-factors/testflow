@@ -11,7 +11,7 @@ function NoBreakdownCharts({
 }) {
   const [hiddenEvents, setHiddenEvents] = useState([]);
   const appliedColors = generateColors(queries.length);
-  const [chartType, setChartType] = useState('linechart');
+  const [chartType, setChartType] = useState('sparklines');
 
   let chartsData = [];
   if (queries.length === 1) {

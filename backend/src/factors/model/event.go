@@ -130,69 +130,83 @@ func GetEventCountOfUsersByEventName(projectID uint64, userIDs []string, eventNa
 	return count, http.StatusFound
 }
 
-func addEventDetailsToCache(project_id uint64, event *Event) {
+func addEventDetailsToCache(projectId uint64, event *Event, isUpdateEventProperty bool) {
 	// TODO: Remove this check after enabling caching realtime.
-	keysToIncr := make([]*cacheRedis.Key, 0)
+	blackListedForUpdate := make(map[string]bool)
+	blackListedForUpdate[U.EP_PAGE_SPENT_TIME] = true
+	blackListedForUpdate[U.EP_PAGE_SCROLL_PERCENT] = true
+
+	eventsToIncr := make([]*cacheRedis.Key, 0)
 	propertiesToIncr := make([]*cacheRedis.Key, 0)
 	valuesToIncr := make([]*cacheRedis.Key, 0)
-	if !C.GetIfRealTimeEventUserCachingIsEnabled(project_id) {
+	if !C.GetIfRealTimeEventUserCachingIsEnabled(projectId) {
 		return
 	}
-	logCtx := log.WithField("project_id", project_id)
+	logCtx := log.WithField("project_id", projectId)
 
-	eventNameDetails, err := GetEventNameFromEventNameId(event.EventNameId, project_id)
+	eventNameDetails, err := GetEventNameFromEventNameId(event.EventNameId, projectId)
 	if err != nil {
 		logCtx.WithError(err).Info("Failed to get event name from id")
 		return
 	}
-	event_name := eventNameDetails.Name
+	eventName := eventNameDetails.Name
 
 	propertyMap, err := U.DecodePostgresJsonb(&event.Properties)
 	if err != nil {
 		logCtx.WithError(err).Info("Failed to decode json blob properties")
 		return
 	}
-	event_properties := *propertyMap
+	eventProperties := *propertyMap
 
 	currentTime := U.TimeNow()
 	currentTimeDatePart := currentTime.Format(U.DATETIME_FORMAT_YYYYMMDD)
 
-	eventNamesKey, err := GetEventNamesOrderByOccurrenceAndRecencyCacheKey(project_id, event_name, currentTimeDatePart)
+	eventNamesKey, err := GetEventNamesOrderByOccurrenceAndRecencyCacheKey(projectId, eventName, currentTimeDatePart)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get cache key - events")
 		return
 	}
-	keysToIncr = append(keysToIncr, eventNamesKey)
-	for property, value := range event_properties {
-		category := U.GetPropertyTypeByKeyValue(property, value)
-		var propertyValue string
-		if category == U.PropertyTypeUnknown && reflect.TypeOf(value).Kind() == reflect.Bool {
-			category = U.PropertyTypeCategorical
-			propertyValue = fmt.Sprintf("%v", value)
-		}
-		if reflect.TypeOf(value).Kind() == reflect.String {
-			propertyValue = value.(string)
-		}
-		propertyCategoryKey, err := GetPropertiesByEventCategoryCacheKey(project_id, event_name, property, category, currentTimeDatePart)
-		if err != nil {
-			logCtx.WithError(err).Error("Failed to get cache key - property category")
-			return
-		}
-		propertiesToIncr = append(propertiesToIncr, propertyCategoryKey)
-		if category == U.PropertyTypeCategorical {
-			if propertyValue != "" {
-				valueKey, err := GetValuesByEventPropertyCacheKey(project_id, event_name, property, propertyValue, currentTimeDatePart)
-				if err != nil {
-					logCtx.WithError(err).Error("Failed to get cache key - values")
-					return
+	eventsToIncr = append(eventsToIncr, eventNamesKey)
+
+	for property, value := range eventProperties {
+		if !blackListedForUpdate[property] || !isUpdateEventProperty {
+			category := U.GetPropertyTypeByKeyValue(property, value)
+			var propertyValue string
+			if category == U.PropertyTypeUnknown && reflect.TypeOf(value).Kind() == reflect.Bool {
+				category = U.PropertyTypeCategorical
+				propertyValue = fmt.Sprintf("%v", value)
+			}
+			if reflect.TypeOf(value).Kind() == reflect.String {
+				propertyValue = value.(string)
+			}
+			propertyCategoryKey, err := GetPropertiesByEventCategoryCacheKey(projectId, eventName, property, category, currentTimeDatePart)
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to get cache key - property category")
+				return
+			}
+			propertiesToIncr = append(propertiesToIncr, propertyCategoryKey)
+			if category == U.PropertyTypeCategorical {
+				if propertyValue != "" {
+					valueKey, err := GetValuesByEventPropertyCacheKey(projectId, eventName, property, propertyValue, currentTimeDatePart)
+					if err != nil {
+						logCtx.WithError(err).Error("Failed to get cache key - values")
+						return
+					}
+					valuesToIncr = append(valuesToIncr, valueKey)
 				}
-				valuesToIncr = append(valuesToIncr, valueKey)
 			}
 		}
 	}
+	begin := U.TimeNow()
+	keysToIncr := make([]*cacheRedis.Key, 0)
+	if !isUpdateEventProperty {
+		keysToIncr = append(keysToIncr, eventsToIncr...)
+	}
 	keysToIncr = append(keysToIncr, propertiesToIncr...)
 	keysToIncr = append(keysToIncr, valuesToIncr...)
-	begin := U.TimeNow()
+	if len(keysToIncr) <= 0 {
+		return
+	}
 	counts, err := cacheRedis.IncrPersistentBatch(keysToIncr...)
 	end := U.TimeNow()
 	logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("EV:Incr")
@@ -205,48 +219,51 @@ func addEventDetailsToCache(project_id uint64, event *Event) {
 	newEventCount := int64(0)
 	newPropertiesCount := int64(0)
 	newValuesCount := int64(0)
-	if counts[0] == 1 {
-		newEventCount++
-	}
-	for _, value := range counts[1 : len(propertiesToIncr)+1] {
-		if value == 1 {
-			newPropertiesCount++
+	index := 0
+	if len(counts) > 0 {
+		if counts[index] == 1 && !isUpdateEventProperty {
+			newEventCount++
+			index++
+		}
+		for _, value := range counts[index : len(propertiesToIncr)+index] {
+			if value == 1 {
+				newPropertiesCount++
+			}
+		}
+		for _, value := range counts[len(propertiesToIncr)+index : len(propertiesToIncr)+len(valuesToIncr)+index] {
+			if value == 1 {
+				newValuesCount++
+			}
 		}
 	}
-	for _, value := range counts[len(propertiesToIncr)+1 : len(propertiesToIncr)+len(valuesToIncr)+1] {
-		if value == 1 {
-			newValuesCount++
-		}
-	}
-
-	countsInCache := make(map[*cacheRedis.Key]int64)
+	countsInCache := make([]cacheRedis.KeyCountTuple, 0)
 	if newEventCount > 0 {
-		eventsCountKey, err := GetEventNamesOrderByOccurrenceAndRecencyCountCacheKey(project_id, currentTimeDatePart)
+		eventsCountKey, err := GetEventNamesOrderByOccurrenceAndRecencyCountCacheKey(projectId, currentTimeDatePart)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to get cache key - eventsCount")
 			return
 		}
-		countsInCache[eventsCountKey] = newEventCount
+		countsInCache = append(countsInCache, cacheRedis.KeyCountTuple{Key: eventsCountKey, Count: newEventCount})
 	}
 	if newPropertiesCount > 0 {
-		propertiesCountKey, err := GetPropertiesByEventCategoryCountCacheKey(project_id, currentTimeDatePart)
+		propertiesCountKey, err := GetPropertiesByEventCategoryCountCacheKey(projectId, currentTimeDatePart)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to get cache key - propertiesCount")
 			return
 		}
-		countsInCache[propertiesCountKey] = newPropertiesCount
+		countsInCache = append(countsInCache, cacheRedis.KeyCountTuple{Key: propertiesCountKey, Count: newPropertiesCount})
 	}
 	if newValuesCount > 0 {
-		valuesCountKey, err := GetValuesByEventPropertyCountCacheKey(project_id, currentTimeDatePart)
+		valuesCountKey, err := GetValuesByEventPropertyCountCacheKey(projectId, currentTimeDatePart)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to get cache key - valuesCount")
 			return
 		}
-		countsInCache[valuesCountKey] = newValuesCount
+		countsInCache = append(countsInCache, cacheRedis.KeyCountTuple{Key: valuesCountKey, Count: newValuesCount})
 	}
 	if len(countsInCache) > 0 {
 		begin := U.TimeNow()
-		err = cacheRedis.IncrByBatchPersistent(countsInCache)
+		_, err = cacheRedis.IncrByBatchPersistent(countsInCache)
 		end := U.TimeNow()
 		logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("C:EV:Incr")
 		if err != nil {
@@ -292,7 +309,7 @@ func CreateEvent(event *Event) (*Event, int) {
 	event.PropertiesUpdatedTimestamp = event.Timestamp
 
 	//Adding the data to cache. Even if it fails, continue silent
-	addEventDetailsToCache(event.ProjectId, event)
+	addEventDetailsToCache(event.ProjectId, event, false)
 	db := C.GetServices().Db
 	transTime := gorm.NowFunc()
 	rows, err := db.Raw("INSERT INTO events (id, customer_event_id,project_id,user_id,user_properties_id,session_id,event_name_id,count,properties,properties_updated_timestamp,timestamp,created_at,updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING events.id",
@@ -525,7 +542,7 @@ func GetRecentEventPropertyValuesWithLimits(projectID uint64, eventName string,
 		logCtx.WithError(err).Error("Failed scanning property value on type classifcation.")
 		return nil, "", err
 	}
-	return values, U.GetCategoryType(values), nil
+	return values, U.GetCategoryType(property, values), nil
 }
 
 func UpdateEventProperties(projectId uint64, id string,
@@ -568,7 +585,12 @@ func UpdateEventProperties(projectId uint64, id string,
 			"update": updatedFields}).WithError(err).Error("Failed to update event properties.")
 		return http.StatusInternalServerError
 	}
-
+	updatedProperties := make(map[string]interface{}, 0)
+	updatedProperties = *properties
+	updatedPropertiesOnlyJsonBlob, err := U.EncodeToPostgresJsonb(&updatedProperties)
+	if err == nil {
+		addEventDetailsToCache(projectId, &Event{EventNameId: event.EventNameId, Properties: *updatedPropertiesOnlyJsonBlob}, true)
+	}
 	return http.StatusAccepted
 }
 

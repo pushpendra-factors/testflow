@@ -565,7 +565,7 @@ func getAdwordsMetricsBreakdown(projectId uint64, customerAccountId string,
 		for ci := range resultRows[ri] {
 			// if not group key and nil: zero.
 			if ci > 0 && resultRows[ri][ci] == nil {
-				resultRows[ri][ci] = 0
+				resultRows[ri][ci] = float64(0)
 			}
 		}
 	}

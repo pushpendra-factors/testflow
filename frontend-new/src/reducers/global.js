@@ -55,9 +55,9 @@ export function fetchProjects(projects) {
     let host = BUILD_CONFIG.backend_host;
     host = (host[host.length - 1] === '/') ? host : host + '/';
     return new Promise((resolve, reject) => {
-      get(host + 'projects', {})
+      get(dispatch, host + 'projects', {})
         .then((response) => {
-          dispatch(setActiveProject(response.data.projects[1]));
+          dispatch(setActiveProject(response.data.projects[0]));
           resolve(dispatch(fetchProjectAction(response.data.projects)));
         }).catch((err) => {
           resolve(dispatch(fetchProjectAction([])));
@@ -73,7 +73,7 @@ export function createProject(projectName){
     let host = BUILD_CONFIG.backend_host;
     host = (host[host.length - 1] === '/') ? host : host + '/';
     return new Promise((resolve, reject) => {
-      post(host + "projects", { name: projectName })
+      post(dispatch, host + "projects", { name: projectName })
         .then((r) => {
           if (r.ok) {
             dispatch({ type: "CREATE_PROJECT_FULFILLED", payload: r.data })

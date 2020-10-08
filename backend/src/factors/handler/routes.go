@@ -15,6 +15,7 @@ const ROUTE_SDK_AMP_ROOT = "/sdk/amp"
 const ROUTE_PROJECTS_ROOT = "/projects"
 const ROUTE_INTEGRATIONS_ROOT = "/integrations"
 const ROUTE_DATA_SERVICE_ROOT = "/data_service"
+const ROUTE_VERSION_V1 = "/v1"
 
 func InitAppRoutes(r *gin.Engine) {
 	r.GET("/status", func(c *gin.Context) {
@@ -77,6 +78,9 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/reports", GetReportsHandler)
 	authRouteGroup.GET("/:project_id/reports/:report_id", GetReportHandler)
 	authRouteGroup.POST("/:project_id/attribution/query", AttributionHandler)
+
+	// /v1 API endpoints
+	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/query", EventsQueryHandler)
 
 	// TODO
 	// Scope this with Project Admin

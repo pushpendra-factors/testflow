@@ -523,17 +523,22 @@ func scan(pattern string, perScanCount int64, limit int64, persistent bool) ([]*
 	return cacheKeys, nil
 }
 
-func IncrByBatch(keys map[*Key]int64) error {
+type KeyCountTuple struct {
+	Key   *Key
+	Count int64
+}
+
+func IncrByBatch(keys []KeyCountTuple) ([]int64, error) {
 	return incrByBatch(keys, false)
 }
 
-func IncrByBatchPersistent(keys map[*Key]int64) error {
+func IncrByBatchPersistent(keys []KeyCountTuple) ([]int64, error) {
 	return incrByBatch(keys, true)
 }
 
-func incrByBatch(keys map[*Key]int64, persistent bool) error {
+func incrByBatch(keys []KeyCountTuple, persistent bool) ([]int64, error) {
 	if len(keys) == 0 {
-		return ErrorInvalidValues
+		return nil, ErrorInvalidValues
 	}
 	var redisConn redis.Conn
 	if persistent {
@@ -545,24 +550,28 @@ func incrByBatch(keys map[*Key]int64, persistent bool) error {
 
 	err := redisConn.Send("MULTI")
 	if err != nil {
-		return err
+		return nil, err
 	}
-	for key, value := range keys {
-		cKey, err := key.Key()
+	for _, tuple := range keys {
+		cKey, err := tuple.Key.Key()
 		if err != nil {
-			return err
+			return nil, err
 		}
-		err = redisConn.Send("INCRBY", cKey, value)
+		err = redisConn.Send("INCRBY", cKey, tuple.Count)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
-	_, err = redis.Values(redisConn.Do("EXEC"))
+	res, err := redis.Values(redisConn.Do("EXEC"))
 	if err != nil {
-		return err
+		return nil, err
+	}
+	counts := make([]int64, 0)
+	if err := redis.ScanSlice(res, &counts); err != nil {
+		return nil, err
 	}
 	// TODO: Check for partial failures
-	return nil
+	return counts, nil
 }
 
 func DecrByBatch(keys map[*Key]int64) error {
