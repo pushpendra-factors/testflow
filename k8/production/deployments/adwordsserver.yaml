@@ -28,13 +28,13 @@ spec:
         cloud.google.com/gke-nodepool: default-pool
       containers:
       - name: adwordsserver
-        image: us.gcr.io/factors-production/adwords-server:v0.01-c4141cb
+        image: us.gcr.io/factors-staging/python-server:v0.13-4bcdb5e2
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8091
         volumeMounts:
         - name: workdir
-          mountPath: /usr/local/var/factors
+          mountPath: $(ADWORDS_SERVER_PATH)
         resources:
           requests:
             memory: "100M"
@@ -66,6 +66,10 @@ spec:
           - $(GOOGLE_OAUTH_SECRET)
           - --developer_token
           - $(GOOGLE_ADWORDS_DEVELOPER_TOKEN)
+          - --sentry_dsn
+          - $(SENTRY_DSN)
+          - --server_name
+          - "adwordsserver"          
         envFrom:
         - configMapRef:
             name: config-adwordsserver
@@ -73,6 +77,8 @@ spec:
             name: config-env
         - secretRef:
             name: secret-google
+        - secretRef:
+            name: secret-sentry
       volumes:
       - name: workdir
         emptyDir: {}

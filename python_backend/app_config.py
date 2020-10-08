@@ -1,0 +1,22 @@
+from lib.adwords.config.app_config import AppConfig as AdwordsAppConfig
+from lib.adwords.config.oauth_config import OauthConfig as AdwordsOauthConfig
+from lib.data_services.sentry.sentry_config import SentryConfig
+
+
+class AppConfig:
+    ADWORDS_APP = None
+    ADWORDS_OAUTH = None
+    SENTRY = None
+
+    @classmethod
+    def build(cls, argv):
+        cls.build_adwords(argv)
+
+    @classmethod
+    def build_adwords(cls, argv):
+        AdwordsAppConfig.build(argv)
+        AdwordsOauthConfig.build(argv)
+        SentryConfig.build(argv)
+        cls.ADWORDS_APP = AdwordsAppConfig
+        cls.ADWORDS_OAUTH = AdwordsOauthConfig
+        cls.SENTRY = SentryConfig

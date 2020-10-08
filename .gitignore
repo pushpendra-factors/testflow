@@ -28,11 +28,13 @@ misc/ingest_events/src/github.com/**
 
 # adwords
 integrations/adwords/**/.swp
+**/__pycache__
 
 */.DS_Store
 **/.DS_Store
 **/*.rdb
 .vscode
+**/.idea
 
 # Android SDK
 sdk/android/*.iml
