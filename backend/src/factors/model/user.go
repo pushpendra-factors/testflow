@@ -627,7 +627,7 @@ func GetRecentUserPropertyValuesWithLimits(projectID uint64, propertyKey string,
 		return nil, "", err
 	}
 
-	return values, U.GetCategoryType(values), nil
+	return values, U.GetCategoryType(propertyKey, values), nil
 }
 
 //GetUserPropertiesByProject This method iterates over n days and gets user properties from cache for a given project

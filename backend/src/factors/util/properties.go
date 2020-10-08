@@ -450,7 +450,6 @@ var NUMERICAL_PROPERTY_BY_NAME = [...]string{
 	UP_SCREEN_WIDTH,
 	UP_SCREEN_HEIGHT,
 	UP_SCREEN_DENSITY,
-	UP_JOIN_TIME, // Todo: move this to property type datetime.
 	UP_SESSION_COUNT,
 	EP_SESSION_COUNT,
 	UP_PAGE_COUNT,
@@ -465,6 +464,10 @@ var CATEGORICAL_PROPERTY_BY_NAME = [...]string{
 	UP_INITIAL_ADGROUP_ID,
 	UP_INITIAL_CAMPAIGN_ID,
 	SP_IS_FIRST_SESSION,
+}
+
+var DATETIME_PROPERTY_BY_NAME = [...]string{
+	UP_JOIN_TIME,
 }
 
 var EVENT_TO_USER_INITIAL_PROPERTIES = map[string]string{
@@ -1020,6 +1023,16 @@ func isCategoricalPropertyByName(propertyKey string) bool {
 	return false
 }
 
+func isDateTimePropertyByName(propertyKey string) bool {
+	for _, key := range DATETIME_PROPERTY_BY_NAME {
+		if key == propertyKey {
+			return true
+		}
+	}
+
+	return false
+}
+
 func GetPropertyTypeByKeyValue(propertyKey string, propertyValue interface{}) string {
 	// PropertyKey will be set to null if the pre-mentioned classfication behaviour need to be supressed
 	if propertyKey != "" {
@@ -1029,6 +1042,15 @@ func GetPropertyTypeByKeyValue(propertyKey string, propertyValue interface{}) st
 			}
 			if isCategoricalPropertyByName(propertyKey) {
 				return PropertyTypeCategorical
+			}
+			if isDateTimePropertyByName(propertyKey) {
+				return PropertyTypeDateTime
+			}
+		}
+		if IsPropertyNameContainsDateOrTime(propertyKey) {
+			_, status := ConvertDateTimeValueToNumber(propertyValue)
+			if status == true {
+				return PropertyTypeDateTime
 			}
 		}
 	}
@@ -1041,6 +1063,22 @@ func GetPropertyTypeByKeyValue(propertyKey string, propertyValue interface{}) st
 	default:
 		return PropertyTypeUnknown
 	}
+}
+
+func IsPropertyNameContainsDateOrTime(propertyName string) bool {
+	propertyNameAllLower := strings.ToLower(propertyName)
+	if strings.Contains(propertyNameAllLower, "date") || strings.Contains(propertyNameAllLower, "timestamp") {
+		return true
+	}
+	return false
+}
+
+func ConvertDateTimeValueToNumber(propertyValue interface{}) (interface{}, bool) {
+	propertyValueFloat64, err := GetPropertyValueAsFloat64(propertyValue)
+	if err == nil {
+		return propertyValueFloat64, true
+	}
+	return propertyValue, false
 }
 
 func GetUpdateAllowedEventProperties(properties *PropertiesMap) *PropertiesMap {
@@ -1359,6 +1397,9 @@ func SanitizeProperties(properties *PropertiesMap) {
 		if strings.HasSuffix(k, "url") {
 			(*properties)[k] = strings.TrimSuffix(v.(string), "/")
 		}
+		if IsPropertyNameContainsDateOrTime(k) {
+			(*properties)[k], _ = ConvertDateTimeValueToNumber(v)
+		}
 	}
 }
 
@@ -1511,12 +1552,19 @@ type PropertyValue struct {
 	ValueType string `json:"value_type"`
 }
 
-func GetCategoryType(values []PropertyValue) string {
+func GetCategoryType(propertyName string, values []PropertyValue) string {
 	if len(values) == 0 {
 		return ""
 	}
 	valueType := make(map[string]int64)
 	for _, value := range values {
+		if IsPropertyNameContainsDateOrTime(propertyName) {
+			_, status := ConvertDateTimeValueToNumber(value.Value)
+			if status == true {
+				valueType[PropertyTypeDateTime]++
+				continue
+			}
+		}
 		if value.ValueType == "string" {
 			valueType[PropertyTypeCategorical]++
 		}
