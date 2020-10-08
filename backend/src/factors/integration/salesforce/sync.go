@@ -290,12 +290,12 @@ func GetAccessToken(ps *M.SalesforceProjectSettings, redirectUrl string) (string
 		return "", err
 	}
 
-	access_token, exists := jsonResponse["access_token"].(string)
-	if !exists && access_token == "" {
+	accessToken, exists := jsonResponse["access_token"].(string)
+	if !exists && accessToken == "" {
 		return "", errors.New("failed to get access token by refresh token")
 	}
 
-	return access_token, nil
+	return accessToken, nil
 }
 
 // SyncDocuments syncs from salesforce to database by doc type
@@ -304,10 +304,15 @@ func SyncDocuments(ps *M.SalesforceProjectSettings, lastSyncInfo map[string]int6
 
 	for docType, timestamp := range lastSyncInfo {
 		var sfFormatedTime string
-		if timestamp != 0 {
-			t := time.Unix(timestamp, 0)
-			sfFormatedTime = t.UTC().Format(M.SalesforceDocumentTimeLayout)
+		var syncAll bool
+		if timestamp == 0 {
+			currentTime := time.Now().AddDate(0, 0, -30).UTC()                                                           // get from last 30 days
+			timestamp = currentTime.Unix() - int64(currentTime.Hour()*3600+currentTime.Minute()*60+currentTime.Second()) //start of the day
+			syncAll = true
 		}
+
+		t := time.Unix(timestamp, 0)
+		sfFormatedTime = t.UTC().Format(M.SalesforceDocumentTimeLayout)
 
 		objectStatus, err := syncByType(ps, accessToken, docType, sfFormatedTime)
 		if err != nil || len(objectStatus.Failures) != 0 {
@@ -325,7 +330,7 @@ func SyncDocuments(ps *M.SalesforceProjectSettings, lastSyncInfo map[string]int6
 			objectStatus.Status = "Success"
 		}
 
-		objectStatus.SyncAll = timestamp == 0
+		objectStatus.SyncAll = syncAll
 		allObjectStatus = append(allObjectStatus, objectStatus)
 	}
 

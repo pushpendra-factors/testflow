@@ -137,13 +137,6 @@ upload-salesforce-enrich: export IMAGE_NAME=salesforce-enrich-job
 upload-salesforce-enrich: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/salesforce-enrich-job:$(TAG)
 
-pack-salesforce-sync:
-	docker build -t us.gcr.io/factors-$(ENV)/salesforce-sync-job:$(TAG) -f Dockerfile.salesforce_sync_job .
-
-upload-salesforce-sync: export IMAGE_NAME=salesforce-sync-job
-upload-salesforce-sync: notify-deployment
-	docker push us.gcr.io/factors-$(ENV)/salesforce-sync-job:$(TAG)
-
 pack-sdk-request-worker:
 	docker build -t us.gcr.io/factors-$(ENV)/sdk-request-worker:$(TAG) -f Dockerfile.sdk_request_worker .
 

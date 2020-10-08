@@ -3,7 +3,7 @@ kind: CronJob
 metadata:
   name: salesforce-enrich-job
 spec:
-  schedule: "0 22 * * *" # In UTC
+  schedule: "0 20 * * *" # In UTC
   successfulJobsHistoryLimit: 5
   failedJobsHistoryLimit: 5
   jobTemplate:
@@ -22,6 +22,8 @@ spec:
             args:
             - --env
             - $(ENV)
+            - --api_domain
+            - $(API_DOMAIN)
             - --db_host
             - $(DB_HOST)
             - --db_port
@@ -40,6 +42,10 @@ spec:
             - $(PERSISTENT_REDIS_HOST)
             - --redis_port_ps
             - $(PERSISTENT_REDIS_PORT)
+            - --salesforce_app_secret
+            - $(SALESFORCE_APP_SECRET)
+            - --salesforce_app_id
+            - $(SALESFORCE_APP_ID)
             - --sentry_dsn
             - $(SENTRY_DSN)
             envFrom:
@@ -48,11 +54,13 @@ spec:
             - configMapRef:
                 name: config-postgres
             - secretRef:
+                name: secret-sentry
+            - secretRef:
+                name: secret-salesforce
+            - secretRef:
                 name: secret-postgres
             - configMapRef:
                 name: config-redis
-            - secretRef:
-                name: secret-sentry
             - configMapRef:
                 name: config-persistent-redis
           restartPolicy: OnFailure

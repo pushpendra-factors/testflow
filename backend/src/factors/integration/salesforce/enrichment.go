@@ -83,6 +83,7 @@ func filterPropertyFieldsByProjectID(projectID uint64, properties *map[string]in
 			}
 		}
 	}
+	delete(*properties, "attributes") // delte nested meta object
 }
 
 func getSalesforceAccountID(document *M.SalesforceDocument) (string, error) {
