@@ -122,23 +122,25 @@ func transformResultsForEachEventQuery(oldResult *QueryResult, query Query) (*Qu
 		headerIndex++
 	}
 
-	datetimeToNewResultRowNoMap := make(map[interface{}]int)
+	datetimeToNewResultRowNoMap := make(map[int64]int)
+	datetimeEncountered := make(map[int64]bool)
 	rowNo := 0
 	for _, row := range oldResult.Rows {
-		newRow := make([]interface{}, len(newResultHeaders), len(newResultHeaders))
 		// headers : datetime, event1, event2, ...
-		dateTime := row[dateIndex].(time.Time)
-		newRow[0] = dateTime
+		dateTime := row[dateIndex].(time.Time).Unix()
 		eventName := row[eventNameIndex].(string)
 		eventNameHeaderIndex := eventsHeaderIndexMap[eventName]
 
-		if _, exists := datetimeToNewResultRowNoMap[dateTime]; exists {
+		if _, exists := datetimeEncountered[dateTime]; exists && datetimeEncountered[dateTime] == true {
 			newResultRowNo := datetimeToNewResultRowNoMap[dateTime]
 			newResultRows[newResultRowNo][eventNameHeaderIndex] = row[countIndex]
 		} else {
+			newRow := make([]interface{}, len(newResultHeaders), len(newResultHeaders))
+			newRow[0] = row[dateIndex]
 			newRow[eventNameHeaderIndex] = row[countIndex]
 			newResultRows = append(newResultRows, newRow)
 			datetimeToNewResultRowNoMap[dateTime] = rowNo
+			datetimeEncountered[dateTime] = true
 			rowNo++
 		}
 	}
