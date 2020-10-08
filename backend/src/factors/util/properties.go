@@ -33,6 +33,16 @@ const EVENT_NAME_HUBSPOT_CONTACT_CREATED = "$hubspot_contact_created"
 const EVENT_NAME_HUBSPOT_CONTACT_UPDATED = "$hubspot_contact_updated"
 const EVENT_NAME_HUBSPOT_DEAL_STATE_CHANGED = "$hubspot_deal_state_changed"
 
+// Integration: Salesforce event names.
+const EVENT_NAME_SALESFORCE_CONTACT_CREATED = "$sf_contact_created"
+const EVENT_NAME_SALESFORCE_CONTACT_UPDATED = "$sf_contact_updated"
+const EVENT_NAME_SALESFORCE_LEAD_CREATED = "$sf_lead_created"
+const EVENT_NAME_SALESFORCE_LEAD_UPDATED = "$sf_lead_updated"
+const EVENT_NAME_SALESFORCE_ACCOUNT_CREATED = "$sf_Account_created"
+const EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED = "$sf_Account_updated"
+const EVENT_NAME_SALESFORCE_OPPORTUNITY_CREATED = "$sf_opportunity_created"
+const EVENT_NAME_SALESFORCE_OPPORTUNITY_UPDATED = "$sf_opportunity_updated"
+
 // Integration shopify event names.
 const EVENT_NAME_SHOPIFY_CHECKOUT_CREATED = "$shopify_checkout_created"
 const EVENT_NAME_SHOPIFY_CHECKOUT_UPDATED = "$shopify_checkout_updated"
@@ -55,6 +65,14 @@ var ALLOWED_INTERNAL_EVENT_NAMES = [...]string{
 	EVENT_NAME_SHOPIFY_ORDER_PAID,
 	EVENT_NAME_SHOPIFY_ORDER_CANCELLED,
 	EVENT_NAME_SHOPIFY_CART_UPDATED,
+	EVENT_NAME_SALESFORCE_CONTACT_CREATED,
+	EVENT_NAME_SALESFORCE_CONTACT_UPDATED,
+	EVENT_NAME_SALESFORCE_LEAD_CREATED,
+	EVENT_NAME_SALESFORCE_LEAD_UPDATED,
+	EVENT_NAME_SALESFORCE_ACCOUNT_CREATED,
+	EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED,
+	EVENT_NAME_SALESFORCE_OPPORTUNITY_CREATED,
+	EVENT_NAME_SALESFORCE_OPPORTUNITY_UPDATED,
 }
 
 /* Properties Constants */
@@ -422,6 +440,7 @@ const NAME_PREFIX_ESCAPE_CHAR = "_"
 const QUERY_PARAM_PROPERTY_PREFIX = "$qp_"
 const QUERY_PARAM_UTM_PREFIX = QUERY_PARAM_PROPERTY_PREFIX + "utm_"
 const HUBSPOT_PROPERTY_PREFIX = "$hubspot_"
+const SALESFORCE_PROPERTY_PREFIX = "$salesforce_"
 
 // Platforms
 const PLATFORM_WEB = "web"
@@ -908,6 +927,7 @@ func GetValidatedUserProperties(properties *PropertiesMap) *PropertiesMap {
 		if err := isPropertyTypeValid(v); err == nil {
 			if strings.HasPrefix(k, NAME_PREFIX) &&
 				!strings.HasPrefix(k, HUBSPOT_PROPERTY_PREFIX) &&
+				!strings.HasPrefix(k, SALESFORCE_PROPERTY_PREFIX) &&
 				!isSDKAllowedUserProperty(&k) {
 
 				validatedProperties[fmt.Sprintf("%s%s", NAME_PREFIX_ESCAPE_CHAR, k)] = v
@@ -931,6 +951,7 @@ func GetValidatedEventProperties(properties *PropertiesMap) *PropertiesMap {
 			if strings.HasPrefix(k, NAME_PREFIX) &&
 				!strings.HasPrefix(k, QUERY_PARAM_PROPERTY_PREFIX) &&
 				!strings.HasPrefix(k, HUBSPOT_PROPERTY_PREFIX) &&
+				!strings.HasPrefix(k, SALESFORCE_PROPERTY_PREFIX) &&
 				!isSDKAllowedEventProperty(&k) {
 				propertyKey = fmt.Sprintf("%s%s", NAME_PREFIX_ESCAPE_CHAR, k)
 			} else {

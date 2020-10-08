@@ -9,11 +9,13 @@ import (
 	"strings"
 )
 
-const SALESFORCE_TOKEN_URL = "login.salesforce.com/services/oauth2/token"
-const SALESFORCE_AUTH_URL = "login.salesforce.com/services/oauth2/authorize"
-const SALESFORCE_APP_SETTINGS_URL = "/#/settings/salesforce"
-const SALESFORCE_REFRESH_TOKEN = "refresh_token"
-const SALESFORCE_INSTANCE_URL = "instance_url"
+const (
+	SALESFORCE_TOKEN_URL        = "login.salesforce.com/services/oauth2/token"
+	SALESFORCE_AUTH_URL         = "login.salesforce.com/services/oauth2/authorize"
+	REFRESH_TOKEN_URL           = "https://login.salesforce.com/services/oauth2/token"
+	SALESFORCE_APP_SETTINGS_URL = "/#/settings/salesforce"
+	SALESFORCE_REFRESH_TOKEN    = "refresh_token"
+)
 
 type OAuthState struct {
 	ProjectId uint64  `json:"pid"`

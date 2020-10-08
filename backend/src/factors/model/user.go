@@ -298,6 +298,37 @@ func GetUserLatestByCustomerUserId(projectId uint64, customerUserId string) (*Us
 	return &user, http.StatusFound
 }
 
+func GetExistingCustomerUserID(projectId uint64, arrayCustomerUserID []string) (map[string]string, int) {
+	db := C.GetServices().Db
+
+	customerUserIDMap := make(map[string]string)
+
+	if len(arrayCustomerUserID) == 0 {
+		return nil, http.StatusBadRequest
+	}
+
+	queryStmnt := "SELECT" + " " + "DISTINCT(customer_user_id), id" + " FROM " + "users" + " WHERE " + "project_id = ? AND customer_user_id IN ( ? )"
+	rows, err := db.Raw(queryStmnt, projectId, arrayCustomerUserID).Rows()
+	if err != nil {
+		log.WithError(err).Error("Failed to get customer_user_id.")
+		return nil, http.StatusInternalServerError
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var customerID string
+		var userID string
+		if err := rows.Scan(&customerID, &userID); err != nil {
+			log.WithError(err).Error("Failed scanning rows on GetExistingCustomerUserID")
+			return nil, http.StatusInternalServerError
+		}
+		customerUserIDMap[customerID] = userID
+	}
+
+	return customerUserIDMap, http.StatusFound
+}
+
 func GetUserBySegmentAnonymousId(projectId uint64, segAnonId string) (*User, int) {
 	db := C.GetServices().Db
 

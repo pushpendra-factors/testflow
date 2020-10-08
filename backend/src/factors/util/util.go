@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
+	"github.com/ttacon/libphonenumber"
 )
 
 const SECONDS_IN_A_DAY int64 = 24 * 60 * 60
@@ -498,4 +499,120 @@ func IsContainsAnySubString(src string, sub ...string) bool {
 	}
 
 	return false
+}
+
+// isPureisPurePhoneNumberNumber checks for pure number string
+func isPurePhoneNumber(phoneNo string) bool {
+	if _, err := strconv.Atoi(phoneNo); err == nil {
+		return true
+	}
+	return false
+}
+
+func getPhoneNoSeparatorIndex(phoneNo *string) []int {
+	var separatorsIndex []int
+	separators := []string{" ", "-"}
+	for _, seperator := range separators {
+		if spIndex := strings.Index(*phoneNo, seperator); spIndex != -1 {
+			separatorsIndex = append(separatorsIndex, spIndex)
+		}
+	}
+	return separatorsIndex
+}
+
+// isPhoneValidCountryCode checks if country code exist in libphonenumber list
+func isPhoneValidCountryCode(cCode string) bool {
+	if code, err := strconv.Atoi(cCode); err == nil {
+		if _, exist := libphonenumber.CountryCodeToRegion[code]; exist {
+			return true
+		}
+	}
+	return false
+}
+
+// maybeAddInternationalPrefix adds if missing '+' at the beginning for the libphonenumber to work
+func maybeAddInternationalPrefix(phoneNo *string) bool {
+	// Ex 91 1234567890
+	separatorsIndex := getPhoneNoSeparatorIndex(phoneNo)
+
+	for _, indexValue := range separatorsIndex {
+		cCode := string((*phoneNo)[:indexValue])
+		if isPhoneValidCountryCode(cCode) {
+			*phoneNo = libphonenumber.PLUS_CHARS + *phoneNo
+			return true
+		}
+	}
+	return false
+}
+
+// getInternationalPhoneNoWithoutCountryCode removes country code
+func getInternationalPhoneNoWithoutCountryCode(intPhone string) string {
+	phoneNo := strings.SplitN(intPhone, " ", 2)
+	return strings.Join(phoneNo[1:], "")
+}
+
+// GetPossiblePhoneNumber is a generator function returning one pattern at a time
+func GetPossiblePhoneNumber(phoneNo string) []string {
+	var possiblePhoneNo []string
+	var phonePattern string
+	possiblePhoneNo = append(possiblePhoneNo, phoneNo)
+
+	// try pure numbers if form submited also had pure numbers
+	if isPurePhoneNumber(phoneNo) {
+		if !strings.Contains(phoneNo, "+") {
+			possiblePhoneNo = append(possiblePhoneNo, "+"+phoneNo)
+			possiblePhoneNo = append(possiblePhoneNo, "+91"+phoneNo)
+		}
+
+		//0123-456-789 or (012)-345-6789
+		if len(phoneNo) == 10 {
+			phonePattern = fmt.Sprintf("%s-%s-%s", phoneNo[:3], phoneNo[3:6], phoneNo[6:])
+			possiblePhoneNo = append(possiblePhoneNo, phonePattern)
+			phonePattern = fmt.Sprintf("(%s)-%s-%s", phoneNo[:3], phoneNo[3:6], phoneNo[6:])
+			possiblePhoneNo = append(possiblePhoneNo, phonePattern)
+		}
+	}
+
+	//phone number having '+' will have country code attached
+	num, err := libphonenumber.Parse(phoneNo, "")
+	if err != nil {
+		// ErrInvalidCountryCode describes missing '+', can be added if phone number in format
+		if err == libphonenumber.ErrInvalidCountryCode && maybeAddInternationalPrefix(&phoneNo) {
+			num, err = libphonenumber.Parse(phoneNo, "")
+		}
+	}
+
+	if err == nil {
+
+		//international format +91 1234 567 890
+		intFormat := libphonenumber.Format(num, libphonenumber.INTERNATIONAL)
+		if intFormat != phoneNo {
+			possiblePhoneNo = append(possiblePhoneNo, intFormat)
+		}
+
+		//International without country code 1234 567 890
+		possiblePhoneNo = append(possiblePhoneNo, getInternationalPhoneNoWithoutCountryCode(intFormat))
+		possiblePhoneNo = append(possiblePhoneNo, libphonenumber.Format(num, libphonenumber.NATIONAL))
+
+		//911234567890
+		possiblePhoneNo = append(possiblePhoneNo, libphonenumber.Format(num, libphonenumber.E164)[1:])
+
+		//National format 01234 567 890
+		nationalNum := libphonenumber.GetNationalSignificantNumber(num)
+		possiblePhoneNo = append(possiblePhoneNo, nationalNum)
+		possiblePhoneNo = append(possiblePhoneNo, "+"+nationalNum)
+		possiblePhoneNo = append(possiblePhoneNo, "+91"+nationalNum)
+
+		standardPhone := libphonenumber.Format(num, libphonenumber.E164)
+		if standardPhone != "+91"+nationalNum {
+			// standard phone number +911234567890. Assuming input phone number be +91 123 456 7890 or similar
+			possiblePhoneNo = append(possiblePhoneNo, standardPhone)
+		}
+
+		//+9101234 567 890
+		possiblePhoneNo = append(possiblePhoneNo, fmt.Sprintf("+%d%s", num.GetCountryCode(), libphonenumber.Format(num, libphonenumber.NATIONAL)))
+
+	}
+
+	return possiblePhoneNo
 }
