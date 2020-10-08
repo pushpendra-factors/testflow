@@ -7,7 +7,7 @@ import LineChart from '../../../components/LineChart';
 import { generateColors } from '../../CoreQuery/FunnelsResultPage/utils';
 
 function NoBreakdownCharts({
-  queries, eventsMapper, reverseEventsMapper, resultState
+  queries, eventsMapper, reverseEventsMapper, resultState, page
 }) {
   const [hiddenEvents, setHiddenEvents] = useState([]);
   const appliedColors = generateColors(queries.length);
@@ -15,9 +15,9 @@ function NoBreakdownCharts({
 
   let chartsData = [];
   if (queries.length === 1) {
-    chartsData = formatSingleEventAnalyticsData(resultState.data, queries[0], eventsMapper);
+    chartsData = formatSingleEventAnalyticsData(resultState.data.result_group[0], queries[0], eventsMapper);
   } else {
-    chartsData = formatMultiEventsAnalyticsData(resultState.data, queries, eventsMapper);
+    chartsData = formatMultiEventsAnalyticsData(resultState.data.result_group[0], queries, eventsMapper);
   }
 
   if (!chartsData.length) {
@@ -47,6 +47,7 @@ function NoBreakdownCharts({
         parentClass="flex items-center flex-wrap mt-4"
         appliedColors={appliedColors}
         eventsMapper={eventsMapper}
+        page={page}
       />
     );
   } else if (chartType === 'linechart') {

@@ -66,22 +66,16 @@ export const formatSingleEventAnalyticsData = (response, event, eventsMapper) =>
 };
 
 export const formatMultiEventsAnalyticsData = (response, queries, eventsMapper) => {
-  const dates = [];
   const result = [];
   response.rows.forEach(r => {
-    if (dates.indexOf(r[0]) === -1) {
-      const currentDateData = response.rows.filter(elem => elem[0] === r[0]);
-      const eventsData = {};
-      currentDateData.forEach(d => {
-        const query = queries.find(q => q === d[1]);
-        eventsData[eventsMapper[query]] = d[2];
-      });
-      result.push({
-        date: new Date(r[0]),
-        ...eventsData
-      });
-      dates.push(r[0]);
-    }
+    const eventsData = {};
+    response.headers.slice(1).forEach((h, index) => {
+      eventsData[eventsMapper[h]] = r[index + 1];
+    })
+    result.push({
+      date: new Date(r[0]),
+      ...eventsData
+    });
   });
   return result;
 };
