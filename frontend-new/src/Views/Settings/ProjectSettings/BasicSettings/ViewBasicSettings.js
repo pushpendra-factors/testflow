@@ -12,7 +12,6 @@ function ViewBasicSettings(props) {
 
   useEffect(() => {
     if (props.project) {
-      console.log('props.project-->', props.project);
       setActiveProject(props.project);
       setDataLoading(false);
     }
