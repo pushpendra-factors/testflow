@@ -88,3 +88,4 @@ ${highlights}"
 payload=`echo "${payload}" | sed 's/"/\\\"/g'`
 
 curl -X POST -H 'Content-type: application/json' --data '{"text":"'"${payload}"'", "type": "mrkdwn"}' https://hooks.slack.com/services/${CHANNEL_TOKEN}
+echo ""
