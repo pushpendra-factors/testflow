@@ -23,7 +23,7 @@ function TotalEvents({
     );
   }
 
-  if(!resultState[index].data) {
+  if (!resultState[index].data) {
     return null;
   }
 

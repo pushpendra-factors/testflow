@@ -71,7 +71,7 @@ export const formatMultiEventsAnalyticsData = (response, queries, eventsMapper) 
     const eventsData = {};
     response.headers.slice(1).forEach((h, index) => {
       eventsData[eventsMapper[h]] = r[index + 1];
-    })
+    });
     result.push({
       date: new Date(r[0]),
       ...eventsData

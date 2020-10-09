@@ -2,10 +2,12 @@ import React from 'react';
 import { Tabs } from 'antd';
 import styles from './index.module.scss';
 
-function ContentTabs({ onChange, activeKey, tabItems, resultState }) {
+function ContentTabs({
+  onChange, activeKey, tabItems, resultState
+}) {
   const { TabPane } = Tabs;
 
-  const loading = resultState.find(elem => elem.loading) ? true : false;
+  const loading = !!resultState.find(elem => elem.loading);
 
   const getTabTitle = (tab) => {
     return (

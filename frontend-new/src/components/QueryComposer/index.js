@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import {
-	Button, Collapse, Select, Popover
+  Button, Collapse, Select, Popover
 } from 'antd';
 import { SVG, Text } from '../factorsComponents';
 import styles from './index.module.scss';
@@ -18,139 +18,139 @@ const { Option } = Select;
 const { Panel } = Collapse;
 
 function QueryComposer({
-	queries, runQuery, eventChange, queryType,
-	fetchEventNames, activeProject,
-	queryOptions,
-	setQueryOptions
+  queries, runQuery, eventChange, queryType,
+  fetchEventNames, activeProject,
+  queryOptions,
+  setQueryOptions
 }) {
-	const [analyticsSeqOpen, setAnalyticsSeqVisible] = useState(false);
+  const [analyticsSeqOpen, setAnalyticsSeqVisible] = useState(false);
 
-	const [filterOptions, setFilterOptions] = useState([
-		{
-			label: 'User Properties',
-			icon: 'fav',
-			values: []
-		}, {
-			label: 'Event Properties',
-			icon: 'virtual',
-			values: []
-		}
-	]);
+  const [filterOptions, setFilterOptions] = useState([
+    {
+      label: 'User Properties',
+      icon: 'fav',
+      values: []
+    }, {
+      label: 'Event Properties',
+      icon: 'virtual',
+      values: []
+    }
+  ]);
 
-	// const [queryOptions, setQueryOptions] = useState({
-	//   groupBy: {
-	//     prop_category: '', // user / event
-	//     property: '', // user/eventproperty
-	//     prop_type: '', // categorical  /numberical
-	//     eventValue: '' // event name (funnel only)
-	//   },
-	//   event_analysis_seq: '',
-	//   session_analytics_seq: {
-	//     start: 1,
-	//     end: 2
-	//   }
-	// });
+  // const [queryOptions, setQueryOptions] = useState({
+  //   groupBy: {
+  //     prop_category: '', // user / event
+  //     property: '', // user/eventproperty
+  //     prop_type: '', // categorical  /numberical
+  //     eventValue: '' // event name (funnel only)
+  //   },
+  //   event_analysis_seq: '',
+  //   session_analytics_seq: {
+  //     start: 1,
+  //     end: 2
+  //   }
+  // });
 
-	useEffect(() => {
-		if (activeProject && activeProject.id) {
-			fetchEventNames(activeProject.id);
-		}
-	}, [activeProject, fetchEventNames]);
+  useEffect(() => {
+    if (activeProject && activeProject.id) {
+      fetchEventNames(activeProject.id);
+    }
+  }, [activeProject, fetchEventNames]);
 
-	useEffect(() => {
-		const eventPropertyFetches = [];
+  useEffect(() => {
+    const eventPropertyFetches = [];
 
-		fetchUserProperties(activeProject.id, queryType).then(res => {
-			convertUserPropertyData(res);
-		});
+    fetchUserProperties(activeProject.id, queryType).then(res => {
+      convertUserPropertyData(res);
+    });
 
-		queries.forEach(ev => {
-			eventPropertyFetches.push(fetchEventProperties(activeProject.id, ev.label));
-		});
+    queries.forEach(ev => {
+      eventPropertyFetches.push(fetchEventProperties(activeProject.id, ev.label));
+    });
 
-		Promise.all(eventPropertyFetches).then((val) => {
-			convertEventPropertyData(val);
-		});
-	}, [queries]);
+    Promise.all(eventPropertyFetches).then((val) => {
+      convertEventPropertyData(val);
+    });
+  }, [queries]);
 
-	const convertUserPropertyData = (res) => {
-		const filterOpts = [...filterOptions];
-		filterOpts[0].values = [];
-		if (res.status === 200) {
-			const data = res.data;
-			Object.keys(data).forEach(key => {
-				data[key].forEach(val => {
-					if (!filterOpts[0].values.find(v => v.name === val)) {
-						filterOpts[0].values.push([val, key]);
-					}
-				});
-			});
-		}
-		setFilterOptions(filterOpts);
-	};
+  const convertUserPropertyData = (res) => {
+    const filterOpts = [...filterOptions];
+    filterOpts[0].values = [];
+    if (res.status === 200) {
+      const data = res.data;
+      Object.keys(data).forEach(key => {
+        data[key].forEach(val => {
+          if (!filterOpts[0].values.find(v => v.name === val)) {
+            filterOpts[0].values.push([val, key]);
+          }
+        });
+      });
+    }
+    setFilterOptions(filterOpts);
+  };
 
-	const convertEventPropertyData = (val) => {
-		const filterOpts = [...filterOptions];
-		filterOpts[1].values = [];
-		val.forEach(res => {
-			if (res.status === 200) {
-				const data = res.data;
-				Object.keys(data).forEach(key => {
-					data[key].forEach(val => {
-						if (!filterOpts[1].values.find(v => v.name === val)) {
-							filterOpts[1].values.push([val, key]);
-						}
-					});
-				});
-			}
-		});
-		setFilterOptions(filterOpts);
-	};
+  const convertEventPropertyData = (val) => {
+    const filterOpts = [...filterOptions];
+    filterOpts[1].values = [];
+    val.forEach(res => {
+      if (res.status === 200) {
+        const data = res.data;
+        Object.keys(data).forEach(key => {
+          data[key].forEach(val => {
+            if (!filterOpts[1].values.find(v => v.name === val)) {
+              filterOpts[1].values.push([val, key]);
+            }
+          });
+        });
+      }
+    });
+    setFilterOptions(filterOpts);
+  };
 
-	const queryList = () => {
-		const blockList = [];
+  const queryList = () => {
+    const blockList = [];
 
-		queries.forEach((event, index) => {
-			blockList.push(
+    queries.forEach((event, index) => {
+      blockList.push(
 				<div key={index} className={styles.composer_body__query_block}>
 					<QueryBlock index={index + 1} queryType={queryType} event={event} queries={queries} eventChange={eventChange}></QueryBlock>
 				</div>
-			);
-		});
+      );
+    });
 
-		if (queries.length < 6) {
-			blockList.push(
+    if (queries.length < 6) {
+      blockList.push(
 				<div key={'init'} className={styles.composer_body__query_block}>
 					<QueryBlock queryType={queryType} index={queries.length + 1} queries={queries} eventChange={eventChange}></QueryBlock>
 				</div>
-			);
-		}
+      );
+    }
 
-		return blockList;
-	};
+    return blockList;
+  };
 
-	const setGroupByState = (value, index, action = 'add') => {
-		const options = Object.assign({}, queryOptions);
-		if (action === 'add') {
-			options.groupBy[index] = value;
-			if (options.groupBy.length - 1 === index) {
-				options.groupBy.push({
-					prop_category: '', // user / event
-					property: '', // user/eventproperty
-					prop_type: '', // categorical  /numberical
-					eventValue: '' // event name (funnel only)
-				});
-			}
-		}
+  const setGroupByState = (value, index, action = 'add') => {
+    const options = Object.assign({}, queryOptions);
+    if (action === 'add') {
+      options.groupBy[index] = value;
+      if (options.groupBy.length - 1 === index) {
+        options.groupBy.push({
+          prop_category: '', // user / event
+          property: '', // user/eventproperty
+          prop_type: '', // categorical  /numberical
+          eventValue: '' // event name (funnel only)
+        });
+      }
+    }
 
-		setQueryOptions(options);
-	};
+    setQueryOptions(options);
+  };
 
-	const groupByBlock = () => {
-		if (queryType === 'event' && queries.length < 1) { return null; }
-		if (queryType === 'funnel' && queries.length < 2) { return null; }
+  const groupByBlock = () => {
+    if (queryType === 'event' && queries.length < 1) { return null; }
+    if (queryType === 'funnel' && queries.length < 2) { return null; }
 
-		return (
+    return (
 			<div key={0} className={'fa--query_block bordered '}>
 				<GroupBlock
 					filterOptions={filterOptions}
@@ -161,24 +161,24 @@ function QueryComposer({
 
 				</GroupBlock>
 			</div>
-		);
-	};
+    );
+  };
 
-	const setEventSequence = (value) => {
-		const options = Object.assign({}, queryOptions);
-		options.event_analysis_seq = value;
-		setQueryOptions(options);
-	};
+  const setEventSequence = (value) => {
+    const options = Object.assign({}, queryOptions);
+    options.event_analysis_seq = value;
+    setQueryOptions(options);
+  };
 
-	const setAnalysisSequence = (seq) => {
-		const options = Object.assign({}, queryOptions);
-		options.session_analytics_seq = seq;
-		setQueryOptions(options);
-	};
+  const setAnalysisSequence = (seq) => {
+    const options = Object.assign({}, queryOptions);
+    options.session_analytics_seq = seq;
+    setQueryOptions(options);
+  };
 
-	const moreOptionsBlock = () => {
-		if (queries.length >= 2) {
-			return (
+  const moreOptionsBlock = () => {
+    if (queries.length >= 2) {
+      return (
 				<div className={' fa--query_block bordered '}>
 					<Collapse bordered={false} expandIcon={() => { }} expandIconPosition={'right'}>
 						<Panel header={<div className={'flex justify-between items-center'}>
@@ -243,38 +243,38 @@ function QueryComposer({
 						</Panel>
 					</Collapse>
 				</div>
-			);
-		}
-	};
+      );
+    }
+  };
 
-	const footer = () => {
-		if (queryType === 'event' && queries.length < 1) { return null; }
-		if (queryType === 'funnel' && queries.length < 2) { return null; } else {
-			return (
+  const footer = () => {
+    if (queryType === 'event' && queries.length < 1) { return null; }
+    if (queryType === 'funnel' && queries.length < 2) { return null; } else {
+      return (
 				<div className={styles.composer_footer}>
 					<Button><SVG name={'calendar'} extraClass={'mr-1'} />Last Week </Button>
 					<Button type="primary" onClick={() => runQuery('0', true)}>Run Query</Button>
 				</div>
-			);
-		}
-	};
+      );
+    }
+  };
 
-	return (
+  return (
 		<div className={styles.composer_body}>
 			{queryList()}
 			{groupByBlock()}
 			{queryType === 'funnel' ? moreOptionsBlock() : null}
 			{footer()}
 		</div>
-	);
+  );
 }
 
 const mapStateToProps = (state) => ({
-	activeProject: state.global.active_project
+  activeProject: state.global.active_project
 });
 
 const mapDispatchToProps = dispatch => bindActionCreators({
-	fetchEventNames
+  fetchEventNames
 }, dispatch);
 
 export default connect(mapStateToProps, mapDispatchToProps)(QueryComposer);

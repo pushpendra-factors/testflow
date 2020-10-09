@@ -39,7 +39,7 @@ function SparkLineChart({
       total += elem[eventsMapper[queries[0]]];
     });
     total = total % 1 !== 0 ? parseFloat(total.toFixed(2)) : total;
-    
+
     return (
       <div className={parentClass}>
         <div className="w-1/4">
