@@ -228,9 +228,8 @@ function CoreQuery({ activeProject }) {
   }, [activeProject, resultState, queries, updateResultState, callRunQueryApiService]);
 
   const title = () => {
-    return (
-			<div className={'flex justify-between items-center'}>
-				<div className={'flex'}>
+    return (<div className={'flex justify-between items-center'}>
+    <div className={'flex'}>
 					<SVG name={queryType === 'funnel' ? 'funnels_cq' : 'events_cq'} size="24px"></SVG>
 					<Text type={'title'} level={4} weight={'bold'} extraClass={'ml-2 m-0'}>{queryType === 'funnel' ? 'Find event funnel for' : 'Analyse Events'}</Text>
 				</div>
@@ -299,7 +298,7 @@ function CoreQuery({ activeProject }) {
 
 			{showResult ? (
 			  <>
-					{result}
+        {result}
 			  </>
 
 			) : (
