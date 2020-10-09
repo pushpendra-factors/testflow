@@ -1,0 +1,66 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: salesforce-enrich-job
+spec:
+  schedule: "0 20 * * *" # In UTC
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            layer: jobs
+        spec:
+          nodeSelector:
+            cloud.google.com/gke-nodepool: default-pool
+          containers:
+          - name: salesforce-enrich-job
+            image: us.gcr.io/factors-production/salesforce-enrich-job:v0.01-064db64-670
+            imagePullPolicy: IfNotPresent
+            args:
+            - --env
+            - $(ENV)
+            - --api_domain
+            - $(API_DOMAIN)
+            - --db_host
+            - $(DB_HOST)
+            - --db_port
+            - $(DB_PORT)
+            - --db_name
+            - $(POSTGRES_DB)
+            - --db_user
+            - $(POSTGRES_USER)
+            - --db_pass
+            - $(POSTGRES_PASSWORD)
+            - --redis_host
+            - $(REDIS_HOST)
+            - --redis_port
+            - $(REDIS_PORT)
+            - --redis_host_ps
+            - $(PERSISTENT_REDIS_HOST)
+            - --redis_port_ps
+            - $(PERSISTENT_REDIS_PORT)
+            - --salesforce_app_secret
+            - $(SALESFORCE_APP_SECRET)
+            - --salesforce_app_id
+            - $(SALESFORCE_APP_ID)
+            - --sentry_dsn
+            - $(SENTRY_DSN)
+            envFrom:
+            - configMapRef:
+                name: config-env
+            - configMapRef:
+                name: config-postgres
+            - secretRef:
+                name: secret-sentry
+            - secretRef:
+                name: secret-salesforce
+            - secretRef:
+                name: secret-postgres
+            - configMapRef:
+                name: config-redis
+            - configMapRef:
+                name: config-persistent-redis
+          restartPolicy: OnFailure
