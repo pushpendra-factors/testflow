@@ -31,7 +31,7 @@ function BarChart({ chartData }) {
     tooltip.current
       .html(`
                   <div>${d.label}</div>
-                  <div style="color: #0E2647;" class="mt-2 leading-5 text-base"><span class="font-semibold">${d.value}</span> (${d.value}%)</div>
+                  <div style="color: #0E2647;" class="mt-2 leading-5 text-base"><span class="font-semibold">${d.value}</span></div>
                 `)
       .style('opacity', 1)
       .style('left', left + 'px')
@@ -129,10 +129,10 @@ function BarChart({ chartData }) {
   }, [displayChart]);
 
   return (
-        <div className="w-full bar-chart">
-            <div ref={chartRef} className={styles.ungroupedChart}>
-            </div>
-        </div>
+    <div className="w-full bar-chart">
+      <div ref={chartRef} className={styles.ungroupedChart}>
+      </div>
+    </div>
   );
 }
 

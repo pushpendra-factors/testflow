@@ -1,7 +1,7 @@
 import React from 'react';
 import styles from './index.module.scss';
 
-function EventsInfo({ queries }) {
+function EventsInfo({ queries, setDrawerVisible }) {
   return (
         <div className="flex justify-between items-center">
             <div className="flex items-center leading-6">
@@ -16,7 +16,7 @@ function EventsInfo({ queries }) {
                         </defs>
                     </svg>
                 </span>
-                <div className={styles.eventsText}>
+                <div onClick={setDrawerVisible.bind(this, true)} className={`cursor-pointer ${styles.eventsText}`}>
                     {queries.map((q, index) => {
                       if (index < queries.length - 1) {
                         return (

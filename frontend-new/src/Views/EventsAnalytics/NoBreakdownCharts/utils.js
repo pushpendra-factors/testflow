@@ -1,9 +1,6 @@
 import moment from 'moment';
 
-import { getTitleWithSorter } from '../CoreQuery/FunnelsResultPage/utils';
-import {
-  singleEventAnyEventUserResponse, multiEventAnyEventUserResponse
-} from './SampleResponse';
+import { getTitleWithSorter } from '../../CoreQuery/FunnelsResultPage/utils';
 
 export const getNoGroupingTableData = (data, currentSorter, searchText, reverseEventsMapper) => {
   const clonedData = data.map(elem => {
@@ -69,55 +66,16 @@ export const formatSingleEventAnalyticsData = (response, event, eventsMapper) =>
 };
 
 export const formatMultiEventsAnalyticsData = (response, queries, eventsMapper) => {
-  const dates = [];
   const result = [];
   response.rows.forEach(r => {
-    if (dates.indexOf(r[0]) === -1) {
-      const currentDateData = response.rows.filter(elem => elem[0] === r[0]);
-      const eventsData = {};
-      currentDateData.forEach(d => {
-        const query = queries.find(q => q === d[1]);
-        eventsData[eventsMapper[query]] = d[2];
-      });
-      result.push({
-        date: new Date(r[0]),
-        ...eventsData
-      });
-      dates.push(r[0]);
-    }
-  });
-  return result;
-};
-
-export const getSingleEventAnyEventUserData = (event, eventsMapper) => {
-  const response = singleEventAnyEventUserResponse;
-  const result = response.rows.map(row => {
-    return {
-      date: new Date(row[0]),
-      [eventsMapper[event]]: row[1]
-    };
-  });
-  return result;
-};
-
-export const getMultiEventsAnyEventUserData = (queries, eventsMapper) => {
-  const response = multiEventAnyEventUserResponse;
-  const dates = [];
-  const result = [];
-  response.rows.forEach(r => {
-    if (dates.indexOf(r[0]) === -1) {
-      const currentDateData = response.rows.filter(elem => elem[0] === r[0]);
-      const eventsData = {};
-      currentDateData.forEach(d => {
-        const query = queries.find(q => q === d[1]);
-        eventsData[eventsMapper[query]] = d[2];
-      });
-      result.push({
-        date: new Date(r[0]),
-        ...eventsData
-      });
-      dates.push(r[0]);
-    }
+    const eventsData = {};
+    response.headers.slice(1).forEach((h, index) => {
+      eventsData[eventsMapper[h]] = r[index + 1];
+    })
+    result.push({
+      date: new Date(r[0]),
+      ...eventsData
+    });
   });
   return result;
 };
@@ -186,28 +144,6 @@ export const getNoGroupingTablularDatesBasedData = (data, currentSorter, searchT
       return parseInt(a[currentSorter.key]) <= parseInt(b[currentSorter.key]) ? 1 : -1;
     }
     return 0;
-  });
-  return result;
-};
-
-export const formatSingleEventSinglePropertyData = (data) => {
-  const properties = {};
-  const result = [];
-  data.rows.forEach(elem => {
-    if (elem[1] !== '$none') {
-      if (Object.prototype.hasOwnProperty.call(properties, elem[1])) {
-        result[properties[elem[1]]].value += elem[2];
-      } else {
-        properties[elem[1]] = result.length;
-        result.push({
-          label: elem[1],
-          value: elem[2]
-        });
-      }
-    }
-  });
-  result.sort((a, b) => {
-    return parseInt(a.value) <= parseInt(b.value) ? 1 : -1;
   });
   return result;
 };

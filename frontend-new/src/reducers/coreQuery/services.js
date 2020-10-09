@@ -7,9 +7,9 @@ export const getEventNames = (dispatch, projectId) => {
   return get(dispatch, host + 'projects/' + projectId + '/v1/event_names', {});
 }
 
-export const runQuery = (projectId, query) => {
-  const url = host + "projects/" + projectId + "/query";
-  return post(null, url, { query: query });
+export const runQuery = (projectId, query_group) => {
+  const url = host + "projects/" + projectId + "/v1/query";
+  return post(null, url, { query_group });
 }
 
 export function fetchEventProperties(projectId, eventName) {

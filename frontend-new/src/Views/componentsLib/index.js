@@ -1,11 +1,9 @@
 /* eslint-disable */
 import React from 'react';
 import {
-  Layout, Breadcrumb, Row, Col, Divider, Skeleton, Button
+  Layout
 } from 'antd';
 import Sidebar from '../../components/Sidebar';
-import { Text, SVG } from 'factorsComponents';
-import { Link } from 'react-router-dom';
 import TextLib from './TextLib';
 import ButtonLib from './ButtonLib';
 import ColorLib from './ColorLib';

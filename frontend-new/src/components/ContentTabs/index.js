@@ -2,8 +2,10 @@ import React from 'react';
 import { Tabs } from 'antd';
 import styles from './index.module.scss';
 
-function ContentTabs({ onChange, activeKey, tabItems }) {
+function ContentTabs({ onChange, activeKey, tabItems, resultState }) {
   const { TabPane } = Tabs;
+
+  const loading = resultState.find(elem => elem.loading) ? true : false;
 
   const getTabTitle = (tab) => {
     return (
@@ -16,7 +18,7 @@ function ContentTabs({ onChange, activeKey, tabItems }) {
       {
         tabItems.map(tab => {
           return (
-            <TabPane className="coreQueryTabPane" tab={getTabTitle(tab)} key={tab.key}>
+            <TabPane disabled={loading} className="coreQueryTabPane" tab={getTabTitle(tab)} key={tab.key}>
               {tab.content}
             </TabPane>
           );

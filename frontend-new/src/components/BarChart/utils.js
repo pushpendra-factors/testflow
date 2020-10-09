@@ -13,7 +13,7 @@ export const getMaxYpoint = (maxVal) => {
     if (pow10 * it > maxVal) {
       return pow10 * it;
     } else {
-      it++;
+      it = it + 2;
     }
   }
 };
