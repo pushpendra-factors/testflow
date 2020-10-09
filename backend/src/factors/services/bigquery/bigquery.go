@@ -85,7 +85,7 @@ func ExecuteQuery(ctx *context.Context, client *bigquery.Client, query string, r
 		}
 		var rowString []string
 		for _, column := range row {
-			rowString = append(rowString, column.(string))
+			rowString = append(rowString, fmt.Sprintf("%v", column))
 		}
 		*resultSet = append(*resultSet, rowString)
 	}
