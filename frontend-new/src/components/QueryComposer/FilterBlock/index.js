@@ -115,7 +115,6 @@ export default function FilterBlock({ filterProps, activeProject, event, filter,
       fetchEventPropertyValues(activeProject.id, event.label, newFilterState.props[0]).then(res => {
         const ddValues = Object.assign({}, dropDownValues);
         ddValues[newFilterState.props[0]] = res.data;
-        console.log(ddValues);
         setDropDownValues(ddValues);
       })
     }
@@ -153,7 +152,8 @@ export default function FilterBlock({ filterProps, activeProject, event, filter,
       case 'props':
         options.forEach((group, grpIndex) => {
           const collState = groupCollapseState[grpIndex];
-          renderOptions.push(<>
+          renderOptions.push(
+          <div class={styles.filter_block__filter_select__option_group_container}>
             <div className={styles.filter_block__filter_select__option_group}
               onClick={() => collapseGroup(grpIndex)}
             >
@@ -180,7 +180,7 @@ export default function FilterBlock({ filterProps, activeProject, event, filter,
               })()
               : null
             }
-          </>);
+          </div>);
         });
         break;
       case 'operator':
