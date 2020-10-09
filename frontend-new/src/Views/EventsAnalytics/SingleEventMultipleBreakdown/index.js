@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { SingleEventMultipleProperty } from '../SampleResponse';
 import { formatData, formatDataInLineChartFormat } from './utils';
 import BarChart from '../../../components/BarChart';
 import LineChart from '../../../components/LineChart';
@@ -7,19 +6,19 @@ import ChartTypeDropdown from '../../../components/ChartTypeDropdown';
 import SingleEventMultipleBreakdownTable from './SingleEventMultipleBreakdownTable';
 import { generateColors } from '../../CoreQuery/FunnelsResultPage/utils';
 
-function SingleEventMultipleBreakdown({ queries, breakdown }) {
+function SingleEventMultipleBreakdown({ queries, breakdown, resultState }) {
   const [chartsData, setChartsData] = useState([]);
   const [visibleProperties, setVisibleProperties] = useState([]);
-  const [chartType, setChartType] = useState('linechart');
+  const [chartType, setChartType] = useState('barchart');
   const [hiddenProperties, setHiddenProperties] = useState([]);
 
-  const maxAllowedVisibleProperties = 6;
+  const maxAllowedVisibleProperties = 5;
 
   useEffect(() => {
-    const formattedData = formatData(SingleEventMultipleProperty);
+    const formattedData = formatData(resultState.data.result_group[0]);
     setChartsData(formattedData);
     setVisibleProperties([...formattedData.slice(0, maxAllowedVisibleProperties)]);
-  }, []);
+  }, [resultState.data.result_group]);
 
   if (!chartsData.length) {
     return null;
@@ -48,7 +47,7 @@ function SingleEventMultipleBreakdown({ queries, breakdown }) {
     reverseMapper[`event${index + 1}`] = q;
   });
 
-  const lineChartData = formatDataInLineChartFormat(SingleEventMultipleProperty, visibleProperties, mapper, hiddenProperties);
+  const lineChartData = formatDataInLineChartFormat(resultState.data.result_group[0], visibleProperties, mapper, hiddenProperties);
   const appliedColors = generateColors(visibleProperties.length);
 
   let chartContent = null;
@@ -104,7 +103,7 @@ function SingleEventMultipleBreakdown({ queries, breakdown }) {
                     setVisibleProperties={setVisibleProperties}
                     visibleProperties={visibleProperties}
                     maxAllowedVisibleProperties={maxAllowedVisibleProperties}
-                    originalData={SingleEventMultipleProperty}
+                    originalData={resultState.data.result_group[0]}
                 />
             </div>
         </div>

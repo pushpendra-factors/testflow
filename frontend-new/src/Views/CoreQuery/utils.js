@@ -28,10 +28,9 @@ export const calculateActiveUsersData = (userData, sessionData) => {
   return result;
 };
 
-
 export const hasApiFailed = (res) => {
-  if(res.result_group && res.result_group[0] && res.result_group[0].headers && (res.result_group[0].headers.indexOf('error') > -1)) {
+  if (res.result_group && res.result_group[0] && res.result_group[0].headers && (res.result_group[0].headers.indexOf('error') > -1)) {
     return true;
   }
   return false;
-}
+};

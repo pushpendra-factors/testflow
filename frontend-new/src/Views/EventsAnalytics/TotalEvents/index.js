@@ -42,6 +42,7 @@ function TotalEvents({
       <SingleEventSingleBreakdown
         queries={queries}
         breakdown={breakdown}
+        resultState={resultState[index]}
       />
     );
   } else if (queries.length === 1) {
@@ -49,6 +50,7 @@ function TotalEvents({
       <SingleEventMultipleBreakdown
         queries={queries}
         breakdown={breakdown}
+        resultState={resultState[index]}
       />
     );
   }
