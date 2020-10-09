@@ -8,7 +8,9 @@ import { Drawer, Button } from 'antd';
 import { SVG, Text } from '../../components/factorsComponents';
 import EventsAnalytics from '../EventsAnalytics';
 import { runQuery as runQueryService } from '../../reducers/coreQuery/services';
-import { initialResultState, calculateFrequencyData, calculateActiveUsersData } from './utils';
+import {
+  initialResultState, calculateFrequencyData, calculateActiveUsersData, hasApiFailed, calculateFrequencyDataForBreakdown, calculateActiveUsersDataForBreakdown
+} from './utils';
 
 function CoreQuery({ activeProject }) {
   const [drawerVisible, setDrawerVisible] = useState(false);
@@ -62,7 +64,6 @@ function CoreQuery({ activeProject }) {
     const query = {};
     query.cl = queryType === 'event' ? 'events' : 'funnel';
     query.ty = parseInt(activeTab) === 1 ? 'unique_users' : 'events_occurrence';
-    query.ec = 'each_given_event';
 
     // Check date range validity
 
@@ -89,22 +90,28 @@ function CoreQuery({ activeProject }) {
       query.gbt = 'date';
     }
 
-    query.gbp = [];
+    const groupBy = [...queryOptions.groupBy.filter(elem => elem.prop_category)].sort((a, b) => {
+      return a.prop_category >= b.prop_category ? 1 : -1;
+    });
 
-    queryOptions.groupBy.forEach(opt => {
-      if (opt.prop_category) {
-        const group = {
+    query.gbp = groupBy
+      .map(opt => {
+        return {
           pr: opt.property,
           en: opt.prop_category,
           pty: opt.prop_type
         };
-        query.gbp.push(group);
-      }
-    });
-    
+      });
+
+    if (query.gbp.length) {
+      query.ec = 'any_given_event';
+    } else {
+      query.ec = 'each_given_event';
+    }
+
     query.tz = 'Asia/Kolkata';
     return query;
-  }, [getEventsWithProperties, queryType]);
+  }, [getEventsWithProperties, queryType, queryOptions.groupBy]);
 
   const closeDrawer = () => {
     setDrawerVisible(false);
@@ -126,11 +133,21 @@ function CoreQuery({ activeProject }) {
     });
   }, []);
 
+  const updateAppliedBreakdown = useCallback(() => {
+    let newAppliedBreakdown = queryOptions.groupBy.filter(elem => elem.prop_category).sort((a, b) => {
+      return a.prop_category >= b.prop_category ? 1 : -1;
+    });
+    if (newAppliedBreakdown.length === 1) {
+      newAppliedBreakdown = [newAppliedBreakdown[0].property];
+    }
+    setAppliedBreakdown(newAppliedBreakdown);
+  }, [queryOptions.groupBy]);
+
   const callRunQueryApiService = useCallback(async (activeProjectId, activeTab) => {
     try {
       const query = getQuery(activeTab);
       const res = await runQueryService(activeProjectId, [query]);
-      if (res.status === 200) {
+      if (res.status === 200 && !hasApiFailed(res)) {
         if (activeTab !== '2') {
           updateResultState(activeTab, { loading: false, error: false, data: res.data });
         }
@@ -144,10 +161,6 @@ function CoreQuery({ activeProject }) {
       return null;
     }
   }, [updateResultState, getQuery]);
-
-  const updateAppliedBreakdown = useCallback(()=>{
-
-  }, []);
 
   const runQuery = useCallback(async (activeTab, refresh = false) => {
     setActiveKey(activeTab);
@@ -164,13 +177,26 @@ function CoreQuery({ activeProject }) {
         if (resultState[1].data) {
           const res = await callRunQueryApiService(activeProject.id, '2');
           if (res) {
-            activeUsersData = calculateActiveUsersData(resultState[1].data, res);
+            
+            if (!appliedBreakdown.length) {
+              activeUsersData = calculateActiveUsersData(resultState[1].data, res);
+            } else {
+              activeUsersData = calculateActiveUsersDataForBreakdown(resultState[1].data, res);
+            }
+
           }
         } else {
+          // combine these two and make one query group
           const userData = await callRunQueryApiService(activeProject.id, '1');
           const sessionData = await callRunQueryApiService(activeProject.id, '2');
           if (userData && sessionData) {
-            activeUsersData = calculateActiveUsersData(userData, sessionData);
+            
+            if (!appliedBreakdown.length) {
+              activeUsersData = calculateActiveUsersData(userData, sessionData);
+            } else {
+              activeUsersData = calculateActiveUsersDataForBreakdown(userData, sessionData);
+            }
+
           }
         }
 
@@ -181,12 +207,24 @@ function CoreQuery({ activeProject }) {
       if (activeTab === '3') {
         let frequencyData = null;
         if (resultState[1].data) {
-          frequencyData = calculateFrequencyData(resultState[0].data, resultState[1].data);
+          
+          if (!appliedBreakdown.length) {
+            frequencyData = calculateFrequencyData(resultState[0].data, resultState[1].data);
+          } else {
+            frequencyData = calculateFrequencyDataForBreakdown(resultState[0].data, resultState[1].data);
+          }
+
         } else {
           updateResultState(activeTab, { loading: true, error: false, data: null });
           const res = await callRunQueryApiService(activeProject.id, '1');
           if (res) {
-            frequencyData = calculateFrequencyData(resultState[0].data, res);
+            
+            if (!appliedBreakdown.length) {
+              frequencyData = calculateFrequencyData(resultState[0].data, res);
+            } else {
+              frequencyData = calculateFrequencyDataForBreakdown(resultState[0].data, res);
+            }
+
           }
         }
         updateResultState(activeTab, { loading: false, error: false, data: frequencyData });
@@ -205,7 +243,7 @@ function CoreQuery({ activeProject }) {
 
     updateResultState(activeTab, { loading: true, error: false, data: null });
     callRunQueryApiService(activeProject.id, activeTab);
-  }, [activeProject, resultState, queries, updateResultState, callRunQueryApiService]);
+  }, [activeProject, resultState, queries, updateResultState, callRunQueryApiService, updateAppliedBreakdown]);
 
   const title = () => {
     return (
