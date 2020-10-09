@@ -15,6 +15,19 @@ export const calculateFrequencyData = (eventData, userData) => {
   return result;
 };
 
+export const calculateFrequencyDataForBreakdown = (eventData, userData) => {
+  const rows = eventData.result_group[0].rows.map((elem, index) => {
+    const eventVals = elem.slice(elem.length - 1).map((e, idx) => {
+      if (!e) return e;
+      const eVal = e / userData.result_group[0].rows[index][elem.length - 1];
+      return eVal % 1 !== 0 ? parseFloat(eVal.toFixed(2)) : eVal;
+    });
+    return [...elem.slice(0, elem.length - 1), ...eventVals];
+  });
+  const result = { result_group: [{ ...eventData.result_group[0], rows }] };
+  return result;
+};
+
 export const calculateActiveUsersData = (userData, sessionData) => {
   const rows = userData.result_group[0].rows.map((elem) => {
     const eventVals = elem.slice(1).map((e) => {
@@ -23,6 +36,19 @@ export const calculateActiveUsersData = (userData, sessionData) => {
       return eVal % 1 !== 0 ? parseFloat(eVal.toFixed(2)) : eVal;
     });
     return [elem[0], ...eventVals];
+  });
+  const result = { result_group: [{ ...userData.result_group[0], rows }] };
+  return result;
+};
+
+export const calculateActiveUsersDataForBreakdown = (userData, sessionData) => {
+  const rows = userData.result_group[0].rows.map((elem) => {
+    const eventVals = elem.slice(elem.length - 1).map((e) => {
+      if (!e) return e;
+      const eVal = sessionData.result_group[0].rows[0] / e;
+      return eVal % 1 !== 0 ? parseFloat(eVal.toFixed(2)) : eVal;
+    });
+    return [...elem.slice(0, elem.length - 1), ...eventVals];
   });
   const result = { result_group: [{ ...userData.result_group[0], rows }] };
   return result;

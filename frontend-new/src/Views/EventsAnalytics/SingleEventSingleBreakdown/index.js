@@ -17,7 +17,6 @@ function SingleEventSingleBreakdown({
   const maxAllowedVisibleProperties = 7;
 
   useEffect(() => {
-    console.log(resultState.data.result_group[0])
     const formattedData = formatSingleEventSinglePropertyData(resultState.data.result_group[0]);
     setChartsData(formattedData);
     setVisibleProperties([...formattedData.slice(0, maxAllowedVisibleProperties)]);
@@ -26,8 +25,6 @@ function SingleEventSingleBreakdown({
   if (!chartsData.length) {
     return null;
   }
-
-  console.log(chartsData)
 
   const menuItems = [
     {
