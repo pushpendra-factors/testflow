@@ -48,6 +48,9 @@ spec:
             - $(SALESFORCE_APP_ID)
             - --sentry_dsn
             - $(SENTRY_DSN)
+            - --real_time_event_user_caching_project_ids
+            - '*'
+            - --enable_real_time_event_user_caching
             envFrom:
             - configMapRef:
                 name: config-env
