@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import ChartTypeDropdown from '../../../components/ChartTypeDropdown';
-import { singleEventSinglePropertyDateTimeResponse } from '../SampleResponse';
 import { formatSingleEventSinglePropertyData, formatDataInLineChartFormat } from './utils';
 import BarChart from '../../../components/BarChart';
 import SingleEventSingleBreakdownTable from './SingleEventSingleBreakdownTable';
@@ -8,24 +7,27 @@ import LineChart from '../../../components/LineChart';
 import { generateColors } from '../../CoreQuery/FunnelsResultPage/utils';
 
 function SingleEventSingleBreakdown({
-  queries, breakdown
+  queries, breakdown, resultState
 }) {
   const [chartsData, setChartsData] = useState([]);
   const [visibleProperties, setVisibleProperties] = useState([]);
-  const [chartType, setChartType] = useState('linechart');
+  const [chartType, setChartType] = useState('barchart');
   const [hiddenProperties, setHiddenProperties] = useState([]);
 
   const maxAllowedVisibleProperties = 7;
 
   useEffect(() => {
-    const formattedData = formatSingleEventSinglePropertyData(singleEventSinglePropertyDateTimeResponse);
+    console.log(resultState.data.result_group[0])
+    const formattedData = formatSingleEventSinglePropertyData(resultState.data.result_group[0]);
     setChartsData(formattedData);
     setVisibleProperties([...formattedData.slice(0, maxAllowedVisibleProperties)]);
-  }, []);
+  }, [resultState.data.result_group]);
 
   if (!chartsData.length) {
     return null;
   }
+
+  console.log(chartsData)
 
   const menuItems = [
     {
@@ -50,7 +52,7 @@ function SingleEventSingleBreakdown({
     reverseMapper[`event${index + 1}`] = q;
   });
 
-  const lineChartData = formatDataInLineChartFormat(singleEventSinglePropertyDateTimeResponse, visibleProperties, mapper, hiddenProperties);
+  const lineChartData = formatDataInLineChartFormat(resultState.data.result_group[0], visibleProperties, mapper, hiddenProperties);
   const appliedColors = generateColors(visibleProperties.length);
 
   let chartContent = null;
@@ -106,7 +108,7 @@ function SingleEventSingleBreakdown({
           visibleProperties={visibleProperties}
           maxAllowedVisibleProperties={maxAllowedVisibleProperties}
           lineChartData={lineChartData}
-          originalData={singleEventSinglePropertyDateTimeResponse}
+          originalData={resultState.data.result_group[0]}
         />
       </div>
     </div>

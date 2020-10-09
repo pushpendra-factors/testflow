@@ -42,6 +42,7 @@ function TotalUsers({
             <SingleEventSingleBreakdown
                 queries={queries}
                 breakdown={breakdown}
+                resultState={resultState[index]}
             />
     );
   } else if (queries.length === 1) {
@@ -49,6 +50,7 @@ function TotalUsers({
             <SingleEventMultipleBreakdown
                 queries={queries}
                 breakdown={breakdown}
+                resultState={resultState[index]}
             />
     );
   }
