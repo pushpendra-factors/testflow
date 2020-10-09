@@ -387,8 +387,8 @@ CASE WHEN _group_key_0 IS NULL THEN '$none' WHEN _group_key_0 = '' THEN '$none' 
 _group_key_0 FROM step_0 LEFT JOIN users on step_0.user_id=users.id LEFT JOIN user_properties on
 users.properties_id=user_properties.id  LEFT JOIN step_1_step_0_users ON step_0.coal_user_id=step_1_step_0_users.coal_user_id),
 
-_group_key_1_bounds AS (SELECT percentile_disc(0.1) WITHIN GROUP(ORDER BY _group_key_1::numeric desc) AS ubound,
-percentile_disc(0.9) WITHIN GROUP(ORDER BY _group_key_1::numeric desc) AS lbound FROM funnel WHERE _group_key_1 != '$none'),
+_group_key_1_bounds AS (SELECT percentile_disc(0.02) WITHIN GROUP(ORDER BY _group_key_1::numeric) AS lbound,
+percentile_disc(0.98) WITHIN GROUP(ORDER BY _group_key_1::numeric) AS ubound FROM funnel WHERE _group_key_1 != '$none'),
 
 bucketed AS (SELECT _group_key_0, COALESCE(NULLIF(_group_key_1, '$none'), 'NaN') AS _group_key_1, CASE
 WHEN _group_key_1 = '$none' THEN -1 ELSE width_bucket(_group_key_1::numeric, _group_key_1_bounds.lbound::numeric,

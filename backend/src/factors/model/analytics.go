@@ -141,18 +141,21 @@ const (
 	SelectDefaultEventFilterByAlias       = "event_id, event_user_id, event_name"
 	SelectCoalesceCustomerUserIDAndUserID = "COALESCE(users.customer_user_id, event_user_id)"
 
-	GroupKeyPrefix            = "_group_key_"
-	AliasEventName            = "event_name"
-	AliasDateTime             = "datetime"
-	AliasAggr                 = "count"
-	DefaultTimezone           = "UTC"
-	ResultsLimit              = 100
-	MaxResultsLimit           = 100000
-	NumericalGroupByBuckets   = 10
-	NumericalGroupBySeparator = " - "
+	GroupKeyPrefix  = "_group_key_"
+	AliasEventName  = "event_name"
+	AliasDateTime   = "datetime"
+	AliasAggr       = "count"
+	DefaultTimezone = "UTC"
+	ResultsLimit    = 100
+	MaxResultsLimit = 100000
 
 	StepPrefix             = "step_"
 	FunnelConversionPrefix = "conversion_"
+
+	NumericalGroupByBuckets       = 10
+	NumericalGroupBySeparator     = " - "
+	NumericalLowerBoundPercentile = 0.02
+	NumericalUpperBoundPercentile = 0.98
 )
 
 const (
@@ -447,9 +450,10 @@ func appendNumericalBucketingSteps(qStmnt *string, groupProps []QueryGroupByProp
 
 		// Adding _group_key_x_bounds step.
 		boundsStepName := groupKey + "_bounds"
-		boundsStatement := fmt.Sprintf("SELECT percentile_disc(0.1) WITHIN GROUP(ORDER BY %s::numeric desc) AS ubound, "+
-			"percentile_disc(0.9) WITHIN GROUP(ORDER BY %s::numeric desc) AS lbound FROM %s "+
-			"WHERE %s != '%s'", groupKey, groupKey, refStepName, groupKey, PropertyValueNone)
+		boundsStatement := fmt.Sprintf("SELECT percentile_disc(%.2f) WITHIN GROUP(ORDER BY %s::numeric) AS lbound, "+
+			"percentile_disc(%.2f) WITHIN GROUP(ORDER BY %s::numeric) AS ubound FROM %s "+
+			"WHERE %s != '%s'", NumericalLowerBoundPercentile, groupKey, NumericalUpperBoundPercentile,
+			groupKey, refStepName, groupKey, PropertyValueNone)
 		boundsStatement = as(boundsStepName, boundsStatement)
 		*qStmnt = joinWithComma(*qStmnt, boundsStatement)
 
@@ -936,6 +940,14 @@ func GetTimstampAndAggregateIndexOnQueryResult(cols []string) (int, int, error) 
 	return aggrIndex, timeIndex, err
 }
 
+// GetBucketRangeForStartAndEnd Converts 2 - 2 range types to 2.
+func GetBucketRangeForStartAndEnd(rangeStart, rangeEnd interface{}) string {
+	if rangeStart == rangeEnd {
+		return fmt.Sprintf("%v", rangeStart)
+	}
+	return fmt.Sprintf("%v%s%v", rangeStart, NumericalGroupBySeparator, rangeEnd)
+}
+
 func sanitizeNumericalBucketRange(query *Query, rows [][]interface{}, indexToSanitize int) {
 	for index, row := range rows {
 		if query.Class == QueryClassFunnel && index == 0 {
@@ -950,7 +962,7 @@ func sanitizeNumericalBucketRange(query *Query, rows [][]interface{}, indexToSan
 		if row[indexToSanitize] != PropertyValueNone {
 			rowSplit := strings.Split(row[indexToSanitize].(string), NumericalGroupBySeparator)
 			if rowSplit[0] == rowSplit[1] {
-				row[indexToSanitize] = rowSplit[0]
+				row[indexToSanitize] = GetBucketRangeForStartAndEnd(rowSplit[0], rowSplit[1])
 			}
 		}
 	}

@@ -1780,9 +1780,11 @@ func TestAnalyticsInsightsQueryWithNumericalBucketing(t *testing.T) {
 
 	startTimestamp := U.UnixTimeBeforeDuration(time.Hour * 1)
 	t.Run("EventOccurrenceSingleBreakdown", func(t *testing.T) {
-		// 20 events with single incremented value.
+		// 100 events with single incremented value.
 		eventName1 := "event1"
-		for i := 0; i < 20; i++ {
+		numPropertyRangeStart := 1
+		numPropertyRangeEnd := 100
+		for i := numPropertyRangeStart; i <= numPropertyRangeEnd; i++ {
 			iUser, _ := M.CreateUser(&M.User{ProjectId: project.ID})
 			payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, `+
 				`"event_properties":{"$page_load_time":%d},"user_properties":{"numerical_property":%d}}`,
@@ -1810,22 +1812,13 @@ func TestAnalyticsInsightsQueryWithNumericalBucketing(t *testing.T) {
 			Type:            M.QueryTypeEventsOccurrence,
 			EventsCondition: M.EventCondAllGivenEvent,
 		}
-
-		// Expected output should be 10 equal range buckets with 2 elements
 		result, errCode, _ := M.Analyze(project.ID, query)
 		assert.Equal(t, http.StatusOK, errCode)
-		for i := 0; i < 10; i++ {
-			assert.Equal(t, fmt.Sprintf("%d - %d", i*2, i*2+1), result.Rows[i][1])
-			assert.Equal(t, int64(2), result.Rows[i][2])
-		}
+		validateNumericalBucketRanges(t, result, numPropertyRangeStart, numPropertyRangeEnd, 0)
 
 		/*
-			New event with $page_load_time = 1
+			New event with $page_load_time = 0
 			total element 21
-			10th percentile = (10/100)*21 = 2 postion = value 1
-			90th percentile = (90/100)*21 = 19 position = value 17
-			8 buckets range (1 - 17)  = 1-2, 3-4, 5-6, 7-8, 9-10 ... 15-16
-			new range min-0, { 8 buckets}, 17-max
 
 			User property numerical_property set as empty ($none).
 			Will create 11 buckets. including 1 $none.
@@ -1833,34 +1826,19 @@ func TestAnalyticsInsightsQueryWithNumericalBucketing(t *testing.T) {
 		iUser, _ := M.CreateUser(&M.User{ProjectId: project.ID})
 		payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, `+
 			`"event_properties":{"$page_load_time":%d},"user_properties":{"numerical_property":""}}`,
-			eventName1, iUser.ID, startTimestamp+10, 1)
+			eventName1, iUser.ID, startTimestamp+10, 0)
 		w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 		assert.Equal(t, http.StatusOK, w.Code)
 
 		result, errCode, _ = M.Analyze(project.ID, query)
-		assert.Equal(t, http.StatusOK, errCode)
-		assert.Equal(t, "0", result.Rows[0][1])
-		assert.Equal(t, int64(1), result.Rows[0][2])
-		assert.Equal(t, "1 - 2", result.Rows[1][1])
-		assert.Equal(t, int64(3), result.Rows[1][2])
-		assert.Equal(t, "15 - 16", result.Rows[8][1])
-		assert.Equal(t, int64(2), result.Rows[8][2])
-		assert.Equal(t, "17 - 19", result.Rows[9][1])
-		assert.Equal(t, int64(3), result.Rows[9][2])
+		validateNumericalBucketRanges(t, result, 0, numPropertyRangeEnd, 0)
 
 		// Using group by numerical property.
 		query.GroupByProperties[0].Entity = M.PropertyEntityUser
 		query.GroupByProperties[0].Property = "numerical_property"
 		result, errCode, _ = M.Analyze(project.ID, query)
 		assert.Equal(t, http.StatusOK, errCode)
-
-		assert.Equal(t, M.PropertyValueNone, result.Rows[0][1]) // First bucket should be $none.
-		assert.Equal(t, int64(1), result.Rows[0][2])            // Count of $none should be 1.
-		for i := 1; i <= 10; i++ {
-			assert.Equal(t, eventName1, result.Rows[i][0])
-			assert.Equal(t, fmt.Sprintf("%d - %d", i*2-2, i*2-1), result.Rows[i][1])
-			assert.Equal(t, int64(2), result.Rows[i][2])
-		}
+		validateNumericalBucketRanges(t, result, numPropertyRangeStart, numPropertyRangeEnd, 1)
 	})
 }
 
@@ -1876,7 +1854,13 @@ func TestAnalyticsFunnelQueryWithNumericalBucketing(t *testing.T) {
 		// 20 events with single incremented value.
 		eventName1 := "event1"
 		eventName2 := "event2"
-		for i := 1; i <= 20; i++ {
+		numPropertyRangeStart := 1
+		numPropertyRangeEnd := 100
+		lowerPercentileValue := int(M.NumericalLowerBoundPercentile * float64(numPropertyRangeEnd))
+		upperPercentileValue := int(M.NumericalUpperBoundPercentile * float64(numPropertyRangeEnd))
+		nonPercentileBucketRange := (upperPercentileValue - lowerPercentileValue) / (M.NumericalGroupByBuckets - 2)
+
+		for i := numPropertyRangeStart; i <= numPropertyRangeEnd; i++ {
 			iUser, _ := M.CreateUser(&M.User{ProjectId: project.ID})
 			payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, `+
 				`"event_properties":{"$page_load_time":%d},"user_properties":{"numerical_property":%d}}`,
@@ -1884,7 +1868,7 @@ func TestAnalyticsFunnelQueryWithNumericalBucketing(t *testing.T) {
 			w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
 			assert.Equal(t, http.StatusOK, w.Code)
 
-			// Event2 by 5 users with timestamp + 20 for funnel.
+			// Event2 by 25 users with timestamp + 20 for funnel.
 			if i%4 == 0 {
 				payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d}`,
 					eventName2, iUser.ID, startTimestamp+20)
@@ -1921,15 +1905,72 @@ func TestAnalyticsFunnelQueryWithNumericalBucketing(t *testing.T) {
 		// Expected output should be 10 equal range buckets with 2 elements
 		result, errCode, _ := M.Analyze(project.ID, query)
 		assert.Equal(t, http.StatusOK, errCode)
-		for i := 1; i <= 10; i++ {
-			assert.Equal(t, fmt.Sprintf("%d - %d", i*2-1, i*2), result.Rows[i][0])
+		bucketStart := numPropertyRangeStart
+		bucketEnd := lowerPercentileValue - 1
+		bucketRange := M.GetBucketRangeForStartAndEnd(bucketStart, bucketEnd)
+		// First bucket range and last bucket range.
+		assert.Equal(t, bucketRange, result.Rows[1][0])
 
-			assert.Equal(t, int64(2), result.Rows[i][1])
-			if i%2 == 0 {
-				assert.Equal(t, int64(1), result.Rows[i][2])
-			} else {
-				assert.Equal(t, int(0), result.Rows[i][2])
-			}
+		// Last bucket range and last bucket range.
+		bucketStart = upperPercentileValue
+		bucketEnd = numPropertyRangeEnd
+		bucketRange = M.GetBucketRangeForStartAndEnd(bucketStart, bucketEnd)
+		assert.Equal(t, bucketRange, result.Rows[10][0])
+
+		bucketStart = lowerPercentileValue
+		for i := 2; i < 10; i++ {
+			bucketEnd = int(bucketStart+nonPercentileBucketRange) - 1
+			bucketRange = M.GetBucketRangeForStartAndEnd(bucketStart, bucketEnd)
+			assert.Equal(t, bucketRange, result.Rows[i][0])
+
+			bucketStart = bucketEnd + 1
 		}
 	})
+}
+
+func validateNumericalBucketRanges(t *testing.T, result *M.QueryResult, numPropertyRangeStart,
+	numPropertyRangeEnd, noneCount int) {
+	lowerPercentileValue := int(M.NumericalLowerBoundPercentile * float64(numPropertyRangeEnd))
+	upperPercentileValue := int(M.NumericalUpperBoundPercentile * float64(numPropertyRangeEnd))
+	nonPercentileBucketRange := (upperPercentileValue - lowerPercentileValue) / (M.NumericalGroupByBuckets - 2)
+
+	bucketsIndexStart := 0
+	bucketsIndexEnd := 9
+	if noneCount > 0 {
+		assert.Equal(t, M.PropertyValueNone, result.Rows[0][1]) // First bucket should be $none.
+		assert.Equal(t, int64(noneCount), result.Rows[0][2])    // Count of $none should be 1.
+
+		bucketsIndexStart = 1
+		bucketsIndexEnd = 10
+	}
+
+	// Expected output should be:
+	//     First bucket should be of the range start to lower bound percentile.
+	//     Last bucket should be of the range upper bound percentile to range end.
+	//     Others buckets to be divided in 8 equal ranges.
+	bucketStart := numPropertyRangeStart
+	bucketEnd := lowerPercentileValue - 1
+	bucketRange := M.GetBucketRangeForStartAndEnd(bucketStart, bucketEnd)
+	countInBucket := bucketEnd - bucketStart + 1
+	// First bucket range and last bucket range.
+	assert.Equal(t, bucketRange, result.Rows[bucketsIndexStart][1])
+	assert.Equal(t, int64(countInBucket), result.Rows[bucketsIndexStart][2])
+
+	bucketStart = lowerPercentileValue
+	for i := bucketsIndexStart + 1; i < bucketsIndexEnd; i++ {
+		bucketEnd = int(bucketStart+nonPercentileBucketRange) - 1
+		bucketRange = M.GetBucketRangeForStartAndEnd(bucketStart, bucketEnd)
+		countInBucket = bucketEnd - bucketStart + 1
+		assert.Equal(t, bucketRange, result.Rows[i][1])
+		assert.Equal(t, int64(countInBucket), result.Rows[i][2])
+
+		bucketStart = bucketEnd + 1
+	}
+	// Last bucket range and last bucket range.
+	bucketStart = upperPercentileValue
+	bucketEnd = numPropertyRangeEnd
+	bucketRange = M.GetBucketRangeForStartAndEnd(bucketStart, bucketEnd)
+	countInBucket = bucketEnd - bucketStart + 1
+	assert.Equal(t, bucketRange, result.Rows[bucketsIndexEnd][1])
+	assert.Equal(t, int64(countInBucket), result.Rows[bucketsIndexEnd][2])
 }
