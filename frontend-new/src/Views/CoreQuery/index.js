@@ -17,7 +17,7 @@ function CoreQuery({ activeProject }) {
   const [showResult, setShowResult] = useState(false);
   const [queries, setQueries] = useState([]);
   const [appliedQueries, setAppliedQueries] = useState([]);
-  const [breakdown] = useState([]);
+  const [appliedBreakdown, setAppliedBreakdown] = useState([]);
   const [queryOptions, setQueryOptions] = useState({
     groupBy: [{
       prop_category: '', // user / event
@@ -90,44 +90,19 @@ function CoreQuery({ activeProject }) {
     }
 
     query.gbp = [];
-    // queryOptions.groupBy.forEach(opt => {
-    //   const group = {
-    //     pr: opt.property,
-    //     en: opt.prop_category,
-    //     pty: opt.prop_type
-    //   };
-    //   query.gbp.push(group);
-    // });
 
-    // for(let i=0; i < this.state.groupBys.length; i++) {
-    //   let groupBy = this.state.groupBys[i];
-    //   let cGroupBy = {};
-
-    //   if (groupBy.name != '' && groupBy.type != '') {
-    //     cGroupBy.pr = groupBy.name;
-    //     cGroupBy.en = groupBy.type;
-    //     cGroupBy.pty = groupBy.ptype
-
-    //     // add group by event name.
-    //     if (this.isEventNameRequiredForGroupBy() && groupBy.eventName != '') {
-    //       let nameWithIndex = removeIndexIfExistsFromOptName(groupBy.eventName);
-    //       cGroupBy.ena = nameWithIndex.name
-    //       // let eni = getIndexIfExistsFromOptName(groupBy.eventName)
-    //       if (!isNaN(nameWithIndex.index)) {
-    //         cGroupBy.eni = nameWithIndex.index  // 1 valued index to distinguish in backend from default 0.
-    //       }
-    //     }
-    //     query.gbp.push(cGroupBy)
-    //   }
-    // }
-
-    // query.gbt = (presentation == PRESENTATION_LINE) ?
-    //   getGroupByTimestampType(query.fr, query.to) : '';
+    queryOptions.groupBy.forEach(opt => {
+      if (opt.prop_category) {
+        const group = {
+          pr: opt.property,
+          en: opt.prop_category,
+          pty: opt.prop_type
+        };
+        query.gbp.push(group);
+      }
+    });
+    
     query.tz = 'Asia/Kolkata';
-
-    // query.sse = sessionStartEvent.value
-    // query.see = sessionEndEvent.value
-
     return query;
   }, [getEventsWithProperties, queryType]);
 
@@ -169,6 +144,10 @@ function CoreQuery({ activeProject }) {
       return null;
     }
   }, [updateResultState, getQuery]);
+
+  const updateAppliedBreakdown = useCallback(()=>{
+
+  }, []);
 
   const runQuery = useCallback(async (activeTab, refresh = false) => {
     setActiveKey(activeTab);
@@ -219,6 +198,7 @@ function CoreQuery({ activeProject }) {
       updateResultState('2', obj);
       updateResultState('3', obj);
       setAppliedQueries(queries.map(elem => elem.label));
+      updateAppliedBreakdown();
       closeDrawer();
       setShowResult(true);
     }
@@ -229,16 +209,16 @@ function CoreQuery({ activeProject }) {
 
   const title = () => {
     return (
-			<div className={'flex justify-between items-center'}>
-				<div className={'flex'}>
-					<SVG name={queryType === 'funnel' ? 'funnels_cq' : 'events_cq'} size="24px"></SVG>
-					<Text type={'title'} level={4} weight={'bold'} extraClass={'ml-2 m-0'}>{queryType === 'funnel' ? 'Find event funnel for' : 'Analyse Events'}</Text>
-				</div>
-				<div className={'flex justify-end items-center'}>
-					<Button type="text"><SVG name="play"></SVG>Help</Button>
-					<Button type="text" onClick={() => closeDrawer()}><SVG name="times"></SVG></Button>
-				</div>
-			</div>
+      <div className={'flex justify-between items-center'}>
+        <div className={'flex'}>
+          <SVG name={queryType === 'funnel' ? 'funnels_cq' : 'events_cq'} size="24px"></SVG>
+          <Text type={'title'} level={4} weight={'bold'} extraClass={'ml-2 m-0'}>{queryType === 'funnel' ? 'Find event funnel for' : 'Analyse Events'}</Text>
+        </div>
+        <div className={'flex justify-end items-center'}>
+          <Button type="text"><SVG name="play"></SVG>Help</Button>
+          <Button type="text" onClick={() => closeDrawer()}><SVG name="times"></SVG></Button>
+        </div>
+      </div>
     );
   };
 
@@ -251,60 +231,60 @@ function CoreQuery({ activeProject }) {
   });
 
   let result = (
-		<EventsAnalytics
-			queries={appliedQueries}
-			eventsMapper={eventsMapper}
-			reverseEventsMapper={reverseEventsMapper}
-			breakdown={breakdown}
-			resultState={resultState}
-			setDrawerVisible={setDrawerVisible}
-			runQuery={runQuery}
-			activeKey={activeKey}
-		/>
+    <EventsAnalytics
+      queries={appliedQueries}
+      eventsMapper={eventsMapper}
+      reverseEventsMapper={reverseEventsMapper}
+      breakdown={appliedBreakdown}
+      resultState={resultState}
+      setDrawerVisible={setDrawerVisible}
+      runQuery={runQuery}
+      activeKey={activeKey}
+    />
   );
 
   if (queryType === 'funnel') {
     result = (
-			<FunnelsResultPage
-				setDrawerVisible={setDrawerVisible}
-				queries={appliedQueries}
-				eventsMapper={eventsMapper}
-				reverseEventsMapper={reverseEventsMapper}
-			/>
+      <FunnelsResultPage
+        setDrawerVisible={setDrawerVisible}
+        queries={['Add to Wishlist', 'Paid', 'Checkout']}
+        eventsMapper={eventsMapper}
+        reverseEventsMapper={reverseEventsMapper}
+      />
     );
   }
 
   return (
     <>
-			<Drawer
-				title={title()}
-				placement="left"
-				closable={false}
-				visible={drawerVisible}
-				onClose={closeDrawer}
-				getContainer={false}
-				width={'600px'}
-				className={'fa-drawer'}
-			>
+      <Drawer
+        title={title()}
+        placement="left"
+        closable={false}
+        visible={drawerVisible}
+        onClose={closeDrawer}
+        getContainer={false}
+        width={'600px'}
+        className={'fa-drawer'}
+      >
 
-				<QueryComposer
-					queries={queries}
-					runQuery={runQuery}
-					eventChange={queryChange}
-					queryType={queryType}
-					queryOptions={queryOptions}
-					setQueryOptions={setExtraOptions}
-				/>
-			</Drawer>
+        <QueryComposer
+          queries={queries}
+          runQuery={runQuery}
+          eventChange={queryChange}
+          queryType={queryType}
+          queryOptions={queryOptions}
+          setQueryOptions={setExtraOptions}
+        />
+      </Drawer>
 
-			{showResult ? (
-			  <>
-					{result}
-			  </>
+      {showResult ? (
+        <>
+          {result}
+        </>
 
-			) : (
-					<CoreQueryHome setQueryType={setQueryType} setDrawerVisible={setDrawerVisible} />
-			)}
+      ) : (
+          <CoreQueryHome setQueryType={setQueryType} setDrawerVisible={setDrawerVisible} />
+        )}
 
     </>
   );
