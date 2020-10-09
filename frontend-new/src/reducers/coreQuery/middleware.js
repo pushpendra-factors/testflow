@@ -1,7 +1,7 @@
 /* eslint-disable */
 
-import { fetchEventsAction } from './actions';
-import { getEventNames } from './services';
+import { fetchEventsAction, fetchEventPropertiesAction } from './actions';
+import { getEventNames, fetchEventProperties, fetchUserProperties } from './services';
 import { convertToEventOptions } from './utils';
 
 export const fetchEventNames = (projectId) => {
@@ -17,3 +17,17 @@ export const fetchEventNames = (projectId) => {
     });
   };
 };
+
+export const getEventProperties = (projectId, eventName) => {
+  return (dispatch) => {
+    return new Promise((resolve, reject) => {
+      fetchEventProperties(projectId, eventName)
+        .then((response) => {
+          resolve(dispatch(fetchEventPropertiesAction(response.data, eventName)));
+        }).catch((err) => {
+          // resolve(dispatch(fetchEventPropertiesAction({})));
+        });
+    });
+  };
+}
+

@@ -10,7 +10,7 @@ import QueryBlock from './QueryBlock';
 import SeqSelector from './AnalysisSeqSelector';
 import GroupBlock from './GroupBlock';
 
-import { fetchEventNames } from '../../reducers/coreQuery/middleware';
+import { fetchEventNames, getEventProperties } from '../../reducers/coreQuery/middleware';
 import { fetchEventProperties, fetchUserProperties } from '../../reducers/coreQuery/services';
 
 const { Option } = Select;
@@ -274,7 +274,8 @@ const mapStateToProps = (state) => ({
 });
 
 const mapDispatchToProps = dispatch => bindActionCreators({
-  fetchEventNames
+  fetchEventNames,
+  getEventProperties
 }, dispatch);
 
 export default connect(mapStateToProps, mapDispatchToProps)(QueryComposer);

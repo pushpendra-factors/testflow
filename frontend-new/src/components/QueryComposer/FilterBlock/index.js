@@ -1,19 +1,23 @@
 /* eslint-disable */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styles from './index.module.scss';
 
 import { Input } from 'antd';
 import { SVG } from 'factorsComponents';
 
-export default function FilterBlock({ filter, insertFilter, closeFilter }) {
+import { fetchEventPropertyValues } from '../../../reducers/coreQuery/services';
+
+export default function FilterBlock({ filterProps, activeProject, event, filter, insertFilter, closeFilter }) {
   const [filterTypeState, setFilterTypeState] = useState('props');
   const [groupCollapseState, setGroupCollapse] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
   const [newFilterState, setNewFilterState] = useState({
-    props: '',
+    props: [],
     operator: '',
     values: []
   });
+
+  const [dropDownValues, setDropDownValues] = useState({});
 
   const placeHolder = {
     props: 'Choose a property',
@@ -26,37 +30,35 @@ export default function FilterBlock({ filter, insertFilter, closeFilter }) {
       {
         label: 'User Properties',
         icon: 'user',
-        values: [
-          'Cart Updated',
-          'Paid'
-        ]
+        
       },
       {
         label: 'Event Properties',
         icon: 'mouseevent',
-        values: [
-          'City',
-          'Country'
-        ]
       }
     ],
-    operator: [
-      'isEqual',
-      'lessThan',
-      'greaterThan'
-    ],
-    values: {
-      'Cart Updated': ['cart val1', 'cart val2', 'cart val3'],
-      Paid: ['paid val1', 'paid val2', 'paid val3'],
-      City: ['Bangalore', 'Delhi', 'Mumbai'],
-      Country: ['India', 'USA', 'France', 'UK']
-    }
+    operator: {
+      "categorical": [
+        '=',
+        '!=',
+        'contains',
+        'not contains'
+      ],
+      "numerical": [
+        '=',
+        '!=',
+        '<',
+        '<=',
+        '>',
+        '>='
+      ]
+  },
   };
 
   const renderFilterContent = () => {
     return (
       <div className={`${styles.filter_block__filter_content} ml-4`}>
-        {filter.props + ' ' + filter.operator + ' ' + filter.values.join(', ')}
+        {filter.props[0] + ' ' + filter.operator + ' ' + filter.values.join(', ')}
       </div>
     );
   };
@@ -66,6 +68,15 @@ export default function FilterBlock({ filter, insertFilter, closeFilter }) {
       if (userInput.keyCode === 8 || userInput.keyCode === 46) {
         removeFilter();
       }
+      
+    } else if (filterTypeState === 'values' 
+      && userInput.keyCode === 13 
+      && newFilterState.props[1] === 'numerical') { 
+        const newFilter = Object.assign({}, newFilterState);
+        newFilter[filterTypeState].push(userInput.currentTarget.value);
+        changeFilterTypeState();
+        insertFilter(newFilter);
+        closeFilter();
     }
     setSearchTerm(userInput.currentTarget.value);
   };
@@ -73,7 +84,7 @@ export default function FilterBlock({ filter, insertFilter, closeFilter }) {
   const removeFilter = () => {
     const filterState = Object.assign({}, newFilterState);
     filterTypeState === 'operator' ? (() => {
-      filterState.props = '';
+      filterState.props = [];
       changeFilterTypeState(false);
     })()
       : null;
@@ -99,13 +110,29 @@ export default function FilterBlock({ filter, insertFilter, closeFilter }) {
     }
   };
 
+  useEffect(() => {
+    if(newFilterState.props[1] === 'categorical' && !dropDownValues[newFilterState.props[0]]) {
+      fetchEventPropertyValues(activeProject.id, event.label, newFilterState.props[0]).then(res => {
+        const ddValues = Object.assign({}, dropDownValues);
+        ddValues[newFilterState.props[0]] = res.data;
+        console.log(ddValues);
+        setDropDownValues(ddValues);
+      })
+    }
+
+  }, [newFilterState])
+
   const optionClick = (value) => {
     const newFilter = Object.assign({}, newFilterState);
-    if (filterTypeState === 'values') {
+    if (filterTypeState === 'props') {
+      newFilter[filterTypeState] = value;
+    }
+    else if (filterTypeState === 'values') {
       newFilter[filterTypeState].push(value);
     } else {
       newFilter[filterTypeState] = value;
     }
+    // One more check for props and fetch prop values;
     changeFilterTypeState();
     setNewFilterState(newFilter);
   };
@@ -139,12 +166,12 @@ export default function FilterBlock({ filter, insertFilter, closeFilter }) {
             { collState
               ? (() => {
                 const valuesOptions = [];
-                group.values.forEach((val) => {
-                  if (val.toLowerCase().includes(searchTerm.toLowerCase())) {
+                filterProps[['user', 'event'][grpIndex]].forEach((val) => {
+                  if (val[0].toLowerCase().includes(searchTerm.toLowerCase())) {
                     valuesOptions.push(
                       <span className={styles.filter_block__filter_select__option}
                         onClick={() => optionClick(val)} >
-                        {val}
+                        {val[0]}
                       </span>
                     );
                   }
@@ -157,7 +184,7 @@ export default function FilterBlock({ filter, insertFilter, closeFilter }) {
         });
         break;
       case 'operator':
-        options.forEach(opt => {
+        options[newFilterState.props[1]].forEach(opt => {
           if (opt.toLowerCase().includes(searchTerm.toLowerCase())) {
             renderOptions.push(
               <span className={styles.filter_block__filter_select__option}
@@ -169,15 +196,18 @@ export default function FilterBlock({ filter, insertFilter, closeFilter }) {
         });
         break;
       case 'values':
-        options[newFilterState.props].forEach(opt => {
-          if (opt.toLowerCase().includes(searchTerm.toLowerCase())) {
-            renderOptions.push(<span className={styles.filter_block__filter_select__option}
-              onClick={() => optionClick(opt)} >
-              {opt}
-            </span>
-            );
-          }
-        });
+        if(newFilterState.props[1] === 'categorical') {
+          options[newFilterState.props[0]] && options[newFilterState.props[0]].forEach(opt => {
+            if (opt.toLowerCase().includes(searchTerm.toLowerCase())) {
+              renderOptions.push(<span className={styles.filter_block__filter_select__option}
+                onClick={() => optionClick(opt)} >
+                {opt}
+              </span>
+              );
+            }
+          });
+        }
+        
         break;
     }
 
@@ -189,7 +219,7 @@ export default function FilterBlock({ filter, insertFilter, closeFilter }) {
     const tagClass = styles.filter_block__filter_select__tag;
     newFilterState.props
       ? tags.push(<span className={tagClass}>
-        {newFilterState.props}
+        {newFilterState.props[0]}
       </span>) : (() => {})();
     newFilterState.operator
       ? tags.push(<span className={tagClass}>
@@ -225,7 +255,11 @@ export default function FilterBlock({ filter, insertFilter, closeFilter }) {
           onKeyUp={onSelectSearch}
         />
         <div className={styles.filter_block__filter_select__content}>
-          {renderOptions(filterDropDownOptions[filterTypeState])}
+          { 
+          filterTypeState!== 'values'? 
+            renderOptions(filterDropDownOptions[filterTypeState])
+           : renderOptions(dropDownValues)
+           }
         </div>
       </div>
     );
@@ -237,6 +271,7 @@ export default function FilterBlock({ filter, insertFilter, closeFilter }) {
             newFilterState.values.length
     ) {
       insertFilter(newFilterState);
+      closeFilter();
     } else {
       closeFilter();
     }

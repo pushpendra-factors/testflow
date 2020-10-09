@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { SVG, Text } from 'factorsComponents';
 import styles from './index.module.scss';
 import { Select, Button } from 'antd';
@@ -7,13 +7,20 @@ import { connect } from 'react-redux';
 // import Filter from '../Filter';
 import FilterBlock from '../FilterBlock';
 
+import { fetchEventProperties, fetchUserProperties } from '../../../reducers/coreQuery/services';
+
 const { OptGroup, Option } = Select;
 
 function QueryBlock({
-  index, event, eventChange, queries, queryType, eventOptions
+  index, event, eventChange, queries, queryType, eventOptions,
+  activeProject
 }) {
   const [isDDVisible, setDDVisible] = useState(!!(index === 1 && !event));
   const [isFilterDDVisible, setFilterDDVisible] = useState(false);
+  const [filterProps, setFilterProperties] = useState({
+    user: [],
+    event: []
+  });
 
   const alphabetIndex = 'ABCDEF';
 
@@ -23,6 +30,30 @@ function QueryBlock({
     setDDVisible(false);
     eventChange(newEvent, index - 1);
   };
+
+  useEffect(() => {
+    if (!event) { return null; };
+    const assignFilterProps = Object.assign({}, filterProps);
+    fetchEventProperties(activeProject.id, event.label).then(res => {
+      const data = res.data;
+      Object.keys(data).forEach(key => {
+        data[key].forEach(val => {
+          assignFilterProps.event.push([val, key]);
+        });
+      });
+      setFilterProperties(assignFilterProps);
+    });
+
+    fetchUserProperties(activeProject.id, queryType).then(res => {
+      const data = res.data;
+      Object.keys(data).forEach(key => {
+        data[key].forEach(val => {
+          assignFilterProps.user.push([val, key]);
+        });
+        setFilterProperties(assignFilterProps);
+      });
+    });
+  }, [event]);
 
   const triggerDropDown = () => {
     setDDVisible(true);
@@ -77,7 +108,7 @@ function QueryBlock({
 
   const selectEventFilter = () => {
     if (isFilterDDVisible) {
-      return <FilterBlock insertFilter={insertFilters} closeFilter={() => setFilterDDVisible(false)}></FilterBlock>;
+      return <FilterBlock filterProps={filterProps} activeProject={activeProject} event={event} insertFilter={insertFilters} closeFilter={() => setFilterDDVisible(false)}></FilterBlock>;
     }
   };
 
@@ -136,11 +167,11 @@ function QueryBlock({
 
 const mapStateToProps = (state) => ({
   eventOptions: state.coreQuery.eventOptions,
-  activeProject: state.global.activeProject
+  activeProject: state.global.active_project
 });
 
 // const mapDispatchToProps = dispatch => bindActionCreators({
-//   fetchEvents,
+//   getEventProperties,
 // }, dispatch)
 
 export default connect(mapStateToProps)(QueryBlock);
