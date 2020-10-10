@@ -449,8 +449,17 @@ func appendNumericalBucketingSteps(qStmnt *string, groupProps []QueryGroupByProp
 		}
 
 		// Adding _group_key_x_bounds step.
+		// Buckets are formed using lower and upper bound as below:
+		//		Bucket 1 as < lbound
+		// 		Bucket 2 as >= lbound && < (lbound + diff / 8)
+		// 		....
+		// 		Bucket 10 as >= ubound
+		// Mostly data is skewed towards first value which would mostly be default.
+		// And since first bucket range is < lbound, first bucket mostly end up getting 0 values.
+		// Adding very small 0.00001 to the lower bound so that while bucketing lbound comes in
+		// first bucket instead of 2nd bucket.
 		boundsStepName := groupKey + "_bounds"
-		boundsStatement := fmt.Sprintf("SELECT percentile_disc(%.2f) WITHIN GROUP(ORDER BY %s::numeric) AS lbound, "+
+		boundsStatement := fmt.Sprintf("SELECT percentile_disc(%.2f) WITHIN GROUP(ORDER BY %s::numeric) + 0.00001 AS lbound, "+
 			"percentile_disc(%.2f) WITHIN GROUP(ORDER BY %s::numeric) AS ubound FROM %s "+
 			"WHERE %s != '%s'", NumericalLowerBoundPercentile, groupKey, NumericalUpperBoundPercentile,
 			groupKey, refStepName, groupKey, PropertyValueNone)

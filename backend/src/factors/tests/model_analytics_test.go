@@ -1906,20 +1906,24 @@ func TestAnalyticsFunnelQueryWithNumericalBucketing(t *testing.T) {
 		result, errCode, _ := M.Analyze(project.ID, query)
 		assert.Equal(t, http.StatusOK, errCode)
 		bucketStart := numPropertyRangeStart
-		bucketEnd := lowerPercentileValue - 1
+		bucketEnd := lowerPercentileValue
 		bucketRange := M.GetBucketRangeForStartAndEnd(bucketStart, bucketEnd)
-		// First bucket range and last bucket range.
+		// First bucket range.
 		assert.Equal(t, bucketRange, result.Rows[1][0])
 
-		// Last bucket range and last bucket range.
+		// Last bucket range.
 		bucketStart = upperPercentileValue
 		bucketEnd = numPropertyRangeEnd
 		bucketRange = M.GetBucketRangeForStartAndEnd(bucketStart, bucketEnd)
 		assert.Equal(t, bucketRange, result.Rows[10][0])
 
-		bucketStart = lowerPercentileValue
+		bucketStart = lowerPercentileValue + 1
 		for i := 2; i < 10; i++ {
-			bucketEnd = int(bucketStart+nonPercentileBucketRange) - 1
+			if i == 9 {
+				bucketEnd = upperPercentileValue - 1
+			} else {
+				bucketEnd = int(bucketStart+nonPercentileBucketRange) - 1
+			}
 			bucketRange = M.GetBucketRangeForStartAndEnd(bucketStart, bucketEnd)
 			assert.Equal(t, bucketRange, result.Rows[i][0])
 
@@ -1949,16 +1953,20 @@ func validateNumericalBucketRanges(t *testing.T, result *M.QueryResult, numPrope
 	//     Last bucket should be of the range upper bound percentile to range end.
 	//     Others buckets to be divided in 8 equal ranges.
 	bucketStart := numPropertyRangeStart
-	bucketEnd := lowerPercentileValue - 1
+	bucketEnd := lowerPercentileValue
 	bucketRange := M.GetBucketRangeForStartAndEnd(bucketStart, bucketEnd)
 	countInBucket := bucketEnd - bucketStart + 1
-	// First bucket range and last bucket range.
+	// First bucket range.
 	assert.Equal(t, bucketRange, result.Rows[bucketsIndexStart][1])
 	assert.Equal(t, int64(countInBucket), result.Rows[bucketsIndexStart][2])
 
-	bucketStart = lowerPercentileValue
+	bucketStart = lowerPercentileValue + 1
 	for i := bucketsIndexStart + 1; i < bucketsIndexEnd; i++ {
-		bucketEnd = int(bucketStart+nonPercentileBucketRange) - 1
+		if i == bucketsIndexEnd-1 {
+			bucketEnd = upperPercentileValue - 1
+		} else {
+			bucketEnd = int(bucketStart+nonPercentileBucketRange) - 1
+		}
 		bucketRange = M.GetBucketRangeForStartAndEnd(bucketStart, bucketEnd)
 		countInBucket = bucketEnd - bucketStart + 1
 		assert.Equal(t, bucketRange, result.Rows[i][1])
@@ -1966,7 +1974,7 @@ func validateNumericalBucketRanges(t *testing.T, result *M.QueryResult, numPrope
 
 		bucketStart = bucketEnd + 1
 	}
-	// Last bucket range and last bucket range.
+	// Last bucket range.
 	bucketStart = upperPercentileValue
 	bucketEnd = numPropertyRangeEnd
 	bucketRange = M.GetBucketRangeForStartAndEnd(bucketStart, bucketEnd)

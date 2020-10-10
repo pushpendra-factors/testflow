@@ -8,7 +8,9 @@ import { Drawer, Button } from 'antd';
 import { SVG, Text } from '../../components/factorsComponents';
 import EventsAnalytics from '../EventsAnalytics';
 import { runQuery as runQueryService } from '../../reducers/coreQuery/services';
-import { initialResultState, calculateFrequencyData, calculateActiveUsersData } from './utils';
+import {
+  initialResultState, calculateFrequencyData, calculateActiveUsersData, hasApiFailed, calculateFrequencyDataForBreakdown, calculateActiveUsersDataForBreakdown
+} from './utils';
 
 function CoreQuery({ activeProject }) {
   const [drawerVisible, setDrawerVisible] = useState(false);
@@ -17,7 +19,7 @@ function CoreQuery({ activeProject }) {
   const [showResult, setShowResult] = useState(false);
   const [queries, setQueries] = useState([]);
   const [appliedQueries, setAppliedQueries] = useState([]);
-  const [breakdown] = useState([]);
+  const [appliedBreakdown, setAppliedBreakdown] = useState([]);
   const [queryOptions, setQueryOptions] = useState({
     groupBy: [{
       prop_category: '', // user / event
@@ -62,7 +64,6 @@ function CoreQuery({ activeProject }) {
     const query = {};
     query.cl = queryType === 'event' ? 'events' : 'funnel';
     query.ty = parseInt(activeTab) === 1 ? 'unique_users' : 'events_occurrence';
-    query.ec = 'each_given_event';
 
     // Check date range validity
 
@@ -89,47 +90,28 @@ function CoreQuery({ activeProject }) {
       query.gbt = 'date';
     }
 
-    query.gbp = [];
-    // queryOptions.groupBy.forEach(opt => {
-    //   const group = {
-    //     pr: opt.property,
-    //     en: opt.prop_category,
-    //     pty: opt.prop_type
-    //   };
-    //   query.gbp.push(group);
-    // });
+    const groupBy = [...queryOptions.groupBy.filter(elem => elem.prop_category)].sort((a, b) => {
+      return a.prop_category >= b.prop_category ? 1 : -1;
+    });
 
-    // for(let i=0; i < this.state.groupBys.length; i++) {
-    //   let groupBy = this.state.groupBys[i];
-    //   let cGroupBy = {};
+    query.gbp = groupBy
+      .map(opt => {
+        return {
+          pr: opt.property,
+          en: opt.prop_category,
+          pty: opt.prop_type
+        };
+      });
 
-    //   if (groupBy.name != '' && groupBy.type != '') {
-    //     cGroupBy.pr = groupBy.name;
-    //     cGroupBy.en = groupBy.type;
-    //     cGroupBy.pty = groupBy.ptype
+    if (query.gbp.length) {
+      query.ec = 'any_given_event';
+    } else {
+      query.ec = 'each_given_event';
+    }
 
-    //     // add group by event name.
-    //     if (this.isEventNameRequiredForGroupBy() && groupBy.eventName != '') {
-    //       let nameWithIndex = removeIndexIfExistsFromOptName(groupBy.eventName);
-    //       cGroupBy.ena = nameWithIndex.name
-    //       // let eni = getIndexIfExistsFromOptName(groupBy.eventName)
-    //       if (!isNaN(nameWithIndex.index)) {
-    //         cGroupBy.eni = nameWithIndex.index  // 1 valued index to distinguish in backend from default 0.
-    //       }
-    //     }
-    //     query.gbp.push(cGroupBy)
-    //   }
-    // }
-
-    // query.gbt = (presentation == PRESENTATION_LINE) ?
-    //   getGroupByTimestampType(query.fr, query.to) : '';
     query.tz = 'Asia/Kolkata';
-
-    // query.sse = sessionStartEvent.value
-    // query.see = sessionEndEvent.value
-
     return query;
-  }, [getEventsWithProperties, queryType]);
+  }, [getEventsWithProperties, queryType, queryOptions.groupBy]);
 
   const closeDrawer = () => {
     setDrawerVisible(false);
@@ -151,11 +133,21 @@ function CoreQuery({ activeProject }) {
     });
   }, []);
 
+  const updateAppliedBreakdown = useCallback(() => {
+    let newAppliedBreakdown = queryOptions.groupBy.filter(elem => elem.prop_category).sort((a, b) => {
+      return a.prop_category >= b.prop_category ? 1 : -1;
+    });
+    if (newAppliedBreakdown.length === 1) {
+      newAppliedBreakdown = [newAppliedBreakdown[0].property];
+    }
+    setAppliedBreakdown(newAppliedBreakdown);
+  }, [queryOptions.groupBy]);
+
   const callRunQueryApiService = useCallback(async (activeProjectId, activeTab) => {
     try {
       const query = getQuery(activeTab);
       const res = await runQueryService(activeProjectId, [query]);
-      if (res.status === 200) {
+      if (res.status === 200 && !hasApiFailed(res)) {
         if (activeTab !== '2') {
           updateResultState(activeTab, { loading: false, error: false, data: res.data });
         }
@@ -185,13 +177,22 @@ function CoreQuery({ activeProject }) {
         if (resultState[1].data) {
           const res = await callRunQueryApiService(activeProject.id, '2');
           if (res) {
-            activeUsersData = calculateActiveUsersData(resultState[1].data, res);
+            if (!appliedBreakdown.length) {
+              activeUsersData = calculateActiveUsersData(resultState[1].data, res);
+            } else {
+              activeUsersData = calculateActiveUsersDataForBreakdown(resultState[1].data, res);
+            }
           }
         } else {
+          // combine these two and make one query group
           const userData = await callRunQueryApiService(activeProject.id, '1');
           const sessionData = await callRunQueryApiService(activeProject.id, '2');
           if (userData && sessionData) {
-            activeUsersData = calculateActiveUsersData(userData, sessionData);
+            if (!appliedBreakdown.length) {
+              activeUsersData = calculateActiveUsersData(userData, sessionData);
+            } else {
+              activeUsersData = calculateActiveUsersDataForBreakdown(userData, sessionData);
+            }
           }
         }
 
@@ -202,12 +203,20 @@ function CoreQuery({ activeProject }) {
       if (activeTab === '3') {
         let frequencyData = null;
         if (resultState[1].data) {
-          frequencyData = calculateFrequencyData(resultState[0].data, resultState[1].data);
+          if (!appliedBreakdown.length) {
+            frequencyData = calculateFrequencyData(resultState[0].data, resultState[1].data);
+          } else {
+            frequencyData = calculateFrequencyDataForBreakdown(resultState[0].data, resultState[1].data);
+          }
         } else {
           updateResultState(activeTab, { loading: true, error: false, data: null });
           const res = await callRunQueryApiService(activeProject.id, '1');
           if (res) {
-            frequencyData = calculateFrequencyData(resultState[0].data, res);
+            if (!appliedBreakdown.length) {
+              frequencyData = calculateFrequencyData(resultState[0].data, res);
+            } else {
+              frequencyData = calculateFrequencyDataForBreakdown(resultState[0].data, res);
+            }
           }
         }
         updateResultState(activeTab, { loading: false, error: false, data: frequencyData });
@@ -219,25 +228,27 @@ function CoreQuery({ activeProject }) {
       updateResultState('2', obj);
       updateResultState('3', obj);
       setAppliedQueries(queries.map(elem => elem.label));
+      updateAppliedBreakdown();
       closeDrawer();
       setShowResult(true);
     }
 
     updateResultState(activeTab, { loading: true, error: false, data: null });
     callRunQueryApiService(activeProject.id, activeTab);
-  }, [activeProject, resultState, queries, updateResultState, callRunQueryApiService]);
+  }, [activeProject, resultState, queries, updateResultState, callRunQueryApiService, updateAppliedBreakdown]);
 
   const title = () => {
-    return (<div className={'flex justify-between items-center'}>
-    <div className={'flex'}>
-					<SVG name={queryType === 'funnel' ? 'funnels_cq' : 'events_cq'} size="24px"></SVG>
-					<Text type={'title'} level={4} weight={'bold'} extraClass={'ml-2 m-0'}>{queryType === 'funnel' ? 'Find event funnel for' : 'Analyse Events'}</Text>
-				</div>
-				<div className={'flex justify-end items-center'}>
-					<Button type="text"><SVG name="play"></SVG>Help</Button>
-					<Button type="text" onClick={() => closeDrawer()}><SVG name="times"></SVG></Button>
-				</div>
-			</div>
+    return (
+      <div className={'flex justify-between items-center'}>
+        <div className={'flex'}>
+          <SVG name={queryType === 'funnel' ? 'funnels_cq' : 'events_cq'} size="24px"></SVG>
+          <Text type={'title'} level={4} weight={'bold'} extraClass={'ml-2 m-0'}>{queryType === 'funnel' ? 'Find event funnel for' : 'Analyse Events'}</Text>
+        </div>
+        <div className={'flex justify-end items-center'}>
+          <Button type="text"><SVG name="play"></SVG>Help</Button>
+          <Button type="text" onClick={() => closeDrawer()}><SVG name="times"></SVG></Button>
+        </div>
+      </div>
     );
   };
 
@@ -250,60 +261,60 @@ function CoreQuery({ activeProject }) {
   });
 
   let result = (
-		<EventsAnalytics
-			queries={appliedQueries}
-			eventsMapper={eventsMapper}
-			reverseEventsMapper={reverseEventsMapper}
-			breakdown={breakdown}
-			resultState={resultState}
-			setDrawerVisible={setDrawerVisible}
-			runQuery={runQuery}
-			activeKey={activeKey}
-		/>
+    <EventsAnalytics
+      queries={appliedQueries}
+      eventsMapper={eventsMapper}
+      reverseEventsMapper={reverseEventsMapper}
+      breakdown={appliedBreakdown}
+      resultState={resultState}
+      setDrawerVisible={setDrawerVisible}
+      runQuery={runQuery}
+      activeKey={activeKey}
+    />
   );
 
   if (queryType === 'funnel') {
     result = (
-			<FunnelsResultPage
-				setDrawerVisible={setDrawerVisible}
-				queries={appliedQueries}
-				eventsMapper={eventsMapper}
-				reverseEventsMapper={reverseEventsMapper}
-			/>
+      <FunnelsResultPage
+        setDrawerVisible={setDrawerVisible}
+        queries={['Add to Wishlist', 'Paid', 'Checkout']}
+        eventsMapper={eventsMapper}
+        reverseEventsMapper={reverseEventsMapper}
+      />
     );
   }
 
   return (
     <>
-			<Drawer
-				title={title()}
-				placement="left"
-				closable={false}
-				visible={drawerVisible}
-				onClose={closeDrawer}
-				getContainer={false}
-				width={'600px'}
-				className={'fa-drawer'}
-			>
+      <Drawer
+        title={title()}
+        placement="left"
+        closable={false}
+        visible={drawerVisible}
+        onClose={closeDrawer}
+        getContainer={false}
+        width={'600px'}
+        className={'fa-drawer'}
+      >
 
-				<QueryComposer
-					queries={queries}
-					runQuery={runQuery}
-					eventChange={queryChange}
-					queryType={queryType}
-					queryOptions={queryOptions}
-					setQueryOptions={setExtraOptions}
-				/>
-			</Drawer>
+        <QueryComposer
+          queries={queries}
+          runQuery={runQuery}
+          eventChange={queryChange}
+          queryType={queryType}
+          queryOptions={queryOptions}
+          setQueryOptions={setExtraOptions}
+        />
+      </Drawer>
 
-			{showResult ? (
-			  <>
-        {result}
-			  </>
+      {showResult ? (
+        <>
+          {result}
+        </>
 
-			) : (
-					<CoreQueryHome setQueryType={setQueryType} setDrawerVisible={setDrawerVisible} />
-			)}
+      ) : (
+          <CoreQueryHome setQueryType={setQueryType} setDrawerVisible={setDrawerVisible} />
+      )}
 
     </>
   );

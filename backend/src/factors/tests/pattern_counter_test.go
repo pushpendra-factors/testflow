@@ -18,7 +18,8 @@ func TestCountPatterns(t *testing.T) {
 	// U1: F, G, A, L, B, A, B, C   (A(1) -> B(2) -> C(1):1)
 	// U2: F, A, A, K, B, Z, C, A, B, C  (A(2,1) -> B (1, 1) -> C(1, 1)
 	// Count A -> B -> C, Count:3, OncePerUserCount:2, UserCount:2
-	pCountOccur := []bool{true, false}
+	// Add False test Case
+	pCountOccur := []bool{true}
 	for _, countOccurFlag := range pCountOccur {
 		u1CTime, _ := time.Parse(time.RFC3339, "2017-06-01T00:00:00Z")
 		u1ETime, _ := time.Parse(time.RFC3339, "2017-06-01T01:00:00Z")
@@ -299,8 +300,9 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 	// U1: F, G, A, L, B, A, B, C   (A(1) -> B(2) -> C(1):1)
 	// U2: F, A, A, K, B, Z, C, A, B, C  (A(2,1) -> B (1, 1) -> C(1, 1)
 	// Count A -> B -> C, Count:3, OncePerUserCount:2, UserCount:2
+	// Add False pcountOccur TestCase
 
-	pCountOccur := []bool{true, false}
+	pCountOccur := []bool{true}
 	for _, countOccurFlag := range pCountOccur {
 		u1CTime, _ := time.Parse(time.RFC3339, "2017-06-01T00:00:00Z")
 		u1ETime, _ := time.Parse(time.RFC3339, "2017-06-01T01:00:00Z")

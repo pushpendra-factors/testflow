@@ -809,10 +809,10 @@ all_users_intersect AS (SELECT events_intersect.event_user_id, CASE WHEN user_pr
 _group_key_1, _group_key_2, _group_key_3 FROM events_intersect LEFT JOIN users ON events_intersect.event_user_id=users.id
 LEFT JOIN user_properties ON users.id=user_properties.user_id AND user_properties.id=users.properties_id),
 
-_group_key_0_bounds AS (SELECT percentile_disc(0.02) WITHIN GROUP(ORDER BY _group_key_0::numeric) AS lbound, percentile_disc(0.98)
+_group_key_0_bounds AS (SELECT percentile_disc(0.02) WITHIN GROUP(ORDER BY _group_key_0::numeric) + 0.00001 AS lbound, percentile_disc(0.98)
  WITHIN GROUP(ORDER BY _group_key_0::numeric) AS ubound FROM all_users_intersect WHERE _group_key_0 != '$none'),
 
-_group_key_1_bounds AS (SELECT percentile_disc(0.02) WITHIN GROUP(ORDER BY _group_key_1::numeric) AS lbound, percentile_disc(0.98)
+_group_key_1_bounds AS (SELECT percentile_disc(0.02) WITHIN GROUP(ORDER BY _group_key_1::numeric) + 0.00001 AS lbound, percentile_disc(0.98)
 WITHIN GROUP(ORDER BY _group_key_1::numeric) AS ubound FROM all_users_intersect WHERE _group_key_1 != '$none'),
 
 bucketed AS (SELECT COALESCE(NULLIF(_group_key_0, '$none'), 'NaN') AS _group_key_0, CASE WHEN _group_key_0 = '$none' THEN -1
@@ -942,10 +942,10 @@ WHEN user_properties.properties->>'' = '' THEN '$none' ELSE user_properties.prop
 _group_key_1 FROM events_union LEFT JOIN users ON events_union.event_user_id=users.id LEFT JOIN user_properties
 ON users.id=user_properties.user_id AND user_properties.id=users.properties_id),
 
-_group_key_1_bounds AS (SELECT percentile_disc(0.02) WITHIN GROUP(ORDER BY _group_key_1::numeric) AS lbound, percentile_disc(0.98)
+_group_key_1_bounds AS (SELECT percentile_disc(0.02) WITHIN GROUP(ORDER BY _group_key_1::numeric) + 0.00001 AS lbound, percentile_disc(0.98)
 WITHIN GROUP(ORDER BY _group_key_1::numeric) AS ubound FROM any_users_union WHERE _group_key_1 != '$none'),
 
-_group_key_2_bounds AS (SELECT percentile_disc(0.02) WITHIN GROUP(ORDER BY _group_key_2::numeric) AS lbound, percentile_disc(0.98)
+_group_key_2_bounds AS (SELECT percentile_disc(0.02) WITHIN GROUP(ORDER BY _group_key_2::numeric) + 0.00001 AS lbound, percentile_disc(0.98)
 WITHIN GROUP(ORDER BY _group_key_2::numeric) AS ubound FROM any_users_union WHERE _group_key_2 != '$none'),
 
 bucketed AS (SELECT _group_key_0, COALESCE(NULLIF(_group_key_1, '$none'), 'NaN') AS _group_key_1, CASE WHEN _group_key_1 = '$none'
@@ -1134,7 +1134,7 @@ WHEN user_properties.properties->>'' = '' THEN '$none' ELSE user_properties.prop
 _group_key_0 FROM step_0 LEFT JOIN users ON step_0.event_user_id=users.id LEFT JOIN user_properties ON
 users.id=user_properties.user_id AND user_properties.id=users.properties_id),
 
-_group_key_0_bounds AS (SELECT percentile_disc(0.02) WITHIN GROUP(ORDER BY _group_key_0::numeric) AS lbound, percentile_disc(0.98)
+_group_key_0_bounds AS (SELECT percentile_disc(0.02) WITHIN GROUP(ORDER BY _group_key_0::numeric) + 0.00001 AS lbound, percentile_disc(0.98)
 WITHIN GROUP(ORDER BY _group_key_0::numeric) AS ubound FROM all_users_intersect WHERE _group_key_0 != '$none'),
 
 bucketed AS (SELECT COALESCE(NULLIF(_group_key_0, '$none'), 'NaN') AS _group_key_0, CASE WHEN _group_key_0 = '$none' THEN -1
@@ -1198,10 +1198,10 @@ user_properties.properties->>'' = '' THEN '$none' ELSE user_properties.propertie
 _group_key_0, _group_key_1, event_user_id FROM any_event LEFT JOIN users ON any_event.event_user_id=users.id
 LEFT JOIN user_properties ON users.id=user_properties.user_id AND user_properties.id=users.properties_id),
 
-_group_key_0_bounds AS (SELECT percentile_disc(0.02) WITHIN GROUP(ORDER BY _group_key_0::numeric) AS lbound,
+_group_key_0_bounds AS (SELECT percentile_disc(0.02) WITHIN GROUP(ORDER BY _group_key_0::numeric) + 0.00001 AS lbound,
 percentile_disc(0.98) WITHIN GROUP(ORDER BY _group_key_0::numeric) AS ubound FROM users_any_event WHERE _group_key_0 != '$none'),
 
-_group_key_2_bounds AS (SELECT percentile_disc(0.02) WITHIN GROUP(ORDER BY _group_key_2::numeric) AS lbound,
+_group_key_2_bounds AS (SELECT percentile_disc(0.02) WITHIN GROUP(ORDER BY _group_key_2::numeric) + 0.00001 AS lbound,
 percentile_disc(0.98) WITHIN GROUP(ORDER BY _group_key_2::numeric) AS ubound FROM users_any_event WHERE _group_key_2 != '$none'),
 
 bucketed AS (SELECT event_name, COALESCE(NULLIF(_group_key_0, '$none'), 'NaN') AS _group_key_0, CASE WHEN _group_key_0 = '$none'

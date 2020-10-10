@@ -51,8 +51,13 @@ sdk/android/*~
 # website
 website/factors-ai/react-website/dist
 website/factors-ai/react-website/.firebase
+
+# IntelliJ IDE files/structure
 /.idea/factors.iml
 /.idea/modules.xml
 /.idea/inspectionProfiles/Project_Default.xml
 /.idea/vcs.xml
 /.idea/workspace.xml
+/.idea/
+/backend/src/pkg/
+/backend/src/src/
