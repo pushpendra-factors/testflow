@@ -1,8 +1,9 @@
 import React from 'react';
 import {
-  Badge
+  Badge, Button
 } from 'antd';
-import { Text } from '../../components/factorsComponents';
+import { Text } from 'factorsComponents';
+import { FullscreenOutlined } from '@ant-design/icons';
 
 const Titles = [
   {
@@ -23,12 +24,17 @@ const Titles = [
   }
 ];
 
-function WidgetCard({ id }) {
+function WidgetCard({ id, setwidgetModal }) {
   return (
         <div className={'fa-dashboard--widget-card'}>
-            <div className={'fa-widget-card--top'}>
-                <Text type={'title'} level={5} weight={'bold'} extraClass={'m-0'}>{Titles[id].title}</Text>
-                <Text type={'paragraph'} mini color={'grey'} extraClass={'m-0'}>{Titles[id].subTitle}</Text>
+            <div className={'fa-widget-card--top flex justify-between items-start'}>
+                <div>
+                    <Text type={'title'} level={5} weight={'bold'} extraClass={'m-0'}>{Titles[id].title}</Text>
+                    <Text type={'paragraph'} mini color={'grey'} extraClass={'m-0'}>{Titles[id].subTitle}</Text>
+                </div>
+                <div className={'flex flex-col justify-start items-start fa-widget-card--top-actions'}>
+                    <Button onClick={() => setwidgetModal(true)} icon={<FullscreenOutlined />} type="text" />
+                </div>
             </div>
             <div className={'fa-widget-card--legend flex justify-center items-center'}>
                 <Badge status="success" text="Add to Wishlist, Chennai" />
