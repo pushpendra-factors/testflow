@@ -224,7 +224,7 @@ func TestCreateSalesforceDocument(t *testing.T) {
 	assert.Equal(t, eventNameCreated, result.Rows[0][0])
 	assert.Equal(t, int64(1), result.Rows[0][1])
 	assert.Equal(t, eventNameUpdate, result.Rows[1][0])
-	assert.Equal(t, int64(2), result.Rows[1][1])
+	assert.Equal(t, int64(3), result.Rows[1][1])
 
 	query.GroupByProperties = []M.QueryGroupByProperty{
 		M.QueryGroupByProperty{

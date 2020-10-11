@@ -171,14 +171,20 @@ func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.Trac
 		return "", "", errors.New("invalid operation")
 	}
 
+	createdTimestamp, err := M.GetSalesforceDocumentTimestampByAction(document, M.SalesforceDocumentCreated)
+	if err != nil {
+		return "", "", err
+	}
+
+	lastModifiedTimestamp, err := M.GetSalesforceDocumentTimestampByAction(document, M.SalesforceDocumentUpdated)
+	if err != nil {
+		return "", "", err
+	}
+
 	var eventID, userID string
-	var err error
 	if document.Action == M.SalesforceDocumentCreated {
 		trackPayload.Name = M.GetSalesforceEventNameByAction(document, M.SalesforceDocumentCreated)
-		trackPayload.Timestamp, err = M.GetSalesforceDocumentTimestampByAction(document, document.Action)
-		if err != nil {
-			return "", "", err
-		}
+		trackPayload.Timestamp = createdTimestamp
 
 		status, response := SDK.Track(projectID, trackPayload, true, SDK.SourceSalesforce)
 		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
@@ -197,10 +203,7 @@ func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.Trac
 	if document.Action == M.SalesforceDocumentCreated || document.Action == M.SalesforceDocumentUpdated {
 		trackPayload.EventId = "" //clear EventId from previous track
 		trackPayload.Name = M.GetSalesforceEventNameByAction(document, M.SalesforceDocumentUpdated)
-		trackPayload.Timestamp, err = M.GetSalesforceDocumentTimestampByAction(document, document.Action)
-		if err != nil {
-			return "", "", err
-		}
+		trackPayload.Timestamp = createdTimestamp
 
 		if document.Action == M.SalesforceDocumentUpdated {
 			// TODO(maisa): Use GetSyncedSalesforceDocumentByType while updating multiple contacts in an account object
@@ -227,6 +230,17 @@ func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.Trac
 		eventID = response.EventId
 	} else {
 		return "", "", errors.New("invalid action on salesforce document sync")
+	}
+
+	// create additional event for created action if document is not the first version
+	if document.Action == M.SalesforceDocumentCreated && createdTimestamp != lastModifiedTimestamp {
+		trackPayload.EventId = "" //clear EventId from previous track
+		trackPayload.Timestamp = lastModifiedTimestamp
+		trackPayload.Name = M.GetSalesforceEventNameByAction(document, M.SalesforceDocumentUpdated)
+		status, _ := SDK.Track(projectID, trackPayload, true, SDK.SourceSalesforce)
+		if status != http.StatusOK && status != http.StatusFound && status != http.StatusNotModified {
+			return "", "", fmt.Errorf("updated event for different timestamp track failed for doc type %d", document.Type)
+		}
 	}
 
 	return eventID, userID, nil
