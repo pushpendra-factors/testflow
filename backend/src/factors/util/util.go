@@ -551,7 +551,7 @@ func getInternationalPhoneNoWithoutCountryCode(intPhone string) string {
 	return strings.Join(phoneNo[1:], "")
 }
 
-// GetPossiblePhoneNumber is a generator function returning one pattern at a time
+// GetPossiblePhoneNumber returns all possible phone number for specific phone number pattern
 func GetPossiblePhoneNumber(phoneNo string) []string {
 	var possiblePhoneNo []string
 	var phonePattern string
@@ -560,15 +560,17 @@ func GetPossiblePhoneNumber(phoneNo string) []string {
 	// try pure numbers if form submited also had pure numbers
 	if isPurePhoneNumber(phoneNo) {
 		if !strings.Contains(phoneNo, "+") {
+			possiblePhoneNo = append(possiblePhoneNo, "0"+phoneNo)
 			possiblePhoneNo = append(possiblePhoneNo, "+"+phoneNo)
 			possiblePhoneNo = append(possiblePhoneNo, "+91"+phoneNo)
 		}
 
 		//0123-456-789 or (012)-345-6789
-		if len(phoneNo) == 10 {
-			phonePattern = fmt.Sprintf("%s-%s-%s", phoneNo[:3], phoneNo[3:6], phoneNo[6:])
+		nationalPhoneNo := strings.TrimPrefix(phoneNo, "+")
+		if len(nationalPhoneNo) == 10 {
+			phonePattern = fmt.Sprintf("%s-%s-%s", nationalPhoneNo[:3], nationalPhoneNo[3:6], nationalPhoneNo[6:])
 			possiblePhoneNo = append(possiblePhoneNo, phonePattern)
-			phonePattern = fmt.Sprintf("(%s)-%s-%s", phoneNo[:3], phoneNo[3:6], phoneNo[6:])
+			phonePattern = fmt.Sprintf("(%s)-%s-%s", nationalPhoneNo[:3], nationalPhoneNo[3:6], nationalPhoneNo[6:])
 			possiblePhoneNo = append(possiblePhoneNo, phonePattern)
 		}
 	}
@@ -595,7 +597,9 @@ func GetPossiblePhoneNumber(phoneNo string) []string {
 		possiblePhoneNo = append(possiblePhoneNo, libphonenumber.Format(num, libphonenumber.NATIONAL))
 
 		//911234567890
-		possiblePhoneNo = append(possiblePhoneNo, libphonenumber.Format(num, libphonenumber.E164)[1:])
+		nationalFormat := libphonenumber.Format(num, libphonenumber.E164)[1:]
+		possiblePhoneNo = append(possiblePhoneNo, nationalFormat)
+		possiblePhoneNo = append(possiblePhoneNo, "0"+nationalFormat)
 
 		//National format 01234 567 890
 		nationalNum := libphonenumber.GetNationalSignificantNumber(num)
