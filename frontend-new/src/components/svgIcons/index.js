@@ -96,11 +96,23 @@ const HexagonSVG = ({ size = 16, color, extraClass }) => {
   );
 };
 
-const PlusSVG = ({ size = 16, color = '#5949BC', extraClass }) => {
-  return (
-    <svg width={size} height={size} className={extraClass} viewBox="0 0 16 17" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M8.77771 4.66144C8.77771 4.23189 8.42948 3.88367 7.99993 3.88367C7.57037 3.88367 7.22215 4.23189 7.22215 4.66144V8.10588H3.77778C3.34822 8.10588 3 8.4541 3 8.88366C3 9.31321 3.34822 9.66144 3.77778 9.66144H7.22215V13.1059C7.22215 13.5354 7.57037 13.8837 7.99993 13.8837C8.42948 13.8837 8.77771 13.5354 8.77771 13.1059V9.66144H12.2222C12.6518 9.66144 13 9.31321 13 8.88366C13 8.4541 12.6518 8.10588 12.2222 8.10588H8.77771V4.66144Z" fill={color} />
+const PlusSVG = ({ size = 16, color, extraClass }) => {
+  return ( 
+    <svg width={size} height={size} className={extraClass}viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path fillRule="evenodd" clipRule="evenodd" d="M13 3.5C13 2.94772 12.5523 2.5 12 2.5C11.4477 2.5 11 2.94772 11 3.5V10.5H4C3.44771 10.5 3 10.9477 3 11.5C3 12.0523 3.44771 12.5 4 12.5H11V19.5C11 20.0523 11.4477 20.5 12 20.5C12.5523 20.5 13 20.0523 13 19.5V12.5H20C20.5523 12.5 21 12.0523 21 11.5C21 10.9477 20.5523 10.5 20 10.5H13V3.5Z" fill={color}/>
     </svg>
+  );
+};
+const EditSVG = ({ size = 16, color, extraClass }) => {
+  return ( 
+    <svg width={size} height={size} className={extraClass} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path fillRule="evenodd" clipRule="evenodd" d="M16.6707 10.7252L20.9133 14.9679L16.5211 19.3601L11.2178 20.4208L12.2784 15.1175L16.6707 10.7252ZM16.6707 13.5537L14.1208 16.1035L13.7673 17.8713L15.535 17.5177L18.0849 14.9679L16.6707 13.5537Z" fill={color}/>
+      <path d="M21.6091 9.94393C20.4436 8.77845 18.554 8.77845 17.3885 9.94393L21.6091 14.1645C22.7745 12.999 22.7745 11.1094 21.6091 9.94393Z" fill={color}/>
+      <rect x="2" y="3.98047" width="13.5346" height="3" rx="1.5" fill={color}/>
+      <rect x="2" y="10.0698" width="9.21777" height="3" rx="1.5" fill={color}/>
+      <rect x="2" y="16" width="6" height="3" rx="1.5" fill={color}/>
+    </svg>
+    
 
   );
 };
@@ -589,5 +601,6 @@ export {
   DropdownSVG,
   LinechartSVG,
   CheckmarkSVG,
-  BarchartSVG
+  BarchartSVG,
+  EditSVG
 };

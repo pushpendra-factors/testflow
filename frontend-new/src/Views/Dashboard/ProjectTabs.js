@@ -1,20 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Row, Col, Tabs, Modal
+  Row, Col, Tabs, Modal, Button
 } from 'antd';
-import { Text } from 'factorsComponents';
-// import { PlusOutlined, EditOutlined } from '@ant-design/icons';
+import { Text, SVG } from 'factorsComponents';
 import WidgetCard from './WidgetCard';
 const { TabPane } = Tabs;
 
-// const operations = <>
-//   <Button type="text" icon={<PlusOutlined />}/>
-//   <Button type="text" icon={<EditOutlined />}/>
-// </>;
-
-function ProjectTabs() {
+function ProjectTabs({ setaddDashboardModal }) {
   const [dataLoading, setDataLoading] = useState(true);
   const [widgetModal, setwidgetModal] = useState(false);
+
+  const operations = <>
+  <Button type="text" size={'small'} onClick={() => setaddDashboardModal(true)}><SVG name="plus" color={'grey'}/></Button>
+  <Button type="text" size={'small'}><SVG name="edit" color={'grey'}/></Button>
+  </>;
 
   useEffect(() => {
     setTimeout(() => {
@@ -29,7 +28,7 @@ function ProjectTabs() {
             { dataLoading ? <></>
               : <Tabs defaultActiveKey="1"
               className={'fa-tabs--dashboard'}
-            //   tabBarExtraContent={operations}
+              tabBarExtraContent={operations}
               >
                 <TabPane tab="My Dashboard" key="1">
                    <div className={'fa-container'}>
