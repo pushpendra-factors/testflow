@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text } from 'factorsComponents';
+import { Text, SVG } from 'factorsComponents';
 import {
   Row, Col, Input, Select
 } from 'antd';
@@ -24,15 +24,29 @@ function AddDashboard() {
             <Col span={24}>
                 <Row gutter={[24, 4]}>
                     <Col span={12}>
-                        <div className={'border--thin-2 border-radius--medium p-4'}>
-                            <Text type={'title'} level={5} weight={'bold'} extraClass={'m-0'}>Private</Text>
-                            <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'}>Only you have access to the contents of Private Dashboards.</Text>
+                        <div className={'fa-dasboard-privacy--card border-radius--medium p-4'}>
+                            <div className={'flex justify-between items-start'}>
+                                <div>
+                                    <SVG name={'lock'} color={'grey'} extraClass={'mr-2 mt-1'} />
+                                </div>
+                                <div>
+                                    <Text type={'title'} level={5} weight={'bold'} extraClass={'m-0'}>Private</Text>
+                                    <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'}>Only you have access to the contents of Private Dashboards.</Text>
+                                </div>
+                            </div>
                         </div>
                     </Col>
                     <Col span={12}>
-                        <div className={'border--thin-2 border-radius--medium p-4'}>
-                            <Text type={'title'} level={5} weight={'bold'} extraClass={'m-0'}>Public</Text>
-                            <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'}>Everyone in your organization has access to this dashboard.</Text>
+                        <div className={'fa-dasboard-privacy--card border-radius--medium p-4'}>
+                            <div className={'flex justify-between items-start'}>
+                                    <div>
+                                        <SVG name={'globe'} color={'grey'} extraClass={'mr-2 mt-1'} />
+                                    </div>
+                                    <div>
+                                    <Text type={'title'} level={5} weight={'bold'} extraClass={'m-0'}>Public</Text>
+                                    <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'}>Everyone in your organization has access to this dashboard.</Text>
+                                    </div>
+                            </div>
                         </div>
                     </Col>
                 </Row>

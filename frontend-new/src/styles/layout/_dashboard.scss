@@ -53,3 +53,13 @@
         }
     }
 }
+
+.fa-dasboard-privacy--card{
+    border: thin solid $fa-color--mono-1;
+    transition: all 0.3s;
+    cursor: pointer;
+    &:hover{
+        border: thin solid $fa-color--brand-color;
+        background-color: $fa-color--brand-1;
+    }
+}
