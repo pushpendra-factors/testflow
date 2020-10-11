@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/360EntSecGroup-Skylar/excelize"
+	"github.com/360EntSecGroup-Skylar/excelize/v2"
 	log "github.com/sirupsen/logrus"
 )
 

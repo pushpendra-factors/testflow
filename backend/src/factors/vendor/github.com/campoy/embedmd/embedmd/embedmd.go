@@ -53,7 +53,6 @@
 package embedmd
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"regexp"
@@ -62,7 +61,7 @@ import (
 // Process reads markdown from the given io.Reader searching for an embedmd
 // command. When a command is found, it is executed and the output is written
 // into the given io.Writer with the rest of standard markdown.
-func Process(ctx context.Context, out io.Writer, in io.Reader, opts ...Option) error {
+func Process(out io.Writer, in io.Reader, opts ...Option) error {
 	e := embedder{Fetcher: fetcher{}}
 	for _, opt := range opts {
 		opt.f(&e)

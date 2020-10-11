@@ -129,14 +129,6 @@ cd $PATH_TO_FACTORS/factors/backend/src/factors/scripts
 go run run_db_create.go
 ```
 
-* Install godep (mac) `brew install dep`.
-
-* Install all dependencies of the project (**Optional, as we have checked in vendor libs already**).
-```
-cd $GOPATH/src/factors
-dep ensure. Use dep ensure -v to look at logs. Logs might seem like its stuck.
-```
-
 * Build
 ```
 export PATH_TO_FACTORS=~/repos
@@ -165,13 +157,24 @@ cd $GOPATH/bin
 
 * Backend available at factors-dev.com:8080
 
-## Managing dependencies with godep (Optional)
+## Managing dependencies with go mod (Optional)
 
-* Adding new dependency
-```
-dep ensure -add github.com/<path_to_repo>
-```
-* Removing a dependency - Remove it from import and run `dep ensure`
+#### Adding new dependency
+1. Import the required dependency in of the files inside backend src.
+2. To install a specific version, use `go get -u <dependency>@<version>`
+3. Run the following two commands:
+    ```
+    go mod tidy
+    go mod vendor
+    ```
+
+#### Removing a dependency
+1. Remove it from the import statement.
+2. Run the following two commands:
+    ```
+    go mod tidy
+    go mod vendor
+    ```
 
 ## Frontend.
 * Download and install Nodejs. https://nodejs.org/en/download/
