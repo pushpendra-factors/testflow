@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"bytes"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -28,8 +30,11 @@ func IntSegmentHandler(c *gin.Context) {
 		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
 	})
 
+	var bodyBuffer bytes.Buffer
+	body := io.TeeReader(r.Body, &bodyBuffer)
+
 	var event IntSegment.Event
-	if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
+	if err := json.NewDecoder(body).Decode(&event); err != nil {
 		logCtx.WithError(err).Error("Segment JSON decode failed")
 	}
 	logCtx.WithFields(log.Fields{"event": event}).Debug("Segment webhook request")
@@ -39,6 +44,15 @@ func IntSegmentHandler(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusOK,
 			IntSegment.EventResponse{Error: "Request failed. Blocked."})
 		return
+	}
+
+	// Debug raw request payload from segment.
+	var rawRequestPayload map[string]interface{}
+	logDebugCtx := logCtx.WithField("token", token).WithField("tag", "segment_request_payload")
+	if err := json.Unmarshal(bodyBuffer.Bytes(), &rawRequestPayload); err != nil {
+		logDebugCtx.WithError(err).Info("Failed to decode as raw request.")
+	} else {
+		logDebugCtx.WithField("request", rawRequestPayload).Info("Raw segment request.")
 	}
 
 	status, response := IntSegment.ReceiveEventWithQueue(token, &event,
