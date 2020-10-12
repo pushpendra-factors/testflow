@@ -25,10 +25,14 @@ spec:
             - $(ENV)
             - --config
             - $(CONFIG)
-            - --endpoint
-            - $(ENDPOINT)
-            - --projectkey
-            - $(LIVSPACE_PROJECT_KEY)
+            - --endpoint_staging
+            - $(ENDPOINT_STAGING)
+             - --endpoint_prod
+            - $(ENDPOINT_PROD)
+            - --projectkey_staging
+            - $(ACME_STAGING_DEMO_KEY)
+             - --projectkey_prod
+            - $(SAAS_DEMO_PROD_KEY)
             envFrom:
             - configMapRef:
                 name: config-env

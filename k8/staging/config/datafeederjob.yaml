@@ -7,4 +7,6 @@ metadata:
     project: factors-staging
 data:
   CONFIG: "acme_com"
-  ENDPOINT: "https://staging-api.factors.ai"
+  ENDPOINT_STAGING: "https://staging-api.factors.ai"
+  ENDPOINT_PROD: "https://api.factors.ai"
+

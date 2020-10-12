@@ -1,22 +1,23 @@
 package main
 
-import(	
-	"fmt"
-	"strings"
-	"net/http"
-	"bytes"
-	"encoding/json"
+import (
 	"bufio"
-	"io/ioutil"
+	"bytes"
+	"compress/gzip"
+	"context"
+	"data_simulator/constants"
+	Log "data_simulator/logger"
 	"data_simulator/operations"
 	"data_simulator/utils"
-	Log "data_simulator/logger"
-    "compress/gzip"
-	"time"
+	"encoding/json"
 	"flag"
-    "data_simulator/constants"
-    "cloud.google.com/go/storage"
-    "context"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"strings"
+	"time"
+
+	"cloud.google.com/go/storage"
 )
 
 var endpoint *string
@@ -28,15 +29,15 @@ var clientUserIdToUserIdMap map[string]string = make(map[string]string)
 func ExtractEventData(data string) interface{} {
 	split := strings.Split(data, "|")
 	var op operations.EventOutput
-	if(len(split) >= 2){
+	if len(split) >= 2 {
 		json.Unmarshal([]byte(split[1]), &op)
-	}else {
+	} else {
 		//ignore: Fix this
 	}
 	return op
 }
 
-func IngestData(obj interface{}){
+func IngestData(obj interface{}) {
 	reqBody, _ := json.Marshal(obj)
 	url := fmt.Sprintf("%s%s", *endpoint, bulkLoadUrl)
 	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(reqBody))
@@ -90,26 +91,38 @@ func getUserId(clientUserId string, eventTimestamp int64) (string, error) {
 	return userId, nil
 }
 
-func main(){
-    env := flag.String("env", "development", "")
+func main() {
+	env := flag.String("env", "development", "")
 	seedDate := flag.String("seed_date", "", "")
-	endpoint = flag.String("endpoint", "", "")
-	authToken = flag.String("projectkey", "", "")
-	dataConfig := flag.String("config","","")
-    flag.Parse()
-    //configFilePrefix := flag.String("config_filename_prefix", "", "")
-    var date time.Time
-    if *seedDate == "" {
-        date = time.Now()        
-    } else {
-        date, _ = time.Parse(constants.TIMEFORMAT, *seedDate)
-    }
-    filePattern := fmt.Sprintf("%v_%v_%v_%v", 
-        date.Year(),
-        date.Month(),
-        date.Day(),
-		date.Hour()) 
-        
+	endpoint_prod := flag.String("endpoint_prod", "", "")
+	authToken_prod := flag.String("projectkey_prod", "", "")
+	endpoint_staging := flag.String("endpoint_staging", "", "")
+	authToken_staging := flag.String("projectkey_staging", "", "")
+	dataConfig := flag.String("config", "", "")
+	flag.Parse()
+	//configFilePrefix := flag.String("config_filename_prefix", "", "")
+	var date time.Time
+	if *seedDate == "" {
+		date = time.Now()
+	} else {
+		date, _ = time.Parse(constants.TIMEFORMAT, *seedDate)
+	}
+	hr, _, _ := date.Clock()
+	if hr%2 != 0 {
+		fmt.Println("PROD")
+		endpoint = endpoint_prod
+		authToken = authToken_prod
+	} else {
+		fmt.Println("STAGING")
+		endpoint = endpoint_staging
+		authToken = authToken_staging
+	}
+	filePattern := fmt.Sprintf("%v_%v_%v_%v",
+		date.Year(),
+		date.Month(),
+		date.Day(),
+		date.Hour())
+
 	utils.CreateDirectoryIfNotExists(constants.LOCALOUTPUTFOLDER)
 	utils.CreateDirectoryIfNotExists("../datagen/processed")
 	Log.RegisterLogFiles(filePattern, "datafeeder")
@@ -122,87 +135,87 @@ func main(){
 	bulkLoadUrl = "/sdk/event/track/bulk"
 	getUserIdUrl = "/sdk/user/identify"
 	var files []string
-	if(*env == "development"){
-		files = utils.GetAllFiles(fmt.Sprintf("%s/%s","../datagen",constants.LOCALOUTPUTFOLDER), *dataConfig)
+	if *env == "development" {
+		files = utils.GetAllFiles(fmt.Sprintf("%s/%s", "../datagen", constants.LOCALOUTPUTFOLDER), *dataConfig)
 	} else {
-		files = utils.ListAllCloudFiles(fmt.Sprintf("%s/%s",constants.UNPROCESSEDFILESCLOUD,constants.LOCALOUTPUTFOLDER), 
-                                    constants.BUCKETNAME, *dataConfig)
+		files = utils.ListAllCloudFiles(fmt.Sprintf("%s/%s", constants.UNPROCESSEDFILESCLOUD, constants.LOCALOUTPUTFOLDER),
+			constants.BUCKETNAME, *dataConfig)
 	}
 	Log.Debug.Printf("Files to be processed %v", files)
 	for _, element := range files {
 		var scanner *bufio.Scanner
-		if(strings.HasSuffix(element, ".gz")){
+		if strings.HasSuffix(element, ".gz") {
 			var gzr *gzip.Reader
-		    if(*env == "development"){
+			if *env == "development" {
 				gzr = utils.GetFileHandlegz(element)
-		    } else {
-               _context := context.Background()
-                _storageClient, _err := storage.NewClient(_context)
-                if _err != nil {
-                    Log.Debug.Printf("%v", _err)
-                }
-                _bucket := _storageClient.Bucket(constants.BUCKETNAME)
-                _object := _bucket.Object(element).ReadCompressed(true)
-                _reader, _err := _object.NewReader(_context)
-                if _err != nil {
-                    Log.Error.Fatal(_err)
-                }
-                defer _reader.Close()
-                gzr, _err = gzip.NewReader(_reader)
-                if _err != nil {
-                    Log.Error.Fatal(_err)
-                }
-                defer gzr.Close()
-            }
-            scanner = bufio.NewScanner(gzr)
-        }
-        if(strings.HasSuffix(element, ".log")){
-            if(*env == "development"){
-                _reader := utils.GetFileHandle(element)
-                scanner = bufio.NewScanner(_reader)
-            } else {
-                _context := context.Background()
-                _storageClient, _err := storage.NewClient(_context)
+			} else {
+				_context := context.Background()
+				_storageClient, _err := storage.NewClient(_context)
+				if _err != nil {
+					Log.Debug.Printf("%v", _err)
+				}
+				_bucket := _storageClient.Bucket(constants.BUCKETNAME)
+				_object := _bucket.Object(element).ReadCompressed(true)
+				_reader, _err := _object.NewReader(_context)
+				if _err != nil {
+					Log.Error.Fatal(_err)
+				}
+				defer _reader.Close()
+				gzr, _err = gzip.NewReader(_reader)
+				if _err != nil {
+					Log.Error.Fatal(_err)
+				}
+				defer gzr.Close()
+			}
+			scanner = bufio.NewScanner(gzr)
+		}
+		if strings.HasSuffix(element, ".log") {
+			if *env == "development" {
+				_reader := utils.GetFileHandle(element)
+				scanner = bufio.NewScanner(_reader)
+			} else {
+				_context := context.Background()
+				_storageClient, _err := storage.NewClient(_context)
 
-                if _err != nil {
-                    Log.Debug.Printf("%v", _err)
-                }
-                _bucket := _storageClient.Bucket(constants.BUCKETNAME)
-                _reader, _err := _bucket.Object(element).NewReader(_context)
-                defer _reader.Close()
-                scanner = bufio.NewScanner(_reader)
-            }
-        }
-        for scanner.Scan() {
-            s := scanner.Text()
-            op := ExtractEventData(s).(operations.EventOutput)
-            if(op.UserId != ""){
-                op.UserId, _ = getUserId(op.UserId, (int64)(op.Timestamp))
-                events = append(events, op)				
-            }
-            counter++ 
+				if _err != nil {
+					Log.Debug.Printf("%v", _err)
+				}
+				_bucket := _storageClient.Bucket(constants.BUCKETNAME)
+				_reader, _err := _bucket.Object(element).NewReader(_context)
+				defer _reader.Close()
+				scanner = bufio.NewScanner(_reader)
+			}
+		}
+		for scanner.Scan() {
+			s := scanner.Text()
+			op := ExtractEventData(s).(operations.EventOutput)
+			if op.UserId != "" {
+				op.UserId, _ = getUserId(op.UserId, (int64)(op.Timestamp))
+				events = append(events, op)
+			}
+			counter++
 
-            if(counter == maxBatchSize){
-                Log.Debug.Printf("Processing %v records", len(events))
-                IngestData(events)
-                counter = 0
-                events = nil
-            }
-        }
-        if(counter != 0){
-            Log.Debug.Printf("Processing %v records", len(events))
-            IngestData(events)
-            counter = 0
-            events = nil
-        }      
-        Log.Debug.Printf("Done !!! Processing contents of File: %s", element)
-        if(*env != "development"){
-            utils.MoveFilesInCloud(element, strings.Replace(element, "unprocessed", "processed", 1), constants.BUCKETNAME)
-        } else {
-            utils.MoveFiles(element, strings.Replace(element, constants.LOCALOUTPUTFOLDER, "processed", 1))
-        }
-    }
-    if(*env != "development"){	
-        utils.CopyFilesToCloud(constants.LOCALOUTPUTFOLDER, constants.UNPROCESSEDFILESCLOUD, constants.BUCKETNAME, true)	
-    }	
+			if counter == maxBatchSize {
+				Log.Debug.Printf("Processing %v records", len(events))
+				IngestData(events)
+				counter = 0
+				events = nil
+			}
+		}
+		if counter != 0 {
+			Log.Debug.Printf("Processing %v records", len(events))
+			IngestData(events)
+			counter = 0
+			events = nil
+		}
+		Log.Debug.Printf("Done !!! Processing contents of File: %s", element)
+		if *env != "development" {
+			utils.MoveFilesInCloud(element, strings.Replace(element, "unprocessed", "processed", 1), constants.BUCKETNAME)
+		} else {
+			utils.MoveFiles(element, strings.Replace(element, constants.LOCALOUTPUTFOLDER, "processed", 1))
+		}
+	}
+	if *env != "development" {
+		utils.CopyFilesToCloud(constants.LOCALOUTPUTFOLDER, constants.UNPROCESSEDFILESCLOUD, constants.BUCKETNAME, true)
+	}
 }
