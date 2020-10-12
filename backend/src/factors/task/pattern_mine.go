@@ -34,7 +34,7 @@ import (
 const max_SEGMENTS = 25000
 const max_EVENT_NAMES = 250
 const top_K = 5
-const max_PATTERN_LENGTH = 4
+const max_PATTERN_LENGTH = 3
 const max_CHUNK_SIZE_IN_BYTES int64 = 200 * 1000 * 1000 // 200MB
 
 var regex_NUM = regexp.MustCompile("[0-9]+")
