@@ -203,9 +203,9 @@ func TrackSalesforceEventByDocumentType(projectID uint64, trackPayload *SDK.Trac
 	if document.Action == M.SalesforceDocumentCreated || document.Action == M.SalesforceDocumentUpdated {
 		trackPayload.EventId = "" //clear EventId from previous track
 		trackPayload.Name = M.GetSalesforceEventNameByAction(document, M.SalesforceDocumentUpdated)
-		trackPayload.Timestamp = createdTimestamp
 
 		if document.Action == M.SalesforceDocumentUpdated {
+			trackPayload.Timestamp = lastModifiedTimestamp
 			// TODO(maisa): Use GetSyncedSalesforceDocumentByType while updating multiple contacts in an account object
 			documents, status := M.GetSyncedSalesforceDocumentByType(projectID, []string{document.ID}, document.Type)
 			if status != http.StatusFound {
