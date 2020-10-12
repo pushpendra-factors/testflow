@@ -1,0 +1,39 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: data-feeder-job
+spec:
+  schedule: "0 */1 * * *" # every 1 hr
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            layer: jobs
+        spec:
+          nodeSelector:
+            cloud.google.com/gke-nodepool: factors-staging-node-pool
+          containers:
+          - name: data-feeder-job
+            image: us.gcr.io/factors-staging/data_feeder_job:6fed2f58
+            imagePullPolicy: IfNotPresent
+            args:
+            - --env
+            - $(ENV)
+            - --config
+            - $(CONFIG)
+            - --endpoint
+            - $(ENDPOINT)
+            - --projectkey
+            - $(LIVSPACE_PROJECT_KEY)
+            envFrom:
+            - configMapRef:
+                name: config-env
+            - configMapRef:
+                name: config-data-feeder-job
+            - secretRef:
+                name: secret-data-feeder-job
+          restartPolicy: OnFailure

@@ -1,0 +1,33 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: data-generator-job
+spec:
+  schedule: "0 */1 * * *" # every 1 hr
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            layer: jobs
+        spec:
+          nodeSelector:
+            cloud.google.com/gke-nodepool: factors-staging-node-pool
+          containers:
+          - name: data-generator-job
+            image: us.gcr.io/factors-staging/data_generator_job:6fed2f58
+            imagePullPolicy: IfNotPresent
+            args:
+            - --env
+            - $(ENV)
+            - --config
+            - $(CONFIG)
+            envFrom:
+            - configMapRef:
+                name: config-env
+            - configMapRef:
+                name: config-data-generation-job
+          restartPolicy: OnFailure

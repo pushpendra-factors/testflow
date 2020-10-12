@@ -1,0 +1,14 @@
+FROM golang:1.14-alpine AS builder
+
+WORKDIR /go/src/data_simulator
+ADD /data_simulator .
+RUN go build -o $GOPATH/bin/datagen $GOPATH/src/data_simulator/datagen/data_generator.go
+ADD /data_simulator/config/livspace.yaml $GOPATH/bin
+ADD /data_simulator/config/acme_com.yaml $GOPATH/bin
+
+# Create stripped down version without go and source code
+FROM alpine:3.7
+COPY --from=builder /go/bin/datagen /go/bin/datagen
+COPY --from=builder /go/bin/livspace.yaml /go/bin/livspace.yaml
+COPY --from=builder /go/bin/acme_com.yaml /go/bin/acme_com.yaml
+ENTRYPOINT ["/go/bin/datagen"]
