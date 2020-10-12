@@ -1,6 +1,16 @@
+.border--thin{
+    border: thin solid $fa-color--mono-1;
+}
+.border--thin-2{
+    border: thin solid $fa-color--mono-2;
+}
 .border-bottom--thin{
     border-bottom: thin solid $fa-color--mono-1;
 }
 .border-bottom--thin-2{
     border-bottom: thin solid $fa-color--mono-2;
+}
+
+.border-radius--medium{
+    border-radius: 8px;
 }

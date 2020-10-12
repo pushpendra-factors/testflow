@@ -4,14 +4,17 @@ import {
 } from 'antd';
 import { Text } from 'factorsComponents';
 import { UserOutlined } from '@ant-design/icons';
+import { connect } from 'react-redux';
 
 function ViewBasicSettings(props) {
   const [dataLoading, setDataLoading] = useState(true);
+  const [activeProject, setActiveProject] = useState(null);
 
   useEffect(() => {
-    setTimeout(() => {
+    if (props.project) {
+      setActiveProject(props.project);
       setDataLoading(false);
-    }, 500);
+    }
   });
 
   return (
@@ -37,9 +40,9 @@ function ViewBasicSettings(props) {
         </Row>
         <Row className={'mt-6'}>
           <Col span={12}>
-            <Text type={'title'} level={7} extraClass={'m-0'}>Project Name</Text>
+          <Text type={'title'} level={7} extraClass={'m-0'}>Project Name</Text>
             { dataLoading ? <Skeleton.Input style={{ width: 200 }} active={true} size={'small'} />
-              : <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>FactorsAI</Text>
+              : <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>{activeProject?.name}</Text>
             }
           </Col>
           <Col span={12}>
@@ -78,4 +81,8 @@ function ViewBasicSettings(props) {
   );
 }
 
-export default ViewBasicSettings;
+const mapStateToProps = (state) => ({
+  project: state.global.active_project
+});
+
+export default connect(mapStateToProps)(ViewBasicSettings);

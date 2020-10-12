@@ -1,4 +1,4 @@
-export const initialResultState = [1, 2, 3, 4].map(_ => {
+export const initialResultState = [1, 2, 3, 4].map(() => {
   return { loading: false, error: false, data: null };
 });
 
@@ -17,7 +17,7 @@ export const calculateFrequencyData = (eventData, userData) => {
 
 export const calculateFrequencyDataForBreakdown = (eventData, userData) => {
   const rows = eventData.result_group[0].rows.map((elem, index) => {
-    const eventVals = elem.slice(elem.length - 1).map((e, idx) => {
+    const eventVals = elem.slice(elem.length - 1).map((e) => {
       if (!e) return e;
       const eVal = e / userData.result_group[0].rows[index][elem.length - 1];
       return eVal % 1 !== 0 ? parseFloat(eVal.toFixed(2)) : eVal;

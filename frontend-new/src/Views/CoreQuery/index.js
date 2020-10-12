@@ -177,26 +177,22 @@ function CoreQuery({ activeProject }) {
         if (resultState[1].data) {
           const res = await callRunQueryApiService(activeProject.id, '2');
           if (res) {
-            
             if (!appliedBreakdown.length) {
               activeUsersData = calculateActiveUsersData(resultState[1].data, res);
             } else {
               activeUsersData = calculateActiveUsersDataForBreakdown(resultState[1].data, res);
             }
-
           }
         } else {
           // combine these two and make one query group
           const userData = await callRunQueryApiService(activeProject.id, '1');
           const sessionData = await callRunQueryApiService(activeProject.id, '2');
           if (userData && sessionData) {
-            
             if (!appliedBreakdown.length) {
               activeUsersData = calculateActiveUsersData(userData, sessionData);
             } else {
               activeUsersData = calculateActiveUsersDataForBreakdown(userData, sessionData);
             }
-
           }
         }
 
@@ -207,24 +203,20 @@ function CoreQuery({ activeProject }) {
       if (activeTab === '3') {
         let frequencyData = null;
         if (resultState[1].data) {
-          
           if (!appliedBreakdown.length) {
             frequencyData = calculateFrequencyData(resultState[0].data, resultState[1].data);
           } else {
             frequencyData = calculateFrequencyDataForBreakdown(resultState[0].data, resultState[1].data);
           }
-
         } else {
           updateResultState(activeTab, { loading: true, error: false, data: null });
           const res = await callRunQueryApiService(activeProject.id, '1');
           if (res) {
-            
             if (!appliedBreakdown.length) {
               frequencyData = calculateFrequencyData(resultState[0].data, res);
             } else {
               frequencyData = calculateFrequencyDataForBreakdown(resultState[0].data, res);
             }
-
           }
         }
         updateResultState(activeTab, { loading: false, error: false, data: frequencyData });
@@ -322,7 +314,7 @@ function CoreQuery({ activeProject }) {
 
       ) : (
           <CoreQueryHome setQueryType={setQueryType} setDrawerVisible={setDrawerVisible} />
-        )}
+      )}
 
     </>
   );
