@@ -102,7 +102,6 @@ func filterAndCompressPatterns(
 			totalConsumedBytes, maxTotalBytes))
 		return []*P.Pattern{}, 0, nil
 	}
-
 	countFilteredPatterns := []*P.Pattern{}
 	for _, p := range patterns {
 		if p.PerOccurrenceCount > 0 {
@@ -353,18 +352,19 @@ func genLenThreeSegmentedCandidates(lenTwoPatterns []*P.Pattern,
 }
 
 func mineAndWriteLenOnePatterns(
-	eventNames []M.EventName, filepath string,
+	eventNames []string, filepath string,
 	userAndEventsInfo *P.UserAndEventsInfo, numRoutines int,
 	chunkDir string, maxModelSize int64, cumulativePatternsSize int64, countOccurence bool) (
 	[]*P.Pattern, int64, error) {
 	var lenOnePatterns []*P.Pattern
 	for _, eventName := range eventNames {
-		p, err := P.NewPattern([]string{eventName.Name}, userAndEventsInfo)
+		p, err := P.NewPattern([]string{eventName}, userAndEventsInfo)
 		if err != nil {
 			return []*P.Pattern{}, 0, fmt.Errorf("Pattern initialization failed")
 		}
 		lenOnePatterns = append(lenOnePatterns, p)
 	}
+
 	countPatterns(filepath, lenOnePatterns, numRoutines, countOccurence)
 	filteredLenOnePatterns, patternsSize, err := filterAndCompressPatterns(
 		lenOnePatterns, maxModelSize, cumulativePatternsSize, 1, max_PATTERN_LENGTH)
@@ -401,7 +401,7 @@ func mineAndWriteLenTwoPatterns(
 }
 
 func mineAndWritePatterns(projectId uint64, filepath string,
-	userAndEventsInfo *P.UserAndEventsInfo, eventNames []M.EventName,
+	userAndEventsInfo *P.UserAndEventsInfo, eventNames []string,
 	numRoutines int, chunkDir string,
 	maxModelSize int64, countOccurence bool) error {
 	var filteredPatterns []*P.Pattern
@@ -507,12 +507,12 @@ func mineAndWritePatterns(projectId uint64, filepath string,
 	return nil
 }
 
-func buildPropertiesInfoFromInput(projectId uint64, eventNames []M.EventName, filepath string) (*P.UserAndEventsInfo, error) {
+func buildPropertiesInfoFromInput(projectId uint64, eventNames []string, filepath string) (*P.UserAndEventsInfo, error) {
 	userAndEventsInfo := P.NewUserAndEventsInfo()
 	eMap := *userAndEventsInfo.EventPropertiesInfoMap
 	for _, eventName := range eventNames {
 		// Initialize info.
-		eMap[eventName.Name] = &P.PropertiesInfo{
+		eMap[eventName] = &P.PropertiesInfo{
 			NumericPropertyKeys:          make(map[string]bool),
 			CategoricalPropertyKeyValues: make(map[string]map[string]bool),
 		}
@@ -786,16 +786,16 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 	}
 	tmpEventsFilepath := efTmpPath + efTmpName
 	mineLog.Info("Successfuly downloaded events file from cloud.")
-
-	// builld user and event properites info
-	eventNamesWithAggregation, err := M.GetOrderedEventNamesFromDb(
-		projectId, startTime, endTime, max_EVENT_NAMES)
-	eventNames := convert(eventNamesWithAggregation)
+	scanner, err := OpenEventFileAndGetScanner(tmpEventsFilepath)
+	eventNames, err := M.GetEventNamesFromFile(scanner, projectId)
 	if err != nil {
-		mineLog.WithFields(log.Fields{"err": err}).Error(
-			"Failed to fetch event names.")
+		mineLog.WithFields(log.Fields{"err": err, "eventFilePath": efTmpPath,
+			"eventFileName": efTmpName}).Error("Failed to read event names from file")
 		return "", 0, err
 	}
+	mineLog.WithField("tmpEventsFilePath",
+		tmpEventsFilepath).Info("Unique EventNames", eventNames)
+
 	mineLog.WithField("tmpEventsFilePath",
 		tmpEventsFilepath).Info("Building user and event properties info and writing it to file.")
 	userAndEventsInfo, err := buildPropertiesInfoFromInput(projectId, eventNames, tmpEventsFilepath)
@@ -920,4 +920,14 @@ func convert(eventNamesWithAggregation []M.EventNameWithAggregation) []M.EventNa
 		})
 	}
 	return eventNames
+}
+
+//OpenEventFileAndGetScanner open file to read events
+func OpenEventFileAndGetScanner(filePath string) (*bufio.Scanner, error) {
+	f, err := os.Open(filePath)
+	if err != nil {
+		return nil, err
+	}
+	scanner := store.CreateScannerFromReader(f)
+	return scanner, nil
 }
