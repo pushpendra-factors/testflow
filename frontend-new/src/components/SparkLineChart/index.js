@@ -1,6 +1,7 @@
 import React from 'react';
 import ChartHeader from './ChartHeader';
 import SparkChart from './Chart';
+import { numberWithCommas } from '../../Views/CoreQuery/utils';
 
 function SparkLineChart({
   queries, chartsData, parentClass, appliedColors, eventsMapper, page
@@ -19,7 +20,7 @@ function SparkLineChart({
           data.forEach(elem => {
             total += elem[eventsMapper[q]];
           });
-          total = total % 1 !== 0 ? parseFloat(total.toFixed(2)) : total;
+          total = total % 1 !== 0 ? parseFloat(total.toFixed(2)) : numberWithCommas(total);
           return (
             <div key={q + index} className="w-1/3 mt-4 px-1">
               <div className="flex flex-col">
@@ -38,7 +39,7 @@ function SparkLineChart({
     chartsData.forEach(elem => {
       total += elem[eventsMapper[queries[0]]];
     });
-    total = total % 1 !== 0 ? parseFloat(total.toFixed(2)) : total;
+    total = total % 1 !== 0 ? parseFloat(total.toFixed(2)) : numberWithCommas(total);
 
     return (
       <div className={parentClass}>

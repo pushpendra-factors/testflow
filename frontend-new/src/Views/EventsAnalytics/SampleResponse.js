@@ -21929,3 +21929,301 @@ export const SingleEventMultipleProperty3 = {
     metrics: null
   }
 };
+
+export const MultipleEventsMultipleBreakdown = {
+  headers: [
+    'datetime',
+    'event_name',
+    '_group_key_0',
+    '_group_key_1',
+    'count'
+  ],
+  rows: [
+    [
+      '2020-10-11T00:00:00+05:30',
+      'www.cars24.com/buy-used-car',
+      'Saturday',
+      'SMS',
+      20
+    ],
+    [
+      '2020-10-11T00:00:00+05:30',
+      'www.cars24.com/buy-used-car',
+      'Monday',
+      'adwords',
+      0
+    ],
+    [
+      '2020-10-11T00:00:00+05:30',
+      'www.cars24.com/account/appointments',
+      'Saturday',
+      '$none',
+      36
+    ],
+    [
+      '2020-10-11T00:00:00+05:30',
+      'www.cars24.com/buy-used-car',
+      'Monday',
+      'SMS',
+      0
+    ],
+    [
+      '2020-10-11T00:00:00+05:30',
+      'www.cars24.com/buy-used-car',
+      'Sunday',
+      '$none',
+      85687
+    ],
+    [
+      '2020-10-11T00:00:00+05:30',
+      'www.cars24.com/buy-used-car',
+      'Monday',
+      'personalised_gs',
+      0
+    ],
+    [
+      '2020-10-11T00:00:00+05:30',
+      'www.cars24.com/buy-used-car',
+      'Monday',
+      'Whatsapp',
+      0
+    ],
+    [
+      '2020-10-11T00:00:00+05:30',
+      'www.cars24.com/buy-used-car',
+      'Saturday',
+      '$none',
+      8536
+    ],
+    [
+      '2020-10-11T00:00:00+05:30',
+      'www.cars24.com/buy-used-car',
+      'Sunday',
+      'Whatsapp',
+      1029
+    ],
+    [
+      '2020-10-11T00:00:00+05:30',
+      'www.cars24.com/buy-used-car',
+      'Monday',
+      '$none',
+      0
+    ],
+    [
+      '2020-10-11T00:00:00+05:30',
+      'www.cars24.com/buy-used-car',
+      'Sunday',
+      'personalised_gs',
+      555
+    ],
+    [
+      '2020-10-11T00:00:00+05:30',
+      'www.cars24.com/buy-used-car',
+      'Sunday',
+      'SMS',
+      513
+    ],
+    [
+      '2020-10-11T00:00:00+05:30',
+      'www.cars24.com/account/appointments',
+      'Monday',
+      '$none',
+      0
+    ],
+    [
+      '2020-10-11T00:00:00+05:30',
+      'www.cars24.com/buy-used-car',
+      'Sunday',
+      'adwords',
+      2
+    ],
+    [
+      '2020-10-11T00:00:00+05:30',
+      'www.cars24.com/buy-used-car',
+      'Saturday',
+      'personalised_gs',
+      7
+    ],
+    [
+      '2020-10-11T00:00:00+05:30',
+      'www.cars24.com/buy-used-car',
+      'Saturday',
+      'Whatsapp',
+      62
+    ],
+    [
+      '2020-10-11T00:00:00+05:30',
+      'www.cars24.com/account/appointments',
+      'Sunday',
+      '$none',
+      10276
+    ],
+    [
+      '2020-10-12T00:00:00+05:30',
+      'www.cars24.com/buy-used-car',
+      'Sunday',
+      'SMS',
+      24
+    ],
+    [
+      '2020-10-12T00:00:00+05:30',
+      'www.cars24.com/buy-used-car',
+      'Sunday',
+      'Whatsapp',
+      73
+    ],
+    [
+      '2020-10-12T00:00:00+05:30',
+      'www.cars24.com/buy-used-car',
+      'Sunday',
+      'personalised_gs',
+      6
+    ],
+    [
+      '2020-10-12T00:00:00+05:30',
+      'www.cars24.com/buy-used-car',
+      'Monday',
+      'adwords',
+      2
+    ],
+    [
+      '2020-10-12T00:00:00+05:30',
+      'www.cars24.com/buy-used-car',
+      'Monday',
+      'SMS',
+      390
+    ],
+    [
+      '2020-10-12T00:00:00+05:30',
+      'www.cars24.com/buy-used-car',
+      'Monday',
+      'personalised_gs',
+      507
+    ],
+    [
+      '2020-10-12T00:00:00+05:30',
+      'www.cars24.com/account/appointments',
+      'Saturday',
+      '$none',
+      0
+    ],
+    [
+      '2020-10-12T00:00:00+05:30',
+      'www.cars24.com/buy-used-car',
+      'Monday',
+      'Whatsapp',
+      915
+    ],
+    [
+      '2020-10-12T00:00:00+05:30',
+      'www.cars24.com/buy-used-car',
+      'Saturday',
+      '$none',
+      0
+    ],
+    [
+      '2020-10-12T00:00:00+05:30',
+      'www.cars24.com/buy-used-car',
+      'Sunday',
+      '$none',
+      8590
+    ],
+    [
+      '2020-10-12T00:00:00+05:30',
+      'www.cars24.com/buy-used-car',
+      'Monday',
+      '$none',
+      75024
+    ],
+    [
+      '2020-10-12T00:00:00+05:30',
+      'www.cars24.com/account/appointments',
+      'Sunday',
+      '$none',
+      33
+    ],
+    [
+      '2020-10-12T00:00:00+05:30',
+      'www.cars24.com/buy-used-car',
+      'Saturday',
+      'Whatsapp',
+      0
+    ],
+    [
+      '2020-10-12T00:00:00+05:30',
+      'www.cars24.com/buy-used-car',
+      'Saturday',
+      'SMS',
+      0
+    ],
+    [
+      '2020-10-12T00:00:00+05:30',
+      'www.cars24.com/buy-used-car',
+      'Saturday',
+      'personalised_gs',
+      0
+    ],
+    [
+      '2020-10-12T00:00:00+05:30',
+      'www.cars24.com/account/appointments',
+      'Monday',
+      '$none',
+      7660
+    ],
+    [
+      '2020-10-12T00:00:00+05:30',
+      'www.cars24.com/buy-used-car',
+      'Sunday',
+      'adwords',
+      0
+    ]
+  ],
+  meta: {
+    query: {
+      cl: 'insights',
+      ty: 'events_occurrence',
+      ec: 'any_given_event',
+      ewp: [
+        {
+          na: 'www.cars24.com/account/appointments',
+          pr: [
+
+          ]
+        },
+        {
+          na: 'www.cars24.com/buy-used-car',
+          pr: [
+
+          ]
+        }
+      ],
+      gbp: [
+        {
+          en: 'event',
+          pr: '$day_of_week',
+          in: 0,
+          pty: 'categorical',
+          ena: '',
+          eni: 0
+        },
+        {
+          en: 'event',
+          pr: '$medium',
+          in: 1,
+          pty: 'categorical',
+          ena: '',
+          eni: 0
+        }
+      ],
+      gbt: 'date',
+      tz: 'Asia/Calcutta',
+      fr: 1602354600,
+      to: 1602527399,
+      ovp: false,
+      sse: 0,
+      see: 0
+    },
+    currency: '',
+    metrics: null
+  }
+};

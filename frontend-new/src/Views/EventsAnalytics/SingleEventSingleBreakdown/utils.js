@@ -46,6 +46,26 @@ export const formatSingleEventSinglePropertyData = (data) => {
   const properties = {};
   const result = [];
   data.rows.forEach(elem => {
+    if (Object.prototype.hasOwnProperty.call(properties, elem[2])) {
+      result[properties[elem[2]]].value += elem[3];
+    } else {
+      properties[elem[2]] = result.length;
+      result.push({
+        label: elem[2],
+        value: elem[3]
+      });
+    }
+  });
+  result.sort((a, b) => {
+    return parseInt(a.value) <= parseInt(b.value) ? 1 : -1;
+  });
+  return result;
+};
+
+export const formatSingleEventSinglePropertyUserData = (data) => {
+  const properties = {};
+  const result = [];
+  data.rows.forEach(elem => {
     if (Object.prototype.hasOwnProperty.call(properties, elem[1])) {
       result[properties[elem[1]]].value += elem[2];
     } else {
@@ -63,6 +83,36 @@ export const formatSingleEventSinglePropertyData = (data) => {
 };
 
 export const formatDataInLineChartFormat = (data, visibleProperties, mapper, hiddenProperties) => {
+  const visibleLabels = visibleProperties.map(v => v.label).filter(l => hiddenProperties.indexOf(l) === -1);
+  const resultInObjFormat = {};
+  const result = [];
+  data.rows.forEach(elem => {
+    if (visibleLabels.indexOf(elem[2]) > -1) {
+      if (resultInObjFormat[elem[0]]) {
+        resultInObjFormat[elem[0]][elem[2]] = elem[3];
+      } else {
+        resultInObjFormat[elem[0]] = {
+          [elem[2]]: elem[3]
+        };
+      }
+    }
+  });
+  result.push(['x']);
+  const keysMapper = {};
+  visibleLabels.forEach(v => {
+    result.push([mapper[v]]);
+    keysMapper[v] = result.length - 1;
+  });
+  for (const key in resultInObjFormat) {
+    result[0].push(moment(key).format('YYYY-MM-DD'));
+    for (const b in resultInObjFormat[key]) {
+      result[keysMapper[b]].push(resultInObjFormat[key][b]);
+    }
+  }
+  return result;
+};
+
+export const formatUserDataInLineChartFormat = (data, visibleProperties, mapper, hiddenProperties) => {
   const visibleLabels = visibleProperties.map(v => v.label).filter(l => hiddenProperties.indexOf(l) === -1);
   const resultInObjFormat = {};
   const result = [];
@@ -112,6 +162,31 @@ export const getDateBasedColumns = (data, breakdown, currentSorter, handleSortin
 };
 
 export const getDateBasedTableData = (labels, data, breakdown, searchText, currentSorter) => {
+  const filteredLabels = labels.filter(d => d.toLowerCase().indexOf(searchText.toLowerCase()) > -1);
+  const result = filteredLabels.map((elem, index) => {
+    const entries = data.rows.filter(d => d[2] === elem);
+    const obj = {
+      index,
+      [breakdown[0]]: elem
+    };
+    entries.forEach(entry => {
+      obj[moment(entry[0]).format('MMM D')] = entry[3];
+    });
+    return obj;
+  });
+  result.sort((a, b) => {
+    if (currentSorter.order === 'ascend') {
+      return parseInt(a[currentSorter.key]) >= parseInt(b[currentSorter.key]) ? 1 : -1;
+    }
+    if (currentSorter.order === 'descend') {
+      return parseInt(a[currentSorter.key]) <= parseInt(b[currentSorter.key]) ? 1 : -1;
+    }
+    return 0;
+  });
+  return result;
+};
+
+export const getDateBasedUserTableData = (labels, data, breakdown, searchText, currentSorter) => {
   const filteredLabels = labels.filter(d => d.toLowerCase().indexOf(searchText.toLowerCase()) > -1);
   const result = filteredLabels.map((elem, index) => {
     const entries = data.rows.filter(d => d[1] === elem);

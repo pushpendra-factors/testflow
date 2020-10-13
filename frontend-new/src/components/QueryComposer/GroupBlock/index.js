@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { connect } from 'react-redux';
 import styles from './index.module.scss';
-import { SVG, Text } from 'factorsComponents';
+import { SVG, Text } from '../../factorsComponents';
 
 import { Select, Button } from 'antd';
 
@@ -77,7 +77,7 @@ function GroupBlock({
 
       {
         groupByState.map((opt, index) => (
-          <div key={0} className={'flex justify-start items-center ml-10 mt-2'} >
+          <div key={index} className={'flex justify-start items-center ml-10 mt-2'} >
           {!isDDVisible[index] && <Button type="link" onClick={() => triggerDropDown(index)}>{!opt.property && <SVG name="plus" />} {opt.property ? opt.property : 'Select user property'}</Button> }
           {isDDVisible[index]
             ? (<Select

@@ -1,26 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import ChartTypeDropdown from '../../../components/ChartTypeDropdown';
-import { formatSingleEventSinglePropertyData, formatDataInLineChartFormat } from './utils';
+import {
+  formatSingleEventSinglePropertyData, formatDataInLineChartFormat, formatSingleEventSinglePropertyUserData, formatUserDataInLineChartFormat
+} from './utils';
 import BarChart from '../../../components/BarChart';
 import SingleEventSingleBreakdownTable from './SingleEventSingleBreakdownTable';
 import LineChart from '../../../components/LineChart';
 import { generateColors } from '../../CoreQuery/FunnelsResultPage/utils';
 
 function SingleEventSingleBreakdown({
-  queries, breakdown, resultState
+  queries, breakdown, resultState, page
 }) {
   const [chartsData, setChartsData] = useState([]);
   const [visibleProperties, setVisibleProperties] = useState([]);
-  const [chartType, setChartType] = useState('barchart');
+  const [chartType, setChartType] = useState('linechart');
   const [hiddenProperties, setHiddenProperties] = useState([]);
 
   const maxAllowedVisibleProperties = 7;
 
   useEffect(() => {
-    const formattedData = formatSingleEventSinglePropertyData(resultState.data.result_group[0]);
+    let formattedData;
+
+    if (page === 'totalEvents') {
+      formattedData = formatSingleEventSinglePropertyData(resultState.data.result_group[0]);
+    } else {
+      formattedData = formatSingleEventSinglePropertyUserData(resultState.data.result_group[0]);
+    }
     setChartsData(formattedData);
     setVisibleProperties([...formattedData.slice(0, maxAllowedVisibleProperties)]);
-  }, [resultState.data.result_group]);
+  }, [resultState.data.result_group, page]);
 
   if (!chartsData.length) {
     return null;
@@ -49,7 +57,14 @@ function SingleEventSingleBreakdown({
     reverseMapper[`event${index + 1}`] = q;
   });
 
-  const lineChartData = formatDataInLineChartFormat(resultState.data.result_group[0], visibleProperties, mapper, hiddenProperties);
+  let lineChartData;
+
+  if (page === 'totalEvents') {
+    lineChartData = formatDataInLineChartFormat(resultState.data.result_group[0], visibleProperties, mapper, hiddenProperties);
+  } else {
+    lineChartData = formatUserDataInLineChartFormat(resultState.data.result_group[0], visibleProperties, mapper, hiddenProperties);
+  }
+
   const appliedColors = generateColors(visibleProperties.length);
 
   let chartContent = null;
@@ -101,6 +116,7 @@ function SingleEventSingleBreakdown({
           breakdown={breakdown}
           events={queries}
           chartType={chartType}
+          page={page}
           setVisibleProperties={setVisibleProperties}
           visibleProperties={visibleProperties}
           maxAllowedVisibleProperties={maxAllowedVisibleProperties}

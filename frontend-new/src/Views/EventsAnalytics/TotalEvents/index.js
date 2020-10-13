@@ -43,6 +43,7 @@ function TotalEvents({
         queries={queries}
         breakdown={breakdown}
         resultState={resultState[index]}
+        page={page}
       />
     );
   } else if (queries.length === 1) {
@@ -51,6 +52,7 @@ function TotalEvents({
         queries={queries}
         breakdown={breakdown}
         resultState={resultState[index]}
+        page={page}
       />
     );
   }

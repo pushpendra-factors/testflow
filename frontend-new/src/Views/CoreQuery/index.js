@@ -77,6 +77,8 @@ function CoreQuery({ activeProject }) {
     query.fr = period.from;
     query.to = period.to;
 
+    query.gbp = [];
+
     if (activeTab === '2') {
       query.ewp = [
         {
@@ -88,20 +90,21 @@ function CoreQuery({ activeProject }) {
     } else {
       query.ewp = getEventsWithProperties();
       query.gbt = 'date';
-    }
+      // send event group by first and then user group byu
 
-    const groupBy = [...queryOptions.groupBy.filter(elem => elem.prop_category)].sort((a, b) => {
-      return a.prop_category >= b.prop_category ? 1 : -1;
-    });
-
-    query.gbp = groupBy
-      .map(opt => {
-        return {
-          pr: opt.property,
-          en: opt.prop_category,
-          pty: opt.prop_type
-        };
+      const groupBy = [...queryOptions.groupBy.filter(elem => elem.prop_category)].sort((a, b) => {
+        return a.prop_category >= b.prop_category ? 1 : -1;
       });
+
+      query.gbp = groupBy
+        .map(opt => {
+          return {
+            pr: opt.property,
+            en: opt.prop_category,
+            pty: opt.prop_type
+          };
+        });
+    }
 
     if (query.gbp.length) {
       query.ec = 'any_given_event';
@@ -173,33 +176,28 @@ function CoreQuery({ activeProject }) {
       if (activeTab === '2') {
         let activeUsersData = null;
         updateResultState(activeTab, { loading: true, error: false, data: null });
-
         if (resultState[1].data) {
+          // get only session data
           const res = await callRunQueryApiService(activeProject.id, '2');
           if (res) {
-            
             if (!appliedBreakdown.length) {
               activeUsersData = calculateActiveUsersData(resultState[1].data, res);
             } else {
               activeUsersData = calculateActiveUsersDataForBreakdown(resultState[1].data, res);
             }
-
           }
         } else {
-          // combine these two and make one query group
+          // combine these two and make one query group to get both session and user data
           const userData = await callRunQueryApiService(activeProject.id, '1');
           const sessionData = await callRunQueryApiService(activeProject.id, '2');
           if (userData && sessionData) {
-            
             if (!appliedBreakdown.length) {
               activeUsersData = calculateActiveUsersData(userData, sessionData);
             } else {
               activeUsersData = calculateActiveUsersDataForBreakdown(userData, sessionData);
             }
-
           }
         }
-
         updateResultState(activeTab, { loading: false, error: false, data: activeUsersData });
         return false;
       }
@@ -207,24 +205,21 @@ function CoreQuery({ activeProject }) {
       if (activeTab === '3') {
         let frequencyData = null;
         if (resultState[1].data) {
-          
           if (!appliedBreakdown.length) {
             frequencyData = calculateFrequencyData(resultState[0].data, resultState[1].data);
           } else {
             frequencyData = calculateFrequencyDataForBreakdown(resultState[0].data, resultState[1].data);
           }
-
         } else {
+          // get user data
           updateResultState(activeTab, { loading: true, error: false, data: null });
           const res = await callRunQueryApiService(activeProject.id, '1');
           if (res) {
-            
             if (!appliedBreakdown.length) {
               frequencyData = calculateFrequencyData(resultState[0].data, res);
             } else {
               frequencyData = calculateFrequencyDataForBreakdown(resultState[0].data, res);
             }
-
           }
         }
         updateResultState(activeTab, { loading: false, error: false, data: frequencyData });
@@ -243,7 +238,7 @@ function CoreQuery({ activeProject }) {
 
     updateResultState(activeTab, { loading: true, error: false, data: null });
     callRunQueryApiService(activeProject.id, activeTab);
-  }, [activeProject, resultState, queries, updateResultState, callRunQueryApiService, updateAppliedBreakdown]);
+  }, [activeProject, resultState, queries, updateResultState, callRunQueryApiService, updateAppliedBreakdown, appliedBreakdown.length]);
 
   const title = () => {
     return (
@@ -322,7 +317,7 @@ function CoreQuery({ activeProject }) {
 
       ) : (
           <CoreQueryHome setQueryType={setQueryType} setDrawerVisible={setDrawerVisible} />
-        )}
+      )}
 
     </>
   );

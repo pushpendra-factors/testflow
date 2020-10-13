@@ -16,15 +16,15 @@ export const calculateFrequencyData = (eventData, userData) => {
 };
 
 export const calculateFrequencyDataForBreakdown = (eventData, userData) => {
-  const rows = eventData.result_group[0].rows.map((elem, index) => {
-    const eventVals = elem.slice(elem.length - 1).map((e, idx) => {
+  const rows = userData.result_group[0].rows.map((elem, index) => {
+    const eventVals = elem.slice(elem.length - 1).map((e) => {
       if (!e) return e;
-      const eVal = e / userData.result_group[0].rows[index][elem.length - 1];
+      const eVal = eventData.result_group[0].rows[index][elem.length] / e;
       return eVal % 1 !== 0 ? parseFloat(eVal.toFixed(2)) : eVal;
     });
     return [...elem.slice(0, elem.length - 1), ...eventVals];
   });
-  const result = { result_group: [{ ...eventData.result_group[0], rows }] };
+  const result = { result_group: [{ ...userData.result_group[0], rows }] };
   return result;
 };
 
@@ -59,4 +59,8 @@ export const hasApiFailed = (res) => {
     return true;
   }
   return false;
+};
+
+export const numberWithCommas = (x) => {
+  return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 };

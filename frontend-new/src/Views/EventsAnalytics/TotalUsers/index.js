@@ -9,17 +9,17 @@ function TotalUsers({
 }) {
   if (resultState[index].loading) {
     return (
-            <div className="flex justify-center items-center w-full h-64">
-                <Spin size="large" />
-            </div>
+      <div className="flex justify-center items-center w-full h-64">
+        <Spin size="large" />
+      </div>
     );
   }
 
   if (resultState[index].error) {
     return (
-            <div className="flex justify-center items-center w-full h-64">
-                Something went wrong!
-            </div>
+      <div className="flex justify-center items-center w-full h-64">
+        Something went wrong!
+      </div>
     );
   }
 
@@ -29,29 +29,31 @@ function TotalUsers({
 
   if (!breakdown.length) {
     return (
-            <NoBreakdownCharts
-                queries={queries}
-                eventsMapper={eventsMapper}
-                reverseEventsMapper={reverseEventsMapper}
-                resultState={resultState[index]}
-                page={page}
-            />
+      <NoBreakdownCharts
+        queries={queries}
+        eventsMapper={eventsMapper}
+        reverseEventsMapper={reverseEventsMapper}
+        resultState={resultState[index]}
+        page={page}
+      />
     );
   } else if (queries.length === 1 && breakdown.length === 1) {
     return (
-            <SingleEventSingleBreakdown
-                queries={queries}
-                breakdown={breakdown}
-                resultState={resultState[index]}
-            />
+      <SingleEventSingleBreakdown
+        queries={queries}
+        breakdown={breakdown}
+        resultState={resultState[index]}
+        page={page}
+      />
     );
   } else if (queries.length === 1) {
     return (
-            <SingleEventMultipleBreakdown
-                queries={queries}
-                breakdown={breakdown}
-                resultState={resultState[index]}
-            />
+      <SingleEventMultipleBreakdown
+        queries={queries}
+        breakdown={breakdown}
+        resultState={resultState[index]}
+        page={page}
+      />
     );
   }
 }
