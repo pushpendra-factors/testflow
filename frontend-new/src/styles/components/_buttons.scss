@@ -1,9 +1,9 @@
 
 .ant-btn {
     font-family: 'Work Sans', sans-serif; 
-    height: auto;
+    // height: auto;
     border-radius: 8px;
-    padding: 8px 16px; 
+    // padding: 8px 16px; 
 
     // border: 1px solid transparent; 
     border-color: #d9d9d9;
@@ -21,7 +21,7 @@
     
     &.ant-btn-sm
     {  
-        padding: 4px 12px;
+        padding: 3px 6px;
     }
     
 
@@ -80,8 +80,7 @@
     }
     &.ant-btn-icon-only{
         height: auto;
-        width: auto;
-        padding: 8px 10px;
+        width: auto; 
     }
 
 }
