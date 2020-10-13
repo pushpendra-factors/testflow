@@ -31,13 +31,13 @@ function ProjectTabs({ setaddDashboardModal }) {
               tabBarExtraContent={operations}
               >
                 <TabPane tab="My Dashboard" key="1">
-                   <div className={'fa-container'}>
-                        <div className={'py-4 flex justify-center flex-wrap'}>
-                            <WidgetCard setwidgetModal={setwidgetModal} id={1}/>
-                            <WidgetCard setwidgetModal={setwidgetModal} id={2}/>
-                            <WidgetCard setwidgetModal={setwidgetModal} id={3}/>
-                            <WidgetCard setwidgetModal={setwidgetModal} id={1}/>
-                        </div>
+                   <div className={'fa-container mt-6'}>
+                          <Row gutter={[24, 24]} className={'flex justify-start items-stretch'}>
+                              <WidgetCard setwidgetModal={setwidgetModal} widthSize={1} id={1}/>
+                              <WidgetCard setwidgetModal={setwidgetModal} id={2}/>
+                              <WidgetCard setwidgetModal={setwidgetModal} id={3}/>
+                              <WidgetCard setwidgetModal={setwidgetModal} id={1}/>
+                            </Row>
                    </div>
                 </TabPane>
                 <TabPane tab="Paid Marketing" key="2">
