@@ -34,9 +34,11 @@ function ProjectTabs({ setaddDashboardModal }) {
                    <div className={'fa-container mt-6'}>
                           <Row gutter={[24, 24]} className={'flex justify-start items-stretch'}>
                               <WidgetCard setwidgetModal={setwidgetModal} widthSize={1} id={1}/>
+                              <WidgetCard setwidgetModal={setwidgetModal} widthSize={1} id={3}/>
                               <WidgetCard setwidgetModal={setwidgetModal} id={2}/>
                               <WidgetCard setwidgetModal={setwidgetModal} id={3}/>
                               <WidgetCard setwidgetModal={setwidgetModal} id={1}/>
+                              <WidgetCard setwidgetModal={setwidgetModal} widthSize={3} id={2}/>
                             </Row>
                    </div>
                 </TabPane>
