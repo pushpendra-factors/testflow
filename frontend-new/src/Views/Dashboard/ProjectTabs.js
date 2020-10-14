@@ -43,19 +43,29 @@ function ProjectTabs({ setaddDashboardModal }) {
                    </div>
                 </TabPane>
                 <TabPane tab="Paid Marketing" key="2">
-                    <div className={'fa-container'}>
-                        <div className={'py-4 flex justify-center flex-wrap'}>
-                            <WidgetCard setwidgetModal={setwidgetModal} id={1}/>
-                            <WidgetCard setwidgetModal={setwidgetModal} id={3}/>
-                        </div>
+                <div className={'fa-container mt-6'}>
+                          <Row gutter={[24, 24]} className={'flex justify-start items-stretch'}>
+                              <WidgetCard setwidgetModal={setwidgetModal} widthSize={1} id={1}/>
+                              <WidgetCard setwidgetModal={setwidgetModal} widthSize={1} id={3}/>
+                              <WidgetCard setwidgetModal={setwidgetModal} widthSize={2} id={2}/>
+                              <WidgetCard setwidgetModal={setwidgetModal} widthSize={2} id={3}/>
+                              <WidgetCard setwidgetModal={setwidgetModal} widthSize={1} id={1}/>
+                              <WidgetCard setwidgetModal={setwidgetModal} widthSize={1} id={2}/>
+                              <WidgetCard setwidgetModal={setwidgetModal} widthSize={3} id={2}/>
+                            </Row>
                    </div>
                 </TabPane>
                 <TabPane tab="Campaigns" key="3">
-                    <div className={'fa-container'}>
-                        <div className={'py-4 flex justify-center flex-wrap'}>
-                            <WidgetCard setwidgetModal={setwidgetModal} id={3}/>
-                            <WidgetCard setwidgetModal={setwidgetModal} id={2}/>
-                        </div>
+                <div className={'fa-container mt-6'}>
+                          <Row gutter={[24, 24]} className={'flex justify-start items-stretch'}>
+                              <WidgetCard setwidgetModal={setwidgetModal} widthSize={1} id={1}/>
+                              <WidgetCard setwidgetModal={setwidgetModal} widthSize={1} id={3}/>
+                              <WidgetCard setwidgetModal={setwidgetModal} widthSize={1} id={2}/>
+                              <WidgetCard setwidgetModal={setwidgetModal} widthSize={1} id={3}/>
+                              <WidgetCard setwidgetModal={setwidgetModal} widthSize={3} id={1}/>
+                              <WidgetCard setwidgetModal={setwidgetModal} widthSize={2} id={2}/>
+                              <WidgetCard setwidgetModal={setwidgetModal} widthSize={2} id={1}/>
+                            </Row>
                    </div>
                 </TabPane>
               </Tabs>
