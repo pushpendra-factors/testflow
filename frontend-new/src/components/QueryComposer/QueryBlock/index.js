@@ -32,7 +32,8 @@ function QueryBlock({
   };
 
   useEffect(() => {
-    if (!event) { return null; };
+    console.log('eventevent-->', event);
+    if (!event || event === undefined) { return undefined; }; // Akhil please check this line
     const assignFilterProps = Object.assign({}, filterProps);
     fetchEventProperties(activeProject.id, event.label).then(res => {
       const data = res.data;

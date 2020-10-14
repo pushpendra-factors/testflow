@@ -1,0 +1,258 @@
+# Assign Probablitites for independent events so that (1 - sum of probablities of independent events)
+# will be the total probablity of correlated events
+---
+user_data_file_name_prefix: "userdata"
+activity_time_in_seconds: 3600
+real_time: false
+user_id_prefix: U
+new_user_poll_time: 30
+new_user_probablity: 0.7
+per_tick_new_user_seed_count: 10
+custom_user_attribute_probablity: 0.9
+custom_event_attribute_probablity: 0.9
+bring_existing_user: 0.5
+user_segments: 
+  segment1:
+    number_of_users: 1000
+    activity_ticker_in_seconds: 10
+    activity_probablity_map:
+      DoSomething: 0.3999
+      NoOp: 0.6
+      Exit: 0.0001
+    event_probablity_map:
+      correlation_matrix:
+        events:
+          Home:
+            ExploreLooks: RULE1
+            Offerings: 0.3
+            BecomeADesignPartner: 0.05
+            ExploreCities: 0.1
+            UserStories: 0.1
+            ConsultADesignerOnline: 0.05
+          ExploreCampaigns:
+            DreamHome: 0.3
+            FlawlessKitchen: 0.3
+            DiwaliRenowation: 0.4
+          OfferingCampaigns:
+            BuildYourKitchen: 0.5
+            BuildYourWardrobe: 0.5
+          DesignPartnerCampaigns:
+            FinancialFreedom: 0.25
+            WorkAtYourSchedule: 0.25
+            EndlessLeads: 0.25
+            LeadsToFreelance: 0.25
+          DreamHome:
+            ExploreLooks: 0.5
+            Logout: 0.5
+          FlawlessKitchen:
+            ExploreLooks: 0.1
+            Logout: 0.9
+          DiwaliRenowation:
+            ExploreLooks: 0.9
+            Logout: 0.1
+          BuildYourKitchen:
+            Offerings: 0.2
+            Logout: 0.8       
+          BuildYourWardrobe:
+            Offerings: 0.8
+            Logout: 0.2
+          FinancialFreedom:
+            BecomeADesignPartner: 0.5
+            Logout: 0.5
+          WorkAtYourSchedule:
+            BecomeADesignPartner: 0.9
+            Logout: 0.1
+          EndlessLeads:
+            BecomeADesignPartner: 0.2
+            Logout: 0.8
+          LeadsToFreelance:
+            BecomeADesignPartner: 0.4
+            Logout: 0.6
+          BecomeADesignPartner:
+            WatchDesignPartnerVideo: 0.4
+            ExploreDesignPartnerPerks: 0.4
+            ApplyForDesignPartner: 0.15
+            Logout: 0.05
+          WatchDesignPartnerVideo:
+            ExploreDesignPartnerPerks: 0.3
+            ApplyForDesignPartner: 0.6
+            Logout: 0.1
+          ExploreDesignPartnerPerks:
+            ApplyForDesignPartner: 0.9
+            Logout: 0.1
+          ApplyForDesignPartner:
+            Logout: 1.0
+          UserStories:
+            ConsultADesignerOnline: 0.3
+            Logout: 0.7
+          ExploreCities:
+            ConsultADesignerOnline: 0.2
+            Logout: 0.8
+          ExploreLooks:
+            ExploreLooks: 0.8
+            DesignsVisited: 0.2
+          DesignsVisited:
+            Range0-10: 0.3
+            Range11-40: 0.3
+            RangeOver40: 0.4
+          Range0-10:
+            ConsultADesignerOnline: 0.1
+            Logout: 0.9
+          Range11-40:
+            ConsultADesignerOnline: RULE2
+            Logout: 0.8
+          RangeOver40:
+            ConsultADesignerOnline: 0.9
+            Logout: 0.1
+          Offerings:
+            EstimateYourDesign: 0.7
+            CustomKitchen: 0.15
+            CustomWardrobes: 0.1
+            Logout: 0.05
+          EstimateYourDesign:
+            ConsultADesignerOnline: 0.9
+            Logout: 0.1
+          CustomKitchen:
+            ConsultADesignerOnline: 0.3
+            Logout: 0.7
+          CustomWardrobes:
+            ConsultADesignerOnline: 0.2
+            Logout: 0.8
+          ConsultADesignerOnline:
+            Logout: 1.0
+          Logout:
+            Logout: 1.0
+        seed_events: 
+          Home: 0.5
+          ExploreCampaigns: 0.2
+          OfferingCampaigns: 0.1
+          DesignPartnerCampaigns: 0.2
+        exit_events: ['Logout']
+    event_attributes: 
+      predefined:
+        ExploreLooks:
+          E-1: 
+            e1: 0.5
+            e2: 0.5
+          E0: 
+            e1: 0.5
+            e2: 0.5
+      default:
+        -
+          key: E1
+          order_level: 1
+          values:
+            e1: 0.5
+            e2: 0.5
+      custom:
+        -
+          key: E2
+          order_level: 1
+          values:
+            e1: 0.5
+            e2: 0.5
+    event_decorators:
+      ExploreLooks:
+        DesignPattern: 
+          AquaDelight: 0.5
+          SereneSummer: 0.08
+          TealMeadows: 0.07
+          VanillaTwilight: 0.05
+          PebbleStudio: 0.3
+    user_attributes:
+      default:
+        -
+          key: Gender
+          order_level: 1
+          values:
+            Male: 0.5
+            Female: 0.5
+        -
+          key: Age
+          order_level: 1
+          values:
+            15-18: 0.4
+            18-25: 0.4
+            25-35: 0.2
+          data_type: Numerical
+        -
+          key: City
+          order_level: 3
+          values:
+            Karnataka:
+              Bengaluru: 0.5
+              Mysore: 0.5
+            TamilNadu:
+              Chennai: 0.5
+              Hosur: 0.5
+            California:
+              SunnyVale: 0.5
+              SanJose: 0.5
+            WashingtonDC:
+              Seattle: 0.5
+              Redmond: 0.5
+            Bristol:
+              Bristol: 1.0
+          dependency: State
+        -
+          key: State
+          order_level: 2
+          values:
+            India:
+              Karnataka : 0.8
+              TamilNadu: 0.2
+            US:
+              WashingtonDC: 0.5
+              California: 0.5
+            UK:
+              Bristol: 1.0
+          dependency: Country
+        -
+          key: Country
+          order_level: 1
+          values:
+            India: 0.2
+            US: 0.5
+            UK: 0.3
+      custom:
+        -
+          key: DeviceType
+          order_level: 1
+          values:
+            Desktop: 0.5
+            Mobile: 0.5
+        -
+          key: OS
+          order_level: 2
+          values:
+            Desktop:
+              Windows: 0.3
+              MacOS: 0.3
+              Linux: 0.4
+            Mobile:
+              Android: 0.5
+              iOS: 0.5
+          dependency: DeviceType
+    set_attributes: true 
+    rules:
+      RULE1:
+        real_time_wait: 5
+        overall_probablity: 0.4
+        attribute_weights:
+          -
+            probablity: 0.7
+            attributes: 
+              DeviceType: 
+                -
+                  Desktop
+      RULE2:
+        real_time_wait: 5
+        overall_probablity: 0.2
+        attribute_weights:
+          -
+            probablity: 0.4
+            attributes:
+              OS: 
+                -
+                  iOS
+...

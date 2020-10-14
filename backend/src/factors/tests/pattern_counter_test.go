@@ -3,7 +3,9 @@ package tests
 import (
 	"bufio"
 	"encoding/json"
+	M "factors/model"
 	P "factors/pattern"
+	T "factors/task"
 	U "factors/util"
 	"fmt"
 	"math"
@@ -930,6 +932,17 @@ func TestCollectAndCountEventsWithProperties(t *testing.T) {
 		assert.Equal(t, uint(1), count)
 
 	}
+}
+
+func TestGetEventNamesfromFile(t *testing.T) {
+	filepath := "./data/eventname.txt"
+	scanner, err := T.OpenEventFileAndGetScanner(filepath)
+	assert.Nil(t, err)
+	tmpProjectID := uint64(123)
+	eventNames, err := M.GetEventNamesFromFile(scanner, tmpProjectID)
+	assert.Equal(t, 2, len(eventNames))
+	assert.Nil(t, err)
+
 }
 
 // TODO(aravind): Add tests for genLenThreeSegmentedCandidates and genSegmentedCandidates in run_pattern_mine.go

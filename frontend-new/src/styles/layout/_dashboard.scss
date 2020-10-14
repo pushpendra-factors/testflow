@@ -1,0 +1,65 @@
+.fa-dashboard--widget-card
+{
+    background-color: $fa-color--white;
+    border-radius: 8px; 
+    margin: 10px;
+    width: 45%; 
+    display: inline-block;
+    border: thin solid $fa-color--mono-2;
+    transition: all 0.3s;
+    .fa-widget-card--top-actions{
+        transition: all 0.3s;
+        opacity: 0;
+    }
+    &:hover{
+        .fa-widget-card--top-actions{
+            opacity: 1;
+        }
+        border: thin solid $fa-color--brand-color;
+        box-shadow: 0px 0px 8px $fa-color--mono-2; 
+
+    }
+
+    .fa-widget-card--top
+    {
+        padding: 1.2em 2em;
+    }
+    .fa-widget-card--legend
+    {
+        padding: 0.5em 2em;
+        border-top: thin solid $fa-color--mono-1;
+        border-bottom: thin solid $fa-color--mono-1;
+        .ant-badge
+        {
+            margin-right: 12px;
+            .ant-badge-status-dot
+            {
+                width: 12px;
+                height: 12px; 
+            }
+            .ant-badge-status-text
+            {
+                font-size: 12px;
+                margin-left: 3px;
+                color: $fa-color--mono-4;
+            }
+        }
+    }
+    .fa-widget-card--visuals
+    {
+        img{
+            max-width: 100%;
+            max-height: 100%;
+        }
+    }
+}
+
+.fa-dasboard-privacy--card{
+    border: thin solid $fa-color--mono-1;
+    transition: all 0.3s;
+    cursor: pointer;
+    &:hover{
+        border: thin solid $fa-color--brand-color;
+        background-color: $fa-color--brand-1;
+    }
+}

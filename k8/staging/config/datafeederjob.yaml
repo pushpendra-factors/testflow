@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config-data-feeder-job
+  labels:
+    env: staging
+    project: factors-staging
+data:
+  CONFIG: "acme_com"
+  ENDPOINT_STAGING: "https://staging-api.factors.ai"
+  ENDPOINT_PROD: "https://api.factors.ai"
+

@@ -1,6 +1,8 @@
 package model
 
 import (
+	"bufio"
+	"encoding/json"
 	"errors"
 	cacheRedis "factors/cache/redis"
 	C "factors/config"
@@ -10,8 +12,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"encoding/json"
 
 	"github.com/gomodule/redigo/redis"
 	"github.com/jinzhu/gorm"
@@ -1207,4 +1207,37 @@ func convert(eventNamesWithAggregation []EventNameWithAggregation) []EventName {
 		})
 	}
 	return eventNames
+}
+
+// GetEventNamesFromFile read unique eventNames from Event file
+func GetEventNamesFromFile(scanner *bufio.Scanner, projectId uint64) ([]string, error) {
+	logCtx := log.WithField("project_id", projectId)
+	scanner.Split(bufio.ScanLines)
+	var txtline string
+	eventNames := make([]string, 0)
+	var dat map[string]interface{}
+	s := map[string]bool{}
+
+	for scanner.Scan() {
+		txtline = scanner.Text()
+		if err := json.Unmarshal([]byte(txtline), &dat); err != nil {
+			logCtx.Error("Unable to decode line")
+		}
+		eventNameString := dat["en"].(string)
+		_, ok := s[eventNameString]
+		if ok != true {
+			eventNames = append(eventNames, eventNameString)
+			s[eventNameString] = true
+		}
+
+	}
+	err := scanner.Err()
+	logCtx.Info("Extraced Unique EventNames from file")
+
+	if err != nil {
+		return []string{}, err
+	}
+
+	return eventNames, nil
+
 }

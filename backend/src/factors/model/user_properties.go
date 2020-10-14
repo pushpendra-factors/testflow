@@ -516,8 +516,6 @@ func updateUserPropertiesForUser(projectID uint64, userID string, userProperties
 		}
 		return "", http.StatusInternalServerError
 	}
-	logCtx.WithField("tag", "db_create_user_properties").
-		Info("Created user_properties record.")
 
 	if updateUser {
 		if err := db.Model(&User{}).Where("project_id = ? AND id = ?", projectID, userID).

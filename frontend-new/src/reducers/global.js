@@ -3,7 +3,10 @@
 import {
   FUNNEL_RESULTS_AVAILABLE, FUNNEL_RESULTS_UNAVAILABLE, SET_PROJECTS, SET_ACTIVE_PROJECT, CREATE_PROJECT_FULFILLED, FETCH_PROJECTS_REJECTED
 } from './types';
-import { get, post } from '../utils/request';
+import { get, post, put } from '../utils/request';
+var host = BUILD_CONFIG.backend_host;
+    host = (host[host.length - 1] === '/') ? host : host + '/';
+
 
 const defaultState = {
   is_funnel_results_visible: false,
@@ -11,7 +14,8 @@ const defaultState = {
   projects: [],
   active_project: {},
   fetchingProjects: null,
-  projectsError: null
+  projectsError: null,
+  currentProjectSettings:{}
 };
 
 export default function (state = defaultState, action) {
@@ -33,7 +37,34 @@ export default function (state = defaultState, action) {
       };
     case FETCH_PROJECTS_REJECTED: {
         return {...state, fetchingProjects: false, projectsError: action.payload}
+      };
+    case "UPDATE_PROJECT_SETTINGS_FULFILLED": {
+      let _state = { ...state };
+      if (_state.currentProjectSettings)
+        _state.currentProjectSettings = { 
+          ..._state.currentProjectSettings,
+          ...action.payload.updatedSettings // Updates the state of settings only which are updated.
+        };
+      return _state;
+    };
+    case "UPDATE_PROJECT_SETTINGS_REJECTED": {
+      return {
+        ...state,
+        projectEventsError: action.payload.err
       }
+    };
+    case "FETCH_PROJECT_SETTINGS_FULFILLED": {
+      return {
+        ...state,
+        currentProjectSettings: action.payload.settings
+      }
+    };
+    case "FETCH_PROJECT_SETTINGS_REJECTED": {
+      return {
+        ...state,
+        projectSettingsError: action.payload.err
+      }
+    };
     default:
       return state;
   }
@@ -52,8 +83,6 @@ export const setActiveProject = project => {
 
 export function fetchProjects(projects) {
   return function (dispatch) {
-    let host = BUILD_CONFIG.backend_host;
-    host = (host[host.length - 1] === '/') ? host : host + '/';
     return new Promise((resolve, reject) => {
       get(dispatch, host + 'projects', {})
         .then((response) => {
@@ -67,11 +96,8 @@ export function fetchProjects(projects) {
 }
 
 
-export function createProject(projectName){
-  console.log('createProject called',projectName)
-  return function(dispatch){
-    let host = BUILD_CONFIG.backend_host;
-    host = (host[host.length - 1] === '/') ? host : host + '/';
+export function createProject(projectName){ 
+  return function(dispatch){ 
     return new Promise((resolve, reject) => {
       post(dispatch, host + "projects", { name: projectName })
         .then((r) => {
@@ -88,5 +114,74 @@ export function createProject(projectName){
           reject(err);
         })
     })
+  }
+}
+
+
+
+export function fetchProjectSettings(projectId) {
+  return function(dispatch) {
+    return new Promise((resolve, reject) => {
+      get(dispatch, host + "projects/" + projectId + "/settings")
+        .then((r) => {
+          if (r.ok) {
+            dispatch({
+              type: "FETCH_PROJECT_SETTINGS_FULFILLED", 
+              payload: {
+                currentProjectId: projectId,
+                settings: r.data,
+              }
+            });
+
+            resolve(r);
+          } else {
+            dispatch({
+              type: "FETCH_PROJECT_SETTINGS_REJECTED", 
+              payload: {
+                currentProjectId: projectId, 
+                settings: {}, 
+                err: "Failed to get project settings.",
+              }
+            });
+
+            reject(r);
+          }
+        })
+        .catch((err) => {
+          dispatch({
+            type: "FETCH_PROJECT_SETTINGS_REJECTED", 
+            payload: {
+              currentProjectId: projectId, 
+              settings: {}, 
+              err: err
+            }
+          });
+
+          reject(err);
+        });
+      });
+  }
+}
+
+export function udpateProjectSettings(projectId, payload) {
+  return function(dispatch) {
+    return put(dispatch, host + "projects/" + projectId + "/settings", payload)
+     .then((response) => {
+        return dispatch({
+          type: "UPDATE_PROJECT_SETTINGS_FULFILLED", 
+          payload: {
+            updatedSettings: response.data
+          }
+        });
+      })
+      .catch((err) => {
+        return dispatch({
+          type: "UPDATE_PROJECT_SETTINGS_REJECTED", 
+          payload: {
+            updatedSettings: {}, 
+            err: err
+          }
+        });
+      });
   }
 }
