@@ -145,6 +145,7 @@ const (
 	AliasEventName  = "event_name"
 	AliasDateTime   = "datetime"
 	AliasAggr       = "count"
+	AliasError      = "error"
 	DefaultTimezone = "UTC"
 	ResultsLimit    = 100
 	MaxResultsLimit = 100000

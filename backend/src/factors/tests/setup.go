@@ -116,6 +116,36 @@ func SetupAgentReturnDAO(email string, phone string) (*M.Agent, int) {
 	return resp.Agent, http.StatusCreated
 }
 
+func SetupProjectUserEventNameAgentReturnDAO() (*M.Project, *M.User, *M.EventName, *M.Agent, error) {
+
+	// Create random project and a corresponding eventName and user.
+	project, err := SetupProjectReturnDAO()
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	user, err_code := M.CreateUser(&M.User{ProjectId: project.ID})
+	if err_code != http.StatusCreated {
+		return nil, nil, nil, nil, fmt.Errorf("User Creation failed.")
+	}
+
+	en, err_code := M.CreateOrGetUserCreatedEventName(&M.EventName{ProjectId: project.ID, Name: "login"})
+	if err_code != http.StatusConflict && err_code != http.StatusCreated {
+		return nil, nil, nil, nil, fmt.Errorf("EventName Creation failed.")
+	}
+
+	agent, errCode := SetupAgentReturnDAO(getRandomEmail(), "+1343545")
+	if errCode != http.StatusCreated {
+		return nil, nil, nil, nil, fmt.Errorf("Agent Creation failed.")
+	}
+	_, errCode = M.CreateProjectAgentMappingWithDependencies(&M.ProjectAgentMapping{
+		ProjectID: project.ID, AgentUUID: agent.UUID})
+	if errCode != http.StatusCreated {
+		return nil, nil, nil, nil, fmt.Errorf("ProjectAgentMapping Creation failed.")
+	}
+	return project, user, en, agent, nil
+}
+
 func SetupProjectWithAgentDAO() (*M.Project, *M.Agent, error) {
 	project, err := SetupProjectReturnDAO()
 	if err != nil {

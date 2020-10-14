@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -14,9 +15,45 @@ import (
 
 const (
 	META_EACH_EVENT_COUNT_METRICS = "EachEventCount"
+	ALLOWED_GOROUTINES            = 4
 )
 
-func RunEventsQuery(projectId uint64, query Query) (*QueryResult, int, string) {
+type ResultGroup struct {
+	Results []QueryResult `json:"result_group"`
+}
+
+func RunEventsGroupQuery(queries []Query, projectId uint64) ResultGroup {
+
+	var resultGroup ResultGroup
+	resultGroup.Results = make([]QueryResult, len(queries))
+	var waitGroup sync.WaitGroup
+	count := 0
+	waitGroup.Add(U.MinInt(len(queries), ALLOWED_GOROUTINES))
+	for index, query := range queries {
+		count++
+		go runSingleEventsQuery(projectId, query, &resultGroup.Results[index], &waitGroup)
+		if count%ALLOWED_GOROUTINES == 0 {
+			waitGroup.Wait()
+			waitGroup.Add(U.MinInt(len(queries)-count, ALLOWED_GOROUTINES))
+		}
+	}
+	waitGroup.Wait()
+	return resultGroup
+}
+
+func runSingleEventsQuery(projectId uint64, query Query, resultHolder *QueryResult, waitGroup *sync.WaitGroup) {
+
+	defer waitGroup.Done()
+	result, errCode, errMsg := ExecuteEventsQuery(projectId, query)
+	if errCode != http.StatusOK {
+		errorResult := buildErrorResult(errMsg)
+		*resultHolder = *errorResult
+	} else {
+		*resultHolder = *result
+	}
+}
+
+func ExecuteEventsQuery(projectId uint64, query Query) (*QueryResult, int, string) {
 
 	if valid, errMsg := IsValidEventsQuery(&query); !valid {
 		return nil, http.StatusBadRequest, errMsg
@@ -73,6 +110,18 @@ func RunInsightsQuery(projectId uint64, query Query) (*QueryResult, int, string)
 	addQueryToResultMeta(result, query)
 
 	return result, http.StatusOK, "Successfully executed query"
+}
+
+// buildErrorResult takes the failure msg and wraps it into a QueryResult object
+func buildErrorResult(errMsg string) *QueryResult {
+	errMsg = "Query failed:" + " - " + errMsg
+	headers := []string{AliasError}
+	rows := make([][]interface{}, 0, 0)
+	row := make([]interface{}, 0, 0)
+	row = append(row, errMsg)
+	rows = append(rows, row)
+	errorResult := &QueryResult{Headers: headers, Rows: rows}
+	return errorResult
 }
 
 // transformResultsForEachEventQuery transforms QueryResult with new header as datetime and events
