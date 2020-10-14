@@ -562,7 +562,6 @@ func GetPossiblePhoneNumber(phoneNo string) []string {
 		if !strings.Contains(phoneNo, "+") {
 			possiblePhoneNo = append(possiblePhoneNo, "0"+phoneNo)
 			possiblePhoneNo = append(possiblePhoneNo, "+"+phoneNo)
-			possiblePhoneNo = append(possiblePhoneNo, "+91"+phoneNo)
 		}
 
 		//0123-456-789 or (012)-345-6789
@@ -605,7 +604,6 @@ func GetPossiblePhoneNumber(phoneNo string) []string {
 		nationalNum := libphonenumber.GetNationalSignificantNumber(num)
 		possiblePhoneNo = append(possiblePhoneNo, nationalNum)
 		possiblePhoneNo = append(possiblePhoneNo, "+"+nationalNum)
-		possiblePhoneNo = append(possiblePhoneNo, "+91"+nationalNum)
 
 		standardPhone := libphonenumber.Format(num, libphonenumber.E164)
 		if standardPhone != "+91"+nationalNum {
