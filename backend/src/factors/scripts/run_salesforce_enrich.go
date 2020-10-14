@@ -15,8 +15,8 @@ import (
 )
 
 type salesforceSyncStatus struct {
-	Success  []IntSalesforce.SalesforceObjectStatus `json:"success"`
-	Failures []IntSalesforce.SalesforceObjectStatus `json:"failures,omitempty"`
+	Success  []IntSalesforce.ObjectStatus `json:"success"`
+	Failures []IntSalesforce.ObjectStatus `json:"failures,omitempty"`
 }
 
 type salesforceJobStatus struct {

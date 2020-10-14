@@ -17,27 +17,31 @@ import (
 )
 
 const (
-	SALESFORCE_INSTANCE_URL       = "instance_url"
-	SALESFORCE_DATA_SERVICE_ROUTE = "/services/data/"
-	SALESFORCE_API_VERSION        = "v20.0"
+	// InstanceURL field instance_url
+	InstanceURL                = "instance_url"
+	salesforceDataServiceRoute = "/services/data/"
+	salesforceAPIVersion       = "v20.0"
 )
 
 //Salesforce API structs
 type field map[string]interface{}
 
+// Describe structure for salesforce describe API
 type Describe struct {
 	Custom bool    `json:"custom"`
 	Fields []field `json:"fields"`
 }
 
+// QueryResponse structure for query API
 type QueryResponse struct {
 	TotalSize      int                  `json:"totalSize"`
 	Done           bool                 `json:"done"`
 	Records        []M.SalesforceRecord `json:"records"`
-	NextRecordsUrl string               `json:"nextRecordsUrl"`
+	NextRecordsURL string               `json:"nextRecordsUrl"`
 }
 
-type SalesforceObjectStatus struct {
+// ObjectStatus represents sync info from query to db
+type ObjectStatus struct {
 	ProjetID     uint64   `json:"project_id"`
 	Status       string   `json:"status"`
 	DocType      string   `json:"doc_type"`
@@ -47,10 +51,11 @@ type SalesforceObjectStatus struct {
 	Failures     []string `json:"failures,omitempty"`
 }
 
-type SalesforceJobStatus struct {
-	Status   string                   `json:"status"`
-	Success  []SalesforceObjectStatus `json:"success"`
-	Failures []SalesforceObjectStatus `json:"failures"`
+// JobStatus list all success and failed while sync from salesforce to db
+type JobStatus struct {
+	Status   string         `json:"status"`
+	Success  []ObjectStatus `json:"success"`
+	Failures []ObjectStatus `json:"failures"`
 }
 
 func buildSalesforceGETRequest(url, accessToken string) (*http.Request, error) {
@@ -62,8 +67,8 @@ func buildSalesforceGETRequest(url, accessToken string) (*http.Request, error) {
 	return req, nil
 }
 
-// SalesforceGetRequest performs GET request on provided url with access token
-func SalesforceGetRequest(url, accessToken string) (*http.Response, error) {
+// GETRequest performs GET request on provided url with access token
+func GETRequest(url, accessToken string) (*http.Response, error) {
 	req, err := buildSalesforceGETRequest(url, accessToken)
 	if err != nil {
 		return nil, err
@@ -79,6 +84,7 @@ func SalesforceGetRequest(url, accessToken string) (*http.Response, error) {
 	return resp, nil
 }
 
+// DataServiceError impelements error interface for salesforce data api error
 type DataServiceError struct {
 	Message   string `json:"message"`
 	ErrorCode string `json:"errorCode"`
@@ -89,8 +95,8 @@ func getSalesforceObjectDescription(objectName, accessToken, instanceURL string)
 		return nil, errors.New("missing required fields")
 	}
 
-	url := instanceURL + SALESFORCE_DATA_SERVICE_ROUTE + SALESFORCE_API_VERSION + "/sobjects/" + objectName + "/describe"
-	resp, err := SalesforceGetRequest(url, accessToken)
+	url := instanceURL + salesforceDataServiceRoute + salesforceAPIVersion + "/sobjects/" + objectName + "/describe"
+	resp, err := GETRequest(url, accessToken)
 	if err != nil {
 		return nil, err
 	}
@@ -138,13 +144,13 @@ func getSalesforceDataByQuery(query, accessToken, instanceURL, dateTime string) 
 		return nil, errors.New("missing required fields")
 	}
 
-	queryURL := instanceURL + SALESFORCE_DATA_SERVICE_ROUTE + SALESFORCE_API_VERSION + "/query?q=" + query
+	queryURL := instanceURL + salesforceDataServiceRoute + salesforceAPIVersion + "/query?q=" + query
 
 	if dateTime != "" {
 		queryURL = queryURL + "+" + "WHERE" + "+" + "LastModifiedDate" + url.QueryEscape(">"+dateTime)
 	}
 
-	resp, err := SalesforceGetRequest(queryURL, accessToken)
+	resp, err := GETRequest(queryURL, accessToken)
 	if err != nil {
 		return nil, err
 	}
@@ -165,8 +171,8 @@ func getSalesforceDataByQuery(query, accessToken, instanceURL, dateTime string) 
 	return &jsonResponse, nil
 }
 
-func syncByType(ps *M.SalesforceProjectSettings, accessToken, objectName, dateTime string) (SalesforceObjectStatus, error) {
-	var salesforceObjectStatus SalesforceObjectStatus
+func syncByType(ps *M.SalesforceProjectSettings, accessToken, objectName, dateTime string) (ObjectStatus, error) {
+	var salesforceObjectStatus ObjectStatus
 	salesforceObjectStatus.ProjetID = ps.ProjectID
 	salesforceObjectStatus.DocType = objectName
 
@@ -217,7 +223,7 @@ func syncByType(ps *M.SalesforceProjectSettings, accessToken, objectName, dateTi
 
 		salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, failures...)
 		hasMore = !queryResponse.Done
-		nextBatchRoute = queryResponse.NextRecordsUrl
+		nextBatchRoute = queryResponse.NextRecordsURL
 		records = make([]M.SalesforceRecord, 0)
 	}
 
@@ -229,7 +235,7 @@ func getSalesforceNextBatch(nextBatchRoute, InstanceURL string, accessToken stri
 		return nil, errors.New("missing required fields")
 	}
 	url := InstanceURL + nextBatchRoute
-	resp, err := SalesforceGetRequest(url, accessToken)
+	resp, err := GETRequest(url, accessToken)
 	if err != nil {
 		return nil, err
 	}
@@ -250,20 +256,21 @@ func getSalesforceNextBatch(nextBatchRoute, InstanceURL string, accessToken stri
 	return &jsonRespone, nil
 }
 
+// TokenError implements error interface for token api error
 type TokenError struct {
 	Error            string `json:"error"`
 	ErrorDescription string `json:"error_description"`
 }
 
 // GetAccessToken gets new salesforce access token by refresh token
-func GetAccessToken(ps *M.SalesforceProjectSettings, redirectUrl string) (string, error) {
-	if ps == nil || redirectUrl == "" {
+func GetAccessToken(ps *M.SalesforceProjectSettings, redirectURL string) (string, error) {
+	if ps == nil || redirectURL == "" {
 		return "", errors.New("invalid project setting or redirect url")
 	}
 
 	queryParams := fmt.Sprintf("grant_type=%s&refresh_token=%s&client_id=%s&client_secret=%s&redirect_uri=%s",
-		"refresh_token", ps.RefreshToken, C.GetSalesforceAppId(), C.GetSalesforceAppSecret(), redirectUrl)
-	url := REFRESH_TOKEN_URL + "?" + queryParams
+		"refresh_token", ps.RefreshToken, C.GetSalesforceAppId(), C.GetSalesforceAppSecret(), redirectURL)
+	url := RefreshTokenURL + "?" + queryParams
 
 	req, err := http.NewRequest("POST", url, nil)
 	if err != nil {
@@ -300,8 +307,8 @@ func GetAccessToken(ps *M.SalesforceProjectSettings, redirectUrl string) (string
 }
 
 // SyncDocuments syncs from salesforce to database by doc type
-func SyncDocuments(ps *M.SalesforceProjectSettings, lastSyncInfo map[string]int64, accessToken string) []SalesforceObjectStatus {
-	var allObjectStatus []SalesforceObjectStatus
+func SyncDocuments(ps *M.SalesforceProjectSettings, lastSyncInfo map[string]int64, accessToken string) []ObjectStatus {
+	var allObjectStatus []ObjectStatus
 
 	for docType, timestamp := range lastSyncInfo {
 		var sfFormatedTime string
