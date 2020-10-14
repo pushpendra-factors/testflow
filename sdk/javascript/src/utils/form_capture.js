@@ -13,7 +13,7 @@ function isPhone(phone) {
     if (!phone || phone.length == 0) return false;
     var numbers = phone.match(/\d/g);
     // atleast 4 numbers.
-    if (!numbers || numbers < 4) return false;
+    if (!numbers || numbers.length < 4) return false;
     return true;
 }
 
