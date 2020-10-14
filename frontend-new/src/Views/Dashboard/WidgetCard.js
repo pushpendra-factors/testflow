@@ -69,9 +69,9 @@ function WidgetCard({ id, setwidgetModal, widthSize = 2 }) {
               </span>
             </div>
             <div className={'fa-widget-card--top flex justify-between items-start'}>
-                <div>
-                    <Text type={'title'} level={5} weight={'bold'} extraClass={'m-0'}>{Titles[id].title}</Text>
-                    <Text type={'paragraph'} mini color={'grey'} extraClass={'m-0'}>{Titles[id].subTitle}</Text>
+                <div className={'w-full'} >
+                    <Text ellipsis type={'title'} level={5} weight={'bold'} extraClass={'m-0'}>{Titles[id].title}</Text>
+                    <Text ellipsis type={'paragraph'} mini color={'grey'} extraClass={'m-0'}>{Titles[id].subTitle}</Text>
                 </div>
                 <div className={'flex flex-col justify-start items-start fa-widget-card--top-actions'}>
                     <Button onClick={() => setwidgetModal(true)} icon={<FullscreenOutlined />} type="text" />
