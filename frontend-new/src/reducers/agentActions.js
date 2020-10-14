@@ -23,7 +23,7 @@ export default function reducer(state = {
       return { ...state, isLoggedIn: false };
     }
     case 'FETCH_AGENT_INFO_FULFILLED': {
-      return { ...state, agent: action.payload };
+      return { ...state, agent_details: action.payload };
     }
     case 'FETCH_AGENT_INFO_REJECTED': {
       return { ...state, agentError: action.payload };
@@ -127,3 +127,22 @@ export function signout() {
 //     });
 //   }
 // }
+
+
+export function fetchAgentInfo(){
+  return function(dispatch) {
+    return new Promise((resolve,reject) => {
+      get(dispatch, host + "agents/info")
+        .then((response) => {        
+          dispatch({type:"FETCH_AGENT_INFO_FULFILLED", 
+            payload: response.data});
+          resolve(response);
+        })
+        .catch((err) => {
+          dispatch({type:"FETCH_AGENT_INFO_REJECTED", 
+            payload: 'Failed to fetch agent info'});
+          reject(err);
+        });
+    });
+  }
+} 

@@ -4,15 +4,19 @@ import {
 } from 'antd';
 import { Text } from 'factorsComponents';
 import { UserOutlined } from '@ant-design/icons';
+import { fetchAgentInfo } from '../../../reducers/agentActions';
+import { connect } from 'react-redux';
 
-function EditUserDetails(props) {
+function ViewUserDetails(props) {
   const [dataLoading, setDataLoading] = useState(true);
+  const [userData, setuserData] = useState(null);
 
   useEffect(() => {
-    setTimeout(() => {
+    props.fetchAgentInfo().then((response) => {
+      setuserData(response.data);
       setDataLoading(false);
-    }, 2000);
-  });
+    });
+  }, []);
 
   return (
     <>
@@ -34,7 +38,7 @@ function EditUserDetails(props) {
           <Col>
             <Text type={'title'} level={7} extraClass={'m-0'}>Name</Text>
             { dataLoading ? <Skeleton.Input style={{ width: 200 }} active={true} size={'small'} />
-              : <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>Vishnu Baliga</Text>
+              : <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>{`${userData.first_name} ${userData.last_name}`}</Text>
             }
           </Col>
         </Row>
@@ -42,7 +46,7 @@ function EditUserDetails(props) {
           <Col>
             <Text type={'title'} level={7} extraClass={'m-0'}>Email</Text>
             { dataLoading ? <Skeleton.Input style={{ width: 200 }} active={true} size={'small'} />
-              : <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>baliga@factors.ai</Text>
+              : <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>{userData.email}</Text>
             }
           </Col>
         </Row>
@@ -75,4 +79,4 @@ function EditUserDetails(props) {
   );
 }
 
-export default EditUserDetails;
+export default connect(null, { fetchAgentInfo })(ViewUserDetails);
