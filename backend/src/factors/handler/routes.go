@@ -154,7 +154,7 @@ func InitIntRoutes(r *gin.Engine) {
 		mid.SetLoggedInAgent(),
 		mid.SetAuthorizedProjectsByLoggedInAgent(),
 		SalesforceAuthRedirectHandler)
-	intRouteGroup.GET(SALESFORCE_CALLBACK_URL,
+	intRouteGroup.GET(SalesforceCallbackRoute,
 		SalesforceCallbackHandler)
 }
 

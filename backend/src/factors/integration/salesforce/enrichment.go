@@ -16,6 +16,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// Status represents current sync status for a doc type
 type Status struct {
 	ProjectID uint64 `json:"project_id"`
 	Type      string `json:"type"`
