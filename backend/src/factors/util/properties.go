@@ -451,6 +451,14 @@ const (
 	PropertyTypeUnknown     = "unknown"
 )
 
+const (
+	DateTimeBreakdownHourlyGranularity  = "hour"
+	DateTimeBreakdownDailyGranularity   = "day"
+	DateTimeBreakdownWeeklyGranularity  = "week"
+	DateTimeBreakdownMonthlyGranularity = "month"
+	DateTimeBreakdownYearlyGranularity  = "year"
+)
+
 var NUMERICAL_PROPERTY_BY_NAME = [...]string{
 	EP_PAGE_LOAD_TIME,
 	EP_PAGE_SPENT_TIME,

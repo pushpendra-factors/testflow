@@ -217,6 +217,7 @@ func FloatRoundOffWithPrecision(value float64, precision int) (float64, error) {
 const (
 	DATETIME_FORMAT_YYYYMMDD_HYPHEN string = "2006-01-02"
 	DATETIME_FORMAT_YYYYMMDD        string = "20060102"
+	DATETIME_FORMAT_DB string = "2006-01-02 00:00:00"
 )
 
 // Returns date in YYYYMMDD format

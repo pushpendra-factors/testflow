@@ -122,6 +122,12 @@ func QueryHandler(c *gin.Context) {
 		}
 	}
 
+	for index, _ := range requestPayload.Query.GroupByProperties {
+		if requestPayload.Query.GroupByProperties[index].Type == U.PropertyTypeDateTime &&
+			requestPayload.Query.GroupByProperties[index].Granularity == "" {
+			requestPayload.Query.GroupByProperties[index].Granularity = U.DateTimeBreakdownDailyGranularity
+		}
+	}
 	result, errCode, errMsg := M.Analyze(projectId, requestPayload.Query)
 	if errCode != http.StatusOK {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": errMsg})
