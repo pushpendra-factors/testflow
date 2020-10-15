@@ -27,3 +27,6 @@ class SentryDataService:
             attach_stacktrace=config.attach_stacktrace,
             integrations=[sentry_logging, TornadoIntegration()]
         )
+
+        with sentry_sdk.configure_scope() as scope:
+            scope.set_tag("AppName", config.server_name)
