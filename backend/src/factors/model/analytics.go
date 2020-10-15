@@ -406,9 +406,9 @@ func getNoneHandledGroupBySelect(groupProp QueryGroupByProperty, groupKey string
 			entityField, PropertyValueNone, entityField, PropertyValueNone, entityField, groupKey)
 		groupSelectParams = []interface{}{groupProp.Property, groupProp.Property, groupProp.Property}
 	} else {
-		groupSelect = fmt.Sprintf("CASE WHEN %s->>? IS NULL THEN '%s' WHEN %s->>? = '' THEN '%s' ELSE CASE WHEN jsonb_typeof(%s->?) = 'number' THEN date_trunc('%s', to_timestamp((%s->>?)::numeric)::timestamp)::text ELSE date_trunc('%s', to_timestamp((%s->>?)::numeric)::timestamp)::text END END AS %s",
-			entityField, PropertyValueNone, entityField, PropertyValueNone, entityField, groupProp.Granularity, entityField, groupProp.Granularity, entityField, groupKey)
-		groupSelectParams = []interface{}{groupProp.Property, groupProp.Property, groupProp.Property, groupProp.Property, groupProp.Property}
+		groupSelect = fmt.Sprintf("CASE WHEN %s->>? IS NULL THEN '%s' WHEN %s->>? = '' THEN '%s' WHEN %s->>? = '0' THEN '%s' ELSE  date_trunc('%s', to_timestamp(to_number((%s->>?)::text,'9999999999'))::timestamp)::text END AS %s",
+			entityField, PropertyValueNone, entityField, PropertyValueNone, entityField, PropertyValueNone, groupProp.Granularity, entityField, groupKey)
+		groupSelectParams = []interface{}{groupProp.Property, groupProp.Property, groupProp.Property, groupProp.Property}
 	}
 	return groupSelect, groupSelectParams
 }
