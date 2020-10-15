@@ -251,7 +251,9 @@ func getWebAnalyticsQueriesFromDashboardUnits(projectID uint64) (uint64, *WebAna
 	// Build web analytics queries from dashboard units.
 	namedQueries := make([]string, 0, 0)
 	customGroupQueries := make([]WebAnalyticsCustomGroupQuery, 0, 0)
-	for _, dunit := range dashboardUnits {
+	for i := range dashboardUnits {
+		dunit := dashboardUnits[i]
+
 		queryMap, err := U.DecodePostgresJsonb(&dunit.Query)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to decode web analytics dashboard unit query.")
@@ -1468,13 +1470,19 @@ func ExecuteWebAnalyticsQueries(projectId uint64, queries *WebAnalyticsQueries) 
 		rowCount++
 	}
 
+	logCtx = logCtx.WithField("no_of_events", rowCount).
+		WithField("total_time_taken_in_secs", U.TimeNowUnix()-funcStartTimestamp)
+
+	if err := rows.Err(); err != nil {
+		logCtx.WithError(err).Error("Failed to scan rows of web analytics query result.")
+		return nil, http.StatusInternalServerError
+	}
+
 	queryResult.QueryResult = getWebAnalyticsQueryResultByName(&webAggrState)
 	queryResult.CustomGroupQueryResult = getResultForCustomGroupQuery(
 		queries.CustomGroupQueries, &customGroupAggrState, &webAggrState)
 
-	logCtx.WithField("no_of_events", rowCount).
-		WithField("total_time_taken_in_secs", U.TimeNowUnix()-funcStartTimestamp).
-		Info("Executed web analytics query.")
+	logCtx.Info("Executed web analytics query.")
 
 	return queryResult, http.StatusOK
 }

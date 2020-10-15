@@ -43,6 +43,8 @@ spec:
             - "2"
             - --num_routines
             - "4"
+            - --num_routines_for_web_analytics
+            - "1"
             envFrom:
             - configMapRef:
                 name: config-env

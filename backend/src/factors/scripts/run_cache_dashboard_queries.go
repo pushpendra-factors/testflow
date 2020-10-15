@@ -16,6 +16,8 @@ func main() {
 	envFlag := flag.String("env", C.DEVELOPMENT, "Environment. Could be development|staging|production")
 	projectIDFlag := flag.String("project_id", "", "Comma separated project ids to run for. * to run for all")
 	numRoutinesFlag := flag.Int("num_routines", 4, "Number of dashboard units to sync in parallel. Each dashboard unit runs 4 queries")
+	numRoutinesForWebAnalyticsFlag := flag.Int("num_routines_for_web_analytics", 1,
+		"No.of routines to use for web analytics dashboard caching.")
 
 	dbHost := flag.String("db_host", "localhost", "")
 	dbPort := flag.Int("db_port", 5432, "")
@@ -83,7 +85,7 @@ func main() {
 	}
 
 	waitGroup.Add(1)
-	go cacheWebsiteAnalyticsForProjects(*projectIDFlag, 2, &timeTaken, &waitGroup)
+	go cacheWebsiteAnalyticsForProjects(*projectIDFlag, *numRoutinesForWebAnalyticsFlag, &timeTaken, &waitGroup)
 
 	waitGroup.Wait()
 	timeTakenString, _ := timeTaken.Load("all")
