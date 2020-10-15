@@ -4,11 +4,73 @@ import {
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
 import WidgetCard from './WidgetCard';
+import { ReactSortable } from 'react-sortablejs';
 const { TabPane } = Tabs;
 
+const widgetCardCollection = [
+  {
+    id: 1, type: 1, size: 1, title: 'item 1'
+  },
+  {
+    id: 2, type: 2, size: 1, title: 'item 2'
+  },
+  {
+    id: 3, type: 3, size: 1, title: 'item 3'
+  },
+  {
+    id: 4, type: 1, size: 1, title: 'item 4'
+  },
+  {
+    id: 5, type: 2, size: 2, title: 'item 5'
+  },
+  {
+    id: 6, type: 1, size: 1, title: 'item 6'
+  },
+  {
+    id: 7, type: 3, size: 1, title: 'item 7'
+  },
+  {
+    id: 8, type: 2, size: 1, title: 'item 8'
+  },
+  {
+    id: 9, type: 3, size: 1, title: 'item 9'
+  },
+  {
+    id: 10, type: 1, size: 2, title: 'item 10'
+  },
+  {
+    id: 11, type: 2, size: 3, title: 'item 11'
+  }
+];
+
 function ProjectTabs({ setaddDashboardModal }) {
-  const [dataLoading, setDataLoading] = useState(true);
   const [widgetModal, setwidgetModal] = useState(false);
+  const [widgets, setWidgets] = useState(widgetCardCollection);
+
+  const onDrop = (newState) => {
+    setWidgets(newState);
+  };
+
+  const resizeWidth = (index, operator) => {
+    const newArray = [...widgets];
+    let newSize = 1;
+    const currentWidth = newArray[index].size;
+    if (operator === '+') {
+      if (currentWidth !== 3) {
+        newSize = currentWidth + 1;
+      } else {
+        newSize = 3;
+      }
+    } else {
+      if (currentWidth !== 0) {
+        (currentWidth - 1 === 0) ? newSize = 1 : newSize = currentWidth - 1;
+      } else {
+        newSize = 1;
+      }
+    }
+    newArray[index] = { ...newArray[index], size: newSize };
+    setWidgets(newArray);
+  };
 
   const operations = <>
   <Button type="text" size={'small'} onClick={() => setaddDashboardModal(true)}><SVG name="plus" color={'grey'}/></Button>
@@ -16,60 +78,51 @@ function ProjectTabs({ setaddDashboardModal }) {
   </>;
 
   useEffect(() => {
-    setTimeout(() => {
-      setDataLoading(false);
-    }, 200);
+    console.log('widgets', widgets);
   });
 
   return (<>
 
         <Row className={'mt-2'}>
           <Col span={24}>
-            { dataLoading ? <></>
-              : <Tabs defaultActiveKey="1"
+             <Tabs defaultActiveKey="1"
               className={'fa-tabs--dashboard'}
               tabBarExtraContent={operations}
               >
                 <TabPane tab="My Dashboard" key="1">
                    <div className={'fa-container mt-6'}>
-                          <Row gutter={[24, 24]} className={'flex justify-start items-stretch'}>
-                              <WidgetCard setwidgetModal={setwidgetModal} widthSize={1} id={1}/>
-                              <WidgetCard setwidgetModal={setwidgetModal} widthSize={1} id={3}/>
-                              <WidgetCard setwidgetModal={setwidgetModal} id={2}/>
-                              <WidgetCard setwidgetModal={setwidgetModal} id={3}/>
-                              <WidgetCard setwidgetModal={setwidgetModal} id={1}/>
-                              <WidgetCard setwidgetModal={setwidgetModal} widthSize={3} id={2}/>
-                            </Row>
+                   <ReactSortable className={'ant-row'} list={widgets} setList={onDrop}>
+                      {widgets.map((item, index) => {
+                        return (
+                          <WidgetCard widthSize={item.size} key={index} index={index} resizeWidth={resizeWidth} title={item.title} id={item.type}/>
+                        );
+                      })}
+                  </ReactSortable>
                    </div>
                 </TabPane>
                 <TabPane tab="Paid Marketing" key="2">
                 <div className={'fa-container mt-6'}>
-                          <Row gutter={[24, 24]} className={'flex justify-start items-stretch'}>
-                              <WidgetCard setwidgetModal={setwidgetModal} widthSize={1} id={1}/>
-                              <WidgetCard setwidgetModal={setwidgetModal} widthSize={1} id={3}/>
-                              <WidgetCard setwidgetModal={setwidgetModal} widthSize={2} id={2}/>
-                              <WidgetCard setwidgetModal={setwidgetModal} widthSize={2} id={3}/>
-                              <WidgetCard setwidgetModal={setwidgetModal} widthSize={1} id={1}/>
-                              <WidgetCard setwidgetModal={setwidgetModal} widthSize={1} id={2}/>
-                              <WidgetCard setwidgetModal={setwidgetModal} widthSize={3} id={2}/>
-                            </Row>
-                   </div>
+                  <ReactSortable className={'ant-row'} list={widgets} setList={onDrop}>
+                      {widgets.map((item, index) => {
+                        return (
+                          <WidgetCard widthSize={item.size} key={index} index={index} resizeWidth={resizeWidth} title={item.title} id={item.type}/>
+                        );
+                      })}
+                  </ReactSortable>
+                </div>
                 </TabPane>
                 <TabPane tab="Campaigns" key="3">
                 <div className={'fa-container mt-6'}>
-                          <Row gutter={[24, 24]} className={'flex justify-start items-stretch'}>
-                              <WidgetCard setwidgetModal={setwidgetModal} widthSize={1} id={1}/>
-                              <WidgetCard setwidgetModal={setwidgetModal} widthSize={1} id={3}/>
-                              <WidgetCard setwidgetModal={setwidgetModal} widthSize={1} id={2}/>
-                              <WidgetCard setwidgetModal={setwidgetModal} widthSize={1} id={3}/>
-                              <WidgetCard setwidgetModal={setwidgetModal} widthSize={3} id={1}/>
-                              <WidgetCard setwidgetModal={setwidgetModal} widthSize={2} id={2}/>
-                              <WidgetCard setwidgetModal={setwidgetModal} widthSize={2} id={1}/>
-                            </Row>
+                    <ReactSortable className={'ant-row'} list={widgets} setList={onDrop}>
+                        {widgets.map((item, index) => {
+                          return (
+                            <WidgetCard widthSize={item.size} key={index} index={index} resizeWidth={resizeWidth} title={item.title} id={item.type}/>
+                          );
+                        })}
+                    </ReactSortable>
                    </div>
                 </TabPane>
               </Tabs>
-            }
           </Col>
         </Row>
 
