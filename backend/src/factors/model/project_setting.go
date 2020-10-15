@@ -72,6 +72,7 @@ var (
 		"MobilePhone":                        true,
 		"Email":                              true,
 		"LeadSource":                         true,
+		"Status":                             true,
 		"ConvertedDate":                      true,
 		"CreatedDate":                        true,
 		"CreatedById":                        true,
