@@ -90,7 +90,8 @@ type Configuration struct {
 	RealTimeEventUserCachingProjectIds  string
 	BlockedSDKRequestProjectTokens      []string
 	// Usage: 	"--cache_look_up_range_projects", "1:20140307"
-	CacheLookUpRangeProjects map[uint64]time.Time // Usually cache look up is for past 30 days. If certain projects need override, then this is used
+	CacheLookUpRangeProjects        map[uint64]time.Time // Usually cache look up is for past 30 days. If certain projects need override, then this is used
+	LookbackWindowForEventUserCache int
 }
 
 type Services struct {
@@ -708,6 +709,10 @@ func GetSkipTrackProjectIds() []uint64 {
 
 func GetWhitelistedProjectIdsEventUserCache() string {
 	return configuration.WhitelistedProjectIdsEventUserCache
+}
+
+func GetLookbackWindowForEventUserCache() int {
+	return configuration.LookbackWindowForEventUserCache
 }
 
 func GetIfRealTimeEventUserCachingIsEnabled(projectId uint64) bool {

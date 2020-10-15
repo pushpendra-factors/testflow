@@ -52,6 +52,8 @@ func main() {
 	skipTrackProjectIds := flag.String("skip_track_project_ids", "", "List or projects to skip track")
 	whitelistedProjectIdsEventUserCache := flag.String("whitelisted_projects_ids_event_user_cache",
 		"1", "List of project ids for which caching for events/user is enabled")
+	lookbackWindowForEventUserCache := flag.Int("lookback_window_event_user_cache",
+		30, "look back window in cache for event/user cache")
 	facebookAppId := flag.String("facebook_app_id", "", "")
 	facebookAppSecret := flag.String("facebook_app_secret", "", "")
 	salesforceAppId := flag.String("salesforce_app_id", "", "")
@@ -106,6 +108,7 @@ func main() {
 		IsRealTimeEventUserCachingEnabled:   *isRealTimeEventUserCachingEnabled,
 		BlockedSDKRequestProjectTokens:      C.GetTokensFromStringListAsString(*blockedSDKRequestProjectTokens),
 		CacheLookUpRangeProjects:            C.ExtractProjectIdDateFromConfig(*cacheLookUpRangeProjects),
+		LookbackWindowForEventUserCache:     *lookbackWindowForEventUserCache,
 	}
 
 	// Initialize configs and connections.

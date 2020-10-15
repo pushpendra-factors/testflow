@@ -1,6 +1,7 @@
 package handler
 
 import (
+	C "factors/config"
 	"factors/handler/helpers"
 	mid "factors/middleware"
 	M "factors/model"
@@ -101,7 +102,7 @@ func GetUserPropertiesHandler(c *gin.Context) {
 	})
 
 	if helpers.IsProjectWhitelistedForEventUserCache(projectId) {
-		properties, err = M.GetUserPropertiesByProject(projectId, 2500, 30)
+		properties, err = M.GetUserPropertiesByProject(projectId, 2500, C.GetLookbackWindowForEventUserCache())
 		if err != nil {
 			logCtx.WithError(err).Error("get user properties by project")
 			c.AbortWithStatus(http.StatusInternalServerError)
@@ -163,7 +164,7 @@ func GetUserPropertyValuesHandler(c *gin.Context) {
 		return
 	}
 	if helpers.IsProjectWhitelistedForEventUserCache(projectId) {
-		propertyValues, err = M.GetPropertyValuesByUserProperty(projectId, propertyName, 2500, 30)
+		propertyValues, err = M.GetPropertyValuesByUserProperty(projectId, propertyName, 2500, C.GetLookbackWindowForEventUserCache())
 		if err != nil {
 			logCtx.WithError(err).Error("get property values by user property")
 			c.AbortWithStatus(http.StatusInternalServerError)

@@ -80,6 +80,7 @@ func TestGetEventNamesHandler(t *testing.T) {
 	}{}
 	C.GetConfig().WhitelistedProjectIdsEventUserCache = "*"
 	C.GetConfig().IsRealTimeEventUserCachingEnabled = true
+	C.GetConfig().LookbackWindowForEventUserCache = 10
 
 	H.InitSDKServiceRoutes(r)
 	uri := "/sdk/event/track"
