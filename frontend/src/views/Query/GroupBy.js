@@ -8,7 +8,8 @@ import {
   fetchProjectUserProperties,
 } from '../../actions/projectsActions';
 import { getSelectedOpt, QUERY_TYPE_ANALYTICS, makeSelectOpt, makeSelectOpts, removeIndexIfExistsFromOptName } from '../../util';
-import { PROPERTY_TYPE_OPTS, PROPERTY_TYPE_EVENT, PROPERTY_TYPE_USER, LABEL_STYLE } from './common';
+import { PROPERTY_TYPE_OPTS, PROPERTY_TYPE_EVENT, PROPERTY_TYPE_USER, LABEL_STYLE, NUMERICAL_GROUP_BY_METHODS } from './common';
+import {TYPE_NUMERICAL} from './Property'
 
 export const USER_PROPERTY_JOIN_TIME = '$joinTime'
 
@@ -98,9 +99,13 @@ class GroupBy extends Component {
     return this.props.isEventNameRequired() && this.props.groupByState.type == PROPERTY_TYPE_EVENT;
   }
 
+  showGroupByMethod() {
+    return this.props.groupByState.ptype == TYPE_NUMERICAL;
+  }
+
   render() {
     return (
-      <div style={{ width: '800px', marginBottom: '15px' }}>
+      <div style={{ width: '900px', marginBottom: '15px' }}>
         <div style={{display: 'inline-block', width: '150px', marginRight: '10px'}} className='fapp-select light'>
           <Select
             onChange={this.props.onTypeChange}
@@ -127,6 +132,15 @@ class GroupBy extends Component {
             value={getSelectedOpt(this.props.groupByState.name)}
             formatCreateLabel={(value) => (value)}
             isLoading={this.state.isNameOptsLoading}
+          />
+        </div>
+        <div style={{display: 'inline-block', width: '150px', marginLeft: '10px'}} className='fapp-select light' 
+            hidden={!this.showGroupByMethod()}>
+          <Select
+            onChange={this.props.onNumericalGroupByChange}
+            options={this.props.getNumericalGroupByMethods()}
+            placeholder='Method'
+            value={getSelectedOpt(this.props.groupByState.method, NUMERICAL_GROUP_BY_METHODS)}
           />
         </div>
         <button className='fapp-close-button' onClick={this.props.remove}>x</button>

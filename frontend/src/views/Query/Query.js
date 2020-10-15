@@ -31,7 +31,7 @@ import {
   PRESENTATION_CARD, PRESENTATION_FUNNEL, PROPERTY_TYPE_EVENT,
   getDateRangeFromStoredDateRange, PROPERTY_LOGICAL_OP_OPTS,
   DEFAULT_DATE_RANGE, DEFINED_DATE_RANGES, getGroupByTimestampType,
-  getQueryPeriod, convertFunnelResultForTable, sameDay, jsonToCSV, PROPERTY_TYPE_USER, getEventsWithProperties
+  getQueryPeriod, convertFunnelResultForTable, sameDay, jsonToCSV, PROPERTY_TYPE_USER, getEventsWithProperties, NUMERICAL_GROUP_BY_METHODS, NUMERICAL_GROUP_BY_BUCKETED, NUMERICAL_GROUP_BY_RAW
 } from './common';
 import ClosableDateRangePicker from '../../common/ClosableDatePicker';
 import { fetchProjectEvents, runQuery } from '../../actions/projectsActions';
@@ -52,6 +52,7 @@ import funnelSVG from '../../assets/img/analytics/funnel.svg';
 import channelSVG from '../../assets/img/analytics/channel.svg';
 import attributionSVG from '../../assets/img/analytics/attribution.svg'
 import { del } from '../../actions/request';
+import { TYPE_NUMERICAL, TYPE_CATEGORICAL } from './Property';
 
 const COND_ALL_GIVEN_EVENT = 'all_given_event';
 const COND_ANY_GIVEN_EVENT = 'any_given_event'; 
@@ -271,6 +272,7 @@ class Query extends Component {
       group.type = prop.en;
       group.name = prop.pr;
       group.eventName = prop.ena;
+      group.method = NUMERICAL_GROUP_BY_METHODS[0];
 
       groupBys.push(group);
     }
@@ -385,15 +387,23 @@ class Query extends Component {
       groupByType = groupByOpts[0].value
     }
 
+    let defaultGroupByState = {
+      type: groupByType,
+      name: '',
+      method: createSelectOpts(NUMERICAL_GROUP_BY_METHODS)[0].value,
+    }
+
     if (groupByType == PROPERTY_TYPE_USER) {
-      return {type: PROPERTY_TYPE_USER, name: '', eventName: USER_PROPERTY_GROUP_BY_PRESENT}
+      defaultGroupByState.eventName = USER_PROPERTY_GROUP_BY_PRESENT;
+      return defaultGroupByState;
     }
 
     let defaultEventName = '';
     if (this.state.events.length > 0) 
       defaultEventName = this.state.events[0].name;
 
-    return { type: groupByType, name: '', eventName: prefixIndexToOptName(0, defaultEventName) };
+    defaultGroupByState.eventName = prefixIndexToOptName(0, defaultEventName);
+    return defaultGroupByState;
   }
 
   addGroupBy = () => {
@@ -432,11 +442,19 @@ class Query extends Component {
   onGroupByNameChange = (groupByIndex, option) => {
     this.setGroupByAttr(groupByIndex, 'name', option.value);
     this.setGroupByAttr(groupByIndex, 'ptype', option.type);
+    if (!option.method) {
+      option.method = NUMERICAL_GROUP_BY_BUCKETED;
+    }
+    this.setGroupByAttr(groupByIndex, 'method', option.method);
   }
 
   onGroupByEventNameChange = (groupByIndex, option) => {
     this.setGroupByAttr(groupByIndex, 'eventName', option.value);
 
+  }
+
+  onNumericalGroupByChange = (groupByIndex, option) => {
+    this.setGroupByAttr(groupByIndex, 'method', option.value);
   }
 
   handleResultDateRangeSelect = (range) => {
@@ -488,7 +506,11 @@ class Query extends Component {
       if (groupBy.name != '' && groupBy.type != '') {
         cGroupBy.pr = groupBy.name;
         cGroupBy.en = groupBy.type;
-        cGroupBy.pty = groupBy.ptype
+        cGroupBy.pty = groupBy.ptype;
+        if (groupBy.ptype == TYPE_NUMERICAL && groupBy.method == NUMERICAL_GROUP_BY_RAW) {
+          // If numerical type property by group by raw is selected, send as categorical.
+          cGroupBy.pty = TYPE_CATEGORICAL;
+        }
 
         // add group by event name.
         if (this.isEventNameRequiredForGroupBy() && groupBy.eventName != '') {
@@ -694,6 +716,10 @@ class Query extends Component {
     }
 
     return createSelectOpts(PROPERTY_TYPE_OPTS);
+  }
+
+  getNumericalGroupByMethods = () => {
+    return createSelectOpts(NUMERICAL_GROUP_BY_METHODS);
   }
 
   isEventNameRequiredForGroupBy = () => {
@@ -932,6 +958,8 @@ class Query extends Component {
           onNameChange={(option) => this.onGroupByNameChange(i, option)}
           onEventNameChange={(option) => this.onGroupByEventNameChange(i, option)}
           getOpts={this.getGroupByOpts}
+          getNumericalGroupByMethods={this.getNumericalGroupByMethods}
+          onNumericalGroupByChange={(option) => this.onNumericalGroupByChange(i, option)}
           shouldAddIndexPrefix={this.shouldAddIndexPrefix}
           isEventNameRequired={this.isEventNameRequiredForGroupBy}
         />

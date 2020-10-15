@@ -17,9 +17,9 @@ import { PROPERTY_VALUE_NONE, PROPERTY_TYPE_OPTS, PROPERTY_LOGICAL_OP_OPTS,
   getDateRangeFromStoredDateRange, DEFAULT_DATE_RANGE, DEFINED_DATE_RANGES 
 } from "./common";
 
-const TYPE_NUMERICAL = 'numerical';
-const TYPE_CATEGORICAL = 'categorical';
-const TYPE_DATETIME = 'datetime';
+export const TYPE_NUMERICAL = 'numerical';
+export const TYPE_CATEGORICAL = 'categorical';
+export const TYPE_DATETIME = 'datetime';
 
 const OP_CONTAINS = 'contains';
 const OP_NOT_CONTAINS = 'notContains';
