@@ -432,7 +432,7 @@ func TestSDKTrackHandler(t *testing.T) {
 		assert.NotNil(t, userProperties[U.UP_HOUR_OF_FIRST_EVENT])
 		assert.Equal(t, float64(retUserFirstVisitHour), userProperties[U.UP_HOUR_OF_FIRST_EVENT])
 
-		// initial user properties should not get updated on existing user's track call.
+		// Initial user properties should not get updated on existing user's track call.
 		rEventName = "https://example.com/" + U.RandomLowerAphaNumString(10)
 		w = ServePostRequestWithHeaders(r, uri,
 			[]byte(fmt.Sprintf(`{"event_name": "%s", "user_id": "%s", "event_properties": {"$qp_utm_campaign": "producthunt", "$qp_utm_campaignid": "78910"}, "user_properties": {"$os": "Mac OS"}}`,
@@ -458,6 +458,33 @@ func TestSDKTrackHandler(t *testing.T) {
 		assert.NotNil(t, userProperties2[U.UP_INITIAL_CAMPAIGN_ID])
 		assert.Equal(t, "12345", userProperties2[U.UP_INITIAL_CAMPAIGN_ID])
 		assert.NotEqual(t, "78910", userProperties2[U.UP_INITIAL_CAMPAIGN_ID])
+
+		// Should set default values for properties.
+		rEventName = "example.com/" + U.RandomLowerAphaNumString(10)
+		w = ServePostRequestWithHeaders(r, uri,
+			[]byte(fmt.Sprintf(`{"event_name": "%s", "auto": true, "event_properties": {"$page_raw_url": "%s", "$qp_utm_campaign": "producthunt", "$qp_utm_campaignid": "78910"}, "user_properties": {"$os": "Mac OS"}}`,
+				rEventName, rEventName)),
+			map[string]string{"Authorization": project.Token}) // user from prev track used.
+		assert.Equal(t, http.StatusOK, w.Code)
+		responseMap = DecodeJSONResponseToMap(w.Body)
+		assert.NotEmpty(t, responseMap)
+		assert.NotNil(t, responseMap["event_id"])
+		assert.NotNil(t, responseMap["user_id"]) // no new user.
+		eventUserId = responseMap["user_id"].(string)
+		rUser, errCode = M.GetUser(project.ID, eventUserId)
+		assert.Equal(t, http.StatusFound, errCode)
+		assert.NotNil(t, rUser)
+		userPropertiesBytes, err = rUser.Properties.Value()
+		assert.Nil(t, err)
+		var userProperties3 map[string]interface{}
+		json.Unmarshal(userPropertiesBytes.([]byte), &userProperties3)
+		assert.NotNil(t, userProperties3["$os"])
+		assert.NotNil(t, userProperties3[U.UP_JOIN_TIME])
+		// initial user properties.
+		assert.Equal(t, rEventName, userProperties3[U.UP_INITIAL_PAGE_RAW_URL])
+		assert.Equal(t, float64(1), userProperties3[U.UP_INITIAL_PAGE_SPENT_TIME])
+		assert.Equal(t, float64(1), userProperties3[U.UP_INITIAL_PAGE_LOAD_TIME])
+		assert.Equal(t, float64(0), userProperties3[U.UP_INITIAL_PAGE_SCROLL_PERCENT])
 	})
 
 	t.Run("AddLatestTouchUserPropertiesFromEventPropertiesIfHasMarketingProperties", func(t *testing.T) {

@@ -405,12 +405,8 @@ func BackFillEventDataInCacheFromDb(project_id uint64, currentTime time.Time, no
 	logCtx.Info("Refresh Event Properties Cache Done!!!")
 }
 
-func setDefaultValuesToEventPropertiesBySource(eventProperties *U.PropertiesMap,
-	source string, isAutoTracked bool) {
-
-	if isAutoTracked && (source == SourceJSSDK || source == SourceAMPSDK) {
-		U.SetDefaultValuesToEventProperties(eventProperties)
-	}
+func isPropertiesDefaultableTrackRequest(source string, isAutoTracked bool) bool {
+	return isAutoTracked && (source == SourceJSSDK || source == SourceAMPSDK)
 }
 
 func Track(projectId uint64, request *TrackPayload,
@@ -506,21 +502,13 @@ func Track(projectId uint64, request *TrackPayload,
 	}
 	// Added IP to event properties for internal usage.
 	(*eventProperties)[U.EP_INTERNAL_IP] = clientIP
-
 	U.SanitizeProperties(eventProperties)
 
-	var userProperties *U.PropertiesMap
-	if request.UserProperties == nil {
-		request.UserProperties = U.PropertiesMap{}
-	}
-	FillUserAgentUserProperties(&request.UserProperties, request.UserAgent)
-
 	response := &TrackResponse{}
-	initialUserProperties := U.GetInitialUserProperties(request.EventId, eventProperties)
-	isNewUser := request.IsNewUser
 
 	// if create_user not true and user is not found,
 	// allow to create_user.
+	isNewUser := request.IsNewUser
 	if !request.CreateUser && request.UserId != "" {
 		_, errCode := M.GetUser(projectId, request.UserId)
 		if errCode == http.StatusNotFound {
@@ -555,9 +543,6 @@ func Track(projectId uint64, request *TrackPayload,
 		request.UserId = createdUser.ID
 		response.UserId = createdUser.ID
 		isNewUser = true
-
-		// Initialize with initial user properties.
-		userProperties = initialUserProperties
 	} else {
 		// Adding initial user properties if user_id exists,
 		// but initial properties are not. i.e user created on identify.
@@ -567,25 +552,13 @@ func Track(projectId uint64, request *TrackPayload,
 				errCode).Error("Tracking failed. Get user properties as map failed.")
 			return errCode, &TrackResponse{Error: "Tracking failed while getting user."}
 		}
-
-		// Checking any initial user properties exists already.
-		// Initial user properties should not be overwritten,
-		// even if one exists already.
-		initialUserPropertyExists := false
-		for k := range *initialUserProperties {
-			if _, exists := (*existingUserProperties)[k]; exists {
-				initialUserPropertyExists = true
-				break
-			}
-		}
-
-		// UpdateUserProperties takes care merging new properites,
-		// with existing user properites. So setting only the
-		// intialProperites.
-		if !initialUserPropertyExists {
-			userProperties = initialUserProperties
-		}
 	}
+
+	newUserPropertiesMap := make(U.PropertiesMap, 0)
+	userProperties := &newUserPropertiesMap
+	FillUserAgentUserProperties(userProperties, request.UserAgent)
+	U.FillInitialUserProperties(userProperties, request.EventId, eventProperties,
+		existingUserProperties, isPropertiesDefaultableTrackRequest(source, request.Auto))
 
 	requestUserProperties := U.GetValidatedUserProperties(&request.UserProperties)
 	if userProperties != nil {
@@ -688,7 +661,10 @@ func Track(projectId uint64, request *TrackPayload,
 		event.SessionId = &session.ID
 	}
 
-	setDefaultValuesToEventPropertiesBySource(eventProperties, source, request.Auto)
+	if isPropertiesDefaultableTrackRequest(source, request.Auto) {
+		U.SetDefaultValuesToEventProperties(eventProperties)
+	}
+
 	eventPropsJSON, err := json.Marshal(eventProperties)
 	if err != nil {
 		return http.StatusBadRequest, &TrackResponse{Error: "Tracking failed. Invalid properties."}
@@ -1262,11 +1238,13 @@ func UpdateEventProperties(projectId uint64,
 			&UpdateEventPropertiesResponse{Error: "No valid properties given to update."}
 	}
 
+	logCtx := log.WithField("project_id", projectId).
+		WithField("event_id", request.EventId).
+		WithField("timestamp", request.Timestamp)
+
 	event, errCode := M.GetEventById(projectId, request.EventId)
 	if errCode == http.StatusNotFound && request.Timestamp > U.UnixTimeBeforeDuration(time.Hour*5) {
-		log.WithField("event_id", request.EventId).
-			WithField("timestamp", request.Timestamp).
-			Error("Failed old update event properties request with unavailable event_id permanently.")
+		logCtx.Error("Failed old update event properties request with unavailable event_id permanently.")
 		return http.StatusBadRequest, &UpdateEventPropertiesResponse{
 			Error: "Update event properties failed permanantly."}
 	}
@@ -1289,7 +1267,7 @@ func UpdateEventProperties(projectId uint64,
 				Error: "Update event properties failed. Failed to update given properties."}
 	}
 
-	newInitialUserProperties := U.GetInitialUserProperties(event.ID, properitesToBeUpdated)
+	newInitialUserProperties := U.GetUpdateAllowedInitialUserProperties(properitesToBeUpdated)
 
 	// Update user_properties state associate to event.
 	errCode = updateInitialUserPropertiesFromUpdateEventProperties(projectId, event.ID,
@@ -1600,6 +1578,8 @@ func AMPUpdateEventPropertiesWithQueue(token string, reqPayload *AMPUpdateEventP
 	return AMPUpdateEventPropertiesByToken(token, reqPayload)
 }
 
+// FillUserAgentUserProperties - Adds user_properties derived from user_agent.
+// Note: Defined here to avoid cyclic import of config package on util.
 func FillUserAgentUserProperties(userProperties *U.PropertiesMap, userAgentStr string) error {
 	if userAgentStr == "" {
 		return errors.New("invalid user agent")

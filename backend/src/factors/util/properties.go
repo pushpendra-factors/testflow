@@ -430,7 +430,6 @@ var INTERNAL_USER_PROPERTIES = [...]string{
 }
 
 var UPDATE_ALLOWED_EVENT_PROPERTIES = [...]string{
-	EP_PAGE_LOAD_TIME,
 	EP_PAGE_SPENT_TIME,
 	EP_PAGE_SCROLL_PERCENT,
 }
@@ -710,6 +709,18 @@ var DISABLED_FACTORS_EVENT_PROPERTIES = [...]string{
 	EP_REFERRER,
 	EP_GCLID,
 	EP_FBCLIID,
+}
+
+var DEFAULT_EVENT_PROPERTY_VALUES = map[string]interface{}{
+	EP_PAGE_SPENT_TIME:     1, // 1 second
+	EP_PAGE_LOAD_TIME:      1, // 1 second
+	EP_PAGE_SCROLL_PERCENT: 0,
+}
+
+var DEFAULT_USER_PROPERTY_VALUES = map[string]interface{}{
+	UP_INITIAL_PAGE_SPENT_TIME:     DEFAULT_EVENT_PROPERTY_VALUES[EP_PAGE_SPENT_TIME],
+	UP_INITIAL_PAGE_LOAD_TIME:      DEFAULT_EVENT_PROPERTY_VALUES[EP_PAGE_LOAD_TIME],
+	UP_INITIAL_PAGE_SCROLL_PERCENT: DEFAULT_EVENT_PROPERTY_VALUES[EP_PAGE_SCROLL_PERCENT],
 }
 
 // ITREE_PROPERTIES_TO_IGNORE Predefined properties that do not add much insights.
@@ -1120,19 +1131,72 @@ func GetUpdateAllowedEventProperties(properties *PropertiesMap) *PropertiesMap {
 	return &allowedProperties
 }
 
-func GetInitialUserProperties(eventID string, eventProperties *PropertiesMap) *PropertiesMap {
-	initialUserProperties := make(PropertiesMap)
-	for k, v := range *eventProperties {
-		if userPropertyKey, exists := EVENT_TO_USER_INITIAL_PROPERTIES[k]; exists {
-			initialUserProperties[userPropertyKey] = v
+// GetUpdateAllowedInitialUserProperties - Returns update allowed initial
+// user_properites based on the update allowed event_properties.
+func GetUpdateAllowedInitialUserProperties(eventProperties *PropertiesMap) *PropertiesMap {
+	newInitialUserProperties := make(PropertiesMap, 0)
+
+	if eventProperties == nil {
+		return &newInitialUserProperties
+	}
+
+	for _, eventProperty := range UPDATE_ALLOWED_EVENT_PROPERTIES {
+		eventPropertyValue, exists := (*eventProperties)[eventProperty]
+		if !exists {
+			continue
+		}
+
+		initialUserProperty, exists := EVENT_TO_USER_INITIAL_PROPERTIES[eventProperty]
+		if !exists {
+			continue
+		}
+
+		newInitialUserProperties[initialUserProperty] = eventPropertyValue
+	}
+
+	return &newInitialUserProperties
+}
+
+func FillInitialUserProperties(newUserProperties *PropertiesMap, eventID string,
+	eventProperties *PropertiesMap, existingUserProperties *map[string]interface{},
+	isPropertiesDefaultableRequest bool) {
+
+	if existingUserProperties == nil {
+		existingUserProperties = &map[string]interface{}{}
+	}
+
+	var initialUserPropertiesExists bool
+	for _, property := range EVENT_TO_USER_INITIAL_PROPERTIES {
+		if _, exists := (*existingUserProperties)[property]; exists {
+			initialUserPropertiesExists = true
+			break
 		}
 	}
 
-	if len(initialUserProperties) > 0 {
-		initialUserProperties[UP_INITIAL_PAGE_EVENT_ID] = eventID
+	if newUserProperties == nil {
+		newUserProperties = &PropertiesMap{}
 	}
 
-	return &initialUserProperties
+	// Add value, if property doesn't exist already
+	// and default value allowed property.
+	if isPropertiesDefaultableRequest {
+		for k, v := range DEFAULT_USER_PROPERTY_VALUES {
+			if _, exists := (*existingUserProperties)[k]; !exists {
+				(*newUserProperties)[k] = v
+			}
+		}
+	}
+
+	if initialUserPropertiesExists {
+		return
+	}
+
+	for k, v := range *eventProperties {
+		if userPropertyKey, exists := EVENT_TO_USER_INITIAL_PROPERTIES[k]; exists {
+			(*newUserProperties)[userPropertyKey] = v
+		}
+	}
+	(*newUserProperties)[UP_INITIAL_PAGE_EVENT_ID] = eventID
 }
 
 func GetSessionProperties(isFirstSession bool, eventProperties,
@@ -1381,13 +1445,7 @@ func ShouldIgnoreItreeProperty(propertyName string) bool {
 }
 
 func SetDefaultValuesToEventProperties(eventProperties *PropertiesMap) {
-	defaultAllowedProperties := map[string]int{
-		EP_PAGE_SPENT_TIME:     1, // 1 second
-		EP_PAGE_LOAD_TIME:      1, // 1 second
-		EP_PAGE_SCROLL_PERCENT: 0,
-	}
-
-	for property, defaultValue := range defaultAllowedProperties {
+	for property, defaultValue := range DEFAULT_EVENT_PROPERTY_VALUES {
 		var setDefault bool
 		if value, exists := (*eventProperties)[property]; exists {
 			v, err := GetPropertyValueAsFloat64(value)
