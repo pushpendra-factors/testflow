@@ -1470,12 +1470,24 @@ func SetDefaultValuesToEventProperties(eventProperties *PropertiesMap) {
 	}
 }
 
+func isURLProperty(property string) bool {
+	propertiesWithoutURLSuffix := []string{
+		EP_REFERRER,
+		UP_INITIAL_REFERRER,
+		UP_LATEST_REFERRER,
+		SP_INITIAL_REFERRER,
+	}
+
+	return strings.HasSuffix(property, "url") ||
+		StringValueIn(property, propertiesWithoutURLSuffix)
+}
+
 func SanitizeProperties(properties *PropertiesMap) {
 	for k, v := range *properties {
-		// checking if key ends with 'url'
-		if strings.HasSuffix(k, "url") {
+		if isURLProperty(k) {
 			(*properties)[k] = strings.TrimSuffix(v.(string), "/")
 		}
+
 		if IsPropertyNameContainsDateOrTime(k) {
 			(*properties)[k], _ = ConvertDateTimeValueToNumber(v)
 		}
