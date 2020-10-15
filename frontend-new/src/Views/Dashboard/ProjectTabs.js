@@ -78,7 +78,7 @@ function ProjectTabs({ setaddDashboardModal }) {
   </>;
 
   useEffect(() => {
-    console.log('widgets', widgets);
+    // console.log('widgets', widgets);
   });
 
   return (<>
