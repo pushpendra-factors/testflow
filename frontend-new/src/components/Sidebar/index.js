@@ -87,7 +87,7 @@ function Sidebar(props) {
     document.onkeydown = keydown;
     function keydown(evt) {
       // Shift+G to trigger grid debugger
-      if (evt.shiftKey && evt.keyCode === 71) { setVisible(true); }
+      if (evt.shiftKey && evt.keyCode === 71) { setVisible(!visible); }
     }
   });
 
