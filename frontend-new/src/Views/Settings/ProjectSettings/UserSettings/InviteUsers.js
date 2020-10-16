@@ -1,15 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  Row, Col, Modal, Input, Select, Button
+  Row, Col, Modal, Input, Select
 } from 'antd';
 import { Text } from 'factorsComponents';
+import { connect } from 'react-redux';
+import { projectAgentInvite } from '../../../../reducers/agentActions';
 const { Option } = Select;
 
 function InviteUsers(props) {
   const [inviteCount, setInviteCount] = useState([1]);
-  const addInviteRow = () => {
-    setInviteCount([...inviteCount, 'newElement']);
-  };
+  // const addInviteRow = () => {
+  //   setInviteCount([...inviteCount, 'newElement']);
+  // };
+  useEffect(() => {
+    props.projectAgentInvite(props.activeProjectID, 'baliga.vishnu+12@gmail.com');
+  }, []);
 
   return (
     <>
@@ -49,11 +54,11 @@ function InviteUsers(props) {
             );
           })}
 
-          <Row className={'mt-6'}>
+          {/* <Row className={'mt-6'}>
             <Col span={24}>
                 <Button type="text" disabled={props.confirmLoading} onClick={() => addInviteRow(true)}>Add another user</Button>
             </Col>
-          </Row>
+          </Row> */}
         </div>
 
       </Modal>
@@ -62,5 +67,7 @@ function InviteUsers(props) {
 
   );
 }
-
-export default InviteUsers;
+const mapStateToProps = (state) => ({
+  activeProjectID: state.global.active_project.id
+});
+export default connect(mapStateToProps, { projectAgentInvite })(InviteUsers);

@@ -37,6 +37,27 @@ export default function reducer(state = {
     case 'UPDATE_AGENT_PASSWORD_FULFILLED': {
       return state;
     }
+    case "PROJECT_AGENT_INVITE_FULFILLED": {
+      let nextState = { ...state };
+      
+      let projectAgentMapping = action.payload.project_agent_mappings[0];
+      nextState.projectAgents = [...state.projectAgents];
+      nextState.projectAgents.push(projectAgentMapping);
+      nextState.agents[projectAgentMapping.agent_uuid] = action.payload.agents[projectAgentMapping.agent_uuid];        
+      return nextState
+    }
+    case "PROJECT_AGENT_INVITE_REJECTED": {
+      return {
+        ...state
+      }
+    }
+    case "PROJECT_AGENT_REMOVE_FULFILLED": {
+      let nextState = { ...state };
+      nextState.projectAgents = state.projectAgents.filter((projectAgent)=>{
+        return projectAgent.agent_uuid != action.payload.agent_uuid
+      })
+      return nextState
+    }
   }
   return state;
 }
@@ -146,3 +167,51 @@ export function fetchAgentInfo(){
     });
   }
 } 
+
+
+export function projectAgentInvite(projectId, emailId){
+  return function(dispatch){
+    let payload = {"email":emailId};
+    return new Promise((resolve, reject) => {
+      post(dispatch, host + "projects/" + projectId + "/agents/invite", payload)
+      .then((r) => {
+        if (r.ok && r.status && r.status == 201){
+          dispatch({type: "PROJECT_AGENT_INVITE_FULFILLED", payload: r.data });
+          resolve(r.data);
+        }else if (r.status && r.status == 409){
+          dispatch({type: "PROJECT_AGENT_INVITE_REJECTED", payload: r.data.error }); 
+          reject("User Seats limit reached");
+        }
+        else {
+          dispatch({type: "PROJECT_AGENT_INVITE_REJECTED", payload: r.data.error });
+          reject(r.data.error);
+        }
+      })
+      .catch((r) => {
+        dispatch({type: "PROJECT_AGENT_INVITE_REJECTED", payload: r.data.error });
+      });
+    });
+  }
+}
+
+export function projectAgentRemove(projectId, agentUUID){
+  return function(dispatch){
+    return new Promise((resolve, reject) => {
+      put(dispatch, host + "projects/" + projectId +"/agents/remove", {"agent_uuid":agentUUID})
+        .then((r) => {
+          dispatch({
+            type: "PROJECT_AGENT_REMOVE_FULFILLED",
+            payload: r.data
+          });
+          resolve(r.data);
+        })
+        .catch((r) => {
+          dispatch({
+            type: "PROJECT_AGENT_REMOVE_REJECTED",
+            error: r
+          });
+          reject({body: r.data, status: r.status});
+        });
+    })
+  }
+}

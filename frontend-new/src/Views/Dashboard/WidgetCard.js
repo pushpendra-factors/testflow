@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
-  Badge, Button, Col
+  Badge, Button
 } from 'antd';
 import { Text } from 'factorsComponents';
 import { FullscreenOutlined, RightOutlined, LeftOutlined } from '@ant-design/icons';
@@ -24,27 +24,9 @@ const Titles = [
   }
 ];
 
-function WidgetCard({ id, setwidgetModal, widthSize = 2 }) {
-  const [currentWidth, setCurrentWidth] = useState(widthSize);
-
-  const resizeWidth = (operator) => {
-    console.log('currentWidth', currentWidth);
-    if (operator === '+') {
-    // console.log("increment");
-      if (currentWidth !== 3) {
-        setCurrentWidth(currentWidth + 1);
-      } else {
-        return 3;
-      }
-    } else {
-    // console.log("decrement");
-      if (currentWidth !== 0) {
-        setCurrentWidth((currentWidth - 1 === 0) ? 1 : currentWidth - 1);
-      } else {
-        return 1;
-      }
-    }
-  };
+function WidgetCard({
+  id, setwidgetModal, resizeWidth, widthSize, title, index
+}) {
   const calcWidth = (size) => {
     // console.log("calcWidth",size);
     switch (size) {
@@ -54,17 +36,14 @@ function WidgetCard({ id, setwidgetModal, widthSize = 2 }) {
       default: return 12;
     }
   };
-  useEffect(() => {
-    calcWidth(currentWidth);
-  });
 
   return (
-        <Col span={calcWidth(currentWidth)} style={{ transition: 'all 0.1s' }}>
+        <div className={`${title} ant-col ant-col-${calcWidth(widthSize)}`} style={{ padding: '12px', transition: 'all 0.1s' }}>
           <div className={'fa-dashboard--widget-card'}>
             <div className={'fa-widget-card--resize-container'}>
               <span className={'fa-widget-card--resize-contents'}>
-              {currentWidth < 3 && <a onClick={() => resizeWidth('+')}><RightOutlined /></a>}
-                {currentWidth > 1 && <a onClick={() => resizeWidth('-')}><LeftOutlined /></a> }
+              {widthSize < 3 && <a onClick={() => resizeWidth(index, '+')}><RightOutlined /></a>}
+                {widthSize > 1 && <a onClick={() => resizeWidth(index, '-')}><LeftOutlined /></a> }
 
               </span>
             </div>
@@ -85,7 +64,7 @@ function WidgetCard({ id, setwidgetModal, widthSize = 2 }) {
                 <img src={`../../assets/charts/chart-${id}.png`} />
             </div>
           </div>
-        </Col>
+        </div>
   );
 }
 
