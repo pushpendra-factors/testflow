@@ -57,6 +57,13 @@ type IdentifyPayload struct {
 	Timestamp      int64  `json:"timestamp"`
 }
 
+// AMPIdentifyPayload holds required fields for AMP identification
+type AMPIdentifyPayload struct {
+	CustomerUserID string `json:"customer_user_id"`
+	ClientID       string `json:"client_id"`
+	Timestamp      int64  `json:"timestamp"`
+}
+
 type IdentifyResponse struct {
 	UserId  string `json:"user_id,omitempty"`
 	Message string `json:"message,omitempty"`
@@ -116,6 +123,7 @@ const (
 	sdkRequestTypeEventUpdateProperties     = "sdk_event_update_properties"
 	sdkRequestTypeAMPEventTrack             = "sdk_amp_event_track"
 	sdkRequestTypedAMPEventUpdateProperties = "sdk_amp_event_update_properties"
+	sdkRequestTypeAMPIdentify               = "sdk_amp_identify"
 )
 
 func ProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, string, error) {
@@ -207,6 +215,19 @@ func ProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, string,
 		logCtx = logCtx.WithField("req_payload", reqPayload)
 
 		status, response = AMPUpdateEventPropertiesByToken(token, &reqPayload)
+
+	case sdkRequestTypeAMPIdentify:
+		var reqPayload AMPIdentifyPayload
+
+		err := json.Unmarshal([]byte(reqPayloadStr), &reqPayload)
+		if err != nil {
+			logCtx.WithError(err).Error(
+				"Failed to unmarshal request payload on sdk process queue.")
+			return http.StatusInternalServerError, "", nil
+		}
+		logCtx = logCtx.WithField("req_payload", reqPayload)
+
+		status, response = AMPIdentifyByToken(token, &reqPayload)
 
 	default:
 		logCtx.Error("Invalid sdk request type on sdk process queue")
@@ -1025,6 +1046,61 @@ func IdentifyByToken(token string, reqPayload *IdentifyPayload) (int, *IdentifyR
 	}
 
 	return errCode, &IdentifyResponse{Error: "Identify failed."}
+}
+
+// AMPIdentifyByToken identifies AMP user by project token
+func AMPIdentifyByToken(token string, reqPayload *AMPIdentifyPayload) (int, *IdentifyResponse) {
+
+	project, errCode := M.GetProjectByToken(token)
+	if errCode != http.StatusFound {
+		log.WithField("token", token).Error("Failed to get project from AMP sdk project token.")
+
+		if errCode == http.StatusInternalServerError {
+			return errCode, &IdentifyResponse{Error: "Identify failed. Failed to get AMP user."}
+		}
+
+		return http.StatusUnauthorized, &IdentifyResponse{Error: "Identify failed. Invalid project id."}
+	}
+
+	user, errCode := M.CreateOrGetAMPUser(project.ID, reqPayload.ClientID, reqPayload.Timestamp)
+	if errCode != http.StatusCreated && errCode != http.StatusFound {
+		log.WithField("project_id", project.ID).Error("Identify failed. Failed to CreateOrGetAMPUser.")
+		return errCode, &IdentifyResponse{Error: "Identify failed. Failed to get AMP user."}
+	}
+
+	identifyPayload := &IdentifyPayload{
+		UserId:         user.ID,
+		CustomerUserId: reqPayload.CustomerUserID,
+		Timestamp:      reqPayload.Timestamp,
+	}
+
+	return Identify(project.ID, identifyPayload)
+}
+
+// AMPIdentifyWithQueue identifies AMP user by customer_user_id. Uses queue if alowed for the poject
+func AMPIdentifyWithQueue(token string, reqPayload *AMPIdentifyPayload,
+	queueAllowedTokens []string) (int, *IdentifyResponse) {
+	if token == "" {
+		return http.StatusBadRequest, &IdentifyResponse{Error: "Identify failed. Invalid token"}
+	}
+
+	if reqPayload.ClientID == "" || reqPayload.CustomerUserID == "" {
+		return http.StatusBadRequest, &IdentifyResponse{Error: "Identify failed. Invalid params"}
+	}
+
+	if U.UseQueue(token, queueAllowedTokens) {
+
+		err := enqueueRequest(token, sdkRequestTypeAMPIdentify, reqPayload)
+		if err != nil {
+			log.WithError(err).Error("Failed to queue identify request.")
+			return http.StatusInternalServerError,
+				&IdentifyResponse{Error: "Identify failed."}
+		}
+
+		return http.StatusOK, &IdentifyResponse{Message: "User has been identified successfully"}
+	}
+
+	return AMPIdentifyByToken(token, reqPayload)
 }
 
 func IdentifyWithQueue(token string, reqPayload *IdentifyPayload,

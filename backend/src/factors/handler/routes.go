@@ -117,6 +117,7 @@ func InitSDKServiceRoutes(r *gin.Engine) {
 	ampSdkRouteGroup := r.Group(ROUTE_SDK_AMP_ROOT)
 	ampSdkRouteGroup.POST("/event/track", SDKAMPTrackHandler)
 	ampSdkRouteGroup.POST("/event/update_properties", SDKAMPUpdateEventPropertiesHandler)
+	ampSdkRouteGroup.GET("/user/identify", SDKAMPIdentifyHandler)
 
 	intRouteGroup := r.Group(ROUTE_INTEGRATIONS_ROOT)
 	intRouteGroup.POST("/segment", mid.SetScopeProjectPrivateToken(), IntSegmentHandler)
