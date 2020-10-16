@@ -9,7 +9,7 @@ import UserSettings from '../../Views/Settings/UserSettings';
 import { setActiveProject, fetchProjectSettings } from '../../reducers/global';
 import { signout } from '../../reducers/agentActions';
 import { connect } from 'react-redux';
-import { PlusOutlined, PoweroffOutlined } from '@ant-design/icons';
+import { PlusOutlined, PoweroffOutlined, BankOutlined } from '@ant-design/icons';
 import CreateNewProject from './CreateNewProject';
 
 function Sidebar(props) {
@@ -59,7 +59,7 @@ function Sidebar(props) {
                 setShowPopOver(false);
                 showUserSettingsModal();
               }}>
-                <Avatar size={28}/><Text type={'title'} level={7} extraClass={'m-0 ml-2'}>{'Account Settings'}</Text>
+                <Avatar src={'https://zos.alipayobjects.com/rmsportal/ODTLcjxAfvqbxHnVXCYX.png'} size={28}/><Text type={'title'} level={7} extraClass={'m-0 ml-2'}>{'Account Settings'}</Text>
           </div>
           <Button type={'text'}
           onClick={() => {
@@ -140,8 +140,8 @@ function Sidebar(props) {
               }}
                 trigger="click">
                   <Avatar
-                    src={'https://zos.alipayobjects.com/rmsportal/ODTLcjxAfvqbxHnVXCYX.png'}
-                    className={'flex justify-center items-center fa-aside--avatar'}
+                     icon={<BankOutlined />}
+                    className={'flex justify-center flex-col items-center fa-aside--avatar'}
                   />
               </Popover>
             </Row>

@@ -11,6 +11,14 @@
     background: $fa-color--white; 
     color: $fa-color--mono-5; 
 
+    &.fa-button-ghost{
+        background:transparent !important; 
+        border-color:transparent !important;
+        outline: transparent !important;
+        box-shadow: none !important;
+        padding: 2px 8px !important;
+    }
+
     font-weight: $font-weight--bold;
     font-size: 14px;
     line-height: 1.6;
