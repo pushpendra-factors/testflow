@@ -14,6 +14,7 @@ import (
 	"factors/vendor_custom/machinery/v1"
 	machineryConfig "factors/vendor_custom/machinery/v1/config"
 
+	"contrib.go.opencensus.io/exporter/stackdriver"
 	"github.com/evalphobia/logrus_sentry"
 	D "github.com/gamebtc/devicedetector"
 	"github.com/gomodule/redigo/redis"
@@ -23,6 +24,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"go.etcd.io/etcd/clientv3"
 
+	"factors/metrics"
 	U "factors/util"
 
 	"factors/interfaces/maileriface"
@@ -51,6 +53,8 @@ type DBConf struct {
 }
 
 type Configuration struct {
+	GCPProjectID                        string
+	GCPProjectLocation                  string
 	AppName                             string
 	Env                                 string
 	Port                                int
@@ -90,7 +94,8 @@ type Configuration struct {
 	RealTimeEventUserCachingProjectIds  string
 	BlockedSDKRequestProjectTokens      []string
 	// Usage: 	"--cache_look_up_range_projects", "1:20140307"
-	CacheLookUpRangeProjects map[uint64]time.Time // Usually cache look up is for past 30 days. If certain projects need override, then this is used
+	CacheLookUpRangeProjects        map[uint64]time.Time // Usually cache look up is for past 30 days. If certain projects need override, then this is used
+	LookbackWindowForEventUserCache int
 }
 
 type Services struct {
@@ -106,6 +111,7 @@ type Services struct {
 	ErrorCollector     *error_collector.Collector
 	DeviceDetector     *D.DeviceDetector
 	SentryHook         *logrus_sentry.SentryHook
+	MetricsExporter    *stackdriver.Exporter
 }
 
 func (service *Services) GetPatternServerAddresses() []string {
@@ -209,6 +215,7 @@ func initServices(config *Configuration) error {
 
 	InitMailClient(config.AWSKey, config.AWSSecret, config.AWSRegion)
 	InitSentryLogging(config.SentryDSN, config.AppName)
+	InitMetricsExporter(config.Env, config.AppName, config.GCPProjectID, config.GCPProjectLocation)
 
 	initGeoLocationService(config.GeolocationFile)
 	initDeviceDetectorPath(config.DeviceDetectorPath)
@@ -419,6 +426,17 @@ func InitQueueClient(redisHost string, redisPort int) error {
 	return nil
 }
 
+// InitMetricsExporter Initialized Opencensus metrics exporter to collect metrics.
+func InitMetricsExporter(env, appName, projectID, projectLocation string) {
+	if services == nil {
+		services = &Services{}
+	}
+	if env == "" || appName == "" || projectID == "" || projectLocation == "" {
+		return
+	}
+	services.MetricsExporter = metrics.InitMetrics(env, appName, projectID, projectLocation)
+}
+
 // InitSentryLogging Adds sentry hook to capture error logs.
 func InitSentryLogging(sentryDSN, appName string) {
 	// Log as JSON instead of the default ASCII formatter.
@@ -461,9 +479,15 @@ func InitSentryLogging(sentryDSN, appName string) {
 
 // SafeFlushSentryHook Safe flush error messages in sentry hook. Used with `defer` statement.
 // Useful while running scripts in development mode where sentry is not initialized.
+// TODO(prateek): Rename this method to generic SafeFlushAllCollectors.
 func SafeFlushSentryHook() {
 	if services.SentryHook != nil {
 		services.SentryHook.Flush()
+	}
+
+	if services.MetricsExporter != nil {
+		services.MetricsExporter.StopMetricsExporter()
+		services.MetricsExporter.Flush()
 	}
 }
 
@@ -579,6 +603,7 @@ func InitSDKService(config *Configuration) error {
 	}
 
 	InitSentryLogging(config.SentryDSN, config.AppName)
+	InitMetricsExporter(config.Env, config.AppName, config.GCPProjectID, config.GCPProjectLocation)
 
 	initiated = true
 	return nil
@@ -613,6 +638,7 @@ func InitQueueWorker(config *Configuration) error {
 	}
 
 	InitSentryLogging(config.SentryDSN, config.AppName)
+	InitMetricsExporter(config.Env, config.AppName, config.GCPProjectID, config.GCPProjectLocation)
 
 	initiated = true
 	return nil
@@ -708,6 +734,10 @@ func GetSkipTrackProjectIds() []uint64 {
 
 func GetWhitelistedProjectIdsEventUserCache() string {
 	return configuration.WhitelistedProjectIdsEventUserCache
+}
+
+func GetLookbackWindowForEventUserCache() int {
+	return configuration.LookbackWindowForEventUserCache
 }
 
 func GetIfRealTimeEventUserCachingIsEnabled(projectId uint64) bool {

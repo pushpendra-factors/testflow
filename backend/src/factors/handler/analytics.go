@@ -5,11 +5,10 @@ import (
 	mid "factors/middleware"
 	M "factors/model"
 	U "factors/util"
-	"net/http"
-	"strconv"
-
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
+	"net/http"
+	"strconv"
 )
 
 type QueryRequestPayload struct {
@@ -18,10 +17,6 @@ type QueryRequestPayload struct {
 
 type QueryGroup struct {
 	Queries []M.Query `json:"query_group"`
-}
-
-type ResultGroup struct {
-	Results []M.QueryResult `json:"result_group"`
 }
 
 /*
@@ -57,22 +52,7 @@ func EventsQueryHandler(c *gin.Context) {
 		return
 	}
 	// TODO (Anil) Add dashboard caching layer by query/query_group?
-	var resultGroup ResultGroup
-	for index, query := range requestPayload.Queries {
-		result, errCode, errMsg := M.RunEventsQuery(projectId, query)
-		if errCode != http.StatusOK {
-			errMsg = "For query no. " + strconv.Itoa(index) + " - " + errMsg
-			headers := []string{"error"}
-			rows := make([][]interface{}, 0, 0)
-			row := make([]interface{}, len(headers), len(headers))
-			row[0] = errMsg
-			rows = append(rows, row)
-			errorResult := &M.QueryResult{Headers: headers, Rows: rows}
-			resultGroup.Results = append(resultGroup.Results, *errorResult)
-		} else {
-			resultGroup.Results = append(resultGroup.Results, *result)
-		}
-	}
+	resultGroup := M.RunEventsGroupQuery(requestPayload.Queries, projectId)
 	c.JSON(http.StatusOK, resultGroup)
 }
 
@@ -142,6 +122,12 @@ func QueryHandler(c *gin.Context) {
 		}
 	}
 
+	for index, _ := range requestPayload.Query.GroupByProperties {
+		if requestPayload.Query.GroupByProperties[index].Type == U.PropertyTypeDateTime &&
+			requestPayload.Query.GroupByProperties[index].Granularity == "" {
+			requestPayload.Query.GroupByProperties[index].Granularity = U.DateTimeBreakdownDailyGranularity
+		}
+	}
 	result, errCode, errMsg := M.Analyze(projectId, requestPayload.Query)
 	if errCode != http.StatusOK {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": errMsg})

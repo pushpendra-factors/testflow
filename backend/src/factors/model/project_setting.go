@@ -13,6 +13,7 @@ import (
 
 	cacheRedis "factors/cache/redis"
 	C "factors/config"
+	"factors/metrics"
 )
 
 type ProjectSetting struct {
@@ -60,7 +61,7 @@ var projectSettingKeys = [...]string{
 
 // Salesforce required fields per project
 var (
-	DESIGNCAFE_LEADS_ALLOWED_FIELDS = map[string]bool{
+	designcafeLeadsAllowedFields = map[string]bool{
 		"Id":                                 true,
 		"LastName":                           true,
 		"Salutation":                         true,
@@ -72,6 +73,7 @@ var (
 		"MobilePhone":                        true,
 		"Email":                              true,
 		"LeadSource":                         true,
+		"Status":                             true,
 		"ConvertedDate":                      true,
 		"CreatedDate":                        true,
 		"CreatedById":                        true,
@@ -155,7 +157,7 @@ var (
 		"Customer_WhatsApp_OptIN__c":        true,
 	}
 
-	DESIGNCAFE_OPPORTUNITY_ALLOWED_FIELDS = map[string]bool{
+	designcafeOpportunityAllowedFields = map[string]bool{
 		"Id":                             true, // require for identification purpose
 		"Name":                           true,
 		"Amount":                         true,
@@ -213,23 +215,24 @@ var (
 		"MobileYM__c":                    true,
 	}
 
-	DESIGNCAFE_ALLOWED_OBJECTS = map[string]map[string]bool{
-		SalesforceDocumentTypeNameLead:        DESIGNCAFE_LEADS_ALLOWED_FIELDS,
-		SalesforceDocumentTypeNameOpportunity: DESIGNCAFE_OPPORTUNITY_ALLOWED_FIELDS,
+	designcafeAllowedObjects = map[string]map[string]bool{
+		SalesforceDocumentTypeNameLead:        designcafeLeadsAllowedFields,
+		SalesforceDocumentTypeNameOpportunity: designcafeOpportunityAllowedFields,
 	}
 
-	SALESFORCE_PROJECT_STORE = map[uint64]map[string]map[string]bool{
-		483: DESIGNCAFE_ALLOWED_OBJECTS,
+	SalesforceProjectStore = map[uint64]map[string]map[string]bool{
+		483: designcafeAllowedObjects,
 	}
 )
 
-func GetSalesforceAllowedObjects(projectId uint64) []int {
+// GetSalesforceAllowedObjects return allowed object type for a project
+func GetSalesforceAllowedObjects(projectID uint64) []int {
 	var docTypes []int
-	if projectId == 0 {
+	if projectID == 0 {
 		return docTypes
 	}
 
-	if objects, exist := SALESFORCE_PROJECT_STORE[projectId]; exist {
+	if objects, exist := SalesforceProjectStore[projectID]; exist {
 		for name := range objects {
 			docType := GetSalesforceDocTypeByAlias(name)
 			docTypes = append(docTypes, docType)
@@ -241,12 +244,13 @@ func GetSalesforceAllowedObjects(projectId uint64) []int {
 	return docTypes
 }
 
-func GetSalesforceAllowedfiedsByObject(projectId uint64, objectName string) map[string]bool {
-	if projectId == 0 {
+// GetSalesforceAllowedfiedsByObject return list of allowed field for a project
+func GetSalesforceAllowedfiedsByObject(projectID uint64, objectName string) map[string]bool {
+	if projectID == 0 {
 		return nil
 	}
 
-	if objects, exist := SALESFORCE_PROJECT_STORE[projectId]; exist {
+	if objects, exist := SalesforceProjectStore[projectID]; exist {
 		if _, objExist := objects[objectName]; objExist {
 			return objects[objectName]
 		}
@@ -282,14 +286,14 @@ type ProjectSettingChannelResponse struct {
 
 // GetProjectSettingByKeyWithTimeout - Get project_settings from db based on key,
 // gets timedout and returns StatusInternalServerError, if the query takes more than
-// the given duration. Returns default project_settings immediately, if the 
+// the given duration. Returns default project_settings immediately, if the
 // config/flag use_default_project_setting_for_sdk is set to true.
 func GetProjectSettingByKeyWithTimeout(key, value string, timeout time.Duration) (*ProjectSetting, int) {
 	if C.GetConfig().UseDefaultProjectSettingForSDK {
 		return getProjectSettingDefault(), http.StatusFound
 	}
 
-	// TODO(Dinesh): Use gorm db.WithContext and context.WithTimeout 
+	// TODO(Dinesh): Use gorm db.WithContext and context.WithTimeout
 	// once gorm v2 is production ready and upgraded.
 	// Ref: https://gorm.io/docs/context.html
 	responseChannel := make(chan ProjectSettingChannelResponse, 1)
@@ -310,6 +314,7 @@ func GetProjectSettingByKeyWithTimeout(key, value string, timeout time.Duration)
 			WithField("project_key", key).
 			WithField("value", value).
 			Info("Get project_settings has timedout.")
+		metrics.Increment(metrics.IncrSDKGetSettingsTimeout)
 		return nil, http.StatusInternalServerError
 	}
 }
@@ -760,12 +765,14 @@ func GetBigqueryEnabledProjectIDs() ([]uint64, int) {
 	return projectIDs, http.StatusFound
 }
 
+// SalesforceProjectSettings contains refresh_token and instance_url for enabled projects
 type SalesforceProjectSettings struct {
 	ProjectID    uint64 `json:"-"`
 	RefreshToken string `json:"refresh_token"`
 	InstanceURL  string `json:"instance_url"`
 }
 
+// GetAllSalesforceProjectSettings return list of all enabled salesforce projects and their meta data
 func GetAllSalesforceProjectSettings() ([]SalesforceProjectSettings, int) {
 	var salesforceProjectSettings []SalesforceProjectSettings
 

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	cacheRedis "factors/cache/redis"
 	C "factors/config"
+	"factors/metrics"
 	U "factors/util"
 	"sort"
 
@@ -224,6 +225,8 @@ func UpdateCacheForUserProperties(userId string, projectid uint64, updatedProper
 	isNewUser, err := cacheRedis.PFAddPersistent(usersCacheKey, userId, 24*60*60)
 	end := U.TimeNow()
 	logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("US:List")
+	metrics.Increment(metrics.IncrEventUserCache)
+	metrics.RecordLatency(metrics.LatencyEventUserCache, float64(end.Sub(begin).Milliseconds()))
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get users from cache - getuserscachedcachekey")
 	}
@@ -267,6 +270,8 @@ func UpdateCacheForUserProperties(userId string, projectid uint64, updatedProper
 	counts, err := cacheRedis.IncrPersistentBatch(keysToIncr...)
 	end = U.TimeNow()
 	logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("US:Incr")
+	metrics.Increment(metrics.IncrEventUserCache)
+	metrics.RecordLatency(metrics.LatencyEventUserCache, float64(end.Sub(begin).Milliseconds()))
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to increment keys")
 		return
@@ -308,6 +313,8 @@ func UpdateCacheForUserProperties(userId string, projectid uint64, updatedProper
 		_, err = cacheRedis.IncrByBatchPersistent(countsInCache)
 		end := U.TimeNow()
 		logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("C:US:Incr")
+		metrics.Increment(metrics.IncrEventUserCache)
+		metrics.RecordLatency(metrics.LatencyEventUserCache, float64(end.Sub(begin).Milliseconds()))
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to increment keys")
 			return
@@ -516,8 +523,6 @@ func updateUserPropertiesForUser(projectID uint64, userID string, userProperties
 		}
 		return "", http.StatusInternalServerError
 	}
-	logCtx.WithField("tag", "db_create_user_properties").
-		Info("Created user_properties record.")
 
 	if updateUser {
 		if err := db.Model(&User{}).Where("project_id = ? AND id = ?", projectID, userID).

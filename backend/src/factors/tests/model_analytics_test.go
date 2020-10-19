@@ -1932,6 +1932,77 @@ func TestAnalyticsFunnelQueryWithNumericalBucketing(t *testing.T) {
 	})
 }
 
+func TestAnalyticsInsightsQueryWithDateTimeProperty(t *testing.T) {
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+	uri := "/sdk/event/track"
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	startTimestamp := U.UnixTimeBeforeDuration(time.Hour * 1)
+	startTimestampString := time.Unix(startTimestamp, 0).UTC().Format(U.DATETIME_FORMAT_DB)
+	startTimestampYesterday := U.UnixTimeBeforeDuration(time.Hour * 24)
+	startTimestampStringYesterday := time.Unix(startTimestampYesterday, 0).UTC().Format(U.DATETIME_FORMAT_DB)
+	t.Run("FunnelSingleBreakdown", func(t *testing.T) {
+		// 20 events with single incremented value.
+		eventName1 := "event1"
+		iUser, _ := M.CreateUser(&M.User{ProjectId: project.ID})
+		payload := fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, `+
+			`"event_properties":{"date_property":%d},"user_properties":{"date_property":%d}}`,
+			eventName1, iUser.ID, startTimestamp+10, startTimestamp, startTimestamp)
+		w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusOK, w.Code)
+		payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, `+
+			`"event_properties":{"date_property":%d},"user_properties":{"date_property":%d}}`,
+			eventName1, iUser.ID, startTimestamp+10, startTimestampYesterday, startTimestampYesterday)
+		w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusOK, w.Code)
+		payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, `+
+			`"event_properties":{"date_property1":%d},"user_properties":{"date_property":%d}}`,
+			eventName1, iUser.ID, startTimestamp+10, startTimestampYesterday, startTimestampYesterday)
+		w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+		payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, `+
+			`"event_properties":{"date_property":%d},"user_properties":{"date_property":%d}}`,
+			eventName1, iUser.ID, startTimestamp+10, startTimestampYesterday, startTimestampYesterday)
+		w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+		payload = fmt.Sprintf(`{"event_name": "%s", "user_id": "%s","timestamp": %d, `+
+			`"event_properties":{"date_property1":%d},"user_properties":{"date_property":%d}}`,
+			eventName1, iUser.ID, startTimestamp+10, startTimestampYesterday, startTimestampYesterday)
+		w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusOK, w.Code)
+		query := M.Query{
+			From: startTimestamp - (24 * 60 * 60),
+			To:   startTimestamp + 40,
+			EventsWithProperties: []M.QueryEventWithProperties{
+				M.QueryEventWithProperties{
+					Name: eventName1,
+				},
+			},
+			GroupByProperties: []M.QueryGroupByProperty{
+				M.QueryGroupByProperty{
+					EventName:      eventName1,
+					EventNameIndex: 1,
+					Entity:         M.PropertyEntityEvent,
+					Property:       "date_property",
+					Type:           U.PropertyTypeDateTime,
+					Granularity:    U.DateTimeBreakdownDailyGranularity,
+				},
+			},
+			Class:           M.QueryClassInsights,
+			Type:            M.QueryTypeEventsOccurrence,
+			EventsCondition: M.EventCondAllGivenEvent,
+		}
+		result, errCode, _ := M.Analyze(project.ID, query)
+		assert.Equal(t, http.StatusOK, errCode)
+		assert.Equal(t, "$none", result.Rows[0][0])
+		assert.Equal(t, startTimestampStringYesterday, result.Rows[1][0])
+		assert.Equal(t, startTimestampString, result.Rows[2][0])
+		assert.Equal(t, int64(2), result.Rows[0][1])
+		assert.Equal(t, int64(2), result.Rows[1][1])
+		assert.Equal(t, int64(1), result.Rows[2][1])
+	})
+}
+
 func validateNumericalBucketRanges(t *testing.T, result *M.QueryResult, numPropertyRangeStart,
 	numPropertyRangeEnd, noneCount int) {
 	lowerPercentileValue := int(M.NumericalLowerBoundPercentile * float64(numPropertyRangeEnd))

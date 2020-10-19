@@ -29,11 +29,12 @@ func main() {
 	projectIdFlag := flag.String("project_ids", "",
 		"Optional: Project Id. A comma separated list of project Ids and supports '*' for all projects. ex: 1,2,6,9")
 	projectIdsToSkipFlag := flag.String("project_ids_to_skip", "", "Optional: Comma separated values of projects to skip")
-	maxModelSizeFlag := flag.Int64("max_size", 20000000000, "Max size of the model")
+	maxModelSizeFlag := flag.Int64("max_size", 10000000000, "Max size of the model")
 	modelType := flag.String("model_type", "weekly", "Optional: Model Type can take 3 values : {all, weekly, monthly}")
 	lookBackPeriodInDays := flag.Int64("look_back_days", 30,
 		"Optional: Build projects which were build in last N days. Provide N here.")
 	noOfDaysToBuild := flag.Int64("no_of_days", 0, "Optional: No.of days to build for. Defaults to current_timestamp.")
+	shouldCountOccurence := flag.Bool("count_occurence", false, "")
 
 	dbHost := flag.String("db_host", "localhost", "")
 	dbPort := flag.Int("db_port", 5432, "")
@@ -140,5 +141,5 @@ func main() {
 
 	_ = T.BuildSequential(*envFlag, db, &cloudManager, etcdClient, diskManager,
 		*bucketName, *numRoutinesFlag, projectIdsToRun, projectIdsToSkip, *maxModelSizeFlag,
-		*modelType, *lookBackPeriodInDays, *noOfDaysToBuild)
+		*modelType, *lookBackPeriodInDays, *noOfDaysToBuild, *shouldCountOccurence)
 }

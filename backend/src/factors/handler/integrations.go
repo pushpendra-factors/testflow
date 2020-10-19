@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"bytes"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -15,6 +17,7 @@ import (
 	IntSalesforce "factors/integration/salesforce"
 	IntSegment "factors/integration/segment"
 	IntShopify "factors/integration/shopify"
+	"factors/metrics"
 	mid "factors/middleware"
 	M "factors/model"
 	SDK "factors/sdk"
@@ -27,9 +30,13 @@ func IntSegmentHandler(c *gin.Context) {
 	logCtx := log.WithFields(log.Fields{
 		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
 	})
+	metrics.Increment(metrics.IncrIntegrationRequestOverallCount)
+
+	var bodyBuffer bytes.Buffer
+	body := io.TeeReader(r.Body, &bodyBuffer)
 
 	var event IntSegment.Event
-	if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
+	if err := json.NewDecoder(body).Decode(&event); err != nil {
 		logCtx.WithError(err).Error("Segment JSON decode failed")
 	}
 	logCtx.WithFields(log.Fields{"event": event}).Debug("Segment webhook request")
@@ -39,6 +46,15 @@ func IntSegmentHandler(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusOK,
 			IntSegment.EventResponse{Error: "Request failed. Blocked."})
 		return
+	}
+
+	// Debug raw request payload from segment.
+	var rawRequestPayload map[string]interface{}
+	logDebugCtx := logCtx.WithField("token", token).WithField("tag", "segment_request_payload")
+	if err := json.Unmarshal(bodyBuffer.Bytes(), &rawRequestPayload); err != nil {
+		logDebugCtx.WithError(err).Info("Failed to decode as raw request.")
+	} else {
+		logDebugCtx.WithField("request", rawRequestPayload).Info("Raw segment request.")
 	}
 
 	status, response := IntSegment.ReceiveEventWithQueue(token, &event,
@@ -671,14 +687,16 @@ func IntShopifySDKHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, nil)
 }
 
-const SALESFORCE_CALLBACK_URL = "/salesforce/auth/callback"
+// SalesforceCallbackRoute holds oauth redirect route
+const SalesforceCallbackRoute = "/salesforce/auth/callback"
 
 type SalesforceRedirectRequestPayload struct {
-	ProjectId string `json:"project_id"`
+	ProjectID string `json:"project_id"`
 }
 
+// GetSalesforceRedirectURL return the redirect URL based on environment
 func GetSalesforceRedirectURL() string {
-	return C.GetProtocol() + C.GetAPIDomain() + ROUTE_INTEGRATIONS_ROOT + SALESFORCE_CALLBACK_URL
+	return C.GetProtocol() + C.GetAPIDomain() + ROUTE_INTEGRATIONS_ROOT + SalesforceCallbackRoute
 }
 
 // SalesforceCallbackHandler handles the callback url from salesforce auth redirect url and requests access token
@@ -687,16 +705,16 @@ func SalesforceCallbackHandler(c *gin.Context) {
 	accessCode := c.Query("code")
 	state := c.Query("state")
 	err := json.Unmarshal([]byte(state), &oauthState)
-	if err != nil || oauthState.ProjectId == 0 || *oauthState.AgentUUID == "" {
+	if err != nil || oauthState.ProjectID == 0 || *oauthState.AgentUUID == "" {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
 
-	logCtx := log.WithFields(log.Fields{"project_id": oauthState.ProjectId, "agent_uuid": oauthState.AgentUUID})
-	salesforceTokenParams := IntSalesforce.SalesforceAuthParams{
+	logCtx := log.WithFields(log.Fields{"project_id": oauthState.ProjectID, "agent_uuid": oauthState.AgentUUID})
+	salesforceTokenParams := IntSalesforce.AuthParams{
 		GrantType:    "authorization_code",
 		AccessCode:   accessCode,
-		ClientId:     C.GetSalesforceAppId(),
+		ClientID:     C.GetSalesforceAppId(),
 		ClientSecret: C.GetSalesforceAppSecret(),
 		RedirectURL:  GetSalesforceRedirectURL(),
 	}
@@ -708,15 +726,16 @@ func SalesforceCallbackHandler(c *gin.Context) {
 		return
 	}
 
-	refreshToken, instancUrl := getRequiredSalesforceCredentials(userCredentials)
-	if refreshToken == "" || instancUrl == "" {
+	refreshToken, instancURL := getRequiredSalesforceCredentials(userCredentials)
+	if refreshToken == "" || instancURL == "" {
 		logCtx.Error("Failed to getRequiredSalesforceCredentials")
 		c.AbortWithStatus(http.StatusBadRequest)
+		return
 	}
 
 	errCode := M.UpdateAgentIntSalesforce(*oauthState.AgentUUID,
 		refreshToken,
-		instancUrl,
+		instancURL,
 	)
 	if errCode != http.StatusAccepted {
 		logCtx.Error("Failed to update salesforce properties for agent.")
@@ -725,7 +744,7 @@ func SalesforceCallbackHandler(c *gin.Context) {
 		return
 	}
 
-	_, errCode = M.UpdateProjectSettings(oauthState.ProjectId,
+	_, errCode = M.UpdateProjectSettings(oauthState.ProjectID,
 		&M.ProjectSetting{IntSalesforceEnabledAgentUUID: oauthState.AgentUUID},
 	)
 	if errCode != http.StatusAccepted {
@@ -735,15 +754,15 @@ func SalesforceCallbackHandler(c *gin.Context) {
 		return
 	}
 
-	redirectURL := C.GetProtocol() + C.GetAPPDomain() + IntSalesforce.SALESFORCE_APP_SETTINGS_URL
+	redirectURL := C.GetProtocol() + C.GetAPPDomain() + IntSalesforce.AppSettingsURL
 	c.Redirect(http.StatusPermanentRedirect, redirectURL)
 }
 
 func getRequiredSalesforceCredentials(credentials map[string]interface{}) (string, string) {
-	if refreshToken, rValid := credentials[IntSalesforce.SALESFORCE_REFRESH_TOKEN].(string); rValid { //could lead to error if refresh token not set on auth scope
-		if instancUrl, iValid := credentials[IntSalesforce.SALESFORCE_INSTANCE_URL].(string); iValid {
-			if refreshToken != "" && instancUrl != "" {
-				return refreshToken, instancUrl
+	if refreshToken, rValid := credentials[IntSalesforce.RefreshToken].(string); rValid { //could lead to error if refresh token not set on auth scope
+		if instancURL, iValid := credentials[IntSalesforce.InstanceURL].(string); iValid {
+			if refreshToken != "" && instancURL != "" {
+				return refreshToken, instancURL
 			}
 
 		}
@@ -764,8 +783,8 @@ func SalesforceAuthRedirectHandler(c *gin.Context) {
 		return
 	}
 
-	projectId, err := strconv.ParseUint(requestPayload.ProjectId, 10, 64)
-	if err != nil || projectId == 0 {
+	projectID, err := strconv.ParseUint(requestPayload.ProjectID, 10, 64)
+	if err != nil || projectID == 0 {
 		log.WithError(err).Error("Failed to get project_id on get SalesforceAuthRedirectHandler.")
 		c.AbortWithStatusJSON(http.StatusBadRequest,
 			gin.H{"error": "Invalid project id."})
@@ -780,7 +799,7 @@ func SalesforceAuthRedirectHandler(c *gin.Context) {
 	}
 
 	oAuthState := &IntSalesforce.OAuthState{
-		ProjectId: projectId,
+		ProjectID: projectID,
 		AgentUUID: &currentAgentUUID,
 	}
 
@@ -790,6 +809,6 @@ func SalesforceAuthRedirectHandler(c *gin.Context) {
 		return
 	}
 
-	redirectURL := IntSalesforce.GetSalesforceAuthorizationUrl(C.GetSalesforceAppId(), GetSalesforceRedirectURL(), "code", url.QueryEscape(string(enOAuthState)))
+	redirectURL := IntSalesforce.GetSalesforceAuthorizationURL(C.GetSalesforceAppId(), GetSalesforceRedirectURL(), "code", url.QueryEscape(string(enOAuthState)))
 	c.JSON(http.StatusTemporaryRedirect, gin.H{"redirectURL": redirectURL})
 }

@@ -14,6 +14,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// SalesforceDocument is an interface for salesforce_documents table
 type SalesforceDocument struct {
 	ProjectID uint64           `gorm:"primary_key:true;auto_increment:false" json:"project_id"`
 	ID        string           `gorm:"primary_key:true;auto_increment:false" json:"id"`
@@ -28,8 +29,12 @@ type SalesforceDocument struct {
 	UpdatedAt time.Time        `json:"updated_at"`
 }
 
+// SalesforceAction defines the existance of record in salesforce_documents
 type SalesforceAction int
 
+/*
+ Salesforce supported document types and their alias
+*/
 const (
 	SalesforceDocumentTypeContact     = 1
 	SalesforceDocumentTypeLead        = 2
@@ -44,9 +49,11 @@ const (
 	SalesforceDocumentCreated SalesforceAction = 1
 	SalesforceDocumentUpdated SalesforceAction = 2
 
+	// Standard template for salesforce date time
 	SalesforceDocumentTimeLayout = "2006-01-02T15:04:05.000-0700"
 )
 
+// SalesforceDocumentTypeAlias maps document type to alias
 var SalesforceDocumentTypeAlias = map[string]int{
 	SalesforceDocumentTypeNameContact:     SalesforceDocumentTypeContact,
 	SalesforceDocumentTypeNameLead:        SalesforceDocumentTypeLead,
@@ -54,6 +61,7 @@ var SalesforceDocumentTypeAlias = map[string]int{
 	SalesforceDocumentTypeNameOpportunity: SalesforceDocumentTypeOpportunity,
 }
 
+// SalesforceStandardDocumentType will be pulled if no custom list is provided
 var SalesforceStandardDocumentType = []int{
 	SalesforceDocumentTypeAccount,
 	SalesforceDocumentTypeContact,
@@ -62,6 +70,7 @@ var SalesforceStandardDocumentType = []int{
 
 var errorDuplicateRecord = errors.New("duplicate record")
 
+// GetSalesforceAliasByDocType return name for the doc type
 func GetSalesforceAliasByDocType(typ int) string {
 	for a, t := range SalesforceDocumentTypeAlias {
 		if typ == t {
@@ -71,6 +80,8 @@ func GetSalesforceAliasByDocType(typ int) string {
 
 	return ""
 }
+
+// GetSalesforceDocTypeByAlias return number representing the doc type name
 func GetSalesforceDocTypeByAlias(alias string) int {
 	if alias == "" {
 		return 0
@@ -84,6 +95,7 @@ func GetSalesforceDocTypeByAlias(alias string) int {
 	return typ
 }
 
+// GetSalesforceDocumentTypeAlias returns a configured map of doc type name and its corresponding number
 func GetSalesforceDocumentTypeAlias(projectID uint64) map[string]int {
 	docTypes := make(map[string]int)
 	for _, doctype := range GetSalesforceAllowedObjects(projectID) {
@@ -92,6 +104,7 @@ func GetSalesforceDocumentTypeAlias(projectID uint64) map[string]int {
 	return docTypes
 }
 
+// GetSalesforceEventNameByAction creates event name by SalesforceAction and doc type name
 func GetSalesforceEventNameByAction(doc *SalesforceDocument, action SalesforceAction) string {
 	typAlias := GetSalesforceAliasByDocType(doc.Type)
 
@@ -107,18 +120,21 @@ func GetSalesforceEventNameByAction(doc *SalesforceDocument, action SalesforceAc
 	return ""
 }
 
+// SalesforceLastSyncInfo contains information about the latest timestamp and type of document for a project
 type SalesforceLastSyncInfo struct {
 	ProjectID uint64 `json:"-"`
 	Type      int    `json:"type"`
 	Timestamp int64  `json:"timestamp"`
 }
 
+// SalesforceSyncInfo lists project_id and their last sync info per doc type
 type SalesforceSyncInfo struct {
 	ProjectSettings map[uint64]*SalesforceProjectSettings `json:"project_settings"`
 	// project_id: { type: last_sync_info }
 	LastSyncInfo map[uint64]map[string]int64 `json:"last_sync_info"`
 }
 
+// GetSalesforceSyncInfo returns list of projects and their corresponding sync status
 func GetSalesforceSyncInfo() (SalesforceSyncInfo, int) {
 	var lastSyncInfo []SalesforceLastSyncInfo
 	var syncInfo SalesforceSyncInfo
@@ -195,14 +211,15 @@ func getSalesforceDocumentID(document *SalesforceDocument) (string, error) {
 	return idAsString, nil
 }
 
-func GetSyncedSalesforceDocumentByType(projectId uint64, ids []string,
+// GetSyncedSalesforceDocumentByType return salesforce_documents by doc type which are synced
+func GetSyncedSalesforceDocumentByType(projectID uint64, ids []string,
 	docType int) ([]SalesforceDocument, int) {
 
-	logCtx := log.WithFields(log.Fields{"project_id": projectId, "ids": ids,
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "ids": ids,
 		"type": docType})
 
 	var documents []SalesforceDocument
-	if projectId == 0 || len(ids) == 0 || docType == 0 {
+	if projectID == 0 || len(ids) == 0 || docType == 0 {
 		logCtx.Error("Failed to get salesforce document by id and type. Invalid project_id or id or type.")
 		return nil, http.StatusBadRequest
 	}
@@ -210,7 +227,7 @@ func GetSyncedSalesforceDocumentByType(projectId uint64, ids []string,
 	db := C.GetServices().Db
 	err := db.Order("timestamp").Where(
 		"project_id = ? AND id IN (?) AND type = ? AND synced = true",
-		projectId, ids, docType).Find(&documents).Error
+		projectID, ids, docType).Find(&documents).Error
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get salesforce documents.")
 		return nil, http.StatusInternalServerError
@@ -247,6 +264,7 @@ func getSalesforceDocumentByIDAndType(projectID uint64, id string, docType int) 
 	return documents, http.StatusFound
 }
 
+// CreateSalesforceDocument fills required fields before inserting into salesforce_document table
 func CreateSalesforceDocument(projectID uint64, document *SalesforceDocument) int {
 	logCtx := log.WithField("project_id", document.ProjectID)
 	if projectID == 0 {
@@ -304,6 +322,7 @@ func CreateSalesforceDocument(projectID uint64, document *SalesforceDocument) in
 	return http.StatusCreated
 }
 
+// CreateSalesforceDocumentByAction inserts salesforce_document to table by SalesforceAction
 func CreateSalesforceDocumentByAction(projectID uint64, document *SalesforceDocument, action SalesforceAction) int {
 	if projectID == 0 {
 		return http.StatusBadRequest
@@ -353,6 +372,7 @@ func getSalesforceLastModifiedTimestamp(document *SalesforceDocument) (int64, er
 	return getSalesforceDocumentTimestamp(date)
 }
 
+// GetSalesforceDocumentTimestampByAction returns created or last modified timestamp by SalesforceAction
 func GetSalesforceDocumentTimestampByAction(document *SalesforceDocument, action SalesforceAction) (int64, error) {
 	if document.Type == 0 {
 		return 0, errors.New("invalid document type")
@@ -394,6 +414,7 @@ func getSalesforceDocumentTimestamp(timestamp interface{}) (int64, error) {
 	return t.Unix(), nil
 }
 
+// UpdateSalesforceDocumentAsSynced inserts syncID and updates the status of the document as synced
 func UpdateSalesforceDocumentAsSynced(projectID uint64, document *SalesforceDocument, syncID string) int {
 	logCtx := log.WithField("project_id", projectID).WithField("id", document.ID)
 
@@ -414,8 +435,10 @@ func UpdateSalesforceDocumentAsSynced(projectID uint64, document *SalesforceDocu
 	return http.StatusAccepted
 }
 
+// SalesforceRecord is map for fields and their values
 type SalesforceRecord map[string]interface{}
 
+// BuildAndUpsertDocument creates new salesforce_document for insertion
 func BuildAndUpsertDocument(projectID uint64, objectName string, value SalesforceRecord) error {
 	if projectID == 0 {
 		return errors.New("invalid project id")

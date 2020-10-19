@@ -18,3 +18,53 @@
         }
     } 
 }
+
+
+.ant-tabs.fa-tabs--dashboard
+{
+    &.ant-tabs-top{
+        .ant-tabs-nav-wrap
+        {
+            padding: 0 2em;
+            flex: none !important;
+        }
+        .ant-tabs-nav
+        {
+            margin:0;
+        }
+        .ant-tabs-content-holder
+        {
+            background-color: $fa-color--mono-1;
+            height: unquote("-webkit-calc(100vh - 120px)");
+            height: unquote("calc(100vh - 110px)");
+            overflow-y: auto;
+
+        }
+        .ant-tabs-tab
+        {
+            padding: 12px 24px ;
+            margin:0;
+        }
+        .ant-tabs-tab-btn
+        {
+            font-weight: $font-weight--bold;
+            color: $fa-color--mono-4;
+            font-size: 14px;
+        }
+        .ant-tabs-tab-active{
+            .ant-tabs-tab-btn
+            { 
+                color:$fa-color--mono-5; 
+            } 
+        }
+        .ant-tabs-ink-bar
+        {
+            background: $fa-color--brand-color;
+            height: 4px;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+            border-bottom-right-radius: 0px;
+            border-bottom-left-radius: 0px;
+        }
+    } 
+}

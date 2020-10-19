@@ -9,6 +9,10 @@ export const fetchEventsAction = (events, status = 'started') => {
   return { type: FETCH_EVENTS, payload: events };
 };
 
+export const fetchUserPropertiesAction = (userProps) => {
+  return { type: FETCH_USER_PROPERTIES, payload: userProps};
+}
+
 export const fetchEventPropertiesAction = (eventProps, name) => {
   return { type: FETCH_EVENT_PROPERTIES, payload: eventProps, eventName: name };
 }

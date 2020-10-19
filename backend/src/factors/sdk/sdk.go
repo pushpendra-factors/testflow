@@ -17,6 +17,7 @@ import (
 	"factors/vendor_custom/machinery/v1/tasks"
 
 	C "factors/config"
+	"factors/metrics"
 	M "factors/model"
 	U "factors/util"
 )
@@ -54,6 +55,13 @@ type IdentifyPayload struct {
 	CreateUser     bool   `json:"create_user"`
 	CustomerUserId string `json:"c_uid"`
 	JoinTimestamp  int64  `json:"join_timestamp"`
+	Timestamp      int64  `json:"timestamp"`
+}
+
+// AMPIdentifyPayload holds required fields for AMP identification
+type AMPIdentifyPayload struct {
+	CustomerUserID string `json:"customer_user_id"`
+	ClientID       string `json:"client_id"`
 	Timestamp      int64  `json:"timestamp"`
 }
 
@@ -116,6 +124,7 @@ const (
 	sdkRequestTypeEventUpdateProperties     = "sdk_event_update_properties"
 	sdkRequestTypeAMPEventTrack             = "sdk_amp_event_track"
 	sdkRequestTypedAMPEventUpdateProperties = "sdk_amp_event_update_properties"
+	sdkRequestTypeAMPIdentify               = "sdk_amp_identify"
 )
 
 func ProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, string, error) {
@@ -208,6 +217,19 @@ func ProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, string,
 
 		status, response = AMPUpdateEventPropertiesByToken(token, &reqPayload)
 
+	case sdkRequestTypeAMPIdentify:
+		var reqPayload AMPIdentifyPayload
+
+		err := json.Unmarshal([]byte(reqPayloadStr), &reqPayload)
+		if err != nil {
+			logCtx.WithError(err).Error(
+				"Failed to unmarshal request payload on sdk process queue.")
+			return http.StatusInternalServerError, "", nil
+		}
+		logCtx = logCtx.WithField("req_payload", reqPayload)
+
+		status, response = AMPIdentifyByToken(token, &reqPayload)
+
 	default:
 		logCtx.Error("Invalid sdk request type on sdk process queue")
 		return http.StatusInternalServerError, "", nil
@@ -219,6 +241,7 @@ func ProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, string,
 	// Do not retry on below conditions.
 	if status == http.StatusBadRequest || status == http.StatusNotAcceptable || status == http.StatusUnauthorized {
 		logCtx.WithField("processed", "true").Info("Failed to process sdk request permanantly.")
+		metrics.Increment(metrics.IncrSDKRequestQueueProcessed)
 		return float64(status), "", nil
 	}
 
@@ -226,12 +249,14 @@ func ProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, string,
 	// Retry dependencies not found and failures which can be successful on retries.
 	if status == http.StatusNotFound || status == http.StatusInternalServerError {
 		logCtx.WithField("retry", "true").Info("Failed to process sdk request on sdk process queue. Retry.")
+		metrics.Increment(metrics.IncrSDKRequestQueueRetry)
 		return http.StatusInternalServerError, "",
 			tasks.NewErrRetryTaskExp("EXP_RETRY__REQUEST_PROCESSING_FAILURE")
 	}
 
 	// Log for analysing queue process status.
 	logCtx.WithField("processed", "true").Info("Processed sdk request.")
+	metrics.Increment(metrics.IncrSDKRequestQueueProcessed)
 
 	return http.StatusOK, string(responseBytes), nil
 }
@@ -405,12 +430,8 @@ func BackFillEventDataInCacheFromDb(project_id uint64, currentTime time.Time, no
 	logCtx.Info("Refresh Event Properties Cache Done!!!")
 }
 
-func setDefaultValuesToEventPropertiesBySource(eventProperties *U.PropertiesMap,
-	source string, isAutoTracked bool) {
-
-	if isAutoTracked && (source == SourceJSSDK || source == SourceAMPSDK) {
-		U.SetDefaultValuesToEventProperties(eventProperties)
-	}
+func isPropertiesDefaultableTrackRequest(source string, isAutoTracked bool) bool {
+	return isAutoTracked && (source == SourceJSSDK || source == SourceAMPSDK)
 }
 
 func Track(projectId uint64, request *TrackPayload,
@@ -506,21 +527,13 @@ func Track(projectId uint64, request *TrackPayload,
 	}
 	// Added IP to event properties for internal usage.
 	(*eventProperties)[U.EP_INTERNAL_IP] = clientIP
-
 	U.SanitizeProperties(eventProperties)
 
-	var userProperties *U.PropertiesMap
-	if request.UserProperties == nil {
-		request.UserProperties = U.PropertiesMap{}
-	}
-	FillUserAgentUserProperties(&request.UserProperties, request.UserAgent)
-
 	response := &TrackResponse{}
-	initialUserProperties := U.GetInitialUserProperties(request.EventId, eventProperties)
-	isNewUser := request.IsNewUser
 
 	// if create_user not true and user is not found,
 	// allow to create_user.
+	isNewUser := request.IsNewUser
 	if !request.CreateUser && request.UserId != "" {
 		_, errCode := M.GetUser(projectId, request.UserId)
 		if errCode == http.StatusNotFound {
@@ -555,9 +568,6 @@ func Track(projectId uint64, request *TrackPayload,
 		request.UserId = createdUser.ID
 		response.UserId = createdUser.ID
 		isNewUser = true
-
-		// Initialize with initial user properties.
-		userProperties = initialUserProperties
 	} else {
 		// Adding initial user properties if user_id exists,
 		// but initial properties are not. i.e user created on identify.
@@ -567,25 +577,13 @@ func Track(projectId uint64, request *TrackPayload,
 				errCode).Error("Tracking failed. Get user properties as map failed.")
 			return errCode, &TrackResponse{Error: "Tracking failed while getting user."}
 		}
-
-		// Checking any initial user properties exists already.
-		// Initial user properties should not be overwritten,
-		// even if one exists already.
-		initialUserPropertyExists := false
-		for k := range *initialUserProperties {
-			if _, exists := (*existingUserProperties)[k]; exists {
-				initialUserPropertyExists = true
-				break
-			}
-		}
-
-		// UpdateUserProperties takes care merging new properites,
-		// with existing user properites. So setting only the
-		// intialProperites.
-		if !initialUserPropertyExists {
-			userProperties = initialUserProperties
-		}
 	}
+
+	newUserPropertiesMap := make(U.PropertiesMap, 0)
+	userProperties := &newUserPropertiesMap
+	FillUserAgentUserProperties(userProperties, request.UserAgent)
+	U.FillInitialUserProperties(userProperties, request.EventId, eventProperties,
+		existingUserProperties, isPropertiesDefaultableTrackRequest(source, request.Auto))
 
 	requestUserProperties := U.GetValidatedUserProperties(&request.UserProperties)
 	if userProperties != nil {
@@ -688,7 +686,10 @@ func Track(projectId uint64, request *TrackPayload,
 		event.SessionId = &session.ID
 	}
 
-	setDefaultValuesToEventPropertiesBySource(eventProperties, source, request.Auto)
+	if isPropertiesDefaultableTrackRequest(source, request.Auto) {
+		U.SetDefaultValuesToEventProperties(eventProperties)
+	}
+
 	eventPropsJSON, err := json.Marshal(eventProperties)
 	if err != nil {
 		return http.StatusBadRequest, &TrackResponse{Error: "Tracking failed. Invalid properties."}
@@ -1051,6 +1052,61 @@ func IdentifyByToken(token string, reqPayload *IdentifyPayload) (int, *IdentifyR
 	return errCode, &IdentifyResponse{Error: "Identify failed."}
 }
 
+// AMPIdentifyByToken identifies AMP user by project token
+func AMPIdentifyByToken(token string, reqPayload *AMPIdentifyPayload) (int, *IdentifyResponse) {
+
+	project, errCode := M.GetProjectByToken(token)
+	if errCode != http.StatusFound {
+		log.WithField("token", token).Error("Failed to get project from AMP sdk project token.")
+
+		if errCode == http.StatusInternalServerError {
+			return errCode, &IdentifyResponse{Error: "Identify failed. Failed to get AMP user."}
+		}
+
+		return http.StatusUnauthorized, &IdentifyResponse{Error: "Identify failed. Invalid project id."}
+	}
+
+	user, errCode := M.CreateOrGetAMPUser(project.ID, reqPayload.ClientID, reqPayload.Timestamp)
+	if errCode != http.StatusCreated && errCode != http.StatusFound {
+		log.WithField("project_id", project.ID).Error("Identify failed. Failed to CreateOrGetAMPUser.")
+		return errCode, &IdentifyResponse{Error: "Identify failed. Failed to get AMP user."}
+	}
+
+	identifyPayload := &IdentifyPayload{
+		UserId:         user.ID,
+		CustomerUserId: reqPayload.CustomerUserID,
+		Timestamp:      reqPayload.Timestamp,
+	}
+
+	return Identify(project.ID, identifyPayload)
+}
+
+// AMPIdentifyWithQueue identifies AMP user by customer_user_id. Uses queue if alowed for the poject
+func AMPIdentifyWithQueue(token string, reqPayload *AMPIdentifyPayload,
+	queueAllowedTokens []string) (int, *IdentifyResponse) {
+	if token == "" {
+		return http.StatusBadRequest, &IdentifyResponse{Error: "Identify failed. Invalid token"}
+	}
+
+	if reqPayload.ClientID == "" || reqPayload.CustomerUserID == "" {
+		return http.StatusBadRequest, &IdentifyResponse{Error: "Identify failed. Invalid params"}
+	}
+
+	if U.UseQueue(token, queueAllowedTokens) {
+
+		err := enqueueRequest(token, sdkRequestTypeAMPIdentify, reqPayload)
+		if err != nil {
+			log.WithError(err).Error("Failed to queue identify request.")
+			return http.StatusInternalServerError,
+				&IdentifyResponse{Error: "Identify failed."}
+		}
+
+		return http.StatusOK, &IdentifyResponse{Message: "User has been identified successfully"}
+	}
+
+	return AMPIdentifyByToken(token, reqPayload)
+}
+
 func IdentifyWithQueue(token string, reqPayload *IdentifyPayload,
 	queueAllowedTokens []string) (int, *IdentifyResponse) {
 
@@ -1262,11 +1318,13 @@ func UpdateEventProperties(projectId uint64,
 			&UpdateEventPropertiesResponse{Error: "No valid properties given to update."}
 	}
 
+	logCtx := log.WithField("project_id", projectId).
+		WithField("event_id", request.EventId).
+		WithField("timestamp", request.Timestamp)
+
 	event, errCode := M.GetEventById(projectId, request.EventId)
 	if errCode == http.StatusNotFound && request.Timestamp > U.UnixTimeBeforeDuration(time.Hour*5) {
-		log.WithField("event_id", request.EventId).
-			WithField("timestamp", request.Timestamp).
-			Error("Failed old update event properties request with unavailable event_id permanently.")
+		logCtx.Error("Failed old update event properties request with unavailable event_id permanently.")
 		return http.StatusBadRequest, &UpdateEventPropertiesResponse{
 			Error: "Update event properties failed permanantly."}
 	}
@@ -1289,7 +1347,7 @@ func UpdateEventProperties(projectId uint64,
 				Error: "Update event properties failed. Failed to update given properties."}
 	}
 
-	newInitialUserProperties := U.GetInitialUserProperties(event.ID, properitesToBeUpdated)
+	newInitialUserProperties := U.GetUpdateAllowedInitialUserProperties(properitesToBeUpdated)
 
 	// Update user_properties state associate to event.
 	errCode = updateInitialUserPropertiesFromUpdateEventProperties(projectId, event.ID,
@@ -1600,6 +1658,8 @@ func AMPUpdateEventPropertiesWithQueue(token string, reqPayload *AMPUpdateEventP
 	return AMPUpdateEventPropertiesByToken(token, reqPayload)
 }
 
+// FillUserAgentUserProperties - Adds user_properties derived from user_agent.
+// Note: Defined here to avoid cyclic import of config package on util.
 func FillUserAgentUserProperties(userProperties *U.PropertiesMap, userAgentStr string) error {
 	if userAgentStr == "" {
 		return errors.New("invalid user agent")

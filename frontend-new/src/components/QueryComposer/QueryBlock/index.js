@@ -1,15 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { SVG, Text } from 'factorsComponents';
 import styles from './index.module.scss';
-import { Select, Button } from 'antd';
+import { Button } from 'antd';
 import { connect } from 'react-redux';
 
 // import Filter from '../Filter';
 import FilterBlock from '../FilterBlock';
 
 import { fetchEventProperties, fetchUserProperties } from '../../../reducers/coreQuery/services';
-
-const { OptGroup, Option } = Select;
+import GroupSelect from '../GroupSelect';
 
 function QueryBlock({
   index, event, eventChange, queries, queryType, eventOptions,
@@ -17,6 +16,7 @@ function QueryBlock({
 }) {
   const [isDDVisible, setDDVisible] = useState(!!(index === 1 && !event));
   const [isFilterDDVisible, setFilterDDVisible] = useState(false);
+  // const [isGroupByDDVisible, setGroupByDDVisible] = useState(false);
   const [filterProps, setFilterProperties] = useState({
     user: [],
     event: []
@@ -32,7 +32,8 @@ function QueryBlock({
   };
 
   useEffect(() => {
-    if (!event) { return null; };
+    console.log('eventevent-->', event);
+    if (!event || event === undefined) { return undefined; }; // Akhil please check this line
     const assignFilterProps = Object.assign({}, filterProps);
     fetchEventProperties(activeProject.id, event.label).then(res => {
       const data = res.data;
@@ -68,32 +69,22 @@ function QueryBlock({
 
     return (
             <div className={styles.query_block__event_selector}>
-                   {isDDVisible ? <Select showSearch
-                        style={{ width: 240 }}
-                        onChange={onChange} defaultOpen={true}
-                        showArrow={false}
-                        onDropdownVisibleChange={() => setDDVisible(false)}
-                        dropdownRender={menu => (
-                            <div className={styles.query_block__selector_body}>
-                              {menu}
-                            </div>
-                        )}
-                    >
-                            {eventOptions && eventOptions.map((group, index) => (
-                                <OptGroup key={index} label={(
-                                        <div className={styles.query_block__selector_group}>
-                                            <SVG name={group.icon}></SVG>
-                                            <span >{group.label}</span>
-                                        </div>
-                                    )}>
-                                        {group.values.map((option, index) => (
-                                            <Option key={index} value={option}></Option>
-                                        ))}
-                                </OptGroup>
-                            ))}
-                    </Select> : null }
+                   {isDDVisible
+                     ? <GroupSelect
+                  groupedProperties={eventOptions}
+                  placeholder="Select Property"
+                  optionClick={(group, val) => onChange(val[0])}
+                  onClickOutside={() => setDDVisible(false)}
+
+                  ></GroupSelect>
+
+                     : null }
                 </div>
     );
+  };
+
+  const addGroupBy = () => {
+    setGroupByDDVisible(true);
   };
 
   const addFilter = () => {
@@ -115,6 +106,7 @@ function QueryBlock({
   const additionalActions = () => {
     return (
             <div className={'fa--query_block--actions'}>
+              <Button type="link" onClick={addGroupBy} className={'mr-1'}><SVG name="groupby"></SVG></Button>
                <Button type="link" onClick={addFilter} className={'mr-1'}><SVG name="filter"></SVG></Button>
                <Button type="link" onClick={deleteItem}><SVG name="trash"></SVG></Button>
             </div>
@@ -167,7 +159,8 @@ function QueryBlock({
 
 const mapStateToProps = (state) => ({
   eventOptions: state.coreQuery.eventOptions,
-  activeProject: state.global.active_project
+  activeProject: state.global.active_project,
+  userProperties: state.coreQuery.userProperties
 });
 
 // const mapDispatchToProps = dispatch => bindActionCreators({

@@ -10,38 +10,43 @@ import (
 )
 
 const (
-	SALESFORCE_TOKEN_URL        = "login.salesforce.com/services/oauth2/token"
-	SALESFORCE_AUTH_URL         = "login.salesforce.com/services/oauth2/authorize"
-	REFRESH_TOKEN_URL           = "https://login.salesforce.com/services/oauth2/token"
-	SALESFORCE_APP_SETTINGS_URL = "/#/settings/salesforce"
-	SALESFORCE_REFRESH_TOKEN    = "refresh_token"
+	salesforceTokenURL = "login.salesforce.com/services/oauth2/token"
+	salesforceAuthURL  = "login.salesforce.com/services/oauth2/authorize"
+	// RefreshTokenURL URL for salesforce refresh token
+	RefreshTokenURL = "https://login.salesforce.com/services/oauth2/token"
+	// AppSettingsURL URL for factors salesforce settings page
+	AppSettingsURL = "/#/settings/salesforce"
+	// RefreshToken refresh_token
+	RefreshToken = "refresh_token"
 )
 
+// OAuthState represent the state parameter for oAuth flow
 type OAuthState struct {
-	ProjectId uint64  `json:"pid"`
+	ProjectID uint64  `json:"pid"`
 	AgentUUID *string `json:"aid"`
 }
 
-// SalesforceAuthParams common struct throughout auth
-type SalesforceAuthParams struct {
+// AuthParams common struct throughout auth
+type AuthParams struct {
 	GrantType    string `token_param:"grant_type"`
 	AccessCode   string `token_param:"code"`
 	ClientSecret string `token_param:"client_secret"`
-	ClientId     string `token_param:"client_id" auth_param:"client_id" `
+	ClientID     string `token_param:"client_id" auth_param:"client_id" `
 	RedirectURL  string `token_param:"redirect_uri" auth_param:"redirect_uri"`
 	ResponseType string `auth_param:"response_type"`
 	State        string `auth_param:"state"`
 }
 
-func GetSalesforceUserToken(salesforceTokenParams *SalesforceAuthParams) (map[string]interface{}, error) {
+// GetSalesforceUserToken return security credentials for a user
+func GetSalesforceUserToken(salesforceTokenParams *AuthParams) (map[string]interface{}, error) {
 	var credentials map[string]interface{}
 	urlParamsStr, err := buildQueryParamsByTagName(*salesforceTokenParams, "token_param")
 	if err != nil {
 		return credentials, errors.New("failed to build query parameter")
 	}
 
-	tokenUrl := fmt.Sprintf("https://%s?%s", SALESFORCE_TOKEN_URL, urlParamsStr)
-	resp, err := http.Post(tokenUrl, "application/json", strings.NewReader(""))
+	tokenURL := fmt.Sprintf("https://%s?%s", salesforceTokenURL, urlParamsStr)
+	resp, err := http.Post(tokenURL, "application/json", strings.NewReader(""))
 	if err != nil {
 		return credentials, errors.New("failed to build request to salesforce tokenUrl")
 	}
@@ -57,11 +62,12 @@ func GetSalesforceUserToken(salesforceTokenParams *SalesforceAuthParams) (map[st
 	return credentials, nil
 }
 
-func GetSalesforceAuthorizationUrl(clientId, redirectUrl, responseType, state string) string {
-	baseUrl := "https://" + SALESFORCE_AUTH_URL
-	urlParams := SalesforceAuthParams{
-		ClientId:     clientId,
-		RedirectURL:  redirectUrl,
+// GetSalesforceAuthorizationURL return the auth URL for granting access
+func GetSalesforceAuthorizationURL(clientID, redirectURL, responseType, state string) string {
+	baseURL := "https://" + salesforceAuthURL
+	urlParams := AuthParams{
+		ClientID:     clientID,
+		RedirectURL:  redirectURL,
 		ResponseType: responseType,
 		State:        state,
 	}
@@ -71,7 +77,7 @@ func GetSalesforceAuthorizationUrl(clientId, redirectUrl, responseType, state st
 		return ""
 	}
 
-	return fmt.Sprintf("%s?%s", baseUrl, urlParamsStr)
+	return fmt.Sprintf("%s?%s", baseURL, urlParamsStr)
 }
 
 // buildQueryParamsByTagName generates url parameters by struct tags

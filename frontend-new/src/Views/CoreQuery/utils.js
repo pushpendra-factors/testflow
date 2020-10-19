@@ -1,6 +1,6 @@
 import moment from 'moment';
 
-export const initialResultState = [1, 2, 3, 4].map(_ => {
+export const initialResultState = [1, 2, 3, 4].map(() => {
   return { loading: false, error: false, data: null };
 });
 

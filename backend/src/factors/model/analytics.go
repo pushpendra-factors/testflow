@@ -36,6 +36,7 @@ type QueryGroupByProperty struct {
 	// group by specific event name.
 	EventName      string `json:"ena"`
 	EventNameIndex int    `json:"eni"`
+	Granularity    string `json:"grn"` // currently used only for datetime - year/month/week/day/hour
 }
 
 type QueryEventWithProperties struct {
@@ -145,6 +146,7 @@ const (
 	AliasEventName  = "event_name"
 	AliasDateTime   = "datetime"
 	AliasAggr       = "count"
+	AliasError      = "error"
 	DefaultTimezone = "UTC"
 	ResultsLimit    = 100
 	MaxResultsLimit = 100000
@@ -388,11 +390,26 @@ func stepNameByIndex(i int) string {
 // Translates empty and null group by property values as $none on select.
 // CASE WHEN events.properties->>'x' IS NULL THEN '$none' WHEN events.properties->>'x' = '' THEN '$none'
 // ELSE events.properties->>'x' END as _group_key_0
+/* SAMPLE QUERY FOR date time property
+SELECT CASE WHEN events.properties->>'check_Timestamp' IS NULL THEN '$none' WHEN events.properties->>'check_Timestamp' = '' THEN '$none' ELSE
+CASE WHEN jsonb_typeof(events.properties->'check_Timestamp') = 'number' THEN date_trunc('day', to_timestamp((events.properties->'check_Timestamp')::numeric)::timestamp)::text
+ELSE date_trunc('day', to_timestamp((events.properties->>'check_Timestamp')::numeric)::timestamp)::text END END AS _group_key_0, COUNT(*) AS count FROM events
+WHERE events.project_id='1' AND timestamp>='1602527400' AND timestamp<='1602576868' AND events.event_name_id IN
+(SELECT id FROM event_names WHERE project_id='1' AND name='factors-dev.com:3000/#/settings') GROUP BY _group_key_0 ORDER BY count DESC LIMIT 100
+*/
 func getNoneHandledGroupBySelect(groupProp QueryGroupByProperty, groupKey string) (string, []interface{}) {
 	entityField := getPropertyEntityField(groupProp.Entity)
-	groupSelect := fmt.Sprintf("CASE WHEN %s->>? IS NULL THEN '%s' WHEN %s->>? = '' THEN '%s' ELSE %s->>? END AS %s",
-		entityField, PropertyValueNone, entityField, PropertyValueNone, entityField, groupKey)
-	groupSelectParams := []interface{}{groupProp.Property, groupProp.Property, groupProp.Property}
+	var groupSelect string
+	groupSelectParams := make([]interface{}, 0)
+	if groupProp.Type != U.PropertyTypeDateTime {
+		groupSelect = fmt.Sprintf("CASE WHEN %s->>? IS NULL THEN '%s' WHEN %s->>? = '' THEN '%s' ELSE %s->>? END AS %s",
+			entityField, PropertyValueNone, entityField, PropertyValueNone, entityField, groupKey)
+		groupSelectParams = []interface{}{groupProp.Property, groupProp.Property, groupProp.Property}
+	} else {
+		groupSelect = fmt.Sprintf("CASE WHEN %s->>? IS NULL THEN '%s' WHEN %s->>? = '' THEN '%s' WHEN %s->>? = '0' THEN '%s' ELSE  date_trunc('%s', to_timestamp(to_number((%s->>?)::text,'9999999999'))::timestamp)::text END AS %s",
+			entityField, PropertyValueNone, entityField, PropertyValueNone, entityField, PropertyValueNone, groupProp.Granularity, entityField, groupKey)
+		groupSelectParams = []interface{}{groupProp.Property, groupProp.Property, groupProp.Property, groupProp.Property}
+	}
 	return groupSelect, groupSelectParams
 }
 

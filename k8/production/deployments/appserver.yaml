@@ -116,6 +116,10 @@ spec:
           - $(OFFLINE_SESSION_PROJECT_IDS)
           - --sentry_dsn
           - $(SENTRY_DSN)
+          - --gcp_project_id
+          - $(GCP_PROJECT_ID)
+          - --gcp_project_location
+          - $(GCP_PROJECT_LOCATION)
           - --whitelisted_projects_ids_event_user_cache
           - "2"
           - --blocked_sdk_request_project_tokens

@@ -11,6 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	Int "factors/integration"
+	"factors/metrics"
 	M "factors/model"
 	SDK "factors/sdk"
 	U "factors/util"
@@ -522,6 +523,7 @@ func ProcessQueueEvent(token, eventJson string) (float64, string, error) {
 	logCtx = log.WithField("status", status).WithField("response", string(responseJsonBytes))
 
 	logCtx.WithField("processed", "true").Info("Processed segment event.")
+	metrics.Increment(metrics.IncrIntegrationRequestQueueProcessed)
 
 	// Do not retry on below conditions.
 	if status == http.StatusBadRequest ||
@@ -535,6 +537,7 @@ func ProcessQueueEvent(token, eventJson string) (float64, string, error) {
 	// Return error only for retry. Retry after a period till it is successfull.
 	if status == http.StatusInternalServerError {
 		logCtx.WithField("retry", "true").Info("Failed to process event on segment event queue. Retry.")
+		metrics.Increment(metrics.IncrIntegrationRequestQueueRetry)
 		return http.StatusInternalServerError, "",
 			tasks.NewErrRetryTaskExp("EXP_RETRY_SEGMENT_EVENT_PROCESSING_FAILURE")
 	}
