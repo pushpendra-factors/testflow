@@ -1,8 +1,8 @@
 /* eslint-disable */
 
-import { fetchEventsAction, fetchEventPropertiesAction } from './actions';
+import { fetchEventsAction, fetchEventPropertiesAction, fetchUserPropertiesAction } from './actions';
 import { getEventNames, fetchEventProperties, fetchUserProperties } from './services';
-import { convertToEventOptions } from './utils';
+import { convertToEventOptions, convertPropsToOptions } from './utils';
 
 export const fetchEventNames = (projectId) => {
   return (dispatch) => {
@@ -17,13 +17,27 @@ export const fetchEventNames = (projectId) => {
     });
   };
 };
+ 
+export const getUserProperties = (projectId, queryType) => {
+  return (dispatch) => {
+    return new Promise((resolve, reject) => {
+      fetchUserProperties(projectId, queryType).then((response) => {
+        const options = convertPropsToOptions(response.data);
+        resolve(dispatch(fetchUserPropertiesAction(options)));
+      }).catch((err) => {
+        // resolve(dispatch(fetchEventPropertiesAction({})));
+      })
+    })
+  }
+}
 
 export const getEventProperties = (projectId, eventName) => {
   return (dispatch) => {
     return new Promise((resolve, reject) => {
       fetchEventProperties(projectId, eventName)
         .then((response) => {
-          resolve(dispatch(fetchEventPropertiesAction(response.data, eventName)));
+          const options = convertPropsToOptions(response.data);
+          resolve(dispatch(fetchEventPropertiesAction(options, eventName)));
         }).catch((err) => {
           // resolve(dispatch(fetchEventPropertiesAction({})));
         });

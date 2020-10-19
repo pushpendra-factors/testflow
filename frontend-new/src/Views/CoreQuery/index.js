@@ -25,7 +25,8 @@ function CoreQuery({ activeProject }) {
       prop_category: '', // user / event
       property: '', // user/eventproperty
       prop_type: '', // categorical  /numberical
-      eventValue: '' // event name (funnel only)
+      eventValue: '', // event name (funnel only)
+      eventName: '' // eventName $present for global user breakdown
     }],
     event_analysis_seq: '',
     session_analytics_seq: {
@@ -99,7 +100,8 @@ function CoreQuery({ activeProject }) {
         return {
           pr: opt.property,
           en: opt.prop_category,
-          pty: opt.prop_type
+          pty: opt.prop_type,
+          ena: opt.eventName
         };
       });
 

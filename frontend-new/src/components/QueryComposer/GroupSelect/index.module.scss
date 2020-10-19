@@ -1,15 +1,7 @@
-.filter_block {
-    display: flex;
-
-    &__filter_content {
-        color: #5949BC;
-        font-weight: 500;
-        font-size: 14px;
-    }
-
+.dropdown {
     &__filter_select {
         position: absolute;
-        left: 125px;
+        top: 0;
 
         display: flex;
         flex-direction: column;
@@ -52,9 +44,18 @@
             
         }
 
+        &__option_group:hover {
+            cursor: pointer;
+        }
+
+        &__option_group:nth-of-type(2) {
+            border-top: 1px solid black;
+        }
+
         &__option_group_container {
             display: flex;
             flex-direction: column;
+
         }
 
         &__option_group_container_sec {
@@ -62,14 +63,6 @@
             flex-direction: column;
             max-height: 200px;
             overflow: scroll;
-        }
-
-        &__option_group:hover {
-            cursor: pointer;
-        }
-
-        &__option_group:nth-of-type(2) {
-            border-top: 1px solid black;
         }
 
         &__tag {
@@ -91,5 +84,4 @@
         display:block;
         z-index: 50;
     }
-
 }

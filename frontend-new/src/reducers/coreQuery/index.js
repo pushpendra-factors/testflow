@@ -14,7 +14,7 @@ export default function (state = defaultState, action) {
     case FETCH_EVENTS:
       return { ...state, eventOptions: action.payload };
     case FETCH_USER_PROPERTIES:
-      return { ...state, eventProperties: action.payload };
+      return { ...state, userProperties: action.payload };
     case FETCH_EVENT_PROPERTIES:
       const eventPropState = Object.assign({}, state.eventProperties);
       eventPropState[action.eventName] = action.payload;
