@@ -638,6 +638,7 @@ func InitQueueWorker(config *Configuration) error {
 	}
 
 	InitSentryLogging(config.SentryDSN, config.AppName)
+	InitMetricsExporter(config.Env, config.AppName, config.GCPProjectID, config.GCPProjectLocation)
 
 	initiated = true
 	return nil
