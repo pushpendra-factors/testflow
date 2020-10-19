@@ -15,6 +15,7 @@ import (
 	mid "factors/middleware"
 	M "factors/model"
 	SDK "factors/sdk"
+	"factors/util"
 	U "factors/util"
 )
 
@@ -337,7 +338,7 @@ func SDKAMPTrackHandler(c *gin.Context) {
 		ScreenWidth:        screenWidth,
 		PageLoadTimeInSecs: pageLoadTimeInSecs,
 
-		Timestamp: time.Now().Unix(), // request timestamp.
+		Timestamp: util.TimeNowUnix(), // request timestamp.
 		UserAgent: c.Request.UserAgent(),
 		ClientIP:  c.ClientIP(),
 	}
@@ -392,6 +393,30 @@ func SDKAMPUpdateEventPropertiesHandler(c *gin.Context) {
 	}
 
 	c.JSON(SDK.AMPUpdateEventPropertiesWithQueue(token, payload, C.GetSDKRequestQueueAllowedTokens()))
+}
+
+// SDKAMPIdentifyHandler Test command.
+// curl -i GET 'http://localhost:8085/sdk/amp/user/identify?token=<token>&client_id=<amp_id>&customer_user_id=<customer_user_id>
+func SDKAMPIdentifyHandler(c *gin.Context) {
+	token := c.Query("token")
+	customerUserID := c.Query("customer_user_id")
+	clientID := c.Query("client_id")
+	if token == "" {
+		c.AbortWithStatusJSON(http.StatusBadRequest, &SDK.Response{Error: "Identificational failed. Missing token"})
+		return
+	}
+
+	if customerUserID == "" || clientID == "" {
+		c.AbortWithStatusJSON(http.StatusBadRequest, &SDK.Response{Error: "Identificational failed. Missing required params"})
+		return
+	}
+
+	var payload SDK.AMPIdentifyPayload
+	payload.CustomerUserID = customerUserID
+	payload.ClientID = clientID
+	payload.Timestamp = util.TimeNowUnix()
+
+	c.JSON(SDK.AMPIdentifyWithQueue(token, &payload, C.GetSDKRequestQueueAllowedTokens()))
 }
 
 type SDKError struct {

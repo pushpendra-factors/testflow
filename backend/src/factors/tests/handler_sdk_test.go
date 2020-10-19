@@ -1798,6 +1798,52 @@ func TestSDKAMPTrackByToken(t *testing.T) {
 	assert.Equal(t, timestamp, event.Timestamp)
 }
 
+func TestSDKAMPIdentifyHandler(t *testing.T) {
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+	uri := "/sdk/amp/user/identify"
+	project, _, err := SetupProjectUserReturnDAO()
+	assert.Nil(t, err)
+
+	timestamp := U.UnixTimeBeforeAWeek()
+	clientID := U.RandomLowerAphaNumString(5)
+	request := &SDK.AMPTrackPayload{
+		ClientID:  clientID,
+		SourceURL: "https://example.com/a/b",
+		Timestamp: timestamp,
+	}
+	errCode, _ := SDK.AMPTrackByToken(project.Token, request)
+	assert.Equal(t, http.StatusOK, errCode)
+
+	cUID := "1234"
+	params := fmt.Sprintf("token=%s&client_id=%s&customer_user_id=%s", project.Token, clientID, cUID)
+	response := ServeGetRequest(r, uri+"?"+params)
+	assert.Equal(t, http.StatusOK, response.Code)
+	jsonResponse, _ := ioutil.ReadAll(response.Body)
+	var jsonResponseMap map[string]interface{}
+	json.Unmarshal(jsonResponse, &jsonResponseMap)
+	assert.Equal(t, "User has been identified successfully.", jsonResponseMap["message"])
+	user, errCode := M.CreateOrGetAMPUser(project.ID, clientID, timestamp)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Equal(t, cUID, user.CustomerUserId)
+
+	// test old timestamp for user creation
+	cUID = "12345"
+	clientID = U.RandomLowerAphaNumString(5)
+	oldTimestamp := time.Now().AddDate(0, 0, -10).Unix()
+	payload := SDK.AMPIdentifyPayload{
+		CustomerUserID: cUID,
+		ClientID:       clientID,
+		Timestamp:      oldTimestamp,
+	}
+	status, message := SDK.AMPIdentifyByToken(project.Token, &payload)
+	assert.Equal(t, http.StatusOK, status)
+	assert.Equal(t, "User has been identified successfully.", message.Message)
+	user, errCode = M.CreateOrGetAMPUser(project.ID, clientID, timestamp)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Equal(t, oldTimestamp, user.JoinTimestamp)
+}
+
 func TestAddUserPropertiesMerge(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
