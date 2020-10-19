@@ -11,6 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	C "factors/config"
+	"factors/metrics"
 	mid "factors/middleware"
 	M "factors/model"
 	SDK "factors/sdk"
@@ -29,6 +30,8 @@ func SDKTrackHandler(c *gin.Context) {
 	logCtx := log.WithFields(log.Fields{
 		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
 	})
+	metrics.Increment(metrics.IncrSDKRequestOverallCount)
+	metrics.Increment(metrics.IncrSDKRequestTypeTrack)
 
 	if r.Body == nil {
 		logCtx.Error("Invalid request. Request body unavailable.")
@@ -130,6 +133,8 @@ func SDKIdentifyHandler(c *gin.Context) {
 	logCtx := log.WithFields(log.Fields{
 		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
 	})
+	metrics.Increment(metrics.IncrSDKRequestOverallCount)
+	metrics.Increment(metrics.IncrSDKRequestTypeIdentifyUser)
 
 	if r.Body == nil {
 		logCtx.Error("Invalid request. Request body unavailable.")
@@ -161,6 +166,8 @@ func SDKAddUserPropertiesHandler(c *gin.Context) {
 	logCtx := log.WithFields(log.Fields{
 		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
 	})
+	metrics.Increment(metrics.IncrSDKRequestOverallCount)
+	metrics.Increment(metrics.IncrSDKRequestTypeAddUserProperties)
 
 	if r.Body == nil {
 		logCtx.Error("Invalid request. Request body unavailable.")
@@ -217,6 +224,8 @@ func SDKUpdateEventPropertiesHandler(c *gin.Context) {
 	logCtx := log.WithFields(log.Fields{
 		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
 	})
+	metrics.Increment(metrics.IncrSDKRequestOverallCount)
+	metrics.Increment(metrics.IncrSDKRequestTypeUpdateEventProperties)
 
 	if r.Body == nil {
 		logCtx.Error("Invalid request. Request body unavailable.")
@@ -251,6 +260,8 @@ https://app.factors.ai/sdk/amp/event/track?token=${token}&title=${title}&referre
 &client_id=${clientId(_factorsai_amp_id)}&source_url=${sourceUrl}
 */
 func SDKAMPTrackHandler(c *gin.Context) {
+	metrics.Increment(metrics.IncrSDKRequestOverallCount)
+	metrics.Increment(metrics.IncrSDKRequestTypeAMPTrack)
 	token := c.Query("token")
 	token = strings.TrimSpace(token)
 	if token == "" {
@@ -335,6 +346,8 @@ func SDKAMPTrackHandler(c *gin.Context) {
 }
 
 func SDKAMPUpdateEventPropertiesHandler(c *gin.Context) {
+	metrics.Increment(metrics.IncrSDKRequestOverallCount)
+	metrics.Increment(metrics.IncrSDKRequestTypeAMPUpdateEventProperties)
 	token := c.Query("token")
 	token = strings.TrimSpace(token)
 	if token == "" {

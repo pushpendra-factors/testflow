@@ -13,6 +13,7 @@ import (
 
 	cacheRedis "factors/cache/redis"
 	C "factors/config"
+	"factors/metrics"
 )
 
 type ProjectSetting struct {
@@ -313,6 +314,7 @@ func GetProjectSettingByKeyWithTimeout(key, value string, timeout time.Duration)
 			WithField("project_key", key).
 			WithField("value", value).
 			Info("Get project_settings has timedout.")
+		metrics.Increment(metrics.IncrSDKGetSettingsTimeout)
 		return nil, http.StatusInternalServerError
 	}
 }

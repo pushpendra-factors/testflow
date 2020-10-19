@@ -17,6 +17,7 @@ import (
 	"factors/vendor_custom/machinery/v1/tasks"
 
 	C "factors/config"
+	"factors/metrics"
 	M "factors/model"
 	U "factors/util"
 )
@@ -219,6 +220,7 @@ func ProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, string,
 	// Do not retry on below conditions.
 	if status == http.StatusBadRequest || status == http.StatusNotAcceptable || status == http.StatusUnauthorized {
 		logCtx.WithField("processed", "true").Info("Failed to process sdk request permanantly.")
+		metrics.Increment(metrics.IncrSDKRequestQueueProcessed)
 		return float64(status), "", nil
 	}
 
@@ -226,12 +228,14 @@ func ProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, string,
 	// Retry dependencies not found and failures which can be successful on retries.
 	if status == http.StatusNotFound || status == http.StatusInternalServerError {
 		logCtx.WithField("retry", "true").Info("Failed to process sdk request on sdk process queue. Retry.")
+		metrics.Increment(metrics.IncrSDKRequestQueueRetry)
 		return http.StatusInternalServerError, "",
 			tasks.NewErrRetryTaskExp("EXP_RETRY__REQUEST_PROCESSING_FAILURE")
 	}
 
 	// Log for analysing queue process status.
 	logCtx.WithField("processed", "true").Info("Processed sdk request.")
+	metrics.Increment(metrics.IncrSDKRequestQueueProcessed)
 
 	return http.StatusOK, string(responseBytes), nil
 }
