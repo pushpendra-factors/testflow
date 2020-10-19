@@ -13,7 +13,7 @@ function SingleEventMultipleBreakdown({
 }) {
   const [chartsData, setChartsData] = useState([]);
   const [visibleProperties, setVisibleProperties] = useState([]);
-  const [chartType, setChartType] = useState('barchart');
+  const [chartType, setChartType] = useState('linechart');
   const [hiddenProperties, setHiddenProperties] = useState([]);
 
   const maxAllowedVisibleProperties = 5;
@@ -21,14 +21,14 @@ function SingleEventMultipleBreakdown({
   useEffect(() => {
     let formattedData;
     if (page === 'totalEvents') {
-      formattedData = formatData(resultState.data.result_group[0]);
+      formattedData = formatData(resultState.data);
     } else {
-      formattedData = formatUserData(resultState.data.result_group[0]);
+      formattedData = formatUserData(resultState.data);
     }
 
     setChartsData(formattedData);
     setVisibleProperties([...formattedData.slice(0, maxAllowedVisibleProperties)]);
-  }, [resultState.data.result_group]);
+  }, [resultState.data, page]);
 
   if (!chartsData.length) {
     return null;
@@ -60,9 +60,9 @@ function SingleEventMultipleBreakdown({
   let lineChartData;
 
   if (page === 'totalEvents') {
-    lineChartData = formatDataInLineChartFormat(resultState.data.result_group[0], visibleProperties, mapper, hiddenProperties);
+    lineChartData = formatDataInLineChartFormat(resultState.data, visibleProperties, mapper, hiddenProperties);
   } else {
-    lineChartData = formatUserDataInLineChartFormat(resultState.data.result_group[0], visibleProperties, mapper, hiddenProperties);
+    lineChartData = formatUserDataInLineChartFormat(resultState.data, visibleProperties, mapper, hiddenProperties);
   }
 
   const appliedColors = generateColors(visibleProperties.length);
@@ -88,6 +88,7 @@ function SingleEventMultipleBreakdown({
           eventsMapper={mapper}
           setHiddenEvents={setHiddenProperties}
           hiddenEvents={hiddenProperties}
+          isDecimalAllowed = {page === 'activeUsers' || page === 'frequency'}
         />
       </div>
     );
@@ -120,7 +121,7 @@ function SingleEventMultipleBreakdown({
           setVisibleProperties={setVisibleProperties}
           visibleProperties={visibleProperties}
           maxAllowedVisibleProperties={maxAllowedVisibleProperties}
-          originalData={resultState.data.result_group[0]}
+          originalData={resultState.data}
           page={page}
         />
       </div>

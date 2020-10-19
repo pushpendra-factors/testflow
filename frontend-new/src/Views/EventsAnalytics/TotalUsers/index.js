@@ -3,6 +3,7 @@ import NoBreakdownCharts from '../NoBreakdownCharts';
 import SingleEventSingleBreakdown from '../SingleEventSingleBreakdown';
 import { Spin } from 'antd';
 import SingleEventMultipleBreakdown from '../SingleEventMultipleBreakdown';
+import MultipleEventsWithBreakdown from '../MultipleEventsWIthBreakdown';
 
 function TotalUsers({
   queries, eventsMapper, reverseEventsMapper, breakdown, resultState, page, index
@@ -37,7 +38,9 @@ function TotalUsers({
         page={page}
       />
     );
-  } else if (queries.length === 1 && breakdown.length === 1) {
+  }
+
+  if (queries.length === 1 && breakdown.length === 1) {
     return (
       <SingleEventSingleBreakdown
         queries={queries}
@@ -46,7 +49,20 @@ function TotalUsers({
         page={page}
       />
     );
-  } else if (queries.length === 1) {
+  }
+
+  if (queries.length > 1 && breakdown.length) {
+    return (
+      <MultipleEventsWithBreakdown
+        queries={queries}
+        breakdown={breakdown}
+        resultState={resultState[index]}
+        page={page}
+      />
+    );
+  }
+
+  if (queries.length === 1 && breakdown.length > 1) {
     return (
       <SingleEventMultipleBreakdown
         queries={queries}

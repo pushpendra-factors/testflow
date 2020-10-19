@@ -15,9 +15,9 @@ function NoBreakdownCharts({
 
   let chartsData = [];
   if (queries.length === 1) {
-    chartsData = formatSingleEventAnalyticsData(resultState.data.result_group[0], queries[0], eventsMapper);
+    chartsData = formatSingleEventAnalyticsData(resultState.data, queries[0], eventsMapper);
   } else {
-    chartsData = formatMultiEventsAnalyticsData(resultState.data.result_group[0], queries, eventsMapper);
+    chartsData = formatMultiEventsAnalyticsData(resultState.data, queries, eventsMapper);
   }
 
   if (!chartsData.length) {
@@ -61,6 +61,7 @@ function NoBreakdownCharts({
           eventsMapper={eventsMapper}
           setHiddenEvents={setHiddenEvents}
           hiddenEvents={hiddenEvents}
+          isDecimalAllowed = {page === 'activeUsers' || page === 'frequency'}
         />
       </div>
     );

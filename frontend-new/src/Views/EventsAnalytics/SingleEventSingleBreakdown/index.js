@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ChartTypeDropdown from '../../../components/ChartTypeDropdown';
 import {
-  formatSingleEventSinglePropertyData, formatDataInLineChartFormat, formatSingleEventSinglePropertyUserData, formatUserDataInLineChartFormat
+  formatData, formatDataInLineChartFormat
 } from './utils';
 import BarChart from '../../../components/BarChart';
 import SingleEventSingleBreakdownTable from './SingleEventSingleBreakdownTable';
@@ -13,22 +13,17 @@ function SingleEventSingleBreakdown({
 }) {
   const [chartsData, setChartsData] = useState([]);
   const [visibleProperties, setVisibleProperties] = useState([]);
-  const [chartType, setChartType] = useState('linechart');
+  const [chartType, setChartType] = useState('barchart');
   const [hiddenProperties, setHiddenProperties] = useState([]);
 
   const maxAllowedVisibleProperties = 7;
 
   useEffect(() => {
     let formattedData;
-
-    if (page === 'totalEvents') {
-      formattedData = formatSingleEventSinglePropertyData(resultState.data.result_group[0]);
-    } else {
-      formattedData = formatSingleEventSinglePropertyUserData(resultState.data.result_group[0]);
-    }
+    formattedData = formatData(resultState.data);
     setChartsData(formattedData);
     setVisibleProperties([...formattedData.slice(0, maxAllowedVisibleProperties)]);
-  }, [resultState.data.result_group, page]);
+  }, [resultState.data]);
 
   if (!chartsData.length) {
     return null;
@@ -59,11 +54,7 @@ function SingleEventSingleBreakdown({
 
   let lineChartData;
 
-  if (page === 'totalEvents') {
-    lineChartData = formatDataInLineChartFormat(resultState.data.result_group[0], visibleProperties, mapper, hiddenProperties);
-  } else {
-    lineChartData = formatUserDataInLineChartFormat(resultState.data.result_group[0], visibleProperties, mapper, hiddenProperties);
-  }
+  lineChartData = formatDataInLineChartFormat(resultState.data, visibleProperties, mapper, hiddenProperties);
 
   const appliedColors = generateColors(visibleProperties.length);
 
@@ -88,6 +79,7 @@ function SingleEventSingleBreakdown({
           eventsMapper={mapper}
           setHiddenEvents={setHiddenProperties}
           hiddenEvents={hiddenProperties}
+          isDecimalAllowed = {page === 'activeUsers' || page === 'frequency'}
         />
       </div>
     );
@@ -121,7 +113,7 @@ function SingleEventSingleBreakdown({
           visibleProperties={visibleProperties}
           maxAllowedVisibleProperties={maxAllowedVisibleProperties}
           lineChartData={lineChartData}
-          originalData={resultState.data.result_group[0]}
+          originalData={resultState.data}
         />
       </div>
     </div>

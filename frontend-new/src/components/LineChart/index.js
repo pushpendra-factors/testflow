@@ -6,7 +6,7 @@ import styles from './index.module.scss';
 import ChartLegends from './ChartLegends';
 
 function LineChart({
-  chartData, appliedColors, queries, reverseEventsMapper, eventsMapper, setHiddenEvents, hiddenEvents
+  chartData, appliedColors, queries, reverseEventsMapper, eventsMapper, setHiddenEvents, hiddenEvents, isDecimalAllowed
 }) {
   const chartRef = useRef(null);
 
@@ -109,7 +109,11 @@ function LineChart({
           tick: {
             count: 6,
             format(d) {
-              return parseInt(d);
+              if (!isDecimalAllowed) {
+                return parseInt(d);
+              } else {
+                return parseFloat(d.toFixed(2));
+              }
             }
           }
         }
@@ -144,7 +148,7 @@ function LineChart({
         }
       }
     });
-  }, [chartData, finalXaxisValues, colors, reverseEventsMapper, focusHoveredLines, focusAllLines]);
+  }, [chartData, finalXaxisValues, colors, reverseEventsMapper, focusHoveredLines, focusAllLines, isDecimalAllowed]);
 
   const displayChart = useCallback(() => {
     drawChart();

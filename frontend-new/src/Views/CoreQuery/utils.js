@@ -1,61 +1,87 @@
+import moment from 'moment';
+
 export const initialResultState = [1, 2, 3, 4].map(_ => {
   return { loading: false, error: false, data: null };
 });
 
-export const calculateFrequencyData = (eventData, userData) => {
-  const rows = eventData.result_group[0].rows.map((elem, index) => {
+export const calculateFrequencyData = (eventData, userData, appliedBreakdown) => {
+  if (appliedBreakdown.length) {
+    return calculateFrequencyDataForBreakdown(eventData, userData);
+  } else {
+    return calculateFrequencyDataForNoBreakdown(eventData, userData);
+  }
+};
+
+export const calculateFrequencyDataForNoBreakdown = (eventData, userData) => {
+  const rows = eventData.rows.map((elem, index) => {
     const eventVals = elem.slice(1).map((e, idx) => {
       if (!e) return e;
-      const eVal = e / userData.result_group[0].rows[index][idx + 1];
+      const eVal = e / userData.rows[index][idx + 1];
       return eVal % 1 !== 0 ? parseFloat(eVal.toFixed(2)) : eVal;
     });
     return [elem[0], ...eventVals];
   });
-  const result = { result_group: [{ ...eventData.result_group[0], rows }] };
+  const result = { ...eventData, rows };
   return result;
+};
+
+const getEventIdx = (eventData, userObj) => {
+  const str = userObj.slice(0, userObj.length - 1).join(',');
+  const eventIdx = eventData.findIndex(elem => elem.slice(0, elem.length - 1).join(',') === str);
+  return eventIdx;
 };
 
 export const calculateFrequencyDataForBreakdown = (eventData, userData) => {
-  const rows = userData.result_group[0].rows.map((elem, index) => {
-    const eventVals = elem.slice(elem.length - 1).map((e) => {
-      if (!e) return e;
-      const eVal = eventData.result_group[0].rows[index][elem.length] / e;
-      return eVal % 1 !== 0 ? parseFloat(eVal.toFixed(2)) : eVal;
-    });
-    return [...elem.slice(0, elem.length - 1), ...eventVals];
+  const rows = userData.rows.map(userObj => {
+    const eventIdx = getEventIdx(eventData.rows, userObj);
+    const eventObj = eventData.rows[eventIdx];
+    let eVal = 0;
+    if (eventObj[eventObj.length - 1] && userObj[userObj.length - 1]) {
+      eVal = eventObj[eventObj.length - 1] / userObj[userObj.length - 1];
+      eVal = eVal % 1 !== 0 ? parseFloat(eVal.toFixed(2)) : eVal;
+    }
+    return [...userObj.slice(0, userObj.length - 1), eVal];
   });
-  const result = { result_group: [{ ...userData.result_group[0], rows }] };
+  const result = { ...userData, rows };
   return result;
 };
 
-export const calculateActiveUsersData = (userData, sessionData) => {
-  const rows = userData.result_group[0].rows.map((elem) => {
+export const calculateActiveUsersData = (userData, sessionData, appliedBreakdown) => {
+  if (appliedBreakdown.length) {
+    return calculateActiveUsersDataForBreakdown(userData, sessionData);
+  } else {
+    return calculateActiveUsersDataForNoBreakdown(userData, sessionData);
+  }
+};
+
+const calculateActiveUsersDataForNoBreakdown = (userData, sessionData) => {
+  const rows = userData.rows.map((elem) => {
     const eventVals = elem.slice(1).map((e) => {
       if (!e) return e;
-      const eVal = sessionData.result_group[0].rows[0] / e;
+      const eVal = sessionData.rows[0][0] / e;
       return eVal % 1 !== 0 ? parseFloat(eVal.toFixed(2)) : eVal;
     });
     return [elem[0], ...eventVals];
   });
-  const result = { result_group: [{ ...userData.result_group[0], rows }] };
+  const result = { ...userData, rows };
   return result;
 };
 
-export const calculateActiveUsersDataForBreakdown = (userData, sessionData) => {
-  const rows = userData.result_group[0].rows.map((elem) => {
+const calculateActiveUsersDataForBreakdown = (userData, sessionData) => {
+  const rows = userData.rows.map((elem) => {
     const eventVals = elem.slice(elem.length - 1).map((e) => {
       if (!e) return e;
-      const eVal = sessionData.result_group[0].rows[0] / e;
+      const eVal = sessionData.rows[0][0] / e;
       return eVal % 1 !== 0 ? parseFloat(eVal.toFixed(2)) : eVal;
     });
     return [...elem.slice(0, elem.length - 1), ...eventVals];
   });
-  const result = { result_group: [{ ...userData.result_group[0], rows }] };
+  const result = { ...userData, rows };
   return result;
 };
 
 export const hasApiFailed = (res) => {
-  if (res.result_group && res.result_group[0] && res.result_group[0].headers && (res.result_group[0].headers.indexOf('error') > -1)) {
+  if (res && res.headers && (res.headers.indexOf('error') > -1)) {
     return true;
   }
   return false;
@@ -63,4 +89,84 @@ export const hasApiFailed = (res) => {
 
 export const numberWithCommas = (x) => {
   return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+};
+
+export const formatApiData = (data, appliedBreakdown) => {
+  if (!appliedBreakdown.length) {
+    return data;
+  }
+
+  const result = { ...data };
+
+  if (result.headers.indexOf('event_name') !== 1) {
+    const idx = result.headers.indexOf('event_name');
+    if (idx === -1) {
+      return null;
+    } else {
+      result.headers = [result.headers[0], 'event_name', ...result.headers.slice(1, idx)];
+      result.rows = result.rows.map(row => {
+        return [row[0], row[idx], ...row.slice(1, idx)];
+      });
+    }
+  }
+  return result;
+};
+
+const getEventsWithProperties = (queries) => {
+  const ewps = [];
+  queries.forEach(ev => {
+    ewps.push({
+      na: ev.label,
+      pr: []
+    });
+  });
+  return ewps;
+};
+
+export const getQuery = (activeTab, queryType, queryOptions, queries) => {
+  const query = {};
+  query.cl = queryType === 'event' ? 'events' : 'funnel';
+  query.ty = parseInt(activeTab) === 1 ? 'unique_users' : 'events_occurrence';
+
+  const period = {
+    from: moment().subtract(6, 'days').startOf('day').utc().unix(),
+    to: moment().utc().unix()
+  };
+
+  query.fr = period.from;
+  query.to = period.to;
+
+  if (activeTab === '2') {
+    query.ewp = [
+      {
+        na: '$session',
+        pr: []
+      }
+    ];
+    query.gbt = '';
+  } else {
+    query.ewp = getEventsWithProperties(queries);
+    query.gbt = 'date';
+
+    const groupBy = [...queryOptions.groupBy.filter(elem => elem.prop_category)].sort((a, b) => {
+      return a.prop_category >= b.prop_category ? 1 : -1;
+    });
+
+    let i = 0;
+
+    query.gbp = groupBy
+      .map(opt => {
+        i++;
+        return {
+          pr: opt.property,
+          en: opt.prop_category,
+          pty: opt.prop_type,
+          ena: 'www.acme.com/product',
+          eni: i
+        };
+      });
+  }
+  query.ec = 'each_given_event';
+  query.tz = 'Asia/Kolkata';
+  return query;
 };

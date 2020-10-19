@@ -1,12 +1,14 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import DataTable from '../../CoreQuery/FunnelsResultPage/DataTable';
 import {
-  getTableColumns, getDataInTableFormat, getDateBasedColumns, getDateBasedTableData, getDateBasedUserTableData
+  getTableColumns, getDataInTableFormat, getDateBasedColumns, getDateBasedTableData
 } from './utils';
 
 function SingleEventSingleBreakdownTable({
   data, events, breakdown, chartType, visibleProperties, setVisibleProperties, maxAllowedVisibleProperties, lineChartData, originalData, page
 }) {
+  const appliedBreakdown = [breakdown[0].property];
+
   const [sorter, setSorter] = useState({});
   const [searchText, setSearchText] = useState('');
 
@@ -23,15 +25,11 @@ function SingleEventSingleBreakdownTable({
   let tableData;
 
   if (chartType === 'linechart') {
-    columns = getDateBasedColumns(lineChartData, breakdown, sorter, handleSorting);
-    if (page === 'totalEvents') {
-      tableData = getDateBasedTableData(data.map(elem => elem.label), originalData, breakdown, searchText, sorter);
-    } else {
-      tableData = getDateBasedUserTableData(data.map(elem => elem.label), originalData, breakdown, searchText, sorter);
-    }
+    columns = getDateBasedColumns(lineChartData, appliedBreakdown, sorter, handleSorting);
+    tableData = getDateBasedTableData(data.map(elem => elem.label), originalData, appliedBreakdown, searchText, sorter);
   } else {
-    columns = getTableColumns(events, breakdown, sorter, handleSorting);
-    tableData = getDataInTableFormat(data, events, breakdown, searchText, sorter);
+    columns = getTableColumns(events, appliedBreakdown, sorter, handleSorting);
+    tableData = getDataInTableFormat(data, events, appliedBreakdown, searchText, sorter);
   }
 
   const visibleLabels = visibleProperties.map(elem => elem.label);
@@ -39,7 +37,7 @@ function SingleEventSingleBreakdownTable({
   const selectedRowKeys = [];
 
   tableData.forEach(elem => {
-    if (visibleLabels.indexOf(elem[breakdown[0]]) > -1) {
+    if (visibleLabels.indexOf(elem[appliedBreakdown[0]]) > -1) {
       selectedRowKeys.push(elem.index);
     }
   });
@@ -49,7 +47,7 @@ function SingleEventSingleBreakdownTable({
       return false;
     }
     const newVisibleProperties = selectedRows.map(elem => {
-      const obj = data.find(d => d.label === elem[breakdown[0]]);
+      const obj = data.find(d => d.label === elem[appliedBreakdown[0]]);
       return obj;
     });
     setVisibleProperties(newVisibleProperties);
@@ -61,13 +59,13 @@ function SingleEventSingleBreakdownTable({
   };
 
   return (
-        <DataTable
-            tableData={tableData}
-            searchText={searchText}
-            setSearchText={setSearchText}
-            columns={columns}
-            rowSelection={rowSelection}
-        />
+    <DataTable
+      tableData={tableData}
+      searchText={searchText}
+      setSearchText={setSearchText}
+      columns={columns}
+      rowSelection={rowSelection}
+    />
   );
 }
 

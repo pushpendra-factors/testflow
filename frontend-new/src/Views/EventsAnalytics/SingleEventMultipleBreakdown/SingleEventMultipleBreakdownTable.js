@@ -20,6 +20,7 @@ function SingleEventMultipleBreakdownTable({
   }, []);
 
   const nonDatecolumns = getTableColumns(breakdown, sorter, handleSorting);
+
   let columns;
   let tableData = [];
 
@@ -29,7 +30,6 @@ function SingleEventMultipleBreakdownTable({
     } else {
       tableData = getDateBasedUserTableData(data.map(elem => elem.label), originalData, breakdown, nonDatecolumns, searchText, sorter);
     }
-
     columns = getDateBasedColumns(lineChartData, breakdown, sorter, handleSorting);
   } else {
     tableData = getDataInTableFormat(data, nonDatecolumns, searchText, sorter);
@@ -71,13 +71,13 @@ function SingleEventMultipleBreakdownTable({
   };
 
   return (
-        <DataTable
-            tableData={tableData}
-            searchText={searchText}
-            setSearchText={setSearchText}
-            columns={columns}
-            rowSelection={rowSelection}
-        />
+    <DataTable
+      tableData={tableData}
+      searchText={searchText}
+      setSearchText={setSearchText}
+      columns={columns}
+      rowSelection={rowSelection}
+    />
   );
 }
 

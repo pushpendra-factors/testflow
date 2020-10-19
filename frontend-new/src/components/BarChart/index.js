@@ -3,8 +3,9 @@ import * as d3 from 'd3';
 import styles from '../../Views/CoreQuery/FunnelsResultPage/UngroupedChart/index.module.scss';
 import { checkForWindowSizeChange } from '../../Views/CoreQuery/FunnelsResultPage/utils';
 import { getMaxYpoint } from './utils';
+import ChartLegends from './ChartLegends';
 
-function BarChart({ chartData }) {
+function BarChart({ chartData, queries }) {
   const tooltip = useRef(null);
   const chartRef = useRef(null);
 
@@ -30,7 +31,7 @@ function BarChart({ chartData }) {
 
     tooltip.current
       .html(`
-                  <div>${d.label}</div>
+                  <div>${d.label.split(';')[0]}</div>
                   <div style="color: #0E2647;" class="mt-2 leading-5 text-base"><span class="font-semibold">${d.value}</span></div>
                 `)
       .style('opacity', 1)
@@ -84,7 +85,9 @@ function BarChart({ chartData }) {
     g.append('g')
       .attr('class', 'axis axis--x')
       .attr('transform', `translate(0,${height})`)
-      .call(d3.axisBottom(xScale));
+      .call(d3.axisBottom(xScale).tickFormat(d => {
+        return d.split(';')[0];
+      }));
 
     g.append('g')
       .attr('class', 'axis axis--y')
@@ -99,7 +102,9 @@ function BarChart({ chartData }) {
       .attr('class', () => {
         return 'bar';
       })
-      .attr('fill', '#4D7DB4')
+      .attr('fill', d => {
+        return d.color ? d.color : '#4D7DB4';
+      })
       .attr('x', d => xScale(d.label))
       .attr('y', d => yScale(d.value))
       .attr('width', xScale.bandwidth())
@@ -132,6 +137,14 @@ function BarChart({ chartData }) {
     <div className="w-full bar-chart">
       <div ref={chartRef} className={styles.ungroupedChart}>
       </div>
+      {queries && queries.length > 1 ? (
+        <div className="mt-4">
+          <ChartLegends
+            events={queries}
+            chartData={chartData}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }

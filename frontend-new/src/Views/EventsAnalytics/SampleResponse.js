@@ -21931,299 +21931,705 @@ export const SingleEventMultipleProperty3 = {
 };
 
 export const MultipleEventsMultipleBreakdown = {
-  headers: [
-    'datetime',
-    'event_name',
-    '_group_key_0',
-    '_group_key_1',
-    'count'
-  ],
-  rows: [
-    [
-      '2020-10-11T00:00:00+05:30',
-      'www.cars24.com/buy-used-car',
-      'Saturday',
-      'SMS',
-      20
-    ],
-    [
-      '2020-10-11T00:00:00+05:30',
-      'www.cars24.com/buy-used-car',
-      'Monday',
-      'adwords',
-      0
-    ],
-    [
-      '2020-10-11T00:00:00+05:30',
-      'www.cars24.com/account/appointments',
-      'Saturday',
-      '$none',
-      36
-    ],
-    [
-      '2020-10-11T00:00:00+05:30',
-      'www.cars24.com/buy-used-car',
-      'Monday',
-      'SMS',
-      0
-    ],
-    [
-      '2020-10-11T00:00:00+05:30',
-      'www.cars24.com/buy-used-car',
-      'Sunday',
-      '$none',
-      85687
-    ],
-    [
-      '2020-10-11T00:00:00+05:30',
-      'www.cars24.com/buy-used-car',
-      'Monday',
-      'personalised_gs',
-      0
-    ],
-    [
-      '2020-10-11T00:00:00+05:30',
-      'www.cars24.com/buy-used-car',
-      'Monday',
-      'Whatsapp',
-      0
-    ],
-    [
-      '2020-10-11T00:00:00+05:30',
-      'www.cars24.com/buy-used-car',
-      'Saturday',
-      '$none',
-      8536
-    ],
-    [
-      '2020-10-11T00:00:00+05:30',
-      'www.cars24.com/buy-used-car',
-      'Sunday',
-      'Whatsapp',
-      1029
-    ],
-    [
-      '2020-10-11T00:00:00+05:30',
-      'www.cars24.com/buy-used-car',
-      'Monday',
-      '$none',
-      0
-    ],
-    [
-      '2020-10-11T00:00:00+05:30',
-      'www.cars24.com/buy-used-car',
-      'Sunday',
-      'personalised_gs',
-      555
-    ],
-    [
-      '2020-10-11T00:00:00+05:30',
-      'www.cars24.com/buy-used-car',
-      'Sunday',
-      'SMS',
-      513
-    ],
-    [
-      '2020-10-11T00:00:00+05:30',
-      'www.cars24.com/account/appointments',
-      'Monday',
-      '$none',
-      0
-    ],
-    [
-      '2020-10-11T00:00:00+05:30',
-      'www.cars24.com/buy-used-car',
-      'Sunday',
-      'adwords',
-      2
-    ],
-    [
-      '2020-10-11T00:00:00+05:30',
-      'www.cars24.com/buy-used-car',
-      'Saturday',
-      'personalised_gs',
-      7
-    ],
-    [
-      '2020-10-11T00:00:00+05:30',
-      'www.cars24.com/buy-used-car',
-      'Saturday',
-      'Whatsapp',
-      62
-    ],
-    [
-      '2020-10-11T00:00:00+05:30',
-      'www.cars24.com/account/appointments',
-      'Sunday',
-      '$none',
-      10276
-    ],
-    [
-      '2020-10-12T00:00:00+05:30',
-      'www.cars24.com/buy-used-car',
-      'Sunday',
-      'SMS',
-      24
-    ],
-    [
-      '2020-10-12T00:00:00+05:30',
-      'www.cars24.com/buy-used-car',
-      'Sunday',
-      'Whatsapp',
-      73
-    ],
-    [
-      '2020-10-12T00:00:00+05:30',
-      'www.cars24.com/buy-used-car',
-      'Sunday',
-      'personalised_gs',
-      6
-    ],
-    [
-      '2020-10-12T00:00:00+05:30',
-      'www.cars24.com/buy-used-car',
-      'Monday',
-      'adwords',
-      2
-    ],
-    [
-      '2020-10-12T00:00:00+05:30',
-      'www.cars24.com/buy-used-car',
-      'Monday',
-      'SMS',
-      390
-    ],
-    [
-      '2020-10-12T00:00:00+05:30',
-      'www.cars24.com/buy-used-car',
-      'Monday',
-      'personalised_gs',
-      507
-    ],
-    [
-      '2020-10-12T00:00:00+05:30',
-      'www.cars24.com/account/appointments',
-      'Saturday',
-      '$none',
-      0
-    ],
-    [
-      '2020-10-12T00:00:00+05:30',
-      'www.cars24.com/buy-used-car',
-      'Monday',
-      'Whatsapp',
-      915
-    ],
-    [
-      '2020-10-12T00:00:00+05:30',
-      'www.cars24.com/buy-used-car',
-      'Saturday',
-      '$none',
-      0
-    ],
-    [
-      '2020-10-12T00:00:00+05:30',
-      'www.cars24.com/buy-used-car',
-      'Sunday',
-      '$none',
-      8590
-    ],
-    [
-      '2020-10-12T00:00:00+05:30',
-      'www.cars24.com/buy-used-car',
-      'Monday',
-      '$none',
-      75024
-    ],
-    [
-      '2020-10-12T00:00:00+05:30',
-      'www.cars24.com/account/appointments',
-      'Sunday',
-      '$none',
-      33
-    ],
-    [
-      '2020-10-12T00:00:00+05:30',
-      'www.cars24.com/buy-used-car',
-      'Saturday',
-      'Whatsapp',
-      0
-    ],
-    [
-      '2020-10-12T00:00:00+05:30',
-      'www.cars24.com/buy-used-car',
-      'Saturday',
-      'SMS',
-      0
-    ],
-    [
-      '2020-10-12T00:00:00+05:30',
-      'www.cars24.com/buy-used-car',
-      'Saturday',
-      'personalised_gs',
-      0
-    ],
-    [
-      '2020-10-12T00:00:00+05:30',
-      'www.cars24.com/account/appointments',
-      'Monday',
-      '$none',
-      7660
-    ],
-    [
-      '2020-10-12T00:00:00+05:30',
-      'www.cars24.com/buy-used-car',
-      'Sunday',
-      'adwords',
-      0
-    ]
-  ],
-  meta: {
-    query: {
-      cl: 'insights',
-      ty: 'events_occurrence',
-      ec: 'any_given_event',
-      ewp: [
-        {
-          na: 'www.cars24.com/account/appointments',
-          pr: [
-
-          ]
-        },
-        {
-          na: 'www.cars24.com/buy-used-car',
-          pr: [
-
-          ]
-        }
+  result_group: [
+    {
+      headers: [
+        'datetime',
+        'event_name',
+        '_group_key_0',
+        'count'
       ],
-      gbp: [
-        {
-          en: 'event',
-          pr: '$day_of_week',
-          in: 0,
-          pty: 'categorical',
-          ena: '',
-          eni: 0
-        },
-        {
-          en: 'event',
-          pr: '$medium',
-          in: 1,
-          pty: 'categorical',
-          ena: '',
-          eni: 0
-        }
+      rows: [
+        [
+          '2020-10-08T00:00:00+05:30',
+          'www.acme.com/product/collaboration',
+          'Firefox',
+          0
+        ],
+        [
+          '2020-10-08T00:00:00+05:30',
+          'www.acme.com/product/analytics',
+          'Chrome',
+          0
+        ],
+        [
+          '2020-10-08T00:00:00+05:30',
+          'www.acme.com/product/analytics',
+          'Internet Explorer',
+          0
+        ],
+        [
+          '2020-10-08T00:00:00+05:30',
+          'www.acme.com/product/collaboration',
+          'Unknown',
+          0
+        ],
+        [
+          '2020-10-08T00:00:00+05:30',
+          'www.acme.com/product/analytics',
+          'Safari',
+          0
+        ],
+        [
+          '2020-10-08T00:00:00+05:30',
+          'www.acme.com/product/analytics',
+          'Unknown',
+          0
+        ],
+        [
+          '2020-10-08T00:00:00+05:30',
+          'www.acme.com/product/collaboration',
+          'Safari',
+          0
+        ],
+        [
+          '2020-10-08T00:00:00+05:30',
+          'www.acme.com/product/collaboration',
+          'Internet Explorer',
+          0
+        ],
+        [
+          '2020-10-08T00:00:00+05:30',
+          'www.acme.com/product/collaboration',
+          'Chrome',
+          0
+        ],
+        [
+          '2020-10-08T00:00:00+05:30',
+          'www.acme.com/product/analytics',
+          'Firefox',
+          0
+        ],
+        [
+          '2020-10-09T00:00:00+05:30',
+          'www.acme.com/product/collaboration',
+          'Chrome',
+          0
+        ],
+        [
+          '2020-10-09T00:00:00+05:30',
+          'www.acme.com/product/collaboration',
+          'Firefox',
+          0
+        ],
+        [
+          '2020-10-09T00:00:00+05:30',
+          'www.acme.com/product/analytics',
+          'Unknown',
+          0
+        ],
+        [
+          '2020-10-09T00:00:00+05:30',
+          'www.acme.com/product/collaboration',
+          'Internet Explorer',
+          0
+        ],
+        [
+          '2020-10-09T00:00:00+05:30',
+          'www.acme.com/product/analytics',
+          'Chrome',
+          0
+        ],
+        [
+          '2020-10-09T00:00:00+05:30',
+          'www.acme.com/product/collaboration',
+          'Unknown',
+          0
+        ],
+        [
+          '2020-10-09T00:00:00+05:30',
+          'www.acme.com/product/collaboration',
+          'Safari',
+          0
+        ],
+        [
+          '2020-10-09T00:00:00+05:30',
+          'www.acme.com/product/analytics',
+          'Internet Explorer',
+          0
+        ],
+        [
+          '2020-10-09T00:00:00+05:30',
+          'www.acme.com/product/analytics',
+          'Safari',
+          0
+        ],
+        [
+          '2020-10-09T00:00:00+05:30',
+          'www.acme.com/product/analytics',
+          'Firefox',
+          0
+        ],
+        [
+          '2020-10-10T00:00:00+05:30',
+          'www.acme.com/product/collaboration',
+          'Safari',
+          0
+        ],
+        [
+          '2020-10-10T00:00:00+05:30',
+          'www.acme.com/product/analytics',
+          'Safari',
+          0
+        ],
+        [
+          '2020-10-10T00:00:00+05:30',
+          'www.acme.com/product/analytics',
+          'Unknown',
+          0
+        ],
+        [
+          '2020-10-10T00:00:00+05:30',
+          'www.acme.com/product/analytics',
+          'Firefox',
+          0
+        ],
+        [
+          '2020-10-10T00:00:00+05:30',
+          'www.acme.com/product/collaboration',
+          'Unknown',
+          0
+        ],
+        [
+          '2020-10-10T00:00:00+05:30',
+          'www.acme.com/product/collaboration',
+          'Firefox',
+          0
+        ],
+        [
+          '2020-10-10T00:00:00+05:30',
+          'www.acme.com/product/analytics',
+          'Chrome',
+          0
+        ],
+        [
+          '2020-10-10T00:00:00+05:30',
+          'www.acme.com/product/collaboration',
+          'Internet Explorer',
+          0
+        ],
+        [
+          '2020-10-10T00:00:00+05:30',
+          'www.acme.com/product/collaboration',
+          'Chrome',
+          0
+        ],
+        [
+          '2020-10-10T00:00:00+05:30',
+          'www.acme.com/product/analytics',
+          'Internet Explorer',
+          0
+        ],
+        [
+          '2020-10-11T00:00:00+05:30',
+          'www.acme.com/product/analytics',
+          'Safari',
+          0
+        ],
+        [
+          '2020-10-11T00:00:00+05:30',
+          'www.acme.com/product/analytics',
+          'Firefox',
+          0
+        ],
+        [
+          '2020-10-11T00:00:00+05:30',
+          'www.acme.com/product/collaboration',
+          'Internet Explorer',
+          0
+        ],
+        [
+          '2020-10-11T00:00:00+05:30',
+          'www.acme.com/product/collaboration',
+          'Unknown',
+          0
+        ],
+        [
+          '2020-10-11T00:00:00+05:30',
+          'www.acme.com/product/analytics',
+          'Unknown',
+          0
+        ],
+        [
+          '2020-10-11T00:00:00+05:30',
+          'www.acme.com/product/analytics',
+          'Chrome',
+          0
+        ],
+        [
+          '2020-10-11T00:00:00+05:30',
+          'www.acme.com/product/analytics',
+          'Internet Explorer',
+          0
+        ],
+        [
+          '2020-10-11T00:00:00+05:30',
+          'www.acme.com/product/collaboration',
+          'Firefox',
+          0
+        ],
+        [
+          '2020-10-11T00:00:00+05:30',
+          'www.acme.com/product/collaboration',
+          'Chrome',
+          0
+        ],
+        [
+          '2020-10-11T00:00:00+05:30',
+          'www.acme.com/product/collaboration',
+          'Safari',
+          0
+        ],
+        [
+          '2020-10-12T00:00:00+05:30',
+          'www.acme.com/product/collaboration',
+          'Internet Explorer',
+          314
+        ],
+        [
+          '2020-10-12T00:00:00+05:30',
+          'www.acme.com/product/collaboration',
+          'Firefox',
+          183
+        ],
+        [
+          '2020-10-12T00:00:00+05:30',
+          'www.acme.com/product/analytics',
+          'Internet Explorer',
+          157
+        ],
+        [
+          '2020-10-12T00:00:00+05:30',
+          'www.acme.com/product/collaboration',
+          'Safari',
+          168
+        ],
+        [
+          '2020-10-12T00:00:00+05:30',
+          'www.acme.com/product/analytics',
+          'Firefox',
+          301
+        ],
+        [
+          '2020-10-12T00:00:00+05:30',
+          'www.acme.com/product/analytics',
+          'Chrome',
+          445
+        ],
+        [
+          '2020-10-12T00:00:00+05:30',
+          'www.acme.com/product/analytics',
+          'Unknown',
+          0
+        ],
+        [
+          '2020-10-12T00:00:00+05:30',
+          'www.acme.com/product/collaboration',
+          'Unknown',
+          0
+        ],
+        [
+          '2020-10-12T00:00:00+05:30',
+          'www.acme.com/product/collaboration',
+          'Chrome',
+          507
+        ],
+        [
+          '2020-10-12T00:00:00+05:30',
+          'www.acme.com/product/analytics',
+          'Safari',
+          165
+        ],
+        [
+          '2020-10-13T00:00:00+05:30',
+          'www.acme.com/product/collaboration',
+          'Chrome',
+          802
+        ],
+        [
+          '2020-10-13T00:00:00+05:30',
+          'www.acme.com/product/analytics',
+          'Firefox',
+          320
+        ],
+        [
+          '2020-10-13T00:00:00+05:30',
+          'www.acme.com/product/analytics',
+          'Internet Explorer',
+          309
+        ],
+        [
+          '2020-10-13T00:00:00+05:30',
+          'www.acme.com/product/collaboration',
+          'Safari',
+          345
+        ],
+        [
+          '2020-10-13T00:00:00+05:30',
+          'www.acme.com/product/analytics',
+          'Unknown',
+          127
+        ],
+        [
+          '2020-10-13T00:00:00+05:30',
+          'www.acme.com/product/analytics',
+          'Safari',
+          0
+        ],
+        [
+          '2020-10-13T00:00:00+05:30',
+          'www.acme.com/product/collaboration',
+          'Unknown',
+          176
+        ],
+        [
+          '2020-10-13T00:00:00+05:30',
+          'www.acme.com/product/collaboration',
+          'Firefox',
+          478
+        ],
+        [
+          '2020-10-13T00:00:00+05:30',
+          'www.acme.com/product/collaboration',
+          'Internet Explorer',
+          145
+        ],
+        [
+          '2020-10-13T00:00:00+05:30',
+          'www.acme.com/product/analytics',
+          'Chrome',
+          1066
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/product/collaboration',
+          'Unknown',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/product/analytics',
+          'Internet Explorer',
+          301
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/product/analytics',
+          'Safari',
+          306
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/product/collaboration',
+          'Internet Explorer',
+          814
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/product/analytics',
+          'Unknown',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/product/collaboration',
+          'Safari',
+          165
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/product/analytics',
+          'Chrome',
+          912
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/product/collaboration',
+          'Firefox',
+          164
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/product/analytics',
+          'Firefox',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/product/collaboration',
+          'Chrome',
+          533
+        ]
       ],
-      gbt: 'date',
-      tz: 'Asia/Calcutta',
-      fr: 1602354600,
-      to: 1602527399,
-      ovp: false,
-      sse: 0,
-      see: 0
-    },
-    currency: '',
-    metrics: null
-  }
+      meta: {
+        query: {
+          cl: 'events',
+          ty: 'events_occurrence',
+          ec: 'any_given_event',
+          ewp: [
+            {
+              na: 'www.acme.com/product/collaboration',
+              pr: [
+
+              ]
+            },
+            {
+              na: 'www.acme.com/product/analytics',
+              pr: [
+
+              ]
+            }
+          ],
+          gbp: [
+            {
+              en: 'event',
+              pr: 'Browser',
+              in: 0,
+              pty: 'categorical',
+              ena: '',
+              eni: 0
+            }
+          ],
+          gbt: 'date',
+          tz: 'Asia/Kolkata',
+          fr: 1602095400,
+          to: 1602687836,
+          ovp: false,
+          sse: 0,
+          see: 0
+        },
+        currency: '',
+        metrics: null
+      }
+    }
+  ]
+};
+
+export const MultipleEventsMultipleBreakdownUserData = {
+  result_group: [
+    {
+      headers: [
+        'datetime',
+        '_group_key_0',
+        'count'
+      ],
+      rows: [
+        [
+          '2020-10-09T00:00:00+05:30',
+          'Firefox',
+          0
+        ],
+        [
+          '2020-10-09T00:00:00+05:30',
+          'Chrome',
+          0
+        ],
+        [
+          '2020-10-09T00:00:00+05:30',
+          'Unknown',
+          0
+        ],
+        [
+          '2020-10-09T00:00:00+05:30',
+          'Internet Explorer',
+          0
+        ],
+        [
+          '2020-10-09T00:00:00+05:30',
+          'Safari',
+          0
+        ],
+        [
+          '2020-10-10T00:00:00+05:30',
+          'Chrome',
+          0
+        ],
+        [
+          '2020-10-10T00:00:00+05:30',
+          'Internet Explorer',
+          0
+        ],
+        [
+          '2020-10-10T00:00:00+05:30',
+          'Unknown',
+          0
+        ],
+        [
+          '2020-10-10T00:00:00+05:30',
+          'Firefox',
+          0
+        ],
+        [
+          '2020-10-10T00:00:00+05:30',
+          'Safari',
+          0
+        ],
+        [
+          '2020-10-11T00:00:00+05:30',
+          'Firefox',
+          0
+        ],
+        [
+          '2020-10-11T00:00:00+05:30',
+          'Chrome',
+          0
+        ],
+        [
+          '2020-10-11T00:00:00+05:30',
+          'Safari',
+          0
+        ],
+        [
+          '2020-10-11T00:00:00+05:30',
+          'Internet Explorer',
+          0
+        ],
+        [
+          '2020-10-11T00:00:00+05:30',
+          'Unknown',
+          0
+        ],
+        [
+          '2020-10-12T00:00:00+05:30',
+          'Unknown',
+          862
+        ],
+        [
+          '2020-10-12T00:00:00+05:30',
+          'Chrome',
+          1174
+        ],
+        [
+          '2020-10-12T00:00:00+05:30',
+          'Internet Explorer',
+          252
+        ],
+        [
+          '2020-10-12T00:00:00+05:30',
+          'Firefox',
+          937
+        ],
+        [
+          '2020-10-12T00:00:00+05:30',
+          'Safari',
+          0
+        ],
+        [
+          '2020-10-13T00:00:00+05:30',
+          'Unknown',
+          0
+        ],
+        [
+          '2020-10-13T00:00:00+05:30',
+          'Firefox',
+          1397
+        ],
+        [
+          '2020-10-13T00:00:00+05:30',
+          'Chrome',
+          2487
+        ],
+        [
+          '2020-10-13T00:00:00+05:30',
+          'Internet Explorer',
+          1071
+        ],
+        [
+          '2020-10-13T00:00:00+05:30',
+          'Safari',
+          242
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'Firefox',
+          1128
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'Internet Explorer',
+          878
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'Unknown',
+          456
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'Safari',
+          208
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'Chrome',
+          2599
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'Chrome',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'Unknown',
+          225
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'Firefox',
+          254
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'Internet Explorer',
+          492
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'Safari',
+          0
+        ]
+      ],
+      meta: {
+        query: {
+          cl: 'events',
+          ty: 'unique_users',
+          ec: 'any_given_event',
+          ewp: [
+            {
+              na: 'www.acme.com/product',
+              pr: [
+
+              ]
+            },
+            {
+              na: 'www.acme.com/solutions',
+              pr: [
+
+              ]
+            }
+          ],
+          gbp: [
+            {
+              en: 'event',
+              pr: 'Browser',
+              in: 0,
+              pty: 'categorical',
+              ena: '',
+              eni: 0
+            }
+          ],
+          gbt: 'date',
+          tz: 'Asia/Kolkata',
+          fr: 1602181800,
+          to: 1602718083,
+          ovp: false,
+          sse: 0,
+          see: 0
+        },
+        currency: '',
+        metrics: null
+      }
+    }
+  ]
 };

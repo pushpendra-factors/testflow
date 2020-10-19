@@ -1,6 +1,5 @@
 import React, { useState, useCallback } from 'react';
 import { connect } from 'react-redux';
-import moment from 'moment';
 import FunnelsResultPage from './FunnelsResultPage';
 import QueryComposer from '../../components/QueryComposer';
 import CoreQueryHome from '../CoreQueryHome';
@@ -9,7 +8,7 @@ import { SVG, Text } from '../../components/factorsComponents';
 import EventsAnalytics from '../EventsAnalytics';
 import { runQuery as runQueryService } from '../../reducers/coreQuery/services';
 import {
-  initialResultState, calculateFrequencyData, calculateActiveUsersData, hasApiFailed, calculateFrequencyDataForBreakdown, calculateActiveUsersDataForBreakdown
+  initialResultState, calculateFrequencyData, calculateActiveUsersData, hasApiFailed, formatApiData, getQuery
 } from './utils';
 
 function CoreQuery({ activeProject }) {
@@ -49,73 +48,6 @@ function CoreQuery({ activeProject }) {
     setQueries(queryupdated);
   };
 
-  const getEventsWithProperties = useCallback(() => {
-    const ewps = [];
-    queries.forEach(ev => {
-      ewps.push({
-        na: ev.label,
-        pr: []
-      });
-    });
-    return ewps;
-  }, [queries]);
-
-  const getQuery = useCallback((activeTab) => {
-    const query = {};
-    query.cl = queryType === 'event' ? 'events' : 'funnel';
-    query.ty = parseInt(activeTab) === 1 ? 'unique_users' : 'events_occurrence';
-
-    // Check date range validity
-
-    // let period = getQueryPeriod(this.state.resultDateRange[0], this.state.timeZone)
-
-    const period = {
-      from: moment().subtract(6, 'days').startOf('day').utc().unix(),
-      to: moment().utc().unix()
-    };
-
-    query.fr = period.from;
-    query.to = period.to;
-
-    query.gbp = [];
-
-    if (activeTab === '2') {
-      query.ewp = [
-        {
-          na: '$session',
-          pr: []
-        }
-      ];
-      query.gbt = '';
-    } else {
-      query.ewp = getEventsWithProperties();
-      query.gbt = 'date';
-      // send event group by first and then user group byu
-
-      const groupBy = [...queryOptions.groupBy.filter(elem => elem.prop_category)].sort((a, b) => {
-        return a.prop_category >= b.prop_category ? 1 : -1;
-      });
-
-      query.gbp = groupBy
-        .map(opt => {
-          return {
-            pr: opt.property,
-            en: opt.prop_category,
-            pty: opt.prop_type
-          };
-        });
-    }
-
-    if (query.gbp.length) {
-      query.ec = 'any_given_event';
-    } else {
-      query.ec = 'each_given_event';
-    }
-
-    query.tz = 'Asia/Kolkata';
-    return query;
-  }, [getEventsWithProperties, queryType, queryOptions.groupBy]);
-
   const closeDrawer = () => {
     setDrawerVisible(false);
   };
@@ -137,22 +69,20 @@ function CoreQuery({ activeProject }) {
   }, []);
 
   const updateAppliedBreakdown = useCallback(() => {
-    let newAppliedBreakdown = queryOptions.groupBy.filter(elem => elem.prop_category).sort((a, b) => {
+    const newAppliedBreakdown = queryOptions.groupBy.filter(elem => elem.prop_category).sort((a, b) => {
       return a.prop_category >= b.prop_category ? 1 : -1;
     });
-    if (newAppliedBreakdown.length === 1) {
-      newAppliedBreakdown = [newAppliedBreakdown[0].property];
-    }
     setAppliedBreakdown(newAppliedBreakdown);
   }, [queryOptions.groupBy]);
 
   const callRunQueryApiService = useCallback(async (activeProjectId, activeTab) => {
     try {
-      const query = getQuery(activeTab);
+      const query = getQuery(activeTab, queryType, queryOptions, queries);
       const res = await runQueryService(activeProjectId, [query]);
       if (res.status === 200 && !hasApiFailed(res)) {
         if (activeTab !== '2') {
-          updateResultState(activeTab, { loading: false, error: false, data: res.data });
+          const bkDown = queryOptions.groupBy.filter(elem => elem.prop_category);
+          updateResultState(activeTab, { loading: false, error: false, data: formatApiData(res.data.result_group[0], bkDown) });
         }
         return res.data;
       } else {
@@ -160,10 +90,11 @@ function CoreQuery({ activeProject }) {
         return null;
       }
     } catch (err) {
+      console.log(err);
       updateResultState(activeTab, { loading: false, error: true, data: null });
       return null;
     }
-  }, [updateResultState, getQuery]);
+  }, [updateResultState, queryType, queryOptions, queries]);
 
   const runQuery = useCallback(async (activeTab, refresh = false) => {
     setActiveKey(activeTab);
@@ -174,54 +105,51 @@ function CoreQuery({ activeProject }) {
       }
 
       if (activeTab === '2') {
-        let activeUsersData = null;
         updateResultState(activeTab, { loading: true, error: false, data: null });
+
+        let activeUsersData = null; let userData = null; let sessionData = null; ;
+
         if (resultState[1].data) {
-          // get only session data
           const res = await callRunQueryApiService(activeProject.id, '2');
+          userData = resultState[1].data;
           if (res) {
-            if (!appliedBreakdown.length) {
-              activeUsersData = calculateActiveUsersData(resultState[1].data, res);
-            } else {
-              activeUsersData = calculateActiveUsersDataForBreakdown(resultState[1].data, res);
-            }
+            sessionData = res.result_group[0];
           }
         } else {
           // combine these two and make one query group to get both session and user data
-          const userData = await callRunQueryApiService(activeProject.id, '1');
-          const sessionData = await callRunQueryApiService(activeProject.id, '2');
-          if (userData && sessionData) {
-            if (!appliedBreakdown.length) {
-              activeUsersData = calculateActiveUsersData(userData, sessionData);
-            } else {
-              activeUsersData = calculateActiveUsersDataForBreakdown(userData, sessionData);
-            }
+          const res1 = await callRunQueryApiService(activeProject.id, '1');
+          const res2 = await callRunQueryApiService(activeProject.id, '2');
+          if (res1 && res2) {
+            userData = formatApiData(res1.result_group[0], appliedBreakdown);
+            sessionData = res2.result_group[0];
           }
+        }
+
+        if (userData && sessionData) {
+          activeUsersData = calculateActiveUsersData(userData, sessionData, appliedBreakdown);
         }
         updateResultState(activeTab, { loading: false, error: false, data: activeUsersData });
         return false;
       }
 
       if (activeTab === '3') {
-        let frequencyData = null;
+        let frequencyData = null; let userData = null;
+        const eventData = resultState[0].data;
+
         if (resultState[1].data) {
-          if (!appliedBreakdown.length) {
-            frequencyData = calculateFrequencyData(resultState[0].data, resultState[1].data);
-          } else {
-            frequencyData = calculateFrequencyDataForBreakdown(resultState[0].data, resultState[1].data);
-          }
+          userData = resultState[1].data;
         } else {
-          // get user data
           updateResultState(activeTab, { loading: true, error: false, data: null });
           const res = await callRunQueryApiService(activeProject.id, '1');
           if (res) {
-            if (!appliedBreakdown.length) {
-              frequencyData = calculateFrequencyData(resultState[0].data, res);
-            } else {
-              frequencyData = calculateFrequencyDataForBreakdown(resultState[0].data, res);
-            }
+            userData = formatApiData(res.result_group[0], appliedBreakdown);
           }
         }
+
+        if (userData && eventData) {
+          frequencyData = calculateFrequencyData(eventData, userData, appliedBreakdown);
+        }
+
         updateResultState(activeTab, { loading: false, error: false, data: frequencyData });
         return false;
       }
@@ -238,7 +166,7 @@ function CoreQuery({ activeProject }) {
 
     updateResultState(activeTab, { loading: true, error: false, data: null });
     callRunQueryApiService(activeProject.id, activeTab);
-  }, [activeProject, resultState, queries, updateResultState, callRunQueryApiService, updateAppliedBreakdown, appliedBreakdown.length]);
+  }, [activeProject, resultState, queries, updateResultState, callRunQueryApiService, updateAppliedBreakdown, appliedBreakdown]);
 
   const title = () => {
     return (
