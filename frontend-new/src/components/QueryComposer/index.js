@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import {
-  Button, Collapse, Select, Popover, DatePicker
+  Button, Collapse, Select, Popover
 } from 'antd';
 import { SVG, Text } from '../factorsComponents';
 import styles from './index.module.scss';

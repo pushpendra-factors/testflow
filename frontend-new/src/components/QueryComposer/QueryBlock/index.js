@@ -84,7 +84,7 @@ function QueryBlock({
   };
 
   const addGroupBy = () => {
-    setGroupByDDVisible(true);
+    // setGroupByDDVisible(true);
   };
 
   const addFilter = () => {
