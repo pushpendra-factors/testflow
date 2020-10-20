@@ -1838,7 +1838,7 @@ func TestSDKAMPIdentifyHandler(t *testing.T) {
 
 	cUID := "1234"
 	params := fmt.Sprintf("token=%s&client_id=%s&customer_user_id=%s", project.Token, clientID, cUID)
-	response := ServeGetRequest(r, uri+"?"+params)
+	response := ServePostRequest(r, uri+"?"+params, []byte{})
 	assert.Equal(t, http.StatusOK, response.Code)
 	jsonResponse, _ := ioutil.ReadAll(response.Body)
 	var jsonResponseMap map[string]interface{}
