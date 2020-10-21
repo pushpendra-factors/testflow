@@ -5,7 +5,6 @@ import { createStore, compose, applyMiddleware } from 'redux';
 import thunk from 'redux-thunk';
 import { createPromise } from 'redux-promise-middleware';
 import reducers from './reducers';
-// import 'antd/dist/antd.css';
 import './assets/tailwind.output.css';
 import './assets/index.scss';
 import './styles/factors-ai.main.scss';

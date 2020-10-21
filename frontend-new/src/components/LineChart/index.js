@@ -133,11 +133,13 @@ function LineChart({
         grouped: false,
         contents: (d) => {
           const data = d[0];
+          let label = reverseEventsMapper[data.name];
+          label = label.split(',').filter(elem => elem).join(',');
           return (
             `   
               <div class="toolTip">
                   <div class="font-semibold">${moment(data.x).format('MMM D, YYYY')}</div>
-                  <div class="my-2">${reverseEventsMapper[data.name]}</div>
+                  <div class="my-2">${label}</div>
                   <div class="flex items-center justify-start">
                       <div class="mr-1" style="background-color:${colors[data.name]};width:16px;height:16px;border-radius:8px"></div>
                       <div style="color:#0E2647;font-size:18px;line-height:24px">${data.value}</div>
@@ -160,18 +162,18 @@ function LineChart({
   }, [displayChart]);
 
   return (
-        <div className="flex flex-col w-full">
-            <div className={styles.lineChart} ref={chartRef} />
-            <ChartLegends
-                colors={colors}
-                events={queries}
-                eventsMapper={eventsMapper}
-                focusHoveredLines={focusHoveredLines}
-                focusAllLines={focusAllLines}
-                setHiddenEvents={setHiddenEvents}
-                hiddenEvents={hiddenEvents}
-            />
-        </div>
+    <div className="flex flex-col w-full">
+      <div className={styles.lineChart} ref={chartRef} />
+      <ChartLegends
+        colors={colors}
+        events={queries}
+        eventsMapper={eventsMapper}
+        focusHoveredLines={focusHoveredLines}
+        focusAllLines={focusAllLines}
+        setHiddenEvents={setHiddenEvents}
+        hiddenEvents={hiddenEvents}
+      />
+    </div>
 
   );
 }

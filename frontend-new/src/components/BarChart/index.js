@@ -9,6 +9,12 @@ function BarChart({ chartData, queries }) {
   const tooltip = useRef(null);
   const chartRef = useRef(null);
 
+  const getLabel = (str) => {
+    let label = str.split(';')[0];
+    label = label.split(',').filter(elem => elem).join(',');
+    return label;
+  };
+
   const showTooltip = useCallback((d, i) => {
     const nodes = d3.select(chartRef.current).selectAll('.bar').nodes();
     nodes.forEach((node, index) => {
@@ -31,7 +37,7 @@ function BarChart({ chartData, queries }) {
 
     tooltip.current
       .html(`
-                  <div>${d.label.split(';')[0]}</div>
+                  <div>${getLabel(d.label)}</div>
                   <div style="color: #0E2647;" class="mt-2 leading-5 text-base"><span class="font-semibold">${d.value}</span></div>
                 `)
       .style('opacity', 1)
@@ -86,7 +92,7 @@ function BarChart({ chartData, queries }) {
       .attr('class', 'axis axis--x')
       .attr('transform', `translate(0,${height})`)
       .call(d3.axisBottom(xScale).tickFormat(d => {
-        return d.split(';')[0];
+        return getLabel(d);
       }));
 
     g.append('g')

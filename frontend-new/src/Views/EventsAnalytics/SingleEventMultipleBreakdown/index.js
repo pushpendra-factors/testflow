@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  formatData, formatDataInLineChartFormat, formatUserData, formatUserDataInLineChartFormat
+  formatData, formatDataInLineChartFormat
 } from './utils';
 import BarChart from '../../../components/BarChart';
 import LineChart from '../../../components/LineChart';
@@ -13,22 +13,16 @@ function SingleEventMultipleBreakdown({
 }) {
   const [chartsData, setChartsData] = useState([]);
   const [visibleProperties, setVisibleProperties] = useState([]);
-  const [chartType, setChartType] = useState('linechart');
+  const [chartType, setChartType] = useState('barchart');
   const [hiddenProperties, setHiddenProperties] = useState([]);
 
   const maxAllowedVisibleProperties = 5;
 
   useEffect(() => {
-    let formattedData;
-    if (page === 'totalEvents') {
-      formattedData = formatData(resultState.data);
-    } else {
-      formattedData = formatUserData(resultState.data);
-    }
-
+    const formattedData = formatData(resultState.data);
     setChartsData(formattedData);
     setVisibleProperties([...formattedData.slice(0, maxAllowedVisibleProperties)]);
-  }, [resultState.data, page]);
+  }, [resultState.data]);
 
   if (!chartsData.length) {
     return null;
@@ -57,13 +51,7 @@ function SingleEventMultipleBreakdown({
     reverseMapper[`event${index + 1}`] = q;
   });
 
-  let lineChartData;
-
-  if (page === 'totalEvents') {
-    lineChartData = formatDataInLineChartFormat(resultState.data, visibleProperties, mapper, hiddenProperties);
-  } else {
-    lineChartData = formatUserDataInLineChartFormat(resultState.data, visibleProperties, mapper, hiddenProperties);
-  }
+  const lineChartData = formatDataInLineChartFormat(resultState.data, visibleProperties, mapper, hiddenProperties);
 
   const appliedColors = generateColors(visibleProperties.length);
 
@@ -88,7 +76,7 @@ function SingleEventMultipleBreakdown({
           eventsMapper={mapper}
           setHiddenEvents={setHiddenProperties}
           hiddenEvents={hiddenProperties}
-          isDecimalAllowed = {page === 'activeUsers' || page === 'frequency'}
+          isDecimalAllowed={page === 'activeUsers' || page === 'frequency'}
         />
       </div>
     );
@@ -122,7 +110,6 @@ function SingleEventMultipleBreakdown({
           visibleProperties={visibleProperties}
           maxAllowedVisibleProperties={maxAllowedVisibleProperties}
           originalData={resultState.data}
-          page={page}
         />
       </div>
     </div>

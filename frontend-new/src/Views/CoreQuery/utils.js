@@ -1,8 +1,105 @@
 import moment from 'moment';
 
+const constantObj = {
+  each: 'each_given_event',
+  any: 'any_given_event',
+  all: 'all_given_event'
+};
+
 export const initialResultState = [1, 2, 3, 4].map(() => {
   return { loading: false, error: false, data: null };
 });
+
+const getEventsWithProperties = (queries) => {
+  const ewps = [];
+  queries.forEach(ev => {
+    ewps.push({
+      na: ev.label,
+      pr: []
+    });
+  });
+  return ewps;
+};
+
+export const getQuery = (activeTab, queryType, queryOptions, queries, breakdownType = 'each') => {
+  const query = {};
+  query.cl = queryType === 'event' ? 'events' : 'funnel';
+  query.ty = parseInt(activeTab) === 1 ? 'unique_users' : 'events_occurrence';
+
+  const period = {
+    from: moment().subtract(7, 'days').startOf('day').utc().unix(),
+    to: moment().utc().unix()
+  };
+
+  query.fr = period.from;
+  query.to = period.to;
+
+  if (activeTab === '2') {
+    query.ewp = [
+      {
+        na: '$session',
+        pr: []
+      }
+    ];
+    query.gbt = '';
+  } else {
+    query.ewp = getEventsWithProperties(queries);
+    query.gbt = 'date';
+
+    const groupBy = [...queryOptions.groupBy.filter(elem => elem.prop_category)].sort((a, b) => {
+      return a.prop_category >= b.prop_category ? 1 : -1;
+    });
+
+    // let i = 0;
+
+    const eventsArr = ['www.acme.com/product'];
+
+    query.gbp = groupBy
+      .map(opt => {
+        return {
+          pr: opt.property,
+          en: opt.prop_category,
+          pty: opt.prop_type,
+          ena: eventsArr[0],
+          eni: 1
+        };
+      });
+
+    // query.gbp = [
+    //   {
+    //     pr: "Browser",
+    //     en: "event",
+    //     pty: "categorical",
+    //     ena: "www.acme.com/pricing",
+    //     eni: 1
+    //   },
+    //   // {
+    //   //   pr: "Referrer",
+    //   //   en: "event",
+    //   //   pty: "categorical",
+    //   //   ena: "www.acme.com/solutions",
+    //   //   eni: 2
+    //   // },
+    //   {
+    //     pr: "Device Type",
+    //     en: "event",
+    //     pty: "categorical",
+    //     ena: "www.acme.com/product",
+    //     eni: 2
+    //   },
+    //   // {
+    //   //   pr: "Page Spent Time",
+    //   //   en: "event",
+    //   //   pty: "categorical",
+    //   //   ena: "www.acme.com/resources",
+    //   //   eni: 4
+    //   // }
+    // ]
+  }
+  query.ec = constantObj[breakdownType];
+  query.tz = 'Asia/Kolkata';
+  return query;
+};
 
 export const calculateFrequencyData = (eventData, userData, appliedBreakdown) => {
   if (appliedBreakdown.length) {
@@ -34,9 +131,12 @@ const getEventIdx = (eventData, userObj) => {
 export const calculateFrequencyDataForBreakdown = (eventData, userData) => {
   const rows = userData.rows.map(userObj => {
     const eventIdx = getEventIdx(eventData.rows, userObj);
-    const eventObj = eventData.rows[eventIdx];
+    let eventObj = null;
+    if (eventIdx > -1) {
+      eventObj = eventData.rows[eventIdx];
+    }
     let eVal = 0;
-    if (eventObj[eventObj.length - 1] && userObj[userObj.length - 1]) {
+    if (eventObj && eventObj[eventObj.length - 1] && userObj[userObj.length - 1]) {
       eVal = eventObj[eventObj.length - 1] / userObj[userObj.length - 1];
       eVal = eVal % 1 !== 0 ? parseFloat(eVal.toFixed(2)) : eVal;
     }
@@ -58,7 +158,7 @@ const calculateActiveUsersDataForNoBreakdown = (userData, sessionData) => {
   const rows = userData.rows.map((elem) => {
     const eventVals = elem.slice(1).map((e) => {
       if (!e) return e;
-      const eVal = sessionData.rows[0][0] / e;
+      const eVal = sessionData.rows[0][1] / e;
       return eVal % 1 !== 0 ? parseFloat(eVal.toFixed(2)) : eVal;
     });
     return [elem[0], ...eventVals];
@@ -71,7 +171,7 @@ const calculateActiveUsersDataForBreakdown = (userData, sessionData) => {
   const rows = userData.rows.map((elem) => {
     const eventVals = elem.slice(elem.length - 1).map((e) => {
       if (!e) return e;
-      const eVal = sessionData.rows[0][0] / e;
+      const eVal = sessionData.rows[0][1] / e;
       return eVal % 1 !== 0 ? parseFloat(eVal.toFixed(2)) : eVal;
     });
     return [...elem.slice(0, elem.length - 1), ...eventVals];
@@ -81,7 +181,7 @@ const calculateActiveUsersDataForBreakdown = (userData, sessionData) => {
 };
 
 export const hasApiFailed = (res) => {
-  if (res && res.headers && (res.headers.indexOf('error') > -1)) {
+  if (res.data && res.data.result_group && res.data.result_group[0] && res.data.result_group[0].headers && (res.data.result_group[0].headers.indexOf('error') > -1)) {
     return true;
   }
   return false;
@@ -110,63 +210,4 @@ export const formatApiData = (data, appliedBreakdown) => {
     }
   }
   return result;
-};
-
-const getEventsWithProperties = (queries) => {
-  const ewps = [];
-  queries.forEach(ev => {
-    ewps.push({
-      na: ev.label,
-      pr: []
-    });
-  });
-  return ewps;
-};
-
-export const getQuery = (activeTab, queryType, queryOptions, queries) => {
-  const query = {};
-  query.cl = queryType === 'event' ? 'events' : 'funnel';
-  query.ty = parseInt(activeTab) === 1 ? 'unique_users' : 'events_occurrence';
-
-  const period = {
-    from: moment().subtract(6, 'days').startOf('day').utc().unix(),
-    to: moment().utc().unix()
-  };
-
-  query.fr = period.from;
-  query.to = period.to;
-
-  if (activeTab === '2') {
-    query.ewp = [
-      {
-        na: '$session',
-        pr: []
-      }
-    ];
-    query.gbt = '';
-  } else {
-    query.ewp = getEventsWithProperties(queries);
-    query.gbt = 'date';
-
-    const groupBy = [...queryOptions.groupBy.filter(elem => elem.prop_category)].sort((a, b) => {
-      return a.prop_category >= b.prop_category ? 1 : -1;
-    });
-
-    let i = 0;
-
-    query.gbp = groupBy
-      .map(opt => {
-        i++;
-        return {
-          pr: opt.property,
-          en: opt.prop_category,
-          pty: opt.prop_type,
-          ena: 'www.acme.com/product',
-          eni: i
-        };
-      });
-  }
-  query.ec = 'each_given_event';
-  query.tz = 'Asia/Kolkata';
-  return query;
 };

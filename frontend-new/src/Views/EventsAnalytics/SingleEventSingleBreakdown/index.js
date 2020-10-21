@@ -19,8 +19,7 @@ function SingleEventSingleBreakdown({
   const maxAllowedVisibleProperties = 7;
 
   useEffect(() => {
-    let formattedData;
-    formattedData = formatData(resultState.data);
+    const formattedData = formatData(resultState.data);
     setChartsData(formattedData);
     setVisibleProperties([...formattedData.slice(0, maxAllowedVisibleProperties)]);
   }, [resultState.data]);
@@ -52,9 +51,7 @@ function SingleEventSingleBreakdown({
     reverseMapper[`event${index + 1}`] = q;
   });
 
-  let lineChartData;
-
-  lineChartData = formatDataInLineChartFormat(resultState.data, visibleProperties, mapper, hiddenProperties);
+  const lineChartData = formatDataInLineChartFormat(resultState.data, visibleProperties, mapper, hiddenProperties);
 
   const appliedColors = generateColors(visibleProperties.length);
 

@@ -19,6 +19,11 @@ function CoreQuery({ activeProject }) {
   const [queries, setQueries] = useState([]);
   const [appliedQueries, setAppliedQueries] = useState([]);
   const [appliedBreakdown, setAppliedBreakdown] = useState([]);
+  const [resultState, setResultState] = useState(initialResultState);
+  const [breakdownTypeData, setBreakdownTypeData] = useState({
+    loading: false, error: false, all: null, any: null
+  });
+  const [breakdownType, setBreakdownType] = useState('each');
   const [queryOptions, setQueryOptions] = useState({
     groupBy: [{
       prop_category: '', // user / event
@@ -33,7 +38,6 @@ function CoreQuery({ activeProject }) {
       end: 2
     }
   });
-  const [resultState, setResultState] = useState(initialResultState);
 
   const queryChange = (newEvent, index, changeType = 'add') => {
     const queryupdated = [...queries];
@@ -73,6 +77,32 @@ function CoreQuery({ activeProject }) {
     const newAppliedBreakdown = queryOptions.groupBy.filter(elem => elem.prop_category).sort((a, b) => {
       return a.prop_category >= b.prop_category ? 1 : -1;
     });
+    // const newAppliedBreakdown = [
+    //   {
+    //     prop_category: 'event',
+    //     property: 'Browser',
+    //     prop_type: 'categorical',
+    //     eventValue: 'www.acme.com/pricing',
+    //   },
+    //   // {
+    //   //   prop_category: 'event',
+    //   //   property: 'Page Load Time',
+    //   //   prop_type: 'numerical',
+    //   //   eventValue: 'www.acme.com/solutions',
+    //   // },
+    //   {
+    //     prop_category: 'event',
+    //     property: 'Device Type',
+    //     prop_type: 'categorical',
+    //     eventValue: 'www.acme.com/product',
+    //   },
+    //   // {
+    //   //   prop_category: 'event',
+    //   //   property: 'Page Spent Time',
+    //   //   prop_type: 'numerical',
+    //   //   eventValue: 'www.acme.com/resources',
+    //   // }
+    // ]
     setAppliedBreakdown(newAppliedBreakdown);
   }, [queryOptions.groupBy]);
 
@@ -108,7 +138,7 @@ function CoreQuery({ activeProject }) {
       if (activeTab === '2') {
         updateResultState(activeTab, { loading: true, error: false, data: null });
 
-        let activeUsersData = null; let userData = null; let sessionData = null; ;
+        let activeUsersData = null; let userData = null; let sessionData = null;
 
         if (resultState[1].data) {
           const res = await callRunQueryApiService(activeProject.id, '2');
@@ -161,6 +191,10 @@ function CoreQuery({ activeProject }) {
       updateResultState('3', obj);
       setAppliedQueries(queries.map(elem => elem.label));
       updateAppliedBreakdown();
+      setBreakdownTypeData({
+        loading: false, error: false, all: null, any: null
+      });
+      setBreakdownType('each');
       closeDrawer();
       setShowResult(true);
     }
@@ -168,6 +202,41 @@ function CoreQuery({ activeProject }) {
     updateResultState(activeTab, { loading: true, error: false, data: null });
     callRunQueryApiService(activeProject.id, activeTab);
   }, [activeProject, resultState, queries, updateResultState, callRunQueryApiService, updateAppliedBreakdown, appliedBreakdown]);
+
+  const handleBreakdownTypeChange = useCallback(async (e) => {
+    const key = e.target.value;
+    setBreakdownType(key);
+    if (key === 'each') {
+      return false;
+    }
+    if (breakdownTypeData[key]) {
+      return false;
+    } else {
+      try {
+        setBreakdownTypeData(currState => {
+          return { ...currState, loading: true };
+        });
+        const query = getQuery('1', queryType, queryOptions, queries, key);
+        const res = await runQueryService(activeProject.id, [query]);
+        if (res.status === 200 && !hasApiFailed(res)) {
+          setBreakdownTypeData(currState => {
+            return {
+              ...currState, loading: false, error: false, [key]: res.data.result_group[0]
+            };
+          });
+        } else {
+          setBreakdownTypeData(currState => {
+            return { ...currState, loading: false, error: true };
+          });
+        }
+      } catch (err) {
+        console.log(err);
+        setBreakdownTypeData(currState => {
+          return { ...currState, loading: false, error: true };
+        });
+      }
+    }
+  }, [activeProject.id, queries, queryOptions, queryType, breakdownTypeData]);
 
   const title = () => {
     return (
@@ -202,6 +271,9 @@ function CoreQuery({ activeProject }) {
       setDrawerVisible={setDrawerVisible}
       runQuery={runQuery}
       activeKey={activeKey}
+      breakdownType={breakdownType}
+      handleBreakdownTypeChange={handleBreakdownTypeChange}
+      breakdownTypeData={breakdownTypeData}
     />
   );
 

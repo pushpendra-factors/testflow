@@ -5,8 +5,8 @@ import { Spin } from 'antd';
 import SingleEventMultipleBreakdown from '../SingleEventMultipleBreakdown';
 import MultipleEventsWithBreakdown from '../MultipleEventsWIthBreakdown';
 
-function TotalEvents({
-  queries, eventsMapper, reverseEventsMapper, breakdown, resultState, page, index
+function ResultTab({
+  queries, eventsMapper, reverseEventsMapper, breakdown, resultState, page, index, breakdownType, handleBreakdownTypeChange
 }) {
   if (resultState[index].loading) {
     return (
@@ -58,6 +58,8 @@ function TotalEvents({
         breakdown={breakdown}
         resultState={resultState[index]}
         page={page}
+        breakdownType={breakdownType}
+        handleBreakdownTypeChange={handleBreakdownTypeChange}
       />
     );
   }
@@ -76,4 +78,4 @@ function TotalEvents({
   return null;
 }
 
-export default TotalEvents;
+export default ResultTab;

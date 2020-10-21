@@ -5,7 +5,7 @@ import {
 } from './utils';
 
 function SingleEventSingleBreakdownTable({
-  data, events, breakdown, chartType, visibleProperties, setVisibleProperties, maxAllowedVisibleProperties, lineChartData, originalData, page
+  data, events, breakdown, chartType, visibleProperties, setVisibleProperties, maxAllowedVisibleProperties, lineChartData, originalData
 }) {
   const appliedBreakdown = [breakdown[0].property];
 

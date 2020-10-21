@@ -1,9 +1,11 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { getTableColumns, getTableData } from './utils';
+import {
+  getTableColumns, getTableData, getDateBasedColumns, getDateBasedTableData
+} from './utils';
 import DataTable from '../../CoreQuery/FunnelsResultPage/DataTable';
 
 function MultipleEventsWithBreakdownTable({
-  chartType, breakdown, data, visibleProperties, setVisibleProperties, maxAllowedVisibleProperties, page, queries
+  chartType, breakdown, data, visibleProperties, setVisibleProperties, maxAllowedVisibleProperties, page, lineChartData
 }) {
   const [sorter, setSorter] = useState({});
   const [searchText, setSearchText] = useState('');
@@ -17,14 +19,27 @@ function MultipleEventsWithBreakdownTable({
     setSorter(sorter);
   }, []);
 
-  const columns = getTableColumns(breakdown, sorter, handleSorting, page);
-  const tableData = getTableData(data, columns, breakdown, searchText, sorter);
+  let columns, tableData;
 
-  const onSelectionChange = (_, selectedRows) => {
-    if (selectedRows.length > maxAllowedVisibleProperties || !selectedRows.length) {
+  if (chartType === 'linechart') {
+    columns = getDateBasedColumns(lineChartData, breakdown, sorter, handleSorting);
+    tableData = getDateBasedTableData(data, breakdown, sorter, searchText);
+  } else {
+    tableData = getTableData(data, breakdown, searchText, sorter);
+    columns = getTableColumns(breakdown, sorter, handleSorting, page);
+  }
+
+  const onSelectionChange = (selectedIncices) => {
+    if (selectedIncices.length > maxAllowedVisibleProperties) {
       return false;
     }
-    setVisibleProperties(selectedRows);
+    if (!selectedIncices.length) {
+      return false;
+    }
+    const newSelectedRows = selectedIncices.map(idx => {
+      return data.find(elem => elem.index === idx);
+    });
+    setVisibleProperties(newSelectedRows);
   };
 
   const selectedRowKeys = visibleProperties.map(elem => elem.index);
@@ -35,13 +50,13 @@ function MultipleEventsWithBreakdownTable({
   };
 
   return (
-        <DataTable
-            tableData={tableData}
-            searchText={searchText}
-            setSearchText={setSearchText}
-            columns={columns}
-            rowSelection={rowSelection}
-        />
+    <DataTable
+      tableData={tableData}
+      searchText={searchText}
+      setSearchText={setSearchText}
+      columns={columns}
+      rowSelection={rowSelection}
+    />
   );
 }
 

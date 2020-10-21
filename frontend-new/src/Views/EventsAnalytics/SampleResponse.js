@@ -21937,444 +21937,6333 @@ export const MultipleEventsMultipleBreakdown = {
         'datetime',
         'event_name',
         '_group_key_0',
+        '_group_key_1',
+        '_group_key_2',
+        '_group_key_3',
         'count'
       ],
       rows: [
         [
-          '2020-10-08T00:00:00+05:30',
-          'www.acme.com/product/collaboration',
-          'Firefox',
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '15.0 - 15.0',
+          'Desktop',
+          '300',
           0
         ],
         [
-          '2020-10-08T00:00:00+05:30',
-          'www.acme.com/product/analytics',
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '3.0 - 3.0',
+          'Desktop',
+          '14',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
           'Chrome',
+          '2.0 - 2.0',
+          'Desktop',
+          '77',
           0
         ],
         [
-          '2020-10-08T00:00:00+05:30',
-          'www.acme.com/product/analytics',
-          'Internet Explorer',
-          0
-        ],
-        [
-          '2020-10-08T00:00:00+05:30',
-          'www.acme.com/product/collaboration',
-          'Unknown',
-          0
-        ],
-        [
-          '2020-10-08T00:00:00+05:30',
-          'www.acme.com/product/analytics',
-          'Safari',
-          0
-        ],
-        [
-          '2020-10-08T00:00:00+05:30',
-          'www.acme.com/product/analytics',
-          'Unknown',
-          0
-        ],
-        [
-          '2020-10-08T00:00:00+05:30',
-          'www.acme.com/product/collaboration',
-          'Safari',
-          0
-        ],
-        [
-          '2020-10-08T00:00:00+05:30',
-          'www.acme.com/product/collaboration',
-          'Internet Explorer',
-          0
-        ],
-        [
-          '2020-10-08T00:00:00+05:30',
-          'www.acme.com/product/collaboration',
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
           'Chrome',
+          '5.0 - 5.0',
+          'Desktop',
+          '179',
           0
         ],
         [
-          '2020-10-08T00:00:00+05:30',
-          'www.acme.com/product/analytics',
-          'Firefox',
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '9.0 - 9.0',
+          'Desktop',
+          '108',
           0
         ],
         [
-          '2020-10-09T00:00:00+05:30',
-          'www.acme.com/product/collaboration',
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/product',
           'Chrome',
+          '1.0 - 1.0',
+          'Desktop',
+          '21',
           0
         ],
         [
-          '2020-10-09T00:00:00+05:30',
-          'www.acme.com/product/collaboration',
-          'Firefox',
-          0
-        ],
-        [
-          '2020-10-09T00:00:00+05:30',
-          'www.acme.com/product/analytics',
-          'Unknown',
-          0
-        ],
-        [
-          '2020-10-09T00:00:00+05:30',
-          'www.acme.com/product/collaboration',
-          'Internet Explorer',
-          0
-        ],
-        [
-          '2020-10-09T00:00:00+05:30',
-          'www.acme.com/product/analytics',
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
           'Chrome',
+          '2.0 - 2.0',
+          'Tablet',
+          '11',
           0
         ],
         [
-          '2020-10-09T00:00:00+05:30',
-          'www.acme.com/product/collaboration',
-          'Unknown',
-          0
-        ],
-        [
-          '2020-10-09T00:00:00+05:30',
-          'www.acme.com/product/collaboration',
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
           'Safari',
+          '29.0 - 29.0',
+          'Desktop',
+          '3',
           0
         ],
         [
-          '2020-10-09T00:00:00+05:30',
-          'www.acme.com/product/analytics',
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '4.0 - 4.0',
+          'Mobile',
+          '28',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Safari',
+          '10.0 - 10.0',
+          'Desktop',
+          '101',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
           'Internet Explorer',
+          '2.0 - 2.0',
+          'Desktop',
+          '108',
           0
         ],
         [
-          '2020-10-09T00:00:00+05:30',
-          'www.acme.com/product/analytics',
-          'Safari',
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '2.0 - 2.0',
+          'Desktop',
+          '1',
           0
         ],
         [
-          '2020-10-09T00:00:00+05:30',
-          'www.acme.com/product/analytics',
-          'Firefox',
-          0
-        ],
-        [
-          '2020-10-10T00:00:00+05:30',
-          'www.acme.com/product/collaboration',
-          'Safari',
-          0
-        ],
-        [
-          '2020-10-10T00:00:00+05:30',
-          'www.acme.com/product/analytics',
-          'Safari',
-          0
-        ],
-        [
-          '2020-10-10T00:00:00+05:30',
-          'www.acme.com/product/analytics',
-          'Unknown',
-          0
-        ],
-        [
-          '2020-10-10T00:00:00+05:30',
-          'www.acme.com/product/analytics',
-          'Firefox',
-          0
-        ],
-        [
-          '2020-10-10T00:00:00+05:30',
-          'www.acme.com/product/collaboration',
-          'Unknown',
-          0
-        ],
-        [
-          '2020-10-10T00:00:00+05:30',
-          'www.acme.com/product/collaboration',
-          'Firefox',
-          0
-        ],
-        [
-          '2020-10-10T00:00:00+05:30',
-          'www.acme.com/product/analytics',
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
           'Chrome',
+          '4.0 - 4.0',
+          'Desktop',
+          '20',
           0
         ],
         [
-          '2020-10-10T00:00:00+05:30',
-          'www.acme.com/product/collaboration',
-          'Internet Explorer',
-          0
-        ],
-        [
-          '2020-10-10T00:00:00+05:30',
-          'www.acme.com/product/collaboration',
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
           'Chrome',
+          '5.0 - 5.0',
+          'Mobile',
+          '13',
           0
         ],
         [
-          '2020-10-10T00:00:00+05:30',
-          'www.acme.com/product/analytics',
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/product',
           'Internet Explorer',
+          '2.0 - 2.0',
+          'Mobile',
+          '21',
           0
         ],
         [
-          '2020-10-11T00:00:00+05:30',
-          'www.acme.com/product/analytics',
-          'Safari',
-          0
-        ],
-        [
-          '2020-10-11T00:00:00+05:30',
-          'www.acme.com/product/analytics',
-          'Firefox',
-          0
-        ],
-        [
-          '2020-10-11T00:00:00+05:30',
-          'www.acme.com/product/collaboration',
-          'Internet Explorer',
-          0
-        ],
-        [
-          '2020-10-11T00:00:00+05:30',
-          'www.acme.com/product/collaboration',
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
           'Unknown',
+          '2.0 - 2.0',
+          'Mobile',
+          '5',
           0
         ],
         [
-          '2020-10-11T00:00:00+05:30',
-          'www.acme.com/product/analytics',
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/product',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Desktop',
+          '21',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '2.0 - 2.0',
+          'Desktop',
+          '4',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '3.0 - 3.0',
+          'Desktop',
+          '7',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '4.0 - 4.0',
+          'Mobile',
+          '17',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '2.0 - 2.0',
+          'Tablet',
+          '2',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '2.0 - 2.0',
+          'Desktop',
+          '220',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '5.0 - 5.0',
+          'Mobile',
+          '9',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '29.0 - 29.0',
+          'Desktop',
+          '17',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '2.0 - 2.0',
+          'Mobile',
+          '273',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Safari',
+          '5.0 - 5.0',
+          'Mobile',
+          '15',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/product',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Desktop',
+          '139',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '2.0 - 2.0',
+          'Desktop',
+          '5',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '2.0 - 2.0',
+          'Desktop',
+          '2',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '1.0 - 1.0',
+          'Desktop',
+          '5',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '2.0 - 2.0',
+          'Desktop',
+          '288',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Safari',
+          '4.0 - 4.0',
+          'Mobile',
+          '13',
+          399
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/product',
+          'Internet Explorer',
+          '3.0 - 3.0',
+          'Desktop',
+          '108',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '1.0 - 1.0',
+          'Tablet',
+          '12',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
           'Unknown',
+          '2.0 - 2.0',
+          'Desktop',
+          '11',
+          395
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '1.0 - 1.0',
+          'Mobile',
+          '5',
           0
         ],
         [
-          '2020-10-11T00:00:00+05:30',
-          'www.acme.com/product/analytics',
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Unknown',
+          '2.0 - 2.0',
+          'Desktop',
+          '2',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
           'Chrome',
+          '5.0 - 5.0',
+          'Desktop',
+          '26',
           0
         ],
         [
-          '2020-10-11T00:00:00+05:30',
-          'www.acme.com/product/analytics',
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
           'Internet Explorer',
+          '9.0 - 9.0',
+          'Desktop',
+          '63',
           0
         ],
         [
-          '2020-10-11T00:00:00+05:30',
-          'www.acme.com/product/collaboration',
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Desktop',
+          '2',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/product',
           'Firefox',
+          '1.0 - 1.0',
+          'Tablet',
+          '5',
           0
         ],
         [
-          '2020-10-11T00:00:00+05:30',
-          'www.acme.com/product/collaboration',
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
           'Chrome',
+          '4.0 - 4.0',
+          'Desktop',
+          '2',
           0
         ],
         [
-          '2020-10-11T00:00:00+05:30',
-          'www.acme.com/product/collaboration',
-          'Safari',
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '1.0 - 1.0',
+          'Mobile',
+          '139',
           0
         ],
         [
-          '2020-10-12T00:00:00+05:30',
-          'www.acme.com/product/collaboration',
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
           'Internet Explorer',
-          314
+          '27.0 - 27.0',
+          'Tablet',
+          '18',
+          0
         ],
         [
-          '2020-10-12T00:00:00+05:30',
-          'www.acme.com/product/collaboration',
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '3.0 - 3.0',
+          'Desktop',
+          '5',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
           'Firefox',
-          183
+          '5.0 - 5.0',
+          'Mobile',
+          '13',
+          0
         ],
         [
-          '2020-10-12T00:00:00+05:30',
-          'www.acme.com/product/analytics',
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '3.0 - 3.0',
+          'Mobile',
+          '3',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
           'Internet Explorer',
-          157
+          '1.0 - 1.0',
+          'Tablet',
+          '5',
+          0
         ],
         [
-          '2020-10-12T00:00:00+05:30',
-          'www.acme.com/product/collaboration',
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '1.0 - 1.0',
+          'Mobile',
+          '4',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '1.0 - 1.0',
+          'Desktop',
+          '6',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '1.0 - 1.0',
+          'Mobile',
+          '53',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '5.0 - 5.0',
+          'Mobile',
+          '5',
+          412
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '5.0 - 5.0',
+          'Tablet',
+          '13',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '2.0 - 2.0',
+          'Mobile',
+          '4',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '9.0 - 9.0',
+          'Desktop',
+          '13',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '6.0 - 6.0',
+          'Mobile',
+          '14',
+          396
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '1.0 - 1.0',
+          'Desktop',
+          '15',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '7.0 - 7.0',
+          'Tablet',
+          '0',
+          390
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '5.0 - 5.0',
+          'Desktop',
+          '5',
+          389
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '6.0 - 6.0',
+          'Desktop',
+          '139',
+          375
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '5.0 - 5.0',
+          'Desktop',
+          '30',
+          373
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '2.0 - 2.0',
+          'Desktop',
+          '78',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '1.0 - 1.0',
+          'Mobile',
+          '5',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Desktop',
+          '13',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '2.0 - 2.0',
+          'Desktop',
+          '127',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
           'Safari',
-          168
+          '2.0 - 2.0',
+          'Tablet',
+          '11',
+          0
         ],
         [
-          '2020-10-12T00:00:00+05:30',
-          'www.acme.com/product/analytics',
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '9.0 - 9.0',
+          'Desktop',
+          '2',
+          403
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '3.0 - 3.0',
+          'Desktop',
+          '0',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '8.0 - 8.0',
+          'Desktop',
+          '66',
+          385
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '24.0 - 24.0',
+          'Desktop',
+          '13',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '9.0 - 9.0',
+          'Unknown',
+          '4',
+          330
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '4.0 - 4.0',
+          'Desktop',
+          '17',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Desktop',
+          '139',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/product',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Mobile',
+          '11',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
           'Firefox',
+          '2.0 - 2.0',
+          'Mobile',
+          '63',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '4.0 - 4.0',
+          'Mobile',
+          '4',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '5.0 - 5.0',
+          'Mobile',
+          '26',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '2.0 - 2.0',
+          'Desktop',
+          '2',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Safari',
+          '29.0 - 29.0',
+          'Desktop',
+          '9',
+          393
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '1.0 - 1.0',
+          'Desktop',
+          '4',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '1.0 - 1.0',
+          'Tablet',
+          '190',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '1.0 - 1.0',
+          'Tablet',
+          '5',
+          308
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Safari',
+          '4.0 - 4.0',
+          'Desktop',
+          '3',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Unknown',
+          '2.0 - 2.0',
+          'Mobile',
+          '89',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Unknown',
+          '1.0 - 1.0',
+          'Desktop',
+          '2',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '1.0 - 1.0',
+          'Desktop',
+          '39',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '16.0 - 16.0',
+          'Desktop',
+          '2',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '1.0 - 1.0',
+          'Desktop',
+          '84',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '4.0 - 4.0',
+          'Desktop',
+          '2',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '1.0 - 1.0',
+          'Tablet',
+          '66',
+          281
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '17.0 - 17.0',
+          'Mobile',
+          '3',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Unknown',
+          '2.0 - 2.0',
+          'Unknown',
+          '11',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/product',
+          'Safari',
+          '1.0 - 1.0',
+          'Desktop',
+          '10',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '1.0 - 1.0',
+          'Desktop',
+          '16',
+          270
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/product',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Tablet',
+          '5',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/product',
+          'Unknown',
+          '1.0 - 1.0',
+          'Tablet',
+          '13',
+          269
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '1.0 - 1.0',
+          'Mobile',
+          '70',
+          262
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Unknown',
+          '9.0 - 9.0',
+          'Desktop',
+          '28',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '2.0 - 2.0',
+          'Mobile',
+          '10',
+          0
+        ],
+        [
+          '2020-10-14T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '5.0 - 5.0',
+          'Mobile',
+          '4',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '9.0 - 9.0',
+          'Desktop',
+          '108',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/product',
+          'Internet Explorer',
+          '3.0 - 3.0',
+          'Desktop',
+          '108',
+          321
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/product',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Tablet',
+          '5',
+          272
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '2.0 - 2.0',
+          'Mobile',
+          '10',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '2.0 - 2.0',
+          'Desktop',
+          '220',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '6.0 - 6.0',
+          'Mobile',
+          '14',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '16.0 - 16.0',
+          'Desktop',
+          '2',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '1.0 - 1.0',
+          'Desktop',
+          '84',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '17.0 - 17.0',
+          'Mobile',
+          '3',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '1.0 - 1.0',
+          'Desktop',
+          '39',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '4.0 - 4.0',
+          'Desktop',
+          '2',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Safari',
+          '4.0 - 4.0',
+          'Desktop',
+          '3',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '1.0 - 1.0',
+          'Desktop',
+          '16',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Unknown',
+          '1.0 - 1.0',
+          'Desktop',
+          '2',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Unknown',
+          '2.0 - 2.0',
+          'Mobile',
+          '89',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '5.0 - 5.0',
+          'Mobile',
+          '4',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '1.0 - 1.0',
+          'Tablet',
+          '66',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '2.0 - 2.0',
+          'Desktop',
+          '2',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Unknown',
+          '9.0 - 9.0',
+          'Desktop',
+          '28',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '1.0 - 1.0',
+          'Desktop',
+          '4',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '9.0 - 9.0',
+          'Unknown',
+          '4',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/product',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Mobile',
+          '11',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/product',
+          'Unknown',
+          '1.0 - 1.0',
+          'Tablet',
+          '13',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '3.0 - 3.0',
+          'Desktop',
+          '5',
+          323
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '15.0 - 15.0',
+          'Desktop',
+          '300',
+          405
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Desktop',
+          '139',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '5.0 - 5.0',
+          'Desktop',
+          '26',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '2.0 - 2.0',
+          'Desktop',
+          '78',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '1.0 - 1.0',
+          'Mobile',
+          '70',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '1.0 - 1.0',
+          'Desktop',
+          '15',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '2.0 - 2.0',
+          'Desktop',
+          '127',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Desktop',
+          '13',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '1.0 - 1.0',
+          'Mobile',
+          '5',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '5.0 - 5.0',
+          'Mobile',
+          '26',
+          391
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '2.0 - 2.0',
+          'Mobile',
+          '4',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '5.0 - 5.0',
+          'Tablet',
+          '13',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/product',
+          'Safari',
+          '1.0 - 1.0',
+          'Desktop',
+          '10',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '24.0 - 24.0',
+          'Desktop',
+          '13',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '7.0 - 7.0',
+          'Tablet',
+          '0',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '1.0 - 1.0',
+          'Mobile',
+          '4',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '1.0 - 1.0',
+          'Mobile',
+          '53',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '3.0 - 3.0',
+          'Desktop',
+          '0',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '8.0 - 8.0',
+          'Desktop',
+          '66',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '2.0 - 2.0',
+          'Mobile',
+          '63',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Safari',
+          '2.0 - 2.0',
+          'Tablet',
+          '11',
+          376
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '27.0 - 27.0',
+          'Tablet',
+          '18',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '1.0 - 1.0',
+          'Tablet',
+          '5',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '2.0 - 2.0',
+          'Desktop',
+          '288',
+          377
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '1.0 - 1.0',
+          'Mobile',
+          '139',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '4.0 - 4.0',
+          'Desktop',
+          '17',
+          386
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Safari',
+          '29.0 - 29.0',
+          'Desktop',
+          '9',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '9.0 - 9.0',
+          'Desktop',
+          '63',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '5.0 - 5.0',
+          'Mobile',
+          '5',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '5.0 - 5.0',
+          'Mobile',
+          '13',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Desktop',
+          '2',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Unknown',
+          '2.0 - 2.0',
+          'Desktop',
+          '2',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '5.0 - 5.0',
+          'Desktop',
+          '5',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '4.0 - 4.0',
+          'Desktop',
+          '2',
+          389
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '1.0 - 1.0',
+          'Tablet',
+          '12',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Safari',
+          '4.0 - 4.0',
+          'Mobile',
+          '13',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '1.0 - 1.0',
+          'Mobile',
+          '5',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '5.0 - 5.0',
+          'Desktop',
+          '30',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '2.0 - 2.0',
+          'Desktop',
+          '2',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Safari',
+          '5.0 - 5.0',
+          'Mobile',
+          '15',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '3.0 - 3.0',
+          'Mobile',
+          '3',
+          399
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '9.0 - 9.0',
+          'Desktop',
+          '13',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '1.0 - 1.0',
+          'Desktop',
+          '5',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '9.0 - 9.0',
+          'Desktop',
+          '2',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/product',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Desktop',
+          '139',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '2.0 - 2.0',
+          'Desktop',
+          '5',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '6.0 - 6.0',
+          'Desktop',
+          '139',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Unknown',
+          '2.0 - 2.0',
+          'Unknown',
+          '11',
+          404
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '2.0 - 2.0',
+          'Mobile',
+          '273',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '2.0 - 2.0',
+          'Desktop',
+          '1',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '5.0 - 5.0',
+          'Mobile',
+          '9',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '1.0 - 1.0',
+          'Tablet',
+          '5',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Unknown',
+          '2.0 - 2.0',
+          'Mobile',
+          '5',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '2.0 - 2.0',
+          'Tablet',
+          '2',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '4.0 - 4.0',
+          'Mobile',
+          '17',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Safari',
+          '10.0 - 10.0',
+          'Desktop',
+          '101',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/product',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Desktop',
+          '21',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '2.0 - 2.0',
+          'Desktop',
+          '4',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '5.0 - 5.0',
+          'Desktop',
+          '179',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '5.0 - 5.0',
+          'Mobile',
+          '13',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '4.0 - 4.0',
+          'Desktop',
+          '20',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '2.0 - 2.0',
+          'Desktop',
+          '108',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/product',
+          'Internet Explorer',
+          '2.0 - 2.0',
+          'Mobile',
+          '21',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '4.0 - 4.0',
+          'Mobile',
+          '28',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '1.0 - 1.0',
+          'Desktop',
+          '21',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Tablet',
+          '5',
+          389
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '2.0 - 2.0',
+          'Tablet',
+          '11',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Safari',
+          '29.0 - 29.0',
+          'Desktop',
+          '3',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '1.0 - 1.0',
+          'Desktop',
+          '6',
+          390
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '3.0 - 3.0',
+          'Desktop',
+          '7',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '3.0 - 3.0',
+          'Desktop',
+          '14',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '1.0 - 1.0',
+          'Tablet',
+          '190',
+          416
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '2.0 - 2.0',
+          'Desktop',
+          '77',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Unknown',
+          '2.0 - 2.0',
+          'Desktop',
+          '11',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '29.0 - 29.0',
+          'Desktop',
+          '17',
+          0
+        ],
+        [
+          '2020-10-15T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '4.0 - 4.0',
+          'Mobile',
+          '4',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Safari',
+          '29.0 - 29.0',
+          'Desktop',
+          '3',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '2.0 - 2.0',
+          'Desktop',
+          '77',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Safari',
+          '29.0 - 29.0',
+          'Desktop',
+          '9',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '3.0 - 3.0',
+          'Desktop',
+          '7',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '2.0 - 2.0',
+          'Tablet',
+          '11',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '1.0 - 1.0',
+          'Desktop',
+          '21',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '29.0 - 29.0',
+          'Desktop',
+          '17',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '6.0 - 6.0',
+          'Desktop',
+          '139',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '4.0 - 4.0',
+          'Desktop',
+          '20',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '2.0 - 2.0',
+          'Desktop',
+          '108',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '4.0 - 4.0',
+          'Mobile',
+          '17',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '1.0 - 1.0',
+          'Tablet',
+          '5',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '2.0 - 2.0',
+          'Mobile',
+          '273',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '5.0 - 5.0',
+          'Desktop',
+          '5',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '2.0 - 2.0',
+          'Desktop',
+          '288',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '1.0 - 1.0',
+          'Mobile',
+          '5',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '5.0 - 5.0',
+          'Desktop',
+          '30',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '27.0 - 27.0',
+          'Tablet',
+          '18',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '1.0 - 1.0',
+          'Tablet',
+          '12',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Desktop',
+          '2',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Unknown',
+          '2.0 - 2.0',
+          'Desktop',
+          '2',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '3.0 - 3.0',
+          'Desktop',
+          '0',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '1.0 - 1.0',
+          'Tablet',
+          '5',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '17.0 - 17.0',
+          'Mobile',
+          '3',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '7.0 - 7.0',
+          'Tablet',
+          '0',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Tablet',
+          '5',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '2.0 - 2.0',
+          'Mobile',
+          '63',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Safari',
+          '2.0 - 2.0',
+          'Tablet',
+          '11',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '24.0 - 24.0',
+          'Desktop',
+          '13',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '1.0 - 1.0',
+          'Desktop',
+          '6',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '1.0 - 1.0',
+          'Mobile',
+          '4',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '5.0 - 5.0',
+          'Mobile',
+          '26',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '2.0 - 2.0',
+          'Mobile',
+          '4',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '1.0 - 1.0',
+          'Desktop',
+          '15',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Desktop',
+          '139',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '2.0 - 2.0',
+          'Desktop',
+          '78',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '1.0 - 1.0',
+          'Tablet',
+          '190',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/product',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Mobile',
+          '11',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '1.0 - 1.0',
+          'Tablet',
+          '66',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '1.0 - 1.0',
+          'Desktop',
+          '84',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/product',
+          'Internet Explorer',
+          '2.0 - 2.0',
+          'Mobile',
+          '21',
+          276
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '5.0 - 5.0',
+          'Mobile',
+          '4',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '1.0 - 1.0',
+          'Desktop',
+          '39',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Unknown',
+          '2.0 - 2.0',
+          'Unknown',
+          '11',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '4.0 - 4.0',
+          'Mobile',
+          '28',
+          307
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '15.0 - 15.0',
+          'Desktop',
+          '300',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Safari',
+          '4.0 - 4.0',
+          'Desktop',
+          '3',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '5.0 - 5.0',
+          'Mobile',
+          '5',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/product',
+          'Safari',
+          '1.0 - 1.0',
+          'Desktop',
+          '10',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '6.0 - 6.0',
+          'Mobile',
+          '14',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '2.0 - 2.0',
+          'Desktop',
+          '220',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '16.0 - 16.0',
+          'Desktop',
+          '2',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/product',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Desktop',
+          '21',
+          288
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/product',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Tablet',
+          '5',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '1.0 - 1.0',
+          'Desktop',
+          '16',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/product',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Desktop',
+          '139',
+          302
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '4.0 - 4.0',
+          'Desktop',
+          '2',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '4.0 - 4.0',
+          'Desktop',
+          '17',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '9.0 - 9.0',
+          'Unknown',
+          '4',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '5.0 - 5.0',
+          'Tablet',
+          '13',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '1.0 - 1.0',
+          'Desktop',
+          '4',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '9.0 - 9.0',
+          'Desktop',
+          '108',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/product',
+          'Unknown',
+          '1.0 - 1.0',
+          'Tablet',
+          '13',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Safari',
+          '10.0 - 10.0',
+          'Desktop',
+          '101',
+          407
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Unknown',
+          '9.0 - 9.0',
+          'Desktop',
+          '28',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '8.0 - 8.0',
+          'Desktop',
+          '66',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '1.0 - 1.0',
+          'Mobile',
+          '70',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '5.0 - 5.0',
+          'Desktop',
+          '26',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '2.0 - 2.0',
+          'Desktop',
+          '127',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '1.0 - 1.0',
+          'Mobile',
+          '5',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Safari',
+          '5.0 - 5.0',
+          'Mobile',
+          '15',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '4.0 - 4.0',
+          'Desktop',
+          '2',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '1.0 - 1.0',
+          'Mobile',
+          '53',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '3.0 - 3.0',
+          'Mobile',
+          '3',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Unknown',
+          '2.0 - 2.0',
+          'Mobile',
+          '5',
+          379
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '9.0 - 9.0',
+          'Desktop',
+          '63',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '3.0 - 3.0',
+          'Desktop',
+          '5',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '2.0 - 2.0',
+          'Mobile',
+          '10',
+          384
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '5.0 - 5.0',
+          'Mobile',
+          '13',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Safari',
+          '4.0 - 4.0',
+          'Mobile',
+          '13',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/product',
+          'Internet Explorer',
+          '3.0 - 3.0',
+          'Desktop',
+          '108',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '9.0 - 9.0',
+          'Desktop',
+          '13',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '9.0 - 9.0',
+          'Desktop',
+          '2',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '4.0 - 4.0',
+          'Mobile',
+          '4',
+          402
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '2.0 - 2.0',
+          'Desktop',
+          '2',
+          403
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Unknown',
+          '2.0 - 2.0',
+          'Mobile',
+          '89',
+          403
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '2.0 - 2.0',
+          'Desktop',
+          '5',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '2.0 - 2.0',
+          'Desktop',
+          '1',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '2.0 - 2.0',
+          'Desktop',
+          '2',
+          406
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '2.0 - 2.0',
+          'Tablet',
+          '2',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '3.0 - 3.0',
+          'Desktop',
+          '14',
+          417
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '5.0 - 5.0',
+          'Desktop',
+          '179',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '2.0 - 2.0',
+          'Desktop',
+          '4',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '1.0 - 1.0',
+          'Desktop',
+          '5',
+          361
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '5.0 - 5.0',
+          'Mobile',
+          '13',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Desktop',
+          '13',
+          399
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Unknown',
+          '1.0 - 1.0',
+          'Desktop',
+          '2',
+          423
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Unknown',
+          '2.0 - 2.0',
+          'Desktop',
+          '11',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '1.0 - 1.0',
+          'Mobile',
+          '139',
+          0
+        ],
+        [
+          '2020-10-16T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '5.0 - 5.0',
+          'Mobile',
+          '9',
+          432
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Unknown',
+          '2.0 - 2.0',
+          'Desktop',
+          '11',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '9.0 - 9.0',
+          'Desktop',
+          '108',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '2.0 - 2.0',
+          'Desktop',
+          '4',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Safari',
+          '10.0 - 10.0',
+          'Desktop',
+          '101',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '2.0 - 2.0',
+          'Desktop',
+          '5',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '9.0 - 9.0',
+          'Desktop',
+          '13',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '9.0 - 9.0',
+          'Desktop',
+          '2',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Safari',
+          '4.0 - 4.0',
+          'Mobile',
+          '13',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '3.0 - 3.0',
+          'Mobile',
+          '3',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '9.0 - 9.0',
+          'Desktop',
+          '63',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '4.0 - 4.0',
+          'Desktop',
+          '2',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '2.0 - 2.0',
+          'Desktop',
+          '127',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Unknown',
+          '9.0 - 9.0',
+          'Desktop',
+          '28',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '8.0 - 8.0',
+          'Desktop',
+          '66',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '4.0 - 4.0',
+          'Mobile',
+          '4',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '9.0 - 9.0',
+          'Unknown',
+          '4',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '4.0 - 4.0',
+          'Desktop',
+          '17',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Unknown',
+          '2.0 - 2.0',
+          'Mobile',
+          '89',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Safari',
+          '29.0 - 29.0',
+          'Desktop',
+          '3',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '5.0 - 5.0',
+          'Mobile',
+          '4',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '16.0 - 16.0',
+          'Desktop',
+          '2',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Unknown',
+          '2.0 - 2.0',
+          'Unknown',
+          '11',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '2.0 - 2.0',
+          'Mobile',
+          '10',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '15.0 - 15.0',
+          'Desktop',
+          '300',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '2.0 - 2.0',
+          'Desktop',
+          '2',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '17.0 - 17.0',
+          'Mobile',
+          '3',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '2.0 - 2.0',
+          'Mobile',
+          '4',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '24.0 - 24.0',
+          'Desktop',
+          '13',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Unknown',
+          '2.0 - 2.0',
+          'Desktop',
+          '2',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '5.0 - 5.0',
+          'Desktop',
+          '30',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '27.0 - 27.0',
+          'Tablet',
+          '18',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '2.0 - 2.0',
+          'Desktop',
+          '2',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '2.0 - 2.0',
+          'Desktop',
+          '108',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '3.0 - 3.0',
+          'Desktop',
+          '14',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Safari',
+          '29.0 - 29.0',
+          'Desktop',
+          '9',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '3.0 - 3.0',
+          'Desktop',
+          '7',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '6.0 - 6.0',
+          'Desktop',
+          '139',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '4.0 - 4.0',
+          'Desktop',
+          '20',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '1.0 - 1.0',
+          'Desktop',
+          '21',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/product',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Desktop',
+          '21',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Unknown',
+          '2.0 - 2.0',
+          'Mobile',
+          '5',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '1.0 - 1.0',
+          'Tablet',
+          '5',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '5.0 - 5.0',
+          'Desktop',
+          '5',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '1.0 - 1.0',
+          'Desktop',
+          '5',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/product',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Desktop',
+          '139',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '1.0 - 1.0',
+          'Mobile',
+          '5',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '2.0 - 2.0',
+          'Desktop',
+          '288',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Desktop',
+          '2',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '7.0 - 7.0',
+          'Tablet',
+          '0',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '1.0 - 1.0',
+          'Tablet',
+          '12',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Tablet',
+          '5',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '1.0 - 1.0',
+          'Tablet',
+          '5',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Safari',
+          '2.0 - 2.0',
+          'Tablet',
+          '11',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '1.0 - 1.0',
+          'Desktop',
+          '6',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '5.0 - 5.0',
+          'Mobile',
+          '26',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '1.0 - 1.0',
+          'Mobile',
+          '4',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Desktop',
+          '13',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Desktop',
+          '139',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '1.0 - 1.0',
+          'Desktop',
+          '15',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '2.0 - 2.0',
+          'Desktop',
+          '78',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '1.0 - 1.0',
+          'Tablet',
+          '190',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '6.0 - 6.0',
+          'Mobile',
+          '14',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Unknown',
+          '1.0 - 1.0',
+          'Desktop',
+          '2',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '1.0 - 1.0',
+          'Tablet',
+          '66',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '2.0 - 2.0',
+          'Tablet',
+          '2',
+          317
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Safari',
+          '4.0 - 4.0',
+          'Desktop',
+          '3',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/product',
+          'Safari',
+          '1.0 - 1.0',
+          'Desktop',
+          '10',
+          275
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '1.0 - 1.0',
+          'Desktop',
+          '39',
+          281
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/product',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Mobile',
+          '11',
+          287
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/product',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Tablet',
+          '5',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '1.0 - 1.0',
+          'Desktop',
+          '16',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '4.0 - 4.0',
+          'Desktop',
+          '2',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '5.0 - 5.0',
+          'Tablet',
+          '13',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '29.0 - 29.0',
+          'Desktop',
+          '17',
+          414
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '1.0 - 1.0',
+          'Desktop',
+          '4',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/product',
+          'Unknown',
+          '1.0 - 1.0',
+          'Tablet',
+          '13',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '1.0 - 1.0',
+          'Mobile',
+          '70',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Safari',
+          '5.0 - 5.0',
+          'Mobile',
+          '15',
+          400
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '1.0 - 1.0',
+          'Mobile',
+          '5',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '5.0 - 5.0',
+          'Desktop',
+          '26',
+          790
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '1.0 - 1.0',
+          'Mobile',
+          '53',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '3.0 - 3.0',
+          'Desktop',
+          '0',
+          383
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '2.0 - 2.0',
+          'Desktop',
+          '1',
+          390
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '5.0 - 5.0',
+          'Mobile',
+          '13',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '3.0 - 3.0',
+          'Desktop',
+          '5',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '2.0 - 2.0',
+          'Desktop',
+          '220',
+          404
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/product',
+          'Internet Explorer',
+          '3.0 - 3.0',
+          'Desktop',
+          '108',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '2.0 - 2.0',
+          'Mobile',
+          '63',
+          410
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '5.0 - 5.0',
+          'Mobile',
+          '9',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '5.0 - 5.0',
+          'Desktop',
+          '179',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '2.0 - 2.0',
+          'Desktop',
+          '77',
+          418
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '2.0 - 2.0',
+          'Tablet',
+          '11',
+          418
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '4.0 - 4.0',
+          'Mobile',
+          '17',
+          421
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '2.0 - 2.0',
+          'Mobile',
+          '273',
+          424
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/product',
+          'Internet Explorer',
+          '2.0 - 2.0',
+          'Mobile',
+          '21',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '5.0 - 5.0',
+          'Mobile',
+          '13',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '4.0 - 4.0',
+          'Mobile',
+          '28',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '5.0 - 5.0',
+          'Mobile',
+          '5',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '1.0 - 1.0',
+          'Mobile',
+          '139',
+          0
+        ],
+        [
+          '2020-10-17T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '1.0 - 1.0',
+          'Desktop',
+          '84',
+          440
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '2.0 - 2.0',
+          'Desktop',
+          '127',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '5.0 - 5.0',
+          'Mobile',
+          '5',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '4.0 - 4.0',
+          'Mobile',
+          '28',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Tablet',
+          '5',
+          377
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/product',
+          'Internet Explorer',
+          '2.0 - 2.0',
+          'Mobile',
+          '21',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '1.0 - 1.0',
+          'Mobile',
+          '5',
+          361
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '2.0 - 2.0',
+          'Tablet',
+          '2',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '5.0 - 5.0',
+          'Mobile',
+          '9',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '5.0 - 5.0',
+          'Desktop',
+          '179',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '2.0 - 2.0',
+          'Desktop',
+          '108',
+          416
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Unknown',
+          '2.0 - 2.0',
+          'Desktop',
+          '2',
+          414
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '5.0 - 5.0',
+          'Mobile',
+          '13',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '2.0 - 2.0',
+          'Mobile',
+          '4',
+          406
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Safari',
+          '5.0 - 5.0',
+          'Mobile',
+          '15',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '3.0 - 3.0',
+          'Desktop',
+          '5',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '3.0 - 3.0',
+          'Desktop',
+          '7',
+          380
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Safari',
+          '4.0 - 4.0',
+          'Desktop',
+          '3',
+          367
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '5.0 - 5.0',
+          'Desktop',
+          '26',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '5.0 - 5.0',
+          'Mobile',
+          '13',
+          424
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '4.0 - 4.0',
+          'Desktop',
+          '2',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '5.0 - 5.0',
+          'Tablet',
+          '13',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '1.0 - 1.0',
+          'Mobile',
+          '5',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '4.0 - 4.0',
+          'Mobile',
+          '4',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '1.0 - 1.0',
+          'Mobile',
+          '70',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '9.0 - 9.0',
+          'Desktop',
+          '63',
+          403
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '6.0 - 6.0',
+          'Mobile',
+          '14',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/product',
+          'Unknown',
+          '1.0 - 1.0',
+          'Tablet',
+          '13',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '9.0 - 9.0',
+          'Desktop',
+          '2',
+          353
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '2.0 - 2.0',
+          'Desktop',
+          '78',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '1.0 - 1.0',
+          'Desktop',
+          '4',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '24.0 - 24.0',
+          'Desktop',
+          '13',
+          361
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '5.0 - 5.0',
+          'Mobile',
+          '26',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Safari',
+          '29.0 - 29.0',
+          'Desktop',
+          '3',
+          394
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '1.0 - 1.0',
+          'Desktop',
+          '16',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Safari',
+          '2.0 - 2.0',
+          'Tablet',
+          '11',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/product',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Desktop',
+          '21',
+          310
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/product',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Tablet',
+          '5',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '7.0 - 7.0',
+          'Tablet',
+          '0',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '1.0 - 1.0',
+          'Desktop',
+          '15',
+          288
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/product',
+          'Safari',
+          '1.0 - 1.0',
+          'Desktop',
+          '10',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '2.0 - 2.0',
+          'Desktop',
+          '288',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '1.0 - 1.0',
+          'Desktop',
+          '39',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/product',
+          'Internet Explorer',
+          '3.0 - 3.0',
+          'Desktop',
+          '108',
+          277
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '5.0 - 5.0',
+          'Desktop',
+          '5',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '1.0 - 1.0',
+          'Desktop',
+          '84',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '1.0 - 1.0',
+          'Tablet',
+          '66',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Unknown',
+          '2.0 - 2.0',
+          'Mobile',
+          '5',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Unknown',
+          '1.0 - 1.0',
+          'Desktop',
+          '2',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/product',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Mobile',
+          '11',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '6.0 - 6.0',
+          'Desktop',
+          '139',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '1.0 - 1.0',
+          'Tablet',
+          '190',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Desktop',
+          '139',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Desktop',
+          '13',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '1.0 - 1.0',
+          'Mobile',
+          '4',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '3.0 - 3.0',
+          'Desktop',
+          '0',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '5.0 - 5.0',
+          'Desktop',
+          '30',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '1.0 - 1.0',
+          'Desktop',
+          '6',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '1.0 - 1.0',
+          'Tablet',
+          '5',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '1.0 - 1.0',
+          'Mobile',
+          '139',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '1.0 - 1.0',
+          'Tablet',
+          '12',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '2.0 - 2.0',
+          'Mobile',
+          '10',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Desktop',
+          '2',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '5.0 - 5.0',
+          'Mobile',
+          '4',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/product',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Desktop',
+          '139',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '1.0 - 1.0',
+          'Desktop',
+          '5',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '4.0 - 4.0',
+          'Desktop',
+          '17',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '1.0 - 1.0',
+          'Tablet',
+          '5',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '2.0 - 2.0',
+          'Mobile',
+          '273',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Unknown',
+          '9.0 - 9.0',
+          'Desktop',
+          '28',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '4.0 - 4.0',
+          'Mobile',
+          '17',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '4.0 - 4.0',
+          'Desktop',
+          '2',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '1.0 - 1.0',
+          'Desktop',
+          '21',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '4.0 - 4.0',
+          'Desktop',
+          '20',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '2.0 - 2.0',
+          'Desktop',
+          '1',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '2.0 - 2.0',
+          'Tablet',
+          '11',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Safari',
+          '29.0 - 29.0',
+          'Desktop',
+          '9',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '2.0 - 2.0',
+          'Desktop',
+          '77',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '9.0 - 9.0',
+          'Desktop',
+          '13',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Unknown',
+          '2.0 - 2.0',
+          'Desktop',
+          '11',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '3.0 - 3.0',
+          'Desktop',
+          '14',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '9.0 - 9.0',
+          'Desktop',
+          '108',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '29.0 - 29.0',
+          'Desktop',
+          '17',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '2.0 - 2.0',
+          'Desktop',
+          '4',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '27.0 - 27.0',
+          'Tablet',
+          '18',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '2.0 - 2.0',
+          'Desktop',
+          '5',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Safari',
+          '10.0 - 10.0',
+          'Desktop',
+          '101',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '2.0 - 2.0',
+          'Desktop',
+          '2',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '2.0 - 2.0',
+          'Mobile',
+          '63',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '17.0 - 17.0',
+          'Mobile',
+          '3',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '2.0 - 2.0',
+          'Desktop',
+          '2',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Safari',
+          '4.0 - 4.0',
+          'Mobile',
+          '13',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '15.0 - 15.0',
+          'Desktop',
+          '300',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Unknown',
+          '2.0 - 2.0',
+          'Unknown',
+          '11',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '16.0 - 16.0',
+          'Desktop',
+          '2',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '2.0 - 2.0',
+          'Desktop',
+          '220',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '3.0 - 3.0',
+          'Mobile',
+          '3',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '9.0 - 9.0',
+          'Unknown',
+          '4',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Unknown',
+          '2.0 - 2.0',
+          'Mobile',
+          '89',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '8.0 - 8.0',
+          'Desktop',
+          '66',
+          0
+        ],
+        [
+          '2020-10-18T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '1.0 - 1.0',
+          'Mobile',
+          '53',
+          251
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '2.0 - 2.0',
+          'Desktop',
+          '77',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '4.0 - 4.0',
+          'Mobile',
+          '4',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '4.0 - 4.0',
+          'Mobile',
+          '28',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '8.0 - 8.0',
+          'Desktop',
+          '66',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '5.0 - 5.0',
+          'Mobile',
+          '5',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '1.0 - 1.0',
+          'Mobile',
+          '139',
+          387
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Unknown',
+          '2.0 - 2.0',
+          'Mobile',
+          '89',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '9.0 - 9.0',
+          'Desktop',
+          '63',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/product',
+          'Internet Explorer',
+          '2.0 - 2.0',
+          'Mobile',
+          '21',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '9.0 - 9.0',
+          'Unknown',
+          '4',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '5.0 - 5.0',
+          'Mobile',
+          '13',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Desktop',
+          '2',
+          362
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '2.0 - 2.0',
+          'Desktop',
+          '220',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '3.0 - 3.0',
+          'Mobile',
+          '3',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '2.0 - 2.0',
+          'Tablet',
+          '2',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '5.0 - 5.0',
+          'Mobile',
+          '9',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '5.0 - 5.0',
+          'Desktop',
+          '179',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Unknown',
+          '2.0 - 2.0',
+          'Unknown',
+          '11',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '2.0 - 2.0',
+          'Desktop',
+          '2',
+          415
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/product',
+          'Internet Explorer',
+          '3.0 - 3.0',
+          'Desktop',
+          '108',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '9.0 - 9.0',
+          'Desktop',
+          '2',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '15.0 - 15.0',
+          'Desktop',
+          '300',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '2.0 - 2.0',
+          'Desktop',
+          '127',
+          401
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '2.0 - 2.0',
+          'Desktop',
+          '2',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Safari',
+          '4.0 - 4.0',
+          'Mobile',
+          '13',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Unknown',
+          '2.0 - 2.0',
+          'Desktop',
+          '11',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '2.0 - 2.0',
+          'Desktop',
+          '5',
+          396
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '3.0 - 3.0',
+          'Desktop',
+          '5',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '17.0 - 17.0',
+          'Mobile',
+          '3',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '2.0 - 2.0',
+          'Mobile',
+          '4',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Safari',
+          '5.0 - 5.0',
+          'Mobile',
+          '15',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '2.0 - 2.0',
+          'Mobile',
+          '63',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '2.0 - 2.0',
+          'Desktop',
+          '4',
+          396
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '24.0 - 24.0',
+          'Desktop',
+          '13',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '2.0 - 2.0',
+          'Desktop',
+          '78',
+          370
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '1.0 - 1.0',
+          'Mobile',
+          '53',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Unknown',
+          '2.0 - 2.0',
+          'Desktop',
+          '2',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '5.0 - 5.0',
+          'Desktop',
+          '26',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Safari',
+          '10.0 - 10.0',
+          'Desktop',
+          '101',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '4.0 - 4.0',
+          'Desktop',
+          '2',
+          337
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '5.0 - 5.0',
+          'Mobile',
+          '13',
+          438
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '1.0 - 1.0',
+          'Mobile',
+          '5',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '2.0 - 2.0',
+          'Desktop',
+          '108',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '5.0 - 5.0',
+          'Tablet',
+          '13',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '9.0 - 9.0',
+          'Desktop',
+          '108',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '29.0 - 29.0',
+          'Desktop',
+          '17',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Unknown',
+          '9.0 - 9.0',
+          'Desktop',
+          '28',
+          416
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '3.0 - 3.0',
+          'Desktop',
+          '14',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '1.0 - 1.0',
+          'Mobile',
+          '70',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Safari',
+          '4.0 - 4.0',
+          'Desktop',
+          '3',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/product',
+          'Unknown',
+          '1.0 - 1.0',
+          'Tablet',
+          '13',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Safari',
+          '29.0 - 29.0',
+          'Desktop',
+          '3',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '6.0 - 6.0',
+          'Mobile',
+          '14',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '16.0 - 16.0',
+          'Desktop',
+          '2',
+          412
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Safari',
+          '2.0 - 2.0',
+          'Tablet',
+          '11',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '2.0 - 2.0',
+          'Tablet',
+          '11',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '9.0 - 9.0',
+          'Desktop',
+          '13',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Safari',
+          '29.0 - 29.0',
+          'Desktop',
+          '9',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '27.0 - 27.0',
+          'Tablet',
+          '18',
+          423
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '5.0 - 5.0',
+          'Mobile',
+          '26',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '4.0 - 4.0',
+          'Desktop',
+          '20',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '2.0 - 2.0',
+          'Desktop',
+          '1',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '1.0 - 1.0',
+          'Desktop',
+          '21',
+          315
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '1.0 - 1.0',
+          'Desktop',
+          '16',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '1.0 - 1.0',
+          'Tablet',
+          '12',
           301
         ],
         [
-          '2020-10-12T00:00:00+05:30',
-          'www.acme.com/product/analytics',
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
           'Chrome',
-          445
-        ],
-        [
-          '2020-10-12T00:00:00+05:30',
-          'www.acme.com/product/analytics',
-          'Unknown',
+          '4.0 - 4.0',
+          'Mobile',
+          '17',
           0
         ],
         [
-          '2020-10-12T00:00:00+05:30',
-          'www.acme.com/product/collaboration',
-          'Unknown',
-          0
-        ],
-        [
-          '2020-10-12T00:00:00+05:30',
-          'www.acme.com/product/collaboration',
-          'Chrome',
-          507
-        ],
-        [
-          '2020-10-12T00:00:00+05:30',
-          'www.acme.com/product/analytics',
-          'Safari',
-          165
-        ],
-        [
-          '2020-10-13T00:00:00+05:30',
-          'www.acme.com/product/collaboration',
-          'Chrome',
-          802
-        ],
-        [
-          '2020-10-13T00:00:00+05:30',
-          'www.acme.com/product/analytics',
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/product',
           'Firefox',
-          320
+          '1.0 - 1.0',
+          'Tablet',
+          '5',
+          292
         ],
         [
-          '2020-10-13T00:00:00+05:30',
-          'www.acme.com/product/analytics',
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/product',
           'Internet Explorer',
-          309
-        ],
-        [
-          '2020-10-13T00:00:00+05:30',
-          'www.acme.com/product/collaboration',
-          'Safari',
-          345
-        ],
-        [
-          '2020-10-13T00:00:00+05:30',
-          'www.acme.com/product/analytics',
-          'Unknown',
-          127
-        ],
-        [
-          '2020-10-13T00:00:00+05:30',
-          'www.acme.com/product/analytics',
-          'Safari',
+          '1.0 - 1.0',
+          'Tablet',
+          '5',
           0
         ],
         [
-          '2020-10-13T00:00:00+05:30',
-          'www.acme.com/product/collaboration',
-          'Unknown',
-          176
-        ],
-        [
-          '2020-10-13T00:00:00+05:30',
-          'www.acme.com/product/collaboration',
-          'Firefox',
-          478
-        ],
-        [
-          '2020-10-13T00:00:00+05:30',
-          'www.acme.com/product/collaboration',
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/product',
           'Internet Explorer',
-          145
+          '1.0 - 1.0',
+          'Desktop',
+          '21',
+          0
         ],
         [
-          '2020-10-13T00:00:00+05:30',
-          'www.acme.com/product/analytics',
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '2.0 - 2.0',
+          'Desktop',
+          '288',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
           'Chrome',
-          1066
-        ],
-        [
-          '2020-10-14T00:00:00+05:30',
-          'www.acme.com/product/collaboration',
-          'Unknown',
+          '2.0 - 2.0',
+          'Mobile',
+          '273',
           0
         ],
         [
-          '2020-10-14T00:00:00+05:30',
-          'www.acme.com/product/analytics',
-          'Internet Explorer',
-          301
-        ],
-        [
-          '2020-10-14T00:00:00+05:30',
-          'www.acme.com/product/analytics',
-          'Safari',
-          306
-        ],
-        [
-          '2020-10-14T00:00:00+05:30',
-          'www.acme.com/product/collaboration',
-          'Internet Explorer',
-          814
-        ],
-        [
-          '2020-10-14T00:00:00+05:30',
-          'www.acme.com/product/analytics',
-          'Unknown',
-          0
-        ],
-        [
-          '2020-10-14T00:00:00+05:30',
-          'www.acme.com/product/collaboration',
-          'Safari',
-          165
-        ],
-        [
-          '2020-10-14T00:00:00+05:30',
-          'www.acme.com/product/analytics',
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
           'Chrome',
-          912
-        ],
-        [
-          '2020-10-14T00:00:00+05:30',
-          'www.acme.com/product/collaboration',
-          'Firefox',
-          164
-        ],
-        [
-          '2020-10-14T00:00:00+05:30',
-          'www.acme.com/product/analytics',
-          'Firefox',
+          '4.0 - 4.0',
+          'Desktop',
+          '2',
           0
         ],
         [
-          '2020-10-14T00:00:00+05:30',
-          'www.acme.com/product/collaboration',
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '1.0 - 1.0',
+          'Mobile',
+          '4',
+          292
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '7.0 - 7.0',
+          'Tablet',
+          '0',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/product',
           'Chrome',
-          533
+          '1.0 - 1.0',
+          'Tablet',
+          '5',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '1.0 - 1.0',
+          'Desktop',
+          '4',
+          269
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '1.0 - 1.0',
+          'Desktop',
+          '5',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '4.0 - 4.0',
+          'Desktop',
+          '17',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/product',
+          'Safari',
+          '1.0 - 1.0',
+          'Desktop',
+          '10',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '5.0 - 5.0',
+          'Mobile',
+          '4',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/product',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Desktop',
+          '139',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '1.0 - 1.0',
+          'Desktop',
+          '39',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '1.0 - 1.0',
+          'Mobile',
+          '5',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Unknown',
+          '2.0 - 2.0',
+          'Mobile',
+          '5',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '5.0 - 5.0',
+          'Desktop',
+          '5',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '1.0 - 1.0',
+          'Desktop',
+          '84',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '2.0 - 2.0',
+          'Mobile',
+          '10',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '1.0 - 1.0',
+          'Tablet',
+          '66',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Unknown',
+          '1.0 - 1.0',
+          'Desktop',
+          '2',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/product',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Mobile',
+          '11',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Tablet',
+          '5',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '3.0 - 3.0',
+          'Desktop',
+          '7',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '6.0 - 6.0',
+          'Desktop',
+          '139',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '1.0 - 1.0',
+          'Tablet',
+          '190',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '1.0 - 1.0',
+          'Desktop',
+          '6',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '5.0 - 5.0',
+          'Desktop',
+          '30',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '1.0 - 1.0',
+          'Desktop',
+          '15',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Desktop',
+          '13',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '3.0 - 3.0',
+          'Desktop',
+          '0',
+          0
+        ],
+        [
+          '2020-10-19T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Desktop',
+          '139',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '3.0 - 3.0',
+          'Desktop',
+          '0',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '1.0 - 1.0',
+          'Mobile',
+          '4',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '6.0 - 6.0',
+          'Desktop',
+          '139',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '1.0 - 1.0',
+          'Tablet',
+          '190',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Desktop',
+          '13',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '1.0 - 1.0',
+          'Desktop',
+          '15',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '1.0 - 1.0',
+          'Tablet',
+          '5',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '5.0 - 5.0',
+          'Desktop',
+          '30',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Unknown',
+          '1.0 - 1.0',
+          'Desktop',
+          '2',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '1.0 - 1.0',
+          'Desktop',
+          '6',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Tablet',
+          '5',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/product',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Mobile',
+          '11',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '2.0 - 2.0',
+          'Mobile',
+          '10',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '3.0 - 3.0',
+          'Desktop',
+          '7',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '1.0 - 1.0',
+          'Desktop',
+          '84',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '5.0 - 5.0',
+          'Desktop',
+          '5',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '1.0 - 1.0',
+          'Tablet',
+          '12',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '1.0 - 1.0',
+          'Tablet',
+          '66',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '1.0 - 1.0',
+          'Mobile',
+          '139',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '4.0 - 4.0',
+          'Desktop',
+          '17',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Desktop',
+          '2',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Unknown',
+          '2.0 - 2.0',
+          'Mobile',
+          '5',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/product',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Desktop',
+          '139',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '1.0 - 1.0',
+          'Desktop',
+          '39',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/product',
+          'Internet Explorer',
+          '2.0 - 2.0',
+          'Mobile',
+          '21',
+          307
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '5.0 - 5.0',
+          'Tablet',
+          '13',
+          399
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '1.0 - 1.0',
+          'Mobile',
+          '5',
+          255
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '7.0 - 7.0',
+          'Tablet',
+          '0',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '1.0 - 1.0',
+          'Mobile',
+          '5',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/product',
+          'Safari',
+          '1.0 - 1.0',
+          'Desktop',
+          '10',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '1.0 - 1.0',
+          'Tablet',
+          '5',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '4.0 - 4.0',
+          'Desktop',
+          '2',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '1.0 - 1.0',
+          'Desktop',
+          '5',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/product',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Desktop',
+          '21',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '2.0 - 2.0',
+          'Mobile',
+          '273',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/product',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Tablet',
+          '5',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Unknown',
+          '9.0 - 9.0',
+          'Desktop',
+          '28',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '1.0 - 1.0',
+          'Desktop',
+          '21',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '2.0 - 2.0',
+          'Desktop',
+          '288',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '5.0 - 5.0',
+          'Mobile',
+          '26',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '2.0 - 2.0',
+          'Desktop',
+          '1',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '1.0 - 1.0',
+          'Desktop',
+          '16',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '4.0 - 4.0',
+          'Mobile',
+          '17',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '5.0 - 5.0',
+          'Mobile',
+          '13',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Safari',
+          '29.0 - 29.0',
+          'Desktop',
+          '9',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '2.0 - 2.0',
+          'Tablet',
+          '11',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Safari',
+          '2.0 - 2.0',
+          'Tablet',
+          '11',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '1.0 - 1.0',
+          'Desktop',
+          '4',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '17.0 - 17.0',
+          'Mobile',
+          '3',
+          348
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Unknown',
+          '2.0 - 2.0',
+          'Desktop',
+          '11',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '6.0 - 6.0',
+          'Mobile',
+          '14',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Safari',
+          '29.0 - 29.0',
+          'Desktop',
+          '3',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '4.0 - 4.0',
+          'Mobile',
+          '4',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/product',
+          'Unknown',
+          '1.0 - 1.0',
+          'Tablet',
+          '13',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '2.0 - 2.0',
+          'Desktop',
+          '78',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '9.0 - 9.0',
+          'Desktop',
+          '108',
+          409
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '9.0 - 9.0',
+          'Desktop',
+          '13',
+          413
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '2.0 - 2.0',
+          'Desktop',
+          '77',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '2.0 - 2.0',
+          'Desktop',
+          '4',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '1.0 - 1.0',
+          'Mobile',
+          '70',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '29.0 - 29.0',
+          'Desktop',
+          '17',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '5.0 - 5.0',
+          'Mobile',
+          '4',
+          373
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Safari',
+          '4.0 - 4.0',
+          'Desktop',
+          '3',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '5.0 - 5.0',
+          'Desktop',
+          '179',
+          411
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '3.0 - 3.0',
+          'Desktop',
+          '14',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '2.0 - 2.0',
+          'Desktop',
+          '108',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '4.0 - 4.0',
+          'Desktop',
+          '2',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '27.0 - 27.0',
+          'Tablet',
+          '18',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '2.0 - 2.0',
+          'Desktop',
+          '5',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '2.0 - 2.0',
+          'Desktop',
+          '2',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Unknown',
+          '2.0 - 2.0',
+          'Desktop',
+          '2',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '1.0 - 1.0',
+          'Mobile',
+          '53',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '24.0 - 24.0',
+          'Desktop',
+          '13',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Safari',
+          '5.0 - 5.0',
+          'Mobile',
+          '15',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Safari',
+          '10.0 - 10.0',
+          'Desktop',
+          '101',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '2.0 - 2.0',
+          'Mobile',
+          '63',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Safari',
+          '4.0 - 4.0',
+          'Mobile',
+          '13',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '3.0 - 3.0',
+          'Desktop',
+          '5',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '2.0 - 2.0',
+          'Mobile',
+          '4',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '15.0 - 15.0',
+          'Desktop',
+          '300',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '5.0 - 5.0',
+          'Desktop',
+          '26',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '2.0 - 2.0',
+          'Desktop',
+          '2',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/product',
+          'Internet Explorer',
+          '3.0 - 3.0',
+          'Desktop',
+          '108',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '5.0 - 5.0',
+          'Mobile',
+          '13',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '9.0 - 9.0',
+          'Desktop',
+          '2',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '16.0 - 16.0',
+          'Desktop',
+          '2',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '3.0 - 3.0',
+          'Mobile',
+          '3',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Unknown',
+          '2.0 - 2.0',
+          'Unknown',
+          '11',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/product',
+          'Chrome',
+          '2.0 - 2.0',
+          'Tablet',
+          '2',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '4.0 - 4.0',
+          'Desktop',
+          '20',
+          420
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '5.0 - 5.0',
+          'Mobile',
+          '9',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '2.0 - 2.0',
+          'Desktop',
+          '220',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '9.0 - 9.0',
+          'Unknown',
+          '4',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '2.0 - 2.0',
+          'Desktop',
+          '127',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Firefox',
+          '5.0 - 5.0',
+          'Mobile',
+          '5',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Unknown',
+          '2.0 - 2.0',
+          'Mobile',
+          '89',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '1.0 - 1.0',
+          'Desktop',
+          '139',
+          415
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Chrome',
+          '8.0 - 8.0',
+          'Desktop',
+          '66',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/pricing',
+          'Internet Explorer',
+          '9.0 - 9.0',
+          'Desktop',
+          '63',
+          0
+        ],
+        [
+          '2020-10-20T00:00:00+05:30',
+          'www.acme.com/product',
+          'Firefox',
+          '4.0 - 4.0',
+          'Mobile',
+          '28',
+          0
         ]
       ],
       meta: {
         query: {
           cl: 'events',
           ty: 'events_occurrence',
-          ec: 'any_given_event',
+          ec: 'each_given_event',
           ewp: [
             {
-              na: 'www.acme.com/product/collaboration',
+              na: 'www.acme.com/pricing',
               pr: [
 
               ]
             },
             {
-              na: 'www.acme.com/product/analytics',
+              na: 'www.acme.com/solutions',
+              pr: [
+
+              ]
+            },
+            {
+              na: 'www.acme.com/product',
               pr: [
 
               ]
@@ -22386,14 +28275,42 @@ export const MultipleEventsMultipleBreakdown = {
               pr: 'Browser',
               in: 0,
               pty: 'categorical',
-              ena: '',
-              eni: 0
+              ena: 'www.acme.com/pricing',
+              eni: 1,
+              grn: ''
+            },
+            {
+              en: 'event',
+              pr: 'Page Load Time',
+              in: 1,
+              pty: 'numerical',
+              ena: 'www.acme.com/solutions',
+              eni: 2,
+              grn: ''
+            },
+            {
+              en: 'event',
+              pr: 'Device Type',
+              in: 2,
+              pty: 'categorical',
+              ena: 'www.acme.com/product',
+              eni: 3,
+              grn: ''
+            },
+            {
+              en: 'event',
+              pr: 'Page Spent Time',
+              in: 3,
+              pty: 'categorical',
+              ena: 'www.acme.com/product',
+              eni: 3,
+              grn: ''
             }
           ],
           gbt: 'date',
           tz: 'Asia/Kolkata',
-          fr: 1602095400,
-          to: 1602687836,
+          fr: 1602613800,
+          to: 1603188824,
           ovp: false,
           sse: 0,
           see: 0

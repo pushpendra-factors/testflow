@@ -3,11 +3,11 @@ import { Tabs } from 'antd';
 import styles from './index.module.scss';
 
 function ContentTabs({
-  onChange, activeKey, tabItems, resultState
+  onChange, activeKey, tabItems, resultState, breakdownTypeData
 }) {
   const { TabPane } = Tabs;
 
-  const loading = !!resultState.find(elem => elem.loading);
+  const loading = !!resultState.find(elem => elem.loading) || breakdownTypeData.loading;
 
   const getTabTitle = (tab) => {
     return (
