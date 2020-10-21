@@ -98,7 +98,7 @@ func main() {
 		log.WithError(err).Fatal("Failed to initialize.")
 		return
 	}
-	defer C.SafeFlushSentryHook()
+	defer C.SafeFlushAllCollectors()
 
 	if !C.IsDevelopment() {
 		gin.SetMode(gin.ReleaseMode)

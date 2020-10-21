@@ -85,7 +85,7 @@ func main() {
 	C.InitRedis(config.RedisHost, config.RedisPort)
 	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
 	C.InitSentryLogging(config.SentryDSN, config.AppName)
-	defer C.SafeFlushSentryHook()
+	defer C.SafeFlushAllCollectors()
 
 	allowedProjectIds, errCode := session.GetAddSessionAllowedProjects(*projectIds, *disabledProjectIds)
 	if errCode != http.StatusFound {

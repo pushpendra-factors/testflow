@@ -477,10 +477,9 @@ func InitSentryLogging(sentryDSN, appName string) {
 	}
 }
 
-// SafeFlushSentryHook Safe flush error messages in sentry hook. Used with `defer` statement.
+// SafeFlushAllCollectors Safe flush sentry and metrics collectors. Used with `defer` statement.
 // Useful while running scripts in development mode where sentry is not initialized.
-// TODO(prateek): Rename this method to generic SafeFlushAllCollectors.
-func SafeFlushSentryHook() {
+func SafeFlushAllCollectors() {
 	if services.SentryHook != nil {
 		services.SentryHook.Flush()
 	}
