@@ -9,6 +9,7 @@ import (
 	"flag"
 	"fmt"
 	"strings"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -63,7 +64,7 @@ func main() {
 		log.WithError(err).Fatal("Failed to initalize queue client.")
 	}
 	C.InitMetricsExporter(config.Env, config.AppName, config.GCPProjectID, config.GCPProjectLocation)
-	defer C.SafeFlushAllCollectors()
+	defer C.WaitAndFlushAllCollectors(65 * time.Second)
 
 	slowQueries := make([]SlowQueries, 0, 0)
 

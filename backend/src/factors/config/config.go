@@ -490,6 +490,13 @@ func SafeFlushAllCollectors() {
 	}
 }
 
+// WaitAndFlushAllCollectors Waits for given period before flushing and terminating.
+// Added as a hack to export metrics before program ends.
+func WaitAndFlushAllCollectors(waitPeriod time.Duration) {
+	time.Sleep(waitPeriod)
+	SafeFlushAllCollectors()()
+}
+
 func InitMailClient(key, secret, region string) {
 	if services == nil {
 		services = &Services{}
