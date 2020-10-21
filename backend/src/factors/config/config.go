@@ -494,7 +494,7 @@ func SafeFlushAllCollectors() {
 // Added as a hack to export metrics before program ends.
 func WaitAndFlushAllCollectors(waitPeriod time.Duration) {
 	time.Sleep(waitPeriod)
-	SafeFlushAllCollectors()()
+	SafeFlushAllCollectors()
 }
 
 func InitMailClient(key, secret, region string) {
