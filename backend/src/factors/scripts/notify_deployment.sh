@@ -39,9 +39,9 @@ if [[ "${latest_tag}" == "" ]]; then
     exit # Non error exit.
 fi
 
-# Get the commit id from the tag.
+# Get the commit id from the tag. Works when separated with - or _.
 # Will work even if the tag is suffixed with PR number or any other suffix.
-commit_id=`echo "${latest_tag}" | cut -d'-' -f2`
+commit_id=`echo "${latest_tag}" | cut -d'-' -f2 | cut -d'_' -f2`
 
 # Get the commit history.
 commit_history=`git log | grep -B10000 "commit ${commit_id}" | sed '$d' | grep -v '^[[:space:]]*$' | grep -e "^Author" -e "^Date" -e "^  " | sed 's/^  /      /g'`
