@@ -13,8 +13,8 @@ export const getBreakdownTitle = (breakdown) => {
       <div className="mr-1">{breakdown.property} of </div>
       <div style={{ backgroundColor: '#3E516C' }} className="text-white w-4 h-4 flex justify-center items-center rounded-full font-semibold leading-5 text-xs">{charArr[breakdown.eventIndex - 1]}</div>
     </div>
-  )
-}
+  );
+};
 
 export const formatData = (data, queries, colors) => {
   const splittedData = {};
