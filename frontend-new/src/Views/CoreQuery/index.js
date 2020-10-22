@@ -274,6 +274,7 @@ function CoreQuery({ activeProject }) {
       breakdownType={breakdownType}
       handleBreakdownTypeChange={handleBreakdownTypeChange}
       breakdownTypeData={breakdownTypeData}
+      queryType={queryType}
     />
   );
 

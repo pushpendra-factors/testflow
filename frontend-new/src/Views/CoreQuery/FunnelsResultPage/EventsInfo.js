@@ -1,8 +1,36 @@
 import React from 'react';
 import styles from './index.module.scss';
 
-function EventsInfo({ queries, setDrawerVisible }) {
-  return (
+function EventsInfo({ queries, setDrawerVisible, queryType }) {
+
+    const charArr = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
+
+    if (queryType === 'event') {
+        return (
+            <div onClick={setDrawerVisible.bind(this, true)} className={`whitespace-no-wrap pb-1 flex items-center cursor-pointer leading-6 overflow-hidden ${styles.eventsText}`}>
+                {queries.map((q, index) => {
+                    if (index < queries.length - 1) {
+                        return (
+                            <div className="flex items-center" key={q}>
+                                <div style={{ backgroundColor: '#3E516C' }} className="text-white w-6 h-6 flex justify-center items-center mr-1 rounded-full font-semibold leading-5 text-xs">{charArr[index]}</div>
+                                <span style={{ color: '#0E2647' }} className="text-xl font-semibold">{q}</span>
+                                <span style={{ color: '#8692A3' }} className="text-xl font-normal">&nbsp;and&nbsp;</span>
+                            </div>
+                        );
+                    } else {
+                        return (
+                            <div className="flex items-center" key={q}>
+                                <div style={{ backgroundColor: '#3E516C' }} className="text-white w-6 h-6 flex justify-center items-center mr-1 rounded-full font-semibold leading-5 text-xs">{charArr[index]}</div>
+                                <span style={{ color: '#0E2647' }} className="text-xl font-semibold">{q}</span>
+                            </div>
+                        );
+                    }
+                })}
+            </div>
+        )
+    }
+
+    return (
         <div className="flex justify-between items-center">
             <div className="flex items-center leading-6">
                 <span className="mr-2">
@@ -18,25 +46,25 @@ function EventsInfo({ queries, setDrawerVisible }) {
                 </span>
                 <div onClick={setDrawerVisible.bind(this, true)} className={`cursor-pointer ${styles.eventsText}`}>
                     {queries.map((q, index) => {
-                      if (index < queries.length - 1) {
-                        return (
+                        if (index < queries.length - 1) {
+                            return (
                                 <React.Fragment key={q}>
                                     <span style={{ color: '#0E2647' }} className="text-xl font-semibold">{q}</span>
                                     <span style={{ color: '#8692A3' }} className="text-xl font-normal">&nbsp;and then&nbsp;</span>
                                 </React.Fragment>
-                        );
-                      } else {
-                        return (
+                            );
+                        } else {
+                            return (
                                 <React.Fragment key={q}>
                                     <span style={{ color: '#0E2647' }} className="text-xl font-semibold">{q}</span>
                                 </React.Fragment>
-                        );
-                      }
+                            );
+                        }
                     })}
                 </div>
             </div>
         </div>
-  );
+    );
 }
 
 export default EventsInfo;

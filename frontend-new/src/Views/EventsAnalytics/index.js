@@ -9,7 +9,7 @@ import { SVG } from '../../components/factorsComponents';
 import EventBreakdown from './EventBreakdown';
 
 function EventsAnalytics({
-  queries, eventsMapper, reverseEventsMapper, breakdown, resultState, setDrawerVisible, runQuery, activeKey, breakdownType, handleBreakdownTypeChange, breakdownTypeData
+  queries, eventsMapper, reverseEventsMapper, breakdown, resultState, setDrawerVisible, runQuery, activeKey, breakdownType, handleBreakdownTypeChange, breakdownTypeData, queryType
 }) {
   const handleTabChange = (tabKey) => {
     runQuery(tabKey);
@@ -64,10 +64,11 @@ function EventsAnalytics({
           <EventsInfo
             setDrawerVisible={setDrawerVisible}
             queries={queries}
+            queryType={queryType}
           />
         </div>
       </Header>
-      <div className="mt-40 mb-8 fa-container">
+      <div className="mt-32 mb-8 fa-container">
         <ContentTabs breakdownTypeData={breakdownTypeData} resultState={resultState} onChange={handleTabChange} activeKey={activeKey} tabItems={tabItems} />
       </div>
     </>
