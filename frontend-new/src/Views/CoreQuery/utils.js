@@ -5,7 +5,7 @@ export const labelsObj = {
   totalUsers: 'User Count',
   activeUsers: 'User Count',
   frequency: 'Count'
-}
+};
 
 const constantObj = {
   each: 'each_given_event',
