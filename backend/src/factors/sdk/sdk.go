@@ -17,6 +17,7 @@ import (
 	"factors/vendor_custom/machinery/v1/tasks"
 
 	C "factors/config"
+	"factors/metrics"
 	M "factors/model"
 	U "factors/util"
 )
@@ -54,6 +55,13 @@ type IdentifyPayload struct {
 	CreateUser     bool   `json:"create_user"`
 	CustomerUserId string `json:"c_uid"`
 	JoinTimestamp  int64  `json:"join_timestamp"`
+	Timestamp      int64  `json:"timestamp"`
+}
+
+// AMPIdentifyPayload holds required fields for AMP identification
+type AMPIdentifyPayload struct {
+	CustomerUserID string `json:"customer_user_id"`
+	ClientID       string `json:"client_id"`
 	Timestamp      int64  `json:"timestamp"`
 }
 
@@ -116,6 +124,7 @@ const (
 	sdkRequestTypeEventUpdateProperties     = "sdk_event_update_properties"
 	sdkRequestTypeAMPEventTrack             = "sdk_amp_event_track"
 	sdkRequestTypedAMPEventUpdateProperties = "sdk_amp_event_update_properties"
+	sdkRequestTypeAMPIdentify               = "sdk_amp_identify"
 )
 
 func ProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, string, error) {
@@ -208,6 +217,19 @@ func ProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, string,
 
 		status, response = AMPUpdateEventPropertiesByToken(token, &reqPayload)
 
+	case sdkRequestTypeAMPIdentify:
+		var reqPayload AMPIdentifyPayload
+
+		err := json.Unmarshal([]byte(reqPayloadStr), &reqPayload)
+		if err != nil {
+			logCtx.WithError(err).Error(
+				"Failed to unmarshal request payload on sdk process queue.")
+			return http.StatusInternalServerError, "", nil
+		}
+		logCtx = logCtx.WithField("req_payload", reqPayload)
+
+		status, response = AMPIdentifyByToken(token, &reqPayload)
+
 	default:
 		logCtx.Error("Invalid sdk request type on sdk process queue")
 		return http.StatusInternalServerError, "", nil
@@ -219,6 +241,7 @@ func ProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, string,
 	// Do not retry on below conditions.
 	if status == http.StatusBadRequest || status == http.StatusNotAcceptable || status == http.StatusUnauthorized {
 		logCtx.WithField("processed", "true").Info("Failed to process sdk request permanantly.")
+		metrics.Increment(metrics.IncrSDKRequestQueueProcessed)
 		return float64(status), "", nil
 	}
 
@@ -226,12 +249,14 @@ func ProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, string,
 	// Retry dependencies not found and failures which can be successful on retries.
 	if status == http.StatusNotFound || status == http.StatusInternalServerError {
 		logCtx.WithField("retry", "true").Info("Failed to process sdk request on sdk process queue. Retry.")
+		metrics.Increment(metrics.IncrSDKRequestQueueRetry)
 		return http.StatusInternalServerError, "",
 			tasks.NewErrRetryTaskExp("EXP_RETRY__REQUEST_PROCESSING_FAILURE")
 	}
 
 	// Log for analysing queue process status.
 	logCtx.WithField("processed", "true").Info("Processed sdk request.")
+	metrics.Increment(metrics.IncrSDKRequestQueueProcessed)
 
 	return http.StatusOK, string(responseBytes), nil
 }
@@ -731,10 +756,43 @@ func Identify(projectId uint64, request *IdentifyPayload) (int, *IdentifyRespons
 		}
 	}
 
-	// Precondition: customer_user_id present, user_id not.
-	// if customer_user has user already : respond with same user.
-	// else : creating a new_user with the given customer_user_id and respond with new_user_id.
-	if request.CreateUser || request.UserId == "" {
+	// Create new user with given user_id and customer_user_id,
+	// if the create user_id is set to true.
+	if request.CreateUser {
+		if request.UserId == "" {
+			logCtx.Error("Identify request payload with create_user true without user_id.")
+			return http.StatusInternalServerError,
+				&IdentifyResponse{Error: "Identification failed. User creation failed."}
+		}
+
+		response := &IdentifyResponse{}
+
+		newUser := M.User{
+			ID:             request.UserId,
+			ProjectId:      projectId,
+			CustomerUserId: request.CustomerUserId,
+			JoinTimestamp:  request.JoinTimestamp,
+		}
+		if userProperties != nil {
+			newUser.Properties = *userProperties
+		}
+
+		_, errCode := M.CreateUser(&newUser)
+		if errCode != http.StatusCreated {
+			return errCode, &IdentifyResponse{
+				Error: "Identification failed. User creation failed."}
+		}
+		response.UserId = request.UserId
+
+		response.Message = "User has been identified successfully."
+		return http.StatusOK, response
+	}
+
+	// If identified without userID, try to re-use existing user of
+	// customer_user_id, else create a new user. This is possible only
+	// on non-queue requests. For queue requests, either create_user is
+	// set to true or the user_id will be present.
+	if request.UserId == "" {
 		response := &IdentifyResponse{}
 
 		userLatest, errCode := M.GetUserLatestByCustomerUserId(projectId, request.CustomerUserId)
@@ -748,16 +806,6 @@ func Identify(projectId uint64, request *IdentifyPayload) (int, *IdentifyRespons
 				ProjectId:      projectId,
 				CustomerUserId: request.CustomerUserId,
 				JoinTimestamp:  request.JoinTimestamp,
-			}
-
-			// create user with given user id.
-			if request.CreateUser {
-				if request.UserId == "" {
-					logCtx.Error("Identify request payload with create_user true without user_id.")
-					return http.StatusInternalServerError,
-						&IdentifyResponse{Error: "Identification failed. User creation failed."}
-				}
-				newUser.ID = request.UserId
 			}
 
 			if userProperties != nil {
@@ -1025,6 +1073,61 @@ func IdentifyByToken(token string, reqPayload *IdentifyPayload) (int, *IdentifyR
 	}
 
 	return errCode, &IdentifyResponse{Error: "Identify failed."}
+}
+
+// AMPIdentifyByToken identifies AMP user by project token
+func AMPIdentifyByToken(token string, reqPayload *AMPIdentifyPayload) (int, *IdentifyResponse) {
+
+	project, errCode := M.GetProjectByToken(token)
+	if errCode != http.StatusFound {
+		log.WithField("token", token).Error("Failed to get project from AMP sdk project token.")
+
+		if errCode == http.StatusInternalServerError {
+			return errCode, &IdentifyResponse{Error: "Identify failed. Failed to get AMP user."}
+		}
+
+		return http.StatusUnauthorized, &IdentifyResponse{Error: "Identify failed. Invalid project id."}
+	}
+
+	user, errCode := M.CreateOrGetAMPUser(project.ID, reqPayload.ClientID, reqPayload.Timestamp)
+	if errCode != http.StatusCreated && errCode != http.StatusFound {
+		log.WithField("project_id", project.ID).Error("Identify failed. Failed to CreateOrGetAMPUser.")
+		return errCode, &IdentifyResponse{Error: "Identify failed. Failed to get AMP user."}
+	}
+
+	identifyPayload := &IdentifyPayload{
+		UserId:         user.ID,
+		CustomerUserId: reqPayload.CustomerUserID,
+		Timestamp:      reqPayload.Timestamp,
+	}
+
+	return Identify(project.ID, identifyPayload)
+}
+
+// AMPIdentifyWithQueue identifies AMP user by customer_user_id. Uses queue if alowed for the poject
+func AMPIdentifyWithQueue(token string, reqPayload *AMPIdentifyPayload,
+	queueAllowedTokens []string) (int, *IdentifyResponse) {
+	if token == "" {
+		return http.StatusBadRequest, &IdentifyResponse{Error: "Identify failed. Invalid token"}
+	}
+
+	if reqPayload.ClientID == "" || reqPayload.CustomerUserID == "" {
+		return http.StatusBadRequest, &IdentifyResponse{Error: "Identify failed. Invalid params"}
+	}
+
+	if U.UseQueue(token, queueAllowedTokens) {
+
+		err := enqueueRequest(token, sdkRequestTypeAMPIdentify, reqPayload)
+		if err != nil {
+			log.WithError(err).Error("Failed to queue identify request.")
+			return http.StatusInternalServerError,
+				&IdentifyResponse{Error: "Identify failed."}
+		}
+
+		return http.StatusOK, &IdentifyResponse{Message: "User has been identified successfully"}
+	}
+
+	return AMPIdentifyByToken(token, reqPayload)
 }
 
 func IdentifyWithQueue(token string, reqPayload *IdentifyPayload,

@@ -1,6 +1,5 @@
 import React, { useState, useCallback } from 'react';
 import { connect } from 'react-redux';
-import moment from 'moment';
 import FunnelsResultPage from './FunnelsResultPage';
 import QueryComposer from '../../components/QueryComposer';
 import CoreQueryHome from '../CoreQueryHome';
@@ -25,12 +24,18 @@ function CoreQuery({ activeProject }) {
       prop_category: '', // user / event
       property: '', // user/eventproperty
       prop_type: '', // categorical  /numberical
-      eventValue: '' // event name (funnel only)
+      eventValue: '', // event name (funnel only)
+      eventName: '', // eventName $present for global user breakdown
+      eventIndex: 0
     }],
     event_analysis_seq: '',
     session_analytics_seq: {
       start: 1,
       end: 2
+    },
+    date_range: {
+      from: '',
+      to: ''
     }
   });
   const [resultState, setResultState] = useState(initialResultState);
@@ -70,8 +75,8 @@ function CoreQuery({ activeProject }) {
     // let period = getQueryPeriod(this.state.resultDateRange[0], this.state.timeZone)
 
     const period = {
-      from: moment().subtract(6, 'days').startOf('day').utc().unix(),
-      to: moment().utc().unix()
+      from: queryOptions.date_range.from.utc().unix(),
+      to: queryOptions.date_range.to.utc().unix()
     };
 
     query.fr = period.from;
@@ -99,7 +104,8 @@ function CoreQuery({ activeProject }) {
         return {
           pr: opt.property,
           en: opt.prop_category,
-          pty: opt.prop_type
+          pty: opt.prop_type,
+          ena: opt.eventName
         };
       });
 

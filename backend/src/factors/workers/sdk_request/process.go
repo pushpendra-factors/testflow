@@ -14,6 +14,8 @@ const workerName = "sdk_request_worker"
 
 func main() {
 	env := flag.String("env", "development", "")
+	gcpProjectID := flag.String("gcp_project_id", "", "Project ID on Google Cloud")
+	gcpProjectLocation := flag.String("gcp_project_location", "", "Location of google cloud project cluster")
 
 	dbHost := flag.String("db_host", "localhost", "")
 	dbPort := flag.Int("db_port", 5432, "")
@@ -47,8 +49,10 @@ func main() {
 	defer U.NotifyOnPanic(workerName, *env)
 
 	config := &C.Configuration{
-		AppName: workerName,
-		Env:     *env,
+		AppName:            workerName,
+		Env:                *env,
+		GCPProjectID:       *gcpProjectID,
+		GCPProjectLocation: *gcpProjectLocation,
 		DBInfo: C.DBConf{
 			Host:     *dbHost,
 			Port:     *dbPort,
@@ -75,7 +79,7 @@ func main() {
 		log.WithError(err).Fatal("Failed to initialize.")
 		return
 	}
-	defer C.SafeFlushSentryHook()
+	defer C.SafeFlushAllCollectors()
 
 	// Register tasks on queueClient.
 	queueClient := C.GetServices().QueueClient

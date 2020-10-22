@@ -65,7 +65,7 @@ func main() {
 	}
 
 	C.InitSentryLogging(config.SentryDSN, config.AppName)
-	defer C.SafeFlushSentryHook()
+	defer C.SafeFlushAllCollectors()
 
 	var cloudManager filestore.FileManager
 	if *envFlag == "development" {

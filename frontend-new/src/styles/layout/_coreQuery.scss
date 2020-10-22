@@ -187,6 +187,12 @@ $cq-card-transition: transform .2s ease-in-out;
             border: 1px solid $fa-color--brand-color;  
         }
     }
+    .fa--query_block--add-event-sm {
+        @extend .fa--query_block--add-event;
+        height: 16px;
+        width: 16px;
+        font-size: 10px;
+    }
     .ant-btn.ant-btn.ant-btn-link:focus, .ant-btn.ant-btn.ant-btn-link:hover, .ant-btn.ant-btn.ant-btn-link:active{
         border-color: transparent;
     }

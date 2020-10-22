@@ -18,9 +18,11 @@
           "requests": {
             "baseTrack": "http://localhost:8085/sdk/amp/event/track?token=${token}&title=${title}&referrer=${documentReferrer}&client_id=${clientId(_factorsai_amp_id)}&source_url=${sourceUrl}",
             "baseUpdate": "http://localhost:8085/sdk/amp/event/update_properties?token=${token}&client_id=${clientId(_factorsai_amp_id)}&source_url=${sourceUrl}",
+            "baseIdentify": "http://localhost:8085/sdk/amp/user/identify?token=${token}&client_id=${clientId(_factorsai_amp_id)}",
             "pageview": "${baseTrack}&screen_height=${screenHeight}&screen_width=${screenWidth}&page_load_time_in_ms=${pageLoadTime}",
             "pageScrollPercent": "${baseUpdate}&page_scroll_percent=${pageScroll}",
-            "pageSpentTime": "${baseUpdate}&page_spent_time=${spentTime}"
+            "pageSpentTime": "${baseUpdate}&page_spent_time=${spentTime}",
+            "identify": "${baseIdentify}&customer_user_id=test123"
           },
           "vars": {
             "token": "<PROJECT-TOKEN>"

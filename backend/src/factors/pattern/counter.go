@@ -110,7 +110,7 @@ func GenCandidates(currentPatterns []*Pattern, maxCandidates int, userAndEventsI
 	sort.Slice(
 		currentPatterns,
 		func(i, j int) bool {
-			return currentPatterns[i].PerOccurrenceCount > currentPatterns[j].PerOccurrenceCount
+			return currentPatterns[i].PerUserCount > currentPatterns[j].PerUserCount
 		})
 	candidatesMap := make(map[string]*Pattern)
 	// Candidates are formed in decreasing order of frequent patterns till maxCandidates.
@@ -118,7 +118,7 @@ func GenCandidates(currentPatterns []*Pattern, maxCandidates int, userAndEventsI
 		for j := i + 1; j < numPatterns; j++ {
 			if c1, c2, ok := GenCandidatesPair(
 				currentPatterns[i], currentPatterns[j], userAndEventsInfo); ok {
-				currentMinCount = currentPatterns[j].PerOccurrenceCount
+				currentMinCount = currentPatterns[j].PerUserCount
 				candidatesMap[c1.String()] = c1
 				if len(candidatesMap) >= maxCandidates {
 					return candidatesMapToSlice(candidatesMap), currentMinCount, nil

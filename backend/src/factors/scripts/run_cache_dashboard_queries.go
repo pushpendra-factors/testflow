@@ -67,7 +67,7 @@ func main() {
 	C.InitRedisPersistent(config.RedisHost, config.RedisPort)
 
 	C.InitSentryLogging(config.SentryDSN, config.AppName)
-	defer C.SafeFlushSentryHook()
+	defer C.SafeFlushAllCollectors()
 
 	logCtx = logCtx.WithFields(log.Fields{
 		"Env":         *envFlag,

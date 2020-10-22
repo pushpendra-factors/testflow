@@ -217,7 +217,7 @@ func FloatRoundOffWithPrecision(value float64, precision int) (float64, error) {
 const (
 	DATETIME_FORMAT_YYYYMMDD_HYPHEN string = "2006-01-02"
 	DATETIME_FORMAT_YYYYMMDD        string = "20060102"
-	DATETIME_FORMAT_DB string = "2006-01-02 00:00:00"
+	DATETIME_FORMAT_DB              string = "2006-01-02 00:00:00"
 )
 
 // Returns date in YYYYMMDD format
@@ -618,4 +618,19 @@ func GetPossiblePhoneNumber(phoneNo string) []string {
 	}
 
 	return possiblePhoneNo
+}
+
+// BytesToReadableFormat Pretty prints bytes to readable KiB/MiB/GiB.. format.
+func BytesToReadableFormat(bytes int64) string {
+	const unit = 1024
+	if bytes < unit {
+		return fmt.Sprintf("%d B", bytes)
+	}
+	div, exp := int64(unit), 0
+	for n := bytes / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %ciB",
+		float64(bytes)/float64(div), "KMGTPE"[exp])
 }

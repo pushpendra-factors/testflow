@@ -1,22 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { SVG, Text } from 'factorsComponents';
 import styles from './index.module.scss';
-import { Select, Button } from 'antd';
+import { Button } from 'antd';
 import { connect } from 'react-redux';
+import { bindActionCreators } from 'redux';
 
-// import Filter from '../Filter';
+import { setGroupBy } from '../../../reducers/coreQuery/middleware';
+
 import FilterBlock from '../FilterBlock';
 
-import { fetchEventProperties, fetchUserProperties } from '../../../reducers/coreQuery/services';
-
-const { OptGroup, Option } = Select;
+import GroupSelect from '../GroupSelect';
+import EventGroupBlock from '../EventGroupBlock';
 
 function QueryBlock({
   index, event, eventChange, queries, queryType, eventOptions,
-  activeProject
+  activeProject, groupBy, setGroupBy, userProperties, eventProperties
 }) {
   const [isDDVisible, setDDVisible] = useState(!!(index === 1 && !event));
   const [isFilterDDVisible, setFilterDDVisible] = useState(false);
+  const [isGroupByDDVisible, setGroupByDDVisible] = useState(false);
   const [filterProps, setFilterProperties] = useState({
     user: [],
     event: []
@@ -35,26 +37,13 @@ function QueryBlock({
     console.log('eventevent-->', event);
     if (!event || event === undefined) { return undefined; }; // Akhil please check this line
     const assignFilterProps = Object.assign({}, filterProps);
-    fetchEventProperties(activeProject.id, event.label).then(res => {
-      const data = res.data;
-      Object.keys(data).forEach(key => {
-        data[key].forEach(val => {
-          assignFilterProps.event.push([val, key]);
-        });
-      });
-      setFilterProperties(assignFilterProps);
-    });
 
-    fetchUserProperties(activeProject.id, queryType).then(res => {
-      const data = res.data;
-      Object.keys(data).forEach(key => {
-        data[key].forEach(val => {
-          assignFilterProps.user.push([val, key]);
-        });
-        setFilterProperties(assignFilterProps);
-      });
-    });
-  }, [event]);
+    if (eventProperties[event.label]) {
+      assignFilterProps.event = eventProperties[event.label];
+    }
+    assignFilterProps.user = userProperties;
+    setFilterProperties(assignFilterProps);
+  }, [userProperties, eventProperties]);
 
   const triggerDropDown = () => {
     setDDVisible(true);
@@ -69,32 +58,22 @@ function QueryBlock({
 
     return (
             <div className={styles.query_block__event_selector}>
-                   {isDDVisible ? <Select showSearch
-                        style={{ width: 240 }}
-                        onChange={onChange} defaultOpen={true}
-                        showArrow={false}
-                        onDropdownVisibleChange={() => setDDVisible(false)}
-                        dropdownRender={menu => (
-                            <div className={styles.query_block__selector_body}>
-                              {menu}
-                            </div>
-                        )}
-                    >
-                            {eventOptions && eventOptions.map((group, index) => (
-                                <OptGroup key={index} label={(
-                                        <div className={styles.query_block__selector_group}>
-                                            <SVG name={group.icon}></SVG>
-                                            <span >{group.label}</span>
-                                        </div>
-                                    )}>
-                                        {group.values.map((option, index) => (
-                                            <Option key={index} value={option}></Option>
-                                        ))}
-                                </OptGroup>
-                            ))}
-                    </Select> : null }
+                   {isDDVisible
+                     ? <GroupSelect
+                  groupedProperties={eventOptions}
+                  placeholder="Select Property"
+                  optionClick={(group, val) => onChange(val[0])}
+                  onClickOutside={() => setDDVisible(false)}
+
+                  ></GroupSelect>
+
+                     : null }
                 </div>
     );
+  };
+
+  const addGroupBy = () => {
+    setGroupByDDVisible(true);
   };
 
   const addFilter = () => {
@@ -113,9 +92,26 @@ function QueryBlock({
     }
   };
 
+  const pushGroupBy = (groupState, index) => {
+    const ind = index || groupBy.length;
+    setGroupBy('event', groupState, ind);
+  };
+
+  const selectGroupByEvent = () => {
+    if (isGroupByDDVisible) {
+      return <EventGroupBlock
+        eventIndex={index}
+        event={event}
+        setGroupState={pushGroupBy}
+        closeDropDown={() => setGroupByDDVisible(false)}
+      ></EventGroupBlock>;
+    }
+  };
+
   const additionalActions = () => {
     return (
             <div className={'fa--query_block--actions'}>
+              <Button type="link" onClick={addGroupBy} className={'mr-1'}><SVG name="groupby"></SVG></Button>
                <Button type="link" onClick={addFilter} className={'mr-1'}><SVG name="filter"></SVG></Button>
                <Button type="link" onClick={deleteItem}><SVG name="trash"></SVG></Button>
             </div>
@@ -141,6 +137,30 @@ function QueryBlock({
 
     return filters;
   };
+
+  const groupByItems = () => {
+    const groupByEvents = [];
+    if (groupBy && groupBy.length && groupBy[0].property) {
+      groupBy.filter(gbp => gbp.eventName === event.label && gbp.eventIndex === index).forEach((gbp, gbpIndex) => {
+        groupByEvents.push(<div key={gbpIndex} className={'fa--query_block--filters'}>
+          <EventGroupBlock
+            index={gbpIndex}
+            eventIndex={index}
+            groupByEvent={gbp} event={event}
+            setGroupState={pushGroupBy}
+            closeDropDown={() => setGroupByDDVisible(false)}
+            ></EventGroupBlock>
+        </div>);
+      });
+    }
+    groupByEvents.push(
+      <div key={'init'} className={'fa--query_block--filters'}>
+        {selectGroupByEvent()}
+      </div>
+    );
+    return groupByEvents;
+  };
+
   const ifQueries = queries.length > 0;
   if (!event) {
     return (
@@ -162,17 +182,21 @@ function QueryBlock({
                 {selectEvents()}
             </div>
             {eventFilters()}
+            {groupByItems()}
         </div>
   );
 }
 
 const mapStateToProps = (state) => ({
   eventOptions: state.coreQuery.eventOptions,
-  activeProject: state.global.active_project
+  activeProject: state.global.active_project,
+  userProperties: state.coreQuery.userProperties,
+  eventProperties: state.coreQuery.eventProperties,
+  groupBy: state.coreQuery.groupBy.event
 });
 
-// const mapDispatchToProps = dispatch => bindActionCreators({
-//   getEventProperties,
-// }, dispatch)
+const mapDispatchToProps = dispatch => bindActionCreators({
+  setGroupBy
+}, dispatch);
 
-export default connect(mapStateToProps)(QueryBlock);
+export default connect(mapStateToProps, mapDispatchToProps)(QueryBlock);

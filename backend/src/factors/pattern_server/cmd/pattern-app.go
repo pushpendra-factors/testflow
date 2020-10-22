@@ -167,7 +167,7 @@ func main() {
 
 	C.InitConf(*env)
 	C.InitSentryLogging(*sentryDSN, "pattern_server")
-	defer C.SafeFlushSentryHook()
+	defer C.SafeFlushAllCollectors()
 
 	// TODO(Ankit):
 	// This needs to be handled with graceful shutdown

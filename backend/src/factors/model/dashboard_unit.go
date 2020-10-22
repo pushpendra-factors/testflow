@@ -20,10 +20,11 @@ type DashboardUnit struct {
 	ProjectId    uint64         `gorm:"primary_key:true" json:"project_id"`
 	DashboardId  uint64         `gorm:"primary_key:true" json:"dashboard_id"`
 	Title        string         `gorm:"not null" json:"title"`
-	Query        postgres.Jsonb `gorm:"not null" json:"query"`
 	Presentation string         `gorm:"type:varchar(5);not null" json:"presentation"`
 	CreatedAt    time.Time      `json:"created_at"`
 	UpdatedAt    time.Time      `json:"updated_at"`
+	Query        postgres.Jsonb `gorm:"not null" json:"query"`
+	QueryId      uint64         `gorm:"not null" json:"query_id"`
 }
 
 type DashboardCacheResult struct {
@@ -100,7 +101,20 @@ func CreateDashboardUnit(projectId uint64, agentUUID string, dashboardUnit *Dash
 	if !hasAccess {
 		return nil, http.StatusForbidden, "Unauthorized to access dashboard"
 	}
-
+	if dashboardUnit.QueryId == 0 {
+		query, errCode, errMsg := CreateQuery(projectId,
+			&Queries{
+				Query: dashboardUnit.Query,
+				Title: dashboardUnit.Title,
+				Type:  QueryTypeDashboardQuery,
+			})
+		if errCode != http.StatusCreated {
+			log.WithFields(log.Fields{"dashboard_unit": dashboardUnit,
+				"project_id": projectId}).Error(errMsg)
+			return nil, errCode, errMsg
+		}
+		dashboardUnit.QueryId = query.ID
+	}
 	dashboardUnit.ProjectId = projectId
 	if err := db.Create(dashboardUnit).Error; err != nil {
 		errMsg := "Falied to create dashboard unit."
@@ -263,6 +277,15 @@ func UpdateDashboardUnit(projectId uint64, agentUUID string,
 	if err != nil {
 		logCtx.WithError(err).Error("updatedDashboardUnitFields failed at UpdateDashboardUnit in dashboard_unit.go")
 		return nil, http.StatusInternalServerError
+	}
+	// update query table
+	var dashboardUnit DashboardUnit
+	err = db.Model(&DashboardUnit{}).Where("id = ? AND project_id = ? AND dashboard_id = ?",
+		id, projectId, dashboardId).Find(&dashboardUnit).Error
+	_, errCode := UpdateSavedQuery(projectId, dashboardUnit.QueryId, &Queries{Title: unit.Title, Type: QueryTypeDashboardQuery})
+	if errCode != http.StatusAccepted {
+		logCtx.WithError(err).Error("updatedDashboardUnitFields failed at UpdateSavedQuery in queries.go")
+		return nil, errCode
 	}
 
 	// returns only updated fields, avoid using it on DashboardUnit API.

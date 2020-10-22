@@ -781,22 +781,43 @@ func TestSDKIdentifyWithExternalUserAndTimestamp(t *testing.T) {
 	project, user, err := SetupProjectUserReturnDAO()
 	assert.Nil(t, err)
 
+	userID := U.GetUUID()
+	customerUserID := U.RandomLowerAphaNumString(10)
 	t.Run("WithUserIdAndCreateUserAsTrue", func(t *testing.T) {
-		userId := U.GetUUID()
-		customerUserId := U.RandomLowerAphaNumString(10)
-		timestamp := U.UnixTimeBeforeDuration(1 * time.Hour)
+		timestamp := U.UnixTimeBeforeDuration(2 * time.Hour)
 		payload := &SDK.IdentifyPayload{
-			UserId:         userId,
+			UserId:         userID,
 			CreateUser:     true,
-			CustomerUserId: customerUserId,
+			CustomerUserId: customerUserID,
 			JoinTimestamp:  timestamp,
 		}
 		status, response := SDK.Identify(project.ID, payload)
 		assert.Equal(t, http.StatusOK, status)
-		assert.Equal(t, userId, response.UserId)
+		assert.Equal(t, userID, response.UserId)
 		user, _ := M.GetUser(project.ID, response.UserId)
 		assert.NotNil(t, user)
-		assert.Equal(t, customerUserId, user.CustomerUserId)
+		assert.Equal(t, customerUserID, user.CustomerUserId)
+		assert.Equal(t, timestamp, user.JoinTimestamp)
+	})
+
+	// Should always create a new user even when customer_user_id
+	// already exists but create_user is set to true.
+	userID2 := U.GetUUID()
+	t.Run("WithUserIDCreateUserAsTrueAndExistingCustomerUserID", func(t *testing.T) {
+		timestamp := U.UnixTimeBeforeDuration(1 * time.Hour)
+		payload := &SDK.IdentifyPayload{
+			UserId:         userID2,
+			CreateUser:     true,
+			CustomerUserId: customerUserID,
+			JoinTimestamp:  timestamp,
+		}
+		status, response := SDK.Identify(project.ID, payload)
+		assert.Equal(t, http.StatusOK, status)
+		assert.Equal(t, userID2, response.UserId)
+		user, _ := M.GetUser(project.ID, response.UserId)
+		assert.NotNil(t, user)
+		assert.Equal(t, customerUserID, user.CustomerUserId)
+		// Should be equal to request Join timestamp.
 		assert.Equal(t, timestamp, user.JoinTimestamp)
 	})
 
@@ -1796,6 +1817,52 @@ func TestSDKAMPTrackByToken(t *testing.T) {
 	assert.Equal(t, http.StatusFound, errCode)
 	// AMP Tracked event should use the given timestamp.
 	assert.Equal(t, timestamp, event.Timestamp)
+}
+
+func TestSDKAMPIdentifyHandler(t *testing.T) {
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+	uri := "/sdk/amp/user/identify"
+	project, _, err := SetupProjectUserReturnDAO()
+	assert.Nil(t, err)
+
+	timestamp := U.UnixTimeBeforeAWeek()
+	clientID := U.RandomLowerAphaNumString(5)
+	request := &SDK.AMPTrackPayload{
+		ClientID:  clientID,
+		SourceURL: "https://example.com/a/b",
+		Timestamp: timestamp,
+	}
+	errCode, _ := SDK.AMPTrackByToken(project.Token, request)
+	assert.Equal(t, http.StatusOK, errCode)
+
+	cUID := "1234"
+	params := fmt.Sprintf("token=%s&client_id=%s&customer_user_id=%s", project.Token, clientID, cUID)
+	response := ServePostRequest(r, uri+"?"+params, []byte{})
+	assert.Equal(t, http.StatusOK, response.Code)
+	jsonResponse, _ := ioutil.ReadAll(response.Body)
+	var jsonResponseMap map[string]interface{}
+	json.Unmarshal(jsonResponse, &jsonResponseMap)
+	assert.Equal(t, "User has been identified successfully.", jsonResponseMap["message"])
+	user, errCode := M.CreateOrGetAMPUser(project.ID, clientID, timestamp)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Equal(t, cUID, user.CustomerUserId)
+
+	// test old timestamp for user creation
+	cUID = "12345"
+	clientID = U.RandomLowerAphaNumString(5)
+	oldTimestamp := time.Now().AddDate(0, 0, -10).Unix()
+	payload := SDK.AMPIdentifyPayload{
+		CustomerUserID: cUID,
+		ClientID:       clientID,
+		Timestamp:      oldTimestamp,
+	}
+	status, message := SDK.AMPIdentifyByToken(project.Token, &payload)
+	assert.Equal(t, http.StatusOK, status)
+	assert.Equal(t, "User has been identified successfully.", message.Message)
+	user, errCode = M.CreateOrGetAMPUser(project.ID, clientID, timestamp)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Equal(t, oldTimestamp, user.JoinTimestamp)
 }
 
 func TestAddUserPropertiesMerge(t *testing.T) {

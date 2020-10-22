@@ -29,12 +29,12 @@ export default function FilterBlock({ filterProps, activeProject, event, filter,
     props: [
       {
         label: 'User Properties',
-        icon: 'user',
+        icon: 'userplus',
         
       },
       {
         label: 'Event Properties',
-        icon: 'mouseevent',
+        icon: 'mouseclick',
       }
     ],
     operator: {
@@ -163,6 +163,7 @@ export default function FilterBlock({ filterProps, activeProject, event, filter,
               </div>
               <SVG name={collState ? 'minus' : 'plus'} extraClass={'self-center'}></SVG>
             </div>
+            <div class={styles.filter_block__filter_select__option_group_container_sec}>
             { collState
               ? (() => {
                 const valuesOptions = [];
@@ -180,6 +181,7 @@ export default function FilterBlock({ filterProps, activeProject, event, filter,
               })()
               : null
             }
+            </div>
           </div>);
         });
         break;

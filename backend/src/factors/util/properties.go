@@ -1283,10 +1283,9 @@ func ClassifyPropertiesType(properties *map[string]map[interface{}]bool) (map[st
 // Moves datetime properties from numerical properties to type datetime.
 func ClassifyDateTimePropertyKeys(propertiesByType *map[string][]string) map[string][]string {
 	cProperties := make(map[string][]string, 0)
-	cProperties[PropertyTypeCategorical] = (*propertiesByType)[PropertyTypeCategorical]
 
+	datetime := (*propertiesByType)[PropertyTypeDateTime]
 	numerical := make([]string, 0, 0)
-	datetime := make([]string, 0, 0)
 	for _, prop := range (*propertiesByType)[PropertyTypeNumerical] {
 		isDatetime := false
 		for _, dtProp := range PROPERTIES_TYPE_DATE_TIME {
@@ -1301,10 +1300,24 @@ func ClassifyDateTimePropertyKeys(propertiesByType *map[string][]string) map[str
 			numerical = append(numerical, prop)
 		}
 	}
+	categorical := make([]string, 0, 0)
+	for _, prop := range (*propertiesByType)[PropertyTypeCategorical] {
+		isDatetime := false
+		for _, dtProp := range PROPERTIES_TYPE_DATE_TIME {
+			if prop == dtProp {
+				datetime = append(datetime, prop)
+				isDatetime = true
+				break
+			}
+		}
 
+		if !isDatetime {
+			categorical = append(categorical, prop)
+		}
+	}
 	cProperties[PropertyTypeNumerical] = numerical
 	cProperties[PropertyTypeDateTime] = datetime
-
+	cProperties[PropertyTypeCategorical] = categorical
 	return cProperties
 }
 

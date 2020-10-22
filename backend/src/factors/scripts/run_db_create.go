@@ -444,6 +444,19 @@ func main() {
 	} else {
 		log.Info("created bigquery_settings table.")
 	}
+	// Create queries table.
+	if err := db.CreateTable(&M.Queries{}).Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("queries table creation failed.")
+	} else {
+		log.Info("Created queries table")
+	}
+
+	// Add foreign key constraints.
+	if err := db.Model(&M.Queries{}).AddForeignKey("project_id", "projects(id)", "RESTRICT", "RESTRICT").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("queries table association with projects table failed.")
+	} else {
+		log.Info("queries table is associated with projects table.")
+	}
 
 	// Create scheduled_tasks table.
 	if err := db.CreateTable(&M.ScheduledTask{}).Error; err != nil {

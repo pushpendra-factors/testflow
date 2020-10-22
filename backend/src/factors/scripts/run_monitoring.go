@@ -3,9 +3,13 @@ package main
 import (
 	C "factors/config"
 	"factors/integration"
+	"factors/metrics"
 	"factors/sdk"
 	"factors/util"
 	"flag"
+	"fmt"
+	"strings"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -15,8 +19,6 @@ type SlowQueries struct {
 	Query   string  `json:"query"`
 	Pid     int64   `json:"pid"`
 }
-
-const taskID = "Task#Monitoring"
 
 func main() {
 	env := flag.String("env", "development", "")
@@ -29,11 +31,17 @@ func main() {
 	queueRedisHost := flag.String("queue_redis_host", "localhost", "")
 	queueRedisPort := flag.Int("queue_redis_port", 6379, "")
 
+	gcpProjectID := flag.String("gcp_project_id", "", "Project ID on Google Cloud")
+	gcpProjectLocation := flag.String("gcp_project_location", "", "Location of google cloud project cluster")
+
 	flag.Parse()
+	taskID := "monitoring_job"
 
 	config := &C.Configuration{
-		AppName: "monitoring",
-		Env:     *env,
+		AppName:            taskID,
+		Env:                *env,
+		GCPProjectID:       *gcpProjectID,
+		GCPProjectLocation: *gcpProjectLocation,
 		DBInfo: C.DBConf{
 			Host:     *dbHost,
 			Port:     *dbPort,
@@ -55,6 +63,8 @@ func main() {
 	if err != nil {
 		log.WithError(err).Fatal("Failed to initalize queue client.")
 	}
+	C.InitMetricsExporter(config.Env, config.AppName, config.GCPProjectID, config.GCPProjectLocation)
+	defer C.WaitAndFlushAllCollectors(65 * time.Second)
 
 	slowQueries := make([]SlowQueries, 0, 0)
 
@@ -95,11 +105,14 @@ func main() {
 		log.WithError(err).Error("Failed to get integration_request_queue length")
 	}
 
+	tableSizes := collectTableSizes()
+
 	slowQueriesStatus := map[string]interface{}{
 		"slowQueries":            slowQueries,
 		"delayedTaskCount":       delayedTaskCount,
 		"sdkQueueLength":         sdkQueueLength,
 		"integrationQueueLength": integrationQueueLength,
+		"tableSizes":             tableSizes,
 	}
 
 	if *env == "development" {
@@ -114,4 +127,49 @@ func main() {
 			}
 		}
 	}
+}
+
+// collectTableSizes Captures size for major tables as metrics.
+func collectTableSizes() map[string]string {
+	// Tables with size in GBs. Not including all tables to avoid cluttering in the chart.
+	tableNameToMetricMap := map[string]string{
+		"adwords_documents": metrics.BytesTableSizeAdwordsDocuments,
+		"events":            metrics.BytesTableSizeEvents,
+		"hubspot_documents": metrics.BytesTableSizeHubspotDocuments,
+		"user_properties":   metrics.BytesTableSizeUserProperties,
+		"users":             metrics.BytesTableSizeUsers,
+	}
+
+	tableSizes := make(map[string]string)
+	tablesToMonitor := make([]string, 0, 0)
+	for tableName := range tableNameToMetricMap {
+		tablesToMonitor = append(tablesToMonitor, tableName)
+	}
+	query := fmt.Sprintf("SELECT relname, pg_total_relation_size(relname::text) FROM pg_stat_user_tables "+
+		"WHERE relname in ('%s')", strings.Join(tablesToMonitor, "','"))
+
+	db := C.GetServices().Db
+	rows, err := db.Raw(query).Rows()
+	if err != nil {
+		log.WithError(err).Error("Failed to get table sizes from database")
+		return tableSizes
+	}
+
+	for rows.Next() {
+		var tableName string
+		var tableSize int64
+		if err := rows.Scan(&tableName, &tableSize); err != nil {
+			log.WithError(err).Error("Failed to scan table size from db.")
+		}
+		tableMetric := tableNameToMetricMap[tableName]
+		metrics.RecordBytesSize(tableMetric, tableSize)
+
+		tableSizes[tableName] = util.BytesToReadableFormat(tableSize)
+	}
+
+	err = rows.Err()
+	if err != nil {
+		log.WithError(err).Error("Error while scanning table sizes")
+	}
+	return tableSizes
 }

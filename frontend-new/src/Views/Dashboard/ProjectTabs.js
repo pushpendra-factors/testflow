@@ -5,7 +5,9 @@ import {
 import { Text, SVG } from 'factorsComponents';
 import WidgetCard from './WidgetCard';
 import { ReactSortable } from 'react-sortablejs';
-import {LockOutlined, ReloadOutlined, UserAddOutlined, MoreOutlined} from '@ant-design/icons';
+import {
+  LockOutlined, ReloadOutlined, UserAddOutlined, MoreOutlined
+} from '@ant-design/icons';
 const { TabPane } = Tabs;
 const { Option } = Select;
 
@@ -46,10 +48,10 @@ const widgetCardCollection = [
 ];
 
 const DashboardSubMenu = () => {
-  return(
-    <div className={`flex justify-between items-center px-4 mb-4`}>
-      <div className={`flex justify-between items-center`}>
-          <Text type={'title'} level={7} extraClass={'m-0 mr-2'}>Date from</Text>   
+  return (
+    <div className={'flex justify-between items-center px-4 mb-4'}>
+      <div className={'flex justify-between items-center'}>
+          <Text type={'title'} level={7} extraClass={'m-0 mr-2'}>Date from</Text>
           <Select className={'fa-select mx-2 mr-4 ml-4'} defaultValue="Last 30 days">
                     <Option value="jack">1 Month</Option>
                     <Option value="lucy2">2 Months</Option>
@@ -59,17 +61,17 @@ const DashboardSubMenu = () => {
           </Select>
           <Button type={'text'} className={'m-0 fa-button-ghost  p-0 py-2'}><LockOutlined /> Personal.</Button>
           {/* <Text type={'title'} level={7}  extraClass={'m-0 mx-2'}><LockOutlined /> Private.</Text>                         */}
-          <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'}>Refreshed 3m ago</Text>                        
+          <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'}>Refreshed 3m ago</Text>
       </div>
-      <div className={`flex justify-between items-center`}>
-          <Button className={'m-0 fa-button-ghost p-0 py-2'}><ReloadOutlined  /> Refresh Data.</Button>                        
-          <Button className={'m-0 fa-button-ghost p-0 py-2'}><UserAddOutlined  /></Button>                        
-          <Button className={'m-0 fa-button-ghost p-0 py-2'}><MoreOutlined  /></Button>                        
+      <div className={'flex justify-between items-center'}>
+          <Button className={'m-0 fa-button-ghost p-0 py-2'}><ReloadOutlined /> Refresh Data.</Button>
+          <Button className={'m-0 fa-button-ghost p-0 py-2'}><UserAddOutlined /></Button>
+          <Button className={'m-0 fa-button-ghost p-0 py-2'}><MoreOutlined /></Button>
 
       </div>
     </div>
-  )
-}
+  );
+};
 
 function ProjectTabs({ setaddDashboardModal }) {
   const [widgetModal, setwidgetModal] = useState(false);

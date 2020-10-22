@@ -104,7 +104,7 @@ func filterAndCompressPatterns(
 	}
 	countFilteredPatterns := []*P.Pattern{}
 	for _, p := range patterns {
-		if p.PerOccurrenceCount > 0 {
+		if p.PerUserCount > 0 {
 			countFilteredPatterns = append(countFilteredPatterns, p)
 		}
 	}
@@ -139,7 +139,7 @@ func filterAndCompressPatterns(
 	// Sort the patterns in descending order.
 	sort.Slice(compressedPatterns,
 		func(i, j int) bool {
-			return compressedPatterns[i].PerOccurrenceCount > compressedPatterns[j].PerOccurrenceCount
+			return compressedPatterns[i].PerUserCount > compressedPatterns[j].PerUserCount
 		})
 	var cumulativeBytes int64 = 0
 	compressedAndDroppedPatterns := []*P.Pattern{}
@@ -324,13 +324,13 @@ func genLenThreeSegmentedCandidates(lenTwoPatterns []*P.Pattern,
 	for _, patterns := range startPatternsMap {
 		sort.Slice(patterns,
 			func(i, j int) bool {
-				return patterns[i].PerOccurrenceCount > patterns[j].PerOccurrenceCount
+				return patterns[i].PerUserCount > patterns[j].PerUserCount
 			})
 	}
 	for _, patterns := range endPatternsMap {
 		sort.Slice(patterns,
 			func(i, j int) bool {
-				return patterns[i].PerOccurrenceCount > patterns[j].PerOccurrenceCount
+				return patterns[i].PerUserCount > patterns[j].PerUserCount
 			})
 	}
 

@@ -62,7 +62,7 @@ func main() {
 	// Cache dependency for requests not using queue.
 	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
 
-	defer C.SafeFlushSentryHook()
+	defer C.SafeFlushAllCollectors()
 
 	status := cleanup.DoRollUpAndCleanUp(eventsLimit, propertiesLimit, valuesLimit, rollupLookback)
 

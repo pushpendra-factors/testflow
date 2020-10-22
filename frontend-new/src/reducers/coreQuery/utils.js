@@ -8,8 +8,18 @@ export const convertToEventOptions = (eventNames) => {
     options.push({
       label: key,
       icon: 'fav',
-      values: eventNames[key]
+      values: eventNames[key].map(v => [v])
     })
   })
   return options
 };
+
+export const convertPropsToOptions = (props) => {
+  const options = [];
+  Object.keys(props).forEach((type) => {
+    props[type].forEach((val) => {
+      options.push([val, type]);
+    })
+  })
+  return options;
+}
