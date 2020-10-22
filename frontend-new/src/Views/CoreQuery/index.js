@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { connect } from 'react-redux';
+import { connect, useSelector } from 'react-redux';
 import FunnelsResultPage from './FunnelsResultPage';
 import QueryComposer from '../../components/QueryComposer';
 import CoreQueryHome from '../CoreQueryHome';
@@ -16,7 +16,6 @@ function CoreQuery({ activeProject }) {
   const [queryType, setQueryType] = useState('event');
   const [activeKey, setActiveKey] = useState('1');
   const [showResult, setShowResult] = useState(false);
-  const [queries, setQueries] = useState([]);
   const [appliedQueries, setAppliedQueries] = useState([]);
   const [appliedBreakdown, setAppliedBreakdown] = useState([]);
   const [resultState, setResultState] = useState(initialResultState);
@@ -24,6 +23,7 @@ function CoreQuery({ activeProject }) {
     loading: false, error: false, all: null, any: null
   });
   const [breakdownType, setBreakdownType] = useState('each');
+  const [queries, setQueries] = useState([]);
   const [queryOptions, setQueryOptions] = useState({
     groupBy: [{
       prop_category: '', // user / event
@@ -44,6 +44,8 @@ function CoreQuery({ activeProject }) {
     }
   });
 
+  const groupBy = useSelector(state => state.coreQuery.groupBy);
+  
   const queryChange = (newEvent, index, changeType = 'add') => {
     const queryupdated = [...queries];
     if (queryupdated[index]) {
@@ -79,7 +81,8 @@ function CoreQuery({ activeProject }) {
   }, []);
 
   const updateAppliedBreakdown = useCallback(() => {
-    const newAppliedBreakdown = queryOptions.groupBy.filter(elem => elem.prop_category).sort((a, b) => {
+    let newAppliedBreakdown = [...groupBy.event, ...groupBy.global];
+    newAppliedBreakdown = newAppliedBreakdown.filter(elem => elem.prop_category).sort((a, b) => {
       return a.prop_category >= b.prop_category ? 1 : -1;
     });
     // const newAppliedBreakdown = [
@@ -109,11 +112,11 @@ function CoreQuery({ activeProject }) {
     //   // }
     // ]
     setAppliedBreakdown(newAppliedBreakdown);
-  }, [queryOptions.groupBy]);
+  }, [groupBy]);
 
   const callRunQueryApiService = useCallback(async (activeProjectId, activeTab) => {
     try {
-      const query = getQuery(activeTab, queryType, queryOptions, queries);
+      const query = getQuery(activeTab, queryType, groupBy, queries);
       const res = await runQueryService(activeProjectId, [query]);
       if (res.status === 200 && !hasApiFailed(res)) {
         if (activeTab !== '2') {
@@ -324,7 +327,7 @@ function CoreQuery({ activeProject }) {
 
       ) : (
           <CoreQueryHome setQueryType={setQueryType} setDrawerVisible={setDrawerVisible} />
-      )}
+        )}
 
     </>
   );

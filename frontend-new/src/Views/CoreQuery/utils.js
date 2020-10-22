@@ -21,7 +21,7 @@ const getEventsWithProperties = (queries) => {
   return ewps;
 };
 
-export const getQuery = (activeTab, queryType, queryOptions, queries, breakdownType = 'each') => {
+export const getQuery = (activeTab, queryType, groupBy, queries, breakdownType = 'each') => {
   const query = {};
   query.cl = queryType === 'event' ? 'events' : 'funnel';
   query.ty = parseInt(activeTab) === 1 ? 'unique_users' : 'events_occurrence';
@@ -46,15 +46,15 @@ export const getQuery = (activeTab, queryType, queryOptions, queries, breakdownT
     query.ewp = getEventsWithProperties(queries);
     query.gbt = 'date';
 
-    const groupBy = [...queryOptions.groupBy.filter(elem => elem.prop_category)].sort((a, b) => {
+    let appliedGroupBy = [...groupBy.event, ...groupBy.global]
+    
+    appliedGroupBy = [...appliedGroupBy.filter(elem => elem.prop_category)].sort((a, b) => {
       return a.prop_category >= b.prop_category ? 1 : -1;
     });
 
-    // let i = 0;
-
     const eventsArr = ['www.acme.com/product'];
 
-    query.gbp = groupBy
+    query.gbp = appliedGroupBy
       .map(opt => {
         return {
           pr: opt.property,
