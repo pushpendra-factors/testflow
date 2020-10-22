@@ -38,6 +38,18 @@ const (
 	BytesTableSizeHubspotDocuments = "table_hubspot_documents_size"
 	BytesTableSizeUserProperties   = "table_user_properties_size"
 	BytesTableSizeUsers            = "table_users_size"
+
+	// Used to report successful completion at the end of the job.
+	// Alert can be added on GCP side with metric 'is absent for' scheduled job frequency.
+	IncrCronMonitoringJobSuccess          = "cron_monitoring_job_success"
+	IncrCronBigqueryUploadSuccess         = "cron_bigquery_upload_success"
+	IncrCronArchiveEventsSuccess          = "cron_archive_events_success"
+	IncrCronDashboardCachingSuccess       = "cron_dashboard_caching_success"
+	IncrCronAddSessionSuccess             = "cron_add_session_success"
+	IncrCronCleanUpEventUserCacheSuccess  = "cron_cleanup_eventuser_cache_success"
+	IncrCronHubspotEnrichSuccess          = "cron_hubspot_enrich_success"
+	IncrCronSalesforceEnrichSuccess       = "cron_salesforce_enrich_success"
+	IncrCronYourstoryAddPropertiesSuccess = "cron_yourstory_add_properties_success"
 )
 
 var (

@@ -7,6 +7,7 @@ import (
 
 	C "factors/config"
 	"factors/filestore"
+	"factors/metrics"
 	serviceDisk "factors/services/disk"
 	serviceGCS "factors/services/gcstorage"
 	T "factors/task"
@@ -14,9 +15,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 )
-
-var taskID = "Script#PushToBigquery"
-var pbLog = log.WithField("prefix", taskID)
 
 func main() {
 	envFlag := flag.String("env", "development", "Environment. Could be development|staging|production.")
@@ -33,7 +31,13 @@ func main() {
 	dbPass := flag.String("db_pass", "@ut0me7a", "")
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 
+	gcpProjectID := flag.String("gcp_project_id", "", "Project ID on Google Cloud")
+	gcpProjectLocation := flag.String("gcp_project_location", "", "Location of google cloud project cluster")
+
 	flag.Parse()
+
+	var taskID = "bigquery_upload"
+	var pbLog = log.WithField("prefix", taskID)
 	defer util.NotifyOnPanic(taskID, *envFlag)
 
 	if *envFlag != "development" && *envFlag != "staging" && *envFlag != "production" {
@@ -46,8 +50,10 @@ func main() {
 
 	pbLog.Info("Starting to initialize database.")
 	config := &C.Configuration{
-		AppName: "script_push_to_bigquery",
-		Env:     *envFlag,
+		AppName:            taskID,
+		Env:                *envFlag,
+		GCPProjectID:       *gcpProjectID,
+		GCPProjectLocation: *gcpProjectLocation,
 		DBInfo: C.DBConf{
 			Host:     *dbHost,
 			Port:     *dbPort,
@@ -65,7 +71,8 @@ func main() {
 	}
 
 	C.InitSentryLogging(config.SentryDSN, config.AppName)
-	defer C.SafeFlushAllCollectors()
+	C.InitMetricsExporter(config.Env, config.AppName, config.GCPProjectID, config.GCPProjectLocation)
+	defer C.WaitAndFlushAllCollectors(65 * time.Second)
 
 	var cloudManager filestore.FileManager
 	if *envFlag == "development" {
@@ -101,7 +108,7 @@ func main() {
 		}
 		allJobDetails[*projectIDFlag] = jobDetails
 	}
-	err = util.NotifyThroughSNS("bigquery_upload", *envFlag, allJobDetails)
+	err = util.NotifyThroughSNS(taskID, *envFlag, allJobDetails)
 	if err != nil {
 		pbLog.WithError(err).Error("SNS notification failed", allJobDetails)
 	}
@@ -110,5 +117,7 @@ func main() {
 		for _, err = range projectErrors {
 			pbLog.WithError(err).Error("Error while processing files for Bigquery")
 		}
+	} else {
+		metrics.Increment(metrics.IncrCronBigqueryUploadSuccess)
 	}
 }

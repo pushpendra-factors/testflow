@@ -4,12 +4,14 @@ import (
 	C "factors/config"
 	H "factors/handler"
 	IntSalesforce "factors/integration/salesforce"
+	"factors/metrics"
 	M "factors/model"
 	"factors/util"
 	"flag"
 	"fmt"
 	"net/http"
 	"os"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -40,7 +42,11 @@ func main() {
 	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
 	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
 	isRealTimeEventUserCachingEnabled := flag.Bool("enable_real_time_event_user_caching", false, "If the real time caching is enabled")
-	realTimeEventUserCachingProjectIds := flag.String("real_time_event_user_caching_project_ids", "", "If the real time caching is enabled and the whitelisted projectids")
+	realTimeEventUserCachingProjectIds := flag.String("real_time_event_user_caching_project_ids", "",
+		"If the real time caching is enabled and the whitelisted projectids")
+
+	gcpProjectID := flag.String("gcp_project_id", "", "Project ID on Google Cloud")
+	gcpProjectLocation := flag.String("gcp_project_location", "", "Location of google cloud project cluster")
 
 	flag.Parse()
 
@@ -53,8 +59,10 @@ func main() {
 	}
 
 	config := &C.Configuration{
-		AppName: "salesforce_enrich",
-		Env:     *env,
+		AppName:            "salesforce_enrich",
+		Env:                *env,
+		GCPProjectID:       *gcpProjectID,
+		GCPProjectLocation: *gcpProjectLocation,
 		DBInfo: C.DBConf{
 			Host:     *dbHost,
 			Port:     *dbPort,
@@ -80,7 +88,8 @@ func main() {
 	C.InitRedis(config.RedisHost, config.RedisPort)
 	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
 	C.InitSentryLogging(config.SentryDSN, config.AppName)
-	defer C.SafeFlushAllCollectors()
+	C.InitMetricsExporter(config.Env, config.AppName, config.GCPProjectID, config.GCPProjectLocation)
+	defer C.WaitAndFlushAllCollectors(65 * time.Second)
 
 	err := C.InitDB(config.DBInfo)
 	if err != nil {
@@ -137,4 +146,5 @@ func main() {
 	if err != nil {
 		log.WithError(err).Fatal("Failed to notify through SNS on salesforce enrich.")
 	}
+	metrics.Increment(metrics.IncrCronSalesforceEnrichSuccess)
 }

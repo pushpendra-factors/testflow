@@ -2,9 +2,11 @@ package main
 
 import (
 	C "factors/config"
+	"factors/metrics"
 	U "factors/util"
 	"flag"
 	"fmt"
+	"time"
 
 	cleanup "factors/task/event_user_cache"
 
@@ -30,6 +32,8 @@ func main() {
 	rollupLookback := flag.Int("rollup_lookback", 1, "")
 
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
+	gcpProjectID := flag.String("gcp_project_id", "", "Project ID on Google Cloud")
+	gcpProjectLocation := flag.String("gcp_project_location", "", "Location of google cloud project cluster")
 
 	flag.Parse()
 	if *env != "development" &&
@@ -43,8 +47,10 @@ func main() {
 	defer U.NotifyOnPanic(taskID, *env)
 
 	config := &C.Configuration{
-		AppName: "CleanUpEventUserCache",
-		Env:     *env,
+		AppName:            "CleanUpEventUserCache",
+		Env:                *env,
+		GCPProjectID:       *gcpProjectID,
+		GCPProjectLocation: *gcpProjectLocation,
 		DBInfo: C.DBConf{
 			Host:     *dbHost,
 			Port:     *dbPort,
@@ -62,7 +68,9 @@ func main() {
 	// Cache dependency for requests not using queue.
 	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
 
-	defer C.SafeFlushAllCollectors()
+	C.InitSentryLogging(config.SentryDSN, config.AppName)
+	C.InitMetricsExporter(config.Env, config.AppName, config.GCPProjectID, config.GCPProjectLocation)
+	defer C.WaitAndFlushAllCollectors(65 * time.Second)
 
 	status := cleanup.DoRollUpAndCleanUp(eventsLimit, propertiesLimit, valuesLimit, rollupLookback)
 
@@ -70,5 +78,5 @@ func main() {
 		log.Fatalf("Failed to notify status %+v", status)
 	}
 	log.Info("Done!!!")
-
+	metrics.Increment(metrics.IncrCronCleanUpEventUserCacheSuccess)
 }

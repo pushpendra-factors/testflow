@@ -6,8 +6,10 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	C "factors/config"
+	"factors/metrics"
 	M "factors/model"
 	U "factors/util"
 
@@ -346,6 +348,9 @@ func main() {
 	customEndTimestamp := flag.Int64("custom_end_timestamp", 0, "Custom end timestamp.")
 	maxLookbackDays := flag.Int64("max_lookback_days", 1, "Fix properties for last given days. Default 1.")
 
+	gcpProjectID := flag.String("gcp_project_id", "", "Project ID on Google Cloud")
+	gcpProjectLocation := flag.String("gcp_project_location", "", "Location of google cloud project cluster")
+
 	flag.Parse()
 
 	if *env != "development" &&
@@ -359,8 +364,10 @@ func main() {
 	defer U.NotifyOnPanic(taskID, *env)
 
 	config := &C.Configuration{
-		AppName: "yourstory:add_missing_event_properties",
-		Env:     *env,
+		AppName:            "yourstory:add_missing_event_properties",
+		Env:                *env,
+		GCPProjectID:       *gcpProjectID,
+		GCPProjectLocation: *gcpProjectLocation,
 		DBInfo: C.DBConf{
 			Host:     *dbHost,
 			Port:     *dbPort,
@@ -376,6 +383,8 @@ func main() {
 	if err != nil {
 		log.WithError(err).Fatal("Failed to initialize db.")
 	}
+	C.InitMetricsExporter(config.Env, config.AppName, config.GCPProjectID, config.GCPProjectLocation)
+	defer C.WaitAndFlushAllCollectors(65 * time.Second)
 
 	if C.IsProduction() {
 		log.SetFormatter(&log.JSONFormatter{})
@@ -426,6 +435,8 @@ func main() {
 		if err := U.NotifyThroughSNS(taskID, *env, failureMsg); err != nil {
 			log.Fatalf("Failed to notify status %+v", failureMsg)
 		}
+	} else {
+		metrics.Increment(metrics.IncrCronYourstoryAddPropertiesSuccess)
 	}
 
 	log.WithFields(log.Fields{

@@ -127,6 +127,7 @@ func main() {
 			}
 		}
 	}
+	metrics.Increment(metrics.IncrCronMonitoringJobSuccess)
 }
 
 // collectTableSizes Captures size for major tables as metrics.
