@@ -33,6 +33,10 @@ spec:
             - $(POSTGRES_USER)
             - --db_pass
             - $(POSTGRES_PASSWORD)
+            - --gcp_project_id
+            - $(GCP_PROJECT_ID)
+            - --gcp_project_location
+            - $(GCP_PROJECT_LOCATION)
             - --max_lookback_days
             - "1"
             - --dry_run

@@ -10,6 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	C "factors/config"
+	"factors/metrics"
 	"factors/util"
 
 	"factors/task/session"
@@ -37,7 +38,11 @@ func main() {
 
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 	isRealTimeEventUserCachingEnabled := flag.Bool("enable_real_time_event_user_caching", false, "If the real time caching is enabled")
-	realTimeEventUserCachingProjectIds := flag.String("real_time_event_user_caching_project_ids", "", "If the real time caching is enabled and the whitelisted projectids")
+	realTimeEventUserCachingProjectIds := flag.String("real_time_event_user_caching_project_ids", "",
+		"If the real time caching is enabled and the whitelisted projectids")
+
+	gcpProjectID := flag.String("gcp_project_id", "", "Project ID on Google Cloud")
+	gcpProjectLocation := flag.String("gcp_project_location", "", "Location of google cloud project cluster")
 
 	flag.Parse()
 
@@ -52,8 +57,10 @@ func main() {
 	defer util.NotifyOnPanic(taskID, *env)
 
 	config := &C.Configuration{
-		AppName: "add_session",
-		Env:     *env,
+		AppName:            "add_session",
+		Env:                *env,
+		GCPProjectID:       *gcpProjectID,
+		GCPProjectLocation: *gcpProjectLocation,
 		DBInfo: C.DBConf{
 			Host:     *dbHost,
 			Port:     *dbPort,
@@ -85,7 +92,8 @@ func main() {
 	C.InitRedis(config.RedisHost, config.RedisPort)
 	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
 	C.InitSentryLogging(config.SentryDSN, config.AppName)
-	defer C.SafeFlushAllCollectors()
+	C.InitMetricsExporter(config.Env, config.AppName, config.GCPProjectID, config.GCPProjectLocation)
+	defer C.WaitAndFlushAllCollectors(65 * time.Second)
 
 	allowedProjectIds, errCode := session.GetAddSessionAllowedProjects(*projectIds, *disabledProjectIds)
 	if errCode != http.StatusFound {
@@ -122,4 +130,5 @@ func main() {
 	}
 
 	log.WithField("no_of_projects", len(allowedProjectIds)).Info("Successfully added sessions.")
+	metrics.Increment(metrics.IncrCronAddSessionSuccess)
 }

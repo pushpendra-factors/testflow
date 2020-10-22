@@ -24,6 +24,7 @@ type DashboardUnitRequestPayload struct {
 	Title        string          `json:"title"`
 	Presentation string          `json:"presentation"`
 	Query        *postgres.Jsonb `json:"query"`
+	QueryId      uint64          `json:"query_id"`
 }
 
 func GetDashboardsHandler(c *gin.Context) {
@@ -176,6 +177,7 @@ func CreateDashboardUnitHandler(c *gin.Context) {
 			Query:        *requestPayload.Query,
 			Title:        requestPayload.Title,
 			Presentation: requestPayload.Presentation,
+			QueryId:      requestPayload.QueryId,
 		})
 	if errCode != http.StatusCreated {
 		c.AbortWithStatusJSON(errCode, errMsg)

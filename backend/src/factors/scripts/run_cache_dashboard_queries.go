@@ -4,8 +4,10 @@ import (
 	"flag"
 	"fmt"
 	"sync"
+	"time"
 
 	C "factors/config"
+	"factors/metrics"
 	M "factors/model"
 	"factors/util"
 
@@ -30,6 +32,9 @@ func main() {
 	redisHost := flag.String("redis_host", "localhost", "")
 	redisPort := flag.Int("redis_port", 6379, "")
 
+	gcpProjectID := flag.String("gcp_project_id", "", "Project ID on Google Cloud")
+	gcpProjectLocation := flag.String("gcp_project_location", "", "Location of google cloud project cluster")
+
 	flag.Parse()
 	taskID := "Script#CacheDashboardQueries"
 	defer util.NotifyOnPanic(taskID, *envFlag)
@@ -45,8 +50,10 @@ func main() {
 
 	logCtx.Info("Starting to initialize database.")
 	config := &C.Configuration{
-		AppName: taskID,
-		Env:     *envFlag,
+		AppName:            taskID,
+		Env:                *envFlag,
+		GCPProjectID:       *gcpProjectID,
+		GCPProjectLocation: *gcpProjectLocation,
 		DBInfo: C.DBConf{
 			Host:     *dbHost,
 			Port:     *dbPort,
@@ -67,7 +74,8 @@ func main() {
 	C.InitRedisPersistent(config.RedisHost, config.RedisPort)
 
 	C.InitSentryLogging(config.SentryDSN, config.AppName)
-	defer C.SafeFlushAllCollectors()
+	C.InitMetricsExporter(config.Env, config.AppName, config.GCPProjectID, config.GCPProjectLocation)
+	defer C.WaitAndFlushAllCollectors(65 * time.Second)
 
 	logCtx = logCtx.WithFields(log.Fields{
 		"Env":         *envFlag,
@@ -93,6 +101,7 @@ func main() {
 	notifyMessage = fmt.Sprintf("Caching successful for %s projects. Time taken: %+v. Time taken for web analytics: %+v",
 		*projectIDFlag, timeTakenString, timeTakenStringWeb)
 	util.NotifyThroughSNS("dashboard_caching", *envFlag, notifyMessage)
+	metrics.Increment(metrics.IncrCronDashboardCachingSuccess)
 }
 
 func cacheDashboardUnitsForProjects(projectIDs string, numRoutines int, timeTaken *sync.Map, waitGroup *sync.WaitGroup) {

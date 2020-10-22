@@ -49,6 +49,10 @@ spec:
             - $(PERSISTENT_REDIS_PORT)
             - --sentry_dsn
             - $(SENTRY_DSN)
+            - --gcp_project_id
+            - $(GCP_PROJECT_ID)
+            - --gcp_project_location
+            - $(GCP_PROJECT_LOCATION)
             envFrom:
             - configMapRef:
                 name: config-env

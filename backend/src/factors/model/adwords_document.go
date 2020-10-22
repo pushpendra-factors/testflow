@@ -287,7 +287,7 @@ func GetAllAdwordsLastSyncInfoByProjectCustomerAccountAndType() ([]AdwordsLastSy
 }
 
 // It returns GCLID based campaign info ( Adgroup, Campaign and Ad) for given time range and adwords account
-func GetGCLIDBasedCampaignInfo(projectId uint64, from, to int64, adwordsAccountId string) (map[string]CampaignInfo, error) {
+func GetGCLIDBasedCampaignInfo(projectId uint64, from, to int64, adwordsAccountIds string) (map[string]CampaignInfo, error) {
 
 	db := C.GetServices().Db
 	logCtx := log.WithFields(log.Fields{"ProjectId": projectId, "Range": fmt.Sprintf("%d - %d", from, to)})
@@ -299,9 +299,10 @@ func GetGCLIDBasedCampaignInfo(projectId uint64, from, to int64, adwordsAccountI
 		" WHEN value->>'creative_id' = '' THEN ? ELSE value->>'creative_id' END AS creative_id"
 
 	performanceQuery := "SELECT id, " + adGroupNameCase + ", " + campaignNameCase + ", " + adIDCase +
-		" FROM adwords_documents where project_id = ? AND customer_account_id = ? AND type = ? AND timestamp between ? AND ? "
+		" FROM adwords_documents where project_id = ? AND customer_account_id IN (?) AND type = ? AND timestamp between ? AND ? "
+	customerAccountIds := strings.Split(adwordsAccountIds, ",")
 	rows, err := db.Raw(performanceQuery, PropertyValueNone, PropertyValueNone, PropertyValueNone, PropertyValueNone,
-		PropertyValueNone, PropertyValueNone, projectId, adwordsAccountId, ADWORDS_CLICK_REPORT_TYPE, U.GetDateOnlyFromTimestamp(from),
+		PropertyValueNone, PropertyValueNone, projectId, customerAccountIds, ADWORDS_CLICK_REPORT_TYPE, U.GetDateOnlyFromTimestamp(from),
 		U.GetDateOnlyFromTimestamp(to)).Rows()
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed")
