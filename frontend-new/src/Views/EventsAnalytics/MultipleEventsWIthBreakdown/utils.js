@@ -1,6 +1,20 @@
+import React from 'react';
 import moment from 'moment';
 import { getTitleWithSorter } from '../../CoreQuery/FunnelsResultPage/utils';
 import { labelsObj } from '../../CoreQuery/utils';
+
+export const getBreakdownTitle = (breakdown) => {
+  const charArr = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+  if (!breakdown.eventIndex) {
+    return breakdown.property;
+  }
+  return (
+    <div className="flex items-center">
+      <div className="mr-1">{breakdown.property} of </div>
+      <div style={{ backgroundColor: '#3E516C' }} className="text-white w-4 h-4 flex justify-center items-center rounded-full font-semibold leading-5 text-xs">{charArr[breakdown.eventIndex - 1]}</div>
+    </div>
+  )
+}
 
 export const formatData = (data, queries, colors) => {
   const splittedData = {};
@@ -90,7 +104,7 @@ export const getTableColumns = (breakdown, currentSorter, handleSorting, page) =
   });
   breakdown.forEach((b, index) => {
     result.push({
-      title: b.property,
+      title: getBreakdownTitle(b),
       dataIndex: b.property + ';' + index
     });
   });
@@ -142,7 +156,7 @@ export const formatDataInLineChartFormat = (visibleProperties, mapper, hiddenPro
 export const getDateBasedColumns = (data, breakdown, currentSorter, handleSorting) => {
   const breakdownColumns = breakdown.map((elem, index) => {
     return {
-      title: elem.property,
+      title: getBreakdownTitle(elem),
       dataIndex: elem.property + ';' + index,
       fixed: 'left',
       width: 200
