@@ -5,23 +5,23 @@ import EventBreakdownTable from './EventBreakdownTable';
 import BreakdownType from '../BreakdownType';
 
 function EventBreakdownCharts({
-    data, breakdownType, handleBreakdownTypeChange, breakdown
+  data, breakdownType, handleBreakdownTypeChange, breakdown
 }) {
-    const [chartsData, setChartsData] = useState([]);
-    const [visibleProperties, setVisibleProperties] = useState([]);
-    const maxAllowedVisibleProperties = 5;
+  const [chartsData, setChartsData] = useState([]);
+  const [visibleProperties, setVisibleProperties] = useState([]);
+  const maxAllowedVisibleProperties = 5;
 
-    useEffect(() => {
-        const formattedData = formatData(data);
-        setChartsData(formattedData);
-        setVisibleProperties([...formattedData.slice(0, maxAllowedVisibleProperties)]);
-    }, [data]);
+  useEffect(() => {
+    const formattedData = formatData(data);
+    setChartsData(formattedData);
+    setVisibleProperties([...formattedData.slice(0, maxAllowedVisibleProperties)]);
+  }, [data]);
 
-    if (!chartsData.length) {
-        return null;
-    }
+  if (!chartsData.length) {
+    return null;
+  }
 
-    return (
+  return (
         <div className="total-events">
             <div className="flex items-center justify-between">
                 <div className="filters-info w-1/2">
@@ -52,7 +52,7 @@ function EventBreakdownCharts({
                 />
             </div>
         </div>
-    );
+  );
 }
 
 export default EventBreakdownCharts;
