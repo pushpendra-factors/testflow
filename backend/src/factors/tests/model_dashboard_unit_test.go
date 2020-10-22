@@ -43,6 +43,7 @@ func TestCreateDashboardUnit(t *testing.T) {
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.NotNil(t, dashboardUnit)
 		assert.Empty(t, errMsg)
+		assert.NotNil(t, dashboardUnit.QueryId)
 
 		rName1 := U.RandomString(5)
 		dashboardUnit1, errCode, errMsg := M.CreateDashboardUnit(project.ID, agent.UUID, &M.DashboardUnit{DashboardId: dashboard.ID,
@@ -50,6 +51,7 @@ func TestCreateDashboardUnit(t *testing.T) {
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.NotNil(t, dashboardUnit1)
 		assert.Empty(t, errMsg)
+		assert.NotNil(t, dashboardUnit.QueryId)
 
 		rName2 := U.RandomString(5)
 		dashboardUnit2, errCode, errMsg := M.CreateDashboardUnit(project.ID, agent.UUID, &M.DashboardUnit{DashboardId: dashboard.ID,
@@ -57,6 +59,7 @@ func TestCreateDashboardUnit(t *testing.T) {
 		assert.Equal(t, http.StatusCreated, errCode)
 		assert.NotNil(t, dashboardUnit2)
 		assert.Empty(t, errMsg)
+		assert.NotNil(t, dashboardUnit.QueryId)
 
 		// should be given a positions on dashboard.
 		gDashboard, errCode := M.GetDashboard(project.ID, agent.UUID, dashboard.ID)
