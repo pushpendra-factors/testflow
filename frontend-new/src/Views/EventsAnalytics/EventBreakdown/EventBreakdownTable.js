@@ -21,8 +21,8 @@ function EventBreakdownTable({
 
   // let columns, tableData;
 
-  const tableData = getTableData(data, breakdown, searchText, sorter);
   const columns = getTableColumns(breakdown, sorter, handleSorting);
+  const tableData = getTableData(data, breakdown, searchText, sorter);
 
   const onSelectionChange = (selectedIncices) => {
     if (selectedIncices.length > maxAllowedVisibleProperties) {

@@ -34,6 +34,9 @@ export default function (state = defaultState, action) {
       } else if (groupByState[action.groupByType] && action.index === groupByState[action.groupByType].length) {
         groupByState[action.groupByType].push(action.payload);
       }
+      groupByState[action.groupByType].sort((a, b) => {
+        return a.prop_category >= b.prop_category ? 1 : -1;
+      });
       return { ...state, groupBy: groupByState };
     default:
       return state;

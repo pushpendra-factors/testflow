@@ -46,55 +46,28 @@ export const getQuery = (activeTab, queryType, groupBy, queries, breakdownType =
     query.ewp = getEventsWithProperties(queries);
     query.gbt = 'date';
 
-    let appliedGroupBy = [...groupBy.event, ...groupBy.global]
-    
-    appliedGroupBy = [...appliedGroupBy.filter(elem => elem.prop_category)].sort((a, b) => {
-      return a.prop_category >= b.prop_category ? 1 : -1;
-    });
-
-    const eventsArr = ['www.acme.com/product'];
+    const appliedGroupBy = [...groupBy.event, ...groupBy.global]
 
     query.gbp = appliedGroupBy
       .map(opt => {
-        return {
-          pr: opt.property,
-          en: opt.prop_category,
-          pty: opt.prop_type,
-          ena: eventsArr[0],
-          eni: 1
-        };
-      });
+        if (opt.eventIndex) {
+          return {
+            pr: opt.property,
+            en: opt.prop_category,
+            pty: opt.prop_type,
+            ena: opt.eventName,
+            eni: opt.eventIndex
+          };
+        } else {
+          return {
+            pr: opt.property,
+            en: opt.prop_category,
+            pty: opt.prop_type,
+            ena: opt.eventName,
+          };
+        }
 
-    // query.gbp = [
-    //   {
-    //     pr: "Browser",
-    //     en: "event",
-    //     pty: "categorical",
-    //     ena: "www.acme.com/pricing",
-    //     eni: 1
-    //   },
-    //   // {
-    //   //   pr: "Referrer",
-    //   //   en: "event",
-    //   //   pty: "categorical",
-    //   //   ena: "www.acme.com/solutions",
-    //   //   eni: 2
-    //   // },
-    //   {
-    //     pr: "Device Type",
-    //     en: "event",
-    //     pty: "categorical",
-    //     ena: "www.acme.com/product",
-    //     eni: 2
-    //   },
-    //   // {
-    //   //   pr: "Page Spent Time",
-    //   //   en: "event",
-    //   //   pty: "categorical",
-    //   //   ena: "www.acme.com/resources",
-    //   //   eni: 4
-    //   // }
-    // ]
+      });
   }
   query.ec = constantObj[breakdownType];
   query.tz = 'Asia/Kolkata';

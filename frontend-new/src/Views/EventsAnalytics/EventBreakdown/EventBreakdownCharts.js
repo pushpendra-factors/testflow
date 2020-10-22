@@ -2,26 +2,26 @@ import React, { useState, useEffect } from 'react';
 import { Radio } from 'antd';
 import { formatData } from './utils';
 import BarChart from '../../../components/BarChart';
-// import EventBreakdownTable from './EventBreakdownTable';
+import EventBreakdownTable from './EventBreakdownTable';
 
 function EventBreakdownCharts({
-  data, breakdownType, handleBreakdownTypeChange
+    data, breakdownType, handleBreakdownTypeChange, breakdown
 }) {
-  const [chartsData, setChartsData] = useState([]);
-  const [visibleProperties, setVisibleProperties] = useState([]);
-  const maxAllowedVisibleProperties = 5;
+    const [chartsData, setChartsData] = useState([]);
+    const [visibleProperties, setVisibleProperties] = useState([]);
+    const maxAllowedVisibleProperties = 5;
 
-  useEffect(() => {
-    const formattedData = formatData(data);
-    setChartsData(formattedData);
-    setVisibleProperties([...formattedData.slice(0, maxAllowedVisibleProperties)]);
-  }, [data]);
+    useEffect(() => {
+        const formattedData = formatData(data);
+        setChartsData(formattedData);
+        setVisibleProperties([...formattedData.slice(0, maxAllowedVisibleProperties)]);
+    }, [data]);
 
-  if (!chartsData.length) {
-    return null;
-  }
+    if (!chartsData.length) {
+        return null;
+    }
 
-  return (
+    return (
         <div className="total-events">
             <div className="flex items-center justify-between">
                 <div className="filters-info w-1/2">
@@ -42,24 +42,17 @@ function EventBreakdownCharts({
                     chartData={visibleProperties}
                 />
             </div>
-            {/* {chartContent} */}
-            {/* <div className="mt-8">
+            <div className="mt-8">
                 <EventBreakdownTable
                     data={chartsData}
-                    // lineChartData={lineChartData}
-                    // queries={queries}
                     breakdown={breakdown}
-                    // events={queries}
-                    // chartType={chartType}
                     setVisibleProperties={setVisibleProperties}
                     visibleProperties={visibleProperties}
                     maxAllowedVisibleProperties={maxAllowedVisibleProperties}
-                    // originalData={resultState.data}
-                    // page={page}
                 />
-            </div> */}
+            </div>
         </div>
-  );
+    );
 }
 
 export default EventBreakdownCharts;
