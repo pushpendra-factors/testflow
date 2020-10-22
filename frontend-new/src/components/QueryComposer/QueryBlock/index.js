@@ -140,7 +140,7 @@ function QueryBlock({
   const groupByItems = () => {
     const groupByEvents = [];
     if (groupBy && groupBy.length && groupBy[0].property) {
-      groupBy.forEach((gbp, gbpIndex) => {
+      groupBy.filter(gbp => gbp.eventName === event.label && gbp.eventIndex === index).forEach((gbp, gbpIndex) => {
         groupByEvents.push(<div key={gbpIndex} className={'fa--query_block--filters'}>
           <EventGroupBlock
             index={gbpIndex}
