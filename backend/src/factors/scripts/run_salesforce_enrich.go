@@ -80,7 +80,7 @@ func main() {
 	C.InitRedis(config.RedisHost, config.RedisPort)
 	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
 	C.InitSentryLogging(config.SentryDSN, config.AppName)
-	defer C.SafeFlushSentryHook()
+	defer C.SafeFlushAllCollectors()
 
 	err := C.InitDB(config.DBInfo)
 	if err != nil {

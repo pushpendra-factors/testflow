@@ -96,15 +96,18 @@ require (
 	golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a
 	golang.org/x/exp v0.0.0-20200224162631-6cc2880d07d6 // indirect
 	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
+	golang.org/x/sync v0.0.0-20201008141435-b3e1573b7520 // indirect
 	golang.org/x/sys v0.0.0-20200905004654-be1d3432aa8f // indirect
 	golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e // indirect
-	golang.org/x/tools v0.0.0-20201001104356-43ebab892c4c // indirect
+	golang.org/x/tools v0.0.0-20201017001424-6003fad69a88 // indirect
+	golang.org/x/tools/gopls v0.5.1 // indirect
 	google.golang.org/api v0.15.1
 	google.golang.org/appengine v1.6.6 // indirect
 	google.golang.org/grpc v1.26.0 // Version downgraded from latest. See https://github.com/etcd-io/etcd/issues/11563#issuecomment-580196860.
 	gopkg.in/go-playground/validator.v8 v8.18.2 // indirect
 	gopkg.in/yaml.v2 v2.2.4
-	honnef.co/go/tools v0.0.1-2020.1.4 // indirect
+	honnef.co/go/tools v0.0.1-2020.1.6 // indirect
+	mvdan.cc/gofumpt v0.0.0-20200927160801-5bfeb2e70dd6 // indirect
 	rsc.io/quote/v3 v3.1.0 // indirect
 )
 

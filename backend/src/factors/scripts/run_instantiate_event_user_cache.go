@@ -85,7 +85,7 @@ func main() {
 	// Cache dependency for requests not using queue.
 	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
 	C.InitSentryLogging(config.SentryDSN, config.AppName)
-	defer C.SafeFlushSentryHook()
+	defer C.SafeFlushAllCollectors()
 
 	var startOfCurrentDay time.Time
 	if *overrideDateRangeEnd == "" {

@@ -12,7 +12,7 @@ import (
 )
 
 // All tracked metrics are to be added here.
-// Type of the metric i.e. Incr / Count / Latency must be prefixed with each metric name.
+// Type of the metric i.e. Incr / Count / Latency / Bytes must be prefixed with each metric name.
 const (
 	IncrSDKRequestOverallCount   = "sdk_request_overall_count"
 	IncrSDKRequestQueueProcessed = "sdk_request_queue_processed"
@@ -32,6 +32,12 @@ const (
 
 	IncrEventUserCache    = "event_user_cache_incr"
 	LatencyEventUserCache = "event_user_cache_latency"
+
+	BytesTableSizeAdwordsDocuments = "table_adwords_documents_size"
+	BytesTableSizeEvents           = "table_events_size"
+	BytesTableSizeHubspotDocuments = "table_hubspot_documents_size"
+	BytesTableSizeUserProperties   = "table_user_properties_size"
+	BytesTableSizeUsers            = "table_users_size"
 )
 
 var (
@@ -39,6 +45,7 @@ var (
 	latencyStats    = stats.Float64("task_latency", "The task latency in milliseconds", stats.UnitMilliseconds)
 	guageStatsInt   = stats.Int64("int_counter", "The number of loop iterations", stats.UnitDimensionless)
 	guageStatsFloat = stats.Float64("float_counter", "The number of loop iterations", stats.UnitDimensionless)
+	bytesStatsInt   = stats.Int64("bytes_size", "Size of a table or object in bytes", stats.UnitBytes)
 )
 
 var (
@@ -72,6 +79,16 @@ var (
 		Name:        "count_float_view",
 		Description: "Count float view",
 		Aggregation: view.Sum(),
+		TagKeys:     []tag.Key{MetricNameTag},
+	}
+
+	bytesSizeViewDistributed = &view.View{
+		Measure:     bytesStatsInt,
+		Name:        "bytes_size_view",
+		Description: "Bytes size view",
+		// Bucketing is not supported in stackdriver.
+		// But retain this else it fails to export metrics.
+		Aggregation: view.Distribution(0, 10, 100, 1000, 10000, 100000),
 		TagKeys:     []tag.Key{MetricNameTag},
 	}
 )
@@ -109,7 +126,7 @@ func InitMetrics(env, appName, projectID, projectLocation string) *stackdriver.E
 
 	ctx := context.Background()
 
-	if err := view.Register(latencyView, countIntView, countFloatView); err != nil {
+	if err := view.Register(latencyView, countIntView, countFloatView, bytesSizeViewDistributed); err != nil {
 		log.WithError(err).Error("Failed to register the view")
 		return nil
 	}
@@ -176,4 +193,14 @@ func RecordLatency(metricName string, latency float64) {
 		return
 	}
 	stats.Record(ctx, latencyStats.M(latency))
+}
+
+// RecordBytesSize Record size in bytes for a table or an object.
+func RecordBytesSize(metricName string, bytes int64) {
+	ctx, err := tag.New(context.Background(), tag.Upsert(MetricNameTag, metricName))
+	if err != nil {
+		log.WithError(err).Error("Failed to record Bytes")
+		return
+	}
+	stats.Record(ctx, bytesStatsInt.M(bytes))
 }

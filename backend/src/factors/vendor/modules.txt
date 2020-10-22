@@ -471,7 +471,8 @@ golang.org/x/oauth2/google
 golang.org/x/oauth2/internal
 golang.org/x/oauth2/jws
 golang.org/x/oauth2/jwt
-# golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208
+# golang.org/x/sync v0.0.0-20201008141435-b3e1573b7520
+## explicit
 golang.org/x/sync/errgroup
 golang.org/x/sync/semaphore
 # golang.org/x/sys v0.0.0-20200905004654-be1d3432aa8f
@@ -502,7 +503,7 @@ golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
 # golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e
 ## explicit
-# golang.org/x/tools v0.0.0-20201001104356-43ebab892c4c
+# golang.org/x/tools v0.0.0-20201017001424-6003fad69a88
 ## explicit
 golang.org/x/tools/cmd/goimports
 golang.org/x/tools/go/analysis
@@ -530,6 +531,8 @@ golang.org/x/tools/internal/imports
 golang.org/x/tools/internal/lsp/fuzzy
 golang.org/x/tools/internal/packagesinternal
 golang.org/x/tools/internal/typesinternal
+# golang.org/x/tools/gopls v0.5.1
+## explicit
 # golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
 golang.org/x/xerrors
 golang.org/x/xerrors/internal
@@ -677,7 +680,7 @@ gopkg.in/go-playground/validator.v8
 gopkg.in/yaml.v2
 # gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
 gopkg.in/yaml.v3
-# honnef.co/go/tools v0.0.1-2020.1.4
+# honnef.co/go/tools v0.0.1-2020.1.6
 ## explicit
 honnef.co/go/tools/arg
 honnef.co/go/tools/cmd/staticcheck
@@ -708,6 +711,8 @@ honnef.co/go/tools/staticcheck
 honnef.co/go/tools/stylecheck
 honnef.co/go/tools/unused
 honnef.co/go/tools/version
+# mvdan.cc/gofumpt v0.0.0-20200927160801-5bfeb2e70dd6
+## explicit
 # rsc.io/quote/v3 v3.1.0
 ## explicit
 # github.com/coreos/bbolt => go.etcd.io/bbolt v1.3.5

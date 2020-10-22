@@ -79,7 +79,7 @@ func main() {
 		log.WithError(err).Fatal("Failed to initialize.")
 		return
 	}
-	defer C.SafeFlushSentryHook()
+	defer C.SafeFlushAllCollectors()
 
 	// Register tasks on queueClient.
 	queueClient := C.GetServices().QueueClient

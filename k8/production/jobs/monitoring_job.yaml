@@ -37,6 +37,10 @@ spec:
             - $(QUEUE_REDIS_HOST)
             - --queue_redis_port
             - $(QUEUE_REDIS_PORT)
+            - --gcp_project_id
+            - $(GCP_PROJECT_ID)
+            - --gcp_project_location
+            - $(GCP_PROJECT_LOCATION)
             envFrom:
             - configMapRef:
                 name: config-env

@@ -66,6 +66,7 @@ function GroupSelect({
           <Input
             className={styles.dropdown__filter_select__input}
             placeholder={placeholder}
+            onKeyUp={(userInput) => setSearchTerm(userInput.currentTarget.value)}
           />
           <div className={styles.dropdown__filter_select__content}>
             {renderOptions(groupedProperties)}

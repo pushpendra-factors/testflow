@@ -781,22 +781,43 @@ func TestSDKIdentifyWithExternalUserAndTimestamp(t *testing.T) {
 	project, user, err := SetupProjectUserReturnDAO()
 	assert.Nil(t, err)
 
+	userID := U.GetUUID()
+	customerUserID := U.RandomLowerAphaNumString(10)
 	t.Run("WithUserIdAndCreateUserAsTrue", func(t *testing.T) {
-		userId := U.GetUUID()
-		customerUserId := U.RandomLowerAphaNumString(10)
-		timestamp := U.UnixTimeBeforeDuration(1 * time.Hour)
+		timestamp := U.UnixTimeBeforeDuration(2 * time.Hour)
 		payload := &SDK.IdentifyPayload{
-			UserId:         userId,
+			UserId:         userID,
 			CreateUser:     true,
-			CustomerUserId: customerUserId,
+			CustomerUserId: customerUserID,
 			JoinTimestamp:  timestamp,
 		}
 		status, response := SDK.Identify(project.ID, payload)
 		assert.Equal(t, http.StatusOK, status)
-		assert.Equal(t, userId, response.UserId)
+		assert.Equal(t, userID, response.UserId)
 		user, _ := M.GetUser(project.ID, response.UserId)
 		assert.NotNil(t, user)
-		assert.Equal(t, customerUserId, user.CustomerUserId)
+		assert.Equal(t, customerUserID, user.CustomerUserId)
+		assert.Equal(t, timestamp, user.JoinTimestamp)
+	})
+
+	// Should always create a new user even when customer_user_id
+	// already exists but create_user is set to true.
+	userID2 := U.GetUUID()
+	t.Run("WithUserIDCreateUserAsTrueAndExistingCustomerUserID", func(t *testing.T) {
+		timestamp := U.UnixTimeBeforeDuration(1 * time.Hour)
+		payload := &SDK.IdentifyPayload{
+			UserId:         userID2,
+			CreateUser:     true,
+			CustomerUserId: customerUserID,
+			JoinTimestamp:  timestamp,
+		}
+		status, response := SDK.Identify(project.ID, payload)
+		assert.Equal(t, http.StatusOK, status)
+		assert.Equal(t, userID2, response.UserId)
+		user, _ := M.GetUser(project.ID, response.UserId)
+		assert.NotNil(t, user)
+		assert.Equal(t, customerUserID, user.CustomerUserId)
+		// Should be equal to request Join timestamp.
 		assert.Equal(t, timestamp, user.JoinTimestamp)
 	})
 
@@ -1817,7 +1838,7 @@ func TestSDKAMPIdentifyHandler(t *testing.T) {
 
 	cUID := "1234"
 	params := fmt.Sprintf("token=%s&client_id=%s&customer_user_id=%s", project.Token, clientID, cUID)
-	response := ServeGetRequest(r, uri+"?"+params)
+	response := ServePostRequest(r, uri+"?"+params, []byte{})
 	assert.Equal(t, http.StatusOK, response.Code)
 	jsonResponse, _ := ioutil.ReadAll(response.Body)
 	var jsonResponseMap map[string]interface{}

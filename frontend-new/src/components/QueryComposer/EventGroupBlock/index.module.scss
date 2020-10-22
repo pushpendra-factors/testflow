@@ -1,0 +1,11 @@
+
+.group_block {
+
+    display: flex;
+
+    &__group_content {
+        color: #5949BC;
+        font-weight: 500;
+        font-size: 14px;
+    }
+}

@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { connect } from 'react-redux';
 import styles from './index.module.scss';
-import { SVG, Text } from '../../factorsComponents';
+import { SVG, Text } from 'factorsComponents';
+import { bindActionCreators } from 'redux';
 
 import { Button } from 'antd';
 import GroupSelect from '../GroupSelect';
 
+import { setGroupBy } from '../../../reducers/coreQuery/middleware';
+
 function GroupBlock({
   groupByState,
-  setGroupByState,
+  setGroupBy,
   userProperties
 }) {
   const [isDDVisible, setDDVisible] = useState([false]);
@@ -16,7 +19,7 @@ function GroupBlock({
   const [filterOptions, setFilterOptions] = useState([
     {
       label: 'User Properties',
-      icon: 'fav',
+      icon: 'userplus',
       values: []
     }
   ]);
@@ -33,7 +36,7 @@ function GroupBlock({
     newGroupByState.eventName = '$present';
     newGroupByState.property = value[1][0];
     newGroupByState.prop_type = value[1][1];
-    setGroupByState(newGroupByState, index);
+    setGroupBy('global', newGroupByState, index);
     const ddVis = [...isDDVisible];
     ddVis[index] = false;
     const valDD = [isValueDDVisible];
@@ -46,6 +49,26 @@ function GroupBlock({
     const ddVis = [...isDDVisible];
     ddVis[index] = !close;
     setDDVisible(ddVis);
+  };
+
+  const renderInitGroupSelect = (index) => {
+    return (<div key={0} className={`${styles.group_block__select} flex justify-start items-center ml-10 mt-2`} >
+      {!isDDVisible[index] &&
+        <Button type="link" onClick={() => triggerDropDown(index)}><SVG name="plus" /> Select user property</Button> }
+      {isDDVisible[index]
+        ? (<GroupSelect groupedProperties={filterOptions}
+          placeholder="Select Property"
+          optionClick={(group, val) => onChange([group, val], index)}
+          onClickOutside={() => triggerDropDown(index, true)}
+
+          >
+            </GroupSelect>
+
+        )
+
+        : null
+      }
+    </div>);
   };
 
   return (
@@ -77,6 +100,8 @@ function GroupBlock({
         ))
 
       }
+
+      {renderInitGroupSelect(groupByState.length)}
     </div>
   );
 }
@@ -84,7 +109,12 @@ function GroupBlock({
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   userProperties: state.coreQuery.userProperties,
-  eventProperties: state.coreQuery.eventProperties
+  eventProperties: state.coreQuery.eventProperties,
+  groupByState: state.coreQuery.groupBy.global
 });
 
-export default connect(mapStateToProps)(GroupBlock);
+const mapDispatchToProps = dispatch => bindActionCreators({
+  setGroupBy
+}, dispatch);
+
+export default connect(mapStateToProps, mapDispatchToProps)(GroupBlock);

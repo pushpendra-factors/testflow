@@ -2,21 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import {
-  Button, Collapse, Select, Popover, DatePicker
+  Button, Collapse, Select, Popover
 } from 'antd';
 import { SVG, Text } from '../factorsComponents';
 import styles from './index.module.scss';
 import QueryBlock from './QueryBlock';
 import SeqSelector from './AnalysisSeqSelector';
 import GroupBlock from './GroupBlock';
+import DateRangeSelector from './DateRangeSelector';
 
 import { fetchEventNames, getUserProperties, getEventProperties } from '../../reducers/coreQuery/middleware';
 
 const { Option } = Select;
 
 const { Panel } = Collapse;
-
-// const { RangePicker } = DatePicker;
 
 function QueryComposer({
   queries, runQuery, eventChange, queryType,
@@ -29,6 +28,7 @@ function QueryComposer({
   setQueryOptions
 }) {
   const [analyticsSeqOpen, setAnalyticsSeqVisible] = useState(false);
+  const [dateRangeOpen, setDateRangeVisibile] = useState(false);
 
   useEffect(() => {
     if (activeProject && activeProject.id) {
@@ -51,7 +51,12 @@ function QueryComposer({
     queries.forEach((event, index) => {
       blockList.push(
         <div key={index} className={styles.composer_body__query_block}>
-          <QueryBlock index={index + 1} queryType={queryType} event={event} queries={queries} eventChange={eventChange}></QueryBlock>
+          <QueryBlock index={index + 1}
+            queryType={queryType}
+            event={event}
+            queries={queries}
+            eventChange={eventChange}
+            ></QueryBlock>
         </div>
       );
     });
@@ -59,29 +64,15 @@ function QueryComposer({
     if (queries.length < 6) {
       blockList.push(
         <div key={'init'} className={styles.composer_body__query_block}>
-          <QueryBlock queryType={queryType} index={queries.length + 1} queries={queries} eventChange={eventChange}></QueryBlock>
+          <QueryBlock queryType={queryType} index={queries.length + 1}
+          queries={queries} eventChange={eventChange}
+          groupBy={queryOptions.groupBy}
+          ></QueryBlock>
         </div>
       );
     }
 
     return blockList;
-  };
-
-  const setGroupByState = (value, index, action = 'add') => {
-    const options = Object.assign({}, queryOptions);
-    if (action === 'add') {
-      options.groupBy[index] = value;
-      if (options.groupBy.length - 1 === index) {
-        options.groupBy.push({
-          prop_category: '', // user / event
-          property: '', // user/eventproperty
-          prop_type: '', // categorical  /numberical
-          eventValue: '' // event name (funnel only)
-        });
-      }
-    }
-
-    setQueryOptions(options);
   };
 
   const groupByBlock = () => {
@@ -91,9 +82,7 @@ function QueryComposer({
     return (
       <div key={0} className={'fa--query_block bordered '}>
         <GroupBlock
-          setGroupByState={setGroupByState}
           queryType={queryType}
-          groupByState={queryOptions.groupBy}
           events={queries}>
         </GroupBlock>
       </div>
@@ -183,13 +172,30 @@ function QueryComposer({
     }
   };
 
+  const setDateRange = (dates) => {
+    const queryOptionsState = Object.assign({}, queryOptions);
+    if (dates && dates.length) {
+      queryOptionsState.date_range.from = dates[0];
+      queryOptionsState.date_range.to = dates[1];
+      setQueryOptions(queryOptionsState);
+    }
+    setDateRangeVisibile(false);
+  };
+
   const footer = () => {
     if (queryType === 'event' && queries.length < 1) { return null; }
     if (queryType === 'funnel' && queries.length < 2) { return null; } else {
       return (
         <div className={styles.composer_footer}>
-          {/* <RangePicker  open={false}/> */}
-          <Button><SVG name={'calendar'} extraClass={'mr-1'} />Last Week </Button>
+          <Popover
+            className="fa-event-popover"
+            trigger="click"
+            visible={dateRangeOpen}
+            content={<DateRangeSelector pickerVisible={dateRangeOpen} setDates={setDateRange}/>}
+            onVisibleChange={(visible) => setDateRangeVisibile(visible)}
+          >
+            <Button><SVG name={'calendar'} extraClass={'mr-1'} />Last Week </Button>
+          </Popover>
           <Button type="primary" onClick={() => runQuery('0', true)}>Run Query</Button>
         </div>
       );

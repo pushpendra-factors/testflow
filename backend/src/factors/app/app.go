@@ -126,7 +126,7 @@ func main() {
 	if !C.IsDevelopment() {
 		gin.SetMode(gin.ReleaseMode)
 	}
-	defer C.SafeFlushSentryHook()
+	defer C.SafeFlushAllCollectors()
 
 	r := gin.New()
 	// Group based middlewares should be registered on corresponding init methods.

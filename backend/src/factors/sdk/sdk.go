@@ -756,10 +756,43 @@ func Identify(projectId uint64, request *IdentifyPayload) (int, *IdentifyRespons
 		}
 	}
 
-	// Precondition: customer_user_id present, user_id not.
-	// if customer_user has user already : respond with same user.
-	// else : creating a new_user with the given customer_user_id and respond with new_user_id.
-	if request.CreateUser || request.UserId == "" {
+	// Create new user with given user_id and customer_user_id,
+	// if the create user_id is set to true.
+	if request.CreateUser {
+		if request.UserId == "" {
+			logCtx.Error("Identify request payload with create_user true without user_id.")
+			return http.StatusInternalServerError,
+				&IdentifyResponse{Error: "Identification failed. User creation failed."}
+		}
+
+		response := &IdentifyResponse{}
+
+		newUser := M.User{
+			ID:             request.UserId,
+			ProjectId:      projectId,
+			CustomerUserId: request.CustomerUserId,
+			JoinTimestamp:  request.JoinTimestamp,
+		}
+		if userProperties != nil {
+			newUser.Properties = *userProperties
+		}
+
+		_, errCode := M.CreateUser(&newUser)
+		if errCode != http.StatusCreated {
+			return errCode, &IdentifyResponse{
+				Error: "Identification failed. User creation failed."}
+		}
+		response.UserId = request.UserId
+
+		response.Message = "User has been identified successfully."
+		return http.StatusOK, response
+	}
+
+	// If identified without userID, try to re-use existing user of
+	// customer_user_id, else create a new user. This is possible only
+	// on non-queue requests. For queue requests, either create_user is
+	// set to true or the user_id will be present.
+	if request.UserId == "" {
 		response := &IdentifyResponse{}
 
 		userLatest, errCode := M.GetUserLatestByCustomerUserId(projectId, request.CustomerUserId)
@@ -773,16 +806,6 @@ func Identify(projectId uint64, request *IdentifyPayload) (int, *IdentifyRespons
 				ProjectId:      projectId,
 				CustomerUserId: request.CustomerUserId,
 				JoinTimestamp:  request.JoinTimestamp,
-			}
-
-			// create user with given user id.
-			if request.CreateUser {
-				if request.UserId == "" {
-					logCtx.Error("Identify request payload with create_user true without user_id.")
-					return http.StatusInternalServerError,
-						&IdentifyResponse{Error: "Identification failed. User creation failed."}
-				}
-				newUser.ID = request.UserId
 			}
 
 			if userProperties != nil {

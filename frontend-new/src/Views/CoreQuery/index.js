@@ -30,12 +30,17 @@ function CoreQuery({ activeProject }) {
       property: '', // user/eventproperty
       prop_type: '', // categorical  /numberical
       eventValue: '', // event name (funnel only)
-      eventName: '' // eventName $present for global user breakdown
+      eventName: '', // eventName $present for global user breakdown
+      eventIndex: 0
     }],
     event_analysis_seq: '',
     session_analytics_seq: {
       start: 1,
       end: 2
+    },
+    date_range: {
+      from: '',
+      to: ''
     }
   });
 

@@ -29,12 +29,12 @@ export default function FilterBlock({ filterProps, activeProject, event, filter,
     props: [
       {
         label: 'User Properties',
-        icon: 'user',
+        icon: 'userplus',
         
       },
       {
         label: 'Event Properties',
-        icon: 'mouseevent',
+        icon: 'mouseclick',
       }
     ],
     operator: {
