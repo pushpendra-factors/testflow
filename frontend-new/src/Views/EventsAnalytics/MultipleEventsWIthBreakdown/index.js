@@ -5,7 +5,7 @@ import BarChart from '../../../components/BarChart';
 import ChartTypeDropdown from '../../../components/ChartTypeDropdown';
 import MultipleEventsWithBreakdownTable from './MultipleEventsWithBreakdownTable';
 import LineChart from '../../../components/LineChart';
-import { Radio } from 'antd';
+import BreakdownType from '../BreakdownType';
 
 function MultipleEventsWithBreakdown({
   queries, breakdown, resultState, page, breakdownType, handleBreakdownTypeChange
@@ -92,11 +92,11 @@ function MultipleEventsWithBreakdown({
 
           {page === 'totalUsers' ? (
             <div className="px-4">
-              <Radio.Group value={breakdownType} onChange={handleBreakdownTypeChange}>
-                <Radio.Button value="each">Each Event</Radio.Button>
-                <Radio.Button disabled value="any">Any Event</Radio.Button>
-                <Radio.Button value="all">All Events</Radio.Button>
-              </Radio.Group>
+              <BreakdownType
+                breakdown={breakdown}
+                breakdownType={breakdownType}
+                handleBreakdownTypeChange={handleBreakdownTypeChange}
+              />
             </div>
           ) : null}
 

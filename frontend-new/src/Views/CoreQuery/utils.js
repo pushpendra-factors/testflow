@@ -46,7 +46,7 @@ export const getQuery = (activeTab, queryType, groupBy, queries, breakdownType =
     query.ewp = getEventsWithProperties(queries);
     query.gbt = 'date';
 
-    const appliedGroupBy = [...groupBy.event, ...groupBy.global]
+    const appliedGroupBy = [...groupBy.event, ...groupBy.global];
 
     query.gbp = appliedGroupBy
       .map(opt => {
@@ -63,10 +63,9 @@ export const getQuery = (activeTab, queryType, groupBy, queries, breakdownType =
             pr: opt.property,
             en: opt.prop_category,
             pty: opt.prop_type,
-            ena: opt.eventName,
+            ena: opt.eventName
           };
         }
-
       });
   }
   query.ec = constantObj[breakdownType];

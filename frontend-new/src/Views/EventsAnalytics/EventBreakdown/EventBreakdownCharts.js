@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Radio } from 'antd';
 import { formatData } from './utils';
 import BarChart from '../../../components/BarChart';
 import EventBreakdownTable from './EventBreakdownTable';
+import BreakdownType from '../BreakdownType';
 
 function EventBreakdownCharts({
     data, breakdownType, handleBreakdownTypeChange, breakdown
@@ -29,11 +29,11 @@ function EventBreakdownCharts({
                 </div>
                 <div className="user-actions w-1/2 flex justify-end">
                     <div className="px-4">
-                        <Radio.Group value={breakdownType} onChange={handleBreakdownTypeChange}>
-                            <Radio.Button value="each">Each Event</Radio.Button>
-                            <Radio.Button disabled value="any">Any Event</Radio.Button>
-                            <Radio.Button value="all">All Events</Radio.Button>
-                        </Radio.Group>
+                        <BreakdownType
+                            breakdown={breakdown}
+                            breakdownType={breakdownType}
+                            handleBreakdownTypeChange={handleBreakdownTypeChange}
+                        />
                     </div>
                 </div>
             </div>

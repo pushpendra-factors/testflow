@@ -298,7 +298,7 @@ function CoreQuery({ activeProject }) {
 
       ) : (
           <CoreQueryHome setQueryType={setQueryType} setDrawerVisible={setDrawerVisible} />
-        )}
+      )}
 
     </>
   );
