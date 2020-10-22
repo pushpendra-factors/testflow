@@ -1,6 +1,8 @@
 /* eslint-disable */
 
-import { fetchEventsAction, fetchEventPropertiesAction, fetchUserPropertiesAction } from './actions';
+import { fetchEventsAction, fetchEventPropertiesAction, 
+  fetchUserPropertiesAction, 
+  setGroupByAction} from './actions';
 import { getEventNames, fetchEventProperties, fetchUserProperties } from './services';
 import { convertToEventOptions, convertPropsToOptions } from './utils';
 
@@ -43,5 +45,13 @@ export const getEventProperties = (projectId, eventName) => {
         });
     });
   };
+}
+
+export const setGroupBy = (type, groupBy, index) => {
+  return (dispatch) => {
+    return new Promise((resolve, reject) => {
+      resolve(dispatch(setGroupByAction(type, groupBy, index)))
+    })
+  }
 }
 
