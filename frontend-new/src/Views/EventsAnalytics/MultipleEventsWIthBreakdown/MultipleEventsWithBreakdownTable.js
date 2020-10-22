@@ -56,6 +56,7 @@ function MultipleEventsWithBreakdownTable({
       setSearchText={setSearchText}
       columns={columns}
       rowSelection={rowSelection}
+      scroll={{ x: 250 }}
     />
   );
 }

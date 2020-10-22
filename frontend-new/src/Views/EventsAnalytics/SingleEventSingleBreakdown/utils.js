@@ -1,7 +1,8 @@
 import { getTitleWithSorter } from '../../CoreQuery/FunnelsResultPage/utils';
 import moment from 'moment';
+import { labelsObj } from '../../CoreQuery/utils';
 
-export const getTableColumns = (events, breakdown, currentSorter, handleSorting) => {
+export const getTableColumns = (events, breakdown, currentSorter, handleSorting, page) => {
   const breakdownColumns = breakdown.map(e => {
     return {
       title: e,
@@ -11,7 +12,7 @@ export const getTableColumns = (events, breakdown, currentSorter, handleSorting)
 
   const eventColumns = events.map(e => {
     return {
-      title: getTitleWithSorter(`${e}: Event Count`, e, currentSorter, handleSorting),
+      title: getTitleWithSorter(`${e}: ${labelsObj[page]}`, e, currentSorter, handleSorting),
       dataIndex: e
     };
   });

@@ -1,5 +1,6 @@
 import { getTitleWithSorter } from '../../CoreQuery/FunnelsResultPage/utils';
 import moment from 'moment';
+import { labelsObj } from '../../CoreQuery/utils';
 
 export const formatData = (data) => {
   const result = [];
@@ -21,7 +22,7 @@ export const formatData = (data) => {
   return result;
 };
 
-export const getTableColumns = (breakdown, currentSorter, handleSorting) => {
+export const getTableColumns = (breakdown, currentSorter, handleSorting, page) => {
   const eventBreakdowns = breakdown
     .filter(elem => elem.prop_category === 'event')
     .map(elem => {
@@ -39,7 +40,7 @@ export const getTableColumns = (breakdown, currentSorter, handleSorting) => {
       };
     });
   const valCol = {
-    title: getTitleWithSorter('Event Count', 'Event Count', currentSorter, handleSorting),
+    title: getTitleWithSorter(labelsObj[page], 'Event Count', currentSorter, handleSorting),
     dataIndex: 'Event Count'
   };
   return [...eventBreakdowns, ...userBreakdowns, valCol];
@@ -108,7 +109,9 @@ export const getDateBasedColumns = (data, breakdown, currentSorter, handleSortin
     .map(elem => {
       return {
         title: elem.property,
-        dataIndex: elem.property
+        dataIndex: elem.property,
+        fixed: 'left',
+        width: 200
       };
     });
   const userBreakdowns = breakdown
@@ -116,7 +119,9 @@ export const getDateBasedColumns = (data, breakdown, currentSorter, handleSortin
     .map(elem => {
       return {
         title: elem.property,
-        dataIndex: elem.property
+        dataIndex: elem.property,
+        fixed: 'left',
+        width: 200
       };
     });
 

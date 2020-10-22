@@ -5,7 +5,7 @@ import {
 } from './utils';
 
 function SingleEventSingleBreakdownTable({
-  data, events, breakdown, chartType, visibleProperties, setVisibleProperties, maxAllowedVisibleProperties, lineChartData, originalData
+  data, events, breakdown, chartType, visibleProperties, setVisibleProperties, maxAllowedVisibleProperties, lineChartData, originalData, page
 }) {
   const appliedBreakdown = [breakdown[0].property];
 
@@ -28,7 +28,7 @@ function SingleEventSingleBreakdownTable({
     columns = getDateBasedColumns(lineChartData, appliedBreakdown, sorter, handleSorting);
     tableData = getDateBasedTableData(data.map(elem => elem.label), originalData, appliedBreakdown, searchText, sorter);
   } else {
-    columns = getTableColumns(events, appliedBreakdown, sorter, handleSorting);
+    columns = getTableColumns(events, appliedBreakdown, sorter, handleSorting, page);
     tableData = getDataInTableFormat(data, events, appliedBreakdown, searchText, sorter);
   }
 
@@ -65,6 +65,7 @@ function SingleEventSingleBreakdownTable({
       setSearchText={setSearchText}
       columns={columns}
       rowSelection={rowSelection}
+      scroll={{ x: 250 }}
     />
   );
 }

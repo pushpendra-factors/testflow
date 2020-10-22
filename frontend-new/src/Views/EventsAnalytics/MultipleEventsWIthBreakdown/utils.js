@@ -1,5 +1,6 @@
 import moment from 'moment';
 import { getTitleWithSorter } from '../../CoreQuery/FunnelsResultPage/utils';
+import { labelsObj } from '../../CoreQuery/utils';
 
 export const formatData = (data, queries, colors) => {
   const splittedData = {};
@@ -81,20 +82,20 @@ export const formatVisibleProperties = (data, queries) => {
   return vp;
 };
 
-export const getTableColumns = (breakdown, currentSorter, handleSorting) => {
+export const getTableColumns = (breakdown, currentSorter, handleSorting, page) => {
   const result = [];
   result.push({
     title: 'Event',
     dataIndex: 'event'
   });
-  breakdown.forEach(b => {
+  breakdown.forEach((b, index) => {
     result.push({
       title: b.property,
-      dataIndex: b.property
+      dataIndex: b.property + ';' + index
     });
   });
   result.push({
-    title: getTitleWithSorter('Event Count', 'Event Count', currentSorter, handleSorting),
+    title: getTitleWithSorter(labelsObj[page], 'Event Count', currentSorter, handleSorting),
     dataIndex: 'Event Count'
   });
   return result;
@@ -106,7 +107,7 @@ export const getTableData = (data, breakdown, searchText, currentSorter) => {
   filteredData.forEach(d => {
     const breakdownValues = {};
     breakdown.forEach((b, index) => {
-      breakdownValues[b.property] = d.label.split(',')[index];
+      breakdownValues[b.property + ';' + index] = d.label.split(',')[index];
     });
     result.push({
       ...d, 'Event Count': d.value, ...breakdownValues
@@ -139,10 +140,10 @@ export const formatDataInLineChartFormat = (visibleProperties, mapper, hiddenPro
 };
 
 export const getDateBasedColumns = (data, breakdown, currentSorter, handleSorting) => {
-  const breakdownColumns = breakdown.map(elem => {
+  const breakdownColumns = breakdown.map((elem, index) => {
     return {
       title: elem.property,
-      dataIndex: elem.property,
+      dataIndex: elem.property + ';' + index,
       fixed: 'left',
       width: 200
     };
@@ -163,11 +164,12 @@ export const getDateBasedColumns = (data, breakdown, currentSorter, handleSortin
   return [eventCol, ...breakdownColumns, ...dateColumns];
 };
 
-export const getDateBasedTableData = (data, breakdown, currentSorter) => {
-  const result = data.map(d => {
+export const getDateBasedTableData = (data, breakdown, currentSorter, searchText) => {
+  const filteredData = data.filter(elem => elem.label.toLowerCase().includes(searchText.toLowerCase()) || elem.event.toLowerCase().includes(searchText.toLowerCase()));
+  const result = filteredData.map(d => {
     const breakdownValues = {};
     breakdown.forEach((b, index) => {
-      breakdownValues[b.property] = d.label.split(',')[index];
+      breakdownValues[b.property + ';' + index] = d.label.split(',')[index];
     });
 
     const dateWiseValues = {};

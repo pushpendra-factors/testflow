@@ -1,5 +1,12 @@
 import moment from 'moment';
 
+export const labelsObj = {
+  totalEvents: 'Event Count',
+  totalUsers: 'User Count',
+  activeUsers: 'User Count',
+  frequency: 'Count'
+}
+
 const constantObj = {
   each: 'each_given_event',
   any: 'any_given_event',
