@@ -25,8 +25,8 @@ function EditBasicSettings(props) {
           </Col>
           <Col span={12}>
             <div className={'flex justify-end'}>
-              <Button disabled={dataLoading} onClick={() => props.setEditMode(false)}>Cancel</Button>
-              <Button type="primary" disabled={dataLoading} className={'ml-2'} onClick={() => props.setEditMode(false)}>Save</Button>
+              <Button size={'large'} disabled={dataLoading} onClick={() => props.setEditMode(false)}>Cancel</Button>
+              <Button size={'large'} type="primary" disabled={dataLoading} className={'ml-2'} onClick={() => props.setEditMode(false)}>Save</Button>
             </div>
           </Col>
         </Row>

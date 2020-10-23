@@ -42,7 +42,7 @@ function ForgotPassword() {
                             </Col>
                             <Col span={24}>
                                 <div className={'flex flex-col justify-center items-center mt-5'} >
-                                    <Button type={'primary'} className={'fa-button-50'} size={'large'} onClick={() => routeChange('/resetpassword')}>Send Reset Link</Button>
+                                    <Button  type={'primary'} className={'fa-button-50'} size={'large'} onClick={() => routeChange('/resetpassword')}>Send Reset Link</Button>
                                 </div>
                             </Col>
                             <Col span={24}>

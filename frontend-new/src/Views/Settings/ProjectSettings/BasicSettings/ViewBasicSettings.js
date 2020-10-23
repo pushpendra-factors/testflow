@@ -26,7 +26,7 @@ function ViewBasicSettings(props) {
           </Col>
           <Col span={12}>
             <div className={'flex justify-end'}>
-              <Button disabled={dataLoading} onClick={() => props.setEditMode(true)}>Edit Details</Button>
+              <Button size={'large'} disabled={dataLoading} onClick={() => props.setEditMode(true)}>Edit Details</Button>
             </div>
           </Col>
         </Row>

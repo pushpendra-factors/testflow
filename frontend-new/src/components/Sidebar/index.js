@@ -47,7 +47,7 @@ function Sidebar(props) {
 
           </div>
           <div className={'fa-popupcard-divider'} />
-          <Button type={'text'}
+          <Button size={'large'} type={'text'}
           onClick={() => {
             setShowPopOver(false);
             setCreateNewProjectModal(true);
@@ -61,7 +61,7 @@ function Sidebar(props) {
               }}>
                 <Avatar src={'https://zos.alipayobjects.com/rmsportal/ODTLcjxAfvqbxHnVXCYX.png'} size={28}/><Text type={'title'} level={7} extraClass={'m-0 ml-2'}>{'Account Settings'}</Text>
           </div>
-          <Button type={'text'}
+          <Button size={'large'} type={'text'}
           onClick={() => {
             setShowPopOver(false);
             props.signout();
