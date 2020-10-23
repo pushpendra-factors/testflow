@@ -36,7 +36,7 @@ func TestAgentDBGetAgentByEmail(t *testing.T) {
 		_, errCode := M.GetAgentByEmail(email)
 		assert.Equal(t, http.StatusNotFound, errCode)
 	})
-	phone:= "+12322365"
+	phone := "+12322365"
 	start := time.Now()
 
 	// Create agent
@@ -239,4 +239,24 @@ func TestUpdateAgentIntAdwordsRefreshToken(t *testing.T) {
 	updatedAgent, errCode = M.GetAgentByEmail(email)
 	assert.Equal(t, http.StatusFound, errCode)
 	assert.Equal(t, token, updatedAgent.IntAdwordsRefreshToken)
+}
+
+func TestUpdateAgentInformation(t *testing.T) {
+	email := getRandomEmail()
+	agent, errCode := SetupAgentReturnDAO(email, "+13425354765")
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	M.UpdateAgentInformation(agent.UUID, "A", "B", "")
+	updatedAgent, errCode := M.GetAgentByEmail(email)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Equal(t, "A", updatedAgent.FirstName)
+	assert.Equal(t, "B", updatedAgent.LastName)
+	assert.Equal(t, "+13425354765", updatedAgent.Phone)
+
+	M.UpdateAgentInformation(agent.UUID, "", "", "+13425354567")
+	updatedAgent, errCode = M.GetAgentByEmail(email)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Equal(t, "A", updatedAgent.FirstName)
+	assert.Equal(t, "B", updatedAgent.LastName)
+	assert.Equal(t, "+13425354567", updatedAgent.Phone)
 }

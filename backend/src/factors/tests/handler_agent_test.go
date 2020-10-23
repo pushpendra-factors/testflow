@@ -54,7 +54,7 @@ func TestAPIAgentSignin(t *testing.T) {
 
 	t.Run("SigninSuccess", func(t *testing.T) {
 		email := getRandomEmail()
-		agent, errCode := SetupAgentReturnDAO(email,"+93214356")
+		agent, errCode := SetupAgentReturnDAO(email, "+93214356")
 		assert.Equal(t, http.StatusCreated, errCode)
 
 		plainTextPassword := U.RandomLowerAphaNumString(6)
@@ -91,12 +91,13 @@ func TestAPIAgentSignout(t *testing.T) {
 	assert.Equal(t, helpers.ExpireCookie, cookie.MaxAge)
 }
 
-func sendAgentInviteRequest(email string, projectId uint64, authData string, exp int, r *gin.Engine) *httptest.ResponseRecorder {
+func sendAgentInviteRequest(email string, role int64, projectId uint64, authData string, exp int, r *gin.Engine) *httptest.ResponseRecorder {
 
 	rb := U.NewRequestBuilder(http.MethodPost, fmt.Sprintf("/projects/%d/agents/invite", projectId)).
 		WithHeader("Content-Type", "application/json").
 		WithPostParams(map[string]interface{}{
 			"email": email,
+			"role":  role,
 		}).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
@@ -123,7 +124,7 @@ func TestAPIAgentInvite(t *testing.T) {
 		emailToAdd := getRandomEmail()
 		projectId := U.RandomUint64()
 		emptyAuthData := ""
-		w := sendAgentInviteRequest(emailToAdd, projectId, emptyAuthData, 100, r)
+		w := sendAgentInviteRequest(emailToAdd, M.AGENT, projectId, emptyAuthData, 100, r)
 		assert.Equal(t, http.StatusUnauthorized, w.Code)
 	})
 
@@ -131,7 +132,7 @@ func TestAPIAgentInvite(t *testing.T) {
 		emailToAdd := getRandomEmail()
 		projectId := U.RandomUint64()
 		emptyAuthData := ""
-		w := sendAgentInviteRequest(emailToAdd, projectId, emptyAuthData, 100, r)
+		w := sendAgentInviteRequest(emailToAdd, M.AGENT, projectId, emptyAuthData, 100, r)
 		assert.Equal(t, http.StatusUnauthorized, w.Code)
 	})
 
@@ -143,7 +144,7 @@ func TestAPIAgentInvite(t *testing.T) {
 		key := U.RandomString(M.SALT_LEN)
 		authData, err := helpers.GetAuthData(randomAgentEmail, randomAgentUUID, key, time.Second*1000)
 		assert.Nil(t, err)
-		w := sendAgentInviteRequest(emailToAdd, projectId, authData, 100, r)
+		w := sendAgentInviteRequest(emailToAdd, M.AGENT, projectId, authData, 100, r)
 		assert.Equal(t, http.StatusUnauthorized, w.Code)
 	})
 
@@ -156,7 +157,7 @@ func TestAPIAgentInvite(t *testing.T) {
 		authData, err := helpers.GetAuthData(randomAgentEmail, randomAgentUUID, key, time.Second*1)
 		assert.Nil(t, err)
 		time.Sleep(time.Second * 2)
-		w := sendAgentInviteRequest(emailToAdd, projectId, authData, 100, r)
+		w := sendAgentInviteRequest(emailToAdd, M.AGENT, projectId, authData, 100, r)
 		assert.Equal(t, http.StatusUnauthorized, w.Code)
 	})
 
@@ -175,8 +176,67 @@ func TestAPIAgentInvite(t *testing.T) {
 		emailToAdd := getRandomEmail()
 		authData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, time.Second*1000)
 		assert.Nil(t, err)
-		w := sendAgentInviteRequest(emailToAdd, project.ID, authData, 100, r)
+		w := sendAgentInviteRequest(emailToAdd, M.AGENT, project.ID, authData, 100, r)
 		assert.Equal(t, http.StatusCreated, w.Code)
+	})
+
+	t.Run("InviteAgentSuccessWithRoleId", func(t *testing.T) {
+		project, err := SetupProjectReturnDAO()
+		assert.Nil(t, err)
+		projectAgentMappings, _ := M.GetProjectAgentMappingsByProjectId(project.ID)
+		billingAccount, _ := M.GetBillingAccountByProjectID(project.ID)
+		M.UpdateBillingAccount(billingAccount.ID, M.StartupPlanID, "1", "2", "3", "4")
+		agentUUIDs := make([]string, 0, 0)
+		for _, pam := range projectAgentMappings {
+			agentUUIDs = append(agentUUIDs, pam.AgentUUID)
+		}
+
+		agents, _ := M.GetAgentsByUUIDs(agentUUIDs)
+
+		authData, err := helpers.GetAuthData(agents[0].Email, agents[0].UUID, agents[0].Salt, time.Second*1000)
+		assert.Nil(t, err)
+		emailToAdd1 := getRandomEmail()
+		w := sendAgentInviteRequest(emailToAdd1, M.ADMIN, project.ID, authData, 100, r)
+		assert.Equal(t, http.StatusCreated, w.Code)
+		emailToAdd2 := getRandomEmail()
+		w = sendAgentInviteRequest(emailToAdd2, M.AGENT, project.ID, authData, 100, r)
+		assert.Equal(t, http.StatusCreated, w.Code)
+		emailToAdd3 := getRandomEmail()
+		w = sendAgentInviteRequest(emailToAdd3, 3, project.ID, authData, 100, r)
+		assert.Equal(t, http.StatusCreated, w.Code)
+		projectAgentMappings, _ = M.GetProjectAgentMappingsByProjectId(project.ID)
+		agentUUIDs = make([]string, 0, 0)
+		for _, pam := range projectAgentMappings {
+			agentUUIDs = append(agentUUIDs, pam.AgentUUID)
+		}
+		agents, _ = M.GetAgentsByUUIDs(agentUUIDs)
+		for _, agent := range agents {
+			var agentUUId string
+			if agent.Email == emailToAdd1 {
+				agentUUId = agent.UUID
+				for _, projectMapping := range projectAgentMappings {
+					if projectMapping.AgentUUID == agentUUId {
+						assert.Equal(t, projectMapping.Role, uint64(2))
+					}
+				}
+			}
+			if agent.Email == emailToAdd2 {
+				agentUUId = agent.UUID
+				for _, projectMapping := range projectAgentMappings {
+					if projectMapping.AgentUUID == agentUUId {
+						assert.Equal(t, projectMapping.Role, uint64(1))
+					}
+				}
+			}
+			if agent.Email == emailToAdd3 {
+				agentUUId = agent.UUID
+				for _, projectMapping := range projectAgentMappings {
+					if projectMapping.AgentUUID == agentUUId {
+						assert.Equal(t, projectMapping.Role, uint64(1))
+					}
+				}
+			}
+		}
 	})
 
 	t.Run("InviteAgentLimitExceeded", func(t *testing.T) {
@@ -196,7 +256,7 @@ func TestAPIAgentInvite(t *testing.T) {
 		emailToAdd := getRandomEmail()
 		authData, err := helpers.GetAuthData(td.Agent.Email, td.Agent.UUID, td.Agent.Salt, time.Second*1000)
 		assert.Nil(t, err)
-		w := sendAgentInviteRequest(emailToAdd, td.Project.ID, authData, 100, r)
+		w := sendAgentInviteRequest(emailToAdd, M.AGENT, td.Project.ID, authData, 100, r)
 		assert.Equal(t, http.StatusConflict, w.Code)
 	})
 
@@ -225,6 +285,30 @@ func sendProjectAgentRemoveRequest(r *gin.Engine, projectId uint64, agentToRemov
 	return w
 }
 
+func sendProjectAgentEditRequest(r *gin.Engine, projectId uint64, agentToRemoveUUID string, roleId int64, agent *M.Agent) *httptest.ResponseRecorder {
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	if err != nil {
+		log.WithError(err).Error("Error Creating cookieData")
+	}
+	rb := U.NewRequestBuilder(http.MethodPut, fmt.Sprintf("/projects/%d/agents/update", projectId)).
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		}).WithPostParams(map[string]interface{}{
+		"agent_uuid": agentToRemoveUUID,
+		"role":       roleId,
+	})
+
+	w := httptest.NewRecorder()
+	req, err := rb.Build()
+	if err != nil {
+		log.WithError(err).Error("Error Creating getAgentBillingAccount Req")
+	}
+	r.ServeHTTP(w, req)
+	return w
+}
+
 func TestAPIRemoveAgentFromProject(t *testing.T) {
 	r := gin.Default()
 	H.InitAppRoutes(r)
@@ -239,7 +323,7 @@ func TestAPIRemoveAgentFromProject(t *testing.T) {
 		assert.Equal(t, http.StatusForbidden, w.Code)
 	})
 
-	t.Run("Success", func(t *testing.T) {
+	t.Run("SuccessAdminRemovingUser", func(t *testing.T) {
 		testData, errCode := SetupTestData()
 		assert.Equal(t, http.StatusCreated, errCode)
 
@@ -257,8 +341,140 @@ func TestAPIRemoveAgentFromProject(t *testing.T) {
 		w := sendProjectAgentRemoveRequest(r, project.ID, agentToRemove.UUID, testData.Agent)
 		assert.Equal(t, http.StatusAccepted, w.Code)
 	})
+
+	t.Run("SuccessAdminRemovingAdminButNotHimself", func(t *testing.T) {
+		testData, errCode := SetupTestData()
+		assert.Equal(t, http.StatusCreated, errCode)
+
+		project := testData.Project
+		agentToRemove, errCode := SetupAgentReturnDAO(getRandomEmail(), "+3423647568")
+		assert.Equal(t, http.StatusCreated, errCode)
+
+		_, errCode = M.CreateProjectAgentMappingWithDependencies(&M.ProjectAgentMapping{
+			ProjectID: project.ID,
+			AgentUUID: agentToRemove.UUID,
+			Role:      M.ADMIN,
+		})
+		assert.Equal(t, http.StatusCreated, errCode)
+
+		w := sendProjectAgentRemoveRequest(r, project.ID, agentToRemove.UUID, testData.Agent)
+		assert.Equal(t, http.StatusAccepted, w.Code)
+	})
+	t.Run("SuccessUserRemovingHimself", func(t *testing.T) {
+		testData, errCode := SetupTestData()
+		assert.Equal(t, http.StatusCreated, errCode)
+
+		project := testData.Project
+		agentToRemove, errCode := SetupAgentReturnDAO(getRandomEmail(), "+3423647568")
+		assert.Equal(t, http.StatusCreated, errCode)
+
+		_, errCode = M.CreateProjectAgentMappingWithDependencies(&M.ProjectAgentMapping{
+			ProjectID: project.ID,
+			AgentUUID: agentToRemove.UUID,
+			Role:      M.AGENT,
+		})
+		assert.Equal(t, http.StatusCreated, errCode)
+
+		w := sendProjectAgentRemoveRequest(r, project.ID, agentToRemove.UUID, agentToRemove)
+		assert.Equal(t, http.StatusAccepted, w.Code)
+	})
+	t.Run("SuccessUserRemovingOthers", func(t *testing.T) {
+		testData, errCode := SetupTestData()
+		assert.Equal(t, http.StatusCreated, errCode)
+
+		project := testData.Project
+		agentToRemove, errCode := SetupAgentReturnDAO(getRandomEmail(), "+3423647568")
+		assert.Equal(t, http.StatusCreated, errCode)
+
+		_, errCode = M.CreateProjectAgentMappingWithDependencies(&M.ProjectAgentMapping{
+			ProjectID: project.ID,
+			AgentUUID: agentToRemove.UUID,
+			Role:      M.AGENT,
+		})
+		assert.Equal(t, http.StatusCreated, errCode)
+
+		w := sendProjectAgentRemoveRequest(r, project.ID, testData.Agent.UUID, agentToRemove)
+		assert.Equal(t, http.StatusForbidden, w.Code)
+	})
+	t.Run("SuccessAddedAdminRemovingBaseAdmin", func(t *testing.T) {
+		testData, errCode := SetupTestData()
+		assert.Equal(t, http.StatusCreated, errCode)
+
+		project := testData.Project
+		agentToRemove, errCode := SetupAgentReturnDAO(getRandomEmail(), "+3423647568")
+		assert.Equal(t, http.StatusCreated, errCode)
+
+		_, errCode = M.CreateProjectAgentMappingWithDependencies(&M.ProjectAgentMapping{
+			ProjectID: project.ID,
+			AgentUUID: agentToRemove.UUID,
+			Role:      M.ADMIN,
+		})
+		assert.Equal(t, http.StatusCreated, errCode)
+
+		w := sendProjectAgentRemoveRequest(r, project.ID, testData.Agent.UUID, agentToRemove)
+		assert.Equal(t, http.StatusAccepted, w.Code)
+	})
 }
 
+func TestAPIUpdateAgentInProject(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	t.Run("AdminEditingAdmin", func(t *testing.T) {
+		testData, errCode := SetupTestData()
+		assert.Equal(t, http.StatusCreated, errCode)
+
+		project := testData.Project
+		agentToEdit, errCode := SetupAgentReturnDAO(getRandomEmail(), "+3423647568")
+		assert.Equal(t, http.StatusCreated, errCode)
+
+		_, errCode = M.CreateProjectAgentMappingWithDependencies(&M.ProjectAgentMapping{
+			ProjectID: project.ID,
+			AgentUUID: agentToEdit.UUID,
+			Role:      M.ADMIN,
+		})
+		assert.Equal(t, http.StatusCreated, errCode)
+
+		w := sendProjectAgentEditRequest(r, project.ID, agentToEdit.UUID, 1, testData.Agent)
+		assert.Equal(t, http.StatusCreated, w.Code)
+	})
+	t.Run("AdminEditingUser", func(t *testing.T) {
+		testData, errCode := SetupTestData()
+		assert.Equal(t, http.StatusCreated, errCode)
+
+		project := testData.Project
+		agentToEdit, errCode := SetupAgentReturnDAO(getRandomEmail(), "+3423647568")
+		assert.Equal(t, http.StatusCreated, errCode)
+
+		_, errCode = M.CreateProjectAgentMappingWithDependencies(&M.ProjectAgentMapping{
+			ProjectID: project.ID,
+			AgentUUID: agentToEdit.UUID,
+			Role:      M.AGENT,
+		})
+		assert.Equal(t, http.StatusCreated, errCode)
+
+		w := sendProjectAgentEditRequest(r, project.ID, agentToEdit.UUID, 2, testData.Agent)
+		assert.Equal(t, http.StatusCreated, w.Code)
+	})
+	t.Run("UserEditingAdmin", func(t *testing.T) {
+		testData, errCode := SetupTestData()
+		assert.Equal(t, http.StatusCreated, errCode)
+
+		project := testData.Project
+		agentToEdit, errCode := SetupAgentReturnDAO(getRandomEmail(), "+3423647568")
+		assert.Equal(t, http.StatusCreated, errCode)
+
+		_, errCode = M.CreateProjectAgentMappingWithDependencies(&M.ProjectAgentMapping{
+			ProjectID: project.ID,
+			AgentUUID: agentToEdit.UUID,
+			Role:      M.AGENT,
+		})
+		assert.Equal(t, http.StatusCreated, errCode)
+
+		w := sendProjectAgentEditRequest(r, project.ID, testData.Agent.UUID, 1, agentToEdit)
+		assert.Equal(t, http.StatusForbidden, w.Code)
+	})
+}
 func sendAgentVerifyRequest(r *gin.Engine, authData, password, firstName, lastName string) *httptest.ResponseRecorder {
 
 	rb := U.NewRequestBuilder(http.MethodPost, "/agents/activate").
@@ -464,6 +680,8 @@ func TestAPIGetProjectAgentsHandler(t *testing.T) {
 		td, errCode := SetupTestData()
 		assert.Equal(t, http.StatusCreated, errCode)
 		agent := td.Agent
+		currentTime := time.Now()
+		M.UpdateAgentLastLoginInfo(agent.UUID, currentTime)
 		w := sendGetProjectAgentsRequest(r, td.Project.ID, agent)
 		assert.Equal(t, http.StatusOK, w.Code)
 
@@ -477,6 +695,7 @@ func TestAPIGetProjectAgentsHandler(t *testing.T) {
 		json.Unmarshal(jsonResponse, &resp)
 
 		assert.Equal(t, agent.Email, resp.Agents[agent.UUID].Email)
+		assert.Equal(t, currentTime.Unix(), resp.Agents[agent.UUID].LastLoggedIn.Unix())
 		assert.Equal(t, 1, len(resp.ProjectAgentMappings))
 		assert.Equal(t, agent.UUID, resp.ProjectAgentMappings[0].AgentUUID)
 	})

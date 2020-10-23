@@ -89,6 +89,7 @@ func Signout(c *gin.Context) {
 
 type agentInviteParams struct {
 	Email string `json:"email" binding:"required"`
+	Role  int64  `json:"role"`
 }
 
 func getAgentInviteParams(c *gin.Context) (*agentInviteParams, error) {
@@ -116,6 +117,7 @@ func AgentInvite(c *gin.Context) {
 
 	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
 	emailOfAgentToInvite := params.Email
+	roleOfAgent := params.Role
 
 	invitedByAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 
@@ -159,11 +161,15 @@ func AgentInvite(c *gin.Context) {
 		invitedAgent = resp.Agent
 	}
 
+	newProjectAgentRole := uint64(M.AGENT)
+	if roleOfAgent == M.ADMIN {
+		newProjectAgentRole = uint64(M.ADMIN)
+	}
 	pam, errCode := M.CreateProjectAgentMappingWithDependencies(&M.ProjectAgentMapping{
 		ProjectID: projectId,
 		AgentUUID: invitedAgent.UUID,
 		InvitedBy: &invitedByAgentUUID,
-		Role:      M.AGENT,
+		Role:      newProjectAgentRole,
 	})
 	if errCode == http.StatusInternalServerError {
 		logCtx.Error("Failed to createProjectAgentMapping")
@@ -214,12 +220,73 @@ func AgentInvite(c *gin.Context) {
 	return
 }
 
+// curl -X PUT -d '{"email":"value1"}' http://localhost:8080/:project_id/agents/update -v
+func AgentUpdate(c *gin.Context) {
+	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	logCtx := log.WithFields(log.Fields{
+		"reqId":         U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
+		"loggedInAgent": loggedInAgentUUID,
+		"projectId":     projectId,
+	})
+
+	params, err := getUpdateProjectAgentParams(c)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to parse removeProjectAgentParams")
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	agentUUIDToEdit := params.AgentUUID
+	roleIDToUpdate := params.Role
+	loggedInAgentPAM, errCode := M.GetProjectAgentMapping(projectId, loggedInAgentUUID)
+	if errCode != http.StatusFound {
+		c.AbortWithStatus(http.StatusInternalServerError)
+		logCtx.Errorln("Failed to fetch loggedInAgentPAM")
+		return
+	}
+
+	if !isAdmin(loggedInAgentPAM.Role) {
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Agent Edit is allowed only fro admins"})
+		return
+	}
+
+	if !(roleIDToUpdate == 1 || roleIDToUpdate == 2) {
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Invalid RoleID"})
+		return
+	}
+
+	errCode = M.EditProjectAgentMapping(projectId, agentUUIDToEdit, roleIDToUpdate)
+	if errCode == http.StatusInternalServerError {
+		c.AbortWithStatus(errCode)
+		return
+	}
+	resp := make(map[string]interface{})
+	resp["status"] = "success"
+	c.JSON(http.StatusCreated, resp)
+	return
+}
+
 type removeProjectAgentParams struct {
 	AgentUUID string `json:"agent_uuid" binding:"required"`
 }
 
+type updateProjectAgentParams struct {
+	AgentUUID string `json:"agent_uuid" binding:"required"`
+	Role      int64  `json:"role"`
+}
+
 func getRemoveProjectAgentParams(c *gin.Context) (*removeProjectAgentParams, error) {
 	params := removeProjectAgentParams{}
+	err := c.BindJSON(&params)
+	if err != nil {
+		return nil, err
+	}
+	return &params, nil
+}
+
+func getUpdateProjectAgentParams(c *gin.Context) (*updateProjectAgentParams, error) {
+	params := updateProjectAgentParams{}
 	err := c.BindJSON(&params)
 	if err != nil {
 		return nil, err
@@ -246,20 +313,28 @@ func RemoveProjectAgent(c *gin.Context) {
 
 	agentUUIDToRemove := params.AgentUUID
 
-	if loggedInAgentUUID == agentUUIDToRemove {
-		loggedInAgentPAM, errCode := M.GetProjectAgentMapping(projectId, loggedInAgentUUID)
-		if errCode != http.StatusFound {
-			c.AbortWithStatus(http.StatusInternalServerError)
-			logCtx.Errorln("Failed to fetch loggedInAgentPAM")
-			return
-		}
-		if loggedInAgentPAM.Role == M.ADMIN {
+	loggedInAgentPAM, errCode := M.GetProjectAgentMapping(projectId, loggedInAgentUUID)
+	if errCode != http.StatusFound {
+		c.AbortWithStatus(http.StatusInternalServerError)
+		logCtx.Errorln("Failed to fetch loggedInAgentPAM")
+		return
+	}
+
+	if isAdmin(loggedInAgentPAM.Role) {
+		if loggedInAgentUUID == agentUUIDToRemove {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Agent Admin cannot remove himself"})
 			return
 		}
 	}
 
-	errCode := M.DeleteProjectAgentMapping(projectId, agentUUIDToRemove)
+	if !isAdmin(loggedInAgentPAM.Role) {
+		if loggedInAgentUUID != agentUUIDToRemove {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Agent User cannot remove others"})
+			return
+		}
+	}
+
+	errCode = M.DeleteProjectAgentMapping(projectId, agentUUIDToRemove)
 	if errCode == http.StatusInternalServerError {
 		c.AbortWithStatus(errCode)
 		return
@@ -608,6 +683,7 @@ func UpdateAgentBillingAccount(c *gin.Context) {
 type updateAgentParams struct {
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
+	Phone     string `json:"phone"`
 }
 
 func getUpdateAgentParams(c *gin.Context) (*updateAgentParams, error) {
@@ -631,7 +707,7 @@ func UpdateAgentInfo(c *gin.Context) {
 		return
 	}
 
-	errCode := M.UpdateAgentInformation(loggedInAgentUUID, params.FirstName, params.LastName)
+	errCode := M.UpdateAgentInformation(loggedInAgentUUID, params.FirstName, params.LastName, params.Phone)
 	if errCode == http.StatusInternalServerError {
 		c.AbortWithStatus(errCode)
 		return
@@ -692,4 +768,11 @@ func UpdateAgentPassword(c *gin.Context) {
 
 	errCode = M.UpdateAgentPassword(loggedInAgentUUID, params.NewPassword, time.Now().UTC())
 	c.Status(errCode)
+}
+
+func isAdmin(role uint64) bool {
+	if role == M.ADMIN {
+		return true
+	}
+	return false
 }

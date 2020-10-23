@@ -21,6 +21,10 @@ type Project struct {
 	PrivateToken string    `gorm:"size:32" json:"private_token"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
+	ProjectURI   string    `json:"project_uri"`
+	TimeFormat   string    `json:"time_format"`
+	DateFormat   string    `json:"date_format"`
+	TimeZone     string    `json:"time_zone"`
 }
 
 const TOKEN_GEN_RETRY_LIMIT = 5
@@ -93,6 +97,35 @@ func createProject(project *Project) (*Project, int) {
 	}
 
 	return project, http.StatusCreated
+}
+
+func UpdateProject(projectId uint64, project *Project) int {
+	db := C.GetServices().Db
+
+	logCtx := log.WithField("project_id", project.ID)
+	updateFields := make(map[string]interface{}, 0)
+	if project.Name != "" {
+		updateFields["name"] = project.Name
+	}
+	if project.TimeFormat != "" {
+		updateFields["time_format"] = project.TimeFormat
+	}
+	if project.DateFormat != "" {
+		updateFields["date_format"] = project.DateFormat
+	}
+	if project.ProjectURI != "" {
+		updateFields["project_uri"] = project.ProjectURI
+	}
+	if project.TimeZone != "" {
+		updateFields["time_zone"] = project.TimeZone
+	}
+	err := db.Model(&Project{}).Where("id = ?", projectId).Update(updateFields).Error
+	if err != nil {
+		logCtx.WithError(err).Error(
+			"Failed to execute query of update project")
+		return http.StatusInternalServerError
+	}
+	return 0
 }
 
 func createProjectDependencies(projectID uint64, agentUUID string) int {
