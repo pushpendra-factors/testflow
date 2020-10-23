@@ -771,9 +771,17 @@ func fillUserPropertiesFromFormSubmitEventProperties(properties *U.PropertiesMap
 	for k, v := range *formSubmitProperties {
 		if U.IsFormSubmitUserProperty(k) {
 			if k == U.UP_EMAIL {
-				(*properties)[k] = U.EmailToLowerCase(v)
+				email := U.EmailToLowerCase(v)
+				if email != "" {
+					(*properties)[k] = email
+				}
+
 			} else if k == U.UP_PHONE {
-				(*properties)[k] = U.SanatizePhoneNumber(v)
+				sPhoneNo := U.SanatizePhoneNumber(v)
+				if sPhoneNo != "" {
+					(*properties)[k] = sPhoneNo
+				}
+
 			} else {
 				(*properties)[k] = v
 			}
