@@ -429,6 +429,11 @@ func CreateOrGetSegmentUser(projectId uint64, segAnonId, custUserId string, segR
 			cUser.SegmentAnonymousId = segAnonId
 		}
 
+		// add c_uid on create, if provided and not exist already.
+		if custUserId != "" {
+			cUser.CustomerUserId = custUserId
+		}
+
 		user, err := createUserWithError(cUser)
 		if err != nil {
 			// Get and return error is duplicate error.
@@ -458,9 +463,20 @@ func CreateOrGetSegmentUser(projectId uint64, segAnonId, custUserId string, segR
 
 	logCtx = logCtx.WithField("fetched_c_uid", user.CustomerUserId)
 
+	// fetched c_uid empty, identify and return.
+	if user.CustomerUserId == "" {
+		uUser, uErrCode := UpdateUser(projectId, user.ID, &User{CustomerUserId: custUserId}, segReqTimestamp)
+		if uErrCode != http.StatusAccepted {
+			logCtx.WithField("err_code", uErrCode).Error(
+				"Identify failed. Failed updating c_uid failed. get_segment_user failed.")
+			return nil, uErrCode
+		}
+		user.CustomerUserId = uUser.CustomerUserId
+	}
+
 	// same seg_aid with different c_uid. log error. return user.
 	if user.CustomerUserId != custUserId {
-		logCtx.Error("Different customer_user_id seen for existing user with segment_anonymous_id.")
+		logCtx.Error("Tried re-identifying with same seg_aid and different c_uid.")
 	}
 
 	// provided and fetched c_uid are same.
