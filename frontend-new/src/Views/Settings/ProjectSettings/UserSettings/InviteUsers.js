@@ -13,7 +13,7 @@ function InviteUsers(props) {
   //   setInviteCount([...inviteCount, 'newElement']);
   // };
   useEffect(() => {
-    props.projectAgentInvite(props.activeProjectID, 'baliga.vishnu+12@gmail.com');
+    // props.projectAgentInvite(props.activeProjectID, 'baliga.vishnu+12@gmail.com');
   }, []);
 
   return (

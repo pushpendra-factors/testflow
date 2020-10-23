@@ -58,6 +58,13 @@ export default function reducer(state = {
       })
       return nextState
     }
+    case "FETCH_PROJECT_AGENTS_FULFILLED":{
+      return {
+        ...state,
+        projectAgents: action.payload.project_agent_mappings,
+        agents: action.payload.agents,
+      }
+    }
   }
   return state;
 }
@@ -167,6 +174,25 @@ export function fetchAgentInfo(){
     });
   }
 } 
+
+export function fetchProjectAgents(projectId){
+  return function(dispatch){
+    return get(dispatch, host + "projects/" + projectId + "/agents")
+      .then((r) => {
+        dispatch({type: "FETCH_PROJECT_AGENTS_FULFILLED", payload: r.data });
+      })
+      .catch((r) => {
+        if (r.status) {
+          // use this pattern for error handling. 
+          // decided to use redux store.
+          dispatch({type: "FETCH_PROJECT_AGENTS_REJECTED", payload: r.data, code: r.status });        
+        } else {
+          // network error. Idea: Use a global error component for this.
+          console.log("network error");
+        }
+      });
+  }
+}
 
 
 export function projectAgentInvite(projectId, emailId){
