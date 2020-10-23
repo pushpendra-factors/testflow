@@ -95,7 +95,7 @@ func IsNumber(num string) bool {
 }
 
 func IsEmail(str string) bool {
-	regexpEmail := regexp.MustCompile(`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,4}$`)
+	regexpEmail := regexp.MustCompile(`^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,4}$`)
 	return regexpEmail.MatchString(str)
 }
 

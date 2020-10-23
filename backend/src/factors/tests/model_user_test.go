@@ -676,6 +676,30 @@ func TestFillFormSubmitEventUserProperties(t *testing.T) {
 		assert.Nil(t, newProperties[U.UP_PHONE])
 		assert.Nil(t, newProperties[U.UP_COMPANY])
 	})
+
+	t.Run("FormSubmitWithCaseSensitiveEmailAndLeadingZeroPhoneNo", func(t *testing.T) {
+		user, errCode1 := M.CreateUser(&M.User{ProjectId: project.ID})
+		assert.Equal(t, http.StatusCreated, errCode1)
+		formSubmitProperties := U.PropertiesMap{
+			U.UP_EMAIL:   "Xyz@Example.com",
+			U.UP_PHONE:   "0123456789",
+			U.UP_COMPANY: "Example Inc",
+		}
+
+		newProperties := U.PropertiesMap{}
+		customerUserId, errCode := M.FillUserPropertiesAndGetCustomerUserIdFromFormSubmit(project.ID,
+			user.ID, &newProperties, &formSubmitProperties)
+		assert.Equal(t, http.StatusOK, errCode)
+
+		// email translated to lower case
+		assert.Equal(t, "xyz@example.com", customerUserId)
+		// Should add all other properties from form submit as phone matches.
+		assert.Equal(t, "xyz@example.com", newProperties[U.UP_EMAIL])
+		// sanatized phone number
+		assert.Equal(t, "123456789", newProperties[U.UP_PHONE])
+		assert.Equal(t, "Example Inc", newProperties[U.UP_COMPANY])
+	})
+
 }
 
 func TestGetUserPropertiesAsMap(t *testing.T) {
