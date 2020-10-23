@@ -148,8 +148,9 @@ func getCustomerUserIdFromProperties(projectID uint64, properties map[string]int
 	var phoneKey string
 	for key := range properties {
 		hasPhone := strings.Index(key, "phone")
-		if hasPhone > -1 && phoneKey == "" {
+		if hasPhone > -1 {
 			phoneKey = key
+			break
 		}
 	}
 
