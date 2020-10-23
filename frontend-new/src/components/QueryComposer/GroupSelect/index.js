@@ -8,7 +8,7 @@ function GroupSelect({
   optionClick, onClickOutside
 }) {
   const [groupCollapseState, setGroupCollapseState] = useState({});
-  const [searchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
 
   const collapseGroup = (index) => {
     const groupColState = Object.assign({}, groupCollapseState);
