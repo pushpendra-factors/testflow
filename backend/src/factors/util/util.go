@@ -582,6 +582,8 @@ func GetPossiblePhoneNumber(phoneNo string) []string {
 			possiblePhoneNo = append(possiblePhoneNo, phonePattern)
 			phonePattern = fmt.Sprintf("(%s)-%s-%s", nationalPhoneNo[:3], nationalPhoneNo[3:6], nationalPhoneNo[6:])
 			possiblePhoneNo = append(possiblePhoneNo, phonePattern)
+			phonePattern = fmt.Sprintf("(%s) %s %s", nationalPhoneNo[:3], nationalPhoneNo[3:6], nationalPhoneNo[6:])
+			possiblePhoneNo = append(possiblePhoneNo, phonePattern)
 		}
 	}
 
@@ -609,11 +611,11 @@ func GetPossiblePhoneNumber(phoneNo string) []string {
 		//911234567890
 		nationalFormat := libphonenumber.Format(num, libphonenumber.E164)[1:]
 		possiblePhoneNo = append(possiblePhoneNo, nationalFormat)
-		possiblePhoneNo = append(possiblePhoneNo, "0"+nationalFormat)
 
-		//National format 01234 567 890
+		//National format 1234 567 890
 		nationalNum := libphonenumber.GetNationalSignificantNumber(num)
 		possiblePhoneNo = append(possiblePhoneNo, nationalNum)
+		possiblePhoneNo = append(possiblePhoneNo, "0"+nationalNum)
 		possiblePhoneNo = append(possiblePhoneNo, "+"+nationalNum)
 
 		standardPhone := libphonenumber.Format(num, libphonenumber.E164)
