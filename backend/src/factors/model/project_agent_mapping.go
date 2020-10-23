@@ -191,3 +191,22 @@ func DeleteProjectAgentMapping(projectId uint64, agentUUIDToRemove string) int {
 
 	return http.StatusAccepted
 }
+
+func EditProjectAgentMapping(projectId uint64, agentUUIDToEdit string, role int64) int {
+	if projectId == 0 || agentUUIDToEdit == "" || role == 0 {
+		return http.StatusBadRequest
+	}
+	db := C.GetServices().Db
+
+	updateFields := make(map[string]interface{}, 0)
+	updateFields["role"] = role
+
+	err := db.Model(&ProjectAgentMapping{}).Where("project_id = ? AND agent_uuid = ?", projectId, agentUUIDToEdit).Update(updateFields).Error
+
+	if err != nil {
+		log.WithFields(log.Fields{"projectId": projectId, "agentUUID": agentUUIDToEdit}).WithError(err).Error(
+			"Deleting ProjectAgentMapping failed.")
+		return http.StatusInternalServerError
+	}
+	return 0
+}

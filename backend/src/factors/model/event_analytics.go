@@ -14,8 +14,8 @@ import (
 )
 
 const (
-	META_EACH_EVENT_COUNT_METRICS = "EachEventCount"
-	ALLOWED_GOROUTINES            = 4
+	MetaEachEventCountMetrics = "EachEventCount"
+	AllowedGoroutines         = 4
 )
 
 type ResultGroup struct {
@@ -28,13 +28,13 @@ func RunEventsGroupQuery(queries []Query, projectId uint64) ResultGroup {
 	resultGroup.Results = make([]QueryResult, len(queries))
 	var waitGroup sync.WaitGroup
 	count := 0
-	waitGroup.Add(U.MinInt(len(queries), ALLOWED_GOROUTINES))
+	waitGroup.Add(U.MinInt(len(queries), AllowedGoroutines))
 	for index, query := range queries {
 		count++
 		go runSingleEventsQuery(projectId, query, &resultGroup.Results[index], &waitGroup)
-		if count%ALLOWED_GOROUTINES == 0 {
+		if count%AllowedGoroutines == 0 {
 			waitGroup.Wait()
-			waitGroup.Add(U.MinInt(len(queries)-count, ALLOWED_GOROUTINES))
+			waitGroup.Add(U.MinInt(len(queries)-count, AllowedGoroutines))
 		}
 	}
 	waitGroup.Wait()
@@ -104,6 +104,15 @@ func RunInsightsQuery(projectId uint64, query Query) (*QueryResult, int, string)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to transform query results.")
 			return nil, http.StatusInternalServerError, ErrMsgQueryProcessingFailure
+		}
+	} else if query.EventsCondition == EventCondEachGivenEvent &&
+		!strings.Contains(strings.Join(result.Headers, ","), AliasEventName) {
+		// for data consistency: single event result has no event_name column, appending here
+		if len(query.EventsWithProperties) == 1 {
+			result.Headers = append(result.Headers, AliasEventName)
+			for i, _ := range result.Rows {
+				result.Rows[i] = append(result.Rows[i], query.EventsWithProperties[0].Name)
+			}
 		}
 	}
 
@@ -214,7 +223,7 @@ func transformResultsForEachEventQuery(oldResult *QueryResult, query Query) (*Qu
 func addEventMetricsMetaToQueryResult(result *QueryResult) {
 
 	metaMetricsEventCount := HeaderRows{}
-	metaMetricsEventCount.Title = META_EACH_EVENT_COUNT_METRICS
+	metaMetricsEventCount.Title = MetaEachEventCountMetrics
 	// headers : event1, event2, ...
 	metaMetricsEventCount.Headers = []string{}
 	headerIndexToEventName := make(map[int]string)
@@ -251,6 +260,10 @@ func BuildInsightsQuery(projectId uint64, query Query) (string, []interface{}, e
 	addIndexToGroupByProperties(&query)
 
 	if query.Type == QueryTypeEventsOccurrence {
+		if query.EventsCondition == EventCondEachGivenEvent {
+			return buildEventCountForEachGivenEventsQueryNEW(projectId, query)
+		}
+
 		if len(query.EventsWithProperties) == 1 {
 			return buildEventsOccurrenceSingleEventQuery(projectId, query)
 		}
@@ -567,11 +580,11 @@ step1 AS (
 */
 
 func addEventFilterStepsForUniqueUsersQuery(projectID uint64, q *Query,
-	qStmnt *string, qParams *[]interface{}) []string {
+	qStmnt *string, qParams *[]interface{}) ([]string, map[string][]string) {
 
 	var commonSelect string
 	var commonOrderBy string
-
+	stepsToKeysMap := make(map[string][]string)
 	eventGroupProps := filterGroupPropsByType(q.GroupByProperties, PropertyEntityEvent)
 	egAnySelect, egAnyParams, egAnyGroupKeys := buildGroupKeys(eventGroupProps)
 
@@ -605,33 +618,35 @@ func addEventFilterStepsForUniqueUsersQuery(projectID uint64, q *Query,
 		var stepSelect, stepOrderBy string
 		var stepParams []interface{}
 		var groupByUserProperties bool
-		if q.EventsCondition == EventCondAllGivenEvent {
+		if q.EventsCondition == EventCondAllGivenEvent || q.EventsCondition == EventCondEachGivenEvent {
 			var stepGroupSelect, stepGroupKeys string
 			var stepGroupParams []interface{}
 			stepGroupSelect, stepGroupParams, stepGroupKeys, groupByUserProperties = buildGroupKeyForStep(
 				&q.EventsWithProperties[i], q.GroupByProperties, i+1)
+
+			eventSelect := commonSelect
+			if q.EventsCondition == EventCondEachGivenEvent {
+				eventNameSelect := "'" + ewp.Name + "'" + "::text" + " AS event_name "
+				eventSelect = joinWithComma(eventSelect, eventNameSelect)
+			}
 			if stepGroupSelect != "" {
-				stepSelect = fmt.Sprintf(commonSelect, ", "+stepGroupKeys, ", "+stepGroupSelect)
+				stepSelect = fmt.Sprintf(eventSelect, ", "+stepGroupKeys, ", "+stepGroupSelect)
 				stepOrderBy = fmt.Sprintf(commonOrderBy, ", "+stepGroupKeys)
 				stepParams = stepGroupParams
+				stepsToKeysMap[refStepName] = strings.Split(stepGroupKeys, ",")
 			} else {
-				stepSelect = fmt.Sprintf(commonSelect, "", "")
+				stepSelect = fmt.Sprintf(eventSelect, "", "")
 				if commonOrderBy != "" {
 					stepOrderBy = fmt.Sprintf(commonOrderBy, "")
 				}
 			}
 		} else {
-			newCommonSelect := commonSelect
-			if q.EventsCondition == EventCondEachGivenEvent {
-				eventNameSelect := "'" + ewp.Name + "'" + "::text" + " AS event_name "
-				newCommonSelect = joinWithComma(commonSelect, eventNameSelect)
-			}
 			if hasGroupEntity(q.GroupByProperties, PropertyEntityEvent) {
-				stepSelect = fmt.Sprintf(newCommonSelect, ", "+egAnyGroupKeys, ", "+egAnySelect)
+				stepSelect = fmt.Sprintf(commonSelect, ", "+egAnyGroupKeys, ", "+egAnySelect)
 				stepParams = egAnyParams
 				stepOrderBy = fmt.Sprintf(commonOrderBy, ", "+egAnyGroupKeys)
 			} else {
-				stepSelect = fmt.Sprintf(newCommonSelect, "", "")
+				stepSelect = fmt.Sprintf(commonSelect, "", "")
 				if commonOrderBy != "" {
 					stepOrderBy = fmt.Sprintf(commonOrderBy, "")
 				}
@@ -652,7 +667,7 @@ func addEventFilterStepsForUniqueUsersQuery(projectID uint64, q *Query,
 		}
 	}
 
-	return steps
+	return steps, stepsToKeysMap
 }
 
 /*
@@ -667,7 +682,6 @@ LEFT JOIN users ON users_union.event_user_id=users.id
 LEFT JOIN user_properties ON users.id=user_properties.user_id and user_properties.id=users.properties_id
 GROUP BY gk_0, gk_1 ORDER BY count DESC LIMIT 10000;
 */
-
 func addUniqueUsersAggregationQuery(query *Query, qStmnt *string, qParams *[]interface{}, refStep string) {
 	eventLevelGroupBys, otherGroupBys := separateEventLevelGroupBys(query.GroupByProperties)
 	var egKeys string
@@ -677,8 +691,7 @@ func addUniqueUsersAggregationQuery(query *Query, qStmnt *string, qParams *[]int
 		_, _, egKeys = buildGroupKeys(eventLevelGroupBys)
 		unionStepName = "all_users_intersect"
 	} else if query.EventsCondition == EventCondEachGivenEvent {
-		eventGroupProps := filterGroupPropsByType(otherGroupBys, PropertyEntityEvent)
-		_, _, egKeys = buildGroupKeys(eventGroupProps)
+		_, _, egKeys = buildGroupKeys(eventLevelGroupBys)
 		unionStepName = "each_users_union"
 	} else {
 		eventGroupProps := filterGroupPropsByType(otherGroupBys, PropertyEntityEvent)
@@ -692,7 +705,11 @@ func addUniqueUsersAggregationQuery(query *Query, qStmnt *string, qParams *[]int
 	*qParams = append(*qParams, ugSelectParams...)
 	// order of group keys changes here if users and event
 	// group by used together, but translated correctly.
-	termSelect := joinWithComma(ugSelect, egKeys)
+	termSelect := ""
+	if query.EventsCondition == EventCondEachGivenEvent {
+		termSelect = fmt.Sprintf(" %s.event_name, ", refStep)
+	}
+	termSelect = termSelect + joinWithComma(ugSelect, egKeys)
 
 	isGroupByTimestamp := query.GetGroupByTimestamp() != ""
 	termSelect = appendSelectTimestampColIfRequired(termSelect, isGroupByTimestamp)
@@ -709,9 +726,12 @@ func addUniqueUsersAggregationQuery(query *Query, qStmnt *string, qParams *[]int
 	termStmnt = as(unionStepName, termStmnt)
 	var aggregateFromStepName, aggregateSelectKeys, aggregateGroupBys, aggregateOrderBys string
 	if hasNumericalGroupBy(query.GroupByProperties) {
-
+		eventName := ""
+		if query.EventsCondition == EventCondEachGivenEvent {
+			eventName = AliasEventName
+		}
 		bucketedStepName, bucketedSelectKeys, bucketedGroupBys, bucketedOrderBys := appendNumericalBucketingSteps(
-			&termStmnt, query.GroupByProperties, unionStepName, "", isGroupByTimestamp, "event_user_id")
+			&termStmnt, query.GroupByProperties, unionStepName, eventName, isGroupByTimestamp, "event_user_id")
 		aggregateFromStepName = bucketedStepName
 		aggregateSelectKeys = bucketedSelectKeys
 		aggregateGroupBys = strings.Join(bucketedGroupBys, ", ")
@@ -816,6 +836,179 @@ func buildEventsOccurrenceSingleEventQuery(projectId uint64, q Query) (string, [
 }
 
 /*
+buildUniqueUsersWithEachGivenEventsQuery computes user count for each event with given filter and
+breakdown.
+
+Example: Query with date.
+Group By: user_properties, event_properties
+
+Sample query with ewp:
+	$session
+		"en": "event", "pr": "$source", "op": "equals", "va": "google", "ty": "categorical","lop": "AND"
+		"en": "user","pr": "$country","op": "equals","va": "India","ty": "categorical","lop": "AND"
+	MagazineViews
+		"en": "event","pr": "$source","op": "equals","va": "google","ty": "categorical","lop": "AND"
+		"en": "user","pr": "$country","op": "equals","va": "India","ty": "categorical","lop": "AND"
+	www.livspace.com/in/hire-a-designer
+		"en": "event","pr": "$source","op": "equals","va": "google","ty": "categorical","lop": "AND"
+		"en": "user","pr": "$country","op": "equals","va": "India","ty": "categorical","lop": "AND"
+gbp: [
+	"pr": "$source","en": "event","pty": "categorical","ena": "$session","eni": 1
+	"pr": "$campaign","en": "event","pty": "categorical","ena": "$session","eni": 1
+	"pr": "$campaign","en": "event","pty": "categorical","ena": "MagazineViews","eni": 2
+	"pr": "$city","en": "user","pty": "categorical","ena": "www.livspace.com/in/hire-a-designer","eni": 3
+	"pr": "$country","en": "user","pty": "categorical"
+]
+gbt: "date"
+
+QUERY:
+
+WITH
+
+step_0_names AS (SELECT id, project_id, name FROM event_names WHERE project_id='204' AND name='$session'),
+
+step_0 AS (SELECT DISTINCT ON(coal_user_id, _group_key_0, _group_key_1, date_trunc('day',
+to_timestamp(timestamp) AT TIME ZONE 'Asia/Calcutta')) COALESCE(users.customer_user_id,events.user_id)
+as coal_user_id, CASE WHEN events.properties->>'$source' IS NULL THEN '$none' WHEN
+events.properties->>'$source' = '' THEN '$none' ELSE events.properties->>'$source' END AS
+_group_key_0, CASE WHEN events.properties->>'$campaign' IS NULL THEN '$none' WHEN
+events.properties->>'$campaign' = '' THEN '$none' ELSE events.properties->>'$campaign'
+END AS _group_key_1, date_trunc('day', to_timestamp(timestamp) AT TIME ZONE 'Asia/Calcutta')
+as datetime, events.user_id as event_user_id, '$session'::text AS event_name  FROM events JOIN
+users ON events.user_id=users.id LEFT JOIN user_properties ON events.user_properties_id=user_properties.id
+WHERE events.project_id='204' AND timestamp>='1583001000' AND timestamp<='1585679399' AND
+events.event_name_id IN (SELECT id FROM step_0_names WHERE project_id='204' AND name='$session')
+AND ( events.properties->>'$source' = 'google' AND user_properties.properties->>'$country' = 'India' )
+ORDER BY coal_user_id, _group_key_0, _group_key_1, datetime, events.timestamp ASC),
+
+step_1_names AS (SELECT id, project_id, name FROM event_names WHERE project_id='204' AND
+name='MagazineViews'), step_1 AS (SELECT DISTINCT ON(coal_user_id, _group_key_2, date_trunc('day',
+to_timestamp(timestamp) AT TIME ZONE 'Asia/Calcutta')) COALESCE(users.customer_user_id,
+events.user_id) as coal_user_id, CASE WHEN events.properties->>'$campaign' IS NULL THEN '$none'
+WHEN events.properties->>'$campaign' = '' THEN '$none' ELSE events.properties->>'$campaign'
+END AS _group_key_2, date_trunc('day', to_timestamp(timestamp) AT TIME ZONE 'Asia/Calcutta')
+as datetime, events.user_id as event_user_id, 'MagazineViews'::text AS event_name  FROM events
+JOIN users ON events.user_id=users.id LEFT JOIN user_properties ON
+events.user_properties_id=user_properties.id WHERE events.project_id='204' AND timestamp>='1583001000'
+AND timestamp<='1585679399' AND events.event_name_id IN (SELECT id FROM step_1_names WHERE project_id='204'
+AND name='MagazineViews') AND ( events.properties->>'$source' = 'google' AND
+user_properties.properties->>'$country' = 'India' ) ORDER BY coal_user_id, _group_key_2, datetime,
+events.timestamp ASC),
+
+step_2_names AS (SELECT id, project_id, name FROM event_names WHERE project_id='204' AND
+name='www.livspace.com/in/hire-a-designer'),
+
+step_2 AS (SELECT DISTINCT ON(coal_user_id, _group_key_3, date_trunc('day', to_timestamp(timestamp)
+AT TIME ZONE 'Asia/Calcutta')) COALESCE(users.customer_user_id,events.user_id) as coal_user_id,
+CASE WHEN user_properties.properties->>'$city' IS NULL THEN '$none' WHEN
+user_properties.properties->>'$city' = '' THEN '$none' ELSE user_properties.properties->>'$city'
+END AS _group_key_3, date_trunc('day', to_timestamp(timestamp) AT TIME ZONE 'Asia/Calcutta') as
+datetime, events.user_id as event_user_id, 'www.livspace.com/in/hire-a-designer'::text AS
+event_name  FROM events JOIN users ON events.user_id=users.id LEFT JOIN user_properties ON
+events.user_properties_id=user_properties.id WHERE events.project_id='204' AND timestamp>='1583001000'
+AND timestamp<='1585679399' AND events.event_name_id IN (SELECT id FROM step_2_names WHERE
+project_id='204' AND name='www.livspace.com/in/hire-a-designer') AND ( events.properties->>'$source'
+= 'google' AND user_properties.properties->>'$country' = 'India' ) ORDER BY coal_user_id, _group_key_3,
+datetime, events.timestamp ASC),
+
+
+each_events_union AS (SELECT step_0.event_name as event_name, step_0.coal_user_id as coal_user_id,
+step_0.event_user_id as event_user_id, datetime , _group_key_0 as _group_key_0,  _group_key_1 as
+_group_key_1,  ''  as _group_key_2,  ''  as _group_key_3 FROM step_0 UNION ALL SELECT
+step_1.event_name as event_name, step_1.coal_user_id as coal_user_id, step_1.event_user_id as
+event_user_id, datetime ,  ''  as _group_key_0,  ''  as  _group_key_1, _group_key_2 as _group_key_2,
+''  as _group_key_3 FROM step_1 UNION ALL SELECT step_2.event_name as event_name, step_2.coal_user_id
+as coal_user_id, step_2.event_user_id as event_user_id, datetime ,  ''  as _group_key_0,  ''
+as  _group_key_1,  ''  as _group_key_2, _group_key_3 as _group_key_3 FROM step_2) ,
+
+each_users_union AS (SELECT each_events_union.event_user_id,  each_events_union.event_name,
+CASE WHEN user_properties.properties->>'$country' IS NULL THEN '$none' WHEN
+user_properties.properties->>'$country' = '' THEN '$none' ELSE user_properties.properties->>'$country'
+END AS _group_key_4, _group_key_0, _group_key_1, _group_key_2, _group_key_3, datetime FROM each_events_union
+LEFT JOIN users ON each_events_union.event_user_id=users.id LEFT JOIN user_properties ON
+users.id=user_properties.user_id AND user_properties.id=users.properties_id)
+
+SELECT datetime, event_name, _group_key_0, _group_key_1, _group_key_2, _group_key_3, _group_key_4,
+COUNT(DISTINCT(event_user_id)) AS count FROM each_users_union GROUP BY event_name, _group_key_0,
+_group_key_1, _group_key_2, _group_key_3, _group_key_4, datetime ORDER BY count DESC LIMIT 100000
+*/
+func buildUniqueUsersWithEachGivenEventsQuery(projectID uint64, query Query) (string, []interface{}, error) {
+	if len(query.EventsWithProperties) == 0 {
+		return "", nil, errors.New("zero events on the query")
+	}
+
+	qStmnt := ""
+	qParams := make([]interface{}, 0, 0)
+
+	steps, stepsToKeysMap := addEventFilterStepsForUniqueUsersQuery(projectID, &query, &qStmnt, &qParams)
+	totalGroupKeys := 0
+	for _, val := range stepsToKeysMap {
+		totalGroupKeys = totalGroupKeys + len(val)
+	}
+	// union each event
+	stepUsersUnion := "each_events_union"
+	isGroupByTimestamp := query.GetGroupByTimestamp() != ""
+	var unionStmnt string
+
+	for i, step := range steps {
+		selectStr := fmt.Sprintf("%s.event_name as event_name, %s.coal_user_id as coal_user_id, %s.event_user_id as event_user_id", step, step, step)
+		selectStr = appendSelectTimestampColIfRequired(selectStr, isGroupByTimestamp)
+		egKeysForStep := getKeysForStep(step, steps, stepsToKeysMap, totalGroupKeys)
+		if egKeysForStep != "" {
+			selectStr = selectStr + " , " + egKeysForStep
+		}
+		selectStmnt := fmt.Sprintf("SELECT %s FROM %s", selectStr, step)
+		if i == 0 {
+			unionStmnt = selectStmnt
+		} else {
+			unionStmnt = unionStmnt + " UNION ALL " + selectStmnt
+		}
+	}
+
+	qStmnt = joinWithComma(qStmnt, as(stepUsersUnion, unionStmnt))
+	addUniqueUsersAggregationQuery(&query, &qStmnt, &qParams, stepUsersUnion)
+	qStmnt = with(qStmnt)
+
+	return qStmnt, qParams, nil
+}
+
+/* getKeysForStep returns column keys for select query for the given step with values and
+  empty string ('') for all other step's breakdowns
+  for ex:
+	breakdown for e1: k0
+	breakdown for e2: k1, k2
+	breakdown for e3: k3, k4
+	key for e1: gk0, '', '',  '', ''
+	key for e2: '', gk1, gk2, '', ''
+    key for e3: '', '',  '',  gk3, gk4
+*/
+func getKeysForStep(step string, steps []string, keysMap map[string][]string, totalKeys int) string {
+
+	keys := ""
+	keyCnt := 0
+	for _, s := range steps {
+		if s == step {
+			for i := 0; i < len(keysMap[s]); i++ {
+				keys = keys + keysMap[s][i]
+				keyCnt++
+				if keyCnt != totalKeys {
+					keys += ", "
+				}
+			}
+		} else {
+			for i := 0; i < len(keysMap[s]); i++ {
+				keys += " '' " + " as " + keysMap[s][i]
+				keyCnt++
+				if keyCnt != totalKeys {
+					keys += ", "
+				}
+			}
+		}
+	}
+	return keys
+}
+
+/*
 buildUniqueUsersWithAllGivenEventsQuery builds a query like below,
 Group by: user_properties, event_properties
 
@@ -912,7 +1105,7 @@ func buildUniqueUsersWithAllGivenEventsQuery(projectID uint64, query Query) (str
 	qStmnt := ""
 	qParams := make([]interface{}, 0, 0)
 
-	steps := addEventFilterStepsForUniqueUsersQuery(projectID, &query, &qStmnt, &qParams)
+	steps, _ := addEventFilterStepsForUniqueUsersQuery(projectID, &query, &qStmnt, &qParams)
 
 	// users intersection
 	intersectSelect := fmt.Sprintf("%s.event_user_id as event_user_id", steps[0])
@@ -1043,7 +1236,7 @@ func buildUniqueUsersWithAnyGivenEventsQuery(projectID uint64, query Query) (str
 	qStmnt := ""
 	qParams := make([]interface{}, 0, 0)
 
-	steps := addEventFilterStepsForUniqueUsersQuery(projectID, &query, &qStmnt, &qParams)
+	steps, _ := addEventFilterStepsForUniqueUsersQuery(projectID, &query, &qStmnt, &qParams)
 
 	eventGroupProps := filterGroupPropsByType(query.GroupByProperties, PropertyEntityEvent)
 	_, _, egKeys := buildGroupKeys(eventGroupProps)
@@ -1052,95 +1245,6 @@ func buildUniqueUsersWithAnyGivenEventsQuery(projectID uint64, query Query) (str
 	var unionStmnt string
 	for i, step := range steps {
 		selectStr := fmt.Sprintf("%s.event_user_id as event_user_id", step)
-		selectStr = appendSelectTimestampColIfRequired(selectStr, isGroupByTimestamp)
-		selectStr = joinWithComma(selectStr, egKeys)
-
-		selectStmnt := fmt.Sprintf("SELECT %s FROM %s", selectStr, step)
-		if i == 0 {
-			unionStmnt = selectStmnt
-		} else {
-			unionStmnt = unionStmnt + " UNION ALL " + selectStmnt
-		}
-	}
-
-	stepUsersUnion := "events_union"
-	qStmnt = joinWithComma(qStmnt, as(stepUsersUnion, unionStmnt))
-
-	addUniqueUsersAggregationQuery(&query, &qStmnt, &qParams, stepUsersUnion)
-	qStmnt = with(qStmnt)
-
-	return qStmnt, qParams, nil
-}
-
-/*
-buildUniqueUsersWithEachGivenEventsQuery adds `event_name` to get user count grouped by event.
-Example: Query with date.
-
-Group By: user_properties, event_properties
-
-Example: Query without date and with group by properties.
-
-Sample query with ewp:
-	$session
-		"en": "event", "pr": "$source", "op": "equals", "va": "google", "ty": "categorical","lop": "AND"
-		"en": "user","pr": "$country","op": "equals","va": "India","ty": "categorical","lop": "AND"
-	MagazineViews
-		"en": "event","pr": "$source","op": "equals","va": "google","ty": "categorical","lop": "AND"
-		"en": "user","pr": "$country","op": "equals","va": "India","ty": "categorical","lop": "AND"
-gbp: []
-gbt: "date"
-
-QUERY:
-
-WITH
-step_0_names AS (SELECT id, project_id, name FROM event_names WHERE project_id='204' AND
-name='$session'),
-
-step_0 AS (SELECT DISTINCT ON(coal_user_id, date_trunc('day', to_timestamp(timestamp) AT TIME ZONE
-'Asia/Calcutta')) COALESCE(users.customer_user_id,events.user_id) as coal_user_id, date_trunc('day',
-to_timestamp(timestamp) AT TIME ZONE 'Asia/Calcutta') as datetime, events.user_id as event_user_id,
-'$session'::text AS event_name  FROM events JOIN users ON events.user_id=users.id LEFT JOIN
-user_properties ON events.user_properties_id=user_properties.id WHERE events.project_id='204' AND
-timestamp>='1583001000' AND timestamp<='1585679399' AND events.event_name_id IN (SELECT id FROM
-step_0_names WHERE project_id='204' AND name='$session') AND ( events.properties->>'$source' = 'google'
-AND user_properties.properties->>'$country' = 'India' ) ORDER BY coal_user_id, datetime, events.timestamp ASC),
-
-step_1_names AS (SELECT id, project_id, name FROM event_names WHERE project_id='204' AND name='MagazineViews'),
-
-step_1 AS (SELECT DISTINCT ON(coal_user_id, date_trunc('day', to_timestamp(timestamp) AT TIME ZONE
-'Asia/Calcutta')) COALESCE(users.customer_user_id,events.user_id) as coal_user_id, date_trunc('day',
-to_timestamp(timestamp) AT TIME ZONE 'Asia/Calcutta') as datetime, events.user_id as event_user_id,
-'MagazineViews'::text AS event_name  FROM events JOIN users ON events.user_id=users.id LEFT JOIN
-user_properties ON events.user_properties_id=user_properties.id WHERE events.project_id='204' AND
-timestamp>='1583001000' AND timestamp<='1585679399' AND events.event_name_id IN (SELECT id FROM
-step_1_names WHERE project_id='204' AND name='MagazineViews') AND ( events.properties->>'$source' =
-'google' AND user_properties.properties->>'$country' = 'India' ) ORDER BY coal_user_id, datetime,
-events.timestamp ASC),
-
-events_union AS (SELECT step_0.event_user_id as event_user_id, event_name, datetime FROM step_0 UNION
-ALL SELECT step_1.event_user_id as event_user_id, event_name, datetime FROM step_1)
-
-SELECT datetime, event_name, COUNT(DISTINCT(event_user_id)) AS count FROM events_union GROUP BY
-event_name, datetime ORDER BY count DESC LIMIT 100000
-*/
-func buildUniqueUsersWithEachGivenEventsQuery(projectID uint64, query Query) (string, []interface{}, error) {
-	if len(query.EventsWithProperties) == 0 {
-		return "", nil, errors.New("zero events on the query")
-	}
-
-	qStmnt := ""
-	qParams := make([]interface{}, 0, 0)
-
-	steps := addEventFilterStepsForUniqueUsersQuery(projectID, &query, &qStmnt, &qParams)
-
-	eventGroupProps := filterGroupPropsByType(query.GroupByProperties, PropertyEntityEvent)
-	_, _, egKeys := buildGroupKeys(eventGroupProps)
-
-	isGroupByTimestamp := query.GetGroupByTimestamp() != ""
-	var unionStmnt string
-	for i, step := range steps {
-		selectStr := fmt.Sprintf("%s.event_user_id as event_user_id", step)
-		selectStr = selectStr + ", event_name"
 		selectStr = appendSelectTimestampColIfRequired(selectStr, isGroupByTimestamp)
 		selectStr = joinWithComma(selectStr, egKeys)
 
@@ -1203,7 +1307,7 @@ func buildUniqueUsersSingleEventQuery(projectID uint64, query Query) (string, []
 	qStmnt := ""
 	qParams := make([]interface{}, 0, 0)
 
-	steps := addEventFilterStepsForUniqueUsersQuery(projectID, &query, &qStmnt, &qParams)
+	steps, _ := addEventFilterStepsForUniqueUsersQuery(projectID, &query, &qStmnt, &qParams)
 	addUniqueUsersAggregationQuery(&query, &qStmnt, &qParams, steps[0])
 	qStmnt = with(qStmnt)
 
@@ -1367,4 +1471,349 @@ func buildEventsOccurrenceWithGivenEventQuery(projectID uint64, q Query) (string
 	qStmnt = with(qStmnt)
 
 	return qStmnt, qParams, nil
+}
+
+/*
+buildEventCountForEachGivenEventsQueryNEW computes event count for each event with given filter and
+breakdown.
+
+Example: Query with date.
+Group By: user_properties, event_properties
+
+Sample query with ewp:
+	$session
+		"en": "event", "pr": "$source", "op": "equals", "va": "google", "ty": "categorical","lop": "AND"
+		"en": "user","pr": "$country","op": "equals","va": "India","ty": "categorical","lop": "AND"
+	MagazineViews
+		"en": "event","pr": "$source","op": "equals","va": "google","ty": "categorical","lop": "AND"
+		"en": "user","pr": "$country","op": "equals","va": "India","ty": "categorical","lop": "AND"
+	www.livspace.com/in/hire-a-designer
+		"en": "event","pr": "$source","op": "equals","va": "google","ty": "categorical","lop": "AND"
+		"en": "user","pr": "$country","op": "equals","va": "India","ty": "categorical","lop": "AND"
+gbp: [
+	"pr": "$source","en": "event","pty": "categorical","ena": "$session","eni": 1
+	"pr": "$campaign","en": "event","pty": "categorical","ena": "$session","eni": 1
+	"pr": "$campaign","en": "event","pty": "categorical","ena": "MagazineViews","eni": 2
+	"pr": "$city","en": "user","pty": "categorical","ena": "www.livspace.com/in/hire-a-designer","eni": 3
+	"pr": "$country","en": "user","pty": "categorical"
+]
+gbt: "date"
+
+QUERY:
+
+WITH
+
+step_0_names AS (SELECT id, project_id, name FROM event_names WHERE project_id='204' AND name='$session'),
+
+step_0 AS (SELECT events.id as event_id, events.user_id as event_user_id, date_trunc('day',
+to_timestamp(timestamp) AT TIME ZONE 'Asia/Calcutta') as datetime, '$session'::text AS event_name ,
+CASE WHEN events.properties->>'$source' IS NULL THEN '$none' WHEN events.properties->>'$source' = ''
+THEN '$none' ELSE events.properties->>'$source' END AS _group_key_0, CASE WHEN
+events.properties->>'$campaign' IS NULL THEN '$none' WHEN events.properties->>'$campaign' = ''
+THEN '$none' ELSE events.properties->>'$campaign' END AS _group_key_1 FROM events JOIN users ON
+events.user_id=users.id LEFT JOIN user_properties ON events.user_properties_id=user_properties.id
+WHERE events.project_id='204' AND timestamp>='1583001000' AND timestamp<='1585679399' AND
+events.event_name_id IN (SELECT id FROM step_0_names WHERE project_id='204' AND name='$session')
+AND ( events.properties->>'$source' = 'google' AND user_properties.properties->>'$country' = 'India' )
+ORDER BY event_id, _group_key_0, _group_key_1, events.timestamp ASC),
+
+step_1_names AS (SELECT id, project_id, name FROM event_names WHERE project_id='204' AND name='MagazineViews'),
+
+step_1 AS (SELECT events.id as event_id, events.user_id as event_user_id, date_trunc('day',
+to_timestamp(timestamp) AT TIME ZONE 'Asia/Calcutta') as datetime, 'MagazineViews'::text AS event_name ,
+CASE WHEN events.properties->>'$campaign' IS NULL THEN '$none' WHEN events.properties->>'$campaign' = ''
+THEN '$none' ELSE events.properties->>'$campaign' END AS _group_key_2 FROM events JOIN users ON
+events.user_id=users.id LEFT JOIN user_properties ON events.user_properties_id=user_properties.id
+WHERE events.project_id='204' AND timestamp>='1583001000' AND timestamp<='1585679399' AND
+events.event_name_id IN (SELECT id FROM step_1_names WHERE project_id='204' AND name='MagazineViews')
+AND ( events.properties->>'$source' = 'google' AND user_properties.properties->>'$country' = 'India' )
+ORDER BY event_id, _group_key_2, events.timestamp ASC),
+
+
+step_2_names AS (SELECT id, project_id, name FROM event_names WHERE project_id='204' AND
+name='www.livspace.com/in/hire-a-designer'),
+
+step_2 AS (SELECT events.id as event_id, events.user_id as event_user_id, date_trunc('day',
+to_timestamp(timestamp) AT TIME ZONE 'Asia/Calcutta') as datetime,
+'www.livspace.com/in/hire-a-designer'::text AS event_name , CASE WHEN user_properties.properties->>'$city'
+IS NULL THEN '$none' WHEN user_properties.properties->>'$city' = '' THEN '$none' ELSE
+user_properties.properties->>'$city' END AS _group_key_3 FROM events JOIN users ON events.user_id=users.id
+LEFT JOIN user_properties ON events.user_properties_id=user_properties.id WHERE events.project_id='204'
+AND timestamp>='1583001000' AND timestamp<='1585679399' AND events.event_name_id IN (SELECT id FROM
+step_2_names WHERE project_id='204' AND name='www.livspace.com/in/hire-a-designer') AND
+( events.properties->>'$source' = 'google' AND user_properties.properties->>'$country' = 'India' )
+ORDER BY event_id, _group_key_3, events.timestamp ASC),
+
+each_events_union AS (SELECT step_0.event_name as event_name, step_0.event_id as event_id,
+step_0.event_user_id as event_user_id, datetime , _group_key_0 as _group_key_0,  _group_key_1 as
+_group_key_1,  ''  as _group_key_2,  ''  as _group_key_3 FROM step_0 UNION ALL SELECT step_1.event_name
+as event_name, step_1.event_id as event_id, step_1.event_user_id as event_user_id, datetime ,
+''  as _group_key_0,  ''  as  _group_key_1, _group_key_2 as _group_key_2,  ''  as _group_key_3
+FROM step_1 UNION ALL SELECT step_2.event_name as event_name, step_2.event_id as event_id,
+step_2.event_user_id as event_user_id, datetime ,  ''  as _group_key_0,  ''  as  _group_key_1,  ''
+as _group_key_2, _group_key_3 as _group_key_3 FROM step_2) ,
+
+each_users_union AS (SELECT each_events_union.event_user_id, each_events_union.event_id,
+each_events_union.event_name, CASE WHEN user_properties.properties->>'$country' IS NULL THEN '$none'
+WHEN user_properties.properties->>'$country' = '' THEN '$none' ELSE user_properties.properties->>'$country'
+END AS _group_key_4, _group_key_0, _group_key_1, _group_key_2, _group_key_3, datetime FROM
+each_events_union LEFT JOIN users ON each_events_union.event_user_id=users.id LEFT JOIN user_properties
+ON users.id=user_properties.user_id AND user_properties.id=users.properties_id)
+
+SELECT datetime, event_name, _group_key_0, _group_key_1, _group_key_2, _group_key_3, _group_key_4,
+COUNT(event_id) AS count FROM each_users_union GROUP BY event_name, _group_key_0, _group_key_1,
+_group_key_2, _group_key_3, _group_key_4, datetime ORDER BY count DESC LIMIT 100000
+*/
+func buildEventCountForEachGivenEventsQueryNEW(projectID uint64, query Query) (string, []interface{}, error) {
+	if len(query.EventsWithProperties) == 0 {
+		return "", nil, errors.New("zero events on the query")
+	}
+
+	qStmnt := ""
+	qParams := make([]interface{}, 0, 0)
+
+	steps, stepsToKeysMap := addEventFilterStepsForEventCountQuery(projectID, &query, &qStmnt, &qParams)
+	totalGroupKeys := 0
+	for _, val := range stepsToKeysMap {
+		totalGroupKeys = totalGroupKeys + len(val)
+	}
+	// union each event
+	stepUsersUnion := "each_events_union"
+	isGroupByTimestamp := query.GetGroupByTimestamp() != ""
+	var unionStmnt string
+
+	for i, step := range steps {
+		selectStr := fmt.Sprintf("%s.event_name as event_name, %s.event_id as event_id, %s.event_user_id as event_user_id", step, step, step)
+		selectStr = appendSelectTimestampColIfRequired(selectStr, isGroupByTimestamp)
+		egKeysForStep := getKeysForStep(step, steps, stepsToKeysMap, totalGroupKeys)
+		if egKeysForStep != "" {
+			selectStr = selectStr + " , " + egKeysForStep
+		}
+		selectStmnt := fmt.Sprintf("SELECT %s FROM %s", selectStr, step)
+		if i == 0 {
+			unionStmnt = selectStmnt
+		} else {
+			unionStmnt = unionStmnt + " UNION ALL " + selectStmnt
+		}
+	}
+
+	qStmnt = joinWithComma(qStmnt, as(stepUsersUnion, unionStmnt))
+	addEventCountAggregationQuery(&query, &qStmnt, &qParams, stepUsersUnion)
+	qStmnt = with(qStmnt)
+
+	return qStmnt, qParams, nil
+}
+
+/* addEventFilterStepsForEventCountQuery builds step queries for each event including their filter
+ and breakdown
+	for ex:
+Sample query with ewp:
+	$session
+		"en": "event", "pr": "$source", "op": "equals", "va": "google", "ty": "categorical","lop": "AND"
+		"en": "user","pr": "$country","op": "equals","va": "India","ty": "categorical","lop": "AND"
+	MagazineViews
+		"en": "event","pr": "$source","op": "equals","va": "google","ty": "categorical","lop": "AND"
+		"en": "user","pr": "$country","op": "equals","va": "India","ty": "categorical","lop": "AND"
+gbp: [
+	"pr": "$source","en": "event","pty": "categorical","ena": "$session","eni": 1
+	"pr": "$campaign","en": "event","pty": "categorical","ena": "$session","eni": 1
+	"pr": "$campaign","en": "event","pty": "categorical","ena": "MagazineViews","eni": 2
+	"pr": "$country","en": "user","pty": "categorical"
+]
+gbt: "date"
+
+Steps returned:
+
+step_0_names AS (SELECT id, project_id, name FROM event_names WHERE project_id='204' AND name='$session'),
+
+step_0 AS (SELECT events.id as event_id, events.user_id as event_user_id, date_trunc('day',
+to_timestamp(timestamp) AT TIME ZONE 'Asia/Calcutta') as datetime, '$session'::text AS event_name ,
+CASE WHEN events.properties->>'$source' IS NULL THEN '$none' WHEN events.properties->>'$source' = ''
+THEN '$none' ELSE events.properties->>'$source' END AS _group_key_0, CASE WHEN
+events.properties->>'$campaign' IS NULL THEN '$none' WHEN events.properties->>'$campaign' = ''
+THEN '$none' ELSE events.properties->>'$campaign' END AS _group_key_1 FROM events JOIN users ON
+events.user_id=users.id LEFT JOIN user_properties ON events.user_properties_id=user_properties.id
+WHERE events.project_id='204' AND timestamp>='1583001000' AND timestamp<='1585679399' AND
+events.event_name_id IN (SELECT id FROM step_0_names WHERE project_id='204' AND name='$session')
+AND ( events.properties->>'$source' = 'google' AND user_properties.properties->>'$country' = 'India' )
+ORDER BY event_id, _group_key_0, _group_key_1, events.timestamp ASC),
+
+step_1_names AS (SELECT id, project_id, name FROM event_names WHERE project_id='204' AND name='MagazineViews'),
+
+step_1 AS (SELECT events.id as event_id, events.user_id as event_user_id, date_trunc('day',
+to_timestamp(timestamp) AT TIME ZONE 'Asia/Calcutta') as datetime, 'MagazineViews'::text AS event_name ,
+CASE WHEN events.properties->>'$campaign' IS NULL THEN '$none' WHEN events.properties->>'$campaign' = ''
+THEN '$none' ELSE events.properties->>'$campaign' END AS _group_key_2 FROM events JOIN users ON
+events.user_id=users.id LEFT JOIN user_properties ON events.user_properties_id=user_properties.id
+WHERE events.project_id='204' AND timestamp>='1583001000' AND timestamp<='1585679399' AND
+events.event_name_id IN (SELECT id FROM step_1_names WHERE project_id='204' AND name='MagazineViews')
+AND ( events.properties->>'$source' = 'google' AND user_properties.properties->>'$country' = 'India' )
+ORDER BY event_id, _group_key_2, events.timestamp ASC),
+*/
+func addEventFilterStepsForEventCountQuery(projectID uint64, q *Query,
+	qStmnt *string, qParams *[]interface{}) ([]string, map[string][]string) {
+
+	var commonSelect string
+	var commonOrderBy string
+	stepsToKeysMap := make(map[string][]string)
+
+	commonSelect = SelectDefaultEventFilter
+	commonSelect = appendSelectTimestampIfRequired(commonSelect, q.GetGroupByTimestamp(), q.Timezone)
+
+	if len(q.GroupByProperties) > 0 && commonOrderBy == "" {
+		commonOrderBy = "event_id%s, events.timestamp ASC"
+	}
+
+	steps := make([]string, 0, 0)
+	for i, ewp := range q.EventsWithProperties {
+		refStepName := stepNameByIndex(i)
+		steps = append(steps, refStepName)
+
+		var stepSelect, stepOrderBy string
+		var stepParams []interface{}
+		var groupByUserProperties bool
+		var stepGroupSelect, stepGroupKeys string
+		var stepGroupParams []interface{}
+		stepGroupSelect, stepGroupParams, stepGroupKeys, groupByUserProperties = buildGroupKeyForStep(
+			&q.EventsWithProperties[i], q.GroupByProperties, i+1)
+
+		eventSelect := commonSelect
+		eventNameSelect := "'" + ewp.Name + "'" + "::text" + " AS event_name "
+		eventSelect = joinWithComma(eventSelect, eventNameSelect)
+		if stepGroupSelect != "" {
+			stepSelect = eventSelect + ", " + stepGroupSelect
+			stepOrderBy = fmt.Sprintf(commonOrderBy, ", "+stepGroupKeys)
+			stepParams = stepGroupParams
+			stepsToKeysMap[refStepName] = strings.Split(stepGroupKeys, ",")
+		} else {
+			stepSelect = eventSelect
+			if commonOrderBy != "" {
+				stepOrderBy = fmt.Sprintf(commonOrderBy, "")
+			}
+		}
+
+		addJoinStmnt := "JOIN users ON events.user_id=users.id"
+		if groupByUserProperties && !hasWhereEntity(ewp, PropertyEntityUser) {
+			// If event has filter on user property, JOIN on user_properties is added in next step.
+			// Skip addding here to avoid duplication.
+			addJoinStmnt += " JOIN user_properties on events.user_properties_id=user_properties.id"
+		}
+		addFilterEventsWithPropsQuery(projectID, qStmnt, qParams, ewp, q.From, q.To,
+			"", refStepName, stepSelect, stepParams, addJoinStmnt, "", stepOrderBy)
+
+		if i < len(q.EventsWithProperties)-1 {
+			*qStmnt = *qStmnt + ","
+		}
+	}
+
+	return steps, stepsToKeysMap
+}
+
+/*
+	addEventCountAggregationQuery applies global breakdown of user properties on each event query
+	and presents query for selecting the final set of columns (data) from derived queries.
+	for ex:
+Sample query with ewp:
+	$session
+		"en": "event", "pr": "$source", "op": "equals", "va": "google", "ty": "categorical","lop": "AND"
+		"en": "user","pr": "$country","op": "equals","va": "India","ty": "categorical","lop": "AND"
+	MagazineViews
+		"en": "event","pr": "$source","op": "equals","va": "google","ty": "categorical","lop": "AND"
+		"en": "user","pr": "$country","op": "equals","va": "India","ty": "categorical","lop": "AND"
+gbp: [
+	"pr": "$source","en": "event","pty": "categorical","ena": "$session","eni": 1
+	"pr": "$campaign","en": "event","pty": "categorical","ena": "$session","eni": 1
+	"pr": "$campaign","en": "event","pty": "categorical","ena": "MagazineViews","eni": 2
+	"pr": "$country","en": "user","pty": "categorical"
+]
+gbt: "date"
+
+The union query and final select columns query are:
+
+each_users_union AS (SELECT each_events_union.event_user_id, each_events_union.event_id,
+each_events_union.event_name, CASE WHEN user_properties.properties->>'$country' IS NULL THEN '$none'
+WHEN user_properties.properties->>'$country' = '' THEN '$none' ELSE user_properties.properties->>'$country'
+END AS _group_key_4, _group_key_0, _group_key_1, _group_key_2, _group_key_3, datetime FROM
+each_events_union LEFT JOIN users ON each_events_union.event_user_id=users.id LEFT JOIN user_properties
+ON users.id=user_properties.user_id AND user_properties.id=users.properties_id)
+
+SELECT datetime, event_name, _group_key_0, _group_key_1, _group_key_2, _group_key_3, _group_key_4,
+COUNT(event_id) AS count FROM each_users_union GROUP BY event_name, _group_key_0, _group_key_1,
+_group_key_2, _group_key_3, _group_key_4, datetime ORDER BY count DESC LIMIT 100000
+
+*/
+func addEventCountAggregationQuery(query *Query, qStmnt *string, qParams *[]interface{}, refStep string) {
+	eventLevelGroupBys, otherGroupBys := separateEventLevelGroupBys(query.GroupByProperties)
+	var egKeys string
+	var unionStepName string
+
+	_, _, egKeys = buildGroupKeys(eventLevelGroupBys)
+	unionStepName = "each_users_union"
+
+	// select
+	userGroupProps := filterGroupPropsByType(otherGroupBys, PropertyEntityUser)
+	ugSelect, ugSelectParams, _ := buildGroupKeys(userGroupProps)
+	*qParams = append(*qParams, ugSelectParams...)
+	termSelect := ""
+	termSelect = fmt.Sprintf(" %s.event_name, ", refStep)
+	termSelect = termSelect + joinWithComma(ugSelect, egKeys)
+
+	isGroupByTimestamp := query.GetGroupByTimestamp() != ""
+	termSelect = appendSelectTimestampColIfRequired(termSelect, isGroupByTimestamp)
+
+	termStmnt := fmt.Sprintf("SELECT %s.event_user_id, %s.event_id, ", refStep, refStep) + termSelect + " FROM " + refStep
+	// join latest user_properties, only if group by user property present.
+	if ugSelect != "" {
+		termStmnt = termStmnt + " " + "LEFT JOIN users ON " + refStep + ".event_user_id=users.id"
+		termStmnt = termStmnt + " " + "LEFT JOIN user_properties ON users.id=user_properties.user_id AND user_properties.id=users.properties_id"
+	}
+
+	_, _, groupKeys := buildGroupKeys(query.GroupByProperties)
+
+	termStmnt = as(unionStepName, termStmnt)
+	var aggregateFromStepName, aggregateSelectKeys, aggregateGroupBys, aggregateOrderBys string
+	if hasNumericalGroupBy(query.GroupByProperties) {
+		eventName := AliasEventName
+		bucketedStepName, bucketedSelectKeys, bucketedGroupBys, bucketedOrderBys := appendNumericalBucketingSteps(
+			&termStmnt, query.GroupByProperties, unionStepName, eventName, isGroupByTimestamp, "")
+		aggregateFromStepName = bucketedStepName
+		aggregateSelectKeys = bucketedSelectKeys
+		aggregateGroupBys = strings.Join(bucketedGroupBys, ", ")
+		aggregateOrderBys = strings.Join(bucketedOrderBys, ", ")
+		*qStmnt = appendStatement(*qStmnt, ", "+termStmnt)
+	} else {
+
+		if groupKeys != "" {
+			// Order by count, which will added later.
+			aggregateFromStepName = unionStepName
+			aggregateSelectKeys = groupKeys + ", "
+			aggregateGroupBys = groupKeys
+			*qStmnt = appendStatement(*qStmnt, ", "+termStmnt)
+		} else {
+			// No group by clause added. Use previous step and rest all leave empty.
+			aggregateFromStepName = refStep
+		}
+	}
+
+	aggregateSelect := "SELECT "
+	if isGroupByTimestamp {
+		aggregateSelect = aggregateSelect + AliasDateTime + ", "
+		aggregateGroupBys = joinWithComma(aggregateGroupBys, AliasDateTime)
+	}
+	// adding select event_name and group by event_name for each event-user count
+	if query.EventsCondition == EventCondEachGivenEvent {
+		aggregateSelect = aggregateSelect + AliasEventName + ", "
+		aggregateGroupBys = joinWithComma(AliasEventName, aggregateGroupBys)
+	}
+	aggregateSelect = aggregateSelect + aggregateSelectKeys + fmt.Sprintf("COUNT(event_id) AS %s FROM %s",
+		AliasAggr, aggregateFromStepName)
+
+	aggregateSelect = appendGroupBy(aggregateSelect, aggregateGroupBys)
+	if aggregateOrderBys != "" {
+		aggregateSelect = aggregateSelect + " ORDER BY " + aggregateOrderBys
+	} else {
+		aggregateSelect = appendOrderByAggr(aggregateSelect)
+	}
+	aggregateSelect = appendLimitByCondition(aggregateSelect, query.GroupByProperties, isGroupByTimestamp)
+	*qStmnt = appendStatement(*qStmnt, aggregateSelect)
 }

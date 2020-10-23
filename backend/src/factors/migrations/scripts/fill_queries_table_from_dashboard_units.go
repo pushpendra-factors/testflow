@@ -81,8 +81,8 @@ func main() {
 			if dashboardUnit.QueryId != 0 {
 				continue
 			}
-			query := M.Queries.ProjectID: dashboardUnit.ProjectId, Title: dashboardUnit.Title, Query: dashboardUnit.Query, Type: M.QueryTypeDashboardQuery, CreatedAt: dashboardUnit.CreatedAt, UpdatedAt: dashboardUnit.UpdatedAt}
-			err := db.Create(&query).Error
+			query := M.Queries{ProjectID: dashboardUnit.ProjectId, Title: dashboardUnit.Title, Query: dashboardUnit.Query, Type: M.QueryTypeDashboardQuery, CreatedAt: dashboardUnit.CreatedAt, UpdatedAt: dashboardUnit.UpdatedAt}
+			err = db.Create(&query).Error
 			if err != nil {
 				log.WithError(err).Error("Migration failed. Failed to add data to queries table.")
 				return
@@ -102,7 +102,7 @@ func main() {
 func getAllDashboardUnitsRowsForProject(projectID uint64) ([]M.DashboardUnit, error) {
 	db := C.GetServices().Db
 	dashboardUnits := make([]M.DashboardUnit, 0, 0)
-	err := db.Table("dashboardUnits").Where("project_id = ?", projectID).Find(&dashboardUnits).Error
+	err := db.Table("dashboard_units").Where("project_id = ?", projectID).Find(&dashboardUnits).Error
 	if err != nil {
 		log.WithError(err).Error("Failed to fetch rows from dashboardUnits table")
 		return dashboardUnits, err

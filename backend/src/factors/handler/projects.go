@@ -57,6 +57,59 @@ func CreateProjectHandler(c *gin.Context) {
 }
 
 // Test command.
+// curl -H "Content-Type: application/json" -i -X PUT http://localhost:8080/projects/1 -d '{ "name": "project_name"}'
+func EditProjectHandler(c *gin.Context) {
+	r := c.Request
+
+	loggedInAgentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+	projectID := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+
+	logCtx := log.WithFields(log.Fields{
+		"reqId":      U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
+		"agent_uuid": loggedInAgentUUID,
+		"project_id": projectID,
+	})
+
+	if projectID == 0 {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	loggedInAgentPAM, errCode := M.GetProjectAgentMapping(projectID, loggedInAgentUUID)
+	if errCode != http.StatusFound {
+		c.AbortWithStatus(http.StatusInternalServerError)
+		logCtx.Errorln("Failed to fetch loggedInAgentPAM")
+		return
+	}
+
+	if loggedInAgentPAM.Role != M.ADMIN {
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "operation denied for non-admins"})
+	}
+
+	if errCode == http.StatusInternalServerError {
+		c.AbortWithStatus(errCode)
+		return
+	}
+	var projectEditDetails M.Project
+
+	err := json.NewDecoder(r.Body).Decode(&projectEditDetails)
+	if err != nil {
+		logCtx.WithError(err).Error("EditProject Failed. Json Decoding failed.")
+	}
+
+	errCode = M.UpdateProject(projectID, &projectEditDetails)
+	if errCode == http.StatusInternalServerError {
+		c.AbortWithStatus(errCode)
+		return
+	}
+	projectIdsToGet := []uint64{}
+	projectIdsToGet = append(projectIdsToGet, projectID)
+	projectDetailsAfterEdit, errCode := M.GetProjectsByIDs(projectIdsToGet)
+	c.JSON(http.StatusCreated, projectDetailsAfterEdit[0])
+	return
+}
+
+// Test command.
 // curl -i -X GET http://localhost:8080/projects
 func GetProjectsHandler(c *gin.Context) {
 	authorizedProjects := U.GetScopeByKey(c, "authorizedProjects")

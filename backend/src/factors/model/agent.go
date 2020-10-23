@@ -48,11 +48,13 @@ type Agent struct {
 
 // AgentInfo - Exposable Info.
 type AgentInfo struct {
-	UUID            string `json:"uuid"`
-	Email           string `json:"email"`
-	FirstName       string `json:"first_name"`
-	LastName        string `json:"last_name"`
-	IsEmailVerified bool   `json:"is_email_verified"`
+	UUID            string     `json:"uuid"`
+	Email           string     `json:"email"`
+	FirstName       string     `json:"first_name"`
+	LastName        string     `json:"last_name"`
+	IsEmailVerified bool       `json:"is_email_verified"`
+	LastLoggedIn    *time.Time `json:"last_logged_in"`
+	Phone           string     `json:"phone"`
 }
 
 func (a *Agent) BeforeCreate(scope *gorm.Scope) error {
@@ -200,6 +202,8 @@ func CreateAgentInfo(agent *Agent) *AgentInfo {
 		Email:           agent.Email,
 		UUID:            agent.UUID,
 		IsEmailVerified: agent.IsEmailVerified,
+		LastLoggedIn:    agent.LastLoggedInAt,
+		Phone:           agent.Phone,
 	}
 }
 
@@ -283,11 +287,21 @@ func UpdateAgentVerificationDetails(agentUUID, password, firstName,
 		IsEmailVerified(verified), PasswordAndPasswordCreatedAt(hashedPassword, passUpdatedAt))
 }
 
-func UpdateAgentInformation(agentUUID, firstName, lastName string) int {
-	if agentUUID == "" || firstName == "" {
+func UpdateAgentInformation(agentUUID, firstName, lastName, phone string) int {
+	if agentUUID == "" {
 		return http.StatusBadRequest
 	}
-	return updateAgent(agentUUID, Firstname(firstName), Lastname(lastName))
+	updateParams := []Option{}
+	if firstName != "" {
+		updateParams = append(updateParams, Firstname(firstName))
+	}
+	if lastName != "" {
+		updateParams = append(updateParams, Lastname(lastName))
+	}
+	if phone != "" {
+		updateParams = append(updateParams, Phone(phone))
+	}
+	return updateAgent(agentUUID, updateParams...)
 }
 
 type fieldsToUpdate map[string]interface{}
@@ -303,6 +317,12 @@ func Firstname(firstName string) Option {
 func Lastname(lastName string) Option {
 	return func(fields fieldsToUpdate) {
 		fields["last_name"] = lastName
+	}
+}
+
+func Phone(phone string) Option {
+	return func(fields fieldsToUpdate) {
+		fields["phone"] = phone
 	}
 }
 
