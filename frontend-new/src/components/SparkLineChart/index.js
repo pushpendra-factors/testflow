@@ -20,11 +20,11 @@ function SparkLineChart({
           data.forEach(elem => {
             total += elem[eventsMapper[q]];
           });
-          
+
           if (page === 'activeUsers' || page === 'frequency') {
             total = total / data.length;
           }
-          
+
           total = total % 1 !== 0 ? parseFloat(total.toFixed(2)) : numberWithCommas(total);
           return (
             <div key={q + index} className="w-1/3 mt-4 px-1">
@@ -44,11 +44,11 @@ function SparkLineChart({
     chartsData.forEach(elem => {
       total += elem[eventsMapper[queries[0]]];
     });
-    
+
     if (page === 'activeUsers' || page === 'frequency') {
       total = total / chartsData.length;
     }
-    
+
     total = total % 1 !== 0 ? parseFloat(total.toFixed(2)) : numberWithCommas(total);
 
     return (
