@@ -36,7 +36,7 @@ function ProjectDetails() {
                         </div>
                       </div>
                       <div>
-                        <Button type="text">Leave Project</Button>
+                        <Button size={'large'} type="text">Leave Project</Button>
                       </div>
                     </div>
                   );

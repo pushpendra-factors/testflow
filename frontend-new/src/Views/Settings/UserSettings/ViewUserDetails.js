@@ -68,8 +68,8 @@ function ViewUserDetails({ fetchAgentInfo, editDetails, editPassword }) {
         </Row>
         <Row className={'mt-6'}>
           <Col className={'flex justify-start items-center'}>
-            <Button disabled={dataLoading} onClick={editDetails}>Edit Details</Button>
-            <Button disabled={dataLoading} className={'ml-4'} onClick={editPassword} >Change Password</Button>
+            <Button size={'large'} disabled={dataLoading} onClick={editDetails}>Edit Details</Button>
+            <Button size={'large'} disabled={dataLoading} className={'ml-4'} onClick={editPassword} >Change Password</Button>
           </Col>
         </Row>
       </div>

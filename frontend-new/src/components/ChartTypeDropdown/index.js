@@ -24,7 +24,7 @@ function ChartTypeDropdown({ menuItems, onClick, chartType }) {
 
   return (
         <Dropdown overlay={menu}>
-            <Button className={`ant-dropdown-link flex items-center ${styles.dropdownBtn}`}>
+            <Button size={'large'} className={`ant-dropdown-link flex items-center ${styles.dropdownBtn}`}>
                 <SVG name={chartType} size={25} color="#0E2647" />
                 <SVG name={'dropdown'} size={25} color="#3E516C" />
             </Button>

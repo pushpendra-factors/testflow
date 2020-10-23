@@ -35,7 +35,7 @@ function FunnelsResultPage({
     <>
       <Header>
         <div className="flex py-4 justify-end">
-          <Button type="primary" icon={<PoweroffOutlined />} >Save query as</Button>
+          <Button size={'large'} type="primary" icon={<PoweroffOutlined />} >Save query as</Button>
         </div>
         <div className="py-4">
           <EventsInfo setDrawerVisible={setDrawerVisible} queries={queries} />

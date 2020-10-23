@@ -48,7 +48,7 @@ const columns = [
     key: 'actions',
     render: () => (
       <Dropdown overlay={menu} trigger={['click']}>
-        <Button type="text" icon={<MoreOutlined />} />
+        <Button size={'large'} type="text" icon={<MoreOutlined />} />
       </Dropdown>
     )
   }
@@ -99,7 +99,7 @@ function UserSettings({
           </Col>
           <Col span={12}>
             <div className={'flex justify-end'}>
-              <Button disabled={dataLoading} onClick={() => setInviteModal(true)}>Invite Users</Button>
+              <Button size={'large'} disabled={dataLoading} onClick={() => setInviteModal(true)}>Invite Users</Button>
             </div>
           </Col>
         </Row>
