@@ -115,7 +115,7 @@ func getCustomerUserIdFromProperties(properties map[string]interface{}) string {
 	if emailExists || emailInt != nil {
 		email, ok := emailInt.(string)
 		if ok && email != "" {
-			return email
+			return U.EmailToLowerCase(email)
 		}
 	}
 
