@@ -52,7 +52,7 @@ func main() {
 	// Initialize configs and connections and close with defer.
 	err := C.InitDB(config.DBInfo)
 	if err != nil {
-		log.WithError(err).Fatal("Failed to run migration. Init failed.")
+		logCtx.WithError(err).Fatal("Failed to run migration. Init failed.")
 	}
 	db := C.GetServices().Db
 	defer db.Close()
@@ -74,23 +74,25 @@ func main() {
 	for _, projectID := range projectIDs {
 		dashboardUnits, err := getAllDashboardUnitsRowsForProject(projectID)
 		if err != nil {
-			log.WithError(err).Error("Queries table migration failed. Failed to fetch data from dahboard_units table.")
+			logCtx.WithError(err).Error("Queries table migration failed. Failed to fetch data from dahboard_units table.")
 			return
 		}
+		logCtx.Infof("Migrating %d units for project_id %d", len(dashboardUnits), projectID)
 		for _, dashboardUnit := range dashboardUnits {
 			if dashboardUnit.QueryId != 0 {
+				logCtx.Infof("  Skipping already migrated unit %d", dashboardUnit.ID)
 				continue
 			}
 			query := M.Queries{ProjectID: dashboardUnit.ProjectId, Title: dashboardUnit.Title, Query: dashboardUnit.Query, Type: M.QueryTypeDashboardQuery, CreatedAt: dashboardUnit.CreatedAt, UpdatedAt: dashboardUnit.UpdatedAt}
 			err = db.Create(&query).Error
 			if err != nil {
-				log.WithError(err).Error("Migration failed. Failed to add data to queries table.")
+				logCtx.WithError(err).Error("Migration failed. Failed to add data to queries table.")
 				return
 			}
 			dashboardUnit.QueryId = query.ID
 			err = db.Save(&dashboardUnit).Error
 			if err != nil {
-				log.WithError(err).Error("Migration failed. Failed to add query_id reference from queries table to dashboardUnits table.")
+				logCtx.WithError(err).Error("Migration failed. Failed to add query_id reference from queries table to dashboardUnits table.")
 				return
 			}
 		}
