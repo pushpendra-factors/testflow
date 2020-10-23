@@ -137,10 +137,10 @@ const (
 	ErrMsgQueryProcessingFailure                  = "Failed processing query"
 	ErrMsgMaxFunnelStepsExceeded                  = "Max funnel steps exceeded"
 
-	SelectDefaultEventFilter              = "events.id as event_id, events.user_id as event_user_id"
-	SelectDefaultEventFilterWithDistinct  = "DISTINCT(events.id) as event_id, events.user_id as event_user_id"
-	SelectDefaultEventFilterByAlias       = "event_id, event_user_id, event_name"
-	SelectCoalesceCustomerUserIDAndUserID = "COALESCE(users.customer_user_id, event_user_id)"
+	SelectDefaultEventFilter        = "events.id as event_id, events.user_id as event_user_id"
+	SelectDefaultUserFilter         = "events.user_id as event_user_id"
+	SelectDefaultEventFilterByAlias = "event_id, event_user_id, event_name"
+	SelectDefaultUserFilterByAlias  = "coal_user_id, event_user_id, event_name"
 
 	GroupKeyPrefix  = "_group_key_"
 	AliasEventName  = "event_name"
@@ -478,19 +478,19 @@ func appendNumericalBucketingSteps(qStmnt *string, groupProps []QueryGroupByProp
 		boundsStepName := groupKey + "_bounds"
 		boundsStatement := fmt.Sprintf("SELECT percentile_disc(%.2f) WITHIN GROUP(ORDER BY %s::numeric) + 0.00001 AS lbound, "+
 			"percentile_disc(%.2f) WITHIN GROUP(ORDER BY %s::numeric) AS ubound FROM %s "+
-			"WHERE %s != '%s'", NumericalLowerBoundPercentile, groupKey, NumericalUpperBoundPercentile,
-			groupKey, refStepName, groupKey, PropertyValueNone)
+			"WHERE %s != '%s' AND %s != '' ", NumericalLowerBoundPercentile, groupKey, NumericalUpperBoundPercentile,
+			groupKey, refStepName, groupKey, PropertyValueNone, groupKey)
 		boundsStatement = as(boundsStepName, boundsStatement)
 		*qStmnt = joinWithComma(*qStmnt, boundsStatement)
 
 		// Preparing 'bucketed' step with changing $none to NaN for float conversion.
-		noneToNaN := fmt.Sprintf("COALESCE(NULLIF(%s, '%s'), 'NaN') AS %s, ", groupKey, PropertyValueNone, groupKey)
+		noneToNaN := fmt.Sprintf("COALESCE(NULLIF(COALESCE(NULLIF(%s, '%s'), ''), ''), 'NaN') AS %s, ", groupKey, PropertyValueNone, groupKey)
 
 		// Adding width_bucket for each record, keeping -1 for $none.
 		bucketKey := groupKey + "_bucket"
-		stepBucket := fmt.Sprintf("CASE WHEN %s = '%s' THEN -1 ELSE width_bucket(%s::numeric, %s.lbound::numeric, "+
+		stepBucket := fmt.Sprintf("CASE WHEN %s = '%s' THEN -1 WHEN %s = '' THEN -1 ELSE width_bucket(%s::numeric, %s.lbound::numeric, "+
 			"COALESCE(NULLIF(%s.ubound, %s.lbound), %s.ubound+1)::numeric, %d) END AS %s, ",
-			groupKey, PropertyValueNone, groupKey, boundsStepName, boundsStepName,
+			groupKey, PropertyValueNone, groupKey, groupKey, boundsStepName, boundsStepName,
 			boundsStepName, boundsStepName, NumericalGroupByBuckets-2, bucketKey)
 
 		// Creating bucket string to be used in group by. Also, replacing NaN-Nan to $none.
@@ -974,6 +974,7 @@ func GetBucketRangeForStartAndEnd(rangeStart, rangeEnd interface{}) string {
 	return fmt.Sprintf("%v%s%v", rangeStart, NumericalGroupBySeparator, rangeEnd)
 }
 
+// TODO (Anil) update this for v1/ each users count query
 func sanitizeNumericalBucketRange(query *Query, rows [][]interface{}, indexToSanitize int) {
 	for index, row := range rows {
 		if query.Class == QueryClassFunnel && index == 0 {
