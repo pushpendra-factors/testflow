@@ -7,6 +7,8 @@ import BasicSettings from './BasicSettings';
 import SDKSettings from './SDKSettings';
 import UserSettings from './UserSettings';
 import IntegrationSettings from './IntegrationSettings';
+import { fetchProjectAgents } from 'Reducers/agentActions';
+import { connect } from 'react-redux';
 
 const MenuTabs = {
   generalSettings: 'General Settings',
@@ -16,7 +18,10 @@ const MenuTabs = {
   EventAlias: 'Event Alias'
 };
 
-function ProjectSettings() {
+function ProjectSettings({
+  activeProjectID,
+  fetchProjectAgents
+}) {
   const [selectedMenu, setSelectedMenu] = useState(MenuTabs.generalSettings);
   // const [editPasswordModal, setPasswordModal] = useState(false);
   // const [editDetailsModal, setDetailsModal] = useState(false);
@@ -24,6 +29,9 @@ function ProjectSettings() {
 
   const handleClick = (e) => {
     setSelectedMenu(e.key);
+    if (e.key === MenuTabs.Users) {
+      fetchProjectAgents(activeProjectID);
+    }
   };
 
   // const handleOk = () => {
@@ -74,4 +82,9 @@ function ProjectSettings() {
   );
 }
 
-export default ProjectSettings;
+const mapStateToProps = (state) => ({
+  activeProjectID: state.global.active_project.id,
+  agents: state.agent.agents
+});
+
+export default connect(mapStateToProps, { fetchProjectAgents })(ProjectSettings);

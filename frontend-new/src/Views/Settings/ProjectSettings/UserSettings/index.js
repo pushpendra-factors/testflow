@@ -5,6 +5,8 @@ import {
 import { Text } from 'factorsComponents';
 import { MoreOutlined } from '@ant-design/icons';
 import InviteUsers from './InviteUsers';
+import { connect } from 'react-redux';
+import { fetchProjectAgents } from 'Reducers/agentActions';
 
 const menu = (
   <Menu>
@@ -16,41 +18,6 @@ const menu = (
     </Menu.Item>
   </Menu>
 );
-
-const dataSource = [
-  {
-    key: '1',
-    name: 'Anand Nair',
-    email: 'anand@uxfish.com',
-    role: 'Owner',
-    lastActivity: 'Yesterday',
-    actions: ''
-  },
-  {
-    key: '2',
-    name: 'Vishnu Baliga',
-    email: 'baliga@factors.ai',
-    role: 'Owner',
-    lastActivity: 'Today',
-    actions: ''
-  },
-  {
-    key: '3',
-    name: 'Praveen Das',
-    email: 'praveen@factors.ai',
-    role: 'Admin',
-    lastActivity: 'A long time ago',
-    actions: ''
-  },
-  {
-    key: '4',
-    name: 'Aravind Murthy',
-    email: 'aravind@factors.ai',
-    role: 'Owner',
-    lastActivity: 'One hour ago',
-    actions: ''
-  }
-];
 
 const columns = [
   {
@@ -87,15 +54,32 @@ const columns = [
   }
 ];
 
-function UserSettings() {
+function UserSettings({
+  agents
+}) {
   const [dataLoading, setDataLoading] = useState(true);
+  const [dataSource, setdataSource] = useState(null);
   const [inviteModal, setInviteModal] = useState(false);
   const [confirmLoading, setConfirmLoading] = useState(false);
 
   useEffect(() => {
-    setTimeout(() => {
-      setDataLoading(false);
-    }, 500);
+    if (!dataSource && agents) {
+      const array = Object.keys(agents).map(function (k) { return agents[k]; });
+      const formattedArray = [];
+      array.map((agent, index) => {
+        console.log(index, 'agent-name-->', agent.first_name);
+        formattedArray.push({
+          key: index,
+          name: `${agent.first_name} ${agent.last_name}`,
+          email: agent.email,
+          role: 'Owner',
+          lastActivity: 'Yesterday',
+          actions: ''
+        });
+        setdataSource(formattedArray);
+      });
+    }
+    setDataLoading(false);
   });
 
   const handleOk = () => {
@@ -138,4 +122,19 @@ function UserSettings() {
   );
 }
 
-export default UserSettings;
+const mapStateToProps = (state) => ({
+  activeProjectID: state.global.active_project.id,
+  agents: state.agent.agents
+});
+
+export default connect(mapStateToProps, { fetchProjectAgents })(UserSettings);
+
+// table datasource example
+// {
+//   key: '1',
+//   name: 'Anand Nair',
+//   email: 'anand@uxfish.com',
+//   role: 'Owner',
+//   lastActivity: 'Yesterday',
+//   actions: ''
+// }
