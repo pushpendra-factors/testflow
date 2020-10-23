@@ -345,6 +345,20 @@ func ReceiveEvent(token string, event *Event) (int, *EventResponse) {
 	}
 	isNewUser := errCode == http.StatusCreated
 
+	// Always try to identify when the event.UserId is available.
+	if user.CustomerUserId == "" && event.UserId != "" {
+		status, _ := SDK.Identify(project.ID,
+			&SDK.IdentifyPayload{
+				UserId:         user.ID,
+				CustomerUserId: event.UserId,
+			})
+		// Log and continue to track, if identification fails.
+		if status != http.StatusOK {
+			logCtx.WithField("customer_user_id", event.UserId).
+				Error("Failed to identify segment user.")
+		}
+	}
+
 	switch event.Type {
 	case "track":
 		userProperties := U.PropertiesMap{}
