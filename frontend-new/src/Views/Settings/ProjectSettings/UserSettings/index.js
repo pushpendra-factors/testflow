@@ -63,11 +63,11 @@ function UserSettings({
   const [confirmLoading, setConfirmLoading] = useState(false);
 
   useEffect(() => {
-    if (!dataSource && agents) {
+    if (agents) {
       const array = Object.keys(agents).map(function (k) { return agents[k]; });
       const formattedArray = [];
       array.map((agent, index) => {
-        console.log(index, 'agent-name-->', agent.first_name);
+        // console.log(index, 'agent-name-->', agent.first_name);
         formattedArray.push({
           key: index,
           name: `${agent.first_name} ${agent.last_name}`,
@@ -80,7 +80,7 @@ function UserSettings({
       });
     }
     setDataLoading(false);
-  });
+  }, [agents]);
 
   const handleOk = () => {
     setConfirmLoading(true);

@@ -4,7 +4,7 @@ import {
 } from 'antd';
 import { Text } from 'factorsComponents';
 import { connect } from 'react-redux';
-import { projectAgentInvite } from 'Reducers/agentActions';
+import { projectAgentInvite, fetchProjectAgents } from 'Reducers/agentActions';
 const { Option } = Select;
 
 function InviteUsers(props) {
@@ -15,6 +15,7 @@ function InviteUsers(props) {
     // console.log('Success! payload values:', payload);
     seterrorInfo(null);
     props.projectAgentInvite(props.activeProjectID, payload).then(() => {
+      props.fetchProjectAgents(props.activeProjectID);
       props.onCancel();
       notification.success({
         message: 'Invite Sent!',
@@ -107,4 +108,4 @@ function InviteUsers(props) {
 const mapStateToProps = (state) => ({
   activeProjectID: state.global.active_project.id
 });
-export default connect(mapStateToProps, { projectAgentInvite })(InviteUsers);
+export default connect(mapStateToProps, { projectAgentInvite, fetchProjectAgents })(InviteUsers);
