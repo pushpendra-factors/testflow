@@ -36,7 +36,7 @@ func main() {
 	gcpProjectLocation := flag.String("gcp_project_location", "", "Location of google cloud project cluster")
 
 	flag.Parse()
-	taskID := "Script#CacheDashboardQueries"
+	taskID := "dashboard_caching"
 	defer util.NotifyOnPanic(taskID, *envFlag)
 	logCtx := log.WithFields(log.Fields{"Prefix": taskID})
 
@@ -100,7 +100,7 @@ func main() {
 	timeTakenStringWeb, _ := timeTaken.Load("web")
 	notifyMessage = fmt.Sprintf("Caching successful for %s projects. Time taken: %+v. Time taken for web analytics: %+v",
 		*projectIDFlag, timeTakenString, timeTakenStringWeb)
-	util.NotifyThroughSNS("dashboard_caching", *envFlag, notifyMessage)
+	util.NotifyThroughSNS(taskID, *envFlag, notifyMessage)
 	metrics.Increment(metrics.IncrCronDashboardCachingSuccess)
 }
 
