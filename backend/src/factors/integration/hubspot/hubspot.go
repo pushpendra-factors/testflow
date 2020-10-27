@@ -108,21 +108,6 @@ func getContactProperties(document *M.HubspotDocument) (map[string]interface{}, 
 	return properties, nil
 }
 
-// getIdentificationPhoneNumber tries various patterns of phone number if exist in db and return the phone no based on priority
-func getIdentificationPhoneNumber(projectID uint64, phoneNo string) string {
-	pPhoneNo := U.GetPossiblePhoneNumber(phoneNo)
-	existingPhoneNo, errCode := M.GetExistingCustomerUserID(projectID, pPhoneNo)
-	if errCode == http.StatusFound {
-		for i := range pPhoneNo {
-			if _, exist := existingPhoneNo[pPhoneNo[i]]; exist {
-				return pPhoneNo[i]
-			}
-		}
-	}
-
-	return phoneNo
-}
-
 func getCustomerUserIdFromProperties(projectID uint64, properties map[string]interface{}) string {
 	// identify using email if exist on properties.
 	emailInt, emailExists := properties[getPropertyKeyByType(
@@ -130,7 +115,7 @@ func getCustomerUserIdFromProperties(projectID uint64, properties map[string]int
 	if emailExists || emailInt != nil {
 		email, ok := emailInt.(string)
 		if ok && email != "" {
-			return U.EmailToLowerCase(email)
+			return U.GetEmailLowerCase(email)
 		}
 	}
 
@@ -140,7 +125,10 @@ func getCustomerUserIdFromProperties(projectID uint64, properties map[string]int
 	if phoneExists || phoneInt != nil {
 		phone := U.GetPropertyValueAsString(phoneInt)
 		if phone != "" {
-			return getIdentificationPhoneNumber(projectID, phone)
+			identifiedPhone, _ := M.GetUserIdentificationPhoneNumber(projectID, phone)
+			if identifiedPhone != "" {
+				return identifiedPhone
+			}
 		}
 	}
 
@@ -158,7 +146,10 @@ func getCustomerUserIdFromProperties(projectID uint64, properties map[string]int
 		if phoneInt != nil {
 			phone := U.GetPropertyValueAsString(phoneInt)
 			if phone != "" {
-				return getIdentificationPhoneNumber(projectID, phone)
+				identifiedPhone, _ := M.GetUserIdentificationPhoneNumber(projectID, phone)
+				if identifiedPhone != "" {
+					return identifiedPhone
+				}
 			}
 		}
 	}

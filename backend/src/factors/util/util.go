@@ -99,8 +99,8 @@ func IsEmail(str string) bool {
 	return regexpEmail.MatchString(str)
 }
 
-// EmailToLowerCase returns email in lower case for consistency
-func EmailToLowerCase(emailI interface{}) string {
+// GetEmailLowerCase returns email in lower case for consistency
+func GetEmailLowerCase(emailI interface{}) string {
 	email := GetPropertyValueAsString(emailI)
 	if !IsEmail(email) {
 		return ""
@@ -647,8 +647,8 @@ func BytesToReadableFormat(bytes int64) string {
 		float64(bytes)/float64(div), "KMGTPE"[exp])
 }
 
-// SanatizePhoneNumber currently removes only leading 0 from phone number. New functionalty will added as when required
-func SanatizePhoneNumber(v interface{}) string {
+// SanitizePhoneNumber currently removes only leading 0 from phone number. New functionalty will added as when required
+func SanitizePhoneNumber(v interface{}) string {
 	phoneNo := GetPropertyValueAsString(v)
 
 	if phoneNo == "" || len(phoneNo) < 4 {

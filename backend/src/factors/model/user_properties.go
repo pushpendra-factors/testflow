@@ -771,13 +771,13 @@ func fillUserPropertiesFromFormSubmitEventProperties(properties *U.PropertiesMap
 	for k, v := range *formSubmitProperties {
 		if U.IsFormSubmitUserProperty(k) {
 			if k == U.UP_EMAIL {
-				email := U.EmailToLowerCase(v)
+				email := U.GetEmailLowerCase(v)
 				if email != "" {
 					(*properties)[k] = email
 				}
 
 			} else if k == U.UP_PHONE {
-				sPhoneNo := U.SanatizePhoneNumber(v)
+				sPhoneNo := U.SanitizePhoneNumber(v)
 				if sPhoneNo != "" {
 					(*properties)[k] = sPhoneNo
 				}
@@ -823,7 +823,7 @@ func FillUserPropertiesAndGetCustomerUserIdFromFormSubmit(projectId uint64, user
 
 		// form event email is same as user properties, update other user properties.
 		fillUserPropertiesFromFormSubmitEventProperties(properties, formSubmitProperties)
-		return U.EmailToLowerCase(formPropertyEmail), http.StatusOK
+		return U.GetEmailLowerCase(formPropertyEmail), http.StatusOK
 	}
 
 	if formPropertyPhoneExists && userPropertyPhoneExists {
@@ -835,7 +835,7 @@ func FillUserPropertiesAndGetCustomerUserIdFromFormSubmit(projectId uint64, user
 
 		// form event phone is same as user propertie, update other user properties.
 		fillUserPropertiesFromFormSubmitEventProperties(properties, formSubmitProperties)
-		return U.SanatizePhoneNumber(formPropertyPhone), http.StatusOK
+		return U.SanitizePhoneNumber(formPropertyPhone), http.StatusOK
 	}
 
 	if !formPropertyEmailExists && !formPropertyPhoneExists {
@@ -844,9 +844,9 @@ func FillUserPropertiesAndGetCustomerUserIdFromFormSubmit(projectId uint64, user
 
 	var identity string
 	if formPropertyEmailExists {
-		identity = U.EmailToLowerCase(formPropertyEmail)
+		identity = U.GetEmailLowerCase(formPropertyEmail)
 	} else if formPropertyPhoneExists {
-		identity = U.SanatizePhoneNumber(formPropertyPhone)
+		identity = U.SanitizePhoneNumber(formPropertyPhone)
 	}
 
 	fillUserPropertiesFromFormSubmitEventProperties(properties, formSubmitProperties)
