@@ -14,10 +14,15 @@ import (
 // All tracked metrics are to be added here.
 // Type of the metric i.e. Incr / Count / Latency / Bytes must be prefixed with each metric name.
 const (
-	IncrSDKRequestOverallCount   = "sdk_request_overall_count"
-	IncrSDKRequestQueueProcessed = "sdk_request_queue_processed"
-	IncrSDKRequestQueueRetry     = "sdk_request_queue_retry"
+	// Metrics to event processing as sdk integration and sdk request workers.
+	IncrSDKRequestOverallCount           = "sdk_request_overall_count"
+	IncrSDKRequestQueueProcessed         = "sdk_request_queue_processed"
+	IncrSDKRequestQueueRetry             = "sdk_request_queue_retry"
+	IncrIntegrationRequestOverallCount   = "integration_request_overall_count"
+	IncrIntegrationRequestQueueProcessed = "integration_request_queue_processed"
+	IncrIntegrationRequestQueueRetry     = "integration_request_queue_retry"
 
+	// Metrics to to track types of sdk requests.
 	IncrSDKRequestTypeTrack                    = "sdk_request_type_track"
 	IncrSDKRequestTypeAMPTrack                 = "sdk_request_type_amp_track"
 	IncrSDKRequestTypeUpdateEventProperties    = "sdk_request_type_update_event_properties"
@@ -26,13 +31,11 @@ const (
 	IncrSDKRequestTypeIdentifyUser             = "sdk_request_type_identify_user"
 	IncrSDKGetSettingsTimeout                  = "sdk_get_settings_timeout"
 
-	IncrIntegrationRequestOverallCount   = "integration_request_overall_count"
-	IncrIntegrationRequestQueueProcessed = "integration_request_queue_processed"
-	IncrIntegrationRequestQueueRetry     = "integration_request_queue_retry"
-
+	// Metrics related to event user caching.
 	IncrEventUserCache    = "event_user_cache_incr"
 	LatencyEventUserCache = "event_user_cache_latency"
 
+	// Metrics to monitor size of the database tables.
 	BytesTableSizeAdwordsDocuments = "table_adwords_documents_size"
 	BytesTableSizeEvents           = "table_events_size"
 	BytesTableSizeHubspotDocuments = "table_hubspot_documents_size"
@@ -50,6 +53,10 @@ const (
 	IncrCronHubspotEnrichSuccess          = "cron_hubspot_enrich_success"
 	IncrCronSalesforceEnrichSuccess       = "cron_salesforce_enrich_success"
 	IncrCronYourstoryAddPropertiesSuccess = "cron_yourstory_add_properties_success"
+
+	IncrUserPropertiesMergeMoreThan10    = "user_properties_merge_more_than_10"
+	IncrUserPropertiesMergeCount         = "user_properties_merge_count"
+	IncrUserPropertiesMergeSanitizeCount = "user_properties_merge_sanitize_count"
 )
 
 var (

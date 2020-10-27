@@ -210,7 +210,6 @@ func addEventDetailsToCache(projectId uint64, event *Event, isUpdateEventPropert
 	}
 	counts, err := cacheRedis.IncrPersistentBatch(keysToIncr...)
 	end := U.TimeNow()
-	logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("EV:Incr")
 	metrics.Increment(metrics.IncrEventUserCache)
 	metrics.RecordLatency(metrics.LatencyEventUserCache, float64(end.Sub(begin).Milliseconds()))
 	if err != nil {

@@ -224,7 +224,6 @@ func UpdateCacheForUserProperties(userId string, projectid uint64, updatedProper
 	begin := U.TimeNow()
 	isNewUser, err := cacheRedis.PFAddPersistent(usersCacheKey, userId, 24*60*60)
 	end := U.TimeNow()
-	logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("US:List")
 	metrics.Increment(metrics.IncrEventUserCache)
 	metrics.RecordLatency(metrics.LatencyEventUserCache, float64(end.Sub(begin).Milliseconds()))
 	if err != nil {
@@ -269,7 +268,6 @@ func UpdateCacheForUserProperties(userId string, projectid uint64, updatedProper
 	begin = U.TimeNow()
 	counts, err := cacheRedis.IncrPersistentBatch(keysToIncr...)
 	end = U.TimeNow()
-	logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("US:Incr")
 	metrics.Increment(metrics.IncrEventUserCache)
 	metrics.RecordLatency(metrics.LatencyEventUserCache, float64(end.Sub(begin).Milliseconds()))
 	if err != nil {
@@ -313,8 +311,6 @@ func UpdateCacheForUserProperties(userId string, projectid uint64, updatedProper
 		_, err = cacheRedis.IncrByBatchPersistent(countsInCache)
 		end := U.TimeNow()
 		logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("C:US:Incr")
-		metrics.Increment(metrics.IncrEventUserCache)
-		metrics.RecordLatency(metrics.LatencyEventUserCache, float64(end.Sub(begin).Milliseconds()))
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to increment keys")
 			return
@@ -386,14 +382,14 @@ func MergeUserPropertiesForUserID(projectID uint64, userID string, updatedProper
 	} else if usersLength == 1 {
 		return currentPropertiesID, http.StatusNotAcceptable
 	} else if usersLength > 10 {
-		logCtx.Infof("User properties merge triggered for more than 10 users. Count: %d", usersLength)
+		metrics.Increment(metrics.IncrUserPropertiesMergeMoreThan10)
 	}
 
 	if usersLength > MaxUsersForPropertiesMerge {
 		// If number of users to merge are more than max allowed, merge for oldest max/2 and latest max/2.
 		users = append(users[0:MaxUsersForPropertiesMerge/2], users[usersLength-MaxUsersForPropertiesMerge/2:usersLength]...)
 	}
-	logCtx.Infof("%d users found to be merged for customer user id %s", len(users), customerUserID)
+	metrics.Increment(metrics.IncrUserPropertiesMergeCount)
 
 	initialPropertiesVisitedMap := make(map[string]bool)
 	for _, property := range U.USER_PROPERTIES_MERGE_TYPE_INITIAL {
@@ -666,10 +662,6 @@ func mergeAddTypeUserProperties(mergedProperties *map[string]interface{}, userPr
 //   3. Generate random value from 1 to 5 min * session_count and set as session_spent_time.
 // TODO(prateek): Remove once older values are fixed using script.
 func SanitizeAddTypeProperties(projectID uint64, users []User, propertiesMap *map[string]interface{}) {
-	logCtx := log.WithFields(log.Fields{
-		"Method":    "SanitizeAddTypeProperties",
-		"ProjectID": projectID,
-	})
 	var userIDs []string
 	for _, user := range users {
 		userIDs = append(userIDs, user.ID)
@@ -700,17 +692,17 @@ func SanitizeAddTypeProperties(projectID uint64, users []User, propertiesMap *ma
 
 	if _, found := (*propertiesMap)[U.UP_SESSION_COUNT]; found {
 		sanitizedValue := float64(sessionCount)
-		logCtx.Infof("Updating value for $session_count from %v to %v", (*propertiesMap)[U.UP_SESSION_COUNT], sanitizedValue)
+		metrics.Increment(metrics.IncrUserPropertiesMergeSanitizeCount)
 		(*propertiesMap)[U.UP_SESSION_COUNT] = sanitizedValue
 	}
 	if _, found := (*propertiesMap)[U.UP_PAGE_COUNT]; found {
 		sanitizedValue := float64(sessionCount * uint64(U.RandomIntInRange(1, 5))) // 1 to 5 pages.
-		logCtx.Infof("Updating value for $page_count from %v to %v", (*propertiesMap)[U.UP_PAGE_COUNT], sanitizedValue)
+		metrics.Increment(metrics.IncrUserPropertiesMergeSanitizeCount)
 		(*propertiesMap)[U.UP_PAGE_COUNT] = sanitizedValue
 	}
 	if _, found := (*propertiesMap)[U.UP_TOTAL_SPENT_TIME]; found {
 		sanitizedValue := float64(sessionCount * uint64(U.RandomIntInRange(60, 300))) // 1 to 5 mins.
-		logCtx.Infof("Updating value for $session_spent_time from %v to %v", (*propertiesMap)[U.UP_TOTAL_SPENT_TIME], sanitizedValue)
+		metrics.Increment(metrics.IncrUserPropertiesMergeSanitizeCount)
 		(*propertiesMap)[U.UP_TOTAL_SPENT_TIME] = sanitizedValue
 	}
 }
