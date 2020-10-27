@@ -195,9 +195,8 @@ export function fetchProjectAgents(projectId){
 }
 
 
-export function projectAgentInvite(projectId, emailId){
-  return function(dispatch){
-    let payload = {"email":emailId};
+export function projectAgentInvite(projectId, payload){
+  return function(dispatch){ 
     return new Promise((resolve, reject) => {
       post(dispatch, host + "projects/" + projectId + "/agents/invite", payload)
       .then((r) => {
