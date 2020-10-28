@@ -3,6 +3,37 @@ import { get, post } from '../utils/request';
 var host = BUILD_CONFIG.backend_host;
 host = (host[host.length - 1] === '/') ? host : host + '/';
 
+const agentsSample = [
+  {
+      "uuid": "6e3803e0-7d63-429f-ba5c-358c6e7d215f",
+      "email": "janani@factors.ai",
+      "first_name": "Janani",
+      "last_name": "Somaskandan",
+      "is_email_verified": true,
+      "last_logged_in": "2020-10-05T10:11:57.375816+05:30",
+      "phone": "123456789",
+      "project_id": 14128,
+      "role": 2,
+      "invited_by": null,
+      "created_at": "2020-10-23T10:43:47.105715+05:30",
+      "updated_at": "2020-10-23T10:43:47.105715+05:30"
+  },
+  {
+      "uuid": "858388fc-52a1-49e5-bce6-5e6ec793917c",
+      "email": "dinesh@factors.ai",
+      "first_name": "",
+      "last_name": "",
+      "is_email_verified": false,
+      "last_logged_in": null,
+      "phone": "",
+      "project_id": 14128,
+      "role": 1,
+      "invited_by": "6e3803e0-7d63-429f-ba5c-358c6e7d215f",
+      "created_at": "2020-10-28T10:51:31.958635+05:30",
+      "updated_at": "2020-10-28T10:51:31.958635+05:30"
+  }
+];
+
 export default function reducer(state = {
   agent: {},
   agentError: null,
@@ -60,9 +91,8 @@ export default function reducer(state = {
     }
     case "FETCH_PROJECT_AGENTS_FULFILLED":{
       return {
-        ...state,
-        projectAgents: action.payload.project_agent_mappings,
-        agents: action.payload.agents,
+        ...state, 
+        agents: action.payload,
       }
     }
   }
@@ -179,7 +209,8 @@ export function fetchProjectAgents(projectId){
   return function(dispatch){
     return get(dispatch, host + "projects/" + projectId + "/agents")
       .then((r) => {
-        dispatch({type: "FETCH_PROJECT_AGENTS_FULFILLED", payload: r.data });
+        // dispatch({type: "FETCH_PROJECT_AGENTS_FULFILLED", payload: r.data });
+        dispatch({type: "FETCH_PROJECT_AGENTS_FULFILLED", payload: agentsSample });
       })
       .catch((r) => {
         if (r.status) {

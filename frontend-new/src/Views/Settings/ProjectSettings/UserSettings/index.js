@@ -7,17 +7,20 @@ import { MoreOutlined } from '@ant-design/icons';
 import InviteUsers from './InviteUsers';
 import { connect } from 'react-redux';
 import { fetchProjectAgents } from 'Reducers/agentActions';
+import moment from 'moment';
 
-const menu = (
+const menu = (uuid) => {
+  return (
   <Menu>
     <Menu.Item key="0">
-      <a href="#!">Remove User</a>
+    <a href="#!" uuid={uuid}>Remove User</a>
     </Menu.Item>
     <Menu.Item key="1">
       <a href="#!">Make Project Admin</a>
     </Menu.Item>
   </Menu>
-);
+  );
+};
 
 const columns = [
   {
@@ -46,8 +49,8 @@ const columns = [
     title: '',
     dataIndex: 'actions',
     key: 'actions',
-    render: () => (
-      <Dropdown overlay={menu} trigger={['click']}>
+    render: (uuid) => (
+      <Dropdown overlay={() => menu(uuid)} trigger={['click']}>
         <Button size={'large'} type="text" icon={<MoreOutlined />} />
       </Dropdown>
     )
@@ -64,17 +67,16 @@ function UserSettings({
 
   useEffect(() => {
     if (agents) {
-      const array = Object.keys(agents).map(function (k) { return agents[k]; });
       const formattedArray = [];
-      array.map((agent, index) => {
+      agents.map((agent, index) => {
         // console.log(index, 'agent-name-->', agent.first_name);
         formattedArray.push({
           key: index,
-          name: `${agent.first_name} ${agent.last_name}`,
+          name: `${agent.first_name || agent.last_name ? (agent.first_name + ' ' + agent.last_name) : '---'}`,
           email: agent.email,
-          role: 'Owner',
-          lastActivity: 'Yesterday',
-          actions: ''
+          role: `${agent.role === 2 ? 'Admin' : 'User'}`,
+          lastActivity: `${agent.last_logged_in ? moment(agent.last_logged_in).fromNow() : !agent.is_email_verified ? 'Pending Invite' : '---'}`,
+          actions: `${agent.uuid}`
         });
         setdataSource(formattedArray);
       });
