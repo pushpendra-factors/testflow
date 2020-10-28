@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	H "factors/handler"
 	M "factors/model"
+	SDK "factors/sdk"
 	U "factors/util"
 	"fmt"
 	"math"
@@ -376,16 +377,27 @@ func TestDBFillUserDefaultProperties(t *testing.T) {
 	assert.Empty(t, propertiesMap[U.EP_INTERNAL_IP])
 }
 
-func TestDBCreateOrGetSegmentUser(t *testing.T) {
+func TestDBCreateOrGetSegmentUserWithSDKIdentify(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 	assert.NotNil(t, project)
 
-	// no seg_aid but c_uid provided. create new user with c_uid.
-	user, errCode := M.CreateOrGetSegmentUser(project.ID, "", "customer_1", time.Now().Unix())
+	// No seg_aid but c_uid provided. should create new user without c_uid.
+	// Later user will be identified with SDK.Identify.
+	customerUserID := U.RandomLowerAphaNumString(15) + "@example.com"
+	user, errCode := M.CreateOrGetSegmentUser(project.ID, "", customerUserID, time.Now().Unix())
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.NotNil(t, user)
-	assert.Equal(t, "customer_1", user.CustomerUserId)
+	assert.Empty(t, user.CustomerUserId)
+	status, _ := SDK.Identify(project.ID, &SDK.IdentifyPayload{UserId: user.ID, CustomerUserId: customerUserID})
+	assert.Equal(t, http.StatusOK, status)
+	user, errCode = M.GetUser(project.ID, user.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Equal(t, customerUserID, user.CustomerUserId)
+	userProperties, err := U.DecodePostgresJsonb(&user.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, user.CustomerUserId, (*userProperties)[U.UP_USER_ID])
+	assert.Equal(t, user.CustomerUserId, (*userProperties)[U.UP_EMAIL])
 
 	// no customer uid. create new user with seg_aid.
 	segAid := U.RandomLowerAphaNumString(15)
@@ -404,13 +416,20 @@ func TestDBCreateOrGetSegmentUser(t *testing.T) {
 	assert.Empty(t, user2.CustomerUserId)
 
 	// both provided. c_uid is empty. identify
-	custId := U.RandomLowerAphaNumString(15)
+	custId := U.RandomLowerAphaNumString(15) + "@example.com"
 	user3, errCode := M.CreateOrGetSegmentUser(project.ID, segAid, custId, time.Now().Unix())
 	assert.Equal(t, http.StatusOK, errCode)
 	assert.NotNil(t, user3)
 	assert.Equal(t, user1.ID, user3.ID)
-	assert.NotEmpty(t, user3.CustomerUserId)
-	assert.Equal(t, custId, user3.CustomerUserId) // Update c_uid on existing user.
+	status, _ = SDK.Identify(project.ID, &SDK.IdentifyPayload{UserId: user3.ID, CustomerUserId: custId})
+	assert.Equal(t, http.StatusOK, status)
+	user3, errCode = M.GetUser(project.ID, user3.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Equal(t, custId, user3.CustomerUserId)
+	userProperties, err = U.DecodePostgresJsonb(&user3.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, user3.CustomerUserId, (*userProperties)[U.UP_USER_ID])
+	assert.Equal(t, user3.CustomerUserId, (*userProperties)[U.UP_EMAIL])
 
 	// both seg_aid and c_uid matches.
 	user4, errCode := M.CreateOrGetSegmentUser(project.ID, segAid, user3.CustomerUserId, time.Now().Unix())
@@ -434,12 +453,21 @@ func TestDBCreateOrGetSegmentUser(t *testing.T) {
 	assert.Equal(t, user4.ID, user6.ID) // Should not use existing user with same c_uid.
 
 	// user by seg_aid and c_uid doesn't exist.
-	custId2 := U.RandomLowerAphaNumString(15)
+	custId2 := U.RandomLowerAphaNumString(15) + "@example.com"
 	segAid2 := U.RandomLowerAphaNumString(15)
 	user7, errCode := M.CreateOrGetSegmentUser(project.ID, segAid2, custId2, time.Now().Unix())
 	assert.Equal(t, http.StatusCreated, errCode)
-	// new user with new seg_aid and c_uid.
+	// new user with new seg_aid and identified with cuid.
 	assert.Equal(t, segAid2, user7.SegmentAnonymousId)
+	status, _ = SDK.Identify(project.ID, &SDK.IdentifyPayload{UserId: user7.ID, CustomerUserId: custId2})
+	assert.Equal(t, http.StatusOK, status)
+	user7, errCode = M.GetUser(project.ID, user7.ID)
+	assert.Equal(t, http.StatusFound, errCode)
+	assert.Equal(t, custId2, user7.CustomerUserId)
+	userProperties, err = U.DecodePostgresJsonb(&user7.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, user7.CustomerUserId, (*userProperties)[U.UP_USER_ID])
+	assert.Equal(t, user7.CustomerUserId, (*userProperties)[U.UP_EMAIL])
 	assert.Equal(t, custId2, user7.CustomerUserId)
 }
 

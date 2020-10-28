@@ -383,7 +383,7 @@ func CreateOrGetUser(projectId uint64, custUserId string) (*User, int) {
 
 // CreateOrGetSegmentUser create or updates(c_uid) and returns user by segement_anonymous_id
 // and/or customer_user_id.
-func CreateOrGetSegmentUser(projectId uint64, segAnonId, custUserId string, segReqTimestamp int64) (*User, int) {
+func CreateOrGetSegmentUser(projectId uint64, segAnonId, custUserId string, requestTimestamp int64) (*User, int) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectId, "seg_aid": segAnonId,
 		"provided_c_uid": custUserId})
 
@@ -422,16 +422,11 @@ func CreateOrGetSegmentUser(projectId uint64, segAnonId, custUserId string, segR
 			}
 		}
 
-		cUser := &User{ProjectId: projectId, JoinTimestamp: segReqTimestamp}
+		cUser := &User{ProjectId: projectId, JoinTimestamp: requestTimestamp}
 
 		// add seg_aid, if provided and not exist already.
 		if segAnonId != "" {
 			cUser.SegmentAnonymousId = segAnonId
-		}
-
-		// add c_uid on create, if provided and not exist already.
-		if custUserId != "" {
-			cUser.CustomerUserId = custUserId
 		}
 
 		user, err := createUserWithError(cUser)
@@ -463,20 +458,9 @@ func CreateOrGetSegmentUser(projectId uint64, segAnonId, custUserId string, segR
 
 	logCtx = logCtx.WithField("fetched_c_uid", user.CustomerUserId)
 
-	// fetched c_uid empty, identify and return.
-	if user.CustomerUserId == "" {
-		uUser, uErrCode := UpdateUser(projectId, user.ID, &User{CustomerUserId: custUserId}, segReqTimestamp)
-		if uErrCode != http.StatusAccepted {
-			logCtx.WithField("err_code", uErrCode).Error(
-				"Identify failed. Failed updating c_uid failed. get_segment_user failed.")
-			return nil, uErrCode
-		}
-		user.CustomerUserId = uUser.CustomerUserId
-	}
-
 	// same seg_aid with different c_uid. log error. return user.
 	if user.CustomerUserId != custUserId {
-		logCtx.Error("Tried re-identifying with same seg_aid and different c_uid.")
+		logCtx.Error("Different customer_user_id seen for existing user with segment_anonymous_id.")
 	}
 
 	// provided and fetched c_uid are same.
