@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Layout, Row, Avatar, Popover, Button, Modal, Col
+  Layout, Row, Avatar, Popover, Button, Modal, Col, notification
 } from 'antd';
 import { NavLink } from 'react-router-dom';
 import { SVG, Text } from 'factorsComponents';
@@ -173,8 +173,12 @@ function Sidebar(props) {
           setShowPopOver(false);
           setchangeProjectModal(false);
           setselectedProject(null);
+          notification.success({
+            message: 'Project Switched!',
+            description: `You are currently viewing data from ${selectedProject.name}`
+
+          });
         }}
-        // confirmLoading={props.confirmLoading}
         centered={true}
         >
           <div className={'p-4'}>

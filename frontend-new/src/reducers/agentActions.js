@@ -271,3 +271,21 @@ export function projectAgentRemove(projectId, agentUUID){
     })
   }
 }
+
+export function updateAgentPassword(params){
+  return function(dispatch){
+    return new Promise((resolve, reject)=> {
+      put(dispatch, host + "agents/updatepassword", params)
+      .then((response) => {
+        dispatch({type:"UPDATE_AGENT_PASSWORD_FULFILLED", 
+            payload: response.data});
+          resolve(response);
+      })
+      .catch((err) => {
+        dispatch({type:"UPDATE_AGENT_PASSWORD_REJECTED", 
+          payload: 'Failed to update agent password'});
+          reject(err);
+      })
+    });
+  }
+}

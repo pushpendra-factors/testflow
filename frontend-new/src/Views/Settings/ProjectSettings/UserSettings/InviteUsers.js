@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  Row, Col, Modal, Input, Select, Form, Button, notification
+  Row, Col, Modal, Input, Select, Form, Button, message
 } from 'antd';
 import { Text } from 'factorsComponents';
 import { connect } from 'react-redux';
@@ -17,15 +17,12 @@ function InviteUsers(props) {
     props.projectAgentInvite(props.activeProjectID, payload).then(() => {
       props.fetchProjectAgents(props.activeProjectID);
       props.onCancel();
-      notification.success({
-        message: 'Invite Sent!',
-        description:
-          'Requested user has been sent invitation email.'
-      });
+      message.success('Invite Sent!');
     }).catch((err) => {
       console.log('invite error', err);
       form.resetFields();
       seterrorInfo(err);
+      message.error('Oops! Something went wrong.');
     });
   };
   const onChange = () => {
@@ -64,7 +61,7 @@ function InviteUsers(props) {
             onChange={onChange}
             className={'w-full'}
           >
-            <Row gutter={[24, 0]}>
+            <Row gutter={[24, 24]}>
 
                 <Col span={16}>
                 <Text type={'title'} level={7} extraClass={'m-0'}>Email</Text>

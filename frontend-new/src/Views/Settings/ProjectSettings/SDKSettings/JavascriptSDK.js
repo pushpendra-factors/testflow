@@ -49,19 +49,22 @@ const JSConfig = ({ currentProjectSettings, activeProject, udpateProjectSettings
   const currentProjectId = activeProject.id;
 
   const toggleAutoTrack = (checked) => {
-    udpateProjectSettings(currentProjectId, { auto_track: checked }).catch(() => {
+    udpateProjectSettings(currentProjectId, { auto_track: checked }).catch((err) => {
+      console.log('Oops! something went wrong-->', err);
       message.error('Oops! something went wrong.');
     });
   };
 
   const toggleExcludeBot = (checked) => {
-    udpateProjectSettings(currentProjectId, { exclude_bot: checked }).catch(() => {
+    udpateProjectSettings(currentProjectId, { exclude_bot: checked }).catch((err) => {
+      console.log('Oops! something went wrong-->', err);
       message.error('Oops! something went wrong.');
     });
   };
 
   const toggleAutoFormCapture = (checked) => {
-    udpateProjectSettings(currentProjectId, { auto_form_capture: checked }).catch(() => {
+    udpateProjectSettings(currentProjectId, { auto_form_capture: checked }).catch((err) => {
+      console.log('Oops! something went wrong-->', err);
       message.error('Oops! something went wrong.');
     });
   };
