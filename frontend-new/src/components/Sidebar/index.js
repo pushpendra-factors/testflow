@@ -6,7 +6,7 @@ import { NavLink } from 'react-router-dom';
 import { SVG, Text } from 'factorsComponents';
 import ModalLib from '../../Views/componentsLib/ModalLib';
 import UserSettings from '../../Views/Settings/UserSettings';
-import { setActiveProject, fetchProjectSettings } from '../../reducers/global';
+import { setActiveProject } from '../../reducers/global';
 import { signout } from '../../reducers/agentActions';
 import { connect } from 'react-redux';
 import { PlusOutlined, PoweroffOutlined, BankOutlined } from '@ant-design/icons';
@@ -170,7 +170,6 @@ function Sidebar(props) {
         okText={'Switch'}
         onOk={() => {
           props.setActiveProject(selectedProject);
-          props.fetchProjectSettings(selectedProject.id);
           setShowPopOver(false);
           setchangeProjectModal(false);
           setselectedProject(null);
@@ -199,4 +198,4 @@ const mapStateToProps = (state) => {
     active_project: state.global.active_project
   };
 };
-export default connect(mapStateToProps, { setActiveProject, signout, fetchProjectSettings })(Sidebar);
+export default connect(mapStateToProps, { setActiveProject, signout })(Sidebar);
