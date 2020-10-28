@@ -1,7 +1,6 @@
 /* eslint-disable */
 import React from 'react';
 import tableStyles from './FunnelsResultTable/index.module.scss';
-import { funnelsDataWithoutBreakdown } from '../../EventsAnalytics/SampleResponse';
 
 const windowSize = {
   w: window.outerWidth,
@@ -12,17 +11,23 @@ const windowSize = {
 
 const visualizationColors = ['#4D7DB4', '#4C9FC8', '#4CBCBD', '#86D3A3', '#CCC36D', '#F9C06E', '#E89E7B', '#D4787D', '#B87B7E', '#9982B5'];
 
-export const generateGroupedChartsData = (data, groups) => {
-  const displayedData = data.filter(elem => elem.display);
-  const result = displayedData.map(elem => {
-    const values = [];
-    for (const key in elem.data) {
-      const group = groups.find(g => g.name === key);
-      if (group.is_visible) {
-        values.push(calculatePercentage(elem.data[key], data[0].data[key]));
-      }
+export const generateGroupedChartsData = (response, queries, groups, eventsMapper) => {
+  if (!response) {
+    return [];
+  }
+  const result = queries.map(elem => {
+    return [eventsMapper[elem]];
+  });
+  const firstEventIdx = response.headers.findIndex(elem => elem === 'step_0');
+  response.rows.forEach((elem) => {
+    const breakdownName = elem.slice(0, firstEventIdx).join(",");
+    const isVisible = groups.filter(g => g.name === breakdownName && g.is_visible).length
+    if (isVisible) {
+      const netCounts = elem.filter(elem => typeof elem === 'number');
+      netCounts.forEach((n, idx) => {
+        result[idx].push(calculatePercentage(n, netCounts[0]));
+      })
     }
-    return [elem.name, ...values];
   });
   return result;
 };
@@ -36,22 +41,27 @@ export const generateColors = (requiredCumberOfColors) => {
   return colors;
 };
 
-export const generateGroups = (data) => {
-  const cat_names = Object.keys(data[0].data);
-  const result = cat_names.map(elem => {
+export const generateGroups = (response, maxAllowedVisibleProperties) => {
+  if (!response) {
+    return [];
+  }
+  const firstEventIdx = response.headers.findIndex(elem => elem === 'step_0');
+  const result = response.rows.map((elem, index) => {
+    const netCounts = elem.filter(elem => typeof elem === 'number');
     return {
-      name: elem,
-      conversion_rate: calculatePercentage(data[data.length - 1].data[elem], data[0].data[elem]) + '%',
-      is_visible: true
+      index,
+      name: elem.slice(0, firstEventIdx).join(","),
+      conversion_rate: calculatePercentage(netCounts[netCounts.length - 1], netCounts[0]) + '%',
+      is_visible: index < maxAllowedVisibleProperties ? true : false,
     };
   });
   return result;
 };
 
-export const generateTableColumns = (data, currentSorter, handleSorting) => {
+export const generateTableColumns = (breakdown, queries, eventsMapper, currentSorter, handleSorting) => {
   const result = [
     {
-      title: 'Grouping',
+      title: breakdown.length ? 'Grouping' : 'Users',
       dataIndex: 'name',
       className: tableStyles.groupColumn
     },
@@ -61,162 +71,94 @@ export const generateTableColumns = (data, currentSorter, handleSorting) => {
       className: tableStyles.conversionColumn
     }
   ];
-  const eventColumns = data.map((elem, index) => {
+  const eventColumns = queries.map((elem, index) => {
     return {
-      title: getTitleWithSorter(elem.name, elem.name, currentSorter, handleSorting),
-      dataIndex: elem.name,
-      className: index === data.length - 1 ? tableStyles.lastColumn : ''
-    };
-  });
-  return [...result, ...eventColumns];
-};
-
-export const generateTableData = (data, groups, currentSorter, searchText) => {
-  const appliedGroups = groups.map(elem => elem.name).filter(elem => elem.toLowerCase().indexOf(searchText.toLowerCase()) > -1);
-  const result = appliedGroups.map((group, index) => {
-    const eventsData = {};
-    data.forEach(d => {
-      eventsData[d.name] = d.data[group] + ' (' + calculatePercentage(d.data[group], data[0].data[group]) + '%)';
-    });
-    return {
-      index,
-      name: group,
-      conversion: calculatePercentage(data[data.length - 1].data[group], data[0].data[group]) + '%',
-      ...eventsData
+      title: getTitleWithSorter(elem, elem, currentSorter, handleSorting),
+      dataIndex: breakdown.length ? eventsMapper[elem] : elem,
+      className: index === queries.length - 1 ? tableStyles.lastColumn : ''
     };
   });
 
-  result.sort((a, b) => {
-    if (currentSorter.order === 'ascend') {
-      return parseInt(a[currentSorter.key].split(' ')[0]) >= parseInt(b[currentSorter.key].split(' ')[0]) ? 1 : -1;
-    }
-    if (currentSorter.order === 'descend') {
-      return parseInt(a[currentSorter.key].split(' ')[0]) <= parseInt(b[currentSorter.key].split(' ')[0]) ? 1 : -1;
-    }
-    return 0;
-  });
-
-  return result;
-};
-
-const groupedDummyData = [
-  {
-    index: 1,
-    display: true,
-    data: {
-      Chennai: 20000,
-      Mumbai: 20000,
-      'New Delhi': 20000,
-      Amritsar: 20000,
-      Jalandhar: 20000,
-      Kolkatta: 20000
-    }
-  },
-  {
-    index: 2,
-    display: true,
-    data: {
-      Chennai: 8000,
-      Mumbai: 8000,
-      'New Delhi': 12000,
-      Amritsar: 10000,
-      Jalandhar: 12000,
-      Kolkatta: 6000
-    }
-  },
-  {
-    index: 3,
-    display: true,
-    data: {
-      Chennai: 6000,
-      Mumbai: 6000,
-      'New Delhi': 6000,
-      Amritsar: 8000,
-      Jalandhar: 8000,
-      Kolkatta: 5000
-    }
-  },
-  {
-    index: 4,
-    display: true,
-    data: {
-      Chennai: 2000,
-      Mumbai: 3000,
-      'New Delhi': 3000,
-      Amritsar: 6000,
-      Jalandhar: 4000,
-      Kolkatta: 4000
-    }
-  },
-  {
-    index: 5,
-    display: true,
-    data: {
-      Chennai: 1000,
-      Mumbai: 2000,
-      'New Delhi': 1600,
-      Amritsar: 4000,
-      Jalandhar: 1050,
-      Kolkatta: 3000
-    }
-  },
-  {
-    index: 6,
-    display: true,
-    data: {
-      Chennai: 600,
-      Mumbai: 1600,
-      'New Delhi': 1200,
-      Amritsar: 3600,
-      Jalandhar: 300,
-      Kolkatta: 2000
-    }
-  },
-  {
-    index: 7,
-    display: true,
-    data: {
-      Chennai: 300,
-      Mumbai: 800,
-      'New Delhi': 600,
-      Amritsar: 1800,
-      Jalandhar: 100,
-      Kolkatta: 1200
-    }
+  const blankCol = {
+    title: '',
+    dataIndex: '',
+    width: 37
+  };
+  if (breakdown.length) {
+    return [...result, ...eventColumns];
+  } else {
+    return [blankCol, ...result, ...eventColumns];
   }
-];
 
-export const generateDummyData = (labels) => {
-  const result = labels.map((elem, index) => {
-    return { ...groupedDummyData[index], name: elem };
-  });
-  return result;
 };
 
-export const generateUngroupedChartsData = (events) => {
+export const generateTableData = (data, breakdown, queries, groups, eventsMapper, currentSorter, searchText) => {
+  if (!breakdown.length) {
+    const queryData = {};
+    queries.forEach((q, index) => {
+      queryData[q] = `${data[index].netCount} (${data[index].value}%)`;
+    })
+    return [
+      {
+        index: 0,
+        ...queryData,
+        name: 'All',
+        conversion: data[data.length - 1].value + '%'
+      }
+    ]
+  } else {
+    const appliedGroups = groups.map(elem => elem.name).filter(elem => elem.toLowerCase().indexOf(searchText.toLowerCase()) > -1);
+    const result = appliedGroups.map((group, index) => {
+      const eventsData = {};
+      data.forEach(d => {
+        eventsData[d.name] = d.data[group] + ' (' + calculatePercentage(d.data[group], data[0].data[group]) + '%)';
+      });
+      return {
+        index,
+        name: group,
+        conversion: calculatePercentage(data[data.length - 1].data[group], data[0].data[group]) + '%',
+        ...eventsData
+      };
+    });
 
-  const response = funnelsDataWithoutBreakdown;
+    result.sort((a, b) => {
+      if (currentSorter.order === 'ascend') {
+        return parseInt(a[eventsMapper[currentSorter.key]].split(' ')[0]) >= parseInt(b[eventsMapper[currentSorter.key]].split(' ')[0]) ? 1 : -1;
+      }
+      if (currentSorter.order === 'descend') {
+        return parseInt(a[eventsMapper[currentSorter.key]].split(' ')[0]) <= parseInt(b[eventsMapper[currentSorter.key]].split(' ')[0]) ? 1 : -1;
+      }
+      return 0;
+    });
+    return result;
+  }
+};
 
-  let i = 0, result = [];
+export const generateUngroupedChartsData = (response, events) => {
+  if (!response) {
+    return [];
+  }
 
-  events.forEach((event, index) => {
+  const netCounts = response.rows[0].filter(elem => typeof elem === 'number');
+  const result = [];
+  let index = 0;
+
+  while (index < events.length) {
     if (index === 0) {
       result.push({
-        event,
-        netCount: response.rows[0][i],
+        event: events[index],
+        netCount: netCounts[index],
         value: 100
       })
-      i++;
     } else {
       result.push({
-        event,
-        netCount: response.rows[0][i],
-        value: response.rows[0][i + index]
-      });
-      i = i + 2;
+        event: events[index],
+        netCount: netCounts[index],
+        value: calculatePercentage(netCounts[index], netCounts[0])
+      })
     }
-  });
-
+    index++;
+  }
   return result;
 };
 
@@ -282,3 +224,25 @@ export const getTitleWithSorter = (title, key, currentSorter, handleSorting) => 
     </div>
   );
 };
+
+
+export const generateEventsData = (response, queries, eventsMapper) => {
+  if (!response) {
+    return [];
+  }
+  const firstEventIdx = response.headers.findIndex(elem => elem === 'step_0');
+  const result = queries.map((q, idx) => {
+    const data = {};
+    response.rows.forEach(r => {
+      const name = r.slice(0, firstEventIdx).join(",");
+      const netCounts = r.filter(elem => typeof elem === 'number');
+      data[name] = netCounts[idx];
+    });
+    return {
+      index: idx + 1,
+      data,
+      name: eventsMapper[q]
+    }
+  });
+  return result;
+}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import {
@@ -25,7 +25,8 @@ function QueryComposer({
   activeProject,
   eventProperties,
   queryOptions,
-  setQueryOptions
+  setQueryOptions,
+  runFunnelQuery
 }) {
   const [analyticsSeqOpen, setAnalyticsSeqVisible] = useState(false);
   const [dateRangeOpen, setDateRangeVisibile] = useState(false);
@@ -56,7 +57,7 @@ function QueryComposer({
             event={event}
             queries={queries}
             eventChange={eventChange}
-            ></QueryBlock>
+          ></QueryBlock>
         </div>
       );
     });
@@ -65,8 +66,8 @@ function QueryComposer({
       blockList.push(
         <div key={'init'} className={styles.composer_body__query_block}>
           <QueryBlock queryType={queryType} index={queries.length + 1}
-          queries={queries} eventChange={eventChange}
-          groupBy={queryOptions.groupBy}
+            queries={queries} eventChange={eventChange}
+            groupBy={queryOptions.groupBy}
           ></QueryBlock>
         </div>
       );
@@ -182,6 +183,14 @@ function QueryComposer({
     setDateRangeVisibile(false);
   };
 
+  const handleRunQuery = useCallback(() => {
+    if (queryType === 'event') {
+      runQuery('0', true);
+    } else {
+      runFunnelQuery();
+    }
+  }, [runFunnelQuery, runQuery, queryType]);
+
   const footer = () => {
     if (queryType === 'event' && queries.length < 1) { return null; }
     if (queryType === 'funnel' && queries.length < 2) { return null; } else {
@@ -191,12 +200,12 @@ function QueryComposer({
             className="fa-event-popover"
             trigger="click"
             visible={dateRangeOpen}
-            content={<DateRangeSelector pickerVisible={dateRangeOpen} setDates={setDateRange}/>}
+            content={<DateRangeSelector pickerVisible={dateRangeOpen} setDates={setDateRange} />}
             onVisibleChange={(visible) => setDateRangeVisibile(visible)}
           >
             <Button><SVG name={'calendar'} extraClass={'mr-1'} />Last Week </Button>
           </Popover>
-          <Button type="primary" onClick={() => runQuery('0', true)}>Run Query</Button>
+          <Button type="primary" onClick={handleRunQuery}>Run Query</Button>
         </div>
       );
     }
