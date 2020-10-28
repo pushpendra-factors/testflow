@@ -185,7 +185,7 @@ function QueryComposer({
 
   const handleRunQuery = useCallback(() => {
     if (queryType === 'event') {
-      runQuery('0', true)
+      runQuery('0', true);
     } else {
       runFunnelQuery();
     }

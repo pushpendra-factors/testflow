@@ -19,7 +19,7 @@ function CoreQuery({ activeProject }) {
   const [appliedQueries, setAppliedQueries] = useState([]);
   const [appliedBreakdown, setAppliedBreakdown] = useState([]);
   const [resultState, setResultState] = useState(initialResultState);
-  const [funnelResult, updateFunnelResult] = useState(initialState)
+  const [funnelResult, updateFunnelResult] = useState(initialState);
   const [breakdownTypeData, setBreakdownTypeData] = useState({
     loading: false, error: false, all: null, any: null
   });
@@ -226,16 +226,15 @@ function CoreQuery({ activeProject }) {
       updateFunnelResult({ ...initialState, loading: true });
       const query = getFunnelQuery(groupBy, queries);
       const res = await getFinalData(activeProject.id, query);
-      if(res.status === 200) {
+      if (res.status === 200) {
         updateFunnelResult({ ...initialState, data: res.data });
       } else {
-        updateFunnelResult({ ...initialState, error: true });  
+        updateFunnelResult({ ...initialState, error: true });
       }
     } catch (err) {
       console.log(err);
       updateFunnelResult({ ...initialState, error: true });
     }
-
   }, [queries, updateAppliedBreakdown, activeProject.id, groupBy]);
 
   const title = () => {
@@ -322,7 +321,7 @@ function CoreQuery({ activeProject }) {
 
       ) : (
           <CoreQueryHome setQueryType={setQueryType} setDrawerVisible={setDrawerVisible} />
-        )}
+      )}
 
     </>
   );

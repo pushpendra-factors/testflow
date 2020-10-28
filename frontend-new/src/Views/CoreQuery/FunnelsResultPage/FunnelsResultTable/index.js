@@ -3,7 +3,9 @@ import styles from './index.module.scss';
 import { generateTableColumns, generateTableData } from '../utils';
 import DataTable from '../DataTable';
 
-function FunnelsResultTable({ chartData, breakdown, setGroups, queries, groups, maxAllowedVisibleProperties, eventsMapper }) {
+function FunnelsResultTable({
+  chartData, breakdown, setGroups, queries, groups, maxAllowedVisibleProperties, eventsMapper
+}) {
   const [sorter, setSorter] = useState({});
   const [searchText, setSearchText] = useState('');
 
@@ -15,23 +17,23 @@ function FunnelsResultTable({ chartData, breakdown, setGroups, queries, groups, 
   const tableData = generateTableData(chartData, breakdown, queries, groups, eventsMapper, sorter, searchText);
 
   const onSelectionChange = (selectedRowKeys) => {
-    if(!selectedRowKeys.length || selectedRowKeys.length > maxAllowedVisibleProperties) {
+    if (!selectedRowKeys.length || selectedRowKeys.length > maxAllowedVisibleProperties) {
       return false;
     }
     setGroups(currData => {
       return currData.map(c => {
         if (selectedRowKeys.indexOf(c.index) > -1) {
-          return { ...c, is_visible: true }
+          return { ...c, is_visible: true };
         } else {
-          return { ...c, is_visible: false }
+          return { ...c, is_visible: false };
         }
-      })
-    })
+      });
+    });
   };
 
   const selectedRowKeys = groups
     .filter(elem => elem.is_visible)
-    .map(elem => elem.index)
+    .map(elem => elem.index);
 
   const rowSelection = {
     selectedRowKeys,

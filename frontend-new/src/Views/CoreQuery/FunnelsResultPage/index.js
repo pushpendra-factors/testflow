@@ -7,7 +7,6 @@ import { Spin } from 'antd';
 function FunnelsResultPage({
   queries, setDrawerVisible, resultState, breakdown, eventsMapper, reverseEventsMapper
 }) {
-
   if (resultState.loading) {
     return (
       <div className="flex justify-center items-center w-full h-64">
@@ -32,7 +31,7 @@ function FunnelsResultPage({
         setDrawerVisible={setDrawerVisible}
         eventsMapper={eventsMapper}
       />
-    )
+    );
   } else {
     return (
       <GroupedChart
@@ -43,7 +42,7 @@ function FunnelsResultPage({
         eventsMapper={eventsMapper}
         reverseEventsMapper={reverseEventsMapper}
       />
-    )
+    );
   }
 }
 

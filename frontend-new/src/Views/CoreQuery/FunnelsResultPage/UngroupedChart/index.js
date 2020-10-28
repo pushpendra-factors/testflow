@@ -7,14 +7,15 @@ import EventsInfo from '../EventsInfo';
 import Chart from './Chart';
 import FunnelsResultTable from '../FunnelsResultTable';
 
-function UngroupedChart({ resultState, queries, setDrawerVisible, eventsMapper }) {
-
+function UngroupedChart({
+  resultState, queries, setDrawerVisible, eventsMapper
+}) {
   const [chartData, setChartData] = useState([]);
 
   useEffect(() => {
-    const formattedData = generateUngroupedChartsData(resultState.data, queries)
+    const formattedData = generateUngroupedChartsData(resultState.data, queries);
     setChartData(formattedData);
-  }, [queries, resultState.data])
+  }, [queries, resultState.data]);
 
   if (!chartData.length) {
     return null;
@@ -48,7 +49,7 @@ function UngroupedChart({ resultState, queries, setDrawerVisible, eventsMapper }
         </div>
       </div>
     </>
-  )
+  );
 }
 
 export default UngroupedChart;

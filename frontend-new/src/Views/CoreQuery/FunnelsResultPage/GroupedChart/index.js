@@ -7,21 +7,22 @@ import EventsInfo from '../EventsInfo';
 import Chart from './Chart';
 import FunnelsResultTable from '../FunnelsResultTable';
 
-function GroupedChart({ resultState, queries, setDrawerVisible, breakdown, eventsMapper, reverseEventsMapper }) {
-
+function GroupedChart({
+  resultState, queries, setDrawerVisible, breakdown, eventsMapper, reverseEventsMapper
+}) {
   const [groups, setGroups] = useState([]);
   const maxAllowedVisibleProperties = 5;
 
   useEffect(() => {
     const formattedGroups = generateGroups(resultState.data, maxAllowedVisibleProperties);
     setGroups(formattedGroups);
-  }, [queries, resultState.data])
+  }, [queries, resultState.data]);
 
   if (!groups.length) {
     return null;
   }
 
-  const chartData = generateGroupedChartsData(resultState.data, queries, groups, eventsMapper)
+  const chartData = generateGroupedChartsData(resultState.data, queries, groups, eventsMapper);
   const eventsData = generateEventsData(resultState.data, queries, eventsMapper);
 
   return (
@@ -58,7 +59,7 @@ function GroupedChart({ resultState, queries, setDrawerVisible, breakdown, event
         </div>
       </div>
     </>
-  )
+  );
 }
 
 export default GroupedChart;

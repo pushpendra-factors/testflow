@@ -70,7 +70,7 @@ export const getFunnelQuery = (groupBy, queries) => {
   query.ec = 'any_given_event';
   query.tz = 'Asia/Kolkata';
   return query;
-}
+};
 
 export const getQuery = (activeTab, queryType, groupBy, queries, breakdownType = 'each') => {
   const query = {};
