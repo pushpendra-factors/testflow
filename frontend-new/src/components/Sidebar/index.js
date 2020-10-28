@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Layout, Row, Avatar, Popover, Button, Modal, Col, notification
 } from 'antd';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useHistory } from 'react-router-dom';
 import { SVG, Text } from 'factorsComponents';
 import ModalLib from '../../Views/componentsLib/ModalLib';
 import UserSettings from '../../Views/Settings/UserSettings';
@@ -22,6 +22,7 @@ function Sidebar(props) {
   const [selectedProject, setselectedProject] = useState(null);
   const [searchProjectName, setsearchProjectName] = useState('');
   const [CreateNewProjectModal, setCreateNewProjectModal] = useState(false);
+  const history = useHistory();
 
   const searchProject = (e) => {
     setsearchProjectName(e.target.value);
@@ -81,6 +82,15 @@ function Sidebar(props) {
 
   const handleCancel = () => {
     setVisible(false);
+  };
+
+  const switchProject = () => {
+    props.setActiveProject(selectedProject);
+    history.push('/');
+    notification.success({
+      message: 'Project Switched!',
+      description: `You are currently viewing data from ${selectedProject.name}`
+    });
   };
 
   useEffect(() => {
@@ -169,15 +179,10 @@ function Sidebar(props) {
         className={'fa-modal--regular'}
         okText={'Switch'}
         onOk={() => {
-          props.setActiveProject(selectedProject);
           setShowPopOver(false);
           setchangeProjectModal(false);
           setselectedProject(null);
-          notification.success({
-            message: 'Project Switched!',
-            description: `You are currently viewing data from ${selectedProject.name}`
-
-          });
+          switchProject();
         }}
         centered={true}
         >
