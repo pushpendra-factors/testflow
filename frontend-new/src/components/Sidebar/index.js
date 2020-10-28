@@ -88,7 +88,7 @@ function Sidebar(props) {
     props.setActiveProject(selectedProject);
     history.push('/');
     notification.success({
-      message: 'Project Switched!',
+      message: 'Project Changed!',
       description: `You are currently viewing data from ${selectedProject.name}`
     });
   };

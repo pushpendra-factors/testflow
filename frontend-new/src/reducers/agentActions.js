@@ -1,5 +1,5 @@
 /* eslint-disable */
-import { get, post } from '../utils/request';
+import { get, post, put } from '../utils/request';
 var host = BUILD_CONFIG.backend_host;
 host = (host[host.length - 1] === '/') ? host : host + '/';
 
@@ -295,9 +295,16 @@ export function updateAgentPassword(params){
     return new Promise((resolve, reject)=> {
       put(dispatch, host + "agents/updatepassword", params)
       .then((response) => {
-        dispatch({type:"UPDATE_AGENT_PASSWORD_FULFILLED", 
-            payload: response.data});
-          resolve(response);
+        if(response.ok){
+          dispatch({type:"UPDATE_AGENT_PASSWORD_FULFILLED", 
+              payload: response.data});
+              resolve(response); 
+        }
+        else{
+          dispatch({type:"UPDATE_AGENT_PASSWORD_REJECTED", 
+            payload: 'Failed to update agent password'});
+            reject(response.data); 
+        }
       })
       .catch((err) => {
         dispatch({type:"UPDATE_AGENT_PASSWORD_REJECTED", 

@@ -27,7 +27,7 @@ function Dashboard() {
                 title={null}
                 visible={addDashboardModal}
                 centered={true}
-                zIndex={1015}
+                zIndex={1005}
                 width={700}
                 onCancel={() => setaddDashboardModal(false)}
                 className={'fa-modal--regular p-4'}

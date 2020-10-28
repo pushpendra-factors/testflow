@@ -162,7 +162,7 @@ function ProjectTabs({ setaddDashboardModal }) {
         visible={widgetModal}
         footer={null}
         centered={false}
-        zIndex={1015}
+        zIndex={1005}
         mask={false}
         onCancel={() => setwidgetModal(false)}
         // closable={false}
