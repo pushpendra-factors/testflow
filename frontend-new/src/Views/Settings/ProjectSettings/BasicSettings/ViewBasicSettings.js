@@ -1,21 +1,38 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Row, Col, Button, Avatar, Skeleton
+  Row, Col, Button, Avatar, Skeleton, Tooltip
 } from 'antd';
 import { Text } from 'factorsComponents';
 import { UserOutlined } from '@ant-design/icons';
 import { connect } from 'react-redux';
-import { fetchAgentInfo } from 'Reducers/agentActions';
+import { fetchProjectAgents, fetchAgentInfo } from 'Reducers/agentActions';
 
-function ViewBasicSettings({ activeProject, setEditMode, fetchAgentInfo }) {
+function ViewBasicSettings({
+  activeProject,
+  setEditMode,
+  fetchProjectAgents,
+  fetchAgentInfo,
+  agents,
+  currentAgent
+}) {
   const [dataLoading, setDataLoading] = useState(true);
-  // const [activeProject, setActiveProject] = useState(null);
+  const [enableEdit, setEnableEdit] = useState(false);
 
   useEffect(() => {
-    fetchAgentInfo().then(() => {
-      setDataLoading(false);
+    const getData = async () => {
+      await fetchAgentInfo();
+      await fetchProjectAgents(activeProject.id);
+    };
+    getData();
+    agents && currentAgent && agents.map((agent) => {
+      if (agent.uuid === currentAgent.uuid) {
+        if (agent.role === 1) {
+          setEnableEdit(true);
+        }
+      }
     });
-  }, [activeProject]);
+    setDataLoading(false);
+  }, [activeProject, agents]);
 
   return (
     <>
@@ -26,7 +43,11 @@ function ViewBasicSettings({ activeProject, setEditMode, fetchAgentInfo }) {
           </Col>
           <Col span={12}>
             <div className={'flex justify-end'}>
-              <Button size={'large'} disabled={dataLoading} onClick={() => setEditMode(true)}>Edit Details</Button>
+              {
+                <Tooltip placement="top" trigger={'hover'} title={enableEdit ? 'Only Admin can edit' : null}>
+                  <Button size={'large'} disabled={dataLoading || enableEdit} onClick={() => setEditMode(true)}>Edit Details</Button>
+                </Tooltip>
+              }
             </div>
           </Col>
         </Row>
@@ -82,7 +103,9 @@ function ViewBasicSettings({ activeProject, setEditMode, fetchAgentInfo }) {
 }
 
 const mapStateToProps = (state) => ({
-  activeProject: state.global.active_project
+  activeProject: state.global.active_project,
+  agents: state.agent.agents,
+  currentAgent: state.agent.agent_details
 });
 
-export default connect(mapStateToProps, { fetchAgentInfo })(ViewBasicSettings);
+export default connect(mapStateToProps, { fetchProjectAgents, fetchAgentInfo })(ViewBasicSettings);

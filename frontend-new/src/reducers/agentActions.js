@@ -31,6 +31,20 @@ const agentsSample = [
       "invited_by": "6e3803e0-7d63-429f-ba5c-358c6e7d215f",
       "created_at": "2020-10-28T10:51:31.958635+05:30",
       "updated_at": "2020-10-28T10:51:31.958635+05:30"
+  },
+  {
+      "uuid": "765a333b-73c0-49a5-8d14-5afc4d1dd7eb",
+      "email": "baliga@factors.ai",
+      "first_name": "Vishnu",
+      "last_name": "Baliga",
+      "is_email_verified": false,
+      "last_logged_in": null,
+      "phone": "",
+      "project_id": 14128,
+      "role": 2,
+      "invited_by": "6e3803e0-7d63-429f-ba5c-358c6e7d215f",
+      "created_at": "2020-10-28T10:51:31.958635+05:30",
+      "updated_at": "2020-10-28T10:51:31.958635+05:30"
   }
 ];
 
@@ -207,21 +221,25 @@ export function fetchAgentInfo(){
 
 export function fetchProjectAgents(projectId){
   return function(dispatch){
-    return get(dispatch, host + "projects/" + projectId + "/agents")
-      .then((r) => {
-        // dispatch({type: "FETCH_PROJECT_AGENTS_FULFILLED", payload: r.data });
-        dispatch({type: "FETCH_PROJECT_AGENTS_FULFILLED", payload: agentsSample });
-      })
-      .catch((r) => {
-        if (r.status) {
-          // use this pattern for error handling. 
-          // decided to use redux store.
-          dispatch({type: "FETCH_PROJECT_AGENTS_REJECTED", payload: r.data, code: r.status });        
-        } else {
-          // network error. Idea: Use a global error component for this.
-          console.log("network error");
-        }
-      });
+    return new Promise((resolve,reject) => {
+       get(dispatch, host + "projects/" + projectId + "/agents")
+        .then((r) => {
+          // dispatch({type: "FETCH_PROJECT_AGENTS_FULFILLED", payload: r.data });
+          dispatch({type: "FETCH_PROJECT_AGENTS_FULFILLED", payload: agentsSample });
+          resolve(r);
+        })
+        .catch((r) => {
+          if (r.status) {
+            // use this pattern for error handling. 
+            // decided to use redux store.
+            dispatch({type: "FETCH_PROJECT_AGENTS_REJECTED", payload: r.data, code: r.status });        
+          } else {
+            // network error. Idea: Use a global error component for this.
+            console.log("network error");
+          }
+          reject(r);
+        }); 
+    })
   }
 }
 
