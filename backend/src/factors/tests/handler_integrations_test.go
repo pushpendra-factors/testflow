@@ -87,7 +87,7 @@ func TestIntSegmentHandler(t *testing.T) {
 	assert.NotNil(t, jsonResponseMap1["type"])
 	assert.Equal(t, "random_type", jsonResponseMap1["type"])
 	assert.Nil(t, jsonResponseMap1["event_id"])
-	assert.Nil(t, jsonResponseMap1["user_id"])
+	assert.NotNil(t, jsonResponseMap1["user_id"]) // Always return user_id.
 
 	// Without both anonymousId and userId
 	w = ServePostRequestWithHeaders(r, uri, []byte(`{"type": "track"}`),
@@ -888,15 +888,15 @@ func TestIntSegmentHandlerWithSession(t *testing.T) {
 		var jsonResponseMap2 map[string]interface{}
 		json.Unmarshal(jsonResponse2, &jsonResponseMap2)
 		assert.Nil(t, jsonResponseMap2["error"])
-		assert.NotNil(t, jsonResponseMap2["event_id"])
+		assert.NotEmpty(t, jsonResponseMap2["event_id"])
+		assert.NotEmpty(t, jsonResponseMap2["user_id"])
+
 		sessionEventName, errCode := M.GetEventName(U.EVENT_NAME_SESSION, project.ID)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.NotNil(t, sessionEventName)
-		segmentUser, errCode := M.CreateOrGetSegmentUser(project.ID, "80444c7e-1580-4d3c-a77a-2f3427ed7d990",
-			"xxx123", time.Now().Unix())
-		assert.NotNil(t, segmentUser)
-		assert.Equal(t, http.StatusOK, errCode)
-		userSessionEvents, errCode := M.GetUserEventsByEventNameId(project.ID, segmentUser.ID, sessionEventName.ID)
+
+		userSessionEvents, errCode := M.GetUserEventsByEventNameId(project.ID,
+			jsonResponseMap2["user_id"].(string), sessionEventName.ID)
 		assert.Equal(t, http.StatusFound, errCode)
 		assert.True(t, len(userSessionEvents) == 1)
 

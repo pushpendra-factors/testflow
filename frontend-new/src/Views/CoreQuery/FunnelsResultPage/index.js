@@ -1,72 +1,49 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import GroupedChart from './GroupedChart';
-import {
-  generateGroupedChartsData, generateDummyData, generateGroups, generateUngroupedChartsData
-} from './utils';
-import FiltersInfo from './FiltersInfo';
+// import FiltersInfo from './FiltersInfo';
 import UngroupedChart from './UngroupedChart';
-import Header from '../../AppLayout/Header';
-import EventsInfo from './EventsInfo';
-import { Button } from 'antd';
-import { PoweroffOutlined } from '@ant-design/icons';
-import FunnelsResultTable from './FunnelsResultTable';
+import { Spin } from 'antd';
 
 function FunnelsResultPage({
-  queries, setDrawerVisible
+  queries, setDrawerVisible, resultState, breakdown, eventsMapper, reverseEventsMapper
 }) {
-  const [eventsData, setEventsData] = useState([]);
-  const [groups, setGroups] = useState([]);
-  const [grouping, setGrouping] = useState(false);
-
-  useEffect(() => {
-    const dummyData = generateDummyData(queries);
-    setEventsData(dummyData);
-    setGroups(generateGroups(dummyData));
-  }, [queries]);
-
-  const groupedChartData = generateGroupedChartsData(eventsData, groups);
-  const ungroupedChartsData = generateUngroupedChartsData(queries);
-
-  if (!eventsData.length) {
-    return null;
+  if (resultState.loading) {
+    return (
+      <div className="flex justify-center items-center w-full h-64">
+        <Spin size="large" />
+      </div>
+    );
   }
 
-  return (
-    <>
-      <Header>
-        <div className="flex py-4 justify-end">
-          <Button size={'large'} type="primary" icon={<PoweroffOutlined />} >Save query as</Button>
-        </div>
-        <div className="py-4">
-          <EventsInfo setDrawerVisible={setDrawerVisible} queries={queries} />
-        </div>
-        <div className="pb-2 flex justify-end">
-          <FiltersInfo grouping={grouping} setGrouping={setGrouping} setDrawerVisible={setDrawerVisible} />
-        </div>
-      </Header>
-      <div className="mt-40 mb-8 fa-container">
-        {grouping ? (
-          <GroupedChart
-            chartData={groupedChartData}
-            groups={groups.filter(elem => elem.is_visible)}
-            eventsData={eventsData}
-          />
-        ) : (
-            <UngroupedChart
-              chartData={ungroupedChartsData}
-            />
-        )}
-
-        <div className="mt-8">
-          <FunnelsResultTable
-            eventsData={eventsData}
-            groups={groups}
-            setGroups={setGroups}
-          />
-        </div>
+  if (resultState.error) {
+    return (
+      <div className="flex justify-center items-center w-full h-64">
+        Something went wrong!
       </div>
-    </>
-  );
+    );
+  }
+
+  if (!breakdown.length) {
+    return (
+      <UngroupedChart
+        resultState={resultState}
+        queries={queries}
+        setDrawerVisible={setDrawerVisible}
+        eventsMapper={eventsMapper}
+      />
+    );
+  } else {
+    return (
+      <GroupedChart
+        queries={queries}
+        setDrawerVisible={setDrawerVisible}
+        resultState={resultState}
+        breakdown={breakdown}
+        eventsMapper={eventsMapper}
+        reverseEventsMapper={reverseEventsMapper}
+      />
+    );
+  }
 }
 
 export default FunnelsResultPage;

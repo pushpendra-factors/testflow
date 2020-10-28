@@ -52,10 +52,13 @@ type TrackResponse struct {
 type IdentifyPayload struct {
 	UserId string `json:"user_id"`
 	// if create_user is true, create user with given id.
-	CreateUser     bool   `json:"create_user"`
 	CustomerUserId string `json:"c_uid"`
-	JoinTimestamp  int64  `json:"join_timestamp"`
 	Timestamp      int64  `json:"timestamp"`
+
+	CreateUser     bool   `json:"create_user"`
+	// join_timestamp to use at the time of creating user,
+	// if not provided, request timestamp will be used.
+	JoinTimestamp  int64  `json:"join_timestamp"`
 }
 
 // AMPIdentifyPayload holds required fields for AMP identification
@@ -736,6 +739,12 @@ func Identify(projectId uint64, request *IdentifyPayload) (int, *IdentifyRespons
 		request.Timestamp = time.Now().Unix()
 	}
 
+	// if join_timestamp is not provided, use request
+	// timestamp as user's join_timestamp during creation.
+	if request.JoinTimestamp == 0 {
+		request.JoinTimestamp = request.Timestamp
+	}
+
 	logCtx := log.WithFields(log.Fields{"project_id": projectId,
 		"user_id": request.UserId, "customer_user_id": request.CustomerUserId})
 
@@ -867,8 +876,7 @@ func Identify(projectId uint64, request *IdentifyPayload) (int, *IdentifyRespons
 	}
 
 	// Happy path. Maps customer_user to an user.
-	updateUser := &M.User{CustomerUserId: request.CustomerUserId,
-		JoinTimestamp: request.JoinTimestamp}
+	updateUser := &M.User{CustomerUserId: request.CustomerUserId}
 	if userProperties != nil {
 		updateUser.Properties = *userProperties
 	}

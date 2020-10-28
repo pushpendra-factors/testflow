@@ -108,14 +108,14 @@ func getContactProperties(document *M.HubspotDocument) (map[string]interface{}, 
 	return properties, nil
 }
 
-func getCustomerUserIdFromProperties(properties map[string]interface{}) string {
+func getCustomerUserIdFromProperties(projectID uint64, properties map[string]interface{}) string {
 	// identify using email if exist on properties.
 	emailInt, emailExists := properties[getPropertyKeyByType(
 		M.HubspotDocumentTypeNameContact, "email")]
 	if emailExists || emailInt != nil {
 		email, ok := emailInt.(string)
 		if ok && email != "" {
-			return email
+			return U.GetEmailLowerCase(email)
 		}
 	}
 
@@ -125,7 +125,10 @@ func getCustomerUserIdFromProperties(properties map[string]interface{}) string {
 	if phoneExists || phoneInt != nil {
 		phone := U.GetPropertyValueAsString(phoneInt)
 		if phone != "" {
-			return phone
+			identifiedPhone, _ := M.GetUserIdentificationPhoneNumber(projectID, phone)
+			if identifiedPhone != "" {
+				return identifiedPhone
+			}
 		}
 	}
 
@@ -143,7 +146,10 @@ func getCustomerUserIdFromProperties(properties map[string]interface{}) string {
 		if phoneInt != nil {
 			phone := U.GetPropertyValueAsString(phoneInt)
 			if phone != "" {
-				return phone
+				identifiedPhone, _ := M.GetUserIdentificationPhoneNumber(projectID, phone)
+				if identifiedPhone != "" {
+					return identifiedPhone
+				}
 			}
 		}
 	}
@@ -227,7 +233,7 @@ func syncContact(projectId uint64, document *M.HubspotDocument) int {
 		return http.StatusInternalServerError
 	}
 
-	customerUserId := getCustomerUserIdFromProperties(properties)
+	customerUserId := getCustomerUserIdFromProperties(projectId, properties)
 	if customerUserId != "" {
 		status, _ := SDK.Identify(projectId, &SDK.IdentifyPayload{
 			UserId: userId, CustomerUserId: customerUserId})

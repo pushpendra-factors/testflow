@@ -977,7 +977,19 @@ func GetValidatedEventProperties(properties *PropertiesMap) *PropertiesMap {
 				propertyKey = k
 			}
 
-			validatedProperties[propertyKey] = v
+			if propertyKey == UP_EMAIL {
+				email := GetEmailLowerCase(v)
+				if email != "" {
+					validatedProperties[propertyKey] = email
+				}
+			} else if propertyKey == UP_PHONE {
+				sPhoneNo := SanitizePhoneNumber(v)
+				if sPhoneNo != "" {
+					validatedProperties[propertyKey] = sPhoneNo
+				}
+			} else {
+				validatedProperties[propertyKey] = v
+			}
 		}
 	}
 	return &validatedProperties

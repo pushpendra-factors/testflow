@@ -6,9 +6,9 @@ import CoreQueryHome from '../CoreQueryHome';
 import { Drawer, Button } from 'antd';
 import { SVG, Text } from '../../components/factorsComponents';
 import EventsAnalytics from '../EventsAnalytics';
-import { runQuery as runQueryService } from '../../reducers/coreQuery/services';
+import { runQuery as runQueryService, getFinalData } from '../../reducers/coreQuery/services';
 import {
-  initialResultState, calculateFrequencyData, calculateActiveUsersData, hasApiFailed, formatApiData, getQuery
+  initialResultState, calculateFrequencyData, calculateActiveUsersData, hasApiFailed, formatApiData, getQuery, initialState, getFunnelQuery
 } from './utils';
 
 function CoreQuery({ activeProject }) {
@@ -19,6 +19,7 @@ function CoreQuery({ activeProject }) {
   const [appliedQueries, setAppliedQueries] = useState([]);
   const [appliedBreakdown, setAppliedBreakdown] = useState([]);
   const [resultState, setResultState] = useState(initialResultState);
+  const [funnelResult, updateFunnelResult] = useState(initialState);
   const [breakdownTypeData, setBreakdownTypeData] = useState({
     loading: false, error: false, all: null, any: null
   });
@@ -164,10 +165,9 @@ function CoreQuery({ activeProject }) {
         return false;
       }
     } else {
-      const obj = { loading: false, error: false, data: null };
-      updateResultState('1', obj);
-      updateResultState('2', obj);
-      updateResultState('3', obj);
+      updateResultState('1', initialState);
+      updateResultState('2', initialState);
+      updateResultState('3', initialState);
       setAppliedQueries(queries.map(elem => elem.label));
       updateAppliedBreakdown();
       setBreakdownTypeData({
@@ -217,6 +217,26 @@ function CoreQuery({ activeProject }) {
     }
   }, [activeProject.id, queries, groupBy, queryType, breakdownTypeData]);
 
+  const runFunnelQuery = useCallback(async () => {
+    try {
+      closeDrawer();
+      setShowResult(true);
+      setAppliedQueries(queries.map(elem => elem.label));
+      updateAppliedBreakdown();
+      updateFunnelResult({ ...initialState, loading: true });
+      const query = getFunnelQuery(groupBy, queries);
+      const res = await getFinalData(activeProject.id, query);
+      if (res.status === 200) {
+        updateFunnelResult({ ...initialState, data: res.data });
+      } else {
+        updateFunnelResult({ ...initialState, error: true });
+      }
+    } catch (err) {
+      console.log(err);
+      updateFunnelResult({ ...initialState, error: true });
+    }
+  }, [queries, updateAppliedBreakdown, activeProject.id, groupBy]);
+
   const title = () => {
     return (
       <div className={'flex justify-between items-center'}>
@@ -261,9 +281,11 @@ function CoreQuery({ activeProject }) {
     result = (
       <FunnelsResultPage
         setDrawerVisible={setDrawerVisible}
-        queries={['Add to Wishlist', 'Paid', 'Checkout']}
+        queries={appliedQueries}
         eventsMapper={eventsMapper}
         reverseEventsMapper={reverseEventsMapper}
+        resultState={funnelResult}
+        breakdown={appliedBreakdown}
       />
     );
   }
@@ -288,6 +310,7 @@ function CoreQuery({ activeProject }) {
           queryType={queryType}
           queryOptions={queryOptions}
           setQueryOptions={setExtraOptions}
+          runFunnelQuery={runFunnelQuery}
         />
       </Drawer>
 

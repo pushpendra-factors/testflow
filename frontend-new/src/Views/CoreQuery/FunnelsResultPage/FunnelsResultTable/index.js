@@ -3,7 +3,9 @@ import styles from './index.module.scss';
 import { generateTableColumns, generateTableData } from '../utils';
 import DataTable from '../DataTable';
 
-function FunnelsResultTable({ eventsData, groups, setGroups }) {
+function FunnelsResultTable({
+  chartData, breakdown, setGroups, queries, groups, maxAllowedVisibleProperties, eventsMapper
+}) {
   const [sorter, setSorter] = useState({});
   const [searchText, setSearchText] = useState('');
 
@@ -11,24 +13,27 @@ function FunnelsResultTable({ eventsData, groups, setGroups }) {
     setSorter(sorter);
   }, []);
 
-  const columns = generateTableColumns(eventsData, sorter, handleSorting);
-  const tableData = generateTableData(eventsData, groups, sorter, searchText);
+  const columns = generateTableColumns(breakdown, queries, eventsMapper, sorter, handleSorting);
+  const tableData = generateTableData(chartData, breakdown, queries, groups, eventsMapper, sorter, searchText);
 
-  const onSelectionChange = (selectedRowKeys, selectedRows) => {
-    const selectedGroups = selectedRows.map(elem => elem.name);
-    setGroups(currentData => {
-      return currentData.map(elem => {
-        return { ...elem, is_visible: selectedGroups.indexOf(elem.name) >= 0 };
+  const onSelectionChange = (selectedRowKeys) => {
+    if (!selectedRowKeys.length || selectedRowKeys.length > maxAllowedVisibleProperties) {
+      return false;
+    }
+    setGroups(currData => {
+      return currData.map(c => {
+        if (selectedRowKeys.indexOf(c.index) > -1) {
+          return { ...c, is_visible: true };
+        } else {
+          return { ...c, is_visible: false };
+        }
       });
     });
   };
 
   const selectedRowKeys = groups
     .filter(elem => elem.is_visible)
-    .map(elem => elem.name)
-    .map(elem => {
-      return tableData.findIndex(d => d.name === elem);
-    });
+    .map(elem => elem.index);
 
   const rowSelection = {
     selectedRowKeys,
@@ -36,14 +41,14 @@ function FunnelsResultTable({ eventsData, groups, setGroups }) {
   };
 
   return (
-        <DataTable
-            tableData={tableData}
-            searchText={searchText}
-            setSearchText={setSearchText}
-            columns={columns}
-            rowSelection={rowSelection}
-            className={styles.funnelResultsTable}
-        />
+    <DataTable
+      tableData={tableData}
+      searchText={searchText}
+      setSearchText={setSearchText}
+      columns={columns}
+      rowSelection={breakdown.length ? rowSelection : null}
+      className={styles.funnelResultsTable}
+    />
   );
 }
 
