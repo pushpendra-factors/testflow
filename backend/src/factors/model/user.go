@@ -829,3 +829,18 @@ func getRecentUserPropertyKeysCacheKey(projectId uint64) (*cacheRedis.Key, error
 	suffix := "user_properites:keys"
 	return cacheRedis.NewKey(projectId, prefix, suffix)
 }
+
+// GetUserIdentificationPhoneNumber tries various patterns of phone number if exist in db and return the phone no based on priority
+func GetUserIdentificationPhoneNumber(projectID uint64, phoneNo string) (string, string) {
+	pPhoneNo := U.GetPossiblePhoneNumber(phoneNo)
+	existingPhoneNo, errCode := GetExistingCustomerUserID(projectID, pPhoneNo)
+	if errCode == http.StatusFound {
+		for i := range pPhoneNo {
+			if userID, exist := existingPhoneNo[pPhoneNo[i]]; exist {
+				return pPhoneNo[i], userID
+			}
+		}
+	}
+
+	return phoneNo, ""
+}

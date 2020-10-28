@@ -95,8 +95,18 @@ func IsNumber(num string) bool {
 }
 
 func IsEmail(str string) bool {
-	regexpEmail := regexp.MustCompile(`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,4}$`)
+	regexpEmail := regexp.MustCompile(`^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,4}$`)
 	return regexpEmail.MatchString(str)
+}
+
+// GetEmailLowerCase returns email in lower case for consistency
+func GetEmailLowerCase(emailI interface{}) string {
+	email := GetPropertyValueAsString(emailI)
+	if !IsEmail(email) {
+		return ""
+	}
+
+	return strings.ToLower(email)
 }
 
 func GetNumberFromAnyString(str string) float64 {
@@ -572,6 +582,8 @@ func GetPossiblePhoneNumber(phoneNo string) []string {
 			possiblePhoneNo = append(possiblePhoneNo, phonePattern)
 			phonePattern = fmt.Sprintf("(%s)-%s-%s", nationalPhoneNo[:3], nationalPhoneNo[3:6], nationalPhoneNo[6:])
 			possiblePhoneNo = append(possiblePhoneNo, phonePattern)
+			phonePattern = fmt.Sprintf("(%s) %s %s", nationalPhoneNo[:3], nationalPhoneNo[3:6], nationalPhoneNo[6:])
+			possiblePhoneNo = append(possiblePhoneNo, phonePattern)
 		}
 	}
 
@@ -599,11 +611,11 @@ func GetPossiblePhoneNumber(phoneNo string) []string {
 		//911234567890
 		nationalFormat := libphonenumber.Format(num, libphonenumber.E164)[1:]
 		possiblePhoneNo = append(possiblePhoneNo, nationalFormat)
-		possiblePhoneNo = append(possiblePhoneNo, "0"+nationalFormat)
 
-		//National format 01234 567 890
+		//National format 1234 567 890
 		nationalNum := libphonenumber.GetNationalSignificantNumber(num)
 		possiblePhoneNo = append(possiblePhoneNo, nationalNum)
+		possiblePhoneNo = append(possiblePhoneNo, "0"+nationalNum)
 		possiblePhoneNo = append(possiblePhoneNo, "+"+nationalNum)
 
 		standardPhone := libphonenumber.Format(num, libphonenumber.E164)
@@ -633,4 +645,19 @@ func BytesToReadableFormat(bytes int64) string {
 	}
 	return fmt.Sprintf("%.1f %ciB",
 		float64(bytes)/float64(div), "KMGTPE"[exp])
+}
+
+// SanitizePhoneNumber currently removes only leading 0 from phone number. New functionalty will added as when required
+func SanitizePhoneNumber(v interface{}) string {
+	phoneNo := GetPropertyValueAsString(v)
+
+	if phoneNo == "" || len(phoneNo) < 4 {
+		return ""
+	}
+
+	if phoneNo[0] == '0' {
+		return phoneNo[1:]
+	}
+
+	return phoneNo
 }
