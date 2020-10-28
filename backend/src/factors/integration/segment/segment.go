@@ -344,6 +344,28 @@ func ReceiveEvent(token string, event *Event) (int, *EventResponse) {
 		return errCode, response
 	}
 	isNewUser := errCode == http.StatusCreated
+	userID := user.ID
+
+	// Always try to identify when the event.UserId is available.
+	if user.CustomerUserId == "" && event.UserId != "" {
+		status, identifyResponse := SDK.Identify(project.ID,
+			&SDK.IdentifyPayload{
+				UserId:         user.ID,
+				CustomerUserId: event.UserId,
+				Timestamp:      requestTimestamp,
+			})
+		// Log and continue to track, if identification fails.
+		if status != http.StatusOK {
+			logCtx.WithField("customer_user_id", event.UserId).
+				Error("Failed to identify segment user.")
+		}
+
+		// overwrite user_id, if new_user returned on identify.
+		if identifyResponse.UserId != "" && identifyResponse.UserId != user.ID {
+			userID = identifyResponse.UserId
+		}
+	}
+	response.UserId = userID
 
 	switch event.Type {
 	case "track":
@@ -366,7 +388,7 @@ func ReceiveEvent(token string, event *Event) (int, *EventResponse) {
 			Name:            event.TrackName,
 			CustomerEventId: event.MessageID,
 			IsNewUser:       isNewUser,
-			UserId:          user.ID,
+			UserId:          userID,
 			Auto:            false,
 			EventProperties: eventProperties,
 			UserProperties:  userProperties,
@@ -411,7 +433,7 @@ func ReceiveEvent(token string, event *Event) (int, *EventResponse) {
 		name := U.GetURLHostAndPath(parsedPageURL)
 		request := &SDK.TrackPayload{
 			Name:            name,
-			UserId:          user.ID,
+			UserId:          userID,
 			IsNewUser:       isNewUser,
 			Auto:            true,
 			CustomerEventId: event.MessageID,
@@ -452,7 +474,7 @@ func ReceiveEvent(token string, event *Event) (int, *EventResponse) {
 
 		request := &SDK.TrackPayload{
 			Name:            event.ScreenName,
-			UserId:          user.ID,
+			UserId:          userID,
 			IsNewUser:       isNewUser,
 			Auto:            false,
 			CustomerEventId: event.MessageID,
@@ -480,9 +502,7 @@ func ReceiveEvent(token string, event *Event) (int, *EventResponse) {
 	case "identify":
 		// Identification happens on every call before type switch.
 		// Updates the user properties with the traits, here.
-		response.UserId = user.ID
-
-		_, status := M.UpdateUserProperties(project.ID, user.ID, &event.Traits, requestTimestamp)
+		_, status := M.UpdateUserProperties(project.ID, userID, &event.Traits, requestTimestamp)
 		if status != http.StatusAccepted && status != http.StatusNotModified {
 			logCtx.WithFields(log.Fields{"user_properties": event.Traits,
 				"error_code": status}).Error("Segment event failure. Updating user_properties failed.")
@@ -497,7 +517,6 @@ func ReceiveEvent(token string, event *Event) (int, *EventResponse) {
 		return http.StatusBadRequest, response
 	}
 
-	response.UserId = user.ID
 	response.Message = "Successfully received event"
 	return http.StatusOK, response
 }

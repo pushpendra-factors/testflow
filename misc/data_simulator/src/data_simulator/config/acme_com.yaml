@@ -33,7 +33,13 @@ user_segments:
             www.acme.com/company: 0.0370
             www.acme.com/schedule-a-demo: RULE13
             Subscribe to Newsletter Form: 0.0113
-            Logout: 0.3462
+            www.acme.com/resources/guides: 0.04
+            www.acme.com/resources/guides/subscription-billing-and-management-guide: 0.04
+            www.acme.com/resources/downloads/infographics/saas-revenue-benchmark-first-100-customers.pdf: 0.04
+            www.acme.com/customers/New World: 0.04
+            www.acme.com/customers/Old World: 0.04
+            www.acme.com/webinars: 0.04
+            Logout: 0.1062
           www.acme.com/pricing: 
             www.acme.com: 0.113
             www.acme.com/product: 0.1361
@@ -152,7 +158,8 @@ user_segments:
             www.acme.com/company: 0.0478
             www.acme.com/schedule-a-demo: 0.0653
             Subscribe to Newsletter Form: 0.0693
-            Logout: 0.3283
+            Schedule A Demo Form: 0.01
+            Logout: 0.3183
           www.acme.com/integrations:
             www.acme.com: 0.0093
             www.acme.com/pricing: 0.1071
@@ -245,6 +252,28 @@ user_segments:
             Logout: 1.0
           Deal Lost:
             Logout: 1.0
+          www.acme.com/resources/guides:
+            Schedule A Demo Form: 0.11
+            Logout: 0.89
+          www.acme.com/resources/guides/subscription-billing-and-management-guide: 
+            Schedule A Demo Form: 0.06
+            Logout: 0.94
+          www.acme.com/resources/downloads/infographics/saas-revenue-benchmark-first-100-customers.pdf:
+            Schedule A Demo Form: 0.03
+            Logout: 0.97
+          www.acme.com/customers/New World:
+            Schedule A Demo Form: 0.04
+            Logout: 0.96
+          www.acme.com/customers/Old World:
+            Schedule A Demo Form: 0.12
+            Logout: 0.88
+          www.acme.com/webinars:
+            Schedule A Demo Form: 0.02
+            webinars.acme.com/analytics after-covid: 0.5
+            Logout: 0.48
+          webinars.acme.com/analytics after-covid: 
+            Schedule A Demo Form: 0.04
+            Logout: 0.96
         seed_events:
           Subscribe to Newsletter Form: 0.0001
           www.acme.com: 0.7

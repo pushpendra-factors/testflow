@@ -54,6 +54,7 @@ const (
 	IncrCronSalesforceEnrichSuccess       = "cron_salesforce_enrich_success"
 	IncrCronYourstoryAddPropertiesSuccess = "cron_yourstory_add_properties_success"
 
+	// Metrics related to user properties merge. TODO(prateek): Can be removed later since not actively tracked.
 	IncrUserPropertiesMergeMoreThan10    = "user_properties_merge_more_than_10"
 	IncrUserPropertiesMergeCount         = "user_properties_merge_count"
 	IncrUserPropertiesMergeSanitizeCount = "user_properties_merge_sanitize_count"

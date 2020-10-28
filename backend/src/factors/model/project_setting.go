@@ -160,6 +160,7 @@ var (
 	designcafeOpportunityAllowedFields = map[string]bool{
 		"Id":                             true, // require for identification purpose
 		"Name":                           true,
+		"StageName":                      true,
 		"Amount":                         true,
 		"ExpectedRevenue":                true,
 		"CloseDate":                      true,

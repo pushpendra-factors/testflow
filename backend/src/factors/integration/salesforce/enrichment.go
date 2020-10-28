@@ -120,17 +120,7 @@ func getCustomerUserIDFromProperties(projectID uint64, properties map[string]int
 				continue
 			}
 
-			pPhoneNo := U.GetPossiblePhoneNumber(phoneStr)
-			existingPhoneNo, errCode := M.GetExistingCustomerUserID(projectID, pPhoneNo)
-			if errCode == http.StatusFound {
-				for i := range pPhoneNo {
-					if userID, exist := existingPhoneNo[pPhoneNo[i]]; exist {
-						return pPhoneNo[i], userID
-					}
-				}
-			}
-
-			return phoneStr, ""
+			return M.GetUserIdentificationPhoneNumber(projectID, phoneStr)
 		}
 	}
 
