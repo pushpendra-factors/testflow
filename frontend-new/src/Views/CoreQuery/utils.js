@@ -13,8 +13,10 @@ const constantObj = {
   all: 'all_given_event'
 };
 
+export const initialState = { loading: false, error: false, data: null };
+
 export const initialResultState = [1, 2, 3, 4].map(() => {
-  return { loading: false, error: false, data: null };
+  return initialState;
 });
 
 const getEventsWithProperties = (queries) => {
@@ -27,6 +29,48 @@ const getEventsWithProperties = (queries) => {
   });
   return ewps;
 };
+
+export const getFunnelQuery = (groupBy, queries) => {
+  const query = {};
+  query.cl = 'funnel';
+  query.ty = 'unique_users';
+
+  const period = {
+    from: moment().subtract(7, 'days').startOf('day').utc().unix(),
+    to: moment().utc().unix()
+  };
+
+  query.fr = period.from;
+  query.to = period.to;
+
+  query.ewp = getEventsWithProperties(queries);
+  query.gbt = '';
+
+  const appliedGroupBy = [...groupBy.event, ...groupBy.global];
+
+  query.gbp = appliedGroupBy
+    .map(opt => {
+      if (opt.eventIndex) {
+        return {
+          pr: opt.property,
+          en: opt.prop_category,
+          pty: opt.prop_type,
+          ena: opt.eventName,
+          eni: opt.eventIndex
+        };
+      } else {
+        return {
+          pr: opt.property,
+          en: opt.prop_category,
+          pty: opt.prop_type,
+          ena: opt.eventName
+        };
+      }
+    });
+  query.ec = 'any_given_event';
+  query.tz = 'Asia/Kolkata';
+  return query;
+}
 
 export const getQuery = (activeTab, queryType, groupBy, queries, breakdownType = 'each') => {
   const query = {};
