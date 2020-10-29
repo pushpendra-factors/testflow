@@ -1,0 +1,1 @@
+ALTER TABLE agents ADD COLUMN company_url VARCHAR, ADD COLUMN subscribe_newsletter BOOL;

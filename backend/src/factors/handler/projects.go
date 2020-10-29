@@ -84,6 +84,7 @@ func EditProjectHandler(c *gin.Context) {
 
 	if loggedInAgentPAM.Role != M.ADMIN {
 		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "operation denied for non-admins"})
+		return
 	}
 
 	if errCode == http.StatusInternalServerError {
