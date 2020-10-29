@@ -6,11 +6,12 @@ import { NavLink, useHistory } from 'react-router-dom';
 import { SVG, Text } from 'factorsComponents';
 import ModalLib from '../../Views/componentsLib/ModalLib';
 import UserSettings from '../../Views/Settings/UserSettings';
-import { setActiveProject } from '../../reducers/global';
-import { signout } from '../../reducers/agentActions';
+import { setActiveProject } from 'Reducers/global';
+import { signout } from 'Reducers/agentActions';
 import { connect } from 'react-redux';
 import { PlusOutlined, PoweroffOutlined, BankOutlined } from '@ant-design/icons';
 import CreateNewProject from './CreateNewProject';
+import _ from 'lodash';
 
 function Sidebar(props) {
   const { Sider } = Layout;
@@ -99,7 +100,11 @@ function Sidebar(props) {
       // Shift+G to trigger grid debugger
       if (evt.shiftKey && evt.keyCode === 71) { setVisible(!visible); }
     }
-  });
+    // Setting first project as active project if no-active project exisit in redux-persist/localStorage.
+    if (_.isEmpty(props.active_project)) {
+      props.setActiveProject(props.projects[0]);
+    }
+  }, []);
 
   return (
     <>

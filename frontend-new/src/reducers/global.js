@@ -101,7 +101,7 @@ export function fetchProjects(projects) {
     return new Promise((resolve, reject) => {
       get(dispatch, host + 'projects', {})
         .then((response) => {
-          dispatch(setActiveProject(response.data.projects[0]));
+          // dispatch(setActiveProject(response.data.projects[0]));
           resolve(dispatch(fetchProjectAction(response.data.projects)));
         }).catch((err) => {
           resolve(dispatch(fetchProjectAction([])));
