@@ -72,7 +72,7 @@ export default function reducer(state = {
     }
     case 'FETCH_AGENT_INFO_REJECTED': {
       return { ...state, agentError: action.payload };
-    }
+    } 
     case 'UPDATE_AGENT_INFO_FULFILLED': {
       return { ...state, agent: action.payload };
     }
@@ -218,6 +218,23 @@ export function fetchAgentInfo(){
     });
   }
 } 
+export function updateAgentInfo(params){
+  return function(dispatch){
+    return new Promise((resolve, reject)=> {
+      put(dispatch, host + "agents/info", params)
+      .then((response) => {
+        dispatch({type:"UPDATE_AGENT_INFO_FULFILLED", 
+            payload: response.data});
+          resolve(response);
+      })
+      .catch((err) => {
+        dispatch({type:"UPDATE_AGENT_INFO_REJECTED", 
+            payload: 'Failed to update agent info'});
+          reject(err);
+      })
+    });
+  }
+}
 
 export function fetchProjectAgents(projectId){
   return function(dispatch){
