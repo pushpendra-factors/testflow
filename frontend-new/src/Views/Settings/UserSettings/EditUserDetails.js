@@ -69,7 +69,7 @@ function EditUserDetails(props) {
           </Row>
           <Row className={'mt-6'}>
             <Col span={24}>
-              <Text type={'title'} level={7} extraClass={'m-0'}>Name</Text>
+              <Text type={'title'} level={7} extraClass={'m-0'}>First Name</Text>
               <Form.Item
                     name="first_name"
                     rules={[{ required: true, message: 'Please input your first name.' }]}
@@ -80,7 +80,7 @@ function EditUserDetails(props) {
           </Row>
           <Row className={'mt-6'}>
             <Col span={24}>
-              <Text type={'title'} level={7} extraClass={'m-0'}>Email</Text>
+              <Text type={'title'} level={7} extraClass={'m-0'}>Last Name</Text>
               <Form.Item
                     name="last_name"
               >

@@ -82,6 +82,22 @@ export default function reducer(state = {
     case 'UPDATE_AGENT_PASSWORD_FULFILLED': {
       return state;
     }
+    case "FETCH_PROJECTS_REJECTED": {
+      return {...state, fetchingProjects: false, projectsError: action.payload}
+    }
+    case "FETCH_PROJECTS_FULFILLED": {
+      // Indexed project objects by projectId. Kept projectId on value also intentionally 
+      // for array of projects from Object.values().
+      let projects = {};
+      for (let project of action.payload.projects) {
+        projects[project.id] = project;
+      } 
+
+      return {
+        ...state, 
+        projects: projects, 
+      }
+    }
     case "PROJECT_AGENT_INVITE_FULFILLED": {
       let nextState = { ...state };  
       let projectAgentMapping = action.payload.project_agent_mappings[0]; 
@@ -95,11 +111,16 @@ export default function reducer(state = {
         ...state
       }
     }
+    case "PROJECT_AGENT_REMOVE_REJECTED": {
+      return {
+        ...state
+      }
+    }
     case "PROJECT_AGENT_REMOVE_FULFILLED": {
-      let nextState = { ...state };
-      nextState.projectAgents = state.projectAgents.filter((projectAgent)=>{
-        return projectAgent.agent_uuid != action.payload.agent_uuid
-      })
+      let nextState = { ...state }; 
+      nextState.agents = state.agents.filter((projectAgent)=>{ 
+        return projectAgent.uuid != action.payload.agent_uuid
+      }) 
       return nextState
     }
     case "FETCH_PROJECT_AGENTS_FULFILLED":{
@@ -199,6 +220,21 @@ export function signout() {
 //   }
 // }
 
+export function fetchProjects() {
+  return function(dispatch) {
+    return new Promise((resolve,reject) => {
+      get(dispatch, host + "projects")
+        .then((response)=>{        
+          dispatch({type:"FETCH_PROJECTS_FULFILLED", payload: response.data});
+          resolve(response)
+        }).catch((err)=>{        
+          dispatch({type:"FETCH_PROJECTS_REJECTED", payload: err});
+          reject(err);
+        });
+    });
+  }
+}
+
 
 export function fetchAgentInfo(){
   return function(dispatch) {
@@ -288,6 +324,13 @@ export function projectAgentRemove(projectId, agentUUID){
     return new Promise((resolve, reject) => {
       put(dispatch, host + "projects/" + projectId +"/agents/remove", {"agent_uuid":agentUUID})
         .then((r) => {
+          if (r.status == 403) {
+            dispatch({
+              type: "PROJECT_AGENT_REMOVE_REJECTED",
+              error: r
+            });
+            reject(r.data.error);
+          }
           dispatch({
             type: "PROJECT_AGENT_REMOVE_FULFILLED",
             payload: r.data
@@ -299,7 +342,7 @@ export function projectAgentRemove(projectId, agentUUID){
             type: "PROJECT_AGENT_REMOVE_REJECTED",
             error: r
           });
-          reject({body: r.data, status: r.status});
+          reject(r);
         });
     })
   }

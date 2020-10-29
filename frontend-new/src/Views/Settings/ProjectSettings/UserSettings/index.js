@@ -1,69 +1,93 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Row, Col, Button, Table, Avatar, Menu, Dropdown
+  Row, Col, Button, Table, Avatar, Menu, Dropdown, Modal, message
 } from 'antd';
 import { Text } from 'factorsComponents';
-import { MoreOutlined } from '@ant-design/icons';
+import { MoreOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import InviteUsers from './InviteUsers';
 import { connect } from 'react-redux';
-import { fetchProjectAgents } from 'Reducers/agentActions';
+import { fetchProjectAgents, projectAgentRemove } from 'Reducers/agentActions';
 import moment from 'moment';
 
-const menu = (uuid) => {
-  return (
-  <Menu>
-    <Menu.Item key="0">
-    <a href="#!" uuid={uuid}>Remove User</a>
-    </Menu.Item>
-    <Menu.Item key="1">
-      <a href="#!">Make Project Admin</a>
-    </Menu.Item>
-  </Menu>
-  );
-};
-
-const columns = [
-  {
-    title: 'Name',
-    dataIndex: 'name',
-    key: 'name',
-    render: (text) => <div className="flex items-center">
-      <Avatar src="assets/avatar/avatar.png" className={'mr-2'} size={32} />&nbsp; {text} </div>
-  },
-  {
-    title: 'Email',
-    dataIndex: 'email',
-    key: 'email'
-  },
-  {
-    title: 'Role',
-    dataIndex: 'role',
-    key: 'role'
-  },
-  {
-    title: 'Last activity',
-    dataIndex: 'lastActivity',
-    key: 'lastActivity'
-  },
-  {
-    title: '',
-    dataIndex: 'actions',
-    key: 'actions',
-    render: (uuid) => (
-      <Dropdown overlay={() => menu(uuid)} trigger={['click']}>
-        <Button size={'large'} type="text" icon={<MoreOutlined />} />
-      </Dropdown>
-    )
-  }
-];
+const { confirm } = Modal;
 
 function UserSettings({
-  agents
+  agents,
+  projectAgentRemove,
+  activeProjectID
 }) {
   const [dataLoading, setDataLoading] = useState(true);
   const [dataSource, setdataSource] = useState(null);
   const [inviteModal, setInviteModal] = useState(false);
   const [confirmLoading, setConfirmLoading] = useState(false);
+
+  const confirmRemove = (uuid) => {
+    confirm({
+      title: 'Do you Want to remove this user?',
+      icon: <ExclamationCircleOutlined />,
+      content: 'Please confirm to proceed',
+      okText: 'Yes',
+      onOk() {
+        projectAgentRemove(activeProjectID, uuid).then(() => {
+          const getData = async () => {
+            await fetchProjectAgents(activeProjectID);
+          };
+          message.success('User removed!');
+          getData();
+        }).catch((err) => {
+          message.error(err);
+        });
+      }
+    });
+  };
+
+  const menu = (uuid) => {
+    return (
+    <Menu>
+      <Menu.Item key="0" onClick={() => confirmRemove(uuid)}>
+        <a>Remove User</a>
+      </Menu.Item>
+      <Menu.Item key="1">
+        <a href="#!">Make Project Admin</a>
+      </Menu.Item>
+    </Menu>
+    );
+  };
+
+  const columns = [
+    {
+      title: 'Name',
+      dataIndex: 'name',
+      key: 'name',
+      render: (text) => <div className="flex items-center">
+        <Avatar src="assets/avatar/avatar.png" className={'mr-2'} size={32} />&nbsp; {text} </div>
+    },
+    {
+      title: 'Email',
+      dataIndex: 'email',
+      key: 'email'
+    },
+    {
+      title: 'Role',
+      dataIndex: 'role',
+      key: 'role'
+    },
+    {
+      title: 'Last activity',
+      dataIndex: 'lastActivity',
+      key: 'lastActivity'
+    },
+    {
+      title: '',
+      dataIndex: 'actions',
+      key: 'actions',
+      render: (uuid) => (
+        <Dropdown overlay={() => menu(uuid)} trigger={['click']}>
+          <Button size={'large'} type="text" icon={<MoreOutlined />} />
+        </Dropdown>
+      )
+    }
+  ];
 
   useEffect(() => {
     if (agents) {
@@ -129,7 +153,7 @@ const mapStateToProps = (state) => ({
   agents: state.agent.agents
 });
 
-export default connect(mapStateToProps, { fetchProjectAgents })(UserSettings);
+export default connect(mapStateToProps, { fetchProjectAgents, projectAgentRemove })(UserSettings);
 
 // table datasource example
 // {
