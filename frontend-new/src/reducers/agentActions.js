@@ -83,12 +83,11 @@ export default function reducer(state = {
       return state;
     }
     case "PROJECT_AGENT_INVITE_FULFILLED": {
-      let nextState = { ...state };
-      
-      let projectAgentMapping = action.payload.project_agent_mappings[0];
-      nextState.projectAgents = [...state.projectAgents];
-      nextState.projectAgents.push(projectAgentMapping);
-      nextState.agents[projectAgentMapping.agent_uuid] = action.payload.agents[projectAgentMapping.agent_uuid];        
+      let nextState = { ...state };  
+      let projectAgentMapping = action.payload.project_agent_mappings[0]; 
+      nextState.agents = [...state.agents]; 
+      nextState.agents.push(projectAgentMapping);  
+      nextState.agents[projectAgentMapping.agent_uuid] = action.payload.agents[projectAgentMapping.agent_uuid];         
       return nextState
     }
     case "PROJECT_AGENT_INVITE_REJECTED": {
@@ -239,10 +238,9 @@ export function updateAgentInfo(params){
 export function fetchProjectAgents(projectId){
   return function(dispatch){
     return new Promise((resolve,reject) => {
-       get(dispatch, host + "projects/" + projectId + "/agents")
+       get(dispatch, host + "projects/" + projectId + "/v1/agents")
         .then((r) => {
-          // dispatch({type: "FETCH_PROJECT_AGENTS_FULFILLED", payload: r.data });
-          dispatch({type: "FETCH_PROJECT_AGENTS_FULFILLED", payload: agentsSample });
+          dispatch({type: "FETCH_PROJECT_AGENTS_FULFILLED", payload: r.data }); 
           resolve(r);
         })
         .catch((r) => {
@@ -265,20 +263,20 @@ export function projectAgentInvite(projectId, payload){
   return function(dispatch){ 
     return new Promise((resolve, reject) => {
       post(dispatch, host + "projects/" + projectId + "/agents/invite", payload)
-      .then((r) => {
-        if (r.ok && r.status && r.status == 201){
+      .then((r) => { 
+        if (r.ok && r.status && r.status == 201){ 
           dispatch({type: "PROJECT_AGENT_INVITE_FULFILLED", payload: r.data });
           resolve(r.data);
-        }else if (r.status && r.status == 409){
+        }else if (r.status && r.status == 409){ 
           dispatch({type: "PROJECT_AGENT_INVITE_REJECTED", payload: r.data.error }); 
           reject("User Seats limit reached");
         }
-        else {
+        else { 
           dispatch({type: "PROJECT_AGENT_INVITE_REJECTED", payload: r.data.error });
           reject(r.data.error);
         }
       })
-      .catch((r) => {
+      .catch((r) => { 
         dispatch({type: "PROJECT_AGENT_INVITE_REJECTED", payload: r.data.error });
       });
     });

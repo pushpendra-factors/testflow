@@ -32,7 +32,7 @@ function ViewBasicSettings({
       }
     });
     setDataLoading(false);
-  }, [activeProject, agents]);
+  }, [activeProject]);
 
   return (
     <>
