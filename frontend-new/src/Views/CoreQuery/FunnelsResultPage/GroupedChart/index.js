@@ -1,14 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { PoweroffOutlined } from '@ant-design/icons';
 import { generateEventsData, generateGroups, generateGroupedChartsData } from '../utils';
 import Header from '../../../AppLayout/Header';
-import { Button } from 'antd';
 import EventsInfo from '../EventsInfo';
 import Chart from './Chart';
 import FunnelsResultTable from '../FunnelsResultTable';
+import ResultsHeader from '../../ResultsHeader';
 
 function GroupedChart({
-  resultState, queries, setDrawerVisible, breakdown, eventsMapper, reverseEventsMapper
+  resultState, queries, setDrawerVisible, breakdown, eventsMapper, reverseEventsMapper, requestQuery, setShowResult, querySaved, setQuerySaved
 }) {
   const [groups, setGroups] = useState([]);
   const maxAllowedVisibleProperties = 5;
@@ -28,9 +27,12 @@ function GroupedChart({
   return (
     <>
       <Header>
-        <div className="flex py-4 justify-end">
-          <Button type="primary" icon={<PoweroffOutlined />} >Save query as</Button>
-        </div>
+        <ResultsHeader
+          setShowResult={setShowResult}
+          requestQuery={requestQuery}
+          querySaved={querySaved}
+          setQuerySaved={setQuerySaved}
+        />
         <div className="py-4">
           <EventsInfo setDrawerVisible={setDrawerVisible} queries={queries} />
         </div>

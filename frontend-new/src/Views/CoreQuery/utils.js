@@ -234,3 +234,33 @@ export const formatApiData = (data, appliedBreakdown) => {
   }
   return result;
 };
+
+export const getStateQueryFromRequestQuery = (requestQuery) => {
+  const events = requestQuery.ewp.map(e => {
+    return {
+      label: e.na,
+      filters: []
+    };
+  });
+  const queryType = requestQuery.cl === 'events' ? 'event' : 'funnel';
+  const breakdown = requestQuery.gbp.map(opt => {
+    return {
+      property: opt.pr,
+      prop_category: opt.en,
+      prop_type: opt.pty,
+      eventName: opt.ena,
+      eventIndex: opt.eni ? opt.eni : 0
+    };
+  });
+  const event = breakdown.filter(b => b.eventIndex);
+  const global = breakdown.filter(b => !b.eventIndex);
+  const result = {
+    events,
+    queryType,
+    breakdown: {
+      event,
+      global
+    }
+  };
+  return result;
+};

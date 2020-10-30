@@ -1,15 +1,14 @@
 import React from 'react';
 import Header from '../AppLayout/Header';
-import { Button } from 'antd';
-import { PoweroffOutlined } from '@ant-design/icons';
 import EventsInfo from '../CoreQuery/FunnelsResultPage/EventsInfo';
 import ContentTabs from '../../components/ContentTabs';
 import ResultTab from './ResultTab.js';
 import { SVG } from '../../components/factorsComponents';
 import EventBreakdown from './EventBreakdown';
+import ResultsHeader from '../CoreQuery/ResultsHeader';
 
 function EventsAnalytics({
-  queries, eventsMapper, reverseEventsMapper, breakdown, resultState, setDrawerVisible, runQuery, activeKey, breakdownType, handleBreakdownTypeChange, breakdownTypeData, queryType
+  queries, eventsMapper, reverseEventsMapper, breakdown, resultState, setDrawerVisible, runQuery, activeKey, breakdownType, handleBreakdownTypeChange, breakdownTypeData, queryType, requestQuery, setShowResult, querySaved, setQuerySaved
 }) {
   const handleTabChange = (tabKey) => {
     runQuery(tabKey);
@@ -57,9 +56,12 @@ function EventsAnalytics({
   return (
     <>
       <Header>
-        <div className="flex py-4 justify-end">
-          <Button size={'large'} type="primary" icon={<PoweroffOutlined />} >Save query as</Button>
-        </div>
+        <ResultsHeader
+          setShowResult={setShowResult}
+          requestQuery={requestQuery}
+          querySaved={querySaved}
+          setQuerySaved={setQuerySaved}
+        />
         <div className="py-4">
           <EventsInfo
             setDrawerVisible={setDrawerVisible}
@@ -68,7 +70,7 @@ function EventsAnalytics({
           />
         </div>
       </Header>
-      <div className="mt-32 mb-8 fa-container">
+      <div className="mt-40 mb-8 fa-container">
         <ContentTabs breakdownTypeData={breakdownTypeData} resultState={resultState} onChange={handleTabChange} activeKey={activeKey} tabItems={tabItems} />
       </div>
     </>
