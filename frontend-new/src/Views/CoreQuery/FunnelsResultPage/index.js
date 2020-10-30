@@ -5,7 +5,7 @@ import UngroupedChart from './UngroupedChart';
 import { Spin } from 'antd';
 
 function FunnelsResultPage({
-  queries, setDrawerVisible, resultState, breakdown, eventsMapper, reverseEventsMapper
+  queries, setDrawerVisible, resultState, breakdown, eventsMapper, reverseEventsMapper, requestQuery, setShowResult, querySaved, setQuerySaved
 }) {
   if (resultState.loading) {
     return (
@@ -30,6 +30,10 @@ function FunnelsResultPage({
         queries={queries}
         setDrawerVisible={setDrawerVisible}
         eventsMapper={eventsMapper}
+        requestQuery={requestQuery}
+        setShowResult={setShowResult}
+        querySaved={querySaved}
+        setQuerySaved={setQuerySaved}
       />
     );
   } else {
@@ -41,6 +45,10 @@ function FunnelsResultPage({
         breakdown={breakdown}
         eventsMapper={eventsMapper}
         reverseEventsMapper={reverseEventsMapper}
+        requestQuery={requestQuery}
+        setShowResult={setShowResult}
+        querySaved={querySaved}
+        setQuerySaved={setQuerySaved}
       />
     );
   }

@@ -1,6 +1,7 @@
 /* eslint-disable */
 
-import { get, getHostUrl, post } from '../../utils/request';
+import { get, getHostUrl, post, del } from '../../utils/request';
+import { QUERIES_LOADING, QUERIES_LOADED, QUERIES_LOADING_FAILED, QUERY_DELETED } from '../types';
 const host = getHostUrl();
 
 export const getEventNames = (dispatch, projectId) => {
@@ -31,4 +32,32 @@ export function fetchUserProperties(projectId, queryType) {
 export const getFinalData = (projectId, query) => {
   const url = host + "projects/" + projectId + "/query";
   return post(null, url, { query });
+}
+
+export const saveQuery = (projectId, title, query) => {
+  const url = host + "projects/" + projectId + "/queries";
+  return post(null, url, { query: JSON.stringify(query), title });
+}
+
+export const deleteQuery = async (dispatch, query) => {
+  try {
+    dispatch({ type: QUERIES_LOADING });
+    const url = host + "projects/" + query.project_id + "/queries/" + query.id;
+    await del(null, url);
+    dispatch({ type: QUERY_DELETED, payload: query.id });
+  } catch (err) {
+    console.log(err);
+  }
+}
+
+export const fetchQueries = async (dispatch, projectId) => {
+  try {
+    dispatch({ type: QUERIES_LOADING });
+    const url = host + "projects/" + projectId + "/queries";
+    const res = await get(null, url);
+    dispatch({ type: QUERIES_LOADED, payload: res.data });
+  } catch (err) {
+    console.log(err);
+    dispatch({ type: QUERIES_LOADING_FAILED });
+  }
 }

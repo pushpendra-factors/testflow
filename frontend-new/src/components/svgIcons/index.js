@@ -570,7 +570,7 @@ const CheckmarkSVG = ({ size = 24, color, extraClass }) => {
 
 const BarchartSVG = ({ size = 24, color, extraClass }) => {
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg className={extraClass} width={size} height={size} viewBox={`0 0 ${size} ${size}`} fill="none" xmlns="http://www.w3.org/2000/svg">
       <g opacity="0.5">
         <rect x="21.9998" y="19.3667" width="1.5" height="20" transform="rotate(90 21.9998 19.3667)" fill="#3E516C" fill={color} />
         <rect x="3.99976" y="4.8667" width="3.99991" height="13" fill={color} />
@@ -594,6 +594,39 @@ const GlobeSVG = ({ size = 24, color, extraClass }) => {
       <path fillRule="evenodd" clipRule="evenodd" d="M16.7686 15.8302C15.668 17.1558 14.0076 18 12.15 18C8.83629 18 6.14999 15.3137 6.14999 12C6.14999 11.4496 6.22411 10.9165 6.36291 10.4101L8.18366 11.3686L9.75197 10.2903L12.1503 10.6984L11.0715 7.83526L9.75197 7.83526L8.99032 6.8984C9.90794 6.32886 10.9906 6 12.15 6C13.4448 6 14.6438 6.41014 15.6242 7.1076L13.3367 9.07218L15.3039 10.9361L13.3366 11.8726L14.5129 13.1048L16.4732 12.6567L16.7686 15.8302ZM20.15 12C20.15 16.4183 16.5683 20 12.15 20C7.73172 20 4.14999 16.4183 4.14999 12C4.14999 7.58172 7.73172 4 12.15 4C16.5683 4 20.15 7.58172 20.15 12ZM7.62851 14.129L9.29432 14.7717L10.2819 17.1271L11.1132 17.4484V15.6866L12.1681 14.129L11.1132 12.8682L10.15 12.515L9.0117 11.0962L7.62851 12.8682V14.129Z" fill={color} />
     </svg>
 
+  )
+}
+
+const SaveSVG = ({ size = 24, color, extraClass }) => {
+  return (
+    <svg width={size} height={size} className={extraClass} viewBox={`0 0 ${size} ${size}`} fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M20.3973 6.9375L17.0625 3.60268C16.7009 3.24107 16.2188 3 15.6964 3H4.92857C3.84375 3 3 3.88393 3 4.92857V19.0714C3 20.1562 3.84375 21 4.92857 21H19.0714C20.1161 21 21 20.1562 21 19.0714V8.30357C21 7.78125 20.7589 7.29911 20.3973 6.9375ZM12 18.4286C10.5536 18.4286 9.42857 17.3036 9.42857 15.8571C9.42857 14.4509 10.5536 13.2857 12 13.2857C13.4062 13.2857 14.5714 14.4509 14.5714 15.8571C14.5714 17.3036 13.4062 18.4286 12 18.4286ZM15.8571 6.21429V10.2321C15.8571 10.5134 15.6161 10.7143 15.375 10.7143H6.05357C5.77232 10.7143 5.57143 10.5134 5.57143 10.2321V6.05357C5.57143 5.8125 5.77232 5.57143 6.05357 5.57143H15.2143C15.3348 5.57143 15.4554 5.65179 15.5759 5.73214L15.6964 5.85268C15.7768 5.97321 15.8571 6.09375 15.8571 6.21429Z" fill={color} />
+    </svg>
+  )
+}
+
+const BreadcrumbSVG = ({ size = 24, color, extraClass }) => {
+  return (
+    <svg width={size} height={size} className={extraClass} fill="none" xmlns="http://www.w3.org/2000/svg">
+      <g opacity="0.5">
+        <mask id="path-1-inside-1" fill="white">
+          <rect x="4.5" y="4.90918" width="7" height="7.96927" rx="1" />
+        </mask>
+        <rect x="4.5" y="4.90918" width="7" height="7.96927" rx="1" stroke={color} strokeWidth="4" mask="url(#path-1-inside-1)" />
+        <mask id="path-2-inside-2" fill="white">
+          <rect x="4.5" y="14.8784" width="7" height="6" rx="1" />
+        </mask>
+        <rect x="4.5" y="14.8784" width="7" height="6" rx="1" stroke={color} strokeWidth="4" mask="url(#path-2-inside-2)" />
+        <mask id="path-3-inside-3" fill="white">
+          <rect x="13.593" y="4.90918" width="6.90698" height="5.96927" rx="1" />
+        </mask>
+        <rect x="13.593" y="4.90918" width="6.90698" height="5.96927" rx="1" stroke={color} strokeWidth="4" mask="url(#path-3-inside-3)" />
+        <mask id="path-4-inside-4" fill="white">
+          <rect x="13.593" y="12.8784" width="6.90698" height="8" rx="1" />
+        </mask>
+        <rect x="13.593" y="12.8784" width="6.90698" height="8" rx="1" stroke={color} strokeWidth="4" mask="url(#path-4-inside-4)" />
+      </g>
+    </svg>
   )
 }
 
@@ -644,5 +677,7 @@ export {
   LockSVG,
   GlobeSVG,
   UserplusSVG,
-  MouseclickSVG
+  MouseclickSVG,
+  SaveSVG,
+  BreadcrumbSVG
 };
