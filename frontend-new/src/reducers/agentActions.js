@@ -82,6 +82,9 @@ export default function reducer(state = {
     case 'UPDATE_AGENT_PASSWORD_FULFILLED': {
       return state;
     }
+    case 'UPDATE_AGENT_ROLE_FULFILLED': {
+      return state;
+    }
     case "FETCH_PROJECTS_REJECTED": {
       return {...state, fetchingProjects: false, projectsError: action.payload}
     }
@@ -367,6 +370,30 @@ export function updateAgentPassword(params){
       .catch((err) => {
         dispatch({type:"UPDATE_AGENT_PASSWORD_REJECTED", 
           payload: 'Failed to update agent password'});
+          reject(err);
+      })
+    });
+  }
+}
+export function updateAgentRole(projectId,uuid,role){
+  return function(dispatch){
+    return new Promise((resolve, reject)=> {
+      put(dispatch, host + "projects/" + projectId +"/agents/update", {"agent_uuid":uuid,role,"role":role})
+      .then((response) => {
+        if(response.ok){
+          dispatch({type:"UPDATE_AGENT_ROLE_FULFILLED", 
+              payload: response.data});
+              resolve(response); 
+        }
+        else{
+          dispatch({type:"UPDATE_AGENT_ROLE_REJECTED", 
+            payload: 'Failed to update agent ROLE'});
+            reject(response.data); 
+        }
+      })
+      .catch((err) => {
+        dispatch({type:"UPDATE_AGENT_ROLE_REJECTED", 
+          payload: 'Failed to update agent ROLE'});
           reject(err);
       })
     });

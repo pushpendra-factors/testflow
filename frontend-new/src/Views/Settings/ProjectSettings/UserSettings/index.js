@@ -6,7 +6,7 @@ import { Text } from 'factorsComponents';
 import { MoreOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import InviteUsers from './InviteUsers';
 import { connect } from 'react-redux';
-import { fetchProjectAgents, projectAgentRemove } from 'Reducers/agentActions';
+import { fetchProjectAgents, projectAgentRemove, updateAgentRole } from 'Reducers/agentActions';
 import moment from 'moment';
 
 const { confirm } = Modal;
@@ -14,7 +14,8 @@ const { confirm } = Modal;
 function UserSettings({
   agents,
   projectAgentRemove,
-  activeProjectID
+  activeProjectID,
+  updateAgentRole
 }) {
   const [dataLoading, setDataLoading] = useState(true);
   const [dataSource, setdataSource] = useState(null);
@@ -29,11 +30,7 @@ function UserSettings({
       okText: 'Yes',
       onOk() {
         projectAgentRemove(activeProjectID, uuid).then(() => {
-          const getData = async () => {
-            await fetchProjectAgents(activeProjectID);
-          };
           message.success('User removed!');
-          getData();
         }).catch((err) => {
           message.error(err);
         });
@@ -41,15 +38,33 @@ function UserSettings({
     });
   };
 
-  const menu = (uuid) => {
+  const confirmRoleChange = (uuid, role) => {
+    confirm({
+      title: 'Do you want to change this user\'s role?',
+      icon: <ExclamationCircleOutlined />,
+      content: 'Please confirm to proceed',
+      okText: 'Yes',
+      onOk() {
+        updateAgentRole(activeProjectID, uuid, role).then(() => {
+          message.success('User role updated!');
+        }).catch((err) => {
+          message.error(err);
+        });
+      }
+    });
+  };
+
+  const menu = (values) => {
     return (
     <Menu>
-      <Menu.Item key="0" onClick={() => confirmRemove(uuid)}>
+      <Menu.Item key="0" onClick={() => confirmRemove(values.uuid)}>
         <a>Remove User</a>
       </Menu.Item>
-      <Menu.Item key="1">
-        <a href="#!">Make Project Admin</a>
-      </Menu.Item>
+      {values.role === 1 &&
+        <Menu.Item key="0" onClick={() => confirmRoleChange(values.uuid, values.role)}>
+          <a>Make Project Admin</a>
+        </Menu.Item>
+      }
     </Menu>
     );
   };
@@ -81,8 +96,8 @@ function UserSettings({
       title: '',
       dataIndex: 'actions',
       key: 'actions',
-      render: (uuid) => (
-        <Dropdown overlay={() => menu(uuid)} trigger={['click']}>
+      render: (values) => (
+        <Dropdown overlay={() => menu(values)} trigger={['click']}>
           <Button size={'large'} type="text" icon={<MoreOutlined />} />
         </Dropdown>
       )
@@ -94,13 +109,17 @@ function UserSettings({
       const formattedArray = [];
       agents.map((agent, index) => {
         // console.log(index, 'agent-name-->', agent.first_name);
+        const values = {
+          uuid: `${agent.uuid}`,
+          role: agent.role
+        };
         formattedArray.push({
           key: index,
           name: `${agent.first_name || agent.last_name ? (agent.first_name + ' ' + agent.last_name) : '---'}`,
           email: agent.email,
           role: `${agent.role === 2 ? 'Admin' : 'User'}`,
           lastActivity: `${agent.last_logged_in ? moment(agent.last_logged_in).fromNow() : !agent.is_email_verified ? 'Pending Invite' : '---'}`,
-          actions: `${agent.uuid}`
+          actions: values
         });
         setdataSource(formattedArray);
       });
@@ -153,7 +172,7 @@ const mapStateToProps = (state) => ({
   agents: state.agent.agents
 });
 
-export default connect(mapStateToProps, { fetchProjectAgents, projectAgentRemove })(UserSettings);
+export default connect(mapStateToProps, { fetchProjectAgents, updateAgentRole, projectAgentRemove })(UserSettings);
 
 // table datasource example
 // {
