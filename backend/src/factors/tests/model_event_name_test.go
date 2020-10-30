@@ -1,7 +1,6 @@
 package tests
 
 import (
-	C "factors/config"
 	H "factors/handler"
 	M "factors/model"
 	"factors/task/event_user_cache"

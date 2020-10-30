@@ -87,7 +87,6 @@ func TestGetEventNamesHandler(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, project)
 
-	ReinitialiseConfigForCachedEnabledProjects(fmt.Sprintf("%v", project.ID))
 	w := sendGetEventNamesExactRequest(project.ID, agent, r)
 	assert.Equal(t, http.StatusOK, w.Code) // Should be still 200 for no event_names with empty result set
 	jsonResponse, _ := ioutil.ReadAll(w.Body)
