@@ -53,10 +53,6 @@ func main() {
 	useDefaultProjectSettingForSDK := flag.Bool("use_defaul_project_setting_for_sdk",
 		false, "Once set to true, it will skip db query to get project_settings, if not found on cache.")
 
-	isRealTimeEventUserCachingEnabled := flag.Bool("enable_real_time_event_user_caching",
-		true, "If the real time caching is enabled")
-	realTimeEventUserCachingProjectIds := flag.String("real_time_event_user_caching_project_ids", "1",
-		"If the real time caching is enabled and the whitelisted projectids")
 	blockedSDKRequestProjectTokens := flag.String("blocked_sdk_request_project_tokens",
 		"", "List of tokens (public and private) to block SDK requests.")
 	flag.Parse()
@@ -87,8 +83,6 @@ func main() {
 		RedisHostPersistent:                *redisHostPersistent,
 		RedisPortPersistent:                *redisPortPersistent,
 		UseDefaultProjectSettingForSDK:     *useDefaultProjectSettingForSDK,
-		IsRealTimeEventUserCachingEnabled:  *isRealTimeEventUserCachingEnabled,
-		RealTimeEventUserCachingProjectIds: *realTimeEventUserCachingProjectIds,
 		// List of tokens (public and private) to block SDK requests.
 		BlockedSDKRequestProjectTokens: C.GetTokensFromStringListAsString(*blockedSDKRequestProjectTokens),
 	}

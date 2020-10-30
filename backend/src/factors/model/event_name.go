@@ -13,7 +13,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gomodule/redigo/redis"
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 )
@@ -1036,162 +1035,6 @@ func GetEventNameFromEventNameId(eventNameId uint64, projectId uint64) (*EventNa
 	return &eventName, nil
 }
 
-func getOccurredEventNamesOrderedByOccurrenceWithLimit(projectId uint64, requestType string, limit int) ([]EventName, int64, error) {
-	eventNames, timestamp, err := GetCacheEventNamesOrderedByOccurrence(projectId)
-	if err == nil || requestType == EVENT_NAME_REQUEST_TYPE_APPROX {
-		return eventNames, timestamp, nil
-	}
-
-	startTimestamp := U.UnixTimeBeforeAWeek()
-	logCtx := log.WithFields(log.Fields{"projectId": projectId, "eventsAfterTimestamp": startTimestamp})
-	if err != redis.ErrNil {
-		logCtx.WithError(err).Error("Failed to get EventNamesOrderedByOccurrence from cache.")
-	}
-
-	endTimestamp := time.Now().UTC().Unix()
-
-	eventNamesWithAggregation, err := GetOrderedEventNamesFromDb(
-		projectId, startTimestamp, endTimestamp, limit)
-	if err != nil {
-		return eventNames, 0, err
-	}
-
-	eventNames = convert(eventNamesWithAggregation)
-	timestamp, err = setCacheEventNamesOrderedByOccurrence(projectId, eventNames)
-	if err != nil {
-		logCtx.WithError(err).Error(
-			"Failed to setCacheEventNamesOrderedByOccurrence on getEventNamesOrderedByOccurredWithLimit.")
-	}
-
-	return eventNames, timestamp, nil
-}
-
-// GetEventNamesOrderedByOccurrenceWithLimit - Returns event names ordered by occurrence
-// and back fills event names which haven't occurred ordered by created_at.
-// limit = 0, for no limit.
-func GetEventNamesOrderedByOccurrenceWithLimit(projectId uint64, requestType string, limit int) ([]EventName, bool, int) {
-	eventNames := make([]EventName, 0)
-	hasLimit := limit > 0
-	// Get event names only occurred on the sample window ordered by occurrence.
-	occurredEventNames, timestamp, err := getOccurredEventNamesOrderedByOccurrenceWithLimit(projectId, requestType, limit)
-	if err != nil {
-		log.WithError(err).Error("Failed to get occured events")
-	}
-
-	// Add all event names not occurred in the sample window with the limit.
-	addedNamesLookup := make(map[uint64]bool, 0)
-
-	for _, eventName := range occurredEventNames {
-		if hasLimit && len(eventNames) == limit {
-			break
-		}
-
-		eventNames = append(eventNames, eventName)
-		addedNamesLookup[eventName.ID] = true
-	}
-	isToday := U.IsTimestampToday(timestamp)
-	// return, if limit reached already.
-	if hasLimit && len(eventNames) == limit {
-		return eventNames, isToday, http.StatusFound
-	}
-
-	allEventNames, errCode := GetEventNames(projectId)
-	if errCode == http.StatusInternalServerError {
-		return eventNames, false, errCode
-	}
-
-	if errCode == http.StatusNotFound {
-		return eventNames, isToday, errCode
-	}
-
-	// fill event names not on occurred list.
-	for _, eventName := range allEventNames {
-		if hasLimit && len(eventNames) == limit {
-			break
-		}
-
-		if _, exists := addedNamesLookup[eventName.ID]; !exists {
-			eventNames = append(eventNames, eventName)
-		}
-	}
-
-	if len(eventNames) == 0 {
-		return eventNames, isToday, http.StatusNotFound
-	}
-
-	return eventNames, isToday, http.StatusFound
-}
-
-func getEventNamesOrderByOccurrenceCacheKey(projectId uint64) (*cacheRedis.Key, error) {
-	prefix := "event_names:ordered_by_occurrence"
-	return cacheRedis.NewKey(projectId, prefix, "")
-}
-
-func setCacheEventNamesOrderedByOccurrence(projectId uint64, eventNames []EventName) (int64, error) {
-	var cacheEventNames CacheEventNames
-	logCtx := log.WithField("project_id", projectId)
-	if projectId == 0 {
-		logCtx.Error("Invalid project id on setCacheEventNamesOrderedByOccurrence")
-		return 0, errors.New("invalid project id")
-	}
-
-	if eventNames == nil || len(eventNames) == 0 {
-		return 0, nil
-	}
-
-	currentTimeStamp := time.Now().Unix()
-	eventNamesKey, err := getEventNamesOrderByOccurrenceCacheKey(projectId)
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to get EventNamesOrderByOccurrenceCacheKey.")
-		return 0, err
-	}
-
-	cacheEventNames.EventNames = eventNames
-	cacheEventNames.Timestamp = currentTimeStamp
-	enEventCache, err := json.Marshal(cacheEventNames)
-	if err != nil {
-		logCtx.Error("Failed event names json marshal.")
-		return 0, err
-	}
-
-	err = cacheRedis.Set(eventNamesKey, string(enEventCache), 10*24*60*60)
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to setCacheEventNamesOrderedByOccurrence.")
-		return 0, err
-	}
-	return currentTimeStamp, nil
-}
-
-func GetCacheEventNamesOrderedByOccurrence(projectId uint64) ([]EventName, int64, error) {
-	var cacheEventNames CacheEventNames
-	if projectId == 0 {
-		return []EventName{}, 0, errors.New("invalid project on GetCacheEventNamesOrderedByOccurrence")
-	}
-
-	eventNamesKey, err := getEventNamesOrderByOccurrenceCacheKey(projectId)
-	if err != nil {
-		return []EventName{}, 0, err
-	}
-	enEventNames, err := cacheRedis.Get(eventNamesKey)
-	if err != nil {
-		return []EventName{}, 0, err
-	}
-
-	err = json.Unmarshal([]byte(enEventNames), &cacheEventNames)
-	if err != nil {
-		return []EventName{}, 0, err
-	}
-
-	if len(cacheEventNames.EventNames) == 0 {
-		return []EventName{}, 0, errors.New("Empty cache event names")
-	}
-	return cacheEventNames.EventNames, cacheEventNames.Timestamp, nil
-}
-
-func GetEventNamesOrderedByOccurrence(projectId uint64, requestType string) ([]EventName, bool, int) {
-	return GetEventNamesOrderedByOccurrenceWithLimit(projectId, requestType, EVENT_NAMES_LIMIT)
-}
-
 func convert(eventNamesWithAggregation []EventNameWithAggregation) []EventName {
 	eventNames := make([]EventName, 0)
 	for _, event := range eventNamesWithAggregation {
@@ -1240,4 +1083,56 @@ func GetEventNamesFromFile(scanner *bufio.Scanner, projectId uint64) ([]string, 
 
 	return eventNames, nil
 
+}
+
+func GetEventTypeFromDb(
+	projectID uint64, eventNames []string, limit int64) (map[string]string, error) {
+	// var err string
+	db := C.GetServices().Db
+	hasLimit := limit > 0
+
+	logCtx := log.WithFields(log.Fields{"projectId": projectID})
+
+	type allEventNameAndType struct {
+		Name string
+		Type string
+	}
+	EventNameType := make(map[string]string)
+	var tmpEventNames []string
+	for _, b := range eventNames {
+		//to remove empty strings which might break sql query
+		if len(b) > 0 {
+			tmpEventNames = append(tmpEventNames, b)
+		}
+	}
+
+	queryStr := "SELECT name,type FROM event_names WHERE project_id=? and name IN (?)"
+
+	if hasLimit {
+		queryStr = queryStr + " " + "LIMIT ?"
+	}
+
+	params := make([]interface{}, 0)
+	params = append(params, projectID)
+	params = append(params, tmpEventNames)
+	if hasLimit {
+		params = append(params, limit)
+	}
+
+	rows, err := db.Raw(queryStr, params...).Rows()
+	if err != nil {
+		logCtx.WithError(err).Error(
+			"Failed scanning rows on get event names and Types.")
+		return EventNameType, err
+	}
+
+	for rows.Next() {
+		var eventNameAndType allEventNameAndType
+		if err := db.ScanRows(rows, &eventNameAndType); err != nil {
+			logCtx.WithError(err).Error("Failed scanning rows on get event names and Types.")
+			return EventNameType, err
+		}
+		EventNameType[eventNameAndType.Name] = eventNameAndType.Type
+	}
+	return EventNameType, nil
 }

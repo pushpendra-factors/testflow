@@ -5,6 +5,7 @@ import (
 	C "factors/config"
 	H "factors/handler"
 	"factors/handler/helpers"
+	V1 "factors/handler/v1"
 	M "factors/model"
 	U "factors/util"
 	"fmt"
@@ -481,7 +482,7 @@ func sendAgentVerifyRequest(r *gin.Engine, authData, password, firstName, lastNa
 		WithHeader("Content-Type", "application/json").
 		WithPostParams(map[string]interface{}{
 			"first_name": firstName,
-			"last_name":  firstName,
+			"last_name":  lastName,
 			"password":   password,
 		}).WithQueryParams(map[string]string{
 		"token": authData,
@@ -672,6 +673,28 @@ func sendGetProjectAgentsRequest(r *gin.Engine, projectId uint64, agent *M.Agent
 	return w
 }
 
+func sendGetProjectAgentsV1Request(r *gin.Engine, projectId uint64, agent *M.Agent) *httptest.ResponseRecorder {
+
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	if err != nil {
+		log.WithError(err).Error("Error Creating cookieData")
+	}
+	rb := U.NewRequestBuilder(http.MethodGet, fmt.Sprintf("/projects/%d/v1/agents", projectId)).
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		})
+
+	w := httptest.NewRecorder()
+	req, err := rb.Build()
+	if err != nil {
+		log.WithError(err).Error("Error Creating getProjectSetting Req")
+	}
+	r.ServeHTTP(w, req)
+	return w
+}
+
 func TestAPIGetProjectAgentsHandler(t *testing.T) {
 	r := gin.Default()
 	H.InitAppRoutes(r)
@@ -809,5 +832,29 @@ func TestAPIUpdateAgentBillingAccount(t *testing.T) {
 		assert.Equal(t, pincode, resp.BillingAcc.Pincode)
 		assert.Equal(t, addr, resp.BillingAcc.BillingAddress)
 		assert.Equal(t, phoneNo, resp.BillingAcc.PhoneNo)
+	})
+}
+
+func TestAPIGetProjectAgentsV1Handler(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	t.Run("Success", func(t *testing.T) {
+		td, errCode := SetupTestData()
+		assert.Equal(t, http.StatusCreated, errCode)
+		agent := td.Agent
+		currentTime := time.Now()
+		M.UpdateAgentLastLoginInfo(agent.UUID, currentTime)
+		w := sendGetProjectAgentsV1Request(r, td.Project.ID, agent)
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		resp := make([]V1.AgentInfoWithProjectMapping, 0)
+		jsonResponse, _ := ioutil.ReadAll(w.Body)
+		json.Unmarshal(jsonResponse, &resp)
+
+		assert.Equal(t, agent.Email, resp[0].Email)
+		assert.Equal(t, currentTime.Unix(), resp[0].LastLoggedIn.Unix())
+		assert.Equal(t, 1, len(resp))
+		assert.Equal(t, agent.UUID, resp[0].UUID)
 	})
 }

@@ -2,10 +2,8 @@ package handler
 
 import (
 	C "factors/config"
-	"factors/handler/helpers"
 	mid "factors/middleware"
 	M "factors/model"
-	PC "factors/pattern_client"
 	U "factors/util"
 	"fmt"
 	"net/http"
@@ -86,7 +84,7 @@ func GetUsersHandler(c *gin.Context) {
 	}
 }
 
-// Test command.
+// GetUserPropertiesHandler Test command.
 // curl -i -X GET http://localhost:8080/projects/1/user_properties
 func GetUserPropertiesHandler(c *gin.Context) {
 	var err error
@@ -101,40 +99,15 @@ func GetUserPropertiesHandler(c *gin.Context) {
 		"projectId": projectId,
 	})
 
-	if helpers.IsProjectWhitelistedForEventUserCache(projectId) {
-		properties, err = M.GetUserPropertiesByProject(projectId, 2500, C.GetLookbackWindowForEventUserCache())
-		if err != nil {
-			logCtx.WithError(err).Error("get user properties by project")
-			c.AbortWithStatus(http.StatusInternalServerError)
-			return
-		}
+	properties, err = M.GetUserPropertiesByProject(projectId, 2500, C.GetLookbackWindowForEventUserCache())
+	if err != nil {
+		logCtx.WithError(err).Error("get user properties by project")
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
 
-		if len(properties) == 0 {
-			logCtx.WithError(err).Error(fmt.Sprintf("No user properties Returned - ProjectID - %s", projectId))
-		}
-	} else {
-		queryType := c.Query("query_type")
-		if !helpers.IsValidQueryType(queryType) {
-			c.AbortWithStatus(http.StatusBadRequest)
-			return
-		}
-		reqId := U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID)
-		modelId := uint64(0)
-		modelIdParam := c.Query("model_id")
-		if modelIdParam != "" {
-			modelId, err = strconv.ParseUint(modelIdParam, 10, 64)
-			if err != nil {
-				c.AbortWithStatus(http.StatusBadRequest)
-				return
-			}
-			properties, err = PC.GetSeenUserProperties(reqId, projectId, modelId)
-			if err != nil {
-				log.WithFields(log.Fields{
-					log.ErrorKey: err, "projectId": projectId}).Error(
-					"Get User Properties from pattern servers failed.")
-				properties = make(map[string][]string)
-			}
-		}
+	if len(properties) == 0 {
+		logCtx.WithError(err).Error(fmt.Sprintf("No user properties Returned - ProjectID - %v", projectId))
 	}
 	properties = U.ClassifyDateTimePropertyKeys(&properties)
 	U.FillMandatoryDefaultUserProperties(&properties)
@@ -143,7 +116,7 @@ func GetUserPropertiesHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, properties)
 }
 
-// curl -i -X GET http://localhost:8080/projects/1/user_properties/$country
+//GetUserPropertyValuesHandler curl -i -X GET http://localhost:8080/projects/1/user_properties/$country
 func GetUserPropertyValuesHandler(c *gin.Context) {
 	var err error
 	var propertyValues []string
@@ -163,37 +136,14 @@ func GetUserPropertyValuesHandler(c *gin.Context) {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-	if helpers.IsProjectWhitelistedForEventUserCache(projectId) {
-		propertyValues, err = M.GetPropertyValuesByUserProperty(projectId, propertyName, 2500, C.GetLookbackWindowForEventUserCache())
-		if err != nil {
-			logCtx.WithError(err).Error("get property values by user property")
-			c.AbortWithStatus(http.StatusInternalServerError)
-			return
-		}
-		if len(propertyValues) == 0 {
-			logCtx.WithError(err).Error(fmt.Sprintf("No user properties Returned - ProjectID - %s, propertyName - %s", projectId, propertyName))
-		}
-	} else {
-		reqId := U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID)
-		modelId := uint64(0)
-		modelIdParam := c.Query("model_id")
-		if modelIdParam != "" {
-			modelId, err = strconv.ParseUint(modelIdParam, 10, 64)
-			if err != nil {
-				c.AbortWithStatus(http.StatusBadRequest)
-				return
-			}
-
-			propertyValues, err = PC.GetSeenUserPropertyValues(reqId, projectId, modelId, propertyName)
-			if err != nil {
-				log.WithError(err).WithFields(log.Fields{
-					"projectId":    projectId,
-					"propertyName": propertyName}).Error(
-					"Get User Properties failed.")
-				c.AbortWithStatus(http.StatusBadRequest)
-				return
-			}
-		}
+	propertyValues, err = M.GetPropertyValuesByUserProperty(projectId, propertyName, 2500, C.GetLookbackWindowForEventUserCache())
+	if err != nil {
+		logCtx.WithError(err).Error("get property values by user property")
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+	if len(propertyValues) == 0 {
+		logCtx.WithError(err).Error(fmt.Sprintf("No user properties Returned - ProjectID - %v, propertyName - %s", projectId, propertyName))
 	}
 	c.JSON(http.StatusOK, propertyValues)
 }

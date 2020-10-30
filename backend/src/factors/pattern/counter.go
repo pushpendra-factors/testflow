@@ -136,6 +136,47 @@ func GenCandidates(currentPatterns []*Pattern, maxCandidates int, userAndEventsI
 	return candidatesMapToSlice(candidatesMap), currentMinCount, nil
 }
 
+//GenSegmentsForTopGoals form candidated with topK goal events
+func GenSegmentsForTopGoals(currentPatterns []*Pattern, userAndEventsInfo *UserAndEventsInfo, GoalPatterns []*Pattern) (
+	// create pairs of (startPattern, GoalPattern) to count from events file
+	[]*Pattern, uint, error) {
+	numPatterns := len(currentPatterns)
+	numGoalPatterns := len(GoalPatterns)
+	var currentMinCount uint
+
+	if numPatterns == 0 {
+		return nil, currentMinCount, fmt.Errorf("Zero Patterns")
+	}
+	// Sort current patterns in decreasing order of frequency.
+	sort.Slice(
+		currentPatterns,
+		func(i, j int) bool {
+			return currentPatterns[i].PerUserCount > currentPatterns[j].PerUserCount
+		})
+	candidatesMap := make(map[string]*Pattern)
+
+	// Candidates are formed with TopK goal Events
+	for i := 0; i < numPatterns; i++ {
+		for j := 0; j < numGoalPatterns; j++ {
+			if currentPatterns[i] != GoalPatterns[j] {
+
+				if len(currentPatterns[i].EventNames) > 1 || len(GoalPatterns[j].EventNames) > 1 {
+					return nil, currentMinCount, fmt.Errorf("Length of events more than 1")
+				}
+
+				if c1, c2, ok := GenCandidatesPair(
+					currentPatterns[i], GoalPatterns[j], userAndEventsInfo); ok {
+					currentMinCount = GoalPatterns[j].PerUserCount
+					candidatesMap[c1.String()] = c1
+					candidatesMap[c2.String()] = c2
+				}
+			}
+		}
+	}
+	// removing max Candidates filtering condition
+	return candidatesMapToSlice(candidatesMap), currentMinCount, nil
+}
+
 func deletePatternFromSlice(patternArray []*Pattern, pattern *Pattern) []*Pattern {
 	// Delete all occurrences of the pattern.
 	j := 0
@@ -249,7 +290,7 @@ func ComputeAllUserPropertiesHistogram(scanner *bufio.Scanner, pattern *Pattern)
 		userProperties := eventDetails.UserProperties
 
 		numEventsProcessed += 1
-		if math.Mod(float64(numEventsProcessed), 10000.0) == 0.0 {
+		if math.Mod(float64(numEventsProcessed), 100000.0) == 0.0 {
 			log.Info(fmt.Sprintf("ComputeAllUserPropertiesHistogram. Processed %d events", numEventsProcessed))
 		}
 

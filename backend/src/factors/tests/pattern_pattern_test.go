@@ -3,8 +3,10 @@ package tests
 import (
 	"bufio"
 	"encoding/json"
+	M "factors/model"
 	P "factors/pattern"
 	PS "factors/pattern_server/store"
+	T "factors/task"
 	U "factors/util"
 	"fmt"
 	"math"
@@ -990,4 +992,76 @@ func TestPatternEdgeConditionsOccureceFalse(t *testing.T) {
 		make(map[string]interface{}), 1, userId, userCreatedTime.Unix(), countOccurFlag)
 	assert.NotNil(t, err)
 
+}
+
+func TestPatternFilterTopKpatternTypes(t *testing.T) {
+
+	topUCevents := []string{"uc1", "uc2", "uc3", "uc4", "uc5"}
+	topPageViewEvents := []string{"pgv1", "pgv2", "pgv3", "$sp4", "pgv5"}
+	topIEEvents := []string{"ie1", "ie2", "ie3", "ie4", "ie5"}
+	topSpecEvents := []string{"$sp1", "$sp2", "$sp3", "$sp4", "$sp5"}
+
+	patterns := make([]*P.Pattern, 0)
+	eNT := make(map[string]string)
+
+	for idx := 0; idx < len(topUCevents); idx++ {
+
+		tmpUC, _ := P.NewPattern([]string{topUCevents[idx]}, nil)
+		tmpPv, _ := P.NewPattern([]string{topPageViewEvents[idx]}, nil)
+		tmpIE, _ := P.NewPattern([]string{topIEEvents[idx]}, nil)
+		tmpSpec, _ := P.NewPattern([]string{topSpecEvents[idx]}, nil)
+
+		tmpUC.PerUserCount = uint(idx)
+		tmpPv.PerUserCount = uint(idx)
+		tmpIE.PerUserCount = uint(idx)
+		tmpSpec.PerUserCount = uint(idx)
+
+		patterns = append(patterns, tmpUC)
+		patterns = append(patterns, tmpPv)
+		patterns = append(patterns, tmpIE)
+		patterns = append(patterns, tmpSpec)
+
+		eNT[topUCevents[idx]] = M.TYPE_USER_CREATED_EVENT_NAME
+		eNT[topPageViewEvents[idx]] = M.TYPE_FILTER_EVENT_NAME
+		eNT[topIEEvents[idx]] = M.TYPE_INTERNAL_EVENT_NAME
+		eNT[topSpecEvents[idx]] = "specialEvents"
+
+	}
+
+	filterdPatterns := T.FilterTopKEventsOnTypes(patterns, eNT, 3)
+	assert.Equal(t, 11, len(filterdPatterns)) //$sp4 is repeated
+}
+
+func TestGenSegmentsForTopGoals(t *testing.T) {
+	var err bool
+	err = false
+	allEvents := []string{"uc1", "uc2", "pgv1", "pgv2", "ie1", "ie2", "$sp1", "$sp2"}
+	goalEvents := []string{"G1", "G2", "G3", "G4", "G5"}
+
+	allPatterns := make([]*P.Pattern, 0)
+	for idx := 0; idx < len(allEvents); idx++ {
+
+		tmpAll, _ := P.NewPattern([]string{allEvents[idx]}, nil)
+		tmpAll.PerUserCount = uint(idx)
+		allPatterns = append(allPatterns, tmpAll)
+
+	}
+
+	goalPatterns := make([]*P.Pattern, 0)
+	for idx := 0; idx < len(goalEvents); idx++ {
+
+		tmpGoal, _ := P.NewPattern([]string{goalEvents[idx]}, nil)
+		tmpGoal.PerUserCount = uint(idx)
+		goalPatterns = append(goalPatterns, tmpGoal)
+
+	}
+	filterdPatterns, _, _ := P.GenSegmentsForTopGoals(allPatterns, nil, goalPatterns)
+	for _, f := range filterdPatterns {
+		if f.EventNames[0] == f.EventNames[1] {
+			err = true
+		}
+		assert.Equal(t, err, false, "Both start and goal patterns are equal")
+	}
+
+	assert.Equal(t, 80, len(filterdPatterns), "total number of patterns")
 }

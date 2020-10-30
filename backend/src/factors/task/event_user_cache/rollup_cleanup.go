@@ -218,7 +218,6 @@ func DoRollUpAndCleanUp(eventsLimit *int, propertiesLimit *int, valuesLimit *int
 					log.WithError(err).Error("Failed to marshall event names")
 					return nil
 				}
-				log.WithField("ProjectId", eventKey.ProjectID).WithField("length", len(eventKeys)).Info("RollUp:EN")
 				eventsRollup++
 				err = cacheRedis.SetPersistent(eventNamesKey, string(enEventCache), U.EVENT_USER_CACHE_EXPIRY_SECS)
 				if err != nil {
@@ -264,7 +263,6 @@ func DoRollUpAndCleanUp(eventsLimit *int, propertiesLimit *int, valuesLimit *int
 					log.WithError(err).Error("Failed to marshall - event properties")
 					return nil
 				}
-				log.WithField("ProjectId", eventKey.ProjectID).WithField("event", eventName).WithField("length", len(propertyNames)).Info("RollUp:EP")
 				eventPropertiesRollup++
 				eventPropertiesToCache[eventPropertiesKey] = string(enEventPropertiesCache)
 			}
@@ -314,7 +312,6 @@ func DoRollUpAndCleanUp(eventsLimit *int, propertiesLimit *int, valuesLimit *int
 						log.WithError(err).Error("Failed to marshall - property values")
 						return nil
 					}
-					log.WithField("ProjectId", eventKey.ProjectID).WithField("event", eventName).WithField("property", property).WithField("length", len(valueNames)).Info("RollUp:EV")
 					eventPropertiesValuesRollup++
 					eventPropertyValuesToCache[eventPropertyValuesKey] = string(enEventPropertyValuesCache)
 				}
@@ -394,7 +391,6 @@ func DoRollUpAndCleanUp(eventsLimit *int, propertiesLimit *int, valuesLimit *int
 				if err != nil {
 					log.WithError(err).Error("Failed to marshal property key - getuserpropertiesbyproject")
 				}
-				log.WithField("ProjectId", property.ProjectID).WithField("length", len(userPropertyKeys)).Info("RollUp:UP")
 				userPropertiesRollup++
 				err = cacheRedis.SetPersistent(propertyCacheKey, string(enPropertiesCache), U.EVENT_USER_CACHE_EXPIRY_SECS)
 				if err != nil {
@@ -439,7 +435,6 @@ func DoRollUpAndCleanUp(eventsLimit *int, propertiesLimit *int, valuesLimit *int
 					log.WithError(err).Error("Failed to marshal property value - getvaluesbyuserproperty")
 				}
 				userPropertiesValuesRollup++
-				log.WithField("ProjectId", property.ProjectID).WithField("property", propertyName).WithField("length", len(valueNames)).Info("RollUp:UV")
 				userPropertiesToCache[PropertyValuesKey] = string(enPropertyValuesCache)
 			}
 			if len(userPropertiesToCache) > 0 {

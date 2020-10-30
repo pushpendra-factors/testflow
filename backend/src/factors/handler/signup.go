@@ -23,9 +23,13 @@ func SignUp(c *gin.Context) {
 	})
 
 	type signupParams struct {
-		Email    string `json:"email" binding:"required"`
-		Phone    string `json:"phone"`
-		PlanCode string `json:"plan_code"`
+		Email               string `json:"email" binding:"required"`
+		Phone               string `json:"phone"`
+		FirstName           string `json:"first_name"`
+		LastName            string `json:"last_name"`
+		CompanyURL          string `json:"company_url"`
+		SubscribeNewsletter bool   `json:"subscribe_newsletter"`
+		PlanCode            string `json:"plan_code"`
 	}
 	params := signupParams{}
 	err := c.BindJSON(&params)
@@ -37,6 +41,10 @@ func SignUp(c *gin.Context) {
 	email := params.Email
 	phone := params.Phone
 	planCode := params.PlanCode
+	firstName := params.FirstName
+	lastName := params.LastName
+	companyUrl := params.CompanyURL
+	subscribeNewsletter := params.SubscribeNewsletter
 	if planCode == "" {
 		planCode = M.FreePlanCode
 	}
@@ -56,7 +64,7 @@ func SignUp(c *gin.Context) {
 		return
 	}
 	createAgentParams := M.CreateAgentParams{
-		Agent:    &M.Agent{Email: email, Phone: phone},
+		Agent:    &M.Agent{Email: email, Phone: phone, LastName: lastName, FirstName: firstName, CompanyURL: companyUrl, SubscribeNewsletter: subscribeNewsletter},
 		PlanCode: planCode,
 	}
 	createAgentResp, code := M.CreateAgentWithDependencies(&createAgentParams)

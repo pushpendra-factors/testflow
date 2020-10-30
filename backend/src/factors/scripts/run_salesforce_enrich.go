@@ -41,9 +41,6 @@ func main() {
 	redisPort := flag.Int("redis_port", 6379, "")
 	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
 	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
-	isRealTimeEventUserCachingEnabled := flag.Bool("enable_real_time_event_user_caching", false, "If the real time caching is enabled")
-	realTimeEventUserCachingProjectIds := flag.String("real_time_event_user_caching_project_ids", "",
-		"If the real time caching is enabled and the whitelisted projectids")
 
 	gcpProjectID := flag.String("gcp_project_id", "", "Project ID on Google Cloud")
 	gcpProjectLocation := flag.String("gcp_project_location", "", "Location of google cloud project cluster")
@@ -78,13 +75,10 @@ func main() {
 		RedisPort:                          *redisPort,
 		RedisHostPersistent:                *redisHostPersistent,
 		RedisPortPersistent:                *redisPortPersistent,
-		IsRealTimeEventUserCachingEnabled:  *isRealTimeEventUserCachingEnabled,
-		RealTimeEventUserCachingProjectIds: *realTimeEventUserCachingProjectIds,
 	}
 
 	C.InitConf(config.Env)
 	C.InitSalesforceConfig(config.SalesforceAppID, config.SalesforceAppSecret)
-	C.InitEventUserRealTimeCachingConfig(config.IsRealTimeEventUserCachingEnabled, config.RealTimeEventUserCachingProjectIds)
 	C.InitRedis(config.RedisHost, config.RedisPort)
 	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
 	C.InitSentryLogging(config.SentryDSN, config.AppName)

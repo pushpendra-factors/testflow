@@ -99,6 +99,7 @@ func InitAppRoutes(r *gin.Engine) {
 
 	// V1 Routes
 	authRouteGroup.GET("/:project_id/v1/event_names", V1.GetEventNamesHandler)
+	authRouteGroup.GET("/:project_id/v1/agents", V1.GetProjectAgentsHandler)
 }
 
 func InitSDKServiceRoutes(r *gin.Engine) {
