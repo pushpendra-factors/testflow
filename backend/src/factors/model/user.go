@@ -824,12 +824,6 @@ func GetDistinctCustomerUserIDSForProject(projectID uint64) ([]string, int) {
 	return customerUserIDS, http.StatusFound
 }
 
-func getRecentUserPropertyKeysCacheKey(projectId uint64) (*cacheRedis.Key, error) {
-	prefix := "recent_properties"
-	suffix := "user_properites:keys"
-	return cacheRedis.NewKey(projectId, prefix, suffix)
-}
-
 // GetUserIdentificationPhoneNumber tries various patterns of phone number if exist in db and return the phone no based on priority
 func GetUserIdentificationPhoneNumber(projectID uint64, phoneNo string) (string, string) {
 	pPhoneNo := U.GetPossiblePhoneNumber(phoneNo)

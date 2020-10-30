@@ -30,9 +30,6 @@ func main() {
 	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
 
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
-	isRealTimeEventUserCachingEnabled := flag.Bool("enable_real_time_event_user_caching", false, "If the real time caching is enabled")
-	realTimeEventUserCachingProjectIds := flag.String("real_time_event_user_caching_project_ids", "",
-		"If the real time caching is enabled and the whitelisted projectids")
 
 	gcpProjectID := flag.String("gcp_project_id", "", "Project ID on Google Cloud")
 	gcpProjectLocation := flag.String("gcp_project_location", "", "Location of google cloud project cluster")
@@ -64,12 +61,9 @@ func main() {
 		RedisHostPersistent:                *redisHostPersistent,
 		RedisPortPersistent:                *redisPortPersistent,
 		SentryDSN:                          *sentryDSN,
-		IsRealTimeEventUserCachingEnabled:  *isRealTimeEventUserCachingEnabled,
-		RealTimeEventUserCachingProjectIds: *realTimeEventUserCachingProjectIds,
 	}
 
 	C.InitConf(config.Env)
-	C.InitEventUserRealTimeCachingConfig(config.IsRealTimeEventUserCachingEnabled, config.RealTimeEventUserCachingProjectIds)
 
 	err := C.InitDB(config.DBInfo)
 	if err != nil {

@@ -78,8 +78,6 @@ func TestGetEventNamesHandler(t *testing.T) {
 		EventNames []string `json:"event_names"`
 		Exact      bool     `json:"exact"`
 	}{}
-	C.GetConfig().WhitelistedProjectIdsEventUserCache = "*"
-	C.GetConfig().IsRealTimeEventUserCachingEnabled = true
 	C.GetConfig().LookbackWindowForEventUserCache = 10
 
 	H.InitSDKServiceRoutes(r)
@@ -88,7 +86,6 @@ func TestGetEventNamesHandler(t *testing.T) {
 	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
 	assert.NotNil(t, project)
-	C.GetConfig().RealTimeEventUserCachingProjectIds = fmt.Sprintf("%v", project.ID)
 
 	ReinitialiseConfigForCachedEnabledProjects(fmt.Sprintf("%v", project.ID))
 	w := sendGetEventNamesExactRequest(project.ID, agent, r)

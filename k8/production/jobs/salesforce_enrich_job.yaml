@@ -52,9 +52,6 @@ spec:
             - $(GCP_PROJECT_ID)
             - --gcp_project_location
             - $(GCP_PROJECT_LOCATION)
-            - --real_time_event_user_caching_project_ids
-            - '*'
-            - --enable_real_time_event_user_caching
             envFrom:
             - configMapRef:
                 name: config-env

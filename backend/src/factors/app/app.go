@@ -52,8 +52,6 @@ func main() {
 	sentryDSN := flag.String("sentry_dsn", "", "Sentry DSN")
 
 	skipTrackProjectIds := flag.String("skip_track_project_ids", "", "List or projects to skip track")
-	whitelistedProjectIdsEventUserCache := flag.String("whitelisted_projects_ids_event_user_cache",
-		"1", "List of project ids for which caching for events/user is enabled")
 	lookbackWindowForEventUserCache := flag.Int("lookback_window_event_user_cache",
 		30, "look back window in cache for event/user cache")
 	facebookAppId := flag.String("facebook_app_id", "", "")
@@ -64,8 +62,6 @@ func main() {
 	skipSessionProjectIds := flag.String("skip_session_project_ids",
 		"", "List or projects to skip session creation.")
 
-	isRealTimeEventUserCachingEnabled := flag.Bool("enable_real_time_event_user_caching",
-		false, "If the real time caching is enabled")
 	blockedSDKRequestProjectTokens := flag.String("blocked_sdk_request_project_tokens",
 		"", "List of project tokens blocked for all sdk requests.")
 	cacheLookUpRangeProjects := flag.String("cache_look_up_range_projects",
@@ -86,33 +82,31 @@ func main() {
 			Name:     *dbName,
 			Password: *dbPass,
 		},
-		RedisHost:                           *redisHost,
-		RedisPort:                           *redisPort,
-		RedisHostPersistent:                 *redisHostPersistent,
-		RedisPortPersistent:                 *redisPortPersistent,
-		GeolocationFile:                     *geoLocFilePath,
-		DeviceDetectorPath:                  *deviceDetectorPath,
-		APIDomain:                           *apiDomain,
-		APPDomain:                           *appDomain,
-		AWSKey:                              *awsAccessKeyId,
-		AWSSecret:                           *awsSecretAccessKey,
-		AWSRegion:                           *awsRegion,
-		EmailSender:                         *factorsEmailSender,
-		AdminLoginEmail:                     *adminLoginEmail,
-		AdminLoginToken:                     *adminLoginToken,
-		FacebookAppID:                       *facebookAppId,
-		FacebookAppSecret:                   *facebookAppSecret,
-		SalesforceAppID:                     *salesforceAppId,
-		SalesforceAppSecret:                 *salesforceAppSecret,
-		SentryDSN:                           *sentryDSN,
-		LoginTokenMap:                       C.ParseConfigStringToMap(*loginTokenMap),                // Map of "<token>": "<agent_email>".
-		SkipTrackProjectIds:                 C.GetTokensFromStringListAsUint64(*skipTrackProjectIds), // comma seperated project ids.
-		SkipSessionProjectIds:               *skipSessionProjectIds,                                  // comma seperated project ids, supports "*".
-		WhitelistedProjectIdsEventUserCache: *whitelistedProjectIdsEventUserCache,
-		IsRealTimeEventUserCachingEnabled:   *isRealTimeEventUserCachingEnabled,
-		BlockedSDKRequestProjectTokens:      C.GetTokensFromStringListAsString(*blockedSDKRequestProjectTokens),
-		CacheLookUpRangeProjects:            C.ExtractProjectIdDateFromConfig(*cacheLookUpRangeProjects),
-		LookbackWindowForEventUserCache:     *lookbackWindowForEventUserCache,
+		RedisHost:                       *redisHost,
+		RedisPort:                       *redisPort,
+		RedisHostPersistent:             *redisHostPersistent,
+		RedisPortPersistent:             *redisPortPersistent,
+		GeolocationFile:                 *geoLocFilePath,
+		DeviceDetectorPath:              *deviceDetectorPath,
+		APIDomain:                       *apiDomain,
+		APPDomain:                       *appDomain,
+		AWSKey:                          *awsAccessKeyId,
+		AWSSecret:                       *awsSecretAccessKey,
+		AWSRegion:                       *awsRegion,
+		EmailSender:                     *factorsEmailSender,
+		AdminLoginEmail:                 *adminLoginEmail,
+		AdminLoginToken:                 *adminLoginToken,
+		FacebookAppID:                   *facebookAppId,
+		FacebookAppSecret:               *facebookAppSecret,
+		SalesforceAppID:                 *salesforceAppId,
+		SalesforceAppSecret:             *salesforceAppSecret,
+		SentryDSN:                       *sentryDSN,
+		LoginTokenMap:                   C.ParseConfigStringToMap(*loginTokenMap),                // Map of "<token>": "<agent_email>".
+		SkipTrackProjectIds:             C.GetTokensFromStringListAsUint64(*skipTrackProjectIds), // comma seperated project ids.
+		SkipSessionProjectIds:           *skipSessionProjectIds,                                  // comma seperated project ids, supports "*".
+		BlockedSDKRequestProjectTokens:  C.GetTokensFromStringListAsString(*blockedSDKRequestProjectTokens),
+		CacheLookUpRangeProjects:        C.ExtractProjectIdDateFromConfig(*cacheLookUpRangeProjects),
+		LookbackWindowForEventUserCache: *lookbackWindowForEventUserCache,
 	}
 
 	// Initialize configs and connections.

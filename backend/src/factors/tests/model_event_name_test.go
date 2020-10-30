@@ -518,9 +518,6 @@ func TestDBGetEventNamesOrderedByOccurrenceWithLimit(t *testing.T) {
 	user, errCode := M.CreateUser(&M.User{ProjectId: project.ID})
 	assert.NotNil(t, user)
 	assert.Equal(t, http.StatusCreated, errCode)
-	C.GetConfig().WhitelistedProjectIdsEventUserCache = "*"
-	C.GetConfig().IsRealTimeEventUserCachingEnabled = true
-	C.GetConfig().RealTimeEventUserCachingProjectIds = fmt.Sprintf("%v", project.ID)
 	rEventName := "event1"
 	w := ServePostRequestWithHeaders(r, uri,
 		[]byte(fmt.Sprintf(`{"user_id": "%s",  "event_name": "%s", "auto": true, "event_properties": {"$dollar_property": "dollarValue", "$qp_search": "mobile", "mobile": "true", "$qp_encoded": "google%%20search", "$qp_utm_keyword": "google%%20search"}, "user_properties": {"name": "Jhon"}}`, user.ID, rEventName)),

@@ -53,46 +53,43 @@ type DBConf struct {
 }
 
 type Configuration struct {
-	GCPProjectID                        string
-	GCPProjectLocation                  string
-	AppName                             string
-	Env                                 string
-	Port                                int
-	DBInfo                              DBConf
-	RedisHost                           string
-	RedisPort                           int
-	RedisHostPersistent                 string
-	RedisPortPersistent                 int
-	QueueRedisHost                      string
-	QueueRedisPort                      int
-	EtcdEndpoints                       []string
-	GeolocationFile                     string
-	DeviceDetectorPath                  string
-	APIDomain                           string
-	APPDomain                           string
-	AWSRegion                           string
-	AWSKey                              string
-	AWSSecret                           string
-	Cookiename                          string
-	EmailSender                         string
-	ErrorReportingInterval              int
-	AdminLoginEmail                     string
-	AdminLoginToken                     string
-	FacebookAppID                       string
-	FacebookAppSecret                   string
-	SalesforceAppID                     string
-	SalesforceAppSecret                 string
-	SentryDSN                           string
-	LoginTokenMap                       map[string]string
-	SkipTrackProjectIds                 []uint64
-	SDKRequestQueueProjectTokens        []string
-	SegmentRequestQueueProjectTokens    []string
-	SkipSessionProjectIds               string // comma seperated project ids, supports "*" for all projects.
-	UseDefaultProjectSettingForSDK      bool
-	WhitelistedProjectIdsEventUserCache string
-	IsRealTimeEventUserCachingEnabled   bool
-	RealTimeEventUserCachingProjectIds  string
-	BlockedSDKRequestProjectTokens      []string
+	GCPProjectID                     string
+	GCPProjectLocation               string
+	AppName                          string
+	Env                              string
+	Port                             int
+	DBInfo                           DBConf
+	RedisHost                        string
+	RedisPort                        int
+	RedisHostPersistent              string
+	RedisPortPersistent              int
+	QueueRedisHost                   string
+	QueueRedisPort                   int
+	EtcdEndpoints                    []string
+	GeolocationFile                  string
+	DeviceDetectorPath               string
+	APIDomain                        string
+	APPDomain                        string
+	AWSRegion                        string
+	AWSKey                           string
+	AWSSecret                        string
+	Cookiename                       string
+	EmailSender                      string
+	ErrorReportingInterval           int
+	AdminLoginEmail                  string
+	AdminLoginToken                  string
+	FacebookAppID                    string
+	FacebookAppSecret                string
+	SalesforceAppID                  string
+	SalesforceAppSecret              string
+	SentryDSN                        string
+	LoginTokenMap                    map[string]string
+	SkipTrackProjectIds              []uint64
+	SDKRequestQueueProjectTokens     []string
+	SegmentRequestQueueProjectTokens []string
+	SkipSessionProjectIds            string // comma seperated project ids, supports "*" for all projects.
+	UseDefaultProjectSettingForSDK   bool
+	BlockedSDKRequestProjectTokens   []string
 	// Usage: 	"--cache_look_up_range_projects", "1:20140307"
 	CacheLookUpRangeProjects        map[uint64]time.Time // Usually cache look up is for past 30 days. If certain projects need override, then this is used
 	LookbackWindowForEventUserCache int
@@ -259,11 +256,6 @@ func InitConf(env string) {
 	configuration = &Configuration{
 		Env: env,
 	}
-}
-
-func InitEventUserRealTimeCachingConfig(isEnabled bool, projectIds string) {
-	configuration.IsRealTimeEventUserCachingEnabled = isEnabled
-	configuration.RealTimeEventUserCachingProjectIds = projectIds
 }
 
 func InitSalesforceConfig(salesforceAppId, salesforceAppSecret string) {
@@ -594,11 +586,7 @@ func InitSDKService(config *Configuration) error {
 	// Cache dependency for requests not using queue.
 	InitRedis(config.RedisHost, config.RedisPort)
 
-	// TODO: Remove this check after enabling caching realtime.
-	if config.IsRealTimeEventUserCachingEnabled {
-		log.Info("Initializing persistent redis service in sdk service.")
-		InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
-	}
+	InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
 
 	initGeoLocationService(config.GeolocationFile)
 	initDeviceDetectorPath(config.DeviceDetectorPath)
@@ -637,11 +625,7 @@ func InitQueueWorker(config *Configuration) error {
 		log.WithError(err).Fatal("Failed to initalize queue client on init queue worker.")
 	}
 
-	// TODO: Remove this check after enabling caching realtime.
-	if config.IsRealTimeEventUserCachingEnabled {
-		log.Info("Initializing persistent redis service in worker.")
-		InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
-	}
+	InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
 
 	InitSentryLogging(config.SentryDSN, config.AppName)
 	InitMetricsExporter(config.Env, config.AppName, config.GCPProjectID, config.GCPProjectLocation)
@@ -738,21 +722,8 @@ func GetSkipTrackProjectIds() []uint64 {
 	return configuration.SkipTrackProjectIds
 }
 
-func GetWhitelistedProjectIdsEventUserCache() string {
-	return configuration.WhitelistedProjectIdsEventUserCache
-}
-
 func GetLookbackWindowForEventUserCache() int {
 	return configuration.LookbackWindowForEventUserCache
-}
-
-func GetIfRealTimeEventUserCachingIsEnabled(projectId uint64) bool {
-	if configuration.RealTimeEventUserCachingProjectIds == "*" {
-		return configuration.IsRealTimeEventUserCachingEnabled && true
-	}
-	projectIds := U.GetIntBoolMapFromStringList(&configuration.RealTimeEventUserCachingProjectIds)
-	isWhitelisted, _ := projectIds[projectId]
-	return configuration.IsRealTimeEventUserCachingEnabled && isWhitelisted == true
 }
 
 func ExtractProjectIdDateFromConfig(config string) map[uint64]time.Time {
