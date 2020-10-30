@@ -1241,3 +1241,55 @@ func GetEventNamesFromFile(scanner *bufio.Scanner, projectId uint64) ([]string, 
 	return eventNames, nil
 
 }
+
+func GetEventTypeFromDb(
+	projectID uint64, eventNames []string, limit int64) (map[string]string, error) {
+	// var err string
+	db := C.GetServices().Db
+	hasLimit := limit > 0
+
+	logCtx := log.WithFields(log.Fields{"projectId": projectID})
+
+	type allEventNameAndType struct {
+		Name string
+		Type string
+	}
+	EventNameType := make(map[string]string)
+	var tmpEventNames []string
+	for _, b := range eventNames {
+		//to remove empty strings which might break sql query
+		if len(b) > 0 {
+			tmpEventNames = append(tmpEventNames, b)
+		}
+	}
+
+	queryStr := "SELECT name,type FROM event_names WHERE project_id=? and name IN (?)"
+
+	if hasLimit {
+		queryStr = queryStr + " " + "LIMIT ?"
+	}
+
+	params := make([]interface{}, 0)
+	params = append(params, projectID)
+	params = append(params, tmpEventNames)
+	if hasLimit {
+		params = append(params, limit)
+	}
+
+	rows, err := db.Raw(queryStr, params...).Rows()
+	if err != nil {
+		logCtx.WithError(err).Error(
+			"Failed scanning rows on get event names and Types.")
+		return EventNameType, err
+	}
+
+	for rows.Next() {
+		var eventNameAndType allEventNameAndType
+		if err := db.ScanRows(rows, &eventNameAndType); err != nil {
+			logCtx.WithError(err).Error("Failed scanning rows on get event names and Types.")
+			return EventNameType, err
+		}
+		EventNameType[eventNameAndType.Name] = eventNameAndType.Type
+	}
+	return EventNameType, nil
+}
