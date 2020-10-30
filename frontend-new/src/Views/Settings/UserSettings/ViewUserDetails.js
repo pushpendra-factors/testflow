@@ -7,13 +7,13 @@ import { UserOutlined } from '@ant-design/icons';
 import { fetchAgentInfo } from '../../../reducers/agentActions';
 import { connect } from 'react-redux';
 
-function ViewUserDetails({ fetchAgentInfo, editDetails, editPassword }) {
+function ViewUserDetails({
+  fetchAgentInfo, editDetails, editPassword, agent
+}) {
   const [dataLoading, setDataLoading] = useState(true);
-  const [userData, setuserData] = useState(null);
 
   useEffect(() => {
-    fetchAgentInfo().then((response) => {
-      setuserData(response.data);
+    fetchAgentInfo().then(() => {
       setDataLoading(false);
     });
   }, [fetchAgentInfo]);
@@ -38,7 +38,7 @@ function ViewUserDetails({ fetchAgentInfo, editDetails, editPassword }) {
           <Col>
             <Text type={'title'} level={7} extraClass={'m-0'}>Name</Text>
             {dataLoading ? <Skeleton.Input style={{ width: 200 }} active={true} size={'small'} />
-              : <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>{`${userData.first_name} ${userData.last_name}`}</Text>
+              : <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>{`${agent.first_name} ${agent.last_name}`}</Text>
             }
           </Col>
         </Row>
@@ -46,7 +46,7 @@ function ViewUserDetails({ fetchAgentInfo, editDetails, editPassword }) {
           <Col>
             <Text type={'title'} level={7} extraClass={'m-0'}>Email</Text>
             {dataLoading ? <Skeleton.Input style={{ width: 200 }} active={true} size={'small'} />
-              : <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>{userData.email}</Text>
+              : <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>{agent.email}</Text>
             }
           </Col>
         </Row>
@@ -54,7 +54,7 @@ function ViewUserDetails({ fetchAgentInfo, editDetails, editPassword }) {
           <Col>
             <Text type={'title'} level={7} extraClass={'m-0'}>Mobile</Text>
             {dataLoading ? <Skeleton.Input style={{ width: 200 }} active={true} size={'small'} />
-              : <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>+91-8123456789</Text>
+              : <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>{agent.phone}</Text>
             }
           </Col>
         </Row>
@@ -68,8 +68,8 @@ function ViewUserDetails({ fetchAgentInfo, editDetails, editPassword }) {
         </Row>
         <Row className={'mt-6'}>
           <Col className={'flex justify-start items-center'}>
-            <Button disabled={dataLoading} onClick={editDetails}>Edit Details</Button>
-            <Button disabled={dataLoading} className={'ml-4'} onClick={editPassword} >Change Password</Button>
+            <Button size={'large'} disabled={dataLoading} onClick={editDetails}>Edit Details</Button>
+            <Button size={'large'} disabled={dataLoading} className={'ml-4'} onClick={editPassword} >Change Password</Button>
           </Col>
         </Row>
       </div>
@@ -79,4 +79,9 @@ function ViewUserDetails({ fetchAgentInfo, editDetails, editPassword }) {
   );
 }
 
-export default connect(null, { fetchAgentInfo })(ViewUserDetails);
+const mapStatesToProps = (state) => {
+  return {
+    agent: state.agent.agent_details
+  };
+};
+export default connect(mapStatesToProps, { fetchAgentInfo })(ViewUserDetails);

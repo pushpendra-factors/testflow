@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Layout, Row, Avatar, Popover, Button, Modal, Col
+  Layout, Row, Avatar, Popover, Button, Modal, Col, notification
 } from 'antd';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useHistory } from 'react-router-dom';
 import { SVG, Text } from 'factorsComponents';
 import ModalLib from '../../Views/componentsLib/ModalLib';
 import UserSettings from '../../Views/Settings/UserSettings';
-import { setActiveProject, fetchProjectSettings } from '../../reducers/global';
-import { signout } from '../../reducers/agentActions';
+import { setActiveProject } from 'Reducers/global';
+import { signout } from 'Reducers/agentActions';
 import { connect } from 'react-redux';
 import { PlusOutlined, PoweroffOutlined, BankOutlined } from '@ant-design/icons';
 import CreateNewProject from './CreateNewProject';
+import _ from 'lodash';
 
 function Sidebar(props) {
   const { Sider } = Layout;
@@ -22,6 +23,7 @@ function Sidebar(props) {
   const [selectedProject, setselectedProject] = useState(null);
   const [searchProjectName, setsearchProjectName] = useState('');
   const [CreateNewProjectModal, setCreateNewProjectModal] = useState(false);
+  const history = useHistory();
 
   const searchProject = (e) => {
     setsearchProjectName(e.target.value);
@@ -47,7 +49,7 @@ function Sidebar(props) {
 
           </div>
           <div className={'fa-popupcard-divider'} />
-          <Button type={'text'}
+          <Button size={'large'} type={'text'}
           onClick={() => {
             setShowPopOver(false);
             setCreateNewProjectModal(true);
@@ -61,7 +63,7 @@ function Sidebar(props) {
               }}>
                 <Avatar src={'https://zos.alipayobjects.com/rmsportal/ODTLcjxAfvqbxHnVXCYX.png'} size={28}/><Text type={'title'} level={7} extraClass={'m-0 ml-2'}>{'Account Settings'}</Text>
           </div>
-          <Button type={'text'}
+          <Button size={'large'} type={'text'}
           onClick={() => {
             setShowPopOver(false);
             props.signout();
@@ -83,13 +85,26 @@ function Sidebar(props) {
     setVisible(false);
   };
 
+  const switchProject = () => {
+    props.setActiveProject(selectedProject);
+    history.push('/');
+    notification.success({
+      message: 'Project Changed!',
+      description: `You are currently viewing data from ${selectedProject.name}`
+    });
+  };
+
   useEffect(() => {
     document.onkeydown = keydown;
     function keydown(evt) {
       // Shift+G to trigger grid debugger
       if (evt.shiftKey && evt.keyCode === 71) { setVisible(!visible); }
     }
-  });
+    // Setting first project as active project if no-active project exisit in redux-persist/localStorage.
+    if (_.isEmpty(props.active_project)) {
+      props.setActiveProject(props.projects[0]);
+    }
+  }, []);
 
   return (
     <>
@@ -169,13 +184,11 @@ function Sidebar(props) {
         className={'fa-modal--regular'}
         okText={'Switch'}
         onOk={() => {
-          props.setActiveProject(selectedProject);
-          props.fetchProjectSettings(selectedProject.id);
           setShowPopOver(false);
           setchangeProjectModal(false);
           setselectedProject(null);
+          switchProject();
         }}
-        // confirmLoading={props.confirmLoading}
         centered={true}
         >
           <div className={'p-4'}>
@@ -199,4 +212,4 @@ const mapStateToProps = (state) => {
     active_project: state.global.active_project
   };
 };
-export default connect(mapStateToProps, { setActiveProject, signout, fetchProjectSettings })(Sidebar);
+export default connect(mapStateToProps, { setActiveProject, signout })(Sidebar);

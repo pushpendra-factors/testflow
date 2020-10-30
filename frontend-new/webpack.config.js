@@ -119,7 +119,8 @@ module.exports = {
     extensions: ['*', '.js', '.jsx'],
     alias: {
       factorsComponents: path.resolve(__dirname, './src/components/factorsComponents'),
-      svgIcons: path.resolve(__dirname, './src/components/svgIcons')
+      svgIcons: path.resolve(__dirname, './src/components/svgIcons'),
+      Reducers: path.resolve(__dirname, './src/reducers')
     }
   },
   plugins: [

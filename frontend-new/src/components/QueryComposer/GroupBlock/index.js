@@ -54,7 +54,7 @@ function GroupBlock({
   const renderInitGroupSelect = (index) => {
     return (<div key={0} className={`${styles.group_block__select} flex justify-start items-center ml-10 mt-2`} >
       {!isDDVisible[index] &&
-        <Button type="link" onClick={() => triggerDropDown(index)}><SVG name="plus" /> Select user property</Button> }
+        <Button size={'large'} type="link" onClick={() => triggerDropDown(index)}><SVG name="plus" /> Select user property</Button> }
       {isDDVisible[index]
         ? (<GroupSelect groupedProperties={filterOptions}
           placeholder="Select Property"

@@ -53,7 +53,7 @@ function WidgetCard({
                     <Text ellipsis type={'paragraph'} mini color={'grey'} extraClass={'m-0'}>{Titles[id].subTitle}</Text>
                 </div>
                 <div className={'flex flex-col justify-start items-start fa-widget-card--top-actions'}>
-                    <Button onClick={() => setwidgetModal(true)} icon={<FullscreenOutlined />} type="text" />
+                    <Button size={'large'} onClick={() => setwidgetModal(true)} icon={<FullscreenOutlined />} type="text" />
                 </div>
             </div>
             <div className={'fa-widget-card--legend flex justify-center items-center'}>

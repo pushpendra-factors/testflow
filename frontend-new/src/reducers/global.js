@@ -43,11 +43,26 @@ export default function (state = defaultState, action) {
       if (_state.currentProjectSettings)
         _state.currentProjectSettings = { 
           ..._state.currentProjectSettings,
-          ...action.payload.updatedSettings // Updates the state of settings only which are updated.
+          ...action.payload.updatedSettings
         };
       return _state;
     };
     case "UPDATE_PROJECT_SETTINGS_REJECTED": {
+      return {
+        ...state,
+        projectEventsError: action.payload.err
+      }
+    };
+    case "UPDATE_PROJECT_DETAILS_FULFILLED": {
+      let _state = { ...state };
+      if (_state.active_project)
+        _state.active_project = { 
+          ..._state.active_project,
+          ...action.payload.updatedDetails
+        };
+      return _state;
+    };
+    case "UPDATE_PROJECT_DETAILS_REJECTED": {
       return {
         ...state,
         projectEventsError: action.payload.err
@@ -86,7 +101,7 @@ export function fetchProjects(projects) {
     return new Promise((resolve, reject) => {
       get(dispatch, host + 'projects', {})
         .then((response) => {
-          dispatch(setActiveProject(response.data.projects[0]));
+          // dispatch(setActiveProject(response.data.projects[0]));
           resolve(dispatch(fetchProjectAction(response.data.projects)));
         }).catch((err) => {
           resolve(dispatch(fetchProjectAction([])));
@@ -165,23 +180,54 @@ export function fetchProjectSettings(projectId) {
 
 export function udpateProjectSettings(projectId, payload) {
   return function(dispatch) {
-    return put(dispatch, host + "projects/" + projectId + "/settings", payload)
-     .then((response) => {
-        return dispatch({
-          type: "UPDATE_PROJECT_SETTINGS_FULFILLED", 
-          payload: {
-            updatedSettings: response.data
-          }
+    return new Promise((resolve, reject) => {
+      put(dispatch, host + "projects/" + projectId + "/settings", payload)
+      .then((response) => {
+          dispatch({
+           type: "UPDATE_PROJECT_SETTINGS_FULFILLED", 
+           payload: {
+             updatedSettings: response.data
+           }
+         });
+         resolve(response); 
+       })
+       .catch((err) => {
+          dispatch({
+           type: "UPDATE_PROJECT_SETTINGS_REJECTED", 
+           payload: {
+             updatedSettings: {}, 
+             err: err
+           }
+         });
+         reject(err);
+       }); 
+    })
+  }
+}
+
+export function udpateProjectDetails(projectId, payload) {
+  return function(dispatch) {
+    return new Promise((resolve, reject) => {
+      put(dispatch, host + "projects/" + projectId, payload)
+       .then((response) => {
+          dispatch({
+            type: "UPDATE_PROJECT_DETAILS_FULFILLED", 
+            payload: {
+              updatedDetails: response.data
+            }
+          });
+          resolve(response);
+        })
+        .catch((err) => {
+          dispatch({
+            type: "UPDATE_PROJECT_DETAILS_REJECTED", 
+            payload: {
+              updatedDetails: {}, 
+              err: err
+            }
+          });
+          reject(err);
         });
-      })
-      .catch((err) => {
-        return dispatch({
-          type: "UPDATE_PROJECT_SETTINGS_REJECTED", 
-          payload: {
-            updatedSettings: {}, 
-            err: err
-          }
-        });
-      });
+    })
   }
 }

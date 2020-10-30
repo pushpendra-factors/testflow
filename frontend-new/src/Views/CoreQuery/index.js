@@ -265,8 +265,8 @@ function CoreQuery({ activeProject }) {
           <Text type={'title'} level={4} weight={'bold'} extraClass={'ml-2 m-0'}>{queryType === 'funnel' ? 'Find event funnel for' : 'Analyse Events'}</Text>
         </div>
         <div className={'flex justify-end items-center'}>
-          <Button type="text"><SVG name="play"></SVG>Help</Button>
-          <Button type="text" onClick={() => closeDrawer()}><SVG name="times"></SVG></Button>
+          <Button size={'large'} type="text"><SVG name="play"></SVG>Help</Button>
+          <Button size={'large'} type="text" onClick={() => closeDrawer()}><SVG name="times"></SVG></Button>
         </div>
       </div>
     );

@@ -72,7 +72,7 @@ function QueryBlock({
   };
 
   const addGroupBy = () => {
-    setGroupByDDVisible(true);
+    // setGroupByDDVisible(true);
   };
 
   const addFilter = () => {
@@ -110,9 +110,9 @@ function QueryBlock({
   const additionalActions = () => {
     return (
             <div className={'fa--query_block--actions'}>
-              <Button type="link" onClick={addGroupBy} className={'mr-1'}><SVG name="groupby"></SVG></Button>
-               <Button type="link" onClick={addFilter} className={'mr-1'}><SVG name="filter"></SVG></Button>
-               <Button type="link" onClick={deleteItem}><SVG name="trash"></SVG></Button>
+              <Button size={'large'} type="link" onClick={addGroupBy} className={'mr-1'}><SVG name="groupby"></SVG></Button>
+               <Button size={'large'} type="link" onClick={addFilter} className={'mr-1'}><SVG name="filter"></SVG></Button>
+               <Button size={'large'} type="link" onClick={deleteItem}><SVG name="trash"></SVG></Button>
             </div>
     );
   };
@@ -166,7 +166,7 @@ function QueryBlock({
             <div className={`${styles.query_block} fa--query_block ${ifQueries ? 'bordered' : ''}`}>
                 <div className={`${styles.query_block__event} flex justify-start items-center`}>
                     <div className={'fa--query_block--add-event flex justify-center items-center mr-2'}><SVG name={'plus'} color={'purple'}></SVG></div>
-                        {!isDDVisible && <Button type="link" onClick={triggerDropDown}>{ifQueries ? 'Add another event' : 'Add First Event'}</Button> }
+                        {!isDDVisible && <Button size={'large'} type="link" onClick={triggerDropDown}>{ifQueries ? 'Add another event' : 'Add First Event'}</Button> }
                     {selectEvents()}
                 </div>
             </div>
@@ -177,7 +177,7 @@ function QueryBlock({
         <div className={`${styles.query_block} fa--query_block bordered `}>
             <div className={`${styles.query_block__event} flex justify-start items-center`}>
                 <div className={'fa--query_block--add-event active flex justify-center items-center mr-2'}><Text type={'title'} level={7} weight={'bold'} color={'white'} extraClass={'m-0'}>{queryType === 'funnel' ? index : alphabetIndex[index - 1]}</Text> </div>
-                {!isDDVisible && <Button type="link" onClick={triggerDropDown}><SVG name="mouseevent" extraClass={'mr-1'}></SVG> {event.label} </Button> }
+                {!isDDVisible && <Button size={'large'} type="link" onClick={triggerDropDown}><SVG name="mouseevent" extraClass={'mr-1'}></SVG> {event.label} </Button> }
                 {selectEvents()}
             </div>
             {eventFilters()}
