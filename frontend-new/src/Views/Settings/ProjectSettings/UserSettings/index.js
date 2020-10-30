@@ -38,14 +38,14 @@ function UserSettings({
     });
   };
 
-  const confirmRoleChange = (uuid, role) => {
+  const confirmRoleChange = (uuid) => {
     confirm({
       title: 'Do you want to change this user\'s role?',
       icon: <ExclamationCircleOutlined />,
       content: 'Please confirm to proceed',
       okText: 'Yes',
       onOk() {
-        updateAgentRole(activeProjectID, uuid, role).then(() => {
+        updateAgentRole(activeProjectID, uuid, 2).then(() => {
           message.success('User role updated!');
         }).catch((err) => {
           message.error(err);
@@ -61,7 +61,7 @@ function UserSettings({
         <a>Remove User</a>
       </Menu.Item>
       {values.role === 1 &&
-        <Menu.Item key="0" onClick={() => confirmRoleChange(values.uuid, values.role)}>
+        <Menu.Item key="0" onClick={() => confirmRoleChange(values.uuid)}>
           <a>Make Project Admin</a>
         </Menu.Item>
       }
