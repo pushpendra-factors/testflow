@@ -21,7 +21,7 @@ type Queries struct {
 	Query     postgres.Jsonb `gorm:"not null" json:"query"`
 	Type      int            `gorm:"not null; primary_key:true" json:"type"`
 	IsDeleted bool           `gorm:"not null;default:false" json:"is_deleted"`
-	CreatedBy string         `gorm:"type:varchar(255);primary_key:true;" json:"created_by"`
+	CreatedBy string         `gorm:"type:varchar(255)" json:"created_by"`
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
 }
@@ -105,7 +105,7 @@ func SearchQueriesWithProjectId(projectID uint64, searchString string) ([]Querie
 	db := C.GetServices().Db
 
 	var queries []Queries
-	err := db.Table("queries").Where("project_id = ? AND title LIKE ? AND is_deleted= ?", projectID, "%"+searchString+"%", "false").Find(&queries).Error
+	err := db.Table("queries").Where("project_id = ? AND title ILIKE ? AND is_deleted= ?", projectID, "%"+searchString+"%", "false").Find(&queries).Error
 	if err != nil || len(queries) == 0 {
 		return nil, http.StatusNotFound
 	}

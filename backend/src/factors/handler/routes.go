@@ -64,7 +64,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.POST("/:project_id/queries", CreateSavedQueryHandler)
 	authRouteGroup.PUT("/:project_id/queries/:query_id", UpdateSavedQueryHandler)
 	authRouteGroup.DELETE("/:project_id/queries/:query_id", DeleteSavedQueryHandler)
-	authRouteGroup.GET(":project_id/queries/search", SearchQueriesHandler)
+	authRouteGroup.GET("/:project_id/queries/search", SearchQueriesHandler)
 	authRouteGroup.GET("/:project_id/event_names", GetEventNamesHandler)
 	authRouteGroup.GET("/:project_id/models", GetProjectModelsHandler)
 	authRouteGroup.GET("/:project_id/filters", GetFiltersHandler)
