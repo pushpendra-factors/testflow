@@ -6,6 +6,7 @@ import {
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
 import { PlusOutlined, SlackOutlined } from '@ant-design/icons';
+import ConfigureDP from './ConfigureDP';
 
 const columns = [
   {
@@ -71,11 +72,15 @@ const suggestionList = [
 
 const Factors = () => {
   const [loadingTable, SetLoadingTable] = useState(true);
+  const [showConfigureDPModal, setConfigureDPModal] = useState(false);
   useEffect(() => {
     setInterval(() => {
       SetLoadingTable(false);
     }, 2000);
   });
+  const handleCancel = () => {
+    setConfigureDPModal(false);
+  };
   return (
     <>
          <Header>
@@ -91,7 +96,7 @@ const Factors = () => {
                             <Col span={24}>
                                 <Text type={'title'} level={5} weight={'bold'} extraClass={'m-0'} >What’s being tracked?</Text>
                                 <Text type={'title'} level={7} extraClass={'m-0'} >Factors periodically track a pre-configured set of data points for faster and efficient retrieval of insights. </Text>
-                                <Button className={'m-0 mt-4'} size={'large'}>Configure Data Points</Button>
+                                <Button className={'m-0 mt-4'} size={'large'} onClick={() => setConfigureDPModal(true)}>Configure Data Points</Button>
                             </Col>
                             <Col span={24}>
                                 <Text type={'title'} level={7} weight={'bold'} extraClass={'mt-8'} >Suggestions based on your activity</Text>
@@ -125,6 +130,11 @@ const Factors = () => {
                 </Col>
                 </Row>
             </div>
+
+            <ConfigureDP
+            visible={showConfigureDPModal}
+            handleCancel={handleCancel}
+            />
 
     </>
   );
