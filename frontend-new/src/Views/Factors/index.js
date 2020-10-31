@@ -7,6 +7,7 @@ import {
 import { Text, SVG } from 'factorsComponents';
 import { PlusOutlined, SlackOutlined } from '@ant-design/icons';
 import ConfigureDP from './ConfigureDP';
+import CreateGoalDrawer from './CreateGoalDrawer';
 
 const columns = [
   {
@@ -73,6 +74,8 @@ const suggestionList = [
 const Factors = () => {
   const [loadingTable, SetLoadingTable] = useState(true);
   const [showConfigureDPModal, setConfigureDPModal] = useState(false);
+  const [showGoalDrawer, setGoalDrawer] = useState(false);
+
   useEffect(() => {
     setInterval(() => {
       SetLoadingTable(false);
@@ -118,7 +121,7 @@ const Factors = () => {
                             <Text type={'title'} level={5} extraClass={'m-0 mt-2'} >Periodically track website events, pages, user properties that are important to you and get insights that influence your goals.</Text>
                         </Col>
                         <Col span={20}>
-                            <Button size={'large'} type={'primary'}>Create a New Goal</Button>
+                            <Button size={'large'} type={'primary'} onClick={() => setGoalDrawer(true)}>Create a New Goal</Button>
                             <a className={'ml-4'}>learn more</a>
                         </Col>
                     </Row>
@@ -134,6 +137,11 @@ const Factors = () => {
             <ConfigureDP
             visible={showConfigureDPModal}
             handleCancel={handleCancel}
+            />
+
+            <CreateGoalDrawer
+                visible={showGoalDrawer}
+                onClose={() => setGoalDrawer(false)}
             />
 
     </>
