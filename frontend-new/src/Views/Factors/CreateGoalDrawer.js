@@ -3,6 +3,7 @@ import {
   Drawer, Button
 } from 'antd';
 import { SVG, Text } from 'factorsComponents';
+import { NavLink } from 'react-router-dom';
 
 const title = (props) => {
   return (
@@ -30,6 +31,16 @@ const CreateGoalDrawer = (props) => {
         width={'600px'}
         className={'fa-drawer'}
       >
+
+<div className={' fa--query_block bordered '}>
+    <div className={'flex flex-col justify-center items-center'} style={{ height: '300px' }}>
+        <p style={{ color: '#bbb' }}>CoreQuery reusable drawer components comes here..</p>
+    </div>
+        <div className={'flex justify-between items-center'}>
+            <Button><SVG name={'calendar'} extraClass={'mr-1'} />Last Week </Button>
+            <NavLink to="/factors/insights"><Button type="primary">Find Insights</Button></NavLink>
+        </div>
+</div>
 
       </Drawer>
   );
