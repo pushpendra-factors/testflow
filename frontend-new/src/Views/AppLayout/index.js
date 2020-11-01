@@ -3,6 +3,8 @@ import { Layout, Spin } from 'antd';
 import Sidebar from '../../components/Sidebar';
 import CoreQuery from '../CoreQuery';
 import Dashboard from '../Dashboard';
+import Factors from '../Factors';
+import FactorsInsights from '../Factors/FactorsInsights';
 import ProjectSettings from '../Settings/ProjectSettings';
 import componentsLib from '../../Views/componentsLib';
 import { connect, useSelector, useDispatch } from 'react-redux';
@@ -58,6 +60,8 @@ function AppLayout({ fetchProjects }) {
                   <Route path="/components/" name="componentsLib" component={componentsLib} />
                   <Route path="/settings/" component={ProjectSettings} />
                   <Route path="/core-analytics" name="Home" component={CoreQuery} />
+                  <Route path="/factors/insights" name="Factors" component={FactorsInsights} />
+                  <Route path="/factors" name="Factors" component={Factors} />
                   <Route path="/" name="Home" component={Dashboard} />
                 </Switch>
               </HashRouter>

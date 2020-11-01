@@ -125,7 +125,7 @@ function Sidebar(props) {
               <NavLink activeClassName="active" exact to="/core-analytics"><SVG name={'corequery'} size={24} color="white"/></NavLink>
             </Row>
             <Row justify="center" align="middle" className=" w-full py-2">
-              <NavLink activeClassName="active" disabled exact to="/key"><SVG name={'key'} size={24} color="white"/></NavLink>
+              <NavLink activeClassName="active" exact to="/factors"><SVG name={'key'} size={24} color="white"/></NavLink>
             </Row>
             <Row justify="center" align="middle" className=" w-full py-2">
               <NavLink activeClassName="active" disabled exact to="/bug"><SVG name={'bug'} size={24} color="white"/></NavLink>
