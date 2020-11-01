@@ -35,6 +35,7 @@ const CreateGoalDrawer = (props) => {
 <div className={' fa--query_block bordered '}>
     <div className={'flex flex-col justify-center items-center'} style={{ height: '300px' }}>
         <p style={{ color: '#bbb' }}>CoreQuery reusable drawer components comes here..</p>
+        <p className={'mt-2'} style={{ color: '#bbb' }}>{'Click on \'Find Insights\' to view Insights page.'}</p>
     </div>
         <div className={'flex justify-between items-center'}>
             <Button><SVG name={'calendar'} extraClass={'mr-1'} />Last Week </Button>

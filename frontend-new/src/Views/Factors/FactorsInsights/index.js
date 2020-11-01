@@ -27,7 +27,7 @@ const InsightHighlightItem = () => {
                                 <Text type={'title'} level={5} color={'blue'} weight={'bold'} extraClass={'m-0'} >1,22,340</Text>
                                 <div className={'flex flex-col items-center justify-center '}>
                                     <Text type={'title'} level={4} color={'grey'} weight={'bold'} extraClass={'m-0'} >1x</Text>
-                                    <Text type={'title'} level={6} color={'grey'} weight={'bold'} extraClass={'m-0'} >Impact</Text>
+                                    <Text type={'title'} level={7} color={'grey'} extraClass={'m-0'} >Impact</Text>
                                 </div>
                                 <Text type={'title'} level={5} color={'yellow'} weight={'bold'} extraClass={'m-0'} >2,340</Text>
                             </div>
