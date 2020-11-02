@@ -25,6 +25,7 @@ type Dashboard struct {
 	ProjectId     uint64          `gorm:"primary_key:true" json:"project_id"`
 	AgentUUID     string          `gorm:"primary_key:true" json:"-"`
 	Name          string          `gorm:"not null" json:"name"`
+	Description   string          `json:"description"`
 	Type          string          `gorm:"type:varchar(5);not null" json:"type"`
 	UnitsPosition *postgres.Jsonb `json:"units_position"` // map[string]map[uint64]int -> map[unit_type]unit_id:unit_position
 	CreatedAt     time.Time       `json:"created_at"`
@@ -33,6 +34,7 @@ type Dashboard struct {
 
 type UpdatableDashboard struct {
 	Name          string                     `json:"name"`
+	Description   string                     `json:"description"`
 	UnitsPosition *map[string]map[uint64]int `json:"units_position"`
 }
 
@@ -44,6 +46,7 @@ const (
 var types = []string{DashboardTypePrivate, DashboardTypeProjectVisible}
 
 const AgentProjectPersonalDashboardName = "My Dashboard"
+const AgentProjectPersonalDashboardDescription = "No Description"
 const DashboardCachingDurationInSeconds = 32 * 24 * 60 * 60 // 32 days.
 
 func isValidDashboard(dashboard *Dashboard) bool {
@@ -87,7 +90,7 @@ func CreateDashboard(projectId uint64, agentUUID string, dashboard *Dashboard) (
 
 func CreateAgentPersonalDashboardForProject(projectId uint64, agentUUID string) (*Dashboard, int) {
 	return CreateDashboard(projectId, agentUUID,
-		&Dashboard{Name: AgentProjectPersonalDashboardName, Type: DashboardTypePrivate})
+		&Dashboard{Name: AgentProjectPersonalDashboardName, Description: AgentProjectPersonalDashboardDescription, Type: DashboardTypePrivate})
 }
 
 func GetDashboards(projectId uint64, agentUUID string) ([]Dashboard, int) {

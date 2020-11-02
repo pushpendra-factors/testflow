@@ -87,6 +87,8 @@ func InitAppRoutes(r *gin.Engine) {
 
 	// /v1 API endpoints
 	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/query", EventsQueryHandler)
+	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/dashboards/multi/:dashboard_ids/units", CreateDashboardUnitForMultiDashboardsHandler)
+	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/dashboards/queries/:dashboard_id/units", CreateDashboardUnitsForMultipleQueriesHandler)
 
 	// TODO
 	// Scope this with Project Admin

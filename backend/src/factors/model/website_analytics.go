@@ -363,7 +363,7 @@ func addWebAnalyticsDefaultDashboardUnits(projectId uint64,
 				Title:        U.GetSnakeCaseToTitleString(queryName),
 				Presentation: presentation,
 				Query:        *queryJsonb,
-			})
+			}, DashboardUnitForNoQueryID)
 
 		if errCode != http.StatusCreated {
 			logCtx.WithField("err_msg", errMsg).WithField("query_name", queryName).

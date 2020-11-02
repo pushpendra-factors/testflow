@@ -1,6 +1,7 @@
 package model
 
 import (
+	"encoding/json"
 	cacheRedis "factors/cache/redis"
 	C "factors/config"
 	U "factors/util"
@@ -17,14 +18,24 @@ type DashboardUnit struct {
 	// Composite primary key, id + project_id.
 	ID uint64 `gorm:"primary_key:true" json:"id"`
 	// Foreign key dashboard_units(project_id) ref projects(id).
-	ProjectId    uint64         `gorm:"primary_key:true" json:"project_id"`
-	DashboardId  uint64         `gorm:"primary_key:true" json:"dashboard_id"`
-	Title        string         `gorm:"not null" json:"title"`
-	Presentation string         `gorm:"type:varchar(5);not null" json:"presentation"`
-	CreatedAt    time.Time      `json:"created_at"`
-	UpdatedAt    time.Time      `json:"updated_at"`
-	Query        postgres.Jsonb `gorm:"not null" json:"query"`
-	QueryId      uint64         `gorm:"not null" json:"query_id"`
+	ProjectId    uint64    `gorm:"primary_key:true" json:"project_id"`
+	DashboardId  uint64    `gorm:"primary_key:true" json:"dashboard_id"`
+	Title        string    `gorm:"not null" json:"title"`
+	Description  string    `json:"description"`
+	Presentation string    `gorm:"type:varchar(5);not null" json:"presentation"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+	// TODO (Anil) remove this field once we move to saved queries
+	Query   postgres.Jsonb `gorm:"not null" json:"query"`
+	QueryId uint64         `gorm:"not null" json:"query_id"`
+}
+
+type DashboardUnitRequestPayload struct {
+	Title        string          `json:"title"`
+	Description  string          `json:"description"`
+	Presentation string          `json:"presentation"`
+	Query        *postgres.Jsonb `json:"query"`
+	QueryId      uint64          `json:"query_id"`
 }
 
 type DashboardCacheResult struct {
@@ -40,6 +51,9 @@ const (
 	PresentationTable  = "pt"
 	PresentationCard   = "pc"
 	PresentationFunnel = "pf"
+
+	DashboardUnitForNoQueryID = "NoQueryID"
+	DashboardUnitWithQueryID  = "WithQueryID"
 )
 
 var presentations = [...]string{PresentationLine, PresentationBar,
@@ -85,7 +99,58 @@ func GetUnitType(presentation string) string {
 	return UnitChart
 }
 
-func CreateDashboardUnit(projectId uint64, agentUUID string, dashboardUnit *DashboardUnit) (*DashboardUnit, int, string) {
+// CreateDashboardUnitForMultipleDashboards creates multiple dashboard units each for given
+// list of dashboards
+func CreateDashboardUnitForMultipleDashboards(dashboardIds []uint64, projectId uint64,
+	agentUUID string, unitPayload DashboardUnitRequestPayload) ([]*DashboardUnit, int, string) {
+
+	var dashboardUnits []*DashboardUnit
+	for _, dashboardId := range dashboardIds {
+		dashboardUnit, errCode, errMsg := CreateDashboardUnit(projectId, agentUUID,
+			&DashboardUnit{
+				DashboardId:  dashboardId,
+				Description:  unitPayload.Description,
+				Query:        postgres.Jsonb{json.RawMessage(`{}`)},
+				Title:        unitPayload.Title,
+				Presentation: unitPayload.Presentation,
+				QueryId:      unitPayload.QueryId,
+			}, DashboardUnitWithQueryID)
+		if errCode != http.StatusCreated {
+			return nil, errCode, errMsg
+		}
+		dashboardUnits = append(dashboardUnits, dashboardUnit)
+	}
+	return dashboardUnits, http.StatusCreated, ""
+}
+
+// CreateMultipleDashboardUnits creates multiple dashboard units for list of queries for single dashboard
+func CreateMultipleDashboardUnits(requestPayload []DashboardUnitRequestPayload, projectId uint64,
+	agentUUID string, dashboardId uint64) ([]*DashboardUnit, int, string) {
+	var dashboardUnits []*DashboardUnit
+	for _, payload := range requestPayload {
+
+		// query should have been created before the dashboard unit
+		if payload.QueryId == 0 {
+			return dashboardUnits, http.StatusBadRequest, "invalid queryID. empty queryID."
+		}
+		dashboardUnit, errCode, errMsg := CreateDashboardUnit(projectId, agentUUID,
+			&DashboardUnit{
+				DashboardId:  dashboardId,
+				Description:  payload.Description,
+				Query:        postgres.Jsonb{json.RawMessage(`{}`)},
+				Title:        payload.Title,
+				Presentation: payload.Presentation,
+				QueryId:      payload.QueryId,
+			}, DashboardUnitWithQueryID)
+		if errCode != http.StatusCreated {
+			return nil, errCode, errMsg
+		}
+		dashboardUnits = append(dashboardUnits, dashboardUnit)
+	}
+	return dashboardUnits, http.StatusCreated, ""
+}
+
+func CreateDashboardUnit(projectId uint64, agentUUID string, dashboardUnit *DashboardUnit, queryType string) (*DashboardUnit, int, string) {
 	db := C.GetServices().Db
 
 	if projectId == 0 || agentUUID == "" {
@@ -101,6 +166,7 @@ func CreateDashboardUnit(projectId uint64, agentUUID string, dashboardUnit *Dash
 	if !hasAccess {
 		return nil, http.StatusForbidden, "Unauthorized to access dashboard"
 	}
+	// Todo (Anil) remove this query creation after we move to new UI completely.
 	if dashboardUnit.QueryId == 0 {
 		query, errCode, errMsg := CreateQuery(projectId,
 			&Queries{
@@ -123,15 +189,18 @@ func CreateDashboardUnit(projectId uint64, agentUUID string, dashboardUnit *Dash
 		return nil, http.StatusInternalServerError, errMsg
 	}
 
-	errCode := addUnitPositionOnDashboard(projectId, agentUUID, dashboardUnit.DashboardId,
-		dashboardUnit.ID, GetUnitType(dashboardUnit.Presentation), dashboard.UnitsPosition)
-	if errCode != http.StatusAccepted {
-		errMsg := "Failed add position for new dashboard unit."
-		log.WithFields(log.Fields{"project_id": projectId,
-			"dashboardUnitId": dashboardUnit.ID}).Error(errMsg)
-		return nil, http.StatusInternalServerError, ""
+	// Todo (Anil) remove this DashboardUnitForNoQueryID based UnitPosition updating
+	// ... after we move to new UI completely. todo
+	if queryType == DashboardUnitForNoQueryID {
+		errCode := addUnitPositionOnDashboard(projectId, agentUUID, dashboardUnit.DashboardId,
+			dashboardUnit.ID, GetUnitType(dashboardUnit.Presentation), dashboard.UnitsPosition)
+		if errCode != http.StatusAccepted {
+			errMsg := "Failed add position for new dashboard unit."
+			log.WithFields(log.Fields{"project_id": projectId,
+				"dashboardUnitId": dashboardUnit.ID}).Error(errMsg)
+			return nil, http.StatusInternalServerError, ""
+		}
 	}
-
 	return dashboardUnit, http.StatusCreated, ""
 }
 

@@ -19,7 +19,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func sendCreateDashboardUnitReq(r *gin.Engine, projectId uint64, agent *M.Agent, dashboardId uint64, dashboardUnit *H.DashboardUnitRequestPayload) *httptest.ResponseRecorder {
+func sendCreateDashboardUnitReq(r *gin.Engine, projectId uint64, agent *M.Agent, dashboardId uint64, dashboardUnit *M.DashboardUnitRequestPayload) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
@@ -125,7 +125,7 @@ func TestAPICreateDashboardUnitHandler(t *testing.T) {
 		queryJson, err := json.Marshal(query)
 		assert.Nil(t, err)
 
-		w := sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &H.DashboardUnitRequestPayload{Title: rTitle,
+		w := sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &M.DashboardUnitRequestPayload{Title: rTitle,
 			Query: &postgres.Jsonb{queryJson}, Presentation: M.PresentationLine})
 		assert.Equal(t, http.StatusCreated, w.Code)
 	})
@@ -143,7 +143,7 @@ func TestAPICreateDashboardUnitHandler(t *testing.T) {
 		queryJson, err := json.Marshal(query)
 		assert.Nil(t, err)
 
-		w := sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &H.DashboardUnitRequestPayload{Title: rTitle,
+		w := sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &M.DashboardUnitRequestPayload{Title: rTitle,
 			Query: &postgres.Jsonb{queryJson}, Presentation: M.PresentationLine})
 
 		assert.Equal(t, http.StatusCreated, w.Code)

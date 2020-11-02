@@ -247,11 +247,11 @@ func TestGetDashboardResutlFromCache(t *testing.T) {
 	assert.Nil(t, err)
 
 	rTitle := U.RandomString(5)
-	w := sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &H.DashboardUnitRequestPayload{Title: rTitle,
+	w := sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &M.DashboardUnitRequestPayload{Title: rTitle,
 		Query: &postgres.Jsonb{query1Json}, Presentation: M.PresentationLine})
 	assert.Equal(t, http.StatusCreated, w.Code)
 	rTitle = U.RandomString(5)
-	w = sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &H.DashboardUnitRequestPayload{Title: rTitle,
+	w = sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &M.DashboardUnitRequestPayload{Title: rTitle,
 		Query: &postgres.Jsonb{query2Json}, Presentation: M.PresentationLine})
 	assert.Equal(t, http.StatusCreated, w.Code)
 
@@ -280,7 +280,7 @@ func TestGetDashboardResutlFromCache(t *testing.T) {
 	query3Json, err := json.Marshal(query3)
 	assert.Nil(t, err)
 
-	w = sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &H.DashboardUnitRequestPayload{
+	w = sendCreateDashboardUnitReq(r, project.ID, agent, dashboard.ID, &M.DashboardUnitRequestPayload{
 		Presentation: "pc",
 		Query:        &postgres.Jsonb{query3Json},
 		Title:        rTitle,

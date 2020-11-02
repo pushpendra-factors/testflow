@@ -8,23 +8,20 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-
-	"github.com/jinzhu/gorm/dialects/postgres"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
 )
 
 type DashboardRequestPayload struct {
-	Name string `json:"name"`
-	Type string `json:"type"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Type        string `json:"type"`
 }
 
-type DashboardUnitRequestPayload struct {
-	Title        string          `json:"title"`
-	Presentation string          `json:"presentation"`
-	Query        *postgres.Jsonb `json:"query"`
-	QueryId      uint64          `json:"query_id"`
+type DashboardIdUnitsPositions struct {
+	ID uint64 `json:"id"`
 }
 
 func GetDashboardsHandler(c *gin.Context) {
@@ -153,7 +150,7 @@ func CreateDashboardUnitHandler(c *gin.Context) {
 		return
 	}
 
-	var requestPayload DashboardUnitRequestPayload
+	var requestPayload M.DashboardUnitRequestPayload
 
 	r := c.Request
 	decoder := json.NewDecoder(r.Body)
@@ -178,13 +175,99 @@ func CreateDashboardUnitHandler(c *gin.Context) {
 			Title:        requestPayload.Title,
 			Presentation: requestPayload.Presentation,
 			QueryId:      requestPayload.QueryId,
-		})
+		}, M.DashboardUnitForNoQueryID)
 	if errCode != http.StatusCreated {
 		c.AbortWithStatusJSON(errCode, errMsg)
 		return
 	}
 
 	c.JSON(http.StatusCreated, dashboardUnit)
+}
+
+func CreateDashboardUnitForMultiDashboardsHandler(c *gin.Context) {
+	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
+		c.AbortWithStatusJSON(http.StatusForbidden,
+			gin.H{"error": "Get dashboard units failed. Invalid project."})
+		return
+	}
+
+	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+
+	dashboardIdsStr := strings.Split(c.Params.ByName("dashboard_ids"), ",")
+
+	var dashboardIds []uint64
+	for _, id := range dashboardIdsStr {
+		dashboardId, err := strconv.ParseUint(id, 10, 64)
+		if err != nil || dashboardId == 0 {
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid dashboard id =" + id})
+			return
+		}
+		dashboardIds = append(dashboardIds, dashboardId)
+	}
+
+	var requestPayload M.DashboardUnitRequestPayload
+
+	r := c.Request
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	logCtx := log.WithFields(log.Fields{"project_id": projectId})
+	if err := decoder.Decode(&requestPayload); err != nil {
+		errMsg := "Get dashboard units failed. Invalid JSON."
+		logCtx.WithError(err).Error(errMsg)
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": errMsg})
+		return
+	}
+
+	// query should have been created before the dashboard unit
+	if requestPayload.QueryId == 0 {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid queryID. empty queryID."})
+		return
+	}
+
+	dashboardUnits, errCode, errMsg := M.CreateDashboardUnitForMultipleDashboards(dashboardIds, projectId, agentUUID, requestPayload)
+	if errCode != http.StatusCreated {
+		c.AbortWithStatusJSON(errCode, errMsg)
+		return
+	}
+	c.JSON(http.StatusCreated, dashboardUnits)
+}
+
+func CreateDashboardUnitsForMultipleQueriesHandler(c *gin.Context) {
+	projectId := U.GetScopeByKeyAsUint64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
+		c.AbortWithStatusJSON(http.StatusForbidden,
+			gin.H{"error": "Get dashboard units failed. Invalid project."})
+		return
+	}
+
+	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+
+	dashboardId, err := strconv.ParseUint(c.Params.ByName("dashboard_id"), 10, 64)
+	if err != nil || dashboardId == 0 {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid dashboard id."})
+		return
+	}
+
+	var requestPayload []M.DashboardUnitRequestPayload
+
+	r := c.Request
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	logCtx := log.WithFields(log.Fields{"project_id": projectId})
+	if err := decoder.Decode(&requestPayload); err != nil {
+		errMsg := "Get dashboard units failed. Invalid JSON."
+		logCtx.WithError(err).Error(errMsg)
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": errMsg})
+		return
+	}
+
+	dashboardUnits, errCode, errMsg := M.CreateMultipleDashboardUnits(requestPayload, projectId, agentUUID, dashboardId)
+	if errCode != http.StatusCreated {
+		c.AbortWithStatusJSON(errCode, errMsg)
+		return
+	}
+	c.JSON(http.StatusCreated, dashboardUnits)
 }
 
 func UpdateDashboardUnitHandler(c *gin.Context) {
@@ -197,7 +280,7 @@ func UpdateDashboardUnitHandler(c *gin.Context) {
 
 	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 
-	var requestPayload DashboardUnitRequestPayload
+	var requestPayload M.DashboardUnitRequestPayload
 
 	r := c.Request
 	decoder := json.NewDecoder(r.Body)
