@@ -430,7 +430,8 @@ func mineAndWritePatterns(projectId uint64, filepath string,
 	cumulativePatternsSize += patternsSize
 	printFilteredPatterns(filteredPatterns, patternLen)
 
-	filteredTopKPatterns := FilterTopKEventsOnTypes(filteredPatterns, eventNamesWithType, topK_patterns)
+	filteredTopKPatterns := FilterTopKEventsOnTypes(filteredPatterns, eventNamesWithType, topK_patterns, keventsSpecial, keventsURL)
+
 
 	if cumulativePatternsSize >= int64(float64(maxModelSize)*limitRoundOffFraction) {
 		return nil
@@ -957,7 +958,8 @@ func OpenEventFileAndGetScanner(filePath string) (*bufio.Scanner, error) {
 	return scanner, nil
 }
 
-func FilterTopKEventsOnTypes(filteredPatterns []*P.Pattern, eventNamesWithType map[string]string, k int) []*P.Pattern {
+func FilterTopKEventsOnTypes(filteredPatterns []*P.Pattern, eventNamesWithType map[string]string, k, keventsSpecial, keventsURL int) []*P.Pattern {
+
 	// take topK from different event types like uc,fe,$types,url etc..
 	allPatterns := make([]patternProperties, 0)
 

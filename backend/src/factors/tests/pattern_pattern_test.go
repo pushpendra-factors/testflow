@@ -1028,7 +1028,7 @@ func TestPatternFilterTopKpatternTypes(t *testing.T) {
 
 	}
 
-	filterdPatterns := T.FilterTopKEventsOnTypes(patterns, eNT, 3)
+	filterdPatterns := T.FilterTopKEventsOnTypes(patterns, eNT, 3, 3, 3)
 	assert.Equal(t, 11, len(filterdPatterns)) //$sp4 is repeated
 }
 
