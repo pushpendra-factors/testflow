@@ -15,6 +15,8 @@ APP_NAME = "hubspot_sync"
 PAGE_SIZE = 50
 DOC_TYPES = [ "contact", "company", "deal", "form", "form_submission" ]
 
+METRIC_TYPE_INCR = "incr"
+
 # Todo: Boilerplate, move this to a reusable module.
 def notify(env, source, message):
     if env != "production": 
@@ -26,6 +28,18 @@ def notify(env, source, message):
     response = requests.post(sns_url, json=payload)
     if not response.ok: log.error("Failed to notify through sns.")
     return response
+
+def record_metric(metric_type, metric_name, metric_value=0):
+    payload = {
+        "type": metric_type,
+        "name": metric_name,
+        "value": metric_value,
+    }
+
+    metrics_url = options.data_service_host + "/data_service/metrics"
+    response = requests.post(metrics_url, json=payload)
+    if not response.ok:
+        log.error("Failed to record metric %s. Error: %s", metric_name, response.text)
 
 def create_document(project_id, doc_type, doc):
     uri = "/data_service/hubspot/documents/add"
@@ -43,7 +57,6 @@ def create_document(project_id, doc_type, doc):
             doc_type, uri, response.status_code)
     
     return response
-
 
 def create_all_documents(project_id, doc_type, docs):
     if options.dry == "True":
@@ -459,5 +472,6 @@ if __name__ == "__main__":
     }
     notify(options.env, APP_NAME, notification_payload)
 
-    log.warning("Successfully synced. End of adwords sync job.")
+    log.warning("Successfully synced. End of hubspot sync job.")
+    record_metric(METRIC_TYPE_INCR, "cron_hubspot_sync_success")
     sys.exit(0)

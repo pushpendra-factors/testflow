@@ -13,6 +13,8 @@ import (
 )
 
 func main() {
+	gcpProjectID := flag.String("gcp_project_id", "", "Project ID on Google Cloud")
+	gcpProjectLocation := flag.String("gcp_project_location", "", "Location of google cloud project cluster")
 
 	env := flag.String("env", "development", "")
 	port := flag.Int("port", 8089, "")
@@ -31,9 +33,11 @@ func main() {
 	flag.Parse()
 
 	config := &C.Configuration{
-		AppName: "data_server",
-		Env:     *env,
-		Port:    *port,
+		AppName:            "data_server",
+		GCPProjectID:       *gcpProjectID,
+		GCPProjectLocation: *gcpProjectLocation,
+		Env:                *env,
+		Port:               *port,
 		DBInfo: C.DBConf{
 			Host:     *dbHost,
 			Port:     *dbPort,

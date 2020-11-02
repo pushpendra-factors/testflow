@@ -34,6 +34,8 @@ DATA = "data"
 FACEBOOK_ALL = "facebook_all"
 PLATFORM = "platform"
 
+METRIC_TYPE_INCR = "incr"
+
 def get_datetime_from_datestring(date):
     date = date.split("-")
     date = datetime(int(date[0]),int(date[1]),int(date[2]))
@@ -49,6 +51,18 @@ def notify(env, source, message):
     response = requests.post(sns_url, json=payload)
     if not response.ok: log.error("Failed to notify through sns.")
     return response
+
+def record_metric(metric_type, metric_name, metric_value=0):
+    payload = {
+        "type": metric_type,
+        "name": metric_name,
+        "value": metric_value,
+    }
+
+    metrics_url = options.data_service_host + "/data_service/metrics"
+    response = requests.post(metrics_url, json=payload)
+    if not response.ok:
+        log.error("Failed to record metric %s. Error: %s", metric_name, response.text)
 
 def get_time_ranges_list(date_start, date_stop):
     days = (date_stop - date_start).days
@@ -286,6 +300,7 @@ if __name__ == "__main__":
         notify(options.env, APP_NAME, notification_payload)
 
         log.warning("Successfully synced. End of facebook sync job.")
+        record_metric(METRIC_TYPE_INCR, "cron_facebook_sync_success")
         sys.exit(0)
         
         

@@ -159,6 +159,11 @@ func GetSortWeightFromAnyType(value interface{}) float64 {
 	return 0
 }
 
+// SafeConvertToFloat64 Converts an interface to float64 value.
+func SafeConvertToFloat64(value interface{}) float64 {
+	return GetSortWeightFromAnyType(value)
+}
+
 func TrimQuotes(str string) string {
 	return strings.TrimSuffix(strings.TrimPrefix(str, "\""), "\"")
 }
@@ -644,10 +649,10 @@ func GetPossiblePhoneNumber(phoneNo string) []string {
 }
 
 // BytesToReadableFormat Pretty prints bytes to readable KiB/MiB/GiB.. format.
-func BytesToReadableFormat(bytes int64) string {
+func BytesToReadableFormat(bytes float64) string {
 	const unit = 1024
 	if bytes < unit {
-		return fmt.Sprintf("%d B", bytes)
+		return fmt.Sprintf("%.1f B", bytes)
 	}
 	div, exp := int64(unit), 0
 	for n := bytes / unit; n >= unit; n /= unit {

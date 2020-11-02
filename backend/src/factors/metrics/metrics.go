@@ -66,12 +66,29 @@ const (
 	IncrUserPropertiesMergeSanitizeCount = "user_properties_merge_sanitize_count"
 )
 
+// Metrics types defined to be used in external calls like from data server.
+const (
+	MetricTypeIncr    = "incr"
+	MetricTypeCount   = "count"
+	MetricTypeBytes   = "bytes"
+	MetricTypeLatency = "latency"
+)
+
+// PythonServerMetrics All python job related metrics to be added here.
+var PythonServerMetrics = map[string]map[string]bool{
+	MetricTypeIncr: {
+		"cron_adwords_sync_success":  true,
+		"cron_hubspot_sync_success":  true,
+		"cron_facebook_sync_success": true,
+	},
+}
+
 var (
 	// The task latency in milliseconds.
 	latencyStats    = stats.Float64("task_latency", "The task latency in milliseconds", stats.UnitMilliseconds)
 	guageStatsInt   = stats.Int64("int_counter", "The number of loop iterations", stats.UnitDimensionless)
 	guageStatsFloat = stats.Float64("float_counter", "The number of loop iterations", stats.UnitDimensionless)
-	bytesStatsInt   = stats.Int64("bytes_size", "Size of a table or object in bytes", stats.UnitBytes)
+	bytesStatsFloat = stats.Float64("bytes_size", "Size of a table or object in bytes", stats.UnitBytes)
 )
 
 var (
@@ -109,7 +126,7 @@ var (
 	}
 
 	bytesSizeViewDistributed = &view.View{
-		Measure:     bytesStatsInt,
+		Measure:     bytesStatsFloat,
 		Name:        "bytes_size_view",
 		Description: "Bytes size view",
 		// Bucketing is not supported in stackdriver.
@@ -222,11 +239,11 @@ func RecordLatency(metricName string, latency float64) {
 }
 
 // RecordBytesSize Record size in bytes for a table or an object.
-func RecordBytesSize(metricName string, bytes int64) {
+func RecordBytesSize(metricName string, bytes float64) {
 	ctx, err := tag.New(context.Background(), tag.Upsert(MetricNameTag, metricName))
 	if err != nil {
 		log.WithError(err).Error("Failed to record Bytes")
 		return
 	}
-	stats.Record(ctx, bytesStatsInt.M(bytes))
+	stats.Record(ctx, bytesStatsFloat.M(bytes))
 }

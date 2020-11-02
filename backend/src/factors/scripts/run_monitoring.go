@@ -158,7 +158,7 @@ func collectTableSizes() map[string]string {
 
 	for rows.Next() {
 		var tableName string
-		var tableSize int64
+		var tableSize float64
 		if err := rows.Scan(&tableName, &tableSize); err != nil {
 			log.WithError(err).Error("Failed to scan table size from db.")
 		}

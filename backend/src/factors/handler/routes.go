@@ -199,4 +199,7 @@ func InitDataServiceRoutes(r *gin.Engine) {
 
 	dataServiceRouteGroup.GET("/facebook/documents/last_sync_info",
 		IH.DataServiceFacebookGetLastSyncInfoHandler)
+
+	dataServiceRouteGroup.POST("/metrics",
+		IH.DataServiceRecordMetricHandler)
 }

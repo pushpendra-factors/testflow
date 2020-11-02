@@ -566,6 +566,7 @@ func InitDataService(config *Configuration) error {
 	}
 	InitRedis(config.RedisHost, config.RedisPort)
 	InitSentryLogging(config.SentryDSN, config.AppName)
+	InitMetricsExporter(config.Env, config.AppName, config.GCPProjectID, config.GCPProjectLocation)
 
 	initiated = true
 	return nil
