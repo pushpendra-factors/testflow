@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { connect, useSelector } from 'react-redux';
 import FunnelsResultPage from './FunnelsResultPage';
 import QueryComposer from '../../components/QueryComposer';
@@ -20,6 +20,9 @@ function CoreQuery({ activeProject }) {
   const [appliedBreakdown, setAppliedBreakdown] = useState([]);
   const [resultState, setResultState] = useState(initialResultState);
   const [funnelResult, updateFunnelResult] = useState(initialState);
+  const [requestQuery, updateRequestQuery] = useState(null);
+  const [rowClicked, setRowClicked] = useState(false);
+  const [querySaved, setQuerySaved] = useState(false);
   const [breakdownTypeData, setBreakdownTypeData] = useState({
     loading: false, error: false, all: null, any: null
   });
@@ -47,28 +50,6 @@ function CoreQuery({ activeProject }) {
 
   const groupBy = useSelector(state => state.coreQuery.groupBy);
 
-  const queryChange = (newEvent, index, changeType = 'add') => {
-    const queryupdated = [...queries];
-    if (queryupdated[index]) {
-      if (changeType === 'add') {
-        queryupdated[index] = newEvent;
-      } else {
-        queryupdated.splice(index, 1);
-      }
-    } else {
-      queryupdated.push(newEvent);
-    }
-    setQueries(queryupdated);
-  };
-
-  const closeDrawer = () => {
-    setDrawerVisible(false);
-  };
-
-  const setExtraOptions = (options) => {
-    setQueryOptions(options);
-  };
-
   const updateResultState = useCallback((activeTab, newState) => {
     const idx = parseInt(activeTab);
     setResultState(currState => {
@@ -89,6 +70,9 @@ function CoreQuery({ activeProject }) {
   const callRunQueryApiService = useCallback(async (activeProjectId, activeTab) => {
     try {
       const query = getQuery(activeTab, queryType, groupBy, queries);
+      if (activeTab === '0') {
+        updateRequestQuery(query);
+      }
       const res = await runQueryService(activeProjectId, [query]);
       if (res.status === 200 && !hasApiFailed(res)) {
         if (activeTab !== '2') {
@@ -107,7 +91,7 @@ function CoreQuery({ activeProject }) {
     }
   }, [updateResultState, queryType, groupBy, queries]);
 
-  const runQuery = useCallback(async (activeTab, refresh = false) => {
+  const runQuery = useCallback(async (activeTab, refresh = false, isQuerySaved = false) => {
     setActiveKey(activeTab);
 
     if (!refresh) {
@@ -169,6 +153,7 @@ function CoreQuery({ activeProject }) {
       updateResultState('2', initialState);
       updateResultState('3', initialState);
       setAppliedQueries(queries.map(elem => elem.label));
+      setQuerySaved(isQuerySaved);
       updateAppliedBreakdown();
       setBreakdownTypeData({
         loading: false, error: false, all: null, any: null
@@ -217,14 +202,16 @@ function CoreQuery({ activeProject }) {
     }
   }, [activeProject.id, queries, groupBy, queryType, breakdownTypeData]);
 
-  const runFunnelQuery = useCallback(async () => {
+  const runFunnelQuery = useCallback(async (isQuerySaved) => {
     try {
       closeDrawer();
       setShowResult(true);
+      setQuerySaved(isQuerySaved);
       setAppliedQueries(queries.map(elem => elem.label));
       updateAppliedBreakdown();
       updateFunnelResult({ ...initialState, loading: true });
       const query = getFunnelQuery(groupBy, queries);
+      updateRequestQuery(query);
       const res = await getFinalData(activeProject.id, query);
       if (res.status === 200) {
         updateFunnelResult({ ...initialState, data: res.data });
@@ -237,6 +224,39 @@ function CoreQuery({ activeProject }) {
     }
   }, [queries, updateAppliedBreakdown, activeProject.id, groupBy]);
 
+  useEffect(() => {
+    if (rowClicked) {
+      if (rowClicked === 'funnel') {
+        runFunnelQuery(true);
+      } else {
+        runQuery('0', true, true);
+      }
+      setRowClicked(false);
+    }
+  }, [rowClicked, runFunnelQuery, runQuery]);
+
+  const queryChange = (newEvent, index, changeType = 'add') => {
+    const queryupdated = [...queries];
+    if (queryupdated[index]) {
+      if (changeType === 'add') {
+        queryupdated[index] = newEvent;
+      } else {
+        queryupdated.splice(index, 1);
+      }
+    } else {
+      queryupdated.push(newEvent);
+    }
+    setQueries(queryupdated);
+  };
+
+  const closeDrawer = () => {
+    setDrawerVisible(false);
+  };
+
+  const setExtraOptions = (options) => {
+    setQueryOptions(options);
+  };
+
   const title = () => {
     return (
       <div className={'flex justify-between items-center'}>
@@ -245,8 +265,8 @@ function CoreQuery({ activeProject }) {
           <Text type={'title'} level={4} weight={'bold'} extraClass={'ml-2 m-0'}>{queryType === 'funnel' ? 'Find event funnel for' : 'Analyse Events'}</Text>
         </div>
         <div className={'flex justify-end items-center'}>
-          <Button type="text"><SVG name="play"></SVG>Help</Button>
-          <Button type="text" onClick={() => closeDrawer()}><SVG name="times"></SVG></Button>
+          <Button size={'large'} type="text"><SVG name="play"></SVG>Help</Button>
+          <Button size={'large'} type="text" onClick={() => closeDrawer()}><SVG name="times"></SVG></Button>
         </div>
       </div>
     );
@@ -274,6 +294,10 @@ function CoreQuery({ activeProject }) {
       handleBreakdownTypeChange={handleBreakdownTypeChange}
       breakdownTypeData={breakdownTypeData}
       queryType={queryType}
+      requestQuery={requestQuery}
+      setShowResult={setShowResult}
+      querySaved={querySaved}
+      setQuerySaved={setQuerySaved}
     />
   );
 
@@ -286,6 +310,10 @@ function CoreQuery({ activeProject }) {
         reverseEventsMapper={reverseEventsMapper}
         resultState={funnelResult}
         breakdown={appliedBreakdown}
+        requestQuery={requestQuery}
+        setShowResult={setShowResult}
+        querySaved={querySaved}
+        setQuerySaved={setQuerySaved}
       />
     );
   }
@@ -320,7 +348,13 @@ function CoreQuery({ activeProject }) {
         </>
 
       ) : (
-          <CoreQueryHome setQueryType={setQueryType} setDrawerVisible={setDrawerVisible} />
+          <CoreQueryHome
+            setQueryType={setQueryType}
+            setDrawerVisible={setDrawerVisible}
+            setQueries={setQueries}
+            setQueryOptions={setQueryOptions}
+            setRowClicked={setRowClicked}
+          />
       )}
 
     </>

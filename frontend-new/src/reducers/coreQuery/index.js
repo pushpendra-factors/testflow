@@ -1,10 +1,12 @@
 /* eslint-disable */
 
 
-import {FETCH_EVENTS, 
-  FETCH_EVENT_PROPERTIES, 
-  FETCH_USER_PROPERTIES, 
+import {
+  FETCH_EVENTS,
+  FETCH_EVENT_PROPERTIES,
+  FETCH_USER_PROPERTIES,
   SET_GROUPBY,
+  INITIALIZE_GROUPBY
 } from './actions';
 
 const defaultState = {
@@ -27,9 +29,14 @@ export default function (state = defaultState, action) {
       const eventPropState = Object.assign({}, state.eventProperties);
       eventPropState[action.eventName] = action.payload;
       return { ...state, eventProperties: eventPropState };
+    case INITIALIZE_GROUPBY: {
+      return {
+        ...state, groupBy: action.payload
+      }
+    }
     case SET_GROUPBY:
       const groupByState = Object.assign({}, state.groupBy);
-      if(groupByState[action.groupByType] && groupByState[action.groupByType][action.index]) {
+      if (groupByState[action.groupByType] && groupByState[action.groupByType][action.index]) {
         groupByState[action.groupByType][action.index] = action.payload;
       } else if (groupByState[action.groupByType] && action.index === groupByState[action.groupByType].length) {
         groupByState[action.groupByType].push(action.payload);

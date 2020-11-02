@@ -1,11 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Row, Col, Skeleton, Tabs, Switch
+  Row, Col, Skeleton, Tabs, Switch, message
 } from 'antd';
 import { Text } from 'factorsComponents';
+import { fetchProjectSettings, udpateProjectSettings } from 'Reducers/global';
+import { connect } from 'react-redux';
 const { TabPane } = Tabs;
 
-const ViewSetup = () => {
+const ViewSetup = ({ activeProject }) => {
+  const projectToken = activeProject.token;
+  // eslint-disable-next-line
+  const assetURL = BUILD_CONFIG.sdk_asset_url;
+
   return (
     <Row>
           <Col span={24}>
@@ -16,7 +22,7 @@ const ViewSetup = () => {
             <pre className={'fa-code-block my-4'}>
             <code>
 {`<script>
-(function(c){var s=document.createElement("script");s.type="text/javascript";if(s.readyState){s.onreadystatechange=function(){if(s.readyState=="loaded"||s.readyState=="complete"){s.onreadystatechange=null;c()}}}else{s.onload=function(){c()}}s.src="https://app.factors.ai/assets/factors.js";s.async=true;d=!!document.body?document.body:document.head;d.appendChild(s)})(function(){factors.init("h0tfn8hfvw66gdhbu4ixnwr7evt3h42k")})
+(function(c){var s=document.createElement("script");s.type="text/javascript";if(s.readyState){s.onreadystatechange=function(){if(s.readyState=="loaded"||s.readyState=="complete"){s.onreadystatechange=null;c()}}}else{s.onload=function(){c()}}s.src="${assetURL}";s.async=true;d=!!document.body?document.body:document.head;d.appendChild(s)})(function(){factors.init("${projectToken}")})
 </script>`}
             </code>
             </pre>
@@ -39,12 +45,35 @@ const ViewSetup = () => {
   );
 };
 
-const JSConfig = () => {
+const JSConfig = ({ currentProjectSettings, activeProject, udpateProjectSettings }) => {
+  const currentProjectId = activeProject.id;
+
+  const toggleAutoTrack = (checked) => {
+    udpateProjectSettings(currentProjectId, { auto_track: checked }).catch((err) => {
+      console.log('Oops! something went wrong-->', err);
+      message.error('Oops! something went wrong.');
+    });
+  };
+
+  const toggleExcludeBot = (checked) => {
+    udpateProjectSettings(currentProjectId, { exclude_bot: checked }).catch((err) => {
+      console.log('Oops! something went wrong-->', err);
+      message.error('Oops! something went wrong.');
+    });
+  };
+
+  const toggleAutoFormCapture = (checked) => {
+    udpateProjectSettings(currentProjectId, { auto_form_capture: checked }).catch((err) => {
+      console.log('Oops! something went wrong-->', err);
+      message.error('Oops! something went wrong.');
+    });
+  };
+
   return (
     <Row>
     <Col span={24}>
       <div span={24} className={'flex flex-start items-center mt-2'}>
-        <span style={{ width: '50px' }}><Switch checkedChildren="On" unCheckedChildren="OFF" defaultChecked /></span> <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>Auto-track</Text>
+        <span style={{ width: '50px' }}><Switch checkedChildren="On" unCheckedChildren="OFF" onChange={toggleAutoTrack} defaultChecked={currentProjectSettings.auto_track} /></span> <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>Auto-track</Text>
       </div>
     </Col>
     <Col span={24} className={'flex flex-start items-center'}>
@@ -52,7 +81,7 @@ const JSConfig = () => {
     </Col>
     <Col span={24}>
       <div span={24} className={'flex flex-start items-center mt-8'}>
-        <span style={{ width: '50px' }}><Switch checkedChildren="On" unCheckedChildren="OFF" defaultChecked /></span> <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>Exclude Bot</Text>
+        <span style={{ width: '50px' }}><Switch checkedChildren="On" unCheckedChildren="OFF" onChange={toggleExcludeBot} defaultChecked={currentProjectSettings.exclude_bot} /></span> <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>Exclude Bot</Text>
       </div>
     </Col>
     <Col span={24} className={'flex flex-start items-center'}>
@@ -60,7 +89,7 @@ const JSConfig = () => {
     </Col>
     <Col span={24}>
       <div span={24} className={'flex flex-start items-center mt-8'}>
-        <span style={{ width: '50px' }}><Switch checkedChildren="On" unCheckedChildren="OFF" /></span> <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>Auto Form Capture</Text>
+        <span style={{ width: '50px' }}><Switch checkedChildren="On" unCheckedChildren="OFF" onChange={toggleAutoFormCapture} defaultChecked={currentProjectSettings.auto_form_capture} /></span> <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0 ml-2'}>Auto Form Capture</Text>
       </div>
     </Col>
     <Col span={24} className={'flex flex-start items-center'}>
@@ -70,14 +99,16 @@ const JSConfig = () => {
   );
 };
 
-function EditUserDetails() {
+function EditUserDetails({
+  activeProject, fetchProjectSettings, currentProjectSettings, udpateProjectSettings
+}) {
   const [dataLoading, setDataLoading] = useState(true);
 
   useEffect(() => {
-    setTimeout(() => {
+    fetchProjectSettings(activeProject.id).then(() => {
       setDataLoading(false);
-    }, 200);
-  });
+    });
+  }, [activeProject]);
 
   const callback = (key) => {
     console.log(key);
@@ -96,10 +127,10 @@ function EditUserDetails() {
             { dataLoading ? <Skeleton active paragraph={{ rows: 4 }}/>
               : <Tabs defaultActiveKey="1" onChange={callback}>
                 <TabPane tab="Setup" key="1">
-                  <ViewSetup />
+                  <ViewSetup currentProjectSettings={currentProjectSettings} activeProject={activeProject} />
                 </TabPane>
                 <TabPane tab="Configuration" key="2">
-                  <JSConfig />
+                  <JSConfig udpateProjectSettings={udpateProjectSettings} currentProjectSettings={currentProjectSettings} activeProject={activeProject} />
                 </TabPane>
               </Tabs>
             }
@@ -111,5 +142,10 @@ function EditUserDetails() {
 
   );
 }
-
-export default EditUserDetails;
+const mapStateToProps = (state) => {
+  return {
+    currentProjectSettings: state.global.currentProjectSettings,
+    activeProject: state.global.active_project
+  };
+};
+export default connect(mapStateToProps, { fetchProjectSettings, udpateProjectSettings })(EditUserDetails);

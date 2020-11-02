@@ -204,11 +204,6 @@ func BackFillUserDataInCacheFromDb(projectid uint64, currentDate time.Time, user
 }
 
 func UpdateCacheForUserProperties(userId string, projectid uint64, updatedProperties map[string]interface{}, redundantProperty bool) {
-	// TODO: Remove this check after enabling caching realtime.
-	if !C.GetIfRealTimeEventUserCachingIsEnabled(projectid) {
-		return
-	}
-
 	// If the cache is empty / cache is updated from more than 1 day - repopulate cache
 	logCtx := log.WithFields(log.Fields{
 		"project_id": projectid,
@@ -224,8 +219,8 @@ func UpdateCacheForUserProperties(userId string, projectid uint64, updatedProper
 	begin := U.TimeNow()
 	isNewUser, err := cacheRedis.PFAddPersistent(usersCacheKey, userId, 24*60*60)
 	end := U.TimeNow()
-	metrics.Increment(metrics.IncrEventUserCache)
-	metrics.RecordLatency(metrics.LatencyEventUserCache, float64(end.Sub(begin).Milliseconds()))
+	metrics.Increment(metrics.IncrNewUserCounter)
+	metrics.RecordLatency(metrics.LatencyNewUserCache, float64(end.Sub(begin).Milliseconds()))
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get users from cache - getuserscachedcachekey")
 	}
@@ -268,8 +263,8 @@ func UpdateCacheForUserProperties(userId string, projectid uint64, updatedProper
 	begin = U.TimeNow()
 	counts, err := cacheRedis.IncrPersistentBatch(keysToIncr...)
 	end = U.TimeNow()
-	metrics.Increment(metrics.IncrEventUserCache)
-	metrics.RecordLatency(metrics.LatencyEventUserCache, float64(end.Sub(begin).Milliseconds()))
+	metrics.Increment(metrics.IncrUserCacheCounter)
+	metrics.RecordLatency(metrics.LatencyUserCache, float64(end.Sub(begin).Milliseconds()))
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to increment keys")
 		return
@@ -310,7 +305,8 @@ func UpdateCacheForUserProperties(userId string, projectid uint64, updatedProper
 		begin := U.TimeNow()
 		_, err = cacheRedis.IncrByBatchPersistent(countsInCache)
 		end := U.TimeNow()
-		logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("C:US:Incr")
+		metrics.Increment(metrics.IncrEventUserCleanupCounter)
+		metrics.RecordLatency(metrics.LatencyEventUserCleanupCounter, float64(end.Sub(begin).Milliseconds()))
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to increment keys")
 			return

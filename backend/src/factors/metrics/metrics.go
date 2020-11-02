@@ -32,8 +32,14 @@ const (
 	IncrSDKGetSettingsTimeout                  = "sdk_get_settings_timeout"
 
 	// Metrics related to event user caching.
-	IncrEventUserCache    = "event_user_cache_incr"
-	LatencyEventUserCache = "event_user_cache_latency"
+	IncrEventCacheCounter          = "event_cache_incr"
+	IncrUserCacheCounter           = "user_cache_incr"
+	IncrNewUserCounter             = "new_user_incr"
+	LatencyEventCache              = "event_cache_latency"
+	LatencyUserCache               = "user_cache_latency"
+	LatencyNewUserCache            = "new_user_cache_latency"
+	IncrEventUserCleanupCounter    = "clean_up_counter_incr"
+	LatencyEventUserCleanupCounter = "clean_up_counter_latency"
 
 	// Metrics to monitor size of the database tables.
 	BytesTableSizeAdwordsDocuments = "table_adwords_documents_size"

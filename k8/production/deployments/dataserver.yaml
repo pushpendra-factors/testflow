@@ -25,10 +25,10 @@ spec:
         layer: dataserver
     spec:
       nodeSelector:
-        cloud.google.com/gke-nodepool: default-pool
+        cloud.google.com/gke-nodepool: persistent-pool-standard
       containers:
       - name: dataserver
-        image: us.gcr.io/factors-production/data-server:v0.01-c4141cb
+        image: us.gcr.io/factors-production/data-server:v2.02-904602b5-2
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8089

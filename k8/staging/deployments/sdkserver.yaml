@@ -92,8 +92,6 @@ spec:
           - $(GCP_PROJECT_ID)
           - --gcp_project_location
           - $(GCP_PROJECT_LOCATION)
-          - --real_time_event_user_caching_project_ids
-          - "2"
         env:
           - name: MY_POD_IP
             valueFrom:

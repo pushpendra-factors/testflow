@@ -140,9 +140,6 @@ func addEventDetailsToCache(projectId uint64, event *Event, isUpdateEventPropert
 	eventsToIncr := make([]*cacheRedis.Key, 0)
 	propertiesToIncr := make([]*cacheRedis.Key, 0)
 	valuesToIncr := make([]*cacheRedis.Key, 0)
-	if !C.GetIfRealTimeEventUserCachingIsEnabled(projectId) {
-		return
-	}
 	logCtx := log.WithField("project_id", projectId)
 
 	eventNameDetails, err := GetEventNameFromEventNameId(event.EventNameId, projectId)
@@ -210,8 +207,8 @@ func addEventDetailsToCache(projectId uint64, event *Event, isUpdateEventPropert
 	}
 	counts, err := cacheRedis.IncrPersistentBatch(keysToIncr...)
 	end := U.TimeNow()
-	metrics.Increment(metrics.IncrEventUserCache)
-	metrics.RecordLatency(metrics.LatencyEventUserCache, float64(end.Sub(begin).Milliseconds()))
+	metrics.Increment(metrics.IncrEventCacheCounter)
+	metrics.RecordLatency(metrics.LatencyEventCache, float64(end.Sub(begin).Milliseconds()))
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to increment keys")
 		return
@@ -267,7 +264,8 @@ func addEventDetailsToCache(projectId uint64, event *Event, isUpdateEventPropert
 		begin := U.TimeNow()
 		_, err = cacheRedis.IncrByBatchPersistent(countsInCache)
 		end := U.TimeNow()
-		logCtx.WithField("timeTaken", end.Sub(begin).Milliseconds()).Info("C:EV:Incr")
+		metrics.Increment(metrics.IncrEventUserCleanupCounter)
+		metrics.RecordLatency(metrics.LatencyEventUserCleanupCounter, float64(end.Sub(begin).Milliseconds()))
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to increment keys")
 			return
@@ -1379,244 +1377,4 @@ func GetDatesForNextEventsArchivalBatch(projectID uint64, startTime int64) (map[
 	}
 
 	return countByDates, http.StatusFound
-}
-
-func getRecentEventPropertyKeysCacheKey(projectId uint64, eventName string) (*cacheRedis.Key, error) {
-	prefix := "recent_properties"
-	suffix := fmt.Sprintf("event_name:%s:keys", eventName)
-	return cacheRedis.NewKey(projectId, prefix, suffix)
-}
-
-func getRecentEventPropertyValuesCacheKey(projectId uint64, eventName string, property string) (*cacheRedis.Key, error) {
-	prefix := "recent_properties"
-	suffix := fmt.Sprintf("event_name:%s:property:%s:values", eventName, property)
-	return cacheRedis.NewKey(projectId, prefix, suffix)
-}
-
-func getCacheRecentProperty(cacheKey *cacheRedis.Key, property interface{}) error {
-	if reflect.ValueOf(property).Kind() != reflect.Ptr {
-		return errors.New("Must be pointer type ")
-	}
-	enRecentProperties, err := cacheRedis.Get(cacheKey)
-	if err != nil {
-		return err
-	}
-
-	err = json.Unmarshal([]byte(enRecentProperties), property)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func GetCacheRecentPropertyValues(projectId uint64, eventName string, property string, entity string) ([]string, error) {
-	var propertyValues []string
-	var err error
-	var recentPropertyValuesCacheKey *cacheRedis.Key
-
-	if entity == PropertyEntityEvent {
-		recentPropertyValuesCacheKey, err = getRecentEventPropertyValuesCacheKey(projectId, eventName, property)
-	}
-
-	if err != nil {
-		return propertyValues, err
-	}
-
-	err = getCacheRecentProperty(recentPropertyValuesCacheKey, &propertyValues)
-	if err != nil {
-		return propertyValues, err
-	}
-
-	if len(propertyValues) == 0 {
-		return propertyValues, errors.New("Empty cache property values")
-	}
-
-	return propertyValues, nil
-}
-
-func setCacheRecentProperty(cacheKey *cacheRedis.Key, property interface{}) error {
-	enProperties, err := json.Marshal(property)
-	if err != nil {
-		return err
-	}
-
-	err = cacheRedis.Set(cacheKey, string(enProperties), 60*60)
-	if err != nil {
-		log.WithError(err).Error("Failed to setCacheRecentProperty.")
-		return err
-	}
-	return nil
-}
-
-func SetCacheRecentPropertyValues(projectId uint64, eventName string, property string, values []string, entity string) error {
-	var err error
-	var recentPropertyValuesCacheKey *cacheRedis.Key
-	if entity == PropertyEntityEvent {
-		recentPropertyValuesCacheKey, err = getRecentEventPropertyValuesCacheKey(projectId, eventName, property)
-	}
-
-	if err != nil {
-		return err
-	}
-
-	if err != nil {
-		return err
-	}
-	return setCacheRecentProperty(recentPropertyValuesCacheKey, values)
-}
-
-func SetCacheRecentPropertyKeys(projectId uint64, eventName string, keys map[string][]string, entity string) error {
-	if len(keys[U.PropertyTypeCategorical]) == 0 && len(keys[U.PropertyTypeNumerical]) == 0 {
-		return nil
-	}
-
-	var err error
-	var recentPropertyKeysCacheKey *cacheRedis.Key
-	if entity == PropertyEntityUser {
-		recentPropertyKeysCacheKey, err = getRecentUserPropertyKeysCacheKey(projectId)
-	} else if entity == PropertyEntityEvent {
-		recentPropertyKeysCacheKey, err = getRecentEventPropertyKeysCacheKey(projectId, eventName)
-	}
-
-	if err != nil {
-		return err
-	}
-	return setCacheRecentProperty(recentPropertyKeysCacheKey, keys)
-}
-
-func GetCacheRecentPropertyKeys(projectId uint64, eventName string, entity string) (map[string][]string, error) {
-	var propertyKeys map[string][]string
-	var err error
-	var recentPropertyKeysCacheKey *cacheRedis.Key
-	if entity == PropertyEntityUser {
-		recentPropertyKeysCacheKey, err = getRecentUserPropertyKeysCacheKey(projectId)
-	} else if entity == PropertyEntityEvent {
-		recentPropertyKeysCacheKey, err = getRecentEventPropertyKeysCacheKey(projectId, eventName)
-	}
-	if err != nil {
-		return propertyKeys, err
-	}
-
-	err = getCacheRecentProperty(recentPropertyKeysCacheKey, &propertyKeys)
-	if err != nil {
-		return propertyKeys, err
-	}
-
-	if len(propertyKeys[U.PropertyTypeCategorical]) == 0 && len(propertyKeys[U.PropertyTypeNumerical]) == 0 {
-		return propertyKeys, errors.New("Empty cache property keys")
-	}
-
-	return propertyKeys, nil
-}
-
-func GetRecentEventPropertyKeysWithLimitsFallback(projectId uint64, eventName string, eventsLimit int) (map[string][]string, int) {
-	properties, err := GetCacheRecentPropertyKeys(projectId, eventName, PropertyEntityEvent)
-	if err == nil {
-		return properties, http.StatusFound
-	} else if err != redis.ErrNil {
-		log.WithFields(log.Fields{"project_id": projectId}).WithError(err).Error("Failed to GetCacheRecentPropertyKeys.")
-	}
-
-	eventsAfterTimestamp := U.UnixTimeBeforeDuration(24 * time.Hour)
-	logCtx := log.WithFields(log.Fields{"project_id": projectId, "events_after_timestamp": eventsAfterTimestamp})
-
-	db := C.GetServices().Db
-	queryStr := "SELECT distinct(properties) AS keys FROM events WHERE project_id = ?" +
-		" " + "AND event_name_id IN (SELECT id FROM event_names WHERE project_id = ? AND name = ?)" +
-		" " + "AND timestamp > ? AND properties != 'null' LIMIT ?"
-
-	rows, err := db.Raw(queryStr, projectId, projectId, eventName, eventsAfterTimestamp, eventsLimit).Rows()
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to get event properties.")
-		return nil, http.StatusInternalServerError
-	}
-	defer rows.Close()
-
-	propertiesMap := make(map[string]map[interface{}]bool, 0)
-	for rows.Next() {
-		var propertiesJson []byte
-		rows.Scan(&propertiesJson)
-
-		err := U.FillPropertyKvsFromPropertiesJson(propertiesJson, &propertiesMap, U.SamplePropertyValuesLimit)
-		if err != nil {
-			log.WithError(err).WithField("properties_json",
-				string(propertiesJson)).Error("Failed to unmarshal json properties.")
-			return nil, http.StatusInternalServerError
-		}
-	}
-
-	err = rows.Err()
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to scan recent property keys.")
-		return nil, http.StatusInternalServerError
-	}
-
-	propsByType, err := U.ClassifyPropertiesType(&propertiesMap)
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to classify properties on get recent property keys.")
-		return nil, http.StatusInternalServerError
-	}
-
-	if err = SetCacheRecentPropertyKeys(projectId, eventName, propsByType, PropertyEntityEvent); err != nil {
-		logCtx.WithError(err).Error("Failed to SetCacheRecentPropertyKeys.")
-	}
-
-	return propsByType, http.StatusFound
-}
-
-func GetRecentEventPropertyKeys(projectId uint64, eventName string) (map[string][]string, int) {
-	return GetRecentEventPropertyKeysWithLimitsFallback(projectId, eventName, eventsLimitForProperites)
-}
-
-// GetRecentEventPropertyValues - Returns unique event property
-// values of given property from last 24 hours.
-func GetRecentEventPropertyValuesWithLimitsFallback(projectId uint64, eventName string,
-	property string, eventsLimit, valuesLimit int) ([]string, int) {
-	logCtx := log.WithFields(log.Fields{"projectId": projectId, "eventName": eventName, "property": property})
-
-	if values, err := GetCacheRecentPropertyValues(projectId, eventName, property, PropertyEntityEvent); err == nil {
-		return values, http.StatusFound
-	} else if err != redis.ErrNil {
-		logCtx.WithError(err).Error("Failed to GetCacheRecentPropertyValues.")
-	}
-
-	db := C.GetServices().Db
-
-	eventsAfterTimestamp := U.UnixTimeBeforeDuration(24 * time.Hour)
-	values := make([]string, 0, 0)
-	queryStr := "SELECT DISTINCT(value) FROM" +
-		" " + "(SELECT properties->? AS value FROM events WHERE project_id = ? AND event_name_id IN" +
-		" " + "(SELECT id FROM event_names WHERE project_id = ? AND name = ?) AND timestamp > ? AND properties->? IS NOT NULL LIMIT ?)" +
-		" " + "AS property_values LIMIT ?"
-
-	rows, err := db.Raw(queryStr, property, projectId, projectId, eventName,
-		eventsAfterTimestamp, property, eventsLimit, valuesLimit).Rows()
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to get recent property keys.")
-		return values, http.StatusInternalServerError
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var value string
-		rows.Scan(&value)
-		value = U.TrimQuotes(value)
-		values = append(values, value)
-	}
-
-	err = rows.Err()
-	if err != nil {
-		logCtx.WithError(err).Error("Failed scanning property value on type classifcation.")
-		return values, http.StatusInternalServerError
-	}
-
-	if err = SetCacheRecentPropertyValues(projectId, eventName, property, values, PropertyEntityEvent); err != nil {
-		logCtx.WithError(err).Error("Failed to SetCacheRecentPropertyValues. ")
-	}
-
-	return values, http.StatusFound
-}
-
-func GetRecentEventPropertyValues(projectId uint64, eventName string, property string) ([]string, int) {
-	return GetRecentEventPropertyValuesWithLimitsFallback(projectId, eventName, property, eventsLimitForProperites, 2000)
 }

@@ -92,8 +92,6 @@ spec:
           - $(GCP_PROJECT_ID)
           - --gcp_project_location
           - $(GCP_PROJECT_LOCATION)
-          - --real_time_event_user_caching_project_ids
-          - "2"
           - --blocked_sdk_request_project_tokens
           - "5w62sncn48ohs9nl9fymkad3ewcked23"
         env:

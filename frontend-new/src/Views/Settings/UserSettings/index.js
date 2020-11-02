@@ -43,7 +43,7 @@ function UserSettings(props) {
         visible={props.visible}
         footer={null}
         centered={false}
-        zIndex={1015}
+        zIndex={1005}
         mask={false}
         closable={false}
         className={'fa-modal--full-width'}
@@ -56,7 +56,7 @@ function UserSettings(props) {
                 <SVG name={'brand'} size={40}/>
               </Col>
               <Col>
-                <Button type="text" onClick={() => props.handleCancel()}><SVG name="times"></SVG></Button>
+                <Button size={'large'} type="text" onClick={() => props.handleCancel()}><SVG name="times"></SVG></Button>
               </Col>
             </Row>
           </div>

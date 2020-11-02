@@ -79,6 +79,11 @@ type UserInfo struct {
 	PropertiesID string
 }
 
+type UserIDPropID struct {
+	UserID       string
+	PropertiesID string
+}
+
 type UserEventInfo struct {
 	CoalUserID string
 	EventName  string
@@ -142,11 +147,11 @@ func addHeadersByAttributionKey(result *QueryResult, query *AttributionQuery) {
 	4. Apply attribution methodology
 	5. Add performance data by attributionId
 */
-func ExecuteAttributionQuery(projectId uint64, query *AttributionQuery) (*QueryResult, error) {
+func ExecuteAttributionQuery(projectID uint64, query *AttributionQuery) (*QueryResult, error) {
 
 	result := &QueryResult{}
 	attributionData := make(map[string]*AttributionData)
-	projectSetting, errCode := GetProjectSetting(projectId)
+	projectSetting, errCode := GetProjectSetting(projectID)
 	if errCode != http.StatusFound {
 		return nil, errors.New("failed to get project Settings")
 	}
@@ -154,32 +159,36 @@ func ExecuteAttributionQuery(projectId uint64, query *AttributionQuery) (*QueryR
 		return nil, errors.New("execute attribution query failed as no ad-words customer account id found")
 	}
 	addHeadersByAttributionKey(result, query)
-	sessionEventNameId, eventNameToIdList, err := getEventInformation(projectId, query)
+	sessionEventNameID, eventNameToIDList, err := getEventInformation(projectID, query)
 	if err != nil {
 		return nil, err
 	}
 
 	// 1. Get all the sessions (userId, attributionId, timestamp) for given period by attribution key
-	_sessions, sessionUsers, err := getAllTheSessions(projectId, sessionEventNameId, query,
+	_sessions, sessionUsers, err := getAllTheSessions(projectID, sessionEventNameID, query,
 		*projectSetting.IntAdwordsCustomerAccountId)
-	usersInfo, err := getCoalesceUsersFromList(sessionUsers, projectId)
+	usersInfo, err := getCoalesceIDFromUserIDs(sessionUsers, projectID)
 	if err != nil {
 		return nil, err
 	}
-	sessions := updateSessionsByCoalesceId(_sessions, usersInfo)
+	sessions := updateSessionsMapWithCoalesceID(_sessions, usersInfo)
 
 	// 2. Add website visitor information against the attribution key
 	addWebsiteVisitorsInfo(query.From, query.To, attributionData, sessions)
 
 	// 3. Fetch users who hit conversion event
-	var usersToBeAttributed []UserEventInfo
-	usersHitConversion, err := getConvertedUsers(projectId, query, eventNameToIdList, usersInfo,
-		&usersToBeAttributed)
+	userIDToInfoConverted, coalescedIDToInfoConverted, err := getConvertedUsers(projectID, query, eventNameToIDList)
 	if err != nil {
 		return nil, err
 	}
-	err = getLinkedFunnelEventUsers(projectId, query, eventNameToIdList, usersInfo,
-		&usersToBeAttributed, usersHitConversion)
+
+	// Add users who hit conversion event
+	var usersToBeAttributed []UserEventInfo
+	for key, _ := range coalescedIDToInfoConverted {
+		usersToBeAttributed = append(usersToBeAttributed, UserEventInfo{key, query.ConversionEvent.Name})
+	}
+
+	err = getLinkedFunnelEventUsers(projectID, query, eventNameToIDList, userIDToInfoConverted, &usersToBeAttributed)
 	if err != nil {
 		return nil, err
 	}
@@ -196,7 +205,7 @@ func ExecuteAttributionQuery(projectId uint64, query *AttributionQuery) (*QueryR
 	addUpLinkedFunnelEventCount(query.LinkedEvents, attributionData, userLinkedFEHit)
 
 	// 5. Add the performance information
-	currency, err := AddPerformanceReportInfo(projectId, attributionData, query.From, query.To,
+	currency, err := AddPerformanceReportInfo(projectID, attributionData, query.From, query.To,
 		*projectSetting.IntAdwordsCustomerAccountId)
 	if err != nil {
 		return nil, err
@@ -306,35 +315,36 @@ func addUpLinkedFunnelEventCount(linkedEvents []QueryEventWithProperties,
 	}
 }
 
-// Returns the map of coalesce userId for given list of users
-func getCoalesceUsersFromList(userIdsWithSession []string, projectId uint64) (map[string]UserInfo, error) {
-	userIdsInBatches := U.GetStringListAsBatch(userIdsWithSession, USER_BATCH_SIZE)
+// getCoalesceIDFromUserIDs returns the map of coalesce userId for given list of users
+func getCoalesceIDFromUserIDs(userIDs []string, projectID uint64) (map[string]UserInfo, error) {
+
+	userIDsInBatches := U.GetStringListAsBatch(userIDs, USER_BATCH_SIZE)
 	db := C.GetServices().Db
-	logCtx := log.WithFields(log.Fields{"ProjectId": projectId})
-	userIdCoalUserIdMap := make(map[string]UserInfo)
-	for _, users := range userIdsInBatches {
+	logCtx := log.WithFields(log.Fields{"ProjectId": projectID})
+	userIDToCoalUserIDMap := make(map[string]UserInfo)
+	for _, users := range userIDsInBatches {
 		placeHolder := U.GetValuePlaceHolder(len(users))
 		value := U.GetInterfaceList(users)
-		queryUserIdCoalId := "SELECT id, COALESCE(users.customer_user_id,users.id) AS coal_user_id, " +
+		queryUserIDCoalID := "SELECT id, COALESCE(users.customer_user_id,users.id) AS coal_user_id, " +
 			" properties_id FROM users WHERE id = ANY (VALUES " + placeHolder + " )"
-		rows, err := db.Raw(queryUserIdCoalId, value...).Rows()
+		rows, err := db.Raw(queryUserIDCoalID, value...).Rows()
 		if err != nil {
 			logCtx.WithError(err).Error("SQL Query failed for getUserInitialSession")
 			return nil, err
 		}
 		defer rows.Close()
 		for rows.Next() {
-			var userId string
-			var coalesceId string
-			var propertiesId string
-			if err = rows.Scan(&userId, &coalesceId, &propertiesId); err != nil {
+			var userID string
+			var coalesceID string
+			var propertiesID string
+			if err = rows.Scan(&userID, &coalesceID, &propertiesID); err != nil {
 				logCtx.WithError(err).Error("SQL Parse failed")
 				continue
 			}
-			userIdCoalUserIdMap[userId] = UserInfo{coalesceId, propertiesId}
+			userIDToCoalUserIDMap[userID] = UserInfo{coalesceID, propertiesID}
 		}
 	}
-	return userIdCoalUserIdMap, nil
+	return userIDToCoalUserIDMap, nil
 }
 
 // Returns the all the sessions (userId,attributionId,minTimestamp,maxTimestamp) for given
@@ -493,14 +503,20 @@ func getEventInformation(projectId uint64, query *AttributionQuery) (uint64, map
 
 // Adds users who hit funnel event with given {event/user properties} to usersToBeAttributed
 func getLinkedFunnelEventUsers(projectId uint64, query *AttributionQuery, eventNameToId map[string][]interface{},
-	userIdInfo map[string]UserInfo, usersToBeAttributed *[]UserEventInfo, usersHitConversion []string) error {
+	userIDInfo map[string]UserInfo, usersToBeAttributed *[]UserEventInfo) error {
+
 	db := C.GetServices().Db
 	logCtx := log.WithFields(log.Fields{"ProjectId": projectId})
+	var usersHitConversion []string
+	for key, _ := range userIDInfo {
+		usersHitConversion = append(usersHitConversion, key)
+	}
+
 	for _, linkedEvent := range query.LinkedEvents {
 		// Part I - Fetch Users base on Event Hit satisfying events.properties
-		linkedEventNameIds := eventNameToId[linkedEvent.Name]
+		linkedEventNameIDs := eventNameToId[linkedEvent.Name]
 		eventsPlaceHolder := "?"
-		for i := 0; i < len(linkedEventNameIds)-1; i++ {
+		for i := 0; i < len(linkedEventNameIDs)-1; i++ {
 			eventsPlaceHolder += ",?"
 		}
 		var userIDList []string
@@ -515,7 +531,7 @@ func getLinkedFunnelEventUsers(projectId uint64, query *AttributionQuery, eventN
 				" timestamp >= ? AND timestamp <=? AND events.event_name_id IN (" + eventsPlaceHolder + ") " +
 				" AND user_id = ANY (VALUES " + usersPlaceHolder + " ) "
 			qParams := []interface{}{projectId, query.From, query.To}
-			qParams = append(qParams, linkedEventNameIds...)
+			qParams = append(qParams, linkedEventNameIDs...)
 			qParams = append(qParams, value...)
 			// add event filter
 			wStmt, wParams, err := getFilterSQLStmtForEventProperties(query.ConversionEvent.Properties)
@@ -547,7 +563,7 @@ func getLinkedFunnelEventUsers(projectId uint64, query *AttributionQuery, eventN
 		}
 
 		// Part-II - Filter the fetched users from Part-I base on user_properties
-		filteredUserIdList, err := applyUserPropertiesFilter(projectId, userIDList, userIdInfo, query)
+		filteredUserIdList, err := applyUserPropertiesFilter(projectId, userIDList, userIDInfo, query)
 		if err != nil {
 			logCtx.WithError(err).Error("error while applying user properties")
 			return err
@@ -556,7 +572,7 @@ func getLinkedFunnelEventUsers(projectId uint64, query *AttributionQuery, eventN
 		// Part-III add the filtered users with eventId usersToBeAttributed
 		for _, userId := range filteredUserIdList {
 			*usersToBeAttributed = append(*usersToBeAttributed,
-				UserEventInfo{userIdInfo[userId].CoalUserID, linkedEvent.Name})
+				UserEventInfo{userIDInfo[userId].CoalUserID, linkedEvent.Name})
 		}
 	}
 	return nil
@@ -619,12 +635,12 @@ func applyUserPropertiesFilter(projectId uint64, userIdList []string, userIdInfo
 	return filteredUserIdList, nil
 }
 
-// Returns the list of eligible users who hit conversion event
-func getConvertedUsers(projectId uint64, query *AttributionQuery, eventNameToIdList map[string][]interface{},
-	userIdInfo map[string]UserInfo, usersToBeAttributed *[]UserEventInfo) ([]string, error) {
+// getConvertedUsers Returns the list of eligible users who hit conversion event
+func getConvertedUsers(projectID uint64, query *AttributionQuery,
+	eventNameToIdList map[string][]interface{}) (map[string]UserInfo, map[string][]UserIDPropID, error) {
 
 	db := C.GetServices().Db
-	logCtx := log.WithFields(log.Fields{"ProjectId": projectId})
+	logCtx := log.WithFields(log.Fields{"ProjectId": projectID})
 
 	conversionEventNameIds := eventNameToIdList[query.ConversionEvent.Name]
 	placeHolder := "?"
@@ -633,13 +649,13 @@ func getConvertedUsers(projectId uint64, query *AttributionQuery, eventNameToIdL
 	}
 	queryEventHits := "SELECT user_id FROM events WHERE events.project_id=? AND timestamp >= ? AND " +
 		" timestamp <=? AND events.event_name_id IN (" + placeHolder + ") "
-	qParams := []interface{}{projectId, query.From, query.To}
+	qParams := []interface{}{projectID, query.From, query.To}
 	qParams = append(qParams, conversionEventNameIds...)
 
 	// add event filter
 	wStmt, wParams, err := getFilterSQLStmtForEventProperties(query.ConversionEvent.Properties)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if wStmt != "" {
 		queryEventHits = queryEventHits + " AND " + fmt.Sprintf("( %s )", wStmt)
@@ -649,10 +665,10 @@ func getConvertedUsers(projectId uint64, query *AttributionQuery, eventNameToIdL
 	rows, err := db.Raw(queryEventHits, qParams...).Rows()
 	if err != nil {
 		logCtx.WithError(err).Error("SQL Query failed for queryEventHits")
-		return nil, err
+		return nil, nil, err
 	}
 	defer rows.Close()
-	var userIdList []string
+	var userIDList []string
 	userIdHitEvent := make(map[string]bool)
 	for rows.Next() {
 		var userId string
@@ -661,27 +677,36 @@ func getConvertedUsers(projectId uint64, query *AttributionQuery, eventNameToIdL
 			continue
 		}
 		if _, ok := userIdHitEvent[userId]; !ok {
-			userIdList = append(userIdList, userId)
+			userIDList = append(userIDList, userId)
 			userIdHitEvent[userId] = true
 		}
 	}
 
+	// Get coalesced Id for converted user_ids (without filter)
+	userIDToCoalIDInfo, err := getCoalesceIDFromUserIDs(userIDList, projectID)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	// Part-II - Filter the fetched users from Part-I base on user_properties
-	filteredUserIdList, err := applyUserPropertiesFilter(projectId, userIdList, userIdInfo, query)
+	filteredUserIdList, err := applyUserPropertiesFilter(projectID, userIDList, userIDToCoalIDInfo, query)
 	if err != nil {
 		logCtx.WithError(err).Error("error while applying user properties")
-		return nil, err
+		return nil, nil, err
 	}
 
-	// add the filtered users against eventId
-	for _, userId := range filteredUserIdList {
-		*usersToBeAttributed = append(*usersToBeAttributed,
-			UserEventInfo{userIdInfo[userId].CoalUserID, query.ConversionEvent.Name})
+	filteredUserIdToUserIDInfo := make(map[string]UserInfo)
+	filteredCoalIDToUserIDInfo := make(map[string][]UserIDPropID)
+	for _, userID := range filteredUserIdList {
+		filteredCoalIDToUserIDInfo[userIDToCoalIDInfo[userID].CoalUserID] = append(filteredCoalIDToUserIDInfo[userIDToCoalIDInfo[userID].CoalUserID],
+			UserIDPropID{userID, userIDToCoalIDInfo[userID].PropertiesID})
+		filteredUserIdToUserIDInfo[userID] = UserInfo{userIDToCoalIDInfo[userID].CoalUserID, userIDToCoalIDInfo[userID].PropertiesID}
 	}
-	return filteredUserIdList, nil
+
+	return filteredUserIdToUserIDInfo, filteredCoalIDToUserIDInfo, nil
 }
 
-// Returns the effective From timestamp considering lookback days
+// getEffectiveFrom Returns the effective From timestamp considering lookback days
 func getEffectiveFrom(from int64, lookbackDays int) int64 {
 	lookbackDaysTimestamp := int64(lookbackDays) * SECS_IN_A_DAY
 	if LOOKBACK_CAP_IN_DAYS < lookbackDays {
@@ -691,8 +716,8 @@ func getEffectiveFrom(from int64, lookbackDays int) int64 {
 	return validFrom
 }
 
-// Clones a new map replacing userId by coalUserId.
-func updateSessionsByCoalesceId(attributedSessionsByUserId map[string]map[string]RangeTimestamp,
+// updateSessionsMapWithCoalesceID Clones a new map replacing userId by coalUserId.
+func updateSessionsMapWithCoalesceID(attributedSessionsByUserId map[string]map[string]RangeTimestamp,
 	usersInfo map[string]UserInfo) map[string]map[string]RangeTimestamp {
 
 	newSessionsMap := make(map[string]map[string]RangeTimestamp)

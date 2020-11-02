@@ -44,6 +44,8 @@ type Agent struct {
 	IntAdwordsRefreshToken    string `json:"-"`
 	IntSalesforceInstanceURL  string `json:"int_salesforce_instance_url"`
 	IntSalesforceRefreshToken string `json:"int_salesforce_refresh_token"`
+	CompanyURL                string `json:"company_url"`
+	SubscribeNewsletter       bool   `json:"subscribe_newsletter"`
 }
 
 // AgentInfo - Exposable Info.
@@ -273,7 +275,7 @@ func UpdateAgentLastLoginInfo(agentUUID string, ts time.Time) int {
 func UpdateAgentVerificationDetails(agentUUID, password, firstName,
 	lastName string, verified bool, passUpdatedAt time.Time) int {
 
-	if agentUUID == "" || firstName == "" || password == "" {
+	if agentUUID == "" {
 		log.Error("UpdateAgentVerificationDetails Failed. Missing params")
 		return http.StatusBadRequest
 	}
@@ -283,8 +285,16 @@ func UpdateAgentVerificationDetails(agentUUID, password, firstName,
 		return http.StatusInternalServerError
 	}
 
-	return updateAgent(agentUUID, Firstname(firstName), Lastname(lastName),
-		IsEmailVerified(verified), PasswordAndPasswordCreatedAt(hashedPassword, passUpdatedAt))
+	options := make([]Option, 0)
+	if firstName != "" {
+		options = append(options, Firstname(firstName))
+	}
+	if lastName != "" {
+		options = append(options, Lastname(lastName))
+	}
+	options = append(options, IsEmailVerified(verified))
+	options = append(options, PasswordAndPasswordCreatedAt(hashedPassword, passUpdatedAt))
+	return updateAgent(agentUUID, options...)
 }
 
 func UpdateAgentInformation(agentUUID, firstName, lastName, phone string) int {

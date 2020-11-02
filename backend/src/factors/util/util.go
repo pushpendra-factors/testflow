@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -97,6 +98,16 @@ func IsNumber(num string) bool {
 func IsEmail(str string) bool {
 	regexpEmail := regexp.MustCompile(`^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,4}$`)
 	return regexpEmail.MatchString(str)
+}
+
+func IsValidUrl(urlString string) bool {
+
+	_, err := url.Parse(urlString)
+	if err != nil {
+		return false
+	}
+
+	return true
 }
 
 // GetEmailLowerCase returns email in lower case for consistency

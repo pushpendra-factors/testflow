@@ -3,7 +3,6 @@ package tests
 import (
 	C "factors/config"
 	"flag"
-	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -75,9 +74,4 @@ func TestMain(m *testing.M) {
 
 	retCode := m.Run()
 	os.Exit(retCode)
-}
-
-func ReinitialiseConfigForCachedEnabledProjects(projectId string) {
-	config.WhitelistedProjectIdsEventUserCache = projectId
-	fmt.Println(config)
 }

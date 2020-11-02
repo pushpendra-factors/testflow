@@ -1,0 +1,19 @@
+.inputLabel {
+    color: #8692A3;
+}
+
+.linkText {
+    color: #5949BC;
+    cursor: pointer;
+    &:hover {
+        text-decoration: underline;
+    }
+}
+
+.switchBtn {
+    margin-right: 0.5rem;
+}
+
+.noteText {
+    color: #3E516C;
+}

@@ -457,6 +457,12 @@ func main() {
 	} else {
 		log.Info("queries table is associated with projects table.")
 	}
+	// Add index on queries table
+	if err := db.Exec("CREATE INDEX queries_title_trgm_idx ON queries USING gin (title gin_trgm_ops);").Error; err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("Failed to create index on queries(title).")
+	} else {
+		log.Info("Created index on queries(title).")
+	}
 
 	// Create scheduled_tasks table.
 	if err := db.CreateTable(&M.ScheduledTask{}).Error; err != nil {

@@ -10,7 +10,29 @@
 .border-bottom--thin-2{
     border-bottom: thin solid $fa-color--mono-2;
 }
+.border-right--thin{
+    border-right: thin solid $fa-color--mono-1;
+}
+.border-right--thin-2{
+    border-right: thin solid $fa-color--mono-2;
+}
+.border-left--thin{
+    border-left: thin solid $fa-color--mono-1;
+}
+.border-left--thin-2{
+    border-left: thin solid $fa-color--mono-2;
+}
 
 .border-radius--medium{
     border-radius: 8px;
+}
+.background-color--brand-color-1{
+ background-color: $fa-color--brand-1;
+}
+
+
+
+.border-radius--sm
+{
+    border-radius: 4px;
 }

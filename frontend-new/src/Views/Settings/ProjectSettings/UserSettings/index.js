@@ -1,102 +1,131 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Row, Col, Button, Table, Avatar, Menu, Dropdown
+  Row, Col, Button, Table, Avatar, Menu, Dropdown, Modal, message
 } from 'antd';
 import { Text } from 'factorsComponents';
-import { MoreOutlined } from '@ant-design/icons';
+import { MoreOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import InviteUsers from './InviteUsers';
+import { connect } from 'react-redux';
+import { fetchProjectAgents, projectAgentRemove, updateAgentRole } from 'Reducers/agentActions';
+import moment from 'moment';
 
-const menu = (
-  <Menu>
-    <Menu.Item key="0">
-      <a href="#!">Remove User</a>
-    </Menu.Item>
-    <Menu.Item key="1">
-      <a href="#!">Make Project Admin</a>
-    </Menu.Item>
-  </Menu>
-);
+const { confirm } = Modal;
 
-const dataSource = [
-  {
-    key: '1',
-    name: 'Anand Nair',
-    email: 'anand@uxfish.com',
-    role: 'Owner',
-    lastActivity: 'Yesterday',
-    actions: ''
-  },
-  {
-    key: '2',
-    name: 'Vishnu Baliga',
-    email: 'baliga@factors.ai',
-    role: 'Owner',
-    lastActivity: 'Today',
-    actions: ''
-  },
-  {
-    key: '3',
-    name: 'Praveen Das',
-    email: 'praveen@factors.ai',
-    role: 'Admin',
-    lastActivity: 'A long time ago',
-    actions: ''
-  },
-  {
-    key: '4',
-    name: 'Aravind Murthy',
-    email: 'aravind@factors.ai',
-    role: 'Owner',
-    lastActivity: 'One hour ago',
-    actions: ''
-  }
-];
-
-const columns = [
-  {
-    title: 'Name',
-    dataIndex: 'name',
-    key: 'name',
-    render: (text) => <div className="flex items-center">
-      <Avatar src="assets/avatar/avatar.png" className={'mr-2'} size={32} />&nbsp; {text} </div>
-  },
-  {
-    title: 'Email',
-    dataIndex: 'email',
-    key: 'email'
-  },
-  {
-    title: 'Role',
-    dataIndex: 'role',
-    key: 'role'
-  },
-  {
-    title: 'Last activity',
-    dataIndex: 'lastActivity',
-    key: 'lastActivity'
-  },
-  {
-    title: '',
-    dataIndex: 'actions',
-    key: 'actions',
-    render: () => (
-      <Dropdown overlay={menu} trigger={['click']}>
-        <Button type="text" icon={<MoreOutlined />} />
-      </Dropdown>
-    )
-  }
-];
-
-function UserSettings() {
+function UserSettings({
+  agents,
+  projectAgentRemove,
+  activeProjectID,
+  updateAgentRole
+}) {
   const [dataLoading, setDataLoading] = useState(true);
+  const [dataSource, setdataSource] = useState(null);
   const [inviteModal, setInviteModal] = useState(false);
   const [confirmLoading, setConfirmLoading] = useState(false);
 
+  const confirmRemove = (uuid) => {
+    confirm({
+      title: 'Do you Want to remove this user?',
+      icon: <ExclamationCircleOutlined />,
+      content: 'Please confirm to proceed',
+      okText: 'Yes',
+      onOk() {
+        projectAgentRemove(activeProjectID, uuid).then(() => {
+          message.success('User removed!');
+        }).catch((err) => {
+          message.error(err);
+        });
+      }
+    });
+  };
+
+  const confirmRoleChange = (uuid) => {
+    confirm({
+      title: 'Do you want to change this user\'s role?',
+      icon: <ExclamationCircleOutlined />,
+      content: 'Please confirm to proceed',
+      okText: 'Yes',
+      onOk() {
+        updateAgentRole(activeProjectID, uuid, 2).then(() => {
+          message.success('User role updated!');
+        }).catch((err) => {
+          message.error(err);
+        });
+      }
+    });
+  };
+
+  const menu = (values) => {
+    return (
+    <Menu>
+      <Menu.Item key="0" onClick={() => confirmRemove(values.uuid)}>
+        <a>Remove User</a>
+      </Menu.Item>
+      {values.role === 1 &&
+        <Menu.Item key="0" onClick={() => confirmRoleChange(values.uuid)}>
+          <a>Make Project Admin</a>
+        </Menu.Item>
+      }
+    </Menu>
+    );
+  };
+
+  const columns = [
+    {
+      title: 'Name',
+      dataIndex: 'name',
+      key: 'name',
+      render: (text) => <div className="flex items-center">
+        <Avatar src="assets/avatar/avatar.png" className={'mr-2'} size={32} />&nbsp; {text} </div>
+    },
+    {
+      title: 'Email',
+      dataIndex: 'email',
+      key: 'email'
+    },
+    {
+      title: 'Role',
+      dataIndex: 'role',
+      key: 'role'
+    },
+    {
+      title: 'Last activity',
+      dataIndex: 'lastActivity',
+      key: 'lastActivity'
+    },
+    {
+      title: '',
+      dataIndex: 'actions',
+      key: 'actions',
+      render: (values) => (
+        <Dropdown overlay={() => menu(values)} trigger={['click']}>
+          <Button size={'large'} type="text" icon={<MoreOutlined />} />
+        </Dropdown>
+      )
+    }
+  ];
+
   useEffect(() => {
-    setTimeout(() => {
-      setDataLoading(false);
-    }, 500);
-  });
+    if (agents) {
+      const formattedArray = [];
+      agents.map((agent, index) => {
+        // console.log(index, 'agent-name-->', agent.first_name);
+        const values = {
+          uuid: `${agent.uuid}`,
+          role: agent.role
+        };
+        formattedArray.push({
+          key: index,
+          name: `${agent.first_name || agent.last_name ? (agent.first_name + ' ' + agent.last_name) : '---'}`,
+          email: agent.email,
+          role: `${agent.role === 2 ? 'Admin' : 'User'}`,
+          lastActivity: `${agent.last_logged_in ? moment(agent.last_logged_in).fromNow() : !agent.is_email_verified ? 'Pending Invite' : '---'}`,
+          actions: values
+        });
+        setdataSource(formattedArray);
+      });
+    }
+    setDataLoading(false);
+  }, [agents]);
 
   const handleOk = () => {
     setConfirmLoading(true);
@@ -115,7 +144,7 @@ function UserSettings() {
           </Col>
           <Col span={12}>
             <div className={'flex justify-end'}>
-              <Button disabled={dataLoading} onClick={() => setInviteModal(true)}>Invite Users</Button>
+              <Button size={'large'} disabled={dataLoading} onClick={() => setInviteModal(true)}>Invite Users</Button>
             </div>
           </Col>
         </Row>
@@ -138,4 +167,19 @@ function UserSettings() {
   );
 }
 
-export default UserSettings;
+const mapStateToProps = (state) => ({
+  activeProjectID: state.global.active_project.id,
+  agents: state.agent.agents
+});
+
+export default connect(mapStateToProps, { fetchProjectAgents, updateAgentRole, projectAgentRemove })(UserSettings);
+
+// table datasource example
+// {
+//   key: '1',
+//   name: 'Anand Nair',
+//   email: 'anand@uxfish.com',
+//   role: 'Owner',
+//   lastActivity: 'Yesterday',
+//   actions: ''
+// }

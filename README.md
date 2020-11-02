@@ -82,7 +82,7 @@ postgres=> \l
 ### Connect to db using this command.
 `psql -U autometa autometa`
 
-### Setting up uuid extension.
+### Setting up uuid extension and pg_trgm extension.
 
 * Get super user
 
@@ -100,7 +100,7 @@ autometa=> \du
  autometa=> \q
 ```
 
-* Create extension
+* Create extensions
 
 ```
 dp-mac:factors dinesh$ psql -U <superuser> autometa
@@ -108,6 +108,9 @@ psql (10.4)
 Type "help" for help.
 
 autometa=# CREATE EXTENSION "uuid-ossp";
+CREATE EXTENSION
+
+autometa=# CREATE EXTENSION "pg_trgm";
 CREATE EXTENSION
 ```
 

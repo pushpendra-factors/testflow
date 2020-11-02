@@ -34,11 +34,21 @@ import (
 const max_SEGMENTS = 25000
 const max_EVENT_NAMES = 250
 const top_K = 5
+const topK_patterns = 10
+const keventsSpecial = 5
+const keventsURL = 100
 const max_PATTERN_LENGTH = 3
+
 const max_CHUNK_SIZE_IN_BYTES int64 = 200 * 1000 * 1000 // 200MB
 
 var regex_NUM = regexp.MustCompile("[0-9]+")
 var mineLog = taskLog.WithField("prefix", "Task#PatternMine")
+
+type patternProperties struct {
+	pattern     *P.Pattern
+	count       uint
+	patternType string
+}
 
 func countPatternsWorker(filepath string,
 	patterns []*P.Pattern, wg *sync.WaitGroup, countOccurence bool) {
@@ -380,11 +390,12 @@ func mineAndWriteLenOnePatterns(
 func mineAndWriteLenTwoPatterns(
 	lenOnePatterns []*P.Pattern, filepath string,
 	userAndEventsInfo *P.UserAndEventsInfo, numRoutines int,
-	chunkDir string, maxModelSize int64, cumulativePatternsSize int64, countOccurence bool) (
+	chunkDir string, maxModelSize int64, cumulativePatternsSize int64, countOccurence bool, goalPatterns []*P.Pattern) (
 	[]*P.Pattern, int64, error) {
 	// Each event combination is a segment in itself.
-	lenTwoPatterns, _, err := P.GenCandidates(
-		lenOnePatterns, max_SEGMENTS, userAndEventsInfo)
+	lenTwoPatterns, _, err := P.GenSegmentsForTopGoals(
+		lenOnePatterns, userAndEventsInfo, goalPatterns)
+
 	if err != nil {
 		return []*P.Pattern{}, 0, err
 	}
@@ -403,7 +414,7 @@ func mineAndWriteLenTwoPatterns(
 func mineAndWritePatterns(projectId uint64, filepath string,
 	userAndEventsInfo *P.UserAndEventsInfo, eventNames []string,
 	numRoutines int, chunkDir string,
-	maxModelSize int64, countOccurence bool) error {
+	maxModelSize int64, countOccurence bool, eventNamesWithType map[string]string) error {
 	var filteredPatterns []*P.Pattern
 	var cumulativePatternsSize int64 = 0
 
@@ -418,6 +429,9 @@ func mineAndWritePatterns(projectId uint64, filepath string,
 	}
 	cumulativePatternsSize += patternsSize
 	printFilteredPatterns(filteredPatterns, patternLen)
+
+	filteredTopKPatterns := FilterTopKEventsOnTypes(filteredPatterns, eventNamesWithType, topK_patterns)
+
 	if cumulativePatternsSize >= int64(float64(maxModelSize)*limitRoundOffFraction) {
 		return nil
 	}
@@ -428,7 +442,7 @@ func mineAndWritePatterns(projectId uint64, filepath string,
 	}
 	filteredPatterns, patternsSize, err = mineAndWriteLenTwoPatterns(
 		filteredPatterns, filepath, userAndEventsInfo,
-		numRoutines, chunkDir, maxModelSize, cumulativePatternsSize, countOccurence)
+		numRoutines, chunkDir, maxModelSize, cumulativePatternsSize, countOccurence, filteredTopKPatterns)
 	if err != nil {
 		return err
 	}
@@ -534,6 +548,7 @@ func buildPropertiesInfoFromInput(projectId uint64, eventNames []string, filepat
 
 func printFilteredPatterns(filteredPatterns []*P.Pattern, iter int) {
 	mineLog.Info(fmt.Sprintf("Mined %d patterns of length %d", len(filteredPatterns), iter))
+
 	/*
 		pnum := 0
 		fmt.Println("----------------------------------")
@@ -550,6 +565,7 @@ func printFilteredPatterns(filteredPatterns []*P.Pattern, iter int) {
 		}
 		fmt.Println("----------------------------------")
 	*/
+
 }
 
 func writeEventInfoFile(projectId, modelId uint64, events *bytes.Reader,
@@ -798,6 +814,15 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 
 	mineLog.WithField("tmpEventsFilePath",
 		tmpEventsFilepath).Info("Building user and event properties info and writing it to file.")
+	eventNamesWithType, err := M.GetEventTypeFromDb(projectId, eventNames, 100000)
+
+	mineLog.WithField("Event Names and type",
+		eventNamesWithType).Info("Building user and type from DB.")
+
+	if err != nil {
+		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to get event names and Type from DB")
+		return "", 0, err
+	}
 	userAndEventsInfo, err := buildPropertiesInfoFromInput(projectId, eventNames, tmpEventsFilepath)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to build user and event Info.")
@@ -849,7 +874,7 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, cloudManager *
 	mineLog.WithFields(log.Fields{"projectId": projectId, "tmpEventsFilepath": tmpEventsFilepath,
 		"tmpChunksDir": tmpChunksDir, "routines": numRoutines}).Info("Mining patterns and writing it as chunks.")
 	err = mineAndWritePatterns(projectId, tmpEventsFilepath,
-		userAndEventsInfo, eventNames, numRoutines, tmpChunksDir, maxModelSize, countOccurence)
+		userAndEventsInfo, eventNames, numRoutines, tmpChunksDir, maxModelSize, countOccurence, eventNamesWithType)
 	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to mine patterns.")
 		return "", 0, err
@@ -930,4 +955,140 @@ func OpenEventFileAndGetScanner(filePath string) (*bufio.Scanner, error) {
 	}
 	scanner := store.CreateScannerFromReader(f)
 	return scanner, nil
+}
+
+func FilterTopKEventsOnTypes(filteredPatterns []*P.Pattern, eventNamesWithType map[string]string, k int) []*P.Pattern {
+	// take topK from different event types like uc,fe,$types,url etc..
+	allPatterns := make([]patternProperties, 0)
+
+	for _, pattern_ := range filteredPatterns {
+		var tmpPattern patternProperties
+
+		tmpPattern.pattern = pattern_
+		tmpPattern.count = pattern_.PerUserCount
+		tmpPattern.patternType = eventNamesWithType[pattern_.EventNames[0]]
+
+		allPatterns = append(allPatterns, tmpPattern)
+
+	}
+
+	ucTopk := takeTopKUC(allPatterns, k)
+	feAT_Topk := takeTopKpageView(allPatterns, k)
+	ieTopk := takeTopKIE(allPatterns, k)
+	specialTopK := takeTopKspecialEvents(allPatterns, keventsSpecial)
+	URLTopK := takeTopKAllURL(allPatterns, keventsURL)
+
+	allPatternsFiltered := make([]patternProperties, 0)
+
+	allPatternsFiltered = append(allPatternsFiltered, ucTopk...)
+	allPatternsFiltered = append(allPatternsFiltered, feAT_Topk...)
+	allPatternsFiltered = append(allPatternsFiltered, ieTopk...)
+	allPatternsFiltered = append(allPatternsFiltered, specialTopK...)
+	allPatternsFiltered = append(allPatternsFiltered, URLTopK...)
+
+	allPatternsTopk := make([]*P.Pattern, 0)
+	exists := make(map[string]bool)
+	for _, pt := range allPatternsFiltered {
+		if exists[pt.pattern.EventNames[0]] == false {
+			allPatternsTopk = append(allPatternsTopk, pt.pattern)
+			exists[pt.pattern.EventNames[0]] = true
+		}
+	}
+
+	return allPatternsTopk
+
+}
+
+func takeTopKUC(allPatterns []patternProperties, topK int) []patternProperties {
+
+	allPatternsType := make([]patternProperties, 0)
+	for _, pattern := range allPatterns {
+
+		if pattern.patternType == M.TYPE_USER_CREATED_EVENT_NAME {
+			allPatternsType = append(allPatternsType, pattern)
+		}
+	}
+
+	if len(allPatternsType) > 0 {
+		return takeTopK(allPatternsType, topK)
+	}
+	return allPatternsType
+
+}
+
+func takeTopKpageView(allPatterns []patternProperties, topK int) []patternProperties {
+
+	allPatternsType := make([]patternProperties, 0)
+	for _, pattern := range allPatterns {
+
+		if pattern.patternType == M.TYPE_FILTER_EVENT_NAME || pattern.patternType == M.TYPE_AUTO_TRACKED_EVENT_NAME {
+			allPatternsType = append(allPatternsType, pattern)
+		}
+	}
+	if len(allPatternsType) > 0 {
+		return takeTopK(allPatternsType, topK)
+	}
+	return allPatternsType
+
+}
+
+func takeTopKIE(allPatterns []patternProperties, topK int) []patternProperties {
+
+	allPatternsType := make([]patternProperties, 0)
+	for _, pattern := range allPatterns {
+
+		if pattern.patternType == M.TYPE_INTERNAL_EVENT_NAME {
+			allPatternsType = append(allPatternsType, pattern)
+		}
+	}
+	if len(allPatternsType) > 0 {
+		return takeTopK(allPatternsType, topK)
+	}
+	return allPatternsType
+
+}
+
+func takeTopKspecialEvents(allPatterns []patternProperties, topK int) []patternProperties {
+
+	allPatternsType := make([]patternProperties, 0)
+	for _, pt := range allPatterns {
+
+		if strings.HasPrefix(pt.pattern.EventNames[0], "$") == true {
+			allPatternsType = append(allPatternsType, pt)
+		}
+	}
+	if len(allPatternsType) > 0 {
+		return takeTopK(allPatternsType, topK)
+	}
+	return allPatternsType
+
+}
+
+func takeTopKAllURL(allPatterns []patternProperties, topK int) []patternProperties {
+
+	allPatternsType := make([]patternProperties, 0)
+	for _, pt := range allPatterns {
+
+		if U.IsValidUrl(pt.pattern.EventNames[0]) == true {
+			allPatternsType = append(allPatternsType, pt)
+		}
+	}
+	if len(allPatternsType) > 0 {
+		return takeTopK(allPatternsType, topK)
+	}
+	return allPatternsType
+
+}
+
+func takeTopK(patterns []patternProperties, topKPatterns int) []patternProperties {
+	//rewrite with heap. can hog the memory
+	if len(patterns) > 0 {
+		sort.Slice(patterns, func(i, j int) bool { return patterns[i].count > patterns[j].count })
+		if len(patterns) > topKPatterns {
+			return patterns[0:topKPatterns]
+		}
+		return patterns
+
+	}
+	return patterns
 }
