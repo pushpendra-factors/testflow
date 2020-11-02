@@ -22,9 +22,20 @@ export const initialResultState = [1, 2, 3, 4].map(() => {
 const getEventsWithProperties = (queries) => {
   const ewps = [];
   queries.forEach(ev => {
+    const filterProps = [];
+    ev.filters.forEach(fil => {
+      const vals = Array.isArray(fil.values) ? fil.values.join(',') : fil.values;
+      filterProps.push({
+        lop: 'AND',
+        op: fil.operator,
+        pr: fil.props[0],
+        ty: fil.props[1],
+        va: vals
+      });
+    });
     ewps.push({
       na: ev.label,
-      pr: []
+      pr: filterProps
     });
   });
   return ewps;
