@@ -322,6 +322,7 @@ func CustomCors() gin.HandlerFunc {
 				corsConfig.AllowOrigins = []string{
 					"http://app.factors.ai",
 					"https://app.factors.ai",
+					"https://tufte-prod.factors.ai"
 				}
 			}
 
